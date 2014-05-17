@@ -35,3 +35,8 @@ If you wish to spawn another process inside the container while your current bas
 running just run the exact same command again to get another bash shell or change the command.  If the original process dies, PID 1, all other processes spawned inside the container will also be killed and the namespace will be removed. 
 
 You can identify if a process is running in a container by looking to see if `pid` is in the root of the directory.   
+
+## Copyright and license
+
+Code and documentation copyright 2014 Docker, inc. Code released under the Apache 2.0 license.
+Docs released under Creative commons.
