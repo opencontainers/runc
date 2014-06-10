@@ -1,6 +1,6 @@
 package fs
 
-import "github.com/dotcloud/docker/pkg/libcontainer/cgroups"
+import "github.com/docker/libcontainer/cgroups"
 
 type devicesGroup struct {
 }

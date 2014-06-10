@@ -1,7 +1,7 @@
 package network
 
 import (
-	"github.com/dotcloud/docker/pkg/libcontainer/netlink"
+	"github.com/docker/libcontainer/netlink"
 	"net"
 )
 

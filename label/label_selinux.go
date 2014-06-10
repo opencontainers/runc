@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/dotcloud/docker/pkg/libcontainer/selinux"
+	"github.com/docker/libcontainer/selinux"
 )
 
 func GenLabels(options string) (string, string, error) {

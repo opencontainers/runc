@@ -3,7 +3,7 @@ package network
 import (
 	"errors"
 
-	"github.com/dotcloud/docker/pkg/libcontainer"
+	"github.com/docker/libcontainer"
 )
 
 var (

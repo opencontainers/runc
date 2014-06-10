@@ -5,7 +5,7 @@ import (
 	"os"
 	"syscall"
 
-	"github.com/dotcloud/docker/pkg/libcontainer"
+	"github.com/docker/libcontainer"
 	"github.com/dotcloud/docker/pkg/system"
 )
 

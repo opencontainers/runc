@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dotcloud/docker/pkg/libcontainer/cgroups"
+	"github.com/docker/libcontainer/cgroups"
 	"github.com/dotcloud/docker/pkg/system"
 )
 

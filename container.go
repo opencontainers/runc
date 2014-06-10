@@ -1,8 +1,8 @@
 package libcontainer
 
 import (
-	"github.com/dotcloud/docker/pkg/libcontainer/cgroups"
-	"github.com/dotcloud/docker/pkg/libcontainer/devices"
+	"github.com/docker/libcontainer/cgroups"
+	"github.com/docker/libcontainer/devices"
 )
 
 // Context is a generic key value pair that allows arbatrary data to be sent

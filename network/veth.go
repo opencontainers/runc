@@ -2,8 +2,8 @@ package network
 
 import (
 	"fmt"
-	"github.com/dotcloud/docker/pkg/libcontainer"
-	"github.com/dotcloud/docker/pkg/libcontainer/utils"
+	"github.com/docker/libcontainer"
+	"github.com/docker/libcontainer/utils"
 )
 
 // Veth is a network strategy that uses a bridge and creates

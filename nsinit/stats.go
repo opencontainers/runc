@@ -6,8 +6,8 @@ import (
 	"log"
 
 	"github.com/codegangsta/cli"
-	"github.com/dotcloud/docker/pkg/libcontainer"
-	"github.com/dotcloud/docker/pkg/libcontainer/cgroups/fs"
+	"github.com/docker/libcontainer"
+	"github.com/docker/libcontainer/cgroups/fs"
 )
 
 var statsCommand = cli.Command{

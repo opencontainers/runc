@@ -3,7 +3,7 @@ package cgroups
 import (
 	"errors"
 
-	"github.com/dotcloud/docker/pkg/libcontainer/devices"
+	"github.com/docker/libcontainer/devices"
 )
 
 var (

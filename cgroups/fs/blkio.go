@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/dotcloud/docker/pkg/libcontainer/cgroups"
+	"github.com/docker/libcontainer/cgroups"
 )
 
 type blkioGroup struct {

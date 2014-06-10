@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/dotcloud/docker/pkg/libcontainer/cgroups"
+	"github.com/docker/libcontainer/cgroups"
 )
 
 func TestCpuStats(t *testing.T) {

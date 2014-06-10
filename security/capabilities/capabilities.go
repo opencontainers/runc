@@ -3,7 +3,7 @@ package capabilities
 import (
 	"os"
 
-	"github.com/dotcloud/docker/pkg/libcontainer"
+	"github.com/docker/libcontainer"
 	"github.com/syndtr/gocapability/capability"
 )
 

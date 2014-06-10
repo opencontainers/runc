@@ -2,7 +2,7 @@ package network
 
 import (
 	"fmt"
-	"github.com/dotcloud/docker/pkg/libcontainer"
+	"github.com/docker/libcontainer"
 )
 
 // Loopback is a network strategy that provides a basic loopback device

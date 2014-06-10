@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/dotcloud/docker/pkg/libcontainer"
+	"github.com/docker/libcontainer"
 )
 
 func loadContainer() (*libcontainer.Container, error) {

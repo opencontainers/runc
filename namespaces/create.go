@@ -4,7 +4,7 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/dotcloud/docker/pkg/libcontainer"
+	"github.com/docker/libcontainer"
 )
 
 type CreateCommand func(container *libcontainer.Container, console, rootfs, dataPath, init string, childPipe *os.File, args []string) *exec.Cmd

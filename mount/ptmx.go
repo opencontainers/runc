@@ -4,7 +4,7 @@ package mount
 
 import (
 	"fmt"
-	"github.com/dotcloud/docker/pkg/libcontainer/console"
+	"github.com/docker/libcontainer/console"
 	"os"
 	"path/filepath"
 )

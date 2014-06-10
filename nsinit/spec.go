@@ -6,7 +6,7 @@ import (
 	"log"
 
 	"github.com/codegangsta/cli"
-	"github.com/dotcloud/docker/pkg/libcontainer"
+	"github.com/docker/libcontainer"
 )
 
 var specCommand = cli.Command{

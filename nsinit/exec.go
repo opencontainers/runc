@@ -8,8 +8,8 @@ import (
 	"os/signal"
 
 	"github.com/codegangsta/cli"
-	"github.com/dotcloud/docker/pkg/libcontainer"
-	"github.com/dotcloud/docker/pkg/libcontainer/namespaces"
+	"github.com/docker/libcontainer"
+	"github.com/docker/libcontainer/namespaces"
 )
 
 var execCommand = cli.Command{

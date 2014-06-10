@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"github.com/dotcloud/docker/pkg/libcontainer/devices"
+	"github.com/docker/libcontainer/devices"
 	"github.com/dotcloud/docker/pkg/system"
 )
 

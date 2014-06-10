@@ -3,8 +3,8 @@
 package namespaces
 
 import (
-	"github.com/dotcloud/docker/pkg/libcontainer"
-	"github.com/dotcloud/docker/pkg/libcontainer/cgroups"
+	"github.com/docker/libcontainer"
+	"github.com/docker/libcontainer/cgroups"
 )
 
 func Exec(container *libcontainer.Container, term Terminal, rootfs, dataPath string, args []string, createCommand CreateCommand, startCallback func()) (int, error) {

@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"github.com/codegangsta/cli"
-	"github.com/dotcloud/docker/pkg/libcontainer/namespaces"
+	"github.com/docker/libcontainer/namespaces"
 )
 
 var (

@@ -5,7 +5,7 @@ import (
 	"log"
 	"testing"
 
-	"github.com/dotcloud/docker/pkg/libcontainer/cgroups"
+	"github.com/docker/libcontainer/cgroups"
 )
 
 func blkioStatEntryEquals(expected, actual []cgroups.BlkioStatEntry) error {
