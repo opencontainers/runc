@@ -10,7 +10,7 @@ for using Linux namespaces with no external dependencies.  libcontainer provides
 A container is a self contained directory that is able to run one or more processes without 
 affecting the host system.  The directory is usually a full system tree.  Inside the directory
 a `container.json` file is placed with the runtime configuration for how the processes 
-should be contained and ran.  Environment, networking, and different capabilities for the 
+should be contained and run.  Environment, networking, and different capabilities for the 
 process are specified in this file.  The configuration is used for each process executed inside the container.
 
 See the `container.json` file for what the configuration should look like.
