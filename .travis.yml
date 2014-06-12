@@ -1,13 +1,11 @@
 language: go
 
-go:
-    - 1.2.1
-
 install:
-    - go get github.com/dotcloud/docker/pkg/term
-    - go get github.com/dotcloud/docker/pkg/system
-    - go get github.com/dotcloud/docker/pkg/mount
+    - go get -d ./...
+    - go get -d github.com/dotcloud/docker # just to be sure
+    - DOCKER_PATH="${GOPATH%%:*}/src/github.com/dotcloud/docker"
+    - sed -i 's!dotcloud/docker!docker/libcontainer!' "$DOCKER_PATH/hack/make/.validate"
 
 script:
-    - hack/make.sh validate-dco
-    - hack/make.sh validate-gofmt
+    - bash "$DOCKER_PATH/hack/make/validate-dco"
+    - bash "$DOCKER_PATH/hack/make/validate-gofmt"
