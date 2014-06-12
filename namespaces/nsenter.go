@@ -51,6 +51,16 @@ void get_args(int *argc, char ***argv) {
 	(*argv)[*argc] = NULL;
 }
 
+// Use raw setns syscall for versions of glibc that don't include it (namely glibc-2.12)
+#if __GLIBC__ == 2 && __GLIBC_MINOR__ < 14 && defined(SYS_setns)
+#define _GNU_SOURCE
+#include <sched.h>
+#include "syscall.h"
+int setns(int fd, int nstype) {
+  return syscall(SYS_setns, fd, nstype);
+}
+#endif
+
 void nsenter() {
 	int argc;
 	char **argv;
