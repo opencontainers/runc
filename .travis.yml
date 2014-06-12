@@ -1,0 +1,13 @@
+language: go
+
+go:
+    - 1.2.1
+
+install:
+    - go get github.com/dotcloud/docker/pkg/term
+    - go get github.com/dotcloud/docker/pkg/system
+    - go get github.com/dotcloud/docker/pkg/mount
+
+script:
+    - hack/make.sh validate-dco
+    - hack/make.sh validate-gofmt
