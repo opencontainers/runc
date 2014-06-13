@@ -71,10 +71,10 @@ This means that all decisions are made by default by Michael. Since making
 every decision himself would be highly un-scalable, in practice decisions
 are spread across multiple maintainers.
 
-The relevant maintainers for a pull request can be worked out in 2 steps:
+The relevant maintainers for a pull request can be worked out in two steps:
 
 * Step 1: Determine the subdirectories affected by the pull request. This
-  might be `src/registry`, `docs/source/api`, or any other part of the repo.
+  might be `netlink/` and `security/`, or any other part of the repo.
 
 * Step 2: Find the `MAINTAINERS` file which affects this directory. If the
   directory itself does not have a `MAINTAINERS` file, work your way up
