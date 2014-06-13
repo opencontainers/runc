@@ -1,4 +1,4 @@
-# Contributing to libcontainer
+# The libcontainer Contributors' Guide
 
 Want to hack on libcontainer? Awesome! Here are instructions to get you
 started. They are probably not perfect, please let us know if anything

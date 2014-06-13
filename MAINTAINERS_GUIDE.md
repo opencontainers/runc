@@ -1,4 +1,4 @@
-# The libcontainer Maintainer manual
+# The libcontainer Maintainers' Guide
 
 ## Introduction
 
