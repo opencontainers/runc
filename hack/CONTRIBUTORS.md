@@ -102,9 +102,6 @@ same commit so that a revert would remove all traces of the feature or fix.
 Commits that fix or close an issue should include a reference like `Closes #XXX`
 or `Fixes #XXX`, which will automatically close the issue when merged.
 
-Please do not add yourself to the AUTHORS file, as it is regenerated
-regularly from the Git history.
-
 ### Merge approval
 
 libcontainer maintainers use LGTM (looks good to me) in comments on the code review
