@@ -197,8 +197,7 @@ If you have any questions, please refer to the FAQ in the [docs](to be written)
 
 * Step 1: learn the component inside out
 * Step 2: make yourself useful by contributing code, bugfixes, support etc.
-* Step 3: volunteer on the irc channel (#docker@freenode)
-* Step 4: propose yourself at a scheduled docker meeting in #docker-dev
+* Step 3: volunteer on the irc channel (#libcontainer@freenode)
 
 Don't forget: being a maintainer is a time investment. Make sure you will have time to make yourself available.
 You don't have to be a maintainer to make a difference on the project!
