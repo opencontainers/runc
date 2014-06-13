@@ -102,6 +102,13 @@ same commit so that a revert would remove all traces of the feature or fix.
 Commits that fix or close an issue should include a reference like `Closes #XXX`
 or `Fixes #XXX`, which will automatically close the issue when merged.
 
+### Testing
+
+Make sure you include suitable tests, preferably unit tests, in your pull request
+and that all the tests pass.
+
+*Instructions for running tests to be added.*
+
 ### Merge approval
 
 libcontainer maintainers use LGTM (looks good to me) in comments on the code review
