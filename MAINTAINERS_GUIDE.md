@@ -66,12 +66,10 @@ However, only currently listed `MAINTAINERS` are counted towards the required
 majority.
 
 libcontainer follows the timeless, highly efficient and totally unfair system
-known as [Benevolent dictator for
-life](http://en.wikipedia.org/wiki/Benevolent_Dictator_for_Life), with
-yours truly, Michael Crosby, in the role of BDFL. This means that all
-decisions are made by default by Michael. Since making every decision
-myself would be highly un-scalable, in practice decisions are spread
-across multiple maintainers.
+known as [Benevolent dictator for life](http://en.wikipedia.org/wiki/Benevolent_Dictator_for_Life), with Michael Crosby in the role of BDFL.
+This means that all decisions are made by default by Michael. Since making
+every decision himself would be highly un-scalable, in practice decisions
+are spread across multiple maintainers.
 
 The relevant maintainers for a pull request can be worked out in 2 steps:
 
