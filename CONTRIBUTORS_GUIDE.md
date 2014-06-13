@@ -12,11 +12,9 @@ the output of `uname -a`. Please include the steps required to reproduce
 the problem if possible and applicable.
 This information will help us review and fix your issue faster.
 
-## Build Environment
+## Development Environment
 
-For instructions on setting up your development environment, please
-see our dedicated [dev environment setup
-docs](to be written).
+*Add instructions on setting up the development environment.*
 
 ## Contribution Guidelines
 
