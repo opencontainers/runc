@@ -9,9 +9,7 @@ To suggest changes to the roadmap, including additions, please write the change 
 
 ## Broader kernel support
 
-Our goal is to make libcontainer run everywhere, but currently libcontainer requires Linux version 3.8 or higher with lxc and aufs support. If you’re deploying new machines for the purpose of running libcontainer, this is a fairly easy requirement to meet. However, if you’re adding libcontainer to an existing deployment, you may not have the flexibility to update and patch the kernel.
-
-Expanding libcontainer’s kernel support is a priority. This includes running on older kernel versions, but also on kernels with no AUFS support, or with incomplete lxc capabilities.
+Our goal is to make libcontainer run everywhere, but currently libcontainer requires Linux version 3.8 or higher. If you’re deploying new machines for the purpose of running libcontainer, this is a fairly easy requirement to meet. However, if you’re adding libcontainer to an existing deployment, you may not have the flexibility to update and patch the kernel.
 
 ## Cross-architecture support
 
