@@ -18,7 +18,7 @@ For instructions on setting up your development environment, please
 see our dedicated [dev environment setup
 docs](to be written).
 
-## Contribution guidelines
+## Contribution Guidelines
 
 ### Pull requests are always welcome
 
