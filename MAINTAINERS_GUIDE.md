@@ -80,9 +80,6 @@ The relevant maintainers for a pull request can be worked out in 2 steps:
   directory itself does not have a `MAINTAINERS` file, work your way up
   the repo hierarchy until you find one.
 
-There is also a `hacks/getmaintainers.sh` script that will print out the 
-maintainers for a specified directory.
-
 ### I'm a maintainer, and I'm going on holiday
 
 Please let your co-maintainers and other contributors know by raising a pull
