@@ -6,7 +6,7 @@ feels wrong or incomplete.
 
 ## Reporting Issues
 
-When reporting [issues](https://github.com/dotcloud/libcontainer/issues) 
+When reporting [issues](https://github.com/docker/libcontainer/issues) 
 on GitHub please include your host OS (Ubuntu 12.04, Fedora 19, etc),
 the output of `uname -a`. Please include the steps required to reproduce
 the problem if possible and applicable.
@@ -47,7 +47,7 @@ else is working on the same thing.
 ### Create issues...
 
 Any significant improvement should be documented as [a GitHub
-issue](https://github.com/dotcloud/libcontainer/issues) before anybody
+issue](https://github.com/docker/libcontainer/issues) before anybody
 starts working on it.
 
 ### ...but check for existing issues first!
