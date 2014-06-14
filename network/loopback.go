@@ -10,7 +10,7 @@ import (
 type Loopback struct {
 }
 
-func (l *Loopback) Create(n *Network, nspid int, context map[string]string) error {
+func (l *Loopback) Create(n *Network, nspid int, context map[string]string, _ string) error {
 	return nil
 }
 

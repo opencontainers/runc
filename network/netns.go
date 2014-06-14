@@ -14,7 +14,7 @@ import (
 type NetNS struct {
 }
 
-func (v *NetNS) Create(n *Network, nspid int, context map[string]string) error {
+func (v *NetNS) Create(n *Network, nspid int, context map[string]string, _ string) error {
 	context["nspath"] = n.NsPath
 	return nil
 }

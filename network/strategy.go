@@ -19,7 +19,7 @@ var strategies = map[string]NetworkStrategy{
 // NetworkStrategy represents a specific network configuration for
 // a container's networking stack
 type NetworkStrategy interface {
-	Create(*Network, int, map[string]string) error
+	Create(*Network, int, map[string]string, string) error
 	Initialize(*Network, map[string]string) error
 }
 

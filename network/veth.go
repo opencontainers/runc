@@ -16,7 +16,7 @@ type Veth struct {
 
 const defaultDevice = "eth0"
 
-func (v *Veth) Create(n *Network, nspid int, context map[string]string) error {
+func (v *Veth) Create(n *Network, nspid int, context map[string]string, dataPath string) error {
 	var (
 		bridge = n.Bridge
 		prefix = n.VethPrefix
@@ -45,7 +45,8 @@ func (v *Veth) Create(n *Network, nspid int, context map[string]string) error {
 	if err := SetInterfaceInNamespacePid(name2, nspid); err != nil {
 		return err
 	}
-	return nil
+	networkRuntimeInfo := NetworkRuntimeInfo{VethHost: name1, VethChild: name2}
+	return writeNetworkRuntimeInfo(&networkRuntimeInfo, dataPath)
 }
 
 func (v *Veth) Initialize(config *Network, context map[string]string) error {

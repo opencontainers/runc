@@ -81,7 +81,7 @@ func Exec(container *libcontainer.Config, term Terminal, rootfs, dataPath string
 		defer cleaner.Cleanup()
 	}
 
-	if err := InitializeNetworking(container, command.Process.Pid, syncPipe); err != nil {
+	if err := InitializeNetworking(container, command.Process.Pid, syncPipe, dataPath); err != nil {
 		command.Process.Kill()
 		command.Wait()
 		return -1, err
@@ -156,14 +156,14 @@ func SetupCgroups(container *libcontainer.Config, nspid int) (cgroups.ActiveCgro
 
 // InitializeNetworking creates the container's network stack outside of the namespace and moves
 // interfaces into the container's net namespaces if necessary
-func InitializeNetworking(container *libcontainer.Config, nspid int, pipe *SyncPipe) error {
+func InitializeNetworking(container *libcontainer.Config, nspid int, pipe *SyncPipe, dataPath string) error {
 	context := map[string]string{}
 	for _, config := range container.Networks {
 		strategy, err := network.GetStrategy(config.Type)
 		if err != nil {
 			return err
 		}
-		if err := strategy.Create((*network.Network)(config), nspid, context); err != nil {
+		if err := strategy.Create((*network.Network)(config), nspid, context, dataPath); err != nil {
 			return err
 		}
 	}
