@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"syscall"
 
 	"github.com/docker/libcontainer/network"
 )
@@ -18,10 +19,14 @@ type SyncPipe struct {
 
 func NewSyncPipe() (s *SyncPipe, err error) {
 	s = &SyncPipe{}
-	s.child, s.parent, err = os.Pipe()
+
+	fds, err := syscall.Socketpair(syscall.AF_LOCAL, syscall.SOCK_STREAM|syscall.SOCK_CLOEXEC, 0)
 	if err != nil {
 		return nil, err
 	}
+	s.child = os.NewFile(uintptr(fds[0]), "child syncpipe")
+	s.parent = os.NewFile(uintptr(fds[1]), "parent syncpipe")
+
 	return s, nil
 }
 
@@ -51,6 +56,18 @@ func (s *SyncPipe) SendToChild(networkState *network.NetworkState) error {
 		return err
 	}
 	s.parent.Write(data)
+	syscall.Shutdown(int(s.parent.Fd()), syscall.SHUT_WR)
+	return nil
+}
+
+func (s *SyncPipe) BlockOnChild() error {
+	data, err := ioutil.ReadAll(s.parent)
+	if err != nil {
+		return nil
+	}
+	if len(data) > 0 {
+		return fmt.Errorf("Child error: %s", string(data))
+	}
 	return nil
 }
 
@@ -69,6 +86,11 @@ func (s *SyncPipe) ReadFromParent() (*network.NetworkState, error) {
 
 }
 
+func (s *SyncPipe) ReportError(err error) {
+	s.child.Write([]byte(err.Error()))
+	s.CloseChild()
+}
+
 func (s *SyncPipe) Close() error {
 	if s.parent != nil {
 		s.parent.Close()
@@ -77,4 +99,11 @@ func (s *SyncPipe) Close() error {
 		s.child.Close()
 	}
 	return nil
+}
+
+func (s *SyncPipe) CloseChild() {
+	if s.child != nil {
+		s.child.Close()
+		s.child = nil
+	}
 }
