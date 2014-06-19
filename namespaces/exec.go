@@ -15,6 +15,8 @@ import (
 	"github.com/dotcloud/docker/pkg/system"
 )
 
+// TODO(vishh): This is part of the libcontainer API and it does much more than just namespaces related work.
+// Move this to libcontainer package.
 // Exec performes setup outside of a namespace so that a container can be
 // executed.  Exec is a high level function for working with container namespaces.
 func Exec(container *libcontainer.Container, term Terminal, rootfs, dataPath string, args []string, createCommand CreateCommand, startCallback func()) (int, error) {
@@ -149,13 +151,13 @@ func SetupCgroups(container *libcontainer.Container, nspid int) (cgroups.ActiveC
 // InitializeNetworking creates the container's network stack outside of the namespace and moves
 // interfaces into the container's net namespaces if necessary
 func InitializeNetworking(container *libcontainer.Container, nspid int, pipe *SyncPipe) error {
-	context := libcontainer.Context{}
+	context := map[string]string{}
 	for _, config := range container.Networks {
 		strategy, err := network.GetStrategy(config.Type)
 		if err != nil {
 			return err
 		}
-		if err := strategy.Create(config, nspid, context); err != nil {
+		if err := strategy.Create(libcontainer.GetInternalNetworkSpec(config), nspid, context); err != nil {
 			return err
 		}
 	}
@@ -167,7 +169,7 @@ func InitializeNetworking(container *libcontainer.Container, nspid int, pipe *Sy
 func GetNamespaceFlags(namespaces map[string]bool) (flag int) {
 	for key, enabled := range namespaces {
 		if enabled {
-			if ns := libcontainer.GetNamespace(key); ns != nil {
+			if ns := GetNamespace(key); ns != nil {
 				flag |= ns.Value
 			}
 		}
