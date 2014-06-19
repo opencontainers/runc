@@ -36,7 +36,7 @@ that feature *on top of* libcontainer.
 ### Discuss your design on the mailing list
 
 We recommend discussing your plans [on the mailing
-list](https://groups.google.com/forum/?fromgroups#!forum/docker-dev)
+list](https://groups.google.com/forum/?fromgroups#!forum/libcontainer)
 before starting to code - especially for more ambitious contributions.
 This gives other contributors a chance to point you in the right
 direction, give feedback on your design, and maybe point out if someone
