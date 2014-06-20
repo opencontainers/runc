@@ -9,10 +9,10 @@ import (
 	"github.com/docker/libcontainer/cgroups"
 )
 
-type freezerGroup struct {
+type FreezerGroup struct {
 }
 
-func (s *freezerGroup) Set(d *data) error {
+func (s *FreezerGroup) Set(d *data) error {
 	switch d.c.Freezer {
 	case cgroups.Frozen, cgroups.Thawed:
 		dir, err := d.path("freezer")
@@ -43,7 +43,7 @@ func (s *freezerGroup) Set(d *data) error {
 	return nil
 }
 
-func (s *freezerGroup) Remove(d *data) error {
+func (s *FreezerGroup) Remove(d *data) error {
 	return removePath(d.path("freezer"))
 }
 
@@ -52,12 +52,11 @@ func getFreezerFileData(path string) (string, error) {
 	return strings.TrimSuffix(string(data), "\n"), err
 }
 
-func (s *freezerGroup) GetStats(d *data, stats *cgroups.Stats) error {
-	path, err := d.path("freezer")
-	if err != nil {
-		return err
-	}
-	var data string
+func (s *FreezerGroup) GetStats(path string, stats *cgroups.Stats) error {
+	var (
+		data string
+		err  error
+	)
 	if data, err = getFreezerFileData(filepath.Join(path, "freezer.parent_freezing")); err != nil {
 		return err
 	}
