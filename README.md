@@ -1,5 +1,9 @@
 ## libcontainer - reference implementation for containers
 
+### Note on API changes:
+
+Please bare with us while we work on making the libcontainer API stable and something that we can support long term.  We are currently discussing the API with the community, therefore, if you currently depend on libcontainer please pin your dependency at a specific tag or commit id.  Please join the discussion and help shape the API.
+
 #### Background
 
 libcontainer specifies configuration options for what a container is.  It provides a native Go implementation 
