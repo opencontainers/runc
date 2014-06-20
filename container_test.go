@@ -17,7 +17,7 @@ func contains(expected string, values []string) bool {
 }
 
 func TestContainerJsonFormat(t *testing.T) {
-	f, err := os.Open("container.json")
+	f, err := os.Open("sample_configs/attach_to_bridge.json")
 	if err != nil {
 		t.Fatal("Unable to open container.json")
 	}
