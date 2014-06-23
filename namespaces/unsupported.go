@@ -3,6 +3,7 @@
 package namespaces
 
 import (
+	"github.com/docker/libcontainer"
 	"github.com/docker/libcontainer/cgroups"
 )
 
