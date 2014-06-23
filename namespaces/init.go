@@ -23,6 +23,8 @@ import (
 	"github.com/dotcloud/docker/pkg/user"
 )
 
+// TODO(vishh): This is part of the libcontainer API and it does much more than just namespaces related work.
+// Move this to libcontainer package.
 // Init is the init process that first runs inside a new namespace to setup mounts, users, networking,
 // and other options required for the new container.
 func Init(container *libcontainer.Container, uncleanRootfs, consolePath string, syncPipe *SyncPipe, args []string) error {
@@ -67,7 +69,9 @@ func Init(container *libcontainer.Container, uncleanRootfs, consolePath string, 
 
 	label.Init()
 
-	if err := mount.InitializeMountNamespace(rootfs, consolePath, container); err != nil {
+	if err := mount.InitializeMountNamespace(rootfs,
+		consolePath,
+		(*mount.MountConfig)(container.MountConfig)); err != nil {
 		return fmt.Errorf("setup mount namespace %s", err)
 	}
 	if container.Hostname != "" {
@@ -157,14 +161,14 @@ func SetupUser(u string) error {
 // setupVethNetwork uses the Network config if it is not nil to initialize
 // the new veth interface inside the container for use by changing the name to eth0
 // setting the MTU and IP address along with the default gateway
-func setupNetwork(container *libcontainer.Container, context libcontainer.Context) error {
+func setupNetwork(container *libcontainer.Container, context map[string]string) error {
 	for _, config := range container.Networks {
 		strategy, err := network.GetStrategy(config.Type)
 		if err != nil {
 			return err
 		}
 
-		err1 := strategy.Initialize(config, context)
+		err1 := strategy.Initialize((*network.Network)(config), context)
 		if err1 != nil {
 			return err1
 		}
@@ -193,7 +197,7 @@ func FinalizeNamespace(container *libcontainer.Container) error {
 	}
 
 	// drop capabilities in bounding set before changing user
-	if err := capabilities.DropBoundingSet(container); err != nil {
+	if err := capabilities.DropBoundingSet(container.Capabilities); err != nil {
 		return fmt.Errorf("drop bounding set %s", err)
 	}
 
@@ -211,7 +215,7 @@ func FinalizeNamespace(container *libcontainer.Container) error {
 	}
 
 	// drop all other capabilities
-	if err := capabilities.DropCapabilities(container); err != nil {
+	if err := capabilities.DropCapabilities(container.Capabilities); err != nil {
 		return fmt.Errorf("drop capabilities %s", err)
 	}
 
