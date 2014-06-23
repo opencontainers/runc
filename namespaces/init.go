@@ -69,7 +69,9 @@ func Init(container *libcontainer.Container, uncleanRootfs, consolePath string, 
 
 	label.Init()
 
-	if err := mount.InitializeMountNamespace(rootfs, consolePath, libcontainer.GetInternalMountConfig(container)); err != nil {
+	if err := mount.InitializeMountNamespace(rootfs,
+		consolePath,
+		(*mount.MountConfig)(&container.MountConfig)); err != nil {
 		return fmt.Errorf("setup mount namespace %s", err)
 	}
 	if container.Hostname != "" {
@@ -166,7 +168,7 @@ func setupNetwork(container *libcontainer.Container, context map[string]string) 
 			return err
 		}
 
-		err1 := strategy.Initialize(libcontainer.GetInternalNetworkConfig(config), context)
+		err1 := strategy.Initialize((*network.Network)(config), context)
 		if err1 != nil {
 			return err1
 		}

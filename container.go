@@ -2,49 +2,18 @@ package libcontainer
 
 import (
 	"github.com/docker/libcontainer/cgroups"
-	"github.com/docker/libcontainer/devices"
 	"github.com/docker/libcontainer/mount"
+	"github.com/docker/libcontainer/network"
 )
 
-type Mount mount.Mount
+type MountConfig mount.MountConfig
 
-type Mounts mount.Mounts
-
-type Network struct {
-	// Type sets the networks type, commonly veth and loopback
-	Type string `json:"type,omitempty"`
-
-	// Context is a generic key value format for setting additional options that are specific to
-	// the network type
-	Context map[string]string `json:"context,omitempty"`
-
-	// Address contains the IP and mask to set on the network interface
-	Address string `json:"address,omitempty"`
-
-	// Gateway sets the gateway address that is used as the default for the interface
-	Gateway string `json:"gateway,omitempty"`
-
-	// Mtu sets the mtu value for the interface and will be mirrored on both the host and
-	// container's interfaces if a pair is created, specifically in the case of type veth
-	Mtu int `json:"mtu,omitempty"`
-}
+type Network network.Network
 
 // Container defines configuration options for executing a process inside a contained environment
 type Container struct {
-	// NoPivotRoot will use MS_MOVE and a chroot to jail the process into the container's rootfs
-	// This is a common option when the container is running in ramdisk
-	NoPivotRoot bool `json:"no_pivot_root,omitempty"`
-
-	// ReadonlyFs will remount the container's rootfs as readonly where only externally mounted
-	// bind mounts are writtable
-	ReadonlyFs bool `json:"readonly_fs,omitempty"`
-
-	// Mounts specify additional source and destination paths that will be mounted inside the container's
-	// rootfs and mount namespace if specified
-	Mounts Mounts `json:"mounts,omitempty"`
-
-	// The device nodes that should be automatically created within the container upon container start.  Note, make sure that the node is marked as allowed in the cgroup as well!
-	DeviceNodes []*devices.Device `json:"device_nodes,omitempty"`
+	// Mount specific options.
+	MountConfig MountConfig `json:"mount_config,omitempty"`
 
 	// Hostname optionally sets the container's hostname if provided
 	Hostname string `json:"hostname,omitempty"`
