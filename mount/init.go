@@ -27,12 +27,12 @@ type mount struct {
 
 // InitializeMountNamespace setups up the devices, mount points, and filesystems for use inside a
 // new mount namepsace
-func InitializeMountNamespace(rootfs, console string, MountConfig *MountConfig) error {
+func InitializeMountNamespace(rootfs, console string, mountConfig *MountConfig) error {
 	var (
 		err  error
 		flag = syscall.MS_PRIVATE
 	)
-	if MountConfig.NoPivotRoot {
+	if mountConfig.NoPivotRoot {
 		flag = syscall.MS_SLAVE
 	}
 	if err := system.Mount("", "/", "", uintptr(flag|syscall.MS_REC), ""); err != nil {
@@ -41,16 +41,16 @@ func InitializeMountNamespace(rootfs, console string, MountConfig *MountConfig) 
 	if err := system.Mount(rootfs, rootfs, "bind", syscall.MS_BIND|syscall.MS_REC, ""); err != nil {
 		return fmt.Errorf("mouting %s as bind %s", rootfs, err)
 	}
-	if err := mountSystem(rootfs, MountConfig); err != nil {
+	if err := mountSystem(rootfs, mountConfig); err != nil {
 		return fmt.Errorf("mount system %s", err)
 	}
-	if err := setupBindmounts(rootfs, MountConfig.Mounts); err != nil {
+	if err := setupBindmounts(rootfs, mountConfig.Mounts); err != nil {
 		return fmt.Errorf("bind mounts %s", err)
 	}
-	if err := nodes.CreateDeviceNodes(rootfs, MountConfig.DeviceNodes); err != nil {
+	if err := nodes.CreateDeviceNodes(rootfs, mountConfig.DeviceNodes); err != nil {
 		return fmt.Errorf("create device nodes %s", err)
 	}
-	if err := SetupPtmx(rootfs, console, MountConfig.MountLabel); err != nil {
+	if err := SetupPtmx(rootfs, console, mountConfig.MountLabel); err != nil {
 		return err
 	}
 	if err := setupDevSymlinks(rootfs); err != nil {
@@ -60,7 +60,7 @@ func InitializeMountNamespace(rootfs, console string, MountConfig *MountConfig) 
 		return fmt.Errorf("chdir into %s %s", rootfs, err)
 	}
 
-	if MountConfig.NoPivotRoot {
+	if mountConfig.NoPivotRoot {
 		err = MsMoveRoot(rootfs)
 	} else {
 		err = PivotRoot(rootfs)
@@ -69,7 +69,7 @@ func InitializeMountNamespace(rootfs, console string, MountConfig *MountConfig) 
 		return err
 	}
 
-	if MountConfig.ReadonlyFs {
+	if mountConfig.ReadonlyFs {
 		if err := SetReadonly(); err != nil {
 			return fmt.Errorf("set readonly %s", err)
 		}
@@ -82,8 +82,8 @@ func InitializeMountNamespace(rootfs, console string, MountConfig *MountConfig) 
 
 // mountSystem sets up linux specific system mounts like sys, proc, shm, and devpts
 // inside the mount namespace
-func mountSystem(rootfs string, MountConfig *MountConfig) error {
-	for _, m := range newSystemMounts(rootfs, MountConfig.MountLabel, MountConfig.Mounts) {
+func mountSystem(rootfs string, mountConfig *MountConfig) error {
+	for _, m := range newSystemMounts(rootfs, mountConfig.MountLabel, mountConfig.Mounts) {
 		if err := os.MkdirAll(m.path, 0755); err != nil && !os.IsExist(err) {
 			return fmt.Errorf("mkdirall %s %s", m.path, err)
 		}

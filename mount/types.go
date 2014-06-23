@@ -21,7 +21,7 @@ type MountConfig struct {
 	// The device nodes that should be automatically created within the container upon container start.  Note, make sure that the node is marked as allowed in the cgroup as well!
 	DeviceNodes []*devices.Device `json:"device_nodes,omitempty"`
 
-	MountLabel string
+	MountLabel string `json:"mount_label,omitempty"`
 }
 
 type Mount struct {
