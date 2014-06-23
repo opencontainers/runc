@@ -6,8 +6,8 @@ import (
 	"github.com/docker/libcontainer/security/capabilities"
 )
 
-func GetInternalMountSpec(container *Container) *mount.MountSpec {
-	out := &mount.MountSpec{
+func GetInternalMountConfig(container *Container) *mount.MountConfig {
+	out := &mount.MountConfig{
 		NoPivotRoot: container.NoPivotRoot,
 		ReadonlyFs:  container.ReadonlyFs,
 		DeviceNodes: container.DeviceNodes,
