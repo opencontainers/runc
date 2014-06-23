@@ -4,12 +4,28 @@ import (
 	"encoding/json"
 	"os"
 	"testing"
+
+	"github.com/docker/libcontainer/devices"
 )
 
 // Checks whether the expected capability is specified in the capabilities.
 func contains(expected string, values []string) bool {
 	for _, v := range values {
 		if v == expected {
+			return true
+		}
+	}
+	return false
+}
+
+func containsDevice(expected *devices.Device, values []*devices.Device) bool {
+	for _, d := range values {
+		if d.Path == expected.Path &&
+			d.CgroupPermissions == expected.CgroupPermissions &&
+			d.FileMode == expected.FileMode &&
+			d.MajorNumber == expected.MajorNumber &&
+			d.MinorNumber == expected.MinorNumber &&
+			d.Type == expected.Type {
 			return true
 		}
 	}
@@ -90,6 +106,13 @@ func TestContainerJsonFormat(t *testing.T) {
 			}
 
 			break
+		}
+	}
+
+	for _, d := range devices.DefaultSimpleDevices {
+		if !containsDevice(d, container.MountConfig.DeviceNodes) {
+			t.Logf("expected defice configuration for %s", d.Path)
+			t.Fail()
 		}
 	}
 }

@@ -71,7 +71,7 @@ func Init(container *libcontainer.Container, uncleanRootfs, consolePath string, 
 
 	if err := mount.InitializeMountNamespace(rootfs,
 		consolePath,
-		(*mount.MountConfig)(&container.MountConfig)); err != nil {
+		(*mount.MountConfig)(container.MountConfig)); err != nil {
 		return fmt.Errorf("setup mount namespace %s", err)
 	}
 	if container.Hostname != "" {
