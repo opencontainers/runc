@@ -13,7 +13,7 @@ type Network network.Network
 // Container defines configuration options for executing a process inside a contained environment
 type Container struct {
 	// Mount specific options.
-	MountConfig MountConfig `json:"mount_config,omitempty"`
+	MountConfig *MountConfig `json:"mount_config,omitempty"`
 
 	// Hostname optionally sets the container's hostname if provided
 	Hostname string `json:"hostname,omitempty"`
