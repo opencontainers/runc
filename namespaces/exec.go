@@ -19,7 +19,7 @@ import (
 // Move this to libcontainer package.
 // Exec performes setup outside of a namespace so that a container can be
 // executed.  Exec is a high level function for working with container namespaces.
-func Exec(container *libcontainer.Container, term Terminal, rootfs, dataPath string, args []string, createCommand CreateCommand, startCallback func()) (int, error) {
+func Exec(container *libcontainer.Config, term Terminal, rootfs, dataPath string, args []string, createCommand CreateCommand, startCallback func()) (int, error) {
 	var (
 		master  *os.File
 		console string
@@ -105,7 +105,7 @@ func Exec(container *libcontainer.Container, term Terminal, rootfs, dataPath str
 // root: the path to the container json file and information
 // pipe: sync pipe to syncronize the parent and child processes
 // args: the arguemnts to pass to the container to run as the user's program
-func DefaultCreateCommand(container *libcontainer.Container, console, rootfs, dataPath, init string, pipe *os.File, args []string) *exec.Cmd {
+func DefaultCreateCommand(container *libcontainer.Config, console, rootfs, dataPath, init string, pipe *os.File, args []string) *exec.Cmd {
 	// get our binary name from arg0 so we can always reexec ourself
 	env := []string{
 		"console=" + console,
@@ -137,7 +137,7 @@ func DefaultCreateCommand(container *libcontainer.Container, console, rootfs, da
 
 // SetupCgroups applies the cgroup restrictions to the process running in the contaienr based
 // on the container's configuration
-func SetupCgroups(container *libcontainer.Container, nspid int) (cgroups.ActiveCgroup, error) {
+func SetupCgroups(container *libcontainer.Config, nspid int) (cgroups.ActiveCgroup, error) {
 	if container.Cgroups != nil {
 		c := container.Cgroups
 		if systemd.UseSystemd() {
@@ -150,7 +150,7 @@ func SetupCgroups(container *libcontainer.Container, nspid int) (cgroups.ActiveC
 
 // InitializeNetworking creates the container's network stack outside of the namespace and moves
 // interfaces into the container's net namespaces if necessary
-func InitializeNetworking(container *libcontainer.Container, nspid int, pipe *SyncPipe) error {
+func InitializeNetworking(container *libcontainer.Config, nspid int, pipe *SyncPipe) error {
 	context := map[string]string{}
 	for _, config := range container.Networks {
 		strategy, err := network.GetStrategy(config.Type)

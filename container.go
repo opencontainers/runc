@@ -10,8 +10,8 @@ type MountConfig mount.MountConfig
 
 type Network network.Network
 
-// Container defines configuration options for executing a process inside a contained environment
-type Container struct {
+// Config defines configuration options for executing a process inside a contained environment.
+type Config struct {
 	// Mount specific options.
 	MountConfig *MountConfig `json:"mount_config,omitempty"`
 

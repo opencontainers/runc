@@ -32,14 +32,14 @@ func containsDevice(expected *devices.Device, values []*devices.Device) bool {
 	return false
 }
 
-func TestContainerJsonFormat(t *testing.T) {
+func TestConfigJsonFormat(t *testing.T) {
 	f, err := os.Open("sample_configs/attach_to_bridge.json")
 	if err != nil {
 		t.Fatal("Unable to open container.json")
 	}
 	defer f.Close()
 
-	var container *Container
+	var container *Config
 	if err := json.NewDecoder(f).Decode(&container); err != nil {
 		t.Fatalf("failed to decode container config: %s", err)
 	}
