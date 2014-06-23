@@ -12,19 +12,12 @@ func GetInternalMountConfig(container *Container) *mount.MountConfig {
 		ReadonlyFs:  container.ReadonlyFs,
 		DeviceNodes: container.DeviceNodes,
 		MountLabel:  container.Context["mount_label"],
-	}
-	for _, mountFromSpec := range container.Mounts {
-		out.Mounts = append(out.Mounts, mount.Mount{
-			Type:        mountFromSpec.Type,
-			Source:      mountFromSpec.Source,
-			Destination: mountFromSpec.Destination,
-			Writable:    mountFromSpec.Writable,
-			Private:     mountFromSpec.Private})
+		Mounts:      (mount.Mounts)(container.Mounts),
 	}
 	return out
 }
 
-func GetInternalNetworkSpec(net *Network) *network.Network {
+func GetInternalNetworkConfig(net *Network) *network.Network {
 	return &network.Network{
 		Type:       net.Type,
 		NsPath:     net.Context["nspath"],

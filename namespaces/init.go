@@ -166,7 +166,7 @@ func setupNetwork(container *libcontainer.Container, context map[string]string) 
 			return err
 		}
 
-		err1 := strategy.Initialize(libcontainer.GetInternalNetworkSpec(config), context)
+		err1 := strategy.Initialize(libcontainer.GetInternalNetworkConfig(config), context)
 		if err1 != nil {
 			return err1
 		}

@@ -6,10 +6,9 @@ import (
 	"github.com/docker/libcontainer/mount"
 )
 
-// Reusing internal Mount struct since we don't expect the API and the internal representation to differ much in the future.
 type Mount mount.Mount
 
-type Mounts []Mount
+type Mounts mount.Mounts
 
 type Network struct {
 	// Type sets the networks type, commonly veth and loopback

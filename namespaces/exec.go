@@ -157,7 +157,7 @@ func InitializeNetworking(container *libcontainer.Container, nspid int, pipe *Sy
 		if err != nil {
 			return err
 		}
-		if err := strategy.Create(libcontainer.GetInternalNetworkSpec(config), nspid, context); err != nil {
+		if err := strategy.Create(libcontainer.GetInternalNetworkConfig(config), nspid, context); err != nil {
 			return err
 		}
 	}

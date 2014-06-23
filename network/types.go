@@ -9,13 +9,13 @@ type Network struct {
 	Type string `json:"type,omitempty"`
 
 	// Path to network namespace
-	NsPath string
+	NsPath string `json:"ns_path,omitempty"`
 
 	// The bridge to use.
-	Bridge string
+	Bridge string `json:"bridge,omitempty"`
 
 	// Prefix for the veth interfaces.
-	VethPrefix string
+	VethPrefix string `json:"type,omitempty"`
 
 	// Address contains the IP and mask to set on the network interface
 	Address string `json:"address,omitempty"`
