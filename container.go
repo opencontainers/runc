@@ -6,9 +6,6 @@ import (
 	"github.com/docker/libcontainer/mount"
 )
 
-// Context is a generic key value pair that allows arbatrary data to be sent
-type Context map[string]string
-
 // Reusing internal Mount struct since we don't expect the API and the internal representation to differ much in the future.
 type Mount mount.Mount
 
@@ -20,7 +17,7 @@ type Network struct {
 
 	// Context is a generic key value format for setting additional options that are specific to
 	// the network type
-	Context Context `json:"context,omitempty"`
+	Context map[string]string `json:"context,omitempty"`
 
 	// Address contains the IP and mask to set on the network interface
 	Address string `json:"address,omitempty"`
@@ -90,8 +87,8 @@ type Container struct {
 	// on the container's creation
 	// This is commonly used to specify apparmor profiles, selinux labels, and different restrictions
 	// placed on the container's processes
-	// TODO(vishh): Strongtype this.
-	Context Context `json:"context,omitempty"`
+	// TODO(vishh): Avoid overloading this field with params for different subsystems. Strongtype this.
+	Context map[string]string `json:"context,omitempty"`
 }
 
 // Routes can be specified to create entries in the route table as the container is started
