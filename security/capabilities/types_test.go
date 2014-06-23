@@ -10,10 +10,10 @@ func TestCapabilitiesContains(t *testing.T) {
 		GetCapability("SETPCAP"),
 	}
 
-	if caps.Contains("SYS_ADMIN") {
+	if caps.contains("SYS_ADMIN") {
 		t.Fatal("capabilities should not contain SYS_ADMIN")
 	}
-	if !caps.Contains("MKNOD") {
+	if !caps.contains("MKNOD") {
 		t.Fatal("capabilities should contain MKNOD but does not")
 	}
 }
