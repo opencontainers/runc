@@ -3,18 +3,14 @@ package libcontainer
 import (
 	"github.com/docker/libcontainer/cgroups"
 	"github.com/docker/libcontainer/devices"
+	"github.com/docker/libcontainer/mount"
 )
 
 // Context is a generic key value pair that allows arbatrary data to be sent
 type Context map[string]string
 
-type Mount struct {
-	Type        string `json:"type,omitempty"`
-	Source      string `json:"source,omitempty"`      // Source path, in the host namespace
-	Destination string `json:"destination,omitempty"` // Destination path, in the container
-	Writable    bool   `json:"writable,omitempty"`
-	Private     bool   `json:"private,omitempty"`
-}
+// Reusing internal Mount struct since we don't expect the API and the internal representation to differ much in the future.
+type Mount mount.Mount
 
 type Mounts []Mount
 
