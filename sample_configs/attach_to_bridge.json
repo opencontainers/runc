@@ -200,10 +200,8 @@
         },
         {
             "address": "172.17.0.101/16",
-            "context": {
-                "bridge": "docker0",
-                "prefix": "veth"
-            },
+            "bridge": "docker0",
+            "veth_prefix": "veth",
             "gateway": "172.17.42.1",
             "mtu": 1500,
             "type": "veth"

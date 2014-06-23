@@ -15,7 +15,7 @@ type Network struct {
 	Bridge string `json:"bridge,omitempty"`
 
 	// Prefix for the veth interfaces.
-	VethPrefix string `json:"type,omitempty"`
+	VethPrefix string `json:"veth_prefix,omitempty"`
 
 	// Address contains the IP and mask to set on the network interface
 	Address string `json:"address,omitempty"`
