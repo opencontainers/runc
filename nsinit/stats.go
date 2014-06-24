@@ -21,7 +21,7 @@ func statsAction(context *cli.Context) {
 		log.Fatal(err)
 	}
 
-	runtimeCkpt, err := libcontainer.GetRuntimeCkpt(dataPath)
+	runtimeCkpt, err := libcontainer.GetState(dataPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -35,8 +35,8 @@ func statsAction(context *cli.Context) {
 }
 
 // returns the container stats in json format.
-func getContainerStats(container *libcontainer.Config, runtimeCkpt *libcontainer.RuntimeCkpt) (string, error) {
-	stats, err := libcontainer.GetContainerStats(container, runtimeCkpt)
+func getContainerStats(container *libcontainer.Config, state *libcontainer.State) (string, error) {
+	stats, err := libcontainer.GetContainerStats(container, state)
 	if err != nil {
 		return "", err
 	}

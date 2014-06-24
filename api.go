@@ -6,14 +6,14 @@ import (
 )
 
 // Returns all available stats for the given container.
-func GetContainerStats(container *Config, runtimeCkpt *RuntimeCkpt) (*ContainerStats, error) {
+func GetContainerStats(container *Config, state *State) (*ContainerStats, error) {
 	containerStats := NewContainerStats()
 	stats, err := fs.GetStats(container.Cgroups)
 	if err != nil {
 		return containerStats, err
 	}
 	containerStats.CgroupStats = stats
-	networkStats, err := network.GetStats(&runtimeCkpt.NetworkCkpt)
+	networkStats, err := network.GetStats(&state.NetworkState)
 	if err != nil {
 		return containerStats, err
 	}

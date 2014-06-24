@@ -57,18 +57,6 @@ func Exec(container *libcontainer.Config, term Terminal, rootfs, dataPath string
 		return -1, err
 	}
 
-	state := &libcontainer.State{
-		InitPid:       command.Process.Pid,
-		InitStartTime: started,
-	}
-
-	if err := libcontainer.SaveState(dataPath, state); err != nil {
-		command.Process.Kill()
-		command.Wait()
-		return -1, err
-	}
-	defer libcontainer.DeleteState(dataPath)
-
 	// Do this before syncing with child so that no children
 	// can escape the cgroup
 	cleaner, err := SetupCgroups(container, command.Process.Pid)
@@ -87,12 +75,18 @@ func Exec(container *libcontainer.Config, term Terminal, rootfs, dataPath string
 		return -1, err
 	}
 
-	// Update the runtime checkpoint.
-	if err = libcontainer.UpdateRuntimeCkpt(dataPath); err != nil {
+	state := &libcontainer.State{
+		InitPid:       command.Process.Pid,
+		InitStartTime: started,
+		NetworkState:  *network.NetworkStateImpl.GetNetworkState(),
+	}
+
+	if err := libcontainer.SaveState(dataPath, state); err != nil {
 		command.Process.Kill()
 		command.Wait()
 		return -1, err
 	}
+	defer libcontainer.DeleteState(dataPath)
 
 	// Sync with child
 	syncPipe.Close()

@@ -45,10 +45,10 @@ func (v *Veth) Create(n *Network, nspid int, context map[string]string, dataPath
 	if err := SetInterfaceInNamespacePid(name2, nspid); err != nil {
 		return err
 	}
-	networkCkpt := NetworkCkptImpl.GetNetworkCkpt()
-	networkCkpt.VethHost = name1
-	networkCkpt.VethChild = name2
-	NetworkCkptImpl.updateNetworkCkpt(networkCkpt)
+	networkState := NetworkStateImpl.GetNetworkState()
+	networkState.VethHost = name1
+	networkState.VethChild = name2
+	NetworkStateImpl.updateNetworkState(networkState)
 	return nil
 }
 
