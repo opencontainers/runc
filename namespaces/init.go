@@ -27,7 +27,7 @@ import (
 // Move this to libcontainer package.
 // Init is the init process that first runs inside a new namespace to setup mounts, users, networking,
 // and other options required for the new container.
-func Init(container *libcontainer.Container, uncleanRootfs, consolePath string, syncPipe *SyncPipe, args []string) error {
+func Init(container *libcontainer.Config, uncleanRootfs, consolePath string, syncPipe *SyncPipe, args []string) error {
 	rootfs, err := utils.ResolveRootfs(uncleanRootfs)
 	if err != nil {
 		return err
@@ -161,7 +161,7 @@ func SetupUser(u string) error {
 // setupVethNetwork uses the Network config if it is not nil to initialize
 // the new veth interface inside the container for use by changing the name to eth0
 // setting the MTU and IP address along with the default gateway
-func setupNetwork(container *libcontainer.Container, context map[string]string) error {
+func setupNetwork(container *libcontainer.Config, context map[string]string) error {
 	for _, config := range container.Networks {
 		strategy, err := network.GetStrategy(config.Type)
 		if err != nil {
@@ -176,7 +176,7 @@ func setupNetwork(container *libcontainer.Container, context map[string]string) 
 	return nil
 }
 
-func setupRoute(container *libcontainer.Container) error {
+func setupRoute(container *libcontainer.Config) error {
 	for _, config := range container.Routes {
 		if err := netlink.AddRoute(config.Destination, config.Source, config.Gateway, config.InterfaceName); err != nil {
 			return err
@@ -188,7 +188,7 @@ func setupRoute(container *libcontainer.Container) error {
 // FinalizeNamespace drops the caps, sets the correct user
 // and working dir, and closes any leaky file descriptors
 // before execing the command inside the namespace
-func FinalizeNamespace(container *libcontainer.Container) error {
+func FinalizeNamespace(container *libcontainer.Config) error {
 	// Ensure that all non-standard fds we may have accidentally
 	// inherited are marked close-on-exec so they stay out of the
 	// container
@@ -228,7 +228,7 @@ func FinalizeNamespace(container *libcontainer.Container) error {
 	return nil
 }
 
-func LoadContainerEnvironment(container *libcontainer.Container) error {
+func LoadContainerEnvironment(container *libcontainer.Config) error {
 	os.Clearenv()
 	for _, pair := range container.Env {
 		p := strings.SplitN(pair, "=", 2)
