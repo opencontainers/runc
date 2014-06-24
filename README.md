@@ -19,10 +19,10 @@ process are specified in this file.  The configuration is used for each process 
 
 See the `sample_configs` folder for examples of what the container configuration should look like.
 
-Using this configuration and the current directory holding the rootfs for a process, one can use libcontainer to exec the container. Running the life of the namespace, a `pid` file 
-is written to the current directory with the pid of the namespaced process to the external world.  A client can use this pid to wait, kill, or perform other operation with the container.  If a user tries to run a new process inside an existing container with a live namespace, the namespace will be joined by the new process.
+Using this configuration and the current directory holding the rootfs for a process, one can use libcontainer to exec the container. During the life of the container, a `state.json` file 
+is written to the current directory with the pid and start time of the container's PID1.  A client can use this pid to wait, kill, or perform other operation with the container.  If a user tries to run a new process inside an existing container with a live namespace, the namespace will be joined by the new process.
 
-You may also specify an alternate root place where the `container.json` file is read and where the `pid` file will be saved.
+You may also specify an alternate root place where the `container.json` file is read and where the `state.json` file will be saved.
 
 #### nsinit
 
@@ -38,7 +38,6 @@ nsinit exec /bin/bash
 If you wish to spawn another process inside the container while your current bash session is 
 running just run the exact same command again to get another bash shell or change the command.  If the original process dies, PID 1, all other processes spawned inside the container will also be killed and the namespace will be removed. 
 
-You can identify if a process is running in a container by looking to see if `pid` is in the root of the directory.   
 #### Future
 See the [roadmap](ROADMAP.md).
 
