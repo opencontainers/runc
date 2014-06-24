@@ -87,6 +87,13 @@ func Exec(container *libcontainer.Config, term Terminal, rootfs, dataPath string
 		return -1, err
 	}
 
+	// Update the runtime checkpoint.
+	if err = libcontainer.UpdateRuntimeCkpt(dataPath); err != nil {
+		command.Process.Kill()
+		command.Wait()
+		return -1, err
+	}
+
 	// Sync with child
 	syncPipe.Close()
 

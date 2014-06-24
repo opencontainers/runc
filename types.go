@@ -1,4 +1,4 @@
-package api
+package libcontainer
 
 import (
 	"github.com/docker/libcontainer/cgroups"

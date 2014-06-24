@@ -20,12 +20,12 @@ type NetworkStats struct {
 }
 
 // Returns the network statistics for the network interfaces represented by the NetworkRuntimeInfo.
-func GetStats(networkRuntimeInfo *NetworkRuntimeInfo) (NetworkStats, error) {
+func GetStats(networkCkpt *NetworkCkpt) (NetworkStats, error) {
 	// This can happen if the network runtime information is missing - possible if the container was created by an old version of libcontainer.
-	if networkRuntimeInfo.VethHost == "" {
+	if networkCkpt.VethHost == "" {
 		return NetworkStats{}, nil
 	}
-	data, err := readSysfsNetworkStats(networkRuntimeInfo.VethHost)
+	data, err := readSysfsNetworkStats(networkCkpt.VethHost)
 	if err != nil {
 		return NetworkStats{}, err
 	}

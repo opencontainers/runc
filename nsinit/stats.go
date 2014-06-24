@@ -7,8 +7,6 @@ import (
 
 	"github.com/codegangsta/cli"
 	"github.com/docker/libcontainer"
-	"github.com/docker/libcontainer/api"
-	"github.com/docker/libcontainer/network"
 )
 
 var statsCommand = cli.Command{
@@ -23,12 +21,12 @@ func statsAction(context *cli.Context) {
 		log.Fatal(err)
 	}
 
-	networkRuntimeInfo, err := loadNetworkRuntimeInfo()
+	runtimeCkpt, err := libcontainer.GetRuntimeCkpt(dataPath)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	stats, err := getContainerStats(container, &networkRuntimeInfo)
+	stats, err := getContainerStats(container, runtimeCkpt)
 	if err != nil {
 		log.Fatalf("Failed to get stats - %v\n", err)
 	}
@@ -37,8 +35,8 @@ func statsAction(context *cli.Context) {
 }
 
 // returns the container stats in json format.
-func getContainerStats(container *libcontainer.Config, networkRuntimeInfo *network.NetworkRuntimeInfo) (string, error) {
-	stats, err := libcontainer.GetContainerStats(container, networkRuntimeInfo)
+func getContainerStats(container *libcontainer.Config, runtimeCkpt *libcontainer.RuntimeCkpt) (string, error) {
+	stats, err := libcontainer.GetContainerStats(container, runtimeCkpt)
 	if err != nil {
 		return "", err
 	}

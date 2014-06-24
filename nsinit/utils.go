@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 
 	"github.com/docker/libcontainer"
-	"github.com/docker/libcontainer/network"
 )
 
 func loadContainer() (*libcontainer.Config, error) {
@@ -23,17 +22,6 @@ func loadContainer() (*libcontainer.Config, error) {
 	}
 
 	return container, nil
-}
-
-func loadNetworkRuntimeInfo() (network.NetworkRuntimeInfo, error) {
-	data, err := network.LoadNetworkRuntimeInfo(dataPath)
-	if err != nil {
-		if err == network.ErrNetworkRuntimeInfoNotFound {
-			return network.NetworkRuntimeInfo{}, nil
-		}
-		return network.NetworkRuntimeInfo{}, err
-	}
-	return data, nil
 }
 
 func openLog(name string) error {
