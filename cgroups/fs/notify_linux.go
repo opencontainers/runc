@@ -13,7 +13,7 @@ import (
 
 // NotifyOnOOM sends signals on the returned channel when the cgroup reaches
 // its memory limit. The channel is closed when the cgroup is removed.
-func NotifyOnOOM(c *cgroups.Cgroup) (chan struct{}, error) {
+func NotifyOnOOM(c *cgroups.Cgroup) (<-chan struct{}, error) {
 	d, err := getCgroupData(c, 0)
 	if err != nil {
 		return nil, err
@@ -22,7 +22,7 @@ func NotifyOnOOM(c *cgroups.Cgroup) (chan struct{}, error) {
 	return notifyOnOOM(d)
 }
 
-func notifyOnOOM(d *data) (chan struct{}, error) {
+func notifyOnOOM(d *data) (<-chan struct{}, error) {
 	dir, err := d.path("memory")
 	if err != nil {
 		return nil, err
@@ -43,8 +43,7 @@ func notifyOnOOM(d *data) (chan struct{}, error) {
 
 	var (
 		eventControlPath = filepath.Join(dir, "cgroup.event_control")
-
-		data = fmt.Sprintf("%d %d", eventfd.Fd(), oomControl.Fd())
+		data             = fmt.Sprintf("%d %d", eventfd.Fd(), oomControl.Fd())
 	)
 
 	if err := writeFile(dir, "cgroup.event_control", data); err != nil {
@@ -56,11 +55,13 @@ func notifyOnOOM(d *data) (chan struct{}, error) {
 	ch := make(chan struct{})
 
 	go func() {
-		defer close(ch)
-		defer eventfd.Close()
-		defer oomControl.Close()
+		defer func() {
+			close(ch)
+			eventfd.Close()
+			oomControl.Close()
+		}()
 
-		var buf = make([]byte, 8)
+		buf := make([]byte, 8)
 
 		for {
 			if _, err := eventfd.Read(buf); err != nil {
