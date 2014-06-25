@@ -56,12 +56,18 @@ func Exec(container *libcontainer.Config, term Terminal, rootfs, dataPath string
 	if err != nil {
 		return -1, err
 	}
-	if err := WritePid(dataPath, command.Process.Pid, started); err != nil {
+
+	state := &libcontainer.State{
+		InitPid:       command.Process.Pid,
+		InitStartTime: started,
+	}
+
+	if err := libcontainer.SaveState(dataPath, state); err != nil {
 		command.Process.Kill()
 		command.Wait()
 		return -1, err
 	}
-	defer DeletePid(dataPath)
+	defer libcontainer.DeleteState(dataPath)
 
 	// Do this before syncing with child so that no children
 	// can escape the cgroup
