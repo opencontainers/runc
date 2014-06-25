@@ -62,7 +62,7 @@ func Exec(container *libcontainer.Config, term Terminal, rootfs, dataPath string
 		Pid1StartTime: started,
 	}
 
-	if err := libcontainer.WriteState(dataPath, state); err != nil {
+	if err := libcontainer.SaveState(dataPath, state); err != nil {
 		command.Process.Kill()
 		command.Wait()
 		return -1, err

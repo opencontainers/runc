@@ -14,9 +14,9 @@ type State struct {
 	Pid1StartTime string `json:"pid1_start_time,omitempty"`
 }
 
-// WriteState writes the container's runtime state to a state.json file
+// SaveState writes the container's runtime state to a state.json file
 // in the specified path
-func WriteState(basePath string, state *State) error {
+func SaveState(basePath string, state *State) error {
 	f, err := os.Create(filepath.Join(basePath, "state.json"))
 	if err != nil {
 		return err
@@ -26,8 +26,8 @@ func WriteState(basePath string, state *State) error {
 	return json.NewEncoder(f).Encode(state)
 }
 
-// LoadState reads the state.json file for a running container
-func LoadState(basePath string) (*State, error) {
+// GetState reads the state.json file for a running container
+func GetState(basePath string) (*State, error) {
 	f, err := os.Open(filepath.Join(basePath, "state.json"))
 	if err != nil {
 		return nil, err

@@ -26,7 +26,7 @@ func execAction(context *cli.Context) {
 		log.Fatal(err)
 	}
 
-	state, err := libcontainer.LoadState(dataPath)
+	state, err := libcontainer.GetState(dataPath)
 	if err != nil && !os.IsNotExist(err) {
 		log.Fatalf("unable to read state.json: %s", err)
 	}
