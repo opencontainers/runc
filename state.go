@@ -8,10 +8,10 @@ import (
 
 // State represents a running container's state
 type State struct {
-	// Pid1 is the process id for the container's pid 1 in it's parent namespace
-	Pid1 int `json:"pid1,omitempty"`
-	// Pid1StartTime is the process start time for the container's pid 1
-	Pid1StartTime string `json:"pid1_start_time,omitempty"`
+	// InitPid is the init process id in the parent namespace
+	InitPid int `json:"init_pid,omitempty"`
+	// InitStartTime is the init process start time
+	InitStartTime string `json:"init_start_time,omitempty"`
 }
 
 // SaveState writes the container's runtime state to a state.json file

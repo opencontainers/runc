@@ -22,7 +22,7 @@ func ExecIn(container *libcontainer.Config, state *libcontainer.State, args []st
 	}
 
 	// Enter the namespace and then finish setup
-	finalArgs := []string{os.Args[0], "nsenter", "--nspid", strconv.Itoa(state.Pid1), "--containerjson", string(containerJson), "--"}
+	finalArgs := []string{os.Args[0], "nsenter", "--nspid", strconv.Itoa(state.InitPid), "--containerjson", string(containerJson), "--"}
 	finalArgs = append(finalArgs, args...)
 	if err := system.Execv(finalArgs[0], finalArgs[0:], os.Environ()); err != nil {
 		return err
