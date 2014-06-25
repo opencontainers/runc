@@ -74,6 +74,7 @@ func Init(container *libcontainer.Config, uncleanRootfs, consolePath string, syn
 		(*mount.MountConfig)(container.MountConfig)); err != nil {
 		return fmt.Errorf("setup mount namespace %s", err)
 	}
+
 	if container.Hostname != "" {
 		if err := system.Sethostname(container.Hostname); err != nil {
 			return fmt.Errorf("sethostname %s", err)
@@ -82,13 +83,16 @@ func Init(container *libcontainer.Config, uncleanRootfs, consolePath string, syn
 
 	runtime.LockOSThread()
 
-	if err := apparmor.ApplyProfile(container.Context["apparmor_profile"]); err != nil {
-		return fmt.Errorf("set apparmor profile %s: %s", container.Context["apparmor_profile"], err)
+	if err := apparmor.ApplyProfile(container.AppArmorProfile); err != nil {
+		return fmt.Errorf("set apparmor profile %s: %s", container.AppArmorProfile, err)
 	}
-	if err := label.SetProcessLabel(container.Context["process_label"]); err != nil {
+
+	if err := label.SetProcessLabel(container.ProcessLabel); err != nil {
 		return fmt.Errorf("set process label %s", err)
 	}
-	if container.Context["restrictions"] != "" {
+
+	// TODO: (crosbymichael) make this configurable at the Config level
+	if container.RestrictSys {
 		if err := restrict.Restrict("proc/sys", "proc/sysrq-trigger", "proc/irq", "proc/bus", "sys"); err != nil {
 			return err
 		}

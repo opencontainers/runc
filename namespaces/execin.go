@@ -41,8 +41,8 @@ func NsEnter(container *libcontainer.Config, nspid int, args []string) error {
 		return err
 	}
 
-	if process_label, ok := container.Context["process_label"]; ok {
-		if err := label.SetProcessLabel(process_label); err != nil {
+	if container.ProcessLabel != "" {
+		if err := label.SetProcessLabel(container.ProcessLabel); err != nil {
 			return err
 		}
 	}
