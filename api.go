@@ -6,7 +6,7 @@ import (
 )
 
 // Returns all available stats for the given container.
-func GetContainerStats(container *Config, state *State) (*ContainerStats, error) {
+func GetStats(container *Config, state *State) (*ContainerStats, error) {
 	var containerStats ContainerStats
 	stats, err := fs.GetStats(container.Cgroups)
 	if err != nil {

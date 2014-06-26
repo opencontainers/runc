@@ -30,14 +30,16 @@ func GetStats(networkState *NetworkState) (NetworkStats, error) {
 		return NetworkStats{}, err
 	}
 
-	return NetworkStats{RxBytes: data["rx_bytes"],
+	return NetworkStats{
+		RxBytes:   data["rx_bytes"],
 		RxPackets: data["rx_packets"],
 		RxErrors:  data["rx_errors"],
 		RxDropped: data["rx_dropped"],
 		TxBytes:   data["tx_bytes"],
 		TxPackets: data["tx_packets"],
 		TxErrors:  data["tx_errors"],
-		TxDropped: data["tx_dropped"]}, nil
+		TxDropped: data["tx_dropped"],
+	}, nil
 }
 
 // Reads all the statistics available under /sys/class/net/<EthInterface>/statistics as a map with file name as key and data as integers.
