@@ -17,7 +17,7 @@ import (
 
 // TODO(vishh): This is part of the libcontainer API and it does much more than just namespaces related work.
 // Move this to libcontainer package.
-// Exec performes setup outside of a namespace so that a container can be
+// Exec performs setup outside of a namespace so that a container can be
 // executed.  Exec is a high level function for working with container namespaces.
 func Exec(container *libcontainer.Config, term Terminal, rootfs, dataPath string, args []string, createCommand CreateCommand, startCallback func()) (int, error) {
 	var (
@@ -107,10 +107,10 @@ func Exec(container *libcontainer.Config, term Terminal, rootfs, dataPath string
 // args provided
 //
 // console: the /dev/console to setup inside the container
-// init: the progam executed inside the namespaces
+// init: the program executed inside the namespaces
 // root: the path to the container json file and information
-// pipe: sync pipe to syncronize the parent and child processes
-// args: the arguemnts to pass to the container to run as the user's program
+// pipe: sync pipe to synchronize the parent and child processes
+// args: the arguments to pass to the container to run as the user's program
 func DefaultCreateCommand(container *libcontainer.Config, console, rootfs, dataPath, init string, pipe *os.File, args []string) *exec.Cmd {
 	// get our binary name from arg0 so we can always reexec ourself
 	env := []string{
@@ -141,7 +141,7 @@ func DefaultCreateCommand(container *libcontainer.Config, console, rootfs, dataP
 	return command
 }
 
-// SetupCgroups applies the cgroup restrictions to the process running in the contaienr based
+// SetupCgroups applies the cgroup restrictions to the process running in the container based
 // on the container's configuration
 func SetupCgroups(container *libcontainer.Config, nspid int) (cgroups.ActiveCgroup, error) {
 	if container.Cgroups != nil {
