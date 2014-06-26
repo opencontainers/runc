@@ -40,7 +40,7 @@ func Init(container *libcontainer.Config, uncleanRootfs, consolePath string, syn
 	}
 
 	// We always read this as it is a way to sync with the parent as well
-	context, err := syncPipe.ReadFromParent()
+	networkState, err := syncPipe.ReadFromParent()
 	if err != nil {
 		syncPipe.Close()
 		return err
@@ -60,7 +60,7 @@ func Init(container *libcontainer.Config, uncleanRootfs, consolePath string, syn
 			return fmt.Errorf("setctty %s", err)
 		}
 	}
-	if err := setupNetwork(container, context); err != nil {
+	if err := setupNetwork(container, networkState); err != nil {
 		return fmt.Errorf("setup networking %s", err)
 	}
 	if err := setupRoute(container); err != nil {
@@ -165,14 +165,14 @@ func SetupUser(u string) error {
 // setupVethNetwork uses the Network config if it is not nil to initialize
 // the new veth interface inside the container for use by changing the name to eth0
 // setting the MTU and IP address along with the default gateway
-func setupNetwork(container *libcontainer.Config, context map[string]string) error {
+func setupNetwork(container *libcontainer.Config, networkState *network.NetworkState) error {
 	for _, config := range container.Networks {
 		strategy, err := network.GetStrategy(config.Type)
 		if err != nil {
 			return err
 		}
 
-		err1 := strategy.Initialize((*network.Network)(config), context)
+		err1 := strategy.Initialize((*network.Network)(config), networkState)
 		if err1 != nil {
 			return err1
 		}

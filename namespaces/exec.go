@@ -57,18 +57,6 @@ func Exec(container *libcontainer.Config, term Terminal, rootfs, dataPath string
 		return -1, err
 	}
 
-	state := &libcontainer.State{
-		InitPid:       command.Process.Pid,
-		InitStartTime: started,
-	}
-
-	if err := libcontainer.SaveState(dataPath, state); err != nil {
-		command.Process.Kill()
-		command.Wait()
-		return -1, err
-	}
-	defer libcontainer.DeleteState(dataPath)
-
 	// Do this before syncing with child so that no children
 	// can escape the cgroup
 	cleaner, err := SetupCgroups(container, command.Process.Pid)
@@ -81,11 +69,25 @@ func Exec(container *libcontainer.Config, term Terminal, rootfs, dataPath string
 		defer cleaner.Cleanup()
 	}
 
-	if err := InitializeNetworking(container, command.Process.Pid, syncPipe); err != nil {
+	var networkState network.NetworkState
+	if err := InitializeNetworking(container, command.Process.Pid, syncPipe, &networkState); err != nil {
 		command.Process.Kill()
 		command.Wait()
 		return -1, err
 	}
+
+	state := &libcontainer.State{
+		InitPid:       command.Process.Pid,
+		InitStartTime: started,
+		NetworkState:  networkState,
+	}
+
+	if err := libcontainer.SaveState(dataPath, state); err != nil {
+		command.Process.Kill()
+		command.Wait()
+		return -1, err
+	}
+	defer libcontainer.DeleteState(dataPath)
 
 	// Sync with child
 	syncPipe.Close()
@@ -156,18 +158,17 @@ func SetupCgroups(container *libcontainer.Config, nspid int) (cgroups.ActiveCgro
 
 // InitializeNetworking creates the container's network stack outside of the namespace and moves
 // interfaces into the container's net namespaces if necessary
-func InitializeNetworking(container *libcontainer.Config, nspid int, pipe *SyncPipe) error {
-	context := map[string]string{}
+func InitializeNetworking(container *libcontainer.Config, nspid int, pipe *SyncPipe, networkState *network.NetworkState) error {
 	for _, config := range container.Networks {
 		strategy, err := network.GetStrategy(config.Type)
 		if err != nil {
 			return err
 		}
-		if err := strategy.Create((*network.Network)(config), nspid, context); err != nil {
+		if err := strategy.Create((*network.Network)(config), nspid, networkState); err != nil {
 			return err
 		}
 	}
-	return pipe.SendToChild(context)
+	return pipe.SendToChild(networkState)
 }
 
 // GetNamespaceFlags parses the container's Namespaces options to set the correct

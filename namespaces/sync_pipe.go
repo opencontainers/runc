@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+
+	"github.com/docker/libcontainer/network"
 )
 
 // SyncPipe allows communication to and from the child processes
@@ -43,8 +45,8 @@ func (s *SyncPipe) Parent() *os.File {
 	return s.parent
 }
 
-func (s *SyncPipe) SendToChild(context map[string]string) error {
-	data, err := json.Marshal(context)
+func (s *SyncPipe) SendToChild(networkState *network.NetworkState) error {
+	data, err := json.Marshal(networkState)
 	if err != nil {
 		return err
 	}
@@ -52,18 +54,18 @@ func (s *SyncPipe) SendToChild(context map[string]string) error {
 	return nil
 }
 
-func (s *SyncPipe) ReadFromParent() (map[string]string, error) {
+func (s *SyncPipe) ReadFromParent() (*network.NetworkState, error) {
 	data, err := ioutil.ReadAll(s.child)
 	if err != nil {
 		return nil, fmt.Errorf("error reading from sync pipe %s", err)
 	}
-	var context map[string]string
+	var networkState *network.NetworkState
 	if len(data) > 0 {
-		if err := json.Unmarshal(data, &context); err != nil {
+		if err := json.Unmarshal(data, &networkState); err != nil {
 			return nil, err
 		}
 	}
-	return context, nil
+	return networkState, nil
 
 }
 
