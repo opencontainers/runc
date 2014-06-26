@@ -44,11 +44,8 @@ func GetStats(networkState *NetworkState) (NetworkStats, error) {
 func readSysfsNetworkStats(ethInterface string) (map[string]uint64, error) {
 	out := make(map[string]uint64)
 
-	fullPath, err := filepath.Abs(filepath.Join("/sys/class/net", ethInterface, "statistics/"))
-	if err != nil {
-		return out, nil
-	}
-	err = filepath.Walk(fullPath, func(path string, _ os.FileInfo, _ error) error {
+	fullPath := filepath.Join("/sys/class/net", ethInterface, "statistics/")
+	err := filepath.Walk(fullPath, func(path string, _ os.FileInfo, _ error) error {
 		// skip fullPath.
 		if path == fullPath {
 			return nil
