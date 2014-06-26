@@ -24,6 +24,7 @@ func NewSyncPipe() (s *SyncPipe, err error) {
 	if err != nil {
 		return nil, err
 	}
+
 	s.child = os.NewFile(uintptr(fds[0]), "child syncpipe")
 	s.parent = os.NewFile(uintptr(fds[1]), "parent syncpipe")
 
@@ -32,6 +33,7 @@ func NewSyncPipe() (s *SyncPipe, err error) {
 
 func NewSyncPipeFromFd(parendFd, childFd uintptr) (*SyncPipe, error) {
 	s := &SyncPipe{}
+
 	if parendFd > 0 {
 		s.parent = os.NewFile(parendFd, "parendPipe")
 	} else if childFd > 0 {
@@ -39,6 +41,7 @@ func NewSyncPipeFromFd(parendFd, childFd uintptr) (*SyncPipe, error) {
 	} else {
 		return nil, fmt.Errorf("no valid sync pipe fd specified")
 	}
+
 	return s, nil
 }
 
@@ -65,9 +68,11 @@ func (s *SyncPipe) ReadFromChild() error {
 	if err != nil {
 		return err
 	}
+
 	if len(data) > 0 {
-		return fmt.Errorf("Child error: %s", string(data))
+		return fmt.Errorf("%s", data)
 	}
+
 	return nil
 }
 
@@ -83,7 +88,6 @@ func (s *SyncPipe) ReadFromParent() (*network.NetworkState, error) {
 		}
 	}
 	return networkState, nil
-
 }
 
 func (s *SyncPipe) ReportChildError(err error) {
@@ -95,9 +99,11 @@ func (s *SyncPipe) Close() error {
 	if s.parent != nil {
 		s.parent.Close()
 	}
+
 	if s.child != nil {
 		s.child.Close()
 	}
+
 	return nil
 }
 
