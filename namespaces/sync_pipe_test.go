@@ -3,6 +3,8 @@ package namespaces
 import (
 	"fmt"
 	"testing"
+
+	"github.com/docker/libcontainer/network"
 )
 
 func TestSendErrorFromChild(t *testing.T) {
@@ -44,7 +46,7 @@ func TestSendPayloadToChild(t *testing.T) {
 
 	expected := "libcontainer"
 
-	if err := pipe.SendToChild(map[string]string{"name": expected}); err != nil {
+	if err := pipe.SendToChild(&network.NetworkState{VethHost: expected}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -53,11 +55,7 @@ func TestSendPayloadToChild(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if len(payload) != 1 {
-		t.Fatalf("expected to only have one value in the payload but received %d", len(payload))
-	}
-
-	if name := payload["name"]; name != expected {
-		t.Fatalf("expected name %q but received %q", expected, name)
+	if payload.VethHost != expected {
+		t.Fatalf("expected veth host %q but received %q", expected, payload.VethHost)
 	}
 }
