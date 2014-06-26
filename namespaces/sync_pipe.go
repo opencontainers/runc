@@ -17,11 +17,11 @@ type SyncPipe struct {
 	parent, child *os.File
 }
 
-func NewSyncPipeFromFd(parendFd, childFd uintptr) (*SyncPipe, error) {
+func NewSyncPipeFromFd(parentFd, childFd uintptr) (*SyncPipe, error) {
 	s := &SyncPipe{}
 
-	if parendFd > 0 {
-		s.parent = os.NewFile(parendFd, "parendPipe")
+	if parentFd > 0 {
+		s.parent = os.NewFile(parentFd, "parentPipe")
 	} else if childFd > 0 {
 		s.child = os.NewFile(childFd, "childPipe")
 	} else {
