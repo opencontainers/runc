@@ -30,7 +30,7 @@ func main() {
 		execCommand,
 		initCommand,
 		statsCommand,
-		specCommand,
+		configCommand,
 		nsenterCommand,
 	}
 
