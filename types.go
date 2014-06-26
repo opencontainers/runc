@@ -9,8 +9,3 @@ type ContainerStats struct {
 	NetworkStats network.NetworkStats `json:"network_stats, omitempty"`
 	CgroupStats  *cgroups.Stats       `json:"cgroup_stats, omitempty"`
 }
-
-func NewContainerStats() *ContainerStats {
-	cgroupStats := cgroups.NewStats()
-	return &ContainerStats{CgroupStats: cgroupStats}
-}
