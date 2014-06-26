@@ -44,9 +44,10 @@ func (s *SyncPipe) SendToChild(networkState *network.NetworkState) error {
 	if err != nil {
 		return err
 	}
+
 	s.parent.Write(data)
-	syscall.Shutdown(int(s.parent.Fd()), syscall.SHUT_WR)
-	return nil
+
+	return syscall.Shutdown(int(s.parent.Fd()), syscall.SHUT_WR)
 }
 
 func (s *SyncPipe) ReadFromChild() error {
