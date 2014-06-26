@@ -60,10 +60,10 @@ func (s *SyncPipe) SendToChild(networkState *network.NetworkState) error {
 	return nil
 }
 
-func (s *SyncPipe) BlockOnChild() error {
+func (s *SyncPipe) ReadFromChild() error {
 	data, err := ioutil.ReadAll(s.parent)
 	if err != nil {
-		return nil
+		return err
 	}
 	if len(data) > 0 {
 		return fmt.Errorf("Child error: %s", string(data))
@@ -86,7 +86,7 @@ func (s *SyncPipe) ReadFromParent() (*network.NetworkState, error) {
 
 }
 
-func (s *SyncPipe) ReportError(err error) {
+func (s *SyncPipe) ReportChildError(err error) {
 	s.child.Write([]byte(err.Error()))
 	s.CloseChild()
 }

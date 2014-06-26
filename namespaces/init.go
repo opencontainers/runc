@@ -30,7 +30,7 @@ import (
 func Init(container *libcontainer.Config, uncleanRootfs, consolePath string, syncPipe *SyncPipe, args []string) (err error) {
 	defer func() {
 		if err != nil {
-			syncPipe.ReportError(err)
+			syncPipe.ReportChildError(err)
 		}
 	}()
 
