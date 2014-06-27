@@ -32,6 +32,8 @@ func main() {
 		statsCommand,
 		configCommand,
 		nsenterCommand,
+		pauseCommand,
+		unpauseCommand,
 	}
 
 	if err := app.Run(os.Args); err != nil {
