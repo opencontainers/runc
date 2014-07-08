@@ -10,7 +10,6 @@ import (
 
 // TODO(vmarmol): Complete Stats() in final libcontainer API and move users to that.
 // DEPRECATED: The below portions are only to be used during the transition to the official API.
-
 // Returns all available stats for the given container.
 func GetStats(container *Config, state *State) (*ContainerStats, error) {
 	var containerStats ContainerStats
