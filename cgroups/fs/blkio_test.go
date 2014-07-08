@@ -86,8 +86,8 @@ func TestBlkioStatsNoSectorsFile(t *testing.T) {
 
 	blkio := &blkioGroup{}
 	err := blkio.GetStats(helper.CgroupData, &actualStats)
-	if err == nil {
-		t.Fatal("Expected to fail, but did not")
+	if err != nil {
+		t.Fatalf("Failed unexpectedly: %s", err)
 	}
 }
 
@@ -102,8 +102,8 @@ func TestBlkioStatsNoServiceBytesFile(t *testing.T) {
 
 	blkio := &blkioGroup{}
 	err := blkio.GetStats(helper.CgroupData, &actualStats)
-	if err == nil {
-		t.Fatal("Expected to fail, but did not")
+	if err != nil {
+		t.Fatalf("Failed unexpectedly: %s", err)
 	}
 }
 
@@ -118,8 +118,8 @@ func TestBlkioStatsNoServicedFile(t *testing.T) {
 
 	blkio := &blkioGroup{}
 	err := blkio.GetStats(helper.CgroupData, &actualStats)
-	if err == nil {
-		t.Fatal("Expected to fail, but did not")
+	if err != nil {
+		t.Fatalf("Failed unexpectedly: %s", err)
 	}
 }
 
@@ -134,8 +134,8 @@ func TestBlkioStatsNoQueuedFile(t *testing.T) {
 
 	blkio := &blkioGroup{}
 	err := blkio.GetStats(helper.CgroupData, &actualStats)
-	if err == nil {
-		t.Fatal("Expected to fail, but did not")
+	if err != nil {
+		t.Fatalf("Failed unexpectedly: %s", err)
 	}
 }
 
