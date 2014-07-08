@@ -43,8 +43,8 @@ func TestMemoryStatsNoStatFile(t *testing.T) {
 
 	memory := &memoryGroup{}
 	err := memory.GetStats(helper.CgroupData, &actualStats)
-	if err == nil {
-		t.Fatal("Expected failure")
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 
