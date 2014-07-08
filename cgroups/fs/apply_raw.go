@@ -52,6 +52,14 @@ func Apply(c *cgroups.Cgroup, pid int) (cgroups.ActiveCgroup, error) {
 	return d, nil
 }
 
+func Cleanup(c *cgroups.Cgroup) error {
+	d, err := getCgroupData(c, 0)
+	if err != nil {
+		return fmt.Errorf("Could not get Cgroup data %s", err)
+	}
+	return d.Cleanup()
+}
+
 func GetStats(c *cgroups.Cgroup) (*cgroups.Stats, error) {
 	stats := cgroups.NewStats()
 
