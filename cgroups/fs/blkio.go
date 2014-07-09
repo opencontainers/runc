@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
 
 	"github.com/docker/libcontainer/cgroups"
 )
@@ -66,7 +65,7 @@ func getBlkioStat(path string) ([]cgroups.BlkioStatEntry, error) {
 	var blkioStats []cgroups.BlkioStatEntry
 	f, err := os.Open(path)
 	if err != nil {
-		if pathErr, ok := err.(*os.PathError); ok && pathErr.Err == syscall.ENOENT {
+		if os.IsNotExist(err) {
 			return blkioStats, nil
 		}
 		return nil, err
