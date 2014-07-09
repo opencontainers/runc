@@ -18,7 +18,7 @@ var createCommand = cli.Command{
 	Name:  "create",
 	Usage: "Create a cgroup container using the supplied configuration and initial process.",
 	Flags: []cli.Flag{
-		cli.StringFlag{"config, c", "cgroup.json", "path to container configuration"},
+		cli.StringFlag{"config, c", "cgroup.json", "path to container configuration (cgroups.Cgroup object)"},
 		cli.IntFlag{"pid, p", 0, "pid of the initial process in the container"},
 	},
 	Action: createAction,
@@ -74,7 +74,7 @@ var psCommand = cli.Command{
 	Action: psAction,
 }
 
-func loadConfig(c *cli.Context) (*cgroups.Cgroup, error) {
+func getConfigFromFile(c *cli.Context) (*cgroups.Cgroup, error) {
 	f, err := os.Open(c.String("config"))
 	if err != nil {
 		return nil, err
@@ -115,7 +115,6 @@ func killAll(config *cgroups.Cgroup) {
 	// to kill everything. But going with more portable solution of retrying for
 	// now.
 	pids := getPids(config)
-	killPids(pids)
 	retry := 10
 	for len(pids) != 0 || retry > 0 {
 		killPids(pids)
@@ -160,7 +159,7 @@ func setFreezerState(context *cli.Context, state cgroups.FreezerState) {
 }
 
 func createAction(context *cli.Context) {
-	config, err := loadConfig(context)
+	config, err := getConfigFromFile(context)
 	if err != nil {
 		log.Fatal(err)
 	}
