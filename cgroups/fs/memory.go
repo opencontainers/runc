@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"syscall"
 
 	"github.com/docker/libcontainer/cgroups"
 )
@@ -61,7 +60,7 @@ func (s *memoryGroup) GetStats(d *data, stats *cgroups.Stats) error {
 	// Set stats from memory.stat.
 	statsFile, err := os.Open(filepath.Join(path, "memory.stat"))
 	if err != nil {
-		if pathErr, ok := err.(*os.PathError); ok && pathErr.Err == syscall.ENOENT {
+		if os.IsNotExist(err) {
 			return nil
 		}
 		return err
