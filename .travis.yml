@@ -21,5 +21,5 @@ install:
 script:
     - if [ "$TRAVIS_GLOBAL_WTF" ]; then bash "$DOCKER_PATH/hack/make/validate-dco"; fi
     - if [ "$TRAVIS_GLOBAL_WTF" ]; then bash "$DOCKER_PATH/hack/make/validate-gofmt"; fi
-    - if [ -z "$TRAVIS_GLOBAL_WTF" ]; then go build -v; fi
-    - if [ -z "$TRAVIS_GLOBAL_WTF" ]; then go test -v; fi
+    - if [ -z "$TRAVIS_GLOBAL_WTF" ]; then go build -v ./...; fi
+    - if [ -z "$TRAVIS_GLOBAL_WTF" ]; then go test -v ./...; fi
