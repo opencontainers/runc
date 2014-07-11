@@ -75,6 +75,7 @@ func GetStats(c *cgroups.Cgroup) (*cgroups.Stats, error) {
 			if err == cgroups.ErrNotFound {
 				continue
 			}
+
 			return nil, err
 		}
 

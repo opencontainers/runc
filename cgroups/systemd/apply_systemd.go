@@ -422,6 +422,11 @@ func GetStats(c *cgroups.Cgroup) (*cgroups.Stats, error) {
 	for sysname, sys := range subsystems {
 		subsystemPath, err := getSubsystemPath(c, sysname)
 		if err != nil {
+			// Don't fail if a cgroup hierarchy was not found, just skip this subsystem
+			if err == cgroups.ErrNotFound {
+				continue
+			}
+
 			return nil, err
 		}
 
