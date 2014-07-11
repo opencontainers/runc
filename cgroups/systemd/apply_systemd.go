@@ -32,7 +32,7 @@ var (
 	connLock              sync.Mutex
 	theConn               *systemd1.Conn
 	hasStartTransientUnit bool
-	subsystems = map[string]subsystem{
+	subsystems            = map[string]subsystem{
 		"devices":    &fs.DevicesGroup{},
 		"memory":     &fs.MemoryGroup{},
 		"cpu":        &fs.CpuGroup{},
@@ -417,15 +417,14 @@ func getUnitName(c *cgroups.Cgroup) string {
  * http://www.freedesktop.org/wiki/Software/systemd/ControlGroupInterface/#readingaccountinginformation.
  */
 func GetStats(c *cgroups.Cgroup) (*cgroups.Stats, error) {
-	var subsystemPath string
-	var err error
-
 	stats := cgroups.NewStats()
 
 	for sysname, sys := range subsystems {
-		if subsystemPath, err = getSubsystemPath(c, sysname); err != nil {
+		subsystemPath, err := getSubsystemPath(c, sysname)
+		if err != nil {
 			return nil, err
 		}
+
 		if err := sys.GetStats(subsystemPath, stats); err != nil {
 			return nil, err
 		}
