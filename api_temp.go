@@ -5,6 +5,7 @@ package libcontainer
 
 import (
 	"github.com/docker/libcontainer/cgroups/fs"
+	"github.com/docker/libcontainer/cgroups/systemd"
 	"github.com/docker/libcontainer/network"
 )
 
@@ -12,17 +13,22 @@ import (
 // DEPRECATED: The below portions are only to be used during the transition to the official API.
 // Returns all available stats for the given container.
 func GetStats(container *Config, state *State) (*ContainerStats, error) {
-	var containerStats ContainerStats
-	stats, err := fs.GetStats(container.Cgroups)
-	if err != nil {
-		return &containerStats, err
-	}
-	containerStats.CgroupStats = stats
-	networkStats, err := network.GetStats(&state.NetworkState)
-	if err != nil {
-		return &containerStats, err
-	}
-	containerStats.NetworkStats = networkStats
+	var (
+		err   error
+		stats = &ContainerStats{}
+	)
 
-	return &containerStats, nil
+	if systemd.UseSystemd() {
+		stats.CgroupStats, err = systemd.GetStats(container.Cgroups)
+	} else {
+		stats.CgroupStats, err = fs.GetStats(container.Cgroups)
+	}
+
+	if err != nil {
+		return stats, err
+	}
+
+	stats.NetworkStats, err = network.GetStats(&state.NetworkState)
+
+	return stats, err
 }
