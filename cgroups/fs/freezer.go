@@ -1,8 +1,6 @@
 package fs
 
 import (
-	"io/ioutil"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -47,24 +45,6 @@ func (s *FreezerGroup) Remove(d *data) error {
 	return removePath(d.path("freezer"))
 }
 
-func getFreezerFileData(path string) (string, error) {
-	data, err := ioutil.ReadFile(path)
-	return strings.TrimSuffix(string(data), "\n"), err
-}
-
 func (s *FreezerGroup) GetStats(path string, stats *cgroups.Stats) error {
-	var (
-		data string
-		err  error
-	)
-	if data, err = getFreezerFileData(filepath.Join(path, "freezer.parent_freezing")); err != nil {
-		return err
-	}
-	stats.FreezerStats.ParentState = data
-	if data, err = getFreezerFileData(filepath.Join(path, "freezer.self_freezing")); err != nil {
-		return err
-	}
-	stats.FreezerStats.SelfState = data
-
 	return nil
 }
