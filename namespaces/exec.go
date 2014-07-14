@@ -14,7 +14,7 @@ import (
 	consolePkg "github.com/docker/libcontainer/console"
 	"github.com/docker/libcontainer/network"
 	"github.com/docker/libcontainer/syncpipe"
-	"github.com/dotcloud/docker/pkg/system"
+	"github.com/docker/libcontainer/system"
 )
 
 // TODO(vishh): This is part of the libcontainer API and it does much more than just namespaces related work.
