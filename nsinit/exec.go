@@ -2,13 +2,16 @@ package nsinit
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
 	"os/signal"
+	"syscall"
 
 	"github.com/codegangsta/cli"
 	"github.com/docker/libcontainer"
+	consolepkg "github.com/docker/libcontainer/console"
 	"github.com/docker/libcontainer/namespaces"
 )
 
@@ -34,8 +37,7 @@ func execAction(context *cli.Context) {
 	if state != nil {
 		err = namespaces.ExecIn(container, state, []string(context.Args()))
 	} else {
-		term := namespaces.NewTerminal(os.Stdin, os.Stdout, os.Stderr, container.Tty)
-		exitCode, err = startContainer(container, term, dataPath, []string(context.Args()))
+		exitCode, err = startContainer(container, dataPath, []string(context.Args()))
 	}
 
 	if err != nil {
@@ -49,7 +51,7 @@ func execAction(context *cli.Context) {
 // error.
 //
 // Signals sent to the current process will be forwarded to container.
-func startContainer(container *libcontainer.Config, term namespaces.Terminal, dataPath string, args []string) (int, error) {
+func startContainer(container *libcontainer.Config, dataPath string, args []string) (int, error) {
 	var (
 		cmd  *exec.Cmd
 		sigc = make(chan os.Signal, 10)
@@ -73,5 +75,28 @@ func startContainer(container *libcontainer.Config, term namespaces.Terminal, da
 		}()
 	}
 
-	return namespaces.Exec(container, term, "", dataPath, args, createCommand, startCallback)
+	var (
+		stdin  = os.Stdin
+		stdout = os.Stdout
+		stderr = os.Stderr
+	)
+
+	if container.Tty {
+		master, slavePath, err := consolepkg.CreateMasterAndConsole()
+		if err != nil {
+			return -1, err
+		}
+
+		slave, err := consolepkg.OpenTerminal(slavePath, syscall.O_RDWR)
+		if err != nil {
+			return -1, err
+		}
+
+		stdin, stdout, stderr = slave, slave, slave
+
+		go io.Copy(master, os.Stdin)
+		go io.Copy(os.Stdout, master)
+	}
+
+	return namespaces.Exec(container, stdin, stdout, stderr, "", dataPath, args, createCommand, startCallback)
 }

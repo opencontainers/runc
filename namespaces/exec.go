@@ -3,6 +3,7 @@
 package namespaces
 
 import (
+	"io"
 	"os"
 	"os/exec"
 	"syscall"
@@ -11,7 +12,6 @@ import (
 	"github.com/docker/libcontainer/cgroups"
 	"github.com/docker/libcontainer/cgroups/fs"
 	"github.com/docker/libcontainer/cgroups/systemd"
-	consolePkg "github.com/docker/libcontainer/console"
 	"github.com/docker/libcontainer/network"
 	"github.com/docker/libcontainer/syncpipe"
 	"github.com/docker/libcontainer/system"
@@ -21,9 +21,8 @@ import (
 // Move this to libcontainer package.
 // Exec performs setup outside of a namespace so that a container can be
 // executed.  Exec is a high level function for working with container namespaces.
-func Exec(container *libcontainer.Config, term Terminal, rootfs, dataPath string, args []string, createCommand CreateCommand, startCallback func()) (int, error) {
+func Exec(container *libcontainer.Config, stdin io.Reader, stdout, stderr io.Writer, rootfs, dataPath string, args []string, createCommand CreateCommand, startCallback func()) (int, error) {
 	var (
-		master  *os.File
 		console string
 		err     error
 	)
@@ -36,20 +35,15 @@ func Exec(container *libcontainer.Config, term Terminal, rootfs, dataPath string
 	}
 	defer syncPipe.Close()
 
-	if container.Tty {
-		master, console, err = consolePkg.CreateMasterAndConsole()
-		if err != nil {
-			return -1, err
-		}
-		term.SetMaster(master)
+	if f, ok := stdin.(*os.File); ok {
+		console = f.Name()
 	}
 
 	command := createCommand(container, console, rootfs, dataPath, os.Args[0], syncPipe.Child(), args)
 
-	if err := term.Attach(command); err != nil {
-		return -1, err
-	}
-	defer term.Close()
+	command.Stdin = stdin
+	command.Stdout = stdout
+	command.Stderr = stderr
 
 	if err := command.Start(); err != nil {
 		return -1, err

@@ -90,13 +90,16 @@ func CreateMasterAndConsole() (*os.File, string, error) {
 	if err != nil {
 		return nil, "", err
 	}
+
 	console, err := Ptsname(master)
 	if err != nil {
 		return nil, "", err
 	}
+
 	if err := Unlockpt(master); err != nil {
 		return nil, "", err
 	}
+
 	return master, console, nil
 }
 
