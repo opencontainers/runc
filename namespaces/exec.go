@@ -11,9 +11,10 @@ import (
 	"github.com/docker/libcontainer/cgroups"
 	"github.com/docker/libcontainer/cgroups/fs"
 	"github.com/docker/libcontainer/cgroups/systemd"
+	consolePkg "github.com/docker/libcontainer/console"
 	"github.com/docker/libcontainer/network"
 	"github.com/docker/libcontainer/syncpipe"
-	"github.com/dotcloud/docker/pkg/system"
+	"github.com/docker/libcontainer/system"
 )
 
 // TODO(vishh): This is part of the libcontainer API and it does much more than just namespaces related work.
@@ -36,7 +37,7 @@ func Exec(container *libcontainer.Config, term Terminal, rootfs, dataPath string
 	defer syncPipe.Close()
 
 	if container.Tty {
-		master, console, err = system.CreateMasterAndConsole()
+		master, console, err = consolePkg.CreateMasterAndConsole()
 		if err != nil {
 			return -1, err
 		}
@@ -110,6 +111,7 @@ func Exec(container *libcontainer.Config, term Terminal, rootfs, dataPath string
 			return -1, err
 		}
 	}
+
 	return command.ProcessState.Sys().(syscall.WaitStatus).ExitStatus(), nil
 }
 
@@ -145,7 +147,11 @@ func DefaultCreateCommand(container *libcontainer.Config, console, rootfs, dataP
 	command.Dir = rootfs
 	command.Env = append(os.Environ(), env...)
 
-	system.SetCloneFlags(command, uintptr(GetNamespaceFlags(container.Namespaces)))
+	if command.SysProcAttr == nil {
+		command.SysProcAttr = &syscall.SysProcAttr{}
+	}
+	command.SysProcAttr.Cloneflags = uintptr(GetNamespaceFlags(container.Namespaces))
+
 	command.SysProcAttr.Pdeathsig = syscall.SIGKILL
 	command.ExtraFiles = []*os.File{pipe}
 
@@ -157,11 +163,14 @@ func DefaultCreateCommand(container *libcontainer.Config, console, rootfs, dataP
 func SetupCgroups(container *libcontainer.Config, nspid int) (cgroups.ActiveCgroup, error) {
 	if container.Cgroups != nil {
 		c := container.Cgroups
+
 		if systemd.UseSystemd() {
 			return systemd.Apply(c, nspid)
 		}
+
 		return fs.Apply(c, nspid)
 	}
+
 	return nil, nil
 }
 
