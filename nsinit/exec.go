@@ -69,26 +69,24 @@ func startContainer(container *libcontainer.Config, dataPath string, args []stri
 	}
 
 	var (
-		master    *os.File
-		slavePath string
-		err       error
-		stdin     = os.Stdin
-		stdout    = os.Stdout
-		stderr    = os.Stderr
+		master  *os.File
+		console string
+		err     error
+
+		stdin  = os.Stdin
+		stdout = os.Stdout
+		stderr = os.Stderr
 	)
 
 	if container.Tty {
-		master, slavePath, err = consolepkg.CreateMasterAndConsole()
+		stdin = nil
+		stdout = nil
+		stderr = nil
+
+		master, console, err = consolepkg.CreateMasterAndConsole()
 		if err != nil {
 			return -1, err
 		}
-
-		slave, err := consolepkg.OpenTerminal(slavePath, syscall.O_RDWR|syscall.O_NOCTTY)
-		if err != nil {
-			return -1, err
-		}
-
-		stdin, stdout, stderr = slave, slave, slave
 
 		go io.Copy(master, os.Stdin)
 		go io.Copy(os.Stdout, master)
@@ -116,7 +114,7 @@ func startContainer(container *libcontainer.Config, dataPath string, args []stri
 		}()
 	}
 
-	return namespaces.Exec(container, stdin, stdout, stderr, "", dataPath, args, createCommand, startCallback)
+	return namespaces.Exec(container, stdin, stdout, stderr, console, "", dataPath, args, createCommand, startCallback)
 }
 
 func resizeTty(master *os.File) {
