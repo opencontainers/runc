@@ -68,22 +68,17 @@ func startContainer(container *libcontainer.Config, dataPath string, args []stri
 		return cmd
 	}
 
-	startCallback := func() {
-		go func() {
-			for sig := range sigc {
-				cmd.Process.Signal(sig)
-			}
-		}()
-	}
-
 	var (
-		stdin  = os.Stdin
-		stdout = os.Stdout
-		stderr = os.Stderr
+		master    *os.File
+		slavePath string
+		err       error
+		stdin     = os.Stdin
+		stdout    = os.Stdout
+		stderr    = os.Stderr
 	)
 
 	if container.Tty {
-		master, slavePath, err := consolepkg.CreateMasterAndConsole()
+		master, slavePath, err = consolepkg.CreateMasterAndConsole()
 		if err != nil {
 			return -1, err
 		}
@@ -98,19 +93,43 @@ func startContainer(container *libcontainer.Config, dataPath string, args []stri
 		go io.Copy(master, os.Stdin)
 		go io.Copy(os.Stdout, master)
 
-		ws, err := term.GetWinsize(os.Stdin.Fd())
+		state, err := term.SetRawTerminal(os.Stdin.Fd())
 		if err != nil {
 			return -1, err
 		}
 
-		if err := term.SetWinsize(master.Fd(), ws); err != nil {
-			return -1, err
-		}
+		defer term.RestoreTerminal(os.Stdin.Fd(), state)
+	}
 
-		if _, err := term.SetRawTerminal(os.Stdin.Fd()); err != nil {
-			return -1, err
-		}
+	startCallback := func() {
+		go func() {
+			resizeTty(master)
+
+			for sig := range sigc {
+				switch sig {
+				case syscall.SIGWINCH:
+					resizeTty(master)
+				default:
+					cmd.Process.Signal(sig)
+				}
+			}
+		}()
 	}
 
 	return namespaces.Exec(container, stdin, stdout, stderr, "", dataPath, args, createCommand, startCallback)
+}
+
+func resizeTty(master *os.File) {
+	if master == nil {
+		return
+	}
+
+	ws, err := term.GetWinsize(os.Stdin.Fd())
+	if err != nil {
+		return
+	}
+
+	if err := term.SetWinsize(master.Fd(), ws); err != nil {
+		return
+	}
 }
