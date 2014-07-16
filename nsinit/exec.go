@@ -13,6 +13,7 @@ import (
 	"github.com/docker/libcontainer"
 	consolepkg "github.com/docker/libcontainer/console"
 	"github.com/docker/libcontainer/namespaces"
+	"github.com/dotcloud/docker/pkg/term"
 )
 
 var execCommand = cli.Command{
@@ -87,7 +88,7 @@ func startContainer(container *libcontainer.Config, dataPath string, args []stri
 			return -1, err
 		}
 
-		slave, err := consolepkg.OpenTerminal(slavePath, syscall.O_RDWR)
+		slave, err := consolepkg.OpenTerminal(slavePath, syscall.O_RDWR|syscall.O_NOCTTY)
 		if err != nil {
 			return -1, err
 		}
@@ -96,6 +97,19 @@ func startContainer(container *libcontainer.Config, dataPath string, args []stri
 
 		go io.Copy(master, os.Stdin)
 		go io.Copy(os.Stdout, master)
+
+		ws, err := term.GetWinsize(os.Stdin.Fd())
+		if err != nil {
+			return -1, err
+		}
+
+		if err := term.SetWinsize(master.Fd(), ws); err != nil {
+			return -1, err
+		}
+
+		if _, err := term.SetRawTerminal(os.Stdin.Fd()); err != nil {
+			return -1, err
+		}
 	}
 
 	return namespaces.Exec(container, stdin, stdout, stderr, "", dataPath, args, createCommand, startCallback)
