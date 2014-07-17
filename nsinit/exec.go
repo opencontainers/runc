@@ -23,7 +23,19 @@ var execCommand = cli.Command{
 }
 
 func execAction(context *cli.Context) {
-	var exitCode int
+	var (
+		exitCode int
+		master  *os.File
+		console string
+		err     error
+
+		stdin  = os.Stdin
+		stdout = os.Stdout
+		stderr = os.Stderr
+		sigc = make(chan os.Signal, 10)
+	)
+
+	signal.Notify(sigc)
 
 	container, err := loadContainer()
 	if err != nil {
@@ -35,8 +47,44 @@ func execAction(context *cli.Context) {
 		log.Fatalf("unable to read state.json: %s", err)
 	}
 
+	if container.Tty {
+		stdin = nil
+		stdout = nil
+		stderr = nil
+
+		master, console, err = consolepkg.CreateMasterAndConsole()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		go io.Copy(master, os.Stdin)
+		go io.Copy(os.Stdout, master)
+
+		state, err := term.SetRawTerminal(os.Stdin.Fd())
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		defer term.RestoreTerminal(os.Stdin.Fd(), state)
+	}
+
+	startCallback := func(cmd *exec.Cmd) {
+		go func() {
+			resizeTty(master)
+
+			for sig := range sigc {
+				switch sig {
+				case syscall.SIGWINCH:
+					resizeTty(master)
+				default:
+					cmd.Process.Signal(sig)
+				}
+			}
+		}()
+	}
+
 	if state != nil {
-		err = namespaces.ExecIn(container, state, []string(context.Args()))
+		exitCode, err = namespaces.RunIn(container, state, []string(context.Args()), os.Args[0], stdin, stdout, stderr, console, startCallback)
 	} else {
 		exitCode, err = startContainer(container, dataPath, []string(context.Args()))
 	}
