@@ -6,9 +6,11 @@ sudo: false
 
 env:
     - TRAVIS_GLOBAL_WTF=1
-    - _GOOS=linux _GOARCH=amd64
-    - _GOOS=linux _GOARCH=386 # CGO_ENABLED=1 # TODO add this once Travis can handle it (ie, has the headers and stuff we need - see https://travis-ci.org/tianon/libcontainer/jobs/30126518#L167 "pkg/runtime/cgo/cgo.go:26:46: fatal error: sys/types.h: No such file or directory")
-#    - _GOOS=linux _GOARCH=arm # see https://github.com/moovweb/gvm/issues/22
+    - _GOOS=linux _GOARCH=amd64 CGO_ENABLED=1
+    - _GOOS=linux _GOARCH=amd64 CGO_ENABLED=0
+#    - _GOOS=linux _GOARCH=386 CGO_ENABLED=1 # TODO add this once Travis can handle it (https://github.com/travis-ci/travis-ci/issues/2207#issuecomment-49625061)
+    - _GOOS=linux _GOARCH=386 CGO_ENABLED=0
+#    - _GOOS=linux _GOARCH=arm CGO_ENABLED=0 # TODO add this once GVM supports it properly (https://github.com/moovweb/gvm/pull/92)
 
 install:
     - mkdir -pv "${GOPATH%%:*}/src/github.com/docker" && [ -d "${GOPATH%%:*}/src/github.com/docker/libcontainer" ] || ln -sv "$(readlink -f .)" "${GOPATH%%:*}/src/github.com/docker/libcontainer"
