@@ -23,19 +23,7 @@ var execCommand = cli.Command{
 }
 
 func execAction(context *cli.Context) {
-	var (
-		exitCode int
-		master  *os.File
-		console string
-		err     error
-
-		stdin  = os.Stdin
-		stdout = os.Stdout
-		stderr = os.Stderr
-		sigc = make(chan os.Signal, 10)
-	)
-
-	signal.Notify(sigc)
+	var exitCode int
 
 	container, err := loadContainer()
 	if err != nil {
@@ -46,6 +34,33 @@ func execAction(context *cli.Context) {
 	if err != nil && !os.IsNotExist(err) {
 		log.Fatalf("unable to read state.json: %s", err)
 	}
+
+	if state != nil {
+		exitCode, err = runIn(container, state, []string(context.Args()))
+	} else {
+		exitCode, err = startContainer(container, dataPath, []string(context.Args()))
+	}
+
+	if err != nil {
+		log.Fatalf("failed to exec: %s", err)
+	}
+
+	os.Exit(exitCode)
+}
+
+func runIn(container *libcontainer.Config, state *libcontainer.State, args []string) (int, error) {
+	var (
+		master  *os.File
+		console string
+		err     error
+
+		stdin  = os.Stdin
+		stdout = os.Stdout
+		stderr = os.Stderr
+		sigc   = make(chan os.Signal, 10)
+	)
+
+	signal.Notify(sigc)
 
 	if container.Tty {
 		stdin = nil
@@ -83,17 +98,7 @@ func execAction(context *cli.Context) {
 		}()
 	}
 
-	if state != nil {
-		exitCode, err = namespaces.RunIn(container, state, []string(context.Args()), os.Args[0], stdin, stdout, stderr, console, startCallback)
-	} else {
-		exitCode, err = startContainer(container, dataPath, []string(context.Args()))
-	}
-
-	if err != nil {
-		log.Fatalf("failed to exec: %s", err)
-	}
-
-	os.Exit(exitCode)
+	return namespaces.RunIn(container, state, args, os.Args[0], stdin, stdout, stderr, console, startCallback)
 }
 
 // startContainer starts the container. Returns the exit status or -1 and an
