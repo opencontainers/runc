@@ -6,6 +6,10 @@ import (
 )
 
 func TestCreateBridgeWithMac(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+
 	name := "testbridge"
 
 	if err := CreateBridge(name, true); err != nil {
@@ -28,6 +32,10 @@ func TestCreateBridgeWithMac(t *testing.T) {
 }
 
 func TestCreateVethPair(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+
 	var (
 		name1 = "veth1"
 		name2 = "veth2"
