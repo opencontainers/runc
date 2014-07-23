@@ -7,4 +7,4 @@ ADD . /go/src/github.com/docker/libcontainer
 WORKDIR /go/src/github.com/docker/libcontainer
 RUN go get -d ./... && go install ./...
 
-CMD ["go", "test", "-v", "-cover", "./..."]
+CMD ["go", "test", "-cover", "./..."]
