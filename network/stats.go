@@ -30,15 +30,16 @@ func GetStats(networkState *NetworkState) (*NetworkStats, error) {
 		return nil, err
 	}
 
+	// Ingress for host veth is from the container. Hence tx_bytes stat on the host veth is actually number of bytes received by the container.
 	return &NetworkStats{
-		RxBytes:   data["rx_bytes"],
-		RxPackets: data["rx_packets"],
-		RxErrors:  data["rx_errors"],
-		RxDropped: data["rx_dropped"],
-		TxBytes:   data["tx_bytes"],
-		TxPackets: data["tx_packets"],
-		TxErrors:  data["tx_errors"],
-		TxDropped: data["tx_dropped"],
+		RxBytes:   data["tx_bytes"],
+		RxPackets: data["tx_packets"],
+		RxErrors:  data["tx_errors"],
+		RxDropped: data["tx_dropped"],
+		TxBytes:   data["rx_bytes"],
+		TxPackets: data["rx_packets"],
+		TxErrors:  data["rx_errors"],
+		TxDropped: data["rx_dropped"],
 	}, nil
 }
 
