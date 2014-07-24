@@ -7,4 +7,4 @@ test:
 	docker run --rm --cap-add NET_ADMIN --cap-add SYS_ADMIN docker/libcontainer
 
 sh:
-	docker run -ti -w /busybox --rm --cap-add NET_ADMIN --cap-add SYS_ADMIN docker/libcontainer nsinit exec sh
+	docker run --rm -ti -w /busybox --rm --cap-add NET_ADMIN --cap-add SYS_ADMIN docker/libcontainer nsinit exec sh
