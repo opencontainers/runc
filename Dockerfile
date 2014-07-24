@@ -7,7 +7,7 @@ RUN go get code.google.com/p/go.tools/cmd/cover
 RUN mkdir /busybox && \
     curl -sSL 'https://github.com/jpetazzo/docker-busybox/raw/buildroot-2014.02/rootfs.tar' | tar -xC /busybox
 
-RUN curl -sSL https://raw.githubusercontent.com/dotcloud/docker/master/hack/dind -o /dind && \
+RUN curl -sSL https://raw.githubusercontent.com/docker/docker/master/hack/dind -o /dind && \
     chmod +x /dind
 
 COPY . /go/src/github.com/docker/libcontainer

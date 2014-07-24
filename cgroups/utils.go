@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/dotcloud/docker/pkg/mount"
+	"github.com/docker/docker/pkg/mount"
 )
 
 // https://www.kernel.org/doc/Documentation/cgroups/cgroups.txt
