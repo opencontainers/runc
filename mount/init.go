@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"syscall"
 
+	"github.com/docker/docker/pkg/symlink"
 	"github.com/docker/libcontainer/label"
 	"github.com/docker/libcontainer/mount/nodes"
-	"github.com/dotcloud/docker/pkg/symlink"
 )
 
 // default mount point flags

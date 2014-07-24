@@ -10,10 +10,10 @@ import (
 	"syscall"
 
 	"github.com/codegangsta/cli"
+	"github.com/docker/docker/pkg/term"
 	"github.com/docker/libcontainer"
 	consolepkg "github.com/docker/libcontainer/console"
 	"github.com/docker/libcontainer/namespaces"
-	"github.com/dotcloud/docker/pkg/term"
 )
 
 var execCommand = cli.Command{
