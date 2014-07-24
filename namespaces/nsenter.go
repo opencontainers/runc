@@ -135,6 +135,10 @@ void nsenter() {
 		snprintf(buf, PATH_MAX - 1, "%s%s", ns_dir, namespaces[i]);
 		int fd = open(buf, O_RDONLY);
 		if (fd == -1) {
+			// Ignore nonexistent namespaces.
+			if (errno == ENOENT)
+				continue;
+
 			fprintf(stderr, "nsenter: Failed to open ns file \"%s\" for ns \"%s\" with error: \"%s\"\n", buf, namespaces[i], strerror(errno));
 			exit(1);
 		}
