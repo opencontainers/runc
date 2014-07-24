@@ -136,7 +136,7 @@ void nsenter() {
         if (console != NULL) {
                consolefd = open(console, O_RDWR);
                if (consolefd < 0) {
-                    fprintf(stderr, "nsenter: failed to open console %s\n", console, strerror(errno));
+                    fprintf(stderr, "nsenter: failed to open console %s %s\n", console, strerror(errno));
                     exit(1);
               }
         }
