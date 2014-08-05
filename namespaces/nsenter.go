@@ -16,6 +16,7 @@ package namespaces
 #include <getopt.h>
 
 static const kBufSize = 256;
+static const char *kNsEnter = "nsenter";
 
 void get_args(int *argc, char ***argv) {
 	// Read argv
@@ -68,7 +69,7 @@ void print_usage() {
 }
 
 void nsenter() {
-	int argc;
+	int argc, c;
 	char **argv;
 	get_args(&argc, &argv);
 
@@ -76,7 +77,16 @@ void nsenter() {
 	if (argc < 6) {
 		return;
 	}
-
+	int found_nsenter = 0;
+	for (c = 0; c < argc; ++c) {
+		if (strcmp(argv[c], kNsEnter) == 0) {
+			found_nsenter = 1;
+			break;
+		}
+	}
+	if (!found_nsenter) {
+		return;
+	}
 	static const struct option longopts[] = {
 		{ "nspid",	       required_argument, NULL, 'n' },
 		{ "containerjson", required_argument, NULL, 'c' },
@@ -84,7 +94,6 @@ void nsenter() {
 		{ NULL,	       0,		  NULL,	 0  }
 	};
 
-	int c;
 	pid_t init_pid = -1;
 	char *init_pid_str = NULL;
 	char *container_json = NULL;
@@ -104,7 +113,7 @@ void nsenter() {
 		}
 	}
 
-	if (strcmp(argv[optind - 2], "nsenter") != 0) {
+	if (strcmp(argv[optind - 2], kNsEnter) != 0) {
 		return;
 	}
 
@@ -186,6 +195,7 @@ void nsenter() {
 			}
 		}
 
+		fprintf(stderr, "entered namespace\n");
 		// Finish executing, let the Go runtime take over.
 		return;
 	} else {

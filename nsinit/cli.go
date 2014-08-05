@@ -24,7 +24,6 @@ func NsInit() {
 	app.Name = "nsinit"
 	app.Version = "0.1"
 	app.Author = "libcontainer maintainers"
-	// These are local to 'nsenter' but are exposed globally because of namespaces.NsEnter is used by DockerInit which does not understand sub-commands.
 	app.Flags = []cli.Flag{
 		cli.StringFlag{Name: "nspid"},
 		cli.StringFlag{Name: "containerjson"},
