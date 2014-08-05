@@ -195,7 +195,6 @@ void nsenter() {
 			}
 		}
 
-		fprintf(stderr, "entered namespace\n");
 		// Finish executing, let the Go runtime take over.
 		return;
 	} else {
