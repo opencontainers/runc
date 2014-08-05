@@ -39,7 +39,7 @@ func TestCreateBridgeLink(t *testing.T) {
 	name := "mybrlink"
 
 	if err := NetworkLinkAdd(name, "bridge"); err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 
 	if _, err := net.InterfaceByName(name); err != nil {
