@@ -48,3 +48,12 @@ func (s *FreezerGroup) Remove(d *data) error {
 func (s *FreezerGroup) GetStats(path string, stats *cgroups.Stats) error {
 	return nil
 }
+
+func (s *FreezerGroup) Active(d *data) (bool, error) {
+	return true, nil
+}
+
+func (s *FreezerGroup) Enter(path, pid string) error {
+	return writeFile(path, cgroupProcesses, pid)
+}
+

@@ -14,7 +14,7 @@ type MemoryGroup struct {
 
 func (s *MemoryGroup) Set(d *data) error {
 	dir, err := d.join("memory")
-	// only return an error for memory if it was not specified
+	// only return an error for memory if it was specified
 	if err != nil && (d.c.Memory != 0 || d.c.MemoryReservation != 0 || d.c.MemorySwap != 0) {
 		return err
 	}
@@ -89,4 +89,20 @@ func (s *MemoryGroup) GetStats(path string, stats *cgroups.Stats) error {
 	stats.MemoryStats.Failcnt = value
 
 	return nil
+}
+
+func (s *MemoryGroup) Active(d *data) (bool, error) {
+	dir, err := d.path("memory")
+	if err != nil {
+		return false, err
+	}
+	if FileExists(dir) {
+		return true, nil
+	}
+	
+	return false, nil
+}
+
+func (s *MemoryGroup) Enter(path, pid string) error {
+	return writeFile(path, cgroupProcesses, pid)
 }

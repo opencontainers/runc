@@ -12,6 +12,7 @@ import (
 	"syscall"
 
 	"github.com/docker/libcontainer"
+	"github.com/docker/libcontainer/cgroups/fs"
 	"github.com/docker/libcontainer/label"
 	"github.com/docker/libcontainer/syncpipe"
 	"github.com/docker/libcontainer/system"
@@ -21,6 +22,10 @@ import (
 // setns code in a single threaded environment joining the existing containers' namespaces.
 func ExecIn(container *libcontainer.Config, state *libcontainer.State, userArgs []string, initPath, action string,
 	stdin io.Reader, stdout, stderr io.Writer, console string, startCallback func(*exec.Cmd)) (int, error) {
+	// Enter cgroups.
+	if err := EnterCgroups(container); err != nil {
+		return err
+	}
 
 	args := []string{fmt.Sprintf("nsenter-%s", action), "--nspid", strconv.Itoa(state.InitPid)}
 
@@ -101,4 +106,8 @@ func FinalizeSetns(container *libcontainer.Config, args []string) error {
 	}
 
 	panic("unreachable")
+}
+
+func EnterCgroups(container *libcontainer.Config) error {
+	return fs.EnterPid(container.Cgroups, os.Getpid())	
 }

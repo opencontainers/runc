@@ -21,12 +21,15 @@ var (
 		"perf_event": &PerfEventGroup{},
 		"freezer":    &FreezerGroup{},
 	}
+	cgroupProcesses = "cgroup.procs"
 )
 
 type subsystem interface {
-	Set(*data) error
-	Remove(*data) error
+	Active(d *data) (bool, error)
+	Enter(string, string) error
 	GetStats(string, *cgroups.Stats) error
+	Remove(*data) error
+	Set(*data) error
 }
 
 type data struct {
@@ -114,6 +117,36 @@ func GetPids(c *cgroups.Cgroup) ([]int, error) {
 	}
 
 	return cgroups.ReadProcsFile(dir)
+}
+
+func EnterPid(c *cgroups.Cgroup, pid int) error {
+	d, err := getCgroupData(c, 0)
+	if err != nil {
+		return err
+	}
+
+	for sysname, sys := range subsystems {
+		active, err := sys.Active(d)
+		if err != nil {
+			return err
+		}
+		if !active {
+			continue
+		}
+		path, err := d.path(sysname)
+		if err != nil {
+			// Don't fail if a cgroup hierarchy was not found, just skip this subsystem
+			if err == cgroups.ErrNotFound {
+				continue
+			}
+			return err
+		}
+		if err := sys.Enter(path, strconv.FormatInt(int64(pid), 10)); err != nil {
+			return err
+		}
+	}
+	
+	return nil
 }
 
 func getCgroupData(c *cgroups.Cgroup, pid int) (*data, error) {

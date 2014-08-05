@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -37,4 +38,11 @@ func getCgroupParamInt(cgroupPath, cgroupFile string) (uint64, error) {
 		return 0, err
 	}
 	return strconv.ParseUint(strings.TrimSpace(string(contents)), 10, 64)
+}
+
+func FileExists(path string) bool {
+	if _, err := os.Stat(path); err == nil {
+		return true
+	}
+	return false
 }

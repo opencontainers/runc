@@ -32,3 +32,11 @@ func (s *DevicesGroup) Remove(d *data) error {
 func (s *DevicesGroup) GetStats(path string, stats *cgroups.Stats) error {
 	return nil
 }
+
+func (s *DevicesGroup) Active(d *data) (bool, error) {
+	return true, nil
+}
+
+func (s *DevicesGroup) Enter(path, pid string) error {
+	return writeFile(path, cgroupProcesses, pid)
+}

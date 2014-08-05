@@ -70,3 +70,18 @@ func (s *CpuGroup) GetStats(path string, stats *cgroups.Stats) error {
 	}
 	return nil
 }
+
+func (s *CpuGroup) Active(d *data) (bool, error) {
+	dir, err := d.path("cpu")
+	if err != nil {
+		return false, err
+	}
+	if FileExists(dir) {
+		return true, nil
+	}
+	return false, nil
+}
+
+func (s *CpuGroup) Enter(path, pid string) error {
+	return writeFile(path, cgroupProcesses, pid)
+}

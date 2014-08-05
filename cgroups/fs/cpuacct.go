@@ -161,3 +161,11 @@ func getPercpuUsage(path string) ([]uint64, error) {
 	}
 	return percpuUsage, nil
 }
+
+func (s *CpuacctGroup) Active(d *data) (bool, error) {
+	return true, nil
+}
+
+func (s *CpuacctGroup) Enter(path, pid string) error {
+	return writeFile(path, cgroupProcesses, pid)
+}
