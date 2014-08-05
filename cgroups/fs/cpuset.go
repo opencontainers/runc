@@ -108,20 +108,3 @@ func (s *CpusetGroup) copyIfNeeded(current, parent string) error {
 func (s *CpusetGroup) isEmpty(b []byte) bool {
 	return len(bytes.Trim(b, "\n")) == 0
 }
-
-func (s *CpusetGroup) Active(d *data) (bool, error) {
-	if d.c.CpusetCpus != "" {
-		dir, err := d.path("cpuset")
-		if err != nil {
-			return false, err
-		}
-		if FileExists(dir) {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
-func (s *CpusetGroup) Enter(path, pid string) error {
-	return writeFile(path, cgroupProcesses, pid)
-}

@@ -22,11 +22,3 @@ func (s *PerfEventGroup) Remove(d *data) error {
 func (s *PerfEventGroup) GetStats(path string, stats *cgroups.Stats) error {
 	return nil
 }
-
-func (s *PerfEventGroup) Active(d *data) (bool, error) {
-	return true, nil
-}
-
-func (s *PerfEventGroup) Enter(path, pid string) error {
-	return writeFile(path, cgroupProcesses, pid)
-}

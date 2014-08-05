@@ -13,6 +13,7 @@ import (
 
 	"github.com/docker/libcontainer"
 	"github.com/docker/libcontainer/cgroups/fs"
+	"github.com/docker/libcontainer/cgroups/systemd"
 	"github.com/docker/libcontainer/label"
 	"github.com/docker/libcontainer/syncpipe"
 	"github.com/docker/libcontainer/system"
@@ -22,10 +23,6 @@ import (
 // setns code in a single threaded environment joining the existing containers' namespaces.
 func ExecIn(container *libcontainer.Config, state *libcontainer.State, userArgs []string, initPath, action string,
 	stdin io.Reader, stdout, stderr io.Writer, console string, startCallback func(*exec.Cmd)) (int, error) {
-	// Enter cgroups.
-	if err := EnterCgroups(container); err != nil {
-		return err
-	}
 
 	args := []string{fmt.Sprintf("nsenter-%s", action), "--nspid", strconv.Itoa(state.InitPid)}
 
@@ -63,6 +60,11 @@ func ExecIn(container *libcontainer.Config, state *libcontainer.State, userArgs 
 		return -1, err
 	}
 	pipe.CloseChild()
+
+	// Enter cgroups.
+	if err := EnterCgroups(container, cmd.Process.Pid); err != nil {
+		return -1, err
+	}
 
 	if err := pipe.SendToChild(container); err != nil {
 		cmd.Process.Kill()
@@ -108,6 +110,9 @@ func FinalizeSetns(container *libcontainer.Config, args []string) error {
 	panic("unreachable")
 }
 
-func EnterCgroups(container *libcontainer.Config) error {
-	return fs.EnterPid(container.Cgroups, os.Getpid())	
+func EnterCgroups(container *libcontainer.Config, pid int) error {
+	if systemd.UseSystemd() {
+		return systemd.EnterPid(container.Cgroups, pid)
+	}
+	return fs.EnterPid(container.Cgroups, pid)
 }

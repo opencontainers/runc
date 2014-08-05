@@ -437,3 +437,26 @@ func GetStats(c *cgroups.Cgroup) (*cgroups.Stats, error) {
 
 	return stats, nil
 }
+
+func EnterPid(c *cgroups.Cgroup, pid int) error {
+	for sysname := range subsystems {
+		subsystemPath, err := getSubsystemPath(c, sysname)
+		if err != nil {
+			// Don't fail if a cgroup hierarchy was not found, just skip this subsystem
+			if err == cgroups.ErrNotFound {
+				continue
+			}
+
+			return err
+		}
+
+		if fs.PathExists(subsystemPath) {
+			if err := ioutil.WriteFile(filepath.Join(subsystemPath, fs.CgroupProcesses),
+				[]byte(strconv.Itoa(pid)), 0700); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}

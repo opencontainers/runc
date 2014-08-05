@@ -21,14 +21,15 @@ var (
 		"perf_event": &PerfEventGroup{},
 		"freezer":    &FreezerGroup{},
 	}
-	cgroupProcesses = "cgroup.procs"
+	CgroupProcesses = "cgroup.procs"
 )
 
 type subsystem interface {
-	Active(d *data) (bool, error)
-	Enter(string, string) error
-	GetStats(string, *cgroups.Stats) error
+	// Returns the stats, as 'stats', corresponding to the cgroup under 'path'.
+	GetStats(path string, stats *cgroups.Stats) error
+	// Removes the cgroup represented by 'data'.
 	Remove(*data) error
+	// Creates and joins the cgroup represented by data.
 	Set(*data) error
 }
 
@@ -120,32 +121,29 @@ func GetPids(c *cgroups.Cgroup) ([]int, error) {
 }
 
 func EnterPid(c *cgroups.Cgroup, pid int) error {
-	d, err := getCgroupData(c, 0)
+	d, err := getCgroupData(c, pid)
 	if err != nil {
 		return err
 	}
 
-	for sysname, sys := range subsystems {
-		active, err := sys.Active(d)
-		if err != nil {
-			return err
-		}
-		if !active {
-			continue
-		}
+	for sysname := range subsystems {
 		path, err := d.path(sysname)
 		if err != nil {
 			// Don't fail if a cgroup hierarchy was not found, just skip this subsystem
 			if err == cgroups.ErrNotFound {
 				continue
 			}
+
 			return err
 		}
-		if err := sys.Enter(path, strconv.FormatInt(int64(pid), 10)); err != nil {
-			return err
+
+		if PathExists(path) {
+			if _, err := d.join(sysname); err != nil {
+				return err
+			}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -202,7 +200,7 @@ func (raw *data) join(subsystem string) (string, error) {
 	if err := os.MkdirAll(path, 0755); err != nil && !os.IsExist(err) {
 		return "", err
 	}
-	if err := writeFile(path, "cgroup.procs", strconv.Itoa(raw.pid)); err != nil {
+	if err := writeFile(path, CgroupProcesses, strconv.Itoa(raw.pid)); err != nil {
 		return "", err
 	}
 	return path, nil

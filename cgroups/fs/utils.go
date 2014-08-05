@@ -40,9 +40,9 @@ func getCgroupParamInt(cgroupPath, cgroupFile string) (uint64, error) {
 	return strconv.ParseUint(strings.TrimSpace(string(contents)), 10, 64)
 }
 
-func FileExists(path string) bool {
-	if _, err := os.Stat(path); err == nil {
-		return true
+func PathExists(path string) bool {
+	if _, err := os.Stat(path); err != nil {
+		return false
 	}
-	return false
+	return true
 }
