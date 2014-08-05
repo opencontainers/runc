@@ -16,6 +16,7 @@ package namespaces
 #include <getopt.h>
 
 static const kBufSize = 256;
+static const char *kNsEnter = "nsenter";
 
 void get_args(int *argc, char ***argv) {
 	// Read argv
@@ -58,7 +59,7 @@ void get_args(int *argc, char ***argv) {
 #include "syscall.h"
 #ifdef SYS_setns
 int setns(int fd, int nstype) {
-  return syscall(SYS_setns, fd, nstype);
+	return syscall(SYS_setns, fd, nstype);
 }
 #endif
 #endif
@@ -68,34 +69,37 @@ void print_usage() {
 }
 
 void nsenter() {
-	int argc;
+	int argc, c;
 	char **argv;
 	get_args(&argc, &argv);
 
 	// Ignore if this is not for us.
-	if (argc < 2 || strcmp(argv[1], "nsenter") != 0) {
+	if (argc < 6) {
 		return;
 	}
-
-	// USAGE: <binary> nsenter <PID> <process label> <container JSON> <argv>...
-	if (argc < 6) {
-		fprintf(stderr, "nsenter: Incorrect usage, not enough arguments\n");
-		exit(1);
+	int found_nsenter = 0;
+	for (c = 0; c < argc; ++c) {
+		if (strcmp(argv[c], kNsEnter) == 0) {
+			found_nsenter = 1;
+			break;
+		}
 	}
-
+	if (!found_nsenter) {
+		return;
+	}
 	static const struct option longopts[] = {
-		{ "nspid",         required_argument, NULL, 'n' },
+		{ "nspid",	       required_argument, NULL, 'n' },
 		{ "containerjson", required_argument, NULL, 'c' },
-                { "console",       required_argument, NULL, 't' },
-		{ NULL,            0,                 NULL,  0  }
+		{ "console",       optional_argument, NULL, 't' },
+		{ NULL,	       0,		  NULL,	 0  }
 	};
 
-	int c;
 	pid_t init_pid = -1;
 	char *init_pid_str = NULL;
 	char *container_json = NULL;
-        char *console = NULL;
-	while ((c = getopt_long_only(argc, argv, "n:s:c:", longopts, NULL)) != -1) {
+	char *console = NULL;
+	opterr = 0;
+	while ((c = getopt_long_only(argc, argv, "-n:s:c:", longopts, NULL)) != -1) {
 		switch (c) {
 		case 'n':
 			init_pid_str = optarg;
@@ -109,14 +113,18 @@ void nsenter() {
 		}
 	}
 
+	if (strcmp(argv[optind - 2], kNsEnter) != 0) {
+		return;
+	}
+
 	if (container_json == NULL || init_pid_str == NULL) {
 		print_usage();
 		exit(1);
 	}
 
 	init_pid = strtol(init_pid_str, NULL, 10);
-	if (errno != 0 || init_pid <= 0) {
-		fprintf(stderr, "nsenter: Failed to parse PID from \"%s\" with error: \"%s\"\n", init_pid_str, strerror(errno));
+	if ((init_pid == 0 && errno == EINVAL) || errno == ERANGE) {
+		fprintf(stderr, "nsenter: Failed to parse PID from \"%s\" with output \"%d\" and error: \"%s\"\n", init_pid_str, init_pid, strerror(errno));
 		print_usage();
 		exit(1);
 	}
@@ -124,20 +132,20 @@ void nsenter() {
 	argc -= 3;
 	argv += 3;
 
-        if (setsid() == -1) {
-               fprintf(stderr, "setsid failed. Error: %s\n", strerror(errno));
-               exit(1);
-        }
+	if (setsid() == -1) {
+		fprintf(stderr, "setsid failed. Error: %s\n", strerror(errno));
+		exit(1);
+	}
 
-        // before we setns we need to dup the console
-        int consolefd = -1;
-        if (console != NULL) {
-               consolefd = open(console, O_RDWR);
-               if (consolefd < 0) {
-                    fprintf(stderr, "nsenter: failed to open console %s %s\n", console, strerror(errno));
-                    exit(1);
-              }
-        }
+	// before we setns we need to dup the console
+	int consolefd = -1;
+	if (console != NULL) {
+		consolefd = open(console, O_RDWR);
+		if (consolefd < 0) {
+			fprintf(stderr, "nsenter: failed to open console %s %s\n", console, strerror(errno));
+			exit(1);
+		}
+	}
 
 	// Setns on all supported namespaces.
 	char ns_dir[PATH_MAX];
@@ -172,20 +180,20 @@ void nsenter() {
 	// We must fork to actually enter the PID namespace.
 	int child = fork();
 	if (child == 0) {
-       if (consolefd != -1) {
-        if (dup2(consolefd, STDIN_FILENO) != 0) {
-            fprintf(stderr, "nsenter: failed to dup 0 %s\n",  strerror(errno));
-            exit(1);
-        }
-        if (dup2(consolefd, STDOUT_FILENO) != STDOUT_FILENO) {
-            fprintf(stderr, "nsenter: failed to dup 1 %s\n",  strerror(errno));
-            exit(1);
-        }
-        if (dup2(consolefd, STDERR_FILENO) != STDERR_FILENO) {
-            fprintf(stderr, "nsenter: failed to dup 2 %s\n",  strerror(errno));
-            exit(1);
-        }
-}
+		if (consolefd != -1) {
+			if (dup2(consolefd, STDIN_FILENO) != 0) {
+				fprintf(stderr, "nsenter: failed to dup 0 %s\n",  strerror(errno));
+				exit(1);
+			}
+			if (dup2(consolefd, STDOUT_FILENO) != STDOUT_FILENO) {
+				fprintf(stderr, "nsenter: failed to dup 1 %s\n",  strerror(errno));
+				exit(1);
+			}
+			if (dup2(consolefd, STDERR_FILENO) != STDERR_FILENO) {
+				fprintf(stderr, "nsenter: failed to dup 2 %s\n",  strerror(errno));
+				exit(1);
+			}
+		}
 
 		// Finish executing, let the Go runtime take over.
 		return;
