@@ -27,7 +27,7 @@ func TestCreateBridgeWithMac(t *testing.T) {
 	}
 
 	if _, err := net.InterfaceByName(name); err == nil {
-		t.Fatal("expected error getting interface because %s bridge was deleted", name)
+		t.Fatalf("expected error getting interface because %s bridge was deleted", name)
 	}
 }
 
@@ -51,7 +51,7 @@ func TestCreateBridgeLink(t *testing.T) {
 	}
 
 	if _, err := net.InterfaceByName(name); err == nil {
-		t.Fatal("expected error getting interface because %s bridge was deleted", name)
+		t.Fatalf("expected error getting interface because %s bridge was deleted", name)
 	}
 
 }
