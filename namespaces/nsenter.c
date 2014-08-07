@@ -117,6 +117,10 @@ void nsenter()
 		}
 	}
 
+    if (strcmp(argv[optind], kNsEnter) != 0) {
+        return;
+    }
+
 	if (init_pid_str == NULL) {
 		print_usage();
 		exit(1);
