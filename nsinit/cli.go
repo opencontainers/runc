@@ -26,9 +26,11 @@ func NsInit() {
 	app.Author = "libcontainer maintainers"
 	app.Flags = []cli.Flag{
 		cli.StringFlag{Name: "nspid"},
-		cli.StringFlag{Name: "containerjson"},
-		cli.StringFlag{Name: "console"}}
+		cli.StringFlag{Name: "console"},
+	}
+
 	app.Before = preload
+
 	app.Commands = []cli.Command{
 		execCommand,
 		initCommand,

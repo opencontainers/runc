@@ -96,7 +96,7 @@ void nsenter()
 	}
 	static const struct option longopts[] = {
 		{"nspid", required_argument, NULL, 'n'},
-		{"containerjson", required_argument, NULL, 'c'},
+		{"containerjson", optional_argument, NULL, 'c'},
 		{"console", optional_argument, NULL, 't'},
 		{NULL, 0, NULL, 0}
 	};
@@ -126,7 +126,7 @@ void nsenter()
 		return;
 	}
 
-	if (container_json == NULL || init_pid_str == NULL) {
+	if (init_pid_str == NULL) {
 		print_usage();
 		exit(1);
 	}
@@ -147,6 +147,7 @@ void nsenter()
 		fprintf(stderr, "setsid failed. Error: %s\n", strerror(errno));
 		exit(1);
 	}
+
 	// before we setns we need to dup the console
 	int consolefd = -1;
 	if (console != NULL) {
@@ -158,6 +159,7 @@ void nsenter()
 			exit(1);
 		}
 	}
+
 	// Setns on all supported namespaces.
 	char ns_dir[PATH_MAX];
 	memset(ns_dir, 0, PATH_MAX);
@@ -211,6 +213,7 @@ void nsenter()
 				exit(1);
 			}
 		}
+
 		// Finish executing, let the Go runtime take over.
 		return;
 	} else {
@@ -222,12 +225,14 @@ void nsenter()
 				strerror(errno));
 			exit(1);
 		}
+
 		// Forward the child's exit code or re-send its death signal.
 		if (WIFEXITED(status)) {
 			exit(WEXITSTATUS(status));
 		} else if (WIFSIGNALED(status)) {
 			kill(getpid(), WTERMSIG(status));
 		}
+
 		exit(1);
 	}
 
