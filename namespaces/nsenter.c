@@ -71,7 +71,7 @@ int setns(int fd, int nstype)
 void print_usage()
 {
 	fprintf(stderr,
-		"<binary> nsenter --nspid <pid> --containerjson <container_json> -- cmd1 arg1 arg2...\n");
+		"<binary> nsenter --nspid <pid> -- cmd1 arg1 arg2...\n");
 }
 
 void nsenter()
@@ -81,9 +81,10 @@ void nsenter()
 	get_args(&argc, &argv);
 
 	// Ignore if this is not for us.
-	if (argc < 6) {
+	if (argc < 4) {
 		return;
 	}
+
 	int found_nsenter = 0;
 	for (c = 0; c < argc; ++c) {
 		if (strcmp(argv[c], kNsEnter) == 0) {
@@ -91,39 +92,29 @@ void nsenter()
 			break;
 		}
 	}
+
 	if (!found_nsenter) {
 		return;
 	}
+
 	static const struct option longopts[] = {
 		{"nspid", required_argument, NULL, 'n'},
-		{"containerjson", optional_argument, NULL, 'c'},
-		{"console", optional_argument, NULL, 't'},
+		{"console", required_argument, NULL, 't'},
 		{NULL, 0, NULL, 0}
 	};
 
 	pid_t init_pid = -1;
 	char *init_pid_str = NULL;
-	char *container_json = NULL;
 	char *console = NULL;
-	opterr = 0;
-	while ((c =
-		getopt_long_only(argc, argv, "-n:s:c:", longopts,
-				 NULL)) != -1) {
+	while ((c = getopt_long_only(argc, argv, "n:c:", longopts, NULL)) != -1) {
 		switch (c) {
 		case 'n':
 			init_pid_str = optarg;
-			break;
-		case 'c':
-			container_json = optarg;
 			break;
 		case 't':
 			console = optarg;
 			break;
 		}
-	}
-
-	if (strcmp(argv[optind - 2], kNsEnter) != 0) {
-		return;
 	}
 
 	if (init_pid_str == NULL) {
@@ -147,7 +138,6 @@ void nsenter()
 		fprintf(stderr, "setsid failed. Error: %s\n", strerror(errno));
 		exit(1);
 	}
-
 	// before we setns we need to dup the console
 	int consolefd = -1;
 	if (console != NULL) {
@@ -159,7 +149,6 @@ void nsenter()
 			exit(1);
 		}
 	}
-
 	// Setns on all supported namespaces.
 	char ns_dir[PATH_MAX];
 	memset(ns_dir, 0, PATH_MAX);
@@ -213,7 +202,6 @@ void nsenter()
 				exit(1);
 			}
 		}
-
 		// Finish executing, let the Go runtime take over.
 		return;
 	} else {
@@ -225,7 +213,6 @@ void nsenter()
 				strerror(errno));
 			exit(1);
 		}
-
 		// Forward the child's exit code or re-send its death signal.
 		if (WIFEXITED(status)) {
 			exit(WEXITSTATUS(status));
