@@ -73,7 +73,7 @@ func (s *CpuacctGroup) GetStats(path string, stats *cgroups.Stats) error {
 		deltaUsage  = lastUsage - startUsage
 	)
 	if deltaSystem > 0.0 {
-		percentage = ((deltaProc / deltaSystem) * clockTicks) * cpuCount
+		percentage = uint64(((float64(deltaProc) / float64(deltaSystem)) * float64(clockTicks)) * float64(cpuCount))
 	}
 	// NOTE: a percentage over 100% is valid for POSIX because that means the
 	// processes is using multiple cores
