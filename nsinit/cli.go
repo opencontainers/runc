@@ -7,7 +7,14 @@ import (
 	"github.com/codegangsta/cli"
 )
 
-var logPath = os.Getenv("log")
+var (
+	logPath = os.Getenv("log")
+	argvs   = make(map[string]func())
+)
+
+func init() {
+	argvs["nsenter"] = nsenter
+}
 
 func preload(context *cli.Context) error {
 	if logPath != "" {
@@ -20,7 +27,18 @@ func preload(context *cli.Context) error {
 }
 
 func NsInit() {
+	// we need to check our argv 0 for any registred functions to run instead of the
+	// normal cli code path
+
+	action, exists := argvs[os.Args[0]]
+	if exists {
+		action()
+
+		return
+	}
+
 	app := cli.NewApp()
+
 	app.Name = "nsinit"
 	app.Version = "0.1"
 	app.Author = "libcontainer maintainers"
@@ -36,7 +54,6 @@ func NsInit() {
 		initCommand,
 		statsCommand,
 		configCommand,
-		nsenterCommand,
 		pauseCommand,
 		unpauseCommand,
 	}
