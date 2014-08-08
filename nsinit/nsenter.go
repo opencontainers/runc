@@ -6,6 +6,7 @@ import (
 	"github.com/codegangsta/cli"
 	"github.com/docker/libcontainer"
 	"github.com/docker/libcontainer/namespaces"
+	_ "github.com/docker/libcontainer/namespaces/nsenter"
 	"github.com/docker/libcontainer/syncpipe"
 )
 
