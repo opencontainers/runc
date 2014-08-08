@@ -81,7 +81,10 @@ void nsenter()
 	get_args(&argc, &argv);
 
     // check argv 0 to ensure that we are supposed to setns
-    if (strcmp(argv[0], kNsEnter) != 0) {
+    // we use strncmp to test for a value of "nsenter" but also allows alternate implmentations
+    // after the setns code path to continue to use the argv 0 to determine actions to be run
+    // resulting in the ability to specify "nsenter-mknod", "nsenter-exec", etc...
+    if (strncmp(argv[0], kNsEnter, strlen(kNsEnter)) != 0) {
         return;
     }
 
