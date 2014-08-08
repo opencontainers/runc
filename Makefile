@@ -3,7 +3,7 @@ all:
 	docker build -t docker/libcontainer .
 
 test: build
-       docker run --rm --privileged docker/libcontainer
+	docker run --rm --privileged docker/libcontainer
 
 sh:
 	docker run --rm -it --cap-add NET_ADMIN --cap-add SYS_ADMIN -w /busybox docker/libcontainer nsinit exec sh
