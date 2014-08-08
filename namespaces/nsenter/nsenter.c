@@ -71,7 +71,7 @@ int setns(int fd, int nstype)
 void print_usage()
 {
 	fprintf(stderr,
-		"<binary> nsenter --nspid <pid> -- cmd1 arg1 arg2...\n");
+		"nsenter --nspid <pid> --console <console> -- cmd1 arg1 arg2...\n");
 }
 
 void nsenter()
@@ -80,22 +80,10 @@ void nsenter()
 	char **argv;
 	get_args(&argc, &argv);
 
-	// Ignore if this is not for us.
-	if (argc < 4) {
-		return;
-	}
-
-	int found_nsenter = 0;
-	for (c = 0; c < argc; ++c) {
-		if (strcmp(argv[c], kNsEnter) == 0) {
-			found_nsenter = 1;
-			break;
-		}
-	}
-
-	if (!found_nsenter) {
-		return;
-	}
+    // check argv 0 to ensure that we are supposed to setns
+    if (strcmp(argv[0], kNsEnter) != 0) {
+        return;
+    }
 
 	static const struct option longopts[] = {
 		{"nspid", required_argument, NULL, 'n'},
@@ -116,10 +104,6 @@ void nsenter()
 			break;
 		}
 	}
-
-    if (strcmp(argv[optind], kNsEnter) != 0) {
-        return;
-    }
 
 	if (init_pid_str == NULL) {
 		print_usage();

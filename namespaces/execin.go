@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"syscall"
 
@@ -15,19 +16,27 @@ import (
 	"github.com/docker/libcontainer/system"
 )
 
+// ExecIn reexec's the initPath with the argv 0 rewrite to "nsenter" so that it is able to run the
+// setns code in a single threaded environment joining the existing containers' namespaces.
 func ExecIn(container *libcontainer.Config, state *libcontainer.State, userArgs []string, initPath string,
 	stdin io.Reader, stdout, stderr io.Writer, console string, startCallback func(*exec.Cmd)) (int, error) {
 
-	args := []string{"--nspid", strconv.Itoa(state.InitPid)}
+	args := []string{"nsenter", "--nspid", strconv.Itoa(state.InitPid)}
 
 	if console != "" {
 		args = append(args, "--console", console)
 	}
 
-	args = append(args, "nsenter", "--")
-	args = append(args, userArgs...)
+	cmd := &exec.Cmd{
+		Path: initPath,
+		Args: append(args, append([]string{"--"}, userArgs...)...),
+	}
 
-	cmd := exec.Command(initPath, args...)
+	if filepath.Base(initPath) == initPath {
+		if lp, err := exec.LookPath(initPath); err == nil {
+			cmd.Path = lp
+		}
+	}
 
 	pipe, err := syncpipe.NewSyncPipe()
 	if err != nil {
