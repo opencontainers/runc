@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func ipAssingned(iface *net.Interface, ip net.IP) bool {
+func ipAssigned(iface *net.Interface, ip net.IP) bool {
 	addrs, _ := iface.Addrs()
 
 	for _, addr := range addrs {
@@ -38,7 +38,7 @@ func TestAddDelNetworkIp(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !ipAssingned(iface, ip) {
+	if !ipAssigned(iface, ip) {
 		t.Fatalf("Could not locate address '%s' in lo address list.", ip.String())
 	}
 
@@ -46,7 +46,7 @@ func TestAddDelNetworkIp(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if ipAssingned(iface, ip) {
+	if ipAssigned(iface, ip) {
 		t.Fatal("Located address '%s' in lo address list after removal.", ip.String())
 	}
 }
