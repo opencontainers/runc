@@ -26,7 +26,7 @@ var (
 func initAction(context *cli.Context) {
 	runtime.LockOSThread()
 
-	container, err := loadContainer()
+	container, err := loadConfig()
 	if err != nil {
 		log.Fatal(err)
 	}

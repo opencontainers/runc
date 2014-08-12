@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/codegangsta/cli"
 	"github.com/docker/libcontainer"
 	"github.com/docker/libcontainer/syncpipe"
 )
@@ -16,7 +17,7 @@ type rFunc struct {
 	Action func(*libcontainer.Config, []string)
 }
 
-func loadContainer() (*libcontainer.Config, error) {
+func loadConfig() (*libcontainer.Config, error) {
 	f, err := os.Open(filepath.Join(dataPath, "container.json"))
 	if err != nil {
 		return nil, err
@@ -40,16 +41,6 @@ func openLog(name string) error {
 	log.SetOutput(f)
 
 	return nil
-}
-
-func loadContainerFromJson(rawData string) (*libcontainer.Config, error) {
-	var container *libcontainer.Config
-
-	if err := json.Unmarshal([]byte(rawData), &container); err != nil {
-		return nil, err
-	}
-
-	return container, nil
 }
 
 func findUserArgs() []string {
@@ -79,4 +70,25 @@ func loadConfigFromFd() (*libcontainer.Config, error) {
 	}
 
 	return config, nil
+}
+
+func preload(context *cli.Context) error {
+	if logPath != "" {
+		if err := openLog(logPath); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func runFunc(f *rFunc) {
+	userArgs := findUserArgs()
+
+	config, err := loadConfigFromFd()
+	if err != nil {
+		log.Fatalf("unable to receive config from sync pipe: %s", err)
+	}
+
+	f.Action(config, userArgs)
 }

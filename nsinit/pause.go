@@ -34,7 +34,7 @@ func unpauseAction(context *cli.Context) {
 }
 
 func toggle(state cgroups.FreezerState) error {
-	container, err := loadContainer()
+	container, err := loadConfig()
 	if err != nil {
 		return err
 	}

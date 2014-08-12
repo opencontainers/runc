@@ -25,7 +25,7 @@ var execCommand = cli.Command{
 func execAction(context *cli.Context) {
 	var exitCode int
 
-	container, err := loadContainer()
+	container, err := loadConfig()
 	if err != nil {
 		log.Fatal(err)
 	}

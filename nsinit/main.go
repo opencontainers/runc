@@ -29,27 +29,6 @@ func init() {
 	}
 }
 
-func preload(context *cli.Context) error {
-	if logPath != "" {
-		if err := openLog(logPath); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func runFunc(f *rFunc) {
-	userArgs := findUserArgs()
-
-	config, err := loadConfigFromFd()
-	if err != nil {
-		log.Fatalf("unable to receive config from sync pipe: %s", err)
-	}
-
-	f.Action(config, userArgs)
-}
-
 func main() {
 	// we need to check our argv 0 for any registred functions to run instead of the
 	// normal cli code path

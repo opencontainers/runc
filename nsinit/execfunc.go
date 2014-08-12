@@ -36,7 +36,7 @@ func execFuncAction(context *cli.Context) {
 
 	var exitCode int
 
-	config, err := loadContainer()
+	config, err := loadConfig()
 	if err != nil {
 		log.Fatal(err)
 	}
