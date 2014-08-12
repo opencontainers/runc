@@ -22,6 +22,11 @@ func init() {
 		Usage:  "mknod a device inside an existing container",
 		Action: nsenterMknod,
 	}
+
+	argvs["nsenter-ip"] = &rFunc{
+		Usage:  "display the container's network interfaces",
+		Action: nsenterIp,
+	}
 }
 
 func preload(context *cli.Context) error {

@@ -1,8 +1,13 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"net"
+	"os"
 	"strconv"
+	"strings"
+	"text/tabwriter"
 
 	"github.com/docker/libcontainer"
 	"github.com/docker/libcontainer/devices"
@@ -48,4 +53,32 @@ func nsenterMknod(config *libcontainer.Config, args []string) {
 	if err := nodes.CreateDeviceNode("/", n); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// nsenterIp displays the network interfaces inside a container's net namespace
+func nsenterIp(config *libcontainer.Config, args []string) {
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	w := tabwriter.NewWriter(os.Stdout, 10, 1, 3, ' ', 0)
+	fmt.Fprint(w, "NAME\tMTU\tMAC\tFLAG\tADDRS\n")
+
+	for _, iface := range interfaces {
+		addrs, err := iface.Addrs()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		o := []string{}
+
+		for _, a := range addrs {
+			o = append(o, a.String())
+		}
+
+		fmt.Fprintf(w, "%s\t%d\t%s\t%s\t%s\n", iface.Name, iface.MTU, iface.HardwareAddr, iface.Flags, strings.Join(o, ","))
+	}
+
+	w.Flush()
 }
