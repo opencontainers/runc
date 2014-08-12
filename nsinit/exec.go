@@ -36,7 +36,7 @@ func execAction(context *cli.Context) {
 	}
 
 	if state != nil {
-		exitCode, err = startInExistingContainer(container, state, context)
+		exitCode, err = startInExistingContainer(container, state, "exec", context)
 	} else {
 		exitCode, err = startContainer(container, dataPath, []string(context.Args()))
 	}
@@ -52,7 +52,7 @@ func execAction(context *cli.Context) {
 // with the nsenter argument so that the C code can setns an the namespaces that we require.  Then that
 // code path will drop us into the path that we can do the final setup of the namespace and exec the users
 // application.
-func startInExistingContainer(config *libcontainer.Config, state *libcontainer.State, context *cli.Context) (int, error) {
+func startInExistingContainer(config *libcontainer.Config, state *libcontainer.State, action string, context *cli.Context) (int, error) {
 	var (
 		master  *os.File
 		console string
@@ -102,7 +102,7 @@ func startInExistingContainer(config *libcontainer.Config, state *libcontainer.S
 		}()
 	}
 
-	return namespaces.ExecIn(config, state, context.Args(), os.Args[0], stdin, stdout, stderr, console, startCallback)
+	return namespaces.ExecIn(config, state, context.Args(), os.Args[0], action, stdin, stdout, stderr, console, startCallback)
 }
 
 // startContainer starts the container. Returns the exit status or -1 and an

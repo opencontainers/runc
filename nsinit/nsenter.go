@@ -2,41 +2,50 @@ package main
 
 import (
 	"log"
-	"os"
+	"strconv"
 
 	"github.com/docker/libcontainer"
+	"github.com/docker/libcontainer/devices"
+	"github.com/docker/libcontainer/mount/nodes"
 	"github.com/docker/libcontainer/namespaces"
 	_ "github.com/docker/libcontainer/namespaces/nsenter"
-	"github.com/docker/libcontainer/syncpipe"
 )
 
-func findUserArgs() []string {
-	i := 0
-	for _, a := range os.Args {
-		i++
-
-		if a == "--" {
-			break
-		}
+// nsenterExec exec's a process inside an existing container
+func nsenterExec(config *libcontainer.Config, args []string) {
+	if err := namespaces.FinalizeSetns(config, args); err != nil {
+		log.Fatalf("failed to nsenter: %s", err)
 	}
-
-	return os.Args[i:]
 }
 
-// this expects that we already have our namespaces setup by the C initializer
-// we are expected to finalize the namespace and exec the user's application
-func nsenter() {
-	syncPipe, err := syncpipe.NewSyncPipeFromFd(0, 3)
+// nsenterMknod runs mknod inside an existing container
+//
+// mknod <path> <type> <major> <minor>
+func nsenterMknod(config *libcontainer.Config, args []string) {
+	if len(args) != 4 {
+		log.Fatalf("expected mknod to have 4 arguments not %d", len(args))
+	}
+
+	t := rune(args[1][0])
+
+	major, err := strconv.Atoi(args[2])
 	if err != nil {
-		log.Fatalf("unable to create sync pipe: %s", err)
+		log.Fatal(err)
 	}
 
-	var config *libcontainer.Config
-	if err := syncPipe.ReadFromParent(&config); err != nil {
-		log.Fatalf("reading container config from parent: %s", err)
+	minor, err := strconv.Atoi(args[3])
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	if err := namespaces.FinalizeSetns(config, findUserArgs()); err != nil {
-		log.Fatalf("failed to nsenter: %s", err)
+	n := &devices.Device{
+		Path:        args[0],
+		Type:        t,
+		MajorNumber: int64(major),
+		MinorNumber: int64(minor),
+	}
+
+	if err := nodes.CreateDeviceNode("/", n); err != nil {
+		log.Fatal(err)
 	}
 }

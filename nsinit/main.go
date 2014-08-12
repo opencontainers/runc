@@ -9,11 +9,19 @@ import (
 
 var (
 	logPath = os.Getenv("log")
-	argvs   = make(map[string]func())
+	argvs   = make(map[string]*rFunc)
 )
 
 func init() {
-	argvs["nsenter"] = nsenter
+	argvs["nsenter-exec"] = &rFunc{
+		Usage:  "execute a process inside an existing container",
+		Action: nsenterExec,
+	}
+
+	argvs["nsenter-mknod"] = &rFunc{
+		Usage:  "mknod a device inside an existing container",
+		Action: nsenterMknod,
+	}
 }
 
 func preload(context *cli.Context) error {
@@ -26,13 +34,23 @@ func preload(context *cli.Context) error {
 	return nil
 }
 
+func runFunc(f *rFunc) {
+	userArgs := findUserArgs()
+
+	config, err := loadConfigFromFd()
+	if err != nil {
+		log.Fatalf("unable to receive config from sync pipe: %s", err)
+	}
+
+	f.Action(config, userArgs)
+}
+
 func main() {
 	// we need to check our argv 0 for any registred functions to run instead of the
 	// normal cli code path
-
-	action, exists := argvs[os.Args[0]]
+	f, exists := argvs[os.Args[0]]
 	if exists {
-		action()
+		runFunc(f)
 
 		return
 	}
@@ -56,6 +74,7 @@ func main() {
 		configCommand,
 		pauseCommand,
 		unpauseCommand,
+		execFuncCommand,
 	}
 
 	if err := app.Run(os.Args); err != nil {
