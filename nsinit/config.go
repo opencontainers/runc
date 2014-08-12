@@ -1,4 +1,4 @@
-package nsinit
+package main
 
 import (
 	"encoding/json"

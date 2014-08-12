@@ -1,4 +1,4 @@
-package nsinit
+package main
 
 import (
 	"log"
@@ -26,7 +26,7 @@ func preload(context *cli.Context) error {
 	return nil
 }
 
-func NsInit() {
+func main() {
 	// we need to check our argv 0 for any registred functions to run instead of the
 	// normal cli code path
 
