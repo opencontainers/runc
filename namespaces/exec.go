@@ -56,14 +56,21 @@ func Exec(container *libcontainer.Config, stdin io.Reader, stdout, stderr io.Wri
 
 	// Do this before syncing with child so that no children
 	// can escape the cgroup
-	cleaner, err := SetupCgroups(container, command.Process.Pid)
+	cgroupRef, err := SetupCgroups(container, command.Process.Pid)
 	if err != nil {
 		command.Process.Kill()
 		command.Wait()
 		return -1, err
 	}
-	if cleaner != nil {
-		defer cleaner.Cleanup()
+	if cgroupRef != nil {
+		defer cgroupRef.Cleanup()
+	}
+
+	cgroupPaths, err := cgroupRef.Paths()
+	if err != nil {
+		command.Process.Kill()
+		command.Wait()
+		return -1, err
 	}
 
 	var networkState network.NetworkState
@@ -77,6 +84,7 @@ func Exec(container *libcontainer.Config, stdin io.Reader, stdout, stderr io.Wri
 		InitPid:       command.Process.Pid,
 		InitStartTime: started,
 		NetworkState:  networkState,
+		CgroupPaths:   cgroupPaths,
 	}
 
 	if err := libcontainer.SaveState(dataPath, state); err != nil {

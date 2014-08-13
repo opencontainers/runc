@@ -37,4 +37,5 @@ type Cgroup struct {
 
 type ActiveCgroup interface {
 	Cleanup() error
+	Paths() ([]string, error)
 }

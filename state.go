@@ -18,6 +18,9 @@ type State struct {
 
 	// Network runtime state.
 	NetworkState network.NetworkState `json:"network_state,omitempty"`
+
+	// Path to all the cgroup dirs.
+	CgroupPaths []string `json:"cgroup_paths,omitempty"`
 }
 
 // The running state of the container.

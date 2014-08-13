@@ -120,33 +120,6 @@ func GetPids(c *cgroups.Cgroup) ([]int, error) {
 	return cgroups.ReadProcsFile(dir)
 }
 
-func EnterPid(c *cgroups.Cgroup, pid int) error {
-	d, err := getCgroupData(c, pid)
-	if err != nil {
-		return err
-	}
-
-	for sysname := range subsystems {
-		path, err := d.path(sysname)
-		if err != nil {
-			// Don't fail if a cgroup hierarchy was not found, just skip this subsystem
-			if err == cgroups.ErrNotFound {
-				continue
-			}
-
-			return err
-		}
-
-		if PathExists(path) {
-			if _, err := d.join(sysname); err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
-}
-
 func getCgroupData(c *cgroups.Cgroup, pid int) (*data, error) {
 	// we can pick any subsystem to find the root
 	cgroupRoot, err := cgroups.FindCgroupMountpoint("cpu")
@@ -178,6 +151,18 @@ func (raw *data) parent(subsystem string) (string, error) {
 		return "", err
 	}
 	return filepath.Join(raw.root, subsystem, initPath), nil
+}
+
+func (raw *data) Paths() ([]string, error) {
+	var paths []string
+	for sysname := range subsystems {
+		path, err := raw.path(sysname)
+		if err != nil {
+			return nil, err
+		}
+		paths = append(paths, path)
+	}
+	return paths, nil
 }
 
 func (raw *data) path(subsystem string) (string, error) {
