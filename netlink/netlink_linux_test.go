@@ -27,7 +27,7 @@ func TestAddDelNetworkIp(t *testing.T) {
 	ifaceName := "lo"
 	ip := net.ParseIP("127.0.1.1")
 	mask := net.IPv4Mask(255, 255, 255, 255)
-	ipNet := &net.IPNet{ip, mask}
+	ipNet := &net.IPNet{IP: ip, Mask: mask}
 
 	iface, err := net.InterfaceByName(ifaceName)
 	if err != nil {
@@ -47,7 +47,7 @@ func TestAddDelNetworkIp(t *testing.T) {
 	}
 
 	if ipAssigned(iface, ip) {
-		t.Fatal("Located address '%s' in lo address list after removal.", ip.String())
+		t.Fatalf("Located address '%s' in lo address list after removal.", ip.String())
 	}
 }
 
