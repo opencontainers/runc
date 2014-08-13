@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"syscall"
+	"text/tabwriter"
 
 	"github.com/codegangsta/cli"
 	"github.com/docker/docker/pkg/term"
@@ -20,9 +21,26 @@ var execCommand = cli.Command{
 	Name:   "exec",
 	Usage:  "execute a new command inside a container",
 	Action: execAction,
+	Flags: []cli.Flag{
+		cli.BoolFlag{Name: "list", Usage: "list all registered exec functions"},
+		cli.StringFlag{Name: "func", Value: "exec", Usage: "function name to exec inside a container"},
+	},
 }
 
 func execAction(context *cli.Context) {
+	if context.Bool("list") {
+		w := tabwriter.NewWriter(os.Stdout, 10, 1, 3, ' ', 0)
+		fmt.Fprint(w, "NAME\tUSAGE\n")
+
+		for k, f := range argvs {
+			fmt.Fprintf(w, "%s\t%s\n", k, f.Usage)
+		}
+
+		w.Flush()
+
+		return
+	}
+
 	var exitCode int
 
 	container, err := loadConfig()
@@ -36,7 +54,7 @@ func execAction(context *cli.Context) {
 	}
 
 	if state != nil {
-		exitCode, err = startInExistingContainer(container, state, "exec", context)
+		exitCode, err = startInExistingContainer(container, state, context.String("func"), context)
 	} else {
 		exitCode, err = startContainer(container, dataPath, []string(context.Args()))
 	}

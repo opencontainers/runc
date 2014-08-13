@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"strings"
 
 	"github.com/codegangsta/cli"
 )
@@ -13,17 +14,17 @@ var (
 )
 
 func init() {
-	argvs["nsenter-exec"] = &rFunc{
+	argvs["exec"] = &rFunc{
 		Usage:  "execute a process inside an existing container",
 		Action: nsenterExec,
 	}
 
-	argvs["nsenter-mknod"] = &rFunc{
+	argvs["mknod"] = &rFunc{
 		Usage:  "mknod a device inside an existing container",
 		Action: nsenterMknod,
 	}
 
-	argvs["nsenter-ip"] = &rFunc{
+	argvs["ip"] = &rFunc{
 		Usage:  "display the container's network interfaces",
 		Action: nsenterIp,
 	}
@@ -32,7 +33,7 @@ func init() {
 func main() {
 	// we need to check our argv 0 for any registred functions to run instead of the
 	// normal cli code path
-	f, exists := argvs[os.Args[0]]
+	f, exists := argvs[strings.TrimPrefix(os.Args[0], "nsenter-")]
 	if exists {
 		runFunc(f)
 
@@ -58,7 +59,6 @@ func main() {
 		configCommand,
 		pauseCommand,
 		unpauseCommand,
-		execFuncCommand,
 	}
 
 	if err := app.Run(os.Args); err != nil {
