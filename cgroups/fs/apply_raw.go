@@ -153,14 +153,14 @@ func (raw *data) parent(subsystem string) (string, error) {
 	return filepath.Join(raw.root, subsystem, initPath), nil
 }
 
-func (raw *data) Paths() ([]string, error) {
-	var paths []string
+func (raw *data) Paths() (map[string]string, error) {
+	paths := make(map[string]string)
 	for sysname := range subsystems {
 		path, err := raw.path(sysname)
 		if err != nil {
 			return nil, err
 		}
-		paths = append(paths, path)
+		paths[sysname] = path
 	}
 	return paths, nil
 }

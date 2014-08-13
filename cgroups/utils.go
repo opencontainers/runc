@@ -175,7 +175,7 @@ func pathExists(path string) bool {
 	return true
 }
 
-func EnterPid(cgroupPaths []string, pid int) error {
+func EnterPid(cgroupPaths map[string]string, pid int) error {
 	for _, path := range cgroupPaths {
 		if pathExists(path) {
 			if err := ioutil.WriteFile(filepath.Join(path, "cgroup.procs"),

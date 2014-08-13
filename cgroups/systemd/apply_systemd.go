@@ -22,6 +22,7 @@ import (
 
 type systemdCgroup struct {
 	cleanupDirs []string
+	cgroup      *cgroups.Cgroup
 }
 
 type subsystem interface {
@@ -100,6 +101,7 @@ func Apply(c *cgroups.Cgroup, pid int) (cgroups.ActiveCgroup, error) {
 		res        systemdCgroup
 	)
 
+	res.cgroup = c
 	// First set up things not supported by systemd
 
 	// -1 disables memorySwap
@@ -320,8 +322,22 @@ func writeFile(dir, file, data string) error {
 	return ioutil.WriteFile(filepath.Join(dir, file), []byte(data), 0700)
 }
 
-func (c *systemdCgroup) Paths() ([]string, error) {
-	return c.cleanupDirs, nil
+func (c *systemdCgroup) Paths() (map[string]string, error) {
+	paths := make(map[string]string)
+	for sysname := range subsystems {
+		subsystemPath, err := getSubsystemPath(c.cgroup, sysname)
+		if err != nil {
+			// Don't fail if a cgroup hierarchy was not found, just skip this subsystem
+			if err == cgroups.ErrNotFound {
+				continue
+			}
+
+			return nil, err
+		}
+		paths[sysname] = subsystemPath
+	}
+
+	return paths, nil
 }
 
 func (c *systemdCgroup) Cleanup() error {
