@@ -62,9 +62,7 @@ func Exec(container *libcontainer.Config, stdin io.Reader, stdout, stderr io.Wri
 		command.Wait()
 		return -1, err
 	}
-	if cgroupRef != nil {
-		defer cgroupRef.Cleanup()
-	}
+	defer cgroupRef.Cleanup()
 
 	cgroupPaths, err := cgroupRef.Paths()
 	if err != nil {
