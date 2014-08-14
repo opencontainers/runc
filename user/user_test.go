@@ -54,7 +54,7 @@ func TestUserParseLine(t *testing.T) {
 }
 
 func TestUserParsePasswd(t *testing.T) {
-	users, err := parsePasswdFile(strings.NewReader(`
+	users, err := ParsePasswdFilter(strings.NewReader(`
 root:x:0:0:root:/root:/bin/bash
 adm:x:3:4:adm:/var/adm:/bin/false
 this is just some garbage data
@@ -74,7 +74,7 @@ this is just some garbage data
 }
 
 func TestUserParseGroup(t *testing.T) {
-	groups, err := parseGroupFile(strings.NewReader(`
+	groups, err := ParseGroupFilter(strings.NewReader(`
 root:x:0:root
 adm:x:4:root,adm,daemon
 this is just some garbage data
