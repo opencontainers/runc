@@ -12,6 +12,7 @@ import (
 	"syscall"
 
 	"github.com/docker/libcontainer"
+	"github.com/docker/libcontainer/cgroups"
 	"github.com/docker/libcontainer/label"
 	"github.com/docker/libcontainer/syncpipe"
 	"github.com/docker/libcontainer/system"
@@ -59,6 +60,11 @@ func ExecIn(container *libcontainer.Config, state *libcontainer.State, userArgs 
 	}
 	pipe.CloseChild()
 
+	// Enter cgroups.
+	if err := EnterCgroups(state, cmd.Process.Pid); err != nil {
+		return -1, err
+	}
+
 	if err := pipe.SendToChild(container); err != nil {
 		cmd.Process.Kill()
 		cmd.Wait()
@@ -101,4 +107,8 @@ func FinalizeSetns(container *libcontainer.Config, args []string) error {
 	}
 
 	panic("unreachable")
+}
+
+func EnterCgroups(state *libcontainer.State, pid int) error {
+	return cgroups.EnterPid(state.CgroupPaths, pid)
 }
