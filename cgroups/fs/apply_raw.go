@@ -155,13 +155,21 @@ func (raw *data) parent(subsystem string) (string, error) {
 
 func (raw *data) Paths() (map[string]string, error) {
 	paths := make(map[string]string)
+
 	for sysname := range subsystems {
 		path, err := raw.path(sysname)
 		if err != nil {
+			// Don't fail if a cgroup hierarchy was not found, just skip this subsystem
+			if cgroups.IsNotFound(err) {
+				continue
+			}
+
 			return nil, err
 		}
+
 		paths[sysname] = path
 	}
+
 	return paths, nil
 }
 
