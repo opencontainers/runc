@@ -76,7 +76,7 @@ func GetStats(c *cgroups.Cgroup) (*cgroups.Stats, error) {
 		path, err := d.path(sysname)
 		if err != nil {
 			// Don't fail if a cgroup hierarchy was not found, just skip this subsystem
-			if err == cgroups.ErrNotFound {
+			if cgroups.IsNotFound(err) {
 				continue
 			}
 
@@ -172,7 +172,7 @@ func (raw *data) path(subsystem string) (string, error) {
 
 		if _, err := os.Stat(path); err != nil {
 			if os.IsNotExist(err) {
-				return "", cgroups.ErrNotFound
+				return "", cgroups.NewNotFoundError(subsystem)
 			}
 
 			return "", err
