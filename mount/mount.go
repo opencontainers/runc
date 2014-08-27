@@ -23,6 +23,8 @@ func (m *Mount) Mount(rootfs, mountLabel string) error {
 	switch m.Type {
 	case "bind":
 		return m.bindMount(rootfs, mountLabel)
+	case "tmpfs":
+		return m.tmpfsMount(rootfs, mountLabel)
 	default:
 		return fmt.Errorf("unsupported mount type %s for %s", m.Type, m.Destination)
 	}
@@ -43,14 +45,14 @@ func (m *Mount) bindMount(rootfs, mountLabel string) error {
 		return err
 	}
 
-	// FIXME: (crosbymichael) This is not belong here and should be done a layer above
+	// FIXME: (crosbymichael) This does not belong here and should be done a layer above
 	dest, err = symlink.FollowSymlinkInScope(dest, rootfs)
 	if err != nil {
 		return err
 	}
 
 	if err := createIfNotExists(dest, stat.IsDir()); err != nil {
-		return fmt.Errorf("creating new bind-mount target, %s", err)
+		return fmt.Errorf("creating new bind mount target %s", err)
 	}
 
 	if err := syscall.Mount(m.Source, dest, "bind", uintptr(flags), ""); err != nil {
@@ -73,6 +75,29 @@ func (m *Mount) bindMount(rootfs, mountLabel string) error {
 		if err := syscall.Mount("", dest, "none", uintptr(syscall.MS_PRIVATE), ""); err != nil {
 			return fmt.Errorf("mounting %s private %s", dest, err)
 		}
+	}
+
+	return nil
+}
+
+func (m *Mount) tmpfsMount(rootfs, mountLabel string) error {
+	var (
+		err  error
+		l    = label.FormatMountLabel("", mountLabel)
+		dest = filepath.Join(rootfs, m.Destination)
+	)
+
+	// FIXME: (crosbymichael) This does not belong here and should be done a layer above
+	if dest, err = symlink.FollowSymlinkInScope(dest, rootfs); err != nil {
+		return err
+	}
+
+	if err := createIfNotExists(dest, true); err != nil {
+		return fmt.Errorf("creating new tmpfs mount target %s", err)
+	}
+
+	if err := syscall.Mount("tmpfs", dest, "tmpfs", uintptr(defaultMountFlags), l); err != nil {
+		return fmt.Errorf("%s mounting %s in tmpfs", err, dest)
 	}
 
 	return nil
