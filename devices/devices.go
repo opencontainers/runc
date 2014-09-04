@@ -17,6 +17,11 @@ var (
 	ErrNotADeviceNode = errors.New("not a device node")
 )
 
+// Testing dependencies
+var (
+	osLstat = os.Lstat
+)
+
 type Device struct {
 	Type              rune        `json:"type,omitempty"`
 	Path              string      `json:"path,omitempty"`               // It is fine if this is an empty string in the case that you are using Wildcards
@@ -42,7 +47,7 @@ func (device *Device) GetCgroupAllowString() string {
 
 // Given the path to a device and it's cgroup_permissions(which cannot be easilly queried) look up the information about a linux device and return that information as a Device struct.
 func GetDevice(path, cgroupPermissions string) (*Device, error) {
-	fileInfo, err := os.Lstat(path)
+	fileInfo, err := osLstat(path)
 	if err != nil {
 		return nil, err
 	}
