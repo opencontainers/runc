@@ -19,7 +19,8 @@ var (
 
 // Testing dependencies
 var (
-	osLstat = os.Lstat
+	osLstat       = os.Lstat
+	ioutilReadDir = ioutil.ReadDir
 )
 
 type Device struct {
@@ -92,7 +93,7 @@ func GetHostDeviceNodes() ([]*Device, error) {
 }
 
 func getDeviceNodes(path string) ([]*Device, error) {
-	files, err := ioutil.ReadDir(path)
+	files, err := ioutilReadDir(path)
 	if err != nil {
 		return nil, err
 	}
