@@ -26,7 +26,7 @@ type Container interface {
 	//
 	// Errors:
 	// ContainerDestroyed - Container no longer exists,
-	// ProcessConfigInvalid - config is invalid,
+	// ConfigInvalid - config is invalid,
 	// ContainerPaused - Container is paused,
 	// SystemError - System error.
 	Start(config *ProcessConfig) (pid int, exitChan chan int, err Error)

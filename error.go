@@ -8,15 +8,14 @@ const (
 	// Factory errors
 	IdInUse ErrorCode = iota
 	InvalidIdFormat
-	ConfigInvalid
 	// TODO: add Load errors
 
 	// Container errors
 	ContainerDestroyed
-	ProcessConfigInvalid
 	ContainerPaused
 
 	// Common errors
+	ConfigInvalid
 	SystemError
 )
 
