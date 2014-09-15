@@ -38,12 +38,15 @@ type ifreqFlags struct {
 	Ifruflags uint16
 }
 
-func nativeEndian() binary.ByteOrder {
+var native binary.ByteOrder
+
+func init() {
 	var x uint32 = 0x01020304
 	if *(*byte)(unsafe.Pointer(&x)) == 0x01 {
-		return binary.BigEndian
+		native = binary.BigEndian
+	} else {
+		native = binary.LittleEndian
 	}
-	return binary.LittleEndian
 }
 
 func getIpFamily(ip net.IP) int {
@@ -80,8 +83,6 @@ func newIfInfomsgChild(parent *RtAttr, family int) *IfInfomsg {
 }
 
 func (msg *IfInfomsg) ToWireFormat() []byte {
-	native := nativeEndian()
-
 	length := syscall.SizeofIfInfomsg
 	b := make([]byte, length)
 	b[0] = msg.Family
@@ -110,8 +111,6 @@ func newIfAddrmsg(family int) *IfAddrmsg {
 }
 
 func (msg *IfAddrmsg) ToWireFormat() []byte {
-	native := nativeEndian()
-
 	length := syscall.SizeofIfAddrmsg
 	b := make([]byte, length)
 	b[0] = msg.Family
@@ -142,8 +141,6 @@ func newRtMsg() *RtMsg {
 }
 
 func (msg *RtMsg) ToWireFormat() []byte {
-	native := nativeEndian()
-
 	length := syscall.SizeofRtMsg
 	b := make([]byte, length)
 	b[0] = msg.Family
@@ -202,8 +199,6 @@ func (a *RtAttr) Len() int {
 }
 
 func (a *RtAttr) ToWireFormat() []byte {
-	native := nativeEndian()
-
 	length := a.Len()
 	buf := make([]byte, rtaAlignOf(length))
 
@@ -231,8 +226,6 @@ type NetlinkRequest struct {
 }
 
 func (rr *NetlinkRequest) ToWireFormat() []byte {
-	native := nativeEndian()
-
 	length := rr.Len
 	dataBytes := make([][]byte, len(rr.Data))
 	for i, data := range rr.Data {
@@ -330,7 +323,6 @@ func (s *NetlinkSocket) GetPid() (uint32, error) {
 }
 
 func (s *NetlinkSocket) HandleAck(seq uint32) error {
-	native := nativeEndian()
 
 	pid, err := s.GetPid()
 	if err != nil {
@@ -454,10 +446,7 @@ func AddRoute(destination, source, gateway, device string) error {
 		wb.AddData(attr)
 	}
 
-	var (
-		native = nativeEndian()
-		b      = make([]byte, 4)
-	)
+	b := make([]byte, 4)
 	iface, err := net.InterfaceByName(device)
 	if err != nil {
 		return err
@@ -539,10 +528,7 @@ func NetworkSetMTU(iface *net.Interface, mtu int) error {
 	msg.Change = DEFAULT_CHANGE
 	wb.AddData(msg)
 
-	var (
-		b      = make([]byte, 4)
-		native = nativeEndian()
-	)
+	b := make([]byte, 4)
 	native.PutUint32(b, uint32(mtu))
 
 	data := newRtAttr(syscall.IFLA_MTU, b)
@@ -571,10 +557,7 @@ func NetworkSetMaster(iface, master *net.Interface) error {
 	msg.Change = DEFAULT_CHANGE
 	wb.AddData(msg)
 
-	var (
-		b      = make([]byte, 4)
-		native = nativeEndian()
-	)
+	b := make([]byte, 4)
 	native.PutUint32(b, uint32(master.Index))
 
 	data := newRtAttr(syscall.IFLA_MASTER, b)
@@ -603,10 +586,7 @@ func NetworkSetNsPid(iface *net.Interface, nspid int) error {
 	msg.Change = DEFAULT_CHANGE
 	wb.AddData(msg)
 
-	var (
-		b      = make([]byte, 4)
-		native = nativeEndian()
-	)
+	b := make([]byte, 4)
 	native.PutUint32(b, uint32(nspid))
 
 	data := newRtAttr(syscall.IFLA_NET_NS_PID, b)
@@ -635,10 +615,7 @@ func NetworkSetNsFd(iface *net.Interface, fd int) error {
 	msg.Change = DEFAULT_CHANGE
 	wb.AddData(msg)
 
-	var (
-		b      = make([]byte, 4)
-		native = nativeEndian()
-	)
+	b := make([]byte, 4)
 	native.PutUint32(b, uint32(fd))
 
 	data := newRtAttr(IFLA_NET_NS_FD, b)
@@ -782,8 +759,6 @@ func NetworkLinkDel(name string) error {
 // Returns an array of IPNet for all the currently routed subnets on ipv4
 // This is similar to the first column of "ip route" output
 func NetworkGetRoutes() ([]Route, error) {
-	native := nativeEndian()
-
 	s, err := getNetlinkSocket()
 	if err != nil {
 		return nil, err
