@@ -115,6 +115,7 @@ func TestCreateVethPair(t *testing.T) {
 	if err := NetworkCreateVethPair(name1, name2); err != nil {
 		t.Fatal(err)
 	}
+	defer NetworkLinkDel(name1)
 
 	if _, err := net.InterfaceByName(name1); err != nil {
 		t.Fatal(err)
