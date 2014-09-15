@@ -221,6 +221,12 @@ func (a *RtAttr) ToWireFormat() []byte {
 	return buf
 }
 
+func uint32Attr(t int, n uint32) *RtAttr {
+	buf := make([]byte, 4)
+	native.PutUint32(buf, n)
+	return newRtAttr(t, buf)
+}
+
 type NetlinkRequest struct {
 	syscall.NlMsghdr
 	Data []NetlinkRequestData
@@ -456,14 +462,11 @@ func AddRoute(destination, source, gateway, device string) error {
 		wb.AddData(attr)
 	}
 
-	b := make([]byte, 4)
 	iface, err := net.InterfaceByName(device)
 	if err != nil {
 		return err
 	}
-	native.PutUint32(b, uint32(iface.Index))
-
-	wb.AddData(newRtAttr(syscall.RTA_OIF, b))
+	wb.AddData(uint32Attr(syscall.RTA_OIF, uint32(iface.Index)))
 
 	if err := s.Send(wb); err != nil {
 		return err
@@ -537,12 +540,7 @@ func NetworkSetMTU(iface *net.Interface, mtu int) error {
 	msg.Index = int32(iface.Index)
 	msg.Change = DEFAULT_CHANGE
 	wb.AddData(msg)
-
-	b := make([]byte, 4)
-	native.PutUint32(b, uint32(mtu))
-
-	data := newRtAttr(syscall.IFLA_MTU, b)
-	wb.AddData(data)
+	wb.AddData(uint32Attr(syscall.IFLA_MTU, uint32(mtu)))
 
 	if err := s.Send(wb); err != nil {
 		return err
@@ -566,12 +564,7 @@ func NetworkSetMaster(iface, master *net.Interface) error {
 	msg.Index = int32(iface.Index)
 	msg.Change = DEFAULT_CHANGE
 	wb.AddData(msg)
-
-	b := make([]byte, 4)
-	native.PutUint32(b, uint32(master.Index))
-
-	data := newRtAttr(syscall.IFLA_MASTER, b)
-	wb.AddData(data)
+	wb.AddData(uint32Attr(syscall.IFLA_MASTER, uint32(master.Index)))
 
 	if err := s.Send(wb); err != nil {
 		return err
@@ -595,12 +588,7 @@ func NetworkSetNsPid(iface *net.Interface, nspid int) error {
 	msg.Index = int32(iface.Index)
 	msg.Change = DEFAULT_CHANGE
 	wb.AddData(msg)
-
-	b := make([]byte, 4)
-	native.PutUint32(b, uint32(nspid))
-
-	data := newRtAttr(syscall.IFLA_NET_NS_PID, b)
-	wb.AddData(data)
+	wb.AddData(uint32Attr(syscall.IFLA_NET_NS_PID, uint32(nspid)))
 
 	if err := s.Send(wb); err != nil {
 		return err
@@ -624,12 +612,7 @@ func NetworkSetNsFd(iface *net.Interface, fd int) error {
 	msg.Index = int32(iface.Index)
 	msg.Change = DEFAULT_CHANGE
 	wb.AddData(msg)
-
-	b := make([]byte, 4)
-	native.PutUint32(b, uint32(fd))
-
-	data := newRtAttr(IFLA_NET_NS_FD, b)
-	wb.AddData(data)
+	wb.AddData(uint32Attr(IFLA_NET_NS_FD, uint32(fd)))
 
 	if err := s.Send(wb); err != nil {
 		return err
