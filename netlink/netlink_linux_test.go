@@ -125,3 +125,30 @@ func TestCreateVethPair(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestSetMACAddress(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+
+	name := "testmac"
+	mac := randMacAddr()
+
+	if err := NetworkLinkAdd(name, "bridge"); err != nil {
+		t.Fatal(err)
+	}
+	defer NetworkLinkDel(name)
+
+	if err := NetworkSetMacAddress(name, mac); err != nil {
+		t.Fatal(err)
+	}
+
+	iface, err := net.InterfaceByName(name)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if iface.HardwareAddr.String() != mac {
+		t.Fatalf("mac address %q does not match %q", iface.HardwareAddr, mac)
+	}
+}

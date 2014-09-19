@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"math/rand"
 	"net"
 	"sync/atomic"
 	"syscall"
@@ -932,7 +933,7 @@ func CreateBridge(name string, setMacAddr bool) error {
 		return err
 	}
 	if setMacAddr {
-		return setBridgeMacAddress(s, name)
+		return NetworkSetMacAddress(name, randMacAddr())
 	}
 	return nil
 }
@@ -988,21 +989,39 @@ func AddToBridge(iface, master *net.Interface) error {
 	return nil
 }
 
-func setBridgeMacAddress(s int, name string) error {
+func randMacAddr() string {
+	hw := make(net.HardwareAddr, 6)
+	for i := 0; i < 6; i++ {
+		hw[i] = byte(rand.Intn(255))
+	}
+	hw[0] &^= 0x1 // clear multicast bit
+	hw[0] |= 0x2  // set local assignment bit (IEEE802)
+	return hw.String()
+}
+
+func NetworkSetMacAddress(name, addr string) error {
 	if len(name) >= IFNAMSIZ {
 		return fmt.Errorf("Interface name %s too long", name)
 	}
+
+	hw, err := net.ParseMAC(addr)
+	if err != nil {
+		return err
+	}
+
+	s, err := getIfSocket()
+	if err != nil {
+		return err
+	}
+	defer syscall.Close(s)
 
 	ifr := ifreqHwaddr{}
 	ifr.IfruHwaddr.Family = syscall.ARPHRD_ETHER
 	copy(ifr.IfrnName[:len(ifr.IfrnName)-1], name)
 
 	for i := 0; i < 6; i++ {
-		ifr.IfruHwaddr.Data[i] = randIfrDataByte()
+		ifr.IfruHwaddr.Data[i] = ifrDataByte(hw[i])
 	}
-
-	ifr.IfruHwaddr.Data[0] &^= 0x1 // clear multicast bit
-	ifr.IfruHwaddr.Data[0] |= 0x2  // set local assignment bit (IEEE802)
 
 	if _, _, err := syscall.Syscall(syscall.SYS_IOCTL, uintptr(s), syscall.SIOCSIFHWADDR, uintptr(unsafe.Pointer(&ifr))); err != 0 {
 		return err
