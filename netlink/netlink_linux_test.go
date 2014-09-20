@@ -61,6 +61,10 @@ func ipAssigned(iface *net.Interface, ip net.IP) bool {
 }
 
 func TestNetworkLinkAddDel(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+
 	testLinks := []testLink{
 		{"tstEth", "dummy"},
 		{"tstBr", "bridge"},
@@ -74,6 +78,10 @@ func TestNetworkLinkAddDel(t *testing.T) {
 }
 
 func TestNetworkLinkUpDown(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+
 	tl := testLink{name: "tstEth", linkType: "dummy"}
 
 	addLink(t, tl.name, tl.linkType)
@@ -95,6 +103,10 @@ func TestNetworkLinkUpDown(t *testing.T) {
 }
 
 func TestNetworkSetMacAddress(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+
 	tl := testLink{name: "tstEth", linkType: "dummy"}
 	macaddr := "22:ce:e0:99:63:6f"
 
@@ -115,6 +127,10 @@ func TestNetworkSetMacAddress(t *testing.T) {
 }
 
 func TestNetworkSetMTU(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+
 	tl := testLink{name: "tstEth", linkType: "dummy"}
 	mtu := 1400
 
@@ -135,6 +151,10 @@ func TestNetworkSetMTU(t *testing.T) {
 }
 
 func TestNetworkSetMasterNoMaster(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+
 	master := testLink{"tstBr", "bridge"}
 	slave := testLink{"tstEth", "dummy"}
 	testLinks := []testLink{master, slave}
