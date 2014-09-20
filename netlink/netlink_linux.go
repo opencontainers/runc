@@ -18,6 +18,7 @@ const (
 	IFLA_INFO_DATA = 2
 	VETH_INFO_PEER = 1
 	IFLA_NET_NS_FD = 28
+	IFLA_ADDRESS   = 1
 	SIOC_BRADDBR   = 0x89a0
 	SIOC_BRDELBR   = 0x89a1
 	SIOC_BRADDIF   = 0x89a2
@@ -375,10 +376,19 @@ outer:
 	return nil
 }
 
-// Add a new route table entry.
-func AddRoute(destination, source, gateway, device string) error {
-	if destination == "" && source == "" && gateway == "" {
-		return fmt.Errorf("one of destination, source or gateway must not be blank")
+func zeroTerminated(s string) []byte {
+	return []byte(s + "\000")
+}
+
+func nonZeroTerminated(s string) []byte {
+	return []byte(s)
+}
+
+// Add a new network link of a specified type.
+// This is identical to running: ip add link $name type $linkType
+func NetworkLinkAdd(name string, linkType string) error {
+	if name == "" || linkType == "" {
+		return fmt.Errorf("Neither link name nor link type can be empty!")
 	}
 
 	s, err := getNetlinkSocket()
@@ -387,101 +397,58 @@ func AddRoute(destination, source, gateway, device string) error {
 	}
 	defer s.Close()
 
-	wb := newNetlinkRequest(syscall.RTM_NEWROUTE, syscall.NLM_F_CREATE|syscall.NLM_F_EXCL|syscall.NLM_F_ACK)
-	msg := newRtMsg()
-	currentFamily := -1
-	var rtAttrs []*RtAttr
+	wb := newNetlinkRequest(syscall.RTM_NEWLINK, syscall.NLM_F_CREATE|syscall.NLM_F_EXCL|syscall.NLM_F_ACK)
 
-	if destination != "" {
-		destIP, destNet, err := net.ParseCIDR(destination)
-		if err != nil {
-			return fmt.Errorf("destination CIDR %s couldn't be parsed", destination)
-		}
-		destFamily := getIpFamily(destIP)
-		currentFamily = destFamily
-		destLen, bits := destNet.Mask.Size()
-		if destLen == 0 && bits == 0 {
-			return fmt.Errorf("destination CIDR %s generated a non-canonical Mask", destination)
-		}
-		msg.Family = uint8(destFamily)
-		msg.Dst_len = uint8(destLen)
-		var destData []byte
-		if destFamily == syscall.AF_INET {
-			destData = destIP.To4()
-		} else {
-			destData = destIP.To16()
-		}
-		rtAttrs = append(rtAttrs, newRtAttr(syscall.RTA_DST, destData))
-	}
-
-	if source != "" {
-		srcIP, srcNet, err := net.ParseCIDR(source)
-		if err != nil {
-			return fmt.Errorf("source CIDR %s couldn't be parsed", source)
-		}
-		srcFamily := getIpFamily(srcIP)
-		if currentFamily != -1 && currentFamily != srcFamily {
-			return fmt.Errorf("source and destination ip were not the same IP family")
-		}
-		currentFamily = srcFamily
-		srcLen, bits := srcNet.Mask.Size()
-		if srcLen == 0 && bits == 0 {
-			return fmt.Errorf("source CIDR %s generated a non-canonical Mask", source)
-		}
-		msg.Family = uint8(srcFamily)
-		msg.Src_len = uint8(srcLen)
-		var srcData []byte
-		if srcFamily == syscall.AF_INET {
-			srcData = srcIP.To4()
-		} else {
-			srcData = srcIP.To16()
-		}
-		rtAttrs = append(rtAttrs, newRtAttr(syscall.RTA_SRC, srcData))
-	}
-
-	if gateway != "" {
-		gwIP := net.ParseIP(gateway)
-		if gwIP == nil {
-			return fmt.Errorf("gateway IP %s couldn't be parsed", gateway)
-		}
-		gwFamily := getIpFamily(gwIP)
-		if currentFamily != -1 && currentFamily != gwFamily {
-			return fmt.Errorf("gateway, source, and destination ip were not the same IP family")
-		}
-		msg.Family = uint8(gwFamily)
-		var gwData []byte
-		if gwFamily == syscall.AF_INET {
-			gwData = gwIP.To4()
-		} else {
-			gwData = gwIP.To16()
-		}
-		rtAttrs = append(rtAttrs, newRtAttr(syscall.RTA_GATEWAY, gwData))
-	}
-
+	msg := newIfInfomsg(syscall.AF_UNSPEC)
 	wb.AddData(msg)
-	for _, attr := range rtAttrs {
-		wb.AddData(attr)
-	}
 
-	iface, err := net.InterfaceByName(device)
-	if err != nil {
-		return err
-	}
-	wb.AddData(uint32Attr(syscall.RTA_OIF, uint32(iface.Index)))
+	linkInfo := newRtAttr(syscall.IFLA_LINKINFO, nil)
+	newRtAttrChild(linkInfo, IFLA_INFO_KIND, nonZeroTerminated(linkType))
+	wb.AddData(linkInfo)
+
+	nameData := newRtAttr(syscall.IFLA_IFNAME, zeroTerminated(name))
+	wb.AddData(nameData)
 
 	if err := s.Send(wb); err != nil {
 		return err
 	}
+
 	return s.HandleAck(wb.Seq)
 }
 
-// Add a new default gateway. Identical to:
-// ip route add default via $ip
-func AddDefaultGw(ip, device string) error {
-	return AddRoute("", "", ip, device)
+// Delete a network link.
+// This is identical to running: ip link del $name
+func NetworkLinkDel(name string) error {
+	if name == "" {
+		return fmt.Errorf("Network link name can not be empty!")
+	}
+
+	s, err := getNetlinkSocket()
+	if err != nil {
+		return err
+	}
+	defer s.Close()
+
+	iface, err := net.InterfaceByName(name)
+	if err != nil {
+		return err
+	}
+
+	wb := newNetlinkRequest(syscall.RTM_DELLINK, syscall.NLM_F_ACK)
+
+	msg := newIfInfomsg(syscall.AF_UNSPEC)
+	msg.Index = int32(iface.Index)
+	wb.AddData(msg)
+
+	if err := s.Send(wb); err != nil {
+		return err
+	}
+
+	return s.HandleAck(wb.Seq)
 }
 
-// Bring up a particular network interface
+// Bring up a particular network interface.
+// This is identical to running: ip link set dev $name up
 func NetworkLinkUp(iface *net.Interface) error {
 	s, err := getNetlinkSocket()
 	if err != nil {
@@ -492,9 +459,9 @@ func NetworkLinkUp(iface *net.Interface) error {
 	wb := newNetlinkRequest(syscall.RTM_NEWLINK, syscall.NLM_F_ACK)
 
 	msg := newIfInfomsg(syscall.AF_UNSPEC)
-	msg.Change = syscall.IFF_UP
-	msg.Flags = syscall.IFF_UP
 	msg.Index = int32(iface.Index)
+	msg.Flags = syscall.IFF_UP
+	msg.Change = syscall.IFF_UP
 	wb.AddData(msg)
 
 	if err := s.Send(wb); err != nil {
@@ -504,6 +471,8 @@ func NetworkLinkUp(iface *net.Interface) error {
 	return s.HandleAck(wb.Seq)
 }
 
+// Bring down a particular network interface.
+// This is identical to running: ip link set $name down
 func NetworkLinkDown(iface *net.Interface) error {
 	s, err := getNetlinkSocket()
 	if err != nil {
@@ -514,9 +483,9 @@ func NetworkLinkDown(iface *net.Interface) error {
 	wb := newNetlinkRequest(syscall.RTM_NEWLINK, syscall.NLM_F_ACK)
 
 	msg := newIfInfomsg(syscall.AF_UNSPEC)
-	msg.Change = syscall.IFF_UP
-	msg.Flags = 0 & ^syscall.IFF_UP
 	msg.Index = int32(iface.Index)
+	msg.Flags = 0 & ^syscall.IFF_UP
+	msg.Change = DEFAULT_CHANGE
 	wb.AddData(msg)
 
 	if err := s.Send(wb); err != nil {
@@ -526,6 +495,53 @@ func NetworkLinkDown(iface *net.Interface) error {
 	return s.HandleAck(wb.Seq)
 }
 
+// Set link layer address ie. MAC Address.
+// This is identical to running: ip link set dev $name address $macaddress
+func NetworkSetMacAddress(iface *net.Interface, macaddr string) error {
+	s, err := getNetlinkSocket()
+	if err != nil {
+		return err
+	}
+	defer s.Close()
+
+	hwaddr, err := net.ParseMAC(macaddr)
+	if err != nil {
+		return err
+	}
+
+	var (
+		MULTICAST byte = 0x1
+		LOCALOUI  byte = 0x2
+	)
+
+	if hwaddr[0]&0x1 == MULTICAST || hwaddr[0]&0x2 != LOCALOUI {
+		return fmt.Errorf("Incorrect Local MAC Address specified: %s", macaddr)
+	}
+
+	wb := newNetlinkRequest(syscall.RTM_SETLINK, syscall.NLM_F_ACK)
+
+	msg := newIfInfomsg(syscall.AF_UNSPEC)
+	msg.Index = int32(iface.Index)
+	msg.Change = DEFAULT_CHANGE
+	wb.AddData(msg)
+
+	macdata := make([]byte, 6)
+	copy(macdata, hwaddr)
+	data := newRtAttr(IFLA_ADDRESS, macdata)
+	wb.AddData(data)
+
+	if err := s.Send(wb); err != nil {
+		return err
+	}
+	return s.HandleAck(wb.Seq)
+}
+
+// Set link Maximum Transmission Unit
+// This is identical to running: ip link set dev $name mtu $MTU
+// bridge is a bitch here https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=292088
+// https://bugzilla.redhat.com/show_bug.cgi?id=697021
+// There is a discussion about how to deal with ifcs joining bridge with MTU > 1500
+// Regular network nterfaces do seem to work though!
 func NetworkSetMTU(iface *net.Interface, mtu int) error {
 	s, err := getNetlinkSocket()
 	if err != nil {
@@ -549,8 +565,7 @@ func NetworkSetMTU(iface *net.Interface, mtu int) error {
 	return s.HandleAck(wb.Seq)
 }
 
-// same as ip link set $name master $master
-func NetworkSetMaster(iface, master *net.Interface) error {
+func networkMasterAction(iface *net.Interface, rtattr *RtAttr) error {
 	s, err := getNetlinkSocket()
 	if err != nil {
 		return err
@@ -565,13 +580,27 @@ func NetworkSetMaster(iface, master *net.Interface) error {
 	msg.Index = int32(iface.Index)
 	msg.Change = DEFAULT_CHANGE
 	wb.AddData(msg)
-	wb.AddData(uint32Attr(syscall.IFLA_MASTER, uint32(master.Index)))
+	wb.AddData(rtattr)
 
 	if err := s.Send(wb); err != nil {
 		return err
 	}
 
 	return s.HandleAck(wb.Seq)
+}
+
+// Add an interface to bridge.
+// This is identical to running: ip link set $name master $master
+func NetworkSetMaster(iface, master *net.Interface) error {
+	data := uint32Attr(syscall.IFLA_MASTER, uint32(master.Index))
+	return networkMasterAction(iface, data)
+}
+
+// Remove an interface from the bridge
+// This is is identical to to running: ip link $name set nomaster
+func NetworkSetNoMaster(iface *net.Interface) error {
+	data := uint32Attr(syscall.IFLA_MASTER, 0)
+	return networkMasterAction(iface, data)
 }
 
 func NetworkSetNsPid(iface *net.Interface, nspid int) error {
@@ -679,77 +708,6 @@ func NetworkLinkAddIp(iface *net.Interface, ip net.IP, ipNet *net.IPNet) error {
 	)
 }
 
-func zeroTerminated(s string) []byte {
-	return []byte(s + "\000")
-}
-
-func nonZeroTerminated(s string) []byte {
-	return []byte(s)
-}
-
-// Add a new network link of a specified type. This is identical to
-// running: ip add link $name type $linkType
-func NetworkLinkAdd(name string, linkType string) error {
-	if name == "" || linkType == "" {
-		return fmt.Errorf("Neither link name nor link type can be empty!")
-	}
-
-	s, err := getNetlinkSocket()
-	if err != nil {
-		return err
-	}
-	defer s.Close()
-
-	wb := newNetlinkRequest(syscall.RTM_NEWLINK, syscall.NLM_F_CREATE|syscall.NLM_F_EXCL|syscall.NLM_F_ACK)
-
-	msg := newIfInfomsg(syscall.AF_UNSPEC)
-	wb.AddData(msg)
-
-	linkInfo := newRtAttr(syscall.IFLA_LINKINFO, nil)
-	newRtAttrChild(linkInfo, IFLA_INFO_KIND, nonZeroTerminated(linkType))
-	wb.AddData(linkInfo)
-
-	nameData := newRtAttr(syscall.IFLA_IFNAME, zeroTerminated(name))
-	wb.AddData(nameData)
-
-	if err := s.Send(wb); err != nil {
-		return err
-	}
-
-	return s.HandleAck(wb.Seq)
-}
-
-// Delete a network link. This is identical to
-// running: ip link del $name
-func NetworkLinkDel(name string) error {
-	if name == "" {
-		return fmt.Errorf("Network link name can not be empty!")
-	}
-
-	s, err := getNetlinkSocket()
-	if err != nil {
-		return err
-	}
-	defer s.Close()
-
-	iface, err := net.InterfaceByName(name)
-	if err != nil {
-		return err
-	}
-
-	wb := newNetlinkRequest(syscall.RTM_DELLINK, syscall.NLM_F_ACK)
-
-	msg := newIfInfomsg(syscall.AF_UNSPEC)
-	msg.Index = int32(iface.Index)
-	wb.AddData(msg)
-
-	if err := s.Send(wb); err != nil {
-		return err
-	}
-
-	return s.HandleAck(wb.Seq)
-}
-
 // Returns an array of IPNet for all the currently routed subnets on ipv4
 // This is similar to the first column of "ip route" output
 func NetworkGetRoutes() ([]Route, error) {
@@ -842,20 +800,110 @@ outer:
 	return res, nil
 }
 
-func getIfSocket() (fd int, err error) {
-	for _, socket := range []int{
-		syscall.AF_INET,
-		syscall.AF_PACKET,
-		syscall.AF_INET6,
-	} {
-		if fd, err = syscall.Socket(socket, syscall.SOCK_DGRAM, 0); err == nil {
-			break
+// Add a new route table entry.
+func AddRoute(destination, source, gateway, device string) error {
+	if destination == "" && source == "" && gateway == "" {
+		return fmt.Errorf("one of destination, source or gateway must not be blank")
+	}
+
+	s, err := getNetlinkSocket()
+	if err != nil {
+		return err
+	}
+	defer s.Close()
+
+	wb := newNetlinkRequest(syscall.RTM_NEWROUTE, syscall.NLM_F_CREATE|syscall.NLM_F_EXCL|syscall.NLM_F_ACK)
+	msg := newRtMsg()
+	currentFamily := -1
+	var rtAttrs []*RtAttr
+
+	if destination != "" {
+		destIP, destNet, err := net.ParseCIDR(destination)
+		if err != nil {
+			return fmt.Errorf("destination CIDR %s couldn't be parsed", destination)
 		}
+		destFamily := getIpFamily(destIP)
+		currentFamily = destFamily
+		destLen, bits := destNet.Mask.Size()
+		if destLen == 0 && bits == 0 {
+			return fmt.Errorf("destination CIDR %s generated a non-canonical Mask", destination)
+		}
+		msg.Family = uint8(destFamily)
+		msg.Dst_len = uint8(destLen)
+		var destData []byte
+		if destFamily == syscall.AF_INET {
+			destData = destIP.To4()
+		} else {
+			destData = destIP.To16()
+		}
+		rtAttrs = append(rtAttrs, newRtAttr(syscall.RTA_DST, destData))
 	}
-	if err == nil {
-		return fd, nil
+
+	if source != "" {
+		srcIP, srcNet, err := net.ParseCIDR(source)
+		if err != nil {
+			return fmt.Errorf("source CIDR %s couldn't be parsed", source)
+		}
+		srcFamily := getIpFamily(srcIP)
+		if currentFamily != -1 && currentFamily != srcFamily {
+			return fmt.Errorf("source and destination ip were not the same IP family")
+		}
+		currentFamily = srcFamily
+		srcLen, bits := srcNet.Mask.Size()
+		if srcLen == 0 && bits == 0 {
+			return fmt.Errorf("source CIDR %s generated a non-canonical Mask", source)
+		}
+		msg.Family = uint8(srcFamily)
+		msg.Src_len = uint8(srcLen)
+		var srcData []byte
+		if srcFamily == syscall.AF_INET {
+			srcData = srcIP.To4()
+		} else {
+			srcData = srcIP.To16()
+		}
+		rtAttrs = append(rtAttrs, newRtAttr(syscall.RTA_SRC, srcData))
 	}
-	return -1, err
+
+	if gateway != "" {
+		gwIP := net.ParseIP(gateway)
+		if gwIP == nil {
+			return fmt.Errorf("gateway IP %s couldn't be parsed", gateway)
+		}
+		gwFamily := getIpFamily(gwIP)
+		if currentFamily != -1 && currentFamily != gwFamily {
+			return fmt.Errorf("gateway, source, and destination ip were not the same IP family")
+		}
+		msg.Family = uint8(gwFamily)
+		var gwData []byte
+		if gwFamily == syscall.AF_INET {
+			gwData = gwIP.To4()
+		} else {
+			gwData = gwIP.To16()
+		}
+		rtAttrs = append(rtAttrs, newRtAttr(syscall.RTA_GATEWAY, gwData))
+	}
+
+	wb.AddData(msg)
+	for _, attr := range rtAttrs {
+		wb.AddData(attr)
+	}
+
+	iface, err := net.InterfaceByName(device)
+	if err != nil {
+		return err
+	}
+	wb.AddData(uint32Attr(syscall.RTA_OIF, uint32(iface.Index)))
+
+	if err := s.Send(wb); err != nil {
+		return err
+	}
+	return s.HandleAck(wb.Seq)
+}
+
+// Add a new default gateway. Identical to:
+// ip route add default via $ip
+func AddDefaultGw(ip, device string) error {
+	return AddRoute("", "", ip, device)
 }
 
 func NetworkChangeName(iface *net.Interface, newName string) error {
@@ -912,6 +960,25 @@ func NetworkCreateVethPair(name1, name2 string) error {
 	return s.HandleAck(wb.Seq)
 }
 
+// THIS CODE DOES NOT COMMUNICATE WITH KERNEL VIA RTNETLINK INTERFACE
+// IT IS HERE FOR BACKWARDS COMPATIBILITY WITH OLDER LINUX KERNELS
+// WHICH SHIP WITH OLDER NOT ENTIRELY FUNCTIONAL VERSION OF NETLINK
+func getIfSocket() (fd int, err error) {
+	for _, socket := range []int{
+		syscall.AF_INET,
+		syscall.AF_PACKET,
+		syscall.AF_INET6,
+	} {
+		if fd, err = syscall.Socket(socket, syscall.SOCK_DGRAM, 0); err == nil {
+			break
+		}
+	}
+	if err == nil {
+		return fd, nil
+	}
+	return -1, err
+}
+
 // Create the actual bridge device.  This is more backward-compatible than
 // netlink.NetworkLinkAdd and works on RHEL 6.
 func CreateBridge(name string, setMacAddr bool) error {
@@ -933,7 +1000,7 @@ func CreateBridge(name string, setMacAddr bool) error {
 		return err
 	}
 	if setMacAddr {
-		return NetworkSetMacAddress(name, randMacAddr())
+		return SetMacAddress(name, randMacAddr())
 	}
 	return nil
 }
@@ -999,7 +1066,7 @@ func randMacAddr() string {
 	return hw.String()
 }
 
-func NetworkSetMacAddress(name, addr string) error {
+func SetMacAddress(name, addr string) error {
 	if len(name) >= IFNAMSIZ {
 		return fmt.Errorf("Interface name %s too long", name)
 	}
