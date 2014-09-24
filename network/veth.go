@@ -63,6 +63,12 @@ func (v *Veth) Initialize(config *Network, networkState *NetworkState) error {
 	if err := SetInterfaceIp(defaultDevice, config.Address); err != nil {
 		return fmt.Errorf("set %s ip %s", defaultDevice, err)
 	}
+	if config.Address6 != "" {
+		if err := SetInterfaceIp(defaultDevice, config.Address6); err != nil {
+			return fmt.Errorf("set %s ipv6 %s", defaultDevice, err)
+		}
+	}
+
 	if err := SetMtu(defaultDevice, config.Mtu); err != nil {
 		return fmt.Errorf("set %s mtu to %d %s", defaultDevice, config.Mtu, err)
 	}
@@ -72,6 +78,11 @@ func (v *Veth) Initialize(config *Network, networkState *NetworkState) error {
 	if config.Gateway != "" {
 		if err := SetDefaultGateway(config.Gateway, defaultDevice); err != nil {
 			return fmt.Errorf("set gateway to %s on device %s failed with %s", config.Gateway, defaultDevice, err)
+		}
+	}
+	if config.Gateway6 != "" {
+		if err := SetDefaultGateway(config.Gateway6, defaultDevice); err != nil {
+			return fmt.Errorf("set gateway for ipv6 to %s on device %s failed with %s", config.Gateway6, defaultDevice, err)
 		}
 	}
 	return nil

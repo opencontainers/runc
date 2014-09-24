@@ -17,11 +17,17 @@ type Network struct {
 	// Prefix for the veth interfaces.
 	VethPrefix string `json:"veth_prefix,omitempty"`
 
-	// Address contains the IP and mask to set on the network interface
+	// Address contains the IPv4 and mask to set on the network interface
 	Address string `json:"address,omitempty"`
+
+	// Address contains the IPv6 and mask to set on the network interface
+	Address6 string `json:"address6,omitempty"`
 
 	// Gateway sets the gateway address that is used as the default for the interface
 	Gateway string `json:"gateway,omitempty"`
+
+	// Gateway sets the ipv6 gateway address that is used as the default for the interface
+	Gateway6 string `json:"gateway6,omitempty"`
 
 	// Mtu sets the mtu value for the interface and will be mirrored on both the host and
 	// container's interfaces if a pair is created, specifically in the case of type veth
