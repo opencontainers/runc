@@ -385,7 +385,7 @@ func nonZeroTerminated(s string) []byte {
 }
 
 // Add a new network link of a specified type.
-// This is identical to running: ip add link $name type $linkType
+// This is identical to running: ip link add $name type $linkType
 func NetworkLinkAdd(name string, linkType string) error {
 	if name == "" || linkType == "" {
 		return fmt.Errorf("Neither link name nor link type can be empty!")
@@ -603,22 +603,18 @@ func NetworkSetNoMaster(iface *net.Interface) error {
 	return networkMasterAction(iface, data)
 }
 
-func NetworkSetNsPid(iface *net.Interface, nspid int) error {
+func networkSetNsAction(iface *net.Interface, rtattr *RtAttr) error {
 	s, err := getNetlinkSocket()
 	if err != nil {
 		return err
 	}
 	defer s.Close()
 
-	wb := newNetlinkRequest(syscall.RTM_SETLINK, syscall.NLM_F_ACK)
-
+	wb := newNetlinkRequest(syscall.RTM_NEWLINK, syscall.NLM_F_ACK)
 	msg := newIfInfomsg(syscall.AF_UNSPEC)
-	msg.Type = syscall.RTM_SETLINK
-	msg.Flags = syscall.NLM_F_REQUEST
 	msg.Index = int32(iface.Index)
-	msg.Change = DEFAULT_CHANGE
 	wb.AddData(msg)
-	wb.AddData(uint32Attr(syscall.IFLA_NET_NS_PID, uint32(nspid)))
+	wb.AddData(rtattr)
 
 	if err := s.Send(wb); err != nil {
 		return err
@@ -627,7 +623,29 @@ func NetworkSetNsPid(iface *net.Interface, nspid int) error {
 	return s.HandleAck(wb.Seq)
 }
 
+// Move a particular network interface to a particular network namespace
+// specified by PID. This is idential to running: ip link set dev $name netns $pid
+func NetworkSetNsPid(iface *net.Interface, nspid int) error {
+	data := uint32Attr(syscall.IFLA_NET_NS_PID, uint32(nspid))
+	return networkSetNsAction(iface, data)
+}
+
+// Move a particular network interface to a particular mounted
+// network namespace specified by file descriptor.
+// This is idential to running: ip link set dev $name netns $fd
 func NetworkSetNsFd(iface *net.Interface, fd int) error {
+	data := uint32Attr(IFLA_NET_NS_FD, uint32(fd))
+	return networkSetNsAction(iface, data)
+}
+
+// Rname a particular interface to a different name
+// !!! Note that you can't rename an active interface. You need to bring it down before renaming it.
+// This is identical to running: ip link set dev ${oldName} name ${newName}
+func NetworkChangeName(iface *net.Interface, newName string) error {
+	if len(newName) >= IFNAMSIZ {
+		return fmt.Errorf("Interface name %s too long", newName)
+	}
+
 	s, err := getNetlinkSocket()
 	if err != nil {
 		return err
@@ -637,17 +655,50 @@ func NetworkSetNsFd(iface *net.Interface, fd int) error {
 	wb := newNetlinkRequest(syscall.RTM_SETLINK, syscall.NLM_F_ACK)
 
 	msg := newIfInfomsg(syscall.AF_UNSPEC)
-	msg.Type = syscall.RTM_SETLINK
-	msg.Flags = syscall.NLM_F_REQUEST
 	msg.Index = int32(iface.Index)
 	msg.Change = DEFAULT_CHANGE
 	wb.AddData(msg)
-	wb.AddData(uint32Attr(IFLA_NET_NS_FD, uint32(fd)))
+
+	nameData := newRtAttr(syscall.IFLA_IFNAME, zeroTerminated(newName))
+	wb.AddData(nameData)
 
 	if err := s.Send(wb); err != nil {
 		return err
 	}
 
+	return s.HandleAck(wb.Seq)
+}
+
+// Add a new VETH pair link on the host
+// This is identical to running: ip link add name $name type veth peer name $peername
+func NetworkCreateVethPair(name1, name2 string) error {
+	s, err := getNetlinkSocket()
+	if err != nil {
+		return err
+	}
+	defer s.Close()
+
+	wb := newNetlinkRequest(syscall.RTM_NEWLINK, syscall.NLM_F_CREATE|syscall.NLM_F_EXCL|syscall.NLM_F_ACK)
+
+	msg := newIfInfomsg(syscall.AF_UNSPEC)
+	wb.AddData(msg)
+
+	nameData := newRtAttr(syscall.IFLA_IFNAME, zeroTerminated(name1))
+	wb.AddData(nameData)
+
+	nest1 := newRtAttr(syscall.IFLA_LINKINFO, nil)
+	newRtAttrChild(nest1, IFLA_INFO_KIND, zeroTerminated("veth"))
+	nest2 := newRtAttrChild(nest1, IFLA_INFO_DATA, nil)
+	nest3 := newRtAttrChild(nest2, VETH_INFO_PEER, nil)
+
+	newIfInfomsgChild(nest3, syscall.AF_UNSPEC)
+	newRtAttrChild(nest3, syscall.IFLA_IFNAME, zeroTerminated(name2))
+
+	wb.AddData(nest1)
+
+	if err := s.Send(wb); err != nil {
+		return err
+	}
 	return s.HandleAck(wb.Seq)
 }
 
@@ -906,60 +957,6 @@ func AddDefaultGw(ip, device string) error {
 	return AddRoute("", "", ip, device)
 }
 
-func NetworkChangeName(iface *net.Interface, newName string) error {
-	if len(newName) >= IFNAMSIZ {
-		return fmt.Errorf("Interface name %s too long", newName)
-	}
-
-	fd, err := getIfSocket()
-	if err != nil {
-		return err
-	}
-	defer syscall.Close(fd)
-
-	data := [IFNAMSIZ * 2]byte{}
-	// the "-1"s here are very important for ensuring we get proper null
-	// termination of our new C strings
-	copy(data[:IFNAMSIZ-1], iface.Name)
-	copy(data[IFNAMSIZ:IFNAMSIZ*2-1], newName)
-
-	if _, _, errno := syscall.Syscall(syscall.SYS_IOCTL, uintptr(fd), syscall.SIOCSIFNAME, uintptr(unsafe.Pointer(&data[0]))); errno != 0 {
-		return errno
-	}
-	return nil
-}
-
-func NetworkCreateVethPair(name1, name2 string) error {
-	s, err := getNetlinkSocket()
-	if err != nil {
-		return err
-	}
-	defer s.Close()
-
-	wb := newNetlinkRequest(syscall.RTM_NEWLINK, syscall.NLM_F_CREATE|syscall.NLM_F_EXCL|syscall.NLM_F_ACK)
-
-	msg := newIfInfomsg(syscall.AF_UNSPEC)
-	wb.AddData(msg)
-
-	nameData := newRtAttr(syscall.IFLA_IFNAME, zeroTerminated(name1))
-	wb.AddData(nameData)
-
-	nest1 := newRtAttr(syscall.IFLA_LINKINFO, nil)
-	newRtAttrChild(nest1, IFLA_INFO_KIND, zeroTerminated("veth"))
-	nest2 := newRtAttrChild(nest1, IFLA_INFO_DATA, nil)
-	nest3 := newRtAttrChild(nest2, VETH_INFO_PEER, nil)
-
-	newIfInfomsgChild(nest3, syscall.AF_UNSPEC)
-	newRtAttrChild(nest3, syscall.IFLA_IFNAME, zeroTerminated(name2))
-
-	wb.AddData(nest1)
-
-	if err := s.Send(wb); err != nil {
-		return err
-	}
-	return s.HandleAck(wb.Seq)
-}
-
 // THIS CODE DOES NOT COMMUNICATE WITH KERNEL VIA RTNETLINK INTERFACE
 // IT IS HERE FOR BACKWARDS COMPATIBILITY WITH OLDER LINUX KERNELS
 // WHICH SHIP WITH OLDER NOT ENTIRELY FUNCTIONAL VERSION OF NETLINK
@@ -1092,6 +1089,29 @@ func SetMacAddress(name, addr string) error {
 
 	if _, _, err := syscall.Syscall(syscall.SYS_IOCTL, uintptr(s), syscall.SIOCSIFHWADDR, uintptr(unsafe.Pointer(&ifr))); err != 0 {
 		return err
+	}
+	return nil
+}
+
+func ChangeName(iface *net.Interface, newName string) error {
+	if len(newName) >= IFNAMSIZ {
+		return fmt.Errorf("Interface name %s too long", newName)
+	}
+
+	fd, err := getIfSocket()
+	if err != nil {
+		return err
+	}
+	defer syscall.Close(fd)
+
+	data := [IFNAMSIZ * 2]byte{}
+	// the "-1"s here are very important for ensuring we get proper null
+	// termination of our new C strings
+	copy(data[:IFNAMSIZ-1], iface.Name)
+	copy(data[IFNAMSIZ:IFNAMSIZ*2-1], newName)
+
+	if _, _, errno := syscall.Syscall(syscall.SYS_IOCTL, uintptr(fd), syscall.SIOCSIFNAME, uintptr(unsafe.Pointer(&data[0]))); errno != 0 {
+		return errno
 	}
 	return nil
 }

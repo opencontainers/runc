@@ -180,6 +180,26 @@ func TestNetworkSetMasterNoMaster(t *testing.T) {
 	}
 }
 
+func TestNetworkChangeName(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+
+	tl := testLink{"tstEth", "dummy"}
+	newName := "newTst"
+
+	addLink(t, tl.name, tl.linkType)
+
+	linkIfc := readLink(t, tl.name)
+	if err := NetworkChangeName(linkIfc, newName); err != nil {
+		deleteLink(t, tl.name)
+		t.Fatalf("Could not change %#v interface name to %s: %s", tl, newName, err)
+	}
+
+	readLink(t, newName)
+	deleteLink(t, newName)
+}
+
 func TestAddDelNetworkIp(t *testing.T) {
 	if testing.Short() {
 		return
