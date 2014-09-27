@@ -12,16 +12,25 @@ import (
 )
 
 const (
-	IFNAMSIZ       = 16
-	DEFAULT_CHANGE = 0xFFFFFFFF
-	IFLA_INFO_KIND = 1
-	IFLA_INFO_DATA = 2
-	VETH_INFO_PEER = 1
-	IFLA_NET_NS_FD = 28
-	IFLA_ADDRESS   = 1
-	SIOC_BRADDBR   = 0x89a0
-	SIOC_BRDELBR   = 0x89a1
-	SIOC_BRADDIF   = 0x89a2
+	IFNAMSIZ          = 16
+	DEFAULT_CHANGE    = 0xFFFFFFFF
+	IFLA_INFO_KIND    = 1
+	IFLA_INFO_DATA    = 2
+	VETH_INFO_PEER    = 1
+	IFLA_MACVLAN_MODE = 1
+	IFLA_VLAN_ID      = 1
+	IFLA_NET_NS_FD    = 28
+	IFLA_ADDRESS      = 1
+	SIOC_BRADDBR      = 0x89a0
+	SIOC_BRDELBR      = 0x89a1
+	SIOC_BRADDIF      = 0x89a2
+)
+
+const (
+	MACVLAN_MODE_PRIVATE = 1 << iota
+	MACVLAN_MODE_VEPA
+	MACVLAN_MODE_BRIDGE
+	MACVLAN_MODE_PASSTHRU
 )
 
 var nextSeqNr uint32
@@ -695,6 +704,89 @@ func NetworkCreateVethPair(name1, name2 string) error {
 	newRtAttrChild(nest3, syscall.IFLA_IFNAME, zeroTerminated(name2))
 
 	wb.AddData(nest1)
+
+	if err := s.Send(wb); err != nil {
+		return err
+	}
+	return s.HandleAck(wb.Seq)
+}
+
+// Add a new VLAN interface with masterDev as its upper device
+// This is identical to running:
+// ip link add name $name link $masterdev type vlan id $id
+func NetworkLinkAddVlan(masterDev, vlanDev string, vlanId uint16) error {
+	s, err := getNetlinkSocket()
+	if err != nil {
+		return err
+	}
+	defer s.Close()
+
+	wb := newNetlinkRequest(syscall.RTM_NEWLINK, syscall.NLM_F_CREATE|syscall.NLM_F_EXCL|syscall.NLM_F_ACK)
+
+	masterDevIfc, err := net.InterfaceByName(masterDev)
+	if err != nil {
+		return err
+	}
+
+	msg := newIfInfomsg(syscall.AF_UNSPEC)
+	wb.AddData(msg)
+
+	nest1 := newRtAttr(syscall.IFLA_LINKINFO, nil)
+	newRtAttrChild(nest1, IFLA_INFO_KIND, nonZeroTerminated("vlan"))
+
+	nest2 := newRtAttrChild(nest1, IFLA_INFO_DATA, nil)
+	vlanData := make([]byte, 2)
+	native.PutUint16(vlanData, vlanId)
+	newRtAttrChild(nest2, IFLA_VLAN_ID, vlanData)
+	wb.AddData(nest1)
+
+	wb.AddData(uint32Attr(syscall.IFLA_LINK, uint32(masterDevIfc.Index)))
+	wb.AddData(newRtAttr(syscall.IFLA_IFNAME, zeroTerminated(vlanDev)))
+
+	if err := s.Send(wb); err != nil {
+		return err
+	}
+	return s.HandleAck(wb.Seq)
+}
+
+// Add MAC VLAN network interface with masterDev as its upper device
+// This is identical to running:
+// ip link add name $name link $masterdev type macvlan mode $mode
+func NetworkLinkAddMacVlan(masterDev, macVlanDev string, mode string) error {
+	s, err := getNetlinkSocket()
+	if err != nil {
+		return err
+	}
+	defer s.Close()
+
+	macVlan := map[string]uint32{
+		"private":  MACVLAN_MODE_PRIVATE,
+		"vepa":     MACVLAN_MODE_VEPA,
+		"bridge":   MACVLAN_MODE_BRIDGE,
+		"passthru": MACVLAN_MODE_PASSTHRU,
+	}
+
+	wb := newNetlinkRequest(syscall.RTM_NEWLINK, syscall.NLM_F_CREATE|syscall.NLM_F_EXCL|syscall.NLM_F_ACK)
+
+	masterDevIfc, err := net.InterfaceByName(masterDev)
+	if err != nil {
+		return err
+	}
+
+	msg := newIfInfomsg(syscall.AF_UNSPEC)
+	wb.AddData(msg)
+
+	nest1 := newRtAttr(syscall.IFLA_LINKINFO, nil)
+	newRtAttrChild(nest1, IFLA_INFO_KIND, nonZeroTerminated("macvlan"))
+
+	nest2 := newRtAttrChild(nest1, IFLA_INFO_DATA, nil)
+	macVlanData := make([]byte, 4)
+	native.PutUint32(macVlanData, macVlan[mode])
+	newRtAttrChild(nest2, IFLA_MACVLAN_MODE, macVlanData)
+	wb.AddData(nest1)
+
+	wb.AddData(uint32Attr(syscall.IFLA_LINK, uint32(masterDevIfc.Index)))
+	wb.AddData(newRtAttr(syscall.IFLA_IFNAME, zeroTerminated(macVlanDev)))
 
 	if err := s.Send(wb); err != nil {
 		return err
