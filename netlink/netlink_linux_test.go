@@ -180,6 +180,74 @@ func TestNetworkSetMasterNoMaster(t *testing.T) {
 	}
 }
 
+func TestNetworkChangeName(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+
+	tl := testLink{"tstEth", "dummy"}
+	newName := "newTst"
+
+	addLink(t, tl.name, tl.linkType)
+
+	linkIfc := readLink(t, tl.name)
+	if err := NetworkChangeName(linkIfc, newName); err != nil {
+		deleteLink(t, tl.name)
+		t.Fatalf("Could not change %#v interface name to %s: %s", tl, newName, err)
+	}
+
+	readLink(t, newName)
+	deleteLink(t, newName)
+}
+
+func TestNetworkLinkAddVlan(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+
+	tl := struct {
+		name string
+		id   uint16
+	}{
+		name: "tstVlan",
+		id:   32,
+	}
+	masterLink := testLink{"tstEth", "dummy"}
+
+	addLink(t, masterLink.name, masterLink.linkType)
+	defer deleteLink(t, masterLink.name)
+
+	if err := NetworkLinkAddVlan(masterLink.name, tl.name, tl.id); err != nil {
+		t.Fatalf("Unable to create %#v VLAN interface: %s", tl, err)
+	}
+
+	readLink(t, tl.name)
+}
+
+func TestNetworkLinkAddMacVlan(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+
+	tl := struct {
+		name string
+		mode string
+	}{
+		name: "tstVlan",
+		mode: "private",
+	}
+	masterLink := testLink{"tstEth", "dummy"}
+
+	addLink(t, masterLink.name, masterLink.linkType)
+	defer deleteLink(t, masterLink.name)
+
+	if err := NetworkLinkAddMacVlan(masterLink.name, tl.name, tl.mode); err != nil {
+		t.Fatalf("Unable to create %#v MAC VLAN interface: %s", tl, err)
+	}
+
+	readLink(t, tl.name)
+}
+
 func TestAddDelNetworkIp(t *testing.T) {
 	if testing.Short() {
 		return
@@ -232,7 +300,7 @@ func TestCreateVethPair(t *testing.T) {
 }
 
 //
-// netlink package test which do not use RTNETLINK
+// netlink package tests which do not use RTNETLINK
 //
 func TestCreateBridgeWithMac(t *testing.T) {
 	if testing.Short() {
