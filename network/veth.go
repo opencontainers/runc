@@ -60,6 +60,11 @@ func (v *Veth) Initialize(config *Network, networkState *NetworkState) error {
 	if err := ChangeInterfaceName(vethChild, defaultDevice); err != nil {
 		return fmt.Errorf("change %s to %s %s", vethChild, defaultDevice, err)
 	}
+	if config.MACAddress != "" {
+		if err := SetInterfaceMac(defaultDevice, config.MACAddress); err != nil {
+			return fmt.Errorf("set %s mac %s", defaultDevice, err)
+		}
+	}
 	if err := SetInterfaceIp(defaultDevice, config.Address); err != nil {
 		return fmt.Errorf("set %s ip %s", defaultDevice, err)
 	}
