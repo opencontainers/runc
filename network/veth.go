@@ -96,16 +96,17 @@ func (v *Veth) Initialize(config *Network, networkState *NetworkState) error {
 // createVethPair will automatically generage two random names for
 // the veth pair and ensure that they have been created
 func createVethPair(prefix string) (name1 string, name2 string, err error) {
-	name1, err = utils.GenerateRandomName(prefix, 4)
-	if err != nil {
+	if name1, err = utils.GenerateRandomName(prefix, 7); err != nil {
 		return
 	}
-	name2, err = utils.GenerateRandomName(prefix, 4)
-	if err != nil {
+
+	if name2, err = utils.GenerateRandomName(prefix, 7); err != nil {
 		return
 	}
+
 	if err = CreateVethPair(name1, name2); err != nil {
 		return
 	}
+
 	return
 }
