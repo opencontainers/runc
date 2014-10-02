@@ -5,6 +5,7 @@ package network
 import (
 	"fmt"
 
+	"github.com/docker/libcontainer/netlink"
 	"github.com/docker/libcontainer/utils"
 )
 
@@ -96,16 +97,24 @@ func (v *Veth) Initialize(config *Network, networkState *NetworkState) error {
 // createVethPair will automatically generage two random names for
 // the veth pair and ensure that they have been created
 func createVethPair(prefix string) (name1 string, name2 string, err error) {
-	if name1, err = utils.GenerateRandomName(prefix, 7); err != nil {
-		return
-	}
+	for i := 0; i < 10; i++ {
+		if name1, err = utils.GenerateRandomName(prefix, 7); err != nil {
+			return
+		}
 
-	if name2, err = utils.GenerateRandomName(prefix, 7); err != nil {
-		return
-	}
+		if name2, err = utils.GenerateRandomName(prefix, 7); err != nil {
+			return
+		}
 
-	if err = CreateVethPair(name1, name2); err != nil {
-		return
+		if err = CreateVethPair(name1, name2); err != nil {
+			if err == netlink.ErrInterfaceExists {
+				continue
+			}
+
+			return
+		}
+
+		break
 	}
 
 	return
