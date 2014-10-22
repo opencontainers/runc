@@ -50,7 +50,7 @@ type Container interface {
 	// ConfigInvalid - config is invalid,
 	// ContainerPaused - Container is paused,
 	// SystemError - System error.
-	Start(config *ProcessConfig) (pid int, exitChan chan int, err Error)
+	StartProcess(config *ProcessConfig) (pid int, err Error)
 
 	// Destroys the container after killing all running processes.
 	//
@@ -79,4 +79,26 @@ type Container interface {
 	// ContainerDestroyed - Container no longer exists,
 	// SystemError - System error.
 	Resume() Error
+
+	// Signal sends the specified signal to a process owned by the container.
+	//
+	// Errors:
+	// ContainerDestroyed - Container no longer exists,
+	// ContainerPaused - Container is paused,
+	// SystemError - System error.
+	Signal(pid, signal int) Error
+
+	// Wait waits for the init process of the conatiner to die and returns it's exit status.
+	//
+	// Errors:
+	// ContainerDestroyed - Container no longer exists,
+	// SystemError - System error.
+	Wait() (exitStatus int, err Error)
+
+	// WaitProcess waits on a process owned by the container.
+	//
+	// Errors:
+	// ContainerDestroyed - Container no longer exists,
+	// SystemError - System error.
+	WaitProcess(pid int) (exitStatus int, err Error)
 }
