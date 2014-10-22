@@ -48,6 +48,7 @@ func main() {
 	app.Flags = []cli.Flag{
 		cli.StringFlag{Name: "nspid"},
 		cli.StringFlag{Name: "console"},
+		cli.StringFlag{Name: "root", Value: ".", Usage: "root directory for containers"},
 	}
 
 	app.Before = preload

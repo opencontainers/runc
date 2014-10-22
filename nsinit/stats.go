@@ -16,23 +16,23 @@ var statsCommand = cli.Command{
 }
 
 func statsAction(context *cli.Context) {
-	container, err := loadConfig()
+	factory, err := libcontainer.New(context.GlobalString("root"))
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	state, err := libcontainer.GetState(dataPath)
+	container, err := factory.Load(context.Args().First())
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	stats, err := libcontainer.GetStats(container, state)
+	stats, err := container.Stats()
 	if err != nil {
 		log.Fatal(err)
 	}
-	data, err := json.MarshalIndent(stats, "", "\t")
+	data, jerr := json.MarshalIndent(stats, "", "\t")
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(jerr)
 	}
 
 	fmt.Printf("%s", data)

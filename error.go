@@ -8,7 +8,6 @@ const (
 	// Factory errors
 	IdInUse ErrorCode = iota
 	InvalidIdFormat
-	// TODO: add Load errors
 
 	// Container errors
 	ContainerDestroyed
@@ -19,13 +18,28 @@ const (
 	SystemError
 )
 
+func (c ErrorCode) String() string {
+	switch c {
+	case IdInUse:
+		return "Id already in use"
+	case InvalidIdFormat:
+		return "Invalid format"
+	case ContainerDestroyed:
+		return "Container destroyed"
+	case ContainerPaused:
+		return "Container paused"
+	case ConfigInvalid:
+		return "Invalid configuration"
+	case SystemError:
+		return "System Error"
+	default:
+		return "Unknown error"
+	}
+}
+
 // API Error type.
 type Error interface {
 	error
-
-	// Returns the stack trace, if any, which identifies the
-	// point at which the error occurred.
-	Stack() []byte
 
 	// Returns a verbose string including the error message
 	// and a representation of the stack trace suitable for
