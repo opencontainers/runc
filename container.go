@@ -9,30 +9,30 @@ type ContainerInfo interface {
 
 	// Returns the current run state of the container.
 	//
-	// Errors:
+	// errors:
 	// ContainerDestroyed - Container no longer exists,
-	// SystemError - System error.
-	RunState() (*RunState, Error)
+	// Systemerror - System error.
+	RunState() (*RunState, error)
 
 	// Returns the current config of the container.
 	Config() *Config
 
 	// Returns the PIDs inside this container. The PIDs are in the namespace of the calling process.
 	//
-	// Errors:
+	// errors:
 	// ContainerDestroyed - Container no longer exists,
-	// SystemError - System error.
+	// Systemerror - System error.
 	//
 	// Some of the returned PIDs may no longer refer to processes in the Container, unless
 	// the Container state is PAUSED in which case every PID in the slice is valid.
-	Processes() ([]int, Error)
+	Processes() ([]int, error)
 
 	// Returns statistics for the container.
 	//
-	// Errors:
+	// errors:
 	// ContainerDestroyed - Container no longer exists,
-	// SystemError - System error.
-	Stats() (*ContainerStats, Error)
+	// Systemerror - System error.
+	Stats() (*ContainerStats, error)
 }
 
 // A libcontainer container object.
@@ -45,60 +45,60 @@ type Container interface {
 
 	// Start a process inside the container. Returns the PID of the new process (in the caller process's namespace) and a channel that will return the exit status of the process whenever it dies.
 	//
-	// Errors:
+	// errors:
 	// ContainerDestroyed - Container no longer exists,
 	// ConfigInvalid - config is invalid,
 	// ContainerPaused - Container is paused,
-	// SystemError - System error.
-	StartProcess(config *ProcessConfig) (pid int, err Error)
+	// Systemerror - System error.
+	StartProcess(config *ProcessConfig) (pid int, err error)
 
 	// Destroys the container after killing all running processes.
 	//
 	// Any event registrations are removed before the container is destroyed.
 	// No error is returned if the container is already destroyed.
 	//
-	// Errors:
-	// SystemError - System error.
-	Destroy() Error
+	// errors:
+	// Systemerror - System error.
+	Destroy() error
 
 	// If the Container state is RUNNING or PAUSING, sets the Container state to PAUSING and pauses
 	// the execution of any user processes. Asynchronously, when the container finished being paused the
 	// state is changed to PAUSED.
 	// If the Container state is PAUSED, do nothing.
 	//
-	// Errors:
+	// errors:
 	// ContainerDestroyed - Container no longer exists,
-	// SystemError - System error.
-	Pause() Error
+	// Systemerror - System error.
+	Pause() error
 
 	// If the Container state is PAUSED, resumes the execution of any user processes in the
 	// Container before setting the Container state to RUNNING.
 	// If the Container state is RUNNING, do nothing.
 	//
-	// Errors:
+	// errors:
 	// ContainerDestroyed - Container no longer exists,
-	// SystemError - System error.
-	Resume() Error
+	// Systemerror - System error.
+	Resume() error
 
 	// Signal sends the specified signal to a process owned by the container.
 	//
-	// Errors:
+	// errors:
 	// ContainerDestroyed - Container no longer exists,
 	// ContainerPaused - Container is paused,
-	// SystemError - System error.
-	Signal(pid, signal int) Error
+	// Systemerror - System error.
+	Signal(pid, signal int) error
 
 	// Wait waits for the init process of the conatiner to die and returns it's exit status.
 	//
-	// Errors:
+	// errors:
 	// ContainerDestroyed - Container no longer exists,
-	// SystemError - System error.
-	Wait() (exitStatus int, err Error)
+	// Systemerror - System error.
+	Wait() (exitStatus int, err error)
 
 	// WaitProcess waits on a process owned by the container.
 	//
-	// Errors:
+	// errors:
 	// ContainerDestroyed - Container no longer exists,
-	// SystemError - System error.
-	WaitProcess(pid int) (exitStatus int, err Error)
+	// Systemerror - System error.
+	WaitProcess(pid int) (exitStatus int, err error)
 }

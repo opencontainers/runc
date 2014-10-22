@@ -1,5 +1,7 @@
 package libcontainer
 
+import "io"
+
 // API error code type.
 type ErrorCode int
 
@@ -10,7 +12,7 @@ const (
 	InvalidIdFormat
 
 	// Container errors
-	ContainerDestroyed
+	ContainerNotExists
 	ContainerPaused
 
 	// Common errors
@@ -24,14 +26,14 @@ func (c ErrorCode) String() string {
 		return "Id already in use"
 	case InvalidIdFormat:
 		return "Invalid format"
-	case ContainerDestroyed:
-		return "Container destroyed"
 	case ContainerPaused:
 		return "Container paused"
 	case ConfigInvalid:
 		return "Invalid configuration"
 	case SystemError:
-		return "System Error"
+		return "System error"
+	case ContainerNotExists:
+		return "Container does not exist"
 	default:
 		return "Unknown error"
 	}
@@ -44,7 +46,7 @@ type Error interface {
 	// Returns a verbose string including the error message
 	// and a representation of the stack trace suitable for
 	// printing.
-	Detail() string
+	Detail(w io.Writer) error
 
 	// Returns the error code for this error.
 	Code() ErrorCode

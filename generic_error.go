@@ -1,46 +1,48 @@
 package libcontainer
 
 import (
-	"bytes"
 	"fmt"
-	"runtime"
+	"io"
+	"text/template"
 	"time"
+
+	"github.com/docker/libcontainer/stacktrace"
 )
 
-var newLine = []byte("\n")
+var errorTemplate = template.Must(template.New("error").Parse(`Timestamp: {{.Timestamp}}
+Code: {{.ECode}}
+Message: {{.Err.Error}}
+Frames:{{range $i, $frame := .Stack.Frames}}
+---
+{{$i}}: {{$frame.Function}}
+Package: {{$frame.Package}}
+File: {{$frame.File}}{{end}}
+`))
 
 func newGenericError(err error, c ErrorCode) Error {
 	return &GenericError{
-		timestamp: time.Now(),
-		err:       err,
-		code:      c,
-		stack:     captureStackTrace(2),
+		Timestamp: time.Now(),
+		Err:       err,
+		ECode:     c,
+		Stack:     stacktrace.Capture(2),
 	}
 }
 
-func captureStackTrace(skip int) string {
-	buf := make([]byte, 4096)
-	buf = buf[:runtime.Stack(buf, true)]
-
-	lines := bytes.Split(buf, newLine)
-	return string(bytes.Join(lines[skip:], newLine))
-}
-
 type GenericError struct {
-	timestamp time.Time
-	code      ErrorCode
-	err       error
-	stack     string
+	Timestamp time.Time
+	ECode     ErrorCode
+	Err       error
+	Stack     stacktrace.Stacktrace
 }
 
 func (e *GenericError) Error() string {
-	return fmt.Sprintf("[%d] %s: %s", e.code, e.code, e.err)
+	return fmt.Sprintf("[%d] %s: %s", e.ECode, e.ECode, e.Err)
 }
 
 func (e *GenericError) Code() ErrorCode {
-	return e.code
+	return e.ECode
 }
 
-func (e *GenericError) Detail() string {
-	return fmt.Sprintf("[%d] %s\n%s", e.code, e.err, e.stack)
+func (e *GenericError) Detail(w io.Writer) error {
+	return errorTemplate.Execute(w, e)
 }

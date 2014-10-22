@@ -14,7 +14,7 @@ const (
 )
 
 // New returns a linux based container factory based in the root directory.
-func New(root string) (Factory, Error) {
+func New(root string) (Factory, error) {
 	if err := os.MkdirAll(root, 0700); err != nil {
 		return nil, newGenericError(err, SystemError)
 	}
@@ -30,11 +30,11 @@ type linuxFactory struct {
 	root string
 }
 
-func (l *linuxFactory) Create(id string, config *Config) (Container, Error) {
+func (l *linuxFactory) Create(id string, config *Config) (Container, error) {
 	panic("not implemented")
 }
 
-func (l *linuxFactory) Load(id string) (ContainerInfo, Error) {
+func (l *linuxFactory) Load(id string) (ContainerInfo, error) {
 	containerRoot := filepath.Join(l.root, id)
 	config, err := l.loadContainerConfig(containerRoot)
 	if err != nil {
@@ -54,11 +54,11 @@ func (l *linuxFactory) Load(id string) (ContainerInfo, Error) {
 	}, nil
 }
 
-func (l *linuxFactory) loadContainerConfig(root string) (*Config, Error) {
+func (l *linuxFactory) loadContainerConfig(root string) (*Config, error) {
 	f, err := os.Open(filepath.Join(root, configFilename))
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, newGenericError(err, ContainerDestroyed)
+			return nil, newGenericError(err, ContainerNotExists)
 		}
 		return nil, newGenericError(err, SystemError)
 	}
@@ -71,11 +71,11 @@ func (l *linuxFactory) loadContainerConfig(root string) (*Config, Error) {
 	return config, nil
 }
 
-func (l *linuxFactory) loadContainerState(root string) (*State, Error) {
+func (l *linuxFactory) loadContainerState(root string) (*State, error) {
 	f, err := os.Open(filepath.Join(root, stateFilename))
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, newGenericError(err, ContainerDestroyed)
+			return nil, newGenericError(err, ContainerNotExists)
 		}
 		return nil, newGenericError(err, SystemError)
 	}

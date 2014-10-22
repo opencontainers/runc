@@ -23,11 +23,11 @@ func (c *linuxContainer) Config() *Config {
 	return c.config
 }
 
-func (c *linuxContainer) RunState() (*RunState, Error) {
+func (c *linuxContainer) RunState() (*RunState, error) {
 	panic("not implemented")
 }
 
-func (c *linuxContainer) Processes() ([]int, Error) {
+func (c *linuxContainer) Processes() ([]int, error) {
 	var (
 		err  error
 		pids []int
@@ -44,7 +44,7 @@ func (c *linuxContainer) Processes() ([]int, Error) {
 	return pids, nil
 }
 
-func (c *linuxContainer) Stats() (*ContainerStats, Error) {
+func (c *linuxContainer) Stats() (*ContainerStats, error) {
 	var (
 		err   error
 		stats = &ContainerStats{}
