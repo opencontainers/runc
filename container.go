@@ -12,7 +12,7 @@ type ContainerInfo interface {
 	// errors:
 	// ContainerDestroyed - Container no longer exists,
 	// Systemerror - System error.
-	RunState() (*RunState, error)
+	RunState() (RunState, error)
 
 	// Returns the current config of the container.
 	Config() *Config

@@ -31,7 +31,7 @@ const (
 	stateFile = "state.json"
 
 	// The container exists and is running.
-	Running RunState = iota
+	Running RunState = iota + 1
 
 	// The container exists, it is in the process of being paused.
 	Pausing

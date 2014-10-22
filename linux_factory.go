@@ -47,10 +47,11 @@ func (l *linuxFactory) Load(id string) (ContainerInfo, error) {
 	}
 
 	return &linuxContainer{
-		id:     id,
-		root:   containerRoot,
-		config: config,
-		state:  state,
+		id:            id,
+		root:          containerRoot,
+		config:        config,
+		state:         state,
+		cgroupManager: newCgroupsManager(),
 	}, nil
 }
 
