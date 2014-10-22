@@ -1,7 +1,6 @@
 package libcontainer
 
 type Factory interface {
-
 	// Creates a new container with the given id and starts the initial process inside it.
 	// id must be a string containing only letters, digits and underscores and must contain
 	// between 1 and 1024 characters, inclusive.
@@ -20,13 +19,12 @@ type Factory interface {
 	// On error, any partially created container parts are cleaned up (the operation is atomic).
 	Create(id string, config *Config) (Container, Error)
 
-	// Load takes an ID for an existing container and reconstructs the container
-	// from the state.
+	// Load takes an ID for an existing container and returns the container information
+	// from the state.  This presents a read only view of the container.
 	//
 	// Errors:
 	// Path does not exist
 	// Container is stopped
 	// System error
-	// TODO: fix description
-	Load(id string) (Container, Error)
+	Load(id string) (ContainerInfo, Error)
 }
