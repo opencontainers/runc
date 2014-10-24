@@ -115,14 +115,19 @@ func getDeviceNodes(path string) ([]*Device, error) {
 			}
 		}
 
-		device, err := GetDevice(filepath.Join(path, f.Name()), "rwm")
-		if err != nil {
-			if err == ErrNotADeviceNode {
-				continue
+		switch f.Name() {
+		case "console":
+			continue
+		default:
+			device, err := GetDevice(filepath.Join(path, f.Name()), "rwm")
+			if err != nil {
+				if err == ErrNotADeviceNode {
+					continue
+				}
+				return nil, err
 			}
-			return nil, err
+			out = append(out, device)
 		}
-		out = append(out, device)
 	}
 
 	return out, nil
