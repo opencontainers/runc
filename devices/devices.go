@@ -100,7 +100,8 @@ func getDeviceNodes(path string) ([]*Device, error) {
 
 	out := []*Device{}
 	for _, f := range files {
-		if f.IsDir() {
+		switch {
+		case f.IsDir():
 			switch f.Name() {
 			case "pts", "shm", "fd":
 				continue
@@ -113,21 +114,18 @@ func getDeviceNodes(path string) ([]*Device, error) {
 				out = append(out, sub...)
 				continue
 			}
+		case f.Name() == "console":
+			continue
 		}
 
-		switch f.Name() {
-		case "console":
-			continue
-		default:
-			device, err := GetDevice(filepath.Join(path, f.Name()), "rwm")
-			if err != nil {
-				if err == ErrNotADeviceNode {
-					continue
-				}
-				return nil, err
+		device, err := GetDevice(filepath.Join(path, f.Name()), "rwm")
+		if err != nil {
+			if err == ErrNotADeviceNode {
+				continue
 			}
-			out = append(out, device)
+			return nil, err
 		}
+		out = append(out, device)
 	}
 
 	return out, nil
