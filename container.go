@@ -3,7 +3,12 @@ NOTE: The API is in flux and mainly not implemented. Proceed with caution until 
 */
 package libcontainer
 
-type ContainerInfo interface {
+// A libcontainer container object.
+//
+// Each container is thread-safe within the same process. Since a container can
+// be destroyed by a separate process, any function may return that the container
+// was not found.
+type Container interface {
 	// Returns the ID of the container
 	ID() string
 
@@ -33,15 +38,6 @@ type ContainerInfo interface {
 	// ContainerDestroyed - Container no longer exists,
 	// Systemerror - System error.
 	Stats() (*ContainerStats, error)
-}
-
-// A libcontainer container object.
-//
-// Each container is thread-safe within the same process. Since a container can
-// be destroyed by a separate process, any function may return that the container
-// was not found.
-type Container interface {
-	ContainerInfo
 
 	// Start a process inside the container. Returns the PID of the new process (in the caller process's namespace) and a channel that will return the exit status of the process whenever it dies.
 	//

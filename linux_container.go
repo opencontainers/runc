@@ -46,3 +46,31 @@ func (c *linuxContainer) Stats() (*ContainerStats, error) {
 	}
 	return stats, nil
 }
+
+func (c *linuxContainer) StartProcess(config *ProcessConfig) (int, error) {
+	panic("not implemented")
+}
+
+func (c *linuxContainer) Destroy() error {
+	panic("not implemented")
+}
+
+func (c *linuxContainer) Pause() error {
+	panic("not implemented")
+}
+
+func (c *linuxContainer) Resume() error {
+	panic("not implemented")
+}
+
+func (c *linuxContainer) Signal(pid, signal int) error {
+	panic("not implemented")
+}
+
+func (c *linuxContainer) Wait() (int, error) {
+	panic("not implemented")
+}
+
+func (c *linuxContainer) WaitProcess(pid int) (int, error) {
+	panic("not implemented")
+}

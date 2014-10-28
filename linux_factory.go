@@ -34,7 +34,7 @@ func (l *linuxFactory) Create(id string, config *Config) (Container, error) {
 	panic("not implemented")
 }
 
-func (l *linuxFactory) Load(id string) (ContainerInfo, error) {
+func (l *linuxFactory) Load(id string) (Container, error) {
 	containerRoot := filepath.Join(l.root, id)
 	config, err := l.loadContainerConfig(containerRoot)
 	if err != nil {

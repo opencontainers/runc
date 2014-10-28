@@ -26,5 +26,5 @@ type Factory interface {
 	// Path does not exist
 	// Container is stopped
 	// System error
-	Load(id string) (ContainerInfo, error)
+	Load(id string) (Container, error)
 }
