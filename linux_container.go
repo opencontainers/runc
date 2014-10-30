@@ -2,7 +2,10 @@
 
 package libcontainer
 
-import "github.com/docker/libcontainer/network"
+import (
+	"github.com/Sirupsen/logrus"
+	"github.com/docker/libcontainer/network"
+)
 
 type linuxContainer struct {
 	id            string
@@ -10,6 +13,7 @@ type linuxContainer struct {
 	config        *Config
 	state         *State
 	cgroupManager CgroupManager
+	logger        *logrus.Logger
 }
 
 func (c *linuxContainer) ID() string {
@@ -25,6 +29,7 @@ func (c *linuxContainer) RunState() (RunState, error) {
 }
 
 func (c *linuxContainer) Processes() ([]int, error) {
+	c.logger.Debug("fetch container processes")
 	pids, err := c.cgroupManager.GetPids(c.config.Cgroups)
 	if err != nil {
 		return nil, newGenericError(err, SystemError)
@@ -33,6 +38,7 @@ func (c *linuxContainer) Processes() ([]int, error) {
 }
 
 func (c *linuxContainer) Stats() (*ContainerStats, error) {
+	c.logger.Debug("fetch container stats")
 	var (
 		err   error
 		stats = &ContainerStats{}
@@ -48,29 +54,36 @@ func (c *linuxContainer) Stats() (*ContainerStats, error) {
 }
 
 func (c *linuxContainer) StartProcess(config *ProcessConfig) (int, error) {
+	c.logger.Debug("start new container process")
 	panic("not implemented")
 }
 
 func (c *linuxContainer) Destroy() error {
+	c.logger.Debug("destroy container")
 	panic("not implemented")
 }
 
 func (c *linuxContainer) Pause() error {
+	c.logger.Debug("pause container")
 	panic("not implemented")
 }
 
 func (c *linuxContainer) Resume() error {
+	c.logger.Debug("resume container")
 	panic("not implemented")
 }
 
 func (c *linuxContainer) Signal(pid, signal int) error {
+	c.logger.Debugf("sending signal %d to pid %d", signal, pid)
 	panic("not implemented")
 }
 
 func (c *linuxContainer) Wait() (int, error) {
+	c.logger.Debug("wait container")
 	panic("not implemented")
 }
 
 func (c *linuxContainer) WaitProcess(pid int) (int, error) {
+	c.logger.Debugf("wait process %d", pid)
 	panic("not implemented")
 }

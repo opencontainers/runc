@@ -7,6 +7,7 @@ import (
 )
 
 type CgroupManager interface {
+	String() string
 	GetPids(*cgroups.Cgroup) ([]int, error)
 	GetStats(*cgroups.Cgroup) (*cgroups.Stats, error)
 }
@@ -29,6 +30,10 @@ func (m *systemdCgroupManager) GetStats(config *cgroups.Cgroup) (*cgroups.Stats,
 	return systemd.GetStats(config)
 }
 
+func (m *systemdCgroupManager) String() string {
+	return "systemd"
+}
+
 type fsCgroupsManager struct {
 }
 
@@ -38,4 +43,8 @@ func (m *fsCgroupsManager) GetPids(config *cgroups.Cgroup) ([]int, error) {
 
 func (m *fsCgroupsManager) GetStats(config *cgroups.Cgroup) (*cgroups.Stats, error) {
 	return fs.GetStats(config)
+}
+
+func (m *fsCgroupsManager) String() string {
+	return "fs"
 }
