@@ -4,8 +4,10 @@ package libcontainer
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 
 	"github.com/Sirupsen/logrus"
 )
@@ -13,6 +15,10 @@ import (
 const (
 	configFilename = "config.json"
 	stateFilename  = "state.json"
+)
+
+var (
+	idRegex = regexp.MustCompile(`^[\w_]{1,1024}$`)
 )
 
 // New returns a linux based container factory based in the root directory.
@@ -37,6 +43,10 @@ type linuxFactory struct {
 }
 
 func (l *linuxFactory) Create(id string, config *Config) (Container, error) {
+	if !idRegex.MatchString(id) {
+		return nil, newGenericError(fmt.Errorf("Invalid id format: %s ", id), InvalidIdFormat)
+	}
+
 	panic("not implemented")
 }
 
