@@ -44,7 +44,12 @@ type linuxFactory struct {
 
 func (l *linuxFactory) Create(id string, config *Config) (Container, error) {
 	if !idRegex.MatchString(id) {
-		return nil, newGenericError(fmt.Errorf("Invalid id format: %s ", id), InvalidIdFormat)
+		return nil, newGenericError(fmt.Errorf("Invalid id format: %v", id), InvalidIdFormat)
+	}
+
+	containerRoot := filepath.Join(l.root, id)
+	if _, err := os.Stat(containerRoot); err == nil {
+		return nil, newGenericError(fmt.Errorf("Container with id exists: %v", id), IdInUse)
 	}
 
 	panic("not implemented")
