@@ -18,7 +18,8 @@ const (
 )
 
 var (
-	idRegex = regexp.MustCompile(`^[\w_]{1,1024}$`)
+	idRegex  = regexp.MustCompile(`^[\w_]+$`)
+	maxIdLen = 1024
 )
 
 // New returns a linux based container factory based in the root directory.
@@ -47,9 +48,16 @@ func (l *linuxFactory) Create(id string, config *Config) (Container, error) {
 		return nil, newGenericError(fmt.Errorf("Invalid id format: %v", id), InvalidIdFormat)
 	}
 
+	if len(id) > maxIdLen {
+		return nil, newGenericError(fmt.Errorf("Invalid id format: %v", id), InvalidIdFormat)
+	}
+
 	containerRoot := filepath.Join(l.root, id)
-	if _, err := os.Stat(containerRoot); err == nil {
+	_, err := os.Stat(containerRoot)
+	if err == nil {
 		return nil, newGenericError(fmt.Errorf("Container with id exists: %v", id), IdInUse)
+	} else if !os.IsNotExist(err) {
+		return nil, newGenericError(err, SystemError)
 	}
 
 	panic("not implemented")
