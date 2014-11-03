@@ -164,11 +164,11 @@ func SetupUser(u string) error {
 		return fmt.Errorf("setgroups %s", err)
 	}
 
-	if err := syscall.Setgid(gid); err != nil {
+	if err := system.Setgid(gid); err != nil {
 		return fmt.Errorf("setgid %s", err)
 	}
 
-	if err := syscall.Setuid(uid); err != nil {
+	if err := system.Setuid(uid); err != nil {
 		return fmt.Errorf("setuid %s", err)
 	}
 
