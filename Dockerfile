@@ -1,7 +1,7 @@
 FROM crosbymichael/golang
 
 RUN apt-get update && apt-get install -y gcc make
-RUN go get code.google.com/p/go.tools/cmd/cover
+RUN go get golang.org/x/tools/cmd/cover
 
 ENV GOPATH $GOPATH:/go/src/github.com/docker/libcontainer/vendor
 RUN go get github.com/docker/docker/pkg/term
