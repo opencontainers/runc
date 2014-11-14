@@ -21,7 +21,7 @@ func GetStats(container *Config, state *State) (*ContainerStats, error) {
 	if systemd.UseSystemd() {
 		stats.CgroupStats, err = systemd.GetStats(container.Cgroups)
 	} else {
-		stats.CgroupStats, err = fs.GetStats(container.Cgroups)
+		stats.CgroupStats, err = fs.GetStats(state.CgroupPaths)
 	}
 
 	if err != nil {

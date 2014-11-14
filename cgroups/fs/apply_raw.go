@@ -94,25 +94,13 @@ func Cleanup(c *cgroups.Cgroup) error {
 	return d.Cleanup()
 }
 
-func GetStats(c *cgroups.Cgroup) (*cgroups.Stats, error) {
+func GetStats(systemPaths map[string]string) (*cgroups.Stats, error) {
 	stats := cgroups.NewStats()
-
-	d, err := getCgroupData(c, 0)
-	if err != nil {
-		return nil, fmt.Errorf("getting CgroupData %s", err)
-	}
-
-	for sysname, sys := range subsystems {
-		path, err := d.path(sysname)
-		if err != nil {
-			// Don't fail if a cgroup hierarchy was not found, just skip this subsystem
-			if cgroups.IsNotFound(err) {
-				continue
-			}
-
-			return nil, err
+	for name, path := range systemPaths {
+		sys, ok := subsystems[name]
+		if !ok {
+			continue
 		}
-
 		if err := sys.GetStats(path, stats); err != nil {
 			return nil, err
 		}

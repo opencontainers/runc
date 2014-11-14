@@ -34,16 +34,6 @@ var destroyCommand = cli.Command{
 	Action: destroyAction,
 }
 
-var statsCommand = cli.Command{
-	Name:  "stats",
-	Usage: "Get stats for cgroup",
-	Flags: []cli.Flag{
-		cli.StringFlag{Name: "name, n", Value: "", Usage: "container name"},
-		cli.StringFlag{Name: "parent, p", Value: "", Usage: "container parent"},
-	},
-	Action: statsAction,
-}
-
 var pauseCommand = cli.Command{
 	Name:  "pause",
 	Usage: "Pause cgroup",
@@ -196,23 +186,6 @@ func destroyAction(context *cli.Context) {
 	}
 }
 
-func statsAction(context *cli.Context) {
-	config, err := getConfig(context)
-	if err != nil {
-		log.Fatal(err)
-	}
-	stats, err := fs.GetStats(config)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	out, err := json.MarshalIndent(stats, "", "\t")
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("Usage stats for '%s':\n %v\n", config.Name, string(out))
-}
-
 func pauseAction(context *cli.Context) {
 	setFreezerState(context, cgroups.Frozen)
 }
@@ -252,7 +225,6 @@ func main() {
 	app.Commands = []cli.Command{
 		createCommand,
 		destroyCommand,
-		statsCommand,
 		pauseCommand,
 		resumeCommand,
 		psCommand,
