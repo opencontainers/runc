@@ -31,16 +31,6 @@ var (
 	connLock              sync.Mutex
 	theConn               *systemd.Conn
 	hasStartTransientUnit bool
-	subsystems            = map[string]subsystem{
-		"devices":    &fs.DevicesGroup{},
-		"memory":     &fs.MemoryGroup{},
-		"cpu":        &fs.CpuGroup{},
-		"cpuset":     &fs.CpusetGroup{},
-		"cpuacct":    &fs.CpuacctGroup{},
-		"blkio":      &fs.BlkioGroup{},
-		"perf_event": &fs.PerfEventGroup{},
-		"freezer":    &fs.FreezerGroup{},
-	}
 )
 
 func newProp(name string, units interface{}) systemd.Property {
@@ -168,21 +158,26 @@ func writeFile(dir, file, data string) error {
 
 func (c *systemdCgroup) Paths() (map[string]string, error) {
 	paths := make(map[string]string)
-
-	for sysname := range subsystems {
+	for _, sysname := range []string{
+		"devices",
+		"memory",
+		"cpu",
+		"cpuset",
+		"cpuacct",
+		"blkio",
+		"perf_event",
+		"freezer",
+	} {
 		subsystemPath, err := getSubsystemPath(c.cgroup, sysname)
 		if err != nil {
 			// Don't fail if a cgroup hierarchy was not found, just skip this subsystem
 			if cgroups.IsNotFound(err) {
 				continue
 			}
-
 			return nil, err
 		}
-
 		paths[sysname] = subsystemPath
 	}
-
 	return paths, nil
 }
 
@@ -265,35 +260,6 @@ func GetPids(c *cgroups.Cgroup) ([]int, error) {
 
 func getUnitName(c *cgroups.Cgroup) string {
 	return fmt.Sprintf("%s-%s.scope", c.Parent, c.Name)
-}
-
-/*
- * This would be nicer to get from the systemd API when accounting
- * is enabled, but sadly there is no way to do that yet.
- * The lack of this functionality in the API & the approach taken
- * is guided by
- * http://www.freedesktop.org/wiki/Software/systemd/ControlGroupInterface/#readingaccountinginformation.
- */
-func GetStats(c *cgroups.Cgroup) (*cgroups.Stats, error) {
-	stats := cgroups.NewStats()
-
-	for sysname, sys := range subsystems {
-		subsystemPath, err := getSubsystemPath(c, sysname)
-		if err != nil {
-			// Don't fail if a cgroup hierarchy was not found, just skip this subsystem
-			if cgroups.IsNotFound(err) {
-				continue
-			}
-
-			return nil, err
-		}
-
-		if err := sys.GetStats(subsystemPath, stats); err != nil {
-			return nil, err
-		}
-	}
-
-	return stats, nil
 }
 
 // Atm we can't use the systemd device support because of two missing things:
