@@ -24,16 +24,6 @@ var createCommand = cli.Command{
 	Action: createAction,
 }
 
-var destroyCommand = cli.Command{
-	Name:  "destroy",
-	Usage: "Destroy an existing cgroup container.",
-	Flags: []cli.Flag{
-		cli.StringFlag{Name: "name, n", Value: "", Usage: "container name"},
-		cli.StringFlag{Name: "parent, p", Value: "", Usage: "container parent"},
-	},
-	Action: destroyAction,
-}
-
 var pauseCommand = cli.Command{
 	Name:  "pause",
 	Usage: "Pause cgroup",
@@ -170,22 +160,6 @@ func createAction(context *cli.Context) {
 	}
 }
 
-func destroyAction(context *cli.Context) {
-	config, err := getConfig(context)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	killAll(config)
-	// Systemd will clean up cgroup state for empty container.
-	if !systemd.UseSystemd() {
-		err := fs.Cleanup(config)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-}
-
 func pauseAction(context *cli.Context) {
 	setFreezerState(context, cgroups.Frozen)
 }
@@ -224,7 +198,6 @@ func main() {
 
 	app.Commands = []cli.Command{
 		createCommand,
-		destroyCommand,
 		pauseCommand,
 		resumeCommand,
 		psCommand,

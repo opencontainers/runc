@@ -81,7 +81,7 @@ func getIfaceForUnit(unitName string) string {
 	return "Unit"
 }
 
-func Apply(c *cgroups.Cgroup, pid int) (cgroups.ActiveCgroup, error) {
+func Apply(c *cgroups.Cgroup, pid int) (map[string]string, error) {
 	var (
 		unitName   = getUnitName(c)
 		slice      = "system.slice"
@@ -149,14 +149,6 @@ func Apply(c *cgroups.Cgroup, pid int) (cgroups.ActiveCgroup, error) {
 		}
 	}
 
-	return res, nil
-}
-
-func writeFile(dir, file, data string) error {
-	return ioutil.WriteFile(filepath.Join(dir, file), []byte(data), 0700)
-}
-
-func (c *systemdCgroup) Paths() (map[string]string, error) {
 	paths := make(map[string]string)
 	for _, sysname := range []string{
 		"devices",
@@ -168,7 +160,7 @@ func (c *systemdCgroup) Paths() (map[string]string, error) {
 		"perf_event",
 		"freezer",
 	} {
-		subsystemPath, err := getSubsystemPath(c.cgroup, sysname)
+		subsystemPath, err := getSubsystemPath(res.cgroup, sysname)
 		if err != nil {
 			// Don't fail if a cgroup hierarchy was not found, just skip this subsystem
 			if cgroups.IsNotFound(err) {
@@ -181,18 +173,8 @@ func (c *systemdCgroup) Paths() (map[string]string, error) {
 	return paths, nil
 }
 
-func (c *systemdCgroup) Cleanup() error {
-	// systemd cleans up, we don't need to do much
-	paths, err := c.Paths()
-	if err != nil {
-		return err
-	}
-
-	for _, path := range paths {
-		os.RemoveAll(path)
-	}
-
-	return nil
+func writeFile(dir, file, data string) error {
+	return ioutil.WriteFile(filepath.Join(dir, file), []byte(data), 0700)
 }
 
 func joinFreezer(c *cgroups.Cgroup, pid int) error {

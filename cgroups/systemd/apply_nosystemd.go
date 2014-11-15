@@ -12,7 +12,7 @@ func UseSystemd() bool {
 	return false
 }
 
-func Apply(c *cgroups.Cgroup, pid int) (cgroups.ActiveCgroup, error) {
+func Apply(c *cgroups.Cgroup, pid int) (map[string]string, error) {
 	return nil, fmt.Errorf("Systemd not supported")
 }
 

@@ -57,20 +57,33 @@ type data struct {
 	pid    int
 }
 
-func Apply(c *cgroups.Cgroup, pid int) (cgroups.ActiveCgroup, error) {
+func Apply(c *cgroups.Cgroup, pid int) (map[string]string, error) {
 	d, err := getCgroupData(c, pid)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, sys := range subsystems {
+	paths := make(map[string]string)
+	for name, sys := range subsystems {
 		if err := sys.Set(d); err != nil {
-			d.Cleanup()
+			for _, p := range paths {
+				os.RemoveAll(p)
+			}
 			return nil, err
 		}
+		p, err := d.path(name)
+		if err != nil {
+			if cgroups.IsNotFound(err) {
+				continue
+			}
+			for _, p := range paths {
+				os.RemoveAll(p)
+			}
+			return nil, err
+		}
+		paths[name] = p
 	}
-
-	return d, nil
+	return paths, nil
 }
 
 // Symmetrical public function to update device based cgroups.  Also available
@@ -84,14 +97,6 @@ func ApplyDevices(c *cgroups.Cgroup, pid int) error {
 	devices := subsystems["devices"]
 
 	return devices.Set(d)
-}
-
-func Cleanup(c *cgroups.Cgroup) error {
-	d, err := getCgroupData(c, 0)
-	if err != nil {
-		return fmt.Errorf("Could not get Cgroup data %s", err)
-	}
-	return d.Cleanup()
 }
 
 func GetStats(systemPaths map[string]string) (*cgroups.Stats, error) {
@@ -164,26 +169,6 @@ func (raw *data) parent(subsystem string) (string, error) {
 	return filepath.Join(raw.root, subsystem, initPath), nil
 }
 
-func (raw *data) Paths() (map[string]string, error) {
-	paths := make(map[string]string)
-
-	for sysname := range subsystems {
-		path, err := raw.path(sysname)
-		if err != nil {
-			// Don't fail if a cgroup hierarchy was not found, just skip this subsystem
-			if cgroups.IsNotFound(err) {
-				continue
-			}
-
-			return nil, err
-		}
-
-		paths[sysname] = path
-	}
-
-	return paths, nil
-}
-
 func (raw *data) path(subsystem string) (string, error) {
 	// If the cgroup name/path is absolute do not look relative to the cgroup of the init process.
 	if filepath.IsAbs(raw.cgroup) {
@@ -220,13 +205,6 @@ func (raw *data) join(subsystem string) (string, error) {
 		return "", err
 	}
 	return path, nil
-}
-
-func (raw *data) Cleanup() error {
-	for _, sys := range subsystems {
-		sys.Remove(raw)
-	}
-	return nil
 }
 
 func writeFile(dir, file, data string) error {
