@@ -64,20 +64,22 @@ func Apply(c *cgroups.Cgroup, pid int) (map[string]string, error) {
 	}
 
 	paths := make(map[string]string)
+	defer func() {
+		if err != nil {
+			cgroups.RemovePaths(paths)
+		}
+	}()
 	for name, sys := range subsystems {
 		if err := sys.Set(d); err != nil {
-			for _, p := range paths {
-				os.RemoveAll(p)
-			}
 			return nil, err
 		}
+		// FIXME: Apply should, ideally, be reentrant or be broken up into a separate
+		// create and join phase so that the cgroup hierarchy for a container can be
+		// created then join consists of writing the process pids to cgroup.procs
 		p, err := d.path(name)
 		if err != nil {
 			if cgroups.IsNotFound(err) {
 				continue
-			}
-			for _, p := range paths {
-				os.RemoveAll(p)
 			}
 			return nil, err
 		}

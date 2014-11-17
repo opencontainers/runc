@@ -10,6 +10,7 @@ import (
 	"syscall"
 
 	"github.com/docker/libcontainer"
+	"github.com/docker/libcontainer/cgroups"
 	"github.com/docker/libcontainer/cgroups/fs"
 	"github.com/docker/libcontainer/cgroups/systemd"
 	"github.com/docker/libcontainer/network"
@@ -63,7 +64,7 @@ func Exec(container *libcontainer.Config, stdin io.Reader, stdout, stderr io.Wri
 	if err != nil {
 		return terminate(err)
 	}
-	defer removeCgroupPaths(cgroupPaths)
+	defer cgroups.RemovePaths(cgroupPaths)
 
 	var networkState network.NetworkState
 	if err := InitializeNetworking(container, command.Process.Pid, &networkState); err != nil {
@@ -171,14 +172,4 @@ func InitializeNetworking(container *libcontainer.Config, nspid int, networkStat
 		}
 	}
 	return nil
-}
-
-// removeCgroupPaths takes the subsystem paths for each cgroup that was
-// setup for the container and removes them from the cgroup filesystem.
-// Errors are ignored during the removal because we don't want to end up
-// with partially removed cgroups.
-func removeCgroupPaths(paths map[string]string) {
-	for _, path := range paths {
-		os.RemoveAll(path)
-	}
 }
