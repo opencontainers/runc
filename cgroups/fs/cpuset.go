@@ -14,17 +14,11 @@ type CpusetGroup struct {
 }
 
 func (s *CpusetGroup) Set(d *data) error {
-	// we don't want to join this cgroup unless it is specified
-	if d.c.CpusetCpus != "" {
-		dir, err := d.path("cpuset")
-		if err != nil {
-			return err
-		}
-
-		return s.SetDir(dir, d.c.CpusetCpus, d.pid)
+	dir, err := d.path("cpuset")
+	if err != nil {
+		return err
 	}
-
-	return nil
+	return s.SetDir(dir, d.c.CpusetCpus, d.pid)
 }
 
 func (s *CpusetGroup) Remove(d *data) error {
