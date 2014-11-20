@@ -576,6 +576,31 @@ func NetworkSetMTU(iface *net.Interface, mtu int) error {
 	return s.HandleAck(wb.Seq)
 }
 
+// Set link queue length
+// This is identical to running: ip link set dev $name txqueuelen $QLEN
+func NetworkSetTxQueueLen(iface *net.Interface, txQueueLen int) error {
+	s, err := getNetlinkSocket()
+	if err != nil {
+		return err
+	}
+	defer s.Close()
+
+	wb := newNetlinkRequest(syscall.RTM_SETLINK, syscall.NLM_F_ACK)
+
+	msg := newIfInfomsg(syscall.AF_UNSPEC)
+	msg.Type = syscall.RTM_SETLINK
+	msg.Flags = syscall.NLM_F_REQUEST
+	msg.Index = int32(iface.Index)
+	msg.Change = DEFAULT_CHANGE
+	wb.AddData(msg)
+	wb.AddData(uint32Attr(syscall.IFLA_TXQLEN, uint32(txQueueLen)))
+
+	if err := s.Send(wb); err != nil {
+		return err
+	}
+	return s.HandleAck(wb.Seq)
+}
+
 func networkMasterAction(iface *net.Interface, rtattr *RtAttr) error {
 	s, err := getNetlinkSocket()
 	if err != nil {
