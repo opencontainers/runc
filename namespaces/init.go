@@ -314,12 +314,11 @@ func LoadContainerEnvironment(container *libcontainer.Config) error {
 func joinExistingNamespaces(namespaces []libcontainer.Namespace) error {
 	for _, ns := range namespaces {
 		if ns.Path != "" {
-			nsf := GetNamespace(ns.Name)
 			f, err := os.OpenFile(ns.Path, os.O_RDONLY, 0)
 			if err != nil {
 				return err
 			}
-			err = system.Setns(f.Fd(), uintptr(nsf.Value))
+			err = system.Setns(f.Fd(), uintptr(namespaceInfo[ns.Name]))
 			f.Close()
 			if err != nil {
 				return err

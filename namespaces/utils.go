@@ -17,6 +17,15 @@ func (i initError) Error() string {
 	return i.Message
 }
 
+var namespaceInfo = map[string]int{
+	"NEWNET":  syscall.CLONE_NEWNET,
+	"NEWNS":   syscall.CLONE_NEWNS,
+	"NEWUSER": syscall.CLONE_NEWUSER,
+	"NEWIPC":  syscall.CLONE_NEWIPC,
+	"NEWUTS":  syscall.CLONE_NEWUTS,
+	"NEWPID":  syscall.CLONE_NEWPID,
+}
+
 // New returns a newly initialized Pipe for communication between processes
 func newInitPipe() (parent *os.File, child *os.File, err error) {
 	fds, err := syscall.Socketpair(syscall.AF_LOCAL, syscall.SOCK_STREAM|syscall.SOCK_CLOEXEC, 0)
@@ -30,9 +39,7 @@ func newInitPipe() (parent *os.File, child *os.File, err error) {
 // flags on clone, unshare, and setns
 func GetNamespaceFlags(namespaces []libcontainer.Namespace) (flag int) {
 	for _, v := range namespaces {
-		if ns := GetNamespace(v.Name); ns != nil {
-			flag |= ns.Value
-		}
+		flag |= namespaceInfo[v.Name]
 	}
 	return flag
 }
