@@ -16,7 +16,7 @@ var statsCommand = cli.Command{
 }
 
 func statsAction(context *cli.Context) {
-	factory, err := libcontainer.New(context.GlobalString("root"), logger)
+	factory, err := libcontainer.New(context.GlobalString("root"))
 	if err != nil {
 		log.Fatal(err)
 	}

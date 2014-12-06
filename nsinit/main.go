@@ -5,13 +5,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 )
 
 var (
 	logPath = os.Getenv("log")
-	logger  = logrus.New()
 	argvs   = make(map[string]*rFunc)
 )
 

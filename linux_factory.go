@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/golang/glog"
 )
 
 const (
@@ -23,14 +23,13 @@ var (
 )
 
 // New returns a linux based container factory based in the root directory.
-func New(root string, logger *logrus.Logger) (Factory, error) {
+func New(root string) (Factory, error) {
 	if err := os.MkdirAll(root, 0700); err != nil {
 		return nil, newGenericError(err, SystemError)
 	}
 
 	return &linuxFactory{
-		root:   root,
-		logger: logger,
+		root: root,
 	}, nil
 }
 
@@ -38,9 +37,6 @@ func New(root string, logger *logrus.Logger) (Factory, error) {
 type linuxFactory struct {
 	// root is the root directory
 	root string
-
-	// standard logger for all packages
-	logger *logrus.Logger
 }
 
 func (l *linuxFactory) Create(id string, config *Config) (Container, error) {
@@ -65,27 +61,26 @@ func (l *linuxFactory) Create(id string, config *Config) (Container, error) {
 
 func (l *linuxFactory) Load(id string) (Container, error) {
 	containerRoot := filepath.Join(l.root, id)
-	l.logger.Debugf("loading container config from %s", containerRoot)
+	glog.Infof("loading container config from %s", containerRoot)
 	config, err := l.loadContainerConfig(containerRoot)
 	if err != nil {
 		return nil, err
 	}
 
-	l.logger.Debugf("loading container state from %s", containerRoot)
+	glog.Infof("loading container state from %s", containerRoot)
 	state, err := l.loadContainerState(containerRoot)
 	if err != nil {
 		return nil, err
 	}
 
 	cgroupManager := newCgroupsManager()
-	l.logger.Debugf("using %s as cgroup manager", cgroupManager)
+	glog.Infof("using %s as cgroup manager", cgroupManager)
 	return &linuxContainer{
 		id:            id,
 		root:          containerRoot,
 		config:        config,
 		state:         state,
 		cgroupManager: cgroupManager,
-		logger:        l.logger,
 	}, nil
 }
 
