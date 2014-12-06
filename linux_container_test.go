@@ -13,11 +13,11 @@ type mockCgroupManager struct {
 	stats *cgroups.Stats
 }
 
-func (m *mockCgroupManager) GetPids(config *cgroups.Cgroup) ([]int, error) {
+func (m *mockCgroupManager) GetPids() ([]int, error) {
 	return m.pids, nil
 }
 
-func (m *mockCgroupManager) GetStats(config *cgroups.Cgroup) (*cgroups.Stats, error) {
+func (m *mockCgroupManager) GetStats() (*cgroups.Stats, error) {
 	return m.stats, nil
 }
 

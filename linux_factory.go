@@ -73,7 +73,7 @@ func (l *linuxFactory) Load(id string) (Container, error) {
 		return nil, err
 	}
 
-	cgroupManager := newCgroupsManager()
+	cgroupManager := NewCgroupManager()
 	glog.Infof("using %s as cgroup manager", cgroupManager)
 	return &linuxContainer{
 		id:            id,

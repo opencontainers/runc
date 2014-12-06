@@ -3,8 +3,8 @@
 package libcontainer
 
 import (
-	"github.com/Sirupsen/logrus"
 	"github.com/docker/libcontainer/network"
+	"github.com/golang/glog"
 )
 
 type linuxContainer struct {
@@ -29,7 +29,7 @@ func (c *linuxContainer) RunState() (RunState, error) {
 
 func (c *linuxContainer) Processes() ([]int, error) {
 	glog.Info("fetch container processes")
-	pids, err := c.cgroupManager.GetPids(c.config.Cgroups)
+	pids, err := c.cgroupManager.GetPids()
 	if err != nil {
 		return nil, newGenericError(err, SystemError)
 	}
@@ -43,7 +43,7 @@ func (c *linuxContainer) Stats() (*ContainerStats, error) {
 		stats = &ContainerStats{}
 	)
 
-	if stats.CgroupStats, err = c.cgroupManager.GetStats(c.config.Cgroups); err != nil {
+	if stats.CgroupStats, err = c.cgroupManager.GetStats(); err != nil {
 		return stats, newGenericError(err, SystemError)
 	}
 	if stats.NetworkStats, err = network.GetStats(&c.state.NetworkState); err != nil {
