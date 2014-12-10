@@ -27,28 +27,7 @@ func TestExecIn(t *testing.T) {
 		t.Fatalf("failed to write config %s", err)
 	}
 
-	// start the container
-	containerErr := make(chan error, 1)
-	containerCmd := &exec.Cmd{}
-	var statePath string
-	createCmd := func(container *libcontainer.Config, console, dataPath, init string,
-		pipe *os.File, args []string) *exec.Cmd {
-		containerCmd = namespaces.DefaultCreateCommand(container, console, dataPath, init, pipe, args)
-		statePath = dataPath
-		return containerCmd
-	}
-	var containerStart sync.WaitGroup
-	containerStart.Add(1)
-	go func() {
-		buffers := newStdBuffers()
-		_, err := namespaces.Exec(config,
-			buffers.Stdin, buffers.Stdout, buffers.Stderr,
-			"", config.RootFs, []string{"sleep", "10"},
-			createCmd, containerStart.Done)
-		containerErr <- err
-	}()
-	containerStart.Wait()
-
+	containerCmd, statePath, containerErr := startLongRunningContainer(config)
 	defer func() {
 		// kill the container
 		if containerCmd.Process != nil {
@@ -98,28 +77,7 @@ func TestExecInRlimit(t *testing.T) {
 		t.Fatalf("failed to write config %s", err)
 	}
 
-	// start the container
-	containerErr := make(chan error, 1)
-	containerCmd := &exec.Cmd{}
-	var statePath string
-	createCmd := func(container *libcontainer.Config, console, dataPath, init string,
-		pipe *os.File, args []string) *exec.Cmd {
-		containerCmd = namespaces.DefaultCreateCommand(container, console, dataPath, init, pipe, args)
-		statePath = dataPath
-		return containerCmd
-	}
-	var containerStart sync.WaitGroup
-	containerStart.Add(1)
-	go func() {
-		buffers := newStdBuffers()
-		_, err := namespaces.Exec(config,
-			buffers.Stdin, buffers.Stdout, buffers.Stderr,
-			"", config.RootFs, []string{"sleep", "10"},
-			createCmd, containerStart.Done)
-		containerErr <- err
-	}()
-	containerStart.Wait()
-
+	containerCmd, statePath, containerErr := startLongRunningContainer(config)
 	defer func() {
 		// kill the container
 		if containerCmd.Process != nil {
@@ -151,4 +109,32 @@ func TestExecInRlimit(t *testing.T) {
 	if limit := strings.TrimSpace(out); limit != "1024" {
 		t.Fatalf("expected rlimit to be 1024, got %s", limit)
 	}
+}
+
+// start a long-running container so we have time to inspect execin processes
+func startLongRunningContainer(config *libcontainer.Config) (*exec.Cmd, string, chan error) {
+	containerErr := make(chan error, 1)
+	containerCmd := &exec.Cmd{}
+	var statePath string
+
+	createCmd := func(container *libcontainer.Config, console, dataPath, init string,
+		pipe *os.File, args []string) *exec.Cmd {
+		containerCmd = namespaces.DefaultCreateCommand(container, console, dataPath, init, pipe, args)
+		statePath = dataPath
+		return containerCmd
+	}
+
+	var containerStart sync.WaitGroup
+	containerStart.Add(1)
+	go func() {
+		buffers := newStdBuffers()
+		_, err := namespaces.Exec(config,
+			buffers.Stdin, buffers.Stdout, buffers.Stderr,
+			"", config.RootFs, []string{"sleep", "10"},
+			createCmd, containerStart.Done)
+		containerErr <- err
+	}()
+	containerStart.Wait()
+
+	return containerCmd, statePath, containerErr
 }
