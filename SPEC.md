@@ -333,6 +333,8 @@ the container is unpaused.  The started process will only run when the container
 primary process (PID 1) is running, and will not be restarted when the container
 is restarted.
 
+#### Planned additions
+
 The started process will have its own cgroups nested inside the container's
 cgroups. This is used for process tracking and optionally resource allocation
 handling for the new process. Freezer cgroup is required, the rest of the cgroups
@@ -340,5 +342,5 @@ are optional. The process executor must place its pid inside the correct
 cgroups before starting the process. This is done so that no child processes or
 threads can escape the cgroups.
 
-When the process stopped, all child processes spawned by the process will be
-stopped and the process's cgroups will be removed.
+When the process is stopped, the process executor will try (in a best-effort way)
+to stop all its children and remove the sub-cgroups.
