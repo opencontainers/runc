@@ -321,13 +321,13 @@ a container.
 ### Execute a new process inside of a running container.
 
 User can execute a new process inside of a running container. Any binaries to be
-executed must be contained within the container's rootfs.
+executed must be accessible within the container's rootfs.
 
-The started process is jailed inside the current container's rootfs. Any changes
-made by the process to the container's filesystem will be persisted after the
+The started process will run inside the container's rootfs. Any changes
+made by the process to the container's filesystem will persist after the
 process finished executing.
 
-The started process will join the container's existing namespaces. When the
+The started process will join all the container's existing namespaces. When the
 container is paused, the process will also be paused and will resume when
 the container is unpaused.  The started process will only run when the container's
 primary process (PID 1) is running, and will not be restarted when the container
