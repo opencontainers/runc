@@ -58,6 +58,15 @@ func (c *linuxContainer) StartProcess(config *ProcessConfig) (int, error) {
 }
 
 func (c *linuxContainer) Destroy() error {
+	state, err := c.RunState()
+	if err != nil {
+		return err
+	}
+
+	if state != Destroyed {
+		return newGenericError(nil, ContainerNotStopped)
+	}
+
 	glog.Info("destroy container")
 	panic("not implemented")
 }
