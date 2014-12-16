@@ -178,17 +178,17 @@ func SetupUser(u string) error {
 		Home: "/",
 	}
 
-	passwdFile, err := user.GetPasswdFile()
+	passwdPath, err := user.GetPasswdPath()
 	if err != nil {
 		return err
 	}
 
-	groupFile, err := user.GetGroupFile()
+	groupPath, err := user.GetGroupPath()
 	if err != nil {
 		return err
 	}
 
-	execUser, err := user.GetExecUserFile(u, &defaultExecUser, passwdFile, groupFile)
+	execUser, err := user.GetExecUserPath(u, &defaultExecUser, passwdPath, groupPath)
 	if err != nil {
 		return fmt.Errorf("get supplementary groups %s", err)
 	}
