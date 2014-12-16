@@ -17,6 +17,39 @@ type Namespace struct {
 	Path string `json:"path,omitempty"`
 }
 
+type Namespaces []Namespace
+
+func (n Namespaces) Exists(name string) bool {
+	return n.index(name) != -1
+}
+
+func (n Namespaces) Remove(name string) bool {
+	i := n.index(name)
+	if i == -1 {
+		return false
+	}
+	n = append(n[:i], n[i+1:]...)
+	return true
+}
+
+func (n Namespaces) Add(name, path string) {
+	i := n.index(name)
+	if i == -1 {
+		n = append(n, Namespace{Name: name, Path: path})
+		return
+	}
+	n[i].Path = path
+}
+
+func (n Namespaces) index(name string) int {
+	for i, ns := range n {
+		if ns.Name == name {
+			return i
+		}
+	}
+	return -1
+}
+
 // Config defines configuration options for executing a process inside a contained environment.
 type Config struct {
 	// Mount specific options.
@@ -45,7 +78,7 @@ type Config struct {
 
 	// Namespaces specifies the container's namespaces that it should setup when cloning the init process
 	// If a namespace is not provided that namespace is shared from the container's parent process
-	Namespaces []Namespace `json:"namespaces,omitempty"`
+	Namespaces Namespaces `json:"namespaces,omitempty"`
 
 	// Capabilities specify the capabilities to keep when executing the process inside the container
 	// All capbilities not specified will be dropped from the processes capability mask
