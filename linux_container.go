@@ -81,20 +81,16 @@ func (c *linuxContainer) StartProcess(pconfig *ProcessConfig) (int, error) {
 }
 
 func (c *linuxContainer) updateStateFile() error {
-	data, err := json.MarshalIndent(c.state, "", "\t")
-	if err != nil {
-		return newGenericError(err, SystemError)
-	}
-
 	fnew := filepath.Join(c.root, fmt.Sprintf("%s.new", stateFilename))
 	f, err := os.Create(fnew)
 	if err != nil {
 		return newGenericError(err, SystemError)
 	}
 
-	_, err = f.Write(data)
+	err = json.NewEncoder(f).Encode(c.state)
 	if err != nil {
 		f.Close()
+		os.Remove(fnew)
 		return newGenericError(err, SystemError)
 	}
 	f.Close()
