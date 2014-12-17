@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/docker/libcontainer/cgroups"
+	"github.com/docker/libcontainer/configs"
 )
 
 type mockCgroupManager struct {
@@ -24,7 +25,7 @@ func (m *mockCgroupManager) GetStats() (*cgroups.Stats, error) {
 func TestGetContainerPids(t *testing.T) {
 	container := &linuxContainer{
 		id:            "myid",
-		config:        &Config{},
+		config:        &configs.Config{},
 		cgroupManager: &mockCgroupManager{pids: []int{1, 2, 3}},
 	}
 
@@ -43,7 +44,7 @@ func TestGetContainerPids(t *testing.T) {
 func TestGetContainerStats(t *testing.T) {
 	container := &linuxContainer{
 		id:     "myid",
-		config: &Config{},
+		config: &configs.Config{},
 		cgroupManager: &mockCgroupManager{
 			pids: []int{1, 2, 3},
 			stats: &cgroups.Stats{

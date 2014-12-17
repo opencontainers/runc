@@ -14,6 +14,7 @@ import (
 	"github.com/codegangsta/cli"
 	"github.com/docker/docker/pkg/term"
 	"github.com/docker/libcontainer"
+	"github.com/docker/libcontainer/configs"
 	consolepkg "github.com/docker/libcontainer/console"
 	"github.com/docker/libcontainer/namespaces"
 )
@@ -66,7 +67,7 @@ func execAction(context *cli.Context) {
 	id := fmt.Sprintf("%x", md5.Sum([]byte(dataPath)))
 	container, err := factory.Load(id)
 	if err != nil && !os.IsNotExist(err) {
-		var config *libcontainer.Config
+		var config *configs.Config
 
 		config, err = loadConfig()
 		if err != nil {
@@ -110,7 +111,7 @@ func execAction(context *cli.Context) {
 // with the nsenter argument so that the C code can setns an the namespaces that we require.  Then that
 // code path will drop us into the path that we can do the final setup of the namespace and exec the users
 // application.
-func startInExistingContainer(config *libcontainer.Config, state *libcontainer.State, action string, context *cli.Context) (int, error) {
+func startInExistingContainer(config *configs.Config, state *libcontainer.State, action string, context *cli.Context) (int, error) {
 	var (
 		master  *os.File
 		console string
@@ -167,7 +168,7 @@ func startInExistingContainer(config *libcontainer.Config, state *libcontainer.S
 // error.
 //
 // Signals sent to the current process will be forwarded to container.
-func startContainer(container *libcontainer.Config, dataPath string, args []string) (int, error) {
+func startContainer(container *configs.Config, dataPath string, args []string) (int, error) {
 	var (
 		cmd  *exec.Cmd
 		sigc = make(chan os.Signal, 10)
@@ -175,7 +176,7 @@ func startContainer(container *libcontainer.Config, dataPath string, args []stri
 
 	signal.Notify(sigc)
 
-	createCommand := func(container *libcontainer.Config, console, dataPath, init string, pipe *os.File, args []string) *exec.Cmd {
+	createCommand := func(container *configs.Config, console, dataPath, init string, pipe *os.File, args []string) *exec.Cmd {
 		cmd = namespaces.DefaultCreateCommand(container, console, dataPath, init, pipe, args)
 		if logPath != "" {
 			cmd.Env = append(cmd.Env, fmt.Sprintf("log=%s", logPath))

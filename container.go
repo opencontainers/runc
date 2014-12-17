@@ -3,6 +3,10 @@ NOTE: The API is in flux and mainly not implemented. Proceed with caution until 
 */
 package libcontainer
 
+import (
+	"github.com/docker/libcontainer/configs"
+)
+
 // A libcontainer container object.
 //
 // Each container is thread-safe within the same process. Since a container can
@@ -20,7 +24,7 @@ type Container interface {
 	RunState() (RunState, error)
 
 	// Returns the current config of the container.
-	Config() *Config
+	Config() *configs.Config
 
 	// Returns the PIDs inside this container. The PIDs are in the namespace of the calling process.
 	//

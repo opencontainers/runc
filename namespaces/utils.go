@@ -6,7 +6,7 @@ import (
 	"os"
 	"syscall"
 
-	"github.com/docker/libcontainer"
+	"github.com/docker/libcontainer/configs"
 )
 
 type initError struct {
@@ -37,7 +37,7 @@ func newInitPipe() (parent *os.File, child *os.File, err error) {
 
 // GetNamespaceFlags parses the container's Namespaces options to set the correct
 // flags on clone, unshare, and setns
-func GetNamespaceFlags(namespaces []libcontainer.Namespace) (flag int) {
+func GetNamespaceFlags(namespaces []configs.Namespace) (flag int) {
 	for _, v := range namespaces {
 		flag |= namespaceInfo[v.Name]
 	}

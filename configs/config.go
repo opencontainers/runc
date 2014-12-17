@@ -1,4 +1,4 @@
-package libcontainer
+package configs
 
 import (
 	"github.com/docker/libcontainer/cgroups"

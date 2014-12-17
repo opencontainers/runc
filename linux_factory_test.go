@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/docker/libcontainer/configs"
 )
 
 func newTestRoot() (string, error) {
@@ -83,7 +85,7 @@ func TestFactoryLoadContainer(t *testing.T) {
 	// setup default container config and state for mocking
 	var (
 		id             = "1"
-		expectedConfig = &Config{
+		expectedConfig = &configs.Config{
 			RootFs: "/mycontainer/root",
 		}
 		expectedState = &State{

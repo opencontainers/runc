@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/docker/libcontainer"
+	"github.com/docker/libcontainer/configs"
 )
 
 func TestExecPS(t *testing.T) {
@@ -180,7 +180,7 @@ func TestRlimit(t *testing.T) {
 	}
 }
 
-func getNamespaceIndex(config *libcontainer.Config, name string) int {
+func getNamespaceIndex(config *configs.Config, name string) int {
 	for i, v := range config.Namespaces {
 		if v.Name == name {
 			return i

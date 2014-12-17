@@ -9,7 +9,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/docker/libcontainer"
+	"github.com/docker/libcontainer/configs"
 	"github.com/docker/libcontainer/devices"
 	"github.com/docker/libcontainer/mount/nodes"
 	"github.com/docker/libcontainer/namespaces"
@@ -17,7 +17,7 @@ import (
 )
 
 // nsenterExec exec's a process inside an existing container
-func nsenterExec(config *libcontainer.Config, args []string) {
+func nsenterExec(config *configs.Config, args []string) {
 	if err := namespaces.FinalizeSetns(config, args); err != nil {
 		log.Fatalf("failed to nsenter: %s", err)
 	}
@@ -26,7 +26,7 @@ func nsenterExec(config *libcontainer.Config, args []string) {
 // nsenterMknod runs mknod inside an existing container
 //
 // mknod <path> <type> <major> <minor>
-func nsenterMknod(config *libcontainer.Config, args []string) {
+func nsenterMknod(config *configs.Config, args []string) {
 	if len(args) != 4 {
 		log.Fatalf("expected mknod to have 4 arguments not %d", len(args))
 	}
@@ -56,7 +56,7 @@ func nsenterMknod(config *libcontainer.Config, args []string) {
 }
 
 // nsenterIp displays the network interfaces inside a container's net namespace
-func nsenterIp(config *libcontainer.Config, args []string) {
+func nsenterIp(config *configs.Config, args []string) {
 	interfaces, err := net.Interfaces()
 	if err != nil {
 		log.Fatal(err)

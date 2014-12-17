@@ -10,6 +10,8 @@ import (
 	"regexp"
 
 	"github.com/golang/glog"
+
+	"github.com/docker/libcontainer/configs"
 )
 
 const (
@@ -43,7 +45,7 @@ type linuxFactory struct {
 	initArgs []string
 }
 
-func (l *linuxFactory) Create(id string, config *Config) (Container, error) {
+func (l *linuxFactory) Create(id string, config *configs.Config) (Container, error) {
 	if l.root == "" {
 		return nil, newGenericError(fmt.Errorf("invalid root"), ConfigInvalid)
 	}
@@ -125,7 +127,7 @@ func (l *linuxFactory) Load(id string) (Container, error) {
 	}, nil
 }
 
-func (l *linuxFactory) loadContainerConfig(root string) (*Config, error) {
+func (l *linuxFactory) loadContainerConfig(root string) (*configs.Config, error) {
 	f, err := os.Open(filepath.Join(root, configFilename))
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -135,7 +137,7 @@ func (l *linuxFactory) loadContainerConfig(root string) (*Config, error) {
 	}
 	defer f.Close()
 
-	var config *Config
+	var config *configs.Config
 	if err := json.NewDecoder(f).Decode(&config); err != nil {
 		return nil, newGenericError(err, ConfigInvalid)
 	}

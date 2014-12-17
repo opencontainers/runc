@@ -10,8 +10,8 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/docker/libcontainer"
 	"github.com/docker/libcontainer/apparmor"
+	"github.com/docker/libcontainer/configs"
 	"github.com/docker/libcontainer/console"
 	"github.com/docker/libcontainer/label"
 	"github.com/docker/libcontainer/mount"
@@ -30,7 +30,7 @@ import (
 // and other options required for the new container.
 // The caller of Init function has to ensure that the go runtime is locked to an OS thread
 // (using runtime.LockOSThread) else system calls like setns called within Init may not work as intended.
-func Init(container *libcontainer.Config, uncleanRootfs, consolePath string, pipe *os.File, args []string) (err error) {
+func Init(container *configs.Config, uncleanRootfs, consolePath string, pipe *os.File, args []string) (err error) {
 	defer func() {
 		// if we have an error during the initialization of the container's init then send it back to the
 		// parent process in the form of an initError.
@@ -218,7 +218,7 @@ func SetupUser(u string) error {
 // setupVethNetwork uses the Network config if it is not nil to initialize
 // the new veth interface inside the container for use by changing the name to eth0
 // setting the MTU and IP address along with the default gateway
-func setupNetwork(container *libcontainer.Config, networkState *network.NetworkState) error {
+func setupNetwork(container *configs.Config, networkState *network.NetworkState) error {
 	for _, config := range container.Networks {
 		strategy, err := network.GetStrategy(config.Type)
 		if err != nil {
@@ -233,7 +233,7 @@ func setupNetwork(container *libcontainer.Config, networkState *network.NetworkS
 	return nil
 }
 
-func setupRoute(container *libcontainer.Config) error {
+func setupRoute(container *configs.Config) error {
 	for _, config := range container.Routes {
 		if err := netlink.AddRoute(config.Destination, config.Source, config.Gateway, config.InterfaceName); err != nil {
 			return err
@@ -242,7 +242,7 @@ func setupRoute(container *libcontainer.Config) error {
 	return nil
 }
 
-func setupRlimits(container *libcontainer.Config) error {
+func setupRlimits(container *configs.Config) error {
 	for _, rlimit := range container.Rlimits {
 		l := &syscall.Rlimit{Max: rlimit.Hard, Cur: rlimit.Soft}
 		if err := syscall.Setrlimit(rlimit.Type, l); err != nil {
@@ -255,7 +255,7 @@ func setupRlimits(container *libcontainer.Config) error {
 // FinalizeNamespace drops the caps, sets the correct user
 // and working dir, and closes any leaky file descriptors
 // before execing the command inside the namespace
-func FinalizeNamespace(container *libcontainer.Config) error {
+func FinalizeNamespace(container *configs.Config) error {
 	// Ensure that all non-standard fds we may have accidentally
 	// inherited are marked close-on-exec so they stay out of the
 	// container
@@ -295,7 +295,7 @@ func FinalizeNamespace(container *libcontainer.Config) error {
 	return nil
 }
 
-func LoadContainerEnvironment(container *libcontainer.Config) error {
+func LoadContainerEnvironment(container *configs.Config) error {
 	os.Clearenv()
 	for _, pair := range container.Env {
 		p := strings.SplitN(pair, "=", 2)
@@ -311,7 +311,7 @@ func LoadContainerEnvironment(container *libcontainer.Config) error {
 
 // joinExistingNamespaces gets all the namespace paths specified for the container and
 // does a setns on the namespace fd so that the current process joins the namespace.
-func joinExistingNamespaces(namespaces []libcontainer.Namespace) error {
+func joinExistingNamespaces(namespaces []configs.Namespace) error {
 	for _, ns := range namespaces {
 		if ns.Path != "" {
 			f, err := os.OpenFile(ns.Path, os.O_RDONLY, 0)

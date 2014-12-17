@@ -9,7 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/docker/libcontainer"
+	"github.com/docker/libcontainer/configs"
 	"github.com/docker/libcontainer/namespaces"
 )
 
@@ -27,7 +27,7 @@ type stdBuffers struct {
 	Stderr *bytes.Buffer
 }
 
-func writeConfig(config *libcontainer.Config) error {
+func writeConfig(config *configs.Config) error {
 	f, err := os.OpenFile(filepath.Join(config.RootFs, "container.json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0700)
 	if err != nil {
 		return err
@@ -36,14 +36,14 @@ func writeConfig(config *libcontainer.Config) error {
 	return json.NewEncoder(f).Encode(config)
 }
 
-func loadConfig() (*libcontainer.Config, error) {
+func loadConfig() (*configs.Config, error) {
 	f, err := os.Open(filepath.Join(os.Getenv("data_path"), "container.json"))
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
 
-	var container *libcontainer.Config
+	var container *configs.Config
 	if err := json.NewDecoder(f).Decode(&container); err != nil {
 		return nil, err
 	}
@@ -83,7 +83,7 @@ func copyBusybox(dest string) error {
 //
 // buffers are returned containing the STDOUT and STDERR output for the run
 // along with the exit code and any go error
-func runContainer(config *libcontainer.Config, console string, args ...string) (buffers *stdBuffers, exitCode int, err error) {
+func runContainer(config *configs.Config, console string, args ...string) (buffers *stdBuffers, exitCode int, err error) {
 	if err := writeConfig(config); err != nil {
 		return nil, -1, err
 	}

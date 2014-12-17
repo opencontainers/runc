@@ -13,6 +13,7 @@ import (
 	"github.com/docker/libcontainer/cgroups"
 	"github.com/docker/libcontainer/cgroups/fs"
 	"github.com/docker/libcontainer/cgroups/systemd"
+	"github.com/docker/libcontainer/configs"
 	"github.com/docker/libcontainer/network"
 	"github.com/docker/libcontainer/system"
 )
@@ -21,7 +22,7 @@ import (
 // Move this to libcontainer package.
 // Exec performs setup outside of a namespace so that a container can be
 // executed.  Exec is a high level function for working with container namespaces.
-func Exec(container *libcontainer.Config, stdin io.Reader, stdout, stderr io.Writer, console, dataPath string, args []string, createCommand CreateCommand, startCallback func()) (int, error) {
+func Exec(container *configs.Config, stdin io.Reader, stdout, stderr io.Writer, console, dataPath string, args []string, createCommand CreateCommand, startCallback func()) (int, error) {
 	var err error
 
 	// create a pipe so that we can syncronize with the namespaced process and
@@ -122,7 +123,7 @@ func Exec(container *libcontainer.Config, stdin io.Reader, stdout, stderr io.Wri
 // root: the path to the container json file and information
 // pipe: sync pipe to synchronize the parent and child processes
 // args: the arguments to pass to the container to run as the user's program
-func DefaultCreateCommand(container *libcontainer.Config, console, dataPath, init string, pipe *os.File, args []string) *exec.Cmd {
+func DefaultCreateCommand(container *configs.Config, console, dataPath, init string, pipe *os.File, args []string) *exec.Cmd {
 	// get our binary name from arg0 so we can always reexec ourself
 	env := []string{
 		"console=" + console,
@@ -148,7 +149,7 @@ func DefaultCreateCommand(container *libcontainer.Config, console, dataPath, ini
 
 // SetupCgroups applies the cgroup restrictions to the process running in the container based
 // on the container's configuration
-func SetupCgroups(container *libcontainer.Config, nspid int) (map[string]string, error) {
+func SetupCgroups(container *configs.Config, nspid int) (map[string]string, error) {
 	if container.Cgroups != nil {
 		c := container.Cgroups
 		if systemd.UseSystemd() {
@@ -161,7 +162,7 @@ func SetupCgroups(container *libcontainer.Config, nspid int) (map[string]string,
 
 // InitializeNetworking creates the container's network stack outside of the namespace and moves
 // interfaces into the container's net namespaces if necessary
-func InitializeNetworking(container *libcontainer.Config, nspid int, networkState *network.NetworkState) error {
+func InitializeNetworking(container *configs.Config, nspid int, networkState *network.NetworkState) error {
 	for _, config := range container.Networks {
 		strategy, err := network.GetStrategy(config.Type)
 		if err != nil {

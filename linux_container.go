@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"syscall"
 
+	"github.com/docker/libcontainer/configs"
 	"github.com/docker/libcontainer/network"
 	"github.com/golang/glog"
 )
@@ -17,7 +18,7 @@ import (
 type linuxContainer struct {
 	id            string
 	root          string
-	config        *Config
+	config        *configs.Config
 	state         *State
 	cgroupManager CgroupManager
 	initArgs      []string
@@ -27,7 +28,7 @@ func (c *linuxContainer) ID() string {
 	return c.id
 }
 
-func (c *linuxContainer) Config() *Config {
+func (c *linuxContainer) Config() *configs.Config {
 	return c.config
 }
 
