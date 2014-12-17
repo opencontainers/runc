@@ -4,6 +4,7 @@ package namespaces
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -25,7 +26,7 @@ const (
 // Move this to libcontainer package.
 // Exec performs setup outside of a namespace so that a container can be
 // executed.  Exec is a high level function for working with container namespaces.
-func Exec(container *libcontainer.Config, stdin io.Reader, stdout, stderr io.Writer, console, dataPath string, args []string, createCommand CreateCommand, startCallback func()) (int, error) {
+func Exec(container *libcontainer.Config, stdin io.Reader, stdout, stderr io.Writer, console, dataPath string, args []string, createCommand CreateCommand, setupCommand SetupCommand, startCallback func()) (int, error) {
 	var err error
 
 	// create a pipe so that we can syncronize with the namespaced process and
@@ -74,14 +75,6 @@ func Exec(container *libcontainer.Config, stdin io.Reader, stdout, stderr io.Wri
 	if err := InitializeNetworking(container, command.Process.Pid, &networkState); err != nil {
 		return terminate(err)
 	}
-	// send the state to the container's init process then shutdown writes for the parent
-	if err := json.NewEncoder(parent).Encode(networkState); err != nil {
-		return terminate(err)
-	}
-	// shutdown writes for the parent side of the pipe
-	if err := syscall.Shutdown(int(parent.Fd()), syscall.SHUT_WR); err != nil {
-		return terminate(err)
-	}
 
 	state := &libcontainer.State{
 		InitPid:       command.Process.Pid,
@@ -94,6 +87,26 @@ func Exec(container *libcontainer.Config, stdin io.Reader, stdout, stderr io.Wri
 		return terminate(err)
 	}
 	defer libcontainer.DeleteState(dataPath)
+
+	// Start the setup process to setup the init process
+	if container.Namespaces.Contains(libcontainer.NEWUSER) {
+		setupCmd := setupCommand(container, console, dataPath, os.Args[0])
+		output, err := setupCmd.CombinedOutput()
+		if err != nil || setupCmd.ProcessState.Sys().(syscall.WaitStatus).ExitStatus() != 0 {
+			command.Process.Kill()
+			command.Wait()
+			return -1, fmt.Errorf("setup failed: %s %s", err, output)
+		}
+	}
+
+	// send the state to the container's init process then shutdown writes for the parent
+	if err := json.NewEncoder(parent).Encode(networkState); err != nil {
+		return terminate(err)
+	}
+	// shutdown writes for the parent side of the pipe
+	if err := syscall.Shutdown(int(parent.Fd()), syscall.SHUT_WR); err != nil {
+		return terminate(err)
+	}
 
 	// wait for the child process to fully complete and receive an error message
 	// if one was encoutered
@@ -157,6 +170,75 @@ func killAllPids(container *libcontainer.Config) error {
 	return err
 }
 
+// Utility function that gets a host ID for a container ID from user namespace map
+// if that ID is present in the map.
+func hostIDFromMapping(containerID int, uMap []libcontainer.IDMap) (int, bool) {
+	for _, m := range uMap {
+		if (containerID >= m.ContainerID) && (containerID <= (m.ContainerID + m.Size - 1)) {
+			hostID := m.HostID + (containerID - m.ContainerID)
+			return hostID, true
+		}
+	}
+	return -1, false
+}
+
+// Gets the root uid for the process on host which could be non-zero
+// when user namespaces are enabled.
+func GetHostRootGid(container *libcontainer.Config) (int, error) {
+	if container.Namespaces.Contains(libcontainer.NEWUSER) {
+		if container.GidMappings == nil {
+			return -1, fmt.Errorf("User namespaces enabled, but no gid mappings found.")
+		}
+		hostRootGid, found := hostIDFromMapping(0, container.GidMappings)
+		if !found {
+			return -1, fmt.Errorf("User namespaces enabled, but no root user mapping found.")
+		}
+		return hostRootGid, nil
+	}
+
+	// Return default root uid 0
+	return 0, nil
+}
+
+// Gets the root uid for the process on host which could be non-zero
+// when user namespaces are enabled.
+func GetHostRootUid(container *libcontainer.Config) (int, error) {
+	if container.Namespaces.Contains(libcontainer.NEWUSER) {
+		if container.UidMappings == nil {
+			return -1, fmt.Errorf("User namespaces enabled, but no user mappings found.")
+		}
+		hostRootUid, found := hostIDFromMapping(0, container.UidMappings)
+		if !found {
+			return -1, fmt.Errorf("User namespaces enabled, but no root user mapping found.")
+		}
+		return hostRootUid, nil
+	}
+
+	// Return default root uid 0
+	return 0, nil
+}
+
+// Converts IDMap to SysProcIDMap array and adds it to SysProcAttr.
+func AddUidGidMappings(sys *syscall.SysProcAttr, container *libcontainer.Config) {
+	if container.UidMappings != nil {
+		sys.UidMappings = make([]syscall.SysProcIDMap, len(container.UidMappings))
+		for i, um := range container.UidMappings {
+			sys.UidMappings[i].ContainerID = um.ContainerID
+			sys.UidMappings[i].HostID = um.HostID
+			sys.UidMappings[i].Size = um.Size
+		}
+	}
+
+	if container.GidMappings != nil {
+		sys.GidMappings = make([]syscall.SysProcIDMap, len(container.GidMappings))
+		for i, gm := range container.GidMappings {
+			sys.GidMappings[i].ContainerID = gm.ContainerID
+			sys.GidMappings[i].HostID = gm.HostID
+			sys.GidMappings[i].Size = gm.Size
+		}
+	}
+}
+
 // DefaultCreateCommand will return an exec.Cmd with the Cloneflags set to the proper namespaces
 // defined on the container's configuration and use the current binary as the init with the
 // args provided
@@ -186,6 +268,46 @@ func DefaultCreateCommand(container *libcontainer.Config, console, dataPath, ini
 
 	command.SysProcAttr.Pdeathsig = syscall.SIGKILL
 	command.ExtraFiles = []*os.File{pipe}
+
+	if container.Namespaces.Contains(libcontainer.NEWUSER) {
+		AddUidGidMappings(command.SysProcAttr, container)
+
+		// Default to root user when user namespaces are enabled.
+		if command.SysProcAttr.Credential == nil {
+			command.SysProcAttr.Credential = &syscall.Credential{}
+		}
+	}
+
+	return command
+}
+
+// DefaultSetupCommand will return an exec.Cmd that joins the init process to set it up.
+//
+// console: the /dev/console to setup inside the container
+// init: the program executed inside the namespaces
+// root: the path to the container json file and information
+// args: the arguments to pass to the container to run as the user's program
+func DefaultSetupCommand(container *libcontainer.Config, console, dataPath, init string) *exec.Cmd {
+	// get our binary name from arg0 so we can always reexec ourself
+	env := []string{
+		"console=" + console,
+		"data_path=" + dataPath,
+	}
+
+	if dataPath == "" {
+		dataPath, _ = os.Getwd()
+	}
+
+	if container.RootFs == "" {
+		container.RootFs, _ = os.Getwd()
+	}
+	args := []string{dataPath, container.RootFs, console}
+
+	command := exec.Command(init, append([]string{"exec", "--func", "setup", "--"}, args...)...)
+
+	// make sure the process is executed inside the context of the rootfs
+	command.Dir = container.RootFs
+	command.Env = append(os.Environ(), env...)
 
 	return command
 }
