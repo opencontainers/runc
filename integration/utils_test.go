@@ -8,9 +8,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"syscall"
 
+	"github.com/docker/libcontainer"
 	"github.com/docker/libcontainer/configs"
-	"github.com/docker/libcontainer/namespaces"
 )
 
 func newStdBuffers() *stdBuffers {
@@ -89,7 +90,49 @@ func runContainer(config *configs.Config, console string, args ...string) (buffe
 	}
 
 	buffers = newStdBuffers()
-	exitCode, err = namespaces.Exec(config, buffers.Stdin, buffers.Stdout, buffers.Stderr,
-		console, config.RootFs, args, namespaces.DefaultCreateCommand, nil)
+
+	process := &libcontainer.ProcessConfig{
+		Args:   args,
+		Env:    make([]string, 0),
+		Stdin:  buffers.Stdin,
+		Stdout: buffers.Stdout,
+		Stderr: buffers.Stderr,
+	}
+
+	factory, err := libcontainer.New(".", []string{os.Args[0], "init", "--"})
+	if err != nil {
+		return nil, -1, err
+	}
+
+	container, err := factory.Create("testCT", config)
+	if err != nil {
+		return nil, -1, err
+	}
+	defer container.Destroy()
+
+	pid, err := container.StartProcess(process)
+	if err != nil {
+		return nil, -1, err
+	}
+
+	p, err := os.FindProcess(pid)
+	if err != nil {
+		return nil, -1, err
+	}
+
+	ps, err := p.Wait()
+	if err != nil {
+		return nil, -1, err
+	}
+
+	status := ps.Sys().(syscall.WaitStatus)
+	if status.Exited() {
+		exitCode = status.ExitStatus()
+	} else if status.Signaled() {
+		exitCode = -int(status.Signal())
+	} else {
+		return nil, -1, err
+	}
+
 	return
 }
