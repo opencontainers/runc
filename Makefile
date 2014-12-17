@@ -12,6 +12,7 @@ sh:
 GO_PACKAGES = $(shell find . -not \( -wholename ./vendor -prune -o -wholename ./.git -prune \) -name '*.go' -print0 | xargs -0n1 dirname | sort -u)
 
 direct-test:
+	go get github.com/golang/glog &&		\
 	go test $(TEST_TAGS) -cover -v $(GO_PACKAGES)
 
 direct-test-short:
