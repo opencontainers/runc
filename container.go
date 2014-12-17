@@ -21,7 +21,7 @@ type Container interface {
 	// errors:
 	// ContainerDestroyed - Container no longer exists,
 	// Systemerror - System error.
-	RunState() (RunState, error)
+	RunState() (configs.RunState, error)
 
 	// Returns the current config of the container.
 	Config() *configs.Config

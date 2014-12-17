@@ -93,7 +93,7 @@ func (l *linuxFactory) Create(id string, config *configs.Config) (Container, err
 		root:          containerRoot,
 		config:        config,
 		initArgs:      l.initArgs,
-		state:         &State{},
+		state:         &configs.State{},
 		cgroupManager: cgroupManager,
 	}, nil
 }
@@ -144,7 +144,7 @@ func (l *linuxFactory) loadContainerConfig(root string) (*configs.Config, error)
 	return config, nil
 }
 
-func (l *linuxFactory) loadContainerState(root string) (*State, error) {
+func (l *linuxFactory) loadContainerState(root string) (*configs.State, error) {
 	f, err := os.Open(filepath.Join(root, stateFilename))
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -154,7 +154,7 @@ func (l *linuxFactory) loadContainerState(root string) (*State, error) {
 	}
 	defer f.Close()
 
-	var state *State
+	var state *configs.State
 	if err := json.NewDecoder(f).Decode(&state); err != nil {
 		return nil, newGenericError(err, SystemError)
 	}

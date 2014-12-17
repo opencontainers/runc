@@ -88,7 +88,7 @@ func TestFactoryLoadContainer(t *testing.T) {
 		expectedConfig = &configs.Config{
 			RootFs: "/mycontainer/root",
 		}
-		expectedState = &State{
+		expectedState = &configs.State{
 			InitPid: 1024,
 		}
 	)

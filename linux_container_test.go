@@ -53,7 +53,7 @@ func TestGetContainerStats(t *testing.T) {
 				},
 			},
 		},
-		state: &State{},
+		state: &configs.State{},
 	}
 
 	stats, err := container.Stats()

@@ -19,7 +19,7 @@ type linuxContainer struct {
 	id            string
 	root          string
 	config        *configs.Config
-	state         *State
+	state         *configs.State
 	cgroupManager CgroupManager
 	initArgs      []string
 }
@@ -32,8 +32,8 @@ func (c *linuxContainer) Config() *configs.Config {
 	return c.config
 }
 
-func (c *linuxContainer) RunState() (RunState, error) {
-	return Destroyed, nil // FIXME return a real state
+func (c *linuxContainer) RunState() (configs.RunState, error) {
+	return configs.Destroyed, nil // FIXME return a real state
 }
 
 func (c *linuxContainer) Processes() ([]int, error) {
@@ -61,18 +61,18 @@ func (c *linuxContainer) Stats() (*ContainerStats, error) {
 	return stats, nil
 }
 
-func (c *linuxContainer) StartProcess(config *ProcessConfig) (int, error) {
+func (c *linuxContainer) StartProcess(pconfig *ProcessConfig) (int, error) {
 	state, err := c.RunState()
 	if err != nil {
 		return -1, err
 	}
 
-	if state != Destroyed {
+	if state != configs.Destroyed {
 		glog.Info("start new container process")
 		panic("not implemented")
 	}
 
-	if err := c.startInitProcess(config); err != nil {
+	if err := c.startInitProcess(pconfig); err != nil {
 		return -1, err
 	}
 
@@ -141,7 +141,7 @@ func (c *linuxContainer) Destroy() error {
 		return err
 	}
 
-	if state != Destroyed {
+	if state != configs.Destroyed {
 		return newGenericError(nil, ContainerNotStopped)
 	}
 

@@ -12,7 +12,6 @@ import (
 	"strconv"
 	"syscall"
 
-	"github.com/docker/libcontainer"
 	"github.com/docker/libcontainer/apparmor"
 	"github.com/docker/libcontainer/cgroups"
 	"github.com/docker/libcontainer/configs"
@@ -22,7 +21,7 @@ import (
 
 // ExecIn reexec's the initPath with the argv 0 rewrite to "nsenter" so that it is able to run the
 // setns code in a single threaded environment joining the existing containers' namespaces.
-func ExecIn(container *configs.Config, state *libcontainer.State, userArgs []string, initPath, action string,
+func ExecIn(container *configs.Config, state *configs.State, userArgs []string, initPath, action string,
 	stdin io.Reader, stdout, stderr io.Writer, console string, startCallback func(*exec.Cmd)) (int, error) {
 
 	args := []string{fmt.Sprintf("nsenter-%s", action), "--nspid", strconv.Itoa(state.InitPid)}
@@ -119,6 +118,6 @@ func FinalizeSetns(container *configs.Config, args []string) error {
 	panic("unreachable")
 }
 
-func EnterCgroups(state *libcontainer.State, pid int) error {
+func EnterCgroups(state *configs.State, pid int) error {
 	return cgroups.EnterPid(state.CgroupPaths, pid)
 }

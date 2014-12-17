@@ -9,7 +9,6 @@ import (
 	"os/exec"
 	"syscall"
 
-	"github.com/docker/libcontainer"
 	"github.com/docker/libcontainer/cgroups"
 	"github.com/docker/libcontainer/cgroups/fs"
 	"github.com/docker/libcontainer/cgroups/systemd"
@@ -80,17 +79,17 @@ func Exec(container *configs.Config, stdin io.Reader, stdout, stderr io.Writer, 
 		return terminate(err)
 	}
 
-	state := &libcontainer.State{
+	state := &configs.State{
 		InitPid:       command.Process.Pid,
 		InitStartTime: started,
 		NetworkState:  networkState,
 		CgroupPaths:   cgroupPaths,
 	}
 
-	if err := libcontainer.SaveState(dataPath, state); err != nil {
+	if err := configs.SaveState(dataPath, state); err != nil {
 		return terminate(err)
 	}
-	defer libcontainer.DeleteState(dataPath)
+	defer configs.DeleteState(dataPath)
 
 	// wait for the child process to fully complete and receive an error message
 	// if one was encoutered
