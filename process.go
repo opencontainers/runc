@@ -17,11 +17,8 @@ type ProcessConfig struct {
 	// If a reader or writer is nil, the input stream is assumed to be empty and the output is
 	// discarded.
 	//
-	// The readers and writers, if supplied, are closed when the process terminates. Their Close
-	// methods should be idempotent.
-	//
 	// Stdout and Stderr may refer to the same writer in which case the output is interspersed.
-	Stdin  io.ReadCloser
-	Stdout io.WriteCloser
-	Stderr io.WriteCloser
+	Stdin  io.Reader
+	Stdout io.Writer
+	Stderr io.Writer
 }
