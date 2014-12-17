@@ -32,12 +32,12 @@ func newTemplateConfig(rootfs string) *libcontainer.Config {
 			"KILL",
 			"AUDIT_WRITE",
 		},
-		Namespaces: []libcontainer.Namespace{
-			{Name: "NEWNS"},
-			{Name: "NEWUTS"},
-			{Name: "NEWIPC"},
-			{Name: "NEWPID"},
-			{Name: "NEWNET"},
+		Namespaces: libcontainer.Namespaces{
+			{Type: libcontainer.NEWNS},
+			{Type: libcontainer.NEWUTS},
+			{Type: libcontainer.NEWIPC},
+			{Type: libcontainer.NEWPID},
+			{Type: libcontainer.NEWNET},
 		},
 		Cgroups: &cgroups.Cgroup{
 			Parent:          "integration",

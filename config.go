@@ -10,21 +10,28 @@ type MountConfig mount.MountConfig
 
 type Network network.Network
 
+type NamespaceType string
+
+const (
+	NEWNET  NamespaceType = "NEWNET"
+	NEWPID  NamespaceType = "NEWPID"
+	NEWNS   NamespaceType = "NEWNS"
+	NEWUTS  NamespaceType = "NEWUTS"
+	NEWIPC  NamespaceType = "NEWIPC"
+	NEWUSER NamespaceType = "NEWUSER"
+)
+
 // Namespace defines configuration for each namespace.  It specifies an
 // alternate path that is able to be joined via setns.
 type Namespace struct {
-	Name string `json:"name"`
-	Path string `json:"path,omitempty"`
+	Type NamespaceType `json:"type"`
+	Path string        `json:"path,omitempty"`
 }
 
 type Namespaces []Namespace
 
-func (n Namespaces) Exists(name string) bool {
-	return n.index(name) != -1
-}
-
-func (n Namespaces) Remove(name string) bool {
-	i := n.index(name)
+func (n Namespaces) Remove(t NamespaceType) bool {
+	i := n.index(t)
 	if i == -1 {
 		return false
 	}
@@ -32,18 +39,18 @@ func (n Namespaces) Remove(name string) bool {
 	return true
 }
 
-func (n Namespaces) Add(name, path string) {
-	i := n.index(name)
+func (n Namespaces) Add(t NamespaceType, path string) {
+	i := n.index(t)
 	if i == -1 {
-		n = append(n, Namespace{Name: name, Path: path})
+		n = append(n, Namespace{Type: t, Path: path})
 		return
 	}
 	n[i].Path = path
 }
 
-func (n Namespaces) index(name string) int {
+func (n Namespaces) index(t NamespaceType) int {
 	for i, ns := range n {
-		if ns.Name == name {
+		if ns.Type == t {
 			return i
 		}
 	}
