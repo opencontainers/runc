@@ -15,6 +15,10 @@
 #include <unistd.h>
 #include <getopt.h>
 
+#ifndef PR_SET_CHILD_SUBREAPER
+#define PR_SET_CHILD_SUBREAPER 36
+#endif
+
 static const kBufSize = 256;
 static const char *kNsEnter = "nsenter";
 
