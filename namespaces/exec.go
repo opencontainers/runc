@@ -55,7 +55,7 @@ func Exec(args []string, env []string, command *exec.Cmd, container *configs.Con
 	}
 
 	process := processArgs{
-		Env:  env,
+		Env:  append(env[0:], container.Env...),
 		Args: args,
 	}
 	if err := encoder.Encode(process); err != nil {
