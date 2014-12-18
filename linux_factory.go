@@ -23,23 +23,30 @@ var (
 )
 
 // New returns a linux based container factory based in the root directory.
-func New(root string) (Factory, error) {
-	if err := os.MkdirAll(root, 0700); err != nil {
-		return nil, newGenericError(err, SystemError)
+func New(root string, initArgs []string) (Factory, error) {
+	if root != "" {
+		if err := os.MkdirAll(root, 0700); err != nil {
+			return nil, newGenericError(err, SystemError)
+		}
 	}
 
 	return &linuxFactory{
-		root: root,
+		root:     root,
+		initArgs: initArgs,
 	}, nil
 }
 
 // linuxFactory implements the default factory interface for linux based systems.
 type linuxFactory struct {
 	// root is the root directory
-	root string
+	root     string
+	initArgs []string
 }
 
 func (l *linuxFactory) Create(id string, config *Config) (Container, error) {
+	if l.root == "" {
+		return nil, newGenericError(fmt.Errorf("invalid root"), ConfigInvalid)
+	}
 	if !idRegex.MatchString(id) {
 		return nil, newGenericError(fmt.Errorf("Invalid id format: %v", id), InvalidIdFormat)
 	}
@@ -56,10 +63,43 @@ func (l *linuxFactory) Create(id string, config *Config) (Container, error) {
 		return nil, newGenericError(err, SystemError)
 	}
 
-	panic("not implemented")
+	data, err := json.MarshalIndent(config, "", "\t")
+	if err != nil {
+		return nil, newGenericError(err, SystemError)
+	}
+
+	if err := os.MkdirAll(containerRoot, 0700); err != nil {
+		return nil, newGenericError(err, SystemError)
+	}
+
+	f, err := os.Create(filepath.Join(containerRoot, configFilename))
+	if err != nil {
+		os.RemoveAll(containerRoot)
+		return nil, newGenericError(err, SystemError)
+	}
+	defer f.Close()
+
+	_, err = f.Write(data)
+	if err != nil {
+		os.RemoveAll(containerRoot)
+		return nil, newGenericError(err, SystemError)
+	}
+
+	cgroupManager := NewCgroupManager()
+	return &linuxContainer{
+		id:            id,
+		root:          containerRoot,
+		config:        config,
+		initArgs:      l.initArgs,
+		state:         &State{},
+		cgroupManager: cgroupManager,
+	}, nil
 }
 
 func (l *linuxFactory) Load(id string) (Container, error) {
+	if l.root == "" {
+		return nil, newGenericError(fmt.Errorf("invalid root"), ConfigInvalid)
+	}
 	containerRoot := filepath.Join(l.root, id)
 	glog.Infof("loading container config from %s", containerRoot)
 	config, err := l.loadContainerConfig(containerRoot)
@@ -81,6 +121,7 @@ func (l *linuxFactory) Load(id string) (Container, error) {
 		config:        config,
 		state:         state,
 		cgroupManager: cgroupManager,
+		initArgs:      l.initArgs,
 	}, nil
 }
 
@@ -116,4 +157,12 @@ func (l *linuxFactory) loadContainerState(root string) (*State, error) {
 		return nil, newGenericError(err, SystemError)
 	}
 	return state, nil
+}
+
+// StartInitialization loads a container by opening the pipe fd from the parent to read the configuration and state
+// This is a low level implementation detail of the reexec and should not be consumed externally
+func (f *linuxFactory) StartInitialization(pipefd uintptr) (err error) {
+
+	/* FIXME call namespaces.Init() */
+	return nil
 }

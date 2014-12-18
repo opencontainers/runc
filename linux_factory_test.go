@@ -28,7 +28,7 @@ func TestFactoryNew(t *testing.T) {
 	}
 	defer os.RemoveAll(root)
 
-	factory, err := New(root)
+	factory, err := New(root, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,7 +54,7 @@ func TestFactoryLoadNotExists(t *testing.T) {
 	}
 	defer os.RemoveAll(root)
 
-	factory, err := New(root)
+	factory, err := New(root, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,7 +101,7 @@ func TestFactoryLoadContainer(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	factory, err := New(root)
+	factory, err := New(root, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/md5"
 	"fmt"
 	"io"
 	"log"
@@ -15,6 +16,12 @@ import (
 	"github.com/docker/libcontainer"
 	consolepkg "github.com/docker/libcontainer/console"
 	"github.com/docker/libcontainer/namespaces"
+)
+
+var (
+	dataPath  = os.Getenv("data_path")
+	console   = os.Getenv("console")
+	rawPipeFd = os.Getenv("pipe")
 )
 
 var execCommand = cli.Command{
@@ -43,24 +50,57 @@ func execAction(context *cli.Context) {
 
 	var exitCode int
 
-	container, err := loadConfig()
+	process := &libcontainer.ProcessConfig{
+		Args:   context.Args(),
+		Env:    context.StringSlice("env"),
+		Stdin:  os.Stdin,
+		Stdout: os.Stdout,
+		Stderr: os.Stderr,
+	}
+
+	factory, err := libcontainer.New(context.GlobalString("root"), []string{os.Args[0], "init", "--fd", "3", "--"})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	state, err := libcontainer.GetState(dataPath)
+	id := fmt.Sprintf("%x", md5.Sum([]byte(dataPath)))
+	container, err := factory.Load(id)
 	if err != nil && !os.IsNotExist(err) {
-		log.Fatalf("unable to read state.json: %s", err)
+		var config *libcontainer.Config
+
+		config, err = loadConfig()
+		if err != nil {
+			log.Fatal(err)
+		}
+		container, err = factory.Create(id, config)
+	}
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	if state != nil {
-		exitCode, err = startInExistingContainer(container, state, context.String("func"), context)
-	} else {
-		exitCode, err = startContainer(container, dataPath, []string(context.Args()))
-	}
-
+	pid, err := container.StartProcess(process)
 	if err != nil {
 		log.Fatalf("failed to exec: %s", err)
+	}
+
+	p, err := os.FindProcess(pid)
+	if err != nil {
+		log.Fatalf("Unable to find the %d process: %s", pid, err)
+	}
+
+	ps, err := p.Wait()
+	if err != nil {
+		log.Fatalf("Unable to wait the %d process: %s", pid, err)
+	}
+	container.Destroy()
+
+	status := ps.Sys().(syscall.WaitStatus)
+	if status.Exited() {
+		exitCode = status.ExitStatus()
+	} else if status.Signaled() {
+		exitCode = -int(status.Signal())
+	} else {
+		log.Fatalf("Unexpected status")
 	}
 
 	os.Exit(exitCode)
