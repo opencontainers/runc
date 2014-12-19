@@ -24,13 +24,20 @@ import (
 	"github.com/docker/libcontainer/utils"
 )
 
+// Process is used for transferring parameters from Exec() to Init()
+type processArgs struct {
+	Args        []string `json:"args,omitempty"`
+	Env         []string `json:"environment,omitempty"`
+	ConsolePath string   `json:"console_path,omitempty"`
+}
+
 // TODO(vishh): This is part of the libcontainer API and it does much more than just namespaces related work.
 // Move this to libcontainer package.
 // Init is the init process that first runs inside a new namespace to setup mounts, users, networking,
 // and other options required for the new container.
 // The caller of Init function has to ensure that the go runtime is locked to an OS thread
 // (using runtime.LockOSThread) else system calls like setns called within Init may not work as intended.
-func Init(container *configs.Config, uncleanRootfs, consolePath string, pipe *os.File, args []string) (err error) {
+func Init(pipe *os.File) (err error) {
 	defer func() {
 		// if we have an error during the initialization of the container's init then send it back to the
 		// parent process in the form of an initError.
@@ -48,6 +55,23 @@ func Init(container *configs.Config, uncleanRootfs, consolePath string, pipe *os
 		pipe.Close()
 	}()
 
+	decoder := json.NewDecoder(pipe)
+
+	var container *configs.Config
+	if err := decoder.Decode(&container); err != nil {
+		return err
+	}
+
+	var process *processArgs
+	if err := decoder.Decode(&process); err != nil {
+		return err
+	}
+
+	uncleanRootfs, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
 	rootfs, err := utils.ResolveRootfs(uncleanRootfs)
 	if err != nil {
 		return err
@@ -61,22 +85,22 @@ func Init(container *configs.Config, uncleanRootfs, consolePath string, pipe *os
 
 	// We always read this as it is a way to sync with the parent as well
 	var networkState *network.NetworkState
-	if err := json.NewDecoder(pipe).Decode(&networkState); err != nil {
+	if err := decoder.Decode(&networkState); err != nil {
 		return err
 	}
 	// join any namespaces via a path to the namespace fd if provided
 	if err := joinExistingNamespaces(container.Namespaces); err != nil {
 		return err
 	}
-	if consolePath != "" {
-		if err := console.OpenAndDup(consolePath); err != nil {
+	if process.ConsolePath != "" {
+		if err := console.OpenAndDup(process.ConsolePath); err != nil {
 			return err
 		}
 	}
 	if _, err := syscall.Setsid(); err != nil {
 		return fmt.Errorf("setsid %s", err)
 	}
-	if consolePath != "" {
+	if process.ConsolePath != "" {
 		if err := system.Setctty(); err != nil {
 			return fmt.Errorf("setctty %s", err)
 		}
@@ -96,7 +120,7 @@ func Init(container *configs.Config, uncleanRootfs, consolePath string, pipe *os
 	label.Init()
 
 	if err := mount.InitializeMountNamespace(rootfs,
-		consolePath,
+		process.ConsolePath,
 		container.RestrictSys,
 		(*mount.MountConfig)(container.MountConfig)); err != nil {
 		return fmt.Errorf("setup mount namespace %s", err)
@@ -138,7 +162,7 @@ func Init(container *configs.Config, uncleanRootfs, consolePath string, pipe *os
 		return fmt.Errorf("restore parent death signal %s", err)
 	}
 
-	return system.Execv(args[0], args[0:], os.Environ())
+	return system.Execv(process.Args[0], process.Args[0:], process.Env)
 }
 
 // RestoreParentDeathSignal sets the parent death signal to old.

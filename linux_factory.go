@@ -12,6 +12,7 @@ import (
 	"github.com/golang/glog"
 
 	"github.com/docker/libcontainer/configs"
+	"github.com/docker/libcontainer/namespaces"
 )
 
 const (
@@ -164,7 +165,7 @@ func (l *linuxFactory) loadContainerState(root string) (*configs.State, error) {
 // StartInitialization loads a container by opening the pipe fd from the parent to read the configuration and state
 // This is a low level implementation detail of the reexec and should not be consumed externally
 func (f *linuxFactory) StartInitialization(pipefd uintptr) (err error) {
+	pipe := os.NewFile(uintptr(pipefd), "pipe")
 
-	/* FIXME call namespaces.Init() */
-	return nil
+	return namespaces.Init(pipe)
 }

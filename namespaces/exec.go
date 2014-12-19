@@ -21,36 +21,45 @@ import (
 // Move this to libcontainer package.
 // Exec performs setup outside of a namespace so that a container can be
 // executed.  Exec is a high level function for working with container namespaces.
-func Exec(container *configs.Config, stdin io.Reader, stdout, stderr io.Writer, console, dataPath string, args []string, createCommand CreateCommand, startCallback func()) (int, error) {
+func Exec(args []string, env []string, command *exec.Cmd, container *configs.Config, state *configs.State) error {
 	var err error
 
 	// create a pipe so that we can syncronize with the namespaced process and
 	// pass the state and configuration to the child process
 	parent, child, err := newInitPipe()
 	if err != nil {
-		return -1, err
+		return err
 	}
 	defer parent.Close()
 
-	command := createCommand(container, console, dataPath, os.Args[0], child, args)
-	// Note: these are only used in non-tty mode
-	// if there is a tty for the container it will be opened within the namespace and the
-	// fds will be duped to stdin, stdiout, and stderr
-	command.Stdin = stdin
-	command.Stdout = stdout
-	command.Stderr = stderr
+	command.ExtraFiles = []*os.File{child}
+	command.Dir = container.RootFs
 
 	if err := command.Start(); err != nil {
 		child.Close()
-		return -1, err
+		return err
 	}
 	child.Close()
 
-	terminate := func(terr error) (int, error) {
+	terminate := func(terr error) error {
 		// TODO: log the errors for kill and wait
 		command.Process.Kill()
 		command.Wait()
-		return -1, terr
+		return terr
+	}
+
+	encoder := json.NewEncoder(parent)
+
+	if err := encoder.Encode(container); err != nil {
+		return terminate(err)
+	}
+
+	process := processArgs{
+		Env:  env,
+		Args: args,
+	}
+	if err := encoder.Encode(process); err != nil {
+		return terminate(err)
 	}
 
 	started, err := system.GetProcessStartTime(command.Process.Pid)
@@ -71,25 +80,13 @@ func Exec(container *configs.Config, stdin io.Reader, stdout, stderr io.Writer, 
 		return terminate(err)
 	}
 	// send the state to the container's init process then shutdown writes for the parent
-	if err := json.NewEncoder(parent).Encode(networkState); err != nil {
+	if err := encoder.Encode(networkState); err != nil {
 		return terminate(err)
 	}
 	// shutdown writes for the parent side of the pipe
 	if err := syscall.Shutdown(int(parent.Fd()), syscall.SHUT_WR); err != nil {
 		return terminate(err)
 	}
-
-	state := &configs.State{
-		InitPid:       command.Process.Pid,
-		InitStartTime: started,
-		NetworkState:  networkState,
-		CgroupPaths:   cgroupPaths,
-	}
-
-	if err := configs.SaveState(dataPath, state); err != nil {
-		return terminate(err)
-	}
-	defer configs.DeleteState(dataPath)
 
 	// wait for the child process to fully complete and receive an error message
 	// if one was encoutered
@@ -101,16 +98,12 @@ func Exec(container *configs.Config, stdin io.Reader, stdout, stderr io.Writer, 
 		return terminate(ierr)
 	}
 
-	if startCallback != nil {
-		startCallback()
-	}
+	state.InitPid = command.Process.Pid
+	state.InitStartTime = started
+	state.NetworkState = networkState
+	state.CgroupPaths = cgroupPaths
 
-	if err := command.Wait(); err != nil {
-		if _, ok := err.(*exec.ExitError); !ok {
-			return -1, err
-		}
-	}
-	return command.ProcessState.Sys().(syscall.WaitStatus).ExitStatus(), nil
+	return nil
 }
 
 // DefaultCreateCommand will return an exec.Cmd with the Cloneflags set to the proper namespaces

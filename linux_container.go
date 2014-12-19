@@ -11,6 +11,7 @@ import (
 	"syscall"
 
 	"github.com/docker/libcontainer/configs"
+	"github.com/docker/libcontainer/namespaces"
 	"github.com/docker/libcontainer/network"
 	"github.com/golang/glog"
 )
@@ -119,16 +120,17 @@ func (c *linuxContainer) startInitProcess(config *ProcessConfig) error {
 		cmd.SysProcAttr = &syscall.SysProcAttr{}
 	}
 
+	cmd.SysProcAttr.Cloneflags = uintptr(namespaces.GetNamespaceFlags(c.config.Namespaces))
 	cmd.SysProcAttr.Pdeathsig = syscall.SIGKILL
 
-	//FIXME call namespaces.Exec()
-	if err := cmd.Start(); err != nil {
+	err := namespaces.Exec(config.Args, config.Env, cmd, c.config, c.state)
+	if err != nil {
 		return err
 	}
 
-	c.state.InitPid = cmd.Process.Pid
-	err := c.updateStateFile()
+	err = c.updateStateFile()
 	if err != nil {
+		// FIXME c.Kill()
 		return err
 	}
 

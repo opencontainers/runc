@@ -1,9 +1,7 @@
 package main
 
 import (
-	"github.com/docker/libcontainer/system"
 	"log"
-	"os"
 
 	"github.com/codegangsta/cli"
 	"github.com/docker/libcontainer"
@@ -36,9 +34,5 @@ func initAction(context *cli.Context) {
 		log.Fatal(err)
 	}
 
-	args := []string(context.Args())
-
-	if err := system.Execv(args[0], args[0:], os.Environ()); err != nil {
-		log.Fatal(err)
-	}
+	panic("This line should never been executed")
 }
