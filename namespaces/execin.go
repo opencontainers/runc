@@ -12,16 +12,16 @@ import (
 	"strconv"
 	"syscall"
 
-	"github.com/docker/libcontainer"
 	"github.com/docker/libcontainer/apparmor"
 	"github.com/docker/libcontainer/cgroups"
+	"github.com/docker/libcontainer/configs"
 	"github.com/docker/libcontainer/label"
 	"github.com/docker/libcontainer/system"
 )
 
 // ExecIn reexec's the initPath with the argv 0 rewrite to "nsenter" so that it is able to run the
 // setns code in a single threaded environment joining the existing containers' namespaces.
-func ExecIn(container *libcontainer.Config, state *libcontainer.State, userArgs []string, initPath, action string,
+func ExecIn(container *configs.Config, state *configs.State, userArgs []string, initPath, action string,
 	stdin io.Reader, stdout, stderr io.Writer, console string, startCallback func(*exec.Cmd)) (int, error) {
 
 	args := []string{fmt.Sprintf("nsenter-%s", action), "--nspid", strconv.Itoa(state.InitPid)}
@@ -91,7 +91,7 @@ func ExecIn(container *libcontainer.Config, state *libcontainer.State, userArgs 
 
 // Finalize expects that the setns calls have been setup and that is has joined an
 // existing namespace
-func FinalizeSetns(container *libcontainer.Config, args []string) error {
+func FinalizeSetns(container *configs.Config, args []string) error {
 	// clear the current processes env and replace it with the environment defined on the container
 	if err := LoadContainerEnvironment(container); err != nil {
 		return err
@@ -118,6 +118,6 @@ func FinalizeSetns(container *libcontainer.Config, args []string) error {
 	panic("unreachable")
 }
 
-func EnterCgroups(state *libcontainer.State, pid int) error {
+func EnterCgroups(state *configs.State, pid int) error {
 	return cgroups.EnterPid(state.CgroupPaths, pid)
 }

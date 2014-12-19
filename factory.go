@@ -1,5 +1,9 @@
 package libcontainer
 
+import (
+	"github.com/docker/libcontainer/configs"
+)
+
 type Factory interface {
 	// Creates a new container with the given id and starts the initial process inside it.
 	// id must be a string containing only letters, digits and underscores and must contain
@@ -17,7 +21,7 @@ type Factory interface {
 	// Systemerror - System error
 	//
 	// On error, any partially created container parts are cleaned up (the operation is atomic).
-	Create(id string, config *Config) (Container, error)
+	Create(id string, config *configs.Config) (Container, error)
 
 	// Load takes an ID for an existing container and returns the container information
 	// from the state.  This presents a read only view of the container.

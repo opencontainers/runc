@@ -3,8 +3,8 @@ package integration
 import (
 	"syscall"
 
-	"github.com/docker/libcontainer"
 	"github.com/docker/libcontainer/cgroups"
+	"github.com/docker/libcontainer/configs"
 	"github.com/docker/libcontainer/devices"
 )
 
@@ -12,8 +12,8 @@ import (
 //
 // it uses a network strategy of just setting a loopback interface
 // and the default setup for devices
-func newTemplateConfig(rootfs string) *libcontainer.Config {
-	return &libcontainer.Config{
+func newTemplateConfig(rootfs string) *configs.Config {
+	return &configs.Config{
 		RootFs: rootfs,
 		Tty:    false,
 		Capabilities: []string{
@@ -32,7 +32,7 @@ func newTemplateConfig(rootfs string) *libcontainer.Config {
 			"KILL",
 			"AUDIT_WRITE",
 		},
-		Namespaces: []libcontainer.Namespace{
+		Namespaces: []configs.Namespace{
 			{Name: "NEWNS"},
 			{Name: "NEWUTS"},
 			{Name: "NEWIPC"},
@@ -45,7 +45,7 @@ func newTemplateConfig(rootfs string) *libcontainer.Config {
 			AllowedDevices:  devices.DefaultAllowedDevices,
 		},
 
-		MountConfig: &libcontainer.MountConfig{
+		MountConfig: &configs.MountConfig{
 			DeviceNodes: devices.DefaultAutoCreatedDevices,
 		},
 		Hostname: "integration",
@@ -55,14 +55,14 @@ func newTemplateConfig(rootfs string) *libcontainer.Config {
 			"HOSTNAME=integration",
 			"TERM=xterm",
 		},
-		Networks: []*libcontainer.Network{
+		Networks: []*configs.Network{
 			{
 				Type:    "loopback",
 				Address: "127.0.0.1/0",
 				Gateway: "localhost",
 			},
 		},
-		Rlimits: []libcontainer.Rlimit{
+		Rlimits: []configs.Rlimit{
 			{
 				Type: syscall.RLIMIT_NOFILE,
 				Hard: uint64(1024),

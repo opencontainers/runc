@@ -10,6 +10,9 @@ import (
 	"regexp"
 
 	"github.com/golang/glog"
+
+	"github.com/docker/libcontainer/configs"
+	"github.com/docker/libcontainer/namespaces"
 )
 
 const (
@@ -43,7 +46,7 @@ type linuxFactory struct {
 	initArgs []string
 }
 
-func (l *linuxFactory) Create(id string, config *Config) (Container, error) {
+func (l *linuxFactory) Create(id string, config *configs.Config) (Container, error) {
 	if l.root == "" {
 		return nil, newGenericError(fmt.Errorf("invalid root"), ConfigInvalid)
 	}
@@ -91,7 +94,7 @@ func (l *linuxFactory) Create(id string, config *Config) (Container, error) {
 		root:          containerRoot,
 		config:        config,
 		initArgs:      l.initArgs,
-		state:         &State{},
+		state:         &configs.State{},
 		cgroupManager: cgroupManager,
 	}, nil
 }
@@ -125,7 +128,7 @@ func (l *linuxFactory) Load(id string) (Container, error) {
 	}, nil
 }
 
-func (l *linuxFactory) loadContainerConfig(root string) (*Config, error) {
+func (l *linuxFactory) loadContainerConfig(root string) (*configs.Config, error) {
 	f, err := os.Open(filepath.Join(root, configFilename))
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -135,14 +138,14 @@ func (l *linuxFactory) loadContainerConfig(root string) (*Config, error) {
 	}
 	defer f.Close()
 
-	var config *Config
+	var config *configs.Config
 	if err := json.NewDecoder(f).Decode(&config); err != nil {
 		return nil, newGenericError(err, ConfigInvalid)
 	}
 	return config, nil
 }
 
-func (l *linuxFactory) loadContainerState(root string) (*State, error) {
+func (l *linuxFactory) loadContainerState(root string) (*configs.State, error) {
 	f, err := os.Open(filepath.Join(root, stateFilename))
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -152,7 +155,7 @@ func (l *linuxFactory) loadContainerState(root string) (*State, error) {
 	}
 	defer f.Close()
 
-	var state *State
+	var state *configs.State
 	if err := json.NewDecoder(f).Decode(&state); err != nil {
 		return nil, newGenericError(err, SystemError)
 	}
@@ -162,7 +165,7 @@ func (l *linuxFactory) loadContainerState(root string) (*State, error) {
 // StartInitialization loads a container by opening the pipe fd from the parent to read the configuration and state
 // This is a low level implementation detail of the reexec and should not be consumed externally
 func (f *linuxFactory) StartInitialization(pipefd uintptr) (err error) {
+	pipe := os.NewFile(uintptr(pipefd), "pipe")
 
-	/* FIXME call namespaces.Init() */
-	return nil
+	return namespaces.Init(pipe)
 }

@@ -7,23 +7,23 @@ import (
 	"path/filepath"
 
 	"github.com/codegangsta/cli"
-	"github.com/docker/libcontainer"
+	"github.com/docker/libcontainer/configs"
 )
 
 // rFunc is a function registration for calling after an execin
 type rFunc struct {
 	Usage  string
-	Action func(*libcontainer.Config, []string)
+	Action func(*configs.Config, []string)
 }
 
-func loadConfig() (*libcontainer.Config, error) {
+func loadConfig() (*configs.Config, error) {
 	f, err := os.Open(filepath.Join(dataPath, "container.json"))
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
 
-	var container *libcontainer.Config
+	var container *configs.Config
 	if err := json.NewDecoder(f).Decode(&container); err != nil {
 		return nil, err
 	}
@@ -57,11 +57,11 @@ func findUserArgs() []string {
 
 // loadConfigFromFd loads a container's config from the sync pipe that is provided by
 // fd 3 when running a process
-func loadConfigFromFd() (*libcontainer.Config, error) {
+func loadConfigFromFd() (*configs.Config, error) {
 	pipe := os.NewFile(3, "pipe")
 	defer pipe.Close()
 
-	var config *libcontainer.Config
+	var config *configs.Config
 	if err := json.NewDecoder(pipe).Decode(&config); err != nil {
 		return nil, err
 	}

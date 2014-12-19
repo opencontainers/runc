@@ -1,4 +1,4 @@
-package libcontainer
+package configs
 
 import (
 	"encoding/json"
@@ -34,7 +34,7 @@ func containsDevice(expected *devices.Device, values []*devices.Device) bool {
 }
 
 func loadConfig(name string) (*Config, error) {
-	f, err := os.Open(filepath.Join("sample_configs", name))
+	f, err := os.Open(filepath.Join("../sample_configs", name))
 	if err != nil {
 		return nil, err
 	}

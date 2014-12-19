@@ -16,17 +16,7 @@ func init() {
 	}
 	runtime.LockOSThread()
 
-	container, err := loadConfig()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	rootfs, err := os.Getwd()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if err := namespaces.Init(container, rootfs, "", os.NewFile(3, "pipe"), os.Args[3:]); err != nil {
+	if err := namespaces.Init(os.NewFile(3, "pipe")); err != nil {
 		log.Fatalf("unable to initialize for container: %s", err)
 	}
 	os.Exit(1)

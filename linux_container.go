@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"syscall"
 
+	"github.com/docker/libcontainer/configs"
+	"github.com/docker/libcontainer/namespaces"
 	"github.com/docker/libcontainer/network"
 	"github.com/golang/glog"
 )
@@ -17,8 +19,8 @@ import (
 type linuxContainer struct {
 	id            string
 	root          string
-	config        *Config
-	state         *State
+	config        *configs.Config
+	state         *configs.State
 	cgroupManager CgroupManager
 	initArgs      []string
 }
@@ -27,12 +29,12 @@ func (c *linuxContainer) ID() string {
 	return c.id
 }
 
-func (c *linuxContainer) Config() *Config {
+func (c *linuxContainer) Config() *configs.Config {
 	return c.config
 }
 
-func (c *linuxContainer) RunState() (RunState, error) {
-	return Destroyed, nil // FIXME return a real state
+func (c *linuxContainer) RunState() (configs.RunState, error) {
+	return configs.Destroyed, nil // FIXME return a real state
 }
 
 func (c *linuxContainer) Processes() ([]int, error) {
@@ -60,18 +62,18 @@ func (c *linuxContainer) Stats() (*ContainerStats, error) {
 	return stats, nil
 }
 
-func (c *linuxContainer) StartProcess(config *ProcessConfig) (int, error) {
+func (c *linuxContainer) StartProcess(pconfig *ProcessConfig) (int, error) {
 	state, err := c.RunState()
 	if err != nil {
 		return -1, err
 	}
 
-	if state != Destroyed {
+	if state != configs.Destroyed {
 		glog.Info("start new container process")
 		panic("not implemented")
 	}
 
-	if err := c.startInitProcess(config); err != nil {
+	if err := c.startInitProcess(pconfig); err != nil {
 		return -1, err
 	}
 
@@ -79,20 +81,16 @@ func (c *linuxContainer) StartProcess(config *ProcessConfig) (int, error) {
 }
 
 func (c *linuxContainer) updateStateFile() error {
-	data, err := json.MarshalIndent(c.state, "", "\t")
-	if err != nil {
-		return newGenericError(err, SystemError)
-	}
-
 	fnew := filepath.Join(c.root, fmt.Sprintf("%s.new", stateFilename))
 	f, err := os.Create(fnew)
 	if err != nil {
 		return newGenericError(err, SystemError)
 	}
 
-	_, err = f.Write(data)
+	err = json.NewEncoder(f).Encode(c.state)
 	if err != nil {
 		f.Close()
+		os.Remove(fnew)
 		return newGenericError(err, SystemError)
 	}
 	f.Close()
@@ -118,16 +116,17 @@ func (c *linuxContainer) startInitProcess(config *ProcessConfig) error {
 		cmd.SysProcAttr = &syscall.SysProcAttr{}
 	}
 
+	cmd.SysProcAttr.Cloneflags = uintptr(namespaces.GetNamespaceFlags(c.config.Namespaces))
 	cmd.SysProcAttr.Pdeathsig = syscall.SIGKILL
 
-	//FIXME call namespaces.Exec()
-	if err := cmd.Start(); err != nil {
+	err := namespaces.Exec(config.Args, config.Env, cmd, c.config, c.state)
+	if err != nil {
 		return err
 	}
 
-	c.state.InitPid = cmd.Process.Pid
-	err := c.updateStateFile()
+	err = c.updateStateFile()
 	if err != nil {
+		// FIXME c.Kill()
 		return err
 	}
 
@@ -140,7 +139,7 @@ func (c *linuxContainer) Destroy() error {
 		return err
 	}
 
-	if state != Destroyed {
+	if state != configs.Destroyed {
 		return newGenericError(nil, ContainerNotStopped)
 	}
 
