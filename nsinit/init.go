@@ -5,6 +5,7 @@ import (
 
 	"github.com/codegangsta/cli"
 	"github.com/docker/libcontainer"
+	_ "github.com/docker/libcontainer/namespaces/nsenter"
 )
 
 var (

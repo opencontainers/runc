@@ -41,12 +41,7 @@ func (c *linuxContainer) RunState() (configs.RunState, error) {
 	// return Running if the init process is alive
 	err := syscall.Kill(c.state.InitPid, 0)
 	if err != nil {
-		errn, y := err.(syscall.Errno)
-		if !y {
-			return 0, err
-		}
-
-		if errn == syscall.ESRCH {
+		if err == syscall.ESRCH {
 			return configs.Destroyed, nil
 		}
 		return 0, err
@@ -82,18 +77,32 @@ func (c *linuxContainer) Stats() (*ContainerStats, error) {
 	return stats, nil
 }
 
-func (c *linuxContainer) StartProcess(pconfig *ProcessConfig) (int, error) {
+func (c *linuxContainer) StartProcess(config *ProcessConfig) (int, error) {
 	state, err := c.RunState()
 	if err != nil {
 		return -1, err
 	}
 
-	if state != configs.Destroyed {
-		glog.Info("start new container process")
-		panic("not implemented")
+	cmd := exec.Command(c.initArgs[0], c.initArgs[1:]...)
+	cmd.Stdin = config.Stdin
+	cmd.Stdout = config.Stdout
+	cmd.Stderr = config.Stderr
+
+	cmd.Env = config.Env
+	cmd.Dir = c.config.RootFs
+
+	if cmd.SysProcAttr == nil {
+		cmd.SysProcAttr = &syscall.SysProcAttr{}
 	}
 
-	if err := c.startInitProcess(pconfig); err != nil {
+	cmd.SysProcAttr.Pdeathsig = syscall.SIGKILL
+
+	if state != configs.Destroyed {
+		glog.Info("start new container process")
+		return namespaces.ExecIn(config.Args, config.Env, cmd, c.config, c.state)
+	}
+
+	if err := c.startInitProcess(cmd, config); err != nil {
 		return -1, err
 	}
 
@@ -123,21 +132,8 @@ func (c *linuxContainer) updateStateFile() error {
 	return nil
 }
 
-func (c *linuxContainer) startInitProcess(config *ProcessConfig) error {
-	cmd := exec.Command(c.initArgs[0], c.initArgs[1:]...)
-	cmd.Stdin = config.Stdin
-	cmd.Stdout = config.Stdout
-	cmd.Stderr = config.Stderr
-
-	cmd.Env = config.Env
-	cmd.Dir = c.config.RootFs
-
-	if cmd.SysProcAttr == nil {
-		cmd.SysProcAttr = &syscall.SysProcAttr{}
-	}
-
+func (c *linuxContainer) startInitProcess(cmd *exec.Cmd, config *ProcessConfig) error {
 	cmd.SysProcAttr.Cloneflags = uintptr(namespaces.GetNamespaceFlags(c.config.Namespaces))
-	cmd.SysProcAttr.Pdeathsig = syscall.SIGKILL
 
 	err := namespaces.Exec(config.Args, config.Env, cmd, c.config, c.state)
 	if err != nil {
