@@ -34,7 +34,27 @@ func (c *linuxContainer) Config() *configs.Config {
 }
 
 func (c *linuxContainer) RunState() (configs.RunState, error) {
-	return configs.Destroyed, nil // FIXME return a real state
+	if c.state.InitPid <= 0 {
+		return configs.Destroyed, nil
+	}
+
+	// return Running if the init process is alive
+	err := syscall.Kill(c.state.InitPid, 0)
+	if err != nil {
+		errn, y := err.(syscall.Errno)
+		if !y {
+			return 0, err
+		}
+
+		if errn == syscall.ESRCH {
+			return configs.Destroyed, nil
+		}
+		return 0, err
+	}
+
+	//FIXME get a cgroup state to check other states
+
+	return configs.Running, nil
 }
 
 func (c *linuxContainer) Processes() ([]int, error) {
