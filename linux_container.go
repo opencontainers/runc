@@ -124,7 +124,7 @@ func (c *linuxContainer) updateStateFile() error {
 }
 
 func (c *linuxContainer) startInitProcess(config *ProcessConfig) error {
-	cmd := exec.Command(c.initArgs[0], append(c.initArgs[1:], config.Args...)...)
+	cmd := exec.Command(c.initArgs[0], c.initArgs[1:]...)
 	cmd.Stdin = config.Stdin
 	cmd.Stdout = config.Stdout
 	cmd.Stderr = config.Stderr
