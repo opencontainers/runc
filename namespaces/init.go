@@ -318,7 +318,7 @@ func joinExistingNamespaces(namespaces []libcontainer.Namespace) error {
 			if err != nil {
 				return err
 			}
-			err = system.Setns(f.Fd(), uintptr(namespaceInfo[ns.Name]))
+			err = system.Setns(f.Fd(), uintptr(namespaceInfo[ns.Type]))
 			f.Close()
 			if err != nil {
 				return err
