@@ -57,6 +57,10 @@ func (n Namespaces) index(t NamespaceType) int {
 	return -1
 }
 
+func (n Namespaces) Contains(t NamespaceType) bool {
+	return n.index(t) != -1
+}
+
 // Config defines configuration options for executing a process inside a contained environment.
 type Config struct {
 	// Mount specific options.
