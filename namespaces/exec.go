@@ -31,9 +31,10 @@ func Exec(args []string, env []string, command *exec.Cmd, container *configs.Con
 		return err
 	}
 	defer parent.Close()
-
 	command.ExtraFiles = []*os.File{child}
+
 	command.Dir = container.RootFs
+	command.SysProcAttr.Cloneflags = uintptr(GetNamespaceFlags(container.Namespaces))
 
 	if err := command.Start(); err != nil {
 		child.Close()

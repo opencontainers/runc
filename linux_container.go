@@ -133,8 +133,6 @@ func (c *linuxContainer) updateStateFile() error {
 }
 
 func (c *linuxContainer) startInitProcess(cmd *exec.Cmd, config *ProcessConfig) error {
-	cmd.SysProcAttr.Cloneflags = uintptr(namespaces.GetNamespaceFlags(c.config.Namespaces))
-
 	err := namespaces.Exec(config.Args, config.Env, cmd, c.config, c.state)
 	if err != nil {
 		return err
