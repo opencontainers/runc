@@ -176,11 +176,19 @@ void nsenter()
 	const int num = sizeof(namespaces) / sizeof(char *);
 	int i;
 	for (i = 0; i < num; i++) {
-		int fd = openat(ns_dir_fd, namespaces[i], O_RDONLY);
-		if (fd == -1) {
+		// A zombie process has links on namespaces, but they can't be opened
+		struct stat st;
+		if (fstatat(ns_dir_fd, namespaces[i], &st, AT_SYMLINK_NOFOLLOW) == -1) {
 			if (errno == ENOENT)
 				continue;
+			fprintf(stderr,
+				"nsenter: Failed to stat ns file \"%s\" for ns \"%s\" with error: \"%s\"\n",
+				ns_dir, namespaces[i], strerror(errno));
+			exit(1);
+		}
 
+		int fd = openat(ns_dir_fd, namespaces[i], O_RDONLY);
+		if (fd == -1) {
 			fprintf(stderr,
 				"nsenter: Failed to open ns file \"%s\" for ns \"%s\" with error: \"%s\"\n",
 				ns_dir, namespaces[i], strerror(errno));
