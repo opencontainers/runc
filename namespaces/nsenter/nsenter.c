@@ -164,22 +164,26 @@ void nsenter()
 	memset(ns_dir, 0, PATH_MAX);
 	snprintf(ns_dir, PATH_MAX - 1, "/proc/%d/ns/", init_pid);
 
+	int ns_dir_fd;
+	ns_dir_fd = open(ns_dir, O_RDONLY | O_DIRECTORY);
+	if (ns_dir_fd < 0) {
+		fprintf(stderr,
+			"Unable to open %s: %m\n", ns_dir);
+		exit(1);
+	}
+
 	char *namespaces[] = { "ipc", "uts", "net", "pid", "mnt" };
 	const int num = sizeof(namespaces) / sizeof(char *);
 	int i;
 	for (i = 0; i < num; i++) {
-		char buf[PATH_MAX];
-		memset(buf, 0, PATH_MAX);
-		snprintf(buf, PATH_MAX - 1, "%s%s", ns_dir, namespaces[i]);
-		int fd = open(buf, O_RDONLY);
+		int fd = openat(ns_dir_fd, namespaces[i], O_RDONLY);
 		if (fd == -1) {
-			// Ignore nonexistent namespaces.
 			if (errno == ENOENT)
 				continue;
 
 			fprintf(stderr,
 				"nsenter: Failed to open ns file \"%s\" for ns \"%s\" with error: \"%s\"\n",
-				buf, namespaces[i], strerror(errno));
+				ns_dir, namespaces[i], strerror(errno));
 			exit(1);
 		}
 		// Set the namespace.
@@ -191,6 +195,7 @@ void nsenter()
 		}
 		close(fd);
 	}
+	close(ns_dir_fd);
 
 	// We must fork to actually enter the PID namespace.
 	int child = fork();
