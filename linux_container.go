@@ -100,7 +100,7 @@ func (c *linuxContainer) StartProcess(config *ProcessConfig) (int, error) {
 
 	if state != configs.Destroyed {
 		glog.Info("start new container process")
-		return namespaces.ExecIn(config.Args, config.Env, cmd, c.config, c.state)
+		return namespaces.ExecIn(config.Args, config.Env, config.Console, cmd, c.config, c.state)
 	}
 
 	if err := c.startInitProcess(cmd, config); err != nil {
@@ -134,7 +134,7 @@ func (c *linuxContainer) updateStateFile() error {
 }
 
 func (c *linuxContainer) startInitProcess(cmd *exec.Cmd, config *ProcessConfig) error {
-	err := namespaces.Exec(config.Args, config.Env, cmd, c.config, c.cgroupManager, c.state)
+	err := namespaces.Exec(config.Args, config.Env, config.Console, cmd, c.config, c.cgroupManager, c.state)
 	if err != nil {
 		return err
 	}

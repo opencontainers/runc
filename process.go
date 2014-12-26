@@ -21,4 +21,7 @@ type ProcessConfig struct {
 	Stdin  io.Reader
 	Stdout io.Writer
 	Stderr io.Writer
+
+	// Console is the path to the pty slave for use by the master
+	Console string
 }
