@@ -82,11 +82,19 @@ func Init(container *libcontainer.Config, uncleanRootfs, consolePath string, pip
 		}
 	}
 
-	if err := setupNetwork(container, networkState); err != nil {
-		return fmt.Errorf("setup networking %s", err)
-	}
-	if err := setupRoute(container); err != nil {
-		return fmt.Errorf("setup route %s", err)
+	cloneFlags := GetNamespaceFlags(container.Namespaces)
+
+	if (cloneFlags & syscall.CLONE_NEWNET) == 0 {
+		if len(container.Networks) != 0 || len(container.Routes) != 0 {
+			return fmt.Errorf("unable to apply network parameters without network namespace")
+		}
+	} else {
+		if err := setupNetwork(container, networkState); err != nil {
+			return fmt.Errorf("setup networking %s", err)
+		}
+		if err := setupRoute(container); err != nil {
+			return fmt.Errorf("setup route %s", err)
+		}
 	}
 
 	if err := setupRlimits(container); err != nil {
@@ -95,7 +103,12 @@ func Init(container *libcontainer.Config, uncleanRootfs, consolePath string, pip
 
 	label.Init()
 
-	if err := mount.InitializeMountNamespace(rootfs,
+	// InitializeMountNamespace() can be executed only for a new mount namespace
+	if (cloneFlags & syscall.CLONE_NEWNS) == 0 {
+		if container.MountConfig != nil {
+			return fmt.Errorf("mount_config is set without mount namespace")
+		}
+	} else if err := mount.InitializeMountNamespace(rootfs,
 		consolePath,
 		container.RestrictSys,
 		(*mount.MountConfig)(container.MountConfig)); err != nil {
@@ -103,6 +116,9 @@ func Init(container *libcontainer.Config, uncleanRootfs, consolePath string, pip
 	}
 
 	if container.Hostname != "" {
+		if (cloneFlags & syscall.CLONE_NEWUTS) == 0 {
+			return fmt.Errorf("unable to set the hostname without UTS namespace")
+		}
 		if err := syscall.Sethostname([]byte(container.Hostname)); err != nil {
 			return fmt.Errorf("unable to sethostname %q: %s", container.Hostname, err)
 		}
@@ -118,6 +134,9 @@ func Init(container *libcontainer.Config, uncleanRootfs, consolePath string, pip
 
 	// TODO: (crosbymichael) make this configurable at the Config level
 	if container.RestrictSys {
+		if (cloneFlags & syscall.CLONE_NEWNS) == 0 {
+			return fmt.Errorf("unable to restrict access to kernel files")
+		}
 		if err := restrict.Restrict("proc/sys", "proc/sysrq-trigger", "proc/irq", "proc/bus"); err != nil {
 			return err
 		}
