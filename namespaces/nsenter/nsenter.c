@@ -15,6 +15,8 @@
 #include <unistd.h>
 #include <getopt.h>
 
+#define pr_perror(fmt, ...) fprintf(stderr, "nsenter: " fmt ": %m\n", ##__VA_ARGS__)
+
 static const kBufSize = 256;
 static const char *kNsEnter = "nsenter";
 
@@ -23,8 +25,7 @@ void get_args(int *argc, char ***argv)
 	// Read argv
 	int fd = open("/proc/self/cmdline", O_RDONLY);
 	if (fd < 0) {
-		fprintf(stderr,
-			"nsenter: Unable to open /proc/self/cmdline: %m\n");
+		pr_perror("Unable to open /proc/self/cmdline");
 		exit(1);
 	}
 
@@ -40,8 +41,7 @@ void get_args(int *argc, char ***argv)
 		    read(fd, contents + contents_offset,
 			 contents_size - contents_offset);
 		if (bytes_read < 0) {
-			fprintf(stderr,
-				"nsenter: Unable to read from /proc/self/cmdline: %m\n");
+			pr_perror("Unable to read from /proc/self/cmdline");
 			exit(1);
 		}
 		contents_offset += bytes_read;
@@ -101,7 +101,7 @@ void nsenter()
 
 	#ifdef PR_SET_CHILD_SUBREAPER
 	if (prctl(PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0) == -1) {
-		fprintf(stderr, "nsenter: failed to set child subreaper: %m\n");
+		pr_perror("Failed to set child subreaper");
 		exit(1);
 	}
 	#endif
@@ -133,8 +133,7 @@ void nsenter()
 
 	init_pid = strtol(init_pid_str, NULL, 10);
 	if ((init_pid == 0 && errno == EINVAL) || errno == ERANGE) {
-		fprintf(stderr,
-			"nsenter: Failed to parse PID from \"%s\" with output \"%d\" and error: %m\n",
+		pr_perror("Failed to parse PID from \"%s\" with output \"%d\"",
 			init_pid_str, init_pid);
 		print_usage();
 		exit(1);
@@ -144,7 +143,7 @@ void nsenter()
 	argv += 3;
 
 	if (setsid() == -1) {
-		fprintf(stderr, "setsid failed. Error: %m\n");
+		pr_perror("setsid failed");
 		exit(1);
 	}
 	// before we setns we need to dup the console
@@ -152,9 +151,7 @@ void nsenter()
 	if (console != NULL) {
 		consolefd = open(console, O_RDWR);
 		if (consolefd < 0) {
-			fprintf(stderr,
-				"nsenter: failed to open console %s: %m\n",
-				console);
+			pr_perror("Failed to open console %s", console);
 			exit(1);
 		}
 	}
@@ -166,7 +163,7 @@ void nsenter()
 	int ns_dir_fd;
 	ns_dir_fd = open(ns_dir, O_RDONLY | O_DIRECTORY);
 	if (ns_dir_fd < 0) {
-		fprintf(stderr, "Unable to open %s: %m\n", ns_dir);
+		pr_perror("Unable to open %s", ns_dir);
 		exit(1);
 	}
 
@@ -179,24 +176,20 @@ void nsenter()
 		if (fstatat(ns_dir_fd, namespaces[i], &st, AT_SYMLINK_NOFOLLOW) == -1) {
 			if (errno == ENOENT)
 				continue;
-			fprintf(stderr,
-				"nsenter: Failed to stat ns file \"%s\" for ns \"%s\" with error: %m\n",
+			pr_perror("Failed to stat ns file %s for ns %s",
 				ns_dir, namespaces[i]);
 			exit(1);
 		}
 
 		int fd = openat(ns_dir_fd, namespaces[i], O_RDONLY);
 		if (fd == -1) {
-			fprintf(stderr,
-				"nsenter: Failed to open ns file \"%s\" for ns \"%s\" with error: %m\n",
+			pr_perror("Failed to open ns file %s for ns %s",
 				ns_dir, namespaces[i]);
 			exit(1);
 		}
 		// Set the namespace.
 		if (setns(fd, 0) == -1) {
-			fprintf(stderr,
-				"nsenter: Failed to setns for \"%s\" with error: %m\n",
-				namespaces[i]);
+			pr_perror("Failed to setns for %s", namespaces[i]);
 			exit(1);
 		}
 		close(fd);
@@ -206,21 +199,21 @@ void nsenter()
 	// We must fork to actually enter the PID namespace.
 	int child = fork();
 	if (child == -1) {
-		fprintf(stderr, "nsenter: Unable to fork a process: %m\n");
+		pr_perror("Unable to fork a process");
 		exit(1);
 	}
 	if (child == 0) {
 		if (consolefd != -1) {
 			if (dup2(consolefd, STDIN_FILENO) != 0) {
-				fprintf(stderr, "nsenter: failed to dup 0: %m\n");
+				pr_perror("Failed to dup 0");
 				exit(1);
 			}
 			if (dup2(consolefd, STDOUT_FILENO) != STDOUT_FILENO) {
-				fprintf(stderr, "nsenter: failed to dup 1: %m\n");
+				pr_perror("Failed to dup 1");
 				exit(1);
 			}
 			if (dup2(consolefd, STDERR_FILENO) != STDERR_FILENO) {
-				fprintf(stderr, "nsenter: failed to dup 2: %m\n");
+				pr_perror("Failed to dup 2\n");
 				exit(1);
 			}
 		}
@@ -230,8 +223,7 @@ void nsenter()
 		// Parent, wait for the child.
 		int status = 0;
 		if (waitpid(child, &status, 0) == -1) {
-			fprintf(stderr,
-				"nsenter: Failed to waitpid with error: %m\n");
+			pr_perror("nsenter: Failed to waitpid with error");
 			exit(1);
 		}
 		// Forward the child's exit code or re-send its death signal.
