@@ -110,7 +110,38 @@ func Exec(container *libcontainer.Config, stdin io.Reader, stdout, stderr io.Wri
 			return -1, err
 		}
 	}
+	if !container.Namespaces.Contains(libcontainer.NEWPID) {
+		killAllPids(container)
+	}
 	return command.ProcessState.Sys().(syscall.WaitStatus).ExitStatus(), nil
+}
+
+func killAllPids(container *libcontainer.Config) {
+	var (
+		pids []int
+		err  error
+	)
+	freeze := fs.Freeze
+	getPids := fs.GetPids
+	if systemd.UseSystemd() {
+		freeze = systemd.Freeze
+		getPids = systemd.GetPids
+	}
+
+	freeze(container.Cgroups, cgroups.Frozen)
+	if pids, err = getPids(container.Cgroups); err == nil {
+		for _, pid := range pids {
+			if p, err := os.FindProcess(pid); err == nil {
+				p.Kill()
+			}
+		}
+	}
+	freeze(container.Cgroups, cgroups.Thawed)
+	for _, pid := range pids {
+		if p, err := os.FindProcess(pid); err == nil {
+			p.Wait()
+		}
+	}
 }
 
 // DefaultCreateCommand will return an exec.Cmd with the Cloneflags set to the proper namespaces
