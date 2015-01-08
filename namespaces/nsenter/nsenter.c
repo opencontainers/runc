@@ -155,6 +155,12 @@ void nsenter()
 			exit(1);
 		}
 	}
+	// blocking until the parent placed the process inside correct cgroups.
+	unsigned char s;
+	if (read(3, &s, 1) != 1 || s != '1') {
+		pr_perror("failed to receive synchronization data from parent");
+		exit(1);
+	}
 	// Setns on all supported namespaces.
 	char ns_dir[PATH_MAX];
 	memset(ns_dir, 0, PATH_MAX);
