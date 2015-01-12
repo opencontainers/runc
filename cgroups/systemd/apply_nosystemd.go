@@ -8,15 +8,34 @@ import (
 	"github.com/docker/libcontainer/cgroups"
 )
 
+type Manager struct {
+	Cgroups *cgroups.Cgroup
+}
+
 func UseSystemd() bool {
 	return false
 }
 
-func Apply(c *cgroups.Cgroup, pid int) (map[string]string, error) {
+func (m *Manager) Apply(pid int) error {
+	return fmt.Errorf("Systemd not supported")
+}
+
+func (m *Manager) GetPids() ([]int, error) {
 	return nil, fmt.Errorf("Systemd not supported")
 }
 
-func GetPids(c *cgroups.Cgroup) ([]int, error) {
+func (m *Manager) RemovePaths() error {
+	return fmt.Errorf("Systemd not supported")
+}
+
+func (m *Manager) GetPaths() map[string]string {
+	return nil
+}
+
+func (m *Manager) SetPaths(paths map[string]string) {
+}
+
+func (m *Manager) GetStats() (*cgroups.Stats, error) {
 	return nil, fmt.Errorf("Systemd not supported")
 }
 

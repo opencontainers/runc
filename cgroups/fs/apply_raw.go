@@ -24,6 +24,11 @@ var (
 	CgroupProcesses = "cgroup.procs"
 )
 
+type Manager struct {
+	Cgroups *cgroups.Cgroup
+	paths   map[string]string
+}
+
 // The absolute path to the root of the cgroup hierarchies.
 var cgroupRoot string
 
@@ -57,10 +62,14 @@ type data struct {
 	pid    int
 }
 
-func Apply(c *cgroups.Cgroup, pid int) (map[string]string, error) {
-	d, err := getCgroupData(c, pid)
+func (m *Manager) Apply(pid int) error {
+	if m.Cgroups == nil {
+		return nil
+	}
+
+	d, err := getCgroupData(m.Cgroups, pid)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	paths := make(map[string]string)
@@ -71,7 +80,7 @@ func Apply(c *cgroups.Cgroup, pid int) (map[string]string, error) {
 	}()
 	for name, sys := range subsystems {
 		if err := sys.Set(d); err != nil {
-			return nil, err
+			return err
 		}
 		// FIXME: Apply should, ideally, be reentrant or be broken up into a separate
 		// create and join phase so that the cgroup hierarchy for a container can be
@@ -81,11 +90,25 @@ func Apply(c *cgroups.Cgroup, pid int) (map[string]string, error) {
 			if cgroups.IsNotFound(err) {
 				continue
 			}
-			return nil, err
+			return err
 		}
 		paths[name] = p
 	}
-	return paths, nil
+	m.paths = paths
+
+	return nil
+}
+
+func (m *Manager) RemovePaths() error {
+	return cgroups.RemovePaths(m.paths)
+}
+
+func (m *Manager) GetPaths() map[string]string {
+	return m.paths
+}
+
+func (m *Manager) SetPaths(paths map[string]string) {
+	m.paths = paths
 }
 
 // Symmetrical public function to update device based cgroups.  Also available
@@ -101,9 +124,9 @@ func ApplyDevices(c *cgroups.Cgroup, pid int) error {
 	return devices.Set(d)
 }
 
-func GetStats(systemPaths map[string]string) (*cgroups.Stats, error) {
+func (m *Manager) GetStats() (*cgroups.Stats, error) {
 	stats := cgroups.NewStats()
-	for name, path := range systemPaths {
+	for name, path := range m.paths {
 		sys, ok := subsystems[name]
 		if !ok {
 			continue
@@ -131,8 +154,8 @@ func Freeze(c *cgroups.Cgroup, state cgroups.FreezerState) error {
 	return freezer.Set(d)
 }
 
-func GetPids(c *cgroups.Cgroup) ([]int, error) {
-	d, err := getCgroupData(c, 0)
+func (m *Manager) GetPids() ([]int, error) {
+	d, err := getCgroupData(m.Cgroups, 0)
 	if err != nil {
 		return nil, err
 	}

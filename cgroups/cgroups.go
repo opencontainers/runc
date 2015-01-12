@@ -6,6 +6,17 @@ import (
 	"github.com/docker/libcontainer/devices"
 )
 
+type Manager interface {
+	Apply(pid int) error
+
+	GetPids() ([]int, error)
+	GetStats() (*Stats, error)
+
+	RemovePaths() error
+	GetPaths() map[string]string
+	SetPaths(map[string]string)
+}
+
 type FreezerState string
 
 const (

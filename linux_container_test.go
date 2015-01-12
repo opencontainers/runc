@@ -22,6 +22,21 @@ func (m *mockCgroupManager) GetStats() (*cgroups.Stats, error) {
 	return m.stats, nil
 }
 
+func (m *mockCgroupManager) Apply(pid int) error {
+	return nil
+}
+
+func (m *mockCgroupManager) RemovePaths() error {
+	return nil
+}
+
+func (m *mockCgroupManager) GetPaths() map[string]string {
+	return nil
+}
+
+func (m *mockCgroupManager) SetPaths(map[string]string) {
+}
+
 func TestGetContainerPids(t *testing.T) {
 	container := &linuxContainer{
 		id:            "myid",

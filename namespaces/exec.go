@@ -10,8 +10,6 @@ import (
 	"syscall"
 
 	"github.com/docker/libcontainer/cgroups"
-	"github.com/docker/libcontainer/cgroups/fs"
-	"github.com/docker/libcontainer/cgroups/systemd"
 	"github.com/docker/libcontainer/configs"
 	"github.com/docker/libcontainer/network"
 	"github.com/docker/libcontainer/system"
@@ -21,7 +19,7 @@ import (
 // Move this to libcontainer package.
 // Exec performs setup outside of a namespace so that a container can be
 // executed.  Exec is a high level function for working with container namespaces.
-func Exec(args []string, env []string, command *exec.Cmd, container *configs.Config, state *configs.State) error {
+func Exec(args []string, env []string, command *exec.Cmd, container *configs.Config, cgroupManager cgroups.Manager, state *configs.State) error {
 	var err error
 
 	// create a pipe so that we can syncronize with the namespaced process and
@@ -70,11 +68,11 @@ func Exec(args []string, env []string, command *exec.Cmd, container *configs.Con
 
 	// Do this before syncing with child so that no children
 	// can escape the cgroup
-	cgroupPaths, err := SetupCgroups(container, command.Process.Pid)
+	err = cgroupManager.Apply(command.Process.Pid)
 	if err != nil {
 		return terminate(err)
 	}
-	defer cgroups.RemovePaths(cgroupPaths)
+	defer cgroupManager.RemovePaths()
 
 	var networkState network.NetworkState
 	if err := InitializeNetworking(container, command.Process.Pid, &networkState); err != nil {
@@ -102,7 +100,7 @@ func Exec(args []string, env []string, command *exec.Cmd, container *configs.Con
 	state.InitPid = command.Process.Pid
 	state.InitStartTime = started
 	state.NetworkState = networkState
-	state.CgroupPaths = cgroupPaths
+	state.CgroupPaths = cgroupManager.GetPaths()
 
 	return nil
 }
@@ -138,19 +136,6 @@ func DefaultCreateCommand(container *configs.Config, console, dataPath, init str
 	command.ExtraFiles = []*os.File{pipe}
 
 	return command
-}
-
-// SetupCgroups applies the cgroup restrictions to the process running in the container based
-// on the container's configuration
-func SetupCgroups(container *configs.Config, nspid int) (map[string]string, error) {
-	if container.Cgroups != nil {
-		c := container.Cgroups
-		if systemd.UseSystemd() {
-			return systemd.Apply(c, nspid)
-		}
-		return fs.Apply(c, nspid)
-	}
-	return map[string]string{}, nil
 }
 
 // InitializeNetworking creates the container's network stack outside of the namespace and moves
