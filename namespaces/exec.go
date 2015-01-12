@@ -116,32 +116,36 @@ func Exec(container *libcontainer.Config, stdin io.Reader, stdout, stderr io.Wri
 	return command.ProcessState.Sys().(syscall.WaitStatus).ExitStatus(), nil
 }
 
-func killAllPids(container *libcontainer.Config) {
+// killAllPids itterates over all of the container's processes
+// sending a SIGKILL to each process.
+func killAllPids(container *libcontainer.Config) error {
 	var (
-		pids []int
-		err  error
+		procs   []*os.Process
+		freeze  = fs.Freeze
+		getPids = fs.GetPids
 	)
-	freeze := fs.Freeze
-	getPids := fs.GetPids
 	if systemd.UseSystemd() {
 		freeze = systemd.Freeze
 		getPids = systemd.GetPids
 	}
-
 	freeze(container.Cgroups, cgroups.Frozen)
-	if pids, err = getPids(container.Cgroups); err == nil {
-		for _, pid := range pids {
-			if p, err := os.FindProcess(pid); err == nil {
-				p.Kill()
-			}
+	pids, err := getPids(container.Cgroups)
+	if err != nil {
+		return err
+	}
+	for _, pid := range pids {
+		// TODO: log err without aborting if we are unable to find
+		// a single PID
+		if p, err := os.FindProcess(pid); err == nil {
+			procs = append(procs, p)
+			p.Kill()
 		}
 	}
 	freeze(container.Cgroups, cgroups.Thawed)
-	for _, pid := range pids {
-		if p, err := os.FindProcess(pid); err == nil {
-			p.Wait()
-		}
+	for _, p := range procs {
+		p.Wait()
 	}
+	return err
 }
 
 // DefaultCreateCommand will return an exec.Cmd with the Cloneflags set to the proper namespaces
