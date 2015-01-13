@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 	"syscall"
-	"text/tabwriter"
 
 	"github.com/codegangsta/cli"
 	"github.com/docker/libcontainer"
@@ -30,19 +29,6 @@ var execCommand = cli.Command{
 }
 
 func execAction(context *cli.Context) {
-	if context.Bool("list") {
-		w := tabwriter.NewWriter(os.Stdout, 10, 1, 3, ' ', 0)
-		fmt.Fprint(w, "NAME\tUSAGE\n")
-
-		for k, f := range argvs {
-			fmt.Fprintf(w, "%s\t%s\n", k, f.Usage)
-		}
-
-		w.Flush()
-
-		return
-	}
-
 	var exitCode int
 
 	process := &libcontainer.ProcessConfig{

@@ -167,5 +167,10 @@ func (l *linuxFactory) loadContainerState(root string) (*configs.State, error) {
 func (f *linuxFactory) StartInitialization(pipefd uintptr) (err error) {
 	pipe := os.NewFile(uintptr(pipefd), "pipe")
 
+	pid := os.Getenv("_LIBCONTAINER_INITPID")
+	if pid != "" {
+		return namespaces.InitIn(pipe)
+	}
+
 	return namespaces.Init(pipe)
 }
