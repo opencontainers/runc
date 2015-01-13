@@ -39,6 +39,10 @@ func (m *Manager) GetStats() (*cgroups.Stats, error) {
 	return nil, fmt.Errorf("Systemd not supported")
 }
 
+func (m *Manager) Freeze(state cgroups.FreezerState) error {
+	return fmt.Errorf("Systemd not supported")
+}
+
 func ApplyDevices(c *cgroups.Cgroup, pid int) error {
 	return fmt.Errorf("Systemd not supported")
 }

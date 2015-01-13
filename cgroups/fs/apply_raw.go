@@ -141,13 +141,13 @@ func (m *Manager) GetStats() (*cgroups.Stats, error) {
 
 // Freeze toggles the container's freezer cgroup depending on the state
 // provided
-func Freeze(c *cgroups.Cgroup, state cgroups.FreezerState) error {
-	d, err := getCgroupData(c, 0)
+func (m *Manager) Freeze(state cgroups.FreezerState) error {
+	d, err := getCgroupData(m.Cgroups, 0)
 	if err != nil {
 		return err
 	}
 
-	c.Freezer = state
+	m.Cgroups.Freezer = state
 
 	freezer := subsystems["freezer"]
 

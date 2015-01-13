@@ -37,6 +37,10 @@ func (m *mockCgroupManager) GetPaths() map[string]string {
 func (m *mockCgroupManager) SetPaths(map[string]string) {
 }
 
+func (m *mockCgroupManager) Freeze(state cgroups.FreezerState) error {
+	return nil
+}
+
 func TestGetContainerPids(t *testing.T) {
 	container := &linuxContainer{
 		id:            "myid",

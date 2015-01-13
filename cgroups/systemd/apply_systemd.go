@@ -221,8 +221,8 @@ func getSubsystemPath(c *cgroups.Cgroup, subsystem string) (string, error) {
 	return filepath.Join(mountpoint, initPath, slice, getUnitName(c)), nil
 }
 
-func Freeze(c *cgroups.Cgroup, state cgroups.FreezerState) error {
-	path, err := getSubsystemPath(c, "freezer")
+func (m *Manager) Freeze(state cgroups.FreezerState) error {
+	path, err := getSubsystemPath(m.Cgroups, "freezer")
 	if err != nil {
 		return err
 	}

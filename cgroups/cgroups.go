@@ -12,6 +12,8 @@ type Manager interface {
 	GetPids() ([]int, error)
 	GetStats() (*Stats, error)
 
+	Freeze(state FreezerState) error
+
 	RemovePaths() error
 	GetPaths() map[string]string
 	SetPaths(map[string]string)
