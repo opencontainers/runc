@@ -11,6 +11,7 @@ import (
 
 	"github.com/golang/glog"
 
+	cgroups "github.com/docker/libcontainer/cgroups/manager"
 	"github.com/docker/libcontainer/configs"
 	"github.com/docker/libcontainer/namespaces"
 )
@@ -88,7 +89,7 @@ func (l *linuxFactory) Create(id string, config *configs.Config) (Container, err
 		return nil, newGenericError(err, SystemError)
 	}
 
-	cgroupManager := NewCgroupManager()
+	cgroupManager := cgroups.NewCgroupManager(config.Cgroups)
 	return &linuxContainer{
 		id:            id,
 		root:          containerRoot,
@@ -116,7 +117,7 @@ func (l *linuxFactory) Load(id string) (Container, error) {
 		return nil, err
 	}
 
-	cgroupManager := NewCgroupManager()
+	cgroupManager := cgroups.LoadCgroupManager(config.Cgroups, state.CgroupPaths)
 	glog.Infof("using %s as cgroup manager", cgroupManager)
 	return &linuxContainer{
 		id:            id,

@@ -19,8 +19,9 @@ import (
 	"github.com/godbus/dbus"
 )
 
-type systemdCgroup struct {
-	cgroup *cgroups.Cgroup
+type Manager struct {
+	Cgroups *cgroups.Cgroup
+	Paths   map[string]string
 }
 
 type subsystem interface {
@@ -81,15 +82,13 @@ func getIfaceForUnit(unitName string) string {
 	return "Unit"
 }
 
-func Apply(c *cgroups.Cgroup, pid int) (map[string]string, error) {
+func (m *Manager) Apply(pid int) error {
 	var (
+		c          = m.Cgroups
 		unitName   = getUnitName(c)
 		slice      = "system.slice"
 		properties []systemd.Property
-		res        = &systemdCgroup{}
 	)
-
-	res.cgroup = c
 
 	if c.Slice != "" {
 		slice = c.Slice
@@ -120,19 +119,19 @@ func Apply(c *cgroups.Cgroup, pid int) (map[string]string, error) {
 	}
 
 	if _, err := theConn.StartTransientUnit(unitName, "replace", properties...); err != nil {
-		return nil, err
+		return err
 	}
 
 	if !c.AllowAllDevices {
 		if err := joinDevices(c, pid); err != nil {
-			return nil, err
+			return err
 		}
 	}
 
 	// -1 disables memorySwap
 	if c.MemorySwap >= 0 && (c.Memory != 0 || c.MemorySwap > 0) {
 		if err := joinMemory(c, pid); err != nil {
-			return nil, err
+			return err
 		}
 
 	}
@@ -140,11 +139,11 @@ func Apply(c *cgroups.Cgroup, pid int) (map[string]string, error) {
 	// we need to manually join the freezer and cpuset cgroup in systemd
 	// because it does not currently support it via the dbus api.
 	if err := joinFreezer(c, pid); err != nil {
-		return nil, err
+		return err
 	}
 
 	if err := joinCpuset(c, pid); err != nil {
-		return nil, err
+		return err
 	}
 
 	paths := make(map[string]string)
@@ -158,17 +157,28 @@ func Apply(c *cgroups.Cgroup, pid int) (map[string]string, error) {
 		"perf_event",
 		"freezer",
 	} {
-		subsystemPath, err := getSubsystemPath(res.cgroup, sysname)
+		subsystemPath, err := getSubsystemPath(m.Cgroups, sysname)
 		if err != nil {
 			// Don't fail if a cgroup hierarchy was not found, just skip this subsystem
 			if cgroups.IsNotFound(err) {
 				continue
 			}
-			return nil, err
+			return err
 		}
 		paths[sysname] = subsystemPath
 	}
-	return paths, nil
+
+	m.Paths = paths
+
+	return nil
+}
+
+func (m *Manager) Destroy() error {
+	return cgroups.RemovePaths(m.Paths)
+}
+
+func (m *Manager) GetPaths() map[string]string {
+	return m.Paths
 }
 
 func writeFile(dir, file, data string) error {
@@ -207,8 +217,8 @@ func getSubsystemPath(c *cgroups.Cgroup, subsystem string) (string, error) {
 	return filepath.Join(mountpoint, initPath, slice, getUnitName(c)), nil
 }
 
-func Freeze(c *cgroups.Cgroup, state cgroups.FreezerState) error {
-	path, err := getSubsystemPath(c, "freezer")
+func (m *Manager) Freeze(state cgroups.FreezerState) error {
+	path, err := getSubsystemPath(m.Cgroups, "freezer")
 	if err != nil {
 		return err
 	}
@@ -229,13 +239,17 @@ func Freeze(c *cgroups.Cgroup, state cgroups.FreezerState) error {
 	return nil
 }
 
-func GetPids(c *cgroups.Cgroup) ([]int, error) {
-	path, err := getSubsystemPath(c, "cpu")
+func (m *Manager) GetPids() ([]int, error) {
+	path, err := getSubsystemPath(m.Cgroups, "cpu")
 	if err != nil {
 		return nil, err
 	}
 
 	return cgroups.ReadProcsFile(path)
+}
+
+func (m *Manager) GetStats() (*cgroups.Stats, error) {
+	panic("not implemented")
 }
 
 func getUnitName(c *cgroups.Cgroup) string {

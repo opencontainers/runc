@@ -28,17 +28,7 @@ var execCommand = cli.Command{
 	},
 }
 
-func execAction(context *cli.Context) {
-	var exitCode int
-
-	process := &libcontainer.ProcessConfig{
-		Args:   context.Args(),
-		Env:    context.StringSlice("env"),
-		Stdin:  os.Stdin,
-		Stdout: os.Stdout,
-		Stderr: os.Stderr,
-	}
-
+func getContainer(context *cli.Context) (libcontainer.Container, error) {
 	factory, err := libcontainer.New(context.GlobalString("root"), []string{os.Args[0], "init", "--fd", "3", "--"})
 	if err != nil {
 		log.Fatal(err)
@@ -55,6 +45,22 @@ func execAction(context *cli.Context) {
 		}
 		container, err = factory.Create(id, config)
 	}
+
+	return container, err
+}
+
+func execAction(context *cli.Context) {
+	var exitCode int
+
+	process := &libcontainer.ProcessConfig{
+		Args:   context.Args(),
+		Env:    context.StringSlice("env"),
+		Stdin:  os.Stdin,
+		Stdout: os.Stdout,
+		Stderr: os.Stderr,
+	}
+
+	container, err := getContainer(context)
 	if err != nil {
 		log.Fatal(err)
 	}

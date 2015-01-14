@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"syscall"
 
+	"github.com/docker/libcontainer/cgroups"
 	"github.com/docker/libcontainer/configs"
 	"github.com/docker/libcontainer/namespaces"
 	"github.com/docker/libcontainer/network"
@@ -21,7 +22,7 @@ type linuxContainer struct {
 	root          string
 	config        *configs.Config
 	state         *configs.State
-	cgroupManager CgroupManager
+	cgroupManager cgroups.Manager
 	initArgs      []string
 }
 
@@ -133,7 +134,7 @@ func (c *linuxContainer) updateStateFile() error {
 }
 
 func (c *linuxContainer) startInitProcess(cmd *exec.Cmd, config *ProcessConfig) error {
-	err := namespaces.Exec(config.Args, config.Env, cmd, c.config, c.state)
+	err := namespaces.Exec(config.Args, config.Env, cmd, c.config, c.cgroupManager, c.state)
 	if err != nil {
 		return err
 	}

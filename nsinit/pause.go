@@ -4,9 +4,6 @@ import (
 	"log"
 
 	"github.com/codegangsta/cli"
-	"github.com/docker/libcontainer/cgroups"
-	"github.com/docker/libcontainer/cgroups/fs"
-	"github.com/docker/libcontainer/cgroups/systemd"
 )
 
 var pauseCommand = cli.Command{
@@ -22,28 +19,23 @@ var unpauseCommand = cli.Command{
 }
 
 func pauseAction(context *cli.Context) {
-	if err := toggle(cgroups.Frozen); err != nil {
+	container, err := getContainer(context)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err = container.Pause(); err != nil {
 		log.Fatal(err)
 	}
 }
 
 func unpauseAction(context *cli.Context) {
-	if err := toggle(cgroups.Thawed); err != nil {
+	container, err := getContainer(context)
+	if err != nil {
 		log.Fatal(err)
 	}
-}
 
-func toggle(state cgroups.FreezerState) error {
-	container, err := loadConfig()
-	if err != nil {
-		return err
+	if err = container.Resume(); err != nil {
+		log.Fatal(err)
 	}
-
-	if systemd.UseSystemd() {
-		err = systemd.Freeze(container.Cgroups, state)
-	} else {
-		err = fs.Freeze(container.Cgroups, state)
-	}
-
-	return err
 }
