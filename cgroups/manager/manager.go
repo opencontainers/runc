@@ -7,6 +7,9 @@ import (
 )
 
 // Create a new cgroup manager with specified configuration
+// TODO this object is not really initialized until Apply() is called.
+// Maybe make this to the equivalent of Apply() at some point?
+// @vmarmol
 func NewCgroupManager(cgroups *cgroups.Cgroup) cgroups.Manager {
 	if systemd.UseSystemd() {
 		return &systemd.Manager{
