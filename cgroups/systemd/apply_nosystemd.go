@@ -10,6 +10,7 @@ import (
 
 type Manager struct {
 	Cgroups *cgroups.Cgroup
+	Paths   map[string]string
 }
 
 func UseSystemd() bool {
@@ -30,9 +31,6 @@ func (m *Manager) RemovePaths() error {
 
 func (m *Manager) GetPaths() map[string]string {
 	return nil
-}
-
-func (m *Manager) SetPaths(paths map[string]string) {
 }
 
 func (m *Manager) GetStats() (*cgroups.Stats, error) {

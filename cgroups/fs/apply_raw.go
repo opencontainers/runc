@@ -26,7 +26,7 @@ var (
 
 type Manager struct {
 	Cgroups *cgroups.Cgroup
-	paths   map[string]string
+	Paths   map[string]string
 }
 
 // The absolute path to the root of the cgroup hierarchies.
@@ -94,21 +94,17 @@ func (m *Manager) Apply(pid int) error {
 		}
 		paths[name] = p
 	}
-	m.paths = paths
+	m.Paths = paths
 
 	return nil
 }
 
 func (m *Manager) RemovePaths() error {
-	return cgroups.RemovePaths(m.paths)
+	return cgroups.RemovePaths(m.Paths)
 }
 
 func (m *Manager) GetPaths() map[string]string {
-	return m.paths
-}
-
-func (m *Manager) SetPaths(paths map[string]string) {
-	m.paths = paths
+	return m.Paths
 }
 
 // Symmetrical public function to update device based cgroups.  Also available
@@ -126,7 +122,7 @@ func ApplyDevices(c *cgroups.Cgroup, pid int) error {
 
 func (m *Manager) GetStats() (*cgroups.Stats, error) {
 	stats := cgroups.NewStats()
-	for name, path := range m.paths {
+	for name, path := range m.Paths {
 		sys, ok := subsystems[name]
 		if !ok {
 			continue

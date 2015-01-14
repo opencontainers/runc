@@ -117,8 +117,7 @@ func (l *linuxFactory) Load(id string) (Container, error) {
 		return nil, err
 	}
 
-	cgroupManager := cgroups.NewCgroupManager(config.Cgroups)
-	cgroupManager.SetPaths(state.CgroupPaths)
+	cgroupManager := cgroups.LoadCgroupManager(config.Cgroups, state.CgroupPaths)
 	glog.Infof("using %s as cgroup manager", cgroupManager)
 	return &linuxContainer{
 		id:            id,

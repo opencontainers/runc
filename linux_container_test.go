@@ -34,9 +34,6 @@ func (m *mockCgroupManager) GetPaths() map[string]string {
 	return nil
 }
 
-func (m *mockCgroupManager) SetPaths(map[string]string) {
-}
-
 func (m *mockCgroupManager) Freeze(state cgroups.FreezerState) error {
 	return nil
 }

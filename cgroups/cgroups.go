@@ -16,7 +16,6 @@ type Manager interface {
 
 	RemovePaths() error
 	GetPaths() map[string]string
-	SetPaths(map[string]string)
 }
 
 type FreezerState string

@@ -21,7 +21,7 @@ import (
 
 type Manager struct {
 	Cgroups *cgroups.Cgroup
-	paths   map[string]string
+	Paths   map[string]string
 }
 
 type subsystem interface {
@@ -168,21 +168,17 @@ func (m *Manager) Apply(pid int) error {
 		paths[sysname] = subsystemPath
 	}
 
-	m.paths = paths
+	m.Paths = paths
 
 	return nil
 }
 
 func (m *Manager) RemovePaths() error {
-	return cgroups.RemovePaths(m.paths)
+	return cgroups.RemovePaths(m.Paths)
 }
 
 func (m *Manager) GetPaths() map[string]string {
-	return m.paths
-}
-
-func (m *Manager) SetPaths(paths map[string]string) {
-	m.paths = paths
+	return m.Paths
 }
 
 func writeFile(dir, file, data string) error {
