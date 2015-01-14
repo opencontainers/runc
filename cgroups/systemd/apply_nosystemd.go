@@ -25,7 +25,7 @@ func (m *Manager) GetPids() ([]int, error) {
 	return nil, fmt.Errorf("Systemd not supported")
 }
 
-func (m *Manager) RemovePaths() error {
+func (m *Manager) Destroy() error {
 	return fmt.Errorf("Systemd not supported")
 }
 

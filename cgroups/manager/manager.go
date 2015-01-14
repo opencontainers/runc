@@ -6,6 +6,7 @@ import (
 	"github.com/docker/libcontainer/cgroups/systemd"
 )
 
+// Create a new cgroup manager with specified configuration
 func NewCgroupManager(cgroups *cgroups.Cgroup) cgroups.Manager {
 	if systemd.UseSystemd() {
 		return &systemd.Manager{
@@ -18,6 +19,7 @@ func NewCgroupManager(cgroups *cgroups.Cgroup) cgroups.Manager {
 	}
 }
 
+// Restore a cgroup manager with specified configuration and state
 func LoadCgroupManager(cgroups *cgroups.Cgroup, paths map[string]string) cgroups.Manager {
 	if systemd.UseSystemd() {
 		return &systemd.Manager{

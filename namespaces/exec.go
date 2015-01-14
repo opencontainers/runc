@@ -72,7 +72,7 @@ func Exec(args []string, env []string, command *exec.Cmd, container *configs.Con
 	if err != nil {
 		return terminate(err)
 	}
-	defer cgroupManager.RemovePaths()
+	defer cgroupManager.Destroy()
 
 	var networkState network.NetworkState
 	if err := InitializeNetworking(container, command.Process.Pid, &networkState); err != nil {

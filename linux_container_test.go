@@ -26,7 +26,7 @@ func (m *mockCgroupManager) Apply(pid int) error {
 	return nil
 }
 
-func (m *mockCgroupManager) RemovePaths() error {
+func (m *mockCgroupManager) Destroy() error {
 	return nil
 }
 

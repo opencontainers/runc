@@ -173,7 +173,7 @@ func (m *Manager) Apply(pid int) error {
 	return nil
 }
 
-func (m *Manager) RemovePaths() error {
+func (m *Manager) Destroy() error {
 	return cgroups.RemovePaths(m.Paths)
 }
 
