@@ -143,11 +143,15 @@ func (m *Manager) Freeze(state cgroups.FreezerState) error {
 		return err
 	}
 
+	freezer := subsystems["freezer"]
+	err = freezer.Set(d)
+	if err != nil {
+		return err
+	}
+
 	m.Cgroups.Freezer = state
 
-	freezer := subsystems["freezer"]
-
-	return freezer.Set(d)
+	return nil
 }
 
 func (m *Manager) GetPids() ([]int, error) {
