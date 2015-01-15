@@ -18,7 +18,7 @@ import (
 
 // ExecIn reexec's cmd with _LIBCONTAINER_INITPID=PID so that it is able to run the
 // setns code in a single threaded environment joining the existing containers' namespaces.
-func ExecIn(args []string, env []string, cmd *exec.Cmd, container *configs.Config, state *configs.State) (int, error) {
+func ExecIn(args []string, env []string, console string, cmd *exec.Cmd, container *configs.Config, state *configs.State) (int, error) {
 	var err error
 
 	parent, child, err := newInitPipe()
@@ -50,8 +50,9 @@ func ExecIn(args []string, env []string, cmd *exec.Cmd, container *configs.Confi
 	}
 
 	process := processArgs{
-		Env:  append(env[0:], container.Env...),
-		Args: args,
+		Env:         append(env[0:], container.Env...),
+		Args:        args,
+		ConsolePath: console,
 	}
 	if err := encoder.Encode(process); err != nil {
 		return terminate(err)
