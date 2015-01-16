@@ -5,7 +5,8 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/docker/libcontainer/namespaces"
+	"github.com/docker/libcontainer"
+	_ "github.com/docker/libcontainer/namespaces/nsenter"
 )
 
 // init runs the libcontainer initialization code because of the busybox style needs
@@ -16,8 +17,12 @@ func init() {
 	}
 	runtime.LockOSThread()
 
-	if err := namespaces.Init(os.NewFile(3, "pipe")); err != nil {
+	factory, err := libcontainer.New("", nil)
+	if err != nil {
 		log.Fatalf("unable to initialize for container: %s", err)
 	}
+
+	factory.StartInitialization(3)
+
 	os.Exit(1)
 }
