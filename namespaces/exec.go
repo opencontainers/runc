@@ -19,9 +19,7 @@ import (
 // Move this to libcontainer package.
 // Exec performs setup outside of a namespace so that a container can be
 // executed.  Exec is a high level function for working with container namespaces.
-func Exec(args []string, env []string, console string, command *exec.Cmd, container *configs.Config, cgroupManager cgroups.Manager, state *configs.State) error {
-	var err error
-
+func Exec(args []string, env []string, console string, command *exec.Cmd, container *configs.Config, cgroupManager cgroups.Manager, state *configs.State) (err error) {
 	// create a pipe so that we can syncronize with the namespaced process and
 	// pass the state and configuration to the child process
 	parent, child, err := newInitPipe()
@@ -73,7 +71,11 @@ func Exec(args []string, env []string, console string, command *exec.Cmd, contai
 	if err != nil {
 		return terminate(err)
 	}
-	defer cgroupManager.Destroy()
+	defer func() {
+		if err != nil {
+			cgroupManager.Destroy()
+		}
+	}()
 
 	var networkState network.NetworkState
 	if err := InitializeNetworking(container, command.Process.Pid, &networkState); err != nil {
