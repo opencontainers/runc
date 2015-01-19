@@ -124,13 +124,15 @@ func Freeze(c *cgroups.Cgroup, state cgroups.FreezerState) error {
 		return err
 	}
 
+	prevState := c.Freezer
+	c.Freezer = state
+
 	freezer := subsystems["freezer"]
 	err = freezer.Set(d)
 	if err != nil {
+		c.Freezer = prevState
 		return err
 	}
-
-	c.Freezer = state
 
 	return nil
 }
