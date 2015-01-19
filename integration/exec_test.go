@@ -204,6 +204,9 @@ func newTestRoot() (string, error) {
 }
 
 func TestEnter(t *testing.T) {
+	if testing.Short() {
+		return
+	}
 	root, err := newTestRoot()
 	if err != nil {
 		t.Fatal(err)
@@ -298,5 +301,79 @@ func TestEnter(t *testing.T) {
 
 	if pidns != pidns2 {
 		t.Fatal("The second process isn't in the required pid namespace", pidns, pidns2)
+	}
+}
+
+func TestFreeze(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+	root, err := newTestRoot()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(root)
+
+	rootfs, err := newRootFs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer remove(rootfs)
+
+	config := newTemplateConfig(rootfs)
+
+	factory, err := libcontainer.New(root, []string{os.Args[0], "init", "--"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	container, err := factory.Create("test", config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer container.Destroy()
+
+	stdinR, stdinW, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	pconfig := libcontainer.ProcessConfig{
+		Args:  []string{"cat"},
+		Stdin: stdinR,
+	}
+	pid, err := container.StartProcess(&pconfig)
+	stdinR.Close()
+	defer stdinW.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	process, err := os.FindProcess(pid)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := container.Pause(); err != nil {
+		t.Fatal(err)
+	}
+	state, err := container.RunState()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state != configs.Paused {
+		t.Fatal("Unexpected state: ", state)
+	}
+	if err := container.Resume(); err != nil {
+		t.Fatal(err)
+	}
+
+	stdinW.Close()
+	s, err := process.Wait()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !s.Success() {
+		t.Fatal(s.String())
 	}
 }
