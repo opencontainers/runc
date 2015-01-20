@@ -114,7 +114,7 @@ func initDefault(container *libcontainer.Config, uncleanRootfs, consolePath stri
 	// InitializeMountNamespace() can be executed only for a new mount namespace
 	if (cloneFlags & syscall.CLONE_NEWNS) == 0 {
 		if container.MountConfig != nil {
-			return fmt.Errorf("mount_config is set without mount namespace")
+			return fmt.Errorf("mount config is set without mount namespace")
 		}
 	} else if err := mount.InitializeMountNamespace(rootfs,
 		consolePath,
@@ -145,7 +145,7 @@ func initDefault(container *libcontainer.Config, uncleanRootfs, consolePath stri
 	// TODO: (crosbymichael) make this configurable at the Config level
 	if container.RestrictSys {
 		if (cloneFlags & syscall.CLONE_NEWNS) == 0 {
-			return fmt.Errorf("unable to restrict access to kernel files")
+			return fmt.Errorf("unable to restrict access to kernel files without mount namespace")
 		}
 		if err := restrict.Restrict("proc/sys", "proc/sysrq-trigger", "proc/irq", "proc/bus"); err != nil {
 			return err
@@ -208,7 +208,12 @@ func initUserNs(container *libcontainer.Config, uncleanRootfs, consolePath strin
 		return fmt.Errorf("setup rlimits %s", err)
 	}
 
+	cloneFlags := GetNamespaceFlags(container.Namespaces)
+
 	if container.Hostname != "" {
+		if (cloneFlags & syscall.CLONE_NEWUTS) == 0 {
+			return fmt.Errorf("unable to set the hostname without UTS namespace")
+		}
 		if err := syscall.Sethostname([]byte(container.Hostname)); err != nil {
 			return fmt.Errorf("unable to sethostname %q: %s", container.Hostname, err)
 		}
@@ -223,6 +228,9 @@ func initUserNs(container *libcontainer.Config, uncleanRootfs, consolePath strin
 	}
 
 	if container.RestrictSys {
+		if (cloneFlags & syscall.CLONE_NEWNS) == 0 {
+			return fmt.Errorf("unable to restrict access to kernel files without mount namespace")
+		}
 		if err := restrict.Restrict("proc/sys", "proc/sysrq-trigger", "proc/irq", "proc/bus"); err != nil {
 			return err
 		}
