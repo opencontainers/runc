@@ -152,12 +152,19 @@ func SetupContainer(container *libcontainer.Config, dataPath, uncleanRootfs, con
 		return fmt.Errorf("unable to read state: %s", err)
 	}
 
-	if err := setupNetwork(container, &state.NetworkState); err != nil {
-		return fmt.Errorf("setup networking %s", err)
-	}
+	cloneFlags := GetNamespaceFlags(container.Namespaces)
 
-	if err := setupRoute(container); err != nil {
-		return fmt.Errorf("setup route %s", err)
+	if (cloneFlags & syscall.CLONE_NEWNET) == 0 {
+		if len(container.Networks) != 0 || len(container.Routes) != 0 {
+			return fmt.Errorf("unable to apply network parameters without network namespace")
+		}
+	} else {
+		if err := setupNetwork(container, &state.NetworkState); err != nil {
+			return fmt.Errorf("setup networking %s", err)
+		}
+		if err := setupRoute(container); err != nil {
+			return fmt.Errorf("setup route %s", err)
+		}
 	}
 
 	label.Init()
@@ -172,7 +179,12 @@ func SetupContainer(container *libcontainer.Config, dataPath, uncleanRootfs, con
 		return fmt.Errorf("failed to get hostRootGid %s", err)
 	}
 
-	if err := mount.InitializeMountNamespace(rootfs,
+	// InitializeMountNamespace() can be executed only for a new mount namespace
+	if (cloneFlags & syscall.CLONE_NEWNS) == 0 {
+		if container.MountConfig != nil {
+			return fmt.Errorf("mount config is set without mount namespace")
+		}
+	} else if err := mount.InitializeMountNamespace(rootfs,
 		consolePath,
 		container.RestrictSys,
 		hostRootUid,
