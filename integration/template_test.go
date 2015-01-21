@@ -40,6 +40,7 @@ func newTemplateConfig(rootfs string) *configs.Config {
 			{Name: "NEWNET"},
 		},
 		Cgroups: &cgroups.Cgroup{
+			Name:            "test",
 			Parent:          "integration",
 			AllowAllDevices: false,
 			AllowedDevices:  devices.DefaultAllowedDevices,
