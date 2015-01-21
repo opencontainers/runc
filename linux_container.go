@@ -181,11 +181,16 @@ func (c *linuxContainer) Signal(pid, signal int) error {
 }
 
 func (c *linuxContainer) Wait() (int, error) {
-	glog.Info("wait container")
-	panic("not implemented")
+	return c.WaitProcess(c.state.InitPid)
 }
 
 func (c *linuxContainer) WaitProcess(pid int) (int, error) {
-	glog.Infof("wait process %d", pid)
-	panic("not implemented")
+	var status syscall.WaitStatus
+
+	_, err := syscall.Wait4(pid, &status, 0, nil)
+	if err != nil {
+		return -1, newGenericError(err, SystemError)
+	}
+
+	return int(status), err
 }

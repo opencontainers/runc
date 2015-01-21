@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/docker/libcontainer"
@@ -252,11 +253,6 @@ func TestEnter(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	process, err := os.FindProcess(pid)
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	// Execute a first process in the container
 	stdinR2, stdinW2, err := os.Pipe()
 	if err != nil {
@@ -269,11 +265,6 @@ func TestEnter(t *testing.T) {
 	pid2, err := container.StartProcess(&pconfig)
 	stdinR2.Close()
 	defer stdinW2.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	process2, err := os.FindProcess(pid2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -293,22 +284,27 @@ func TestEnter(t *testing.T) {
 		t.Fatal("unexpected number of processes", processes, pid, pid2)
 	}
 
+	// Wait processes
+	var status syscall.WaitStatus
+
 	stdinW2.Close()
-	s, err := process2.Wait()
+	exitCode, err := container.WaitProcess(pid2)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !s.Success() {
-		t.Fatal(s.String())
+	status = syscall.WaitStatus(exitCode)
+	if status.ExitStatus() != 0 {
+		t.Fatal(exitCode)
 	}
 
 	stdinW.Close()
-	s, err = process.Wait()
+	exitCode, err = container.WaitProcess(pid)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !s.Success() {
-		t.Fatal(s.String())
+	status = syscall.WaitStatus(exitCode)
+	if status.ExitStatus() != 0 {
+		t.Fatal(exitCode)
 	}
 
 	// Check that both processes live in the same pidns
