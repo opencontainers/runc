@@ -257,11 +257,18 @@ func TestEnter(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	pconfig.Args = []string{"readlink", "/proc/self/ns/pid"}
-	pconfig.Stdin = nil
+	// Execute a first process in the container
+	stdinR2, stdinW2, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	pconfig.Args = []string{"sh", "-c", "cat && readlink /proc/self/ns/pid"}
+	pconfig.Stdin = stdinR2
 	pconfig.Stdout = &stdout2
 
 	pid2, err := container.StartProcess(&pconfig)
+	stdinR2.Close()
+	defer stdinW2.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -271,6 +278,22 @@ func TestEnter(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	processes, err := container.Processes()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	n := 0
+	for i := range processes {
+		if processes[i] == pid || processes[i] == pid2 {
+			n++
+		}
+	}
+	if n != 2 {
+		t.Fatal("unexpected number of processes", processes, pid, pid2)
+	}
+
+	stdinW2.Close()
 	s, err := process2.Wait()
 	if err != nil {
 		t.Fatal(err)
