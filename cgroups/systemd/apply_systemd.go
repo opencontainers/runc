@@ -128,10 +128,8 @@ func Apply(c *cgroups.Cgroup, pid int) (map[string]string, error) {
 		return nil, err
 	}
 
-	if !c.AllowAllDevices {
-		if err := joinDevices(c, pid); err != nil {
-			return nil, err
-		}
+	if err := joinDevices(c, pid); err != nil {
+		return nil, err
 	}
 
 	// -1 disables memorySwap
@@ -272,13 +270,15 @@ func joinDevices(c *cgroups.Cgroup, pid int) error {
 		return err
 	}
 
-	if err := writeFile(path, "devices.deny", "a"); err != nil {
-		return err
-	}
-
-	for _, dev := range c.AllowedDevices {
-		if err := writeFile(path, "devices.allow", dev.GetCgroupAllowString()); err != nil {
+	if !c.AllowAllDevices {
+		if err := writeFile(path, "devices.deny", "a"); err != nil {
 			return err
+		}
+
+		for _, dev := range c.AllowedDevices {
+			if err := writeFile(path, "devices.allow", dev.GetCgroupAllowString()); err != nil {
+				return err
+			}
 		}
 	}
 
