@@ -133,7 +133,7 @@ func Apply(c *cgroups.Cgroup, pid int) (map[string]string, error) {
 	}
 
 	// -1 disables memorySwap
-	if c.MemorySwap >= 0 && (c.Memory != 0 || c.MemorySwap > 0) {
+	if c.MemorySwap >= 0 && c.Memory != 0 {
 		if err := joinMemory(c, pid); err != nil {
 			return nil, err
 		}
