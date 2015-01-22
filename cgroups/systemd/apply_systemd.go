@@ -236,6 +236,9 @@ func (m *Manager) Freeze(state cgroups.FreezerState) error {
 		}
 		time.Sleep(1 * time.Millisecond)
 	}
+
+	m.Cgroups.Freezer = state
+
 	return nil
 }
 

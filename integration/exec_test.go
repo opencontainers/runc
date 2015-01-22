@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/docker/libcontainer"
@@ -252,40 +253,58 @@ func TestEnter(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	process, err := os.FindProcess(pid)
+	// Execute a first process in the container
+	stdinR2, stdinW2, err := os.Pipe()
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	pconfig.Args = []string{"readlink", "/proc/self/ns/pid"}
-	pconfig.Stdin = nil
+	pconfig.Args = []string{"sh", "-c", "cat && readlink /proc/self/ns/pid"}
+	pconfig.Stdin = stdinR2
 	pconfig.Stdout = &stdout2
 
 	pid2, err := container.StartProcess(&pconfig)
+	stdinR2.Close()
+	defer stdinW2.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	process2, err := os.FindProcess(pid2)
+	processes, err := container.Processes()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	s, err := process2.Wait()
+	n := 0
+	for i := range processes {
+		if processes[i] == pid || processes[i] == pid2 {
+			n++
+		}
+	}
+	if n != 2 {
+		t.Fatal("unexpected number of processes", processes, pid, pid2)
+	}
+
+	// Wait processes
+	var status syscall.WaitStatus
+
+	stdinW2.Close()
+	exitCode, err := container.WaitProcess(pid2)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !s.Success() {
-		t.Fatal(s.String())
+	status = syscall.WaitStatus(exitCode)
+	if status.ExitStatus() != 0 {
+		t.Fatal(exitCode)
 	}
 
 	stdinW.Close()
-	s, err = process.Wait()
+	exitCode, err = container.WaitProcess(pid)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !s.Success() {
-		t.Fatal(s.String())
+	status = syscall.WaitStatus(exitCode)
+	if status.ExitStatus() != 0 {
+		t.Fatal(exitCode)
 	}
 
 	// Check that both processes live in the same pidns
@@ -361,11 +380,11 @@ func TestFreeze(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if state != configs.Paused {
-		t.Fatal("Unexpected state: ", state)
-	}
 	if err := container.Resume(); err != nil {
 		t.Fatal(err)
+	}
+	if state != configs.Paused {
+		t.Fatal("Unexpected state: ", state)
 	}
 
 	stdinW.Close()
