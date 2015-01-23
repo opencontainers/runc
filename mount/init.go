@@ -82,7 +82,7 @@ func InitializeMountNamespace(rootfs, console string, sysReadonly bool, hostRoot
 	if mountConfig.NoPivotRoot {
 		err = MsMoveRoot(rootfs)
 	} else {
-		err = PivotRoot(rootfs)
+		err = PivotRoot(rootfs, mountConfig.PivotDir)
 	}
 
 	if err != nil {
