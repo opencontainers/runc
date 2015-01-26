@@ -138,7 +138,7 @@ func Exec(container *libcontainer.Config, stdin io.Reader, stdout, stderr io.Wri
 	return waitStatus.ExitStatus(), nil
 }
 
-// killAllPids itterates over all of the container's processes
+// killAllPids iterates over all of the container's processes
 // sending a SIGKILL to each process.
 func killAllPids(container *libcontainer.Config) error {
 	var (
