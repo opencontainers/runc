@@ -16,6 +16,10 @@ import (
 	"github.com/docker/libcontainer/system"
 )
 
+type pid struct {
+	Pid int `json:"Pid"`
+}
+
 // ExecIn reexec's cmd with _LIBCONTAINER_INITPID=PID so that it is able to run the
 // setns code in a single threaded environment joining the existing containers' namespaces.
 func ExecIn(args []string, env []string, console string, cmd *exec.Cmd, container *configs.Config, state *configs.State) (int, error) {
@@ -36,11 +40,36 @@ func ExecIn(args []string, env []string, console string, cmd *exec.Cmd, containe
 	}
 	child.Close()
 
+	s, err := cmd.Process.Wait()
+	if err != nil {
+		return -1, err
+	}
+	if !s.Success() {
+		return -1, &exec.ExitError{s}
+	}
+
+	decoder := json.NewDecoder(parent)
+	var pid *pid
+
+	if err := decoder.Decode(&pid); err != nil {
+		return -1, err
+	}
+
+	p, err := os.FindProcess(pid.Pid)
+	if err != nil {
+		return -1, err
+	}
+
 	terminate := func(terr error) (int, error) {
 		// TODO: log the errors for kill and wait
-		cmd.Process.Kill()
-		cmd.Wait()
+		p.Kill()
+		p.Wait()
 		return -1, terr
+	}
+
+	// Enter cgroups.
+	if err := EnterCgroups(state, pid.Pid); err != nil {
+		return terminate(err)
 	}
 
 	encoder := json.NewEncoder(parent)
@@ -58,16 +87,7 @@ func ExecIn(args []string, env []string, console string, cmd *exec.Cmd, containe
 		return terminate(err)
 	}
 
-	// Enter cgroups.
-	if err := EnterCgroups(state, cmd.Process.Pid); err != nil {
-		return terminate(err)
-	}
-
-	if err := json.NewEncoder(parent).Encode(container); err != nil {
-		return terminate(err)
-	}
-
-	return cmd.Process.Pid, nil
+	return pid.Pid, nil
 }
 
 // Finalize entering into a container and execute a specified command
