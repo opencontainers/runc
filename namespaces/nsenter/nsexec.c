@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -11,13 +12,32 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <signal.h>
+#include <setjmp.h>
+#include <sched.h>
+#include <signal.h>
+
+/* All arguments should be above stack, because it grows down */
+struct clone_arg {
+	/*
+	 * Reserve some space for clone() to locate arguments
+	 * and retcode in this place
+	 */
+	char stack[4096] __attribute__((aligned (8)));
+	char stack_ptr[0];
+	jmp_buf *env;
+};
+
+static int child_func(void *_arg)
+{
+	struct clone_arg *arg = (struct clone_arg *) _arg;
+	longjmp(*arg->env, 1);
+}
 
 #define pr_perror(fmt, ...) fprintf(stderr, "nsenter: " fmt ": %m\n", ##__VA_ARGS__)
 
 // Use raw setns syscall for versions of glibc that don't include it (namely glibc-2.12)
 #if __GLIBC__ == 2 && __GLIBC_MINOR__ < 14
 #define _GNU_SOURCE
-#include <sched.h>
 #include "syscall.h"
 #ifdef SYS_setns
 int setns(int fd, int nstype)
@@ -27,12 +47,25 @@ int setns(int fd, int nstype)
 #endif
 #endif
 
+static int clone_parent(jmp_buf *env) __attribute__ ((noinline));
+static int clone_parent(jmp_buf *env)
+{
+	struct clone_arg ca;
+	int child;
+
+	ca.env = env;
+	child = clone(child_func, ca.stack_ptr, CLONE_PARENT | SIGCHLD, &ca);
+
+	return child;
+}
+
 void nsexec()
 {
 	char *namespaces[] = { "ipc", "uts", "net", "pid", "mnt" };
 	const int num = sizeof(namespaces) / sizeof(char *);
+	jmp_buf env;
 	char buf[PATH_MAX], *val;
-	int child, i, tfd;
+	int i, tfd, child, len;
 	pid_t pid;
 
 	val = getenv("_LIBCONTAINER_INITPID");
@@ -78,31 +111,24 @@ void nsexec()
 		close(fd);
 	}
 
-	child = fork();
+	if (setjmp(env) == 1) {
+		// Finish executing, let the Go runtime take over.
+		return;
+	}
+
+	child = clone_parent(&env);
 	if (child < 0) {
 		pr_perror("Unable to fork");
 		exit(1);
 	}
-	// We must fork to actually enter the PID namespace.
-	if (child == 0) {
-		// Finish executing, let the Go runtime take over.
-		return;
-	} else {
-		// Parent, wait for the child.
-		int status = 0;
-		if (waitpid(child, &status, 0) == -1) {
-			pr_perror("Failed to waitpid");
-			exit(1);
-		}
-		// Forward the child's exit code or re-send its death signal.
-		if (WIFEXITED(status)) {
-			exit(WEXITSTATUS(status));
-		} else if (WIFSIGNALED(status)) {
-			kill(getpid(), WTERMSIG(status));
-		}
 
+	len = snprintf(buf, sizeof(buf), "{ \"pid\" : %d }\n", child);
+
+	if (write(3, buf, len) != len) {
+		pr_perror("Unable to send a child pid");
+		kill(child, SIGKILL);
 		exit(1);
 	}
 
-	return;
+	exit(0);
 }
