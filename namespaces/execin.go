@@ -63,10 +63,6 @@ func ExecIn(args []string, env []string, console string, cmd *exec.Cmd, containe
 		return terminate(err)
 	}
 
-	if err := json.NewEncoder(parent).Encode(container); err != nil {
-		return terminate(err)
-	}
-
 	return cmd.Process.Pid, nil
 }
 
