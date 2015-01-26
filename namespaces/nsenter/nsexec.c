@@ -12,6 +12,8 @@
 #include <fcntl.h>
 #include <signal.h>
 
+#define pr_perror(fmt, ...) fprintf(stderr, "nsenter: " fmt ": %m\n", ##__VA_ARGS__)
+
 // Use raw setns syscall for versions of glibc that don't include it (namely glibc-2.12)
 #if __GLIBC__ == 2 && __GLIBC_MINOR__ < 14
 #define _GNU_SOURCE
@@ -40,7 +42,7 @@ void nsexec()
 	pid = atoi(val);
 	snprintf(buf, sizeof(buf), "%d", pid);
 	if (strcmp(val, buf)) {
-		fprintf(stderr, "Unable to parse _LIBCONTAINER_INITPID");
+		pr_perror("Unable to parse _LIBCONTAINER_INITPID");
 		exit(1);
 	}
 
@@ -48,9 +50,7 @@ void nsexec()
 	snprintf(buf, PATH_MAX - 1, "/proc/%d/ns", pid);
 	tfd = open(buf, O_DIRECTORY | O_RDONLY);
 	if (tfd == -1) {
-		fprintf(stderr,
-			"nsenter: Failed to open \"%s\" with error: \"%s\"\n",
-			buf, strerror(errno));
+		pr_perror("Failed to open \"%s\"", buf);
 		exit(1);
 	}
 
@@ -67,16 +67,12 @@ void nsexec()
 
 		fd = openat(tfd, namespaces[i], O_RDONLY);
 		if (fd == -1) {
-			fprintf(stderr,
-				"nsenter: Failed to open ns file \"%s\" for ns \"%s\" with error: \"%s\"\n",
-				buf, namespaces[i], strerror(errno));
+			pr_perror("Failed to open ns file %s for ns %s", buf, namespaces[i]);
 			exit(1);
 		}
 		// Set the namespace.
 		if (setns(fd, 0) == -1) {
-			fprintf(stderr,
-				"nsenter: Failed to setns for \"%s\" with error: \"%s\"\n",
-				namespaces[i], strerror(errno));
+			pr_perror("Failed to setns for %s", namespaces[i]);
 			exit(1);
 		}
 		close(fd);
@@ -84,7 +80,7 @@ void nsexec()
 
 	child = fork();
 	if (child < 0) {
-		fprintf(stderr, "Unable to fork: %s", strerror(errno));
+		pr_perror("Unable to fork");
 		exit(1);
 	}
 	// We must fork to actually enter the PID namespace.
@@ -95,9 +91,7 @@ void nsexec()
 		// Parent, wait for the child.
 		int status = 0;
 		if (waitpid(child, &status, 0) == -1) {
-			fprintf(stderr,
-				"nsenter: Failed to waitpid with error: \"%s\"\n",
-				strerror(errno));
+			pr_perror("Failed to waitpid");
 			exit(1);
 		}
 		// Forward the child's exit code or re-send its death signal.
