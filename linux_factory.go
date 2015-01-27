@@ -168,10 +168,11 @@ func (l *linuxFactory) loadContainerState(root string) (*configs.State, error) {
 func (f *linuxFactory) StartInitialization(pipefd uintptr) (err error) {
 	pipe := os.NewFile(uintptr(pipefd), "pipe")
 
+	setupUserns := os.Getenv("_LIBCONTAINER_USERNS")
 	pid := os.Getenv("_LIBCONTAINER_INITPID")
-	if pid != "" {
+	if pid != "" && setupUserns == "" {
 		return namespaces.InitIn(pipe)
 	}
 
-	return namespaces.Init(pipe)
+	return namespaces.Init(pipe, setupUserns != "")
 }

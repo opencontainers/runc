@@ -17,13 +17,13 @@ func (i initError) Error() string {
 	return i.Message
 }
 
-var namespaceInfo = map[string]int{
-	"NEWNET":  syscall.CLONE_NEWNET,
-	"NEWNS":   syscall.CLONE_NEWNS,
-	"NEWUSER": syscall.CLONE_NEWUSER,
-	"NEWIPC":  syscall.CLONE_NEWIPC,
-	"NEWUTS":  syscall.CLONE_NEWUTS,
-	"NEWPID":  syscall.CLONE_NEWPID,
+var namespaceInfo = map[configs.NamespaceType]int{
+	configs.NEWNET:  syscall.CLONE_NEWNET,
+	configs.NEWNS:   syscall.CLONE_NEWNS,
+	configs.NEWUSER: syscall.CLONE_NEWUSER,
+	configs.NEWIPC:  syscall.CLONE_NEWIPC,
+	configs.NEWUTS:  syscall.CLONE_NEWUTS,
+	configs.NEWPID:  syscall.CLONE_NEWPID,
 }
 
 // New returns a newly initialized Pipe for communication between processes
@@ -36,10 +36,13 @@ func newInitPipe() (parent *os.File, child *os.File, err error) {
 }
 
 // GetNamespaceFlags parses the container's Namespaces options to set the correct
-// flags on clone, unshare, and setns
-func GetNamespaceFlags(namespaces []configs.Namespace) (flag int) {
+// flags on clone, unshare. This functions returns flags only for new namespaces.
+func GetNamespaceFlags(namespaces configs.Namespaces) (flag int) {
 	for _, v := range namespaces {
-		flag |= namespaceInfo[v.Name]
+		if v.Path != "" {
+			continue
+		}
+		flag |= namespaceInfo[v.Type]
 	}
 	return flag
 }

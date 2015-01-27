@@ -10,11 +10,55 @@ type MountConfig mount.MountConfig
 
 type Network network.Network
 
+type NamespaceType string
+
+const (
+	NEWNET  NamespaceType = "NEWNET"
+	NEWPID  NamespaceType = "NEWPID"
+	NEWNS   NamespaceType = "NEWNS"
+	NEWUTS  NamespaceType = "NEWUTS"
+	NEWIPC  NamespaceType = "NEWIPC"
+	NEWUSER NamespaceType = "NEWUSER"
+)
+
 // Namespace defines configuration for each namespace.  It specifies an
 // alternate path that is able to be joined via setns.
 type Namespace struct {
-	Name string `json:"name"`
-	Path string `json:"path,omitempty"`
+	Type NamespaceType `json:"type"`
+	Path string        `json:"path,omitempty"`
+}
+
+type Namespaces []Namespace
+
+func (n *Namespaces) Remove(t NamespaceType) bool {
+	i := n.index(t)
+	if i == -1 {
+		return false
+	}
+	*n = append((*n)[:i], (*n)[i+1:]...)
+	return true
+}
+
+func (n *Namespaces) Add(t NamespaceType, path string) {
+	i := n.index(t)
+	if i == -1 {
+		*n = append(*n, Namespace{Type: t, Path: path})
+		return
+	}
+	(*n)[i].Path = path
+}
+
+func (n *Namespaces) index(t NamespaceType) int {
+	for i, ns := range *n {
+		if ns.Type == t {
+			return i
+		}
+	}
+	return -1
+}
+
+func (n *Namespaces) Contains(t NamespaceType) bool {
+	return n.index(t) != -1
 }
 
 // Config defines configuration options for executing a process inside a contained environment.
@@ -45,7 +89,7 @@ type Config struct {
 
 	// Namespaces specifies the container's namespaces that it should setup when cloning the init process
 	// If a namespace is not provided that namespace is shared from the container's parent process
-	Namespaces []Namespace `json:"namespaces,omitempty"`
+	Namespaces Namespaces `json:"namespaces,omitempty"`
 
 	// Capabilities specify the capabilities to keep when executing the process inside the container
 	// All capbilities not specified will be dropped from the processes capability mask
@@ -76,6 +120,15 @@ type Config struct {
 	// Rlimits specifies the resource limits, such as max open files, to set in the container
 	// If Rlimits are not set, the container will inherit rlimits from the parent process
 	Rlimits []Rlimit `json:"rlimits,omitempty"`
+
+	// AdditionalGroups specifies the gids that should be added to supplementary groups
+	// in addition to those that the user belongs to.
+	AdditionalGroups []int `json:"additional_groups,omitempty"`
+	// UidMappings is an array of User ID mappings for User Namespaces
+	UidMappings []IDMap `json:"uid_mappings,omitempty"`
+
+	// GidMappings is an array of Group ID mappings for User Namespaces
+	GidMappings []IDMap `json:"gid_mappings,omitempty"`
 }
 
 // Routes can be specified to create entries in the route table as the container is started
@@ -103,4 +156,11 @@ type Rlimit struct {
 	Type int    `json:"type,omitempty"`
 	Hard uint64 `json:"hard,omitempty"`
 	Soft uint64 `json:"soft,omitempty"`
+}
+
+// IDMap represents UID/GID Mappings for User Namespaces.
+type IDMap struct {
+	ContainerID int `json:"container_id,omitempty"`
+	HostID      int `json:"host_id,omitempty"`
+	Size        int `json:"size,omitempty"`
 }

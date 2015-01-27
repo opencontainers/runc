@@ -186,7 +186,8 @@
         {"type": "NEWNET"},
         {"type": "NEWNS"},
         {"type": "NEWPID"},
-        {"type": "NEWUTS"}
+        {"type": "NEWUTS"},
+        {"type": "NEWUSER"}
     ],
     "networks": [
         {
@@ -194,8 +195,57 @@
             "gateway": "localhost",
             "mtu": 1500,
             "type": "loopback"
+        },
+        {
+            "address": "172.17.0.9/16",
+            "gateway": "172.17.42.1",
+            "bridge": "docker0",
+            "veth_prefix": "veth",
+            "mtu": 1500,
+            "type": "veth"
         }
     ],
     "tty": true,
-    "user": "daemon"
+    "user": "root",
+    "uid_mappings": [
+        {
+            "container_id": 0,
+            "host_id": 1000,
+            "size": 1
+        },
+        {
+            "container_id": 1,
+            "host_id": 1,
+            "size": 999
+        },
+        {
+            "container_id": 1001,
+            "host_id": 1001,
+            "size": 9000
+        }
+     ],
+    "gid_mappings": [
+        {
+            "container_id": 0,
+            "host_id": 1000,
+            "size": 1
+        },
+        {
+            "container_id": 1,
+            "host_id": 1,
+            "size": 999
+        },
+        {
+            "container_id": 1001,
+            "host_id": 1001,
+            "size": 9000
+        }
+     ],
+     "rlimits": [
+        {
+            "type": 7,
+            "hard": 999,
+            "soft": 999
+        }
+     ]
 }

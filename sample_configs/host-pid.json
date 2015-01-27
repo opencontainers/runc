@@ -185,7 +185,6 @@
         {"type": "NEWIPC"},
         {"type": "NEWNET"},
         {"type": "NEWNS"},
-        {"type": "NEWPID"},
         {"type": "NEWUTS"}
     ],
     "networks": [
