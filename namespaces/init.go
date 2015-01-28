@@ -68,11 +68,8 @@ func Init(pipe *os.File, setupUserns bool) (err error) {
 		return err
 	}
 
-	container := process.Config
-	networkState := process.NetworkState
-
 	if setupUserns {
-		err = SetupContainer(container, networkState, process.ConsolePath)
+		err = SetupContainer(process)
 		if err == nil {
 			os.Exit(0)
 		} else {
@@ -80,14 +77,17 @@ func Init(pipe *os.File, setupUserns bool) (err error) {
 		}
 	}
 
-	if container.Namespaces.Contains(configs.NEWUSER) {
-		return initUserNs(container, uncleanRootfs, process, networkState)
+	if process.Config.Namespaces.Contains(configs.NEWUSER) {
+		return initUserNs(uncleanRootfs, process)
 	} else {
-		return initDefault(container, uncleanRootfs, process, networkState)
+		return initDefault(uncleanRootfs, process)
 	}
 }
 
-func initDefault(container *configs.Config, uncleanRootfs string, process *processArgs, networkState *network.NetworkState) (err error) {
+func initDefault(uncleanRootfs string, process *processArgs) (err error) {
+	container := process.Config
+	networkState := process.NetworkState
+
 	rootfs, err := utils.ResolveRootfs(uncleanRootfs)
 	if err != nil {
 		return err
@@ -197,7 +197,9 @@ func initDefault(container *configs.Config, uncleanRootfs string, process *proce
 	return system.Execv(process.Args[0], process.Args[0:], process.Env)
 }
 
-func initUserNs(container *configs.Config, uncleanRootfs string, process *processArgs, networkState *network.NetworkState) (err error) {
+func initUserNs(uncleanRootfs string, process *processArgs) (err error) {
+	container := process.Config
+
 	// clear the current processes env and replace it with the environment
 	// defined on the container
 	if err := LoadContainerEnvironment(container); err != nil {
