@@ -71,7 +71,7 @@ func TestIPCPrivate(t *testing.T) {
 	}
 
 	if actual := strings.Trim(buffers.Stdout.String(), "\n"); actual == l {
-		t.Fatalf("ipc link should be private to the conatiner but equals host %q %q", actual, l)
+		t.Fatalf("ipc link should be private to the container but equals host %q %q", actual, l)
 	}
 }
 
@@ -92,8 +92,7 @@ func TestIPCHost(t *testing.T) {
 	}
 
 	config := newTemplateConfig(rootfs)
-	i := getNamespaceIndex(config, "NEWIPC")
-	config.Namespaces = append(config.Namespaces[:i], config.Namespaces[i+1:]...)
+	config.Namespaces.Remove(configs.NEWIPC)
 	buffers, exitCode, err := runContainer(config, "", "readlink", "/proc/self/ns/ipc")
 	if err != nil {
 		t.Fatal(err)
@@ -125,8 +124,7 @@ func TestIPCJoinPath(t *testing.T) {
 	}
 
 	config := newTemplateConfig(rootfs)
-	i := getNamespaceIndex(config, "NEWIPC")
-	config.Namespaces[i].Path = "/proc/1/ns/ipc"
+	config.Namespaces.Add(configs.NEWIPC, "/proc/1/ns/ipc")
 
 	buffers, exitCode, err := runContainer(config, "", "readlink", "/proc/self/ns/ipc")
 	if err != nil {
@@ -154,12 +152,11 @@ func TestIPCBadPath(t *testing.T) {
 	defer remove(rootfs)
 
 	config := newTemplateConfig(rootfs)
-	i := getNamespaceIndex(config, "NEWIPC")
-	config.Namespaces[i].Path = "/proc/1/ns/ipcc"
+	config.Namespaces.Add(configs.NEWIPC, "/proc/1/ns/ipcc")
 
 	_, _, err = runContainer(config, "", "true")
 	if err == nil {
-		t.Fatal("container succeded with bad ipc path")
+		t.Fatal("container succeeded with bad ipc path")
 	}
 }
 
@@ -182,15 +179,6 @@ func TestRlimit(t *testing.T) {
 	if limit := strings.TrimSpace(out.Stdout.String()); limit != "1024" {
 		t.Fatalf("expected rlimit to be 1024, got %s", limit)
 	}
-}
-
-func getNamespaceIndex(config *configs.Config, name string) int {
-	for i, v := range config.Namespaces {
-		if v.Name == name {
-			return i
-		}
-	}
-	return -1
 }
 
 func newTestRoot() (string, error) {

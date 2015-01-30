@@ -118,6 +118,11 @@ func (m *Manager) Apply(pid int) error {
 			newProp("CPUShares", uint64(c.CpuShares)))
 	}
 
+	if c.BlkioWeight != 0 {
+		properties = append(properties,
+			newProp("BlockIOWeight", uint64(c.BlkioWeight)))
+	}
+
 	if _, err := theConn.StartTransientUnit(unitName, "replace", properties...); err != nil {
 		return err
 	}
@@ -330,5 +335,5 @@ func joinCpuset(c *cgroups.Cgroup, pid int) error {
 
 	s := &fs.CpusetGroup{}
 
-	return s.SetDir(path, c.CpusetCpus, pid)
+	return s.SetDir(path, c.CpusetCpus, c.CpusetMems, pid)
 }
