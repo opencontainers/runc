@@ -68,18 +68,8 @@ func executeSetupCmd(args []string, ppid int, container *configs.Config, process
 		return terr
 	}
 
-	encoder := json.NewEncoder(parent)
-
-	if err := encoder.Encode(container); err != nil {
-		return terminate(err)
-	}
-
-	if err := encoder.Encode(process); err != nil {
-		return terminate(err)
-	}
-
 	// send the state to the container's init process then shutdown writes for the parent
-	if err := encoder.Encode(networkState); err != nil {
+	if err := json.NewEncoder(parent).Encode(process); err != nil {
 		return terminate(err)
 	}
 
@@ -158,21 +148,6 @@ func Exec(args []string, env []string, console string, command *exec.Cmd, contai
 		return terr
 	}
 
-	encoder := json.NewEncoder(parent)
-
-	if err := encoder.Encode(container); err != nil {
-		return terminate(err)
-	}
-
-	process := processArgs{
-		Env:         append(env[0:], container.Env...),
-		Args:        args,
-		ConsolePath: console,
-	}
-	if err := encoder.Encode(process); err != nil {
-		return terminate(err)
-	}
-
 	started, err := system.GetProcessStartTime(command.Process.Pid)
 	if err != nil {
 		return terminate(err)
@@ -195,6 +170,14 @@ func Exec(args []string, env []string, console string, command *exec.Cmd, contai
 		return terminate(err)
 	}
 
+	process := processArgs{
+		Env:          append(env[0:], container.Env...),
+		Args:         args,
+		ConsolePath:  console,
+		Config:       container,
+		NetworkState: &networkState,
+	}
+
 	// Start the setup process to setup the init process
 	if container.Namespaces.Contains(configs.NEWUSER) {
 		if err = executeSetupCmd(command.Args, command.Process.Pid, container, &process, &networkState); err != nil {
@@ -203,7 +186,7 @@ func Exec(args []string, env []string, console string, command *exec.Cmd, contai
 	}
 
 	// send the state to the container's init process then shutdown writes for the parent
-	if err := encoder.Encode(networkState); err != nil {
+	if err := json.NewEncoder(parent).Encode(process); err != nil {
 		return terminate(err)
 	}
 	// shutdown writes for the parent side of the pipe

@@ -15,7 +15,6 @@ import (
 	"github.com/docker/libcontainer/configs"
 	"github.com/docker/libcontainer/label"
 	"github.com/docker/libcontainer/mount"
-	"github.com/docker/libcontainer/network"
 	"github.com/docker/libcontainer/system"
 	"github.com/docker/libcontainer/utils"
 )
@@ -171,7 +170,11 @@ func FinalizeSetns(container *configs.Config) error {
 // The setup process joins all the namespaces of user namespace enabled init
 // except the user namespace, so it run as root in the root user namespace
 // to perform these operations.
-func SetupContainer(container *configs.Config, networkState *network.NetworkState, consolePath string) error {
+func SetupContainer(process *processArgs) error {
+	container := process.Config
+	networkState := process.NetworkState
+	consolePath := process.ConsolePath
+
 	rootfs, err := utils.ResolveRootfs(container.RootFs)
 	if err != nil {
 		return err

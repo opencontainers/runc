@@ -26,9 +26,11 @@ import (
 
 // Process is used for transferring parameters from Exec() to Init()
 type processArgs struct {
-	Args        []string `json:"args,omitempty"`
-	Env         []string `json:"environment,omitempty"`
-	ConsolePath string   `json:"console_path,omitempty"`
+	Args         []string              `json:"args,omitempty"`
+	Env          []string              `json:"environment,omitempty"`
+	ConsolePath  string                `json:"console_path,omitempty"`
+	Config       *configs.Config       `json:"config,omitempty"`
+	NetworkState *network.NetworkState `json:"network_state,omitempty"`
 }
 
 // TODO(vishh): This is part of the libcontainer API and it does much more than just namespaces related work.
@@ -55,31 +57,19 @@ func Init(pipe *os.File, setupUserns bool) (err error) {
 		pipe.Close()
 	}()
 
-	decoder := json.NewDecoder(pipe)
-
-	var container *configs.Config
-	if err := decoder.Decode(&container); err != nil {
-		return err
-	}
-
-	var process *processArgs
-	if err := decoder.Decode(&process); err != nil {
-		return err
-	}
-
 	uncleanRootfs, err := os.Getwd()
 	if err != nil {
 		return err
 	}
 
+	var process *processArgs
 	// We always read this as it is a way to sync with the parent as well
-	var networkState *network.NetworkState
-	if err := decoder.Decode(&networkState); err != nil {
+	if err := json.NewDecoder(pipe).Decode(&process); err != nil {
 		return err
 	}
 
 	if setupUserns {
-		err = SetupContainer(container, networkState, process.ConsolePath)
+		err = SetupContainer(process)
 		if err == nil {
 			os.Exit(0)
 		} else {
@@ -87,14 +77,17 @@ func Init(pipe *os.File, setupUserns bool) (err error) {
 		}
 	}
 
-	if container.Namespaces.Contains(configs.NEWUSER) {
-		return initUserNs(container, uncleanRootfs, process, networkState)
+	if process.Config.Namespaces.Contains(configs.NEWUSER) {
+		return initUserNs(uncleanRootfs, process)
 	} else {
-		return initDefault(container, uncleanRootfs, process, networkState)
+		return initDefault(uncleanRootfs, process)
 	}
 }
 
-func initDefault(container *configs.Config, uncleanRootfs string, process *processArgs, networkState *network.NetworkState) (err error) {
+func initDefault(uncleanRootfs string, process *processArgs) (err error) {
+	container := process.Config
+	networkState := process.NetworkState
+
 	rootfs, err := utils.ResolveRootfs(uncleanRootfs)
 	if err != nil {
 		return err
@@ -204,7 +197,9 @@ func initDefault(container *configs.Config, uncleanRootfs string, process *proce
 	return system.Execv(process.Args[0], process.Args[0:], process.Env)
 }
 
-func initUserNs(container *configs.Config, uncleanRootfs string, process *processArgs, networkState *network.NetworkState) (err error) {
+func initUserNs(uncleanRootfs string, process *processArgs) (err error) {
+	container := process.Config
+
 	// clear the current processes env and replace it with the environment
 	// defined on the container
 	if err := LoadContainerEnvironment(container); err != nil {
