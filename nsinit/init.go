@@ -14,7 +14,7 @@ var (
 		Usage:  "runs the init process inside the namespace",
 		Action: initAction,
 		Flags: []cli.Flag{
-			cli.IntFlag{"fd", 0, "internal pipe fd"},
+			cli.IntFlag{Name: "fd", Value: 0, Usage: "internal pipe fd"},
 		},
 	}
 )
