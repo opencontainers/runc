@@ -2,35 +2,22 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/codegangsta/cli"
 	"github.com/docker/libcontainer"
 	"github.com/docker/libcontainer/configs"
 )
 
-func loadConfig() (*configs.Config, error) {
-	f, err := os.Open(filepath.Join(dataPath, "container.json"))
+func loadConfig(context *cli.Context) (*configs.Config, error) {
+	f, err := os.Open(context.String("config"))
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
-	var container *configs.Config
-	if err := json.NewDecoder(f).Decode(&container); err != nil {
-		return nil, err
-	}
-	return container, nil
-}
-
-// loadConfigFromFd loads a container's config from the sync pipe that is provided by
-// fd 3 when running a process
-func loadConfigFromFd() (*configs.Config, error) {
-	pipe := os.NewFile(3, "pipe")
-	defer pipe.Close()
-
 	var config *configs.Config
-	if err := json.NewDecoder(pipe).Decode(&config); err != nil {
+	if err := json.NewDecoder(f).Decode(&config); err != nil {
 		return nil, err
 	}
 	return config, nil
@@ -38,4 +25,29 @@ func loadConfigFromFd() (*configs.Config, error) {
 
 func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
 	return libcontainer.New(context.GlobalString("root"), []string{os.Args[0], "init", "--fd", "3", "--"})
+}
+
+func getContainer(context *cli.Context) (libcontainer.Container, error) {
+	factory, err := loadFactory(context)
+	if err != nil {
+		return nil, err
+	}
+	container, err := factory.Load(context.String("id"))
+	if err != nil {
+		return nil, err
+	}
+	return container, nil
+}
+
+func fatal(err error) {
+	if lerr, ok := err.(libcontainer.Error); ok {
+		lerr.Detail(os.Stderr)
+		os.Exit(1)
+	}
+	fmt.Fprintln(os.Stderr, err)
+}
+
+func fatalf(t string, v ...interface{}) {
+	fmt.Fprintf(os.Stderr, t, v...)
+	os.Exit(1)
 }

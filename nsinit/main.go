@@ -18,7 +18,6 @@ func main() {
 		cli.StringFlag{Name: "root", Value: ".", Usage: "root directory for containers"},
 	}
 	app.Commands = []cli.Command{
-		configCommand,
 		execCommand,
 		initCommand,
 		oomCommand,

@@ -6,34 +6,27 @@ import (
 	"log"
 
 	"github.com/codegangsta/cli"
-	"github.com/docker/libcontainer"
 )
 
 var statsCommand = cli.Command{
-	Name:   "stats",
-	Usage:  "display statistics for the container",
-	Action: statsAction,
-}
-
-func statsAction(context *cli.Context) {
-	factory, err := libcontainer.New(context.GlobalString("root"), nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	container, err := factory.Load(context.Args().First())
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	stats, err := container.Stats()
-	if err != nil {
-		log.Fatal(err)
-	}
-	data, jerr := json.MarshalIndent(stats, "", "\t")
-	if err != nil {
-		log.Fatal(jerr)
-	}
-
-	fmt.Printf("%s", data)
+	Name:  "stats",
+	Usage: "display statistics for the container",
+	Flags: []cli.Flag{
+		cli.StringFlag{Name: "id", Value: "nsinit", Usage: "specify the ID for a container"},
+	},
+	Action: func(context *cli.Context) {
+		container, err := getContainer(context)
+		if err != nil {
+			log.Fatal(err)
+		}
+		stats, err := container.Stats()
+		if err != nil {
+			log.Fatal(err)
+		}
+		data, jerr := json.MarshalIndent(stats, "", "\t")
+		if err != nil {
+			log.Fatal(jerr)
+		}
+		fmt.Printf("%s", data)
+	},
 }

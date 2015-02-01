@@ -50,44 +50,32 @@ func (l *linuxFactory) Create(id string, config *configs.Config) (Container, err
 	if l.root == "" {
 		return nil, newGenericError(fmt.Errorf("invalid root"), ConfigInvalid)
 	}
-	if !idRegex.MatchString(id) {
-		return nil, newGenericError(fmt.Errorf("Invalid id format: %v", id), InvalidIdFormat)
+	if err := l.validateID(id); err != nil {
+		return nil, err
 	}
-
-	if len(id) > maxIdLen {
-		return nil, newGenericError(fmt.Errorf("Invalid id format: %v", id), InvalidIdFormat)
-	}
-
 	containerRoot := filepath.Join(l.root, id)
-	_, err := os.Stat(containerRoot)
-	if err == nil {
+	if _, err := os.Stat(containerRoot); err == nil {
 		return nil, newGenericError(fmt.Errorf("Container with id exists: %v", id), IdInUse)
 	} else if !os.IsNotExist(err) {
 		return nil, newGenericError(err, SystemError)
 	}
-
 	data, err := json.MarshalIndent(config, "", "\t")
 	if err != nil {
 		return nil, newGenericError(err, SystemError)
 	}
-
 	if err := os.MkdirAll(containerRoot, 0700); err != nil {
 		return nil, newGenericError(err, SystemError)
 	}
-
 	f, err := os.Create(filepath.Join(containerRoot, configFilename))
 	if err != nil {
 		os.RemoveAll(containerRoot)
 		return nil, newGenericError(err, SystemError)
 	}
 	defer f.Close()
-
-	_, err = f.Write(data)
-	if err != nil {
+	if _, err := f.Write(data); err != nil {
 		os.RemoveAll(containerRoot)
 		return nil, newGenericError(err, SystemError)
 	}
-
 	cgroupManager := cgroups.NewCgroupManager(config.Cgroups)
 	return &linuxContainer{
 		id:            id,
@@ -109,13 +97,11 @@ func (l *linuxFactory) Load(id string) (Container, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	glog.Infof("loading container state from %s", containerRoot)
 	state, err := l.loadContainerState(containerRoot)
 	if err != nil {
 		return nil, err
 	}
-
 	cgroupManager := cgroups.LoadCgroupManager(config.Cgroups, state.CgroupPaths)
 	glog.Infof("using %s as cgroup manager", cgroupManager)
 	return &linuxContainer{
@@ -126,6 +112,20 @@ func (l *linuxFactory) Load(id string) (Container, error) {
 		cgroupManager: cgroupManager,
 		initArgs:      l.initArgs,
 	}, nil
+}
+
+// StartInitialization loads a container by opening the pipe fd from the parent to read the configuration and state
+// This is a low level implementation detail of the reexec and should not be consumed externally
+func (f *linuxFactory) StartInitialization(pipefd uintptr) (err error) {
+	pipe := os.NewFile(uintptr(pipefd), "pipe")
+
+	setupUserns := os.Getenv("_LIBCONTAINER_USERNS")
+	pid := os.Getenv("_LIBCONTAINER_INITPID")
+	if pid != "" && setupUserns == "" {
+		return namespaces.InitIn(pipe)
+	}
+
+	return namespaces.Init(pipe, setupUserns != "")
 }
 
 func (l *linuxFactory) loadContainerConfig(root string) (*configs.Config, error) {
@@ -162,16 +162,12 @@ func (l *linuxFactory) loadContainerState(root string) (*configs.State, error) {
 	return state, nil
 }
 
-// StartInitialization loads a container by opening the pipe fd from the parent to read the configuration and state
-// This is a low level implementation detail of the reexec and should not be consumed externally
-func (f *linuxFactory) StartInitialization(pipefd uintptr) (err error) {
-	pipe := os.NewFile(uintptr(pipefd), "pipe")
-
-	setupUserns := os.Getenv("_LIBCONTAINER_USERNS")
-	pid := os.Getenv("_LIBCONTAINER_INITPID")
-	if pid != "" && setupUserns == "" {
-		return namespaces.InitIn(pipe)
+func (l *linuxFactory) validateID(id string) error {
+	if !idRegex.MatchString(id) {
+		return newGenericError(fmt.Errorf("Invalid id format: %v", id), InvalidIdFormat)
 	}
-
-	return namespaces.Init(pipe, setupUserns != "")
+	if len(id) > maxIdLen {
+		return newGenericError(fmt.Errorf("Invalid id format: %v", id), InvalidIdFormat)
+	}
+	return nil
 }

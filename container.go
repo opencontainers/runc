@@ -4,6 +4,9 @@ NOTE: The API is in flux and mainly not implemented. Proceed with caution until 
 package libcontainer
 
 import (
+	"os"
+	"syscall"
+
 	"github.com/docker/libcontainer/cgroups"
 	"github.com/docker/libcontainer/configs"
 	"github.com/docker/libcontainer/network"
@@ -56,7 +59,7 @@ type Container interface {
 	// ConfigInvalid - config is invalid,
 	// ContainerPaused - Container is paused,
 	// Systemerror - System error.
-	StartProcess(config *ProcessConfig) (pid int, err error)
+	Start(process *Process) (pid int, err error)
 
 	// Destroys the container after killing all running processes.
 	//
@@ -86,27 +89,20 @@ type Container interface {
 	// Systemerror - System error.
 	Resume() error
 
-	// Signal sends the specified signal to a process owned by the container.
+	// Signal sends the specified signal to the init process of the container.
 	//
 	// errors:
 	// ContainerDestroyed - Container no longer exists,
 	// ContainerPaused - Container is paused,
 	// Systemerror - System error.
-	Signal(pid, signal int) error
+	Signal(signal os.Signal) error
 
 	// Wait waits for the init process of the conatiner to die and returns it's exit status.
 	//
 	// errors:
 	// ContainerDestroyed - Container no longer exists,
 	// Systemerror - System error.
-	Wait() (exitStatus int, err error)
-
-	// WaitProcess waits on a process owned by the container.
-	//
-	// errors:
-	// ContainerDestroyed - Container no longer exists,
-	// Systemerror - System error.
-	WaitProcess(pid int) (exitStatus int, err error)
+	Wait() (exitStatus syscall.WaitStatus, err error)
 
 	// OOM returns a read-only channel signaling when the container receives an OOM notification.
 	//

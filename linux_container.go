@@ -77,31 +77,28 @@ func (c *linuxContainer) Stats() (*Stats, error) {
 	return stats, nil
 }
 
-func (c *linuxContainer) StartProcess(config *ProcessConfig) (int, error) {
+func (c *linuxContainer) Start(process *Process) (int, error) {
 	status, err := c.Status()
 	if err != nil {
 		return -1, err
 	}
-
 	cmd := exec.Command(c.initArgs[0], c.initArgs[1:]...)
-	cmd.Stdin = config.Stdin
-	cmd.Stdout = config.Stdout
-	cmd.Stderr = config.Stderr
-
-	cmd.Env = config.Env
+	cmd.Stdin = process.Stdin
+	cmd.Stdout = process.Stdout
+	cmd.Stderr = process.Stderr
+	cmd.Env = c.config.Env
 	cmd.Dir = c.config.RootFs
-
 	if cmd.SysProcAttr == nil {
 		cmd.SysProcAttr = &syscall.SysProcAttr{}
 	}
-
+	// TODO: add pdeath to config for a container
 	cmd.SysProcAttr.Pdeathsig = syscall.SIGKILL
-
 	if status != configs.Destroyed {
 		glog.Info("start new container process")
-		return namespaces.ExecIn(config.Args, config.Env, config.Console, cmd, c.config, c.state)
+		// TODO: (crosbymichael) check out console use for execin
+		return namespaces.ExecIn(process.Args, c.config.Env, "", cmd, c.config, c.state)
 	}
-	if err := c.startInitProcess(cmd, config); err != nil {
+	if err := c.startInitProcess(cmd, process); err != nil {
 		return -1, err
 	}
 	return c.state.InitPid, nil
@@ -130,8 +127,8 @@ func (c *linuxContainer) updateStateFile() error {
 	return nil
 }
 
-func (c *linuxContainer) startInitProcess(cmd *exec.Cmd, config *ProcessConfig) error {
-	err := namespaces.Exec(config.Args, config.Env, config.Console, cmd, c.config, c.cgroupManager, c.state)
+func (c *linuxContainer) startInitProcess(cmd *exec.Cmd, config *Process) error {
+	err := namespaces.Exec(config.Args, c.config.Env, c.config.Console, cmd, c.config, c.cgroupManager, c.state)
 	if err != nil {
 		return err
 	}
@@ -164,24 +161,19 @@ func (c *linuxContainer) Resume() error {
 	return c.cgroupManager.Freeze(configs.Thawed)
 }
 
-func (c *linuxContainer) Signal(pid, signal int) error {
-	glog.Infof("sending signal %d to pid %d", signal, pid)
+func (c *linuxContainer) Signal(signal os.Signal) error {
+	glog.Infof("sending signal %d to pid %d", signal, c.state.InitPid)
 	panic("not implemented")
 }
 
-func (c *linuxContainer) Wait() (int, error) {
-	return c.WaitProcess(c.state.InitPid)
-}
-
-func (c *linuxContainer) WaitProcess(pid int) (int, error) {
+func (c *linuxContainer) Wait() (syscall.WaitStatus, error) {
 	var status syscall.WaitStatus
-
-	_, err := syscall.Wait4(pid, &status, 0, nil)
+	// TODO : close exec.Cmd pipes, fix in master
+	_, err := syscall.Wait4(c.state.InitPid, &status, 0, nil)
 	if err != nil {
-		return -1, newGenericError(err, SystemError)
+		return 0, newGenericError(err, SystemError)
 	}
-
-	return int(status), err
+	return status, err
 }
 
 func (c *linuxContainer) OOM() (<-chan struct{}, error) {

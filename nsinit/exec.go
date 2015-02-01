@@ -1,24 +1,14 @@
 package main
 
 import (
-	"crypto/md5"
-	"fmt"
 	"io"
-	"log"
 	"os"
 	"syscall"
 
 	"github.com/codegangsta/cli"
 	"github.com/docker/docker/pkg/term"
 	"github.com/docker/libcontainer"
-	"github.com/docker/libcontainer/configs"
 	consolepkg "github.com/docker/libcontainer/console"
-)
-
-var (
-	dataPath  = os.Getenv("data_path")
-	console   = os.Getenv("console")
-	rawPipeFd = os.Getenv("pipe")
 )
 
 var execCommand = cli.Command{
@@ -27,27 +17,9 @@ var execCommand = cli.Command{
 	Action: execAction,
 	Flags: []cli.Flag{
 		cli.BoolFlag{Name: "tty", Usage: "allocate a TTY to the container"},
+		cli.StringFlag{Name: "id", Value: "nsinit", Usage: "specify the ID for a container"},
+		cli.StringFlag{Name: "config", Value: "container.json", Usage: "path to the configuration file"},
 	},
-}
-
-func getContainer(context *cli.Context) (libcontainer.Container, error) {
-	factory, err := loadFactory(context)
-	if err != nil {
-		log.Fatal(err)
-	}
-	id := fmt.Sprintf("%x", md5.Sum([]byte(dataPath)))
-	container, err := factory.Load(id)
-	if err != nil && !os.IsNotExist(err) {
-		var config *configs.Config
-
-		config, err = loadConfig()
-		if err != nil {
-			log.Fatal(err)
-		}
-		container, err = factory.Create(id, config)
-	}
-
-	return container, err
 }
 
 func execAction(context *cli.Context) {
@@ -65,79 +37,73 @@ func execAction(context *cli.Context) {
 		exitCode int
 	)
 
-	container, err := getContainer(context)
+	factory, err := loadFactory(context)
 	if err != nil {
-		log.Fatal(err)
+		fatal(err)
 	}
-
-	if context.Bool("tty") {
-		stdin = nil
-		stdout = nil
-		stderr = nil
-
-		master, console, err = consolepkg.CreateMasterAndConsole()
-		if err != nil {
-			log.Fatal(err)
+	container, err := factory.Load(context.String("id"))
+	if err != nil {
+		if lerr, ok := err.(libcontainer.Error); !ok || lerr.Code() != libcontainer.ContainerNotExists {
+			fatal(err)
 		}
-
-		go io.Copy(master, os.Stdin)
-		go io.Copy(os.Stdout, master)
-
-		state, err := term.SetRawTerminal(os.Stdin.Fd())
+		config, err := loadConfig(context)
 		if err != nil {
-			log.Fatal(err)
+			fatal(err)
 		}
-
-		defer term.RestoreTerminal(os.Stdin.Fd(), state)
+		if context.Bool("tty") {
+			stdin = nil
+			stdout = nil
+			stderr = nil
+			if master, console, err = consolepkg.CreateMasterAndConsole(); err != nil {
+				fatal(err)
+			}
+			go io.Copy(master, os.Stdin)
+			go io.Copy(os.Stdout, master)
+			state, err := term.SetRawTerminal(os.Stdin.Fd())
+			if err != nil {
+				fatal(err)
+			}
+			defer term.RestoreTerminal(os.Stdin.Fd(), state)
+			config.Console = console
+		}
+		if container, err = factory.Create(context.String("id"), config); err != nil {
+			fatal(err)
+		}
 	}
-
-	process := &libcontainer.ProcessConfig{
-		Args:    context.Args(),
-		Env:     context.StringSlice("env"),
-		Stdin:   stdin,
-		Stdout:  stdout,
-		Stderr:  stderr,
-		Console: console,
+	process := &libcontainer.Process{
+		Args:   context.Args(),
+		Stdin:  stdin,
+		Stdout: stdout,
+		Stderr: stderr,
 	}
-
-	pid, err := container.StartProcess(process)
-	if err != nil {
-		log.Fatalf("failed to exec: %s", err)
+	if _, err := container.Start(process); err != nil {
+		fatal(err)
 	}
-
-	p, err := os.FindProcess(pid)
-	if err != nil {
-		log.Fatalf("Unable to find the %d process: %s", pid, err)
-	}
-
 	go func() {
 		resizeTty(master)
-
 		for sig := range sigc {
 			switch sig {
 			case syscall.SIGWINCH:
 				resizeTty(master)
 			default:
-				p.Signal(sig)
+				container.Signal(sig)
 			}
 		}
 	}()
-
-	ps, err := p.Wait()
+	status, err := container.Wait()
 	if err != nil {
-		log.Fatalf("Unable to wait the %d process: %s", pid, err)
+		fatal(err)
 	}
-	container.Destroy()
-
-	status := ps.Sys().(syscall.WaitStatus)
+	if err := container.Destroy(); err != nil {
+		fatal(err)
+	}
 	if status.Exited() {
 		exitCode = status.ExitStatus()
 	} else if status.Signaled() {
 		exitCode = -int(status.Signal())
 	} else {
-		log.Fatalf("Unexpected status")
+		fatalf("Unexpected status")
 	}
-
 	os.Exit(exitCode)
 }
 
@@ -145,13 +111,9 @@ func resizeTty(master *os.File) {
 	if master == nil {
 		return
 	}
-
 	ws, err := term.GetWinsize(os.Stdin.Fd())
 	if err != nil {
 		return
 	}
-
-	if err := term.SetWinsize(master.Fd(), ws); err != nil {
-		return
-	}
+	term.SetWinsize(master.Fd(), ws)
 }

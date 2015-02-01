@@ -28,7 +28,6 @@ func setupPtmx(config *configs.Config) error {
 		if err != nil {
 			return err
 		}
-		// TODO: (crosbymichael) get uid/gid
 		return console.Setup(config.RootFs, config.Console, config.MountLabel, uid, gid)
 	}
 	return nil
