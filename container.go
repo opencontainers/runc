@@ -33,7 +33,7 @@ type Container interface {
 	Status() (configs.Status, error)
 
 	// Returns the current config of the container.
-	Config() *configs.Config
+	Config() configs.Config
 
 	// Returns the PIDs inside this container. The PIDs are in the namespace of the calling process.
 	//

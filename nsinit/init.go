@@ -5,7 +5,7 @@ import (
 
 	"github.com/codegangsta/cli"
 	"github.com/docker/libcontainer"
-	_ "github.com/docker/libcontainer/namespaces/nsenter"
+	_ "github.com/docker/libcontainer/nsenter"
 )
 
 var initCommand = cli.Command{

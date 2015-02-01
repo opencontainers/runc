@@ -3,13 +3,54 @@ package main
 import (
 	"io"
 	"os"
+	"os/signal"
 	"syscall"
 
 	"github.com/codegangsta/cli"
 	"github.com/docker/docker/pkg/term"
 	"github.com/docker/libcontainer"
+	"github.com/docker/libcontainer/configs"
 	consolepkg "github.com/docker/libcontainer/console"
 )
+
+type tty struct {
+	master  *os.File
+	console string
+	state   *term.State
+}
+
+func (t *tty) Close() error {
+	if t.master != nil {
+		t.master.Close()
+	}
+	if t.state != nil {
+		term.RestoreTerminal(os.Stdin.Fd(), t.state)
+	}
+	return nil
+}
+
+func (t *tty) set(config *configs.Config) {
+	config.Console = t.console
+}
+
+func (t *tty) attach(process *libcontainer.Process) {
+	if t.master != nil {
+		process.Stderr = nil
+		process.Stdout = nil
+		process.Stdin = nil
+	}
+}
+
+func (t *tty) resize() error {
+	if t.master == nil {
+		return nil
+	}
+	ws, err := term.GetWinsize(os.Stdin.Fd())
+	if err != nil {
+		return err
+	}
+	return term.SetWinsize(t.master.Fd(), ws)
+}
 
 var execCommand = cli.Command{
 	Name:   "exec",
@@ -23,21 +64,11 @@ var execCommand = cli.Command{
 }
 
 func execAction(context *cli.Context) {
-	var (
-		master  *os.File
-		console string
-		err     error
-
-		sigc = make(chan os.Signal, 10)
-
-		stdin  = os.Stdin
-		stdout = os.Stdout
-		stderr = os.Stderr
-
-		exitCode int
-	)
-
 	factory, err := loadFactory(context)
+	if err != nil {
+		fatal(err)
+	}
+	tty, err := newTty(context)
 	if err != nil {
 		fatal(err)
 	}
@@ -50,46 +81,22 @@ func execAction(context *cli.Context) {
 		if err != nil {
 			fatal(err)
 		}
-		if context.Bool("tty") {
-			stdin = nil
-			stdout = nil
-			stderr = nil
-			if master, console, err = consolepkg.CreateMasterAndConsole(); err != nil {
-				fatal(err)
-			}
-			go io.Copy(master, os.Stdin)
-			go io.Copy(os.Stdout, master)
-			state, err := term.SetRawTerminal(os.Stdin.Fd())
-			if err != nil {
-				fatal(err)
-			}
-			defer term.RestoreTerminal(os.Stdin.Fd(), state)
-			config.Console = console
-		}
+		tty.set(config)
 		if container, err = factory.Create(context.String("id"), config); err != nil {
 			fatal(err)
 		}
 	}
+	go handleSignals(container, tty)
 	process := &libcontainer.Process{
 		Args:   context.Args(),
-		Stdin:  stdin,
-		Stdout: stdout,
-		Stderr: stderr,
+		Stdin:  os.Stdin,
+		Stdout: os.Stdout,
+		Stderr: os.Stderr,
 	}
+	tty.attach(process)
 	if _, err := container.Start(process); err != nil {
 		fatal(err)
 	}
-	go func() {
-		resizeTty(master)
-		for sig := range sigc {
-			switch sig {
-			case syscall.SIGWINCH:
-				resizeTty(master)
-			default:
-				container.Signal(sig)
-			}
-		}
-	}()
 	status, err := container.Wait()
 	if err != nil {
 		fatal(err)
@@ -97,6 +104,11 @@ func execAction(context *cli.Context) {
 	if err := container.Destroy(); err != nil {
 		fatal(err)
 	}
+	exit(status)
+}
+
+func exit(status syscall.WaitStatus) {
+	var exitCode int
 	if status.Exited() {
 		exitCode = status.ExitStatus()
 	} else if status.Signaled() {
@@ -107,13 +119,37 @@ func execAction(context *cli.Context) {
 	os.Exit(exitCode)
 }
 
-func resizeTty(master *os.File) {
-	if master == nil {
-		return
+func handleSignals(container libcontainer.Container, tty *tty) {
+	sigc := make(chan os.Signal, 10)
+	signal.Notify(sigc)
+	tty.resize()
+	for sig := range sigc {
+		switch sig {
+		case syscall.SIGWINCH:
+			tty.resize()
+		default:
+			container.Signal(sig)
+		}
 	}
-	ws, err := term.GetWinsize(os.Stdin.Fd())
-	if err != nil {
-		return
+}
+
+func newTty(context *cli.Context) (*tty, error) {
+	if context.Bool("tty") {
+		master, console, err := consolepkg.CreateMasterAndConsole()
+		if err != nil {
+			return nil, err
+		}
+		go io.Copy(master, os.Stdin)
+		go io.Copy(os.Stdout, master)
+		state, err := term.SetRawTerminal(os.Stdin.Fd())
+		if err != nil {
+			return nil, err
+		}
+		return &tty{
+			master:  master,
+			console: console,
+			state:   state,
+		}, nil
 	}
-	term.SetWinsize(master.Fd(), ws)
+	return &tty{}, nil
 }
