@@ -1,147 +1,127 @@
 package devices
 
+import "github.com/docker/libcontainer/configs"
+
 var (
 	// These are devices that are to be both allowed and created.
-
-	DefaultSimpleDevices = []*Device{
+	DefaultSimpleDevices = []*configs.Device{
 		// /dev/null and zero
 		{
-			Path:              "/dev/null",
-			Type:              'c',
-			MajorNumber:       1,
-			MinorNumber:       3,
-			CgroupPermissions: "rwm",
-			FileMode:          0666,
+			Path:        "/dev/null",
+			Type:        'c',
+			Major:       1,
+			Minor:       3,
+			Permissions: "rwm",
+			FileMode:    0666,
 		},
 		{
-			Path:              "/dev/zero",
-			Type:              'c',
-			MajorNumber:       1,
-			MinorNumber:       5,
-			CgroupPermissions: "rwm",
-			FileMode:          0666,
+			Path:        "/dev/zero",
+			Type:        'c',
+			Major:       1,
+			Minor:       5,
+			Permissions: "rwm",
+			FileMode:    0666,
 		},
 
 		{
-			Path:              "/dev/full",
-			Type:              'c',
-			MajorNumber:       1,
-			MinorNumber:       7,
-			CgroupPermissions: "rwm",
-			FileMode:          0666,
+			Path:        "/dev/full",
+			Type:        'c',
+			Major:       1,
+			Minor:       7,
+			Permissions: "rwm",
+			FileMode:    0666,
 		},
 
 		// consoles and ttys
 		{
-			Path:              "/dev/tty",
-			Type:              'c',
-			MajorNumber:       5,
-			MinorNumber:       0,
-			CgroupPermissions: "rwm",
-			FileMode:          0666,
+			Path:        "/dev/tty",
+			Type:        'c',
+			Major:       5,
+			Minor:       0,
+			Permissions: "rwm",
+			FileMode:    0666,
 		},
 
 		// /dev/urandom,/dev/random
 		{
-			Path:              "/dev/urandom",
-			Type:              'c',
-			MajorNumber:       1,
-			MinorNumber:       9,
-			CgroupPermissions: "rwm",
-			FileMode:          0666,
+			Path:        "/dev/urandom",
+			Type:        'c',
+			Major:       1,
+			Minor:       9,
+			Permissions: "rwm",
+			FileMode:    0666,
 		},
 		{
-			Path:              "/dev/random",
-			Type:              'c',
-			MajorNumber:       1,
-			MinorNumber:       8,
-			CgroupPermissions: "rwm",
-			FileMode:          0666,
+			Path:        "/dev/random",
+			Type:        'c',
+			Major:       1,
+			Minor:       8,
+			Permissions: "rwm",
+			FileMode:    0666,
 		},
 	}
-
-	DefaultAllowedDevices = append([]*Device{
+	DefaultAllowedDevices = append([]*configs.Device{
 		// allow mknod for any device
 		{
-			Type:              'c',
-			MajorNumber:       Wildcard,
-			MinorNumber:       Wildcard,
-			CgroupPermissions: "m",
+			Type:        'c',
+			Major:       configs.Wildcard,
+			Minor:       configs.Wildcard,
+			Permissions: "m",
 		},
 		{
-			Type:              'b',
-			MajorNumber:       Wildcard,
-			MinorNumber:       Wildcard,
-			CgroupPermissions: "m",
+			Type:        'b',
+			Major:       configs.Wildcard,
+			Minor:       configs.Wildcard,
+			Permissions: "m",
 		},
 
 		{
-			Path:              "/dev/console",
-			Type:              'c',
-			MajorNumber:       5,
-			MinorNumber:       1,
-			CgroupPermissions: "rwm",
+			Path:        "/dev/console",
+			Type:        'c',
+			Major:       5,
+			Minor:       1,
+			Permissions: "rwm",
 		},
 		{
-			Path:              "/dev/tty0",
-			Type:              'c',
-			MajorNumber:       4,
-			MinorNumber:       0,
-			CgroupPermissions: "rwm",
+			Path:        "/dev/tty0",
+			Type:        'c',
+			Major:       4,
+			Minor:       0,
+			Permissions: "rwm",
 		},
 		{
-			Path:              "/dev/tty1",
-			Type:              'c',
-			MajorNumber:       4,
-			MinorNumber:       1,
-			CgroupPermissions: "rwm",
+			Path:        "/dev/tty1",
+			Type:        'c',
+			Major:       4,
+			Minor:       1,
+			Permissions: "rwm",
 		},
 		// /dev/pts/ - pts namespaces are "coming soon"
 		{
-			Path:              "",
-			Type:              'c',
-			MajorNumber:       136,
-			MinorNumber:       Wildcard,
-			CgroupPermissions: "rwm",
+			Path:        "",
+			Type:        'c',
+			Major:       136,
+			Minor:       configs.Wildcard,
+			Permissions: "rwm",
 		},
 		{
-			Path:              "",
-			Type:              'c',
-			MajorNumber:       5,
-			MinorNumber:       2,
-			CgroupPermissions: "rwm",
+			Path:        "",
+			Type:        'c',
+			Major:       5,
+			Minor:       2,
+			Permissions: "rwm",
 		},
 
 		// tuntap
 		{
-			Path:              "",
-			Type:              'c',
-			MajorNumber:       10,
-			MinorNumber:       200,
-			CgroupPermissions: "rwm",
+			Path:        "",
+			Type:        'c',
+			Major:       10,
+			Minor:       200,
+			Permissions: "rwm",
 		},
-
-		/*// fuse
-		   {
-		    Path: "",
-		    Type: 'c',
-		    MajorNumber: 10,
-		    MinorNumber: 229,
-		    CgroupPermissions: "rwm",
-		   },
-
-		// rtc
-		   {
-		    Path: "",
-		    Type: 'c',
-		    MajorNumber: 254,
-		    MinorNumber: 0,
-		    CgroupPermissions: "rwm",
-		   },
-		*/
 	}, DefaultSimpleDevices...)
-
-	DefaultAutoCreatedDevices = append([]*Device{
+	DefaultAutoCreatedDevices = append([]*configs.Device{
 		{
 			// /dev/fuse is created but not allowed.
 			// This is to allow java to work.  Because java
@@ -149,11 +129,11 @@ var (
 			// https://github.com/docker/docker/issues/514
 			// https://github.com/docker/docker/issues/2393
 			//
-			Path:              "/dev/fuse",
-			Type:              'c',
-			MajorNumber:       10,
-			MinorNumber:       229,
-			CgroupPermissions: "rwm",
+			Path:        "/dev/fuse",
+			Type:        'c',
+			Major:       10,
+			Minor:       229,
+			Permissions: "rwm",
 		},
 	}, DefaultSimpleDevices...)
 )

@@ -34,11 +34,10 @@ func (c *linuxContainer) Config() *configs.Config {
 	return c.config
 }
 
-func (c *linuxContainer) RunState() (configs.RunState, error) {
+func (c *linuxContainer) Status() (configs.Status, error) {
 	if c.state.InitPid <= 0 {
 		return configs.Destroyed, nil
 	}
-
 	// return Running if the init process is alive
 	err := syscall.Kill(c.state.InitPid, 0)
 	if err != nil {
@@ -47,14 +46,10 @@ func (c *linuxContainer) RunState() (configs.RunState, error) {
 		}
 		return 0, err
 	}
-
 	if c.config.Cgroups != nil &&
-		c.config.Cgroups.Freezer == cgroups.Frozen {
+		c.config.Cgroups.Freezer == configs.Frozen {
 		return configs.Paused, nil
 	}
-
-	//FIXME get a cgroup state to check other states
-
 	return configs.Running, nil
 }
 
@@ -67,13 +62,12 @@ func (c *linuxContainer) Processes() ([]int, error) {
 	return pids, nil
 }
 
-func (c *linuxContainer) Stats() (*ContainerStats, error) {
+func (c *linuxContainer) Stats() (*Stats, error) {
 	glog.Info("fetch container stats")
 	var (
 		err   error
-		stats = &ContainerStats{}
+		stats = &Stats{}
 	)
-
 	if stats.CgroupStats, err = c.cgroupManager.GetStats(); err != nil {
 		return stats, newGenericError(err, SystemError)
 	}
@@ -84,7 +78,7 @@ func (c *linuxContainer) Stats() (*ContainerStats, error) {
 }
 
 func (c *linuxContainer) StartProcess(config *ProcessConfig) (int, error) {
-	state, err := c.RunState()
+	status, err := c.Status()
 	if err != nil {
 		return -1, err
 	}
@@ -103,15 +97,13 @@ func (c *linuxContainer) StartProcess(config *ProcessConfig) (int, error) {
 
 	cmd.SysProcAttr.Pdeathsig = syscall.SIGKILL
 
-	if state != configs.Destroyed {
+	if status != configs.Destroyed {
 		glog.Info("start new container process")
 		return namespaces.ExecIn(config.Args, config.Env, config.Console, cmd, c.config, c.state)
 	}
-
 	if err := c.startInitProcess(cmd, config); err != nil {
 		return -1, err
 	}
-
 	return c.state.InitPid, nil
 }
 
@@ -154,25 +146,22 @@ func (c *linuxContainer) startInitProcess(cmd *exec.Cmd, config *ProcessConfig) 
 }
 
 func (c *linuxContainer) Destroy() error {
-	state, err := c.RunState()
+	status, err := c.Status()
 	if err != nil {
 		return err
 	}
-
-	if state != configs.Destroyed {
+	if status != configs.Destroyed {
 		return newGenericError(nil, ContainerNotStopped)
 	}
-
-	os.RemoveAll(c.root)
-	return nil
+	return os.RemoveAll(c.root)
 }
 
 func (c *linuxContainer) Pause() error {
-	return c.cgroupManager.Freeze(cgroups.Frozen)
+	return c.cgroupManager.Freeze(configs.Frozen)
 }
 
 func (c *linuxContainer) Resume() error {
-	return c.cgroupManager.Freeze(cgroups.Thawed)
+	return c.cgroupManager.Freeze(configs.Thawed)
 }
 
 func (c *linuxContainer) Signal(pid, signal int) error {
@@ -193,4 +182,8 @@ func (c *linuxContainer) WaitProcess(pid int) (int, error) {
 	}
 
 	return int(status), err
+}
+
+func (c *linuxContainer) OOM() (<-chan struct{}, error) {
+	return NotifyOnOOM(c.state)
 }

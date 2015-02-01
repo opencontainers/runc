@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/docker/libcontainer/configs"
 )
 
 type NetworkStats struct {
@@ -19,7 +21,7 @@ type NetworkStats struct {
 }
 
 // Returns the network statistics for the network interfaces represented by the NetworkRuntimeInfo.
-func GetStats(networkState *NetworkState) (*NetworkStats, error) {
+func GetStats(networkState *configs.NetworkState) (*NetworkStats, error) {
 	// This can happen if the network runtime information is missing - possible if the container was created by an old version of libcontainer.
 	if networkState.VethHost == "" {
 		return &NetworkStats{}, nil

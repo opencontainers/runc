@@ -33,7 +33,6 @@ func New(root string, initArgs []string) (Factory, error) {
 			return nil, newGenericError(err, SystemError)
 		}
 	}
-
 	return &linuxFactory{
 		root:     root,
 		initArgs: initArgs,

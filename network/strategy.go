@@ -4,6 +4,8 @@ package network
 
 import (
 	"errors"
+
+	"github.com/docker/libcontainer/configs"
 )
 
 var (
@@ -18,8 +20,8 @@ var strategies = map[string]NetworkStrategy{
 // NetworkStrategy represents a specific network configuration for
 // a container's networking stack
 type NetworkStrategy interface {
-	Create(*Network, int, *NetworkState) error
-	Initialize(*Network, *NetworkState) error
+	Create(*configs.Network, int, *configs.NetworkState) error
+	Initialize(*configs.Network, *configs.NetworkState) error
 }
 
 // GetStrategy returns the specific network strategy for the

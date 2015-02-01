@@ -2,19 +2,13 @@ package main
 
 import (
 	"encoding/json"
-	"log"
 	"os"
 	"path/filepath"
 
 	"github.com/codegangsta/cli"
+	"github.com/docker/libcontainer"
 	"github.com/docker/libcontainer/configs"
 )
-
-// rFunc is a function registration for calling after an execin
-type rFunc struct {
-	Usage  string
-	Action func(*configs.Config, []string)
-}
 
 func loadConfig() (*configs.Config, error) {
 	f, err := os.Open(filepath.Join(dataPath, "container.json"))
@@ -22,37 +16,11 @@ func loadConfig() (*configs.Config, error) {
 		return nil, err
 	}
 	defer f.Close()
-
 	var container *configs.Config
 	if err := json.NewDecoder(f).Decode(&container); err != nil {
 		return nil, err
 	}
-
 	return container, nil
-}
-
-func openLog(name string) error {
-	f, err := os.OpenFile(name, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0755)
-	if err != nil {
-		return err
-	}
-
-	log.SetOutput(f)
-
-	return nil
-}
-
-func findUserArgs() []string {
-	i := 0
-	for _, a := range os.Args {
-		i++
-
-		if a == "--" {
-			break
-		}
-	}
-
-	return os.Args[i:]
 }
 
 // loadConfigFromFd loads a container's config from the sync pipe that is provided by
@@ -68,23 +36,6 @@ func loadConfigFromFd() (*configs.Config, error) {
 	return config, nil
 }
 
-func preload(context *cli.Context) error {
-	if logPath != "" {
-		if err := openLog(logPath); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func runFunc(f *rFunc) {
-	userArgs := findUserArgs()
-
-	config, err := loadConfigFromFd()
-	if err != nil {
-		log.Fatalf("unable to receive config from sync pipe: %s", err)
-	}
-
-	f.Action(config, userArgs)
+func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
+	return libcontainer.New(context.GlobalString("root"), []string{os.Args[0], "init", "--fd", "3", "--"})
 }

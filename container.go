@@ -4,8 +4,15 @@ NOTE: The API is in flux and mainly not implemented. Proceed with caution until 
 package libcontainer
 
 import (
+	"github.com/docker/libcontainer/cgroups"
 	"github.com/docker/libcontainer/configs"
+	"github.com/docker/libcontainer/network"
 )
+
+type Stats struct {
+	NetworkStats *network.NetworkStats `json:"network_stats,omitempty"`
+	CgroupStats  *cgroups.Stats        `json:"cgroup_stats,omitempty"`
+}
 
 // A libcontainer container object.
 //
@@ -16,12 +23,11 @@ type Container interface {
 	// Returns the ID of the container
 	ID() string
 
-	// Returns the current run state of the container.
+	// Returns the current statusof the container.
 	//
 	// errors:
-	// ContainerDestroyed - Container no longer exists,
 	// Systemerror - System error.
-	RunState() (configs.RunState, error)
+	Status() (configs.Status, error)
 
 	// Returns the current config of the container.
 	Config() *configs.Config
@@ -41,7 +47,7 @@ type Container interface {
 	// errors:
 	// ContainerDestroyed - Container no longer exists,
 	// Systemerror - System error.
-	Stats() (*ContainerStats, error)
+	Stats() (*Stats, error)
 
 	// Start a process inside the container. Returns the PID of the new process (in the caller process's namespace) and a channel that will return the exit status of the process whenever it dies.
 	//
@@ -101,4 +107,10 @@ type Container interface {
 	// ContainerDestroyed - Container no longer exists,
 	// Systemerror - System error.
 	WaitProcess(pid int) (exitStatus int, err error)
+
+	// OOM returns a read-only channel signaling when the container receives an OOM notification.
+	//
+	// errors:
+	// Systemerror - System error.
+	OOM() (<-chan struct{}, error)
 }

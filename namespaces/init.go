@@ -30,7 +30,7 @@ type processArgs struct {
 	Env          []string              `json:"environment,omitempty"`
 	ConsolePath  string                `json:"console_path,omitempty"`
 	Config       *configs.Config       `json:"config,omitempty"`
-	NetworkState *network.NetworkState `json:"network_state,omitempty"`
+	NetworkState *configs.NetworkState `json:"network_state,omitempty"`
 }
 
 // TODO(vishh): This is part of the libcontainer API and it does much more than just namespaces related work.
@@ -88,10 +88,13 @@ func initDefault(uncleanRootfs string, process *processArgs) (err error) {
 	container := process.Config
 	networkState := process.NetworkState
 
-	rootfs, err := utils.ResolveRootfs(uncleanRootfs)
-	if err != nil {
-		return err
-	}
+	// TODO: move to validation
+	/*
+		rootfs, err := utils.ResolveRootfs(uncleanRootfs)
+		if err != nil {
+			return err
+		}
+	*/
 
 	// clear the current processes env and replace it with the environment
 	// defined on the container
@@ -139,20 +142,14 @@ func initDefault(uncleanRootfs string, process *processArgs) (err error) {
 	label.Init()
 
 	// InitializeMountNamespace() can be executed only for a new mount namespace
-	if (cloneFlags & syscall.CLONE_NEWNS) == 0 {
-		if container.MountConfig != nil {
-			return fmt.Errorf("mount config is set without mount namespace")
+	if (cloneFlags & syscall.CLONE_NEWNS) != 0 {
+		if err := mount.InitializeMountNamespace(container); err != nil {
+			return err
 		}
-	} else if err := mount.InitializeMountNamespace(rootfs,
-		process.ConsolePath,
-		container.RestrictSys,
-		0, // Default Root Uid
-		0, // Default Root Gid
-		(*mount.MountConfig)(container.MountConfig)); err != nil {
-		return fmt.Errorf("setup mount namespace %s", err)
 	}
 
 	if container.Hostname != "" {
+		// TODO: (crosbymichael) move this to pre spawn validation
 		if (cloneFlags & syscall.CLONE_NEWUTS) == 0 {
 			return fmt.Errorf("unable to set the hostname without UTS namespace")
 		}
@@ -357,14 +354,14 @@ func SetupUser(container *configs.Config) error {
 // setupVethNetwork uses the Network config if it is not nil to initialize
 // the new veth interface inside the container for use by changing the name to eth0
 // setting the MTU and IP address along with the default gateway
-func setupNetwork(container *configs.Config, networkState *network.NetworkState) error {
+func setupNetwork(container *configs.Config, networkState *configs.NetworkState) error {
 	for _, config := range container.Networks {
 		strategy, err := network.GetStrategy(config.Type)
 		if err != nil {
 			return err
 		}
 
-		err1 := strategy.Initialize((*network.Network)(config), networkState)
+		err1 := strategy.Initialize(config, networkState)
 		if err1 != nil {
 			return err1
 		}

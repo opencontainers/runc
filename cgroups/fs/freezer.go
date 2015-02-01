@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/docker/libcontainer/cgroups"
+	"github.com/docker/libcontainer/configs"
 )
 
 type FreezerGroup struct {
@@ -12,7 +13,7 @@ type FreezerGroup struct {
 
 func (s *FreezerGroup) Set(d *data) error {
 	switch d.c.Freezer {
-	case cgroups.Frozen, cgroups.Thawed:
+	case configs.Frozen, configs.Thawed:
 		dir, err := d.path("freezer")
 		if err != nil {
 			return err

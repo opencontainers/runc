@@ -16,7 +16,6 @@ import (
 	"github.com/docker/libcontainer/label"
 	"github.com/docker/libcontainer/mount"
 	"github.com/docker/libcontainer/system"
-	"github.com/docker/libcontainer/utils"
 )
 
 type pid struct {
@@ -173,12 +172,14 @@ func FinalizeSetns(container *configs.Config) error {
 func SetupContainer(process *processArgs) error {
 	container := process.Config
 	networkState := process.NetworkState
-	consolePath := process.ConsolePath
 
-	rootfs, err := utils.ResolveRootfs(container.RootFs)
-	if err != nil {
-		return err
-	}
+	// TODO : move to validation
+	/*
+		rootfs, err := utils.ResolveRootfs(container.RootFs)
+		if err != nil {
+			return err
+		}
+	*/
 
 	// clear the current processes env and replace it with the environment
 	// defined on the container
@@ -203,30 +204,12 @@ func SetupContainer(process *processArgs) error {
 
 	label.Init()
 
-	hostRootUid, err := GetHostRootUid(container)
-	if err != nil {
-		return fmt.Errorf("failed to get hostRootUid %s", err)
-	}
-
-	hostRootGid, err := GetHostRootGid(container)
-	if err != nil {
-		return fmt.Errorf("failed to get hostRootGid %s", err)
-	}
-
 	// InitializeMountNamespace() can be executed only for a new mount namespace
-	if (cloneFlags & syscall.CLONE_NEWNS) == 0 {
-		if container.MountConfig != nil {
-			return fmt.Errorf("mount config is set without mount namespace")
+	if (cloneFlags & syscall.CLONE_NEWNS) != 0 {
+		if err := mount.InitializeMountNamespace(container); err != nil {
+			return fmt.Errorf("setup mount namespace %s", err)
 		}
-	} else if err := mount.InitializeMountNamespace(rootfs,
-		consolePath,
-		container.RestrictSys,
-		hostRootUid,
-		hostRootGid,
-		(*mount.MountConfig)(container.MountConfig)); err != nil {
-		return fmt.Errorf("setup mount namespace %s", err)
 	}
-
 	return nil
 }
 

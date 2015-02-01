@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/docker/libcontainer/cgroups"
+	"github.com/docker/libcontainer/configs"
 )
 
 var (
@@ -24,8 +25,17 @@ var (
 	CgroupProcesses = "cgroup.procs"
 )
 
+type subsystem interface {
+	// Returns the stats, as 'stats', corresponding to the cgroup under 'path'.
+	GetStats(path string, stats *cgroups.Stats) error
+	// Removes the cgroup represented by 'data'.
+	Remove(*data) error
+	// Creates and joins the cgroup represented by data.
+	Set(*data) error
+}
+
 type Manager struct {
-	Cgroups *cgroups.Cgroup
+	Cgroups *configs.Cgroup
 	Paths   map[string]string
 }
 
@@ -46,19 +56,10 @@ func init() {
 	}
 }
 
-type subsystem interface {
-	// Returns the stats, as 'stats', corresponding to the cgroup under 'path'.
-	GetStats(path string, stats *cgroups.Stats) error
-	// Removes the cgroup represented by 'data'.
-	Remove(*data) error
-	// Creates and joins the cgroup represented by data.
-	Set(*data) error
-}
-
 type data struct {
 	root   string
 	cgroup string
-	c      *cgroups.Cgroup
+	c      *configs.Cgroup
 	pid    int
 }
 
@@ -109,7 +110,7 @@ func (m *Manager) GetPaths() map[string]string {
 
 // Symmetrical public function to update device based cgroups.  Also available
 // in the systemd implementation.
-func ApplyDevices(c *cgroups.Cgroup, pid int) error {
+func ApplyDevices(c *configs.Cgroup, pid int) error {
 	d, err := getCgroupData(c, pid)
 	if err != nil {
 		return err
@@ -137,7 +138,7 @@ func (m *Manager) GetStats() (*cgroups.Stats, error) {
 
 // Freeze toggles the container's freezer cgroup depending on the state
 // provided
-func (m *Manager) Freeze(state cgroups.FreezerState) error {
+func (m *Manager) Freeze(state configs.FreezerState) error {
 	d, err := getCgroupData(m.Cgroups, 0)
 	if err != nil {
 		return err
@@ -170,7 +171,7 @@ func (m *Manager) GetPids() ([]int, error) {
 	return cgroups.ReadProcsFile(dir)
 }
 
-func getCgroupData(c *cgroups.Cgroup, pid int) (*data, error) {
+func getCgroupData(c *configs.Cgroup, pid int) (*data, error) {
 	if cgroupRoot == "" {
 		return nil, fmt.Errorf("failed to find the cgroup root")
 	}

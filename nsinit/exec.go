@@ -26,17 +26,15 @@ var execCommand = cli.Command{
 	Usage:  "execute a new command inside a container",
 	Action: execAction,
 	Flags: []cli.Flag{
-		cli.BoolFlag{Name: "list", Usage: "list all registered exec functions"},
-		cli.StringFlag{Name: "func", Value: "exec", Usage: "function name to exec inside a container"},
+		cli.BoolFlag{Name: "tty", Usage: "allocate a TTY to the container"},
 	},
 }
 
 func getContainer(context *cli.Context) (libcontainer.Container, error) {
-	factory, err := libcontainer.New(context.GlobalString("root"), []string{os.Args[0], "init", "--fd", "3", "--"})
+	factory, err := loadFactory(context)
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	id := fmt.Sprintf("%x", md5.Sum([]byte(dataPath)))
 	container, err := factory.Load(id)
 	if err != nil && !os.IsNotExist(err) {
@@ -72,7 +70,7 @@ func execAction(context *cli.Context) {
 		log.Fatal(err)
 	}
 
-	if container.Config().Tty {
+	if context.Bool("tty") {
 		stdin = nil
 		stdout = nil
 		stderr = nil

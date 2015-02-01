@@ -5,6 +5,7 @@ package network
 import (
 	"fmt"
 
+	"github.com/docker/libcontainer/configs"
 	"github.com/docker/libcontainer/netlink"
 	"github.com/docker/libcontainer/utils"
 )
@@ -17,7 +18,7 @@ type Veth struct {
 
 const defaultDevice = "eth0"
 
-func (v *Veth) Create(n *Network, nspid int, networkState *NetworkState) error {
+func (v *Veth) Create(n *configs.Network, nspid int, networkState *configs.NetworkState) error {
 	var (
 		bridge     = n.Bridge
 		prefix     = n.VethPrefix
@@ -51,7 +52,7 @@ func (v *Veth) Create(n *Network, nspid int, networkState *NetworkState) error {
 	return nil
 }
 
-func (v *Veth) Initialize(config *Network, networkState *NetworkState) error {
+func (v *Veth) Initialize(config *configs.Network, networkState *configs.NetworkState) error {
 	var vethChild = networkState.VethChild
 	if vethChild == "" {
 		return fmt.Errorf("vethChild is not specified")

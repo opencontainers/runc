@@ -4,8 +4,6 @@ import (
 	"log"
 
 	"github.com/codegangsta/cli"
-	"github.com/docker/libcontainer"
-	"github.com/docker/libcontainer/configs"
 )
 
 var oomCommand = cli.Command{
@@ -15,11 +13,15 @@ var oomCommand = cli.Command{
 }
 
 func oomAction(context *cli.Context) {
-	state, err := configs.GetState(dataPath)
+	factory, err := loadFactory(context)
 	if err != nil {
 		log.Fatal(err)
 	}
-	n, err := libcontainer.NotifyOnOOM(state)
+	container, err := factory.Load("nsinit")
+	if err != nil {
+		log.Fatal(err)
+	}
+	n, err := container.OOM()
 	if err != nil {
 		log.Fatal(err)
 	}

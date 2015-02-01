@@ -6,6 +6,6 @@ import (
 	"syscall"
 )
 
-func SetReadonly() error {
+func setReadonly() error {
 	return syscall.Mount("/", "/", "bind", syscall.MS_BIND|syscall.MS_REMOUNT|syscall.MS_RDONLY|syscall.MS_REC, "")
 }

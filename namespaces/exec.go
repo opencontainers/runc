@@ -20,27 +20,23 @@ const (
 	EXIT_SIGNAL_OFFSET = 128
 )
 
-func executeSetupCmd(args []string, ppid int, container *configs.Config, process *processArgs, networkState *network.NetworkState) error {
+func executeSetupCmd(args []string, ppid int, container *configs.Config, process *processArgs, networkState *configs.NetworkState) error {
 	command := exec.Command(args[0], args[1:]...)
-
 	parent, child, err := newInitPipe()
 	if err != nil {
 		return err
 	}
 	defer parent.Close()
 	command.ExtraFiles = []*os.File{child}
-
 	command.Dir = container.RootFs
 	command.Env = append(command.Env,
 		fmt.Sprintf("_LIBCONTAINER_INITPID=%d", ppid),
 		fmt.Sprintf("_LIBCONTAINER_USERNS=1"))
-
 	err = command.Start()
 	child.Close()
 	if err != nil {
 		return err
 	}
-
 	s, err := command.Process.Wait()
 	if err != nil {
 		return err
@@ -48,36 +44,29 @@ func executeSetupCmd(args []string, ppid int, container *configs.Config, process
 	if !s.Success() {
 		return &exec.ExitError{s}
 	}
-
 	decoder := json.NewDecoder(parent)
 	var pid *pid
-
 	if err := decoder.Decode(&pid); err != nil {
 		return err
 	}
-
 	p, err := os.FindProcess(pid.Pid)
 	if err != nil {
 		return err
 	}
-
 	terminate := func(terr error) error {
 		// TODO: log the errors for kill and wait
 		p.Kill()
 		p.Wait()
 		return terr
 	}
-
 	// send the state to the container's init process then shutdown writes for the parent
 	if err := json.NewEncoder(parent).Encode(process); err != nil {
 		return terminate(err)
 	}
-
 	// shutdown writes for the parent side of the pipe
 	if err := syscall.Shutdown(int(parent.Fd()), syscall.SHUT_WR); err != nil {
 		return terminate(err)
 	}
-
 	// wait for the child process to fully complete and receive an error message
 	// if one was encoutered
 	var ierr *initError
@@ -87,7 +76,6 @@ func executeSetupCmd(args []string, ppid int, container *configs.Config, process
 	if ierr != nil {
 		return ierr
 	}
-
 	s, err = p.Wait()
 	if err != nil {
 		return err
@@ -95,7 +83,6 @@ func executeSetupCmd(args []string, ppid int, container *configs.Config, process
 	if !s.Success() {
 		return &exec.ExitError{s}
 	}
-
 	return nil
 }
 
@@ -165,7 +152,7 @@ func Exec(args []string, env []string, console string, command *exec.Cmd, contai
 		}
 	}()
 
-	var networkState network.NetworkState
+	var networkState configs.NetworkState
 	if err := InitializeNetworking(container, command.Process.Pid, &networkState); err != nil {
 		return terminate(err)
 	}
@@ -218,7 +205,7 @@ func killAllPids(m cgroups.Manager) error {
 	var (
 		procs []*os.Process
 	)
-	m.Freeze(cgroups.Frozen)
+	m.Freeze(configs.Frozen)
 	pids, err := m.GetPids()
 	if err != nil {
 		return err
@@ -231,59 +218,11 @@ func killAllPids(m cgroups.Manager) error {
 			p.Kill()
 		}
 	}
-	m.Freeze(cgroups.Thawed)
+	m.Freeze(configs.Thawed)
 	for _, p := range procs {
 		p.Wait()
 	}
 	return err
-}
-
-// Utility function that gets a host ID for a container ID from user namespace map
-// if that ID is present in the map.
-func hostIDFromMapping(containerID int, uMap []configs.IDMap) (int, bool) {
-	for _, m := range uMap {
-		if (containerID >= m.ContainerID) && (containerID <= (m.ContainerID + m.Size - 1)) {
-			hostID := m.HostID + (containerID - m.ContainerID)
-			return hostID, true
-		}
-	}
-	return -1, false
-}
-
-// Gets the root uid for the process on host which could be non-zero
-// when user namespaces are enabled.
-func GetHostRootGid(container *configs.Config) (int, error) {
-	if container.Namespaces.Contains(configs.NEWUSER) {
-		if container.GidMappings == nil {
-			return -1, fmt.Errorf("User namespaces enabled, but no gid mappings found.")
-		}
-		hostRootGid, found := hostIDFromMapping(0, container.GidMappings)
-		if !found {
-			return -1, fmt.Errorf("User namespaces enabled, but no root user mapping found.")
-		}
-		return hostRootGid, nil
-	}
-
-	// Return default root uid 0
-	return 0, nil
-}
-
-// Gets the root uid for the process on host which could be non-zero
-// when user namespaces are enabled.
-func GetHostRootUid(container *configs.Config) (int, error) {
-	if container.Namespaces.Contains(configs.NEWUSER) {
-		if container.UidMappings == nil {
-			return -1, fmt.Errorf("User namespaces enabled, but no user mappings found.")
-		}
-		hostRootUid, found := hostIDFromMapping(0, container.UidMappings)
-		if !found {
-			return -1, fmt.Errorf("User namespaces enabled, but no root user mapping found.")
-		}
-		return hostRootUid, nil
-	}
-
-	// Return default root uid 0
-	return 0, nil
 }
 
 // Converts IDMap to SysProcIDMap array and adds it to SysProcAttr.
@@ -309,13 +248,13 @@ func AddUidGidMappings(sys *syscall.SysProcAttr, container *configs.Config) {
 
 // InitializeNetworking creates the container's network stack outside of the namespace and moves
 // interfaces into the container's net namespaces if necessary
-func InitializeNetworking(container *configs.Config, nspid int, networkState *network.NetworkState) error {
+func InitializeNetworking(container *configs.Config, nspid int, networkState *configs.NetworkState) error {
 	for _, config := range container.Networks {
 		strategy, err := network.GetStrategy(config.Type)
 		if err != nil {
 			return err
 		}
-		if err := strategy.Create((*network.Network)(config), nspid, networkState); err != nil {
+		if err := strategy.Create(config, nspid, networkState); err != nil {
 			return err
 		}
 	}

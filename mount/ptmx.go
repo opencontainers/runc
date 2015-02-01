@@ -7,24 +7,29 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/docker/libcontainer/configs"
 	"github.com/docker/libcontainer/console"
 )
 
-func SetupPtmx(rootfs, consolePath, mountLabel string, hostRootUid, hostRootGid int) error {
-	ptmx := filepath.Join(rootfs, "dev/ptmx")
+func setupPtmx(config *configs.Config) error {
+	ptmx := filepath.Join(config.RootFs, "dev/ptmx")
 	if err := os.Remove(ptmx); err != nil && !os.IsNotExist(err) {
 		return err
 	}
-
 	if err := os.Symlink("pts/ptmx", ptmx); err != nil {
 		return fmt.Errorf("symlink dev ptmx %s", err)
 	}
-
-	if consolePath != "" {
-		if err := console.Setup(rootfs, consolePath, mountLabel, hostRootUid, hostRootGid); err != nil {
+	if config.Console != "" {
+		uid, err := config.HostUID()
+		if err != nil {
 			return err
 		}
+		gid, err := config.HostGID()
+		if err != nil {
+			return err
+		}
+		// TODO: (crosbymichael) get uid/gid
+		return console.Setup(config.RootFs, config.Console, config.MountLabel, uid, gid)
 	}
-
 	return nil
 }

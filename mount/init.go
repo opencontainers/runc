@@ -8,11 +8,10 @@ import (
 	"path/filepath"
 	"syscall"
 
+	"github.com/docker/libcontainer/configs"
 	"github.com/docker/libcontainer/label"
-	"github.com/docker/libcontainer/mount/nodes"
 )
 
-// default mount point flags
 const defaultMountFlags = syscall.MS_NOEXEC | syscall.MS_NOSUID | syscall.MS_NODEV
 
 type mount struct {
@@ -25,112 +24,65 @@ type mount struct {
 
 // InitializeMountNamespace sets up the devices, mount points, and filesystems for use inside a
 // new mount namespace.
-func InitializeMountNamespace(rootfs, console string, sysReadonly bool, hostRootUid, hostRootGid int, mountConfig *MountConfig) error {
-	var (
-		err  error
-		flag = syscall.MS_PRIVATE
-	)
-
-	if mountConfig.NoPivotRoot {
-		flag = syscall.MS_SLAVE
+func InitializeMountNamespace(config *configs.Config) (err error) {
+	if err := prepareRoot(config); err != nil {
+		return err
 	}
-
-	if err := syscall.Mount("", "/", "", uintptr(flag|syscall.MS_REC), ""); err != nil {
-		return fmt.Errorf("mounting / with flags %X %s", (flag | syscall.MS_REC), err)
+	if err := mountSystem(config); err != nil {
+		return err
 	}
-
-	if err := syscall.Mount(rootfs, rootfs, "bind", syscall.MS_BIND|syscall.MS_REC, ""); err != nil {
-		return fmt.Errorf("mouting %s as bind %s", rootfs, err)
-	}
-
-	if err := mountSystem(rootfs, sysReadonly, mountConfig); err != nil {
-		return fmt.Errorf("mount system %s", err)
-	}
-
 	// apply any user specified mounts within the new mount namespace
-	for _, m := range mountConfig.Mounts {
-		if err := m.Mount(rootfs, mountConfig.MountLabel); err != nil {
+	for _, m := range config.Mounts {
+		if err := m.Mount(config.RootFs, config.MountLabel); err != nil {
 			return err
 		}
 	}
-
-	if err := nodes.CreateDeviceNodes(rootfs, mountConfig.DeviceNodes); err != nil {
-		return fmt.Errorf("create device nodes %s", err)
-	}
-
-	if err := SetupPtmx(rootfs, console, mountConfig.MountLabel, hostRootUid, hostRootGid); err != nil {
+	if err := createDeviceNodes(config); err != nil {
 		return err
 	}
-
+	if err := setupPtmx(config); err != nil {
+		return err
+	}
 	// stdin, stdout and stderr could be pointing to /dev/null from parent namespace.
 	// Re-open them inside this namespace.
 	// FIXME: Need to fix this for user namespaces.
-	if hostRootUid == 0 {
-		if err := reOpenDevNull(rootfs); err != nil {
-			return fmt.Errorf("Failed to reopen /dev/null %s", err)
+	if 0 == 0 {
+		if err := reOpenDevNull(config.RootFs); err != nil {
+			return err
 		}
 	}
-
-	if err := setupDevSymlinks(rootfs); err != nil {
-		return fmt.Errorf("dev symlinks %s", err)
+	if err := setupDevSymlinks(config.RootFs); err != nil {
+		return err
 	}
-
-	if err := syscall.Chdir(rootfs); err != nil {
-		return fmt.Errorf("chdir into %s %s", rootfs, err)
+	if err := syscall.Chdir(config.RootFs); err != nil {
+		return err
 	}
-
-	if mountConfig.NoPivotRoot {
-		err = MsMoveRoot(rootfs)
+	if config.NoPivotRoot {
+		err = msMoveRoot(config.RootFs)
 	} else {
-		err = PivotRoot(rootfs, mountConfig.PivotDir)
+		err = pivotRoot(config.RootFs, config.PivotDir)
 	}
-
 	if err != nil {
 		return err
 	}
-
-	if mountConfig.ReadonlyFs {
-		if err := SetReadonly(); err != nil {
+	if config.ReadonlyFs {
+		if err := setReadonly(); err != nil {
 			return fmt.Errorf("set readonly %s", err)
 		}
 	}
-
 	syscall.Umask(0022)
-
 	return nil
 }
 
 // mountSystem sets up linux specific system mounts like mqueue, sys, proc, shm, and devpts
 // inside the mount namespace
-func mountSystem(rootfs string, sysReadonly bool, mountConfig *MountConfig) error {
-	for _, m := range newSystemMounts(rootfs, mountConfig.MountLabel, sysReadonly) {
+func mountSystem(config *configs.Config) error {
+	for _, m := range newSystemMounts(config.RootFs, config.MountLabel, config.RestrictSys) {
 		if err := os.MkdirAll(m.path, 0755); err != nil && !os.IsExist(err) {
 			return fmt.Errorf("mkdirall %s %s", m.path, err)
 		}
 		if err := syscall.Mount(m.source, m.path, m.device, uintptr(m.flags), m.data); err != nil {
 			return fmt.Errorf("mounting %s into %s %s", m.source, m.path, err)
-		}
-	}
-	return nil
-}
-
-func createIfNotExists(path string, isDir bool) error {
-	if _, err := os.Stat(path); err != nil {
-		if os.IsNotExist(err) {
-			if isDir {
-				if err := os.MkdirAll(path, 0755); err != nil {
-					return err
-				}
-			} else {
-				if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-					return err
-				}
-				f, err := os.OpenFile(path, os.O_CREATE, 0755)
-				if err != nil {
-					return err
-				}
-				f.Close()
-			}
 		}
 	}
 	return nil
@@ -209,4 +161,55 @@ func reOpenDevNull(rootfs string) error {
 		}
 	}
 	return nil
+}
+
+// Create the device nodes in the container.
+func createDeviceNodes(config *configs.Config) error {
+	oldMask := syscall.Umask(0000)
+	for _, node := range config.DeviceNodes {
+		if err := createDeviceNode(config.RootFs, node); err != nil {
+			syscall.Umask(oldMask)
+			return err
+		}
+	}
+	syscall.Umask(oldMask)
+	return nil
+}
+
+// Creates the device node in the rootfs of the container.
+func createDeviceNode(rootfs string, node *configs.Device) error {
+	var (
+		dest   = filepath.Join(rootfs, node.Path)
+		parent = filepath.Dir(dest)
+	)
+	if err := os.MkdirAll(parent, 0755); err != nil {
+		return err
+	}
+	fileMode := node.FileMode
+	switch node.Type {
+	case 'c':
+		fileMode |= syscall.S_IFCHR
+	case 'b':
+		fileMode |= syscall.S_IFBLK
+	default:
+		return fmt.Errorf("%c is not a valid device type for device %s", node.Type, node.Path)
+	}
+	if err := syscall.Mknod(dest, uint32(fileMode), node.Mkdev()); err != nil && !os.IsExist(err) {
+		return fmt.Errorf("mknod %s %s", node.Path, err)
+	}
+	if err := syscall.Chown(dest, int(node.Uid), int(node.Gid)); err != nil {
+		return fmt.Errorf("chown %s to %d:%d", node.Path, node.Uid, node.Gid)
+	}
+	return nil
+}
+
+func prepareRoot(config *configs.Config) error {
+	flag := syscall.MS_PRIVATE | syscall.MS_REC
+	if config.NoPivotRoot {
+		flag = syscall.MS_SLAVE | syscall.MS_REC
+	}
+	if err := syscall.Mount("", "/", "", uintptr(flag), ""); err != nil {
+		return err
+	}
+	return syscall.Mount(config.RootFs, config.RootFs, "bind", syscall.MS_BIND|syscall.MS_REC, "")
 }
