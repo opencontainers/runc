@@ -295,16 +295,6 @@ func (c *linuxContainer) Signal(signal os.Signal) error {
 	panic("not implemented")
 }
 
-func (c *linuxContainer) Wait() (syscall.WaitStatus, error) {
-	var status syscall.WaitStatus
-	// TODO : close exec.Cmd pipes, fix in master
-	_, err := syscall.Wait4(c.state.InitPid, &status, 0, nil)
-	if err != nil {
-		return 0, newGenericError(err, SystemError)
-	}
-	return status, err
-}
-
 func (c *linuxContainer) OOM() (<-chan struct{}, error) {
 	return NotifyOnOOM(c.state)
 }

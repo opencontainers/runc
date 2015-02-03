@@ -94,17 +94,22 @@ func execAction(context *cli.Context) {
 		Stderr: os.Stderr,
 	}
 	tty.attach(process)
-	if _, err := container.Start(process); err != nil {
+	pid, err := container.Start(process)
+	if err != nil {
 		fatal(err)
 	}
-	status, err := container.Wait()
+	proc, err := os.FindProcess(pid)
+	if err != nil {
+		fatal(err)
+	}
+	status, err := proc.Wait()
 	if err != nil {
 		fatal(err)
 	}
 	if err := container.Destroy(); err != nil {
 		fatal(err)
 	}
-	exit(status)
+	exit(status.Sys().(syscall.WaitStatus))
 }
 
 func exit(status syscall.WaitStatus) {

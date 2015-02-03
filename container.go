@@ -5,7 +5,6 @@ package libcontainer
 
 import (
 	"os"
-	"syscall"
 
 	"github.com/docker/libcontainer/cgroups"
 	"github.com/docker/libcontainer/configs"
@@ -26,7 +25,7 @@ type Container interface {
 	// Returns the ID of the container
 	ID() string
 
-	// Returns the current statusof the container.
+	// Returns the current status of the container.
 	//
 	// errors:
 	// Systemerror - System error.
@@ -96,13 +95,6 @@ type Container interface {
 	// ContainerPaused - Container is paused,
 	// Systemerror - System error.
 	Signal(signal os.Signal) error
-
-	// Wait waits for the init process of the conatiner to die and returns it's exit status.
-	//
-	// errors:
-	// ContainerDestroyed - Container no longer exists,
-	// Systemerror - System error.
-	Wait() (exitStatus syscall.WaitStatus, err error)
 
 	// OOM returns a read-only channel signaling when the container receives an OOM notification.
 	//
