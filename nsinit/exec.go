@@ -1,11 +1,9 @@
 package main
 
 import (
-	"crypto/md5"
-	"fmt"
 	"io"
-	"log"
 	"os"
+	"os/signal"
 	"syscall"
 
 	"github.com/codegangsta/cli"
@@ -15,145 +13,148 @@ import (
 	consolepkg "github.com/docker/libcontainer/console"
 )
 
-var (
-	dataPath  = os.Getenv("data_path")
-	console   = os.Getenv("console")
-	rawPipeFd = os.Getenv("pipe")
-)
+type tty struct {
+	master  *os.File
+	console string
+	state   *term.State
+}
+
+func (t *tty) Close() error {
+	if t.master != nil {
+		t.master.Close()
+	}
+	if t.state != nil {
+		term.RestoreTerminal(os.Stdin.Fd(), t.state)
+	}
+	return nil
+}
+
+func (t *tty) set(config *configs.Config) {
+	config.Console = t.console
+}
+
+func (t *tty) attach(process *libcontainer.Process) {
+	if t.master != nil {
+		process.Stderr = nil
+		process.Stdout = nil
+		process.Stdin = nil
+	}
+}
+
+func (t *tty) resize() error {
+	if t.master == nil {
+		return nil
+	}
+	ws, err := term.GetWinsize(os.Stdin.Fd())
+	if err != nil {
+		return err
+	}
+	return term.SetWinsize(t.master.Fd(), ws)
+}
 
 var execCommand = cli.Command{
 	Name:   "exec",
 	Usage:  "execute a new command inside a container",
 	Action: execAction,
 	Flags: []cli.Flag{
-		cli.BoolFlag{Name: "list", Usage: "list all registered exec functions"},
-		cli.StringFlag{Name: "func", Value: "exec", Usage: "function name to exec inside a container"},
+		cli.BoolFlag{Name: "tty", Usage: "allocate a TTY to the container"},
+		cli.StringFlag{Name: "id", Value: "nsinit", Usage: "specify the ID for a container"},
+		cli.StringFlag{Name: "config", Value: "container.json", Usage: "path to the configuration file"},
 	},
 }
 
-func getContainer(context *cli.Context) (libcontainer.Container, error) {
-	factory, err := libcontainer.New(context.GlobalString("root"), []string{os.Args[0], "init", "--fd", "3", "--"})
+func execAction(context *cli.Context) {
+	factory, err := loadFactory(context)
 	if err != nil {
-		log.Fatal(err)
+		fatal(err)
 	}
-
-	id := fmt.Sprintf("%x", md5.Sum([]byte(dataPath)))
-	container, err := factory.Load(id)
-	if err != nil && !os.IsNotExist(err) {
-		var config *configs.Config
-
-		config, err = loadConfig()
-		if err != nil {
-			log.Fatal(err)
+	tty, err := newTty(context)
+	if err != nil {
+		fatal(err)
+	}
+	container, err := factory.Load(context.String("id"))
+	if err != nil {
+		if lerr, ok := err.(libcontainer.Error); !ok || lerr.Code() != libcontainer.ContainerNotExists {
+			fatal(err)
 		}
-		container, err = factory.Create(id, config)
+		config, err := loadConfig(context)
+		if err != nil {
+			fatal(err)
+		}
+		tty.set(config)
+		if container, err = factory.Create(context.String("id"), config); err != nil {
+			fatal(err)
+		}
 	}
-
-	return container, err
+	go handleSignals(container, tty)
+	process := &libcontainer.Process{
+		Args:   context.Args(),
+		Stdin:  os.Stdin,
+		Stdout: os.Stdout,
+		Stderr: os.Stderr,
+	}
+	tty.attach(process)
+	pid, err := container.Start(process)
+	if err != nil {
+		fatal(err)
+	}
+	proc, err := os.FindProcess(pid)
+	if err != nil {
+		fatal(err)
+	}
+	status, err := proc.Wait()
+	if err != nil {
+		fatal(err)
+	}
+	if err := container.Destroy(); err != nil {
+		fatal(err)
+	}
+	exit(status.Sys().(syscall.WaitStatus))
 }
 
-func execAction(context *cli.Context) {
-	var (
-		master  *os.File
-		console string
-		err     error
-
-		sigc = make(chan os.Signal, 10)
-
-		stdin  = os.Stdin
-		stdout = os.Stdout
-		stderr = os.Stderr
-
-		exitCode int
-	)
-
-	container, err := getContainer(context)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if container.Config().Tty {
-		stdin = nil
-		stdout = nil
-		stderr = nil
-
-		master, console, err = consolepkg.CreateMasterAndConsole()
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		go io.Copy(master, os.Stdin)
-		go io.Copy(os.Stdout, master)
-
-		state, err := term.SetRawTerminal(os.Stdin.Fd())
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		defer term.RestoreTerminal(os.Stdin.Fd(), state)
-	}
-
-	process := &libcontainer.ProcessConfig{
-		Args:    context.Args(),
-		Env:     context.StringSlice("env"),
-		Stdin:   stdin,
-		Stdout:  stdout,
-		Stderr:  stderr,
-		Console: console,
-	}
-
-	pid, err := container.StartProcess(process)
-	if err != nil {
-		log.Fatalf("failed to exec: %s", err)
-	}
-
-	p, err := os.FindProcess(pid)
-	if err != nil {
-		log.Fatalf("Unable to find the %d process: %s", pid, err)
-	}
-
-	go func() {
-		resizeTty(master)
-
-		for sig := range sigc {
-			switch sig {
-			case syscall.SIGWINCH:
-				resizeTty(master)
-			default:
-				p.Signal(sig)
-			}
-		}
-	}()
-
-	ps, err := p.Wait()
-	if err != nil {
-		log.Fatalf("Unable to wait the %d process: %s", pid, err)
-	}
-	container.Destroy()
-
-	status := ps.Sys().(syscall.WaitStatus)
+func exit(status syscall.WaitStatus) {
+	var exitCode int
 	if status.Exited() {
 		exitCode = status.ExitStatus()
 	} else if status.Signaled() {
 		exitCode = -int(status.Signal())
 	} else {
-		log.Fatalf("Unexpected status")
+		fatalf("Unexpected status")
 	}
-
 	os.Exit(exitCode)
 }
 
-func resizeTty(master *os.File) {
-	if master == nil {
-		return
+func handleSignals(container libcontainer.Container, tty *tty) {
+	sigc := make(chan os.Signal, 10)
+	signal.Notify(sigc)
+	tty.resize()
+	for sig := range sigc {
+		switch sig {
+		case syscall.SIGWINCH:
+			tty.resize()
+		default:
+			container.Signal(sig)
+		}
 	}
+}
 
-	ws, err := term.GetWinsize(os.Stdin.Fd())
-	if err != nil {
-		return
+func newTty(context *cli.Context) (*tty, error) {
+	if context.Bool("tty") {
+		master, console, err := consolepkg.CreateMasterAndConsole()
+		if err != nil {
+			return nil, err
+		}
+		go io.Copy(master, os.Stdin)
+		go io.Copy(os.Stdout, master)
+		state, err := term.SetRawTerminal(os.Stdin.Fd())
+		if err != nil {
+			return nil, err
+		}
+		return &tty{
+			master:  master,
+			console: console,
+			state:   state,
+		}, nil
 	}
-
-	if err := term.SetWinsize(master.Fd(), ws); err != nil {
-		return
-	}
+	return &tty{}, nil
 }

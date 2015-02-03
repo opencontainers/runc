@@ -16,99 +16,99 @@
     "cgroups": {
         "allowed_devices": [
             {
-                "cgroup_permissions": "m",
-                "major_number": -1,
-                "minor_number": -1,
+                "permissions": "m",
+                "major": -1,
+                "minor": -1,
                 "type": 99
             },
             {
-                "cgroup_permissions": "m",
-                "major_number": -1,
-                "minor_number": -1,
+                "permissions": "m",
+                "major": -1,
+                "minor": -1,
                 "type": 98
             },
             {
-                "cgroup_permissions": "rwm",
-                "major_number": 5,
-                "minor_number": 1,
+                "permissions": "rwm",
+                "major": 5,
+                "minor": 1,
                 "path": "/dev/console",
                 "type": 99
             },
             {
-                "cgroup_permissions": "rwm",
-                "major_number": 4,
+                "permissions": "rwm",
+                "major": 4,
                 "path": "/dev/tty0",
                 "type": 99
             },
             {
-                "cgroup_permissions": "rwm",
-                "major_number": 4,
-                "minor_number": 1,
+                "permissions": "rwm",
+                "major": 4,
+                "minor": 1,
                 "path": "/dev/tty1",
                 "type": 99
             },
             {
-                "cgroup_permissions": "rwm",
-                "major_number": 136,
-                "minor_number": -1,
+                "permissions": "rwm",
+                "major": 136,
+                "minor": -1,
                 "type": 99
             },
             {
-                "cgroup_permissions": "rwm",
-                "major_number": 5,
-                "minor_number": 2,
+                "permissions": "rwm",
+                "major": 5,
+                "minor": 2,
                 "type": 99
             },
             {
-                "cgroup_permissions": "rwm",
-                "major_number": 10,
-                "minor_number": 200,
+                "permissions": "rwm",
+                "major": 10,
+                "minor": 200,
                 "type": 99
             },
             {
-                "cgroup_permissions": "rwm",
+                "permissions": "rwm",
                 "file_mode": 438,
-                "major_number": 1,
-                "minor_number": 3,
+                "major": 1,
+                "minor": 3,
                 "path": "/dev/null",
                 "type": 99
             },
             {
-                "cgroup_permissions": "rwm",
+                "permissions": "rwm",
                 "file_mode": 438,
-                "major_number": 1,
-                "minor_number": 5,
+                "major": 1,
+                "minor": 5,
                 "path": "/dev/zero",
                 "type": 99
             },
             {
-                "cgroup_permissions": "rwm",
+                "permissions": "rwm",
                 "file_mode": 438,
-                "major_number": 1,
-                "minor_number": 7,
+                "major": 1,
+                "minor": 7,
                 "path": "/dev/full",
                 "type": 99
             },
             {
-                "cgroup_permissions": "rwm",
+                "permissions": "rwm",
                 "file_mode": 438,
-                "major_number": 5,
+                "major": 5,
                 "path": "/dev/tty",
                 "type": 99
             },
             {
-                "cgroup_permissions": "rwm",
+                "permissions": "rwm",
                 "file_mode": 438,
-                "major_number": 1,
-                "minor_number": 9,
+                "major": 1,
+                "minor": 9,
                 "path": "/dev/urandom",
                 "type": 99
             },
             {
-                "cgroup_permissions": "rwm",
+                "permissions": "rwm",
                 "file_mode": 438,
-                "major_number": 1,
-                "minor_number": 8,
+                "major": 1,
+                "minor": 8,
                 "path": "/dev/random",
                 "type": 99
             }
@@ -118,57 +118,55 @@
     },
     "restrict_sys": true,
     "apparmor_profile": "docker-default",
-    "mount_config": {
         "device_nodes": [
             {
-                "cgroup_permissions": "rwm",
+                "permissions": "rwm",
                 "file_mode": 438,
-                "major_number": 1,
-                "minor_number": 3,
+                "major": 1,
+                "minor": 3,
                 "path": "/dev/null",
                 "type": 99
             },
             {
-                "cgroup_permissions": "rwm",
+                "permissions": "rwm",
                 "file_mode": 438,
-                "major_number": 1,
-                "minor_number": 5,
+                "major": 1,
+                "minor": 5,
                 "path": "/dev/zero",
                 "type": 99
             },
             {
-                "cgroup_permissions": "rwm",
+                "permissions": "rwm",
                 "file_mode": 438,
-                "major_number": 1,
-                "minor_number": 7,
+                "major": 1,
+                "minor": 7,
                 "path": "/dev/full",
                 "type": 99
             },
             {
-                "cgroup_permissions": "rwm",
+                "permissions": "rwm",
                 "file_mode": 438,
-                "major_number": 5,
+                "major": 5,
                 "path": "/dev/tty",
                 "type": 99
             },
             {
-                "cgroup_permissions": "rwm",
+                "permissions": "rwm",
                 "file_mode": 438,
-                "major_number": 1,
-                "minor_number": 9,
+                "major": 1,
+                "minor": 9,
                 "path": "/dev/urandom",
                 "type": 99
             },
             {
-                "cgroup_permissions": "rwm",
+                "permissions": "rwm",
                 "file_mode": 438,
-                "major_number": 1,
-                "minor_number": 8,
+                "major": 1,
+                "minor": 8,
                 "path": "/dev/random",
                 "type": 99
             }
-        ]
-    },
+        ],
     "environment": [
         "HOME=/",
         "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",

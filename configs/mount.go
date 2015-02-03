@@ -1,4 +1,4 @@
-package mount
+package configs
 
 import (
 	"fmt"
@@ -9,6 +9,8 @@ import (
 	"github.com/docker/docker/pkg/symlink"
 	"github.com/docker/libcontainer/label"
 )
+
+const DefaultMountFlags = syscall.MS_NOEXEC | syscall.MS_NOSUID | syscall.MS_NODEV
 
 type Mount struct {
 	Type        string `json:"type,omitempty"`
@@ -101,9 +103,31 @@ func (m *Mount) tmpfsMount(rootfs, mountLabel string) error {
 		return fmt.Errorf("creating new tmpfs mount target %s", err)
 	}
 
-	if err := syscall.Mount("tmpfs", dest, "tmpfs", uintptr(defaultMountFlags), l); err != nil {
+	if err := syscall.Mount("tmpfs", dest, "tmpfs", uintptr(DefaultMountFlags), l); err != nil {
 		return fmt.Errorf("%s mounting %s in tmpfs", err, dest)
 	}
 
+	return nil
+}
+
+func createIfNotExists(path string, isDir bool) error {
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			if isDir {
+				if err := os.MkdirAll(path, 0755); err != nil {
+					return err
+				}
+			} else {
+				if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+					return err
+				}
+				f, err := os.OpenFile(path, os.O_CREATE, 0755)
+				if err != nil {
+					return err
+				}
+				f.Close()
+			}
+		}
+	}
 	return nil
 }

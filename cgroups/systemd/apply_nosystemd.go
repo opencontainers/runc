@@ -6,10 +6,11 @@ import (
 	"fmt"
 
 	"github.com/docker/libcontainer/cgroups"
+	"github.com/docker/libcontainer/configs"
 )
 
 type Manager struct {
-	Cgroups *cgroups.Cgroup
+	Cgroups *configs.Cgroup
 	Paths   map[string]string
 }
 
@@ -37,14 +38,14 @@ func (m *Manager) GetStats() (*cgroups.Stats, error) {
 	return nil, fmt.Errorf("Systemd not supported")
 }
 
-func (m *Manager) Freeze(state cgroups.FreezerState) error {
+func (m *Manager) Freeze(state configs.FreezerState) error {
 	return fmt.Errorf("Systemd not supported")
 }
 
-func ApplyDevices(c *cgroups.Cgroup, pid int) error {
+func ApplyDevices(c *configs.Cgroup, pid int) error {
 	return fmt.Errorf("Systemd not supported")
 }
 
-func Freeze(c *cgroups.Cgroup, state cgroups.FreezerState) error {
+func Freeze(c *configs.Cgroup, state configs.FreezerState) error {
 	return fmt.Errorf("Systemd not supported")
 }

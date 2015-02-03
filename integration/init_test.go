@@ -6,7 +6,7 @@ import (
 	"runtime"
 
 	"github.com/docker/libcontainer"
-	_ "github.com/docker/libcontainer/namespaces/nsenter"
+	_ "github.com/docker/libcontainer/nsenter"
 )
 
 // init runs the libcontainer initialization code because of the busybox style needs

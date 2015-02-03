@@ -4,8 +4,17 @@ NOTE: The API is in flux and mainly not implemented. Proceed with caution until 
 package libcontainer
 
 import (
+	"os"
+
+	"github.com/docker/libcontainer/cgroups"
 	"github.com/docker/libcontainer/configs"
+	"github.com/docker/libcontainer/network"
 )
+
+type Stats struct {
+	NetworkStats *network.NetworkStats `json:"network_stats,omitempty"`
+	CgroupStats  *cgroups.Stats        `json:"cgroup_stats,omitempty"`
+}
 
 // A libcontainer container object.
 //
@@ -16,15 +25,14 @@ type Container interface {
 	// Returns the ID of the container
 	ID() string
 
-	// Returns the current run state of the container.
+	// Returns the current status of the container.
 	//
 	// errors:
-	// ContainerDestroyed - Container no longer exists,
 	// Systemerror - System error.
-	RunState() (configs.RunState, error)
+	Status() (configs.Status, error)
 
 	// Returns the current config of the container.
-	Config() *configs.Config
+	Config() configs.Config
 
 	// Returns the PIDs inside this container. The PIDs are in the namespace of the calling process.
 	//
@@ -41,7 +49,7 @@ type Container interface {
 	// errors:
 	// ContainerDestroyed - Container no longer exists,
 	// Systemerror - System error.
-	Stats() (*ContainerStats, error)
+	Stats() (*Stats, error)
 
 	// Start a process inside the container. Returns the PID of the new process (in the caller process's namespace) and a channel that will return the exit status of the process whenever it dies.
 	//
@@ -50,7 +58,7 @@ type Container interface {
 	// ConfigInvalid - config is invalid,
 	// ContainerPaused - Container is paused,
 	// Systemerror - System error.
-	StartProcess(config *ProcessConfig) (pid int, err error)
+	Start(process *Process) (pid int, err error)
 
 	// Destroys the container after killing all running processes.
 	//
@@ -80,25 +88,17 @@ type Container interface {
 	// Systemerror - System error.
 	Resume() error
 
-	// Signal sends the specified signal to a process owned by the container.
+	// Signal sends the specified signal to the init process of the container.
 	//
 	// errors:
 	// ContainerDestroyed - Container no longer exists,
 	// ContainerPaused - Container is paused,
 	// Systemerror - System error.
-	Signal(pid, signal int) error
+	Signal(signal os.Signal) error
 
-	// Wait waits for the init process of the conatiner to die and returns it's exit status.
+	// OOM returns a read-only channel signaling when the container receives an OOM notification.
 	//
 	// errors:
-	// ContainerDestroyed - Container no longer exists,
 	// Systemerror - System error.
-	Wait() (exitStatus int, err error)
-
-	// WaitProcess waits on a process owned by the container.
-	//
-	// errors:
-	// ContainerDestroyed - Container no longer exists,
-	// Systemerror - System error.
-	WaitProcess(pid int) (exitStatus int, err error)
+	OOM() (<-chan struct{}, error)
 }

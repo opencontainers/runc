@@ -4,26 +4,25 @@ import (
 	"log"
 
 	"github.com/codegangsta/cli"
-	"github.com/docker/libcontainer"
-	"github.com/docker/libcontainer/configs"
 )
 
 var oomCommand = cli.Command{
-	Name:   "oom",
-	Usage:  "display oom notifications for a container",
-	Action: oomAction,
-}
-
-func oomAction(context *cli.Context) {
-	state, err := configs.GetState(dataPath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	n, err := libcontainer.NotifyOnOOM(state)
-	if err != nil {
-		log.Fatal(err)
-	}
-	for range n {
-		log.Printf("OOM notification received")
-	}
+	Name:  "oom",
+	Usage: "display oom notifications for a container",
+	Flags: []cli.Flag{
+		cli.StringFlag{Name: "id", Value: "nsinit", Usage: "specify the ID for a container"},
+	},
+	Action: func(context *cli.Context) {
+		container, err := getContainer(context)
+		if err != nil {
+			log.Fatal(err)
+		}
+		n, err := container.OOM()
+		if err != nil {
+			log.Fatal(err)
+		}
+		for range n {
+			log.Printf("OOM notification received")
+		}
+	},
 }

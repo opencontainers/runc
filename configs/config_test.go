@@ -5,8 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-
-	"github.com/docker/libcontainer/devices"
 )
 
 // Checks whether the expected capability is specified in the capabilities.
@@ -19,13 +17,13 @@ func contains(expected string, values []string) bool {
 	return false
 }
 
-func containsDevice(expected *devices.Device, values []*devices.Device) bool {
+func containsDevice(expected *Device, values []*Device) bool {
 	for _, d := range values {
 		if d.Path == expected.Path &&
-			d.CgroupPermissions == expected.CgroupPermissions &&
+			d.Permissions == expected.Permissions &&
 			d.FileMode == expected.FileMode &&
-			d.MajorNumber == expected.MajorNumber &&
-			d.MinorNumber == expected.MinorNumber &&
+			d.Major == expected.Major &&
+			d.Minor == expected.Minor &&
 			d.Type == expected.Type {
 			return true
 		}
@@ -56,11 +54,6 @@ func TestConfigJsonFormat(t *testing.T) {
 
 	if container.Hostname != "koye" {
 		t.Log("hostname is not set")
-		t.Fail()
-	}
-
-	if !container.Tty {
-		t.Log("tty should be set to true")
 		t.Fail()
 	}
 
@@ -120,8 +113,8 @@ func TestConfigJsonFormat(t *testing.T) {
 		}
 	}
 
-	for _, d := range devices.DefaultSimpleDevices {
-		if !containsDevice(d, container.MountConfig.DeviceNodes) {
+	for _, d := range DefaultSimpleDevices {
+		if !containsDevice(d, container.DeviceNodes) {
 			t.Logf("expected device configuration for %s", d.Path)
 			t.Fail()
 		}
@@ -154,8 +147,8 @@ func TestSelinuxLabels(t *testing.T) {
 	if container.ProcessLabel != label {
 		t.Fatalf("expected process label %q but received %q", label, container.ProcessLabel)
 	}
-	if container.MountConfig.MountLabel != label {
-		t.Fatalf("expected mount label %q but received %q", label, container.MountConfig.MountLabel)
+	if container.MountLabel != label {
+		t.Fatalf("expected mount label %q but received %q", label, container.MountLabel)
 	}
 }
 

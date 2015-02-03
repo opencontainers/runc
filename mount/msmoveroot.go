@@ -2,19 +2,14 @@
 
 package mount
 
-import (
-	"fmt"
-	"syscall"
-)
+import "syscall"
 
-func MsMoveRoot(rootfs string) error {
+func msMoveRoot(rootfs string) error {
 	if err := syscall.Mount(rootfs, "/", "", syscall.MS_MOVE, ""); err != nil {
-		return fmt.Errorf("mount move %s into / %s", rootfs, err)
+		return err
 	}
-
 	if err := syscall.Chroot("."); err != nil {
-		return fmt.Errorf("chroot . %s", err)
+		return err
 	}
-
 	return syscall.Chdir("/")
 }

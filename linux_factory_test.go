@@ -118,9 +118,6 @@ func TestFactoryLoadContainer(t *testing.T) {
 	}
 
 	config := container.Config()
-	if config == nil {
-		t.Fatal("expected non nil container config")
-	}
 
 	if config.RootFs != expectedConfig.RootFs {
 		t.Fatalf("expected rootfs %q but received %q", expectedConfig.RootFs, config.RootFs)

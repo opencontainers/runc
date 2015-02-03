@@ -91,9 +91,8 @@ func runContainer(config *configs.Config, console string, args ...string) (buffe
 
 	buffers = newStdBuffers()
 
-	process := &libcontainer.ProcessConfig{
+	process := &libcontainer.Process{
 		Args:   args,
-		Env:    make([]string, 0),
 		Stdin:  buffers.Stdin,
 		Stdout: buffers.Stdout,
 		Stderr: buffers.Stderr,
@@ -110,7 +109,7 @@ func runContainer(config *configs.Config, console string, args ...string) (buffe
 	}
 	defer container.Destroy()
 
-	pid, err := container.StartProcess(process)
+	pid, err := container.Start(process)
 	if err != nil {
 		return nil, -1, err
 	}

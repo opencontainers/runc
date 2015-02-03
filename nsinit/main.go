@@ -7,26 +7,17 @@ import (
 	"github.com/codegangsta/cli"
 )
 
-var (
-	logPath = os.Getenv("log")
-)
-
 func main() {
 	app := cli.NewApp()
-
 	app.Name = "nsinit"
-	app.Version = "0.1"
+	app.Version = "1"
 	app.Author = "libcontainer maintainers"
 	app.Flags = []cli.Flag{
 		cli.StringFlag{Name: "nspid"},
 		cli.StringFlag{Name: "console"},
 		cli.StringFlag{Name: "root", Value: ".", Usage: "root directory for containers"},
 	}
-
-	app.Before = preload
-
 	app.Commands = []cli.Command{
-		configCommand,
 		execCommand,
 		initCommand,
 		oomCommand,
@@ -34,7 +25,6 @@ func main() {
 		statsCommand,
 		unpauseCommand,
 	}
-
 	if err := app.Run(os.Args); err != nil {
 		log.Fatal(err)
 	}

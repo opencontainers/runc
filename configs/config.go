@@ -1,70 +1,43 @@
 package configs
 
-import (
-	"github.com/docker/libcontainer/cgroups"
-	"github.com/docker/libcontainer/mount"
-	"github.com/docker/libcontainer/network"
-)
+import "fmt"
 
-type MountConfig mount.MountConfig
-
-type Network network.Network
-
-type NamespaceType string
-
-const (
-	NEWNET  NamespaceType = "NEWNET"
-	NEWPID  NamespaceType = "NEWPID"
-	NEWNS   NamespaceType = "NEWNS"
-	NEWUTS  NamespaceType = "NEWUTS"
-	NEWIPC  NamespaceType = "NEWIPC"
-	NEWUSER NamespaceType = "NEWUSER"
-)
-
-// Namespace defines configuration for each namespace.  It specifies an
-// alternate path that is able to be joined via setns.
-type Namespace struct {
-	Type NamespaceType `json:"type"`
-	Path string        `json:"path,omitempty"`
+type Rlimit struct {
+	Type int    `json:"type,omitempty"`
+	Hard uint64 `json:"hard,omitempty"`
+	Soft uint64 `json:"soft,omitempty"`
 }
 
-type Namespaces []Namespace
-
-func (n *Namespaces) Remove(t NamespaceType) bool {
-	i := n.index(t)
-	if i == -1 {
-		return false
-	}
-	*n = append((*n)[:i], (*n)[i+1:]...)
-	return true
-}
-
-func (n *Namespaces) Add(t NamespaceType, path string) {
-	i := n.index(t)
-	if i == -1 {
-		*n = append(*n, Namespace{Type: t, Path: path})
-		return
-	}
-	(*n)[i].Path = path
-}
-
-func (n *Namespaces) index(t NamespaceType) int {
-	for i, ns := range *n {
-		if ns.Type == t {
-			return i
-		}
-	}
-	return -1
-}
-
-func (n *Namespaces) Contains(t NamespaceType) bool {
-	return n.index(t) != -1
+// IDMap represents UID/GID Mappings for User Namespaces.
+type IDMap struct {
+	ContainerID int `json:"container_id,omitempty"`
+	HostID      int `json:"host_id,omitempty"`
+	Size        int `json:"size,omitempty"`
 }
 
 // Config defines configuration options for executing a process inside a contained environment.
 type Config struct {
-	// Mount specific options.
-	MountConfig *MountConfig `json:"mount_config,omitempty"`
+	// NoPivotRoot will use MS_MOVE and a chroot to jail the process into the container's rootfs
+	// This is a common option when the container is running in ramdisk
+	NoPivotRoot bool `json:"no_pivot_root,omitempty"`
+
+	// PivotDir allows a custom directory inside the container's root filesystem to be used as pivot, when NoPivotRoot is not set.
+	// When a custom PivotDir not set, a temporary dir inside the root filesystem will be used. The pivot dir needs to be writeable.
+	// This is required when using read only root filesystems. In these cases, a read/writeable path can be (bind) mounted somewhere inside the root filesystem to act as pivot.
+	PivotDir string `json:"pivot_dir,omitempty"`
+
+	// ReadonlyFs will remount the container's rootfs as readonly where only externally mounted
+	// bind mounts are writtable
+	ReadonlyFs bool `json:"readonly_fs,omitempty"`
+
+	// Mounts specify additional source and destination paths that will be mounted inside the container's
+	// rootfs and mount namespace if specified
+	Mounts []*Mount `json:"mounts,omitempty"`
+
+	// The device nodes that should be automatically created within the container upon container start.  Note, make sure that the node is marked as allowed in the cgroup as well!
+	DeviceNodes []*Device `json:"device_nodes,omitempty"`
+
+	MountLabel string `json:"mount_label,omitempty"`
 
 	// Pathname to container's root filesystem
 	RootFs string `json:"root_fs,omitempty"`
@@ -83,9 +56,8 @@ type Config struct {
 	// provided in Env are provided to the process
 	Env []string `json:"environment,omitempty"`
 
-	// Tty when true will allocate a pty slave on the host for access by the container's process
-	// and ensure that it is mounted inside the container's rootfs
-	Tty bool `json:"tty,omitempty"`
+	// Console is the path to the console allocated to the container.
+	Console string `json:"console,omitempty"`
 
 	// Namespaces specifies the container's namespaces that it should setup when cloning the init process
 	// If a namespace is not provided that namespace is shared from the container's parent process
@@ -103,7 +75,7 @@ type Config struct {
 
 	// Cgroups specifies specific cgroup settings for the various subsystems that the container is
 	// placed into to limit the resources the container has available
-	Cgroups *cgroups.Cgroup `json:"cgroups,omitempty"`
+	Cgroups *Cgroup `json:"cgroups,omitempty"`
 
 	// AppArmorProfile specifies the profile to apply to the process running in the container and is
 	// change at the time the process is execed
@@ -124,6 +96,7 @@ type Config struct {
 	// AdditionalGroups specifies the gids that should be added to supplementary groups
 	// in addition to those that the user belongs to.
 	AdditionalGroups []int `json:"additional_groups,omitempty"`
+
 	// UidMappings is an array of User ID mappings for User Namespaces
 	UidMappings []IDMap `json:"uid_mappings,omitempty"`
 
@@ -131,36 +104,48 @@ type Config struct {
 	GidMappings []IDMap `json:"gid_mappings,omitempty"`
 }
 
-// Routes can be specified to create entries in the route table as the container is started
-//
-// All of destination, source, and gateway should be either IPv4 or IPv6.
-// One of the three options must be present, and ommitted entries will use their
-// IP family default for the route table.  For IPv4 for example, setting the
-// gateway to 1.2.3.4 and the interface to eth0 will set up a standard
-// destination of 0.0.0.0(or *) when viewed in the route table.
-type Route struct {
-	// Sets the destination and mask, should be a CIDR.  Accepts IPv4 and IPv6
-	Destination string `json:"destination,omitempty"`
-
-	// Sets the source and mask, should be a CIDR.  Accepts IPv4 and IPv6
-	Source string `json:"source,omitempty"`
-
-	// Sets the gateway.  Accepts IPv4 and IPv6
-	Gateway string `json:"gateway,omitempty"`
-
-	// The device to set this route up for, for example: eth0
-	InterfaceName string `json:"interface_name,omitempty"`
+// Gets the root uid for the process on host which could be non-zero
+// when user namespaces are enabled.
+func (c *Config) HostUID() (int, error) {
+	if c.Namespaces.Contains(NEWUSER) {
+		if c.UidMappings == nil {
+			return -1, fmt.Errorf("User namespaces enabled, but no user mappings found.")
+		}
+		id, found := c.hostIDFromMapping(0, c.UidMappings)
+		if !found {
+			return -1, fmt.Errorf("User namespaces enabled, but no root user mapping found.")
+		}
+		return id, nil
+	}
+	// Return default root uid 0
+	return 0, nil
 }
 
-type Rlimit struct {
-	Type int    `json:"type,omitempty"`
-	Hard uint64 `json:"hard,omitempty"`
-	Soft uint64 `json:"soft,omitempty"`
+// Gets the root uid for the process on host which could be non-zero
+// when user namespaces are enabled.
+func (c *Config) HostGID() (int, error) {
+	if c.Namespaces.Contains(NEWUSER) {
+		if c.GidMappings == nil {
+			return -1, fmt.Errorf("User namespaces enabled, but no gid mappings found.")
+		}
+		id, found := c.hostIDFromMapping(0, c.GidMappings)
+		if !found {
+			return -1, fmt.Errorf("User namespaces enabled, but no root user mapping found.")
+		}
+		return id, nil
+	}
+	// Return default root uid 0
+	return 0, nil
 }
 
-// IDMap represents UID/GID Mappings for User Namespaces.
-type IDMap struct {
-	ContainerID int `json:"container_id,omitempty"`
-	HostID      int `json:"host_id,omitempty"`
-	Size        int `json:"size,omitempty"`
+// Utility function that gets a host ID for a container ID from user namespace map
+// if that ID is present in the map.
+func (c *Config) hostIDFromMapping(containerID int, uMap []IDMap) (int, bool) {
+	for _, m := range uMap {
+		if (containerID >= m.ContainerID) && (containerID <= (m.ContainerID + m.Size - 1)) {
+			hostID := m.HostID + (containerID - m.ContainerID)
+			return hostID, true
+		}
+	}
+	return -1, false
 }
