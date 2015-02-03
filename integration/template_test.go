@@ -4,7 +4,6 @@ import (
 	"syscall"
 
 	"github.com/docker/libcontainer/configs"
-	"github.com/docker/libcontainer/devices"
 )
 
 // newTemplateConfig returns a base template for running a container
@@ -41,10 +40,10 @@ func newTemplateConfig(rootfs string) *configs.Config {
 			Name:            "test",
 			Parent:          "integration",
 			AllowAllDevices: false,
-			AllowedDevices:  devices.DefaultAllowedDevices,
+			AllowedDevices:  configs.DefaultAllowedDevices,
 		},
 
-		DeviceNodes: devices.DefaultAutoCreatedDevices,
+		DeviceNodes: configs.DefaultAutoCreatedDevices,
 		Hostname:    "integration",
 		Env: []string{
 			"HOME=/root",

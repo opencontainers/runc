@@ -1,10 +1,8 @@
-package devices
-
-import "github.com/docker/libcontainer/configs"
+package configs
 
 var (
 	// These are devices that are to be both allowed and created.
-	DefaultSimpleDevices = []*configs.Device{
+	DefaultSimpleDevices = []*Device{
 		// /dev/null and zero
 		{
 			Path:        "/dev/null",
@@ -60,18 +58,18 @@ var (
 			FileMode:    0666,
 		},
 	}
-	DefaultAllowedDevices = append([]*configs.Device{
+	DefaultAllowedDevices = append([]*Device{
 		// allow mknod for any device
 		{
 			Type:        'c',
-			Major:       configs.Wildcard,
-			Minor:       configs.Wildcard,
+			Major:       Wildcard,
+			Minor:       Wildcard,
 			Permissions: "m",
 		},
 		{
 			Type:        'b',
-			Major:       configs.Wildcard,
-			Minor:       configs.Wildcard,
+			Major:       Wildcard,
+			Minor:       Wildcard,
 			Permissions: "m",
 		},
 
@@ -101,7 +99,7 @@ var (
 			Path:        "",
 			Type:        'c',
 			Major:       136,
-			Minor:       configs.Wildcard,
+			Minor:       Wildcard,
 			Permissions: "rwm",
 		},
 		{
@@ -121,7 +119,7 @@ var (
 			Permissions: "rwm",
 		},
 	}, DefaultSimpleDevices...)
-	DefaultAutoCreatedDevices = append([]*configs.Device{
+	DefaultAutoCreatedDevices = append([]*Device{
 		{
 			// /dev/fuse is created but not allowed.
 			// This is to allow java to work.  Because java
