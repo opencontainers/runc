@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
-	"syscall"
 	"testing"
 
 	"github.com/docker/libcontainer"
@@ -192,6 +191,20 @@ func newTestRoot() (string, error) {
 	return dir, nil
 }
 
+func waitProcess(pid int, t *testing.T) {
+	p, err := os.FindProcess(pid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	status, err := p.Wait()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !status.Success() {
+		t.Fatal(status)
+	}
+}
+
 func TestEnter(t *testing.T) {
 	if testing.Short() {
 		return
@@ -229,12 +242,12 @@ func TestEnter(t *testing.T) {
 
 	var stdout, stdout2 bytes.Buffer
 
-	pconfig := libcontainer.ProcessConfig{
+	pconfig := libcontainer.Process{
 		Args:   []string{"sh", "-c", "cat && readlink /proc/self/ns/pid"},
 		Stdin:  stdinR,
 		Stdout: &stdout,
 	}
-	pid, err := container.StartProcess(&pconfig)
+	pid, err := container.Start(&pconfig)
 	stdinR.Close()
 	defer stdinW.Close()
 	if err != nil {
@@ -250,7 +263,7 @@ func TestEnter(t *testing.T) {
 	pconfig.Stdin = stdinR2
 	pconfig.Stdout = &stdout2
 
-	pid2, err := container.StartProcess(&pconfig)
+	pid2, err := container.Start(&pconfig)
 	stdinR2.Close()
 	defer stdinW2.Close()
 	if err != nil {
@@ -273,27 +286,11 @@ func TestEnter(t *testing.T) {
 	}
 
 	// Wait processes
-	var status syscall.WaitStatus
-
 	stdinW2.Close()
-	exitCode, err := container.WaitProcess(pid2)
-	if err != nil {
-		t.Fatal(err)
-	}
-	status = syscall.WaitStatus(exitCode)
-	if status.ExitStatus() != 0 {
-		t.Fatal(exitCode)
-	}
+	waitProcess(pid2, t)
 
 	stdinW.Close()
-	exitCode, err = container.WaitProcess(pid)
-	if err != nil {
-		t.Fatal(err)
-	}
-	status = syscall.WaitStatus(exitCode)
-	if status.ExitStatus() != 0 {
-		t.Fatal(exitCode)
-	}
+	waitProcess(pid, t)
 
 	// Check that both processes live in the same pidns
 	pidns := string(stdout.Bytes())
@@ -345,11 +342,11 @@ func TestFreeze(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	pconfig := libcontainer.ProcessConfig{
+	pconfig := libcontainer.Process{
 		Args:  []string{"cat"},
 		Stdin: stdinR,
 	}
-	pid, err := container.StartProcess(&pconfig)
+	pid, err := container.Start(&pconfig)
 	stdinR.Close()
 	defer stdinW.Close()
 	if err != nil {
@@ -364,7 +361,7 @@ func TestFreeze(t *testing.T) {
 	if err := container.Pause(); err != nil {
 		t.Fatal(err)
 	}
-	state, err := container.RunState()
+	state, err := container.Status()
 	if err != nil {
 		t.Fatal(err)
 	}

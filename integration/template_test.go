@@ -3,7 +3,6 @@ package integration
 import (
 	"syscall"
 
-	"github.com/docker/libcontainer/cgroups"
 	"github.com/docker/libcontainer/configs"
 	"github.com/docker/libcontainer/devices"
 )
@@ -15,7 +14,6 @@ import (
 func newTemplateConfig(rootfs string) *configs.Config {
 	return &configs.Config{
 		RootFs: rootfs,
-		Tty:    false,
 		Capabilities: []string{
 			"CHOWN",
 			"DAC_OVERRIDE",
@@ -39,17 +37,15 @@ func newTemplateConfig(rootfs string) *configs.Config {
 			{Type: configs.NEWPID},
 			{Type: configs.NEWNET},
 		}),
-		Cgroups: &cgroups.Cgroup{
+		Cgroups: &configs.Cgroup{
 			Name:            "test",
 			Parent:          "integration",
 			AllowAllDevices: false,
 			AllowedDevices:  devices.DefaultAllowedDevices,
 		},
 
-		MountConfig: &configs.MountConfig{
-			DeviceNodes: devices.DefaultAutoCreatedDevices,
-		},
-		Hostname: "integration",
+		DeviceNodes: devices.DefaultAutoCreatedDevices,
+		Hostname:    "integration",
 		Env: []string{
 			"HOME=/root",
 			"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
