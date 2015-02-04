@@ -46,7 +46,7 @@ func InitializeMountNamespace(config *configs.Config) (err error) {
 	// stdin, stdout and stderr could be pointing to /dev/null from parent namespace.
 	// Re-open them inside this namespace.
 	// FIXME: Need to fix this for user namespaces.
-	if 0 == 0 {
+	if !config.Namespaces.Contains(configs.NEWUSER) {
 		if err := reOpenDevNull(config.RootFs); err != nil {
 			return err
 		}
