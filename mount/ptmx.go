@@ -12,7 +12,7 @@ import (
 )
 
 func setupPtmx(config *configs.Config) error {
-	ptmx := filepath.Join(config.RootFs, "dev/ptmx")
+	ptmx := filepath.Join(config.Rootfs, "dev/ptmx")
 	if err := os.Remove(ptmx); err != nil && !os.IsNotExist(err) {
 		return err
 	}
@@ -28,7 +28,7 @@ func setupPtmx(config *configs.Config) error {
 		if err != nil {
 			return err
 		}
-		return console.Setup(config.RootFs, config.Console, config.MountLabel, uid, gid)
+		return console.Setup(config.Rootfs, config.Console, config.MountLabel, uid, gid)
 	}
 	return nil
 }

@@ -29,7 +29,7 @@ type stdBuffers struct {
 }
 
 func writeConfig(config *configs.Config) error {
-	f, err := os.OpenFile(filepath.Join(config.RootFs, "container.json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0700)
+	f, err := os.OpenFile(filepath.Join(config.Rootfs, "container.json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0700)
 	if err != nil {
 		return err
 	}
@@ -51,8 +51,8 @@ func loadConfig() (*configs.Config, error) {
 	return container, nil
 }
 
-// newRootFs creates a new tmp directory and copies the busybox root filesystem
-func newRootFs() (string, error) {
+// newRootfs creates a new tmp directory and copies the busybox root filesystem
+func newRootfs() (string, error) {
 	dir, err := ioutil.TempDir("", "")
 	if err != nil {
 		return "", err

@@ -20,11 +20,11 @@ type Network struct {
 	// Address contains the IPv4 and mask to set on the network interface
 	Address string `json:"address,omitempty"`
 
-	// IPv6Address contains the IPv6 and mask to set on the network interface
-	IPv6Address string `json:"ipv6_address,omitempty"`
-
 	// Gateway sets the gateway address that is used as the default for the interface
 	Gateway string `json:"gateway,omitempty"`
+
+	// IPv6Address contains the IPv6 and mask to set on the network interface
+	IPv6Address string `json:"ipv6_address,omitempty"`
 
 	// IPv6Gateway sets the ipv6 gateway address that is used as the default for the interface
 	IPv6Gateway string `json:"ipv6_gateway,omitempty"`

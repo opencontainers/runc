@@ -33,11 +33,11 @@ func InitializeMountNamespace(config *configs.Config) (err error) {
 	}
 	// apply any user specified mounts within the new mount namespace
 	for _, m := range config.Mounts {
-		if err := m.Mount(config.RootFs, config.MountLabel); err != nil {
+		if err := m.Mount(config.Rootfs, config.MountLabel); err != nil {
 			return err
 		}
 	}
-	if err := createDeviceNodes(config); err != nil {
+	if err := createDevices(config); err != nil {
 		return err
 	}
 	if err := setupPtmx(config); err != nil {
@@ -51,21 +51,21 @@ func InitializeMountNamespace(config *configs.Config) (err error) {
 			return err
 		}
 	}
-	if err := setupDevSymlinks(config.RootFs); err != nil {
+	if err := setupDevSymlinks(config.Rootfs); err != nil {
 		return err
 	}
-	if err := syscall.Chdir(config.RootFs); err != nil {
+	if err := syscall.Chdir(config.Rootfs); err != nil {
 		return err
 	}
 	if config.NoPivotRoot {
-		err = msMoveRoot(config.RootFs)
+		err = msMoveRoot(config.Rootfs)
 	} else {
-		err = pivotRoot(config.RootFs, config.PivotDir)
+		err = pivotRoot(config.Rootfs, config.PivotDir)
 	}
 	if err != nil {
 		return err
 	}
-	if config.ReadonlyFs {
+	if config.Readonlyfs {
 		if err := setReadonly(); err != nil {
 			return fmt.Errorf("set readonly %s", err)
 		}
@@ -77,7 +77,7 @@ func InitializeMountNamespace(config *configs.Config) (err error) {
 // mountSystem sets up linux specific system mounts like mqueue, sys, proc, shm, and devpts
 // inside the mount namespace
 func mountSystem(config *configs.Config) error {
-	for _, m := range newSystemMounts(config.RootFs, config.MountLabel, config.RestrictSys) {
+	for _, m := range newSystemMounts(config.Rootfs, config.MountLabel, config.RestrictSys) {
 		if err := os.MkdirAll(m.path, 0755); err != nil && !os.IsExist(err) {
 			return fmt.Errorf("mkdirall %s %s", m.path, err)
 		}
@@ -164,10 +164,10 @@ func reOpenDevNull(rootfs string) error {
 }
 
 // Create the device nodes in the container.
-func createDeviceNodes(config *configs.Config) error {
+func createDevices(config *configs.Config) error {
 	oldMask := syscall.Umask(0000)
-	for _, node := range config.DeviceNodes {
-		if err := createDeviceNode(config.RootFs, node); err != nil {
+	for _, node := range config.Devices {
+		if err := createDeviceNode(config.Rootfs, node); err != nil {
 			syscall.Umask(oldMask)
 			return err
 		}
@@ -211,5 +211,5 @@ func prepareRoot(config *configs.Config) error {
 	if err := syscall.Mount("", "/", "", uintptr(flag), ""); err != nil {
 		return err
 	}
-	return syscall.Mount(config.RootFs, config.RootFs, "bind", syscall.MS_BIND|syscall.MS_REC, "")
+	return syscall.Mount(config.Rootfs, config.Rootfs, "bind", syscall.MS_BIND|syscall.MS_REC, "")
 }

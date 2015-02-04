@@ -6,17 +6,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"syscall"
 
-	"github.com/docker/libcontainer/apparmor"
 	"github.com/docker/libcontainer/cgroups"
 	"github.com/docker/libcontainer/configs"
-	"github.com/docker/libcontainer/label"
-	"github.com/docker/libcontainer/mount"
 	"github.com/docker/libcontainer/network"
 	"github.com/docker/libcontainer/system"
 	"github.com/golang/glog"
@@ -106,7 +102,7 @@ func (c *linuxContainer) Start(process *Process) (int, error) {
 	cmd.Stdout = process.Stdout
 	cmd.Stderr = process.Stderr
 	cmd.Env = c.config.Env
-	cmd.Dir = c.config.RootFs
+	cmd.Dir = c.config.Rootfs
 	if cmd.SysProcAttr == nil {
 		cmd.SysProcAttr = &syscall.SysProcAttr{}
 	}
@@ -161,7 +157,7 @@ func (c *linuxContainer) startNewProcess(cmd *exec.Cmd, args []string) (int, err
 		return -1, terr
 	}
 	// Enter cgroups.
-	if err := enterCgroups(c.state, pid.Pid); err != nil {
+	if err := c.enterCgroups(pid.Pid); err != nil {
 		return terminate(err)
 	}
 	encoder := json.NewEncoder(parent)
@@ -398,7 +394,7 @@ func executeSetupCmd(args []string, ppid int, container *configs.Config, process
 	}
 	defer parent.Close()
 	command.ExtraFiles = []*os.File{child}
-	command.Dir = container.RootFs
+	command.Dir = container.Rootfs
 	command.Env = append(command.Env,
 		fmt.Sprintf("_LIBCONTAINER_INITPID=%d", ppid),
 		fmt.Sprintf("_LIBCONTAINER_USERNS=1"))
@@ -460,120 +456,6 @@ type pid struct {
 	Pid int `json:"Pid"`
 }
 
-// Finalize entering into a container and execute a specified command
-func InitIn(pipe *os.File) (err error) {
-	defer func() {
-		// if we have an error during the initialization of the container's init then send it back to the
-		// parent process in the form of an initError.
-		if err != nil {
-			// ensure that any data sent from the parent is consumed so it doesn't
-			// receive ECONNRESET when the child writes to the pipe.
-			ioutil.ReadAll(pipe)
-			if err := json.NewEncoder(pipe).Encode(initError{
-				Message: err.Error(),
-			}); err != nil {
-				panic(err)
-			}
-		}
-		// ensure that this pipe is always closed
-		pipe.Close()
-	}()
-	decoder := json.NewDecoder(pipe)
-	var config *configs.Config
-	if err := decoder.Decode(&config); err != nil {
-		return err
-	}
-	var process *processArgs
-	if err := decoder.Decode(&process); err != nil {
-		return err
-	}
-	if err := finalizeSetns(config); err != nil {
-		return err
-	}
-	if err := system.Execv(process.Args[0], process.Args[0:], config.Env); err != nil {
-		return err
-	}
-	panic("unreachable")
-}
-
-// finalize expects that the setns calls have been setup and that is has joined an
-// existing namespace
-func finalizeSetns(container *configs.Config) error {
-	// clear the current processes env and replace it with the environment defined on the container
-	if err := loadContainerEnvironment(container); err != nil {
-		return err
-	}
-
-	if err := setupRlimits(container); err != nil {
-		return fmt.Errorf("setup rlimits %s", err)
-	}
-
-	if err := finalizeNamespace(container); err != nil {
-		return err
-	}
-
-	if err := apparmor.ApplyProfile(container.AppArmorProfile); err != nil {
-		return fmt.Errorf("set apparmor profile %s: %s", container.AppArmorProfile, err)
-	}
-
-	if container.ProcessLabel != "" {
-		if err := label.SetProcessLabel(container.ProcessLabel); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// SetupContainer is run to setup mounts and networking related operations
-// for a user namespace enabled process as a user namespace root doesn't
-// have permissions to perform these operations.
-// The setup process joins all the namespaces of user namespace enabled init
-// except the user namespace, so it run as root in the root user namespace
-// to perform these operations.
-func SetupContainer(process *processArgs) error {
-	container := process.Config
-	networkState := process.NetworkState
-
-	// TODO : move to validation
-	/*
-		rootfs, err := utils.ResolveRootfs(container.RootFs)
-		if err != nil {
-			return err
-		}
-	*/
-
-	// clear the current processes env and replace it with the environment
-	// defined on the container
-	if err := loadContainerEnvironment(container); err != nil {
-		return err
-	}
-
-	cloneFlags := container.Namespaces.CloneFlags()
-	if (cloneFlags & syscall.CLONE_NEWNET) == 0 {
-		if len(container.Networks) != 0 || len(container.Routes) != 0 {
-			return fmt.Errorf("unable to apply network parameters without network namespace")
-		}
-	} else {
-		if err := setupNetwork(container, networkState); err != nil {
-			return fmt.Errorf("setup networking %s", err)
-		}
-		if err := setupRoute(container); err != nil {
-			return fmt.Errorf("setup route %s", err)
-		}
-	}
-
-	label.Init()
-
-	// InitializeMountNamespace() can be executed only for a new mount namespace
-	if (cloneFlags & syscall.CLONE_NEWNS) != 0 {
-		if err := mount.InitializeMountNamespace(container); err != nil {
-			return fmt.Errorf("setup mount namespace %s", err)
-		}
-	}
-	return nil
-}
-
-func enterCgroups(state *configs.State, pid int) error {
-	return cgroups.EnterPid(state.CgroupPaths, pid)
+func (c *linuxContainer) enterCgroups(pid int) error {
+	return cgroups.EnterPid(c.state.CgroupPaths, pid)
 }

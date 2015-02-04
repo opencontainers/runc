@@ -83,7 +83,7 @@ func (m *Manager) Apply(pid int) error {
 		if err := sys.Set(d); err != nil {
 			return err
 		}
-		// FIXME: Apply should, ideally, be reentrant or be broken up into a separate
+		// TODO: Apply should, ideally, be reentrant or be broken up into a separate
 		// create and join phase so that the cgroup hierarchy for a container can be
 		// created then join consists of writing the process pids to cgroup.procs
 		p, err := d.path(name)

@@ -52,7 +52,7 @@ func (m *Mount) bindMount(rootfs, mountLabel string) error {
 		return err
 	}
 
-	// FIXME: (crosbymichael) This does not belong here and should be done a layer above
+	// TODO: (crosbymichael) This does not belong here and should be done a layer above
 	dest, err = symlink.FollowSymlinkInScope(dest, rootfs)
 	if err != nil {
 		return err
@@ -94,7 +94,7 @@ func (m *Mount) tmpfsMount(rootfs, mountLabel string) error {
 		dest = filepath.Join(rootfs, m.Destination)
 	)
 
-	// FIXME: (crosbymichael) This does not belong here and should be done a layer above
+	// TODO: (crosbymichael) This does not belong here and should be done a layer above
 	if dest, err = symlink.FollowSymlinkInScope(dest, rootfs); err != nil {
 		return err
 	}

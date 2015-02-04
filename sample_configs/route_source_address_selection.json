@@ -117,7 +117,7 @@
         "parent": "docker"
     },
     "restrict_sys": true,
-        "device_nodes": [
+        "devices": [
             {
                 "permissions": "rwm",
                 "file_mode": 438,

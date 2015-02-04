@@ -114,7 +114,7 @@ func TestConfigJsonFormat(t *testing.T) {
 	}
 
 	for _, d := range DefaultSimpleDevices {
-		if !containsDevice(d, container.DeviceNodes) {
+		if !containsDevice(d, container.Devices) {
 			t.Logf("expected device configuration for %s", d.Path)
 			t.Fail()
 		}
@@ -161,5 +161,71 @@ func TestRemoveNamespace(t *testing.T) {
 	}
 	if len(ns) != 0 {
 		t.Fatalf("namespaces should have 0 items but reports %d", len(ns))
+	}
+}
+
+func TestHostUIDNoUSERNS(t *testing.T) {
+	config := &Config{
+		Namespaces: Namespaces{},
+	}
+	uid, err := config.HostUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if uid != 0 {
+		t.Fatal("expected uid 0 with no USERNS but received %d", uid)
+	}
+}
+
+func TestHostUIDWithUSERNS(t *testing.T) {
+	config := &Config{
+		Namespaces: Namespaces{{Type: NEWUSER}},
+		UidMappings: []IDMap{
+			{
+				ContainerID: 0,
+				HostID:      1000,
+				Size:        1,
+			},
+		},
+	}
+	uid, err := config.HostUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if uid != 1000 {
+		t.Fatal("expected uid 1000 with no USERNS but received %d", uid)
+	}
+}
+
+func TestHostGIDNoUSERNS(t *testing.T) {
+	config := &Config{
+		Namespaces: Namespaces{},
+	}
+	uid, err := config.HostGID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if uid != 0 {
+		t.Fatal("expected gid 0 with no USERNS but received %d", uid)
+	}
+}
+
+func TestHostGIDWithUSERNS(t *testing.T) {
+	config := &Config{
+		Namespaces: Namespaces{{Type: NEWUSER}},
+		GidMappings: []IDMap{
+			{
+				ContainerID: 0,
+				HostID:      1000,
+				Size:        1,
+			},
+		},
+	}
+	uid, err := config.HostGID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if uid != 1000 {
+		t.Fatal("expected gid 1000 with no USERNS but received %d", uid)
 	}
 }

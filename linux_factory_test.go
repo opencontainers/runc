@@ -86,7 +86,7 @@ func TestFactoryLoadContainer(t *testing.T) {
 	var (
 		id             = "1"
 		expectedConfig = &configs.Config{
-			RootFs: "/mycontainer/root",
+			Rootfs: "/mycontainer/root",
 		}
 		expectedState = &configs.State{
 			InitPid: 1024,
@@ -119,8 +119,8 @@ func TestFactoryLoadContainer(t *testing.T) {
 
 	config := container.Config()
 
-	if config.RootFs != expectedConfig.RootFs {
-		t.Fatalf("expected rootfs %q but received %q", expectedConfig.RootFs, config.RootFs)
+	if config.Rootfs != expectedConfig.Rootfs {
+		t.Fatalf("expected rootfs %q but received %q", expectedConfig.Rootfs, config.Rootfs)
 	}
 
 	lcontainer, ok := container.(*linuxContainer)

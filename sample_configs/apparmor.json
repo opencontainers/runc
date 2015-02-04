@@ -118,7 +118,7 @@
     },
     "restrict_sys": true,
     "apparmor_profile": "docker-default",
-        "device_nodes": [
+        "devices": [
             {
                 "permissions": "rwm",
                 "file_mode": 438,

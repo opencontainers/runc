@@ -12,7 +12,7 @@ import (
 // and the default setup for devices
 func newTemplateConfig(rootfs string) *configs.Config {
 	return &configs.Config{
-		RootFs: rootfs,
+		Rootfs: rootfs,
 		Capabilities: []string{
 			"CHOWN",
 			"DAC_OVERRIDE",
@@ -43,7 +43,7 @@ func newTemplateConfig(rootfs string) *configs.Config {
 			AllowedDevices:  configs.DefaultAllowedDevices,
 		},
 
-		DeviceNodes: configs.DefaultAutoCreatedDevices,
+		Devices: configs.DefaultAutoCreatedDevices,
 		Hostname:    "integration",
 		Env: []string{
 			"HOME=/root",

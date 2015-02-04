@@ -60,10 +60,10 @@ func DeviceFromPath(path, permissions string) (*configs.Device, error) {
 }
 
 func HostDevices() ([]*configs.Device, error) {
-	return getDeviceNodes("/dev")
+	return getDevices("/dev")
 }
 
-func getDeviceNodes(path string) ([]*configs.Device, error) {
+func getDevices(path string) ([]*configs.Device, error) {
 	files, err := ioutilReadDir(path)
 	if err != nil {
 		return nil, err
@@ -76,7 +76,7 @@ func getDeviceNodes(path string) ([]*configs.Device, error) {
 			case "pts", "shm", "fd", "mqueue":
 				continue
 			default:
-				sub, err := getDeviceNodes(filepath.Join(path, f.Name()))
+				sub, err := getDevices(filepath.Join(path, f.Name()))
 				if err != nil {
 					return nil, err
 				}
