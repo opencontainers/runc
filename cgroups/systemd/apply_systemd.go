@@ -28,9 +28,10 @@ type subsystem interface {
 }
 
 var (
-	connLock              sync.Mutex
-	theConn               *systemd.Conn
-	hasStartTransientUnit bool
+	connLock                        sync.Mutex
+	theConn                         *systemd.Conn
+	hasStartTransientUnit           bool
+	hasTransientDefaultDependencies bool
 )
 
 func newProp(name string, units interface{}) systemd.Property {
@@ -64,6 +65,18 @@ func UseSystemd() bool {
 			if dbusError, ok := err.(dbus.Error); ok {
 				if dbusError.Name == "org.freedesktop.DBus.Error.UnknownMethod" {
 					hasStartTransientUnit = false
+					return hasStartTransientUnit
+				}
+			}
+		}
+
+		// Assume StartTransientUnit on a scope allows DefaultDependencies
+		hasTransientDefaultDependencies = true
+		ddf := newProp("DefaultDependencies", false)
+		if _, err := theConn.StartTransientUnit("docker-systemd-test-default-dependencies.scope", "replace", ddf); err != nil {
+			if dbusError, ok := err.(dbus.Error); ok {
+				if dbusError.Name == "org.freedesktop.DBus.Error.PropertyReadOnly" {
+					hasTransientDefaultDependencies = false
 				}
 			}
 		}
@@ -107,6 +120,11 @@ func Apply(c *cgroups.Cgroup, pid int) (map[string]string, error) {
 		newProp("MemoryAccounting", true),
 		newProp("CPUAccounting", true),
 		newProp("BlockIOAccounting", true))
+
+	if hasTransientDefaultDependencies {
+		properties = append(properties,
+			newProp("DefaultDependencies", false))
+	}
 
 	if c.Memory != 0 {
 		properties = append(properties,
