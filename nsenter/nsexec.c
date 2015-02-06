@@ -22,14 +22,14 @@ struct clone_arg {
 	 * Reserve some space for clone() to locate arguments
 	 * and retcode in this place
 	 */
-	char stack[4096] __attribute__((aligned (8)));
+	char stack[4096] __attribute__ ((aligned(8)));
 	char stack_ptr[0];
 	jmp_buf *env;
 };
 
 static int child_func(void *_arg)
 {
-	struct clone_arg *arg = (struct clone_arg *) _arg;
+	struct clone_arg *arg = (struct clone_arg *)_arg;
 	longjmp(*arg->env, 1);
 }
 
@@ -47,8 +47,8 @@ int setns(int fd, int nstype)
 #endif
 #endif
 
-static int clone_parent(jmp_buf *env) __attribute__ ((noinline));
-static int clone_parent(jmp_buf *env)
+static int clone_parent(jmp_buf * env) __attribute__ ((noinline));
+static int clone_parent(jmp_buf * env)
 {
 	struct clone_arg ca;
 	int child;
@@ -100,7 +100,8 @@ void nsexec()
 
 		fd = openat(tfd, namespaces[i], O_RDONLY);
 		if (fd == -1) {
-			pr_perror("Failed to open ns file %s for ns %s", buf, namespaces[i]);
+			pr_perror("Failed to open ns file %s for ns %s", buf,
+				  namespaces[i]);
 			exit(1);
 		}
 		// Set the namespace.

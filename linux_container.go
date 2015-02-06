@@ -22,12 +22,8 @@ const (
 	EXIT_SIGNAL_OFFSET = 128
 )
 
-type initError struct {
-	Message string `json:"message,omitempty"`
-}
-
-func (i initError) Error() string {
-	return i.Message
+type pid struct {
+	Pid int `json:"Pid"`
 }
 
 type linuxContainer struct {
@@ -97,6 +93,21 @@ func (c *linuxContainer) Start(process *Process) (int, error) {
 	if err != nil {
 		return -1, err
 	}
+	cmd := c.commandTemplate(process)
+	if status != configs.Destroyed {
+		// TODO: (crosbymichael) check out console use for execin
+		return c.startNewProcess(cmd, process.Args)
+		//return namespaces.ExecIn(process.Args, c.config.Env, "", cmd, c.config, c.state)
+	}
+	if err := c.startInitialProcess(cmd, process.Args); err != nil {
+		return -1, err
+	}
+	return c.state.InitPid, nil
+}
+
+// commandTemplate creates a template *exec.Cmd.  It uses the init arguments provided
+// to the factory and attaches IO to the process.
+func (c *linuxContainer) commandTemplate(process *Process) *exec.Cmd {
 	cmd := exec.Command(c.initArgs[0], c.initArgs[1:]...)
 	cmd.Stdin = process.Stdin
 	cmd.Stdout = process.Stdout
@@ -108,32 +119,26 @@ func (c *linuxContainer) Start(process *Process) (int, error) {
 	}
 	// TODO: add pdeath to config for a container
 	cmd.SysProcAttr.Pdeathsig = syscall.SIGKILL
-	if status != configs.Destroyed {
-		glog.Info("start new container process")
-		// TODO: (crosbymichael) check out console use for execin
-		//return namespaces.ExecIn(process.Args, c.config.Env, "", cmd, c.config, c.state)
-		return c.startNewProcess(cmd, process.Args)
-	}
-	if err := c.startInitProcess(cmd, process.Args); err != nil {
-		return -1, err
-	}
-	return c.state.InitPid, nil
+	return cmd
 }
 
+// startNewProcess adds another process to an already running container
 func (c *linuxContainer) startNewProcess(cmd *exec.Cmd, args []string) (int, error) {
-	var err error
+	glog.Info("start new container process")
 	parent, child, err := newInitPipe()
 	if err != nil {
 		return -1, err
 	}
 	defer parent.Close()
 	cmd.ExtraFiles = []*os.File{child}
-	cmd.Env = append(cmd.Env, fmt.Sprintf("_LIBCONTAINER_INITPID=%d", c.state.InitPid))
-	if err := cmd.Start(); err != nil {
-		child.Close()
+	cmd.Env = append(cmd.Env, fmt.Sprintf("_LIBCONTAINER_INITPID=%d", c.state.InitPid), "_LIBCONTAINER_INITTYPE=setns")
+
+	// start the command
+	err = cmd.Start()
+	child.Close()
+	if err != nil {
 		return -1, err
 	}
-	child.Close()
 	s, err := cmd.Process.Wait()
 	if err != nil {
 		return -1, err
@@ -152,29 +157,28 @@ func (c *linuxContainer) startNewProcess(cmd *exec.Cmd, args []string) (int, err
 	}
 	terminate := func(terr error) (int, error) {
 		// TODO: log the errors for kill and wait
-		p.Kill()
-		p.Wait()
+		if err := p.Kill(); err != nil {
+			glog.Warning(err)
+		}
+		if _, err := p.Wait(); err != nil {
+			glog.Warning(err)
+		}
 		return -1, terr
 	}
-	// Enter cgroups.
 	if err := c.enterCgroups(pid.Pid); err != nil {
 		return terminate(err)
 	}
-	encoder := json.NewEncoder(parent)
-	if err := encoder.Encode(c.config); err != nil {
-		return terminate(err)
-	}
-	process := processArgs{
+	if err := json.NewEncoder(parent).Encode(&initConfig{
 		Config: c.config,
 		Args:   args,
-	}
-	if err := encoder.Encode(process); err != nil {
+	}); err != nil {
 		return terminate(err)
 	}
 	return pid.Pid, nil
 }
 
-func (c *linuxContainer) startInitProcess(cmd *exec.Cmd, args []string) error {
+func (c *linuxContainer) startInitialProcess(cmd *exec.Cmd, args []string) error {
+	glog.Info("starting container initial process")
 	// create a pipe so that we can syncronize with the namespaced process and
 	// pass the state and configuration to the child process
 	parent, child, err := newInitPipe()
@@ -184,6 +188,9 @@ func (c *linuxContainer) startInitProcess(cmd *exec.Cmd, args []string) error {
 	defer parent.Close()
 	cmd.ExtraFiles = []*os.File{child}
 	cmd.SysProcAttr.Cloneflags = c.config.Namespaces.CloneFlags()
+	cmd.Env = append(cmd.Env, "_LIBCONTAINER_INITTYPE=standard")
+	// if the container is configured to use user namespaces we have to setup the
+	// uid:gid mapping on the command.
 	if c.config.Namespaces.Contains(configs.NEWUSER) {
 		addUidGidMappings(cmd.SysProcAttr, c.config)
 		// Default to root user when user namespaces are enabled.
@@ -191,7 +198,6 @@ func (c *linuxContainer) startInitProcess(cmd *exec.Cmd, args []string) error {
 			cmd.SysProcAttr.Credential = &syscall.Credential{}
 		}
 	}
-	glog.Info("starting container init process")
 	err = cmd.Start()
 	child.Close()
 	if err != nil {
@@ -199,12 +205,15 @@ func (c *linuxContainer) startInitProcess(cmd *exec.Cmd, args []string) error {
 	}
 	wait := func() (*os.ProcessState, error) {
 		ps, err := cmd.Process.Wait()
+		if err != nil {
+			return nil, newGenericError(err, SystemError)
+		}
 		// we should kill all processes in cgroup when init is died if we use
 		// host PID namespace
 		if !c.config.Namespaces.Contains(configs.NEWPID) {
 			c.killAllPids()
 		}
-		return ps, newGenericError(err, SystemError)
+		return ps, nil
 	}
 	terminate := func(terr error) error {
 		// TODO: log the errors for kill and wait
@@ -230,19 +239,19 @@ func (c *linuxContainer) startInitProcess(cmd *exec.Cmd, args []string) error {
 	if err := c.initializeNetworking(cmd.Process.Pid, &networkState); err != nil {
 		return terminate(err)
 	}
-	process := processArgs{
+	iconfig := &initConfig{
 		Args:         args,
 		Config:       c.config,
 		NetworkState: &networkState,
 	}
 	// Start the setup process to setup the init process
 	if c.config.Namespaces.Contains(configs.NEWUSER) {
-		if err = executeSetupCmd(cmd.Args, cmd.Process.Pid, c.config, &process, &networkState); err != nil {
+		if err = executeSetupCmd(cmd.Args, cmd.Process.Pid, c.config, iconfig, &networkState); err != nil {
 			return terminate(err)
 		}
 	}
 	// send the state to the container's init process then shutdown writes for the parent
-	if err := json.NewEncoder(parent).Encode(process); err != nil {
+	if err := json.NewEncoder(parent).Encode(iconfig); err != nil {
 		return terminate(err)
 	}
 	// shutdown writes for the parent side of the pipe
@@ -258,12 +267,10 @@ func (c *linuxContainer) startInitProcess(cmd *exec.Cmd, args []string) error {
 	if ierr != nil {
 		return terminate(ierr)
 	}
-
 	c.state.InitPid = cmd.Process.Pid
 	c.state.InitStartTime = started
 	c.state.NetworkState = networkState
 	c.state.CgroupPaths = c.cgroupManager.GetPaths()
-
 	return nil
 }
 
@@ -386,7 +393,7 @@ func (c *linuxContainer) initializeNetworking(nspid int, networkState *configs.N
 	return nil
 }
 
-func executeSetupCmd(args []string, ppid int, container *configs.Config, process *processArgs, networkState *configs.NetworkState) error {
+func executeSetupCmd(args []string, ppid int, container *configs.Config, process *initConfig, networkState *configs.NetworkState) error {
 	command := exec.Command(args[0], args[1:]...)
 	parent, child, err := newInitPipe()
 	if err != nil {
@@ -397,7 +404,7 @@ func executeSetupCmd(args []string, ppid int, container *configs.Config, process
 	command.Dir = container.Rootfs
 	command.Env = append(command.Env,
 		fmt.Sprintf("_LIBCONTAINER_INITPID=%d", ppid),
-		fmt.Sprintf("_LIBCONTAINER_USERNS=1"))
+		fmt.Sprintf("_LIBCONTAINER_INITTYPE=userns_sidecar"))
 	err = command.Start()
 	child.Close()
 	if err != nil {
@@ -450,10 +457,6 @@ func executeSetupCmd(args []string, ppid int, container *configs.Config, process
 		return &exec.ExitError{s}
 	}
 	return nil
-}
-
-type pid struct {
-	Pid int `json:"Pid"`
 }
 
 func (c *linuxContainer) enterCgroups(pid int) error {
