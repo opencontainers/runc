@@ -117,8 +117,7 @@ func (c *linuxContainer) commandTemplate(process *Process) *exec.Cmd {
 	if cmd.SysProcAttr == nil {
 		cmd.SysProcAttr = &syscall.SysProcAttr{}
 	}
-	// TODO: add pdeath to config for a container
-	cmd.SysProcAttr.Pdeathsig = syscall.SIGKILL
+	cmd.SysProcAttr.Pdeathsig = syscall.Signal(c.config.ParentDeathSignal)
 	return cmd
 }
 
