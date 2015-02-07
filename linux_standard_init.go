@@ -38,7 +38,7 @@ func (l *linuxStandardInit) Init() error {
 			return err
 		}
 	}
-	if err := setupNetwork(l.config.Config, l.config.NetworkState); err != nil {
+	if err := setupNetwork(l.config.Config); err != nil {
 		return err
 	}
 	if err := setupRoute(l.config.Config); err != nil {

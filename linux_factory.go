@@ -87,7 +87,6 @@ func (l *linuxFactory) Create(id string, config *configs.Config) (Container, err
 		root:          containerRoot,
 		config:        config,
 		initArgs:      l.initArgs,
-		state:         &configs.State{},
 		cgroupManager: cgroups.NewCgroupManager(config.Cgroups),
 	}, nil
 }
@@ -107,15 +106,19 @@ func (l *linuxFactory) Load(id string) (Container, error) {
 	if err != nil {
 		return nil, err
 	}
+	r := &restoredProcess{
+		processPid:       state.InitPid,
+		processStartTime: state.InitStartTime,
+	}
 	cgroupManager := cgroups.LoadCgroupManager(config.Cgroups, state.CgroupPaths)
 	glog.Infof("using %s as cgroup manager", cgroupManager)
 	return &linuxContainer{
+		initProcess:   r,
 		id:            id,
-		root:          containerRoot,
 		config:        config,
-		state:         state,
-		cgroupManager: cgroupManager,
 		initArgs:      l.initArgs,
+		cgroupManager: cgroupManager,
+		root:          containerRoot,
 	}, nil
 }
 
@@ -192,4 +195,32 @@ func (l *linuxFactory) validateID(id string) error {
 		return newGenericError(fmt.Errorf("Invalid id format: %v", id), InvalidIdFormat)
 	}
 	return nil
+}
+
+// restoredProcess represents a process where the calling process may or may not be
+// the parent process.  This process is created when a factory loads a container from
+// a persisted state.
+type restoredProcess struct {
+	processPid       int
+	processStartTime string
+}
+
+func (p *restoredProcess) start() error {
+	return newGenericError(fmt.Errorf("restored process cannot be started"), SystemError)
+}
+
+func (p *restoredProcess) pid() int {
+	return p.processPid
+}
+
+func (p *restoredProcess) terminate() error {
+	return newGenericError(fmt.Errorf("restored process cannot be terminated"), SystemError)
+}
+
+func (p *restoredProcess) wait() (*os.ProcessState, error) {
+	return nil, newGenericError(fmt.Errorf("restored process cannot be waited on"), SystemError)
+}
+
+func (p *restoredProcess) startTime() (string, error) {
+	return p.processStartTime, nil
 }

@@ -26,13 +26,11 @@ func testExecPS(t *testing.T, userns bool) {
 	if testing.Short() {
 		return
 	}
-
 	rootfs, err := newRootfs()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer remove(rootfs)
-
 	config := newTemplateConfig(rootfs)
 	if userns {
 		config.UidMappings = []configs.IDMap{{0, 0, 1000}}
@@ -42,13 +40,11 @@ func testExecPS(t *testing.T, userns bool) {
 
 	buffers, exitCode, err := runContainer(config, "", "ps")
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("%s: %s", buffers, err)
 	}
-
 	if exitCode != 0 {
 		t.Fatalf("exit code not 0. code %d stderr %q", exitCode, buffers.Stderr)
 	}
-
 	lines := strings.Split(buffers.Stdout.String(), "\n")
 	if len(lines) < 2 {
 		t.Fatalf("more than one process running for output %q", buffers.Stdout.String())

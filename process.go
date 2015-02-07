@@ -1,9 +1,6 @@
 package libcontainer
 
-import (
-	"io"
-	"os/exec"
-)
+import "io"
 
 // Process specifies the configuration and IO for a process inside
 // a container.
@@ -22,6 +19,4 @@ type Process struct {
 
 	// Stderr is a pointer to a writer which receives the standard error stream.
 	Stderr io.Writer
-
-	cmd *exec.Cmd
 }

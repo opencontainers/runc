@@ -21,18 +21,17 @@ import (
 type initType string
 
 const (
-	initSetns         initType = "setns"
-	initStandard      initType = "standard"
-	initUserns        initType = "userns"
-	initUsernsSideCar initType = "userns_sidecar"
+	initSetns       initType = "setns"
+	initStandard    initType = "standard"
+	initUserns      initType = "userns"
+	initUsernsSetup initType = "userns_setup"
 )
 
 // Process is used for transferring parameters from Exec() to Init()
 type initConfig struct {
-	Args         []string              `json:"args,omitempty"`
-	Env          []string              `json:"env,omitempty"`
-	Config       *configs.Config       `json:"config,omitempty"`
-	NetworkState *configs.NetworkState `json:"network_state,omitempty"`
+	Args   []string        `json:"args,omitempty"`
+	Env    []string        `json:"env,omitempty"`
+	Config *configs.Config `json:"config,omitempty"`
 }
 
 type initer interface {
@@ -60,10 +59,9 @@ func newContainerInit(t initType, pipe *os.File) (initer, error) {
 			env:    config.Env,
 			config: config.Config,
 		}, nil
-	case initUsernsSideCar:
+	case initUsernsSetup:
 		return &linuxUsernsSideCar{
-			config:  config.Config,
-			network: config.NetworkState,
+			config: config.Config,
 		}, nil
 	case initStandard:
 		return &linuxStandardInit{
@@ -186,13 +184,13 @@ func setupUser(config *configs.Config) error {
 // setupVethNetwork uses the Network config if it is not nil to initialize
 // the new veth interface inside the container for use by changing the name to eth0
 // setting the MTU and IP address along with the default gateway
-func setupNetwork(config *configs.Config, networkState *configs.NetworkState) error {
+func setupNetwork(config *configs.Config) error {
 	for _, config := range config.Networks {
 		strategy, err := network.GetStrategy(config.Type)
 		if err != nil {
 			return err
 		}
-		err1 := strategy.Initialize(config, networkState)
+		err1 := strategy.Initialize(config)
 		if err1 != nil {
 			return err1
 		}

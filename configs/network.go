@@ -11,9 +11,6 @@ type Network struct {
 	// The bridge to use.
 	Bridge string `json:"bridge,omitempty"`
 
-	// Prefix for the veth interfaces.
-	VethPrefix string `json:"veth_prefix,omitempty"`
-
 	// MacAddress contains the MAC address to set on the network interface
 	MacAddress string `json:"mac_address,omitempty"`
 
@@ -38,6 +35,12 @@ type Network struct {
 	// container's interfaces if a pair is created, specifically in the case of type veth
 	// Note: This does not apply to loopback interfaces.
 	TxQueueLen int `json:"txqueuelen,omitempty"`
+
+	// The name of the veth interface on the Host.
+	VethHost string `json:"veth_host,omitempty"`
+
+	// The name of the veth interface created inside the container for the child.
+	VethChild string `json:"veth_child,omitempty"`
 }
 
 // Routes can be specified to create entries in the route table as the container is started

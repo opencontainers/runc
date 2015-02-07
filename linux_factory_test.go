@@ -29,21 +29,17 @@ func TestFactoryNew(t *testing.T) {
 		t.Fatal(rerr)
 	}
 	defer os.RemoveAll(root)
-
 	factory, err := New(root, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	if factory == nil {
 		t.Fatal("factory should not be nil")
 	}
-
 	lfactory, ok := factory.(*linuxFactory)
 	if !ok {
 		t.Fatal("expected linux factory returned on linux based systems")
 	}
-
 	if lfactory.root != root {
 		t.Fatalf("expected factory root to be %q but received %q", root, lfactory.root)
 	}
@@ -55,17 +51,14 @@ func TestFactoryLoadNotExists(t *testing.T) {
 		t.Fatal(rerr)
 	}
 	defer os.RemoveAll(root)
-
 	factory, err := New(root, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	_, err = factory.Load("nocontainer")
 	if err == nil {
 		t.Fatal("expected nil error loading non-existing container")
 	}
-
 	lerr, ok := err.(Error)
 	if !ok {
 		t.Fatal("expected libcontainer error type")
@@ -81,7 +74,6 @@ func TestFactoryLoadContainer(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(root)
-
 	// setup default container config and state for mocking
 	var (
 		id             = "1"
@@ -92,7 +84,6 @@ func TestFactoryLoadContainer(t *testing.T) {
 			InitPid: 1024,
 		}
 	)
-
 	if err := os.Mkdir(filepath.Join(root, id), 0700); err != nil {
 		t.Fatal(err)
 	}
@@ -102,34 +93,27 @@ func TestFactoryLoadContainer(t *testing.T) {
 	if err := marshal(filepath.Join(root, id, stateFilename), expectedState); err != nil {
 		t.Fatal(err)
 	}
-
 	factory, err := New(root, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	container, err := factory.Load(id)
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	if container.ID() != id {
 		t.Fatalf("expected container id %q but received %q", id, container.ID())
 	}
-
 	config := container.Config()
-
 	if config.Rootfs != expectedConfig.Rootfs {
 		t.Fatalf("expected rootfs %q but received %q", expectedConfig.Rootfs, config.Rootfs)
 	}
-
 	lcontainer, ok := container.(*linuxContainer)
 	if !ok {
 		t.Fatal("expected linux container on linux based systems")
 	}
-
-	if lcontainer.state.InitPid != expectedState.InitPid {
-		t.Fatalf("expected init pid %d but received %d", expectedState.InitPid, lcontainer.state.InitPid)
+	if lcontainer.initProcess.pid() != expectedState.InitPid {
+		t.Fatalf("expected init pid %d but received %d", expectedState.InitPid, lcontainer.initProcess.pid())
 	}
 }
 

@@ -5,8 +5,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-
-	"github.com/docker/libcontainer/configs"
 )
 
 type NetworkStats struct {
@@ -21,14 +19,12 @@ type NetworkStats struct {
 }
 
 // Returns the network statistics for the network interfaces represented by the NetworkRuntimeInfo.
-func GetStats(networkState *configs.NetworkState) (*NetworkStats, error) {
+func GetStats(vethHostInterface string) (*NetworkStats, error) {
 	// This can happen if the network runtime information is missing - possible if the container was created by an old version of libcontainer.
-	if networkState.VethHost == "" {
+	if vethHostInterface == "" {
 		return &NetworkStats{}, nil
 	}
-
 	out := &NetworkStats{}
-
 	type netStatsPair struct {
 		// Where to write the output.
 		Out *uint64
@@ -36,7 +32,6 @@ func GetStats(networkState *configs.NetworkState) (*NetworkStats, error) {
 		// The network stats file to read.
 		File string
 	}
-
 	// Ingress for host veth is from the container. Hence tx_bytes stat on the host veth is actually number of bytes received by the container.
 	netStats := []netStatsPair{
 		{Out: &out.RxBytes, File: "tx_bytes"},
@@ -50,13 +45,12 @@ func GetStats(networkState *configs.NetworkState) (*NetworkStats, error) {
 		{Out: &out.TxDropped, File: "rx_dropped"},
 	}
 	for _, netStat := range netStats {
-		data, err := readSysfsNetworkStats(networkState.VethHost, netStat.File)
+		data, err := readSysfsNetworkStats(vethHostInterface, netStat.File)
 		if err != nil {
 			return nil, err
 		}
 		*(netStat.Out) = data
 	}
-
 	return out, nil
 }
 

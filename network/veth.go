@@ -6,8 +6,6 @@ import (
 	"fmt"
 
 	"github.com/docker/libcontainer/configs"
-	"github.com/docker/libcontainer/netlink"
-	"github.com/docker/libcontainer/utils"
 )
 
 // Veth is a network strategy that uses a bridge and creates
@@ -18,42 +16,32 @@ type Veth struct {
 
 const defaultDevice = "eth0"
 
-func (v *Veth) Create(n *configs.Network, nspid int, networkState *configs.NetworkState) error {
+func (v *Veth) Create(n *configs.Network, nspid int) error {
 	var (
 		bridge     = n.Bridge
-		prefix     = n.VethPrefix
 		txQueueLen = n.TxQueueLen
 	)
 	if bridge == "" {
 		return fmt.Errorf("bridge is not specified")
 	}
-	if prefix == "" {
-		return fmt.Errorf("veth prefix is not specified")
-	}
-	name1, name2, err := createVethPair(prefix, txQueueLen)
-	if err != nil {
+	if err := CreateVethPair(n.VethHost, n.VethChild, txQueueLen); err != nil {
 		return err
 	}
-	if err := SetInterfaceMaster(name1, bridge); err != nil {
+	if err := SetInterfaceMaster(n.VethHost, bridge); err != nil {
 		return err
 	}
-	if err := SetMtu(name1, n.Mtu); err != nil {
+	if err := SetMtu(n.VethHost, n.Mtu); err != nil {
 		return err
 	}
-	if err := InterfaceUp(name1); err != nil {
+	if err := InterfaceUp(n.VethHost); err != nil {
 		return err
 	}
-	if err := SetInterfaceInNamespacePid(name2, nspid); err != nil {
-		return err
-	}
-	networkState.VethHost = name1
-	networkState.VethChild = name2
-
+	return SetInterfaceInNamespacePid(n.VethChild, nspid)
 	return nil
 }
 
-func (v *Veth) Initialize(config *configs.Network, networkState *configs.NetworkState) error {
-	var vethChild = networkState.VethChild
+func (v *Veth) Initialize(config *configs.Network) error {
+	vethChild := config.VethChild
 	if vethChild == "" {
 		return fmt.Errorf("vethChild is not specified")
 	}
@@ -94,30 +82,4 @@ func (v *Veth) Initialize(config *configs.Network, networkState *configs.Network
 		}
 	}
 	return nil
-}
-
-// createVethPair will automatically generage two random names for
-// the veth pair and ensure that they have been created
-func createVethPair(prefix string, txQueueLen int) (name1 string, name2 string, err error) {
-	for i := 0; i < 10; i++ {
-		if name1, err = utils.GenerateRandomName(prefix, 7); err != nil {
-			return
-		}
-
-		if name2, err = utils.GenerateRandomName(prefix, 7); err != nil {
-			return
-		}
-
-		if err = CreateVethPair(name1, name2, txQueueLen); err != nil {
-			if err == netlink.ErrInterfaceExists {
-				continue
-			}
-
-			return
-		}
-
-		break
-	}
-
-	return
 }

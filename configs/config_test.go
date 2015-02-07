@@ -94,11 +94,6 @@ func TestConfigJsonFormat(t *testing.T) {
 				t.Fail()
 			}
 
-			if n.VethPrefix != "veth" {
-				t.Logf("veth prefix should be veth but received %q", n.VethPrefix)
-				t.Fail()
-			}
-
 			if n.Gateway != "172.17.42.1" {
 				t.Logf("veth gateway should be 172.17.42.1 but received %q", n.Gateway)
 				t.Fail()

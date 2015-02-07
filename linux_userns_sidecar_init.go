@@ -15,12 +15,11 @@ import (
 // except the user namespace, so it run as root in the root user namespace
 // to perform these operations.
 type linuxUsernsSideCar struct {
-	config  *configs.Config
-	network *configs.NetworkState
+	config *configs.Config
 }
 
 func (l *linuxUsernsSideCar) Init() error {
-	if err := setupNetwork(l.config, l.network); err != nil {
+	if err := setupNetwork(l.config); err != nil {
 		return err
 	}
 	if err := setupRoute(l.config); err != nil {
