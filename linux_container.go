@@ -18,10 +18,6 @@ import (
 	"github.com/golang/glog"
 )
 
-const (
-	EXIT_SIGNAL_OFFSET = 128
-)
-
 type pid struct {
 	Pid int `json:"Pid"`
 }
@@ -50,8 +46,7 @@ func (c *linuxContainer) Status() (configs.Status, error) {
 		return configs.Destroyed, nil
 	}
 	// return Running if the init process is alive
-	err := syscall.Kill(c.state.InitPid, 0)
-	if err != nil {
+	if err := syscall.Kill(c.state.InitPid, 0); err != nil {
 		if err == syscall.ESRCH {
 			return configs.Destroyed, nil
 		}
@@ -96,10 +91,9 @@ func (c *linuxContainer) Start(process *Process) (int, error) {
 	cmd := c.commandTemplate(process)
 	if status != configs.Destroyed {
 		// TODO: (crosbymichael) check out console use for execin
-		return c.startNewProcess(cmd, process.Args)
-		//return namespaces.ExecIn(process.Args, c.config.Env, "", cmd, c.config, c.state)
+		return c.startNewProcess(cmd, process)
 	}
-	if err := c.startInitialProcess(cmd, process.Args); err != nil {
+	if err := c.startInitialProcess(cmd, process); err != nil {
 		return -1, err
 	}
 	return c.state.InitPid, nil
@@ -112,7 +106,7 @@ func (c *linuxContainer) commandTemplate(process *Process) *exec.Cmd {
 	cmd.Stdin = process.Stdin
 	cmd.Stdout = process.Stdout
 	cmd.Stderr = process.Stderr
-	cmd.Env = c.config.Env
+	cmd.Env = process.Env
 	cmd.Dir = c.config.Rootfs
 	if cmd.SysProcAttr == nil {
 		cmd.SysProcAttr = &syscall.SysProcAttr{}
@@ -122,9 +116,9 @@ func (c *linuxContainer) commandTemplate(process *Process) *exec.Cmd {
 }
 
 // startNewProcess adds another process to an already running container
-func (c *linuxContainer) startNewProcess(cmd *exec.Cmd, args []string) (int, error) {
+func (c *linuxContainer) startNewProcess(cmd *exec.Cmd, process *Process) (int, error) {
 	glog.Info("start new container process")
-	parent, child, err := newInitPipe()
+	parent, child, err := c.newInitPipe()
 	if err != nil {
 		return -1, err
 	}
@@ -169,18 +163,20 @@ func (c *linuxContainer) startNewProcess(cmd *exec.Cmd, args []string) (int, err
 	}
 	if err := json.NewEncoder(parent).Encode(&initConfig{
 		Config: c.config,
-		Args:   args,
+		Args:   process.Args,
+		Env:    process.Env,
 	}); err != nil {
 		return terminate(err)
 	}
 	return pid.Pid, nil
 }
 
-func (c *linuxContainer) startInitialProcess(cmd *exec.Cmd, args []string) error {
+// startInitialProcess starts PID 1 for the container.
+func (c *linuxContainer) startInitialProcess(cmd *exec.Cmd, process *Process) error {
 	glog.Info("starting container initial process")
 	// create a pipe so that we can syncronize with the namespaced process and
 	// pass the state and configuration to the child process
-	parent, child, err := newInitPipe()
+	parent, child, err := c.newInitPipe()
 	if err != nil {
 		return err
 	}
@@ -239,13 +235,14 @@ func (c *linuxContainer) startInitialProcess(cmd *exec.Cmd, args []string) error
 		return terminate(err)
 	}
 	iconfig := &initConfig{
-		Args:         args,
+		Args:         process.Args,
 		Config:       c.config,
+		Env:          process.Env,
 		NetworkState: &networkState,
 	}
 	// Start the setup process to setup the init process
 	if c.config.Namespaces.Contains(configs.NEWUSER) {
-		if err = executeSetupCmd(cmd.Args, cmd.Process.Pid, c.config, iconfig, &networkState); err != nil {
+		if err = c.executeSetupCmd(cmd.Args, cmd.Process.Pid, c.config, iconfig, &networkState); err != nil {
 			return terminate(err)
 		}
 	}
@@ -281,6 +278,7 @@ func (c *linuxContainer) Destroy() error {
 	if status != configs.Destroyed {
 		return newGenericError(nil, ContainerNotStopped)
 	}
+	// TODO: remove cgroups
 	return os.RemoveAll(c.root)
 }
 
@@ -297,6 +295,7 @@ func (c *linuxContainer) Signal(signal os.Signal) error {
 	panic("not implemented")
 }
 
+// TODO: rename to be more descriptive
 func (c *linuxContainer) OOM() (<-chan struct{}, error) {
 	return NotifyOnOOM(c.state)
 }
@@ -322,7 +321,7 @@ func (c *linuxContainer) updateStateFile() error {
 }
 
 // New returns a newly initialized Pipe for communication between processes
-func newInitPipe() (parent *os.File, child *os.File, err error) {
+func (c *linuxContainer) newInitPipe() (parent *os.File, child *os.File, err error) {
 	fds, err := syscall.Socketpair(syscall.AF_LOCAL, syscall.SOCK_STREAM|syscall.SOCK_CLOEXEC, 0)
 	if err != nil {
 		return nil, nil, err
@@ -392,9 +391,9 @@ func (c *linuxContainer) initializeNetworking(nspid int, networkState *configs.N
 	return nil
 }
 
-func executeSetupCmd(args []string, ppid int, container *configs.Config, process *initConfig, networkState *configs.NetworkState) error {
+func (c *linuxContainer) executeSetupCmd(args []string, ppid int, container *configs.Config, process *initConfig, networkState *configs.NetworkState) error {
 	command := exec.Command(args[0], args[1:]...)
-	parent, child, err := newInitPipe()
+	parent, child, err := c.newInitPipe()
 	if err != nil {
 		return err
 	}

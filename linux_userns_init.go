@@ -15,6 +15,7 @@ import (
 
 type linuxUsernsInit struct {
 	args   []string
+	env    []string
 	config *configs.Config
 }
 
@@ -76,5 +77,5 @@ func (l *linuxUsernsInit) Init() error {
 	if syscall.Getppid() == 1 {
 		return syscall.Kill(syscall.Getpid(), syscall.SIGKILL)
 	}
-	return system.Execv(l.args[0], l.args[0:], l.config.Env)
+	return system.Execv(l.args[0], l.args[0:], l.env)
 }

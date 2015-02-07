@@ -6,6 +6,13 @@ import (
 	"github.com/docker/libcontainer/configs"
 )
 
+var standardEnvironment = []string{
+	"HOME=/root",
+	"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+	"HOSTNAME=integration",
+	"TERM=xterm",
+}
+
 // newTemplateConfig returns a base template for running a container
 //
 // it uses a network strategy of just setting a loopback interface
@@ -43,14 +50,8 @@ func newTemplateConfig(rootfs string) *configs.Config {
 			AllowedDevices:  configs.DefaultAllowedDevices,
 		},
 
-		Devices: configs.DefaultAutoCreatedDevices,
-		Hostname:    "integration",
-		Env: []string{
-			"HOME=/root",
-			"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-			"HOSTNAME=integration",
-			"TERM=xterm",
-		},
+		Devices:  configs.DefaultAutoCreatedDevices,
+		Hostname: "integration",
 		Networks: []*configs.Network{
 			{
 				Type:    "loopback",

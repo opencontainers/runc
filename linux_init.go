@@ -30,6 +30,7 @@ const (
 // Process is used for transferring parameters from Exec() to Init()
 type initConfig struct {
 	Args         []string              `json:"args,omitempty"`
+	Env          []string              `json:"env,omitempty"`
 	Config       *configs.Config       `json:"config,omitempty"`
 	NetworkState *configs.NetworkState `json:"network_state,omitempty"`
 }
@@ -43,18 +44,20 @@ func newContainerInit(t initType, pipe *os.File) (initer, error) {
 	if err := json.NewDecoder(pipe).Decode(&config); err != nil {
 		return nil, err
 	}
-	if err := populateProcessEnvironment(config.Config.Env); err != nil {
+	if err := populateProcessEnvironment(config.Env); err != nil {
 		return nil, err
 	}
 	switch t {
 	case initSetns:
 		return &linuxSetnsInit{
 			args:   config.Args,
+			env:    config.Env,
 			config: config.Config,
 		}, nil
 	case initUserns:
 		return &linuxUsernsInit{
 			args:   config.Args,
+			env:    config.Env,
 			config: config.Config,
 		}, nil
 	case initUsernsSideCar:
@@ -65,6 +68,7 @@ func newContainerInit(t initType, pipe *os.File) (initer, error) {
 	case initStandard:
 		return &linuxStandardInit{
 			config: config,
+			env:    config.Env,
 		}, nil
 	}
 	return nil, fmt.Errorf("unknown init type %q", t)

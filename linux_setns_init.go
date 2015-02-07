@@ -13,6 +13,7 @@ import (
 // inside an existing container.
 type linuxSetnsInit struct {
 	args   []string
+	env    []string
 	config *configs.Config
 }
 
@@ -31,5 +32,5 @@ func (l *linuxSetnsInit) Init() error {
 			return err
 		}
 	}
-	return system.Execv(l.args[0], l.args[0:], l.config.Env)
+	return system.Execv(l.args[0], l.args[0:], l.env)
 }

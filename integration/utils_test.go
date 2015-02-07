@@ -93,6 +93,7 @@ func runContainer(config *configs.Config, console string, args ...string) (buffe
 
 	process := &libcontainer.Process{
 		Args:   args,
+		Env:    standardEnvironment,
 		Stdin:  buffers.Stdin,
 		Stdout: buffers.Stdout,
 		Stderr: buffers.Stderr,
