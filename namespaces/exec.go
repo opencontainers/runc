@@ -192,7 +192,7 @@ func hostIDFromMapping(containerID int, uMap []libcontainer.IDMap) (int, bool) {
 	return -1, false
 }
 
-// Gets the root uid for the process on host which could be non-zero
+// Gets the root gid for the process on host which could be non-zero
 // when user namespaces are enabled.
 func GetHostRootGid(container *libcontainer.Config) (int, error) {
 	if container.Namespaces.Contains(libcontainer.NEWUSER) {
@@ -206,7 +206,7 @@ func GetHostRootGid(container *libcontainer.Config) (int, error) {
 		return hostRootGid, nil
 	}
 
-	// Return default root uid 0
+	// Return default root gid 0
 	return 0, nil
 }
 
@@ -215,7 +215,7 @@ func GetHostRootGid(container *libcontainer.Config) (int, error) {
 func GetHostRootUid(container *libcontainer.Config) (int, error) {
 	if container.Namespaces.Contains(libcontainer.NEWUSER) {
 		if container.UidMappings == nil {
-			return -1, fmt.Errorf("User namespaces enabled, but no user mappings found.")
+			return -1, fmt.Errorf("User namespaces enabled, but no uid mappings found.")
 		}
 		hostRootUid, found := hostIDFromMapping(0, container.UidMappings)
 		if !found {
@@ -255,7 +255,7 @@ func AddUidGidMappings(sys *syscall.SysProcAttr, container *libcontainer.Config)
 //
 // console: the /dev/console to setup inside the container
 // init: the program executed inside the namespaces
-// root: the path to the container json file and information
+// dataPath: the path to the directory under which the container's state file is stored
 // pipe: sync pipe to synchronize the parent and child processes
 // args: the arguments to pass to the container to run as the user's program
 func DefaultCreateCommand(container *libcontainer.Config, console, dataPath, init string, pipe *os.File, args []string) *exec.Cmd {
@@ -294,11 +294,9 @@ func DefaultCreateCommand(container *libcontainer.Config, console, dataPath, ini
 // DefaultSetupCommand will return an exec.Cmd that joins the init process to set it up.
 //
 // console: the /dev/console to setup inside the container
+// dataPath: the path to the directory under which the container's state file is stored
 // init: the program executed inside the namespaces
-// root: the path to the container json file and information
-// args: the arguments to pass to the container to run as the user's program
 func DefaultSetupCommand(container *libcontainer.Config, console, dataPath, init string) *exec.Cmd {
-	// get our binary name from arg0 so we can always reexec ourself
 	env := []string{
 		"console=" + console,
 		"data_path=" + dataPath,
