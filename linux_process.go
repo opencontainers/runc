@@ -32,6 +32,8 @@ type parentProcess interface {
 
 	// startTime return's the process start time.
 	startTime() (string, error)
+
+	signal(os.Signal) error
 }
 
 type setnsProcess struct {
@@ -45,6 +47,10 @@ type setnsProcess struct {
 
 func (p *setnsProcess) startTime() (string, error) {
 	return system.GetProcessStartTime(p.pid())
+}
+
+func (p *setnsProcess) signal(s os.Signal) error {
+	return p.forkedProcess.Signal(s)
 }
 
 func (p *setnsProcess) start() (err error) {
@@ -259,4 +265,8 @@ func (p *initProcess) newUsernsSetupProcess() (parentProcess, error) {
 		parentPipe: parentPipe,
 		config:     p.config,
 	}, nil
+}
+
+func (p *initProcess) signal(s os.Signal) error {
+	return p.cmd.Process.Signal(s)
 }

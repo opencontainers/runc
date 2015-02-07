@@ -224,3 +224,7 @@ func (p *restoredProcess) wait() (*os.ProcessState, error) {
 func (p *restoredProcess) startTime() (string, error) {
 	return p.processStartTime, nil
 }
+
+func (p *restoredProcess) signal(s os.Signal) error {
+	return newGenericError(fmt.Errorf("restored process cannot be signaled"), SystemError)
+}

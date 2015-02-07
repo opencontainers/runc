@@ -230,7 +230,7 @@ func (c *linuxContainer) Resume() error {
 
 func (c *linuxContainer) Signal(signal os.Signal) error {
 	glog.Infof("sending signal %d to pid %d", signal, c.initProcess.pid())
-	panic("not implemented")
+	return c.initProcess.signal(signal)
 }
 
 // TODO: rename to be more descriptive
