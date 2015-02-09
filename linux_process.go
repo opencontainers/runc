@@ -12,7 +12,6 @@ import (
 
 	"github.com/docker/libcontainer/cgroups"
 	"github.com/docker/libcontainer/configs"
-	"github.com/docker/libcontainer/network"
 	"github.com/docker/libcontainer/system"
 	"github.com/golang/glog"
 )
@@ -236,7 +235,7 @@ func (p *initProcess) sendConfig() error {
 
 func (p *initProcess) createNetworkInterfaces() error {
 	for _, config := range p.config.Config.Networks {
-		strategy, err := network.GetStrategy(config.Type)
+		strategy, err := getStrategy(config.Type)
 		if err != nil {
 			return err
 		}

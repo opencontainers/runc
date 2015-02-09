@@ -11,7 +11,6 @@ import (
 
 	"github.com/docker/libcontainer/configs"
 	"github.com/docker/libcontainer/netlink"
-	"github.com/docker/libcontainer/network"
 	"github.com/docker/libcontainer/security/capabilities"
 	"github.com/docker/libcontainer/system"
 	"github.com/docker/libcontainer/user"
@@ -27,13 +26,17 @@ const (
 	initUsernsSetup initType = "userns_setup"
 )
 
+type pid struct {
+	Pid int `json:"pid"`
+}
+
 // Process is used for transferring parameters from Exec() to Init()
 type initConfig struct {
-	Args   []string        `json:"args,omitempty"`
-	Env    []string        `json:"env,omitempty"`
-	Cwd    string          `json:"cwd,omitempty"`
-	User   string          `json:"user,omitempty"`
-	Config *configs.Config `json:"config,omitempty"`
+	Args   []string        `json:"args"`
+	Env    []string        `json:"env"`
+	Cwd    string          `json:"cwd"`
+	User   string          `json:"user"`
+	Config *configs.Config `json:"config"`
 }
 
 type initer interface {
@@ -183,7 +186,7 @@ func setupUser(config *initConfig) error {
 // setting the MTU and IP address along with the default gateway
 func setupNetwork(config *configs.Config) error {
 	for _, config := range config.Networks {
-		strategy, err := network.GetStrategy(config.Type)
+		strategy, err := getStrategy(config.Type)
 		if err != nil {
 			return err
 		}

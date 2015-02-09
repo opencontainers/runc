@@ -10,13 +10,8 @@ import (
 
 	"github.com/docker/libcontainer/cgroups"
 	"github.com/docker/libcontainer/configs"
-	"github.com/docker/libcontainer/network"
 	"github.com/golang/glog"
 )
-
-type pid struct {
-	Pid int `json:"Pid"`
-}
 
 type linuxContainer struct {
 	id            string
@@ -73,13 +68,14 @@ func (c *linuxContainer) Stats() (*Stats, error) {
 	if stats.CgroupStats, err = c.cgroupManager.GetStats(); err != nil {
 		return stats, newGenericError(err, SystemError)
 	}
-	// TODO: handle stats for multiple veth interfaces
 	for _, iface := range c.config.Networks {
-		if iface.Type == "veth" {
-			if stats.NetworkStats, err = network.GetStats(iface.VethHost); err != nil {
+		switch iface.Type {
+		case "veth":
+			istats, err := getNetworkInterfaceStats(iface.VethHost)
+			if err != nil {
 				return stats, newGenericError(err, SystemError)
 			}
-			break
+			stats.Interfaces = append(stats.Interfaces, istats)
 		}
 	}
 	return stats, nil
