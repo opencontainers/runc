@@ -31,6 +31,8 @@ const (
 type initConfig struct {
 	Args   []string        `json:"args,omitempty"`
 	Env    []string        `json:"env,omitempty"`
+	Cwd    string          `json:"cwd,omitempty"`
+	User   string          `json:"user,omitempty"`
 	Config *configs.Config `json:"config,omitempty"`
 }
 
@@ -49,24 +51,19 @@ func newContainerInit(t initType, pipe *os.File) (initer, error) {
 	switch t {
 	case initSetns:
 		return &linuxSetnsInit{
-			args:   config.Args,
-			env:    config.Env,
-			config: config.Config,
+			config: config,
 		}, nil
 	case initUserns:
 		return &linuxUsernsInit{
-			args:   config.Args,
-			env:    config.Env,
-			config: config.Config,
+			config: config,
 		}, nil
 	case initUsernsSetup:
 		return &linuxUsernsSideCar{
-			config: config.Config,
+			config: config,
 		}, nil
 	case initStandard:
 		return &linuxStandardInit{
 			config: config,
-			env:    config.Env,
 		}, nil
 	}
 	return nil, fmt.Errorf("unknown init type %q", t)
@@ -90,7 +87,7 @@ func populateProcessEnvironment(env []string) error {
 // finalizeNamespace drops the caps, sets the correct user
 // and working dir, and closes any leaky file descriptors
 // before execing the command inside the namespace
-func finalizeNamespace(config *configs.Config) error {
+func finalizeNamespace(config *initConfig) error {
 	// Ensure that all non-standard fds we may have accidentally
 	// inherited are marked close-on-exec so they stay out of the
 	// container
@@ -98,7 +95,7 @@ func finalizeNamespace(config *configs.Config) error {
 		return err
 	}
 	// drop capabilities in bounding set before changing user
-	if err := capabilities.DropBoundingSet(config.Capabilities); err != nil {
+	if err := capabilities.DropBoundingSet(config.Config.Capabilities); err != nil {
 		return err
 	}
 	// preserve existing capabilities while we change users
@@ -112,12 +109,12 @@ func finalizeNamespace(config *configs.Config) error {
 		return err
 	}
 	// drop all other capabilities
-	if err := capabilities.DropCapabilities(config.Capabilities); err != nil {
+	if err := capabilities.DropCapabilities(config.Config.Capabilities); err != nil {
 		return err
 	}
-	if config.WorkingDir != "" {
-		if err := syscall.Chdir(config.WorkingDir); err != nil {
-			return fmt.Errorf("chdir to %s %s", config.WorkingDir, err)
+	if config.Cwd != "" {
+		if err := syscall.Chdir(config.Cwd); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -143,7 +140,7 @@ func joinExistingNamespaces(namespaces []configs.Namespace) error {
 }
 
 // setupUser changes the groups, gid, and uid for the user inside the container
-func setupUser(config *configs.Config) error {
+func setupUser(config *initConfig) error {
 	// Set up defaults.
 	defaultExecUser := user.ExecUser{
 		Uid:  syscall.Getuid(),
@@ -160,22 +157,22 @@ func setupUser(config *configs.Config) error {
 	}
 	execUser, err := user.GetExecUserPath(config.User, &defaultExecUser, passwdPath, groupPath)
 	if err != nil {
-		return fmt.Errorf("get supplementary groups %s", err)
+		return err
 	}
-	suppGroups := append(execUser.Sgids, config.AdditionalGroups...)
+	suppGroups := append(execUser.Sgids, config.Config.AdditionalGroups...)
 	if err := syscall.Setgroups(suppGroups); err != nil {
-		return fmt.Errorf("setgroups %s", err)
+		return err
 	}
 	if err := system.Setgid(execUser.Gid); err != nil {
-		return fmt.Errorf("setgid %s", err)
+		return err
 	}
 	if err := system.Setuid(execUser.Uid); err != nil {
-		return fmt.Errorf("setuid %s", err)
+		return err
 	}
 	// if we didn't get HOME already, set it based on the user's HOME
 	if envHome := os.Getenv("HOME"); envHome == "" {
 		if err := os.Setenv("HOME", execUser.Home); err != nil {
-			return fmt.Errorf("set HOME %s", err)
+			return err
 		}
 	}
 	return nil

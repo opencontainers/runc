@@ -16,7 +16,6 @@ import (
 
 type linuxStandardInit struct {
 	config *initConfig
-	env    []string
 }
 
 func (l *linuxStandardInit) Init() error {
@@ -74,7 +73,7 @@ func (l *linuxStandardInit) Init() error {
 	if err != nil {
 		return err
 	}
-	if err := finalizeNamespace(l.config.Config); err != nil {
+	if err := finalizeNamespace(l.config); err != nil {
 		return err
 	}
 	// finalizeNamespace can change user/group which clears the parent death
@@ -87,5 +86,5 @@ func (l *linuxStandardInit) Init() error {
 	if syscall.Getppid() == 1 {
 		return syscall.Kill(syscall.Getpid(), syscall.SIGKILL)
 	}
-	return system.Execv(l.config.Args[0], l.config.Args[0:], l.env)
+	return system.Execv(l.config.Args[0], l.config.Args[0:], l.config.Env)
 }

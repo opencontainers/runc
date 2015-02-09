@@ -15,20 +15,20 @@ import (
 // except the user namespace, so it run as root in the root user namespace
 // to perform these operations.
 type linuxUsernsSideCar struct {
-	config *configs.Config
+	config *initConfig
 }
 
 func (l *linuxUsernsSideCar) Init() error {
-	if err := setupNetwork(l.config); err != nil {
+	if err := setupNetwork(l.config.Config); err != nil {
 		return err
 	}
-	if err := setupRoute(l.config); err != nil {
+	if err := setupRoute(l.config.Config); err != nil {
 		return err
 	}
 	label.Init()
 	// InitializeMountNamespace() can be executed only for a new mount namespace
-	if l.config.Namespaces.Contains(configs.NEWNET) {
-		if err := mount.InitializeMountNamespace(l.config); err != nil {
+	if l.config.Config.Namespaces.Contains(configs.NEWNET) {
+		if err := mount.InitializeMountNamespace(l.config.Config); err != nil {
 			return err
 		}
 	}

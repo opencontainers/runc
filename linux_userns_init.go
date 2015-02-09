@@ -6,7 +6,6 @@ import (
 	"syscall"
 
 	"github.com/docker/libcontainer/apparmor"
-	"github.com/docker/libcontainer/configs"
 	consolepkg "github.com/docker/libcontainer/console"
 	"github.com/docker/libcontainer/label"
 	"github.com/docker/libcontainer/security/restrict"
@@ -14,17 +13,15 @@ import (
 )
 
 type linuxUsernsInit struct {
-	args   []string
-	env    []string
-	config *configs.Config
+	config *initConfig
 }
 
 func (l *linuxUsernsInit) Init() error {
 	// join any namespaces via a path to the namespace fd if provided
-	if err := joinExistingNamespaces(l.config.Namespaces); err != nil {
+	if err := joinExistingNamespaces(l.config.Config.Namespaces); err != nil {
 		return err
 	}
-	console := l.config.Console
+	console := l.config.Config.Console
 	if console != "" {
 		if err := consolepkg.OpenAndDup("/dev/console"); err != nil {
 			return err
@@ -38,24 +35,24 @@ func (l *linuxUsernsInit) Init() error {
 			return err
 		}
 	}
-	if l.config.WorkingDir == "" {
-		l.config.WorkingDir = "/"
+	if l.config.Cwd == "" {
+		l.config.Cwd = "/"
 	}
-	if err := setupRlimits(l.config); err != nil {
+	if err := setupRlimits(l.config.Config); err != nil {
 		return err
 	}
-	if hostname := l.config.Hostname; hostname != "" {
+	if hostname := l.config.Config.Hostname; hostname != "" {
 		if err := syscall.Sethostname([]byte(hostname)); err != nil {
 			return err
 		}
 	}
-	if err := apparmor.ApplyProfile(l.config.AppArmorProfile); err != nil {
+	if err := apparmor.ApplyProfile(l.config.Config.AppArmorProfile); err != nil {
 		return err
 	}
-	if err := label.SetProcessLabel(l.config.ProcessLabel); err != nil {
+	if err := label.SetProcessLabel(l.config.Config.ProcessLabel); err != nil {
 		return err
 	}
-	if l.config.RestrictSys {
+	if l.config.Config.RestrictSys {
 		if err := restrict.Restrict("proc/sys", "proc/sysrq-trigger", "proc/irq", "proc/bus"); err != nil {
 			return err
 		}
@@ -77,5 +74,5 @@ func (l *linuxUsernsInit) Init() error {
 	if syscall.Getppid() == 1 {
 		return syscall.Kill(syscall.Getpid(), syscall.SIGKILL)
 	}
-	return system.Execv(l.args[0], l.args[0:], l.env)
+	return system.Execv(l.config.Args[0], l.config.Args[0:], l.config.Env)
 }

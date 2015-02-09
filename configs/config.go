@@ -49,12 +49,6 @@ type Config struct {
 	// Hostname optionally sets the container's hostname if provided
 	Hostname string `json:"hostname,omitempty"`
 
-	// User will set the uid and gid of the executing process running inside the container
-	User string `json:"user,omitempty"`
-
-	// WorkingDir will change the processes current working directory inside the container's rootfs
-	WorkingDir string `json:"working_dir,omitempty"`
-
 	// Console is the path to the console allocated to the container.
 	Console string `json:"console,omitempty"`
 
