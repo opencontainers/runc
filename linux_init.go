@@ -11,7 +11,6 @@ import (
 
 	"github.com/docker/libcontainer/configs"
 	"github.com/docker/libcontainer/netlink"
-	"github.com/docker/libcontainer/security/capabilities"
 	"github.com/docker/libcontainer/system"
 	"github.com/docker/libcontainer/user"
 	"github.com/docker/libcontainer/utils"
@@ -97,8 +96,12 @@ func finalizeNamespace(config *initConfig) error {
 	if err := utils.CloseExecFrom(3); err != nil {
 		return err
 	}
+	w, err := newCapWhitelist(config.Config.Capabilities)
+	if err != nil {
+		return err
+	}
 	// drop capabilities in bounding set before changing user
-	if err := capabilities.DropBoundingSet(config.Config.Capabilities); err != nil {
+	if err := w.dropBoundingSet(); err != nil {
 		return err
 	}
 	// preserve existing capabilities while we change users
@@ -112,7 +115,7 @@ func finalizeNamespace(config *initConfig) error {
 		return err
 	}
 	// drop all other capabilities
-	if err := capabilities.DropCapabilities(config.Config.Capabilities); err != nil {
+	if err := w.drop(); err != nil {
 		return err
 	}
 	if config.Cwd != "" {
