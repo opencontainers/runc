@@ -1,55 +1,19 @@
 package main
 
 import (
-	"io"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/codegangsta/cli"
-	"github.com/docker/docker/pkg/term"
 	"github.com/docker/libcontainer"
-	"github.com/docker/libcontainer/configs"
-	consolepkg "github.com/docker/libcontainer/console"
+	"github.com/docker/libcontainer/utils"
 )
 
-type tty struct {
-	master  *os.File
-	console string
-	state   *term.State
-}
-
-func (t *tty) Close() error {
-	if t.master != nil {
-		t.master.Close()
-	}
-	if t.state != nil {
-		term.RestoreTerminal(os.Stdin.Fd(), t.state)
-	}
-	return nil
-}
-
-func (t *tty) set(config *configs.Config) {
-	config.Console = t.console
-}
-
-func (t *tty) attach(process *libcontainer.Process) {
-	if t.master != nil {
-		process.Stderr = nil
-		process.Stdout = nil
-		process.Stdin = nil
-	}
-}
-
-func (t *tty) resize() error {
-	if t.master == nil {
-		return nil
-	}
-	ws, err := term.GetWinsize(os.Stdin.Fd())
-	if err != nil {
-		return err
-	}
-	return term.SetWinsize(t.master.Fd(), ws)
+var standardEnvironment = &cli.StringSlice{
+	"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+	"HOSTNAME=nsinit",
+	"TERM=xterm",
 }
 
 var execCommand = cli.Command{
@@ -60,6 +24,8 @@ var execCommand = cli.Command{
 		cli.BoolFlag{Name: "tty", Usage: "allocate a TTY to the container"},
 		cli.StringFlag{Name: "id", Value: "nsinit", Usage: "specify the ID for a container"},
 		cli.StringFlag{Name: "config", Value: "container.json", Usage: "path to the configuration file"},
+		cli.StringFlag{Name: "user,u", Value: "root", Usage: "set the user, uid, and/or gid for the process"},
+		cli.StringSliceFlag{Name: "env", Value: standardEnvironment, Usage: "set environment variables for the process"},
 	},
 }
 
@@ -81,7 +47,7 @@ func execAction(context *cli.Context) {
 		if err != nil {
 			fatal(err)
 		}
-		tty.set(config)
+		config.Console = tty.console.Path()
 		if container, err = factory.Create(context.String("id"), config); err != nil {
 			fatal(err)
 		}
@@ -89,6 +55,8 @@ func execAction(context *cli.Context) {
 	go handleSignals(container, tty)
 	process := &libcontainer.Process{
 		Args:   context.Args(),
+		Env:    context.StringSlice("env"),
+		User:   context.String("user"),
 		Stdin:  os.Stdin,
 		Stdout: os.Stdout,
 		Stderr: os.Stderr,
@@ -109,19 +77,7 @@ func execAction(context *cli.Context) {
 	if err := container.Destroy(); err != nil {
 		fatal(err)
 	}
-	exit(status.Sys().(syscall.WaitStatus))
-}
-
-func exit(status syscall.WaitStatus) {
-	var exitCode int
-	if status.Exited() {
-		exitCode = status.ExitStatus()
-	} else if status.Signaled() {
-		exitCode = -int(status.Signal())
-	} else {
-		fatalf("Unexpected status")
-	}
-	os.Exit(exitCode)
+	os.Exit(utils.ExitStatus(status.Sys().(syscall.WaitStatus)))
 }
 
 func handleSignals(container libcontainer.Container, tty *tty) {
@@ -136,25 +92,4 @@ func handleSignals(container libcontainer.Container, tty *tty) {
 			container.Signal(sig)
 		}
 	}
-}
-
-func newTty(context *cli.Context) (*tty, error) {
-	if context.Bool("tty") {
-		master, console, err := consolepkg.CreateMasterAndConsole()
-		if err != nil {
-			return nil, err
-		}
-		go io.Copy(master, os.Stdin)
-		go io.Copy(os.Stdout, master)
-		state, err := term.SetRawTerminal(os.Stdin.Fd())
-		if err != nil {
-			return nil, err
-		}
-		return &tty{
-			master:  master,
-			console: console,
-			state:   state,
-		}, nil
-	}
-	return &tty{}, nil
 }

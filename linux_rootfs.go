@@ -10,7 +10,6 @@ import (
 	"syscall"
 
 	"github.com/docker/libcontainer/configs"
-	"github.com/docker/libcontainer/console"
 	"github.com/docker/libcontainer/label"
 )
 
@@ -237,7 +236,8 @@ func setupPtmx(config *configs.Config) error {
 		if err != nil {
 			return err
 		}
-		return console.Setup(config.Rootfs, config.Console, config.MountLabel, uid, gid)
+		console := newConsoleFromPath(config.Console)
+		return console.mount(config.Rootfs, config.MountLabel, uid, gid)
 	}
 	return nil
 }

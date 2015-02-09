@@ -7,7 +7,6 @@ import (
 
 	"github.com/docker/libcontainer/apparmor"
 	"github.com/docker/libcontainer/configs"
-	consolepkg "github.com/docker/libcontainer/console"
 	"github.com/docker/libcontainer/label"
 	"github.com/docker/libcontainer/security/restrict"
 	"github.com/docker/libcontainer/system"
@@ -22,16 +21,17 @@ func (l *linuxStandardInit) Init() error {
 	if err := joinExistingNamespaces(l.config.Config.Namespaces); err != nil {
 		return err
 	}
-	console := l.config.Config.Console
-	if console != "" {
-		if err := consolepkg.OpenAndDup(console); err != nil {
+	consolePath := l.config.Config.Console
+	if consolePath != "" {
+		console := newConsoleFromPath(consolePath)
+		if err := console.dupStdio(); err != nil {
 			return err
 		}
 	}
 	if _, err := syscall.Setsid(); err != nil {
 		return err
 	}
-	if console != "" {
+	if consolePath != "" {
 		if err := system.Setctty(); err != nil {
 			return err
 		}

@@ -6,7 +6,6 @@ import (
 	"syscall"
 
 	"github.com/docker/libcontainer/apparmor"
-	consolepkg "github.com/docker/libcontainer/console"
 	"github.com/docker/libcontainer/label"
 	"github.com/docker/libcontainer/security/restrict"
 	"github.com/docker/libcontainer/system"
@@ -21,16 +20,17 @@ func (l *linuxUsernsInit) Init() error {
 	if err := joinExistingNamespaces(l.config.Config.Namespaces); err != nil {
 		return err
 	}
-	console := l.config.Config.Console
-	if console != "" {
-		if err := consolepkg.OpenAndDup("/dev/console"); err != nil {
+	consolePath := l.config.Config.Console
+	if consolePath != "" {
+		console := newConsoleFromPath(consolePath)
+		if err := console.dupStdio(); err != nil {
 			return err
 		}
 	}
 	if _, err := syscall.Setsid(); err != nil {
 		return err
 	}
-	if console != "" {
+	if consolePath != "" {
 		if err := system.Setctty(); err != nil {
 			return err
 		}
