@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"syscall"
+	"time"
 
 	"github.com/docker/docker/pkg/symlink"
 	"github.com/docker/libcontainer/configs"
@@ -350,24 +351,54 @@ func tmpfsMount(m *configs.Mount, rootfs, mountLabel string) error {
 	return syscall.Mount("tmpfs", dest, "tmpfs", uintptr(defaultMountFlags), l)
 }
 
+// createIfNotExists creates a file or a directory only if it does not already exist.
 func createIfNotExists(path string, isDir bool) error {
 	if _, err := os.Stat(path); err != nil {
 		if os.IsNotExist(err) {
 			if isDir {
-				if err := os.MkdirAll(path, 0755); err != nil {
+				return os.MkdirAll(path, 0755)
+			}
+			if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+				return err
+			}
+			f, err := os.OpenFile(path, os.O_CREATE, 0755)
+			if err != nil {
+				return err
+			}
+			f.Close()
+		}
+	}
+	return nil
+}
+
+// remountReadonly will bind over the top of an existing path and ensure that it is read-only.
+func remountReadonly(path string) error {
+	for i := 0; i < 5; i++ {
+		if err := syscall.Mount("", path, "", syscall.MS_REMOUNT|syscall.MS_RDONLY, ""); err != nil && !os.IsNotExist(err) {
+			switch err {
+			case syscall.EINVAL:
+				// Probably not a mountpoint, use bind-mount
+				if err := syscall.Mount(path, path, "", syscall.MS_BIND, ""); err != nil {
 					return err
 				}
-			} else {
-				if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-					return err
-				}
-				f, err := os.OpenFile(path, os.O_CREATE, 0755)
-				if err != nil {
-					return err
-				}
-				f.Close()
+				return syscall.Mount(path, path, "", syscall.MS_BIND|syscall.MS_REMOUNT|syscall.MS_RDONLY|syscall.MS_REC|defaultMountFlags, "")
+			case syscall.EBUSY:
+				time.Sleep(100 * time.Millisecond)
+				continue
+			default:
+				return err
 			}
 		}
+		return nil
+	}
+	return fmt.Errorf("unable to mount %s as readonly max retries reached", path)
+}
+
+// maskProckcore bind mounts /dev/null over the top of /proc/kcore inside a container to avoid security
+// issues from processes reading memory information.
+func maskProckcore() error {
+	if err := syscall.Mount("/dev/null", "/proc/kcore", "", syscall.MS_BIND, ""); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("unable to bind-mount /dev/null over /proc/kcore: %s", err)
 	}
 	return nil
 }

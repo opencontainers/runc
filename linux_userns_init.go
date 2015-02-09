@@ -7,7 +7,6 @@ import (
 
 	"github.com/docker/libcontainer/apparmor"
 	"github.com/docker/libcontainer/label"
-	"github.com/docker/libcontainer/security/restrict"
 	"github.com/docker/libcontainer/system"
 )
 
@@ -53,7 +52,12 @@ func (l *linuxUsernsInit) Init() error {
 		return err
 	}
 	if l.config.Config.RestrictSys {
-		if err := restrict.Restrict("proc/sys", "proc/sysrq-trigger", "proc/irq", "proc/bus"); err != nil {
+		for _, path := range []string{"proc/sys", "proc/sysrq-trigger", "proc/irq", "proc/bus"} {
+			if err := remountReadonly(path); err != nil {
+				return err
+			}
+		}
+		if err := maskProckcore(); err != nil {
 			return err
 		}
 	}
