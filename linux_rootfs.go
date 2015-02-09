@@ -1,14 +1,16 @@
 // +build linux
 
-package mount
+package libcontainer
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"syscall"
 
 	"github.com/docker/libcontainer/configs"
+	"github.com/docker/libcontainer/console"
 	"github.com/docker/libcontainer/label"
 )
 
@@ -22,9 +24,9 @@ type mount struct {
 	data   string
 }
 
-// InitializeMountNamespace sets up the devices, mount points, and filesystems for use inside a
+// setupRootfs sets up the devices, mount points, and filesystems for use inside a
 // new mount namespace.
-func InitializeMountNamespace(config *configs.Config) (err error) {
+func setupRootfs(config *configs.Config) (err error) {
 	if err := prepareRoot(config); err != nil {
 		return err
 	}
@@ -212,4 +214,66 @@ func prepareRoot(config *configs.Config) error {
 		return err
 	}
 	return syscall.Mount(config.Rootfs, config.Rootfs, "bind", syscall.MS_BIND|syscall.MS_REC, "")
+}
+
+func setReadonly() error {
+	return syscall.Mount("/", "/", "bind", syscall.MS_BIND|syscall.MS_REMOUNT|syscall.MS_RDONLY|syscall.MS_REC, "")
+}
+
+func setupPtmx(config *configs.Config) error {
+	ptmx := filepath.Join(config.Rootfs, "dev/ptmx")
+	if err := os.Remove(ptmx); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	if err := os.Symlink("pts/ptmx", ptmx); err != nil {
+		return fmt.Errorf("symlink dev ptmx %s", err)
+	}
+	if config.Console != "" {
+		uid, err := config.HostUID()
+		if err != nil {
+			return err
+		}
+		gid, err := config.HostGID()
+		if err != nil {
+			return err
+		}
+		return console.Setup(config.Rootfs, config.Console, config.MountLabel, uid, gid)
+	}
+	return nil
+}
+
+func pivotRoot(rootfs, pivotBaseDir string) error {
+	if pivotBaseDir == "" {
+		pivotBaseDir = "/"
+	}
+	tmpDir := filepath.Join(rootfs, pivotBaseDir)
+	if err := os.MkdirAll(tmpDir, 0755); err != nil {
+		return fmt.Errorf("can't create tmp dir %s, error %v", tmpDir, err)
+	}
+	pivotDir, err := ioutil.TempDir(tmpDir, ".pivot_root")
+	if err != nil {
+		return fmt.Errorf("can't create pivot_root dir %s, error %v", pivotDir, err)
+	}
+	if err := syscall.PivotRoot(rootfs, pivotDir); err != nil {
+		return fmt.Errorf("pivot_root %s", err)
+	}
+	if err := syscall.Chdir("/"); err != nil {
+		return fmt.Errorf("chdir / %s", err)
+	}
+	// path to pivot dir now changed, update
+	pivotDir = filepath.Join(pivotBaseDir, filepath.Base(pivotDir))
+	if err := syscall.Unmount(pivotDir, syscall.MNT_DETACH); err != nil {
+		return fmt.Errorf("unmount pivot_root dir %s", err)
+	}
+	return os.Remove(pivotDir)
+}
+
+func msMoveRoot(rootfs string) error {
+	if err := syscall.Mount(rootfs, "/", "", syscall.MS_MOVE, ""); err != nil {
+		return err
+	}
+	if err := syscall.Chroot("."); err != nil {
+		return err
+	}
+	return syscall.Chdir("/")
 }

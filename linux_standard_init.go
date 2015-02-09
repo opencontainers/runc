@@ -9,7 +9,6 @@ import (
 	"github.com/docker/libcontainer/configs"
 	consolepkg "github.com/docker/libcontainer/console"
 	"github.com/docker/libcontainer/label"
-	"github.com/docker/libcontainer/mount"
 	"github.com/docker/libcontainer/security/restrict"
 	"github.com/docker/libcontainer/system"
 )
@@ -49,7 +48,7 @@ func (l *linuxStandardInit) Init() error {
 	label.Init()
 	// InitializeMountNamespace() can be executed only for a new mount namespace
 	if l.config.Config.Namespaces.Contains(configs.NEWNS) {
-		if err := mount.InitializeMountNamespace(l.config.Config); err != nil {
+		if err := setupRootfs(l.config.Config); err != nil {
 			return err
 		}
 	}
