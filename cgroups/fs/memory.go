@@ -13,7 +13,7 @@ import (
 type MemoryGroup struct {
 }
 
-func (s *MemoryGroup) Set(d *data) error {
+func (s *MemoryGroup) Apply(d *data) error {
 	dir, err := d.join("memory")
 	// only return an error for memory if it was specified
 	if err != nil && (d.c.Memory != 0 || d.c.MemoryReservation != 0 || d.c.MemorySwap != 0) {

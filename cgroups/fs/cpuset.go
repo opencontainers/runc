@@ -13,12 +13,12 @@ import (
 type CpusetGroup struct {
 }
 
-func (s *CpusetGroup) Set(d *data) error {
+func (s *CpusetGroup) Apply(d *data) error {
 	dir, err := d.path("cpuset")
 	if err != nil {
 		return err
 	}
-	return s.SetDir(dir, d.c.CpusetCpus, d.c.CpusetMems, d.pid)
+	return s.ApplyDir(dir, d.c.CpusetCpus, d.c.CpusetMems, d.pid)
 }
 
 func (s *CpusetGroup) Remove(d *data) error {
@@ -29,7 +29,7 @@ func (s *CpusetGroup) GetStats(path string, stats *cgroups.Stats) error {
 	return nil
 }
 
-func (s *CpusetGroup) SetDir(dir, cpus string, mems string, pid int) error {
+func (s *CpusetGroup) ApplyDir(dir, cpus string, mems string, pid int) error {
 	if err := s.ensureParent(dir); err != nil {
 		return err
 	}

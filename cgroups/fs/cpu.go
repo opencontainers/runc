@@ -12,7 +12,7 @@ import (
 type CpuGroup struct {
 }
 
-func (s *CpuGroup) Set(d *data) error {
+func (s *CpuGroup) Apply(d *data) error {
 	// We always want to join the cpu group, to allow fair cpu scheduling
 	// on a container basis
 	dir, err := d.join("cpu")

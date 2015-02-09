@@ -31,7 +31,7 @@ type subsystem interface {
 	// Removes the cgroup represented by 'data'.
 	Remove(*data) error
 	// Creates and joins the cgroup represented by data.
-	Set(*data) error
+	Apply(*data) error
 }
 
 type Manager struct {
@@ -91,7 +91,7 @@ func (m *Manager) Apply(pid int) error {
 		}
 	}()
 	for name, sys := range subsystems {
-		if err := sys.Set(d); err != nil {
+		if err := sys.Apply(d); err != nil {
 			return err
 		}
 		// TODO: Apply should, ideally, be reentrant or be broken up into a separate
@@ -129,7 +129,7 @@ func ApplyDevices(c *configs.Cgroup, pid int) error {
 
 	devices := subsystems["devices"]
 
-	return devices.Set(d)
+	return devices.Apply(d)
 }
 
 func (m *Manager) GetStats() (*cgroups.Stats, error) {
@@ -159,7 +159,7 @@ func (m *Manager) Freeze(state configs.FreezerState) error {
 	m.Cgroups.Freezer = state
 
 	freezer := subsystems["freezer"]
-	err = freezer.Set(d)
+	err = freezer.Apply(d)
 	if err != nil {
 		m.Cgroups.Freezer = prevState
 		return err

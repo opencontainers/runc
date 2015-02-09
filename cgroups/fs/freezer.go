@@ -11,7 +11,7 @@ import (
 type FreezerGroup struct {
 }
 
-func (s *FreezerGroup) Set(d *data) error {
+func (s *FreezerGroup) Apply(d *data) error {
 	switch d.c.Freezer {
 	case configs.Frozen, configs.Thawed:
 		dir, err := d.path("freezer")

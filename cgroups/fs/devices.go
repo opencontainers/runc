@@ -5,7 +5,7 @@ import "github.com/docker/libcontainer/cgroups"
 type DevicesGroup struct {
 }
 
-func (s *DevicesGroup) Set(d *data) error {
+func (s *DevicesGroup) Apply(d *data) error {
 	dir, err := d.join("devices")
 	if err != nil {
 		return err
