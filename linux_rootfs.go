@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"syscall"
 
+	"github.com/docker/docker/pkg/symlink"
 	"github.com/docker/libcontainer/configs"
 	"github.com/docker/libcontainer/label"
 )
@@ -34,7 +35,7 @@ func setupRootfs(config *configs.Config) (err error) {
 	}
 	// apply any user specified mounts within the new mount namespace
 	for _, m := range config.Mounts {
-		if err := m.Mount(config.Rootfs, config.MountLabel); err != nil {
+		if err := mountUserMount(m, config.Rootfs, config.MountLabel); err != nil {
 			return err
 		}
 	}
@@ -68,7 +69,7 @@ func setupRootfs(config *configs.Config) (err error) {
 	}
 	if config.Readonlyfs {
 		if err := setReadonly(); err != nil {
-			return fmt.Errorf("set readonly %s", err)
+			return err
 		}
 	}
 	syscall.Umask(0022)
@@ -80,10 +81,10 @@ func setupRootfs(config *configs.Config) (err error) {
 func mountSystem(config *configs.Config) error {
 	for _, m := range newSystemMounts(config.Rootfs, config.MountLabel, config.RestrictSys) {
 		if err := os.MkdirAll(m.path, 0755); err != nil && !os.IsExist(err) {
-			return fmt.Errorf("mkdirall %s %s", m.path, err)
+			return err
 		}
 		if err := syscall.Mount(m.source, m.path, m.device, uintptr(m.flags), m.data); err != nil {
-			return fmt.Errorf("mounting %s into %s %s", m.source, m.path, err)
+			return err
 		}
 	}
 	return nil
@@ -276,4 +277,97 @@ func msMoveRoot(rootfs string) error {
 		return err
 	}
 	return syscall.Chdir("/")
+}
+
+func mountUserMount(m *configs.Mount, rootfs, mountLabel string) error {
+	switch m.Type {
+	case "bind":
+		return bindMount(m, rootfs, mountLabel)
+	case "tmpfs":
+		return tmpfsMount(m, rootfs, mountLabel)
+	default:
+		return fmt.Errorf("unsupported mount type %s for %s", m.Type, m.Destination)
+	}
+}
+
+func bindMount(m *configs.Mount, rootfs, mountLabel string) error {
+	var (
+		flags = syscall.MS_BIND | syscall.MS_REC
+		dest  = filepath.Join(rootfs, m.Destination)
+	)
+	if !m.Writable {
+		flags = flags | syscall.MS_RDONLY
+	}
+	if m.Slave {
+		flags = flags | syscall.MS_SLAVE
+	}
+	stat, err := os.Stat(m.Source)
+	if err != nil {
+		return err
+	}
+	// TODO: (crosbymichael) This does not belong here and should be done a layer above
+	dest, err = symlink.FollowSymlinkInScope(dest, rootfs)
+	if err != nil {
+		return err
+	}
+	if err := createIfNotExists(dest, stat.IsDir()); err != nil {
+		return fmt.Errorf("creating new bind mount target %s", err)
+	}
+	if err := syscall.Mount(m.Source, dest, "bind", uintptr(flags), ""); err != nil {
+		return err
+	}
+	if !m.Writable {
+		if err := syscall.Mount(m.Source, dest, "bind", uintptr(flags|syscall.MS_REMOUNT), ""); err != nil {
+			return err
+		}
+	}
+	if m.Relabel != "" {
+		if err := label.Relabel(m.Source, mountLabel, m.Relabel); err != nil {
+			return err
+		}
+	}
+	if m.Private {
+		if err := syscall.Mount("", dest, "none", uintptr(syscall.MS_PRIVATE), ""); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func tmpfsMount(m *configs.Mount, rootfs, mountLabel string) error {
+	var (
+		err  error
+		l    = label.FormatMountLabel("", mountLabel)
+		dest = filepath.Join(rootfs, m.Destination)
+	)
+	// TODO: (crosbymichael) This does not belong here and should be done a layer above
+	if dest, err = symlink.FollowSymlinkInScope(dest, rootfs); err != nil {
+		return err
+	}
+	if err := createIfNotExists(dest, true); err != nil {
+		return err
+	}
+	return syscall.Mount("tmpfs", dest, "tmpfs", uintptr(defaultMountFlags), l)
+}
+
+func createIfNotExists(path string, isDir bool) error {
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			if isDir {
+				if err := os.MkdirAll(path, 0755); err != nil {
+					return err
+				}
+			} else {
+				if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+					return err
+				}
+				f, err := os.OpenFile(path, os.O_CREATE, 0755)
+				if err != nil {
+					return err
+				}
+				f.Close()
+			}
+		}
+	}
+	return nil
 }
