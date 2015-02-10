@@ -15,14 +15,12 @@ func init() {
 	if len(os.Args) < 2 || os.Args[1] != "init" {
 		return
 	}
+	runtime.GOMAXPROCS(1)
 	runtime.LockOSThread()
-
 	factory, err := libcontainer.New("", nil)
 	if err != nil {
 		log.Fatalf("unable to initialize for container: %s", err)
 	}
-
 	factory.StartInitialization(3)
-
 	os.Exit(1)
 }

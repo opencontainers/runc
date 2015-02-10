@@ -239,9 +239,13 @@ func (p *initProcess) createNetworkInterfaces() error {
 		if err != nil {
 			return err
 		}
-		if err := strategy.Create(config, p.pid()); err != nil {
+		n := &network{
+			Network: *config,
+		}
+		if err := strategy.create(n, p.pid()); err != nil {
 			return err
 		}
+		p.config.Networks = append(p.config.Networks, n)
 	}
 	return nil
 }

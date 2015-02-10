@@ -8,6 +8,9 @@ type Network struct {
 	// Type sets the networks type, commonly veth and loopback
 	Type string `json:"type,omitempty"`
 
+	// Name of the network interface
+	Name string `json:"name,omitempty"`
+
 	// The bridge to use.
 	Bridge string `json:"bridge,omitempty"`
 
@@ -36,11 +39,9 @@ type Network struct {
 	// Note: This does not apply to loopback interfaces.
 	TxQueueLen int `json:"txqueuelen,omitempty"`
 
-	// The name of the veth interface on the Host.
-	VethHost string `json:"veth_host,omitempty"`
-
-	// The name of the veth interface created inside the container for the child.
-	VethChild string `json:"veth_child,omitempty"`
+	// HostInterfaceName is a unique name of a veth pair that resides on in the host interface of the
+	// container.
+	HostInterfaceName string `json:"host_interface_name,omitempty"`
 }
 
 // Routes can be specified to create entries in the route table as the container is started

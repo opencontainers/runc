@@ -71,7 +71,7 @@ func (c *linuxContainer) Stats() (*Stats, error) {
 	for _, iface := range c.config.Networks {
 		switch iface.Type {
 		case "veth":
-			istats, err := getNetworkInterfaceStats(iface.VethHost)
+			istats, err := getNetworkInterfaceStats(iface.HostInterfaceName)
 			if err != nil {
 				return stats, newGenericError(err, SystemError)
 			}
@@ -134,6 +134,8 @@ func (c *linuxContainer) commandTemplate(p *Process, childPipe *os.File) (*exec.
 }
 
 func (c *linuxContainer) newInitProcess(p *Process, cmd *exec.Cmd, parentPipe, childPipe *os.File) *initProcess {
+	t := "_LIBCONTAINER_INITTYPE=standard"
+
 	cloneFlags := c.config.Namespaces.CloneFlags()
 	if cloneFlags&syscall.CLONE_NEWUSER != 0 {
 		c.addUidGidMappings(cmd.SysProcAttr)
@@ -141,9 +143,10 @@ func (c *linuxContainer) newInitProcess(p *Process, cmd *exec.Cmd, parentPipe, c
 		if cmd.SysProcAttr.Credential == nil {
 			cmd.SysProcAttr.Credential = &syscall.Credential{}
 		}
+		t = "_LIBCONTAINER_INITTYPE=userns"
 	}
+	cmd.Env = append(cmd.Env, t)
 	cmd.SysProcAttr.Cloneflags = cloneFlags
-	cmd.Env = append(cmd.Env, "_LIBCONTAINER_INITTYPE=standard")
 	return &initProcess{
 		cmd:        cmd,
 		childPipe:  childPipe,

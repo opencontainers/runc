@@ -18,7 +18,7 @@ type linuxUsernsSideCar struct {
 }
 
 func (l *linuxUsernsSideCar) Init() error {
-	if err := setupNetwork(l.config.Config); err != nil {
+	if err := setupNetwork(l.config); err != nil {
 		return err
 	}
 	if err := setupRoute(l.config.Config); err != nil {
@@ -26,7 +26,7 @@ func (l *linuxUsernsSideCar) Init() error {
 	}
 	label.Init()
 	// InitializeMountNamespace() can be executed only for a new mount namespace
-	if l.config.Config.Namespaces.Contains(configs.NEWNET) {
+	if l.config.Config.Namespaces.Contains(configs.NEWNS) {
 		if err := setupRootfs(l.config.Config); err != nil {
 			return err
 		}

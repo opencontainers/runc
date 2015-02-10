@@ -29,13 +29,23 @@ type pid struct {
 	Pid int `json:"pid"`
 }
 
+// network is an internal struct used to setup container networks.
+type network struct {
+	configs.Network
+
+	// TempVethPeerName is a unique tempory veth peer name that was placed into
+	// the container's namespace.
+	TempVethPeerName string `json:"temp_veth_peer_name"`
+}
+
 // Process is used for transferring parameters from Exec() to Init()
 type initConfig struct {
-	Args   []string        `json:"args"`
-	Env    []string        `json:"env"`
-	Cwd    string          `json:"cwd"`
-	User   string          `json:"user"`
-	Config *configs.Config `json:"config"`
+	Args     []string        `json:"args"`
+	Env      []string        `json:"env"`
+	Cwd      string          `json:"cwd"`
+	User     string          `json:"user"`
+	Config   *configs.Config `json:"config"`
+	Networks []*network      `json:"network"`
 }
 
 type initer interface {
@@ -184,18 +194,15 @@ func setupUser(config *initConfig) error {
 	return nil
 }
 
-// setupVethNetwork uses the Network config if it is not nil to initialize
-// the new veth interface inside the container for use by changing the name to eth0
-// setting the MTU and IP address along with the default gateway
-func setupNetwork(config *configs.Config) error {
+// setupNetwork sets up and initializes any network interface inside the container.
+func setupNetwork(config *initConfig) error {
 	for _, config := range config.Networks {
 		strategy, err := getStrategy(config.Type)
 		if err != nil {
 			return err
 		}
-		err1 := strategy.Initialize(config)
-		if err1 != nil {
-			return err1
+		if err := strategy.initialize(config); err != nil {
+			return err
 		}
 	}
 	return nil

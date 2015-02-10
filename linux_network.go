@@ -11,11 +11,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/docker/libcontainer/configs"
 	"github.com/docker/libcontainer/netlink"
+	"github.com/docker/libcontainer/utils"
 )
-
-const defaultVethInterfaceName = "eth0"
 
 var (
 	ErrNotValidStrategyType = errors.New("not a valid network strategy type")
@@ -29,8 +27,8 @@ var strategies = map[string]networkStrategy{
 // networkStrategy represents a specific network configuration for
 // a container's networking stack
 type networkStrategy interface {
-	Create(*configs.Network, int) error
-	Initialize(*configs.Network) error
+	create(*network, int) error
+	initialize(*network) error
 }
 
 // getStrategy returns the specific network strategy for the
@@ -93,11 +91,11 @@ func readSysfsNetworkStats(ethInterface, statsFile string) (uint64, error) {
 type loopback struct {
 }
 
-func (l *loopback) Create(n *configs.Network, nspid int) error {
+func (l *loopback) create(n *network, nspid int) error {
 	return nil
 }
 
-func (l *loopback) Initialize(config *configs.Network) error {
+func (l *loopback) initialize(config *network) error {
 	iface, err := net.InterfaceByName("lo")
 	if err != nil {
 		return err
@@ -111,7 +109,18 @@ func (l *loopback) Initialize(config *configs.Network) error {
 type veth struct {
 }
 
-func (v *veth) Create(n *configs.Network, nspid int) error {
+func (v *veth) create(n *network, nspid int) (err error) {
+	tmpName, err := v.generateTempPeerName()
+	if err != nil {
+		return err
+	}
+	n.TempVethPeerName = tmpName
+	defer func() {
+		if err != nil {
+			netlink.NetworkLinkDel(n.HostInterfaceName)
+			netlink.NetworkLinkDel(n.TempVethPeerName)
+		}
+	}()
 	if n.Bridge == "" {
 		return fmt.Errorf("bridge is not specified")
 	}
@@ -119,10 +128,10 @@ func (v *veth) Create(n *configs.Network, nspid int) error {
 	if err != nil {
 		return err
 	}
-	if err := netlink.NetworkCreateVethPair(n.VethHost, n.VethChild, n.TxQueueLen); err != nil {
+	if err := netlink.NetworkCreateVethPair(n.HostInterfaceName, n.TempVethPeerName, n.TxQueueLen); err != nil {
 		return err
 	}
-	host, err := net.InterfaceByName(n.VethHost)
+	host, err := net.InterfaceByName(n.HostInterfaceName)
 	if err != nil {
 		return err
 	}
@@ -135,30 +144,34 @@ func (v *veth) Create(n *configs.Network, nspid int) error {
 	if err := netlink.NetworkLinkUp(host); err != nil {
 		return err
 	}
-	child, err := net.InterfaceByName(n.VethChild)
+	child, err := net.InterfaceByName(n.TempVethPeerName)
 	if err != nil {
 		return err
 	}
 	return netlink.NetworkSetNsPid(child, nspid)
 }
 
-func (v *veth) Initialize(config *configs.Network) error {
-	vethChild := config.VethChild
-	if vethChild == "" {
-		return fmt.Errorf("vethChild is not specified")
+func (v *veth) generateTempPeerName() (string, error) {
+	return utils.GenerateRandomName("veth", 7)
+}
+
+func (v *veth) initialize(config *network) error {
+	peer := config.TempVethPeerName
+	if peer == "" {
+		return fmt.Errorf("peer is not specified")
 	}
-	child, err := net.InterfaceByName(vethChild)
+	child, err := net.InterfaceByName(peer)
 	if err != nil {
 		return err
 	}
 	if err := netlink.NetworkLinkDown(child); err != nil {
 		return err
 	}
-	if err := netlink.NetworkChangeName(child, defaultVethInterfaceName); err != nil {
+	if err := netlink.NetworkChangeName(child, config.Name); err != nil {
 		return err
 	}
 	// get the interface again after we changed the name as the index also changes.
-	if child, err = net.InterfaceByName(defaultVethInterfaceName); err != nil {
+	if child, err = net.InterfaceByName(config.Name); err != nil {
 		return err
 	}
 	if config.MacAddress != "" {
@@ -188,12 +201,12 @@ func (v *veth) Initialize(config *configs.Network) error {
 		return err
 	}
 	if config.Gateway != "" {
-		if err := netlink.AddDefaultGw(config.Gateway, defaultVethInterfaceName); err != nil {
+		if err := netlink.AddDefaultGw(config.Gateway, config.Name); err != nil {
 			return err
 		}
 	}
 	if config.IPv6Gateway != "" {
-		if err := netlink.AddDefaultGw(config.IPv6Gateway, defaultVethInterfaceName); err != nil {
+		if err := netlink.AddDefaultGw(config.IPv6Gateway, config.Name); err != nil {
 			return err
 		}
 	}

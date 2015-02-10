@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"runtime"
 
 	"github.com/codegangsta/cli"
 	"github.com/docker/libcontainer"
@@ -15,6 +16,8 @@ var initCommand = cli.Command{
 		cli.IntFlag{Name: "fd", Value: 0, Usage: "internal pipe fd"},
 	},
 	Action: func(context *cli.Context) {
+		runtime.GOMAXPROCS(1)
+		runtime.LockOSThread()
 		factory, err := libcontainer.New("", nil)
 		if err != nil {
 			log.Fatal(err)
