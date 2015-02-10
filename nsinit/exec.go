@@ -21,7 +21,7 @@ var execCommand = cli.Command{
 	Usage:  "execute a new command inside a container",
 	Action: execAction,
 	Flags: []cli.Flag{
-		cli.BoolFlag{Name: "tty", Usage: "allocate a TTY to the container"},
+		cli.BoolFlag{Name: "tty,t", Usage: "allocate a TTY to the container"},
 		cli.StringFlag{Name: "id", Value: "nsinit", Usage: "specify the ID for a container"},
 		cli.StringFlag{Name: "config", Value: "container.json", Usage: "path to the configuration file"},
 		cli.StringFlag{Name: "user,u", Value: "root", Usage: "set the user, uid, and/or gid for the process"},

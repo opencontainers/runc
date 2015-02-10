@@ -46,6 +46,10 @@ func setupRootfs(config *configs.Config) (err error) {
 	if err := setupPtmx(config); err != nil {
 		return err
 	}
+	uid, err := config.HostUID()
+	if err != nil {
+		return err
+	}
 	// stdin, stdout and stderr could be pointing to /dev/null from parent namespace.
 	// Re-open them inside this namespace.
 	// FIXME: Need to fix this for user namespaces.
