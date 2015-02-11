@@ -12,6 +12,17 @@ import (
 )
 
 func TestExecPS(t *testing.T) {
+	testExecPS(t, false)
+}
+
+func TestUsernsExecPS(t *testing.T) {
+	if _, err := os.Stat("/proc/self/ns/user"); os.IsNotExist(err) {
+		t.Skip("userns is unsupported")
+	}
+	testExecPS(t, true)
+}
+
+func testExecPS(t *testing.T, userns bool) {
 	if testing.Short() {
 		return
 	}
@@ -23,6 +34,12 @@ func TestExecPS(t *testing.T) {
 	defer remove(rootfs)
 
 	config := newTemplateConfig(rootfs)
+	if userns {
+		config.UidMappings = []configs.IDMap{{0, 0, 1000}}
+		config.GidMappings = []configs.IDMap{{0, 0, 1000}}
+		config.Namespaces = append(config.Namespaces, configs.Namespace{Type: configs.NEWUSER})
+	}
+
 	buffers, exitCode, err := runContainer(config, "", "ps")
 	if err != nil {
 		t.Fatal(err)
