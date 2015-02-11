@@ -17,7 +17,7 @@ var oomCommand = cli.Command{
 		if err != nil {
 			log.Fatal(err)
 		}
-		n, err := container.OOM()
+		n, err := container.NotifyOOM()
 		if err != nil {
 			log.Fatal(err)
 		}

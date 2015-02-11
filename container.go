@@ -113,9 +113,9 @@ type Container interface {
 	// Systemerror - System error.
 	Signal(signal os.Signal) error
 
-	// OOM returns a read-only channel signaling when the container receives an OOM notification.
+	// NotifyOOM returns a read-only channel signaling when the container receives an OOM notification.
 	//
 	// errors:
 	// Systemerror - System error.
-	OOM() (<-chan struct{}, error)
+	NotifyOOM() (<-chan struct{}, error)
 }

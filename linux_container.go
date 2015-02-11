@@ -275,6 +275,6 @@ func (c *linuxContainer) Signal(signal os.Signal) error {
 }
 
 // TODO: rename to be more descriptive
-func (c *linuxContainer) OOM() (<-chan struct{}, error) {
+func (c *linuxContainer) NotifyOOM() (<-chan struct{}, error) {
 	return NotifyOnOOM(c.cgroupManager.GetPaths())
 }
