@@ -80,8 +80,8 @@ func TestFactoryLoadContainer(t *testing.T) {
 		expectedConfig = &configs.Config{
 			Rootfs: "/mycontainer/root",
 		}
-		expectedState = &configs.State{
-			InitPid: 1024,
+		expectedState = &State{
+			InitProcessPid: 1024,
 		}
 	)
 	if err := os.Mkdir(filepath.Join(root, id), 0700); err != nil {
@@ -112,8 +112,8 @@ func TestFactoryLoadContainer(t *testing.T) {
 	if !ok {
 		t.Fatal("expected linux container on linux based systems")
 	}
-	if lcontainer.initProcess.pid() != expectedState.InitPid {
-		t.Fatalf("expected init pid %d but received %d", expectedState.InitPid, lcontainer.initProcess.pid())
+	if lcontainer.initProcess.pid() != expectedState.InitProcessPid {
+		t.Fatalf("expected init pid %d but received %d", expectedState.InitProcessPid, lcontainer.initProcess.pid())
 	}
 }
 

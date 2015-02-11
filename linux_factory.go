@@ -107,8 +107,8 @@ func (l *linuxFactory) Load(id string) (Container, error) {
 		return nil, err
 	}
 	r := &restoredProcess{
-		processPid:       state.InitPid,
-		processStartTime: state.InitStartTime,
+		processPid:       state.InitProcessPid,
+		processStartTime: state.InitProcessStartTime,
 	}
 	cgroupManager := cgroups.LoadCgroupManager(config.Cgroups, state.CgroupPaths)
 	glog.Infof("using %s as cgroup manager", cgroupManager)
@@ -171,7 +171,7 @@ func (l *linuxFactory) loadContainerConfig(root string) (*configs.Config, error)
 	return config, nil
 }
 
-func (l *linuxFactory) loadContainerState(root string) (*configs.State, error) {
+func (l *linuxFactory) loadContainerState(root string) (*State, error) {
 	f, err := os.Open(filepath.Join(root, stateFilename))
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -180,7 +180,7 @@ func (l *linuxFactory) loadContainerState(root string) (*configs.State, error) {
 		return nil, newGenericError(err, SystemError)
 	}
 	defer f.Close()
-	var state *configs.State
+	var state *State
 	if err := json.NewDecoder(f).Decode(&state); err != nil {
 		return nil, newGenericError(err, SystemError)
 	}

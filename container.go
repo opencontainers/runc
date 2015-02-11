@@ -9,6 +9,23 @@ import (
 	"github.com/docker/libcontainer/configs"
 )
 
+// State represents a running container's state
+type State struct {
+	// InitProcessPid is the init process id in the parent namespace.
+	InitProcessPid int
+
+	// InitProcessStartTime is the init process start time.
+	InitProcessStartTime string
+
+	// Path to all the cgroups setup for a container. Key is cgroup subsystem name
+	// with the value as the path.
+	CgroupPaths map[string]string
+
+	// NamespacePaths are filepaths to the container's namespaces. Key is the namespace name
+	// with the value as the path.
+	NamespacePaths map[string]string
+}
+
 // A libcontainer container object.
 //
 // Each container is thread-safe within the same process. Since a container can
@@ -21,8 +38,15 @@ type Container interface {
 	// Returns the current status of the container.
 	//
 	// errors:
+	// ContainerDestroyed - Container no longer exists,
 	// Systemerror - System error.
 	Status() (configs.Status, error)
+
+	// State returns the current container's state information.
+	//
+	// errors:
+	// Systemerror - System erroor.
+	State() (*State, error)
 
 	// Returns the current config of the container.
 	Config() configs.Config

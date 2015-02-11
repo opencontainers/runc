@@ -16,15 +16,3 @@ const (
 	// The container does not exist.
 	Destroyed
 )
-
-// State represents a running container's state
-type State struct {
-	// InitPid is the init process id in the parent namespace
-	InitPid int `json:"init_pid,omitempty"`
-
-	// InitStartTime is the init process start time
-	InitStartTime string `json:"init_start_time,omitempty"`
-
-	// Path to all the cgroups setup for a container. Key is cgroup subsystem name.
-	CgroupPaths map[string]string `json:"cgroup_paths,omitempty"`
-}

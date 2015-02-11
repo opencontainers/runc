@@ -43,11 +43,53 @@ func (c *linuxContainer) Status() (configs.Status, error) {
 		}
 		return 0, err
 	}
-	if c.config.Cgroups != nil &&
-		c.config.Cgroups.Freezer == configs.Frozen {
+	if c.config.Cgroups != nil && c.config.Cgroups.Freezer == configs.Frozen {
 		return configs.Paused, nil
 	}
 	return configs.Running, nil
+}
+
+func (c *linuxContainer) State() (*State, error) {
+	status, err := c.Status()
+	if err != nil {
+		return nil, err
+	}
+	if status == configs.Destroyed {
+		return nil, newGenericError(fmt.Errorf("container destroyed"), ContainerNotExists)
+	}
+	startTime, err := c.initProcess.startTime()
+	if err != nil {
+		return nil, err
+	}
+	state := &State{
+		InitProcessPid:       c.initProcess.pid(),
+		InitProcessStartTime: startTime,
+		CgroupPaths:          c.cgroupManager.GetPaths(),
+		NamespacePaths:       make(map[string]string),
+	}
+	for _, ns := range c.config.Namespaces {
+		if ns.Path != "" {
+			state.NamespacePaths[string(ns.Type)] = ns.Path
+			continue
+		}
+		file := ""
+		switch ns.Type {
+		case configs.NEWNET:
+			file = "net"
+		case configs.NEWNS:
+			file = "mnt"
+		case configs.NEWPID:
+			file = "pid"
+		case configs.NEWIPC:
+			file = "ipc"
+		case configs.NEWUSER:
+			file = "user"
+		case configs.NEWUTS:
+			file = "uts"
+		}
+		state.NamespacePaths[string(ns.Type)] = fmt.Sprintf("/proc/%d/ns/%s", c.initProcess.pid(), file)
+	}
+	return state, nil
 }
 
 func (c *linuxContainer) Processes() ([]int, error) {
