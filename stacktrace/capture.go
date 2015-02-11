@@ -10,7 +10,6 @@ func Capture(userSkip int) Stacktrace {
 		skip   = userSkip + 1 // add one for our own function
 		frames []Frame
 	)
-
 	for i := skip; ; i++ {
 		pc, file, line, ok := runtime.Caller(i)
 		if !ok {
@@ -18,7 +17,6 @@ func Capture(userSkip int) Stacktrace {
 		}
 		frames = append(frames, NewFrame(pc, file, line))
 	}
-
 	return Stacktrace{
 		Frames: frames,
 	}

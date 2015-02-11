@@ -26,13 +26,11 @@ func testExecPS(t *testing.T, userns bool) {
 	if testing.Short() {
 		return
 	}
-
-	rootfs, err := newRootFs()
+	rootfs, err := newRootfs()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer remove(rootfs)
-
 	config := newTemplateConfig(rootfs)
 	if userns {
 		config.UidMappings = []configs.IDMap{{0, 0, 1000}}
@@ -42,13 +40,11 @@ func testExecPS(t *testing.T, userns bool) {
 
 	buffers, exitCode, err := runContainer(config, "", "ps")
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("%s: %s", buffers, err)
 	}
-
 	if exitCode != 0 {
 		t.Fatalf("exit code not 0. code %d stderr %q", exitCode, buffers.Stderr)
 	}
-
 	lines := strings.Split(buffers.Stdout.String(), "\n")
 	if len(lines) < 2 {
 		t.Fatalf("more than one process running for output %q", buffers.Stdout.String())
@@ -65,7 +61,7 @@ func TestIPCPrivate(t *testing.T) {
 		return
 	}
 
-	rootfs, err := newRootFs()
+	rootfs, err := newRootfs()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,7 +92,7 @@ func TestIPCHost(t *testing.T) {
 		return
 	}
 
-	rootfs, err := newRootFs()
+	rootfs, err := newRootfs()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -128,7 +124,7 @@ func TestIPCJoinPath(t *testing.T) {
 		return
 	}
 
-	rootfs, err := newRootFs()
+	rootfs, err := newRootfs()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -161,7 +157,7 @@ func TestIPCBadPath(t *testing.T) {
 		return
 	}
 
-	rootfs, err := newRootFs()
+	rootfs, err := newRootfs()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -181,7 +177,7 @@ func TestRlimit(t *testing.T) {
 		return
 	}
 
-	rootfs, err := newRootFs()
+	rootfs, err := newRootfs()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -232,7 +228,7 @@ func TestEnter(t *testing.T) {
 	}
 	defer os.RemoveAll(root)
 
-	rootfs, err := newRootFs()
+	rootfs, err := newRootfs()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -261,6 +257,7 @@ func TestEnter(t *testing.T) {
 
 	pconfig := libcontainer.Process{
 		Args:   []string{"sh", "-c", "cat && readlink /proc/self/ns/pid"},
+		Env:    standardEnvironment,
 		Stdin:  stdinR,
 		Stdout: &stdout,
 	}
@@ -335,7 +332,7 @@ func TestFreeze(t *testing.T) {
 	}
 	defer os.RemoveAll(root)
 
-	rootfs, err := newRootFs()
+	rootfs, err := newRootfs()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -361,6 +358,7 @@ func TestFreeze(t *testing.T) {
 
 	pconfig := libcontainer.Process{
 		Args:  []string{"cat"},
+		Env:   standardEnvironment,
 		Stdin: stdinR,
 	}
 	pid, err := container.Start(&pconfig)

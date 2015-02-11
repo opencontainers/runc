@@ -6,15 +6,8 @@ package libcontainer
 import (
 	"os"
 
-	"github.com/docker/libcontainer/cgroups"
 	"github.com/docker/libcontainer/configs"
-	"github.com/docker/libcontainer/network"
 )
-
-type Stats struct {
-	NetworkStats *network.NetworkStats `json:"network_stats,omitempty"`
-	CgroupStats  *cgroups.Stats        `json:"cgroup_stats,omitempty"`
-}
 
 // A libcontainer container object.
 //

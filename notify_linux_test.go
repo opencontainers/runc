@@ -11,8 +11,6 @@ import (
 	"syscall"
 	"testing"
 	"time"
-
-	"github.com/docker/libcontainer/configs"
 )
 
 func TestNotifyOnOOM(t *testing.T) {
@@ -29,12 +27,10 @@ func TestNotifyOnOOM(t *testing.T) {
 		t.Fatal(err)
 	}
 	var eventFd, oomControlFd int
-	st := &configs.State{
-		CgroupPaths: map[string]string{
-			"memory": memoryPath,
-		},
+	paths := map[string]string{
+		"memory": memoryPath,
 	}
-	ooms, err := NotifyOnOOM(st)
+	ooms, err := NotifyOnOOM(paths)
 	if err != nil {
 		t.Fatal("expected no error, got:", err)
 	}

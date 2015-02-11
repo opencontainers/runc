@@ -2,12 +2,11 @@ package integration
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path/filepath"
+	"strings"
 	"syscall"
 
 	"github.com/docker/libcontainer"
@@ -28,31 +27,19 @@ type stdBuffers struct {
 	Stderr *bytes.Buffer
 }
 
-func writeConfig(config *configs.Config) error {
-	f, err := os.OpenFile(filepath.Join(config.RootFs, "container.json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0700)
-	if err != nil {
-		return err
+func (b *stdBuffers) String() string {
+	s := []string{}
+	if b.Stderr != nil {
+		s = append(s, b.Stderr.String())
 	}
-	defer f.Close()
-	return json.NewEncoder(f).Encode(config)
+	if b.Stdout != nil {
+		s = append(s, b.Stdout.String())
+	}
+	return strings.Join(s, "|")
 }
 
-func loadConfig() (*configs.Config, error) {
-	f, err := os.Open(filepath.Join(os.Getenv("data_path"), "container.json"))
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	var container *configs.Config
-	if err := json.NewDecoder(f).Decode(&container); err != nil {
-		return nil, err
-	}
-	return container, nil
-}
-
-// newRootFs creates a new tmp directory and copies the busybox root filesystem
-func newRootFs() (string, error) {
+// newRootfs creates a new tmp directory and copies the busybox root filesystem
+func newRootfs() (string, error) {
 	dir, err := ioutil.TempDir("", "")
 	if err != nil {
 		return "", err
@@ -85,14 +72,10 @@ func copyBusybox(dest string) error {
 // buffers are returned containing the STDOUT and STDERR output for the run
 // along with the exit code and any go error
 func runContainer(config *configs.Config, console string, args ...string) (buffers *stdBuffers, exitCode int, err error) {
-	if err := writeConfig(config); err != nil {
-		return nil, -1, err
-	}
-
 	buffers = newStdBuffers()
-
 	process := &libcontainer.Process{
 		Args:   args,
+		Env:    standardEnvironment,
 		Stdin:  buffers.Stdin,
 		Stdout: buffers.Stdout,
 		Stderr: buffers.Stderr,

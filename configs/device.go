@@ -10,19 +10,29 @@ const (
 )
 
 type Device struct {
+	// Device type, block, char, etc.
 	Type rune `json:"type,omitempty"`
-	// It is fine if this is an empty string in the case that you are using Wildcards
+
+	// Path to the device.
 	Path string `json:"path,omitempty"`
-	// Use the wildcard constant for wildcards.
+
+	// Major is the device's major number.
 	Major int64 `json:"major,omitempty"`
-	// Use the wildcard constant for wildcards.
+
+	// Minor is the device's minor number.
 	Minor int64 `json:"minor,omitempty"`
-	// Typically just "rwm"
+
+	// Cgroup permissions format, rwm.
 	Permissions string `json:"permissions,omitempty"`
-	// The permission bits of the file's mode
+
+	// FileMode permission bits for the device.
 	FileMode os.FileMode `json:"file_mode,omitempty"`
-	Uid      uint32      `json:"uid,omitempty"`
-	Gid      uint32      `json:"gid,omitempty"`
+
+	// Uid of the device.
+	Uid uint32 `json:"uid,omitempty"`
+
+	// Gid of the device.
+	Gid uint32 `json:"gid,omitempty"`
 }
 
 func (d *Device) CgroupString() string {

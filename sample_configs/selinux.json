@@ -119,7 +119,7 @@
     "restrict_sys": true,
     "process_label": "system_u:system_r:svirt_lxc_net_t:s0:c164,c475",
         "mount_label": "system_u:system_r:svirt_lxc_net_t:s0:c164,c475",
-        "device_nodes": [
+        "devices": [
             {
                 "permissions": "rwm",
                 "file_mode": 438,

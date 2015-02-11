@@ -21,40 +21,33 @@ type Config struct {
 	// This is a common option when the container is running in ramdisk
 	NoPivotRoot bool `json:"no_pivot_root,omitempty"`
 
+	// ParentDeathSignal specifies the signal that is sent to the container's process in the case
+	// that the parent process dies.
+	ParentDeathSignal int `json:"parent_death_signal,omitempty"`
+
 	// PivotDir allows a custom directory inside the container's root filesystem to be used as pivot, when NoPivotRoot is not set.
 	// When a custom PivotDir not set, a temporary dir inside the root filesystem will be used. The pivot dir needs to be writeable.
 	// This is required when using read only root filesystems. In these cases, a read/writeable path can be (bind) mounted somewhere inside the root filesystem to act as pivot.
 	PivotDir string `json:"pivot_dir,omitempty"`
 
-	// ReadonlyFs will remount the container's rootfs as readonly where only externally mounted
-	// bind mounts are writtable
-	ReadonlyFs bool `json:"readonly_fs,omitempty"`
+	// Path to a directory containing the container's root filesystem.
+	Rootfs string `json:"rootfs,omitempty"`
+
+	// Readonlyfs will remount the container's rootfs as readonly where only externally mounted
+	// bind mounts are writtable.
+	Readonlyfs bool `json:"readonlyfs,omitempty"`
 
 	// Mounts specify additional source and destination paths that will be mounted inside the container's
 	// rootfs and mount namespace if specified
 	Mounts []*Mount `json:"mounts,omitempty"`
 
 	// The device nodes that should be automatically created within the container upon container start.  Note, make sure that the node is marked as allowed in the cgroup as well!
-	DeviceNodes []*Device `json:"device_nodes,omitempty"`
+	Devices []*Device `json:"devices,omitempty"`
 
 	MountLabel string `json:"mount_label,omitempty"`
 
-	// Pathname to container's root filesystem
-	RootFs string `json:"root_fs,omitempty"`
-
 	// Hostname optionally sets the container's hostname if provided
 	Hostname string `json:"hostname,omitempty"`
-
-	// User will set the uid and gid of the executing process running inside the container
-	User string `json:"user,omitempty"`
-
-	// WorkingDir will change the processes current working directory inside the container's rootfs
-	WorkingDir string `json:"working_dir,omitempty"`
-
-	// Env will populate the processes environment with the provided values
-	// Any values from the parent processes will be cleared before the values
-	// provided in Env are provided to the process
-	Env []string `json:"environment,omitempty"`
 
 	// Console is the path to the console allocated to the container.
 	Console string `json:"console,omitempty"`

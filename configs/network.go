@@ -8,11 +8,11 @@ type Network struct {
 	// Type sets the networks type, commonly veth and loopback
 	Type string `json:"type,omitempty"`
 
+	// Name of the network interface
+	Name string `json:"name,omitempty"`
+
 	// The bridge to use.
 	Bridge string `json:"bridge,omitempty"`
-
-	// Prefix for the veth interfaces.
-	VethPrefix string `json:"veth_prefix,omitempty"`
 
 	// MacAddress contains the MAC address to set on the network interface
 	MacAddress string `json:"mac_address,omitempty"`
@@ -20,11 +20,11 @@ type Network struct {
 	// Address contains the IPv4 and mask to set on the network interface
 	Address string `json:"address,omitempty"`
 
-	// IPv6Address contains the IPv6 and mask to set on the network interface
-	IPv6Address string `json:"ipv6_address,omitempty"`
-
 	// Gateway sets the gateway address that is used as the default for the interface
 	Gateway string `json:"gateway,omitempty"`
+
+	// IPv6Address contains the IPv6 and mask to set on the network interface
+	IPv6Address string `json:"ipv6_address,omitempty"`
 
 	// IPv6Gateway sets the ipv6 gateway address that is used as the default for the interface
 	IPv6Gateway string `json:"ipv6_gateway,omitempty"`
@@ -38,6 +38,10 @@ type Network struct {
 	// container's interfaces if a pair is created, specifically in the case of type veth
 	// Note: This does not apply to loopback interfaces.
 	TxQueueLen int `json:"txqueuelen,omitempty"`
+
+	// HostInterfaceName is a unique name of a veth pair that resides on in the host interface of the
+	// container.
+	HostInterfaceName string `json:"host_interface_name,omitempty"`
 }
 
 // Routes can be specified to create entries in the route table as the container is started
