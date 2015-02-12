@@ -12,6 +12,8 @@ import (
 	"github.com/docker/libcontainer/label"
 )
 
+// NewConsole returns an initalized console that can be used within a container by copying bytes
+// from the master side to the slave that is attached as the tty for the container's init process.
 func NewConsole() (Console, error) {
 	master, err := os.OpenFile("/dev/ptmx", syscall.O_RDWR|syscall.O_NOCTTY|syscall.O_CLOEXEC, 0)
 	if err != nil {

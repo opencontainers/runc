@@ -1,6 +1,7 @@
 package configs
 
 import (
+	"fmt"
 	"syscall"
 )
 
@@ -19,11 +20,37 @@ const (
 // alternate path that is able to be joined via setns.
 type Namespace struct {
 	Type NamespaceType `json:"type"`
-	Path string        `json:"path,omitempty"`
+	Path string        `json:"path"`
 }
 
 func (n *Namespace) Syscall() int {
 	return namespaceInfo[n.Type]
+}
+
+func (n *Namespace) GetPath(pid int) string {
+	if n.Path != "" {
+		return n.Path
+	}
+	return fmt.Sprintf("/proc/%d/ns/%s", pid, n.file())
+}
+
+func (n *Namespace) file() string {
+	file := ""
+	switch n.Type {
+	case NEWNET:
+		file = "net"
+	case NEWNS:
+		file = "mnt"
+	case NEWPID:
+		file = "pid"
+	case NEWIPC:
+		file = "ipc"
+	case NEWUSER:
+		file = "user"
+	case NEWUTS:
+		file = "uts"
+	}
+	return file
 }
 
 type Namespaces []Namespace

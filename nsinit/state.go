@@ -7,9 +7,9 @@ import (
 	"github.com/codegangsta/cli"
 )
 
-var statsCommand = cli.Command{
-	Name:  "stats",
-	Usage: "display statistics for the container",
+var stateCommand = cli.Command{
+	Name:  "state",
+	Usage: "get the container's current state",
 	Flags: []cli.Flag{
 		cli.StringFlag{Name: "id", Value: "nsinit", Usage: "specify the ID for a container"},
 	},
@@ -18,11 +18,11 @@ var statsCommand = cli.Command{
 		if err != nil {
 			fatal(err)
 		}
-		stats, err := container.Stats()
+		state, err := container.State()
 		if err != nil {
 			fatal(err)
 		}
-		data, err := json.MarshalIndent(stats, "", "\t")
+		data, err := json.MarshalIndent(state, "", "\t")
 		if err != nil {
 			fatal(err)
 		}

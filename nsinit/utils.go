@@ -11,6 +11,11 @@ import (
 )
 
 func loadConfig(context *cli.Context) (*configs.Config, error) {
+	if context.Bool("create") {
+		config := getTemplate()
+		modify(config, context)
+		return config, nil
+	}
 	f, err := os.Open(context.String("config"))
 	if err != nil {
 		return nil, err
@@ -24,7 +29,7 @@ func loadConfig(context *cli.Context) (*configs.Config, error) {
 }
 
 func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
-	return libcontainer.New(context.GlobalString("root"), []string{os.Args[0], "init", "--fd", "3", "--"})
+	return libcontainer.New(context.GlobalString("root"), []string{os.Args[0], "init"})
 }
 
 func getContainer(context *cli.Context) (libcontainer.Container, error) {

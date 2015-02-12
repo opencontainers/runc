@@ -15,6 +15,7 @@ const (
 	ContainerNotExists
 	ContainerPaused
 	ContainerNotStopped
+	ContainerNotRunning
 
 	// Common errors
 	ConfigInvalid
@@ -36,7 +37,9 @@ func (c ErrorCode) String() string {
 	case ContainerNotExists:
 		return "Container does not exist"
 	case ContainerNotStopped:
-		return "Container isn't stopped"
+		return "Container is not stopped"
+	case ContainerNotRunning:
+		return "Container is not running"
 	default:
 		return "Unknown error"
 	}

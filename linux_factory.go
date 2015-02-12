@@ -18,8 +18,7 @@ import (
 )
 
 const (
-	configFilename = "config.json"
-	stateFilename  = "state.json"
+	stateFilename = "state.json"
 )
 
 var (
@@ -65,21 +64,7 @@ func (l *linuxFactory) Create(id string, config *configs.Config) (Container, err
 	} else if !os.IsNotExist(err) {
 		return nil, newGenericError(err, SystemError)
 	}
-	data, err := json.MarshalIndent(config, "", "\t")
-	if err != nil {
-		return nil, newGenericError(err, SystemError)
-	}
 	if err := os.MkdirAll(containerRoot, 0700); err != nil {
-		return nil, newGenericError(err, SystemError)
-	}
-	f, err := os.Create(filepath.Join(containerRoot, configFilename))
-	if err != nil {
-		os.RemoveAll(containerRoot)
-		return nil, newGenericError(err, SystemError)
-	}
-	defer f.Close()
-	if _, err := f.Write(data); err != nil {
-		os.RemoveAll(containerRoot)
 		return nil, newGenericError(err, SystemError)
 	}
 	return &linuxContainer{
@@ -96,26 +81,20 @@ func (l *linuxFactory) Load(id string) (Container, error) {
 		return nil, newGenericError(fmt.Errorf("invalid root"), ConfigInvalid)
 	}
 	containerRoot := filepath.Join(l.root, id)
-	glog.Infof("loading container config from %s", containerRoot)
-	config, err := l.loadContainerConfig(containerRoot)
-	if err != nil {
-		return nil, err
-	}
-	glog.Infof("loading container state from %s", containerRoot)
-	state, err := l.loadContainerState(containerRoot)
+	state, err := l.loadState(containerRoot)
 	if err != nil {
 		return nil, err
 	}
 	r := &restoredProcess{
-		processPid:       state.InitPid,
-		processStartTime: state.InitStartTime,
+		processPid:       state.InitProcessPid,
+		processStartTime: state.InitProcessStartTime,
 	}
-	cgroupManager := cgroups.LoadCgroupManager(config.Cgroups, state.CgroupPaths)
+	cgroupManager := cgroups.LoadCgroupManager(state.Config.Cgroups, state.CgroupPaths)
 	glog.Infof("using %s as cgroup manager", cgroupManager)
 	return &linuxContainer{
 		initProcess:   r,
 		id:            id,
-		config:        config,
+		config:        &state.Config,
 		initArgs:      l.initArgs,
 		cgroupManager: cgroupManager,
 		root:          containerRoot,
@@ -155,23 +134,7 @@ func (l *linuxFactory) StartInitialization(pipefd uintptr) (err error) {
 	return i.Init()
 }
 
-func (l *linuxFactory) loadContainerConfig(root string) (*configs.Config, error) {
-	f, err := os.Open(filepath.Join(root, configFilename))
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, newGenericError(err, ContainerNotExists)
-		}
-		return nil, newGenericError(err, SystemError)
-	}
-	defer f.Close()
-	var config *configs.Config
-	if err := json.NewDecoder(f).Decode(&config); err != nil {
-		return nil, newGenericError(err, ConfigInvalid)
-	}
-	return config, nil
-}
-
-func (l *linuxFactory) loadContainerState(root string) (*configs.State, error) {
+func (l *linuxFactory) loadState(root string) (*State, error) {
 	f, err := os.Open(filepath.Join(root, stateFilename))
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -180,7 +143,7 @@ func (l *linuxFactory) loadContainerState(root string) (*configs.State, error) {
 		return nil, newGenericError(err, SystemError)
 	}
 	defer f.Close()
-	var state *configs.State
+	var state *State
 	if err := json.NewDecoder(f).Decode(&state); err != nil {
 		return nil, newGenericError(err, SystemError)
 	}

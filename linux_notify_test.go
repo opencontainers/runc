@@ -30,7 +30,7 @@ func TestNotifyOnOOM(t *testing.T) {
 	paths := map[string]string{
 		"memory": memoryPath,
 	}
-	ooms, err := NotifyOnOOM(paths)
+	ooms, err := notifyOnOOM(paths)
 	if err != nil {
 		t.Fatal("expected no error, got:", err)
 	}
