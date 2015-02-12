@@ -24,6 +24,7 @@ func main() {
 		pauseCommand,
 		statsCommand,
 		unpauseCommand,
+		configCommand,
 	}
 	if err := app.Run(os.Args); err != nil {
 		log.Fatal(err)
