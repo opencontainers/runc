@@ -72,26 +72,7 @@ func (c *linuxContainer) State() (*State, error) {
 		NamespacePaths:       make(map[string]string),
 	}
 	for _, ns := range c.config.Namespaces {
-		if ns.Path != "" {
-			state.NamespacePaths[string(ns.Type)] = ns.Path
-			continue
-		}
-		file := ""
-		switch ns.Type {
-		case configs.NEWNET:
-			file = "net"
-		case configs.NEWNS:
-			file = "mnt"
-		case configs.NEWPID:
-			file = "pid"
-		case configs.NEWIPC:
-			file = "ipc"
-		case configs.NEWUSER:
-			file = "user"
-		case configs.NEWUTS:
-			file = "uts"
-		}
-		state.NamespacePaths[string(ns.Type)] = fmt.Sprintf("/proc/%d/ns/%s", c.initProcess.pid(), file)
+		state.NamespacePaths[string(ns.Type)] = ns.GetPath(c.initProcess.pid())
 	}
 	return state, nil
 }

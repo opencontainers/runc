@@ -13,7 +13,7 @@ import (
 )
 
 var createFlags = []cli.Flag{
-	cli.IntFlag{Name: "parent-death-signal", Usage: "set the signal that will be delivered to the process incase the parent dies"},
+	cli.IntFlag{Name: "parent-death-signal", Usage: "set the signal that will be delivered to the process in case the parent dies"},
 	cli.BoolFlag{Name: "read-only", Usage: "set the container's rootfs as read-only"},
 	cli.StringSliceFlag{Name: "bind", Value: &cli.StringSlice{}, Usage: "add bind mounts to the container"},
 	cli.StringSliceFlag{Name: "tmpfs", Value: &cli.StringSlice{}, Usage: "add tmpfs mounts to the container"},
