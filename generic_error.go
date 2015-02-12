@@ -23,7 +23,7 @@ func newGenericError(err error, c ErrorCode) Error {
 	if le, ok := err.(Error); ok {
 		return le
 	}
-	return &GenericError{
+	return &genericError{
 		Timestamp: time.Now(),
 		Err:       err,
 		ECode:     c,
@@ -35,7 +35,7 @@ func newSystemError(err error) Error {
 	if le, ok := err.(Error); ok {
 		return le
 	}
-	return &GenericError{
+	return &genericError{
 		Timestamp: time.Now(),
 		Err:       err,
 		ECode:     SystemError,
@@ -43,21 +43,21 @@ func newSystemError(err error) Error {
 	}
 }
 
-type GenericError struct {
+type genericError struct {
 	Timestamp time.Time
 	ECode     ErrorCode
 	Err       error
 	Stack     stacktrace.Stacktrace
 }
 
-func (e *GenericError) Error() string {
+func (e *genericError) Error() string {
 	return fmt.Sprintf("[%d] %s: %s", e.ECode, e.ECode, e.Err)
 }
 
-func (e *GenericError) Code() ErrorCode {
+func (e *genericError) Code() ErrorCode {
 	return e.ECode
 }
 
-func (e *GenericError) Detail(w io.Writer) error {
+func (e *genericError) Detail(w io.Writer) error {
 	return errorTemplate.Execute(w, e)
 }

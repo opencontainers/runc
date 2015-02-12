@@ -2,7 +2,12 @@ package libcontainer
 
 import "github.com/docker/libcontainer/cgroups"
 
-type NetworkInterface struct {
+type Stats struct {
+	Interfaces  []*networkInterface
+	CgroupStats *cgroups.Stats
+}
+
+type networkInterface struct {
 	// Name is the name of the network interface.
 	Name string
 
@@ -14,9 +19,4 @@ type NetworkInterface struct {
 	TxPackets uint64
 	TxErrors  uint64
 	TxDropped uint64
-}
-
-type Stats struct {
-	Interfaces  []*NetworkInterface
-	CgroupStats *cgroups.Stats
 }

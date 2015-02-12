@@ -2,7 +2,7 @@ package libcontainer
 
 import "io"
 
-// Console is a psuedo TTY.
+// Console represents a psuedo TTY.
 type Console interface {
 	io.ReadWriter
 	io.Closer

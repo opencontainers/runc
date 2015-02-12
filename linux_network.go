@@ -3,7 +3,6 @@
 package libcontainer
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -13,10 +12,6 @@ import (
 
 	"github.com/docker/libcontainer/netlink"
 	"github.com/docker/libcontainer/utils"
-)
-
-var (
-	ErrNotValidStrategyType = errors.New("not a valid network strategy type")
 )
 
 var strategies = map[string]networkStrategy{
@@ -32,19 +27,18 @@ type networkStrategy interface {
 }
 
 // getStrategy returns the specific network strategy for the
-// provided type.  If no strategy is registered for the type an
-// ErrNotValidStrategyType is returned.
+// provided type.
 func getStrategy(tpe string) (networkStrategy, error) {
 	s, exists := strategies[tpe]
 	if !exists {
-		return nil, ErrNotValidStrategyType
+		return nil, fmt.Errorf("unknown strategy type %q", tpe)
 	}
 	return s, nil
 }
 
 // Returns the network statistics for the network interfaces represented by the NetworkRuntimeInfo.
-func getNetworkInterfaceStats(interfaceName string) (*NetworkInterface, error) {
-	out := &NetworkInterface{Name: interfaceName}
+func getNetworkInterfaceStats(interfaceName string) (*networkInterface, error) {
+	out := &networkInterface{Name: interfaceName}
 	// This can happen if the network runtime information is missing - possible if the
 	// container was created by an old version of libcontainer.
 	if interfaceName == "" {

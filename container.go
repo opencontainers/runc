@@ -1,6 +1,7 @@
-/*
-NOTE: The API is in flux and mainly not implemented. Proceed with caution until further notice.
-*/
+// Libcontainer provides a native Go implementation for creating containers
+// with namespaces, cgroups, capabilities, and filesystem access controls.
+// It allows you to manage the lifecycle of the container performing additional operations
+// after the container is created.
 package libcontainer
 
 import (

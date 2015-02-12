@@ -289,7 +289,7 @@ func (c *linuxContainer) Signal(signal os.Signal) error {
 }
 
 func (c *linuxContainer) NotifyOOM() (<-chan struct{}, error) {
-	return NotifyOnOOM(c.cgroupManager.GetPaths())
+	return notifyOnOOM(c.cgroupManager.GetPaths())
 }
 
 func (c *linuxContainer) updateState(process parentProcess) error {
