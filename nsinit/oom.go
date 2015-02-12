@@ -21,7 +21,9 @@ var oomCommand = cli.Command{
 		if err != nil {
 			log.Fatal(err)
 		}
-		for range n {
+		for x := range n {
+			// hack for calm down go1.4 gofmt
+			_ = x
 			log.Printf("OOM notification received")
 		}
 	},
