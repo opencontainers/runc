@@ -20,10 +20,25 @@ File: {{$frame.File}}{{end}}
 `))
 
 func newGenericError(err error, c ErrorCode) Error {
+	if le, ok := err.(Error); ok {
+		return le
+	}
 	return &GenericError{
 		Timestamp: time.Now(),
 		Err:       err,
 		ECode:     c,
+		Stack:     stacktrace.Capture(2),
+	}
+}
+
+func newSystemError(err error) Error {
+	if le, ok := err.(Error); ok {
+		return le
+	}
+	return &GenericError{
+		Timestamp: time.Now(),
+		Err:       err,
+		ECode:     SystemError,
 		Stack:     stacktrace.Capture(2),
 	}
 }

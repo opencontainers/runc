@@ -9,21 +9,44 @@ import (
 	"github.com/docker/libcontainer/configs"
 )
 
+// The status of a container.
+type Status int
+
+const (
+	// The container exists and is running.
+	Running Status = iota + 1
+
+	// The container exists, it is in the process of being paused.
+	Pausing
+
+	// The container exists, but all its processes are paused.
+	Paused
+
+	// The container does not exist.
+	Destroyed
+)
+
 // State represents a running container's state
 type State struct {
+	// ID is the container ID.
+	ID string `json:"id"`
+
 	// InitProcessPid is the init process id in the parent namespace.
-	InitProcessPid int
+	InitProcessPid int `json:"init_process_pid"`
 
 	// InitProcessStartTime is the init process start time.
-	InitProcessStartTime string
+	InitProcessStartTime string `json:"init_process_start"`
 
 	// Path to all the cgroups setup for a container. Key is cgroup subsystem name
 	// with the value as the path.
-	CgroupPaths map[string]string
+	CgroupPaths map[string]string `json:"cgroup_paths"`
 
 	// NamespacePaths are filepaths to the container's namespaces. Key is the namespace name
 	// with the value as the path.
-	NamespacePaths map[string]string
+	NamespacePaths map[string]string `json:"namespace_paths"`
+
+	// Config is the container's configuration.
+	Config configs.Config `json:"config"`
 }
 
 // A libcontainer container object.
@@ -40,7 +63,7 @@ type Container interface {
 	// errors:
 	// ContainerDestroyed - Container no longer exists,
 	// Systemerror - System error.
-	Status() (configs.Status, error)
+	Status() (Status, error)
 
 	// State returns the current container's state information.
 	//

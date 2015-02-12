@@ -11,7 +11,6 @@ import (
 	"syscall"
 
 	"github.com/docker/libcontainer/cgroups"
-	"github.com/docker/libcontainer/configs"
 	"github.com/docker/libcontainer/system"
 	"github.com/golang/glog"
 )
@@ -184,27 +183,7 @@ func (p *initProcess) wait() (*os.ProcessState, error) {
 	}
 	// we should kill all processes in cgroup when init is died if we use host PID namespace
 	if p.cmd.SysProcAttr.Cloneflags&syscall.CLONE_NEWPID == 0 {
-		// TODO: this will not work for the success path because libcontainer
-		// does not wait on the process.  This needs to be moved to destroy or add a Wait()
-		// method back onto the container.
-		var procs []*os.Process
-		p.manager.Freeze(configs.Frozen)
-		pids, err := p.manager.GetPids()
-		if err != nil {
-			return nil, err
-		}
-		for _, pid := range pids {
-			// TODO: log err without aborting if we are unable to find
-			// a single PID
-			if p, err := os.FindProcess(pid); err == nil {
-				procs = append(procs, p)
-				p.Kill()
-			}
-		}
-		p.manager.Freeze(configs.Thawed)
-		for _, p := range procs {
-			p.Wait()
-		}
+		killCgroupProcesses(p.manager)
 	}
 	return state, nil
 }

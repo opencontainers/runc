@@ -24,7 +24,7 @@ func loadConfig(context *cli.Context) (*configs.Config, error) {
 }
 
 func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
-	return libcontainer.New(context.GlobalString("root"), []string{os.Args[0], "init", "--fd", "3", "--"})
+	return libcontainer.New(context.GlobalString("root"), []string{os.Args[0], "init"})
 }
 
 func getContainer(context *cli.Context) (libcontainer.Container, error) {

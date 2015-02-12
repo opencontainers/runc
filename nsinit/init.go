@@ -12,9 +12,6 @@ import (
 var initCommand = cli.Command{
 	Name:  "init",
 	Usage: "runs the init process inside the namespace",
-	Flags: []cli.Flag{
-		cli.IntFlag{Name: "fd", Value: 0, Usage: "internal pipe fd"},
-	},
 	Action: func(context *cli.Context) {
 		runtime.GOMAXPROCS(1)
 		runtime.LockOSThread()
@@ -22,11 +19,7 @@ var initCommand = cli.Command{
 		if err != nil {
 			log.Fatal(err)
 		}
-		if context.Int("fd") == 0 {
-			log.Fatal("--fd must be specified for init process")
-		}
-		fd := uintptr(context.Int("fd"))
-		if err := factory.StartInitialization(fd); err != nil {
+		if err := factory.StartInitialization(3); err != nil {
 			log.Fatal(err)
 		}
 		panic("This line should never been executed")

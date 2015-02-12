@@ -3,9 +3,11 @@
 package libcontainer
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"syscall"
 
 	"github.com/docker/libcontainer/cgroups"
@@ -32,21 +34,21 @@ func (c *linuxContainer) Config() configs.Config {
 	return *c.config
 }
 
-func (c *linuxContainer) Status() (configs.Status, error) {
+func (c *linuxContainer) Status() (Status, error) {
 	if c.initProcess == nil {
-		return configs.Destroyed, nil
+		return Destroyed, nil
 	}
 	// return Running if the init process is alive
 	if err := syscall.Kill(c.initProcess.pid(), 0); err != nil {
 		if err == syscall.ESRCH {
-			return configs.Destroyed, nil
+			return Destroyed, nil
 		}
-		return 0, err
+		return 0, newSystemError(err)
 	}
 	if c.config.Cgroups != nil && c.config.Cgroups.Freezer == configs.Frozen {
-		return configs.Paused, nil
+		return Paused, nil
 	}
-	return configs.Running, nil
+	return Running, nil
 }
 
 func (c *linuxContainer) State() (*State, error) {
@@ -54,14 +56,16 @@ func (c *linuxContainer) State() (*State, error) {
 	if err != nil {
 		return nil, err
 	}
-	if status == configs.Destroyed {
+	if status == Destroyed {
 		return nil, newGenericError(fmt.Errorf("container destroyed"), ContainerNotExists)
 	}
 	startTime, err := c.initProcess.startTime()
 	if err != nil {
-		return nil, err
+		return nil, newSystemError(err)
 	}
 	state := &State{
+		ID:                   c.ID(),
+		Config:               *c.config,
 		InitProcessPid:       c.initProcess.pid(),
 		InitProcessStartTime: startTime,
 		CgroupPaths:          c.cgroupManager.GetPaths(),
@@ -96,7 +100,7 @@ func (c *linuxContainer) Processes() ([]int, error) {
 	glog.Info("fetch container processes")
 	pids, err := c.cgroupManager.GetPids()
 	if err != nil {
-		return nil, newGenericError(err, SystemError)
+		return nil, newSystemError(err)
 	}
 	return pids, nil
 }
@@ -108,14 +112,14 @@ func (c *linuxContainer) Stats() (*Stats, error) {
 		stats = &Stats{}
 	)
 	if stats.CgroupStats, err = c.cgroupManager.GetStats(); err != nil {
-		return stats, newGenericError(err, SystemError)
+		return stats, newSystemError(err)
 	}
 	for _, iface := range c.config.Networks {
 		switch iface.Type {
 		case "veth":
 			istats, err := getNetworkInterfaceStats(iface.HostInterfaceName)
 			if err != nil {
-				return stats, newGenericError(err, SystemError)
+				return stats, newSystemError(err)
 			}
 			stats.Interfaces = append(stats.Interfaces, istats)
 		}
@@ -128,20 +132,20 @@ func (c *linuxContainer) Start(process *Process) (int, error) {
 	if err != nil {
 		return -1, err
 	}
-	doInit := status == configs.Destroyed
+	doInit := status == Destroyed
 	parent, err := c.newParentProcess(process, doInit)
 	if err != nil {
-		return -1, err
+		return -1, newSystemError(err)
 	}
 	if err := parent.start(); err != nil {
 		// terminate the process to ensure that it properly is reaped.
 		if err := parent.terminate(); err != nil {
 			glog.Warning(err)
 		}
-		return -1, err
+		return -1, newSystemError(err)
 	}
 	if doInit {
-		c.initProcess = parent
+		c.updateState(parent)
 	}
 	return parent.pid(), nil
 }
@@ -149,11 +153,11 @@ func (c *linuxContainer) Start(process *Process) (int, error) {
 func (c *linuxContainer) newParentProcess(p *Process, doInit bool) (parentProcess, error) {
 	parentPipe, childPipe, err := newPipe()
 	if err != nil {
-		return nil, err
+		return nil, newSystemError(err)
 	}
 	cmd, err := c.commandTemplate(p, childPipe)
 	if err != nil {
-		return nil, err
+		return nil, newSystemError(err)
 	}
 	if !doInit {
 		return c.newSetnsProcess(p, cmd, parentPipe, childPipe), nil
@@ -171,7 +175,10 @@ func (c *linuxContainer) commandTemplate(p *Process, childPipe *os.File) (*exec.
 		cmd.SysProcAttr = &syscall.SysProcAttr{}
 	}
 	cmd.ExtraFiles = []*os.File{childPipe}
-	cmd.SysProcAttr.Pdeathsig = syscall.Signal(c.config.ParentDeathSignal)
+	cmd.SysProcAttr.Pdeathsig = syscall.SIGKILL
+	if c.config.ParentDeathSignal > 0 {
+		cmd.SysProcAttr.Pdeathsig = syscall.Signal(c.config.ParentDeathSignal)
+	}
 	return cmd, nil
 }
 
@@ -254,11 +261,19 @@ func (c *linuxContainer) Destroy() error {
 	if err != nil {
 		return err
 	}
-	if status != configs.Destroyed {
+	if status != Destroyed {
 		return newGenericError(nil, ContainerNotStopped)
 	}
-	// TODO: remove cgroups
-	return os.RemoveAll(c.root)
+	if !c.config.Namespaces.Contains(configs.NEWPID) {
+		if err := killCgroupProcesses(c.cgroupManager); err != nil {
+			glog.Warning(err)
+		}
+	}
+	err = c.cgroupManager.Destroy()
+	if rerr := os.RemoveAll(c.root); err == nil {
+		err = rerr
+	}
+	return err
 }
 
 func (c *linuxContainer) Pause() error {
@@ -270,11 +285,23 @@ func (c *linuxContainer) Resume() error {
 }
 
 func (c *linuxContainer) Signal(signal os.Signal) error {
-	glog.Infof("sending signal %d to pid %d", signal, c.initProcess.pid())
 	return c.initProcess.signal(signal)
 }
 
-// TODO: rename to be more descriptive
 func (c *linuxContainer) NotifyOOM() (<-chan struct{}, error) {
 	return NotifyOnOOM(c.cgroupManager.GetPaths())
+}
+
+func (c *linuxContainer) updateState(process parentProcess) error {
+	c.initProcess = process
+	state, err := c.State()
+	if err != nil {
+		return err
+	}
+	f, err := os.Create(filepath.Join(c.root, stateFilename))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	return json.NewEncoder(f).Encode(state)
 }

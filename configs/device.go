@@ -11,28 +11,28 @@ const (
 
 type Device struct {
 	// Device type, block, char, etc.
-	Type rune `json:"type,omitempty"`
+	Type rune `json:"type"`
 
 	// Path to the device.
-	Path string `json:"path,omitempty"`
+	Path string `json:"path"`
 
 	// Major is the device's major number.
-	Major int64 `json:"major,omitempty"`
+	Major int64 `json:"major"`
 
 	// Minor is the device's minor number.
-	Minor int64 `json:"minor,omitempty"`
+	Minor int64 `json:"minor"`
 
 	// Cgroup permissions format, rwm.
-	Permissions string `json:"permissions,omitempty"`
+	Permissions string `json:"permissions"`
 
 	// FileMode permission bits for the device.
-	FileMode os.FileMode `json:"file_mode,omitempty"`
+	FileMode os.FileMode `json:"file_mode"`
 
 	// Uid of the device.
-	Uid uint32 `json:"uid,omitempty"`
+	Uid uint32 `json:"uid"`
 
 	// Gid of the device.
-	Gid uint32 `json:"gid,omitempty"`
+	Gid uint32 `json:"gid"`
 }
 
 func (d *Device) CgroupString() string {

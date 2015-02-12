@@ -82,12 +82,10 @@ func TestFactoryLoadContainer(t *testing.T) {
 		}
 		expectedState = &State{
 			InitProcessPid: 1024,
+			Config:         *expectedConfig,
 		}
 	)
 	if err := os.Mkdir(filepath.Join(root, id), 0700); err != nil {
-		t.Fatal(err)
-	}
-	if err := marshal(filepath.Join(root, id, configFilename), expectedConfig); err != nil {
 		t.Fatal(err)
 	}
 	if err := marshal(filepath.Join(root, id, stateFilename), expectedState); err != nil {

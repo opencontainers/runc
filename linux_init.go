@@ -9,11 +9,13 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/docker/libcontainer/cgroups"
 	"github.com/docker/libcontainer/configs"
 	"github.com/docker/libcontainer/netlink"
 	"github.com/docker/libcontainer/system"
 	"github.com/docker/libcontainer/user"
 	"github.com/docker/libcontainer/utils"
+	"github.com/golang/glog"
 )
 
 type initType string
@@ -222,6 +224,38 @@ func setupRlimits(config *configs.Config) error {
 		l := &syscall.Rlimit{Max: rlimit.Hard, Cur: rlimit.Soft}
 		if err := syscall.Setrlimit(rlimit.Type, l); err != nil {
 			return fmt.Errorf("error setting rlimit type %v: %v", rlimit.Type, err)
+		}
+	}
+	return nil
+}
+
+// killCgroupProcesses freezes then itterates over all the processes inside the
+// manager's cgroups sending a SIGKILL to each process then waiting for them to
+// exit.
+func killCgroupProcesses(m cgroups.Manager) error {
+	var procs []*os.Process
+	if err := m.Freeze(configs.Frozen); err != nil {
+		glog.Warning(err)
+	}
+	pids, err := m.GetPids()
+	if err != nil {
+		m.Freeze(configs.Thawed)
+		return err
+	}
+	for _, pid := range pids {
+		if p, err := os.FindProcess(pid); err == nil {
+			procs = append(procs, p)
+			if err := p.Kill(); err != nil {
+				glog.Warning(err)
+			}
+		}
+	}
+	if err := m.Freeze(configs.Thawed); err != nil {
+		glog.Warning(err)
+	}
+	for _, p := range procs {
+		if _, err := p.Wait(); err != nil {
+			glog.Warning(err)
 		}
 	}
 	return nil
