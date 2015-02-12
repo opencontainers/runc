@@ -20,13 +20,14 @@ var execCommand = cli.Command{
 	Name:   "exec",
 	Usage:  "execute a new command inside a container",
 	Action: execAction,
-	Flags: []cli.Flag{
+	Flags: append([]cli.Flag{
 		cli.BoolFlag{Name: "tty,t", Usage: "allocate a TTY to the container"},
 		cli.StringFlag{Name: "id", Value: "nsinit", Usage: "specify the ID for a container"},
 		cli.StringFlag{Name: "config", Value: "container.json", Usage: "path to the configuration file"},
+		cli.BoolFlag{Name: "create", Usage: "create the container's configuration on the fly with arguments"},
 		cli.StringFlag{Name: "user,u", Value: "root", Usage: "set the user, uid, and/or gid for the process"},
 		cli.StringSliceFlag{Name: "env", Value: standardEnvironment, Usage: "set environment variables for the process"},
-	},
+	}, createFlags...),
 }
 
 func execAction(context *cli.Context) {
@@ -38,6 +39,7 @@ func execAction(context *cli.Context) {
 	if err != nil {
 		fatal(err)
 	}
+	created := false
 	container, err := factory.Load(context.String("id"))
 	if err != nil {
 		if lerr, ok := err.(libcontainer.Error); !ok || lerr.Code() != libcontainer.ContainerNotExists {
@@ -45,10 +47,15 @@ func execAction(context *cli.Context) {
 		}
 		config, err := loadConfig(context)
 		if err != nil {
+			tty.Close()
 			fatal(err)
 		}
-		config.Console = tty.console.Path()
+		if tty.console != nil {
+			config.Console = tty.console.Path()
+		}
+		created = true
 		if container, err = factory.Create(context.String("id"), config); err != nil {
+			tty.Close()
 			fatal(err)
 		}
 	}
@@ -64,19 +71,26 @@ func execAction(context *cli.Context) {
 	tty.attach(process)
 	pid, err := container.Start(process)
 	if err != nil {
+		tty.Close()
 		fatal(err)
 	}
 	proc, err := os.FindProcess(pid)
 	if err != nil {
+		tty.Close()
 		fatal(err)
 	}
 	status, err := proc.Wait()
 	if err != nil {
+		tty.Close()
 		fatal(err)
 	}
-	if err := container.Destroy(); err != nil {
-		fatal(err)
+	if created {
+		if err := container.Destroy(); err != nil {
+			tty.Close()
+			fatal(err)
+		}
 	}
+	tty.Close()
 	os.Exit(utils.ExitStatus(status.Sys().(syscall.WaitStatus)))
 }
 

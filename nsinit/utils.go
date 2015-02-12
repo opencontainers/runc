@@ -11,6 +11,11 @@ import (
 )
 
 func loadConfig(context *cli.Context) (*configs.Config, error) {
+	if context.Bool("create") {
+		config := getTemplate()
+		modify(config, context)
+		return config, nil
+	}
 	f, err := os.Open(context.String("config"))
 	if err != nil {
 		return nil, err

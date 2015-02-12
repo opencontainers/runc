@@ -12,14 +12,30 @@ import (
 	"github.com/docker/libcontainer/configs"
 )
 
+var createFlags = []cli.Flag{
+	cli.IntFlag{Name: "parent-death-signal", Usage: "set the signal that will be delivered to the process incase the parent dies"},
+	cli.BoolFlag{Name: "read-only", Usage: "set the container's rootfs as read-only"},
+	cli.StringSliceFlag{Name: "bind", Value: &cli.StringSlice{}, Usage: "add bind mounts to the container"},
+	cli.StringSliceFlag{Name: "tmpfs", Value: &cli.StringSlice{}, Usage: "add tmpfs mounts to the container"},
+	cli.IntFlag{Name: "cpushares", Usage: "set the cpushares for the container"},
+	cli.IntFlag{Name: "memory-limit", Usage: "set the memory limit for the container"},
+	cli.IntFlag{Name: "memory-swap", Usage: "set the memory swap limit for the container"},
+	cli.StringFlag{Name: "cpuset-cpus", Usage: "set the cpuset cpus"},
+	cli.StringFlag{Name: "cpuset-mems", Usage: "set the cpuset mems"},
+	cli.StringFlag{Name: "apparmor-profile", Usage: "set the apparmor profile"},
+	cli.StringFlag{Name: "process-label", Usage: "set the process label"},
+	cli.StringFlag{Name: "mount-label", Usage: "set the mount label"},
+}
+
 var configCommand = cli.Command{
 	Name:  "config",
 	Usage: "generate a standard configuration file for a container",
-	Flags: []cli.Flag{
+	Flags: append([]cli.Flag{
 		cli.StringFlag{Name: "file,f", Value: "stdout", Usage: "write the configuration to the specified file"},
-	},
+	}, createFlags...),
 	Action: func(context *cli.Context) {
 		template := getTemplate()
+		modify(template, context)
 		data, err := json.MarshalIndent(template, "", "\t")
 		if err != nil {
 			fatal(err)
@@ -39,6 +55,19 @@ var configCommand = cli.Command{
 			fatal(err)
 		}
 	},
+}
+
+func modify(config *configs.Config, context *cli.Context) {
+	config.ParentDeathSignal = context.Int("parent-death-signal")
+	config.Readonlyfs = context.Bool("read-only")
+	config.Cgroups.CpusetCpus = context.String("cpuset-cpus")
+	config.Cgroups.CpusetMems = context.String("cpuset-mems")
+	config.Cgroups.CpuShares = int64(context.Int("cpushares"))
+	config.Cgroups.Memory = int64(context.Int("memory-limit"))
+	config.Cgroups.MemorySwap = int64(context.Int("memory-swap"))
+	config.AppArmorProfile = context.String("apparmor-profile")
+	config.ProcessLabel = context.String("process-label")
+	config.MountLabel = context.String("mount-label")
 }
 
 func getTemplate() *configs.Config {
@@ -91,14 +120,8 @@ func getTemplate() *configs.Config {
 		Rlimits: []configs.Rlimit{
 			{
 				Type: syscall.RLIMIT_NOFILE,
-				Hard: uint64(1024),
-				Soft: uint64(1024),
-			},
-		},
-		Mounts: []*configs.Mount{
-			{
-				Type:        "tmpfs",
-				Destination: "/tmp",
+				Hard: 1024,
+				Soft: 1024,
 			},
 		},
 	}

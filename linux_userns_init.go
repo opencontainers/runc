@@ -21,7 +21,8 @@ func (l *linuxUsernsInit) Init() error {
 	}
 	consolePath := l.config.Config.Console
 	if consolePath != "" {
-		console := newConsoleFromPath(consolePath)
+		// TODO: why is this hard coded?
+		console := newConsoleFromPath("/dev/console")
 		if err := console.dupStdio(); err != nil {
 			return err
 		}

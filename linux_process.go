@@ -54,15 +54,15 @@ func (p *setnsProcess) signal(s os.Signal) error {
 func (p *setnsProcess) start() (err error) {
 	defer p.parentPipe.Close()
 	if p.forkedProcess, err = p.execSetns(); err != nil {
-		return err
+		return newSystemError(err)
 	}
 	if len(p.cgroupPaths) > 0 {
 		if err := cgroups.EnterPid(p.cgroupPaths, p.forkedProcess.Pid); err != nil {
-			return err
+			return newSystemError(err)
 		}
 	}
 	if err := json.NewEncoder(p.parentPipe).Encode(p.config); err != nil {
-		return err
+		return newSystemError(err)
 	}
 	return nil
 }
@@ -75,18 +75,18 @@ func (p *setnsProcess) execSetns() (*os.Process, error) {
 	err := p.cmd.Start()
 	p.childPipe.Close()
 	if err != nil {
-		return nil, err
+		return nil, newSystemError(err)
 	}
 	status, err := p.cmd.Process.Wait()
 	if err != nil {
-		return nil, err
+		return nil, newSystemError(err)
 	}
 	if !status.Success() {
-		return nil, &exec.ExitError{status}
+		return nil, newSystemError(&exec.ExitError{status})
 	}
 	var pid *pid
 	if err := json.NewDecoder(p.parentPipe).Decode(&pid); err != nil {
-		return nil, err
+		return nil, newSystemError(err)
 	}
 	return os.FindProcess(pid.Pid)
 }
@@ -129,12 +129,12 @@ func (p *initProcess) start() error {
 	err := p.cmd.Start()
 	p.childPipe.Close()
 	if err != nil {
-		return err
+		return newSystemError(err)
 	}
 	// Do this before syncing with child so that no children
 	// can escape the cgroup
 	if err := p.manager.Apply(p.pid()); err != nil {
-		return err
+		return newSystemError(err)
 	}
 	defer func() {
 		if err != nil {
@@ -143,13 +143,13 @@ func (p *initProcess) start() error {
 		}
 	}()
 	if err := p.createNetworkInterfaces(); err != nil {
-		return err
+		return newSystemError(err)
 	}
 	// Start the setup process to setup the init process
 	if p.cmd.SysProcAttr.Cloneflags&syscall.CLONE_NEWUSER != 0 {
 		parent, err := p.newUsernsSetupProcess()
 		if err != nil {
-			return err
+			return newSystemError(err)
 		}
 		if err := parent.start(); err != nil {
 			if err := parent.terminate(); err != nil {
@@ -158,20 +158,20 @@ func (p *initProcess) start() error {
 			return err
 		}
 		if _, err := parent.wait(); err != nil {
-			return err
+			return newSystemError(err)
 		}
 	}
 	if err := p.sendConfig(); err != nil {
-		return err
+		return newSystemError(err)
 	}
 	// wait for the child process to fully complete and receive an error message
 	// if one was encoutered
 	var ierr *initError
 	if err := json.NewDecoder(p.parentPipe).Decode(&ierr); err != nil && err != io.EOF {
-		return err
+		return newSystemError(err)
 	}
 	if ierr != nil {
-		return ierr
+		return newSystemError(ierr)
 	}
 	return nil
 }
@@ -232,7 +232,7 @@ func (p *initProcess) createNetworkInterfaces() error {
 func (p *initProcess) newUsernsSetupProcess() (parentProcess, error) {
 	parentPipe, childPipe, err := newPipe()
 	if err != nil {
-		return nil, err
+		return nil, newSystemError(err)
 	}
 	cmd := exec.Command(p.cmd.Args[0], p.cmd.Args[1:]...)
 	cmd.ExtraFiles = []*os.File{childPipe}

@@ -18,13 +18,14 @@ func main() {
 		cli.StringFlag{Name: "root", Value: ".", Usage: "root directory for containers"},
 	}
 	app.Commands = []cli.Command{
+		configCommand,
 		execCommand,
 		initCommand,
 		oomCommand,
 		pauseCommand,
 		statsCommand,
 		unpauseCommand,
-		configCommand,
+		stateCommand,
 	}
 	if err := app.Run(os.Args); err != nil {
 		log.Fatal(err)

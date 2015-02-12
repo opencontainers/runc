@@ -184,7 +184,6 @@ func (c *linuxContainer) commandTemplate(p *Process, childPipe *os.File) (*exec.
 
 func (c *linuxContainer) newInitProcess(p *Process, cmd *exec.Cmd, parentPipe, childPipe *os.File) *initProcess {
 	t := "_LIBCONTAINER_INITTYPE=standard"
-
 	cloneFlags := c.config.Namespaces.CloneFlags()
 	if cloneFlags&syscall.CLONE_NEWUSER != 0 {
 		c.addUidGidMappings(cmd.SysProcAttr)
@@ -225,6 +224,8 @@ func (c *linuxContainer) newInitConfig(process *Process) *initConfig {
 		Config: c.config,
 		Args:   process.Args,
 		Env:    process.Env,
+		User:   process.User,
+		Cwd:    process.Cwd,
 	}
 }
 
@@ -273,6 +274,7 @@ func (c *linuxContainer) Destroy() error {
 	if rerr := os.RemoveAll(c.root); err == nil {
 		err = rerr
 	}
+	c.initProcess = nil
 	return err
 }
 
@@ -285,6 +287,9 @@ func (c *linuxContainer) Resume() error {
 }
 
 func (c *linuxContainer) Signal(signal os.Signal) error {
+	if c.initProcess == nil {
+		return newGenericError(nil, ContainerNotRunning)
+	}
 	return c.initProcess.signal(signal)
 }
 
