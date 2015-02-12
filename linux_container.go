@@ -143,7 +143,7 @@ func (c *linuxContainer) newParentProcess(p *Process, doInit bool) (parentProces
 	if !doInit {
 		return c.newSetnsProcess(p, cmd, parentPipe, childPipe), nil
 	}
-	return c.newInitProcess(p, cmd, parentPipe, childPipe), nil
+	return c.newInitProcess(p, cmd, parentPipe, childPipe)
 }
 
 func (c *linuxContainer) commandTemplate(p *Process, childPipe *os.File) (*exec.Cmd, error) {
@@ -163,11 +163,14 @@ func (c *linuxContainer) commandTemplate(p *Process, childPipe *os.File) (*exec.
 	return cmd, nil
 }
 
-func (c *linuxContainer) newInitProcess(p *Process, cmd *exec.Cmd, parentPipe, childPipe *os.File) *initProcess {
+func (c *linuxContainer) newInitProcess(p *Process, cmd *exec.Cmd, parentPipe, childPipe *os.File) (*initProcess, error) {
 	t := "_LIBCONTAINER_INITTYPE=standard"
 	cloneFlags := c.config.Namespaces.CloneFlags()
 	if cloneFlags&syscall.CLONE_NEWUSER != 0 {
-		c.addUidGidMappings(cmd.SysProcAttr)
+		if err := c.addUidGidMappings(cmd.SysProcAttr); err != nil {
+			// mappings is not supported
+			return nil, err
+		}
 		// Default to root user when user namespaces are enabled.
 		if cmd.SysProcAttr.Credential == nil {
 			cmd.SysProcAttr.Credential = &syscall.Credential{}
@@ -182,7 +185,7 @@ func (c *linuxContainer) newInitProcess(p *Process, cmd *exec.Cmd, parentPipe, c
 		parentPipe: parentPipe,
 		manager:    c.cgroupManager,
 		config:     c.newInitConfig(p),
-	}
+	}, nil
 }
 
 func (c *linuxContainer) newSetnsProcess(p *Process, cmd *exec.Cmd, parentPipe, childPipe *os.File) *setnsProcess {
@@ -207,26 +210,6 @@ func (c *linuxContainer) newInitConfig(process *Process) *initConfig {
 		Env:    process.Env,
 		User:   process.User,
 		Cwd:    process.Cwd,
-	}
-}
-
-// Converts IDMap to SysProcIDMap array and adds it to SysProcAttr.
-func (c *linuxContainer) addUidGidMappings(sys *syscall.SysProcAttr) {
-	if c.config.UidMappings != nil {
-		sys.UidMappings = make([]syscall.SysProcIDMap, len(c.config.UidMappings))
-		for i, um := range c.config.UidMappings {
-			sys.UidMappings[i].ContainerID = um.ContainerID
-			sys.UidMappings[i].HostID = um.HostID
-			sys.UidMappings[i].Size = um.Size
-		}
-	}
-	if c.config.GidMappings != nil {
-		sys.GidMappings = make([]syscall.SysProcIDMap, len(c.config.GidMappings))
-		for i, gm := range c.config.GidMappings {
-			sys.GidMappings[i].ContainerID = gm.ContainerID
-			sys.GidMappings[i].HostID = gm.HostID
-			sys.GidMappings[i].Size = gm.Size
-		}
 	}
 }
 
