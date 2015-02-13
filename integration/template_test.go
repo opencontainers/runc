@@ -13,6 +13,8 @@ var standardEnvironment = []string{
 	"TERM=xterm",
 }
 
+const defaultMountFlags = syscall.MS_NOEXEC | syscall.MS_NOSUID | syscall.MS_NODEV
+
 // newTemplateConfig returns a base template for running a container
 //
 // it uses a network strategy of just setting a loopback interface
@@ -49,9 +51,35 @@ func newTemplateConfig(rootfs string) *configs.Config {
 			AllowAllDevices: false,
 			AllowedDevices:  configs.DefaultAllowedDevices,
 		},
-
+		MaskPaths: []string{
+			"/proc/kcore",
+		},
+		ReadonlyPaths: []string{
+			"/proc/sys", "/proc/sysrq-trigger", "/proc/irq", "/proc/bus",
+		},
 		Devices:  configs.DefaultAutoCreatedDevices,
 		Hostname: "integration",
+		Mounts: []*configs.Mount{
+			{
+				Device:      "tmpfs",
+				Source:      "shm",
+				Destination: "/dev/shm",
+				Data:        "mode=1777,size=65536k",
+				Flags:       defaultMountFlags,
+			},
+			{
+				Source:      "mqueue",
+				Destination: "/dev/mqueue",
+				Device:      "mqueue",
+				Flags:       defaultMountFlags,
+			},
+			{
+				Source:      "sysfs",
+				Destination: "/sys",
+				Device:      "sysfs",
+				Flags:       defaultMountFlags | syscall.MS_RDONLY,
+			},
+		},
 		Networks: []*configs.Network{
 			{
 				Type:    "loopback",

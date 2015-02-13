@@ -12,6 +12,8 @@ import (
 	"github.com/docker/libcontainer/configs"
 )
 
+const defaultMountFlags = syscall.MS_NOEXEC | syscall.MS_NOSUID | syscall.MS_NODEV
+
 var createFlags = []cli.Flag{
 	cli.IntFlag{Name: "parent-death-signal", Usage: "set the signal that will be delivered to the process in case the parent dies"},
 	cli.BoolFlag{Name: "read-only", Usage: "set the container's rootfs as read-only"},
@@ -107,9 +109,35 @@ func getTemplate() *configs.Config {
 			AllowAllDevices: false,
 			AllowedDevices:  configs.DefaultAllowedDevices,
 		},
-
 		Devices:  configs.DefaultAutoCreatedDevices,
 		Hostname: "nsinit",
+		MaskPaths: []string{
+			"/proc/kcore",
+		},
+		ReadonlyPaths: []string{
+			"/proc/sys", "/proc/sysrq-trigger", "/proc/irq", "/proc/bus",
+		},
+		Mounts: []*configs.Mount{
+			{
+				Device:      "tmpfs",
+				Source:      "shm",
+				Destination: "/dev/shm",
+				Data:        "mode=1777,size=65536k",
+				Flags:       defaultMountFlags,
+			},
+			{
+				Source:      "mqueue",
+				Destination: "/dev/mqueue",
+				Device:      "mqueue",
+				Flags:       defaultMountFlags,
+			},
+			{
+				Source:      "sysfs",
+				Destination: "/sys",
+				Device:      "sysfs",
+				Flags:       defaultMountFlags | syscall.MS_RDONLY,
+			},
+		},
 		Networks: []*configs.Network{
 			{
 				Type:    "loopback",

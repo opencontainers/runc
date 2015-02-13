@@ -107,17 +107,11 @@ func TestConfigJsonFormat(t *testing.T) {
 			break
 		}
 	}
-
 	for _, d := range DefaultSimpleDevices {
 		if !containsDevice(d, container.Devices) {
 			t.Logf("expected device configuration for %s", d.Path)
 			t.Fail()
 		}
-	}
-
-	if !container.RestrictSys {
-		t.Log("expected restrict sys to be true")
-		t.Fail()
 	}
 }
 

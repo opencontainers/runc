@@ -78,10 +78,6 @@ type Config struct {
 	// commonly used by selinux
 	ProcessLabel string `json:"process_label"`
 
-	// RestrictSys will remount /proc/sys, /sys, and mask over sysrq-trigger as well as /proc/irq and
-	// /proc/bus
-	RestrictSys bool `json:"restrict_sys"`
-
 	// Rlimits specifies the resource limits, such as max open files, to set in the container
 	// If Rlimits are not set, the container will inherit rlimits from the parent process
 	Rlimits []Rlimit `json:"rlimits"`
@@ -95,6 +91,14 @@ type Config struct {
 
 	// GidMappings is an array of Group ID mappings for User Namespaces
 	GidMappings []IDMap `json:"gid_mappings"`
+
+	// MaskPaths specifies paths within the container's rootfs to mask over with a bind
+	// mount pointing to /dev/null as to prevent reads of the file.
+	MaskPaths []string `json:"mask_paths"`
+
+	// ReadonlyPaths specifies paths within the container's rootfs to remount as read-only
+	// so that these files prevent any writes.
+	ReadonlyPaths []string `json:"readonly_paths"`
 }
 
 // Gets the root uid for the process on host which could be non-zero
