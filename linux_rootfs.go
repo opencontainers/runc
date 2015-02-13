@@ -10,19 +10,33 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/docker/docker/pkg/symlink"
 	"github.com/docker/libcontainer/configs"
 	"github.com/docker/libcontainer/label"
 )
 
 const defaultMountFlags = syscall.MS_NOEXEC | syscall.MS_NOSUID | syscall.MS_NODEV
 
-type mount struct {
-	source string
-	path   string
-	device string
-	flags  int
-	data   string
+var baseMounts = []*configs.Mount{
+	{
+		Source:      "proc",
+		Destination: "/proc",
+		Device:      "proc",
+		Flags:       defaultMountFlags,
+	},
+	{
+		Source:      "tmpfs",
+		Destination: "/dev",
+		Device:      "tmpfs",
+		Flags:       syscall.MS_NOSUID | syscall.MS_STRICTATIME,
+		Data:        "mode=755",
+	},
+	{
+		Source:      "devpts",
+		Destination: "/dev/pts",
+		Device:      "devpts",
+		Flags:       syscall.MS_NOSUID | syscall.MS_NOEXEC,
+		Data:        "newinstance,ptmxmode=0666,mode=620,gid=5",
+	},
 }
 
 // setupRootfs sets up the devices, mount points, and filesystems for use inside a
@@ -31,12 +45,8 @@ func setupRootfs(config *configs.Config) (err error) {
 	if err := prepareRoot(config); err != nil {
 		return err
 	}
-	if err := mountSystem(config); err != nil {
-		return err
-	}
-	// apply any user specified mounts within the new mount namespace
-	for _, m := range config.Mounts {
-		if err := mountUserMount(m, config.Rootfs, config.MountLabel); err != nil {
+	for _, m := range append(baseMounts, config.Mounts...) {
+		if err := mount(m, config.Rootfs, config.MountLabel); err != nil {
 			return err
 		}
 	}
@@ -77,16 +87,52 @@ func setupRootfs(config *configs.Config) (err error) {
 	return nil
 }
 
-// mountSystem sets up linux specific system mounts like mqueue, sys, proc, shm, and devpts
-// inside the mount namespace
-func mountSystem(config *configs.Config) error {
-	for _, m := range newSystemMounts(config.Rootfs, config.MountLabel, config.RestrictSys) {
-		if err := os.MkdirAll(m.path, 0755); err != nil && !os.IsExist(err) {
+func mount(m *configs.Mount, rootfs, mountLabel string) error {
+	var (
+		dest = filepath.Join(rootfs, m.Destination)
+		data = label.FormatMountLabel(m.Data, mountLabel)
+	)
+	switch m.Device {
+	case "proc":
+		if err := os.MkdirAll(dest, 0755); err != nil && !os.IsExist(err) {
 			return err
 		}
-		if err := syscall.Mount(m.source, m.path, m.device, uintptr(m.flags), m.data); err != nil {
+		return syscall.Mount(m.Source, dest, m.Device, uintptr(m.Flags), "")
+	case "tmpfs", "mqueue", "devpts", "sysfs":
+		if err := os.MkdirAll(dest, 0755); err != nil && !os.IsExist(err) {
 			return err
 		}
+		return syscall.Mount(m.Source, dest, m.Device, uintptr(m.Flags), data)
+	case "bind":
+		stat, err := os.Stat(m.Source)
+		if err != nil {
+			// error out if the source of a bind mount does not exist as we will be
+			// unable to bind anything to it.
+			return err
+		}
+		if err := createIfNotExists(dest, stat.IsDir()); err != nil {
+			return err
+		}
+		if err := syscall.Mount(m.Source, dest, m.Device, uintptr(m.Flags), data); err != nil {
+			return err
+		}
+		if m.Flags&syscall.MS_RDONLY != 0 {
+			if err := syscall.Mount(m.Source, dest, m.Device, uintptr(m.Flags|syscall.MS_REMOUNT), ""); err != nil {
+				return err
+			}
+		}
+		if m.Relabel != "" {
+			if err := label.Relabel(m.Source, mountLabel, m.Relabel); err != nil {
+				return err
+			}
+		}
+		if m.Flags&syscall.MS_PRIVATE != 0 {
+			if err := syscall.Mount("", dest, "none", uintptr(syscall.MS_PRIVATE), ""); err != nil {
+				return err
+			}
+		}
+	default:
+		return fmt.Errorf("unknown mount device %q to %q", m.Device, m.Destination)
 	}
 	return nil
 }
@@ -98,46 +144,21 @@ func setupDevSymlinks(rootfs string) error {
 		{"/proc/self/fd/1", "/dev/stdout"},
 		{"/proc/self/fd/2", "/dev/stderr"},
 	}
-
 	// kcore support can be toggled with CONFIG_PROC_KCORE; only create a symlink
 	// in /dev if it exists in /proc.
 	if _, err := os.Stat("/proc/kcore"); err == nil {
 		links = append(links, [2]string{"/proc/kcore", "/dev/kcore"})
 	}
-
 	for _, link := range links {
 		var (
 			src = link[0]
 			dst = filepath.Join(rootfs, link[1])
 		)
-
 		if err := os.Symlink(src, dst); err != nil && !os.IsExist(err) {
 			return fmt.Errorf("symlink %s %s %s", src, dst, err)
 		}
 	}
-
 	return nil
-}
-
-// TODO: this is crappy right now and should be cleaned up with a better way of handling system and
-// standard bind mounts allowing them to be more dynamic
-func newSystemMounts(rootfs, mountLabel string, sysReadonly bool) []mount {
-	systemMounts := []mount{
-		{source: "proc", path: filepath.Join(rootfs, "proc"), device: "proc", flags: defaultMountFlags},
-		{source: "tmpfs", path: filepath.Join(rootfs, "dev"), device: "tmpfs", flags: syscall.MS_NOSUID | syscall.MS_STRICTATIME, data: label.FormatMountLabel("mode=755", mountLabel)},
-		{source: "shm", path: filepath.Join(rootfs, "dev", "shm"), device: "tmpfs", flags: defaultMountFlags, data: label.FormatMountLabel("mode=1777,size=65536k", mountLabel)},
-		{source: "mqueue", path: filepath.Join(rootfs, "dev", "mqueue"), device: "mqueue", flags: defaultMountFlags},
-		{source: "devpts", path: filepath.Join(rootfs, "dev", "pts"), device: "devpts", flags: syscall.MS_NOSUID | syscall.MS_NOEXEC, data: label.FormatMountLabel("newinstance,ptmxmode=0666,mode=620,gid=5", mountLabel)},
-	}
-
-	sysMountFlags := defaultMountFlags
-	if sysReadonly {
-		sysMountFlags |= syscall.MS_RDONLY
-	}
-
-	systemMounts = append(systemMounts, mount{source: "sysfs", path: filepath.Join(rootfs, "sys"), device: "sysfs", flags: sysMountFlags})
-
-	return systemMounts
 }
 
 // Is stdin, stdout or stderr were to be pointing to '/dev/null',
@@ -149,17 +170,17 @@ func reOpenDevNull(rootfs string) error {
 		return fmt.Errorf("Failed to open /dev/null - %s", err)
 	}
 	defer file.Close()
-	if err = syscall.Fstat(int(file.Fd()), &devNullStat); err != nil {
-		return fmt.Errorf("Failed to stat /dev/null - %s", err)
+	if err := syscall.Fstat(int(file.Fd()), &devNullStat); err != nil {
+		return err
 	}
 	for fd := 0; fd < 3; fd++ {
-		if err = syscall.Fstat(fd, &stat); err != nil {
-			return fmt.Errorf("Failed to stat fd %d - %s", fd, err)
+		if err := syscall.Fstat(fd, &stat); err != nil {
+			return err
 		}
 		if stat.Rdev == devNullStat.Rdev {
 			// Close and re-open the fd.
-			if err = syscall.Dup2(int(file.Fd()), fd); err != nil {
-				return fmt.Errorf("Failed to dup fd %d to fd %d - %s", file.Fd(), fd, err)
+			if err := syscall.Dup2(int(file.Fd()), fd); err != nil {
+				return err
 			}
 		}
 	}
@@ -280,77 +301,6 @@ func msMoveRoot(rootfs string) error {
 	return syscall.Chdir("/")
 }
 
-func mountUserMount(m *configs.Mount, rootfs, mountLabel string) error {
-	switch m.Type {
-	case "bind":
-		return bindMount(m, rootfs, mountLabel)
-	case "tmpfs":
-		return tmpfsMount(m, rootfs, mountLabel)
-	default:
-		return fmt.Errorf("unsupported mount type %s for %s", m.Type, m.Destination)
-	}
-}
-
-func bindMount(m *configs.Mount, rootfs, mountLabel string) error {
-	var (
-		flags = syscall.MS_BIND | syscall.MS_REC
-		dest  = filepath.Join(rootfs, m.Destination)
-	)
-	if !m.Writable {
-		flags = flags | syscall.MS_RDONLY
-	}
-	if m.Slave {
-		flags = flags | syscall.MS_SLAVE
-	}
-	stat, err := os.Stat(m.Source)
-	if err != nil {
-		return err
-	}
-	// TODO: (crosbymichael) This does not belong here and should be done a layer above
-	dest, err = symlink.FollowSymlinkInScope(dest, rootfs)
-	if err != nil {
-		return err
-	}
-	if err := createIfNotExists(dest, stat.IsDir()); err != nil {
-		return fmt.Errorf("creating new bind mount target %s", err)
-	}
-	if err := syscall.Mount(m.Source, dest, "bind", uintptr(flags), ""); err != nil {
-		return err
-	}
-	if !m.Writable {
-		if err := syscall.Mount(m.Source, dest, "bind", uintptr(flags|syscall.MS_REMOUNT), ""); err != nil {
-			return err
-		}
-	}
-	if m.Relabel != "" {
-		if err := label.Relabel(m.Source, mountLabel, m.Relabel); err != nil {
-			return err
-		}
-	}
-	if m.Private {
-		if err := syscall.Mount("", dest, "none", uintptr(syscall.MS_PRIVATE), ""); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func tmpfsMount(m *configs.Mount, rootfs, mountLabel string) error {
-	var (
-		err  error
-		l    = label.FormatMountLabel("", mountLabel)
-		dest = filepath.Join(rootfs, m.Destination)
-	)
-	// TODO: (crosbymichael) This does not belong here and should be done a layer above
-	if dest, err = symlink.FollowSymlinkInScope(dest, rootfs); err != nil {
-		return err
-	}
-	if err := createIfNotExists(dest, true); err != nil {
-		return err
-	}
-	return syscall.Mount("tmpfs", dest, "tmpfs", uintptr(defaultMountFlags), l)
-}
-
 // createIfNotExists creates a file or a directory only if it does not already exist.
 func createIfNotExists(path string, isDir bool) error {
 	if _, err := os.Stat(path); err != nil {
@@ -394,11 +344,11 @@ func remountReadonly(path string) error {
 	return fmt.Errorf("unable to mount %s as readonly max retries reached", path)
 }
 
-// maskProckcore bind mounts /dev/null over the top of /proc/kcore inside a container to avoid security
-// issues from processes reading memory information.
-func maskProckcore() error {
-	if err := syscall.Mount("/dev/null", "/proc/kcore", "", syscall.MS_BIND, ""); err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("unable to bind-mount /dev/null over /proc/kcore: %s", err)
+// maskFile bind mounts /dev/null over the top of the specified path inside a container
+// to avoid security issues from processes reading information from non-namespace aware mounts ( proc/kcore ).
+func maskFile(path string) error {
+	if err := syscall.Mount("/dev/null", path, "", syscall.MS_BIND, ""); err != nil && !os.IsNotExist(err) {
+		return err
 	}
 	return nil
 }

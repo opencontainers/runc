@@ -68,7 +68,8 @@ func (v *ConfigValidator) hostname(config *configs.Config) error {
 
 func (v *ConfigValidator) security(config *configs.Config) error {
 	// restrict sys without mount namespace
-	if config.RestrictSys && !config.Namespaces.Contains(configs.NEWNS) {
+	if (len(config.MaskPaths) > 0 || len(config.ReadonlyPaths) > 0) &&
+		!config.Namespaces.Contains(configs.NEWNS) {
 		return fmt.Errorf("unable to restrict sys entries without a private MNT namespace")
 	}
 	return nil

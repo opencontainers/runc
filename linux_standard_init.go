@@ -62,13 +62,13 @@ func (l *linuxStandardInit) Init() error {
 	if err := label.SetProcessLabel(l.config.Config.ProcessLabel); err != nil {
 		return err
 	}
-	if l.config.Config.RestrictSys {
-		for _, path := range []string{"proc/sys", "proc/sysrq-trigger", "proc/irq", "proc/bus"} {
-			if err := remountReadonly(path); err != nil {
-				return err
-			}
+	for _, path := range l.config.Config.ReadonlyPaths {
+		if err := remountReadonly(path); err != nil {
+			return err
 		}
-		if err := maskProckcore(); err != nil {
+	}
+	for _, path := range l.config.Config.MaskPaths {
+		if err := maskFile(path); err != nil {
 			return err
 		}
 	}
