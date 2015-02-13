@@ -21,8 +21,9 @@ func (l *linuxUsernsInit) Init() error {
 	}
 	consolePath := l.config.Config.Console
 	if consolePath != "" {
-		// TODO: why is this hard coded?
-		console := newConsoleFromPath("/dev/console")
+		// We use the containerConsolePath here, because the console has already been
+		// setup by the side car process for the user namespace scenario.
+		console := newConsoleFromPath(containerConsolePath)
 		if err := console.dupStdio(); err != nil {
 			return err
 		}
