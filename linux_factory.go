@@ -10,9 +10,9 @@ import (
 	"path/filepath"
 	"regexp"
 
-	"github.com/golang/glog"
-
-	cgroups "github.com/docker/libcontainer/cgroups/manager"
+	"github.com/docker/libcontainer/cgroups"
+	"github.com/docker/libcontainer/cgroups/fs"
+	"github.com/docker/libcontainer/cgroups/systemd"
 	"github.com/docker/libcontainer/configs"
 	"github.com/docker/libcontainer/configs/validate"
 )
@@ -26,39 +26,89 @@ var (
 	maxIdLen = 1024
 )
 
-// New returns a linux based container factory based in the root directory.
-func New(root string, initArgs []string) (Factory, error) {
+// InitArgs returns an options func to configure a LinuxFactory with the
+// provided init arguments.
+func InitArgs(args ...string) func(*LinuxFactory) error {
+	return func(l *LinuxFactory) error {
+		l.InitArgs = args
+		return nil
+	}
+}
+
+// SystemdCgroups is an options func to configure a LinuxFactory to return
+// containers that use systemd to create and manage cgroups.
+func SystemdCgroups(l *LinuxFactory) error {
+	l.NewCgroupsManager = func(config *configs.Cgroup, paths map[string]string) cgroups.Manager {
+		return &systemd.Manager{
+			Cgroups: config,
+			Paths:   paths,
+		}
+	}
+	return nil
+}
+
+// Cgroupfs is an options func to configure a LinuxFactory to return
+// containers that use the native cgroups filesystem implementation to
+// create and manage cgroups.
+func Cgroupfs(l *LinuxFactory) error {
+	l.NewCgroupsManager = func(config *configs.Cgroup, paths map[string]string) cgroups.Manager {
+		return &fs.Manager{
+			Cgroups: config,
+			Paths:   paths,
+		}
+	}
+	return nil
+}
+
+// New returns a linux based container factory based in the root directory and
+// configures the factory with the provided option funcs.
+func New(root string, options ...func(*LinuxFactory) error) (Factory, error) {
 	if root != "" {
 		if err := os.MkdirAll(root, 0700); err != nil {
 			return nil, newGenericError(err, SystemError)
 		}
 	}
-	return &linuxFactory{
-		root:      root,
-		initArgs:  initArgs,
-		validator: validate.New(),
-	}, nil
+	l := &LinuxFactory{
+		Root:      root,
+		InitArgs:  []string{os.Args[0], "init"},
+		Validator: validate.New(),
+	}
+	Cgroupfs(l)
+	for _, opt := range options {
+		if err := opt(l); err != nil {
+			return nil, err
+		}
+	}
+	return l, nil
 }
 
-// linuxFactory implements the default factory interface for linux based systems.
-type linuxFactory struct {
-	// root is the root directory
-	root      string
-	initArgs  []string
-	validator validate.Validator
+// LinuxFactory implements the default factory interface for linux based systems.
+type LinuxFactory struct {
+	// Root directory for the factory to store state.
+	Root string
+
+	// InitArgs are arguments for calling the init responsibilities for spawning
+	// a container.
+	InitArgs []string
+
+	// Validator provides validation to container configurations.
+	Validator validate.Validator
+
+	// NewCgroupsManager returns an initialized cgroups manager for a single container.
+	NewCgroupsManager func(config *configs.Cgroup, paths map[string]string) cgroups.Manager
 }
 
-func (l *linuxFactory) Create(id string, config *configs.Config) (Container, error) {
-	if l.root == "" {
+func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, error) {
+	if l.Root == "" {
 		return nil, newGenericError(fmt.Errorf("invalid root"), ConfigInvalid)
 	}
 	if err := l.validateID(id); err != nil {
 		return nil, err
 	}
-	if err := l.validator.Validate(config); err != nil {
+	if err := l.Validator.Validate(config); err != nil {
 		return nil, newGenericError(err, ConfigInvalid)
 	}
-	containerRoot := filepath.Join(l.root, id)
+	containerRoot := filepath.Join(l.Root, id)
 	if _, err := os.Stat(containerRoot); err == nil {
 		return nil, newGenericError(fmt.Errorf("Container with id exists: %v", id), IdInUse)
 	} else if !os.IsNotExist(err) {
@@ -71,16 +121,16 @@ func (l *linuxFactory) Create(id string, config *configs.Config) (Container, err
 		id:            id,
 		root:          containerRoot,
 		config:        config,
-		initArgs:      l.initArgs,
-		cgroupManager: cgroups.NewCgroupManager(config.Cgroups),
+		initArgs:      l.InitArgs,
+		cgroupManager: l.NewCgroupsManager(config.Cgroups, nil),
 	}, nil
 }
 
-func (l *linuxFactory) Load(id string) (Container, error) {
-	if l.root == "" {
+func (l *LinuxFactory) Load(id string) (Container, error) {
+	if l.Root == "" {
 		return nil, newGenericError(fmt.Errorf("invalid root"), ConfigInvalid)
 	}
-	containerRoot := filepath.Join(l.root, id)
+	containerRoot := filepath.Join(l.Root, id)
 	state, err := l.loadState(containerRoot)
 	if err != nil {
 		return nil, err
@@ -89,21 +139,19 @@ func (l *linuxFactory) Load(id string) (Container, error) {
 		processPid:       state.InitProcessPid,
 		processStartTime: state.InitProcessStartTime,
 	}
-	cgroupManager := cgroups.LoadCgroupManager(state.Config.Cgroups, state.CgroupPaths)
-	glog.Infof("using %s as cgroup manager", cgroupManager)
 	return &linuxContainer{
 		initProcess:   r,
 		id:            id,
 		config:        &state.Config,
-		initArgs:      l.initArgs,
-		cgroupManager: cgroupManager,
+		initArgs:      l.InitArgs,
+		cgroupManager: l.NewCgroupsManager(state.Config.Cgroups, state.CgroupPaths),
 		root:          containerRoot,
 	}, nil
 }
 
 // StartInitialization loads a container by opening the pipe fd from the parent to read the configuration and state
 // This is a low level implementation detail of the reexec and should not be consumed externally
-func (l *linuxFactory) StartInitialization(pipefd uintptr) (err error) {
+func (l *LinuxFactory) StartInitialization(pipefd uintptr) (err error) {
 	var (
 		pipe = os.NewFile(uintptr(pipefd), "pipe")
 		it   = initType(os.Getenv("_LIBCONTAINER_INITTYPE"))
@@ -134,7 +182,7 @@ func (l *linuxFactory) StartInitialization(pipefd uintptr) (err error) {
 	return i.Init()
 }
 
-func (l *linuxFactory) loadState(root string) (*State, error) {
+func (l *LinuxFactory) loadState(root string) (*State, error) {
 	f, err := os.Open(filepath.Join(root, stateFilename))
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -150,7 +198,7 @@ func (l *linuxFactory) loadState(root string) (*State, error) {
 	return state, nil
 }
 
-func (l *linuxFactory) validateID(id string) error {
+func (l *LinuxFactory) validateID(id string) error {
 	if !idRegex.MatchString(id) {
 		return newGenericError(fmt.Errorf("Invalid id format: %v", id), InvalidIdFormat)
 	}
