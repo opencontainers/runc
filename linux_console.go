@@ -12,6 +12,10 @@ import (
 	"github.com/docker/libcontainer/label"
 )
 
+const (
+	containerConsolePath string = "/dev/console"
+)
+
 // NewConsole returns an initalized console that can be used within a container by copying bytes
 // from the master side to the slave that is attached as the tty for the container's init process.
 func NewConsole() (Console, error) {
@@ -83,7 +87,7 @@ func (c *linuxConsole) mount(rootfs, mountLabel string, uid, gid int) error {
 	if err := label.SetFileLabel(c.slavePath, mountLabel); err != nil {
 		return err
 	}
-	dest := filepath.Join(rootfs, "dev/console")
+	dest := filepath.Join(rootfs, containerConsolePath)
 	f, err := os.Create(dest)
 	if err != nil && !os.IsExist(err) {
 		return err
