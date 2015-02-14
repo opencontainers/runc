@@ -98,7 +98,7 @@ func (l *loopback) initialize(config *network) error {
 }
 
 // veth is a network strategy that uses a bridge and creates
-// a veth pair, one that stays outside on the host and the other
+// a veth pair, one that is attached to the bridge on the host and the other
 // is placed inside the container's namespace
 type veth struct {
 }
