@@ -40,7 +40,7 @@ type network struct {
 	TempVethPeerName string `json:"temp_veth_peer_name"`
 }
 
-// Process is used for transferring parameters from Exec() to Init()
+// initConfig is used for transferring parameters from Exec() to Init()
 type initConfig struct {
 	Args     []string        `json:"args"`
 	Env      []string        `json:"env"`
@@ -99,7 +99,7 @@ func populateProcessEnvironment(env []string) error {
 }
 
 // finalizeNamespace drops the caps, sets the correct user
-// and working dir, and closes any leaky file descriptors
+// and working dir, and closes any leaked file descriptors
 // before execing the command inside the namespace
 func finalizeNamespace(config *initConfig) error {
 	// Ensure that all non-standard fds we may have accidentally
@@ -229,7 +229,7 @@ func setupRlimits(config *configs.Config) error {
 	return nil
 }
 
-// killCgroupProcesses freezes then itterates over all the processes inside the
+// killCgroupProcesses freezes then iterates over all the processes inside the
 // manager's cgroups sending a SIGKILL to each process then waiting for them to
 // exit.
 func killCgroupProcesses(m cgroups.Manager) error {

@@ -161,8 +161,8 @@ func setupDevSymlinks(rootfs string) error {
 	return nil
 }
 
-// Is stdin, stdout or stderr were to be pointing to '/dev/null',
-// this method will make them point to '/dev/null' from within this namespace.
+// If stdin, stdout or stderr are pointing to '/dev/null' in the global mount namespace,
+// this method will make them point to '/dev/null' in this namespace.
 func reOpenDevNull(rootfs string) error {
 	var stat, devNullStat syscall.Stat_t
 	file, err := os.Open(filepath.Join(rootfs, "/dev/null"))

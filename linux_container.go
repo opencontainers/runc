@@ -168,7 +168,7 @@ func (c *linuxContainer) newInitProcess(p *Process, cmd *exec.Cmd, parentPipe, c
 	cloneFlags := c.config.Namespaces.CloneFlags()
 	if cloneFlags&syscall.CLONE_NEWUSER != 0 {
 		if err := c.addUidGidMappings(cmd.SysProcAttr); err != nil {
-			// mappings is not supported
+			// user mappings are not supported
 			return nil, err
 		}
 		// Default to root user when user namespaces are enabled.
