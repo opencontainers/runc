@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"math"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -27,6 +28,7 @@ var createFlags = []cli.Flag{
 	cli.StringFlag{Name: "apparmor-profile", Usage: "set the apparmor profile"},
 	cli.StringFlag{Name: "process-label", Usage: "set the process label"},
 	cli.StringFlag{Name: "mount-label", Usage: "set the mount label"},
+	cli.IntFlag{Name: "userns-root-uid", Usage: "set the user namespace root uid"},
 }
 
 var configCommand = cli.Command{
@@ -70,6 +72,21 @@ func modify(config *configs.Config, context *cli.Context) {
 	config.AppArmorProfile = context.String("apparmor-profile")
 	config.ProcessLabel = context.String("process-label")
 	config.MountLabel = context.String("mount-label")
+
+	userns_uid := context.Int("userns-root-uid")
+	if userns_uid != 0 {
+		config.Namespaces = append(config.Namespaces, configs.Namespace{Type: configs.NEWUSER})
+		config.UidMappings = []configs.IDMap{
+			{ContainerID: 0, HostID: userns_uid, Size: 1},
+			{ContainerID: 1, HostID: 1, Size: userns_uid - 1},
+			{ContainerID: userns_uid + 1, HostID: userns_uid + 1, Size: math.MaxInt32 - userns_uid},
+		}
+		config.GidMappings = []configs.IDMap{
+			{ContainerID: 0, HostID: userns_uid, Size: 1},
+			{ContainerID: 1, HostID: 1, Size: userns_uid - 1},
+			{ContainerID: userns_uid + 1, HostID: userns_uid + 1, Size: math.MaxInt32 - userns_uid},
+		}
+	}
 }
 
 func getTemplate() *configs.Config {
