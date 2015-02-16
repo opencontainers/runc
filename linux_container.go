@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sync"
 	"syscall"
 
 	"github.com/docker/libcontainer/cgroups"
@@ -22,6 +23,7 @@ type linuxContainer struct {
 	cgroupManager cgroups.Manager
 	initArgs      []string
 	initProcess   parentProcess
+	m             sync.Mutex
 }
 
 // ID returns the container's unique ID
@@ -35,46 +37,15 @@ func (c *linuxContainer) Config() configs.Config {
 }
 
 func (c *linuxContainer) Status() (Status, error) {
-	if c.initProcess == nil {
-		return Destroyed, nil
-	}
-	// return Running if the init process is alive
-	if err := syscall.Kill(c.initProcess.pid(), 0); err != nil {
-		if err == syscall.ESRCH {
-			return Destroyed, nil
-		}
-		return 0, newSystemError(err)
-	}
-	if c.config.Cgroups != nil && c.config.Cgroups.Freezer == configs.Frozen {
-		return Paused, nil
-	}
-	return Running, nil
+	c.m.Lock()
+	defer c.m.Unlock()
+	return c.currentStatus()
 }
 
 func (c *linuxContainer) State() (*State, error) {
-	status, err := c.Status()
-	if err != nil {
-		return nil, err
-	}
-	if status == Destroyed {
-		return nil, newGenericError(fmt.Errorf("container destroyed"), ContainerNotExists)
-	}
-	startTime, err := c.initProcess.startTime()
-	if err != nil {
-		return nil, newSystemError(err)
-	}
-	state := &State{
-		ID:                   c.ID(),
-		Config:               *c.config,
-		InitProcessPid:       c.initProcess.pid(),
-		InitProcessStartTime: startTime,
-		CgroupPaths:          c.cgroupManager.GetPaths(),
-		NamespacePaths:       make(map[string]string),
-	}
-	for _, ns := range c.config.Namespaces {
-		state.NamespacePaths[string(ns.Type)] = ns.GetPath(c.initProcess.pid())
-	}
-	return state, nil
+	c.m.Lock()
+	defer c.m.Unlock()
+	return c.currentState()
 }
 
 func (c *linuxContainer) Processes() ([]int, error) {
@@ -109,7 +80,9 @@ func (c *linuxContainer) Stats() (*Stats, error) {
 }
 
 func (c *linuxContainer) Start(process *Process) (int, error) {
-	status, err := c.Status()
+	c.m.Lock()
+	defer c.m.Unlock()
+	status, err := c.currentStatus()
 	if err != nil {
 		return -1, err
 	}
@@ -126,6 +99,7 @@ func (c *linuxContainer) Start(process *Process) (int, error) {
 		return -1, newSystemError(err)
 	}
 	if doInit {
+
 		c.updateState(parent)
 	}
 	return parent.pid(), nil
@@ -222,7 +196,9 @@ func newPipe() (parent *os.File, child *os.File, err error) {
 }
 
 func (c *linuxContainer) Destroy() error {
-	status, err := c.Status()
+	c.m.Lock()
+	defer c.m.Unlock()
+	status, err := c.currentStatus()
 	if err != nil {
 		return err
 	}
@@ -243,14 +219,20 @@ func (c *linuxContainer) Destroy() error {
 }
 
 func (c *linuxContainer) Pause() error {
+	c.m.Lock()
+	defer c.m.Unlock()
 	return c.cgroupManager.Freeze(configs.Frozen)
 }
 
 func (c *linuxContainer) Resume() error {
+	c.m.Lock()
+	defer c.m.Unlock()
 	return c.cgroupManager.Freeze(configs.Thawed)
 }
 
 func (c *linuxContainer) Signal(signal os.Signal) error {
+	c.m.Lock()
+	defer c.m.Unlock()
 	if c.initProcess == nil {
 		return newGenericError(nil, ContainerNotRunning)
 	}
@@ -263,7 +245,7 @@ func (c *linuxContainer) NotifyOOM() (<-chan struct{}, error) {
 
 func (c *linuxContainer) updateState(process parentProcess) error {
 	c.initProcess = process
-	state, err := c.State()
+	state, err := c.currentState()
 	if err != nil {
 		return err
 	}
@@ -273,4 +255,47 @@ func (c *linuxContainer) updateState(process parentProcess) error {
 	}
 	defer f.Close()
 	return json.NewEncoder(f).Encode(state)
+}
+
+func (c *linuxContainer) currentStatus() (Status, error) {
+	if c.initProcess == nil {
+		return Destroyed, nil
+	}
+	// return Running if the init process is alive
+	if err := syscall.Kill(c.initProcess.pid(), 0); err != nil {
+		if err == syscall.ESRCH {
+			return Destroyed, nil
+		}
+		return 0, newSystemError(err)
+	}
+	if c.config.Cgroups != nil && c.config.Cgroups.Freezer == configs.Frozen {
+		return Paused, nil
+	}
+	return Running, nil
+}
+
+func (c *linuxContainer) currentState() (*State, error) {
+	status, err := c.currentStatus()
+	if err != nil {
+		return nil, err
+	}
+	if status == Destroyed {
+		return nil, newGenericError(fmt.Errorf("container destroyed"), ContainerNotExists)
+	}
+	startTime, err := c.initProcess.startTime()
+	if err != nil {
+		return nil, newSystemError(err)
+	}
+	state := &State{
+		ID:                   c.ID(),
+		Config:               *c.config,
+		InitProcessPid:       c.initProcess.pid(),
+		InitProcessStartTime: startTime,
+		CgroupPaths:          c.cgroupManager.GetPaths(),
+		NamespacePaths:       make(map[string]string),
+	}
+	for _, ns := range c.config.Namespaces {
+		state.NamespacePaths[string(ns.Type)] = ns.GetPath(c.initProcess.pid())
+	}
+	return state, nil
 }

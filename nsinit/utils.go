@@ -29,7 +29,7 @@ func loadConfig(context *cli.Context) (*configs.Config, error) {
 }
 
 func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
-	return libcontainer.New(context.GlobalString("root"), []string{os.Args[0], "init"})
+	return libcontainer.New(context.GlobalString("root"), libcontainer.Cgroupfs)
 }
 
 func getContainer(context *cli.Context) (libcontainer.Container, error) {

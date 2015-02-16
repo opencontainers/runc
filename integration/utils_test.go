@@ -81,7 +81,7 @@ func runContainer(config *configs.Config, console string, args ...string) (buffe
 		Stderr: buffers.Stderr,
 	}
 
-	factory, err := libcontainer.New(".", []string{os.Args[0], "init", "--"})
+	factory, err := libcontainer.New(".", libcontainer.InitArgs(os.Args[0], "init", "--"), libcontainer.Cgroupfs)
 	if err != nil {
 		return nil, -1, err
 	}

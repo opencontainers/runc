@@ -10,7 +10,7 @@ import (
 func main() {
 	app := cli.NewApp()
 	app.Name = "nsinit"
-	app.Version = "1"
+	app.Version = "2"
 	app.Author = "libcontainer maintainers"
 	app.Flags = []cli.Flag{
 		cli.StringFlag{Name: "nspid"},

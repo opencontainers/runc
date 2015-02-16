@@ -236,7 +236,7 @@ func TestEnter(t *testing.T) {
 
 	config := newTemplateConfig(rootfs)
 
-	factory, err := libcontainer.New(root, []string{os.Args[0], "init", "--"})
+	factory, err := libcontainer.New(root, libcontainer.InitArgs(os.Args[0], "init", "--"), libcontainer.Cgroupfs)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -340,7 +340,7 @@ func TestFreeze(t *testing.T) {
 
 	config := newTemplateConfig(rootfs)
 
-	factory, err := libcontainer.New(root, []string{os.Args[0], "init", "--"})
+	factory, err := libcontainer.New(root, libcontainer.InitArgs(os.Args[0], "init", "--"), libcontainer.Cgroupfs)
 	if err != nil {
 		t.Fatal(err)
 	}
