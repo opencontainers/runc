@@ -10,9 +10,9 @@ import (
 	"os/exec"
 	"syscall"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/docker/libcontainer/cgroups"
 	"github.com/docker/libcontainer/system"
-	"github.com/golang/glog"
 )
 
 type parentProcess interface {
@@ -82,7 +82,7 @@ func (p *setnsProcess) execSetns() (*os.Process, error) {
 		return nil, newSystemError(err)
 	}
 	if !status.Success() {
-		return nil, newSystemError(&exec.ExitError{status})
+		return nil, newSystemError(&exec.ExitError{ProcessState: status})
 	}
 	var pid *pid
 	if err := json.NewDecoder(p.parentPipe).Decode(&pid); err != nil {
@@ -153,7 +153,7 @@ func (p *initProcess) start() error {
 		}
 		if err := parent.start(); err != nil {
 			if err := parent.terminate(); err != nil {
-				glog.Warning(err)
+				log.Warn(err)
 			}
 			return err
 		}

@@ -1,9 +1,9 @@
 package main
 
 import (
-	"log"
 	"os"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 )
 
@@ -13,9 +13,9 @@ func main() {
 	app.Version = "2"
 	app.Author = "libcontainer maintainers"
 	app.Flags = []cli.Flag{
-		cli.StringFlag{Name: "nspid"},
-		cli.StringFlag{Name: "console"},
 		cli.StringFlag{Name: "root", Value: ".", Usage: "root directory for containers"},
+		cli.StringFlag{Name: "log-file", Value: "nsinit-debug.log", Usage: "set the log file to output logs to"},
+		cli.BoolFlag{Name: "debug", Usage: "enable debug output in the logs"},
 	}
 	app.Commands = []cli.Command{
 		configCommand,
@@ -26,6 +26,19 @@ func main() {
 		statsCommand,
 		unpauseCommand,
 		stateCommand,
+	}
+	app.Before = func(context *cli.Context) error {
+		if context.GlobalBool("debug") {
+			log.SetLevel(log.DebugLevel)
+		}
+		if path := context.GlobalString("log-file"); path != "" {
+			f, err := os.Create(path)
+			if err != nil {
+				return err
+			}
+			log.SetOutput(f)
+		}
+		return nil
 	}
 	if err := app.Run(os.Args); err != nil {
 		log.Fatal(err)

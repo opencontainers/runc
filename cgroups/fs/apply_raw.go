@@ -1,11 +1,11 @@
 package fs
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
+	"sync"
 
 	"github.com/docker/libcontainer/cgroups"
 	"github.com/docker/libcontainer/configs"
@@ -40,20 +40,31 @@ type Manager struct {
 }
 
 // The absolute path to the root of the cgroup hierarchies.
+var cgroupRootLock sync.Mutex
 var cgroupRoot string
 
-// TODO(vmarmol): Report error here, we'll probably need to wait for the new API.
-func init() {
+// Gets the cgroupRoot.
+func getCgroupRoot() (string, error) {
+	cgroupRootLock.Lock()
+	defer cgroupRootLock.Unlock()
+
+	if cgroupRoot != "" {
+		return cgroupRoot, nil
+	}
+
 	// we can pick any subsystem to find the root
 	cpuRoot, err := cgroups.FindCgroupMountpoint("cpu")
 	if err != nil {
-		return
+		return "", err
 	}
-	cgroupRoot = filepath.Dir(cpuRoot)
+	root := filepath.Dir(cpuRoot)
 
-	if _, err := os.Stat(cgroupRoot); err != nil {
-		return
+	if _, err := os.Stat(root); err != nil {
+		return "", err
 	}
+
+	cgroupRoot = root
+	return cgroupRoot, nil
 }
 
 type data struct {
@@ -172,8 +183,9 @@ func (m *Manager) GetPids() ([]int, error) {
 }
 
 func getCgroupData(c *configs.Cgroup, pid int) (*data, error) {
-	if cgroupRoot == "" {
-		return nil, fmt.Errorf("failed to find the cgroup root")
+	root, err := getCgroupRoot()
+	if err != nil {
+		return nil, err
 	}
 
 	cgroup := c.Name
@@ -182,7 +194,7 @@ func getCgroupData(c *configs.Cgroup, pid int) (*data, error) {
 	}
 
 	return &data{
-		root:   cgroupRoot,
+		root:   root,
 		cgroup: cgroup,
 		c:      c,
 		pid:    pid,

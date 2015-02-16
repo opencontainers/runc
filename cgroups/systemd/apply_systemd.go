@@ -30,9 +30,10 @@ type subsystem interface {
 }
 
 var (
-	connLock              sync.Mutex
-	theConn               *systemd.Conn
-	hasStartTransientUnit bool
+	connLock                        sync.Mutex
+	theConn                         *systemd.Conn
+	hasStartTransientUnit           bool
+	hasTransientDefaultDependencies bool
 )
 
 func newProp(name string, units interface{}) systemd.Property {
@@ -66,6 +67,18 @@ func UseSystemd() bool {
 			if dbusError, ok := err.(dbus.Error); ok {
 				if dbusError.Name == "org.freedesktop.DBus.Error.UnknownMethod" {
 					hasStartTransientUnit = false
+					return hasStartTransientUnit
+				}
+			}
+		}
+
+		// Assume StartTransientUnit on a scope allows DefaultDependencies
+		hasTransientDefaultDependencies = true
+		ddf := newProp("DefaultDependencies", false)
+		if _, err := theConn.StartTransientUnit("docker-systemd-test-default-dependencies.scope", "replace", ddf); err != nil {
+			if dbusError, ok := err.(dbus.Error); ok {
+				if dbusError.Name == "org.freedesktop.DBus.Error.PropertyReadOnly" {
+					hasTransientDefaultDependencies = false
 				}
 			}
 		}
@@ -108,6 +121,11 @@ func (m *Manager) Apply(pid int) error {
 		newProp("CPUAccounting", true),
 		newProp("BlockIOAccounting", true))
 
+	if hasTransientDefaultDependencies {
+		properties = append(properties,
+			newProp("DefaultDependencies", false))
+	}
+
 	if c.Memory != 0 {
 		properties = append(properties,
 			newProp("MemoryLimit", uint64(c.Memory)))
@@ -128,14 +146,12 @@ func (m *Manager) Apply(pid int) error {
 		return err
 	}
 
-	if !c.AllowAllDevices {
-		if err := joinDevices(c, pid); err != nil {
-			return err
-		}
+	if err := joinDevices(c, pid); err != nil {
+		return err
 	}
 
 	// -1 disables memorySwap
-	if c.MemorySwap >= 0 && (c.Memory != 0 || c.MemorySwap > 0) {
+	if c.MemorySwap >= 0 && c.Memory != 0 {
 		if err := joinMemory(c, pid); err != nil {
 			return err
 		}
@@ -290,16 +306,16 @@ func joinDevices(c *configs.Cgroup, pid int) error {
 		return err
 	}
 
-	if err := writeFile(path, "devices.deny", "a"); err != nil {
-		return err
+	if !c.AllowAllDevices {
+		if err := writeFile(path, "devices.deny", "a"); err != nil {
+			return err
+		}
 	}
-
 	for _, dev := range c.AllowedDevices {
 		if err := writeFile(path, "devices.allow", dev.CgroupString()); err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 

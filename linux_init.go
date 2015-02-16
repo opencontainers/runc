@@ -9,13 +9,13 @@ import (
 	"strings"
 	"syscall"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/docker/libcontainer/cgroups"
 	"github.com/docker/libcontainer/configs"
 	"github.com/docker/libcontainer/netlink"
 	"github.com/docker/libcontainer/system"
 	"github.com/docker/libcontainer/user"
 	"github.com/docker/libcontainer/utils"
-	"github.com/golang/glog"
 )
 
 type initType string
@@ -235,7 +235,7 @@ func setupRlimits(config *configs.Config) error {
 func killCgroupProcesses(m cgroups.Manager) error {
 	var procs []*os.Process
 	if err := m.Freeze(configs.Frozen); err != nil {
-		glog.Warning(err)
+		log.Warn(err)
 	}
 	pids, err := m.GetPids()
 	if err != nil {
@@ -246,16 +246,16 @@ func killCgroupProcesses(m cgroups.Manager) error {
 		if p, err := os.FindProcess(pid); err == nil {
 			procs = append(procs, p)
 			if err := p.Kill(); err != nil {
-				glog.Warning(err)
+				log.Warn(err)
 			}
 		}
 	}
 	if err := m.Freeze(configs.Thawed); err != nil {
-		glog.Warning(err)
+		log.Warn(err)
 	}
 	for _, p := range procs {
 		if _, err := p.Wait(); err != nil {
-			glog.Warning(err)
+			log.Warn(err)
 		}
 	}
 	return nil
