@@ -162,7 +162,7 @@ func TestHostUIDNoUSERNS(t *testing.T) {
 		t.Fatal(err)
 	}
 	if uid != 0 {
-		t.Fatal("expected uid 0 with no USERNS but received %d", uid)
+		t.Fatalf("expected uid 0 with no USERNS but received %d", uid)
 	}
 }
 
@@ -182,7 +182,7 @@ func TestHostUIDWithUSERNS(t *testing.T) {
 		t.Fatal(err)
 	}
 	if uid != 1000 {
-		t.Fatal("expected uid 1000 with no USERNS but received %d", uid)
+		t.Fatalf("expected uid 1000 with no USERNS but received %d", uid)
 	}
 }
 
@@ -195,7 +195,7 @@ func TestHostGIDNoUSERNS(t *testing.T) {
 		t.Fatal(err)
 	}
 	if uid != 0 {
-		t.Fatal("expected gid 0 with no USERNS but received %d", uid)
+		t.Fatalf("expected gid 0 with no USERNS but received %d", uid)
 	}
 }
 
@@ -215,6 +215,6 @@ func TestHostGIDWithUSERNS(t *testing.T) {
 		t.Fatal(err)
 	}
 	if uid != 1000 {
-		t.Fatal("expected gid 1000 with no USERNS but received %d", uid)
+		t.Fatalf("expected gid 1000 with no USERNS but received %d", uid)
 	}
 }

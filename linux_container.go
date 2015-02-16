@@ -11,9 +11,9 @@ import (
 	"sync"
 	"syscall"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/docker/libcontainer/cgroups"
 	"github.com/docker/libcontainer/configs"
-	"github.com/golang/glog"
 )
 
 type linuxContainer struct {
@@ -49,7 +49,6 @@ func (c *linuxContainer) State() (*State, error) {
 }
 
 func (c *linuxContainer) Processes() ([]int, error) {
-	glog.Info("fetch container processes")
 	pids, err := c.cgroupManager.GetPids()
 	if err != nil {
 		return nil, newSystemError(err)
@@ -58,7 +57,6 @@ func (c *linuxContainer) Processes() ([]int, error) {
 }
 
 func (c *linuxContainer) Stats() (*Stats, error) {
-	glog.Info("fetch container stats")
 	var (
 		err   error
 		stats = &Stats{}
@@ -94,7 +92,7 @@ func (c *linuxContainer) Start(process *Process) (int, error) {
 	if err := parent.start(); err != nil {
 		// terminate the process to ensure that it properly is reaped.
 		if err := parent.terminate(); err != nil {
-			glog.Warning(err)
+			log.Warn(err)
 		}
 		return -1, newSystemError(err)
 	}
@@ -207,7 +205,7 @@ func (c *linuxContainer) Destroy() error {
 	}
 	if !c.config.Namespaces.Contains(configs.NEWPID) {
 		if err := killCgroupProcesses(c.cgroupManager); err != nil {
-			glog.Warning(err)
+			log.Warn(err)
 		}
 	}
 	err = c.cgroupManager.Destroy()

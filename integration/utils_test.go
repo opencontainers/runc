@@ -67,11 +67,27 @@ func copyBusybox(dest string) error {
 	return nil
 }
 
+func newContainer(config *configs.Config) (libcontainer.Container, error) {
+	factory, err := libcontainer.New(".",
+		libcontainer.InitArgs(os.Args[0], "init", "--"),
+		libcontainer.Cgroupfs,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return factory.Create("testCT", config)
+}
+
 // runContainer runs the container with the specific config and arguments
 //
 // buffers are returned containing the STDOUT and STDERR output for the run
 // along with the exit code and any go error
 func runContainer(config *configs.Config, console string, args ...string) (buffers *stdBuffers, exitCode int, err error) {
+	container, err := newContainer(config)
+	if err != nil {
+		return nil, -1, err
+	}
+	defer container.Destroy()
 	buffers = newStdBuffers()
 	process := &libcontainer.Process{
 		Args:   args,
@@ -81,32 +97,18 @@ func runContainer(config *configs.Config, console string, args ...string) (buffe
 		Stderr: buffers.Stderr,
 	}
 
-	factory, err := libcontainer.New(".", libcontainer.InitArgs(os.Args[0], "init", "--"), libcontainer.Cgroupfs)
-	if err != nil {
-		return nil, -1, err
-	}
-
-	container, err := factory.Create("testCT", config)
-	if err != nil {
-		return nil, -1, err
-	}
-	defer container.Destroy()
-
 	pid, err := container.Start(process)
 	if err != nil {
 		return nil, -1, err
 	}
-
 	p, err := os.FindProcess(pid)
 	if err != nil {
 		return nil, -1, err
 	}
-
 	ps, err := p.Wait()
 	if err != nil {
 		return nil, -1, err
 	}
-
 	status := ps.Sys().(syscall.WaitStatus)
 	if status.Exited() {
 		exitCode = status.ExitStatus()
@@ -115,6 +117,5 @@ func runContainer(config *configs.Config, console string, args ...string) (buffe
 	} else {
 		return nil, -1, err
 	}
-
 	return
 }
