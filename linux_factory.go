@@ -166,9 +166,7 @@ func (l *LinuxFactory) StartInitialization(pipefd uintptr) (err error) {
 			// ensure that any data sent from the parent is consumed so it doesn't
 			// receive ECONNRESET when the child writes to the pipe.
 			ioutil.ReadAll(pipe)
-			if err := json.NewEncoder(pipe).Encode(initError{
-				Message: err.Error(),
-			}); err != nil {
+			if err := json.NewEncoder(pipe).Encode(newSystemError(err)); err != nil {
 				panic(err)
 			}
 		}

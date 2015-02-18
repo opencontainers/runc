@@ -9,10 +9,9 @@ import (
 	"github.com/docker/libcontainer"
 )
 
-func newTty(context *cli.Context) (*tty, error) {
+func newTty(context *cli.Context, rootuid int) (*tty, error) {
 	if context.Bool("tty") {
-		rootid := context.Int("userns-root-uid")
-		console, err := libcontainer.NewConsole(rootid, rootid)
+		console, err := libcontainer.NewConsole(rootuid, rootuid)
 		if err != nil {
 			return nil, err
 		}

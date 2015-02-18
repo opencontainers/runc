@@ -33,6 +33,7 @@ var createFlags = []cli.Flag{
 	cli.StringFlag{Name: "mount-label", Usage: "set the mount label"},
 	cli.StringFlag{Name: "rootfs", Usage: "set the rootfs"},
 	cli.IntFlag{Name: "userns-root-uid", Usage: "set the user namespace root uid"},
+	cli.StringFlag{Name: "hostname", Value: "nsinit", Usage: "hostname value for the container"},
 	cli.StringFlag{Name: "net", Value: "", Usage: "network namespace"},
 	cli.StringFlag{Name: "ipc", Value: "", Usage: "ipc namespace"},
 	cli.StringFlag{Name: "pid", Value: "", Usage: "pid namespace"},
@@ -149,7 +150,7 @@ func modify(config *configs.Config, context *cli.Context) {
 			if !config.Namespaces.Contains(value) {
 				config.Namespaces.Add(value, "")
 			}
-			if v == "net" {
+			if flag == "net" {
 				config.Networks = []*configs.Network{
 					{
 						Type:    "loopback",
@@ -157,6 +158,9 @@ func modify(config *configs.Config, context *cli.Context) {
 						Gateway: "localhost",
 					},
 				}
+			}
+			if flag == "uts" {
+				config.Hostname = context.String("hostname")
 			}
 		default:
 			config.Namespaces.Remove(value)
@@ -218,8 +222,7 @@ func getTemplate() *configs.Config {
 			AllowAllDevices: false,
 			AllowedDevices:  configs.DefaultAllowedDevices,
 		},
-		Devices:  configs.DefaultAutoCreatedDevices,
-		Hostname: "nsinit",
+		Devices: configs.DefaultAutoCreatedDevices,
 		MaskPaths: []string{
 			"/proc/kcore",
 		},

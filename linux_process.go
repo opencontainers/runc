@@ -4,13 +4,11 @@ package libcontainer
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"syscall"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/docker/libcontainer/cgroups"
 	"github.com/docker/libcontainer/system"
 )
@@ -145,28 +143,12 @@ func (p *initProcess) start() error {
 	if err := p.createNetworkInterfaces(); err != nil {
 		return newSystemError(err)
 	}
-	// Start the setup process to setup the init process
-	if p.cmd.SysProcAttr.Cloneflags&syscall.CLONE_NEWUSER != 0 {
-		parent, err := p.newUsernsSetupProcess()
-		if err != nil {
-			return newSystemError(err)
-		}
-		if err := parent.start(); err != nil {
-			if err := parent.terminate(); err != nil {
-				log.Warn(err)
-			}
-			return err
-		}
-		if _, err := parent.wait(); err != nil {
-			return newSystemError(err)
-		}
-	}
 	if err := p.sendConfig(); err != nil {
 		return newSystemError(err)
 	}
 	// wait for the child process to fully complete and receive an error message
 	// if one was encoutered
-	var ierr *initError
+	var ierr *genericError
 	if err := json.NewDecoder(p.parentPipe).Decode(&ierr); err != nil && err != io.EOF {
 		return newSystemError(err)
 	}
@@ -227,26 +209,6 @@ func (p *initProcess) createNetworkInterfaces() error {
 		p.config.Networks = append(p.config.Networks, n)
 	}
 	return nil
-}
-
-func (p *initProcess) newUsernsSetupProcess() (parentProcess, error) {
-	parentPipe, childPipe, err := newPipe()
-	if err != nil {
-		return nil, newSystemError(err)
-	}
-	cmd := exec.Command(p.cmd.Args[0], p.cmd.Args[1:]...)
-	cmd.ExtraFiles = []*os.File{childPipe}
-	cmd.Dir = p.cmd.Dir
-	cmd.Env = append(cmd.Env,
-		fmt.Sprintf("_LIBCONTAINER_INITPID=%d", p.pid()),
-		fmt.Sprintf("_LIBCONTAINER_INITTYPE=userns_setup"),
-	)
-	return &setnsProcess{
-		cmd:        cmd,
-		childPipe:  childPipe,
-		parentPipe: parentPipe,
-		config:     p.config,
-	}, nil
 }
 
 func (p *initProcess) signal(s os.Signal) error {

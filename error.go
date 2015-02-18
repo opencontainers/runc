@@ -57,11 +57,3 @@ type Error interface {
 	// Returns the error code for this error.
 	Code() ErrorCode
 }
-
-type initError struct {
-	Message string `json:"message,omitempty"`
-}
-
-func (i initError) Error() string {
-	return i.Message
-}

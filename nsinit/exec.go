@@ -36,18 +36,21 @@ func execAction(context *cli.Context) {
 	if err != nil {
 		fatal(err)
 	}
-	tty, err := newTty(context)
+	config, err := loadConfig(context)
+	if err != nil {
+		fatal(err)
+	}
+	rootuid, err := config.HostUID()
+	if err != nil {
+		fatal(err)
+	}
+	tty, err := newTty(context, rootuid)
 	if err != nil {
 		fatal(err)
 	}
 	created := false
 	container, err := factory.Load(context.String("id"))
 	if err != nil {
-		config, err := loadConfig(context)
-		if err != nil {
-			tty.Close()
-			fatal(err)
-		}
 		if tty.console != nil {
 			config.Console = tty.console.Path()
 		}

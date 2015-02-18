@@ -11,8 +11,8 @@ import (
 
 var errorTemplate = template.Must(template.New("error").Parse(`Timestamp: {{.Timestamp}}
 Code: {{.ECode}}
-{{if .Err }}
-Message: {{.Err.Error}}
+{{if .Message }}
+Message: {{.Message}}
 {{end}}
 Frames:{{range $i, $frame := .Stack.Frames}}
 ---
@@ -28,6 +28,7 @@ func newGenericError(err error, c ErrorCode) Error {
 	return &genericError{
 		Timestamp: time.Now(),
 		Err:       err,
+		Message:   err.Error(),
 		ECode:     c,
 		Stack:     stacktrace.Capture(1),
 	}
@@ -41,6 +42,7 @@ func newSystemError(err error) Error {
 		Timestamp: time.Now(),
 		Err:       err,
 		ECode:     SystemError,
+		Message:   err.Error(),
 		Stack:     stacktrace.Capture(1),
 	}
 }
@@ -48,12 +50,13 @@ func newSystemError(err error) Error {
 type genericError struct {
 	Timestamp time.Time
 	ECode     ErrorCode
-	Err       error
+	Err       error `json:"-"`
+	Message   string
 	Stack     stacktrace.Stacktrace
 }
 
 func (e *genericError) Error() string {
-	return fmt.Sprintf("[%d] %s: %s", e.ECode, e.ECode, e.Err)
+	return fmt.Sprintf("[%d] %s: %s", e.ECode, e.ECode, e.Message)
 }
 
 func (e *genericError) Code() ErrorCode {
