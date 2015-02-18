@@ -35,7 +35,7 @@ var baseMounts = []*configs.Mount{
 		Destination: "/dev/pts",
 		Device:      "devpts",
 		Flags:       syscall.MS_NOSUID | syscall.MS_NOEXEC,
-		Data:        "newinstance,ptmxmode=0666,mode=620,gid=5",
+		Data:        "newinstance,ptmxmode=0666,mode=0620,gid=5",
 	},
 }
 
@@ -43,32 +43,29 @@ var baseMounts = []*configs.Mount{
 // new mount namespace.
 func setupRootfs(config *configs.Config) (err error) {
 	if err := prepareRoot(config); err != nil {
-		return err
+		return newSystemError(err)
 	}
 	for _, m := range append(baseMounts, config.Mounts...) {
 		if err := mount(m, config.Rootfs, config.MountLabel); err != nil {
-			return err
+			return newSystemError(err)
 		}
 	}
 	if err := createDevices(config); err != nil {
-		return err
+		return newSystemError(err)
 	}
 	if err := setupPtmx(config); err != nil {
-		return err
+		return newSystemError(err)
 	}
 	// stdin, stdout and stderr could be pointing to /dev/null from parent namespace.
-	// Re-open them inside this namespace.
-	// FIXME: Need to fix this for user namespaces.
-	if !config.Namespaces.Contains(configs.NEWUSER) {
-		if err := reOpenDevNull(config.Rootfs); err != nil {
-			return err
-		}
+	// re-open them inside this namespace.
+	if err := reOpenDevNull(config.Rootfs); err != nil {
+		return newSystemError(err)
 	}
 	if err := setupDevSymlinks(config.Rootfs); err != nil {
-		return err
+		return newSystemError(err)
 	}
 	if err := syscall.Chdir(config.Rootfs); err != nil {
-		return err
+		return newSystemError(err)
 	}
 	if config.NoPivotRoot {
 		err = msMoveRoot(config.Rootfs)
@@ -76,11 +73,11 @@ func setupRootfs(config *configs.Config) (err error) {
 		err = pivotRoot(config.Rootfs, config.PivotDir)
 	}
 	if err != nil {
-		return err
+		return newSystemError(err)
 	}
 	if config.Readonlyfs {
 		if err := setReadonly(); err != nil {
-			return err
+			return newSystemError(err)
 		}
 	}
 	syscall.Umask(0022)
@@ -209,6 +206,28 @@ func createDeviceNode(rootfs string, node *configs.Device) error {
 	if err := os.MkdirAll(parent, 0755); err != nil {
 		return err
 	}
+	if err := mknodDevice(dest, node); err != nil {
+		if os.IsExist(err) {
+			return nil
+		}
+		// containers running in a user namespace are not allowed to mknod
+		// devices so we can just bind mount it from the host.
+		if err == syscall.EPERM {
+			f, err := os.Create(dest)
+			if err != nil {
+				if os.IsExist(err) {
+					return nil
+				}
+				return err
+			}
+			f.Close()
+			return syscall.Mount(node.Path, dest, "bind", syscall.MS_BIND, "")
+		}
+	}
+	return nil
+}
+
+func mknodDevice(dest string, node *configs.Device) error {
 	fileMode := node.FileMode
 	switch node.Type {
 	case 'c':
@@ -218,13 +237,10 @@ func createDeviceNode(rootfs string, node *configs.Device) error {
 	default:
 		return fmt.Errorf("%c is not a valid device type for device %s", node.Type, node.Path)
 	}
-	if err := syscall.Mknod(dest, uint32(fileMode), node.Mkdev()); err != nil && !os.IsExist(err) {
-		return fmt.Errorf("mknod %s %s", node.Path, err)
+	if err := syscall.Mknod(dest, uint32(fileMode), node.Mkdev()); err != nil {
+		return err
 	}
-	if err := syscall.Chown(dest, int(node.Uid), int(node.Gid)); err != nil {
-		return fmt.Errorf("chown %s to %d:%d", node.Path, node.Uid, node.Gid)
-	}
-	return nil
+	return syscall.Chown(dest, int(node.Uid), int(node.Gid))
 }
 
 func prepareRoot(config *configs.Config) error {
@@ -251,16 +267,8 @@ func setupPtmx(config *configs.Config) error {
 		return fmt.Errorf("symlink dev ptmx %s", err)
 	}
 	if config.Console != "" {
-		uid, err := config.HostUID()
-		if err != nil {
-			return err
-		}
-		gid, err := config.HostGID()
-		if err != nil {
-			return err
-		}
 		console := newConsoleFromPath(config.Console)
-		return console.mount(config.Rootfs, config.MountLabel, uid, gid)
+		return console.mount(config.Rootfs, config.MountLabel, 0, 0)
 	}
 	return nil
 }

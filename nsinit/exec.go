@@ -5,7 +5,6 @@ import (
 	"os/signal"
 	"syscall"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 	"github.com/docker/libcontainer"
 	"github.com/docker/libcontainer/utils"
@@ -27,12 +26,12 @@ var execCommand = cli.Command{
 		cli.StringFlag{Name: "config", Value: "container.json", Usage: "path to the configuration file"},
 		cli.BoolFlag{Name: "create", Usage: "create the container's configuration on the fly with arguments"},
 		cli.StringFlag{Name: "user,u", Value: "root", Usage: "set the user, uid, and/or gid for the process"},
+		cli.StringFlag{Name: "cwd", Value: "", Usage: "set the current working dir"},
 		cli.StringSliceFlag{Name: "env", Value: standardEnvironment, Usage: "set environment variables for the process"},
 	}, createFlags...),
 }
 
 func execAction(context *cli.Context) {
-	entry := log.WithField("parent", "nsinit")
 	factory, err := loadFactory(context)
 	if err != nil {
 		fatal(err)
@@ -44,7 +43,6 @@ func execAction(context *cli.Context) {
 	created := false
 	container, err := factory.Load(context.String("id"))
 	if err != nil {
-		entry.Debug("creating container")
 		config, err := loadConfig(context)
 		if err != nil {
 			tty.Close()
@@ -53,7 +51,6 @@ func execAction(context *cli.Context) {
 		if tty.console != nil {
 			config.Console = tty.console.Path()
 		}
-
 		created = true
 		if container, err = factory.Create(context.String("id"), config); err != nil {
 			tty.Close()
@@ -65,11 +62,14 @@ func execAction(context *cli.Context) {
 		Args:   context.Args(),
 		Env:    context.StringSlice("env"),
 		User:   context.String("user"),
+		Cwd:    context.String("cwd"),
 		Stdin:  os.Stdin,
 		Stdout: os.Stdout,
 		Stderr: os.Stderr,
 	}
-	tty.attach(process)
+	if err := tty.attach(process); err != nil {
+		fatal(err)
+	}
 	pid, err := container.Start(process)
 	if err != nil {
 		tty.Close()

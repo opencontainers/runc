@@ -11,19 +11,13 @@ import (
 
 func newTty(context *cli.Context) (*tty, error) {
 	if context.Bool("tty") {
-		console, err := libcontainer.NewConsole()
-		if err != nil {
-			return nil, err
-		}
-		go io.Copy(console, os.Stdin)
-		go io.Copy(os.Stdout, console)
-		state, err := term.SetRawTerminal(os.Stdin.Fd())
+		rootid := context.Int("userns-root-uid")
+		console, err := libcontainer.NewConsole(rootid, rootid)
 		if err != nil {
 			return nil, err
 		}
 		return &tty{
 			console: console,
-			state:   state,
 		}, nil
 	}
 	return &tty{}, nil
@@ -44,12 +38,20 @@ func (t *tty) Close() error {
 	return nil
 }
 
-func (t *tty) attach(process *libcontainer.Process) {
+func (t *tty) attach(process *libcontainer.Process) error {
 	if t.console != nil {
+		go io.Copy(t.console, os.Stdin)
+		go io.Copy(os.Stdout, t.console)
+		state, err := term.SetRawTerminal(os.Stdin.Fd())
+		if err != nil {
+			return err
+		}
+		t.state = state
 		process.Stderr = nil
 		process.Stdout = nil
 		process.Stdin = nil
 	}
+	return nil
 }
 
 func (t *tty) resize() error {

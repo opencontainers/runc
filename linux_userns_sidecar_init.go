@@ -2,11 +2,6 @@
 
 package libcontainer
 
-import (
-	"github.com/docker/libcontainer/configs"
-	"github.com/docker/libcontainer/label"
-)
-
 // linuxUsernsSideCar is run to setup mounts and networking related operations
 // for a user namespace enabled process as a user namespace root doesn't
 // have permissions to perform these operations.
@@ -23,13 +18,6 @@ func (l *linuxUsernsSideCar) Init() error {
 	}
 	if err := setupRoute(l.config.Config); err != nil {
 		return err
-	}
-	label.Init()
-	// InitializeMountNamespace() can be executed only for a new mount namespace
-	if l.config.Config.Namespaces.Contains(configs.NEWNS) {
-		if err := setupRootfs(l.config.Config); err != nil {
-			return err
-		}
 	}
 	return nil
 }

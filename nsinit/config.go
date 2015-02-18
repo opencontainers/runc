@@ -7,10 +7,13 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"strings"
 	"syscall"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 	"github.com/docker/libcontainer/configs"
+	"github.com/docker/libcontainer/utils"
 )
 
 const defaultMountFlags = syscall.MS_NOEXEC | syscall.MS_NOSUID | syscall.MS_NODEV
@@ -28,7 +31,17 @@ var createFlags = []cli.Flag{
 	cli.StringFlag{Name: "apparmor-profile", Usage: "set the apparmor profile"},
 	cli.StringFlag{Name: "process-label", Usage: "set the process label"},
 	cli.StringFlag{Name: "mount-label", Usage: "set the mount label"},
+	cli.StringFlag{Name: "rootfs", Usage: "set the rootfs"},
 	cli.IntFlag{Name: "userns-root-uid", Usage: "set the user namespace root uid"},
+	cli.StringFlag{Name: "net", Value: "", Usage: "network namespace"},
+	cli.StringFlag{Name: "ipc", Value: "", Usage: "ipc namespace"},
+	cli.StringFlag{Name: "pid", Value: "", Usage: "pid namespace"},
+	cli.StringFlag{Name: "uts", Value: "", Usage: "uts namespace"},
+	cli.StringFlag{Name: "mnt", Value: "", Usage: "mount namespace"},
+	cli.StringFlag{Name: "veth-bridge", Usage: "veth bridge"},
+	cli.StringFlag{Name: "veth-address", Usage: "veth ip address"},
+	cli.StringFlag{Name: "veth-gateway", Usage: "veth gateway address"},
+	cli.IntFlag{Name: "veth-mtu", Usage: "veth mtu"},
 }
 
 var configCommand = cli.Command{
@@ -72,10 +85,11 @@ func modify(config *configs.Config, context *cli.Context) {
 	config.AppArmorProfile = context.String("apparmor-profile")
 	config.ProcessLabel = context.String("process-label")
 	config.MountLabel = context.String("mount-label")
+	config.Rootfs = context.String("rootfs")
 
 	userns_uid := context.Int("userns-root-uid")
 	if userns_uid != 0 {
-		config.Namespaces = append(config.Namespaces, configs.Namespace{Type: configs.NEWUSER})
+		config.Namespaces.Add(configs.NEWUSER, "")
 		config.UidMappings = []configs.IDMap{
 			{ContainerID: 0, HostID: userns_uid, Size: 1},
 			{ContainerID: 1, HostID: 1, Size: userns_uid - 1},
@@ -86,6 +100,84 @@ func modify(config *configs.Config, context *cli.Context) {
 			{ContainerID: 1, HostID: 1, Size: userns_uid - 1},
 			{ContainerID: userns_uid + 1, HostID: userns_uid + 1, Size: math.MaxInt32 - userns_uid},
 		}
+		for _, node := range config.Devices {
+			node.Uid = uint32(userns_uid)
+			node.Gid = uint32(userns_uid)
+		}
+	}
+	for _, rawBind := range context.StringSlice("bind") {
+		mount := &configs.Mount{
+			Device: "bind",
+			Flags:  syscall.MS_BIND | syscall.MS_REC,
+		}
+		parts := strings.SplitN(rawBind, ":", 3)
+		switch len(parts) {
+		default:
+			logrus.Fatalf("invalid bind mount %s", rawBind)
+		case 2:
+			mount.Source, mount.Destination = parts[0], parts[1]
+		case 3:
+			mount.Source, mount.Destination = parts[0], parts[1]
+			switch parts[2] {
+			case "ro":
+				mount.Flags |= syscall.MS_RDONLY
+			case "rw":
+			default:
+				logrus.Fatalf("invalid bind mount mode %s", parts[2])
+			}
+		}
+		config.Mounts = append(config.Mounts, mount)
+	}
+	for _, tmpfs := range context.StringSlice("tmpfs") {
+		config.Mounts = append(config.Mounts, &configs.Mount{
+			Device:      "tmpfs",
+			Destination: tmpfs,
+			Flags:       syscall.MS_NOEXEC | syscall.MS_NOSUID | syscall.MS_NODEV,
+		})
+	}
+	for flag, value := range map[string]configs.NamespaceType{
+		"net": configs.NEWNET,
+		"mnt": configs.NEWNS,
+		"pid": configs.NEWPID,
+		"ipc": configs.NEWIPC,
+		"uts": configs.NEWUTS,
+	} {
+		switch v := context.String(flag); v {
+		case "host":
+			config.Namespaces.Remove(value)
+		case "", "private":
+			if !config.Namespaces.Contains(value) {
+				config.Namespaces.Add(value, "")
+			}
+			if v == "net" {
+				config.Networks = []*configs.Network{
+					{
+						Type:    "loopback",
+						Address: "127.0.0.1/0",
+						Gateway: "localhost",
+					},
+				}
+			}
+		default:
+			config.Namespaces.Remove(value)
+			config.Namespaces.Add(value, v)
+		}
+	}
+	if bridge := context.String("veth-bridge"); bridge != "" {
+		hostName, err := utils.GenerateRandomName("veth", 7)
+		if err != nil {
+			logrus.Fatal(err)
+		}
+		network := &configs.Network{
+			Type:              "veth",
+			Name:              "eth0",
+			Bridge:            bridge,
+			Address:           context.String("veth-address"),
+			Gateway:           context.String("veth-gateway"),
+			Mtu:               context.Int("veth-mtu"),
+			HostInterfaceName: hostName,
+		}
+		config.Networks = append(config.Networks, network)
 	}
 }
 
@@ -153,13 +245,6 @@ func getTemplate() *configs.Config {
 				Destination: "/sys",
 				Device:      "sysfs",
 				Flags:       defaultMountFlags | syscall.MS_RDONLY,
-			},
-		},
-		Networks: []*configs.Network{
-			{
-				Type:    "loopback",
-				Address: "127.0.0.1/0",
-				Gateway: "localhost",
 			},
 		},
 		Rlimits: []configs.Rlimit{
