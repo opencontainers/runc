@@ -86,7 +86,11 @@ func modify(config *configs.Config, context *cli.Context) {
 	config.AppArmorProfile = context.String("apparmor-profile")
 	config.ProcessLabel = context.String("process-label")
 	config.MountLabel = context.String("mount-label")
-	config.Rootfs = context.String("rootfs")
+
+	rootfs := context.String("rootfs")
+	if rootfs != "" {
+		config.Rootfs = rootfs
+	}
 
 	userns_uid := context.Int("userns-root-uid")
 	if userns_uid != 0 {
