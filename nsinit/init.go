@@ -18,10 +18,10 @@ var initCommand = cli.Command{
 		runtime.LockOSThread()
 		factory, err := libcontainer.New("")
 		if err != nil {
-			log.Fatal(err)
+			fatal(err)
 		}
 		if err := factory.StartInitialization(3); err != nil {
-			log.Fatal(err)
+			fatal(err)
 		}
 		panic("This line should never been executed")
 	},

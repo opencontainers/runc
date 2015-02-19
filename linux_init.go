@@ -21,10 +21,8 @@ import (
 type initType string
 
 const (
-	initSetns       initType = "setns"
-	initStandard    initType = "standard"
-	initUserns      initType = "userns"
-	initUsernsSetup initType = "userns_setup"
+	initSetns    initType = "setns"
+	initStandard initType = "standard"
 )
 
 type pid struct {
@@ -65,14 +63,6 @@ func newContainerInit(t initType, pipe *os.File) (initer, error) {
 	switch t {
 	case initSetns:
 		return &linuxSetnsInit{
-			config: config,
-		}, nil
-	case initUserns:
-		return &linuxUsernsInit{
-			config: config,
-		}, nil
-	case initUsernsSetup:
-		return &linuxUsernsSideCar{
 			config: config,
 		}, nil
 	case initStandard:

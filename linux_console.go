@@ -12,13 +12,9 @@ import (
 	"github.com/docker/libcontainer/label"
 )
 
-const (
-	containerConsolePath string = "/dev/console"
-)
-
 // NewConsole returns an initalized console that can be used within a container by copying bytes
 // from the master side to the slave that is attached as the tty for the container's init process.
-func NewConsole() (Console, error) {
+func NewConsole(uid, gid int) (Console, error) {
 	master, err := os.OpenFile("/dev/ptmx", syscall.O_RDWR|syscall.O_NOCTTY|syscall.O_CLOEXEC, 0)
 	if err != nil {
 		return nil, err
@@ -28,6 +24,12 @@ func NewConsole() (Console, error) {
 		return nil, err
 	}
 	if err := unlockpt(master); err != nil {
+		return nil, err
+	}
+	if err := os.Chmod(console, 0600); err != nil {
+		return nil, err
+	}
+	if err := os.Chown(console, uid, gid); err != nil {
 		return nil, err
 	}
 	return &linuxConsole{
@@ -78,16 +80,10 @@ func (c *linuxConsole) Close() error {
 func (c *linuxConsole) mount(rootfs, mountLabel string, uid, gid int) error {
 	oldMask := syscall.Umask(0000)
 	defer syscall.Umask(oldMask)
-	if err := os.Chmod(c.slavePath, 0600); err != nil {
-		return err
-	}
-	if err := os.Chown(c.slavePath, uid, gid); err != nil {
-		return err
-	}
 	if err := label.SetFileLabel(c.slavePath, mountLabel); err != nil {
 		return err
 	}
-	dest := filepath.Join(rootfs, containerConsolePath)
+	dest := filepath.Join(rootfs, "/dev/console")
 	f, err := os.Create(dest)
 	if err != nil && !os.IsExist(err) {
 		return err
