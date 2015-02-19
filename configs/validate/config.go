@@ -2,6 +2,7 @@ package validate
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/docker/libcontainer/configs"
@@ -29,6 +30,9 @@ func (v *ConfigValidator) Validate(config *configs.Config) error {
 		return err
 	}
 	if err := v.security(config); err != nil {
+		return err
+	}
+	if err := v.usernamespace(config); err != nil {
 		return err
 	}
 	return nil
@@ -71,6 +75,19 @@ func (v *ConfigValidator) security(config *configs.Config) error {
 	if (len(config.MaskPaths) > 0 || len(config.ReadonlyPaths) > 0) &&
 		!config.Namespaces.Contains(configs.NEWNS) {
 		return fmt.Errorf("unable to restrict sys entries without a private MNT namespace")
+	}
+	return nil
+}
+
+func (v *ConfigValidator) usernamespace(config *configs.Config) error {
+	if config.Namespaces.Contains(configs.NEWUSER) {
+		if _, err := os.Stat("/proc/self/ns/user"); os.IsNotExist(err) {
+			return fmt.Errorf("USER namespaces aren't enabled in the kernel")
+		}
+	} else {
+		if config.UidMappings != nil || config.GidMappings != nil {
+			return fmt.Errorf("User namespace mappings specified, but USER namespace isn't enabled in the config")
+		}
 	}
 	return nil
 }
