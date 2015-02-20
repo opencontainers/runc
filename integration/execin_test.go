@@ -2,59 +2,68 @@ package integration
 
 import (
 	"os"
-	"os/exec"
 	"strings"
-	"sync"
+	"syscall"
 	"testing"
 
 	"github.com/docker/libcontainer"
-	"github.com/docker/libcontainer/namespaces"
 )
 
 func TestExecIn(t *testing.T) {
 	if testing.Short() {
 		return
 	}
-
-	rootfs, err := newRootFs()
+	rootfs, err := newRootfs()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer remove(rootfs)
-
 	config := newTemplateConfig(rootfs)
-	if err := writeConfig(config); err != nil {
-		t.Fatalf("failed to write config %s", err)
-	}
-
-	containerCmd, statePath, containerErr := startLongRunningContainer(config)
-	defer func() {
-		// kill the container
-		if containerCmd.Process != nil {
-			containerCmd.Process.Kill()
-		}
-		if err := <-containerErr; err != nil {
-			t.Fatal(err)
-		}
-	}()
-
-	// start the exec process
-	state, err := libcontainer.GetState(statePath)
+	container, err := newContainer(config)
 	if err != nil {
-		t.Fatalf("failed to get state %s", err)
+		t.Fatal(err)
 	}
+	defer container.Destroy()
 	buffers := newStdBuffers()
-	execErr := make(chan error, 1)
-	go func() {
-		_, err := namespaces.ExecIn(config, state, []string{"ps"},
-			os.Args[0], "exec", buffers.Stdin, buffers.Stdout, buffers.Stderr,
-			"", nil)
-		execErr <- err
-	}()
-	if err := <-execErr; err != nil {
-		t.Fatalf("exec finished with error %s", err)
+	process := &libcontainer.Process{
+		Args:   []string{"sleep", "10"},
+		Env:    standardEnvironment,
+		Stdin:  buffers.Stdin,
+		Stdout: buffers.Stdout,
+		Stderr: buffers.Stderr,
 	}
-
+	pid1, err := container.Start(process)
+	if err != nil {
+		t.Fatal(err)
+	}
+	buffers = newStdBuffers()
+	psPid, err := container.Start(&libcontainer.Process{
+		Args:   []string{"ps"},
+		Env:    standardEnvironment,
+		Stdin:  buffers.Stdin,
+		Stdout: buffers.Stdout,
+		Stderr: buffers.Stderr,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ps, err := os.FindProcess(psPid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ps.Wait(); err != nil {
+		t.Fatal(err)
+	}
+	p, err := os.FindProcess(pid1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := p.Signal(syscall.SIGKILL); err != nil {
+		t.Log(err)
+	}
+	if _, err := p.Wait(); err != nil {
+		t.Log(err)
+	}
 	out := buffers.Stdout.String()
 	if !strings.Contains(out, "sleep 10") || !strings.Contains(out, "ps") {
 		t.Fatalf("unexpected running process, output %q", out)
@@ -65,83 +74,59 @@ func TestExecInRlimit(t *testing.T) {
 	if testing.Short() {
 		return
 	}
-
-	rootfs, err := newRootFs()
+	rootfs, err := newRootfs()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer remove(rootfs)
-
 	config := newTemplateConfig(rootfs)
-	if err := writeConfig(config); err != nil {
-		t.Fatalf("failed to write config %s", err)
-	}
-
-	containerCmd, statePath, containerErr := startLongRunningContainer(config)
-	defer func() {
-		// kill the container
-		if containerCmd.Process != nil {
-			containerCmd.Process.Kill()
-		}
-		if err := <-containerErr; err != nil {
-			t.Fatal(err)
-		}
-	}()
-
-	// start the exec process
-	state, err := libcontainer.GetState(statePath)
+	container, err := newContainer(config)
 	if err != nil {
-		t.Fatalf("failed to get state %s", err)
+		t.Fatal(err)
 	}
+	defer container.Destroy()
 	buffers := newStdBuffers()
-	execErr := make(chan error, 1)
-	go func() {
-		_, err := namespaces.ExecIn(config, state, []string{"/bin/sh", "-c", "ulimit -n"},
-			os.Args[0], "exec", buffers.Stdin, buffers.Stdout, buffers.Stderr,
-			"", nil)
-		execErr <- err
-	}()
-	if err := <-execErr; err != nil {
-		t.Fatalf("exec finished with error %s", err)
+	process := &libcontainer.Process{
+		Args:   []string{"sleep", "10"},
+		Env:    standardEnvironment,
+		Stdin:  buffers.Stdin,
+		Stdout: buffers.Stdout,
+		Stderr: buffers.Stderr,
 	}
-
+	pid1, err := container.Start(process)
+	if err != nil {
+		t.Fatal(err)
+	}
+	buffers = newStdBuffers()
+	psPid, err := container.Start(&libcontainer.Process{
+		Args:   []string{"/bin/sh", "-c", "ulimit -n"},
+		Env:    standardEnvironment,
+		Stdin:  buffers.Stdin,
+		Stdout: buffers.Stdout,
+		Stderr: buffers.Stderr,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ps, err := os.FindProcess(psPid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ps.Wait(); err != nil {
+		t.Fatal(err)
+	}
+	p, err := os.FindProcess(pid1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := p.Signal(syscall.SIGKILL); err != nil {
+		t.Log(err)
+	}
+	if _, err := p.Wait(); err != nil {
+		t.Log(err)
+	}
 	out := buffers.Stdout.String()
 	if limit := strings.TrimSpace(out); limit != "1024" {
 		t.Fatalf("expected rlimit to be 1024, got %s", limit)
 	}
-}
-
-// start a long-running container so we have time to inspect execin processes
-func startLongRunningContainer(config *libcontainer.Config) (*exec.Cmd, string, chan error) {
-	containerErr := make(chan error, 1)
-	containerCmd := &exec.Cmd{}
-	setupContainerCmd := &exec.Cmd{}
-	var statePath string
-
-	createCmd := func(container *libcontainer.Config, console, dataPath, init string,
-		pipe *os.File, args []string) *exec.Cmd {
-		containerCmd = namespaces.DefaultCreateCommand(container, console, dataPath, init, pipe, args)
-		statePath = dataPath
-		return containerCmd
-	}
-
-	setupCmd := func(container *libcontainer.Config, console, dataPath, init string) *exec.Cmd {
-		setupContainerCmd = namespaces.DefaultSetupCommand(container, console, dataPath, init)
-		statePath = dataPath
-		return setupContainerCmd
-	}
-
-	var containerStart sync.WaitGroup
-	containerStart.Add(1)
-	go func() {
-		buffers := newStdBuffers()
-		_, err := namespaces.Exec(config,
-			buffers.Stdin, buffers.Stdout, buffers.Stderr,
-			"", config.RootFs, []string{"sleep", "10"},
-			createCmd, setupCmd, containerStart.Done)
-		containerErr <- err
-	}()
-	containerStart.Wait()
-
-	return containerCmd, statePath, containerErr
 }

@@ -16,11 +16,13 @@ import (
 	systemd "github.com/coreos/go-systemd/dbus"
 	"github.com/docker/libcontainer/cgroups"
 	"github.com/docker/libcontainer/cgroups/fs"
+	"github.com/docker/libcontainer/configs"
 	"github.com/godbus/dbus"
 )
 
-type systemdCgroup struct {
-	cgroup *cgroups.Cgroup
+type Manager struct {
+	Cgroups *configs.Cgroup
+	Paths   map[string]string
 }
 
 type subsystem interface {
@@ -94,15 +96,13 @@ func getIfaceForUnit(unitName string) string {
 	return "Unit"
 }
 
-func Apply(c *cgroups.Cgroup, pid int) (map[string]string, error) {
+func (m *Manager) Apply(pid int) error {
 	var (
+		c          = m.Cgroups
 		unitName   = getUnitName(c)
 		slice      = "system.slice"
 		properties []systemd.Property
-		res        = &systemdCgroup{}
 	)
-
-	res.cgroup = c
 
 	if c.Slice != "" {
 		slice = c.Slice
@@ -143,23 +143,23 @@ func Apply(c *cgroups.Cgroup, pid int) (map[string]string, error) {
 	}
 
 	if _, err := theConn.StartTransientUnit(unitName, "replace", properties...); err != nil {
-		return nil, err
+		return err
 	}
 
 	if err := joinDevices(c, pid); err != nil {
-		return nil, err
+		return err
 	}
 
 	// TODO: CpuQuota and CpuPeriod not available in systemd
 	// we need to manually join the cpu.cfs_quota_us and cpu.cfs_period_us
 	if err := joinCpu(c, pid); err != nil {
-		return nil, err
+		return err
 	}
 
 	// -1 disables memorySwap
 	if c.MemorySwap >= 0 && c.Memory != 0 {
 		if err := joinMemory(c, pid); err != nil {
-			return nil, err
+			return err
 		}
 
 	}
@@ -167,11 +167,11 @@ func Apply(c *cgroups.Cgroup, pid int) (map[string]string, error) {
 	// we need to manually join the freezer and cpuset cgroup in systemd
 	// because it does not currently support it via the dbus api.
 	if err := joinFreezer(c, pid); err != nil {
-		return nil, err
+		return err
 	}
 
 	if err := joinCpuset(c, pid); err != nil {
-		return nil, err
+		return err
 	}
 
 	paths := make(map[string]string)
@@ -185,24 +185,35 @@ func Apply(c *cgroups.Cgroup, pid int) (map[string]string, error) {
 		"perf_event",
 		"freezer",
 	} {
-		subsystemPath, err := getSubsystemPath(res.cgroup, sysname)
+		subsystemPath, err := getSubsystemPath(m.Cgroups, sysname)
 		if err != nil {
 			// Don't fail if a cgroup hierarchy was not found, just skip this subsystem
 			if cgroups.IsNotFound(err) {
 				continue
 			}
-			return nil, err
+			return err
 		}
 		paths[sysname] = subsystemPath
 	}
-	return paths, nil
+
+	m.Paths = paths
+
+	return nil
+}
+
+func (m *Manager) Destroy() error {
+	return cgroups.RemovePaths(m.Paths)
+}
+
+func (m *Manager) GetPaths() map[string]string {
+	return m.Paths
 }
 
 func writeFile(dir, file, data string) error {
 	return ioutil.WriteFile(filepath.Join(dir, file), []byte(data), 0700)
 }
 
-func joinCpu(c *cgroups.Cgroup, pid int) error {
+func joinCpu(c *configs.Cgroup, pid int) error {
 	path, err := getSubsystemPath(c, "cpu")
 	if err != nil {
 		return err
@@ -220,7 +231,7 @@ func joinCpu(c *cgroups.Cgroup, pid int) error {
 	return nil
 }
 
-func joinFreezer(c *cgroups.Cgroup, pid int) error {
+func joinFreezer(c *configs.Cgroup, pid int) error {
 	path, err := getSubsystemPath(c, "freezer")
 	if err != nil {
 		return err
@@ -233,7 +244,7 @@ func joinFreezer(c *cgroups.Cgroup, pid int) error {
 	return ioutil.WriteFile(filepath.Join(path, "cgroup.procs"), []byte(strconv.Itoa(pid)), 0700)
 }
 
-func getSubsystemPath(c *cgroups.Cgroup, subsystem string) (string, error) {
+func getSubsystemPath(c *configs.Cgroup, subsystem string) (string, error) {
 	mountpoint, err := cgroups.FindCgroupMountpoint(subsystem)
 	if err != nil {
 		return "", err
@@ -252,8 +263,8 @@ func getSubsystemPath(c *cgroups.Cgroup, subsystem string) (string, error) {
 	return filepath.Join(mountpoint, initPath, slice, getUnitName(c)), nil
 }
 
-func Freeze(c *cgroups.Cgroup, state cgroups.FreezerState) error {
-	path, err := getSubsystemPath(c, "freezer")
+func (m *Manager) Freeze(state configs.FreezerState) error {
+	path, err := getSubsystemPath(m.Cgroups, "freezer")
 	if err != nil {
 		return err
 	}
@@ -271,11 +282,14 @@ func Freeze(c *cgroups.Cgroup, state cgroups.FreezerState) error {
 		}
 		time.Sleep(1 * time.Millisecond)
 	}
+
+	m.Cgroups.Freezer = state
+
 	return nil
 }
 
-func GetPids(c *cgroups.Cgroup) ([]int, error) {
-	path, err := getSubsystemPath(c, "cpu")
+func (m *Manager) GetPids() ([]int, error) {
+	path, err := getSubsystemPath(m.Cgroups, "cpu")
 	if err != nil {
 		return nil, err
 	}
@@ -283,7 +297,11 @@ func GetPids(c *cgroups.Cgroup) ([]int, error) {
 	return cgroups.ReadProcsFile(path)
 }
 
-func getUnitName(c *cgroups.Cgroup) string {
+func (m *Manager) GetStats() (*cgroups.Stats, error) {
+	panic("not implemented")
+}
+
+func getUnitName(c *configs.Cgroup) string {
 	return fmt.Sprintf("%s-%s.scope", c.Parent, c.Name)
 }
 
@@ -298,7 +316,7 @@ func getUnitName(c *cgroups.Cgroup) string {
 // Note: we can't use systemd to set up the initial limits, and then change the cgroup
 // because systemd will re-write the device settings if it needs to re-apply the cgroup context.
 // This happens at least for v208 when any sibling unit is started.
-func joinDevices(c *cgroups.Cgroup, pid int) error {
+func joinDevices(c *configs.Cgroup, pid int) error {
 	path, err := getSubsystemPath(c, "devices")
 	if err != nil {
 		return err
@@ -316,24 +334,22 @@ func joinDevices(c *cgroups.Cgroup, pid int) error {
 		if err := writeFile(path, "devices.deny", "a"); err != nil {
 			return err
 		}
-
-		for _, dev := range c.AllowedDevices {
-			if err := writeFile(path, "devices.allow", dev.GetCgroupAllowString()); err != nil {
-				return err
-			}
+	}
+	for _, dev := range c.AllowedDevices {
+		if err := writeFile(path, "devices.allow", dev.CgroupString()); err != nil {
+			return err
 		}
 	}
-
 	return nil
 }
 
 // Symmetrical public function to update device based cgroups.  Also available
 // in the fs implementation.
-func ApplyDevices(c *cgroups.Cgroup, pid int) error {
+func ApplyDevices(c *configs.Cgroup, pid int) error {
 	return joinDevices(c, pid)
 }
 
-func joinMemory(c *cgroups.Cgroup, pid int) error {
+func joinMemory(c *configs.Cgroup, pid int) error {
 	memorySwap := c.MemorySwap
 
 	if memorySwap == 0 {
@@ -352,7 +368,7 @@ func joinMemory(c *cgroups.Cgroup, pid int) error {
 // systemd does not atm set up the cpuset controller, so we must manually
 // join it. Additionally that is a very finicky controller where each
 // level must have a full setup as the default for a new directory is "no cpus"
-func joinCpuset(c *cgroups.Cgroup, pid int) error {
+func joinCpuset(c *configs.Cgroup, pid int) error {
 	path, err := getSubsystemPath(c, "cpuset")
 	if err != nil {
 		return err

@@ -17,7 +17,7 @@ func (s *DevicesGroup) Set(d *data) error {
 		}
 
 		for _, dev := range d.c.AllowedDevices {
-			if err := writeFile(dir, "devices.allow", dev.GetCgroupAllowString()); err != nil {
+			if err := writeFile(dir, "devices.allow", dev.CgroupString()); err != nil {
 				return err
 			}
 		}
