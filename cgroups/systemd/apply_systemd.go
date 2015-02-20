@@ -150,6 +150,12 @@ func (m *Manager) Apply(pid int) error {
 		return err
 	}
 
+	// TODO: CpuQuota and CpuPeriod not available in systemd
+	// we need to manually join the cpu.cfs_quota_us and cpu.cfs_period_us
+	if err := joinCpu(c, pid); err != nil {
+		return err
+	}
+
 	// -1 disables memorySwap
 	if c.MemorySwap >= 0 && c.Memory != 0 {
 		if err := joinMemory(c, pid); err != nil {
@@ -205,6 +211,24 @@ func (m *Manager) GetPaths() map[string]string {
 
 func writeFile(dir, file, data string) error {
 	return ioutil.WriteFile(filepath.Join(dir, file), []byte(data), 0700)
+}
+
+func joinCpu(c *configs.Cgroup, pid int) error {
+	path, err := getSubsystemPath(c, "cpu")
+	if err != nil {
+		return err
+	}
+	if c.CpuQuota != 0 {
+		if err = ioutil.WriteFile(filepath.Join(path, "cpu.cfs_quota_us"), []byte(strconv.FormatInt(c.CpuQuota, 10)), 0700); err != nil {
+			return err
+		}
+	}
+	if c.CpuPeriod != 0 {
+		if err = ioutil.WriteFile(filepath.Join(path, "cpu.cfs_period_us"), []byte(strconv.FormatInt(c.CpuPeriod, 10)), 0700); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func joinFreezer(c *configs.Cgroup, pid int) error {
