@@ -60,7 +60,6 @@ func execAction(context *cli.Context) {
 			fatal(err)
 		}
 	}
-	go handleSignals(container, tty)
 	process := &libcontainer.Process{
 		Args:   context.Args(),
 		Env:    context.StringSlice("env"),
@@ -73,7 +72,8 @@ func execAction(context *cli.Context) {
 	if err := tty.attach(process); err != nil {
 		fatal(err)
 	}
-	pid, err := container.Start(process)
+	go handleSignals(process, tty)
+	err = container.Start(process)
 	if err != nil {
 		tty.Close()
 		if created {
@@ -81,15 +81,7 @@ func execAction(context *cli.Context) {
 		}
 		fatal(err)
 	}
-	proc, err := os.FindProcess(pid)
-	if err != nil {
-		tty.Close()
-		if created {
-			container.Destroy()
-		}
-		fatal(err)
-	}
-	status, err := proc.Wait()
+	status, err := process.Wait()
 	if err != nil {
 		tty.Close()
 		if created {
@@ -107,7 +99,7 @@ func execAction(context *cli.Context) {
 	os.Exit(utils.ExitStatus(status.Sys().(syscall.WaitStatus)))
 }
 
-func handleSignals(container libcontainer.Container, tty *tty) {
+func handleSignals(container *libcontainer.Process, tty *tty) {
 	sigc := make(chan os.Signal, 10)
 	signal.Notify(sigc)
 	tty.resize()

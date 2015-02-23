@@ -77,30 +77,31 @@ func (c *linuxContainer) Stats() (*Stats, error) {
 	return stats, nil
 }
 
-func (c *linuxContainer) Start(process *Process) (int, error) {
+func (c *linuxContainer) Start(process *Process) error {
 	c.m.Lock()
 	defer c.m.Unlock()
 	status, err := c.currentStatus()
 	if err != nil {
-		return -1, err
+		return err
 	}
 	doInit := status == Destroyed
 	parent, err := c.newParentProcess(process, doInit)
 	if err != nil {
-		return -1, newSystemError(err)
+		return newSystemError(err)
 	}
 	if err := parent.start(); err != nil {
 		// terminate the process to ensure that it properly is reaped.
 		if err := parent.terminate(); err != nil {
 			log.Warn(err)
 		}
-		return -1, newSystemError(err)
+		return newSystemError(err)
 	}
+	process.ops = parent
 	if doInit {
 
 		c.updateState(parent)
 	}
-	return parent.pid(), nil
+	return nil
 }
 
 func (c *linuxContainer) newParentProcess(p *Process, doInit bool) (parentProcess, error) {
@@ -225,15 +226,6 @@ func (c *linuxContainer) Resume() error {
 	c.m.Lock()
 	defer c.m.Unlock()
 	return c.cgroupManager.Freeze(configs.Thawed)
-}
-
-func (c *linuxContainer) Signal(signal os.Signal) error {
-	c.m.Lock()
-	defer c.m.Unlock()
-	if c.initProcess == nil {
-		return newGenericError(nil, ContainerNotRunning)
-	}
-	return c.initProcess.signal(signal)
 }
 
 func (c *linuxContainer) NotifyOOM() (<-chan struct{}, error) {

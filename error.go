@@ -17,6 +17,9 @@ const (
 	ContainerNotStopped
 	ContainerNotRunning
 
+	// Process errors
+	ProcessNotExecuted
+
 	// Common errors
 	ConfigInvalid
 	SystemError

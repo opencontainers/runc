@@ -97,15 +97,11 @@ func runContainer(config *configs.Config, console string, args ...string) (buffe
 		Stderr: buffers.Stderr,
 	}
 
-	pid, err := container.Start(process)
+	err = container.Start(process)
 	if err != nil {
 		return nil, -1, err
 	}
-	p, err := os.FindProcess(pid)
-	if err != nil {
-		return nil, -1, err
-	}
-	ps, err := p.Wait()
+	ps, err := process.Wait()
 	if err != nil {
 		return nil, -1, err
 	}
