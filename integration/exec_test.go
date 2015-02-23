@@ -204,11 +204,7 @@ func newTestRoot() (string, error) {
 	return dir, nil
 }
 
-func waitProcess(pid int, t *testing.T) {
-	p, err := os.FindProcess(pid)
-	if err != nil {
-		t.Fatal(err)
-	}
+func waitProcess(p *libcontainer.Process, t *testing.T) {
 	status, err := p.Wait()
 	if err != nil {
 		t.Fatal(err)
@@ -261,9 +257,13 @@ func TestEnter(t *testing.T) {
 		Stdin:  stdinR,
 		Stdout: &stdout,
 	}
-	pid, err := container.Start(&pconfig)
+	err = container.Start(&pconfig)
 	stdinR.Close()
 	defer stdinW.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	pid, err := pconfig.Pid()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -273,13 +273,21 @@ func TestEnter(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	pconfig.Args = []string{"sh", "-c", "cat && readlink /proc/self/ns/pid"}
-	pconfig.Stdin = stdinR2
-	pconfig.Stdout = &stdout2
+	pconfig2 := libcontainer.Process{
+		Env: standardEnvironment,
+	}
+	pconfig2.Args = []string{"sh", "-c", "cat && readlink /proc/self/ns/pid"}
+	pconfig2.Stdin = stdinR2
+	pconfig2.Stdout = &stdout2
 
-	pid2, err := container.Start(&pconfig)
+	err = container.Start(&pconfig2)
 	stdinR2.Close()
 	defer stdinW2.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	pid2, err := pconfig2.Pid()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -301,10 +309,10 @@ func TestEnter(t *testing.T) {
 
 	// Wait processes
 	stdinW2.Close()
-	waitProcess(pid2, t)
+	waitProcess(&pconfig2, t)
 
 	stdinW.Close()
-	waitProcess(pid, t)
+	waitProcess(&pconfig, t)
 
 	// Check that both processes live in the same pidns
 	pidns := string(stdout.Bytes())
@@ -361,9 +369,14 @@ func TestFreeze(t *testing.T) {
 		Env:   standardEnvironment,
 		Stdin: stdinR,
 	}
-	pid, err := container.Start(&pconfig)
+	err = container.Start(&pconfig)
 	stdinR.Close()
 	defer stdinW.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	pid, err := pconfig.Pid()
 	if err != nil {
 		t.Fatal(err)
 	}

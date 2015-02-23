@@ -5,8 +5,6 @@
 package libcontainer
 
 import (
-	"os"
-
 	"github.com/docker/libcontainer/configs"
 )
 
@@ -99,7 +97,7 @@ type Container interface {
 	// ConfigInvalid - config is invalid,
 	// ContainerPaused - Container is paused,
 	// Systemerror - System error.
-	Start(process *Process) (pid int, err error)
+	Start(process *Process) (err error)
 
 	// Destroys the container after killing all running processes.
 	//
@@ -128,14 +126,6 @@ type Container interface {
 	// ContainerDestroyed - Container no longer exists,
 	// Systemerror - System error.
 	Resume() error
-
-	// Signal sends the specified signal to the init process of the container.
-	//
-	// errors:
-	// ContainerDestroyed - Container no longer exists,
-	// ContainerPaused - Container is paused,
-	// Systemerror - System error.
-	Signal(signal os.Signal) error
 
 	// NotifyOOM returns a read-only channel signaling when the container receives an OOM notification.
 	//

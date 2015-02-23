@@ -33,12 +33,11 @@ type parentProcess interface {
 }
 
 type setnsProcess struct {
-	cmd           *exec.Cmd
-	parentPipe    *os.File
-	childPipe     *os.File
-	forkedProcess *os.Process
-	cgroupPaths   map[string]string
-	config        *initConfig
+	cmd         *exec.Cmd
+	parentPipe  *os.File
+	childPipe   *os.File
+	cgroupPaths map[string]string
+	config      *initConfig
 }
 
 func (p *setnsProcess) startTime() (string, error) {
@@ -46,16 +45,16 @@ func (p *setnsProcess) startTime() (string, error) {
 }
 
 func (p *setnsProcess) signal(s os.Signal) error {
-	return p.forkedProcess.Signal(s)
+	return p.cmd.Process.Signal(s)
 }
 
 func (p *setnsProcess) start() (err error) {
 	defer p.parentPipe.Close()
-	if p.forkedProcess, err = p.execSetns(); err != nil {
+	if err = p.execSetns(); err != nil {
 		return newSystemError(err)
 	}
 	if len(p.cgroupPaths) > 0 {
-		if err := cgroups.EnterPid(p.cgroupPaths, p.forkedProcess.Pid); err != nil {
+		if err := cgroups.EnterPid(p.cgroupPaths, p.cmd.Process.Pid); err != nil {
 			return newSystemError(err)
 		}
 	}
@@ -69,33 +68,40 @@ func (p *setnsProcess) start() (err error) {
 // because setns support requires the C process to fork off a child and perform the setns
 // before the go runtime boots, we wait on the process to die and receive the child's pid
 // over the provided pipe.
-func (p *setnsProcess) execSetns() (*os.Process, error) {
+func (p *setnsProcess) execSetns() error {
 	err := p.cmd.Start()
 	p.childPipe.Close()
 	if err != nil {
-		return nil, newSystemError(err)
+		return newSystemError(err)
 	}
 	status, err := p.cmd.Process.Wait()
 	if err != nil {
-		return nil, newSystemError(err)
+		p.cmd.Wait()
+		return newSystemError(err)
 	}
 	if !status.Success() {
-		return nil, newSystemError(&exec.ExitError{ProcessState: status})
+		p.cmd.Wait()
+		return newSystemError(&exec.ExitError{ProcessState: status})
 	}
 	var pid *pid
 	if err := json.NewDecoder(p.parentPipe).Decode(&pid); err != nil {
-		return nil, newSystemError(err)
+		p.cmd.Wait()
+		return newSystemError(err)
 	}
-	return os.FindProcess(pid.Pid)
+
+	process, err := os.FindProcess(pid.Pid)
+	if err != nil {
+		return err
+	}
+
+	p.cmd.Process = process
+	return nil
 }
 
 // terminate sends a SIGKILL to the forked process for the setns routine then waits to
 // avoid the process becomming a zombie.
 func (p *setnsProcess) terminate() error {
-	if p.forkedProcess == nil {
-		return nil
-	}
-	err := p.forkedProcess.Kill()
+	err := p.cmd.Process.Kill()
 	if _, werr := p.wait(); err == nil {
 		err = werr
 	}
@@ -103,11 +109,16 @@ func (p *setnsProcess) terminate() error {
 }
 
 func (p *setnsProcess) wait() (*os.ProcessState, error) {
-	return p.forkedProcess.Wait()
+	err := p.cmd.Wait()
+	if err != nil {
+		return nil, err
+	}
+
+	return p.cmd.ProcessState, nil
 }
 
 func (p *setnsProcess) pid() int {
-	return p.forkedProcess.Pid
+	return p.cmd.Process.Pid
 }
 
 type initProcess struct {
@@ -159,7 +170,7 @@ func (p *initProcess) start() error {
 }
 
 func (p *initProcess) wait() (*os.ProcessState, error) {
-	state, err := p.cmd.Process.Wait()
+	err := p.cmd.Wait()
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +178,7 @@ func (p *initProcess) wait() (*os.ProcessState, error) {
 	if p.cmd.SysProcAttr.Cloneflags&syscall.CLONE_NEWPID == 0 {
 		killCgroupProcesses(p.manager)
 	}
-	return state, nil
+	return p.cmd.ProcessState, nil
 }
 
 func (p *initProcess) terminate() error {

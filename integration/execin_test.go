@@ -3,7 +3,6 @@ package integration
 import (
 	"os"
 	"strings"
-	"syscall"
 	"testing"
 
 	"github.com/docker/libcontainer"
@@ -24,48 +23,45 @@ func TestExecIn(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer container.Destroy()
-	buffers := newStdBuffers()
-	process := &libcontainer.Process{
-		Args:   []string{"sleep", "10"},
-		Env:    standardEnvironment,
-		Stdin:  buffers.Stdin,
-		Stdout: buffers.Stdout,
-		Stderr: buffers.Stderr,
-	}
-	pid1, err := container.Start(process)
+
+	// Execute a first process in the container
+	stdinR, stdinW, err := os.Pipe()
 	if err != nil {
 		t.Fatal(err)
 	}
-	buffers = newStdBuffers()
-	psPid, err := container.Start(&libcontainer.Process{
+	process := &libcontainer.Process{
+		Args:  []string{"cat"},
+		Env:   standardEnvironment,
+		Stdin: stdinR,
+	}
+	err = container.Start(process)
+	stdinR.Close()
+	defer stdinW.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	buffers := newStdBuffers()
+	ps := &libcontainer.Process{
 		Args:   []string{"ps"},
 		Env:    standardEnvironment,
 		Stdin:  buffers.Stdin,
 		Stdout: buffers.Stdout,
 		Stderr: buffers.Stderr,
-	})
-	if err != nil {
-		t.Fatal(err)
 	}
-	ps, err := os.FindProcess(psPid)
+	err = container.Start(ps)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if _, err := ps.Wait(); err != nil {
 		t.Fatal(err)
 	}
-	p, err := os.FindProcess(pid1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := p.Signal(syscall.SIGKILL); err != nil {
-		t.Log(err)
-	}
-	if _, err := p.Wait(); err != nil {
+	stdinW.Close()
+	if _, err := process.Wait(); err != nil {
 		t.Log(err)
 	}
 	out := buffers.Stdout.String()
-	if !strings.Contains(out, "sleep 10") || !strings.Contains(out, "ps") {
+	if !strings.Contains(out, "cat") || !strings.Contains(out, "ps") {
 		t.Fatalf("unexpected running process, output %q", out)
 	}
 }
@@ -85,44 +81,40 @@ func TestExecInRlimit(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer container.Destroy()
-	buffers := newStdBuffers()
-	process := &libcontainer.Process{
-		Args:   []string{"sleep", "10"},
-		Env:    standardEnvironment,
-		Stdin:  buffers.Stdin,
-		Stdout: buffers.Stdout,
-		Stderr: buffers.Stderr,
-	}
-	pid1, err := container.Start(process)
+
+	stdinR, stdinW, err := os.Pipe()
 	if err != nil {
 		t.Fatal(err)
 	}
-	buffers = newStdBuffers()
-	psPid, err := container.Start(&libcontainer.Process{
+	process := &libcontainer.Process{
+		Args:  []string{"cat"},
+		Env:   standardEnvironment,
+		Stdin: stdinR,
+	}
+	err = container.Start(process)
+	stdinR.Close()
+	defer stdinW.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	buffers := newStdBuffers()
+	ps := &libcontainer.Process{
 		Args:   []string{"/bin/sh", "-c", "ulimit -n"},
 		Env:    standardEnvironment,
 		Stdin:  buffers.Stdin,
 		Stdout: buffers.Stdout,
 		Stderr: buffers.Stderr,
-	})
-	if err != nil {
-		t.Fatal(err)
 	}
-	ps, err := os.FindProcess(psPid)
+	err = container.Start(ps)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if _, err := ps.Wait(); err != nil {
 		t.Fatal(err)
 	}
-	p, err := os.FindProcess(pid1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := p.Signal(syscall.SIGKILL); err != nil {
-		t.Log(err)
-	}
-	if _, err := p.Wait(); err != nil {
+	stdinW.Close()
+	if _, err := process.Wait(); err != nil {
 		t.Log(err)
 	}
 	out := buffers.Stdout.String()

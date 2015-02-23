@@ -1,6 +1,15 @@
 package libcontainer
 
-import "io"
+import (
+	"io"
+	"os"
+)
+
+type processOperations interface {
+	wait() (*os.ProcessState, error)
+	signal(sig os.Signal) error
+	pid() int
+}
 
 // Process specifies the configuration and IO for a process inside
 // a container.
@@ -26,4 +35,31 @@ type Process struct {
 
 	// Stderr is a pointer to a writer which receives the standard error stream.
 	Stderr io.Writer
+
+	ops processOperations
+}
+
+// Wait waits for the process to exit.
+// Wait releases any resources associated with the Process
+func (p Process) Wait() (*os.ProcessState, error) {
+	if p.ops == nil {
+		return nil, newGenericError(nil, ProcessNotExecuted)
+	}
+	return p.ops.wait()
+}
+
+// Pid returns the process ID
+func (p Process) Pid() (int, error) {
+	if p.ops == nil {
+		return -1, newGenericError(nil, ProcessNotExecuted)
+	}
+	return p.ops.pid(), nil
+}
+
+// Signal sends a signal to the Process.
+func (p Process) Signal(sig os.Signal) error {
+	if p.ops == nil {
+		return newGenericError(nil, ProcessNotExecuted)
+	}
+	return p.ops.signal(sig)
 }
