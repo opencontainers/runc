@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"os/exec"
 	"os/signal"
 	"syscall"
 
@@ -81,13 +82,19 @@ func execAction(context *cli.Context) {
 		}
 		fatal(err)
 	}
+
 	status, err := process.Wait()
 	if err != nil {
-		tty.Close()
-		if created {
-			container.Destroy()
+		exitError, ok := err.(*exec.ExitError)
+		if ok {
+			status = exitError.ProcessState
+		} else {
+			tty.Close()
+			if created {
+				container.Destroy()
+			}
+			fatal(err)
 		}
-		fatal(err)
 	}
 	if created {
 		if err := container.Destroy(); err != nil {

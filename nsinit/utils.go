@@ -50,6 +50,7 @@ func fatal(err error) {
 		os.Exit(1)
 	}
 	fmt.Fprintln(os.Stderr, err)
+	os.Exit(1)
 }
 
 func fatalf(t string, v ...interface{}) {
