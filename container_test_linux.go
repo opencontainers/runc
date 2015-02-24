@@ -163,7 +163,7 @@ func TestGetContainerState(t *testing.T) {
 		t.Fatalf("expected memory path %q but received %q", expectedMemoryPath, memPath)
 	}
 	for _, ns := range container.config.Namespaces {
-		path := state.NamespacePaths[string(ns.Type)]
+		path := state.NamespacePaths[ns.Type]
 		if path == "" {
 			t.Fatalf("expected non nil namespace path for %s", ns.Type)
 		}
