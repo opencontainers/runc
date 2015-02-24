@@ -24,12 +24,46 @@ const (
 	linuxCapVer3 = 0x20080522
 )
 
-var capVers uint32
+var (
+	capVers    uint32
+	capLastCap Cap
+)
 
 func init() {
 	var hdr capHeader
 	capget(&hdr, nil)
 	capVers = hdr.version
+
+	if initLastCap() == nil {
+		CAP_LAST_CAP = capLastCap
+		if capLastCap > 31 {
+			capUpperMask = (uint32(1) << (uint(capLastCap) - 31)) - 1
+		} else {
+			capUpperMask = 0
+		}
+	}
+}
+
+func initLastCap() error {
+	if capLastCap != 0 {
+		return nil
+	}
+
+	f, err := os.Open("/proc/sys/kernel/cap_last_cap")
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	var b []byte = make([]byte, 11)
+	_, err = f.Read(b)
+	if err != nil {
+		return err
+	}
+
+	fmt.Sscanf(string(b), "%d", &capLastCap)
+
+	return nil
 }
 
 func mkStringCap(c Capabilities, which CapType) (ret string) {
@@ -383,6 +417,10 @@ func (c *capsV3) Load() (err error) {
 }
 
 func (c *capsV3) Apply(kind CapType) (err error) {
+	err = initLastCap()
+	if err != nil {
+		return
+	}
 	if kind&BOUNDS == BOUNDS {
 		var data [2]capData
 		err = capget(&c.hdr, &data[0])
@@ -390,7 +428,7 @@ func (c *capsV3) Apply(kind CapType) (err error) {
 			return
 		}
 		if (1<<uint(CAP_SETPCAP))&data[0].effective != 0 {
-			for i := Cap(0); i <= CAP_LAST_CAP; i++ {
+			for i := Cap(0); i <= capLastCap; i++ {
 				if c.Get(BOUNDING, i) {
 					continue
 				}
