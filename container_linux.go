@@ -281,10 +281,10 @@ func (c *linuxContainer) currentState() (*State, error) {
 		InitProcessPid:       c.initProcess.pid(),
 		InitProcessStartTime: startTime,
 		CgroupPaths:          c.cgroupManager.GetPaths(),
-		NamespacePaths:       make(map[string]string),
+		NamespacePaths:       make(map[configs.NamespaceType]string),
 	}
 	for _, ns := range c.config.Namespaces {
-		state.NamespacePaths[string(ns.Type)] = ns.GetPath(c.initProcess.pid())
+		state.NamespacePaths[ns.Type] = ns.GetPath(c.initProcess.pid())
 	}
 	return state, nil
 }

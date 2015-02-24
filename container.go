@@ -40,9 +40,9 @@ type State struct {
 	// with the value as the path.
 	CgroupPaths map[string]string `json:"cgroup_paths"`
 
-	// NamespacePaths are filepaths to the container's namespaces. Key is the namespace name
+	// NamespacePaths are filepaths to the container's namespaces. Key is the namespace type
 	// with the value as the path.
-	NamespacePaths map[string]string `json:"namespace_paths"`
+	NamespacePaths map[configs.NamespaceType]string `json:"namespace_paths"`
 
 	// Config is the container's configuration.
 	Config configs.Config `json:"config"`
