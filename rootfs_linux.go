@@ -41,7 +41,7 @@ var baseMounts = []*configs.Mount{
 
 // setupRootfs sets up the devices, mount points, and filesystems for use inside a
 // new mount namespace.
-func setupRootfs(config *configs.Config) (err error) {
+func setupRootfs(config *configs.Config, console *linuxConsole) (err error) {
 	if err := prepareRoot(config); err != nil {
 		return newSystemError(err)
 	}
@@ -53,7 +53,7 @@ func setupRootfs(config *configs.Config) (err error) {
 	if err := createDevices(config); err != nil {
 		return newSystemError(err)
 	}
-	if err := setupPtmx(config); err != nil {
+	if err := setupPtmx(config, console); err != nil {
 		return newSystemError(err)
 	}
 	// stdin, stdout and stderr could be pointing to /dev/null from parent namespace.
@@ -255,7 +255,7 @@ func setReadonly() error {
 	return syscall.Mount("/", "/", "bind", syscall.MS_BIND|syscall.MS_REMOUNT|syscall.MS_RDONLY|syscall.MS_REC, "")
 }
 
-func setupPtmx(config *configs.Config) error {
+func setupPtmx(config *configs.Config, console *linuxConsole) error {
 	ptmx := filepath.Join(config.Rootfs, "dev/ptmx")
 	if err := os.Remove(ptmx); err != nil && !os.IsNotExist(err) {
 		return err
@@ -263,8 +263,7 @@ func setupPtmx(config *configs.Config) error {
 	if err := os.Symlink("pts/ptmx", ptmx); err != nil {
 		return fmt.Errorf("symlink dev ptmx %s", err)
 	}
-	if config.Console != "" {
-		console := newConsoleFromPath(config.Console)
+	if console != nil {
 		return console.mount(config.Rootfs, config.MountLabel, 0, 0)
 	}
 	return nil

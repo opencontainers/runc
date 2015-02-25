@@ -36,6 +36,9 @@ type Process struct {
 	// Stderr is a pointer to a writer which receives the standard error stream.
 	Stderr io.Writer
 
+	// consolePath is the path to the console allocated to the container.
+	consolePath string
+
 	ops processOperations
 }
 
@@ -62,4 +65,14 @@ func (p Process) Signal(sig os.Signal) error {
 		return newGenericError(nil, ProcessNotExecuted)
 	}
 	return p.ops.signal(sig)
+}
+
+// NewConsole creates new console for process and returns it
+func (p *Process) NewConsole(rootuid int) (Console, error) {
+	console, err := newConsole(rootuid, rootuid)
+	if err != nil {
+		return nil, err
+	}
+	p.consolePath = console.Path()
+	return console, nil
 }
