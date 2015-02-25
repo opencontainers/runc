@@ -32,6 +32,8 @@ type subsystem interface {
 	Remove(*data) error
 	// Creates and joins the cgroup represented by data.
 	Apply(*data) error
+	// Set the cgroup represented by cgroup.
+	Set(path string, cgroup *configs.Cgroup) error
 }
 
 type Manager struct {
@@ -145,6 +147,20 @@ func (m *Manager) GetStats() (*cgroups.Stats, error) {
 	}
 
 	return stats, nil
+}
+
+func (m *Manager) Set(container *configs.Config) error {
+	for name, path := range m.Paths {
+		sys, ok := subsystems[name]
+		if !ok || !cgroups.PathExists(path) {
+			continue
+		}
+		if err := sys.Set(path, container.Cgroups); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // Freeze toggles the container's freezer cgroup depending on the state

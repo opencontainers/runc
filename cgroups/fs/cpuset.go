@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/docker/libcontainer/cgroups"
+	"github.com/docker/libcontainer/configs"
 )
 
 type CpusetGroup struct {
@@ -19,6 +20,22 @@ func (s *CpusetGroup) Apply(d *data) error {
 		return err
 	}
 	return s.ApplyDir(dir, d.c.CpusetCpus, d.c.CpusetMems, d.pid)
+}
+
+func (s *CpusetGroup) Set(path string, cgroup *configs.Cgroup) error {
+	if cgroup.CpusetCpus != "" {
+		if err := writeFile(path, "cpuset.cpus", cgroup.CpusetCpus); err != nil {
+			return err
+		}
+	}
+
+	if cgroup.CpusetMems != "" {
+		if err := writeFile(path, "cpuset.mems", cgroup.CpusetMems); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (s *CpusetGroup) Remove(d *data) error {

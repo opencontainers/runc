@@ -26,7 +26,10 @@ type Manager struct {
 }
 
 type subsystem interface {
-	GetStats(string, *cgroups.Stats) error
+	// Returns the stats, as 'stats', corresponding to the cgroup under 'path'.
+	GetStats(path string, stats *cgroups.Stats) error
+	// Set the cgroup represented by cgroup.
+	Set(path string, cgroup *configs.Cgroup) error
 }
 
 var subsystems = map[string]subsystem{
@@ -321,6 +324,10 @@ func (m *Manager) GetStats() (*cgroups.Stats, error) {
 	}
 
 	return stats, nil
+}
+
+func (m *Manager) Set(container *configs.Config) error {
+	panic("not implemented")
 }
 
 func getUnitName(c *configs.Cgroup) string {

@@ -42,6 +42,28 @@ func (s *FreezerGroup) Apply(d *data) error {
 	return nil
 }
 
+func (s *FreezerGroup) Set(path string, cgroup *configs.Cgroup) error {
+	switch cgroup.Freezer {
+	case configs.Frozen, configs.Thawed:
+		if err := writeFile(path, "freezer.state", string(cgroup.Freezer)); err != nil {
+			return err
+		}
+
+		for {
+			state, err := readFile(path, "freezer.state")
+			if err != nil {
+				return err
+			}
+			if strings.TrimSpace(state) == string(cgroup.Freezer) {
+				break
+			}
+			time.Sleep(1 * time.Millisecond)
+		}
+	}
+
+	return nil
+}
+
 func (s *FreezerGroup) Remove(d *data) error {
 	return removePath(d.path("freezer"))
 }

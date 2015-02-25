@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/docker/libcontainer/cgroups"
+	"github.com/docker/libcontainer/configs"
 )
 
 type CpuGroup struct {
@@ -34,6 +35,26 @@ func (s *CpuGroup) Apply(d *data) error {
 			return err
 		}
 	}
+	return nil
+}
+
+func (s *CpuGroup) Set(path string, cgroup *configs.Cgroup) error {
+	if cgroup.CpuShares != 0 {
+		if err := writeFile(path, "cpu.shares", strconv.FormatInt(cgroup.CpuShares, 10)); err != nil {
+			return err
+		}
+	}
+	if cgroup.CpuPeriod != 0 {
+		if err := writeFile(path, "cpu.cfs_period_us", strconv.FormatInt(cgroup.CpuPeriod, 10)); err != nil {
+			return err
+		}
+	}
+	if cgroup.CpuQuota != 0 {
+		if err := writeFile(path, "cpu.cfs_quota_us", strconv.FormatInt(cgroup.CpuQuota, 10)); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

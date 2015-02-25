@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/docker/libcontainer/cgroups"
+	"github.com/docker/libcontainer/configs"
 	"github.com/docker/libcontainer/system"
 )
 
@@ -27,6 +28,10 @@ func (s *CpuacctGroup) Apply(d *data) error {
 		return err
 	}
 
+	return nil
+}
+
+func (s *CpuacctGroup) Set(path string, cgroup *configs.Cgroup) error {
 	return nil
 }
 
