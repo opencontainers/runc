@@ -111,7 +111,7 @@ func (p *setnsProcess) terminate() error {
 func (p *setnsProcess) wait() (*os.ProcessState, error) {
 	err := p.cmd.Wait()
 	if err != nil {
-		return nil, err
+		return p.cmd.ProcessState, err
 	}
 
 	return p.cmd.ProcessState, nil
@@ -172,7 +172,7 @@ func (p *initProcess) start() error {
 func (p *initProcess) wait() (*os.ProcessState, error) {
 	err := p.cmd.Wait()
 	if err != nil {
-		return nil, err
+		return p.cmd.ProcessState, err
 	}
 	// we should kill all processes in cgroup when init is died if we use host PID namespace
 	if p.cmd.SysProcAttr.Cloneflags&syscall.CLONE_NEWPID == 0 {
