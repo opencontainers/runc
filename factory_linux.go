@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 
@@ -30,6 +31,23 @@ var (
 // provided init arguments.
 func InitArgs(args ...string) func(*LinuxFactory) error {
 	return func(l *LinuxFactory) error {
+		name := args[0]
+		if filepath.Base(name) == name {
+			if lp, err := exec.LookPath(name); err == nil {
+				name = lp
+			}
+		}
+		l.InitPath = name
+		l.InitArgs = append([]string{name}, args[1:]...)
+		return nil
+	}
+}
+
+// InitPath returns an options func to configure a LinuxFactory with the
+// provided absolute path to the init binary and arguements.
+func InitPath(path string, args ...string) func(*LinuxFactory) error {
+	return func(l *LinuxFactory) error {
+		l.InitPath = path
 		l.InitArgs = args
 		return nil
 	}
@@ -70,7 +88,6 @@ func New(root string, options ...func(*LinuxFactory) error) (Factory, error) {
 	}
 	l := &LinuxFactory{
 		Root:      root,
-		InitArgs:  []string{os.Args[0], "init"},
 		Validator: validate.New(),
 	}
 	Cgroupfs(l)
@@ -86,6 +103,9 @@ func New(root string, options ...func(*LinuxFactory) error) (Factory, error) {
 type LinuxFactory struct {
 	// Root directory for the factory to store state.
 	Root string
+
+	// InitPath is the absolute path to the init binary.
+	InitPath string
 
 	// InitArgs are arguments for calling the init responsibilities for spawning
 	// a container.
@@ -121,6 +141,7 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 		id:            id,
 		root:          containerRoot,
 		config:        config,
+		initPath:      l.InitPath,
 		initArgs:      l.InitArgs,
 		cgroupManager: l.NewCgroupsManager(config.Cgroups, nil),
 	}, nil
@@ -143,6 +164,7 @@ func (l *LinuxFactory) Load(id string) (Container, error) {
 		initProcess:   r,
 		id:            id,
 		config:        &state.Config,
+		initPath:      l.InitPath,
 		initArgs:      l.InitArgs,
 		cgroupManager: l.NewCgroupsManager(state.Config.Cgroups, state.CgroupPaths),
 		root:          containerRoot,
