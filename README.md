@@ -21,9 +21,7 @@ To use the current binary that is spawning the containers and acting as the pare
 you can use `os.Args[0]` and we have a command called `init` setup.
 
 ```go
-initArgs := []string{os.Args[0], "init"}
-
-root, err := libcontainer.New("/var/lib/container", initArgs)
+root, err := libcontainer.New("/var/lib/container", libcontainer.InitArgs(os.Args[0], "init"))
 if err != nil {
     log.Fatal(err)
 }

@@ -90,6 +90,7 @@ func New(root string, options ...func(*LinuxFactory) error) (Factory, error) {
 		Root:      root,
 		Validator: validate.New(),
 	}
+	InitArgs(os.Args[0], "init")(l)
 	Cgroupfs(l)
 	for _, opt := range options {
 		if err := opt(l); err != nil {
