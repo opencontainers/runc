@@ -90,7 +90,8 @@ type Container interface {
 	// Systemerror - System error.
 	Stats() (*Stats, error)
 
-	// Start a process inside the container. Returns the PID of the new process (in the caller process's namespace) and a channel that will return the exit status of the process whenever it dies.
+	// Start a process inside the container. Returns error if process fails to
+	// start. You can track process lifecycle with passed Process structure.
 	//
 	// errors:
 	// ContainerDestroyed - Container no longer exists,
