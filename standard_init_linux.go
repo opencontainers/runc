@@ -20,9 +20,9 @@ func (l *linuxStandardInit) Init() error {
 	if err := joinExistingNamespaces(l.config.Config.Namespaces); err != nil {
 		return err
 	}
-	consolePath := l.config.Config.Console
-	if consolePath != "" {
-		console := newConsoleFromPath(consolePath)
+	var console *linuxConsole
+	if l.config.Console != "" {
+		console = newConsoleFromPath(l.config.Console)
 		if err := console.dupStdio(); err != nil {
 			return err
 		}
@@ -30,7 +30,7 @@ func (l *linuxStandardInit) Init() error {
 	if _, err := syscall.Setsid(); err != nil {
 		return err
 	}
-	if consolePath != "" {
+	if console != nil {
 		if err := system.Setctty(); err != nil {
 			return err
 		}
@@ -47,7 +47,7 @@ func (l *linuxStandardInit) Init() error {
 	label.Init()
 	// InitializeMountNamespace() can be executed only for a new mount namespace
 	if l.config.Config.Namespaces.Contains(configs.NEWNS) {
-		if err := setupRootfs(l.config.Config); err != nil {
+		if err := setupRootfs(l.config.Config, console); err != nil {
 			return err
 		}
 	}

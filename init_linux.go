@@ -45,6 +45,7 @@ type initConfig struct {
 	Cwd      string          `json:"cwd"`
 	User     string          `json:"user"`
 	Config   *configs.Config `json:"config"`
+	Console  string          `json:"console"`
 	Networks []*network      `json:"network"`
 }
 
