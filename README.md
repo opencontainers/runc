@@ -101,14 +101,16 @@ process := &libcontainer.Process{
     Stderr: os.Stderr,
 }
 
-pid, err := container.Start(process)
+err := container.Start(process)
 if err != nil {
     log.Fatal(err)
 }
 
-
 // wait for the process to finish.
-wait(pid)
+status, err := process.Wait()
+if err != nil {
+    log.Fatal(err)
+}
 
 // destroy the container.
 container.Destroy()
