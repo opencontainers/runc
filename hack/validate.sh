@@ -5,8 +5,8 @@ set -e
 
 validate() {
     sed -i 's!docker/docker!docker/libcontainer!' /go/src/github.com/docker/docker/hack/make/.validate
-    /go/src/github.com/docker/docker/hack/make/validate-dco
-    /go/src/github.com/docker/docker/hack/make/validate-gofmt
+    bash /go/src/github.com/docker/docker/hack/make/validate-dco
+    bash /go/src/github.com/docker/docker/hack/make/validate-gofmt
 }
 
 # run validations
