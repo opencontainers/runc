@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -86,9 +87,13 @@ func setupRootfs(config *configs.Config, console *linuxConsole) (err error) {
 
 func mount(m *configs.Mount, rootfs, mountLabel string) error {
 	var (
-		dest = filepath.Join(rootfs, m.Destination)
+		dest = m.Destination
 		data = label.FormatMountLabel(m.Data, mountLabel)
 	)
+	if !strings.HasPrefix(dest, rootfs) {
+		dest = filepath.Join(rootfs, dest)
+	}
+
 	switch m.Device {
 	case "proc":
 		if err := os.MkdirAll(dest, 0755); err != nil && !os.IsExist(err) {
