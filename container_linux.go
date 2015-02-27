@@ -206,7 +206,7 @@ func (c *linuxContainer) Destroy() error {
 		return err
 	}
 	if status != Destroyed {
-		return newGenericError(nil, ContainerNotStopped)
+		return newGenericError(fmt.Errorf("container is not destroyed"), ContainerNotStopped)
 	}
 	if !c.config.Namespaces.Contains(configs.NEWPID) {
 		if err := killCgroupProcesses(c.cgroupManager); err != nil {
