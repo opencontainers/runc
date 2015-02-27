@@ -26,31 +26,10 @@ func (s *MemoryGroup) Apply(d *data) error {
 		}
 	}()
 
-	// Only set values if some config was specified.
-	if d.c.Memory != 0 || d.c.MemoryReservation != 0 || d.c.MemorySwap != 0 {
-		if d.c.Memory != 0 {
-			if err := writeFile(dir, "memory.limit_in_bytes", strconv.FormatInt(d.c.Memory, 10)); err != nil {
-				return err
-			}
-		}
-		if d.c.MemoryReservation != 0 {
-			if err := writeFile(dir, "memory.soft_limit_in_bytes", strconv.FormatInt(d.c.MemoryReservation, 10)); err != nil {
-				return err
-			}
-		}
-		// By default, MemorySwap is set to twice the size of RAM.
-		// If you want to omit MemorySwap, set it to '-1'.
-		if d.c.MemorySwap == 0 {
-			if err := writeFile(dir, "memory.memsw.limit_in_bytes", strconv.FormatInt(d.c.Memory*2, 10)); err != nil {
-				return err
-			}
-		}
-		if d.c.MemorySwap > 0 {
-			if err := writeFile(dir, "memory.memsw.limit_in_bytes", strconv.FormatInt(d.c.MemorySwap, 10)); err != nil {
-				return err
-			}
-		}
+	if err := s.Set(dir, d.c); err != nil {
+		return err
 	}
+
 	return nil
 }
 

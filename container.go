@@ -90,6 +90,14 @@ type Container interface {
 	// Systemerror - System error.
 	Stats() (*Stats, error)
 
+	// Set cgroup resources of container as configured
+	//
+	// We can use this to change resources when containers are running.
+	//
+	// errors:
+	// Systemerror - System error.
+	Set() error
+
 	// Start a process inside the container. Returns error if process fails to
 	// start. You can track process lifecycle with passed Process structure.
 	//

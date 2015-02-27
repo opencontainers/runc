@@ -19,19 +19,8 @@ func (s *FreezerGroup) Apply(d *data) error {
 			return err
 		}
 
-		if err := writeFile(dir, "freezer.state", string(d.c.Freezer)); err != nil {
+		if err := s.Set(dir, d.c); err != nil {
 			return err
-		}
-
-		for {
-			state, err := readFile(dir, "freezer.state")
-			if err != nil {
-				return err
-			}
-			if strings.TrimSpace(state) == string(d.c.Freezer) {
-				break
-			}
-			time.Sleep(1 * time.Millisecond)
 		}
 	default:
 		if _, err := d.join("freezer"); err != nil && !cgroups.IsNotFound(err) {

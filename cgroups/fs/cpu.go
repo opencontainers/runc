@@ -20,21 +20,11 @@ func (s *CpuGroup) Apply(d *data) error {
 	if err != nil {
 		return err
 	}
-	if d.c.CpuShares != 0 {
-		if err := writeFile(dir, "cpu.shares", strconv.FormatInt(d.c.CpuShares, 10)); err != nil {
-			return err
-		}
+
+	if err := s.Set(dir, d.c); err != nil {
+		return err
 	}
-	if d.c.CpuPeriod != 0 {
-		if err := writeFile(dir, "cpu.cfs_period_us", strconv.FormatInt(d.c.CpuPeriod, 10)); err != nil {
-			return err
-		}
-	}
-	if d.c.CpuQuota != 0 {
-		if err := writeFile(dir, "cpu.cfs_quota_us", strconv.FormatInt(d.c.CpuQuota, 10)); err != nil {
-			return err
-		}
-	}
+
 	return nil
 }
 

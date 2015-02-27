@@ -21,10 +21,8 @@ func (s *BlkioGroup) Apply(d *data) error {
 		return err
 	}
 
-	if d.c.BlkioWeight != 0 {
-		if err := writeFile(dir, "blkio.weight", strconv.FormatInt(d.c.BlkioWeight, 10)); err != nil {
-			return err
-		}
+	if err := s.Set(dir, d.c); err != nil {
+		return err
 	}
 
 	return nil

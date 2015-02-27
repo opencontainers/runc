@@ -14,17 +14,10 @@ func (s *DevicesGroup) Apply(d *data) error {
 		return err
 	}
 
-	if !d.c.AllowAllDevices {
-		if err := writeFile(dir, "devices.deny", "a"); err != nil {
-			return err
-		}
-
-		for _, dev := range d.c.AllowedDevices {
-			if err := writeFile(dir, "devices.allow", dev.CgroupString()); err != nil {
-				return err
-			}
-		}
+	if err := s.Set(dir, d.c); err != nil {
+		return err
 	}
+
 	return nil
 }
 
