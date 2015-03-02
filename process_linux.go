@@ -61,6 +61,19 @@ func (p *setnsProcess) start() (err error) {
 	if err := json.NewEncoder(p.parentPipe).Encode(p.config); err != nil {
 		return newSystemError(err)
 	}
+	if err := syscall.Shutdown(int(p.parentPipe.Fd()), syscall.SHUT_WR); err != nil {
+		return newSystemError(err)
+	}
+	// wait for the child process to fully complete and receive an error message
+	// if one was encoutered
+	var ierr *genericError
+	if err := json.NewDecoder(p.parentPipe).Decode(&ierr); err != nil && err != io.EOF {
+		return newSystemError(err)
+	}
+	if ierr != nil {
+		return newSystemError(ierr)
+	}
+
 	return nil
 }
 

@@ -122,3 +122,54 @@ func TestExecInRlimit(t *testing.T) {
 		t.Fatalf("expected rlimit to be 1024, got %s", limit)
 	}
 }
+
+func TestExecInError(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+	rootfs, err := newRootfs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer remove(rootfs)
+	config := newTemplateConfig(rootfs)
+	container, err := newContainer(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer container.Destroy()
+
+	// Execute a first process in the container
+	stdinR, stdinW, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	process := &libcontainer.Process{
+		Args:  []string{"cat"},
+		Env:   standardEnvironment,
+		Stdin: stdinR,
+	}
+	err = container.Start(process)
+	stdinR.Close()
+	defer func() {
+		stdinW.Close()
+		if _, err := process.Wait(); err != nil {
+			t.Log(err)
+		}
+	}()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	unexistent := &libcontainer.Process{
+		Args: []string{"unexistent"},
+		Env:  standardEnvironment,
+	}
+	err = container.Start(unexistent)
+	if err == nil {
+		t.Fatal("Should be an error")
+	}
+	if !strings.Contains(err.Error(), "executable file not found") {
+		t.Fatalf("Should be error about not found executable, got %s", err)
+	}
+}
