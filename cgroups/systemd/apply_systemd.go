@@ -29,6 +29,17 @@ type subsystem interface {
 	GetStats(string, *cgroups.Stats) error
 }
 
+var subsystems = map[string]subsystem{
+	"devices":    &fs.DevicesGroup{},
+	"memory":     &fs.MemoryGroup{},
+	"cpu":        &fs.CpuGroup{},
+	"cpuset":     &fs.CpusetGroup{},
+	"cpuacct":    &fs.CpuacctGroup{},
+	"blkio":      &fs.BlkioGroup{},
+	"perf_event": &fs.PerfEventGroup{},
+	"freezer":    &fs.FreezerGroup{},
+}
+
 var (
 	connLock                        sync.Mutex
 	theConn                         *systemd.Conn
@@ -298,7 +309,18 @@ func (m *Manager) GetPids() ([]int, error) {
 }
 
 func (m *Manager) GetStats() (*cgroups.Stats, error) {
-	panic("not implemented")
+	stats := cgroups.NewStats()
+	for name, path := range m.Paths {
+		sys, ok := subsystems[name]
+		if !ok || !cgroups.PathExists(path) {
+			continue
+		}
+		if err := sys.GetStats(path, stats); err != nil {
+			return nil, err
+		}
+	}
+
+	return stats, nil
 }
 
 func getUnitName(c *configs.Cgroup) string {
