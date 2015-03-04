@@ -25,26 +25,32 @@ func newGenericError(err error, c ErrorCode) Error {
 	if le, ok := err.(Error); ok {
 		return le
 	}
-	return &genericError{
+	gerr := &genericError{
 		Timestamp: time.Now(),
 		Err:       err,
-		Message:   err.Error(),
 		ECode:     c,
 		Stack:     stacktrace.Capture(1),
 	}
+	if err != nil {
+		gerr.Message = err.Error()
+	}
+	return gerr
 }
 
 func newSystemError(err error) Error {
 	if le, ok := err.(Error); ok {
 		return le
 	}
-	return &genericError{
+	gerr := &genericError{
 		Timestamp: time.Now(),
 		Err:       err,
 		ECode:     SystemError,
-		Message:   err.Error(),
 		Stack:     stacktrace.Capture(1),
 	}
+	if err != nil {
+		gerr.Message = err.Error()
+	}
+	return gerr
 }
 
 type genericError struct {

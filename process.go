@@ -1,6 +1,7 @@
 package libcontainer
 
 import (
+	"fmt"
 	"io"
 	"os"
 )
@@ -46,7 +47,7 @@ type Process struct {
 // Wait releases any resources associated with the Process
 func (p Process) Wait() (*os.ProcessState, error) {
 	if p.ops == nil {
-		return nil, newGenericError(nil, ProcessNotExecuted)
+		return nil, newGenericError(fmt.Errorf("invalid process"), ProcessNotExecuted)
 	}
 	return p.ops.wait()
 }
@@ -54,7 +55,7 @@ func (p Process) Wait() (*os.ProcessState, error) {
 // Pid returns the process ID
 func (p Process) Pid() (int, error) {
 	if p.ops == nil {
-		return -1, newGenericError(nil, ProcessNotExecuted)
+		return -1, newGenericError(fmt.Errorf("invalid process"), ProcessNotExecuted)
 	}
 	return p.ops.pid(), nil
 }
@@ -62,7 +63,7 @@ func (p Process) Pid() (int, error) {
 // Signal sends a signal to the Process.
 func (p Process) Signal(sig os.Signal) error {
 	if p.ops == nil {
-		return newGenericError(nil, ProcessNotExecuted)
+		return newGenericError(fmt.Errorf("invalid process"), ProcessNotExecuted)
 	}
 	return p.ops.signal(sig)
 }
