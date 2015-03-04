@@ -188,8 +188,8 @@ func TestRlimit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if limit := strings.TrimSpace(out.Stdout.String()); limit != "1024" {
-		t.Fatalf("expected rlimit to be 1024, got %s", limit)
+	if limit := strings.TrimSpace(out.Stdout.String()); limit != "1025" {
+		t.Fatalf("expected rlimit to be 1025, got %s", limit)
 	}
 }
 

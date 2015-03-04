@@ -90,8 +90,8 @@ func newTemplateConfig(rootfs string) *configs.Config {
 		Rlimits: []configs.Rlimit{
 			{
 				Type: syscall.RLIMIT_NOFILE,
-				Hard: uint64(1024),
-				Soft: uint64(1024),
+				Hard: uint64(1025),
+				Soft: uint64(1025),
 			},
 		},
 	}
