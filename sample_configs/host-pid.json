@@ -104,7 +104,6 @@
 	],
 	"mount_label": "",
 	"hostname": "nsinit",
-	"console": "",
 	"namespaces": [
 		{
 			"type": "NEWNS",
