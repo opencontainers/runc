@@ -268,7 +268,7 @@ func TestEnter(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Execute a first process in the container
+	// Execute another process in the container
 	stdinR2, stdinW2, err := os.Pipe()
 	if err != nil {
 		t.Fatal(err)
@@ -327,6 +327,67 @@ func TestEnter(t *testing.T) {
 
 	if pidns != pidns2 {
 		t.Fatal("The second process isn't in the required pid namespace", pidns, pidns2)
+	}
+}
+
+func TestProcessEnv(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+	root, err := newTestRoot()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(root)
+
+	rootfs, err := newRootfs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer remove(rootfs)
+
+	config := newTemplateConfig(rootfs)
+
+	factory, err := libcontainer.New(root, libcontainer.Cgroupfs)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	container, err := factory.Create("test", config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer container.Destroy()
+
+	var stdout bytes.Buffer
+	pEnv := append(standardEnvironment, "FOO=BAR")
+	pconfig := libcontainer.Process{
+		Args:   []string{"sh", "-c", "env"},
+		Env:    pEnv,
+		Stdin:  nil,
+		Stdout: &stdout,
+	}
+	err = container.Start(&pconfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Wait for process
+	waitProcess(&pconfig, t)
+
+	outputEnv := string(stdout.Bytes())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check that the environment has the key/value pair we added
+	if !strings.Contains(outputEnv, "FOO=BAR") {
+		t.Fatal("Environment doesn't have the expected FOO=BAR key/value pair: ", outputEnv)
+	}
+
+	// Make sure that HOME is set
+	if !strings.Contains(outputEnv, "HOME=") {
+		t.Fatal("Environment doesn't have HOME set: ", outputEnv)
 	}
 }
 
