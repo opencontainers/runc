@@ -12,20 +12,13 @@ type FreezerGroup struct {
 }
 
 func (s *FreezerGroup) Apply(d *data) error {
-	switch d.c.Freezer {
-	case configs.Frozen, configs.Thawed:
-		dir, err := d.path("freezer")
-		if err != nil {
-			return err
-		}
+	dir, err := d.join("freezer")
+	if err != nil && !cgroups.IsNotFound(err) {
+		return err
+	}
 
-		if err := s.Set(dir, d.c); err != nil {
-			return err
-		}
-	default:
-		if _, err := d.join("freezer"); err != nil && !cgroups.IsNotFound(err) {
-			return err
-		}
+	if err := s.Set(dir, d.c); err != nil {
+		return err
 	}
 
 	return nil

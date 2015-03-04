@@ -171,11 +171,16 @@ func (m *Manager) Freeze(state configs.FreezerState) error {
 		return err
 	}
 
+	dir, err := d.path("freezer")
+	if err != nil {
+		return err
+	}
+
 	prevState := m.Cgroups.Freezer
 	m.Cgroups.Freezer = state
 
 	freezer := subsystems["freezer"]
-	err = freezer.Apply(d)
+	err = freezer.Set(dir, m.Cgroups)
 	if err != nil {
 		m.Cgroups.Freezer = prevState
 		return err
