@@ -9,19 +9,28 @@ import (
 	"strings"
 
 	"github.com/docker/libcontainer/cgroups"
+	"github.com/docker/libcontainer/configs"
 )
 
 type BlkioGroup struct {
 }
 
-func (s *BlkioGroup) Set(d *data) error {
+func (s *BlkioGroup) Apply(d *data) error {
 	dir, err := d.join("blkio")
 	if err != nil && !cgroups.IsNotFound(err) {
 		return err
 	}
 
-	if d.c.BlkioWeight != 0 {
-		if err := writeFile(dir, "blkio.weight", strconv.FormatInt(d.c.BlkioWeight, 10)); err != nil {
+	if err := s.Set(dir, d.c); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *BlkioGroup) Set(path string, cgroup *configs.Cgroup) error {
+	if cgroup.BlkioWeight != 0 {
+		if err := writeFile(path, "blkio.weight", strconv.FormatInt(cgroup.BlkioWeight, 10)); err != nil {
 			return err
 		}
 	}

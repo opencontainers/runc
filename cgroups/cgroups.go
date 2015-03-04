@@ -31,6 +31,9 @@ type Manager interface {
 	// Returns cgroup paths to save in a state file and to be able to
 	// restore the object later.
 	GetPaths() map[string]string
+
+	// Set the cgroup as configured.
+	Set(container *configs.Config) error
 }
 
 type NotFoundError struct {

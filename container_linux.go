@@ -78,6 +78,12 @@ func (c *linuxContainer) Stats() (*Stats, error) {
 	return stats, nil
 }
 
+func (c *linuxContainer) Set() error {
+	c.m.Lock()
+	defer c.m.Unlock()
+	return c.cgroupManager.Set(c.config)
+}
+
 func (c *linuxContainer) Start(process *Process) error {
 	c.m.Lock()
 	defer c.m.Unlock()

@@ -31,7 +31,9 @@ type subsystem interface {
 	// Removes the cgroup represented by 'data'.
 	Remove(*data) error
 	// Creates and joins the cgroup represented by data.
-	Set(*data) error
+	Apply(*data) error
+	// Set the cgroup represented by cgroup.
+	Set(path string, cgroup *configs.Cgroup) error
 }
 
 type Manager struct {
@@ -91,7 +93,7 @@ func (m *Manager) Apply(pid int) error {
 		}
 	}()
 	for name, sys := range subsystems {
-		if err := sys.Set(d); err != nil {
+		if err := sys.Apply(d); err != nil {
 			return err
 		}
 		// TODO: Apply should, ideally, be reentrant or be broken up into a separate
@@ -129,7 +131,7 @@ func ApplyDevices(c *configs.Cgroup, pid int) error {
 
 	devices := subsystems["devices"]
 
-	return devices.Set(d)
+	return devices.Apply(d)
 }
 
 func (m *Manager) GetStats() (*cgroups.Stats, error) {
@@ -147,6 +149,20 @@ func (m *Manager) GetStats() (*cgroups.Stats, error) {
 	return stats, nil
 }
 
+func (m *Manager) Set(container *configs.Config) error {
+	for name, path := range m.Paths {
+		sys, ok := subsystems[name]
+		if !ok || !cgroups.PathExists(path) {
+			continue
+		}
+		if err := sys.Set(path, container.Cgroups); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // Freeze toggles the container's freezer cgroup depending on the state
 // provided
 func (m *Manager) Freeze(state configs.FreezerState) error {
@@ -159,7 +175,7 @@ func (m *Manager) Freeze(state configs.FreezerState) error {
 	m.Cgroups.Freezer = state
 
 	freezer := subsystems["freezer"]
-	err = freezer.Set(d)
+	err = freezer.Apply(d)
 	if err != nil {
 		m.Cgroups.Freezer = prevState
 		return err
