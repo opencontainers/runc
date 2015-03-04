@@ -26,6 +26,7 @@ func notifyOnOOM(paths map[string]string) (<-chan struct{}, error) {
 	}
 	fd, _, syserr := syscall.RawSyscall(syscall.SYS_EVENTFD2, 0, syscall.FD_CLOEXEC, 0)
 	if syserr != 0 {
+		oomControl.Close()
 		return nil, syserr
 	}
 
