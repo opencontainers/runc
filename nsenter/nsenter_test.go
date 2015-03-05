@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"os/signal"
 	"strings"
-	"syscall"
 	"testing"
 )
 
@@ -67,16 +65,10 @@ func TestNsenterInvalidPid(t *testing.T) {
 }
 
 func TestNsenterDeadPid(t *testing.T) {
-
-	c := make(chan os.Signal)
-	signal.Notify(c, syscall.SIGCHLD)
 	dead_cmd := exec.Command("true")
-	if err := dead_cmd.Start(); err != nil {
+	if err := dead_cmd.Run(); err != nil {
 		t.Fatal(err)
 	}
-	defer dead_cmd.Wait()
-	<-c // dead_cmd is zombie
-
 	args := []string{"nsenter-exec"}
 
 	cmd := &exec.Cmd{
