@@ -104,7 +104,6 @@
 	],
 	"mount_label": "system_u:system_r:svirt_lxc_net_t:s0:c164,c475",
 	"hostname": "nsinit",
-	"console": "",
 	"namespaces": [
 		{
 			"type": "NEWNS",

@@ -104,7 +104,6 @@
 	],
 	"mount_label": "",
 	"hostname": "koye",
-	"console": "",
 	"namespaces": [
 		{
 			"type": "NEWNS",

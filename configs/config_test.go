@@ -2,6 +2,7 @@ package configs
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -41,6 +42,34 @@ func loadConfig(name string) (*Config, error) {
 	var container *Config
 	if err := json.NewDecoder(f).Decode(&container); err != nil {
 		return nil, err
+	}
+
+	// Check that a config doesn't contain extra fields
+	var configMap, abstractMap map[string]interface{}
+
+	if _, err := f.Seek(0, 0); err != nil {
+		return nil, err
+	}
+
+	if err := json.NewDecoder(f).Decode(&abstractMap); err != nil {
+		return nil, err
+	}
+
+	configData, err := json.Marshal(&container)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := json.Unmarshal(configData, &configMap); err != nil {
+		return nil, err
+	}
+
+	for k := range configMap {
+		delete(abstractMap, k)
+	}
+
+	if len(abstractMap) != 0 {
+		return nil, fmt.Errorf("unknown fields: %s", abstractMap)
 	}
 
 	return container, nil

@@ -3,6 +3,7 @@ package libcontainer
 import (
 	"fmt"
 	"io"
+	"math"
 	"os"
 )
 
@@ -54,8 +55,10 @@ func (p Process) Wait() (*os.ProcessState, error) {
 
 // Pid returns the process ID
 func (p Process) Pid() (int, error) {
+	// math.MinInt32 is returned here, because it's invalid value
+	// for the kill() system call.
 	if p.ops == nil {
-		return -1, newGenericError(fmt.Errorf("invalid process"), ProcessNotExecuted)
+		return math.MinInt32, newGenericError(fmt.Errorf("invalid process"), ProcessNotExecuted)
 	}
 	return p.ops.pid(), nil
 }

@@ -121,8 +121,8 @@ func TestExecInRlimit(t *testing.T) {
 		t.Log(err)
 	}
 	out := buffers.Stdout.String()
-	if limit := strings.TrimSpace(out); limit != "1024" {
-		t.Fatalf("expected rlimit to be 1024, got %s", limit)
+	if limit := strings.TrimSpace(out); limit != "1025" {
+		t.Fatalf("expected rlimit to be 1025, got %s", limit)
 	}
 }
 
