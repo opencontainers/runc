@@ -175,6 +175,11 @@ func (c *linuxContainer) newSetnsProcess(p *Process, cmd *exec.Cmd, parentPipe, 
 		fmt.Sprintf("_LIBCONTAINER_INITPID=%d", c.initProcess.pid()),
 		"_LIBCONTAINER_INITTYPE=setns",
 	)
+
+	if p.consolePath != "" {
+		cmd.Env = append(cmd.Env, "_LIBCONTAINER_CONSOLE_PATH="+p.consolePath)
+	}
+
 	// TODO: set on container for process management
 	return &setnsProcess{
 		cmd:         cmd,
