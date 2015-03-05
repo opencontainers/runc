@@ -10,6 +10,7 @@
 #include <sys/wait.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/ioctl.h>
 #include <fcntl.h>
 #include <signal.h>
 #include <setjmp.h>
@@ -27,13 +28,13 @@ struct clone_arg {
 	jmp_buf *env;
 };
 
+#define pr_perror(fmt, ...) fprintf(stderr, "nsenter: " fmt ": %m\n", ##__VA_ARGS__)
+
 static int child_func(void *_arg)
 {
 	struct clone_arg *arg = (struct clone_arg *)_arg;
 	longjmp(*arg->env, 1);
 }
-
-#define pr_perror(fmt, ...) fprintf(stderr, "nsenter: " fmt ": %m\n", ##__VA_ARGS__)
 
 // Use raw setns syscall for versions of glibc that don't include it (namely glibc-2.12)
 #if __GLIBC__ == 2 && __GLIBC_MINOR__ < 14
@@ -65,8 +66,9 @@ void nsexec()
 	const int num = sizeof(namespaces) / sizeof(char *);
 	jmp_buf env;
 	char buf[PATH_MAX], *val;
-	int i, tfd, child, len;
+	int i, tfd, child, len, consolefd = -1;
 	pid_t pid;
+	char *console;
 
 	val = getenv("_LIBCONTAINER_INITPID");
 	if (val == NULL)
@@ -77,6 +79,15 @@ void nsexec()
 	if (strcmp(val, buf)) {
 		pr_perror("Unable to parse _LIBCONTAINER_INITPID");
 		exit(1);
+	}
+
+	console = getenv("_LIBCONTAINER_CONSOLE_PATH");
+	if (console != NULL) {
+		consolefd = open(console, O_RDWR);
+		if (consolefd < 0) {
+			pr_perror("Failed to open console %s", console);
+			exit(1);
+		}
 	}
 
 	/* Check that the specified process exists */
@@ -113,6 +124,28 @@ void nsexec()
 	}
 
 	if (setjmp(env) == 1) {
+		if (setsid() == -1) {
+			pr_perror("setsid failed");
+			exit(1);
+		}
+		if (consolefd != -1) {
+			if (ioctl(consolefd, TIOCSCTTY, 0) == -1) {
+				pr_perror("ioctl TIOCSCTTY failed");
+				exit(1);
+			}
+			if (dup2(consolefd, STDIN_FILENO) != STDIN_FILENO) {
+				pr_perror("Failed to dup 0");
+				exit(1);
+			}
+			if (dup2(consolefd, STDOUT_FILENO) != STDOUT_FILENO) {
+				pr_perror("Failed to dup 1");
+				exit(1);
+			}
+			if (dup2(consolefd, STDERR_FILENO) != STDERR_FILENO) {
+				pr_perror("Failed to dup 2");
+				exit(1);
+			}
+		}
 		// Finish executing, let the Go runtime take over.
 		return;
 	}

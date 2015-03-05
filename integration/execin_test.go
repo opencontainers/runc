@@ -1,9 +1,12 @@
 package integration
 
 import (
+	"bytes"
+	"io"
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/docker/libcontainer"
 )
@@ -171,5 +174,74 @@ func TestExecInError(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "executable file not found") {
 		t.Fatalf("Should be error about not found executable, got %s", err)
+	}
+}
+
+func TestExecInTTY(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+	rootfs, err := newRootfs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer remove(rootfs)
+	config := newTemplateConfig(rootfs)
+	container, err := newContainer(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer container.Destroy()
+
+	// Execute a first process in the container
+	stdinR, stdinW, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	process := &libcontainer.Process{
+		Args:  []string{"cat"},
+		Env:   standardEnvironment,
+		Stdin: stdinR,
+	}
+	err = container.Start(process)
+	stdinR.Close()
+	defer stdinW.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout bytes.Buffer
+	ps := &libcontainer.Process{
+		Args: []string{"ps"},
+		Env:  standardEnvironment,
+	}
+	console, err := ps.NewConsole(0)
+	copy := make(chan struct{})
+	go func() {
+		io.Copy(&stdout, console)
+		close(copy)
+	}()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = container.Start(ps)
+	if err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-time.After(5 * time.Second):
+		t.Fatal("Waiting for copy timed out")
+	case <-copy:
+	}
+	if _, err := ps.Wait(); err != nil {
+		t.Fatal(err)
+	}
+	stdinW.Close()
+	if _, err := process.Wait(); err != nil {
+		t.Log(err)
+	}
+	out := stdout.String()
+	if !strings.Contains(out, "cat") || !strings.Contains(string(out), "ps") {
+		t.Fatalf("unexpected running process, output %q", out)
 	}
 }
