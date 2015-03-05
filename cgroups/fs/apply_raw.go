@@ -54,12 +54,10 @@ func getCgroupRoot() (string, error) {
 		return cgroupRoot, nil
 	}
 
-	// we can pick any subsystem to find the root
-	cpuRoot, err := cgroups.FindCgroupMountpoint("cpu")
+	root, err := cgroups.FindCgroupMountpointDir()
 	if err != nil {
 		return "", err
 	}
-	root := filepath.Dir(cpuRoot)
 
 	if _, err := os.Stat(root); err != nil {
 		return "", err
