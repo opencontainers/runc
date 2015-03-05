@@ -360,10 +360,14 @@ func TestProcessEnv(t *testing.T) {
 	defer container.Destroy()
 
 	var stdout bytes.Buffer
-	pEnv := append(standardEnvironment, "FOO=BAR")
 	pconfig := libcontainer.Process{
-		Args:   []string{"sh", "-c", "env"},
-		Env:    pEnv,
+		Args: []string{"sh", "-c", "env"},
+		Env: []string{
+			"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+			"HOSTNAME=integration",
+			"TERM=xterm",
+			"FOO=BAR",
+		},
 		Stdin:  nil,
 		Stdout: &stdout,
 	}
@@ -386,7 +390,7 @@ func TestProcessEnv(t *testing.T) {
 	}
 
 	// Make sure that HOME is set
-	if !strings.Contains(outputEnv, "HOME=") {
+	if !strings.Contains(outputEnv, "HOME=/root") {
 		t.Fatal("Environment doesn't have HOME set: ", outputEnv)
 	}
 }

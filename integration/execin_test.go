@@ -245,3 +245,72 @@ func TestExecInTTY(t *testing.T) {
 		t.Fatalf("unexpected running process, output %q", out)
 	}
 }
+
+func TestExecInEnvironment(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+	rootfs, err := newRootfs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer remove(rootfs)
+	config := newTemplateConfig(rootfs)
+	container, err := newContainer(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer container.Destroy()
+
+	// Execute a first process in the container
+	stdinR, stdinW, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	process := &libcontainer.Process{
+		Args:  []string{"cat"},
+		Env:   standardEnvironment,
+		Stdin: stdinR,
+	}
+	err = container.Start(process)
+	stdinR.Close()
+	defer stdinW.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	buffers := newStdBuffers()
+	process2 := &libcontainer.Process{
+		Args: []string{"env"},
+		Env: []string{
+			"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+			"DEBUG=true",
+			"DEBUG=false",
+			"ENV=test",
+		},
+		Stdin:  buffers.Stdin,
+		Stdout: buffers.Stdout,
+		Stderr: buffers.Stderr,
+	}
+	err = container.Start(process2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := process2.Wait(); err != nil {
+		out := buffers.Stdout.String()
+		t.Fatal(err, out)
+	}
+	stdinW.Close()
+	if _, err := process.Wait(); err != nil {
+		t.Log(err)
+	}
+	out := buffers.Stdout.String()
+	// check execin's process environment
+	if !strings.Contains(out, "DEBUG=false") ||
+		!strings.Contains(out, "ENV=test") ||
+		!strings.Contains(out, "HOME=/root") ||
+		!strings.Contains(out, "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin") ||
+		strings.Contains(out, "DEBUG=true") {
+		t.Fatalf("unexpected running process, output %q", out)
+	}
+}

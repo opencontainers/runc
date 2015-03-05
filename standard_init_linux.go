@@ -3,6 +3,7 @@
 package libcontainer
 
 import (
+	"os"
 	"syscall"
 
 	"github.com/docker/libcontainer/apparmor"
@@ -89,5 +90,5 @@ func (l *linuxStandardInit) Init() error {
 	if syscall.Getppid() == 1 {
 		return syscall.Kill(syscall.Getpid(), syscall.SIGKILL)
 	}
-	return system.Execv(l.config.Args[0], l.config.Args[0:], l.config.Env)
+	return system.Execv(l.config.Args[0], l.config.Args[0:], os.Environ())
 }
