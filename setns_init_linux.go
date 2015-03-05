@@ -3,6 +3,8 @@
 package libcontainer
 
 import (
+	"os"
+
 	"github.com/docker/libcontainer/apparmor"
 	"github.com/docker/libcontainer/label"
 	"github.com/docker/libcontainer/system"
@@ -29,5 +31,5 @@ func (l *linuxSetnsInit) Init() error {
 			return err
 		}
 	}
-	return system.Execv(l.config.Args[0], l.config.Args[0:], l.config.Env)
+	return system.Execv(l.config.Args[0], l.config.Args[0:], os.Environ())
 }
