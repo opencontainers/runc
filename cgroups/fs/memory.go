@@ -56,6 +56,12 @@ func (s *MemoryGroup) Set(path string, cgroup *configs.Cgroup) error {
 		}
 	}
 
+	if cgroup.OomKillDisable {
+		if err := writeFile(path, "memory.oom_control", "1"); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

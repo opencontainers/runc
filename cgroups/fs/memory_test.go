@@ -173,3 +173,30 @@ func TestMemoryStatsBadMaxUsageFile(t *testing.T) {
 		t.Fatal("Expected failure")
 	}
 }
+
+func TestMemorySetOomControl(t *testing.T) {
+	helper := NewCgroupTestUtil("memory", t)
+	defer helper.cleanup()
+
+	const (
+		oom_kill_disable = 1 // disable oom killer, default is 0
+	)
+
+	helper.writeFileContents(map[string]string{
+		"memory.oom_control": strconv.Itoa(oom_kill_disable),
+	})
+
+	memory := &MemoryGroup{}
+	if err := memory.Set(helper.CgroupPath, helper.CgroupData.c); err != nil {
+		t.Fatal(err)
+	}
+
+	value, err := getCgroupParamUint(helper.CgroupPath, "memory.oom_control")
+	if err != nil {
+		t.Fatalf("Failed to parse memory.oom_control - %s", err)
+	}
+
+	if value != oom_kill_disable {
+		t.Fatalf("Got the wrong value, set memory.oom_control failed.")
+	}
+}
