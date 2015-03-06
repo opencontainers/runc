@@ -51,4 +51,7 @@ type Cgroup struct {
 
 	// Parent slice to use for systemd TODO: remove in favor or parent
 	Slice string `json:"slice"`
+
+	// Whether to disable OOM Killer
+	OomKillDisable bool `json:"oom_kill_disable"`
 }
