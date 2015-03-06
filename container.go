@@ -108,6 +108,18 @@ type Container interface {
 	// Systemerror - System error.
 	Start(process *Process) (err error)
 
+	// Checkpoint checkpoints the running container's state to disk using the criu(8) utility.
+	//
+	// errors:
+	// Systemerror - System error.
+	Checkpoint() error
+
+	// Restore restores the checkpointed container to a running state using the criu(8) utiity.
+	//
+	// errors:
+	// Systemerror - System error.
+	Restore() error
+
 	// Destroys the container after killing all running processes.
 	//
 	// Any event registrations are removed before the container is destroyed.

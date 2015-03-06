@@ -129,6 +129,10 @@ type LinuxFactory struct {
 	// a container.
 	InitArgs []string
 
+	// CriuPath is the path to the criu binary used for checkpoint and restore of
+	// containers.
+	CriuPath string
+
 	// Validator provides validation to container configurations.
 	Validator validate.Validator
 
@@ -161,6 +165,7 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 		config:        config,
 		initPath:      l.InitPath,
 		initArgs:      l.InitArgs,
+		criuPath:      l.CriuPath,
 		cgroupManager: l.NewCgroupsManager(config.Cgroups, nil),
 	}, nil
 }
@@ -184,6 +189,7 @@ func (l *LinuxFactory) Load(id string) (Container, error) {
 		config:        &state.Config,
 		initPath:      l.InitPath,
 		initArgs:      l.InitArgs,
+		criuPath:      l.CriuPath,
 		cgroupManager: l.NewCgroupsManager(state.Config.Cgroups, state.CgroupPaths),
 		root:          containerRoot,
 	}, nil

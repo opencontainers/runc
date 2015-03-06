@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"syscall"
 
@@ -26,6 +27,7 @@ type linuxContainer struct {
 	initPath      string
 	initArgs      []string
 	initProcess   parentProcess
+	criuPath      string
 	m             sync.Mutex
 }
 
@@ -252,6 +254,49 @@ func (c *linuxContainer) Resume() error {
 
 func (c *linuxContainer) NotifyOOM() (<-chan struct{}, error) {
 	return notifyOnOOM(c.cgroupManager.GetPaths())
+}
+
+func (c *linuxContainer) Checkpoint() error {
+	args := []string{
+		"dump", "-v4",
+		"-D", filepath.Join(c.root, "checkpoint"),
+		"-o", "dump.log",
+		"--root", c.config.Rootfs,
+		"--manage-cgroups", "--evasive-devices",
+		"-t", strconv.Itoa(c.initProcess.pid()),
+	}
+	for _, m := range c.config.Mounts {
+		if m.Device == "bind" {
+			args = append(args,
+				"--ext-mount-map", fmt.Sprintf("%s:%s", m.Destination, m.Destination))
+		}
+	}
+	return c.execCriu(args)
+}
+
+func (c *linuxContainer) Restore() error {
+	args := []string{
+		"restore", "-d", "-v4",
+		"-D", filepath.Join(c.root, "checkpoint"),
+		"-o", "restore.log",
+		"--root", c.config.Rootfs,
+		"--manage-cgroups", "--evasive-devices",
+	}
+	for _, m := range c.config.Mounts {
+		if m.Device == "bind" {
+			args = append(args, "--ext-mount-map",
+				fmt.Sprintf("%s:%s", m.Destination, m.Source))
+		}
+	}
+	return c.execCriu(args)
+}
+
+func (c *linuxContainer) execCriu(args []string) error {
+	output, err := exec.Command(c.criuPath, args...).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%s: %s", err, output)
+	}
+	return nil
 }
 
 func (c *linuxContainer) updateState(process parentProcess) error {
