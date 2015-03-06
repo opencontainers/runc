@@ -34,8 +34,8 @@ var (
 	spaceRegex            = regexp.MustCompile(`^([^=]+) (.*)$`)
 	mcsList               = make(map[string]bool)
 	selinuxfs             = "unknown"
-	selinuxEnabled        = false
-	selinuxEnabledChecked = false
+	selinuxEnabled        = false // Stores whether selinux is currently enabled
+	selinuxEnabledChecked = false // Stores whether selinux enablement has been checked or established yet
 )
 
 type SELinuxContext map[string]string
@@ -45,6 +45,11 @@ func SetDisabled() {
 	selinuxEnabled, selinuxEnabledChecked = false, true
 }
 
+// getSelinuxMountPoint returns the path to the mountpoint of an selinuxfs
+// filesystem or an empty string if no mountpoint is found.  Selinuxfs is
+// a proc-like pseudo-filesystem that exposes the selinux policy API to
+// processes.  The existence of an selinuxfs mount is used to determine
+// whether selinux is currently enabled or not.
 func getSelinuxMountPoint() string {
 	if selinuxfs != "unknown" {
 		return selinuxfs
@@ -71,6 +76,7 @@ func getSelinuxMountPoint() string {
 	return selinuxfs
 }
 
+// SelinuxEnabled returns whether selinux is currently enabled.
 func SelinuxEnabled() bool {
 	if selinuxEnabledChecked {
 		return selinuxEnabled
@@ -142,11 +148,12 @@ func readCon(name string) (string, error) {
 	return val, err
 }
 
+// Setfilecon sets the SELinux label for this path or returns an error.
 func Setfilecon(path string, scon string) error {
 	return system.Lsetxattr(path, xattrNameSelinux, []byte(scon), 0)
 }
 
-// Return the SELinux label for this path
+// Getfilecon returns the SELinux label for this path or returns an error.
 func Getfilecon(path string) (string, error) {
 	con, err := system.Lgetxattr(path, xattrNameSelinux)
 	return string(con), err
@@ -160,11 +167,12 @@ func Getfscreatecon() (string, error) {
 	return readCon(fmt.Sprintf("/proc/self/task/%d/attr/fscreate", system.Gettid()))
 }
 
-// Return the SELinux label of the current process thread.
+// Getcon returns the SELinux label of the current process thread, or an error.
 func Getcon() (string, error) {
 	return readCon(fmt.Sprintf("/proc/self/task/%d/attr/current", system.Gettid()))
 }
 
+// Getpidcon returns the SELinux label of the given pid, or an error.
 func Getpidcon(pid int) (string, error) {
 	return readCon(fmt.Sprintf("/proc/%d/attr/current", pid))
 }
