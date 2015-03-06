@@ -110,7 +110,6 @@ func (c *linuxContainer) Start(process *Process) error {
 	}
 	process.ops = parent
 	if doInit {
-
 		c.updateState(parent)
 	}
 	return nil
@@ -257,9 +256,13 @@ func (c *linuxContainer) NotifyOOM() (<-chan struct{}, error) {
 }
 
 func (c *linuxContainer) Checkpoint() error {
+	dir := filepath.Join(c.root, "checkpoint")
+	if err := os.Mkdir(dir, 0655); err != nil {
+		return err
+	}
 	args := []string{
 		"dump", "-v4",
-		"-D", filepath.Join(c.root, "checkpoint"),
+		"-D", dir,
 		"-o", "dump.log",
 		"--root", c.config.Rootfs,
 		"--manage-cgroups", "--evasive-devices",
