@@ -179,7 +179,7 @@ func (l *LinuxFactory) Load(id string) (Container, error) {
 	if err != nil {
 		return nil, err
 	}
-	r := &restoredProcess{
+	r := &nonChildProcess{
 		processPid:       state.InitProcessPid,
 		processStartTime: state.InitProcessStartTime,
 	}
@@ -258,36 +258,4 @@ func (l *LinuxFactory) validateID(id string) error {
 		return newGenericError(fmt.Errorf("Invalid id format: %v", id), InvalidIdFormat)
 	}
 	return nil
-}
-
-// restoredProcess represents a process where the calling process may or may not be
-// the parent process.  This process is created when a factory loads a container from
-// a persisted state.
-type restoredProcess struct {
-	processPid       int
-	processStartTime string
-}
-
-func (p *restoredProcess) start() error {
-	return newGenericError(fmt.Errorf("restored process cannot be started"), SystemError)
-}
-
-func (p *restoredProcess) pid() int {
-	return p.processPid
-}
-
-func (p *restoredProcess) terminate() error {
-	return newGenericError(fmt.Errorf("restored process cannot be terminated"), SystemError)
-}
-
-func (p *restoredProcess) wait() (*os.ProcessState, error) {
-	return nil, newGenericError(fmt.Errorf("restored process cannot be waited on"), SystemError)
-}
-
-func (p *restoredProcess) startTime() (string, error) {
-	return p.processStartTime, nil
-}
-
-func (p *restoredProcess) signal(s os.Signal) error {
-	return newGenericError(fmt.Errorf("restored process cannot be signaled"), SystemError)
 }

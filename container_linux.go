@@ -219,6 +219,12 @@ func newPipe() (parent *os.File, child *os.File, err error) {
 func (c *linuxContainer) Destroy() error {
 	c.m.Lock()
 	defer c.m.Unlock()
+	// Since the state.json and CRIU image files are in the c.root
+	// directory, we should not remove it after checkpoint.  Also,
+	// when     CRIU exits after restore, we should not kill the processes.
+	if _, err := os.Stat(filepath.Join(c.root, "checkpoint")); err == nil {
+		return nil
+	}
 	status, err := c.currentStatus()
 	if err != nil {
 		return err
@@ -256,6 +262,8 @@ func (c *linuxContainer) NotifyOOM() (<-chan struct{}, error) {
 }
 
 func (c *linuxContainer) Checkpoint() error {
+	c.m.Lock()
+	defer c.m.Unlock()
 	dir := filepath.Join(c.root, "checkpoint")
 	if err := os.Mkdir(dir, 0655); err != nil {
 		return err
@@ -274,15 +282,22 @@ func (c *linuxContainer) Checkpoint() error {
 				"--ext-mount-map", fmt.Sprintf("%s:%s", m.Destination, m.Destination))
 		}
 	}
-	return c.execCriu(args)
+	if err := exec.Command(c.criuPath, args...).Run(); err != nil {
+		return err
+	}
+	return nil
 }
 
-func (c *linuxContainer) Restore() error {
+func (c *linuxContainer) Restore() (*Process, error) {
+	c.m.Lock()
+	defer c.m.Unlock()
+	pidfile := filepath.Join(c.root, "restoredpid")
 	args := []string{
-		"restore", "-d", "-v4",
+		"restore", "-v4",
 		"-D", filepath.Join(c.root, "checkpoint"),
 		"-o", "restore.log",
 		"--root", c.config.Rootfs,
+		"--pidfile", pidfile,
 		"--manage-cgroups", "--evasive-devices",
 	}
 	for _, m := range c.config.Mounts {
@@ -291,15 +306,27 @@ func (c *linuxContainer) Restore() error {
 				fmt.Sprintf("%s:%s", m.Destination, m.Source))
 		}
 	}
-	return c.execCriu(args)
-}
-
-func (c *linuxContainer) execCriu(args []string) error {
-	output, err := exec.Command(c.criuPath, args...).CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("%s: %s", err, output)
+	// remount root for restore
+	if err := syscall.Mount(c.config.Rootfs, c.config.Rootfs, "bind", syscall.MS_BIND|syscall.MS_REC, ""); err != nil {
+		return nil, err
 	}
-	return nil
+	defer syscall.Unmount(c.config.Rootfs, syscall.MNT_DETACH)
+	cmd := exec.Command(c.criuPath, args...)
+	if err := cmd.Start(); err != nil {
+		return nil, err
+	}
+	r, err := newRestoredProcess(pidfile, cmd)
+	if err != nil {
+		return nil, err
+	}
+	// TODO: crosbymichael restore previous process information by saving the init process information in
+	// the conatiner's state file or separate process state files.
+	if err := c.updateState(r); err != nil {
+		return nil, err
+	}
+	return &Process{
+		ops: r,
+	}, nil
 }
 
 func (c *linuxContainer) updateState(process parentProcess) error {

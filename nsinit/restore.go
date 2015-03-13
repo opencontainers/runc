@@ -1,6 +1,13 @@
 package main
 
-import "github.com/codegangsta/cli"
+import (
+	"os"
+	"os/exec"
+	"syscall"
+
+	"github.com/codegangsta/cli"
+	"github.com/docker/libcontainer/utils"
+)
 
 var restoreCommand = cli.Command{
 	Name:  "restore",
@@ -13,8 +20,24 @@ var restoreCommand = cli.Command{
 		if err != nil {
 			fatal(err)
 		}
-		if err := container.Restore(); err != nil {
+		process, err := container.Restore()
+		if err != nil {
 			fatal(err)
 		}
+		go handleSignals(process, &tty{})
+		status, err := process.Wait()
+		if err != nil {
+			exitError, ok := err.(*exec.ExitError)
+			if ok {
+				status = exitError.ProcessState
+			} else {
+				container.Destroy()
+				fatal(err)
+			}
+		}
+		if err := container.Destroy(); err != nil {
+			fatal(err)
+		}
+		os.Exit(utils.ExitStatus(status.Sys().(syscall.WaitStatus)))
 	},
 }

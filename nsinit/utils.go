@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/Sirupsen/logrus"
 
@@ -40,7 +41,12 @@ func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
 			logrus.Warn("systemd cgroup flag passed, but systemd support for managing cgroups is not available.")
 		}
 	}
-	return libcontainer.New(context.GlobalString("root"), cgm, func(l *libcontainer.LinuxFactory) error {
+	root := context.GlobalString("root")
+	abs, err := filepath.Abs(root)
+	if err != nil {
+		return nil, err
+	}
+	return libcontainer.New(abs, libcontainer.Cgroupfs, func(l *libcontainer.LinuxFactory) error {
 		l.CriuPath = context.GlobalString("criu")
 		return nil
 	})

@@ -118,7 +118,7 @@ type Container interface {
 	//
 	// errors:
 	// Systemerror - System error.
-	Restore() error
+	Restore() (*Process, error)
 
 	// Destroys the container after killing all running processes.
 	//
