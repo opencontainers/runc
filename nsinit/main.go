@@ -16,7 +16,7 @@ func main() {
 		cli.BoolFlag{Name: "debug", Usage: "enable debug output in the logs"},
 		cli.StringFlag{Name: "root", Value: "/var/run/nsinit", Usage: "root directory for containers"},
 		cli.StringFlag{Name: "log-file", Usage: "set the log file to output logs to"},
-		cli.StringFlag{Name: "criu", Usage: "path to the criu binary for checkpoint and restore"},
+		cli.StringFlag{Name: "criu", Value: "criu", Usage: "path to the criu binary for checkpoint and restore"},
 	}
 	app.Commands = []cli.Command{
 		checkpointCommand,
