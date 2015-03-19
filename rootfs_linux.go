@@ -24,7 +24,7 @@ func setupRootfs(config *configs.Config, console *linuxConsole) (err error) {
 		return newSystemError(err)
 	}
 	for _, m := range config.Mounts {
-		if err := mount(m, config.Rootfs, config.MountLabel); err != nil {
+		if err := mountToRootfs(m, config.Rootfs, config.MountLabel); err != nil {
 			return newSystemError(err)
 		}
 	}
@@ -62,7 +62,7 @@ func setupRootfs(config *configs.Config, console *linuxConsole) (err error) {
 	return nil
 }
 
-func mount(m *configs.Mount, rootfs, mountLabel string) error {
+func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 	var (
 		dest = m.Destination
 		data = label.FormatMountLabel(m.Data, mountLabel)
