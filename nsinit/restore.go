@@ -6,6 +6,7 @@ import (
 	"syscall"
 
 	"github.com/codegangsta/cli"
+	"github.com/docker/libcontainer"
 	"github.com/docker/libcontainer/utils"
 )
 
@@ -20,11 +21,28 @@ var restoreCommand = cli.Command{
 		if err != nil {
 			fatal(err)
 		}
-		process, err := container.Restore()
+		process := &libcontainer.Process{
+			Stdin:  os.Stdin,
+			Stdout: os.Stdout,
+			Stderr: os.Stderr,
+		}
+		//rootuid, err := config.HostUID()
+		//if err != nil {
+			//fatal(err)
+		//}
+		rootuid := 0	// XXX
+		tty, err := newTty(context, process, rootuid)
 		if err != nil {
 			fatal(err)
 		}
-		go handleSignals(process, &tty{})
+		if err := tty.attach(process); err != nil {
+			fatal(err)
+		}
+		err = container.Restore(process)
+		if err != nil {
+			fatal(err)
+		}
+		go handleSignals(process, tty)
 		status, err := process.Wait()
 		if err != nil {
 			exitError, ok := err.(*exec.ExitError)

@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"syscall"
 
@@ -261,11 +262,23 @@ func (c *linuxContainer) NotifyOOM() (<-chan struct{}, error) {
 	return notifyOnOOM(c.cgroupManager.GetPaths())
 }
 
+// XXX debug support, remove when debugging done.
+func addArgsFromEnv(evar string, args *[]string) {
+	if e := os.Getenv(evar); e != "" {
+		for _, f := range strings.Fields(e) {
+			*args = append(*args, f)
+		}
+	}
+	fmt.Printf(">>> criu %v\n", *args)
+}
+
 func (c *linuxContainer) Checkpoint() error {
 	c.m.Lock()
 	defer c.m.Unlock()
 	dir := filepath.Join(c.root, "checkpoint")
-	if err := os.Mkdir(dir, 0655); err != nil {
+	// Since a container can be C/R'ed multiple times,
+	// the checkpoint directory may already exist.
+	if err := os.Mkdir(dir, 0655); err != nil && !os.IsExist(err) {
 		return err
 	}
 	args := []string{
@@ -282,16 +295,27 @@ func (c *linuxContainer) Checkpoint() error {
 				"--ext-mount-map", fmt.Sprintf("%s:%s", m.Destination, m.Destination))
 		}
 	}
+	addArgsFromEnv("CRIU_C", &args)	// XXX debug
 	if err := exec.Command(c.criuPath, args...).Run(); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (c *linuxContainer) Restore() (*Process, error) {
+func (c *linuxContainer) Restore(process *Process) error {
 	c.m.Lock()
 	defer c.m.Unlock()
+
 	pidfile := filepath.Join(c.root, "restoredpid")
+	// Make sure pidfile doesn't already exist from a
+	// previous restore.  Otherwise, CRIU will fail.
+	if err := os.Remove(pidfile); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	// XXX We should do the restore in detached mode (-d).
+	//     To do this, we need an "init" process that executes
+	//     CRIU and waits for it, reaping its children, and
+	//     waiting for the container.
 	args := []string{
 		"restore", "-v4",
 		"-D", filepath.Join(c.root, "checkpoint"),
@@ -306,27 +330,43 @@ func (c *linuxContainer) Restore() (*Process, error) {
 				fmt.Sprintf("%s:%s", m.Destination, m.Source))
 		}
 	}
+	// Pipes that were previously set up for std{in,out,err}
+	// were removed after checkpoint.  Use the new ones.
+	for i := 0; i < 3; i++ {
+		if s := c.config.StdFds[i]; strings.Contains(s, "pipe:") {
+			args = append(args, "--inherit-fd", fmt.Sprintf("fd[%d]:%s", i, s))
+		}
+	}
+	addArgsFromEnv("CRIU_R", &args)	// XXX debug
+
+	// XXX This doesn't really belong here as our caller should have
+	//     already set up root (including devices) and mounted it.
+/*
 	// remount root for restore
 	if err := syscall.Mount(c.config.Rootfs, c.config.Rootfs, "bind", syscall.MS_BIND|syscall.MS_REC, ""); err != nil {
-		return nil, err
+		return err
 	}
+*/
+
 	defer syscall.Unmount(c.config.Rootfs, syscall.MNT_DETACH)
 	cmd := exec.Command(c.criuPath, args...)
+	cmd.Stdin = process.Stdin
+	cmd.Stdout = process.Stdout
+	cmd.Stderr = process.Stderr
 	if err := cmd.Start(); err != nil {
-		return nil, err
+		return err
 	}
 	r, err := newRestoredProcess(pidfile, cmd)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	// TODO: crosbymichael restore previous process information by saving the init process information in
 	// the conatiner's state file or separate process state files.
 	if err := c.updateState(r); err != nil {
-		return nil, err
+		return err
 	}
-	return &Process{
-		ops: r,
-	}, nil
+	process.ops = r
+	return nil
 }
 
 func (c *linuxContainer) updateState(process parentProcess) error {
