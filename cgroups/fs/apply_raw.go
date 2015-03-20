@@ -1,8 +1,11 @@
 package fs
 
 import (
+	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 	"sync"
@@ -75,9 +78,12 @@ type data struct {
 }
 
 func (m *Manager) Apply(pid int) error {
+
 	if m.Cgroups == nil {
 		return nil
 	}
+
+	var c = m.Cgroups
 
 	d, err := getCgroupData(m.Cgroups, pid)
 	if err != nil {
@@ -107,6 +113,28 @@ func (m *Manager) Apply(pid int) error {
 		paths[name] = p
 	}
 	m.Paths = paths
+
+	var cpuShares int64
+
+	fd, err := os.Open(path.Join(m.Paths["cpu"], "cpu.shares"))
+	if err != nil {
+		return err
+	}
+
+	_, err = fmt.Fscanf(fd, "%d", &cpuShares)
+	if err != nil && err != io.EOF {
+		return err
+	}
+
+	fd.Close()
+
+	if c.CpuShares != 0 {
+		if c.CpuShares > cpuShares {
+			return fmt.Errorf("The maximum allowed cpu-shares is %d", cpuShares)
+		} else if c.CpuShares < cpuShares {
+			return fmt.Errorf("The minimum allowed cpu-shares is %d", cpuShares)
+		}
+	}
 
 	return nil
 }
