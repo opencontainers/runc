@@ -235,6 +235,12 @@ func (raw *data) parent(subsystem string) (string, error) {
 }
 
 func (raw *data) path(subsystem string) (string, error) {
+	_, err := cgroups.FindCgroupMountpoint(subsystem)
+	// If we didn't mount the subsystem, there is no point we make the path.
+	if err != nil {
+		return "", err
+	}
+
 	// If the cgroup name/path is absolute do not look relative to the cgroup of the init process.
 	if filepath.IsAbs(raw.cgroup) {
 		return filepath.Join(raw.root, subsystem, raw.cgroup), nil
