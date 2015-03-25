@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
-	"time"
 
 	"github.com/docker/libcontainer/system"
 )
@@ -18,21 +17,8 @@ func newRestoredProcess(pidfile string, criuCommand *exec.Cmd) (*restoredProcess
 		data []byte
 		err  error
 	)
-	// XXX The loop below should be replaced by a wait
-	//     on CRIU to complete.  See the comment at the
-	//     begining of Restore() in "container_linux.go.
-	for i := 0; i < 20; i++ {
-		data, err = ioutil.ReadFile(pidfile)
-		if err == nil {
-			break
-		}
-		if !os.IsNotExist(err) {
-			return nil, err
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
-	// Did CRIU fail?
-	if os.IsNotExist(err) {
+	data, err = ioutil.ReadFile(pidfile)
+	if err != nil {
 		return nil, err
 	}
 	if len(data) == 0 {

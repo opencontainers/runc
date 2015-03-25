@@ -356,10 +356,21 @@ func (c *linuxContainer) Restore(process *Process) error {
 	if err := cmd.Start(); err != nil {
 		return err
 	}
+
+	// cmd.Wait() waits cmd.goroutines which are used for proxying file descriptors.
+	// Here we want to wait only the CRIU process.
+	st, err := cmd.Process.Wait()
+	if err != nil {
+		return err
+	}
+	if !st.Success() {
+		return fmt.Errorf("criu failed: %s", st.String())
+	}
 	r, err := newRestoredProcess(pidfile, cmd)
 	if err != nil {
 		return err
 	}
+
 	// TODO: crosbymichael restore previous process information by saving the init process information in
 	// the conatiner's state file or separate process state files.
 	if err := c.updateState(r); err != nil {
