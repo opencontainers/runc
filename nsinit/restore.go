@@ -28,9 +28,9 @@ var restoreCommand = cli.Command{
 		}
 		//rootuid, err := config.HostUID()
 		//if err != nil {
-			//fatal(err)
+		//fatal(err)
 		//}
-		rootuid := 0	// XXX
+		rootuid := 0 // XXX
 		tty, err := newTty(context, process, rootuid)
 		if err != nil {
 			fatal(err)

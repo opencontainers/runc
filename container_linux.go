@@ -295,7 +295,7 @@ func (c *linuxContainer) Checkpoint() error {
 				"--ext-mount-map", fmt.Sprintf("%s:%s", m.Destination, m.Destination))
 		}
 	}
-	addArgsFromEnv("CRIU_C", &args)	// XXX debug
+	addArgsFromEnv("CRIU_C", &args) // XXX debug
 	if err := exec.Command(c.criuPath, args...).Run(); err != nil {
 		return err
 	}
@@ -337,16 +337,16 @@ func (c *linuxContainer) Restore(process *Process) error {
 			args = append(args, "--inherit-fd", fmt.Sprintf("fd[%d]:%s", i, s))
 		}
 	}
-	addArgsFromEnv("CRIU_R", &args)	// XXX debug
+	addArgsFromEnv("CRIU_R", &args) // XXX debug
 
 	// XXX This doesn't really belong here as our caller should have
 	//     already set up root (including devices) and mounted it.
-/*
-	// remount root for restore
-	if err := syscall.Mount(c.config.Rootfs, c.config.Rootfs, "bind", syscall.MS_BIND|syscall.MS_REC, ""); err != nil {
-		return err
-	}
-*/
+	/*
+		// remount root for restore
+		if err := syscall.Mount(c.config.Rootfs, c.config.Rootfs, "bind", syscall.MS_BIND|syscall.MS_REC, ""); err != nil {
+			return err
+		}
+	*/
 
 	defer syscall.Unmount(c.config.Rootfs, syscall.MNT_DETACH)
 	cmd := exec.Command(c.criuPath, args...)
