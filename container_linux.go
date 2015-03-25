@@ -346,9 +346,9 @@ func (c *linuxContainer) Restore(process *Process) error {
 		if err := syscall.Mount(c.config.Rootfs, c.config.Rootfs, "bind", syscall.MS_BIND|syscall.MS_REC, ""); err != nil {
 			return err
 		}
-	*/
 
-	defer syscall.Unmount(c.config.Rootfs, syscall.MNT_DETACH)
+		defer syscall.Unmount(c.config.Rootfs, syscall.MNT_DETACH)
+	*/
 	cmd := exec.Command(c.criuPath, args...)
 	cmd.Stdin = process.Stdin
 	cmd.Stdout = process.Stdout
