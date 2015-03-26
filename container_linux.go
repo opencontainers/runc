@@ -5,6 +5,7 @@ package libcontainer
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -16,6 +17,8 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/libcontainer/cgroups"
 	"github.com/docker/libcontainer/configs"
+	"github.com/docker/libcontainer/criurpc"
+	"github.com/golang/protobuf/proto"
 )
 
 const stdioFdCount = 3
@@ -299,6 +302,7 @@ func (c *linuxContainer) Checkpoint() error {
 	if err := exec.Command(c.criuPath, args...).Run(); err != nil {
 		return err
 	}
+	log.Info("Checkpointed")
 	return nil
 }
 
@@ -312,34 +316,56 @@ func (c *linuxContainer) Restore(process *Process) error {
 	if err := os.Remove(pidfile); err != nil && !os.IsNotExist(err) {
 		return err
 	}
-	// XXX We should do the restore in detached mode (-d).
-	//     To do this, we need an "init" process that executes
-	//     CRIU and waits for it, reaping its children, and
-	//     waiting for the container.
-	args := []string{
-		"restore", "-v4",
-		"-D", filepath.Join(c.root, "checkpoint"),
-		"-o", "restore.log",
-		"--restore-detached",
-		"--restore-sibling",
-		"--root", c.config.Rootfs,
-		"--pidfile", pidfile,
-		"--manage-cgroups", "--evasive-devices",
+
+	fds, err := syscall.Socketpair(syscall.AF_LOCAL, syscall.SOCK_SEQPACKET|syscall.SOCK_CLOEXEC, 0)
+	if err != nil {
+		return err
+	}
+
+	criuClient := os.NewFile(uintptr(fds[0]), "criu-transport-client")
+	criuServer := os.NewFile(uintptr(fds[1]), "criu-transport-server")
+	defer criuClient.Close()
+	defer criuServer.Close()
+
+	imagePath := filepath.Join(c.root, "checkpoint")
+	imageDir, err := os.Open(imagePath)
+	if err != nil {
+		return err
+	}
+	defer imageDir.Close()
+	t := criurpc.CriuReqType_RESTORE
+	req := criurpc.CriuReq{
+		Type: &t,
+		Opts: &criurpc.CriuOpts{
+			ImagesDirFd:    proto.Int32(int32(imageDir.Fd())),
+			EvasiveDevices: proto.Bool(true),
+			LogLevel:       proto.Int32(4),
+			LogFile:        proto.String("restore.log"),
+			RstSibling:     proto.Bool(true),
+			Root:           proto.String(c.config.Rootfs),
+			ManageCgroups:  proto.Bool(true),
+			NotifyScripts:  proto.Bool(true),
+		},
 	}
 	for _, m := range c.config.Mounts {
 		if m.Device == "bind" {
-			args = append(args, "--ext-mount-map",
-				fmt.Sprintf("%s:%s", m.Destination, m.Source))
+			extMnt := new(criurpc.ExtMountMap)
+			extMnt.Key = proto.String(m.Destination)
+			extMnt.Val = proto.String(m.Source)
+			req.Opts.ExtMnt = append(req.Opts.ExtMnt, extMnt)
 		}
 	}
 	// Pipes that were previously set up for std{in,out,err}
 	// were removed after checkpoint.  Use the new ones.
-	for i := 0; i < 3; i++ {
+	var i int32
+	for i = 0; i < 3; i++ {
 		if s := c.config.StdFds[i]; strings.Contains(s, "pipe:") {
-			args = append(args, "--inherit-fd", fmt.Sprintf("fd[%d]:%s", i, s))
+			inheritFd := new(criurpc.InheritFd)
+			inheritFd.Key = proto.String(s)
+			inheritFd.Fd = proto.Int32(i)
+			req.Opts.InheritFd = append(req.Opts.InheritFd, inheritFd)
 		}
 	}
-	addArgsFromEnv("CRIU_R", &args) // XXX debug
 
 	// XXX This doesn't really belong here as our caller should have
 	//     already set up root (including devices) and mounted it.
@@ -351,12 +377,125 @@ func (c *linuxContainer) Restore(process *Process) error {
 
 		defer syscall.Unmount(c.config.Rootfs, syscall.MNT_DETACH)
 	*/
+	args := []string{"swrk", "3"}
 	cmd := exec.Command(c.criuPath, args...)
 	cmd.Stdin = process.Stdin
 	cmd.Stdout = process.Stdout
 	cmd.Stderr = process.Stderr
+	cmd.ExtraFiles = append(cmd.ExtraFiles, criuServer)
+
 	if err := cmd.Start(); err != nil {
 		return err
+	}
+	criuServer.Close()
+
+	defer func() {
+		if err != nil {
+			log.Errorf(filepath.Join(imagePath, "restore.log"))
+		}
+		criuClient.Close()
+		st, err := cmd.Process.Wait()
+		if err != nil {
+			return
+		}
+		log.Warn(st.String())
+	}()
+
+	err = saveStdPipes(cmd.Process.Pid, c.config)
+	if err != nil {
+		return err
+	}
+
+	data, err := proto.Marshal(&req)
+	if err != nil {
+		return err
+	}
+	_, err = criuClient.Write(data)
+	if err != nil {
+		return err
+	}
+
+	var pid int32 = math.MinInt32
+
+	buf := make([]byte, 10*4096)
+	for true {
+		n, err := criuClient.Read(buf)
+		if err != nil {
+			return err
+		}
+		if n == 0 {
+			return fmt.Errorf("unexpected EOF")
+		}
+		if n == len(buf) {
+			return fmt.Errorf("buffer is too small")
+		}
+
+		resp := new(criurpc.CriuResp)
+		err = proto.Unmarshal(buf[:n], resp)
+		if err != nil {
+			return err
+		}
+
+		log.Debug(resp.String())
+		if !resp.GetSuccess() {
+			return fmt.Errorf("criu failed: type %d errno %d", t, resp.GetCrErrno())
+		}
+
+		t = resp.GetType()
+		switch {
+		case t == criurpc.CriuReqType_NOTIFY:
+			notify := resp.GetNotify()
+			if notify == nil {
+				return fmt.Errorf("invalid response: %s", resp.String())
+			}
+
+			if notify.GetScript() == "setup-namespaces" {
+				pid = notify.GetPid()
+			}
+
+			if notify.GetScript() == "post-restore" {
+				// In many case, restore from the images can be done only once.
+				// If we want to create snapshots, we need to snapshot the file system.
+				os.RemoveAll(imagePath)
+
+				r, err := newRestoredProcess(int(pid))
+				if err != nil {
+					return err
+				}
+
+				// TODO: crosbymichael restore previous process information by saving the init process information in
+				// the container's state file or separate process state files.
+				if err := c.updateState(r); err != nil {
+					return err
+				}
+				process.ops = r
+			}
+
+			t = criurpc.CriuReqType_NOTIFY
+			req = criurpc.CriuReq{
+				Type:          &t,
+				NotifySuccess: proto.Bool(true),
+			}
+			data, err = proto.Marshal(&req)
+			if err != nil {
+				return err
+			}
+			n, err = criuClient.Write(data)
+			if err != nil {
+				return err
+			}
+			continue
+		case t == criurpc.CriuReqType_RESTORE:
+			restore := resp.GetRestore()
+			if restore != nil {
+				pid = restore.GetPid()
+				break
+			}
+		default:
+			return fmt.Errorf("unable to parse the response %s", resp.String())
+		}
+
+		break
 	}
 
 	// cmd.Wait() waits cmd.goroutines which are used for proxying file descriptors.
@@ -368,17 +507,7 @@ func (c *linuxContainer) Restore(process *Process) error {
 	if !st.Success() {
 		return fmt.Errorf("criu failed: %s", st.String())
 	}
-	r, err := newRestoredProcess(pidfile)
-	if err != nil {
-		return err
-	}
-
-	// TODO: crosbymichael restore previous process information by saving the init process information in
-	// the conatiner's state file or separate process state files.
-	if err := c.updateState(r); err != nil {
-		return err
-	}
-	process.ops = r
+	log.Info("Restored")
 	return nil
 }
 

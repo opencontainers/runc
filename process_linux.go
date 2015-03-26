@@ -13,6 +13,7 @@ import (
 	"syscall"
 
 	"github.com/docker/libcontainer/cgroups"
+	"github.com/docker/libcontainer/configs"
 	"github.com/docker/libcontainer/system"
 )
 
@@ -166,7 +167,7 @@ func (p *initProcess) start() error {
 	// Save the standard descriptor names before the container process
 	// can potentially move them (e.g., via dup2()).  If we don't do this now,
 	// we won't know at checkpoint time which file descriptor to look up.
-	if err = p.saveStdPipes(); err != nil {
+	if err = saveStdPipes(p.pid(), p.config.Config); err != nil {
 		return newSystemError(err)
 	}
 	// Do this before syncing with child so that no children
@@ -262,15 +263,15 @@ func (p *initProcess) signal(sig os.Signal) error {
 // Save process's std{in,out,err} file names as these will be
 // removed if/when the container is checkpointed.  We will need
 // this info to restore the container.
-func (p *initProcess) saveStdPipes() error {
-	dirPath := filepath.Join("/proc", strconv.Itoa(p.pid()), "/fd")
+func saveStdPipes(pid int, config *configs.Config) error {
+	dirPath := filepath.Join("/proc", strconv.Itoa(pid), "/fd")
 	for i := 0; i < 3; i++ {
 		f := filepath.Join(dirPath, strconv.Itoa(i))
 		target, err := os.Readlink(f)
 		if err != nil {
 			return err
 		}
-		p.config.Config.StdFds[i] = target
+		config.StdFds[i] = target
 	}
 	return nil
 }

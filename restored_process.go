@@ -4,29 +4,15 @@ package libcontainer
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
-	"strconv"
 
 	"github.com/docker/libcontainer/system"
 )
 
-func newRestoredProcess(pidfile string) (*restoredProcess, error) {
+func newRestoredProcess(pid int) (*restoredProcess, error) {
 	var (
-		data []byte
-		err  error
+		err error
 	)
-	data, err = ioutil.ReadFile(pidfile)
-	if err != nil {
-		return nil, err
-	}
-	if len(data) == 0 {
-		return nil, fmt.Errorf("empty pidfile, restore failed")
-	}
-	pid, err := strconv.Atoi(string(data))
-	if err != nil {
-		return nil, err
-	}
 	proc, err := os.FindProcess(pid)
 	if err != nil {
 		return nil, err
