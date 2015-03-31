@@ -19,6 +19,8 @@ type Cgroup struct {
 
 	AllowedDevices []*Device `json:"allowed_devices"`
 
+	DeniedDevices []*Device `json:"denied_devices"`
+
 	// Memory limit (in bytes)
 	Memory int64 `json:"memory"`
 
