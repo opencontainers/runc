@@ -139,7 +139,7 @@ func (c *linuxContainer) commandTemplate(p *Process, childPipe *os.File) (*exec.
 	if cmd.SysProcAttr == nil {
 		cmd.SysProcAttr = &syscall.SysProcAttr{}
 	}
-	cmd.ExtraFiles = []*os.File{childPipe}
+	cmd.ExtraFiles = append([]*os.File{childPipe}, p.ExtraFiles...)
 	// NOTE: when running a container with no PID namespace and the parent process spawning the container is
 	// PID1 the pdeathsig is being delivered to the container's init process by the kernel for some reason
 	// even with the parent still running.
@@ -195,13 +195,14 @@ func (c *linuxContainer) newSetnsProcess(p *Process, cmd *exec.Cmd, parentPipe, 
 
 func (c *linuxContainer) newInitConfig(process *Process) *initConfig {
 	return &initConfig{
-		Config:       c.config,
-		Args:         process.Args,
-		Env:          process.Env,
-		User:         process.User,
-		Cwd:          process.Cwd,
-		Console:      process.consolePath,
-		Capabilities: process.Capabilities,
+		Config:           c.config,
+		Args:             process.Args,
+		Env:              process.Env,
+		User:             process.User,
+		Cwd:              process.Cwd,
+		Console:          process.consolePath,
+		Capabilities:     process.Capabilities,
+		PassedFilesCount: len(process.ExtraFiles),
 	}
 }
 
