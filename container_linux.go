@@ -275,9 +275,34 @@ func addArgsFromEnv(evar string, args *[]string) {
 	fmt.Printf(">>> criu %v\n", *args)
 }
 
+func (c *linuxContainer) checkCriuVersion() error {
+	var x, y, z int
+
+	out, err := exec.Command(c.criuPath, "-V").Output()
+	if err != nil {
+		return err
+	}
+
+	n, err := fmt.Sscanf(string(out), "Version: %d.%d.%d", &x, &y, &z)
+	if n < 2 || err != nil {
+		return fmt.Errorf("Unable to parse the CRIU version: %s", out)
+	}
+
+	if x*10000+y*100+z < 10501 {
+		return fmt.Errorf("CRIU version must be 1.5.1 or higher")
+	}
+
+	return nil
+}
+
 func (c *linuxContainer) Checkpoint() error {
 	c.m.Lock()
 	defer c.m.Unlock()
+
+	if err := c.checkCriuVersion(); err != nil {
+		return err
+	}
+
 	dir := filepath.Join(c.root, "checkpoint")
 	// Since a container can be C/R'ed multiple times,
 	// the checkpoint directory may already exist.
@@ -309,6 +334,10 @@ func (c *linuxContainer) Checkpoint() error {
 func (c *linuxContainer) Restore(process *Process) error {
 	c.m.Lock()
 	defer c.m.Unlock()
+
+	if err := c.checkCriuVersion(); err != nil {
+		return err
+	}
 
 	pidfile := filepath.Join(c.root, "restoredpid")
 	// Make sure pidfile doesn't already exist from a
