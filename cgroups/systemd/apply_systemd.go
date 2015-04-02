@@ -303,21 +303,15 @@ func (m *Manager) Freeze(state configs.FreezerState) error {
 		return err
 	}
 
-	if err := ioutil.WriteFile(filepath.Join(path, "freezer.state"), []byte(state), 0); err != nil {
+	prevState := m.Cgroups.Freezer
+	m.Cgroups.Freezer = state
+
+	freezer := subsystems["freezer"]
+	err = freezer.Set(path, m.Cgroups)
+	if err != nil {
+		m.Cgroups.Freezer = prevState
 		return err
 	}
-	for {
-		state_, err := ioutil.ReadFile(filepath.Join(path, "freezer.state"))
-		if err != nil {
-			return err
-		}
-		if string(state) == string(bytes.TrimSpace(state_)) {
-			break
-		}
-		time.Sleep(1 * time.Millisecond)
-	}
-
-	m.Cgroups.Freezer = state
 
 	return nil
 }
