@@ -303,15 +303,20 @@ func (c *linuxContainer) Checkpoint() error {
 		return err
 	}
 
-	dir := filepath.Join(c.root, "checkpoint")
+	imagePath := filepath.Join(c.root, "checkpoint")
 	// Since a container can be C/R'ed multiple times,
 	// the checkpoint directory may already exist.
-	if err := os.Mkdir(dir, 0655); err != nil && !os.IsExist(err) {
+	if err := os.Mkdir(imagePath, 0655); err != nil && !os.IsExist(err) {
+		return err
+	}
+	workPath := filepath.Join(c.root, "criu.work")
+	if err := os.Mkdir(workPath, 0655); err != nil && !os.IsExist(err) {
 		return err
 	}
 	args := []string{
 		"dump", "-v4",
-		"-D", dir,
+		"--images-dir", imagePath,
+		"--work-dir", workPath,
 		"-o", "dump.log",
 		"--root", c.config.Rootfs,
 		"--manage-cgroups", "--evasive-devices",
@@ -356,6 +361,18 @@ func (c *linuxContainer) Restore(process *Process) error {
 	defer criuClient.Close()
 	defer criuServer.Close()
 
+	workPath := filepath.Join(c.root, "criu.work")
+	// Since a container can be C/R'ed multiple times,
+	// the work directory may already exist.
+	if err := os.Mkdir(workPath, 0655); err != nil && !os.IsExist(err) {
+		return err
+	}
+	workDir, err := os.Open(workPath)
+	if err != nil {
+		return err
+	}
+	defer workDir.Close()
+
 	imagePath := filepath.Join(c.root, "checkpoint")
 	imageDir, err := os.Open(imagePath)
 	if err != nil {
@@ -367,6 +384,7 @@ func (c *linuxContainer) Restore(process *Process) error {
 		Type: &t,
 		Opts: &criurpc.CriuOpts{
 			ImagesDirFd:    proto.Int32(int32(imageDir.Fd())),
+			WorkDirFd:      proto.Int32(int32(workDir.Fd())),
 			EvasiveDevices: proto.Bool(true),
 			LogLevel:       proto.Int32(4),
 			LogFile:        proto.String("restore.log"),
