@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/docker/libcontainer"
+	"github.com/docker/libcontainer/cgroups/systemd"
 	"github.com/docker/libcontainer/configs"
 )
 
@@ -481,6 +482,17 @@ func TestProcessCaps(t *testing.T) {
 }
 
 func TestFreeze(t *testing.T) {
+	testFreeze(t, false)
+}
+
+func TestSystemdFreeze(t *testing.T) {
+	if !systemd.UseSystemd() {
+		t.Skip("Systemd is unsupported")
+	}
+	testFreeze(t, true)
+}
+
+func testFreeze(t *testing.T, systemd bool) {
 	if testing.Short() {
 		return
 	}
@@ -497,6 +509,9 @@ func TestFreeze(t *testing.T) {
 	defer remove(rootfs)
 
 	config := newTemplateConfig(rootfs)
+	if systemd {
+		config.Cgroups.Slice = "system.slice"
+	}
 
 	factory, err := libcontainer.New(root, libcontainer.Cgroupfs)
 	if err != nil {
