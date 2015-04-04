@@ -16,22 +16,16 @@ func TestExecIn(t *testing.T) {
 		return
 	}
 	rootfs, err := newRootfs()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer remove(rootfs)
 	config := newTemplateConfig(rootfs)
 	container, err := newContainer(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer container.Destroy()
 
 	// Execute a first process in the container
 	stdinR, stdinW, err := os.Pipe()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	process := &libcontainer.Process{
 		Args:  []string{"cat"},
 		Env:   standardEnvironment,
@@ -40,9 +34,7 @@ func TestExecIn(t *testing.T) {
 	err = container.Start(process)
 	stdinR.Close()
 	defer stdinW.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	buffers := newStdBuffers()
 	ps := &libcontainer.Process{
@@ -53,12 +45,9 @@ func TestExecIn(t *testing.T) {
 		Stderr: buffers.Stderr,
 	}
 	err = container.Start(ps)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := ps.Wait(); err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
+	_, err = ps.Wait()
+	ok(t, err)
 	stdinW.Close()
 	if _, err := process.Wait(); err != nil {
 		t.Log(err)
@@ -74,21 +63,15 @@ func TestExecInRlimit(t *testing.T) {
 		return
 	}
 	rootfs, err := newRootfs()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer remove(rootfs)
 	config := newTemplateConfig(rootfs)
 	container, err := newContainer(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer container.Destroy()
 
 	stdinR, stdinW, err := os.Pipe()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	process := &libcontainer.Process{
 		Args:  []string{"cat"},
 		Env:   standardEnvironment,
@@ -97,9 +80,7 @@ func TestExecInRlimit(t *testing.T) {
 	err = container.Start(process)
 	stdinR.Close()
 	defer stdinW.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	buffers := newStdBuffers()
 	ps := &libcontainer.Process{
@@ -110,12 +91,9 @@ func TestExecInRlimit(t *testing.T) {
 		Stderr: buffers.Stderr,
 	}
 	err = container.Start(ps)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := ps.Wait(); err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
+	_, err = ps.Wait()
+	ok(t, err)
 	stdinW.Close()
 	if _, err := process.Wait(); err != nil {
 		t.Log(err)
@@ -131,22 +109,16 @@ func TestExecInError(t *testing.T) {
 		return
 	}
 	rootfs, err := newRootfs()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer remove(rootfs)
 	config := newTemplateConfig(rootfs)
 	container, err := newContainer(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer container.Destroy()
 
 	// Execute a first process in the container
 	stdinR, stdinW, err := os.Pipe()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	process := &libcontainer.Process{
 		Args:  []string{"cat"},
 		Env:   standardEnvironment,
@@ -160,9 +132,7 @@ func TestExecInError(t *testing.T) {
 			t.Log(err)
 		}
 	}()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	unexistent := &libcontainer.Process{
 		Args: []string{"unexistent"},
@@ -182,22 +152,16 @@ func TestExecInTTY(t *testing.T) {
 		return
 	}
 	rootfs, err := newRootfs()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer remove(rootfs)
 	config := newTemplateConfig(rootfs)
 	container, err := newContainer(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer container.Destroy()
 
 	// Execute a first process in the container
 	stdinR, stdinW, err := os.Pipe()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	process := &libcontainer.Process{
 		Args:  []string{"cat"},
 		Env:   standardEnvironment,
@@ -206,9 +170,7 @@ func TestExecInTTY(t *testing.T) {
 	err = container.Start(process)
 	stdinR.Close()
 	defer stdinW.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	var stdout bytes.Buffer
 	ps := &libcontainer.Process{
@@ -221,21 +183,16 @@ func TestExecInTTY(t *testing.T) {
 		io.Copy(&stdout, console)
 		close(copy)
 	}()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	err = container.Start(ps)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	select {
 	case <-time.After(5 * time.Second):
 		t.Fatal("Waiting for copy timed out")
 	case <-copy:
 	}
-	if _, err := ps.Wait(); err != nil {
-		t.Fatal(err)
-	}
+	_, err = ps.Wait()
+	ok(t, err)
 	stdinW.Close()
 	if _, err := process.Wait(); err != nil {
 		t.Log(err)
@@ -251,22 +208,16 @@ func TestExecInEnvironment(t *testing.T) {
 		return
 	}
 	rootfs, err := newRootfs()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer remove(rootfs)
 	config := newTemplateConfig(rootfs)
 	container, err := newContainer(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer container.Destroy()
 
 	// Execute a first process in the container
 	stdinR, stdinW, err := os.Pipe()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	process := &libcontainer.Process{
 		Args:  []string{"cat"},
 		Env:   standardEnvironment,
@@ -275,9 +226,7 @@ func TestExecInEnvironment(t *testing.T) {
 	err = container.Start(process)
 	stdinR.Close()
 	defer stdinW.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	buffers := newStdBuffers()
 	process2 := &libcontainer.Process{
@@ -293,9 +242,7 @@ func TestExecInEnvironment(t *testing.T) {
 		Stderr: buffers.Stderr,
 	}
 	err = container.Start(process2)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	if _, err := process2.Wait(); err != nil {
 		out := buffers.Stdout.String()
 		t.Fatal(err, out)

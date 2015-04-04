@@ -29,9 +29,7 @@ func testExecPS(t *testing.T, userns bool) {
 		return
 	}
 	rootfs, err := newRootfs()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer remove(rootfs)
 	config := newTemplateConfig(rootfs)
 	if userns {
@@ -64,21 +62,15 @@ func TestIPCPrivate(t *testing.T) {
 	}
 
 	rootfs, err := newRootfs()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer remove(rootfs)
 
 	l, err := os.Readlink("/proc/1/ns/ipc")
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	config := newTemplateConfig(rootfs)
 	buffers, exitCode, err := runContainer(config, "", "readlink", "/proc/self/ns/ipc")
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	if exitCode != 0 {
 		t.Fatalf("exit code not 0. code %d stderr %q", exitCode, buffers.Stderr)
@@ -95,22 +87,16 @@ func TestIPCHost(t *testing.T) {
 	}
 
 	rootfs, err := newRootfs()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer remove(rootfs)
 
 	l, err := os.Readlink("/proc/1/ns/ipc")
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	config := newTemplateConfig(rootfs)
 	config.Namespaces.Remove(configs.NEWIPC)
 	buffers, exitCode, err := runContainer(config, "", "readlink", "/proc/self/ns/ipc")
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	if exitCode != 0 {
 		t.Fatalf("exit code not 0. code %d stderr %q", exitCode, buffers.Stderr)
@@ -127,23 +113,17 @@ func TestIPCJoinPath(t *testing.T) {
 	}
 
 	rootfs, err := newRootfs()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer remove(rootfs)
 
 	l, err := os.Readlink("/proc/1/ns/ipc")
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	config := newTemplateConfig(rootfs)
 	config.Namespaces.Add(configs.NEWIPC, "/proc/1/ns/ipc")
 
 	buffers, exitCode, err := runContainer(config, "", "readlink", "/proc/self/ns/ipc")
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	if exitCode != 0 {
 		t.Fatalf("exit code not 0. code %d stderr %q", exitCode, buffers.Stderr)
@@ -160,9 +140,7 @@ func TestIPCBadPath(t *testing.T) {
 	}
 
 	rootfs, err := newRootfs()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer remove(rootfs)
 
 	config := newTemplateConfig(rootfs)
@@ -180,16 +158,12 @@ func TestRlimit(t *testing.T) {
 	}
 
 	rootfs, err := newRootfs()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer remove(rootfs)
 
 	config := newTemplateConfig(rootfs)
 	out, _, err := runContainer(config, "", "/bin/sh", "-c", "ulimit -n")
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	if limit := strings.TrimSpace(out.Stdout.String()); limit != "1025" {
 		t.Fatalf("expected rlimit to be 1025, got %s", limit)
 	}
@@ -208,9 +182,7 @@ func newTestRoot() (string, error) {
 
 func waitProcess(p *libcontainer.Process, t *testing.T) {
 	status, err := p.Wait()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	if !status.Success() {
 		t.Fatal(status)
 	}
@@ -221,35 +193,25 @@ func TestEnter(t *testing.T) {
 		return
 	}
 	root, err := newTestRoot()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer os.RemoveAll(root)
 
 	rootfs, err := newRootfs()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer remove(rootfs)
 
 	config := newTemplateConfig(rootfs)
 
 	factory, err := libcontainer.New(root, libcontainer.Cgroupfs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	container, err := factory.Create("test", config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer container.Destroy()
 
 	// Execute a first process in the container
 	stdinR, stdinW, err := os.Pipe()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	var stdout, stdout2 bytes.Buffer
 
@@ -262,19 +224,13 @@ func TestEnter(t *testing.T) {
 	err = container.Start(&pconfig)
 	stdinR.Close()
 	defer stdinW.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	pid, err := pconfig.Pid()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	// Execute another process in the container
 	stdinR2, stdinW2, err := os.Pipe()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	pconfig2 := libcontainer.Process{
 		Env: standardEnvironment,
 	}
@@ -285,19 +241,13 @@ func TestEnter(t *testing.T) {
 	err = container.Start(&pconfig2)
 	stdinR2.Close()
 	defer stdinW2.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	pid2, err := pconfig2.Pid()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	processes, err := container.Processes()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	n := 0
 	for i := range processes {
@@ -318,14 +268,10 @@ func TestEnter(t *testing.T) {
 
 	// Check that both processes live in the same pidns
 	pidns := string(stdout.Bytes())
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	pidns2 := string(stdout2.Bytes())
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	if pidns != pidns2 {
 		t.Fatal("The second process isn't in the required pid namespace", pidns, pidns2)
@@ -337,28 +283,20 @@ func TestProcessEnv(t *testing.T) {
 		return
 	}
 	root, err := newTestRoot()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer os.RemoveAll(root)
 
 	rootfs, err := newRootfs()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer remove(rootfs)
 
 	config := newTemplateConfig(rootfs)
 
 	factory, err := libcontainer.New(root, libcontainer.Cgroupfs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	container, err := factory.Create("test", config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer container.Destroy()
 
 	var stdout bytes.Buffer
@@ -374,17 +312,12 @@ func TestProcessEnv(t *testing.T) {
 		Stdout: &stdout,
 	}
 	err = container.Start(&pconfig)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	// Wait for process
 	waitProcess(&pconfig, t)
 
 	outputEnv := string(stdout.Bytes())
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	// Check that the environment has the key/value pair we added
 	if !strings.Contains(outputEnv, "FOO=BAR") {
@@ -402,28 +335,20 @@ func TestProcessCaps(t *testing.T) {
 		return
 	}
 	root, err := newTestRoot()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer os.RemoveAll(root)
 
 	rootfs, err := newRootfs()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer remove(rootfs)
 
 	config := newTemplateConfig(rootfs)
 
 	factory, err := libcontainer.New(root, libcontainer.Cgroupfs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	container, err := factory.Create("test", config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer container.Destroy()
 
 	processCaps := append(config.Capabilities, "NET_ADMIN")
@@ -437,17 +362,12 @@ func TestProcessCaps(t *testing.T) {
 		Stdout:       &stdout,
 	}
 	err = container.Start(&pconfig)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	// Wait for process
 	waitProcess(&pconfig, t)
 
 	outputStatus := string(stdout.Bytes())
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	lines := strings.Split(outputStatus, "\n")
 
@@ -497,15 +417,11 @@ func testFreeze(t *testing.T, systemd bool) {
 		return
 	}
 	root, err := newTestRoot()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer os.RemoveAll(root)
 
 	rootfs, err := newRootfs()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer remove(rootfs)
 
 	config := newTemplateConfig(rootfs)
@@ -514,20 +430,14 @@ func testFreeze(t *testing.T, systemd bool) {
 	}
 
 	factory, err := libcontainer.New(root, libcontainer.Cgroupfs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	container, err := factory.Create("test", config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer container.Destroy()
 
 	stdinR, stdinW, err := os.Pipe()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	pconfig := libcontainer.Process{
 		Args:  []string{"cat"},
@@ -537,39 +447,28 @@ func testFreeze(t *testing.T, systemd bool) {
 	err = container.Start(&pconfig)
 	stdinR.Close()
 	defer stdinW.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	pid, err := pconfig.Pid()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	process, err := os.FindProcess(pid)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
-	if err := container.Pause(); err != nil {
-		t.Fatal(err)
-	}
+	err = container.Pause()
+	ok(t, err)
 	state, err := container.Status()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := container.Resume(); err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
+	err = container.Resume()
+	ok(t, err)
 	if state != libcontainer.Paused {
 		t.Fatal("Unexpected state: ", state)
 	}
 
 	stdinW.Close()
 	s, err := process.Wait()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
+
 	if !s.Success() {
 		t.Fatal(s.String())
 	}
