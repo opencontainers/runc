@@ -4,7 +4,7 @@
 
 package criurpc
 
-import proto "code.google.com/p/goprotobuf/proto"
+import proto "github.com/golang/protobuf/proto"
 import json "encoding/json"
 import math "math"
 

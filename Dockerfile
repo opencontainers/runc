@@ -16,7 +16,6 @@ COPY . /go/src/github.com/docker/libcontainer
 WORKDIR /go/src/github.com/docker/libcontainer
 RUN cp sample_configs/minimal.json /busybox/container.json
 
-RUN go get -d -v ./...
 RUN make direct-install
 
 ENTRYPOINT ["/dind"]
