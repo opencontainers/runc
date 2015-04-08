@@ -38,6 +38,9 @@ type Process struct {
 	// Stderr is a pointer to a writer which receives the standard error stream.
 	Stderr io.Writer
 
+	// ExtraFiles specifies additional open files to be inherited by the container
+	ExtraFiles []*os.File
+
 	// consolePath is the path to the console allocated to the container.
 	consolePath string
 
