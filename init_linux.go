@@ -96,21 +96,9 @@ func populateProcessEnvironment(env []string) error {
 // and working dir, and closes any leaked file descriptors
 // before executing the command inside the namespace
 func finalizeNamespace(config *initConfig) error {
-	// FD 3 is the child pipe, which needs to be closed.
-	// Additional file descriptors starts from 3 to (3 + n)
-	// To fix the order all additional file descriptors
-	// are shiftet by one right
-	for fd := 3; fd < (config.PassedFilesCount + 3); fd++ {
-		err := syscall.Dup2(fd+1, fd)
-		if err != nil {
-			return err
-		}
-	}
-
 	// Ensure that all unwanted fds we may have accidentally
 	// inherited are marked close-on-exec so they stay out of the
 	// container
-
 	if err := utils.CloseExecFrom(config.PassedFilesCount + 3); err != nil {
 		return err
 	}
