@@ -72,11 +72,19 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 	}
 
 	switch m.Device {
-	case "proc", "mqueue", "sysfs":
+	case "proc", "sysfs":
 		if err := os.MkdirAll(dest, 0755); err != nil && !os.IsExist(err) {
 			return err
 		}
 		return syscall.Mount(m.Source, dest, m.Device, uintptr(m.Flags), "")
+	case "mqueue":
+		if err := os.MkdirAll(dest, 0755); err != nil && !os.IsExist(err) {
+			return err
+		}
+		if err := syscall.Mount(m.Source, dest, m.Device, uintptr(m.Flags), ""); err != nil {
+			return err
+		}
+		return label.SetFileLabel(dest, mountLabel)
 	case "tmpfs":
 		stat, err := os.Stat(dest)
 		if err != nil {
