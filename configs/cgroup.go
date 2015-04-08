@@ -46,6 +46,9 @@ type Cgroup struct {
 	// Specifies per cgroup weight, range is from 10 to 1000.
 	BlkioWeight int64 `json:"blkio_weight"`
 
+	// Weight per cgroup per device, can override BlkioWeight.
+	BlkioWeightDevice string `json:"blkio_weight_device"`
+
 	// set the freeze value for the process
 	Freezer FreezerState `json:"freezer"`
 

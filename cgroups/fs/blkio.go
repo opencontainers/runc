@@ -35,6 +35,12 @@ func (s *BlkioGroup) Set(path string, cgroup *configs.Cgroup) error {
 		}
 	}
 
+	if cgroup.BlkioWeightDevice != "" {
+		if err := writeFile(path, "blkio.weight_device", cgroup.BlkioWeightDevice); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
