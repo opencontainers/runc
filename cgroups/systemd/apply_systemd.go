@@ -216,6 +216,13 @@ func (m *Manager) Apply(pid int) error {
 		return err
 	}
 
+	// FIXME: Systemd does have `BlockIODeviceWeight` property, but we got problem
+	// using that (at least on systemd 208, see https://github.com/docker/libcontainer/pull/354),
+	// so use fs work around for now.
+	if err := joinBlkio(c, pid); err != nil {
+		return err
+	}
+
 	paths := make(map[string]string)
 	for sysname := range subsystems {
 		subsystemPath, err := getSubsystemPath(m.Cgroups, sysname)
@@ -416,4 +423,21 @@ func joinCpuset(c *configs.Cgroup, pid int) error {
 	s := &fs.CpusetGroup{}
 
 	return s.ApplyDir(path, c, pid)
+}
+
+// `BlockIODeviceWeight` property of systemd does not work properly, and systemd
+// expects device path instead of major minor numbers, which is also confusing
+// for users. So we use fs work around for now.
+func joinBlkio(c *configs.Cgroup, pid int) error {
+	path, err := getSubsystemPath(c, "blkio")
+	if err != nil {
+		return err
+	}
+	if c.BlkioWeightDevice != "" {
+		if err := writeFile(path, "blkio.weight_device", c.BlkioWeightDevice); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

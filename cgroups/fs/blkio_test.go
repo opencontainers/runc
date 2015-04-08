@@ -102,6 +102,35 @@ func TestBlkioSetWeight(t *testing.T) {
 	}
 }
 
+func TestBlkioSetWeightDevice(t *testing.T) {
+	helper := NewCgroupTestUtil("blkio", t)
+	defer helper.cleanup()
+
+	const (
+		weightDeviceBefore = "8:0 400"
+		weightDeviceAfter  = "8:0 500"
+	)
+
+	helper.writeFileContents(map[string]string{
+		"blkio.weight_device": weightDeviceBefore,
+	})
+
+	helper.CgroupData.c.BlkioWeightDevice = weightDeviceAfter
+	blkio := &BlkioGroup{}
+	if err := blkio.Set(helper.CgroupPath, helper.CgroupData.c); err != nil {
+		t.Fatal(err)
+	}
+
+	value, err := getCgroupParamString(helper.CgroupPath, "blkio.weight_device")
+	if err != nil {
+		t.Fatalf("Failed to parse blkio.weight_device - %s", err)
+	}
+
+	if value != weightDeviceAfter {
+		t.Fatal("Got the wrong value, set blkio.weight_device failed.")
+	}
+}
+
 func TestBlkioStats(t *testing.T) {
 	helper := NewCgroupTestUtil("blkio", t)
 	defer helper.cleanup()
