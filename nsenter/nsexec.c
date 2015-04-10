@@ -66,7 +66,7 @@ void nsexec()
 	const int num = sizeof(namespaces) / sizeof(char *);
 	jmp_buf env;
 	char buf[PATH_MAX], *val;
-	int i, tfd, child, len, consolefd = -1;
+	int i, tfd, child, len, pipenum, consolefd = -1;
 	pid_t pid;
 	char *console;
 
@@ -78,6 +78,19 @@ void nsexec()
 	snprintf(buf, sizeof(buf), "%d", pid);
 	if (strcmp(val, buf)) {
 		pr_perror("Unable to parse _LIBCONTAINER_INITPID");
+		exit(1);
+	}
+
+	val = getenv("_LIBCONTAINER_INITPIPE");
+	if (val == NULL) {
+		pr_perror("Child pipe not found");
+		exit(1);
+	}
+
+	pipenum = atoi(val);
+	snprintf(buf, sizeof(buf), "%d", pipenum);
+	if (strcmp(val, buf)) {
+		pr_perror("Unable to parse _LIBCONTAINER_INITPIPE");
 		exit(1);
 	}
 
@@ -158,7 +171,7 @@ void nsexec()
 
 	len = snprintf(buf, sizeof(buf), "{ \"pid\" : %d }\n", child);
 
-	if (write(3, buf, len) != len) {
+	if (write(pipenum, buf, len) != len) {
 		pr_perror("Unable to send a child pid");
 		kill(child, SIGKILL);
 		exit(1);
