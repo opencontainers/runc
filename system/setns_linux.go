@@ -15,6 +15,7 @@ var setNsMap = map[string]uintptr{
 	"linux/arm64":   268,
 	"linux/amd64":   308,
 	"linux/arm":     375,
+	"linux/ppc":     350,
 	"linux/ppc64":   350,
 	"linux/ppc64le": 350,
 	"linux/s390x":   339,
