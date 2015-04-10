@@ -289,7 +289,7 @@ func (c *linuxContainer) checkCriuVersion() error {
 	return nil
 }
 
-func (c *linuxContainer) Checkpoint() error {
+func (c *linuxContainer) Checkpoint(imagePath string) error {
 	c.m.Lock()
 	defer c.m.Unlock()
 
@@ -297,12 +297,6 @@ func (c *linuxContainer) Checkpoint() error {
 		return err
 	}
 
-	imagePath := filepath.Join(c.root, "checkpoint")
-	// Since a container can be C/R'ed multiple times,
-	// the checkpoint directory may already exist.
-	if err := os.Mkdir(imagePath, 0655); err != nil && !os.IsExist(err) {
-		return err
-	}
 	workPath := filepath.Join(c.root, "criu.work")
 	if err := os.Mkdir(workPath, 0655); err != nil && !os.IsExist(err) {
 		return err
@@ -322,6 +316,11 @@ func (c *linuxContainer) Checkpoint() error {
 				"--ext-mount-map", fmt.Sprintf("%s:%s", m.Destination, m.Destination))
 		}
 	}
+	f, err := os.Create(filepath.Join(c.root, "checkpoint"))
+	if err != nil {
+		return err
+	}
+	f.Close()
 	addArgsFromEnv("CRIU_C", &args) // XXX debug
 	if err := exec.Command(c.criuPath, args...).Run(); err != nil {
 		return err
@@ -330,18 +329,11 @@ func (c *linuxContainer) Checkpoint() error {
 	return nil
 }
 
-func (c *linuxContainer) Restore(process *Process) error {
+func (c *linuxContainer) Restore(process *Process, imagePath string) error {
 	c.m.Lock()
 	defer c.m.Unlock()
 
 	if err := c.checkCriuVersion(); err != nil {
-		return err
-	}
-
-	pidfile := filepath.Join(c.root, "restoredpid")
-	// Make sure pidfile doesn't already exist from a
-	// previous restore.  Otherwise, CRIU will fail.
-	if err := os.Remove(pidfile); err != nil && !os.IsNotExist(err) {
 		return err
 	}
 
@@ -367,7 +359,6 @@ func (c *linuxContainer) Restore(process *Process) error {
 	}
 	defer workDir.Close()
 
-	imagePath := filepath.Join(c.root, "checkpoint")
 	imageDir, err := os.Open(imagePath)
 	if err != nil {
 		return err
@@ -563,7 +554,7 @@ func (c *linuxContainer) updateState(process parentProcess) error {
 		return err
 	}
 	defer f.Close()
-	os.RemoveAll(filepath.Join(c.root, "checkpoint"))
+	os.Remove(filepath.Join(c.root, "checkpoint"))
 	return json.NewEncoder(f).Encode(state)
 }
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"syscall"
@@ -15,8 +16,13 @@ var restoreCommand = cli.Command{
 	Usage: "restore a container from a previous checkpoint",
 	Flags: []cli.Flag{
 		cli.StringFlag{Name: "id", Value: "nsinit", Usage: "specify the ID for a container"},
+		cli.StringFlag{Name: "image-path", Value: "", Usage: "path where to save images"},
 	},
 	Action: func(context *cli.Context) {
+		imagePath := context.String("image-path")
+		if imagePath == "" {
+			fatal(fmt.Errorf("The --image-path option isn't specified"))
+		}
 		container, err := getContainer(context)
 		if err != nil {
 			fatal(err)
@@ -38,7 +44,7 @@ var restoreCommand = cli.Command{
 		if err := tty.attach(process); err != nil {
 			fatal(err)
 		}
-		err = container.Restore(process)
+		err = container.Restore(process, imagePath)
 		if err != nil {
 			fatal(err)
 		}
