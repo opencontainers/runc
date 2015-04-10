@@ -336,16 +336,6 @@ func (c *linuxContainer) Restore(process *Process, imagePath string) error {
 		return err
 	}
 
-	fds, err := syscall.Socketpair(syscall.AF_LOCAL, syscall.SOCK_SEQPACKET|syscall.SOCK_CLOEXEC, 0)
-	if err != nil {
-		return err
-	}
-
-	criuClient := os.NewFile(uintptr(fds[0]), "criu-transport-client")
-	criuServer := os.NewFile(uintptr(fds[1]), "criu-transport-server")
-	defer criuClient.Close()
-	defer criuServer.Close()
-
 	workPath := filepath.Join(c.root, "criu.work")
 	// Since a container can be C/R'ed multiple times,
 	// the work directory may already exist.
@@ -408,6 +398,28 @@ func (c *linuxContainer) Restore(process *Process, imagePath string) error {
 
 		defer syscall.Unmount(c.config.Rootfs, syscall.MNT_DETACH)
 	*/
+
+	err = c.criuSwrk(process, &req, imagePath)
+	if err != nil {
+		log.Errorf(filepath.Join(imagePath, "restore.log"))
+		return err
+	}
+
+	log.Info("Restored")
+	return nil
+}
+
+func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, imagePath string) (error) {
+	fds, err := syscall.Socketpair(syscall.AF_LOCAL, syscall.SOCK_SEQPACKET|syscall.SOCK_CLOEXEC, 0)
+	if err != nil {
+		return err
+	}
+
+	criuClient := os.NewFile(uintptr(fds[0]), "criu-transport-client")
+	criuServer := os.NewFile(uintptr(fds[1]), "criu-transport-server")
+	defer criuClient.Close()
+	defer criuServer.Close()
+
 	args := []string{"swrk", "3"}
 	cmd := exec.Command(c.criuPath, args...)
 	cmd.Stdin = process.Stdin
@@ -421,9 +433,6 @@ func (c *linuxContainer) Restore(process *Process, imagePath string) error {
 	criuServer.Close()
 
 	defer func() {
-		if err != nil {
-			log.Errorf(filepath.Join(imagePath, "restore.log"))
-		}
 		criuClient.Close()
 		st, err := cmd.Process.Wait()
 		if err != nil {
@@ -437,7 +446,7 @@ func (c *linuxContainer) Restore(process *Process, imagePath string) error {
 		return err
 	}
 
-	data, err := proto.Marshal(&req)
+	data, err := proto.Marshal(req)
 	if err != nil {
 		return err
 	}
@@ -467,22 +476,21 @@ func (c *linuxContainer) Restore(process *Process, imagePath string) error {
 
 		log.Debug(resp.String())
 		if !resp.GetSuccess() {
-			return fmt.Errorf("criu failed: type %d errno %d", t, resp.GetCrErrno())
+			return fmt.Errorf("criu failed: type %s errno %d", req.GetType().String(), resp.GetCrErrno())
 		}
 
-		t = resp.GetType()
+		t := resp.GetType()
 		switch {
 		case t == criurpc.CriuReqType_NOTIFY:
 			if err := c.criuNotifications(resp, process, imagePath); err != nil {
 				return err
 			}
-
 			t = criurpc.CriuReqType_NOTIFY
-			req = criurpc.CriuReq{
+			req = &criurpc.CriuReq{
 				Type:          &t,
 				NotifySuccess: proto.Bool(true),
 			}
-			data, err = proto.Marshal(&req)
+			data, err = proto.Marshal(req)
 			if err != nil {
 				return err
 			}
@@ -492,7 +500,7 @@ func (c *linuxContainer) Restore(process *Process, imagePath string) error {
 			}
 			continue
 		case t == criurpc.CriuReqType_RESTORE:
-			break;
+			break
 		default:
 			return fmt.Errorf("unable to parse the response %s", resp.String())
 		}
@@ -509,7 +517,6 @@ func (c *linuxContainer) Restore(process *Process, imagePath string) error {
 	if !st.Success() {
 		return fmt.Errorf("criu failed: %s", st.String())
 	}
-	log.Info("Restored")
 	return nil
 }
 
