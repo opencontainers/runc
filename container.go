@@ -21,6 +21,9 @@ const (
 	// The container exists, but all its processes are paused.
 	Paused
 
+	// The container exists, but its state is saved on disk
+	Checkpointed
+
 	// The container does not exist.
 	Destroyed
 )

@@ -223,12 +223,6 @@ func newPipe() (parent *os.File, child *os.File, err error) {
 func (c *linuxContainer) Destroy() error {
 	c.m.Lock()
 	defer c.m.Unlock()
-	// Since the state.json and CRIU image files are in the c.root
-	// directory, we should not remove it after checkpoint.  Also,
-	// when     CRIU exits after restore, we should not kill the processes.
-	if _, err := os.Stat(filepath.Join(c.root, "checkpoint")); err == nil {
-		return nil
-	}
 	status, err := c.currentStatus()
 	if err != nil {
 		return err
@@ -569,10 +563,14 @@ func (c *linuxContainer) updateState(process parentProcess) error {
 		return err
 	}
 	defer f.Close()
+	os.RemoveAll(filepath.Join(c.root, "checkpoint"))
 	return json.NewEncoder(f).Encode(state)
 }
 
 func (c *linuxContainer) currentStatus() (Status, error) {
+	if _, err := os.Stat(filepath.Join(c.root, "checkpoint")); err == nil {
+		return Checkpointed, nil
+	}
 	if c.initProcess == nil {
 		return Destroyed, nil
 	}

@@ -53,8 +53,11 @@ var restoreCommand = cli.Command{
 				fatal(err)
 			}
 		}
-		if err := container.Destroy(); err != nil {
-			fatal(err)
+		ctStatus, err := container.Status()
+		if ctStatus == libcontainer.Destroyed {
+			if err := container.Destroy(); err != nil {
+				fatal(err)
+			}
 		}
 		os.Exit(utils.ExitStatus(status.Sys().(syscall.WaitStatus)))
 	},
