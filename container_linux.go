@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -300,30 +299,46 @@ func (c *linuxContainer) Checkpoint(imagePath string) error {
 	if err := os.Mkdir(workPath, 0655); err != nil && !os.IsExist(err) {
 		return err
 	}
-	args := []string{
-		"dump", "-v4",
-		"--images-dir", imagePath,
-		"--work-dir", workPath,
-		"-o", "dump.log",
-		"--root", c.config.Rootfs,
-		"--manage-cgroups", "--evasive-devices",
-		"-t", strconv.Itoa(c.initProcess.pid()),
-	}
-	for _, m := range c.config.Mounts {
-		if m.Device == "bind" {
-			args = append(args,
-				"--ext-mount-map", fmt.Sprintf("%s:%s", m.Destination, m.Destination))
-		}
-	}
-	f, err := os.Create(filepath.Join(c.root, "checkpoint"))
+
+	workDir, err := os.Open(workPath)
 	if err != nil {
 		return err
 	}
-	f.Close()
-	addArgsFromEnv("CRIU_C", &args) // XXX debug
-	if err := exec.Command(c.criuPath, args...).Run(); err != nil {
+	defer workDir.Close()
+
+	imageDir, err := os.Open(imagePath)
+	if err != nil {
 		return err
 	}
+	defer imageDir.Close()
+	t := criurpc.CriuReqType_DUMP
+	req := criurpc.CriuReq{
+		Type: &t,
+		Opts: &criurpc.CriuOpts{
+			ImagesDirFd:   proto.Int32(int32(imageDir.Fd())),
+			WorkDirFd:     proto.Int32(int32(workDir.Fd())),
+			LogLevel:      proto.Int32(4),
+			LogFile:       proto.String("dump.log"),
+			Root:          proto.String(c.config.Rootfs),
+			ManageCgroups: proto.Bool(true),
+			NotifyScripts: proto.Bool(true),
+			Pid:           proto.Int32(int32(c.initProcess.pid())),
+		},
+	}
+	for _, m := range c.config.Mounts {
+		if m.Device == "bind" {
+			extMnt := new(criurpc.ExtMountMap)
+			extMnt.Key = proto.String(m.Destination)
+			extMnt.Val = proto.String(m.Destination)
+			req.Opts.ExtMnt = append(req.Opts.ExtMnt, extMnt)
+		}
+	}
+
+	err = c.criuSwrk(nil, &req, imagePath)
+	if err != nil {
+		return err
+	}
+
 	log.Info("Checkpointed")
 	return nil
 }
@@ -409,7 +424,7 @@ func (c *linuxContainer) Restore(process *Process, imagePath string) error {
 	return nil
 }
 
-func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, imagePath string) (error) {
+func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, imagePath string) error {
 	fds, err := syscall.Socketpair(syscall.AF_LOCAL, syscall.SOCK_SEQPACKET|syscall.SOCK_CLOEXEC, 0)
 	if err != nil {
 		return err
@@ -422,9 +437,11 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, imageP
 
 	args := []string{"swrk", "3"}
 	cmd := exec.Command(c.criuPath, args...)
-	cmd.Stdin = process.Stdin
-	cmd.Stdout = process.Stdout
-	cmd.Stderr = process.Stderr
+	if process != nil {
+		cmd.Stdin = process.Stdin
+		cmd.Stdout = process.Stdout
+		cmd.Stderr = process.Stderr
+	}
 	cmd.ExtraFiles = append(cmd.ExtraFiles, criuServer)
 
 	if err := cmd.Start(); err != nil {
@@ -441,9 +458,11 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, imageP
 		log.Warn(st.String())
 	}()
 
-	err = saveStdPipes(cmd.Process.Pid, c.config)
-	if err != nil {
-		return err
+	if process != nil {
+		err = saveStdPipes(cmd.Process.Pid, c.config)
+		if err != nil {
+			return err
+		}
 	}
 
 	data, err := proto.Marshal(req)
@@ -500,6 +519,7 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, imageP
 			}
 			continue
 		case t == criurpc.CriuReqType_RESTORE:
+		case t == criurpc.CriuReqType_DUMP:
 			break
 		default:
 			return fmt.Errorf("unable to parse the response %s", resp.String())
@@ -527,6 +547,14 @@ func (c *linuxContainer) criuNotifications(resp *criurpc.CriuResp, process *Proc
 	}
 
 	switch {
+	case notify.GetScript() == "post-dump":
+		f, err := os.Create(filepath.Join(c.root, "checkpoint"))
+		if err != nil {
+			return err
+		}
+		f.Close()
+		break
+
 	case notify.GetScript() == "post-restore":
 		// In many case, restore from the images can be done only once.
 		// If we want to create snapshots, we need to snapshot the file system.
