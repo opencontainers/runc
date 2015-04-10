@@ -1281,7 +1281,9 @@ func TestEnum(t *testing.T) {
 // We don't care what the value actually is, just as long as it doesn't crash.
 func TestPrintingNilEnumFields(t *testing.T) {
 	pb := new(GoEnum)
-	fmt.Sprintf("%+v", pb)
+	if fmt.Sprintf("%+v", pb) == "" {
+		t.Errorf("expected non-empty string")
+	}
 }
 
 // Verify that absent required fields cause Marshal/Unmarshal to return errors.
