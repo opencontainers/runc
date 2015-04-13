@@ -38,6 +38,7 @@ var subsystems = map[string]subsystem{
 	"cpuset":     &fs.CpusetGroup{},
 	"cpuacct":    &fs.CpuacctGroup{},
 	"blkio":      &fs.BlkioGroup{},
+	"hugetlb":    &fs.HugetlbGroup{},
 	"perf_event": &fs.PerfEventGroup{},
 	"freezer":    &fs.FreezerGroup{},
 }

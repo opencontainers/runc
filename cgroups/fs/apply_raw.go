@@ -19,6 +19,7 @@ var (
 		"cpuset":     &CpusetGroup{},
 		"cpuacct":    &CpuacctGroup{},
 		"blkio":      &BlkioGroup{},
+		"hugetlb":    &HugetlbGroup{},
 		"perf_event": &PerfEventGroup{},
 		"freezer":    &FreezerGroup{},
 	}
