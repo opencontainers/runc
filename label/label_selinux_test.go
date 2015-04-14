@@ -103,6 +103,15 @@ func TestRelabel(t *testing.T) {
 		t.Fatal("Relabel unshared failed: %v", err)
 	}
 	if err := Relabel(testdir, label, "zZ"); err == nil {
-		t.Fatal("Relabel with shared and unshared succeeded: %v", err)
+		t.Fatal("Relabel with shared and unshared succeeded")
+	}
+	if err := Relabel("/etc", label, "zZ"); err == nil {
+		t.Fatal("Relabel /etc succeeded")
+	}
+	if err := Relabel("/", label, ""); err == nil {
+		t.Fatal("Relabel / succeeded")
+	}
+	if err := Relabel("/usr", label, "Z"); err == nil {
+		t.Fatal("Relabel /usr succeeded")
 	}
 }
