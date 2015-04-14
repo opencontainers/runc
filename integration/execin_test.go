@@ -311,6 +311,8 @@ func TestExecinPassExtraFiles(t *testing.T) {
 	}
 
 	waitProcess(inprocess, t)
+	stdinW.Close()
+	waitProcess(process, t)
 
 	out := string(stdout.Bytes())
 	// fd 5 is the directory handle for /proc/$$/fd
