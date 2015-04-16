@@ -336,6 +336,7 @@ func (c *linuxContainer) Checkpoint(imagePath string) error {
 
 	err = c.criuSwrk(nil, &req, imagePath)
 	if err != nil {
+		log.Errorf(filepath.Join(workPath, "dump.log"))
 		return err
 	}
 
@@ -354,7 +355,7 @@ func (c *linuxContainer) Restore(process *Process, imagePath string) error {
 	workPath := filepath.Join(c.root, "criu.work")
 	// Since a container can be C/R'ed multiple times,
 	// the work directory may already exist.
-	if err := os.Mkdir(workPath, 0655); err != nil && !os.IsExist(err) {
+	if err := os.Mkdir(workPath, 0755); err != nil && !os.IsExist(err) {
 		return err
 	}
 	workDir, err := os.Open(workPath)
@@ -368,6 +369,25 @@ func (c *linuxContainer) Restore(process *Process, imagePath string) error {
 		return err
 	}
 	defer imageDir.Close()
+
+	root := filepath.Join(c.root, "criu-root")
+	if err := os.Mkdir(root, 0755); err != nil {
+		return err
+	}
+	defer os.Remove(root)
+
+	root, err = filepath.EvalSymlinks(root)
+	if err != nil {
+		return err
+	}
+
+	err = syscall.Mount(c.config.Rootfs, root, "", syscall.MS_BIND|syscall.MS_REC, "")
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	defer syscall.Unmount(root, syscall.MNT_DETACH)
+
 	t := criurpc.CriuReqType_RESTORE
 	req := criurpc.CriuReq{
 		Type: &t,
@@ -378,7 +398,7 @@ func (c *linuxContainer) Restore(process *Process, imagePath string) error {
 			LogLevel:       proto.Int32(4),
 			LogFile:        proto.String("restore.log"),
 			RstSibling:     proto.Bool(true),
-			Root:           proto.String(c.config.Rootfs),
+			Root:           proto.String(root),
 			ManageCgroups:  proto.Bool(true),
 			NotifyScripts:  proto.Bool(true),
 		},
@@ -403,20 +423,9 @@ func (c *linuxContainer) Restore(process *Process, imagePath string) error {
 		}
 	}
 
-	// XXX This doesn't really belong here as our caller should have
-	//     already set up root (including devices) and mounted it.
-	/*
-		// remount root for restore
-		if err := syscall.Mount(c.config.Rootfs, c.config.Rootfs, "bind", syscall.MS_BIND|syscall.MS_REC, ""); err != nil {
-			return err
-		}
-
-		defer syscall.Unmount(c.config.Rootfs, syscall.MNT_DETACH)
-	*/
-
 	err = c.criuSwrk(process, &req, imagePath)
 	if err != nil {
-		log.Errorf(filepath.Join(imagePath, "restore.log"))
+		log.Errorf(filepath.Join(workPath, "restore.log"))
 		return err
 	}
 
