@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/docker/libcontainer"
@@ -611,5 +613,78 @@ func TestPassExtraFiles(t *testing.T) {
 	out2 := string(buf)
 	if out2 != "2" {
 		t.Fatalf("expected second pipe to receive '2', got '%s'", out2)
+	}
+}
+
+func TestMountCmds(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+	root, err := newTestRoot()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(root)
+
+	rootfs, err := newRootfs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer remove(rootfs)
+
+	tmpDir, err := ioutil.TempDir("", "tmpdir")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	config := newTemplateConfig(rootfs)
+	config.Mounts = append(config.Mounts, &configs.Mount{
+		Source:      tmpDir,
+		Destination: filepath.Join(rootfs, "tmp"),
+		Device:      "bind",
+		Flags:       syscall.MS_BIND | syscall.MS_REC,
+		PremountCmds: []configs.Command{
+			{Path: "touch", Args: []string{filepath.Join(tmpDir, "hello")}},
+			{Path: "touch", Args: []string{filepath.Join(tmpDir, "world")}},
+		},
+		PostmountCmds: []configs.Command{
+			{Path: "cp", Args: []string{filepath.Join(rootfs, "tmp", "hello"), filepath.Join(rootfs, "tmp", "hello-backup")}},
+			{Path: "cp", Args: []string{filepath.Join(rootfs, "tmp", "world"), filepath.Join(rootfs, "tmp", "world-backup")}},
+		},
+	})
+
+	factory, err := libcontainer.New(root, libcontainer.Cgroupfs)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	container, err := factory.Create("test", config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer container.Destroy()
+
+	pconfig := libcontainer.Process{
+		Args: []string{"sh", "-c", "env"},
+		Env:  standardEnvironment,
+	}
+	err = container.Start(&pconfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Wait for process
+	waitProcess(&pconfig, t)
+
+	entries, err := ioutil.ReadDir(tmpDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := []string{"hello", "hello-backup", "world", "world-backup"}
+	for i, e := range entries {
+		if e.Name() != expected[i] {
+			t.Errorf("Got(%s), expect %s", e.Name(), expected[i])
+		}
 	}
 }

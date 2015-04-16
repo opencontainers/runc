@@ -80,7 +80,7 @@ func mountCmd(cmd configs.Command) error {
 	command.Env = cmd.Env
 	command.Dir = cmd.Dir
 	if out, err := command.CombinedOutput(); err != nil {
-		return fmt.Errorf("%s failed: %s: %v", cmd, string(out), err)
+		return fmt.Errorf("%#v failed: %s: %v", cmd, string(out), err)
 	}
 
 	return nil
