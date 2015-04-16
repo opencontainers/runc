@@ -2,6 +2,7 @@ package integration
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -13,6 +14,7 @@ import (
 	"github.com/docker/libcontainer"
 	"github.com/docker/libcontainer/cgroups/systemd"
 	"github.com/docker/libcontainer/configs"
+	"github.com/docker/libcontainer/seccomp"
 )
 
 func TestExecPS(t *testing.T) {
@@ -713,4 +715,67 @@ func TestSystemProperties(t *testing.T) {
 	if shmmniOutput != "8192" {
 		t.Fatalf("kernel.shmmni property expected to be 8192, but is %s", shmmniOutput)
 	}
+}
+
+func allExcept(calls []string) []string {
+	num := len(seccomp.SyscallMap) - len(calls)
+	filter := make([]string, num)
+	i := 0
+	for key := range seccomp.SyscallMap {
+		j := 0
+		for _, key1 := range calls {
+			if strings.EqualFold(key, key1) {
+				break
+			}
+			j++
+		}
+		if j == len(calls) {
+			filter[i] = key
+			i++
+		}
+	}
+	return filter
+}
+
+func TestSeccompNotStat(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+
+	rootfs, err := newRootfs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer remove(rootfs)
+
+	config := newTemplateConfig(rootfs)
+	exceptCall := []string{"STAT"}
+	config.SysCalls = allExcept(exceptCall)
+	out, _, err := runContainer(config, "", "/bin/sh", "-c", "ls / -l")
+	if err == nil {
+		t.Fatal("runContainer should be failed")
+	} else {
+		fmt.Println(out)
+	}
+}
+
+func TestSeccompStat(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+
+	rootfs, err := newRootfs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer remove(rootfs)
+
+	config := newTemplateConfig(rootfs)
+	exceptCall := []string{}
+	config.SysCalls = allExcept(exceptCall)
+	out, _, err := runContainer(config, "", "/bin/sh", "-c", "ls / -l")
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println(out)
 }
