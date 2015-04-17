@@ -565,10 +565,6 @@ func (c *linuxContainer) criuNotifications(resp *criurpc.CriuResp, process *Proc
 		break
 
 	case notify.GetScript() == "post-restore":
-		// In many case, restore from the images can be done only once.
-		// If we want to create snapshots, we need to snapshot the file system.
-		os.RemoveAll(imagePath)
-
 		pid := notify.GetPid()
 		r, err := newRestoredProcess(int(pid))
 		if err != nil {
