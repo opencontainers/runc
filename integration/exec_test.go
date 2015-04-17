@@ -475,6 +475,37 @@ func testFreeze(t *testing.T, systemd bool) {
 	}
 }
 
+func TestCpuShares(t *testing.T) {
+	testCpuShares(t, false)
+}
+
+func TestSystemdCpuShares(t *testing.T) {
+	if !systemd.UseSystemd() {
+		t.Skip("Systemd is unsupported")
+	}
+	testCpuShares(t, true)
+}
+
+func testCpuShares(t *testing.T, systemd bool) {
+	if testing.Short() {
+		return
+	}
+	rootfs, err := newRootfs()
+	ok(t, err)
+	defer remove(rootfs)
+
+	config := newTemplateConfig(rootfs)
+	if systemd {
+		config.Cgroups.Slice = "system.slice"
+	}
+	config.Cgroups.CpuShares = 1
+
+	_, _, err = runContainer(config, "", "ps")
+	if err == nil {
+		t.Fatalf("runContainer should failed with invalid CpuShares")
+	}
+}
+
 func TestContainerState(t *testing.T) {
 	if testing.Short() {
 		return
