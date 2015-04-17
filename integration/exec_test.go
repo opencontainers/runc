@@ -425,11 +425,12 @@ func testFreeze(t *testing.T, systemd bool) {
 	defer remove(rootfs)
 
 	config := newTemplateConfig(rootfs)
+	cgm := libcontainer.Cgroupfs
 	if systemd {
-		config.Cgroups.Slice = "system.slice"
+		cgm = libcontainer.SystemdCgroups
 	}
 
-	factory, err := libcontainer.New(root, libcontainer.Cgroupfs)
+	factory, err := libcontainer.New(root, cgm)
 	ok(t, err)
 
 	container, err := factory.Create("test", config)
