@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/docker/libcontainer/cgroups"
 	"github.com/docker/libcontainer/configs"
 	"github.com/docker/libcontainer/label"
 )
@@ -131,6 +132,37 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 		}
 		if m.Flags&syscall.MS_PRIVATE != 0 {
 			if err := syscall.Mount("", dest, "none", uintptr(syscall.MS_PRIVATE), ""); err != nil {
+				return err
+			}
+		}
+	case "cgroup":
+		mounts, err := cgroups.GetCgroupMounts()
+		if err != nil {
+			return err
+		}
+		var binds []*configs.Mount
+		for _, mm := range mounts {
+			dir, err := mm.GetThisCgroupDir()
+			if err != nil {
+				return err
+			}
+			binds = append(binds, &configs.Mount{
+				Device:      "bind",
+				Source:      filepath.Join(mm.Mountpoint, dir),
+				Destination: filepath.Join(m.Destination, strings.Join(mm.Subsystems, ",")),
+				Flags:       syscall.MS_BIND | syscall.MS_REC | syscall.MS_RDONLY,
+			})
+		}
+		tmpfs := &configs.Mount{
+			Device:      "tmpfs",
+			Destination: m.Destination,
+			Flags:       syscall.MS_NOEXEC | syscall.MS_NOSUID | syscall.MS_NODEV,
+		}
+		if err := mountToRootfs(tmpfs, rootfs, mountLabel); err != nil {
+			return err
+		}
+		for _, b := range binds {
+			if err := mountToRootfs(b, rootfs, mountLabel); err != nil {
 				return err
 			}
 		}
