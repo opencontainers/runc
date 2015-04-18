@@ -9,6 +9,7 @@ import (
 	"os"
 	"sync/atomic"
 	"syscall"
+	"time"
 	"unsafe"
 )
 
@@ -53,6 +54,8 @@ type ifreqFlags struct {
 }
 
 var native binary.ByteOrder
+
+var rnd = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 func init() {
 	var x uint32 = 0x01020304
@@ -1215,7 +1218,7 @@ func AddToBridge(iface, master *net.Interface) error {
 func randMacAddr() string {
 	hw := make(net.HardwareAddr, 6)
 	for i := 0; i < 6; i++ {
-		hw[i] = byte(rand.Intn(255))
+		hw[i] = byte(rnd.Intn(255))
 	}
 	hw[0] &^= 0x1 // clear multicast bit
 	hw[0] |= 0x2  // set local assignment bit (IEEE802)
