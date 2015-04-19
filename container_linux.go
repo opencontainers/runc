@@ -327,7 +327,13 @@ func (c *linuxContainer) Checkpoint(imagePath string) error {
 	}
 	for _, m := range c.config.Mounts {
 		if m.Device == "bind" {
+			mountDest := m.Destination
+			if strings.HasPrefix(mountDest, c.config.Rootfs) {
+				mountDest = mountDest[len(c.config.Rootfs):]
+			}
+
 			extMnt := new(criurpc.ExtMountMap)
+			extMnt.Key = proto.String(mountDest)
 			extMnt.Key = proto.String(m.Destination)
 			extMnt.Val = proto.String(m.Destination)
 			req.Opts.ExtMnt = append(req.Opts.ExtMnt, extMnt)
