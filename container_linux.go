@@ -287,7 +287,7 @@ func (c *linuxContainer) checkCriuVersion() error {
 	return nil
 }
 
-func (c *linuxContainer) Checkpoint(imagePath string) error {
+func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 	c.m.Lock()
 	defer c.m.Unlock()
 
@@ -295,36 +295,57 @@ func (c *linuxContainer) Checkpoint(imagePath string) error {
 		return err
 	}
 
-	workPath := filepath.Join(c.root, "criu.work")
-	if err := os.Mkdir(workPath, 0655); err != nil && !os.IsExist(err) {
+	if criuOpts.ImagesDirectory == "" {
+		criuOpts.ImagesDirectory = filepath.Join(c.root, "criu.image")
+	}
+
+	// Since a container can be C/R'ed multiple times,
+	// the checkpoint directory may already exist.
+	if err := os.Mkdir(criuOpts.ImagesDirectory, 0755); err != nil && !os.IsExist(err) {
 		return err
 	}
 
-	workDir, err := os.Open(workPath)
+	if criuOpts.WorkDirectory == "" {
+		criuOpts.WorkDirectory = filepath.Join(c.root, "criu.work")
+	}
+
+	if err := os.Mkdir(criuOpts.WorkDirectory, 0755); err != nil && !os.IsExist(err) {
+		return err
+	}
+
+	workDir, err := os.Open(criuOpts.WorkDirectory)
 	if err != nil {
 		return err
 	}
 	defer workDir.Close()
 
-	imageDir, err := os.Open(imagePath)
+	imageDir, err := os.Open(criuOpts.ImagesDirectory)
 	if err != nil {
 		return err
 	}
 	defer imageDir.Close()
+
+	rpcOpts := criurpc.CriuOpts{
+		ImagesDirFd:    proto.Int32(int32(imageDir.Fd())),
+		WorkDirFd:      proto.Int32(int32(workDir.Fd())),
+		LogLevel:       proto.Int32(4),
+		LogFile:        proto.String("dump.log"),
+		Root:           proto.String(c.config.Rootfs),
+		ManageCgroups:  proto.Bool(true),
+		NotifyScripts:  proto.Bool(true),
+		Pid:            proto.Int32(int32(c.initProcess.pid())),
+		ShellJob:       proto.Bool(criuOpts.ShellJob),
+		LeaveRunning:   proto.Bool(criuOpts.LeaveRunning),
+		TcpEstablished: proto.Bool(criuOpts.TcpEstablished),
+		ExtUnixSk:      proto.Bool(criuOpts.ExternalUnixConnections),
+	}
+
 	t := criurpc.CriuReqType_DUMP
 	req := criurpc.CriuReq{
 		Type: &t,
-		Opts: &criurpc.CriuOpts{
-			ImagesDirFd:   proto.Int32(int32(imageDir.Fd())),
-			WorkDirFd:     proto.Int32(int32(workDir.Fd())),
-			LogLevel:      proto.Int32(4),
-			LogFile:       proto.String("dump.log"),
-			Root:          proto.String(c.config.Rootfs),
-			ManageCgroups: proto.Bool(true),
-			NotifyScripts: proto.Bool(true),
-			Pid:           proto.Int32(int32(c.initProcess.pid())),
-		},
+		Opts: &rpcOpts,
 	}
+
 	for _, m := range c.config.Mounts {
 		if m.Device == "bind" {
 			mountDest := m.Destination
@@ -340,9 +361,9 @@ func (c *linuxContainer) Checkpoint(imagePath string) error {
 		}
 	}
 
-	err = c.criuSwrk(nil, &req, imagePath)
+	err = c.criuSwrk(nil, &req, criuOpts.ImagesDirectory)
 	if err != nil {
-		log.Errorf(filepath.Join(workPath, "dump.log"))
+		log.Errorf(filepath.Join(criuOpts.WorkDirectory, "dump.log"))
 		return err
 	}
 
@@ -350,7 +371,7 @@ func (c *linuxContainer) Checkpoint(imagePath string) error {
 	return nil
 }
 
-func (c *linuxContainer) Restore(process *Process, imagePath string) error {
+func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 	c.m.Lock()
 	defer c.m.Unlock()
 
@@ -358,19 +379,25 @@ func (c *linuxContainer) Restore(process *Process, imagePath string) error {
 		return err
 	}
 
-	workPath := filepath.Join(c.root, "criu.work")
+	if criuOpts.WorkDirectory == "" {
+		criuOpts.WorkDirectory = filepath.Join(c.root, "criu.work")
+	}
 	// Since a container can be C/R'ed multiple times,
 	// the work directory may already exist.
-	if err := os.Mkdir(workPath, 0755); err != nil && !os.IsExist(err) {
+	if err := os.Mkdir(criuOpts.WorkDirectory, 0655); err != nil && !os.IsExist(err) {
 		return err
 	}
-	workDir, err := os.Open(workPath)
+
+	workDir, err := os.Open(criuOpts.WorkDirectory)
 	if err != nil {
 		return err
 	}
 	defer workDir.Close()
 
-	imageDir, err := os.Open(imagePath)
+	if criuOpts.ImagesDirectory == "" {
+		criuOpts.ImagesDirectory = filepath.Join(c.root, "criu.image")
+	}
+	imageDir, err := os.Open(criuOpts.ImagesDirectory)
 	if err != nil {
 		return err
 	}
@@ -412,6 +439,9 @@ func (c *linuxContainer) Restore(process *Process, imagePath string) error {
 			Root:           proto.String(root),
 			ManageCgroups:  proto.Bool(true),
 			NotifyScripts:  proto.Bool(true),
+			ShellJob:       proto.Bool(criuOpts.ShellJob),
+			ExtUnixSk:      proto.Bool(criuOpts.ExternalUnixConnections),
+			TcpEstablished: proto.Bool(criuOpts.TcpEstablished),
 		},
 	}
 	for _, m := range c.config.Mounts {
@@ -446,9 +476,9 @@ func (c *linuxContainer) Restore(process *Process, imagePath string) error {
 		}
 	}
 
-	err = c.criuSwrk(process, &req, imagePath)
+	err = c.criuSwrk(process, &req, criuOpts.ImagesDirectory)
 	if err != nil {
-		log.Errorf(filepath.Join(workPath, "restore.log"))
+		log.Errorf(filepath.Join(criuOpts.WorkDirectory, "restore.log"))
 		return err
 	}
 
@@ -461,6 +491,9 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, imageP
 	if err != nil {
 		return err
 	}
+
+	stringOpts, _ := json.Marshal(*req.Opts)
+	log.Debugf("stringOpts: %s", stringOpts)
 
 	criuClient := os.NewFile(uintptr(fds[0]), "criu-transport-client")
 	criuServer := os.NewFile(uintptr(fds[1]), "criu-transport-server")
