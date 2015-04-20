@@ -27,6 +27,7 @@ const (
 	SIOC_BRADDBR      = 0x89a0
 	SIOC_BRDELBR      = 0x89a1
 	SIOC_BRADDIF      = 0x89a2
+	SIOC_BRDELIF      = 0x89a3
 )
 
 const (
@@ -1191,9 +1192,7 @@ func DeleteBridge(name string) error {
 	return nil
 }
 
-// Add a slave to abridge device.  This is more backward-compatible than
-// netlink.NetworkSetMaster and works on RHEL 6.
-func AddToBridge(iface, master *net.Interface) error {
+func ifIoctBridge(iface, master *net.Interface, op uintptr) error {
 	if len(master.Name) >= IFNAMSIZ {
 		return fmt.Errorf("Interface name %s too long", master.Name)
 	}
@@ -1208,11 +1207,23 @@ func AddToBridge(iface, master *net.Interface) error {
 	copy(ifr.IfrnName[:len(ifr.IfrnName)-1], master.Name)
 	ifr.IfruIndex = int32(iface.Index)
 
-	if _, _, err := syscall.Syscall(syscall.SYS_IOCTL, uintptr(s), SIOC_BRADDIF, uintptr(unsafe.Pointer(&ifr))); err != 0 {
+	if _, _, err := syscall.Syscall(syscall.SYS_IOCTL, uintptr(s), op, uintptr(unsafe.Pointer(&ifr))); err != 0 {
 		return err
 	}
 
 	return nil
+}
+
+// Add a slave to a bridge device.  This is more backward-compatible than
+// netlink.NetworkSetMaster and works on RHEL 6.
+func AddToBridge(iface, master *net.Interface) error {
+	return ifIoctBridge(iface, master, SIOC_BRADDIF)
+}
+
+// Detach a slave from a bridge device.  This is more backward-compatible than
+// netlink.NetworkSetMaster and works on RHEL 6.
+func DelFromBridge(iface, master *net.Interface) error {
+	return ifIoctBridge(iface, master, SIOC_BRDELIF)
 }
 
 func randMacAddr() string {

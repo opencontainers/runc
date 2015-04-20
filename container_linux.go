@@ -417,6 +417,18 @@ func (c *linuxContainer) Restore(process *Process, imagePath string) error {
 			req.Opts.ExtMnt = append(req.Opts.ExtMnt, extMnt)
 		}
 	}
+	for _, iface := range c.config.Networks {
+		switch iface.Type {
+		case "veth":
+			veth := new(criurpc.CriuVethPair)
+			veth.IfOut = proto.String(iface.HostInterfaceName)
+			veth.IfIn = proto.String(iface.Name)
+			req.Opts.Veths = append(req.Opts.Veths, veth)
+			break
+		case "loopback":
+			break
+		}
+	}
 	// Pipes that were previously set up for std{in,out,err}
 	// were removed after checkpoint.  Use the new ones.
 	var i int32
@@ -555,6 +567,34 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, imageP
 	return nil
 }
 
+// block any external network activity
+func lockNetwork(config *configs.Config) error {
+	for _, config := range config.Networks {
+		strategy, err := getStrategy(config.Type)
+		if err != nil {
+			return err
+		}
+
+		if err := strategy.detach(config); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func unlockNetwork(config *configs.Config) error {
+	for _, config := range config.Networks {
+		strategy, err := getStrategy(config.Type)
+		if err != nil {
+			return err
+		}
+		if err = strategy.attach(config); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (c *linuxContainer) criuNotifications(resp *criurpc.CriuResp, process *Process, imagePath string) error {
 	notify := resp.GetNotify()
 	if notify == nil {
@@ -568,6 +608,18 @@ func (c *linuxContainer) criuNotifications(resp *criurpc.CriuResp, process *Proc
 			return err
 		}
 		f.Close()
+		break
+
+	case notify.GetScript() == "network-unlock":
+		if err := unlockNetwork(c.config); err != nil {
+			return err
+		}
+		break
+
+	case notify.GetScript() == "network-lock":
+		if err := lockNetwork(c.config); err != nil {
+			return err
+		}
 		break
 
 	case notify.GetScript() == "post-restore":
