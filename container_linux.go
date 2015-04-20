@@ -355,13 +355,12 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 
 			extMnt := new(criurpc.ExtMountMap)
 			extMnt.Key = proto.String(mountDest)
-			extMnt.Key = proto.String(m.Destination)
 			extMnt.Val = proto.String(m.Destination)
 			req.Opts.ExtMnt = append(req.Opts.ExtMnt, extMnt)
 		}
 	}
 
-	err = c.criuSwrk(nil, &req, criuOpts.ImagesDirectory)
+	err = c.criuSwrk(nil, &req, criuOpts)
 	if err != nil {
 		log.Errorf(filepath.Join(criuOpts.WorkDirectory, "dump.log"))
 		return err
@@ -476,7 +475,7 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 		}
 	}
 
-	err = c.criuSwrk(process, &req, criuOpts.ImagesDirectory)
+	err = c.criuSwrk(process, &req, criuOpts)
 	if err != nil {
 		log.Errorf(filepath.Join(criuOpts.WorkDirectory, "restore.log"))
 		return err
@@ -486,7 +485,7 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 	return nil
 }
 
-func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, imagePath string) error {
+func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *CriuOpts) error {
 	fds, err := syscall.Socketpair(syscall.AF_LOCAL, syscall.SOCK_SEQPACKET|syscall.SOCK_CLOEXEC, 0)
 	if err != nil {
 		return err
@@ -566,7 +565,7 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, imageP
 		t := resp.GetType()
 		switch {
 		case t == criurpc.CriuReqType_NOTIFY:
-			if err := c.criuNotifications(resp, process, imagePath); err != nil {
+			if err := c.criuNotifications(resp, process, opts); err != nil {
 				return err
 			}
 			t = criurpc.CriuReqType_NOTIFY
@@ -633,7 +632,7 @@ func unlockNetwork(config *configs.Config) error {
 	return nil
 }
 
-func (c *linuxContainer) criuNotifications(resp *criurpc.CriuResp, process *Process, imagePath string) error {
+func (c *linuxContainer) criuNotifications(resp *criurpc.CriuResp, process *Process, opts *CriuOpts) error {
 	notify := resp.GetNotify()
 	if notify == nil {
 		return fmt.Errorf("invalid response: %s", resp.String())
@@ -641,11 +640,13 @@ func (c *linuxContainer) criuNotifications(resp *criurpc.CriuResp, process *Proc
 
 	switch {
 	case notify.GetScript() == "post-dump":
-		f, err := os.Create(filepath.Join(c.root, "checkpoint"))
-		if err != nil {
-			return err
+		if !opts.LeaveRunning {
+			f, err := os.Create(filepath.Join(c.root, "checkpoint"))
+			if err != nil {
+				return err
+			}
+			f.Close()
 		}
-		f.Close()
 		break
 
 	case notify.GetScript() == "network-unlock":
