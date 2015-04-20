@@ -385,7 +385,7 @@ func getUnitName(c *configs.Cgroup) string {
 // * Support for wildcards to allow /dev/pts support
 //
 // The second is available in more recent systemd as "char-pts", but not in e.g. v208 which is
-// in wide use. When both these are availalable we will be able to switch, but need to keep the old
+// in wide use. When both these are available we will be able to switch, but need to keep the old
 // implementation for backwards compat.
 //
 // Note: we can't use systemd to set up the initial limits, and then change the cgroup
