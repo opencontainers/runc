@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/docker/docker/pkg/symlink"
 	"github.com/docker/libcontainer/cgroups"
 	"github.com/docker/libcontainer/configs"
 	"github.com/docker/libcontainer/label"
@@ -139,6 +140,16 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 			// unable to bind anything to it.
 			return err
 		}
+		// ensure that the destination of the bind mount is resolved of symlinks at mount time because
+		// any previous mounts can invalidate the next mount's destination.
+		// this can happen when a user specifies mounts within other mounts to cause breakouts or other
+		// evil stuff to try to escape the container's rootfs.
+		if dest, err = symlink.FollowSymlinkInScope(filepath.Join(rootfs, m.Destination), rootfs); err != nil {
+			return err
+		}
+		if err := checkMountDestination(rootfs, dest); err != nil {
+			return err
+		}
 		if err := createIfNotExists(dest, stat.IsDir()); err != nil {
 			return err
 		}
@@ -195,6 +206,38 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 		return fmt.Errorf("unknown mount device %q to %q", m.Device, m.Destination)
 	}
 	return nil
+}
+
+// checkMountDestination checks to ensure that the mount destination is not over the
+// top of /proc or /sys.
+// dest is required to be an abs path and have any symlinks resolved before calling this function.
+func checkMountDestination(rootfs, dest string) error {
+	invalidDestinations := []string{
+		"/proc",
+		"/sys",
+	}
+	for _, invalid := range invalidDestinations {
+		if dirIsChild(filepath.Join(rootfs, invalid), dest) {
+			return fmt.Errorf("%q cannot be mounted because it is located inside %q", dest, invalid)
+		}
+	}
+	return nil
+}
+
+// dirIsChild compare the parts of the dir to check if it is located
+// inside root.  comparing the individual parts ensures that false positives
+// are not found.
+func dirIsChild(root, dir string) bool {
+	var (
+		rootParts = strings.Split(filepath.Clean(root), string(filepath.Separator))
+		dirParts  = strings.Split(filepath.Clean(dir), string(filepath.Separator))
+	)
+	for i, p := range rootParts {
+		if p != dirParts[i] {
+			return false
+		}
+	}
+	return true
 }
 
 func setupDevSymlinks(rootfs string) error {
