@@ -376,6 +376,11 @@ func (c *linuxContainer) Restore(process *Process, imagePath string) error {
 	}
 	defer imageDir.Close()
 
+	// CRIU has a few requirements for a root directory:
+	// * it must be a mount point
+	// * its parent must not be overmounted
+	// c.config.Rootfs is bind-mounted to a temporary directory
+	// to satisfy these requirements.
 	root := filepath.Join(c.root, "criu-root")
 	if err := os.Mkdir(root, 0755); err != nil {
 		return err
