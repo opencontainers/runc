@@ -340,6 +340,14 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 		ExtUnixSk:      proto.Bool(criuOpts.ExternalUnixConnections),
 	}
 
+	// append optional criu opts, e.g., page-server and port
+	if criuOpts.Ps.Address != "" && criuOpts.Ps.Port != 0 {
+		rpcOpts.Ps = &criurpc.CriuPageServerInfo{
+			Address: proto.String(criuOpts.Ps.Address),
+			Port:    proto.Int32(criuOpts.Ps.Port),
+		}
+	}
+
 	t := criurpc.CriuReqType_DUMP
 	req := criurpc.CriuReq{
 		Type: &t,
