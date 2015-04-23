@@ -720,3 +720,46 @@ func TestMountCmds(t *testing.T) {
 		}
 	}
 }
+
+func TestSystemProperties(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+	root, err := newTestRoot()
+	ok(t, err)
+	defer os.RemoveAll(root)
+
+	rootfs, err := newRootfs()
+	ok(t, err)
+	defer remove(rootfs)
+
+	config := newTemplateConfig(rootfs)
+	config.SystemProperties = map[string]string{
+		"kernel.shmmni": "8192",
+	}
+
+	factory, err := libcontainer.New(root, libcontainer.Cgroupfs)
+	ok(t, err)
+
+	container, err := factory.Create("test", config)
+	ok(t, err)
+	defer container.Destroy()
+
+	var stdout bytes.Buffer
+	pconfig := libcontainer.Process{
+		Args:   []string{"sh", "-c", "cat /proc/sys/kernel/shmmni"},
+		Env:    standardEnvironment,
+		Stdin:  nil,
+		Stdout: &stdout,
+	}
+	err = container.Start(&pconfig)
+	ok(t, err)
+
+	// Wait for process
+	waitProcess(&pconfig, t)
+
+	shmmniOutput := strings.TrimSpace(string(stdout.Bytes()))
+	if shmmniOutput != "8192" {
+		t.Fatalf("kernel.shmmni property expected to be 8192, but is %s", shmmniOutput)
+	}
+}
