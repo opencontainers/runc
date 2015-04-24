@@ -19,7 +19,7 @@ var checkpointCommand = cli.Command{
 		cli.BoolFlag{Name: "tcp-established", Usage: "allow open tcp connections"},
 		cli.BoolFlag{Name: "ext-unix-sk", Usage: "allow external unix sockets"},
 		cli.BoolFlag{Name: "shell-job", Usage: "allow shell jobs"},
-		cli.StringFlag{Name: "page-server", Value: "", Usage: "ADDRESS:PORT of the page server"},
+		cli.StringFlag{Name: "PageServer", Value: "", Usage: "ADDRESS:PORT of the page server"},
 	},
 	Action: func(context *cli.Context) {
 		imagePath := context.String("image-path")
@@ -44,10 +44,10 @@ var checkpointCommand = cli.Command{
 
 		// xxx following criu opts are optional
 		// The dump image can be sent to a criu page server
-		if psOpt := context.String("page-server"); psOpt != "" {
+		if psOpt := context.String("PageServer"); psOpt != "" {
 			addressPort := strings.Split(psOpt, ":")
 			if len(addressPort) != 2 {
-				fatal(fmt.Errorf("Use --page-server ADDRESS:PORT to specify page server"))
+				fatal(fmt.Errorf("Use --PageServer ADDRESS:PORT to specify page server"))
 			}
 
 			port_int, err := strconv.Atoi(addressPort[1])
