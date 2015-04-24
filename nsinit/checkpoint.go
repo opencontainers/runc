@@ -54,7 +54,7 @@ var checkpointCommand = cli.Command{
 			if err != nil {
 				fatal(fmt.Errorf("Invalid port number"))
 			}
-			criuOpts.Ps = &libcontainer.CriuPageServerInfo{
+			criuOpts.Ps = libcontainer.CriuPageServerInfo{
 				Address: addressPort[0],
 				Port:    int32(port_int),
 			}

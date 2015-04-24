@@ -12,5 +12,5 @@ type CriuOpts struct {
 	TcpEstablished          bool                // checkpoint/restore established TCP connections
 	ExternalUnixConnections bool                // allow external unix connections
 	ShellJob                bool                // allow to dump and restore shell jobs
-	Ps                      *CriuPageServerInfo // allow to dump to criu page server
+	Ps                      CriuPageServerInfo // allow to dump to criu page server
 }
