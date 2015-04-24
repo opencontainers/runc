@@ -341,10 +341,10 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 	}
 
 	// append optional criu opts, e.g., page-server and port
-	if criuOpts.Ps.Address != "" && criuOpts.Ps.Port != 0 {
+	if criuOpts.PageServer.Address != "" && criuOpts.PageServer.Port != 0 {
 		rpcOpts.Ps = &criurpc.CriuPageServerInfo{
-			Address: proto.String(criuOpts.Ps.Address),
-			Port:    proto.Int32(criuOpts.Ps.Port),
+			Address: proto.String(criuOpts.PageServer.Address),
+			Port:    proto.Int32(criuOpts.PageServer.Port),
 		}
 	}
 
