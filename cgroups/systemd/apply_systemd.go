@@ -398,33 +398,7 @@ func joinDevices(c *configs.Cgroup, pid int) error {
 	}
 
 	devices := subsystems["devices"]
-	if err := devices.Set(path, c); err != nil {
-		return err
-	}
-
-	if !c.AllowAllDevices {
-		if err := writeFile(path, "devices.deny", "a"); err != nil {
-			return err
-		}
-		for _, dev := range c.AllowedDevices {
-			if err := writeFile(path, "devices.allow", dev.CgroupString()); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-
-	if err := writeFile(path, "devices.allow", "a"); err != nil {
-		return err
-	}
-
-	for _, dev := range c.DeniedDevices {
-		if err := writeFile(path, "devices.deny", dev.CgroupString()); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return devices.Set(path, c)
 }
 
 // Symmetrical public function to update device based cgroups.  Also available
