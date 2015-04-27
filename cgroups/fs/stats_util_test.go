@@ -72,6 +72,13 @@ func expectThrottlingDataEquals(t *testing.T, expected, actual cgroups.Throttlin
 	}
 }
 
+func expectHugetlbStatEquals(t *testing.T, expected, actual cgroups.HugetlbStats) {
+	if expected != actual {
+		logrus.Printf("Expected hugetlb stats %v but found %v\n", expected, actual)
+		t.Fail()
+	}
+}
+
 func expectMemoryStatEquals(t *testing.T, expected, actual cgroups.MemoryStats) {
 	if expected.Usage != actual.Usage {
 		logrus.Printf("Expected memory usage %d but found %d\n", expected.Usage, actual.Usage)

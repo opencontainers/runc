@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/pkg/mount"
+	"github.com/docker/docker/pkg/units"
 )
 
 // https://www.kernel.org/doc/Documentation/cgroups/cgroups.txt
@@ -237,4 +238,24 @@ func RemovePaths(paths map[string]string) (err error) {
 		}
 	}
 	return fmt.Errorf("Failed to remove paths: %s", paths)
+}
+
+func GetHugePageSize() ([]string, error) {
+	var pageSizes []string
+	sizeList := []string{"B", "kB", "MB", "GB", "TB", "PB"}
+	files, err := ioutil.ReadDir("/sys/kernel/mm/hugepages")
+	if err != nil {
+		return pageSizes, err
+	}
+	for _, st := range files {
+		nameArray := strings.Split(st.Name(), "-")
+		pageSize, err := units.RAMInBytes(nameArray[1])
+		if err != nil {
+			return []string{}, err
+		}
+		sizeString := units.CustomSize("%g%s", float64(pageSize), 1024.0, sizeList)
+		pageSizes = append(pageSizes, sizeString)
+	}
+
+	return pageSizes, nil
 }

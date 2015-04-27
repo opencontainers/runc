@@ -65,13 +65,25 @@ type BlkioStats struct {
 	SectorsRecursive        []BlkioStatEntry `json:"sectors_recursive,omitempty"`
 }
 
+type HugetlbStats struct {
+	// current res_counter usage for hugetlb
+	Usage uint64 `json:"usage,omitempty"`
+	// maximum usage ever recorded.
+	MaxUsage uint64 `json:"max_usage,omitempty"`
+	// number of times htgetlb usage allocation failure.
+	Failcnt uint64 `json:"failcnt"`
+}
+
 type Stats struct {
 	CpuStats    CpuStats    `json:"cpu_stats,omitempty"`
 	MemoryStats MemoryStats `json:"memory_stats,omitempty"`
 	BlkioStats  BlkioStats  `json:"blkio_stats,omitempty"`
+	// the map is in the format "size of hugepage: stats of the hugepage"
+	HugetlbStats map[string]HugetlbStats `json:"hugetlb_stats,omitempty"`
 }
 
 func NewStats() *Stats {
 	memoryStats := MemoryStats{Stats: make(map[string]uint64)}
-	return &Stats{MemoryStats: memoryStats}
+	hugetlbStats := make(map[string]HugetlbStats)
+	return &Stats{MemoryStats: memoryStats, HugetlbStats: hugetlbStats}
 }

@@ -30,6 +30,7 @@ var (
 		"freezer":    &FreezerGroup{},
 	}
 	CgroupProcesses = "cgroup.procs"
+	HugePageSizes, _ = cgroups.GetHugePageSize()
 )
 
 type subsystem interface {
