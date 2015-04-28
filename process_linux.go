@@ -35,6 +35,8 @@ type parentProcess interface {
 	signal(os.Signal) error
 
 	stdFds() [3]string
+
+	setStdFds(fds [3]string)
 }
 
 type setnsProcess struct {
@@ -43,6 +45,7 @@ type setnsProcess struct {
 	childPipe   *os.File
 	cgroupPaths map[string]string
 	config      *initConfig
+	fds         [3]string
 }
 
 func (p *setnsProcess) startTime() (string, error) {
@@ -147,7 +150,11 @@ func (p *setnsProcess) pid() int {
 }
 
 func (p *setnsProcess) stdFds() [3]string {
-	return [3]string{"", "", ""}
+	return p.fds
+}
+
+func (p *setnsProcess) setStdFds(newFds [3]string) {
+	p.fds = newFds
 }
 
 type initProcess struct {
@@ -178,16 +185,11 @@ func (p *initProcess) start() error {
 	// Save the standard descriptor names before the container process
 	// can potentially move them (e.g., via dup2()).  If we don't do this now,
 	// we won't know at checkpoint time which file descriptor to look up.
-	// we need this info to restore the container
-	dirPath := filepath.Join("/proc", strconv.Itoa(p.pid()), "/fd")
-	for i := 0; i < 3; i++ {
-		f := filepath.Join(dirPath, strconv.Itoa(i))
-		target, err := os.Readlink(f)
-		if err != nil {
-			return newSystemError(err)
-		}
-		p.fds[i] = target
+	fds, err := getPipeFds(p.pid())
+	if err != nil {
+		return newSystemError(err)
 	}
+	p.setStdFds(fds);
 
 	// Do this before syncing with child so that no children
 	// can escape the cgroup
@@ -277,4 +279,23 @@ func (p *initProcess) signal(sig os.Signal) error {
 		return errors.New("os: unsupported signal type")
 	}
 	return syscall.Kill(p.cmd.Process.Pid, s)
+}
+
+func (p *initProcess) setStdFds(newFds [3]string) {
+	p.fds = newFds
+}
+
+func getPipeFds(pid int) ([3]string, error) {
+	var fds [3]string;
+
+	dirPath := filepath.Join("/proc", strconv.Itoa(pid), "/fd")
+	for i := 0; i < 3; i++ {
+		f := filepath.Join(dirPath, strconv.Itoa(i))
+		target, err := os.Readlink(f)
+		if err != nil {
+			return fds, err
+		}
+		fds[i] = target
+	}
+	return fds, nil
 }

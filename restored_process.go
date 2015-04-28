@@ -9,7 +9,7 @@ import (
 	"github.com/docker/libcontainer/system"
 )
 
-func newRestoredProcess(pid int) (*restoredProcess, error) {
+func newRestoredProcess(pid int, fds [3]string) (*restoredProcess, error) {
 	var (
 		err error
 	)
@@ -24,12 +24,14 @@ func newRestoredProcess(pid int) (*restoredProcess, error) {
 	return &restoredProcess{
 		proc:             proc,
 		processStartTime: started,
+		fds:              fds,
 	}, nil
 }
 
 type restoredProcess struct {
 	proc             *os.Process
 	processStartTime string
+	fds              [3]string
 }
 
 func (p *restoredProcess) start() error {
@@ -67,7 +69,11 @@ func (p *restoredProcess) signal(s os.Signal) error {
 }
 
 func (p *restoredProcess) stdFds() [3]string {
-	return [3]string{"", "", ""}
+	return p.fds
+}
+
+func (p *restoredProcess) setStdFds(newFds [3]string) {
+	p.fds = newFds
 }
 
 // nonChildProcess represents a process where the calling process is not
@@ -76,6 +82,7 @@ func (p *restoredProcess) stdFds() [3]string {
 type nonChildProcess struct {
 	processPid       int
 	processStartTime string
+	fds              [3]string
 }
 
 func (p *nonChildProcess) start() error {
@@ -103,5 +110,9 @@ func (p *nonChildProcess) signal(s os.Signal) error {
 }
 
 func (p *nonChildProcess) stdFds() [3]string {
-	return [3]string{"", "", ""}
+	return p.fds
+}
+
+func (p *nonChildProcess) setStdFds(newFds [3]string) {
+	p.fds = newFds
 }
