@@ -5,6 +5,7 @@ package libcontainer
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -363,9 +364,21 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 
 			extMnt := new(criurpc.ExtMountMap)
 			extMnt.Key = proto.String(mountDest)
-			extMnt.Val = proto.String(m.Destination)
+			extMnt.Val = proto.String(mountDest)
 			req.Opts.ExtMnt = append(req.Opts.ExtMnt, extMnt)
 		}
+	}
+
+	// Write the FD info to a file in the image directory
+
+	fdsJSON, err := json.Marshal(c.config.StdFds)
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile(filepath.Join(criuOpts.ImagesDirectory, "std_fds.json"), fdsJSON, 0655)
+	if err != nil {
+		return err
 	}
 
 	err = c.criuSwrk(nil, &req, criuOpts)
@@ -453,8 +466,13 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 	}
 	for _, m := range c.config.Mounts {
 		if m.Device == "bind" {
+			mountDest := m.Destination
+			if strings.HasPrefix(mountDest, c.config.Rootfs) {
+				mountDest = mountDest[len(c.config.Rootfs):]
+			}
+
 			extMnt := new(criurpc.ExtMountMap)
-			extMnt.Key = proto.String(m.Destination)
+			extMnt.Key = proto.String(mountDest)
 			extMnt.Val = proto.String(m.Source)
 			req.Opts.ExtMnt = append(req.Opts.ExtMnt, extMnt)
 		}
@@ -471,11 +489,21 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 			break
 		}
 	}
-	// Pipes that were previously set up for std{in,out,err}
-	// were removed after checkpoint.  Use the new ones.
+
+	var fds [3]string
+	fdJSON, err := ioutil.ReadFile(filepath.Join(criuOpts.ImagesDirectory, "std_fds.json"))
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(fdJSON, &fds)
+	if err != nil {
+		return err
+	}
+
 	var i int32
 	for i = 0; i < 3; i++ {
-		if s := c.config.StdFds[i]; strings.Contains(s, "pipe:") {
+		if s := fds[i]; strings.Contains(s, "pipe:") {
 			inheritFd := new(criurpc.InheritFd)
 			inheritFd.Key = proto.String(s)
 			inheritFd.Fd = proto.Int32(i)
