@@ -131,19 +131,6 @@ func (m *Manager) GetPaths() map[string]string {
 	return m.Paths
 }
 
-// Symmetrical public function to update device based cgroups.  Also available
-// in the systemd implementation.
-func ApplyDevices(c *configs.Cgroup, pid int) error {
-	d, err := getCgroupData(c, pid)
-	if err != nil {
-		return err
-	}
-
-	devices := subsystems["devices"]
-
-	return devices.Apply(d)
-}
-
 func (m *Manager) GetStats() (*cgroups.Stats, error) {
 	stats := cgroups.NewStats()
 	for name, path := range m.Paths {
