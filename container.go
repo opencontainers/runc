@@ -49,6 +49,9 @@ type State struct {
 
 	// Config is the container's configuration.
 	Config configs.Config `json:"config"`
+
+	// Container's standard descriptors (std{in,out,err}), needed for checkpoint and restore
+	StdFds [3]string `json:"std_fds,omitempty"`
 }
 
 // A libcontainer container object.

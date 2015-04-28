@@ -66,6 +66,10 @@ func (p *restoredProcess) signal(s os.Signal) error {
 	return p.proc.Signal(s)
 }
 
+func (p *restoredProcess) stdFds() [3]string {
+	return [3]string{"", "", ""}
+}
+
 // nonChildProcess represents a process where the calling process is not
 // the parent process.  This process is created when a factory loads a container from
 // a persisted state.
@@ -96,4 +100,8 @@ func (p *nonChildProcess) startTime() (string, error) {
 
 func (p *nonChildProcess) signal(s os.Signal) error {
 	return newGenericError(fmt.Errorf("restored process cannot be signaled"), SystemError)
+}
+
+func (p *nonChildProcess) stdFds() [3]string {
+	return [3]string{"", "", ""}
 }

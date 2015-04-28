@@ -13,7 +13,6 @@ import (
 	"syscall"
 
 	"github.com/docker/libcontainer/cgroups"
-	"github.com/docker/libcontainer/configs"
 	"github.com/docker/libcontainer/system"
 )
 
@@ -34,6 +33,8 @@ type parentProcess interface {
 	startTime() (string, error)
 
 	signal(os.Signal) error
+
+	stdFds() [3]string
 }
 
 type setnsProcess struct {
@@ -145,16 +146,26 @@ func (p *setnsProcess) pid() int {
 	return p.cmd.Process.Pid
 }
 
+func (p *setnsProcess) stdFds() [3]string {
+	return [3]string{"", "", ""}
+}
+
 type initProcess struct {
 	cmd        *exec.Cmd
 	parentPipe *os.File
 	childPipe  *os.File
 	config     *initConfig
 	manager    cgroups.Manager
+	container  *linuxContainer
+	fds        [3]string
 }
 
 func (p *initProcess) pid() int {
 	return p.cmd.Process.Pid
+}
+
+func (p *initProcess) stdFds() [3]string {
+	return p.fds
 }
 
 func (p *initProcess) start() error {
@@ -167,9 +178,17 @@ func (p *initProcess) start() error {
 	// Save the standard descriptor names before the container process
 	// can potentially move them (e.g., via dup2()).  If we don't do this now,
 	// we won't know at checkpoint time which file descriptor to look up.
-	if err = saveStdPipes(p.pid(), p.config.Config); err != nil {
-		return newSystemError(err)
+	// we need this info to restore the container
+	dirPath := filepath.Join("/proc", strconv.Itoa(p.pid()), "/fd")
+	for i := 0; i < 3; i++ {
+		f := filepath.Join(dirPath, strconv.Itoa(i))
+		target, err := os.Readlink(f)
+		if err != nil {
+			return newSystemError(err)
+		}
+		p.fds[i] = target
 	}
+
 	// Do this before syncing with child so that no children
 	// can escape the cgroup
 	if err := p.manager.Apply(p.pid()); err != nil {
@@ -258,20 +277,4 @@ func (p *initProcess) signal(sig os.Signal) error {
 		return errors.New("os: unsupported signal type")
 	}
 	return syscall.Kill(p.cmd.Process.Pid, s)
-}
-
-// Save process's std{in,out,err} file names as these will be
-// removed if/when the container is checkpointed.  We will need
-// this info to restore the container.
-func saveStdPipes(pid int, config *configs.Config) error {
-	dirPath := filepath.Join("/proc", strconv.Itoa(pid), "/fd")
-	for i := 0; i < 3; i++ {
-		f := filepath.Join(dirPath, strconv.Itoa(i))
-		target, err := os.Readlink(f)
-		if err != nil {
-			return err
-		}
-		config.StdFds[i] = target
-	}
-	return nil
 }

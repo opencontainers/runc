@@ -371,7 +371,7 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 
 	// Write the FD info to a file in the image directory
 
-	fdsJSON, err := json.Marshal(c.config.StdFds)
+	fdsJSON, err := json.Marshal(c.initProcess.stdFds())
 	if err != nil {
 		return err
 	}
@@ -557,13 +557,6 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *
 		}
 		log.Warn(st.String())
 	}()
-
-	if process != nil {
-		err = saveStdPipes(cmd.Process.Pid, c.config)
-		if err != nil {
-			return err
-		}
-	}
 
 	data, err := proto.Marshal(req)
 	if err != nil {
@@ -770,6 +763,7 @@ func (c *linuxContainer) currentState() (*State, error) {
 		InitProcessStartTime: startTime,
 		CgroupPaths:          c.cgroupManager.GetPaths(),
 		NamespacePaths:       make(map[configs.NamespaceType]string),
+		StdFds:               c.initProcess.stdFds(),
 	}
 	for _, ns := range c.config.Namespaces {
 		state.NamespacePaths[ns.Type] = ns.GetPath(c.initProcess.pid())
