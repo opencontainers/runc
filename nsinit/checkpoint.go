@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
-	"strconv"
-	"strings"
 	"github.com/codegangsta/cli"
 	"github.com/docker/libcontainer"
+	"strconv"
+	"strings"
 )
 
 var checkpointCommand = cli.Command{

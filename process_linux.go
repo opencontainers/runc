@@ -189,7 +189,7 @@ func (p *initProcess) start() error {
 	if err != nil {
 		return newSystemError(err)
 	}
-	p.setExternalDescriptors(fds);
+	p.setExternalDescriptors(fds)
 
 	// Do this before syncing with child so that no children
 	// can escape the cgroup
