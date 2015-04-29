@@ -9,7 +9,7 @@ import (
 	"github.com/docker/libcontainer/system"
 )
 
-func newRestoredProcess(pid int, fds [3]string) (*restoredProcess, error) {
+func newRestoredProcess(pid int, fds []string) (*restoredProcess, error) {
 	var (
 		err error
 	)
@@ -31,7 +31,7 @@ func newRestoredProcess(pid int, fds [3]string) (*restoredProcess, error) {
 type restoredProcess struct {
 	proc             *os.Process
 	processStartTime string
-	fds              [3]string
+	fds              []string
 }
 
 func (p *restoredProcess) start() error {
@@ -68,11 +68,11 @@ func (p *restoredProcess) signal(s os.Signal) error {
 	return p.proc.Signal(s)
 }
 
-func (p *restoredProcess) externalDescriptors() [3]string {
+func (p *restoredProcess) externalDescriptors() []string {
 	return p.fds
 }
 
-func (p *restoredProcess) setExternalDescriptors(newFds [3]string) {
+func (p *restoredProcess) setExternalDescriptors(newFds []string) {
 	p.fds = newFds
 }
 
@@ -82,7 +82,7 @@ func (p *restoredProcess) setExternalDescriptors(newFds [3]string) {
 type nonChildProcess struct {
 	processPid       int
 	processStartTime string
-	fds              [3]string
+	fds              []string
 }
 
 func (p *nonChildProcess) start() error {
@@ -109,10 +109,10 @@ func (p *nonChildProcess) signal(s os.Signal) error {
 	return newGenericError(fmt.Errorf("restored process cannot be signaled"), SystemError)
 }
 
-func (p *nonChildProcess) externalDescriptors() [3]string {
+func (p *nonChildProcess) externalDescriptors() []string {
 	return p.fds
 }
 
-func (p *nonChildProcess) setExternalDescriptors(newFds [3]string) {
+func (p *nonChildProcess) setExternalDescriptors(newFds []string) {
 	p.fds = newFds
 }

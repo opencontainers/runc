@@ -34,9 +34,9 @@ type parentProcess interface {
 
 	signal(os.Signal) error
 
-	externalDescriptors() [3]string
+	externalDescriptors() []string
 
-	setExternalDescriptors(fds [3]string)
+	setExternalDescriptors(fds []string)
 }
 
 type setnsProcess struct {
@@ -45,7 +45,7 @@ type setnsProcess struct {
 	childPipe   *os.File
 	cgroupPaths map[string]string
 	config      *initConfig
-	fds         [3]string
+	fds         []string
 }
 
 func (p *setnsProcess) startTime() (string, error) {
@@ -149,11 +149,11 @@ func (p *setnsProcess) pid() int {
 	return p.cmd.Process.Pid
 }
 
-func (p *setnsProcess) externalDescriptors() [3]string {
+func (p *setnsProcess) externalDescriptors() []string {
 	return p.fds
 }
 
-func (p *setnsProcess) setExternalDescriptors(newFds [3]string) {
+func (p *setnsProcess) setExternalDescriptors(newFds []string) {
 	p.fds = newFds
 }
 
@@ -164,14 +164,14 @@ type initProcess struct {
 	config     *initConfig
 	manager    cgroups.Manager
 	container  *linuxContainer
-	fds        [3]string
+	fds        []string
 }
 
 func (p *initProcess) pid() int {
 	return p.cmd.Process.Pid
 }
 
-func (p *initProcess) externalDescriptors() [3]string {
+func (p *initProcess) externalDescriptors() []string {
 	return p.fds
 }
 
@@ -281,12 +281,14 @@ func (p *initProcess) signal(sig os.Signal) error {
 	return syscall.Kill(p.cmd.Process.Pid, s)
 }
 
-func (p *initProcess) setExternalDescriptors(newFds [3]string) {
+func (p *initProcess) setExternalDescriptors(newFds []string) {
 	p.fds = newFds
 }
 
-func getPipeFds(pid int) ([3]string, error) {
-	var fds [3]string;
+func getPipeFds(pid int) ([]string, error) {
+	var fds []string
+
+	fds = make([]string, 3)
 
 	dirPath := filepath.Join("/proc", strconv.Itoa(pid), "/fd")
 	for i := 0; i < 3; i++ {
