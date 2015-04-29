@@ -371,7 +371,7 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 
 	// Write the FD info to a file in the image directory
 
-	fdsJSON, err := json.Marshal(c.initProcess.stdFds())
+	fdsJSON, err := json.Marshal(c.initProcess.externalDescriptors())
 	if err != nil {
 		return err
 	}
@@ -563,7 +563,7 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *
 		if err != nil {
 			return err
 		}
-		c.initProcess.setStdFds(fds)
+		c.initProcess.setExternalDescriptors(fds)
 	}
 
 	data, err := proto.Marshal(req)
@@ -700,7 +700,7 @@ func (c *linuxContainer) criuNotifications(resp *criurpc.CriuResp, process *Proc
 
 	case notify.GetScript() == "post-restore":
 		pid := notify.GetPid()
-		r, err := newRestoredProcess(int(pid), c.initProcess.stdFds())
+		r, err := newRestoredProcess(int(pid), c.initProcess.externalDescriptors())
 		if err != nil {
 			return err
 		}
@@ -771,7 +771,7 @@ func (c *linuxContainer) currentState() (*State, error) {
 		InitProcessStartTime: startTime,
 		CgroupPaths:          c.cgroupManager.GetPaths(),
 		NamespacePaths:       make(map[configs.NamespaceType]string),
-		StdFds:               c.initProcess.stdFds(),
+		ExternalDescriptors:  c.initProcess.externalDescriptors(),
 	}
 	for _, ns := range c.config.Namespaces {
 		state.NamespacePaths[ns.Type] = ns.GetPath(c.initProcess.pid())

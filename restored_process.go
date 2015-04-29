@@ -68,11 +68,11 @@ func (p *restoredProcess) signal(s os.Signal) error {
 	return p.proc.Signal(s)
 }
 
-func (p *restoredProcess) stdFds() [3]string {
+func (p *restoredProcess) externalDescriptors() [3]string {
 	return p.fds
 }
 
-func (p *restoredProcess) setStdFds(newFds [3]string) {
+func (p *restoredProcess) setExternalDescriptors(newFds [3]string) {
 	p.fds = newFds
 }
 
@@ -109,10 +109,10 @@ func (p *nonChildProcess) signal(s os.Signal) error {
 	return newGenericError(fmt.Errorf("restored process cannot be signaled"), SystemError)
 }
 
-func (p *nonChildProcess) stdFds() [3]string {
+func (p *nonChildProcess) externalDescriptors() [3]string {
 	return p.fds
 }
 
-func (p *nonChildProcess) setStdFds(newFds [3]string) {
+func (p *nonChildProcess) setExternalDescriptors(newFds [3]string) {
 	p.fds = newFds
 }
