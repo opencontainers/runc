@@ -182,6 +182,7 @@ func (l *LinuxFactory) Load(id string) (Container, error) {
 	r := &nonChildProcess{
 		processPid:       state.InitProcessPid,
 		processStartTime: state.InitProcessStartTime,
+		fds:              state.StdFds,
 	}
 	return &linuxContainer{
 		initProcess:   r,
