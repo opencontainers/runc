@@ -490,7 +490,7 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 		}
 	}
 
-	var fds [3]string
+	var fds []string
 	fdJSON, err := ioutil.ReadFile(filepath.Join(criuOpts.ImagesDirectory, "std_fds.json"))
 	if err != nil {
 		return err
@@ -501,12 +501,11 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 		return err
 	}
 
-	var i int32
-	for i = 0; i < 3; i++ {
+	for i := range fds {
 		if s := fds[i]; strings.Contains(s, "pipe:") {
 			inheritFd := new(criurpc.InheritFd)
 			inheritFd.Key = proto.String(s)
-			inheritFd.Fd = proto.Int32(i)
+			inheritFd.Fd = proto.Int32(int32(i))
 			req.Opts.InheritFd = append(req.Opts.InheritFd, inheritFd)
 		}
 	}
