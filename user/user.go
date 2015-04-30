@@ -348,3 +348,52 @@ func GetExecUser(userSpec string, defaults *ExecUser, passwd, group io.Reader) (
 
 	return user, nil
 }
+
+// GetAdditionalGroupsPath is a wrapper for GetAdditionalGroups. It reads data from the
+// given file path and uses that data as the arguments to GetAdditionalGroups.
+func GetAdditionalGroupsPath(additionalGroups []string, groupPath string) ([]int, error) {
+	var groupIds []int
+
+	for _, ag := range additionalGroups {
+		groupReader, err := os.Open(groupPath)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to open group file: %v", err)
+		}
+		defer groupReader.Close()
+
+		groupId, err := GetAdditionalGroup(ag, groupReader)
+		if err != nil {
+			return nil, err
+		}
+		groupIds = append(groupIds, groupId)
+	}
+
+	return groupIds, nil
+}
+
+// GetAdditionalGroup looks up the specified group in the passed groupReader.
+func GetAdditionalGroup(additionalGroup string, groupReader io.Reader) (int, error) {
+	groups, err := ParseGroupFilter(groupReader, func(g Group) bool {
+		return g.Name == additionalGroup || strconv.Itoa(g.Gid) == additionalGroup
+	})
+	if err != nil {
+		return -1, fmt.Errorf("Unable to find additional groups %v: %v", additionalGroup, err)
+	}
+	if groups != nil && len(groups) > 0 {
+		// if we found any group entries that matched our filter, let's take the first one as "correct"
+		return groups[0].Gid, nil
+	} else {
+		// we asked for a group but didn't find id...  let's check to see if we wanted a numeric group
+		addGroup, err := strconv.Atoi(additionalGroup)
+		if err != nil {
+			// not numeric - we have to bail
+			return -1, fmt.Errorf("Unable to find group %v", additionalGroup)
+		}
+
+		// Ensure gid is inside gid range.
+		if addGroup < minId || addGroup > maxId {
+			return -1, ErrRange
+		}
+		return addGroup, nil
+	}
+}
