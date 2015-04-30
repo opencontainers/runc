@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 	"syscall"
@@ -418,4 +419,11 @@ func maskFile(path string) error {
 		return err
 	}
 	return nil
+}
+
+// writeSystemProperty writes the value to a path under /proc/sys as determined from the key.
+// For e.g. net.ipv4.ip_forward translated to /proc/sys/net/ipv4/ip_forward.
+func writeSystemProperty(key, value string) error {
+	keyPath := strings.Replace(key, ".", "/", -1)
+	return ioutil.WriteFile(path.Join("/proc/sys", keyPath), []byte(value), 0644)
 }

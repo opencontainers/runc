@@ -99,6 +99,10 @@ type Config struct {
 	// ReadonlyPaths specifies paths within the container's rootfs to remount as read-only
 	// so that these files prevent any writes.
 	ReadonlyPaths []string `json:"readonly_paths"`
+
+	// SystemProperties is a map of properties and their values. It is the equivalent of using
+	// sysctl -w my.property.name value in Linux.
+	SystemProperties map[string]string `json:"system_properties"`
 }
 
 // Gets the root uid for the process on host which could be non-zero
