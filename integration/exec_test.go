@@ -386,6 +386,53 @@ func TestProcessCaps(t *testing.T) {
 	}
 }
 
+func TestAdditionalGroups(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+	root, err := newTestRoot()
+	ok(t, err)
+	defer os.RemoveAll(root)
+
+	rootfs, err := newRootfs()
+	ok(t, err)
+	defer remove(rootfs)
+
+	config := newTemplateConfig(rootfs)
+	config.AdditionalGroups = []string{"plugdev", "audio"}
+
+	factory, err := libcontainer.New(root, libcontainer.Cgroupfs)
+	ok(t, err)
+
+	container, err := factory.Create("test", config)
+	ok(t, err)
+	defer container.Destroy()
+
+	var stdout bytes.Buffer
+	pconfig := libcontainer.Process{
+		Args:   []string{"sh", "-c", "id", "-Gn"},
+		Env:    standardEnvironment,
+		Stdin:  nil,
+		Stdout: &stdout,
+	}
+	err = container.Start(&pconfig)
+	ok(t, err)
+
+	// Wait for process
+	waitProcess(&pconfig, t)
+
+	outputGroups := string(stdout.Bytes())
+
+	// Check that the groups output has the groups that we specified
+	if !strings.Contains(outputGroups, "audio") {
+		t.Fatalf("Listed groups do not contain the audio group as expected: %v", outputGroups)
+	}
+
+	if !strings.Contains(outputGroups, "plugdev") {
+		t.Fatalf("Listed groups do not contain the plugdev group as expected: %v", outputGroups)
+	}
+}
+
 func TestFreeze(t *testing.T) {
 	testFreeze(t, false)
 }
