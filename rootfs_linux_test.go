@@ -27,3 +27,11 @@ func TestCheckMountDestFalsePositive(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestCheckMountRoot(t *testing.T) {
+	dest := "/rootfs"
+	err := checkMountDestination("/rootfs", dest)
+	if err == nil {
+		t.Fatal(err)
+	}
+}

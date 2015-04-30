@@ -212,6 +212,9 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 // top of /proc or /sys.
 // dest is required to be an abs path and have any symlinks resolved before calling this function.
 func checkMountDestination(rootfs, dest string) error {
+	if filepath.Clean(rootfs) == filepath.Clean(dest) {
+		return fmt.Errorf("mounting into / is prohibited")
+	}
 	invalidDestinations := []string{
 		"/proc",
 		"/sys",
@@ -232,6 +235,9 @@ func dirIsChild(root, dir string) bool {
 		rootParts = strings.Split(filepath.Clean(root), string(filepath.Separator))
 		dirParts  = strings.Split(filepath.Clean(dir), string(filepath.Separator))
 	)
+	if len(dirParts) < len(rootParts) {
+		return false
+	}
 	for i, p := range rootParts {
 		if p != dirParts[i] {
 			return false
