@@ -46,6 +46,7 @@ var createFlags = []cli.Flag{
 	cli.StringSliceFlag{Name: "bind", Value: &cli.StringSlice{}, Usage: "add bind mounts to the container"},
 	cli.StringSliceFlag{Name: "sysctl", Value: &cli.StringSlice{}, Usage: "set system properties in the container"},
 	cli.StringSliceFlag{Name: "tmpfs", Value: &cli.StringSlice{}, Usage: "add tmpfs mounts to the container"},
+	cli.StringSliceFlag{Name: "groups", Value: &cli.StringSlice{}, Usage: "add additional groups"},
 }
 
 var configCommand = cli.Command{
@@ -113,6 +114,7 @@ func modify(config *configs.Config, context *cli.Context) {
 			node.Gid = uint32(userns_uid)
 		}
 	}
+
 	config.SystemProperties = make(map[string]string)
 	for _, sysProp := range context.StringSlice("sysctl") {
 		parts := strings.SplitN(sysProp, "=", 2)
@@ -121,6 +123,11 @@ func modify(config *configs.Config, context *cli.Context) {
 		}
 		config.SystemProperties[parts[0]] = parts[1]
 	}
+
+	for _, group := range context.StringSlice("groups") {
+		config.AdditionalGroups = append(config.AdditionalGroups, group)
+	}
+
 	for _, rawBind := range context.StringSlice("bind") {
 		mount := &configs.Mount{
 			Device: "bind",
