@@ -49,11 +49,6 @@ func setupRootfs(config *configs.Config, console *linuxConsole) (err error) {
 	if err := setupPtmx(config, console); err != nil {
 		return newSystemError(err)
 	}
-	// stdin, stdout and stderr could be pointing to /dev/null from parent namespace.
-	// re-open them inside this namespace.
-	if err := reOpenDevNull(config.Rootfs); err != nil {
-		return newSystemError(err)
-	}
 	if err := setupDevSymlinks(config.Rootfs); err != nil {
 		return newSystemError(err)
 	}
@@ -66,6 +61,9 @@ func setupRootfs(config *configs.Config, console *linuxConsole) (err error) {
 		err = pivotRoot(config.Rootfs, config.PivotDir)
 	}
 	if err != nil {
+		return newSystemError(err)
+	}
+	if err := reOpenDevNull(config.Rootfs); err != nil {
 		return newSystemError(err)
 	}
 	if config.Readonlyfs {
@@ -270,11 +268,13 @@ func setupDevSymlinks(rootfs string) error {
 	return nil
 }
 
-// If stdin, stdout or stderr are pointing to '/dev/null' in the global mount namespace,
-// this method will make them point to '/dev/null' in this namespace.
+// If stdin, stdout, and/or stderr are pointing to `/dev/null` in the parent's rootfs
+// this method will make them point to `/dev/null` in this container's rootfs.  This
+// needs to be called after we chroot/pivot into the container's rootfs so that any
+// symlinks are resolved locally.
 func reOpenDevNull(rootfs string) error {
 	var stat, devNullStat syscall.Stat_t
-	file, err := os.Open(filepath.Join(rootfs, "/dev/null"))
+	file, err := os.Open("/dev/null")
 	if err != nil {
 		return fmt.Errorf("Failed to open /dev/null - %s", err)
 	}
