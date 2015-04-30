@@ -218,30 +218,15 @@ func checkMountDestination(rootfs, dest string) error {
 		"/sys",
 	}
 	for _, invalid := range invalidDestinations {
-		if dirIsChild(filepath.Join(rootfs, invalid), dest) {
+		path, err := filepath.Rel(filepath.Join(rootfs, invalid), dest)
+		if err != nil {
+			return err
+		}
+		if path == "." || !strings.HasPrefix(path, "..") {
 			return fmt.Errorf("%q cannot be mounted because it is located inside %q", dest, invalid)
 		}
 	}
 	return nil
-}
-
-// dirIsChild compare the parts of the dir to check if it is located
-// inside root.  comparing the individual parts ensures that false positives
-// are not found.
-func dirIsChild(root, dir string) bool {
-	var (
-		rootParts = strings.Split(filepath.Clean(root), string(filepath.Separator))
-		dirParts  = strings.Split(filepath.Clean(dir), string(filepath.Separator))
-	)
-	if len(dirParts) < len(rootParts) {
-		return false
-	}
-	for i, p := range rootParts {
-		if p != dirParts[i] {
-			return false
-		}
-	}
-	return true
 }
 
 func setupDevSymlinks(rootfs string) error {
