@@ -204,9 +204,6 @@ func TestEnter(t *testing.T) {
 
 	config := newTemplateConfig(rootfs)
 
-	factory, err := libcontainer.New(root, libcontainer.Cgroupfs)
-	ok(t, err)
-
 	container, err := factory.Create("test", config)
 	ok(t, err)
 	defer container.Destroy()
@@ -294,9 +291,6 @@ func TestProcessEnv(t *testing.T) {
 
 	config := newTemplateConfig(rootfs)
 
-	factory, err := libcontainer.New(root, libcontainer.Cgroupfs)
-	ok(t, err)
-
 	container, err := factory.Create("test", config)
 	ok(t, err)
 	defer container.Destroy()
@@ -345,9 +339,6 @@ func TestProcessCaps(t *testing.T) {
 	defer remove(rootfs)
 
 	config := newTemplateConfig(rootfs)
-
-	factory, err := libcontainer.New(root, libcontainer.Cgroupfs)
-	ok(t, err)
 
 	container, err := factory.Create("test", config)
 	ok(t, err)
@@ -427,15 +418,12 @@ func testFreeze(t *testing.T, systemd bool) {
 	defer remove(rootfs)
 
 	config := newTemplateConfig(rootfs)
-	cgm := libcontainer.Cgroupfs
+	f := factory
 	if systemd {
-		cgm = libcontainer.SystemdCgroups
+		f = systemdFactory
 	}
 
-	factory, err := libcontainer.New(root, cgm)
-	ok(t, err)
-
-	container, err := factory.Create("test", config)
+	container, err := f.Create("test", config)
 	ok(t, err)
 	defer container.Destroy()
 
@@ -539,11 +527,6 @@ func TestContainerState(t *testing.T) {
 		{Type: configs.NEWNET},
 	})
 
-	factory, err := libcontainer.New(root, libcontainer.Cgroupfs)
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	container, err := factory.Create("test", config)
 	if err != nil {
 		t.Fatal(err)
@@ -594,11 +577,6 @@ func TestPassExtraFiles(t *testing.T) {
 	defer remove(rootfs)
 
 	config := newTemplateConfig(rootfs)
-
-	factory, err := libcontainer.New(rootfs, libcontainer.Cgroupfs)
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	container, err := factory.Create("test", config)
 	if err != nil {
@@ -686,11 +664,6 @@ func TestMountCmds(t *testing.T) {
 		},
 	})
 
-	factory, err := libcontainer.New(root, libcontainer.Cgroupfs)
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	container, err := factory.Create("test", config)
 	if err != nil {
 		t.Fatal(err)
@@ -737,9 +710,6 @@ func TestSystemProperties(t *testing.T) {
 	config.SystemProperties = map[string]string{
 		"kernel.shmmni": "8192",
 	}
-
-	factory, err := libcontainer.New(root, libcontainer.Cgroupfs)
-	ok(t, err)
 
 	container, err := factory.Create("test", config)
 	ok(t, err)
