@@ -288,6 +288,8 @@ func (c *linuxContainer) checkCriuVersion() error {
 	return nil
 }
 
+const descriptors_filename = "descriptors.json"
+
 func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 	c.m.Lock()
 	defer c.m.Unlock()
@@ -376,7 +378,7 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 		return err
 	}
 
-	err = ioutil.WriteFile(filepath.Join(criuOpts.ImagesDirectory, "std_fds.json"), fdsJSON, 0655)
+	err = ioutil.WriteFile(filepath.Join(criuOpts.ImagesDirectory, descriptors_filename), fdsJSON, 0655)
 	if err != nil {
 		return err
 	}
@@ -490,14 +492,16 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 		}
 	}
 
-	var fds []string
-	fdJSON, err := ioutil.ReadFile(filepath.Join(criuOpts.ImagesDirectory, "std_fds.json"))
-	if err != nil {
+	var (
+		fds    []string
+		fdJSON []byte
+	)
+
+	if fdJSON, err = ioutil.ReadFile(filepath.Join(criuOpts.ImagesDirectory, descriptors_filename)); err != nil {
 		return err
 	}
 
-	err = json.Unmarshal(fdJSON, &fds)
-	if err != nil {
+	if err = json.Unmarshal(fdJSON, &fds); err != nil {
 		return err
 	}
 
