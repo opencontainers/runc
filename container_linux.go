@@ -281,8 +281,8 @@ func (c *linuxContainer) checkCriuVersion() error {
 		return fmt.Errorf("Unable to parse the CRIU version: %s", out)
 	}
 
-	if x*10000+y*100+z < 10501 {
-		return fmt.Errorf("CRIU version must be 1.5.1 or higher")
+	if x*10000+y*100+z < 10502 {
+		return fmt.Errorf("CRIU version must be 1.5.2 or higher")
 	}
 
 	return nil
