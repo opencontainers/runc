@@ -651,7 +651,7 @@ func TestMountCmds(t *testing.T) {
 	config := newTemplateConfig(rootfs)
 	config.Mounts = append(config.Mounts, &configs.Mount{
 		Source:      tmpDir,
-		Destination: filepath.Join(rootfs, "tmp"),
+		Destination: "/tmp",
 		Device:      "bind",
 		Flags:       syscall.MS_BIND | syscall.MS_REC,
 		PremountCmds: []configs.Command{
