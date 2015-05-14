@@ -27,10 +27,31 @@ var restoreCommand = cli.Command{
 		if imagePath == "" {
 			fatal(fmt.Errorf("The --image-path option isn't specified"))
 		}
-		container, err := getContainer(context)
+
+		var (
+			container libcontainer.Container
+			err       error
+		)
+
+		factory, err := loadFactory(context)
 		if err != nil {
 			fatal(err)
 		}
+
+		config, err := loadConfig(context)
+		if err != nil {
+			fatal(err)
+		}
+
+		created := false
+		container, err = factory.Load(context.String("id"))
+		if err != nil {
+			created = true
+			if container, err = factory.Create(context.String("id"), config); err != nil {
+				fatal(err)
+			}
+		}
+
 		process := &libcontainer.Process{
 			Stdin:  os.Stdin,
 			Stdout: os.Stdout,
@@ -48,6 +69,8 @@ var restoreCommand = cli.Command{
 		if err := tty.attach(process); err != nil {
 			fatal(err)
 		}
+		go handleSignals(process, tty)
+
 		err = container.Restore(process, &libcontainer.CriuOpts{
 			ImagesDirectory:         imagePath,
 			WorkDirectory:           context.String("work-path"),
@@ -56,25 +79,42 @@ var restoreCommand = cli.Command{
 			ShellJob:                context.Bool("shell-job"),
 		})
 		if err != nil {
+			tty.Close()
+			if created {
+				container.Destroy()
+			}
 			fatal(err)
 		}
-		go handleSignals(process, tty)
+
 		status, err := process.Wait()
 		if err != nil {
 			exitError, ok := err.(*exec.ExitError)
 			if ok {
 				status = exitError.ProcessState
 			} else {
-				container.Destroy()
+				tty.Close()
+				if created {
+					container.Destroy()
+				}
 				fatal(err)
 			}
 		}
-		ctStatus, err := container.Status()
-		if ctStatus == libcontainer.Destroyed {
-			if err := container.Destroy(); err != nil {
+
+		if created {
+			status, err := container.Status()
+			if err != nil {
+				tty.Close()
 				fatal(err)
 			}
+			if status != libcontainer.Checkpointed {
+				if err := container.Destroy(); err != nil {
+					tty.Close()
+					fatal(err)
+				}
+			}
 		}
+
+		tty.Close()
 		os.Exit(utils.ExitStatus(status.Sys().(syscall.WaitStatus)))
 	},
 }
