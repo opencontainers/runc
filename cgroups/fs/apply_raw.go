@@ -22,6 +22,8 @@ var (
 		"cpuacct":    &CpuacctGroup{},
 		"blkio":      &BlkioGroup{},
 		"hugetlb":    &HugetlbGroup{},
+		"net_cls":    &NetClsGroup{},
+		"net_prio":   &NetPrioGroup{},
 		"perf_event": &PerfEventGroup{},
 		"freezer":    &FreezerGroup{},
 	}
