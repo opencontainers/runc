@@ -561,12 +561,12 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *
 		log.Warn(st.String())
 	}()
 
+	var extFds []string
 	if process != nil {
-		fds, err := getPipeFds(cmd.Process.Pid)
+		extFds, err = getPipeFds(cmd.Process.Pid)
 		if err != nil {
 			return err
 		}
-		c.initProcess.setExternalDescriptors(fds)
 	}
 
 	data, err := proto.Marshal(req)
@@ -605,7 +605,7 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *
 		t := resp.GetType()
 		switch {
 		case t == criurpc.CriuReqType_NOTIFY:
-			if err := c.criuNotifications(resp, process, opts); err != nil {
+			if err := c.criuNotifications(resp, process, opts, extFds); err != nil {
 				return err
 			}
 			t = criurpc.CriuReqType_NOTIFY
@@ -672,7 +672,7 @@ func unlockNetwork(config *configs.Config) error {
 	return nil
 }
 
-func (c *linuxContainer) criuNotifications(resp *criurpc.CriuResp, process *Process, opts *CriuOpts) error {
+func (c *linuxContainer) criuNotifications(resp *criurpc.CriuResp, process *Process, opts *CriuOpts, fds []string) error {
 	notify := resp.GetNotify()
 	if notify == nil {
 		return fmt.Errorf("invalid response: %s", resp.String())
@@ -703,7 +703,7 @@ func (c *linuxContainer) criuNotifications(resp *criurpc.CriuResp, process *Proc
 
 	case notify.GetScript() == "post-restore":
 		pid := notify.GetPid()
-		r, err := newRestoredProcess(int(pid), c.initProcess.externalDescriptors())
+		r, err := newRestoredProcess(int(pid), fds)
 		if err != nil {
 			return err
 		}
