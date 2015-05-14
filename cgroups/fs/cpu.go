@@ -44,6 +44,16 @@ func (s *CpuGroup) Set(path string, cgroup *configs.Cgroup) error {
 			return err
 		}
 	}
+	if cgroup.CpuRtPeriod != 0 {
+		if err := writeFile(path, "cpu.rt_period_us", strconv.FormatInt(cgroup.CpuRtPeriod, 10)); err != nil {
+			return err
+		}
+	}
+	if cgroup.CpuRtRuntime != 0 {
+		if err := writeFile(path, "cpu.rt_runtime_us", strconv.FormatInt(cgroup.CpuRtRuntime, 10)); err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
