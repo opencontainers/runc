@@ -294,6 +294,17 @@ func joinCpu(c *configs.Cgroup, pid int) error {
 			return err
 		}
 	}
+	if c.CpuRtPeriod != 0 {
+		if err = writeFile(path, "cpu.rt_period_us", strconv.FormatInt(c.CpuRtPeriod, 10)); err != nil {
+			return err
+		}
+	}
+	if c.CpuRtRuntime != 0 {
+		if err = writeFile(path, "cpu.rt_runtime_us", strconv.FormatInt(c.CpuRtRuntime, 10)); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

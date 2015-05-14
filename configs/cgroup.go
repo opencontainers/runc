@@ -39,6 +39,12 @@ type Cgroup struct {
 	// CPU period to be used for hardcapping (in usecs). 0 to use system default.
 	CpuPeriod int64 `json:"cpu_period"`
 
+	// How many time CPU will use in realtime scheduling (in usecs).
+	CpuRtRuntime int64 `json:"cpu_quota"`
+
+	// CPU period to be used for realtime scheduling (in usecs).
+	CpuRtPeriod int64 `json:"cpu_period"`
+
 	// CPU to use
 	CpusetCpus string `json:"cpuset_cpus"`
 
