@@ -314,11 +314,13 @@ func joinCpu(c *configs.Cgroup, pid int) error {
 }
 
 func joinFreezer(c *configs.Cgroup, pid int) error {
-	if _, err := join(c, "freezer", pid); err != nil && !cgroups.IsNotFound(err) {
+	path, err := join(c, "freezer", pid)
+	if err != nil && !cgroups.IsNotFound(err) {
 		return err
 	}
 
-	return nil
+	freezer := subsystems["freezer"]
+	return freezer.Set(path, c)
 }
 
 func joinNetPrio(c *configs.Cgroup, pid int) error {
