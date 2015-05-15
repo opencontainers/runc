@@ -83,4 +83,7 @@ type Cgroup struct {
 
 	// Set priority of network traffic for container
 	NetPrioIfpriomap []*IfPrioMap `json:"net_prio_ifpriomap"`
+
+	// Set class identifier for container's network packets
+	NetClsClassid string `json:"net_cls_classid"`
 }
