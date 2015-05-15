@@ -200,12 +200,8 @@ func (m *Manager) Apply(pid int) error {
 		return err
 	}
 
-	// -1 disables memorySwap
-	if c.MemorySwap >= 0 && c.Memory != 0 {
-		if err := joinMemory(c, pid); err != nil {
-			return err
-		}
-
+	if err := joinMemory(c, pid); err != nil {
+		return err
 	}
 
 	// we need to manually join the freezer, net_prio and cpuset cgroup in systemd
@@ -435,19 +431,33 @@ func joinDevices(c *configs.Cgroup, pid int) error {
 }
 
 func joinMemory(c *configs.Cgroup, pid int) error {
-	memorySwap := c.MemorySwap
-
-	if memorySwap == 0 {
-		// By default, MemorySwap is set to twice the size of RAM.
-		memorySwap = c.Memory * 2
-	}
-
 	path, err := getSubsystemPath(c, "memory")
 	if err != nil && !cgroups.IsNotFound(err) {
 		return err
 	}
 
-	return writeFile(path, "memory.memsw.limit_in_bytes", strconv.FormatInt(memorySwap, 10))
+	// -1 disables memoryswap
+	if c.Memory != 0 && c.MemorySwap >= 0 {
+		memorySwap := c.MemorySwap
+
+		if memorySwap == 0 {
+			// By default, MemorySwap is set to twice the size of RAM.
+			memorySwap = c.Memory * 2
+		}
+		err = writeFile(path, "memory.memsw.limit_in_bytes", strconv.FormatInt(memorySwap, 10))
+		if err != nil {
+			return err
+		}
+	}
+
+	if c.KernelMemory > 0 {
+		err = writeFile(path, "memory.kmem.limit_in_bytes", strconv.FormatInt(c.KernelMemory, 10))
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // systemd does not atm set up the cpuset controller, so we must manually

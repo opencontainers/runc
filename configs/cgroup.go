@@ -30,6 +30,9 @@ type Cgroup struct {
 	// Total memory usage (memory + swap); set `-1' to disable swap
 	MemorySwap int64 `json:"memory_swap"`
 
+	// Kernel memory limit (in bytes)
+	KernelMemory int64 `json:"kernel_memory"`
+
 	// CPU shares (relative weight vs. other containers)
 	CpuShares int64 `json:"cpu_shares"`
 

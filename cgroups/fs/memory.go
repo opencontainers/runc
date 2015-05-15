@@ -54,6 +54,11 @@ func (s *MemoryGroup) Set(path string, cgroup *configs.Cgroup) error {
 			return err
 		}
 	}
+	if cgroup.KernelMemory > 0 {
+		if err := writeFile(path, "memory.kmem.limit_in_bytes", strconv.FormatInt(cgroup.KernelMemory, 10)); err != nil {
+			return err
+		}
+	}
 
 	if cgroup.OomKillDisable {
 		if err := writeFile(path, "memory.oom_control", "1"); err != nil {
