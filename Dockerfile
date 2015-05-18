@@ -1,7 +1,7 @@
 FROM golang:1.4
 
 RUN echo "deb http://ftp.us.debian.org/debian testing main contrib" >> /etc/apt/sources.list
-RUN apt-get update && apt-get install -y criu=1.5.2-1 && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y iptables criu=1.5.2-1 && rm -rf /var/lib/apt/lists/*
 
 RUN go get golang.org/x/tools/cmd/cover
 
