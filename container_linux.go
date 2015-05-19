@@ -276,9 +276,12 @@ func (c *linuxContainer) checkCriuVersion() error {
 		return err
 	}
 
-	n, err := fmt.Sscanf(string(out), "Version: %d.%d.%d", &x, &y, &z)
+	n, err := fmt.Sscanf(string(out), "Version: %d.%d.%d\n", &x, &y, &z) // 1.5.2
+	if err != nil {
+		n, err = fmt.Sscanf(string(out), "Version: %d.%d\n", &x, &y) // 1.6
+	}
 	if n < 2 || err != nil {
-		return fmt.Errorf("Unable to parse the CRIU version: %s", out)
+		return fmt.Errorf("Unable to parse the CRIU version: %s %d %s", out, n, err)
 	}
 
 	if x*10000+y*100+z < 10502 {
