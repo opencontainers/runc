@@ -46,7 +46,7 @@ func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
 	if err != nil {
 		return nil, err
 	}
-	return libcontainer.New(abs, libcontainer.Cgroupfs, func(l *libcontainer.LinuxFactory) error {
+	return libcontainer.New(abs, cgm, func(l *libcontainer.LinuxFactory) error {
 		l.CriuPath = context.GlobalString("criu")
 		return nil
 	})
