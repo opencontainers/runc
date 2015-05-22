@@ -262,15 +262,13 @@ func killCgroupProcesses(m cgroups.Manager) error {
 }
 
 func finalizeSeccomp(config *initConfig) error {
-	scmpCtx, _ := seccomp.ScmpInit(seccomp.ScmpActAllow)
-	if 0 == len(config.Config.SysCalls) {
-		for key := range seccomp.SyscallMap {
+	if len(config.Config.Seccomps.SysCalls) > 0 {
+		scmpCtx, _ := seccomp.ScmpInit(seccomp.ScmpActAllow)
+		for _, key := range config.Config.Seccomps.SysCalls {
 			seccomp.ScmpAdd(scmpCtx, key, seccomp.ScmpActAllow)
 		}
-	} else {
-		for _, call := range config.Config.SysCalls {
-			seccomp.ScmpAdd(scmpCtx, call, seccomp.ScmpActAllow)
-		}
+		return seccomp.ScmpLoad(scmpCtx)
 	}
-	return seccomp.ScmpLoad(scmpCtx)
+
+	return nil
 }

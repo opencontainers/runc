@@ -13,6 +13,10 @@ type IDMap struct {
 	Size        int `json:"size"`
 }
 
+type SeccompConf struct {
+	SysCalls []int `json:"syscalls"`
+}
+
 // TODO Windows. Many of these fields should be factored out into those parts
 // which are common across platforms, and those which are platform specific.
 
@@ -61,9 +65,6 @@ type Config struct {
 	// All capbilities not specified will be dropped from the processes capability mask
 	Capabilities []string `json:"capabilities"`
 
-	// SysCalls specify the system calls to keep when executing the process inside the container
-	SysCalls []string `json:"syscalls"`
-
 	// Networks specifies the container's network setup to be created
 	Networks []*Network `json:"networks"`
 
@@ -107,4 +108,7 @@ type Config struct {
 	// SystemProperties is a map of properties and their values. It is the equivalent of using
 	// sysctl -w my.property.name value in Linux.
 	SystemProperties map[string]string `json:"system_properties"`
+
+	// SysCalls specify the system calls to keep when executing the process inside the container
+	Seccomps SeccompConf `json:"seccomp"`
 }

@@ -169,6 +169,13 @@ func (c *linuxContainer) newInitProcess(p *Process, cmd *exec.Cmd, parentPipe, c
 			cmd.SysProcAttr.Credential = &syscall.Credential{}
 		}
 	}
+	if cloneFlags&uintptr(configs.CLONE_SECCOMP) != 0 {
+		//os don't surport for CLONE_SECCOMP, remote it
+		c.config.Namespaces.Remove(configs.NEWSECCOMP)
+		cloneFlags = c.config.Namespaces.CloneFlags()
+	} else {
+		c.config.Seccomps.SysCalls = []int{}
+	}
 	cmd.Env = append(cmd.Env, t)
 	cmd.SysProcAttr.Cloneflags = cloneFlags
 	return &initProcess{

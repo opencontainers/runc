@@ -44,6 +44,7 @@ func newTemplateConfig(rootfs string) *configs.Config {
 			{Type: configs.NEWIPC},
 			{Type: configs.NEWPID},
 			{Type: configs.NEWNET},
+			{Type: configs.NEWSECCOMP},
 		}),
 		Cgroups: &configs.Cgroup{
 			Name:            "test",
@@ -113,6 +114,9 @@ func newTemplateConfig(rootfs string) *configs.Config {
 				Hard: uint64(1025),
 				Soft: uint64(1025),
 			},
+		},
+		Seccomps: configs.SeccompConf{
+			SysCalls: make([]int, 0, 512),
 		},
 	}
 }
