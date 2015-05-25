@@ -18,6 +18,7 @@ direct-test-short:
 	go test $(TEST_TAGS) -cover -test.short -v $(GO_PACKAGES)
 
 direct-build:
+	chmod 755 hack/seccomp.sh
 	hack/seccomp.sh
 	go build -v $(GO_PACKAGES)
 

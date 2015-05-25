@@ -28,6 +28,8 @@ if($pid == 0) {
     close $out;
     exit 0;
 }
+print "//";
+system("uname -m");
 print "package seccomp\r\n\r\n";
 print "var syscallMap = map[string] int {\n";
 while(<$in>) {
