@@ -1,8 +1,12 @@
 package user
 
 import (
+	"fmt"
 	"io"
+	"io/ioutil"
 	"reflect"
+	"sort"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -347,6 +351,93 @@ this is just some garbage data
 			t.Logf("expected: %#v", test.expected)
 			t.Fail()
 			continue
+		}
+	}
+}
+
+func TestGetAdditionalGroupsPath(t *testing.T) {
+	const groupContent = `
+root:x:0:root
+adm:x:43:
+grp:x:1234:root,adm
+adm:x:4343:root,adm-duplicate
+this is just some garbage data
+`
+	tests := []struct {
+		groups   []string
+		expected []int
+		hasError bool
+	}{
+		{
+			// empty group
+			groups:   []string{},
+			expected: []int{},
+		},
+		{
+			// single group
+			groups:   []string{"adm"},
+			expected: []int{43},
+		},
+		{
+			// multiple groups
+			groups:   []string{"adm", "grp"},
+			expected: []int{43, 1234},
+		},
+		{
+			// invalid group
+			groups:   []string{"adm", "grp", "not-exist"},
+			expected: nil,
+			hasError: true,
+		},
+		{
+			// group with numeric id
+			groups:   []string{"43"},
+			expected: []int{43},
+		},
+		{
+			// group with unknown numeric id
+			groups:   []string{"adm", "10001"},
+			expected: []int{43, 10001},
+		},
+		{
+			// groups specified twice with numeric and name
+			groups:   []string{"adm", "43"},
+			expected: []int{43},
+		},
+		{
+			// groups with too small id
+			groups:   []string{"-1"},
+			expected: nil,
+			hasError: true,
+		},
+		{
+			// groups with too large id
+			groups:   []string{strconv.Itoa(1 << 31)},
+			expected: nil,
+			hasError: true,
+		},
+	}
+
+	for _, test := range tests {
+		tmpFile, err := ioutil.TempFile("", "get-additional-groups-path")
+		if err != nil {
+			t.Error(err)
+		}
+		fmt.Fprint(tmpFile, groupContent)
+		tmpFile.Close()
+
+		gids, err := GetAdditionalGroupsPath(test.groups, tmpFile.Name())
+		if test.hasError && err == nil {
+			t.Errorf("Parse(%#v) expects error but has none", test)
+			continue
+		}
+		if !test.hasError && err != nil {
+			t.Errorf("Parse(%#v) has error %v", test, err)
+			continue
+		}
+		sort.Sort(sort.IntSlice(gids))
+		if !reflect.DeepEqual(gids, test.expected) {
+			t.Errorf("Gids(%v), expect %v from groups %v", gids, test.expected, test.groups)
 		}
 	}
 }

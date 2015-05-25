@@ -349,51 +349,59 @@ func GetExecUser(userSpec string, defaults *ExecUser, passwd, group io.Reader) (
 	return user, nil
 }
 
-// GetAdditionalGroupsPath is a wrapper for GetAdditionalGroups. It reads data from the
-// given file path and uses that data as the arguments to GetAdditionalGroups.
+// GetAdditionalGroupsPath looks up a list of groups by name or group id
+// against the group file. If a group name cannot be found, an error will be
+// returned. If a group id cannot be found, it will be returned as-is.
 func GetAdditionalGroupsPath(additionalGroups []string, groupPath string) ([]int, error) {
-	var groupIds []int
-
-	for _, ag := range additionalGroups {
-		groupReader, err := os.Open(groupPath)
-		if err != nil {
-			return nil, fmt.Errorf("Failed to open group file: %v", err)
-		}
-		defer groupReader.Close()
-
-		groupId, err := GetAdditionalGroup(ag, groupReader)
-		if err != nil {
-			return nil, err
-		}
-		groupIds = append(groupIds, groupId)
+	groupReader, err := os.Open(groupPath)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to open group file: %v", err)
 	}
+	defer groupReader.Close()
 
-	return groupIds, nil
-}
-
-// GetAdditionalGroup looks up the specified group in the passed groupReader.
-func GetAdditionalGroup(additionalGroup string, groupReader io.Reader) (int, error) {
 	groups, err := ParseGroupFilter(groupReader, func(g Group) bool {
-		return g.Name == additionalGroup || strconv.Itoa(g.Gid) == additionalGroup
+		for _, ag := range additionalGroups {
+			if g.Name == ag || strconv.Itoa(g.Gid) == ag {
+				return true
+			}
+		}
+		return false
 	})
 	if err != nil {
-		return -1, fmt.Errorf("Unable to find additional groups %v: %v", additionalGroup, err)
+		return nil, fmt.Errorf("Unable to find additional groups %v: %v", additionalGroups, err)
 	}
-	if groups != nil && len(groups) > 0 {
-		// if we found any group entries that matched our filter, let's take the first one as "correct"
-		return groups[0].Gid, nil
-	} else {
-		// we asked for a group but didn't find id...  let's check to see if we wanted a numeric group
-		addGroup, err := strconv.Atoi(additionalGroup)
-		if err != nil {
-			// not numeric - we have to bail
-			return -1, fmt.Errorf("Unable to find group %v", additionalGroup)
-		}
 
-		// Ensure gid is inside gid range.
-		if addGroup < minId || addGroup > maxId {
-			return -1, ErrRange
+	gidMap := make(map[int]struct{})
+	for _, ag := range additionalGroups {
+		var found bool
+		for _, g := range groups {
+			// if we found a matched group either by name or gid, take the
+			// first matched as correct
+			if g.Name == ag || strconv.Itoa(g.Gid) == ag {
+				if _, ok := gidMap[g.Gid]; !ok {
+					gidMap[g.Gid] = struct{}{}
+					found = true
+					break
+				}
+			}
 		}
-		return addGroup, nil
+		// we asked for a group but didn't find it. let's check to see
+		// if we wanted a numeric group
+		if !found {
+			gid, err := strconv.Atoi(ag)
+			if err != nil {
+				return nil, fmt.Errorf("Unable to find group %s", ag)
+			}
+			// Ensure gid is inside gid range.
+			if gid < minId || gid > maxId {
+				return nil, ErrRange
+			}
+			gidMap[gid] = struct{}{}
+		}
 	}
+	gids := []int{}
+	for gid := range gidMap {
+		gids = append(gids, gid)
+	}
+	return gids, nil
 }
