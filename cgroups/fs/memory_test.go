@@ -146,10 +146,16 @@ func TestMemoryStats(t *testing.T) {
 	helper := NewCgroupTestUtil("memory", t)
 	defer helper.cleanup()
 	helper.writeFileContents(map[string]string{
-		"memory.stat":               memoryStatContents,
-		"memory.usage_in_bytes":     memoryUsageContents,
-		"memory.max_usage_in_bytes": memoryMaxUsageContents,
-		"memory.failcnt":            memoryFailcnt,
+		"memory.stat":                     memoryStatContents,
+		"memory.usage_in_bytes":           memoryUsageContents,
+		"memory.max_usage_in_bytes":       memoryMaxUsageContents,
+		"memory.failcnt":                  memoryFailcnt,
+		"memory.memsw.usage_in_bytes":     memoryUsageContents,
+		"memory.memsw.max_usage_in_bytes": memoryMaxUsageContents,
+		"memory.memsw.failcnt":            memoryFailcnt,
+		"memory.kmem.usage_in_bytes":      memoryUsageContents,
+		"memory.kmem.max_usage_in_bytes":  memoryMaxUsageContents,
+		"memory.kmem.failcnt":             memoryFailcnt,
 	})
 
 	memory := &MemoryGroup{}
@@ -158,7 +164,7 @@ func TestMemoryStats(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expectedStats := cgroups.MemoryStats{Usage: 2048, Cache: 512, MaxUsage: 4096, Failcnt: 100, Stats: map[string]uint64{"cache": 512, "rss": 1024}}
+	expectedStats := cgroups.MemoryStats{Cache: 512, Usage: cgroups.MemoryData{Usage: 2048, MaxUsage: 4096, Failcnt: 100}, SwapUsage: cgroups.MemoryData{Usage: 2048, MaxUsage: 4096, Failcnt: 100}, KernelUsage: cgroups.MemoryData{Usage: 2048, MaxUsage: 4096, Failcnt: 100}, Stats: map[string]uint64{"cache": 512, "rss": 1024}}
 	expectMemoryStatEquals(t, expectedStats, actualStats.MemoryStats)
 }
 

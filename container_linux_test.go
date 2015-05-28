@@ -106,7 +106,9 @@ func TestGetContainerStats(t *testing.T) {
 			pids: []int{1, 2, 3},
 			stats: &cgroups.Stats{
 				MemoryStats: cgroups.MemoryStats{
-					Usage: 1024,
+					Usage: cgroups.MemoryData{
+						Usage: 1024,
+					},
 				},
 			},
 		},
@@ -118,8 +120,8 @@ func TestGetContainerStats(t *testing.T) {
 	if stats.CgroupStats == nil {
 		t.Fatal("cgroup stats are nil")
 	}
-	if stats.CgroupStats.MemoryStats.Usage != 1024 {
-		t.Fatalf("expected memory usage 1024 but recevied %d", stats.CgroupStats.MemoryStats.Usage)
+	if stats.CgroupStats.MemoryStats.Usage.Usage != 1024 {
+		t.Fatalf("expected memory usage 1024 but recevied %d", stats.CgroupStats.MemoryStats.Usage.Usage)
 	}
 }
 
@@ -149,7 +151,9 @@ func TestGetContainerState(t *testing.T) {
 			pids: []int{1, 2, 3},
 			stats: &cgroups.Stats{
 				MemoryStats: cgroups.MemoryStats{
-					Usage: 1024,
+					Usage: cgroups.MemoryData{
+						Usage: 1024,
+					},
 				},
 			},
 			paths: map[string]string{
