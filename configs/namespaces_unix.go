@@ -5,13 +5,12 @@ package configs
 import "fmt"
 
 const (
-	NEWNET     NamespaceType = "NEWNET"
-	NEWPID     NamespaceType = "NEWPID"
-	NEWNS      NamespaceType = "NEWNS"
-	NEWUTS     NamespaceType = "NEWUTS"
-	NEWIPC     NamespaceType = "NEWIPC"
-	NEWUSER    NamespaceType = "NEWUSER"
-	NEWSECCOMP NamespaceType = "NEWSECCOMP"
+	NEWNET  NamespaceType = "NEWNET"
+	NEWPID  NamespaceType = "NEWPID"
+	NEWNS   NamespaceType = "NEWNS"
+	NEWUTS  NamespaceType = "NEWUTS"
+	NEWIPC  NamespaceType = "NEWIPC"
+	NEWUSER NamespaceType = "NEWUSER"
 )
 
 func NamespaceTypes() []NamespaceType {

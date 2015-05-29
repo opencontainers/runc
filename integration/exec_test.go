@@ -1,15 +1,10 @@
 package integration
 
 import (
-	"bufio"
 	"bytes"
-	"errors"
-	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -720,103 +715,7 @@ func TestSystemProperties(t *testing.T) {
 	}
 }
 
-func genSeccompConfigFile(file string, calls []int) error {
-	callBegin := 0
-	callEnd := 0
-	if runtime.GOARCH == "386" {
-		callEnd = 340
-	} else if runtime.GOARCH == "amd64" {
-		callEnd = 302
-	} else if runtime.GOARCH == "arm" {
-		callEnd = 377
-	} else if runtime.GOARCH == "arm64" {
-		callEnd = 281
-	} else if runtime.GOARCH == "ppc64" || runtime.GOARCH == "ppc64le" {
-		callEnd = 354
-	}
-
-	conf := fmt.Sprintf("%d\nwhitelist\n", 1)
-	i := 0
-	nr := callBegin
-	for nr <= callEnd {
-		j := 0
-		for _, key := range calls {
-			if nr == key {
-				break
-			}
-			j++
-		}
-		if j == len(calls) {
-			callfilter := fmt.Sprintf("%d\n", nr)
-			conf += callfilter
-			i++
-		}
-		nr++
-	}
-	fout, err := os.Create(file)
-	defer fout.Close()
-	if err == nil {
-		fout.WriteString(conf)
-	}
-	return nil
-}
-
-func genSeccompSyscall(configFile string, Seccomps *configs.SeccompConf) error {
-	f, err := os.Open(configFile)
-	defer f.Close()
-	if nil == err {
-		buff := bufio.NewReader(f)
-		firstl, err := buff.ReadString('\n')
-		if err != nil || io.EOF == err {
-			return errors.New("initSeccomp ReadString, firstl")
-		}
-		ver := 0
-		fmt.Sscanf(firstl, "%d\n", &ver)
-		if err != nil || 1 != ver {
-			return errors.New("initSeccomp Sscanf")
-		}
-
-		secondl, err := buff.ReadString('\n')
-		if err != nil || io.EOF == err || strings.EqualFold(secondl, "whitelist") {
-			return errors.New("initSeccomp ReadString, secondl")
-		}
-		nr := 0
-		for {
-			line, err := buff.ReadString('\n')
-			if err != nil || io.EOF == err {
-				break
-			}
-			fmt.Sscanf(line, "%d\n", &nr)
-			Seccomps.SysCalls = append(Seccomps.SysCalls, nr)
-		}
-		return nil
-	}
-	return nil
-}
-
-func TestSeccompNotStat(t *testing.T) {
-	if testing.Short() {
-		return
-	}
-
-	rootfs, err := newRootfs()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer remove(rootfs)
-	config := newTemplateConfig(rootfs)
-	exceptCall := []int{syscall.SYS_STAT}
-	genSeccompConfigFile("seccomp.conf", exceptCall)
-	genSeccompSyscall("seccomp.conf", &config.Seccomps)
-	out, _, err := runContainer(config, "", "/bin/sh", "-c", "ls / -l")
-	if err == nil {
-		t.Fatal("runontainer[ls without SYS_STAT] should be failed")
-	} else {
-		fmt.Println(out)
-	}
-}
-
-func TestSeccompStat(t *testing.T) {
+func TestSeccompNoChown(t *testing.T) {
 	if testing.Short() {
 		return
 	}
@@ -825,14 +724,17 @@ func TestSeccompStat(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer remove(rootfs)
-
 	config := newTemplateConfig(rootfs)
-	exceptCall := []int{}
-	genSeccompConfigFile("seccomp.conf", exceptCall)
-	genSeccompSyscall("seccomp.conf", &config.Seccomps)
-	out, _, err := runContainer(config, "", "/bin/sh", "-c", "ls / -l")
-	if err != nil {
-		t.Fatal(err)
+	config.Seccomp = &configs.Seccomp{}
+	config.Seccomp.Syscalls = append(config.Seccomp.Syscalls, &configs.Syscall{
+		Value:  syscall.SYS_CHOWN,
+		Action: configs.Action(syscall.EPERM),
+	})
+	buffers, _, err := runContainer(config, "", "/bin/sh", "-c", "chown 1:1 /tmp")
+	if err == nil {
+		t.Fatal("running chown in a container should fail")
 	}
-	fmt.Println(out)
+	if s := buffers.String(); !strings.Contains(s, "not permitted") {
+		t.Fatalf("running chown should result in an EPERM but got %q", s)
+	}
 }
