@@ -78,6 +78,9 @@ type Cgroup struct {
 	// set the freeze value for the process
 	Freezer FreezerState `json:"freezer"`
 
+	// Hugetlb limit (in bytes)
+	HugetlbLimit []*HugepageLimit `json:"hugetlb_limit"`
+
 	// Parent slice to use for systemd TODO: remove in favor or parent
 	Slice string `json:"slice"`
 

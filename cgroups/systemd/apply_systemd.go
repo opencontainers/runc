@@ -223,6 +223,9 @@ func (m *Manager) Apply(pid int) error {
 		return err
 	}
 
+	if err := joinHugetlb(c, pid); err != nil {
+		return err
+	}
 	// FIXME: Systemd does have `BlockIODeviceWeight` property, but we got problem
 	// using that (at least on systemd 208, see https://github.com/docker/libcontainer/pull/354),
 	// so use fs work around for now.
@@ -537,4 +540,14 @@ func joinBlkio(c *configs.Cgroup, pid int) error {
 	}
 
 	return nil
+}
+
+func joinHugetlb(c *configs.Cgroup, pid int) error {
+	path, err := join(c, "hugetlb", pid)
+	if err != nil && !cgroups.IsNotFound(err) {
+		return err
+	}
+
+	hugetlb := subsystems["hugetlb"]
+	return hugetlb.Set(path, c)
 }
