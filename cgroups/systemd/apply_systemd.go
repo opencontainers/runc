@@ -13,9 +13,9 @@ import (
 	"time"
 
 	systemd "github.com/coreos/go-systemd/dbus"
-	"github.com/docker/libcontainer/cgroups"
-	"github.com/docker/libcontainer/cgroups/fs"
-	"github.com/docker/libcontainer/configs"
+	"github.com/opencontainers/libcontainer/cgroups"
+	"github.com/opencontainers/libcontainer/cgroups/fs"
+	"github.com/opencontainers/libcontainer/configs"
 	"github.com/godbus/dbus"
 )
 
@@ -227,7 +227,7 @@ func (m *Manager) Apply(pid int) error {
 		return err
 	}
 	// FIXME: Systemd does have `BlockIODeviceWeight` property, but we got problem
-	// using that (at least on systemd 208, see https://github.com/docker/libcontainer/pull/354),
+	// using that (at least on systemd 208, see https://github.com/opencontainers/libcontainer/pull/354),
 	// so use fs work around for now.
 	if err := joinBlkio(c, pid); err != nil {
 		return err

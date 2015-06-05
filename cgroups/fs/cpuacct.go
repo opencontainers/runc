@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/docker/libcontainer/cgroups"
-	"github.com/docker/libcontainer/configs"
-	"github.com/docker/libcontainer/system"
+	"github.com/opencontainers/libcontainer/cgroups"
+	"github.com/opencontainers/libcontainer/configs"
+	"github.com/opencontainers/libcontainer/system"
 )
 
 const (

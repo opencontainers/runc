@@ -14,11 +14,11 @@ import (
 	"syscall"
 
 	"github.com/docker/docker/pkg/mount"
-	"github.com/docker/libcontainer/cgroups"
-	"github.com/docker/libcontainer/cgroups/fs"
-	"github.com/docker/libcontainer/cgroups/systemd"
-	"github.com/docker/libcontainer/configs"
-	"github.com/docker/libcontainer/configs/validate"
+	"github.com/opencontainers/libcontainer/cgroups"
+	"github.com/opencontainers/libcontainer/cgroups/fs"
+	"github.com/opencontainers/libcontainer/cgroups/systemd"
+	"github.com/opencontainers/libcontainer/configs"
+	"github.com/opencontainers/libcontainer/configs/validate"
 )
 
 const (

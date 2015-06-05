@@ -6,9 +6,9 @@ import (
 	"testing"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/docker/libcontainer"
-	"github.com/docker/libcontainer/cgroups/systemd"
-	_ "github.com/docker/libcontainer/nsenter"
+	"github.com/opencontainers/libcontainer"
+	"github.com/opencontainers/libcontainer/cgroups/systemd"
+	_ "github.com/opencontainers/libcontainer/nsenter"
 )
 
 // init runs the libcontainer initialization code because of the busybox style needs

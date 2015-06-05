@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/docker/libcontainer"
+	"github.com/opencontainers/libcontainer"
 )
 
 func TestCheckpoint(t *testing.T) {

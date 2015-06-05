@@ -4,8 +4,8 @@ import "testing"
 
 func TestParsePackageName(t *testing.T) {
 	var (
-		name             = "github.com/docker/libcontainer/stacktrace.captureFunc"
-		expectedPackage  = "github.com/docker/libcontainer/stacktrace"
+		name             = "github.com/opencontainers/libcontainer/stacktrace.captureFunc"
+		expectedPackage  = "github.com/opencontainers/libcontainer/stacktrace"
 		expectedFunction = "captureFunc"
 	)
 

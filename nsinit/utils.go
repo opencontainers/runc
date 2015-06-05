@@ -9,9 +9,9 @@ import (
 	"github.com/Sirupsen/logrus"
 
 	"github.com/codegangsta/cli"
-	"github.com/docker/libcontainer"
-	"github.com/docker/libcontainer/cgroups/systemd"
-	"github.com/docker/libcontainer/configs"
+	"github.com/opencontainers/libcontainer"
+	"github.com/opencontainers/libcontainer/cgroups/systemd"
+	"github.com/opencontainers/libcontainer/configs"
 )
 
 func loadConfig(context *cli.Context) (*configs.Config, error) {

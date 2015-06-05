@@ -3,8 +3,8 @@
 package fs
 
 import (
-	"github.com/docker/libcontainer/cgroups"
-	"github.com/docker/libcontainer/configs"
+	"github.com/opencontainers/libcontainer/cgroups"
+	"github.com/opencontainers/libcontainer/configs"
 )
 
 type DevicesGroup struct {

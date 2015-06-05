@@ -6,7 +6,7 @@ import (
 
 	"github.com/codegangsta/cli"
 	"github.com/docker/docker/pkg/term"
-	"github.com/docker/libcontainer"
+	"github.com/opencontainers/libcontainer"
 )
 
 func newTty(context *cli.Context, p *libcontainer.Process, rootuid int) (*tty, error) {

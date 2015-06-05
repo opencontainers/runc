@@ -14,9 +14,9 @@ import (
 	"time"
 
 	"github.com/docker/docker/pkg/symlink"
-	"github.com/docker/libcontainer/cgroups"
-	"github.com/docker/libcontainer/configs"
-	"github.com/docker/libcontainer/label"
+	"github.com/opencontainers/libcontainer/cgroups"
+	"github.com/opencontainers/libcontainer/configs"
+	"github.com/opencontainers/libcontainer/label"
 )
 
 const defaultMountFlags = syscall.MS_NOEXEC | syscall.MS_NOSUID | syscall.MS_NODEV

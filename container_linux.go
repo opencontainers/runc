@@ -14,9 +14,9 @@ import (
 	"syscall"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/docker/libcontainer/cgroups"
-	"github.com/docker/libcontainer/configs"
-	"github.com/docker/libcontainer/criurpc"
+	"github.com/opencontainers/libcontainer/cgroups"
+	"github.com/opencontainers/libcontainer/configs"
+	"github.com/opencontainers/libcontainer/criurpc"
 	"github.com/golang/protobuf/proto"
 )
 

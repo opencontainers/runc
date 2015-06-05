@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/docker/libcontainer/configs"
+	"github.com/opencontainers/libcontainer/configs"
 )
 
 type cgroupTestUtil struct {

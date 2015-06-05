@@ -12,8 +12,8 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
-	"github.com/docker/libcontainer/configs"
-	"github.com/docker/libcontainer/utils"
+	"github.com/opencontainers/libcontainer/configs"
+	"github.com/opencontainers/libcontainer/utils"
 )
 
 const defaultMountFlags = syscall.MS_NOEXEC | syscall.MS_NOSUID | syscall.MS_NODEV

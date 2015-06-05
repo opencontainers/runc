@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/docker/libcontainer/cgroups"
+	"github.com/opencontainers/libcontainer/cgroups"
 )
 
 const (

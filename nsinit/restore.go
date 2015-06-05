@@ -7,8 +7,8 @@ import (
 	"syscall"
 
 	"github.com/codegangsta/cli"
-	"github.com/docker/libcontainer"
-	"github.com/docker/libcontainer/utils"
+	"github.com/opencontainers/libcontainer"
+	"github.com/opencontainers/libcontainer/utils"
 )
 
 var restoreCommand = cli.Command{

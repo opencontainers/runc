@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/codegangsta/cli"
-	"github.com/docker/libcontainer"
+	"github.com/opencontainers/libcontainer"
 	"strconv"
 	"strings"
 )

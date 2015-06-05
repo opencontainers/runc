@@ -1,6 +1,6 @@
 package libcontainer
 
-import "github.com/docker/libcontainer/cgroups"
+import "github.com/opencontainers/libcontainer/cgroups"
 
 type Stats struct {
 	Interfaces  []*NetworkInterface
