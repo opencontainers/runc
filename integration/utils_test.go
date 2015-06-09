@@ -122,11 +122,11 @@ func runContainer(config *configs.Config, console string, args ...string) (buffe
 
 	err = container.Start(process)
 	if err != nil {
-		return nil, -1, err
+		return buffers, -1, err
 	}
 	ps, err := process.Wait()
 	if err != nil {
-		return nil, -1, err
+		return buffers, -1, err
 	}
 	status := ps.Sys().(syscall.WaitStatus)
 	if status.Exited() {
@@ -134,7 +134,7 @@ func runContainer(config *configs.Config, console string, args ...string) (buffe
 	} else if status.Signaled() {
 		exitCode = -int(status.Signal())
 	} else {
-		return nil, -1, err
+		return buffers, -1, err
 	}
 	return
 }
