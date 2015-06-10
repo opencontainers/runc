@@ -119,7 +119,7 @@ type Config struct {
 
 	// AdditionalGroups specifies the gids that should be added to supplementary groups
 	// in addition to those that the user belongs to.
-	AdditionalGroups []int `json:"additional_groups"`
+	AdditionalGroups []string `json:"additional_groups"`
 
 	// UidMappings is an array of User ID mappings for User Namespaces
 	UidMappings []IDMap `json:"uid_mappings"`
