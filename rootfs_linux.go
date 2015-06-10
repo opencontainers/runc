@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
@@ -28,19 +27,8 @@ func setupRootfs(config *configs.Config, console *linuxConsole) (err error) {
 		return newSystemError(err)
 	}
 	for _, m := range config.Mounts {
-		for _, precmd := range m.PremountCmds {
-			if err := mountCmd(precmd); err != nil {
-				return newSystemError(err)
-			}
-		}
 		if err := mountToRootfs(m, config.Rootfs, config.MountLabel); err != nil {
 			return newSystemError(err)
-		}
-
-		for _, postcmd := range m.PostmountCmds {
-			if err := mountCmd(postcmd); err != nil {
-				return newSystemError(err)
-			}
 		}
 	}
 	if err := createDevices(config); err != nil {
@@ -72,18 +60,6 @@ func setupRootfs(config *configs.Config, console *linuxConsole) (err error) {
 		}
 	}
 	syscall.Umask(0022)
-	return nil
-}
-
-func mountCmd(cmd configs.Command) error {
-
-	command := exec.Command(cmd.Path, cmd.Args[:]...)
-	command.Env = cmd.Env
-	command.Dir = cmd.Dir
-	if out, err := command.CombinedOutput(); err != nil {
-		return fmt.Errorf("%#v failed: %s: %v", cmd, string(out), err)
-	}
-
 	return nil
 }
 
