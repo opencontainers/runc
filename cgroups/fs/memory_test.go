@@ -85,35 +85,6 @@ func TestMemorySetMemoryswap(t *testing.T) {
 	}
 }
 
-func TestMemorySetMemoryswapDefault(t *testing.T) {
-	helper := NewCgroupTestUtil("memory", t)
-	defer helper.cleanup()
-
-	const (
-		memoryBefore    = 209715200 // 200M
-		memoryAfter     = 314572800 // 300M
-		memoryswapAfter = 629145600 // 300M*2
-	)
-
-	helper.writeFileContents(map[string]string{
-		"memory.limit_in_bytes": strconv.Itoa(memoryBefore),
-	})
-
-	helper.CgroupData.c.Memory = memoryAfter
-	memory := &MemoryGroup{}
-	if err := memory.Set(helper.CgroupPath, helper.CgroupData.c); err != nil {
-		t.Fatal(err)
-	}
-
-	value, err := getCgroupParamUint(helper.CgroupPath, "memory.memsw.limit_in_bytes")
-	if err != nil {
-		t.Fatalf("Failed to parse memory.memsw.limit_in_bytes - %s", err)
-	}
-	if value != memoryswapAfter {
-		t.Fatal("Got the wrong value, set memory.memsw.limit_in_bytes failed.")
-	}
-}
-
 func TestMemorySetKernelMemory(t *testing.T) {
 	helper := NewCgroupTestUtil("memory", t)
 	defer helper.cleanup()

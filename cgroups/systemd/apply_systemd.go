@@ -469,14 +469,8 @@ func joinMemory(c *configs.Cgroup, pid int) error {
 	}
 
 	// -1 disables memoryswap
-	if c.Memory != 0 && c.MemorySwap >= 0 {
-		memorySwap := c.MemorySwap
-
-		if memorySwap == 0 {
-			// By default, MemorySwap is set to twice the size of RAM.
-			memorySwap = c.Memory * 2
-		}
-		err = writeFile(path, "memory.memsw.limit_in_bytes", strconv.FormatInt(memorySwap, 10))
+	if c.MemorySwap > 0 {
+		err = writeFile(path, "memory.memsw.limit_in_bytes", strconv.FormatInt(c.MemorySwap, 10))
 		if err != nil {
 			return err
 		}
