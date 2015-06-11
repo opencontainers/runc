@@ -46,12 +46,6 @@ func (s *MemoryGroup) Set(path string, cgroup *configs.Cgroup) error {
 			return err
 		}
 	}
-	// By default, MemorySwap is set to twice the size of Memory.
-	if cgroup.MemorySwap == 0 && cgroup.Memory != 0 {
-		if err := writeFile(path, "memory.memsw.limit_in_bytes", strconv.FormatInt(cgroup.Memory*2, 10)); err != nil {
-			return err
-		}
-	}
 	if cgroup.MemorySwap > 0 {
 		if err := writeFile(path, "memory.memsw.limit_in_bytes", strconv.FormatInt(cgroup.MemorySwap, 10)); err != nil {
 			return err
