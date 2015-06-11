@@ -19,19 +19,22 @@ import (
 
 // https://www.kernel.org/doc/Documentation/cgroups/cgroups.txt
 func FindCgroupMountpoint(subsystem string) (string, error) {
-	mounts, err := mount.GetMounts()
+	f, err := os.Open("/proc/self/mountinfo")
 	if err != nil {
 		return "", err
 	}
-
-	for _, mount := range mounts {
-		if mount.Fstype == "cgroup" {
-			for _, opt := range strings.Split(mount.VfsOpts, ",") {
-				if opt == subsystem {
-					return mount.Mountpoint, nil
-				}
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		txt := scanner.Text()
+		fields := strings.Split(txt, " ")
+		for _, opt := range strings.Split(fields[len(fields)-1], ",") {
+			if opt == subsystem {
+				return fields[4], nil
 			}
 		}
+	}
+	if err := scanner.Err(); err != nil {
+		return "", err
 	}
 
 	return "", NewNotFoundError(subsystem)
