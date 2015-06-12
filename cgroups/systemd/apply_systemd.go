@@ -482,6 +482,12 @@ func joinMemory(c *configs.Cgroup, pid int) error {
 			return err
 		}
 	}
+	if c.MemorySwappiness >= 0 && c.MemorySwappiness <= 100 {
+		err = writeFile(path, "memory.swappiness", strconv.FormatInt(c.MemorySwappiness, 10))
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }

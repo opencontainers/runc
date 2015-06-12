@@ -87,6 +87,9 @@ type Cgroup struct {
 	// Whether to disable OOM Killer
 	OomKillDisable bool `json:"oom_kill_disable"`
 
+	// Tuning swappiness behaviour per cgroup
+	MemorySwappiness int64 `json:"memory_swappiness"`
+
 	// Set priority of network traffic for container
 	NetPrioIfpriomap []*IfPrioMap `json:"net_prio_ifpriomap"`
 

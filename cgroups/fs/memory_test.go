@@ -113,6 +113,34 @@ func TestMemorySetKernelMemory(t *testing.T) {
 	}
 }
 
+func TestMemorySetMemorySwappinessDefault(t *testing.T) {
+	helper := NewCgroupTestUtil("memory", t)
+	defer helper.cleanup()
+
+	const (
+		swappinessBefore = 60 //deafult is 60
+		swappinessAfter  = 0
+	)
+
+	helper.writeFileContents(map[string]string{
+		"memory.swappiness": strconv.Itoa(swappinessBefore),
+	})
+
+	helper.CgroupData.c.Memory = swappinessAfter
+	memory := &MemoryGroup{}
+	if err := memory.Set(helper.CgroupPath, helper.CgroupData.c); err != nil {
+		t.Fatal(err)
+	}
+
+	value, err := getCgroupParamUint(helper.CgroupPath, "memory.swappiness")
+	if err != nil {
+		t.Fatalf("Failed to parse memory.swappiness - %s", err)
+	}
+	if value != swappinessAfter {
+		t.Fatal("Got the wrong value, set memory.swappiness failed.")
+	}
+}
+
 func TestMemoryStats(t *testing.T) {
 	helper := NewCgroupTestUtil("memory", t)
 	defer helper.cleanup()
