@@ -78,7 +78,7 @@ is very clean and clear.
 
 *   **config**	
 It will generate a standard configuration file for a container.  By default, it
-will generate as the template file in [config.go](https://github.com/docker/libcontainer/blob/master/nsinit/config.go#L192). 
+will generate as the template file in [config.go](https://github.com/docker/libcontainer/blob/f28dff5539855bac2adbc5699f57f84349605b5f/nsinit/config.go#L234). 
 It will modify the template if you have specified some configuration by options.
 *   **exec**	
 Starts a container and execute a new command inside it. Besides common options, it
