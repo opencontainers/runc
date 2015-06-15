@@ -178,9 +178,12 @@ func setupUser(config *initConfig) error {
 		return err
 	}
 
-	addGroups, err := user.GetAdditionalGroupsPath(config.Config.AdditionalGroups, groupPath)
-	if err != nil {
-		return err
+	var addGroups []int
+	if len(config.Config.AdditionalGroups) > 0 {
+		addGroups, err = user.GetAdditionalGroupsPath(config.Config.AdditionalGroups, groupPath)
+		if err != nil {
+			return err
+		}
 	}
 
 	suppGroups := append(execUser.Sgids, addGroups...)
