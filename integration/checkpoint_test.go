@@ -48,9 +48,9 @@ func TestCheckpoint(t *testing.T) {
 	var stdout bytes.Buffer
 
 	pconfig := libcontainer.Process{
-		Args:  []string{"cat"},
-		Env:   standardEnvironment,
-		Stdin: stdinR,
+		Args:   []string{"cat"},
+		Env:    standardEnvironment,
+		Stdin:  stdinR,
 		Stdout: &stdout,
 	}
 
@@ -79,7 +79,7 @@ func TestCheckpoint(t *testing.T) {
 
 	checkpointOpts := &libcontainer.CriuOpts{
 		ImagesDirectory: imagesDir,
-		WorkDirectory: imagesDir,
+		WorkDirectory:   imagesDir,
 	}
 
 	if err := container.Checkpoint(checkpointOpts); err != nil {
