@@ -9,7 +9,7 @@ validate() {
     bash /go/src/github.com/docker/docker/hack/make/validate-dco
     bash /go/src/github.com/docker/docker/hack/make/validate-gofmt
     go get golang.org/x/tools/cmd/vet
-    go vet github.com/docker/libcontainer/...
+    bash /go/src/github.com/docker/docker/hack/make/validate-vet
 }
 
 # run validations
