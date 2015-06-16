@@ -29,7 +29,7 @@ var (
 		"perf_event": &PerfEventGroup{},
 		"freezer":    &FreezerGroup{},
 	}
-	CgroupProcesses = "cgroup.procs"
+	CgroupProcesses  = "cgroup.procs"
 	HugePageSizes, _ = cgroups.GetHugePageSize()
 )
 
