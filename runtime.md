@@ -60,19 +60,15 @@ A Standard Container bundle is a directory containing all the content needed to 
 
 One or more *content directories* may be adjacent to the configuration file. This at least includes the root filesystem (referenced in the configuration by the *rootfs* field), and any number of   and other related content (signatures, other configs, etc.). The interpretation of these resources is specified in the configuration.
 
+```
 /
-
 !
-
 -- config.json
-
 !
-
 --- rootfs1
-
 !
-
 --- rootfs2
+```
 
 The syntax and semantics for config.json are described in this specification.
 
@@ -93,9 +89,9 @@ To ensure that containers can be reliably transferred between implementations an
 ### Digest
 
 The purpose of the "digest" step is to create a stable, summary of the content, invariant to irrelevant changes yet strong enough to avoid tampering. The algorithm for the digest is defined by an executable file, named “digest”, directly in the container directory. If such a file is present, it can be run with the container path as the first argument:
-
+```
 $ $CONTAINER_PATH/digest $CONTAINER_PATH
-
+```
 The nature of this executable is not important other than that it should run on a variety of systems with minimal dependencies. Typically, this can be a bourne shell script. The output of the script is left to the implementation but it is recommend that the output adhere to the following properties:
 
 * The script itself should be included in the output in some way to avoid tampering
@@ -107,7 +103,7 @@ The nature of this executable is not important other than that it should run on 
 * The only constraint is that the signatures directory should be ignored to avoid the act of signing preventing the content from being verified
 
 The following is a naive example:
-
+```
 #!/usr/bin/env bash
 
 set -e
@@ -141,6 +137,7 @@ content() {
 scriptpath=$( cd $(dirname $0) ; pwd -P )/$(basename $0)
 
 content $1 | shasum -a256
+```
 
 NOTE: The above is still pretty naive. It does not include permissions and users and other important aspects. This is just a demo. Part of the specification process would be producing a rock-solid, standard version of this script. It can be updated at any time and containers can use different versions depending on the use case.
 
@@ -195,9 +192,9 @@ Optionally, we can go with a set hashing approach. Here are a few requirements:
 The output, known as the container’s *digest*, can be signed using any cryptography system (pgp, x509, jose). The result of which should be deposited in the container’s top-level signatures directory.
 
 To sign the digest, we pipe the output to a cryptography tool. We can demonstrate the concept with gpg:
-
+```
 $ $CONTAINER_PATH/digest $CONTAINER_PATH | gpg --sign --detach-sign --armor > $CONTAINER_PATH/signatures/gpg/signature.asc
-
+```
 Notice that the signatures have been added to a directory, "gpg" to allow multiple signing systems to coexist.
 
 ### Verify
@@ -205,14 +202,13 @@ Notice that the signatures have been added to a directory, "gpg" to allow multip
 The container signature can be verified on another machine by piping the same command output, from the digest to a verification command.
 
 Following from the gpg example:
-
+```
 $CONTAINER_PATH/digest $CONTAINER_PATH | gpg --verify $CONTAINER_PATH/signatures/gpg/signature.asc -
-
-FIXME
+```
 
 ## 4. Configuration file
 
-The container’s top-level directory MUST contain a configuration file called config.json. The configuration file MUST comply with the Open Container Configuration JSON Schema attached to this document. The latest version of the schema is available at [https://github.com/opencontainers/specs/to-be-created-oc-schema.json](https://github.com/opencontainers/specs/oc-schema.json)
+The container’s top-level directory MUST contain a configuration file called config.json. The configuration file MUST comply with the Open Container Configuration JSON Schema attached to this document. The latest version of the schema is available at [https://opencontainers.org/spec/schema.json](https://opencontainers.org/spec/schema.json)
 
 ### The configuration file contains metadata necessary to implement standard operations against the container. This includes processes to run, environment variables to inject, sandboxing features to use, etc.
 
@@ -220,13 +216,13 @@ Below is a detailed description of each field defined in the configuration forma
 
 ### Manifest version
 
-The version element specifies the version of the OCF specification which the container complies with. If the container is compliant with multiple versions, it SHOULD advertise the most recent known version to be supported.
+The `version` element specifies the version of the OCF specification which the container complies with. If the container is compliant with multiple versions, it SHOULD advertise the most recent known version to be supported.
 
 *Linux example*
-
+```
 {
     "version": "1",
-
+```
 ### File system configuration
 
 Each container has exactly one *root filesystem*, and any number of optional *mounted filesystems*. Both need to be declared in the manifest.
@@ -236,16 +232,17 @@ The rootfs string element specifies the path to the root file system for the con
 The readonlyRootfs is an optional boolean element which defaults to false. If it is true, access to the root file system MUST be read-only for all processes running inside it.  whether you want the root file system to be readonly or not for the processes running on it.
 
 *Example (Linux)*
-
+```
     "rootfs": "rootfs",
 
    "readonlyRootfs": true,
-
+```
 *Example (**Windows)*
-
+```
     "rootfs": "My Fancy Root FS",
 
    "readonlyRootfs": true,
+```
 
 Additional file systems can be declared as "mounts", declared by the the array element mounts. The parameters are similar to the ones in Linux mount system call. [http://linux.die.net/man/2/mount](http://linux.die.net/man/2/mount)
 
@@ -259,7 +256,7 @@ options: in the fstab format [https://wiki.archlinux.org/index.php/Fstab](https:
 
 *Example (Linux)*
 
-
+```
     "mounts": [
         {
             "type": "proc",
@@ -286,9 +283,10 @@ options: in the fstab format [https://wiki.archlinux.org/index.php/Fstab](https:
             "options": "nosuid,noexec,nodev,mode=1777,size=65536k"
         },
     ]
+```
 
 *Example (Windows)*
-
+```
     "mounts": [
         {
             "type": "ntfs",
@@ -298,7 +296,7 @@ options: in the fstab format [https://wiki.archlinux.org/index.php/Fstab](https:
             "destination": "C:\Users\crosbymichael\My Fancy Mount Point\",
             "options": ""
         }
-
+```
 See links for details about mountvol in Windows.
 
 [https://msdn.microsoft.com/en-us/library/windows/desktop/aa365561(v=vs.85).aspx](https://msdn.microsoft.com/en-us/library/windows/desktop/aa365561(v=vs.85).aspx)
@@ -318,7 +316,7 @@ See links for details about mountvol in Windows.
 #### Working directory
 
 *Example (Linux)*
-
+```
     "processes": [
         {
             "tty": true,
@@ -333,10 +331,11 @@ See links for details about mountvol in Windows.
             "cwd": ""
         }
     ],
+```    
 The processes to be created inside the container are specified in a processes array. They are started in order.
-
+```
     "processes": [...]
-
+```
 The command to start a process is specified in an array of args. It will be run in the working directory specified in the string cwd.
 
 Environment variables are specified is an array called env.
@@ -348,7 +347,7 @@ The user inside the container under which the process is running is specified un
 tty is a boolean that lets you specify whether you want a terminal attached to that process. tty cannot be set to true for more than one process in the array, else oc returns the error code THERE_CAN_BE_ONLY_ONE_TTY.
 
 *Example (Windows)*
-
+```
     "processes": [
         {
             "tty": true,
@@ -363,15 +362,15 @@ tty is a boolean that lets you specify whether you want a terminal attached to t
             "cwd": ""
         }
     ],
-
+```
 ### Resource Constraints
 
 *Example*
-
+```
     "cpus": 1.1,
     "memory": 1024,
     "hostname": "mrsdalloway",
-
+```
 The number of CPUs is specified as a positive decimal under the key cpus. 
 
 The amount of memory allocated to this container is specified under the memory key, as an integer and is expressed in MBb.
@@ -381,7 +380,7 @@ If the cpu or memory requested are too high for the underlying environment capab
 hostname is a string specifying the hostname for that container as it is accessible to processes running in it.
 
 ### Access to devices
-
+```
    "devices": [
         "null",
         "random",
@@ -390,7 +389,7 @@ hostname is a string specifying the hostname for that container as it is accessi
         "zero",
         "urandom"
     ],
-
+```
 Devices is an array specifying the list of devices from the host to make available in the container.
 
 The array contains names: for each name, the device /dev/<name> will be made available inside the container.
@@ -410,7 +409,7 @@ The array contains names: for each name, the device /dev/<name> will be made ava
 ### Linux
 
 #### Linux Namespaces
-
+```
     "namespaces": [
         "process",
         "network",
@@ -418,7 +417,7 @@ The array contains names: for each name, the device /dev/<name> will be made ava
         "ipc",
         "uts"
     ],
-
+```
 Namespaces for the container are specified as an array of strings under the namespaces key. The list of constants that can be used is portable across operating systems. Here is a table mapping these names to native OS equivalent.
 
 For Linux the mapping is
@@ -438,12 +437,13 @@ For Linux the mapping is
 #### Linux Seccomp
 
 #### Linux Process Capabilities
-
+```
    "capabilities": [
         "AUDIT_WRITE",
         "KILL",
         "NET_BIND_SERVICE"
     ],
+```    
 capabilities is an array of Linux process capabilities. Valid values are the string after CAP_ for capabilities defined in http://linux.die.net/man/7/capabilities
 
 #### SELinux
@@ -461,10 +461,10 @@ capabilities is an array of Linux process capabilities. Valid values are the str
 ### ARM
 
 ## Machine-specific configuration
-
+```
     "os": "linux",
     "arch": "amd64",
-
+```
 os specifies the operating system family this image must run on. 
 
 arch specifies the instruction set for which the binaries in the image have been compiled. 
