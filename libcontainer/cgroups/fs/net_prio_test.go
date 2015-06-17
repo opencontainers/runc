@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/opencontainers/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
 var (

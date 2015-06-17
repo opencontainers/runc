@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"github.com/opencontainers/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
 var (

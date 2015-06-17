@@ -12,8 +12,8 @@ import (
 	"strconv"
 	"syscall"
 
-	"github.com/opencontainers/libcontainer/cgroups"
-	"github.com/opencontainers/libcontainer/system"
+	"github.com/opencontainers/runc/libcontainer/cgroups"
+	"github.com/opencontainers/runc/libcontainer/system"
 )
 
 type parentProcess interface {

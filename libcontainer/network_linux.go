@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/opencontainers/libcontainer/configs"
-	"github.com/opencontainers/libcontainer/netlink"
-	"github.com/opencontainers/libcontainer/utils"
+	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/netlink"
+	"github.com/opencontainers/runc/libcontainer/utils"
 )
 
 var strategies = map[string]networkStrategy{

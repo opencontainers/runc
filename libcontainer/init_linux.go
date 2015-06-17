@@ -10,12 +10,12 @@ import (
 	"syscall"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/opencontainers/libcontainer/cgroups"
-	"github.com/opencontainers/libcontainer/configs"
-	"github.com/opencontainers/libcontainer/netlink"
-	"github.com/opencontainers/libcontainer/system"
-	"github.com/opencontainers/libcontainer/user"
-	"github.com/opencontainers/libcontainer/utils"
+	"github.com/opencontainers/runc/libcontainer/cgroups"
+	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/netlink"
+	"github.com/opencontainers/runc/libcontainer/system"
+	"github.com/opencontainers/runc/libcontainer/user"
+	"github.com/opencontainers/runc/libcontainer/utils"
 )
 
 type initType string

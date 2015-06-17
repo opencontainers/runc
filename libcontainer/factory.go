@@ -1,7 +1,7 @@
 package libcontainer
 
 import (
-	"github.com/opencontainers/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
 type Factory interface {

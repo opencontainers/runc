@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/opencontainers/libcontainer"
+	"github.com/opencontainers/runc/libcontainer"
 )
 
 func TestExecIn(t *testing.T) {

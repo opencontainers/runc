@@ -3,7 +3,7 @@ package integration
 import (
 	"syscall"
 
-	"github.com/opencontainers/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
 var standardEnvironment = []string{

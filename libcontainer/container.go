@@ -5,7 +5,7 @@
 package libcontainer
 
 import (
-	"github.com/opencontainers/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
 // The status of a container.
