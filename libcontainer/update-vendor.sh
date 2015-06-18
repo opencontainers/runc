@@ -40,7 +40,7 @@ clone() {
 }
 
 # the following lines are in sorted order, FYI
-clone git github.com/codegangsta/cli 1.1.0
+clone git github.com/codegangsta/cli 7ad88c27405eca0bb4a04bb45897fb7985bd1217
 clone git github.com/coreos/go-systemd v2
 clone git github.com/godbus/dbus v2
 clone git github.com/Sirupsen/logrus v0.7.3
