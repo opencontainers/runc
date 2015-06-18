@@ -24,6 +24,7 @@ var createFlags = []cli.Flag{
 	cli.IntFlag{Name: "cpushares", Usage: "set the cpushares for the container"},
 	cli.IntFlag{Name: "memory-limit", Usage: "set the memory limit for the container"},
 	cli.IntFlag{Name: "memory-swap", Usage: "set the memory swap limit for the container"},
+	cli.IntFlag{Name: "memory-swappiness", Usage: "set the memory swappiness value (0-100 inclusive) for the container"},
 	cli.IntFlag{Name: "parent-death-signal", Usage: "set the signal that will be delivered to the process in case the parent dies"},
 	cli.IntFlag{Name: "userns-root-uid", Usage: "set the user namespace root uid"},
 	cli.IntFlag{Name: "veth-mtu", Usage: "veth mtu"},
@@ -87,6 +88,7 @@ func modify(config *configs.Config, context *cli.Context) {
 	config.Cgroups.CpuShares = int64(context.Int("cpushares"))
 	config.Cgroups.Memory = int64(context.Int("memory-limit"))
 	config.Cgroups.MemorySwap = int64(context.Int("memory-swap"))
+	config.Cgroups.MemorySwappiness = int64(context.Int("memory-swappiness"))
 	config.AppArmorProfile = context.String("apparmor-profile")
 	config.ProcessLabel = context.String("process-label")
 	config.MountLabel = context.String("mount-label")
@@ -263,10 +265,11 @@ func getTemplate() *configs.Config {
 			{Type: configs.NEWNET},
 		}),
 		Cgroups: &configs.Cgroup{
-			Name:            filepath.Base(cwd),
-			Parent:          "nsinit",
-			AllowAllDevices: false,
-			AllowedDevices:  configs.DefaultAllowedDevices,
+			Name:             filepath.Base(cwd),
+			Parent:           "nsinit",
+			AllowAllDevices:  false,
+			AllowedDevices:   configs.DefaultAllowedDevices,
+			MemorySwappiness: -1,
 		},
 		Devices: configs.DefaultAutoCreatedDevices,
 		MaskPaths: []string{
