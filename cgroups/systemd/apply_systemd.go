@@ -188,6 +188,16 @@ func (m *Manager) Apply(pid int) error {
 			newProp("BlockIOWeight", uint64(c.BlkioWeight)))
 	}
 
+	// We need to set kernel memory before processes join cgroup because
+	// kmem.limit_in_bytes can only be set when the cgroup is empty.
+	// And swap memory limit needs to be set after memory limit, only
+	// memory limit is handled by systemd, so it's kind of ugly here.
+	if c.KernelMemory > 0 {
+		if err := setKernelMemory(c); err != nil {
+			return err
+		}
+	}
+
 	if _, err := theConn.StartTransientUnit(unitName, "replace", properties...); err != nil {
 		return err
 	}
@@ -462,6 +472,26 @@ func joinDevices(c *configs.Cgroup, pid int) error {
 	return devices.Set(path, c)
 }
 
+func setKernelMemory(c *configs.Cgroup) error {
+	path, err := getSubsystemPath(c, "memory")
+	if err != nil && !cgroups.IsNotFound(err) {
+		return err
+	}
+
+	if err := os.MkdirAll(path, 0755); err != nil && !os.IsExist(err) {
+		return err
+	}
+
+	if c.KernelMemory > 0 {
+		err = writeFile(path, "memory.kmem.limit_in_bytes", strconv.FormatInt(c.KernelMemory, 10))
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func joinMemory(c *configs.Cgroup, pid int) error {
 	path, err := getSubsystemPath(c, "memory")
 	if err != nil && !cgroups.IsNotFound(err) {
@@ -476,12 +506,6 @@ func joinMemory(c *configs.Cgroup, pid int) error {
 		}
 	}
 
-	if c.KernelMemory > 0 {
-		err = writeFile(path, "memory.kmem.limit_in_bytes", strconv.FormatInt(c.KernelMemory, 10))
-		if err != nil {
-			return err
-		}
-	}
 	if c.MemorySwappiness >= 0 && c.MemorySwappiness <= 100 {
 		err = writeFile(path, "memory.swappiness", strconv.FormatInt(c.MemorySwappiness, 10))
 		if err != nil {
