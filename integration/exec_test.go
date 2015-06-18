@@ -497,7 +497,7 @@ func TestCpuShares(t *testing.T) {
 	testCpuShares(t, false)
 }
 
-func TestSystemdCpuShares(t *testing.T) {
+func TestCpuSharesSystemd(t *testing.T) {
 	if !systemd.UseSystemd() {
 		t.Skip("Systemd is unsupported")
 	}
@@ -521,6 +521,37 @@ func testCpuShares(t *testing.T, systemd bool) {
 	_, _, err = runContainer(config, "", "ps")
 	if err == nil {
 		t.Fatalf("runContainer should failed with invalid CpuShares")
+	}
+}
+
+func TestRunWithKernelMemory(t *testing.T) {
+	testRunWithKernelMemory(t, false)
+}
+
+func TestRunWithKernelMemorySystemd(t *testing.T) {
+	if !systemd.UseSystemd() {
+		t.Skip("Systemd is unsupported")
+	}
+	testRunWithKernelMemory(t, true)
+}
+
+func testRunWithKernelMemory(t *testing.T, systemd bool) {
+	if testing.Short() {
+		return
+	}
+	rootfs, err := newRootfs()
+	ok(t, err)
+	defer remove(rootfs)
+
+	config := newTemplateConfig(rootfs)
+	if systemd {
+		config.Cgroups.Slice = "system.slice"
+	}
+	config.Cgroups.KernelMemory = 52428800
+
+	_, _, err = runContainer(config, "", "ps")
+	if err != nil {
+		t.Fatalf("runContainer failed with kernel memory limit: %v", err)
 	}
 }
 
