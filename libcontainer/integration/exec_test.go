@@ -812,6 +812,9 @@ func TestSeccompNoChown(t *testing.T) {
 	if err == nil {
 		t.Fatal("running chown in a container should fail")
 	}
+	if buffers == nil {
+		t.Fatalf("Container wasn't even created: %v", err)
+	}
 	if s := buffers.String(); !strings.Contains(s, "not permitted") {
 		t.Fatalf("running chown should result in an EPERM but got %q", s)
 	}
