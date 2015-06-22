@@ -18,7 +18,7 @@ func TestCaptureTestFunc(t *testing.T) {
 	if expected := "captureFunc"; frame.Function != expected {
 		t.Fatalf("expteced function %q but recevied %q", expected, frame.Function)
 	}
-	if expected := "github.com/docker/libcontainer/stacktrace"; frame.Package != expected {
+	if expected := "github.com/opencontainers/runc/libcontainer/stacktrace"; frame.Package != expected {
 		t.Fatalf("expected package %q but received %q", expected, frame.Package)
 	}
 	if expected := "capture_test.go"; frame.File != expected {

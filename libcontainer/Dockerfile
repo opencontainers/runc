@@ -5,7 +5,7 @@ RUN apt-get update && apt-get install -y iptables criu=1.5.2-1 && rm -rf /var/li
 
 RUN go get golang.org/x/tools/cmd/cover
 
-ENV GOPATH $GOPATH:/go/src/github.com/docker/libcontainer/vendor
+ENV GOPATH $GOPATH:/go/src/github.com/opencontainers/runc/libcontainer/vendor
 RUN go get github.com/docker/docker/pkg/term
 
 # setup a playground for us to spawn containers in
@@ -15,8 +15,8 @@ RUN mkdir /busybox && \
 RUN curl -sSL https://raw.githubusercontent.com/docker/docker/master/hack/dind -o /dind && \
     chmod +x /dind
 
-COPY . /go/src/github.com/docker/libcontainer
-WORKDIR /go/src/github.com/docker/libcontainer
+COPY . /go/src/github.com/opencontainers/runc/libcontainer
+WORKDIR /go/src/github.com/opencontainers/runc/libcontainer
 RUN cp sample_configs/minimal.json /busybox/container.json
 
 RUN make direct-install

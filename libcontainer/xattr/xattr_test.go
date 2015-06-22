@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/docker/libcontainer/xattr"
+	"github.com/opencontainers/runc/libcontainer/xattr"
 )
 
 func testXattr(t *testing.T) {

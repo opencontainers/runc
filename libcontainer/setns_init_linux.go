@@ -5,9 +5,9 @@ package libcontainer
 import (
 	"os"
 
-	"github.com/docker/libcontainer/apparmor"
-	"github.com/docker/libcontainer/label"
-	"github.com/docker/libcontainer/system"
+	"github.com/opencontainers/runc/libcontainer/apparmor"
+	"github.com/opencontainers/runc/libcontainer/label"
+	"github.com/opencontainers/runc/libcontainer/system"
 )
 
 // linuxSetnsInit performs the container's initialization for running a new process

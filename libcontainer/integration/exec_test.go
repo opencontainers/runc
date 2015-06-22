@@ -10,9 +10,9 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/docker/libcontainer"
-	"github.com/docker/libcontainer/cgroups/systemd"
-	"github.com/docker/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer"
+	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
+	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
 func TestExecPS(t *testing.T) {

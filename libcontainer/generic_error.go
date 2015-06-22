@@ -6,7 +6,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/docker/libcontainer/stacktrace"
+	"github.com/opencontainers/runc/libcontainer/stacktrace"
 )
 
 var errorTemplate = template.Must(template.New("error").Parse(`Timestamp: {{.Timestamp}}

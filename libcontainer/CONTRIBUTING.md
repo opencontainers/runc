@@ -6,7 +6,7 @@ feels wrong or incomplete.
 
 ## Reporting Issues
 
-When reporting [issues](https://github.com/docker/libcontainer/issues)
+When reporting [issues](https://github.com/opencontainers/runc/libcontainer/issues)
 on GitHub please include your host OS (Ubuntu 12.04, Fedora 19, etc),
 the output of `uname -a`. Please include the steps required to reproduce
 the problem if possible and applicable.
@@ -37,7 +37,7 @@ As this build is done using Docker, you can even run this from [OSX](https://git
 
     make sh
 
-This will create an container that runs `nsinit exec sh` on a busybox rootfs with the configuration from ['minimal.json'](https://github.com/docker/libcontainer/blob/master/sample_configs/minimal.json).
+This will create an container that runs `nsinit exec sh` on a busybox rootfs with the configuration from ['minimal.json'](https://github.com/opencontainers/runc/libcontainer/blob/master/sample_configs/minimal.json).
 Like the previous command, you can run this on OSX too!
 
 ### Building libcontainer directly
@@ -98,7 +98,7 @@ else is working on the same thing.
 ### Create issues...
 
 Any significant improvement should be documented as [a GitHub
-issue](https://github.com/docker/libcontainer/issues) before anybody
+issue](https://github.com/opencontainers/runc/libcontainer/issues) before anybody
 starts working on it.
 
 ### ...but check for existing issues first!

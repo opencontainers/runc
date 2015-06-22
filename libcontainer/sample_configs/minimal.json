@@ -2,7 +2,7 @@
 	"no_pivot_root": false,
 	"parent_death_signal": 0,
 	"pivot_dir": "",
-	"rootfs": "/home/michael/development/gocode/src/github.com/docker/libcontainer",
+	"rootfs": "/home/michael/development/gocode/src/github.com/opencontainers/runc/libcontainer",
 	"readonlyfs": false,
 	"mounts": [
 		{

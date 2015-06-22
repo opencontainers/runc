@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/docker/libcontainer/selinux"
+	"github.com/opencontainers/runc/libcontainer/selinux"
 )
 
 func testSetfilecon(t *testing.T) {

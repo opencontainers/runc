@@ -6,10 +6,10 @@ import (
 	"os"
 	"syscall"
 
-	"github.com/docker/libcontainer/apparmor"
-	"github.com/docker/libcontainer/configs"
-	"github.com/docker/libcontainer/label"
-	"github.com/docker/libcontainer/system"
+	"github.com/opencontainers/runc/libcontainer/apparmor"
+	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/label"
+	"github.com/opencontainers/runc/libcontainer/system"
 )
 
 type linuxStandardInit struct {

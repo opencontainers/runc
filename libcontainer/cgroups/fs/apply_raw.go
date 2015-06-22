@@ -11,8 +11,8 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/docker/libcontainer/cgroups"
-	"github.com/docker/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/cgroups"
+	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
 var (

@@ -5,8 +5,8 @@ package systemd
 import (
 	"fmt"
 
-	"github.com/docker/libcontainer/cgroups"
-	"github.com/docker/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/cgroups"
+	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
 type Manager struct {

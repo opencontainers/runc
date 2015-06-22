@@ -5,7 +5,7 @@ package fs
 import (
 	"testing"
 
-	"github.com/docker/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
 var (

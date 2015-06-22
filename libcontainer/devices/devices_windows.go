@@ -1,7 +1,7 @@
 package devices
 
 import (
-	"github.com/docker/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
 // TODO Windows. This can be factored out further - Devices are not supported

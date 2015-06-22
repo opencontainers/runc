@@ -16,7 +16,7 @@ import (
 	"syscall"
 
 	"github.com/docker/docker/pkg/mount"
-	"github.com/docker/libcontainer/system"
+	"github.com/opencontainers/runc/libcontainer/system"
 )
 
 const (

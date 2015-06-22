@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/docker/docker/pkg/mount"
-	"github.com/docker/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
 func newTestRoot() (string, error) {

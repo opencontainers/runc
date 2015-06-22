@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/docker/libcontainer/cgroups"
+	"github.com/opencontainers/runc/libcontainer/cgroups"
 )
 
 func blkioStatEntryEquals(expected, actual []cgroups.BlkioStatEntry) error {

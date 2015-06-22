@@ -1,5 +1,5 @@
 % nsinit User Manual
-% docker/libcontainer
+% opencontainers/runc/libcontainer
 % JAN 2015
 
 NAME:
