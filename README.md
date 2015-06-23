@@ -5,7 +5,8 @@
 ### Building:
 
 ```bash
-git clone https://github.com/opencontainers/runc
+git clone https://github.com/opencontainers/runc $(GOPATH)/github.com/opencontainers/runc
+cd $(GOPATH)/github.com/opencontainers/runc/
 make
 sudo make install
 ```
