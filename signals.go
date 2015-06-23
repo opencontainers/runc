@@ -1,4 +1,4 @@
-package main
+package runc
 
 import (
 	"os"
@@ -14,7 +14,7 @@ const signalBufferSize = 2048
 
 // newSignalHandler returns a signal handler for processing SIGCHLD and SIGWINCH signals
 // while still forwarding all other signals to the process.
-func newSignalHandler(tty *tty) *signalHandler {
+func NewSignalHandler(tty *TTY) *signalHandler {
 	// ensure that we have a large buffer size so that we do not miss any signals
 	// incase we are not processing them fast enough.
 	s := make(chan os.Signal, signalBufferSize)
@@ -35,12 +35,12 @@ type exit struct {
 
 type signalHandler struct {
 	signals chan os.Signal
-	tty     *tty
+	tty     *TTY
 }
 
 // forward handles the main signal event loop forwarding, resizing, or reaping depeding
 // on the signal received.
-func (h *signalHandler) forward(process *libcontainer.Process) (int, error) {
+func (h *signalHandler) Forward(process *libcontainer.Process) (int, error) {
 	// make sure we know the pid of our main process so that we can return
 	// after it dies.
 	pid1, err := process.Pid()
@@ -48,11 +48,11 @@ func (h *signalHandler) forward(process *libcontainer.Process) (int, error) {
 		return -1, err
 	}
 	// perform the initial tty resize.
-	h.tty.resize()
+	h.tty.Resize()
 	for s := range h.signals {
 		switch s {
 		case syscall.SIGWINCH:
-			h.tty.resize()
+			h.tty.Resize()
 		case syscall.SIGCHLD:
 			exits, err := h.reap()
 			if err != nil {

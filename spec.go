@@ -1,14 +1,33 @@
-package main
+package runc
 
 import (
-	"encoding/json"
-	"fmt"
-	"runtime"
-
-	"github.com/codegangsta/cli"
+	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
-const cpuQuotaMultiplyer = 100000
+type SpecConfig interface {
+	NewConfig() (*configs.Config, error)
+	AddNamepsaces(config *configs.Config) error
+	AddMounts(config *configs.Config) error
+	AddDevices(config *configs.Config) error
+	AddUserNamespace(config *configs.Config) error
+	AddGroups(config *configs.Config) error
+	SetReadOnly(config *configs.Config) error
+}
+
+type Spec struct {
+	Version      string      `json:"version"`
+	OS           string      `json:"os"`
+	Arch         string      `json:"arch"`
+	Processes    []*Process  `json:"processes"`
+	Root         Root        `json:"root"`
+	Cpus         float64     `json:"cpus"`   // in 1.1 for 110% cpus
+	Memory       int64       `json:"memory"` // in mb; 1024m
+	Hostname     string      `json:"hostname"`
+	Namespaces   []Namespace `json:"namespaces"`
+	Capabilities []string    `json:"capabilities"`
+	Devices      []string    `json:"devices"`
+	Mounts       []Mount     `json:"mounts"`
+}
 
 type Mount struct {
 	Type        string `json:"type"`
@@ -33,114 +52,4 @@ type Root struct {
 type Namespace struct {
 	Type string `json:"type"`
 	Path string `json:"path,omitempty"`
-}
-
-type PortableSpec struct {
-	Version      string      `json:"version"`
-	OS           string      `json:"os"`
-	Arch         string      `json:"arch"`
-	Processes    []*Process  `json:"processes"`
-	Root         Root        `json:"root"`
-	Cpus         float64     `json:"cpus"`   // in 1.1 for 110% cpus
-	Memory       int64       `json:"memory"` // in mb; 1024m
-	Hostname     string      `json:"hostname"`
-	Namespaces   []Namespace `json:"namespaces"`
-	Capabilities []string    `json:"capabilities"`
-	Devices      []string    `json:"devices"`
-	Mounts       []Mount     `json:"mounts"`
-}
-
-var specCommand = cli.Command{
-	Name:  "spec",
-	Usage: "create a new specification file",
-	Action: func(context *cli.Context) {
-		spec := PortableSpec{
-			Version: version,
-			OS:      runtime.GOOS,
-			Arch:    runtime.GOARCH,
-			Root: Root{
-				Path:     "rootfs",
-				Readonly: true,
-			},
-			Processes: []*Process{
-				{
-					TTY:  true,
-					User: "daemon",
-					Args: []string{
-						"sh",
-					},
-					Env: []string{
-						"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-						"TERM=xterm",
-					},
-				},
-			},
-			Cpus:     1.1,
-			Memory:   1024,
-			Hostname: "shell",
-			Capabilities: []string{
-				"AUDIT_WRITE",
-				"KILL",
-				"NET_BIND_SERVICE",
-			},
-			Devices: []string{
-				"null",
-				"random",
-				"full",
-				"tty",
-				"zero",
-				"urandom",
-			},
-			Namespaces: []Namespace{
-				{Type: "process"},
-				{Type: "network"},
-				{Type: "mount"},
-				{Type: "ipc"},
-				{Type: "uts"},
-			},
-			Mounts: []Mount{
-				{
-					Type:        "proc",
-					Source:      "proc",
-					Destination: "/proc",
-					Options:     "",
-				},
-				{
-					Type:        "tmpfs",
-					Source:      "tmpfs",
-					Destination: "/dev",
-					Options:     "nosuid,strictatime,mode=755,size=65536k",
-				},
-				{
-					Type:        "devpts",
-					Source:      "devpts",
-					Destination: "/dev/pts",
-					Options:     "nosuid,noexec,newinstance,ptmxmode=0666,mode=0620,gid=5",
-				},
-				{
-					Type:        "tmpfs",
-					Source:      "shm",
-					Destination: "/dev/shm",
-					Options:     "nosuid,noexec,nodev,mode=1777,size=65536k",
-				},
-				{
-					Type:        "mqueue",
-					Source:      "mqueue",
-					Destination: "/dev/mqueue",
-					Options:     "nosuid,noexec,nodev",
-				},
-				{
-					Type:        "sysfs",
-					Source:      "sysfs",
-					Destination: "/sys",
-					Options:     "nosuid,noexec,nodev",
-				},
-			},
-		}
-		data, err := json.MarshalIndent(&spec, "", "\t")
-		if err != nil {
-			fatal(err)
-		}
-		fmt.Printf("%s", data)
-	},
 }

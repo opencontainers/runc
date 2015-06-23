@@ -7,6 +7,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
+	"github.com/opencontainer/runc"
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/utils"
@@ -25,13 +26,13 @@ var restoreCommand = cli.Command{
 	Action: func(context *cli.Context) {
 		imagePath := context.String("image-path")
 		if imagePath == "" {
-			imagePath = getDefaultImagePath(context)
+			imagePath = runc.DefaultImagePath()
 		}
-		spec, err := loadSpec(context.Args().First())
+		spec, err := runc.NewSpec(context.Args().First())
 		if err != nil {
 			fatal(err)
 		}
-		config, err := createLibcontainerConfig(spec)
+		config, err := spec.NewConfig()
 		if err != nil {
 			fatal(err)
 		}
@@ -43,15 +44,16 @@ var restoreCommand = cli.Command{
 	},
 }
 
-func restoreContainer(context *cli.Context, spec *LinuxSpec, config *configs.Config, imagePath string) (code int, err error) {
+func restoreContainer(context *cli.Context, spec *runc.LinuxSpec, config *configs.Config, imagePath string) (code int, err error) {
 	rootuid := 0
-	factory, err := loadFactory(context)
+	factory, err := runc.NewFactory(context.GlobalString("root"), context.GlobalString("criu"))
 	if err != nil {
 		return -1, err
 	}
-	container, err := factory.Load(context.GlobalString("id"))
+	id := context.GlobalString("id")
+	container, err := factory.Load(id)
 	if err != nil {
-		container, err = factory.Create(context.GlobalString("id"), config)
+		container, err = factory.Create(id, config)
 		if err != nil {
 			return -1, err
 		}
@@ -81,7 +83,7 @@ func restoreContainer(context *cli.Context, spec *LinuxSpec, config *configs.Con
 		Stdout: os.Stdout,
 		Stderr: os.Stderr,
 	}
-	tty, err := newTty(spec.Processes[0].TTY, process, rootuid)
+	tty, err := runc.NewTTY(spec.Processes[0].TTY, process, rootuid)
 	if err != nil {
 		return -1, err
 	}
@@ -114,14 +116,14 @@ func criuOptions(context *cli.Context) *libcontainer.CriuOpts {
 
 // we have to use this type of signal handler because there is a memory leak if we
 // wait and reap with SICHLD.
-func handleSignals(process *libcontainer.Process, tty *tty) {
+func handleSignals(process *libcontainer.Process, tty *runc.TTY) {
 	sigc := make(chan os.Signal, 10)
 	signal.Notify(sigc)
-	tty.resize()
+	tty.Resize()
 	for sig := range sigc {
 		switch sig {
 		case syscall.SIGWINCH:
-			tty.resize()
+			tty.Resize()
 		default:
 			process.Signal(sig)
 		}

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/codegangsta/cli"
+	"github.com/opencontainer/runc"
 	"github.com/opencontainers/runc/libcontainer"
 )
 
@@ -22,7 +23,11 @@ var checkpointCommand = cli.Command{
 		cli.StringFlag{Name: "page-server", Value: "", Usage: "ADDRESS:PORT of the page server"},
 	},
 	Action: func(context *cli.Context) {
-		container, err := getContainer(context)
+		factory, err := runc.NewFactory(context.GlobalString("root"), context.GlobalString("criu"))
+		if err != nil {
+			fatal(err)
+		}
+		container, err := runc.GetContainer(factory, context.GlobalString("id"))
 		if err != nil {
 			fatal(err)
 		}
@@ -38,11 +43,12 @@ var checkpointCommand = cli.Command{
 func getCheckpointImagePath(context *cli.Context) string {
 	imagePath := context.String("image-path")
 	if imagePath == "" {
-		imagePath = getDefaultImagePath(context)
+		imagePath = runc.DefaultImagePath()
 	}
 	return imagePath
 }
 
+//http://criu.org/Main_Page
 func setPageServer(context *cli.Context, options *libcontainer.CriuOpts) {
 	// xxx following criu opts are optional
 	// The dump image can be sent to a criu page server

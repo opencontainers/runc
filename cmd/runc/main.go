@@ -6,19 +6,21 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
+	"github.com/opencontainer/runc"
 	"github.com/opencontainers/runc/libcontainer"
 	_ "github.com/opencontainers/runc/libcontainer/nsenter"
 )
 
+var version = "?"
+
 const (
-	version = "0.1"
-	usage   = `open container runtime
+	usage = `open container runtime
 
 runc integrates well with existing process supervisors to provide a production container runtime environment for
-applications.  It can be used with your existing process monitoring tools and the container will be spawned as direct 
+applications.  It can be used with your existing process monitoring tools and the container will be spawned as direct
 child of the process supervisor.  nsinit can be used to manage the lifetime of a single container.
 
-Execute a simple container in your shell by running: 
+Execute a simple container in your shell by running:
 
     cd /mycontainer
     runc
@@ -33,7 +35,7 @@ func init() {
 		if err := factory.StartInitialization(); err != nil {
 			fatal(err)
 		}
-		panic("--this line should never been executed, congradulations--")
+		panic("--this line should never been executed, congratulations--")
 	}
 }
 
@@ -45,7 +47,7 @@ func main() {
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "id",
-			Value: getDefaultID(),
+			Value: runc.DefaultID(),
 			Usage: "specify the ID to be used for the container",
 		},
 		cli.BoolFlag{
@@ -81,11 +83,11 @@ func main() {
 			cli.ShowAppHelp(context)
 			logrus.Fatal("runc should be run as root")
 		}
-		spec, err := loadSpec(context.Args().First())
+		spec, err := runc.NewSpec(context.Args().First())
 		if err != nil {
 			fatal(err)
 		}
-		status, err := execContainer(context, spec)
+		status, err := start(context, spec)
 		if err != nil {
 			fatal(err)
 		}

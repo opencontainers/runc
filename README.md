@@ -5,23 +5,22 @@
 ### Building:
 
 ```bash
-git clone https://github.com/opencontainers/runc
-make
-sudo make install
+git clone https://github.com/opencontainer/runc
+make install
 ```
 
 ### Using:
 
-To run a container that you received just execute `runc run` with the JSON format at the argument or have a 
+To run a container that you received just execute `runc run` with the JSON format at the argument or have a
 `container.json` file in the current working directory.
 
 ```bash
-runc 
+runc
 / $ ps
 PID   USER     COMMAND
 1     daemon   sh
 5     daemon   sh
-/ $ 
+/ $
 ```
 
 ### OCF Container JSON Format:
