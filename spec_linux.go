@@ -186,12 +186,13 @@ func createCgroupConfig(spec *LinuxSpec, devices []*configs.Device) (*configs.Cg
 		return nil, err
 	}
 	c := &configs.Cgroup{
-		Name:           getDefaultID(),
-		Parent:         myCgroupPath,
-		AllowedDevices: append(devices, allowedDevices...),
-		CpuQuota:       getCPUQuota(spec.Cpus),
-		Memory:         spec.Memory * 1024 * 1024,
-		MemorySwap:     -1,
+		Name:             getDefaultID(),
+		Parent:           myCgroupPath,
+		AllowedDevices:   append(devices, allowedDevices...),
+		CpuQuota:         getCPUQuota(spec.Cpus),
+		Memory:           spec.Memory * 1024 * 1024,
+		MemorySwap:       -1,
+		MemorySwappiness: -1,
 	}
 	if r := spec.Resources; r != nil {
 		c.MemoryReservation = r.MemoryReservation
