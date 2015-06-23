@@ -24,7 +24,7 @@ PID   USER     COMMAND
 / $ 
 ```
 
-### OCF Container JSON Format;
+### OCF Container JSON Format:
 
 ```json
 {
