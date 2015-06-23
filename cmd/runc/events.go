@@ -8,7 +8,8 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
-	"github.com/opencontainers/runc/libcontainer"
+	"github.com/docker/libcontainer"
+	"github.com/opencontainer/runc"
 )
 
 // event struct for encoding the event data to json.
@@ -26,7 +27,11 @@ var eventsCommand = cli.Command{
 		cli.BoolFlag{Name: "stats", Usage: "display the container's stats then exit"},
 	},
 	Action: func(context *cli.Context) {
-		container, err := getContainer(context)
+		factory, err := runc.NewFactory(context.GlobalString("root"), context.GlobalString("criu"))
+		if err != nil {
+			logrus.Fatal(err)
+		}
+		container, err := runc.GetContainer(factory, context.GlobalString("id"))
 		if err != nil {
 			logrus.Fatal(err)
 		}
