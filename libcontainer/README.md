@@ -135,40 +135,6 @@ container.Resume()
 ```
 
 
-#### nsinit
-
-`nsinit` is a cli application which demonstrates the use of libcontainer.
-It is able to spawn new containers or join existing containers.  A root
-filesystem must be provided for use along with a container configuration file.
-
-To build `nsinit`, run `make binary`. It will save the binary into
-`bundles/nsinit`.
-
-To use `nsinit`, cd into a Linux rootfs and copy a `container.json` file into
-the directory with your specified configuration. Environment, networking,
-and different capabilities for the container are specified in this file.
-The configuration is used for each process executed inside the container.
-
-See the `sample_configs` folder for examples of what the container configuration should look like.
-
-To execute `/bin/bash` in the current directory as a container just run the following **as root**:
-```bash
-nsinit exec --tty /bin/bash
-```
-
-If you wish to spawn another process inside the container while your
-current bash session is running, run the same command again to
-get another bash shell (or change the command).  If the original
-process (PID 1) dies, all other processes spawned inside the container
-will be killed and the namespace will be removed.
-
-You can identify if a process is running in a container by
-looking to see if `state.json` is in the root of the directory.
-
-You may also specify an alternate root place where
-the `container.json` file is read and where the `state.json` file will be saved.
-
-
 #### Checkpoint & Restore
 
 libcontainer now integrates [CRIU](http://criu.org/) for checkpointing and restoring containers.
@@ -179,25 +145,6 @@ that state into a new process, on the same machine or on another machine.
 If you don't already  have `criu` installed, you can build it from source, following the
 [online instructions](http://criu.org/Installation). `criu` is also installed in the docker image
 generated when building libcontainer with docker.
-
-To try an example with `nsinit`, open two terminals to the same busybox directory.
-In the first terminal, run a command like this one:
-```bash
-nsinit exec -- sh -c 'i=0; while true; do echo $i; i=$(expr $i + 1); sleep 1; done'
-```
-
-You should see logs printing to the terminal every second. Now, in the second terminal, run:
-```bash
-nsinit checkpoint --image-path=/tmp/criu
-```
-
-The logs in your first terminal will stop and the process will exit. Finally, in the second
-terminal, run the restore command:
-```bash
-nsinit restore --image-path=/tmp/criu
-```
-
-The process will resume counting where it left off and printing to the new terminal window.
 
 
 #### Future
