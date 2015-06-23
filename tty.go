@@ -1,27 +1,27 @@
-package main
+package runc
 
 import (
 	"io"
 	"os"
 
 	"github.com/docker/docker/pkg/term"
-	"github.com/opencontainers/runc/libcontainer"
+	"github.com/docker/libcontainer"
 )
 
-// newTty creates a new pty for use with the container.  If a tty is not to be
+// NewTTY creates a new pty for use with the container.  If a TTY is not to be
 // created for the process, pipes are created so that the TTY of the parent
 // process are not inherited by the container.
-func newTty(create bool, p *libcontainer.Process, rootuid int) (*tty, error) {
+func NewTTY(create bool, p *libcontainer.Process, rootuid int) (*TTY, error) {
 	if create {
-		return createTty(p, rootuid)
+		return createTTY(p, rootuid)
 	}
 	return createStdioPipes(p)
 }
 
 // setup standard pipes so that the TTY of the calling nsinit process
 // is not inherited by the container.
-func createStdioPipes(p *libcontainer.Process) (*tty, error) {
-	t := &tty{}
+func createStdioPipes(p *libcontainer.Process) (*TTY, error) {
+	t := &TTY{}
 	r, w, err := os.Pipe()
 	if err != nil {
 		return nil, err
@@ -45,7 +45,7 @@ func createStdioPipes(p *libcontainer.Process) (*tty, error) {
 
 }
 
-func createTty(p *libcontainer.Process, rootuid int) (*tty, error) {
+func createTTY(p *libcontainer.Process, rootuid int) (*TTY, error) {
 	console, err := p.NewConsole(rootuid)
 	if err != nil {
 		return nil, err
@@ -56,7 +56,7 @@ func createTty(p *libcontainer.Process, rootuid int) (*tty, error) {
 	if err != nil {
 		return nil, err
 	}
-	t := &tty{
+	t := &TTY{
 		console: console,
 		state:   state,
 		closers: []io.Closer{
@@ -69,13 +69,13 @@ func createTty(p *libcontainer.Process, rootuid int) (*tty, error) {
 	return t, nil
 }
 
-type tty struct {
+type TTY struct {
 	console libcontainer.Console
 	state   *term.State
 	closers []io.Closer
 }
 
-func (t *tty) Close() error {
+func (t *TTY) Close() error {
 	for _, c := range t.closers {
 		c.Close()
 	}
@@ -85,7 +85,7 @@ func (t *tty) Close() error {
 	return nil
 }
 
-func (t *tty) resize() error {
+func (t *TTY) Resize() error {
 	if t.console == nil {
 		return nil
 	}

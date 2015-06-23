@@ -1,6 +1,5 @@
 // +build linux
-
-package main
+package runc
 
 import (
 	"encoding/json"
@@ -10,10 +9,23 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/opencontainers/runc/libcontainer/cgroups"
-	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/opencontainers/runc/libcontainer/devices"
+	"github.com/docker/libcontainer/cgroups"
+	"github.com/docker/libcontainer/configs"
+	"github.com/docker/libcontainer/devices"
 )
+
+const (
+	wildcard           = -1
+	cpuQuotaMultiplyer = 100000
+)
+
+type LinuxSpec struct {
+	Spec
+	UserMapping      map[string]UserMapping `json:"userMapping"`
+	Rlimits          []Rlimit               `json:"rlimits"`
+	SystemProperties map[string]string      `json:"systemProperties"`
+	Resources        *Resources             `json:"resources"`
+}
 
 type UserMapping struct {
 	From  int `json:"from"`
@@ -80,14 +92,6 @@ type Resources struct {
 	NetClsClassid string `json:"netClsClassid"`
 }
 
-type LinuxSpec struct {
-	PortableSpec
-	UserMapping      map[string]UserMapping `json:"userMapping"`
-	Rlimits          []Rlimit               `json:"rlimits"`
-	SystemProperties map[string]string      `json:"systemProperties"`
-	Resources        *Resources             `json:"resources"`
-}
-
 var namespaceMapping = map[string]configs.NamespaceType{
 	"process": configs.NEWPID,
 	"network": configs.NEWNET,
@@ -97,9 +101,69 @@ var namespaceMapping = map[string]configs.NamespaceType{
 	"uts":     configs.NEWUTS,
 }
 
-// loadSpec loads the specification from the provided path.
+var allowedDevices = []*configs.Device{
+	// allow mknod for any device
+	{
+		Type:        'c',
+		Major:       wildcard,
+		Minor:       wildcard,
+		Permissions: "m",
+	},
+	{
+		Type:        'b',
+		Major:       wildcard,
+		Minor:       wildcard,
+		Permissions: "m",
+	},
+	{
+		Path:        "/dev/console",
+		Type:        'c',
+		Major:       5,
+		Minor:       1,
+		Permissions: "rwm",
+	},
+	{
+		Path:        "/dev/tty0",
+		Type:        'c',
+		Major:       4,
+		Minor:       0,
+		Permissions: "rwm",
+	},
+	{
+		Path:        "/dev/tty1",
+		Type:        'c',
+		Major:       4,
+		Minor:       1,
+		Permissions: "rwm",
+	},
+	// /dev/pts/ - pts namespaces are "coming soon"
+	{
+		Path:        "",
+		Type:        'c',
+		Major:       136,
+		Minor:       wildcard,
+		Permissions: "rwm",
+	},
+	{
+		Path:        "",
+		Type:        'c',
+		Major:       5,
+		Minor:       2,
+		Permissions: "rwm",
+	},
+	// tuntap
+	{
+		Path:        "",
+		Type:        'c',
+		Major:       10,
+		Minor:       200,
+		Permissions: "rwm",
+	},
+}
+
+// NewSpec loads the specification from the provided path.
 // If the path is empty then the default path will be "container.json"
-func loadSpec(path string) (*LinuxSpec, error) {
+func NewSpec(path string) (*LinuxSpec, error) {
 	if path == "" {
 		path = "container.json"
 	}
@@ -118,7 +182,7 @@ func loadSpec(path string) (*LinuxSpec, error) {
 	return s, nil
 }
 
-func createLibcontainerConfig(spec *LinuxSpec) (*configs.Config, error) {
+func (spec *LinuxSpec) NewConfig() (*configs.Config, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return nil, err
@@ -130,66 +194,97 @@ func createLibcontainerConfig(spec *LinuxSpec) (*configs.Config, error) {
 		Hostname:     spec.Hostname,
 		Privatefs:    true,
 	}
-	for _, ns := range spec.Namespaces {
-		t, exists := namespaceMapping[ns.Type]
-		if !exists {
-			return nil, fmt.Errorf("namespace %q does not exist", ns)
-		}
-		config.Namespaces.Add(t, ns.Path)
-	}
-	for _, m := range spec.Mounts {
-		config.Mounts = append(config.Mounts, createLibcontianerMount(cwd, m))
-	}
-	if err := createDevices(spec, config); err != nil {
+	if err := spec.AddNamespaces(config); err != nil {
 		return nil, err
 	}
-	if err := setupUserNamespace(spec, config); err != nil {
+	if err := spec.AddMounts(config); err != nil {
 		return nil, err
 	}
-	c, err := createCgroupConfig(spec, config.Devices)
-	if err != nil {
+	if err := spec.AddDevices(config); err != nil {
 		return nil, err
 	}
-	config.Cgroups = c
-	if config.Readonlyfs {
-		setReadonly(config)
-		config.MaskPaths = []string{
-			"/proc/kcore",
-		}
-		config.ReadonlyPaths = []string{
-			"/proc/sys", "/proc/sysrq-trigger", "/proc/irq", "/proc/bus",
-		}
+	if err := spec.AddUserNamespace(config); err != nil {
+		return nil, err
+	}
+	if err := spec.AddGroups(config); err != nil {
+		return nil, err
+	}
+	if err := spec.SetReadOnly(config); err != nil {
+		return nil, err
 	}
 	return config, nil
 }
 
-func createLibcontianerMount(cwd string, m Mount) *configs.Mount {
-	flags, data := parseMountOptions(m.Options)
-	source := m.Source
-	if m.Type == "bind" {
-		if !filepath.IsAbs(source) {
-			source = filepath.Join(cwd, m.Source)
+func (spec *LinuxSpec) AddNamespaces(config *configs.Config) error {
+	for _, ns := range spec.Namespaces {
+		t, exists := namespaceMapping[ns.Type]
+		if !exists {
+			return fmt.Errorf("namespace %q does not exist", ns)
 		}
+		config.Namespaces.Add(t, ns.Path)
 	}
-	return &configs.Mount{
-		Device:      m.Type,
-		Source:      source,
-		Destination: m.Destination,
-		Data:        data,
-		Flags:       flags,
-	}
+	return nil
 }
 
-func createCgroupConfig(spec *LinuxSpec, devices []*configs.Device) (*configs.Cgroup, error) {
+func (spec *LinuxSpec) AddMounts(config *configs.Config) error {
+	cwd := filepath.Dir(config.Rootfs)
+	for _, m := range spec.Mounts {
+		config.Mounts = append(config.Mounts, newMount(cwd, m))
+	}
+	return nil
+}
+
+func (spec *LinuxSpec) AddDevices(config *configs.Config) error {
+	for _, name := range spec.Devices {
+		d, err := devices.DeviceFromPath(filepath.Join("/dev", name), "rwm")
+		if err != nil {
+			return err
+		}
+		config.Devices = append(config.Devices, d)
+	}
+	return nil
+}
+
+func (spec *LinuxSpec) AddUserNamespace(config *configs.Config) error {
+	if len(spec.UserMapping) == 0 {
+		return nil
+	}
+	config.Namespaces.Add(configs.NEWUSER, "")
+	mappings := make(map[string][]configs.IDMap)
+	for k, v := range spec.UserMapping {
+		mappings[k] = append(mappings[k], configs.IDMap{
+			ContainerID: v.From,
+			HostID:      v.To,
+			Size:        v.Count,
+		})
+	}
+	config.UidMappings = mappings["uid"]
+	config.GidMappings = mappings["gid"]
+	rootUid, err := config.HostUID()
+	if err != nil {
+		return err
+	}
+	rootGid, err := config.HostGID()
+	if err != nil {
+		return err
+	}
+	for _, node := range config.Devices {
+		node.Uid = uint32(rootUid)
+		node.Gid = uint32(rootGid)
+	}
+	return nil
+}
+
+func (spec *LinuxSpec) AddGroups(config *configs.Config) error {
 	myCgroupPath, err := cgroups.GetThisCgroupDir("devices")
 	if err != nil {
-		return nil, err
+		return err
 	}
 	c := &configs.Cgroup{
-		Name:           getDefaultID(),
+		Name:           DefaultID(),
 		Parent:         myCgroupPath,
-		AllowedDevices: append(devices, allowedDevices...),
-		CpuQuota:       getCPUQuota(spec.Cpus),
+		AllowedDevices: append(config.Devices, allowedDevices...),
+		CpuQuota:       spec.CPUQuota(),
 		Memory:         spec.Memory * 1024 * 1024,
 		MemorySwap:     -1,
 	}
@@ -225,60 +320,47 @@ func createCgroupConfig(spec *LinuxSpec, devices []*configs.Device) (*configs.Cg
 		}
 		c.NetClsClassid = r.NetClsClassid
 	}
-	return c, nil
+	config.Cgroups = c
+	return nil
 }
 
-func createDevices(spec *LinuxSpec, config *configs.Config) error {
-	for _, name := range spec.Devices {
-		d, err := devices.DeviceFromPath(filepath.Join("/dev", name), "rwm")
-		if err != nil {
-			return err
+func (spec *LinuxSpec) SetReadOnly(config *configs.Config) error {
+	if config.Readonlyfs {
+		for _, m := range config.Mounts {
+			if m.Device == "sysfs" {
+				m.Flags |= syscall.MS_RDONLY
+			}
 		}
-		config.Devices = append(config.Devices, d)
+		config.MaskPaths = []string{
+			"/proc/kcore",
+		}
+		config.ReadonlyPaths = []string{
+			"/proc/sys", "/proc/sysrq-trigger", "/proc/irq", "/proc/bus",
+		}
 	}
 	return nil
 }
 
-func setReadonly(config *configs.Config) {
-	for _, m := range config.Mounts {
-		if m.Device == "sysfs" {
-			m.Flags |= syscall.MS_RDONLY
+func (spec *LinuxSpec) CPUQuota() int64 {
+	return int64(spec.Cpus * cpuQuotaMultiplyer)
+}
+
+// Create a new mount from current directory and options
+func newMount(cwd string, m Mount) *configs.Mount {
+	flags, data := parseMountOptions(m.Options)
+	source := m.Source
+	if m.Type == "bind" {
+		if !filepath.IsAbs(source) {
+			source = filepath.Join(cwd, m.Source)
 		}
 	}
-}
-
-func getCPUQuota(cpus float64) int64 {
-	return int64(cpus * cpuQuotaMultiplyer)
-}
-
-func setupUserNamespace(spec *LinuxSpec, config *configs.Config) error {
-	if len(spec.UserMapping) == 0 {
-		return nil
+	return &configs.Mount{
+		Device:      m.Type,
+		Source:      source,
+		Destination: m.Destination,
+		Data:        data,
+		Flags:       flags,
 	}
-	config.Namespaces.Add(configs.NEWUSER, "")
-	mappings := make(map[string][]configs.IDMap)
-	for k, v := range spec.UserMapping {
-		mappings[k] = append(mappings[k], configs.IDMap{
-			ContainerID: v.From,
-			HostID:      v.To,
-			Size:        v.Count,
-		})
-	}
-	config.UidMappings = mappings["uid"]
-	config.GidMappings = mappings["gid"]
-	rootUid, err := config.HostUID()
-	if err != nil {
-		return err
-	}
-	rootGid, err := config.HostGID()
-	if err != nil {
-		return err
-	}
-	for _, node := range config.Devices {
-		node.Uid = uint32(rootUid)
-		node.Gid = uint32(rootGid)
-	}
-	return nil
 }
 
 // parseMountOptions parses the string and returns the flags and any mount data that

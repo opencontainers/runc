@@ -1,27 +1,30 @@
 ## runc
 
+_NOTE:_ Since this is a big change from the current `opencontainer/runc` project I have left the import paths pointing to `opencontainer/runc`
+
+_NOTE:_ Some vendor trickery used because libcontainer includes a `vendor/src` directory, but still references the default import paths for vendored dependencies. For example, `github.com/coreos/go-systemd` is import path, but `libcontainer/vendor/src/github.com/coreos/go-systemd` is the desired dependency. The `libcontainer` project manages this by including all the files on the command line in the Makefile. This project solve the problem by updating the GOPATH and only including dependencies not part of the `libcontainer` project in the Godeps manifest.
+
 `runc` is a CLI tool for spawning and running containers according to the OCF specification.
 
 ### Building:
 
 ```bash
-git clone https://github.com/opencontainers/runc
-make
-sudo make install
+git clone https://github.com/opencontainer/runc
+make install
 ```
 
 ### Using:
 
-To run a container that you received just execute `runc run` with the JSON format at the argument or have a 
+To run a container that you received just execute `runc run` with the JSON format at the argument or have a
 `container.json` file in the current working directory.
 
 ```bash
-runc 
+runc
 / $ ps
 PID   USER     COMMAND
 1     daemon   sh
 5     daemon   sh
-/ $ 
+/ $
 ```
 
 ### OCF Container JSON Format:
