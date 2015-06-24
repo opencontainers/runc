@@ -182,6 +182,7 @@ func NewSpec(path string) (*LinuxSpec, error) {
 	return s, nil
 }
 
+// NewConfig returns the configured container
 func (spec *LinuxSpec) NewConfig() (*configs.Config, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -215,6 +216,8 @@ func (spec *LinuxSpec) NewConfig() (*configs.Config, error) {
 	return config, nil
 }
 
+// AddNamespaces updates config with specifed namespaces based on
+// allowed namespace mapping
 func (spec *LinuxSpec) AddNamespaces(config *configs.Config) error {
 	for _, ns := range spec.Namespaces {
 		t, exists := namespaceMapping[ns.Type]
@@ -226,6 +229,8 @@ func (spec *LinuxSpec) AddNamespaces(config *configs.Config) error {
 	return nil
 }
 
+// AddMounts will create a newMount in the directory holding the Rootfs
+// for each of the specified mounts
 func (spec *LinuxSpec) AddMounts(config *configs.Config) error {
 	cwd := filepath.Dir(config.Rootfs)
 	for _, m := range spec.Mounts {
@@ -234,6 +239,7 @@ func (spec *LinuxSpec) AddMounts(config *configs.Config) error {
 	return nil
 }
 
+// AddDevices will update config with specified devices in `/dev`
 func (spec *LinuxSpec) AddDevices(config *configs.Config) error {
 	for _, name := range spec.Devices {
 		d, err := devices.DeviceFromPath(filepath.Join("/dev", name), "rwm")
@@ -245,6 +251,8 @@ func (spec *LinuxSpec) AddDevices(config *configs.Config) error {
 	return nil
 }
 
+// AddUserNamespace will add a namespace based on the specified
+// UserMapping
 func (spec *LinuxSpec) AddUserNamespace(config *configs.Config) error {
 	if len(spec.UserMapping) == 0 {
 		return nil
@@ -275,6 +283,8 @@ func (spec *LinuxSpec) AddUserNamespace(config *configs.Config) error {
 	return nil
 }
 
+// AddGroups will add Cgroups to the config based on the
+// specified and allowed devices
 func (spec *LinuxSpec) AddGroups(config *configs.Config) error {
 	myCgroupPath, err := cgroups.GetThisCgroupDir("devices")
 	if err != nil {
@@ -325,6 +335,8 @@ func (spec *LinuxSpec) AddGroups(config *configs.Config) error {
 	return nil
 }
 
+// SetReadOnly will set certain read only paths if config
+// filesystem is readonly
 func (spec *LinuxSpec) SetReadOnly(config *configs.Config) error {
 	if config.Readonlyfs {
 		for _, m := range config.Mounts {
@@ -342,6 +354,8 @@ func (spec *LinuxSpec) SetReadOnly(config *configs.Config) error {
 	return nil
 }
 
+// CPUQuota provides the current cpu quota based on
+// the specified number of cpus and platform multiplier
 func (spec *LinuxSpec) CPUQuota() int64 {
 	return int64(spec.Cpus * cpuQuotaMultiplyer)
 }

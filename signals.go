@@ -12,7 +12,7 @@ import (
 
 const signalBufferSize = 2048
 
-// newSignalHandler returns a signal handler for processing SIGCHLD and SIGWINCH signals
+// NewSignalHandler returns a signal handler for processing SIGCHLD and SIGWINCH signals
 // while still forwarding all other signals to the process.
 func NewSignalHandler(tty *TTY) *signalHandler {
 	// ensure that we have a large buffer size so that we do not miss any signals
@@ -38,7 +38,7 @@ type signalHandler struct {
 	tty     *TTY
 }
 
-// forward handles the main signal event loop forwarding, resizing, or reaping depeding
+// Forward handles the main signal event loop forwarding, resizing, or reaping depeding
 // on the signal received.
 func (h *signalHandler) Forward(process *libcontainer.Process) (int, error) {
 	// make sure we know the pid of our main process so that we can return
@@ -103,6 +103,7 @@ func (h *signalHandler) reap() (exits []exit, err error) {
 	}
 }
 
+// Close handles the TTY Close
 func (h *signalHandler) Close() error {
 	return h.tty.Close()
 }
