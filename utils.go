@@ -140,7 +140,7 @@ func fatalf(t string, v ...interface{}) {
 }
 
 // getDefaultID returns a string to be used as the container id based on the
-// current working directory of the nsinit process.  This function panics
+// current working directory of the runc process.  This function panics
 // if the cwd is unable to be found based on a system error.
 func getDefaultID() string {
 	cwd, err := os.Getwd()

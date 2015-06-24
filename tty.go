@@ -18,7 +18,7 @@ func newTty(create bool, p *libcontainer.Process, rootuid int) (*tty, error) {
 	return createStdioPipes(p)
 }
 
-// setup standard pipes so that the TTY of the calling nsinit process
+// setup standard pipes so that the TTY of the calling runc process
 // is not inherited by the container.
 func createStdioPipes(p *libcontainer.Process) (*tty, error) {
 	t := &tty{}
