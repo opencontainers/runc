@@ -31,7 +31,7 @@ var eventsCommand = cli.Command{
 		if err != nil {
 			logrus.Fatal(err)
 		}
-		container, err := runc.GetContainer(factory, context.GlobalString("id"))
+		container, err := factory.Load(context.GlobalString("id"))
 		if err != nil {
 			logrus.Fatal(err)
 		}

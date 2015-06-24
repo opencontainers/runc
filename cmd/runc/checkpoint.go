@@ -27,7 +27,7 @@ var checkpointCommand = cli.Command{
 		if err != nil {
 			fatal(err)
 		}
-		container, err := runc.GetContainer(factory, context.GlobalString("id"))
+		container, err := factory.Load(context.GlobalString("id"))
 		if err != nil {
 			fatal(err)
 		}

@@ -17,13 +17,3 @@ func NewFactory(root string, criu string) (libcontainer.Factory, error) {
 		return nil
 	})
 }
-
-// GetContainer returns the specified container instance by loading it from state
-// with the default factory.
-func GetContainer(factory libcontainer.Factory, id string) (libcontainer.Container, error) {
-	container, err := factory.Load(id)
-	if err != nil {
-		return nil, err
-	}
-	return container, nil
-}
