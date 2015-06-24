@@ -138,7 +138,7 @@ func createLibcontainerConfig(spec *LinuxSpec) (*configs.Config, error) {
 		config.Namespaces.Add(t, ns.Path)
 	}
 	for _, m := range spec.Mounts {
-		config.Mounts = append(config.Mounts, createLibcontianerMount(cwd, m))
+		config.Mounts = append(config.Mounts, createLibcontainerMount(cwd, m))
 	}
 	if err := createDevices(spec, config); err != nil {
 		return nil, err
@@ -163,7 +163,7 @@ func createLibcontainerConfig(spec *LinuxSpec) (*configs.Config, error) {
 	return config, nil
 }
 
-func createLibcontianerMount(cwd string, m Mount) *configs.Mount {
+func createLibcontainerMount(cwd string, m Mount) *configs.Mount {
 	flags, data := parseMountOptions(m.Options)
 	source := m.Source
 	if m.Type == "bind" {
