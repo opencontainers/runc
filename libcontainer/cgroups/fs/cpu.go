@@ -19,7 +19,10 @@ func (s *CpuGroup) Apply(d *data) error {
 	// We always want to join the cpu group, to allow fair cpu scheduling
 	// on a container basis
 	dir, err := d.join("cpu")
-	if err != nil && !cgroups.IsNotFound(err) {
+	if err != nil {
+		if cgroups.IsNotFound(err) {
+			return nil
+		}
 		return err
 	}
 

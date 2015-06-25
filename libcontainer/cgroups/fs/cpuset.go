@@ -18,7 +18,10 @@ type CpusetGroup struct {
 
 func (s *CpusetGroup) Apply(d *data) error {
 	dir, err := d.path("cpuset")
-	if err != nil && !cgroups.IsNotFound(err) {
+	if err != nil {
+		if cgroups.IsNotFound(err) {
+			return nil
+		}
 		return err
 	}
 	return s.ApplyDir(dir, d.c, d.pid)

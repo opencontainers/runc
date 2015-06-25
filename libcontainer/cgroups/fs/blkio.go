@@ -19,7 +19,10 @@ type BlkioGroup struct {
 
 func (s *BlkioGroup) Apply(d *data) error {
 	dir, err := d.join("blkio")
-	if err != nil && !cgroups.IsNotFound(err) {
+	if err != nil {
+		if cgroups.IsNotFound(err) {
+			return nil
+		}
 		return err
 	}
 

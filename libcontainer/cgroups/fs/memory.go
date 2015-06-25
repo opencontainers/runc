@@ -19,7 +19,10 @@ type MemoryGroup struct {
 
 func (s *MemoryGroup) Apply(d *data) error {
 	path, err := d.path("memory")
-	if err != nil && !cgroups.IsNotFound(err) {
+	if err != nil {
+		if cgroups.IsNotFound(err) {
+			return nil
+		}
 		return err
 	}
 	if err := os.MkdirAll(path, 0755); err != nil && !os.IsExist(err) {
