@@ -26,7 +26,7 @@ const (
 )
 
 var (
-	idRegex  = regexp.MustCompile(`^[\w_]+$`)
+	idRegex  = regexp.MustCompile(`^[\w_-]+$`)
 	maxIdLen = 1024
 )
 
