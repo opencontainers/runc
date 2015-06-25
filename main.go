@@ -16,10 +16,10 @@ const (
 	usage   = `open container runtime
 
 runc integrates well with existing process supervisors to provide a production container runtime environment for
-applications.  It can be used with your existing process monitoring tools and the container will be spawned as direct 
+applications.  It can be used with your existing process monitoring tools and the container will be spawned as direct
 child of the process supervisor.  nsinit can be used to manage the lifetime of a single container.
 
-Execute a simple container in your shell by running: 
+Execute a simple container in your shell by running:
 
     cd /mycontainer
     runc
@@ -34,7 +34,7 @@ func init() {
 		if err := factory.StartInitialization(); err != nil {
 			fatal(err)
 		}
-		panic("--this line should never been executed, congradulations--")
+		panic("--this line should never been executed, congratulations--")
 	}
 }
 
