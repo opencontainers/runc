@@ -14,7 +14,7 @@ A standard container bundle is made of the following 4 parts:
 
 A Standard Container bundle is a directory containing all the content needed to load and run a container. This includes its configuration file, content directories, and cryptographic signatures. The main property of this directory layout is that it can be moved as a unit to another machine and run the same container.
 
-One or more *content directories* may be adjacent to the configuration file. This at least includes the root filesystem (referenced in the configuration by the *rootfs* field), and any number of   and other related content (signatures, other configs, etc.). The interpretation of these resources is specified in the configuration.
+One or more *content directories* may be adjacent to the configuration file. This at least includes the root filesystem (referenced in the configuration by the *rootfs* field) and other related content (signatures, other configs, etc.). The interpretation of these resources is specified in the configuration.
 
 ```
 /
