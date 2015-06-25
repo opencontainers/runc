@@ -19,7 +19,7 @@ A great analogy for this is the shipping container. Just like how Standard Conta
 
 ## 1. Standard operations
 
-Just like shipping containers, Standard Containers define a set of STANDARD OPERATIONS. Shipping containers can be lifted, stacked, locked, loaded, unloaded and labelled. Similarly, Standard Containers can be started, stopped, copied, snapshotted, downloaded, uploaded and tagged.
+Just like shipping containers, Standard Containers define a set of STANDARD OPERATIONS. Shipping containers can be lifted, stacked, locked, loaded, unloaded and labelled. Similarly, Standard Containers can be created, started, and stopped using standard container tools (what this spec is about); copied and snapshotted using standard filesystem tools; and downloaded and uploaded using standard network tools.
 
 ## 2. Content-agnostic
 
