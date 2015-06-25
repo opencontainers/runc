@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"path/filepath"
 	"runtime"
 
 	"github.com/Sirupsen/logrus"
@@ -92,6 +93,13 @@ func main() {
 		// exit with the container's exit status so any external supervisor is
 		// notified of the exit with the correct exit status.
 		os.Exit(status)
+	}
+
+	//allow for relative path for the runC binary
+	if absPath, err := filepath.Abs(os.Args[0]); err != nil {
+		logrus.Fatal("Cannot convert runc path to absolute: %v", err)
+	} else {
+		os.Args[0] = absPath
 	}
 	if err := app.Run(os.Args); err != nil {
 		logrus.Fatal(err)
