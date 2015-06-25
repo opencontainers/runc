@@ -8,7 +8,8 @@
         "network",
         "mount",
         "ipc",
-        "uts"
+        "uts",
+        "user"
     ],
 ```
 
@@ -25,6 +26,8 @@ For Linux the mapping is
 * ipc -> ipc processes in the container can only communicate with other processes inside same container
 
 * uts -> uts Hostname and NIS domain name are specific to the container
+
+* user -> user uids/gids on the host are mapped to different uids/gids in the container, so root in a container could be a non-root, unprivileged uid on the host
 
 ## Linux Control groups
 
