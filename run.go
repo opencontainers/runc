@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
@@ -14,6 +15,12 @@ func execContainer(context *cli.Context, spec *LinuxSpec) (int, error) {
 	}
 	config, err := createLibcontainerConfig(spec)
 	if err != nil {
+		return -1, err
+	}
+	if _, err := os.Stat(config.Rootfs); err != nil {
+		if os.IsNotExist(err) {
+			return -1, fmt.Errorf("Rootfs (%q) does not exist", config.Rootfs)
+		}
 		return -1, err
 	}
 	rootuid, err := config.HostUID()

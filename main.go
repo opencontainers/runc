@@ -79,7 +79,6 @@ func main() {
 	// default action is to execute a container
 	app.Action = func(context *cli.Context) {
 		if os.Geteuid() != 0 {
-			cli.ShowAppHelp(context)
 			logrus.Fatal("runc should be run as root")
 		}
 		spec, err := loadSpec(context.Args().First())
@@ -88,7 +87,7 @@ func main() {
 		}
 		status, err := execContainer(context, spec)
 		if err != nil {
-			fatal(err)
+			logrus.Fatalf("Container start failed: %v", err)
 		}
 		// exit with the container's exit status so any external supervisor is
 		// notified of the exit with the correct exit status.
