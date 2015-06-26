@@ -150,6 +150,7 @@ func createLibcontainerConfig(spec *LinuxSpec) (*configs.Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	config.SystemProperties = spec.SystemProperties
 	config.Cgroups = c
 	if config.Readonlyfs {
 		setReadonly(config)
