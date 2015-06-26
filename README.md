@@ -2,6 +2,13 @@
 
 `runc` is a CLI tool for spawning and running containers according to the OCF specification.
 
+## State of the project
+
+Currently `runc` is an implementation of the OCF specification.  We are currently sprinting
+to have a v1 of the spec out within a quick timeframe of a few weeks, ~July 2015, 
+so the `runc` config format will be constantly changing until 
+the spec is finalialized.  However, we encourage you to try out the tool and give feedback.
+
 ### Building:
 
 ```bash
