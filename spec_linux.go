@@ -130,6 +130,9 @@ func createLibcontainerConfig(spec *LinuxSpec) (*configs.Config, error) {
 		Hostname:     spec.Hostname,
 		Privatefs:    true,
 	}
+	if spec.Root.Readonly {
+		config.NoPivotRoot = true
+	}
 	for _, ns := range spec.Namespaces {
 		t, exists := namespaceMapping[ns.Type]
 		if !exists {
