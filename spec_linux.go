@@ -123,9 +123,13 @@ func createLibcontainerConfig(spec *LinuxSpec) (*configs.Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	rootfsPath := spec.Root.Path
+	if !filepath.IsAbs(rootfsPath) {
+		rootfsPath = filepath.Join(cwd, rootfsPath)
+	}
 	config := &configs.Config{
 		Capabilities: spec.Capabilities,
-		Rootfs:       filepath.Join(cwd, spec.Root.Path),
+		Rootfs:       rootfsPath,
 		Readonlyfs:   spec.Root.Readonly,
 		Hostname:     spec.Hostname,
 		Privatefs:    true,
