@@ -12,15 +12,17 @@ the spec is finalialized.  However, we encourage you to try out the tool and giv
 ### Building:
 
 ```bash
-go get -d github.com/opencontainers/runc
-cd $GOPATH/src/github.com/opencontainers/runc/
+# create a 'github.com/opencontainers' in your GOPATH
+cd github.com/opencontainers
+git clone https://github.com/opencontainers/runc
+cd runc
 make
 sudo make install
 ```
 
 ### Using:
 
-To run a container that you received just execute `runc run` with the JSON format at the argument or have a 
+To run a container that you received just execute `runc` with the JSON format as the argument or have a 
 `container.json` file in the current working directory.
 
 ```bash
@@ -33,6 +35,10 @@ PID   USER     COMMAND
 ```
 
 ### OCF Container JSON Format:
+
+Below is a sample `container.json` configuration file. It assumes that
+the file-system is found in a directory called `rootfs` and there is a
+user named `daemon` defined within that file-system.
 
 ```json
 {
@@ -132,6 +138,28 @@ PID   USER     COMMAND
 ```
 
 ### Examples:
+
+#### Using a Docker image
+
+To test using Docker's `busybox` image follow these steps:
+* Install `docker` and download the `buysbox` image: `docker pull busybox`
+* Create a container from that image and export its contents to a tar file:
+`docker export $(docker create busybox) > busybox.tar`
+* Untar the contents to create your filesystem directory:
+```
+mkdir rootfs
+tar -C rootfs -xf busybox.tar
+```
+* Create a file called `container.json` using the example from above.
+Modify the `user` property to be `root`.
+* Execute `runc` and you should be placed into a shell where you can run `ps`:
+```
+$ runc
+/ # ps
+PID   USER     COMMAND
+    1 root     sh
+    9 root     ps
+```
 
 #### Using runc with systemd
 
