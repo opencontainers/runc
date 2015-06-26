@@ -150,6 +150,9 @@ func compareVxlan(t *testing.T, expected, actual *Vxlan) {
 	if actual.L3miss != expected.L3miss {
 		t.Fatal("Vxlan.L3miss doesn't match")
 	}
+	if actual.GBP != expected.GBP {
+		t.Fatal("Vxlan.GBP doesn't match")
+	}
 	if expected.NoAge {
 		if !actual.NoAge {
 			t.Fatal("Vxlan.NoAge doesn't match")
@@ -178,6 +181,13 @@ func TestLinkAddDelDummy(t *testing.T) {
 	defer tearDown()
 
 	testLinkAddDel(t, &Dummy{LinkAttrs{Name: "foo"}})
+}
+
+func TestLinkAddDelIfb(t *testing.T) {
+	tearDown := setUpNetlinkTest(t)
+	defer tearDown()
+
+	testLinkAddDel(t, &Ifb{LinkAttrs{Name: "foo"}})
 }
 
 func TestLinkAddDelBridge(t *testing.T) {
@@ -215,6 +225,27 @@ func TestLinkAddDelMacvlan(t *testing.T) {
 	testLinkAddDel(t, &Macvlan{
 		LinkAttrs: LinkAttrs{Name: "bar", ParentIndex: parent.Attrs().Index},
 		Mode:      MACVLAN_MODE_PRIVATE,
+	})
+
+	if err := LinkDel(parent); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestLinkAddDelMacvtap(t *testing.T) {
+	tearDown := setUpNetlinkTest(t)
+	defer tearDown()
+
+	parent := &Dummy{LinkAttrs{Name: "foo"}}
+	if err := LinkAdd(parent); err != nil {
+		t.Fatal(err)
+	}
+
+	testLinkAddDel(t, &Macvtap{
+		Macvlan: Macvlan{
+			LinkAttrs: LinkAttrs{Name: "bar", ParentIndex: parent.Attrs().Index},
+			Mode:      MACVLAN_MODE_PRIVATE,
+		},
 	})
 
 	if err := LinkDel(parent); err != nil {

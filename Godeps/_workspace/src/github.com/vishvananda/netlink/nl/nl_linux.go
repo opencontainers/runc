@@ -39,8 +39,9 @@ func NativeEndian() binary.ByteOrder {
 		var x uint32 = 0x01020304
 		if *(*byte)(unsafe.Pointer(&x)) == 0x01 {
 			nativeEndian = binary.BigEndian
+		} else {
+			nativeEndian = binary.LittleEndian
 		}
-		nativeEndian = binary.LittleEndian
 	}
 	return nativeEndian
 }
@@ -141,7 +142,7 @@ func (a *RtAttr) Len() int {
 }
 
 // Serialize the RtAttr into a byte array
-// This can't ust unsafe.cast because it must iterate through children.
+// This can't just unsafe.cast because it must iterate through children.
 func (a *RtAttr) Serialize() []byte {
 	native := NativeEndian()
 
