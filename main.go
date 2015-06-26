@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 
@@ -98,6 +99,12 @@ func main() {
 		os.Exit(status)
 	}
 
+	// allow "runc" command
+	if cmdPath, err := exec.LookPath(os.Args[0]); err != nil {
+		logrus.Fatal("Cannot find runc: %v", err)
+	} else {
+		os.Args[0] = cmdPath
+	}
 	//allow for relative path for the runC binary
 	if absPath, err := filepath.Abs(os.Args[0]); err != nil {
 		logrus.Fatal("Cannot convert runc path to absolute: %v", err)
