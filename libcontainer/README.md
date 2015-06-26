@@ -1,5 +1,3 @@
-## libcontainer - reference implementation for containers [![Build Status](https://jenkins.dockerproject.org/buildStatus/icon?job=Libcontainer%20Master)](https://jenkins.dockerproject.org/job/Libcontainer%20Master/)
-
 Libcontainer provides a native Go implementation for creating containers
 with namespaces, cgroups, capabilities, and filesystem access controls.
 It allows you to manage the lifecycle of the container performing additional operations
@@ -147,19 +145,8 @@ If you don't already  have `criu` installed, you can build it from source, follo
 generated when building libcontainer with docker.
 
 
-#### Future
-See the [roadmap](ROADMAP.md).
-
 ## Copyright and license
 
 Code and documentation copyright 2014 Docker, inc. Code released under the Apache 2.0 license.
 Docs released under Creative commons.
 
-## Hacking on libcontainer
-
-First of all, please familiarise yourself with the [libcontainer Principles](PRINCIPLES.md).
-
-If you're a *contributor* or aspiring contributor, you should read the [Contributors' Guide](CONTRIBUTING.md).
-
-If you're a *maintainer* or aspiring maintainer, you should read the [Maintainers' Guide](MAINTAINERS_GUIDE.md) and
-"How can I become a maintainer?" in the Contributors' Guide.

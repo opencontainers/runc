@@ -1,6 +1,6 @@
-# libcontainer Principles
+# runc principles
 
-In the design and development of libcontainer we try to follow these principles:
+In the design and development of runc and libcontainer we try to follow these principles:
 
 (Work in progress)
 

@@ -1,9 +1,7 @@
-# The libcontainer Maintainers' Guide
-
 ## Introduction
 
 Dear maintainer. Thank you for investing the time and energy to help
-make libcontainer as useful as possible. Maintaining a project is difficult,
+make runc as useful as possible. Maintaining a project is difficult,
 sometimes unrewarding work.  Sure, you will get to contribute cool
 features to the project. But most of your time will be spent reviewing,
 cleaning up, documenting, answering questions, justifying design
@@ -34,9 +32,9 @@ It is every maintainer's responsibility to:
 
 ## How are decisions made?
 
-Short answer: with pull requests to the libcontainer repository.
+Short answer: with pull requests to the runc repository.
 
-libcontainer is an open-source project with an open design philosophy. This
+runc is an open-source project with an open design philosophy. This
 means that the repository is the source of truth for EVERY aspect of the
 project, including its philosophy, design, roadmap and APIs. *If it's
 part of the project, it's in the repo. It's in the repo, it's part of
@@ -47,7 +45,7 @@ repository. An implementation change is a change to the source code. An
 API change is a change to the API specification. A philosophy change is
 a change to the philosophy manifesto. And so on.
 
-All decisions affecting libcontainer, big and small, follow the same 3 steps:
+All decisions affecting runc, big and small, follow the same 3 steps:
 
 * Step 1: Open a pull request. Anyone can do this.
 
@@ -65,7 +63,7 @@ by anyone is denoted by adding a comment in the pull request: `LGTM`.
 However, only currently listed `MAINTAINERS` are counted towards the required
 two LGTMs.
 
-libcontainer follows the timeless, highly efficient and totally unfair system
+runc follows the timeless, highly efficient and totally unfair system
 known as [Benevolent dictator for life](http://en.wikipedia.org/wiki/Benevolent_Dictator_for_Life), with Michael Crosby in the role of BDFL.
 This means that all decisions are made by default by Michael. Since making
 every decision himself would be highly un-scalable, in practice decisions
