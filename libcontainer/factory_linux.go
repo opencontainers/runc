@@ -39,6 +39,12 @@ func InitArgs(args ...string) func(*LinuxFactory) error {
 			if lp, err := exec.LookPath(name); err == nil {
 				name = lp
 			}
+		} else {
+			abs, err := filepath.Abs(name)
+			if err != nil {
+				return err
+			}
+			name = abs
 		}
 		l.InitPath = name
 		l.InitArgs = append([]string{name}, args[1:]...)
