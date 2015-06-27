@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 
 	"github.com/codegangsta/cli"
@@ -103,6 +104,12 @@ func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
 	}
 	return libcontainer.New(abs, libcontainer.Cgroupfs, func(l *libcontainer.LinuxFactory) error {
 		l.CriuPath = context.GlobalString("criu")
+		initPath, err := exec.LookPath(context.App.Name)
+		if err != nil {
+			return err
+		}
+		l.InitPath = initPath
+		l.InitArgs = []string{initPath, "init"}
 		return nil
 	})
 }
