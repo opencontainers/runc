@@ -1,3 +1,5 @@
+// +build linux
+
 // Package seccomp provides native seccomp ( https://www.kernel.org/doc/Documentation/prctl/seccomp_filter.txt ) support for go.
 package seccomp
 
