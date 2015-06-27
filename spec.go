@@ -53,6 +53,9 @@ type PortableSpec struct {
 var specCommand = cli.Command{
 	Name:  "spec",
 	Usage: "create a new specification file",
+	Flags: []cli.Flag{
+		cli.StringFlag{Name: "user", Value: "daemon", Usage: "User for container process (default: daemon)"},
+	},
 	Action: func(context *cli.Context) {
 		spec := PortableSpec{
 			Version: version,
@@ -65,7 +68,7 @@ var specCommand = cli.Command{
 			Processes: []*Process{
 				{
 					TTY:  true,
-					User: "daemon",
+					User: context.String("user"),
 					Args: []string{
 						"sh",
 					},
