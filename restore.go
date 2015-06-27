@@ -21,6 +21,7 @@ var restoreCommand = cli.Command{
 		cli.BoolFlag{Name: "tcp-established", Usage: "allow open tcp connections"},
 		cli.BoolFlag{Name: "ext-unix-sk", Usage: "allow external unix sockets"},
 		cli.BoolFlag{Name: "shell-job", Usage: "allow shell jobs"},
+		cli.BoolFlag{Name: "file-locks", Usage: "handle file locks, for safety"},
 	},
 	Action: func(context *cli.Context) {
 		imagePath := context.String("image-path")
@@ -109,6 +110,7 @@ func criuOptions(context *cli.Context) *libcontainer.CriuOpts {
 		TcpEstablished:          true, // context.Bool("tcp-established"),
 		ExternalUnixConnections: context.Bool("ext-unix-sk"),
 		ShellJob:                context.Bool("shell-job"),
+		FileLocks:               context.Bool("file-locks"),
 	}
 }
 

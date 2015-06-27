@@ -20,6 +20,7 @@ var checkpointCommand = cli.Command{
 		cli.BoolFlag{Name: "ext-unix-sk", Usage: "allow external unix sockets"},
 		cli.BoolFlag{Name: "shell-job", Usage: "allow shell jobs"},
 		cli.StringFlag{Name: "page-server", Value: "", Usage: "ADDRESS:PORT of the page server"},
+		cli.BoolFlag{Name: "file-locks", Usage: "handle file locks, for safety"},
 	},
 	Action: func(context *cli.Context) {
 		container, err := getContainer(context)

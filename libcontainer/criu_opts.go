@@ -12,5 +12,6 @@ type CriuOpts struct {
 	TcpEstablished          bool               // checkpoint/restore established TCP connections
 	ExternalUnixConnections bool               // allow external unix connections
 	ShellJob                bool               // allow to dump and restore shell jobs
+	FileLocks               bool               // handle file locks, for safety
 	PageServer              CriuPageServerInfo // allow to dump to criu page server
 }
