@@ -1,9 +1,7 @@
 package user
 
 import (
-	"fmt"
 	"io"
-	"io/ioutil"
 	"reflect"
 	"sort"
 	"strconv"
@@ -355,7 +353,7 @@ this is just some garbage data
 	}
 }
 
-func TestGetAdditionalGroupsPath(t *testing.T) {
+func TestGetAdditionalGroups(t *testing.T) {
 	const groupContent = `
 root:x:0:root
 adm:x:43:
@@ -419,14 +417,9 @@ this is just some garbage data
 	}
 
 	for _, test := range tests {
-		tmpFile, err := ioutil.TempFile("", "get-additional-groups-path")
-		if err != nil {
-			t.Error(err)
-		}
-		fmt.Fprint(tmpFile, groupContent)
-		tmpFile.Close()
+		group := strings.NewReader(groupContent)
 
-		gids, err := GetAdditionalGroupsPath(test.groups, tmpFile.Name())
+		gids, err := GetAdditionalGroups(test.groups, group)
 		if test.hasError && err == nil {
 			t.Errorf("Parse(%#v) expects error but has none", test)
 			continue
