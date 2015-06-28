@@ -35,6 +35,28 @@ type Namespace struct {
 	Path string `json:"path,omitempty"`
 }
 
+type Network struct {
+	Type              string `json:"type"`
+	Name              string `json:"name"`
+	Bridge            string `json:"bridge"`
+	MacAddress        string `json:"mac_address"`
+	Address           string `json:"address"`
+	Gateway           string `json:"gateway"`
+	Mtu               int    `json:"mtu"`
+	TxQueueLen        int    `json:"txqueuelen"`
+	IPv6Address       string `json:"ipv6_address"`
+	IPv6Gateway       string `json:"ipv6_gateway"`
+	HostInterfaceName string `json:"host_interface_name"`
+	HairpinMode       bool   `json:"hairpin_mode"`
+}
+
+type Route struct {
+	Destination   string `json:"destination"`
+	Source        string `json:"source"`
+	Gateway       string `json:"gateway"`
+	InterfaceName string `json:"interface_name"`
+}
+
 type PortableSpec struct {
 	Version      string      `json:"version"`
 	OS           string      `json:"os"`
@@ -48,6 +70,8 @@ type PortableSpec struct {
 	Capabilities []string    `json:"capabilities"`
 	Devices      []string    `json:"devices"`
 	Mounts       []Mount     `json:"mounts"`
+	Networks     []Network   `json:"networks"`
+	Routes       []Route     `json:"routes"`
 }
 
 var specCommand = cli.Command{
@@ -134,6 +158,12 @@ var specCommand = cli.Command{
 					Source:      "sysfs",
 					Destination: "/sys",
 					Options:     "nosuid,noexec,nodev",
+				},
+			},
+			Networks: []Network{
+				{
+					Type:    "loopback",
+					Address: "127.0.0.1",
 				},
 			},
 		}
