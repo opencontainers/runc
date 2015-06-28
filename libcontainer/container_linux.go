@@ -344,6 +344,7 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 		LeaveRunning:   proto.Bool(criuOpts.LeaveRunning),
 		TcpEstablished: proto.Bool(criuOpts.TcpEstablished),
 		ExtUnixSk:      proto.Bool(criuOpts.ExternalUnixConnections),
+		FileLocks:      proto.Bool(criuOpts.FileLocks),
 	}
 
 	// append optional criu opts, e.g., page-server and port
@@ -463,6 +464,7 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 			ShellJob:       proto.Bool(criuOpts.ShellJob),
 			ExtUnixSk:      proto.Bool(criuOpts.ExternalUnixConnections),
 			TcpEstablished: proto.Bool(criuOpts.TcpEstablished),
+			FileLocks:      proto.Bool(criuOpts.FileLocks),
 		},
 	}
 	for _, m := range c.config.Mounts {
