@@ -22,7 +22,7 @@ Each container has exactly one *root filesystem*, and any number of optional *mo
 
 The rootfs string element specifies the path to the root file system for the container, relative to the path where the manifest is. A directory MUST exist at the relative path declared by the field.
 
-The readonlyRootfs is an optional boolean element which defaults to false. If it is true, access to the root file system MUST be read-only for all processes running inside it.  whether you want the root file system to be readonly or not for the processes running on it.
+The readonlyRootfs is an optional boolean element which defaults to false. If it is true, access to the root file system MUST be read-only for all processes running inside it, whether you want the root file system to be readonly or not for the processes running on it.
 
 *Example (Linux)*
 
@@ -38,7 +38,7 @@ The readonlyRootfs is an optional boolean element which defaults to false. If it
     "readonlyRootfs": true,
 ```
 
-Additional file systems can be declared as "mounts", declared by the the array element mounts. The parameters are similar to the ones in Linux mount system call. [http://linux.die.net/man/2/mount](http://linux.die.net/man/2/mount)
+Additional file systems can be declared as "mounts", declared by the array element mounts. The parameters are similar to the ones in Linux mount system call. [http://linux.die.net/man/2/mount](http://linux.die.net/man/2/mount)
 
 type: Linux, *filesystemtype* argument supported by the kernel are listed in */proc/filesystems* (e.g., "minix", "ext2", "ext3", "jfs", "xfs", "reiserfs", "msdos", "proc", "nfs", "iso9660"). Windows: ntfs
 
@@ -132,7 +132,7 @@ The processes to be created inside the container are specified in a processes ar
 
 The command to start a process is specified in an array of args. It will be run in the working directory specified in the string cwd.
 
-Environment variables are specified is an array called env.
+Environment variables are specified in an array called env.
 
 Elements in the array are specified as Strings in the form "KEY=value"
 
@@ -161,17 +161,17 @@ tty is a boolean that lets you specify whether you want a terminal attached to t
 
 hostname is a string specifying the hostname for that container as it is accessible to processes running in it.
 
-### Resource Constraints
-
 *Example*
 
 ```
     "hostname": "mrsdalloway",
 ```
 
+### Resource Constraints
+
 The number of CPUs is specified as a positive decimal under the key cpus.
 
-The amount of memory allocated to this container is specified under the memory key, as an integer and is expressed in MBb.
+The amount of memory allocated to this container is specified under the memory key, as an integer and is expressed in MB.
 
 If the cpu or memory requested are too high for the underlying environment capabilities, an error code NOT_ENOUGH_CPU or NOT_ENOUGH_MEM will be returned.
 
@@ -204,6 +204,6 @@ os specifies the operating system family this image must run on.
 
 arch specifies the instruction set for which the binaries in the image have been compiled.
 
-values for os and arch must be in the list specified by by the Go Language documentation for $GOOS and $GOARCH https://golang.org/doc/install/source#environment
+values for os and arch must be in the list specified by the Go Language documentation for $GOOS and $GOARCH https://golang.org/doc/install/source#environment
 
 OS or architecture specific settings can be added in the json file. They will be interpreted by the implementation depending on the os and arch values specified at the top of the manifest.
