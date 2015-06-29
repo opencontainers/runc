@@ -16,7 +16,10 @@ type HugetlbGroup struct {
 
 func (s *HugetlbGroup) Apply(d *data) error {
 	dir, err := d.join("hugetlb")
-	if err != nil && !cgroups.IsNotFound(err) {
+	if err != nil {
+		if cgroups.IsNotFound(err) {
+			return nil
+		}
 		return err
 	}
 
