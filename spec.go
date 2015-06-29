@@ -35,10 +35,14 @@ type Namespace struct {
 	Path string `json:"path,omitempty"`
 }
 
+type Platform struct {
+	OS   string `json:"os"`
+	Arch string `json:"arch"`
+}
+
 type PortableSpec struct {
 	Version   string     `json:"version"`
-	OS        string     `json:"os"`
-	Arch      string     `json:"arch"`
+	Platform  Platform   `json:"platform"`
 	Processes []*Process `json:"processes"`
 	Root      Root       `json:"root"`
 	Hostname  string     `json:"hostname"`
@@ -51,8 +55,10 @@ var specCommand = cli.Command{
 	Action: func(context *cli.Context) {
 		spec := PortableSpec{
 			Version: version,
-			OS:      runtime.GOOS,
-			Arch:    runtime.GOARCH,
+			Platform: Platform{
+				OS:   runtime.GOOS,
+				Arch: runtime.GOARCH,
+			},
 			Root: Root{
 				Path:     "rootfs",
 				Readonly: true,
