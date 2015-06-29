@@ -48,7 +48,7 @@ user named `daemon` defined within that file-system.
         "arch": "amd64"
     },
     "process": {
-        "tty": true,
+        "terminal": true,
         "user": "daemon",
         "args": [
             "sh"

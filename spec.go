@@ -18,7 +18,7 @@ type Mount struct {
 }
 
 type Process struct {
-	Terminal bool     `json:"tty"`
+	Terminal bool     `json:"terminal"`
 	User     string   `json:"user"`
 	Args     []string `json:"args"`
 	Env      []string `json:"env"`
@@ -28,11 +28,6 @@ type Process struct {
 type Root struct {
 	Path     string `json:"path"`
 	Readonly bool   `json:"readonly"`
-}
-
-type Namespace struct {
-	Type string `json:"type"`
-	Path string `json:"path,omitempty"`
 }
 
 type Platform struct {

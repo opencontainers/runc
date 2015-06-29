@@ -30,6 +30,11 @@ type Linux struct {
 	Devices          []string               `json:"devices"`
 }
 
+type Namespace struct {
+	Type string `json:"type"`
+	Path string `json:"path"`
+}
+
 type UserMapping struct {
 	From  int `json:"from"`
 	To    int `json:"to"`
