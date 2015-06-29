@@ -42,7 +42,7 @@ user named `daemon` defined within that file-system.
 
 ```json
 {
-    "version": "0.1",
+    "version": "0.1.1",
     "platform": {
         "os": "linux",
         "arch": "amd64"

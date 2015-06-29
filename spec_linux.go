@@ -107,10 +107,10 @@ var namespaceMapping = map[string]configs.NamespaceType{
 }
 
 // loadSpec loads the specification from the provided path.
-// If the path is empty then the default path will be "container.json"
+// If the path is empty then the default path will be "config.json"
 func loadSpec(path string) (*Spec, error) {
 	if path == "" {
-		path = "container.json"
+		path = "config.json"
 	}
 	f, err := os.Open(path)
 	if err != nil {
@@ -124,7 +124,16 @@ func loadSpec(path string) (*Spec, error) {
 	if err := json.NewDecoder(f).Decode(&s); err != nil {
 		return nil, err
 	}
-	return s, nil
+	return s, checkSpecVersion(s)
+}
+
+// checkSpecVersion makes sure that the spec version matches runc's while we are in the initial
+// development period.  It is better to hard fail than have missing fields or options in the spec.
+func checkSpecVersion(s *Spec) error {
+	if s.Version != version {
+		return fmt.Errorf("spec version is not compatible with runc version %q: spec %q", version, s.Version)
+	}
+	return nil
 }
 
 func createLibcontainerConfig(spec *Spec) (*configs.Config, error) {

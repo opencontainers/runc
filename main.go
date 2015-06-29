@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	version = "0.1"
+	version = "0.1.1"
 	usage   = `Open Container Project runtime
 
 runc is a command line client for running applications packaged according to the Open Container Format (OCF) and is
@@ -79,12 +79,12 @@ func main() {
 	}
 	// default action is to execute a container
 	app.Action = func(context *cli.Context) {
-		if os.Geteuid() != 0 {
-			logrus.Fatal("runc should be run as root")
-		}
 		spec, err := loadSpec(context.Args().First())
 		if err != nil {
 			fatal(err)
+		}
+		if os.Geteuid() != 0 {
+			logrus.Fatal("runc should be run as root")
 		}
 		status, err := execContainer(context, spec)
 		if err != nil {
