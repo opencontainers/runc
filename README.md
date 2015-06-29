@@ -139,7 +139,7 @@ user named `daemon` defined within that file-system.
 
 ### Examples:
 
-#### Using a Docker image
+#### Using a Docker image (requires version 1.3 or later)
 
 To test using Docker's `busybox` image follow these steps:
 * Install `docker` and download the `buysbox` image: `docker pull busybox`
