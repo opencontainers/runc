@@ -82,7 +82,7 @@ func restoreContainer(context *cli.Context, spec *Spec, config *configs.Config, 
 		Stdout: os.Stdout,
 		Stderr: os.Stderr,
 	}
-	tty, err := newTty(spec.Processes[0].TTY, process, rootuid)
+	tty, err := newTty(spec.Process.Terminal, process, rootuid)
 	if err != nil {
 		return -1, err
 	}

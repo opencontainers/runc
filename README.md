@@ -43,22 +43,22 @@ user named `daemon` defined within that file-system.
 ```json
 {
     "version": "0.1",
-    "os": "linux",
-    "arch": "amd64",
-    "processes": [
-        {
-            "tty": true,
-            "user": "daemon",
-            "args": [
-                "sh"
-            ],
-            "env": [
-                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-                "TERM=xterm"
-            ],
-            "cwd": ""
-        }
-    ],
+    "platform": {
+        "os": "linux",
+        "arch": "amd64"
+    },
+    "process": {
+        "tty": true,
+        "user": "daemon",
+        "args": [
+            "sh"
+        ],
+        "env": [
+            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+            "TERM=xterm"
+        ],
+        "cwd": ""
+    },
     "root": {
         "path": "rootfs",
         "readonly": true

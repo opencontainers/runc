@@ -18,11 +18,11 @@ type Mount struct {
 }
 
 type Process struct {
-	TTY  bool     `json:"tty"`
-	User string   `json:"user"`
-	Args []string `json:"args"`
-	Env  []string `json:"env"`
-	Cwd  string   `json:"cwd"`
+	Terminal bool     `json:"tty"`
+	User     string   `json:"user"`
+	Args     []string `json:"args"`
+	Env      []string `json:"env"`
+	Cwd      string   `json:"cwd"`
 }
 
 type Root struct {
@@ -41,12 +41,12 @@ type Platform struct {
 }
 
 type PortableSpec struct {
-	Version   string     `json:"version"`
-	Platform  Platform   `json:"platform"`
-	Processes []*Process `json:"processes"`
-	Root      Root       `json:"root"`
-	Hostname  string     `json:"hostname"`
-	Mounts    []Mount    `json:"mounts"`
+	Version  string   `json:"version"`
+	Platform Platform `json:"platform"`
+	Process  Process  `json:"process"`
+	Root     Root     `json:"root"`
+	Hostname string   `json:"hostname"`
+	Mounts   []Mount  `json:"mounts"`
 }
 
 var specCommand = cli.Command{
@@ -63,17 +63,15 @@ var specCommand = cli.Command{
 				Path:     "rootfs",
 				Readonly: true,
 			},
-			Processes: []*Process{
-				{
-					TTY:  true,
-					User: "daemon",
-					Args: []string{
-						"sh",
-					},
-					Env: []string{
-						"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-						"TERM=xterm",
-					},
+			Process: Process{
+				Terminal: true,
+				User:     "daemon",
+				Args: []string{
+					"sh",
+				},
+				Env: []string{
+					"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+					"TERM=xterm",
 				},
 			},
 			Hostname: "shell",

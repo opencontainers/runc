@@ -10,9 +10,6 @@ import (
 )
 
 func execContainer(context *cli.Context, spec *Spec) (int, error) {
-	if len(spec.Processes) != 1 {
-		return -1, fmt.Errorf("runc only supports one(1) process for the container")
-	}
 	config, err := createLibcontainerConfig(spec)
 	if err != nil {
 		return -1, err
@@ -38,8 +35,8 @@ func execContainer(context *cli.Context, spec *Spec) (int, error) {
 	// ensure that the container is always removed if we were the process
 	// that created it.
 	defer destroy(container)
-	process := newProcess(spec.Processes[0])
-	tty, err := newTty(spec.Processes[0].TTY, process, rootuid)
+	process := newProcess(spec.Process)
+	tty, err := newTty(spec.Process.Terminal, process, rootuid)
 	if err != nil {
 		return -1, err
 	}
