@@ -96,6 +96,9 @@ user named `daemon` defined within that file-system.
         "zero",
         "urandom"
     ],
+    "systemProperties": [
+        "net.ipv4.ip_forward": "1"
+    ],
     "mounts": [
         {
             "type": "proc",
