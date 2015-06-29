@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"runtime"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 )
 
@@ -111,7 +112,7 @@ var specCommand = cli.Command{
 		}
 		data, err := json.MarshalIndent(&spec, "", "\t")
 		if err != nil {
-			fatal(err)
+			logrus.Fatal(err)
 		}
 		fmt.Printf("%s", data)
 	},
