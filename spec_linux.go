@@ -150,6 +150,9 @@ func createLibcontainerConfig(spec *LinuxSpec) (*configs.Config, error) {
 	if err := setupUserNamespace(spec, config); err != nil {
 		return nil, err
 	}
+	if err := createLibcontainerNetwork(spec, config); err != nil {
+		return nil, err
+	}
 	c, err := createCgroupConfig(spec, config.Devices)
 	if err != nil {
 		return nil, err
@@ -165,6 +168,36 @@ func createLibcontainerConfig(spec *LinuxSpec) (*configs.Config, error) {
 		}
 	}
 	return config, nil
+}
+
+func createLibcontainerNetwork(spec *LinuxSpec, config *configs.Config) error {
+	for _, network := range spec.Networks {
+		n := &configs.Network{
+			Type:              network.Type,
+			Name:              network.Name,
+			Bridge:            network.Bridge,
+			MacAddress:        network.MacAddress,
+			Address:           network.Address,
+			Gateway:           network.Gateway,
+			Mtu:               network.Mtu,
+			TxQueueLen:        network.TxQueueLen,
+			IPv6Address:       network.IPv6Address,
+			IPv6Gateway:       network.IPv6Gateway,
+			HostInterfaceName: network.HostInterfaceName,
+			HairpinMode:       network.HairpinMode,
+		}
+		config.Networks = append(config.Networks, n)
+	}
+	for _, route := range spec.Routes {
+		r := &configs.Route{
+			Destination:   route.Destination,
+			Source:        route.Source,
+			Gateway:       route.Gateway,
+			InterfaceName: route.InterfaceName,
+		}
+		config.Routes = append(config.Routes, r)
+	}
+	return nil
 }
 
 func createLibcontainerMount(cwd string, m Mount) *configs.Mount {
