@@ -42,60 +42,28 @@ user named `daemon` defined within that file-system.
 
 ```json
 {
-    "version": "0.1",
-    "os": "linux",
-    "arch": "amd64",
-    "processes": [
-        {
-            "tty": true,
-            "user": "daemon",
-            "args": [
-                "sh"
-            ],
-            "env": [
-                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-                "TERM=xterm"
-            ],
-            "cwd": ""
-        }
-    ],
+    "version": "0.1.1",
+    "platform": {
+        "os": "linux",
+        "arch": "amd64"
+    },
+    "process": {
+        "terminal": true,
+        "user": "daemon",
+        "args": [
+            "sh"
+        ],
+        "env": [
+            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+            "TERM=xterm"
+        ],
+        "cwd": ""
+    },
     "root": {
         "path": "rootfs",
         "readonly": true
     },
-    "cpus": 1.1,
-    "memory": 1024,
     "hostname": "shell",
-    "namespaces": [
-        {
-            "type": "process"
-        },
-        {
-            "type": "network"
-        },
-        {
-            "type": "mount"
-        },
-        {
-            "type": "ipc"
-        },
-        {
-            "type": "uts"
-        }
-    ],
-    "capabilities": [
-        "AUDIT_WRITE",
-        "KILL",
-        "NET_BIND_SERVICE"
-    ],
-    "devices": [
-        "null",
-        "random",
-        "full",
-        "tty",
-        "zero",
-        "urandom"
-    ],
     "mounts": [
         {
             "type": "proc",

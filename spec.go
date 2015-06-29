@@ -18,11 +18,11 @@ type Mount struct {
 }
 
 type Process struct {
-	TTY  bool     `json:"tty"`
-	User string   `json:"user"`
-	Args []string `json:"args"`
-	Env  []string `json:"env"`
-	Cwd  string   `json:"cwd"`
+	Terminal bool     `json:"terminal"`
+	User     string   `json:"user"`
+	Args     []string `json:"args"`
+	Env      []string `json:"env"`
+	Cwd      string   `json:"cwd"`
 }
 
 type Root struct {
@@ -30,24 +30,18 @@ type Root struct {
 	Readonly bool   `json:"readonly"`
 }
 
-type Namespace struct {
-	Type string `json:"type"`
-	Path string `json:"path,omitempty"`
+type Platform struct {
+	OS   string `json:"os"`
+	Arch string `json:"arch"`
 }
 
 type PortableSpec struct {
-	Version      string      `json:"version"`
-	OS           string      `json:"os"`
-	Arch         string      `json:"arch"`
-	Processes    []*Process  `json:"processes"`
-	Root         Root        `json:"root"`
-	Cpus         float64     `json:"cpus"`   // in 1.1 for 110% cpus
-	Memory       int64       `json:"memory"` // in mb; 1024m
-	Hostname     string      `json:"hostname"`
-	Namespaces   []Namespace `json:"namespaces"`
-	Capabilities []string    `json:"capabilities"`
-	Devices      []string    `json:"devices"`
-	Mounts       []Mount     `json:"mounts"`
+	Version  string   `json:"version"`
+	Platform Platform `json:"platform"`
+	Process  Process  `json:"process"`
+	Root     Root     `json:"root"`
+	Hostname string   `json:"hostname"`
+	Mounts   []Mount  `json:"mounts"`
 }
 
 var specCommand = cli.Command{
@@ -56,48 +50,26 @@ var specCommand = cli.Command{
 	Action: func(context *cli.Context) {
 		spec := PortableSpec{
 			Version: version,
-			OS:      runtime.GOOS,
-			Arch:    runtime.GOARCH,
+			Platform: Platform{
+				OS:   runtime.GOOS,
+				Arch: runtime.GOARCH,
+			},
 			Root: Root{
 				Path:     "rootfs",
 				Readonly: true,
 			},
-			Processes: []*Process{
-				{
-					TTY:  true,
-					User: "daemon",
-					Args: []string{
-						"sh",
-					},
-					Env: []string{
-						"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-						"TERM=xterm",
-					},
+			Process: Process{
+				Terminal: true,
+				User:     "daemon",
+				Args: []string{
+					"sh",
+				},
+				Env: []string{
+					"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+					"TERM=xterm",
 				},
 			},
-			Cpus:     1.1,
-			Memory:   1024,
 			Hostname: "shell",
-			Capabilities: []string{
-				"AUDIT_WRITE",
-				"KILL",
-				"NET_BIND_SERVICE",
-			},
-			Devices: []string{
-				"null",
-				"random",
-				"full",
-				"tty",
-				"zero",
-				"urandom",
-			},
-			Namespaces: []Namespace{
-				{Type: "process"},
-				{Type: "network"},
-				{Type: "mount"},
-				{Type: "ipc"},
-				{Type: "uts"},
-			},
 			Mounts: []Mount{
 				{
 					Type:        "proc",

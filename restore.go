@@ -44,7 +44,7 @@ var restoreCommand = cli.Command{
 	},
 }
 
-func restoreContainer(context *cli.Context, spec *LinuxSpec, config *configs.Config, imagePath string) (code int, err error) {
+func restoreContainer(context *cli.Context, spec *Spec, config *configs.Config, imagePath string) (code int, err error) {
 	rootuid := 0
 	factory, err := loadFactory(context)
 	if err != nil {
@@ -82,7 +82,7 @@ func restoreContainer(context *cli.Context, spec *LinuxSpec, config *configs.Con
 		Stdout: os.Stdout,
 		Stderr: os.Stderr,
 	}
-	tty, err := newTty(spec.Processes[0].TTY, process, rootuid)
+	tty, err := newTty(spec.Process.Terminal, process, rootuid)
 	if err != nil {
 		return -1, err
 	}
