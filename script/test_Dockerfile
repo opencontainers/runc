@@ -1,7 +1,13 @@
 FROM golang:1.4
 
 RUN echo "deb http://ftp.us.debian.org/debian testing main contrib" >> /etc/apt/sources.list
-RUN apt-get update && apt-get install -y iptables criu=1.6-2 && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y iptables criu=1.6-2 git build-essential autoconf libtool && rm -rf /var/lib/apt/lists/*
+
+# Need Libseccomp v2.2.1 minimum, but grab the latest version of the v2.2 releases
+RUN git clone -b v2.2.3 --depth 1 https://github.com/seccomp/libseccomp /libseccomp
+RUN cd /libseccomp && ./autogen.sh && ./configure && make && make check && make install
+# Fix linking error
+RUN cp /usr/local/lib/libseccomp.so /usr/lib/libseccomp.so.2
 
 # setup a playground for us to spawn containers in
 RUN mkdir /busybox && \
