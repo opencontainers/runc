@@ -36,18 +36,13 @@ type Namespace struct {
 }
 
 type PortableSpec struct {
-	Version      string      `json:"version"`
-	OS           string      `json:"os"`
-	Arch         string      `json:"arch"`
-	Processes    []*Process  `json:"processes"`
-	Root         Root        `json:"root"`
-	Cpus         float64     `json:"cpus"`   // in 1.1 for 110% cpus
-	Memory       int64       `json:"memory"` // in mb; 1024m
-	Hostname     string      `json:"hostname"`
-	Namespaces   []Namespace `json:"namespaces"`
-	Capabilities []string    `json:"capabilities"`
-	Devices      []string    `json:"devices"`
-	Mounts       []Mount     `json:"mounts"`
+	Version   string     `json:"version"`
+	OS        string     `json:"os"`
+	Arch      string     `json:"arch"`
+	Processes []*Process `json:"processes"`
+	Root      Root       `json:"root"`
+	Hostname  string     `json:"hostname"`
+	Mounts    []Mount    `json:"mounts"`
 }
 
 var specCommand = cli.Command{
@@ -75,29 +70,7 @@ var specCommand = cli.Command{
 					},
 				},
 			},
-			Cpus:     1.1,
-			Memory:   1024,
 			Hostname: "shell",
-			Capabilities: []string{
-				"AUDIT_WRITE",
-				"KILL",
-				"NET_BIND_SERVICE",
-			},
-			Devices: []string{
-				"null",
-				"random",
-				"full",
-				"tty",
-				"zero",
-				"urandom",
-			},
-			Namespaces: []Namespace{
-				{Type: "process"},
-				{Type: "network"},
-				{Type: "mount"},
-				{Type: "ipc"},
-				{Type: "uts"},
-			},
 			Mounts: []Mount{
 				{
 					Type:        "proc",

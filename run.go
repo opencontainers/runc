@@ -9,7 +9,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer"
 )
 
-func execContainer(context *cli.Context, spec *LinuxSpec) (int, error) {
+func execContainer(context *cli.Context, spec *Spec) (int, error) {
 	if len(spec.Processes) != 1 {
 		return -1, fmt.Errorf("runc only supports one(1) process for the container")
 	}

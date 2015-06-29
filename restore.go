@@ -44,7 +44,7 @@ var restoreCommand = cli.Command{
 	},
 }
 
-func restoreContainer(context *cli.Context, spec *LinuxSpec, config *configs.Config, imagePath string) (code int, err error) {
+func restoreContainer(context *cli.Context, spec *Spec, config *configs.Config, imagePath string) (code int, err error) {
 	rootuid := 0
 	factory, err := loadFactory(context)
 	if err != nil {

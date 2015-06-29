@@ -15,6 +15,21 @@ import (
 	"github.com/opencontainers/runc/libcontainer/devices"
 )
 
+type Spec struct {
+	PortableSpec
+	Linux Linux `json:"linux"`
+}
+
+type Linux struct {
+	UserMapping      map[string]UserMapping `json:"userMapping"`
+	Rlimits          []Rlimit               `json:"rlimits"`
+	SystemProperties map[string]string      `json:"systemProperties"`
+	Resources        *Resources             `json:"resources"`
+	Namespaces       []Namespace            `json:"namespaces"`
+	Capabilities     []string               `json:"capabilities"`
+	Devices          []string               `json:"devices"`
+}
+
 type UserMapping struct {
 	From  int `json:"from"`
 	To    int `json:"to"`
@@ -38,6 +53,8 @@ type IfPrioMap struct {
 }
 
 type Resources struct {
+	// Memory limit (in bytes)
+	MemoryLimit int64 `json:"memoryLimit"`
 	// Memory reservation or soft_limit (in bytes)
 	MemoryReservation int64 `json:"memoryReservation"`
 	// Total memory usage (memory + swap); set `-1' to disable swap
@@ -80,14 +97,6 @@ type Resources struct {
 	NetClsClassid string `json:"netClsClassid"`
 }
 
-type LinuxSpec struct {
-	PortableSpec
-	UserMapping      map[string]UserMapping `json:"userMapping"`
-	Rlimits          []Rlimit               `json:"rlimits"`
-	SystemProperties map[string]string      `json:"systemProperties"`
-	Resources        *Resources             `json:"resources"`
-}
-
 var namespaceMapping = map[string]configs.NamespaceType{
 	"process": configs.NEWPID,
 	"network": configs.NEWNET,
@@ -99,7 +108,7 @@ var namespaceMapping = map[string]configs.NamespaceType{
 
 // loadSpec loads the specification from the provided path.
 // If the path is empty then the default path will be "container.json"
-func loadSpec(path string) (*LinuxSpec, error) {
+func loadSpec(path string) (*Spec, error) {
 	if path == "" {
 		path = "container.json"
 	}
@@ -111,14 +120,14 @@ func loadSpec(path string) (*LinuxSpec, error) {
 		return nil, err
 	}
 	defer f.Close()
-	var s *LinuxSpec
+	var s *Spec
 	if err := json.NewDecoder(f).Decode(&s); err != nil {
 		return nil, err
 	}
 	return s, nil
 }
 
-func createLibcontainerConfig(spec *LinuxSpec) (*configs.Config, error) {
+func createLibcontainerConfig(spec *Spec) (*configs.Config, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return nil, err
@@ -128,13 +137,13 @@ func createLibcontainerConfig(spec *LinuxSpec) (*configs.Config, error) {
 		rootfsPath = filepath.Join(cwd, rootfsPath)
 	}
 	config := &configs.Config{
-		Capabilities: spec.Capabilities,
 		Rootfs:       rootfsPath,
+		Capabilities: spec.Linux.Capabilities,
 		Readonlyfs:   spec.Root.Readonly,
 		Hostname:     spec.Hostname,
 		Privatefs:    true,
 	}
-	for _, ns := range spec.Namespaces {
+	for _, ns := range spec.Linux.Namespaces {
 		t, exists := namespaceMapping[ns.Type]
 		if !exists {
 			return nil, fmt.Errorf("namespace %q does not exist", ns)
@@ -184,7 +193,7 @@ func createLibcontainerMount(cwd string, m Mount) *configs.Mount {
 	}
 }
 
-func createCgroupConfig(spec *LinuxSpec, devices []*configs.Device) (*configs.Cgroup, error) {
+func createCgroupConfig(spec *Spec, devices []*configs.Device) (*configs.Cgroup, error) {
 	myCgroupPath, err := cgroups.GetThisCgroupDir("devices")
 	if err != nil {
 		return nil, err
@@ -193,12 +202,10 @@ func createCgroupConfig(spec *LinuxSpec, devices []*configs.Device) (*configs.Cg
 		Name:             getDefaultID(),
 		Parent:           myCgroupPath,
 		AllowedDevices:   append(devices, allowedDevices...),
-		CpuQuota:         getCPUQuota(spec.Cpus),
-		Memory:           spec.Memory * 1024 * 1024,
 		MemorySwap:       -1,
 		MemorySwappiness: -1,
 	}
-	if r := spec.Resources; r != nil {
+	if r := spec.Linux.Resources; r != nil {
 		c.MemoryReservation = r.MemoryReservation
 		c.MemorySwap = r.MemorySwap
 		c.KernelMemory = r.KernelMemory
@@ -233,8 +240,8 @@ func createCgroupConfig(spec *LinuxSpec, devices []*configs.Device) (*configs.Cg
 	return c, nil
 }
 
-func createDevices(spec *LinuxSpec, config *configs.Config) error {
-	for _, name := range spec.Devices {
+func createDevices(spec *Spec, config *configs.Config) error {
+	for _, name := range spec.Linux.Devices {
 		d, err := devices.DeviceFromPath(filepath.Join("/dev", name), "rwm")
 		if err != nil {
 			return err
@@ -256,13 +263,13 @@ func getCPUQuota(cpus float64) int64 {
 	return int64(cpus * cpuQuotaMultiplyer)
 }
 
-func setupUserNamespace(spec *LinuxSpec, config *configs.Config) error {
-	if len(spec.UserMapping) == 0 {
+func setupUserNamespace(spec *Spec, config *configs.Config) error {
+	if len(spec.Linux.UserMapping) == 0 {
 		return nil
 	}
 	config.Namespaces.Add(configs.NEWUSER, "")
 	mappings := make(map[string][]configs.IDMap)
-	for k, v := range spec.UserMapping {
+	for k, v := range spec.Linux.UserMapping {
 		mappings[k] = append(mappings[k], configs.IDMap{
 			ContainerID: v.From,
 			HostID:      v.To,

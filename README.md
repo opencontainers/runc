@@ -63,39 +63,7 @@ user named `daemon` defined within that file-system.
         "path": "rootfs",
         "readonly": true
     },
-    "cpus": 1.1,
-    "memory": 1024,
     "hostname": "shell",
-    "namespaces": [
-        {
-            "type": "process"
-        },
-        {
-            "type": "network"
-        },
-        {
-            "type": "mount"
-        },
-        {
-            "type": "ipc"
-        },
-        {
-            "type": "uts"
-        }
-    ],
-    "capabilities": [
-        "AUDIT_WRITE",
-        "KILL",
-        "NET_BIND_SERVICE"
-    ],
-    "devices": [
-        "null",
-        "random",
-        "full",
-        "tty",
-        "zero",
-        "urandom"
-    ],
     "mounts": [
         {
             "type": "proc",
