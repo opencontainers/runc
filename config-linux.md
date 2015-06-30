@@ -1,8 +1,7 @@
 # Linux
 
 ## Linux Namespaces
-
-```
+```json
     "namespaces": [
         "process",
         "network",
@@ -10,7 +9,7 @@
         "ipc",
         "uts",
         "user"
-    ],
+    ]
 ```
 
 Namespaces for the container are specified as an array of strings under the namespaces key. The list of constants that can be used is portable across operating systems. Here is a table mapping these names to native OS equivalent.
@@ -29,18 +28,34 @@ For Linux the mapping is
 
 * user -> user uids/gids on the host are mapped to different uids/gids in the container, so root in a container could be a non-root, unprivileged uid on the host
 
+### Access to devices
+```json
+   "devices": [
+        "null",
+        "random",
+        "full",
+        "tty",
+        "zero",
+        "urandom"
+    ]
+```
+
+Devices is an array specifying the list of devices from the host to make available in the container.
+
+The array contains names: for each name, the device /dev/<name> will be made available inside the container.
+
 ## Linux Control groups
 
 ## Linux Seccomp
 
 ## Linux Process Capabilities
 
-```
+```json
    "capabilities": [
         "AUDIT_WRITE",
         "KILL",
         "NET_BIND_SERVICE"
-    ],
+    ]
 ```
 
 capabilities is an array of Linux process capabilities. Valid values are the string after `CAP_` for capabilities defined in http://linux.die.net/man/7/capabilities
@@ -48,5 +63,4 @@ capabilities is an array of Linux process capabilities. Valid values are the str
 ## SELinux
 
 ## Apparmor
-
 
