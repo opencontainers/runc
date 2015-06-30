@@ -76,7 +76,7 @@ the container has access rights for the device.
 
 Also known as cgroups, they are used to restrict resource usage for a container and handle
 device access.  cgroups provide controls to restrict cpu, memory, IO, and network for
-the container.
+the container. For more information, see the [kernel cgroups documentation](https://www.kernel.org/doc/Documentation/cgroups/cgroups.txt)
 
 ## Linux capabilities
 
