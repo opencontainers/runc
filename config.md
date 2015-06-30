@@ -19,15 +19,15 @@ The `version` element specifies the version of the OCF specification which the c
 
 Each container has exactly one *root filesystem*, and any number of optional *mounted filesystems*. Both need to be declared in the manifest.
 
-The rootfs string element specifies the path to the root file system for the container, relative to the path where the manifest is. A directory MUST exist at the relative path declared by the field.
+The path string element specifies the path to the root file system for the container, relative to the path where the manifest is. A directory MUST exist at the relative path declared by the field.
 
-The readonlyRootfs is an optional boolean element which defaults to false. If it is true, access to the root file system MUST be read-only for all processes running inside it, whether you want the root file system to be readonly or not for the processes running on it.
+The readonly is an optional boolean element which defaults to false. If it is true, access to the root file system MUST be read-only for all processes running inside it, whether you want the root file system to be readonly or not for the processes running on it.
 
 *Example*
 ```json
     "root": {
-        "rootfs": "rootfs",
-        "readonlyRootfs": true
+        "path": "rootfs",
+        "readonly": true
     }
 ```
 
