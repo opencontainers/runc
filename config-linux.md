@@ -3,30 +3,44 @@
 ## Linux Namespaces
 ```json
     "namespaces": [
-        "process",
-        "network",
-        "mount",
-        "ipc",
-        "uts",
-        "user"
+        {
+            "type": "pid",
+            "path": "/proc/1234/ns/pid"
+        },
+        {
+            "type": "net",
+            "path": "/var/run/netns/neta"
+        },
+        {
+            "type": "mnt",
+        },
+        {
+            "type": "ipc",
+        },
+        {
+            "type": "uts",
+        },
+        {
+            "type": "user",
+        },
     ]
 ```
 
-Namespaces for the container are specified as an array of strings under the namespaces key. The list of constants that can be used is portable across operating systems. Here is a table mapping these names to native OS equivalent.
+A namespace wraps a global system resource in an abstraction that makes it appear to the processes within the namespace that they have their own isolated instance of the global resource.  Changes to the global resource are visible to other processes that are members of the namespace, but are invisible to other processes. For more information, see http://man7.org/linux/man-pages/man7/namespaces.7.html
 
-For Linux the mapping is
+Namespaces are specified in the spec as an array of entries. Each entry has a type field with possible values described below and an optional path element. If a path is specified, that particular fd is used to join that type of namespace.
 
-* process -> pid: the process ID number space is specific to the container, meaning that processes in different PID namespaces can have the same PID
+* pid: the process ID number space is specific to the container, meaning that processes in different PID namespaces can have the same PID
 
-* network -> network: the container will have an isolated network stack
+* network: the container will have an isolated network stack
 
-* mount -> mnt container can only access mounts local to itself
+* mnt: container can only access mounts local to itself
 
-* ipc -> ipc processes in the container can only communicate with other processes inside same container
+* ipc: processes in the container can only communicate with other processes inside same container
 
-* uts -> uts Hostname and NIS domain name are specific to the container
+* uts: Hostname and NIS domain name are specific to the container
 
-* user -> user uids/gids on the host are mapped to different uids/gids in the container, so root in a container could be a non-root, unprivileged uid on the host
+* user: uids/gids on the host are mapped to different uids/gids in the container, so root in a container could be a non-root, unprivileged uid on the host
 
 ### Access to devices
 ```json
@@ -58,7 +72,7 @@ The array contains names: for each name, the device /dev/<name> will be made ava
     ]
 ```
 
-capabilities is an array of Linux process capabilities. Valid values are the string after `CAP_` for capabilities defined in http://linux.die.net/man/7/capabilities
+capabilities is an array of Linux process capabilities. Valid values are the string after `CAP_` for capabilities defined in http://man7.org/linux/man-pages/man7/capabilities.7.html
 
 ## SELinux
 
