@@ -10,7 +10,7 @@ Below is a detailed description of each field defined in the configuration forma
 
 ## Manifest version
 
-* **version** (string, required) specifies the version of the OCF specification which the container bundle complies with. If the container is compliant with multiple versions, it SHOULD advertise the most recent known version to be supported.
+* **version** (string, required) must be in SemVer v2.0.0 format and specifies the version of the OCF specification which the container bundle complies. The Open Container spec follows semantic versioning and retain forward and backwards compatibility within major versions. For example, if an implementation is compliant against version 1.0.1 of the spec, it is compatible with the complete 1.x series.
 
 *Example*
 
