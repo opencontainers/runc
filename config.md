@@ -38,7 +38,7 @@ Additional file systems can be declared as "mounts", declared by the array eleme
 
 * **type** (string, required) Linux, *filesystemtype* argument supported by the kernel are listed in */proc/filesystems* (e.g., "minix", "ext2", "ext3", "jfs", "xfs", "reiserfs", "msdos", "proc", "nfs", "iso9660"). Windows: ntfs
 * **source** (string, required) a device name, but can also be a directory name or a dummy. Windows, the volume name that is the target of the mount point. \\?\Volume\{GUID}\ (on Windows source is called target)
-* **destination** (string, required) where the file system is mounted relative to the container rootfs.
+* **destination** (string, required) where the source file system is mounted relative to the container rootfs.
 * **options** (string, optional) in the fstab format [https://wiki.archlinux.org/index.php/Fstab](https://wiki.archlinux.org/index.php/Fstab).
 
 *Example (Linux)*
@@ -64,11 +64,11 @@ Additional file systems can be declared as "mounts", declared by the array eleme
         "options": "nosuid,noexec,newinstance,ptmxmode=0666,mode=0620,gid=5"
     },
     {
-        "type": "tmpfs",
-        "source": "shm",
-        "destination": "/dev/shm",
-        "options": "nosuid,noexec,nodev,mode=1777,size=65536k"
-    },
+        "type": "bind",
+        "source": "/volumes/testing",
+        "destination": "/data",
+        "options": "rbind,rw"
+    }
 ]
 ```
 
