@@ -1,3 +1,5 @@
+// +build linux
+
 package main
 
 import (
@@ -56,7 +58,7 @@ var eventsCommand = cli.Command{
 			return
 		}
 		go func() {
-			for _ = range time.Tick(context.Duration("interval")) {
+			for range time.Tick(context.Duration("interval")) {
 				s, err := container.Stats()
 				if err != nil {
 					logrus.Error(err)

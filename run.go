@@ -1,13 +1,28 @@
+// +build linux
+
 package main
 
 import (
 	"fmt"
 	"os"
+	"runtime"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 	"github.com/opencontainers/runc/libcontainer"
 )
+
+func init() {
+	if len(os.Args) > 1 && os.Args[1] == "init" {
+		runtime.GOMAXPROCS(1)
+		runtime.LockOSThread()
+		factory, _ := libcontainer.New("")
+		if err := factory.StartInitialization(); err != nil {
+			fatal(err)
+		}
+		panic("--this line should never been executed, congratulations--")
+	}
+}
 
 func execContainer(context *cli.Context, spec *Spec) (int, error) {
 	config, err := createLibcontainerConfig(spec)
@@ -46,6 +61,24 @@ func execContainer(context *cli.Context, spec *Spec) (int, error) {
 		return -1, err
 	}
 	return handler.forward(process)
+}
+
+// default action is to execute a container
+func runAction(context *cli.Context) {
+	spec, err := loadSpec(context.Args().First())
+	if err != nil {
+		fatal(err)
+	}
+	if os.Geteuid() != 0 {
+		logrus.Fatal("runc should be run as root")
+	}
+	status, err := execContainer(context, spec)
+	if err != nil {
+		logrus.Fatalf("Container start failed: %v", err)
+	}
+	// exit with the container's exit status so any external supervisor is
+	// notified of the exit with the correct exit status.
+	os.Exit(status)
 }
 
 func destroy(container libcontainer.Container) {
