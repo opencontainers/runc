@@ -74,6 +74,17 @@ The array contains names: for each name, the device /dev/<name> will be made ava
 
 capabilities is an array of Linux process capabilities. Valid values are the string after `CAP_` for capabilities defined in http://man7.org/linux/man-pages/man7/capabilities.7.html
 
+## Linux Sysctl
+
+```
+   "sysctl": {
+        "net.ipv4.ip_forward": "1",
+        "net.core.somaxconn": "256"
+   }
+```
+
+sysctl allows kernel parameters to be modified at runtime. For more information, see http://man7.org/linux/man-pages/man8/sysctl.8.html
+
 ## SELinux
 
 ## Apparmor
