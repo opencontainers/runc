@@ -1,5 +1,10 @@
 # Linux
 
+The Linux container specification uses various kernel features like namespaces,
+cgroups, capabilities, LSM, and file system jails to fulfill the spec.  
+Additional information is needed for Linux over the default spec configuration
+in order to configure these various kernel features.
+
 ## Linux namespaces
 
 A namespace wraps a global system resource in an abstraction that makes it 
@@ -70,7 +75,7 @@ the container has access rights for the device.
 ## Linux control groups
 
 Also known as cgroups, they are used to restrict resource usage for a container and handle
-device access.  cgroups provide controls to restruct cpu, memory, IO, and network for
+device access.  cgroups provide controls to restrict cpu, memory, IO, and network for
 the container.
 
 ## Linux capabilities
