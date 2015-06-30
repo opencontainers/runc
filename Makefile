@@ -1,7 +1,7 @@
 RUNC_TEST_IMAGE=runc_test
 PROJECT=github.com/opencontainers/runc
 TEST_DOCKERFILE=test_Dockerfile
-export GOPATH:=$(GOPATH):$(CURDIR)/Godeps/_workspace
+export GOPATH:=$(CURDIR)/Godeps/_workspace:$(GOPATH)
 
 all:
 	go build -o runc .
