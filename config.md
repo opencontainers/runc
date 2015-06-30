@@ -90,17 +90,28 @@ See links for details about [mountvol](http://ss64.com/nt/mountvol.html) and [Se
 ## Processes configuration
 
 * **terminal** (bool, optional) specifies whether you want a terminal attached to that process. Defaults to false.
-* **user** (string, required) indicates the user which the process will run as.
 * **cwd** (string, optional) is the working directory that will be set for the executable.
 * **env** (array of strings, optional) contains a list of variables that will be set in the processes environment prior to execution. Elements in the array are specified as Strings in the form "KEY=value". The left hand side must consist solely of letters, digits, and underscores '_' as outlined in [IEEE Std 1003.1-2001](http://pubs.opengroup.org/onlinepubs/009695399/basedefs/xbd_chap08.html).
 * **args** (string, required) executable to launch and any flags as an array. The executable is the first element and must be available at the given path inside of the rootfs. If the executable path is not an absoulte path then the search $PATH is interpreted to find the executable.
+
+The user for the process is a platform specific structure that allows specific control
+over which user the process runs as.  For linux based systems the user structure has the
+following fields:
+
+* **uid** (int, required) specifies the user id.
+* **gid** (int, required) specifies the group id.
+* **additionalGids** (array of ints, optional) specifies additional group ids to be added to the process.
 
 *Example*
 
 ```json
 "process": {
     "terminal": true,
-    "user": "daemon",
+    "user": {
+        "uid": 1,
+        "gid": 1,
+        "additionalGids": []
+    },
     "env": [
         "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
         "TERM=xterm"
