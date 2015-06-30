@@ -5,8 +5,8 @@
 ## State of the project
 
 Currently `runc` is an implementation of the OCF specification.  We are currently sprinting
-to have a v1 of the spec out within a quick timeframe of a few weeks, ~July 2015, 
-so the `runc` config format will be constantly changing until 
+to have a v1 of the spec out within a quick timeframe of a few weeks, ~July 2015,
+so the `runc` config format will be constantly changing until
 the spec is finalized.  However, we encourage you to try out the tool and give feedback.
 
 ### Building:
@@ -22,16 +22,16 @@ sudo make install
 
 ### Using:
 
-To run a container that you received just execute `runc` with the JSON format as the argument or have a 
+To run a container that you received just execute `runc` with the JSON format as the argument or have a
 `container.json` file in the current working directory.
 
 ```bash
-runc 
+runc
 / $ ps
 PID   USER     COMMAND
 1     daemon   sh
 5     daemon   sh
-/ $ 
+/ $
 ```
 
 ### OCF Container JSON Format:
@@ -110,7 +110,7 @@ user named `daemon` defined within that file-system.
 #### Using a Docker image (requires version 1.3 or later)
 
 To test using Docker's `busybox` image follow these steps:
-* Install `docker` and download the `buysbox` image: `docker pull busybox`
+* Install `docker` and download the `busybox` image: `docker pull busybox`
 * Create a container from that image and export its contents to a tar file:
 `docker export $(docker create busybox) > busybox.tar`
 * Untar the contents to create your filesystem directory:
