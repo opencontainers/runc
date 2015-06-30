@@ -349,17 +349,12 @@ func GetExecUser(userSpec string, defaults *ExecUser, passwd, group io.Reader) (
 	return user, nil
 }
 
-// GetAdditionalGroupsPath looks up a list of groups by name or group id
-// against the group file. If a group name cannot be found, an error will be
-// returned. If a group id cannot be found, it will be returned as-is.
-func GetAdditionalGroupsPath(additionalGroups []string, groupPath string) ([]int, error) {
-	groupReader, err := os.Open(groupPath)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to open group file: %v", err)
-	}
-	defer groupReader.Close()
-
-	groups, err := ParseGroupFilter(groupReader, func(g Group) bool {
+// GetAdditionalGroups looks up a list of groups by name or group id against
+// against the given /etc/group formatted data. If a group name cannot be found,
+// an error will be returned. If a group id cannot be found, it will be returned
+// as-is.
+func GetAdditionalGroups(additionalGroups []string, group io.Reader) ([]int, error) {
+	groups, err := ParseGroupFilter(group, func(g Group) bool {
 		for _, ag := range additionalGroups {
 			if g.Name == ag || strconv.Itoa(g.Gid) == ag {
 				return true
@@ -404,4 +399,15 @@ func GetAdditionalGroupsPath(additionalGroups []string, groupPath string) ([]int
 		gids = append(gids, gid)
 	}
 	return gids, nil
+}
+
+// Wrapper around GetAdditionalGroups that opens the groupPath given and gives
+// it as an argument to GetAdditionalGroups.
+func GetAdditionalGroupsPath(additionalGroups []string, groupPath string) ([]int, error) {
+	group, err := os.Open(groupPath)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to open group file: %v", err)
+	}
+	defer group.Close()
+	return GetAdditionalGroups(additionalGroups, group)
 }
