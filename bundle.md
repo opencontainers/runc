@@ -4,7 +4,7 @@ This section defines a format for encoding a container as a *bundle* - a directo
 
 The format does not define distribution. In other words, it only specifies how a container must be stored on a local filesystem, for consumption by a runtime. It does not specify how to transfer a container between computers, how to discover containers, or assign names or versions to them. Any distribution method capable of preserving the original layout of a container, as specified here, is considered compliant.
 
-A standard container bundle is made of the following 4 parts:
+A standard container bundle is made of the following 3 parts:
 
 - A top-level directory holding everything else
 - One or more content directories
