@@ -56,7 +56,6 @@ With Standard Containers we can put an end to that embarrassment, by making INDU
 Development happens on github for the spec.  Issues are used for bugs and actionable items and longer
 discussions can happen on the mailing list.  You can subscribe and join the mailing list on
 [google groups](https://groups.google.com/a/opencontainers.org/forum/#!forum/dev).
-
 The specification and code is licensed under the Apache 2.0 license found in 
 the `LICENSE` file of this repository.  
 
@@ -73,7 +72,7 @@ To keep consistency throughout the Markdown files in the Open Container spec all
 This fixes two things: it makes diffing easier with git and it resolves fights about line wrapping length.
 For example, this paragraph will span three lines in the Markdown source.
 
-### Sign your work
+## Sign your work
 
 The sign-off is a simple line at the end of the explanation for the
 patch, which certifies that you wrote it or otherwise have the right to

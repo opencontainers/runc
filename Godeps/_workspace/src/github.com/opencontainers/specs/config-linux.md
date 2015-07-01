@@ -146,6 +146,13 @@ rootfsPropagation sets the rootfs's mount propagation. Its value is either slave
     "rootfsPropagation": "slave",
 ```
 
+## Rootfs Mount Propagation
+rootfsPropagation sets the rootfs's mount propagation. Its value is either slave, private, or shared. [The kernel doc](https://www.kernel.org/doc/Documentation/filesystems/sharedsubtree.txt) has more information about mount propagation.
+
+```
+    "rootfsPropagation": "slave",
+```
+
 ## Security
 
 **TODO:** security profiles
