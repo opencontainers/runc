@@ -1,4 +1,5 @@
 // +build linux,386
+
 package system
 
 import (
