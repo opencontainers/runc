@@ -15,7 +15,7 @@ Below is a detailed description of each field defined in the configuration forma
 *Example*
 
 ```json
-    "version": "1"
+    "version": "0.1.0"
 ```
 
 ## Root Configuration
