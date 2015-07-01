@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"runtime"
+	"strings"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
@@ -116,4 +117,41 @@ var specCommand = cli.Command{
 		}
 		fmt.Printf("%s", data)
 	},
+}
+
+func (m *Mount) UnmarshalJSON(s []byte) error {
+	type readMount Mount
+	var v interface{}
+
+	if err := json.Unmarshal(s, &v); err != nil {
+		return err
+	}
+
+	switch v.(type) {
+
+	case string:
+		S := strings.Trim(string(s), "\"")
+		a := strings.Split(S, " ")
+		if len(a) < 3 {
+			return fmt.Errorf("fstab line format needs at least 3 parameters")
+		}
+		*m = Mount{
+			Type:        a[2],
+			Source:      a[0],
+			Destination: a[1],
+			Options:     strings.Join(a[3:], ""),
+		}
+		return nil
+
+	case map[string]interface{}:
+		var rm readMount
+		if err := json.Unmarshal(s, &rm); err != nil {
+			return err
+		}
+		*m = Mount(rm)
+		return nil
+
+	default:
+		return fmt.Errorf("cannot unmarshal mount from other than string or object")
+	}
 }
