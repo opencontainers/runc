@@ -92,7 +92,7 @@ See links for details about [mountvol](http://ss64.com/nt/mountvol.html) and [Se
 * **terminal** (bool, optional) specifies whether you want a terminal attached to that process. Defaults to false.
 * **cwd** (string, optional) is the working directory that will be set for the executable.
 * **env** (array of strings, optional) contains a list of variables that will be set in the process's environment prior to execution. Elements in the array are specified as Strings in the form "KEY=value". The left hand side must consist solely of letters, digits, and underscores '_' as outlined in [IEEE Std 1003.1-2001](http://pubs.opengroup.org/onlinepubs/009695399/basedefs/xbd_chap08.html).
-* **args** (string, required) executable to launch and any flags as an array. The executable is the first element and must be available at the given path inside of the rootfs. If the executable path is not an absoulte path then the search $PATH is interpreted to find the executable.
+* **args** (string, required) executable to launch and any flags as an array. The executable is the first element and must be available at the given path inside of the rootfs. If the executable path is not an absolute path then the search $PATH is interpreted to find the executable.
 
 The user for the process is a platform-specific structure that allows specific control over which user the process runs as.
 For Linux-based systems the user structure has the following fields:
@@ -145,6 +145,6 @@ For Linux-based systems the user structure has the following fields:
 }
 ```
 
-Interpretation of the platform section of the JSON file is used to find which platform specific section may be availble in the document. For example if `os` is set to `linux` then the `linux` JSON object SHOULD be found in the `config.json`.
+Interpretation of the platform section of the JSON file is used to find which platform specific section may be available in the document. For example if `os` is set to `linux` then the `linux` JSON object SHOULD be found in the `config.json`.
 
 
