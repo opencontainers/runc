@@ -109,14 +109,14 @@ For more information, see [the man page](http://man7.org/linux/man-pages/man8/sy
 ```
    "rlimits": [
         {
-            "type": "RLIMIT_NOPROC"
+            "type": "RLIMIT_NPROC",
             "soft": 1024,
             "hard": 102400
         }
    ]
 ```
 
-rlimits allow setting resource limits. The type is from one the values defined in [the man page](http://man7.org/linux/man-pages/man2/setrlimit.2.html). The kernel enforces the soft limit for a resource while the hard limit acts as a ceiling for that value that could be set by an unprivileged process.
+rlimits allow setting resource limits. The type is from the values defined in [the man page](http://man7.org/linux/man-pages/man2/setrlimit.2.html). The kernel enforces the soft limit for a resource while the hard limit acts as a ceiling for that value that could be set by an unprivileged process.
 
 ## Security
 
