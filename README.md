@@ -23,7 +23,7 @@ sudo make install
 ### Using:
 
 To run a container that you received just execute `runc` with the JSON format as the argument or have a
-`container.json` file in the current working directory.
+`config.json` file in the current working directory.
 
 ```bash
 runc
@@ -36,7 +36,7 @@ PID   USER     COMMAND
 
 ### OCF Container JSON Format:
 
-Below is a sample `container.json` configuration file. It assumes that
+Below is a sample `config.json` configuration file. It assumes that
 the file-system is found in a directory called `rootfs` and there is a
 user named `daemon` defined within that file-system.
 
@@ -101,7 +101,39 @@ user named `daemon` defined within that file-system.
             "destination": "/sys",
             "options": "nosuid,noexec,nodev"
         }
-    ]
+    ],
+    "linux": {
+        "namespaces": [
+            {
+                "type": "process"
+            },
+            {
+                "type": "network"
+            },
+            {
+                "type": "mount"
+            },
+            {
+                "type": "ipc"
+            },
+            {
+                "type": "uts"
+            }
+        ],
+        "capabilities": [
+            "AUDIT_WRITE",
+            "KILL",
+            "NET_BIND_SERVICE"
+        ],
+        "devices": [
+            "null",
+            "random",
+            "full",
+            "tty",
+            "zero",
+            "urandom"
+        ]
+    }
 }
 ```
 
@@ -118,7 +150,7 @@ To test using Docker's `busybox` image follow these steps:
 mkdir rootfs
 tar -C rootfs -xf busybox.tar
 ```
-* Create a file called `container.json` using the example from above.
+* Create a file called `config.json` using the example from above.
 Modify the `user` property to be `root`.
 * Execute `runc` and you should be placed into a shell where you can run `ps`:
 ```
