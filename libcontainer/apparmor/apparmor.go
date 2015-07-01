@@ -12,6 +12,7 @@ import (
 	"unsafe"
 )
 
+// IsEnabled returns true if apparmor is enabled for the host.
 func IsEnabled() bool {
 	if _, err := os.Stat("/sys/kernel/security/apparmor"); err == nil && os.Getenv("container") == "" {
 		if _, err = os.Stat("/sbin/apparmor_parser"); err == nil {
@@ -22,13 +23,14 @@ func IsEnabled() bool {
 	return false
 }
 
+// ApplyProfile will apply the profile with the specified name to the process after
+// the next exec.
 func ApplyProfile(name string) error {
 	if name == "" {
 		return nil
 	}
 	cName := C.CString(name)
 	defer C.free(unsafe.Pointer(cName))
-
 	if _, err := C.aa_change_onexec(cName); err != nil {
 		return err
 	}
