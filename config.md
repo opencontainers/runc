@@ -10,7 +10,7 @@ Below is a detailed description of each field defined in the configuration forma
 
 ## Manifest version
 
-* **version** (string, required) must be in SemVer v2.0.0 format and specifies the version of the OCF specification which the container bundle complies. The Open Container spec follows semantic versioning and retain forward and backwards compatibility within major versions. For example, if an implementation is compliant against version 1.0.1 of the spec, it is compatible with the complete 1.x series.
+* **version** (string, required) must be in SemVer v2.0.0 format and specifies the version of the OCF specification with which the container bundle complies. The Open Container spec follows semantic versioning and retains forward and backward compatibility within major versions. For example, if an implementation is compliant with version 1.0.1 of the spec, it is compatible with the complete 1.x series.
 
 *Example*
 
@@ -20,8 +20,10 @@ Below is a detailed description of each field defined in the configuration forma
 
 ## Root Configuration
 
-* **path** (string, required) Each container has exactly one *root filesystem*. The path string element specifies the path to the root file system for the container, relative to the path where the manifest is. A directory MUST exist at the relative path declared by the field.
-* **readonly** (bool, optional) If true then the root file system MUST be read-only inside the container. Defaults to false.
+Each container has exactly one *root filesystem*, specified in the *root* object:
+
+* **path** (string, required) Specifies the path to the root filesystem for the container, relative to the path where the manifest is. A directory MUST exist at the relative path declared by the field.
+* **readonly** (bool, optional) If true then the root filesystem MUST be read-only inside the container. Defaults to false.
 
 *Example*
 
@@ -34,11 +36,11 @@ Below is a detailed description of each field defined in the configuration forma
 
 ## Mount Configuration
 
-Additional file systems can be declared as "mounts", declared by the array element mounts. The parameters are similar to the ones in Linux mount system call. [http://linux.die.net/man/2/mount](http://linux.die.net/man/2/mount)
+Additional filesystems can be declared as "mounts", specified in the *mounts* array. The parameters are similar to the ones in Linux mount system call. [http://linux.die.net/man/2/mount](http://linux.die.net/man/2/mount)
 
 * **type** (string, required) Linux, *filesystemtype* argument supported by the kernel are listed in */proc/filesystems* (e.g., "minix", "ext2", "ext3", "jfs", "xfs", "reiserfs", "msdos", "proc", "nfs", "iso9660"). Windows: ntfs
 * **source** (string, required) a device name, but can also be a directory name or a dummy. Windows, the volume name that is the target of the mount point. \\?\Volume\{GUID}\ (on Windows source is called target)
-* **destination** (string, required) where the source file system is mounted relative to the container rootfs.
+* **destination** (string, required) where the source filesystem is mounted relative to the container rootfs.
 * **options** (string, optional) in the fstab format [https://wiki.archlinux.org/index.php/Fstab](https://wiki.archlinux.org/index.php/Fstab).
 
 *Example (Linux)*
@@ -133,7 +135,7 @@ For Linux-based systems the user structure has the following fields:
 "hostname": "mrsdalloway"
 ```
 
-## Machine-specific configuration
+## Platform-specific configuration
 
 * **os** (string, required) specifies the operating system family this image must run on. Values for arch must be in the list specified by the Go Language document for [$GOOS](https://golang.org/doc/install/source#environment).
 * **arch** (string, required) specifies the instruction set for which the binaries in the image have been compiled. Values for arch must be in the list specified by the Go Language document for [$GOARCH](https://golang.org/doc/install/source#environment).
