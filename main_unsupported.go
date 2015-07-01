@@ -7,6 +7,10 @@ import (
 	"github.com/codegangsta/cli"
 )
 
+type User struct {
+	NOTSUPPORTED string
+}
+
 func getDefaultID() string {
 	return ""
 }

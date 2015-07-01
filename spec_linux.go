@@ -30,6 +30,12 @@ type Linux struct {
 	Devices          []string               `json:"devices"`
 }
 
+type User struct {
+	Uid            int32   `json:"uid"`
+	Gid            int32   `json:"gid"`
+	AdditionalGids []int32 `json:"additionalGids"`
+}
+
 type Namespace struct {
 	Type string `json:"type"`
 	Path string `json:"path"`
@@ -271,10 +277,6 @@ func setReadonly(config *configs.Config) {
 			m.Flags |= syscall.MS_RDONLY
 		}
 	}
-}
-
-func getCPUQuota(cpus float64) int64 {
-	return int64(cpus * cpuQuotaMultiplyer)
 }
 
 func setupUserNamespace(spec *Spec, config *configs.Config) error {

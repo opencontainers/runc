@@ -49,7 +49,11 @@ user named `daemon` defined within that file-system.
     },
     "process": {
         "terminal": true,
-        "user": "daemon",
+        "user": {
+            "uid": 0,
+            "gid": 0,
+            "additionalGids": null
+        },
         "args": [
             "sh"
         ],

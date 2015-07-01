@@ -9,8 +9,6 @@ import (
 	"github.com/codegangsta/cli"
 )
 
-const cpuQuotaMultiplyer = 100000
-
 type Mount struct {
 	Type        string `json:"type"`
 	Source      string `json:"source"`
@@ -20,7 +18,7 @@ type Mount struct {
 
 type Process struct {
 	Terminal bool     `json:"terminal"`
-	User     string   `json:"user"`
+	User     User     `json:"user"`
 	Args     []string `json:"args"`
 	Env      []string `json:"env"`
 	Cwd      string   `json:"cwd"`
@@ -61,7 +59,7 @@ var specCommand = cli.Command{
 			},
 			Process: Process{
 				Terminal: true,
-				User:     "daemon",
+				User:     User{},
 				Args: []string{
 					"sh",
 				},

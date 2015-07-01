@@ -166,7 +166,7 @@ func newProcess(p Process) *libcontainer.Process {
 	return &libcontainer.Process{
 		Args:   p.Args,
 		Env:    p.Env,
-		User:   p.User,
+		User:   fmt.Sprintf("%d:%d", p.User.Uid, p.User.Gid),
 		Cwd:    p.Cwd,
 		Stdin:  os.Stdin,
 		Stdout: os.Stdout,
