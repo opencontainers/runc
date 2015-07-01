@@ -87,22 +87,21 @@ Additional file systems can be declared as "mounts", declared by the array eleme
 
 See links for details about [mountvol](http://ss64.com/nt/mountvol.html) and [SetVolumeMountPoint](https://msdn.microsoft.com/en-us/library/windows/desktop/aa365561(v=vs.85).aspx) in Windows.
 
-## Processes configuration
+## Process configuration
 
 * **terminal** (bool, optional) specifies whether you want a terminal attached to that process. Defaults to false.
 * **cwd** (string, optional) is the working directory that will be set for the executable.
-* **env** (array of strings, optional) contains a list of variables that will be set in the processes environment prior to execution. Elements in the array are specified as Strings in the form "KEY=value". The left hand side must consist solely of letters, digits, and underscores '_' as outlined in [IEEE Std 1003.1-2001](http://pubs.opengroup.org/onlinepubs/009695399/basedefs/xbd_chap08.html).
+* **env** (array of strings, optional) contains a list of variables that will be set in the process's environment prior to execution. Elements in the array are specified as Strings in the form "KEY=value". The left hand side must consist solely of letters, digits, and underscores '_' as outlined in [IEEE Std 1003.1-2001](http://pubs.opengroup.org/onlinepubs/009695399/basedefs/xbd_chap08.html).
 * **args** (string, required) executable to launch and any flags as an array. The executable is the first element and must be available at the given path inside of the rootfs. If the executable path is not an absoulte path then the search $PATH is interpreted to find the executable.
 
-The user for the process is a platform specific structure that allows specific control
-over which user the process runs as.  For linux based systems the user structure has the
-following fields:
+The user for the process is a platform-specific structure that allows specific control over which user the process runs as.
+For Linux-based systems the user structure has the following fields:
 
 * **uid** (int, required) specifies the user id.
 * **gid** (int, required) specifies the group id.
 * **additionalGids** (array of ints, optional) specifies additional group ids to be added to the process.
 
-*Example*
+*Example (Linux)*
 
 ```json
 "process": {
