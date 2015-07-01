@@ -56,7 +56,7 @@ within the container.
 ### Access to devices
 
 Devices is an array specifying the list of devices from the host to make available in the container.
-By providing a device name within the list the runtime should lookup the same device on the host's `/dev`
+By providing a device name within the list the runtime should look up the same device on the host's `/dev`
 and collect information about the device node so that it can be recreated for the container.  The runtime
 should not only create the device inside the container but ensure that the root user inside 
 the container has access rights for the device.
@@ -94,7 +94,7 @@ in [the man page](http://man7.org/linux/man-pages/man7/capabilities.7.html)
 
 ## Linux sysctl
 
-sysctl allows kernel parameters to be modified at runtime for the container.  
+sysctl allows kernel parameters to be modified at runtime for the container.
 For more information, see [the man page](http://man7.org/linux/man-pages/man8/sysctl.8.html)
 
 ```
