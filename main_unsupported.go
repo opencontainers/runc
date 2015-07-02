@@ -7,10 +7,6 @@ import (
 	"github.com/codegangsta/cli"
 )
 
-type User struct {
-	NOTSUPPORTED string
-}
-
 func getDefaultID() string {
 	return ""
 }
@@ -19,6 +15,7 @@ var (
 	checkpointCommand cli.Command
 	eventsCommand     cli.Command
 	restoreCommand    cli.Command
+	specCommand       cli.Command
 )
 
 func runAction(*cli.Context) {

@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	version = "0.1.1"
+	version = "0.2"
 	usage   = `Open Container Project runtime
 
 runc is a command line client for running applications packaged according to the Open Container Format (OCF) and is

@@ -165,8 +165,9 @@ func getDefaultImagePath(context *cli.Context) string {
 // spec and stdio from the current process.
 func newProcess(p specs.Process) *libcontainer.Process {
 	return &libcontainer.Process{
-		Args:   p.Args,
-		Env:    p.Env,
+		Args: p.Args,
+		Env:  p.Env,
+		// TODO: fix libcontainer's API to better support uid/gid in a typesafe way.
 		User:   fmt.Sprintf("%d:%d", p.User.Uid, p.User.Gid),
 		Cwd:    p.Cwd,
 		Stdin:  os.Stdin,
