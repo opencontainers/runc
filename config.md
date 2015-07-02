@@ -1,7 +1,7 @@
 # Configuration file
 
 The container’s top-level directory MUST contain a configuration file called `config.json`.
-For now the schema is defined in [spec.go](https://github.com/opencontainers/runc/blob/master/spec.go) and [spec_linux.go](https://github.com/opencontainers/runc/blob/master/spec_linux.go), this will be moved to a JSON schema overtime.
+For now the canonical schema is defined in [spec.go](spec.go) and [spec_linux.go](spec_linux.go), but this will be moved to a formal JSON schema over time.
 
 The configuration file contains metadata necessary to implement standard operations against the container.
 This includes the process to run, environment variables to inject, sandboxing features to use, etc.
