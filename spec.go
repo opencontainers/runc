@@ -9,40 +9,6 @@ import (
 	"github.com/codegangsta/cli"
 )
 
-type Mount struct {
-	Type        string `json:"type"`
-	Source      string `json:"source"`
-	Destination string `json:"destination"`
-	Options     string `json:"options"`
-}
-
-type Process struct {
-	Terminal bool     `json:"terminal"`
-	User     User     `json:"user"`
-	Args     []string `json:"args"`
-	Env      []string `json:"env"`
-	Cwd      string   `json:"cwd"`
-}
-
-type Root struct {
-	Path     string `json:"path"`
-	Readonly bool   `json:"readonly"`
-}
-
-type Platform struct {
-	OS   string `json:"os"`
-	Arch string `json:"arch"`
-}
-
-type PortableSpec struct {
-	Version  string   `json:"version"`
-	Platform Platform `json:"platform"`
-	Process  Process  `json:"process"`
-	Root     Root     `json:"root"`
-	Hostname string   `json:"hostname"`
-	Mounts   []Mount  `json:"mounts"`
-}
-
 var specCommand = cli.Command{
 	Name:  "spec",
 	Usage: "create a new specification file",
