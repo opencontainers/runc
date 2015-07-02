@@ -7,25 +7,26 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
+	"github.com/opencontainers/specs"
 )
 
 var specCommand = cli.Command{
 	Name:  "spec",
 	Usage: "create a new specification file",
 	Action: func(context *cli.Context) {
-		spec := PortableSpec{
+		spec := specs.Spec{
 			Version: version,
-			Platform: Platform{
+			Platform: specs.Platform{
 				OS:   runtime.GOOS,
 				Arch: runtime.GOARCH,
 			},
-			Root: Root{
+			Root: specs.Root{
 				Path:     "rootfs",
 				Readonly: true,
 			},
-			Process: Process{
+			Process: specs.Process{
 				Terminal: true,
-				User:     User{},
+				User:     specs.User{},
 				Args: []string{
 					"sh",
 				},
@@ -35,7 +36,7 @@ var specCommand = cli.Command{
 				},
 			},
 			Hostname: "shell",
-			Mounts: []Mount{
+			Mounts: []specs.Mount{
 				{
 					Type:        "proc",
 					Source:      "proc",

@@ -13,6 +13,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/devices"
+	"github.com/opencontainers/specs"
 )
 
 var namespaceMapping = map[string]configs.NamespaceType{
@@ -26,7 +27,7 @@ var namespaceMapping = map[string]configs.NamespaceType{
 
 // loadSpec loads the specification from the provided path.
 // If the path is empty then the default path will be "config.json"
-func loadSpec(path string) (*Spec, error) {
+func loadSpec(path string) (*specs.LinuxSpec, error) {
 	if path == "" {
 		path = "config.json"
 	}
@@ -38,7 +39,7 @@ func loadSpec(path string) (*Spec, error) {
 		return nil, err
 	}
 	defer f.Close()
-	var s *Spec
+	var s *specs.LinuxSpec
 	if err := json.NewDecoder(f).Decode(&s); err != nil {
 		return nil, err
 	}
@@ -47,14 +48,14 @@ func loadSpec(path string) (*Spec, error) {
 
 // checkSpecVersion makes sure that the spec version matches runc's while we are in the initial
 // development period.  It is better to hard fail than have missing fields or options in the spec.
-func checkSpecVersion(s *Spec) error {
+func checkSpecVersion(s *specs.LinuxSpec) error {
 	if s.Version != version {
 		return fmt.Errorf("spec version is not compatible with runc version %q: spec %q", version, s.Version)
 	}
 	return nil
 }
 
-func createLibcontainerConfig(spec *Spec) (*configs.Config, error) {
+func createLibcontainerConfig(spec *specs.LinuxSpec) (*configs.Config, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return nil, err
@@ -103,7 +104,7 @@ func createLibcontainerConfig(spec *Spec) (*configs.Config, error) {
 	return config, nil
 }
 
-func createLibcontainerMount(cwd string, m Mount) *configs.Mount {
+func createLibcontainerMount(cwd string, m specs.Mount) *configs.Mount {
 	flags, data := parseMountOptions(m.Options)
 	source := m.Source
 	if m.Type == "bind" {
@@ -120,7 +121,7 @@ func createLibcontainerMount(cwd string, m Mount) *configs.Mount {
 	}
 }
 
-func createCgroupConfig(spec *Spec, devices []*configs.Device) (*configs.Cgroup, error) {
+func createCgroupConfig(spec *specs.LinuxSpec, devices []*configs.Device) (*configs.Cgroup, error) {
 	myCgroupPath, err := cgroups.GetThisCgroupDir("devices")
 	if err != nil {
 		return nil, err
@@ -133,41 +134,41 @@ func createCgroupConfig(spec *Spec, devices []*configs.Device) (*configs.Cgroup,
 		MemorySwappiness: -1,
 	}
 	if r := spec.Linux.Resources; r != nil {
-		c.MemoryReservation = r.MemoryReservation
-		c.MemorySwap = r.MemorySwap
-		c.KernelMemory = r.KernelMemory
-		c.CpuShares = r.CpuShares
-		c.CpuQuota = r.CpuQuota
-		c.CpuPeriod = r.CpuPeriod
-		c.CpuRtRuntime = r.CpuRtRuntime
-		c.CpuRtPeriod = r.CpuRtPeriod
-		c.CpusetCpus = r.CpusetCpus
-		c.CpusetMems = r.CpusetMems
-		c.BlkioThrottleReadBpsDevice = r.BlkioThrottleReadBpsDevice
-		c.BlkioThrottleWriteBpsDevice = r.BlkioThrottleWriteBpsDevice
-		c.BlkioThrottleReadIOpsDevice = r.BlkioThrottleReadIOpsDevice
-		c.BlkioThrottleWriteIOpsDevice = r.BlkioThrottleWriteIOpsDevice
-		c.BlkioWeight = r.BlkioWeight
-		c.BlkioWeightDevice = r.BlkioWeightDevice
-		for _, l := range r.HugetlbLimit {
+		c.MemoryReservation = r.Memory.Reservation
+		c.MemorySwap = r.Memory.Swap
+		c.KernelMemory = r.Memory.Kernel
+		c.CpuShares = r.CPU.Shares
+		c.CpuQuota = r.CPU.Quota
+		c.CpuPeriod = r.CPU.Period
+		c.CpuRtRuntime = r.CPU.RealtimeRuntime
+		c.CpuRtPeriod = r.CPU.RealtimePeriod
+		c.CpusetCpus = r.CPU.Cpus
+		c.CpusetMems = r.CPU.Mems
+		c.BlkioThrottleReadBpsDevice = r.BlockIO.ThrottleReadBpsDevice
+		c.BlkioThrottleWriteBpsDevice = r.BlockIO.ThrottleWriteBpsDevice
+		c.BlkioThrottleReadIOpsDevice = r.BlockIO.ThrottleReadIOpsDevice
+		c.BlkioThrottleWriteIOpsDevice = r.BlockIO.ThrottleWriteIOpsDevice
+		c.BlkioWeight = r.BlockIO.Weight
+		c.BlkioWeightDevice = r.BlockIO.WeightDevice
+		for _, l := range r.HugepageLimits {
 			c.HugetlbLimit = append(c.HugetlbLimit, &configs.HugepageLimit{
 				Pagesize: l.Pagesize,
 				Limit:    l.Limit,
 			})
 		}
 		c.OomKillDisable = r.DisableOOMKiller
-		for _, m := range r.NetPrioIfpriomap {
+		c.NetClsClassid = r.Network.ClassID
+		for _, m := range r.Network.Priorities {
 			c.NetPrioIfpriomap = append(c.NetPrioIfpriomap, &configs.IfPrioMap{
-				Interface: m.Interface,
+				Interface: m.Name,
 				Priority:  m.Priority,
 			})
 		}
-		c.NetClsClassid = r.NetClsClassid
 	}
 	return c, nil
 }
 
-func createDevices(spec *Spec, config *configs.Config) error {
+func createDevices(spec *specs.LinuxSpec, config *configs.Config) error {
 	for _, name := range spec.Linux.Devices {
 		d, err := devices.DeviceFromPath(filepath.Join("/dev", name), "rwm")
 		if err != nil {
@@ -186,21 +187,24 @@ func setReadonly(config *configs.Config) {
 	}
 }
 
-func setupUserNamespace(spec *Spec, config *configs.Config) error {
-	if len(spec.Linux.UserMapping) == 0 {
+func setupUserNamespace(spec *specs.LinuxSpec, config *configs.Config) error {
+	if len(spec.Linux.UidMapping) == 0 {
 		return nil
 	}
 	config.Namespaces.Add(configs.NEWUSER, "")
-	mappings := make(map[string][]configs.IDMap)
-	for k, v := range spec.Linux.UserMapping {
-		mappings[k] = append(mappings[k], configs.IDMap{
-			ContainerID: v.From,
-			HostID:      v.To,
-			Size:        v.Count,
-		})
+	create := func(m specs.IDMapping) configs.IDMap {
+		return configs.IDMap{
+			ContainerID: int(m.From),
+			HostID:      int(m.To),
+			Size:        int(m.Count),
+		}
 	}
-	config.UidMappings = mappings["uid"]
-	config.GidMappings = mappings["gid"]
+	for _, m := range spec.Linux.UidMapping {
+		config.UidMappings = append(config.UidMappings, create(m))
+	}
+	for _, m := range spec.Linux.GidMapping {
+		config.GidMappings = append(config.GidMappings, create(m))
+	}
 	rootUid, err := config.HostUID()
 	if err != nil {
 		return err

@@ -10,6 +10,7 @@ import (
 	"github.com/codegangsta/cli"
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/specs"
 )
 
 const wildcard = -1
@@ -162,7 +163,7 @@ func getDefaultImagePath(context *cli.Context) string {
 
 // newProcess returns a new libcontainer Process with the arguments from the
 // spec and stdio from the current process.
-func newProcess(p Process) *libcontainer.Process {
+func newProcess(p specs.Process) *libcontainer.Process {
 	return &libcontainer.Process{
 		Args:   p.Args,
 		Env:    p.Env,

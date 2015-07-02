@@ -12,6 +12,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/utils"
+	"github.com/opencontainers/specs"
 )
 
 var restoreCommand = cli.Command{
@@ -46,7 +47,7 @@ var restoreCommand = cli.Command{
 	},
 }
 
-func restoreContainer(context *cli.Context, spec *Spec, config *configs.Config, imagePath string) (code int, err error) {
+func restoreContainer(context *cli.Context, spec *specs.LinuxSpec, config *configs.Config, imagePath string) (code int, err error) {
 	rootuid := 0
 	factory, err := loadFactory(context)
 	if err != nil {
