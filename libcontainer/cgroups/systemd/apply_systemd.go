@@ -511,6 +511,10 @@ func joinMemory(c *configs.Cgroup, pid int) error {
 		if err != nil {
 			return err
 		}
+	} else if c.MemorySwappiness == -1 {
+		return nil
+	} else {
+		return fmt.Errorf("invalid value:%d. valid memory swappiness range is 0-100", c.MemorySwappiness)
 	}
 
 	return nil
