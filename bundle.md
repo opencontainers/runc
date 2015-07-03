@@ -16,7 +16,7 @@ A Standard Container bundle is a directory containing all the content needed to 
 
 The syntax and semantics for `config.json` are described in [this specification](config.md).
 
-One or more *content directories* may be adjacent to the configuration file. This must include at least the root filesystem (referenced in the configuration file by the *root* field) and may include other related content (signatures, other configs, etc.). The interpretation of these resources is specified in the configuration.
+One or more *content directories* may be adjacent to the configuration file. This must include at least the root filesystem (referenced in the configuration file by the *root* field) and may include other related content (signatures, other configs, etc.). The interpretation of these resources is specified in the configuration. The names of the directories may be arbitrary, but users should consider using conventional names as in the example below.
 
 ```
 /
@@ -25,6 +25,6 @@ One or more *content directories* may be adjacent to the configuration file. Thi
 !
 --- rootfs
 !
---- sigs
+--- signatures
 ```
 
