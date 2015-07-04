@@ -10,6 +10,7 @@ import (
 	"github.com/codegangsta/cli"
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/specs"
 )
 
 const wildcard = -1
@@ -162,11 +163,12 @@ func getDefaultImagePath(context *cli.Context) string {
 
 // newProcess returns a new libcontainer Process with the arguments from the
 // spec and stdio from the current process.
-func newProcess(p Process) *libcontainer.Process {
+func newProcess(p specs.Process) *libcontainer.Process {
 	return &libcontainer.Process{
-		Args:   p.Args,
-		Env:    p.Env,
-		User:   p.User,
+		Args: p.Args,
+		Env:  p.Env,
+		// TODO: fix libcontainer's API to better support uid/gid in a typesafe way.
+		User:   fmt.Sprintf("%d:%d", p.User.Uid, p.User.Gid),
 		Cwd:    p.Cwd,
 		Stdin:  os.Stdin,
 		Stdout: os.Stdout,

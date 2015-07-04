@@ -15,6 +15,7 @@ var (
 	checkpointCommand cli.Command
 	eventsCommand     cli.Command
 	restoreCommand    cli.Command
+	specCommand       cli.Command
 )
 
 func runAction(*cli.Context) {

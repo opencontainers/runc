@@ -9,6 +9,13 @@ to have a v1 of the spec out within a quick timeframe of a few weeks, ~July 2015
 so the `runc` config format will be constantly changing until
 the spec is finalized.  However, we encourage you to try out the tool and give feedback.
 
+### OCF
+
+How does `runc` integrate with the Open Container Format?  `runc` depends on the types
+specified in the [specs](https://github.com/opencontainers/specs) repository.  Whenever
+the specification is updated and ready to be versioned `runc` will update it's dependency
+on the specs repository and support the update spec.
+
 ### Building:
 
 ```bash
@@ -42,14 +49,18 @@ user named `daemon` defined within that file-system.
 
 ```json
 {
-    "version": "0.1.1",
+    "version": "pre-draft",
     "platform": {
         "os": "linux",
         "arch": "amd64"
     },
     "process": {
         "terminal": true,
-        "user": "daemon",
+        "user": {
+            "uid": 0,
+            "gid": 0,
+            "additionalGids": null
+        },
         "args": [
             "sh"
         ],
@@ -103,21 +114,61 @@ user named `daemon` defined within that file-system.
         }
     ],
     "linux": {
+        "uidMapping": null,
+        "gidMapping": null,
+        "rlimits": null,
+        "systemProperties": null,
+        "resources": {
+            "disableOOMKiller": false,
+            "memory": {
+                "limit": 0,
+                "reservation": 0,
+                "swap": 0,
+                "kernel": 0
+            },
+            "cpu": {
+                "shares": 0,
+                "quota": 0,
+                "period": 0,
+                "realtimeRuntime": 0,
+                "realtimePeriod": 0,
+                "cpus": "",
+                "mems": ""
+            },
+            "blockIO": {
+                "blkioWeight": 0,
+                "blkioWeightDevice": "",
+                "blkioThrottleReadBpsDevice": "",
+                "blkioThrottleWriteBpsDevice": "",
+                "blkioThrottleReadIopsDevice": "",
+                "blkioThrottleWriteIopsDevice": ""
+            },
+            "hugepageLimits": null,
+            "network": {
+                "classId": "",
+                "priorities": null
+            }
+        },
         "namespaces": [
             {
-                "type": "process"
+                "type": "process",
+                "path": ""
             },
             {
-                "type": "network"
+                "type": "network",
+                "path": ""
             },
             {
-                "type": "mount"
+                "type": "ipc",
+                "path": ""
             },
             {
-                "type": "ipc"
+                "type": "uts",
+                "path": ""
             },
             {
-                "type": "uts"
+                "type": "mount",
+                "path": ""
             }
         ],
         "capabilities": [

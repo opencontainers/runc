@@ -10,6 +10,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 	"github.com/opencontainers/runc/libcontainer"
+	"github.com/opencontainers/specs"
 )
 
 func init() {
@@ -24,7 +25,7 @@ func init() {
 	}
 }
 
-func execContainer(context *cli.Context, spec *Spec) (int, error) {
+func execContainer(context *cli.Context, spec *specs.LinuxSpec) (int, error) {
 	config, err := createLibcontainerConfig(spec)
 	if err != nil {
 		return -1, err
