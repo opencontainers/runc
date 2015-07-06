@@ -17,8 +17,8 @@ type Linux struct {
 	GidMappings []IDMapping `json:"gidMappings"`
 	// Rlimits specifies rlimit options to apply to the container's process.
 	Rlimits []Rlimit `json:"rlimits"`
-	// SystemProperties are a set of key value pairs that are set for the container on start.
-	SystemProperties map[string]string `json:"systemProperties"`
+	// Sysctl are a set of key value pairs that are set for the container on start.
+	Sysctl map[string]string `json:"sysctl"`
 	// Resources contain cgroup information for handling resource constraints
 	// for the container.
 	Resources Resources `json:"resources"`
