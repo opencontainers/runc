@@ -12,20 +12,19 @@ A standard container bundle is made of the following 3 parts:
 
 # Directory layout
 
-A Standard Container bundle is a directory containing all the content needed to load and run a container. This includes its configuration file, content directories, and cryptographic signatures. The main property of this directory layout is that it can be moved as a unit to another machine and run the same container.
+A Standard Container bundle is a directory containing all the content needed to load and run a container. This includes its configuration file (`config.json`) and content directories. The main property of this directory layout is that it can be moved as a unit to another machine and run the same container.
 
-One or more *content directories* may be adjacent to the configuration file. This at least includes the root filesystem (referenced in the configuration by the *rootfs* field) and other related content (signatures, other configs, etc.). The interpretation of these resources is specified in the configuration.
+The syntax and semantics for `config.json` are described in [this specification](config.md).
+
+One or more *content directories* may be adjacent to the configuration file. This must include at least the root filesystem (referenced in the configuration file by the *root* field) and may include other related content (signatures, other configs, etc.). The interpretation of these resources is specified in the configuration. The names of the directories may be arbitrary, but users should consider using conventional names as in the example below.
 
 ```
 /
 !
 -- config.json
 !
---- rootfs1
+--- rootfs
 !
---- rootfs2
+--- signatures
 ```
 
-The syntax and semantics for config.json are described in this specification.
-
-One or more content directories can be specified as root file systems for containers. They COULD be called rootfs..10^100 but SHALL be called whatever you want.
