@@ -211,6 +211,7 @@ func createLibcontainerConfig(spec *specs.LinuxSpec) (*configs.Config, error) {
 			"/proc/sys", "/proc/sysrq-trigger", "/proc/irq", "/proc/bus",
 		}
 	}
+	config.Sysctl = spec.Linux.Sysctl
 	return config, nil
 }
 

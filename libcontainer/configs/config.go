@@ -135,9 +135,9 @@ type Config struct {
 	// so that these files prevent any writes.
 	ReadonlyPaths []string `json:"readonly_paths"`
 
-	// SystemProperties is a map of properties and their values. It is the equivalent of using
+	// Sysctl is a map of properties and their values. It is the equivalent of using
 	// sysctl -w my.property.name value in Linux.
-	SystemProperties map[string]string `json:"system_properties"`
+	Sysctl map[string]string `json:"sysctl"`
 
 	// Seccomp allows actions to be taken whenever a syscall is made within the container.
 	// By default, all syscalls are allowed with actions to allow, trap, kill, or return an errno

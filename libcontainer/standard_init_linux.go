@@ -65,7 +65,7 @@ func (l *linuxStandardInit) Init() error {
 		return err
 	}
 
-	for key, value := range l.config.Config.SystemProperties {
+	for key, value := range l.config.Config.Sysctl {
 		if err := writeSystemProperty(key, value); err != nil {
 			return err
 		}
