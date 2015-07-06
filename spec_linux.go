@@ -106,6 +106,8 @@ type Memory struct {
 	Swap int64 `json:"swap"`
 	// Kernel memory limit (in bytes)
 	Kernel int64 `json:"kernel"`
+	// How aggressive the kernel will swap memory pages. Range from 0 to 100. Set -1 to use system default.
+	Swappiness int64 `json:"swappiness"`
 }
 
 type CPU struct {
