@@ -75,6 +75,10 @@ func (s *MemoryGroup) Set(path string, cgroup *configs.Cgroup) error {
 		if err := writeFile(path, "memory.swappiness", strconv.FormatInt(cgroup.MemorySwappiness, 10)); err != nil {
 			return err
 		}
+	} else if cgroup.MemorySwappiness == -1 {
+		return nil
+	} else {
+		return fmt.Errorf("invalid value:%d. valid memory swappiness range is 0-100", cgroup.MemorySwappiness)
 	}
 
 	return nil
