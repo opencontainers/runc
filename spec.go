@@ -243,6 +243,7 @@ func createCgroupConfig(spec *specs.LinuxSpec, devices []*configs.Device) (*conf
 		AllowedDevices: append(devices, allowedDevices...),
 	}
 	r := spec.Linux.Resources
+	c.Memory = r.Memory.Limit
 	c.MemoryReservation = r.Memory.Reservation
 	c.MemorySwap = r.Memory.Swap
 	c.KernelMemory = r.Memory.Kernel
