@@ -46,10 +46,11 @@ func newTemplateConfig(rootfs string) *configs.Config {
 			{Type: configs.NEWNET},
 		}),
 		Cgroups: &configs.Cgroup{
-			Name:            "test",
-			Parent:          "integration",
-			AllowAllDevices: false,
-			AllowedDevices:  configs.DefaultAllowedDevices,
+			Name:             "test",
+			Parent:           "integration",
+			MemorySwappiness: -1,
+			AllowAllDevices:  false,
+			AllowedDevices:   configs.DefaultAllowedDevices,
 		},
 		MaskPaths: []string{
 			"/proc/kcore",
