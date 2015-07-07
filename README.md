@@ -62,7 +62,7 @@ user named `daemon` defined within that file-system.
             "additionalGids": null
         },
         "args": [
-            "sh"
+            "bash"
         ],
         "env": [
             "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
