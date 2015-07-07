@@ -17,8 +17,8 @@ type Linux struct {
 	GidMappings []IDMapping `json:"gidMappings"`
 	// Rlimits specifies rlimit options to apply to the container's process.
 	Rlimits []Rlimit `json:"rlimits"`
-	// SystemProperties are a set of key value pairs that are set for the container on start.
-	SystemProperties map[string]string `json:"systemProperties"`
+	// Sysctl are a set of key value pairs that are set for the container on start.
+	Sysctl map[string]string `json:"sysctl"`
 	// Resources contain cgroup information for handling resource constraints
 	// for the container.
 	Resources Resources `json:"resources"`
@@ -106,6 +106,8 @@ type Memory struct {
 	Swap int64 `json:"swap"`
 	// Kernel memory limit (in bytes)
 	Kernel int64 `json:"kernel"`
+	// How aggressive the kernel will swap memory pages. Range from 0 to 100. Set -1 to use system default.
+	Swappiness int64 `json:"swappiness"`
 }
 
 type CPU struct {

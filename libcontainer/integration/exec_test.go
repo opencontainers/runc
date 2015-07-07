@@ -753,7 +753,7 @@ func TestMountCmds(t *testing.T) {
 	}
 }
 
-func TestSystemProperties(t *testing.T) {
+func TestSysctl(t *testing.T) {
 	if testing.Short() {
 		return
 	}
@@ -766,7 +766,7 @@ func TestSystemProperties(t *testing.T) {
 	defer remove(rootfs)
 
 	config := newTemplateConfig(rootfs)
-	config.SystemProperties = map[string]string{
+	config.Sysctl = map[string]string{
 		"kernel.shmmni": "8192",
 	}
 
