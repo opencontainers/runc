@@ -1,8 +1,8 @@
-# Linux
+# Linux-specific configuration
 
 The Linux container specification uses various kernel features like namespaces,
-cgroups, capabilities, LSM, and file system jails to fulfill the spec.  
-Additional information is needed for Linux over the default spec configuration
+cgroups, capabilities, LSM, and file system jails to fulfill the spec.
+Additional information is needed for Linux over the [default spec configuration](config.md)
 in order to configure these various kernel features.
 
 ## Linux namespaces
