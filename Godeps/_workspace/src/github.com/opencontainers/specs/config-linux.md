@@ -1,8 +1,8 @@
-# Linux
+# Linux-specific configuration
 
 The Linux container specification uses various kernel features like namespaces,
-cgroups, capabilities, LSM, and file system jails to fulfill the spec.  
-Additional information is needed for Linux over the default spec configuration
+cgroups, capabilities, LSM, and file system jails to fulfill the spec.
+Additional information is needed for Linux over the [default spec configuration](config.md)
 in order to configure these various kernel features.
 
 ## Linux namespaces
@@ -117,6 +117,27 @@ For more information, see [the man page](http://man7.org/linux/man-pages/man8/sy
 ```
 
 rlimits allow setting resource limits. The type is from the values defined in [the man page](http://man7.org/linux/man-pages/man2/setrlimit.2.html). The kernel enforces the soft limit for a resource while the hard limit acts as a ceiling for that value that could be set by an unprivileged process.
+
+## Linux user namespace mappings
+
+```
+    "uidMappings": [
+        {
+            "hostID": 1000,
+            "containerID": 0,
+            "size": 10
+        }
+    ],
+    "gidMappings": [
+        {
+            "hostID": 1000,
+            "containerID": 0,
+            "size": 10
+        }
+    ]
+```
+
+uid/gid mappings describe the user namespace mappings from the host to the container. *from* is the starting uid/gid on the host to be mapped to *to* which is the starting uid/gid in the container and *count* refers to the number of ids to be mapped. The Linux kernel has a limit of 5 such mappings that can be specified.
 
 ## Security
 
