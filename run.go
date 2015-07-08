@@ -21,7 +21,7 @@ func init() {
 		if err := factory.StartInitialization(); err != nil {
 			fatal(err)
 		}
-		panic("--this line should never been executed, congratulations--")
+		panic("--this line should have never been executed, congratulations--")
 	}
 }
 
