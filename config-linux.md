@@ -123,16 +123,16 @@ rlimits allow setting resource limits. The type is from the values defined in [t
 ```
     "uidMappings": [
         {
-            "from"  : 1000,
-            "to"    : 0,
-            "count" : 10
+            "hostID": 1000,
+            "containerID": 0,
+            "size": 10
         }
     ],
     "gidMappings": [
         {
-            "from"  : 1000,
-            "to"    : 0,
-            "count" : 10
+            "hostID": 1000,
+            "containerID": 0,
+            "size": 10
         }
     ]
 ```
