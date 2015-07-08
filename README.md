@@ -19,7 +19,7 @@ on the specs repository and support the update spec.
 ### Building:
 
 ```bash
-# create a 'github.com/opencontainers' in your GOPATH
+# create a 'github.com/opencontainers' in your GOPATH/src
 cd github.com/opencontainers
 git clone https://github.com/opencontainers/runc
 cd runc
