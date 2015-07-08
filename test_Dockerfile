@@ -1,7 +1,7 @@
 FROM golang:1.4
 
 RUN echo "deb http://ftp.us.debian.org/debian testing main contrib" >> /etc/apt/sources.list
-RUN apt-get update && apt-get install -y iptables criu=1.5.2-1 && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y iptables criu=1.6-2 && rm -rf /var/lib/apt/lists/*
 
 # setup a playground for us to spawn containers in
 RUN mkdir /busybox && \
@@ -11,5 +11,4 @@ RUN curl -sSL https://raw.githubusercontent.com/docker/docker/master/hack/dind -
     chmod +x /dind
 
 WORKDIR /go/src/github.com/opencontainers/runc
-COPY libcontainer/sample_configs/minimal.json /busybox/container.json
 ENTRYPOINT ["/dind"]
