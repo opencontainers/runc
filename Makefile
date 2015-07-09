@@ -1,13 +1,15 @@
 RUNC_TEST_IMAGE=runc_test
 PROJECT=github.com/opencontainers/runc
-TEST_DOCKERFILE=test_Dockerfile
+TEST_DOCKERFILE=script/test_Dockerfile
 export GOPATH:=$(CURDIR)/Godeps/_workspace:$(GOPATH)
 
 all:
 	go build -o runc .
 
-lint:
+vet:
 	go get golang.org/x/tools/cmd/vet
+
+lint: vet
 	go vet ./...
 	go fmt ./...
 
@@ -25,3 +27,9 @@ install:
 
 clean:
 	rm runc
+
+validate: vet
+	script/validate-gofmt
+	go vet ./...
+
+ci: validate localtest
