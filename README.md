@@ -19,8 +19,8 @@ on the specs repository and support the update spec.
 ### Building:
 
 ```bash
-# create a 'github.com/opencontainers' in your GOPATH
-cd github.com/opencontainers
+# create a 'src/github.com/opencontainers' in your GOPATH
+cd src/github.com/opencontainers
 git clone https://github.com/opencontainers/runc
 cd runc
 make
