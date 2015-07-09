@@ -52,12 +52,12 @@ type Namespace struct {
 
 // IDMapping specifies uid/gid mappings.
 type IDMapping struct {
-	// From is the uid/gid of the host user or group.
-	From int32 `json:"from"`
-	// To is the uid/gid of the container's user or group.
-	To int32 `json:"to"`
-	// Count is how many uid/gids to map after To.
-	Count int32 `json:"count"`
+	// HostID is the uid/gid of the host user or group.
+	HostID int32 `json:"hostID"`
+	// ContainerID is the uid/gid of the container's user or group.
+	ContainerID int32 `json:"containerID"`
+	// Size is the length of the range of IDs mapped between the two namespaces.
+	Size int32 `json:"size"`
 }
 
 // Rlimit type and restrictions.
