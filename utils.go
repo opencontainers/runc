@@ -125,7 +125,7 @@ func getContainer(context *cli.Context) (libcontainer.Container, error) {
 }
 
 // fatal prints the error's details if it is a libcontainer specific error type
-// then exists the program with an exit status of 1.
+// then exits the program with an exit status of 1.
 func fatal(err error) {
 	if lerr, ok := err.(libcontainer.Error); ok {
 		lerr.Detail(os.Stderr)
