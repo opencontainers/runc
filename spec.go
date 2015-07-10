@@ -303,9 +303,9 @@ func setupUserNamespace(spec *specs.LinuxSpec, config *configs.Config) error {
 	config.Namespaces.Add(configs.NEWUSER, "")
 	create := func(m specs.IDMapping) configs.IDMap {
 		return configs.IDMap{
-			ContainerID: int(m.From),
-			HostID:      int(m.To),
-			Size:        int(m.Count),
+			HostID:      int(m.HostID),
+			ContainerID: int(m.ContainerID),
+			Size:        int(m.Size),
 		}
 	}
 	for _, m := range spec.Linux.UidMappings {
