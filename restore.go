@@ -118,7 +118,7 @@ func criuOptions(context *cli.Context) *libcontainer.CriuOpts {
 }
 
 // we have to use this type of signal handler because there is a memory leak if we
-// wait and reap with SICHLD.
+// wait and reap with SIGCHLD.
 func handleSignals(process *libcontainer.Process, tty *tty) {
 	sigc := make(chan os.Signal, 10)
 	signal.Notify(sigc)
