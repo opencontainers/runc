@@ -40,7 +40,7 @@ type signalHandler struct {
 	tty     *tty
 }
 
-// forward handles the main signal event loop forwarding, resizing, or reaping depeding
+// forward handles the main signal event loop forwarding, resizing, or reaping depending
 // on the signal received.
 func (h *signalHandler) forward(process *libcontainer.Process) (int, error) {
 	// make sure we know the pid of our main process so that we can return
