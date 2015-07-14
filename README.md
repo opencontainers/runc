@@ -124,7 +124,8 @@ user named `daemon` defined within that file-system.
                 "limit": 0,
                 "reservation": 0,
                 "swap": 0,
-                "kernel": 0
+                "kernel": 0,
+                "swappiness": -1
             },
             "cpu": {
                 "shares": 0,
