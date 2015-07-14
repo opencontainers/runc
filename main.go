@@ -55,6 +55,7 @@ func main() {
 		checkpointCommand,
 		eventsCommand,
 		restoreCommand,
+		killCommand,
 		specCommand,
 	}
 	app.Before = func(context *cli.Context) error {
