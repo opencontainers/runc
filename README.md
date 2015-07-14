@@ -188,6 +188,8 @@ user named `daemon` defined within that file-system.
 }
 ```
 
+
+
 ### Examples:
 
 #### Using a Docker image (requires version 1.3 or later)
@@ -230,3 +232,12 @@ WorkingDirectory=/containers/minecraftbuild
 [Install]
 WantedBy=multi-user.target
 ```
+
+#####Kill Support for runc
+Usage:
+runc --id=runc kill <arguments>
+Arguments can be signal number or signal name in string 
+
+Example
+runc --id=runc kill TERM
+runc --id=runc kill 15
