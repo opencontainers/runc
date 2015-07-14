@@ -79,7 +79,7 @@ var killCommand = cli.Command{
 
 		state, err := container.Status()
 		if err != nil {
-			fmt.Println("Container not running %d", state)
+			fatal(fmt.Errorf("Container not running %d",state))
 			// return here
 		}
 		if sig == 0 || syscall.Signal(sig) == syscall.SIGKILL {
