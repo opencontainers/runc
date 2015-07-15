@@ -28,6 +28,8 @@ type Linux struct {
 	Capabilities []string `json:"capabilities"`
 	// Devices are a list of device nodes that are created and enabled for the container.
 	Devices []string `json:"devices"`
+	// RootfsPropagation is the rootfs mount propagation mode for the container.
+	RootfsPropagation string `json:"rootfsPropagation"`
 }
 
 // User specifies linux specific user and group information for the container's

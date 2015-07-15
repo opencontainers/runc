@@ -139,6 +139,13 @@ rlimits allow setting resource limits. The type is from the values defined in [t
 
 uid/gid mappings describe the user namespace mappings from the host to the container. *from* is the starting uid/gid on the host to be mapped to *to* which is the starting uid/gid in the container and *count* refers to the number of ids to be mapped. The Linux kernel has a limit of 5 such mappings that can be specified.
 
+## Rootfs Mount Propagation
+rootfsPropagation sets the rootfs's mount propagation. Its value is either slave, private, or shared. [The kernel doc](https://www.kernel.org/doc/Documentation/filesystems/sharedsubtree.txt) has more information about mount propagation.
+
+```
+    "rootfsPropagation": "slave",
+```
+
 ## Security
 
 **TODO:** security profiles
