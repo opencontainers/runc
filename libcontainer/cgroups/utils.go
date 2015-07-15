@@ -57,6 +57,7 @@ func FindCgroupMountpointDir() (string, error) {
 
 type Mount struct {
 	Mountpoint string
+	Root       string
 	Subsystems []string
 }
 
@@ -87,7 +88,7 @@ func GetCgroupMounts() ([]Mount, error) {
 	res := []Mount{}
 	for _, mount := range mounts {
 		if mount.Fstype == "cgroup" {
-			m := Mount{Mountpoint: mount.Mountpoint}
+			m := Mount{Mountpoint: mount.Mountpoint, Root: mount.Root}
 
 			for _, opt := range strings.Split(mount.VfsOpts, ",") {
 				if strings.HasPrefix(opt, "name=") {

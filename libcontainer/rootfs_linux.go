@@ -180,18 +180,22 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 			if err != nil {
 				return err
 			}
+			relDir, err := filepath.Rel(mm.Root, dir)
+			if err != nil {
+				return err
+			}
 			binds = append(binds, &configs.Mount{
 				Device:      "bind",
-				Source:      filepath.Join(mm.Mountpoint, dir),
+				Source:      filepath.Join(mm.Mountpoint, relDir),
 				Destination: filepath.Join(m.Destination, strings.Join(mm.Subsystems, ",")),
 				Flags:       syscall.MS_BIND | syscall.MS_REC | m.Flags,
 			})
 		}
 		tmpfs := &configs.Mount{
-			Device:      "tmpfs",
 			Source:      "tmpfs",
+			Device:      "tmpfs",
 			Destination: m.Destination,
-			Flags:       syscall.MS_NOEXEC | syscall.MS_NOSUID | syscall.MS_NODEV,
+			Flags:       defaultMountFlags,
 		}
 		if err := mountToRootfs(tmpfs, rootfs, mountLabel); err != nil {
 			return err
