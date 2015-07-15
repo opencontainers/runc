@@ -116,6 +116,11 @@ var specCommand = cli.Command{
 					"zero",
 					"urandom",
 				},
+				Resources: specs.Resources{
+					Memory: specs.Memory{
+						Swappiness: -1,
+					},
+				},
 			},
 		}
 		data, err := json.MarshalIndent(&spec, "", "\t")
@@ -247,6 +252,7 @@ func createCgroupConfig(spec *specs.LinuxSpec, devices []*configs.Device) (*conf
 	c.MemoryReservation = r.Memory.Reservation
 	c.MemorySwap = r.Memory.Swap
 	c.KernelMemory = r.Memory.Kernel
+	c.MemorySwappiness = r.Memory.Swappiness
 	c.CpuShares = r.CPU.Shares
 	c.CpuQuota = r.CPU.Quota
 	c.CpuPeriod = r.CPU.Period
