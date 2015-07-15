@@ -83,6 +83,12 @@ var specCommand = cli.Command{
 						Destination: "/sys",
 						Options:     "nosuid,noexec,nodev",
 					},
+					{
+						Type:        "cgroup",
+						Source:      "cgroup",
+						Destination: "/sys/fs/cgroup",
+						Options:     "nosuid,noexec,nodev,relatime,ro",
+					},
 				},
 			},
 			Linux: specs.Linux{
