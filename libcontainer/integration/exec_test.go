@@ -819,3 +819,72 @@ func TestSeccompNoChown(t *testing.T) {
 		t.Fatalf("running chown should result in an EPERM but got %q", s)
 	}
 }
+
+func TestMountCgroupRO(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+	rootfs, err := newRootfs()
+	ok(t, err)
+	defer remove(rootfs)
+	config := newTemplateConfig(rootfs)
+
+	config.Mounts = append(config.Mounts, &configs.Mount{
+		Destination: "/sys/fs/cgroup",
+		Device:      "cgroup",
+		Flags:       defaultMountFlags | syscall.MS_RDONLY,
+	})
+
+	buffers, exitCode, err := runContainer(config, "", "mount")
+	if err != nil {
+		t.Fatalf("%s: %s", buffers, err)
+	}
+	if exitCode != 0 {
+		t.Fatalf("exit code not 0. code %d stderr %q", exitCode, buffers.Stderr)
+	}
+	mountInfo := buffers.Stdout.String()
+	lines := strings.Split(mountInfo, "\n")
+	for _, l := range lines {
+		if !strings.HasPrefix(l, "cgroup") {
+			continue
+		}
+		if !strings.Contains(l, "ro,nosuid,nodev,noexec") {
+			t.Fatalf("Mode expected to contain 'ro,nosuid,nodev,noexec': %s", l)
+		}
+	}
+}
+
+func TestMountCgroupRW(t *testing.T) {
+	t.Skip("This test is screwed because of dind")
+	if testing.Short() {
+		return
+	}
+	rootfs, err := newRootfs()
+	ok(t, err)
+	defer remove(rootfs)
+	config := newTemplateConfig(rootfs)
+
+	config.Mounts = append(config.Mounts, &configs.Mount{
+		Destination: "/sys/fs/cgroup",
+		Device:      "cgroup",
+		Flags:       defaultMountFlags,
+	})
+
+	buffers, exitCode, err := runContainer(config, "", "mount")
+	if err != nil {
+		t.Fatalf("%s: %s", buffers, err)
+	}
+	if exitCode != 0 {
+		t.Fatalf("exit code not 0. code %d stderr %q", exitCode, buffers.Stderr)
+	}
+	mountInfo := buffers.Stdout.String()
+	lines := strings.Split(mountInfo, "\n")
+	for _, l := range lines {
+		if !strings.HasPrefix(l, "cgroup") {
+			continue
+		}
+		if !strings.Contains(l, "rw,nosuid,nodev,noexec") {
+			t.Fatalf("Mode expected to contain 'rw,nosuid,nodev,noexec': %s", l)
+		}
+	}
+}
