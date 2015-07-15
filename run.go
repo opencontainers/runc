@@ -67,6 +67,12 @@ func execContainer(context *cli.Context, spec *specs.LinuxSpec) (int, error) {
 // default action is to execute a container
 func runAction(context *cli.Context) {
 	spec, err := loadSpec(context.Args().First())
+
+	notifySocket := os.Getenv("NOTIFY_SOCKET")
+	if notifySocket != "" {
+		setupSdNotify(spec, notifySocket)
+	}
+
 	if err != nil {
 		fatal(err)
 	}
@@ -80,6 +86,13 @@ func runAction(context *cli.Context) {
 	// exit with the container's exit status so any external supervisor is
 	// notified of the exit with the correct exit status.
 	os.Exit(status)
+}
+
+// If systemd is supporting sd_notify protocol, this function will add support
+// for sd_notify protocol from within the container.
+func setupSdNotify(spec *specs.LinuxSpec, notifySocket string) {
+	spec.Mounts = append(spec.Mounts, specs.Mount{Type: "bind", Source: notifySocket, Destination: notifySocket, Options: "bind"})
+	spec.Process.Env = append(spec.Process.Env, fmt.Sprintf("NOTIFY_SOCKET=%s", notifySocket))
 }
 
 func destroy(container libcontainer.Container) {
