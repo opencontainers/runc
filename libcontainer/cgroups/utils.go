@@ -17,6 +17,8 @@ import (
 	"github.com/docker/docker/pkg/units"
 )
 
+const cgroupNamePrefix = "name="
+
 // https://www.kernel.org/doc/Documentation/cgroups/cgroups.txt
 func FindCgroupMountpoint(subsystem string) (string, error) {
 	f, err := os.Open("/proc/self/mountinfo")
@@ -90,8 +92,8 @@ func GetCgroupMounts() ([]Mount, error) {
 			m := Mount{Mountpoint: mount.Mountpoint}
 
 			for _, opt := range strings.Split(mount.VfsOpts, ",") {
-				if strings.HasPrefix(opt, "name=") {
-					m.Subsystems = append(m.Subsystems, opt)
+				if strings.HasPrefix(opt, cgroupNamePrefix) {
+					m.Subsystems = append(m.Subsystems, opt[len(cgroupNamePrefix):])
 				}
 				if allMap[opt] {
 					m.Subsystems = append(m.Subsystems, opt)
@@ -186,7 +188,7 @@ func ParseCgroupFile(subsystem string, r io.Reader) (string, error) {
 		parts := strings.Split(text, ":")
 
 		for _, subs := range strings.Split(parts[1], ",") {
-			if subs == subsystem {
+			if subs == subsystem || subs == cgroupNamePrefix+subsystem {
 				return parts[2], nil
 			}
 		}
