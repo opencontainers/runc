@@ -189,6 +189,7 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 		}
 		tmpfs := &configs.Mount{
 			Device:      "tmpfs",
+			Source:      "tmpfs",
 			Destination: m.Destination,
 			Flags:       syscall.MS_NOEXEC | syscall.MS_NOSUID | syscall.MS_NODEV,
 		}
