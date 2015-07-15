@@ -111,6 +111,12 @@ user named `daemon` defined within that file-system.
             "source": "sysfs",
             "destination": "/sys",
             "options": "nosuid,noexec,nodev"
+        },
+        {
+            "type": "cgroup",
+            "source": "cgroup",
+            "destination": "/sys/fs/cgroup",
+            "options": "nosuid,noexec,nodev,relatime,ro"
         }
     ],
     "linux": {
