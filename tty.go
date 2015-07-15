@@ -10,7 +10,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer"
 )
 
-// newTty creates a new pty for use with the container.  If a tty is not to be
+// newTty creates a new tty for use with the container.  If a tty is not to be
 // created for the process, pipes are created so that the TTY of the parent
 // process are not inherited by the container.
 func newTty(create bool, p *libcontainer.Process, rootuid int) (*tty, error) {
