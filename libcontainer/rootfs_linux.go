@@ -196,7 +196,6 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 			Device:      "tmpfs",
 			Destination: m.Destination,
 			Flags:       defaultMountFlags,
-			Data:        "mode=755",
 		}
 		if err := mountToRootfs(tmpfs, rootfs, mountLabel); err != nil {
 			return err
@@ -205,11 +204,6 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 			if err := mountToRootfs(b, rootfs, mountLabel); err != nil {
 				return err
 			}
-		}
-		// remount cgroup root as readonly
-		rootfsCgroup := filepath.Join(rootfs, m.Destination)
-		if err := syscall.Mount("", rootfsCgroup, "", defaultMountFlags|syscall.MS_REMOUNT|syscall.MS_RDONLY, ""); err != nil {
-			return err
 		}
 	default:
 		return fmt.Errorf("unknown mount device %q to %q", m.Device, m.Destination)
