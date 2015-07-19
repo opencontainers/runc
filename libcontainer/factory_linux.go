@@ -164,7 +164,7 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 		if err != nil {
 			return nil, newGenericError(fmt.Errorf("delete the directory: %s", containerRoot), IdInUse)
 		}
-		procPath := fmt.Sprintf("/proc/%s/cmdline", pid)
+		procPath := filepath.Join("/proc", string(pid), "/cmdline")
 		cmdline, err := ioutil.ReadFile(procPath)
 		if err != nil {
 			return nil, newGenericError(fmt.Errorf("delete the directory: %s", containerRoot), IdInUse)
