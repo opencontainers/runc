@@ -170,26 +170,9 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 			}
 		}
 	case "cgroup":
-		mounts, err := cgroups.GetCgroupMounts()
+		binds, err := getCgroupMounts(m)
 		if err != nil {
 			return err
-		}
-		var binds []*configs.Mount
-		for _, mm := range mounts {
-			dir, err := mm.GetThisCgroupDir()
-			if err != nil {
-				return err
-			}
-			relDir, err := filepath.Rel(mm.Root, dir)
-			if err != nil {
-				return err
-			}
-			binds = append(binds, &configs.Mount{
-				Device:      "bind",
-				Source:      filepath.Join(mm.Mountpoint, relDir),
-				Destination: filepath.Join(m.Destination, strings.Join(mm.Subsystems, ",")),
-				Flags:       syscall.MS_BIND | syscall.MS_REC | m.Flags,
-			})
 		}
 		tmpfs := &configs.Mount{
 			Source:      "tmpfs",
@@ -209,6 +192,34 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 		return fmt.Errorf("unknown mount device %q to %q", m.Device, m.Destination)
 	}
 	return nil
+}
+
+func getCgroupMounts(m *configs.Mount) ([]*configs.Mount, error) {
+	mounts, err := cgroups.GetCgroupMounts()
+	if err != nil {
+		return nil, err
+	}
+
+	var binds []*configs.Mount
+
+	for _, mm := range mounts {
+		dir, err := mm.GetThisCgroupDir()
+		if err != nil {
+			return nil, err
+		}
+		relDir, err := filepath.Rel(mm.Root, dir)
+		if err != nil {
+			return nil, err
+		}
+		binds = append(binds, &configs.Mount{
+			Device:      "bind",
+			Source:      filepath.Join(mm.Mountpoint, relDir),
+			Destination: filepath.Join(m.Destination, strings.Join(mm.Subsystems, ",")),
+			Flags:       syscall.MS_BIND | syscall.MS_REC | m.Flags,
+		})
+	}
+
+	return binds, nil
 }
 
 // checkMountDestination checks to ensure that the mount destination is not over the
