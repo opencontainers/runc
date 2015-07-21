@@ -174,6 +174,13 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 		if err != nil {
 			return err
 		}
+		var merged []string
+		for _, b := range binds {
+			ss := filepath.Base(b.Destination)
+			if strings.Contains(ss, ",") {
+				merged = append(merged, ss)
+			}
+		}
 		tmpfs := &configs.Mount{
 			Source:      "tmpfs",
 			Device:      "tmpfs",
@@ -187,6 +194,29 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 			if err := mountToRootfs(b, rootfs, mountLabel); err != nil {
 				return err
 			}
+		}
+		// create symlinks for merged cgroups
+		cwd, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+		if err := os.Chdir(filepath.Join(rootfs, m.Destination)); err != nil {
+			return err
+		}
+		for _, mc := range merged {
+			for _, ss := range strings.Split(mc, ",") {
+				if err := os.Symlink(mc, ss); err != nil {
+					// if cgroup already exists, then okay(it could have been created before)
+					if os.IsExist(err) {
+						continue
+					}
+					os.Chdir(cwd)
+					return err
+				}
+			}
+		}
+		if err := os.Chdir(cwd); err != nil {
+			return err
 		}
 	default:
 		return fmt.Errorf("unknown mount device %q to %q", m.Device, m.Destination)
