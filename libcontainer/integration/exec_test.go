@@ -845,6 +845,15 @@ func TestMountCgroupRO(t *testing.T) {
 	mountInfo := buffers.Stdout.String()
 	lines := strings.Split(mountInfo, "\n")
 	for _, l := range lines {
+		if strings.HasPrefix(l, "tmpfs on /sys/fs/cgroup") {
+			if !strings.Contains(l, "ro,nosuid,nodev,noexec") {
+				t.Fatalf("Mode expected to contain 'ro,nosuid,nodev,noexec': %s", l)
+			}
+			if !strings.Contains(l, "mode=755") {
+				t.Fatalf("Mode expected to contain 'mode=755': %s", l)
+			}
+			continue
+		}
 		if !strings.HasPrefix(l, "cgroup") {
 			continue
 		}
@@ -880,6 +889,15 @@ func TestMountCgroupRW(t *testing.T) {
 	mountInfo := buffers.Stdout.String()
 	lines := strings.Split(mountInfo, "\n")
 	for _, l := range lines {
+		if strings.HasPrefix(l, "tmpfs on /sys/fs/cgroup") {
+			if !strings.Contains(l, "rw,nosuid,nodev,noexec") {
+				t.Fatalf("Mode expected to contain 'rw,nosuid,nodev,noexec': %s", l)
+			}
+			if !strings.Contains(l, "mode=755") {
+				t.Fatalf("Mode expected to contain 'mode=755': %s", l)
+			}
+			continue
+		}
 		if !strings.HasPrefix(l, "cgroup") {
 			continue
 		}
