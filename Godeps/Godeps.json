@@ -14,8 +14,8 @@
 		},
 		{
 			"ImportPath": "github.com/coreos/go-systemd/dbus",
-			"Comment": "v2",
-			"Rev": "f743bc15d6bddd23662280b4ad20f7c874cdd5ad"
+			"Comment": "v3",
+			"Rev": "be94bc700879ae8217780e9d141789a2defa302b"
 		},
 		{
 			"ImportPath": "github.com/docker/docker/pkg/mount",
