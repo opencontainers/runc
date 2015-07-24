@@ -84,7 +84,7 @@ func UseSystemd() bool {
 		hasStartTransientUnit = true
 
 		// But if we get UnknownMethod error we don't
-		if _, err := theConn.StartTransientUnit("test.scope", "invalid"); err != nil {
+		if _, err := theConn.StartTransientUnit("test.scope", "invalid", nil, nil); err != nil {
 			if dbusError, ok := err.(dbus.Error); ok {
 				if dbusError.Name == "org.freedesktop.DBus.Error.UnknownMethod" {
 					hasStartTransientUnit = false
@@ -99,7 +99,7 @@ func UseSystemd() bool {
 		scope := fmt.Sprintf("libcontainer-%d-systemd-test-default-dependencies.scope", os.Getpid())
 		testScopeExists := true
 		for i := 0; i <= testScopeWait; i++ {
-			if _, err := theConn.StopUnit(scope, "replace"); err != nil {
+			if _, err := theConn.StopUnit(scope, "replace", nil); err != nil {
 				if dbusError, ok := err.(dbus.Error); ok {
 					if strings.Contains(dbusError.Name, "org.freedesktop.systemd1.NoSuchUnit") {
 						testScopeExists = false
@@ -118,7 +118,7 @@ func UseSystemd() bool {
 		// Assume StartTransientUnit on a scope allows DefaultDependencies
 		hasTransientDefaultDependencies = true
 		ddf := newProp("DefaultDependencies", false)
-		if _, err := theConn.StartTransientUnit(scope, "replace", ddf); err != nil {
+		if _, err := theConn.StartTransientUnit(scope, "replace", []systemd.Property{ddf}, nil); err != nil {
 			if dbusError, ok := err.(dbus.Error); ok {
 				if strings.Contains(dbusError.Name, "org.freedesktop.DBus.Error.PropertyReadOnly") {
 					hasTransientDefaultDependencies = false
@@ -127,7 +127,7 @@ func UseSystemd() bool {
 		}
 
 		// Not critical because of the stop unit logic above.
-		theConn.StopUnit(scope, "replace")
+		theConn.StopUnit(scope, "replace", nil)
 	}
 	return hasStartTransientUnit
 }
@@ -198,7 +198,7 @@ func (m *Manager) Apply(pid int) error {
 		}
 	}
 
-	if _, err := theConn.StartTransientUnit(unitName, "replace", properties...); err != nil {
+	if _, err := theConn.StartTransientUnit(unitName, "replace", properties, nil); err != nil {
 		return err
 	}
 
@@ -269,7 +269,7 @@ func (m *Manager) Apply(pid int) error {
 func (m *Manager) Destroy() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	theConn.StopUnit(getUnitName(m.Cgroups), "replace")
+	theConn.StopUnit(getUnitName(m.Cgroups), "replace", nil)
 	if err := cgroups.RemovePaths(m.Paths); err != nil {
 		return err
 	}
