@@ -12,7 +12,8 @@ import (
 	"sync"
 	"time"
 
-	systemd "github.com/coreos/go-systemd/dbus"
+	systemdDbus "github.com/coreos/go-systemd/dbus"
+	systemdUtil "github.com/coreos/go-systemd/util"
 	"github.com/godbus/dbus"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fs"
@@ -52,21 +53,20 @@ const (
 
 var (
 	connLock                        sync.Mutex
-	theConn                         *systemd.Conn
+	theConn                         *systemdDbus.Conn
 	hasStartTransientUnit           bool
 	hasTransientDefaultDependencies bool
 )
 
-func newProp(name string, units interface{}) systemd.Property {
-	return systemd.Property{
+func newProp(name string, units interface{}) systemdDbus.Property {
+	return systemdDbus.Property{
 		Name:  name,
 		Value: dbus.MakeVariant(units),
 	}
 }
 
 func UseSystemd() bool {
-	s, err := os.Stat("/run/systemd/system")
-	if err != nil || !s.IsDir() {
+	if !systemdUtil.IsRunningSystemd() {
 		return false
 	}
 
@@ -75,7 +75,7 @@ func UseSystemd() bool {
 
 	if theConn == nil {
 		var err error
-		theConn, err = systemd.New()
+		theConn, err = systemdDbus.New()
 		if err != nil {
 			return false
 		}
@@ -118,7 +118,7 @@ func UseSystemd() bool {
 		// Assume StartTransientUnit on a scope allows DefaultDependencies
 		hasTransientDefaultDependencies = true
 		ddf := newProp("DefaultDependencies", false)
-		if _, err := theConn.StartTransientUnit(scope, "replace", []systemd.Property{ddf}, nil); err != nil {
+		if _, err := theConn.StartTransientUnit(scope, "replace", []systemdDbus.Property{ddf}, nil); err != nil {
 			if dbusError, ok := err.(dbus.Error); ok {
 				if strings.Contains(dbusError.Name, "org.freedesktop.DBus.Error.PropertyReadOnly") {
 					hasTransientDefaultDependencies = false
@@ -147,7 +147,7 @@ func (m *Manager) Apply(pid int) error {
 		c          = m.Cgroups
 		unitName   = getUnitName(c)
 		slice      = "system.slice"
-		properties []systemd.Property
+		properties []systemdDbus.Property
 	)
 
 	if c.Slice != "" {
@@ -155,8 +155,8 @@ func (m *Manager) Apply(pid int) error {
 	}
 
 	properties = append(properties,
-		systemd.PropSlice(slice),
-		systemd.PropDescription("docker container "+c.Name),
+		systemdDbus.PropSlice(slice),
+		systemdDbus.PropDescription("docker container "+c.Name),
 		newProp("PIDs", []uint32{uint32(pid)}),
 	)
 
