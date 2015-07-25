@@ -32,4 +32,4 @@ validate: vet
 	script/validate-gofmt
 	go vet ./...
 
-ci: validate localtest
+ci: validate test
