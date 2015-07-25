@@ -72,7 +72,7 @@ func newRootfs() (string, error) {
 		return "", err
 	}
 	if err := copyBusybox(dir); err != nil {
-		return "", nil
+		return "", err
 	}
 	return dir, nil
 }
