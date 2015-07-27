@@ -191,11 +191,6 @@ func createLibcontainerConfig(spec *specs.LinuxSpec) (*configs.Config, error) {
 		Readonlyfs:   spec.Root.Readonly,
 		Hostname:     spec.Hostname,
 		Privatefs:    true,
-		Networks: []*configs.Network{
-			{
-				Type: "loopback",
-			},
-		},
 	}
 	for _, ns := range spec.Linux.Namespaces {
 		t, exists := namespaceMapping[ns.Type]
@@ -203,6 +198,13 @@ func createLibcontainerConfig(spec *specs.LinuxSpec) (*configs.Config, error) {
 			return nil, fmt.Errorf("namespace %q does not exist", ns)
 		}
 		config.Namespaces.Add(t, ns.Path)
+	}
+	if config.Namespaces.Contains(configs.NEWNET) {
+		config.Networks = []*configs.Network{
+			{
+				Type: "loopback",
+			},
+		}
 	}
 	for _, m := range spec.Mounts {
 		config.Mounts = append(config.Mounts, createLibcontainerMount(cwd, m))
