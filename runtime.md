@@ -12,6 +12,6 @@ Runs a process in a container. Can be invoked several times.
 
 ### Stop (process)
 
-Not sure we need that from oc cli. Process is killed from the outside.
+Not sure we need that from runc cli. Process is killed from the outside.
 
-This event needs to be captured by oc to run onstop event handlers.
+This event needs to be captured by runc to run onstop event handlers.
