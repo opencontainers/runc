@@ -98,6 +98,9 @@ func (h *signalHandler) reap() (exits []exit, err error) {
 			}
 			return nil, err
 		}
+		if pid <= 0 {
+			return exits, nil
+		}
 		exits = append(exits, exit{
 			pid:    pid,
 			status: utils.ExitStatus(ws),
