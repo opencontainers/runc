@@ -42,7 +42,7 @@ func main() {
 		},
 		cli.StringFlag{
 			Name:  "root",
-			Value: "/var/run/ocf",
+			Value: "/run/oci",
 			Usage: "root directory for storage of container state (this should be located in tmpfs)",
 		},
 		cli.StringFlag{
