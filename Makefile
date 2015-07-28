@@ -17,10 +17,10 @@ runctestimage:
 	docker build -t $(RUNC_TEST_IMAGE) -f $(TEST_DOCKERFILE) .
 
 test: runctestimage
-	docker run --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_TEST_IMAGE) make localtest
+	docker run -e TESTFLAGS --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_TEST_IMAGE) make localtest
 
 localtest:
-	go test -v ./...
+	go test ${TESTFLAGS} -v ./...
 
 install:
 	cp runc /usr/local/bin/runc
