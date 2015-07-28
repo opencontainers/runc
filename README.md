@@ -208,8 +208,8 @@ To test using Docker's `busybox` image follow these steps:
 mkdir rootfs
 tar -C rootfs -xf busybox.tar
 ```
-* Create a file called `config.json` using the example from above.
-Modify the `user` property to be `root`.
+* Create a file called `config.json` using the example from above.  You can also
+generate a spec using `runc spec`, redirecting the output into `config.json`
 * Execute `runc` and you should be placed into a shell where you can run `ps`:
 ```
 $ runc
