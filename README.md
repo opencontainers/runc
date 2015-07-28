@@ -49,6 +49,12 @@ With Standard Containers we can put an end to that embarrassment, by making INDU
 The specification and code is licensed under the Apache 2.0 license found in 
 the `LICENSE` file of this repository.  
 
+## Markdown style
+
+To keep consistency throughout the Markdown files in the Open Container spec all files should be formatted one sentence per line.
+This fixes two things: it makes diffing easier with git and it resolves fights about line wrapping length.
+For example, this paragraph will span three lines in the Markdown source.
+
 ### Sign your work
 
 The sign-off is a simple line at the end of the explanation for the
