@@ -43,11 +43,21 @@ There are 17 million shipping containers in existence, packed with every physica
 
 With Standard Containers we can put an end to that embarrassment, by making INDUSTRIAL-GRADE DELIVERY of software a reality.
 
-
 # Contributing
+
+Development happens on github for the spec.  Issues are used for bugs and actionable items and longer
+discussions can happen on the mailing list.  You can subscribe and join the mailing list on
+[google groups](https://groups.google.com/a/opencontainers.org/forum/#!forum/dev).
 
 The specification and code is licensed under the Apache 2.0 license found in 
 the `LICENSE` file of this repository.  
+
+## Weekly Call
+
+The contributors and maintainers of the project have a weekly meeting Wednesdays at 10:00 AM PST.
+Everyone is welcome to participate in the call.  The link to the call will be posted on the mailing
+list each week along with set topics for discussion.
+Minutes for the call will be posted to the mailing list for those who are unable to join the call.
 
 ## Markdown style
 
