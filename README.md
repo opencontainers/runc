@@ -9,6 +9,14 @@ Table of Contents
   - [Linux Specific Configuration](config-linux.md)
 - [Runtime and Lifecycle](runtime.md)
 
+## Use Cases
+
+To provide context for users the following section gives example use cases for each part of the spec.
+
+### Filesystem Bundle & Configuration
+
+- A user can create a root filesystem and configuration, with low-level OS and host specific details, and launch it as a container under an Open Container runtime.
+
 # The 5 principles of Standard Containers
 
 Define a unit of software delivery called a Standard Container. The goal of a Standard Container is to encapsulate a software component and all its dependencies in a format that is self-describing and portable, so that any compliant runtime can run it without extra dependencies, regardless of the underlying machine and the contents of the container.
