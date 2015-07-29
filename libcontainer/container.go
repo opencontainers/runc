@@ -159,4 +159,7 @@ type Container interface {
 	// errors:
 	// Systemerror - System error.
 	NotifyOOM() (<-chan struct{}, error)
+
+	// Kill the container by signaling
+	Kill(string) error
 }

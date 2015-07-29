@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -778,4 +779,29 @@ func (c *linuxContainer) currentState() (*State, error) {
 		}
 	}
 	return state, nil
+}
+
+func (c *linuxContainer) Kill(sigStr string) error {
+	var sig uint64
+	sigN, err := strconv.ParseUint(sigStr, 10, 5)
+	if err != nil {
+		//The signal is not a number, treat it as a string (either like
+		//KILL" or like "SIGKILL")
+		syscallSig, ok := SignalMap[strings.TrimPrefix(sigStr, "SIG")]
+		if !ok {
+			return fmt.Errorf("Invalid signal: %s", sigStr)
+		}
+		sig = uint64(syscallSig)
+	} else {
+		sig = sigN
+	}
+
+	if sig == 0 {
+		return fmt.Errorf("Invalid signal: %s", sigStr)
+	}
+	state, err := c.State()
+	if err != nil {
+		return err
+	}
+	return syscall.Kill(state.InitProcessPid, syscall.Signal(sig))
 }
