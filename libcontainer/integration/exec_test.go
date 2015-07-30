@@ -864,7 +864,6 @@ func TestMountCgroupRO(t *testing.T) {
 }
 
 func TestMountCgroupRW(t *testing.T) {
-	t.Skip("This test is screwed because of dind")
 	if testing.Short() {
 		return
 	}
