@@ -160,7 +160,11 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 			}
 		}
 		if m.Relabel != "" {
-			if err := label.Relabel(m.Source, mountLabel, m.Relabel); err != nil {
+			if err := label.Validate(m.Relabel); err != nil {
+				return err
+			}
+			shared := label.IsShared(m.Relabel)
+			if err := label.Relabel(m.Source, mountLabel, shared); err != nil {
 				return err
 			}
 		}
