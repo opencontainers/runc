@@ -1,9 +1,11 @@
 package integration
 
 import (
+	"bufio"
 	"bytes"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"testing"
@@ -11,6 +13,30 @@ import (
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
+
+func showFile(t *testing.T, fname string) error {
+	t.Logf("=== %s ===\n", fname)
+
+	f, err := os.Open(fname)
+	if err != nil {
+		t.Log(err)
+		return err
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		t.Log(scanner.Text())
+	}
+
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+
+	t.Logf("=== END ===\n")
+
+	return nil
+}
 
 func TestCheckpoint(t *testing.T) {
 	if testing.Short() {
@@ -89,8 +115,11 @@ func TestCheckpoint(t *testing.T) {
 		ImagesDirectory: imagesDir,
 		WorkDirectory:   imagesDir,
 	}
+	dumpLog := filepath.Join(checkpointOpts.WorkDirectory, "dump.log")
+	restoreLog := filepath.Join(checkpointOpts.WorkDirectory, "restore.log")
 
 	if err := container.Checkpoint(checkpointOpts); err != nil {
+		showFile(t, dumpLog)
 		t.Fatal(err)
 	}
 
@@ -125,11 +154,13 @@ func TestCheckpoint(t *testing.T) {
 		Stdout: &stdout,
 	}
 
-	err = container.Restore(restoreProcessConfig, &libcontainer.CriuOpts{
-		ImagesDirectory: imagesDir,
-	})
+	err = container.Restore(restoreProcessConfig, checkpointOpts)
 	restoreStdinR.Close()
 	defer restoreStdinW.Close()
+	if err != nil {
+		showFile(t, restoreLog)
+		t.Fatal(err)
+	}
 
 	state, err = container.Status()
 	if err != nil {
