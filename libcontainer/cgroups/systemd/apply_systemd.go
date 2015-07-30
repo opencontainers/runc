@@ -298,7 +298,7 @@ func join(c *configs.Cgroup, subsystem string, pid int) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err := os.MkdirAll(path, 0755); err != nil && !os.IsExist(err) {
+	if err := os.MkdirAll(path, 0755); err != nil {
 		return "", err
 	}
 	if err := writeFile(path, "cgroup.procs", strconv.Itoa(pid)); err != nil {
@@ -478,7 +478,7 @@ func setKernelMemory(c *configs.Cgroup) error {
 		return err
 	}
 
-	if err := os.MkdirAll(path, 0755); err != nil && !os.IsExist(err) {
+	if err := os.MkdirAll(path, 0755); err != nil {
 		return err
 	}
 
