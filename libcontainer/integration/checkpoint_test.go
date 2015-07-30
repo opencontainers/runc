@@ -5,9 +5,11 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/opencontainers/runc/libcontainer"
+	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
 func TestCheckpoint(t *testing.T) {
@@ -27,6 +29,12 @@ func TestCheckpoint(t *testing.T) {
 	defer remove(rootfs)
 
 	config := newTemplateConfig(rootfs)
+
+	config.Mounts = append(config.Mounts, &configs.Mount{
+		Destination: "/sys/fs/cgroup",
+		Device:      "cgroup",
+		Flags:       defaultMountFlags | syscall.MS_RDONLY,
+	})
 
 	factory, err := libcontainer.New(root, libcontainer.Cgroupfs)
 
