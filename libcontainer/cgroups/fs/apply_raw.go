@@ -272,7 +272,7 @@ func (raw *data) join(subsystem string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err := os.MkdirAll(path, 0755); err != nil && !os.IsExist(err) {
+	if err := os.MkdirAll(path, 0755); err != nil {
 		return "", err
 	}
 	if err := writeFile(path, CgroupProcesses, strconv.Itoa(raw.pid)); err != nil {
