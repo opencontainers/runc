@@ -1,23 +1,20 @@
-// +build linux
-
 package specs
 
 import "os"
 
-// LinuxSpec is the full specification for Linux containers
-type LinuxSpec struct {
-	Spec
-	// Linux is platform specific configuration for Linux based containers
-	Linux Linux `json:"linux"`
+// LinuxSpec is the full specification for linux containers.
+type LinuxRuntimeSpec struct {
+	RuntimeSpec
+	// Linux is platform specific configuration for linux based containers.
+	LinuxRuntime Linux `json:"linux"`
 }
 
-// Linux contains platform specific configuration for Linux based containers
-type Linux struct {
-	// UIDMapping specifies user mappings for supporting user namespaces on Linux
-	UIDMappings []IDMapping `json:"uidMappings"`
-	// GIDMapping specifies group mappings for supporting user namespaces on Linux
-	GIDMappings []IDMapping `json:"gidMappings"`
-	// Rlimits specifies rlimit options to apply to the container's process
+type LinuxRuntime struct {
+	// UidMapping specifies user mappings for supporting user namespaces on linux.
+	UidMappings []IDMapping `json:"uidMappings"`
+	// UidMapping specifies group mappings for supporting user namespaces on linux.
+	GidMappings []IDMapping `json:"gidMappings"`
+	// Rlimits specifies rlimit options to apply to the container's process.
 	Rlimits []Rlimit `json:"rlimits"`
 	// Sysctl are a set of key value pairs that are set for the container on start
 	Sysctl map[string]string `json:"sysctl"`
@@ -26,8 +23,6 @@ type Linux struct {
 	Resources Resources `json:"resources"`
 	// Namespaces contains the namespaces that are created and/or joined by the container
 	Namespaces []Namespace `json:"namespaces"`
-	// Capabilities are Linux capabilities that are kept for the container
-	Capabilities []string `json:"capabilities"`
 	// Devices are a list of device nodes that are created and enabled for the container
 	Devices []Device `json:"devices"`
 	// ApparmorProfile specified the apparmor profile for the container.
@@ -40,18 +35,7 @@ type Linux struct {
 	RootfsPropagation string `json:"rootfsPropagation"`
 }
 
-// User specifies Linux specific user and group information for the container's
-// main process
-type User struct {
-	// Uid is the user id
-	UID int32 `json:"uid"`
-	// Gid is the group id
-	GID int32 `json:"gid"`
-	// AdditionalGids are additional group ids set for the container's process
-	AdditionalGids []int32 `json:"additionalGids"`
-}
-
-// Namespace is the configuration for a Linux namespace
+// Namespace is the configuration for a linux namespace.
 type Namespace struct {
 	// Type is the type of Linux namespace
 	Type string `json:"type"`
