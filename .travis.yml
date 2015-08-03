@@ -1,0 +1,17 @@
+language: go
+go:
+  - 1.4.2
+  - 1.3.3
+
+sudo: false
+
+before_install:
+  - go get golang.org/x/tools/cmd/vet
+  - go get github.com/golang/lint/golint
+
+install: true
+
+script:
+  - go vet -x ./...
+  - $HOME/gopath/bin/golint ./...
+  
