@@ -273,7 +273,7 @@ func (c *linuxContainer) checkCriuVersion() error {
 
 	out, err := exec.Command(c.criuPath, "-V").Output()
 	if err != nil {
-		return err
+		return fmt.Errorf("Unable to execute CRIU command: %s", c.criuPath)
 	}
 
 	n, err := fmt.Sscanf(string(out), "Version: %d.%d.%d\n", &x, &y, &z) // 1.5.2
