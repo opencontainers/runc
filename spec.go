@@ -316,7 +316,7 @@ func setReadonly(config *configs.Config) {
 }
 
 func setupUserNamespace(spec *specs.LinuxSpec, config *configs.Config) error {
-	if len(spec.Linux.UidMappings) == 0 {
+	if len(spec.Linux.UIDMappings) == 0 {
 		return nil
 	}
 	config.Namespaces.Add(configs.NEWUSER, "")
@@ -327,10 +327,10 @@ func setupUserNamespace(spec *specs.LinuxSpec, config *configs.Config) error {
 			Size:        int(m.Size),
 		}
 	}
-	for _, m := range spec.Linux.UidMappings {
+	for _, m := range spec.Linux.UIDMappings {
 		config.UidMappings = append(config.UidMappings, create(m))
 	}
-	for _, m := range spec.Linux.GidMappings {
+	for _, m := range spec.Linux.GIDMappings {
 		config.GidMappings = append(config.GidMappings, create(m))
 	}
 	rootUid, err := config.HostUID()

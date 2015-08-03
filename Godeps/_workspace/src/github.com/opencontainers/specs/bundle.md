@@ -21,7 +21,7 @@ One or more *content directories* may be adjacent to the configuration file. Thi
 ```
 /
 !
--- config.json
+--- config.json
 !
 --- rootfs
 !

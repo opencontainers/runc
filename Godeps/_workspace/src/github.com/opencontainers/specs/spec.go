@@ -11,10 +11,20 @@ type Spec struct {
 	Process Process `json:"process"`
 	// Root is the root information for the container's filesystem.
 	Root Root `json:"root"`
-	// Hostname is the containers host name.
+	// Hostname is the container's host name.
 	Hostname string `json:"hostname"`
 	// Mounts profile configuration for adding mounts to the container's filesystem.
 	Mounts []Mount `json:"mounts"`
+	// Hooks are the commands run at various lifecycle events of the container.
+	Hooks Hooks `json:"hooks"`
+}
+
+type Hooks struct {
+	// Prestart is a list of hooks to be run before the container process is executed.
+	// On Linux, they are run after the container namespaces are created.
+	Prestart []Hook `json:"prestart"`
+	// Poststop is a list of hooks to be run after the container process exits.
+	Poststop []Hook `json:"poststop"`
 }
 
 // Mount specifies a mount for a container.
@@ -60,4 +70,11 @@ type Platform struct {
 	OS string `json:"os"`
 	// Arch is the architecture
 	Arch string `json:"arch"`
+}
+
+// Hook specifies a command that is run at a particular event in the lifecycle of a container.
+type Hook struct {
+	Path string   `json:"path"`
+	Args []string `json:"args"`
+	Env  []string `json:"env"`
 }

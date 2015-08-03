@@ -80,8 +80,8 @@ Additional filesystems can be declared as "mounts", specified in the *mounts* ar
 "mounts": [
     {
         "type": "ntfs",
-        "source": "\\?\Volume\{2eca078d-5cbc-43d3-aff8-7e8511f60d0e}\",
-        "destination": "C:\Users\crosbymichael\My Fancy Mount Point\",
+        "source": "\\\\?\\Volume\\{2eca078d-5cbc-43d3-aff8-7e8511f60d0e}\\",
+        "destination": "C:\\Users\\crosbymichael\\My Fancy Mount Point\\",
         "options": ""
     }
 ]

@@ -97,7 +97,7 @@ in [the man page](http://man7.org/linux/man-pages/man7/capabilities.7.html)
 sysctl allows kernel parameters to be modified at runtime for the container.
 For more information, see [the man page](http://man7.org/linux/man-pages/man8/sysctl.8.html)
 
-```
+```json
    "sysctl": {
         "net.ipv4.ip_forward": "1",
         "net.core.somaxconn": "256"
@@ -106,7 +106,7 @@ For more information, see [the man page](http://man7.org/linux/man-pages/man8/sy
 
 ## Linux rlimits
 
-```
+```json
    "rlimits": [
         {
             "type": "RLIMIT_NPROC",
@@ -120,7 +120,7 @@ rlimits allow setting resource limits. The type is from the values defined in [t
 
 ## Linux user namespace mappings
 
-```
+```json
     "uidMappings": [
         {
             "hostID": 1000,
@@ -137,7 +137,14 @@ rlimits allow setting resource limits. The type is from the values defined in [t
     ]
 ```
 
-uid/gid mappings describe the user namespace mappings from the host to the container. *from* is the starting uid/gid on the host to be mapped to *to* which is the starting uid/gid in the container and *count* refers to the number of ids to be mapped. The Linux kernel has a limit of 5 such mappings that can be specified.
+uid/gid mappings describe the user namespace mappings from the host to the container. *hostID* is the starting uid/gid on the host to be mapped to *containerID* which is the starting uid/gid in the container and *size* refers to the number of ids to be mapped. The Linux kernel has a limit of 5 such mappings that can be specified.
+
+## Rootfs Mount Propagation
+rootfsPropagation sets the rootfs's mount propagation. Its value is either slave, private, or shared. [The kernel doc](https://www.kernel.org/doc/Documentation/filesystems/sharedsubtree.txt) has more information about mount propagation.
+
+```json
+    "rootfsPropagation": "slave",
+```
 
 ## Security
 

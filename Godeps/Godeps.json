@@ -48,7 +48,7 @@
 		},
 		{
 			"ImportPath": "github.com/opencontainers/specs",
-			"Rev": "08873003592da169f89ec7c671ed34e1a2333ef8"
+			"Rev": "5b31bb2b7771e5074a4eb14eca432da1ca5182d6"
 		},
 		{
 			"ImportPath": "github.com/syndtr/gocapability/capability",
