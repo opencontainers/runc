@@ -239,9 +239,8 @@ WantedBy=multi-user.target
 ```
 ##Usage:
 runc --id=runc kill <arguments>
-##Arguments can be signal number or signal name in string 
+####Arguments can be signal number or signal name in string 
 
 ##Example
 runc --id=runc kill TERM
 runc --id=runc kill 15
-##if the shell is interactive, few signals can not be forwarded. /bin/sh can not forward the signal
