@@ -2,19 +2,19 @@
 
 package specs
 
-// LinuxSpec is the full specification for linux containers.
+// LinuxSpec is the full specification for Linux containers.
 type LinuxSpec struct {
 	Spec
-	// Linux is platform specific configuration for linux based containers.
+	// Linux is platform specific configuration for Linux based containers.
 	Linux Linux `json:"linux"`
 }
 
-// Linux contains platform specific configuration for linux based containers.
+// Linux contains platform specific configuration for Linux based containers.
 type Linux struct {
-	// UidMapping specifies user mappings for supporting user namespaces on linux.
-	UidMappings []IDMapping `json:"uidMappings"`
-	// UidMapping specifies group mappings for supporting user namespaces on linux.
-	GidMappings []IDMapping `json:"gidMappings"`
+	// UIDMapping specifies user mappings for supporting user namespaces on Linux.
+	UIDMappings []IDMapping `json:"uidMappings"`
+	// GIDMapping specifies group mappings for supporting user namespaces on Linux.
+	GIDMappings []IDMapping `json:"gidMappings"`
 	// Rlimits specifies rlimit options to apply to the container's process.
 	Rlimits []Rlimit `json:"rlimits"`
 	// Sysctl are a set of key value pairs that are set for the container on start.
@@ -24,7 +24,7 @@ type Linux struct {
 	Resources Resources `json:"resources"`
 	// Namespaces contains the namespaces that are created and/or joined by the container.
 	Namespaces []Namespace `json:"namespaces"`
-	// Capabilities are linux capabilities that are kept for the container.
+	// Capabilities are Linux capabilities that are kept for the container.
 	Capabilities []string `json:"capabilities"`
 	// Devices are a list of device nodes that are created and enabled for the container.
 	Devices []string `json:"devices"`
@@ -32,31 +32,31 @@ type Linux struct {
 	RootfsPropagation string `json:"rootfsPropagation"`
 }
 
-// User specifies linux specific user and group information for the container's
+// User specifies Linux specific user and group information for the container's
 // main process.
 type User struct {
 	// Uid is the user id.
-	Uid int32 `json:"uid"`
+	UID int32 `json:"uid"`
 	// Gid is the group id.
-	Gid int32 `json:"gid"`
+	GID int32 `json:"gid"`
 	// AdditionalGids are additional group ids set for the container's process.
 	AdditionalGids []int32 `json:"additionalGids"`
 }
 
-// Namespace is the configuration for a linux namespace.
+// Namespace is the configuration for a Linux namespace.
 type Namespace struct {
-	// Type is the type of linux namespace.
+	// Type is the type of Linux namespace.
 	Type string `json:"type"`
 	// Path is a path to an existing namespace persisted on disk that can be joined
 	// and is of the same type.
 	Path string `json:"path"`
 }
 
-// IDMapping specifies uid/gid mappings.
+// IDMapping specifies UID/GID mappings.
 type IDMapping struct {
-	// HostID is the uid/gid of the host user or group.
+	// HostID is the UID/GID of the host user or group.
 	HostID int32 `json:"hostID"`
-	// ContainerID is the uid/gid of the container's user or group.
+	// ContainerID is the UID/GID of the container's user or group.
 	ContainerID int32 `json:"containerID"`
 	// Size is the length of the range of IDs mapped between the two namespaces.
 	Size int32 `json:"size"`
@@ -72,11 +72,13 @@ type Rlimit struct {
 	Soft uint64 `json:"soft"`
 }
 
+// HugepageLimit structure corresponds to limiting kernel hugepages
 type HugepageLimit struct {
 	Pagesize string `json:"pageSize"`
 	Limit    int    `json:"limit"`
 }
 
+// InterfacePriority for network interfaces
 type InterfacePriority struct {
 	// Name is the name of the network interface.
 	Name string `json:"name"`
@@ -84,6 +86,7 @@ type InterfacePriority struct {
 	Priority int64 `json:"priority"`
 }
 
+// BlockIO for Linux cgroup 'blockio' resource management
 type BlockIO struct {
 	// Specifies per cgroup weight, range is from 10 to 1000.
 	Weight int64 `json:"blkioWeight"`
@@ -99,6 +102,7 @@ type BlockIO struct {
 	ThrottleWriteIOpsDevice string `json:"blkioThrottleWriteIopsDevice"`
 }
 
+// Memory for Linux cgroup 'memory' resource management
 type Memory struct {
 	// Memory limit (in bytes)
 	Limit int64 `json:"limit"`
@@ -112,6 +116,7 @@ type Memory struct {
 	Swappiness int64 `json:"swappiness"`
 }
 
+// CPU for Linux cgroup 'cpu' resource management
 type CPU struct {
 	// CPU shares (relative weight vs. other cgroups with cpu shares).
 	Shares int64 `json:"shares"`
@@ -129,6 +134,7 @@ type CPU struct {
 	Mems string `json:"mems"`
 }
 
+// Network identification and priority configuration
 type Network struct {
 	// Set class identifier for container's network packets.
 	ClassID string `json:"classId"`
@@ -136,6 +142,7 @@ type Network struct {
 	Priorities []InterfacePriority `json:"priorities"`
 }
 
+// Resources has container runtime resource constraints
 type Resources struct {
 	// DisableOOMKiller disables the OOM killer for out of memory conditions.
 	DisableOOMKiller bool `json:"disableOOMKiller"`
