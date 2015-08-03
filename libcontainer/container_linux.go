@@ -118,6 +118,13 @@ func (c *linuxContainer) Start(process *Process) error {
 	return nil
 }
 
+func (c *linuxContainer) Signal(s os.Signal) error {
+	if err := c.initProcess.signal(s); err != nil {
+		return newSystemError(err)
+	}
+	return nil
+}
+
 func (c *linuxContainer) newParentProcess(p *Process, doInit bool) (parentProcess, error) {
 	parentPipe, childPipe, err := newPipe()
 	if err != nil {
