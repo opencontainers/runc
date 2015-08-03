@@ -406,7 +406,15 @@ func prepareRoot(config *configs.Config) error {
 	if err := syscall.Mount("", "/", "", uintptr(flag), ""); err != nil {
 		return err
 	}
-	return syscall.Mount(config.Rootfs, config.Rootfs, "bind", syscall.MS_BIND|syscall.MS_REC, "")
+	if err := syscall.Mount(config.Rootfs, config.Rootfs, "bind", syscall.MS_BIND|syscall.MS_REC, ""); err != nil {
+		return err
+	}
+	if config.RootfsMountMode == configs.SHARED {
+		if err := syscall.Mount("", config.Rootfs, "none", uintptr(syscall.MS_PRIVATE), ""); err != nil {
+			return fmt.Errorf("failed to mount rootfs %s: %v", config.Rootfs, err)
+		}
+	}
+	return nil
 }
 
 func setReadonly() error {

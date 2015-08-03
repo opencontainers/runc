@@ -238,29 +238,6 @@ func (c *linuxContainer) Destroy() error {
 	if rerr := os.RemoveAll(c.root); err == nil {
 		err = rerr
 	}
-	// if rootfs propagation is shared, cleanup mountpoints
-	rootfs := c.config.Rootfs
-	if c.config.RootfsMountMode == configs.SHARED {
-		// umount /dev/console
-		dest := filepath.Join(rootfs, "/dev/console")
-		syscall.Unmount(dest, 0)
-		// umount rest of the mountpoints
-		unmounted := 1
-		for unmounted != 0 { // if no more unmount, exit
-			unmounted = 0
-			for _, m := range c.config.Mounts {
-				dest = m.Destination
-				if !strings.HasPrefix(dest, rootfs) {
-					dest = filepath.Join(rootfs, dest)
-				}
-				if err := syscall.Unmount(dest, 0); err == nil {
-					unmounted++
-				}
-			}
-		}
-		syscall.Unmount(rootfs, 0)
-	}
-
 	c.initProcess = nil
 	return err
 }
