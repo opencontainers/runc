@@ -16,6 +16,7 @@ var (
 	eventsCommand     cli.Command
 	restoreCommand    cli.Command
 	specCommand       cli.Command
+	killCommand       cli.Command
 )
 
 func runAction(*cli.Context) {
