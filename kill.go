@@ -4,50 +4,77 @@ package main
 
 import (
 	"fmt"
-	"github.com/codegangsta/cli"
 	"strconv"
 	"strings"
 	"syscall"
+
+	"github.com/codegangsta/cli"
 )
+
+var signalMap = map[string]syscall.Signal{
+	"ABRT":   syscall.SIGABRT,
+	"ALRM":   syscall.SIGALRM,
+	"BUS":    syscall.SIGBUS,
+	"CHLD":   syscall.SIGCHLD,
+	"CLD":    syscall.SIGCLD,
+	"CONT":   syscall.SIGCONT,
+	"FPE":    syscall.SIGFPE,
+	"HUP":    syscall.SIGHUP,
+	"ILL":    syscall.SIGILL,
+	"INT":    syscall.SIGINT,
+	"IO":     syscall.SIGIO,
+	"IOT":    syscall.SIGIOT,
+	"KILL":   syscall.SIGKILL,
+	"PIPE":   syscall.SIGPIPE,
+	"POLL":   syscall.SIGPOLL,
+	"PROF":   syscall.SIGPROF,
+	"PWR":    syscall.SIGPWR,
+	"QUIT":   syscall.SIGQUIT,
+	"SEGV":   syscall.SIGSEGV,
+	"STKFLT": syscall.SIGSTKFLT,
+	"STOP":   syscall.SIGSTOP,
+	"SYS":    syscall.SIGSYS,
+	"TERM":   syscall.SIGTERM,
+	"TRAP":   syscall.SIGTRAP,
+	"TSTP":   syscall.SIGTSTP,
+	"TTIN":   syscall.SIGTTIN,
+	"TTOU":   syscall.SIGTTOU,
+	"UNUSED": syscall.SIGUNUSED,
+	"URG":    syscall.SIGURG,
+	"USR1":   syscall.SIGUSR1,
+	"USR2":   syscall.SIGUSR2,
+	"VTALRM": syscall.SIGVTALRM,
+	"WINCH":  syscall.SIGWINCH,
+	"XCPU":   syscall.SIGXCPU,
+	"XFSZ":   syscall.SIGXFSZ,
+}
 
 var killCommand = cli.Command{
 	Name:  "kill",
-	Usage: "kill a container",
+	Usage: "kill sends the specified signal to the container's init process",
 	Action: func(context *cli.Context) {
 		container, err := getContainer(context)
 		if err != nil {
-			fatal(fmt.Errorf("%s", err))
+			fatal(err)
 		}
-		sigStr := context.Args().First()
-		state, err := container.Status()
+		signal, err := parseSignal(context.Args().First())
 		if err != nil {
-			fatal(fmt.Errorf("Container not running %d", state))
-			// return here
+			fatal(err)
 		}
-		var sig uint64
-		sigN, err := strconv.ParseUint(sigStr, 10, 5)
-		if err != nil {
-			//The signal is not a number, treat it as a string (either like
-			//KILL" or like "SIGKILL")
-			syscallSig, ok := SignalMap[strings.TrimPrefix(sigStr, "SIG")]
-			if !ok {
-				fatal(fmt.Errorf("Invalid Signal: %s", sigStr))
-			}
-			sig = uint64(syscallSig)
-			errVal := container.Signal(syscall.Signal(sig))
-			if errVal != nil {
-				fatal(fmt.Errorf("%s", errVal))
-			}
-		} else {
-			sig = sigN
-			errVar := container.Signal(syscall.Signal(sig))
-			if errVar != nil {
-				fatal(fmt.Errorf("%s", errVar))
-			}
-
-		}
-		if sig == 0 {
-			fatal(fmt.Errorf("Invalid signal: %s", sigStr))
+		if err := container.Signal(signal); err != nil {
+			fatal(err)
 		}
 	},
+}
+
+func parseSignal(rawSignal string) (syscall.Signal, error) {
+	s, err := strconv.Atoi(rawSignal)
+	if err == nil {
+		return syscall.Signal(s), nil
+	}
+	signal, ok := signalMap[strings.TrimPrefix(strings.ToUpper(rawSignal), "SIG")]
+	if !ok {
+		return -1, fmt.Errorf("unknown signal %q", rawSignal)
+	}
+	return signal, nil
 }
