@@ -94,7 +94,7 @@ var specCommand = cli.Command{
 			Linux: specs.Linux{
 				Namespaces: []specs.Namespace{
 					{
-						Type: "process",
+						Type: "pid",
 					},
 					{
 						Type: "network",
@@ -138,7 +138,7 @@ var specCommand = cli.Command{
 }
 
 var namespaceMapping = map[string]configs.NamespaceType{
-	"process": configs.NEWPID,
+	"pid":     configs.NEWPID,
 	"network": configs.NEWNET,
 	"mount":   configs.NEWNS,
 	"user":    configs.NEWUSER,
