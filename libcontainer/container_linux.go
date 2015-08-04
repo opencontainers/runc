@@ -299,7 +299,7 @@ func (c *linuxContainer) checkCriuVersion() error {
 	return nil
 }
 
-const descriptors_filename = "descriptors.json"
+const descriptorsFilename = "descriptors.json"
 
 func (c *linuxContainer) addCriuDumpMount(req *criurpc.CriuReq, m *configs.Mount) {
 	mountDest := m.Destination
@@ -406,7 +406,7 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 		return err
 	}
 
-	err = ioutil.WriteFile(filepath.Join(criuOpts.ImagesDirectory, descriptors_filename), fdsJSON, 0655)
+	err = ioutil.WriteFile(filepath.Join(criuOpts.ImagesDirectory, descriptorsFilename), fdsJSON, 0655)
 	if err != nil {
 		return err
 	}
@@ -538,7 +538,7 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 		fdJSON []byte
 	)
 
-	if fdJSON, err = ioutil.ReadFile(filepath.Join(criuOpts.ImagesDirectory, descriptors_filename)); err != nil {
+	if fdJSON, err = ioutil.ReadFile(filepath.Join(criuOpts.ImagesDirectory, descriptorsFilename)); err != nil {
 		return err
 	}
 
