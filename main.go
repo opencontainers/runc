@@ -49,6 +49,10 @@ func main() {
 			Usage: "enable debug output for logging",
 		},
 		cli.StringFlag{
+			Name:  "log",
+			Usage: "set the log file path where internal debug information is written",
+		},
+		cli.StringFlag{
 			Name:  "root",
 			Value: "/run/oci",
 			Usage: "root directory for storage of container state (this should be located in tmpfs)",
@@ -74,12 +78,17 @@ func main() {
 		if context.GlobalBool("debug") {
 			logrus.SetLevel(logrus.DebugLevel)
 		}
+		if path := context.GlobalString("log"); path != "" {
+			f, err := os.Create(path)
+			if err != nil {
+				return err
+			}
+			logrus.SetOutput(f)
+		}
 		return nil
 	}
-
 	// Default to 'start' is no command is specified
 	app.Action = startCommand.Action
-
 	if err := app.Run(os.Args); err != nil {
 		logrus.Fatal(err)
 	}
