@@ -137,6 +137,11 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 			return err
 		}
 		return syscall.Mount(m.Source, dest, m.Device, uintptr(m.Flags), data)
+	case "securityfs":
+		if err := os.MkdirAll(dest, 0755); err != nil {
+			return err
+		}
+		return syscall.Mount(m.Source, dest, m.Device, uintptr(m.Flags), data)
 	case "bind":
 		stat, err := os.Stat(m.Source)
 		if err != nil {
