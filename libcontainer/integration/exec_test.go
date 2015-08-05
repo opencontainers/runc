@@ -932,3 +932,47 @@ func TestOomScoreAdj(t *testing.T) {
 		t.Fatalf("Expected oom_score_adj %d; got %q", config.OomScoreAdj, outputOomScoreAdj)
 	}
 }
+
+func TestPrestartHook(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+	root, err := newTestRoot()
+	ok(t, err)
+	defer os.RemoveAll(root)
+
+	rootfs, err := newRootfs()
+	ok(t, err)
+	defer remove(rootfs)
+
+	config := newTemplateConfig(rootfs)
+	pwd, _ := os.Getwd()
+
+	hookPath := filepath.Join(pwd, "../../script", "hook.py")
+	prestartCmd := configs.Command{Path: hookPath}
+	config.Prestart = append(config.Prestart, prestartCmd)
+
+	container, err := factory.Create("test", config)
+	ok(t, err)
+	defer container.Destroy()
+
+	var stdout bytes.Buffer
+	pconfig := libcontainer.Process{
+		Args:   []string{"sh", "-c", "ls /tmp.txt"},
+		Env:    standardEnvironment,
+		Stdin:  nil,
+		Stdout: &stdout,
+	}
+	err = container.Start(&pconfig)
+	ok(t, err)
+
+	// Wait for process
+	waitProcess(&pconfig, t)
+
+	outputLs := string(stdout.Bytes())
+
+	// Check that the ls output has the expected file touched by the prestart hook
+	if !strings.Contains(outputLs, "/tmp.txt") {
+		t.Fatal("ls output doesn't have the expected file: ", outputLs)
+	}
+}
