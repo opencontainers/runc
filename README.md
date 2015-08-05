@@ -158,7 +158,7 @@ user named `daemon` defined within that file-system.
         },
         "namespaces": [
             {
-                "type": "process",
+                "type": "pid",
                 "path": ""
             },
             {
