@@ -55,20 +55,82 @@ within the container.
 
 ### Access to devices
 
-Devices is an array specifying the list of devices from the host to make available in the container.
-By providing a device name within the list the runtime should look up the same device on the host's `/dev`
-and collect information about the device node so that it can be recreated for the container.  The runtime
-should not only create the device inside the container but ensure that the root user inside 
-the container has access rights for the device.
+Devices is an array specifying the list of devices to be created in the container.
+Next parameters can be specified:
+
+* type - type of device: 'c', 'b', 'u' or 'p'. More info in `man mknod`
+* path - full path to device inside container
+* major, minor - major, minor numbers for device. More info in `man mknod`.
+                 There is special value: `-1`, which means `*` for `device`
+                 cgroup setup.
+* permissions - cgroup permissions for device. A composition of 'r'
+                (read), 'w' (write), and 'm' (mknod).
+* fileMode - file mode for device file
+* uid - uid of device owner
+* gid - gid of device owner
 
 ```json
    "devices": [
-        "null",
-        "random",
-        "full",
-        "tty",
-        "zero",
-        "urandom"
+        {
+            "path": "/dev/random",
+            "type": "c",
+            "major": 1,
+            "minor": 8,
+            "permissions": "rwm",
+            "fileMode": 0666,
+            "uid": 0,
+            "gid": 0
+        },
+        {
+            "path": "/dev/urandom",
+            "type": "c",
+            "major": 1,
+            "minor": 9,
+            "permissions": "rwm",
+            "fileMode": 0666,
+            "uid": 0,
+            "gid": 0
+        },
+        {
+            "path": "/dev/null",
+            "type": "c",
+            "major": 1,
+            "minor": 3,
+            "permissions": "rwm",
+            "fileMode": 0666,
+            "uid": 0,
+            "gid": 0
+        },
+        {
+            "path": "/dev/zero",
+            "type": "c",
+            "major": 1,
+            "minor": 5,
+            "permissions": "rwm",
+            "fileMode": 0666,
+            "uid": 0,
+            "gid": 0
+        },
+        {
+            "path": "/dev/tty",
+            "type": "c",
+            "major": 5,
+            "minor": 0,
+            "permissions": "rwm",
+            "fileMode": 0666,
+            "uid": 0,
+            "gid": 0
+        },
+        {
+            "path": "/dev/full",
+            "type": "c",
+            "major": 1,
+            "minor": 7,
+            "permissions": "rwm",
+            "fileMode": 0666,
+            "uid": 0,
+            "gid": 0
+        }
     ]
 ```
 
