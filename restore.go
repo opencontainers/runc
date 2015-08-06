@@ -45,6 +45,11 @@ var restoreCommand = cli.Command{
 			Usage: "handle file locks, for safety",
 		},
 		cli.StringFlag{
+			Name:  "manage-cgroups-mode",
+			Value: "",
+			Usage: "cgroups mode: 'soft' (default), 'full' and 'strict'.",
+		},
+		cli.StringFlag{
 			Name:  "config-file, c",
 			Value: "config.json",
 			Usage: "path to spec file for writing",
@@ -90,6 +95,7 @@ func restoreContainer(context *cli.Context, spec *specs.LinuxSpec, config *confi
 		}
 	}
 	options := criuOptions(context)
+
 	status, err := container.Status()
 	if err != nil {
 		logrus.Error(err)
@@ -97,6 +103,9 @@ func restoreContainer(context *cli.Context, spec *specs.LinuxSpec, config *confi
 	if status == libcontainer.Running {
 		fatal(fmt.Errorf("Container with id %s already running", context.GlobalString("id")))
 	}
+
+	setManageCgroupsMode(context, options)
+
 	// ensure that the container is always removed if we were the process
 	// that created it.
 	defer func() {
