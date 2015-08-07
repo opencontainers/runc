@@ -143,7 +143,7 @@ the container. For more information, see the [kernel cgroups documentation](http
 ## Linux capabilities
 
 Capabilities is an array that specifies Linux capabilities that can be provided to the process
-inside the container. Valid values are the string after `CAP_` for capabilities defined 
+inside the container. Valid values are the string after `CAP_` for capabilities defined
 in [the man page](http://man7.org/linux/man-pages/man7/capabilities.7.html)
 
 ```json
@@ -208,7 +208,39 @@ rootfsPropagation sets the rootfs's mount propagation. Its value is either slave
     "rootfsPropagation": "slave",
 ```
 
-## Security
+## Selinux process label
 
-**TODO:** security profiles
+Selinux process label specifies the label with which the processes in a container are run.
+For more information about SELinux, see  [Selinux documentation](http://selinuxproject.org/page/Main_Page)
+```json
+   "selinuxProcessLabel": "system_u:system_r:svirt_lxc_net_t:s0:c124,c675"
+```
 
+## Apparmor profile
+
+Apparmor profile specifies the name of the apparmor profile that will be used for the container.
+For more information about Apparmor, see [Apparmor documentation](https://wiki.ubuntu.com/AppArmor)
+
+```json
+   "apparmorProfile": "acme_secure_profile"
+```
+
+## Seccomp
+
+Seccomp provides application sandboxing mechanism in the Linux kernel.
+Seccomp configuration allows one to configure actions to take for matched syscalls and furthermore also allows
+matching on values passed as arguments to syscalls.
+For more information about Seccomp, see [Seccomp kernel documentation](https://www.kernel.org/doc/Documentation/prctl/seccomp_filter.txt)
+The actions and operators are strings that match the definitions in seccomp.h from [libseccomp](https://github.com/seccomp/libseccomp) and are translated to corresponding values.
+
+```json
+   "seccomp": {
+       "defaultAction": "SCMP_ACT_ALLOW",
+       "syscalls": [
+           {
+               "name": "getcwd",
+               "action": "SCMP_ACT_ERRNO"
+           }
+       ]
+   }
+```

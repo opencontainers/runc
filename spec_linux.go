@@ -30,6 +30,12 @@ type Linux struct {
 	Capabilities []string `json:"capabilities"`
 	// Devices are a list of device nodes that are created and enabled for the container
 	Devices []Device `json:"devices"`
+	// ApparmorProfile specified the apparmor profile for the container.
+	ApparmorProfile string `json:"apparmorProfile"`
+	// SelinuxProcessLabel specifies the selinux context that the container process is run as.
+	SelinuxProcessLabel string `json:"selinuxProcessLabel"`
+	// Seccomp specifies the seccomp security settings for the container.
+	Seccomp Seccomp `json:"seccomp"`
 	// RootfsPropagation is the rootfs mount propagation mode for the container
 	RootfsPropagation string `json:"rootfsPropagation"`
 }
@@ -177,4 +183,31 @@ type Device struct {
 	UID uint32 `json:"uid"`
 	// Gid of the device.
 	GID uint32 `json:"gid"`
+}
+
+// Seccomp represents syscall restrictions
+type Seccomp struct {
+	DefaultAction Action     `json:"defaultAction"`
+	Syscalls      []*Syscall `json:"syscalls"`
+}
+
+// Action taken upon Seccomp rule match
+type Action string
+
+// Operator used to match syscall arguments in Seccomp
+type Operator string
+
+// Arg used for matching specific syscall arguments in Seccomp
+type Arg struct {
+	Index    uint     `json:"index"`
+	Value    uint64   `json:"value"`
+	ValueTwo uint64   `json:"valueTwo"`
+	Op       Operator `json:"op"`
+}
+
+// Syscall is used to match a syscall in Seccomp
+type Syscall struct {
+	Name   string `json:"name"`
+	Action Action `json:"action"`
+	Args   []*Arg `json:"args"`
 }
