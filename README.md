@@ -64,8 +64,9 @@ the `LICENSE` file of this repository.
 ## Weekly Call
 
 The contributors and maintainers of the project have a weekly meeting Wednesdays at 10:00 AM PST.
-Everyone is welcome to participate in the call.  The link to the call will be posted on the mailing
-list each week along with set topics for discussion.
+Everyone is welcome to participate in the call.
+The link to the call will be posted on the mailing list each week along with set topics for discussion.
+Everyone is welcome to propose additional topics or suggest other agenda alterations via the mailing list.
 Minutes for the call will be posted to the mailing list for those who are unable to join the call.
 
 ## Markdown style
