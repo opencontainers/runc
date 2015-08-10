@@ -32,7 +32,7 @@ var restoreCommand = cli.Command{
 		if err != nil {
 			fatal(err)
 		}
-		config, err := createLibcontainerConfig(spec)
+		config, err := createLibcontainerConfig(context.GlobalString("id"), spec)
 		if err != nil {
 			fatal(err)
 		}
