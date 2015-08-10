@@ -9,20 +9,24 @@ import (
 
 const (
 	version = "0.2"
-	usage   = `Open Container Project runtime
+	usage   = `Open Container Initiative runtime
 
-runc is a command line client for running applications packaged according to the Open Container Format (OCF) and is
-a compliant implementation of the Open Container Project specification.
+runc is a command line client for running applications packaged according to
+the Open Container Format (OCF) and is a compliant implementation of the
+Open Container Initiative specification.
 
-runc integrates well with existing process supervisors to provide a production container runtime environment for
-applications. It can be used with your existing process monitoring tools and the container will be spawned as a direct
-child of the process supervisor.
+runc integrates well with existing process supervisors to provide a production
+container runtime environment for applications. It can be used with your
+existing process monitoring tools and the container will be spawned as a
+direct child of the process supervisor.
 
-After creating a spec for your root filesystem with runc, you can execute a simple container in your shell by running:
+After creating a spec for your root filesystem with runc, you can execute a
+container in your shell by running:
 
     cd /mycontainer
-    runc
-`
+    runc  [ spec-file ]
+
+If not specified, the default value for the 'spec-file' is 'config.json'. `
 )
 
 func main() {

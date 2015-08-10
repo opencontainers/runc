@@ -45,7 +45,7 @@ PID   USER     COMMAND
 
 Below is a sample `config.json` configuration file. It assumes that
 the file-system is found in a directory called `rootfs` and there is a
-user named `daemon` defined within that file-system.
+user with uid and gid of `0` defined within that file-system.
 
 ```json
 {
