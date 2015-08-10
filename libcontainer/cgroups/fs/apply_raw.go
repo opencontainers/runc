@@ -240,7 +240,7 @@ func (raw *data) parent(subsystem, mountpoint, src string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	relDir, err := filepath.Rel(src, initPath)
+	relDir, err := filepath.Rel(initPath, src)
 	if err != nil {
 		return "", err
 	}
