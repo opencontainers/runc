@@ -176,7 +176,7 @@ func checkSpecVersion(s *specs.LinuxSpec) error {
 	return nil
 }
 
-func createLibcontainerConfig(spec *specs.LinuxSpec) (*configs.Config, error) {
+func createLibcontainerConfig(cgroupName string, spec *specs.LinuxSpec) (*configs.Config, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return nil, err
@@ -215,7 +215,7 @@ func createLibcontainerConfig(spec *specs.LinuxSpec) (*configs.Config, error) {
 	if err := setupUserNamespace(spec, config); err != nil {
 		return nil, err
 	}
-	c, err := createCgroupConfig(spec, config.Devices)
+	c, err := createCgroupConfig(cgroupName, spec, config.Devices)
 	if err != nil {
 		return nil, err
 	}
@@ -250,13 +250,13 @@ func createLibcontainerMount(cwd string, m specs.Mount) *configs.Mount {
 	}
 }
 
-func createCgroupConfig(spec *specs.LinuxSpec, devices []*configs.Device) (*configs.Cgroup, error) {
+func createCgroupConfig(name string, spec *specs.LinuxSpec, devices []*configs.Device) (*configs.Cgroup, error) {
 	myCgroupPath, err := cgroups.GetThisCgroupDir("devices")
 	if err != nil {
 		return nil, err
 	}
 	c := &configs.Cgroup{
-		Name:           getDefaultID(),
+		Name:           name,
 		Parent:         myCgroupPath,
 		AllowedDevices: append(devices, allowedDevices...),
 	}

@@ -26,7 +26,7 @@ func init() {
 }
 
 func execContainer(context *cli.Context, spec *specs.LinuxSpec) (int, error) {
-	config, err := createLibcontainerConfig(spec)
+	config, err := createLibcontainerConfig(context.GlobalString("id"), spec)
 	if err != nil {
 		return -1, err
 	}
