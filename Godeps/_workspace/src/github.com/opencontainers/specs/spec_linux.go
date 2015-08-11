@@ -2,6 +2,8 @@
 
 package specs
 
+import "os"
+
 // LinuxSpec is the full specification for Linux containers
 type LinuxSpec struct {
 	Spec
@@ -27,7 +29,13 @@ type Linux struct {
 	// Capabilities are Linux capabilities that are kept for the container
 	Capabilities []string `json:"capabilities"`
 	// Devices are a list of device nodes that are created and enabled for the container
-	Devices []string `json:"devices"`
+	Devices []Device `json:"devices"`
+	// ApparmorProfile specified the apparmor profile for the container.
+	ApparmorProfile string `json:"apparmorProfile"`
+	// SelinuxProcessLabel specifies the selinux context that the container process is run as.
+	SelinuxProcessLabel string `json:"selinuxProcessLabel"`
+	// Seccomp specifies the seccomp security settings for the container.
+	Seccomp Seccomp `json:"seccomp"`
 	// RootfsPropagation is the rootfs mount propagation mode for the container
 	RootfsPropagation string `json:"rootfsPropagation"`
 }
@@ -156,4 +164,50 @@ type Resources struct {
 	HugepageLimits []HugepageLimit `json:"hugepageLimits"`
 	// Network restriction configuration
 	Network Network `json:"network"`
+}
+
+type Device struct {
+	// Device type, block, char, etc.
+	Type rune `json:"type"`
+	// Path to the device.
+	Path string `json:"path"`
+	// Major is the device's major number.
+	Major int64 `json:"major"`
+	// Minor is the device's minor number.
+	Minor int64 `json:"minor"`
+	// Cgroup permissions format, rwm.
+	Permissions string `json:"permissions"`
+	// FileMode permission bits for the device.
+	FileMode os.FileMode `json:"fileMode"`
+	// UID of the device.
+	UID uint32 `json:"uid"`
+	// Gid of the device.
+	GID uint32 `json:"gid"`
+}
+
+// Seccomp represents syscall restrictions
+type Seccomp struct {
+	DefaultAction Action     `json:"defaultAction"`
+	Syscalls      []*Syscall `json:"syscalls"`
+}
+
+// Action taken upon Seccomp rule match
+type Action string
+
+// Operator used to match syscall arguments in Seccomp
+type Operator string
+
+// Arg used for matching specific syscall arguments in Seccomp
+type Arg struct {
+	Index    uint     `json:"index"`
+	Value    uint64   `json:"value"`
+	ValueTwo uint64   `json:"valueTwo"`
+	Op       Operator `json:"op"`
+}
+
+// Syscall is used to match a syscall in Seccomp
+type Syscall struct {
+	Name   string `json:"name"`
+	Action Action `json:"action"`
+	Args   []*Arg `json:"args"`
 }
