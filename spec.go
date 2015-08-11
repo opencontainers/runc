@@ -15,7 +15,6 @@ import (
 	"github.com/codegangsta/cli"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/opencontainers/runc/libcontainer/devices"
 	"github.com/opencontainers/specs"
 )
 
@@ -114,13 +113,67 @@ var specCommand = cli.Command{
 					"KILL",
 					"NET_BIND_SERVICE",
 				},
-				Devices: []string{
-					"null",
-					"random",
-					"full",
-					"tty",
-					"zero",
-					"urandom",
+				Devices: []specs.Device{
+					{
+						Type:        'c',
+						Path:        "/dev/null",
+						Major:       1,
+						Minor:       3,
+						Permissions: "rwm",
+						FileMode:    0666,
+						UID:         0,
+						GID:         0,
+					},
+					{
+						Type:        'c',
+						Path:        "/dev/random",
+						Major:       1,
+						Minor:       8,
+						Permissions: "rwm",
+						FileMode:    0666,
+						UID:         0,
+						GID:         0,
+					},
+					{
+						Type:        'c',
+						Path:        "/dev/full",
+						Major:       1,
+						Minor:       7,
+						Permissions: "rwm",
+						FileMode:    0666,
+						UID:         0,
+						GID:         0,
+					},
+					{
+						Type:        'c',
+						Path:        "/dev/tty",
+						Major:       5,
+						Minor:       0,
+						Permissions: "rwm",
+						FileMode:    0666,
+						UID:         0,
+						GID:         0,
+					},
+					{
+						Type:        'c',
+						Path:        "/dev/zero",
+						Major:       1,
+						Minor:       5,
+						Permissions: "rwm",
+						FileMode:    0666,
+						UID:         0,
+						GID:         0,
+					},
+					{
+						Type:        'c',
+						Path:        "/dev/urandom",
+						Major:       1,
+						Minor:       9,
+						Permissions: "rwm",
+						FileMode:    0666,
+						UID:         0,
+						GID:         0,
+					},
 				},
 				Resources: specs.Resources{
 					Memory: specs.Memory{
@@ -297,12 +350,18 @@ func createCgroupConfig(name string, spec *specs.LinuxSpec, devices []*configs.D
 }
 
 func createDevices(spec *specs.LinuxSpec, config *configs.Config) error {
-	for _, name := range spec.Linux.Devices {
-		d, err := devices.DeviceFromPath(filepath.Join("/dev", name), "rwm")
-		if err != nil {
-			return err
+	for _, d := range spec.Linux.Devices {
+		device := &configs.Device{
+			Type:        d.Type,
+			Path:        d.Path,
+			Major:       d.Major,
+			Minor:       d.Minor,
+			Permissions: d.Permissions,
+			FileMode:    d.FileMode,
+			Uid:         d.UID,
+			Gid:         d.GID,
 		}
-		config.Devices = append(config.Devices, d)
+		config.Devices = append(config.Devices, device)
 	}
 	return nil
 }
