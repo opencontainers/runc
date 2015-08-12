@@ -54,12 +54,21 @@ With Standard Containers we can put an end to that embarrassment, by making INDU
 
 # Contributing
 
-Development happens on github for the spec.  Issues are used for bugs and actionable items and longer
-discussions can happen on the mailing list.  You can subscribe and join the mailing list on
-[google groups](https://groups.google.com/a/opencontainers.org/forum/#!forum/dev).
+Development happens on GitHub for the spec.
+Issues are used for bugs and actionable items and longer discussions can happen on the [mailing list](#mailing-list).
 
-The specification and code is licensed under the Apache 2.0 license found in 
-the `LICENSE` file of this repository.  
+The specification and code is licensed under the Apache 2.0 license found in the `LICENSE` file of this repository.  
+
+## Discuss your design
+
+The project welcomes submissions, but please let everyone know what you are working on.
+
+Before undertaking a nontrivial change to this specification, send mail to the [mailing list](#mailing-list) to discuss what you plan to do.
+This gives everyone a chance to validate the design, helps prevent duplication of effort, and ensures that the idea fits.
+It also guarantees that the design is sound before code is written; a GitHub pull-request is not the place for high-level discussions.
+
+Typos and grammatical errors can go straight to a pull-request.
+When in doubt, start on the [mailing-list](#mailing-list).
 
 ## Weekly Call
 
@@ -67,8 +76,12 @@ The contributors and maintainers of the project have a weekly meeting Wednesdays
 The link to the call will be posted on the mailing list each week along with set topics for discussion.
 Everyone is welcome to participate in the call, although there can only be speaking members on the Google Hangout.
 Participants who don't get a speaking slot can watch the live broadcast on [this YouTube channel][youtube] and post feedback and questions on [the IRC channel](#irc).
-Everyone is welcome to propose additional topics, suggest other agenda alterations, or request a speaking slot via the mailing list.
-Minutes for the call will be posted to the mailing list for those who are unable to join the call.
+Everyone is welcome to propose additional topics, suggest other agenda alterations, or request a speaking slot via the [mailing list](#mailing-list).
+Minutes for the call will be posted to the [mailing list](#mailing-list) for those who are unable to join the call.
+
+## Mailing List
+
+You can subscribe and join the mailing list on [Google Groups](https://groups.google.com/a/opencontainers.org/forum/#!forum/dev).
 
 ## IRC
 
