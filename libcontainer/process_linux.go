@@ -138,11 +138,9 @@ func (p *setnsProcess) terminate() error {
 
 func (p *setnsProcess) wait() (*os.ProcessState, error) {
 	err := p.cmd.Wait()
-	if err != nil {
-		return p.cmd.ProcessState, err
-	}
 
-	return p.cmd.ProcessState, nil
+	// Return actual ProcessState even on Wait error
+	return p.cmd.ProcessState, err
 }
 
 func (p *setnsProcess) pid() int {
