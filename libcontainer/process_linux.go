@@ -284,9 +284,7 @@ func (p *initProcess) setExternalDescriptors(newFds []string) {
 }
 
 func getPipeFds(pid int) ([]string, error) {
-	var fds []string
-
-	fds = make([]string, 3)
+	fds := make([]string, 3)
 
 	dirPath := filepath.Join("/proc", strconv.Itoa(pid), "/fd")
 	for i := 0; i < 3; i++ {
