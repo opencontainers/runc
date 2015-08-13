@@ -9,6 +9,7 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/configs"
+	libseccomp "github.com/seccomp/libseccomp-golang"
 )
 
 func TestSeccompDenyGetcwd(t *testing.T) {
@@ -133,6 +134,13 @@ func TestSeccompPermitWriteConditional(t *testing.T) {
 
 func TestSeccompDenyWriteConditional(t *testing.T) {
 	if testing.Short() {
+		return
+	}
+
+	// Only test if library version is v2.2.1 or higher
+	// Conditional filtering will always error in v2.2.0 and lower
+	major, minor, micro := libseccomp.GetLibraryVersion()
+	if (major == 2 && minor < 2) || (major == 2 && minor == 2 && micro < 1) {
 		return
 	}
 
