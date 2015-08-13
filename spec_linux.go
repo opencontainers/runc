@@ -167,10 +167,10 @@ type Resources struct {
 }
 
 type Device struct {
-	// Device type, block, char, etc.
-	Type rune `json:"type"`
 	// Path to the device.
 	Path string `json:"path"`
+	// Device type, block, char, etc.
+	Type rune `json:"type"`
 	// Major is the device's major number.
 	Major int64 `json:"major"`
 	// Minor is the device's minor number.
