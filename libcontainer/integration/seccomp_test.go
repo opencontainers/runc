@@ -1,4 +1,4 @@
-// +build seccomp,linux,cgo
+// +build linux,cgo
 
 package integration
 
