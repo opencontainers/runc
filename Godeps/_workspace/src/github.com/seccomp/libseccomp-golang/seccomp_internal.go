@@ -20,12 +20,42 @@ import (
 #include <stdlib.h>
 #include <seccomp.h>
 
-#if SCMP_VER_MAJOR < 1
-#error Minimum supported version of Libseccomp is v2.2.1
-#elif SCMP_VER_MAJOR == 2 && SCMP_VER_MINOR < 2
-#error Minimum supported version of Libseccomp is v2.2.1
-#elif SCMP_VER_MAJOR == 2 && SCMP_VER_MINOR == 2 && SCMP_VER_MICRO < 1
-#error Minimum supported version of Libseccomp is v2.2.1
+#if SCMP_VER_MAJOR < 2
+#error Minimum supported version of Libseccomp is v2.1.0
+#elif SCMP_VER_MAJOR == 2 && SCMP_VER_MINOR < 1
+#error Minimum supported version of Libseccomp is v2.1.0
+#endif
+
+#define ARCH_BAD ~0
+
+const uint32_t C_ARCH_BAD = ARCH_BAD;
+
+#ifndef SCMP_ARCH_AARCH64
+#define SCMP_ARCH_AARCH64 ARCH_BAD
+#endif
+
+#ifndef SCMP_ARCH_MIPS
+#define SCMP_ARCH_MIPS ARCH_BAD
+#endif
+
+#ifndef SCMP_ARCH_MIPS64
+#define SCMP_ARCH_MIPS64 ARCH_BAD
+#endif
+
+#ifndef SCMP_ARCH_MIPS64N32
+#define SCMP_ARCH_MIPS64N32 ARCH_BAD
+#endif
+
+#ifndef SCMP_ARCH_MIPSEL
+#define SCMP_ARCH_MIPSEL ARCH_BAD
+#endif
+
+#ifndef SCMP_ARCH_MIPSEL64
+#define SCMP_ARCH_MIPSEL64 ARCH_BAD
+#endif
+
+#ifndef SCMP_ARCH_MIPSEL64N32
+#define SCMP_ARCH_MIPSEL64N32 ARCH_BAD
 #endif
 
 const uint32_t C_ARCH_NATIVE       = SCMP_ARCH_NATIVE;
@@ -46,6 +76,12 @@ const uint32_t C_ACT_TRAP          = SCMP_ACT_TRAP;
 const uint32_t C_ACT_ERRNO         = SCMP_ACT_ERRNO(0);
 const uint32_t C_ACT_TRACE         = SCMP_ACT_TRACE(0);
 const uint32_t C_ACT_ALLOW         = SCMP_ACT_ALLOW;
+
+// If TSync is not supported, make sure it doesn't map to a supported filter attribute
+// Don't worry about major version < 2, the minimum version checks should catch that case
+#if SCMP_VER_MAJOR == 2 && SCMP_VER_MINOR < 2
+#define SCMP_FLTATR_CTL_TSYNC _SCMP_CMP_MIN
+#endif
 
 const uint32_t C_ATTRIBUTE_DEFAULT = (uint32_t)SCMP_FLTATR_ACT_DEFAULT;
 const uint32_t C_ATTRIBUTE_BADARCH = (uint32_t)SCMP_FLTATR_ACT_BADARCH;
@@ -73,7 +109,7 @@ make_struct_arg_cmp(
                     int compare,
                     uint64_t a,
                     uint64_t b
-					)
+                   )
 {
 	struct scmp_arg_cmp *s = malloc(sizeof(struct scmp_arg_cmp));
 
@@ -113,29 +149,29 @@ const (
 	compareOpEnd   ScmpCompareOp = CompareMaskedEqual
 )
 
+var (
+	// Error thrown on bad filter context
+	errBadFilter = fmt.Errorf("filter is invalid or uninitialized")
+	// Constants representing library major, minor, and micro versions
+	verMajor = int(C.C_VERSION_MAJOR)
+	verMinor = int(C.C_VERSION_MINOR)
+	verMicro = int(C.C_VERSION_MICRO)
+)
+
 // Nonexported functions
 
-// Exit with error, as provided version of Libseccomp is too low
-func errorOnVersionTooLow() {
-	fmt.Fprintf(os.Stderr, "Libseccomp version too low: minimum supported is 2.2.1, detected %d.%d.%d", C.C_VERSION_MAJOR, C.C_VERSION_MINOR, C.C_VERSION_MICRO)
-	os.Exit(-1)
+// Check if library version is greater than or equal to the given one
+func checkVersionAbove(major, minor, micro int) bool {
+	return (verMajor > major) ||
+		(verMajor == major && verMinor > minor) ||
+		(verMajor == major && verMinor == minor && verMicro >= micro)
 }
 
 // Init function: Verify library version is appropriate
 func init() {
-	// No versions of the 1.x library are supported
-	if C.C_VERSION_MAJOR < 2 {
-		errorOnVersionTooLow()
-	}
-
-	// Versions 2.0 and 2.1 are not supported
-	if C.C_VERSION_MAJOR == 2 && C.C_VERSION_MINOR < 2 {
-		errorOnVersionTooLow()
-	}
-
-	// Version 2.2.0 is not supported - need at least 2.2.1
-	if C.C_VERSION_MAJOR == 2 && C.C_VERSION_MINOR == 2 && C.C_VERSION_MICRO < 1 {
-		errorOnVersionTooLow()
+	if !checkVersionAbove(2, 1, 0) {
+		fmt.Fprintf(os.Stderr, "Libseccomp version too low: minimum supported is 2.1.0, detected %d.%d.%d", C.C_VERSION_MAJOR, C.C_VERSION_MINOR, C.C_VERSION_MICRO)
+		os.Exit(-1)
 	}
 }
 
@@ -147,14 +183,16 @@ func filterFinalizer(f *ScmpFilter) {
 }
 
 // Get a raw filter attribute
-func (f *ScmpFilter) getFilterAttr(attr scmpFilterAttr, lock bool) (C.uint32_t, error) {
-	if lock {
-		f.lock.Lock()
-		defer f.lock.Unlock()
+func (f *ScmpFilter) getFilterAttr(attr scmpFilterAttr) (C.uint32_t, error) {
+	f.lock.Lock()
+	defer f.lock.Unlock()
 
-		if !f.valid {
-			return 0x0, fmt.Errorf("Filter is invalid or uninitialized")
-		}
+	if !f.valid {
+		return 0x0, errBadFilter
+	}
+
+	if !checkVersionAbove(2, 2, 0) && attr == filterAttrTsync {
+		return 0x0, fmt.Errorf("the thread synchronization attribute is not supported in this version of the library")
 	}
 
 	var attribute C.uint32_t
@@ -173,7 +211,11 @@ func (f *ScmpFilter) setFilterAttr(attr scmpFilterAttr, value C.uint32_t) error 
 	defer f.lock.Unlock()
 
 	if !f.valid {
-		return fmt.Errorf("Filter is invalid or uninitialized")
+		return errBadFilter
+	}
+
+	if !checkVersionAbove(2, 2, 0) && attr == filterAttrTsync {
+		return fmt.Errorf("the thread synchronization attribute is not supported in this version of the library")
 	}
 
 	retCode := C.seccomp_attr_set(f.filterCtx, attr.toNative(), value)
@@ -203,9 +245,9 @@ func (f *ScmpFilter) addRuleWrapper(call ScmpSyscall, action ScmpAction, exact b
 	}
 
 	if syscall.Errno(-1*retCode) == syscall.EFAULT {
-		return fmt.Errorf("Unrecognized syscall")
+		return fmt.Errorf("unrecognized syscall")
 	} else if syscall.Errno(-1*retCode) == syscall.EPERM {
-		return fmt.Errorf("Requested action matches default action of filter")
+		return fmt.Errorf("requested action matches default action of filter")
 	} else if retCode != 0 {
 		return syscall.Errno(-1 * retCode)
 	}
@@ -215,12 +257,11 @@ func (f *ScmpFilter) addRuleWrapper(call ScmpSyscall, action ScmpAction, exact b
 
 // Generic add function for filter rules
 func (f *ScmpFilter) addRuleGeneric(call ScmpSyscall, action ScmpAction, exact bool, conds []ScmpCondition) error {
-
 	f.lock.Lock()
 	defer f.lock.Unlock()
 
 	if !f.valid {
-		return fmt.Errorf("Filter is invalid or uninitialized")
+		return errBadFilter
 	}
 
 	if len(conds) == 0 {
@@ -228,6 +269,11 @@ func (f *ScmpFilter) addRuleGeneric(call ScmpSyscall, action ScmpAction, exact b
 			return err
 		}
 	} else {
+		// We don't support conditional filtering in library version v2.1
+		if !checkVersionAbove(2, 2, 1) {
+			return fmt.Errorf("conditional filtering requires libseccomp version >= 2.2.1")
+		}
+
 		for _, cond := range conds {
 			cmpStruct := C.make_struct_arg_cmp(C.uint(cond.Argument), cond.Op.toNative(), C.uint64_t(cond.Operand1), C.uint64_t(cond.Operand2))
 			defer C.free(cmpStruct)
@@ -246,7 +292,11 @@ func (f *ScmpFilter) addRuleGeneric(call ScmpSyscall, action ScmpAction, exact b
 // Helper - Sanitize Arch token input
 func sanitizeArch(in ScmpArch) error {
 	if in < archStart || in > archEnd {
-		return fmt.Errorf("Unrecognized architecture")
+		return fmt.Errorf("unrecognized architecture")
+	}
+
+	if in.toNative() == C.C_ARCH_BAD {
+		return fmt.Errorf("architecture is not supported on this version of the library")
 	}
 
 	return nil
@@ -255,12 +305,11 @@ func sanitizeArch(in ScmpArch) error {
 func sanitizeAction(in ScmpAction) error {
 	inTmp := in & 0x0000FFFF
 	if inTmp < actionStart || inTmp > actionEnd {
-		return fmt.Errorf("Unrecognized action")
+		return fmt.Errorf("unrecognized action")
 	}
 
 	if inTmp != ActTrace && inTmp != ActErrno && (in&0xFFFF0000) != 0 {
-		return fmt.Errorf("Highest 16 bits must be zeroed except for Trace " +
-			"and Errno")
+		return fmt.Errorf("highest 16 bits must be zeroed except for Trace and Errno")
 	}
 
 	return nil
@@ -268,7 +317,7 @@ func sanitizeAction(in ScmpAction) error {
 
 func sanitizeCompareOp(in ScmpCompareOp) error {
 	if in < compareOpStart || in > compareOpEnd {
-		return fmt.Errorf("Unrecognized comparison operator")
+		return fmt.Errorf("unrecognized comparison operator")
 	}
 
 	return nil
@@ -301,7 +350,7 @@ func archFromNative(a C.uint32_t) (ScmpArch, error) {
 	case C.C_ARCH_MIPSEL64N32:
 		return ArchMIPSEL64N32, nil
 	default:
-		return 0x0, fmt.Errorf("Unrecognized architecture")
+		return 0x0, fmt.Errorf("unrecognized architecture")
 	}
 }
 
@@ -373,7 +422,7 @@ func actionFromNative(a C.uint32_t) (ScmpAction, error) {
 	case C.C_ACT_ALLOW:
 		return ActAllow, nil
 	default:
-		return 0x0, fmt.Errorf("Unrecognized action")
+		return 0x0, fmt.Errorf("unrecognized action")
 	}
 }
 

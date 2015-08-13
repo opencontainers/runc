@@ -3,9 +3,9 @@
 // Public API specification for libseccomp Go bindings
 // Contains public API for the bindings
 
-// Provides bindings for libseccomp, a library wrapping the Linux seccomp
-// syscall. Seccomp enables an application to restrict system call use for
-// itself and its children.
+// Package seccomp rovides bindings for libseccomp, a library wrapping the Linux
+// seccomp syscall. Seccomp enables an application to restrict system call use
+// for itself and its children.
 package seccomp
 
 import (
@@ -27,17 +27,19 @@ import "C"
 
 // Exported types
 
-// Represents a CPU architecture.
-// Seccomp can restrict syscalls on a per-architecture basis.
+// ScmpArch represents a CPU architecture. Seccomp can restrict syscalls on a
+// per-architecture basis.
 type ScmpArch uint
 
-// Represents an action to be taken on a filter rule match in libseccomp
+// ScmpAction represents an action to be taken on a filter rule match in
+// libseccomp
 type ScmpAction uint
 
-// Represents a comparison operator which can be used in a filter rule
+// ScmpCompareOp represents a comparison operator which can be used in a filter
+// rule
 type ScmpCompareOp uint
 
-// Represents a rule in a libseccomp filter context
+// ScmpCondition represents a rule in a libseccomp filter context
 type ScmpCondition struct {
 	Argument uint          `json:"argument,omitempty"`
 	Op       ScmpCompareOp `json:"operator,omitempty"`
@@ -45,78 +47,99 @@ type ScmpCondition struct {
 	Operand2 uint64        `json:"operand_two,omitempty"`
 }
 
-// Represents a Linux System Call
+// ScmpSyscall represents a Linux System Call
 type ScmpSyscall int32
 
 // Exported Constants
 
 const (
 	// Valid architectures recognized by libseccomp
+	// ARM64 and all MIPS architectures are unsupported by versions of the
+	// library before v2.2 and will return errors if used
 
-	// Ensure uninitialized ScmpArch variables are invalid
+	// ArchInvalid is a placeholder to ensure uninitialized ScmpArch
+	// variables are invalid
 	ArchInvalid ScmpArch = iota
-	// The native architecture of the kernel
+	// ArchNative is the native architecture of the kernel
 	ArchNative ScmpArch = iota
-	// 32-bit x86 syscalls
+	// ArchX86 represents 32-bit x86 syscalls
 	ArchX86 ScmpArch = iota
-	// 64-bit x86-64 syscalls
+	// ArchAMD64 represents 64-bit x86-64 syscalls
 	ArchAMD64 ScmpArch = iota
-	// 64-bit x86-64 syscalls (32-bit pointers)
+	// ArchX32 represents 64-bit x86-64 syscalls (32-bit pointers)
 	ArchX32 ScmpArch = iota
-	// 32-bit ARM syscalls
+	// ArchARM represents 32-bit ARM syscalls
 	ArchARM ScmpArch = iota
-	// 64-bit ARM syscalls
+	// ArchARM64 represents 64-bit ARM syscalls
 	ArchARM64 ScmpArch = iota
-	// 32-bit MIPS syscalls
+	// ArchMIPS represents 32-bit MIPS syscalls
 	ArchMIPS ScmpArch = iota
-	// 64-bit MIPS syscalls
+	// ArchMIPS64 represents 64-bit MIPS syscalls
 	ArchMIPS64 ScmpArch = iota
-	// 64-bit MIPS syscalls (32-bit pointers)
+	// ArchMIPS64N32 represents 64-bit MIPS syscalls (32-bit pointers)
 	ArchMIPS64N32 ScmpArch = iota
-	// 32-bit MIPS syscalls (little endian)
+	// ArchMIPSEL represents 32-bit MIPS syscalls (little endian)
 	ArchMIPSEL ScmpArch = iota
-	// 64-bit MIPS syscalls (little endian)
+	// ArchMIPSEL64 represents 64-bit MIPS syscalls (little endian)
 	ArchMIPSEL64 ScmpArch = iota
-	// 64-bit MIPS syscalls (little endian, 32-bit pointers)
+	// ArchMIPSEL64N32 represents 64-bit MIPS syscalls (little endian,
+	// 32-bit pointers)
 	ArchMIPSEL64N32 ScmpArch = iota
 )
 
 const (
 	// Supported actions on filter match
 
-	// Ensure uninitialized ScmpAction variables are invalid
+	// ActInvalid is a placeholder to ensure uninitialized ScmpAction
+	// variables are invalid
 	ActInvalid ScmpAction = iota
-	// Kill process
+	// ActKill kills the process
 	ActKill ScmpAction = iota
-	// Throw SIGSYS
+	// ActTrap throws SIGSYS
 	ActTrap ScmpAction = iota
-	// The syscall will return an negative error code
-	// This code can be set with the SetReturnCode method
+	// ActErrno causes the syscall to return a negative error code. This
+	// code can be set with the SetReturnCode method
 	ActErrno ScmpAction = iota
-	// Notify tracing processes with given error code
-	// This code can be set with the SetReturnCode method
+	// ActTrace causes the syscall to notify tracing processes with the
+	// given error code. This code can be set with the SetReturnCode method
 	ActTrace ScmpAction = iota
-	// Permit the syscall to continue execution
+	// ActAllow permits the syscall to continue execution
 	ActAllow ScmpAction = iota
 )
 
 const (
 	// These are comparison operators used in conditional seccomp rules
+	// They are used to compare the value of a single argument of a syscall
+	// against a user-defined constant
 
-	// Ensure uninitialized ScmpCompareOp variables are invalid
-	CompareInvalid      ScmpCompareOp = iota
-	CompareNotEqual     ScmpCompareOp = iota
-	CompareLess         ScmpCompareOp = iota
-	CompareLessOrEqual  ScmpCompareOp = iota
-	CompareEqual        ScmpCompareOp = iota
+	// CompareInvalid is a placeholder to ensure uninitialized ScmpCompareOp
+	// variables are invalid
+	CompareInvalid ScmpCompareOp = iota
+	// CompareNotEqual returns true if the argument is not equal to the
+	// given value
+	CompareNotEqual ScmpCompareOp = iota
+	// CompareLess returns true if the argument is less than the given value
+	CompareLess ScmpCompareOp = iota
+	// CompareLessOrEqual returns true if the argument is less than or equal
+	// to the given value
+	CompareLessOrEqual ScmpCompareOp = iota
+	// CompareEqual returns true if the argument is equal to the given value
+	CompareEqual ScmpCompareOp = iota
+	// CompareGreaterEqual returns true if the argument is greater than or
+	// equal to the given value
 	CompareGreaterEqual ScmpCompareOp = iota
-	CompareGreater      ScmpCompareOp = iota
-	CompareMaskedEqual  ScmpCompareOp = iota
+	// CompareGreater returns true if the argument is greater than the given
+	// value
+	CompareGreater ScmpCompareOp = iota
+	// CompareMaskedEqual returns true if the argument is equal to the given
+	// value, when masked (bitwise &) against the second given value
+	CompareMaskedEqual ScmpCompareOp = iota
 )
 
 // Helpers for types
 
-// Return an ScmpArch constant from a string representing an architecture
+// GetArchFromString returns an ScmpArch constant from a string representing an
+// architecture
 func GetArchFromString(arch string) (ScmpArch, error) {
 	switch strings.ToLower(arch) {
 	case "x86":
@@ -142,11 +165,11 @@ func GetArchFromString(arch string) (ScmpArch, error) {
 	case "mipsel64n32":
 		return ArchMIPSEL64N32, nil
 	default:
-		return ArchInvalid, fmt.Errorf("Cannot convert unrecognized string %s", arch)
+		return ArchInvalid, fmt.Errorf("cannot convert unrecognized string %s", arch)
 	}
 }
 
-// Returns a string representation of an architecture constant
+// String returns a string representation of an architecture constant
 func (a ScmpArch) String() string {
 	switch a {
 	case ArchX86:
@@ -180,7 +203,7 @@ func (a ScmpArch) String() string {
 	}
 }
 
-// Returns a string representation of a comparison operator constant
+// String returns a string representation of a comparison operator constant
 func (a ScmpCompareOp) String() string {
 	switch a {
 	case CompareNotEqual:
@@ -204,7 +227,7 @@ func (a ScmpCompareOp) String() string {
 	}
 }
 
-// Returns a string representation of a seccomp match action
+// String returns a string representation of a seccomp match action
 func (a ScmpAction) String() string {
 	switch a & 0xFFFF {
 	case ActKill:
@@ -223,8 +246,8 @@ func (a ScmpAction) String() string {
 	}
 }
 
-// Add a return code to a supporting ScmpAction, clearing any existing code
-// Only valid on ActErrno and ActTrace. Takes no action otherwise.
+// SetReturnCode adds a return code to a supporting ScmpAction, clearing any
+// existing code Only valid on ActErrno and ActTrace. Takes no action otherwise.
 // Accepts 16-bit return code as argument.
 // Returns a valid ScmpAction of the original type with the new error code set.
 func (a ScmpAction) SetReturnCode(code int16) ScmpAction {
@@ -235,21 +258,31 @@ func (a ScmpAction) SetReturnCode(code int16) ScmpAction {
 	return a
 }
 
-// Get the return code of an ScmpAction
+// GetReturnCode returns the return code of an ScmpAction
 func (a ScmpAction) GetReturnCode() int16 {
 	return int16(a >> 16)
 }
 
+// General utility functions
+
+// GetLibraryVersion returns the version of the library the bindings are built
+// against.
+// The version is formatted as follows: Major.Minor.Micro
+func GetLibraryVersion() (major, minor, micro int) {
+	return verMajor, verMinor, verMicro
+}
+
 // Syscall functions
 
-// Get the name of a syscall from its number.
+// GetName retrieves the name of a syscall from its number.
 // Acts on any syscall number.
 // Returns either a string containing the name of the syscall, or an error.
 func (s ScmpSyscall) GetName() (string, error) {
 	return s.GetNameByArch(ArchNative)
 }
 
-// Get the name of a syscall from its number for a given architecture.
+// GetNameByArch retrieves the name of a syscall from its number for a given
+// architecture.
 // Acts on any syscall number.
 // Accepts a valid architecture constant.
 // Returns either a string containing the name of the syscall, or an error.
@@ -261,7 +294,7 @@ func (s ScmpSyscall) GetNameByArch(arch ScmpArch) (string, error) {
 
 	cString := C.seccomp_syscall_resolve_num_arch(arch.toNative(), C.int(s))
 	if cString == nil {
-		return "", fmt.Errorf("Could not resolve syscall name")
+		return "", fmt.Errorf("could not resolve syscall name")
 	}
 	defer C.free(unsafe.Pointer(cString))
 
@@ -269,7 +302,8 @@ func (s ScmpSyscall) GetNameByArch(arch ScmpArch) (string, error) {
 	return finalStr, nil
 }
 
-// Get the number of a syscall by name on the kernel's native architecture.
+// GetSyscallFromName returns the number of a syscall by name on the kernel's
+// native architecture.
 // Accepts a string containing the name of a syscall.
 // Returns the number of the syscall, or an error if no syscall with that name
 // was found.
@@ -279,13 +313,14 @@ func GetSyscallFromName(name string) (ScmpSyscall, error) {
 
 	result := C.seccomp_syscall_resolve_name(cString)
 	if result == scmpError {
-		return 0, fmt.Errorf("Could not resolve name to syscall")
+		return 0, fmt.Errorf("could not resolve name to syscall")
 	}
 
 	return ScmpSyscall(result), nil
 }
 
-// Get the number of a syscall by name for a given architecture's ABI.
+// GetSyscallFromNameByArch returns the number of a syscall by name for a given
+// architecture's ABI.
 // Accepts the name of a syscall and an architecture constant.
 // Returns the number of the syscall, or an error if an invalid architecture is
 // passed or a syscall with that name was not found.
@@ -299,13 +334,13 @@ func GetSyscallFromNameByArch(name string, arch ScmpArch) (ScmpSyscall, error) {
 
 	result := C.seccomp_syscall_resolve_name_arch(arch.toNative(), cString)
 	if result == scmpError {
-		return 0, fmt.Errorf("Could not resolve name to syscall")
+		return 0, fmt.Errorf("could not resolve name to syscall")
 	}
 
 	return ScmpSyscall(result), nil
 }
 
-// Make a new condition to attach to a filter rule.
+// MakeCondition creates and returns a new condition to attach to a filter rule.
 // Associated rules will only match if this condition is true.
 // Accepts the number the argument we are checking, and a comparison operator
 // and value to compare to.
@@ -322,13 +357,13 @@ func MakeCondition(arg uint, comparison ScmpCompareOp, values ...uint64) (ScmpCo
 	var condStruct ScmpCondition
 
 	if comparison == CompareInvalid {
-		return condStruct, fmt.Errorf("Invalid comparison operator!")
+		return condStruct, fmt.Errorf("invalid comparison operator")
 	} else if arg > 5 {
-		return condStruct, fmt.Errorf("Syscalls only have up to 6 arguments!")
+		return condStruct, fmt.Errorf("syscalls only have up to 6 arguments")
 	} else if len(values) > 2 {
-		return condStruct, fmt.Errorf("Conditions can have at most 2 arguments!")
+		return condStruct, fmt.Errorf("conditions can have at most 2 arguments")
 	} else if len(values) == 0 {
-		return condStruct, fmt.Errorf("Must provide at least one value to compare against!")
+		return condStruct, fmt.Errorf("must provide at least one value to compare against")
 	}
 
 	condStruct.Argument = arg
@@ -345,7 +380,8 @@ func MakeCondition(arg uint, comparison ScmpCompareOp, values ...uint64) (ScmpCo
 
 // Utility Functions
 
-// Returns architecture token representing the native kernel architecture
+// GetNativeArch returns architecture token representing the native kernel
+// architecture
 func GetNativeArch() (ScmpArch, error) {
 	arch := C.seccomp_arch_native()
 
@@ -354,7 +390,7 @@ func GetNativeArch() (ScmpArch, error) {
 
 // Public Filter API
 
-// Represents a filter context in libseccomp.
+// ScmpFilter represents a filter context in libseccomp.
 // A filter context is initially empty. Rules can be added to it, and it can
 // then be loaded into the kernel.
 type ScmpFilter struct {
@@ -363,7 +399,7 @@ type ScmpFilter struct {
 	lock      sync.Mutex
 }
 
-// Create a new filter context.
+// NewFilter creates and returns a new filter context.
 // Accepts a default action to be taken for syscalls which match no rules in
 // the filter.
 // Returns a reference to a valid filter context, or nil and an error if the
@@ -375,7 +411,7 @@ func NewFilter(defaultAction ScmpAction) (*ScmpFilter, error) {
 
 	fPtr := C.seccomp_init(defaultAction.toNative())
 	if fPtr == nil {
-		return nil, fmt.Errorf("Could not create filter")
+		return nil, fmt.Errorf("could not create filter")
 	}
 
 	filter := new(ScmpFilter)
@@ -386,7 +422,7 @@ func NewFilter(defaultAction ScmpAction) (*ScmpFilter, error) {
 	return filter, nil
 }
 
-// Determine whether a filter context is valid to use.
+// IsValid determines whether a filter context is valid to use.
 // Some operations (Release and Merge) render filter contexts invalid and
 // consequently prevent further use.
 func (f *ScmpFilter) IsValid() bool {
@@ -396,7 +432,7 @@ func (f *ScmpFilter) IsValid() bool {
 	return f.valid
 }
 
-// Reset a filter context, removing all its existing state.
+// Reset resets a filter context, removing all its existing state.
 // Accepts a new default action to be taken for syscalls which do not match.
 // Returns an error if the filter or action provided are invalid.
 func (f *ScmpFilter) Reset(defaultAction ScmpAction) error {
@@ -406,7 +442,7 @@ func (f *ScmpFilter) Reset(defaultAction ScmpAction) error {
 	if err := sanitizeAction(defaultAction); err != nil {
 		return err
 	} else if !f.valid {
-		return fmt.Errorf("Filter is invalid or uninitialized")
+		return errBadFilter
 	}
 
 	retCode := C.seccomp_reset(f.filterCtx, defaultAction.toNative())
@@ -417,7 +453,7 @@ func (f *ScmpFilter) Reset(defaultAction ScmpAction) error {
 	return nil
 }
 
-// Releases a filter context, freeing its memory. Should be called after
+// Release releases a filter context, freeing its memory. Should be called after
 // loading into the kernel, when the filter is no longer needed.
 // After calling this function, the given filter is no longer valid and cannot
 // be used.
@@ -435,11 +471,12 @@ func (f *ScmpFilter) Release() {
 	C.seccomp_release(f.filterCtx)
 }
 
-// Merge two filter contexts.
+// Merge merges two filter contexts.
 // The source filter src will be released as part of the process, and will no
 // longer be usable or valid after this call.
 // To be merged, filters must NOT share any architectures, and all their
-// attributes must match.
+// attributes (Default Action, Bad Arch Action, No New Privs and TSync bools)
+// must match.
 // The filter src will be merged into the filter this is called on.
 // The architectures of the src filter not present in the destination, and all
 // associated rules, will be added to the destination.
@@ -452,14 +489,13 @@ func (f *ScmpFilter) Merge(src *ScmpFilter) error {
 	defer src.lock.Unlock()
 
 	if !src.valid || !f.valid {
-		return fmt.Errorf(
-			"One or more of the filter contexts is invalid or uninitialized")
+		return fmt.Errorf("one or more of the filter contexts is invalid or uninitialized")
 	}
 
 	// Merge the filters
 	retCode := C.seccomp_merge(f.filterCtx, src.filterCtx)
 	if syscall.Errno(-1*retCode) == syscall.EINVAL {
-		return fmt.Errorf("Filters could not be merged due to a mismatch in attributes or invalid filter!")
+		return fmt.Errorf("filters could not be merged due to a mismatch in attributes or invalid filter")
 	} else if retCode != 0 {
 		return syscall.Errno(-1 * retCode)
 	}
@@ -469,7 +505,7 @@ func (f *ScmpFilter) Merge(src *ScmpFilter) error {
 	return nil
 }
 
-// Check if an architecture is present in a filter.
+// IsArchPresent checks if an architecture is present in a filter.
 // If a filter contains an architecture, it uses its default action for
 // syscalls which do not match rules in it, and its rules can match syscalls
 // for that ABI.
@@ -487,7 +523,7 @@ func (f *ScmpFilter) IsArchPresent(arch ScmpArch) (bool, error) {
 	if err := sanitizeArch(arch); err != nil {
 		return false, err
 	} else if !f.valid {
-		return false, fmt.Errorf("Filter is invalid or uninitialized")
+		return false, errBadFilter
 	}
 
 	retCode := C.seccomp_arch_exist(f.filterCtx, arch.toNative())
@@ -501,7 +537,7 @@ func (f *ScmpFilter) IsArchPresent(arch ScmpArch) (bool, error) {
 	return true, nil
 }
 
-// Add an architecture to the filter.
+// AddArch adds an architecture to the filter.
 // Accepts an architecture constant.
 // Returns an error on invalid filter context or architecture token, or an
 // issue with the call to libseccomp.
@@ -512,7 +548,7 @@ func (f *ScmpFilter) AddArch(arch ScmpArch) error {
 	if err := sanitizeArch(arch); err != nil {
 		return err
 	} else if !f.valid {
-		return fmt.Errorf("Filter is invalid or uninitialized")
+		return errBadFilter
 	}
 
 	// Libseccomp returns -EEXIST if the specified architecture is already
@@ -526,7 +562,7 @@ func (f *ScmpFilter) AddArch(arch ScmpArch) error {
 	return nil
 }
 
-// Remove an architecture from the filter.
+// RemoveArch removes an architecture from the filter.
 // Accepts an architecture constant.
 // Returns an error on invalid filter context or architecture token, or an
 // issue with the call to libseccomp.
@@ -537,7 +573,7 @@ func (f *ScmpFilter) RemoveArch(arch ScmpArch) error {
 	if err := sanitizeArch(arch); err != nil {
 		return err
 	} else if !f.valid {
-		return fmt.Errorf("Filter is invalid or uninitialized")
+		return errBadFilter
 	}
 
 	// Similar to AddArch, -EEXIST is returned if the arch is not present
@@ -551,14 +587,14 @@ func (f *ScmpFilter) RemoveArch(arch ScmpArch) error {
 	return nil
 }
 
-// Load a filter context into the kernel.
+// Load loads a filter context into the kernel.
 // Returns an error if the filter context is invalid or the syscall failed.
 func (f *ScmpFilter) Load() error {
 	f.lock.Lock()
 	defer f.lock.Unlock()
 
 	if !f.valid {
-		return fmt.Errorf("Filter is invalid or uninitialized")
+		return errBadFilter
 	}
 
 	if retCode := C.seccomp_load(f.filterCtx); retCode != 0 {
@@ -568,10 +604,11 @@ func (f *ScmpFilter) Load() error {
 	return nil
 }
 
-// Returns the default action taken on a syscall which does not match a rule in
-// the filter, or an error if an issue was encountered retrieving the value.
+// GetDefaultAction returns the default action taken on a syscall which does not
+// match a rule in the filter, or an error if an issue was encountered
+// retrieving the value.
 func (f *ScmpFilter) GetDefaultAction() (ScmpAction, error) {
-	action, err := f.getFilterAttr(filterAttrActDefault, true)
+	action, err := f.getFilterAttr(filterAttrActDefault)
 	if err != nil {
 		return 0x0, err
 	}
@@ -579,10 +616,11 @@ func (f *ScmpFilter) GetDefaultAction() (ScmpAction, error) {
 	return actionFromNative(action)
 }
 
-// Returns the default action taken on a syscall for an architecture not in the
-// filter, or an error if an issue was encountered retrieving the value.
+// GetBadArchAction returns the default action taken on a syscall for an
+// architecture not in the filter, or an error if an issue was encountered
+// retrieving the value.
 func (f *ScmpFilter) GetBadArchAction() (ScmpAction, error) {
-	action, err := f.getFilterAttr(filterAttrActBadArch, true)
+	action, err := f.getFilterAttr(filterAttrActBadArch)
 	if err != nil {
 		return 0x0, err
 	}
@@ -590,15 +628,15 @@ func (f *ScmpFilter) GetBadArchAction() (ScmpAction, error) {
 	return actionFromNative(action)
 }
 
-// Returns the current state the No New Privileges bit will be set to on the
-// filter being loaded, or an error if an issue was encountered retrieving the
-// value.
+// GetNoNewPrivsBit returns the current state the No New Privileges bit will be set
+// to on the filter being loaded, or an error if an issue was encountered
+// retrieving the value.
 // The No New Privileges bit tells the kernel that new processes run with exec()
 // cannot gain more privileges than the process that ran exec().
 // For example, a process with No New Privileges set would be unable to exec
 // setuid/setgid executables.
 func (f *ScmpFilter) GetNoNewPrivsBit() (bool, error) {
-	noNewPrivs, err := f.getFilterAttr(filterAttrNNP, true)
+	noNewPrivs, err := f.getFilterAttr(filterAttrNNP)
 	if err != nil {
 		return false, err
 	}
@@ -610,16 +648,19 @@ func (f *ScmpFilter) GetNoNewPrivsBit() (bool, error) {
 	return true, nil
 }
 
-// Returns whether Thread Synchronization will be enabled on the filter being
-// loaded, or an error if an issue was encountered retrieving the value.
+// GetTsyncBit returns whether Thread Synchronization will be enabled on the
+// filter being loaded, or an error if an issue was encountered retrieving the
+// value.
 // Thread Sync ensures that all members of the thread group of the calling
 // process will share the same Seccomp filter set.
 // Tsync is a fairly recent addition to the Linux kernel and older kernels
 // lack support. If the running kernel does not support Tsync and it is
 // requested in a filter, Libseccomp will not enable TSync support and will
 // proceed as normal.
+// This function is unavailable before v2.2 of libseccomp and will return an
+// error.
 func (f *ScmpFilter) GetTsyncBit() (bool, error) {
-	tSync, err := f.getFilterAttr(filterAttrTsync, true)
+	tSync, err := f.getFilterAttr(filterAttrTsync)
 	if err != nil {
 		return false, err
 	}
@@ -631,8 +672,9 @@ func (f *ScmpFilter) GetTsyncBit() (bool, error) {
 	return true, nil
 }
 
-// Set the default action taken on a syscall for an architecture not in the
-// filter, or an error if an issue was encountered setting the value.
+// SetBadArchAction sets the default action taken on a syscall for an
+// architecture not in the filter, or an error if an issue was encountered
+// setting the value.
 func (f *ScmpFilter) SetBadArchAction(action ScmpAction) error {
 	if err := sanitizeAction(action); err != nil {
 		return err
@@ -641,10 +683,11 @@ func (f *ScmpFilter) SetBadArchAction(action ScmpAction) error {
 	return f.setFilterAttr(filterAttrActBadArch, action.toNative())
 }
 
-// Set the state of the No New Privileges bit, which will be applied on filter
-// load, or an error if an issue was encountered setting the value.
-// Filters with No New Privileges set to 0 can only be loaded with the
-// CAP_SYS_ADMIN privilege.
+// SetNoNewPrivsBit sets the state of the No New Privileges bit, which will be
+// applied on filter load, or an error if an issue was encountered setting the
+// value.
+// Filters with No New Privileges set to 0 can only be loaded if the process
+// has the CAP_SYS_ADMIN capability.
 func (f *ScmpFilter) SetNoNewPrivsBit(state bool) error {
 	var toSet C.uint32_t = 0x0
 
@@ -655,14 +698,17 @@ func (f *ScmpFilter) SetNoNewPrivsBit(state bool) error {
 	return f.setFilterAttr(filterAttrNNP, toSet)
 }
 
-// Sets whether Thread Synchronization will be enabled on the filter being
-// loaded. Returns an error if setting Tsync failed, or the filter is invalid.
+// SetTsync sets whether Thread Synchronization will be enabled on the filter
+// being loaded. Returns an error if setting Tsync failed, or the filter is
+// invalid.
 // Thread Sync ensures that all members of the thread group of the calling
 // process will share the same Seccomp filter set.
 // Tsync is a fairly recent addition to the Linux kernel and older kernels
 // lack support. If the running kernel does not support Tsync and it is
 // requested in a filter, Libseccomp will not enable TSync support and will
 // proceed as normal.
+// This function is unavailable before v2.2 of libseccomp and will return an
+// error.
 func (f *ScmpFilter) SetTsync(enable bool) error {
 	var toSet C.uint32_t = 0x0
 
@@ -673,7 +719,7 @@ func (f *ScmpFilter) SetTsync(enable bool) error {
 	return f.setFilterAttr(filterAttrTsync, toSet)
 }
 
-// Set a syscall's priority.
+// SetSyscallPriority sets a syscall's priority.
 // This provides a hint to the filter generator in libseccomp about the
 // importance of this syscall. High-priority syscalls are placed
 // first in the filter code, and incur less overhead (at the expense of
@@ -683,7 +729,7 @@ func (f *ScmpFilter) SetSyscallPriority(call ScmpSyscall, priority uint8) error 
 	defer f.lock.Unlock()
 
 	if !f.valid {
-		return fmt.Errorf("Filter is invalid or uninitialized")
+		return errBadFilter
 	}
 
 	if retCode := C.seccomp_syscall_priority(f.filterCtx, C.int(call),
@@ -694,7 +740,7 @@ func (f *ScmpFilter) SetSyscallPriority(call ScmpSyscall, priority uint8) error 
 	return nil
 }
 
-// Add a single rule for an unconditional action on a syscall.
+// AddRule adds a single rule for an unconditional action on a syscall.
 // Accepts the number of the syscall and the action to be taken on the call
 // being made.
 // Returns an error if an issue was encountered adding the rule.
@@ -702,7 +748,7 @@ func (f *ScmpFilter) AddRule(call ScmpSyscall, action ScmpAction) error {
 	return f.addRuleGeneric(call, action, false, nil)
 }
 
-// Add a single rule for an unconditional action on a syscall.
+// AddRuleExact adds a single rule for an unconditional action on a syscall.
 // Accepts the number of the syscall and the action to be taken on the call
 // being made.
 // No modifications will be made to the rule, and it will fail to add if it
@@ -714,25 +760,32 @@ func (f *ScmpFilter) AddRuleExact(call ScmpSyscall, action ScmpAction) error {
 	return f.addRuleGeneric(call, action, true, nil)
 }
 
-// Add a single rule for a conditional action on a syscall.
+// AddRuleConditional adds a single rule for a conditional action on a syscall.
 // Returns an error if an issue was encountered adding the rule.
 // All conditions must match for the rule to match.
+// There is a bug in library versions below v2.2.1 which can, in some cases,
+// cause conditions to be lost when more than one are used. Consequently,
+// AddRuleConditional is disabled on library versions lower than v2.2.1
 func (f *ScmpFilter) AddRuleConditional(call ScmpSyscall, action ScmpAction, conds []ScmpCondition) error {
 	return f.addRuleGeneric(call, action, false, conds)
 }
 
-// Add a single rule for a conditional action on a syscall.
+// AddRuleConditionalExact adds a single rule for a conditional action on a
+// syscall.
 // No modifications will be made to the rule, and it will fail to add if it
 // cannot be applied to the current architecture without modification.
 // The rule will function exactly as described, but it may not function identically
 // (or be able to be applied to) all architectures.
 // Returns an error if an issue was encountered adding the rule.
+// There is a bug in library versions below v2.2.1 which can, in some cases,
+// cause conditions to be lost when more than one are used. Consequently,
+// AddRuleConditionalExact is disabled on library versions lower than v2.2.1
 func (f *ScmpFilter) AddRuleConditionalExact(call ScmpSyscall, action ScmpAction, conds []ScmpCondition) error {
 	return f.addRuleGeneric(call, action, true, conds)
 }
 
-// Output PFC-formatted, human-readable dump of a filter context's rules to a
-// file.
+// ExportPFC output PFC-formatted, human-readable dump of a filter context's
+// rules to a file.
 // Accepts file to write to (must be open for writing).
 // Returns an error if writing to the file fails.
 func (f *ScmpFilter) ExportPFC(file *os.File) error {
@@ -742,7 +795,7 @@ func (f *ScmpFilter) ExportPFC(file *os.File) error {
 	fd := file.Fd()
 
 	if !f.valid {
-		return fmt.Errorf("Filter is invalid or uninitialized")
+		return errBadFilter
 	}
 
 	if retCode := C.seccomp_export_pfc(f.filterCtx, C.int(fd)); retCode != 0 {
@@ -752,8 +805,8 @@ func (f *ScmpFilter) ExportPFC(file *os.File) error {
 	return nil
 }
 
-// Output Berkeley Packet Filter-formatted, kernel-readable dump of a filter
-// context's rules to a file.
+// ExportBPF outputs Berkeley Packet Filter-formatted, kernel-readable dump of a
+// filter context's rules to a file.
 // Accepts file to write to (must be open for writing).
 // Returns an error if writing to the file fails.
 func (f *ScmpFilter) ExportBPF(file *os.File) error {
@@ -763,7 +816,7 @@ func (f *ScmpFilter) ExportBPF(file *os.File) error {
 	fd := file.Fd()
 
 	if !f.valid {
-		return fmt.Errorf("Filter is invalid or uninitialized")
+		return errBadFilter
 	}
 
 	if retCode := C.seccomp_export_bpf(f.filterCtx, C.int(fd)); retCode != 0 {

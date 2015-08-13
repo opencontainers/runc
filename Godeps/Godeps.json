@@ -61,7 +61,7 @@
 		},
 		{
 			"ImportPath": "github.com/seccomp/libseccomp-golang",
-			"Rev": "4ad869ffe4033151a18ef08fc260213051d8388d"
+			"Rev": "1b506fc7c24eec5a3693cdcbed40d9c226cfc6a1"
 		}
 	]
 }
