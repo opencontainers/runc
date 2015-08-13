@@ -51,16 +51,23 @@ var signalMap = map[string]syscall.Signal{
 
 var killCommand = cli.Command{
 	Name:  "kill",
-	Usage: "kill sends the specified signal to the container's init process",
+	Usage: "kill sends the specified signal (default: SIGTERM) to the container's init process",
 	Action: func(context *cli.Context) {
 		container, err := getContainer(context)
 		if err != nil {
 			fatal(err)
 		}
-		signal, err := parseSignal(context.Args().First())
+
+		sigstr := context.Args().First()
+		if sigstr == "" {
+			sigstr = "SIGTERM"
+		}
+
+		signal, err := parseSignal(sigstr)
 		if err != nil {
 			fatal(err)
 		}
+
 		if err := container.Signal(signal); err != nil {
 			fatal(err)
 		}
