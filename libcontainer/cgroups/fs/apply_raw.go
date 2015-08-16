@@ -83,7 +83,7 @@ type data struct {
 	pid    int
 }
 
-func (m *Manager) Apply(pid int) error {
+func (m *Manager) Apply(pid int) (err error) {
 	if m.Cgroups == nil {
 		return nil
 	}
