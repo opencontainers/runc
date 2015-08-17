@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"syscall"
 	"testing"
 
 	"github.com/docker/docker/pkg/mount"
@@ -97,6 +98,7 @@ func TestFactoryNewTmpfs(t *testing.T) {
 	if !found {
 		t.Fatalf("Factory Root is not listed in mounts list")
 	}
+	defer syscall.Unmount(root, syscall.MNT_DETACH)
 }
 
 func TestFactoryLoadNotExists(t *testing.T) {
