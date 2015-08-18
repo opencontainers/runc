@@ -159,11 +159,28 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 	}
 	containerRoot := filepath.Join(l.Root, id)
 	if _, err := os.Stat(containerRoot); err == nil {
-		return nil, newGenericError(fmt.Errorf("Container with id exists: %v", id), IdInUse)
+		_, runcName := filepath.Split(os.Args[0])
+		pid, err := ioutil.ReadFile(filepath.Join(containerRoot, "task"))
+		if err != nil {
+			return nil, newGenericError(fmt.Errorf("delete the directory: %s", containerRoot), IdInUse)
+		}
+		procPath := filepath.Join("/proc", string(pid), "/cmdline")
+		cmdline, err := ioutil.ReadFile(procPath)
+		if err != nil {
+			return nil, newGenericError(fmt.Errorf("delete the directory: %s", containerRoot), IdInUse)
+		}
+		_, exeName := filepath.Split(string(cmdline))
+		if len(exeName) >= len(runcName) && exeName[0:len(runcName)] == runcName {
+			return nil, newGenericError(fmt.Errorf("Container with id exists: %v", id), IdInUse)
+		}
+		return nil, newGenericError(fmt.Errorf("Container with id by other cli exists: %v", id), IdInUse)
 	} else if !os.IsNotExist(err) {
 		return nil, newGenericError(err, SystemError)
 	}
 	if err := os.MkdirAll(containerRoot, 0700); err != nil {
+		return nil, newGenericError(err, SystemError)
+	}
+	if err := ioutil.WriteFile(filepath.Join(containerRoot, "task"), []byte(fmt.Sprintf("%d", os.Getpid())), 0700); err != nil {
 		return nil, newGenericError(err, SystemError)
 	}
 	return &linuxContainer{
