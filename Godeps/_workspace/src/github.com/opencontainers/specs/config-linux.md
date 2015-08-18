@@ -55,20 +55,82 @@ within the container.
 
 ### Access to devices
 
-Devices is an array specifying the list of devices from the host to make available in the container.
-By providing a device name within the list the runtime should look up the same device on the host's `/dev`
-and collect information about the device node so that it can be recreated for the container.  The runtime
-should not only create the device inside the container but ensure that the root user inside 
-the container has access rights for the device.
+Devices is an array specifying the list of devices to be created in the container.
+Next parameters can be specified:
+
+* type - type of device: 'c', 'b', 'u' or 'p'. More info in `man mknod`
+* path - full path to device inside container
+* major, minor - major, minor numbers for device. More info in `man mknod`.
+                 There is special value: `-1`, which means `*` for `device`
+                 cgroup setup.
+* permissions - cgroup permissions for device. A composition of 'r'
+                (read), 'w' (write), and 'm' (mknod).
+* fileMode - file mode for device file
+* uid - uid of device owner
+* gid - gid of device owner
 
 ```json
    "devices": [
-        "null",
-        "random",
-        "full",
-        "tty",
-        "zero",
-        "urandom"
+        {
+            "path": "/dev/random",
+            "type": "c",
+            "major": 1,
+            "minor": 8,
+            "permissions": "rwm",
+            "fileMode": 0666,
+            "uid": 0,
+            "gid": 0
+        },
+        {
+            "path": "/dev/urandom",
+            "type": "c",
+            "major": 1,
+            "minor": 9,
+            "permissions": "rwm",
+            "fileMode": 0666,
+            "uid": 0,
+            "gid": 0
+        },
+        {
+            "path": "/dev/null",
+            "type": "c",
+            "major": 1,
+            "minor": 3,
+            "permissions": "rwm",
+            "fileMode": 0666,
+            "uid": 0,
+            "gid": 0
+        },
+        {
+            "path": "/dev/zero",
+            "type": "c",
+            "major": 1,
+            "minor": 5,
+            "permissions": "rwm",
+            "fileMode": 0666,
+            "uid": 0,
+            "gid": 0
+        },
+        {
+            "path": "/dev/tty",
+            "type": "c",
+            "major": 5,
+            "minor": 0,
+            "permissions": "rwm",
+            "fileMode": 0666,
+            "uid": 0,
+            "gid": 0
+        },
+        {
+            "path": "/dev/full",
+            "type": "c",
+            "major": 1,
+            "minor": 7,
+            "permissions": "rwm",
+            "fileMode": 0666,
+            "uid": 0,
+            "gid": 0
+        }
     ]
 ```
 
@@ -81,7 +143,7 @@ the container. For more information, see the [kernel cgroups documentation](http
 ## Linux capabilities
 
 Capabilities is an array that specifies Linux capabilities that can be provided to the process
-inside the container. Valid values are the string after `CAP_` for capabilities defined 
+inside the container. Valid values are the string after `CAP_` for capabilities defined
 in [the man page](http://man7.org/linux/man-pages/man7/capabilities.7.html)
 
 ```json
@@ -146,7 +208,39 @@ rootfsPropagation sets the rootfs's mount propagation. Its value is either slave
     "rootfsPropagation": "slave",
 ```
 
-## Security
+## Selinux process label
 
-**TODO:** security profiles
+Selinux process label specifies the label with which the processes in a container are run.
+For more information about SELinux, see  [Selinux documentation](http://selinuxproject.org/page/Main_Page)
+```json
+   "selinuxProcessLabel": "system_u:system_r:svirt_lxc_net_t:s0:c124,c675"
+```
 
+## Apparmor profile
+
+Apparmor profile specifies the name of the apparmor profile that will be used for the container.
+For more information about Apparmor, see [Apparmor documentation](https://wiki.ubuntu.com/AppArmor)
+
+```json
+   "apparmorProfile": "acme_secure_profile"
+```
+
+## Seccomp
+
+Seccomp provides application sandboxing mechanism in the Linux kernel.
+Seccomp configuration allows one to configure actions to take for matched syscalls and furthermore also allows
+matching on values passed as arguments to syscalls.
+For more information about Seccomp, see [Seccomp kernel documentation](https://www.kernel.org/doc/Documentation/prctl/seccomp_filter.txt)
+The actions and operators are strings that match the definitions in seccomp.h from [libseccomp](https://github.com/seccomp/libseccomp) and are translated to corresponding values.
+
+```json
+   "seccomp": {
+       "defaultAction": "SCMP_ACT_ALLOW",
+       "syscalls": [
+           {
+               "name": "getcwd",
+               "action": "SCMP_ACT_ERRNO"
+           }
+       ]
+   }
+```

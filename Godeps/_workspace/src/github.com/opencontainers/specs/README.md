@@ -8,6 +8,7 @@ Table of Contents
 - [Container Configuration](config.md)
   - [Linux Specific Configuration](config-linux.md)
 - [Runtime and Lifecycle](runtime.md)
+- [Implementations](implementations.md)
 
 ## Use Cases
 
@@ -63,9 +64,15 @@ the `LICENSE` file of this repository.
 ## Weekly Call
 
 The contributors and maintainers of the project have a weekly meeting Wednesdays at 10:00 AM PST.
-Everyone is welcome to participate in the call.  The link to the call will be posted on the mailing
-list each week along with set topics for discussion.
+The link to the call will be posted on the mailing list each week along with set topics for discussion.
+Everyone is welcome to participate in the call, although there can only be speaking members on the Google Hangout.
+Participants who don't get a speaking slot can watch the live broadcast on [this YouTube channel][youtube] and post feedback and questions on [the IRC channel](#irc).
+Everyone is welcome to propose additional topics, suggest other agenda alterations, or request a speaking slot via the mailing list.
 Minutes for the call will be posted to the mailing list for those who are unable to join the call.
+
+## IRC
+
+OCI discussion happens on #opencontainers on Freenode.
 
 ## Markdown style
 
@@ -127,3 +134,5 @@ then you just add a line to every git commit message:
 using your real name (sorry, no pseudonyms or anonymous contributions.)
 
 You can add the sign off when creating the git commit via `git commit -s`.
+
+[youtube]: https://www.youtube.com/channel/UC1wmLdEYmwWcsFg7bt1s5nw
