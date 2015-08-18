@@ -13,6 +13,33 @@ import (
 	"github.com/opencontainers/specs"
 )
 
+var startCommand = cli.Command{
+	Name:  "start",
+	Usage: "create and run a container",
+	Action: func(context *cli.Context) {
+		spec, err := loadSpec(context.Args().First())
+
+		notifySocket := os.Getenv("NOTIFY_SOCKET")
+		if notifySocket != "" {
+			setupSdNotify(spec, notifySocket)
+		}
+
+		if err != nil {
+			fatal(err)
+		}
+		if os.Geteuid() != 0 {
+			logrus.Fatal("runc should be run as root")
+		}
+		status, err := startContainer(context, spec)
+		if err != nil {
+			logrus.Fatalf("Container start failed: %v", err)
+		}
+		// exit with the container's exit status so any external supervisor is
+		// notified of the exit with the correct exit status.
+		os.Exit(status)
+	},
+}
+
 func init() {
 	if len(os.Args) > 1 && os.Args[1] == "init" {
 		runtime.GOMAXPROCS(1)
@@ -25,7 +52,7 @@ func init() {
 	}
 }
 
-func execContainer(context *cli.Context, spec *specs.LinuxSpec) (int, error) {
+func startContainer(context *cli.Context, spec *specs.LinuxSpec) (int, error) {
 	config, err := createLibcontainerConfig(context.GlobalString("id"), spec)
 	if err != nil {
 		return -1, err
@@ -65,28 +92,6 @@ func execContainer(context *cli.Context, spec *specs.LinuxSpec) (int, error) {
 }
 
 // default action is to execute a container
-func runAction(context *cli.Context) {
-	spec, err := loadSpec(context.Args().First())
-
-	notifySocket := os.Getenv("NOTIFY_SOCKET")
-	if notifySocket != "" {
-		setupSdNotify(spec, notifySocket)
-	}
-
-	if err != nil {
-		fatal(err)
-	}
-	if os.Geteuid() != 0 {
-		logrus.Fatal("runc should be run as root")
-	}
-	status, err := execContainer(context, spec)
-	if err != nil {
-		logrus.Fatalf("Container start failed: %v", err)
-	}
-	// exit with the container's exit status so any external supervisor is
-	// notified of the exit with the correct exit status.
-	os.Exit(status)
-}
 
 // If systemd is supporting sd_notify protocol, this function will add support
 // for sd_notify protocol from within the container.
