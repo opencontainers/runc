@@ -514,7 +514,7 @@ func testCpuShares(t *testing.T, systemd bool) {
 
 	config := newTemplateConfig(rootfs)
 	if systemd {
-		config.Cgroups.Slice = "system.slice"
+		config.Cgroups.Parent = "system.slice"
 	}
 	config.Cgroups.CpuShares = 1
 
@@ -545,7 +545,7 @@ func testRunWithKernelMemory(t *testing.T, systemd bool) {
 
 	config := newTemplateConfig(rootfs)
 	if systemd {
-		config.Cgroups.Slice = "system.slice"
+		config.Cgroups.Parent = "system.slice"
 	}
 	config.Cgroups.KernelMemory = 52428800
 
