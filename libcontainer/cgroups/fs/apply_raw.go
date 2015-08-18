@@ -236,11 +236,11 @@ func getCgroupData(c *configs.Cgroup, pid int) (*data, error) {
 }
 
 func (raw *data) parent(subsystem, mountpoint, src string) (string, error) {
-	initPath, err := cgroups.GetInitCgroupDir(subsystem)
+	initPath, err := cgroups.GetThisCgroupDir(subsystem)
 	if err != nil {
 		return "", err
 	}
-	relDir, err := filepath.Rel(initPath, src)
+	relDir, err := filepath.Rel(src, initPath)
 	if err != nil {
 		return "", err
 	}
