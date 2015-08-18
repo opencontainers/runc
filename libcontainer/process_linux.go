@@ -173,9 +173,9 @@ func (p *initProcess) externalDescriptors() []string {
 	return p.fds
 }
 
-func (p *initProcess) start() error {
+func (p *initProcess) start() (err error) {
 	defer p.parentPipe.Close()
-	err := p.cmd.Start()
+	err = p.cmd.Start()
 	p.childPipe.Close()
 	if err != nil {
 		return newSystemError(err)
