@@ -3,6 +3,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"os"
 
@@ -56,7 +57,7 @@ func createTty(p *libcontainer.Process, rootuid int) (*tty, error) {
 	go io.Copy(os.Stdout, console)
 	state, err := term.SetRawTerminal(os.Stdin.Fd())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to set the terminal from the stdin: %v", err)
 	}
 	t := &tty{
 		console: console,
