@@ -283,6 +283,8 @@ func createLibcontainerConfig(cgroupName string, spec *specs.LinuxSpec) (*config
 		}
 	}
 	config.Sysctl = spec.Linux.Sysctl
+	config.ProcessLabel = spec.Linux.SelinuxProcessLabel
+	config.AppArmorProfile = spec.Linux.ApparmorProfile
 	return config, nil
 }
 
