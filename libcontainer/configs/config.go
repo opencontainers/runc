@@ -13,36 +13,46 @@ type IDMap struct {
 	Size        int `json:"size"`
 }
 
+// Seccomp represents syscall restrictions
 type Seccomp struct {
-	Syscalls []*Syscall `json:"syscalls"`
+	DefaultAction Action     `json:"default_action"`
+	Syscalls      []*Syscall `json:"syscalls"`
 }
 
+// An action to be taken upon rule match in Seccomp
 type Action int
 
 const (
-	Kill Action = iota - 3
+	Kill Action = iota - 4
+	Errno
 	Trap
 	Allow
 )
 
+// A comparison operator to be used when matching syscall arguments in Seccomp
 type Operator int
 
 const (
 	EqualTo Operator = iota
 	NotEqualTo
-	GreatherThan
+	GreaterThan
+	GreaterThanOrEqualTo
 	LessThan
+	LessThanOrEqualTo
 	MaskEqualTo
 )
 
+// A rule to match a specific syscall argument in Seccomp
 type Arg struct {
-	Index int      `json:"index"`
-	Value uint32   `json:"value"`
-	Op    Operator `json:"op"`
+	Index    uint     `json:"index"`
+	Value    uint64   `json:"value"`
+	ValueTwo uint64   `json:"value_two"`
+	Op       Operator `json:"op"`
 }
 
+// An rule to match a syscall in Seccomp
 type Syscall struct {
-	Value  int    `json:"value"`
+	Name   string `json:"name"`
 	Action Action `json:"action"`
 	Args   []*Arg `json:"args"`
 }
@@ -140,7 +150,7 @@ type Config struct {
 	Sysctl map[string]string `json:"sysctl"`
 
 	// Seccomp allows actions to be taken whenever a syscall is made within the container.
-	// By default, all syscalls are allowed with actions to allow, trap, kill, or return an errno
-	// can be specified on a per syscall basis.
+	// A number of rules are given, each having an action to be taken if a syscall matches it.
+	// A default action to be taken if no rules match is also given.
 	Seccomp *Seccomp `json:"seccomp"`
 }

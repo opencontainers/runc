@@ -793,33 +793,6 @@ func TestSysctl(t *testing.T) {
 	}
 }
 
-func TestSeccompNoChown(t *testing.T) {
-	if testing.Short() {
-		return
-	}
-	rootfs, err := newRootfs()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer remove(rootfs)
-	config := newTemplateConfig(rootfs)
-	config.Seccomp = &configs.Seccomp{}
-	config.Seccomp.Syscalls = append(config.Seccomp.Syscalls, &configs.Syscall{
-		Value:  syscall.SYS_CHOWN,
-		Action: configs.Action(syscall.EPERM),
-	})
-	buffers, _, err := runContainer(config, "", "/bin/sh", "-c", "chown 1:1 /tmp")
-	if err == nil {
-		t.Fatal("running chown in a container should fail")
-	}
-	if buffers == nil {
-		t.Fatalf("Container wasn't even created: %v", err)
-	}
-	if s := buffers.String(); !strings.Contains(s, "not permitted") {
-		t.Fatalf("running chown should result in an EPERM but got %q", s)
-	}
-}
-
 func TestMountCgroupRO(t *testing.T) {
 	if testing.Short() {
 		return

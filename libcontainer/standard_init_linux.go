@@ -9,6 +9,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/apparmor"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/label"
+	"github.com/opencontainers/runc/libcontainer/seccomp"
 	"github.com/opencontainers/runc/libcontainer/system"
 )
 
@@ -85,6 +86,11 @@ func (l *linuxStandardInit) Init() error {
 	if err != nil {
 		return err
 	}
+	if l.config.Config.Seccomp != nil {
+		if err := seccomp.InitSeccomp(l.config.Config.Seccomp); err != nil {
+			return err
+		}
+	}
 	if err := finalizeNamespace(l.config); err != nil {
 		return err
 	}
@@ -98,9 +104,6 @@ func (l *linuxStandardInit) Init() error {
 	// just kill ourself and not cause problems for someone else.
 	if syscall.Getppid() != l.parentPid {
 		return syscall.Kill(syscall.Getpid(), syscall.SIGKILL)
-	}
-	if err := finalizeSeccomp(l.config); err != nil {
-		return err
 	}
 	return system.Execv(l.config.Args[0], l.config.Args[0:], os.Environ())
 }
