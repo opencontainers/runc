@@ -153,6 +153,15 @@ func getDefaultID() string {
 	return filepath.Base(cwd)
 }
 
+// getDefaultRoot returns a directory path for storage of container state.
+func getDefaultRoot() string {
+	root := os.Getenv("OCI_ROOT")
+	if root == "" {
+		root = "/run/oci"
+	}
+	return root
+}
+
 func getDefaultImagePath(context *cli.Context) string {
 	cwd, err := os.Getwd()
 	if err != nil {
