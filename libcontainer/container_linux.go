@@ -775,6 +775,27 @@ func (c *linuxContainer) updateState(process parentProcess) error {
 	return json.NewEncoder(f).Encode(state)
 }
 
+func (c *linuxContainer) checkFreezer() (Status, error) {
+	path := c.cgroupManager.GetPaths()["freezer"]
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			// Freezer subsystem is not available,Application is neither Checkpointed nor Destroyed
+			// return the status as Running
+			return Running, nil
+		}
+	}
+	contents, err := ioutil.ReadFile(filepath.Join(path, "freezer.state"))
+	if err != nil {
+		return 0, newSystemError(err)
+	}
+	freezerstate := string(contents)
+	if strings.TrimSpace(freezerstate) == "FROZEN" {
+		return Paused, nil
+	}
+	return Running, nil
+
+}
+
 func (c *linuxContainer) currentStatus() (Status, error) {
 	if _, err := os.Stat(filepath.Join(c.root, "checkpoint")); err == nil {
 		return Checkpointed, nil
@@ -789,10 +810,7 @@ func (c *linuxContainer) currentStatus() (Status, error) {
 		}
 		return 0, newSystemError(err)
 	}
-	if c.config.Cgroups != nil && c.config.Cgroups.Freezer == configs.Frozen {
-		return Paused, nil
-	}
-	return Running, nil
+	return c.checkFreezer()
 }
 
 func (c *linuxContainer) currentState() (*State, error) {
