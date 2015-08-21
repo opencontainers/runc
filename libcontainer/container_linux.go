@@ -568,6 +568,7 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *
 		return err
 	}
 
+	logPath := filepath.Join(opts.WorkDirectory, req.GetOpts().GetLogFile())
 	criuClient := os.NewFile(uintptr(fds[0]), "criu-transport-client")
 	criuServer := os.NewFile(uintptr(fds[1]), "criu-transport-server")
 	defer criuClient.Close()
@@ -631,7 +632,8 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *
 			return err
 		}
 		if !resp.GetSuccess() {
-			return fmt.Errorf("criu failed: type %s errno %d", req.GetType().String(), resp.GetCrErrno())
+			typeString := req.GetType().String()
+			return fmt.Errorf("criu failed: type %s errno %d\nlog file: %s", typeString, resp.GetCrErrno(), logPath)
 		}
 
 		t := resp.GetType()
@@ -671,7 +673,7 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *
 		return err
 	}
 	if !st.Success() {
-		return fmt.Errorf("criu failed: %s", st.String())
+		return fmt.Errorf("criu failed: %s\nlog file: %s", st.String(), logPath)
 	}
 	return nil
 }
