@@ -51,7 +51,7 @@ func main() {
 		},
 		cli.StringFlag{
 			Name:  "criu",
-			Value: "criu",
+			Value: getDefaultCriu(),
 			Usage: "path to the criu binary used for checkpoint and restore",
 		},
 	}

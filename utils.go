@@ -162,6 +162,15 @@ func getDefaultRoot() string {
 	return root
 }
 
+// getDefaultCriu returns a path to the criu binary.
+func getDefaultCriu() string {
+	criu := os.Getenv("RUNC_CRIU")
+	if criu == "" {
+		criu = "criu"
+	}
+	return criu
+}
+
 func getDefaultImagePath(context *cli.Context) string {
 	cwd, err := os.Getwd()
 	if err != nil {
