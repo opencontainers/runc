@@ -1,10 +1,11 @@
 RUNC_TEST_IMAGE=runc_test
 PROJECT=github.com/opencontainers/runc
 TEST_DOCKERFILE=script/test_Dockerfile
+BUILDTAGS=seccomp
 export GOPATH:=$(CURDIR)/Godeps/_workspace:$(GOPATH)
 
 all:
-	go build -o runc .
+	go build -tags "$(BUILDTAGS)" -o runc .
 
 vet:
 	go get golang.org/x/tools/cmd/vet
@@ -20,7 +21,8 @@ test: runctestimage
 	docker run -e TESTFLAGS --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_TEST_IMAGE) make localtest
 
 localtest:
-	go test ${TESTFLAGS} -v ./...
+	go test -tags "$(BUILDTAGS)" ${TESTFLAGS} -v ./...
+
 
 install:
 	cp runc /usr/local/bin/runc
