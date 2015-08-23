@@ -113,6 +113,14 @@ var specCommand = cli.Command{
 					"KILL",
 					"NET_BIND_SERVICE",
 				},
+				Rlimits: []specs.Rlimit{
+					{
+						Type: syscall.RLIMIT_NOFILE,
+						Hard: uint64(1024),
+						Soft: uint64(1024),
+					},
+				},
+
 				Devices: []specs.Device{
 					{
 						Type:        'c',
@@ -268,6 +276,9 @@ func createLibcontainerConfig(cgroupName string, spec *specs.LinuxSpec) (*config
 	if err := setupUserNamespace(spec, config); err != nil {
 		return nil, err
 	}
+	for _, rlimit := range spec.Linux.Rlimits {
+		config.Rlimits = append(config.Rlimits, createLibContainerRlimit(rlimit))
+	}
 	c, err := createCgroupConfig(cgroupName, spec, config.Devices)
 	if err != nil {
 		return nil, err
@@ -407,6 +418,14 @@ func setupUserNamespace(spec *specs.LinuxSpec, config *configs.Config) error {
 		node.Gid = uint32(rootGID)
 	}
 	return nil
+}
+
+func createLibContainerRlimit(rlimit specs.Rlimit) configs.Rlimit {
+	return configs.Rlimit{
+		Type: int(rlimit.Type),
+		Hard: uint64(rlimit.Hard),
+		Soft: uint64(rlimit.Soft),
+	}
 }
 
 // parseMountOptions parses the string and returns the flags and any mount data that
