@@ -184,13 +184,67 @@ user with uid and gid of `0` defined within that file-system.
             "NET_BIND_SERVICE"
         ],
         "devices": [
-            "null",
-            "random",
-            "full",
-            "tty",
-            "zero",
-            "urandom"
-        ]
+                {
+                        "type": 99,
+                        "path": "/dev/null",
+                        "major": 1,
+                        "minor": 3,
+                        "permissions": "rwm",
+                        "fileMode": 438,
+                        "uid": 0,
+                        "gid": 0
+                },
+                {
+                        "type": 99,
+                        "path": "/dev/random",
+                        "major": 1,
+                        "minor": 8,
+                        "permissions": "rwm",
+                        "fileMode": 438,
+                        "uid": 0,
+                        "gid": 0
+                },
+                {
+                        "type": 99,
+                        "path": "/dev/full",
+                        "major": 1,
+                        "minor": 7,
+                        "permissions": "rwm",
+                        "fileMode": 438,
+                        "uid": 0,
+                        "gid": 0
+                },
+                {
+                        "type": 99,
+                        "path": "/dev/tty",
+                        "major": 5,
+                        "minor": 0,
+                        "permissions": "rwm",
+                        "fileMode": 438,
+                        "uid": 0,
+                        "gid": 0
+                },
+                {
+                        "type": 99,
+                        "path": "/dev/zero",
+                        "major": 1,
+                        "minor": 5,
+                        "permissions": "rwm",
+                        "fileMode": 438,
+                        "uid": 0,
+                        "gid": 0
+                },
+                {
+                        "type": 99,
+                        "path": "/dev/urandom",
+                        "major": 1,
+                        "minor": 9,
+                        "permissions": "rwm",
+                        "fileMode": 438,
+                        "uid": 0,
+                        "gid": 0
+                }
+        ],
     }
 }
 ```
