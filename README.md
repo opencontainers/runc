@@ -122,7 +122,13 @@ user with uid and gid of `0` defined within that file-system.
     "linux": {
         "uidMapping": null,
         "gidMapping": null,
-        "rlimits": null,
+        "rlimits": [
+           {
+                "type": 7,
+                "hard": 1024,
+                "soft": 1024
+           }
+        ],
         "systemProperties": null,
         "resources": {
             "disableOOMKiller": false,
