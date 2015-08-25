@@ -29,17 +29,27 @@ sudo make install
 
 ### Using:
 
-To run a container that you received just execute `runc` with the JSON format as the argument or have a
-`config.json` file in the current working directory.
-
+To run a container, execute `runc start` in the bundle's root directory:
 ```bash
-runc
+runc start
 / $ ps
 PID   USER     COMMAND
 1     daemon   sh
 5     daemon   sh
 / $
 ```
+
+Or you can specify the path to a JSON configuration file:
+```bash
+runc start config.json
+/ $ ps
+PID   USER     COMMAND
+1     daemon   sh
+5     daemon   sh
+/ $
+```
+Note: the use of the `start` command is required when specifying a 
+configuration file.
 
 ### OCF Container JSON Format:
 
@@ -210,9 +220,9 @@ tar -C rootfs -xf busybox.tar
 ```
 * Create a file called `config.json` using the example from above.  You can also
 generate a spec using `runc spec`, redirecting the output into `config.json`
-* Execute `runc` and you should be placed into a shell where you can run `ps`:
+* Execute `runc start` and you should be placed into a shell where you can run `ps`:
 ```
-$ runc
+$ runc start
 / # ps
 PID   USER     COMMAND
     1 root     sh

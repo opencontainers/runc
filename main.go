@@ -24,7 +24,11 @@ After creating a spec for your root filesystem with runc, you can execute a
 container in your shell by running:
 
     cd /mycontainer
-    runc  [ spec-file ]
+    runc start
+
+or
+	cd /mycontainer
+	runc start [ spec-file ]
 
 If not specified, the default value for the 'spec-file' is 'config.json'. `
 )
@@ -56,6 +60,7 @@ func main() {
 		},
 	}
 	app.Commands = []cli.Command{
+		startCommand,
 		checkpointCommand,
 		eventsCommand,
 		restoreCommand,
@@ -72,7 +77,8 @@ func main() {
 		return nil
 	}
 
-	app.Action = runAction
+	// Default to 'start' is no command is specified
+	app.Action = startCommand.Action
 
 	if err := app.Run(os.Args); err != nil {
 		logrus.Fatal(err)
