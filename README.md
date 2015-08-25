@@ -26,6 +26,7 @@ cd runc
 make
 sudo make install
 ```
+Before you build the `runc`, please make sure your OS has already installed the `libseccomp-dev` libraries
 
 ### Using:
 
