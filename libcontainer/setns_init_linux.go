@@ -21,6 +21,9 @@ func (l *linuxSetnsInit) Init() error {
 	if err := setupRlimits(l.config.Config); err != nil {
 		return err
 	}
+	if err := setOomScoreAdj(l.config.Config.OomScoreAdj); err != nil {
+		return err
+	}
 	if l.config.Config.Seccomp != nil {
 		if err := seccomp.InitSeccomp(l.config.Config.Seccomp); err != nil {
 			return err
