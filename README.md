@@ -73,10 +73,8 @@ When in doubt, start on the [mailing-list](#mailing-list).
 ## Weekly Call
 
 The contributors and maintainers of the project have a weekly meeting Wednesdays at 10:00 AM PST.
-The link to the call will be posted on the mailing list each week along with set topics for discussion.
-Everyone is welcome to participate in the call, although there can only be speaking members on the Google Hangout.
-Participants who don't get a speaking slot can watch the live broadcast on [this YouTube channel][youtube] and post feedback and questions on [the IRC channel](#irc).
-Everyone is welcome to propose additional topics, suggest other agenda alterations, or request a speaking slot via the [mailing list](#mailing-list).
+Everyone is welcome to participate in the [BlueJeans call][BlueJeans].
+An initial agenda will be posted to the [mailing list](#mailing-list) earlier in the week, and everyone is welcome to propose additional topics or suggest other agenda alterations there.
 Minutes for the call will be posted to the [mailing list](#mailing-list) for those who are unable to join the call.
 
 ## Mailing List
@@ -148,4 +146,4 @@ using your real name (sorry, no pseudonyms or anonymous contributions.)
 
 You can add the sign off when creating the git commit via `git commit -s`.
 
-[youtube]: https://www.youtube.com/channel/UC1wmLdEYmwWcsFg7bt1s5nw
+[BlueJeans]: https://bluejeans.com/1771332256/
