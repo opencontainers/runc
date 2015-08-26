@@ -1,13 +1,11 @@
 ## Linux namespaces
 
-A namespace wraps a global system resource in an abstraction that makes it
-appear to the processes within the namespace that they have their own isolated
-instance of the global resource.  Changes to the global resource are visible to
-other processes that are members of the namespace, but are invisible to other
-processes. For more information, see [the man page](http://man7.org/linux/man-pages/man7/namespaces.7.html)
+A namespace wraps a global system resource in an abstraction that makes it appear to the processes within the namespace that they have their own isolated instance of the global resource.
+Changes to the global resource are visible to other processes that are members of the namespace, but are invisible to other processes.
+For more information, see [the man page](http://man7.org/linux/man-pages/man7/namespaces.7.html).
 
-Namespaces are specified in the spec as an array of entries. Each entry has a
-type field with possible values described below and an optional path element.
+Namespaces are specified in the spec as an array of entries.
+Each entry has a type field with possible values described below and an optional path element.
 If a path is specified, that particular file is used to join that type of namespace.
 
 ```json
