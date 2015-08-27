@@ -18,6 +18,8 @@ on the specs repository and support the update spec.
 
 ### Building:
 
+At the time of writing, runc only builds on the Linux platform.
+
 ```bash
 # create a 'github.com/opencontainers' in your GOPATH/src
 cd github.com/opencontainers
