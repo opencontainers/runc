@@ -32,5 +32,5 @@ type Mount struct {
 	// Destination is the path where the mount will be placed relative to the container's root.
 	Destination string `json:"destination"`
 	// Options are fstab style mount options.
-	Options string `json:"options"`
+	Options []string `json:"options"`
 }
