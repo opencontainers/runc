@@ -18,15 +18,15 @@ var startCommand = cli.Command{
 	Usage: "create and run a container",
 	Action: func(context *cli.Context) {
 		spec, err := loadSpec(context.Args().First())
+		if err != nil {
+			fatal(err)
+		}
 
 		notifySocket := os.Getenv("NOTIFY_SOCKET")
 		if notifySocket != "" {
 			setupSdNotify(spec, notifySocket)
 		}
 
-		if err != nil {
-			fatal(err)
-		}
 		if os.Geteuid() != 0 {
 			logrus.Fatal("runc should be run as root")
 		}
