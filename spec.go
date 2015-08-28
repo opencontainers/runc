@@ -15,6 +15,7 @@ import (
 	"github.com/codegangsta/cli"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/seccomp"
 	"github.com/opencontainers/specs"
 )
 
@@ -180,6 +181,10 @@ var specCommand = cli.Command{
 						Swappiness: -1,
 					},
 				},
+				Seccomp: specs.Seccomp{
+					DefaultAction: "SCMP_ACT_ALLOW",
+					Syscalls:      []*specs.Syscall{},
+				},
 			},
 		}
 		data, err := json.MarshalIndent(&spec, "", "\t")
@@ -282,6 +287,11 @@ func createLibcontainerConfig(cgroupName string, spec *specs.LinuxSpec) (*config
 			"/proc/sys", "/proc/sysrq-trigger", "/proc/irq", "/proc/bus",
 		}
 	}
+	seccomp, err := setupSeccomp(&spec.Linux.Seccomp)
+	if err != nil {
+		return nil, err
+	}
+	config.Seccomp = seccomp
 	config.Sysctl = spec.Linux.Sysctl
 	config.ProcessLabel = spec.Linux.SelinuxProcessLabel
 	config.AppArmorProfile = spec.Linux.ApparmorProfile
@@ -469,4 +479,60 @@ func parseMountOptions(options string) (int, string) {
 		}
 	}
 	return flag, strings.Join(data, ",")
+}
+
+func setupSeccomp(config *specs.Seccomp) (*configs.Seccomp, error) {
+	if config == nil {
+		return nil, nil
+	}
+
+	// No default action specified, no syscalls listed, assume seccomp disabled
+	if config.DefaultAction == "" && len(config.Syscalls) == 0 {
+		return nil, nil
+	}
+
+	newConfig := new(configs.Seccomp)
+	newConfig.Syscalls = []*configs.Syscall{}
+
+	// Convert default action from string representation
+	newDefaultAction, err := seccomp.ConvertStringToAction(string(config.DefaultAction))
+	if err != nil {
+		return nil, err
+	}
+	newConfig.DefaultAction = newDefaultAction
+
+	// Loop through all syscall blocks and convert them to libcontainer format
+	for _, call := range config.Syscalls {
+		newAction, err := seccomp.ConvertStringToAction(string(call.Action))
+		if err != nil {
+			return nil, err
+		}
+
+		newCall := configs.Syscall{
+			Name:   call.Name,
+			Action: newAction,
+			Args:   []*configs.Arg{},
+		}
+
+		// Loop through all the arguments of the syscall and convert them
+		for _, arg := range call.Args {
+			newOp, err := seccomp.ConvertStringToOperator(string(arg.Op))
+			if err != nil {
+				return nil, err
+			}
+
+			newArg := configs.Arg{
+				Index:    arg.Index,
+				Value:    arg.Value,
+				ValueTwo: arg.ValueTwo,
+				Op:       newOp,
+			}
+
+			newCall.Args = append(newCall.Args, &newArg)
+		}
+
+		newConfig.Syscalls = append(newConfig.Syscalls, &newCall)
+	}
+
+	return newConfig, nil
 }
