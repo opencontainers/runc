@@ -4,6 +4,7 @@ package main
 
 import (
 	"os"
+	"path/filepath"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
@@ -89,6 +90,16 @@ func restoreContainer(context *cli.Context, spec *specs.LinuxSpec, config *confi
 	handler := newSignalHandler(tty)
 	defer handler.Close()
 	if err := container.Restore(process, options); err != nil {
+		cstatus, cerr := container.Status()
+		if cerr != nil {
+			logrus.Error(cerr)
+		}
+		if cstatus == libcontainer.Destroyed {
+			dest := filepath.Join(context.GlobalString("root"), context.GlobalString("id"))
+			if errVal := os.RemoveAll(dest); errVal != nil {
+				logrus.Error(errVal)
+			}
+		}
 		return -1, err
 	}
 	return handler.forward(process)
