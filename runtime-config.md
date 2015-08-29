@@ -52,6 +52,3 @@ Additional filesystems can be declared as "mounts", specified in the *mounts* ar
 ```
 
 See links for details about [mountvol](http://ss64.com/nt/mountvol.html) and [SetVolumeMountPoint](https://msdn.microsoft.com/en-us/library/windows/desktop/aa365561(v=vs.85).aspx) in Windows.
-
-
-
