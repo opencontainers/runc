@@ -16,6 +16,7 @@ import (
 
 const SD_LISTEN_FDS_START = 3
 
+// default action is to start a container
 var startCommand = cli.Command{
 	Name:  "start",
 	Usage: "create and run a container",
@@ -113,8 +114,6 @@ func startContainer(context *cli.Context, spec *specs.LinuxSpec) (int, error) {
 	}
 	return handler.forward(process)
 }
-
-// default action is to execute a container
 
 // If systemd is supporting sd_notify protocol, this function will add support
 // for sd_notify protocol from within the container.
