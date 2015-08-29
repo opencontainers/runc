@@ -56,7 +56,7 @@ For Linux-based systems the user structure has the following fields:
     "user": {
         "uid": 1,
         "gid": 1,
-        "additionalGids": []
+        "additionalGids": [5, 6]
     },
     "env": [
         "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
