@@ -62,7 +62,7 @@ For Linux-based systems the user structure has the following fields:
         "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
         "TERM=xterm"
     ],
-    "cwd": "",
+    "cwd": "/root",
     "args": [
         "sh"
     ]
