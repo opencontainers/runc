@@ -2,7 +2,7 @@ package specs
 
 import "os"
 
-// LinuxSpec is the full specification for linux containers.
+// LinuxRuntimeSpec is the full specification for linux containers.
 type LinuxRuntimeSpec struct {
 	RuntimeSpec
 	// Linux is platform specific configuration for linux based containers.
