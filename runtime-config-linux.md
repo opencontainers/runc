@@ -193,4 +193,3 @@ The actions and operators are strings that match the definitions in seccomp.h fr
        ]
    }
 ```
-
