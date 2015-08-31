@@ -10,10 +10,10 @@ type LinuxRuntimeSpec struct {
 }
 
 type LinuxRuntime struct {
-	// UidMapping specifies user mappings for supporting user namespaces on linux.
-	UidMappings []IDMapping `json:"uidMappings"`
-	// UidMapping specifies group mappings for supporting user namespaces on linux.
-	GidMappings []IDMapping `json:"gidMappings"`
+	// UIDMapping specifies user mappings for supporting user namespaces on linux.
+	UIDMappings []IDMapping `json:"uidMappings"`
+	// GIDMapping specifies group mappings for supporting user namespaces on linux.
+	GIDMappings []IDMapping `json:"gidMappings"`
 	// Rlimits specifies rlimit options to apply to the container's process.
 	Rlimits []Rlimit `json:"rlimits"`
 	// Sysctl are a set of key value pairs that are set for the container on start
