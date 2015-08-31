@@ -165,10 +165,9 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 		if err := syscall.Mount(m.Source, dest, m.Device, uintptr(m.Flags), data); err != nil {
 			return err
 		}
-		if m.Flags&syscall.MS_RDONLY != 0 {
-			if err := syscall.Mount(m.Source, dest, m.Device, uintptr(m.Flags|syscall.MS_REMOUNT), ""); err != nil {
-				return err
-			}
+		// bind mount won't change mount options, we need remount to make mount options effective.
+		if err := syscall.Mount(m.Source, dest, m.Device, uintptr(m.Flags|syscall.MS_REMOUNT), ""); err != nil {
+			return err
 		}
 		if m.Relabel != "" {
 			if err := label.Validate(m.Relabel); err != nil {
