@@ -819,7 +819,10 @@ func TestMountCgroupRO(t *testing.T) {
 	lines := strings.Split(mountInfo, "\n")
 	for _, l := range lines {
 		if strings.HasPrefix(l, "tmpfs on /sys/fs/cgroup") {
-			if !strings.Contains(l, "ro,nosuid,nodev,noexec") {
+			if !strings.Contains(l, "ro") ||
+				!strings.Contains(l, "nosuid") ||
+				!strings.Contains(l, "nodev") ||
+				!strings.Contains(l, "noexec") {
 				t.Fatalf("Mode expected to contain 'ro,nosuid,nodev,noexec': %s", l)
 			}
 			if !strings.Contains(l, "mode=755") {
@@ -830,7 +833,10 @@ func TestMountCgroupRO(t *testing.T) {
 		if !strings.HasPrefix(l, "cgroup") {
 			continue
 		}
-		if !strings.Contains(l, "ro,nosuid,nodev,noexec") {
+		if !strings.Contains(l, "ro") ||
+			!strings.Contains(l, "nosuid") ||
+			!strings.Contains(l, "nodev") ||
+			!strings.Contains(l, "noexec") {
 			t.Fatalf("Mode expected to contain 'ro,nosuid,nodev,noexec': %s", l)
 		}
 	}
@@ -862,7 +868,10 @@ func TestMountCgroupRW(t *testing.T) {
 	lines := strings.Split(mountInfo, "\n")
 	for _, l := range lines {
 		if strings.HasPrefix(l, "tmpfs on /sys/fs/cgroup") {
-			if !strings.Contains(l, "rw,nosuid,nodev,noexec") {
+			if !strings.Contains(l, "rw") ||
+				!strings.Contains(l, "nosuid") ||
+				!strings.Contains(l, "nodev") ||
+				!strings.Contains(l, "noexec") {
 				t.Fatalf("Mode expected to contain 'rw,nosuid,nodev,noexec': %s", l)
 			}
 			if !strings.Contains(l, "mode=755") {
@@ -873,7 +882,10 @@ func TestMountCgroupRW(t *testing.T) {
 		if !strings.HasPrefix(l, "cgroup") {
 			continue
 		}
-		if !strings.Contains(l, "rw,nosuid,nodev,noexec") {
+		if !strings.Contains(l, "rw") ||
+			!strings.Contains(l, "nosuid") ||
+			!strings.Contains(l, "nodev") ||
+			!strings.Contains(l, "noexec") {
 			t.Fatalf("Mode expected to contain 'rw,nosuid,nodev,noexec': %s", l)
 		}
 	}
