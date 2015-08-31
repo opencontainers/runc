@@ -5,8 +5,8 @@ import "os"
 // LinuxRuntimeSpec is the full specification for linux containers.
 type LinuxRuntimeSpec struct {
 	RuntimeSpec
-	// Linux is platform specific configuration for linux based containers.
-	LinuxRuntime Linux `json:"linux"`
+	// LinuxRuntime is platform specific configuration for linux based containers.
+	Linux LinuxRuntime `json:"linux"`
 }
 
 type LinuxRuntime struct {
