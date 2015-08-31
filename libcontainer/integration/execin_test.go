@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -330,5 +331,51 @@ func TestExecinPassExtraFiles(t *testing.T) {
 	out2 := string(buf)
 	if out2 != "2" {
 		t.Fatalf("expected second pipe to receive '2', got '%s'", out2)
+	}
+}
+
+func TestExecInOomScoreAdj(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+	rootfs, err := newRootfs()
+	ok(t, err)
+	defer remove(rootfs)
+	config := newTemplateConfig(rootfs)
+	config.OomScoreAdj = 200
+	container, err := newContainer(config)
+	ok(t, err)
+	defer container.Destroy()
+
+	stdinR, stdinW, err := os.Pipe()
+	ok(t, err)
+	process := &libcontainer.Process{
+		Args:  []string{"cat"},
+		Env:   standardEnvironment,
+		Stdin: stdinR,
+	}
+	err = container.Start(process)
+	stdinR.Close()
+	defer stdinW.Close()
+	ok(t, err)
+
+	buffers := newStdBuffers()
+	ps := &libcontainer.Process{
+		Args:   []string{"/bin/sh", "-c", "cat /proc/self/oom_score_adj"},
+		Env:    standardEnvironment,
+		Stdin:  buffers.Stdin,
+		Stdout: buffers.Stdout,
+		Stderr: buffers.Stderr,
+	}
+	err = container.Start(ps)
+	ok(t, err)
+	waitProcess(ps, t)
+
+	stdinW.Close()
+	waitProcess(process, t)
+
+	out := buffers.Stdout.String()
+	if oomScoreAdj := strings.TrimSpace(out); oomScoreAdj != strconv.Itoa(config.OomScoreAdj) {
+		t.Fatalf("expected oomScoreAdj to be %d, got %s", config.OomScoreAdj, oomScoreAdj)
 	}
 }

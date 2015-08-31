@@ -878,3 +878,45 @@ func TestMountCgroupRW(t *testing.T) {
 		}
 	}
 }
+
+func TestOomScoreAdj(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+	root, err := newTestRoot()
+	ok(t, err)
+	defer os.RemoveAll(root)
+
+	rootfs, err := newRootfs()
+	ok(t, err)
+	defer remove(rootfs)
+
+	config := newTemplateConfig(rootfs)
+	config.OomScoreAdj = 200
+
+	factory, err := libcontainer.New(root, libcontainer.Cgroupfs)
+	ok(t, err)
+
+	container, err := factory.Create("test", config)
+	ok(t, err)
+	defer container.Destroy()
+
+	var stdout bytes.Buffer
+	pconfig := libcontainer.Process{
+		Args:   []string{"sh", "-c", "cat /proc/self/oom_score_adj"},
+		Env:    standardEnvironment,
+		Stdin:  nil,
+		Stdout: &stdout,
+	}
+	err = container.Start(&pconfig)
+	ok(t, err)
+
+	// Wait for process
+	waitProcess(&pconfig, t)
+	outputOomScoreAdj := strings.TrimSpace(string(stdout.Bytes()))
+
+	// Check that the oom_score_adj matches the value that was set as part of config.
+	if outputOomScoreAdj != strconv.Itoa(config.OomScoreAdj) {
+		t.Fatalf("Expected oom_score_adj %d; got %q", config.OomScoreAdj, outputOomScoreAdj)
+	}
+}

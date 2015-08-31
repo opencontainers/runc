@@ -127,6 +127,12 @@ type Config struct {
 	// If Rlimits are not set, the container will inherit rlimits from the parent process
 	Rlimits []Rlimit `json:"rlimits"`
 
+	// OomScoreAdj specifies the adjustment to be made by the kernel when calculating oom scores
+	// for a process. Valid values are between the range [-1000, '1000'], where processes with
+	// higher scores are preferred for being killed.
+	// More information about kernel oom score calculation here: https://lwn.net/Articles/317814/
+	OomScoreAdj int `json:"oom_score_adj"`
+
 	// AdditionalGroups specifies the gids that should be added to supplementary groups
 	// in addition to those that the user belongs to.
 	AdditionalGroups []string `json:"additional_groups"`

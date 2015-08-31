@@ -5,7 +5,9 @@ package libcontainer
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
+	"strconv"
 	"strings"
 	"syscall"
 
@@ -236,6 +238,11 @@ func setupRlimits(config *configs.Config) error {
 		}
 	}
 	return nil
+}
+
+func setOomScoreAdj(oomScoreAdj int) error {
+	path := "/proc/self/oom_score_adj"
+	return ioutil.WriteFile(path, []byte(strconv.Itoa(oomScoreAdj)), 0700)
 }
 
 // killCgroupProcesses freezes then iterates over all the processes inside the
