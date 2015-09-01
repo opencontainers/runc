@@ -1,33 +1,36 @@
-// +build linux
-
 package specs
 
 import "os"
 
-// LinuxSpec is the full specification for Linux containers
-type LinuxSpec struct {
-	Spec
-	// Linux is platform specific configuration for Linux based containers
-	Linux Linux `json:"linux"`
+// LinuxStateDirectory holds the container's state information
+const LinuxStateDirectory = "/run/opencontainer/containers"
+
+// LinuxRuntimeSpec is the full specification for linux containers.
+type LinuxRuntimeSpec struct {
+	RuntimeSpec
+	// LinuxRuntime is platform specific configuration for linux based containers.
+	Linux LinuxRuntime `json:"linux"`
 }
 
-// Linux contains platform specific configuration for Linux based containers
-type Linux struct {
-	// UIDMapping specifies user mappings for supporting user namespaces on Linux
+// LinuxRuntime hosts the Linux-only runtime information
+type LinuxRuntime struct {
+	// UIDMapping specifies user mappings for supporting user namespaces on linux.
 	UIDMappings []IDMapping `json:"uidMappings"`
-	// GIDMapping specifies group mappings for supporting user namespaces on Linux
+	// GIDMapping specifies group mappings for supporting user namespaces on linux.
 	GIDMappings []IDMapping `json:"gidMappings"`
-	// Rlimits specifies rlimit options to apply to the container's process
+	// Rlimits specifies rlimit options to apply to the container's process.
 	Rlimits []Rlimit `json:"rlimits"`
 	// Sysctl are a set of key value pairs that are set for the container on start
 	Sysctl map[string]string `json:"sysctl"`
 	// Resources contain cgroup information for handling resource constraints
 	// for the container
-	Resources Resources `json:"resources"`
+	Resources *Resources `json:"resources"`
+	// CgroupsPath specifies the path to cgroups that are created and/or joined by the container.
+	// The path is expected to be relative to the cgroups mountpoint.
+	// If resources are specified, the cgroups at CgroupsPath will be updated based on resources.
+	CgroupsPath string `json:"cgroupsPath"`
 	// Namespaces contains the namespaces that are created and/or joined by the container
 	Namespaces []Namespace `json:"namespaces"`
-	// Capabilities are Linux capabilities that are kept for the container
-	Capabilities []string `json:"capabilities"`
 	// Devices are a list of device nodes that are created and enabled for the container
 	Devices []Device `json:"devices"`
 	// ApparmorProfile specified the apparmor profile for the container.
@@ -40,25 +43,32 @@ type Linux struct {
 	RootfsPropagation string `json:"rootfsPropagation"`
 }
 
-// User specifies Linux specific user and group information for the container's
-// main process
-type User struct {
-	// Uid is the user id
-	UID int32 `json:"uid"`
-	// Gid is the group id
-	GID int32 `json:"gid"`
-	// AdditionalGids are additional group ids set for the container's process
-	AdditionalGids []int32 `json:"additionalGids"`
-}
-
-// Namespace is the configuration for a Linux namespace
+// Namespace is the configuration for a linux namespace
 type Namespace struct {
 	// Type is the type of Linux namespace
-	Type string `json:"type"`
+	Type NamespaceType `json:"type"`
 	// Path is a path to an existing namespace persisted on disk that can be joined
 	// and is of the same type
 	Path string `json:"path"`
 }
+
+// NamespaceType is one of the linux namespaces
+type NamespaceType string
+
+const (
+	// PIDNamespace for isolating process IDs
+	PIDNamespace NamespaceType = "pid"
+	// NetworkNamespace for isolating network devices, stacks, ports, etc
+	NetworkNamespace = "network"
+	// MountNamespace for isolating mount points
+	MountNamespace = "mount"
+	// IPCNamespace for isolating System V IPC, POSIX message queues
+	IPCNamespace = "ipc"
+	// UTSNamespace for isolating hostname and NIS domain name
+	UTSNamespace = "uts"
+	// UserNamespace for isolating user and group IDs
+	UserNamespace = "user"
+)
 
 // IDMapping specifies UID/GID mappings
 type IDMapping struct {
@@ -73,7 +83,7 @@ type IDMapping struct {
 // Rlimit type and restrictions
 type Rlimit struct {
 	// Type of the rlimit to set
-	Type int `json:"type"`
+	Type string `json:"type"`
 	// Hard is the hard limit for the specified type
 	Hard uint64 `json:"hard"`
 	// Soft is the soft limit for the specified type
@@ -142,6 +152,12 @@ type CPU struct {
 	Mems string `json:"mems"`
 }
 
+// Pids for Linux cgroup 'pids' resource management (Linux 4.3)
+type Pids struct {
+	// Maximum number of PIDs. A value < 0 implies "no limit".
+	Limit int64 `json:"limit"`
+}
+
 // Network identification and priority configuration
 type Network struct {
 	// Set class identifier for container's network packets
@@ -158,6 +174,8 @@ type Resources struct {
 	Memory Memory `json:"memory"`
 	// CPU resource restriction configuration
 	CPU CPU `json:"cpu"`
+	// Task resource restriction configuration.
+	Pids Pids `json:"pids"`
 	// BlockIO restriction configuration
 	BlockIO BlockIO `json:"blockIO"`
 	// Hugetlb limit (in bytes)
@@ -166,11 +184,12 @@ type Resources struct {
 	Network Network `json:"network"`
 }
 
+// Device represents the information on a Linux special device file
 type Device struct {
-	// Device type, block, char, etc.
-	Type rune `json:"type"`
 	// Path to the device.
 	Path string `json:"path"`
+	// Device type, block, char, etc.
+	Type rune `json:"type"`
 	// Major is the device's major number.
 	Major int64 `json:"major"`
 	// Minor is the device's minor number.

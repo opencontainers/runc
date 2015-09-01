@@ -18,23 +18,53 @@ var restoreCommand = cli.Command{
 	Name:  "restore",
 	Usage: "restore a container from a previous checkpoint",
 	Flags: []cli.Flag{
-		cli.StringFlag{Name: "image-path", Value: "", Usage: "path to criu image files for restoring"},
-		cli.StringFlag{Name: "work-path", Value: "", Usage: "path for saving work files and logs"},
-		cli.BoolFlag{Name: "tcp-established", Usage: "allow open tcp connections"},
-		cli.BoolFlag{Name: "ext-unix-sk", Usage: "allow external unix sockets"},
-		cli.BoolFlag{Name: "shell-job", Usage: "allow shell jobs"},
-		cli.BoolFlag{Name: "file-locks", Usage: "handle file locks, for safety"},
+		cli.StringFlag{
+			Name:  "image-path",
+			Value: "",
+			Usage: "path to criu image files for restoring",
+		},
+		cli.StringFlag{
+			Name:  "work-path",
+			Value: "",
+			Usage: "path for saving work files and logs",
+		},
+		cli.BoolFlag{
+			Name:  "tcp-established",
+			Usage: "allow open tcp connections",
+		},
+		cli.BoolFlag{
+			Name:  "ext-unix-sk",
+			Usage: "allow external unix sockets",
+		},
+		cli.BoolFlag{
+			Name:  "shell-job",
+			Usage: "allow shell jobs",
+		},
+		cli.BoolFlag{
+			Name:  "file-locks",
+			Usage: "handle file locks, for safety",
+		},
+		cli.StringFlag{
+			Name:  "config-file, c",
+			Value: "config.json",
+			Usage: "path to spec file for writing",
+		},
+		cli.StringFlag{
+			Name:  "runtime-file, r",
+			Value: "runtime.json",
+			Usage: "path for runtime file for writing",
+		},
 	},
 	Action: func(context *cli.Context) {
 		imagePath := context.String("image-path")
 		if imagePath == "" {
 			imagePath = getDefaultImagePath(context)
 		}
-		spec, err := loadSpec(context.Args().First())
+		spec, rspec, err := loadSpec(context.String("config-file"), context.String("runtime-file"))
 		if err != nil {
 			fatal(err)
 		}
-		config, err := createLibcontainerConfig(context.GlobalString("id"), spec)
+		config, err := createLibcontainerConfig(context.GlobalString("id"), spec, rspec)
 		if err != nil {
 			fatal(err)
 		}
