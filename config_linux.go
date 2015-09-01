@@ -20,10 +20,10 @@ type Linux struct {
 // User specifies linux specific user and group information for the container's
 // main process.
 type User struct {
-	// Uid is the user id.
-	Uid int32 `json:"uid"`
-	// Gid is the group id.
-	Gid int32 `json:"gid"`
+	// UID is the user id.
+	UID int32 `json:"uid"`
+	// GID is the group id.
+	GID int32 `json:"gid"`
 	// AdditionalGids are additional group ids set for the container's process.
 	AdditionalGids []int32 `json:"additionalGids"`
 }
