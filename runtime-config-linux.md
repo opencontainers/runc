@@ -131,6 +131,60 @@ Also known as cgroups, they are used to restrict resource usage for a container 
 cgroups provide controls to restrict cpu, memory, IO, pids and network for the container.
 For more information, see the [kernel cgroups documentation](https://www.kernel.org/doc/Documentation/cgroups/cgroups.txt).
 
+The path to the cgroups can to be specified in the Spec via `cgroupsPath`.
+`cgroupsPath` is expected to be relative to the cgroups mount point.
+If not specified, cgroups will be created under '/'.
+Implementations of the Spec can choose to name cgroups in any manner.
+The Spec does not include naming schema for cgroups.
+The Spec does not support [split hierarchy](https://www.kernel.org/doc/Documentation/cgroups/unified-hierarchy.txt).
+The cgroups will be created if they don't exist.
+
+```json
+   "cgroupsPath": "/myRuntime/myContainer"
+```
+
+`cgroupsPath` can be used to either control the cgroups hierarchy for containers or to run a new process in an existing container.
+
+Optionally, cgroups limits can be specified via `resources`.
+
+```json
+    "resources": {
+        "disableOOMKiller": false,
+        "memory": {
+            "limit": 0,
+            "reservation": 0,
+            "swap": 0,
+            "kernel": 0,
+            "swappiness": -1
+        },
+        "cpu": {
+            "shares": 0,
+            "quota": 0,
+            "period": 0,
+            "realtimeRuntime": 0,
+            "realtimePeriod": 0,
+            "cpus": "",
+            "mems": ""
+        },
+        "blockIO": {
+            "blkioWeight": 0,
+            "blkioWeightDevice": "",
+            "blkioThrottleReadBpsDevice": "",
+            "blkioThrottleWriteBpsDevice": "",
+            "blkioThrottleReadIopsDevice": "",
+            "blkioThrottleWriteIopsDevice": ""
+        },
+        "hugepageLimits": null,
+        "network": {
+            "classId": "",
+            "priorities": null
+        }
+    }
+```
+
+Do not specify `resources` unless limits have to be updated.
+For example, to run a new process in an existing container without updating limits, `resources` need not be specified.
+
 ## Sysctl
 
 sysctl allows kernel parameters to be modified at runtime for the container.

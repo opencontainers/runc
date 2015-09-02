@@ -24,7 +24,11 @@ type LinuxRuntime struct {
 	Sysctl map[string]string `json:"sysctl"`
 	// Resources contain cgroup information for handling resource constraints
 	// for the container
-	Resources Resources `json:"resources"`
+	Resources *Resources `json:"resources"`
+	// CgroupsPath specifies the path to cgroups that are created and/or joined by the container.
+	// The path is expected to be relative to the cgroups mountpoint.
+	// If resources are specified, the cgroups at CgroupsPath will be updated based on resources.
+	CgroupsPath string `json:"cgroupsPath"`
 	// Namespaces contains the namespaces that are created and/or joined by the container
 	Namespaces []Namespace `json:"namespaces"`
 	// Devices are a list of device nodes that are created and enabled for the container
