@@ -44,7 +44,7 @@ container via system level IPC.
 * **user** the container will be able to remap user and group IDs from the host to local users and groups
 within the container.
 
-### Access to devices
+## Devices
 
 Devices is an array specifying the list of devices to be created in the container.
 Next parameters can be specified:
