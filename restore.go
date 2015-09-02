@@ -3,6 +3,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -59,6 +60,13 @@ func restoreContainer(context *cli.Context, spec *specs.LinuxSpec, config *confi
 		}
 	}
 	options := criuOptions(context)
+	status, err := container.Status()
+	if err != nil {
+		logrus.Error(err)
+	}
+	if status == libcontainer.Running {
+		fatal(fmt.Errorf("Container with id %s already running", context.GlobalString("id")))
+	}
 	// ensure that the container is always removed if we were the process
 	// that created it.
 	defer func() {
