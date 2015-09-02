@@ -34,6 +34,37 @@ Each container has exactly one *root filesystem*, specified in the *root* object
 }
 ```
 
+## Mount Points
+
+You can add array of mount points inside container as `mounts`.
+Each record in this array must have configuration in [runtime config](runtime-config.md#mount-configuration).
+
+* **name** (string, required) Name of mount point. Used for config lookup.
+* **path** (string, required) Destination of mount point: path inside container.
+
+*Example*
+
+```json
+"mounts": [
+    {
+        "name": "proc",
+        "path": "/proc"
+    },
+    {
+        "name": "dev",
+        "path": "/dev"
+    },
+    {
+        "name": "devpts",
+        "path": "/dev/pts"
+    },
+    {
+        "name": "data",
+        "path": "/data"
+    }
+]
+```
+
 ## Process configuration
 
 * **terminal** (bool, optional) specifies whether you want a terminal attached to that process. Defaults to false.

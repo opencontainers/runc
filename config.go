@@ -14,7 +14,7 @@ type Spec struct {
 	// Hostname is the container's host name.
 	Hostname string `json:"hostname"`
 	// Mounts profile configuration for adding mounts to the container's filesystem.
-	MountPoints []MountPoint `json:"mounts"`
+	Mounts []MountPoint `json:"mounts"`
 }
 
 // Process contains information to start a specific application inside the container.
