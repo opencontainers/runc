@@ -1,8 +1,10 @@
 package specs
 
 type RuntimeSpec struct {
-	// Mounts profile configuration for adding mounts to the container's filesystem.
-	Mounts []Mount `json:"mounts"`
+	// Mounts is a mapping of names to mount configurations.
+	// Which mounts will be mounted and where should be chosen with MountPoints
+	// in Spec.
+	Mounts map[string]Mount `json:"mounts"`
 	// Hooks are the commands run at various lifecycle events of the container.
 	Hooks Hooks `json:"hooks"`
 }
@@ -29,8 +31,6 @@ type Mount struct {
 	// Source specifies the source path of the mount.  In the case of bind mounts on
 	// linux based systems this would be the file on the host.
 	Source string `json:"source"`
-	// Destination is the path where the mount will be placed relative to the container's root.
-	Destination string `json:"destination"`
 	// Options are fstab style mount options.
 	Options []string `json:"options"`
 }
