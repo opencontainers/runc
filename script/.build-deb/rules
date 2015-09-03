@@ -1,0 +1,22 @@
+#!/usr/bin/make -f
+
+override_dh_gencontrol:
+	# if we're on Ubuntu, we need to Recommends: apparmor
+	echo 'apparmor:Recommends=$(shell dpkg-vendor --is Ubuntu && echo apparmor)' >> debian/runc.substvars
+	dh_gencontrol
+
+override_dh_auto_build:
+	make all
+
+override_dh_auto_test:
+	./runc -v
+
+override_dh_strip:
+	# Go has lots of problems with stripping, so just don't
+
+override_dh_auto_install:
+	mkdir -p debian/runc/usr/bin
+	cp -aT "$$(readlink -f runc)" debian/runc/usr/bin/runc
+
+%:
+	dh $@

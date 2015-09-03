@@ -34,8 +34,15 @@ localtest:
 install:
 	cp runc /usr/local/bin/runc
 
+build-deb:
+	./script/build-deb
+
+build-rpm:
+	./script/build-rpm
+
 clean:
 	rm -f runc
+	rm -rf bundles
 
 validate: vet
 	script/validate-gofmt
