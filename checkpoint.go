@@ -30,6 +30,13 @@ var checkpointCommand = cli.Command{
 			fatal(err)
 		}
 		options := criuOptions(context)
+		status, err := container.Status()
+		if err != nil {
+			fatal(err)
+		}
+		if status == libcontainer.Checkpointed {
+			fatal(fmt.Errorf("Container with id %s already checkpointed", context.GlobalString("id")))
+		}
 		// these are the mandatory criu options for a container
 		setPageServer(context, options)
 		if err := container.Checkpoint(options); err != nil {
