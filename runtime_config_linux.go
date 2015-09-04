@@ -12,6 +12,7 @@ type LinuxRuntimeSpec struct {
 	Linux LinuxRuntime `json:"linux"`
 }
 
+// LinuxRuntime hosts the Linux-only runtime information
 type LinuxRuntime struct {
 	// UIDMapping specifies user mappings for supporting user namespaces on linux.
 	UIDMappings []IDMapping `json:"uidMappings"`
@@ -38,7 +39,7 @@ type LinuxRuntime struct {
 	RootfsPropagation string `json:"rootfsPropagation"`
 }
 
-// Namespace is the configuration for a linux namespace.
+// Namespace is the configuration for a linux namespace
 type Namespace struct {
 	// Type is the type of Linux namespace
 	Type NamespaceType `json:"type"`
@@ -51,12 +52,18 @@ type Namespace struct {
 type NamespaceType string
 
 const (
-	PIDNamespace     NamespaceType = "pid"
-	NetworkNamespace               = "network"
-	MountNamespace                 = "mount"
-	IPCNamespace                   = "ipc"
-	UTSNamespace                   = "uts"
-	UserNamespace                  = "user"
+	// PIDNamespace for isolating process IDs
+	PIDNamespace NamespaceType = "pid"
+	// NetworkNamespace for isolating network devices, stacks, ports, etc
+	NetworkNamespace = "network"
+	// MountNamespace for isolating mount points
+	MountNamespace = "mount"
+	// IPCNamespace for isolating System V IPC, POSIX message queues
+	IPCNamespace = "ipc"
+	// UTSNamespace for isolating hostname and NIS domain name
+	UTSNamespace = "uts"
+	// UserNamespace for isolating user and group IDs
+	UserNamespace = "user"
 )
 
 // IDMapping specifies UID/GID mappings
@@ -141,6 +148,7 @@ type CPU struct {
 	Mems string `json:"mems"`
 }
 
+// Pids for Linux cgroup 'pids' resource management (Linux 4.3)
 type Pids struct {
 	// Maximum number of PIDs. A value < 0 implies "no limit".
 	Limit int64 `json:"limit"`
@@ -172,6 +180,7 @@ type Resources struct {
 	Network Network `json:"network"`
 }
 
+// Device represents the information on a Linux special device file
 type Device struct {
 	// Path to the device.
 	Path string `json:"path"`
