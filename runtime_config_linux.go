@@ -129,6 +129,11 @@ type CPU struct {
 	Mems string `json:"mems"`
 }
 
+type Pids struct {
+	// Maximum number of PIDs. A value < 0 implies "no limit".
+	Limit int64 `json:"limit"`
+}
+
 // Network identification and priority configuration
 type Network struct {
 	// Set class identifier for container's network packets
@@ -145,6 +150,8 @@ type Resources struct {
 	Memory Memory `json:"memory"`
 	// CPU resource restriction configuration
 	CPU CPU `json:"cpu"`
+	// Task resource restriction configuration.
+	Pids Pids `json:"pids"`
 	// BlockIO restriction configuration
 	BlockIO BlockIO `json:"blockIO"`
 	// Hugetlb limit (in bytes)
