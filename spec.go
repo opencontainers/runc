@@ -97,7 +97,7 @@ var specCommand = cli.Command{
 						Type: "pid",
 					},
 					{
-						Type: "network",
+						Type: "net",
 					},
 					{
 						Type: "ipc",
@@ -106,7 +106,7 @@ var specCommand = cli.Command{
 						Type: "uts",
 					},
 					{
-						Type: "mount",
+						Type: "mnt",
 					},
 				},
 				Capabilities: []string{
@@ -204,12 +204,12 @@ var specCommand = cli.Command{
 }
 
 var namespaceMapping = map[string]configs.NamespaceType{
-	"pid":     configs.NEWPID,
-	"network": configs.NEWNET,
-	"mount":   configs.NEWNS,
-	"user":    configs.NEWUSER,
-	"ipc":     configs.NEWIPC,
-	"uts":     configs.NEWUTS,
+	"pid":  configs.NEWPID,
+	"net":  configs.NEWNET,
+	"mnt":  configs.NEWNS,
+	"user": configs.NEWUSER,
+	"ipc":  configs.NEWIPC,
+	"uts":  configs.NEWUTS,
 }
 
 // loadSpec loads the specification from the provided path.
