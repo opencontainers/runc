@@ -41,11 +41,23 @@ type LinuxRuntime struct {
 // Namespace is the configuration for a linux namespace.
 type Namespace struct {
 	// Type is the type of Linux namespace
-	Type string `json:"type"`
+	Type NamespaceType `json:"type"`
 	// Path is a path to an existing namespace persisted on disk that can be joined
 	// and is of the same type
 	Path string `json:"path"`
 }
+
+// NamespaceType is one of the linux namespaces
+type NamespaceType string
+
+const (
+	PIDNamespace     NamespaceType = "pid"
+	NetworkNamespace               = "network"
+	MountNamespace                 = "mount"
+	IPCNamespace                   = "ipc"
+	UTSNamespace                   = "uts"
+	UserNamespace                  = "user"
+)
 
 // IDMapping specifies UID/GID mappings
 type IDMapping struct {
