@@ -180,7 +180,7 @@ user with uid and gid of `0` defined within that file-system.
                 "path": ""
             },
             {
-                "type": "network",
+                "type": "net",
                 "path": ""
             },
             {
@@ -192,7 +192,7 @@ user with uid and gid of `0` defined within that file-system.
                 "path": ""
             },
             {
-                "type": "mount",
+                "type": "mnt",
                 "path": ""
             }
         ],
