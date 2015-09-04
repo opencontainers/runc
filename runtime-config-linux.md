@@ -15,11 +15,11 @@ If a path is specified, that particular file is used to join that type of namesp
             "path": "/proc/1234/ns/pid"
         },
         {
-            "type": "net",
+            "type": "network",
             "path": "/var/run/netns/neta"
         },
         {
-            "type": "mnt",
+            "type": "mount",
         },
         {
             "type": "ipc",
@@ -37,7 +37,7 @@ If a path is specified, that particular file is used to join that type of namesp
 
 * **pid** processes inside the container will only be able to see other processes inside the same container.
 * **network** the container will have its own network stack.
-* **mnt** the container will have an isolated mount table.
+* **mount** the container will have an isolated mount table.
 * **ipc** processes inside the container will only be able to communicate to other processes inside the same
 container via system level IPC.
 * **uts** the container will be able to have its own hostname and domain name.
