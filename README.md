@@ -59,6 +59,10 @@ Issues are used for bugs and actionable items and longer discussions can happen 
 
 The specification and code is licensed under the Apache 2.0 license found in the `LICENSE` file of this repository.
 
+## Code of Conduct
+
+Participation in the OpenContainers community is governed by [OpenContainer's Code of Conduct](code-of-conduct.md).
+
 ## Discuss your design
 
 The project welcomes submissions, but please let everyone know what you are working on.
