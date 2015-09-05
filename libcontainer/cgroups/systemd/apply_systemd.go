@@ -313,6 +313,7 @@ func joinCpu(c *configs.Cgroup, pid int) error {
 	if err != nil && !cgroups.IsNotFound(err) {
 		return err
 	}
+	cgroups.CheckSubsystem(path, c, "cpu")
 	if c.CpuQuota != 0 {
 		if err = writeFile(path, "cpu.cfs_quota_us", strconv.FormatInt(c.CpuQuota, 10)); err != nil {
 			return err
@@ -497,7 +498,7 @@ func joinMemory(c *configs.Cgroup, pid int) error {
 	if err != nil && !cgroups.IsNotFound(err) {
 		return err
 	}
-
+	cgroups.CheckSubsystem(path, c, "memory")
 	// -1 disables memoryswap
 	if c.MemorySwap > 0 {
 		err = writeFile(path, "memory.memsw.limit_in_bytes", strconv.FormatInt(c.MemorySwap, 10))

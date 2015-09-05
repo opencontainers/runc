@@ -22,6 +22,7 @@ func (s *CpuGroup) Apply(d *data) error {
 	if err != nil && !cgroups.IsNotFound(err) {
 		return err
 	}
+	cgroups.CheckSubsystem(dir, d.c, "cpu")
 
 	if err := s.Set(dir, d.c); err != nil {
 		return err
