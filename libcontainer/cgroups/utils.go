@@ -47,7 +47,7 @@ func FindCgroupMountpoint(subsystem string) (string, error) {
 	return "", NewNotFoundError(subsystem)
 }
 
-func FindCgroupMountpointAndSource(subsystem string) (string, string, error) {
+func FindCgroupMountpointAndRoot(subsystem string) (string, string, error) {
 	f, err := os.Open("/proc/self/mountinfo")
 	if err != nil {
 		return "", "", err
