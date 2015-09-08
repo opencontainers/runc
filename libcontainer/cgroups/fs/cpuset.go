@@ -26,6 +26,11 @@ func (s *CpusetGroup) Apply(d *data) error {
 
 func (s *CpusetGroup) Set(path string, cgroup *configs.Cgroup) error {
 	if cgroup.CpusetCpus != "" {
+		// We should check whether there has already a change of CPUs before we specify it
+		if err := s.amend(path, cgroup); err != nil {
+			return err
+		}
+
 		if err := writeFile(path, "cpuset.cpus", cgroup.CpusetCpus); err != nil {
 			return err
 		}
@@ -132,4 +137,26 @@ func (s *CpusetGroup) copyIfNeeded(current, parent string) error {
 
 func (s *CpusetGroup) isEmpty(b []byte) bool {
 	return len(bytes.Trim(b, "\n")) == 0
+}
+
+func (s *CpusetGroup) amend(path string, cgroup *configs.Cgroup) error {
+
+	var newCPUs string
+	var err error
+
+	parentDir := filepath.Dir(path)
+	grandParentDir := filepath.Dir(parentDir)
+
+	// Generally it should be /sys/fs/cgroup/cpuset
+	if newCPUs, err = readFile(grandParentDir, "cpuset.cpus"); err != nil {
+		return err
+	}
+	if newCPUs != cgroup.CpusetCpus {
+		// Generally it should be /sys/fs/cgroup/cpuset/docker
+		if err := writeFile(parentDir, "cpuset.cpus", newCPUs); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
