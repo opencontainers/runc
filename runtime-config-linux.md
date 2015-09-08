@@ -7,6 +7,7 @@ For more information, see [the man page](http://man7.org/linux/man-pages/man7/na
 Namespaces are specified in the spec as an array of entries.
 Each entry has a type field with possible values described below and an optional path element.
 If a path is specified, that particular file is used to join that type of namespace.
+Also, when a path is specified, a runtime MUST assume that the setup for that particular namespace has already been done and error out if the config specifies anything else related to that namespace.
 
 ```json
     "namespaces": [
