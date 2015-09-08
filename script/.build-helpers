@@ -1,0 +1,6 @@
+#!/bin/bash
+set -e
+
+export VERSION=$(cat VERSION)
+export DEST="bundles/$VERSION/$(basename "$0")"
+mkdir -p $DEST

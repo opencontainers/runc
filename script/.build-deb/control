@@ -1,0 +1,13 @@
+Source: runc
+Maintainer: Open Containers Initiative <dev@opencontainers.org>
+Homepage: https://www.opencontainers.org/
+Vcs-Browser: https://github.com/opencontainers/runc
+Vcs-Git: git://github.com/opencontainers/runc.git
+
+Package: runc
+Architecture: linux-any
+Depends: ${misc:Depends}, ${perl:Depends}, ${shlibs:Depends}
+Recommends: cgroupfs-mount | cgroup-lite,
+            criu,
+            ${apparmor:Recommends}
+Description: a CLI tool for spawning and running containers according to the OCF specification

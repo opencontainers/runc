@@ -5,11 +5,11 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
+	"github.com/opencontainers/runc/version"
 )
 
-const (
-	version = "0.2"
-	usage   = `Open Container Initiative runtime
+var (
+	usage = `Open Container Initiative runtime
 
 runc is a command line client for running applications packaged according to
 the Open Container Format (OCF) and is a compliant implementation of the
@@ -30,14 +30,16 @@ or
 	cd /mycontainer
 	runc start [ spec-file ]
 
-If not specified, the default value for the 'spec-file' is 'config.json'. `
+If not specified, the default value for the 'spec-file' is 'config.json'. 
+
+Built from git commit: ` + version.GitCommit
 )
 
 func main() {
 	app := cli.NewApp()
 	app.Name = "runc"
 	app.Usage = usage
-	app.Version = version
+	app.Version = version.Version
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "id",
