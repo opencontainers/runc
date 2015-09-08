@@ -411,7 +411,7 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 		return err
 	}
 
-	err = c.criuSwrk(nil, req, criuOpts)
+	err = c.criuSwrk(nil, req, criuOpts, false)
 	if err != nil {
 		return err
 	}
@@ -504,6 +504,7 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 			FileLocks:      proto.Bool(criuOpts.FileLocks),
 		},
 	}
+
 	for _, m := range c.config.Mounts {
 		switch m.Device {
 		case "bind":
@@ -561,14 +562,36 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 		}
 	}
 
-	err = c.criuSwrk(process, req, criuOpts)
+	err = c.criuSwrk(process, req, criuOpts, true)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *CriuOpts) error {
+func (c *linuxContainer) criuApplyCgroups(pid int, req *criurpc.CriuReq) error {
+	if err := c.cgroupManager.Apply(pid); err != nil {
+		return err
+	}
+
+	path := fmt.Sprintf("/proc/%d/cgroup", pid)
+	cgroupsPaths, err := cgroups.ParseCgroupFile(path)
+	if err != nil {
+		return err
+	}
+
+	for c, p := range cgroupsPaths {
+		cgroupRoot := &criurpc.CgroupRoot{
+			Ctrl: proto.String(c),
+			Path: proto.String(p),
+		}
+		req.Opts.CgRoot = append(req.Opts.CgRoot, cgroupRoot)
+	}
+
+	return nil
+}
+
+func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *CriuOpts, applyCgroups bool) error {
 	fds, err := syscall.Socketpair(syscall.AF_LOCAL, syscall.SOCK_SEQPACKET|syscall.SOCK_CLOEXEC, 0)
 	if err != nil {
 		return err
@@ -601,6 +624,13 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *
 			return
 		}
 	}()
+
+	if applyCgroups {
+		err := c.criuApplyCgroups(cmd.Process.Pid, req)
+		if err != nil {
+			return err
+		}
+	}
 
 	var extFds []string
 	if process != nil {
