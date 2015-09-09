@@ -1,8 +1,12 @@
 # Bundle Container Format
 
-This section defines a format for encoding a container as a *bundle* - a directory organized in a certain way, and containing all the necessary data and metadata for any compliant runtime to perform all standard operations against it. See also [OS X application bundles](http://en.wikipedia.org/wiki/Bundle_%28OS_X%29) for a similar use of the term *bundle*.
+This section defines a format for encoding a container as a *bundle* - a directory organized in a certain way, and containing all the necessary data and metadata for any compliant runtime to perform all standard operations against it.
+See also [OS X application bundles](http://en.wikipedia.org/wiki/Bundle_%28OS_X%29) for a similar use of the term *bundle*.
 
-The format does not define distribution. In other words, it only specifies how a container must be stored on a local filesystem, for consumption by a runtime. It does not specify how to transfer a container between computers, how to discover containers, or assign names or versions to them. Any distribution method capable of preserving the original layout of a container, as specified here, is considered compliant.
+The format does not define distribution.
+In other words, it only specifies how a container must be stored on a local filesystem, for consumption by a runtime.
+It does not specify how to transfer a container between computers, how to discover containers, or assign names or versions to them.
+Any distribution method capable of preserving the original layout of a container, as specified here, is considered compliant.
 
 A standard container bundle is made of the following 3 parts:
 

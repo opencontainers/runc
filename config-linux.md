@@ -1,15 +1,12 @@
 # Linux-specific configuration
 
-The Linux container specification uses various kernel features like namespaces,
-cgroups, capabilities, LSM, and file system jails to fulfill the spec.
-Additional information is needed for Linux over the [default spec configuration](config.md)
-in order to configure these various kernel features.
+The Linux container specification uses various kernel features like namespaces, cgroups, capabilities, LSM, and file system jails to fulfill the spec.
+Additional information is needed for Linux over the [default spec configuration](config.md) in order to configure these various kernel features.
 
 ## Capabilities
 
-Capabilities is an array that specifies Linux capabilities that can be provided to the process
-inside the container. Valid values are the string after `CAP_` for capabilities defined
-in [the man page](http://man7.org/linux/man-pages/man7/capabilities.7.html)
+Capabilities is an array that specifies Linux capabilities that can be provided to the process inside the container.
+Valid values are the string after `CAP_` for capabilities defined in [the man page](http://man7.org/linux/man-pages/man7/capabilities.7.html).
 
 ```json
    "capabilities": [
@@ -21,7 +18,9 @@ in [the man page](http://man7.org/linux/man-pages/man7/capabilities.7.html)
 
 ## Rootfs Mount Propagation
 
-rootfsPropagation sets the rootfs's mount propagation. Its value is either slave, private, or shared. [The kernel doc](https://www.kernel.org/doc/Documentation/filesystems/sharedsubtree.txt) has more information about mount propagation.
+rootfsPropagation sets the rootfs's mount propagation.
+Its value is either slave, private, or shared.
+[The kernel doc](https://www.kernel.org/doc/Documentation/filesystems/sharedsubtree.txt) has more information about mount propagation.
 
 ```json
     "rootfsPropagation": "slave",

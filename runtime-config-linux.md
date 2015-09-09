@@ -127,9 +127,9 @@ Next parameters can be specified:
 
 ## Control groups
 
-Also known as cgroups, they are used to restrict resource usage for a container and handle
-device access.  cgroups provide controls to restrict cpu, memory, IO, pids and network for
-the container. For more information, see the [kernel cgroups documentation](https://www.kernel.org/doc/Documentation/cgroups/cgroups.txt).
+Also known as cgroups, they are used to restrict resource usage for a container and handle device access.
+cgroups provide controls to restrict cpu, memory, IO, pids and network for the container.
+For more information, see the [kernel cgroups documentation](https://www.kernel.org/doc/Documentation/cgroups/cgroups.txt).
 
 ## Sysctl
 
@@ -155,7 +155,9 @@ For more information, see [the man page](http://man7.org/linux/man-pages/man8/sy
    ]
 ```
 
-rlimits allow setting resource limits. The type is from the values defined in [the man page](http://man7.org/linux/man-pages/man2/setrlimit.2.html). The kernel enforces the soft limit for a resource while the hard limit acts as a ceiling for that value that could be set by an unprivileged process.
+rlimits allow setting resource limits.
+The type is from the values defined in [the man page](http://man7.org/linux/man-pages/man2/setrlimit.2.html).
+The kernel enforces the soft limit for a resource while the hard limit acts as a ceiling for that value that could be set by an unprivileged process.
 
 ## SELinux process label
 
@@ -177,8 +179,7 @@ For more information about Apparmor, see [Apparmor documentation](https://wiki.u
 ## seccomp
 
 Seccomp provides application sandboxing mechanism in the Linux kernel.
-Seccomp configuration allows one to configure actions to take for matched syscalls and furthermore also allows
-matching on values passed as arguments to syscalls.
+Seccomp configuration allows one to configure actions to take for matched syscalls and furthermore also allows matching on values passed as arguments to syscalls.
 For more information about Seccomp, see [Seccomp kernel documentation](https://www.kernel.org/doc/Documentation/prctl/seccomp_filter.txt)
 The actions and operators are strings that match the definitions in seccomp.h from [libseccomp](https://github.com/seccomp/libseccomp) and are translated to corresponding values.
 
