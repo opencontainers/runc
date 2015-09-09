@@ -336,7 +336,7 @@ func TestProcessCaps(t *testing.T) {
 	ok(t, err)
 	defer container.Destroy()
 
-	processCaps := append(config.Capabilities, "NET_ADMIN")
+	processCaps := append(config.Capabilities, "CAP_NET_ADMIN")
 
 	var stdout bytes.Buffer
 	pconfig := libcontainer.Process{
