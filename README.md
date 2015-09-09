@@ -115,6 +115,8 @@ To keep consistency throughout the Markdown files in the Open Container spec all
 This fixes two things: it makes diffing easier with git and it resolves fights about line wrapping length.
 For example, this paragraph will span three lines in the Markdown source.
 
+## Git commit
+
 ### Sign your work
 
 The sign-off is a simple line at the end of the explanation for the patch, which certifies that you wrote it or otherwise have the right to pass it on as an open-source patch.
@@ -166,5 +168,20 @@ then you just add a line to every git commit message:
 using your real name (sorry, no pseudonyms or anonymous contributions.)
 
 You can add the sign off when creating the git commit via `git commit -s`.
+
+### Commit Style
+
+Simple house-keeping for clean git history.
+Read more on [How to Write a Git Commit Message](http://chris.beams.io/posts/git-commit/) or the Discussion section of [`git-commit(1)`](http://git-scm.com/docs/git-commit).
+
+1. Separate the subject from body with a blank line
+2. Limit the subject line to 50 characters
+3. Capitalize the subject line
+4. Do not end the subject line with a period
+5. Use the imperative mood in the subject line
+6. Wrap the body at 72 characters
+7. Use the body to explain what and why vs. how
+  * If there was important/useful/essential conversation or information, copy or include a reference
+8. When possible, one keyword to scope the change in the subject (i.e. "README: ...", "runtime: ...")
 
 [BlueJeans]: https://bluejeans.com/1771332256/
