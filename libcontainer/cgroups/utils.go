@@ -82,7 +82,7 @@ func FindCgroupMountpointDir() (string, error) {
 	for scanner.Scan() {
 		txt := scanner.Text()
 		fields := strings.Split(txt, " ")
-		if fields[7] == "cgroup" {
+		if fields[8] == "cgroup" {
 			return filepath.Dir(fields[4]), nil
 		}
 	}
