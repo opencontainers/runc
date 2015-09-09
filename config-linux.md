@@ -6,13 +6,13 @@ Additional information is needed for Linux over the [default spec configuration]
 ## Capabilities
 
 Capabilities is an array that specifies Linux capabilities that can be provided to the process inside the container.
-Valid values are the string after `CAP_` for capabilities defined in [the man page](http://man7.org/linux/man-pages/man7/capabilities.7.html).
+Valid values are the strings for capabilities defined in [the man page](http://man7.org/linux/man-pages/man7/capabilities.7.html)
 
 ```json
    "capabilities": [
-        "AUDIT_WRITE",
-        "KILL",
-        "NET_BIND_SERVICE"
+        "CAP_AUDIT_WRITE",
+        "CAP_KILL",
+        "CAP_NET_BIND_SERVICE"
     ]
 ```
 
