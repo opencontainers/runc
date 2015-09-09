@@ -141,9 +141,9 @@ user with uid and gid of `0` defined within that file-system.
 	],
 	"linux": {
 		"capabilities": [
-			"AUDIT_WRITE",
-			"KILL",
-			"NET_BIND_SERVICE"
+			"CAP_AUDIT_WRITE",
+			"CAP_KILL",
+			"CAP_NET_BIND_SERVICE"
 		],
 		"rootfsPropagation": ""
 	}
