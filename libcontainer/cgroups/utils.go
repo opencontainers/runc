@@ -21,6 +21,9 @@ const cgroupNamePrefix = "name="
 
 // https://www.kernel.org/doc/Documentation/cgroups/cgroups.txt
 func FindCgroupMountpoint(subsystem string) (string, error) {
+	// We are not using mount.GetMounts() because it's super-inefficient,
+	// parsing it directly sped up x10 times because of not using Sscanf.
+	// It was one of two major performance drawbacks in container start.
 	f, err := os.Open("/proc/self/mountinfo")
 	if err != nil {
 		return "", err
@@ -69,15 +72,22 @@ func FindCgroupMountpointAndSource(subsystem string) (string, string, error) {
 }
 
 func FindCgroupMountpointDir() (string, error) {
-	mounts, err := mount.GetMounts()
+	f, err := os.Open("/proc/self/mountinfo")
 	if err != nil {
 		return "", err
 	}
+	defer f.Close()
 
-	for _, mount := range mounts {
-		if mount.Fstype == "cgroup" {
-			return filepath.Dir(mount.Mountpoint), nil
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		txt := scanner.Text()
+		fields := strings.Split(txt, " ")
+		if fields[7] == "cgroup" {
+			return filepath.Dir(fields[4]), nil
 		}
+	}
+	if err := scanner.Err(); err != nil {
+		return "", err
 	}
 
 	return "", NewNotFoundError("cgroup")
