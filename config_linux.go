@@ -13,8 +13,6 @@ type LinuxSpec struct {
 type Linux struct {
 	// Capabilities are linux capabilities that are kept for the container.
 	Capabilities []string `json:"capabilities"`
-	// RootfsPropagation is the rootfs mount propagation mode for the container.
-	RootfsPropagation string `json:"rootfsPropagation"`
 }
 
 // User specifies linux specific user and group information for the container's

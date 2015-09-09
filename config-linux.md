@@ -16,16 +16,6 @@ Valid values are the string after `CAP_` for capabilities defined in [the man pa
     ]
 ```
 
-## Rootfs Mount Propagation
-
-rootfsPropagation sets the rootfs's mount propagation.
-Its value is either slave, private, or shared.
-[The kernel doc](https://www.kernel.org/doc/Documentation/filesystems/sharedsubtree.txt) has more information about mount propagation.
-
-```json
-    "rootfsPropagation": "slave",
-```
-
 ## User namespace mappings
 
 ```json
