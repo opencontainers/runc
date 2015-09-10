@@ -16,6 +16,12 @@ import (
 var DefaultRules = []ValidateRule{
 	func(c CommitEntry) (vr ValidateResult) {
 		vr.CommitEntry = c
+		if len(strings.Split(c.Parent, " ")) > 1 {
+			vr.Pass = true
+			vr.Msg = "merge commits do not require DCO"
+			return vr
+		}
+
 		hasValid := false
 		for _, line := range strings.Split(c.Body, "\n") {
 			if validDCO.MatchString(line) {
@@ -70,7 +76,7 @@ func main() {
 			fmt.Println("PASS")
 			if *flVerbose {
 				for _, r := range vr {
-					if !r.Pass {
+					if r.Pass {
 						fmt.Printf("  - %s\n", r.Msg)
 					}
 				}
