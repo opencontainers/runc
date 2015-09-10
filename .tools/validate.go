@@ -145,7 +145,7 @@ type CommitEntry struct {
 	Signer               string
 	SignerKey            string       `json:"signer_key"`
 	Author               PersonAction `json:"author,omitempty"`
-	Commiter             PersonAction `json:"commiter,omitempty"`
+	Committer            PersonAction `json:"committer,omitempty"`
 }
 
 // PersonAction is a time and identity of an action on a git commit
@@ -156,16 +156,16 @@ type PersonAction struct {
 }
 
 var (
-	prettyLogSubject       = `--pretty=format:%s`
-	prettyLogBody          = `--pretty=format:%b`
-	prettyLogCommit        = `--pretty=format:%H`
-	prettyLogAuthorName    = `--pretty=format:%aN`
-	prettyLogAuthorEmail   = `--pretty=format:%aE`
-	prettyLogCommiterName  = `--pretty=format:%cN`
-	prettyLogCommiterEmail = `--pretty=format:%cE`
-	prettyLogSigner        = `--pretty=format:%GS`
-	prettyLogCommitNotes   = `--pretty=format:%N`
-	prettyLogFormat        = `--pretty=format:{"commit": "%H", "abbreviated_commit": "%h", "tree": "%T", "abbreviated_tree": "%t", "parent": "%P", "abbreviated_parent": "%p", "refs": "%D", "encoding": "%e", "sanitized_subject_line": "%f", "verification_flag": "%G?", "signer_key": "%GK", "author": { "date": "%aD" }, "commiter": { "date": "%cD" }}`
+	prettyLogSubject        = `--pretty=format:%s`
+	prettyLogBody           = `--pretty=format:%b`
+	prettyLogCommit         = `--pretty=format:%H`
+	prettyLogAuthorName     = `--pretty=format:%aN`
+	prettyLogAuthorEmail    = `--pretty=format:%aE`
+	prettyLogCommitterName  = `--pretty=format:%cN`
+	prettyLogCommitterEmail = `--pretty=format:%cE`
+	prettyLogSigner         = `--pretty=format:%GS`
+	prettyLogCommitNotes    = `--pretty=format:%N`
+	prettyLogFormat         = `--pretty=format:{"commit": "%H", "abbreviated_commit": "%h", "tree": "%T", "abbreviated_tree": "%t", "parent": "%P", "abbreviated_parent": "%p", "refs": "%D", "encoding": "%e", "sanitized_subject_line": "%f", "verification_flag": "%G?", "signer_key": "%GK", "author": { "date": "%aD" }, "committer": { "date": "%cD" }}`
 )
 
 // GitLogCommit assembles the full information on a commit from its commit hash
@@ -210,17 +210,17 @@ func GitLogCommit(commit string) (*CommitEntry, error) {
 	}
 	c.Author.Email = strings.TrimSpace(string(output))
 
-	output, err = exec.Command("git", "log", "-1", prettyLogCommiterName, commit).Output()
+	output, err = exec.Command("git", "log", "-1", prettyLogCommitterName, commit).Output()
 	if err != nil {
 		return nil, err
 	}
-	c.Commiter.Name = strings.TrimSpace(string(output))
+	c.Committer.Name = strings.TrimSpace(string(output))
 
-	output, err = exec.Command("git", "log", "-1", prettyLogCommiterEmail, commit).Output()
+	output, err = exec.Command("git", "log", "-1", prettyLogCommitterEmail, commit).Output()
 	if err != nil {
 		return nil, err
 	}
-	c.Commiter.Email = strings.TrimSpace(string(output))
+	c.Committer.Email = strings.TrimSpace(string(output))
 
 	output, err = exec.Command("git", "log", "-1", prettyLogCommitNotes, commit).Output()
 	if err != nil {
