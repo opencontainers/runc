@@ -1,7 +1,7 @@
 # Open Container Specifications
 
-This project is where the [Open Container Initiative](http://www.opencontainers.org/) Specifications are written.
-This is a work in progress.
+[Open Container Initiative](http://www.opencontainers.org/) Specifications for standards on Operating System process and application containers.
+
 
 Table of Contents
 
