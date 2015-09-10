@@ -1,4 +1,4 @@
-# OpenContainer's Code of Conduct
+# OpenContainers Code of Conduct
 
 Behave as a community member, follow the code of conduct.
 
