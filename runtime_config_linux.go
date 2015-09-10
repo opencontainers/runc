@@ -79,7 +79,7 @@ type IDMapping struct {
 // Rlimit type and restrictions
 type Rlimit struct {
 	// Type of the rlimit to set
-	Type int `json:"type"`
+	Type string `json:"type"`
 	// Hard is the hard limit for the specified type
 	Hard uint64 `json:"hard"`
 	// Soft is the soft limit for the specified type
