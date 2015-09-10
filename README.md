@@ -7,12 +7,16 @@ Table of Contents
 
 - [Container Principles](principles.md)
 - [Filesystem Bundle](bundle.md)
-- [Container Configuration](config.md)
-  - [Linux Specific Configuration](config-linux.md)
+- Configuration
+  - [Container Configuration](config.md)
+  - [Container Configuration (Linux-specific)](config-linux.md)
+  - [Runtime Configuration](runtime-config.md)
+  - [Runtime Configuration (Linux-specific)](runtime-config-linux.md)
 - [Runtime and Lifecycle](runtime.md)
+  - [Linux Specific Runtime](runtime-linux.md)
 - [Implementations](implementations.md)
 
-## Use Cases
+# Use Cases
 
 To provide context for users the following section gives example use cases for each part of the spec.
 

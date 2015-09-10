@@ -1,3 +1,5 @@
+# Runtime Configuration
+
 ## Mount Configuration
 
 Additional filesystems can be declared as "mounts", specified in the *mounts* object.
