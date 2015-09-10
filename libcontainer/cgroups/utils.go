@@ -5,7 +5,6 @@ package cgroups
 import (
 	"bufio"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -170,23 +169,22 @@ func GetAllSubsystems() ([]string, error) {
 
 // Returns the relative path to the cgroup docker is running in.
 func GetThisCgroupDir(subsystem string) (string, error) {
-	f, err := os.Open("/proc/self/cgroup")
+	cgroups, err := ParseCgroupFile("/proc/self/cgroup")
 	if err != nil {
 		return "", err
 	}
-	defer f.Close()
 
-	return ParseCgroupFile(subsystem, f)
+	return getControllerPath(subsystem, cgroups)
 }
 
 func GetInitCgroupDir(subsystem string) (string, error) {
-	f, err := os.Open("/proc/1/cgroup")
+
+	cgroups, err := ParseCgroupFile("/proc/1/cgroup")
 	if err != nil {
 		return "", err
 	}
-	defer f.Close()
 
-	return ParseCgroupFile(subsystem, f)
+	return getControllerPath(subsystem, cgroups)
 }
 
 func ReadProcsFile(dir string) ([]int, error) {
@@ -213,22 +211,39 @@ func ReadProcsFile(dir string) ([]int, error) {
 	return out, nil
 }
 
-func ParseCgroupFile(subsystem string, r io.Reader) (string, error) {
-	s := bufio.NewScanner(r)
+func ParseCgroupFile(path string) (map[string]string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	s := bufio.NewScanner(f)
+	cgroups := make(map[string]string)
 
 	for s.Scan() {
 		if err := s.Err(); err != nil {
-			return "", err
+			return nil, err
 		}
 
 		text := s.Text()
 		parts := strings.Split(text, ":")
 
 		for _, subs := range strings.Split(parts[1], ",") {
-			if subs == subsystem || subs == cgroupNamePrefix+subsystem {
-				return parts[2], nil
-			}
+			cgroups[subs] = parts[2]
 		}
+	}
+	return cgroups, nil
+}
+
+func getControllerPath(subsystem string, cgroups map[string]string) (string, error) {
+
+	if p, ok := cgroups[subsystem]; ok {
+		return p, nil
+	}
+
+	if p, ok := cgroups[cgroupNamePrefix+subsystem]; ok {
+		return p, nil
 	}
 
 	return "", NewNotFoundError(subsystem)
