@@ -80,9 +80,15 @@ func FindCgroupMountpointDir() (string, error) {
 
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
-		txt := scanner.Text()
-		fields := strings.Split(txt, " ")
-		if fields[7] == "cgroup" {
+		text := scanner.Text()
+		fields := strings.Split(text, " ")
+		// Safe as mountinfo encodes mountpoints with spaces as \040.
+		index := strings.Index(text, " - ")
+		postSeparatorFields := strings.Fields(text[index+3:])
+		if len(postSeparatorFields) < 3 {
+			return "", fmt.Errorf("Error found less than 3 fields post '-' in %q", text)
+		}
+		if postSeparatorFields[0] == "cgroup" {
 			return filepath.Dir(fields[4]), nil
 		}
 	}
