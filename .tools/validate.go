@@ -16,14 +16,14 @@ import (
 var DefaultRules = []ValidateRule{
 	func(c CommitEntry) (vr ValidateResult) {
 		vr.CommitEntry = c
-		if len(strings.Split(c.Parent, " ")) > 1 {
+		if len(strings.Split(c["parent"], " ")) > 1 {
 			vr.Pass = true
 			vr.Msg = "merge commits do not require DCO"
 			return vr
 		}
 
 		hasValid := false
-		for _, line := range strings.Split(c.Body, "\n") {
+		for _, line := range strings.Split(c["body"], "\n") {
 			if validDCO.MatchString(line) {
 				hasValid = true
 			}
@@ -69,7 +69,7 @@ func main() {
 
 	results := ValidateResults{}
 	for _, commit := range c {
-		fmt.Printf(" * %s %s ... ", commit.AbbreviatedCommit, commit.Subject)
+		fmt.Printf(" * %s %s ... ", commit["abbreviated_commit"], commit["subject"])
 		vr := ValidateCommit(commit, DefaultRules)
 		results = append(results, vr...)
 		if _, fail := vr.PassFail(); fail == 0 {
@@ -133,51 +133,26 @@ func (vr ValidateResults) PassFail() (pass int, fail int) {
 }
 
 // CommitEntry represents a single commit's information from `git`
-type CommitEntry struct {
-	Commit               string
-	AbbreviatedCommit    string `json:"abbreviated_commit"`
-	Tree                 string
-	AbbreviatedTree      string `json:"abbreviated_tree"`
-	Parent               string
-	AbbreviatedParent    string `json:"abbreviated_parent"`
-	Refs                 string
-	Encoding             string
-	Subject              string
-	SanitizedSubjectLine string `json:"sanitized_subject_line"`
-	Body                 string
-	CommitNotes          string `json:"commit_notes"`
-	VerificationFlag     string `json:"verification_flag"`
-	ShortMsg             string
-	Signer               string
-	SignerKey            string       `json:"signer_key"`
-	Author               PersonAction `json:"author,omitempty"`
-	Committer            PersonAction `json:"committer,omitempty"`
-}
-
-// PersonAction is a time and identity of an action on a git commit
-type PersonAction struct {
-	Name  string `json:"name"`
-	Email string `json:"email"`
-	Date  string `json:"date"` // this could maybe be an actual time.Time
-}
+type CommitEntry map[string]string
 
 var (
-	prettyLogSubject        = `--pretty=format:%s`
-	prettyLogBody           = `--pretty=format:%b`
-	prettyLogCommit         = `--pretty=format:%H`
-	prettyLogAuthorName     = `--pretty=format:%aN`
-	prettyLogAuthorEmail    = `--pretty=format:%aE`
-	prettyLogCommitterName  = `--pretty=format:%cN`
-	prettyLogCommitterEmail = `--pretty=format:%cE`
-	prettyLogSigner         = `--pretty=format:%GS`
-	prettyLogCommitNotes    = `--pretty=format:%N`
-	prettyLogFormat         = `--pretty=format:{"commit": "%H", "abbreviated_commit": "%h", "tree": "%T", "abbreviated_tree": "%t", "parent": "%P", "abbreviated_parent": "%p", "refs": "%D", "encoding": "%e", "sanitized_subject_line": "%f", "verification_flag": "%G?", "signer_key": "%GK", "author": { "date": "%aD" }, "committer": { "date": "%cD" }}`
+	prettyFormat         = `--pretty=format:`
+	formatSubject        = `%s`
+	formatBody           = `%b`
+	formatCommit         = `%H`
+	formatAuthorName     = `%aN`
+	formatAuthorEmail    = `%aE`
+	formatCommitterName  = `%cN`
+	formatCommitterEmail = `%cE`
+	formatSigner         = `%GS`
+	formatCommitNotes    = `%N`
+	formatMap            = `{"commit": "%H", "abbreviated_commit": "%h", "tree": "%T", "abbreviated_tree": "%t", "parent": "%P", "abbreviated_parent": "%p", "refs": "%D", "encoding": "%e", "sanitized_subject_line": "%f", "verification_flag": "%G?", "signer_key": "%GK", "author_date": "%aD" , "committer_date": "%cD" }`
 )
 
 // GitLogCommit assembles the full information on a commit from its commit hash
 func GitLogCommit(commit string) (*CommitEntry, error) {
 	buf := bytes.NewBuffer([]byte{})
-	cmd := exec.Command("git", "log", "-1", prettyLogFormat, commit)
+	cmd := exec.Command("git", "log", "-1", prettyFormat+formatMap, commit)
 	cmd.Stdout = buf
 	cmd.Stderr = os.Stderr
 
@@ -192,53 +167,23 @@ func GitLogCommit(commit string) (*CommitEntry, error) {
 		return nil, err
 	}
 
-	output, err := exec.Command("git", "log", "-1", prettyLogSubject, commit).Output()
-	if err != nil {
-		return nil, err
+	// any user provided fields can't be sanitized for the mock-json marshal above
+	for k, v := range map[string]string{
+		"subject":         formatSubject,
+		"body":            formatBody,
+		"author_name":     formatAuthorName,
+		"author_email":    formatAuthorEmail,
+		"committer_name":  formatCommitterName,
+		"committer_email": formatCommitterEmail,
+		"commit_notes":    formatCommitNotes,
+		"signer":          formatSigner,
+	} {
+		output, err := exec.Command("git", "log", "-1", prettyFormat+v, commit).Output()
+		if err != nil {
+			return nil, err
+		}
+		c[k] = strings.TrimSpace(string(output))
 	}
-	c.Subject = strings.TrimSpace(string(output))
-
-	output, err = exec.Command("git", "log", "-1", prettyLogBody, commit).Output()
-	if err != nil {
-		return nil, err
-	}
-	c.Body = strings.TrimSpace(string(output))
-
-	output, err = exec.Command("git", "log", "-1", prettyLogAuthorName, commit).Output()
-	if err != nil {
-		return nil, err
-	}
-	c.Author.Name = strings.TrimSpace(string(output))
-
-	output, err = exec.Command("git", "log", "-1", prettyLogAuthorEmail, commit).Output()
-	if err != nil {
-		return nil, err
-	}
-	c.Author.Email = strings.TrimSpace(string(output))
-
-	output, err = exec.Command("git", "log", "-1", prettyLogCommitterName, commit).Output()
-	if err != nil {
-		return nil, err
-	}
-	c.Committer.Name = strings.TrimSpace(string(output))
-
-	output, err = exec.Command("git", "log", "-1", prettyLogCommitterEmail, commit).Output()
-	if err != nil {
-		return nil, err
-	}
-	c.Committer.Email = strings.TrimSpace(string(output))
-
-	output, err = exec.Command("git", "log", "-1", prettyLogCommitNotes, commit).Output()
-	if err != nil {
-		return nil, err
-	}
-	c.CommitNotes = strings.TrimSpace(string(output))
-
-	output, err = exec.Command("git", "log", "-1", prettyLogSigner, commit).Output()
-	if err != nil {
-		return nil, err
-	}
-	c.Signer = strings.TrimSpace(string(output))
 
 	return &c, nil
 }
@@ -247,7 +192,7 @@ func GitLogCommit(commit string) (*CommitEntry, error) {
 // If commitrange is a git still range 12345...54321, then it will be isolated set of commits.
 // If commitrange is a single commit, all ancestor commits up through the hash provided.
 func GitCommits(commitrange string) ([]CommitEntry, error) {
-	output, err := exec.Command("git", "log", prettyLogCommit, commitrange).Output()
+	output, err := exec.Command("git", "log", prettyFormat+formatCommit, commitrange).Output()
 	if err != nil {
 		return nil, err
 	}
