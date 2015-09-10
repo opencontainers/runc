@@ -1,5 +1,13 @@
 # Runtime Configuration
 
+## Hooks
+
+Lifecycle hooks allow custom events for different points in a container's runtime.
+Presently there are `Prestart` and `Poststop`.
+
+* `Prestart` is a list of hooks to be run before the container process is executed
+* `Poststop` is a list of hooks to be run after the container process exits
+	
 ## Mount Configuration
 
 Additional filesystems can be declared as "mounts", specified in the *mounts* object.
