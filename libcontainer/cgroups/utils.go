@@ -98,12 +98,12 @@ type Mount struct {
 	Subsystems []string
 }
 
-func (m Mount) GetThisCgroupDir() (string, error) {
+func (m Mount) GetThisCgroupDir(cgroups map[string]string) (string, error) {
 	if len(m.Subsystems) == 0 {
 		return "", fmt.Errorf("no subsystem for mount")
 	}
 
-	return GetThisCgroupDir(m.Subsystems[0])
+	return getControllerPath(m.Subsystems[0], cgroups)
 }
 
 func GetCgroupMounts() ([]Mount, error) {
