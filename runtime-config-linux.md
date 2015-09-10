@@ -194,3 +194,13 @@ The actions and operators are strings that match the definitions in seccomp.h fr
        ]
    }
 ```
+
+## Rootfs Mount Propagation
+
+rootfsPropagation sets the rootfs's mount propagation.
+Its value is either slave, private, or shared.
+[The kernel doc](https://www.kernel.org/doc/Documentation/filesystems/sharedsubtree.txt) has more information about mount propagation.
+
+```json
+    "rootfsPropagation": "slave",
+```
