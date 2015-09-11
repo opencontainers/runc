@@ -1,4 +1,4 @@
-// +build linux,cgo
+// +build linux,cgo,seccomp
 
 package seccomp
 
