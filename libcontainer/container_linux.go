@@ -185,6 +185,7 @@ func (c *linuxContainer) newInitProcess(p *Process, cmd *exec.Cmd, parentPipe, c
 		parentPipe: parentPipe,
 		manager:    c.cgroupManager,
 		config:     c.newInitConfig(p),
+		container:  c,
 	}, nil
 }
 

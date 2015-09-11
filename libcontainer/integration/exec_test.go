@@ -946,19 +946,24 @@ func TestPrestartHook(t *testing.T) {
 	defer remove(rootfs)
 
 	config := newTemplateConfig(rootfs)
-	pwd, _ := os.Getwd()
-
-	hookPath := filepath.Join(pwd, "../../script", "hook.py")
-	prestartCmd := configs.Command{Path: hookPath}
-	config.Prestart = append(config.Prestart, prestartCmd)
-
+	config.Hooks = &configs.Hooks{
+		Prestart: []configs.Hook{
+			configs.NewFunctionHook(func(s *configs.HookState) error {
+				f, err := os.Create(filepath.Join(rootfs, "test"))
+				if err != nil {
+					return err
+				}
+				return f.Close()
+			}),
+		},
+	}
 	container, err := factory.Create("test", config)
 	ok(t, err)
 	defer container.Destroy()
 
 	var stdout bytes.Buffer
 	pconfig := libcontainer.Process{
-		Args:   []string{"sh", "-c", "ls /tmp.txt"},
+		Args:   []string{"sh", "-c", "ls /test"},
 		Env:    standardEnvironment,
 		Stdin:  nil,
 		Stdout: &stdout,
@@ -972,7 +977,7 @@ func TestPrestartHook(t *testing.T) {
 	outputLs := string(stdout.Bytes())
 
 	// Check that the ls output has the expected file touched by the prestart hook
-	if !strings.Contains(outputLs, "/tmp.txt") {
+	if !strings.Contains(outputLs, "/test") {
 		t.Fatal("ls output doesn't have the expected file: ", outputLs)
 	}
 }

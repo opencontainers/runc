@@ -194,12 +194,16 @@ type Hook interface {
 // NewFunctionHooks will call the provided function when the hook is run.
 func NewFunctionHook(f func(*HookState) error) *FuncHook {
 	return &FuncHook{
-		Run: f,
+		run: f,
 	}
 }
 
 type FuncHook struct {
-	Run func(*HookState) error
+	run func(*HookState) error
+}
+
+func (f *FuncHook) Run(s *HookState) error {
+	return f.run(s)
 }
 
 type Command struct {
