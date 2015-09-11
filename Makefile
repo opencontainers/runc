@@ -1,10 +1,19 @@
 RUNC_TEST_IMAGE=runc_test
 PROJECT=github.com/opencontainers/runc
 TEST_DOCKERFILE=script/test_Dockerfile
+VERSION := $(shell cat VERSION)
 export GOPATH:=$(CURDIR)/Godeps/_workspace:$(GOPATH)
 
+GITCOMMIT := $(shell git rev-parse --short HEAD)
+GITUNTRACKEDCHANGES := $(shell git status --porcelain --untracked-files=no)
+ifneq ($(GITUNTRACKEDCHANGES),)
+	GITCOMMIT := $(GITCOMMIT)-dirty
+endif
+CTIMEVAR=-X $(PROJECT)/version.GitCommit '$(GITCOMMIT)' -X $(PROJECT)/version.Version '$(VERSION)'
+GO_LDFLAGS=-ldflags "-w $(CTIMEVAR)"
+
 all:
-	go build -o runc .
+	go build -o runc ${GO_LDFLAGS} .
 
 vet:
 	go get golang.org/x/tools/cmd/vet
@@ -26,7 +35,7 @@ install:
 	cp runc /usr/local/bin/runc
 
 clean:
-	rm runc
+	rm -f runc
 
 validate: vet
 	script/validate-gofmt
