@@ -210,7 +210,7 @@ func GitCommits(commitrange string) ([]CommitEntry, error) {
 
 // GitFetchHeadCommit returns the hash of FETCH_HEAD
 func GitFetchHeadCommit() (string, error) {
-	output, err := exec.Command("git", "rev-parse", "--verify", "HEAD").Output()
+	output, err := exec.Command("git", "rev-parse", "--verify", "FETCH_HEAD").Output()
 	if err != nil {
 		return "", err
 	}
