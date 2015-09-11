@@ -11,7 +11,10 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 	"github.com/opencontainers/runc/libcontainer"
+	"github.com/opencontainers/runc/libcontainer/cgroups"
+	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/specs"
+	"path/filepath"
 )
 
 const SD_LISTEN_FDS_START = 3
@@ -102,7 +105,9 @@ func startContainer(context *cli.Context, spec *specs.LinuxSpec) (int, error) {
 			process.ExtraFiles = append(process.ExtraFiles, os.NewFile(uintptr(i), ""))
 		}
 	}
-
+	if err := CheckContainerSettings(config); err != nil {
+		return -1, err
+	}
 	tty, err := newTty(spec.Process.Terminal, process, rootuid)
 	if err != nil {
 		return -1, err
@@ -126,6 +131,18 @@ func setupSdNotify(spec *specs.LinuxSpec, notifySocket string) {
 // for on-demand socket activation for the containerized service.
 func setupSocketActivation(spec *specs.LinuxSpec, listenFds string) {
 	spec.Process.Env = append(spec.Process.Env, fmt.Sprintf("LISTEN_FDS=%s", listenFds), "LISTEN_PID=1")
+}
+
+func CheckContainerSettings(config *configs.Config) error {
+	subsys, err := cgroups.GetAllSubsystems()
+	if err != nil {
+		return err
+	}
+	for _, subsysname := range subsys {
+		subsystempath := filepath.Join("/sys/fs/cgroup", subsysname)
+		CheckCgroupSubsystem(subsystempath, config.Cgroups, subsysname)
+	}
+	return nil
 }
 
 func destroy(container libcontainer.Container) {
