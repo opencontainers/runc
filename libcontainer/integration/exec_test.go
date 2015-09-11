@@ -932,3 +932,65 @@ func TestOomScoreAdj(t *testing.T) {
 		t.Fatalf("Expected oom_score_adj %d; got %q", config.OomScoreAdj, outputOomScoreAdj)
 	}
 }
+
+func TestHook(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+	root, err := newTestRoot()
+	ok(t, err)
+	defer os.RemoveAll(root)
+
+	rootfs, err := newRootfs()
+	ok(t, err)
+	defer remove(rootfs)
+
+	config := newTemplateConfig(rootfs)
+	config.Hooks = &configs.Hooks{
+		Prestart: []configs.Hook{
+			configs.NewFunctionHook(func(s configs.HookState) error {
+				f, err := os.Create(filepath.Join(s.Root, "test"))
+				if err != nil {
+					return err
+				}
+				return f.Close()
+			}),
+		},
+		Poststop: []configs.Hook{
+			configs.NewFunctionHook(func(s configs.HookState) error {
+				return os.RemoveAll(filepath.Join(s.Root, "test"))
+			}),
+		},
+	}
+	container, err := factory.Create("test", config)
+	ok(t, err)
+
+	var stdout bytes.Buffer
+	pconfig := libcontainer.Process{
+		Args:   []string{"sh", "-c", "ls /test"},
+		Env:    standardEnvironment,
+		Stdin:  nil,
+		Stdout: &stdout,
+	}
+	err = container.Start(&pconfig)
+	ok(t, err)
+
+	// Wait for process
+	waitProcess(&pconfig, t)
+
+	outputLs := string(stdout.Bytes())
+
+	// Check that the ls output has the expected file touched by the prestart hook
+	if !strings.Contains(outputLs, "/test") {
+		container.Destroy()
+		t.Fatalf("ls output doesn't have the expected file: %s", outputLs)
+	}
+
+	if err := container.Destroy(); err != nil {
+		t.Fatalf("container destory %s", err)
+	}
+	fi, err := os.Stat(filepath.Join(rootfs, "test"))
+	if err == nil || !os.IsNotExist(err) {
+		t.Fatalf("expected file to not exist, got %s", fi.Name())
+	}
+}

@@ -13,6 +13,7 @@ import (
 	"syscall"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
+	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/system"
 )
 
@@ -200,6 +201,18 @@ func (p *initProcess) start() (err error) {
 			p.manager.Destroy()
 		}
 	}()
+	if p.config.Config.Hooks != nil {
+		s := configs.HookState{
+			ID:   p.container.id,
+			Pid:  p.pid(),
+			Root: p.config.Config.Rootfs,
+		}
+		for _, hook := range p.config.Config.Hooks.Prestart {
+			if err := hook.Run(s); err != nil {
+				return newSystemError(err)
+			}
+		}
+	}
 	if err := p.createNetworkInterfaces(); err != nil {
 		return newSystemError(err)
 	}
