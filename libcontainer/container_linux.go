@@ -247,6 +247,16 @@ func (c *linuxContainer) Destroy() error {
 		err = rerr
 	}
 	c.initProcess = nil
+	if c.config.Hooks != nil {
+		s := configs.HookState{
+			ID: c.id,
+		}
+		for _, hook := range c.config.Hooks.Poststop {
+			if err := hook.Run(&s); err != nil {
+				return err
+			}
+		}
+	}
 	return err
 }
 
