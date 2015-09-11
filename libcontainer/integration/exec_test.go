@@ -933,7 +933,7 @@ func TestOomScoreAdj(t *testing.T) {
 	}
 }
 
-func TestPrestartHook(t *testing.T) {
+func TestHook(t *testing.T) {
 	if testing.Short() {
 		return
 	}
@@ -948,18 +948,22 @@ func TestPrestartHook(t *testing.T) {
 	config := newTemplateConfig(rootfs)
 	config.Hooks = &configs.Hooks{
 		Prestart: []configs.Hook{
-			configs.NewFunctionHook(func(s *configs.HookState) error {
-				f, err := os.Create(filepath.Join(rootfs, "test"))
+			configs.NewFunctionHook(func(s configs.HookState) error {
+				f, err := os.Create(filepath.Join(s.Root, "test"))
 				if err != nil {
 					return err
 				}
 				return f.Close()
 			}),
 		},
+		Poststop: []configs.Hook{
+			configs.NewFunctionHook(func(s configs.HookState) error {
+				return os.RemoveAll(filepath.Join(s.Root, "test"))
+			}),
+		},
 	}
 	container, err := factory.Create("test", config)
 	ok(t, err)
-	defer container.Destroy()
 
 	var stdout bytes.Buffer
 	pconfig := libcontainer.Process{
@@ -978,6 +982,15 @@ func TestPrestartHook(t *testing.T) {
 
 	// Check that the ls output has the expected file touched by the prestart hook
 	if !strings.Contains(outputLs, "/test") {
-		t.Fatal("ls output doesn't have the expected file: ", outputLs)
+		container.Destroy()
+		t.Fatalf("ls output doesn't have the expected file: %s", outputLs)
+	}
+
+	if err := container.Destroy(); err != nil {
+		t.Fatalf("container destory %s", err)
+	}
+	fi, err := os.Stat(filepath.Join(rootfs, "test"))
+	if err == nil || !os.IsNotExist(err) {
+		t.Fatalf("expected file to not exist, got %s", fi.Name())
 	}
 }

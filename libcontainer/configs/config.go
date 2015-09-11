@@ -176,33 +176,34 @@ type Hooks struct {
 	// but before the user supplied command is executed from init.
 	Prestart []Hook
 
-	// PostStop commands are executed after the container init process exits.
+	// Poststop commands are executed after the container init process exits.
 	Poststop []Hook
 }
 
 // HookState is the payload provided to a hook on execution.
 type HookState struct {
-	ID  string `json:"id"`
-	Pid int    `json:"pid"`
+	ID   string `json:"id"`
+	Pid  int    `json:"pid"`
+	Root string `json:"root"`
 }
 
 type Hook interface {
 	// Run executes the hook with the provided state.
-	Run(*HookState) error
+	Run(HookState) error
 }
 
 // NewFunctionHooks will call the provided function when the hook is run.
-func NewFunctionHook(f func(*HookState) error) *FuncHook {
-	return &FuncHook{
+func NewFunctionHook(f func(HookState) error) FuncHook {
+	return FuncHook{
 		run: f,
 	}
 }
 
 type FuncHook struct {
-	run func(*HookState) error
+	run func(HookState) error
 }
 
-func (f *FuncHook) Run(s *HookState) error {
+func (f FuncHook) Run(s HookState) error {
 	return f.run(s)
 }
 
@@ -214,8 +215,8 @@ type Command struct {
 }
 
 // NewCommandHooks will execute the provided command when the hook is run.
-func NewCommandHook(cmd Command) *CommandHook {
-	return &CommandHook{
+func NewCommandHook(cmd Command) CommandHook {
+	return CommandHook{
 		Command: cmd,
 	}
 }
@@ -224,7 +225,7 @@ type CommandHook struct {
 	Command
 }
 
-func (c *Command) Run(s *HookState) error {
+func (c Command) Run(s HookState) error {
 	b, err := json.Marshal(s)
 	if err != nil {
 		return err
