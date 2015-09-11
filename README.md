@@ -32,6 +32,18 @@ sudo make install
 In order to enable seccomp support you will need to install libseccomp on your platform.
 If you do not with to build `runc` with seccomp support you can add `BUILDTAGS=""` when running make.
 
+#### Build Tags
+
+`runc` supports optional build tags for compiling in support for various features.
+
+
+| Build Tag | Feature                            | Dependency  |
+|-----------|------------------------------------|-------------|
+| seccomp   | Syscall filtering                  | libseccomp  |
+| selinux   | selinux process and mount labeling | <none>      |
+| apparmor  | apparmor profile support           | libapparmor |
+
+
 ### Using:
 
 To run a container, execute `runc start` in the bundle's root directory:
