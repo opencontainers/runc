@@ -253,10 +253,15 @@ func getCgroupMounts(m *configs.Mount) ([]*configs.Mount, error) {
 		return nil, err
 	}
 
+	cgroupPaths, err := cgroups.ParseCgroupFile("/proc/self/cgroup")
+	if err != nil {
+		return nil, err
+	}
+
 	var binds []*configs.Mount
 
 	for _, mm := range mounts {
-		dir, err := mm.GetThisCgroupDir()
+		dir, err := mm.GetThisCgroupDir(cgroupPaths)
 		if err != nil {
 			return nil, err
 		}
