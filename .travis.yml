@@ -18,5 +18,6 @@ install: true
 script:
   - make .govet
   - make .golint
-  - make .gitvalidation
+  - echo "${TRAVIS_COMMIT_RANGE} -> ${TRAVIS_COMMIT_RANGE/.../..} (travis-ci/travis-ci#4596)"
+  - TRAVIS_COMMIT_RANGE="${TRAVIS_COMMIT_RANGE/.../..}" make .gitvalidation
   - make docs
