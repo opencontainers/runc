@@ -28,6 +28,7 @@ func (s *MemoryGroup) Apply(d *data) (err error) {
 	if err := os.MkdirAll(path, 0755); err != nil {
 		return err
 	}
+	cgroups.CheckSubsystem(path, d.c, "memory")
 
 	defer func() {
 		if err != nil {

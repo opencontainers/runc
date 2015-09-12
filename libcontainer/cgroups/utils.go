@@ -12,8 +12,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/docker/docker/pkg/mount"
 	"github.com/docker/docker/pkg/units"
+	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
 const cgroupNamePrefix = "name="
@@ -321,4 +323,37 @@ func GetHugePageSize() ([]string, error) {
 	}
 
 	return pageSizes, nil
+}
+
+func CheckSubsystem(path string, cgroup *configs.Cgroup, subsystem string) {
+	switch subsystem {
+	case "memory":
+		if cgroup.MemorySwap > 0 {
+			if !PathExists(filepath.Join(path, "memory.memsw.limit_in_bytes")) {
+				logrus.Warn("Your kernel does not support swap memory limit.Limitation discarded.")
+				cgroup.MemorySwap = 0
+			}
+		}
+		if cgroup.OomKillDisable {
+			if !PathExists(filepath.Join(path, "memory.oom_control")) {
+				logrus.Warn("Your kernel does not support oom killer.Limitation discarded.")
+				cgroup.OomKillDisable = false
+			}
+		}
+		break
+	case "cpu":
+		if cgroup.CpuPeriod != 0 {
+			if !PathExists(filepath.Join(path, "cpu.cfs_period_us")) {
+				logrus.Warn("Your kernel does not support CPU Period.Limitation discarded.")
+				cgroup.CpuPeriod = 0
+			}
+		}
+		if cgroup.CpuQuota != 0 {
+			if !PathExists(filepath.Join(path, "cpu.cfs_quota_us")) {
+				logrus.Warn("Your kernel does not support CPU Quota.Limitation discarded.")
+				cgroup.CpuQuota = 0
+			}
+		}
+		break
+	}
 }
