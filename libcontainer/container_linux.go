@@ -1090,3 +1090,39 @@ func (c *linuxContainer) bootstrapData(cloneFlags uintptr, pid int, consolePath 
 	}
 	return bytes.NewReader(r.Serialize()), nil
 }
+
+// orderNamespacePaths sorts namespace paths into a list of paths that we
+// can setns in order.
+func (c *linuxContainer) orderNamespacePaths(namespaces map[configs.NamespaceType]string) ([]string, error) {
+	paths := []string{}
+	nsTypes := []configs.NamespaceType{
+		configs.NEWIPC,
+		configs.NEWUTS,
+		configs.NEWNET,
+		configs.NEWPID,
+		configs.NEWNS,
+	}
+	// join userns if the init process explicitly requires NEWUSER
+	if c.config.Namespaces.Contains(configs.NEWUSER) {
+		nsTypes = append(nsTypes, configs.NEWUSER)
+	}
+	for _, nsType := range nsTypes {
+		if p, ok := namespaces[nsType]; ok && p != "" {
+			// check if the requested namespace is supported
+			if !configs.IsNamespaceSupported(nsType) {
+				return nil, newSystemError(fmt.Errorf("namespace %s is not supported", nsType))
+			}
+			// only set to join this namespace if it exists
+			if _, err := os.Lstat(p); err != nil {
+				return nil, newSystemError(err)
+			}
+			// do not allow namespace path with comma as we use it to separate
+			// the namespace paths
+			if strings.ContainsRune(p, ',') {
+				return nil, newSystemError(fmt.Errorf("invalid path %s", p))
+			}
+			paths = append(paths, p)
+		}
+	}
+	return paths, nil
+}
