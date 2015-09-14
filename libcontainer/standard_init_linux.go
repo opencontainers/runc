@@ -26,9 +26,6 @@ func (l *linuxStandardInit) Init() error {
 			return err
 		}
 	}
-	if _, err := syscall.Setsid(); err != nil {
-		return err
-	}
 	if console != nil {
 		if err := system.Setctty(); err != nil {
 			return err
