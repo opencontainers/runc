@@ -3,8 +3,10 @@
 package libcontainer
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -18,6 +20,8 @@ import (
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/criurpc"
+	"github.com/syndtr/gocapability/capability"
+	"github.com/vishvananda/netlink/nl"
 )
 
 const stdioFdCount = 3
@@ -135,7 +139,7 @@ func (c *linuxContainer) newParentProcess(p *Process, doInit bool) (parentProces
 		return nil, newSystemError(err)
 	}
 	if !doInit {
-		return c.newSetnsProcess(p, cmd, parentPipe, childPipe), nil
+		return c.newSetnsProcess(p, cmd, parentPipe, childPipe)
 	}
 	return c.newInitProcess(p, cmd, parentPipe, childPipe)
 }
@@ -164,47 +168,51 @@ func (c *linuxContainer) commandTemplate(p *Process, childPipe *os.File) (*exec.
 }
 
 func (c *linuxContainer) newInitProcess(p *Process, cmd *exec.Cmd, parentPipe, childPipe *os.File) (*initProcess, error) {
-	t := "_LIBCONTAINER_INITTYPE=standard"
-	cloneFlags := c.config.Namespaces.CloneFlags()
-	if cloneFlags&syscall.CLONE_NEWUSER != 0 {
-		if err := c.addUidGidMappings(cmd.SysProcAttr); err != nil {
-			// user mappings are not supported
-			return nil, err
-		}
-		enableSetgroups(cmd.SysProcAttr)
-		// Default to root user when user namespaces are enabled.
-		if cmd.SysProcAttr.Credential == nil {
-			cmd.SysProcAttr.Credential = &syscall.Credential{}
+	cmd.Env = append(cmd.Env, "_LIBCONTAINER_INITTYPE=standard")
+	nsMaps := make(map[configs.NamespaceType]string)
+	for _, ns := range c.config.Namespaces {
+		if ns.Path != "" {
+			nsMaps[ns.Type] = ns.Path
 		}
 	}
-	cmd.Env = append(cmd.Env, t)
-	cmd.SysProcAttr.Cloneflags = cloneFlags
+	_, sharePidns := nsMaps[configs.NEWPID]
+	data, err := c.bootstrapData(c.config.Namespaces.CloneFlags(), nsMaps, "")
+	if err != nil {
+		return nil, err
+	}
 	return &initProcess{
-		cmd:        cmd,
-		childPipe:  childPipe,
-		parentPipe: parentPipe,
-		manager:    c.cgroupManager,
-		config:     c.newInitConfig(p),
-		container:  c,
+		cmd:           cmd,
+		childPipe:     childPipe,
+		parentPipe:    parentPipe,
+		manager:       c.cgroupManager,
+		config:        c.newInitConfig(p),
+		container:     c,
+		bootstrapData: data,
+		sharePidns:    sharePidns,
 	}, nil
 }
 
-func (c *linuxContainer) newSetnsProcess(p *Process, cmd *exec.Cmd, parentPipe, childPipe *os.File) *setnsProcess {
-	cmd.Env = append(cmd.Env,
-		fmt.Sprintf("_LIBCONTAINER_INITPID=%d", c.initProcess.pid()),
-		"_LIBCONTAINER_INITTYPE=setns",
-	)
-	if p.consolePath != "" {
-		cmd.Env = append(cmd.Env, "_LIBCONTAINER_CONSOLE_PATH="+p.consolePath)
+func (c *linuxContainer) newSetnsProcess(p *Process, cmd *exec.Cmd, parentPipe, childPipe *os.File) (*setnsProcess, error) {
+	cmd.Env = append(cmd.Env, "_LIBCONTAINER_INITTYPE=setns")
+	state, err := c.currentState()
+	if err != nil {
+		return nil, newSystemError(err)
+	}
+	// for setns process, we dont have to set cloneflags as the process namespaces
+	// will only be set via setns syscall
+	data, err := c.bootstrapData(0, state.NamespacePaths, p.consolePath)
+	if err != nil {
+		return nil, err
 	}
 	// TODO: set on container for process management
 	return &setnsProcess{
-		cmd:         cmd,
-		cgroupPaths: c.cgroupManager.GetPaths(),
-		childPipe:   childPipe,
-		parentPipe:  parentPipe,
-		config:      c.newInitConfig(p),
-	}
+		cmd:           cmd,
+		cgroupPaths:   c.cgroupManager.GetPaths(),
+		childPipe:     childPipe,
+		parentPipe:    parentPipe,
+		config:        c.newInitConfig(p),
+		bootstrapData: data,
+	}, nil
 }
 
 func (c *linuxContainer) newInitConfig(process *Process) *initConfig {
@@ -905,4 +913,160 @@ func (c *linuxContainer) orderNamespacePaths(namespaces map[configs.NamespaceTyp
 	}
 	return paths, nil
 }
+
+const (
+	RuncInit uint16 = 62000
+
+	// list of known message types we want to send to bootstrap program
+	RuncInitCloneFlags  uint16 = 27281
+	RuncInitConsolePath uint16 = 27282
+	RuncInitNsPaths     uint16 = 27283
+	RuncInitUidmap      uint16 = 27284
+	RuncInitGidmap      uint16 = 27285
+	RuncInitSetgroup    uint16 = 27286
+)
+
+// bootstrapData encodes the necessary data in binary format as a io.Reader.
+// Consumer can write the data to a bootstrap program such as one that uses
+// nsenter package to bootstrap the container's init process correctly, i.e. with
+// correct namespaces, uid/gid mapping etc.
+//
+// The binary format is netlink binary format
+func (c *linuxContainer) bootstrapData(cloneFlags uintptr, nsMaps map[configs.NamespaceType]string, consolePath string) (io.Reader, error) {
+	// create the netlink message
+	r := nl.NewNetlinkRequest(int(RuncInit), 0)
+
+	// write cloneFlags
+	r.AddData(&Int32msg{
+		Type:  RuncInitCloneFlags,
+		Value: uint32(cloneFlags),
+	})
+
+	// write console path
+	if consolePath != "" {
+		r.AddData(&Bytemsg{
+			Type:  RuncInitConsolePath,
+			Value: []byte(consolePath),
+		})
+	}
+
+	// write custom namespace paths
+	if len(nsMaps) > 0 {
+		nsPaths, err := c.orderNamespacePaths(nsMaps)
+		if err != nil {
+			return nil, err
+		}
+		r.AddData(&Bytemsg{
+			Type:  RuncInitNsPaths,
+			Value: []byte(strings.Join(nsPaths, ",")),
+		})
+	}
+
+	// write namespace paths only when we are not joining an existing user ns
+	_, joinExistingUser := nsMaps[configs.NEWUSER]
+	if !joinExistingUser {
+		// write uid mappings
+		if len(c.config.UidMappings) > 0 {
+			b, err := encodeIDMapping(c.config.UidMappings)
+			if err != nil {
+				return nil, err
+			}
+			r.AddData(&Bytemsg{
+				Type:  RuncInitUidmap,
+				Value: b,
+			})
+		}
+
+		// write gid mappings
+		if len(c.config.GidMappings) > 0 {
+			b, err := encodeIDMapping(c.config.UidMappings)
+			if err != nil {
+				return nil, err
+			}
+			r.AddData(&Bytemsg{
+				Type:  RuncInitGidmap,
+				Value: b,
+			})
+			// check if we have CAP_SETGID to setgroup properly
+			pid, err := capability.NewPid(os.Getpid())
+			if err != nil {
+				return nil, err
+			}
+			if !pid.Get(capability.EFFECTIVE, capability.CAP_SETGID) {
+				r.AddData(&Boolmsg{
+					Type:  RuncInitSetgroup,
+					Value: true,
+				})
+			}
+		}
+	}
+
+	return bytes.NewReader(r.Serialize()), nil
+}
+
+type Boolmsg struct {
+	Type  uint16
+	Value bool
+}
+
+func (msg *Boolmsg) Serialize() []byte {
+	buf := make([]byte, msg.Len())
+	native := nl.NativeEndian()
+	native.PutUint16(buf[0:2], msg.Type)
+	if msg.Value {
+		buf[2] = 1
+	} else {
+		buf[2] = 0
+	}
+	return buf
+}
+
+func (msg *Boolmsg) Len() int {
+	return 2 + 1 // uint16 + 0/1
+}
+
+type Int32msg struct {
+	Type  uint16
+	Value uint32
+}
+
+func (msg *Int32msg) Serialize() []byte {
+	buf := make([]byte, msg.Len())
+	native := nl.NativeEndian()
+	native.PutUint16(buf[0:2], msg.Type)
+	native.PutUint32(buf[2:6], msg.Value)
+	return buf
+}
+
+func (msg *Int32msg) Len() int {
+	return 2 + 4 // uint16 + uint32
+}
+
+type Bytemsg struct {
+	Type  uint16
+	Value []byte
+}
+
+func (msg *Bytemsg) Serialize() []byte {
+	buf := make([]byte, msg.Len())
+	native := nl.NativeEndian()
+	native.PutUint16(buf[0:2], msg.Type)
+	native.PutUint32(buf[2:6], uint32(len(msg.Value)))
+	copy(buf[6:], msg.Value)
+	return buf
+}
+
+func (msg *Bytemsg) Len() int {
+	return 2 + 4 + len(msg.Value)
+}
+
+func encodeIDMapping(idMap []configs.IDMap) ([]byte, error) {
+	data := bytes.NewBuffer(nil)
+	for _, im := range idMap {
+		line := fmt.Sprintf("%d %d %d\n", im.ContainerID, im.HostID, im.Size)
+		if _, err := data.WriteString(line); err != nil {
+			return nil, err
+		}
+	}
+	return data.Bytes(), nil
 }
