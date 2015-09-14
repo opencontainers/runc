@@ -54,12 +54,12 @@ func main() {
 		},
 		cli.StringFlag{
 			Name:  "root",
-			Value: "/run/oci",
+			Value: getDefaultRoot(),
 			Usage: "root directory for storage of container state (this should be located in tmpfs)",
 		},
 		cli.StringFlag{
 			Name:  "criu",
-			Value: "criu",
+			Value: getDefaultCriu(),
 			Usage: "path to the criu binary used for checkpoint and restore",
 		},
 	}

@@ -153,6 +153,24 @@ func getDefaultID() string {
 	return filepath.Base(cwd)
 }
 
+// getDefaultRoot returns a directory path for storage of container state.
+func getDefaultRoot() string {
+	root := os.Getenv("OCI_ROOT")
+	if root == "" {
+		root = "/run/oci"
+	}
+	return root
+}
+
+// getDefaultCriu returns a path to the criu binary.
+func getDefaultCriu() string {
+	criu := os.Getenv("RUNC_CRIU")
+	if criu == "" {
+		criu = "criu"
+	}
+	return criu
+}
+
 func getDefaultImagePath(context *cli.Context) string {
 	cwd, err := os.Getwd()
 	if err != nil {
