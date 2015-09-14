@@ -2,10 +2,12 @@ package integration
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"syscall"
@@ -1209,7 +1211,6 @@ func TestRootfsPropagationSlaveMount(t *testing.T) {
 	defer stdinW2.Close()
 	ok(t, err)
 
-	// Wait for process
 	stdinW2.Close()
 	waitProcess(pconfig2, t)
 	stdinW.Close()
@@ -1374,4 +1375,196 @@ func TestPIDHost(t *testing.T) {
 	if actual := strings.Trim(buffers.Stdout.String(), "\n"); actual != l {
 		t.Fatalf("ipc link not equal to host link %q %q", actual, l)
 	}
+}
+
+func TestInitJoinPID(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+	rootfs, err := newRootfs()
+	ok(t, err)
+	defer remove(rootfs)
+
+	// Execute a long-running container
+	container1, err := newContainer(newTemplateConfig(rootfs))
+	ok(t, err)
+	defer container1.Destroy()
+
+	stdinR1, stdinW1, err := os.Pipe()
+	ok(t, err)
+	init1 := &libcontainer.Process{
+		Cwd:   "/",
+		Args:  []string{"cat"},
+		Env:   standardEnvironment,
+		Stdin: stdinR1,
+	}
+	err = container1.Start(init1)
+	stdinR1.Close()
+	defer stdinW1.Close()
+	ok(t, err)
+
+	// get the state of the first container
+	state1, err := container1.State()
+	ok(t, err)
+	pidns1 := state1.NamespacePaths[configs.NEWPID]
+
+	// Start a container inside the existing pidns but with different cgroups
+	config2 := newTemplateConfig(rootfs)
+	config2.Namespaces.Add(configs.NEWPID, pidns1)
+	config2.Cgroups.Path = "integration/test2"
+	container2, err := newContainerWithName("testCT2", config2)
+	ok(t, err)
+	defer container2.Destroy()
+
+	stdinR2, stdinW2, err := os.Pipe()
+	ok(t, err)
+	init2 := &libcontainer.Process{
+		Cwd:   "/",
+		Args:  []string{"cat"},
+		Env:   standardEnvironment,
+		Stdin: stdinR2,
+	}
+	err = container2.Start(init2)
+	stdinR2.Close()
+	defer stdinW2.Close()
+	ok(t, err)
+	// get the state of the second container
+	state2, err := container2.State()
+	ok(t, err)
+
+	ns1, err := os.Readlink(fmt.Sprintf("/proc/%d/ns/pid", state1.InitProcessPid))
+	ok(t, err)
+	ns2, err := os.Readlink(fmt.Sprintf("/proc/%d/ns/pid", state2.InitProcessPid))
+	ok(t, err)
+	if ns1 != ns2 {
+		t.Errorf("pidns(%s), wanted %s", ns2, ns1)
+	}
+
+	// check that namespaces are not the same
+	if reflect.DeepEqual(state2.NamespacePaths, state1.NamespacePaths) {
+		t.Errorf("Namespaces(%v), original %v", state2.NamespacePaths,
+			state1.NamespacePaths)
+	}
+	// check that pidns is joined correctly. The initial container process list
+	// should contain the second container's init process
+	buffers := newStdBuffers()
+	ps := &libcontainer.Process{
+		Cwd:    "/",
+		Args:   []string{"ps"},
+		Env:    standardEnvironment,
+		Stdout: buffers.Stdout,
+	}
+	err = container1.Start(ps)
+	ok(t, err)
+	waitProcess(ps, t)
+
+	// Stop init processes one by one. Stop the second container should
+	// not stop the first.
+	stdinW2.Close()
+	waitProcess(init2, t)
+	stdinW1.Close()
+	waitProcess(init1, t)
+
+	out := strings.TrimSpace(buffers.Stdout.String())
+	// output of ps inside the initial PID namespace should have
+	// 1 line of header,
+	// 2 lines of init processes,
+	// 1 line of ps process
+	if len(strings.Split(out, "\n")) != 4 {
+		t.Errorf("unexpected running process, output %q", out)
+	}
+}
+
+func TestInitJoinNetworkAndUser(t *testing.T) {
+	if _, err := os.Stat("/proc/self/ns/user"); os.IsNotExist(err) {
+		t.Skip("userns is unsupported")
+	}
+	if testing.Short() {
+		return
+	}
+	rootfs, err := newRootfs()
+	ok(t, err)
+	defer remove(rootfs)
+
+	// Execute a long-running container
+	config1 := newTemplateConfig(rootfs)
+	config1.UidMappings = []configs.IDMap{{0, 0, 1000}}
+	config1.GidMappings = []configs.IDMap{{0, 0, 1000}}
+	config1.Namespaces = append(config1.Namespaces, configs.Namespace{Type: configs.NEWUSER})
+	container1, err := newContainer(config1)
+	ok(t, err)
+	defer container1.Destroy()
+
+	stdinR1, stdinW1, err := os.Pipe()
+	ok(t, err)
+	init1 := &libcontainer.Process{
+		Cwd:   "/",
+		Args:  []string{"cat"},
+		Env:   standardEnvironment,
+		Stdin: stdinR1,
+	}
+	err = container1.Start(init1)
+	stdinR1.Close()
+	defer stdinW1.Close()
+	ok(t, err)
+
+	// get the state of the first container
+	state1, err := container1.State()
+	ok(t, err)
+	netns1 := state1.NamespacePaths[configs.NEWNET]
+	userns1 := state1.NamespacePaths[configs.NEWUSER]
+
+	// Start a container inside the existing pidns but with different cgroups
+	rootfs2, err := newRootfs()
+	ok(t, err)
+	defer remove(rootfs2)
+
+	config2 := newTemplateConfig(rootfs2)
+	config2.UidMappings = []configs.IDMap{{0, 0, 1000}}
+	config2.GidMappings = []configs.IDMap{{0, 0, 1000}}
+	config2.Namespaces.Add(configs.NEWNET, netns1)
+	config2.Namespaces.Add(configs.NEWUSER, userns1)
+	config2.Cgroups.Path = "integration/test2"
+	container2, err := newContainerWithName("testCT2", config2)
+	ok(t, err)
+	defer container2.Destroy()
+
+	stdinR2, stdinW2, err := os.Pipe()
+	ok(t, err)
+	init2 := &libcontainer.Process{
+		Cwd:   "/",
+		Args:  []string{"cat"},
+		Env:   standardEnvironment,
+		Stdin: stdinR2,
+	}
+	err = container2.Start(init2)
+	stdinR2.Close()
+	defer stdinW2.Close()
+	ok(t, err)
+
+	// get the state of the second container
+	state2, err := container2.State()
+	ok(t, err)
+
+	for _, ns := range []string{"net", "user"} {
+		ns1, err := os.Readlink(fmt.Sprintf("/proc/%d/ns/%s", state1.InitProcessPid, ns))
+		ok(t, err)
+		ns2, err := os.Readlink(fmt.Sprintf("/proc/%d/ns/%s", state2.InitProcessPid, ns))
+		ok(t, err)
+		if ns1 != ns2 {
+			t.Errorf("%s(%s), wanted %s", ns, ns2, ns1)
+		}
+	}
+
+	// check that namespaces are not the same
+	if reflect.DeepEqual(state2.NamespacePaths, state1.NamespacePaths) {
+		t.Errorf("Namespaces(%v), original %v", state2.NamespacePaths,
+			state1.NamespacePaths)
+	}
+	// Stop init processes one by one. Stop the second container should
+	// not stop the first.
+	stdinW2.Close()
+	waitProcess(init2, t)
+	stdinW1.Close()
+	waitProcess(init1, t)
 }
