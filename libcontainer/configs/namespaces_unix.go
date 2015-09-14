@@ -117,3 +117,11 @@ func (n *Namespaces) index(t NamespaceType) int {
 func (n *Namespaces) Contains(t NamespaceType) bool {
 	return n.index(t) != -1
 }
+
+func (n *Namespaces) PathOf(t NamespaceType) string {
+	i := n.index(t)
+	if i == -1 {
+		return ""
+	}
+	return (*n)[i].Path
+}
