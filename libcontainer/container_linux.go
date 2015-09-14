@@ -23,6 +23,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/criurpc"
 	"github.com/opencontainers/runc/libcontainer/utils"
+	"github.com/syndtr/gocapability/capability"
 	"github.com/vishvananda/netlink/nl"
 )
 
@@ -268,37 +269,40 @@ func (c *linuxContainer) commandTemplate(p *Process, childPipe *os.File) (*exec.
 }
 
 func (c *linuxContainer) newInitProcess(p *Process, cmd *exec.Cmd, parentPipe, childPipe *os.File) (*initProcess, error) {
-	t := "_LIBCONTAINER_INITTYPE=" + string(initStandard)
-	cloneFlags := c.config.Namespaces.CloneFlags()
-	if cloneFlags&syscall.CLONE_NEWUSER != 0 {
-		if err := c.addUidGidMappings(cmd.SysProcAttr); err != nil {
-			// user mappings are not supported
-			return nil, err
-		}
-		enableSetgroups(cmd.SysProcAttr)
-		// Default to root user when user namespaces are enabled.
-		if cmd.SysProcAttr.Credential == nil {
-			cmd.SysProcAttr.Credential = &syscall.Credential{}
+	cmd.Env = append(cmd.Env, "_LIBCONTAINER_INITTYPE="+string(initStandard))
+	nsMaps := make(map[configs.NamespaceType]string)
+	for _, ns := range c.config.Namespaces {
+		if ns.Path != "" {
+			nsMaps[ns.Type] = ns.Path
 		}
 	}
-	cmd.Env = append(cmd.Env, t)
-	cmd.SysProcAttr.Cloneflags = cloneFlags
+	_, sharePidns := nsMaps[configs.NEWPID]
+	data, err := c.bootstrapData(c.config.Namespaces.CloneFlags(), nsMaps, "")
+	if err != nil {
+		return nil, err
+	}
 	return &initProcess{
-		cmd:        cmd,
-		childPipe:  childPipe,
-		parentPipe: parentPipe,
-		manager:    c.cgroupManager,
-		config:     c.newInitConfig(p),
-		container:  c,
-		process:    p,
+		cmd:           cmd,
+		childPipe:     childPipe,
+		parentPipe:    parentPipe,
+		manager:       c.cgroupManager,
+		config:        c.newInitConfig(p),
+		container:     c,
+		process:       p,
+		bootstrapData: data,
+		sharePidns:    sharePidns,
 	}, nil
 }
 
 func (c *linuxContainer) newSetnsProcess(p *Process, cmd *exec.Cmd, parentPipe, childPipe *os.File) (*setnsProcess, error) {
 	cmd.Env = append(cmd.Env, "_LIBCONTAINER_INITTYPE="+string(initSetns))
+	state, err := c.currentState()
+	if err != nil {
+		return nil, newSystemError(err)
+	}
 	// for setns process, we dont have to set cloneflags as the process namespaces
 	// will only be set via setns syscall
-	data, err := c.bootstrapData(0, c.initProcess.pid(), p.consolePath)
+	data, err := c.bootstrapData(0, state.NamespacePaths, p.consolePath)
 	if err != nil {
 		return nil, err
 	}
@@ -1069,28 +1073,6 @@ func (c *linuxContainer) currentState() (*State, error) {
 	return state, nil
 }
 
-// bootstrapData encodes the necessary data in netlink binary format as a io.Reader.
-// Consumer can write the data to a bootstrap program such as one that uses
-// nsenter package to bootstrap the container's init process correctly, i.e. with
-// correct namespaces, uid/gid mapping etc.
-func (c *linuxContainer) bootstrapData(cloneFlags uintptr, pid int, consolePath string) (io.Reader, error) {
-	// create the netlink message
-	r := nl.NewNetlinkRequest(int(InitMsg), 0)
-	// write pid
-	r.AddData(&Int32msg{
-		Type:  PidAttr,
-		Value: uint32(pid),
-	})
-	// write console path
-	if consolePath != "" {
-		r.AddData(&Bytemsg{
-			Type:  ConsolePathAttr,
-			Value: []byte(consolePath),
-		})
-	}
-	return bytes.NewReader(r.Serialize()), nil
-}
-
 // orderNamespacePaths sorts namespace paths into a list of paths that we
 // can setns in order.
 func (c *linuxContainer) orderNamespacePaths(namespaces map[configs.NamespaceType]string) ([]string, error) {
@@ -1125,4 +1107,93 @@ func (c *linuxContainer) orderNamespacePaths(namespaces map[configs.NamespaceTyp
 		}
 	}
 	return paths, nil
+}
+
+func encodeIDMapping(idMap []configs.IDMap) ([]byte, error) {
+	data := bytes.NewBuffer(nil)
+	for _, im := range idMap {
+		line := fmt.Sprintf("%d %d %d\n", im.ContainerID, im.HostID, im.Size)
+		if _, err := data.WriteString(line); err != nil {
+			return nil, err
+		}
+	}
+	return data.Bytes(), nil
+}
+
+// bootstrapData encodes the necessary data in netlink binary format
+// as a io.Reader.
+// Consumer can write the data to a bootstrap program
+// such as one that uses nsenter package to bootstrap the container's
+// init process correctly, i.e. with correct namespaces, uid/gid
+// mapping etc.
+func (c *linuxContainer) bootstrapData(cloneFlags uintptr, nsMaps map[configs.NamespaceType]string, consolePath string) (io.Reader, error) {
+	// create the netlink message
+	r := nl.NewNetlinkRequest(int(InitMsg), 0)
+
+	// write cloneFlags
+	r.AddData(&Int32msg{
+		Type:  CloneFlagsAttr,
+		Value: uint32(cloneFlags),
+	})
+
+	// write console path
+	if consolePath != "" {
+		r.AddData(&Bytemsg{
+			Type:  ConsolePathAttr,
+			Value: []byte(consolePath),
+		})
+	}
+
+	// write custom namespace paths
+	if len(nsMaps) > 0 {
+		nsPaths, err := c.orderNamespacePaths(nsMaps)
+		if err != nil {
+			return nil, err
+		}
+		r.AddData(&Bytemsg{
+			Type:  NsPathsAttr,
+			Value: []byte(strings.Join(nsPaths, ",")),
+		})
+	}
+
+	// write namespace paths only when we are not joining an existing user ns
+	_, joinExistingUser := nsMaps[configs.NEWUSER]
+	if !joinExistingUser {
+		// write uid mappings
+		if len(c.config.UidMappings) > 0 {
+			b, err := encodeIDMapping(c.config.UidMappings)
+			if err != nil {
+				return nil, err
+			}
+			r.AddData(&Bytemsg{
+				Type:  UidmapAttr,
+				Value: b,
+			})
+		}
+
+		// write gid mappings
+		if len(c.config.GidMappings) > 0 {
+			b, err := encodeIDMapping(c.config.UidMappings)
+			if err != nil {
+				return nil, err
+			}
+			r.AddData(&Bytemsg{
+				Type:  GidmapAttr,
+				Value: b,
+			})
+			// check if we have CAP_SETGID to setgroup properly
+			pid, err := capability.NewPid(os.Getpid())
+			if err != nil {
+				return nil, err
+			}
+			if !pid.Get(capability.EFFECTIVE, capability.CAP_SETGID) {
+				r.AddData(&Boolmsg{
+					Type:  SetgroupAttr,
+					Value: true,
+				})
+			}
+		}
+	}
+
+	return bytes.NewReader(r.Serialize()), nil
 }
