@@ -1,28 +1,19 @@
 #define _GNU_SOURCE
-#include <stdlib.h>
-#include <unistd.h>
-#include <stdio.h>
-#include <errno.h>
-#include <string.h>
-#include <linux/limits.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/ioctl.h>
-#include <fcntl.h>
-#include <signal.h>
-#include <setjmp.h>
-#include <sched.h>
-#include <signal.h>
 #include <endian.h>
-#include <stdint.h>
-#include <inttypes.h>
-
-// netlink related
-#include <linux/types.h>
-#include <sys/socket.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <linux/limits.h>
 #include <linux/netlink.h>
+#include <sched.h>
+#include <setjmp.h>
+#include <signal.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <unistd.h>
 
 #include <bits/sockaddr.h>
 #include <linux/netlink.h>
