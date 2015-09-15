@@ -20,15 +20,27 @@ const SD_LISTEN_FDS_START = 3
 var startCommand = cli.Command{
 	Name:  "start",
 	Usage: "create and run a container",
+	Flags: []cli.Flag{
+		cli.StringFlag{
+			Name:  "config-file, c",
+			Value: "config.json",
+			Usage: "path to spec file for writing",
+		},
+		cli.StringFlag{
+			Name:  "runtime-file, r",
+			Value: "runtime.json",
+			Usage: "path for runtime file for writing",
+		},
+	},
 	Action: func(context *cli.Context) {
-		spec, err := loadSpec(context.Args().First())
+		spec, rspec, err := loadSpec(context.String("config-file"), context.String("runtime-file"))
 		if err != nil {
 			fatal(err)
 		}
 
 		notifySocket := os.Getenv("NOTIFY_SOCKET")
 		if notifySocket != "" {
-			setupSdNotify(spec, notifySocket)
+			setupSdNotify(spec, rspec, notifySocket)
 		}
 
 		listenFds := os.Getenv("LISTEN_FDS")
@@ -41,7 +53,7 @@ var startCommand = cli.Command{
 		if os.Geteuid() != 0 {
 			logrus.Fatal("runc should be run as root")
 		}
-		status, err := startContainer(context, spec)
+		status, err := startContainer(context, spec, rspec)
 		if err != nil {
 			logrus.Fatalf("Container start failed: %v", err)
 		}
@@ -63,8 +75,8 @@ func init() {
 	}
 }
 
-func startContainer(context *cli.Context, spec *specs.LinuxSpec) (int, error) {
-	config, err := createLibcontainerConfig(context.GlobalString("id"), spec)
+func startContainer(context *cli.Context, spec *specs.LinuxSpec, rspec *specs.LinuxRuntimeSpec) (int, error) {
+	config, err := createLibcontainerConfig(context.GlobalString("id"), spec, rspec)
 	if err != nil {
 		return -1, err
 	}
@@ -117,9 +129,11 @@ func startContainer(context *cli.Context, spec *specs.LinuxSpec) (int, error) {
 
 // If systemd is supporting sd_notify protocol, this function will add support
 // for sd_notify protocol from within the container.
-func setupSdNotify(spec *specs.LinuxSpec, notifySocket string) {
-	spec.Mounts = append(spec.Mounts, specs.Mount{Type: "bind", Source: notifySocket, Destination: notifySocket, Options: "bind"})
+func setupSdNotify(spec *specs.LinuxSpec, rspec *specs.LinuxRuntimeSpec, notifySocket string) {
+	mountName := "sdNotify"
+	spec.Mounts = append(spec.Mounts, specs.MountPoint{Name: mountName, Path: notifySocket})
 	spec.Process.Env = append(spec.Process.Env, fmt.Sprintf("NOTIFY_SOCKET=%s", notifySocket))
+	rspec.Mounts[mountName] = specs.Mount{Type: "bind", Source: notifySocket, Options: []string{"bind"}}
 }
 
 // If systemd is supporting on-demand socket activation, this function will add support

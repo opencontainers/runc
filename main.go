@@ -5,10 +5,11 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
+	"github.com/opencontainers/specs"
 )
 
 const (
-	version = "0.2"
+	version = "0.3"
 	usage   = `Open Container Initiative runtime
 
 runc is a command line client for running applications packaged according to
@@ -54,7 +55,7 @@ func main() {
 		},
 		cli.StringFlag{
 			Name:  "root",
-			Value: "/run/oci",
+			Value: specs.LinuxStateDirectory,
 			Usage: "root directory for storage of container state (this should be located in tmpfs)",
 		},
 		cli.StringFlag{
@@ -87,8 +88,6 @@ func main() {
 		}
 		return nil
 	}
-	// Default to 'start' if no command is specified
-	app.Action = startCommand.Action
 	if err := app.Run(os.Args); err != nil {
 		logrus.Fatal(err)
 	}

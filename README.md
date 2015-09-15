@@ -4,16 +4,17 @@
 
 ## State of the project
 
-Currently `runc` is an implementation of the OCF specification.  We are currently sprinting
+Currently `runc` is an implementation of the OCI specification.  We are currently sprinting
 to have a v1 of the spec out within a quick timeframe of a few weeks, ~July 2015,
 so the `runc` config format will be constantly changing until
 the spec is finalized.  However, we encourage you to try out the tool and give feedback.
 
 ### OCF
 
-How does `runc` integrate with the Open Container Format?  `runc` depends on the types
-specified in the [specs](https://github.com/opencontainers/specs) repository.  Whenever
-the specification is updated and ready to be versioned `runc` will update it's dependency
+How does `runc` integrate with the Open Container Initiative Specification?
+`runc` depends on the types specified in the
+[specs](https://github.com/opencontainers/specs) repository. Whenever the
+specification is updated and ready to be versioned `runc` will update its dependency
 on the specs repository and support the update spec.
 
 ### Building:
@@ -73,229 +74,293 @@ PID   USER     COMMAND
 / $
 ```
 
-Or you can specify the path to a JSON configuration file:
-```bash
-runc start config.json
-/ $ ps
-PID   USER     COMMAND
-1     daemon   sh
-5     daemon   sh
-/ $
-```
-Note: the use of the `start` command is required when specifying a 
-configuration file.
+### OCI Container JSON Format:
 
-### OCF Container JSON Format:
-
-Below is a sample `config.json` configuration file. It assumes that
+Below are sample `config.json` and `runtime.json` configuration files. It assumes that
 the file-system is found in a directory called `rootfs` and there is a
 user with uid and gid of `0` defined within that file-system.
 
+`config.json`:
 ```json
 {
-    "version": "pre-draft",
-    "platform": {
-        "os": "linux",
-        "arch": "amd64"
-    },
-    "process": {
-        "terminal": true,
-        "user": {
-            "uid": 0,
-            "gid": 0,
-            "additionalGids": null
-        },
-        "args": [
-            "sh"
-        ],
-        "env": [
-            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-            "TERM=xterm"
-        ],
-        "cwd": ""
-    },
-    "root": {
-        "path": "rootfs",
-        "readonly": true
-    },
-    "hostname": "shell",
-    "mounts": [
-        {
-            "type": "proc",
-            "source": "proc",
-            "destination": "/proc",
-            "options": ""
-        },
-        {
-            "type": "tmpfs",
-            "source": "tmpfs",
-            "destination": "/dev",
-            "options": "nosuid,strictatime,mode=755,size=65536k"
-        },
-        {
-            "type": "devpts",
-            "source": "devpts",
-            "destination": "/dev/pts",
-            "options": "nosuid,noexec,newinstance,ptmxmode=0666,mode=0620,gid=5"
-        },
-        {
-            "type": "tmpfs",
-            "source": "shm",
-            "destination": "/dev/shm",
-            "options": "nosuid,noexec,nodev,mode=1777,size=65536k"
-        },
-        {
-            "type": "mqueue",
-            "source": "mqueue",
-            "destination": "/dev/mqueue",
-            "options": "nosuid,noexec,nodev"
-        },
-        {
-            "type": "sysfs",
-            "source": "sysfs",
-            "destination": "/sys",
-            "options": "nosuid,noexec,nodev"
-        },
-        {
-            "type": "cgroup",
-            "source": "cgroup",
-            "destination": "/sys/fs/cgroup",
-            "options": "nosuid,noexec,nodev,relatime,ro"
-        }
-    ],
-    "linux": {
-        "uidMapping": null,
-        "gidMapping": null,
-        "rlimits": [
-           {
-                "type": 7,
-                "hard": 1024,
-                "soft": 1024
-           }
-        ],
-        "systemProperties": null,
-        "resources": {
-            "disableOOMKiller": false,
-            "memory": {
-                "limit": 0,
-                "reservation": 0,
-                "swap": 0,
-                "kernel": 0,
-                "swappiness": -1
-            },
-            "cpu": {
-                "shares": 0,
-                "quota": 0,
-                "period": 0,
-                "realtimeRuntime": 0,
-                "realtimePeriod": 0,
-                "cpus": "",
-                "mems": ""
-            },
-            "blockIO": {
-                "blkioWeight": 0,
-                "blkioWeightDevice": "",
-                "blkioThrottleReadBpsDevice": "",
-                "blkioThrottleWriteBpsDevice": "",
-                "blkioThrottleReadIopsDevice": "",
-                "blkioThrottleWriteIopsDevice": ""
-            },
-            "hugepageLimits": null,
-            "network": {
-                "classId": "",
-                "priorities": null
-            }
-        },
-        "namespaces": [
-            {
-                "type": "pid",
-                "path": ""
-            },
-            {
-                "type": "network",
-                "path": ""
-            },
-            {
-                "type": "ipc",
-                "path": ""
-            },
-            {
-                "type": "uts",
-                "path": ""
-            },
-            {
-                "type": "mount",
-                "path": ""
-            }
-        ],
-        "capabilities": [
-            "AUDIT_WRITE",
-            "KILL",
-            "NET_BIND_SERVICE"
-        ],
-        "devices": [
-                {
-                        "type": 99,
-                        "path": "/dev/null",
-                        "major": 1,
-                        "minor": 3,
-                        "permissions": "rwm",
-                        "fileMode": 438,
-                        "uid": 0,
-                        "gid": 0
-                },
-                {
-                        "type": 99,
-                        "path": "/dev/random",
-                        "major": 1,
-                        "minor": 8,
-                        "permissions": "rwm",
-                        "fileMode": 438,
-                        "uid": 0,
-                        "gid": 0
-                },
-                {
-                        "type": 99,
-                        "path": "/dev/full",
-                        "major": 1,
-                        "minor": 7,
-                        "permissions": "rwm",
-                        "fileMode": 438,
-                        "uid": 0,
-                        "gid": 0
-                },
-                {
-                        "type": 99,
-                        "path": "/dev/tty",
-                        "major": 5,
-                        "minor": 0,
-                        "permissions": "rwm",
-                        "fileMode": 438,
-                        "uid": 0,
-                        "gid": 0
-                },
-                {
-                        "type": 99,
-                        "path": "/dev/zero",
-                        "major": 1,
-                        "minor": 5,
-                        "permissions": "rwm",
-                        "fileMode": 438,
-                        "uid": 0,
-                        "gid": 0
-                },
-                {
-                        "type": 99,
-                        "path": "/dev/urandom",
-                        "major": 1,
-                        "minor": 9,
-                        "permissions": "rwm",
-                        "fileMode": 438,
-                        "uid": 0,
-                        "gid": 0
-                }
-        ],
-    }
+	"version": "pre-draft",
+	"platform": {
+		"os": "linux",
+		"arch": "amd64"
+	},
+	"process": {
+		"terminal": true,
+		"user": {
+			"uid": 0,
+			"gid": 0,
+			"additionalGids": null
+		},
+		"args": [
+			"sh"
+		],
+		"env": [
+			"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+			"TERM=xterm"
+		],
+		"cwd": ""
+	},
+	"root": {
+		"path": "rootfs",
+		"readonly": true
+	},
+	"hostname": "shell",
+	"mounts": [
+		{
+			"name": "proc",
+			"path": "/proc"
+		},
+		{
+			"name": "dev",
+			"path": "/dev"
+		},
+		{
+			"name": "devpts",
+			"path": "/dev/pts"
+		},
+		{
+			"name": "shm",
+			"path": "/dev/shm"
+		},
+		{
+			"name": "mqueue",
+			"path": "/dev/mqueue"
+		},
+		{
+			"name": "sysfs",
+			"path": "/sys"
+		},
+		{
+			"name": "cgroup",
+			"path": "/sys/fs/cgroup"
+		}
+	],
+	"linux": {
+		"capabilities": [
+			"AUDIT_WRITE",
+			"KILL",
+			"NET_BIND_SERVICE"
+		],
+		"rootfsPropagation": ""
+	}
+}
+```
+
+`runtime.json`:
+```json
+{
+	"mounts": {
+		"proc": {
+			"type": "proc",
+			"source": "proc",
+			"options": null
+		},
+		"dev": {
+			"type": "tmpfs",
+			"source": "tmpfs",
+			"options": [
+				"nosuid",
+				"strictatime",
+				"mode=755",
+				"size=65536k"
+			]
+		},
+		"devpts": {
+			"type": "devpts",
+			"source": "devpts",
+			"options": [
+				"nosuid",
+				"noexec",
+				"newinstance",
+				"ptmxmode=0666",
+				"mode=0620",
+				"gid=5"
+			]
+		},
+		"shm": {
+			"type": "tmpfs",
+			"source": "shm",
+			"options": [
+				"nosuid",
+				"noexec",
+				"nodev",
+				"mode=1777",
+				"size=65536k"
+			]
+		},
+		"mqueue": {
+			"type": "mqueue",
+			"source": "mqueue",
+			"options": [
+				"nosuid",
+				"noexec",
+				"nodev"
+			]
+		},
+		"sysfs": {
+			"type": "sysfs",
+			"source": "sysfs",
+			"options": [
+				"nosuid",
+				"noexec",
+				"nodev"
+			]
+		},
+		"cgroup": {
+			"type": "cgroup",
+			"source": "cgroup",
+			"options": [
+				"nosuid",
+				"noexec",
+				"nodev",
+				"relatime",
+				"ro"
+			]
+		}
+	},
+	"hooks": {
+		"prestart": null,
+		"poststop": null
+	},
+	"linux": {
+		"uidMappings": null,
+		"gidMappings": null,
+		"rlimits": [
+			{
+				"type": 7,
+				"hard": 1024,
+				"soft": 1024
+			}
+		],
+		"sysctl": null,
+		"resources": {
+			"disableOOMKiller": false,
+			"memory": {
+				"limit": 0,
+				"reservation": 0,
+				"swap": 0,
+				"kernel": 0,
+				"swappiness": -1
+			},
+			"cpu": {
+				"shares": 0,
+				"quota": 0,
+				"period": 0,
+				"realtimeRuntime": 0,
+				"realtimePeriod": 0,
+				"cpus": "",
+				"mems": ""
+			},
+			"blockIO": {
+				"blkioWeight": 0,
+				"blkioWeightDevice": "",
+				"blkioThrottleReadBpsDevice": "",
+				"blkioThrottleWriteBpsDevice": "",
+				"blkioThrottleReadIopsDevice": "",
+				"blkioThrottleWriteIopsDevice": ""
+			},
+			"hugepageLimits": null,
+			"network": {
+				"classId": "",
+				"priorities": null
+			}
+		},
+		"namespaces": [
+			{
+				"type": "pid",
+				"path": ""
+			},
+			{
+				"type": "network",
+				"path": ""
+			},
+			{
+				"type": "ipc",
+				"path": ""
+			},
+			{
+				"type": "uts",
+				"path": ""
+			},
+			{
+				"type": "mount",
+				"path": ""
+			}
+		],
+		"devices": [
+			{
+				"path": "/dev/null",
+				"type": 99,
+				"major": 1,
+				"minor": 3,
+				"permissions": "rwm",
+				"fileMode": 438,
+				"uid": 0,
+				"gid": 0
+			},
+			{
+				"path": "/dev/random",
+				"type": 99,
+				"major": 1,
+				"minor": 8,
+				"permissions": "rwm",
+				"fileMode": 438,
+				"uid": 0,
+				"gid": 0
+			},
+			{
+				"path": "/dev/full",
+				"type": 99,
+				"major": 1,
+				"minor": 7,
+				"permissions": "rwm",
+				"fileMode": 438,
+				"uid": 0,
+				"gid": 0
+			},
+			{
+				"path": "/dev/tty",
+				"type": 99,
+				"major": 5,
+				"minor": 0,
+				"permissions": "rwm",
+				"fileMode": 438,
+				"uid": 0,
+				"gid": 0
+			},
+			{
+				"path": "/dev/zero",
+				"type": 99,
+				"major": 1,
+				"minor": 5,
+				"permissions": "rwm",
+				"fileMode": 438,
+				"uid": 0,
+				"gid": 0
+			},
+			{
+				"path": "/dev/urandom",
+				"type": 99,
+				"major": 1,
+				"minor": 9,
+				"permissions": "rwm",
+				"fileMode": 438,
+				"uid": 0,
+				"gid": 0
+			}
+		],
+		"apparmorProfile": "",
+		"selinuxProcessLabel": "",
+		"seccomp": {
+			"defaultAction": "SCMP_ACT_ALLOW",
+			"syscalls": []
+		},
+		"rootfsPropagation": ""
+	}
 }
 ```
 
@@ -312,8 +377,8 @@ To test using Docker's `busybox` image follow these steps:
 mkdir rootfs
 tar -C rootfs -xf busybox.tar
 ```
-* Create a file called `config.json` using the example from above.  You can also
-generate a spec using `runc spec`, redirecting the output into `config.json`
+* Create `config.json` and `runtime.json` using the example from above.  You can also
+generate a spec using `runc spec`, which will create those files for you.
 * Execute `runc start` and you should be placed into a shell where you can run `ps`:
 ```
 $ runc start
