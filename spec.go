@@ -391,6 +391,7 @@ func createLibcontainerConfig(cgroupName string, spec *specs.LinuxSpec, rspec *s
 	config.Sysctl = rspec.Linux.Sysctl
 	config.ProcessLabel = rspec.Linux.SelinuxProcessLabel
 	config.AppArmorProfile = rspec.Linux.ApparmorProfile
+	createHooks(rspec, config)
 	return config, nil
 }
 
@@ -652,4 +653,24 @@ func setupSeccomp(config *specs.Seccomp) (*configs.Seccomp, error) {
 	}
 
 	return newConfig, nil
+}
+
+func createHooks(rspec *specs.LinuxRuntimeSpec, config *configs.Config) {
+	config.Hooks = &configs.Hooks{}
+	for _, h := range rspec.Hooks.Prestart {
+		cmd := configs.Command{
+			Path: h.Path,
+			Args: h.Args,
+			Env:  h.Env,
+		}
+		config.Hooks.Prestart = append(config.Hooks.Prestart, configs.NewCommandHook(cmd))
+	}
+	for _, h := range rspec.Hooks.Poststop {
+		cmd := configs.Command{
+			Path: h.Path,
+			Args: h.Args,
+			Env:  h.Env,
+		}
+		config.Hooks.Poststop = append(config.Hooks.Poststop, configs.NewCommandHook(cmd))
+	}
 }
