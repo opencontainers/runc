@@ -104,7 +104,7 @@ type InterfacePriority struct {
 	Priority int64 `json:"priority"`
 }
 
-// BlockIO for Linux cgroup 'blockio' resource management
+// BlockIO for Linux cgroup 'blkio' resource management
 type BlockIO struct {
 	// Specifies per cgroup weight, range is from 10 to 1000
 	Weight int64 `json:"blkioWeight"`
