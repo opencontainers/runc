@@ -387,7 +387,7 @@ func createLibcontainerConfig(cgroupName string, spec *specs.LinuxSpec, rspec *s
 }
 
 func createLibcontainerMount(cwd, dest string, m specs.Mount) *configs.Mount {
-	flags, data := parseMountOptions(m.Options)
+	flags, pgflags, data := parseMountOptions(m.Options)
 	source := m.Source
 	if m.Type == "bind" {
 		if !filepath.IsAbs(source) {
@@ -395,11 +395,12 @@ func createLibcontainerMount(cwd, dest string, m specs.Mount) *configs.Mount {
 		}
 	}
 	return &configs.Mount{
-		Device:      m.Type,
-		Source:      source,
-		Destination: dest,
-		Data:        data,
-		Flags:       flags,
+		Device:           m.Type,
+		Source:           source,
+		Destination:      dest,
+		Data:             data,
+		Flags:            flags,
+		PropagationFlags: pgflags,
 	}
 }
 
@@ -519,12 +520,13 @@ func createLibContainerRlimit(rlimit specs.Rlimit) (configs.Rlimit, error) {
 	}, nil
 }
 
-// parseMountOptions parses the string and returns the flags and any mount data that
-// it contains.
-func parseMountOptions(options []string) (int, string) {
+// parseMountOptions parses the string and returns the flags, propagation
+// flags and any mount data that it contains.
+func parseMountOptions(options []string) (int, []int, string) {
 	var (
-		flag int
-		data []string
+		flag   int
+		pgflag []int
+		data   []string
 	)
 	flags := map[string]struct {
 		clear bool
@@ -547,22 +549,27 @@ func parseMountOptions(options []string) (int, string) {
 		"norelatime":    {true, syscall.MS_RELATIME},
 		"nostrictatime": {true, syscall.MS_STRICTATIME},
 		"nosuid":        {false, syscall.MS_NOSUID},
-		"private":       {false, syscall.MS_PRIVATE},
 		"rbind":         {false, syscall.MS_BIND | syscall.MS_REC},
 		"relatime":      {false, syscall.MS_RELATIME},
 		"remount":       {false, syscall.MS_REMOUNT},
 		"ro":            {false, syscall.MS_RDONLY},
-		"rprivate":      {false, syscall.MS_PRIVATE | syscall.MS_REC},
-		"rshared":       {false, syscall.MS_SHARED | syscall.MS_REC},
-		"rslave":        {false, syscall.MS_SLAVE | syscall.MS_REC},
-		"runbindable":   {false, syscall.MS_UNBINDABLE | syscall.MS_REC},
 		"rw":            {true, syscall.MS_RDONLY},
-		"shared":        {false, syscall.MS_SHARED},
-		"slave":         {false, syscall.MS_SLAVE},
 		"strictatime":   {false, syscall.MS_STRICTATIME},
 		"suid":          {true, syscall.MS_NOSUID},
 		"sync":          {false, syscall.MS_SYNCHRONOUS},
-		"unbindable":    {false, syscall.MS_UNBINDABLE},
+	}
+	propagationFlags := map[string]struct {
+		clear bool
+		flag  int
+	}{
+		"private":     {false, syscall.MS_PRIVATE},
+		"shared":      {false, syscall.MS_SHARED},
+		"slave":       {false, syscall.MS_SLAVE},
+		"unbindable":  {false, syscall.MS_UNBINDABLE},
+		"rprivate":    {false, syscall.MS_PRIVATE | syscall.MS_REC},
+		"rshared":     {false, syscall.MS_SHARED | syscall.MS_REC},
+		"rslave":      {false, syscall.MS_SLAVE | syscall.MS_REC},
+		"runbindable": {false, syscall.MS_UNBINDABLE | syscall.MS_REC},
 	}
 	for _, o := range options {
 		// If the option does not exist in the flags table or the flag
@@ -574,11 +581,13 @@ func parseMountOptions(options []string) (int, string) {
 			} else {
 				flag |= f.flag
 			}
+		} else if f, exists := propagationFlags[o]; exists && f.flag != 0 {
+			pgflag = append(pgflag, f.flag)
 		} else {
 			data = append(data, o)
 		}
 	}
-	return flag, strings.Join(data, ",")
+	return flag, pgflag, strings.Join(data, ",")
 }
 
 func setupSeccomp(config *specs.Seccomp) (*configs.Seccomp, error) {
