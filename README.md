@@ -83,7 +83,7 @@ user with uid and gid of `0` defined within that file-system.
 `config.json`:
 ```json
 {
-	"version": "pre-draft",
+	"version": "0.1.0",
 	"platform": {
 		"os": "linux",
 		"arch": "amd64"
@@ -144,8 +144,7 @@ user with uid and gid of `0` defined within that file-system.
 			"CAP_AUDIT_WRITE",
 			"CAP_KILL",
 			"CAP_NET_BIND_SERVICE"
-		],
-		"rootfsPropagation": ""
+		]
 	}
 }
 ```
@@ -231,7 +230,7 @@ user with uid and gid of `0` defined within that file-system.
 		"gidMappings": null,
 		"rlimits": [
 			{
-				"type": 7,
+				"type": "RLIMIT_NOFILE",
 				"hard": 1024,
 				"soft": 1024
 			}
@@ -255,6 +254,9 @@ user with uid and gid of `0` defined within that file-system.
 				"cpus": "",
 				"mems": ""
 			},
+			"pids": {
+				"limit": 0
+			},
 			"blockIO": {
 				"blkioWeight": 0,
 				"blkioWeightDevice": "",
@@ -269,6 +271,7 @@ user with uid and gid of `0` defined within that file-system.
 				"priorities": null
 			}
 		},
+		"cgroupsPath": "",
 		"namespaces": [
 			{
 				"type": "pid",
