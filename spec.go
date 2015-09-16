@@ -282,6 +282,8 @@ func loadSpec(cPath, rPath string) (spec *specs.LinuxSpec, rspec *specs.LinuxRun
 		}
 		return
 	}
+	defer cf.Close()
+
 	rf, err := os.Open(rPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -290,6 +292,7 @@ func loadSpec(cPath, rPath string) (spec *specs.LinuxSpec, rspec *specs.LinuxRun
 		return
 	}
 	defer rf.Close()
+
 	if err = json.NewDecoder(cf).Decode(&spec); err != nil {
 		return
 	}
