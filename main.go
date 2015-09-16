@@ -21,17 +21,14 @@ container runtime environment for applications. It can be used with your
 existing process monitoring tools and the container will be spawned as a
 direct child of the process supervisor.
 
-After creating a spec for your root filesystem with runc, you can execute a
+After creating config files for your root filesystem with runc, you can execute a
 container in your shell by running:
 
     # cd /mycontainer
-    # runc start
+    # runc start [ -c spec-config-file ] [ -r runtime-config-file ]
 
-or
-    # cd /mycontainer
-    # runc start [ spec-file ]
-
-If not specified, the default value for the 'spec-file' is 'config.json'. `
+If not specified, the default value for the 'spec-config-file' is 'config.json',
+and the default value for the 'runtime-config-file' is 'runtime.json'.`
 )
 
 func main() {
