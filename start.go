@@ -24,12 +24,12 @@ var startCommand = cli.Command{
 		cli.StringFlag{
 			Name:  "config-file, c",
 			Value: "config.json",
-			Usage: "path to spec file for writing",
+			Usage: "path to spec config file",
 		},
 		cli.StringFlag{
 			Name:  "runtime-file, r",
 			Value: "runtime.json",
-			Usage: "path for runtime file for writing",
+			Usage: "path to runtime config file",
 		},
 	},
 	Action: func(context *cli.Context) {
