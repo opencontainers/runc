@@ -33,7 +33,7 @@ func TestHugetlbSetHugetlb(t *testing.T) {
 	)
 
 	helper.writeFileContents(map[string]string{
-		limit: strconv.Itoa(hugetlbBefore),
+		limit: strconv.FormatUint(hugetlbBefore, 10),
 	})
 
 	helper.CgroupData.c.HugetlbLimit = []*configs.HugepageLimit{
