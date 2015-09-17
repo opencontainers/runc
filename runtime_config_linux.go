@@ -92,8 +92,10 @@ type Rlimit struct {
 
 // HugepageLimit structure corresponds to limiting kernel hugepages
 type HugepageLimit struct {
+	// Pagesize is the hugepage size
 	Pagesize string `json:"pageSize"`
-	Limit    int    `json:"limit"`
+	// Limit is the limit of "hugepagesize" hugetlb usage
+	Limit uint64 `json:"limit"`
 }
 
 // InterfacePriority for network interfaces
