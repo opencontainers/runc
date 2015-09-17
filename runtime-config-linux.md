@@ -20,17 +20,17 @@ Also, when a path is specified, a runtime MUST assume that the setup for that pa
             "path": "/var/run/netns/neta"
         },
         {
-            "type": "mount",
+            "type": "mount"
         },
         {
-            "type": "ipc",
+            "type": "ipc"
         },
         {
-            "type": "uts",
+            "type": "uts"
         },
         {
-            "type": "user",
-        },
+            "type": "user"
+        }
     ]
 ```
 
@@ -132,7 +132,7 @@ Also known as cgroups, they are used to restrict resource usage for a container 
 cgroups provide controls to restrict cpu, memory, IO, pids and network for the container.
 For more information, see the [kernel cgroups documentation](https://www.kernel.org/doc/Documentation/cgroups/cgroups.txt).
 
-The path to the cgroups can to be specified in the Spec via `cgroupsPath`.
+The path to the cgroups can be specified in the Spec via `cgroupsPath`.
 `cgroupsPath` is expected to be relative to the cgroups mount point.
 If not specified, cgroups will be created under '/'.
 Implementations of the Spec can choose to name cgroups in any manner.
