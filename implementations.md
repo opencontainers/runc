@@ -13,6 +13,7 @@ If you know of any associated projects that are not listed here, please file a p
 
 ## Bundle authoring
 
+* [kunalkushwaha/octool](https://github.com/kunalkushwaha/octool) - A config linter and validator.
 * [mrunalp/ocitools](https://github.com/mrunalp/ocitools) - A config generator.
 
 ## Testing
