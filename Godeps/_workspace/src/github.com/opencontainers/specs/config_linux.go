@@ -1,5 +1,3 @@
-// +build linux
-
 package specs
 
 // LinuxSpec is the full specification for linux containers.

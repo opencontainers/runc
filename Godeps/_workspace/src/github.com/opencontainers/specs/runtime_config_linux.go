@@ -92,8 +92,10 @@ type Rlimit struct {
 
 // HugepageLimit structure corresponds to limiting kernel hugepages
 type HugepageLimit struct {
+	// Pagesize is the hugepage size
 	Pagesize string `json:"pageSize"`
-	Limit    int    `json:"limit"`
+	// Limit is the limit of "hugepagesize" hugetlb usage
+	Limit uint64 `json:"limit"`
 }
 
 // InterfacePriority for network interfaces
@@ -104,20 +106,46 @@ type InterfacePriority struct {
 	Priority int64 `json:"priority"`
 }
 
-// BlockIO for Linux cgroup 'blockio' resource management
+// blockIODevice holds major:minor format supported in blkio cgroup
+type blockIODevice struct {
+	// Major is the device's major number.
+	Major int64 `json:"major"`
+	// Minor is the device's minor number.
+	Minor int64 `json:"minor"`
+}
+
+// WeightDevice struct holds a `major:minor weight` pair for blkioWeightDevice
+type WeightDevice struct {
+	blockIODevice
+	// Weight is the bandwidth rate for the device, range is from 10 to 1000
+	Weight uint16 `json:"weight"`
+	// LeafWeight is the bandwidth rate for the device while competing with the cgroup's child cgroups, range is from 10 to 1000, cfq scheduler only
+	LeafWeight uint16 `json:"leafWeight"`
+}
+
+// ThrottleDevice struct holds a `major:minor rate_per_second` pair
+type ThrottleDevice struct {
+	blockIODevice
+	// Rate is the IO rate limit per cgroup per device
+	Rate uint64 `json:"rate"`
+}
+
+// BlockIO for Linux cgroup 'blkio' resource management
 type BlockIO struct {
 	// Specifies per cgroup weight, range is from 10 to 1000
-	Weight int64 `json:"blkioWeight"`
+	Weight uint16 `json:"blkioWeight"`
+	// Specifies tasks' weight in the given cgroup while competing with the cgroup's child cgroups, range is from 10 to 1000, cfq scheduler only
+	LeafWeight uint16 `json:"blkioLeafWeight"`
 	// Weight per cgroup per device, can override BlkioWeight
-	WeightDevice string `json:"blkioWeightDevice"`
+	WeightDevice []*WeightDevice `json:"blkioWeightDevice"`
 	// IO read rate limit per cgroup per device, bytes per second
-	ThrottleReadBpsDevice string `json:"blkioThrottleReadBpsDevice"`
-	// IO write rate limit per cgroup per divice, bytes per second
-	ThrottleWriteBpsDevice string `json:"blkioThrottleWriteBpsDevice"`
+	ThrottleReadBpsDevice []*ThrottleDevice `json:"blkioThrottleReadBpsDevice"`
+	// IO write rate limit per cgroup per device, bytes per second
+	ThrottleWriteBpsDevice []*ThrottleDevice `json:"blkioThrottleWriteBpsDevice"`
 	// IO read rate limit per cgroup per device, IO per second
-	ThrottleReadIOpsDevice string `json:"blkioThrottleReadIopsDevice"`
+	ThrottleReadIOPSDevice []*ThrottleDevice `json:"blkioThrottleReadIOPSDevice"`
 	// IO write rate limit per cgroup per device, IO per second
-	ThrottleWriteIOpsDevice string `json:"blkioThrottleWriteIopsDevice"`
+	ThrottleWriteIOPSDevice []*ThrottleDevice `json:"blkioThrottleWriteIOPSDevice"`
 }
 
 // Memory for Linux cgroup 'memory' resource management

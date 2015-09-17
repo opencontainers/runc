@@ -452,12 +452,28 @@ func createCgroupConfig(name string, spec *specs.LinuxRuntimeSpec, devices []*co
 	c.CpuRtPeriod = r.CPU.RealtimePeriod
 	c.CpusetCpus = r.CPU.Cpus
 	c.CpusetMems = r.CPU.Mems
-	c.BlkioThrottleReadBpsDevice = r.BlockIO.ThrottleReadBpsDevice
-	c.BlkioThrottleWriteBpsDevice = r.BlockIO.ThrottleWriteBpsDevice
-	c.BlkioThrottleReadIOpsDevice = r.BlockIO.ThrottleReadIOpsDevice
-	c.BlkioThrottleWriteIOpsDevice = r.BlockIO.ThrottleWriteIOpsDevice
 	c.BlkioWeight = r.BlockIO.Weight
-	c.BlkioWeightDevice = r.BlockIO.WeightDevice
+	c.BlkioLeafWeight = r.BlockIO.LeafWeight
+	for _, wd := range r.BlockIO.WeightDevice {
+		weightDevice := configs.NewWeightDevice(wd.Major, wd.Minor, wd.Weight, wd.LeafWeight)
+		c.BlkioWeightDevice = append(c.BlkioWeightDevice, weightDevice)
+	}
+	for _, td := range r.BlockIO.ThrottleReadBpsDevice {
+		throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, td.Rate)
+		c.BlkioThrottleReadBpsDevice = append(c.BlkioThrottleReadBpsDevice, throttleDevice)
+	}
+	for _, td := range r.BlockIO.ThrottleWriteBpsDevice {
+		throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, td.Rate)
+		c.BlkioThrottleWriteBpsDevice = append(c.BlkioThrottleWriteBpsDevice, throttleDevice)
+	}
+	for _, td := range r.BlockIO.ThrottleReadIOPSDevice {
+		throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, td.Rate)
+		c.BlkioThrottleReadIOPSDevice = append(c.BlkioThrottleReadIOPSDevice, throttleDevice)
+	}
+	for _, td := range r.BlockIO.ThrottleWriteIOPSDevice {
+		throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, td.Rate)
+		c.BlkioThrottleWriteIOPSDevice = append(c.BlkioThrottleWriteIOPSDevice, throttleDevice)
+	}
 	for _, l := range r.HugepageLimits {
 		c.HugetlbLimit = append(c.HugetlbLimit, &configs.HugepageLimit{
 			Pagesize: l.Pagesize,
