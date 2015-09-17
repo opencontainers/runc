@@ -283,6 +283,10 @@ For more information, see [the man page](http://man7.org/linux/man-pages/man8/sy
 
 ## Rlimits
 
+rlimits allow setting resource limits.
+`type` is a string with a value from those defined in [the man page](http://man7.org/linux/man-pages/man2/setrlimit.2.html).
+The kernel enforces the `soft` limit for a resource while the `hard` limit acts as a ceiling for that value that could be set by an unprivileged process.
+
 ```json
    "rlimits": [
         {
@@ -292,10 +296,6 @@ For more information, see [the man page](http://man7.org/linux/man-pages/man8/sy
         }
    ]
 ```
-
-rlimits allow setting resource limits.
-`type` is a string with a value from those defined in [the man page](http://man7.org/linux/man-pages/man2/setrlimit.2.html).
-The kernel enforces the `soft` limit for a resource while the `hard` limit acts as a ceiling for that value that could be set by an unprivileged process.
 
 ## SELinux process label
 
