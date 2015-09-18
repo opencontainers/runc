@@ -103,7 +103,7 @@ type InterfacePriority struct {
 	// Name is the name of the network interface
 	Name string `json:"name"`
 	// Priority for the interface
-	Priority int64 `json:"priority"`
+	Priority uint32 `json:"priority"`
 }
 
 // blockIODevice holds major:minor format supported in blkio cgroup
@@ -119,7 +119,7 @@ type WeightDevice struct {
 	blockIODevice
 	// Weight is the bandwidth rate for the device, range is from 10 to 1000
 	Weight uint16 `json:"weight"`
-	// LeafWeight is the bandwidth rate for the device while competing with the cgroup's child cgroups, range is from 10 to 1000, cfq scheduler only
+	// LeafWeight is the bandwidth rate for the device while competing with the cgroup's child cgroups, range is from 10 to 1000, CFQ scheduler only
 	LeafWeight uint16 `json:"leafWeight"`
 }
 
@@ -134,7 +134,7 @@ type ThrottleDevice struct {
 type BlockIO struct {
 	// Specifies per cgroup weight, range is from 10 to 1000
 	Weight uint16 `json:"blkioWeight"`
-	// Specifies tasks' weight in the given cgroup while competing with the cgroup's child cgroups, range is from 10 to 1000, cfq scheduler only
+	// Specifies tasks' weight in the given cgroup while competing with the cgroup's child cgroups, range is from 10 to 1000, CFQ scheduler only
 	LeafWeight uint16 `json:"blkioLeafWeight"`
 	// Weight per cgroup per device, can override BlkioWeight
 	WeightDevice []*WeightDevice `json:"blkioWeightDevice"`
@@ -151,29 +151,29 @@ type BlockIO struct {
 // Memory for Linux cgroup 'memory' resource management
 type Memory struct {
 	// Memory limit (in bytes)
-	Limit int64 `json:"limit"`
+	Limit uint64 `json:"limit"`
 	// Memory reservation or soft_limit (in bytes)
-	Reservation int64 `json:"reservation"`
+	Reservation uint64 `json:"reservation"`
 	// Total memory usage (memory + swap); set `-1' to disable swap
-	Swap int64 `json:"swap"`
+	Swap uint64 `json:"swap"`
 	// Kernel memory limit (in bytes)
-	Kernel int64 `json:"kernel"`
+	Kernel uint64 `json:"kernel"`
 	// How aggressive the kernel will swap memory pages. Range from 0 to 100. Set -1 to use system default
-	Swappiness int64 `json:"swappiness"`
+	Swappiness uint64 `json:"swappiness"`
 }
 
 // CPU for Linux cgroup 'cpu' resource management
 type CPU struct {
 	// CPU shares (relative weight vs. other cgroups with cpu shares)
-	Shares int64 `json:"shares"`
+	Shares uint64 `json:"shares"`
 	// CPU hardcap limit (in usecs). Allowed cpu time in a given period
-	Quota int64 `json:"quota"`
+	Quota uint64 `json:"quota"`
 	// CPU period to be used for hardcapping (in usecs). 0 to use system default
-	Period int64 `json:"period"`
+	Period uint64 `json:"period"`
 	// How many time CPU will use in realtime scheduling (in usecs)
-	RealtimeRuntime int64 `json:"realtimeRuntime"`
+	RealtimeRuntime uint64 `json:"realtimeRuntime"`
 	// CPU period to be used for realtime scheduling (in usecs)
-	RealtimePeriod int64 `json:"realtimePeriod"`
+	RealtimePeriod uint64 `json:"realtimePeriod"`
 	// CPU to use within the cpuset
 	Cpus string `json:"cpus"`
 	// MEM to use within the cpuset
@@ -189,7 +189,9 @@ type Pids struct {
 // Network identification and priority configuration
 type Network struct {
 	// Set class identifier for container's network packets
-	ClassID string `json:"classId"`
+	// this is actually a string instead of a uint64 to overcome the json
+	// limitation of specifying hex numbers
+	ClassID string `json:"classID"`
 	// Set priority of network traffic for container
 	Priorities []InterfacePriority `json:"priorities"`
 }
