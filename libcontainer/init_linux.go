@@ -140,25 +140,6 @@ func finalizeNamespace(config *initConfig) error {
 	return nil
 }
 
-// joinExistingNamespaces gets all the namespace paths specified for the container and
-// does a setns on the namespace fd so that the current process joins the namespace.
-func joinExistingNamespaces(namespaces []configs.Namespace) error {
-	for _, ns := range namespaces {
-		if ns.Path != "" {
-			f, err := os.OpenFile(ns.Path, os.O_RDONLY, 0)
-			if err != nil {
-				return err
-			}
-			err = system.Setns(f.Fd(), uintptr(ns.Syscall()))
-			f.Close()
-			if err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
 // setupUser changes the groups, gid, and uid for the user inside the container
 func setupUser(config *initConfig) error {
 	// Set up defaults.
