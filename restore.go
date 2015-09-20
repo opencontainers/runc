@@ -94,8 +94,9 @@ func restoreContainer(context *cli.Context, spec *specs.LinuxSpec, config *confi
 	if err != nil {
 		logrus.Error(err)
 	}
-	if status == libcontainer.Running {
-		fatal(fmt.Errorf("Container with id %s already running", context.GlobalString("id")))
+	cerr := handleContainerstatus(status, container, context)
+	if cerr != nil {
+		return -1, cerr
 	}
 	// ensure that the container is always removed if we were the process
 	// that created it.
@@ -141,6 +142,21 @@ func restoreContainer(context *cli.Context, spec *specs.LinuxSpec, config *confi
 		return -1, err
 	}
 	return handler.forward(process)
+}
+
+func handleContainerstatus(status libcontainer.Status, container libcontainer.Container, context *cli.Context) error {
+	switch status {
+	case libcontainer.Running:
+		return fmt.Errorf("Container with id %s already running", context.GlobalString("id"))
+	case libcontainer.Destroyed:
+		// Ensure to clean/destroy the container as the container id got created during restore startup
+		dest := filepath.Join(context.GlobalString("root"), context.GlobalString("id"))
+		if errVal := os.RemoveAll(dest); errVal != nil {
+			logrus.Error(errVal)
+		}
+		return fmt.Errorf("Container with id %s does not exists", context.GlobalString("id"))
+	}
+	return nil
 }
 
 func criuOptions(context *cli.Context) *libcontainer.CriuOpts {
