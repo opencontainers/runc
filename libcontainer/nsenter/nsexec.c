@@ -65,7 +65,7 @@ static int clone_parent(jmp_buf * env)
 
 void nsexec()
 {
-	char *namespaces[] = { "ipc", "uts", "net", "pid", "mnt" };
+	char *namespaces[] = { "ipc", "uts", "net", "pid", "mnt", "user" };
 	const int num = sizeof(namespaces) / sizeof(char *);
 	jmp_buf env;
 	char buf[PATH_MAX], *val;
