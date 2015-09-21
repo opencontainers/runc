@@ -187,7 +187,17 @@ func setupUser(config *initConfig) error {
 			return err
 		}
 	}
-
+	// change the permissions on the STDIO of the current process so that when the user
+	// is changed for the container, it's STDIO of the process matches the user.
+	for _, fd := range []uintptr{
+		os.Stdin.Fd(),
+		os.Stderr.Fd(),
+		os.Stdout.Fd(),
+	} {
+		if err := syscall.Fchown(int(fd), execUser.Uid, execUser.Gid); err != nil {
+			return err
+		}
+	}
 	suppGroups := append(execUser.Sgids, addGroups...)
 	if err := syscall.Setgroups(suppGroups); err != nil {
 		return err

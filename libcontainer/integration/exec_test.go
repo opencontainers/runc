@@ -994,3 +994,23 @@ func TestHook(t *testing.T) {
 		t.Fatalf("expected file to not exist, got %s", fi.Name())
 	}
 }
+
+func TestSTDIOPermissions(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+
+	rootfs, err := newRootfs()
+	ok(t, err)
+	defer remove(rootfs)
+	config := newTemplateConfig(rootfs)
+	buffers, exitCode, err := runContainer(config, "", "sh", "-c", "echo hi > /dev/stderr")
+	ok(t, err)
+	if exitCode != 0 {
+		t.Fatalf("exit code not 0. code %d stderr %q", exitCode, buffers.Stderr)
+	}
+
+	if actual := strings.Trim(buffers.Stderr.String(), "\n"); actual != "hi" {
+		t.Fatalf("stderr should equal be equal %q %q", actual, "hi")
+	}
+}
