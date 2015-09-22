@@ -68,7 +68,7 @@ func setupRootfs(config *configs.Config, console *linuxConsole) (err error) {
 		return newSystemError(err)
 	}
 	if !setupDev {
-		if err := reOpenDevNull(config.Rootfs); err != nil {
+		if err := reOpenDevNull(); err != nil {
 			return newSystemError(err)
 		}
 	}
@@ -328,7 +328,7 @@ func setupDevSymlinks(rootfs string) error {
 // this method will make them point to `/dev/null` in this container's rootfs.  This
 // needs to be called after we chroot/pivot into the container's rootfs so that any
 // symlinks are resolved locally.
-func reOpenDevNull(rootfs string) error {
+func reOpenDevNull() error {
 	var stat, devNullStat syscall.Stat_t
 	file, err := os.Open("/dev/null")
 	if err != nil {
@@ -433,7 +433,7 @@ func setupPtmx(config *configs.Config, console *linuxConsole) error {
 		return fmt.Errorf("symlink dev ptmx %s", err)
 	}
 	if console != nil {
-		return console.mount(config.Rootfs, config.MountLabel, 0, 0)
+		return console.mount(config.Rootfs, config.MountLabel)
 	}
 	return nil
 }
