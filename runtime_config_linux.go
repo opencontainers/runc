@@ -235,8 +235,13 @@ type Device struct {
 // Seccomp represents syscall restrictions
 type Seccomp struct {
 	DefaultAction Action     `json:"defaultAction"`
+	Architectures []Arch     `json:"architectures"`
 	Syscalls      []*Syscall `json:"syscalls"`
 }
+
+// Additional architectures permitted to be used for system calls
+// By default only the native architecture of the kernel is permitted
+type Arch string
 
 // Action taken upon Seccomp rule match
 type Action string

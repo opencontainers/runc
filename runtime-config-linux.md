@@ -319,11 +319,14 @@ For more information about Apparmor, see [Apparmor documentation](https://wiki.u
 Seccomp provides application sandboxing mechanism in the Linux kernel.
 Seccomp configuration allows one to configure actions to take for matched syscalls and furthermore also allows matching on values passed as arguments to syscalls.
 For more information about Seccomp, see [Seccomp kernel documentation](https://www.kernel.org/doc/Documentation/prctl/seccomp_filter.txt)
-The actions and operators are strings that match the definitions in seccomp.h from [libseccomp](https://github.com/seccomp/libseccomp) and are translated to corresponding values.
+The actions, architectures, and operators are strings that match the definitions in seccomp.h from [libseccomp](https://github.com/seccomp/libseccomp) and are translated to corresponding values.
 
 ```json
    "seccomp": {
        "defaultAction": "SCMP_ACT_ALLOW",
+       "architectures": [
+           "SCMP_ARCH_X86"
+       ],
        "syscalls": [
            {
                "name": "getcwd",
