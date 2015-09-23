@@ -158,6 +158,8 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 		if err := checkMountDestination(rootfs, dest); err != nil {
 			return err
 		}
+		// update the mount with the correct dest after symlinks are resolved.
+		m.Destination = dest
 		if err := createIfNotExists(dest, stat.IsDir()); err != nil {
 			return err
 		}
