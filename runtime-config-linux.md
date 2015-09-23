@@ -319,11 +319,44 @@ For more information about Apparmor, see [Apparmor documentation](https://wiki.u
 Seccomp provides application sandboxing mechanism in the Linux kernel.
 Seccomp configuration allows one to configure actions to take for matched syscalls and furthermore also allows matching on values passed as arguments to syscalls.
 For more information about Seccomp, see [Seccomp kernel documentation](https://www.kernel.org/doc/Documentation/prctl/seccomp_filter.txt)
-The actions and operators are strings that match the definitions in seccomp.h from [libseccomp](https://github.com/seccomp/libseccomp) and are translated to corresponding values.
+The actions, architectures, and operators are strings that match the definitions in seccomp.h from [libseccomp](https://github.com/seccomp/libseccomp) and are translated to corresponding values.
+A valid list of constants as of Libseccomp v2.2.3 is contained below.
+
+Architecture Constants
+* `SCMP_ARCH_X86`
+* `SCMP_ARCH_X86_64`
+* `SCMP_ARCH_X32`
+* `SCMP_ARCH_ARM`
+* `SCMP_ARCH_AARCH64`
+* `SCMP_ARCH_MIPS`
+* `SCMP_ARCH_MIPS64`
+* `SCMP_ARCH_MIPS64N32`
+* `SCMP_ARCH_MIPSEL`
+* `SCMP_ARCH_MIPSEL64`
+* `SCMP_ARCH_MIPSEL64N32`
+
+Action Constants:
+* `SCMP_ACT_KILL`
+* `SCMP_ACT_TRAP`
+* `SCMP_ACT_ERRNO`
+* `SCMP_ACT_TRACE`
+* `SCMP_ACT_ALLOW`
+
+Operator Constants:
+* `SCMP_CMP_NE`
+* `SCMP_CMP_LT`
+* `SCMP_CMP_LE`
+* `SCMP_CMP_EQ`
+* `SCMP_CMP_GE`
+* `SCMP_CMP_GT`
+* `SCMP_CMP_MASKED_EQ`
 
 ```json
    "seccomp": {
        "defaultAction": "SCMP_ACT_ALLOW",
+       "architectures": [
+           "SCMP_ARCH_X86"
+       ],
        "syscalls": [
            {
                "name": "getcwd",
