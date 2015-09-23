@@ -112,7 +112,6 @@ type Container interface {
 	// errors:
 	// ContainerDestroyed - Container no longer exists,
 	// ConfigInvalid - config is invalid,
-	// ContainerPaused - Container is paused,
 	// Systemerror - System error.
 	Start(process *Process) (err error)
 
