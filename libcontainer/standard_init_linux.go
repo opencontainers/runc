@@ -6,6 +6,7 @@ import (
 	"os"
 	"syscall"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/opencontainers/runc/libcontainer/apparmor"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/label"
@@ -92,7 +93,11 @@ func (l *linuxStandardInit) Init() error {
 	}
 	if l.config.Config.Seccomp != nil {
 		if err := seccomp.InitSeccomp(l.config.Config.Seccomp); err != nil {
-			return err
+			if err == seccomp.ErrSeccompNotEnabled {
+				logrus.Warn("Seccomp support not enabled, rules will be ignored!")
+			} else {
+				return err
+			}
 		}
 	}
 	if err := finalizeNamespace(l.config); err != nil {
