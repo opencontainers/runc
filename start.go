@@ -53,6 +53,15 @@ var startCommand = cli.Command{
 		if os.Geteuid() != 0 {
 			logrus.Fatal("runc should be run as root")
 		}
+
+		if spec.Platform.OS != runtime.GOOS {
+			logrus.Fatalf("config file specified wrong Platform.OS: %v", spec.Platform.OS)
+		}
+
+		if spec.Platform.Arch != runtime.GOARCH {
+			logrus.Fatalf("config file specified wrong Platform.Arch: %v", spec.Platform.Arch)
+		}
+
 		status, err := startContainer(context, spec, rspec)
 		if err != nil {
 			logrus.Fatalf("Container start failed: %v", err)
