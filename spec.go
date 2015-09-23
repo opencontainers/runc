@@ -24,8 +24,16 @@ var specCommand = cli.Command{
 	Name:  "spec",
 	Usage: "create a new specification file",
 	Flags: []cli.Flag{
-		cli.StringFlag{Name: "config-file, c", Value: "config.json", Usage: "path to spec file for writing"},
-		cli.StringFlag{Name: "runtime-file, r", Value: "runtime.json", Usage: "path to runtime file for writing"},
+		cli.StringFlag{
+			Name:  "config-file, c",
+			Value: "config.json",
+			Usage: "path to spec config file for writing",
+		},
+		cli.StringFlag{
+			Name:  "runtime-file, r",
+			Value: "runtime.json",
+			Usage: "path to runtime config file for writing",
+		},
 	},
 	Action: func(context *cli.Context) {
 		spec := specs.LinuxSpec{
