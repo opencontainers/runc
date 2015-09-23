@@ -20,8 +20,12 @@ type IDMap struct {
 }
 
 // Seccomp represents syscall restrictions
+// By default, only the native architecture of the kernel is allowed to be used
+// for syscalls. Additional architectures can be added by specifying them in
+// Architectures.
 type Seccomp struct {
 	DefaultAction Action     `json:"default_action"`
+	Architectures []string   `json:"architectures"`
 	Syscalls      []*Syscall `json:"syscalls"`
 }
 
