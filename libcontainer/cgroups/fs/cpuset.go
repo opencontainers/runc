@@ -56,7 +56,7 @@ func (s *CpusetGroup) ApplyDir(dir string, cgroup *configs.Cgroup, pid int) erro
 	if dir == "" {
 		return nil
 	}
-	root, err := getCgroupRoot()
+	root, err := getCgroupRoot("cpuset")
 	if err != nil {
 		return err
 	}

@@ -66,30 +66,35 @@ type Manager struct {
 	Paths   map[string]string
 }
 
-// The absolute path to the root of the cgroup hierarchies.
-var cgroupRootLock sync.Mutex
-var cgroupRoot string
+// A mapping between each available subsystem and the absolute path to the root
+// of the cgroup hierarchies
+var cgroupDirsLock sync.Mutex
+var cgroupDirs map[string]string
 
-// Gets the cgroupRoot.
-func getCgroupRoot() (string, error) {
-	cgroupRootLock.Lock()
-	defer cgroupRootLock.Unlock()
+func getCgroupRoot(subsystem string) (string, error) {
+	cgroupDirsLock.Lock()
+	defer cgroupDirsLock.Unlock()
 
-	if cgroupRoot != "" {
-		return cgroupRoot, nil
+	if cgroupDirs == nil {
+		dirs, err := cgroups.FindCgroupMountpointDirs()
+		if err != nil {
+			return "", err
+		}
+
+		for _, d := range dirs {
+			if _, err := os.Stat(d); err != nil {
+				return "", err
+			}
+		}
+
+		cgroupDirs = dirs
 	}
 
-	root, err := cgroups.FindCgroupMountpointDir()
-	if err != nil {
-		return "", err
+	if ret, ok := cgroupDirs[subsystem]; ok {
+		return ret, nil
 	}
 
-	if _, err := os.Stat(root); err != nil {
-		return "", err
-	}
-
-	cgroupRoot = root
-	return cgroupRoot, nil
+	return "", cgroups.NewNotFoundError(subsystem)
 }
 
 type data struct {
@@ -106,11 +111,6 @@ func (m *Manager) Apply(pid int) (err error) {
 
 	var c = m.Cgroups
 
-	d, err := getCgroupData(m.Cgroups, pid)
-	if err != nil {
-		return err
-	}
-
 	paths := make(map[string]string)
 	defer func() {
 		if err != nil {
@@ -118,6 +118,14 @@ func (m *Manager) Apply(pid int) (err error) {
 		}
 	}()
 	for _, sys := range subsystems {
+		d, err := getCgroupData(sys.Name(), m.Cgroups, pid)
+		if err != nil {
+			if cgroups.IsNotFound(err) {
+				continue
+			}
+			return err
+		}
+
 		if err := sys.Apply(d); err != nil {
 			return err
 		}
@@ -193,7 +201,7 @@ func (m *Manager) Set(container *configs.Config) error {
 // Freeze toggles the container's freezer cgroup depending on the state
 // provided
 func (m *Manager) Freeze(state configs.FreezerState) error {
-	d, err := getCgroupData(m.Cgroups, 0)
+	d, err := getCgroupData("freezer", m.Cgroups, 0)
 	if err != nil {
 		return err
 	}
@@ -216,7 +224,7 @@ func (m *Manager) Freeze(state configs.FreezerState) error {
 }
 
 func (m *Manager) GetPids() ([]int, error) {
-	d, err := getCgroupData(m.Cgroups, 0)
+	d, err := getCgroupData("devices", m.Cgroups, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -229,8 +237,8 @@ func (m *Manager) GetPids() ([]int, error) {
 	return cgroups.GetPids(dir)
 }
 
-func getCgroupData(c *configs.Cgroup, pid int) (*data, error) {
-	root, err := getCgroupRoot()
+func getCgroupData(subsystem string, c *configs.Cgroup, pid int) (*data, error) {
+	root, err := getCgroupRoot(subsystem)
 	if err != nil {
 		return nil, err
 	}
