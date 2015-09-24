@@ -392,6 +392,7 @@ func createLibcontainerConfig(cgroupName string, spec *specs.LinuxSpec, rspec *s
 	config.ProcessLabel = rspec.Linux.SelinuxProcessLabel
 	config.AppArmorProfile = rspec.Linux.ApparmorProfile
 	createHooks(rspec, config)
+	config.Version = specs.Version
 	return config, nil
 }
 
