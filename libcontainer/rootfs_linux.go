@@ -106,12 +106,12 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 		if err := os.MkdirAll(dest, 0755); err != nil {
 			return err
 		}
-		return m.MountPropagate(rootfs, mountLabel)
+		return mountPropagate(m, rootfs, mountLabel)
 	case "mqueue":
 		if err := os.MkdirAll(dest, 0755); err != nil {
 			return err
 		}
-		if err := m.MountPropagate(rootfs, mountLabel); err != nil {
+		if err := mountPropagate(m, rootfs, mountLabel); err != nil {
 			return err
 		}
 		return label.SetFileLabel(dest, mountLabel)
@@ -122,7 +122,7 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 				return err
 			}
 		}
-		if err := m.MountPropagate(rootfs, mountLabel); err != nil {
+		if err := mountPropagate(m, rootfs, mountLabel); err != nil {
 			return err
 		}
 		if stat != nil {
@@ -135,12 +135,12 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 		if err := os.MkdirAll(dest, 0755); err != nil {
 			return err
 		}
-		return m.MountPropagate(rootfs, mountLabel)
+		return mountPropagate(m, rootfs, mountLabel)
 	case "securityfs":
 		if err := os.MkdirAll(dest, 0755); err != nil {
 			return err
 		}
-		return m.MountPropagate(rootfs, mountLabel)
+		return mountPropagate(m, rootfs, mountLabel)
 	case "bind":
 		stat, err := os.Stat(m.Source)
 		if err != nil {
@@ -163,11 +163,11 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 		if err := createIfNotExists(dest, stat.IsDir()); err != nil {
 			return err
 		}
-		if err := m.MountPropagate(rootfs, mountLabel); err != nil {
+		if err := mountPropagate(m, rootfs, mountLabel); err != nil {
 			return err
 		}
 		// bind mount won't change mount options, we need remount to make mount options effective.
-		if err := m.Remount(rootfs); err != nil {
+		if err := remount(m, rootfs); err != nil {
 			return err
 		}
 		if m.Relabel != "" {
@@ -236,7 +236,7 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 				Destination: m.Destination,
 				Flags:       defaultMountFlags | syscall.MS_RDONLY,
 			}
-			if err := mcgrouproot.Remount(rootfs); err != nil {
+			if err := remount(mcgrouproot, rootfs); err != nil {
 				return err
 			}
 		}
@@ -533,4 +533,41 @@ func maskFile(path string) error {
 func writeSystemProperty(key, value string) error {
 	keyPath := strings.Replace(key, ".", "/", -1)
 	return ioutil.WriteFile(path.Join("/proc/sys", keyPath), []byte(value), 0644)
+}
+
+func remount(m *configs.Mount, rootfs string) error {
+	var (
+		dest = m.Destination
+	)
+	if !strings.HasPrefix(dest, rootfs) {
+		dest = filepath.Join(rootfs, dest)
+	}
+
+	if err := syscall.Mount(m.Source, dest, m.Device, uintptr(m.Flags|syscall.MS_REMOUNT), ""); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Do the mount operation followed by additional mounts required to take care
+// of propagation flags.
+func mountPropagate(m *configs.Mount, rootfs string, mountLabel string) error {
+	var (
+		dest = m.Destination
+		data = label.FormatMountLabel(m.Data, mountLabel)
+	)
+	if !strings.HasPrefix(dest, rootfs) {
+		dest = filepath.Join(rootfs, dest)
+	}
+
+	if err := syscall.Mount(m.Source, dest, m.Device, uintptr(m.Flags), data); err != nil {
+		return err
+	}
+
+	for _, pflag := range m.PropagationFlags {
+		if err := syscall.Mount("", dest, "", uintptr(pflag), ""); err != nil {
+			return err
+		}
+	}
+	return nil
 }
