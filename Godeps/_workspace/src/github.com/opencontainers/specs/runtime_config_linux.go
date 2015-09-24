@@ -207,6 +207,7 @@ type Device struct {
 // Seccomp represents syscall restrictions
 type Seccomp struct {
 	DefaultAction Action     `json:"defaultAction"`
+	Architectures []string   `json:"architectures"`
 	Syscalls      []*Syscall `json:"syscalls"`
 }
 

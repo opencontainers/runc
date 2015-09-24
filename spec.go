@@ -618,6 +618,11 @@ func setupSeccomp(config *specs.Seccomp) (*configs.Seccomp, error) {
 	}
 	newConfig.DefaultAction = newDefaultAction
 
+	// Adding the architecures
+	for _, arch := range config.Architectures {
+		newConfig.Architectures = append(newConfig.Architectures, arch)
+	}
+
 	// Loop through all syscall blocks and convert them to libcontainer format
 	for _, call := range config.Syscalls {
 		newAction, err := seccomp.ConvertStringToAction(string(call.Action))
