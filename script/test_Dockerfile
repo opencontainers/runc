@@ -1,6 +1,5 @@
 FROM golang:1.4
 
-RUN echo "deb http://ftp.us.debian.org/debian testing main contrib" >> /etc/apt/sources.list
 RUN apt-get update && apt-get install -y \
 	curl \
 	build-essential \
