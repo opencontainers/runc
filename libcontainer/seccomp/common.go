@@ -1,10 +1,13 @@
 package seccomp
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
+
+var ErrSeccompNotEnabled = errors.New("seccomp: config provided but seccomp not supported")
 
 // ConvertStringToOperator converts a string into a Seccomp comparison operator.
 // Comparison operators use the names they are assigned by Libseccomp's header.
