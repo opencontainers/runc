@@ -1,3 +1,5 @@
+# Linux-specific Runtime Configuration
+
 ## Namespaces
 
 A namespace wraps a global system resource in an abstraction that makes it appear to the processes within the namespace that they have their own isolated instance of the global resource.
