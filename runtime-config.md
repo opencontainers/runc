@@ -3,9 +3,10 @@
 ## Hooks
 
 Lifecycle hooks allow custom events for different points in a container's runtime.
-Presently there are `Prestart` and `Poststop`.
+Presently there are `Prestart`, `Poststart` and `Poststop`.
 
 * [`Prestart`](#pre-start) is a list of hooks to be run before the container process is executed
+* [`Poststart`](#post-start) is a list of hooks to be run immediately after the container process is started
 * [`Poststop`](#post-stop)is a list of hooks to be run after the container process exits
 	
 Hooks allow one to run code before/after various lifecycle events of the container.
@@ -21,6 +22,13 @@ They are called after the container namespaces are created on Linux, so they pro
 In Linux, for e.g., the network namespace could be configured in this hook.
 
 If a hook returns a non-zero exit code, then an error including the exit code and the stderr is returned to the caller and the container is torn down.
+
+### Post-start
+
+The post-start hooks are called after the user process is started.
+For example this hook can notify user that real process is spawned.
+
+If a hook returns a non-zero exit code, then an error is logged and the remaining hooks are executed.
 
 ### Post-stop
 
@@ -41,6 +49,11 @@ If a hook returns a non-zero exit code, then an error is logged and the remainin
             {
                 "path": "/usr/bin/setup-network"
             }
+        ],
+        "poststart": [
+            {
+                "path": "/usr/bin/notify-start",
+            },
         ],
         "poststop": [
             {
