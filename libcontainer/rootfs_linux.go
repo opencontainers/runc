@@ -113,7 +113,10 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 			return err
 		}
 		if err := mountPropagate(m, rootfs, mountLabel); err != nil {
-			return err
+			// older kernels do not support labeling of /dev/mqueue
+			if err := mountPropagate(m, rootfs, ""); err != nil {
+				return err
+			}
 		}
 		return label.SetFileLabel(dest, mountLabel)
 	case "tmpfs":
