@@ -7,7 +7,7 @@ Presently there are `Prestart` and `Poststop`.
 
 * [`Prestart`](#pre-start) is a list of hooks to be run before the container process is executed
 * [`Poststop`](#post-stop)is a list of hooks to be run after the container process exits
-	
+
 Hooks allow one to run code before/after various lifecycle events of the container.
 Hooks MUST be called in the listed order.
 The state of the container is passed to the hooks over stdin, so the hooks could get the information they need to do their work.
@@ -62,9 +62,9 @@ Values are objects with configuration of mount points.
 The parameters are similar to the ones in [the Linux mount system call](http://man7.org/linux/man-pages/man2/mount.2.html).
 Only [mounts from the portable config](config.md#mount-points) will be mounted.
 
-* **type** (string, required) Linux, *filesystemtype* argument supported by the kernel are listed in */proc/filesystems* (e.g., "minix", "ext2", "ext3", "jfs", "xfs", "reiserfs", "msdos", "proc", "nfs", "iso9660"). Windows: ntfs
-* **source** (string, required) a device name, but can also be a directory name or a dummy. Windows, the volume name that is the target of the mount point. \\?\Volume\{GUID}\ (on Windows source is called target)
-* **options** (list of strings, optional) in the fstab format [https://wiki.archlinux.org/index.php/Fstab](https://wiki.archlinux.org/index.php/Fstab).
+* **`type`** (string, required) Linux, *filesystemtype* argument supported by the kernel are listed in */proc/filesystems* (e.g., "minix", "ext2", "ext3", "jfs", "xfs", "reiserfs", "msdos", "proc", "nfs", "iso9660"). Windows: ntfs
+* **`source`** (string, required) a device name, but can also be a directory name or a dummy. Windows, the volume name that is the target of the mount point. \\?\Volume\{GUID}\ (on Windows source is called target)
+* **`options`** (list of strings, optional) in the fstab format [https://wiki.archlinux.org/index.php/Fstab](https://wiki.archlinux.org/index.php/Fstab).
 
 *Example (Linux)*
 
