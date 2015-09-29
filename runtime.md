@@ -9,10 +9,10 @@ On Linux based systems the state information should be stored in `/run/openconta
 The directory structure for a container is `/run/opencontainer/containers/<containerID>/state.json`.
 By providing a default location that container state is stored external applications can find all containers running on a system.
 
-* **version** (string) Version of the OCI specification used when creating the container.
-* **id** (string) ID is the container's ID.
-* **pid** (int) Pid is the ID of the main process within the container.
-* **root** (string) Root is the path to the container's bundle directory.
+* **`version`** (string) Version of the OCI specification used when creating the container.
+* **`id`** (string) ID is the container's ID.
+* **`pid`** (int) Pid is the ID of the main process within the container.
+* **`root`** (string) Root is the path to the container's bundle directory.
 
 The ID is provided in the state because hooks will be executed with the state as the payload.
 This allows the hook to perform clean and teardown logic after the runtime destroys its own state.

@@ -38,13 +38,13 @@ Also, when a path is specified, a runtime MUST assume that the setup for that pa
 
 #### Namespace types
 
-* **pid** processes inside the container will only be able to see other processes inside the same container.
-* **network** the container will have its own network stack.
-* **mount** the container will have an isolated mount table.
-* **ipc** processes inside the container will only be able to communicate to other processes inside the same
+* **`pid`** processes inside the container will only be able to see other processes inside the same container.
+* **`network`** the container will have its own network stack.
+* **`mount`** the container will have an isolated mount table.
+* **`ipc`** processes inside the container will only be able to communicate to other processes inside the same
 container via system level IPC.
-* **uts** the container will be able to have its own hostname and domain name.
-* **user** the container will be able to remap user and group IDs from the host to local users and groups
+* **`uts`** the container will be able to have its own hostname and domain name.
+* **`user`** the container will be able to remap user and group IDs from the host to local users and groups
 within the container.
 
 ## Devices
@@ -52,16 +52,16 @@ within the container.
 Devices is an array specifying the list of devices to be created in the container.
 Next parameters can be specified:
 
-* **type** - type of device: `c`, `b`, `u` or `p`. More info in `man mknod`
-* **path** - full path to device inside container
-* **major, minor** - major, minor numbers for device. More info in `man mknod`.
+* **`type`** - type of device: `c`, `b`, `u` or `p`. More info in `man mknod`
+* **`path`** - full path to device inside container
+* **`major, minor`** - major, minor numbers for device. More info in `man mknod`.
                  There is special value: `-1`, which means `*` for `device`
                  cgroup setup.
-* **permissions** - cgroup permissions for device. A composition of `r`
+* **`permissions`** - cgroup permissions for device. A composition of `r`
                 (read), `w` (write), and `m` (mknod).
-* **fileMode** - file mode for device file
-* **uid** - uid of device owner
-* **gid** - gid of device owner
+* **`fileMode`** - file mode for device file
+* **`uid`** - uid of device owner
+* **`gid`** - gid of device owner
 
 ```json
    "devices": [
