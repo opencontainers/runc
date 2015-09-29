@@ -176,7 +176,6 @@ func (m *Manager) Apply(pid int) error {
 		properties = append(properties,
 			newProp("MemoryLimit", uint64(c.Memory)))
 	}
-	// TODO: MemoryReservation and MemorySwap not available in systemd
 
 	if c.CpuShares != 0 {
 		properties = append(properties,
@@ -212,6 +211,7 @@ func (m *Manager) Apply(pid int) error {
 		return err
 	}
 
+	// TODO: MemoryReservation and MemorySwap not available in systemd
 	if err := joinMemory(c, pid); err != nil {
 		return err
 	}
@@ -501,6 +501,12 @@ func joinMemory(c *configs.Cgroup, pid int) error {
 	// -1 disables memoryswap
 	if c.MemorySwap > 0 {
 		err = writeFile(path, "memory.memsw.limit_in_bytes", strconv.FormatInt(c.MemorySwap, 10))
+		if err != nil {
+			return err
+		}
+	}
+	if c.MemoryReservation > 0 {
+		err = writeFile(path, "memory.soft_limit_in_bytes", strconv.FormatInt(c.MemoryReservation, 10))
 		if err != nil {
 			return err
 		}
