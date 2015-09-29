@@ -12,7 +12,7 @@ By providing a default location that container state is stored external applicat
 * **`version`** (string) Version of the OCI specification used when creating the container.
 * **`id`** (string) ID is the container's ID.
 * **`pid`** (int) Pid is the ID of the main process within the container.
-* **`root`** (string) Root is the path to the container's bundle directory.
+* **`bundlePath`** (string) BundlePath is the path to the container's bundle directory.
 
 The ID is provided in the state because hooks will be executed with the state as the payload.
 This allows the hook to perform clean and teardown logic after the runtime destroys its own state.
