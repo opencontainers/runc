@@ -106,13 +106,17 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 		if err := os.MkdirAll(dest, 0755); err != nil {
 			return err
 		}
-		return mountPropagate(m, rootfs, mountLabel)
+		// Selinux kernels do not support labeling of /proc or /sys
+		return mountPropagate(m, rootfs, "")
 	case "mqueue":
 		if err := os.MkdirAll(dest, 0755); err != nil {
 			return err
 		}
 		if err := mountPropagate(m, rootfs, mountLabel); err != nil {
-			return err
+			// older kernels do not support labeling of /dev/mqueue
+			if err := mountPropagate(m, rootfs, ""); err != nil {
+				return err
+			}
 		}
 		return label.SetFileLabel(dest, mountLabel)
 	case "tmpfs":
