@@ -7,7 +7,7 @@ Presently there are `Prestart`, `Poststart` and `Poststop`.
 
 * [`Prestart`](#pre-start) is a list of hooks to be run before the container process is executed
 * [`Poststart`](#post-start) is a list of hooks to be run immediately after the container process is started
-* [`Poststop`](#post-stop)is a list of hooks to be run after the container process exits
+* [`Poststop`](#post-stop) is a list of hooks to be run after the container process exits
 
 Hooks allow one to run code before/after various lifecycle events of the container.
 Hooks MUST be called in the listed order.
