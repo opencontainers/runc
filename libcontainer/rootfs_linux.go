@@ -171,9 +171,14 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 			return err
 		}
 		// bind mount won't change mount options, we need remount to make mount options effective.
-		if err := remount(m, rootfs); err != nil {
-			return err
+		// first check that we have non-default options required before attempting a remount
+		if m.Flags&^(syscall.MS_REC|syscall.MS_REMOUNT|syscall.MS_BIND) != 0 {
+			// only remount if unique mount options are set
+			if err := remount(m, rootfs); err != nil {
+				return err
+			}
 		}
+
 		if m.Relabel != "" {
 			if err := label.Validate(m.Relabel); err != nil {
 				return err
