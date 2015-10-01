@@ -236,6 +236,10 @@ func (m *Manager) Apply(pid int) error {
 	if err := joinHugetlb(c, pid); err != nil {
 		return err
 	}
+
+	if err := joinPerfEvent(c, pid); err != nil {
+		return err
+	}
 	// FIXME: Systemd does have `BlockIODeviceWeight` property, but we got problem
 	// using that (at least on systemd 208, see https://github.com/opencontainers/runc/libcontainer/pull/354),
 	// so use fs work around for now.
@@ -584,4 +588,14 @@ func joinHugetlb(c *configs.Cgroup, pid int) error {
 
 	hugetlb := subsystems["hugetlb"]
 	return hugetlb.Set(path, c)
+}
+
+func joinPerfEvent(c *configs.Cgroup, pid int) error {
+	path, err := join(c, "perf_event", pid)
+	if err != nil && !cgroups.IsNotFound(err) {
+		return err
+	}
+
+	perfEvent := subsystems["perf_event"]
+	return perfEvent.Set(path, c)
 }
