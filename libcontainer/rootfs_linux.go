@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/docker/docker/pkg/mount"
 	"github.com/docker/docker/pkg/symlink"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -420,6 +421,76 @@ func mknodDevice(dest string, node *configs.Device) error {
 	return syscall.Chown(dest, int(node.Uid), int(node.Gid))
 }
 
+func getMountInfo(mountinfo []*mount.MountInfo, dir string) *mount.MountInfo {
+	for _, m := range mountinfo {
+		if m.Mountpoint == dir {
+			return m
+		}
+	}
+	return nil
+}
+
+// Get the parent mount point of directory passed in as argument. Also return
+// optional fields.
+func getParentMount(rootfs string) (string, string, error) {
+	var path string
+
+	mountinfos, err := mount.GetMounts()
+	if err != nil {
+		return "", "", err
+	}
+
+	mountinfo := getMountInfo(mountinfos, rootfs)
+	if mountinfo != nil {
+		return rootfs, mountinfo.Optional, nil
+	}
+
+	path = rootfs
+	for {
+		path = filepath.Dir(path)
+
+		mountinfo = getMountInfo(mountinfos, path)
+		if mountinfo != nil {
+			return path, mountinfo.Optional, nil
+		}
+
+		if path == "/" {
+			break
+		}
+	}
+
+	// If we are here, we did not find parent mount. Something is wrong.
+	return "", "", fmt.Errorf("Could not find parent mount of %s", rootfs)
+}
+
+// Make parent mount private if it was shared
+func rootfsParentMountPrivate(config *configs.Config) error {
+	sharedMount := false
+
+	parentMount, optionalOpts, err := getParentMount(config.Rootfs)
+	if err != nil {
+		return err
+	}
+
+	optsSplit := strings.Split(optionalOpts, " ")
+	for _, opt := range optsSplit {
+		if strings.HasPrefix(opt, "shared:") {
+			sharedMount = true
+			break
+		}
+	}
+
+	// Make parent mount PRIVATE if it was shared. It is needed for two
+	// reasons. First of all pivot_root() will fail if parent mount is
+	// shared. Secondly when we bind mount rootfs it will propagate to
+	// parent namespace and we don't want that to happen.
+	if sharedMount {
+		return syscall.Mount("", parentMount, "", syscall.MS_PRIVATE, "")
+	}
+
+	return nil
+}
+
 func prepareRoot(config *configs.Config) error {
 	flag := syscall.MS_SLAVE | syscall.MS_REC
 	if config.RootPropagation != 0 {
@@ -428,6 +499,11 @@ func prepareRoot(config *configs.Config) error {
 	if err := syscall.Mount("", "/", "", uintptr(flag), ""); err != nil {
 		return err
 	}
+
+	if err := rootfsParentMountPrivate(config); err != nil {
+		return err
+	}
+
 	return syscall.Mount(config.Rootfs, config.Rootfs, "bind", syscall.MS_BIND|syscall.MS_REC, "")
 }
 
