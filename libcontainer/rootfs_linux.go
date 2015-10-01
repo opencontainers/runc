@@ -422,8 +422,8 @@ func mknodDevice(dest string, node *configs.Device) error {
 
 func prepareRoot(config *configs.Config) error {
 	flag := syscall.MS_SLAVE | syscall.MS_REC
-	if config.Privatefs {
-		flag = syscall.MS_PRIVATE | syscall.MS_REC
+	if config.RootPropagation != 0 {
+		flag = config.RootPropagation
 	}
 	if err := syscall.Mount("", "/", "", uintptr(flag), ""); err != nil {
 		return err
