@@ -341,7 +341,7 @@ func setupDevSymlinks(rootfs string) error {
 // symlinks are resolved locally.
 func reOpenDevNull() error {
 	var stat, devNullStat syscall.Stat_t
-	file, err := os.Open("/dev/null")
+	file, err := os.OpenFile("/dev/null", os.O_RDWR, 0)
 	if err != nil {
 		return fmt.Errorf("Failed to open /dev/null - %s", err)
 	}
