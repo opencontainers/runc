@@ -1014,3 +1014,127 @@ func TestSTDIOPermissions(t *testing.T) {
 		t.Fatalf("stderr should equal be equal %q %q", actual, "hi")
 	}
 }
+
+func unmountOp(path string) error {
+	if err := syscall.Unmount(path, syscall.MNT_DETACH); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Launch container with rootfsPropagation in rslave mode. Also
+// bind mount a volume /mnt1host at /mnt1cont at the time of launch. Now do
+// another mount on host (/mnt1host/mnt2host) and this new mount should
+// propagate to container (/mnt1cont/mnt2host)
+func TestRootfsPropagationSlaveMount(t *testing.T) {
+	var mountPropagated bool
+	var dir1cont string
+	var dir2cont string
+
+	dir1cont = "/root/mnt1cont"
+
+	if testing.Short() {
+		return
+	}
+	rootfs, err := newRootfs()
+	ok(t, err)
+	defer remove(rootfs)
+	config := newTemplateConfig(rootfs)
+
+	config.RootPropagation = syscall.MS_SLAVE | syscall.MS_REC
+
+	// Bind mount a volume
+	dir1host, err := ioutil.TempDir("", "mnt1host")
+	ok(t, err)
+	defer os.RemoveAll(dir1host)
+
+	// Make this dir a "shared" mount point. This will make sure a
+	// slave relation ship can be established in container.
+	err = syscall.Mount(dir1host, dir1host, "bind", syscall.MS_BIND|syscall.MS_REC, "")
+	ok(t, err)
+	err = syscall.Mount("", dir1host, "", syscall.MS_SHARED|syscall.MS_REC, "")
+	ok(t, err)
+	defer unmountOp(dir1host)
+
+	config.Mounts = append(config.Mounts, &configs.Mount{
+		Source:      dir1host,
+		Destination: dir1cont,
+		Device:      "bind",
+		Flags:       syscall.MS_BIND | syscall.MS_REC})
+
+	// TODO: systemd specific processing
+	f := factory
+
+	container, err := f.Create("testSlaveMount", config)
+	ok(t, err)
+	defer container.Destroy()
+
+	stdinR, stdinW, err := os.Pipe()
+	ok(t, err)
+
+	pconfig := &libcontainer.Process{
+		Args:  []string{"cat"},
+		Env:   standardEnvironment,
+		Stdin: stdinR,
+	}
+
+	err = container.Start(pconfig)
+	stdinR.Close()
+	defer stdinW.Close()
+	ok(t, err)
+
+	// Create mnt1host/mnt2host and bind mount itself on top of it. This
+	// should be visible in container.
+	dir2host, err := ioutil.TempDir(dir1host, "mnt2host")
+	ok(t, err)
+	defer os.RemoveAll(dir2host)
+
+	err = syscall.Mount(dir2host, dir2host, "bind", syscall.MS_BIND, "")
+	defer unmountOp(dir2host)
+	ok(t, err)
+
+	// Run "cat /proc/self/mountinfo" in container and look at mount points.
+	var stdout2 bytes.Buffer
+
+	stdinR2, stdinW2, err := os.Pipe()
+	ok(t, err)
+
+	pconfig2 := &libcontainer.Process{
+		Args:   []string{"cat", "/proc/self/mountinfo"},
+		Env:    standardEnvironment,
+		Stdin:  stdinR2,
+		Stdout: &stdout2,
+	}
+
+	err = container.Start(pconfig2)
+	stdinR2.Close()
+	defer stdinW2.Close()
+	ok(t, err)
+
+	// Wait for process
+	stdinW2.Close()
+	waitProcess(pconfig2, t)
+	stdinW.Close()
+	waitProcess(pconfig, t)
+
+	mountPropagated = false
+	dir2cont = filepath.Join(dir1cont, filepath.Base(dir2host))
+
+	propagationInfo := string(stdout2.Bytes())
+	lines := strings.Split(propagationInfo, "\n")
+	for _, l := range lines {
+		linefields := strings.Split(l, " ")
+		if len(linefields) < 5 {
+			continue
+		}
+
+		if linefields[4] == dir2cont {
+			mountPropagated = true
+			break
+		}
+	}
+
+	if mountPropagated != true {
+		t.Fatalf("Mount on host %s did not propagate in container at %s\n", dir2host, dir2cont)
+	}
+}
