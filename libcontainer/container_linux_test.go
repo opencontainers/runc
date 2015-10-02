@@ -161,6 +161,7 @@ func TestGetContainerState(t *testing.T) {
 			},
 		},
 	}
+	container.state = &nullState{c: container}
 	state, err := container.State()
 	if err != nil {
 		t.Fatal(err)

@@ -166,7 +166,7 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 	if err := os.MkdirAll(containerRoot, 0700); err != nil {
 		return nil, newGenericError(err, SystemError)
 	}
-	return &linuxContainer{
+	c := &linuxContainer{
 		id:            id,
 		root:          containerRoot,
 		config:        config,
@@ -174,7 +174,9 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 		initArgs:      l.InitArgs,
 		criuPath:      l.CriuPath,
 		cgroupManager: l.NewCgroupsManager(config.Cgroups, nil),
-	}, nil
+	}
+	c.state = &stoppedState{c: c}
+	return c, nil
 }
 
 func (l *LinuxFactory) Load(id string) (Container, error) {
@@ -191,7 +193,7 @@ func (l *LinuxFactory) Load(id string) (Container, error) {
 		processStartTime: state.InitProcessStartTime,
 		fds:              state.ExternalDescriptors,
 	}
-	return &linuxContainer{
+	c := &linuxContainer{
 		initProcess:   r,
 		id:            id,
 		config:        &state.Config,
@@ -200,7 +202,9 @@ func (l *LinuxFactory) Load(id string) (Container, error) {
 		criuPath:      l.CriuPath,
 		cgroupManager: l.NewCgroupsManager(state.Config.Cgroups, state.CgroupPaths),
 		root:          containerRoot,
-	}, nil
+	}
+	c.state = &nullState{c: c}
+	return c, nil
 }
 
 func (l *LinuxFactory) Type() string {

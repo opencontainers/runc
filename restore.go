@@ -5,7 +5,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
@@ -109,24 +108,12 @@ func restoreContainer(context *cli.Context, spec *specs.LinuxSpec, config *confi
 
 	// ensure that the container is always removed if we were the process
 	// that created it.
-	defer func() {
-		if err != nil {
-			return
-		}
-		status, err := container.Status()
-		if err != nil {
-			logrus.Error(err)
-		}
-		if status != libcontainer.Checkpointed {
-			if err := container.Destroy(); err != nil {
-				logrus.Error(err)
-			}
-			if err := os.RemoveAll(options.ImagesDirectory); err != nil {
-				logrus.Error(err)
-			}
-		}
-	}()
-	process := &libcontainer.Process{}
+	defer destroy(container)
+	process := &libcontainer.Process{
+		Stdin:  os.Stdin,
+		Stdout: os.Stdout,
+		Stderr: os.Stderr,
+	}
 	tty, err := newTty(spec.Process.Terminal, process, rootuid)
 	if err != nil {
 		return -1, err
@@ -134,16 +121,6 @@ func restoreContainer(context *cli.Context, spec *specs.LinuxSpec, config *confi
 	handler := newSignalHandler(tty)
 	defer handler.Close()
 	if err := container.Restore(process, options); err != nil {
-		cstatus, cerr := container.Status()
-		if cerr != nil {
-			logrus.Error(cerr)
-		}
-		if cstatus == libcontainer.Destroyed {
-			dest := filepath.Join(context.GlobalString("root"), context.GlobalString("id"))
-			if errVal := os.RemoveAll(dest); errVal != nil {
-				logrus.Error(errVal)
-			}
-		}
 		return -1, err
 	}
 	return handler.forward(process)
