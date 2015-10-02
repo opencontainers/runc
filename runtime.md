@@ -2,22 +2,26 @@
 
 ## State
 
-The runtime state for a container is persisted on disk so that external tools can consume and act on this information.
-The runtime state is stored in a JSON encoded file.
-It is recommended that this file is stored in a temporary filesystem so that it can be removed on a system reboot.
-On Linux based systems the state information should be stored in `/run/opencontainer/containers`.
-The directory structure for a container is `/run/opencontainer/containers/<containerID>/state.json`.
-By providing a default location that container state is stored external applications can find all containers running on a system.
+Runtime MUST store container metadata on disk so that external tools can consume and act on this information.
+It is recommended that this data be stored in a temporary filesystem so that it can be removed on a system reboot.
+On Linux/Unix based systems the metadata MUST be stored under `/run/opencontainer/containers`.
+For non-Linux/Unix based systems the location of the root metadata directory is currently undefined.
+Within that directory there MUST be one directory for each container created, where the name of the directory MUST be the ID of the container.
+For example: for a Linux container with an ID of `173975398351`, there will be a corresponding directory: `/run/opencontainer/containers/173975398351`.
+Within each container's directory, there MUST be a JSON encoded file called `state.json` that contains the runtime state of the container.
+For example: `/run/opencontainer/containers/173975398351/state.json`.
 
-* **`version`** (string) Version of the OCI specification used when creating the container.
-* **`id`** (string) ID is the container's ID.
-* **`pid`** (int) Pid is the ID of the main process within the container.
-* **`bundlePath`** (string) BundlePath is the path to the container's bundle directory.
+The `state.json` file MUST contain all of the following properties:
 
+* **`version`**: (string) is the OCF specification version used when creating the container.
+* **`id`**: (string) is the container's ID.
+This MUST be unique across all containers on this host.
+There is no requirement that it be unique across hosts.
 The ID is provided in the state because hooks will be executed with the state as the payload.
-This allows the hook to perform clean and teardown logic after the runtime destroys its own state.
-
-The root directory to the bundle is provided in the state so that consumers can find the container's configuration and rootfs where it is located on the host's filesystem.
+This allows the hooks to perform cleanup and teardown logic after the runtime destroys its own state.
+* **`pid`**: (int) is the ID of the main process within the container, as seen by the host.
+* **`bundlePath`**: (string) is the absolute path to the container's bundle directory.
+This is provided so that consumers can find the container's configuration and root filesystem on the host.
 
 *Example*
 
