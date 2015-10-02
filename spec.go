@@ -280,6 +280,16 @@ var namespaceMapping = map[specs.NamespaceType]configs.NamespaceType{
 	specs.UTSNamespace:     configs.NEWUTS,
 }
 
+var mountPropagationMapping = map[string]int{
+	"rprivate": syscall.MS_PRIVATE | syscall.MS_REC,
+	"private":  syscall.MS_PRIVATE,
+	"rslave":   syscall.MS_SLAVE | syscall.MS_REC,
+	"slave":    syscall.MS_SLAVE,
+	"rshared":  syscall.MS_SHARED | syscall.MS_REC,
+	"shared":   syscall.MS_SHARED,
+	"":         syscall.MS_PRIVATE | syscall.MS_REC,
+}
+
 // loadSpec loads the specification from the provided path.
 // If the path is empty then the default path will be "config.json"
 func loadSpec(cPath, rPath string) (spec *specs.LinuxSpec, rspec *specs.LinuxRuntimeSpec, err error) {
@@ -333,8 +343,13 @@ func createLibcontainerConfig(cgroupName string, spec *specs.LinuxSpec, rspec *s
 		Capabilities: spec.Linux.Capabilities,
 		Readonlyfs:   spec.Root.Readonly,
 		Hostname:     spec.Hostname,
-		Privatefs:    true,
 	}
+
+	exists := false
+	if config.RootPropagation, exists = mountPropagationMapping[rspec.Linux.RootfsPropagation]; !exists {
+		return nil, fmt.Errorf("rootfsPropagation=%v is not supported", rspec.Linux.RootfsPropagation)
+	}
+
 	for _, ns := range rspec.Linux.Namespaces {
 		t, exists := namespaceMapping[ns.Type]
 		if !exists {
