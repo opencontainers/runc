@@ -56,7 +56,7 @@ When in doubt, start on the [mailing-list](#mailing-list).
 The contributors and maintainers of the project have a weekly meeting Wednesdays at 10:00 AM PST.
 Everyone is welcome to participate in the [BlueJeans call][BlueJeans].
 An initial agenda will be posted to the [mailing list](#mailing-list) earlier in the week, and everyone is welcome to propose additional topics or suggest other agenda alterations there.
-Minutes for the call will be posted to the [mailing list](#mailing-list) for those who are unable to join the call.
+Minutes are posted to the [mailing list](#mailing-list) and minutes from past calls are archived to the [wiki](https://github.com/opencontainers/specs/wiki) for those who are unable to join the call.
 
 ## Mailing List
 
