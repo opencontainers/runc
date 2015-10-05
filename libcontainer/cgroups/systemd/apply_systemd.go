@@ -34,17 +34,18 @@ type subsystem interface {
 }
 
 var subsystems = map[string]subsystem{
-	"devices":    &fs.DevicesGroup{},
-	"memory":     &fs.MemoryGroup{},
-	"cpu":        &fs.CpuGroup{},
-	"cpuset":     &fs.CpusetGroup{},
-	"cpuacct":    &fs.CpuacctGroup{},
-	"blkio":      &fs.BlkioGroup{},
-	"hugetlb":    &fs.HugetlbGroup{},
-	"perf_event": &fs.PerfEventGroup{},
-	"freezer":    &fs.FreezerGroup{},
-	"net_prio":   &fs.NetPrioGroup{},
-	"net_cls":    &fs.NetClsGroup{},
+	"devices":      &fs.DevicesGroup{},
+	"memory":       &fs.MemoryGroup{},
+	"cpu":          &fs.CpuGroup{},
+	"cpuset":       &fs.CpusetGroup{},
+	"cpuacct":      &fs.CpuacctGroup{},
+	"blkio":        &fs.BlkioGroup{},
+	"hugetlb":      &fs.HugetlbGroup{},
+	"perf_event":   &fs.PerfEventGroup{},
+	"freezer":      &fs.FreezerGroup{},
+	"net_prio":     &fs.NetPrioGroup{},
+	"net_cls":      &fs.NetClsGroup{},
+	"name=systemd": &fs.NameGroup{},
 }
 
 const (
