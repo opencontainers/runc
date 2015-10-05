@@ -38,6 +38,7 @@ Each container has exactly one *root filesystem*, specified in the *root* object
 
 You can add array of mount points inside container as `mounts`.
 Each record in this array must have configuration in [runtime config](runtime-config.md#mount-configuration).
+The runtime MUST mount entries in the listed order.
 
 * **`name`** (string, required) Name of mount point. Used for config lookup.
 * **`path`** (string, required) Destination of mount point: path inside container.
