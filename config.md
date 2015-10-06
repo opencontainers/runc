@@ -104,7 +104,7 @@ For Linux-based systems the user structure has the following fields:
 
 ## Hostname
 
-* **`hostname`** (string, optional) as it is accessible to processes running inside.
+* **`hostname`** (string, optional) as it is accessible to processes running inside.  On Linux, you can only set this if your bundle creates a new [UTS namespace][uts-namespace].
 
 *Example*
 
@@ -126,3 +126,5 @@ For Linux-based systems the user structure has the following fields:
 
 Interpretation of the platform section of the JSON file is used to find which platform-specific sections may be available in the document.
 For example, if `os` is set to `linux`, then a JSON object conforming to the [Linux-specific schema](config-linux.md) SHOULD be found at the key `linux` in the `config.json`.
+
+[uts-namespace]: http://man7.org/linux/man-pages/man7/namespaces.7.html
