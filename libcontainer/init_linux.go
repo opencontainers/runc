@@ -149,8 +149,8 @@ func joinExistingNamespaces(namespaces []configs.Namespace) error {
 			if err != nil {
 				return err
 			}
+			defer f.Close()
 			err = system.Setns(f.Fd(), uintptr(ns.Syscall()))
-			f.Close()
 			if err != nil {
 				return err
 			}
