@@ -421,7 +421,7 @@ func mknodDevice(dest string, node *configs.Device) error {
 	return syscall.Chown(dest, int(node.Uid), int(node.Gid))
 }
 
-func getMountInfo(mountinfo []*mount.MountInfo, dir string) *mount.MountInfo {
+func getMountInfo(mountinfo []*mount.Info, dir string) *mount.Info {
 	for _, m := range mountinfo {
 		if m.Mountpoint == dir {
 			return m
