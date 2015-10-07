@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"syscall"
 
@@ -406,6 +407,9 @@ func createLibcontainerConfig(cgroupName string, spec *specs.LinuxSpec, rspec *s
 	config.Sysctl = rspec.Linux.Sysctl
 	config.ProcessLabel = rspec.Linux.SelinuxProcessLabel
 	config.AppArmorProfile = rspec.Linux.ApparmorProfile
+	for _, g := range spec.Process.User.AdditionalGids {
+		config.AdditionalGroups = append(config.AdditionalGroups, strconv.FormatUint(uint64(g), 10))
+	}
 	createHooks(rspec, config)
 	config.Version = specs.Version
 	return config, nil
