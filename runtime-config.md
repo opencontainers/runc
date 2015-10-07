@@ -52,8 +52,8 @@ If a hook returns a non-zero exit code, then an error is logged and the remainin
         ],
         "poststart": [
             {
-                "path": "/usr/bin/notify-start",
-            },
+                "path": "/usr/bin/notify-start"
+            }
         ],
         "poststop": [
             {
