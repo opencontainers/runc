@@ -434,23 +434,14 @@ func getMountInfo(mountinfos []*mount.Info, dir string) (mountinfo *mount.Info) 
 // Get the parent mount point of directory passed in as argument. Also return
 // optional fields.
 func getParentMount(rootfs string) (string, string, error) {
-	var path string
-
 	mountinfos, err := mount.GetMounts()
 	if err != nil {
 		return "", "", err
 	}
 
-	mountinfo := getMountInfo(mountinfos, rootfs)
-	if mountinfo != nil {
-		return rootfs, mountinfo.Optional, nil
-	}
-
-	path = rootfs
+	path := rootfs
 	for {
-		path = filepath.Dir(path)
-
-		mountinfo = getMountInfo(mountinfos, path)
+		mountinfo := getMountInfo(mountinfos, path)
 		if mountinfo != nil {
 			return path, mountinfo.Optional, nil
 		}
@@ -458,6 +449,7 @@ func getParentMount(rootfs string) (string, string, error) {
 		if path == "/" {
 			break
 		}
+		path = filepath.Dir(path)
 	}
 
 	// If we are here, we did not find parent mount. Something is wrong.
