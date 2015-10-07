@@ -421,13 +421,14 @@ func mknodDevice(dest string, node *configs.Device) error {
 	return syscall.Chown(dest, int(node.Uid), int(node.Gid))
 }
 
-func getMountInfo(mountinfo []*mount.Info, dir string) *mount.Info {
-	for _, m := range mountinfo {
+// Get the latest mountinfo of the mount point dir
+func getMountInfo(mountinfos []*mount.Info, dir string) (mountinfo *mount.Info) {
+	for _, m := range mountinfos {
 		if m.Mountpoint == dir {
-			return m
+			mountinfo = m
 		}
 	}
-	return nil
+	return mountinfo
 }
 
 // Get the parent mount point of directory passed in as argument. Also return
