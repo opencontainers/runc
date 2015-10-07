@@ -53,8 +53,8 @@
 		},
 		{
 			"ImportPath": "github.com/opencontainers/specs",
-			"Comment": "v0.1.1-16-g96bcd04",
-			"Rev": "96bcd043aa8a28f6f64c95ad61329765f01de1ba"
+			"Comment": "v0.1.1-55-gcf8dd12",
+			"Rev": "cf8dd120937acc3593708f99304c51cfd0f73240"
 		},
 		{
 			"ImportPath": "github.com/seccomp/libseccomp-golang",

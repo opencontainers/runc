@@ -2,7 +2,6 @@
 
 Behave as a community member, follow the code of conduct.
 
-
 ## Code of Conduct
 
 The OpenContainers community is made up of a mixture of professionals and volunteers from all over the world.
@@ -36,4 +35,3 @@ By adopting this Code of Conduct, project maintainers commit themselves to fairl
 Thanks to the [Fedora Code of Conduct](https://getfedora.org/code-of-conduct) and [Contributor Covenant](http://contributor-covenant.org) for inspiration and ideas.
 
 Portions of this Code of Conduct are adapted from the Contributor Covenant, version 1.2.0, available at http://contributor-covenant.org/version/1/2/0/
-

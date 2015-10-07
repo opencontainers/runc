@@ -1,3 +1,5 @@
+# Linux-specific Runtime Configuration
+
 ## Namespaces
 
 A namespace wraps a global system resource in an abstraction that makes it appear to the processes within the namespace that they have their own isolated instance of the global resource.
@@ -36,13 +38,13 @@ Also, when a path is specified, a runtime MUST assume that the setup for that pa
 
 #### Namespace types
 
-* **pid** processes inside the container will only be able to see other processes inside the same container.
-* **network** the container will have its own network stack.
-* **mount** the container will have an isolated mount table.
-* **ipc** processes inside the container will only be able to communicate to other processes inside the same
+* **`pid`** processes inside the container will only be able to see other processes inside the same container.
+* **`network`** the container will have its own network stack.
+* **`mount`** the container will have an isolated mount table.
+* **`ipc`** processes inside the container will only be able to communicate to other processes inside the same
 container via system level IPC.
-* **uts** the container will be able to have its own hostname and domain name.
-* **user** the container will be able to remap user and group IDs from the host to local users and groups
+* **`uts`** the container will be able to have its own hostname and domain name.
+* **`user`** the container will be able to remap user and group IDs from the host to local users and groups
 within the container.
 
 ## Devices
@@ -50,16 +52,16 @@ within the container.
 Devices is an array specifying the list of devices to be created in the container.
 Next parameters can be specified:
 
-* **type** - type of device: `c`, `b`, `u` or `p`. More info in `man mknod`
-* **path** - full path to device inside container
-* **major, minor** - major, minor numbers for device. More info in `man mknod`.
+* **`type`** - type of device: `c`, `b`, `u` or `p`. More info in `man mknod`
+* **`path`** - full path to device inside container
+* **`major, minor`** - major, minor numbers for device. More info in `man mknod`.
                  There is special value: `-1`, which means `*` for `device`
                  cgroup setup.
-* **permissions** - cgroup permissions for device. A composition of `r`
+* **`permissions`** - cgroup permissions for device. A composition of `r`
                 (read), `w` (write), and `m` (mknod).
-* **fileMode** - file mode for device file
-* **uid** - uid of device owner
-* **gid** - gid of device owner
+* **`fileMode`** - file mode for device file
+* **`uid`** - uid of device owner
+* **`gid`** - gid of device owner
 
 ```json
    "devices": [
@@ -319,11 +321,44 @@ For more information about Apparmor, see [Apparmor documentation](https://wiki.u
 Seccomp provides application sandboxing mechanism in the Linux kernel.
 Seccomp configuration allows one to configure actions to take for matched syscalls and furthermore also allows matching on values passed as arguments to syscalls.
 For more information about Seccomp, see [Seccomp kernel documentation](https://www.kernel.org/doc/Documentation/prctl/seccomp_filter.txt)
-The actions and operators are strings that match the definitions in seccomp.h from [libseccomp](https://github.com/seccomp/libseccomp) and are translated to corresponding values.
+The actions, architectures, and operators are strings that match the definitions in seccomp.h from [libseccomp](https://github.com/seccomp/libseccomp) and are translated to corresponding values.
+A valid list of constants as of Libseccomp v2.2.3 is contained below.
+
+Architecture Constants
+* `SCMP_ARCH_X86`
+* `SCMP_ARCH_X86_64`
+* `SCMP_ARCH_X32`
+* `SCMP_ARCH_ARM`
+* `SCMP_ARCH_AARCH64`
+* `SCMP_ARCH_MIPS`
+* `SCMP_ARCH_MIPS64`
+* `SCMP_ARCH_MIPS64N32`
+* `SCMP_ARCH_MIPSEL`
+* `SCMP_ARCH_MIPSEL64`
+* `SCMP_ARCH_MIPSEL64N32`
+
+Action Constants:
+* `SCMP_ACT_KILL`
+* `SCMP_ACT_TRAP`
+* `SCMP_ACT_ERRNO`
+* `SCMP_ACT_TRACE`
+* `SCMP_ACT_ALLOW`
+
+Operator Constants:
+* `SCMP_CMP_NE`
+* `SCMP_CMP_LT`
+* `SCMP_CMP_LE`
+* `SCMP_CMP_EQ`
+* `SCMP_CMP_GE`
+* `SCMP_CMP_GT`
+* `SCMP_CMP_MASKED_EQ`
 
 ```json
    "seccomp": {
        "defaultAction": "SCMP_ACT_ALLOW",
+       "architectures": [
+           "SCMP_ARCH_X86"
+       ],
        "syscalls": [
            {
                "name": "getcwd",

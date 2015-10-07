@@ -73,11 +73,11 @@ const (
 // IDMapping specifies UID/GID mappings
 type IDMapping struct {
 	// HostID is the UID/GID of the host user or group
-	HostID int32 `json:"hostID"`
+	HostID uint32 `json:"hostID"`
 	// ContainerID is the UID/GID of the container's user or group
-	ContainerID int32 `json:"containerID"`
+	ContainerID uint32 `json:"containerID"`
 	// Size is the length of the range of IDs mapped between the two namespaces
-	Size int32 `json:"size"`
+	Size uint32 `json:"size"`
 }
 
 // Rlimit type and restrictions
@@ -235,14 +235,51 @@ type Device struct {
 // Seccomp represents syscall restrictions
 type Seccomp struct {
 	DefaultAction Action     `json:"defaultAction"`
+	Architectures []Arch     `json:"architectures"`
 	Syscalls      []*Syscall `json:"syscalls"`
 }
+
+// Additional architectures permitted to be used for system calls
+// By default only the native architecture of the kernel is permitted
+type Arch string
+
+const (
+	ArchX86         Arch = "SCMP_ARCH_X86"
+	ArchX86_64      Arch = "SCMP_ARCH_X86_64"
+	ArchX32         Arch = "SCMP_ARCH_X32"
+	ArchARM         Arch = "SCMP_ARCH_ARM"
+	ArchAARCH64     Arch = "SCMP_ARCH_AARCH64"
+	ArchMIPS        Arch = "SCMP_ARCH_MIPS"
+	ArchMIPS64      Arch = "SCMP_ARCH_MIPS64"
+	ArchMIPS64N32   Arch = "SCMP_ARCH_MIPS64N32"
+	ArchMIPSEL      Arch = "SCMP_ARCH_MIPSEL"
+	ArchMIPSEL64    Arch = "SCMP_ARCH_MIPSEL64"
+	ArchMIPSEL64N32 Arch = "SCMP_ARCH_MIPSEL64N32"
+)
 
 // Action taken upon Seccomp rule match
 type Action string
 
+const (
+	ActKill  Action = "SCMP_ACT_KILL"
+	ActTrap  Action = "SCMP_ACT_TRAP"
+	ActErrno Action = "SCMP_ACT_ERRNO"
+	ActTrace Action = "SCMP_ACT_TRACE"
+	ActAllow Action = "SCMP_ACT_ALLOW"
+)
+
 // Operator used to match syscall arguments in Seccomp
 type Operator string
+
+const (
+	OpNotEqual     Operator = "SCMP_CMP_NE"
+	OpLessThan     Operator = "SCMP_CMP_LT"
+	OpLessEqual    Operator = "SCMP_CMP_LE"
+	OpEqualTo      Operator = "SCMP_CMP_EQ"
+	OpGreaterEqual Operator = "SCMP_CMP_GE"
+	OpGreaterThan  Operator = "SCMP_CMP_GT"
+	OpMaskedEqual  Operator = "SCMP_CMP_MASKED_EQ"
+)
 
 // Arg used for matching specific syscall arguments in Seccomp
 type Arg struct {
