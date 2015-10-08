@@ -20,11 +20,11 @@ Table of Contents
 
 To provide context for users the following section gives example use cases for each part of the spec.
 
-### Filesystem Bundle & Configuration
+## Filesystem Bundle & Configuration
 
 - A user can create a root filesystem and configuration, with low-level OS and host specific details, and launch it as a container under an Open Container runtime.
 
-## Releases
+# Releases
 
 There is a loose [Road Map](https://github.com/opencontainers/specs/wiki/RoadMap:) on the wiki.
 During the `0.x` series of OCI releases we make no backwards compatibility guarantees and intend to break the schema during this series.
