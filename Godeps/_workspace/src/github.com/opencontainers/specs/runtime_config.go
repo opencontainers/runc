@@ -22,6 +22,8 @@ type Hooks struct {
 	// Prestart is a list of hooks to be run before the container process is executed.
 	// On Linux, they are run after the container namespaces are created.
 	Prestart []Hook `json:"prestart"`
+	// Poststart is a list of hooks to be run after the container process is started.
+	Poststart []Hook `json:"poststart"`
 	// Poststop is a list of hooks to be run after the container process exits.
 	Poststop []Hook `json:"poststop"`
 }

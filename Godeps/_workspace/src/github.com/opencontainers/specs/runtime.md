@@ -2,22 +2,26 @@
 
 ## State
 
-The runtime state for a container is persisted on disk so that external tools can consume and act on this information.
-The runtime state is stored in a JSON encoded file.
-It is recommended that this file is stored in a temporary filesystem so that it can be removed on a system reboot.
-On Linux based systems the state information should be stored in `/run/opencontainer/containers`.
-The directory structure for a container is `/run/opencontainer/containers/<containerID>/state.json`.
-By providing a default location that container state is stored external applications can find all containers running on a system.
+Runtime MUST store container metadata on disk so that external tools can consume and act on this information.
+It is recommended that this data be stored in a temporary filesystem so that it can be removed on a system reboot.
+On Linux/Unix based systems the metadata MUST be stored under `/run/opencontainer/containers`.
+For non-Linux/Unix based systems the location of the root metadata directory is currently undefined.
+Within that directory there MUST be one directory for each container created, where the name of the directory MUST be the ID of the container.
+For example: for a Linux container with an ID of `173975398351`, there will be a corresponding directory: `/run/opencontainer/containers/173975398351`.
+Within each container's directory, there MUST be a JSON encoded file called `state.json` that contains the runtime state of the container.
+For example: `/run/opencontainer/containers/173975398351/state.json`.
 
-* **version** (string) Version of the OCI specification used when creating the container.
-* **id** (string) ID is the container's ID.
-* **pid** (int) Pid is the ID of the main process within the container.
-* **root** (string) Root is the path to the container's bundle directory.
+The `state.json` file MUST contain all of the following properties:
 
+* **`version`**: (string) is the OCF specification version used when creating the container.
+* **`id`**: (string) is the container's ID.
+This MUST be unique across all containers on this host.
+There is no requirement that it be unique across hosts.
 The ID is provided in the state because hooks will be executed with the state as the payload.
-This allows the hook to perform clean and teardown logic after the runtime destroys its own state.
-
-The root directory to the bundle is provided in the state so that consumers can find the container's configuration and rootfs where it is located on the host's filesystem.
+This allows the hooks to perform cleanup and teardown logic after the runtime destroys its own state.
+* **`pid`**: (int) is the ID of the main process within the container, as seen by the host.
+* **`bundlePath`**: (string) is the absolute path to the container's bundle directory.
+This is provided so that consumers can find the container's configuration and root filesystem on the host.
 
 *Example*
 
@@ -49,48 +53,4 @@ This event needs to be captured by runc to run onstop event handlers.
 
 ## Hooks
 
-Hooks allow one to run code before/after various lifecycle events of the container.
-Hooks MUST be called in the listed order.
-The state of the container is passed to the hooks over stdin, so the hooks could get the information they need to do their work.
-
-Hook paths are absolute and are executed from the host's filesystem.
-
-### Pre-start
-
-The pre-start hooks are called after the container process is spawned, but before the user supplied command is executed.
-They are called after the container namespaces are created on Linux, so they provide an opportunity to customize the container.
-In Linux, for e.g., the network namespace could be configured in this hook.
-
-If a hook returns a non-zero exit code, then an error including the exit code and the stderr is returned to the caller and the container is torn down.
-
-### Post-stop
-
-The post-stop hooks are called after the container process is stopped.
-Cleanup or debugging could be performed in such a hook.
-If a hook returns a non-zero exit code, then an error is logged and the remaining hooks are executed.
-
-*Example*
-
-```json
-    "hooks" : {
-        "prestart": [
-            {
-                "path": "/usr/bin/fix-mounts",
-                "args": ["arg1", "arg2"],
-                "env":  [ "key1=value1"]
-            },
-            {
-                "path": "/usr/bin/setup-network"
-            }
-        ],
-        "poststop": [
-            {
-                "path": "/usr/sbin/cleanup.sh",
-                "args": ["-f"]
-            }
-        ]
-    }
-```
-
-`path` is required for a hook.
-`args` and `env` are optional.
+See [runtime configuration for hooks](./runtime-config.md)
