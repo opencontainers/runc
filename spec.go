@@ -340,12 +340,12 @@ func createLibcontainerConfig(cgroupName string, spec *specs.LinuxSpec, rspec *s
 		rootfsPath = filepath.Join(cwd, rootfsPath)
 	}
 	config := &configs.Config{
-		Rootfs:       rootfsPath,
-		Capabilities: spec.Linux.Capabilities,
-		Readonlyfs:   spec.Root.Readonly,
-		Hostname:     spec.Hostname,
+		Rootfs:             rootfsPath,
+		Capabilities:       spec.Linux.Capabilities,
+		Readonlyfs:         spec.Root.Readonly,
+		Hostname:           spec.Hostname,
+		IsHostUnprivileged: rspec.Linux.IsHostUnprivileged,
 	}
-
 	exists := false
 	if config.RootPropagation, exists = mountPropagationMapping[rspec.Linux.RootfsPropagation]; !exists {
 		return nil, fmt.Errorf("rootfsPropagation=%v is not supported", rspec.Linux.RootfsPropagation)
@@ -444,6 +444,7 @@ func createCgroupConfig(name string, spec *specs.LinuxRuntimeSpec, devices []*co
 		AllowedDevices: append(devices, allowedDevices...),
 	}
 	r := spec.Linux.Resources
+	c.IsHostUnprivileged = spec.Linux.IsHostUnprivileged
 	c.Memory = r.Memory.Limit
 	c.MemoryReservation = r.Memory.Reservation
 	c.MemorySwap = r.Memory.Swap
