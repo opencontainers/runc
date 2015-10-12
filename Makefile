@@ -5,6 +5,7 @@ BUILDTAGS=seccomp
 export GOPATH:=$(CURDIR)/Godeps/_workspace:$(GOPATH)
 
 all:
+	ln -sfn $(CURDIR) $(CURDIR)/Godeps/_workspace/src/github.com/opencontainers/runc
 	go build -tags "$(BUILDTAGS)" -o runc .
 
 vet:
@@ -29,6 +30,7 @@ install:
 
 clean:
 	rm runc
+	rm $(CURDIR)/Godeps/_workspace/src/github.com/opencontainers/runc
 
 validate: vet
 	script/validate-gofmt
