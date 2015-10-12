@@ -30,6 +30,23 @@ const (
 	Destroyed
 )
 
+//Custom type method for returning status as strings
+func (s Status) String() string {
+	switch s {
+	case Running:
+		return "Running"
+	case Pausing:
+		return "Pausing"
+	case Paused:
+		return "Paused"
+	case Checkpointed:
+		return "Checkpointed"
+	case Destroyed:
+		return "Destroyed"
+	}
+	return ""
+}
+
 // State represents a running container's state
 type State struct {
 	// ID is the container ID.
