@@ -158,6 +158,14 @@ For example, to run a new process in an existing container without updating limi
     "disableOOMKiller": false
 ```
 
+#### Set oom_score_adj
+
+More information on `oom_score_adj` available [here](https://www.kernel.org/doc/Documentation/filesystems/proc.txt).
+
+```json
+    "oomScoreAdj": 0
+```
+
 #### Memory
 
 ```json

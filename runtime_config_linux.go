@@ -198,6 +198,8 @@ type Network struct {
 type Resources struct {
 	// DisableOOMKiller disables the OOM killer for out of memory conditions
 	DisableOOMKiller bool `json:"disableOOMKiller"`
+	// Specify an oom_score_adj for the container. Optional.
+	OOMScoreAdj int `json:"oomScoreAdj"`
 	// Memory restriction configuration
 	Memory Memory `json:"memory"`
 	// CPU resource restriction configuration
