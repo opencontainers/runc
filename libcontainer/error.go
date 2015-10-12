@@ -13,7 +13,6 @@ const (
 
 	// Container errors
 	ContainerNotExists
-	ContainerPaused
 	ContainerNotStopped
 	ContainerNotRunning
 
@@ -31,8 +30,6 @@ func (c ErrorCode) String() string {
 		return "Id already in use"
 	case InvalidIdFormat:
 		return "Invalid format"
-	case ContainerPaused:
-		return "Container paused"
 	case ConfigInvalid:
 		return "Invalid configuration"
 	case SystemError:
