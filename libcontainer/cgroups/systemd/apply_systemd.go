@@ -411,7 +411,7 @@ func (m *Manager) Freeze(state configs.FreezerState) error {
 }
 
 func (m *Manager) GetPids() ([]int, error) {
-	path, err := getSubsystemPath(m.Cgroups, "cpu")
+	path, err := getSubsystemPath(m.Cgroups, "devices")
 	if err != nil {
 		return nil, err
 	}
