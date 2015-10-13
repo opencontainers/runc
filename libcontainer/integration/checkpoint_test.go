@@ -114,6 +114,8 @@ func TestCheckpoint(t *testing.T) {
 	checkpointOpts := &libcontainer.CriuOpts{
 		ImagesDirectory: imagesDir,
 		WorkDirectory:   imagesDir,
+		LeaveRunning:    true,
+		TrackMemory:     true,
 	}
 	dumpLog := filepath.Join(checkpointOpts.WorkDirectory, "dump.log")
 	restoreLog := filepath.Join(checkpointOpts.WorkDirectory, "restore.log")
@@ -124,6 +126,35 @@ func TestCheckpoint(t *testing.T) {
 	}
 
 	state, err := container.Status()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if state != libcontainer.Running {
+		t.Fatal("Unexpected state: ", state)
+	}
+
+	secondImagesDir, err := ioutil.TempDir("", "criu")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(secondImagesDir)
+
+	checkpointOpts = &libcontainer.CriuOpts{
+		ImagesDirectory:       secondImagesDir,
+		WorkDirectory:         secondImagesDir,
+		ParentImagesDirectory: imagesDir,
+	}
+
+	dumpLog = filepath.Join(checkpointOpts.WorkDirectory, "dump.log")
+	restoreLog = filepath.Join(checkpointOpts.WorkDirectory, "restore.log")
+
+	if err := container.Checkpoint(checkpointOpts); err != nil {
+		showFile(t, dumpLog)
+		t.Fatal(err)
+	}
+
+	state, err = container.Status()
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -20,10 +20,13 @@ var checkpointCommand = cli.Command{
 		cli.BoolFlag{Name: "leave-running", Usage: "leave the process running after checkpointing"},
 		cli.BoolFlag{Name: "tcp-established", Usage: "allow open tcp connections"},
 		cli.BoolFlag{Name: "ext-unix-sk", Usage: "allow external unix sockets"},
-		cli.BoolFlag{Name: "shell-job", Usage: "allow shell jobs"},
+		cli.BoolFlag{Name: "file-locks", Usage: "allow file locks, for safety"},
+		cli.IntFlag{Name: "log-level", Value: 4, Usage: "set criu log level (1-4, least to most verbose)"},
 		cli.StringFlag{Name: "page-server", Value: "", Usage: "ADDRESS:PORT of the page server"},
-		cli.BoolFlag{Name: "file-locks", Usage: "handle file locks, for safety"},
 		cli.StringFlag{Name: "manage-cgroups-mode", Value: "", Usage: "cgroups mode: 'soft' (default), 'full' and 'strict'."},
+		cli.StringFlag{Name: "parent-path", Value: "", Usage: "path to parent image, relative to image-path"},
+		cli.BoolFlag{Name: "track-mem", Usage: "enable tracking changed memory pages in kernel"},
+		cli.BoolFlag{Name: "auto-dedup", Usage: "reduce space required for secondary checpoints"},
 	},
 	Action: func(context *cli.Context) {
 		container, err := getContainer(context)
