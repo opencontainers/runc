@@ -1250,3 +1250,29 @@ func TestRootfsPropagationSharedMount(t *testing.T) {
 		t.Fatalf("Mount in container on %s did not propagate to host on %s. finmnt output=%s", dir2cont, dir2host, outtrim)
 	}
 }
+
+func TestPIDHost(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+
+	rootfs, err := newRootfs()
+	ok(t, err)
+	defer remove(rootfs)
+
+	l, err := os.Readlink("/proc/1/ns/pid")
+	ok(t, err)
+
+	config := newTemplateConfig(rootfs)
+	config.Namespaces.Remove(configs.NEWPID)
+	buffers, exitCode, err := runContainer(config, "", "readlink", "/proc/self/ns/pid")
+	ok(t, err)
+
+	if exitCode != 0 {
+		t.Fatalf("exit code not 0. code %d stderr %q", exitCode, buffers.Stderr)
+	}
+
+	if actual := strings.Trim(buffers.Stdout.String(), "\n"); actual != l {
+		t.Fatalf("ipc link not equal to host link %q %q", actual, l)
+	}
+}
