@@ -51,6 +51,11 @@ func main() {
 			Usage: "set the log file path where internal debug information is written",
 		},
 		cli.StringFlag{
+			Name:  "log-format",
+			Value: "text",
+			Usage: "set the format used by logs ('text' (default), or 'json')",
+		},
+		cli.StringFlag{
 			Name:  "root",
 			Value: specs.LinuxStateDirectory,
 			Usage: "root directory for storage of container state (this should be located in tmpfs)",
@@ -82,6 +87,14 @@ func main() {
 				return err
 			}
 			logrus.SetOutput(f)
+		}
+		switch context.GlobalString("log-format") {
+		case "text":
+			// retain logrus's default.
+		case "json":
+			logrus.SetFormatter(new(logrus.JSONFormatter))
+		default:
+			logrus.Fatalf("unknown log-format %q", context.GlobalString("log-format"))
 		}
 		return nil
 	}
