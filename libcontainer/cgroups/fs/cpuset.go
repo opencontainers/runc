@@ -16,6 +16,10 @@ import (
 type CpusetGroup struct {
 }
 
+func (s *CpusetGroup) Name() string {
+	return "cpuset"
+}
+
 func (s *CpusetGroup) Apply(d *data) error {
 	dir, err := d.path("cpuset")
 	if err != nil && !cgroups.IsNotFound(err) {

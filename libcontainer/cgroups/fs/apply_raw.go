@@ -34,6 +34,8 @@ var (
 )
 
 type subsystem interface {
+	// Name returns the name of the subsystem.
+	Name() string
 	// Returns the stats, as 'stats', corresponding to the cgroup under 'path'.
 	GetStats(path string, stats *cgroups.Stats) error
 	// Removes the cgroup represented by 'data'.

@@ -17,6 +17,10 @@ import (
 type BlkioGroup struct {
 }
 
+func (s *BlkioGroup) Name() string {
+	return "blkio"
+}
+
 func (s *BlkioGroup) Apply(d *data) error {
 	dir, err := d.join("blkio")
 	if err != nil && !cgroups.IsNotFound(err) {
