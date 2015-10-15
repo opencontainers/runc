@@ -16,22 +16,33 @@ import (
 )
 
 var (
-	subsystems = map[string]subsystem{
-		"devices":    &DevicesGroup{},
-		"memory":     &MemoryGroup{},
-		"cpu":        &CpuGroup{},
-		"cpuset":     &CpusetGroup{},
-		"cpuacct":    &CpuacctGroup{},
-		"blkio":      &BlkioGroup{},
-		"hugetlb":    &HugetlbGroup{},
-		"net_cls":    &NetClsGroup{},
-		"net_prio":   &NetPrioGroup{},
-		"perf_event": &PerfEventGroup{},
-		"freezer":    &FreezerGroup{},
+	subsystems = subsystemSet{
+		&CpusetGroup{},
+		&DevicesGroup{},
+		&MemoryGroup{},
+		&CpuGroup{},
+		&CpuacctGroup{},
+		&BlkioGroup{},
+		&HugetlbGroup{},
+		&NetClsGroup{},
+		&NetPrioGroup{},
+		&PerfEventGroup{},
+		&FreezerGroup{},
 	}
 	CgroupProcesses  = "cgroup.procs"
 	HugePageSizes, _ = cgroups.GetHugePageSize()
 )
+
+type subsystemSet []subsystem
+
+func (s subsystemSet) Get(name string) subsystem {
+	for _, ss := range s {
+		if ss.Name() == name {
+			return ss
+		}
+	}
+	return nil
+}
 
 type subsystem interface {
 	// Name returns the name of the subsystem.
@@ -103,21 +114,21 @@ func (m *Manager) Apply(pid int) (err error) {
 			cgroups.RemovePaths(paths)
 		}
 	}()
-	for name, sys := range subsystems {
+	for _, sys := range subsystems {
 		if err := sys.Apply(d); err != nil {
 			return err
 		}
 		// TODO: Apply should, ideally, be reentrant or be broken up into a separate
 		// create and join phase so that the cgroup hierarchy for a container can be
 		// created then join consists of writing the process pids to cgroup.procs
-		p, err := d.path(name)
+		p, err := d.path(sys.Name())
 		if err != nil {
 			if cgroups.IsNotFound(err) {
 				continue
 			}
 			return err
 		}
-		paths[name] = p
+		paths[sys.Name()] = p
 	}
 	m.Paths = paths
 
@@ -152,22 +163,21 @@ func (m *Manager) GetStats() (*cgroups.Stats, error) {
 	defer m.mu.Unlock()
 	stats := cgroups.NewStats()
 	for name, path := range m.Paths {
-		sys, ok := subsystems[name]
-		if !ok || !cgroups.PathExists(path) {
+		sys := subsystems.Get(name)
+		if sys == nil || !cgroups.PathExists(path) {
 			continue
 		}
 		if err := sys.GetStats(path, stats); err != nil {
 			return nil, err
 		}
 	}
-
 	return stats, nil
 }
 
 func (m *Manager) Set(container *configs.Config) error {
 	for name, path := range m.Paths {
-		sys, ok := subsystems[name]
-		if !ok || !cgroups.PathExists(path) {
+		sys := subsystems.Get(name)
+		if sys == nil || !cgroups.PathExists(path) {
 			continue
 		}
 		if err := sys.Set(path, container.Cgroups); err != nil {
@@ -194,13 +204,12 @@ func (m *Manager) Freeze(state configs.FreezerState) error {
 	prevState := m.Cgroups.Freezer
 	m.Cgroups.Freezer = state
 
-	freezer := subsystems["freezer"]
+	freezer := subsystems.Get("freezer")
 	err = freezer.Set(dir, m.Cgroups)
 	if err != nil {
 		m.Cgroups.Freezer = prevState
 		return err
 	}
-
 	return nil
 }
 
