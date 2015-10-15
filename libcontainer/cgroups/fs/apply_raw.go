@@ -101,7 +101,20 @@ func (m *Manager) Apply(pid int) (err error) {
 			cgroups.RemovePaths(paths)
 		}
 	}()
-	for name, sys := range subsystems {
+	var subsyskeys []string
+	for key := range subsystems {
+		// make key index of subsystems to make sure the order of sybsystem apply.
+		// As for users using unified hierarchy on kernel 3.10 or older it needs cpuset.cpus and cpuset.mems to be set
+		// before any sybsystems write pids to cgroup.procs, cupset sybsystem should be applied first.
+		subsyskeys = append(subsyskeys, key)
+		if key == "cpuset" {
+			length := len(subsyskeys) - 1
+			subsyskeys[0], subsyskeys[length] = subsyskeys[length], subsyskeys[0]
+		}
+	}
+
+	for _, name := range subsyskeys {
+		sys := subsystems[name]
 		if err := sys.Apply(d); err != nil {
 			return err
 		}
