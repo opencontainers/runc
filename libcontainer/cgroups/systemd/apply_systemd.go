@@ -450,7 +450,14 @@ func (m *Manager) Set(container *configs.Config) error {
 }
 
 func getUnitName(c *configs.Cgroup) string {
-	return fmt.Sprintf("%s-%s.scope", c.Parent, c.Name)
+	allowed := "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ:-_.\\"
+	sanitizeFunc := func(r rune) rune {
+		if strings.ContainsRune(allowed, r) {
+			return r
+		}
+		return '.'
+	}
+	return fmt.Sprintf("%s-%s.scope", strings.Map(sanitizeFunc, c.Parent), strings.Map(sanitizeFunc, c.Name))
 }
 
 // Atm we can't use the systemd device support because of two missing things:
