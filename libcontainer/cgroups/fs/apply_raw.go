@@ -3,6 +3,7 @@
 package fs
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -33,15 +34,17 @@ var (
 	HugePageSizes, _ = cgroups.GetHugePageSize()
 )
 
+var errSubsystemDoesNotExist = errors.New("cgroup: subsystem does not exist")
+
 type subsystemSet []subsystem
 
-func (s subsystemSet) Get(name string) subsystem {
+func (s subsystemSet) Get(name string) (subsystem, error) {
 	for _, ss := range s {
 		if ss.Name() == name {
-			return ss
+			return ss, nil
 		}
 	}
-	return nil
+	return nil, errSubsystemDoesNotExist
 }
 
 type subsystem interface {
@@ -163,8 +166,8 @@ func (m *Manager) GetStats() (*cgroups.Stats, error) {
 	defer m.mu.Unlock()
 	stats := cgroups.NewStats()
 	for name, path := range m.Paths {
-		sys := subsystems.Get(name)
-		if sys == nil || !cgroups.PathExists(path) {
+		sys, err := subsystems.Get(name)
+		if err == errSubsystemDoesNotExist || !cgroups.PathExists(path) {
 			continue
 		}
 		if err := sys.GetStats(path, stats); err != nil {
@@ -176,15 +179,14 @@ func (m *Manager) GetStats() (*cgroups.Stats, error) {
 
 func (m *Manager) Set(container *configs.Config) error {
 	for name, path := range m.Paths {
-		sys := subsystems.Get(name)
-		if sys == nil || !cgroups.PathExists(path) {
+		sys, err := subsystems.Get(name)
+		if err == errSubsystemDoesNotExist || !cgroups.PathExists(path) {
 			continue
 		}
 		if err := sys.Set(path, container.Cgroups); err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 
@@ -195,16 +197,16 @@ func (m *Manager) Freeze(state configs.FreezerState) error {
 	if err != nil {
 		return err
 	}
-
 	dir, err := d.path("freezer")
 	if err != nil {
 		return err
 	}
-
 	prevState := m.Cgroups.Freezer
 	m.Cgroups.Freezer = state
-
-	freezer := subsystems.Get("freezer")
+	freezer, err := subsystems.Get("freezer")
+	if err != nil {
+		return err
+	}
 	err = freezer.Set(dir, m.Cgroups)
 	if err != nil {
 		m.Cgroups.Freezer = prevState

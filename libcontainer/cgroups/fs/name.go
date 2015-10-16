@@ -6,6 +6,11 @@ import (
 )
 
 type NameGroup struct {
+	GroupName string
+}
+
+func (s *NameGroup) Name() string {
+	return s.GroupName
 }
 
 func (s *NameGroup) Apply(d *data) error {
