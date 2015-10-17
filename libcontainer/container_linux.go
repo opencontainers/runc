@@ -218,7 +218,7 @@ func (c *linuxContainer) newParentProcess(p *Process, doInit bool) (parentProces
 		return nil, newSystemError(err)
 	}
 	if !doInit {
-		return c.newSetnsProcess(p, cmd, parentPipe, childPipe), nil
+		return c.newSetnsProcess(p, cmd, parentPipe, childPipe)
 	}
 	return c.newInitProcess(p, cmd, parentPipe, childPipe)
 }
@@ -273,7 +273,7 @@ func (c *linuxContainer) newInitProcess(p *Process, cmd *exec.Cmd, parentPipe, c
 	}, nil
 }
 
-func (c *linuxContainer) newSetnsProcess(p *Process, cmd *exec.Cmd, parentPipe, childPipe *os.File) *setnsProcess {
+func (c *linuxContainer) newSetnsProcess(p *Process, cmd *exec.Cmd, parentPipe, childPipe *os.File) (*setnsProcess, error) {
 	cmd.Env = append(cmd.Env,
 		fmt.Sprintf("_LIBCONTAINER_INITPID=%d", c.initProcess.pid()),
 		"_LIBCONTAINER_INITTYPE=setns",
@@ -289,7 +289,7 @@ func (c *linuxContainer) newSetnsProcess(p *Process, cmd *exec.Cmd, parentPipe, 
 		parentPipe:  parentPipe,
 		config:      c.newInitConfig(p),
 		process:     p,
-	}
+	}, nil
 }
 
 func (c *linuxContainer) newInitConfig(process *Process) *initConfig {
