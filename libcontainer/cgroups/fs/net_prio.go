@@ -10,7 +10,10 @@ type NetPrioGroup struct {
 
 func (s *NetPrioGroup) Apply(d *data) error {
 	dir, err := d.join("net_prio")
-	if err != nil && !cgroups.IsNotFound(err) {
+	if err != nil {
+		if cgroups.IsNotFound(err) {
+			return nil
+		}
 		return err
 	}
 
