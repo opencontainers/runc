@@ -21,9 +21,9 @@ func ConvertStringToOperator(in string) (configs.Operator, error) {
 	case "SCMP_CMP_EQ":
 		return configs.EqualTo, nil
 	case "SCMP_CMP_GE":
-		return configs.GreaterThan, nil
-	case "SCMP_CMP_GT":
 		return configs.GreaterThanOrEqualTo, nil
+	case "SCMP_CMP_GT":
+		return configs.GreaterThan, nil
 	case "SCMP_CMP_MASKED_EQ":
 		return configs.MaskEqualTo, nil
 	default:
