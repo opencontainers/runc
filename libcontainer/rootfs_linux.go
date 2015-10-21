@@ -29,7 +29,7 @@ func setupRootfs(config *configs.Config, console *linuxConsole) (err error) {
 		return newSystemError(err)
 	}
 
-	setupDev := len(config.Devices) == 0
+	setupDev := len(config.Devices) != 0
 	for _, m := range config.Mounts {
 		for _, precmd := range m.PremountCmds {
 			if err := mountCmd(precmd); err != nil {
@@ -46,7 +46,7 @@ func setupRootfs(config *configs.Config, console *linuxConsole) (err error) {
 			}
 		}
 	}
-	if !setupDev {
+	if setupDev {
 		if err := createDevices(config); err != nil {
 			return newSystemError(err)
 		}
@@ -68,7 +68,7 @@ func setupRootfs(config *configs.Config, console *linuxConsole) (err error) {
 	if err != nil {
 		return newSystemError(err)
 	}
-	if !setupDev {
+	if setupDev {
 		if err := reOpenDevNull(); err != nil {
 			return newSystemError(err)
 		}
