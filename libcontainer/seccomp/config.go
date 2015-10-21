@@ -47,6 +47,8 @@ func ConvertStringToAction(in string) (configs.Action, error) {
 		return configs.Trap, nil
 	case "SCMP_ACT_ALLOW":
 		return configs.Allow, nil
+	case "SCMP_ACT_TRACE":
+		return configs.Trace, nil
 	default:
 		return 0, fmt.Errorf("string %s is not a valid action for seccomp", in)
 	}

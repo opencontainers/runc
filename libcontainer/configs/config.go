@@ -33,9 +33,10 @@ type Seccomp struct {
 type Action int
 
 const (
-	Kill Action = iota - 4
+	Kill Action = iota - 5
 	Errno
 	Trap
+	Trace
 	Allow
 )
 

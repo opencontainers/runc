@@ -15,6 +15,7 @@ var (
 	actAllow = libseccomp.ActAllow
 	actTrap  = libseccomp.ActTrap
 	actKill  = libseccomp.ActKill
+	actTrace = libseccomp.ActTrace.SetReturnCode(int16(syscall.EPERM))
 	actErrno = libseccomp.ActErrno.SetReturnCode(int16(syscall.EPERM))
 )
 
@@ -81,6 +82,8 @@ func getAction(act configs.Action) (libseccomp.ScmpAction, error) {
 		return actErrno, nil
 	case configs.Trap:
 		return actTrap, nil
+	case configs.Trace:
+		return actTrace, nil
 	case configs.Allow:
 		return actAllow, nil
 	default:
