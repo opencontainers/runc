@@ -54,6 +54,9 @@ type State struct {
 
 	// Container's standard descriptors (std{in,out,err}), needed for checkpoint and restore
 	ExternalDescriptors []string `json:"external_descriptors,omitempty"`
+
+	// Criu image paths
+	CriuimagePaths map[string]string `json:"criu_image_paths"`
 }
 
 // A libcontainer container object.
@@ -127,6 +130,12 @@ type Container interface {
 	// errors:
 	// Systemerror - System error.
 	Restore(process *Process, criuOpts *CriuOpts) error
+
+	// List the checkpointed images of a container
+	//
+	// errors:
+	// Systemerror - System error.
+	Listimages() error
 
 	// Destroys the container after killing all running processes.
 	//
