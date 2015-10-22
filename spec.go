@@ -299,7 +299,7 @@ func loadSpec(cPath, rPath string) (spec *specs.LinuxSpec, rspec *specs.LinuxRun
 		if os.IsNotExist(err) {
 			return nil, nil, fmt.Errorf("JSON specification file at %s not found", cPath)
 		}
-		return
+		return spec, rspec, err
 	}
 	defer cf.Close()
 
@@ -308,15 +308,15 @@ func loadSpec(cPath, rPath string) (spec *specs.LinuxSpec, rspec *specs.LinuxRun
 		if os.IsNotExist(err) {
 			return nil, nil, fmt.Errorf("JSON runtime config file at %s not found", rPath)
 		}
-		return
+		return spec, rspec, err
 	}
 	defer rf.Close()
 
 	if err = json.NewDecoder(cf).Decode(&spec); err != nil {
-		return
+		return spec, rspec, err
 	}
 	if err = json.NewDecoder(rf).Decode(&rspec); err != nil {
-		return
+		return spec, rspec, err
 	}
 	return spec, rspec, checkSpecVersion(spec)
 }
