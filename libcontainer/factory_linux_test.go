@@ -137,8 +137,10 @@ func TestFactoryLoadContainer(t *testing.T) {
 			Rootfs: "/mycontainer/root",
 		}
 		expectedState = &State{
-			InitProcessPid: 1024,
-			Config:         *expectedConfig,
+			BaseState: BaseState{
+				InitProcessPid: 1024,
+				Config:         *expectedConfig,
+			},
 		}
 	)
 	if err := os.Mkdir(filepath.Join(root, id), 0700); err != nil {

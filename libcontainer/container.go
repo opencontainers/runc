@@ -30,8 +30,9 @@ const (
 	Destroyed
 )
 
-// State represents a running container's state
-type State struct {
+// BaseState represents the platform agnostic pieces relating to a
+// running container's state
+type BaseState struct {
 	// ID is the container ID.
 	ID string `json:"id"`
 
@@ -41,19 +42,8 @@ type State struct {
 	// InitProcessStartTime is the init process start time.
 	InitProcessStartTime string `json:"init_process_start"`
 
-	// Path to all the cgroups setup for a container. Key is cgroup subsystem name
-	// with the value as the path.
-	CgroupPaths map[string]string `json:"cgroup_paths"`
-
-	// NamespacePaths are filepaths to the container's namespaces. Key is the namespace type
-	// with the value as the path.
-	NamespacePaths map[configs.NamespaceType]string `json:"namespace_paths"`
-
 	// Config is the container's configuration.
 	Config configs.Config `json:"config"`
-
-	// Container's standard descriptors (std{in,out,err}), needed for checkpoint and restore
-	ExternalDescriptors []string `json:"external_descriptors,omitempty"`
 }
 
 // A libcontainer container object.
