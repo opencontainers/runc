@@ -135,13 +135,6 @@ func fatal(err error) {
 	os.Exit(1)
 }
 
-// fatalf formats the errror string with the specified template then exits the
-// program with an exit status of 1.
-func fatalf(t string, v ...interface{}) {
-	fmt.Fprintf(os.Stderr, t, v...)
-	os.Exit(1)
-}
-
 // getDefaultID returns a string to be used as the container id based on the
 // current working directory of the runc process.  This function panics
 // if the cwd is unable to be found based on a system error.
