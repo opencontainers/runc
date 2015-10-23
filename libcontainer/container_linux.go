@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"sync"
 	"syscall"
@@ -32,6 +33,7 @@ type linuxContainer struct {
 	initProcess   parentProcess
 	criuPath      string
 	m             sync.Mutex
+	criuVersion   int
 }
 
 // ID returns the container's unique ID
@@ -337,7 +339,9 @@ func (c *linuxContainer) checkCriuVersion(min_version string) error {
 		}
 	}
 
-	if x*10000+y*100+z < versionReq {
+	c.criuVersion = x*10000 + y*100 + z
+
+	if c.criuVersion < versionReq {
 		return fmt.Errorf("CRIU version must be %s or higher", min_version)
 	}
 
@@ -665,6 +669,8 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *
 	defer criuServer.Close()
 
 	args := []string{"swrk", "3"}
+	logrus.Debugf("Using CRIU %d at: %s", c.criuVersion, c.criuPath)
+	logrus.Debugf("Using CRIU with following args: %s", args)
 	cmd := exec.Command(c.criuPath, args...)
 	if process != nil {
 		cmd.Stdin = process.Stdin
@@ -701,6 +707,18 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *
 		}
 	}
 
+	logrus.Debugf("Using CRIU in %s mode", req.GetType().String())
+	val := reflect.ValueOf(req.GetOpts())
+	v := reflect.Indirect(val)
+	for i := 0; i < v.NumField(); i++ {
+		st := v.Type()
+		name := st.Field(i).Name
+		if strings.HasPrefix(name, "XXX_") {
+			continue
+		}
+		value := val.MethodByName("Get" + name).Call([]reflect.Value{})
+		logrus.Debugf("CRIU option %s with value %v", name, value[0])
+	}
 	data, err := proto.Marshal(req)
 	if err != nil {
 		return err
