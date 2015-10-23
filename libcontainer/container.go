@@ -50,8 +50,8 @@ type BaseState struct {
 //
 // Each container is thread-safe within the same process. Since a container can
 // be destroyed by a separate process, any function may return that the container
-// was not found.
-type Container interface {
+// was not found. BaseContainer includes methods that are platform agnostic.
+type BaseContainer interface {
 	// Returns the ID of the container
 	ID() string
 
@@ -88,7 +88,7 @@ type Container interface {
 	// Systemerror - System error.
 	Stats() (*Stats, error)
 
-	// Set cgroup resources of container as configured
+	// Set resources of container as configured
 	//
 	// We can use this to change resources when containers are running.
 	//
@@ -106,18 +106,6 @@ type Container interface {
 	// Systemerror - System error.
 	Start(process *Process) (err error)
 
-	// Checkpoint checkpoints the running container's state to disk using the criu(8) utility.
-	//
-	// errors:
-	// Systemerror - System error.
-	Checkpoint(criuOpts *CriuOpts) error
-
-	// Restore restores the checkpointed container to a running state using the criu(8) utiity.
-	//
-	// errors:
-	// Systemerror - System error.
-	Restore(process *Process, criuOpts *CriuOpts) error
-
 	// Destroys the container after killing all running processes.
 	//
 	// Any event registrations are removed before the container is destroyed.
@@ -126,31 +114,6 @@ type Container interface {
 	// errors:
 	// Systemerror - System error.
 	Destroy() error
-
-	// If the Container state is RUNNING or PAUSING, sets the Container state to PAUSING and pauses
-	// the execution of any user processes. Asynchronously, when the container finished being paused the
-	// state is changed to PAUSED.
-	// If the Container state is PAUSED, do nothing.
-	//
-	// errors:
-	// ContainerDestroyed - Container no longer exists,
-	// Systemerror - System error.
-	Pause() error
-
-	// If the Container state is PAUSED, resumes the execution of any user processes in the
-	// Container before setting the Container state to RUNNING.
-	// If the Container state is RUNNING, do nothing.
-	//
-	// errors:
-	// ContainerDestroyed - Container no longer exists,
-	// Systemerror - System error.
-	Resume() error
-
-	// NotifyOOM returns a read-only channel signaling when the container receives an OOM notification.
-	//
-	// errors:
-	// Systemerror - System error.
-	NotifyOOM() (<-chan struct{}, error)
 
 	// Signal sends the provided signal code to the container's initial process.
 	//
