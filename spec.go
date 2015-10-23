@@ -648,6 +648,17 @@ func setupSeccomp(config *specs.Seccomp) (*configs.Seccomp, error) {
 	newConfig := new(configs.Seccomp)
 	newConfig.Syscalls = []*configs.Syscall{}
 
+	if len(config.Architectures) > 0 {
+		newConfig.Architectures = []string{}
+		for _, arch := range config.Architectures {
+			newArch, err := seccomp.ConvertStringToArch(string(arch))
+			if err != nil {
+				return nil, err
+			}
+			newConfig.Architectures = append(newConfig.Architectures, newArch)
+		}
+	}
+
 	// Convert default action from string representation
 	newDefaultAction, err := seccomp.ConvertStringToAction(string(config.DefaultAction))
 	if err != nil {
