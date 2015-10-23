@@ -472,6 +472,55 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 	if err != nil {
 		return err
 	}
+
+	// checkpoint succeeds; update the state file
+	r, err := os.Open(filepath.Join(c.root, stateFilename))
+	if err != nil {
+		fmt.Println("Can not open state file")
+		return err
+	}
+	decoder := json.NewDecoder(r)
+	var old_state *State
+	if err := decoder.Decode(&old_state); err != nil {
+		return err
+	}
+	r.Close()
+
+	// Append new criu images
+	state, err := c.currentState()
+	for k, v := range old_state.CriuimagePaths {
+		state.CriuimagePaths[k] = v
+	}
+	state.CriuimagePaths[criuOpts.ImagesDirectory] = criuOpts.ImagesDirectory
+
+	f, err := os.Create(filepath.Join(c.root, stateFilename))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	json.NewEncoder(f).Encode(state)
+
+	return nil
+}
+
+func (c *linuxContainer) Listimages() error {
+	f, err := os.Open(filepath.Join(c.root, stateFilename))
+	defer f.Close()
+	if err != nil {
+		fmt.Println("Can not open state file")
+		return err
+	}
+
+	decoder := json.NewDecoder(f)
+	var state *State
+	if err := decoder.Decode(&state); err != nil {
+		return err
+	}
+
+	for _, v := range state.CriuimagePaths {
+		fmt.Println(v)
+	}
+
 	return nil
 }
 
@@ -924,6 +973,7 @@ func (c *linuxContainer) currentState() (*State, error) {
 		CgroupPaths:          c.cgroupManager.GetPaths(),
 		NamespacePaths:       make(map[configs.NamespaceType]string),
 		ExternalDescriptors:  c.initProcess.externalDescriptors(),
+		CriuimagePaths:       make(map[string]string),
 	}
 	for _, ns := range c.config.Namespaces {
 		state.NamespacePaths[ns.Type] = ns.GetPath(c.initProcess.pid())
