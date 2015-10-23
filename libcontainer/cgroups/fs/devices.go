@@ -30,6 +30,9 @@ func (s *DevicesGroup) Apply(d *data) error {
 }
 
 func (s *DevicesGroup) Set(path string, cgroup *configs.Cgroup) error {
+	if cgroup.IsHostUnprivileged {
+		return nil
+	}
 	if !cgroup.AllowAllDevices {
 		if err := writeFile(path, "devices.deny", "a"); err != nil {
 			return err

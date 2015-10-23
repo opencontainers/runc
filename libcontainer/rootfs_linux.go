@@ -370,7 +370,13 @@ func createDevices(config *configs.Config) error {
 	for _, node := range config.Devices {
 		// containers running in a user namespace are not allowed to mknod
 		// devices so we can just bind mount it from the host.
-		if err := createDeviceNode(config.Rootfs, node, config.Namespaces.Contains(configs.NEWUSER)); err != nil {
+		isHostUserns := config.IsHostUnprivileged
+
+		isContainerUserns := config.Namespaces.Contains(configs.NEWUSER)
+		if err := createDeviceNode(
+			config.Rootfs,
+			node,
+			isContainerUserns || isHostUserns); err != nil {
 			syscall.Umask(oldMask)
 			return err
 		}
