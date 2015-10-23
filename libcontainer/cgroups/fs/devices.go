@@ -10,6 +10,10 @@ import (
 type DevicesGroup struct {
 }
 
+func (s *DevicesGroup) Name() string {
+	return "devices"
+}
+
 func (s *DevicesGroup) Apply(d *data) error {
 	dir, err := d.join("devices")
 	if err != nil {

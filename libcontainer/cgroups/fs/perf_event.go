@@ -10,6 +10,10 @@ import (
 type PerfEventGroup struct {
 }
 
+func (s *PerfEventGroup) Name() string {
+	return "perf_event"
+}
+
 func (s *PerfEventGroup) Apply(d *data) error {
 	// we just want to join this group even though we don't set anything
 	if _, err := d.join("perf_event"); err != nil && !cgroups.IsNotFound(err) {

@@ -15,6 +15,10 @@ import (
 type CpuGroup struct {
 }
 
+func (s *CpuGroup) Name() string {
+	return "cpu"
+}
+
 func (s *CpuGroup) Apply(d *data) error {
 	// We always want to join the cpu group, to allow fair cpu scheduling
 	// on a container basis

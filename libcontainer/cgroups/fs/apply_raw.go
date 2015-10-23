@@ -3,6 +3,7 @@
 package fs
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -16,24 +17,39 @@ import (
 )
 
 var (
-	subsystems = map[string]subsystem{
-		"devices":    &DevicesGroup{},
-		"memory":     &MemoryGroup{},
-		"cpu":        &CpuGroup{},
-		"cpuset":     &CpusetGroup{},
-		"cpuacct":    &CpuacctGroup{},
-		"blkio":      &BlkioGroup{},
-		"hugetlb":    &HugetlbGroup{},
-		"net_cls":    &NetClsGroup{},
-		"net_prio":   &NetPrioGroup{},
-		"perf_event": &PerfEventGroup{},
-		"freezer":    &FreezerGroup{},
+	subsystems = subsystemSet{
+		&CpusetGroup{},
+		&DevicesGroup{},
+		&MemoryGroup{},
+		&CpuGroup{},
+		&CpuacctGroup{},
+		&BlkioGroup{},
+		&HugetlbGroup{},
+		&NetClsGroup{},
+		&NetPrioGroup{},
+		&PerfEventGroup{},
+		&FreezerGroup{},
 	}
 	CgroupProcesses  = "cgroup.procs"
 	HugePageSizes, _ = cgroups.GetHugePageSize()
 )
 
+var errSubsystemDoesNotExist = errors.New("cgroup: subsystem does not exist")
+
+type subsystemSet []subsystem
+
+func (s subsystemSet) Get(name string) (subsystem, error) {
+	for _, ss := range s {
+		if ss.Name() == name {
+			return ss, nil
+		}
+	}
+	return nil, errSubsystemDoesNotExist
+}
+
 type subsystem interface {
+	// Name returns the name of the subsystem.
+	Name() string
 	// Returns the stats, as 'stats', corresponding to the cgroup under 'path'.
 	GetStats(path string, stats *cgroups.Stats) error
 	// Removes the cgroup represented by 'data'.
@@ -101,21 +117,21 @@ func (m *Manager) Apply(pid int) (err error) {
 			cgroups.RemovePaths(paths)
 		}
 	}()
-	for name, sys := range subsystems {
+	for _, sys := range subsystems {
 		if err := sys.Apply(d); err != nil {
 			return err
 		}
 		// TODO: Apply should, ideally, be reentrant or be broken up into a separate
 		// create and join phase so that the cgroup hierarchy for a container can be
 		// created then join consists of writing the process pids to cgroup.procs
-		p, err := d.path(name)
+		p, err := d.path(sys.Name())
 		if err != nil {
 			if cgroups.IsNotFound(err) {
 				continue
 			}
 			return err
 		}
-		paths[name] = p
+		paths[sys.Name()] = p
 	}
 	m.Paths = paths
 
@@ -150,29 +166,27 @@ func (m *Manager) GetStats() (*cgroups.Stats, error) {
 	defer m.mu.Unlock()
 	stats := cgroups.NewStats()
 	for name, path := range m.Paths {
-		sys, ok := subsystems[name]
-		if !ok || !cgroups.PathExists(path) {
+		sys, err := subsystems.Get(name)
+		if err == errSubsystemDoesNotExist || !cgroups.PathExists(path) {
 			continue
 		}
 		if err := sys.GetStats(path, stats); err != nil {
 			return nil, err
 		}
 	}
-
 	return stats, nil
 }
 
 func (m *Manager) Set(container *configs.Config) error {
 	for name, path := range m.Paths {
-		sys, ok := subsystems[name]
-		if !ok || !cgroups.PathExists(path) {
+		sys, err := subsystems.Get(name)
+		if err == errSubsystemDoesNotExist || !cgroups.PathExists(path) {
 			continue
 		}
 		if err := sys.Set(path, container.Cgroups); err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 
@@ -183,22 +197,21 @@ func (m *Manager) Freeze(state configs.FreezerState) error {
 	if err != nil {
 		return err
 	}
-
 	dir, err := d.path("freezer")
 	if err != nil {
 		return err
 	}
-
 	prevState := m.Cgroups.Freezer
 	m.Cgroups.Freezer = state
-
-	freezer := subsystems["freezer"]
+	freezer, err := subsystems.Get("freezer")
+	if err != nil {
+		return err
+	}
 	err = freezer.Set(dir, m.Cgroups)
 	if err != nil {
 		m.Cgroups.Freezer = prevState
 		return err
 	}
-
 	return nil
 }
 

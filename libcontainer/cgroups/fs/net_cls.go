@@ -8,6 +8,10 @@ import (
 type NetClsGroup struct {
 }
 
+func (s *NetClsGroup) Name() string {
+	return "net_cls"
+}
+
 func (s *NetClsGroup) Apply(d *data) error {
 	dir, err := d.join("net_cls")
 	if err != nil && !cgroups.IsNotFound(err) {

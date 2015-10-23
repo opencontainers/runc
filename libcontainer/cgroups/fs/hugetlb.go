@@ -14,6 +14,10 @@ import (
 type HugetlbGroup struct {
 }
 
+func (s *HugetlbGroup) Name() string {
+	return "hugetlb"
+}
+
 func (s *HugetlbGroup) Apply(d *data) error {
 	dir, err := d.join("hugetlb")
 	if err != nil && !cgroups.IsNotFound(err) {

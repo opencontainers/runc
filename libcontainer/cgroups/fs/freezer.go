@@ -14,6 +14,10 @@ import (
 type FreezerGroup struct {
 }
 
+func (s *FreezerGroup) Name() string {
+	return "freezer"
+}
+
 func (s *FreezerGroup) Apply(d *data) error {
 	dir, err := d.join("freezer")
 	if err != nil && !cgroups.IsNotFound(err) {

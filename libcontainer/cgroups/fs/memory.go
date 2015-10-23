@@ -17,6 +17,10 @@ import (
 type MemoryGroup struct {
 }
 
+func (s *MemoryGroup) Name() string {
+	return "memory"
+}
+
 func (s *MemoryGroup) Apply(d *data) (err error) {
 	path, err := d.path("memory")
 	if err != nil {
