@@ -455,6 +455,14 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 			break
 		}
 	}
+	//Adding console as mountpoint for criu (for ttys only)
+	if _, err := os.Stat("/dev/console"); err == nil {
+		extMnt := &criurpc.ExtMountMap{
+			Key: proto.String("/dev/console"),
+			Val: proto.String("/dev/console"),
+		}
+		req.Opts.ExtMnt = append(req.Opts.ExtMnt, extMnt)
+	}
 
 	// Write the FD info to a file in the image directory
 
@@ -480,7 +488,6 @@ func (c *linuxContainer) addCriuRestoreMount(req *criurpc.CriuReq, m *configs.Mo
 	if strings.HasPrefix(mountDest, c.config.Rootfs) {
 		mountDest = mountDest[len(c.config.Rootfs):]
 	}
-
 	extMnt := &criurpc.ExtMountMap{
 		Key: proto.String(mountDest),
 		Val: proto.String(m.Source),
@@ -578,6 +585,15 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 			break
 		}
 	}
+	//Added for  tty
+	if _, err := os.Stat("/dev/console"); err == nil {
+		extMnt := &criurpc.ExtMountMap{
+			Key: proto.String("/dev/console"),
+			Val: proto.String("/dev/console"),
+		}
+		req.Opts.ExtMnt = append(req.Opts.ExtMnt, extMnt)
+	}
+
 	for _, iface := range c.config.Networks {
 		switch iface.Type {
 		case "veth":
@@ -620,6 +636,15 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 
 	for i := range fds {
 		if s := fds[i]; strings.Contains(s, "pipe:") {
+			inheritFd := new(criurpc.InheritFd)
+			inheritFd.Key = proto.String(s)
+			inheritFd.Fd = proto.Int32(int32(i))
+			req.Opts.InheritFd = append(req.Opts.InheritFd, inheritFd)
+		}
+	}
+	//Added for tty
+	for i := range fds {
+		if s := fds[i]; strings.Contains(s, "/") {
 			inheritFd := new(criurpc.InheritFd)
 			inheritFd.Key = proto.String(s)
 			inheritFd.Fd = proto.Int32(int32(i))
