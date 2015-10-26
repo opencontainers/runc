@@ -158,6 +158,8 @@ type Memory struct {
 	Swap uint64 `json:"swap"`
 	// Kernel memory limit (in bytes)
 	Kernel uint64 `json:"kernel"`
+	// Kernel memory limit for tcp (in bytes)
+	KernelTCP uint64 `json:"kernelTCP"`
 	// How aggressive the kernel will swap memory pages. Range from 0 to 100. Set -1 to use system default
 	Swappiness uint64 `json:"swappiness"`
 }
