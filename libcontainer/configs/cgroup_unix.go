@@ -35,6 +35,9 @@ type Cgroup struct {
 	// Kernel memory limit (in bytes)
 	KernelMemory int64 `json:"kernel_memory"`
 
+	// Kernel memory limit for TCP using (in bytes)
+	KernelMemoryTCP int64 `json:"kernel_memory_tcp"`
+
 	// CPU shares (relative weight vs. other containers)
 	CpuShares int64 `json:"cpu_shares"`
 
