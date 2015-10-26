@@ -130,6 +130,9 @@ container.Pause()
 
 // resume all paused processes.
 container.Resume()
+
+// set cgroup resources inside the running container.
+container.Set()
 ```
 
 
