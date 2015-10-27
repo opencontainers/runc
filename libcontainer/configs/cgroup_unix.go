@@ -56,6 +56,9 @@ type Cgroup struct {
 	// MEM to use
 	CpusetMems string `json:"cpuset_mems"`
 
+	// Max pids to use
+	PidsLimit int64 `json:"pids_limit"`
+
 	// Specifies per cgroup weight, range is from 10 to 1000.
 	BlkioWeight uint16 `json:"blkio_weight"`
 

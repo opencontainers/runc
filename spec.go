@@ -230,6 +230,9 @@ var specCommand = cli.Command{
 					Memory: specs.Memory{
 						Swappiness: -1,
 					},
+					Pids: specs.Pids{
+						Limit: -1,
+					},
 				},
 				Seccomp: specs.Seccomp{
 					DefaultAction: "SCMP_ACT_ALLOW",
@@ -456,6 +459,7 @@ func createCgroupConfig(name string, spec *specs.LinuxRuntimeSpec, devices []*co
 	c.CpuRtPeriod = r.CPU.RealtimePeriod
 	c.CpusetCpus = r.CPU.Cpus
 	c.CpusetMems = r.CPU.Mems
+	c.PidsLimit = r.Pids.Limit
 	c.BlkioWeight = r.BlockIO.Weight
 	c.BlkioLeafWeight = r.BlockIO.LeafWeight
 	for _, wd := range r.BlockIO.WeightDevice {

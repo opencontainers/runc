@@ -255,7 +255,7 @@ user with uid and gid of `0` defined within that file-system.
 				"mems": ""
 			},
 			"pids": {
-				"limit": 0
+				"limit": -1
 			},
 			"blockIO": {
 				"blkioWeight": 0,
