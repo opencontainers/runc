@@ -26,14 +26,9 @@ var specCommand = cli.Command{
 	Usage: "create a new specification file",
 	Flags: []cli.Flag{
 		cli.StringFlag{
-			Name:  "config-file, c",
-			Value: "config.json",
-			Usage: "path to spec config file for writing",
-		},
-		cli.StringFlag{
-			Name:  "runtime-file, r",
-			Value: "runtime.json",
-			Usage: "path to runtime config file for writing",
+			Name:  "bundle, b",
+			Value: "",
+			Usage: "path to the root of the bundle directory",
 		},
 	},
 	Action: func(context *cli.Context) {
@@ -247,26 +242,30 @@ var specCommand = cli.Command{
 			}
 			return nil
 		}
-		cName := context.String("config-file")
-		rName := context.String("runtime-file")
-		if err := checkNoFile(cName); err != nil {
+		bundle := context.String("bundle")
+		if bundle != "" {
+			if err := os.Chdir(bundle); err != nil {
+				fatal(err)
+			}
+		}
+		if err := checkNoFile(specConfig); err != nil {
 			logrus.Fatal(err)
 		}
-		if err := checkNoFile(rName); err != nil {
+		if err := checkNoFile(runtimeConfig); err != nil {
 			logrus.Fatal(err)
 		}
 		data, err := json.MarshalIndent(&spec, "", "\t")
 		if err != nil {
 			logrus.Fatal(err)
 		}
-		if err := ioutil.WriteFile(cName, data, 0666); err != nil {
+		if err := ioutil.WriteFile(specConfig, data, 0666); err != nil {
 			logrus.Fatal(err)
 		}
 		rdata, err := json.MarshalIndent(&rspec, "", "\t")
 		if err != nil {
 			logrus.Fatal(err)
 		}
-		if err := ioutil.WriteFile(rName, rdata, 0666); err != nil {
+		if err := ioutil.WriteFile(runtimeConfig, rdata, 0666); err != nil {
 			logrus.Fatal(err)
 		}
 	},
@@ -297,7 +296,7 @@ func loadSpec(cPath, rPath string) (spec *specs.LinuxSpec, rspec *specs.LinuxRun
 	cf, err := os.Open(cPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, nil, fmt.Errorf("JSON specification file at %s not found", cPath)
+			return nil, nil, fmt.Errorf("JSON specification file %s not found", cPath)
 		}
 		return spec, rspec, err
 	}
@@ -306,7 +305,7 @@ func loadSpec(cPath, rPath string) (spec *specs.LinuxSpec, rspec *specs.LinuxRun
 	rf, err := os.Open(rPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, nil, fmt.Errorf("JSON runtime config file at %s not found", rPath)
+			return nil, nil, fmt.Errorf("JSON runtime config file %s not found", rPath)
 		}
 		return spec, rspec, err
 	}

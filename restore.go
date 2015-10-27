@@ -50,14 +50,9 @@ var restoreCommand = cli.Command{
 			Usage: "cgroups mode: 'soft' (default), 'full' and 'strict'.",
 		},
 		cli.StringFlag{
-			Name:  "config-file, c",
-			Value: "config.json",
-			Usage: "path to spec file for writing",
-		},
-		cli.StringFlag{
-			Name:  "runtime-file, r",
-			Value: "runtime.json",
-			Usage: "path for runtime file for writing",
+			Name:  "bundle, b",
+			Value: "",
+			Usage: "path to the root of the bundle directory",
 		},
 	},
 	Action: func(context *cli.Context) {
@@ -65,7 +60,13 @@ var restoreCommand = cli.Command{
 		if imagePath == "" {
 			imagePath = getDefaultImagePath(context)
 		}
-		spec, rspec, err := loadSpec(context.String("config-file"), context.String("runtime-file"))
+		bundle := context.String("bundle")
+		if bundle != "" {
+			if err := os.Chdir(bundle); err != nil {
+				fatal(err)
+			}
+		}
+		spec, rspec, err := loadSpec(specConfig, runtimeConfig)
 		if err != nil {
 			fatal(err)
 		}

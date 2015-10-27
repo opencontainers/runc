@@ -9,9 +9,11 @@ import (
 )
 
 const (
-	version = "0.3"
-	usage   = `Open Container Initiative runtime
-
+	version       = "0.3"
+	specConfig    = "config.json"
+	runtimeConfig = "runtime.json"
+	usage         = `Open Container Initiative runtime
+	
 runc is a command line client for running applications packaged according to
 the Open Container Format (OCF) and is a compliant implementation of the
 Open Container Initiative specification.
@@ -21,14 +23,14 @@ container runtime environment for applications. It can be used with your
 existing process monitoring tools and the container will be spawned as a
 direct child of the process supervisor.
 
-After creating config files for your root filesystem with runc, you can execute a
-container in your shell by running:
+After creating config files for your root filesystem with runc, you can execute 
+a container in your shell by running:
 
     # cd /mycontainer
-    # runc start [ -c spec-config-file ] [ -r runtime-config-file ]
+    # runc start [ -b bundle ] 
 
-If not specified, the default value for the 'spec-config-file' is 'config.json',
-and the default value for the 'runtime-config-file' is 'runtime.json'.`
+If not specified, the default value for the 'bundle' is the current directory.
+'Bundle' is the directory where '` + specConfig + `' and '` + runtimeConfig + `' must be located.`
 )
 
 func main() {
