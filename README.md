@@ -83,7 +83,7 @@ user with uid and gid of `0` defined within that file-system.
 `config.json`:
 ```json
 {
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"platform": {
 		"os": "linux",
 		"arch": "amd64"
@@ -259,11 +259,11 @@ user with uid and gid of `0` defined within that file-system.
 			},
 			"blockIO": {
 				"blkioWeight": 0,
-				"blkioWeightDevice": "",
-				"blkioThrottleReadBpsDevice": "",
-				"blkioThrottleWriteBpsDevice": "",
-				"blkioThrottleReadIopsDevice": "",
-				"blkioThrottleWriteIopsDevice": ""
+				"blkioWeightDevice": null,
+				"blkioThrottleReadBpsDevice": null,
+				"blkioThrottleWriteBpsDevice": null,
+				"blkioThrottleReadIopsDevice": null,
+				"blkioThrottleWriteIopsDevice": null
 			},
 			"hugepageLimits": null,
 			"network": {
