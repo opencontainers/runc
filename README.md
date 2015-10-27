@@ -76,14 +76,18 @@ PID   USER     COMMAND
 
 ### OCI Container JSON Format:
 
-Below are sample `config.json` and `runtime.json` configuration files. It assumes that
-the file-system is found in a directory called `rootfs` and there is a
-user with uid and gid of `0` defined within that file-system.
+OCI container JSON format is based on OCI [specs](https://github.com/opencontainers/specs).
+You can generate JSON files by using `runc spec`, it'll generate `config.json`
+and `runtime.json`. It assumes that the file-system is found in a directory called
+`rootfs` and there is a user with uid and gid of `0` defined within that file-system.
+
+Below are sample `config.json` and `runtime.json` configuration files. Note that it
+could be outdated, please always create base JSON files by `runc spec`.
 
 `config.json`:
 ```json
 {
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"platform": {
 		"os": "linux",
 		"arch": "amd64"
@@ -153,10 +157,16 @@ user with uid and gid of `0` defined within that file-system.
 ```json
 {
 	"mounts": {
-		"proc": {
-			"type": "proc",
-			"source": "proc",
-			"options": null
+		"cgroup": {
+			"type": "cgroup",
+			"source": "cgroup",
+			"options": [
+				"nosuid",
+				"noexec",
+				"nodev",
+				"relatime",
+				"ro"
+			]
 		},
 		"dev": {
 			"type": "tmpfs",
@@ -180,6 +190,20 @@ user with uid and gid of `0` defined within that file-system.
 				"gid=5"
 			]
 		},
+		"mqueue": {
+			"type": "mqueue",
+			"source": "mqueue",
+			"options": [
+				"nosuid",
+				"noexec",
+				"nodev"
+			]
+		},
+		"proc": {
+			"type": "proc",
+			"source": "proc",
+			"options": null
+		},
 		"shm": {
 			"type": "tmpfs",
 			"source": "shm",
@@ -191,15 +215,6 @@ user with uid and gid of `0` defined within that file-system.
 				"size=65536k"
 			]
 		},
-		"mqueue": {
-			"type": "mqueue",
-			"source": "mqueue",
-			"options": [
-				"nosuid",
-				"noexec",
-				"nodev"
-			]
-		},
 		"sysfs": {
 			"type": "sysfs",
 			"source": "sysfs",
@@ -208,21 +223,11 @@ user with uid and gid of `0` defined within that file-system.
 				"noexec",
 				"nodev"
 			]
-		},
-		"cgroup": {
-			"type": "cgroup",
-			"source": "cgroup",
-			"options": [
-				"nosuid",
-				"noexec",
-				"nodev",
-				"relatime",
-				"ro"
-			]
 		}
 	},
 	"hooks": {
 		"prestart": null,
+		"poststart": null,
 		"poststop": null
 	},
 	"linux": {
@@ -259,11 +264,12 @@ user with uid and gid of `0` defined within that file-system.
 			},
 			"blockIO": {
 				"blkioWeight": 0,
-				"blkioWeightDevice": "",
-				"blkioThrottleReadBpsDevice": "",
-				"blkioThrottleWriteBpsDevice": "",
-				"blkioThrottleReadIopsDevice": "",
-				"blkioThrottleWriteIopsDevice": ""
+				"blkioLeafWeight": 0,
+				"blkioWeightDevice": null,
+				"blkioThrottleReadBpsDevice": null,
+				"blkioThrottleWriteBpsDevice": null,
+				"blkioThrottleReadIOPSDevice": null,
+				"blkioThrottleWriteIOPSDevice": null
 			},
 			"hugepageLimits": null,
 			"network": {
@@ -360,6 +366,7 @@ user with uid and gid of `0` defined within that file-system.
 		"selinuxProcessLabel": "",
 		"seccomp": {
 			"defaultAction": "SCMP_ACT_ALLOW",
+			"architectures": null,
 			"syscalls": []
 		},
 		"rootfsPropagation": ""
@@ -380,8 +387,7 @@ To test using Docker's `busybox` image follow these steps:
 mkdir rootfs
 tar -C rootfs -xf busybox.tar
 ```
-* Create `config.json` and `runtime.json` using the example from above.  You can also
-generate a spec using `runc spec`, which will create those files for you.
+* Create `config.json` and `runtime.json` by using `runc spec`.
 * Execute `runc start` and you should be placed into a shell where you can run `ps`:
 ```
 $ runc start
