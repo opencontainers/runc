@@ -182,7 +182,7 @@ type CPU struct {
 
 // Pids for Linux cgroup 'pids' resource management (Linux 4.3)
 type Pids struct {
-	// Maximum number of PIDs. A value < 0 implies "no limit".
+	// Maximum number of PIDs. A value <= 0 indicates "no limit".
 	Limit int64 `json:"limit"`
 }
 
