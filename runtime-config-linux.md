@@ -180,7 +180,11 @@ For more information, see [the memory cgroup man page](https://www.kernel.org/do
 
 #### Set oom_score_adj
 
-More information on `oom_score_adj` available [here](https://www.kernel.org/doc/Documentation/filesystems/proc.txt).
+oom_score_adj works with disableOOMKiller. If out-of-memory killer enabled("disableOOMKiller": false), oom_score_adj can be set to adjust the oom-killer score, the value of oom_score_adj is added to the badness score before it is used to determine which task to kill. If out-of-memory killer disabled("disableOOMKiller": true), the value of oom_score_adj is useless and will be omitted. For more information, see [the proc filesystem man page](https://www.kernel.org/doc/Documentation/filesystems/proc.txt).
+
+* **`oomScoreAdj`** *(int, optional)* - adjust the oom-killer score
+
+###### Example
 
 ```json
     "oomScoreAdj": 0
