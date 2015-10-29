@@ -300,10 +300,29 @@ func createContainer(context *cli.Context, id string, spec *specs.Spec) (libcont
 	if err != nil {
 		return nil, err
 	}
-	return factory.Create(id, config)
+	container, err := factory.Create(id, config)
+	if err != nil {
+		return nil, err
+	}
+
+	proc, err := newProcess(spec.Process)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := container.Create(proc); err != nil {
+		return nil, err
+	}
+	return container, nil
 }
 
-// runProcess will create a new process in the specified container
+func deleteContainer(container libcontainer.Container) {
+	if err := container.Destroy(); err != nil {
+		logrus.Error(err)
+	}
+}
+
+// runProcess will create a new process (PID ns) in the specified container
 // by executing the process specified in the 'config'.
 func runProcess(container libcontainer.Container, config *specs.Process, listenFDs []*os.File, console string, pidFile string, detach bool) (int, error) {
 	process, err := newProcess(*config)

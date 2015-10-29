@@ -16,13 +16,13 @@ import (
 	"github.com/opencontainers/runc/libcontainer/system"
 )
 
-type linuxStandardInit struct {
+type linuxCreateInit struct {
 	pipe      io.ReadWriter
 	parentPid int
 	config    *initConfig
 }
 
-func (l *linuxStandardInit) getSessionRingParams() (string, uint32, uint32) {
+func (l *linuxCreateInit) getSessionRingParams() (string, uint32, uint32) {
 	var newperms uint32
 
 	if l.config.Config.Namespaces.Contains(configs.NEWUSER) {
@@ -38,11 +38,7 @@ func (l *linuxStandardInit) getSessionRingParams() (string, uint32, uint32) {
 	return fmt.Sprintf("_ses.%s", l.config.ContainerId), 0xffffffff, newperms
 }
 
-// PR_SET_NO_NEW_PRIVS isn't exposed in Golang so we define it ourselves copying the value
-// the kernel
-const PR_SET_NO_NEW_PRIVS = 0x26
-
-func (l *linuxStandardInit) Init() error {
+func (l *linuxCreateInit) Init() error {
 	ringname, keepperms, newperms := l.getSessionRingParams()
 
 	// do not inherit the parent's session keyring
@@ -147,5 +143,6 @@ func (l *linuxStandardInit) Init() error {
 		return syscall.Kill(syscall.Getpid(), syscall.SIGKILL)
 	}
 
-	return system.Execv(l.config.Args[0], l.config.Args[0:], os.Environ())
+	os.Exit(0)
+	return nil
 }

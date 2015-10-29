@@ -22,11 +22,13 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
+// initType is the reason we're being called - the action should we take
 type initType string
 
 const (
-	initSetns    initType = "setns"
-	initStandard initType = "standard"
+	initCreate   initType = "create"   // Just setting up the namespaces
+	initSetns    initType = "setns"    // Joining and existing container
+	initStandard initType = "standard" // Starting the main proces
 )
 
 type pid struct {
@@ -73,6 +75,12 @@ func newContainerInit(t initType, pipe *os.File) (initer, error) {
 		return nil, err
 	}
 	switch t {
+	case initCreate:
+		return &linuxCreateInit{
+			pipe:      pipe,
+			parentPid: syscall.Getppid(),
+			config:    config,
+		}, nil
 	case initSetns:
 		return &linuxSetnsInit{
 			config: config,

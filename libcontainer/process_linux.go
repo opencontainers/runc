@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -256,6 +257,42 @@ func (p *initProcess) start() error {
 	if err := p.createNetworkInterfaces(); err != nil {
 		return newSystemError(err)
 	}
+
+	nss := make(map[configs.NamespaceType]string)
+	for _, ns := range p.container.config.Namespaces {
+		nss[ns.Type] = ns.GetPath(p.pid())
+	}
+	for _, nsType := range configs.NamespaceTypes() {
+		if _, ok := nss[nsType]; !ok {
+			ns := configs.Namespace{Type: nsType}
+			nss[ns.Type] = ns.GetPath(p.pid())
+		}
+	}
+	for key, val := range nss {
+		src := val
+		tgt := p.container.root + "/" + string(key)
+
+		if _, err := os.Stat(tgt); err == nil {
+			// skip if already there
+			continue
+		}
+
+		err = os.MkdirAll(p.container.root, 0700)
+		if err != nil {
+			return newSystemError(fmt.Errorf("Mkdir Err: %v\n", err))
+		}
+
+		err = ioutil.WriteFile(tgt, nil, 0700)
+		if err != nil {
+			return newSystemError(fmt.Errorf("Touch Err: %v\n", err))
+		}
+
+		err = syscall.Mount(src, tgt, "", syscall.MS_BIND|syscall.MS_REC, "")
+		if err != nil {
+			return newSystemError(fmt.Errorf("Mount Err(%s): %v\n", src, err))
+		}
+	}
+
 	if err := p.sendConfig(); err != nil {
 		return newSystemError(err)
 	}
@@ -357,6 +394,12 @@ loop:
 }
 
 func (p *initProcess) wait() (*os.ProcessState, error) {
+	defer func() {
+		p.container.state.transition(&stoppedState{
+			c: p.container,
+		})
+	}()
+
 	err := p.cmd.Wait()
 	if err != nil {
 		return p.cmd.ProcessState, err

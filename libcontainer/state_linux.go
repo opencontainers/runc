@@ -69,13 +69,13 @@ func runPoststopHooks(c *linuxContainer) error {
 	return nil
 }
 
-// stoppedState represents a container is a stopped/destroyed state.
+// stoppedState represents a container is a created/stopped/destroyed state.
 type stoppedState struct {
 	c *linuxContainer
 }
 
 func (b *stoppedState) status() Status {
-	return Destroyed
+	return Created
 }
 
 func (b *stoppedState) transition(s containerState) error {
