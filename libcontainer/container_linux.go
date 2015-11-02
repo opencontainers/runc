@@ -36,6 +36,24 @@ type linuxContainer struct {
 	criuVersion   int
 }
 
+// State represents a running container's state
+type State struct {
+	BaseState
+
+	// Platform specific fields below here
+
+	// Path to all the cgroups setup for a container. Key is cgroup subsystem name
+	// with the value as the path.
+	CgroupPaths map[string]string `json:"cgroup_paths"`
+
+	// NamespacePaths are filepaths to the container's namespaces. Key is the namespace type
+	// with the value as the path.
+	NamespacePaths map[configs.NamespaceType]string `json:"namespace_paths"`
+
+	// Container's standard descriptors (std{in,out,err}), needed for checkpoint and restore
+	ExternalDescriptors []string `json:"external_descriptors,omitempty"`
+}
+
 // ID returns the container's unique ID
 func (c *linuxContainer) ID() string {
 	return c.id
@@ -917,13 +935,15 @@ func (c *linuxContainer) currentState() (*State, error) {
 		return nil, newSystemError(err)
 	}
 	state := &State{
-		ID:                   c.ID(),
-		Config:               *c.config,
-		InitProcessPid:       c.initProcess.pid(),
-		InitProcessStartTime: startTime,
-		CgroupPaths:          c.cgroupManager.GetPaths(),
-		NamespacePaths:       make(map[configs.NamespaceType]string),
-		ExternalDescriptors:  c.initProcess.externalDescriptors(),
+		BaseState: BaseState{
+			ID:                   c.ID(),
+			Config:               *c.config,
+			InitProcessPid:       c.initProcess.pid(),
+			InitProcessStartTime: startTime,
+		},
+		CgroupPaths:         c.cgroupManager.GetPaths(),
+		NamespacePaths:      make(map[configs.NamespaceType]string),
+		ExternalDescriptors: c.initProcess.externalDescriptors(),
 	}
 	for _, ns := range c.config.Namespaces {
 		state.NamespacePaths[ns.Type] = ns.GetPath(c.initProcess.pid())
