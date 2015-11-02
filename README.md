@@ -393,6 +393,10 @@ PID   USER     COMMAND
 
 #### Using runc with systemd
 
+To use runc with systemd, you can create a unit file
+`/usr/lib/systemd/system/minecraft.service` as below (edit your
+own Description or WorkingDirectory or service name as you need).
+
 ```service
 [Unit]
 Description=Minecraft Build Server
@@ -402,10 +406,23 @@ After=network.target
 [Service]
 CPUQuota=200%
 MemoryLimit=1536M
-ExecStart=/usr/local/bin/runc
+ExecStart=/usr/local/bin/runc start
 Restart=on-failure
 WorkingDirectory=/containers/minecraftbuild
 
 [Install]
 WantedBy=multi-user.target
 ```
+
+Make sure you have the bundle's root directory and JSON configs in
+your WorkingDirectory, then use systemd commands to start the service:
+
+```bash
+systemctl daemon-reload
+systemctl start minecraft.service
+```
+
+Note that if you use JSON configs by `runc spec`, you need to modify
+`config.json` and change `process.terminal` to false so runc won't
+create tty, because we can't set terminal from the stdin when using
+systemd service.
