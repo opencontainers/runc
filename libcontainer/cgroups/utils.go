@@ -70,13 +70,24 @@ func FindCgroupMountpointAndRoot(subsystem string) (string, string, error) {
 	return "", "", NewNotFoundError(subsystem)
 }
 
-func FindCgroupMountpointDir() (string, error) {
+func FindCgroupMountpointDirs() (map[string]string, error) {
 	f, err := os.Open("/proc/self/mountinfo")
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer f.Close()
 
+	all, err := GetAllSubsystems()
+	if err != nil {
+		return nil, err
+	}
+
+	allMap := make(map[string]bool, len(all))
+	for _, s := range all {
+		allMap[s] = true
+	}
+
+	dirs := make(map[string]string, len(all))
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		text := scanner.Text()
@@ -85,17 +96,24 @@ func FindCgroupMountpointDir() (string, error) {
 		index := strings.Index(text, " - ")
 		postSeparatorFields := strings.Fields(text[index+3:])
 		if len(postSeparatorFields) < 3 {
-			return "", fmt.Errorf("Error found less than 3 fields post '-' in %q", text)
+			return nil, fmt.Errorf("Error found less than 3 fields post '-' in %q", text)
 		}
 		if postSeparatorFields[0] == "cgroup" {
-			return filepath.Dir(fields[4]), nil
+			for _, opt := range strings.Split(postSeparatorFields[2], ",") {
+				// Cache the first seen entry, to be consistent with FindCgroupMountpointAndRoot
+				if _, ok := allMap[opt]; ok {
+					if _, ok := dirs[opt]; !ok {
+						dirs[opt] = filepath.Dir(fields[4])
+					}
+				}
+			}
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return "", NewNotFoundError("cgroup")
+	return dirs, nil
 }
 
 type Mount struct {
