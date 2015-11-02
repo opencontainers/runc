@@ -3,9 +3,12 @@
 package fs
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -64,6 +67,33 @@ func getCgroupParamUint(cgroupPath, cgroupFile string) (uint64, error) {
 	res, err := parseUint(strings.TrimSpace(string(contents)), 10, 64)
 	if err != nil {
 		return res, fmt.Errorf("unable to parse %q as a uint from Cgroup file %q", string(contents), fileName)
+	}
+	return res, nil
+}
+
+// Gets an array of uint64 values from the specified cgroup file.
+func getCgroupParamUintArray(cgroupPath, cgroupFile string) ([]uint64, error) {
+
+	var res []uint64
+
+	fileName := filepath.Join(cgroupPath, cgroupFile)
+	file, err := os.Open(fileName)
+	if err != nil {
+		return res, err
+	}
+	defer file.Close()
+
+	reader := bufio.NewReader(file)
+	for {
+		line, _, err := reader.ReadLine()
+		if err == io.EOF {
+			break
+		}
+		item, err := parseUint(strings.TrimSpace(string(line)), 10, 64)
+		if err != nil {
+			return res, fmt.Errorf("unable to parse %q as a uint from Cgroup file %q", string(line), fileName)
+		}
+		res = append(res, item)
 	}
 	return res, nil
 }

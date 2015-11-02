@@ -77,12 +77,21 @@ type HugetlbStats struct {
 	Failcnt uint64 `json:"failcnt"`
 }
 
+type PidsStats struct {
+	// current pids in cgroup; the set of processes can change at any time
+	Current []uint64 `json:"current,omitempty"`
+
+	// maximum number of processes allowed in this cgroup (fork limit)
+	Max int `json:"max,omitempty"`
+}
+
 type Stats struct {
 	CpuStats    CpuStats    `json:"cpu_stats,omitempty"`
 	MemoryStats MemoryStats `json:"memory_stats,omitempty"`
 	BlkioStats  BlkioStats  `json:"blkio_stats,omitempty"`
 	// the map is in the format "size of hugepage: stats of the hugepage"
 	HugetlbStats map[string]HugetlbStats `json:"hugetlb_stats,omitempty"`
+	PidsStats    PidsStats               `json:"pids_stats,omitempty"`
 }
 
 func NewStats() *Stats {
