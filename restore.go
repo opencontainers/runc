@@ -24,6 +24,11 @@ var restoreCommand = cli.Command{
 			Usage: "path to criu image files for restoring",
 		},
 		cli.StringFlag{
+			Name:  "parent-path",
+			Value: "",
+			Usage: "path to parent image, relative to image-path",
+		},
+		cli.StringFlag{
 			Name:  "work-path",
 			Value: "",
 			Usage: "path for saving work files and logs",
@@ -37,10 +42,6 @@ var restoreCommand = cli.Command{
 			Usage: "allow external unix sockets",
 		},
 		cli.BoolFlag{
-			Name:  "shell-job",
-			Usage: "allow shell jobs",
-		},
-		cli.BoolFlag{
 			Name:  "file-locks",
 			Usage: "handle file locks, for safety",
 		},
@@ -48,6 +49,15 @@ var restoreCommand = cli.Command{
 			Name:  "manage-cgroups-mode",
 			Value: "",
 			Usage: "cgroups mode: 'soft' (default), 'full' and 'strict'.",
+		},
+		cli.IntFlag{
+			Name: "log-level",
+			Value: 4,
+			Usage: "set criu log level (1-4, least to most verbose)",
+		},
+		cli.BoolFlag{
+			Name: "auto-dedup",
+			Usage: "reduce space required for restore",
 		},
 		cli.StringFlag{
 			Name:  "config-file, c",
@@ -160,10 +170,14 @@ func criuOptions(context *cli.Context) *libcontainer.CriuOpts {
 	return &libcontainer.CriuOpts{
 		ImagesDirectory:         imagePath,
 		WorkDirectory:           context.String("work-path"),
+		ParentImagesDirectory:   context.String("parent-image-path"),
+		LogLevel:                context.Int("log-level"),
+		AutoDedup:               context.Bool("auto-dedup"),
+		TrackMemory:             context.Bool("track-mem"),
 		LeaveRunning:            context.Bool("leave-running"),
 		TcpEstablished:          context.Bool("tcp-established"),
 		ExternalUnixConnections: context.Bool("ext-unix-sk"),
-		ShellJob:                context.Bool("shell-job"),
 		FileLocks:               context.Bool("file-locks"),
+		ShellJob:                false,
 	}
 }

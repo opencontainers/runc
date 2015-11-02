@@ -22,12 +22,16 @@ type VethPairName struct {
 
 type CriuOpts struct {
 	ImagesDirectory         string             // directory for storing image files
+	ParentImagesDirectory   string             // path to images from previous dump (relative to ImagesDirectory)
 	WorkDirectory           string             // directory to cd and write logs/pidfiles/stats to
+	LogLevel                int                // logging level (1 to 4, from least to most verbose)
 	LeaveRunning            bool               // leave container in running state after checkpoint
 	TcpEstablished          bool               // checkpoint/restore established TCP connections
 	ExternalUnixConnections bool               // allow external unix connections
 	ShellJob                bool               // allow to dump and restore shell jobs
 	FileLocks               bool               // handle file locks, for safety
+	TrackMemory             bool               // turn on memory changes tracker in the kernel
+	AutoDedup               bool               // dump: dedupes data in previous dumps, restore: punch data from image as restored
 	PageServer              CriuPageServerInfo // allow to dump to criu page server
 	VethPairs               []VethPairName     // pass the veth to criu when restore
 	ManageCgroupsMode       cg_mode            // dump or restore cgroup mode

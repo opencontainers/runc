@@ -401,10 +401,19 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 	}
 	defer imageDir.Close()
 
+	if criuOpts.LogLevel == 0 {
+		criuOpts.LogLevel = 4
+	}
+
+	var parentImg *string
+	if criuOpts.ParentImagesDirectory != "" {
+		parentImg = proto.String(criuOpts.ParentImagesDirectory)
+	}
+
 	rpcOpts := criurpc.CriuOpts{
 		ImagesDirFd:    proto.Int32(int32(imageDir.Fd())),
 		WorkDirFd:      proto.Int32(int32(workDir.Fd())),
-		LogLevel:       proto.Int32(4),
+		LogLevel:       proto.Int32(int32(criuOpts.LogLevel)),
 		LogFile:        proto.String("dump.log"),
 		Root:           proto.String(c.config.Rootfs),
 		ManageCgroups:  proto.Bool(true),
@@ -415,6 +424,9 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 		TcpEstablished: proto.Bool(criuOpts.TcpEstablished),
 		ExtUnixSk:      proto.Bool(criuOpts.ExternalUnixConnections),
 		FileLocks:      proto.Bool(criuOpts.FileLocks),
+		AutoDedup:      proto.Bool(criuOpts.AutoDedup),
+		TrackMem:       proto.Bool(criuOpts.TrackMemory),
+		ParentImg:      parentImg,
 	}
 
 	// append optional criu opts, e.g., page-server and port
@@ -520,6 +532,15 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 	}
 	defer imageDir.Close()
 
+	if criuOpts.LogLevel == 0 {
+		criuOpts.LogLevel = 4
+	}
+
+	var parentImg *string
+	if criuOpts.ParentImagesDirectory != "" {
+		parentImg = proto.String(criuOpts.ParentImagesDirectory)
+	}
+
 	// CRIU has a few requirements for a root directory:
 	// * it must be a mount point
 	// * its parent must not be overmounted
@@ -549,7 +570,7 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 			ImagesDirFd:    proto.Int32(int32(imageDir.Fd())),
 			WorkDirFd:      proto.Int32(int32(workDir.Fd())),
 			EvasiveDevices: proto.Bool(true),
-			LogLevel:       proto.Int32(4),
+			LogLevel:       proto.Int32(int32(criuOpts.LogLevel)),
 			LogFile:        proto.String("restore.log"),
 			RstSibling:     proto.Bool(true),
 			Root:           proto.String(root),
@@ -559,6 +580,8 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 			ExtUnixSk:      proto.Bool(criuOpts.ExternalUnixConnections),
 			TcpEstablished: proto.Bool(criuOpts.TcpEstablished),
 			FileLocks:      proto.Bool(criuOpts.FileLocks),
+			AutoDedup:      proto.Bool(criuOpts.AutoDedup),
+			ParentImg:      parentImg,
 		},
 	}
 
