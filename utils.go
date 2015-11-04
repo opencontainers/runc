@@ -136,17 +136,6 @@ func fatal(err error) {
 	os.Exit(1)
 }
 
-// getDefaultID returns a string to be used as the container id based on the
-// current working directory of the runc process.  This function panics
-// if the cwd is unable to be found based on a system error.
-func getDefaultID() string {
-	cwd, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
-	return filepath.Base(cwd)
-}
-
 // generateID returns a random string to be used as the container id.
 func generateID() string {
 	return stringid.GenerateRandomID()

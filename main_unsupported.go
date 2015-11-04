@@ -7,10 +7,6 @@ import (
 	"github.com/codegangsta/cli"
 )
 
-func getDefaultID() string {
-	return ""
-}
-
 func generateID() string {
 	return ""
 }
