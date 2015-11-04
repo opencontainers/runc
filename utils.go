@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/codegangsta/cli"
+	"github.com/docker/docker/pkg/stringid"
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/specs"
@@ -144,6 +145,11 @@ func getDefaultID() string {
 		panic(err)
 	}
 	return filepath.Base(cwd)
+}
+
+// generateID returns a random string to be used as the container id.
+func generateID() string {
+	return stringid.GenerateRandomID()
 }
 
 func getDefaultImagePath(context *cli.Context) string {

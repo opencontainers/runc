@@ -11,6 +11,10 @@ func getDefaultID() string {
 	return ""
 }
 
+func generateID() string {
+	return ""
+}
+
 var (
 	checkpointCommand cli.Command
 	eventsCommand     cli.Command
