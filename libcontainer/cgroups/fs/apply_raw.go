@@ -246,10 +246,15 @@ func getCgroupData(c *configs.Cgroup, pid int) (*cgroupData, error) {
 }
 
 func (raw *cgroupData) parentPath(subsystem, mountpoint, root string) (string, error) {
+	// Use GetThisCgroupDir instead of GetInitCgroupDir, because the creating
+	// process could in container and shared pid namespace with host, and
+	// /proc/1/cgroup could point to whole other world of cgroups.
 	initPath, err := cgroups.GetThisCgroupDir(subsystem)
 	if err != nil {
 		return "", err
 	}
+	// This is needed for nested containers, because in /proc/self/cgroup we
+	// see pathes from host, which don't exist in container.
 	relDir, err := filepath.Rel(root, initPath)
 	if err != nil {
 		return "", err
@@ -267,6 +272,7 @@ func (raw *cgroupData) path(subsystem string) (string, error) {
 	cgPath := filepath.Join(raw.parent, raw.name)
 	// If the cgroup name/path is absolute do not look relative to the cgroup of the init process.
 	if filepath.IsAbs(cgPath) {
+		// Sometimes subsystems can be mounted togethger as 'cpu,cpuacct'.
 		return filepath.Join(raw.root, filepath.Base(mnt), cgPath), nil
 	}
 
