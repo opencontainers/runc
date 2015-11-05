@@ -26,14 +26,14 @@ func (s *MemoryGroup) Apply(d *cgroupData) (err error) {
 	if err != nil && !cgroups.IsNotFound(err) {
 		return err
 	}
-	if memoryAssigned(d.c) {
+	if memoryAssigned(d.config) {
 		if path != "" {
 			if err := os.MkdirAll(path, 0755); err != nil {
 				return err
 			}
 		}
 
-		if err := s.Set(path, d.c); err != nil {
+		if err := s.Set(path, d.config); err != nil {
 			return err
 		}
 	}

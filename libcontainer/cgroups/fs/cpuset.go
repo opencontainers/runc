@@ -25,7 +25,7 @@ func (s *CpusetGroup) Apply(d *cgroupData) error {
 	if err != nil && !cgroups.IsNotFound(err) {
 		return err
 	}
-	return s.ApplyDir(dir, d.c, d.pid)
+	return s.ApplyDir(dir, d.config, d.pid)
 }
 
 func (s *CpusetGroup) Set(path string, cgroup *configs.Cgroup) error {

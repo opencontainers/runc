@@ -94,8 +94,9 @@ func getCgroupRoot() (string, error) {
 
 type cgroupData struct {
 	root   string
-	cgroup string
-	c      *configs.Cgroup
+	parent string
+	name   string
+	config *configs.Cgroup
 	pid    int
 }
 
@@ -235,15 +236,11 @@ func getCgroupData(c *configs.Cgroup, pid int) (*cgroupData, error) {
 		return nil, err
 	}
 
-	cgroup := c.Name
-	if c.Parent != "" {
-		cgroup = filepath.Join(c.Parent, cgroup)
-	}
-
 	return &cgroupData{
 		root:   root,
-		cgroup: cgroup,
-		c:      c,
+		parent: c.Parent,
+		name:   c.Name,
+		config: c,
 		pid:    pid,
 	}, nil
 }
@@ -267,9 +264,10 @@ func (raw *cgroupData) path(subsystem string) (string, error) {
 		return "", err
 	}
 
+	cgPath := filepath.Join(raw.parent, raw.name)
 	// If the cgroup name/path is absolute do not look relative to the cgroup of the init process.
-	if filepath.IsAbs(raw.cgroup) {
-		return filepath.Join(raw.root, filepath.Base(mnt), raw.cgroup), nil
+	if filepath.IsAbs(cgPath) {
+		return filepath.Join(raw.root, filepath.Base(mnt), cgPath), nil
 	}
 
 	parentPath, err := raw.parentPath(subsystem, mnt, root)
@@ -277,7 +275,7 @@ func (raw *cgroupData) path(subsystem string) (string, error) {
 		return "", err
 	}
 
-	return filepath.Join(parentPath, raw.cgroup), nil
+	return filepath.Join(parentPath, cgPath), nil
 }
 
 func (raw *cgroupData) join(subsystem string) (string, error) {

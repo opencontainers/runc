@@ -24,7 +24,7 @@ func (s *HugetlbGroup) Apply(d *cgroupData) error {
 		return err
 	}
 
-	if err := s.Set(dir, d.c); err != nil {
+	if err := s.Set(dir, d.config); err != nil {
 		return err
 	}
 

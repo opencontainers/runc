@@ -31,7 +31,7 @@ type cgroupTestUtil struct {
 // Creates a new test util for the specified subsystem
 func NewCgroupTestUtil(subsystem string, t *testing.T) *cgroupTestUtil {
 	d := &cgroupData{
-		c: &configs.Cgroup{},
+		config: &configs.Cgroup{},
 	}
 	tempDir, err := ioutil.TempDir("", "cgroup_test")
 	if err != nil {
