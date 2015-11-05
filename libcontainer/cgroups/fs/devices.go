@@ -14,7 +14,7 @@ func (s *DevicesGroup) Name() string {
 	return "devices"
 }
 
-func (s *DevicesGroup) Apply(d *data) error {
+func (s *DevicesGroup) Apply(d *cgroupData) error {
 	dir, err := d.join("devices")
 	if err != nil {
 		// We will return error even it's `not found` error, devices
@@ -56,7 +56,7 @@ func (s *DevicesGroup) Set(path string, cgroup *configs.Cgroup) error {
 	return nil
 }
 
-func (s *DevicesGroup) Remove(d *data) error {
+func (s *DevicesGroup) Remove(d *cgroupData) error {
 	return removePath(d.path("devices"))
 }
 

@@ -21,7 +21,7 @@ func (s *MemoryGroup) Name() string {
 	return "memory"
 }
 
-func (s *MemoryGroup) Apply(d *data) (err error) {
+func (s *MemoryGroup) Apply(d *cgroupData) (err error) {
 	path, err := d.path("memory")
 	if err != nil && !cgroups.IsNotFound(err) {
 		return err
@@ -94,7 +94,7 @@ func (s *MemoryGroup) Set(path string, cgroup *configs.Cgroup) error {
 	return nil
 }
 
-func (s *MemoryGroup) Remove(d *data) error {
+func (s *MemoryGroup) Remove(d *cgroupData) error {
 	return removePath(d.path("memory"))
 }
 

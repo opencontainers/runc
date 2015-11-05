@@ -18,7 +18,7 @@ func (s *FreezerGroup) Name() string {
 	return "freezer"
 }
 
-func (s *FreezerGroup) Apply(d *data) error {
+func (s *FreezerGroup) Apply(d *cgroupData) error {
 	dir, err := d.join("freezer")
 	if err != nil && !cgroups.IsNotFound(err) {
 		return err
@@ -57,7 +57,7 @@ func (s *FreezerGroup) Set(path string, cgroup *configs.Cgroup) error {
 	return nil
 }
 
-func (s *FreezerGroup) Remove(d *data) error {
+func (s *FreezerGroup) Remove(d *cgroupData) error {
 	return removePath(d.path("freezer"))
 }
 

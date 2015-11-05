@@ -19,7 +19,7 @@ func (s *CpuGroup) Name() string {
 	return "cpu"
 }
 
-func (s *CpuGroup) Apply(d *data) error {
+func (s *CpuGroup) Apply(d *cgroupData) error {
 	// We always want to join the cpu group, to allow fair cpu scheduling
 	// on a container basis
 	dir, err := d.join("cpu")
@@ -64,7 +64,7 @@ func (s *CpuGroup) Set(path string, cgroup *configs.Cgroup) error {
 	return nil
 }
 
-func (s *CpuGroup) Remove(d *data) error {
+func (s *CpuGroup) Remove(d *cgroupData) error {
 	return removePath(d.path("cpu"))
 }
 
