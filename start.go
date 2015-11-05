@@ -76,7 +76,8 @@ func init() {
 }
 
 func startContainer(context *cli.Context, spec *specs.LinuxSpec, rspec *specs.LinuxRuntimeSpec) (int, error) {
-	config, err := createLibcontainerConfig(context.GlobalString("id"), spec, rspec)
+	containerID := context.GlobalString("id")
+	config, err := createLibcontainerConfig(containerID, spec, rspec)
 	if err != nil {
 		return -1, err
 	}
@@ -94,7 +95,7 @@ func startContainer(context *cli.Context, spec *specs.LinuxSpec, rspec *specs.Li
 	if err != nil {
 		return -1, err
 	}
-	container, err := factory.Create(context.GlobalString("id"), config)
+	container, err := factory.Create(containerID, config)
 	if err != nil {
 		return -1, err
 	}
@@ -124,6 +125,7 @@ func startContainer(context *cli.Context, spec *specs.LinuxSpec, rspec *specs.Li
 	if err := container.Start(process); err != nil {
 		return -1, err
 	}
+	output(containerID)
 	return handler.forward(process)
 }
 
