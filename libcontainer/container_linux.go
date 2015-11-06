@@ -183,6 +183,22 @@ func (c *linuxContainer) Start(process *Process) error {
 	if doInit {
 		c.updateState(parent)
 	}
+	if c.config.Hooks != nil {
+		s := configs.HookState{
+			Version: c.config.Version,
+			ID:      c.id,
+			Pid:     parent.pid(),
+			Root:    c.config.Rootfs,
+		}
+		for _, hook := range c.config.Hooks.Poststart {
+			if err := hook.Run(s); err != nil {
+				if err := parent.terminate(); err != nil {
+					logrus.Warn(err)
+				}
+				return newSystemError(err)
+			}
+		}
+	}
 	return nil
 }
 

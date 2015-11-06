@@ -712,6 +712,14 @@ func createHooks(rspec *specs.LinuxRuntimeSpec, config *configs.Config) {
 		}
 		config.Hooks.Prestart = append(config.Hooks.Prestart, configs.NewCommandHook(cmd))
 	}
+	for _, h := range rspec.Hooks.Poststart {
+		cmd := configs.Command{
+			Path: h.Path,
+			Args: h.Args,
+			Env:  h.Env,
+		}
+		config.Hooks.Poststart = append(config.Hooks.Poststart, configs.NewCommandHook(cmd))
+	}
 	for _, h := range rspec.Hooks.Poststop {
 		cmd := configs.Command{
 			Path: h.Path,
