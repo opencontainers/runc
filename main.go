@@ -39,7 +39,7 @@ func main() {
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "id",
-			Value: getDefaultID(),
+			Value: generateID(),
 			Usage: "specify the ID to be used for the container",
 		},
 		cli.BoolFlag{
