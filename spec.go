@@ -434,13 +434,13 @@ func createLibcontainerMount(cwd, dest string, m specs.Mount) *configs.Mount {
 }
 
 func createCgroupConfig(name string, spec *specs.LinuxRuntimeSpec, devices []*configs.Device) (*configs.Cgroup, error) {
-	myCgroupPath, err := cgroups.GetThisCgroupDir("devices")
+	rootDir, err := cgroups.GetThisCgroupDir("devices")
 	if err != nil {
 		return nil, err
 	}
 	c := &configs.Cgroup{
 		Name:           name,
-		Parent:         myCgroupPath,
+		Parent:         filepath.Join(rootDir, "runc"),
 		AllowedDevices: append(devices, allowedDevices...),
 	}
 	r := spec.Linux.Resources
