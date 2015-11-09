@@ -179,7 +179,6 @@ func (c *linuxContainer) Start(process *Process) error {
 		}
 		return newSystemError(err)
 	}
-	process.ops = parent
 	if doInit {
 		c.updateState(parent)
 	}
@@ -254,6 +253,7 @@ func (c *linuxContainer) newInitProcess(p *Process, cmd *exec.Cmd, parentPipe, c
 		manager:    c.cgroupManager,
 		config:     c.newInitConfig(p),
 		container:  c,
+		process:    p,
 	}, nil
 }
 
@@ -272,6 +272,7 @@ func (c *linuxContainer) newSetnsProcess(p *Process, cmd *exec.Cmd, parentPipe, 
 		childPipe:   childPipe,
 		parentPipe:  parentPipe,
 		config:      c.newInitConfig(p),
+		process:     p,
 	}
 }
 
