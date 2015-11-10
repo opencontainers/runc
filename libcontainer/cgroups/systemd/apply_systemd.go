@@ -335,22 +335,22 @@ func joinCpu(c *configs.Cgroup, pid int) error {
 		return err
 	}
 	if c.CpuQuota != 0 {
-		if err = writeFile(path, "cpu.cfs_quota_us", strconv.FormatInt(c.CpuQuota, 10)); err != nil {
+		if err = writeFile(path, "cpu.cfs_quota_us", strconv.FormatUint(uint64(c.CpuQuota), 10)); err != nil {
 			return err
 		}
 	}
 	if c.CpuPeriod != 0 {
-		if err = writeFile(path, "cpu.cfs_period_us", strconv.FormatInt(c.CpuPeriod, 10)); err != nil {
+		if err = writeFile(path, "cpu.cfs_period_us", strconv.FormatUint(uint64(c.CpuPeriod), 10)); err != nil {
 			return err
 		}
 	}
 	if c.CpuRtPeriod != 0 {
-		if err = writeFile(path, "cpu.rt_period_us", strconv.FormatInt(c.CpuRtPeriod, 10)); err != nil {
+		if err = writeFile(path, "cpu.rt_period_us", strconv.FormatUint(uint64(c.CpuRtPeriod), 10)); err != nil {
 			return err
 		}
 	}
 	if c.CpuRtRuntime != 0 {
-		if err = writeFile(path, "cpu.rt_runtime_us", strconv.FormatInt(c.CpuRtRuntime, 10)); err != nil {
+		if err = writeFile(path, "cpu.rt_runtime_us", strconv.FormatUint(uint64(c.CpuRtRuntime), 10)); err != nil {
 			return err
 		}
 	}

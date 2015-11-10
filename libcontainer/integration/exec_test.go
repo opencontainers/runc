@@ -523,6 +523,12 @@ func testCpuShares(t *testing.T, systemd bool) {
 	if err == nil {
 		t.Fatalf("runContainer should failed with invalid CpuShares")
 	}
+	config.Cgroups.CpuShares = 262145
+
+	_, _, err = runContainer(config, "", "ps")
+	if err == nil {
+		t.Fatalf("runContainer should failed with invalid CpuShares")
+	}
 }
 
 func TestRunWithKernelMemory(t *testing.T) {
