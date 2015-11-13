@@ -40,14 +40,14 @@ func TestHugetlbSetHugetlb(t *testing.T) {
 	}
 
 	for _, pageSize := range HugePageSizes {
-		helper.CgroupData.c.HugetlbLimit = []*configs.HugepageLimit{
+		helper.CgroupData.config.HugetlbLimit = []*configs.HugepageLimit{
 			{
 				Pagesize: pageSize,
 				Limit:    hugetlbAfter,
 			},
 		}
 		hugetlb := &HugetlbGroup{}
-		if err := hugetlb.Set(helper.CgroupPath, helper.CgroupData.c); err != nil {
+		if err := hugetlb.Set(helper.CgroupPath, helper.CgroupData.config); err != nil {
 			t.Fatal(err)
 		}
 	}

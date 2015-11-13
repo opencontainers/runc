@@ -52,10 +52,10 @@ type subsystem interface {
 	Name() string
 	// Returns the stats, as 'stats', corresponding to the cgroup under 'path'.
 	GetStats(path string, stats *cgroups.Stats) error
-	// Removes the cgroup represented by 'data'.
-	Remove(*data) error
-	// Creates and joins the cgroup represented by data.
-	Apply(*data) error
+	// Removes the cgroup represented by 'cgroupData'.
+	Remove(*cgroupData) error
+	// Creates and joins the cgroup represented by 'cgroupData'.
+	Apply(*cgroupData) error
 	// Set the cgroup represented by cgroup.
 	Set(path string, cgroup *configs.Cgroup) error
 }
@@ -92,10 +92,11 @@ func getCgroupRoot() (string, error) {
 	return cgroupRoot, nil
 }
 
-type data struct {
+type cgroupData struct {
 	root   string
-	cgroup string
-	c      *configs.Cgroup
+	parent string
+	name   string
+	config *configs.Cgroup
 	pid    int
 }
 
@@ -229,30 +230,31 @@ func (m *Manager) GetPids() ([]int, error) {
 	return cgroups.GetPids(dir)
 }
 
-func getCgroupData(c *configs.Cgroup, pid int) (*data, error) {
+func getCgroupData(c *configs.Cgroup, pid int) (*cgroupData, error) {
 	root, err := getCgroupRoot()
 	if err != nil {
 		return nil, err
 	}
 
-	cgroup := c.Name
-	if c.Parent != "" {
-		cgroup = filepath.Join(c.Parent, cgroup)
-	}
-
-	return &data{
+	return &cgroupData{
 		root:   root,
-		cgroup: cgroup,
-		c:      c,
+		parent: c.Parent,
+		name:   c.Name,
+		config: c,
 		pid:    pid,
 	}, nil
 }
 
-func (raw *data) parent(subsystem, mountpoint, root string) (string, error) {
+func (raw *cgroupData) parentPath(subsystem, mountpoint, root string) (string, error) {
+	// Use GetThisCgroupDir instead of GetInitCgroupDir, because the creating
+	// process could in container and shared pid namespace with host, and
+	// /proc/1/cgroup could point to whole other world of cgroups.
 	initPath, err := cgroups.GetThisCgroupDir(subsystem)
 	if err != nil {
 		return "", err
 	}
+	// This is needed for nested containers, because in /proc/self/cgroup we
+	// see pathes from host, which don't exist in container.
 	relDir, err := filepath.Rel(root, initPath)
 	if err != nil {
 		return "", err
@@ -260,27 +262,29 @@ func (raw *data) parent(subsystem, mountpoint, root string) (string, error) {
 	return filepath.Join(mountpoint, relDir), nil
 }
 
-func (raw *data) path(subsystem string) (string, error) {
+func (raw *cgroupData) path(subsystem string) (string, error) {
 	mnt, root, err := cgroups.FindCgroupMountpointAndRoot(subsystem)
 	// If we didn't mount the subsystem, there is no point we make the path.
 	if err != nil {
 		return "", err
 	}
 
+	cgPath := filepath.Join(raw.parent, raw.name)
 	// If the cgroup name/path is absolute do not look relative to the cgroup of the init process.
-	if filepath.IsAbs(raw.cgroup) {
-		return filepath.Join(raw.root, filepath.Base(mnt), raw.cgroup), nil
+	if filepath.IsAbs(cgPath) {
+		// Sometimes subsystems can be mounted togethger as 'cpu,cpuacct'.
+		return filepath.Join(raw.root, filepath.Base(mnt), cgPath), nil
 	}
 
-	parent, err := raw.parent(subsystem, mnt, root)
+	parentPath, err := raw.parentPath(subsystem, mnt, root)
 	if err != nil {
 		return "", err
 	}
 
-	return filepath.Join(parent, raw.cgroup), nil
+	return filepath.Join(parentPath, cgPath), nil
 }
 
-func (raw *data) join(subsystem string) (string, error) {
+func (raw *cgroupData) join(subsystem string) (string, error) {
 	path, err := raw.path(subsystem)
 	if err != nil {
 		return "", err
