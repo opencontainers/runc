@@ -23,6 +23,9 @@ var execCommand = cli.Command{
 		if os.Geteuid() != 0 {
 			logrus.Fatal("runc should be run as root")
 		}
+		if config.Args == nil {
+			logrus.Fatal("args missing in process configuration")
+		}
 		status, err := execProcess(context, config)
 		if err != nil {
 			logrus.Fatalf("exec failed: %v", err)
