@@ -33,17 +33,18 @@ type Seccomp struct {
 type Action int
 
 const (
-	Kill Action = iota - 4
+	Kill Action = iota + 1
 	Errno
 	Trap
 	Allow
+	Trace
 )
 
 // A comparison operator to be used when matching syscall arguments in Seccomp
 type Operator int
 
 const (
-	EqualTo Operator = iota
+	EqualTo Operator = iota + 1
 	NotEqualTo
 	GreaterThan
 	GreaterThanOrEqualTo
