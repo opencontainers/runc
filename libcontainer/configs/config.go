@@ -183,6 +183,9 @@ type Hooks struct {
 	// but before the user supplied command is executed from init.
 	Prestart []Hook
 
+	// Poststart commands are executed after the container init process starts.
+	Poststart []Hook
+
 	// Poststop commands are executed after the container init process exits.
 	Poststop []Hook
 }
