@@ -66,6 +66,12 @@ Provide validation tooling for compliance with OCI spec and runtime environment.
 
 *Owner:* mrunalp
 
+### Testing Framework
+
+Provide a testing framework for compliance with OCI spec and runtime environment.
+
+*Owner:* liangchenye
+
 ### Version Schema
 
 Decide on a robust versioning schema for the spec as it evolves.
