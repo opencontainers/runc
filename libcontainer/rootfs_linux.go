@@ -378,6 +378,17 @@ func createDevices(config *configs.Config) error {
 	return nil
 }
 
+func bindMountDeviceNode(dest string, node *configs.Device) error {
+	f, err := os.Create(dest)
+	if err != nil && !os.IsExist(err) {
+		return err
+	}
+	if f != nil {
+		f.Close()
+	}
+	return syscall.Mount(node.Path, dest, "bind", syscall.MS_BIND, "")
+}
+
 // Creates the device node in the rootfs of the container.
 func createDeviceNode(rootfs string, node *configs.Device, bind bool) error {
 	dest := filepath.Join(rootfs, node.Path)
@@ -386,18 +397,13 @@ func createDeviceNode(rootfs string, node *configs.Device, bind bool) error {
 	}
 
 	if bind {
-		f, err := os.Create(dest)
-		if err != nil && !os.IsExist(err) {
-			return err
-		}
-		if f != nil {
-			f.Close()
-		}
-		return syscall.Mount(node.Path, dest, "bind", syscall.MS_BIND, "")
+		return bindMountDeviceNode(dest, node)
 	}
 	if err := mknodDevice(dest, node); err != nil {
 		if os.IsExist(err) {
 			return nil
+		} else if os.IsPermission(err) {
+			return bindMountDeviceNode(dest, node)
 		}
 		return err
 	}
@@ -633,7 +639,6 @@ func remount(m *configs.Mount, rootfs string) error {
 	if !strings.HasPrefix(dest, rootfs) {
 		dest = filepath.Join(rootfs, dest)
 	}
-
 	if err := syscall.Mount(m.Source, dest, m.Device, uintptr(m.Flags|syscall.MS_REMOUNT), ""); err != nil {
 		return err
 	}
