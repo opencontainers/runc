@@ -7,6 +7,9 @@ export GOPATH:=$(CURDIR)/Godeps/_workspace:$(GOPATH)
 all:
 	go build -tags "$(BUILDTAGS)" -o runc .
 
+static:
+	CGO_ENABLED=1 go build -tags "$(BUILDTAGS) cgo static_build" -ldflags "-w -extldflags -static" -o runc .
+
 vet:
 	go get golang.org/x/tools/cmd/vet
 
