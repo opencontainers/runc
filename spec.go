@@ -320,11 +320,12 @@ func loadSpec(cPath, rPath string) (spec *specs.LinuxSpec, rspec *specs.LinuxRun
 	return spec, rspec, checkSpecVersion(spec)
 }
 
-// checkSpecVersion makes sure that the spec version matches runc's while we are in the initial
-// development period.  It is better to hard fail than have missing fields or options in the spec.
+// checkSpecVersion makes sure that the spec version specified in config.json is
+// not ahead of runc's version.  It is better to hard fail than have missing
+// fields or options in the spec.
 func checkSpecVersion(s *specs.LinuxSpec) error {
-	if s.Version != specs.Version {
-		return fmt.Errorf("spec version is not compatible with implemented version %q: spec %q", specs.Version, s.Version)
+	if s.Version > specs.Version {
+		return fmt.Errorf("spec requires a container implementation of %q or higher, current version is %q", s.Version, specs.Version)
 	}
 	return nil
 }
