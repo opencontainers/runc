@@ -9,8 +9,7 @@ import (
 )
 
 const (
-	version = "0.3"
-	usage   = `Open Container Initiative runtime
+	usage = `Open Container Initiative runtime
 
 runc is a command line client for running applications packaged according to
 the Open Container Format (OCF) and is a compliant implementation of the
@@ -35,7 +34,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "runc"
 	app.Usage = usage
-	app.Version = version
+	app.Version = specs.Version
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "id",
