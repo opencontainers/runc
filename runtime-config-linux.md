@@ -232,9 +232,9 @@ The following parameters can be specified to setup the controller:
 
 * **`realtimePeriod`** *(uint64, optional)* - same as **`period`** but applies to realtime scheduler only
 
-* **`cpus`** *(cpus, optional)* - list of CPUs the container will run in
+* **`cpus`** *(string, optional)* - list of CPUs the container will run in
 
-* **`mems`** *(mems, optional)* - list of Memory Nodes the container will run in
+* **`mems`** *(string, optional)* - list of Memory Nodes the container will run in
 
 ###### Example
 
