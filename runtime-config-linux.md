@@ -146,7 +146,7 @@ For more information, see the [kernel cgroups documentation](https://www.kernel.
 
 The path to the cgroups can be specified in the Spec via `cgroupsPath`.
 `cgroupsPath` is expected to be relative to the cgroups mount point.
-If not specified, cgroups will be created under '/'.
+If `cgroupsPath` is not specified, implementations can define the default cgroup path.
 Implementations of the Spec can choose to name cgroups in any manner.
 The Spec does not include naming schema for cgroups.
 The Spec does not support [split hierarchy](https://www.kernel.org/doc/Documentation/cgroups/unified-hierarchy.txt).
