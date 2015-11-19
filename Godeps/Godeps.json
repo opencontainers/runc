@@ -14,13 +14,13 @@
 		},
 		{
 			"ImportPath": "github.com/coreos/go-systemd/dbus",
-			"Comment": "v3",
-			"Rev": "be94bc700879ae8217780e9d141789a2defa302b"
+			"Comment": "v4",
+			"Rev": "b4a58d95188dd092ae20072bac14cece0e67c388"
 		},
 		{
 			"ImportPath": "github.com/coreos/go-systemd/util",
-			"Comment": "v3",
-			"Rev": "be94bc700879ae8217780e9d141789a2defa302b"
+			"Comment": "v4",
+			"Rev": "b4a58d95188dd092ae20072bac14cece0e67c388"
 		},
 		{
 			"ImportPath": "github.com/docker/docker/pkg/mount",
@@ -44,8 +44,8 @@
 		},
 		{
 			"ImportPath": "github.com/godbus/dbus",
-			"Comment": "v2",
-			"Rev": "88765d85c0fdadcd98a54e30694fa4e4f5b51133"
+			"Comment": "v3",
+			"Rev": "c7fdd8b5cd55e87b4e1f4e372cdb1db61dd6c66f"
 		},
 		{
 			"ImportPath": "github.com/golang/protobuf/proto",
