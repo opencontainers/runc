@@ -3,6 +3,7 @@
 package label
 
 import (
+	"os"
 	"strings"
 	"testing"
 
@@ -89,6 +90,10 @@ func TestDuplicateLabel(t *testing.T) {
 }
 func TestRelabel(t *testing.T) {
 	testdir := "/tmp/test"
+	if err := os.Mkdir(testdir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(testdir)
 	label := "system_u:system_r:svirt_sandbox_file_t:s0:c1,c2"
 	if err := Relabel(testdir, "", true); err != nil {
 		t.Fatal("Relabel with no label failed: %v", err)
