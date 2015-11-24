@@ -242,9 +242,10 @@ func (c Command) Run(s HookState) error {
 	if err != nil {
 		return err
 	}
+	hArgs := append([]string{""}, c.Args...)
 	cmd := exec.Cmd{
 		Path:  c.Path,
-		Args:  c.Args,
+		Args:  hArgs,
 		Env:   c.Env,
 		Stdin: bytes.NewReader(b),
 	}
