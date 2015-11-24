@@ -22,7 +22,7 @@ type event struct {
 
 var eventsCommand = cli.Command{
 	Name:  "events",
-	Usage: "display container events such as OOM notifications and cpu, memeory, IO, and network stats",
+	Usage: "display container events such as OOM notifications, cpu, memory, IO and network stats",
 	Flags: []cli.Flag{
 		cli.DurationFlag{Name: "interval", Value: 5 * time.Second, Usage: "set the stats collection interval"},
 		cli.BoolFlag{Name: "stats", Usage: "display the container's stats then exit"},
