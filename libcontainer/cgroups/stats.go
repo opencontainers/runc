@@ -44,9 +44,12 @@ type MemoryStats struct {
 	Usage MemoryData `json:"usage,omitempty"`
 	// usage of memory + swap
 	SwapUsage MemoryData `json:"swap_usage,omitempty"`
-	// usafe of kernel memory
-	KernelUsage MemoryData        `json:"kernel_usage,omitempty"`
-	Stats       map[string]uint64 `json:"stats,omitempty"`
+	// usage of kernel memory
+	KernelUsage MemoryData `json:"kernel_usage,omitempty"`
+	// status of memory usage
+	Stats map[string]uint64 `json:"stats,omitempty"`
+	// status of oom
+	OomStat map[string]uint64 `json:"oom_stat,omitempry"`
 }
 
 type BlkioStatEntry struct {

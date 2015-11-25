@@ -115,6 +115,10 @@ func (s *MemoryGroup) GetStats(path string, stats *cgroups.Stats) error {
 	if err != nil {
 		return err
 	}
+	oomStat, err := getOomStat(path)
+	if err != nil {
+		return err
+	}
 
 	stats.MemoryStats = cgroups.MemoryStats{
 		Stats:       memoryStat,
@@ -122,6 +126,7 @@ func (s *MemoryGroup) GetStats(path string, stats *cgroups.Stats) error {
 		Usage:       memoryUsage,
 		SwapUsage:   swapUsage,
 		KernelUsage: kernelUsage,
+		OomStat:     oomStat,
 	}
 
 	return nil
@@ -136,29 +141,38 @@ func memoryAssigned(cgroup *configs.Cgroup) bool {
 		cgroup.MemorySwappiness != -1
 }
 
-func getMemoryStat(path string) (map[string]uint64, error) {
-	stats := make(map[string]uint64)
+func getMemoryMappingData(path, name string) (map[string]uint64, error) {
+	data := make(map[string]uint64)
 
-	// Get stats from memory.stat.
-	statsFile, err := os.Open(filepath.Join(path, "memory.stat"))
+	file, err := os.Open(filepath.Join(path, name))
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil
 		}
 		return nil, err
 	}
-	defer statsFile.Close()
+	defer file.Close()
 
-	sc := bufio.NewScanner(statsFile)
+	sc := bufio.NewScanner(file)
 	for sc.Scan() {
 		t, v, err := getCgroupParamKeyValue(sc.Text())
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse memory.stat (%q) - %v", sc.Text(), err)
+			return nil, fmt.Errorf("failed to parse %s (%q) - %v", name, sc.Text(), err)
 		}
-		stats[t] = v
+		data[t] = v
 	}
 
-	return stats, nil
+	return data, nil
+}
+
+func getMemoryStat(path string) (map[string]uint64, error) {
+	// Get stats from memory.stat.
+	return getMemoryMappingData(path, "memory.stat")
+}
+
+func getOomStat(path string) (map[string]uint64, error) {
+	// Get oom stats from memory.oom_control.
+	return getMemoryMappingData(path, "memory.oom_control")
 }
 
 func getMemoryData(path, name string) (cgroups.MemoryData, error) {
