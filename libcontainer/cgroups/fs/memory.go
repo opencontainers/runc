@@ -99,41 +99,30 @@ func (s *MemoryGroup) Remove(d *cgroupData) error {
 }
 
 func (s *MemoryGroup) GetStats(path string, stats *cgroups.Stats) error {
-	// Set stats from memory.stat.
-	statsFile, err := os.Open(filepath.Join(path, "memory.stat"))
+	memoryStat, err := getMemoryStat(path)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
 		return err
 	}
-	defer statsFile.Close()
-
-	sc := bufio.NewScanner(statsFile)
-	for sc.Scan() {
-		t, v, err := getCgroupParamKeyValue(sc.Text())
-		if err != nil {
-			return fmt.Errorf("failed to parse memory.stat (%q) - %v", sc.Text(), err)
-		}
-		stats.MemoryStats.Stats[t] = v
-	}
-	stats.MemoryStats.Cache = stats.MemoryStats.Stats["cache"]
-
 	memoryUsage, err := getMemoryData(path, "")
 	if err != nil {
 		return err
 	}
-	stats.MemoryStats.Usage = memoryUsage
 	swapUsage, err := getMemoryData(path, "memsw")
 	if err != nil {
 		return err
 	}
-	stats.MemoryStats.SwapUsage = swapUsage
 	kernelUsage, err := getMemoryData(path, "kmem")
 	if err != nil {
 		return err
 	}
-	stats.MemoryStats.KernelUsage = kernelUsage
+
+	stats.MemoryStats = cgroups.MemoryStats{
+		Stats:       memoryStat,
+		Cache:       memoryStat["cache"],
+		Usage:       memoryUsage,
+		SwapUsage:   swapUsage,
+		KernelUsage: kernelUsage,
+	}
 
 	return nil
 }
@@ -145,6 +134,31 @@ func memoryAssigned(cgroup *configs.Cgroup) bool {
 		cgroup.KernelMemory > 0 ||
 		cgroup.OomKillDisable ||
 		cgroup.MemorySwappiness != -1
+}
+
+func getMemoryStat(path string) (map[string]uint64, error) {
+	stats := make(map[string]uint64)
+
+	// Get stats from memory.stat.
+	statsFile, err := os.Open(filepath.Join(path, "memory.stat"))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	defer statsFile.Close()
+
+	sc := bufio.NewScanner(statsFile)
+	for sc.Scan() {
+		t, v, err := getCgroupParamKeyValue(sc.Text())
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse memory.stat (%q) - %v", sc.Text(), err)
+		}
+		stats[t] = v
+	}
+
+	return stats, nil
 }
 
 func getMemoryData(path, name string) (cgroups.MemoryData, error) {
