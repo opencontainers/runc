@@ -35,7 +35,7 @@ type CpuStats struct {
 type MemoryData struct {
 	Usage    uint64 `json:"usage,omitempty"`
 	MaxUsage uint64 `json:"max_usage,omitempty"`
-	Failcnt  uint64 `json:"failcnt"`
+	Failcnt  uint64 `json:"failcnt,omitempty"`
 }
 type MemoryStats struct {
 	// memory used for cache
@@ -77,7 +77,7 @@ type HugetlbStats struct {
 	// maximum usage ever recorded.
 	MaxUsage uint64 `json:"max_usage,omitempty"`
 	// number of times htgetlb usage allocation failure.
-	Failcnt uint64 `json:"failcnt"`
+	Failcnt uint64 `json:"failcnt,omitempty"`
 }
 
 type Stats struct {
