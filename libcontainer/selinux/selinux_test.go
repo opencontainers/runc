@@ -1,4 +1,4 @@
-// +build linux
+// +build linux,selinux
 
 package selinux_test
 
