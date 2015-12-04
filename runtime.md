@@ -27,6 +27,7 @@ This is provided so that consumers can find the container's configuration and ro
 
 ```json
 {
+    "version": "0.2.0",
     "id": "oc-container",
     "pid": 4422,
     "bundlePath": "/containers/redis"
