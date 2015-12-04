@@ -80,7 +80,7 @@ Decide on a robust versioning schema for the spec as it evolves.
 
 ### Printable/Compiled Spec
 
-Reguardless of how the spec is written, ensure that it is easy to read and follow for first time users.
+Regardless of how the spec is written, ensure that it is easy to read and follow for first time users.
 
 *Owner:* vbatts
 
