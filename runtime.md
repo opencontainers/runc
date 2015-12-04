@@ -29,7 +29,7 @@ This is provided so that consumers can find the container's configuration and ro
 {
     "id": "oc-container",
     "pid": 4422,
-    "root": "/containers/redis"
+    "bundlePath": "/containers/redis"
 }
 ```
 
