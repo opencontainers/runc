@@ -43,7 +43,7 @@ If a hook returns a non-zero exit code, then an error is logged and the remainin
         "prestart": [
             {
                 "path": "/usr/bin/fix-mounts",
-                "args": ["arg1", "arg2"],
+                "args": ["fix-mounts", "arg1", "arg2"],
                 "env":  [ "key1=value1"]
             },
             {
@@ -58,7 +58,7 @@ If a hook returns a non-zero exit code, then an error is logged and the remainin
         "poststop": [
             {
                 "path": "/usr/sbin/cleanup.sh",
-                "args": ["-f"]
+                "args": ["cleanup.sh", "-f"]
             }
         ]
     }
@@ -66,6 +66,7 @@ If a hook returns a non-zero exit code, then an error is logged and the remainin
 
 `path` is required for a hook.
 `args` and `env` are optional.
+The semantics are the same as `Path`, `Args` and `Env` in [golang Cmd](https://golang.org/pkg/os/exec/#Cmd).
 
 ## Mount Configuration
 
