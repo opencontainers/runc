@@ -122,7 +122,6 @@ func (m *Manager) Apply(pid int) (err error) {
 		if err := sys.Apply(d); err != nil {
 			return err
 		}
-
 		// TODO: Apply should, ideally, be reentrant or be broken up into a separate
 		// create and join phase so that the cgroup hierarchy for a container can be
 		// created then join consists of writing the process pids to cgroup.procs
@@ -290,14 +289,8 @@ func (raw *cgroupData) join(subsystem string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	_, err = os.Stat(path)
-	if err != nil && os.IsNotExist(err) {
-		if err := os.MkdirAll(path, 0755); err != nil {
-			return "", err
-		}
-	} else if err == nil {
-		//cgroup exists, therefore join only
-		raw.config.ExternalCgroup = true
+	if err := os.MkdirAll(path, 0755); err != nil {
+		return "", err
 	}
 	if err := writeFile(path, CgroupProcesses, strconv.Itoa(raw.pid)); err != nil {
 		return "", err
