@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"syscall"
 
 	"github.com/docker/docker/pkg/term"
 	"github.com/opencontainers/runc/libcontainer"
@@ -25,38 +24,20 @@ func newTty(create bool, p *libcontainer.Process, rootuid int) (*tty, error) {
 // setup standard pipes so that the TTY of the calling runc process
 // is not inherited by the container.
 func createStdioPipes(p *libcontainer.Process, rootuid int) (*tty, error) {
-	var (
-		t   = &tty{}
-		fds []int
-	)
-	r, w, err := os.Pipe()
+	i, err := p.InitializeIO(rootuid)
 	if err != nil {
 		return nil, err
 	}
-	fds = append(fds, int(r.Fd()), int(w.Fd()))
-	go io.Copy(w, os.Stdin)
-	t.closers = append(t.closers, w)
-	p.Stdin = r
-	if r, w, err = os.Pipe(); err != nil {
-		return nil, err
+	t := &tty{
+		closers: []io.Closer{
+			i.Stdin,
+			i.Stdout,
+			i.Stderr,
+		},
 	}
-	fds = append(fds, int(r.Fd()), int(w.Fd()))
-	go io.Copy(os.Stdout, r)
-	p.Stdout = w
-	t.closers = append(t.closers, r)
-	if r, w, err = os.Pipe(); err != nil {
-		return nil, err
-	}
-	fds = append(fds, int(r.Fd()), int(w.Fd()))
-	go io.Copy(os.Stderr, r)
-	p.Stderr = w
-	t.closers = append(t.closers, r)
-	// change the ownership of the pipe fds incase we are in a user namespace.
-	for _, fd := range fds {
-		if err := syscall.Fchown(fd, rootuid, rootuid); err != nil {
-			return nil, err
-		}
-	}
+	go io.Copy(i.Stdin, os.Stdin)
+	go io.Copy(os.Stdout, i.Stdout)
+	go io.Copy(os.Stderr, i.Stderr)
 	return t, nil
 }
 
@@ -78,9 +59,6 @@ func createTty(p *libcontainer.Process, rootuid int) (*tty, error) {
 			console,
 		},
 	}
-	p.Stderr = nil
-	p.Stdout = nil
-	p.Stdin = nil
 	return t, nil
 }
 

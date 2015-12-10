@@ -126,11 +126,7 @@ func restoreContainer(context *cli.Context, spec *specs.LinuxSpec, config *confi
 			}
 		}
 	}()
-	process := &libcontainer.Process{
-		Stdin:  os.Stdin,
-		Stdout: os.Stdout,
-		Stderr: os.Stderr,
-	}
+	process := &libcontainer.Process{}
 	tty, err := newTty(spec.Process.Terminal, process, rootuid)
 	if err != nil {
 		return -1, err
