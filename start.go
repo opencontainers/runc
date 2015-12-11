@@ -110,12 +110,10 @@ func startContainer(context *cli.Context, spec *specs.LinuxSpec, rspec *specs.Li
 		if err != nil {
 			return -1, err
 		}
-
 		for i := SD_LISTEN_FDS_START; i < (listenFdsInt + SD_LISTEN_FDS_START); i++ {
 			process.ExtraFiles = append(process.ExtraFiles, os.NewFile(uintptr(i), ""))
 		}
 	}
-
 	tty, err := newTty(spec.Process.Terminal, process, rootuid)
 	if err != nil {
 		return -1, err
