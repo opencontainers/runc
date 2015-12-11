@@ -40,7 +40,7 @@ The lifecycle describes the timeline of events that happen from when a container
 1. OCI compliant runtime is invoked by passing the bundle path as argument.
 2. The container's runtime environment is created according to the configuration in config.json.
    Any updates to config.json after container is running do not affect the container.
-3. The container's state.json file is written to the filesystem under /run/opencontainer/<runtime>/containers/<id>/.
+3. The container's state.json file is written to the filesystem.
 4. The prestart hooks are invoked by the runtime.
    If any prestart hook fails, then the container is stopped and the lifecycle continues at step 8.
 5. The user specified process is executed in the container.
