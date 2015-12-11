@@ -45,7 +45,7 @@ func (c ErrorCode) String() string {
 	case ContainerNotRunning:
 		return "Container is not running"
 	case ConsoleExists:
-		return "Console exist for process"
+		return "Console exists for process"
 	default:
 		return "Unknown error"
 	}
