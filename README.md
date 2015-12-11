@@ -5,9 +5,8 @@
 ## State of the project
 
 Currently `runc` is an implementation of the OCI specification.  We are currently sprinting
-to have a v1 of the spec out within a quick timeframe of a few weeks, ~July 2015,
-so the `runc` config format will be constantly changing until
-the spec is finalized.  However, we encourage you to try out the tool and give feedback.
+to have a v1 of the spec out. So the `runc` config format will be constantly changing until
+the spec is finalized. However, we encourage you to try out the tool and give feedback.
 
 ### OCF
 
