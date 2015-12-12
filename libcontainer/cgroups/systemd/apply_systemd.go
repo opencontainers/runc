@@ -63,6 +63,7 @@ var subsystems = subsystemSet{
 	&fs.NetPrioGroup{},
 	&fs.NetClsGroup{},
 	&fs.NameGroup{GroupName: "name=systemd"},
+	&fs.IntelRdtGroup{},
 }
 
 const (
@@ -251,7 +252,7 @@ func (m *Manager) Apply(pid int) error {
 		return err
 	}
 
-	// we need to manually join the freezer, net_cls, net_prio, pids and cpuset cgroup in systemd
+	// we need to manually join the freezer, net_cls, net_prio cpuset and intel_rdt cgroup in systemd
 	// because it does not currently support it via the dbus api.
 	if err := joinFreezer(c, pid); err != nil {
 		return err
@@ -279,6 +280,11 @@ func (m *Manager) Apply(pid int) error {
 	if err := joinPerfEvent(c, pid); err != nil {
 		return err
 	}
+
+	if err := joinIntelRdt(c, pid); err != nil {
+		return err
+	}
+
 	// FIXME: Systemd does have `BlockIODeviceWeight` property, but we got problem
 	// using that (at least on systemd 208, see https://github.com/opencontainers/runc/libcontainer/pull/354),
 	// so use fs work around for now.
@@ -602,4 +608,25 @@ func joinPerfEvent(c *configs.Cgroup, pid int) error {
 		return err
 	}
 	return nil
+}
+
+func joinIntelRdt(c *configs.Cgroup, pid int) error {
+	path, err := join(c, "intel_rdt", pid)
+	if err != nil {
+		if !cgroups.IsNotFound(err) {
+			return err
+		}
+		// We will not return err here when:
+		// 1. The h/w platform doesn't support Intel RDT/CAT feature,
+		//    intel_rdt cgroup is not enabled in kernel.
+		// 2. intel_rdt cgroup is not mounted
+		return nil
+	}
+
+	IntelRdt, err := subsystems.Get("intel_rdt")
+	if err != nil {
+		return err
+	}
+
+	return IntelRdt.Set(path, c)
 }

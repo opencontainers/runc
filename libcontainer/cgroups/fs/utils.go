@@ -68,6 +68,22 @@ func getCgroupParamUint(cgroupPath, cgroupFile string) (uint64, error) {
 	return res, nil
 }
 
+// Gets a single hex uint64 value from the specified cgroup file.
+func getCgroupParamUintHex(cgroupPath, cgroupFile string) (uint64, error) {
+	fileName := filepath.Join(cgroupPath, cgroupFile)
+	contents, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		return 0, err
+	}
+
+	hexStr := strings.TrimSpace(strings.TrimPrefix(string(contents), "0x"))
+	res, err := parseUint(hexStr, 16, 64)
+	if err != nil {
+		return res, fmt.Errorf("unable to parse %q as a uint from Cgroup file %q", string(contents), fileName)
+	}
+	return res, nil
+}
+
 // Gets a string value from the specified cgroup file
 func getCgroupParamString(cgroupPath, cgroupFile string) (string, error) {
 	contents, err := ioutil.ReadFile(filepath.Join(cgroupPath, cgroupFile))

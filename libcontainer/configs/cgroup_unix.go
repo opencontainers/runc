@@ -118,4 +118,7 @@ type Resources struct {
 
 	// Set class identifier for container's network packets
 	NetClsClassid string `json:"net_cls_classid"`
+
+	// L3 cache capacity bitmask (CBM) for container
+	IntelRdtL3Cbm uint64 `json:"intel_rdt_l3_cbm"`
 }
