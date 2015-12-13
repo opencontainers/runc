@@ -36,19 +36,19 @@ type Cgroup struct {
 	KernelMemory int64 `json:"kernel_memory"`
 
 	// CPU shares (relative weight vs. other containers)
-	CpuShares int64 `json:"cpu_shares"`
+	CpuShares uint64 `json:"cpu_shares"`
 
 	// CPU hardcap limit (in usecs). Allowed cpu time in a given period.
-	CpuQuota int64 `json:"cpu_quota"`
+	CpuQuota uint64 `json:"cpu_quota"`
 
 	// CPU period to be used for hardcapping (in usecs). 0 to use system default.
-	CpuPeriod int64 `json:"cpu_period"`
+	CpuPeriod uint64 `json:"cpu_period"`
 
 	// How many time CPU will use in realtime scheduling (in usecs).
-	CpuRtRuntime int64 `json:"cpu_quota"`
+	CpuRtRuntime uint64 `json:"cpu_quota"`
 
 	// CPU period to be used for realtime scheduling (in usecs).
-	CpuRtPeriod int64 `json:"cpu_period"`
+	CpuRtPeriod uint64 `json:"cpu_period"`
 
 	// CPU to use
 	CpusetCpus string `json:"cpuset_cpus"`

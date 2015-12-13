@@ -165,15 +165,15 @@ type Memory struct {
 // CPU for Linux cgroup 'cpu' resource management
 type CPU struct {
 	// CPU shares (relative weight vs. other cgroups with cpu shares)
-	Shares int64 `json:"shares"`
+	Shares uint64 `json:"shares"`
 	// CPU hardcap limit (in usecs). Allowed cpu time in a given period
-	Quota int64 `json:"quota"`
+	Quota uint64 `json:"quota"`
 	// CPU period to be used for hardcapping (in usecs). 0 to use system default
-	Period int64 `json:"period"`
+	Period uint64 `json:"period"`
 	// How many time CPU will use in realtime scheduling (in usecs)
-	RealtimeRuntime int64 `json:"realtimeRuntime"`
+	RealtimeRuntime uint64 `json:"realtimeRuntime"`
 	// CPU period to be used for realtime scheduling (in usecs)
-	RealtimePeriod int64 `json:"realtimePeriod"`
+	RealtimePeriod uint64 `json:"realtimePeriod"`
 	// CPU to use within the cpuset
 	Cpus string `json:"cpus"`
 	// MEM to use within the cpuset
