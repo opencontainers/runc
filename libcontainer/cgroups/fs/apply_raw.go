@@ -23,6 +23,7 @@ var (
 		&MemoryGroup{},
 		&CpuGroup{},
 		&CpuacctGroup{},
+		&PidsGroup{},
 		&BlkioGroup{},
 		&HugetlbGroup{},
 		&NetClsGroup{},

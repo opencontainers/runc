@@ -55,6 +55,7 @@ var subsystems = subsystemSet{
 	&fs.MemoryGroup{},
 	&fs.CpuGroup{},
 	&fs.CpuacctGroup{},
+	&fs.PidsGroup{},
 	&fs.BlkioGroup{},
 	&fs.HugetlbGroup{},
 	&fs.PerfEventGroup{},
@@ -233,7 +234,7 @@ func (m *Manager) Apply(pid int) error {
 		return err
 	}
 
-	// we need to manually join the freezer, net_cls, net_prio and cpuset cgroup in systemd
+	// we need to manually join the freezer, net_cls, net_prio, pids and cpuset cgroup in systemd
 	// because it does not currently support it via the dbus api.
 	if err := joinFreezer(c, pid); err != nil {
 		return err
@@ -243,6 +244,10 @@ func (m *Manager) Apply(pid int) error {
 		return err
 	}
 	if err := joinNetCls(c, pid); err != nil {
+		return err
+	}
+
+	if err := joinPids(c, pid); err != nil {
 		return err
 	}
 
@@ -392,6 +397,18 @@ func joinNetCls(c *configs.Cgroup, pid int) error {
 		return err
 	}
 	return netcls.Set(path, c)
+}
+
+func joinPids(c *configs.Cgroup, pid int) error {
+	path, err := join(c, "pids", pid)
+	if err != nil && !cgroups.IsNotFound(err) {
+		return err
+	}
+	pids, err := subsystems.Get("pids")
+	if err != nil {
+		return err
+	}
+	return pids.Set(path, c)
 }
 
 func getSubsystemPath(c *configs.Cgroup, subsystem string) (string, error) {
