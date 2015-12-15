@@ -40,7 +40,7 @@ func TestHugetlbSetHugetlb(t *testing.T) {
 	}
 
 	for _, pageSize := range HugePageSizes {
-		helper.CgroupData.config.HugetlbLimit = []*configs.HugepageLimit{
+		helper.CgroupData.config.Resources.HugetlbLimit = []*configs.HugepageLimit{
 			{
 				Pagesize: pageSize,
 				Limit:    hugetlbAfter,
