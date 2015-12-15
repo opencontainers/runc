@@ -38,9 +38,9 @@
 			"Rev": "0f5c9d301b9b1cca66b3ea0f9dec3b5317d3686d"
 		},
 		{
-			"ImportPath": "github.com/docker/docker/pkg/units",
-			"Comment": "v1.4.1-4831-g0f5c9d3",
-			"Rev": "0f5c9d301b9b1cca66b3ea0f9dec3b5317d3686d"
+			"ImportPath": "github.com/docker/go-units",
+			"Comment": "v0.1.0",
+			"Rev": "9b001659dd36225e356b4467c465d732e745f53d"
 		},
 		{
 			"ImportPath": "github.com/godbus/dbus",
