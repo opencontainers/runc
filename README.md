@@ -247,6 +247,7 @@ could be outdated, please always create base JSON files by `runc spec`.
 				"reservation": 0,
 				"swap": 0,
 				"kernel": 0,
+				"kernelTCP": 0,
 				"swappiness": -1
 			},
 			"cpu": {

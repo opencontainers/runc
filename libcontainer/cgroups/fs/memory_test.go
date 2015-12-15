@@ -113,6 +113,34 @@ func TestMemorySetKernelMemory(t *testing.T) {
 	}
 }
 
+func TestMemorySetKernelMemory(t *testing.T) {
+	helper := NewCgroupTestUtil("memory", t)
+	defer helper.cleanup()
+
+	const (
+		kernelMemoryTCPBefore = 314572800 // 300M
+		kernelMemoryTCPAfter  = 524288000 // 500M
+	)
+
+	helper.writeFileContents(map[string]string{
+		"memory.kmem.tcp.limit_in_bytes": strconv.Itoa(kernelMemoryTCPBefore),
+	})
+
+	helper.CgroupData.c.KernelMemoryTCP = kernelMemoryTCPAfter
+	memory := &MemoryGroup{}
+	if err := memory.Set(helper.CgroupPath, helper.CgroupData.c); err != nil {
+		t.Fatal(err)
+	}
+
+	value, err := getCgroupParamUint(helper.CgroupPath, "memory.kmem.tcp.limit_in_bytes")
+	if err != nil {
+		t.Fatalf("Failed to parse memory.kmem.tcp.limit_in_bytes - %s", err)
+	}
+	if value != kernelMemoryTCPAfter {
+		t.Fatal("Got the wrong value, set memory.kmem.tcp.limit_in_bytes failed.")
+	}
+}
+
 func TestMemorySetMemorySwappinessDefault(t *testing.T) {
 	helper := NewCgroupTestUtil("memory", t)
 	defer helper.cleanup()

@@ -447,6 +447,7 @@ func createCgroupConfig(name string, spec *specs.LinuxRuntimeSpec, devices []*co
 	c.MemoryReservation = r.Memory.Reservation
 	c.MemorySwap = r.Memory.Swap
 	c.KernelMemory = r.Memory.Kernel
+	c.KernelMemoryTCP = r.Memory.KernelTCP
 	c.MemorySwappiness = r.Memory.Swappiness
 	c.CpuShares = r.CPU.Shares
 	c.CpuQuota = r.CPU.Quota
