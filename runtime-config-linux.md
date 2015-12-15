@@ -201,6 +201,8 @@ The following parameters can be specified to setup the controller:
 
 * **`kernel`** *(uint64, optional)* - sets hard limit for kernel memory
 
+* **`kernelTCP`** *(uint64, optional)* - sets hard limit for kernel memory in tcp using
+
 * **`swappiness`** *(uint64, optional)* - sets swappiness parameter of vmscan (See sysctl's vm.swappiness)
 
 ###### Example
@@ -211,6 +213,7 @@ The following parameters can be specified to setup the controller:
         "reservation": 0,
         "swap": 0,
         "kernel": 0,
+        "kernelTCP": 0,
         "swappiness": -1
     }
 ```
