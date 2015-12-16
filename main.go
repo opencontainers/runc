@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	version       = "0.0.5"
+	version       = "0.0.6"
 	specConfig    = "config.json"
 	runtimeConfig = "runtime.json"
 	usage         = `Open Container Initiative runtime
