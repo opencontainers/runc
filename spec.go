@@ -440,6 +440,7 @@ func createCgroupConfig(name string, spec *specs.LinuxRuntimeSpec, devices []*co
 	c := &configs.Cgroup{
 		Name:           name,
 		Parent:         myCgroupPath,
+		CgroupsPath:    spec.Linux.CgroupsPath,
 		AllowedDevices: append(devices, allowedDevices...),
 	}
 	r := spec.Linux.Resources

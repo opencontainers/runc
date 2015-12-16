@@ -16,6 +16,9 @@ type Cgroup struct {
 	// name of parent cgroup or slice
 	Parent string `json:"parent"`
 
+	// CgroupsPath specifies the path to cgroups that are created and/or joined by the container.
+	CgroupsPath string `json:"cgroupsPath"`
+
 	// If this is true allow access to any kind of device within the container.  If false, allow access only to devices explicitly listed in the allowed_devices list.
 	AllowAllDevices bool `json:"allow_all_devices"`
 

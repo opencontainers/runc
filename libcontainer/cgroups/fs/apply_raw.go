@@ -270,6 +270,9 @@ func (raw *cgroupData) path(subsystem string) (string, error) {
 	}
 
 	cgPath := filepath.Join(raw.parent, raw.name)
+	if raw.config.CgroupsPath != "" {
+		cgPath = raw.config.CgroupsPath
+	}
 	// If the cgroup name/path is absolute do not look relative to the cgroup of the init process.
 	if filepath.IsAbs(cgPath) {
 		// Sometimes subsystems can be mounted togethger as 'cpu,cpuacct'.
