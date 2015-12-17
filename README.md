@@ -28,7 +28,7 @@ To provide context for users the following section gives example use cases for e
 
 # Releases
 
-There is a loose [Road Map](https://github.com/opencontainers/specs/wiki/RoadMap:) on the wiki.
+There is a loose [Road Map](./ROADMAP.md).
 During the `0.x` series of OCI releases we make no backwards compatibility guarantees and intend to break the schema during this series.
 
 # Contributing
