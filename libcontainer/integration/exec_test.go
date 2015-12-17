@@ -587,6 +587,11 @@ func testPids(t *testing.T, systemd bool) {
 	if err == nil {
 		t.Fatalf("expected fork() to fail with restrictive pids limit")
 	}
+
+	// Minimal restrictions are not really supported, due to quirks in using Go
+	// due to the fact that it spawns random processes. While we do our best with
+	// late setting cgroup values, it's just too unreliable with very small pids.max.
+	// As such, we don't test that case. YMMV.
 }
 
 func TestRunWithKernelMemory(t *testing.T) {
