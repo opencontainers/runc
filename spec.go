@@ -345,7 +345,7 @@ func checkSpecVersion(s *specs.LinuxSpec) error {
 	return nil
 }
 
-func createLibcontainerConfig(cgroupName string, spec *specs.LinuxSpec, rspec *specs.LinuxRuntimeSpec) (*configs.Config, error) {
+func createLibcontainerConfig(cgroupName string, parentDeathSignal int, spec *specs.LinuxSpec, rspec *specs.LinuxRuntimeSpec) (*configs.Config, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return nil, err
@@ -355,10 +355,11 @@ func createLibcontainerConfig(cgroupName string, spec *specs.LinuxSpec, rspec *s
 		rootfsPath = filepath.Join(cwd, rootfsPath)
 	}
 	config := &configs.Config{
-		Rootfs:       rootfsPath,
-		Capabilities: spec.Linux.Capabilities,
-		Readonlyfs:   spec.Root.Readonly,
-		Hostname:     spec.Hostname,
+		ParentDeathSignal: parentDeathSignal,
+		Rootfs:            rootfsPath,
+		Capabilities:      spec.Linux.Capabilities,
+		Readonlyfs:        spec.Root.Readonly,
+		Hostname:          spec.Hostname,
 	}
 
 	exists := false
