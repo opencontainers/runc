@@ -587,6 +587,32 @@ func testPids(t *testing.T, systemd bool) {
 	if err == nil {
 		t.Fatalf("expected fork() to fail with restrictive pids limit")
 	}
+
+	// Enforce minimal restrictions.
+	config.Cgroups.Resources.PidsLimit = 1
+	out, ret, err = runContainer(config, "", "/bin/true")
+	if err != nil && strings.Contains(err.Error(), "no such directory for pids.max") {
+		t.Skip("PIDs cgroup is unsupported")
+	}
+	ok(t, err)
+
+	if ret != 0 {
+		t.Fatalf("expected fork() to succeed for very small pids.max")
+	}
+
+	// Enforce minimal restrictions.
+	config.Cgroups.Resources.PidsLimit = 1
+	out, ret, err = runContainer(config, "", "/bin/sh", "-c", "/bin/true")
+	if err != nil && strings.Contains(err.Error(), "no such directory for pids.max") {
+		t.Skip("PIDs cgroup is unsupported")
+	}
+	if err != nil && !strings.Contains(out.String(), "sh: can't fork") {
+		ok(t, err)
+	}
+
+	if err == nil {
+		t.Fatalf("expected fork() to fail for very small pids.max")
+	}
 }
 
 func TestRunWithKernelMemory(t *testing.T) {
