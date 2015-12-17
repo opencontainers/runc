@@ -8,6 +8,8 @@ const (
 	Undefined FreezerState = ""
 	Frozen    FreezerState = "FROZEN"
 	Thawed    FreezerState = "THAWED"
+
+	MaxPids = -1
 )
 
 type Cgroup struct {
@@ -102,4 +104,10 @@ type Resources struct {
 
 	// Set class identifier for container's network packets
 	NetClsClassid string `json:"net_cls_classid"`
+
+	// max. number of processes in this cgroup
+	PidsMax uint32 `json:"pids_max"`
+
+	// a set of processes to add to this cgroup
+	Pids []uint32 `json:"pids"`
 }
