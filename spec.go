@@ -438,55 +438,56 @@ func createCgroupConfig(name string, spec *specs.LinuxRuntimeSpec, devices []*co
 		return nil, err
 	}
 	c := &configs.Cgroup{
-		Name:           name,
-		Parent:         myCgroupPath,
-		AllowedDevices: append(devices, allowedDevices...),
+		Name:      name,
+		Parent:    myCgroupPath,
+		Resources: &configs.Resources{},
 	}
+	c.Resources.AllowedDevices = append(devices, allowedDevices...)
 	r := spec.Linux.Resources
-	c.Memory = r.Memory.Limit
-	c.MemoryReservation = r.Memory.Reservation
-	c.MemorySwap = r.Memory.Swap
-	c.KernelMemory = r.Memory.Kernel
-	c.MemorySwappiness = r.Memory.Swappiness
-	c.CpuShares = r.CPU.Shares
-	c.CpuQuota = r.CPU.Quota
-	c.CpuPeriod = r.CPU.Period
-	c.CpuRtRuntime = r.CPU.RealtimeRuntime
-	c.CpuRtPeriod = r.CPU.RealtimePeriod
-	c.CpusetCpus = r.CPU.Cpus
-	c.CpusetMems = r.CPU.Mems
-	c.BlkioWeight = r.BlockIO.Weight
-	c.BlkioLeafWeight = r.BlockIO.LeafWeight
+	c.Resources.Memory = r.Memory.Limit
+	c.Resources.MemoryReservation = r.Memory.Reservation
+	c.Resources.MemorySwap = r.Memory.Swap
+	c.Resources.KernelMemory = r.Memory.Kernel
+	c.Resources.MemorySwappiness = r.Memory.Swappiness
+	c.Resources.CpuShares = r.CPU.Shares
+	c.Resources.CpuQuota = r.CPU.Quota
+	c.Resources.CpuPeriod = r.CPU.Period
+	c.Resources.CpuRtRuntime = r.CPU.RealtimeRuntime
+	c.Resources.CpuRtPeriod = r.CPU.RealtimePeriod
+	c.Resources.CpusetCpus = r.CPU.Cpus
+	c.Resources.CpusetMems = r.CPU.Mems
+	c.Resources.BlkioWeight = r.BlockIO.Weight
+	c.Resources.BlkioLeafWeight = r.BlockIO.LeafWeight
 	for _, wd := range r.BlockIO.WeightDevice {
 		weightDevice := configs.NewWeightDevice(wd.Major, wd.Minor, wd.Weight, wd.LeafWeight)
-		c.BlkioWeightDevice = append(c.BlkioWeightDevice, weightDevice)
+		c.Resources.BlkioWeightDevice = append(c.Resources.BlkioWeightDevice, weightDevice)
 	}
 	for _, td := range r.BlockIO.ThrottleReadBpsDevice {
 		throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, td.Rate)
-		c.BlkioThrottleReadBpsDevice = append(c.BlkioThrottleReadBpsDevice, throttleDevice)
+		c.Resources.BlkioThrottleReadBpsDevice = append(c.Resources.BlkioThrottleReadBpsDevice, throttleDevice)
 	}
 	for _, td := range r.BlockIO.ThrottleWriteBpsDevice {
 		throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, td.Rate)
-		c.BlkioThrottleWriteBpsDevice = append(c.BlkioThrottleWriteBpsDevice, throttleDevice)
+		c.Resources.BlkioThrottleWriteBpsDevice = append(c.Resources.BlkioThrottleWriteBpsDevice, throttleDevice)
 	}
 	for _, td := range r.BlockIO.ThrottleReadIOPSDevice {
 		throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, td.Rate)
-		c.BlkioThrottleReadIOPSDevice = append(c.BlkioThrottleReadIOPSDevice, throttleDevice)
+		c.Resources.BlkioThrottleReadIOPSDevice = append(c.Resources.BlkioThrottleReadIOPSDevice, throttleDevice)
 	}
 	for _, td := range r.BlockIO.ThrottleWriteIOPSDevice {
 		throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, td.Rate)
-		c.BlkioThrottleWriteIOPSDevice = append(c.BlkioThrottleWriteIOPSDevice, throttleDevice)
+		c.Resources.BlkioThrottleWriteIOPSDevice = append(c.Resources.BlkioThrottleWriteIOPSDevice, throttleDevice)
 	}
 	for _, l := range r.HugepageLimits {
-		c.HugetlbLimit = append(c.HugetlbLimit, &configs.HugepageLimit{
+		c.Resources.HugetlbLimit = append(c.Resources.HugetlbLimit, &configs.HugepageLimit{
 			Pagesize: l.Pagesize,
 			Limit:    l.Limit,
 		})
 	}
-	c.OomKillDisable = r.DisableOOMKiller
-	c.NetClsClassid = r.Network.ClassID
+	c.Resources.OomKillDisable = r.DisableOOMKiller
+	c.Resources.NetClsClassid = r.Network.ClassID
 	for _, m := range r.Network.Priorities {
-		c.NetPrioIfpriomap = append(c.NetPrioIfpriomap, &configs.IfPrioMap{
+		c.Resources.NetPrioIfpriomap = append(c.Resources.NetPrioIfpriomap, &configs.IfPrioMap{
 			Interface: m.Name,
 			Priority:  m.Priority,
 		})

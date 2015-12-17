@@ -517,7 +517,7 @@ func testCpuShares(t *testing.T, systemd bool) {
 	if systemd {
 		config.Cgroups.Parent = "system.slice"
 	}
-	config.Cgroups.CpuShares = 1
+	config.Cgroups.Resources.CpuShares = 1
 
 	_, _, err = runContainer(config, "", "ps")
 	if err == nil {
@@ -548,7 +548,7 @@ func testRunWithKernelMemory(t *testing.T, systemd bool) {
 	if systemd {
 		config.Cgroups.Parent = "system.slice"
 	}
-	config.Cgroups.KernelMemory = 52428800
+	config.Cgroups.Resources.KernelMemory = 52428800
 
 	_, _, err = runContainer(config, "", "ps")
 	if err != nil {

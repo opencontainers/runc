@@ -33,6 +33,7 @@ func NewCgroupTestUtil(subsystem string, t *testing.T) *cgroupTestUtil {
 	d := &cgroupData{
 		config: &configs.Cgroup{},
 	}
+	d.config.Resources = &configs.Resources{}
 	tempDir, err := ioutil.TempDir("", "cgroup_test")
 	if err != nil {
 		t.Fatal(err)
