@@ -181,6 +181,11 @@ func (m *Manager) GetStats() (*cgroups.Stats, error) {
 
 func (m *Manager) Set(container *configs.Config) error {
 	for name, path := range m.Paths {
+		// We can't set this here, because after being applied, memcg doesn't
+		// allow a non-empty cgroup from having its limits changed.
+		if name == "memory" {
+			continue
+		}
 		sys, err := subsystems.Get(name)
 		if err == errSubsystemDoesNotExist || !cgroups.PathExists(path) {
 			continue

@@ -204,6 +204,9 @@ func (p *initProcess) start() (err error) {
 	if err := p.manager.Apply(p.pid()); err != nil {
 		return newSystemError(err)
 	}
+	if err := p.manager.Set(p.config.Config); err != nil {
+		return newSystemError(err)
+	}
 	defer func() {
 		if err != nil {
 			// TODO: should not be the responsibility to call here
