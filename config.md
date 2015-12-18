@@ -244,4 +244,160 @@ Annotations are key-value maps.
 }
 ```
 
+## Configuration Schema Example
+
+Here is a full example `config.json` for reference.
+
+```json
+{
+	"ociVersion": "0.3.0",
+	"platform": {
+		"os": "linux",
+		"arch": "amd64"
+	},
+	"process": {
+		"terminal": true,
+		"user": {
+			"uid": 1,
+			"gid": 1,
+			"additionalGids": [5, 6]
+		},
+		"args": [
+			"sh"
+		],
+		"env": [
+			"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+			"TERM=xterm"
+		],
+		"cwd": "/",
+		"capabilities": [
+			"CAP_AUDIT_WRITE",
+			"CAP_KILL",
+			"CAP_NET_BIND_SERVICE"
+		],
+		"apparmorProfile": "",
+		"selinuxLabel": ""
+	},
+	"root": {
+		"path": "rootfs",
+		"readonly": true
+	},
+	"hostname": "slartibartfast",
+	"mounts": [
+		{
+			"destination": "/proc",
+			"type": "proc",
+			"source": "proc"
+		},
+		{
+			"destination": "/dev",
+			"type": "tmpfs",
+			"source": "tmpfs",
+			"options": [
+				"nosuid",
+				"strictatime",
+				"mode=755",
+				"size=65536k"
+			]
+		},
+		{
+			"destination": "/dev/pts",
+			"type": "devpts",
+			"source": "devpts",
+			"options": [
+				"nosuid",
+				"noexec",
+				"newinstance",
+				"ptmxmode=0666",
+				"mode=0620",
+				"gid=5"
+			]
+		},
+		{
+			"destination": "/dev/shm",
+			"type": "tmpfs",
+			"source": "shm",
+			"options": [
+				"nosuid",
+				"noexec",
+				"nodev",
+				"mode=1777",
+				"size=65536k"
+			]
+		},
+		{
+			"destination": "/dev/mqueue",
+			"type": "mqueue",
+			"source": "mqueue",
+			"options": [
+				"nosuid",
+				"noexec",
+				"nodev"
+			]
+		},
+		{
+			"destination": "/sys",
+			"type": "sysfs",
+			"source": "sysfs",
+			"options": [
+				"nosuid",
+				"noexec",
+				"nodev"
+			]
+		},
+		{
+			"destination": "/sys/fs/cgroup",
+			"type": "cgroup",
+			"source": "cgroup",
+			"options": [
+				"nosuid",
+				"noexec",
+				"nodev",
+				"relatime",
+				"ro"
+			]
+		}
+	],
+	"hooks": {
+		"prestart": [
+			{
+				"path": "/",
+				"args": ["/usr/bin/uptime"],
+				"env": []
+			}
+		]
+	},
+	"linux": {
+		"rlimits": [
+			{
+				"type": "RLIMIT_NOFILE",
+				"hard": 1024,
+				"soft": 1024
+			}
+		],
+		"resources": {
+			"devices": [
+				{
+					"allow": false,
+					"access": "rwm"
+				}
+			]
+		},
+		"namespaces": [
+			{ "type": "pid" },
+			{ "type": "network" },
+			{ "type": "ipc" },
+			{ "type": "uts" },
+			{ "type": "mount" }
+		],
+		"devices": null,
+		"seccomp": {
+			"defaultAction": "",
+			"architectures": null
+		}
+	}
+}
+```
+
+
 [uts-namespace]: http://man7.org/linux/man-pages/man7/namespaces.7.html
