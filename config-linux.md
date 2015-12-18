@@ -34,7 +34,7 @@ The following parameters can be specified to setup namespaces:
     * **`uts`** the container will be able to have its own hostname and domain name
     * **`user`** the container will be able to remap user and group IDs from the host to local users and groups within the container
 
-* **`path`** *(string, optional)* - path to namespace file
+* **`path`** *(string, optional)* - path to namespace file in the [runtime mount namespace](glossary.md#runtime-namespace)
 
 If a path is specified, that particular file is used to join that type of namespace.
 Also, when a path is specified, a runtime MUST assume that the setup for that particular namespace has already been done and error out if the config specifies anything else related to that namespace.
