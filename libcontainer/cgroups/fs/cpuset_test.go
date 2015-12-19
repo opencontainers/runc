@@ -19,7 +19,7 @@ func TestCpusetSetCpus(t *testing.T) {
 		"cpuset.cpus": cpusBefore,
 	})
 
-	helper.CgroupData.config.Resources.CpusetCpus = cpusAfter
+	helper.CgroupData.config.Resources.CpusetCpus = ptrString(cpusAfter)
 	cpuset := &CpusetGroup{}
 	if err := cpuset.Set(helper.CgroupPath, helper.CgroupData.config); err != nil {
 		t.Fatal(err)
@@ -48,7 +48,7 @@ func TestCpusetSetMems(t *testing.T) {
 		"cpuset.mems": memsBefore,
 	})
 
-	helper.CgroupData.config.Resources.CpusetMems = memsAfter
+	helper.CgroupData.config.Resources.CpusetMems = ptrString(memsAfter)
 	cpuset := &CpusetGroup{}
 	if err := cpuset.Set(helper.CgroupPath, helper.CgroupData.config); err != nil {
 		t.Fatal(err)

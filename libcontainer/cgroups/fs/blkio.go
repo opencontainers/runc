@@ -35,14 +35,14 @@ func (s *BlkioGroup) Apply(d *cgroupData) error {
 }
 
 func (s *BlkioGroup) Set(path string, cgroup *configs.Cgroup) error {
-	if cgroup.Resources.BlkioWeight != 0 {
-		if err := writeFile(path, "blkio.weight", strconv.FormatUint(uint64(cgroup.Resources.BlkioWeight), 10)); err != nil {
+	if cgroup.Resources.BlkioWeight != nil {
+		if err := writeFile(path, "blkio.weight", strconv.FormatUint(uint64(*cgroup.Resources.BlkioWeight), 10)); err != nil {
 			return err
 		}
 	}
 
-	if cgroup.Resources.BlkioLeafWeight != 0 {
-		if err := writeFile(path, "blkio.leaf_weight", strconv.FormatUint(uint64(cgroup.Resources.BlkioLeafWeight), 10)); err != nil {
+	if cgroup.Resources.BlkioLeafWeight != nil {
+		if err := writeFile(path, "blkio.leaf_weight", strconv.FormatUint(uint64(*cgroup.Resources.BlkioLeafWeight), 10)); err != nil {
 			return err
 		}
 	}

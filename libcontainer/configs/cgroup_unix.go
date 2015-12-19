@@ -32,43 +32,43 @@ type Resources struct {
 	DeniedDevices []*Device `json:"denied_devices"`
 
 	// Memory limit (in bytes)
-	Memory int64 `json:"memory"`
+	Memory *uint64 `json:"memory"`
 
 	// Memory reservation or soft_limit (in bytes)
-	MemoryReservation int64 `json:"memory_reservation"`
+	MemoryReservation *uint64 `json:"memory_reservation"`
 
 	// Total memory usage (memory + swap); set `-1' to disable swap
-	MemorySwap int64 `json:"memory_swap"`
+	MemorySwap *uint64 `json:"memory_swap"`
 
 	// Kernel memory limit (in bytes)
-	KernelMemory int64 `json:"kernel_memory"`
+	KernelMemory *uint64 `json:"kernel_memory"`
 
 	// CPU shares (relative weight vs. other containers)
-	CpuShares int64 `json:"cpu_shares"`
+	CpuShares *uint64 `json:"cpu_shares"`
 
 	// CPU hardcap limit (in usecs). Allowed cpu time in a given period.
-	CpuQuota int64 `json:"cpu_quota"`
+	CpuQuota *uint64 `json:"cpu_quota"`
 
 	// CPU period to be used for hardcapping (in usecs). 0 to use system default.
-	CpuPeriod int64 `json:"cpu_period"`
+	CpuPeriod *uint64 `json:"cpu_period"`
 
 	// How many time CPU will use in realtime scheduling (in usecs).
-	CpuRtRuntime int64 `json:"cpu_quota"`
+	CpuRtRuntime *uint64 `json:"cpu_quota"`
 
 	// CPU period to be used for realtime scheduling (in usecs).
-	CpuRtPeriod int64 `json:"cpu_period"`
+	CpuRtPeriod *uint64 `json:"cpu_period"`
 
 	// CPU to use
-	CpusetCpus string `json:"cpuset_cpus"`
+	CpusetCpus *string `json:"cpuset_cpus"`
 
 	// MEM to use
-	CpusetMems string `json:"cpuset_mems"`
+	CpusetMems *string `json:"cpuset_mems"`
 
 	// Specifies per cgroup weight, range is from 10 to 1000.
-	BlkioWeight uint16 `json:"blkio_weight"`
+	BlkioWeight *uint16 `json:"blkio_weight"`
 
 	// Specifies tasks' weight in the given cgroup while competing with the cgroup's child cgroups, range is from 10 to 1000, cfq scheduler only
-	BlkioLeafWeight uint16 `json:"blkio_leaf_weight"`
+	BlkioLeafWeight *uint16 `json:"blkio_leaf_weight"`
 
 	// Weight per cgroup per device, can override BlkioWeight.
 	BlkioWeightDevice []*WeightDevice `json:"blkio_weight_device"`
@@ -92,10 +92,10 @@ type Resources struct {
 	HugetlbLimit []*HugepageLimit `json:"hugetlb_limit"`
 
 	// Whether to disable OOM Killer
-	OomKillDisable bool `json:"oom_kill_disable"`
+	OomKillDisable *bool `json:"oom_kill_disable"`
 
 	// Tuning swappiness behaviour per cgroup
-	MemorySwappiness int64 `json:"memory_swappiness"`
+	MemorySwappiness *uint64 `json:"memory_swappiness"`
 
 	// Set priority of network traffic for container
 	NetPrioIfpriomap []*IfPrioMap `json:"net_prio_ifpriomap"`

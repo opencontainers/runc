@@ -77,3 +77,21 @@ func getCgroupParamString(cgroupPath, cgroupFile string) (string, error) {
 
 	return strings.TrimSpace(string(contents)), nil
 }
+
+func ptrUint64(val uint64) *uint64 {
+	result := new(uint64)
+	*result = val
+	return result
+}
+
+func ptrUint16(val uint16) *uint16 {
+	result := new(uint16)
+	*result = val
+	return result
+}
+
+func ptrString(val string) *string {
+	result := new(string)
+	*result = val
+	return result
+}
