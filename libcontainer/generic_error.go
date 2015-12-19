@@ -9,15 +9,6 @@ import (
 	"github.com/opencontainers/runc/libcontainer/stacktrace"
 )
 
-type syncType uint8
-
-const (
-	procReady syncType = iota
-	procError
-	procStart
-	procRun
-)
-
 var errorTemplate = template.Must(template.New("error").Parse(`Timestamp: {{.Timestamp}}
 Code: {{.ECode}}
 {{if .Message }}

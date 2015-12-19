@@ -23,7 +23,6 @@ var (
 		&MemoryGroup{},
 		&CpuGroup{},
 		&CpuacctGroup{},
-		&PidsGroup{},
 		&BlkioGroup{},
 		&HugetlbGroup{},
 		&NetClsGroup{},
@@ -180,24 +179,11 @@ func (m *Manager) GetStats() (*cgroups.Stats, error) {
 }
 
 func (m *Manager) Set(container *configs.Config) error {
-	for _, sys := range subsystems {
-		// We can't set this here, because after being applied, memcg doesn't
-		// allow a non-empty cgroup from having its limits changed.
-		if sys.Name() == "memory" {
+	for name, path := range m.Paths {
+		sys, err := subsystems.Get(name)
+		if err == errSubsystemDoesNotExist || !cgroups.PathExists(path) {
 			continue
 		}
-
-		// Generate fake cgroup data.
-		d, err := getCgroupData(container.Cgroups, -1)
-		if err != nil {
-			return err
-		}
-		// Get the path, but don't error out if the cgroup wasn't found.
-		path, err := d.path(sys.Name())
-		if err != nil && !cgroups.IsNotFound(err) {
-			return err
-		}
-
 		if err := sys.Set(path, container.Cgroups); err != nil {
 			return err
 		}
