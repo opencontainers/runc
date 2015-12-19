@@ -127,7 +127,7 @@ type WeightDevice struct {
 type ThrottleDevice struct {
 	blockIODevice
 	// Rate is the IO rate limit per cgroup per device
-	Rate uint64 `json:"rate"`
+	Rate *uint64 `json:"rate,omitempty"`
 }
 
 // BlockIO for Linux cgroup 'blkio' resource management
