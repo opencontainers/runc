@@ -22,10 +22,15 @@ func (s *CpuGroup) Name() string {
 func (s *CpuGroup) Apply(d *cgroupData) error {
 	// We always want to join the cpu group, to allow fair cpu scheduling
 	// on a container basis
-	_, err := d.join("cpu")
+	dir, err := d.join("cpu")
 	if err != nil && !cgroups.IsNotFound(err) {
 		return err
 	}
+
+	if err := s.Set(dir, d.config); err != nil {
+		return err
+	}
+
 	return nil
 }
 

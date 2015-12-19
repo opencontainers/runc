@@ -456,7 +456,6 @@ func createCgroupConfig(name string, spec *specs.LinuxRuntimeSpec, devices []*co
 	c.Resources.CpuRtPeriod = r.CPU.RealtimePeriod
 	c.Resources.CpusetCpus = r.CPU.Cpus
 	c.Resources.CpusetMems = r.CPU.Mems
-	c.Resources.PidsLimit = r.Pids.Limit
 	c.Resources.BlkioWeight = r.BlockIO.Weight
 	c.Resources.BlkioLeafWeight = r.BlockIO.LeafWeight
 	for _, wd := range r.BlockIO.WeightDevice {

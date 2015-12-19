@@ -15,12 +15,17 @@ func (s *DevicesGroup) Name() string {
 }
 
 func (s *DevicesGroup) Apply(d *cgroupData) error {
-	_, err := d.join("devices")
+	dir, err := d.join("devices")
 	if err != nil {
 		// We will return error even it's `not found` error, devices
 		// cgroup is hard requirement for container's security.
 		return err
 	}
+
+	if err := s.Set(dir, d.config); err != nil {
+		return err
+	}
+
 	return nil
 }
 

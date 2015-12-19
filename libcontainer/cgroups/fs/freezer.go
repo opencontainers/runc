@@ -19,10 +19,15 @@ func (s *FreezerGroup) Name() string {
 }
 
 func (s *FreezerGroup) Apply(d *cgroupData) error {
-	_, err := d.join("freezer")
+	dir, err := d.join("freezer")
 	if err != nil && !cgroups.IsNotFound(err) {
 		return err
 	}
+
+	if err := s.Set(dir, d.config); err != nil {
+		return err
+	}
+
 	return nil
 }
 
