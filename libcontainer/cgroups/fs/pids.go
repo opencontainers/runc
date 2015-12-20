@@ -18,15 +18,10 @@ func (s *PidsGroup) Name() string {
 }
 
 func (s *PidsGroup) Apply(d *cgroupData) error {
-	dir, err := d.join("pids")
+	_, err := d.join("pids")
 	if err != nil && !cgroups.IsNotFound(err) {
 		return err
 	}
-
-	if err := s.Set(dir, d.config); err != nil {
-		return err
-	}
-
 	return nil
 }
 

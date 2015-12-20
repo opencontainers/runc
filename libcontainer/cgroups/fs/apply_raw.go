@@ -106,8 +106,6 @@ func (m *Manager) Apply(pid int) (err error) {
 		return nil
 	}
 
-	var c = m.Cgroups
-
 	d, err := getCgroupData(m.Cgroups, pid)
 	if err != nil {
 		return err
@@ -136,13 +134,6 @@ func (m *Manager) Apply(pid int) (err error) {
 		paths[sys.Name()] = p
 	}
 	m.Paths = paths
-
-	if paths["cpu"] != "" {
-		if err := CheckCpushares(paths["cpu"], c.Resources.CpuShares); err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
@@ -181,11 +172,22 @@ func (m *Manager) GetStats() (*cgroups.Stats, error) {
 
 func (m *Manager) Set(container *configs.Config) error {
 	for name, path := range m.Paths {
+		// We can't set this here, because after being applied, memcg doesn't
+		// allow a non-empty cgroup from having its limits changed.
+		if name == "memory" {
+			continue
+		}
 		sys, err := subsystems.Get(name)
 		if err == errSubsystemDoesNotExist || !cgroups.PathExists(path) {
 			continue
 		}
 		if err := sys.Set(path, container.Cgroups); err != nil {
+			return err
+		}
+	}
+
+	if m.Paths["cpu"] != "" {
+		if err := CheckCpushares(m.Paths["cpu"], container.Cgroups.Resources.CpuShares); err != nil {
 			return err
 		}
 	}
