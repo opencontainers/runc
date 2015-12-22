@@ -27,29 +27,32 @@ This is provided so that consumers can find the container's configuration and ro
 
 ```json
 {
+    "version": "0.2.0",
     "id": "oc-container",
     "pid": 4422,
-    "root": "/containers/redis"
+    "bundlePath": "/containers/redis"
 }
 ```
 
 ## Lifecycle
+The lifecycle describes the timeline of events that happen from when a container is created to when it ceases to exist.
 
-### Create
+1. OCI compliant runtime is invoked by passing the bundle path as argument.
+2. The container's runtime environment is created according to the configuration in `config.json` and `runtime.json`.
+   Any updates to `config.json` or `runtime.json` after container is running do not affect the container.
+3. The container's state.json file is written to the filesystem.
+4. The prestart hooks are invoked by the runtime.
+   If any prestart hook fails, then the container is stopped and the lifecycle continues at step 8.
+5. The user specified process is executed in the container.
+6. The poststart hooks are invoked by the runtime.
+   If any poststart hook fails, then the container is stopped and the lifecycle continues at step 8.
+7. Additional actions such as pausing the container, resuming the container or signaling the container may be performed using the runtime interface.
+   The container could also error out or crash.
+8. The container is destroyed by undoing the steps performed during create phase (step 2).
+9. The poststop hooks are invoked by the runtime and errors, if any, are logged.
+10. The state.json file associated with the container is removed and the return code of the container's user specified process is returned or logged.
 
-Creates the container: file system, namespaces, cgroups, capabilities.
-
-### Start (process)
-
-Runs a process in a container.
-Can be invoked several times.
-
-### Stop (process)
-
-Not sure we need that from runc cli.
-Process is killed from the outside.
-
-This event needs to be captured by runc to run onstop event handlers.
+Note: The lifecycle is a WIP and it will evolve as we have more use cases and more information on the viability of a separate create phase.
 
 ## Hooks
 

@@ -1,7 +1,8 @@
 package specs
 
 // Spec is the base configuration for the container.  It specifies platform
-// independent configuration.
+// independent configuration. This information must be included when the
+// bundle is packaged for distribution.
 type Spec struct {
 	// Version is the version of the specification that is supported.
 	Version string `json:"version"`
@@ -55,16 +56,4 @@ type MountPoint struct {
 	Name string `json:"name"`
 	// Path specifies the path of the mount. The path and child directories MUST exist, a runtime MUST NOT create directories automatically to a mount point.
 	Path string `json:"path"`
-}
-
-// State holds information about the runtime state of the container.
-type State struct {
-	// Version is the version of the specification that is supported.
-	Version string `json:"version"`
-	// ID is the container ID
-	ID string `json:"id"`
-	// Pid is the process id for the container's main process.
-	Pid int `json:"pid"`
-	// BundlePath is the path to the container's bundle directory.
-	BundlePath string `json:"bundlePath"`
 }

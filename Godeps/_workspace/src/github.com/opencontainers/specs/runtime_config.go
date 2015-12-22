@@ -1,6 +1,8 @@
 package specs
 
-// RuntimeSpec is the generic runtime state information on a running container
+// RuntimeSpec contains host-specific configuration information for
+// a container. This information must not be included when the bundle
+// is packaged for distribution.
 type RuntimeSpec struct {
 	// Mounts is a mapping of names to mount configurations.
 	// Which mounts will be mounted and where should be chosen with MountPoints
