@@ -214,7 +214,7 @@ The following parameters can be specified to setup the controller:
         "swap": 0,
         "kernel": 0,
         "kernelTCP": 0,
-        "swappiness": -1
+        "swappiness": 0
     }
 ```
 
