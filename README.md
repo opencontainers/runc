@@ -22,9 +22,10 @@ In the specifications in the above table of contents, the keywords "MUST", "MUST
 
 To provide context for users the following section gives example use cases for each part of the spec.
 
-## Filesystem Bundle & Configuration
+#### Filesystem Bundle & Configuration
 
 - A user can create a root filesystem and configuration, with low-level OS and host specific details, and launch it as a container under an Open Container runtime.
+
 
 # Releases
 
