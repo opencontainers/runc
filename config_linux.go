@@ -21,5 +21,5 @@ type User struct {
 	// GID is the group id.
 	GID uint32 `json:"gid"`
 	// AdditionalGids are additional group ids set for the container's process.
-	AdditionalGids []uint32 `json:"additionalGids"`
+	AdditionalGids []uint32 `json:"additionalGids,omitempty"`
 }

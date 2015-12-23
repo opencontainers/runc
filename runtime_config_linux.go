@@ -15,13 +15,13 @@ type LinuxRuntimeSpec struct {
 // LinuxRuntime hosts the Linux-only runtime information
 type LinuxRuntime struct {
 	// UIDMapping specifies user mappings for supporting user namespaces on linux.
-	UIDMappings []IDMapping `json:"uidMappings"`
+	UIDMappings []IDMapping `json:"uidMappings,omitempty"`
 	// GIDMapping specifies group mappings for supporting user namespaces on linux.
-	GIDMappings []IDMapping `json:"gidMappings"`
+	GIDMappings []IDMapping `json:"gidMappings,omitempty"`
 	// Rlimits specifies rlimit options to apply to the container's process.
-	Rlimits []Rlimit `json:"rlimits"`
+	Rlimits []Rlimit `json:"rlimits,omitempty"`
 	// Sysctl are a set of key value pairs that are set for the container on start
-	Sysctl map[string]string `json:"sysctl"`
+	Sysctl map[string]string `json:"sysctl,omitempty"`
 	// Resources contain cgroup information for handling resource constraints
 	// for the container
 	Resources *Resources `json:"resources,omitempty"`
@@ -49,7 +49,7 @@ type Namespace struct {
 	Type NamespaceType `json:"type"`
 	// Path is a path to an existing namespace persisted on disk that can be joined
 	// and is of the same type
-	Path string `json:"path"`
+	Path string `json:"path,omitempty"`
 }
 
 // NamespaceType is one of the linux namespaces
