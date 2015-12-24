@@ -163,7 +163,7 @@ In addition to any devices configured with this setting, the runtime MUST also s
 ## Control groups
 
 Also known as cgroups, they are used to restrict resource usage for a container and handle device access.
-cgroups provide controls to restrict cpu, memory, IO, pids and network for the container.
+cgroups provide controls to restrict cpu, memory, IO, pids, network and intel_rdt for the container.
 For more information, see the [kernel cgroups documentation][cgroup-v1].
 
 The path to the cgroups can be specified in the Spec via `cgroupsPath`.
@@ -451,6 +451,23 @@ The following paramters can be specified to setup the controller:
 ```json
    "pids": {
         "limit": 32771
+   }
+```
+
+#### Intel rdt 
+
+`intelRdt` represents the cgroup subsystem `intel_rdt`.
+For more information, see [the intel_rdt cgroup man page](https://lkml.org/lkml/2015/12/17/574).
+
+The following paramters can be specified to setup the controller:
+
+* **`l3Cbm`** *(uint64, optional)* - specifies L3 cache capacity bitmask (CBM) in the cgroup
+
+###### Example
+
+```json
+   "intelRdt": {
+        "l3Cbm": 4080 
    }
 ```
 
