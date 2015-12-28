@@ -15,7 +15,7 @@ The redundancy reduction from removing the namespacing prefix is not useful enou
 So we have a consistent way to identify unset values ([source][optional-pointer]).
 
 [capabilities]: config-linux.md#capabilities
-[class-id]: runtime-config-linux.md#network
+[class-id]: config-linux.md#network
 [integer-over-hex]: https://github.com/opencontainers/specs/pull/267#discussion_r48360013
 [keep-prefix]: https://github.com/opencontainers/specs/pull/159#issuecomment-138728337
 [optional-pointer]: https://github.com/opencontainers/specs/pull/233#discussion_r47829711
