@@ -4,6 +4,7 @@ DOC_FILES := \
 	README.md \
 	code-of-conduct.md \
 	principles.md \
+	style.md \
 	ROADMAP.md \
 	implementations.md \
 	bundle.md \
