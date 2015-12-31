@@ -40,7 +40,7 @@ type LinuxRuntime struct {
 	// Seccomp specifies the seccomp security settings for the container.
 	Seccomp Seccomp `json:"seccomp"`
 	// RootfsPropagation is the rootfs mount propagation mode for the container
-	RootfsPropagation string `json:"rootfsPropagation"`
+	RootfsPropagation string `json:"rootfsPropagation,omitempty"`
 }
 
 // Namespace is the configuration for a linux namespace
