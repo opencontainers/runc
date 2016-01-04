@@ -12,7 +12,8 @@ DOC_FILES := \
 	config.md \
 	config-linux.md \
 	runtime-config.md \
-	runtime-config-linux.md
+	runtime-config-linux.md \
+	glossary.md
 
 docs: pdf html
 
