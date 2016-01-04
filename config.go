@@ -13,7 +13,7 @@ type Spec struct {
 	// Root is the root information for the container's filesystem.
 	Root Root `json:"root"`
 	// Hostname is the container's host name.
-	Hostname string `json:"hostname"`
+	Hostname string `json:"hostname,omitempty"`
 	// Mounts profile configuration for adding mounts to the container's filesystem.
 	Mounts []MountPoint `json:"mounts"`
 }
@@ -27,10 +27,10 @@ type Process struct {
 	// Args specifies the binary and arguments for the application to execute.
 	Args []string `json:"args"`
 	// Env populates the process environment for the process.
-	Env []string `json:"env"`
+	Env []string `json:"env,omitempty"`
 	// Cwd is the current working directory for the process and must be
 	// relative to the container's root.
-	Cwd string `json:"cwd"`
+	Cwd string `json:"cwd,omitempty"`
 }
 
 // Root contains information about the container's root filesystem on the host.
