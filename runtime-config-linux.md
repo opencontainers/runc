@@ -503,3 +503,14 @@ Its value is either slave, private, or shared.
 ```json
     "rootfsPropagation": "slave",
 ```
+
+## No new privileges
+
+Setting `noNewPrivileges` to true prevents the processes in the container from gaining additional privileges.
+[The kernel doc](https://www.kernel.org/doc/Documentation/prctl/no_new_privs.txt) has more information on how this is achieved using a prctl system call.
+
+###### Example
+
+```json
+    "noNewPrivileges": true,
+```

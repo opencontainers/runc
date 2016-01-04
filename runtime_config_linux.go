@@ -39,8 +39,10 @@ type LinuxRuntime struct {
 	SelinuxProcessLabel string `json:"selinuxProcessLabel"`
 	// Seccomp specifies the seccomp security settings for the container.
 	Seccomp Seccomp `json:"seccomp"`
-	// RootfsPropagation is the rootfs mount propagation mode for the container
+	// RootfsPropagation is the rootfs mount propagation mode for the container.
 	RootfsPropagation string `json:"rootfsPropagation,omitempty"`
+	// NoNewPrivileges controls whether additional privileges could be gained by processes in the container.
+	NoNewPrivileges bool `json:"noNewPrivileges,omitempty"`
 }
 
 // Namespace is the configuration for a linux namespace
