@@ -152,6 +152,8 @@ The Spec does not include naming schema for cgroups.
 The Spec does not support [split hierarchy](https://www.kernel.org/doc/Documentation/cgroups/unified-hierarchy.txt).
 The cgroups will be created if they don't exist.
 
+###### Example
+
 ```json
    "cgroupsPath": "/myRuntime/myContainer"
 ```
@@ -181,6 +183,8 @@ For more information, see [the memory cgroup man page](https://www.kernel.org/do
 #### Set oom_score_adj
 
 More information on `oom_score_adj` available [here](https://www.kernel.org/doc/Documentation/filesystems/proc.txt).
+
+###### Example
 
 ```json
     "oomScoreAdj": 0
