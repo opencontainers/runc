@@ -26,5 +26,5 @@ While the name of this REQUIRED directory may be arbitrary, users should conside
 When the bundle is packaged up for distribution, this directory MUST be included.
 This directory MUST be referenced from within the `config.json` file.
 
-While these three artifacts MUST all be present in a single directory on the local filesytem, that directory itself is not part of the bundle.
+While these three artifacts MUST all be present in a single directory on the local filesystem, that directory itself is not part of the bundle.
 In other words, a tar archive of a *bundle* will have these artifacts at the root of the archive, not nested within a top-level directory.
