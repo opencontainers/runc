@@ -49,6 +49,32 @@ Also, when a path is specified, a runtime MUST assume that the setup for that pa
     ]
 ```
 
+## User namespace mappings
+
+###### Example
+
+```json
+    "uidMappings": [
+        {
+            "hostID": 1000,
+            "containerID": 0,
+            "size": 10
+        }
+    ],
+    "gidMappings": [
+        {
+            "hostID": 1000,
+            "containerID": 0,
+            "size": 10
+        }
+    ]
+```
+
+uid/gid mappings describe the user namespace mappings from the host to the container.
+The mappings represent how the bundle `rootfs` expects the user namespace to be setup and the runtime SHOULD NOT modify the permissions on the rootfs to realize the mapping.
+*hostID* is the starting uid/gid on the host to be mapped to *containerID* which is the starting uid/gid in the container and *size* refers to the number of ids to be mapped.
+There is a limit of 5 mappings which is the Linux kernel hard limit.
+
 ## Devices
 
 `devices` is an array specifying the list of devices to be created in the container.
@@ -152,6 +178,8 @@ The Spec does not include naming schema for cgroups.
 The Spec does not support [split hierarchy](https://www.kernel.org/doc/Documentation/cgroups/unified-hierarchy.txt).
 The cgroups will be created if they don't exist.
 
+###### Example
+
 ```json
    "cgroupsPath": "/myRuntime/myContainer"
 ```
@@ -181,6 +209,8 @@ For more information, see [the memory cgroup man page](https://www.kernel.org/do
 #### Set oom_score_adj
 
 More information on `oom_score_adj` available [here](https://www.kernel.org/doc/Documentation/filesystems/proc.txt).
+
+###### Example
 
 ```json
     "oomScoreAdj": 0

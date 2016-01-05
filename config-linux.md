@@ -16,30 +16,6 @@ Valid values are the strings for capabilities defined in [the man page](http://m
     ]
 ```
 
-## User namespace mappings
-
-```json
-    "uidMappings": [
-        {
-            "hostID": 1000,
-            "containerID": 0,
-            "size": 10
-        }
-    ],
-    "gidMappings": [
-        {
-            "hostID": 1000,
-            "containerID": 0,
-            "size": 10
-        }
-    ]
-```
-
-uid/gid mappings describe the user namespace mappings from the host to the container.
-The mappings represent how the bundle `rootfs` expects the user namespace to be setup and the runtime SHOULD NOT modify the permissions on the rootfs to realize the mapping.
-*hostID* is the starting uid/gid on the host to be mapped to *containerID* which is the starting uid/gid in the container and *size* refers to the number of ids to be mapped.
-There is a limit of 5 mappings which is the Linux kernel hard limit.
-
 ## Default Devices and File Systems
 
 The Linux ABI includes both syscalls and several special file paths.
