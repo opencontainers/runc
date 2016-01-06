@@ -299,6 +299,24 @@ func checkMountDestination(rootfs, dest string) error {
 	invalidDestinations := []string{
 		"/proc",
 	}
+	// White list, it should be sub directories of invalid destinations
+	validDestinations := []string{
+		// These entries can be bind mounted by files emulated by fuse,
+		// so commands like top, free displays stats in container.
+		"/proc/cpuinfo",
+		"/proc/diskstats",
+		"/proc/meminfo",
+		"/proc/stats",
+	}
+	for _, valid := range validDestinations {
+		path, err := filepath.Rel(filepath.Join(rootfs, valid), dest)
+		if err != nil {
+			return err
+		}
+		if path == "." {
+			return nil
+		}
+	}
 	for _, invalid := range invalidDestinations {
 		path, err := filepath.Rel(filepath.Join(rootfs, invalid), dest)
 		if err != nil {
