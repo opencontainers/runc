@@ -208,7 +208,14 @@ For more information, see [the memory cgroup man page](https://www.kernel.org/do
 
 #### Set oom_score_adj
 
-More information on `oom_score_adj` available [here](https://www.kernel.org/doc/Documentation/filesystems/proc.txt).
+`oomScoreAdj` sets heuristic regarding how the process is evaluated by the kernel during memory pressure.
+For more information, see [the proc filesystem documentation section 3.1](https://www.kernel.org/doc/Documentation/filesystems/proc.txt).
+This is a kernel/system level setting, where as `disableOOMKiller` is scoped for a memory cgroup.
+For more information on how these two settings work together, see [the memory cgroup documentation section 10. OOM Contol](https://www.kernel.org/doc/Documentation/cgroups/memory.txt).
+
+* **`oomScoreAdj`** *(int, optional)* - adjust the oom-killer score
+
+###### Example
 
 ###### Example
 
