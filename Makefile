@@ -17,6 +17,7 @@ DOC_FILES := \
 	glossary.md
 
 docs: pdf html
+.PHONY: docs
 
 pdf:
 	@mkdir -p output/ && \
@@ -39,6 +40,22 @@ html:
 	-u $(shell id -u) \
 	vbatts/pandoc -f markdown_github -t html5 -o /output/docs.html $(patsubst %,/input/%,$(DOC_FILES)) && \
 	ls -sh $(shell readlink -f output/docs.html)
+
+.PHONY: test .govet .golint .gitvalidation
+
+test: .govet .golint
+
+# `go get golang.org/x/tools/cmd/vet`
+.govet:
+	go vet -x ./...
+
+# `go get github.com/golang/lint/golint`
+.golint:
+	golint ./...
+
+# `go get github.com/vbatts/git-validation`
+.gitvalidation:
+	git-validation -run DCO,short-subject -v -range ${TRAVIS_COMMIT_RANGE}
 
 clean:
 	rm -rf output/ *~
