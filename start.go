@@ -26,6 +26,11 @@ var startCommand = cli.Command{
 			Value: "",
 			Usage: "path to the root of the bundle directory",
 		},
+		cli.StringFlag{
+			Name:  "console",
+			Value: "",
+			Usage: "specify the pty slave path for use with the container",
+		},
 	},
 	Action: func(context *cli.Context) {
 		bundle := context.String("bundle")
@@ -44,9 +49,10 @@ var startCommand = cli.Command{
 			setupSdNotify(spec, rspec, notifySocket)
 		}
 
-		listenFds := os.Getenv("LISTEN_FDS")
-		listenPid := os.Getenv("LISTEN_PID")
-
+		var (
+			listenFds = os.Getenv("LISTEN_FDS")
+			listenPid = os.Getenv("LISTEN_PID")
+		)
 		if listenFds != "" && listenPid == strconv.Itoa(os.Getpid()) {
 			setupSocketActivation(spec, listenFds)
 		}
@@ -114,7 +120,7 @@ func startContainer(context *cli.Context, spec *specs.LinuxSpec, rspec *specs.Li
 			process.ExtraFiles = append(process.ExtraFiles, os.NewFile(uintptr(i), ""))
 		}
 	}
-	tty, err := newTty(spec.Process.Terminal, process, rootuid)
+	tty, err := newTty(spec.Process.Terminal, process, rootuid, context.String("console"))
 	if err != nil {
 		return -1, err
 	}

@@ -14,9 +14,9 @@ import (
 // newTty creates a new tty for use with the container.  If a tty is not to be
 // created for the process, pipes are created so that the TTY of the parent
 // process are not inherited by the container.
-func newTty(create bool, p *libcontainer.Process, rootuid int) (*tty, error) {
+func newTty(create bool, p *libcontainer.Process, rootuid int, console string) (*tty, error) {
 	if create {
-		return createTty(p, rootuid)
+		return createTty(p, rootuid, console)
 	}
 	return createStdioPipes(p, rootuid)
 }
@@ -41,13 +41,20 @@ func createStdioPipes(p *libcontainer.Process, rootuid int) (*tty, error) {
 	return t, nil
 }
 
-func createTty(p *libcontainer.Process, rootuid int) (*tty, error) {
+func createTty(p *libcontainer.Process, rootuid int, consolePath string) (*tty, error) {
+	if consolePath != "" {
+		if err := p.ConsoleFromPath(consolePath); err != nil {
+			return nil, err
+		}
+		return &tty{}, nil
+	}
 	console, err := p.NewConsole(rootuid)
 	if err != nil {
 		return nil, err
 	}
 	go io.Copy(console, os.Stdin)
 	go io.Copy(os.Stdout, console)
+
 	state, err := term.SetRawTerminal(os.Stdin.Fd())
 	if err != nil {
 		return nil, fmt.Errorf("failed to set the terminal from the stdin: %v", err)
