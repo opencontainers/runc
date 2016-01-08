@@ -217,17 +217,28 @@ func (m *Manager) Freeze(state configs.FreezerState) error {
 }
 
 func (m *Manager) GetPids() ([]int, error) {
-	d, err := getCgroupData(m.Cgroups, 0)
+	dir, err := getCgroupPath(m.Cgroups)
 	if err != nil {
 		return nil, err
 	}
-
-	dir, err := d.path("devices")
-	if err != nil {
-		return nil, err
-	}
-
 	return cgroups.GetPids(dir)
+}
+
+func (m *Manager) GetAllPids() ([]int, error) {
+	dir, err := getCgroupPath(m.Cgroups)
+	if err != nil {
+		return nil, err
+	}
+	return cgroups.GetAllPids(dir)
+}
+
+func getCgroupPath(c *configs.Cgroup) (string, error) {
+	d, err := getCgroupData(c, 0)
+	if err != nil {
+		return "", err
+	}
+
+	return d.path("devices")
 }
 
 func getCgroupData(c *configs.Cgroup, pid int) (*cgroupData, error) {

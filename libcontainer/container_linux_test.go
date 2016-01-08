@@ -12,13 +12,18 @@ import (
 )
 
 type mockCgroupManager struct {
-	pids  []int
-	stats *cgroups.Stats
-	paths map[string]string
+	pids    []int
+	allPids []int
+	stats   *cgroups.Stats
+	paths   map[string]string
 }
 
 func (m *mockCgroupManager) GetPids() ([]int, error) {
 	return m.pids, nil
+}
+
+func (m *mockCgroupManager) GetAllPids() ([]int, error) {
+	return m.allPids, nil
 }
 
 func (m *mockCgroupManager) GetStats() (*cgroups.Stats, error) {
@@ -85,7 +90,7 @@ func TestGetContainerPids(t *testing.T) {
 	container := &linuxContainer{
 		id:            "myid",
 		config:        &configs.Config{},
-		cgroupManager: &mockCgroupManager{pids: []int{1, 2, 3}},
+		cgroupManager: &mockCgroupManager{allPids: []int{1, 2, 3}},
 	}
 	pids, err := container.Processes()
 	if err != nil {

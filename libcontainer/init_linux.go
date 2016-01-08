@@ -309,7 +309,7 @@ func killCgroupProcesses(m cgroups.Manager) error {
 	if err := m.Freeze(configs.Frozen); err != nil {
 		logrus.Warn(err)
 	}
-	pids, err := m.GetPids()
+	pids, err := m.GetAllPids()
 	if err != nil {
 		m.Freeze(configs.Thawed)
 		return err
