@@ -440,6 +440,14 @@ func (m *Manager) GetPids() ([]int, error) {
 	return cgroups.GetPids(path)
 }
 
+func (m *Manager) GetAllPids() ([]int, error) {
+	path, err := getSubsystemPath(m.Cgroups, "devices")
+	if err != nil {
+		return nil, err
+	}
+	return cgroups.GetAllPids(path)
+}
+
 func (m *Manager) GetStats() (*cgroups.Stats, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
