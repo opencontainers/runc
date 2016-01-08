@@ -1,4 +1,4 @@
-// +build linux
+// +build linux,selinux
 
 package selinux_test
 
@@ -9,10 +9,10 @@ import (
 	"github.com/opencontainers/runc/libcontainer/selinux"
 )
 
-func testSetfilecon(t *testing.T) {
+func TestSetfilecon(t *testing.T) {
 	if selinux.SelinuxEnabled() {
 		tmp := "selinux_test"
-		out, _ := os.OpenFile(tmp, os.O_WRONLY, 0)
+		out, _ := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE, 0)
 		out.Close()
 		err := selinux.Setfilecon(tmp, "system_u:object_r:bin_t:s0")
 		if err != nil {
