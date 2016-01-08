@@ -6,6 +6,7 @@
 Table of Contents
 
 - [Container Principles](principles.md)
+- [Specification Style](style.md)
 - [Filesystem Bundle](bundle.md)
 - Configuration
   - [Container Configuration](config.md)
