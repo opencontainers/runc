@@ -378,7 +378,7 @@ For more information, see [the net\_cls cgroup man page](https://www.kernel.org/
 
 The following parameters can be specified to setup these cgroup controllers:
 
-* **`classID`** *(string, optional)* - is the network class identifier the cgroup's network packets will be tagged with
+* **`classID`** *(uint32, optional)* - is the network class identifier the cgroup's network packets will be tagged with
 
 * **`priorities`** *(array, optional)* - specifies a list of objects of the priorities assigned to traffic originating from
 processes in the group and egressing the system on various interfaces. The following parameters can be specified per-priority:
@@ -389,7 +389,7 @@ processes in the group and egressing the system on various interfaces. The follo
 
 ```json
    "network": {
-        "classID": "0x100001",
+        "classID": 1048577,
         "priorities": [
             {
                 "name": "eth0",
