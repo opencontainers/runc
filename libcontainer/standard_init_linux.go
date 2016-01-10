@@ -16,6 +16,7 @@ import (
 type linuxStandardInit struct {
 	parentPid int
 	config    *initConfig
+	pipe      *os.File // back to parent process
 }
 
 func (l *linuxStandardInit) Init() error {
@@ -109,5 +110,15 @@ func (l *linuxStandardInit) Init() error {
 	if syscall.Getppid() != l.parentPid {
 		return syscall.Kill(syscall.Getpid(), syscall.SIGKILL)
 	}
+
+	// Special case - just sleep forever
+	if len(l.config.Args) == 0 {
+		// Close the pipe back to the parent process so it knows there's
+		// no error and we're done with our setup.  The system.Execv
+		// will do it automatically for us in the non-special case.
+		l.pipe.Close()
+		select {}
+	}
+
 	return system.Execv(l.config.Args[0], l.config.Args[0:], os.Environ())
 }
