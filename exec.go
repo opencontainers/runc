@@ -15,6 +15,13 @@ import (
 var execCommand = cli.Command{
 	Name:  "exec",
 	Usage: "execute new process inside the container",
+	Flags: []cli.Flag{
+		cli.StringFlag{
+			Name:  "console",
+			Value: "",
+			Usage: "specify the pty slave path for use with the container",
+		},
+	},
 	Action: func(context *cli.Context) {
 		config, err := loadProcessConfig(context.Args().First())
 		if err != nil {
@@ -45,7 +52,7 @@ func execProcess(context *cli.Context, config *specs.Process) (int, error) {
 	if err != nil {
 		return -1, err
 	}
-	tty, err := newTty(config.Terminal, process, rootuid)
+	tty, err := newTty(config.Terminal, process, rootuid, context.String("console"))
 	if err != nil {
 		return -1, err
 	}
