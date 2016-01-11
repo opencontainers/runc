@@ -11,6 +11,11 @@ If you know of any associated projects that are not listed here, please file a p
 
 * [hyperhq/runv](https://github.com/hyperhq/runv) - Hypervisor-based runtime for OCI
 
+## Bundle authoring
+
+* [kunalkushwaha/octool](https://github.com/kunalkushwaha/octool) - A config linter and validator.
+* [mrunalp/ocitools](https://github.com/mrunalp/ocitools) - A config generator.
+
 ## Testing
 
 * [huawei-openlab/oct](https://github.com/huawei-openlab/oct) - Open Container Testing framework for OCI configuration and runtime

@@ -517,7 +517,7 @@ func testCpuShares(t *testing.T, systemd bool) {
 	if systemd {
 		config.Cgroups.Parent = "system.slice"
 	}
-	config.Cgroups.Resources.CpuShares = 1
+	config.Cgroups.Resources.CpuShares = ptrUint64(1)
 
 	_, _, err = runContainer(config, "", "ps")
 	if err == nil {
@@ -548,7 +548,7 @@ func testRunWithKernelMemory(t *testing.T, systemd bool) {
 	if systemd {
 		config.Cgroups.Parent = "system.slice"
 	}
-	config.Cgroups.Resources.KernelMemory = 52428800
+	config.Cgroups.Resources.KernelMemory = ptrUint64(52428800)
 
 	_, _, err = runContainer(config, "", "ps")
 	if err != nil {
@@ -1275,4 +1275,10 @@ func TestPIDHost(t *testing.T) {
 	if actual := strings.Trim(buffers.Stdout.String(), "\n"); actual != l {
 		t.Fatalf("ipc link not equal to host link %q %q", actual, l)
 	}
+}
+
+func ptrUint64(val uint64) *uint64 {
+	result := new(uint64)
+	*result = val
+	return result
 }

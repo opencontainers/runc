@@ -49,9 +49,8 @@ func newTemplateConfig(rootfs string) *configs.Config {
 			Name:   "test",
 			Parent: "integration",
 			Resources: &configs.Resources{
-				MemorySwappiness: -1,
-				AllowAllDevices:  false,
-				AllowedDevices:   configs.DefaultAllowedDevices,
+				AllowAllDevices: false,
+				AllowedDevices:  configs.DefaultAllowedDevices,
 			},
 		},
 		MaskPaths: []string{

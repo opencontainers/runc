@@ -89,7 +89,8 @@ func TestBlkioSetWeight(t *testing.T) {
 		"blkio.weight": strconv.Itoa(weightBefore),
 	})
 
-	helper.CgroupData.config.Resources.BlkioWeight = weightAfter
+	helper.CgroupData.config.Resources.BlkioWeight = ptrUint16(weightAfter)
+
 	blkio := &BlkioGroup{}
 	if err := blkio.Set(helper.CgroupPath, helper.CgroupData.config); err != nil {
 		t.Fatal(err)

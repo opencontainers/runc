@@ -33,8 +33,8 @@ func TestMemorySetMemory(t *testing.T) {
 		"memory.soft_limit_in_bytes": strconv.Itoa(reservationBefore),
 	})
 
-	helper.CgroupData.config.Resources.Memory = memoryAfter
-	helper.CgroupData.config.Resources.MemoryReservation = reservationAfter
+	helper.CgroupData.config.Resources.Memory = ptrUint64(memoryAfter)
+	helper.CgroupData.config.Resources.MemoryReservation = ptrUint64(reservationAfter)
 	memory := &MemoryGroup{}
 	if err := memory.Set(helper.CgroupPath, helper.CgroupData.config); err != nil {
 		t.Fatal(err)
@@ -70,7 +70,7 @@ func TestMemorySetMemoryswap(t *testing.T) {
 		"memory.memsw.limit_in_bytes": strconv.Itoa(memoryswapBefore),
 	})
 
-	helper.CgroupData.config.Resources.MemorySwap = memoryswapAfter
+	helper.CgroupData.config.Resources.MemorySwap = ptrUint64(memoryswapAfter)
 	memory := &MemoryGroup{}
 	if err := memory.Set(helper.CgroupPath, helper.CgroupData.config); err != nil {
 		t.Fatal(err)
@@ -98,7 +98,7 @@ func TestMemorySetKernelMemory(t *testing.T) {
 		"memory.kmem.limit_in_bytes": strconv.Itoa(kernelMemoryBefore),
 	})
 
-	helper.CgroupData.config.Resources.KernelMemory = kernelMemoryAfter
+	helper.CgroupData.config.Resources.KernelMemory = ptrUint64(kernelMemoryAfter)
 	memory := &MemoryGroup{}
 	if err := memory.Set(helper.CgroupPath, helper.CgroupData.config); err != nil {
 		t.Fatal(err)
@@ -118,7 +118,7 @@ func TestMemorySetMemorySwappinessDefault(t *testing.T) {
 	defer helper.cleanup()
 
 	const (
-		swappinessBefore = 60 //deafult is 60
+		swappinessBefore = 60 //default is 60
 		swappinessAfter  = 0
 	)
 
@@ -126,7 +126,7 @@ func TestMemorySetMemorySwappinessDefault(t *testing.T) {
 		"memory.swappiness": strconv.Itoa(swappinessBefore),
 	})
 
-	helper.CgroupData.config.Resources.Memory = swappinessAfter
+	helper.CgroupData.config.Resources.MemorySwappiness = ptrUint64(swappinessAfter)
 	memory := &MemoryGroup{}
 	if err := memory.Set(helper.CgroupPath, helper.CgroupData.config); err != nil {
 		t.Fatal(err)

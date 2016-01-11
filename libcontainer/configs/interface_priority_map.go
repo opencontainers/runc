@@ -6,7 +6,7 @@ import (
 
 type IfPrioMap struct {
 	Interface string `json:"interface"`
-	Priority  int64  `json:"priority"`
+	Priority  uint32 `json:"priority"`
 }
 
 func (i *IfPrioMap) CgroupString() string {
