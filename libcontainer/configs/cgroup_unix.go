@@ -19,6 +19,9 @@ type Cgroup struct {
 	// ScopePrefix decribes prefix for the scope name
 	ScopePrefix string `json:"scope_prefix"`
 
+	// Paths represent the cgroups paths to join
+	Paths map[string]string
+
 	// Resources contains various cgroups settings to apply
 	*Resources
 }

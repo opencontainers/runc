@@ -106,9 +106,27 @@ func (m *Manager) Apply(pid int) (err error) {
 		return nil
 	}
 
+	var c = m.Cgroups
+
 	d, err := getCgroupData(m.Cgroups, pid)
 	if err != nil {
 		return err
+	}
+
+	if c.Paths != nil {
+		paths := make(map[string]string)
+		for name, path := range c.Paths {
+			_, err := d.path(name)
+			if err != nil {
+				if cgroups.IsNotFound(err) {
+					continue
+				}
+				return err
+			}
+			paths[name] = path
+		}
+		m.Paths = paths
+		return cgroups.EnterPid(m.Paths, pid)
 	}
 
 	paths := make(map[string]string)
@@ -138,6 +156,9 @@ func (m *Manager) Apply(pid int) (err error) {
 }
 
 func (m *Manager) Destroy() error {
+	if m.Cgroups.Paths != nil {
+		return nil
+	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if err := cgroups.RemovePaths(m.Paths); err != nil {
