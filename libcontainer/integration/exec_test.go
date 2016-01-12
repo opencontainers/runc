@@ -525,6 +525,75 @@ func testCpuShares(t *testing.T, systemd bool) {
 	}
 }
 
+func TestPids(t *testing.T) {
+	testPids(t, false)
+}
+
+func TestPidsSystemd(t *testing.T) {
+	if !systemd.UseSystemd() {
+		t.Skip("Systemd is unsupported")
+	}
+	testPids(t, true)
+}
+
+func testPids(t *testing.T, systemd bool) {
+	if testing.Short() {
+		return
+	}
+
+	rootfs, err := newRootfs()
+	ok(t, err)
+	defer remove(rootfs)
+
+	config := newTemplateConfig(rootfs)
+	if systemd {
+		config.Cgroups.Parent = "system.slice"
+	}
+	config.Cgroups.Resources.PidsLimit = -1
+
+	// Running multiple processes.
+	_, ret, err := runContainer(config, "", "/bin/sh", "-c", "/bin/true | /bin/true | /bin/true | /bin/true")
+	if err != nil && strings.Contains(err.Error(), "no such directory for pids.max") {
+		t.Skip("PIDs cgroup is unsupported")
+	}
+	ok(t, err)
+
+	if ret != 0 {
+		t.Fatalf("expected fork() to succeed with no pids limit")
+	}
+
+	// Enforce a permissive limit (shell + 6 * true + 3).
+	config.Cgroups.Resources.PidsLimit = 10
+	_, ret, err = runContainer(config, "", "/bin/sh", "-c", "/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true")
+	if err != nil && strings.Contains(err.Error(), "no such directory for pids.max") {
+		t.Skip("PIDs cgroup is unsupported")
+	}
+	ok(t, err)
+
+	if ret != 0 {
+		t.Fatalf("expected fork() to succeed with permissive pids limit")
+	}
+
+	// Enforce a restrictive limit (shell + 6 * true + 3).
+	config.Cgroups.Resources.PidsLimit = 10
+	out, ret, err := runContainer(config, "", "/bin/sh", "-c", "/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true")
+	if err != nil && strings.Contains(err.Error(), "no such directory for pids.max") {
+		t.Skip("PIDs cgroup is unsupported")
+	}
+	if err != nil && !strings.Contains(out.String(), "sh: can't fork") {
+		ok(t, err)
+	}
+
+	if err == nil {
+		t.Fatalf("expected fork() to fail with restrictive pids limit")
+	}
+
+	// Minimal restrictions are not really supported, due to quirks in using Go
+	// due to the fact that it spawns random processes. While we do our best with
+	// late setting cgroup values, it's just too unreliable with very small pids.max.
+	// As such, we don't test that case. YMMV.
+}
+
 func TestRunWithKernelMemory(t *testing.T) {
 	testRunWithKernelMemory(t, false)
 }
