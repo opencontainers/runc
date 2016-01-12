@@ -219,5 +219,8 @@ func (n *createdState) transition(s containerState) error {
 }
 
 func (n *createdState) destroy() error {
-	return nil
+	if err := n.c.refreshState(); err != nil {
+		return err
+	}
+	return n.c.state.destroy()
 }
