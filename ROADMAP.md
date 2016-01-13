@@ -106,8 +106,15 @@ Systems:
 *Owner:* robdolinms as lead coordinator
 
 ### Full Lifecycle Hooks
+
 Ensure that we have lifecycle hooks in the correct places with full coverage over the container lifecycle.
 
 Will probably go away with Vish's work on splitting create and start, and if we have exec.
 
 *Owner:*
+
+### Distributable Format
+
+A common format for serializing and distributing bundles.
+
+*Owner:* vbatts
