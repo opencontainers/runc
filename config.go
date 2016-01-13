@@ -30,7 +30,7 @@ type Process struct {
 	Env []string `json:"env,omitempty"`
 	// Cwd is the current working directory for the process and must be
 	// relative to the container's root.
-	Cwd string `json:"cwd,omitempty"`
+	Cwd string `json:"cwd"`
 }
 
 // Root contains information about the container's root filesystem on the host.
