@@ -191,9 +191,7 @@ type Pids struct {
 // Network identification and priority configuration
 type Network struct {
 	// Set class identifier for container's network packets
-	// this is actually a string instead of a uint64 to overcome the json
-	// limitation of specifying hex numbers
-	ClassID string `json:"classID"`
+	ClassID *uint32 `json:"classID"`
 	// Set priority of network traffic for container
 	Priorities []InterfacePriority `json:"priorities"`
 }
