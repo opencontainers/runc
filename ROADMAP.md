@@ -37,16 +37,6 @@ Define what type of actions a runtime can perform on a container without imposin
 
 *Owner:* duglin
 
-### Clarify rootfs requirement in base spec
-
-Is the rootfs needed or should it just be expected in the bundle without having a field in the spec?
-
-Resolution: keep it as is - user definable
-Submit as a different PR
-For reference: https://groups.google.com/a/opencontainers.org/forum/#!topic/dev/6ZKMNWujDhU
-
-*Owner:*
-
 ### Container Definition
 
 Define what a software container is and its attributes in a cross platform way.
