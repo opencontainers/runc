@@ -63,15 +63,6 @@ Proposal: make it an optional feature
 
 *Owner:* hqhq (was vishh) robdolinms, bcorrie
 
-### Protobuf Config
-
-We currently have only one language binding for the spec and that is Go.
-If we change the specs format in the respository to be something like protobuf then the generation for multiple language bindings become effortless.
-
-Not going to do it
-
-*Owner:* vbatts
-
 ### Validation Tooling (Target release: v0.3.0)
 
 Provide validation tooling for compliance with OCI spec and runtime environment.
