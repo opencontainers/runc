@@ -3,7 +3,7 @@
 ## Traditionally hex settings should use JSON integers, not JSON strings
 
 For example, [`"classID": 1048577`][class-id] instead of `"classID": "0x100001"`.
-The config JSON isn't enough of a UI to be worth jumping through string ↔ integer hoops to support an 0x… form ([source][integer-over-hex]).
+The config JSON isn't enough of a UI to be worth jumping through string <-> integer hoops to support an 0x… form ([source][integer-over-hex]).
 
 ## Constant names should keep redundant prefixes
 
