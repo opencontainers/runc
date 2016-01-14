@@ -113,6 +113,7 @@ func runContainer(config *configs.Config, console string, args ...string) (buffe
 	defer container.Destroy()
 	buffers = newStdBuffers()
 	process := &libcontainer.Process{
+		Cwd:    "/",
 		Args:   args,
 		Env:    standardEnvironment,
 		Stdin:  buffers.Stdin,

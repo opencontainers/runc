@@ -42,6 +42,7 @@ func TestSeccompDenyGetcwd(t *testing.T) {
 
 	buffers := newStdBuffers()
 	pwd := &libcontainer.Process{
+		Cwd:    "/",
 		Args:   []string{"pwd"},
 		Env:    standardEnvironment,
 		Stdin:  buffers.Stdin,
@@ -116,6 +117,7 @@ func TestSeccompPermitWriteConditional(t *testing.T) {
 
 	buffers := newStdBuffers()
 	dmesg := &libcontainer.Process{
+		Cwd:    "/",
 		Args:   []string{"busybox", "ls", "/"},
 		Env:    standardEnvironment,
 		Stdin:  buffers.Stdin,
@@ -176,6 +178,7 @@ func TestSeccompDenyWriteConditional(t *testing.T) {
 
 	buffers := newStdBuffers()
 	dmesg := &libcontainer.Process{
+		Cwd:    "/",
 		Args:   []string{"busybox", "ls", "does_not_exist"},
 		Env:    standardEnvironment,
 		Stdin:  buffers.Stdin,

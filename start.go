@@ -108,6 +108,7 @@ func startContainer(context *cli.Context, spec *specs.LinuxSpec, rspec *specs.Li
 	// ensure that the container is always removed if we were the process
 	// that created it.
 	defer destroy(container)
+
 	process := newProcess(spec.Process)
 
 	// Support on-demand socket activation by passing file descriptors into the container init process.

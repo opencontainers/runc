@@ -28,6 +28,7 @@ func TestExecIn(t *testing.T) {
 	stdinR, stdinW, err := os.Pipe()
 	ok(t, err)
 	process := &libcontainer.Process{
+		Cwd:   "/",
 		Args:  []string{"cat"},
 		Env:   standardEnvironment,
 		Stdin: stdinR,
@@ -39,6 +40,7 @@ func TestExecIn(t *testing.T) {
 
 	buffers := newStdBuffers()
 	ps := &libcontainer.Process{
+		Cwd:    "/",
 		Args:   []string{"ps"},
 		Env:    standardEnvironment,
 		Stdin:  buffers.Stdin,
@@ -73,6 +75,7 @@ func TestExecInRlimit(t *testing.T) {
 	stdinR, stdinW, err := os.Pipe()
 	ok(t, err)
 	process := &libcontainer.Process{
+		Cwd:   "/",
 		Args:  []string{"cat"},
 		Env:   standardEnvironment,
 		Stdin: stdinR,
@@ -84,6 +87,7 @@ func TestExecInRlimit(t *testing.T) {
 
 	buffers := newStdBuffers()
 	ps := &libcontainer.Process{
+		Cwd:    "/",
 		Args:   []string{"/bin/sh", "-c", "ulimit -n"},
 		Env:    standardEnvironment,
 		Stdin:  buffers.Stdin,
@@ -119,6 +123,7 @@ func TestExecInError(t *testing.T) {
 	stdinR, stdinW, err := os.Pipe()
 	ok(t, err)
 	process := &libcontainer.Process{
+		Cwd:   "/",
 		Args:  []string{"cat"},
 		Env:   standardEnvironment,
 		Stdin: stdinR,
@@ -136,6 +141,7 @@ func TestExecInError(t *testing.T) {
 	for i := 0; i < 42; i++ {
 		var out bytes.Buffer
 		unexistent := &libcontainer.Process{
+			Cwd:    "/",
 			Args:   []string{"unexistent"},
 			Env:    standardEnvironment,
 			Stdout: &out,
@@ -169,6 +175,7 @@ func TestExecInTTY(t *testing.T) {
 	stdinR, stdinW, err := os.Pipe()
 	ok(t, err)
 	process := &libcontainer.Process{
+		Cwd:   "/",
 		Args:  []string{"cat"},
 		Env:   standardEnvironment,
 		Stdin: stdinR,
@@ -180,6 +187,7 @@ func TestExecInTTY(t *testing.T) {
 
 	var stdout bytes.Buffer
 	ps := &libcontainer.Process{
+		Cwd:  "/",
 		Args: []string{"ps"},
 		Env:  standardEnvironment,
 	}
@@ -224,6 +232,7 @@ func TestExecInEnvironment(t *testing.T) {
 	stdinR, stdinW, err := os.Pipe()
 	ok(t, err)
 	process := &libcontainer.Process{
+		Cwd:   "/",
 		Args:  []string{"cat"},
 		Env:   standardEnvironment,
 		Stdin: stdinR,
@@ -235,6 +244,7 @@ func TestExecInEnvironment(t *testing.T) {
 
 	buffers := newStdBuffers()
 	process2 := &libcontainer.Process{
+		Cwd:  "/",
 		Args: []string{"env"},
 		Env: []string{
 			"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
@@ -286,6 +296,7 @@ func TestExecinPassExtraFiles(t *testing.T) {
 		t.Fatal(err)
 	}
 	process := &libcontainer.Process{
+		Cwd:   "/",
 		Args:  []string{"cat"},
 		Env:   standardEnvironment,
 		Stdin: stdinR,
@@ -301,6 +312,7 @@ func TestExecinPassExtraFiles(t *testing.T) {
 	pipeout1, pipein1, err := os.Pipe()
 	pipeout2, pipein2, err := os.Pipe()
 	inprocess := &libcontainer.Process{
+		Cwd:        "/",
 		Args:       []string{"sh", "-c", "cd /proc/$$/fd; echo -n *; echo -n 1 >3; echo -n 2 >4"},
 		Env:        []string{"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"},
 		ExtraFiles: []*os.File{pipein1, pipein2},
@@ -357,6 +369,7 @@ func TestExecInOomScoreAdj(t *testing.T) {
 	stdinR, stdinW, err := os.Pipe()
 	ok(t, err)
 	process := &libcontainer.Process{
+		Cwd:   "/",
 		Args:  []string{"cat"},
 		Env:   standardEnvironment,
 		Stdin: stdinR,
@@ -368,6 +381,7 @@ func TestExecInOomScoreAdj(t *testing.T) {
 
 	buffers := newStdBuffers()
 	ps := &libcontainer.Process{
+		Cwd:    "/",
 		Args:   []string{"/bin/sh", "-c", "cat /proc/self/oom_score_adj"},
 		Env:    standardEnvironment,
 		Stdin:  buffers.Stdin,

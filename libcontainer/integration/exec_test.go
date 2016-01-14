@@ -208,6 +208,7 @@ func TestEnter(t *testing.T) {
 	var stdout, stdout2 bytes.Buffer
 
 	pconfig := libcontainer.Process{
+		Cwd:    "/",
 		Args:   []string{"sh", "-c", "cat && readlink /proc/self/ns/pid"},
 		Env:    standardEnvironment,
 		Stdin:  stdinR,
@@ -224,6 +225,7 @@ func TestEnter(t *testing.T) {
 	stdinR2, stdinW2, err := os.Pipe()
 	ok(t, err)
 	pconfig2 := libcontainer.Process{
+		Cwd: "/",
 		Env: standardEnvironment,
 	}
 	pconfig2.Args = []string{"sh", "-c", "cat && readlink /proc/self/ns/pid"}
@@ -290,6 +292,7 @@ func TestProcessEnv(t *testing.T) {
 
 	var stdout bytes.Buffer
 	pconfig := libcontainer.Process{
+		Cwd:  "/",
 		Args: []string{"sh", "-c", "env"},
 		Env: []string{
 			"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
@@ -341,6 +344,7 @@ func TestProcessCaps(t *testing.T) {
 
 	var stdout bytes.Buffer
 	pconfig := libcontainer.Process{
+		Cwd:          "/",
 		Args:         []string{"sh", "-c", "cat /proc/self/status"},
 		Env:          standardEnvironment,
 		Capabilities: processCaps,
@@ -411,6 +415,7 @@ func TestAdditionalGroups(t *testing.T) {
 
 	var stdout bytes.Buffer
 	pconfig := libcontainer.Process{
+		Cwd:    "/",
 		Args:   []string{"sh", "-c", "id", "-Gn"},
 		Env:    standardEnvironment,
 		Stdin:  nil,
@@ -471,6 +476,7 @@ func testFreeze(t *testing.T, systemd bool) {
 	ok(t, err)
 
 	pconfig := &libcontainer.Process{
+		Cwd:   "/",
 		Args:  []string{"cat"},
 		Env:   standardEnvironment,
 		Stdin: stdinR,
@@ -667,6 +673,7 @@ func TestContainerState(t *testing.T) {
 		t.Fatal(err)
 	}
 	p := &libcontainer.Process{
+		Cwd:   "/",
 		Args:  []string{"cat"},
 		Env:   standardEnvironment,
 		Stdin: stdinR,
@@ -717,6 +724,7 @@ func TestPassExtraFiles(t *testing.T) {
 	pipeout1, pipein1, err := os.Pipe()
 	pipeout2, pipein2, err := os.Pipe()
 	process := libcontainer.Process{
+		Cwd:        "/",
 		Args:       []string{"sh", "-c", "cd /proc/$$/fd; echo -n *; echo -n 1 >3; echo -n 2 >4"},
 		Env:        []string{"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"},
 		ExtraFiles: []*os.File{pipein1, pipein2},
@@ -800,6 +808,7 @@ func TestMountCmds(t *testing.T) {
 	defer container.Destroy()
 
 	pconfig := libcontainer.Process{
+		Cwd:  "/",
 		Args: []string{"sh", "-c", "env"},
 		Env:  standardEnvironment,
 	}
@@ -846,6 +855,7 @@ func TestSysctl(t *testing.T) {
 
 	var stdout bytes.Buffer
 	pconfig := libcontainer.Process{
+		Cwd:    "/",
 		Args:   []string{"sh", "-c", "cat /proc/sys/kernel/shmmni"},
 		Env:    standardEnvironment,
 		Stdin:  nil,
@@ -985,6 +995,7 @@ func TestOomScoreAdj(t *testing.T) {
 
 	var stdout bytes.Buffer
 	pconfig := libcontainer.Process{
+		Cwd:    "/",
 		Args:   []string{"sh", "-c", "cat /proc/self/oom_score_adj"},
 		Env:    standardEnvironment,
 		Stdin:  nil,
@@ -1037,6 +1048,7 @@ func TestHook(t *testing.T) {
 
 	var stdout bytes.Buffer
 	pconfig := libcontainer.Process{
+		Cwd:    "/",
 		Args:   []string{"sh", "-c", "ls /test"},
 		Env:    standardEnvironment,
 		Stdin:  nil,
@@ -1143,6 +1155,7 @@ func TestRootfsPropagationSlaveMount(t *testing.T) {
 	ok(t, err)
 
 	pconfig := &libcontainer.Process{
+		Cwd:   "/",
 		Args:  []string{"cat"},
 		Env:   standardEnvironment,
 		Stdin: stdinR,
@@ -1170,6 +1183,7 @@ func TestRootfsPropagationSlaveMount(t *testing.T) {
 	ok(t, err)
 
 	pconfig2 := &libcontainer.Process{
+		Cwd:    "/",
 		Args:   []string{"cat", "/proc/self/mountinfo"},
 		Env:    standardEnvironment,
 		Stdin:  stdinR2,
@@ -1259,6 +1273,7 @@ func TestRootfsPropagationSharedMount(t *testing.T) {
 	ok(t, err)
 
 	pconfig := &libcontainer.Process{
+		Cwd:   "/",
 		Args:  []string{"cat"},
 		Env:   standardEnvironment,
 		Stdin: stdinR,
@@ -1288,6 +1303,7 @@ func TestRootfsPropagationSharedMount(t *testing.T) {
 	processCaps := append(config.Capabilities, "CAP_SYS_ADMIN")
 
 	pconfig2 := &libcontainer.Process{
+		Cwd:          "/",
 		Args:         []string{"mount", "--bind", dir2cont, dir2cont},
 		Env:          standardEnvironment,
 		Stdin:        stdinR2,
