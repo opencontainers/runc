@@ -15,6 +15,7 @@ DOC_FILES := \
 	runtime-config.md \
 	runtime-config-linux.md \
 	glossary.md
+EPOCH_TEST_COMMIT := 041eb73d2e0391463894c04c8ac938036143eba3
 
 docs: pdf html
 .PHONY: docs
@@ -43,7 +44,7 @@ html:
 
 .PHONY: test .govet .golint .gitvalidation
 
-test: .govet .golint
+test: .govet .golint .gitvalidation
 
 # `go get golang.org/x/tools/cmd/vet`
 .govet:
@@ -55,7 +56,7 @@ test: .govet .golint
 
 # `go get github.com/vbatts/git-validation`
 .gitvalidation:
-	git-validation -run DCO,short-subject -v -range ${TRAVIS_COMMIT_RANGE}
+	git-validation -q -run DCO,short-subject -v -range $(EPOCH_TEST_COMMIT)..HEAD
 
 clean:
 	rm -rf output/ *~
