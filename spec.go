@@ -53,6 +53,7 @@ var specCommand = cli.Command{
 						"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
 						"TERM=xterm",
 					},
+					Cwd: "/",
 				},
 				Hostname: "shell",
 				Mounts: []specs.MountPoint{
@@ -290,6 +291,15 @@ var mountPropagationMapping = map[string]int{
 	"":         syscall.MS_PRIVATE | syscall.MS_REC,
 }
 
+// validateSpec validates the fields in the spec
+// TODO: Add validation for other fields where applicable
+func validateSpec(spec *specs.LinuxSpec, rspec *specs.LinuxRuntimeSpec) error {
+	if spec.Process.Cwd == "" {
+		return fmt.Errorf("Cwd property must not be empty")
+	}
+	return nil
+}
+
 // loadSpec loads the specification from the provided path.
 // If the path is empty then the default path will be "config.json"
 func loadSpec(cPath, rPath string) (spec *specs.LinuxSpec, rspec *specs.LinuxRuntimeSpec, err error) {
@@ -317,7 +327,10 @@ func loadSpec(cPath, rPath string) (spec *specs.LinuxSpec, rspec *specs.LinuxRun
 	if err = json.NewDecoder(rf).Decode(&rspec); err != nil {
 		return spec, rspec, err
 	}
-	return spec, rspec, checkSpecVersion(spec)
+	if err := checkSpecVersion(spec); err != nil {
+		return spec, rspec, err
+	}
+	return spec, rspec, validateSpec(spec, rspec)
 }
 
 // checkSpecVersion makes sure that the spec version matches runc's while we are in the initial
