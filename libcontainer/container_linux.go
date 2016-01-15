@@ -104,6 +104,12 @@ type Container interface {
 	// errors:
 	// Systemerror - System error.
 	NotifyOOM() (<-chan struct{}, error)
+
+	// NotifyMemoryPressure returns a read-only channel signaling when the container reaches a given pressure level
+	//
+	// errors:
+	// Systemerror - System error.
+	NotifyMemoryPressure(level PressureLevel) (<-chan struct{}, error)
 }
 
 // ID returns the container's unique ID
@@ -355,6 +361,10 @@ func (c *linuxContainer) Resume() error {
 
 func (c *linuxContainer) NotifyOOM() (<-chan struct{}, error) {
 	return notifyOnOOM(c.cgroupManager.GetPaths())
+}
+
+func (c *linuxContainer) NotifyMemoryPressure(level PressureLevel) (<-chan struct{}, error) {
+	return notifyMemoryPressure(c.cgroupManager.GetPaths(), level)
 }
 
 // XXX debug support, remove when debugging done.
