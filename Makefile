@@ -1,8 +1,11 @@
 RUNC_TEST_IMAGE=runc_test
 PROJECT=github.com/opencontainers/runc
 TEST_DOCKERFILE=script/test_Dockerfile
-BUILDTAGS=seccomp
 export GOPATH:=$(CURDIR)/Godeps/_workspace:$(GOPATH)
+
+# allow for passing buildtags to make or setting the default
+DEFAULT_BUILDTAGS=seccomp
+BUILDTAGS := $(if $(BUILDTAGS),$(BUILDTAGS),$(DEFAULT_BUILDTAGS))
 
 all:
 	go build -tags "$(BUILDTAGS)" -o runc .
