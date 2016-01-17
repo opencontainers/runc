@@ -206,6 +206,10 @@ func (n *nullState) transition(s containerState) error {
 	switch s.(type) {
 	case *restoredState:
 		n.c.state = s
+	case *runningState:
+		n.c.state = s
+	case *pausedState:
+		n.c.state = s
 	default:
 		// do nothing for null states
 	}
