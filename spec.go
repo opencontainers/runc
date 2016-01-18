@@ -297,6 +297,9 @@ func validateSpec(spec *specs.LinuxSpec, rspec *specs.LinuxRuntimeSpec) error {
 	if spec.Process.Cwd == "" {
 		return fmt.Errorf("Cwd property must not be empty")
 	}
+	if !filepath.IsAbs(spec.Process.Cwd) {
+		return fmt.Errorf("Cwd must be an absolute path")
+	}
 	return nil
 }
 
