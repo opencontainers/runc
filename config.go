@@ -5,7 +5,7 @@ package specs
 // bundle is packaged for distribution.
 type Spec struct {
 	// Version is the version of the specification that is supported.
-	Version string `json:"version"`
+	Version string `json:"ociVersion"`
 	// Platform is the host information for OS and Arch.
 	Platform Platform `json:"platform"`
 	// Process is the container's main process.

@@ -8,14 +8,17 @@ This includes the process to run, environment variables to inject, sandboxing fe
 
 Below is a detailed description of each field defined in the configuration format.
 
-## Manifest version
+## Specification version
 
-* **`version`** (string, required) must be in [SemVer v2.0.0](http://semver.org/spec/v2.0.0.html) format and specifies the version of the OCF specification with which the container bundle complies. The Open Container spec follows semantic versioning and retains forward and backward compatibility within major versions. For example, if an implementation is compliant with version 1.0.1 of the spec, it is compatible with the complete 1.x series. NOTE that there is no guarantee for forward or backward compatibility for version 0.x.
+* **`ociVersion`** (string, required) must be in [SemVer v2.0.0](http://semver.org/spec/v2.0.0.html) format and specifies the version of the OpenContainer specification with which the bundle complies.
+The OpenContainer spec follows semantic versioning and retains forward and backward compatibility within major versions.
+For example, if an implementation is compliant with version 1.0.1 of the spec, it is compatible with the complete 1.x series.
+NOTE that there is no guarantee for forward or backward compatibility for version 0.x.
 
 *Example*
 
 ```json
-    "version": "0.1.0"
+    "ociVersion": "0.1.0"
 ```
 
 ## Root Configuration
