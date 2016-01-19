@@ -84,20 +84,17 @@ func IsEnabled() bool {
 	// Try to read from /proc/self/status for kernels > 3.8
 	s, err := parseStatusFile("/proc/self/status")
 	if err != nil {
+		// Check if Seccomp is supported, via CONFIG_SECCOMP.
+		if _, _, err := syscall.RawSyscall(syscall.SYS_PRCTL, syscall.PR_GET_SECCOMP, 0, 0); err != syscall.EINVAL {
+			// Make sure the kernel has CONFIG_SECCOMP_FILTER.
+			if _, _, err := syscall.RawSyscall(syscall.SYS_PRCTL, syscall.PR_SET_SECCOMP, SeccompModeFilter, 0); err != syscall.EINVAL {
+				return true
+			}
+		}
 		return false
 	}
-
-	if _, ok := s["Seccomp"]; ok {
-		return true
-	}
-	// Check if Seccomp is supported, via CONFIG_SECCOMP.
-	if _, _, err := syscall.RawSyscall(syscall.SYS_PRCTL, syscall.PR_GET_SECCOMP, 0, 0); err != syscall.EINVAL {
-		// Make sure the kernel has CONFIG_SECCOMP_FILTER.
-		if _, _, err := syscall.RawSyscall(syscall.SYS_PRCTL, syscall.PR_SET_SECCOMP, SeccompModeFilter, 0); err != syscall.EINVAL {
-			return true
-		}
-	}
-	return false
+	_, ok := s["Seccomp"]
+	return ok
 }
 
 // Convert Libcontainer Action to Libseccomp ScmpAction
