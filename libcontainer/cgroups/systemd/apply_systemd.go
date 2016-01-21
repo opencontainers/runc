@@ -168,6 +168,23 @@ func (m *Manager) Apply(pid int) error {
 		properties []systemdDbus.Property
 	)
 
+	if c.Paths != nil {
+		paths := make(map[string]string)
+		for name, path := range c.Paths {
+			_, err := getSubsystemPath(m.Cgroups, name)
+			if err != nil {
+				// Don't fail if a cgroup hierarchy was not found, just skip this subsystem
+				if cgroups.IsNotFound(err) {
+					continue
+				}
+				return err
+			}
+			paths[name] = path
+		}
+		m.Paths = paths
+		return cgroups.EnterPid(m.Paths, pid)
+	}
+
 	if c.Parent != "" {
 		slice = c.Parent
 	}
@@ -286,6 +303,9 @@ func (m *Manager) Apply(pid int) error {
 }
 
 func (m *Manager) Destroy() error {
+	if m.Cgroups.Paths != nil {
+		return nil
+	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	theConn.StopUnit(getUnitName(m.Cgroups), "replace", nil)
