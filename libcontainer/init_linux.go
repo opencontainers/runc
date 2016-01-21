@@ -134,8 +134,10 @@ func finalizeNamespace(config *initConfig) error {
 	if err := w.drop(); err != nil {
 		return err
 	}
-	if err := syscall.Chdir(config.Cwd); err != nil {
-		return err
+	if config.Cwd != "" {
+		if err := syscall.Chdir(config.Cwd); err != nil {
+			return err
+		}
 	}
 	return nil
 }
