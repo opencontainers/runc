@@ -14,7 +14,6 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	libcontainerUtils "github.com/opencontainers/runc/libcontainer/utils"
 )
 
 var (
@@ -95,11 +94,10 @@ func getCgroupRoot() (string, error) {
 }
 
 type cgroupData struct {
-	root   string
-	parent string
-	name   string
-	config *configs.Cgroup
-	pid    int
+	root      string
+	innerPath string
+	config    *configs.Cgroup
+	pid       int
 }
 
 func (m *Manager) Apply(pid int) (err error) {
@@ -274,15 +272,20 @@ func getCgroupData(c *configs.Cgroup, pid int) (*cgroupData, error) {
 		return nil, err
 	}
 
-	// Clean the parent slice path.
-	c.Parent = libcontainerUtils.CleanPath(c.Parent)
+	if (c.Name != "" || c.Parent != "") && c.Path != "" {
+		return nil, fmt.Errorf("cgroup: either Path or Name and Parent should be used")
+	}
+
+	innerPath := c.Path
+	if innerPath == "" {
+		innerPath = filepath.Join(c.Parent, c.Name)
+	}
 
 	return &cgroupData{
-		root:   root,
-		parent: c.Parent,
-		name:   c.Name,
-		config: c,
-		pid:    pid,
+		root:      root,
+		innerPath: c.Path,
+		config:    c,
+		pid:       pid,
 	}, nil
 }
 
@@ -310,11 +313,10 @@ func (raw *cgroupData) path(subsystem string) (string, error) {
 		return "", err
 	}
 
-	cgPath := filepath.Join(raw.parent, raw.name)
 	// If the cgroup name/path is absolute do not look relative to the cgroup of the init process.
-	if filepath.IsAbs(cgPath) {
+	if filepath.IsAbs(raw.innerPath) {
 		// Sometimes subsystems can be mounted togethger as 'cpu,cpuacct'.
-		return filepath.Join(raw.root, filepath.Base(mnt), cgPath), nil
+		return filepath.Join(raw.root, filepath.Base(mnt), raw.innerPath), nil
 	}
 
 	parentPath, err := raw.parentPath(subsystem, mnt, root)
@@ -322,7 +324,7 @@ func (raw *cgroupData) path(subsystem string) (string, error) {
 		return "", err
 	}
 
-	return filepath.Join(parentPath, cgPath), nil
+	return filepath.Join(parentPath, raw.innerPath), nil
 }
 
 func (raw *cgroupData) join(subsystem string) (string, error) {
