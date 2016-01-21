@@ -14,6 +14,7 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
+	libcontainerUtils "github.com/opencontainers/runc/libcontainer/utils"
 )
 
 var (
@@ -267,30 +268,6 @@ func getCgroupPath(c *configs.Cgroup) (string, error) {
 	return d.path("devices")
 }
 
-// pathClean makes a path safe for use with filepath.Join. This is done by not
-// only cleaning the path, but also (if the path is relative) adding a leading
-// '/' and cleaning it (then removing the leading '/'). This ensures that a
-// path resulting from prepending another path will always resolve to lexically
-// be a subdirectory of the prefixed path. This is all done lexically, so paths
-// that include symlinks won't be safe as a result of using pathClean.
-func pathClean(path string) string {
-	// Ensure that all paths are cleaned (especially problematic ones like
-	// "/../../../../../" which can cause lots of issues).
-	path = filepath.Clean(path)
-
-	// If the path isn't absolute, we need to do more processing to fix paths
-	// such as "../../../../<etc>/some/path". We also shouldn't convert absolute
-	// paths to relative ones.
-	if !filepath.IsAbs(path) {
-		path = filepath.Clean(string(os.PathSeparator) + path)
-		// This can't fail, as (by definition) all paths are relative to root.
-		path, _ = filepath.Rel(string(os.PathSeparator), path)
-	}
-
-	// Clean the path again for good measure.
-	return filepath.Clean(path)
-}
-
 func getCgroupData(c *configs.Cgroup, pid int) (*cgroupData, error) {
 	root, err := getCgroupRoot()
 	if err != nil {
@@ -298,7 +275,7 @@ func getCgroupData(c *configs.Cgroup, pid int) (*cgroupData, error) {
 	}
 
 	// Clean the parent slice path.
-	c.Parent = pathClean(c.Parent)
+	c.Parent = libcontainerUtils.CleanPath(c.Parent)
 
 	return &cgroupData{
 		root:   root,

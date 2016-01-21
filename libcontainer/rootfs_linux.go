@@ -19,6 +19,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/label"
 	"github.com/opencontainers/runc/libcontainer/system"
+	libcontainerUtils "github.com/opencontainers/runc/libcontainer/utils"
 )
 
 const defaultMountFlags = syscall.MS_NOEXEC | syscall.MS_NOSUID | syscall.MS_NODEV
@@ -294,7 +295,7 @@ func getCgroupMounts(m *configs.Mount) ([]*configs.Mount, error) {
 // checkMountDestination checks to ensure that the mount destination is not over the top of /proc.
 // dest is required to be an abs path and have any symlinks resolved before calling this function.
 func checkMountDestination(rootfs, dest string) error {
-	if filepath.Clean(rootfs) == filepath.Clean(dest) {
+	if libcontainerUtils.CleanPath(rootfs) == libcontainerUtils.CleanPath(dest) {
 		return fmt.Errorf("mounting into / is prohibited")
 	}
 	invalidDestinations := []string{
