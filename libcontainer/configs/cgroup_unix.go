@@ -40,7 +40,7 @@ type Resources struct {
 	// Memory reservation or soft_limit (in bytes)
 	MemoryReservation int64 `json:"memory_reservation"`
 
-	// Total memory usage (memory + swap); set `-1' to disable swap
+	// Total memory usage (memory + swap); set `-1` to enable unlimited swap
 	MemorySwap int64 `json:"memory_swap"`
 
 	// Kernel memory limit (in bytes)
