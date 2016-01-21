@@ -264,7 +264,7 @@ func (c *linuxContainer) commandTemplate(p *Process, childPipe *os.File) (*exec.
 }
 
 func (c *linuxContainer) newInitProcess(p *Process, cmd *exec.Cmd, parentPipe, childPipe *os.File) (*initProcess, error) {
-	t := "_LIBCONTAINER_INITTYPE=standard"
+	t := "_LIBCONTAINER_INITTYPE=" + string(initStandard)
 	cloneFlags := c.config.Namespaces.CloneFlags()
 	if cloneFlags&syscall.CLONE_NEWUSER != 0 {
 		if err := c.addUidGidMappings(cmd.SysProcAttr); err != nil {
@@ -291,7 +291,7 @@ func (c *linuxContainer) newInitProcess(p *Process, cmd *exec.Cmd, parentPipe, c
 }
 
 func (c *linuxContainer) newSetnsProcess(p *Process, cmd *exec.Cmd, parentPipe, childPipe *os.File) (*setnsProcess, error) {
-	cmd.Env = append(cmd.Env, "_LIBCONTAINER_INITTYPE=setns")
+	cmd.Env = append(cmd.Env, "_LIBCONTAINER_INITTYPE="+string(initSetns))
 	// for setns process, we dont have to set cloneflags as the process namespaces
 	// will only be set via setns syscall
 	data, err := c.bootstrapData(0, c.initProcess.pid(), p.consolePath)
