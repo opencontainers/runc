@@ -49,18 +49,12 @@ func TestPausedStateTransition(t *testing.T) {
 	valid := []containerState{
 		&pausedState{},
 		&runningState{},
+		&stoppedState{},
 	}
 	for _, v := range valid {
 		if err := s.transition(v); err != nil {
 			t.Fatal(err)
 		}
-	}
-	err := s.transition(&stoppedState{})
-	if err == nil {
-		t.Fatal("transition to stopped state should fail")
-	}
-	if !isStateTransitionError(err) {
-		t.Fatal("expected stateTransitionError")
 	}
 }
 
