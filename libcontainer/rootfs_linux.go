@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/docker/docker/pkg/mount"
 	"github.com/docker/docker/pkg/symlink"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
@@ -150,9 +151,8 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 	case "bind":
 		stat, err := os.Stat(m.Source)
 		if err != nil {
-			// error out if the source of a bind mount does not exist as we will be
-			// unable to bind anything to it.
-			return err
+			logrus.Warnf("Non-existant volume host path %s, skip!", m.Source)
+			return nil
 		}
 		// ensure that the destination of the bind mount is resolved of symlinks at mount time because
 		// any previous mounts can invalidate the next mount's destination.
