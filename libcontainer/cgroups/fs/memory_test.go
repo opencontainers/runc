@@ -100,7 +100,7 @@ func TestMemorySetKernelMemory(t *testing.T) {
 
 	helper.CgroupData.config.Resources.KernelMemory = kernelMemoryAfter
 	memory := &MemoryGroup{}
-	if err := memory.Set(helper.CgroupPath, helper.CgroupData.config); err != nil {
+	if err := memory.SetKernelMemory(helper.CgroupPath, helper.CgroupData.config); err != nil {
 		t.Fatal(err)
 	}
 
