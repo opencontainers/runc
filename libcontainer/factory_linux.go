@@ -203,6 +203,9 @@ func (l *LinuxFactory) Load(id string) (Container, error) {
 		root:          containerRoot,
 	}
 	c.state = &nullState{c: c}
+	if err := c.refreshState(); err != nil {
+		return nil, err
+	}
 	return c, nil
 }
 

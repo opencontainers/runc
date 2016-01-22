@@ -214,12 +214,7 @@ func (n *nullState) status() Status {
 }
 
 func (n *nullState) transition(s containerState) error {
-	switch s.(type) {
-	case *restoredState:
-		n.c.state = s
-	default:
-		// do nothing for null states
-	}
+	n.c.state = s
 	return nil
 }
 
