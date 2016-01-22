@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/Sirupsen/logrus"
@@ -37,7 +38,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "runc"
 	app.Usage = usage
-	app.Version = version
+	app.Version = fmt.Sprintf("%s\nspec version %s", version, specs.Version)
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "id",
