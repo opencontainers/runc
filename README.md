@@ -1,3 +1,5 @@
+[![Build Status](https://jenkins.dockerproject.org/buildStatus/icon?job=runc Master)](https://jenkins.dockerproject.org/job/runc Master)
+
 ## runc
 
 `runc` is a CLI tool for spawning and running containers according to the OCF specification.
