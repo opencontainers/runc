@@ -79,6 +79,7 @@ func main() {
 		pauseCommand,
 		resumeCommand,
 		execCommand,
+		listCommand,
 	}
 	app.Before = func(context *cli.Context) error {
 		if context.GlobalBool("debug") {

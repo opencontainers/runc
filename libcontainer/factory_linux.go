@@ -201,6 +201,7 @@ func (l *LinuxFactory) Load(id string) (Container, error) {
 		criuPath:      l.CriuPath,
 		cgroupManager: l.NewCgroupsManager(state.Config.Cgroups, state.CgroupPaths),
 		root:          containerRoot,
+		createdTime:   state.CreatedTime,
 	}
 	c.state = &nullState{c: c}
 	if err := c.refreshState(); err != nil {

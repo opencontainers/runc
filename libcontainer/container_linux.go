@@ -15,6 +15,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
@@ -38,6 +39,7 @@ type linuxContainer struct {
 	m             sync.Mutex
 	criuVersion   int
 	state         containerState
+	createdTime   time.Time
 }
 
 // State represents a running container's state
@@ -117,6 +119,11 @@ func (c *linuxContainer) ID() string {
 	return c.id
 }
 
+// CreatedTime returns the timestamp from when the container was CREATED
+func (c *linuxContainer) CreatedTime() time.Time {
+	return c.createdTime
+}
+
 // Config returns the container's configuration
 func (c *linuxContainer) Config() configs.Config {
 	return *c.config
@@ -189,6 +196,9 @@ func (c *linuxContainer) Start(process *Process) error {
 		}
 		return newSystemError(err)
 	}
+	// generate a timestamp indicating when the container was started
+	c.createdTime = time.Now().UTC()
+
 	c.state = &runningState{
 		c: c,
 	}
@@ -1042,6 +1052,7 @@ func (c *linuxContainer) currentState() (*State, error) {
 			Config:               *c.config,
 			InitProcessPid:       pid,
 			InitProcessStartTime: startTime,
+			CreatedTime:          c.createdTime,
 		},
 		CgroupPaths:         c.cgroupManager.GetPaths(),
 		NamespacePaths:      make(map[configs.NamespaceType]string),

@@ -6,6 +6,7 @@ package libcontainer
 
 import (
 	"os"
+	"time"
 
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
@@ -56,8 +57,11 @@ type BaseState struct {
 	// InitProcessPid is the init process id in the parent namespace.
 	InitProcessPid int `json:"init_process_pid"`
 
-	// InitProcessStartTime is the init process start time.
+	// InitProcessStartTime is the init process start time in clock cycles since boot time.
 	InitProcessStartTime string `json:"init_process_start"`
+
+	// CreatedTime is the unix timestamp for the creation time of the container in UTC
+	CreatedTime time.Time `json:"created_time"`
 
 	// Config is the container's configuration.
 	Config configs.Config `json:"config"`
