@@ -5,6 +5,7 @@ package libcontainer
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -251,6 +252,9 @@ func (l *LinuxFactory) StartInitialization() (err error) {
 	if err != nil {
 		return err
 	}
+	// Ensure that we've read everything from the pipe to ensure that the parent
+	// does not get an ECONNRESET after we close it.
+	ioutil.ReadAll(pipe)
 	return i.Init()
 }
 
