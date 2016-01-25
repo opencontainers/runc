@@ -129,8 +129,8 @@ func TestCheckpoint(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if state != libcontainer.Running {
-		t.Fatal("Unexpected state checkpoint: ", state)
+	if state != libcontainer.Checkpointed {
+		t.Fatal("Unexpected state: ", state)
 	}
 
 	stdinW.Close()
@@ -169,7 +169,7 @@ func TestCheckpoint(t *testing.T) {
 		t.Fatal(err)
 	}
 	if state != libcontainer.Running {
-		t.Fatal("Unexpected restore state: ", state)
+		t.Fatal("Unexpected state: ", state)
 	}
 
 	pid, err = restoreProcessConfig.Pid()

@@ -149,7 +149,13 @@ func setupSocketActivation(spec *specs.LinuxSpec, listenFds string) {
 }
 
 func destroy(container libcontainer.Container) {
-	if err := container.Destroy(); err != nil {
+	status, err := container.Status()
+	if err != nil {
 		logrus.Error(err)
+	}
+	if status != libcontainer.Checkpointed {
+		if err := container.Destroy(); err != nil {
+			logrus.Error(err)
+		}
 	}
 }
