@@ -49,6 +49,7 @@ func destroy(c *linuxContainer) error {
 	if herr := runPoststopHooks(c); err == nil {
 		err = herr
 	}
+	c.state = &stoppedState{c: c}
 	return err
 }
 
@@ -116,10 +117,10 @@ func (r *runningState) transition(s containerState) error {
 		}
 		r.c.state = s
 		return nil
-	case *pausedState:
+	case *pausedState, *nullState:
 		r.c.state = s
 		return nil
-	case *runningState, *nullState:
+	case *runningState:
 		return nil
 	}
 	return newStateTransitionError(r, s)
@@ -148,7 +149,7 @@ func (p *pausedState) status() Status {
 
 func (p *pausedState) transition(s containerState) error {
 	switch s.(type) {
-	case *runningState:
+	case *runningState, *stoppedState:
 		p.c.state = s
 		return nil
 	case *pausedState:
@@ -158,6 +159,16 @@ func (p *pausedState) transition(s containerState) error {
 }
 
 func (p *pausedState) destroy() error {
+	isRunning, err := p.c.isRunning()
+	if err != nil {
+		return err
+	}
+	if !isRunning {
+		if err := p.c.cgroupManager.Freeze(configs.Thawed); err != nil {
+			return err
+		}
+		return destroy(p.c)
+	}
 	return newGenericError(fmt.Errorf("container is paused"), ContainerPaused)
 }
 
@@ -203,12 +214,7 @@ func (n *nullState) status() Status {
 }
 
 func (n *nullState) transition(s containerState) error {
-	switch s.(type) {
-	case *restoredState:
-		n.c.state = s
-	default:
-		// do nothing for null states
-	}
+	n.c.state = s
 	return nil
 }
 

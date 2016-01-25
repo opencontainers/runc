@@ -189,29 +189,27 @@ func (c *linuxContainer) Start(process *Process) error {
 		}
 		return newSystemError(err)
 	}
+	c.state = &runningState{
+		c: c,
+	}
 	if doInit {
 		if err := c.updateState(parent); err != nil {
 			return err
 		}
-	} else {
-		c.state.transition(&nullState{
-			c: c,
-			s: Running,
-		})
-	}
-	if c.config.Hooks != nil {
-		s := configs.HookState{
-			Version: c.config.Version,
-			ID:      c.id,
-			Pid:     parent.pid(),
-			Root:    c.config.Rootfs,
-		}
-		for _, hook := range c.config.Hooks.Poststart {
-			if err := hook.Run(s); err != nil {
-				if err := parent.terminate(); err != nil {
-					logrus.Warn(err)
+		if c.config.Hooks != nil {
+			s := configs.HookState{
+				Version: c.config.Version,
+				ID:      c.id,
+				Pid:     parent.pid(),
+				Root:    c.config.Rootfs,
+			}
+			for _, hook := range c.config.Hooks.Poststart {
+				if err := hook.Run(s); err != nil {
+					if err := parent.terminate(); err != nil {
+						logrus.Warn(err)
+					}
+					return newSystemError(err)
 				}
-				return newSystemError(err)
 			}
 		}
 	}
@@ -340,6 +338,13 @@ func (c *linuxContainer) Destroy() error {
 func (c *linuxContainer) Pause() error {
 	c.m.Lock()
 	defer c.m.Unlock()
+	status, err := c.currentStatus()
+	if err != nil {
+		return err
+	}
+	if status != Running {
+		return newGenericError(fmt.Errorf("container not running"), ContainerNotRunning)
+	}
 	if err := c.cgroupManager.Freeze(configs.Frozen); err != nil {
 		return err
 	}
@@ -351,6 +356,13 @@ func (c *linuxContainer) Pause() error {
 func (c *linuxContainer) Resume() error {
 	c.m.Lock()
 	defer c.m.Unlock()
+	status, err := c.currentStatus()
+	if err != nil {
+		return err
+	}
+	if status != Paused {
+		return newGenericError(fmt.Errorf("container not paused"), ContainerNotPaused)
+	}
 	if err := c.cgroupManager.Freeze(configs.Thawed); err != nil {
 		return err
 	}
@@ -939,9 +951,6 @@ func (c *linuxContainer) criuNotifications(resp *criurpc.CriuResp, process *Proc
 
 func (c *linuxContainer) updateState(process parentProcess) error {
 	c.initProcess = process
-	if err := c.refreshState(); err != nil {
-		return err
-	}
 	state, err := c.currentState()
 	if err != nil {
 		return err
@@ -1017,35 +1026,36 @@ func (c *linuxContainer) isPaused() (bool, error) {
 }
 
 func (c *linuxContainer) currentState() (*State, error) {
-	status, err := c.currentStatus()
-	if err != nil {
-		return nil, err
-	}
-	if status == Destroyed {
-		return nil, newGenericError(fmt.Errorf("container destroyed"), ContainerNotExists)
-	}
-	startTime, err := c.initProcess.startTime()
-	if err != nil {
-		return nil, newSystemError(err)
+	var (
+		startTime           string
+		externalDescriptors []string
+		pid                 = -1
+	)
+	if c.initProcess != nil {
+		pid = c.initProcess.pid()
+		startTime, _ = c.initProcess.startTime()
+		externalDescriptors = c.initProcess.externalDescriptors()
 	}
 	state := &State{
 		BaseState: BaseState{
 			ID:                   c.ID(),
 			Config:               *c.config,
-			InitProcessPid:       c.initProcess.pid(),
+			InitProcessPid:       pid,
 			InitProcessStartTime: startTime,
 		},
 		CgroupPaths:         c.cgroupManager.GetPaths(),
 		NamespacePaths:      make(map[configs.NamespaceType]string),
-		ExternalDescriptors: c.initProcess.externalDescriptors(),
+		ExternalDescriptors: externalDescriptors,
 	}
-	for _, ns := range c.config.Namespaces {
-		state.NamespacePaths[ns.Type] = ns.GetPath(c.initProcess.pid())
-	}
-	for _, nsType := range configs.NamespaceTypes() {
-		if _, ok := state.NamespacePaths[nsType]; !ok {
-			ns := configs.Namespace{Type: nsType}
-			state.NamespacePaths[ns.Type] = ns.GetPath(c.initProcess.pid())
+	if pid > 0 {
+		for _, ns := range c.config.Namespaces {
+			state.NamespacePaths[ns.Type] = ns.GetPath(pid)
+		}
+		for _, nsType := range configs.NamespaceTypes() {
+			if _, ok := state.NamespacePaths[nsType]; !ok {
+				ns := configs.Namespace{Type: nsType}
+				state.NamespacePaths[ns.Type] = ns.GetPath(pid)
+			}
 		}
 	}
 	return state, nil
