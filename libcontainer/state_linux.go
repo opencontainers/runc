@@ -5,7 +5,6 @@ package libcontainer
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -194,11 +193,12 @@ func (r *restoredState) transition(s containerState) error {
 }
 
 func (r *restoredState) destroy() error {
-	if _, err := os.Stat(filepath.Join(r.c.root, "checkpoint")); err != nil {
+	if _, err := os.Stat(r.imageDir); err != nil {
 		if !os.IsNotExist(err) {
 			return err
 		}
 	}
+	defer os.RemoveAll(r.imageDir)
 	return destroy(r.c)
 }
 
