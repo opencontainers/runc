@@ -69,9 +69,9 @@ func TestRestoredStateTransition(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	err := s.transition(&nullState{})
+	err := s.transition(&createdState{})
 	if err == nil {
-		t.Fatal("transition to null state should fail")
+		t.Fatal("transition to created state should fail")
 	}
 	if !isStateTransitionError(err) {
 		t.Fatal("expected stateTransitionError")
