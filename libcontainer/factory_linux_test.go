@@ -3,7 +3,6 @@
 package libcontainer
 
 import (
-	"encoding/json"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/docker/docker/pkg/mount"
 	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/utils"
 )
 
 func newTestRoot() (string, error) {
@@ -179,5 +179,5 @@ func marshal(path string, v interface{}) error {
 		return err
 	}
 	defer f.Close()
-	return json.NewEncoder(f).Encode(v)
+	return utils.WriteJSON(f, v)
 }
