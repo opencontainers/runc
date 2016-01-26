@@ -139,15 +139,15 @@ type BlockIO struct {
 	// Specifies tasks' weight in the given cgroup while competing with the cgroup's child cgroups, range is from 10 to 1000, CFQ scheduler only
 	LeafWeight *uint16 `json:"blkioLeafWeight,omitempty"`
 	// Weight per cgroup per device, can override BlkioWeight
-	WeightDevice []*WeightDevice `json:"blkioWeightDevice,omitempty"`
+	WeightDevice []WeightDevice `json:"blkioWeightDevice,omitempty"`
 	// IO read rate limit per cgroup per device, bytes per second
-	ThrottleReadBpsDevice []*ThrottleDevice `json:"blkioThrottleReadBpsDevice,omitempty"`
+	ThrottleReadBpsDevice []ThrottleDevice `json:"blkioThrottleReadBpsDevice,omitempty"`
 	// IO write rate limit per cgroup per device, bytes per second
-	ThrottleWriteBpsDevice []*ThrottleDevice `json:"blkioThrottleWriteBpsDevice,omitempty"`
+	ThrottleWriteBpsDevice []ThrottleDevice `json:"blkioThrottleWriteBpsDevice,omitempty"`
 	// IO read rate limit per cgroup per device, IO per second
-	ThrottleReadIOPSDevice []*ThrottleDevice `json:"blkioThrottleReadIOPSDevice,omitempty"`
+	ThrottleReadIOPSDevice []ThrottleDevice `json:"blkioThrottleReadIOPSDevice,omitempty"`
 	// IO write rate limit per cgroup per device, IO per second
-	ThrottleWriteIOPSDevice []*ThrottleDevice `json:"blkioThrottleWriteIOPSDevice,omitempty"`
+	ThrottleWriteIOPSDevice []ThrottleDevice `json:"blkioThrottleWriteIOPSDevice,omitempty"`
 }
 
 // Memory for Linux cgroup 'memory' resource management
@@ -195,7 +195,7 @@ type Network struct {
 	// Set class identifier for container's network packets
 	ClassID *uint32 `json:"classID"`
 	// Set priority of network traffic for container
-	Priorities []InterfacePriority `json:"priorities"`
+	Priorities []InterfacePriority `json:"priorities,omitempty"`
 }
 
 // Resources has container runtime resource constraints
@@ -240,9 +240,9 @@ type Device struct {
 
 // Seccomp represents syscall restrictions
 type Seccomp struct {
-	DefaultAction Action     `json:"defaultAction"`
-	Architectures []Arch     `json:"architectures"`
-	Syscalls      []*Syscall `json:"syscalls"`
+	DefaultAction Action    `json:"defaultAction"`
+	Architectures []Arch    `json:"architectures"`
+	Syscalls      []Syscall `json:"syscalls,omitempty"`
 }
 
 // Arch used for additional architectures
@@ -302,5 +302,5 @@ type Arg struct {
 type Syscall struct {
 	Name   string `json:"name"`
 	Action Action `json:"action"`
-	Args   []*Arg `json:"args"`
+	Args   []Arg  `json:"args,omitempty"`
 }
