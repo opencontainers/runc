@@ -254,7 +254,33 @@ func (l *LinuxFactory) StartInitialization() (err error) {
 	if err != nil {
 		return err
 	}
+	flushReadPipe(pipefd)
 	return i.Init()
+}
+
+func fd_set(p *syscall.FdSet, i int) {
+	p.Bits[i/64] |= 1 << uint(i) % 64
+}
+
+func fd_isset(p *syscall.FdSet, i int) bool {
+	return (p.Bits[i/64] & (1 << uint(i) % 64)) != 0
+}
+
+// flushReadPipe ensures that all data has been read from the pipe to ensure the
+// parent does not get an ECONNRESET after the pipe is closed.
+func flushReadPipe(pipefd int) {
+	rfds := &syscall.FdSet{}
+	timeout := &syscall.Timeval{}
+
+	fd_set(rfds, pipefd)
+	_, err := syscall.Select(pipefd+1, rfds, nil, nil, timeout)
+	if err != nil {
+		return
+	}
+
+	if fd_isset(rfds, pipefd) {
+		syscall.Read(pipefd, make([]byte, 256))
+	}
 }
 
 func (l *LinuxFactory) loadState(root string) (*State, error) {
