@@ -8,14 +8,17 @@ This includes the process to run, environment variables to inject, sandboxing fe
 
 Below is a detailed description of each field defined in the configuration format.
 
-## Manifest version
+## Specification version
 
-* **`version`** (string, required) must be in [SemVer v2.0.0](http://semver.org/spec/v2.0.0.html) format and specifies the version of the OCF specification with which the container bundle complies. The Open Container spec follows semantic versioning and retains forward and backward compatibility within major versions. For example, if an implementation is compliant with version 1.0.1 of the spec, it is compatible with the complete 1.x series.
+* **`ociVersion`** (string, required) must be in [SemVer v2.0.0](http://semver.org/spec/v2.0.0.html) format and specifies the version of the OpenContainer specification with which the bundle complies.
+The OpenContainer spec follows semantic versioning and retains forward and backward compatibility within major versions.
+For example, if an implementation is compliant with version 1.0.1 of the spec, it is compatible with the complete 1.x series.
+NOTE that there is no guarantee for forward or backward compatibility for version 0.x.
 
 *Example*
 
 ```json
-    "version": "0.1.0"
+    "ociVersion": "0.1.0"
 ```
 
 ## Root Configuration
@@ -69,7 +72,7 @@ The runtime MUST mount entries in the listed order.
 ## Process configuration
 
 * **`terminal`** (bool, optional) specifies whether you want a terminal attached to that process. Defaults to false.
-* **`cwd`** (string, optional) is the working directory that will be set for the executable.
+* **`cwd`** (string, required) is the working directory that will be set for the executable. This value MUST be an absolute path.
 * **`env`** (array of strings, optional) contains a list of variables that will be set in the process's environment prior to execution. Elements in the array are specified as Strings in the form "KEY=value". The left hand side must consist solely of letters, digits, and underscores `_` as outlined in [IEEE Std 1003.1-2001](http://pubs.opengroup.org/onlinepubs/009695399/basedefs/xbd_chap08.html).
 * **`args`** (string, required) executable to launch and any flags as an array. The executable is the first element and must be available at the given path inside of the rootfs. If the executable path is not an absolute path then the search $PATH is interpreted to find the executable.
 
@@ -104,7 +107,7 @@ For Linux-based systems the user structure has the following fields:
 
 ## Hostname
 
-* **`hostname`** (string, optional) as it is accessible to processes running inside.
+* **`hostname`** (string, optional) as it is accessible to processes running inside.  On Linux, you can only set this if your bundle creates a new [UTS namespace][uts-namespace].
 
 *Example*
 
@@ -126,3 +129,5 @@ For Linux-based systems the user structure has the following fields:
 
 Interpretation of the platform section of the JSON file is used to find which platform-specific sections may be available in the document.
 For example, if `os` is set to `linux`, then a JSON object conforming to the [Linux-specific schema](config-linux.md) SHOULD be found at the key `linux` in the `config.json`.
+
+[uts-namespace]: http://man7.org/linux/man-pages/man7/namespaces.7.html

@@ -223,9 +223,7 @@ var specCommand = cli.Command{
 					},
 				},
 				Resources: &specs.Resources{
-					Memory: specs.Memory{
-						Swappiness: -1,
-					},
+					Memory: &specs.Memory{},
 				},
 				Seccomp: specs.Seccomp{
 					DefaultAction: "SCMP_ACT_ALLOW",
@@ -460,54 +458,109 @@ func createCgroupConfig(name string, spec *specs.LinuxRuntimeSpec, devices []*co
 	}
 	c.Resources.AllowedDevices = append(devices, allowedDevices...)
 	r := spec.Linux.Resources
-	c.Resources.Memory = r.Memory.Limit
-	c.Resources.MemoryReservation = r.Memory.Reservation
-	c.Resources.MemorySwap = r.Memory.Swap
-	c.Resources.KernelMemory = r.Memory.Kernel
-	c.Resources.MemorySwappiness = r.Memory.Swappiness
-	c.Resources.CpuShares = r.CPU.Shares
-	c.Resources.CpuQuota = r.CPU.Quota
-	c.Resources.CpuPeriod = r.CPU.Period
-	c.Resources.CpuRtRuntime = r.CPU.RealtimeRuntime
-	c.Resources.CpuRtPeriod = r.CPU.RealtimePeriod
-	c.Resources.CpusetCpus = r.CPU.Cpus
-	c.Resources.CpusetMems = r.CPU.Mems
-	c.Resources.PidsLimit = r.Pids.Limit
-	c.Resources.BlkioWeight = r.BlockIO.Weight
-	c.Resources.BlkioLeafWeight = r.BlockIO.LeafWeight
-	for _, wd := range r.BlockIO.WeightDevice {
-		weightDevice := configs.NewWeightDevice(wd.Major, wd.Minor, wd.Weight, wd.LeafWeight)
-		c.Resources.BlkioWeightDevice = append(c.Resources.BlkioWeightDevice, weightDevice)
-	}
-	for _, td := range r.BlockIO.ThrottleReadBpsDevice {
-		throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, td.Rate)
-		c.Resources.BlkioThrottleReadBpsDevice = append(c.Resources.BlkioThrottleReadBpsDevice, throttleDevice)
-	}
-	for _, td := range r.BlockIO.ThrottleWriteBpsDevice {
-		throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, td.Rate)
-		c.Resources.BlkioThrottleWriteBpsDevice = append(c.Resources.BlkioThrottleWriteBpsDevice, throttleDevice)
-	}
-	for _, td := range r.BlockIO.ThrottleReadIOPSDevice {
-		throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, td.Rate)
-		c.Resources.BlkioThrottleReadIOPSDevice = append(c.Resources.BlkioThrottleReadIOPSDevice, throttleDevice)
-	}
-	for _, td := range r.BlockIO.ThrottleWriteIOPSDevice {
-		throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, td.Rate)
-		c.Resources.BlkioThrottleWriteIOPSDevice = append(c.Resources.BlkioThrottleWriteIOPSDevice, throttleDevice)
-	}
-	for _, l := range r.HugepageLimits {
-		c.Resources.HugetlbLimit = append(c.Resources.HugetlbLimit, &configs.HugepageLimit{
-			Pagesize: l.Pagesize,
-			Limit:    l.Limit,
-		})
-	}
-	c.Resources.OomKillDisable = r.DisableOOMKiller
-	c.Resources.NetClsClassid = r.Network.ClassID
-	for _, m := range r.Network.Priorities {
-		c.Resources.NetPrioIfpriomap = append(c.Resources.NetPrioIfpriomap, &configs.IfPrioMap{
-			Interface: m.Name,
-			Priority:  m.Priority,
-		})
+	if r != nil {
+		if r.Memory != nil {
+			if r.Memory.Limit != nil {
+				c.Resources.Memory = int64(*r.Memory.Limit)
+			}
+			if r.Memory.Reservation != nil {
+				c.Resources.MemoryReservation = int64(*r.Memory.Reservation)
+			}
+			if r.Memory.Swap != nil {
+				c.Resources.MemorySwap = int64(*r.Memory.Swap)
+			}
+			if r.Memory.Kernel != nil {
+				c.Resources.KernelMemory = int64(*r.Memory.Kernel)
+			}
+			if r.Memory.Swappiness != nil {
+				c.Resources.MemorySwappiness = int64(*r.Memory.Swappiness)
+			}
+		}
+
+		if r.CPU != nil {
+			if r.CPU.Shares != nil {
+				c.Resources.CpuShares = int64(*r.CPU.Shares)
+			}
+			if r.CPU.Quota != nil {
+				c.Resources.CpuQuota = int64(*r.CPU.Quota)
+			}
+			if r.CPU.Period != nil {
+				c.Resources.CpuPeriod = int64(*r.CPU.Period)
+			}
+			if r.CPU.RealtimeRuntime != nil {
+				c.Resources.CpuRtRuntime = int64(*r.CPU.RealtimeRuntime)
+			}
+			if r.CPU.RealtimePeriod != nil {
+				c.Resources.CpuRtPeriod = int64(*r.CPU.RealtimePeriod)
+			}
+			if r.CPU.Cpus != nil {
+				c.Resources.CpusetCpus = *r.CPU.Cpus
+			}
+			if r.CPU.Mems != nil {
+				c.Resources.CpusetMems = *r.CPU.Mems
+			}
+		}
+		if r.Pids != nil {
+			c.Resources.PidsLimit = *r.Pids.Limit
+		}
+		if r.BlockIO != nil {
+			if r.BlockIO.Weight != nil {
+				c.Resources.BlkioWeight = *r.BlockIO.Weight
+			}
+			if r.BlockIO.LeafWeight != nil {
+				c.Resources.BlkioLeafWeight = *r.BlockIO.LeafWeight
+			}
+			if r.BlockIO.WeightDevice != nil {
+				for _, wd := range r.BlockIO.WeightDevice {
+					weightDevice := configs.NewWeightDevice(wd.Major, wd.Minor, *wd.Weight, *wd.LeafWeight)
+					c.Resources.BlkioWeightDevice = append(c.Resources.BlkioWeightDevice, weightDevice)
+				}
+			}
+			if r.BlockIO.ThrottleReadBpsDevice != nil {
+				for _, td := range r.BlockIO.ThrottleReadBpsDevice {
+					throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, *td.Rate)
+					c.Resources.BlkioThrottleReadBpsDevice = append(c.Resources.BlkioThrottleReadBpsDevice, throttleDevice)
+				}
+			}
+			if r.BlockIO.ThrottleWriteBpsDevice != nil {
+				for _, td := range r.BlockIO.ThrottleWriteBpsDevice {
+					throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, *td.Rate)
+					c.Resources.BlkioThrottleWriteBpsDevice = append(c.Resources.BlkioThrottleWriteBpsDevice, throttleDevice)
+				}
+			}
+			if r.BlockIO.ThrottleReadIOPSDevice != nil {
+				for _, td := range r.BlockIO.ThrottleReadIOPSDevice {
+					throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, *td.Rate)
+					c.Resources.BlkioThrottleReadIOPSDevice = append(c.Resources.BlkioThrottleReadIOPSDevice, throttleDevice)
+				}
+			}
+			if r.BlockIO.ThrottleWriteIOPSDevice != nil {
+				for _, td := range r.BlockIO.ThrottleWriteIOPSDevice {
+					throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, *td.Rate)
+					c.Resources.BlkioThrottleWriteIOPSDevice = append(c.Resources.BlkioThrottleWriteIOPSDevice, throttleDevice)
+				}
+			}
+		}
+		for _, l := range r.HugepageLimits {
+			c.Resources.HugetlbLimit = append(c.Resources.HugetlbLimit, &configs.HugepageLimit{
+				Pagesize: *l.Pagesize,
+				Limit:    *l.Limit,
+			})
+		}
+		if r.DisableOOMKiller != nil {
+			c.Resources.OomKillDisable = *r.DisableOOMKiller
+		}
+		if r.Network != nil {
+			if r.Network.ClassID != nil {
+				c.Resources.NetClsClassid = string(*r.Network.ClassID)
+			}
+			for _, m := range r.Network.Priorities {
+				c.Resources.NetPrioIfpriomap = append(c.Resources.NetPrioIfpriomap, &configs.IfPrioMap{
+					Interface: m.Name,
+					Priority:  int64(m.Priority),
+				})
+			}
+		}
 	}
 	return c, nil
 }
