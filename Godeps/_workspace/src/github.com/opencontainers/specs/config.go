@@ -1,10 +1,11 @@
 package specs
 
 // Spec is the base configuration for the container.  It specifies platform
-// independent configuration.
+// independent configuration. This information must be included when the
+// bundle is packaged for distribution.
 type Spec struct {
 	// Version is the version of the specification that is supported.
-	Version string `json:"version"`
+	Version string `json:"ociVersion"`
 	// Platform is the host information for OS and Arch.
 	Platform Platform `json:"platform"`
 	// Process is the container's main process.
@@ -12,7 +13,7 @@ type Spec struct {
 	// Root is the root information for the container's filesystem.
 	Root Root `json:"root"`
 	// Hostname is the container's host name.
-	Hostname string `json:"hostname"`
+	Hostname string `json:"hostname,omitempty"`
 	// Mounts profile configuration for adding mounts to the container's filesystem.
 	Mounts []MountPoint `json:"mounts"`
 }
@@ -26,7 +27,7 @@ type Process struct {
 	// Args specifies the binary and arguments for the application to execute.
 	Args []string `json:"args"`
 	// Env populates the process environment for the process.
-	Env []string `json:"env"`
+	Env []string `json:"env,omitempty"`
 	// Cwd is the current working directory for the process and must be
 	// relative to the container's root.
 	Cwd string `json:"cwd"`
@@ -55,16 +56,4 @@ type MountPoint struct {
 	Name string `json:"name"`
 	// Path specifies the path of the mount. The path and child directories MUST exist, a runtime MUST NOT create directories automatically to a mount point.
 	Path string `json:"path"`
-}
-
-// State holds information about the runtime state of the container.
-type State struct {
-	// Version is the version of the specification that is supported.
-	Version string `json:"version"`
-	// ID is the container ID
-	ID string `json:"id"`
-	// Pid is the process id for the container's main process.
-	Pid int `json:"pid"`
-	// BundlePath is the path to the container's bundle directory.
-	BundlePath string `json:"bundlePath"`
 }
