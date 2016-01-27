@@ -392,9 +392,18 @@ func joinPids(c *configs.Cgroup, pid int) error {
 // test.slice/test-a.slice/test-a-b.slice.
 func expandSlice(slice string) (string, error) {
 	suffix := ".slice"
-	sliceName := strings.TrimSuffix(slice, suffix)
+	// Name has to end with ".slice", but can't be just ".slice".
+	if len(slice) < len(suffix) || !strings.HasSuffix(slice, suffix) {
+		return "", fmt.Errorf("invalid slice name: %s", slice)
+	}
+
+	// Path-separators are not allowed.
+	if strings.Contains(slice, "/") {
+		return "", fmt.Errorf("invalid slice name: %s", slice)
+	}
 
 	var path, prefix string
+	sliceName := strings.TrimSuffix(slice, suffix)
 	for _, component := range strings.Split(sliceName, "-") {
 		// test--a.slice isn't permitted, nor is -test.slice.
 		if component == "" {
