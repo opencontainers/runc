@@ -17,13 +17,6 @@ Although OCI doesn't define a transport method we should have a cryptographic di
 
 *Owner:* philips
 
-### Review the need for runtime.json (Target release: v0.3.0)
-
-There are some discussions about having `runtime.json` being optional for containers and specifying defaults.
-Runtimes would use this standard set of defaults for containers and `runtime.json` would provide overrides for fine tuning of these extra host or platform specific settings.
-
-*Owner:* mrunalp
-
 ### Define Container Lifecycle
 
 Containers have a lifecycle and being able to identify and document the lifecycle of a container is very helpful for implementations of the spec.
