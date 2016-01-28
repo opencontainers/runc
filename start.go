@@ -7,6 +7,7 @@ import (
 	"os"
 	"runtime"
 	"strconv"
+	"syscall"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
@@ -30,6 +31,15 @@ var startCommand = cli.Command{
 			Name:  "console",
 			Value: "",
 			Usage: "specify the pty slave path for use with the container",
+		},
+		cli.BoolFlag{
+			Name:  "detach,d",
+			Usage: "detach from the container's process",
+		},
+		cli.StringFlag{
+			Name:  "pid-file",
+			Value: "",
+			Usage: "specify the file to write the process id to",
 		},
 	},
 	Action: func(context *cli.Context) {
@@ -107,10 +117,11 @@ func startContainer(context *cli.Context, spec *specs.LinuxSpec, rspec *specs.Li
 	}
 	// ensure that the container is always removed if we were the process
 	// that created it.
-	defer destroy(container)
-
+	detach := context.Bool("detach")
+	if !detach {
+		defer destroy(container)
+	}
 	process := newProcess(spec.Process)
-
 	// Support on-demand socket activation by passing file descriptors into the container init process.
 	if os.Getenv("LISTEN_FDS") != "" {
 		listenFdsInt, err := strconv.Atoi(os.Getenv("LISTEN_FDS"))
@@ -121,16 +132,61 @@ func startContainer(context *cli.Context, spec *specs.LinuxSpec, rspec *specs.Li
 			process.ExtraFiles = append(process.ExtraFiles, os.NewFile(uintptr(i), ""))
 		}
 	}
-	tty, err := newTty(spec.Process.Terminal, process, rootuid, context.String("console"))
-	if err != nil {
-		return -1, err
+	var tty *tty
+	if spec.Process.Terminal {
+		if tty, err = createTty(process, rootuid, context.String("console")); err != nil {
+			return -1, err
+		}
+	} else if detach {
+		if err := dupStdio(process, rootuid); err != nil {
+			return -1, err
+		}
+	} else {
+		if tty, err = createStdioPipes(process, rootuid); err != nil {
+			return -1, err
+		}
 	}
-	handler := newSignalHandler(tty)
-	defer handler.Close()
 	if err := container.Start(process); err != nil {
 		return -1, err
 	}
+	if pidFile := context.String("pid-file"); pidFile != "" {
+		pid, err := process.Pid()
+		if err != nil {
+			return -1, err
+		}
+		f, err := os.Create(pidFile)
+		if err != nil {
+			logrus.WithField("pid", pid).Error("create pid file")
+		} else {
+			_, err = fmt.Fprintf(f, "%d", pid)
+			f.Close()
+			if err != nil {
+				logrus.WithField("error", err).Error("write pid file")
+			}
+		}
+	}
+	if detach {
+		return 0, nil
+	}
+	handler := newSignalHandler(tty)
+	defer handler.Close()
 	return handler.forward(process)
+}
+
+func dupStdio(process *libcontainer.Process, rootuid int) error {
+	process.Stdin = os.Stdin
+	process.Stdout = os.Stdout
+	process.Stderr = os.Stderr
+	for _, fd := range []uintptr{
+		os.Stdin.Fd(),
+		os.Stdout.Fd(),
+		os.Stderr.Fd(),
+	} {
+		if err := syscall.Fchown(int(fd), rootuid, rootuid); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // If systemd is supporting sd_notify protocol, this function will add support

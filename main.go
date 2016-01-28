@@ -70,16 +70,18 @@ func main() {
 		},
 	}
 	app.Commands = []cli.Command{
-		startCommand,
 		checkpointCommand,
+		deleteCommand,
 		eventsCommand,
-		restoreCommand,
-		killCommand,
-		specCommand,
-		pauseCommand,
-		resumeCommand,
 		execCommand,
+		execCommand,
+		killCommand,
 		listCommand,
+		pauseCommand,
+		restoreCommand,
+		resumeCommand,
+		specCommand,
+		startCommand,
 	}
 	app.Before = func(context *cli.Context) error {
 		if context.GlobalBool("debug") {
