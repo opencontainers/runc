@@ -53,6 +53,10 @@ var restoreCommand = cli.Command{
 			Value: "",
 			Usage: "path to the root of the bundle directory",
 		},
+		cli.IntFlag{
+			Name:  "parent-death-signal",
+			Usage: "signal to send to the container when runc terminates",
+		},
 	},
 	Action: func(context *cli.Context) {
 		imagePath := context.String("image-path")
@@ -69,7 +73,10 @@ var restoreCommand = cli.Command{
 		if err != nil {
 			fatal(err)
 		}
-		config, err := createLibcontainerConfig(context.GlobalString("id"), spec, rspec)
+		config, err := createLibcontainerConfig(
+			context.GlobalString("id"), context.Int("parent-death-signal"),
+			spec, rspec,
+		)
 		if err != nil {
 			fatal(err)
 		}

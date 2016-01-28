@@ -31,6 +31,10 @@ var startCommand = cli.Command{
 			Value: "",
 			Usage: "specify the pty slave path for use with the container",
 		},
+		cli.IntFlag{
+			Name:  "parent-death-signal",
+			Usage: "signal to send to the container when runc terminates",
+		},
 	},
 	Action: func(context *cli.Context) {
 		bundle := context.String("bundle")
@@ -83,7 +87,10 @@ func init() {
 }
 
 func startContainer(context *cli.Context, spec *specs.LinuxSpec, rspec *specs.LinuxRuntimeSpec) (int, error) {
-	config, err := createLibcontainerConfig(context.GlobalString("id"), spec, rspec)
+	config, err := createLibcontainerConfig(
+		context.GlobalString("id"), context.Int("parent-death-signal"),
+		spec, rspec,
+	)
 	if err != nil {
 		return -1, err
 	}
