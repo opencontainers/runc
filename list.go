@@ -12,72 +12,60 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
+	"github.com/opencontainers/runc/libcontainer"
 )
 
 var listCommand = cli.Command{
 	Name:  "list",
 	Usage: "lists containers started by runc with the given root",
 	Action: func(context *cli.Context) {
-
-		// preload the container factory
-		if factory == nil {
-			err := factoryPreload(context)
-			if err != nil {
-				logrus.Fatal(err)
-				return
-			}
+		factory, err := loadFactory(context)
+		if err != nil {
+			logrus.Fatal(err)
 		}
-
 		// get the list of containers
 		root := context.GlobalString("root")
 		absRoot, err := filepath.Abs(root)
 		if err != nil {
 			logrus.Fatal(err)
-			return
 		}
 		list, err := ioutil.ReadDir(absRoot)
-
+		if err != nil {
+			logrus.Fatal(err)
+		}
 		w := tabwriter.NewWriter(os.Stdout, 12, 1, 3, ' ', 0)
 		fmt.Fprint(w, "ID\tPID\tSTATUS\tCREATED\n")
-
 		// output containers
 		for _, item := range list {
-			switch {
-			case !item.IsDir():
-				// do nothing with misc files in the containers directory
-			case item.IsDir():
-				outputListInfo(item.Name(), w)
+			if item.IsDir() {
+				if err := outputListInfo(item.Name(), factory, w); err != nil {
+					logrus.Fatal(err)
+				}
 			}
 		}
-
 		if err := w.Flush(); err != nil {
 			logrus.Fatal(err)
 		}
 	},
 }
 
-func outputListInfo(id string, w *tabwriter.Writer) {
+func outputListInfo(id string, factory libcontainer.Factory, w *tabwriter.Writer) error {
 	container, err := factory.Load(id)
 	if err != nil {
-		logrus.Fatal(err)
-		return
+		return err
 	}
-
 	containerStatus, err := container.Status()
 	if err != nil {
-		logrus.Fatal(err)
-		return
+		return err
 	}
-
 	state, err := container.State()
 	if err != nil {
-		logrus.Fatal(err)
-		return
+		return err
 	}
-
-	fmt.Fprintf(w, "%s\t%d\t%s\t%s\n", container.ID(),
+	fmt.Fprintf(w, "%s\t%d\t%s\t%s\n",
+		container.ID(),
 		state.BaseState.InitProcessPid,
 		containerStatus.String(),
-		state.BaseState.CreatedTime.Format(time.RFC3339Nano))
-
+		state.BaseState.Created.Format(time.RFC3339Nano))
+	return nil
 }

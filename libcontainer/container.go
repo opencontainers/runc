@@ -65,8 +65,8 @@ type BaseState struct {
 	// InitProcessStartTime is the init process start time in clock cycles since boot time.
 	InitProcessStartTime string `json:"init_process_start"`
 
-	// CreatedTime is the unix timestamp for the creation time of the container in UTC
-	CreatedTime time.Time `json:"created_time"`
+	// Created is the unix timestamp for the creation time of the container in UTC
+	Created time.Time `json:"created"`
 
 	// Config is the container's configuration.
 	Config configs.Config `json:"config"`
