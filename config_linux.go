@@ -33,7 +33,7 @@ type Linux struct {
 	CgroupsPath *string `json:"cgroupsPath,omitempty"`
 	// Namespaces contains the namespaces that are created and/or joined by the container
 	Namespaces []Namespace `json:"namespaces"`
-	// Devices are a list of device nodes that are created and enabled for the container
+	// Devices are a list of device nodes that are created for the container
 	Devices []Device `json:"devices"`
 	// ApparmorProfile specified the apparmor profile for the container.
 	ApparmorProfile string `json:"apparmorProfile"`
@@ -213,6 +213,8 @@ type Network struct {
 
 // Resources has container runtime resource constraints
 type Resources struct {
+	// Devices are a list of device rules for the whitelist controller
+	Devices []DeviceCgroup `json:"devices"`
 	// DisableOOMKiller disables the OOM killer for out of memory conditions
 	DisableOOMKiller *bool `json:"disableOOMKiller,omitempty"`
 	// Specify an oom_score_adj for the container.
@@ -231,7 +233,7 @@ type Resources struct {
 	Network *Network `json:"network,omitempty"`
 }
 
-// Device represents the information on a Linux special device file
+// Device represents the mknod information for a Linux special device file
 type Device struct {
 	// Path to the device.
 	Path string `json:"path"`
@@ -241,14 +243,26 @@ type Device struct {
 	Major int64 `json:"major"`
 	// Minor is the device's minor number.
 	Minor int64 `json:"minor"`
-	// Cgroup permissions format, rwm.
-	Permissions string `json:"permissions"`
 	// FileMode permission bits for the device.
-	FileMode os.FileMode `json:"fileMode"`
+	FileMode *os.FileMode `json:"fileMode,omitempty"`
 	// UID of the device.
-	UID uint32 `json:"uid"`
+	UID *uint32 `json:"uid,omitempty"`
 	// Gid of the device.
-	GID uint32 `json:"gid"`
+	GID *uint32 `json:"gid,omitempty"`
+}
+
+// DeviceCgroup represents a device rule for the whitelist controller
+type DeviceCgroup struct {
+	// Allow or deny
+	Allow bool `json:"allow"`
+	// Device type, block, char, etc.
+	Type *rune `json:"type,omitempty"`
+	// Major is the device's major number.
+	Major *int64 `json:"major,omitempty"`
+	// Minor is the device's minor number.
+	Minor *int64 `json:"minor,omitempty"`
+	// Cgroup access permissions format, rwm.
+	Access *string `json:"access,omitempty"`
 }
 
 // Seccomp represents syscall restrictions

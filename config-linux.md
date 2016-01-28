@@ -16,27 +16,19 @@ Valid values are the strings for capabilities defined in [the man page](http://m
     ]
 ```
 
-## Default Devices and File Systems
+## Default File Systems
 
 The Linux ABI includes both syscalls and several special file paths.
 Applications expecting a Linux environment will very likely expect these files paths to be setup correctly.
 
-The following devices and filesystems MUST be made available in each application's filesystem
+The following filesystems MUST be made available in each application's filesystem
 
-|     Path     |  Type  |  Notes  |
-| ------------ | ------ | ------- |
-| /proc        | [procfs](https://www.kernel.org/doc/Documentation/filesystems/proc.txt)    | |
-| /sys         | [sysfs](https://www.kernel.org/doc/Documentation/filesystems/sysfs.txt)    | |
-| /dev/null    | [device](http://man7.org/linux/man-pages/man4/null.4.html)                 | |
-| /dev/zero    | [device](http://man7.org/linux/man-pages/man4/zero.4.html)                 | |
-| /dev/full    | [device](http://man7.org/linux/man-pages/man4/full.4.html)                 | |
-| /dev/random  | [device](http://man7.org/linux/man-pages/man4/random.4.html)               | |
-| /dev/urandom | [device](http://man7.org/linux/man-pages/man4/random.4.html)               | |
-| /dev/tty     | [device](http://man7.org/linux/man-pages/man4/tty.4.html)                  | |
-| /dev/console | [device](http://man7.org/linux/man-pages/man4/console.4.html)              | |
-| /dev/pts     | [devpts](https://www.kernel.org/doc/Documentation/filesystems/devpts.txt)  | |
-| /dev/ptmx    | [device](https://www.kernel.org/doc/Documentation/filesystems/devpts.txt)  | Bind-mount or symlink of /dev/pts/ptmx |
-| /dev/shm     | [tmpfs](https://www.kernel.org/doc/Documentation/filesystems/tmpfs.txt)    | |
+|   Path   |  Type  |
+| -------- | ------ |
+| /proc    | [procfs](https://www.kernel.org/doc/Documentation/filesystems/proc.txt)   |
+| /sys     | [sysfs](https://www.kernel.org/doc/Documentation/filesystems/sysfs.txt)   |
+| /dev/pts | [devpts](https://www.kernel.org/doc/Documentation/filesystems/devpts.txt) |
+| /dev/shm | [tmpfs](https://www.kernel.org/doc/Documentation/filesystems/tmpfs.txt)   |
 
 ## Namespaces
 
@@ -115,92 +107,58 @@ There is a limit of 5 mappings which is the Linux kernel hard limit.
 
 ## Devices
 
-`devices` is an array specifying the list of devices to be created in the container.
+`devices` is an array specifying the list of devices that MUST be available in the container.
+The runtime may supply them however it likes (with [mknod][mknod.2], by bind mounting from the runtime mount namespace, etc.).
 
 The following parameters can be specified:
 
-* **`type`** *(char, required)* - type of device: `c`, `b`, `u` or `p`. More info in `man mknod`.
-
-* **`path`** *(string, optional)* - full path to device inside container
-
-* **`major, minor`** *(int64, required)* - major, minor numbers for device. More info in `man mknod`. There is a special value: `-1`, which means `*` for `device` cgroup setup.
-
-* **`permissions`** *(string, optional)* - cgroup permissions for device. A composition of `r` (*read*), `w` (*write*), and `m` (*mknod*).
-
-* **`fileMode`** *(uint32, optional)* - file mode for device file
-
-* **`uid`** *(uint32, optional)* - uid of device owner
-
-* **`gid`** *(uint32, optional)* - gid of device owner
-
-**`fileMode`**, **`uid`** and **`gid`** are required if **`path`** is given and are otherwise not allowed.
+* **`type`** *(char, required)* - type of device: `c`, `b`, `u` or `p`.
+  More info in [mknod(1)][mknod.1].
+* **`path`** *(string, required)* - full path to device inside container.
+* **`major, minor`** *(int64, required unless **`type`** is `p`)* - [major, minor numbers][devices] for the device.
+* **`fileMode`** *(uint32, optional)* - file mode for the device.
+  You can also control access to devices [with cgroups](#device-whitelist).
+* **`uid`** *(uint32, optional)* - id of device owner.
+* **`gid`** *(uint32, optional)* - id of device group.
 
 ###### Example
 
 ```json
    "devices": [
         {
-            "path": "/dev/random",
+            "path": "/dev/fuse",
             "type": "c",
-            "major": 1,
-            "minor": 8,
-            "permissions": "rwm",
+            "major": 10,
+            "minor": 229,
             "fileMode": 0666,
             "uid": 0,
             "gid": 0
         },
         {
-            "path": "/dev/urandom",
-            "type": "c",
-            "major": 1,
-            "minor": 9,
-            "permissions": "rwm",
-            "fileMode": 0666,
-            "uid": 0,
-            "gid": 0
-        },
-        {
-            "path": "/dev/null",
-            "type": "c",
-            "major": 1,
-            "minor": 3,
-            "permissions": "rwm",
-            "fileMode": 0666,
-            "uid": 0,
-            "gid": 0
-        },
-        {
-            "path": "/dev/zero",
-            "type": "c",
-            "major": 1,
-            "minor": 5,
-            "permissions": "rwm",
-            "fileMode": 0666,
-            "uid": 0,
-            "gid": 0
-        },
-        {
-            "path": "/dev/tty",
-            "type": "c",
-            "major": 5,
+            "path": "/dev/sda",
+            "type": "b",
+            "major": 8,
             "minor": 0,
-            "permissions": "rwm",
-            "fileMode": 0666,
-            "uid": 0,
-            "gid": 0
-        },
-        {
-            "path": "/dev/full",
-            "type": "c",
-            "major": 1,
-            "minor": 7,
-            "permissions": "rwm",
-            "fileMode": 0666,
+            "fileMode": 0660,
             "uid": 0,
             "gid": 0
         }
     ]
 ```
+
+###### Default Devices
+
+In addition to any devices configured with this setting, the runtime MUST also supply:
+
+* [`/dev/null`][null.4]
+* [`/dev/zero`][zero.4]
+* [`/dev/full`][full.4]
+* [`/dev/random`][random.4]
+* [`/dev/urandom`][random.4]
+* [`/dev/tty`][tty.4]
+* [`/dev/console`][console.4]
+* [`/dev/ptmx`][pts.4].
+  A [bind-mount or symlink of the container's `/dev/pts/ptmx`][devpts].
 
 ## Control groups
 
@@ -227,6 +185,46 @@ The cgroups will be created if they don't exist.
 You can configure a container's cgroups via the `resources` field of the Linux configuration.
 Do not specify `resources` unless limits have to be updated.
 For example, to run a new process in an existing container without updating limits, `resources` need not be specified.
+
+#### Device whitelist
+
+`devices` is an array of entries to control the [device whitelist][cgroups-devices].
+The runtime MUST apply entries in the listed order.
+
+The following parameters can be specified:
+
+* **`allow`** *(boolean, required)* - whether the entry is allowed or denied.
+* **`type`** *(char, optional)* - type of device: `a` (all), `c` (char), or `b` (block).
+  `null` or unset values mean "all", mapping to `a`.
+* **`major, minor`** *(int64, optional)* - [major, minor numbers][devices] for the device.
+  `null` or unset values mean "all", mapping to [`*` in the filesystem API][cgroups-devices].
+* **`access`** *(string, optional)* - cgroup permissions for device.
+  A composition of `r` (read), `w` (write), and `m` (mknod).
+
+###### Example
+
+```json
+   "devices": [
+        {
+            "allow": false,
+            "access": "rwm"
+        },
+        {
+            "allow": true,
+            "type": "c",
+            "major": 10,
+            "minor": 229,
+            "access": "rw"
+        },
+        {
+            "allow": true,
+            "type": "b",
+            "major": 8,
+            "minor": 0,
+            "access": "r"
+        }
+    ]
+```
 
 #### Disable out-of-memory killer
 
@@ -587,3 +585,17 @@ Setting `noNewPrivileges` to true prevents the processes in the container from g
 ```json
     "noNewPrivileges": true,
 ```
+
+[cgroups-devices]: https://www.kernel.org/doc/Documentation/cgroup-v1/devices.txt
+[devices]: https://www.kernel.org/doc/Documentation/devices.txt
+[devpts]: https://www.kernel.org/doc/Documentation/filesystems/devpts.txt
+
+[mknod.1]: http://man7.org/linux/man-pages/man1/mknod.1.html
+[mknod.2]: http://man7.org/linux/man-pages/man2/mknod.2.html
+[console.4]: http://man7.org/linux/man-pages/man4/console.4.html
+[full.4]: http://man7.org/linux/man-pages/man4/full.4.html
+[null.4]: http://man7.org/linux/man-pages/man4/null.4.html
+[pts.4]: http://man7.org/linux/man-pages/man4/pts.4.html
+[random.4]: http://man7.org/linux/man-pages/man4/random.4.html
+[tty.4]: http://man7.org/linux/man-pages/man4/tty.4.html
+[zero.4]: http://man7.org/linux/man-pages/man4/zero.4.html
