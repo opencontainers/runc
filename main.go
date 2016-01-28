@@ -74,7 +74,6 @@ func main() {
 		deleteCommand,
 		eventsCommand,
 		execCommand,
-		execCommand,
 		killCommand,
 		listCommand,
 		pauseCommand,
