@@ -315,7 +315,9 @@ func (p *initProcess) startTime() (string, error) {
 }
 
 func (p *initProcess) sendConfig() error {
-	// send the state to the container's init process then shutdown writes for the parent
+	// send the config to the container's init process, we don't use JSON Encode
+	// here because there might be a problem in JSON decoder in some cases, see:
+	// https://github.com/docker/docker/issues/14203#issuecomment-174177790
 	return utils.WriteJSON(p.parentPipe, p.config)
 }
 
