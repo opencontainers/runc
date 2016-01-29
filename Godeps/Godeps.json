@@ -9,8 +9,8 @@
 		},
 		{
 			"ImportPath": "github.com/codegangsta/cli",
-			"Comment": "1.2.0-107-g942282e",
-			"Rev": "942282e931e8286aa802a30b01fa7e16befb50f3"
+			"Comment": "1.2.0-187-gc31a797",
+			"Rev": "c31a7975863e7810c92e2e288a9ab074f9a88f29"
 		},
 		{
 			"ImportPath": "github.com/coreos/go-systemd/dbus",
