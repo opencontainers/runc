@@ -247,8 +247,6 @@ loop:
 			return newSystemError(err)
 		}
 		switch procSync.Type {
-		case procStart:
-			break loop
 		case procReady:
 			if err := p.manager.Set(p.config.Config); err != nil {
 				return newSystemError(err)
