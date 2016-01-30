@@ -132,37 +132,16 @@ func startContainer(context *cli.Context, spec *specs.LinuxSpec, rspec *specs.Li
 			process.ExtraFiles = append(process.ExtraFiles, os.NewFile(uintptr(i), ""))
 		}
 	}
-	var tty *tty
-	if spec.Process.Terminal {
-		if tty, err = createTty(process, rootuid, context.String("console")); err != nil {
-			return -1, err
-		}
-	} else if detach {
-		if err := dupStdio(process, rootuid); err != nil {
-			return -1, err
-		}
-	} else {
-		if tty, err = createStdioPipes(process, rootuid); err != nil {
-			return -1, err
-		}
+	tty, err := setupIO(process, rootuid, context.String("console"), spec.Process.Terminal, detach)
+	if err != nil {
+		return -1, err
 	}
 	if err := container.Start(process); err != nil {
 		return -1, err
 	}
 	if pidFile := context.String("pid-file"); pidFile != "" {
-		pid, err := process.Pid()
-		if err != nil {
+		if err := createPidile(pidFile, process); err != nil {
 			return -1, err
-		}
-		f, err := os.Create(pidFile)
-		if err != nil {
-			logrus.WithField("pid", pid).Error("create pid file")
-		} else {
-			_, err = fmt.Fprintf(f, "%d", pid)
-			f.Close()
-			if err != nil {
-				logrus.WithField("error", err).Error("write pid file")
-			}
 		}
 	}
 	if detach {
@@ -208,4 +187,40 @@ func destroy(container libcontainer.Container) {
 	if err := container.Destroy(); err != nil {
 		logrus.Error(err)
 	}
+}
+
+func setupIO(process *libcontainer.Process, rootuid int, console string, createTTY, detach bool) (*tty, error) {
+	// detach and createTty will not work unless a console path is passed
+	// so error out here before changing any terminal settings
+	if createTTY && detach && console == "" {
+		return nil, fmt.Errorf("cannot allocate tty if runc will detach")
+	}
+	if createTTY {
+		return createTty(process, rootuid, console)
+	}
+	if detach {
+		if err := dupStdio(process, rootuid); err != nil {
+			return nil, err
+		}
+		return nil, nil
+	}
+	return createStdioPipes(process, rootuid)
+}
+
+func createPidile(path string, process *libcontainer.Process) error {
+	pid, err := process.Pid()
+	if err != nil {
+		return err
+	}
+	f, err := os.Create(path)
+	if err != nil {
+		logrus.WithField("pid", pid).Error("create pid file")
+	} else {
+		_, err = fmt.Fprintf(f, "%d", pid)
+		f.Close()
+		if err != nil {
+			logrus.WithField("error", err).Error("write pid file")
+		}
+	}
+	return nil
 }

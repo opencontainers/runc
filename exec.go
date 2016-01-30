@@ -43,6 +43,15 @@ var execCommand = cli.Command{
 			Name:  "process,p",
 			Usage: "path to the process.json",
 		},
+		cli.BoolFlag{
+			Name:  "detach,d",
+			Usage: "detach from the container's process",
+		},
+		cli.StringFlag{
+			Name:  "pid-file",
+			Value: "",
+			Usage: "specify the file to write the process id to",
+		},
 	},
 	Action: func(context *cli.Context) {
 		if os.Geteuid() != 0 {
@@ -61,7 +70,10 @@ func execProcess(context *cli.Context) (int, error) {
 	if err != nil {
 		return -1, err
 	}
-	bundle := container.Config().Rootfs
+	var (
+		detach = context.Bool("detach")
+		bundle = container.Config().Rootfs
+	)
 	rootuid, err := container.Config().HostUID()
 	if err != nil {
 		return -1, err
@@ -71,15 +83,23 @@ func execProcess(context *cli.Context) (int, error) {
 		return -1, err
 	}
 	process := newProcess(*p)
-	tty, err := newTty(p.Terminal, process, rootuid, context.String("console"))
+	tty, err := setupIO(process, rootuid, context.String("console"), p.Terminal, detach)
 	if err != nil {
 		return -1, err
 	}
-	handler := newSignalHandler(tty)
-	defer handler.Close()
 	if err := container.Start(process); err != nil {
 		return -1, err
 	}
+	if pidFile := context.String("pid-file"); pidFile != "" {
+		if err := createPidile(pidFile, process); err != nil {
+			return -1, err
+		}
+	}
+	if detach {
+		return 0, nil
+	}
+	handler := newSignalHandler(tty)
+	defer handler.Close()
 	return handler.forward(process)
 }
 
