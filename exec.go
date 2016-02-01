@@ -9,6 +9,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
@@ -72,13 +73,13 @@ func execProcess(context *cli.Context) (int, error) {
 	}
 	var (
 		detach = context.Bool("detach")
-		bundle = container.Config().Rootfs
+		rootfs = container.Config().Rootfs
 	)
 	rootuid, err := container.Config().HostUID()
 	if err != nil {
 		return -1, err
 	}
-	p, err := getProcess(context, path.Dir(bundle))
+	p, err := getProcess(context, path.Dir(rootfs))
 	if err != nil {
 		return -1, err
 	}
@@ -91,7 +92,9 @@ func execProcess(context *cli.Context) (int, error) {
 		return -1, err
 	}
 	if pidFile := context.String("pid-file"); pidFile != "" {
-		if err := createPidile(pidFile, process); err != nil {
+		if err := createPidFile(pidFile, process); err != nil {
+			process.Signal(syscall.SIGKILL)
+			process.Wait()
 			return -1, err
 		}
 	}
