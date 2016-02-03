@@ -249,21 +249,6 @@ func (p *initProcess) start() error {
 			p.manager.Destroy()
 		}
 	}()
-	if !p.config.Config.Namespaces.Contains(configs.NEWNS) {
-		if p.config.Config.Hooks != nil {
-			s := configs.HookState{
-				Version: p.container.config.Version,
-				ID:      p.container.id,
-				Pid:     p.pid(),
-				Root:    p.config.Config.Rootfs,
-			}
-			for _, hook := range p.config.Config.Hooks.Prestart {
-				if err := hook.Run(s); err != nil {
-					return newSystemError(err)
-				}
-			}
-		}
-	}
 	if err := p.createNetworkInterfaces(); err != nil {
 		return newSystemError(err)
 	}
@@ -290,6 +275,22 @@ loop:
 		case procReady:
 			if err := p.manager.Set(p.config.Config); err != nil {
 				return newSystemError(err)
+			}
+			// call prestart hooks
+			if !p.config.Config.Namespaces.Contains(configs.NEWNS) {
+				if p.config.Config.Hooks != nil {
+					s := configs.HookState{
+						Version: p.container.config.Version,
+						ID:      p.container.id,
+						Pid:     p.pid(),
+						Root:    p.config.Config.Rootfs,
+					}
+					for _, hook := range p.config.Config.Hooks.Prestart {
+						if err := hook.Run(s); err != nil {
+							return newSystemError(err)
+						}
+					}
+				}
 			}
 			// Sync with child.
 			if err := utils.WriteJSON(p.parentPipe, syncT{procRun}); err != nil {
