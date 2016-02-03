@@ -162,6 +162,7 @@ func getMemoryData(path, name string) (cgroups.MemoryData, error) {
 	usage := strings.Join([]string{moduleName, "usage_in_bytes"}, ".")
 	maxUsage := strings.Join([]string{moduleName, "max_usage_in_bytes"}, ".")
 	failcnt := strings.Join([]string{moduleName, "failcnt"}, ".")
+	limit := strings.Join([]string{moduleName, "limit_in_bytes"}, ".")
 
 	value, err := getCgroupParamUint(path, usage)
 	if err != nil {
@@ -187,6 +188,14 @@ func getMemoryData(path, name string) (cgroups.MemoryData, error) {
 		return cgroups.MemoryData{}, fmt.Errorf("failed to parse %s - %v", failcnt, err)
 	}
 	memoryData.Failcnt = value
+	value, err = getCgroupParamUint(path, limit)
+	if err != nil {
+		if moduleName != "memory" && os.IsNotExist(err) {
+			return cgroups.MemoryData{}, nil
+		}
+		return cgroups.MemoryData{}, fmt.Errorf("failed to parse %s - %v", limit, err)
+	}
+	memoryData.Limit = value
 
 	return memoryData, nil
 }
