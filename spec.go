@@ -328,19 +328,7 @@ func loadSpec(cPath, rPath string) (spec *specs.LinuxSpec, rspec *specs.LinuxRun
 	if err = json.NewDecoder(rf).Decode(&rspec); err != nil {
 		return spec, rspec, err
 	}
-	if err := checkSpecVersion(spec); err != nil {
-		return spec, rspec, err
-	}
 	return spec, rspec, validateSpec(spec, rspec)
-}
-
-// checkSpecVersion makes sure that the spec version matches runc's while we are in the initial
-// development period.  It is better to hard fail than have missing fields or options in the spec.
-func checkSpecVersion(s *specs.LinuxSpec) error {
-	if s.Version != specs.Version {
-		return fmt.Errorf("spec version is not compatible with implemented version %q: spec %q", specs.Version, s.Version)
-	}
-	return nil
 }
 
 func createLibcontainerConfig(cgroupName string, spec *specs.LinuxSpec, rspec *specs.LinuxRuntimeSpec) (*configs.Config, error) {
