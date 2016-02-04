@@ -86,17 +86,6 @@ func containerPreload(context *cli.Context) error {
 	return nil
 }
 
-var factory libcontainer.Factory
-
-func factoryPreload(context *cli.Context) error {
-	f, err := loadFactory(context)
-	if err != nil {
-		return err
-	}
-	factory = f
-	return nil
-}
-
 // loadFactory returns the configured factory instance for execing containers.
 func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
 	root := context.GlobalString("root")
