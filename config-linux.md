@@ -164,14 +164,14 @@ In addition to any devices configured with this setting, the runtime MUST also s
 
 Also known as cgroups, they are used to restrict resource usage for a container and handle device access.
 cgroups provide controls to restrict cpu, memory, IO, pids and network for the container.
-For more information, see the [kernel cgroups documentation](https://www.kernel.org/doc/Documentation/cgroups/cgroups.txt).
+For more information, see the [kernel cgroups documentation][cgroup-v1].
 
 The path to the cgroups can be specified in the Spec via `cgroupsPath`.
 `cgroupsPath` is expected to be relative to the cgroups mount point.
 If `cgroupsPath` is not specified, implementations can define the default cgroup path.
 Implementations of the Spec can choose to name cgroups in any manner.
 The Spec does not include naming schema for cgroups.
-The Spec does not support [split hierarchy](https://www.kernel.org/doc/Documentation/cgroups/unified-hierarchy.txt).
+The Spec does not support [split hierarchy][cgroup-v2].
 The cgroups will be created if they don't exist.
 
 ###### Example
@@ -188,7 +188,7 @@ For example, to run a new process in an existing container without updating limi
 
 #### Device whitelist
 
-`devices` is an array of entries to control the [device whitelist][cgroups-devices].
+`devices` is an array of entries to control the [device whitelist][cgroup-v1-devices].
 The runtime MUST apply entries in the listed order.
 
 The following parameters can be specified:
@@ -197,7 +197,7 @@ The following parameters can be specified:
 * **`type`** *(char, optional)* - type of device: `a` (all), `c` (char), or `b` (block).
   `null` or unset values mean "all", mapping to `a`.
 * **`major, minor`** *(int64, optional)* - [major, minor numbers][devices] for the device.
-  `null` or unset values mean "all", mapping to [`*` in the filesystem API][cgroups-devices].
+  `null` or unset values mean "all", mapping to [`*` in the filesystem API][cgroup-v1-devices].
 * **`access`** *(string, optional)* - cgroup permissions for device.
   A composition of `r` (read), `w` (write), and `m` (mknod).
 
@@ -232,7 +232,7 @@ The following parameters can be specified:
 If enabled (`false`), tasks that attempt to consume more memory than they are allowed are immediately killed by the OOM killer.
 The OOM killer is enabled by default in every cgroup using the `memory` subsystem.
 To disable it, specify a value of `true`.
-For more information, see [the memory cgroup man page](https://www.kernel.org/doc/Documentation/cgroups/memory.txt).
+For more information, see [the memory cgroup man page][cgroup-v1-memory].
 
 * **`disableOOMKiller`** *(bool, optional)* - enables or disables the OOM killer
 
@@ -247,7 +247,7 @@ For more information, see [the memory cgroup man page](https://www.kernel.org/do
 `oomScoreAdj` sets heuristic regarding how the process is evaluated by the kernel during memory pressure.
 For more information, see [the proc filesystem documentation section 3.1](https://www.kernel.org/doc/Documentation/filesystems/proc.txt).
 This is a kernel/system level setting, where as `disableOOMKiller` is scoped for a memory cgroup.
-For more information on how these two settings work together, see [the memory cgroup documentation section 10. OOM Contol](https://www.kernel.org/doc/Documentation/cgroups/memory.txt).
+For more information on how these two settings work together, see [the memory cgroup documentation section 10. OOM Contol][cgroup-v1-memory].
 
 * **`oomScoreAdj`** *(int, optional)* - adjust the oom-killer score
 
@@ -260,7 +260,7 @@ For more information on how these two settings work together, see [the memory cg
 #### Memory
 
 `memory` represents the cgroup subsystem `memory` and it's used to set limits on the container's memory usage.
-For more information, see [the memory cgroup man page](https://www.kernel.org/doc/Documentation/cgroups/memory.txt).
+For more information, see [the memory cgroup man page][cgroup-v1-memory].
 
 The following parameters can be specified to setup the controller:
 
@@ -292,7 +292,7 @@ The following parameters can be specified to setup the controller:
 #### CPU
 
 `cpu` represents the cgroup subsystems `cpu` and `cpusets`.
-For more information, see [the cpusets cgroup man page](https://www.kernel.org/doc/Documentation/cgroups/cpusets.txt).
+For more information, see [the cpusets cgroup man page][cgroup-v1-cpusets].
 
 The following parameters can be specified to setup the controller:
 
@@ -327,7 +327,7 @@ The following parameters can be specified to setup the controller:
 #### Block IO Controller
 
 `blockIO` represents the cgroup subsystem `blkio` which implements the block io controller.
-For more information, see [the kernel cgroups documentation about blkio](https://www.kernel.org/doc/Documentation/cgroups/blkio-controller.txt).
+For more information, see [the kernel cgroups documentation about blkio][cgroup-v1-blkio].
 
 The following parameters can be specified to setup the controller:
 
@@ -386,7 +386,7 @@ The following parameters can be specified to setup the controller:
 
 `hugepageLimits` represents the `hugetlb` controller which allows to limit the
 HugeTLB usage per control group and enforces the controller limit during page fault.
-For more information, see the [kernel cgroups documentation about HugeTLB](https://www.kernel.org/doc/Documentation/cgroups/hugetlb.txt).
+For more information, see the [kernel cgroups documentation about HugeTLB][cgroup-v1-hugetlb].
 
 `hugepageLimits` is an array of entries, each having the following structure:
 
@@ -408,7 +408,7 @@ For more information, see the [kernel cgroups documentation about HugeTLB](https
 #### Network
 
 `network` represents the cgroup subsystems `net_cls` and `net_prio`.
-For more information, see [the net\_cls cgroup man page](https://www.kernel.org/doc/Documentation/cgroups/net_cls.txt) and [the net\_prio cgroup man page](https://www.kernel.org/doc/Documentation/cgroups/net_prio.txt).
+For more information, see [the net\_cls cgroup man page][cgroup-v1-net-cls] and [the net\_prio cgroup man page][cgroup-v1-net-prio].
 
 The following parameters can be specified to setup these cgroup controllers:
 
@@ -440,8 +440,7 @@ processes in the group and egressing the system on various interfaces. The follo
 #### PIDs
 
 `pids` represents the cgroup subsystem `pids`.
-For more information, see [the pids cgroup man page](https://www.kernel.org/doc/Documentation/cgroups/pids.txt
-).
+For more information, see [the pids cgroup man page][cgroup-v1-pids].
 
 The following paramters can be specified to setup the controller:
 
@@ -586,7 +585,16 @@ Setting `noNewPrivileges` to true prevents the processes in the container from g
     "noNewPrivileges": true,
 ```
 
-[cgroups-devices]: https://www.kernel.org/doc/Documentation/cgroup-v1/devices.txt
+[cgroup-v1]: https://www.kernel.org/doc/Documentation/cgroup-v1/cgroups.txt
+[cgroup-v1-blkio]: https://www.kernel.org/doc/Documentation/cgroup-v1/blkio-controller.txt
+[cgroup-v1-cpusets]: https://www.kernel.org/doc/Documentation/cgroup-v1/cpusets.txt
+[cgroup-v1-devices]: https://www.kernel.org/doc/Documentation/cgroup-v1/devices.txt
+[cgroup-v1-hugetlb]: https://www.kernel.org/doc/Documentation/cgroup-v1/hugetlb.txt
+[cgroup-v1-memory]: https://www.kernel.org/doc/Documentation/cgroup-v1/memory.txt
+[cgroup-v1-net-cls]: https://www.kernel.org/doc/Documentation/cgroup-v1/net_cls.txt
+[cgroup-v1-net-prio]: https://www.kernel.org/doc/Documentation/cgroup-v1/net_prio.txt
+[cgroup-v1-pids]: https://www.kernel.org/doc/Documentation/cgroup-v1/pids.txt
+[cgroup-v2]: https://www.kernel.org/doc/Documentation/cgroup-v2.txt
 [devices]: https://www.kernel.org/doc/Documentation/devices.txt
 [devpts]: https://www.kernel.org/doc/Documentation/filesystems/devpts.txt
 
