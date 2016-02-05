@@ -56,34 +56,48 @@ var specCommand = cli.Command{
 					Cwd: "/",
 				},
 				Hostname: "shell",
-				Mounts: []specs.MountPoint{
+				Mounts: []specs.Mount{
 					{
-						Name: "proc",
-						Path: "/proc",
+						Destination: "/proc",
+						Type:        "proc",
+						Source:      "proc",
+						Options:     nil,
 					},
 					{
-						Name: "dev",
-						Path: "/dev",
+						Destination: "/dev",
+						Type:        "tmpfs",
+						Source:      "tmpfs",
+						Options:     []string{"nosuid", "strictatime", "mode=755", "size=65536k"},
 					},
 					{
-						Name: "devpts",
-						Path: "/dev/pts",
+						Destination: "/dev/pts",
+						Type:        "devpts",
+						Source:      "devpts",
+						Options:     []string{"nosuid", "noexec", "newinstance", "ptmxmode=0666", "mode=0620", "gid=5"},
 					},
 					{
-						Name: "shm",
-						Path: "/dev/shm",
+						Destination: "/dev/shm",
+						Type:        "tmpfs",
+						Source:      "shm",
+						Options:     []string{"nosuid", "noexec", "nodev", "mode=1777", "size=65536k"},
 					},
 					{
-						Name: "mqueue",
-						Path: "/dev/mqueue",
+						Destination: "/dev/mqueue",
+						Type:        "mqueue",
+						Source:      "mqueue",
+						Options:     []string{"nosuid", "noexec", "nodev"},
 					},
 					{
-						Name: "sysfs",
-						Path: "/sys",
+						Destination: "/sys",
+						Type:        "sysfs",
+						Source:      "sysfs",
+						Options:     []string{"nosuid", "noexec", "nodev"},
 					},
 					{
-						Name: "cgroup",
-						Path: "/sys/fs/cgroup",
+						Destination: "/sys/fs/cgroup",
+						Type:        "cgroup",
+						Source:      "cgroup",
+						Options:     []string{"nosuid", "noexec", "nodev", "relatime", "ro"},
 					},
 				},
 			},
@@ -93,49 +107,7 @@ var specCommand = cli.Command{
 					"CAP_KILL",
 					"CAP_NET_BIND_SERVICE",
 				},
-			},
-		}
-		rspec := specs.LinuxRuntimeSpec{
-			RuntimeSpec: specs.RuntimeSpec{
-				Mounts: map[string]specs.Mount{
-					"proc": {
-						Type:    "proc",
-						Source:  "proc",
-						Options: nil,
-					},
-					"dev": {
-						Type:    "tmpfs",
-						Source:  "tmpfs",
-						Options: []string{"nosuid", "strictatime", "mode=755", "size=65536k"},
-					},
-					"devpts": {
-						Type:    "devpts",
-						Source:  "devpts",
-						Options: []string{"nosuid", "noexec", "newinstance", "ptmxmode=0666", "mode=0620", "gid=5"},
-					},
-					"shm": {
-						Type:    "tmpfs",
-						Source:  "shm",
-						Options: []string{"nosuid", "noexec", "nodev", "mode=1777", "size=65536k"},
-					},
-					"mqueue": {
-						Type:    "mqueue",
-						Source:  "mqueue",
-						Options: []string{"nosuid", "noexec", "nodev"},
-					},
-					"sysfs": {
-						Type:    "sysfs",
-						Source:  "sysfs",
-						Options: []string{"nosuid", "noexec", "nodev"},
-					},
-					"cgroup": {
-						Type:    "cgroup",
-						Source:  "cgroup",
-						Options: []string{"nosuid", "noexec", "nodev", "relatime", "ro"},
-					},
-				},
-			},
-			Linux: specs.LinuxRuntime{
+
 				Namespaces: []specs.Namespace{
 					{
 						Type: "pid",
@@ -153,6 +125,7 @@ var specCommand = cli.Command{
 						Type: "mount",
 					},
 				},
+
 				Rlimits: []specs.Rlimit{
 					{
 						Type: "RLIMIT_NOFILE",
@@ -160,77 +133,93 @@ var specCommand = cli.Command{
 						Soft: uint64(1024),
 					},
 				},
-				Devices: []specs.Device{
-					{
-						Type:        'c',
-						Path:        "/dev/null",
-						Major:       1,
-						Minor:       3,
-						Permissions: "rwm",
-						FileMode:    0666,
-						UID:         0,
-						GID:         0,
-					},
-					{
-						Type:        'c',
-						Path:        "/dev/random",
-						Major:       1,
-						Minor:       8,
-						Permissions: "rwm",
-						FileMode:    0666,
-						UID:         0,
-						GID:         0,
-					},
-					{
-						Type:        'c',
-						Path:        "/dev/full",
-						Major:       1,
-						Minor:       7,
-						Permissions: "rwm",
-						FileMode:    0666,
-						UID:         0,
-						GID:         0,
-					},
-					{
-						Type:        'c',
-						Path:        "/dev/tty",
-						Major:       5,
-						Minor:       0,
-						Permissions: "rwm",
-						FileMode:    0666,
-						UID:         0,
-						GID:         0,
-					},
-					{
-						Type:        'c',
-						Path:        "/dev/zero",
-						Major:       1,
-						Minor:       5,
-						Permissions: "rwm",
-						FileMode:    0666,
-						UID:         0,
-						GID:         0,
-					},
-					{
-						Type:        'c',
-						Path:        "/dev/urandom",
-						Major:       1,
-						Minor:       9,
-						Permissions: "rwm",
-						FileMode:    0666,
-						UID:         0,
-						GID:         0,
-					},
-				},
 				Resources: &specs.Resources{
+					Devices: []specs.DeviceCgroup{
+						{
+							Allow:  false,
+							Access: sPtr("rwm"),
+						},
+						{
+							Allow:  true,
+							Type:   rPtr('c'),
+							Major:  iPtr(8),
+							Minor:  iPtr(229),
+							Access: sPtr("rw"),
+						},
+						{
+							Allow:  true,
+							Type:   rPtr('b'),
+							Major:  iPtr(8),
+							Minor:  iPtr(0),
+							Access: sPtr("r"),
+						},
+					},
 					Memory: &specs.Memory{},
 				},
+				Devices: []specs.Device{
+					{
+						Type:     'c',
+						Path:     "/dev/null",
+						Major:    1,
+						Minor:    3,
+						FileMode: fmPtr(0666),
+						UID:      u32Ptr(0),
+						GID:      u32Ptr(0),
+					},
+					{
+						Type:     'c',
+						Path:     "/dev/random",
+						Major:    1,
+						Minor:    8,
+						FileMode: fmPtr(0666),
+						UID:      u32Ptr(0),
+						GID:      u32Ptr(0),
+					},
+					{
+						Type:     'c',
+						Path:     "/dev/full",
+						Major:    1,
+						Minor:    7,
+						FileMode: fmPtr(0666),
+						UID:      u32Ptr(0),
+						GID:      u32Ptr(0),
+					},
+					{
+						Type:     'c',
+						Path:     "/dev/tty",
+						Major:    5,
+						Minor:    0,
+						FileMode: fmPtr(0666),
+						UID:      u32Ptr(0),
+						GID:      u32Ptr(0),
+					},
+					{
+						Type:     'c',
+						Path:     "/dev/zero",
+						Major:    1,
+						Minor:    5,
+						FileMode: fmPtr(0666),
+						UID:      u32Ptr(0),
+						GID:      u32Ptr(0),
+					},
+					{
+						Type:     'c',
+						Path:     "/dev/urandom",
+						Major:    1,
+						Minor:    9,
+						FileMode: fmPtr(0666),
+						UID:      u32Ptr(0),
+						GID:      u32Ptr(0),
+					},
+				},
+
 				Seccomp: specs.Seccomp{
 					DefaultAction: "SCMP_ACT_ALLOW",
-					Syscalls:      []*specs.Syscall{},
+					Syscalls:      []specs.Syscall{},
 				},
 			},
 		}
+
 		checkNoFile := func(name string) error {
 			_, err := os.Stat(name)
 			if err == nil {
@@ -250,9 +239,6 @@ var specCommand = cli.Command{
 		if err := checkNoFile(specConfig); err != nil {
 			logrus.Fatal(err)
 		}
-		if err := checkNoFile(runtimeConfig); err != nil {
-			logrus.Fatal(err)
-		}
 		data, err := json.MarshalIndent(&spec, "", "\t")
 		if err != nil {
 			logrus.Fatal(err)
@@ -260,15 +246,14 @@ var specCommand = cli.Command{
 		if err := ioutil.WriteFile(specConfig, data, 0666); err != nil {
 			logrus.Fatal(err)
 		}
-		rdata, err := json.MarshalIndent(&rspec, "", "\t")
-		if err != nil {
-			logrus.Fatal(err)
-		}
-		if err := ioutil.WriteFile(runtimeConfig, rdata, 0666); err != nil {
-			logrus.Fatal(err)
-		}
 	},
 }
+
+func sPtr(s string) *string      { return &s }
+func rPtr(r rune) *rune          { return &r }
+func iPtr(i int64) *int64        { return &i }
+func u32Ptr(i int64) *uint32     { u := uint32(i); return &u }
+func fmPtr(i int64) *os.FileMode { fm := os.FileMode(i); return &fm }
 
 var namespaceMapping = map[specs.NamespaceType]configs.NamespaceType{
 	specs.PIDNamespace:     configs.NEWPID,
@@ -291,7 +276,7 @@ var mountPropagationMapping = map[string]int{
 
 // validateSpec validates the fields in the spec
 // TODO: Add validation for other fields where applicable
-func validateSpec(spec *specs.LinuxSpec, rspec *specs.LinuxRuntimeSpec) error {
+func validateSpec(spec *specs.LinuxSpec) error {
 	if spec.Process.Cwd == "" {
 		return fmt.Errorf("Cwd property must not be empty")
 	}
@@ -303,35 +288,23 @@ func validateSpec(spec *specs.LinuxSpec, rspec *specs.LinuxRuntimeSpec) error {
 
 // loadSpec loads the specification from the provided path.
 // If the path is empty then the default path will be "config.json"
-func loadSpec(cPath, rPath string) (spec *specs.LinuxSpec, rspec *specs.LinuxRuntimeSpec, err error) {
+func loadSpec(cPath string) (spec *specs.LinuxSpec, err error) {
 	cf, err := os.Open(cPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, nil, fmt.Errorf("JSON specification file %s not found", cPath)
+			return nil, fmt.Errorf("JSON specification file %s not found", cPath)
 		}
-		return spec, rspec, err
+		return spec, err
 	}
 	defer cf.Close()
 
-	rf, err := os.Open(rPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil, fmt.Errorf("JSON runtime config file %s not found", rPath)
-		}
-		return spec, rspec, err
-	}
-	defer rf.Close()
-
 	if err = json.NewDecoder(cf).Decode(&spec); err != nil {
-		return spec, rspec, err
+		return spec, err
 	}
-	if err = json.NewDecoder(rf).Decode(&rspec); err != nil {
-		return spec, rspec, err
-	}
-	return spec, rspec, validateSpec(spec, rspec)
+	return spec, validateSpec(spec)
 }
 
-func createLibcontainerConfig(cgroupName string, spec *specs.LinuxSpec, rspec *specs.LinuxRuntimeSpec) (*configs.Config, error) {
+func createLibcontainerConfig(cgroupName string, spec *specs.LinuxSpec) (*configs.Config, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return nil, err
@@ -348,11 +321,11 @@ func createLibcontainerConfig(cgroupName string, spec *specs.LinuxSpec, rspec *s
 	}
 
 	exists := false
-	if config.RootPropagation, exists = mountPropagationMapping[rspec.Linux.RootfsPropagation]; !exists {
-		return nil, fmt.Errorf("rootfsPropagation=%v is not supported", rspec.Linux.RootfsPropagation)
+	if config.RootPropagation, exists = mountPropagationMapping[spec.Linux.RootfsPropagation]; !exists {
+		return nil, fmt.Errorf("rootfsPropagation=%v is not supported", spec.Linux.RootfsPropagation)
 	}
 
-	for _, ns := range rspec.Linux.Namespaces {
+	for _, ns := range spec.Linux.Namespaces {
 		t, exists := namespaceMapping[ns.Type]
 		if !exists {
 			return nil, fmt.Errorf("namespace %q does not exist", ns)
@@ -366,27 +339,23 @@ func createLibcontainerConfig(cgroupName string, spec *specs.LinuxSpec, rspec *s
 			},
 		}
 	}
-	for _, mp := range spec.Mounts {
-		m, ok := rspec.Mounts[mp.Name]
-		if !ok {
-			return nil, fmt.Errorf("Mount with Name %q not found in runtime config", mp.Name)
-		}
-		config.Mounts = append(config.Mounts, createLibcontainerMount(cwd, mp.Path, m))
+	for _, m := range spec.Mounts {
+		config.Mounts = append(config.Mounts, createLibcontainerMount(cwd, m))
 	}
-	if err := createDevices(rspec, config); err != nil {
+	if err := createDevices(spec, config); err != nil {
 		return nil, err
 	}
-	if err := setupUserNamespace(rspec, config); err != nil {
+	if err := setupUserNamespace(spec, config); err != nil {
 		return nil, err
 	}
-	for _, rlimit := range rspec.Linux.Rlimits {
+	for _, rlimit := range spec.Linux.Rlimits {
 		rl, err := createLibContainerRlimit(rlimit)
 		if err != nil {
 			return nil, err
 		}
 		config.Rlimits = append(config.Rlimits, rl)
 	}
-	c, err := createCgroupConfig(cgroupName, rspec, config.Devices)
+	c, err := createCgroupConfig(cgroupName, spec, config.Devices)
 	if err != nil {
 		return nil, err
 	}
@@ -400,23 +369,23 @@ func createLibcontainerConfig(cgroupName string, spec *specs.LinuxSpec, rspec *s
 			"/proc/sys", "/proc/sysrq-trigger", "/proc/irq", "/proc/bus",
 		}
 	}
-	seccomp, err := setupSeccomp(&rspec.Linux.Seccomp)
+	seccomp, err := setupSeccomp(&spec.Linux.Seccomp)
 	if err != nil {
 		return nil, err
 	}
 	config.Seccomp = seccomp
-	config.Sysctl = rspec.Linux.Sysctl
-	config.ProcessLabel = rspec.Linux.SelinuxProcessLabel
-	config.AppArmorProfile = rspec.Linux.ApparmorProfile
+	config.Sysctl = spec.Linux.Sysctl
+	config.ProcessLabel = spec.Linux.SelinuxProcessLabel
+	config.AppArmorProfile = spec.Linux.ApparmorProfile
 	for _, g := range spec.Process.User.AdditionalGids {
 		config.AdditionalGroups = append(config.AdditionalGroups, strconv.FormatUint(uint64(g), 10))
 	}
-	createHooks(rspec, config)
+	createHooks(spec, config)
 	config.Version = specs.Version
 	return config, nil
 }
 
-func createLibcontainerMount(cwd, dest string, m specs.Mount) *configs.Mount {
+func createLibcontainerMount(cwd string, m specs.Mount) *configs.Mount {
 	flags, pgflags, data := parseMountOptions(m.Options)
 	source := m.Source
 	if m.Type == "bind" {
@@ -427,14 +396,14 @@ func createLibcontainerMount(cwd, dest string, m specs.Mount) *configs.Mount {
 	return &configs.Mount{
 		Device:           m.Type,
 		Source:           source,
-		Destination:      dest,
+		Destination:      m.Destination,
 		Data:             data,
 		Flags:            flags,
 		PropagationFlags: pgflags,
 	}
 }
 
-func createCgroupConfig(name string, spec *specs.LinuxRuntimeSpec, devices []*configs.Device) (*configs.Cgroup, error) {
+func createCgroupConfig(name string, spec *specs.LinuxSpec, devices []*configs.Device) (*configs.Cgroup, error) {
 	myCgroupPath, err := cgroups.GetThisCgroupDir("devices")
 	if err != nil {
 		return nil, err
@@ -553,17 +522,16 @@ func createCgroupConfig(name string, spec *specs.LinuxRuntimeSpec, devices []*co
 	return c, nil
 }
 
-func createDevices(spec *specs.LinuxRuntimeSpec, config *configs.Config) error {
+func createDevices(spec *specs.LinuxSpec, config *configs.Config) error {
 	for _, d := range spec.Linux.Devices {
 		device := &configs.Device{
-			Type:        d.Type,
-			Path:        d.Path,
-			Major:       d.Major,
-			Minor:       d.Minor,
-			Permissions: d.Permissions,
-			FileMode:    d.FileMode,
-			Uid:         d.UID,
-			Gid:         d.GID,
+			Type:     d.Type,
+			Path:     d.Path,
+			Major:    d.Major,
+			Minor:    d.Minor,
+			FileMode: *d.FileMode,
+			Uid:      *d.UID,
+			Gid:      *d.GID,
 		}
 		config.Devices = append(config.Devices, device)
 	}
@@ -578,7 +546,7 @@ func setReadonly(config *configs.Config) {
 	}
 }
 
-func setupUserNamespace(spec *specs.LinuxRuntimeSpec, config *configs.Config) error {
+func setupUserNamespace(spec *specs.LinuxSpec, config *configs.Config) error {
 	if len(spec.Linux.UIDMappings) == 0 {
 		return nil
 	}
@@ -760,7 +728,7 @@ func setupSeccomp(config *specs.Seccomp) (*configs.Seccomp, error) {
 	return newConfig, nil
 }
 
-func createHooks(rspec *specs.LinuxRuntimeSpec, config *configs.Config) {
+func createHooks(rspec *specs.LinuxSpec, config *configs.Config) {
 	config.Hooks = &configs.Hooks{}
 	for _, h := range rspec.Hooks.Prestart {
 		cmd := configs.Command{

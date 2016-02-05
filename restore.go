@@ -75,11 +75,11 @@ var restoreCommand = cli.Command{
 				fatal(err)
 			}
 		}
-		spec, rspec, err := loadSpec(specConfig, runtimeConfig)
+		spec, err := loadSpec(specConfig)
 		if err != nil {
 			fatal(err)
 		}
-		config, err := createLibcontainerConfig(context.GlobalString("id"), spec, rspec)
+		config, err := createLibcontainerConfig(context.GlobalString("id"), spec)
 		if err != nil {
 			fatal(err)
 		}

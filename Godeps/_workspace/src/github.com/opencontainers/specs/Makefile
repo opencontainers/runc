@@ -12,8 +12,6 @@ DOC_FILES := \
 	runtime-linux.md \
 	config.md \
 	config-linux.md \
-	runtime-config.md \
-	runtime-config-linux.md \
 	glossary.md
 EPOCH_TEST_COMMIT := 041eb73d2e0391463894c04c8ac938036143eba3
 

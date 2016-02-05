@@ -10,10 +10,9 @@ import (
 )
 
 const (
-	version       = "0.0.7"
-	specConfig    = "config.json"
-	runtimeConfig = "runtime.json"
-	usage         = `Open Container Initiative runtime
+	version    = "0.0.7"
+	specConfig = "config.json"
+	usage      = `Open Container Initiative runtime
 	
 runc is a command line client for running applications packaged according to
 the Open Container Format (OCF) and is a compliant implementation of the
@@ -31,7 +30,7 @@ a container in your shell by running:
     # runc start [ -b bundle ] 
 
 If not specified, the default value for the 'bundle' is the current directory.
-'Bundle' is the directory where '` + specConfig + `' and '` + runtimeConfig + `' must be located.`
+'Bundle' is the directory where '` + specConfig + `' must be located.`
 )
 
 func main() {
