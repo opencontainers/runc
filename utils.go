@@ -265,3 +265,64 @@ func createPidFile(path string, process *libcontainer.Process) error {
 	_, err = fmt.Fprintf(f, "%d", pid)
 	return err
 }
+
+func createContainer(context *cli.Context, id string, spec *specs.LinuxSpec) (libcontainer.Container, error) {
+	config, err := createLibcontainerConfig(id, spec)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := os.Stat(config.Rootfs); err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("rootfs (%q) does not exist", config.Rootfs)
+		}
+		return nil, err
+	}
+
+	factory, err := loadFactory(context)
+	if err != nil {
+		return nil, err
+	}
+	return factory.Create(id, config)
+}
+
+// runProcess will create a new process in the specified container
+// by executing the process specified in the 'config'.
+func runProcess(container libcontainer.Container, config *specs.Process, listenFDs []*os.File, console string, pidFile string, detach bool) (int, error) {
+	process := newProcess(*config)
+
+	// Add extra file descriptors if needed
+	if len(listenFDs) > 0 {
+		process.Env = append(process.Env, fmt.Sprintf("LISTEN_FDS=%d", len(listenFDs)), "LISTEN_PID=1")
+		process.ExtraFiles = append(process.ExtraFiles, listenFDs...)
+	}
+
+	rootuid, err := container.Config().HostUID()
+	if err != nil {
+		return -1, err
+	}
+
+	tty, err := setupIO(process, rootuid, console, config.Terminal, detach)
+	if err != nil {
+		return -1, err
+	}
+
+	if err := container.Start(process); err != nil {
+		return -1, err
+	}
+
+	if pidFile != "" {
+		if err := createPidFile(pidFile, process); err != nil {
+			process.Signal(syscall.SIGKILL)
+			process.Wait()
+			return -1, err
+		}
+	}
+	if detach {
+		return 0, nil
+	}
+	handler := newSignalHandler(tty)
+	defer handler.Close()
+
+	return handler.forward(process)
+}

@@ -3,10 +3,8 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"runtime"
-	"syscall"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
@@ -88,61 +86,23 @@ func startContainer(context *cli.Context, spec *specs.LinuxSpec) (int, error) {
 	if id == "" {
 		return -1, errEmptyID
 	}
-	config, err := createLibcontainerConfig(id, spec)
+	container, err := createContainer(context, id, spec)
 	if err != nil {
 		return -1, err
 	}
-	if _, err := os.Stat(config.Rootfs); err != nil {
-		if os.IsNotExist(err) {
-			return -1, fmt.Errorf("rootfs (%q) does not exist", config.Rootfs)
-		}
-		return -1, err
-	}
-	rootuid, err := config.HostUID()
-	if err != nil {
-		return -1, err
-	}
-	factory, err := loadFactory(context)
-	if err != nil {
-		return -1, err
-	}
-	container, err := factory.Create(id, config)
-	if err != nil {
-		return -1, err
-	}
+
 	// ensure that the container is always removed if we were the process
 	// that created it.
 	detach := context.Bool("detach")
 	if !detach {
 		defer destroy(container)
 	}
-	process := newProcess(spec.Process)
+
 	// Support on-demand socket activation by passing file descriptors into the container init process.
+	listenFDs := []*os.File{}
 	if os.Getenv("LISTEN_FDS") != "" {
-		listenFds := activation.Files(false)
-		if len(listenFds) > 0 {
-			process.Env = append(process.Env, fmt.Sprintf("LISTEN_FDS=%d", len(listenFds)), "LISTEN_PID=1")
-			process.ExtraFiles = append(process.ExtraFiles, listenFds...)
-		}
+		listenFDs = activation.Files(false)
 	}
-	tty, err := setupIO(process, rootuid, context.String("console"), spec.Process.Terminal, detach)
-	if err != nil {
-		return -1, err
-	}
-	if err := container.Start(process); err != nil {
-		return -1, err
-	}
-	if pidFile := context.String("pid-file"); pidFile != "" {
-		if err := createPidFile(pidFile, process); err != nil {
-			process.Signal(syscall.SIGKILL)
-			process.Wait()
-			return -1, err
-		}
-	}
-	if detach {
-		return 0, nil
-	}
-	handler := newSignalHandler(tty)
-	defer handler.Close()
-	return handler.forward(process)
+
+	return runProcess(container, &spec.Process, listenFDs, context.String("console"), context.String("pid-file"), detach)
 }

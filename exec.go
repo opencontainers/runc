@@ -9,7 +9,6 @@ import (
 	"path"
 	"strconv"
 	"strings"
-	"syscall"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
@@ -71,39 +70,19 @@ func execProcess(context *cli.Context) (int, error) {
 	if err != nil {
 		return -1, err
 	}
+
 	var (
 		detach = context.Bool("detach")
 		rootfs = container.Config().Rootfs
 	)
-	rootuid, err := container.Config().HostUID()
-	if err != nil {
-		return -1, err
-	}
+
 	p, err := getProcess(context, path.Dir(rootfs))
 	if err != nil {
 		return -1, err
 	}
-	process := newProcess(*p)
-	tty, err := setupIO(process, rootuid, context.String("console"), p.Terminal, detach)
-	if err != nil {
-		return -1, err
-	}
-	if err := container.Start(process); err != nil {
-		return -1, err
-	}
-	if pidFile := context.String("pid-file"); pidFile != "" {
-		if err := createPidFile(pidFile, process); err != nil {
-			process.Signal(syscall.SIGKILL)
-			process.Wait()
-			return -1, err
-		}
-	}
-	if detach {
-		return 0, nil
-	}
-	handler := newSignalHandler(tty)
-	defer handler.Close()
-	return handler.forward(process)
+
+	return runProcess(container, p, nil, context.String("console"), context.String("pid-file"), detach)
+
 }
 
 func getProcess(context *cli.Context, bundle string) (*specs.Process, error) {
