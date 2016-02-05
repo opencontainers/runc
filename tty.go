@@ -35,7 +35,10 @@ func createStdioPipes(p *libcontainer.Process, rootuid int) (*tty, error) {
 			i.Stderr,
 		},
 	}
-	go io.Copy(i.Stdin, os.Stdin)
+	go func() {
+		io.Copy(i.Stdin, os.Stdin)
+		i.Stdin.Close()
+	}()
 	go io.Copy(os.Stdout, i.Stdout)
 	go io.Copy(os.Stderr, i.Stderr)
 	return t, nil

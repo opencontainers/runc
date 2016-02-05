@@ -5,6 +5,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"syscall"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
@@ -52,6 +53,15 @@ var restoreCommand = cli.Command{
 			Name:  "bundle, b",
 			Value: "",
 			Usage: "path to the root of the bundle directory",
+		},
+		cli.BoolFlag{
+			Name:  "detach,d",
+			Usage: "detach from the container's process",
+		},
+		cli.StringFlag{
+			Name:  "pid-file",
+			Value: "",
+			Usage: "specify the file to write the process id to",
 		},
 	},
 	Action: func(context *cli.Context) {
@@ -108,21 +118,30 @@ func restoreContainer(context *cli.Context, spec *specs.LinuxSpec, config *confi
 
 	// ensure that the container is always removed if we were the process
 	// that created it.
-	defer destroy(container)
-	process := &libcontainer.Process{
-		Stdin:  os.Stdin,
-		Stdout: os.Stdout,
-		Stderr: os.Stderr,
+	detach := context.Bool("detach")
+	if !detach {
+		defer destroy(container)
 	}
-	tty, err := newTty(spec.Process.Terminal, process, rootuid, "")
+	process := &libcontainer.Process{}
+	tty, err := setupIO(process, rootuid, "", false, detach)
 	if err != nil {
 		return -1, err
 	}
-	handler := newSignalHandler(tty)
-	defer handler.Close()
 	if err := container.Restore(process, options); err != nil {
 		return -1, err
 	}
+	if pidFile := context.String("pid-file"); pidFile != "" {
+		if err := createPidFile(pidFile, process); err != nil {
+			process.Signal(syscall.SIGKILL)
+			process.Wait()
+			return -1, err
+		}
+	}
+	if detach {
+		return 0, nil
+	}
+	handler := newSignalHandler(tty)
+	defer handler.Close()
 	return handler.forward(process)
 }
 

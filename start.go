@@ -132,37 +132,18 @@ func startContainer(context *cli.Context, spec *specs.LinuxSpec, rspec *specs.Li
 			process.ExtraFiles = append(process.ExtraFiles, os.NewFile(uintptr(i), ""))
 		}
 	}
-	var tty *tty
-	if spec.Process.Terminal {
-		if tty, err = createTty(process, rootuid, context.String("console")); err != nil {
-			return -1, err
-		}
-	} else if detach {
-		if err := dupStdio(process, rootuid); err != nil {
-			return -1, err
-		}
-	} else {
-		if tty, err = createStdioPipes(process, rootuid); err != nil {
-			return -1, err
-		}
+	tty, err := setupIO(process, rootuid, context.String("console"), spec.Process.Terminal, detach)
+	if err != nil {
+		return -1, err
 	}
 	if err := container.Start(process); err != nil {
 		return -1, err
 	}
 	if pidFile := context.String("pid-file"); pidFile != "" {
-		pid, err := process.Pid()
-		if err != nil {
+		if err := createPidFile(pidFile, process); err != nil {
+			process.Signal(syscall.SIGKILL)
+			process.Wait()
 			return -1, err
-		}
-		f, err := os.Create(pidFile)
-		if err != nil {
-			logrus.WithField("pid", pid).Error("create pid file")
-		} else {
-			_, err = fmt.Fprintf(f, "%d", pid)
-			f.Close()
-			if err != nil {
-				logrus.WithField("error", err).Error("write pid file")
-			}
 		}
 	}
 	if detach {
@@ -171,41 +152,4 @@ func startContainer(context *cli.Context, spec *specs.LinuxSpec, rspec *specs.Li
 	handler := newSignalHandler(tty)
 	defer handler.Close()
 	return handler.forward(process)
-}
-
-func dupStdio(process *libcontainer.Process, rootuid int) error {
-	process.Stdin = os.Stdin
-	process.Stdout = os.Stdout
-	process.Stderr = os.Stderr
-	for _, fd := range []uintptr{
-		os.Stdin.Fd(),
-		os.Stdout.Fd(),
-		os.Stderr.Fd(),
-	} {
-		if err := syscall.Fchown(int(fd), rootuid, rootuid); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// If systemd is supporting sd_notify protocol, this function will add support
-// for sd_notify protocol from within the container.
-func setupSdNotify(spec *specs.LinuxSpec, rspec *specs.LinuxRuntimeSpec, notifySocket string) {
-	mountName := "sdNotify"
-	spec.Mounts = append(spec.Mounts, specs.MountPoint{Name: mountName, Path: notifySocket})
-	spec.Process.Env = append(spec.Process.Env, fmt.Sprintf("NOTIFY_SOCKET=%s", notifySocket))
-	rspec.Mounts[mountName] = specs.Mount{Type: "bind", Source: notifySocket, Options: []string{"bind"}}
-}
-
-// If systemd is supporting on-demand socket activation, this function will add support
-// for on-demand socket activation for the containerized service.
-func setupSocketActivation(spec *specs.LinuxSpec, listenFds string) {
-	spec.Process.Env = append(spec.Process.Env, fmt.Sprintf("LISTEN_FDS=%s", listenFds), "LISTEN_PID=1")
-}
-
-func destroy(container libcontainer.Container) {
-	if err := container.Destroy(); err != nil {
-		logrus.Error(err)
-	}
 }

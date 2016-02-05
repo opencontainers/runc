@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"syscall"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -153,4 +155,73 @@ func newProcess(p specs.Process) *libcontainer.Process {
 		User: fmt.Sprintf("%d:%d", p.User.UID, p.User.GID),
 		Cwd:  p.Cwd,
 	}
+}
+
+func dupStdio(process *libcontainer.Process, rootuid int) error {
+	process.Stdin = os.Stdin
+	process.Stdout = os.Stdout
+	process.Stderr = os.Stderr
+	for _, fd := range []uintptr{
+		os.Stdin.Fd(),
+		os.Stdout.Fd(),
+		os.Stderr.Fd(),
+	} {
+		if err := syscall.Fchown(int(fd), rootuid, rootuid); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// If systemd is supporting sd_notify protocol, this function will add support
+// for sd_notify protocol from within the container.
+func setupSdNotify(spec *specs.LinuxSpec, rspec *specs.LinuxRuntimeSpec, notifySocket string) {
+	mountName := "sdNotify"
+	spec.Mounts = append(spec.Mounts, specs.MountPoint{Name: mountName, Path: notifySocket})
+	spec.Process.Env = append(spec.Process.Env, fmt.Sprintf("NOTIFY_SOCKET=%s", notifySocket))
+	rspec.Mounts[mountName] = specs.Mount{Type: "bind", Source: notifySocket, Options: []string{"bind"}}
+}
+
+// If systemd is supporting on-demand socket activation, this function will add support
+// for on-demand socket activation for the containerized service.
+func setupSocketActivation(spec *specs.LinuxSpec, listenFds string) {
+	spec.Process.Env = append(spec.Process.Env, fmt.Sprintf("LISTEN_FDS=%s", listenFds), "LISTEN_PID=1")
+}
+
+func destroy(container libcontainer.Container) {
+	if err := container.Destroy(); err != nil {
+		logrus.Error(err)
+	}
+}
+
+func setupIO(process *libcontainer.Process, rootuid int, console string, createTTY, detach bool) (*tty, error) {
+	// detach and createTty will not work unless a console path is passed
+	// so error out here before changing any terminal settings
+	if createTTY && detach && console == "" {
+		return nil, fmt.Errorf("cannot allocate tty if runc will detach")
+	}
+	if createTTY {
+		return createTty(process, rootuid, console)
+	}
+	if detach {
+		if err := dupStdio(process, rootuid); err != nil {
+			return nil, err
+		}
+		return nil, nil
+	}
+	return createStdioPipes(process, rootuid)
+}
+
+func createPidFile(path string, process *libcontainer.Process) error {
+	pid, err := process.Pid()
+	if err != nil {
+		return err
+	}
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_, err = fmt.Fprintf(f, "%d", pid)
+	return err
 }
