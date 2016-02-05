@@ -24,12 +24,62 @@ var allowedDevices = []*configs.Device{
 		Major:       wildcard,
 		Minor:       wildcard,
 		Permissions: "m",
+		Allow:       true,
 	},
 	{
 		Type:        'b',
 		Major:       wildcard,
 		Minor:       wildcard,
 		Permissions: "m",
+		Allow:       true,
+	},
+	{
+		Type:        'c',
+		Path:        "/dev/null",
+		Major:       1,
+		Minor:       3,
+		Permissions: "rwm",
+		Allow:       true,
+	},
+	{
+		Type:        'c',
+		Path:        "/dev/random",
+		Major:       1,
+		Minor:       8,
+		Permissions: "rwm",
+		Allow:       true,
+	},
+	{
+		Type:        'c',
+		Path:        "/dev/full",
+		Major:       1,
+		Minor:       7,
+		Permissions: "rwm",
+		Allow:       true,
+	},
+	{
+		Type:        'c',
+		Path:        "/dev/tty",
+		Major:       5,
+		Minor:       0,
+		Permissions: "rwm",
+		Allow:       true,
+	},
+	{
+		Type:        'c',
+		Path:        "/dev/zero",
+		Major:       1,
+		Minor:       5,
+		Permissions: "rwm",
+		Allow:       true,
+	},
+	{
+		Type:        'c',
+		Path:        "/dev/urandom",
+		Major:       1,
+		Minor:       9,
+		Permissions: "rwm",
+		Allow:       true,
 	},
 	{
 		Path:        "/dev/console",
@@ -37,6 +87,7 @@ var allowedDevices = []*configs.Device{
 		Major:       5,
 		Minor:       1,
 		Permissions: "rwm",
+		Allow:       true,
 	},
 	{
 		Path:        "/dev/tty0",
@@ -44,6 +95,7 @@ var allowedDevices = []*configs.Device{
 		Major:       4,
 		Minor:       0,
 		Permissions: "rwm",
+		Allow:       true,
 	},
 	{
 		Path:        "/dev/tty1",
@@ -51,6 +103,7 @@ var allowedDevices = []*configs.Device{
 		Major:       4,
 		Minor:       1,
 		Permissions: "rwm",
+		Allow:       true,
 	},
 	// /dev/pts/ - pts namespaces are "coming soon"
 	{
@@ -59,6 +112,7 @@ var allowedDevices = []*configs.Device{
 		Major:       136,
 		Minor:       wildcard,
 		Permissions: "rwm",
+		Allow:       true,
 	},
 	{
 		Path:        "",
@@ -66,6 +120,7 @@ var allowedDevices = []*configs.Device{
 		Major:       5,
 		Minor:       2,
 		Permissions: "rwm",
+		Allow:       true,
 	},
 	// tuntap
 	{
@@ -74,6 +129,7 @@ var allowedDevices = []*configs.Device{
 		Major:       10,
 		Minor:       200,
 		Permissions: "rwm",
+		Allow:       true,
 	},
 }
 

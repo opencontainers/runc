@@ -28,11 +28,14 @@ type Cgroup struct {
 
 type Resources struct {
 	// If this is true allow access to any kind of device within the container.  If false, allow access only to devices explicitly listed in the allowed_devices list.
-	AllowAllDevices bool `json:"allow_all_devices"`
+	// Deprecated
+	AllowAllDevices bool `json:"allow_all_devices,omitempty"`
+	// Deprecated
+	AllowedDevices []*Device `json:"allowed_devices,omitempty"`
+	// Deprecated
+	DeniedDevices []*Device `json:"denied_devices,omitempty"`
 
-	AllowedDevices []*Device `json:"allowed_devices"`
-
-	DeniedDevices []*Device `json:"denied_devices"`
+	Devices []*Device `json:"devices"`
 
 	// Memory limit (in bytes)
 	Memory int64 `json:"memory"`

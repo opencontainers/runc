@@ -107,7 +107,14 @@ var specCommand = cli.Command{
 					"CAP_KILL",
 					"CAP_NET_BIND_SERVICE",
 				},
-
+				Resources: &specs.Resources{
+					Devices: []specs.DeviceCgroup{
+						{
+							Allow:  false,
+							Access: sPtr("rwm"),
+						},
+					},
+				},
 				Namespaces: []specs.Namespace{
 					{
 						Type: "pid",
@@ -125,97 +132,12 @@ var specCommand = cli.Command{
 						Type: "mount",
 					},
 				},
-
 				Rlimits: []specs.Rlimit{
 					{
 						Type: "RLIMIT_NOFILE",
 						Hard: uint64(1024),
 						Soft: uint64(1024),
 					},
-				},
-				Resources: &specs.Resources{
-					Devices: []specs.DeviceCgroup{
-						{
-							Allow:  false,
-							Access: sPtr("rwm"),
-						},
-						{
-							Allow:  true,
-							Type:   rPtr('c'),
-							Major:  iPtr(8),
-							Minor:  iPtr(229),
-							Access: sPtr("rw"),
-						},
-						{
-							Allow:  true,
-							Type:   rPtr('b'),
-							Major:  iPtr(8),
-							Minor:  iPtr(0),
-							Access: sPtr("r"),
-						},
-					},
-					Memory: &specs.Memory{},
-				},
-				Devices: []specs.Device{
-					{
-						Type:     'c',
-						Path:     "/dev/null",
-						Major:    1,
-						Minor:    3,
-						FileMode: fmPtr(0666),
-						UID:      u32Ptr(0),
-						GID:      u32Ptr(0),
-					},
-					{
-						Type:     'c',
-						Path:     "/dev/random",
-						Major:    1,
-						Minor:    8,
-						FileMode: fmPtr(0666),
-						UID:      u32Ptr(0),
-						GID:      u32Ptr(0),
-					},
-					{
-						Type:     'c',
-						Path:     "/dev/full",
-						Major:    1,
-						Minor:    7,
-						FileMode: fmPtr(0666),
-						UID:      u32Ptr(0),
-						GID:      u32Ptr(0),
-					},
-					{
-						Type:     'c',
-						Path:     "/dev/tty",
-						Major:    5,
-						Minor:    0,
-						FileMode: fmPtr(0666),
-						UID:      u32Ptr(0),
-						GID:      u32Ptr(0),
-					},
-					{
-						Type:     'c',
-						Path:     "/dev/zero",
-						Major:    1,
-						Minor:    5,
-						FileMode: fmPtr(0666),
-						UID:      u32Ptr(0),
-						GID:      u32Ptr(0),
-					},
-					{
-						Type:     'c',
-						Path:     "/dev/urandom",
-						Major:    1,
-						Minor:    9,
-						FileMode: fmPtr(0666),
-						UID:      u32Ptr(0),
-						GID:      u32Ptr(0),
-					},
-				},
-
-				Seccomp: specs.Seccomp{
-					DefaultAction: "SCMP_ACT_ALLOW",
-					Syscalls:      []specs.Syscall{},
 				},
 			},
 		}
@@ -355,7 +277,7 @@ func createLibcontainerConfig(cgroupName string, spec *specs.LinuxSpec) (*config
 		}
 		config.Rlimits = append(config.Rlimits, rl)
 	}
-	c, err := createCgroupConfig(cgroupName, spec, config.Devices)
+	c, err := createCgroupConfig(cgroupName, spec)
 	if err != nil {
 		return nil, err
 	}
@@ -403,7 +325,7 @@ func createLibcontainerMount(cwd string, m specs.Mount) *configs.Mount {
 	}
 }
 
-func createCgroupConfig(name string, spec *specs.LinuxSpec, devices []*configs.Device) (*configs.Cgroup, error) {
+func createCgroupConfig(name string, spec *specs.LinuxSpec) (*configs.Cgroup, error) {
 	myCgroupPath, err := cgroups.GetThisCgroupDir("devices")
 	if err != nil {
 		return nil, err
@@ -413,125 +335,219 @@ func createCgroupConfig(name string, spec *specs.LinuxSpec, devices []*configs.D
 		Parent:    myCgroupPath,
 		Resources: &configs.Resources{},
 	}
-	c.Resources.AllowedDevices = append(devices, allowedDevices...)
+	c.Resources.AllowedDevices = allowedDevices
 	r := spec.Linux.Resources
-	if r != nil {
-		if r.Memory != nil {
-			if r.Memory.Limit != nil {
-				c.Resources.Memory = int64(*r.Memory.Limit)
-			}
-			if r.Memory.Reservation != nil {
-				c.Resources.MemoryReservation = int64(*r.Memory.Reservation)
-			}
-			if r.Memory.Swap != nil {
-				c.Resources.MemorySwap = int64(*r.Memory.Swap)
-			}
-			if r.Memory.Kernel != nil {
-				c.Resources.KernelMemory = int64(*r.Memory.Kernel)
-			}
-			if r.Memory.Swappiness != nil {
-				c.Resources.MemorySwappiness = int64(*r.Memory.Swappiness)
+	if r == nil {
+		return c, nil
+	}
+	for i, d := range spec.Linux.Resources.Devices {
+		var (
+			t     = 'a'
+			major = int64(-1)
+			minor = int64(-1)
+		)
+		if d.Type != nil {
+			t = *d.Type
+		}
+		if d.Major != nil {
+			major = *d.Major
+		}
+		if d.Minor != nil {
+			minor = *d.Minor
+		}
+		if d.Access == nil || *d.Access == "" {
+			return nil, fmt.Errorf("device access at %d field canot be empty", i)
+		}
+		dd := &configs.Device{
+			Type:        t,
+			Major:       major,
+			Minor:       minor,
+			Permissions: *d.Access,
+			Allow:       d.Allow,
+		}
+		c.Resources.Devices = append(c.Resources.Devices, dd)
+	}
+	// append the default allowed devices to the end of the list
+	c.Resources.Devices = append(c.Resources.Devices, allowedDevices...)
+	if r.Memory != nil {
+		if r.Memory.Limit != nil {
+			c.Resources.Memory = int64(*r.Memory.Limit)
+		}
+		if r.Memory.Reservation != nil {
+			c.Resources.MemoryReservation = int64(*r.Memory.Reservation)
+		}
+		if r.Memory.Swap != nil {
+			c.Resources.MemorySwap = int64(*r.Memory.Swap)
+		}
+		if r.Memory.Kernel != nil {
+			c.Resources.KernelMemory = int64(*r.Memory.Kernel)
+		}
+		if r.Memory.Swappiness != nil {
+			c.Resources.MemorySwappiness = int64(*r.Memory.Swappiness)
+		}
+	}
+	if r.CPU != nil {
+		if r.CPU.Shares != nil {
+			c.Resources.CpuShares = int64(*r.CPU.Shares)
+		}
+		if r.CPU.Quota != nil {
+			c.Resources.CpuQuota = int64(*r.CPU.Quota)
+		}
+		if r.CPU.Period != nil {
+			c.Resources.CpuPeriod = int64(*r.CPU.Period)
+		}
+		if r.CPU.RealtimeRuntime != nil {
+			c.Resources.CpuRtRuntime = int64(*r.CPU.RealtimeRuntime)
+		}
+		if r.CPU.RealtimePeriod != nil {
+			c.Resources.CpuRtPeriod = int64(*r.CPU.RealtimePeriod)
+		}
+		if r.CPU.Cpus != nil {
+			c.Resources.CpusetCpus = *r.CPU.Cpus
+		}
+		if r.CPU.Mems != nil {
+			c.Resources.CpusetMems = *r.CPU.Mems
+		}
+	}
+	if r.Pids != nil {
+		c.Resources.PidsLimit = *r.Pids.Limit
+	}
+	if r.BlockIO != nil {
+		if r.BlockIO.Weight != nil {
+			c.Resources.BlkioWeight = *r.BlockIO.Weight
+		}
+		if r.BlockIO.LeafWeight != nil {
+			c.Resources.BlkioLeafWeight = *r.BlockIO.LeafWeight
+		}
+		if r.BlockIO.WeightDevice != nil {
+			for _, wd := range r.BlockIO.WeightDevice {
+				weightDevice := configs.NewWeightDevice(wd.Major, wd.Minor, *wd.Weight, *wd.LeafWeight)
+				c.Resources.BlkioWeightDevice = append(c.Resources.BlkioWeightDevice, weightDevice)
 			}
 		}
-
-		if r.CPU != nil {
-			if r.CPU.Shares != nil {
-				c.Resources.CpuShares = int64(*r.CPU.Shares)
-			}
-			if r.CPU.Quota != nil {
-				c.Resources.CpuQuota = int64(*r.CPU.Quota)
-			}
-			if r.CPU.Period != nil {
-				c.Resources.CpuPeriod = int64(*r.CPU.Period)
-			}
-			if r.CPU.RealtimeRuntime != nil {
-				c.Resources.CpuRtRuntime = int64(*r.CPU.RealtimeRuntime)
-			}
-			if r.CPU.RealtimePeriod != nil {
-				c.Resources.CpuRtPeriod = int64(*r.CPU.RealtimePeriod)
-			}
-			if r.CPU.Cpus != nil {
-				c.Resources.CpusetCpus = *r.CPU.Cpus
-			}
-			if r.CPU.Mems != nil {
-				c.Resources.CpusetMems = *r.CPU.Mems
+		if r.BlockIO.ThrottleReadBpsDevice != nil {
+			for _, td := range r.BlockIO.ThrottleReadBpsDevice {
+				throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, *td.Rate)
+				c.Resources.BlkioThrottleReadBpsDevice = append(c.Resources.BlkioThrottleReadBpsDevice, throttleDevice)
 			}
 		}
-		if r.Pids != nil {
-			c.Resources.PidsLimit = *r.Pids.Limit
-		}
-		if r.BlockIO != nil {
-			if r.BlockIO.Weight != nil {
-				c.Resources.BlkioWeight = *r.BlockIO.Weight
-			}
-			if r.BlockIO.LeafWeight != nil {
-				c.Resources.BlkioLeafWeight = *r.BlockIO.LeafWeight
-			}
-			if r.BlockIO.WeightDevice != nil {
-				for _, wd := range r.BlockIO.WeightDevice {
-					weightDevice := configs.NewWeightDevice(wd.Major, wd.Minor, *wd.Weight, *wd.LeafWeight)
-					c.Resources.BlkioWeightDevice = append(c.Resources.BlkioWeightDevice, weightDevice)
-				}
-			}
-			if r.BlockIO.ThrottleReadBpsDevice != nil {
-				for _, td := range r.BlockIO.ThrottleReadBpsDevice {
-					throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, *td.Rate)
-					c.Resources.BlkioThrottleReadBpsDevice = append(c.Resources.BlkioThrottleReadBpsDevice, throttleDevice)
-				}
-			}
-			if r.BlockIO.ThrottleWriteBpsDevice != nil {
-				for _, td := range r.BlockIO.ThrottleWriteBpsDevice {
-					throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, *td.Rate)
-					c.Resources.BlkioThrottleWriteBpsDevice = append(c.Resources.BlkioThrottleWriteBpsDevice, throttleDevice)
-				}
-			}
-			if r.BlockIO.ThrottleReadIOPSDevice != nil {
-				for _, td := range r.BlockIO.ThrottleReadIOPSDevice {
-					throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, *td.Rate)
-					c.Resources.BlkioThrottleReadIOPSDevice = append(c.Resources.BlkioThrottleReadIOPSDevice, throttleDevice)
-				}
-			}
-			if r.BlockIO.ThrottleWriteIOPSDevice != nil {
-				for _, td := range r.BlockIO.ThrottleWriteIOPSDevice {
-					throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, *td.Rate)
-					c.Resources.BlkioThrottleWriteIOPSDevice = append(c.Resources.BlkioThrottleWriteIOPSDevice, throttleDevice)
-				}
+		if r.BlockIO.ThrottleWriteBpsDevice != nil {
+			for _, td := range r.BlockIO.ThrottleWriteBpsDevice {
+				throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, *td.Rate)
+				c.Resources.BlkioThrottleWriteBpsDevice = append(c.Resources.BlkioThrottleWriteBpsDevice, throttleDevice)
 			}
 		}
-		for _, l := range r.HugepageLimits {
-			c.Resources.HugetlbLimit = append(c.Resources.HugetlbLimit, &configs.HugepageLimit{
-				Pagesize: *l.Pagesize,
-				Limit:    *l.Limit,
+		if r.BlockIO.ThrottleReadIOPSDevice != nil {
+			for _, td := range r.BlockIO.ThrottleReadIOPSDevice {
+				throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, *td.Rate)
+				c.Resources.BlkioThrottleReadIOPSDevice = append(c.Resources.BlkioThrottleReadIOPSDevice, throttleDevice)
+			}
+		}
+		if r.BlockIO.ThrottleWriteIOPSDevice != nil {
+			for _, td := range r.BlockIO.ThrottleWriteIOPSDevice {
+				throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, *td.Rate)
+				c.Resources.BlkioThrottleWriteIOPSDevice = append(c.Resources.BlkioThrottleWriteIOPSDevice, throttleDevice)
+			}
+		}
+	}
+	for _, l := range r.HugepageLimits {
+		c.Resources.HugetlbLimit = append(c.Resources.HugetlbLimit, &configs.HugepageLimit{
+			Pagesize: *l.Pagesize,
+			Limit:    *l.Limit,
+		})
+	}
+	if r.DisableOOMKiller != nil {
+		c.Resources.OomKillDisable = *r.DisableOOMKiller
+	}
+	if r.Network != nil {
+		if r.Network.ClassID != nil {
+			c.Resources.NetClsClassid = string(*r.Network.ClassID)
+		}
+		for _, m := range r.Network.Priorities {
+			c.Resources.NetPrioIfpriomap = append(c.Resources.NetPrioIfpriomap, &configs.IfPrioMap{
+				Interface: m.Name,
+				Priority:  int64(m.Priority),
 			})
-		}
-		if r.DisableOOMKiller != nil {
-			c.Resources.OomKillDisable = *r.DisableOOMKiller
-		}
-		if r.Network != nil {
-			if r.Network.ClassID != nil {
-				c.Resources.NetClsClassid = string(*r.Network.ClassID)
-			}
-			for _, m := range r.Network.Priorities {
-				c.Resources.NetPrioIfpriomap = append(c.Resources.NetPrioIfpriomap, &configs.IfPrioMap{
-					Interface: m.Name,
-					Priority:  int64(m.Priority),
-				})
-			}
 		}
 	}
 	return c, nil
 }
 
 func createDevices(spec *specs.LinuxSpec, config *configs.Config) error {
+	// add whitelisted devices
+	config.Devices = []*configs.Device{
+		{
+			Type:     'c',
+			Path:     "/dev/null",
+			Major:    1,
+			Minor:    3,
+			FileMode: 0666,
+			Uid:      0,
+			Gid:      0,
+		},
+		{
+			Type:     'c',
+			Path:     "/dev/random",
+			Major:    1,
+			Minor:    8,
+			FileMode: 0666,
+			Uid:      0,
+			Gid:      0,
+		},
+		{
+			Type:     'c',
+			Path:     "/dev/full",
+			Major:    1,
+			Minor:    7,
+			FileMode: 0666,
+			Uid:      0,
+			Gid:      0,
+		},
+		{
+			Type:     'c',
+			Path:     "/dev/tty",
+			Major:    5,
+			Minor:    0,
+			FileMode: 0666,
+			Uid:      0,
+			Gid:      0,
+		},
+		{
+			Type:     'c',
+			Path:     "/dev/zero",
+			Major:    1,
+			Minor:    5,
+			FileMode: 0666,
+			Uid:      0,
+			Gid:      0,
+		},
+		{
+			Type:     'c',
+			Path:     "/dev/urandom",
+			Major:    1,
+			Minor:    9,
+			FileMode: 0666,
+			Uid:      0,
+			Gid:      0,
+		},
+	}
+	// merge in additional devices from the spec
 	for _, d := range spec.Linux.Devices {
+		var uid, gid uint32
+		if d.UID != nil {
+			uid = *d.UID
+		}
+		if d.GID != nil {
+			gid = *d.GID
+		}
 		device := &configs.Device{
 			Type:     d.Type,
 			Path:     d.Path,
 			Major:    d.Major,
 			Minor:    d.Minor,
 			FileMode: *d.FileMode,
-			Uid:      *d.UID,
-			Gid:      *d.GID,
+			Uid:      uid,
+			Gid:      gid,
 		}
 		config.Devices = append(config.Devices, device)
 	}

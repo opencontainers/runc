@@ -35,16 +35,13 @@ type Device struct {
 
 	// Gid of the device.
 	Gid uint32 `json:"gid"`
+
+	// Write the file to the allowed list
+	Allow bool `json:"allow"`
 }
 
 func (d *Device) CgroupString() string {
-	var p string
-	if d.Permissions == "" {
-		p = "rwm" // empty permissions is invalid... causes a write invalid argument error upon saving to cgroups
-	} else {
-		p = d.Permissions
-	}
-	return fmt.Sprintf("%c %s:%s %s", d.Type, deviceNumberString(d.Major), deviceNumberString(d.Minor), p)
+	return fmt.Sprintf("%c %s:%s %s", d.Type, deviceNumberString(d.Major), deviceNumberString(d.Minor), d.Permissions)
 }
 
 func (d *Device) Mkdev() int {
