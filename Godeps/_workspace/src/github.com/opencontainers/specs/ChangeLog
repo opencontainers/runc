@@ -1,5 +1,30 @@
 OpenContainers Specifications
 
+Changes with v0.3.0:
+	Breaking changes:
+	
+	* config: Single, unified config file, #284
+	* config: cwd is a required default, and must be absolute, #286,
+	  #307, #308, #312
+	* config: qualify the name of the version field, #309
+	* config-linux: Convert classID from hex to uint32, #296
+	* config-linux: Separate mknod from cgroups, #298
+	
+	Additions:
+	
+	* config-linux: Add NoNewPrivileges setting for linux, #290
+	
+	Minor fixes and documentation:
+	
+	* config-linux: clarify oom_score_adj, #236, #292
+	* config-linux: Update links to cgroups documentation, #318
+	* config-linux: Remove pointers for slices preferring omitempty
+	  tag instead, #316
+	* README: add runtime, bundle, and hook author user, #280
+	* ROADMAP: reshuffled and split into GitHub issues, #300, #301,
+	  #304, #306
+	* style: Collect established styles in a discoverable location, #287, #311
+
 Changes with v0.2.0:
 	* Add Apparmor, Selinux and Seccomp
 	* Add Apparmor, Selinux and Seccomp sections

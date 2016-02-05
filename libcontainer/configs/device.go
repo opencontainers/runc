@@ -38,7 +38,13 @@ type Device struct {
 }
 
 func (d *Device) CgroupString() string {
-	return fmt.Sprintf("%c %s:%s %s", d.Type, deviceNumberString(d.Major), deviceNumberString(d.Minor), d.Permissions)
+	var p string
+	if d.Permissions == "" {
+		p = "rwm" // empty permissions is invalid... causes a write invalid argument error upon saving to cgroups
+	} else {
+		p = d.Permissions
+	}
+	return fmt.Sprintf("%c %s:%s %s", d.Type, deviceNumberString(d.Major), deviceNumberString(d.Minor), p)
 }
 
 func (d *Device) Mkdev() int {

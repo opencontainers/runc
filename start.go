@@ -49,14 +49,14 @@ var startCommand = cli.Command{
 				fatal(err)
 			}
 		}
-		spec, rspec, err := loadSpec(specConfig, runtimeConfig)
+		spec, err := loadSpec(specConfig)
 		if err != nil {
 			fatal(err)
 		}
 
 		notifySocket := os.Getenv("NOTIFY_SOCKET")
 		if notifySocket != "" {
-			setupSdNotify(spec, rspec, notifySocket)
+			setupSdNotify(spec, notifySocket)
 		}
 
 		var (
@@ -70,7 +70,7 @@ var startCommand = cli.Command{
 		if os.Geteuid() != 0 {
 			logrus.Fatal("runc should be run as root")
 		}
-		status, err := startContainer(context, spec, rspec)
+		status, err := startContainer(context, spec)
 		if err != nil {
 			logrus.Fatalf("Container start failed: %v", err)
 		}
@@ -92,8 +92,8 @@ func init() {
 	}
 }
 
-func startContainer(context *cli.Context, spec *specs.LinuxSpec, rspec *specs.LinuxRuntimeSpec) (int, error) {
-	config, err := createLibcontainerConfig(context.GlobalString("id"), spec, rspec)
+func startContainer(context *cli.Context, spec *specs.LinuxSpec) (int, error) {
+	config, err := createLibcontainerConfig(context.GlobalString("id"), spec)
 	if err != nil {
 		return -1, err
 	}
