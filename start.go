@@ -5,6 +5,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"syscall"
@@ -43,8 +44,18 @@ var startCommand = cli.Command{
 		},
 	},
 	Action: func(context *cli.Context) {
+		id := context.GlobalString("id")
 		bundle := context.String("bundle")
 		if bundle != "" {
+			if !context.GlobalIsSet("id") {
+				cwd, err := os.Getwd()
+				if err != nil {
+					fatal(err)
+				}
+				// use the pure lexical base name instead of "Chdir() + getDefaultID()"
+				// to respect the symbolic link bundle name
+				id = filepath.Base(filepath.Clean(filepath.Join(cwd, bundle)))
+			}
 			if err := os.Chdir(bundle); err != nil {
 				fatal(err)
 			}
@@ -70,7 +81,7 @@ var startCommand = cli.Command{
 		if os.Geteuid() != 0 {
 			logrus.Fatal("runc should be run as root")
 		}
-		status, err := startContainer(context, spec, rspec)
+		status, err := startContainer(context, id, spec, rspec)
 		if err != nil {
 			logrus.Fatalf("Container start failed: %v", err)
 		}
@@ -92,8 +103,8 @@ func init() {
 	}
 }
 
-func startContainer(context *cli.Context, spec *specs.LinuxSpec, rspec *specs.LinuxRuntimeSpec) (int, error) {
-	config, err := createLibcontainerConfig(context.GlobalString("id"), spec, rspec)
+func startContainer(context *cli.Context, id string, spec *specs.LinuxSpec, rspec *specs.LinuxRuntimeSpec) (int, error) {
+	config, err := createLibcontainerConfig(id, spec, rspec)
 	if err != nil {
 		return -1, err
 	}
@@ -111,7 +122,7 @@ func startContainer(context *cli.Context, spec *specs.LinuxSpec, rspec *specs.Li
 	if err != nil {
 		return -1, err
 	}
-	container, err := factory.Create(context.GlobalString("id"), config)
+	container, err := factory.Create(id, config)
 	if err != nil {
 		return -1, err
 	}
