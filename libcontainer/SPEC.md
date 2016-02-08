@@ -199,7 +199,7 @@ provide a good default for security and flexibility for the applications.
 | CAP_SYS_BOOT         | 0       |
 | CAP_LEASE            | 0       |
 | CAP_WAKE_ALARM       | 0       |
-| CAP_BLOCK_SUSPE      | 0       |
+| CAP_BLOCK_SUSPEND    | 0       |
 
 
 Additional security layers like [apparmor](https://wiki.ubuntu.com/AppArmor)
