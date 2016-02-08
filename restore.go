@@ -66,6 +66,10 @@ var restoreCommand = cli.Command{
 	},
 	Action: func(context *cli.Context) {
 		imagePath := context.String("image-path")
+		id := context.Args().First()
+		if id == "" {
+			fatal(errEmptyID)
+		}
 		if imagePath == "" {
 			imagePath = getDefaultImagePath(context)
 		}
@@ -79,7 +83,7 @@ var restoreCommand = cli.Command{
 		if err != nil {
 			fatal(err)
 		}
-		config, err := createLibcontainerConfig(context.GlobalString("id"), spec)
+		config, err := createLibcontainerConfig(id, spec)
 		if err != nil {
 			fatal(err)
 		}
@@ -92,14 +96,17 @@ var restoreCommand = cli.Command{
 }
 
 func restoreContainer(context *cli.Context, spec *specs.LinuxSpec, config *configs.Config, imagePath string) (code int, err error) {
-	rootuid := 0
+	var (
+		rootuid = 0
+		id      = context.Args().First()
+	)
 	factory, err := loadFactory(context)
 	if err != nil {
 		return -1, err
 	}
-	container, err := factory.Load(context.GlobalString("id"))
+	container, err := factory.Load(id)
 	if err != nil {
-		container, err = factory.Create(context.GlobalString("id"), config)
+		container, err = factory.Create(id, config)
 		if err != nil {
 			return -1, err
 		}
@@ -111,7 +118,7 @@ func restoreContainer(context *cli.Context, spec *specs.LinuxSpec, config *confi
 		logrus.Error(err)
 	}
 	if status == libcontainer.Running {
-		fatal(fmt.Errorf("Container with id %s already running", context.GlobalString("id")))
+		fatal(fmt.Errorf("Container with id %s already running", id))
 	}
 
 	setManageCgroupsMode(context, options)

@@ -93,13 +93,17 @@ func init() {
 }
 
 func startContainer(context *cli.Context, spec *specs.LinuxSpec) (int, error) {
-	config, err := createLibcontainerConfig(context.GlobalString("id"), spec)
+	id := context.Args().First()
+	if id == "" {
+		return -1, errEmptyID
+	}
+	config, err := createLibcontainerConfig(id, spec)
 	if err != nil {
 		return -1, err
 	}
 	if _, err := os.Stat(config.Rootfs); err != nil {
 		if os.IsNotExist(err) {
-			return -1, fmt.Errorf("Rootfs (%q) does not exist", config.Rootfs)
+			return -1, fmt.Errorf("rootfs (%q) does not exist", config.Rootfs)
 		}
 		return -1, err
 	}
@@ -111,7 +115,7 @@ func startContainer(context *cli.Context, spec *specs.LinuxSpec) (int, error) {
 	if err != nil {
 		return -1, err
 	}
-	container, err := factory.Create(context.GlobalString("id"), config)
+	container, err := factory.Create(id, config)
 	if err != nil {
 		return -1, err
 	}

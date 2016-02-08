@@ -65,9 +65,11 @@ You can also run specific test cases by:
 
 ### Using:
 
-To run a container, execute `runc start` in the bundle's root directory:
+To run a container with the id "test", execute `runc start` with the containers id as arg one 
+in the bundle's root directory:
+
 ```bash
-runc start
+runc start test
 / $ ps
 PID   USER     COMMAND
 1     daemon   sh
@@ -98,7 +100,7 @@ tar -C rootfs -xf busybox.tar
 * Create `config.json` by using `runc spec`.
 * Execute `runc start` and you should be placed into a shell where you can run `ps`:
 ```
-$ runc start
+$ runc start test
 / # ps
 PID   USER     COMMAND
     1 root     sh
@@ -120,7 +122,7 @@ After=network.target
 [Service]
 CPUQuota=200%
 MemoryLimit=1536M
-ExecStart=/usr/local/bin/runc start
+ExecStart=/usr/local/bin/runc start minecraft
 Restart=on-failure
 WorkingDirectory=/containers/minecraftbuild
 
