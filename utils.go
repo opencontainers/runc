@@ -24,12 +24,62 @@ var allowedDevices = []*configs.Device{
 		Major:       wildcard,
 		Minor:       wildcard,
 		Permissions: "m",
+		Allow:       true,
 	},
 	{
 		Type:        'b',
 		Major:       wildcard,
 		Minor:       wildcard,
 		Permissions: "m",
+		Allow:       true,
+	},
+	{
+		Type:        'c',
+		Path:        "/dev/null",
+		Major:       1,
+		Minor:       3,
+		Permissions: "rwm",
+		Allow:       true,
+	},
+	{
+		Type:        'c',
+		Path:        "/dev/random",
+		Major:       1,
+		Minor:       8,
+		Permissions: "rwm",
+		Allow:       true,
+	},
+	{
+		Type:        'c',
+		Path:        "/dev/full",
+		Major:       1,
+		Minor:       7,
+		Permissions: "rwm",
+		Allow:       true,
+	},
+	{
+		Type:        'c',
+		Path:        "/dev/tty",
+		Major:       5,
+		Minor:       0,
+		Permissions: "rwm",
+		Allow:       true,
+	},
+	{
+		Type:        'c',
+		Path:        "/dev/zero",
+		Major:       1,
+		Minor:       5,
+		Permissions: "rwm",
+		Allow:       true,
+	},
+	{
+		Type:        'c',
+		Path:        "/dev/urandom",
+		Major:       1,
+		Minor:       9,
+		Permissions: "rwm",
+		Allow:       true,
 	},
 	{
 		Path:        "/dev/console",
@@ -37,6 +87,7 @@ var allowedDevices = []*configs.Device{
 		Major:       5,
 		Minor:       1,
 		Permissions: "rwm",
+		Allow:       true,
 	},
 	{
 		Path:        "/dev/tty0",
@@ -44,6 +95,7 @@ var allowedDevices = []*configs.Device{
 		Major:       4,
 		Minor:       0,
 		Permissions: "rwm",
+		Allow:       true,
 	},
 	{
 		Path:        "/dev/tty1",
@@ -51,6 +103,7 @@ var allowedDevices = []*configs.Device{
 		Major:       4,
 		Minor:       1,
 		Permissions: "rwm",
+		Allow:       true,
 	},
 	// /dev/pts/ - pts namespaces are "coming soon"
 	{
@@ -59,6 +112,7 @@ var allowedDevices = []*configs.Device{
 		Major:       136,
 		Minor:       wildcard,
 		Permissions: "rwm",
+		Allow:       true,
 	},
 	{
 		Path:        "",
@@ -66,6 +120,7 @@ var allowedDevices = []*configs.Device{
 		Major:       5,
 		Minor:       2,
 		Permissions: "rwm",
+		Allow:       true,
 	},
 	// tuntap
 	{
@@ -74,6 +129,7 @@ var allowedDevices = []*configs.Device{
 		Major:       10,
 		Minor:       200,
 		Permissions: "rwm",
+		Allow:       true,
 	},
 }
 
@@ -175,11 +231,9 @@ func dupStdio(process *libcontainer.Process, rootuid int) error {
 
 // If systemd is supporting sd_notify protocol, this function will add support
 // for sd_notify protocol from within the container.
-func setupSdNotify(spec *specs.LinuxSpec, rspec *specs.LinuxRuntimeSpec, notifySocket string) {
-	mountName := "sdNotify"
-	spec.Mounts = append(spec.Mounts, specs.MountPoint{Name: mountName, Path: notifySocket})
+func setupSdNotify(spec *specs.LinuxSpec, notifySocket string) {
+	spec.Mounts = append(spec.Mounts, specs.Mount{Destination: notifySocket, Type: "bind", Source: notifySocket, Options: []string{"bind"}})
 	spec.Process.Env = append(spec.Process.Env, fmt.Sprintf("NOTIFY_SOCKET=%s", notifySocket))
-	rspec.Mounts[mountName] = specs.Mount{Type: "bind", Source: notifySocket, Options: []string{"bind"}}
 }
 
 // If systemd is supporting on-demand socket activation, this function will add support
