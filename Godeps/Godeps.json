@@ -1,6 +1,6 @@
 {
 	"ImportPath": "github.com/opencontainers/runc",
-	"GoVersion": "go1.4.2",
+	"GoVersion": "go1.5.3",
 	"Deps": [
 		{
 			"ImportPath": "github.com/Sirupsen/logrus",
@@ -11,6 +11,11 @@
 			"ImportPath": "github.com/codegangsta/cli",
 			"Comment": "1.2.0-187-gc31a797",
 			"Rev": "c31a7975863e7810c92e2e288a9ab074f9a88f29"
+		},
+		{
+			"ImportPath": "github.com/coreos/go-systemd/activation",
+			"Comment": "v4",
+			"Rev": "b4a58d95188dd092ae20072bac14cece0e67c388"
 		},
 		{
 			"ImportPath": "github.com/coreos/go-systemd/dbus",
