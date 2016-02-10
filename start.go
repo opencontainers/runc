@@ -6,16 +6,14 @@ import (
 	"fmt"
 	"os"
 	"runtime"
-	"strconv"
 	"syscall"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
+	"github.com/coreos/go-systemd/activation"
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/specs"
 )
-
-const SD_LISTEN_FDS_START = 3
 
 // default action is to start a container
 var startCommand = cli.Command{
@@ -59,17 +57,10 @@ var startCommand = cli.Command{
 			setupSdNotify(spec, notifySocket)
 		}
 
-		var (
-			listenFds = os.Getenv("LISTEN_FDS")
-			listenPid = os.Getenv("LISTEN_PID")
-		)
-		if listenFds != "" && listenPid == strconv.Itoa(os.Getpid()) {
-			setupSocketActivation(spec, listenFds)
-		}
-
 		if os.Geteuid() != 0 {
 			logrus.Fatal("runc should be run as root")
 		}
+
 		status, err := startContainer(context, spec)
 		if err != nil {
 			logrus.Fatalf("Container start failed: %v", err)
@@ -124,12 +115,10 @@ func startContainer(context *cli.Context, spec *specs.LinuxSpec) (int, error) {
 	process := newProcess(spec.Process)
 	// Support on-demand socket activation by passing file descriptors into the container init process.
 	if os.Getenv("LISTEN_FDS") != "" {
-		listenFdsInt, err := strconv.Atoi(os.Getenv("LISTEN_FDS"))
-		if err != nil {
-			return -1, err
-		}
-		for i := SD_LISTEN_FDS_START; i < (listenFdsInt + SD_LISTEN_FDS_START); i++ {
-			process.ExtraFiles = append(process.ExtraFiles, os.NewFile(uintptr(i), ""))
+		listenFds := activation.Files(false)
+		if len(listenFds) > 0 {
+			process.Env = append(process.Env, fmt.Sprintf("LISTEN_FDS=%d", len(listenFds)), "LISTEN_PID=1")
+			process.ExtraFiles = append(process.ExtraFiles, listenFds...)
 		}
 	}
 	tty, err := setupIO(process, rootuid, context.String("console"), spec.Process.Terminal, detach)

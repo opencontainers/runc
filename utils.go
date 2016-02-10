@@ -236,12 +236,6 @@ func setupSdNotify(spec *specs.LinuxSpec, notifySocket string) {
 	spec.Process.Env = append(spec.Process.Env, fmt.Sprintf("NOTIFY_SOCKET=%s", notifySocket))
 }
 
-// If systemd is supporting on-demand socket activation, this function will add support
-// for on-demand socket activation for the containerized service.
-func setupSocketActivation(spec *specs.LinuxSpec, listenFds string) {
-	spec.Process.Env = append(spec.Process.Env, fmt.Sprintf("LISTEN_FDS=%s", listenFds), "LISTEN_PID=1")
-}
-
 func destroy(container libcontainer.Container) {
 	if err := container.Destroy(); err != nil {
 		logrus.Error(err)
