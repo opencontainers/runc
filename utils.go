@@ -3,6 +3,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -16,6 +17,8 @@ import (
 )
 
 const wildcard = -1
+
+var errEmptyID = errors.New("container id cannot be empty")
 
 var allowedDevices = []*configs.Device{
 	// allow mknod for any device
@@ -160,15 +163,15 @@ func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
 // getContainer returns the specified container instance by loading it from state
 // with the default factory.
 func getContainer(context *cli.Context) (libcontainer.Container, error) {
+	id := context.Args().First()
+	if id == "" {
+		return nil, errEmptyID
+	}
 	factory, err := loadFactory(context)
 	if err != nil {
 		return nil, err
 	}
-	container, err := factory.Load(context.GlobalString("id"))
-	if err != nil {
-		return nil, err
-	}
-	return container, nil
+	return factory.Load(id)
 }
 
 // fatal prints the error's details if it is a libcontainer specific error type
@@ -180,17 +183,6 @@ func fatal(err error) {
 	}
 	fmt.Fprintln(os.Stderr, err)
 	os.Exit(1)
-}
-
-// getDefaultID returns a string to be used as the container id based on the
-// current working directory of the runc process.  This function panics
-// if the cwd is unable to be found based on a system error.
-func getDefaultID() string {
-	cwd, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
-	return filepath.Base(cwd)
 }
 
 func getDefaultImagePath(context *cli.Context) string {

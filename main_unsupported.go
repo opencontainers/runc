@@ -7,10 +7,6 @@ import (
 	"github.com/codegangsta/cli"
 )
 
-func getDefaultID() string {
-	return ""
-}
-
 var (
 	checkpointCommand cli.Command
 	eventsCommand     cli.Command

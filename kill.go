@@ -58,7 +58,7 @@ var killCommand = cli.Command{
 			fatal(err)
 		}
 
-		sigstr := context.Args().First()
+		sigstr := context.Args().Get(1)
 		if sigstr == "" {
 			sigstr = "SIGTERM"
 		}

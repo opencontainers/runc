@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	version    = "0.0.7"
+	version    = "0.0.8"
 	specConfig = "config.json"
 	usage      = `Open Container Initiative runtime
 	
@@ -27,7 +27,7 @@ After creating config files for your root filesystem with runc, you can execute
 a container in your shell by running:
 
     # cd /mycontainer
-    # runc start [ -b bundle ] 
+    # runc start [ -b bundle ] <container-id>
 
 If not specified, the default value for the 'bundle' is the current directory.
 'Bundle' is the directory where '` + specConfig + `' must be located.`
@@ -39,11 +39,6 @@ func main() {
 	app.Usage = usage
 	app.Version = fmt.Sprintf("%s\nspec version %s", version, specs.Version)
 	app.Flags = []cli.Flag{
-		cli.StringFlag{
-			Name:  "id",
-			Value: getDefaultID(),
-			Usage: "specify the ID to be used for the container",
-		},
 		cli.BoolFlag{
 			Name:  "debug",
 			Usage: "enable debug output for logging",
