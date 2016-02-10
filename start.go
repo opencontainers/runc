@@ -17,11 +17,18 @@ import (
 var startCommand = cli.Command{
 	Name:  "start",
 	Usage: "create and run a container",
+	ArgsUsage: `<container-id>
+
+Where "<container-id>" is your name for the instance of the container that you
+are starting. The name you provide for the container instance must be unique on
+your host.`,
+	Description: `The start command creates an instance of a container for a bundle. The bundle
+is a directory with a specification file and a root filesystem.`,
 	Flags: []cli.Flag{
 		cli.StringFlag{
 			Name:  "bundle, b",
 			Value: "",
-			Usage: "path to the root of the bundle directory",
+			Usage: `path to the root of the bundle directory, defaults to the current directory`,
 		},
 		cli.StringFlag{
 			Name:  "console",

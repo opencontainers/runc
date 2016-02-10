@@ -18,6 +18,15 @@ import (
 var execCommand = cli.Command{
 	Name:  "exec",
 	Usage: "execute new process inside the container",
+	ArgsUsage: `<container-id> <container command>
+
+Where "<container-id>" is the name for the instance of the container and
+"<container command>" is the command to be executed in the container.
+
+For example, if the container is configured to run the linux ps command the
+following will output a list of processes running in the container:
+	 
+       # runc exec <container-id> ps`,
 	Flags: []cli.Flag{
 		cli.StringFlag{
 			Name:  "console",
