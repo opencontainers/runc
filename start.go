@@ -129,6 +129,8 @@ func startContainer(context *cli.Context, spec *specs.LinuxSpec) (int, error) {
 	if err != nil {
 		return -1, err
 	}
+	handler := newSignalHandler(tty)
+	defer handler.Close()
 	if err := container.Start(process); err != nil {
 		return -1, err
 	}
@@ -142,7 +144,5 @@ func startContainer(context *cli.Context, spec *specs.LinuxSpec) (int, error) {
 	if detach {
 		return 0, nil
 	}
-	handler := newSignalHandler(tty)
-	defer handler.Close()
 	return handler.forward(process)
 }
