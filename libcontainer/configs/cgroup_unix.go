@@ -11,15 +11,22 @@ const (
 )
 
 type Cgroup struct {
-	Name string `json:"name"`
+	// Deprecated, use Path instead
+	Name string `json:"name,omitempty"`
 
-	// name of parent cgroup or slice
-	Parent string `json:"parent"`
+	// name of parent of cgroup or slice
+	// Deprecated, use Path instead
+	Parent string `json:"parent,omitempty"`
+
+	// Path specifies the path to cgroups that are created and/or joined by the container.
+	// The path is assumed to be relative to the host system cgroup mountpoint.
+	Path string `json:"path"`
 
 	// ScopePrefix decribes prefix for the scope name
 	ScopePrefix string `json:"scope_prefix"`
 
-	// Paths represent the cgroups paths to join
+	// Paths represent the absolute cgroups paths to join.
+	// This takes precedence over Path.
 	Paths map[string]string
 
 	// Resources contains various cgroups settings to apply

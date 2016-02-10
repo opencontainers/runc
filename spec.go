@@ -18,6 +18,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/seccomp"
+	libcontainerUtils "github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/opencontainers/specs"
 )
 
@@ -326,13 +327,22 @@ func createLibcontainerMount(cwd string, m specs.Mount) *configs.Mount {
 }
 
 func createCgroupConfig(name string, spec *specs.LinuxSpec) (*configs.Cgroup, error) {
-	myCgroupPath, err := cgroups.GetThisCgroupDir("devices")
-	if err != nil {
-		return nil, err
+	var (
+		err          error
+		myCgroupPath string
+	)
+
+	if spec.Linux.CgroupsPath != nil {
+		myCgroupPath = libcontainerUtils.CleanPath(*spec.Linux.CgroupsPath)
+	} else {
+		myCgroupPath, err = cgroups.GetThisCgroupDir("devices")
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	c := &configs.Cgroup{
-		Name:      name,
-		Parent:    myCgroupPath,
+		Path:      filepath.Join(myCgroupPath, name),
 		Resources: &configs.Resources{},
 	}
 	c.Resources.AllowedDevices = allowedDevices
