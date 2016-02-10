@@ -142,6 +142,7 @@ system resources like cpu, memory, and device access.
 | perf_event | 1       |
 | freezer    | 1       |
 | hugetlb    | 1       |
+| pids       | 1       |
 
 
 All cgroup subsystem are joined so that statistics can be collected from
