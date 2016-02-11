@@ -14,6 +14,7 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
+	libcontainerUtils "github.com/opencontainers/runc/libcontainer/utils"
 )
 
 var (
@@ -276,9 +277,14 @@ func getCgroupData(c *configs.Cgroup, pid int) (*cgroupData, error) {
 		return nil, fmt.Errorf("cgroup: either Path or Name and Parent should be used")
 	}
 
-	innerPath := c.Path
+	// XXX: Do not remove this code. Path safety is important! -- cyphar
+	cgPath := libcontainerUtils.CleanPath(c.Path)
+	cgParent := libcontainerUtils.CleanPath(c.Parent)
+	cgName := libcontainerUtils.CleanPath(c.Name)
+
+	innerPath := cgPath
 	if innerPath == "" {
-		innerPath = filepath.Join(c.Parent, c.Name)
+		innerPath = filepath.Join(cgParent, cgName)
 	}
 
 	return &cgroupData{
