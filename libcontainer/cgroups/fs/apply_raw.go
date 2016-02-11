@@ -283,7 +283,7 @@ func getCgroupData(c *configs.Cgroup, pid int) (*cgroupData, error) {
 
 	return &cgroupData{
 		root:      root,
-		innerPath: c.Path,
+		innerPath: innerPath,
 		config:    c,
 		pid:       pid,
 	}, nil
