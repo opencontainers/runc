@@ -308,7 +308,9 @@ func runProcess(container libcontainer.Container, config *specs.Process, listenF
 	}
 
 	if err := container.Start(process); err != nil {
-		tty.Close()
+		if tty != nil {
+			tty.Close()
+		}
 		return -1, err
 	}
 
@@ -316,7 +318,9 @@ func runProcess(container libcontainer.Container, config *specs.Process, listenF
 		if err := createPidFile(pidFile, process); err != nil {
 			process.Signal(syscall.SIGKILL)
 			process.Wait()
-			tty.Close()
+			if tty != nil {
+				tty.Close()
+			}
 			return -1, err
 		}
 	}
