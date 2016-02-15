@@ -405,11 +405,6 @@ func expandSlice(slice string) (string, error) {
 	var path, prefix string
 	sliceName := strings.TrimSuffix(slice, suffix)
 	for _, component := range strings.Split(sliceName, "-") {
-		// test--a.slice isn't permitted, nor is -test.slice.
-		if component == "" {
-			return "", fmt.Errorf("invalid slice name: %s", slice)
-		}
-
 		// Append the component to the path and to the prefix.
 		path += prefix + component + suffix + "/"
 		prefix += component + "-"
