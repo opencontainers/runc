@@ -134,6 +134,8 @@ func restoreContainer(context *cli.Context, spec *specs.LinuxSpec, config *confi
 	if err != nil {
 		return -1, err
 	}
+	handler := newSignalHandler(tty)
+	defer handler.Close()
 	if err := container.Restore(process, options); err != nil {
 		tty.Close()
 		return -1, err
@@ -149,8 +151,6 @@ func restoreContainer(context *cli.Context, spec *specs.LinuxSpec, config *confi
 	if detach {
 		return 0, nil
 	}
-	handler := newSignalHandler(tty)
-	defer handler.Close()
 	return handler.forward(process)
 }
 

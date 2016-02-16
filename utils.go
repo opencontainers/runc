@@ -307,6 +307,9 @@ func runProcess(container libcontainer.Container, config *specs.Process, listenF
 		return -1, err
 	}
 
+	handler := newSignalHandler(tty)
+	defer handler.Close()
+
 	if err := container.Start(process); err != nil {
 		tty.Close()
 		return -1, err
@@ -323,8 +326,6 @@ func runProcess(container libcontainer.Container, config *specs.Process, listenF
 	if detach {
 		return 0, nil
 	}
-	handler := newSignalHandler(tty)
-	defer handler.Close()
 
 	return handler.forward(process)
 }
