@@ -232,22 +232,18 @@ func (l *LinuxFactory) StartInitialization() (err error) {
 	os.Clearenv()
 	var i initer
 	defer func() {
-		// if we have an error during the initialization of the container's init then send it back to the
-		// parent process in the form of an initError.
-		if err != nil {
-			if _, ok := i.(*linuxStandardInit); ok {
-				//  Synchronisation only necessary for standard init.
-				if err := utils.WriteJSON(pipe, syncT{procError}); err != nil {
-					panic(err)
-				}
-			}
-			if err := utils.WriteJSON(pipe, newSystemError(err)); err != nil {
+		// We have an error during the initialization of the container's init,
+		// send it back to the parent process in the form of an initError.
+		// If container's init successed, syscall.Exec will not return, hence
+		// this defer function will never be called.
+		if _, ok := i.(*linuxStandardInit); ok {
+			//  Synchronisation only necessary for standard init.
+			if err := utils.WriteJSON(pipe, syncT{procError}); err != nil {
 				panic(err)
 			}
-		} else {
-			if err := utils.WriteJSON(pipe, syncT{procStart}); err != nil {
-				panic(err)
-			}
+		}
+		if err := utils.WriteJSON(pipe, newSystemError(err)); err != nil {
+			panic(err)
 		}
 		// ensure that this pipe is always closed
 		pipe.Close()
