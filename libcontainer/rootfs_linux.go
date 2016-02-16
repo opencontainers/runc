@@ -342,7 +342,7 @@ func setupDevSymlinks(rootfs string) error {
 	// kcore support can be toggled with CONFIG_PROC_KCORE; only create a symlink
 	// in /dev if it exists in /proc.
 	if _, err := os.Stat("/proc/kcore"); err == nil {
-		links = append(links, [2]string{"/proc/kcore", "/dev/kcore"})
+		links = append(links, [2]string{"/proc/kcore", "/dev/core"})
 	}
 	for _, link := range links {
 		var (
