@@ -308,7 +308,8 @@ func checkMountDestination(rootfs, dest string) error {
 		"/proc/cpuinfo",
 		"/proc/diskstats",
 		"/proc/meminfo",
-		"/proc/stats",
+		"/proc/stat",
+		"/proc/net/dev",
 	}
 	for _, valid := range validDestinations {
 		path, err := filepath.Rel(filepath.Join(rootfs, valid), dest)
