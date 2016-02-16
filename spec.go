@@ -140,6 +140,7 @@ var specCommand = cli.Command{
 						Soft: uint64(1024),
 					},
 				},
+				NoNewPrivileges: true,
 			},
 		}
 
@@ -300,6 +301,7 @@ func createLibcontainerConfig(cgroupName string, spec *specs.LinuxSpec) (*config
 	config.Sysctl = spec.Linux.Sysctl
 	config.ProcessLabel = spec.Linux.SelinuxProcessLabel
 	config.AppArmorProfile = spec.Linux.ApparmorProfile
+	config.NoNewPrivileges = spec.Linux.NoNewPrivileges
 	for _, g := range spec.Process.User.AdditionalGids {
 		config.AdditionalGroups = append(config.AdditionalGroups, strconv.FormatUint(uint64(g), 10))
 	}

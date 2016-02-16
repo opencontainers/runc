@@ -21,6 +21,10 @@ type linuxStandardInit struct {
 	config    *initConfig
 }
 
+// PR_SET_NO_NEW_PRIVS isn't exposed in Golang so we define it ourselves copying the value
+// the kernel
+const PR_SET_NO_NEW_PRIVS = 0x26
+
 func (l *linuxStandardInit) Init() error {
 	// do not inherit the parent's session keyring
 	sessKeyId, err := keyctl.JoinSessionKeyring("")
@@ -103,6 +107,11 @@ func (l *linuxStandardInit) Init() error {
 	if err != nil {
 		return err
 	}
+	if l.config.Config.NoNewPrivileges {
+		if err := system.Prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0); err != nil {
+			return err
+		}
+	}
 	// Tell our parent that we're ready to Execv. This must be done before the
 	// Seccomp rules have been applied, because we need to be able to read and
 	// write to a socket.
@@ -128,5 +137,6 @@ func (l *linuxStandardInit) Init() error {
 	if syscall.Getppid() != l.parentPid {
 		return syscall.Kill(syscall.Getpid(), syscall.SIGKILL)
 	}
+
 	return system.Execv(l.config.Args[0], l.config.Args[0:], os.Environ())
 }
