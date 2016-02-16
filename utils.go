@@ -92,22 +92,6 @@ var allowedDevices = []*configs.Device{
 		Permissions: "rwm",
 		Allow:       true,
 	},
-	{
-		Path:        "/dev/tty0",
-		Type:        'c',
-		Major:       4,
-		Minor:       0,
-		Permissions: "rwm",
-		Allow:       true,
-	},
-	{
-		Path:        "/dev/tty1",
-		Type:        'c',
-		Major:       4,
-		Minor:       1,
-		Permissions: "rwm",
-		Allow:       true,
-	},
 	// /dev/pts/ - pts namespaces are "coming soon"
 	{
 		Path:        "",
