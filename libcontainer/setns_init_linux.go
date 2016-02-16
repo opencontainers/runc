@@ -29,6 +29,11 @@ func (l *linuxSetnsInit) Init() error {
 	if err := setOomScoreAdj(l.config.Config.OomScoreAdj); err != nil {
 		return err
 	}
+	if l.config.Config.NoNewPrivileges {
+		if err := system.Prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0); err != nil {
+			return err
+		}
+	}
 	if l.config.Config.Seccomp != nil {
 		if err := seccomp.InitSeccomp(l.config.Config.Seccomp); err != nil {
 			return err
