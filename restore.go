@@ -137,14 +137,18 @@ func restoreContainer(context *cli.Context, spec *specs.LinuxSpec, config *confi
 	handler := newSignalHandler(tty)
 	defer handler.Close()
 	if err := container.Restore(process, options); err != nil {
-		tty.Close()
+		if tty != nil {
+			tty.Close()
+		}
 		return -1, err
 	}
 	if pidFile := context.String("pid-file"); pidFile != "" {
 		if err := createPidFile(pidFile, process); err != nil {
 			process.Signal(syscall.SIGKILL)
 			process.Wait()
-			tty.Close()
+			if tty != nil {
+				tty.Close()
+			}
 			return -1, err
 		}
 	}
