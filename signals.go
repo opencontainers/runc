@@ -109,5 +109,8 @@ func (h *signalHandler) reap() (exits []exit, err error) {
 }
 
 func (h *signalHandler) Close() error {
-	return h.tty.Close()
+	if h.tty != nil {
+		return h.tty.Close()
+	}
+	return nil
 }
