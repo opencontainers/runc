@@ -216,3 +216,55 @@ func TestGetContainerState(t *testing.T) {
 		}
 	}
 }
+
+type MockHook struct {
+	state configs.HookState
+}
+
+func (m *MockHook) Run(h configs.HookState) error {
+	m.state = h
+	return nil
+}
+
+func TestPostStopHooks(t *testing.T) {
+	var (
+		pid                = os.Getpid()
+		expectedMemoryPath = "/sys/fs/cgroup/memory/myid"
+	)
+	mockHook := &MockHook{}
+	container := &linuxContainer{
+		id: "myid",
+		config: &configs.Config{
+			Hooks: &configs.Hooks{
+				Poststop: []configs.Hook{
+					mockHook,
+				},
+			},
+		},
+		initProcess: &mockProcess{
+			_pid:    pid,
+			started: "010",
+		},
+		cgroupManager: &mockCgroupManager{
+			pids: []int{1, 2, 3},
+			stats: &cgroups.Stats{
+				MemoryStats: cgroups.MemoryStats{
+					Usage: cgroups.MemoryData{
+						Usage: 1024,
+					},
+				},
+			},
+			paths: map[string]string{
+				"memory": expectedMemoryPath,
+			},
+		},
+	}
+	container.state = &stoppedState{c: container}
+	err := container.Destroy()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if mockHook.state.Pid != pid {
+		t.Fatalf("expected pid %d but received %d", pid, mockHook.state.Pid)
+	}
+}

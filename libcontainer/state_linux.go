@@ -45,10 +45,10 @@ func destroy(c *linuxContainer) error {
 	if rerr := os.RemoveAll(c.root); err == nil {
 		err = rerr
 	}
-	c.initProcess = nil
 	if herr := runPoststopHooks(c); err == nil {
 		err = herr
 	}
+	c.initProcess = nil
 	c.state = &stoppedState{c: c}
 	return err
 }
@@ -59,6 +59,7 @@ func runPoststopHooks(c *linuxContainer) error {
 			Version: c.config.Version,
 			ID:      c.id,
 			Root:    c.config.Rootfs,
+			Pid:     c.initProcess.pid(),
 		}
 		for _, hook := range c.config.Hooks.Poststop {
 			if err := hook.Run(s); err != nil {
