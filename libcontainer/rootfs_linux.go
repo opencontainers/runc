@@ -4,6 +4,7 @@ package libcontainer
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -26,7 +27,7 @@ const defaultMountFlags = syscall.MS_NOEXEC | syscall.MS_NOSUID | syscall.MS_NOD
 
 // setupRootfs sets up the devices, mount points, and filesystems for use inside a
 // new mount namespace.
-func setupRootfs(config *configs.Config, console *linuxConsole) (err error) {
+func setupRootfs(config *configs.Config, console *linuxConsole, pipe io.ReadWriter) (err error) {
 	if err := prepareRoot(config); err != nil {
 		return newSystemError(err)
 	}
@@ -58,6 +59,13 @@ func setupRootfs(config *configs.Config, console *linuxConsole) (err error) {
 		if err := setupDevSymlinks(config.Rootfs); err != nil {
 			return newSystemError(err)
 		}
+	}
+	// Signal the parent to run the pre-start hooks.
+	// The hooks are run after the mounts are setup, but before we switch to the new
+	// root, so that the old root is still available in the hooks for any mount
+	// manipulations.
+	if err := syncParentHooks(pipe); err != nil {
+		return err
 	}
 	if err := syscall.Chdir(config.Rootfs); err != nil {
 		return newSystemError(err)
