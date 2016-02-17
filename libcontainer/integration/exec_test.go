@@ -568,9 +568,14 @@ func testPids(t *testing.T, systemd bool) {
 		t.Fatalf("expected fork() to succeed with no pids limit")
 	}
 
-	// Enforce a permissive limit (shell + 6 * true + 3).
-	config.Cgroups.Resources.PidsLimit = 10
-	_, ret, err = runContainer(config, "", "/bin/sh", "-c", "/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true")
+	// Enforce a permissive limit. This needs to be fairly hand-wavey due to the
+	// issues with running Go binaries with pids restrictions (see below).
+	config.Cgroups.Resources.PidsLimit = 64
+	_, ret, err = runContainer(config, "", "/bin/sh", "-c", `
+	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
+	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
+	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
+	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true`)
 	if err != nil && strings.Contains(err.Error(), "no such directory for pids.max") {
 		t.Skip("PIDs cgroup is unsupported")
 	}
@@ -580,9 +585,18 @@ func testPids(t *testing.T, systemd bool) {
 		t.Fatalf("expected fork() to succeed with permissive pids limit")
 	}
 
-	// Enforce a restrictive limit (shell + 6 * true + 3).
-	config.Cgroups.Resources.PidsLimit = 10
-	out, ret, err := runContainer(config, "", "/bin/sh", "-c", "/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true")
+	// Enforce a restrictive limit. 64 * /bin/true + 1 * shell should cause this
+	// to fail reliabily.
+	config.Cgroups.Resources.PidsLimit = 64
+	out, ret, err := runContainer(config, "", "/bin/sh", "-c", `
+	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
+	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
+	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
+	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
+	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
+	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
+	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
+	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true`)
 	if err != nil && strings.Contains(err.Error(), "no such directory for pids.max") {
 		t.Skip("PIDs cgroup is unsupported")
 	}
