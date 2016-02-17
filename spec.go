@@ -343,10 +343,11 @@ func createCgroupConfig(name string, spec *specs.LinuxSpec) (*configs.Cgroup, er
 		if err != nil {
 			return nil, err
 		}
+		myCgroupPath = filepath.Join(myCgroupPath, name)
 	}
 
 	c := &configs.Cgroup{
-		Path:      filepath.Join(myCgroupPath, name),
+		Path:      myCgroupPath,
 		Resources: &configs.Resources{},
 	}
 	c.Resources.AllowedDevices = allowedDevices
