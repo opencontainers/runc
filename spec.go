@@ -23,8 +23,10 @@ import (
 )
 
 var specCommand = cli.Command{
-	Name:  "spec",
-	Usage: "create a new specification file",
+	Name:        "spec",
+	Usage:       "create a new specification file",
+	ArgsUsage:   "",
+	Description: `The spec command creates the new specification file named "` + specConfig + `" for the bundle." `,
 	Flags: []cli.Flag{
 		cli.StringFlag{
 			Name:  "bundle, b",

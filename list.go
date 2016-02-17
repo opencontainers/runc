@@ -15,10 +15,37 @@ import (
 	"github.com/opencontainers/runc/libcontainer"
 )
 
+const formatOptions = `table, json, yaml, xml, or "go=<go-template text>"`
+
 var listCommand = cli.Command{
 	Name:  "list",
 	Usage: "lists containers started by runc with the given root",
+	Flags: []cli.Flag{
+		cli.StringFlag{
+			Name:  "format, f",
+			Value: "",
+			Usage: `select one of: ` + formatOptions + `.
+
+The default format is table.  The following will output the list of containers
+in json format:
+
+    # runc list -f json`,
+		},
+	},
 	Action: func(context *cli.Context) {
+		format := context.String("format")
+		if format != "" {
+			switch format {
+			default:
+				logrus.Fatal("invalid format, valid formats are: " + formatOptions)
+			case "":
+				format = "table"
+			case "json", "yaml", "xml":
+			}
+		}
+		//quiet := context.Bool("quiet")
+		//noTrunc := context.Bool("no-trunc")
+
 		factory, err := loadFactory(context)
 		if err != nil {
 			logrus.Fatal(err)

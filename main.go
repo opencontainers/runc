@@ -23,14 +23,18 @@ container runtime environment for applications. It can be used with your
 existing process monitoring tools and the container will be spawned as a
 direct child of the process supervisor.
 
-After creating config files for your root filesystem with runc, you can execute 
-a container in your shell by running:
+Containers are configured using bundles. A bundle for a container is a directory
+that includes a specification file named "` + specConfig + `" and a root filesystem.
+The root filesystem contains the contents of the container. 
 
-    # cd /mycontainer
+To start a new instance of a container:
+
     # runc start [ -b bundle ] <container-id>
 
-If not specified, the default value for the 'bundle' is the current directory.
-'Bundle' is the directory where '` + specConfig + `' must be located.`
+Where "<container-id>" is your name for the instance of the container that you
+are starting. The name you provide for the container instance must be unique on
+your host. Providing the bundle directory using "-b" is optional. The default
+value for "bundle" is the current directory.`
 )
 
 func main() {

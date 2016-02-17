@@ -14,6 +14,11 @@ import (
 var checkpointCommand = cli.Command{
 	Name:  "checkpoint",
 	Usage: "checkpoint a running container",
+	ArgsUsage: `<container-id>
+
+Where "<container-id>" is the name for the instance of the container to be
+checkpointed.`,
+	Description: `The checkpoint command saves the state of the container instance.`,
 	Flags: []cli.Flag{
 		cli.StringFlag{Name: "image-path", Value: "", Usage: "path for saving criu image files"},
 		cli.StringFlag{Name: "work-path", Value: "", Usage: "path for saving work files and logs"},
