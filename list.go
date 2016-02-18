@@ -10,12 +10,29 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"encoding/json"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
-	"github.com/opencontainers/runc/libcontainer"
 )
 
-const formatOptions = `table, json, yaml, xml, or "go=<go-template text>"`
+const formatOptions = `table or json`
+
+// containerState represents the platform agnostic pieces relating to a
+// running container's status and state
+type containerState struct {
+	// ID is the container ID.
+	ID string `json:"id"`
+
+	// InitProcessPid is the init process id in the parent namespace.
+	InitProcessPid int `json:"pid"`
+
+	// Status is the current status of the container, running, paused, ...
+	Status string `json:"status"`
+
+	// Created is the unix timestamp for the creation time of the container in UTC
+	Created time.Time `json:"created"`
+}
 
 var listCommand = cli.Command{
 	Name:  "list",
@@ -33,66 +50,74 @@ in json format:
 		},
 	},
 	Action: func(context *cli.Context) {
-		format := context.String("format")
-		if format != "" {
-			switch format {
-			default:
-				logrus.Fatal("invalid format, valid formats are: " + formatOptions)
-			case "":
-				format = "table"
-			case "json", "yaml", "xml":
-			}
+		s, err := getContainers(context)
+		if err != nil {
+			logrus.Fatal(err)
 		}
-		//quiet := context.Bool("quiet")
-		//noTrunc := context.Bool("no-trunc")
 
-		factory, err := loadFactory(context)
-		if err != nil {
-			logrus.Fatal(err)
-		}
-		// get the list of containers
-		root := context.GlobalString("root")
-		absRoot, err := filepath.Abs(root)
-		if err != nil {
-			logrus.Fatal(err)
-		}
-		list, err := ioutil.ReadDir(absRoot)
-		if err != nil {
-			logrus.Fatal(err)
-		}
-		w := tabwriter.NewWriter(os.Stdout, 12, 1, 3, ' ', 0)
-		fmt.Fprint(w, "ID\tPID\tSTATUS\tCREATED\n")
-		// output containers
-		for _, item := range list {
-			if item.IsDir() {
-				if err := outputListInfo(item.Name(), factory, w); err != nil {
-					logrus.Fatal(err)
-				}
+		switch context.String("format") {
+		case "", "table":
+			w := tabwriter.NewWriter(os.Stdout, 12, 1, 3, ' ', 0)
+			fmt.Fprint(w, "ID\tPID\tSTATUS\tCREATED\n")
+			for _, item := range s {
+				fmt.Fprintf(w, "%s\t%d\t%s\t%s\n",
+					item.ID,
+					item.InitProcessPid,
+					item.Status,
+					item.Created.Format(time.RFC3339Nano))
 			}
-		}
-		if err := w.Flush(); err != nil {
-			logrus.Fatal(err)
+			if err := w.Flush(); err != nil {
+				logrus.Fatal(err)
+			}
+		case "json":
+			data, err := json.Marshal(s)
+			if err != nil {
+				logrus.Fatal(err)
+			}
+			os.Stdout.Write(data)
+
+		default:
+			logrus.Fatal("invalid format option")
 		}
 	},
 }
 
-func outputListInfo(id string, factory libcontainer.Factory, w *tabwriter.Writer) error {
-	container, err := factory.Load(id)
+func getContainers(context *cli.Context) ([]containerState, error) {
+	factory, err := loadFactory(context)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	containerStatus, err := container.Status()
+	root := context.GlobalString("root")
+	absRoot, err := filepath.Abs(root)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	state, err := container.State()
+	list, err := ioutil.ReadDir(absRoot)
 	if err != nil {
-		return err
+		logrus.Fatal(err)
 	}
-	fmt.Fprintf(w, "%s\t%d\t%s\t%s\n",
-		container.ID(),
-		state.BaseState.InitProcessPid,
-		containerStatus.String(),
-		state.BaseState.Created.Format(time.RFC3339Nano))
-	return nil
+
+	var s []containerState
+	for _, item := range list {
+		if item.IsDir() {
+			container, err := factory.Load(item.Name())
+			if err != nil {
+				return nil, err
+			}
+			containerStatus, err := container.Status()
+			if err != nil {
+				return nil, err
+			}
+			state, err := container.State()
+			if err != nil {
+				return nil, err
+			}
+			s = append(s, containerState{
+				ID:             state.BaseState.ID,
+				InitProcessPid: state.BaseState.InitProcessPid,
+				Status:         containerStatus.String(),
+				Created:        state.BaseState.Created})
+		}
+	}
+	return s, nil
 }
