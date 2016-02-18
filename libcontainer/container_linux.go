@@ -934,6 +934,20 @@ func (c *linuxContainer) criuNotifications(resp *criurpc.CriuResp, process *Proc
 		if err := lockNetwork(c.config); err != nil {
 			return err
 		}
+	case notify.GetScript() == "setup-namespaces":
+		if c.config.Hooks != nil {
+			s := configs.HookState{
+				Version: c.config.Version,
+				ID:      c.id,
+				Pid:     int(notify.GetPid()),
+				Root:    c.config.Rootfs,
+			}
+			for _, hook := range c.config.Hooks.Prestart {
+				if err := hook.Run(s); err != nil {
+					return newSystemError(err)
+				}
+			}
+		}
 	case notify.GetScript() == "post-restore":
 		pid := notify.GetPid()
 		r, err := newRestoredProcess(int(pid), fds)
