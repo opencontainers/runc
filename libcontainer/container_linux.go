@@ -534,7 +534,8 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 		if err := c.checkCriuVersion("1.7"); err != nil {
 			return err
 		}
-		rpcOpts.ManageCgroupsMode = proto.Uint32(uint32(criuOpts.ManageCgroupsMode))
+		mode := criurpc.CriuCgMode(criuOpts.ManageCgroupsMode)
+		rpcOpts.ManageCgroupsMode = &mode
 	}
 
 	t := criurpc.CriuReqType_DUMP
@@ -698,7 +699,8 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 		if err := c.checkCriuVersion("1.7"); err != nil {
 			return err
 		}
-		req.Opts.ManageCgroupsMode = proto.Uint32(uint32(criuOpts.ManageCgroupsMode))
+		mode := criurpc.CriuCgMode(criuOpts.ManageCgroupsMode)
+		req.Opts.ManageCgroupsMode = &mode
 	}
 
 	var (
