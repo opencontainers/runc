@@ -211,6 +211,12 @@ type Network struct {
 	Priorities []InterfacePriority `json:"priorities,omitempty"`
 }
 
+// IntelRdt for Linux cgroup 'intel_rdt' resource management
+type IntelRdt struct {
+	// L3 cache capacity bitmask (CBM) for container
+	L3Cbm *uint64 `json:"l3Cbm,omitempty"`
+}
+
 // Resources has container runtime resource constraints
 type Resources struct {
 	// Devices are a list of device rules for the whitelist controller
@@ -231,6 +237,8 @@ type Resources struct {
 	HugepageLimits []HugepageLimit `json:"hugepageLimits,omitempty"`
 	// Network restriction configuration
 	Network *Network `json:"network,omitempty"`
+	// IntelRdt restriction configuration
+	IntelRdt *IntelRdt `json:"intelRdt,omitempty"`
 }
 
 // Device represents the mknod information for a Linux special device file

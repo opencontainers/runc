@@ -485,6 +485,10 @@ func createCgroupConfig(name string, spec *specs.LinuxSpec) (*configs.Cgroup, er
 			})
 		}
 	}
+	if r.IntelRdt != nil {
+		c.Resources.IntelRdtL3Cbm = *r.IntelRdt.L3Cbm
+	}
+
 	return c, nil
 }
 

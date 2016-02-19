@@ -31,6 +31,7 @@ var (
 		&NetPrioGroup{},
 		&PerfEventGroup{},
 		&FreezerGroup{},
+		&IntelRdtGroup{},
 	}
 	CgroupProcesses  = "cgroup.procs"
 	HugePageSizes, _ = cgroups.GetHugePageSize()

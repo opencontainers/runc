@@ -143,6 +143,7 @@ system resources like cpu, memory, and device access.
 | freezer    | 1       |
 | hugetlb    | 1       |
 | pids       | 1       |
+| intel_rdt  | 1       |
 
 
 All cgroup subsystem are joined so that statistics can be collected from
