@@ -11,6 +11,12 @@ import (
 type DevicesGroup struct {
 }
 
+type CgroupParams struct {
+	initpid int
+}
+
+var cg CgroupParams
+
 func (s *DevicesGroup) Name() string {
 	return "devices"
 }
@@ -22,11 +28,16 @@ func (s *DevicesGroup) Apply(d *cgroupData) error {
 		// cgroup is hard requirement for container's security.
 		return err
 	}
+	cg = CgroupParams{initpid: d.pid}
 	return nil
+}
+func (c *CgroupParams) getCgroupParams() int {
+	return c.initpid
 }
 
 func (s *DevicesGroup) Set(path string, cgroup *configs.Cgroup) error {
-	if system.RunningInUserNS() {
+	initpid := cg.getCgroupParams()
+	if system.RunningInUserNS(initpid) {
 		return nil
 	}
 

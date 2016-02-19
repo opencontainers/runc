@@ -399,7 +399,8 @@ func reOpenDevNull() error {
 
 // Create the device nodes in the container.
 func createDevices(config *configs.Config) error {
-	useBindMount := system.RunningInUserNS() || config.Namespaces.Contains(configs.NEWUSER)
+	pid := os.Getpid()
+	useBindMount := system.RunningInUserNS(pid) || config.Namespaces.Contains(configs.NEWUSER)
 	oldMask := syscall.Umask(0000)
 	for _, node := range config.Devices {
 		// containers running in a user namespace are not allowed to mknod
