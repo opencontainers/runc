@@ -65,50 +65,102 @@ const fedoraMountinfo = `15 35 0:3 / /proc rw,nosuid,nodev,noexec,relatime share
 247 35 253:35 / /var/lib/docker/devicemapper/mnt/5fec11304b6f4713fea7b6ccdcc1adc0a1966187f590fe25a8227428a8df275d rw,relatime shared:229 - ext4 /dev/mapper/docker-253:2-425882-5fec11304b6f4713fea7b6ccdcc1adc0a1966187f590fe25a8227428a8df275d rw,seclabel,discard,stripe=16,data=ordered
 31 21 0:23 / /DATA/foo_bla_bla rw,relatime - cifs //foo/BLA\040BLA\040BLA/ rw,sec=ntlm,cache=loose,unc=\\foo\BLA BLA BLA,username=my_login,domain=mydomain.com,uid=12345678,forceuid,gid=12345678,forcegid,addr=10.1.30.10,file_mode=0755,dir_mode=0755,nounix,rsize=61440,wsize=65536,actimeo=1`
 
+const systemdMountinfo = `115 83 0:32 / / rw,relatime - aufs none rw,si=c0bd3d3,dio,dirperm1
+116 115 0:35 / /proc rw,nosuid,nodev,noexec,relatime - proc proc rw
+117 115 0:36 / /dev rw,nosuid - tmpfs tmpfs rw,mode=755
+118 117 0:37 / /dev/pts rw,nosuid,noexec,relatime - devpts devpts rw,gid=5,mode=620,ptmxmode=666
+119 115 0:38 / /sys rw,nosuid,nodev,noexec,relatime - sysfs sysfs rw
+120 119 0:39 / /sys/fs/cgroup rw,nosuid,nodev,noexec,relatime - tmpfs tmpfs rw,mode=755
+121 120 0:19 /system.slice/docker-dc4eaa1a34ec4d593bc0125d31eea823a1d76ae483aeb1409cca80304e34da2e.scope /sys/fs/cgroup/systemd rw,nosuid,nodev,noexec,relatime - cgroup cgroup rw,xattr,release_agent=/lib/systemd/systemd-cgroups-agent,name=systemd
+122 120 0:20 /system.slice/docker-dc4eaa1a34ec4d593bc0125d31eea823a1d76ae483aeb1409cca80304e34da2e.scope /sys/fs/cgroup/devices rw,nosuid,nodev,noexec,relatime - cgroup cgroup rw,devices
+123 120 0:21 /system.slice/docker-dc4eaa1a34ec4d593bc0125d31eea823a1d76ae483aeb1409cca80304e34da2e.scope /sys/fs/cgroup/freezer rw,nosuid,nodev,noexec,relatime - cgroup cgroup rw,freezer
+124 120 0:22 /system.slice/docker-dc4eaa1a34ec4d593bc0125d31eea823a1d76ae483aeb1409cca80304e34da2e.scope /sys/fs/cgroup/memory rw,nosuid,nodev,noexec,relatime - cgroup cgroup rw,memory
+125 120 0:23 /system.slice/docker-dc4eaa1a34ec4d593bc0125d31eea823a1d76ae483aeb1409cca80304e34da2e.scope /sys/fs/cgroup/net_cls,net_prio rw,nosuid,nodev,noexec,relatime - cgroup cgroup rw,net_cls,net_prio
+126 120 0:24 /system.slice/docker-dc4eaa1a34ec4d593bc0125d31eea823a1d76ae483aeb1409cca80304e34da2e.scope /sys/fs/cgroup/blkio rw,nosuid,nodev,noexec,relatime - cgroup cgroup rw,blkio
+127 120 0:25 /system.slice/docker-dc4eaa1a34ec4d593bc0125d31eea823a1d76ae483aeb1409cca80304e34da2e.scope /sys/fs/cgroup/cpuset rw,nosuid,nodev,noexec,relatime - cgroup cgroup rw,cpuset,clone_children
+128 120 0:26 /system.slice/docker-dc4eaa1a34ec4d593bc0125d31eea823a1d76ae483aeb1409cca80304e34da2e.scope /sys/fs/cgroup/cpu,cpuacct rw,nosuid,nodev,noexec,relatime - cgroup cgroup rw,cpu,cpuacct
+129 120 0:27 /system.slice/docker-dc4eaa1a34ec4d593bc0125d31eea823a1d76ae483aeb1409cca80304e34da2e.scope /sys/fs/cgroup/perf_event rw,nosuid,nodev,noexec,relatime - cgroup cgroup rw,perf_event,release_agent=/run/cgmanager/agents/cgm-release-agent.perf_event
+130 115 43:0 /var/lib/docker/volumes/a44a712176377f57c094397330ee04387284c478364eb25f4c3d25f775f25c26/_data /var/lib/docker rw,relatime - ext4 /dev/nbd0 rw,data=ordered
+131 115 43:0 /var/lib/docker/containers/dc4eaa1a34ec4d593bc0125d31eea823a1d76ae483aeb1409cca80304e34da2e/resolv.conf /etc/resolv.conf rw,relatime - ext4 /dev/nbd0 rw,data=ordered
+132 115 43:0 /var/lib/docker/containers/dc4eaa1a34ec4d593bc0125d31eea823a1d76ae483aeb1409cca80304e34da2e/hostname /etc/hostname rw,relatime - ext4 /dev/nbd0 rw,data=ordered
+133 115 43:0 /var/lib/docker/containers/dc4eaa1a34ec4d593bc0125d31eea823a1d76ae483aeb1409cca80304e34da2e/hosts /etc/hosts rw,relatime - ext4 /dev/nbd0 rw,data=ordered
+134 117 0:33 / /dev/shm rw,nosuid,nodev,noexec,relatime - tmpfs shm rw,size=65536k
+135 117 0:13 / /dev/mqueue rw,nosuid,nodev,noexec,relatime - mqueue mqueue rw
+136 117 0:12 /1 /dev/console rw,nosuid,noexec,relatime - devpts none rw,gid=5,mode=620,ptmxmode=000
+84 115 0:40 / /tmp rw,relatime - tmpfs none rw`
+
 func TestGetCgroupMounts(t *testing.T) {
-	subsystems := map[string]bool{
-		"cpuset":     true,
-		"cpu":        true,
-		"cpuacct":    true,
-		"memory":     true,
-		"devices":    true,
-		"freezer":    true,
-		"net_cls":    true,
-		"blkio":      true,
-		"perf_event": true,
-		"hugetlb":    true,
+	type testData struct {
+		mountInfo  string
+		root       string
+		subsystems map[string]bool
 	}
-	mi := bytes.NewBufferString(fedoraMountinfo)
-	cgMounts, err := getCgroupMountsHelper(subsystems, mi)
-	if err != nil {
-		t.Fatal(err)
+	testTable := []testData{
+		{
+			mountInfo: fedoraMountinfo,
+			root:      "/",
+			subsystems: map[string]bool{
+				"cpuset":     true,
+				"cpu":        true,
+				"cpuacct":    true,
+				"memory":     true,
+				"devices":    true,
+				"freezer":    true,
+				"net_cls":    true,
+				"blkio":      true,
+				"perf_event": true,
+				"hugetlb":    true,
+			},
+		},
+		{
+			mountInfo: systemdMountinfo,
+			root:      "/system.slice/docker-dc4eaa1a34ec4d593bc0125d31eea823a1d76ae483aeb1409cca80304e34da2e.scope",
+			subsystems: map[string]bool{
+				"cpuset":     true,
+				"cpu":        true,
+				"cpuacct":    true,
+				"memory":     true,
+				"devices":    true,
+				"freezer":    true,
+				"net_cls":    true,
+				"blkio":      true,
+				"perf_event": true,
+			},
+		},
 	}
-	cgMap := make(map[string]Mount)
-	for _, m := range cgMounts {
-		for _, ss := range m.Subsystems {
-			cgMap[ss] = m
+	for _, td := range testTable {
+		mi := bytes.NewBufferString(td.mountInfo)
+		cgMounts, err := getCgroupMountsHelper(td.subsystems, mi)
+		if err != nil {
+			t.Fatal(err)
 		}
-	}
-	for ss := range subsystems {
-		m, ok := cgMap[ss]
-		if !ok {
-			t.Fatalf("%s not found", ss)
-		}
-		if m.Root != "/" {
-			t.Fatalf("unexpected root for %s: %s", ss, m.Root)
-		}
-		if !strings.HasPrefix(m.Mountpoint, "/sys/fs/cgroup/") && !strings.Contains(m.Mountpoint, ss) {
-			t.Fatalf("unexpected mountpoint for %s: %s", ss, m.Mountpoint)
-		}
-		var ssFound bool
-		for _, mss := range m.Subsystems {
-			if mss == ss {
-				ssFound = true
-				break
+		cgMap := make(map[string]Mount)
+		for _, m := range cgMounts {
+			for _, ss := range m.Subsystems {
+				cgMap[ss] = m
 			}
 		}
-		if !ssFound {
-			t.Fatalf("subsystem %s not found in Subsystems field %v", ss, m.Subsystems)
+		for ss := range td.subsystems {
+			m, ok := cgMap[ss]
+			if !ok {
+				t.Fatalf("%s not found", ss)
+			}
+			if m.Root != td.root {
+				t.Fatalf("unexpected root for %s: %s", ss, m.Root)
+			}
+			if !strings.HasPrefix(m.Mountpoint, "/sys/fs/cgroup/") && !strings.Contains(m.Mountpoint, ss) {
+				t.Fatalf("unexpected mountpoint for %s: %s", ss, m.Mountpoint)
+			}
+			var ssFound bool
+			for _, mss := range m.Subsystems {
+				if mss == ss {
+					ssFound = true
+					break
+				}
+			}
+			if !ssFound {
+				t.Fatalf("subsystem %s not found in Subsystems field %v", ss, m.Subsystems)
+			}
 		}
 	}
 }
