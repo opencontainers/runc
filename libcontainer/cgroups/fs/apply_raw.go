@@ -31,6 +31,7 @@ var (
 		&NetPrioGroup{},
 		&PerfEventGroup{},
 		&FreezerGroup{},
+		&NameGroup{GroupName: "name=systemd", Join: true},
 	}
 	CgroupProcesses  = "cgroup.procs"
 	HugePageSizes, _ = cgroups.GetHugePageSize()
