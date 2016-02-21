@@ -398,7 +398,8 @@ func createCgroupConfig(name string, spec *specs.LinuxSpec) (*configs.Cgroup, er
 			c.Resources.KernelMemory = int64(*r.Memory.Kernel)
 		}
 		if r.Memory.Swappiness != nil {
-			c.Resources.MemorySwappiness = int64(*r.Memory.Swappiness)
+			swappiness := int64(*r.Memory.Swappiness)
+			c.Resources.MemorySwappiness = &swappiness
 		}
 	}
 	if r.CPU != nil {
