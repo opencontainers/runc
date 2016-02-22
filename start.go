@@ -111,5 +111,10 @@ func startContainer(context *cli.Context, spec *specs.LinuxSpec) (int, error) {
 		listenFDs = activation.Files(false)
 	}
 
-	return runProcess(container, &spec.Process, listenFDs, context.String("console"), context.String("pid-file"), detach)
+	status, err := runProcess(container, &spec.Process, listenFDs, context.String("console"), context.String("pid-file"), detach)
+	if err != nil {
+		destroy(container)
+		return -1, err
+	}
+	return status, nil
 }
