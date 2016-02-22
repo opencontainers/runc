@@ -3,6 +3,7 @@
 package libcontainer
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/opencontainers/runc/libcontainer/apparmor"
@@ -18,9 +19,13 @@ type linuxSetnsInit struct {
 	config *initConfig
 }
 
+func (l *linuxSetnsInit) getSessionRingName() string {
+	return fmt.Sprintf("_ses.%s", l.config.ContainerId)
+}
+
 func (l *linuxSetnsInit) Init() error {
 	// do not inherit the parent's session keyring
-	if _, err := keyctl.JoinSessionKeyring("_ses"); err != nil {
+	if _, err := keyctl.JoinSessionKeyring(l.getSessionRingName()); err != nil {
 		return err
 	}
 	if err := setupRlimits(l.config.Config); err != nil {

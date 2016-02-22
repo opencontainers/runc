@@ -3,6 +3,7 @@
 package libcontainer
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"syscall"
@@ -21,20 +22,36 @@ type linuxStandardInit struct {
 	config    *initConfig
 }
 
+func (l *linuxStandardInit) getSessionRingParams() (string, uint32, uint32) {
+	var newperms uint32
+
+	if l.config.Config.Namespaces.Contains(configs.NEWUSER) {
+		// with user ns we need 'other' search permissions
+		newperms = 0x8
+	} else {
+		// without user ns we need 'UID' search permissions
+		newperms = 0x80000
+	}
+
+	// create a unique per session container name that we can
+	// join in setns; however, other containers can also join it
+	return fmt.Sprintf("_ses.%s", l.config.ContainerId), 0xffffffff, newperms
+}
+
 // PR_SET_NO_NEW_PRIVS isn't exposed in Golang so we define it ourselves copying the value
 // the kernel
 const PR_SET_NO_NEW_PRIVS = 0x26
 
 func (l *linuxStandardInit) Init() error {
+	ringname, keepperms, newperms := l.getSessionRingParams()
+
 	// do not inherit the parent's session keyring
-	sessKeyId, err := keyctl.JoinSessionKeyring("")
+	sessKeyId, err := keyctl.JoinSessionKeyring(ringname)
 	if err != nil {
 		return err
 	}
 	// make session keyring searcheable
-	// without user ns we need 'UID' search permissions
-	// with user ns we need 'other' search permissions
-	if err := keyctl.ModKeyringPerm(sessKeyId, 0xffffffff, 0x080008); err != nil {
+	if err := keyctl.ModKeyringPerm(sessKeyId, keepperms, newperms); err != nil {
 		return err
 	}
 

@@ -324,6 +324,7 @@ func (c *linuxContainer) newInitConfig(process *Process) *initConfig {
 		Console:          process.consolePath,
 		Capabilities:     process.Capabilities,
 		PassedFilesCount: len(process.ExtraFiles),
+		ContainerId:      c.ID(),
 	}
 }
 

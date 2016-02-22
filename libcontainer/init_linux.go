@@ -53,6 +53,7 @@ type initConfig struct {
 	Console          string          `json:"console"`
 	Networks         []*network      `json:"network"`
 	PassedFilesCount int             `json:"passed_files_count"`
+	ContainerId      string          `json:"containerid"`
 }
 
 type initer interface {
