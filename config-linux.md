@@ -130,7 +130,7 @@ The following parameters can be specified:
             "type": "c",
             "major": 10,
             "minor": 229,
-            "fileMode": 0666,
+            "fileMode": 438,
             "uid": 0,
             "gid": 0
         },
@@ -139,7 +139,7 @@ The following parameters can be specified:
             "type": "b",
             "major": 8,
             "minor": 0,
-            "fileMode": 0660,
+            "fileMode": 432,
             "uid": 0,
             "gid": 0
         }
