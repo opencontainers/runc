@@ -75,6 +75,18 @@ func setupRootfs(config *configs.Config, console *linuxConsole) (err error) {
 			return newSystemError(err)
 		}
 	}
+	// remount dev as ro if specifed
+	for _, m := range config.Mounts {
+		if m.Destination == "/dev" {
+			if m.Flags&syscall.MS_RDONLY != 0 {
+				if err := remountReadonly(m.Destination); err != nil {
+					return newSystemError(err)
+				}
+			}
+			break
+		}
+	}
+	// set rootfs ( / ) as readonly
 	if config.Readonlyfs {
 		if err := setReadonly(); err != nil {
 			return newSystemError(err)
@@ -671,14 +683,18 @@ func remount(m *configs.Mount, rootfs string) error {
 // of propagation flags.
 func mountPropagate(m *configs.Mount, rootfs string, mountLabel string) error {
 	var (
-		dest = m.Destination
-		data = label.FormatMountLabel(m.Data, mountLabel)
+		dest  = m.Destination
+		data  = label.FormatMountLabel(m.Data, mountLabel)
+		flags = m.Flags
 	)
+	if dest == "/dev" {
+		flags &= ^syscall.MS_RDONLY
+	}
 	if !strings.HasPrefix(dest, rootfs) {
 		dest = filepath.Join(rootfs, dest)
 	}
 
-	if err := syscall.Mount(m.Source, dest, m.Device, uintptr(m.Flags), data); err != nil {
+	if err := syscall.Mount(m.Source, dest, m.Device, uintptr(flags), data); err != nil {
 		return err
 	}
 
