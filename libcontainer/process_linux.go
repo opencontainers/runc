@@ -213,16 +213,18 @@ func (p *initProcess) start() (err error) {
 			p.manager.Destroy()
 		}
 	}()
-	if p.config.Config.Hooks != nil {
-		s := configs.HookState{
-			Version: p.container.config.Version,
-			ID:      p.container.id,
-			Pid:     p.pid(),
-			Root:    p.config.Config.Rootfs,
-		}
-		for _, hook := range p.config.Config.Hooks.Prestart {
-			if err := hook.Run(s); err != nil {
-				return newSystemError(err)
+	if !p.config.Config.Namespaces.Contains(configs.NEWNS) {
+		if p.config.Config.Hooks != nil {
+			s := configs.HookState{
+				Version: p.container.config.Version,
+				ID:      p.container.id,
+				Pid:     p.pid(),
+				Root:    p.config.Config.Rootfs,
+			}
+			for _, hook := range p.config.Config.Hooks.Prestart {
+				if err := hook.Run(s); err != nil {
+					return newSystemError(err)
+				}
 			}
 		}
 	}
@@ -233,9 +235,10 @@ func (p *initProcess) start() (err error) {
 		return newSystemError(err)
 	}
 	var (
-		procSync syncT
-		sentRun  bool
-		ierr     *genericError
+		procSync   syncT
+		sentRun    bool
+		sentResume bool
+		ierr       *genericError
 	)
 
 loop:
@@ -256,6 +259,25 @@ loop:
 				return newSystemError(err)
 			}
 			sentRun = true
+		case procHooks:
+			if p.config.Config.Hooks != nil {
+				s := configs.HookState{
+					Version: p.container.config.Version,
+					ID:      p.container.id,
+					Pid:     p.pid(),
+					Root:    p.config.Config.Rootfs,
+				}
+				for _, hook := range p.config.Config.Hooks.Prestart {
+					if err := hook.Run(s); err != nil {
+						return newSystemError(err)
+					}
+				}
+			}
+			// Sync with child.
+			if err := utils.WriteJSON(p.parentPipe, syncT{procResume}); err != nil {
+				return newSystemError(err)
+			}
+			sentResume = true
 		case procError:
 			// wait for the child process to fully complete and receive an error message
 			// if one was encoutered
@@ -273,6 +295,9 @@ loop:
 	}
 	if !sentRun {
 		return newSystemError(fmt.Errorf("could not synchronise with container process"))
+	}
+	if p.config.Config.Namespaces.Contains(configs.NEWNS) && !sentResume {
+		return newSystemError(fmt.Errorf("could not synchronise after executing prestart hooks with container process"))
 	}
 	if err := syscall.Shutdown(int(p.parentPipe.Fd()), syscall.SHUT_WR); err != nil {
 		return newSystemError(err)

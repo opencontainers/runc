@@ -163,6 +163,27 @@ func syncParentReady(pipe io.ReadWriter) error {
 	return nil
 }
 
+// syncParentHooks sends to the given pipe a JSON payload which indicates that
+// the parent should execute pre-start hooks. It then waits for the parent to
+// indicate that it is cleared to resume.
+func syncParentHooks(pipe io.ReadWriter) error {
+	// Tell parent.
+	if err := utils.WriteJSON(pipe, syncT{procHooks}); err != nil {
+		return err
+	}
+	// Wait for parent to give the all-clear.
+	var procSync syncT
+	if err := json.NewDecoder(pipe).Decode(&procSync); err != nil {
+		if err == io.EOF {
+			return fmt.Errorf("parent closed synchronisation channel")
+		}
+		if procSync.Type != procResume {
+			return fmt.Errorf("invalid synchronisation flag from parent")
+		}
+	}
+	return nil
+}
+
 // joinExistingNamespaces gets all the namespace paths specified for the container and
 // does a setns on the namespace fd so that the current process joins the namespace.
 func joinExistingNamespaces(namespaces []configs.Namespace) error {
