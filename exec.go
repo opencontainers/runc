@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path"
 	"strconv"
 	"strings"
 
@@ -79,19 +78,17 @@ func execProcess(context *cli.Context) (int, error) {
 	if err != nil {
 		return -1, err
 	}
-
-	var (
-		detach = context.Bool("detach")
-		rootfs = container.Config().Rootfs
-	)
-
-	p, err := getProcess(context, path.Dir(rootfs))
+	detach := context.Bool("detach")
+	state, err := container.State()
 	if err != nil {
 		return -1, err
 	}
-
+	bundle := searchLabels(state.Config.Labels, "bundle")
+	p, err := getProcess(context, bundle)
+	if err != nil {
+		return -1, err
+	}
 	return runProcess(container, p, nil, context.String("console"), context.String("pid-file"), detach)
-
 }
 
 func getProcess(context *cli.Context, bundle string) (*specs.Process, error) {

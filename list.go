@@ -117,20 +117,20 @@ func getContainers(context *cli.Context) ([]containerState, error) {
 				ID:             state.BaseState.ID,
 				InitProcessPid: state.BaseState.InitProcessPid,
 				Status:         containerStatus.String(),
-				Bundle:         getBundlePath(state.Config.Labels),
+				Bundle:         searchLabels(state.Config.Labels, "bundle"),
 				Created:        state.BaseState.Created})
 		}
 	}
 	return s, nil
 }
 
-func getBundlePath(labels []string) string {
+func searchLabels(labels []string, query string) string {
 	for _, l := range labels {
 		parts := strings.SplitN(l, "=", 2)
-		if len(parts) < 1 {
+		if len(parts) < 2 {
 			continue
 		}
-		if parts[0] == "bundle" {
+		if parts[0] == query {
 			return parts[1]
 		}
 	}
