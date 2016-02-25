@@ -6,7 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strconv"
 	"syscall"
 
 	"github.com/Sirupsen/logrus"
@@ -161,6 +163,22 @@ func getContainer(context *cli.Context) (libcontainer.Container, error) {
 // fatal prints the error's details if it is a libcontainer specific error type
 // then exits the program with an exit status of 1.
 func fatal(err error) {
+	// return proper unix error codes
+	if exerr, ok := err.(*exec.Error); ok {
+		switch exerr.Err {
+		case os.ErrPermission:
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(126)
+		case exec.ErrNotFound:
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(127)
+		default:
+			if os.IsNotExist(exerr.Err) {
+				fmt.Fprintf(os.Stderr, "exec: %s: %v\n", strconv.Quote(exerr.Name), os.ErrNotExist)
+				os.Exit(127)
+			}
+		}
+	}
 	if lerr, ok := err.(libcontainer.Error); ok {
 		lerr.Detail(os.Stderr)
 		os.Exit(1)

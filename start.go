@@ -84,7 +84,7 @@ func init() {
 		if err := factory.StartInitialization(); err != nil {
 			fatal(err)
 		}
-		panic("--this line should have never been executed, congratulations--")
+		panic("libcontainer: container init failed to exec")
 	}
 }
 
