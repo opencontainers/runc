@@ -304,6 +304,9 @@ func createLibcontainerConfig(cgroupName string, spec *specs.LinuxSpec) (*config
 	config.ProcessLabel = spec.Linux.SelinuxProcessLabel
 	config.AppArmorProfile = spec.Linux.ApparmorProfile
 	config.NoNewPrivileges = spec.Linux.NoNewPrivileges
+	if oomScoreAdj := spec.Linux.Resources.OOMScoreAdj; oomScoreAdj != nil {
+		config.OomScoreAdj = *oomScoreAdj
+	}
 	for _, g := range spec.Process.User.AdditionalGids {
 		config.AdditionalGroups = append(config.AdditionalGroups, strconv.FormatUint(uint64(g), 10))
 	}
