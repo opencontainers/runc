@@ -241,9 +241,10 @@ func (p *initProcess) start() (err error) {
 		ierr       *genericError
 	)
 
+	dec := json.NewDecoder(p.parentPipe)
 loop:
 	for {
-		if err := json.NewDecoder(p.parentPipe).Decode(&procSync); err != nil {
+		if err := dec.Decode(&procSync); err != nil {
 			if err == io.EOF {
 				break loop
 			}
@@ -281,7 +282,7 @@ loop:
 		case procError:
 			// wait for the child process to fully complete and receive an error message
 			// if one was encoutered
-			if err := json.NewDecoder(p.parentPipe).Decode(&ierr); err != nil && err != io.EOF {
+			if err := dec.Decode(&ierr); err != nil && err != io.EOF {
 				return newSystemError(err)
 			}
 			if ierr != nil {
