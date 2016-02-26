@@ -286,15 +286,9 @@ func createLibcontainerConfig(cgroupName string, spec *specs.LinuxSpec) (*config
 		return nil, err
 	}
 	config.Cgroups = c
-	if config.Readonlyfs {
-		setReadonly(config)
-		config.MaskPaths = []string{
-			"/proc/kcore",
-		}
-		config.ReadonlyPaths = []string{
-			"/proc/sys", "/proc/sysrq-trigger", "/proc/irq", "/proc/bus",
-		}
-	}
+	// set extra path masking for libcontainer for the various unsafe places in proc
+	config.MaskPaths = maskedPaths
+	config.ReadonlyPaths = readonlyPaths
 	seccomp, err := setupSeccomp(&spec.Linux.Seccomp)
 	if err != nil {
 		return nil, err
