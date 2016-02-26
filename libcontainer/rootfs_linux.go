@@ -560,7 +560,7 @@ func setupPtmx(config *configs.Config, console *linuxConsole) error {
 	return nil
 }
 
-func pivotRoot(rootfs, pivotBaseDir string) error {
+func pivotRoot(rootfs, pivotBaseDir string) (err error) {
 	if pivotBaseDir == "" {
 		pivotBaseDir = "/"
 	}
@@ -572,6 +572,12 @@ func pivotRoot(rootfs, pivotBaseDir string) error {
 	if err != nil {
 		return fmt.Errorf("can't create pivot_root dir %s, error %v", pivotDir, err)
 	}
+	defer func() {
+		errVal := os.Remove(pivotDir)
+		if err == nil {
+			err = errVal
+		}
+	}()
 	if err := syscall.PivotRoot(rootfs, pivotDir); err != nil {
 		return fmt.Errorf("pivot_root %s", err)
 	}
@@ -590,7 +596,7 @@ func pivotRoot(rootfs, pivotBaseDir string) error {
 	if err := syscall.Unmount(pivotDir, syscall.MNT_DETACH); err != nil {
 		return fmt.Errorf("unmount pivot_root dir %s", err)
 	}
-	return os.Remove(pivotDir)
+	return nil
 }
 
 func msMoveRoot(rootfs string) error {
