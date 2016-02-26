@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sync"
 
 	"github.com/docker/docker/pkg/term"
 	"github.com/opencontainers/runc/libcontainer"
@@ -35,13 +36,30 @@ func createStdioPipes(p *libcontainer.Process, rootuid int) (*tty, error) {
 			i.Stderr,
 		},
 	}
+	// add the process's io to the post start closers if they support close
+	for _, cc := range []interface{}{
+		p.Stdin,
+		p.Stdout,
+		p.Stderr,
+	} {
+		if c, ok := cc.(io.Closer); ok {
+			t.postStart = append(t.postStart, c)
+		}
+	}
 	go func() {
 		io.Copy(i.Stdin, os.Stdin)
 		i.Stdin.Close()
 	}()
-	go io.Copy(os.Stdout, i.Stdout)
-	go io.Copy(os.Stderr, i.Stderr)
+	t.wg.Add(2)
+	go t.copyIO(os.Stdout, i.Stdout)
+	go t.copyIO(os.Stderr, i.Stderr)
 	return t, nil
+}
+
+func (t *tty) copyIO(w io.Writer, r io.ReadCloser) {
+	defer t.wg.Done()
+	io.Copy(w, r)
+	r.Close()
 }
 
 func createTty(p *libcontainer.Process, rootuid int, consolePath string) (*tty, error) {
@@ -62,23 +80,41 @@ func createTty(p *libcontainer.Process, rootuid int, consolePath string) (*tty, 
 	if err != nil {
 		return nil, fmt.Errorf("failed to set the terminal from the stdin: %v", err)
 	}
-	t := &tty{
+	return &tty{
 		console: console,
 		state:   state,
 		closers: []io.Closer{
 			console,
 		},
-	}
-	return t, nil
+	}, nil
 }
 
 type tty struct {
-	console libcontainer.Console
-	state   *term.State
-	closers []io.Closer
+	console   libcontainer.Console
+	state     *term.State
+	closers   []io.Closer
+	postStart []io.Closer
+	wg        sync.WaitGroup
 }
 
+// ClosePostStart closes any fds that are provided to the container and dup2'd
+// so that we no longer have copy in our process.
+func (t *tty) ClosePostStart() error {
+	for _, c := range t.postStart {
+		c.Close()
+	}
+	return nil
+}
+
+// Close closes all open fds for the tty and/or restores the orignal
+// stdin state to what it was prior to the container execution
 func (t *tty) Close() error {
+	// ensure that our side of the fds are always closed
+	for _, c := range t.postStart {
+		c.Close()
+	}
+	// wait for the copy routines to finish before closing the fds
+	t.wg.Wait()
 	for _, c := range t.closers {
 		c.Close()
 	}

@@ -218,6 +218,8 @@ func destroy(container libcontainer.Container) {
 	}
 }
 
+// setupIO sets the proper IO on the process depending on the configuration
+// If there is a nil error then there must be a non nil tty returned
 func setupIO(process *libcontainer.Process, rootuid int, console string, createTTY, detach bool) (*tty, error) {
 	// detach and createTty will not work unless a console path is passed
 	// so error out here before changing any terminal settings
@@ -231,7 +233,7 @@ func setupIO(process *libcontainer.Process, rootuid int, console string, createT
 		if err := dupStdio(process, rootuid); err != nil {
 			return nil, err
 		}
-		return nil, nil
+		return &tty{}, nil
 	}
 	return createStdioPipes(process, rootuid)
 }
@@ -290,30 +292,24 @@ func runProcess(container libcontainer.Container, config *specs.Process, listenF
 	if err != nil {
 		return -1, err
 	}
-
+	defer tty.Close()
 	handler := newSignalHandler(tty)
 	defer handler.Close()
-
 	if err := container.Start(process); err != nil {
-		if tty != nil {
-			tty.Close()
-		}
 		return -1, err
 	}
-
+	if err := tty.ClosePostStart(); err != nil {
+		return -1, err
+	}
 	if pidFile != "" {
 		if err := createPidFile(pidFile, process); err != nil {
 			process.Signal(syscall.SIGKILL)
 			process.Wait()
-			if tty != nil {
-				tty.Close()
-			}
 			return -1, err
 		}
 	}
 	if detach {
 		return 0, nil
 	}
-
 	return handler.forward(process)
 }
