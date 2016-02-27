@@ -146,16 +146,6 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 			}
 		}
 		return nil
-	case "devpts":
-		if err := os.MkdirAll(dest, 0755); err != nil {
-			return err
-		}
-		return mountPropagate(m, rootfs, mountLabel)
-	case "securityfs":
-		if err := os.MkdirAll(dest, 0755); err != nil {
-			return err
-		}
-		return mountPropagate(m, rootfs, mountLabel)
 	case "bind":
 		stat, err := os.Stat(m.Source)
 		if err != nil {
@@ -261,7 +251,10 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 			}
 		}
 	default:
-		return fmt.Errorf("unknown mount device %q to %q", m.Device, m.Destination)
+		if err := os.MkdirAll(dest, 0755); err != nil {
+			return err
+		}
+		return mountPropagate(m, rootfs, mountLabel)
 	}
 	return nil
 }
