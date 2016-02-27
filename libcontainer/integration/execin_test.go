@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"io"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -138,24 +140,26 @@ func TestExecInError(t *testing.T) {
 	}()
 	ok(t, err)
 
-	for i := 0; i < 42; i++ {
-		var out bytes.Buffer
-		unexistent := &libcontainer.Process{
-			Cwd:    "/",
-			Args:   []string{"unexistent"},
-			Env:    standardEnvironment,
-			Stdout: &out,
+	var out bytes.Buffer
+	unexistent := &libcontainer.Process{
+		Cwd:    "/",
+		Args:   []string{"unexistent"},
+		Env:    standardEnvironment,
+		Stdout: &out,
+		Stderr: &out,
+	}
+	err = container.Start(unexistent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ws, err := unexistent.Wait()
+	if err != nil {
+		if _, ok := err.(*exec.ExitError); !ok {
+			t.Fatal(err)
 		}
-		err = container.Start(unexistent)
-		if err == nil {
-			t.Fatal("Should be an error")
-		}
-		if !strings.Contains(err.Error(), "executable file not found") {
-			t.Fatalf("Should be error about not found executable, got %s", err)
-		}
-		if !bytes.Contains(out.Bytes(), []byte("executable file not found")) {
-			t.Fatalf("executable file not found error not delivered to stdio:\n%s", out.String())
-		}
+	}
+	if s := ws.Sys().(syscall.WaitStatus).ExitStatus(); s != 127 {
+		t.Fatalf("expected wait status of 127 but received %d", s)
 	}
 }
 
