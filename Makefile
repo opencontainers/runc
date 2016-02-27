@@ -1,8 +1,13 @@
+RUNC_IMAGE=runc_dev
 RUNC_TEST_IMAGE=runc_test
 PROJECT=github.com/opencontainers/runc
 TEST_DOCKERFILE=script/test_Dockerfile
 BUILDTAGS=seccomp
+RUNC_BUILD_PATH=/go/src/github.com/opencontainers/runc/runc
+RUNC_INSTANCE=runc_dev
 export GOPATH:=$(CURDIR)/Godeps/_workspace:$(GOPATH)
+
+.PHONY=dbuild
 
 all:
 	ln -sfn $(CURDIR) $(CURDIR)/Godeps/_workspace/src/github.com/opencontainers/runc
@@ -27,6 +32,11 @@ test: runctestimage
 localtest:
 	go test -tags "$(BUILDTAGS)" ${TESTFLAGS} -v ./...
 
+dbuild: runctestimage 
+	docker build -t $(RUNC_IMAGE) .
+	docker create --name=$(RUNC_INSTANCE) $(RUNC_IMAGE)
+	docker cp $(RUNC_INSTANCE):$(RUNC_BUILD_PATH) .
+	docker rm $(RUNC_INSTANCE)
 
 install:
 	cp runc /usr/local/bin/runc
