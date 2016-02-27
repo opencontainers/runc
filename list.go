@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"text/tabwriter"
 	"time"
 
@@ -21,15 +22,14 @@ const formatOptions = `table or json`
 // containerState represents the platform agnostic pieces relating to a
 // running container's status and state
 type containerState struct {
-	// ID is the container ID.
+	// ID is the container ID
 	ID string `json:"id"`
-
-	// InitProcessPid is the init process id in the parent namespace.
+	// InitProcessPid is the init process id in the parent namespace
 	InitProcessPid int `json:"pid"`
-
 	// Status is the current status of the container, running, paused, ...
 	Status string `json:"status"`
-
+	// Bundle is the path on the filesystem to the bundle
+	Bundle string `json:"bundle"`
 	// Created is the unix timestamp for the creation time of the container in UTC
 	Created time.Time `json:"created"`
 }
@@ -58,12 +58,13 @@ in json format:
 		switch context.String("format") {
 		case "", "table":
 			w := tabwriter.NewWriter(os.Stdout, 12, 1, 3, ' ', 0)
-			fmt.Fprint(w, "ID\tPID\tSTATUS\tCREATED\n")
+			fmt.Fprint(w, "ID\tPID\tSTATUS\tBUNDLE\tCREATED\n")
 			for _, item := range s {
-				fmt.Fprintf(w, "%s\t%d\t%s\t%s\n",
+				fmt.Fprintf(w, "%s\t%d\t%s\t%s\t%s\n",
 					item.ID,
 					item.InitProcessPid,
 					item.Status,
+					item.Bundle,
 					item.Created.Format(time.RFC3339Nano))
 			}
 			if err := w.Flush(); err != nil {
@@ -116,8 +117,22 @@ func getContainers(context *cli.Context) ([]containerState, error) {
 				ID:             state.BaseState.ID,
 				InitProcessPid: state.BaseState.InitProcessPid,
 				Status:         containerStatus.String(),
+				Bundle:         searchLabels(state.Config.Labels, "bundle"),
 				Created:        state.BaseState.Created})
 		}
 	}
 	return s, nil
+}
+
+func searchLabels(labels []string, query string) string {
+	for _, l := range labels {
+		parts := strings.SplitN(l, "=", 2)
+		if len(parts) < 2 {
+			continue
+		}
+		if parts[0] == query {
+			return parts[1]
+		}
+	}
+	return ""
 }

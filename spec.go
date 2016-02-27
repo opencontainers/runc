@@ -231,7 +231,12 @@ func loadSpec(cPath string) (spec *specs.LinuxSpec, err error) {
 }
 
 func createLibcontainerConfig(cgroupName string, spec *specs.LinuxSpec) (*configs.Config, error) {
-	cwd, err := os.Getwd()
+	// runc's cwd will always be the bundle path
+	rcwd, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+	cwd, err := filepath.Abs(rcwd)
 	if err != nil {
 		return nil, err
 	}
@@ -244,6 +249,9 @@ func createLibcontainerConfig(cgroupName string, spec *specs.LinuxSpec) (*config
 		Capabilities: spec.Linux.Capabilities,
 		Readonlyfs:   spec.Root.Readonly,
 		Hostname:     spec.Hostname,
+		Labels: []string{
+			"bundle=" + cwd,
+		},
 	}
 
 	exists := false
