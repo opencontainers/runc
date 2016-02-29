@@ -112,7 +112,7 @@ The runtime may supply them however it likes (with [mknod][mknod.2], by bind mou
 
 The following parameters can be specified:
 
-* **`type`** *(char, required)* - type of device: `c`, `b`, `u` or `p`.
+* **`type`** *(string, required)* - type of device: `c`, `b`, `u` or `p`.
   More info in [mknod(1)][mknod.1].
 * **`path`** *(string, required)* - full path to device inside container.
 * **`major, minor`** *(int64, required unless **`type`** is `p`)* - [major, minor numbers][devices] for the device.
@@ -130,7 +130,7 @@ The following parameters can be specified:
             "type": "c",
             "major": 10,
             "minor": 229,
-            "fileMode": 0666,
+            "fileMode": 438,
             "uid": 0,
             "gid": 0
         },
@@ -139,7 +139,7 @@ The following parameters can be specified:
             "type": "b",
             "major": 8,
             "minor": 0,
-            "fileMode": 0660,
+            "fileMode": 432,
             "uid": 0,
             "gid": 0
         }
@@ -194,7 +194,7 @@ The runtime MUST apply entries in the listed order.
 The following parameters can be specified:
 
 * **`allow`** *(boolean, required)* - whether the entry is allowed or denied.
-* **`type`** *(char, optional)* - type of device: `a` (all), `c` (char), or `b` (block).
+* **`type`** *(string, optional)* - type of device: `a` (all), `c` (char), or `b` (block).
   `null` or unset values mean "all", mapping to `a`.
 * **`major, minor`** *(int64, optional)* - [major, minor numbers][devices] for the device.
   `null` or unset values mean "all", mapping to [`*` in the filesystem API][cgroup-v1-devices].

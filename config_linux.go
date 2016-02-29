@@ -238,7 +238,7 @@ type Device struct {
 	// Path to the device.
 	Path string `json:"path"`
 	// Device type, block, char, etc.
-	Type rune `json:"type"`
+	Type string `json:"type"`
 	// Major is the device's major number.
 	Major int64 `json:"major"`
 	// Minor is the device's minor number.
@@ -256,7 +256,7 @@ type DeviceCgroup struct {
 	// Allow or deny
 	Allow bool `json:"allow"`
 	// Device type, block, char, etc.
-	Type *rune `json:"type,omitempty"`
+	Type *string `json:"type,omitempty"`
 	// Major is the device's major number.
 	Major *int64 `json:"major,omitempty"`
 	// Minor is the device's minor number.
