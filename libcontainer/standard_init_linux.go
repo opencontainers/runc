@@ -55,19 +55,12 @@ func (l *linuxStandardInit) Init() error {
 		return err
 	}
 
-	// join any namespaces via a path to the namespace fd if provided
-	if err := joinExistingNamespaces(l.config.Config.Namespaces); err != nil {
-		return err
-	}
 	var console *linuxConsole
 	if l.config.Console != "" {
 		console = newConsoleFromPath(l.config.Console)
 		if err := console.dupStdio(); err != nil {
 			return err
 		}
-	}
-	if _, err := syscall.Setsid(); err != nil {
-		return err
 	}
 	if console != nil {
 		if err := system.Setctty(); err != nil {

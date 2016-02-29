@@ -593,7 +593,10 @@ func setupUserNamespace(spec *specs.LinuxSpec, config *configs.Config) error {
 	if len(spec.Linux.UIDMappings) == 0 {
 		return nil
 	}
-	config.Namespaces.Add(configs.NEWUSER, "")
+	// do not override the specified user namespace path
+	if config.Namespaces.PathOf(configs.NEWUSER) == "" {
+		config.Namespaces.Add(configs.NEWUSER, "")
+	}
 	create := func(m specs.IDMapping) configs.IDMap {
 		return configs.IDMap{
 			HostID:      int(m.HostID),
