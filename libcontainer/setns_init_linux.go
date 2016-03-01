@@ -31,9 +31,6 @@ func (l *linuxSetnsInit) Init() error {
 	if err := setupRlimits(l.config.Config); err != nil {
 		return err
 	}
-	if err := setOomScoreAdj(l.config.Config.OomScoreAdj); err != nil {
-		return err
-	}
 	if l.config.NoNewPrivileges {
 		if err := system.Prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0); err != nil {
 			return err

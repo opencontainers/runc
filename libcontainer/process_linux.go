@@ -88,6 +88,10 @@ func (p *setnsProcess) start() (err error) {
 	if err := utils.WriteJSON(p.parentPipe, p.config); err != nil {
 		return newSystemError(err)
 	}
+	// set oom_score_adj
+	if err := setOomScoreAdj(p.config.Config.OomScoreAdj, p.pid()); err != nil {
+		return newSystemError(err)
+	}
 
 	if err := syscall.Shutdown(int(p.parentPipe.Fd()), syscall.SHUT_WR); err != nil {
 		return newSystemError(err)
@@ -274,6 +278,10 @@ loop:
 		switch procSync.Type {
 		case procReady:
 			if err := p.manager.Set(p.config.Config); err != nil {
+				return newSystemError(err)
+			}
+			// set oom_score_adj
+			if err := setOomScoreAdj(p.config.Config.OomScoreAdj, p.pid()); err != nil {
 				return newSystemError(err)
 			}
 			// call prestart hooks
