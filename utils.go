@@ -122,6 +122,23 @@ var allowedDevices = []*configs.Device{
 	},
 }
 
+var (
+	maskedPaths = []string{
+		"/proc/kcore",
+		"/proc/latency_stats",
+		"/proc/timer_stats",
+		"/proc/sched_debug",
+	}
+	readonlyPaths = []string{
+		"/proc/asound",
+		"/proc/bus",
+		"/proc/fs",
+		"/proc/irq",
+		"/proc/sys",
+		"/proc/sysrq-trigger",
+	}
+)
+
 var container libcontainer.Container
 
 func containerPreload(context *cli.Context) error {
