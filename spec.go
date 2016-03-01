@@ -94,7 +94,7 @@ var specCommand = cli.Command{
 						Destination: "/sys",
 						Type:        "sysfs",
 						Source:      "sysfs",
-						Options:     []string{"nosuid", "noexec", "nodev"},
+						Options:     []string{"nosuid", "noexec", "nodev", "ro"},
 					},
 					{
 						Destination: "/sys/fs/cgroup",
@@ -573,14 +573,6 @@ func createDevices(spec *specs.LinuxSpec, config *configs.Config) error {
 		config.Devices = append(config.Devices, device)
 	}
 	return nil
-}
-
-func setReadonly(config *configs.Config) {
-	for _, m := range config.Mounts {
-		if m.Device == "sysfs" {
-			m.Flags |= syscall.MS_RDONLY
-		}
-	}
 }
 
 func setupUserNamespace(spec *specs.LinuxSpec, config *configs.Config) error {
