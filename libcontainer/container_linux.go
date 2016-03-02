@@ -1064,6 +1064,9 @@ func (c *linuxContainer) currentState() (*State, error) {
 			state.NamespacePaths[ns.Type] = ns.GetPath(pid)
 		}
 		for _, nsType := range configs.NamespaceTypes() {
+			if !configs.IsNamespaceSupported(nsType) {
+				continue
+			}
 			if _, ok := state.NamespacePaths[nsType]; !ok {
 				ns := configs.Namespace{Type: nsType}
 				state.NamespacePaths[ns.Type] = ns.GetPath(pid)
