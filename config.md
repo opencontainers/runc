@@ -126,8 +126,8 @@ For Linux-based systems the user structure has the following fields:
     "args": [
         "sh"
     ],
-   "apparmorProfile": "acme_secure_profile",
-   "selinuxLabel": "system_u:system_r:svirt_lxc_net_t:s0:c124,c675",
+    "apparmorProfile": "acme_secure_profile",
+    "selinuxLabel": "system_u:system_r:svirt_lxc_net_t:s0:c124,c675",
     "noNewPrivileges": true,
     "capabilities": [
         "CAP_AUDIT_WRITE",
