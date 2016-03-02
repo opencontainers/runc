@@ -3,19 +3,6 @@
 The Linux container specification uses various kernel features like namespaces, cgroups, capabilities, LSM, and file system jails to fulfill the spec.
 Additional information is needed for Linux over the [default spec configuration](config.md) in order to configure these various kernel features.
 
-## Capabilities
-
-Capabilities is an array that specifies Linux capabilities that can be provided to the process inside the container.
-Valid values are the strings for capabilities defined in [the man page](http://man7.org/linux/man-pages/man7/capabilities.7.html)
-
-```json
-   "capabilities": [
-        "CAP_AUDIT_WRITE",
-        "CAP_KILL",
-        "CAP_NET_BIND_SERVICE"
-    ]
-```
-
 ## Default File Systems
 
 The Linux ABI includes both syscalls and several special file paths.
@@ -486,28 +473,6 @@ The kernel enforces the `soft` limit for a resource while the `hard` limit acts 
    ]
 ```
 
-## SELinux process label
-
-SELinux process label specifies the label with which the processes in a container are run.
-For more information about SELinux, see  [Selinux documentation](http://selinuxproject.org/page/Main_Page)
-
-###### Example
-
-```json
-   "selinuxProcessLabel": "system_u:system_r:svirt_lxc_net_t:s0:c124,c675"
-```
-
-## Apparmor profile
-
-Apparmor profile specifies the name of the apparmor profile that will be used for the container.
-For more information about Apparmor, see [Apparmor documentation](https://wiki.ubuntu.com/AppArmor)
-
-###### Example
-
-```json
-   "apparmorProfile": "acme_secure_profile"
-```
-
 ## seccomp
 
 Seccomp provides application sandboxing mechanism in the Linux kernel.
@@ -572,17 +537,6 @@ Its value is either slave, private, or shared.
 
 ```json
     "rootfsPropagation": "slave",
-```
-
-## No new privileges
-
-Setting `noNewPrivileges` to true prevents the processes in the container from gaining additional privileges.
-[The kernel doc](https://www.kernel.org/doc/Documentation/prctl/no_new_privs.txt) has more information on how this is achieved using a prctl system call.
-
-###### Example
-
-```json
-    "noNewPrivileges": true,
 ```
 
 [cgroup-v1]: https://www.kernel.org/doc/Documentation/cgroup-v1/cgroups.txt
