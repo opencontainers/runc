@@ -192,6 +192,10 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 			}
 		}
 	case "cgroup":
+		// cgroup remount fails, when usernamespace is enabled as ro. Clear the flag.
+		if system.RunningInUserNS() {
+			m.Flags &= ^syscall.MS_RDONLY
+		}
 		binds, err := getCgroupMounts(m)
 		if err != nil {
 			return err
