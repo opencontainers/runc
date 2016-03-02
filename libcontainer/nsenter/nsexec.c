@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <linux/limits.h>
+#include <sys/socket.h>
 #include <linux/netlink.h>
 #include <sched.h>
 #include <setjmp.h>
@@ -12,7 +13,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
-#include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
 
