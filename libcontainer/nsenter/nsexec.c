@@ -17,10 +17,7 @@
 #include <unistd.h>
 
 #include <bits/sockaddr.h>
-#include <linux/netlink.h>
 #include <linux/types.h>
-#include <stdint.h>
-#include <sys/socket.h>
 
 // All arguments should be above the stack because it grows down
 struct clone_arg {
