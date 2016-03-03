@@ -91,10 +91,10 @@ func (l *linuxStandardInit) Init() error {
 			return err
 		}
 	}
-	if err := apparmor.ApplyProfile(l.config.Config.AppArmorProfile); err != nil {
+	if err := apparmor.ApplyProfile(l.config.AppArmorProfile); err != nil {
 		return err
 	}
-	if err := label.SetProcessLabel(l.config.Config.ProcessLabel); err != nil {
+	if err := label.SetProcessLabel(l.config.ProcessLabel); err != nil {
 		return err
 	}
 
@@ -117,7 +117,7 @@ func (l *linuxStandardInit) Init() error {
 	if err != nil {
 		return err
 	}
-	if l.config.Config.NoNewPrivileges {
+	if l.config.NoNewPrivileges {
 		if err := system.Prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0); err != nil {
 			return err
 		}

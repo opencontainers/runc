@@ -48,7 +48,7 @@ following will output a list of processes running in the container:
 			Usage: "UID (format: <uid>[:<gid>])",
 		},
 		cli.StringFlag{
-			Name:  "process,p",
+			Name:  "process, p",
 			Usage: "path to the process.json",
 		},
 		cli.BoolFlag{
@@ -59,6 +59,23 @@ following will output a list of processes running in the container:
 			Name:  "pid-file",
 			Value: "",
 			Usage: "specify the file to write the process id to",
+		},
+		cli.StringFlag{
+			Name:  "process-label",
+			Usage: "set the asm process label for the process commonly used with selinux",
+		},
+		cli.StringFlag{
+			Name:  "apparmor",
+			Usage: "set the apparmor profile for the process",
+		},
+		cli.BoolFlag{
+			Name:  "no-new-privs",
+			Usage: "set the no new privileges value for the process",
+		},
+		cli.StringSliceFlag{
+			Name:  "cap, c",
+			Value: &cli.StringSlice{},
+			Usage: "add a capability to the bounding set for the process",
 		},
 	},
 	Action: func(context *cli.Context) {
@@ -118,6 +135,15 @@ func getProcess(context *cli.Context, bundle string) (*specs.Process, error) {
 	if context.String("cwd") != "" {
 		p.Cwd = context.String("cwd")
 	}
+	if ap := context.String("apparmor"); ap != "" {
+		p.ApparmorProfile = ap
+	}
+	if l := context.String("process-label"); l != "" {
+		p.SelinuxLabel = l
+	}
+	if caps := context.StringSlice("cap"); len(caps) > 0 {
+		p.Capabilities = caps
+	}
 	// append the passed env variables
 	for _, e := range context.StringSlice("env") {
 		p.Env = append(p.Env, e)
@@ -125,6 +151,9 @@ func getProcess(context *cli.Context, bundle string) (*specs.Process, error) {
 	// set the tty
 	if context.IsSet("tty") {
 		p.Terminal = context.Bool("tty")
+	}
+	if context.IsSet("no-new-privs") {
+		p.NoNewPrivileges = context.Bool("no-new-privs")
 	}
 	// override the user, if passed
 	if context.String("user") != "" {

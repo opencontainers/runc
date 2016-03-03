@@ -319,7 +319,7 @@ func (c *linuxContainer) newSetnsProcess(p *Process, cmd *exec.Cmd, parentPipe, 
 }
 
 func (c *linuxContainer) newInitConfig(process *Process) *initConfig {
-	return &initConfig{
+	cfg := &initConfig{
 		Config:           c.config,
 		Args:             process.Args,
 		Env:              process.Env,
@@ -329,7 +329,20 @@ func (c *linuxContainer) newInitConfig(process *Process) *initConfig {
 		Capabilities:     process.Capabilities,
 		PassedFilesCount: len(process.ExtraFiles),
 		ContainerId:      c.ID(),
+		NoNewPrivileges:  c.config.NoNewPrivileges,
+		AppArmorProfile:  c.config.AppArmorProfile,
+		ProcessLabel:     c.config.ProcessLabel,
 	}
+	if process.NoNewPrivileges != nil {
+		cfg.NoNewPrivileges = *process.NoNewPrivileges
+	}
+	if process.AppArmorProfile != "" {
+		cfg.AppArmorProfile = process.AppArmorProfile
+	}
+	if process.Label != "" {
+		cfg.ProcessLabel = process.Label
+	}
+	return cfg
 }
 
 func newPipe() (parent *os.File, child *os.File, err error) {

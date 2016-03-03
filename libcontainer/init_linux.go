@@ -48,6 +48,9 @@ type initConfig struct {
 	Env              []string        `json:"env"`
 	Cwd              string          `json:"cwd"`
 	Capabilities     []string        `json:"capabilities"`
+	ProcessLabel     string          `json:"process_label"`
+	AppArmorProfile  string          `json:"apparmor_profile"`
+	NoNewPrivileges  bool            `json:"no_new_privileges"`
 	User             string          `json:"user"`
 	Config           *configs.Config `json:"config"`
 	Console          string          `json:"console"`

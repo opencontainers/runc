@@ -245,10 +245,9 @@ func createLibcontainerConfig(cgroupName string, spec *specs.LinuxSpec) (*config
 		rootfsPath = filepath.Join(cwd, rootfsPath)
 	}
 	config := &configs.Config{
-		Rootfs:       rootfsPath,
-		Capabilities: spec.Process.Capabilities,
-		Readonlyfs:   spec.Root.Readonly,
-		Hostname:     spec.Hostname,
+		Rootfs:     rootfsPath,
+		Readonlyfs: spec.Root.Readonly,
+		Hostname:   spec.Hostname,
 		Labels: []string{
 			"bundle=" + cwd,
 		},
@@ -303,9 +302,6 @@ func createLibcontainerConfig(cgroupName string, spec *specs.LinuxSpec) (*config
 	}
 	config.Seccomp = seccomp
 	config.Sysctl = spec.Linux.Sysctl
-	config.ProcessLabel = spec.Process.SelinuxLabel
-	config.AppArmorProfile = spec.Process.ApparmorProfile
-	config.NoNewPrivileges = spec.Process.NoNewPrivileges
 	if oomScoreAdj := spec.Linux.Resources.OOMScoreAdj; oomScoreAdj != nil {
 		config.OomScoreAdj = *oomScoreAdj
 	}
