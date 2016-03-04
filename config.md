@@ -231,4 +231,17 @@ If a hook returns a non-zero exit code, then an error is logged and the remainin
 `args` and `env` are optional.
 The semantics are the same as `Path`, `Args` and `Env` in [golang Cmd](https://golang.org/pkg/os/exec/#Cmd).
 
+## Annotations
+
+Annotations are optional arbitrary non-identifying metadata that can be attached to containers.
+This information may be large, may be structured or unstructured.
+Annotations are key-value maps.
+
+```json
+"annotations": {
+	"key1" : "value1",
+	"key2" : "value2"
+}
+```
+
 [uts-namespace]: http://man7.org/linux/man-pages/man7/namespaces.7.html

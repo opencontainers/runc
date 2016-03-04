@@ -18,6 +18,8 @@ type Spec struct {
 	Mounts []Mount `json:"mounts"`
 	// Hooks are the commands run at various lifecycle events of the container.
 	Hooks Hooks `json:"hooks"`
+	// Annotations is an unstructured key value map that may be set by external tools to store and retrieve arbitrary metadata.
+	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
 // Process contains information to start a specific application inside the container.
