@@ -76,9 +76,7 @@ func (l *linuxStandardInit) Init() error {
 	if err := setupRlimits(l.config.Config); err != nil {
 		return err
 	}
-	if err := setOomScoreAdj(l.config.Config.OomScoreAdj); err != nil {
-		return err
-	}
+
 	label.Init()
 	// InitializeMountNamespace() can be executed only for a new mount namespace
 	if l.config.Config.Namespaces.Contains(configs.NEWNS) {

@@ -325,9 +325,10 @@ func setupRlimits(config *configs.Config) error {
 	return nil
 }
 
-func setOomScoreAdj(oomScoreAdj int) error {
-	path := "/proc/self/oom_score_adj"
-	return ioutil.WriteFile(path, []byte(strconv.Itoa(oomScoreAdj)), 0700)
+func setOomScoreAdj(oomScoreAdj int, pid int) error {
+	path := fmt.Sprintf("/proc/%d/oom_score_adj", pid)
+
+	return ioutil.WriteFile(path, []byte(strconv.Itoa(oomScoreAdj)), 0600)
 }
 
 // killCgroupProcesses freezes then iterates over all the processes inside the

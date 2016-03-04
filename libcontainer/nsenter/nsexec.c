@@ -368,6 +368,16 @@ static void process_nl_attributes(int pipenum, char *data, int data_size)
 			exit(1);
 		}
 
+		if (setuid(0) == -1) {
+			pr_perror("setuid failed");
+			exit(1);
+		}
+
+		if (setgid(0) == -1) {
+			pr_perror("setgid failed");
+			exit(1);
+		}
+
 		if (consolefd != -1) {
 			if (ioctl(consolefd, TIOCSCTTY, 0) == -1) {
 				pr_perror("ioctl TIOCSCTTY failed");
