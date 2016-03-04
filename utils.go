@@ -219,8 +219,12 @@ func newProcess(p specs.Process) *libcontainer.Process {
 		Args: p.Args,
 		Env:  p.Env,
 		// TODO: fix libcontainer's API to better support uid/gid in a typesafe way.
-		User: fmt.Sprintf("%d:%d", p.User.UID, p.User.GID),
-		Cwd:  p.Cwd,
+		User:            fmt.Sprintf("%d:%d", p.User.UID, p.User.GID),
+		Cwd:             p.Cwd,
+		Capabilities:    p.Capabilities,
+		Label:           p.SelinuxLabel,
+		NoNewPrivileges: &p.NoNewPrivileges,
+		AppArmorProfile: p.ApparmorProfile,
 	}
 }
 

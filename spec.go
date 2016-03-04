@@ -56,7 +56,13 @@ var specCommand = cli.Command{
 						"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
 						"TERM=xterm",
 					},
-					Cwd: "/",
+					Cwd:             "/",
+					NoNewPrivileges: true,
+					Capabilities: []string{
+						"CAP_AUDIT_WRITE",
+						"CAP_KILL",
+						"CAP_NET_BIND_SERVICE",
+					},
 				},
 				Hostname: "shell",
 				Mounts: []specs.Mount{
@@ -105,11 +111,6 @@ var specCommand = cli.Command{
 				},
 			},
 			Linux: specs.Linux{
-				Capabilities: []string{
-					"CAP_AUDIT_WRITE",
-					"CAP_KILL",
-					"CAP_NET_BIND_SERVICE",
-				},
 				Resources: &specs.Resources{
 					Devices: []specs.DeviceCgroup{
 						{
@@ -142,7 +143,6 @@ var specCommand = cli.Command{
 						Soft: uint64(1024),
 					},
 				},
-				NoNewPrivileges: true,
 			},
 		}
 
@@ -245,10 +245,9 @@ func createLibcontainerConfig(cgroupName string, spec *specs.LinuxSpec) (*config
 		rootfsPath = filepath.Join(cwd, rootfsPath)
 	}
 	config := &configs.Config{
-		Rootfs:       rootfsPath,
-		Capabilities: spec.Linux.Capabilities,
-		Readonlyfs:   spec.Root.Readonly,
-		Hostname:     spec.Hostname,
+		Rootfs:     rootfsPath,
+		Readonlyfs: spec.Root.Readonly,
+		Hostname:   spec.Hostname,
 		Labels: []string{
 			"bundle=" + cwd,
 		},
@@ -303,9 +302,6 @@ func createLibcontainerConfig(cgroupName string, spec *specs.LinuxSpec) (*config
 	}
 	config.Seccomp = seccomp
 	config.Sysctl = spec.Linux.Sysctl
-	config.ProcessLabel = spec.Linux.SelinuxProcessLabel
-	config.AppArmorProfile = spec.Linux.ApparmorProfile
-	config.NoNewPrivileges = spec.Linux.NoNewPrivileges
 	if oomScoreAdj := spec.Linux.Resources.OOMScoreAdj; oomScoreAdj != nil {
 		config.OomScoreAdj = *oomScoreAdj
 	}
@@ -362,7 +358,7 @@ func createCgroupConfig(name string, spec *specs.LinuxSpec) (*configs.Cgroup, er
 	}
 	for i, d := range spec.Linux.Resources.Devices {
 		var (
-			t     = 'a'
+			t     = "a"
 			major = int64(-1)
 			minor = int64(-1)
 		)
@@ -378,8 +374,12 @@ func createCgroupConfig(name string, spec *specs.LinuxSpec) (*configs.Cgroup, er
 		if d.Access == nil || *d.Access == "" {
 			return nil, fmt.Errorf("device access at %d field canot be empty", i)
 		}
+		dt, err := stringToDeviceRune(t)
+		if err != nil {
+			return nil, err
+		}
 		dd := &configs.Device{
-			Type:        t,
+			Type:        dt,
 			Major:       major,
 			Minor:       minor,
 			Permissions: *d.Access,
@@ -494,6 +494,19 @@ func createCgroupConfig(name string, spec *specs.LinuxSpec) (*configs.Cgroup, er
 	return c, nil
 }
 
+func stringToDeviceRune(s string) (rune, error) {
+	switch s {
+	case "a":
+		return 'a', nil
+	case "b":
+		return 'b', nil
+	case "c":
+		return 'c', nil
+	default:
+		return 0, fmt.Errorf("invalid device type %q", s)
+	}
+}
+
 func createDevices(spec *specs.LinuxSpec, config *configs.Config) error {
 	// add whitelisted devices
 	config.Devices = []*configs.Device{
@@ -561,8 +574,12 @@ func createDevices(spec *specs.LinuxSpec, config *configs.Config) error {
 		if d.GID != nil {
 			gid = *d.GID
 		}
+		dt, err := stringToDeviceRune(d.Type)
+		if err != nil {
+			return err
+		}
 		device := &configs.Device{
-			Type:     d.Type,
+			Type:     dt,
 			Path:     d.Path,
 			Major:    d.Major,
 			Minor:    d.Minor,
