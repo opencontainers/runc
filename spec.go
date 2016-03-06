@@ -220,12 +220,12 @@ func loadSpec(cPath string) (spec *specs.LinuxSpec, err error) {
 		if os.IsNotExist(err) {
 			return nil, fmt.Errorf("JSON specification file %s not found", cPath)
 		}
-		return spec, err
+		return nil, err
 	}
 	defer cf.Close()
 
 	if err = json.NewDecoder(cf).Decode(&spec); err != nil {
-		return spec, err
+		return nil, err
 	}
 	return spec, validateSpec(spec)
 }
