@@ -34,7 +34,7 @@ type Linux struct {
 	// Devices are a list of device nodes that are created for the container
 	Devices []Device `json:"devices"`
 	// Seccomp specifies the seccomp security settings for the container.
-	Seccomp Seccomp `json:"seccomp"`
+	Seccomp *Seccomp `json:"seccomp,omitempty"`
 	// RootfsPropagation is the rootfs mount propagation mode for the container.
 	RootfsPropagation string `json:"rootfsPropagation,omitempty"`
 }
