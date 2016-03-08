@@ -2,9 +2,6 @@ package specs
 
 import "os"
 
-// LinuxStateDirectory holds the container's state information
-const LinuxStateDirectory = "/run/opencontainer/containers"
-
 // LinuxSpec is the full specification for linux containers.
 type LinuxSpec struct {
 	Spec
