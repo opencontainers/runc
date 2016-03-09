@@ -154,5 +154,4 @@ Read more on [How to Write a Git Commit Message](http://chris.beams.io/posts/git
   * If there was important/useful/essential conversation or information, copy or include a reference
 8. When possible, one keyword to scope the change in the subject (i.e. "README: ...", "runtime: ...")
 
-[BlueJeans]: https://bluejeans.com/1771332256/
 [UberConference]: https://www.uberconference.com/ssaul
