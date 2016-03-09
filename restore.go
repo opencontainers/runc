@@ -3,7 +3,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"syscall"
 
@@ -124,7 +123,7 @@ func restoreContainer(context *cli.Context, spec *specs.LinuxSpec, config *confi
 		logrus.Error(err)
 	}
 	if status == libcontainer.Running {
-		fatal(fmt.Errorf("Container with id %s already running", id))
+		fatalf("Container with id %s already running", id)
 	}
 
 	setManageCgroupsMode(context, options)

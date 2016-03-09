@@ -6,7 +6,6 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 	"github.com/coreos/go-systemd/activation"
 	"github.com/opencontainers/runc/libcontainer"
@@ -63,12 +62,12 @@ is a directory with a specification file and a root filesystem.`,
 		}
 
 		if os.Geteuid() != 0 {
-			logrus.Fatal("runc should be run as root")
+			fatalf("runc should be run as root")
 		}
 
 		status, err := startContainer(context, spec)
 		if err != nil {
-			logrus.Fatalf("Container start failed: %v", err)
+			fatalf("Container start failed: %v", err)
 		}
 		// exit with the container's exit status so any external supervisor is
 		// notified of the exit with the correct exit status.
@@ -76,8 +75,12 @@ is a directory with a specification file and a root filesystem.`,
 	},
 }
 
-func init() {
-	if len(os.Args) > 1 && os.Args[1] == "init" {
+var initCommand = cli.Command{
+	Name: "init",
+	Usage: `init is used to initialize the containers namespaces and launch the users process.
+    This command should not be called outside of runc.
+    `,
+	Action: func(context *cli.Context) {
 		runtime.GOMAXPROCS(1)
 		runtime.LockOSThread()
 		factory, _ := libcontainer.New("")
@@ -85,7 +88,7 @@ func init() {
 			fatal(err)
 		}
 		panic("libcontainer: container init failed to exec")
-	}
+	},
 }
 
 func startContainer(context *cli.Context, spec *specs.LinuxSpec) (int, error) {
