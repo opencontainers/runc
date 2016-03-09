@@ -282,7 +282,7 @@ func createPidFile(path string, process *libcontainer.Process) error {
 	if err != nil {
 		return err
 	}
-	f, err := os.Create(path)
+	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
 	if err != nil {
 		return err
 	}
