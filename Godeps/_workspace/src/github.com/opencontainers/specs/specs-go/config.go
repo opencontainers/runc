@@ -2,24 +2,122 @@ package specs
 
 import "os"
 
-// LinuxStateDirectory holds the container's state information
-const LinuxStateDirectory = "/run/opencontainer/containers"
+// Spec is the base configuration for the container.  It specifies platform
+// independent configuration. This information must be included when the
+// bundle is packaged for distribution.
+type Spec struct {
+	// Version is the version of the specification that is supported.
+	Version string `json:"ociVersion"`
+	// Platform is the host information for OS and Arch.
+	Platform Platform `json:"platform"`
+	// Process is the container's main process.
+	Process Process `json:"process"`
+	// Root is the root information for the container's filesystem.
+	Root Root `json:"root"`
+	// Hostname is the container's host name.
+	Hostname string `json:"hostname,omitempty"`
+	// Mounts profile configuration for adding mounts to the container's filesystem.
+	Mounts []Mount `json:"mounts"`
+	// Hooks are the commands run at various lifecycle events of the container.
+	Hooks Hooks `json:"hooks"`
+	// Annotations is an unstructured key value map that may be set by external tools to store and retrieve arbitrary metadata.
+	Annotations map[string]string `json:"annotations,omitempty"`
 
-// LinuxSpec is the full specification for linux containers.
-type LinuxSpec struct {
-	Spec
-	// Linux is platform specific configuration for linux based containers.
-	Linux Linux `json:"linux"`
+	// Linux is platform specific configuration for Linux based containers.
+	Linux Linux `json:"linux" platform:"linux"`
 }
 
-// Linux contains platform specific configuration for linux based containers.
-type Linux struct {
-	// UIDMapping specifies user mappings for supporting user namespaces on linux.
-	UIDMappings []IDMapping `json:"uidMappings,omitempty"`
-	// GIDMapping specifies group mappings for supporting user namespaces on linux.
-	GIDMappings []IDMapping `json:"gidMappings,omitempty"`
-	// Rlimits specifies rlimit options to apply to the container's process.
+// Process contains information to start a specific application inside the container.
+type Process struct {
+	// Terminal creates an interactive terminal for the container.
+	Terminal bool `json:"terminal"`
+	// User specifies user information for the process.
+	User User `json:"user"`
+	// Args specifies the binary and arguments for the application to execute.
+	Args []string `json:"args"`
+	// Env populates the process environment for the process.
+	Env []string `json:"env,omitempty"`
+	// Cwd is the current working directory for the process and must be
+	// relative to the container's root.
+	Cwd string `json:"cwd"`
+	// Capabilities are Linux capabilities that are kept for the container.
+	Capabilities []string `json:"capabilities,omitempty" platform:"linux"`
+	// Rlimits specifies rlimit options to apply to the process.
 	Rlimits []Rlimit `json:"rlimits,omitempty"`
+	// NoNewPrivileges controls whether additional privileges could be gained by processes in the container.
+	NoNewPrivileges bool `json:"noNewPrivileges,omitempty"`
+
+	// ApparmorProfile specified the apparmor profile for the container. (this field is platform dependent)
+	ApparmorProfile string `json:"apparmorProfile,omitempty" platform:"linux"`
+	// SelinuxProcessLabel specifies the selinux context that the container process is run as. (this field is platform dependent)
+	SelinuxLabel string `json:"selinuxLabel,omitempty" platform:"linux"`
+}
+
+// User specifies Linux specific user and group information for the container's
+// main process.
+type User struct {
+	// UID is the user id. (this field is platform dependent)
+	UID uint32 `json:"uid,omitempty" platform:"linux"`
+	// GID is the group id. (this field is platform dependent)
+	GID uint32 `json:"gid,omitempty" platform:"linux"`
+	// AdditionalGids are additional group ids set for the container's process. (this field is platform dependent)
+	AdditionalGids []uint32 `json:"additionalGids,omitempty" platform:"linux"`
+}
+
+// Root contains information about the container's root filesystem on the host.
+type Root struct {
+	// Path is the absolute path to the container's root filesystem.
+	Path string `json:"path"`
+	// Readonly makes the root filesystem for the container readonly before the process is executed.
+	Readonly bool `json:"readonly"`
+}
+
+// Platform specifies OS and arch information for the host system that the container
+// is created for.
+type Platform struct {
+	// OS is the operating system.
+	OS string `json:"os"`
+	// Arch is the architecture
+	Arch string `json:"arch"`
+}
+
+// Mount specifies a mount for a container.
+type Mount struct {
+	// Destination is the path where the mount will be placed relative to the container's root.  The path and child directories MUST exist, a runtime MUST NOT create directories automatically to a mount point.
+	Destination string `json:"destination"`
+	// Type specifies the mount kind.
+	Type string `json:"type"`
+	// Source specifies the source path of the mount.  In the case of bind mounts on
+	// Linux based systems this would be the file on the host.
+	Source string `json:"source"`
+	// Options are fstab style mount options.
+	Options []string `json:"options,omitempty"`
+}
+
+// Hook specifies a command that is run at a particular event in the lifecycle of a container
+type Hook struct {
+	Path string   `json:"path"`
+	Args []string `json:"args,omitempty"`
+	Env  []string `json:"env,omitempty"`
+}
+
+// Hooks for container setup and teardown
+type Hooks struct {
+	// Prestart is a list of hooks to be run before the container process is executed.
+	// On Linux, they are run after the container namespaces are created.
+	Prestart []Hook `json:"prestart,omitempty"`
+	// Poststart is a list of hooks to be run after the container process is started.
+	Poststart []Hook `json:"poststart,omitempty"`
+	// Poststop is a list of hooks to be run after the container process exits.
+	Poststop []Hook `json:"poststop,omitempty"`
+}
+
+// Linux contains platform specific configuration for Linux based containers.
+type Linux struct {
+	// UIDMapping specifies user mappings for supporting user namespaces on Linux.
+	UIDMappings []IDMapping `json:"uidMappings,omitempty"`
+	// GIDMapping specifies group mappings for supporting user namespaces on Linux.
+	GIDMappings []IDMapping `json:"gidMappings,omitempty"`
 	// Sysctl are a set of key value pairs that are set for the container on start
 	Sysctl map[string]string `json:"sysctl,omitempty"`
 	// Resources contain cgroup information for handling resource constraints
@@ -34,23 +132,12 @@ type Linux struct {
 	// Devices are a list of device nodes that are created for the container
 	Devices []Device `json:"devices"`
 	// Seccomp specifies the seccomp security settings for the container.
-	Seccomp Seccomp `json:"seccomp"`
+	Seccomp *Seccomp `json:"seccomp,omitempty"`
 	// RootfsPropagation is the rootfs mount propagation mode for the container.
 	RootfsPropagation string `json:"rootfsPropagation,omitempty"`
 }
 
-// User specifies linux specific user and group information for the container's
-// main process.
-type User struct {
-	// UID is the user id.
-	UID uint32 `json:"uid"`
-	// GID is the group id.
-	GID uint32 `json:"gid"`
-	// AdditionalGids are additional group ids set for the container's process.
-	AdditionalGids []uint32 `json:"additionalGids,omitempty"`
-}
-
-// Namespace is the configuration for a linux namespace
+// Namespace is the configuration for a Linux namespace
 type Namespace struct {
 	// Type is the type of Linux namespace
 	Type NamespaceType `json:"type"`
@@ -59,7 +146,7 @@ type Namespace struct {
 	Path string `json:"path,omitempty"`
 }
 
-// NamespaceType is one of the linux namespaces
+// NamespaceType is one of the Linux namespaces
 type NamespaceType string
 
 const (

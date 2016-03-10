@@ -90,10 +90,13 @@ See links for details about [mountvol](http://ss64.com/nt/mountvol.html) and [Se
 * **`env`** (array of strings, optional) contains a list of variables that will be set in the process's environment prior to execution. Elements in the array are specified as Strings in the form "KEY=value". The left hand side must consist solely of letters, digits, and underscores `_` as outlined in [IEEE Std 1003.1-2001](http://pubs.opengroup.org/onlinepubs/009695399/basedefs/xbd_chap08.html).
 * **`args`** (string, required) executable to launch and any flags as an array. The executable is the first element and must be available at the given path inside of the rootfs. If the executable path is not an absolute path then the search $PATH is interpreted to find the executable.
 
-For Linux-based systemd the process structure supports the following process specific fields:
+For Linux-based systems the process structure supports the following process specific fields:
 
 * **`capabilities`** (array of strings, optional) capabilities is an array that specifies Linux capabilities that can be provided to the process inside the container.
 Valid values are the strings for capabilities defined in [the man page](http://man7.org/linux/man-pages/man7/capabilities.7.html)
+* **`rlimits`** (array of rlimits, optional) rlimits is an array of rlimits that allows setting resource limits for a process inside the container.
+The kernel enforces the `soft` limit for a resource while the `hard` limit acts as a ceiling for that value that could be set by an unprivileged process.
+Valid values for the 'type' field are the resources defined in [the man page](http://man7.org/linux/man-pages/man2/setrlimit.2.html).
 * **`apparmorProfile`** (string, optional) apparmor profile specifies the name of the apparmor profile that will be used for the container.
 For more information about Apparmor, see [Apparmor documentation](https://wiki.ubuntu.com/AppArmor)
 * **`selinuxLabel`** (string, optional) SELinux process label specifies the label with which the processes in a container are run.
@@ -133,6 +136,13 @@ For Linux-based systems the user structure has the following fields:
         "CAP_AUDIT_WRITE",
         "CAP_KILL",
         "CAP_NET_BIND_SERVICE"
+    ],
+    "rlimits": [
+        {
+            "type": "RLIMIT_NOFILE",
+            "hard": 1024,
+            "soft": 1024
+        }
     ]
 }
 ```
@@ -230,5 +240,189 @@ If a hook returns a non-zero exit code, then an error is logged and the remainin
 `path` is required for a hook.
 `args` and `env` are optional.
 The semantics are the same as `Path`, `Args` and `Env` in [golang Cmd](https://golang.org/pkg/os/exec/#Cmd).
+
+## Annotations
+
+Annotations are optional arbitrary non-identifying metadata that can be attached to containers.
+This information may be large, may be structured or unstructured.
+Annotations are key-value maps.
+
+```json
+"annotations": {
+	"key1" : "value1",
+	"key2" : "value2"
+}
+```
+
+## Configuration Schema Example
+
+Here is a full example `config.json` for reference.
+
+```json
+{
+    "ociVersion": "0.3.0",
+    "platform": {
+        "os": "linux",
+        "arch": "amd64"
+    },
+    "process": {
+        "terminal": true,
+        "user": {
+            "uid": 1,
+            "gid": 1,
+            "additionalGids": [
+                5,
+                6
+            ]
+        },
+        "args": [
+            "sh"
+        ],
+        "env": [
+            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+            "TERM=xterm"
+        ],
+        "cwd": "/",
+        "capabilities": [
+            "CAP_AUDIT_WRITE",
+            "CAP_KILL",
+            "CAP_NET_BIND_SERVICE"
+        ],
+        "rlimits": [
+            {
+                "type": "RLIMIT_NOFILE",
+                "hard": 1024,
+                "soft": 1024
+            }
+        ],
+        "apparmorProfile": "",
+        "selinuxLabel": ""
+    },
+    "root": {
+        "path": "rootfs",
+        "readonly": true
+    },
+    "hostname": "slartibartfast",
+    "mounts": [
+        {
+            "destination": "/proc",
+            "type": "proc",
+            "source": "proc"
+        },
+        {
+            "destination": "/dev",
+            "type": "tmpfs",
+            "source": "tmpfs",
+            "options": [
+                "nosuid",
+                "strictatime",
+                "mode=755",
+                "size=65536k"
+            ]
+        },
+        {
+            "destination": "/dev/pts",
+            "type": "devpts",
+            "source": "devpts",
+            "options": [
+                "nosuid",
+                "noexec",
+                "newinstance",
+                "ptmxmode=0666",
+                "mode=0620",
+                "gid=5"
+            ]
+        },
+        {
+            "destination": "/dev/shm",
+            "type": "tmpfs",
+            "source": "shm",
+            "options": [
+                "nosuid",
+                "noexec",
+                "nodev",
+                "mode=1777",
+                "size=65536k"
+            ]
+        },
+        {
+            "destination": "/dev/mqueue",
+            "type": "mqueue",
+            "source": "mqueue",
+            "options": [
+                "nosuid",
+                "noexec",
+                "nodev"
+            ]
+        },
+        {
+            "destination": "/sys",
+            "type": "sysfs",
+            "source": "sysfs",
+            "options": [
+                "nosuid",
+                "noexec",
+                "nodev"
+            ]
+        },
+        {
+            "destination": "/sys/fs/cgroup",
+            "type": "cgroup",
+            "source": "cgroup",
+            "options": [
+                "nosuid",
+                "noexec",
+                "nodev",
+                "relatime",
+                "ro"
+            ]
+        }
+    ],
+    "hooks": {
+        "prestart": [
+            {
+                "path": "/usr/bin/uptime",
+                "args": [
+                    "/usr/bin/uptime"
+                ],
+                "env": []
+            }
+        ]
+    },
+    "linux": {
+        "resources": {
+            "devices": [
+                {
+                    "allow": false,
+                    "access": "rwm"
+                }
+            ]
+        },
+        "namespaces": [
+            {
+                "type": "pid"
+            },
+            {
+                "type": "network"
+            },
+            {
+                "type": "ipc"
+            },
+            {
+                "type": "uts"
+            },
+            {
+                "type": "mount"
+            }
+        ],
+        "devices": null,
+        "seccomp": {
+            "defaultAction": "",
+            "architectures": null
+        }
+    }
+}
+```
+
 
 [uts-namespace]: http://man7.org/linux/man-pages/man7/namespaces.7.html
