@@ -90,7 +90,7 @@ See links for details about [mountvol](http://ss64.com/nt/mountvol.html) and [Se
 * **`env`** (array of strings, optional) contains a list of variables that will be set in the process's environment prior to execution. Elements in the array are specified as Strings in the form "KEY=value". The left hand side must consist solely of letters, digits, and underscores `_` as outlined in [IEEE Std 1003.1-2001](http://pubs.opengroup.org/onlinepubs/009695399/basedefs/xbd_chap08.html).
 * **`args`** (string, required) executable to launch and any flags as an array. The executable is the first element and must be available at the given path inside of the rootfs. If the executable path is not an absolute path then the search $PATH is interpreted to find the executable.
 
-For Linux-based systemd the process structure supports the following process specific fields:
+For Linux-based systems the process structure supports the following process specific fields:
 
 * **`capabilities`** (array of strings, optional) capabilities is an array that specifies Linux capabilities that can be provided to the process inside the container.
 Valid values are the strings for capabilities defined in [the man page](http://man7.org/linux/man-pages/man7/capabilities.7.html)
