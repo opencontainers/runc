@@ -2,10 +2,7 @@
 
 package main
 
-import (
-	"github.com/Sirupsen/logrus"
-	"github.com/codegangsta/cli"
-)
+import "github.com/codegangsta/cli"
 
 var (
 	checkpointCommand cli.Command
@@ -16,5 +13,5 @@ var (
 )
 
 func runAction(*cli.Context) {
-	logrus.Fatal("Current OS is not supported yet")
+	fatalf("Current OS is not supported yet")
 }

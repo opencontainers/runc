@@ -13,7 +13,6 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -163,14 +162,14 @@ var specCommand = cli.Command{
 			}
 		}
 		if err := checkNoFile(specConfig); err != nil {
-			logrus.Fatal(err)
+			fatal(err)
 		}
 		data, err := json.MarshalIndent(&spec, "", "\t")
 		if err != nil {
-			logrus.Fatal(err)
+			fatal(err)
 		}
 		if err := ioutil.WriteFile(specConfig, data, 0666); err != nil {
-			logrus.Fatal(err)
+			fatal(err)
 		}
 	},
 }

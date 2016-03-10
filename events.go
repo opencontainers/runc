@@ -35,7 +35,7 @@ information is displayed once every 5 seconds.`,
 	Action: func(context *cli.Context) {
 		container, err := getContainer(context)
 		if err != nil {
-			logrus.Fatal(err)
+			fatal(err)
 		}
 		var (
 			stats  = make(chan *libcontainer.Stats, 1)
@@ -74,7 +74,7 @@ information is displayed once every 5 seconds.`,
 		}()
 		n, err := container.NotifyOOM()
 		if err != nil {
-			logrus.Fatal(err)
+			fatal(err)
 		}
 		for {
 			select {

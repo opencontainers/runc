@@ -49,6 +49,7 @@ func main() {
 		},
 		cli.StringFlag{
 			Name:  "log",
+			Value: "/dev/null",
 			Usage: "set the log file path where internal debug information is written",
 		},
 		cli.StringFlag{
@@ -72,6 +73,7 @@ func main() {
 		deleteCommand,
 		eventsCommand,
 		execCommand,
+		initCommand,
 		killCommand,
 		listCommand,
 		pauseCommand,
@@ -86,7 +88,7 @@ func main() {
 			logrus.SetLevel(logrus.DebugLevel)
 		}
 		if path := context.GlobalString("log"); path != "" {
-			f, err := os.Create(path)
+			f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 			if err != nil {
 				return err
 			}
@@ -103,6 +105,6 @@ func main() {
 		return nil
 	}
 	if err := app.Run(os.Args); err != nil {
-		logrus.Fatal(err)
+		fatal(err)
 	}
 }

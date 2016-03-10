@@ -152,15 +152,31 @@ func containerPreload(context *cli.Context) error {
 
 // loadFactory returns the configured factory instance for execing containers.
 func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
-	root := context.GlobalString("root")
+	var (
+		debug = "false"
+		root  = context.GlobalString("root")
+	)
+	if context.GlobalBool("debug") {
+		debug = "true"
+	}
 	abs, err := filepath.Abs(root)
+	if err != nil {
+		return nil, err
+	}
+	logAbs, err := filepath.Abs(context.GlobalString("log"))
 	if err != nil {
 		return nil, err
 	}
 	return libcontainer.New(abs, libcontainer.Cgroupfs, func(l *libcontainer.LinuxFactory) error {
 		l.CriuPath = context.GlobalString("criu")
 		return nil
-	})
+	},
+		libcontainer.InitArgs(os.Args[0],
+			"--log", logAbs,
+			"--log-format", context.GlobalString("log-format"),
+			fmt.Sprintf("--debug=%s", debug),
+			"init"),
+	)
 }
 
 // getContainer returns the specified container instance by loading it from state
@@ -180,6 +196,8 @@ func getContainer(context *cli.Context) (libcontainer.Container, error) {
 // fatal prints the error's details if it is a libcontainer specific error type
 // then exits the program with an exit status of 1.
 func fatal(err error) {
+	// make sure the error is written to the logger
+	logrus.Error(err)
 	// return proper unix error codes
 	if exerr, ok := err.(*exec.Error); ok {
 		switch exerr.Err {
@@ -196,12 +214,12 @@ func fatal(err error) {
 			}
 		}
 	}
-	if lerr, ok := err.(libcontainer.Error); ok {
-		lerr.Detail(os.Stderr)
-		os.Exit(1)
-	}
 	fmt.Fprintln(os.Stderr, err)
 	os.Exit(1)
+}
+
+func fatalf(t string, v ...interface{}) {
+	fatal(fmt.Errorf(t, v...))
 }
 
 func getDefaultImagePath(context *cli.Context) string {

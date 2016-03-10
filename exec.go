@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 	"github.com/opencontainers/specs"
 )
@@ -80,11 +79,11 @@ following will output a list of processes running in the container:
 	},
 	Action: func(context *cli.Context) {
 		if os.Geteuid() != 0 {
-			logrus.Fatal("runc should be run as root")
+			fatalf("runc should be run as root")
 		}
 		status, err := execProcess(context)
 		if err != nil {
-			logrus.Fatalf("exec failed: %v", err)
+			fatalf("exec failed: %v", err)
 		}
 		os.Exit(status)
 	},
