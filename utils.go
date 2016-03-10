@@ -6,9 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"strconv"
 	"syscall"
 
 	"github.com/Sirupsen/logrus"
@@ -163,9 +161,11 @@ func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
 	if err != nil {
 		return nil, err
 	}
-	logAbs, err := filepath.Abs(context.GlobalString("log"))
-	if err != nil {
-		return nil, err
+	var logAbs string
+	if l := context.GlobalString("log"); l != "" {
+		if logAbs, err = filepath.Abs(context.GlobalString("log")); err != nil {
+			return nil, err
+		}
 	}
 	return libcontainer.New(abs, libcontainer.Cgroupfs, func(l *libcontainer.LinuxFactory) error {
 		l.CriuPath = context.GlobalString("criu")
@@ -198,22 +198,6 @@ func getContainer(context *cli.Context) (libcontainer.Container, error) {
 func fatal(err error) {
 	// make sure the error is written to the logger
 	logrus.Error(err)
-	// return proper unix error codes
-	if exerr, ok := err.(*exec.Error); ok {
-		switch exerr.Err {
-		case os.ErrPermission:
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(126)
-		case exec.ErrNotFound:
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(127)
-		default:
-			if os.IsNotExist(exerr.Err) {
-				fmt.Fprintf(os.Stderr, "exec: %s: %v\n", strconv.Quote(exerr.Name), os.ErrNotExist)
-				os.Exit(127)
-			}
-		}
-	}
 	fmt.Fprintln(os.Stderr, err)
 	os.Exit(1)
 }
