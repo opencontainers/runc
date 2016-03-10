@@ -1,21 +1,53 @@
 OpenContainers Specifications
 
+Changes with v0.4.0:
+	Breaking changes:
+
+	* config: Move capabilities, selinuxProcessLabel, apparmorProfile,
+	  and noNewPrivileges from the linux setting to the process setting
+	  and make them optional, renaming selinuxProcessLabel to
+	  selinuxLabel, #329, #330, #339
+	* runtime: Rename version to ociVerison in the state JSON, #225
+	* runtime: Remove the directory requirement for storing state, now
+	  that there is a 'state' operation, #225, #334
+	* go: Shift *.go to specs-go/*.go, #276
+	* config: Move rlimits to process, #341
+	* go: Move config_linux.go content into config.go, removing
+	  LinuxSpec, #310
+
+	Additions:
+
+	* schema: Add JSON Schema (and validator) for `config.json`, #313
+	* config: Add annotations for opaque-to-the-runtime data, #331
+	* config-linux: Make seccomp optional, #333
+	* runtime: Added additional operations: state, stop, and exec.
+	  #225
+
+	Minor fixes and documentation:
+
+	* config-linux: Change mount type from *rune to *string and fix
+	  octal fileMode examples, #323
+	* runtime: RFC 2119 phrasing for the lifecycle, #225
+	* README: Add a full example of config.json, #276
+	* README: Replace BlueJeans with UberConference, #326, #338
+	* style: Document Go-pointer exceptions, #317
+
 Changes with v0.3.0:
 	Breaking changes:
-	
+
 	* config: Single, unified config file, #284
 	* config: cwd is a required default, and must be absolute, #286,
 	  #307, #308, #312
 	* config: qualify the name of the version field, #309
 	* config-linux: Convert classID from hex to uint32, #296
 	* config-linux: Separate mknod from cgroups, #298
-	
+
 	Additions:
-	
+
 	* config-linux: Add NoNewPrivileges setting for linux, #290
-	
+
 	Minor fixes and documentation:
-	
+
 	* config-linux: clarify oom_score_adj, #236, #292
 	* config-linux: Update links to cgroups documentation, #318
 	* config-linux: Remove pointers for slices preferring omitempty
