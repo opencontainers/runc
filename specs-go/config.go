@@ -128,9 +128,9 @@ type Linux struct {
 	// If resources are specified, the cgroups at CgroupsPath will be updated based on resources.
 	CgroupsPath *string `json:"cgroupsPath,omitempty"`
 	// Namespaces contains the namespaces that are created and/or joined by the container
-	Namespaces []Namespace `json:"namespaces"`
+	Namespaces []Namespace `json:"namespaces,omitempty"`
 	// Devices are a list of device nodes that are created for the container
-	Devices []Device `json:"devices"`
+	Devices []Device `json:"devices,omitempty"`
 	// Seccomp specifies the seccomp security settings for the container.
 	Seccomp *Seccomp `json:"seccomp,omitempty"`
 	// RootfsPropagation is the rootfs mount propagation mode for the container.

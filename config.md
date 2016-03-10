@@ -404,12 +404,7 @@ Here is a full example `config.json` for reference.
             {
                 "type": "mount"
             }
-        ],
-        "devices": null,
-        "seccomp": {
-            "defaultAction": "",
-            "architectures": null
-        }
+        ]
     }
 }
 ```
