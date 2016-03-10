@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/codegangsta/cli"
-	"github.com/opencontainers/specs"
+	"github.com/opencontainers/specs/specs-go"
 )
 
 var execCommand = cli.Command{

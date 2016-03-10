@@ -15,7 +15,7 @@ import (
 	"github.com/codegangsta/cli"
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/opencontainers/specs"
+	"github.com/opencontainers/specs/specs-go"
 )
 
 const wildcard = -1
@@ -264,7 +264,7 @@ func dupStdio(process *libcontainer.Process, rootuid int) error {
 
 // If systemd is supporting sd_notify protocol, this function will add support
 // for sd_notify protocol from within the container.
-func setupSdNotify(spec *specs.LinuxSpec, notifySocket string) {
+func setupSdNotify(spec *specs.Spec, notifySocket string) {
 	spec.Mounts = append(spec.Mounts, specs.Mount{Destination: notifySocket, Type: "bind", Source: notifySocket, Options: []string{"bind"}})
 	spec.Process.Env = append(spec.Process.Env, fmt.Sprintf("NOTIFY_SOCKET=%s", notifySocket))
 }
@@ -309,7 +309,7 @@ func createPidFile(path string, process *libcontainer.Process) error {
 	return err
 }
 
-func createContainer(context *cli.Context, id string, spec *specs.LinuxSpec) (libcontainer.Container, error) {
+func createContainer(context *cli.Context, id string, spec *specs.Spec) (libcontainer.Container, error) {
 	config, err := createLibcontainerConfig(id, spec)
 	if err != nil {
 		return nil, err

@@ -6,7 +6,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
-	"github.com/opencontainers/specs"
+	"github.com/opencontainers/specs/specs-go"
 )
 
 const (
@@ -59,7 +59,7 @@ func main() {
 		},
 		cli.StringFlag{
 			Name:  "root",
-			Value: specs.LinuxStateDirectory,
+			Value: "/run/runc",
 			Usage: "root directory for storage of container state (this should be located in tmpfs)",
 		},
 		cli.StringFlag{
