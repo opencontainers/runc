@@ -14,6 +14,7 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
+#include <sys/prctl.h>
 #include <unistd.h>
 
 #include <bits/sockaddr.h>
@@ -84,6 +85,14 @@ static int clone_parent(jmp_buf *env, int flags)
 	ca.env = env;
 	child  = clone(child_func, ca.stack_ptr, CLONE_PARENT | SIGCHLD | flags,
 		      &ca);
+	if (child == -1 && errno == EINVAL) {
+		if (unshare(flags)) {
+			pr_perror("Unable to unshare namespaces");
+			return -1;
+		}
+		child  = clone(child_func, ca.stack_ptr, SIGCHLD | CLONE_PARENT,
+			      &ca);
+	}
 	return child;
 }
 
