@@ -42,6 +42,8 @@ type Process struct {
 	Cwd string `json:"cwd"`
 	// Capabilities are Linux capabilities that are kept for the container.
 	Capabilities []string `json:"capabilities,omitempty" platform:"linux"`
+	// Rlimits specifies rlimit options to apply to the process.
+	Rlimits []Rlimit `json:"rlimits,omitempty"`
 	// NoNewPrivileges controls whether additional privileges could be gained by processes in the container.
 	NoNewPrivileges bool `json:"noNewPrivileges,omitempty"`
 
@@ -116,8 +118,6 @@ type Linux struct {
 	UIDMappings []IDMapping `json:"uidMappings,omitempty"`
 	// GIDMapping specifies group mappings for supporting user namespaces on Linux.
 	GIDMappings []IDMapping `json:"gidMappings,omitempty"`
-	// Rlimits specifies rlimit options to apply to the container's process.
-	Rlimits []Rlimit `json:"rlimits,omitempty"`
 	// Sysctl are a set of key value pairs that are set for the container on start
 	Sysctl map[string]string `json:"sysctl,omitempty"`
 	// Resources contain cgroup information for handling resource constraints

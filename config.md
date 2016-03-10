@@ -94,6 +94,9 @@ For Linux-based systems the process structure supports the following process spe
 
 * **`capabilities`** (array of strings, optional) capabilities is an array that specifies Linux capabilities that can be provided to the process inside the container.
 Valid values are the strings for capabilities defined in [the man page](http://man7.org/linux/man-pages/man7/capabilities.7.html)
+* **`rlimits`** (array of rlimits, optional) rlimits is an array of rlimits that allows setting resource limits for a process inside the container.
+The kernel enforces the `soft` limit for a resource while the `hard` limit acts as a ceiling for that value that could be set by an unprivileged process.
+Valid values for the 'type' field are the resources defined in [the man page](http://man7.org/linux/man-pages/man2/setrlimit.2.html).
 * **`apparmorProfile`** (string, optional) apparmor profile specifies the name of the apparmor profile that will be used for the container.
 For more information about Apparmor, see [Apparmor documentation](https://wiki.ubuntu.com/AppArmor)
 * **`selinuxLabel`** (string, optional) SELinux process label specifies the label with which the processes in a container are run.
@@ -133,6 +136,13 @@ For Linux-based systems the user structure has the following fields:
         "CAP_AUDIT_WRITE",
         "CAP_KILL",
         "CAP_NET_BIND_SERVICE"
+    ],
+    "rlimits": [
+        {
+            "type": "RLIMIT_NOFILE",
+            "hard": 1024,
+            "soft": 1024
+        }
     ]
 }
 ```
@@ -278,6 +288,13 @@ Here is a full example `config.json` for reference.
             "CAP_KILL",
             "CAP_NET_BIND_SERVICE"
         ],
+        "rlimits": [
+            {
+                "type": "RLIMIT_NOFILE",
+                "hard": 1024,
+                "soft": 1024
+            }
+        ],
         "apparmorProfile": "",
         "selinuxLabel": ""
     },
@@ -373,13 +390,6 @@ Here is a full example `config.json` for reference.
         ]
     },
     "linux": {
-        "rlimits": [
-            {
-                "type": "RLIMIT_NOFILE",
-                "hard": 1024,
-                "soft": 1024
-            }
-        ],
         "resources": {
             "devices": [
                 {
