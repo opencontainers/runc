@@ -80,6 +80,10 @@ func (l *linuxStandardInit) Init() error {
 	label.Init()
 	// InitializeMountNamespace() can be executed only for a new mount namespace
 	if l.config.Config.Namespaces.Contains(configs.NEWNS) {
+		if err := syscall.Unshare(syscall.CLONE_NEWIPC); err != nil {
+			return err
+		}
+
 		if err := setupRootfs(l.config.Config, console, l.pipe); err != nil {
 			return err
 		}
