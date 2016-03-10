@@ -332,6 +332,7 @@ func (c *linuxContainer) newInitConfig(process *Process) *initConfig {
 		NoNewPrivileges:  c.config.NoNewPrivileges,
 		AppArmorProfile:  c.config.AppArmorProfile,
 		ProcessLabel:     c.config.ProcessLabel,
+		Rlimits:          c.config.Rlimits,
 	}
 	if process.NoNewPrivileges != nil {
 		cfg.NoNewPrivileges = *process.NoNewPrivileges
@@ -341,6 +342,9 @@ func (c *linuxContainer) newInitConfig(process *Process) *initConfig {
 	}
 	if process.Label != "" {
 		cfg.ProcessLabel = process.Label
+	}
+	if len(process.Rlimits) > 0 {
+		cfg.Rlimits = process.Rlimits
 	}
 	return cfg
 }

@@ -278,13 +278,6 @@ func createLibcontainerConfig(cgroupName string, spec *specs.Spec) (*configs.Con
 	if err := setupUserNamespace(spec, config); err != nil {
 		return nil, err
 	}
-	for _, rlimit := range spec.Process.Rlimits {
-		rl, err := createLibContainerRlimit(rlimit)
-		if err != nil {
-			return nil, err
-		}
-		config.Rlimits = append(config.Rlimits, rl)
-	}
 	c, err := createCgroupConfig(cgroupName, spec)
 	if err != nil {
 		return nil, err

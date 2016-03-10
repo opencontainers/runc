@@ -232,8 +232,8 @@ func getDefaultImagePath(context *cli.Context) string {
 
 // newProcess returns a new libcontainer Process with the arguments from the
 // spec and stdio from the current process.
-func newProcess(p specs.Process) *libcontainer.Process {
-	return &libcontainer.Process{
+func newProcess(p specs.Process) (*libcontainer.Process, error) {
+	lp := &libcontainer.Process{
 		Args: p.Args,
 		Env:  p.Env,
 		// TODO: fix libcontainer's API to better support uid/gid in a typesafe way.
@@ -244,6 +244,14 @@ func newProcess(p specs.Process) *libcontainer.Process {
 		NoNewPrivileges: &p.NoNewPrivileges,
 		AppArmorProfile: p.ApparmorProfile,
 	}
+	for _, rlimit := range p.Rlimits {
+		rl, err := createLibContainerRlimit(rlimit)
+		if err != nil {
+			return nil, err
+		}
+		lp.Rlimits = append(lp.Rlimits, rl)
+	}
+	return lp, nil
 }
 
 func dupStdio(process *libcontainer.Process, rootuid int) error {
@@ -332,7 +340,10 @@ func createContainer(context *cli.Context, id string, spec *specs.Spec) (libcont
 // runProcess will create a new process in the specified container
 // by executing the process specified in the 'config'.
 func runProcess(container libcontainer.Container, config *specs.Process, listenFDs []*os.File, console string, pidFile string, detach bool) (int, error) {
-	process := newProcess(*config)
+	process, err := newProcess(*config)
+	if err != nil {
+		return -1, err
+	}
 
 	// Add extra file descriptors if needed
 	if len(listenFDs) > 0 {
