@@ -1,11 +1,8 @@
 package integration
 
 import (
-	"fmt"
 	"os"
-	"os/exec"
 	"runtime"
-	"strconv"
 	"testing"
 
 	"github.com/Sirupsen/logrus"
@@ -27,25 +24,8 @@ func init() {
 		logrus.Fatalf("unable to initialize for container: %s", err)
 	}
 	if err := factory.StartInitialization(); err != nil {
-		// return proper unix error codes
-		if exerr, ok := err.(*exec.Error); ok {
-			switch exerr.Err {
-			case os.ErrPermission:
-				fmt.Fprintln(os.Stderr, err)
-				os.Exit(126)
-			case exec.ErrNotFound:
-				fmt.Fprintln(os.Stderr, err)
-				os.Exit(127)
-			default:
-				if os.IsNotExist(exerr.Err) {
-					fmt.Fprintf(os.Stderr, "exec: %s: %v\n", strconv.Quote(exerr.Name), os.ErrNotExist)
-					os.Exit(127)
-				}
-			}
-		}
 		logrus.Fatal(err)
 	}
-	panic("init: init failed to start contianer")
 }
 
 var (

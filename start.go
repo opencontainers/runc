@@ -67,7 +67,7 @@ is a directory with a specification file and a root filesystem.`,
 
 		status, err := startContainer(context, spec)
 		if err != nil {
-			fatalf("Container start failed: %v", err)
+			fatal(err)
 		}
 		// exit with the container's exit status so any external supervisor is
 		// notified of the exit with the correct exit status.
