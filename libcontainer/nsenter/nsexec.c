@@ -16,6 +16,7 @@
 #include <sys/types.h>
 #include <sys/prctl.h>
 #include <unistd.h>
+#include <grp.h>
 
 #include <bits/sockaddr.h>
 #include <linux/types.h>
@@ -381,6 +382,11 @@ static void process_nl_attributes(int pipenum, char *data, int data_size)
 
 		if (setgid(0) == -1) {
 			pr_perror("setgid failed");
+			exit(1);
+		}
+    
+		if (setgroups(0, NULL) == -1) {
+			pr_perror("setgroups failed");
 			exit(1);
 		}
 
