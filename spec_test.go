@@ -6,13 +6,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/opencontainers/specs"
+	"github.com/opencontainers/specs/specs-go"
 )
 
 func TestLinuxCgroupsPathSpecified(t *testing.T) {
 	cgroupsPath := "/user/cgroups/path/id"
 
-	spec := &specs.LinuxSpec{}
+	spec := &specs.Spec{}
 	spec.Linux.CgroupsPath = &cgroupsPath
 
 	cgroup, err := createCgroupConfig("ContainerID", spec)
@@ -26,7 +26,7 @@ func TestLinuxCgroupsPathSpecified(t *testing.T) {
 }
 
 func TestLinuxCgroupsPathNotSpecified(t *testing.T) {
-	spec := &specs.LinuxSpec{}
+	spec := &specs.Spec{}
 
 	cgroup, err := createCgroupConfig("ContainerID", spec)
 	if err != nil {

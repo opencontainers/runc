@@ -10,7 +10,7 @@ import (
 	"github.com/codegangsta/cli"
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/opencontainers/specs"
+	"github.com/opencontainers/specs/specs-go"
 )
 
 var restoreCommand = cli.Command{
@@ -100,7 +100,7 @@ using the runc checkpoint command.`,
 	},
 }
 
-func restoreContainer(context *cli.Context, spec *specs.LinuxSpec, config *configs.Config, imagePath string) (code int, err error) {
+func restoreContainer(context *cli.Context, spec *specs.Spec, config *configs.Config, imagePath string) (code int, err error) {
 	var (
 		rootuid = 0
 		id      = context.Args().First()

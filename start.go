@@ -9,7 +9,7 @@ import (
 	"github.com/codegangsta/cli"
 	"github.com/coreos/go-systemd/activation"
 	"github.com/opencontainers/runc/libcontainer"
-	"github.com/opencontainers/specs"
+	"github.com/opencontainers/specs/specs-go"
 )
 
 // default action is to start a container
@@ -91,7 +91,7 @@ var initCommand = cli.Command{
 	},
 }
 
-func startContainer(context *cli.Context, spec *specs.LinuxSpec) (int, error) {
+func startContainer(context *cli.Context, spec *specs.Spec) (int, error) {
 	id := context.Args().First()
 	if id == "" {
 		return -1, errEmptyID

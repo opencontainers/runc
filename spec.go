@@ -18,7 +18,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/seccomp"
 	libcontainerUtils "github.com/opencontainers/runc/libcontainer/utils"
-	"github.com/opencontainers/specs"
+	"github.com/opencontainers/specs/specs-go"
 )
 
 var specCommand = cli.Command{
@@ -34,79 +34,84 @@ var specCommand = cli.Command{
 		},
 	},
 	Action: func(context *cli.Context) {
-		spec := specs.LinuxSpec{
-			Spec: specs.Spec{
-				Version: specs.Version,
-				Platform: specs.Platform{
-					OS:   runtime.GOOS,
-					Arch: runtime.GOARCH,
+		spec := specs.Spec{
+			Version: specs.Version,
+			Platform: specs.Platform{
+				OS:   runtime.GOOS,
+				Arch: runtime.GOARCH,
+			},
+			Root: specs.Root{
+				Path:     "rootfs",
+				Readonly: true,
+			},
+			Process: specs.Process{
+				Terminal: true,
+				User:     specs.User{},
+				Args: []string{
+					"sh",
 				},
-				Root: specs.Root{
-					Path:     "rootfs",
-					Readonly: true,
+				Env: []string{
+					"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+					"TERM=xterm",
 				},
-				Process: specs.Process{
-					Terminal: true,
-					User:     specs.User{},
-					Args: []string{
-						"sh",
-					},
-					Env: []string{
-						"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-						"TERM=xterm",
-					},
-					Cwd:             "/",
-					NoNewPrivileges: true,
-					Capabilities: []string{
-						"CAP_AUDIT_WRITE",
-						"CAP_KILL",
-						"CAP_NET_BIND_SERVICE",
+				Cwd:             "/",
+				NoNewPrivileges: true,
+				Capabilities: []string{
+					"CAP_AUDIT_WRITE",
+					"CAP_KILL",
+					"CAP_NET_BIND_SERVICE",
+				},
+				Rlimits: []specs.Rlimit{
+					{
+						Type: "RLIMIT_NOFILE",
+						Hard: uint64(1024),
+						Soft: uint64(1024),
 					},
 				},
-				Hostname: "shell",
-				Mounts: []specs.Mount{
-					{
-						Destination: "/proc",
-						Type:        "proc",
-						Source:      "proc",
-						Options:     nil,
-					},
-					{
-						Destination: "/dev",
-						Type:        "tmpfs",
-						Source:      "tmpfs",
-						Options:     []string{"nosuid", "strictatime", "mode=755", "size=65536k"},
-					},
-					{
-						Destination: "/dev/pts",
-						Type:        "devpts",
-						Source:      "devpts",
-						Options:     []string{"nosuid", "noexec", "newinstance", "ptmxmode=0666", "mode=0620", "gid=5"},
-					},
-					{
-						Destination: "/dev/shm",
-						Type:        "tmpfs",
-						Source:      "shm",
-						Options:     []string{"nosuid", "noexec", "nodev", "mode=1777", "size=65536k"},
-					},
-					{
-						Destination: "/dev/mqueue",
-						Type:        "mqueue",
-						Source:      "mqueue",
-						Options:     []string{"nosuid", "noexec", "nodev"},
-					},
-					{
-						Destination: "/sys",
-						Type:        "sysfs",
-						Source:      "sysfs",
-						Options:     []string{"nosuid", "noexec", "nodev", "ro"},
-					},
-					{
-						Destination: "/sys/fs/cgroup",
-						Type:        "cgroup",
-						Source:      "cgroup",
-						Options:     []string{"nosuid", "noexec", "nodev", "relatime", "ro"},
-					},
+			},
+			Hostname: "runc",
+			Mounts: []specs.Mount{
+				{
+					Destination: "/proc",
+					Type:        "proc",
+					Source:      "proc",
+					Options:     nil,
+				},
+				{
+					Destination: "/dev",
+					Type:        "tmpfs",
+					Source:      "tmpfs",
+					Options:     []string{"nosuid", "strictatime", "mode=755", "size=65536k"},
+				},
+				{
+					Destination: "/dev/pts",
+					Type:        "devpts",
+					Source:      "devpts",
+					Options:     []string{"nosuid", "noexec", "newinstance", "ptmxmode=0666", "mode=0620", "gid=5"},
+				},
+				{
+					Destination: "/dev/shm",
+					Type:        "tmpfs",
+					Source:      "shm",
+					Options:     []string{"nosuid", "noexec", "nodev", "mode=1777", "size=65536k"},
+				},
+				{
+					Destination: "/dev/mqueue",
+					Type:        "mqueue",
+					Source:      "mqueue",
+					Options:     []string{"nosuid", "noexec", "nodev"},
+				},
+				{
+					Destination: "/sys",
+					Type:        "sysfs",
+					Source:      "sysfs",
+					Options:     []string{"nosuid", "noexec", "nodev", "ro"},
+				},
+				{
+					Destination: "/sys/fs/cgroup",
+					Type:        "cgroup",
+					Source:      "cgroup",
+					Options:     []string{"nosuid", "noexec", "nodev", "relatime", "ro"},
 				},
 			},
 			Linux: specs.Linux{
@@ -133,13 +138,6 @@ var specCommand = cli.Command{
 					},
 					{
 						Type: "mount",
-					},
-				},
-				Rlimits: []specs.Rlimit{
-					{
-						Type: "RLIMIT_NOFILE",
-						Hard: uint64(1024),
-						Soft: uint64(1024),
 					},
 				},
 			},
@@ -201,7 +199,7 @@ var mountPropagationMapping = map[string]int{
 
 // validateSpec validates the fields in the spec
 // TODO: Add validation for other fields where applicable
-func validateSpec(spec *specs.LinuxSpec) error {
+func validateSpec(spec *specs.Spec) error {
 	if spec.Process.Cwd == "" {
 		return fmt.Errorf("Cwd property must not be empty")
 	}
@@ -213,7 +211,7 @@ func validateSpec(spec *specs.LinuxSpec) error {
 
 // loadSpec loads the specification from the provided path.
 // If the path is empty then the default path will be "config.json"
-func loadSpec(cPath string) (spec *specs.LinuxSpec, err error) {
+func loadSpec(cPath string) (spec *specs.Spec, err error) {
 	cf, err := os.Open(cPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -229,7 +227,7 @@ func loadSpec(cPath string) (spec *specs.LinuxSpec, err error) {
 	return spec, validateSpec(spec)
 }
 
-func createLibcontainerConfig(cgroupName string, spec *specs.LinuxSpec) (*configs.Config, error) {
+func createLibcontainerConfig(cgroupName string, spec *specs.Spec) (*configs.Config, error) {
 	// runc's cwd will always be the bundle path
 	rcwd, err := os.Getwd()
 	if err != nil {
@@ -280,13 +278,6 @@ func createLibcontainerConfig(cgroupName string, spec *specs.LinuxSpec) (*config
 	if err := setupUserNamespace(spec, config); err != nil {
 		return nil, err
 	}
-	for _, rlimit := range spec.Linux.Rlimits {
-		rl, err := createLibContainerRlimit(rlimit)
-		if err != nil {
-			return nil, err
-		}
-		config.Rlimits = append(config.Rlimits, rl)
-	}
 	c, err := createCgroupConfig(cgroupName, spec)
 	if err != nil {
 		return nil, err
@@ -295,11 +286,13 @@ func createLibcontainerConfig(cgroupName string, spec *specs.LinuxSpec) (*config
 	// set extra path masking for libcontainer for the various unsafe places in proc
 	config.MaskPaths = maskedPaths
 	config.ReadonlyPaths = readonlyPaths
-	seccomp, err := setupSeccomp(&spec.Linux.Seccomp)
-	if err != nil {
-		return nil, err
+	if spec.Linux.Seccomp != nil {
+		seccomp, err := setupSeccomp(spec.Linux.Seccomp)
+		if err != nil {
+			return nil, err
+		}
+		config.Seccomp = seccomp
 	}
-	config.Seccomp = seccomp
 	config.Sysctl = spec.Linux.Sysctl
 	if oomScoreAdj := spec.Linux.Resources.OOMScoreAdj; oomScoreAdj != nil {
 		config.OomScoreAdj = *oomScoreAdj
@@ -330,7 +323,7 @@ func createLibcontainerMount(cwd string, m specs.Mount) *configs.Mount {
 	}
 }
 
-func createCgroupConfig(name string, spec *specs.LinuxSpec) (*configs.Cgroup, error) {
+func createCgroupConfig(name string, spec *specs.Spec) (*configs.Cgroup, error) {
 	var (
 		err          error
 		myCgroupPath string
@@ -506,7 +499,7 @@ func stringToDeviceRune(s string) (rune, error) {
 	}
 }
 
-func createDevices(spec *specs.LinuxSpec, config *configs.Config) error {
+func createDevices(spec *specs.Spec, config *configs.Config) error {
 	// add whitelisted devices
 	config.Devices = []*configs.Device{
 		{
@@ -591,7 +584,7 @@ func createDevices(spec *specs.LinuxSpec, config *configs.Config) error {
 	return nil
 }
 
-func setupUserNamespace(spec *specs.LinuxSpec, config *configs.Config) error {
+func setupUserNamespace(spec *specs.Spec, config *configs.Config) error {
 	if len(spec.Linux.UIDMappings) == 0 {
 		return nil
 	}
@@ -776,7 +769,7 @@ func setupSeccomp(config *specs.Seccomp) (*configs.Seccomp, error) {
 	return newConfig, nil
 }
 
-func createHooks(rspec *specs.LinuxSpec, config *configs.Config) {
+func createHooks(rspec *specs.Spec, config *configs.Config) {
 	config.Hooks = &configs.Hooks{}
 	for _, h := range rspec.Hooks.Prestart {
 		cmd := configs.Command{

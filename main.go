@@ -6,11 +6,11 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
-	"github.com/opencontainers/specs"
+	"github.com/opencontainers/specs/specs-go"
 )
 
 const (
-	version    = "0.0.8"
+	version    = "0.0.9"
 	specConfig = "config.json"
 	usage      = `Open Container Initiative runtime
 	
@@ -59,7 +59,7 @@ func main() {
 		},
 		cli.StringFlag{
 			Name:  "root",
-			Value: specs.LinuxStateDirectory,
+			Value: "/run/runc",
 			Usage: "root directory for storage of container state (this should be located in tmpfs)",
 		},
 		cli.StringFlag{

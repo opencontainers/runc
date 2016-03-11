@@ -138,7 +138,7 @@ type Config struct {
 
 	// Rlimits specifies the resource limits, such as max open files, to set in the container
 	// If Rlimits are not set, the container will inherit rlimits from the parent process
-	Rlimits []Rlimit `json:"rlimits"`
+	Rlimits []Rlimit `json:"rlimits,omitempty"`
 
 	// OomScoreAdj specifies the adjustment to be made by the kernel when calculating oom scores
 	// for a process. Valid values are between the range [-1000, '1000'], where processes with

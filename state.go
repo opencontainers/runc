@@ -12,7 +12,7 @@ import (
 
 // cState represents the platform agnostic pieces relating to a running
 // container's status and state.  Note: The fields in this structure adhere to
-// the opencontainers/specs requirement for json fields that must be returned
+// the opencontainers/specs/specs-go requirement for json fields that must be returned
 // in a state command.
 type cState struct {
 	// Version is the OCI version for the container
