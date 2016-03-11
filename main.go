@@ -3,11 +3,16 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 	"github.com/opencontainers/specs/specs-go"
 )
+
+// gitCommit will be the hash that the binary was built from
+// and will be populated by the Makefile
+var gitCommit = ""
 
 const (
 	version    = "0.0.9"
@@ -41,7 +46,14 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "runc"
 	app.Usage = usage
-	app.Version = fmt.Sprintf("%s\nspec version %s", version, specs.Version)
+	v := []string{
+		version,
+	}
+	if gitCommit != "" {
+		v = append(v, fmt.Sprintf("commit: %s", gitCommit))
+	}
+	v = append(v, fmt.Sprintf("spec: %s", specs.Version))
+	app.Version = strings.Join(v, "\n")
 	app.Flags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "debug",

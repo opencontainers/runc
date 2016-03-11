@@ -5,16 +5,17 @@ TEST_DOCKERFILE=script/test_Dockerfile
 BUILDTAGS=seccomp
 RUNC_BUILD_PATH=/go/src/github.com/opencontainers/runc/runc
 RUNC_INSTANCE=runc_dev
+COMMIT=$(shell git rev-parse HEAD 2> /dev/null || true)
 export GOPATH:=$(CURDIR)/Godeps/_workspace:$(GOPATH)
 
 .PHONY=dbuild
 
 all:
 	ln -sfn $(CURDIR) $(CURDIR)/Godeps/_workspace/src/github.com/opencontainers/runc
-	go build -tags "$(BUILDTAGS)" -o runc .
+	go build -ldflags "-X main.gitCommit=${COMMIT}" -tags "$(BUILDTAGS)" -o runc .
 
 static:
-	CGO_ENABLED=1 go build -tags "$(BUILDTAGS) cgo static_build" -ldflags "-w -extldflags -static" -o runc .
+	CGO_ENABLED=1 go build -tags "$(BUILDTAGS) cgo static_build" -ldflags "-w -extldflags -static -X main.gitCommit=${COMMIT}" -o runc .
 
 vet:
 	go get golang.org/x/tools/cmd/vet
