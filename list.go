@@ -13,7 +13,6 @@ import (
 
 	"encoding/json"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 )
 
@@ -52,7 +51,7 @@ in json format:
 	Action: func(context *cli.Context) {
 		s, err := getContainers(context)
 		if err != nil {
-			logrus.Fatal(err)
+			fatal(err)
 		}
 
 		switch context.String("format") {
@@ -68,17 +67,17 @@ in json format:
 					item.Created.Format(time.RFC3339Nano))
 			}
 			if err := w.Flush(); err != nil {
-				logrus.Fatal(err)
+				fatal(err)
 			}
 		case "json":
 			data, err := json.Marshal(s)
 			if err != nil {
-				logrus.Fatal(err)
+				fatal(err)
 			}
 			os.Stdout.Write(data)
 
 		default:
-			logrus.Fatal("invalid format option")
+			fatalf("invalid format option")
 		}
 	},
 }
@@ -95,7 +94,7 @@ func getContainers(context *cli.Context) ([]containerState, error) {
 	}
 	list, err := ioutil.ReadDir(absRoot)
 	if err != nil {
-		logrus.Fatal(err)
+		fatal(err)
 	}
 
 	var s []containerState
