@@ -80,4 +80,8 @@ func TestPidsStats(t *testing.T) {
 	if stats.PidsStats.Current != 1337 {
 		t.Fatalf("Expected %d, got %d for pids.current", 1337, stats.PidsStats.Current)
 	}
+
+	if stats.PidsStats.Max != maxLimited {
+		t.Fatalf("Expected %d, got %d for pids.max", maxLimited, stats.PidsStats.Max)
+	}
 }
