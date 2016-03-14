@@ -321,47 +321,76 @@ func createContainer(context *cli.Context, id string, spec *specs.Spec) (libcont
 	return factory.Create(id, config)
 }
 
-// runProcess will create a new process in the specified container
-// by executing the process specified in the 'config'.
-func runProcess(container libcontainer.Container, config *specs.Process, listenFDs []*os.File, console string, pidFile string, detach bool) (int, error) {
+type runner struct {
+	enableSubreaper bool
+	shouldDestroy   bool
+	detach          bool
+	listenFDs       []*os.File
+	pidFile         string
+	console         string
+	container       libcontainer.Container
+}
+
+func (r *runner) run(config *specs.Process) (int, error) {
 	process, err := newProcess(*config)
 	if err != nil {
+		r.destroy()
 		return -1, err
 	}
-
-	// Add extra file descriptors if needed
-	if len(listenFDs) > 0 {
-		process.Env = append(process.Env, fmt.Sprintf("LISTEN_FDS=%d", len(listenFDs)), "LISTEN_PID=1")
-		process.ExtraFiles = append(process.ExtraFiles, listenFDs...)
+	if len(r.listenFDs) > 0 {
+		process.Env = append(process.Env, fmt.Sprintf("LISTEN_FDS=%d", len(r.listenFDs)), "LISTEN_PID=1")
+		process.ExtraFiles = append(process.ExtraFiles, r.listenFDs...)
 	}
-
-	rootuid, err := container.Config().HostUID()
+	rootuid, err := r.container.Config().HostUID()
 	if err != nil {
+		r.destroy()
 		return -1, err
 	}
-
-	tty, err := setupIO(process, rootuid, console, config.Terminal, detach)
+	tty, err := setupIO(process, rootuid, r.console, config.Terminal, r.detach)
 	if err != nil {
+		r.destroy()
 		return -1, err
 	}
-	defer tty.Close()
-	handler := newSignalHandler(tty)
-	defer handler.Close()
-	if err := container.Start(process); err != nil {
+	handler := newSignalHandler(tty, r.enableSubreaper)
+	if err := r.container.Start(process); err != nil {
+		r.destroy()
+		tty.Close()
 		return -1, err
 	}
 	if err := tty.ClosePostStart(); err != nil {
+		r.terminate(process)
+		r.destroy()
+		tty.Close()
 		return -1, err
 	}
-	if pidFile != "" {
-		if err := createPidFile(pidFile, process); err != nil {
-			process.Signal(syscall.SIGKILL)
-			process.Wait()
+	if r.pidFile != "" {
+		if err := createPidFile(r.pidFile, process); err != nil {
+			r.terminate(process)
+			r.destroy()
+			tty.Close()
 			return -1, err
 		}
 	}
-	if detach {
+	if r.detach {
+		tty.Close()
 		return 0, nil
 	}
-	return handler.forward(process)
+	status, err := handler.forward(process)
+	if err != nil {
+		r.terminate(process)
+	}
+	r.destroy()
+	tty.Close()
+	return status, err
+}
+
+func (r *runner) destroy() {
+	if r.shouldDestroy {
+		destroy(r.container)
+	}
+}
+
+func (r *runner) terminate(p *libcontainer.Process) {
+	p.Signal(syscall.SIGKILL)
+	p.Wait()
 }
