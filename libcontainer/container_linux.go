@@ -1211,7 +1211,7 @@ func (c *linuxContainer) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Na
 
 		// write gid mappings
 		if len(c.config.GidMappings) > 0 {
-			b, err := encodeIDMapping(c.config.UidMappings)
+			b, err := encodeIDMapping(c.config.GidMappings)
 			if err != nil {
 				return nil, err
 			}
