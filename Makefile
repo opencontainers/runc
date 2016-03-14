@@ -43,6 +43,9 @@ dbuild: runctestimage
 install:
 	cp runc /usr/local/bin/runc
 
+uninstall:
+	rm -f /usr/local/bin/runc
+
 clean:
 	rm runc
 	rm $(CURDIR)/Godeps/_workspace/src/github.com/opencontainers/runc
