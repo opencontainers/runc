@@ -541,6 +541,7 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 		TcpEstablished: proto.Bool(criuOpts.TcpEstablished),
 		ExtUnixSk:      proto.Bool(criuOpts.ExternalUnixConnections),
 		FileLocks:      proto.Bool(criuOpts.FileLocks),
+		EmptyNs:        proto.Uint32(criuOpts.EmptyNs),
 	}
 
 	// append optional criu opts, e.g., page-server and port
@@ -556,7 +557,8 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 		if err := c.checkCriuVersion("1.7"); err != nil {
 			return err
 		}
-		rpcOpts.ManageCgroupsMode = proto.Uint32(uint32(criuOpts.ManageCgroupsMode))
+		mode := criurpc.CriuCgMode(criuOpts.ManageCgroupsMode)
+		rpcOpts.ManageCgroupsMode = &mode
 	}
 
 	t := criurpc.CriuReqType_DUMP
@@ -677,6 +679,7 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 			ExtUnixSk:      proto.Bool(criuOpts.ExternalUnixConnections),
 			TcpEstablished: proto.Bool(criuOpts.TcpEstablished),
 			FileLocks:      proto.Bool(criuOpts.FileLocks),
+			EmptyNs:        proto.Uint32(criuOpts.EmptyNs),
 		},
 	}
 
@@ -720,7 +723,8 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 		if err := c.checkCriuVersion("1.7"); err != nil {
 			return err
 		}
-		req.Opts.ManageCgroupsMode = proto.Uint32(uint32(criuOpts.ManageCgroupsMode))
+		mode := criurpc.CriuCgMode(criuOpts.ManageCgroupsMode)
+		req.Opts.ManageCgroupsMode = &mode
 	}
 
 	var (
@@ -951,6 +955,20 @@ func (c *linuxContainer) criuNotifications(resp *criurpc.CriuResp, process *Proc
 	case notify.GetScript() == "network-lock":
 		if err := lockNetwork(c.config); err != nil {
 			return err
+		}
+	case notify.GetScript() == "setup-namespaces":
+		if c.config.Hooks != nil {
+			s := configs.HookState{
+				Version: c.config.Version,
+				ID:      c.id,
+				Pid:     int(notify.GetPid()),
+				Root:    c.config.Rootfs,
+			}
+			for _, hook := range c.config.Hooks.Prestart {
+				if err := hook.Run(s); err != nil {
+					return newSystemError(err)
+				}
+			}
 		}
 	case notify.GetScript() == "post-restore":
 		pid := notify.GetPid()
