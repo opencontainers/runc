@@ -118,7 +118,7 @@ func getProcess(context *cli.Context, bundle string) (*specs.Process, error) {
 		if err := json.NewDecoder(f).Decode(&p); err != nil {
 			return nil, err
 		}
-		return &p, nil
+		return &p, validateProcessSpec(&p)
 	}
 	// process via cli flags
 	if err := os.Chdir(bundle); err != nil {

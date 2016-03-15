@@ -197,18 +197,6 @@ var mountPropagationMapping = map[string]int{
 	"":         syscall.MS_PRIVATE | syscall.MS_REC,
 }
 
-// validateSpec validates the fields in the spec
-// TODO: Add validation for other fields where applicable
-func validateSpec(spec *specs.Spec) error {
-	if spec.Process.Cwd == "" {
-		return fmt.Errorf("Cwd property must not be empty")
-	}
-	if !filepath.IsAbs(spec.Process.Cwd) {
-		return fmt.Errorf("Cwd must be an absolute path")
-	}
-	return nil
-}
-
 // loadSpec loads the specification from the provided path.
 // If the path is empty then the default path will be "config.json"
 func loadSpec(cPath string) (spec *specs.Spec, err error) {
@@ -224,7 +212,7 @@ func loadSpec(cPath string) (spec *specs.Spec, err error) {
 	if err = json.NewDecoder(cf).Decode(&spec); err != nil {
 		return nil, err
 	}
-	return spec, validateSpec(spec)
+	return spec, validateProcessSpec(&spec.Process)
 }
 
 func createLibcontainerConfig(cgroupName string, spec *specs.Spec) (*configs.Config, error) {

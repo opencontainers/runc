@@ -365,3 +365,16 @@ func runProcess(container libcontainer.Container, config *specs.Process, listenF
 	}
 	return handler.forward(process)
 }
+
+func validateProcessSpec(spec *specs.Process) error {
+	if spec.Cwd == "" {
+		return fmt.Errorf("Cwd property must not be empty")
+	}
+	if !filepath.IsAbs(spec.Cwd) {
+		return fmt.Errorf("Cwd must be an absolute path")
+	}
+	if len(spec.Args) == 0 {
+		return fmt.Errorf("args must not be empty")
+	}
+	return nil
+}
