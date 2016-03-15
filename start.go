@@ -85,7 +85,9 @@ var initCommand = cli.Command{
 		runtime.LockOSThread()
 		factory, _ := libcontainer.New("")
 		if err := factory.StartInitialization(); err != nil {
-			fatal(err)
+			// as the error is sent back to the parent there is no need to log
+			// or write it to stderr because the parent process will handle this
+			os.Exit(1)
 		}
 		panic("libcontainer: container init failed to exec")
 	},

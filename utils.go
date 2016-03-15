@@ -150,33 +150,15 @@ func containerPreload(context *cli.Context) error {
 
 // loadFactory returns the configured factory instance for execing containers.
 func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
-	var (
-		debug = "false"
-		root  = context.GlobalString("root")
-	)
-	if context.GlobalBool("debug") {
-		debug = "true"
-	}
+	root := context.GlobalString("root")
 	abs, err := filepath.Abs(root)
 	if err != nil {
 		return nil, err
 	}
-	var logAbs string
-	if l := context.GlobalString("log"); l != "" {
-		if logAbs, err = filepath.Abs(context.GlobalString("log")); err != nil {
-			return nil, err
-		}
-	}
 	return libcontainer.New(abs, libcontainer.Cgroupfs, func(l *libcontainer.LinuxFactory) error {
 		l.CriuPath = context.GlobalString("criu")
 		return nil
-	},
-		libcontainer.InitArgs(os.Args[0],
-			"--log", logAbs,
-			"--log-format", context.GlobalString("log-format"),
-			fmt.Sprintf("--debug=%s", debug),
-			"init"),
-	)
+	})
 }
 
 // getContainer returns the specified container instance by loading it from state
