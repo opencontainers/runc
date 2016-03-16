@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"runtime"
 	"testing"
+
+	"github.com/pquerna/ffjson/ffjson"
 )
 
 func init() {
@@ -130,7 +132,8 @@ var spec = &Spec{
 
 func BenchmarkMarsalSpec(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		if _, err := json.Marshal(spec); err != nil {
+		_, err := ffjson.Marshal(spec)
+		if err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -139,7 +142,7 @@ func BenchmarkMarsalSpec(b *testing.B) {
 func BenchmarkUnmarshal(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		var temp Spec
-		if err := json.Unmarshal(encoded, &temp); err != nil {
+		if err := ffjson.Unmarshal(encoded, &temp); err != nil {
 			b.Fatal(err)
 		}
 	}
