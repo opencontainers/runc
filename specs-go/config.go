@@ -96,9 +96,10 @@ type Mount struct {
 
 // Hook specifies a command that is run at a particular event in the lifecycle of a container
 type Hook struct {
-	Path string   `json:"path"`
-	Args []string `json:"args,omitempty"`
-	Env  []string `json:"env,omitempty"`
+	Path    string   `json:"path"`
+	Args    []string `json:"args,omitempty"`
+	Env     []string `json:"env,omitempty"`
+	Timeout *int     `json:"timeout,omitempty"`
 }
 
 // Hooks for container setup and teardown
