@@ -56,6 +56,11 @@ test: .govet .golint .gitvalidation
 .gitvalidation:
 	git-validation -q -run DCO,short-subject -v -range $(EPOCH_TEST_COMMIT)..HEAD
 
+# `go get https://github.com/pquerna/ffjson`
+ffjson:
+	cd specs-go/ && ffjson config.go
+	cd specs-go/ && ffjson state.go
+
 clean:
 	rm -rf output/ *~
 

@@ -130,7 +130,7 @@ var spec = &Spec{
 	},
 }
 
-func BenchmarkMarsalSpec(b *testing.B) {
+func BenchmarkMarshalSpec(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_, err := ffjson.Marshal(spec)
 		if err != nil {
