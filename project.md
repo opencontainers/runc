@@ -2,7 +2,7 @@
 
 ## Release Process
 
-* Increment version in version.go
+* Increment version in [`specs-go/version.go`](specs-go/version.go)
 * `git commit` version increment
 * `git tag` the prior commit (preferrably signed tag)
 * `make docs` to produce PDF and HTML copies of the spec
