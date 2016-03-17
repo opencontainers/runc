@@ -17,30 +17,30 @@ DOC_FILES := \
 	glossary.md
 EPOCH_TEST_COMMIT := 041eb73d2e0391463894c04c8ac938036143eba3
 
-docs: pdf html
+default: docs
+
 .PHONY: docs
+docs: output/docs.pdf output/docs.html
 
-pdf:
-	@mkdir -p output/ && \
+output/docs.pdf:
+	mkdir -p output/ && \
 	$(DOCKER) run \
 	-it \
 	--rm \
 	-v $(shell pwd)/:/input/:ro \
 	-v $(shell pwd)/output/:/output/ \
 	-u $(shell id -u) \
-	vbatts/pandoc -f markdown_github -t latex -o /output/docs.pdf $(patsubst %,/input/%,$(DOC_FILES)) && \
-	ls -sh $(shell readlink -f output/docs.pdf)
+	vbatts/pandoc -f markdown_github -t latex -o /$@ $(patsubst %,/input/%,$(DOC_FILES))
 
-html:
-	@mkdir -p output/ && \
+output/docs.html:
+	mkdir -p output/ && \
 	$(DOCKER) run \
 	-it \
 	--rm \
 	-v $(shell pwd)/:/input/:ro \
 	-v $(shell pwd)/output/:/output/ \
 	-u $(shell id -u) \
-	vbatts/pandoc -f markdown_github -t html5 -o /output/docs.html $(patsubst %,/input/%,$(DOC_FILES)) && \
-	ls -sh $(shell readlink -f output/docs.html)
+	vbatts/pandoc -f markdown_github -t html5 -o /$@ $(patsubst %,/input/%,$(DOC_FILES))
 
 
 HOST_GOLANG_VERSION	= $(shell go version | cut -d ' ' -f3 | cut -c 3-)
@@ -53,19 +53,41 @@ test: .govet .golint .gitvalidation
 
 # `go get golang.org/x/tools/cmd/vet`
 .govet:
+	@go tool | grep -qw vet || (echo "ERROR: 'go vet' not found. Consider 'make install.tools' target" && false)
 	go vet -x ./...
 
 # `go get github.com/golang/lint/golint`
 .golint:
 ifeq ($(call ALLOWED_GO_VERSION,1.5,$(HOST_GOLANG_VERSION)),true)
+	@which golint > /dev/null 2>/dev/null || (echo "ERROR: golint not found. Consider 'make install.tools' target" && false)
 	golint ./...
 endif
 
 
-# `go get github.com/vbatts/git-validation`
 .gitvalidation:
+	@which git-validation > /dev/null 2>/dev/null || (echo "ERROR: git-validation not found. Consider 'make install.tools' target" && false)
 	git-validation -q -run DCO,short-subject -v -range $(EPOCH_TEST_COMMIT)..HEAD
 
+.PHONY: install.tools
+install.tools: .install.golint .install.govet .install.gitvalidation
+
+# golint does not even build for <go1.5
+.install.golint:
+ifeq ($(call ALLOWED_GO_VERSION,1.5,$(HOST_GOLANG_VERSION)),true)
+	go get github.com/golang/lint/golint
+endif
+
+# go vet is now included in >=go1.5, so no need to get it.
+.install.govet:
+ifeq ($(call ALLOWED_GO_VERSION,1.5,$(HOST_GOLANG_VERSION)),true)
+	go get golang.org/x/tools/cmd/vet
+endif
+
+.install.gitvalidation:
+	go get github.com/vbatts/git-validation
+
+
+.PHONY: clean
 clean:
 	rm -rf output/ *~
 
