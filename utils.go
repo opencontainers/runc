@@ -269,18 +269,28 @@ func setupIO(process *libcontainer.Process, rootuid int, console string, createT
 	return createStdioPipes(process, rootuid)
 }
 
+// createPidFile creates a file with the processes pid inside it atomically
+// it creates a temp file with the paths filename + '.' infront of it
+// then renames the file
 func createPidFile(path string, process *libcontainer.Process) error {
 	pid, err := process.Pid()
 	if err != nil {
 		return err
 	}
-	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
+	var (
+		tmpDir  = filepath.Dir(path)
+		tmpName = filepath.Join(tmpDir, fmt.Sprintf(".%s", filepath.Base(path)))
+	)
+	f, err := os.OpenFile(tmpName, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
 	_, err = fmt.Fprintf(f, "%d", pid)
-	return err
+	f.Close()
+	if err != nil {
+		return err
+	}
+	return os.Rename(tmpName, path)
 }
 
 func createContainer(context *cli.Context, id string, spec *specs.Spec) (libcontainer.Container, error) {
