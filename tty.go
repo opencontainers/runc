@@ -12,16 +12,6 @@ import (
 	"github.com/opencontainers/runc/libcontainer"
 )
 
-// newTty creates a new tty for use with the container.  If a tty is not to be
-// created for the process, pipes are created so that the TTY of the parent
-// process are not inherited by the container.
-func newTty(create bool, p *libcontainer.Process, rootuid int, console string) (*tty, error) {
-	if create {
-		return createTty(p, rootuid, console)
-	}
-	return createStdioPipes(p, rootuid)
-}
-
 // setup standard pipes so that the TTY of the calling runc process
 // is not inherited by the container.
 func createStdioPipes(p *libcontainer.Process, rootuid int) (*tty, error) {
