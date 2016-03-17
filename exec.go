@@ -76,6 +76,10 @@ following will output a list of processes running in the container:
 			Value: &cli.StringSlice{},
 			Usage: "add a capability to the bounding set for the process",
 		},
+		cli.BoolFlag{
+			Name:  "no-subreaper",
+			Usage: "disable the use of the subreaper used to reap reparented processes",
+		},
 	},
 	Action: func(context *cli.Context) {
 		if os.Geteuid() != 0 {
@@ -104,7 +108,15 @@ func execProcess(context *cli.Context) (int, error) {
 	if err != nil {
 		return -1, err
 	}
-	return runProcess(container, p, nil, context.String("console"), context.String("pid-file"), detach)
+	r := &runner{
+		enableSubreaper: !context.Bool("no-subreaper"),
+		shouldDestroy:   false,
+		container:       container,
+		console:         context.String("console"),
+		detach:          detach,
+		pidFile:         context.String("pid-file"),
+	}
+	return r.run(p)
 }
 
 func getProcess(context *cli.Context, bundle string) (*specs.Process, error) {
