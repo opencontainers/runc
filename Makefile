@@ -6,12 +6,15 @@ BUILDTAGS=seccomp
 RUNC_BUILD_PATH=/go/src/github.com/opencontainers/runc/runc
 RUNC_INSTANCE=runc_dev
 COMMIT=$(shell git rev-parse HEAD 2> /dev/null || true)
+RUNC_LINK=$(CURDIR)/Godeps/_workspace/src/github.com/opencontainers/runc
 export GOPATH:=$(CURDIR)/Godeps/_workspace:$(GOPATH)
 
 .PHONY=dbuild
 
 all:
-	ln -sfn $(CURDIR) $(CURDIR)/Godeps/_workspace/src/github.com/opencontainers/runc
+ifneq ($(RUNC_LINK), $(wildcard $(RUNC_LINK)))
+	ln -sfn $(CURDIR) $(RUNC_LINK)
+endif
 	go build -ldflags "-X main.gitCommit=${COMMIT}" -tags "$(BUILDTAGS)" -o runc .
 
 static:
@@ -47,8 +50,8 @@ uninstall:
 	rm -f /usr/local/bin/runc
 
 clean:
-	rm runc
-	rm $(CURDIR)/Godeps/_workspace/src/github.com/opencontainers/runc
+	rm -f runc
+	rm -f $(RUNC_LINK)
 
 validate: vet
 	script/validate-gofmt
