@@ -281,7 +281,7 @@ func createPidFile(path string, process *libcontainer.Process) error {
 		tmpDir  = filepath.Dir(path)
 		tmpName = filepath.Join(tmpDir, fmt.Sprintf(".%s", filepath.Base(path)))
 	)
-	f, err := os.OpenFile(tmpName, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
+	f, err := os.OpenFile(tmpName, os.O_RDWR|os.O_CREATE|os.O_EXCL|os.O_SYNC, 0666)
 	if err != nil {
 		return err
 	}
