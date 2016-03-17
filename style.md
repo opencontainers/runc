@@ -21,6 +21,70 @@ The redundancy reduction from removing the namespacing prefix is not useful enou
 So we have a consistent way to identify unset values ([source][optional-pointer]).
 The exceptions are entries where the Go default for the type is a no-op in the spec, in which case `omitempty` is sufficient and no pointer is needed (sources [here][no-pointer-for-slices], [here][no-pointer-for-boolean], and [here][pointer-when-updates-require-changes]).
 
+## Examples
+
+### Anchoring
+
+For any given section that provides a notable example, it is ideal to have it denoted with [markdown headers][markdown-headers].
+The level of header should be such that it is a subheader of the header it is an example of.
+
+#### Example
+
+```markdown
+## Some Topic
+
+### Some Subheader
+
+#### Further Subheader
+
+##### Example
+
+To use Further Subheader, ...
+
+### Example
+
+To use Some Topic, ...
+
+```
+
+### Content
+
+Where necessary, the values in the example can be empty or unset, but accommodate with comments regarding this intention.
+
+Where feasible, the content and values used in an example should convey the fullest use of the data structures concerned.
+Most commonly onlookers will intend to copy-and-paste a "working example".
+If the intention of the example is to be a fully utilized example, rather than a copy-and-paste example, perhaps add a comment as such.
+
+```markdown
+### Example
+```
+```json
+{
+    "foo": null,
+    "bar": ""
+}
+```
+
+**vs.**
+
+```markdown
+### Example
+
+Following is a fully populated example (not necessarily for copy/paste use)
+```
+```json
+{
+    "foo": [
+        1,
+        2,
+        3
+    ],
+    "bar": "waffles",
+    "bif": {
+        "baz": "potatoes"
+    }
+}
+```
 
 [capabilities]: config-linux.md#capabilities
 [class-id]: config-linux.md#network
@@ -30,3 +94,4 @@ The exceptions are entries where the Go default for the type is a no-op in the s
 [no-pointer-for-slices]: https://github.com/opencontainers/runtime-spec/pull/316/files#r50782982
 [optional-pointer]: https://github.com/opencontainers/runtime-spec/pull/233#discussion_r47829711
 [pointer-when-updates-require-changes]: https://github.com/opencontainers/runtime-spec/pull/317/files#r50932706
+[markdown-headers]: https://help.github.com/articles/basic-writing-and-formatting-syntax/#headings
