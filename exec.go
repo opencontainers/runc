@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/codegangsta/cli"
+	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/specs/specs-go"
 )
 
@@ -94,16 +95,28 @@ func execProcess(context *cli.Context) (int, error) {
 	if err != nil {
 		return -1, err
 	}
+
 	detach := context.Bool("detach")
+
 	state, err := container.State()
 	if err != nil {
 		return -1, err
 	}
 	bundle := searchLabels(state.Config.Labels, "bundle")
+
+	status, err := container.Status()
+	if err != nil {
+		return -1, err
+	}
+	if status != libcontainer.Running {
+		return -1, fmt.Errorf("Container not running")
+	}
+
 	p, err := getProcess(context, bundle)
 	if err != nil {
 		return -1, err
 	}
+
 	return runProcess(container, p, nil, context.String("console"), context.String("pid-file"), detach)
 }
 
@@ -130,6 +143,7 @@ func getProcess(context *cli.Context, bundle string) (*specs.Process, error) {
 	}
 	p := spec.Process
 	p.Args = context.Args()[1:]
+
 	// override the cwd, if passed
 	if context.String("cwd") != "" {
 		p.Cwd = context.String("cwd")

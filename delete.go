@@ -1,6 +1,11 @@
 package main
 
-import "github.com/codegangsta/cli"
+import (
+	"os"
+
+	"github.com/Sirupsen/logrus"
+	"github.com/codegangsta/cli"
+)
 
 var deleteCommand = cli.Command{
 	Name:  "delete",
@@ -14,11 +19,16 @@ status of "ubuntu01" as "destroyed" the following will delete resources held for
 "ubuntu01" removing "ubuntu01" from the runc list of containers:  
 	 
        # runc delete ubuntu01`,
+	Flags: []cli.Flag{},
 	Action: func(context *cli.Context) {
+		if os.Geteuid() != 0 {
+			logrus.Fatal("runc should be run as root")
+		}
 		container, err := getContainer(context)
 		if err != nil {
-			fatal(err)
+			logrus.Fatalf("Container delete failed: %v", err)
+			os.Exit(-1)
 		}
-		destroy(container)
+		deleteContainer(container)
 	},
 }

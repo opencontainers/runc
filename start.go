@@ -98,16 +98,11 @@ func startContainer(context *cli.Context, spec *specs.Spec) (int, error) {
 	if id == "" {
 		return -1, errEmptyID
 	}
-	container, err := createContainer(context, id, spec)
+	detach := context.Bool("detach")
+
+	container, err := getContainer(context)
 	if err != nil {
 		return -1, err
-	}
-
-	// ensure that the container is always removed if we were the process
-	// that created it.
-	detach := context.Bool("detach")
-	if !detach {
-		defer destroy(container)
 	}
 
 	// Support on-demand socket activation by passing file descriptors into the container init process.
@@ -116,10 +111,5 @@ func startContainer(context *cli.Context, spec *specs.Spec) (int, error) {
 		listenFDs = activation.Files(false)
 	}
 
-	status, err := runProcess(container, &spec.Process, listenFDs, context.String("console"), context.String("pid-file"), detach)
-	if err != nil {
-		destroy(container)
-		return -1, err
-	}
-	return status, nil
+	return runProcess(container, &spec.Process, listenFDs, context.String("console"), context.String("pid-file"), detach)
 }

@@ -117,6 +117,9 @@ type BaseContainer interface {
 	// Systemerror - System error.
 	Set(config configs.Config) error
 
+	// Create will setup a new container but not actually run a user process
+	Create(process *Process) (err error)
+
 	// Start a process inside the container. Returns error if process fails to
 	// start. You can track process lifecycle with passed Process structure.
 	//
