@@ -150,16 +150,6 @@ func UseSystemd() bool {
 	return hasStartTransientUnit
 }
 
-func getIfaceForUnit(unitName string) string {
-	if strings.HasSuffix(unitName, ".scope") {
-		return "Scope"
-	}
-	if strings.HasSuffix(unitName, ".service") {
-		return "Service"
-	}
-	return "Unit"
-}
-
 func (m *Manager) Apply(pid int) error {
 	var (
 		c          = m.Cgroups

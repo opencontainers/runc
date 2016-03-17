@@ -11,7 +11,3 @@ var (
 	specCommand       cli.Command
 	killCommand       cli.Command
 )
-
-func runAction(*cli.Context) {
-	fatalf("Current OS is not supported yet")
-}
