@@ -80,10 +80,8 @@ is a directory with a specification file and a root filesystem.`,
 }
 
 var initCommand = cli.Command{
-	Name: "init",
-	Usage: `init is used to initialize the containers namespaces and launch the users process.
-    This command should not be called outside of runc.
-    `,
+	Name:  "init",
+	Usage: `initialize the namespaces and launch the process (do not call it outside of runc)`,
 	Action: func(context *cli.Context) {
 		runtime.GOMAXPROCS(1)
 		runtime.LockOSThread()
