@@ -226,6 +226,7 @@ If a hook returns a non-zero exit code, then an error is logged and the remainin
         "poststart": [
             {
                 "path": "/usr/bin/notify-start"
+                "timeout": 5
             }
         ],
         "poststop": [
@@ -239,6 +240,7 @@ If a hook returns a non-zero exit code, then an error is logged and the remainin
 
 `path` is required for a hook.
 `args` and `env` are optional.
+`timeout` is the number of seconds before aborting the hook.
 The semantics are the same as `Path`, `Args` and `Env` in [golang Cmd](https://golang.org/pkg/os/exec/#Cmd).
 
 ## Annotations
