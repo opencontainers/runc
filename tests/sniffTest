@@ -1,7 +1,6 @@
 #!/bin/bash
 
 set -e
-
 RUNC=$PWD/runc
 DIR=/tmp/runc_test
 
@@ -47,9 +46,10 @@ echo "PASS: runc start"
 
 # Test exec
 ################################################################
-set -ex
+set -e 
 rm config.json && $RUNC spec  # reset things
 sed -i 's/"sh"/"sleep","6"/' config.json
+set +e
 $RUNC start -d --console /dev/ptmx c1 >out 2>&1
 rc=$?
 if [[ $rc != 0 || -s out ]]; then
@@ -68,15 +68,27 @@ if [[ $rc != 0 || -s err ]]; then
 	echo Output: $(cat out)
 	exit 1
 fi
-$RUNC kill c1
-rm -rf /run/opencontainer/containers/c1
 echo "PASS: runc exec"
+
+# wait for the detached container to exit then clean up
+for ((i=0; i < 10; i++)); do
+  $RUNC state c1 | grep -q 'destroyed' >out 2>err
+  rc=$?
+  if [[ $rc != 0 || -s err ]]; then 
+    sleep 1
+  else 
+    $RUNC delete c1
+    i=10    
+  fi  
+done
 
 # Test pause/resume
 ################################################################
+set -e 
 rm config.json && $RUNC spec  # reset things
 sed -i 's/"sh"/"sleep","6"/' config.json
-$RUNC start -d --console /dev/ptmx c1 >out 2>&1
+set +e
+$RUNC start -d --console /dev/ptmx c2 >out 2>&1
 rc=$?
 if [[ $rc != 0 || -s out ]]; then
 	echo Error while running start
@@ -85,7 +97,7 @@ if [[ $rc != 0 || -s out ]]; then
 	exit 1
 fi
 sleep 1
-$RUNC pause c1 >out 2>&1
+$RUNC pause c2 >out 2>&1
 rc=$?
 if [[ $rc != 0 || -s out ]]; then
 	echo Error while running pause
@@ -93,7 +105,7 @@ if [[ $rc != 0 || -s out ]]; then
 	echo Output: $(cat out)
 	exit 1
 fi
-$RUNC resume c1 >out 2>&1
+$RUNC resume c2 >out 2>&1
 rc=$?
 if [[ $? != 0 || -s out ]]; then
 	echo Error while running pause
@@ -101,12 +113,19 @@ if [[ $? != 0 || -s out ]]; then
 	echo Output: $(cat out)
 	exit 1
 fi
-
-$RUNC kill c1
-rm -rf /run/opencontainer/containers/c1
 echo "PASS: runc pause/resume"
 
-# give it a sec before we erase the dir
-sleep 5
+# wait for the detached container to exit then clean up
+for ((i=0; i < 10; i++)); do
+  $RUNC state c2 | grep -q 'destroyed' >out 2>err
+  rc=$?
+  if [[ $rc != 0 || -s err ]]; then 
+    sleep 1
+  else 
+    $RUNC delete c2
+    i=10    
+  fi  
+done
+
 cd ..
 rm -rf $DIR
