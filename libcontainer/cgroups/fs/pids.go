@@ -52,12 +52,22 @@ func (s *PidsGroup) GetStats(path string, stats *cgroups.Stats) error {
 		return fmt.Errorf("failed to parse pids.current - %s", err)
 	}
 
-	max, err := getCgroupParamUint(path, "pids.max")
+	stats.PidsStats.Current = current
+
+	maxStr, err := getCgroupParamString(path, "pids.max")
 	if err != nil {
-		return fmt.Errorf("failed to parse pids.max - %s", err)
+		return fmt.Errorf("failed to parse pids.max as string - %s", err)
 	}
 
-	stats.PidsStats.Current = current
+	if maxStr == "max" {
+		return nil
+	}
+
+	max, err := getCgroupParamUint(path, "pids.max")
+	if err != nil {
+		return fmt.Errorf("failed to parse pids.max as uint - %s", err)
+	}
+
 	stats.PidsStats.Max = max
 	return nil
 }
