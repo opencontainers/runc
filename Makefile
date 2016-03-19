@@ -40,6 +40,11 @@ html:
 	vbatts/pandoc -f markdown_github -t html5 -o /output/docs.html $(patsubst %,/input/%,$(DOC_FILES)) && \
 	ls -sh $(shell readlink -f output/docs.html)
 
+
+HOST_GOLANG_VERSION	= $(shell go version | cut -d ' ' -f3 | cut -c 3-)
+# this variable is used like a function. First arg is the minimum version, Second arg is the version to be checked.
+ALLOWED_GO_VERSION	= $(shell test '$(shell /bin/echo -e "$(1)\n$(2)" | sort -V | head -n1)' == '$(1)' && echo 'true')
+
 .PHONY: test .govet .golint .gitvalidation
 
 test: .govet .golint .gitvalidation
@@ -50,7 +55,10 @@ test: .govet .golint .gitvalidation
 
 # `go get github.com/golang/lint/golint`
 .golint:
+ifeq ($(call ALLOWED_GO_VERSION,1.5,$(HOST_GOLANG_VERSION)),true)
 	golint ./...
+endif
+
 
 # `go get github.com/vbatts/git-validation`
 .gitvalidation:
