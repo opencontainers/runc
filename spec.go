@@ -382,6 +382,9 @@ func createCgroupConfig(name string, spec *specs.Spec) (*configs.Cgroup, error) 
 		if r.Memory.Kernel != nil {
 			c.Resources.KernelMemory = int64(*r.Memory.Kernel)
 		}
+		if r.Memory.KernelTCP != nil {
+			c.Resources.KernelMemoryTCP = int64(*r.Memory.KernelTCP)
+		}
 		if r.Memory.Swappiness != nil {
 			swappiness := int64(*r.Memory.Swappiness)
 			c.Resources.MemorySwappiness = &swappiness
