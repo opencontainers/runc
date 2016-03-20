@@ -144,6 +144,11 @@ func (s *MemoryGroup) GetStats(path string, stats *cgroups.Stats) error {
 		return err
 	}
 	stats.MemoryStats.KernelUsage = kernelUsage
+	kernelTCPUsage, err := getMemoryData(path, "kmem.tcp")
+	if err != nil {
+		return err
+	}
+	stats.MemoryStats.KernelTCPUsage = kernelTCPUsage
 
 	return nil
 }
