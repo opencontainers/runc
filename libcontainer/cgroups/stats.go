@@ -47,8 +47,11 @@ type MemoryStats struct {
 	// usage of memory + swap
 	SwapUsage MemoryData `json:"swap_usage,omitempty"`
 	// usage of kernel memory
-	KernelUsage MemoryData        `json:"kernel_usage,omitempty"`
-	Stats       map[string]uint64 `json:"stats,omitempty"`
+	KernelUsage MemoryData `json:"kernel_usage,omitempty"`
+	// usage of kernel TCP memory
+	KernelTCPUsage MemoryData `json:"kernel_tcp_usage,omitempty"`
+
+	Stats map[string]uint64 `json:"stats,omitempty"`
 }
 
 type PidsStats struct {
