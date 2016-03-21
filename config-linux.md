@@ -429,7 +429,7 @@ processes in the group and egressing the system on various interfaces. The follo
 `pids` represents the cgroup subsystem `pids`.
 For more information, see [the pids cgroup man page][cgroup-v1-pids].
 
-The following paramters can be specified to setup the controller:
+The following parameters can be specified to setup the controller:
 
 * **`limit`** *(int64, required)* - specifies the maximum number of tasks in the cgroup
 
