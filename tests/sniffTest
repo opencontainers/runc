@@ -69,7 +69,7 @@ if [[ $rc != 0 || -s err ]]; then
 	exit 1
 fi
 $RUNC kill c1
-rm -rf /run/opencontainer/containers/c1
+rm -rf /run/runc/c1
 echo "PASS: runc exec"
 
 # Test pause/resume
@@ -103,7 +103,7 @@ if [[ $? != 0 || -s out ]]; then
 fi
 
 $RUNC kill c1
-rm -rf /run/opencontainer/containers/c1
+rm -rf /run/runc/c1
 echo "PASS: runc pause/resume"
 
 # give it a sec before we erase the dir
