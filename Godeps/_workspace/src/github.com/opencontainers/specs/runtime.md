@@ -118,7 +118,7 @@ Example:
     "cwd": "...",
 }
 ```
-This specification does not manadate the name of this JSON file.
+This specification does not mandate the name of this JSON file.
 See the specification of the `config.json` file for the definition of these fields.
 The stopping, or exiting, of these secondary process MUST have no effect on the state of the container.
 In other words, a container (and its PID 1 process) MUST NOT be stopped due to the exiting of a secondary process.
