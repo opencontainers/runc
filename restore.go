@@ -92,7 +92,7 @@ using the runc checkpoint command.`,
 		if err != nil {
 			fatal(err)
 		}
-		config, err := createLibcontainerConfig(id, spec)
+		config, err := createLibcontainerConfig(id, context.GlobalBool("systemd-cgroup"), spec)
 		if err != nil {
 			fatal(err)
 		}

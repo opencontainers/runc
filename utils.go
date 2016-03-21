@@ -12,6 +12,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 	"github.com/opencontainers/runc/libcontainer"
+	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/specs/specs-go"
 )
@@ -146,7 +147,15 @@ func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
 	if err != nil {
 		return nil, err
 	}
-	return libcontainer.New(abs, libcontainer.Cgroupfs, func(l *libcontainer.LinuxFactory) error {
+	cgroupManager := libcontainer.Cgroupfs
+	if context.GlobalBool("systemd-cgroup") {
+		if systemd.UseSystemd() {
+			cgroupManager = libcontainer.SystemdCgroups
+		} else {
+			return nil, fmt.Errorf("systemd cgroup flag passed, but systemd support for managing cgroups is not available.")
+		}
+	}
+	return libcontainer.New(abs, cgroupManager, func(l *libcontainer.LinuxFactory) error {
 		l.CriuPath = context.GlobalString("criu")
 		return nil
 	})
@@ -285,7 +294,7 @@ func createPidFile(path string, process *libcontainer.Process) error {
 }
 
 func createContainer(context *cli.Context, id string, spec *specs.Spec) (libcontainer.Container, error) {
-	config, err := createLibcontainerConfig(id, spec)
+	config, err := createLibcontainerConfig(id, context.GlobalBool("systemd-cgroup"), spec)
 	if err != nil {
 		return nil, err
 	}
