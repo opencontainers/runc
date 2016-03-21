@@ -230,7 +230,7 @@ Changes with v0.1.0:
 	* ROADMAP.md: remove the tail spaces
 	* roadmap: update links and add wiki reference
 	* runtime: Add 'version' to the state.json example
-	* runtime-config: add example label before json exmaple
+	* runtime-config: add example label before json example
 	* runtime-config: add section about Hooks
 	* runtime: config: linux: add cgroups information
 	* runtime: config: linux: Edit BlockIO struct
