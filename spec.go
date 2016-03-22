@@ -385,7 +385,7 @@ func createCgroupConfig(name string, spec *specs.Spec) (*configs.Cgroup, error) 
 			minor = *d.Minor
 		}
 		if d.Access == nil || *d.Access == "" {
-			return nil, fmt.Errorf("device access at %d field canot be empty", i)
+			return nil, fmt.Errorf("device access at %d field cannot be empty", i)
 		}
 		dt, err := stringToDeviceRune(t)
 		if err != nil {
