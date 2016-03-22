@@ -127,7 +127,7 @@ func TestMemorySetKernelMemoryTCP(t *testing.T) {
 		"memory.kmem.tcp.limit_in_bytes": strconv.Itoa(kernelMemoryTCPBefore),
 	})
 
-	helper.CgroupData.config.Resources.KernelMemory = kernelMemoryTCPAfter
+	helper.CgroupData.config.Resources.KernelMemoryTCP = kernelMemoryTCPAfter
 	memory := &MemoryGroup{}
 	if err := memory.Set(helper.CgroupPath, helper.CgroupData.config); err != nil {
 		t.Fatal(err)
