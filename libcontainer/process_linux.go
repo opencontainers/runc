@@ -340,7 +340,7 @@ loop:
 		}
 	}
 	if !sentRun {
-		return newSystemError(fmt.Errorf("could not synchronise with container process"))
+		return newSystemError(fmt.Errorf("could not synchronise with container process: %v", ierr))
 	}
 	if p.config.Config.Namespaces.Contains(configs.NEWNS) && !sentResume {
 		return newSystemError(fmt.Errorf("could not synchronise after executing prestart hooks with container process"))
