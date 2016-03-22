@@ -22,10 +22,43 @@ import (
 )
 
 var specCommand = cli.Command{
-	Name:        "spec",
-	Usage:       "create a new specification file",
-	ArgsUsage:   "",
-	Description: `The spec command creates the new specification file named "` + specConfig + `" for the bundle." `,
+	Name:      "spec",
+	Usage:     "create a new specification file",
+	ArgsUsage: "",
+	Description: `The spec command creates the new specification file named "` + specConfig + `" for
+the bundle.
+
+The spec generated is just a starter file. Editing of the spec is required to
+achieve desired results. For example, the newly generated spec includes an args
+parameter that is initially set to call the "sh" command when the container is
+started. Calling "sh" may work for an ubuntu container or busybox, but will not
+work for containers that do not include the "sh" program.
+
+EXAMPLE:
+  To run docker's hello-world container one needs to set the args parameter
+in the spec to call hello. This can be done using the sed command or a text
+editor. The following commands create a bundle for hello-world, change the
+default args parameter in the spec from "sh" to "/hello", then run the hello
+command in a new hello-world container named container1:
+
+    mkdir hello
+    cd hello
+    docker pull hello-world
+    docker export $(docker create hello-world) > hello-world.tar
+    mkdir rootfs
+    tar -C rootfs -xf hello-world.tar
+    runc spec
+    sed -i 's;"sh";"/hello";' ` + specConfig + `
+    runc start container1
+
+In the start command above, "container1" is the name for the instance of the
+container that you are starting. The name you provide for the container instance
+must be unique on your host.
+
+When starting a container through runc, runc needs root privilege. If not
+already running as root, you can use sudo to give runc root privilege. For
+example: "sudo runc start container1" will give runc root privilege to start the
+container on your host.`,
 	Flags: []cli.Flag{
 		cli.StringFlag{
 			Name:  "bundle, b",
@@ -197,18 +230,6 @@ var mountPropagationMapping = map[string]int{
 	"":         syscall.MS_PRIVATE | syscall.MS_REC,
 }
 
-// validateSpec validates the fields in the spec
-// TODO: Add validation for other fields where applicable
-func validateSpec(spec *specs.Spec) error {
-	if spec.Process.Cwd == "" {
-		return fmt.Errorf("Cwd property must not be empty")
-	}
-	if !filepath.IsAbs(spec.Process.Cwd) {
-		return fmt.Errorf("Cwd must be an absolute path")
-	}
-	return nil
-}
-
 // loadSpec loads the specification from the provided path.
 // If the path is empty then the default path will be "config.json"
 func loadSpec(cPath string) (spec *specs.Spec, err error) {
@@ -224,7 +245,7 @@ func loadSpec(cPath string) (spec *specs.Spec, err error) {
 	if err = json.NewDecoder(cf).Decode(&spec); err != nil {
 		return nil, err
 	}
-	return spec, validateSpec(spec)
+	return spec, validateProcessSpec(&spec.Process)
 }
 
 func createLibcontainerConfig(cgroupName string, spec *specs.Spec) (*configs.Config, error) {
@@ -393,6 +414,9 @@ func createCgroupConfig(name string, spec *specs.Spec) (*configs.Cgroup, error) 
 		}
 		if r.Memory.Kernel != nil {
 			c.Resources.KernelMemory = int64(*r.Memory.Kernel)
+		}
+		if r.Memory.KernelTCP != nil {
+			c.Resources.KernelMemoryTCP = int64(*r.Memory.KernelTCP)
 		}
 		if r.Memory.Swappiness != nil {
 			swappiness := int64(*r.Memory.Swappiness)

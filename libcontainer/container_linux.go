@@ -407,16 +407,6 @@ func (c *linuxContainer) NotifyMemoryPressure(level PressureLevel) (<-chan struc
 	return notifyMemoryPressure(c.cgroupManager.GetPaths(), level)
 }
 
-// XXX debug support, remove when debugging done.
-func addArgsFromEnv(evar string, args *[]string) {
-	if e := os.Getenv(evar); e != "" {
-		for _, f := range strings.Fields(e) {
-			*args = append(*args, f)
-		}
-	}
-	fmt.Printf(">>> criu %v\n", *args)
-}
-
 // check Criu version greater than or equal to min_version
 func (c *linuxContainer) checkCriuVersion(min_version string) error {
 	var x, y, z, versionReq int
@@ -541,6 +531,7 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 		TcpEstablished: proto.Bool(criuOpts.TcpEstablished),
 		ExtUnixSk:      proto.Bool(criuOpts.ExternalUnixConnections),
 		FileLocks:      proto.Bool(criuOpts.FileLocks),
+		EmptyNs:        proto.Uint32(criuOpts.EmptyNs),
 	}
 
 	// append optional criu opts, e.g., page-server and port
@@ -556,7 +547,8 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 		if err := c.checkCriuVersion("1.7"); err != nil {
 			return err
 		}
-		rpcOpts.ManageCgroupsMode = proto.Uint32(uint32(criuOpts.ManageCgroupsMode))
+		mode := criurpc.CriuCgMode(criuOpts.ManageCgroupsMode)
+		rpcOpts.ManageCgroupsMode = &mode
 	}
 
 	t := criurpc.CriuReqType_DUMP
@@ -677,6 +669,7 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 			ExtUnixSk:      proto.Bool(criuOpts.ExternalUnixConnections),
 			TcpEstablished: proto.Bool(criuOpts.TcpEstablished),
 			FileLocks:      proto.Bool(criuOpts.FileLocks),
+			EmptyNs:        proto.Uint32(criuOpts.EmptyNs),
 		},
 	}
 
@@ -720,7 +713,8 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 		if err := c.checkCriuVersion("1.7"); err != nil {
 			return err
 		}
-		req.Opts.ManageCgroupsMode = proto.Uint32(uint32(criuOpts.ManageCgroupsMode))
+		mode := criurpc.CriuCgMode(criuOpts.ManageCgroupsMode)
+		req.Opts.ManageCgroupsMode = &mode
 	}
 
 	var (
@@ -877,7 +871,7 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *
 			if err != nil {
 				return err
 			}
-			n, err = criuClient.Write(data)
+			_, err = criuClient.Write(data)
 			if err != nil {
 				return err
 			}
@@ -951,6 +945,20 @@ func (c *linuxContainer) criuNotifications(resp *criurpc.CriuResp, process *Proc
 	case notify.GetScript() == "network-lock":
 		if err := lockNetwork(c.config); err != nil {
 			return err
+		}
+	case notify.GetScript() == "setup-namespaces":
+		if c.config.Hooks != nil {
+			s := configs.HookState{
+				Version: c.config.Version,
+				ID:      c.id,
+				Pid:     int(notify.GetPid()),
+				Root:    c.config.Rootfs,
+			}
+			for _, hook := range c.config.Hooks.Prestart {
+				if err := hook.Run(s); err != nil {
+					return newSystemError(err)
+				}
+			}
 		}
 	case notify.GetScript() == "post-restore":
 		pid := notify.GetPid()
@@ -1193,7 +1201,7 @@ func (c *linuxContainer) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Na
 
 		// write gid mappings
 		if len(c.config.GidMappings) > 0 {
-			b, err := encodeIDMapping(c.config.UidMappings)
+			b, err := encodeIDMapping(c.config.GidMappings)
 			if err != nil {
 				return nil, err
 			}

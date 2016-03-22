@@ -139,44 +139,17 @@ var (
 
 var container libcontainer.Container
 
-func containerPreload(context *cli.Context) error {
-	c, err := getContainer(context)
-	if err != nil {
-		return err
-	}
-	container = c
-	return nil
-}
-
 // loadFactory returns the configured factory instance for execing containers.
 func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
-	var (
-		debug = "false"
-		root  = context.GlobalString("root")
-	)
-	if context.GlobalBool("debug") {
-		debug = "true"
-	}
+	root := context.GlobalString("root")
 	abs, err := filepath.Abs(root)
 	if err != nil {
 		return nil, err
 	}
-	var logAbs string
-	if l := context.GlobalString("log"); l != "" {
-		if logAbs, err = filepath.Abs(context.GlobalString("log")); err != nil {
-			return nil, err
-		}
-	}
 	return libcontainer.New(abs, libcontainer.Cgroupfs, func(l *libcontainer.LinuxFactory) error {
 		l.CriuPath = context.GlobalString("criu")
 		return nil
-	},
-		libcontainer.InitArgs(os.Args[0],
-			"--log", logAbs,
-			"--log-format", context.GlobalString("log-format"),
-			fmt.Sprintf("--debug=%s", debug),
-			"init"),
-	)
+	})
 }
 
 // getContainer returns the specified container instance by loading it from state
@@ -287,18 +260,28 @@ func setupIO(process *libcontainer.Process, rootuid int, console string, createT
 	return createStdioPipes(process, rootuid)
 }
 
+// createPidFile creates a file with the processes pid inside it atomically
+// it creates a temp file with the paths filename + '.' infront of it
+// then renames the file
 func createPidFile(path string, process *libcontainer.Process) error {
 	pid, err := process.Pid()
 	if err != nil {
 		return err
 	}
-	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
+	var (
+		tmpDir  = filepath.Dir(path)
+		tmpName = filepath.Join(tmpDir, fmt.Sprintf(".%s", filepath.Base(path)))
+	)
+	f, err := os.OpenFile(tmpName, os.O_RDWR|os.O_CREATE|os.O_EXCL|os.O_SYNC, 0666)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
 	_, err = fmt.Fprintf(f, "%d", pid)
-	return err
+	f.Close()
+	if err != nil {
+		return err
+	}
+	return os.Rename(tmpName, path)
 }
 
 func createContainer(context *cli.Context, id string, spec *specs.Spec) (libcontainer.Container, error) {
@@ -321,47 +304,89 @@ func createContainer(context *cli.Context, id string, spec *specs.Spec) (libcont
 	return factory.Create(id, config)
 }
 
-// runProcess will create a new process in the specified container
-// by executing the process specified in the 'config'.
-func runProcess(container libcontainer.Container, config *specs.Process, listenFDs []*os.File, console string, pidFile string, detach bool) (int, error) {
+type runner struct {
+	enableSubreaper bool
+	shouldDestroy   bool
+	detach          bool
+	listenFDs       []*os.File
+	pidFile         string
+	console         string
+	container       libcontainer.Container
+}
+
+func (r *runner) run(config *specs.Process) (int, error) {
 	process, err := newProcess(*config)
 	if err != nil {
+		r.destroy()
 		return -1, err
 	}
-
-	// Add extra file descriptors if needed
-	if len(listenFDs) > 0 {
-		process.Env = append(process.Env, fmt.Sprintf("LISTEN_FDS=%d", len(listenFDs)), "LISTEN_PID=1")
-		process.ExtraFiles = append(process.ExtraFiles, listenFDs...)
+	if len(r.listenFDs) > 0 {
+		process.Env = append(process.Env, fmt.Sprintf("LISTEN_FDS=%d", len(r.listenFDs)), "LISTEN_PID=1")
+		process.ExtraFiles = append(process.ExtraFiles, r.listenFDs...)
 	}
-
-	rootuid, err := container.Config().HostUID()
+	rootuid, err := r.container.Config().HostUID()
 	if err != nil {
+		r.destroy()
 		return -1, err
 	}
-
-	tty, err := setupIO(process, rootuid, console, config.Terminal, detach)
+	tty, err := setupIO(process, rootuid, r.console, config.Terminal, r.detach)
 	if err != nil {
+		r.destroy()
 		return -1, err
 	}
-	defer tty.Close()
-	handler := newSignalHandler(tty)
-	defer handler.Close()
-	if err := container.Start(process); err != nil {
+	handler := newSignalHandler(tty, r.enableSubreaper)
+	if err := r.container.Start(process); err != nil {
+		r.destroy()
+		tty.Close()
 		return -1, err
 	}
 	if err := tty.ClosePostStart(); err != nil {
+		r.terminate(process)
+		r.destroy()
+		tty.Close()
 		return -1, err
 	}
-	if pidFile != "" {
-		if err := createPidFile(pidFile, process); err != nil {
-			process.Signal(syscall.SIGKILL)
-			process.Wait()
+	if r.pidFile != "" {
+		if err := createPidFile(r.pidFile, process); err != nil {
+			r.terminate(process)
+			r.destroy()
+			tty.Close()
 			return -1, err
 		}
 	}
-	if detach {
+	if r.detach {
+		tty.Close()
 		return 0, nil
 	}
-	return handler.forward(process)
+	status, err := handler.forward(process)
+	if err != nil {
+		r.terminate(process)
+	}
+	r.destroy()
+	tty.Close()
+	return status, err
+}
+
+func (r *runner) destroy() {
+	if r.shouldDestroy {
+		destroy(r.container)
+	}
+}
+
+func (r *runner) terminate(p *libcontainer.Process) {
+	p.Signal(syscall.SIGKILL)
+	p.Wait()
+}
+
+func validateProcessSpec(spec *specs.Process) error {
+	if spec.Cwd == "" {
+		return fmt.Errorf("Cwd property must not be empty")
+	}
+	if !filepath.IsAbs(spec.Cwd) {
+		return fmt.Errorf("Cwd must be an absolute path")
+	}
+	if len(spec.Args) == 0 {
+		return fmt.Errorf("args must not be empty")
+	}
+	return nil
 }

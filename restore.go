@@ -68,6 +68,10 @@ using the runc checkpoint command.`,
 			Value: "",
 			Usage: "specify the file to write the process id to",
 		},
+		cli.BoolFlag{
+			Name:  "no-subreaper",
+			Usage: "disable the use of the subreaper used to reap reparented processes",
+		},
 	},
 	Action: func(context *cli.Context) {
 		imagePath := context.String("image-path")
@@ -140,8 +144,7 @@ func restoreContainer(context *cli.Context, spec *specs.Spec, config *configs.Co
 		return -1, err
 	}
 	defer tty.Close()
-	handler := newSignalHandler(tty)
-	defer handler.Close()
+	handler := newSignalHandler(tty, !context.Bool("no-subreaper"))
 	if err := container.Restore(process, options); err != nil {
 		return -1, err
 	}

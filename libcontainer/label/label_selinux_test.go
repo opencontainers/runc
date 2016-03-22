@@ -41,8 +41,7 @@ func TestInit(t *testing.T) {
 		}
 
 		testBadData := []string{"user", "role:user_r", "type:user_t", "level:s0:c1,c15"}
-		plabel, mlabel, err = InitLabels(testBadData)
-		if err == nil {
+		if _, _, err = InitLabels(testBadData); err == nil {
 			t.Log("InitLabels Bad Failed")
 			t.Fatal(err)
 		}

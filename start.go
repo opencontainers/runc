@@ -22,7 +22,13 @@ Where "<container-id>" is your name for the instance of the container that you
 are starting. The name you provide for the container instance must be unique on
 your host.`,
 	Description: `The start command creates an instance of a container for a bundle. The bundle
-is a directory with a specification file and a root filesystem.`,
+is a directory with a specification file named "` + specConfig + `" and a root
+filesystem.
+
+The specification file includes an args parameter. The args parameter is used
+to specify command(s) that get run when the container is started. To change the
+command(s) that get executed on start, edit the args parameter of the spec. See
+"runc spec --help" for more explanation.`,
 	Flags: []cli.Flag{
 		cli.StringFlag{
 			Name:  "bundle, b",
@@ -42,6 +48,10 @@ is a directory with a specification file and a root filesystem.`,
 			Name:  "pid-file",
 			Value: "",
 			Usage: "specify the file to write the process id to",
+		},
+		cli.BoolFlag{
+			Name:  "no-subreaper",
+			Usage: "disable the use of the subreaper used to reap reparented processes",
 		},
 	},
 	Action: func(context *cli.Context) {
@@ -76,16 +86,16 @@ is a directory with a specification file and a root filesystem.`,
 }
 
 var initCommand = cli.Command{
-	Name: "init",
-	Usage: `init is used to initialize the containers namespaces and launch the users process.
-    This command should not be called outside of runc.
-    `,
+	Name:  "init",
+	Usage: `initialize the namespaces and launch the process (do not call it outside of runc)`,
 	Action: func(context *cli.Context) {
 		runtime.GOMAXPROCS(1)
 		runtime.LockOSThread()
 		factory, _ := libcontainer.New("")
 		if err := factory.StartInitialization(); err != nil {
-			fatal(err)
+			// as the error is sent back to the parent there is no need to log
+			// or write it to stderr because the parent process will handle this
+			os.Exit(1)
 		}
 		panic("libcontainer: container init failed to exec")
 	},
@@ -100,24 +110,20 @@ func startContainer(context *cli.Context, spec *specs.Spec) (int, error) {
 	if err != nil {
 		return -1, err
 	}
-
-	// ensure that the container is always removed if we were the process
-	// that created it.
 	detach := context.Bool("detach")
-	if !detach {
-		defer destroy(container)
-	}
-
 	// Support on-demand socket activation by passing file descriptors into the container init process.
 	listenFDs := []*os.File{}
 	if os.Getenv("LISTEN_FDS") != "" {
 		listenFDs = activation.Files(false)
 	}
-
-	status, err := runProcess(container, &spec.Process, listenFDs, context.String("console"), context.String("pid-file"), detach)
-	if err != nil {
-		destroy(container)
-		return -1, err
+	r := &runner{
+		enableSubreaper: !context.Bool("no-subreaper"),
+		shouldDestroy:   true,
+		container:       container,
+		listenFDs:       listenFDs,
+		console:         context.String("console"),
+		detach:          detach,
+		pidFile:         context.String("pid-file"),
 	}
-	return status, nil
+	return r.run(&spec.Process)
 }
