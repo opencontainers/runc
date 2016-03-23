@@ -104,12 +104,19 @@ For more information about SELinux, see  [Selinux documentation](http://selinuxp
 * **`noNewPrivileges`** (bool, optional) setting `noNewPrivileges` to true prevents the processes in the container from gaining additional privileges.
 [The kernel doc](https://www.kernel.org/doc/Documentation/prctl/no_new_privs.txt) has more information on how this is achieved using a prctl system call.
 
+### User
+
 The user for the process is a platform-specific structure that allows specific control over which user the process runs as.
+
+#### Linux User
+
 For Linux-based systems the user structure has the following fields:
 
 * **`uid`** (int, required) specifies the user id.
 * **`gid`** (int, required) specifies the group id.
 * **`additionalGids`** (array of ints, optional) specifies additional group ids to be added to the process.
+
+_Note: symbolic name for uid and gid, such as uname and gname respectively, are left to upper levels to derive (i.e. `/etc/passwd` parsing, NSS, etc)_
 
 *Example (Linux)*
 
