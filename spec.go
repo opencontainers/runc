@@ -248,7 +248,7 @@ func loadSpec(cPath string) (spec *specs.Spec, err error) {
 	return spec, validateProcessSpec(&spec.Process)
 }
 
-func createLibcontainerConfig(cgroupName string, spec *specs.Spec) (*configs.Config, error) {
+func createLibcontainerConfig(cgroupName string, useSystemdCgroup bool, spec *specs.Spec) (*configs.Config, error) {
 	// runc's cwd will always be the bundle path
 	rcwd, err := os.Getwd()
 	if err != nil {
@@ -299,7 +299,7 @@ func createLibcontainerConfig(cgroupName string, spec *specs.Spec) (*configs.Con
 	if err := setupUserNamespace(spec, config); err != nil {
 		return nil, err
 	}
-	c, err := createCgroupConfig(cgroupName, spec)
+	c, err := createCgroupConfig(cgroupName, useSystemdCgroup, spec)
 	if err != nil {
 		return nil, err
 	}
@@ -344,26 +344,47 @@ func createLibcontainerMount(cwd string, m specs.Mount) *configs.Mount {
 	}
 }
 
-func createCgroupConfig(name string, spec *specs.Spec) (*configs.Cgroup, error) {
+func createCgroupConfig(name string, useSystemdCgroup bool, spec *specs.Spec) (*configs.Cgroup, error) {
 	var (
 		err          error
 		myCgroupPath string
 	)
 
-	if spec.Linux.CgroupsPath != nil {
-		myCgroupPath = libcontainerUtils.CleanPath(*spec.Linux.CgroupsPath)
-	} else {
-		myCgroupPath, err = cgroups.GetThisCgroupDir("devices")
-		if err != nil {
-			return nil, err
-		}
-		myCgroupPath = filepath.Join(myCgroupPath, name)
-	}
-
 	c := &configs.Cgroup{
-		Path:      myCgroupPath,
 		Resources: &configs.Resources{},
 	}
+
+	if spec.Linux.CgroupsPath != nil {
+		myCgroupPath = libcontainerUtils.CleanPath(*spec.Linux.CgroupsPath)
+	}
+
+	if useSystemdCgroup {
+		if myCgroupPath == "" {
+			c.Parent = "system.slice"
+			c.ScopePrefix = "runc"
+			c.Name = name
+		} else {
+			// Parse the path from expected "slice:prefix:name"
+			// for e.g. "system.slice:docker:1234"
+			parts := strings.Split(myCgroupPath, ":")
+			if len(parts) != 3 {
+				return nil, fmt.Errorf("expected cgroupsPath to be of format \"slice:prefix:name\" for systemd cgroups")
+			}
+			c.Parent = parts[0]
+			c.ScopePrefix = parts[1]
+			c.Name = parts[2]
+		}
+	} else {
+		if myCgroupPath == "" {
+			myCgroupPath, err = cgroups.GetThisCgroupDir("devices")
+			if err != nil {
+				return nil, err
+			}
+			myCgroupPath = filepath.Join(myCgroupPath, name)
+		}
+		c.Path = myCgroupPath
+	}
+
 	c.Resources.AllowedDevices = allowedDevices
 	r := spec.Linux.Resources
 	if r == nil {

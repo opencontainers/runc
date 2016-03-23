@@ -48,5 +48,6 @@ value for "bundle" is the current directory.
    --log-format "text"                          set the format used by logs ('text' (default), or 'json')
    --root "/run/opencontainer/containers"       root directory for storage of container state (this should be located in tmpfs)
    --criu "criu"                                path to the criu binary used for checkpoint and restore
+   --systemd-cgroup                             enable systemd cgroup support, expects cgroupsPath to be of form "slice:prefix:name" for e.g. "system.slice:runc:434234"
    --help, -h                                   show help
    --version, -v                                print the version
