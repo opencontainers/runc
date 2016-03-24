@@ -15,7 +15,7 @@ DOC_FILES := \
 	config.md \
 	config-linux.md \
 	glossary.md
-EPOCH_TEST_COMMIT := 041eb73d2e0391463894c04c8ac938036143eba3
+EPOCH_TEST_COMMIT := 78e6667ae2d67aad100b28ee9580b41b7a24e667
 
 default: docs
 
@@ -64,9 +64,10 @@ ifeq ($(call ALLOWED_GO_VERSION,1.5,$(HOST_GOLANG_VERSION)),true)
 endif
 
 
+# When this is running in travis, it will only check the travis commit range
 .gitvalidation:
 	@which git-validation > /dev/null 2>/dev/null || (echo "ERROR: git-validation not found. Consider 'make install.tools' target" && false)
-	git-validation -q -run DCO,short-subject -v -range $(EPOCH_TEST_COMMIT)..HEAD
+	git-validation -q -run DCO,short-subject,dangling-whitespace -v -range $(EPOCH_TEST_COMMIT)..HEAD
 
 .PHONY: install.tools
 install.tools: .install.golint .install.govet .install.gitvalidation

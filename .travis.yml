@@ -6,13 +6,12 @@ go:
 sudo: false
 
 before_install:
-  - go version | (grep -q 'go1.[56]' || exit 0 && go get -u github.com/golang/lint/golint )
-  - go get -u github.com/vbatts/git-validation
+  - make install.tools
 
 install: true
 
 script:
-  - go vet -x ./...
+  - make .govet
   - make .golint
-  - git-validation -run DCO,short-subject,dangling-whitespace -v
+  - make .gitvalidation
   
