@@ -356,6 +356,9 @@ func createCgroupConfig(name string, useSystemdCgroup bool, spec *specs.Spec) (*
 
 	if spec.Linux.CgroupsPath != nil {
 		myCgroupPath = libcontainerUtils.CleanPath(*spec.Linux.CgroupsPath)
+		if useSystemdCgroup {
+			myCgroupPath = *spec.Linux.CgroupsPath
+		}
 	}
 
 	if useSystemdCgroup {
