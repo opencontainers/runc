@@ -140,8 +140,9 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 			if err := mountPropagate(m, rootfs, ""); err != nil {
 				return err
 			}
+			return label.SetFileLabel(dest, mountLabel)
 		}
-		return label.SetFileLabel(dest, mountLabel)
+		return nil
 	case "tmpfs":
 		stat, err := os.Stat(dest)
 		if err != nil {
