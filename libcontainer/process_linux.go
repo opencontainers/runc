@@ -89,6 +89,11 @@ func (p *setnsProcess) start() (err error) {
 	if err := setOomScoreAdj(p.config.Config.OomScoreAdj, p.pid()); err != nil {
 		return newSystemError(err)
 	}
+	// set rlimits, this has to be done here because we lose permissions
+	// to raise the limits once we enter a user-namespace
+	if err := setupRlimits(p.config.Rlimits, p.pid()); err != nil {
+		return newSystemError(err)
+	}
 	if err := utils.WriteJSON(p.parentPipe, p.config); err != nil {
 		return newSystemError(err)
 	}
@@ -282,6 +287,11 @@ loop:
 			}
 			// set oom_score_adj
 			if err := setOomScoreAdj(p.config.Config.OomScoreAdj, p.pid()); err != nil {
+				return newSystemError(err)
+			}
+			// set rlimits, this has to be done here because we lose permissions
+			// to raise the limits once we enter a user-namespace
+			if err := setupRlimits(p.config.Rlimits, p.pid()); err != nil {
 				return newSystemError(err)
 			}
 			// call prestart hooks

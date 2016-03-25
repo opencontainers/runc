@@ -158,6 +158,18 @@ func TestIPCBadPath(t *testing.T) {
 }
 
 func TestRlimit(t *testing.T) {
+	testRlimit(t, false)
+}
+
+func TestUsernsRlimit(t *testing.T) {
+	if _, err := os.Stat("/proc/self/ns/user"); os.IsNotExist(err) {
+		t.Skip("userns is unsupported")
+	}
+
+	testRlimit(t, true)
+}
+
+func testRlimit(t *testing.T, userns bool) {
 	if testing.Short() {
 		return
 	}
@@ -167,6 +179,19 @@ func TestRlimit(t *testing.T) {
 	defer remove(rootfs)
 
 	config := newTemplateConfig(rootfs)
+	if userns {
+		config.UidMappings = []configs.IDMap{{0, 0, 1000}}
+		config.GidMappings = []configs.IDMap{{0, 0, 1000}}
+		config.Namespaces = append(config.Namespaces, configs.Namespace{Type: configs.NEWUSER})
+	}
+
+	// ensure limit is lower than what the config requests to test that in a user namespace
+	// the Setrlimit call happens early enough that we still have permissions to raise the limit.
+	ok(t, syscall.Setrlimit(syscall.RLIMIT_NOFILE, &syscall.Rlimit{
+		Max: 1024,
+		Cur: 1024,
+	}))
+
 	out, _, err := runContainer(config, "", "/bin/sh", "-c", "ulimit -n")
 	ok(t, err)
 	if limit := strings.TrimSpace(out.Stdout.String()); limit != "1025" {
