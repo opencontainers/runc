@@ -10,6 +10,7 @@ import (
 	"github.com/codegangsta/cli"
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/specconv"
 	"github.com/opencontainers/specs/specs-go"
 )
 
@@ -92,7 +93,7 @@ using the runc checkpoint command.`,
 		if err != nil {
 			fatal(err)
 		}
-		config, err := createLibcontainerConfig(id, context.GlobalBool("systemd-cgroup"), spec)
+		config, err := specconv.CreateLibcontainerConfig(id, context.GlobalBool("systemd-cgroup"), spec)
 		if err != nil {
 			fatal(err)
 		}

@@ -13,130 +13,11 @@ import (
 	"github.com/codegangsta/cli"
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
-	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/specconv"
 	"github.com/opencontainers/specs/specs-go"
 )
 
-const wildcard = -1
-
 var errEmptyID = errors.New("container id cannot be empty")
-
-var allowedDevices = []*configs.Device{
-	// allow mknod for any device
-	{
-		Type:        'c',
-		Major:       wildcard,
-		Minor:       wildcard,
-		Permissions: "m",
-		Allow:       true,
-	},
-	{
-		Type:        'b',
-		Major:       wildcard,
-		Minor:       wildcard,
-		Permissions: "m",
-		Allow:       true,
-	},
-	{
-		Type:        'c',
-		Path:        "/dev/null",
-		Major:       1,
-		Minor:       3,
-		Permissions: "rwm",
-		Allow:       true,
-	},
-	{
-		Type:        'c',
-		Path:        "/dev/random",
-		Major:       1,
-		Minor:       8,
-		Permissions: "rwm",
-		Allow:       true,
-	},
-	{
-		Type:        'c',
-		Path:        "/dev/full",
-		Major:       1,
-		Minor:       7,
-		Permissions: "rwm",
-		Allow:       true,
-	},
-	{
-		Type:        'c',
-		Path:        "/dev/tty",
-		Major:       5,
-		Minor:       0,
-		Permissions: "rwm",
-		Allow:       true,
-	},
-	{
-		Type:        'c',
-		Path:        "/dev/zero",
-		Major:       1,
-		Minor:       5,
-		Permissions: "rwm",
-		Allow:       true,
-	},
-	{
-		Type:        'c',
-		Path:        "/dev/urandom",
-		Major:       1,
-		Minor:       9,
-		Permissions: "rwm",
-		Allow:       true,
-	},
-	{
-		Path:        "/dev/console",
-		Type:        'c',
-		Major:       5,
-		Minor:       1,
-		Permissions: "rwm",
-		Allow:       true,
-	},
-	// /dev/pts/ - pts namespaces are "coming soon"
-	{
-		Path:        "",
-		Type:        'c',
-		Major:       136,
-		Minor:       wildcard,
-		Permissions: "rwm",
-		Allow:       true,
-	},
-	{
-		Path:        "",
-		Type:        'c',
-		Major:       5,
-		Minor:       2,
-		Permissions: "rwm",
-		Allow:       true,
-	},
-	// tuntap
-	{
-		Path:        "",
-		Type:        'c',
-		Major:       10,
-		Minor:       200,
-		Permissions: "rwm",
-		Allow:       true,
-	},
-}
-
-var (
-	maskedPaths = []string{
-		"/proc/kcore",
-		"/proc/latency_stats",
-		"/proc/timer_stats",
-		"/proc/sched_debug",
-	}
-	readonlyPaths = []string{
-		"/proc/asound",
-		"/proc/bus",
-		"/proc/fs",
-		"/proc/irq",
-		"/proc/sys",
-		"/proc/sysrq-trigger",
-	}
-)
 
 var container libcontainer.Container
 
@@ -294,7 +175,7 @@ func createPidFile(path string, process *libcontainer.Process) error {
 }
 
 func createContainer(context *cli.Context, id string, spec *specs.Spec) (libcontainer.Container, error) {
-	config, err := createLibcontainerConfig(id, context.GlobalBool("systemd-cgroup"), spec)
+	config, err := specconv.CreateLibcontainerConfig(id, context.GlobalBool("systemd-cgroup"), spec)
 	if err != nil {
 		return nil, err
 	}
