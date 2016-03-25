@@ -170,10 +170,12 @@ static void update_process_idmap(char *pathfmt, int pid, char *map, int map_len)
 	len = write(fd, map, map_len);
 	if (len == -1) {
 		pr_perror("failed to write to %s", buf);
+		close(fd);
 		exit(1);
 	} else if (len != map_len) {
-		fprintf(stderr, "Failed to write data to %s (%d/%d)",
+		pr_perror("Failed to write data to %s (%d/%d)",
 			buf, len, map_len);
+		close(fd);
 		exit(1);
 	}
 
@@ -217,6 +219,7 @@ static void update_process_gidmap(int pid, uint8_t is_setgroup, char *map, int m
 			// ENOENT; this is OK.
 			if (errno != ENOENT) {
 				pr_perror("failed to write allow to %s", buf);
+				close(fd);
 				exit(1);
 			}
 		}
@@ -295,7 +298,7 @@ static struct nsenter_config process_nl_attributes(int pipenum, char *data, int 
 		} else if (nlattr->nla_type == NS_PATHS_ATTR) {
 			// if custom namespaces are required, open all
 			// descriptors and perform setns on them
-			int	i;
+			int	i, j;
 			int	nslen = num_namespaces(data + start);
 			int	fds[nslen];
 			char	*nslist[nslen];
@@ -314,6 +317,9 @@ static struct nsenter_config process_nl_attributes(int pipenum, char *data, int 
 				}
 				fds[i] = open(ns, O_RDONLY);
 				if (fds[i] == -1) {
+					for (j = 0; j < i; j++) {
+						close(fds[j]);
+					}
 					pr_perror("Failed to open %s", ns);
 					exit(1);
 				}
