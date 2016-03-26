@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -62,14 +63,34 @@ func TestExecIn(t *testing.T) {
 	}
 }
 
+func TestExecInUsernsRlimit(t *testing.T) {
+	if _, err := os.Stat("/proc/self/ns/user"); os.IsNotExist(err) {
+		t.Skip("userns is unsupported")
+	}
+
+	testExecInRlimit(t, true)
+}
+
 func TestExecInRlimit(t *testing.T) {
+	testExecInRlimit(t, false)
+}
+
+func testExecInRlimit(t *testing.T, userns bool) {
 	if testing.Short() {
 		return
 	}
+
 	rootfs, err := newRootfs()
 	ok(t, err)
 	defer remove(rootfs)
+
 	config := newTemplateConfig(rootfs)
+	if userns {
+		config.UidMappings = []configs.IDMap{{0, 0, 1000}}
+		config.GidMappings = []configs.IDMap{{0, 0, 1000}}
+		config.Namespaces = append(config.Namespaces, configs.Namespace{Type: configs.NEWUSER})
+	}
+
 	container, err := newContainer(config)
 	ok(t, err)
 	defer container.Destroy()
@@ -95,6 +116,10 @@ func TestExecInRlimit(t *testing.T) {
 		Stdin:  buffers.Stdin,
 		Stdout: buffers.Stdout,
 		Stderr: buffers.Stderr,
+		Rlimits: []configs.Rlimit{
+			// increase process rlimit higher than container rlimit to test per-process limit
+			{Type: syscall.RLIMIT_NOFILE, Hard: 1026, Soft: 1026},
+		},
 	}
 	err = container.Start(ps)
 	ok(t, err)
@@ -104,8 +129,8 @@ func TestExecInRlimit(t *testing.T) {
 	waitProcess(process, t)
 
 	out := buffers.Stdout.String()
-	if limit := strings.TrimSpace(out); limit != "1025" {
-		t.Fatalf("expected rlimit to be 1025, got %s", limit)
+	if limit := strings.TrimSpace(out); limit != "1026" {
+		t.Fatalf("expected rlimit to be 1026, got %s", limit)
 	}
 }
 
