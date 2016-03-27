@@ -78,7 +78,7 @@ type Container interface {
 	// Systemerror - System error.
 	Checkpoint(criuOpts *CriuOpts) error
 
-	// Restore restores the checkpointed container to a running state using the criu(8) utiity.
+	// Restore restores the checkpointed container to a running state using the criu(8) utility.
 	//
 	// errors:
 	// Systemerror - System error.
