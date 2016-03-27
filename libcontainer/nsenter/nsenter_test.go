@@ -60,6 +60,9 @@ func TestNsenterValidPaths(t *testing.T) {
 	decoder := json.NewDecoder(parent)
 	var pid *pid
 
+	if err := cmd.Wait(); err != nil {
+		t.Fatalf("nsenter exits with a non-zero exit status")
+	}
 	if err := decoder.Decode(&pid); err != nil {
 		dir, _ := ioutil.ReadDir(fmt.Sprintf("/proc/%d/ns", os.Getpid()))
 		for _, d := range dir {
@@ -68,9 +71,6 @@ func TestNsenterValidPaths(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 
-	if err := cmd.Wait(); err != nil {
-		t.Fatalf("nsenter exits with a non-zero exit status")
-	}
 	p, err := os.FindProcess(pid.Pid)
 	if err != nil {
 		t.Fatalf("%v", err)
