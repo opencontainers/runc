@@ -37,17 +37,17 @@ test: runctestimage
 localtest: all
 	go test -tags "$(BUILDTAGS)" ${TESTFLAGS} -v ./...
 
-dbuild: runctestimage 
+dbuild: runctestimage
 	docker build -t $(RUNC_IMAGE) .
 	docker create --name=$(RUNC_INSTANCE) $(RUNC_IMAGE)
 	docker cp $(RUNC_INSTANCE):$(RUNC_BUILD_PATH) .
 	docker rm $(RUNC_INSTANCE)
 
 install:
-	cp runc /usr/local/bin/runc
+	install -D -m0755 runc /usr/local/sbin/runc
 
 uninstall:
-	rm -f /usr/local/bin/runc
+	rm -f /usr/local/sbin/runc
 
 clean:
 	rm -f runc
