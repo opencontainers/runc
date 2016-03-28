@@ -90,7 +90,7 @@ func (c *linuxContainer) addCriuDumpMount(req *criurpc.CriuReq, m *configs.Mount
 	req.Opts.ExtMnt = append(req.Opts.ExtMnt, extMnt)
 }
 
-func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
+func (c *linuxContainer) Checkpoint(opts *CheckpointOpts) error {
 	c.m.Lock()
 	defer c.m.Unlock()
 
@@ -98,31 +98,31 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 		return err
 	}
 
-	if criuOpts.ImagesDirectory == "" {
+	if opts.ImagesDirectory == "" {
 		return fmt.Errorf("invalid directory to save checkpoint")
 	}
 
 	// Since a container can be C/R'ed multiple times,
 	// the checkpoint directory may already exist.
-	if err := os.Mkdir(criuOpts.ImagesDirectory, 0755); err != nil && !os.IsExist(err) {
+	if err := os.Mkdir(opts.ImagesDirectory, 0755); err != nil && !os.IsExist(err) {
 		return err
 	}
 
-	if criuOpts.WorkDirectory == "" {
-		criuOpts.WorkDirectory = filepath.Join(c.root, "criu.work")
+	if opts.WorkDirectory == "" {
+		opts.WorkDirectory = filepath.Join(c.root, "criu.work")
 	}
 
-	if err := os.Mkdir(criuOpts.WorkDirectory, 0755); err != nil && !os.IsExist(err) {
+	if err := os.Mkdir(opts.WorkDirectory, 0755); err != nil && !os.IsExist(err) {
 		return err
 	}
 
-	workDir, err := os.Open(criuOpts.WorkDirectory)
+	workDir, err := os.Open(opts.WorkDirectory)
 	if err != nil {
 		return err
 	}
 	defer workDir.Close()
 
-	imageDir, err := os.Open(criuOpts.ImagesDirectory)
+	imageDir, err := os.Open(opts.ImagesDirectory)
 	if err != nil {
 		return err
 	}
@@ -137,28 +137,28 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 		ManageCgroups:  proto.Bool(true),
 		NotifyScripts:  proto.Bool(true),
 		Pid:            proto.Int32(int32(c.initProcess.pid())),
-		ShellJob:       proto.Bool(criuOpts.ShellJob),
-		LeaveRunning:   proto.Bool(criuOpts.LeaveRunning),
-		TcpEstablished: proto.Bool(criuOpts.TcpEstablished),
-		ExtUnixSk:      proto.Bool(criuOpts.ExternalUnixConnections),
-		FileLocks:      proto.Bool(criuOpts.FileLocks),
-		EmptyNs:        proto.Uint32(criuOpts.EmptyNs),
+		ShellJob:       proto.Bool(opts.ShellJob),
+		LeaveRunning:   proto.Bool(opts.LeaveRunning),
+		TcpEstablished: proto.Bool(opts.TcpEstablished),
+		ExtUnixSk:      proto.Bool(opts.ExternalUnixConnections),
+		FileLocks:      proto.Bool(opts.FileLocks),
+		EmptyNs:        proto.Uint32(opts.EmptyNs),
 	}
 
 	// append optional criu opts, e.g., page-server and port
-	if criuOpts.PageServer.Address != "" && criuOpts.PageServer.Port != 0 {
+	if opts.PageServer.Address != "" && opts.PageServer.Port != 0 {
 		rpcOpts.Ps = &criurpc.CriuPageServerInfo{
-			Address: proto.String(criuOpts.PageServer.Address),
-			Port:    proto.Int32(criuOpts.PageServer.Port),
+			Address: proto.String(opts.PageServer.Address),
+			Port:    proto.Int32(opts.PageServer.Port),
 		}
 	}
 
 	// append optional manage cgroups mode
-	if criuOpts.ManageCgroupsMode != 0 {
+	if opts.ManageCgroupsMode != 0 {
 		if err := c.checkCriuVersion("1.7"); err != nil {
 			return err
 		}
-		mode := criurpc.CriuCgMode(criuOpts.ManageCgroupsMode)
+		mode := criurpc.CriuCgMode(opts.ManageCgroupsMode)
 		rpcOpts.ManageCgroupsMode = &mode
 	}
 
@@ -192,12 +192,12 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 		return err
 	}
 
-	err = ioutil.WriteFile(filepath.Join(criuOpts.ImagesDirectory, descriptorsFilename), fdsJSON, 0655)
+	err = ioutil.WriteFile(filepath.Join(opts.ImagesDirectory, descriptorsFilename), fdsJSON, 0655)
 	if err != nil {
 		return err
 	}
 
-	err = c.criuSwrk(nil, req, criuOpts, false)
+	err = c.criuSwrk(nil, req, opts, false)
 	if err != nil {
 		return err
 	}
@@ -217,7 +217,7 @@ func (c *linuxContainer) addCriuRestoreMount(req *criurpc.CriuReq, m *configs.Mo
 	req.Opts.ExtMnt = append(req.Opts.ExtMnt, extMnt)
 }
 
-func (c *linuxContainer) restoreNetwork(req *criurpc.CriuReq, criuOpts *CriuOpts) {
+func (c *linuxContainer) restoreNetwork(req *criurpc.CriuReq, opts *CheckpointOpts) {
 	for _, iface := range c.config.Networks {
 		switch iface.Type {
 		case "veth":
@@ -230,7 +230,7 @@ func (c *linuxContainer) restoreNetwork(req *criurpc.CriuReq, criuOpts *CriuOpts
 			break
 		}
 	}
-	for _, i := range criuOpts.VethPairs {
+	for _, i := range opts.VethPairs {
 		veth := new(criurpc.CriuVethPair)
 		veth.IfOut = proto.String(i.HostInterfaceName)
 		veth.IfIn = proto.String(i.ContainerInterfaceName)
@@ -238,29 +238,29 @@ func (c *linuxContainer) restoreNetwork(req *criurpc.CriuReq, criuOpts *CriuOpts
 	}
 }
 
-func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
+func (c *linuxContainer) Restore(process *Process, opts *CheckpointOpts) error {
 	c.m.Lock()
 	defer c.m.Unlock()
 	if err := c.checkCriuVersion("1.5.2"); err != nil {
 		return err
 	}
-	if criuOpts.WorkDirectory == "" {
-		criuOpts.WorkDirectory = filepath.Join(c.root, "criu.work")
+	if opts.WorkDirectory == "" {
+		opts.WorkDirectory = filepath.Join(c.root, "criu.work")
 	}
 	// Since a container can be C/R'ed multiple times,
 	// the work directory may already exist.
-	if err := os.Mkdir(criuOpts.WorkDirectory, 0655); err != nil && !os.IsExist(err) {
+	if err := os.Mkdir(opts.WorkDirectory, 0655); err != nil && !os.IsExist(err) {
 		return err
 	}
-	workDir, err := os.Open(criuOpts.WorkDirectory)
+	workDir, err := os.Open(opts.WorkDirectory)
 	if err != nil {
 		return err
 	}
 	defer workDir.Close()
-	if criuOpts.ImagesDirectory == "" {
+	if opts.ImagesDirectory == "" {
 		return fmt.Errorf("invalid directory to restore checkpoint")
 	}
-	imageDir, err := os.Open(criuOpts.ImagesDirectory)
+	imageDir, err := os.Open(opts.ImagesDirectory)
 	if err != nil {
 		return err
 	}
@@ -297,11 +297,11 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 			Root:           proto.String(root),
 			ManageCgroups:  proto.Bool(true),
 			NotifyScripts:  proto.Bool(true),
-			ShellJob:       proto.Bool(criuOpts.ShellJob),
-			ExtUnixSk:      proto.Bool(criuOpts.ExternalUnixConnections),
-			TcpEstablished: proto.Bool(criuOpts.TcpEstablished),
-			FileLocks:      proto.Bool(criuOpts.FileLocks),
-			EmptyNs:        proto.Uint32(criuOpts.EmptyNs),
+			ShellJob:       proto.Bool(opts.ShellJob),
+			ExtUnixSk:      proto.Bool(opts.ExternalUnixConnections),
+			TcpEstablished: proto.Bool(opts.TcpEstablished),
+			FileLocks:      proto.Bool(opts.FileLocks),
+			EmptyNs:        proto.Uint32(opts.EmptyNs),
 		},
 	}
 
@@ -322,16 +322,16 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 		}
 	}
 
-	if criuOpts.EmptyNs&syscall.CLONE_NEWNET == 0 {
-		c.restoreNetwork(req, criuOpts)
+	if opts.EmptyNs&syscall.CLONE_NEWNET == 0 {
+		c.restoreNetwork(req, opts)
 	}
 
 	// append optional manage cgroups mode
-	if criuOpts.ManageCgroupsMode != 0 {
+	if opts.ManageCgroupsMode != 0 {
 		if err := c.checkCriuVersion("1.7"); err != nil {
 			return err
 		}
-		mode := criurpc.CriuCgMode(criuOpts.ManageCgroupsMode)
+		mode := criurpc.CriuCgMode(opts.ManageCgroupsMode)
 		req.Opts.ManageCgroupsMode = &mode
 	}
 
@@ -339,7 +339,7 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 		fds    []string
 		fdJSON []byte
 	)
-	if fdJSON, err = ioutil.ReadFile(filepath.Join(criuOpts.ImagesDirectory, descriptorsFilename)); err != nil {
+	if fdJSON, err = ioutil.ReadFile(filepath.Join(opts.ImagesDirectory, descriptorsFilename)); err != nil {
 		return err
 	}
 
@@ -354,7 +354,7 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 			req.Opts.InheritFd = append(req.Opts.InheritFd, inheritFd)
 		}
 	}
-	return c.criuSwrk(process, req, criuOpts, true)
+	return c.criuSwrk(process, req, opts, true)
 }
 
 func (c *linuxContainer) criuApplyCgroups(pid int, req *criurpc.CriuReq) error {
@@ -379,7 +379,7 @@ func (c *linuxContainer) criuApplyCgroups(pid int, req *criurpc.CriuReq) error {
 	return nil
 }
 
-func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *CriuOpts, applyCgroups bool) error {
+func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *CheckpointOpts, applyCgroups bool) error {
 	fds, err := syscall.Socketpair(syscall.AF_LOCAL, syscall.SOCK_SEQPACKET|syscall.SOCK_CLOEXEC, 0)
 	if err != nil {
 		return err
@@ -543,7 +543,7 @@ func unlockNetwork(config *configs.Config) error {
 	return nil
 }
 
-func (c *linuxContainer) criuNotifications(resp *criurpc.CriuResp, process *Process, opts *CriuOpts, fds []string) error {
+func (c *linuxContainer) criuNotifications(resp *criurpc.CriuResp, process *Process, opts *CheckpointOpts, fds []string) error {
 	notify := resp.GetNotify()
 	if notify == nil {
 		return fmt.Errorf("invalid response: %s", resp.String())

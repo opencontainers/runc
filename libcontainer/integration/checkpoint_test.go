@@ -112,7 +112,7 @@ func TestCheckpoint(t *testing.T) {
 	}
 	defer os.RemoveAll(imagesDir)
 
-	checkpointOpts := &libcontainer.CriuOpts{
+	checkpointOpts := &libcontainer.CheckpointOpts{
 		ImagesDirectory: imagesDir,
 		WorkDirectory:   imagesDir,
 	}

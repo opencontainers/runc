@@ -70,13 +70,13 @@ type Container interface {
 	//
 	// errors:
 	// Systemerror - System error.
-	Checkpoint(criuOpts *CriuOpts) error
+	Checkpoint(opts *CheckpointOpts) error
 
 	// Restore restores the checkpointed container to a running state using the criu(8) utility.
 	//
 	// errors:
 	// Systemerror - System error.
-	Restore(process *Process, criuOpts *CriuOpts) error
+	Restore(process *Process, opts *CheckpointOpts) error
 
 	// If the Container state is RUNNING or PAUSING, sets the Container state to PAUSING and pauses
 	// the execution of any user processes. Asynchronously, when the container finished being paused the
