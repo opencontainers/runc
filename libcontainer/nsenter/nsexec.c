@@ -39,6 +39,7 @@ struct nsenter_config {
 	char     *gidmap;
 	int      gidmap_len;
 	uint8_t  is_setgroup;
+	int      consolefd;
 };
 
 // list of known message types we want to send to bootstrap program
@@ -86,6 +87,8 @@ static int clone_parent(jmp_buf *env, int flags)
 	ca.env = env;
 	child  = clone(child_func, ca.stack_ptr, CLONE_PARENT | SIGCHLD | flags,
 		      &ca);
+	// On old kernels, CLONE_PARENT cannot work with CLONE_NEWPID,
+	// unshare before clone to workaround this.
 	if (child == -1 && errno == EINVAL) {
 		if (unshare(flags)) {
 			pr_perror("Unable to unshare namespaces");
@@ -244,7 +247,6 @@ static void start_child(int pipenum, jmp_buf *env, int syncpipe[2],
 	// update uid_map and gid_map for the child process if they
 	// were provided
 	update_process_uidmap(childpid, config->uidmap, config->uidmap_len);
-
 	update_process_gidmap(childpid, config->is_setgroup, config->gidmap, config->gidmap_len);
 
 	// Send the sync signal to the child
@@ -266,16 +268,14 @@ static void start_child(int pipenum, jmp_buf *env, int syncpipe[2],
 	exit(0);
 }
 
-static void process_nl_attributes(int pipenum, char *data, int data_size)
+static struct nsenter_config process_nl_attributes(int pipenum, char *data, int data_size)
 {
-	jmp_buf			env;
 	struct nsenter_config	config	    = {0};
 	struct nlattr		*nlattr;
 	int			payload_len;
 	int			start       = 0;
-	int			consolefd   = -1;
-	int			syncpipe[2] = {-1, -1};
 
+	config.consolefd = -1;
 	while (start < data_size) {
 		nlattr = (struct nlattr *)(data + start);
 		start += NLA_HDRLEN;
@@ -286,8 +286,8 @@ static void process_nl_attributes(int pipenum, char *data, int data_size)
 		} else if (nlattr->nla_type == CONSOLE_PATH_ATTR) {
 			// get the console path before setns because it may
 			// change mnt namespace
-			consolefd = open(data + start, O_RDWR);
-			if (consolefd < 0) {
+			config.consolefd = open(data + start, O_RDWR);
+			if (config.consolefd < 0) {
 				pr_perror("Failed to open console %s",
 					  data + start);
 				exit(1);
@@ -344,14 +344,61 @@ static void process_nl_attributes(int pipenum, char *data, int data_size)
 		start += NLA_ALIGN(payload_len);
 	}
 
+	return config;
+}
+
+void nsexec(void)
+{
+	int pipenum;
+
+	// If we don't have init pipe, then just return to the go routine,
+	// we'll only have init pipe for start or exec
+	pipenum = get_init_pipe();
+	if (pipenum == -1) {
+		return;
+	}
+
+	// Retrieve the netlink header
+	struct nlmsghdr nl_msg_hdr;
+	int		len;
+
+	if ((len = read(pipenum, &nl_msg_hdr, NLMSG_HDRLEN)) != NLMSG_HDRLEN) {
+		pr_perror("Invalid netlink header length %d", len);
+		exit(1);
+	}
+
+	if (nl_msg_hdr.nlmsg_type == NLMSG_ERROR) {
+		pr_perror("Failed to read netlink message");
+		exit(1);
+	}
+
+	if (nl_msg_hdr.nlmsg_type != INIT_MSG) {
+		pr_perror("Unexpected msg type %d", nl_msg_hdr.nlmsg_type);
+		exit(1);
+	}
+
+	// Retrieve data
+	int  nl_total_size = NLMSG_PAYLOAD(&nl_msg_hdr, 0);
+	char data[nl_total_size];
+
+	if ((len = read(pipenum, data, nl_total_size)) != nl_total_size) {
+		pr_perror("Failed to read netlink payload, %d != %d", len,
+			  nl_total_size);
+		exit(1);
+	}
+
+	jmp_buf	env;
+	int	syncpipe[2] = {-1, -1};
+	struct	nsenter_config config = process_nl_attributes(pipenum,
+						data, nl_total_size);
+
 	// required clone_flags to be passed
 	if (config.cloneflags == -1) {
 		pr_perror("Missing clone_flags");
 		exit(1);
 	}
 	// prepare sync pipe between parent and child. We need this to let the
-	// child
-	// know that the parent has finished setting up
+	// child know that the parent has finished setting up
 	if (pipe(syncpipe) != 0) {
 		pr_perror("Failed to setup sync pipe between parent and child");
 		exit(1);
@@ -360,6 +407,7 @@ static void process_nl_attributes(int pipenum, char *data, int data_size)
 	if (setjmp(env) == 1) {
 		// Child
 		uint8_t s = 0;
+		int	consolefd = config.consolefd;
 
 		// close the writing side of pipe
 		close(syncpipe[1]);
@@ -415,46 +463,4 @@ static void process_nl_attributes(int pipenum, char *data, int data_size)
 
 	// Parent
 	start_child(pipenum, &env, syncpipe, &config);
-}
-
-void nsexec(void)
-{
-	int pipenum;
-
-	// if we dont have init pipe, then just return to the parent
-	pipenum = get_init_pipe();
-	if (pipenum == -1) {
-		return;
-	}
-
-	// Retrieve the netlink header
-	struct nlmsghdr nl_msg_hdr;
-	int		len;
-
-	if ((len = read(pipenum, &nl_msg_hdr, NLMSG_HDRLEN)) != NLMSG_HDRLEN) {
-		pr_perror("Invalid netlink header length %d", len);
-		exit(1);
-	}
-
-	if (nl_msg_hdr.nlmsg_type == NLMSG_ERROR) {
-		pr_perror("Failed to read netlink message");
-		exit(1);
-	}
-
-	if (nl_msg_hdr.nlmsg_type != INIT_MSG) {
-		pr_perror("Unexpected msg type %d", nl_msg_hdr.nlmsg_type);
-		exit(1);
-	}
-
-	// Retrieve data
-	int  nl_total_size = NLMSG_PAYLOAD(&nl_msg_hdr, 0);
-	char data[nl_total_size];
-
-	if ((len = read(pipenum, data, nl_total_size)) != nl_total_size) {
-		pr_perror("Failed to read netlink payload, %d != %d", len,
-			  nl_total_size);
-		exit(1);
-	}
-
-	process_nl_attributes(pipenum, data, nl_total_size);
 }
