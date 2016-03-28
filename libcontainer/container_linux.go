@@ -33,9 +33,7 @@ type linuxContainer struct {
 	initPath      string
 	initArgs      []string
 	initProcess   parentProcess
-	criuPath      string
 	m             sync.Mutex
-	criuVersion   int
 	state         containerState
 	created       time.Time
 }

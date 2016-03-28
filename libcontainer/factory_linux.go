@@ -113,7 +113,6 @@ func New(root string, options ...func(*LinuxFactory) error) (Factory, error) {
 	l := &LinuxFactory{
 		Root:      root,
 		Validator: validate.New(),
-		CriuPath:  "criu",
 	}
 	InitArgs(os.Args[0], "init")(l)
 	Cgroupfs(l)
@@ -136,10 +135,6 @@ type LinuxFactory struct {
 	// InitArgs are arguments for calling the init responsibilities for spawning
 	// a container.
 	InitArgs []string
-
-	// CriuPath is the path to the criu binary used for checkpoint and restore of
-	// containers.
-	CriuPath string
 
 	// Validator provides validation to container configurations.
 	Validator validate.Validator
@@ -173,7 +168,6 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 		config:        config,
 		initPath:      l.InitPath,
 		initArgs:      l.InitArgs,
-		criuPath:      l.CriuPath,
 		cgroupManager: l.NewCgroupsManager(config.Cgroups, nil),
 	}
 	c.state = &stoppedState{c: c}
@@ -200,7 +194,6 @@ func (l *LinuxFactory) Load(id string) (Container, error) {
 		config:        &state.Config,
 		initPath:      l.InitPath,
 		initArgs:      l.InitArgs,
-		criuPath:      l.CriuPath,
 		cgroupManager: l.NewCgroupsManager(state.Config.Cgroups, state.CgroupPaths),
 		root:          containerRoot,
 		created:       state.Created,

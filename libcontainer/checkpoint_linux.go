@@ -30,9 +30,9 @@ func (c *linuxContainer) checkCriuVersion(min_version string) error {
 	}
 	versionReq = x*10000 + y*100 + z
 
-	out, err := exec.Command(c.criuPath, "-V").Output()
+	out, err := exec.Command("criu", "-V").Output()
 	if err != nil {
-		return fmt.Errorf("Unable to execute CRIU command: %s", c.criuPath)
+		return fmt.Errorf("Unable to execute CRIU command")
 	}
 
 	x = 0
@@ -44,7 +44,7 @@ func (c *linuxContainer) checkCriuVersion(min_version string) error {
 		if sp := strings.Index(string(out), "GitID"); sp > 0 {
 			version = string(out)[sp:ep]
 		} else {
-			return fmt.Errorf("Unable to parse the CRIU version: %s", c.criuPath)
+			return fmt.Errorf("Unable to parse the CRIU version")
 		}
 
 		n, err := fmt.Sscanf(string(version), "GitID: v%d.%d.%d", &x, &y, &z) // 1.5.2
@@ -68,9 +68,9 @@ func (c *linuxContainer) checkCriuVersion(min_version string) error {
 		}
 	}
 
-	c.criuVersion = x*10000 + y*100 + z
+	criuVersion := x*10000 + y*100 + z
 
-	if c.criuVersion < versionReq {
+	if criuVersion < versionReq {
 		return fmt.Errorf("CRIU version must be %s or higher", min_version)
 	}
 
@@ -392,9 +392,8 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *
 	defer criuServer.Close()
 
 	args := []string{"swrk", "3"}
-	logrus.Debugf("Using CRIU %d at: %s", c.criuVersion, c.criuPath)
 	logrus.Debugf("Using CRIU with following args: %s", args)
-	cmd := exec.Command(c.criuPath, args...)
+	cmd := exec.Command("criu", args...)
 	if process != nil {
 		cmd.Stdin = process.Stdin
 		cmd.Stdout = process.Stdout
