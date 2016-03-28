@@ -1,3 +1,5 @@
+// +build linux,!nocriu
+
 package integration
 
 import (
