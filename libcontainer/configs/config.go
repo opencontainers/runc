@@ -3,7 +3,9 @@ package configs
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"os/exec"
+	"time"
 
 	"github.com/Sirupsen/logrus"
 )
@@ -274,10 +276,11 @@ func (f FuncHook) Run(s HookState) error {
 }
 
 type Command struct {
-	Path string   `json:"path"`
-	Args []string `json:"args"`
-	Env  []string `json:"env"`
-	Dir  string   `json:"dir"`
+	Path    string         `json:"path"`
+	Args    []string       `json:"args"`
+	Env     []string       `json:"env"`
+	Dir     string         `json:"dir"`
+	Timeout *time.Duration `json:"timeout"`
 }
 
 // NewCommandHooks will execute the provided command when the hook is run.
@@ -302,5 +305,19 @@ func (c Command) Run(s HookState) error {
 		Env:   c.Env,
 		Stdin: bytes.NewReader(b),
 	}
-	return cmd.Run()
+	errC := make(chan error, 1)
+	go func() {
+		errC <- cmd.Run()
+	}()
+	if c.Timeout != nil {
+		select {
+		case err := <-errC:
+			return err
+		case <-time.After(*c.Timeout):
+			cmd.Process.Kill()
+			cmd.Wait()
+			return fmt.Errorf("hook ran past specified timeout of %.1fs", c.Timeout.Seconds())
+		}
+	}
+	return <-errC
 }

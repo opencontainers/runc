@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -719,27 +720,28 @@ func setupSeccomp(config *specs.Seccomp) (*configs.Seccomp, error) {
 func createHooks(rspec *specs.Spec, config *configs.Config) {
 	config.Hooks = &configs.Hooks{}
 	for _, h := range rspec.Hooks.Prestart {
-		cmd := configs.Command{
-			Path: h.Path,
-			Args: h.Args,
-			Env:  h.Env,
-		}
+		cmd := createCommandHook(h)
 		config.Hooks.Prestart = append(config.Hooks.Prestart, configs.NewCommandHook(cmd))
 	}
 	for _, h := range rspec.Hooks.Poststart {
-		cmd := configs.Command{
-			Path: h.Path,
-			Args: h.Args,
-			Env:  h.Env,
-		}
+		cmd := createCommandHook(h)
 		config.Hooks.Poststart = append(config.Hooks.Poststart, configs.NewCommandHook(cmd))
 	}
 	for _, h := range rspec.Hooks.Poststop {
-		cmd := configs.Command{
-			Path: h.Path,
-			Args: h.Args,
-			Env:  h.Env,
-		}
+		cmd := createCommandHook(h)
 		config.Hooks.Poststop = append(config.Hooks.Poststop, configs.NewCommandHook(cmd))
 	}
+}
+
+func createCommandHook(h specs.Hook) configs.Command {
+	cmd := configs.Command{
+		Path: h.Path,
+		Args: h.Args,
+		Env:  h.Env,
+	}
+	if h.Timeout != nil {
+		d := time.Duration(*h.Timeout) * time.Second
+		cmd.Timeout = &d
+	}
+	return cmd
 }
