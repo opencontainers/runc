@@ -10,6 +10,7 @@ const (
 	// Factory errors
 	IdInUse ErrorCode = iota
 	InvalidIdFormat
+	InvalidIdLength
 
 	// Container errors
 	ContainerNotExists
@@ -33,6 +34,8 @@ func (c ErrorCode) String() string {
 		return "Id already in use"
 	case InvalidIdFormat:
 		return "Invalid format"
+	case InvalidIdLength:
+		return "Invalid length"
 	case ContainerPaused:
 		return "Container paused"
 	case ConfigInvalid:

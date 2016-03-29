@@ -284,7 +284,7 @@ func (l *LinuxFactory) validateID(id string) error {
 		return newGenericError(fmt.Errorf("invalid id format: %v", id), InvalidIdFormat)
 	}
 	if len(id) > maxIdLen {
-		return newGenericError(fmt.Errorf("invalid id format: %v", id), InvalidIdFormat)
+		return newGenericError(fmt.Errorf("invalid id length: %v", id), InvalidIdLength)
 	}
 	return nil
 }
