@@ -2741,6 +2741,13 @@ func (mj *Hook) MarshalJSONBuf(buf fflib.EncodingBuffer) error {
 		}
 		buf.WriteByte(',')
 	}
+	if mj.Timeout != nil {
+		if true {
+			buf.WriteString(`"timeout":`)
+			fflib.FormatBits2(buf, uint64(*mj.Timeout), 10, *mj.Timeout < 0)
+			buf.WriteByte(',')
+		}
+	}
 	buf.Rewind(1)
 	buf.WriteByte('}')
 	return nil
@@ -2755,6 +2762,8 @@ const (
 	ffj_t_Hook_Args
 
 	ffj_t_Hook_Env
+
+	ffj_t_Hook_Timeout
 )
 
 var ffj_key_Hook_Path = []byte("path")
@@ -2762,6 +2771,8 @@ var ffj_key_Hook_Path = []byte("path")
 var ffj_key_Hook_Args = []byte("args")
 
 var ffj_key_Hook_Env = []byte("env")
+
+var ffj_key_Hook_Timeout = []byte("timeout")
 
 func (uj *Hook) UnmarshalJSON(input []byte) error {
 	fs := fflib.NewFFLexer(input)
@@ -2846,6 +2857,20 @@ mainparse:
 						goto mainparse
 					}
 
+				case 't':
+
+					if bytes.Equal(ffj_key_Hook_Timeout, kn) {
+						currentKey = ffj_t_Hook_Timeout
+						state = fflib.FFParse_want_colon
+						goto mainparse
+					}
+
+				}
+
+				if fflib.SimpleLetterEqualFold(ffj_key_Hook_Timeout, kn) {
+					currentKey = ffj_t_Hook_Timeout
+					state = fflib.FFParse_want_colon
+					goto mainparse
 				}
 
 				if fflib.SimpleLetterEqualFold(ffj_key_Hook_Env, kn) {
@@ -2891,6 +2916,9 @@ mainparse:
 
 				case ffj_t_Hook_Env:
 					goto handle_Env
+
+				case ffj_t_Hook_Timeout:
+					goto handle_Timeout
 
 				case ffj_t_Hookno_such_key:
 					err = fs.SkipField(tok)
@@ -3072,6 +3100,39 @@ handle_Env:
 				uj.Env = append(uj.Env, tmp_uj__Env)
 				wantVal = false
 			}
+		}
+	}
+
+	state = fflib.FFParse_after_value
+	goto mainparse
+
+handle_Timeout:
+
+	/* handler: uj.Timeout type=int kind=int quoted=false*/
+
+	{
+		if tok != fflib.FFTok_integer && tok != fflib.FFTok_null {
+			return fs.WrapErr(fmt.Errorf("cannot unmarshal %s into Go value for int", tok))
+		}
+	}
+
+	{
+
+		if tok == fflib.FFTok_null {
+
+			uj.Timeout = nil
+
+		} else {
+
+			tval, err := fflib.ParseInt(fs.Output.Bytes(), 10, 64)
+
+			if err != nil {
+				return fs.WrapErr(err)
+			}
+
+			ttypval := int(tval)
+			uj.Timeout = &ttypval
+
 		}
 	}
 
@@ -4476,49 +4537,54 @@ func (mj *Linux) MarshalJSONBuf(buf fflib.EncodingBuffer) error {
 			buf.WriteByte(',')
 		}
 	}
-	buf.WriteString(`"namespaces":`)
-	if mj.Namespaces != nil {
-		buf.WriteString(`[`)
-		for i, v := range mj.Namespaces {
-			if i != 0 {
-				buf.WriteString(`,`)
-			}
-
-			{
-
-				err = v.MarshalJSONBuf(buf)
-				if err != nil {
-					return err
+	if len(mj.Namespaces) != 0 {
+		buf.WriteString(`"namespaces":`)
+		if mj.Namespaces != nil {
+			buf.WriteString(`[`)
+			for i, v := range mj.Namespaces {
+				if i != 0 {
+					buf.WriteString(`,`)
 				}
 
+				{
+
+					err = v.MarshalJSONBuf(buf)
+					if err != nil {
+						return err
+					}
+
+				}
 			}
+			buf.WriteString(`]`)
+		} else {
+			buf.WriteString(`null`)
 		}
-		buf.WriteString(`]`)
-	} else {
-		buf.WriteString(`null`)
+		buf.WriteByte(',')
 	}
-	buf.WriteString(`,"devices":`)
-	if mj.Devices != nil {
-		buf.WriteString(`[`)
-		for i, v := range mj.Devices {
-			if i != 0 {
-				buf.WriteString(`,`)
-			}
-
-			{
-
-				err = v.MarshalJSONBuf(buf)
-				if err != nil {
-					return err
+	if len(mj.Devices) != 0 {
+		buf.WriteString(`"devices":`)
+		if mj.Devices != nil {
+			buf.WriteString(`[`)
+			for i, v := range mj.Devices {
+				if i != 0 {
+					buf.WriteString(`,`)
 				}
 
+				{
+
+					err = v.MarshalJSONBuf(buf)
+					if err != nil {
+						return err
+					}
+
+				}
 			}
+			buf.WriteString(`]`)
+		} else {
+			buf.WriteString(`null`)
 		}
-		buf.WriteString(`]`)
-	} else {
-		buf.WriteString(`null`)
+		buf.WriteByte(',')
 	}
-	buf.WriteByte(',')
 	if mj.Seccomp != nil {
 		if true {
 			buf.WriteString(`"seccomp":`)

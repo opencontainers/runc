@@ -66,8 +66,8 @@ endif
 
 # `go get https://github.com/pquerna/ffjson`
 ffjson:
-	cd specs-go/ && ffjson config.go
-	cd specs-go/ && ffjson state.go
+	cd specs-go/ && ffjson -force-regenerate config.go
+	cd specs-go/ && ffjson -force-regenerate state.go
 
 clean:
 	rm -rf output/ *~
