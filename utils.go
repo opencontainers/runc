@@ -175,7 +175,12 @@ func createPidFile(path string, process *libcontainer.Process) error {
 }
 
 func createContainer(context *cli.Context, id string, spec *specs.Spec) (libcontainer.Container, error) {
-	config, err := specconv.CreateLibcontainerConfig(id, context.GlobalBool("systemd-cgroup"), spec)
+	config, err := specconv.CreateLibcontainerConfig(&specconv.CreateOpts{
+		CgroupName:       id,
+		UseSystemdCgroup: context.GlobalBool("systemd-cgroup"),
+		NoPivotRoot:      context.Bool("no-pivot"),
+		Spec:             spec,
+	})
 	if err != nil {
 		return nil, err
 	}
