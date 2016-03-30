@@ -73,6 +73,10 @@ using the runc checkpoint command.`,
 			Name:  "no-subreaper",
 			Usage: "disable the use of the subreaper used to reap reparented processes",
 		},
+		cli.BoolFlag{
+			Name:  "no-pivot",
+			Usage: "do not use pivot root to jail process inside rootfs.  This should be used whenever the rootfs is on top of a ramdisk",
+		},
 	},
 	Action: func(context *cli.Context) {
 		imagePath := context.String("image-path")
@@ -93,7 +97,12 @@ using the runc checkpoint command.`,
 		if err != nil {
 			fatal(err)
 		}
-		config, err := specconv.CreateLibcontainerConfig(id, context.GlobalBool("systemd-cgroup"), spec)
+		config, err := specconv.CreateLibcontainerConfig(&specconv.CreateOpts{
+			CgroupName:       id,
+			UseSystemdCgroup: context.GlobalBool("systemd-cgroup"),
+			NoPivotRoot:      context.Bool("no-pivot"),
+			Spec:             spec,
+		})
 		if err != nil {
 			fatal(err)
 		}

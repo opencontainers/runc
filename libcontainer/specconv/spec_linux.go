@@ -158,9 +158,16 @@ var allowedDevices = []*configs.Device{
 	},
 }
 
+type CreateOpts struct {
+	CgroupName       string
+	UseSystemdCgroup bool
+	NoPivotRoot      bool
+	Spec             *specs.Spec
+}
+
 // CreateLibcontainerConfig creates a new libcontainer configuration from a
 // given specification and a cgroup name
-func CreateLibcontainerConfig(cgroupName string, useSystemdCgroup bool, spec *specs.Spec) (*configs.Config, error) {
+func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 	// runc's cwd will always be the bundle path
 	rcwd, err := os.Getwd()
 	if err != nil {
@@ -170,14 +177,16 @@ func CreateLibcontainerConfig(cgroupName string, useSystemdCgroup bool, spec *sp
 	if err != nil {
 		return nil, err
 	}
+	spec := opts.Spec
 	rootfsPath := spec.Root.Path
 	if !filepath.IsAbs(rootfsPath) {
 		rootfsPath = filepath.Join(cwd, rootfsPath)
 	}
 	config := &configs.Config{
-		Rootfs:     rootfsPath,
-		Readonlyfs: spec.Root.Readonly,
-		Hostname:   spec.Hostname,
+		Rootfs:      rootfsPath,
+		NoPivotRoot: opts.NoPivotRoot,
+		Readonlyfs:  spec.Root.Readonly,
+		Hostname:    spec.Hostname,
 		Labels: []string{
 			"bundle=" + cwd,
 		},
@@ -211,7 +220,7 @@ func CreateLibcontainerConfig(cgroupName string, useSystemdCgroup bool, spec *sp
 	if err := setupUserNamespace(spec, config); err != nil {
 		return nil, err
 	}
-	c, err := createCgroupConfig(cgroupName, useSystemdCgroup, spec)
+	c, err := createCgroupConfig(opts.CgroupName, opts.UseSystemdCgroup, spec)
 	if err != nil {
 		return nil, err
 	}
