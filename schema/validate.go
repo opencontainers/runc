@@ -10,7 +10,7 @@ import (
 
 func main() {
 	if len(os.Args[1:]) != 2 {
-		fmt.Printf("ERROR: usage is: %s <schema.json> <config.json>", os.Args[0])
+		fmt.Printf("ERROR: usage is: %s <schema.json> <config.json>\n", os.Args[0])
 		os.Exit(1)
 	}
 
