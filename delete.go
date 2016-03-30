@@ -1,6 +1,12 @@
 package main
 
-import "github.com/codegangsta/cli"
+import (
+	"os"
+	"path/filepath"
+
+	"github.com/codegangsta/cli"
+	"github.com/opencontainers/runc/libcontainer"
+)
 
 var deleteCommand = cli.Command{
 	Name:  "delete",
@@ -17,6 +23,14 @@ status of "ubuntu01" as "destroyed" the following will delete resources held for
 	Action: func(context *cli.Context) {
 		container, err := getContainer(context)
 		if err != nil {
+			if lerr, ok := err.(libcontainer.Error); ok && lerr.Code() == libcontainer.ContainerNotExists {
+				// if there was an aborted start or something of the sort then the container's directory could exist but
+				// libcontainer does not see it because the state.json file inside that directory was never created.
+				path := filepath.Join(context.GlobalString("root"), context.Args().First())
+				if err := os.RemoveAll(path); err == nil {
+					return
+				}
+			}
 			fatal(err)
 		}
 		destroy(container)
