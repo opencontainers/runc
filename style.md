@@ -7,7 +7,7 @@ The config JSON isn't enough of a UI to be worth jumping through string <-> inte
 
 ## Constant names should keep redundant prefixes
 
-For example, `CAP_KILL` instead of `KILL` in [**`linux.capabilities`**][capabilities]).
+For example, `CAP_KILL` instead of `KILL` in [**`linux.capabilities`**][capabilities].
 The redundancy reduction from removing the namespacing prefix is not useful enough to be worth trimming the upstream identifier ([source][keep-prefix]).
 
 ## Optional settings should have pointer Go types
