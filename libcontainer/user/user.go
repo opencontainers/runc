@@ -15,7 +15,7 @@ const (
 )
 
 var (
-	ErrRange = fmt.Errorf("Uids and gids must be in range %d-%d", minId, maxId)
+	ErrRange = fmt.Errorf("uids and gids must be in range %d-%d", minId, maxId)
 )
 
 type User struct {
@@ -42,29 +42,30 @@ func parseLine(line string, v ...interface{}) {
 
 	parts := strings.Split(line, ":")
 	for i, p := range parts {
+		// Ignore cases where we don't have enough fields to populate the arguments.
+		// Some configuration files like to misbehave.
 		if len(v) <= i {
-			// if we have more "parts" than we have places to put them, bail for great "tolerance" of naughty configuration files
 			break
 		}
 
+		// Use the type of the argument to figure out how to parse it, scanf() style.
+		// This is legit.
 		switch e := v[i].(type) {
 		case *string:
-			// "root", "adm", "/bin/bash"
 			*e = p
 		case *int:
-			// "0", "4", "1000"
-			// ignore string to int conversion errors, for great "tolerance" of naughty configuration files
+			// "numbers", with conversion errors ignored because of some misbehaving configuration files.
 			*e, _ = strconv.Atoi(p)
 		case *[]string:
-			// "", "root", "root,adm,daemon"
+			// Comma-separated lists.
 			if p != "" {
 				*e = strings.Split(p, ",")
 			} else {
 				*e = []string{}
 			}
 		default:
-			// panic, because this is a programming/logic error, not a runtime one
-			panic("parseLine expects only pointers!  argument " + strconv.Itoa(i) + " is not a pointer!")
+			// Someone goof'd when writing code using this function. Scream so they can hear us.
+			panic(fmt.Sprintf("parseLine only accepts {*string, *int, *[]string} as arguments! %#v is not a pointer!", e))
 		}
 	}
 }
@@ -106,8 +107,8 @@ func ParsePasswdFilter(r io.Reader, filter func(User) bool) ([]User, error) {
 			return nil, err
 		}
 
-		text := strings.TrimSpace(s.Text())
-		if text == "" {
+		line := strings.TrimSpace(s.Text())
+		if line == "" {
 			continue
 		}
 
@@ -117,10 +118,7 @@ func ParsePasswdFilter(r io.Reader, filter func(User) bool) ([]User, error) {
 		//  root:x:0:0:root:/root:/bin/bash
 		//  adm:x:3:4:adm:/var/adm:/bin/false
 		p := User{}
-		parseLine(
-			text,
-			&p.Name, &p.Pass, &p.Uid, &p.Gid, &p.Gecos, &p.Home, &p.Shell,
-		)
+		parseLine(line, &p.Name, &p.Pass, &p.Uid, &p.Gid, &p.Gecos, &p.Home, &p.Shell)
 
 		if filter == nil || filter(p) {
 			out = append(out, p)
@@ -135,6 +133,7 @@ func ParseGroupFile(path string) ([]Group, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	defer group.Close()
 	return ParseGroup(group)
 }
@@ -178,10 +177,7 @@ func ParseGroupFilter(r io.Reader, filter func(Group) bool) ([]Group, error) {
 		//  root:x:0:root
 		//  adm:x:4:root,adm,daemon
 		p := Group{}
-		parseLine(
-			text,
-			&p.Name, &p.Pass, &p.Gid, &p.List,
-		)
+		parseLine(text, &p.Name, &p.Pass, &p.Gid, &p.List)
 
 		if filter == nil || filter(p) {
 			out = append(out, p)
@@ -192,9 +188,10 @@ func ParseGroupFilter(r io.Reader, filter func(Group) bool) ([]Group, error) {
 }
 
 type ExecUser struct {
-	Uid, Gid int
-	Sgids    []int
-	Home     string
+	Uid   int
+	Gid   int
+	Sgids []int
+	Home  string
 }
 
 // GetExecUserPath is a wrapper for GetExecUser. It reads data from each of the
@@ -241,10 +238,6 @@ func GetExecUserPath(userSpec string, defaults *ExecUser, passwdPath, groupPath 
 // to parse a user with user.Name = "1337" will produce the user with a UID of
 // 1337.
 func GetExecUser(userSpec string, defaults *ExecUser, passwd, group io.Reader) (*ExecUser, error) {
-	var (
-		userArg, groupArg string
-	)
-
 	if defaults == nil {
 		defaults = new(ExecUser)
 	}
@@ -262,7 +255,8 @@ func GetExecUser(userSpec string, defaults *ExecUser, passwd, group io.Reader) (
 		user.Sgids = []int{}
 	}
 
-	// allow for userArg to have either "user" syntax, or optionally "user:group" syntax
+	// Allow for userArg to have either "user" syntax, or optionally "user:group" syntax
+	var userArg, groupArg string
 	parseLine(userSpec, &userArg, &groupArg)
 
 	// Convert userArg and groupArg to be numeric, so we don't have to execute
@@ -270,8 +264,10 @@ func GetExecUser(userSpec string, defaults *ExecUser, passwd, group io.Reader) (
 	uidArg, uidErr := strconv.Atoi(userArg)
 	gidArg, gidErr := strconv.Atoi(groupArg)
 
+	// Find the matching user.
 	users, err := ParsePasswdFilter(passwd, func(u User) bool {
 		if userArg == "" {
+			// Default to current state of the user.
 			return u.Uid == user.Uid
 		}
 
@@ -282,11 +278,13 @@ func GetExecUser(userSpec string, defaults *ExecUser, passwd, group io.Reader) (
 
 		return u.Name == userArg
 	})
+
+	// If we can't find the user, we have to bail.
 	if err != nil && passwd != nil {
 		if userArg == "" {
 			userArg = strconv.Itoa(user.Uid)
 		}
-		return nil, fmt.Errorf("Unable to find user %v: %v", userArg, err)
+		return nil, fmt.Errorf("unable to find user %s: %v", userArg, err)
 	}
 
 	var matchedUserName string
@@ -340,10 +338,10 @@ func GetExecUser(userSpec string, defaults *ExecUser, passwd, group io.Reader) (
 			return nil, fmt.Errorf("unable to find groups for spec %v: %v", matchedUserName, err)
 		}
 
-		haveGroup := groups != nil && len(groups) > 0
+		// Only start modifying user.Gid if it is in explicit form.
 		if groupArg != "" {
-			if haveGroup {
-				// if we found any group entries that matched our filter, let's take the first one as "correct"
+			if len(groups) > 0 {
+				// First match wins, even if there's more than one matching entry.
 				user.Gid = groups[0].Gid
 			} else if groupArg != "" {
 				// If we can't find a group with the given name, the only other valid
@@ -355,7 +353,7 @@ func GetExecUser(userSpec string, defaults *ExecUser, passwd, group io.Reader) (
 				}
 				user.Gid = gidArg
 
-				// Ensure gid is inside gid range.
+				// Must be inside valid gid range.
 				if user.Gid < minId || user.Gid > maxId {
 					return nil, ErrRange
 				}
