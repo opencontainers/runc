@@ -80,7 +80,7 @@ You can subscribe and join the mailing list on [Google Groups](https://groups.go
 
 ## IRC
 
-OCI discussion happens on #opencontainers on Freenode.
+OCI discussion happens on #opencontainers on Freenode ([logs][irc-logs]).
 
 ## Markdown style
 
@@ -158,3 +158,4 @@ Read more on [How to Write a Git Commit Message](http://chris.beams.io/posts/git
 8. When possible, one keyword to scope the change in the subject (i.e. "README: ...", "runtime: ...")
 
 [UberConference]: https://www.uberconference.com/ssaul
+[irc-logs]: http://ircbot.wl.linuxfoundation.org/eavesdrop/%23opencontainers/
