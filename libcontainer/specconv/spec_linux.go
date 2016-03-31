@@ -1,6 +1,6 @@
 // +build linux
 
-// Package strconv implements conversion of specifications to libcontainer
+// Package specconv implements conversion of specifications to libcontainer
 // configurations
 package specconv
 
