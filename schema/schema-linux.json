@@ -337,6 +337,14 @@
                         "type": "null"
                     }
                 ]
+            },
+            "maskedPaths": {
+                "id": "https://opencontainers.org/schema/bundle/linux/maskedPaths",
+                "$ref": "defs.json#/definitions/ArrayOfStrings"
+            },
+            "readonlyPaths": {
+                "id": "https://opencontainers.org/schema/bundle/linux/readonlyPaths",
+                "$ref": "defs.json#/definitions/ArrayOfStrings"
             }
         }
     }

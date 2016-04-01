@@ -443,7 +443,7 @@ The following parameters can be specified to setup the controller:
 
 ## Sysctl
 
-sysctl allows kernel parameters to be modified at runtime for the container.
+`sysctl` allows kernel parameters to be modified at runtime for the container.
 For more information, see [the man page](http://man7.org/linux/man-pages/man8/sysctl.8.html)
 
 ###### Example
@@ -511,7 +511,7 @@ Operator Constants:
 
 ## Rootfs Mount Propagation
 
-rootfsPropagation sets the rootfs's mount propagation.
+`rootfsPropagation` sets the rootfs's mount propagation.
 Its value is either slave, private, or shared.
 [The kernel doc](https://www.kernel.org/doc/Documentation/filesystems/sharedsubtree.txt) has more information about mount propagation.
 
@@ -519,6 +519,30 @@ Its value is either slave, private, or shared.
 
 ```json
     "rootfsPropagation": "slave",
+```
+
+## Masked Paths
+
+`maskedPaths` will mask over the provided paths inside the container so that they cannot be read.
+
+###### Example
+
+```json
+    "maskedPaths": [
+        "/proc/kcore"
+    ]
+```
+
+## Readonly Paths
+
+`readonlyPaths` will set the provided paths as readonly inside the container.
+
+###### Example
+
+```json
+    "readonlyPaths": [
+        "/proc/sys"
+    ]
 ```
 
 [cgroup-v1]: https://www.kernel.org/doc/Documentation/cgroup-v1/cgroups.txt
