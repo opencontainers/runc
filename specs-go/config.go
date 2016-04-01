@@ -136,6 +136,10 @@ type Linux struct {
 	Seccomp *Seccomp `json:"seccomp,omitempty"`
 	// RootfsPropagation is the rootfs mount propagation mode for the container.
 	RootfsPropagation string `json:"rootfsPropagation,omitempty"`
+	// MaskedPaths masks over the provided paths inside the container.
+	MaskedPaths []string `json:"maskedPaths,omitempty"`
+	// ReadonlyPaths sets the provided paths as RO inside the container.
+	ReadonlyPaths []string `json:"readonlyPaths,omitempty"`
 }
 
 // Namespace is the configuration for a Linux namespace
