@@ -13,8 +13,6 @@ The state of a container MUST include, at least, the following properties:
 * **`id`**: (string) is the container's ID.
 This MUST be unique across all containers on this host.
 There is no requirement that it be unique across hosts.
-The ID is provided in the state because hooks will be executed with the state as the payload.
-This allows the hooks to perform cleanup and teardown logic after the runtime destroys its own state.
 * **`pid`**: (int) is the ID of the main process within the container, as seen by the host.
 * **`bundlePath`**: (string) is the absolute path to the container's bundle directory.
 This is provided so that consumers can find the container's configuration and root filesystem on the host.
@@ -34,22 +32,19 @@ See [Query State](#query-state) for information on retrieving the state of a con
 
 ## Lifecycle
 The lifecycle describes the timeline of events that happen from when a container is created to when it ceases to exist.
-
-1. OCI compliant runtime is invoked with a reference to the location of the bundle.
-   How this reference is passed to the runtime is an implementation detail.
+1. OCI compliant runtime's `create` command is invoked with a reference to the location of the bundle and a unique identifier.
+   How these references are passed to the runtime is an implementation detail.
 2. The container's runtime environment MUST be created according to the configuration in [`config.json`](config.md).
-   Any updates to `config.json` after container is running MUST not affect the container.
-3. The prestart hooks MUST be invoked by the runtime.
-   If any prestart hook fails, then the container MUST be stopped and the lifecycle continues at step 7.
-4. The user specified process MUST be executed in the container.
-5. The poststart hooks MUST be invoked by the runtime.
-   If any poststart hook fails, then the container MUST be stopped and the lifecycle continues at step 7.
-6. Additional actions such as pausing the container, resuming the container or signaling the container MAY be performed using the runtime interface.
-   The container MAY also error out, exit or crash.
-7. The container MUST be destroyed by undoing the steps performed during create phase (step 2).
-8. The poststop hooks MUST be invoked by the runtime and errors, if any, SHOULD be logged.
-
-Note: The lifecycle is a WIP and it will evolve as we have more use cases and more information on the viability of a separate create phase.
+   While the resources requested in the [`config.json`](config.md) MUST be created, the user-specified code (from [`process`](config.md#process-configuration) MUST NOT be run at this time.
+   Any updates to `config.json` after this step MUST NOT affect the container.
+3. Once the container is created additional actions MAY be performed based on the features the runtime chooses to support.
+  However, some actions might only be available based on the current state of the container (e.g. only available while it is started).
+4. Runtime's `start` command is invoked with the unique identifier of the container.
+   The runtime MUST run the user-specified code, as specified by [`process`](config.md#process-configuration).
+5. The container's process is stopped.
+   This MAY happen due to them erroring out, exiting, crashing or the runtime's `kill` operation being invoked.
+6. Runtime's `delete` command is invoked with the unique identifier of the container.
+   The container MUST be destroyed by undoing the steps performed during create phase (step 2).
 
 ## Errors
 
@@ -67,36 +62,50 @@ Note: these operations are not specifying any command-line APIs, and the paramen
 `state <container-id>`
 
 This operation MUST generate an error if it is not provided the ID of a container.
+Attempting to query a container that does not exist MUST generate an error.
 This operation MUST return the state of a container as specified in the [State](#state) section.
 
-### Start
+### Create
 
-`start <container-id> <path-to-bundle>`
+`create <container-id> <path-to-bundle>`
 
 This operation MUST generate an error if it is not provided a path to the bundle and the container ID to associate with the container.
-If the ID provided is not unique across all containers within the scope of the runtime, or is not valid in any other way, the implementation MUST generate an error.
-Using the data in `config.json`, that are in the bundle's directory, this operation MUST create a new container.
-This includes creating the relevant namespaces, resource limits, etc and configuring the appropriate capabilities for the container.
-A new process within the scope of the container MUST be created as specified by the `config.json` file otherwise an error MUST be generated.
+If the ID provided is not unique across all containers within the scope of the runtime, or is not valid in any other way, the implementation MUST generate an error and a new container MUST not be created.
+Using the data in [`config.json`](config.md), this operation MUST create a new container.
+This means that all of the resources associated with the container MUST be created, however, the user-specified process MUST NOT be run at this time.
 
 The runtime MAY validate `config.json` against this spec, either generically or with respect to the local system capabilities, before creating the container ([step 2](#lifecycle)).
-If the runtime does not perform initial validation and triggers an error due to an invalid or incompatible configuration, it MUST generate an error and jump to cleanup ([step 7](#lifecycle)).
-Runtime callers who are interested in pre-start validation can run [bundle-validation tools](implementations.md#testing--tools) before invoking the start operation.
+Runtime callers who are interested in pre-create validation can run [bundle-validation tools](implementations.md#testing--tools) before invoking the create operation.
 
-Attempting to start an already running container MUST have no effect on the container and MUST generate an error.
+Any changes made to the [`config.json`](config.md) file after this operation will not have an effect on the container.
 
-### Stop
-
-`stop <container-id>`
+### Start
+`start <container-id>`
 
 This operation MUST generate an error if it is not provided the container ID.
-This operation MUST stop and delete a running container.
-Stopping a container MUST stop all of the processes running within the scope of the container.
-Deleting a container MUST delete the associated namespaces and resources associated with the container.
-Once a container is deleted, its `id` MAY be used by subsequent containers.
-Attempting to stop a container that is not running MUST have no effect on the container and MUST generate an error.
+Attempting to start a container that does not exist MUST generate an error.
+Attempting to start an already started container MUST have no effect on the container and MUST generate an error.
+This operation MUST run the user-specified code as specified by [`process`](config.md#process-configuration).
+If the runtime fails to run the code as specified, an error MUST be generated.
+
+### Kill
+`kill <container-id> <signal>`
+
+This operation MUST generate an error if it is not provided the container ID.
+Attempting to send a signal to a container that is not running MUST have no effect on the container and MUST generate an error.
+This operation MUST send the specified signal to the process in the container.
+
+### Delete
+`delete <container-id>`
+
+This operation MUST generate an error if it is not provided the container ID.
+Attempting to delete a container that does not exist MUST generate an error.
+Attempting to delete a container whose process is still running MUST generate an error.
+Deleting a container MUST delete the resources that were created during the `create` step.
+Note that resources associated with the container, but not created by this container, MUST NOT be deleted.
+Once a container is deleted its ID MAY be used by a subsequent container.
+
 
 ## Hooks
-
 Many of the operations specified in this specification have "hooks" that allow for additional actions to be taken before or after each operation.
 See [runtime configuration for hooks](./config.md#hooks) for more information.
