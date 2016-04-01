@@ -41,23 +41,6 @@ var mountPropagationMapping = map[string]int{
 	"":         syscall.MS_PRIVATE | syscall.MS_REC,
 }
 
-var (
-	maskedPaths = []string{
-		"/proc/kcore",
-		"/proc/latency_stats",
-		"/proc/timer_stats",
-		"/proc/sched_debug",
-	}
-	readonlyPaths = []string{
-		"/proc/asound",
-		"/proc/bus",
-		"/proc/fs",
-		"/proc/irq",
-		"/proc/sys",
-		"/proc/sysrq-trigger",
-	}
-)
-
 var allowedDevices = []*configs.Device{
 	// allow mknod for any device
 	{
@@ -226,8 +209,8 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 	}
 	config.Cgroups = c
 	// set extra path masking for libcontainer for the various unsafe places in proc
-	config.MaskPaths = maskedPaths
-	config.ReadonlyPaths = readonlyPaths
+	config.MaskPaths = spec.Linux.MaskedPaths
+	config.ReadonlyPaths = spec.Linux.ReadonlyPaths
 	if spec.Linux.Seccomp != nil {
 		seccomp, err := setupSeccomp(spec.Linux.Seccomp)
 		if err != nil {
