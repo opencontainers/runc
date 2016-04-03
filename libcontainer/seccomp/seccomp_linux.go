@@ -9,6 +9,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	libseccomp "github.com/seccomp/libseccomp-golang"
 )
@@ -166,6 +167,7 @@ func matchCall(filter *libseccomp.ScmpFilter, call *configs.Syscall) error {
 	// Ignore it, don't error out
 	callNum, err := libseccomp.GetSyscallFromName(call.Name)
 	if err != nil {
+		logrus.Warnf("syscall %s is not supported by this kernel", call.Name)
 		return nil
 	}
 
