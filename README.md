@@ -1,6 +1,6 @@
-# Open Container Specifications
+# Open Container Runtime Specification
 
-[Open Container Initiative](http://www.opencontainers.org/) Specifications for standards on Operating System process and application containers.
+The [Open Container Initiative](http://www.opencontainers.org/) develops specifications for standards on Operating System process and application containers.
 
 
 Table of Contents
