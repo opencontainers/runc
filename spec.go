@@ -141,6 +141,20 @@ container on your host.`,
 				},
 			},
 			Linux: specs.Linux{
+				MaskedPaths: []string{
+					"/proc/kcore",
+					"/proc/latency_stats",
+					"/proc/timer_stats",
+					"/proc/sched_debug",
+				},
+				ReadonlyPaths: []string{
+					"/proc/asound",
+					"/proc/bus",
+					"/proc/fs",
+					"/proc/irq",
+					"/proc/sys",
+					"/proc/sysrq-trigger",
+				},
 				Resources: &specs.Resources{
 					Devices: []specs.DeviceCgroup{
 						{
