@@ -18,9 +18,9 @@ The exceptions are entries where the Go default for the type is a no-op in the s
 
 [capabilities]: config-linux.md#capabilities
 [class-id]: config-linux.md#network
-[integer-over-hex]: https://github.com/opencontainers/specs/pull/267#discussion_r48360013
-[keep-prefix]: https://github.com/opencontainers/specs/pull/159#issuecomment-138728337
-[no-pointer-for-boolean]: https://github.com/opencontainers/specs/pull/290#discussion_r50296396
-[no-pointer-for-slices]: https://github.com/opencontainers/specs/pull/316/files#r50782982
-[optional-pointer]: https://github.com/opencontainers/specs/pull/233#discussion_r47829711
-[pointer-when-updates-require-changes]: https://github.com/opencontainers/specs/pull/317/files#r50932706
+[integer-over-hex]: https://github.com/opencontainers/runtime-spec/pull/267#discussion_r48360013
+[keep-prefix]: https://github.com/opencontainers/runtime-spec/pull/159#issuecomment-138728337
+[no-pointer-for-boolean]: https://github.com/opencontainers/runtime-spec/pull/290#discussion_r50296396
+[no-pointer-for-slices]: https://github.com/opencontainers/runtime-spec/pull/316/files#r50782982
+[optional-pointer]: https://github.com/opencontainers/runtime-spec/pull/233#discussion_r47829711
+[pointer-when-updates-require-changes]: https://github.com/opencontainers/runtime-spec/pull/317/files#r50932706
