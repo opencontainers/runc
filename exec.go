@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/codegangsta/cli"
+	"github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/opencontainers/specs/specs-go"
 )
 
@@ -103,7 +104,7 @@ func execProcess(context *cli.Context) (int, error) {
 	if err != nil {
 		return -1, err
 	}
-	bundle := searchLabels(state.Config.Labels, "bundle")
+	bundle := utils.SearchLabels(state.Config.Labels, "bundle")
 	p, err := getProcess(context, bundle)
 	if err != nil {
 		return -1, err

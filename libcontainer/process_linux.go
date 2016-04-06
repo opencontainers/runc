@@ -318,10 +318,11 @@ loop:
 		case procHooks:
 			if p.config.Config.Hooks != nil {
 				s := configs.HookState{
-					Version: p.container.config.Version,
-					ID:      p.container.id,
-					Pid:     p.pid(),
-					Root:    p.config.Config.Rootfs,
+					Version:    p.container.config.Version,
+					ID:         p.container.id,
+					Pid:        p.pid(),
+					Root:       p.config.Config.Rootfs,
+					BundlePath: utils.SearchLabels(p.config.Config.Labels, "bundle"),
 				}
 				for _, hook := range p.config.Config.Hooks.Prestart {
 					if err := hook.Run(s); err != nil {

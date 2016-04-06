@@ -205,10 +205,11 @@ func (c *linuxContainer) Start(process *Process) error {
 		}
 		if c.config.Hooks != nil {
 			s := configs.HookState{
-				Version: c.config.Version,
-				ID:      c.id,
-				Pid:     parent.pid(),
-				Root:    c.config.Rootfs,
+				Version:    c.config.Version,
+				ID:         c.id,
+				Pid:        parent.pid(),
+				Root:       c.config.Rootfs,
+				BundlePath: utils.SearchLabels(c.config.Labels, "bundle"),
 			}
 			for _, hook := range c.config.Hooks.Poststart {
 				if err := hook.Run(s); err != nil {
