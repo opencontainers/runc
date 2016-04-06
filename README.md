@@ -32,7 +32,7 @@ sudo make install
 ```
 
 In order to enable seccomp support you will need to install libseccomp on your platform.
-If you do not with to build `runc` with seccomp support you can add `BUILDTAGS=""` when running make.
+If you do not want to build `runc` with seccomp support you can add `BUILDTAGS=""` when running make.
 
 #### Build Tags
 
