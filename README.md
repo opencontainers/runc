@@ -72,7 +72,7 @@ When in doubt, start on the [mailing-list](#mailing-list).
 
 ## Weekly Call
 
-The contributors and maintainers of the project have a weekly meeting Wednesdays at 10:00 AM PST.
+The contributors and maintainers of all OCI projects have a weekly meeting Wednesdays at 10:00 AM (USA Pacific.)
 Everyone is welcome to participate via [UberConference web][UberConference] or audio-only: 646-494-8704 (no PIN needed.)
 An initial agenda will be posted to the [mailing list](#mailing-list) earlier in the week, and everyone is welcome to propose additional topics or suggest other agenda alterations there.
 Minutes are posted to the [mailing list](#mailing-list) and minutes from past calls are archived to the [wiki](https://github.com/opencontainers/runtime-spec/wiki) for those who are unable to join the call.
