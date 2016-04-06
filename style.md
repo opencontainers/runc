@@ -1,5 +1,11 @@
 # Style and conventions
 
+## One sentence per line
+
+To keep consistency throughout the Markdown files in the Open Container spec all files should be formatted one sentence per line.
+This fixes two things: it makes diffing easier with git and it resolves fights about line wrapping length.
+For example, this paragraph will span three lines in the Markdown source.
+
 ## Traditionally hex settings should use JSON integers, not JSON strings
 
 For example, [`"classID": 1048577`][class-id] instead of `"classID": "0x100001"`.
