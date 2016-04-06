@@ -93,7 +93,9 @@
             "type": "string"
         },
         "FileType": {
-            "type": "integer"
+            "description": "Type of a block or special character device",
+            "type": "string",
+            "pattern": "^[cbup]$"
         },
         "Device": {
             "properties": {

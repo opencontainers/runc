@@ -25,7 +25,7 @@
             }
         },
         "annotations": {
-            "id": "https://opencontainers.org/schema/bundle/linux/sysctl",
+            "id": "https://opencontainers.org/schema/bundle/annotations",
             "oneOf": [
                 {
                     "$ref": "defs.json#/definitions/mapStringString"
@@ -139,6 +139,29 @@
                 "noNewPrivileges": {
                     "id": "https://opencontainers.org/schema/bundle/process/linux/noNewPrivileges",
                     "type": "boolean"
+                },
+                "rlimits": {
+                    "id": "https://opencontainers.org/schema/bundle/linux/rlimits",
+                    "type": "array",
+                    "items": {
+                        "id": "https://opencontainers.org/schema/bundle/linux/rlimits/0",
+                        "type": "object",
+                        "properties": {
+                            "hard": {
+                                "id": "https://opencontainers.org/schema/bundle/linux/rlimits/0/hard",
+                                "$ref": "defs.json#/definitions/uint64"
+                            },
+                            "soft": {
+                                "id": "https://opencontainers.org/schema/bundle/linux/rlimits/0/soft",
+                                "$ref": "defs.json#/definitions/uint64"
+                            },
+                            "type": {
+                                "id": "https://opencontainers.org/schema/bundle/linux/rlimits/0/type",
+                                "type": "string",
+                                "pattern": "^RLIMIT_[A-Z]+$"
+                            }
+                        }
+                    }
                 }
             }
         },
