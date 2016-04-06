@@ -82,12 +82,6 @@ You can subscribe and join the mailing list on [Google Groups](https://groups.go
 
 OCI discussion happens on #opencontainers on Freenode ([logs][irc-logs]).
 
-## Markdown style
-
-To keep consistency throughout the Markdown files in the Open Container spec all files should be formatted one sentence per line.
-This fixes two things: it makes diffing easier with git and it resolves fights about line wrapping length.
-For example, this paragraph will span three lines in the Markdown source.
-
 ## Git commit
 
 ### Sign your work
