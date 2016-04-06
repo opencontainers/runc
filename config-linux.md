@@ -241,7 +241,7 @@ For more information on how these two settings work together, see [the memory cg
 ###### Example
 
 ```json
-    "oomScoreAdj": 0
+    "oomScoreAdj": 100
 ```
 
 #### Memory
@@ -251,9 +251,9 @@ For more information, see [the memory cgroup man page][cgroup-v1-memory].
 
 The following parameters can be specified to setup the controller:
 
-* **`limit`** *(uint64, optional)* - sets limit of memory usage
+* **`limit`** *(uint64, optional)* - sets limit of memory usage in bytes
 
-* **`reservation`** *(uint64, optional)* - sets soft limit of memory usage
+* **`reservation`** *(uint64, optional)* - sets soft limit of memory usage in bytes
 
 * **`swap`** *(uint64, optional)* - sets limit of memory+Swap usage
 
@@ -267,9 +267,9 @@ The following parameters can be specified to setup the controller:
 
 ```json
     "memory": {
-        "limit": 0,
-        "reservation": 0,
-        "swap": 0,
+        "limit": 536870912,
+        "reservation": 536870912,
+        "swap": 536870912,
         "kernel": 0,
         "kernelTCP": 0,
         "swappiness": 0
@@ -301,13 +301,13 @@ The following parameters can be specified to setup the controller:
 
 ```json
     "cpu": {
-        "shares": 0,
-        "quota": 0,
-        "period": 0,
-        "realtimeRuntime": 0,
-        "realtimePeriod": 0,
-        "cpus": "",
-        "mems": ""
+        "shares": 1024,
+        "quota": 1000000,
+        "period": 500000,
+        "realtimeRuntime": 950000,
+        "realtimePeriod": 1000000,
+        "cpus": "2-3",
+        "mems": "0-7"
     }
 ```
 
@@ -337,8 +337,8 @@ The following parameters can be specified to setup the controller:
 
 ```json
     "blockIO": {
-        "blkioWeight": 0,
-        "blkioLeafWeight": 0,
+        "blkioWeight": 10,
+        "blkioLeafWeight": 10,
         "blkioWeightDevice": [
             {
                 "major": 8,
