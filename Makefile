@@ -20,10 +20,7 @@ endif
 static:
 	CGO_ENABLED=1 go build -tags "$(BUILDTAGS) cgo static_build" -ldflags "-w -extldflags -static -X main.gitCommit=${COMMIT}" -o runc .
 
-vet:
-	go get golang.org/x/tools/cmd/vet
-
-lint: vet
+lint:
 	go vet ./...
 	go fmt ./...
 
@@ -53,7 +50,7 @@ clean:
 	rm -f runc
 	rm -f $(RUNC_LINK)
 
-validate: vet
+validate:
 	script/validate-gofmt
 	go vet ./...
 
