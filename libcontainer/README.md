@@ -216,6 +216,9 @@ container.Pause()
 
 // resume all paused processes.
 container.Resume()
+
+// send signal to container's init process.
+container.Signal(signal)
 ```
 
 
