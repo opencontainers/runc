@@ -307,7 +307,11 @@ func (c Command) Run(s HookState) error {
 	}
 	errC := make(chan error, 1)
 	go func() {
-		errC <- cmd.Run()
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			err = fmt.Errorf("%s: %s", err, out)
+		}
+		errC <- err
 	}()
 	if c.Timeout != nil {
 		select {
