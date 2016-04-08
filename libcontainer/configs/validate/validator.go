@@ -52,7 +52,7 @@ func (v *ConfigValidator) rootfs(config *configs.Config) error {
 	if cleaned, err = filepath.EvalSymlinks(cleaned); err != nil {
 		return err
 	}
-	if config.Rootfs != cleaned {
+	if filepath.Clean(config.Rootfs) != cleaned {
 		return fmt.Errorf("%s is not an absolute path or is a symlink", config.Rootfs)
 	}
 	return nil
