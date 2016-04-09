@@ -7,7 +7,7 @@ RUNC_BUILD_PATH=/go/src/github.com/opencontainers/runc/runc
 RUNC_INSTANCE=runc_dev
 COMMIT=$(shell git rev-parse HEAD 2> /dev/null || true)
 RUNC_LINK=$(CURDIR)/Godeps/_workspace/src/github.com/opencontainers/runc
-export GOPATH:=$(CURDIR)/Godeps/_workspace:$(GOPATH)
+export GOPATH:=$(CURDIR)/Godeps/_workspace
 
 .PHONY=dbuild
 
