@@ -99,6 +99,10 @@ func execProcess(context *cli.Context) (int, error) {
 	if err != nil {
 		return -1, err
 	}
+	path := context.String("process")
+	if path == "" && len(context.Args()) == 1 {
+		return -1, fmt.Errorf("process args cannot be empty")
+	}
 	detach := context.Bool("detach")
 	state, err := container.State()
 	if err != nil {
