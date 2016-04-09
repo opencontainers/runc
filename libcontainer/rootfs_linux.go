@@ -25,6 +25,20 @@ import (
 
 const defaultMountFlags = syscall.MS_NOEXEC | syscall.MS_NOSUID | syscall.MS_NODEV
 
+func mountCheck(m *configs.Mount, rootfs, mountLabel string, config *configs.Config) error {
+	switch m.Device {
+	case "mqueue":
+		if !config.Namespaces.Contains(configs.NEWUSER) {
+			dest := m.Destination
+			if !strings.HasPrefix(dest, rootfs) {
+				dest = filepath.Join(rootfs, dest)
+			}
+			return label.SetFileLabel(dest, mountLabel)
+		}
+	}
+	return nil
+}
+
 // setupRootfs sets up the devices, mount points, and filesystems for use inside a
 // new mount namespace.
 func setupRootfs(config *configs.Config, console *linuxConsole, pipe io.ReadWriter) (err error) {
@@ -42,7 +56,9 @@ func setupRootfs(config *configs.Config, console *linuxConsole, pipe io.ReadWrit
 		if err := mountToRootfs(m, config.Rootfs, config.MountLabel); err != nil {
 			return newSystemError(err)
 		}
-
+		if err := mountCheck(m, config.Rootfs, config.MountLabel, config); err != nil {
+			return newSystemError(err)
+		}
 		for _, postcmd := range m.PostmountCmds {
 			if err := mountCmd(postcmd); err != nil {
 				return newSystemError(err)
@@ -140,7 +156,6 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 			if err := mountPropagate(m, rootfs, ""); err != nil {
 				return err
 			}
-			return label.SetFileLabel(dest, mountLabel)
 		}
 		return nil
 	case "tmpfs":
