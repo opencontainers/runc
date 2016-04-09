@@ -11,14 +11,14 @@ export GOPATH:=$(CURDIR)/Godeps/_workspace:$(GOPATH)
 
 .PHONY=dbuild
 
-all:
-ifneq ($(RUNC_LINK), $(wildcard $(RUNC_LINK)))
-	ln -sfn $(CURDIR) $(RUNC_LINK)
-endif
+all: $(RUNC_LINK)
 	go build -ldflags "-X main.gitCommit=${COMMIT}" -tags "$(BUILDTAGS)" -o runc .
 
-static:
+static: $(RUNC_LINK)
 	CGO_ENABLED=1 go build -tags "$(BUILDTAGS) cgo static_build" -ldflags "-w -extldflags -static -X main.gitCommit=${COMMIT}" -o runc .
+
+$(RUNC_LINK):
+	ln -sfn $(CURDIR) $(RUNC_LINK)
 
 lint:
 	go vet ./...
