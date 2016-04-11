@@ -2,7 +2,11 @@
 
 package libcontainer
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/opencontainers/runc/libcontainer/configs"
+)
 
 func TestCheckMountDestOnProc(t *testing.T) {
 	dest := "/rootfs/proc/"
@@ -33,5 +37,81 @@ func TestCheckMountRoot(t *testing.T) {
 	err := checkMountDestination("/rootfs", dest)
 	if err == nil {
 		t.Fatal(err)
+	}
+}
+
+func TestNeedsSetupDev(t *testing.T) {
+	config := &configs.Config{
+		Mounts: []*configs.Mount{
+			{
+				Device:      "bind",
+				Source:      "/dev",
+				Destination: "/dev",
+			},
+		},
+	}
+	setupDev, err := needsSetupDev(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if setupDev {
+		t.Fatalf("expected false")
+	}
+}
+
+func TestNeedsSetupDevStrangeSource(t *testing.T) {
+	config := &configs.Config{
+		Mounts: []*configs.Mount{
+			{
+				Device:      "bind",
+				Source:      "/devx",
+				Destination: "/dev",
+			},
+		},
+	}
+	setupDev, err := needsSetupDev(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if setupDev {
+		t.Fatalf("expected false")
+	}
+}
+
+func TestNeedsSetupDevStrangeDest(t *testing.T) {
+	config := &configs.Config{
+		Mounts: []*configs.Mount{
+			{
+				Device:      "bind",
+				Source:      "/dev",
+				Destination: "/devx",
+			},
+		},
+	}
+	setupDev, err := needsSetupDev(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !setupDev {
+		t.Fatalf("expected true")
+	}
+}
+
+func TestNeedsSetupDevStrangeSourceDest(t *testing.T) {
+	config := &configs.Config{
+		Mounts: []*configs.Mount{
+			{
+				Device:      "bind",
+				Source:      "/devx",
+				Destination: "/devx",
+			},
+		},
+	}
+	setupDev, err := needsSetupDev(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !setupDev {
+		t.Fatalf("expected true")
 	}
 }

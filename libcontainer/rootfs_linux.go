@@ -25,6 +25,17 @@ import (
 
 const defaultMountFlags = syscall.MS_NOEXEC | syscall.MS_NOSUID | syscall.MS_NODEV
 
+// setupDev returns true if /dev needs to be set up.
+func needsSetupDev(config *configs.Config) (bool, error) {
+	setupDev := true
+	for _, m := range config.Mounts {
+		if m.Device == "bind" && m.Destination == "/dev" {
+			setupDev = false
+		}
+	}
+	return setupDev, nil
+}
+
 // setupRootfs sets up the devices, mount points, and filesystems for use inside a
 // new mount namespace.
 func setupRootfs(config *configs.Config, console *linuxConsole, pipe io.ReadWriter) (err error) {
@@ -32,7 +43,10 @@ func setupRootfs(config *configs.Config, console *linuxConsole, pipe io.ReadWrit
 		return newSystemError(err)
 	}
 
-	setupDev := len(config.Devices) != 0
+	setupDev, err := needsSetupDev(config)
+	if err != nil {
+		return newSystemError(err)
+	}
 	for _, m := range config.Mounts {
 		for _, precmd := range m.PremountCmds {
 			if err := mountCmd(precmd); err != nil {
