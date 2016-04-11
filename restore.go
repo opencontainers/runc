@@ -174,12 +174,12 @@ func restoreContainer(context *cli.Context, spec *specs.Spec, config *configs.Co
 	return handler.forward(process)
 }
 
-func criuOptions(context *cli.Context) *libcontainer.CriuOpts {
+func criuOptions(context *cli.Context) *libcontainer.CheckpointOpts {
 	imagePath := getCheckpointImagePath(context)
 	if err := os.MkdirAll(imagePath, 0655); err != nil {
 		fatal(err)
 	}
-	return &libcontainer.CriuOpts{
+	return &libcontainer.CheckpointOpts{
 		ImagesDirectory:         imagePath,
 		WorkDirectory:           context.String("work-path"),
 		LeaveRunning:            context.Bool("leave-running"),

@@ -22,7 +22,7 @@ type VethPairName struct {
 	HostInterfaceName      string
 }
 
-type CriuOpts struct {
+type CheckpointOpts struct {
 	ImagesDirectory         string             // directory for storing image files
 	WorkDirectory           string             // directory to cd and write logs/pidfiles/stats to
 	LeaveRunning            bool               // leave container in running state after checkpoint

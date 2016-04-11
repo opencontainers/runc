@@ -37,7 +37,6 @@ func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
 		}
 	}
 	return libcontainer.New(abs, cgroupManager, func(l *libcontainer.LinuxFactory) error {
-		l.CriuPath = context.GlobalString("criu")
 		return nil
 	})
 }

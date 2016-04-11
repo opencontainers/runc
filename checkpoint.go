@@ -54,7 +54,7 @@ func getCheckpointImagePath(context *cli.Context) string {
 	return imagePath
 }
 
-func setPageServer(context *cli.Context, options *libcontainer.CriuOpts) {
+func setPageServer(context *cli.Context, options *libcontainer.CheckpointOpts) {
 	// xxx following criu opts are optional
 	// The dump image can be sent to a criu page server
 	if psOpt := context.String("page-server"); psOpt != "" {
@@ -73,7 +73,7 @@ func setPageServer(context *cli.Context, options *libcontainer.CriuOpts) {
 	}
 }
 
-func setManageCgroupsMode(context *cli.Context, options *libcontainer.CriuOpts) {
+func setManageCgroupsMode(context *cli.Context, options *libcontainer.CheckpointOpts) {
 	if cgOpt := context.String("manage-cgroups-mode"); cgOpt != "" {
 		switch cgOpt {
 		case "soft":
