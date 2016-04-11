@@ -249,10 +249,11 @@ func (hooks Hooks) MarshalJSON() ([]byte, error) {
 
 // HookState is the payload provided to a hook on execution.
 type HookState struct {
-	Version string `json:"version"`
-	ID      string `json:"id"`
-	Pid     int    `json:"pid"`
-	Root    string `json:"root"`
+	Version    string `json:"ociVersion"`
+	ID         string `json:"id"`
+	Pid        int    `json:"pid"`
+	Root       string `json:"root"`
+	BundlePath string `json:"bundlePath"`
 }
 
 type Hook interface {

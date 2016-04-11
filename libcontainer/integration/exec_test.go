@@ -1068,9 +1068,15 @@ func TestHook(t *testing.T) {
 	defer remove(rootfs)
 
 	config := newTemplateConfig(rootfs)
+	expectedBundlePath := "/path/to/bundle/path"
+	config.Labels = append(config.Labels, fmt.Sprintf("bundle=%s", expectedBundlePath))
 	config.Hooks = &configs.Hooks{
 		Prestart: []configs.Hook{
 			configs.NewFunctionHook(func(s configs.HookState) error {
+				if s.BundlePath != expectedBundlePath {
+					t.Fatalf("Expected prestart hook bundlePath '%s'; got '%s'", expectedBundlePath, s.BundlePath)
+				}
+
 				f, err := os.Create(filepath.Join(s.Root, "test"))
 				if err != nil {
 					return err
@@ -1078,8 +1084,21 @@ func TestHook(t *testing.T) {
 				return f.Close()
 			}),
 		},
+		Poststart: []configs.Hook{
+			configs.NewFunctionHook(func(s configs.HookState) error {
+				if s.BundlePath != expectedBundlePath {
+					t.Fatalf("Expected poststart hook bundlePath '%s'; got '%s'", expectedBundlePath, s.BundlePath)
+				}
+
+				return ioutil.WriteFile(filepath.Join(s.Root, "test"), []byte("hello world"), 0755)
+			}),
+		},
 		Poststop: []configs.Hook{
 			configs.NewFunctionHook(func(s configs.HookState) error {
+				if s.BundlePath != expectedBundlePath {
+					t.Fatalf("Expected poststop hook bundlePath '%s'; got '%s'", expectedBundlePath, s.BundlePath)
+				}
+
 				return os.RemoveAll(filepath.Join(s.Root, "test"))
 			}),
 		},
@@ -1107,6 +1126,16 @@ func TestHook(t *testing.T) {
 	if !strings.Contains(outputLs, "/test") {
 		container.Destroy()
 		t.Fatalf("ls output doesn't have the expected file: %s", outputLs)
+	}
+
+	// Check that the file is written by the poststart hook
+	testFilePath := filepath.Join(rootfs, "test")
+	contents, err := ioutil.ReadFile(testFilePath)
+	if err != nil {
+		t.Fatalf("cannot read file '%s': %s", testFilePath, err)
+	}
+	if string(contents) != "hello world" {
+		t.Fatalf("Expected test file to contain 'hello world'; got '%s'", string(contents))
 	}
 
 	if err := container.Destroy(); err != nil {

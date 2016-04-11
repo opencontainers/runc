@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/codegangsta/cli"
+	"github.com/opencontainers/runc/libcontainer/utils"
 )
 
 // cState represents the platform agnostic pieces relating to a running
@@ -57,7 +58,7 @@ instance of a container.`,
 			ID:             state.BaseState.ID,
 			InitProcessPid: state.BaseState.InitProcessPid,
 			Status:         containerStatus.String(),
-			Bundle:         searchLabels(state.Config.Labels, "bundle"),
+			Bundle:         utils.SearchLabels(state.Config.Labels, "bundle"),
 			Rootfs:         state.BaseState.Config.Rootfs,
 			Created:        state.BaseState.Created}
 		data, err := json.MarshalIndent(cs, "", "  ")
