@@ -259,7 +259,7 @@ The following parameters can be specified to setup the controller:
 
 * **`kernel`** *(uint64, optional)* - sets hard limit for kernel memory
 
-* **`kernelTCP`** *(uint64, optional)* - sets hard limit for kernel memory in tcp using
+* **`kernelTCP`** *(uint64, optional)* - sets hard limit in bytes for kernel TCP buffer memory
 
 * **`swappiness`** *(uint64, optional)* - sets swappiness parameter of vmscan (See sysctl's vm.swappiness)
 
