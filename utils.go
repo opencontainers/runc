@@ -33,7 +33,7 @@ func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
 		if systemd.UseSystemd() {
 			cgroupManager = libcontainer.SystemdCgroups
 		} else {
-			return nil, fmt.Errorf("systemd cgroup flag passed, but systemd support for managing cgroups is not available.")
+			return nil, fmt.Errorf("systemd cgroup flag passed, but systemd support for managing cgroups is not available")
 		}
 	}
 	return libcontainer.New(abs, cgroupManager, func(l *libcontainer.LinuxFactory) error {

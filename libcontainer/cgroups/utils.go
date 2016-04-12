@@ -173,7 +173,7 @@ func GetCgroupMounts() ([]Mount, error) {
 	return getCgroupMountsHelper(allMap, f)
 }
 
-// Returns all the cgroup subsystems supported by the kernel
+// GetAllSubsystems returns all the cgroup subsystems supported by the kernel
 func GetAllSubsystems() ([]string, error) {
 	f, err := os.Open("/proc/cgroups")
 	if err != nil {
@@ -199,7 +199,7 @@ func GetAllSubsystems() ([]string, error) {
 	return subsystems, nil
 }
 
-// Returns the relative path to the cgroup docker is running in.
+// GetThisCgroupDir returns the relative path to the cgroup docker is running in.
 func GetThisCgroupDir(subsystem string) (string, error) {
 	cgroups, err := ParseCgroupFile("/proc/self/cgroup")
 	if err != nil {

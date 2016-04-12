@@ -471,11 +471,11 @@ func TestMemorySetOomControl(t *testing.T) {
 	defer helper.cleanup()
 
 	const (
-		oom_kill_disable = 1 // disable oom killer, default is 0
+		oomKillDisable = 1 // disable oom killer, default is 0
 	)
 
 	helper.writeFileContents(map[string]string{
-		"memory.oom_control": strconv.Itoa(oom_kill_disable),
+		"memory.oom_control": strconv.Itoa(oomKillDisable),
 	})
 
 	memory := &MemoryGroup{}
@@ -488,7 +488,7 @@ func TestMemorySetOomControl(t *testing.T) {
 		t.Fatalf("Failed to parse memory.oom_control - %s", err)
 	}
 
-	if value != oom_kill_disable {
+	if value != oomKillDisable {
 		t.Fatalf("Got the wrong value, set memory.oom_control failed.")
 	}
 }
