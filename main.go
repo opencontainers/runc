@@ -7,7 +7,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
-	"github.com/opencontainers/specs/specs-go"
+	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
 // gitCommit will be the hash that the binary was built from
@@ -15,7 +15,7 @@ import (
 var gitCommit = ""
 
 const (
-	version    = "0.0.9"
+	version    = "0.1.0"
 	specConfig = "config.json"
 	usage      = `Open Container Initiative runtime
 	

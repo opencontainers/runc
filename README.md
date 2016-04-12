@@ -14,7 +14,7 @@ the spec is finalized. However, we encourage you to try out the tool and give fe
 
 How does `runc` integrate with the Open Container Initiative Specification?
 `runc` depends on the types specified in the
-[specs](https://github.com/opencontainers/specs) repository. Whenever the
+[specs](https://github.com/opencontainers/runtime-spec) repository. Whenever the
 specification is updated and ready to be versioned `runc` will update its dependency
 on the specs repository and support the update spec.
 
@@ -79,7 +79,7 @@ PID   USER     COMMAND
 
 ### OCI Container JSON Format:
 
-OCI container JSON format is based on OCI [specs](https://github.com/opencontainers/specs).
+OCI container JSON format is based on OCI [specs](https://github.com/opencontainers/runtime-spec).
 You can generate JSON files by using `runc spec`.
 It assumes that the file-system is found in a directory called
 `rootfs` and there is a user with uid and gid of `0` defined within that file-system.
