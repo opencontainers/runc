@@ -62,7 +62,7 @@ type State struct {
 	ExternalDescriptors []string `json:"external_descriptors,omitempty"`
 }
 
-// A libcontainer container object.
+// Container is a libcontainer container object.
 //
 // Each container is thread-safe within the same process. Since a container can
 // be destroyed by a separate process, any function may return that the container
@@ -408,13 +408,13 @@ func (c *linuxContainer) NotifyMemoryPressure(level PressureLevel) (<-chan struc
 	return notifyMemoryPressure(c.cgroupManager.GetPaths(), level)
 }
 
-// check Criu version greater than or equal to min_version
-func (c *linuxContainer) checkCriuVersion(min_version string) error {
+// checkCriuVersion checks Criu version greater than or equal to minVersion
+func (c *linuxContainer) checkCriuVersion(minVersion string) error {
 	var x, y, z, versionReq int
 
-	_, err := fmt.Sscanf(min_version, "%d.%d.%d\n", &x, &y, &z) // 1.5.2
+	_, err := fmt.Sscanf(minVersion, "%d.%d.%d\n", &x, &y, &z) // 1.5.2
 	if err != nil {
-		_, err = fmt.Sscanf(min_version, "Version: %d.%d\n", &x, &y) // 1.6
+		_, err = fmt.Sscanf(minVersion, "Version: %d.%d\n", &x, &y) // 1.6
 	}
 	versionReq = x*10000 + y*100 + z
 
@@ -459,7 +459,7 @@ func (c *linuxContainer) checkCriuVersion(min_version string) error {
 	c.criuVersion = x*10000 + y*100 + z
 
 	if c.criuVersion < versionReq {
-		return fmt.Errorf("CRIU version must be %s or higher", min_version)
+		return fmt.Errorf("CRIU version must be %s or higher", minVersion)
 	}
 
 	return nil

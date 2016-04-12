@@ -297,7 +297,7 @@ func IntToMcs(id int, catRange uint32) string {
 
 	for ORD > TIER {
 		ORD = ORD - TIER
-		TIER -= 1
+		TIER--
 	}
 	TIER = SETSIZE - TIER
 	ORD = ORD + TIER
@@ -438,7 +438,7 @@ func badPrefix(fpath string) error {
 	return nil
 }
 
-// Change the fpath file object to the SELinux label scon.
+// Chcon changes the fpath file object to the SELinux label scon.
 // If the fpath is a directory and recurse is true Chcon will walk the
 // directory tree setting the label
 func Chcon(fpath string, scon string, recurse bool) error {

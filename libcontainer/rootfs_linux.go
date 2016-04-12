@@ -25,7 +25,7 @@ import (
 
 const defaultMountFlags = syscall.MS_NOEXEC | syscall.MS_NOSUID | syscall.MS_NODEV
 
-// setupDev returns true if /dev needs to be set up.
+// needsSetupDev returns true if /dev needs to be set up.
 func needsSetupDev(config *configs.Config) bool {
 	for _, m := range config.Mounts {
 		if m.Device == "bind" && (m.Destination == "/dev" || m.Destination == "/dev/") {
