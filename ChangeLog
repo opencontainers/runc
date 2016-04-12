@@ -1,5 +1,36 @@
 OpenContainers Specifications
 
+Changes with v0.5.0:
+	Breaking changes:
+
+	* specs-go: Renamed the repository from opencontainers/specs to
+	  opencontainers/runtime-spec, #365
+
+	Additions:
+
+	* config: Add 'timeout' for hooks, #346
+	* config-linux: Add 'maskedPaths' and 'readonlyPaths', #364
+
+	Minor fixes and documentation:
+
+	* JSON Schema bug-fixes and improved examples, #370
+	* README: Define "unconditionally compliant", #374
+	* config: Make Markdown canonical, #342
+	* config: Explicitly list mapping from symbolic names to UID/GIDs as
+	  out-of-scope, #347
+	* config-linux: Require the runtime mount namespace for namespace
+	  'path' values, #275
+	* config-linux: Reword kernelTCP docs, #377
+	* specs-go: Add omitempty to 'Device' and 'Namespace', #340
+	* .travis.yml: Use built-in 'go vet' and current 'go lint', dropping
+	  Go < 1.5, #372, #352
+	* implementations: Expand ocitools scope to include testing, #328
+	* style: Move one-sentence-per-line rule from the README, #369
+	* style: Remove dangling parenthesis, #359
+	* README: Add a link to the IRC logs, #358
+	* Fix "manadate", "exmaple", "paramters", and "preferrably" typos,
+	  #353, #354
+
 Changes with v0.4.0:
 	Breaking changes:
 
