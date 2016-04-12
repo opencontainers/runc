@@ -68,7 +68,7 @@ func (s *MemoryGroup) SetKernelMemory(path string, cgroup *configs.Cgroup) error
 func setMemoryAndSwap(path string, cgroup *configs.Cgroup) error {
 	// When memory and swap memory are both set, we need to handle the cases
 	// for updating container.
-	if cgroup.Resources.Memory != 0 && cgroup.Resources.MemorySwap != 0 {
+	if cgroup.Resources.Memory != 0 && cgroup.Resources.MemorySwap > 0 {
 		memoryUsage, err := getMemoryData(path, "")
 		if err != nil {
 			return err
