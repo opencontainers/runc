@@ -232,7 +232,7 @@ If a hook returns a non-zero exit code, then an error is logged and the remainin
         ],
         "poststart": [
             {
-                "path": "/usr/bin/notify-start"
+                "path": "/usr/bin/notify-start",
                 "timeout": 5
             }
         ],
@@ -269,7 +269,7 @@ Here is a full example `config.json` for reference.
 
 ```json
 {
-    "ociVersion": "0.3.0",
+    "ociVersion": "0.5.0-dev",
     "platform": {
         "os": "linux",
         "arch": "amd64"
@@ -284,6 +284,20 @@ Here is a full example `config.json` for reference.
                 6
             ]
         },
+        "uidMappings": [
+            {
+                "hostID": 1000,
+                "containerID": 0,
+                "size": 32000
+            }
+        ],
+        "gidMappings": [
+            {
+                "hostID": 1000,
+                "containerID": 0,
+                "size": 32000
+            }
+        ],
         "args": [
             "sh"
         ],
@@ -299,13 +313,19 @@ Here is a full example `config.json` for reference.
         ],
         "rlimits": [
             {
+                "type": "RLIMIT_CORE",
+                "hard": 1024,
+                "soft": 1024
+            },
+            {
                 "type": "RLIMIT_NOFILE",
                 "hard": 1024,
                 "soft": 1024
             }
         ],
-        "apparmorProfile": "",
-        "selinuxLabel": ""
+        "apparmorProfile": "acme_secure_profile",
+        "selinuxLabel": "system_u:system_r:svirt_lxc_net_t:s0:c124,c675",
+        "noNewPrivileges": true
     },
     "root": {
         "path": "rootfs",
@@ -390,20 +410,166 @@ Here is a full example `config.json` for reference.
     "hooks": {
         "prestart": [
             {
-                "path": "/usr/bin/uptime",
+                "path": "/usr/bin/fix-mounts",
                 "args": [
-                    "/usr/bin/uptime"
+                    "fix-mounts",
+                    "arg1",
+                    "arg2"
                 ],
-                "env": []
+                "env": [
+                    "key1=value1"
+                ]
+            },
+            {
+                "path": "/usr/bin/setup-network"
+            }
+        ],
+        "poststart": [
+            {
+                "path": "/usr/bin/notify-start",
+                "timeout": 5
+            }
+        ],
+        "poststop": [
+            {
+                "path": "/usr/sbin/cleanup.sh",
+                "args": [
+                    "cleanup.sh",
+                    "-f"
+                ]
             }
         ]
     },
     "linux": {
+        "devices": [
+            {
+                "path": "/dev/fuse",
+                "type": "c",
+                "major": 10,
+                "minor": 229,
+                "fileMode": 438,
+                "uid": 0,
+                "gid": 0
+            },
+            {
+                "path": "/dev/sda",
+                "type": "b",
+                "major": 8,
+                "minor": 0,
+                "fileMode": 432,
+                "uid": 0,
+                "gid": 0
+            }
+        ],
+        "sysctl": {
+            "net.ipv4.ip_forward": "1",
+            "net.core.somaxconn": "256"
+        },
+        "cgroupsPath": "/myRuntime/myContainer",
         "resources": {
+            "network": {
+                "classID": 1048577,
+                "priorities": [
+                    {
+                        "name": "eth0",
+                        "priority": 500
+                    },
+                    {
+                        "name": "eth1",
+                        "priority": 1000
+                    }
+                ]
+            },
+            "pids": {
+                "limit": 32771
+            },
+            "hugepageLimits": [
+                {
+                    "pageSize": "2MB",
+                    "limit": 9223372036854772000
+                }
+            ],
+            "oomScoreAdj": 100,
+            "memory": {
+                "limit": 536870912,
+                "reservation": 536870912,
+                "swap": 536870912,
+                "kernel": 0,
+                "kernelTCP": 0,
+                "swappiness": 0
+            },
+            "cpu": {
+                "shares": 1024,
+                "quota": 1000000,
+                "period": 500000,
+                "realtimeRuntime": 950000,
+                "realtimePeriod": 1000000,
+                "cpus": "2-3",
+                "mems": "0-7"
+            },
+            "disableOOMKiller": false,
             "devices": [
                 {
                     "allow": false,
                     "access": "rwm"
+                },
+                {
+                    "allow": true,
+                    "type": "c",
+                    "major": 10,
+                    "minor": 229,
+                    "access": "rw"
+                },
+                {
+                    "allow": true,
+                    "type": "b",
+                    "major": 8,
+                    "minor": 0,
+                    "access": "r"
+                }
+            ],
+            "blockIO": {
+                "blkioWeight": 10,
+                "blkioLeafWeight": 10,
+                "blkioWeightDevice": [
+                    {
+                        "major": 8,
+                        "minor": 0,
+                        "weight": 500,
+                        "leafWeight": 300
+                    },
+                    {
+                        "major": 8,
+                        "minor": 16,
+                        "weight": 500
+                    }
+                ],
+                "blkioThrottleReadBpsDevice": [
+                    {
+                        "major": 8,
+                        "minor": 0,
+                        "rate": 600
+                    }
+                ],
+                "blkioThrottleWriteIOPSDevice": [
+                    {
+                        "major": 8,
+                        "minor": 16,
+                        "rate": 300
+                    }
+                ]
+            }
+        },
+        "rootfsPropagation": "slave",
+        "seccomp": {
+            "defaultAction": "SCMP_ACT_ALLOW",
+            "architectures": [
+                "SCMP_ARCH_X86"
+            ],
+            "syscalls": [
+                {
+                    "name": "getcwd",
+                    "action": "SCMP_ACT_ERRNO"
                 }
             ]
         },
@@ -423,7 +589,25 @@ Here is a full example `config.json` for reference.
             {
                 "type": "mount"
             }
+        ],
+        "maskedPaths": [
+            "/proc/kcore",
+            "/proc/latency_stats",
+            "/proc/timer_stats",
+            "/proc/sched_debug"
+        ],
+        "readonlyPaths": [
+            "/proc/asound",
+            "/proc/bus",
+            "/proc/fs",
+            "/proc/irq",
+            "/proc/sys",
+            "/proc/sysrq-trigger"
         ]
+    },
+    "annotations": {
+        "key1": "value1",
+        "key2": "value2"
     }
 }
 ```

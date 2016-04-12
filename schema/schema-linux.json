@@ -61,6 +61,21 @@
                 "id": "https://opencontainers.org/schema/bundle/linux/resources",
                 "type": "object",
                 "properties": {
+                    "oomScoreAdj": {
+                        "id": "https://opencontainers.org/schema/bundle/linux/resources/oomScoreAdj",
+                        "type": "integer",
+                        "minimum": -1000,
+                        "maximum": 1000
+                    },
+                    "pids": {
+                        "id": "https://opencontainers.org/schema/bundle/linux/resources/pids",
+                        "properties": {
+                            "limit": {
+                                "id": "https://opencontainers.org/schema/bundle/linux/resources/pids/limit",
+                                "$ref": "defs.json#/definitions/int64"
+                            }
+                        }
+                    },
                     "blockIO": {
                         "id": "https://opencontainers.org/schema/bundle/linux/resources/blockIO",
                         "type": "object",
@@ -94,11 +109,9 @@
                                 "oneOf": [
                                     {
                                         "type": "array",
-                                        "items": [
-                                            {
-                                                "$ref": "defs-linux.json#/definitions/blockIODeviceThrottlePointer"
-                                            }
-                                        ]
+                                        "items": {
+                                            "$ref": "defs-linux.json#/definitions/blockIODeviceThrottlePointer"
+                                        }
                                     },
                                     {
                                         "type": "null"
@@ -110,11 +123,9 @@
                                 "oneOf": [
                                     {
                                         "type": "array",
-                                        "items": [
-                                            {
-                                                "$ref": "defs-linux.json#/definitions/blockIODeviceThrottlePointer"
-                                            }
-                                        ]
+                                        "items": {
+                                            "$ref": "defs-linux.json#/definitions/blockIODeviceThrottlePointer"
+                                        }
                                     },
                                     {
                                         "type": "null"
@@ -126,11 +137,9 @@
                                 "oneOf": [
                                     {
                                         "type": "array",
-                                        "items": [
-                                            {
-                                                "$ref": "defs-linux.json#/definitions/blockIODeviceThrottlePointer"
-                                            }
-                                        ]
+                                        "items": {
+                                            "$ref": "defs-linux.json#/definitions/blockIODeviceThrottlePointer"
+                                        }
                                     },
                                     {
                                         "type": "null"
@@ -140,11 +149,9 @@
                             "blkioWeightDevice": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/blockIO/blkioWeightDevice",
                                 "type": "array",
-                                "items": [
-                                    {
-                                        "$ref": "defs-linux.json#/definitions/blockIODeviceWeightPointer"
-                                    }
-                                ]
+                                "items": {
+                                    "$ref": "defs-linux.json#/definitions/blockIODeviceWeightPointer"
+                                }
                             }
                         }
                     },
@@ -190,13 +197,16 @@
                         "id": "https://opencontainers.org/schema/bundle/linux/resources/hugepageLimits",
                         "oneOf": [
                             {
-                                "type": "object",
-                                "properties": {
-                                    "pageSize": {
-                                        "type": "string"
-                                    },
-                                    "limit": {
-                                        "$ref": "defs.json#/definitions/uint64"
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "pageSize": {
+                                            "type": "string"
+                                        },
+                                        "limit": {
+                                            "$ref": "defs.json#/definitions/uint64"
+                                        }
                                     }
                                 }
                             },
@@ -235,9 +245,9 @@
                         "id": "https://opencontainers.org/schema/bundle/linux/resources/network",
                         "type": "object",
                         "properties": {
-                            "classId": {
+                            "classID": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/network/classId",
-                                "type": "string"
+                                "$ref": "defs.json#/definitions/uint32"
                             },
                             "priorities": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/network/priorities",
@@ -256,31 +266,6 @@
                         }
                     }
                 }
-            },
-            "rlimits": {
-                "id": "https://opencontainers.org/schema/bundle/linux/rlimits",
-                "items": [
-                    {
-                        "id": "https://opencontainers.org/schema/bundle/linux/rlimits/0",
-                        "properties": {
-                            "hard": {
-                                "id": "https://opencontainers.org/schema/bundle/linux/rlimits/0/hard",
-                                "type": "integer"
-                            },
-                            "soft": {
-                                "id": "https://opencontainers.org/schema/bundle/linux/rlimits/0/soft",
-                                "type": "integer"
-                            },
-                            "type": {
-                                "id": "https://opencontainers.org/schema/bundle/linux/rlimits/0/type",
-                                "type": "string",
-                                "pattern": "^RLIMIT_[A-Z]+$"
-                            }
-                        },
-                        "type": "object"
-                    }
-                ],
-                "type": "array"
             },
             "cgroupsPath": {
                 "oneOf": [
