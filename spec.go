@@ -11,7 +11,7 @@ import (
 
 	"github.com/codegangsta/cli"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/opencontainers/specs/specs-go"
+	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
 var specCommand = cli.Command{
