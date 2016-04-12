@@ -1,5 +1,6 @@
 
 DOCKER ?= $(shell which docker)
+# These docs are in an order that determines how they show up in the PDF/HTML docs.
 DOC_FILES := \
 	README.md \
 	code-of-conduct.md \
@@ -7,6 +8,7 @@ DOC_FILES := \
 	style.md \
 	ROADMAP.md \
 	implementations.md \
+	project.md \
 	bundle.md \
 	runtime.md \
 	runtime-linux.md \
