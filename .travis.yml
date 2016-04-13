@@ -7,12 +7,12 @@ sudo: false
 
 before_install:
   - go version | (grep -q 'go1.[56]' || exit 0 && go get -u github.com/golang/lint/golint )
-  - go get github.com/vbatts/git-validation
+  - go get -u github.com/vbatts/git-validation
 
 install: true
 
 script:
   - go vet -x ./...
   - make .golint
-  - $HOME/gopath/bin/git-validation -run DCO,short-subject,dangling-whitespace -v -range ${TRAVIS_COMMIT_RANGE}
+  - git-validation -run DCO,short-subject,dangling-whitespace -v
   
