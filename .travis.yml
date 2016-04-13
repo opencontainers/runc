@@ -14,5 +14,5 @@ install: true
 script:
   - go vet -x ./...
   - make .golint
-  - $HOME/gopath/bin/git-validation -run DCO,short-subject -v -range ${TRAVIS_COMMIT_RANGE}
+  - $HOME/gopath/bin/git-validation -run DCO,short-subject,dangling-whitespace -v -range ${TRAVIS_COMMIT_RANGE}
   
