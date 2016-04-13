@@ -15,7 +15,7 @@ The OpenContainer spec follows semantic versioning and retains forward and backw
 For example, if an implementation is compliant with version 1.0.1 of the spec, it is compatible with the complete 1.x series.
 NOTE that there is no guarantee for forward or backward compatibility for version 0.x.
 
-*Example*
+### Example
 
 ```json
     "ociVersion": "0.1.0"
@@ -28,7 +28,7 @@ Each container has exactly one *root filesystem*, specified in the *root* object
 * **`path`** (string, required) Specifies the path to the root filesystem for the container, relative to the path where the manifest is. A directory MUST exist at the relative path declared by the field.
 * **`readonly`** (bool, optional) If true then the root filesystem MUST be read-only inside the container. Defaults to false.
 
-*Example*
+### Example
 
 ```json
 "root": {
@@ -48,7 +48,7 @@ The parameters are similar to the ones in [the Linux mount system call](http://m
 * **`source`** (string, required) a device name, but can also be a directory name or a dummy. Windows, the volume name that is the target of the mount point. \\?\Volume\{GUID}\ (on Windows source is called target)
 * **`options`** (list of strings, optional) in the fstab format [https://wiki.archlinux.org/index.php/Fstab](https://wiki.archlinux.org/index.php/Fstab).
 
-### Linux Example
+### Example (Linux)
 
 ```json
 "mounts": [
@@ -67,7 +67,7 @@ The parameters are similar to the ones in [the Linux mount system call](http://m
 ]
 ```
 
-### Windows Example
+### Example (Windows)
 
 ```json
 "mounts": [
@@ -118,7 +118,7 @@ For Linux-based systems the user structure has the following fields:
 
 _Note: symbolic name for uid and gid, such as uname and gname respectively, are left to upper levels to derive (i.e. `/etc/passwd` parsing, NSS, etc)_
 
-*Example (Linux)*
+### Example (Linux)
 
 ```json
 "process": {
@@ -159,7 +159,7 @@ _Note: symbolic name for uid and gid, such as uname and gname respectively, are 
 
 * **`hostname`** (string, optional) as it is accessible to processes running inside.  On Linux, you can only set this if your bundle creates a new [UTS namespace][uts-namespace].
 
-*Example*
+### Example
 
 ```json
 "hostname": "mrsdalloway"
@@ -169,6 +169,8 @@ _Note: symbolic name for uid and gid, such as uname and gname respectively, are 
 
 * **`os`** (string, required) specifies the operating system family this image must run on. Values for os must be in the list specified by the Go Language document for [`$GOOS`](https://golang.org/doc/install/source#environment).
 * **`arch`** (string, required) specifies the instruction set for which the binaries in the image have been compiled. Values for arch must be in the list specified by the Go Language document for [`$GOARCH`](https://golang.org/doc/install/source#environment).
+
+### Example
 
 ```json
 "platform": {
@@ -216,7 +218,7 @@ The post-stop hooks are called after the container process is stopped.
 Cleanup or debugging could be performed in such a hook.
 If a hook returns a non-zero exit code, then an error is logged and the remaining hooks are executed.
 
-*Example*
+### Example
 
 ```json
     "hooks" : {

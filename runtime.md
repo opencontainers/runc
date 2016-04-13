@@ -20,6 +20,7 @@ This allows the hooks to perform cleanup and teardown logic after the runtime de
 This is provided so that consumers can find the container's configuration and root filesystem on the host.
 
 When serialized in JSON, the format MUST adhere to the following pattern:
+
 ```json
 {
     "ociVersion": "0.2.0",
@@ -99,8 +100,10 @@ The JSON describing the new process MUST adhere to the [Process configuration](c
 This operation MUST create a new process within the scope of the container.
 If the container is not running then this operation MUST have no effect on the container and MUST generate an error.
 Executing this operation multiple times MUST result in a new process each time.
-Example:
-```
+
+#### Example
+
+```json
 {
     "terminal": true,
     "user": {
@@ -118,6 +121,7 @@ Example:
     "cwd": "...",
 }
 ```
+
 This specification does not mandate the name of this JSON file.
 See the specification of the `config.json` file for the definition of these fields.
 The stopping, or exiting, of these secondary process MUST have no effect on the state of the container.
