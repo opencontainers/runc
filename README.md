@@ -90,12 +90,10 @@ It assumes that the file-system is found in a directory called
 
 To test using Docker's `busybox` image follow these steps:
 * Install `docker` and download the `busybox` image: `docker pull busybox`
-* Create a container from that image and export its contents to a tar file:
-`docker export $(docker create busybox) > busybox.tar`
-* Untar the contents to create your filesystem directory:
+* Create a container from that image and export its contents in a directory:
 ```
 mkdir rootfs
-tar -C rootfs -xf busybox.tar
+docker export $(docker create busybox) | tar -C rootfs -xvf -
 ```
 * Create `config.json` by using `runc spec`.
 * Execute `runc start` and you should be placed into a shell where you can run `ps`:
