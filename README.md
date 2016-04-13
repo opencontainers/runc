@@ -2,7 +2,7 @@
 
 ## runc
 
-`runc` is a CLI tool for spawning and running containers according to the OCF specification.
+`runc` is a CLI tool for spawning and running containers according to the OCI specification.
 
 ## State of the project
 
