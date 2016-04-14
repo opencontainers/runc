@@ -66,6 +66,9 @@ information is displayed once every 5 seconds.`,
 			for range time.Tick(context.Duration("interval")) {
 				s, err := container.Stats()
 				if err != nil {
+					if serr, ok := err.(libcontainer.Error); ok && serr.Code() == libcontainer.ContainerNotRunning {
+						fatal(err)
+					}
 					logrus.Error(err)
 					continue
 				}
