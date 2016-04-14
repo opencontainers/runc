@@ -20,7 +20,7 @@ There is also included a simple utility for facilitating validation of a
 
 ```bash
 export GOPATH=`mktemp -d`
-go get ./...
+go get -d ./...
 go build .
 rm -rf $GOPATH
 ```
