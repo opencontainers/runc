@@ -92,6 +92,7 @@ following will output a list of processes running in the container:
 		}
 		os.Exit(status)
 	},
+	SkipFlagParsing: true,
 }
 
 func execProcess(context *cli.Context) (int, error) {
