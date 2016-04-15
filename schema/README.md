@@ -20,13 +20,19 @@ There is also included a simple utility for facilitating validation of a
 
 ```bash
 export GOPATH=`mktemp -d`
-go get ./...
-go build .
+go get -d ./...
+go build ./validate.go
 rm -rf $GOPATH
+```
+
+Or you can just use make command to create the utility:
+
+```bash
+make validate
 ```
 
 Then use it like:
 
 ```bash
-./schema schema.json <yourpath>/config.json
+./validate schema.json <yourpath>/config.json
 ```
