@@ -39,35 +39,35 @@ func needsSetupDev(config *configs.Config) bool {
 // new mount namespace.
 func setupRootfs(config *configs.Config, console *linuxConsole, pipe io.ReadWriter) (err error) {
 	if err := prepareRoot(config); err != nil {
-		return newSystemError(err)
+		return newSystemErrorWithCause(err, "preparing rootfs")
 	}
 
 	setupDev := needsSetupDev(config)
 	for _, m := range config.Mounts {
 		for _, precmd := range m.PremountCmds {
 			if err := mountCmd(precmd); err != nil {
-				return newSystemError(err)
+				return newSystemErrorWithCause(err, "running premount command")
 			}
 		}
 		if err := mountToRootfs(m, config.Rootfs, config.MountLabel); err != nil {
-			return newSystemError(err)
+			return newSystemErrorWithCausef(err, "mounting %q to rootfs %q", m.Destination, config.Rootfs)
 		}
 
 		for _, postcmd := range m.PostmountCmds {
 			if err := mountCmd(postcmd); err != nil {
-				return newSystemError(err)
+				return newSystemErrorWithCause(err, "running postmount command")
 			}
 		}
 	}
 	if setupDev {
 		if err := createDevices(config); err != nil {
-			return newSystemError(err)
+			return newSystemErrorWithCause(err, "creating device nodes")
 		}
 		if err := setupPtmx(config, console); err != nil {
-			return newSystemError(err)
+			return newSystemErrorWithCause(err, "setting up ptmx")
 		}
 		if err := setupDevSymlinks(config.Rootfs); err != nil {
-			return newSystemError(err)
+			return newSystemErrorWithCause(err, "setting up /dev symlinks")
 		}
 	}
 	// Signal the parent to run the pre-start hooks.
@@ -78,7 +78,7 @@ func setupRootfs(config *configs.Config, console *linuxConsole, pipe io.ReadWrit
 		return err
 	}
 	if err := syscall.Chdir(config.Rootfs); err != nil {
-		return newSystemError(err)
+		return newSystemErrorWithCausef(err, "changing dir to %q", config.Rootfs)
 	}
 	if config.NoPivotRoot {
 		err = msMoveRoot(config.Rootfs)
@@ -86,11 +86,11 @@ func setupRootfs(config *configs.Config, console *linuxConsole, pipe io.ReadWrit
 		err = pivotRoot(config.Rootfs, config.PivotDir)
 	}
 	if err != nil {
-		return newSystemError(err)
+		return newSystemErrorWithCause(err, "jailing process inside rootfs")
 	}
 	if setupDev {
 		if err := reOpenDevNull(); err != nil {
-			return newSystemError(err)
+			return newSystemErrorWithCause(err, "reopening /dev/null inside container")
 		}
 	}
 	// remount dev as ro if specifed
@@ -98,7 +98,7 @@ func setupRootfs(config *configs.Config, console *linuxConsole, pipe io.ReadWrit
 		if m.Destination == "/dev" {
 			if m.Flags&syscall.MS_RDONLY != 0 {
 				if err := remountReadonly(m.Destination); err != nil {
-					return newSystemError(err)
+					return newSystemErrorWithCausef(err, "remounting %q as readonly", m.Destination)
 				}
 			}
 			break
@@ -107,7 +107,7 @@ func setupRootfs(config *configs.Config, console *linuxConsole, pipe io.ReadWrit
 	// set rootfs ( / ) as readonly
 	if config.Readonlyfs {
 		if err := setReadonly(); err != nil {
-			return newSystemError(err)
+			return newSystemErrorWithCause(err, "setting rootfs as readonly")
 		}
 	}
 	syscall.Umask(0022)
@@ -115,14 +115,12 @@ func setupRootfs(config *configs.Config, console *linuxConsole, pipe io.ReadWrit
 }
 
 func mountCmd(cmd configs.Command) error {
-
 	command := exec.Command(cmd.Path, cmd.Args[:]...)
 	command.Env = cmd.Env
 	command.Dir = cmd.Dir
 	if out, err := command.CombinedOutput(); err != nil {
 		return fmt.Errorf("%#v failed: %s: %v", cmd, string(out), err)
 	}
-
 	return nil
 }
 
