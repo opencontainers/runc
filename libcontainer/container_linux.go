@@ -84,7 +84,7 @@ type Container interface {
 	// Systemerror - System error.
 	Restore(process *Process, criuOpts *CriuOpts) error
 
-	// If the Container state is RUNNING or PAUSING, sets the Container state to PAUSING and pauses
+	// If the Container state is RUNNING, sets the Container state to PAUSING and pauses
 	// the execution of any user processes. Asynchronously, when the container finished being paused the
 	// state is changed to PAUSED.
 	// If the Container state is PAUSED, do nothing.
