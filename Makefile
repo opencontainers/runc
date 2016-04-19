@@ -7,18 +7,18 @@ RUNC_BUILD_PATH=/go/src/github.com/opencontainers/runc/runc
 RUNC_INSTANCE=runc_dev
 COMMIT=$(shell git rev-parse HEAD 2> /dev/null || true)
 RUNC_LINK=$(CURDIR)/Godeps/_workspace/src/github.com/opencontainers/runc
-export GOPATH:=$(CURDIR)/Godeps/_workspace:$(GOPATH)
+export GOPATH:=$(CURDIR)/Godeps/_workspace
 
 .PHONY=dbuild
 
-all:
-ifneq ($(RUNC_LINK), $(wildcard $(RUNC_LINK)))
-	ln -sfn $(CURDIR) $(RUNC_LINK)
-endif
-	go build -ldflags "-X main.gitCommit=${COMMIT}" -tags "$(BUILDTAGS)" -o runc .
+all: $(RUNC_LINK)
+	go build -i -ldflags "-X main.gitCommit=${COMMIT}" -tags "$(BUILDTAGS)" -o runc .
 
-static:
-	CGO_ENABLED=1 go build -tags "$(BUILDTAGS) cgo static_build" -ldflags "-w -extldflags -static -X main.gitCommit=${COMMIT}" -o runc .
+static: $(RUNC_LINK)
+	CGO_ENABLED=1 go build -i -tags "$(BUILDTAGS) cgo static_build" -ldflags "-w -extldflags -static -X main.gitCommit=${COMMIT}" -o runc .
+
+$(RUNC_LINK):
+	ln -sfn $(CURDIR) $(RUNC_LINK)
 
 lint:
 	go vet ./...
@@ -49,6 +49,7 @@ uninstall:
 clean:
 	rm -f runc
 	rm -f $(RUNC_LINK)
+	rm -rf $(GOPATH)/pkg
 
 validate:
 	script/validate-gofmt
