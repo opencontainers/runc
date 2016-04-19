@@ -264,8 +264,10 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 		if m.Flags&syscall.MS_RDONLY != 0 {
 			// remount cgroup root as readonly
 			mcgrouproot := &configs.Mount{
+				Source:      m.Destination,
+				Device:      "bind",
 				Destination: m.Destination,
-				Flags:       defaultMountFlags | syscall.MS_RDONLY,
+				Flags:       defaultMountFlags | syscall.MS_RDONLY | syscall.MS_BIND,
 			}
 			if err := remount(mcgrouproot, rootfs); err != nil {
 				return err
