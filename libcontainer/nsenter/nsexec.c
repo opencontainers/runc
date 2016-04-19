@@ -18,7 +18,6 @@
 #include <unistd.h>
 #include <grp.h>
 
-#include <bits/sockaddr.h>
 #include <linux/types.h>
 
 // All arguments should be above the stack because it grows down
