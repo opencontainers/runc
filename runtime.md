@@ -91,42 +91,6 @@ Deleting a container MUST delete the associated namespaces and resources associa
 Once a container is deleted, its `id` MAY be used by subsequent containers.
 Attempting to stop a container that is not running MUST have no effect on the container and MUST generate an error.
 
-### Exec
-
-`exec <container-id> <path-to-json>`
-
-This operation MUST generate an error if it is not provided the container ID and a path to the JSON describing the process to start.
-The JSON describing the new process MUST adhere to the [Process configuration](config.md#process-configuration) definition.
-This operation MUST create a new process within the scope of the container.
-If the container is not running then this operation MUST have no effect on the container and MUST generate an error.
-Executing this operation multiple times MUST result in a new process each time.
-
-#### Example
-
-```json
-{
-    "terminal": true,
-    "user": {
-        "uid": 0,
-        "gid": 0,
-        "additionalGids": null
-    },
-    "args": [
-        "/bin/sleep",
-        "60"
-    ],
-    "env": [
-        "version=1.0"
-    ],
-    "cwd": "...",
-}
-```
-
-This specification does not mandate the name of this JSON file.
-See the specification of the `config.json` file for the definition of these fields.
-The stopping, or exiting, of these secondary process MUST have no effect on the state of the container.
-In other words, a container (and its PID 1 process) MUST NOT be stopped due to the exiting of a secondary process.
-
 ## Hooks
 
 Many of the operations specified in this specification have "hooks" that allow for additional actions to be taken before or after each operation.
