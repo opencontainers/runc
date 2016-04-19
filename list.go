@@ -47,11 +47,22 @@ in json format:
 
     # runc list -f json`,
 		},
+		cli.BoolFlag{
+			Name:  "quiet, q",
+			Usage: "display only container IDs",
+		},
 	},
 	Action: func(context *cli.Context) {
 		s, err := getContainers(context)
 		if err != nil {
 			fatal(err)
+		}
+
+		if context.Bool("quiet") {
+			for _, item := range s {
+				fmt.Println(item.ID)
+			}
+			return
 		}
 
 		switch context.String("format") {

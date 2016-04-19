@@ -12,3 +12,4 @@ in json format:
 
 # OPTIONS
    --format, -f         select one of: table or json.
+   --quiet, -q          display only container IDs
