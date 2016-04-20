@@ -286,20 +286,6 @@ Here is a full example `config.json` for reference.
                 6
             ]
         },
-        "uidMappings": [
-            {
-                "hostID": 1000,
-                "containerID": 0,
-                "size": 32000
-            }
-        ],
-        "gidMappings": [
-            {
-                "hostID": 1000,
-                "containerID": 0,
-                "size": 32000
-            }
-        ],
         "args": [
             "sh"
         ],
@@ -461,6 +447,20 @@ Here is a full example `config.json` for reference.
                 "fileMode": 432,
                 "uid": 0,
                 "gid": 0
+            }
+        ],
+        "uidMappings": [
+            {
+                "hostID": 1000,
+                "containerID": 0,
+                "size": 32000
+            }
+        ],
+        "gidMappings": [
+            {
+                "hostID": 1000,
+                "containerID": 0,
+                "size": 32000
             }
         ],
         "sysctl": {
