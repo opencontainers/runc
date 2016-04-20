@@ -37,6 +37,14 @@ information is displayed once every 5 seconds.`,
 		if err != nil {
 			fatal(err)
 		}
+		id := context.Args().First()
+		status, err := container.Status()
+		if err != nil {
+			fatal(err)
+		}
+		if status == libcontainer.Destroyed {
+			fatalf("container with id %s is not running",id)
+		}
 		var (
 			stats  = make(chan *libcontainer.Stats, 1)
 			events = make(chan *event, 1024)
