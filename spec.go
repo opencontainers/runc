@@ -58,6 +58,10 @@ container on your host.`,
 			Value: "",
 			Usage: "path to the root of the bundle directory",
 		},
+		cli.BoolFlag{
+			Name:  "userns",
+			Usage: "generate a default config.json with userns enabled",
+		},
 	},
 	Action: func(context *cli.Context) {
 		spec := specs.Spec{
@@ -183,6 +187,11 @@ container on your host.`,
 			},
 		}
 
+		userns := context.Bool("userns")
+		if userns {
+			adjustSpecForUserns(&spec)
+		}
+
 		checkNoFile := func(name string) error {
 			_, err := os.Stat(name)
 			if err == nil {
@@ -210,6 +219,26 @@ container on your host.`,
 			fatal(err)
 		}
 	},
+}
+
+func adjustSpecForUserns(spec *specs.Spec) {
+	spec.Linux.UIDMappings = []specs.IDMapping{
+		{
+			HostID:      1000,
+			ContainerID: 0,
+			Size:        10,
+		},
+	}
+	spec.Linux.GIDMappings = []specs.IDMapping{
+		{
+			HostID:      1000,
+			ContainerID: 0,
+			Size:        10,
+		},
+	}
+	spec.Linux.Namespaces = append(spec.Linux.Namespaces, specs.Namespace{
+		Type: "user",
+	})
 }
 
 func sPtr(s string) *string      { return &s }
