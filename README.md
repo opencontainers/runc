@@ -58,7 +58,7 @@ The specification and code is licensed under the Apache 2.0 license found in the
 
 ## Code of Conduct
 
-Participation in the OpenContainers community is governed by [OpenContainer's Code of Conduct](code-of-conduct.md).
+Participation in the OpenContainers community is governed by [OpenContainer's Code of Conduct](https://github.com/opencontainers/tob/blob/master/code-of-conduct.md).
 
 ## Discuss your design
 
