@@ -145,6 +145,14 @@ func getCgroupMountsHelper(ss map[string]bool, mi io.Reader) ([]Mount, error) {
 			if ss[opt] {
 				m.Subsystems = append(m.Subsystems, opt)
 			}
+			if strings.HasPrefix(opt, "nsroot=") {
+				nsroot := opt[7:]
+				if nsroot == m.Root {
+					m.Root = "/"
+				} else if len(nsroot) > 1 && strings.HasPrefix(m.Root, nsroot) {
+					m.Root = m.Root[len(nsroot):]
+				}
+			}
 		}
 		res = append(res, m)
 	}
