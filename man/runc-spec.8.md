@@ -42,3 +42,4 @@ container on your host.
 
 # OPTIONS
    --bundle, -b         path to the root of the bundle directory
+   --userns             generate a default config.json with userns enabled
