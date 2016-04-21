@@ -605,7 +605,8 @@ Here is a full example `config.json` for reference.
             "/proc/irq",
             "/proc/sys",
             "/proc/sysrq-trigger"
-        ]
+        ],
+        "mountLabel": "system_u:object_r:svirt_sandbox_file_t:s0:c715,c811"
     },
     "annotations": {
         "key1": "value1",

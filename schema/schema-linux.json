@@ -330,6 +330,10 @@
             "readonlyPaths": {
                 "id": "https://opencontainers.org/schema/bundle/linux/readonlyPaths",
                 "$ref": "defs.json#/definitions/ArrayOfStrings"
+            },
+            "mountLabel": {
+                "id": "https://opencontainers.org/schema/bundle/linux/mountLabel",
+                "type": "string"
             }
         }
     }
