@@ -93,6 +93,7 @@ func main() {
 		killCommand,
 		listCommand,
 		pauseCommand,
+		psCommand,
 		restoreCommand,
 		resumeCommand,
 		specCommand,
