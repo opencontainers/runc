@@ -57,10 +57,12 @@ var killCommand = cli.Command{
 Where "<container-id>" is the name for the instance of the container and
 "<signal>" is the signal to be sent to the init process.
 	 
-For example, if the container id is "ubuntu01" the following will send a "KILL"
-signal to the init process of the "ubuntu01" container:
-	 
-       # runc kill ubuntu01 KILL`,
+For example, if the container id is "ubuntu01" the following will send a
+"syscall.SIGKILL" signal to the init process of the "ubuntu01" container:
+
+    # runc kill ubuntu01 KILL
+
+More supported signals can be found from man page.`,
 	Action: func(context *cli.Context) {
 		container, err := getContainer(context)
 		if err != nil {
