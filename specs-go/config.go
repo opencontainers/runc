@@ -49,7 +49,7 @@ type Process struct {
 
 	// ApparmorProfile specified the apparmor profile for the container. (this field is platform dependent)
 	ApparmorProfile string `json:"apparmorProfile,omitempty" platform:"linux"`
-	// SelinuxProcessLabel specifies the selinux context that the container process is run as. (this field is platform dependent)
+	// SelinuxLabel specifies the selinux context that the container process is run as. (this field is platform dependent)
 	SelinuxLabel string `json:"selinuxLabel,omitempty" platform:"linux"`
 }
 
