@@ -40,6 +40,12 @@ dbuild: runctestimage
 	docker cp $(RUNC_INSTANCE):$(RUNC_BUILD_PATH) .
 	docker rm $(RUNC_INSTANCE)
 
+integration: runctestimage
+	docker run -e TESTFLAGS -t --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_TEST_IMAGE) make localintegration
+
+localintegration:
+	bats tests/integration${TESTFLAGS}
+		
 install:
 	install -D -m0755 runc /usr/local/sbin/runc
 
