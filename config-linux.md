@@ -545,6 +545,16 @@ Its value is either slave, private, or shared.
     ]
 ```
 
+## Mount Label
+
+`mountLabel` will set the Selinux context for the mounts in the container.
+
+###### Example
+
+```json
+    "mountLabel": "system_u:object_r:svirt_sandbox_file_t:s0:c715,c811"
+```
+
 [cgroup-v1]: https://www.kernel.org/doc/Documentation/cgroup-v1/cgroups.txt
 [cgroup-v1-blkio]: https://www.kernel.org/doc/Documentation/cgroup-v1/blkio-controller.txt
 [cgroup-v1-cpusets]: https://www.kernel.org/doc/Documentation/cgroup-v1/cpusets.txt
