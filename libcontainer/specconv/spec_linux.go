@@ -226,6 +226,7 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 		config.AdditionalGroups = append(config.AdditionalGroups, strconv.FormatUint(uint64(g), 10))
 	}
 	createHooks(spec, config)
+	config.MountLabel = spec.Linux.MountLabel
 	config.Version = specs.Version
 	return config, nil
 }
