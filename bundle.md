@@ -8,10 +8,10 @@ See also [OS X application bundles](http://en.wikipedia.org/wiki/Bundle_%28OS_X%
 The definition of a bundle is only concerned with how a container, and its configuration data, are stored on a local file system so that it can be consumed by a compliant runtime.
 
 A Standard Container bundle contains all the information needed to load and run a container.
-This includes the following artifacts which MUST all reside in the same directory on the local filesystem:
+This MUST include the following artifacts:
 
 1. `config.json` : contains configuration data.
-This REQUIRED file, which MUST be named `config.json`.
+This REQUIRED file MUST reside in the root of the bundle directory and MUST be named `config.json`.
 When the bundle is packaged up for distribution, this file MUST be included.
 See [`config.json`](config.md) for more details.
 
