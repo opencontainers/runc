@@ -1,15 +1,20 @@
-RUNC_IMAGE=runc_dev
-RUNC_TEST_IMAGE=runc_test
-PROJECT=github.com/opencontainers/runc
-TEST_DOCKERFILE=script/test_Dockerfile
-BUILDTAGS=seccomp
-RUNC_BUILD_PATH=/go/src/github.com/opencontainers/runc/runc
-RUNC_INSTANCE=runc_dev
-COMMIT=$(shell git rev-parse HEAD 2> /dev/null || true)
-RUNC_LINK=$(CURDIR)/Godeps/_workspace/src/github.com/opencontainers/runc
-export GOPATH:=$(CURDIR)/Godeps/_workspace
+.PHONY: dbuild man
 
-.PHONY=dbuild
+RUNC_IMAGE := runc_dev
+RUNC_TEST_IMAGE := runc_test
+PROJECT := github.com/opencontainers/runc
+TEST_DOCKERFILE := script/test_Dockerfile
+BUILDTAGS := seccomp
+RUNC_BUILD_PATH := /go/src/github.com/opencontainers/runc/runc
+RUNC_INSTANCE := runc_dev
+COMMIT := $(shell git rev-parse HEAD 2> /dev/null || true)
+RUNC_LINK := $(CURDIR)/Godeps/_workspace/src/github.com/opencontainers/runc
+export GOPATH := $(CURDIR)/Godeps/_workspace
+
+MAN_DIR := $(CURDIR)/man/man8
+MAN_PAGES = $(shell ls $(MAN_DIR)/*.8)
+MAN_PAGES_BASE = $(notdir $(MAN_PAGES))
+MAN_INSTALL_PATH := /usr/local/share/man/man8/
 
 all: $(RUNC_LINK)
 	go build -i -ldflags "-X main.gitCommit=${COMMIT}" -tags "$(BUILDTAGS)" -o runc .
@@ -23,6 +28,9 @@ $(RUNC_LINK):
 lint:
 	go vet ./...
 	go fmt ./...
+
+man:
+	man/md2man-all.sh
 
 runctestimage:
 	docker build -t $(RUNC_TEST_IMAGE) -f $(TEST_DOCKERFILE) .
@@ -43,8 +51,15 @@ dbuild: runctestimage
 install:
 	install -D -m0755 runc /usr/local/sbin/runc
 
+install-man:
+	install -d -m 755 $(MAN_INSTALL_PATH)
+	install -m 644 $(MAN_PAGES) $(MAN_INSTALL_PATH)
+
 uninstall:
 	rm -f /usr/local/sbin/runc
+
+uninstall-man:
+	rm -f $(addprefix $(MAN_INSTALL_PATH),$(MAN_PAGES_BASE))
 
 clean:
 	rm -f runc
