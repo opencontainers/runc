@@ -218,7 +218,7 @@ func TestExecInTTY(t *testing.T) {
 		Args: []string{"ps"},
 		Env:  standardEnvironment,
 	}
-	console, err := ps.NewConsole(0)
+	console, err := ps.NewConsole(0, 0)
 	copy := make(chan struct{})
 	go func() {
 		io.Copy(&stdout, console)

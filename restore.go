@@ -117,6 +117,7 @@ using the runc checkpoint command.`,
 func restoreContainer(context *cli.Context, spec *specs.Spec, config *configs.Config, imagePath string) (code int, err error) {
 	var (
 		rootuid = 0
+		rootgid = 0
 		id      = context.Args().First()
 	)
 	factory, err := loadFactory(context)
@@ -149,7 +150,7 @@ func restoreContainer(context *cli.Context, spec *specs.Spec, config *configs.Co
 		defer destroy(container)
 	}
 	process := &libcontainer.Process{}
-	tty, err := setupIO(process, rootuid, "", false, detach)
+	tty, err := setupIO(process, rootuid, rootgid, "", false, detach)
 	if err != nil {
 		return -1, err
 	}
