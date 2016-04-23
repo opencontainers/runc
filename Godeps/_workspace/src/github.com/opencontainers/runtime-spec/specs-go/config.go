@@ -140,6 +140,8 @@ type Linux struct {
 	MaskedPaths []string `json:"maskedPaths,omitempty"`
 	// ReadonlyPaths sets the provided paths as RO inside the container.
 	ReadonlyPaths []string `json:"readonlyPaths,omitempty"`
+	// MountLabel specifies the selinux context for the mounts in the container.
+	MountLabel string `json:"mountLabel,omitempty"`
 }
 
 // Namespace is the configuration for a Linux namespace
