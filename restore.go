@@ -3,6 +3,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"syscall"
 
@@ -86,6 +87,11 @@ using the runc checkpoint command.`,
 		if err := checkArgs(context, 1, exactArgs); err != nil {
 			return err
 		}
+		// XXX: Currently this is untested with rootless containers.
+		if isRootless() {
+			return fmt.Errorf("runc restore requires root")
+		}
+
 		imagePath := context.String("image-path")
 		id := context.Args().First()
 		if id == "" {

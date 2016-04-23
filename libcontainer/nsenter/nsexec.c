@@ -72,6 +72,7 @@ struct nlconfig_t {
 	char *namespaces;
 	size_t namespaces_len;
 	uint8_t is_setgroup;
+	uint8_t is_rootless;
 	char *oom_score_adj;
 	size_t oom_score_adj_len;
 };
@@ -87,6 +88,7 @@ struct nlconfig_t {
 #define GIDMAP_ATTR			27284
 #define SETGROUP_ATTR		27285
 #define OOM_SCORE_ADJ_ATTR	27286
+#define ROOTLESS_ATTR	    27287
 
 /*
  * Use the raw syscall for versions of glibc which don't include a function for
@@ -175,6 +177,7 @@ static void update_setgroups(int pid, enum policy_t setgroup)
 			policy = "deny";
 			break;
 		case SETGROUPS_DEFAULT:
+		default:
 			/* Nothing to do. */
 			return;
 	}
@@ -328,6 +331,9 @@ static void nl_parse(int fd, struct nlconfig_t *config)
 		switch (nlattr->nla_type) {
 		case CLONE_FLAGS_ATTR:
 			config->cloneflags = readint32(current);
+			break;
+		case ROOTLESS_ATTR:
+			config->is_rootless = readint8(current);
 			break;
 		case OOM_SCORE_ADJ_ATTR:
 			config->oom_score_adj = current;
@@ -574,9 +580,21 @@ void nsexec(void)
 
 					exit(ret);
 				case SYNC_USERMAP_PLS:
-					/* Enable setgroups(2) if we've been asked to. */
+					/*
+					 * Enable setgroups(2) if we've been asked to. But we also
+					 * have to explicitly disable setgroups(2) if we're
+					 * creating a rootless container (this is required since
+					 * Linux 3.19).
+					 */
+					if (config.is_rootless && config.is_setgroup) {
+						kill(child, SIGKILL);
+						bail("cannot allow setgroup in an unprivileged user namespace setup");
+					}
+
 					if (config.is_setgroup)
 						update_setgroups(child, SETGROUPS_ALLOW);
+					if (config.is_rootless)
+						update_setgroups(child, SETGROUPS_DENY);
 
 					/* Set up mappings. */
 					update_uidmap(child, config.uidmap, config.uidmap_len);
@@ -818,8 +836,10 @@ void nsexec(void)
 			if (setgid(0) < 0)
 				bail("setgid failed");
 
-			if (setgroups(0, NULL) < 0)
-				bail("setgroups failed");
+			if (!config.is_rootless && config.is_setgroup) {
+				if (setgroups(0, NULL) < 0)
+					bail("setgroups failed");
+			}
 
 			s = SYNC_CHILD_READY;
 			if (write(syncfd, &s, sizeof(s)) != sizeof(s))

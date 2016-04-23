@@ -183,6 +183,9 @@ type Config struct {
 	// NoNewKeyring will not allocated a new session keyring for the container.  It will use the
 	// callers keyring in this case.
 	NoNewKeyring bool `json:"no_new_keyring"`
+
+	// Rootless specifies whether the container is a rootless container.
+	Rootless bool `json:"rootless"`
 }
 
 type Hooks struct {

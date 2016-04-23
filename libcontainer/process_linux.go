@@ -80,7 +80,8 @@ func (p *setnsProcess) start() (err error) {
 	if err = p.execSetns(); err != nil {
 		return newSystemErrorWithCause(err, "executing setns process")
 	}
-	if len(p.cgroupPaths) > 0 {
+	// We can't join cgroups if we're in a rootless container.
+	if !p.config.Rootless && len(p.cgroupPaths) > 0 {
 		if err := cgroups.EnterPid(p.cgroupPaths, p.pid()); err != nil {
 			return newSystemErrorWithCausef(err, "adding pid %d to cgroups", p.pid())
 		}
@@ -253,13 +254,15 @@ func (p *initProcess) start() error {
 		return newSystemErrorWithCausef(err, "getting pipe fds for pid %d", p.pid())
 	}
 	p.setExternalDescriptors(fds)
-	// Do this before syncing with child so that no children
-	// can escape the cgroup
-	if err := p.manager.Apply(p.pid()); err != nil {
-		return newSystemErrorWithCause(err, "applying cgroup configuration for process")
+	if !p.container.config.Rootless {
+		// Do this before syncing with child so that no children can escape the
+		// cgroup. We can't do this if we're not running as root.
+		if err := p.manager.Apply(p.pid()); err != nil {
+			return newSystemErrorWithCause(err, "applying cgroup configuration for process")
+		}
 	}
 	defer func() {
-		if err != nil {
+		if err != nil && !p.container.config.Rootless {
 			// TODO: should not be the responsibility to call here
 			p.manager.Destroy()
 		}
@@ -278,8 +281,11 @@ func (p *initProcess) start() error {
 	ierr := parseSync(p.parentPipe, func(sync *syncT) error {
 		switch sync.Type {
 		case procReady:
-			if err := p.manager.Set(p.config.Config); err != nil {
-				return newSystemErrorWithCause(err, "setting cgroup config for ready process")
+			// We can't set cgroups if we're in a rootless container.
+			if !p.container.config.Rootless {
+				if err := p.manager.Set(p.config.Config); err != nil {
+					return newSystemErrorWithCause(err, "setting cgroup config for ready process")
+				}
 			}
 			// set rlimits, this has to be done here because we lose permissions
 			// to raise the limits once we enter a user-namespace
@@ -424,6 +430,12 @@ func getPipeFds(pid int) ([]string, error) {
 		f := filepath.Join(dirPath, strconv.Itoa(i))
 		target, err := os.Readlink(f)
 		if err != nil {
+			// Ignore permission errors, for rootless containers and other
+			// non-dumpable processes. if we can't get the fd for a particular
+			// file, there's not much we can do.
+			if os.IsPermission(err) {
+				continue
+			}
 			return fds, err
 		}
 		fds[i] = target

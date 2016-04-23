@@ -4,7 +4,7 @@
 
 SOURCES := $(shell find . 2>&1 | grep -E '.*\.(c|h|go)$$')
 PREFIX := $(DESTDIR)/usr/local
-BINDIR := $(PREFIX)/sbin
+BINDIR := $(PREFIX)/bin
 GIT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null)
 GIT_BRANCH_CLEAN := $(shell echo $(GIT_BRANCH) | sed -e "s/[^[:alnum:]]/-/g")
 RUNC_IMAGE := runc_dev$(if $(GIT_BRANCH_CLEAN),:$(GIT_BRANCH_CLEAN))

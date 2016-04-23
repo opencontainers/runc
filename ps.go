@@ -28,6 +28,11 @@ var psCommand = cli.Command{
 		if err := checkArgs(context, 1, minArgs); err != nil {
 			return err
 		}
+		// XXX: Currently not supported with rootless containers.
+		if isRootless() {
+			return fmt.Errorf("runc ps requires root")
+		}
+
 		container, err := getContainer(context)
 		if err != nil {
 			return err
