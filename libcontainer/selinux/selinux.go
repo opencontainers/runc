@@ -16,7 +16,6 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/docker/docker/pkg/mount"
 	"github.com/opencontainers/runc/libcontainer/system"
 )
 
@@ -60,16 +59,31 @@ func getSelinuxMountPoint() string {
 	}
 	selinuxfs = ""
 
-	mounts, err := mount.GetMounts()
+	f, err := os.Open("/proc/self/mountinfo")
 	if err != nil {
 		return selinuxfs
 	}
-	for _, mount := range mounts {
-		if mount.Fstype == "selinuxfs" {
-			selinuxfs = mount.Mountpoint
-			break
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		txt := scanner.Text()
+		// Safe as mountinfo encodes mountpoints with spaces as \040.
+		sepIdx := strings.Index(txt, " - ")
+		if sepIdx == -1 {
+			continue
 		}
+		if !strings.Contains(txt[sepIdx:], "selinuxfs") {
+			continue
+		}
+		fields := strings.Split(txt, " ")
+		if len(fields) < 5 {
+			continue
+		}
+		selinuxfs = fields[4]
+		break
 	}
+
 	if selinuxfs != "" {
 		var buf syscall.Statfs_t
 		syscall.Statfs(selinuxfs, &buf)

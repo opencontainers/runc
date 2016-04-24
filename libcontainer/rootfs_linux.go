@@ -515,10 +515,10 @@ func getParentMount(rootfs string) (string, string, error) {
 }
 
 // Make parent mount private if it was shared
-func rootfsParentMountPrivate(config *configs.Config) error {
+func rootfsParentMountPrivate(rootfs string) error {
 	sharedMount := false
 
-	parentMount, optionalOpts, err := getParentMount(config.Rootfs)
+	parentMount, optionalOpts, err := getParentMount(rootfs)
 	if err != nil {
 		return err
 	}
@@ -550,9 +550,10 @@ func prepareRoot(config *configs.Config) error {
 	if err := syscall.Mount("", "/", "", uintptr(flag), ""); err != nil {
 		return err
 	}
-
-	if err := rootfsParentMountPrivate(config); err != nil {
-		return err
+	if config.NoPivotRoot {
+		if err := rootfsParentMountPrivate(config.Rootfs); err != nil {
+			return err
+		}
 	}
 
 	return syscall.Mount(config.Rootfs, config.Rootfs, "bind", syscall.MS_BIND|syscall.MS_REC, "")
@@ -595,7 +596,14 @@ func pivotRoot(rootfs, pivotBaseDir string) (err error) {
 		}
 	}()
 	if err := syscall.PivotRoot(rootfs, pivotDir); err != nil {
-		return fmt.Errorf("pivot_root %s", err)
+		// Make the parent mount private
+		if err := rootfsParentMountPrivate(rootfs); err != nil {
+			return err
+		}
+		// Try again
+		if err := syscall.PivotRoot(rootfs, pivotDir); err != nil {
+			return fmt.Errorf("pivot_root %s", err)
+		}
 	}
 	if err := syscall.Chdir("/"); err != nil {
 		return fmt.Errorf("chdir / %s", err)
