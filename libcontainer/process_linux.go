@@ -254,15 +254,14 @@ func (p *initProcess) start() error {
 		return newSystemErrorWithCausef(err, "getting pipe fds for pid %d", p.pid())
 	}
 	p.setExternalDescriptors(fds)
-	if !p.container.config.Rootless {
-		// Do this before syncing with child so that no children can escape the
-		// cgroup. We can't do this if we're not running as root.
-		if err := p.manager.Apply(p.pid()); err != nil {
-			return newSystemErrorWithCause(err, "applying cgroup configuration for process")
-		}
+	// Do this before syncing with child so that no children can escape the
+	// cgroup. We don't need to worry about not doing this and not being root
+	// because we'd be using the rootless cgroup manager in that case.
+	if err := p.manager.Apply(p.pid()); err != nil {
+		return newSystemErrorWithCause(err, "applying cgroup configuration for process")
 	}
 	defer func() {
-		if err != nil && !p.container.config.Rootless {
+		if err != nil {
 			// TODO: should not be the responsibility to call here
 			p.manager.Destroy()
 		}
@@ -281,11 +280,8 @@ func (p *initProcess) start() error {
 	ierr := parseSync(p.parentPipe, func(sync *syncT) error {
 		switch sync.Type {
 		case procReady:
-			// We can't set cgroups if we're in a rootless container.
-			if !p.container.config.Rootless {
-				if err := p.manager.Set(p.config.Config); err != nil {
-					return newSystemErrorWithCause(err, "setting cgroup config for ready process")
-				}
+			if err := p.manager.Set(p.config.Config); err != nil {
+				return newSystemErrorWithCause(err, "setting cgroup config for ready process")
 			}
 			// set rlimits, this has to be done here because we lose permissions
 			// to raise the limits once we enter a user-namespace
