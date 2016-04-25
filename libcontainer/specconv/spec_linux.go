@@ -222,8 +222,8 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 		config.ProcessLabel = spec.Process.SelinuxLabel
 	}
 	config.Sysctl = spec.Linux.Sysctl
-	if oomScoreAdj := spec.Linux.Resources.OOMScoreAdj; oomScoreAdj != nil {
-		config.OomScoreAdj = *oomScoreAdj
+	if spec.Linux.Resources != nil && spec.Linux.Resources.OOMScoreAdj != nil {
+		config.OomScoreAdj = *spec.Linux.Resources.OOMScoreAdj
 	}
 	for _, g := range spec.Process.User.AdditionalGids {
 		config.AdditionalGroups = append(config.AdditionalGroups, strconv.FormatUint(uint64(g), 10))
