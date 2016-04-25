@@ -120,7 +120,7 @@ After=network.target
 [Service]
 CPUQuota=200%
 MemoryLimit=1536M
-ExecStart=/usr/local/bin/runc start minecraft
+ExecStart=/usr/local/sbin/runc start minecraft
 Restart=on-failure
 WorkingDirectory=/containers/minecraftbuild
 
