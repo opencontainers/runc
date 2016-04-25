@@ -15,7 +15,7 @@ import (
 var gitCommit = ""
 
 const (
-	version    = "0.1.0"
+	version    = "0.1.1"
 	specConfig = "config.json"
 	usage      = `Open Container Initiative runtime
 	
