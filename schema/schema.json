@@ -132,8 +132,8 @@
                     "id": "https://opencontainers.org/schema/bundle/process/linux/apparmorProfile",
                     "type": "string"
                 },
-                "selinuxProcessLabel": {
-                    "id": "https://opencontainers.org/schema/bundle/process/linux/selinuxProcessLabel",
+                "selinuxLabel": {
+                    "id": "https://opencontainers.org/schema/bundle/process/linux/selinuxLabel",
                     "type": "string"
                 },
                 "noNewPrivileges": {
