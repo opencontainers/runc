@@ -27,7 +27,7 @@ function startup_events() {
   run "$RUNC" events --stats test_busybox
   [ "$status" -eq 0 ]
   [[ "${lines[0]}" == [\{]"\"type\""[:]"\"stats\""[,]"\"id\""[:]"\"test_busybox\""[,]* ]]
-  [[ "${lines[0]}" == *"CgroupStats"* ]]
+  [[ "${lines[0]}" == *"data"* ]]
 }
 
 @test "events --interval default " {
@@ -54,7 +54,7 @@ function startup_events() {
   run cat events.log
   [ "$status" -eq 0 ]
   [[ "${lines[0]}" == [\{]"\"type\""[:]"\"stats\""[,]"\"id\""[:]"\"test_busybox\""[,]* ]]
-  [[ "${lines[0]}" == *"CgroupStats"* ]]
+  [[ "${lines[0]}" == *"data"* ]]
 }
 
 @test "events --interval 1s " {
