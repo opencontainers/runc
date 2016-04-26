@@ -1,4 +1,6 @@
-.PHONY: dbuild man
+.PHONY: dbuild man \
+	    localtest localunittest localintegration \
+	    test unittest integration
 
 RUNC_IMAGE := runc_dev
 RUNC_TEST_IMAGE := runc_test
@@ -25,6 +27,12 @@ static: $(RUNC_LINK)
 $(RUNC_LINK):
 	ln -sfn $(CURDIR) $(RUNC_LINK)
 
+dbuild: runctestimage
+	docker build -t $(RUNC_IMAGE) .
+	docker create --name=$(RUNC_INSTANCE) $(RUNC_IMAGE)
+	docker cp $(RUNC_INSTANCE):$(RUNC_BUILD_PATH) .
+	docker rm $(RUNC_INSTANCE)
+
 lint:
 	go vet ./...
 	go fmt ./...
@@ -35,24 +43,24 @@ man:
 runctestimage:
 	docker build -t $(RUNC_TEST_IMAGE) -f $(TEST_DOCKERFILE) .
 
-test: runctestimage
-	docker run -e TESTFLAGS -ti --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_TEST_IMAGE) make localtest
+test:
+	make unittest integration
 
-localtest: all
+localtest:
+	make localunittest localintegration
+
+unittest: runctestimage
+	docker run -e TESTFLAGS -ti --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_TEST_IMAGE) make localunittest
+
+localunittest: all
 	go test -tags "$(BUILDTAGS)" ${TESTFLAGS} -v ./...
-
-dbuild: runctestimage
-	docker build -t $(RUNC_IMAGE) .
-	docker create --name=$(RUNC_INSTANCE) $(RUNC_IMAGE)
-	docker cp $(RUNC_INSTANCE):$(RUNC_BUILD_PATH) .
-	docker rm $(RUNC_INSTANCE)
 
 integration: runctestimage
 	docker run -e TESTFLAGS -t --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_TEST_IMAGE) make localintegration
 
-localintegration:
-	bats tests/integration${TESTFLAGS}
-		
+localintegration: all
+	bats -t tests/integration${TESTFLAGS}
+
 install:
 	install -D -m0755 runc /usr/local/sbin/runc
 
