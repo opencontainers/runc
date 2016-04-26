@@ -37,7 +37,6 @@ runctestimage:
 
 test: runctestimage
 	docker run -e TESTFLAGS -ti --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_TEST_IMAGE) make localtest
-	tests/sniffTest
 
 localtest: all
 	go test -tags "$(BUILDTAGS)" ${TESTFLAGS} -v ./...
