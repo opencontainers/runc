@@ -29,6 +29,7 @@ var namespaceMapping = map[specs.NamespaceType]configs.NamespaceType{
 	specs.UserNamespace:    configs.NEWUSER,
 	specs.IPCNamespace:     configs.NEWIPC,
 	specs.UTSNamespace:     configs.NEWUTS,
+	specs.CgroupNamespace:  configs.NEWCGROUP,
 }
 
 var mountPropagationMapping = map[string]int{
