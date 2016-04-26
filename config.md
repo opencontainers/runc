@@ -108,15 +108,17 @@ For more information about SELinux, see  [Selinux documentation](http://selinuxp
 
 The user for the process is a platform-specific structure that allows specific control over which user the process runs as.
 
-#### Linux User
+#### Linux and Solaris User
 
-For Linux-based systems the user structure has the following fields:
+For Linux and Solaris based systems the user structure has the following fields:
 
 * **`uid`** (int, required) specifies the user id.
 * **`gid`** (int, required) specifies the group id.
 * **`additionalGids`** (array of ints, optional) specifies additional group ids to be added to the process.
 
 _Note: symbolic name for uid and gid, such as uname and gname respectively, are left to upper levels to derive (i.e. `/etc/passwd` parsing, NSS, etc)_
+
+_Note: For Solaris, uid and gid specify the uid and gid of the process inside the container and need not be same as in the host._
 
 ### Example (Linux)
 
@@ -151,6 +153,26 @@ _Note: symbolic name for uid and gid, such as uname and gname respectively, are 
             "soft": 1024
         }
     ]
+}
+```
+### Example (Solaris)
+
+```json
+"process": {
+    "terminal": true,
+    "user": {
+        "uid": 1,
+        "gid": 1,
+        "additionalGids": [2, 8]
+    },
+    "env": [
+        "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+        "TERM=xterm"
+    ],
+    "cwd": "/root",
+    "args": [
+        "/usr/bin/bash"
+    ],
 }
 ```
 
@@ -607,6 +629,29 @@ Here is a full example `config.json` for reference.
             "/proc/sysrq-trigger"
         ],
         "mountLabel": "system_u:object_r:svirt_sandbox_file_t:s0:c715,c811"
+    },
+    "solaris": {
+        "anet": [
+            {
+                "allowedAddress": "172.17.0.2/16",
+                "configureAllowedAddress": "true",
+                "defrouter": "172.17.0.1/16",
+                "linkProtection": "mac-nospoof, ip-nospoof",
+                "linkname": "net0",
+                "lowerLink": "net2",
+                "macAddress": "02:42:f8:52:c7:16"
+            }
+        ],
+        "cappedCPU": {
+            "ncpus": "0.8"
+        },
+        "cappedMemory": {
+            "physical": "1G",
+            "swap": "512m"
+        },
+        "maxShmMemory": "256m",
+        "limitpriv": "default",
+        "milestone": "svc:/milestone/container:default"
     },
     "annotations": {
         "key1": "value1",
