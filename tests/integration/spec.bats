@@ -71,19 +71,19 @@ function teardown() {
   # note this test is brittle against specs changes that lead runc's spec command
   # todo get the validate program, gojsonschema, and schema/*s.json from godeps? 
   
-  run git clone https://github.com/opencontainers/specs.git src/specs
-  [ -e src/specs/schema/schema.json ]
+  run git clone https://github.com/opencontainers/runtime-spec.git src/runtime-spec
+  [ -e src/runtime-spec/schema/schema.json ]
   
   run bash -c "GOPATH='$GOPATH' go get github.com/xeipuuv/gojsonschema"
   [ "$status" -eq 0 ]
   
-  GOPATH="$GOPATH" go build src/specs/schema/validate.go
+  GOPATH="$GOPATH" go build src/runtime-spec/schema/validate.go
   [ -e ./validate ]
   
   run "$RUNC" spec 
   [ -e config.json ]
   
-  run ./validate src/specs/schema/schema.json config.json
+  run ./validate src/runtime-spec/schema/schema.json config.json
   [ "$status" -eq 0 ]
   [[ "${lines[0]}" == *"The document is valid"* ]]
 }
