@@ -3,7 +3,9 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -15,10 +17,33 @@ var psCommand = cli.Command{
 	Name:      "ps",
 	Usage:     "ps displays the processes running inside a container",
 	ArgsUsage: `<container-id> <ps options>`,
+	Flags: []cli.Flag{
+		cli.StringFlag{
+			Name:  "format, f",
+			Value: "",
+			Usage: `select one of: ` + formatOptions + `.
+
+The default format is table.  The following will output the processes of a container
+in json format:
+
+    # runc ps -f json`,
+		},
+	},
 	Action: func(context *cli.Context) {
 		container, err := getContainer(context)
 		if err != nil {
 			fatal(err)
+		}
+
+		if context.String("format") == "json" {
+			pids, err := container.Processes()
+			if err != nil {
+				fatal(err)
+			}
+			if err := json.NewEncoder(os.Stdout).Encode(pids); err != nil {
+				fatal(err)
+			}
+			return
 		}
 
 		psArgs := context.Args().Get(1)

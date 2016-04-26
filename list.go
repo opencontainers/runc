@@ -81,12 +81,9 @@ in json format:
 				fatal(err)
 			}
 		case "json":
-			data, err := json.Marshal(s)
-			if err != nil {
+			if err := json.NewEncoder(os.Stdout).Encode(s); err != nil {
 				fatal(err)
 			}
-			os.Stdout.Write(data)
-
 		default:
 			fatalf("invalid format option")
 		}
