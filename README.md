@@ -13,11 +13,12 @@ Table of Contents
   - [Implementations](implementations.md)
   - [project](project.md)
 - [Filesystem Bundle](bundle.md)
-- [Runtime and Lifecycle](runtime.md)
-  - [Linux Specific Runtime](runtime-linux.md)
+- Runtime and Lifecycle
+  - [General Runtime and Lifecycle](runtime.md)
+  - [Linux-specific Runtime and Lifecycle](runtime-linux.md)
 - Configuration
-  - [General](config.md)
-  - [Linux-specific](config-linux.md)
+  - [General Configuration](config.md)
+  - [Linux-specific Configuration](config-linux.md)
 - [Glossary](glossary.md)
 
 In the specifications in the above table of contents, the keywords "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" are to be interpreted as described in [RFC 2119](http://tools.ietf.org/html/rfc2119) (Bradner, S., "Key words for use in RFCs to Indicate Requirement Levels", BCP 14, RFC 2119, March 1997).
