@@ -7,7 +7,7 @@ Whether other entities using the same, or other, instance of the runtime can see
 
 ## State
 
-The state of a container MUST include, at least, the following propeties:
+The state of a container MUST include, at least, the following properties:
 
 * **`ociVersion`**: (string) is the OCI specification version used when creating the container.
 * **`id`**: (string) is the container's ID.
