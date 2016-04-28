@@ -39,7 +39,7 @@ Each container has exactly one *root filesystem*, specified in the *root* object
 
 ## Mounts
 
-You can add array of mount points inside container as `mounts`.
+You MAY add array of mount points inside container as `mounts`.
 The runtime MUST mount entries in the listed order.
 The parameters are similar to the ones in [the Linux mount system call](http://man7.org/linux/man-pages/man2/mount.2.html).
 
