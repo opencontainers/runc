@@ -52,7 +52,7 @@ integration: runctestimage
 
 localintegration:
 	bats tests/integration${TESTFLAGS}
-		
+
 install:
 	install -D -m0755 runc /usr/local/sbin/runc
 
@@ -75,4 +75,4 @@ validate:
 	script/validate-gofmt
 	go vet ./...
 
-ci: validate localtest
+ci: validate localtest localintegration
