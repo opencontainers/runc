@@ -254,8 +254,8 @@ The semantics are the same as `Path`, `Args` and `Env` in [golang Cmd](https://g
 
 ## Annotations
 
-Annotations are optional arbitrary non-identifying metadata that can be attached to containers.
-This information may be large, may be structured or unstructured.
+This OPTIONAL property contains arbitrary metadata for the container.
+This information may be structured or unstructured.
 Annotations are key-value maps.
 
 ```json
