@@ -51,39 +51,40 @@ func TestDuplicateLabel(t *testing.T) {
 	secopt := DupSecOpt("system_u:system_r:svirt_lxc_net_t:s0:c1,c2")
 	t.Log(secopt)
 	for _, opt := range secopt {
-		con := strings.SplitN(opt, ":", 3)
-		if len(con) != 3 || con[0] != "label" {
+		parts := strings.SplitN(opt, "=", 2)
+		if len(parts) != 2 || parts[0] != "label" {
 			t.Errorf("Invalid DupSecOpt return value")
 			continue
 		}
-		if con[1] == "user" {
-			if con[2] != "system_u" {
+		con := strings.SplitN(parts[1], ":", 2)
+		if con[0] == "user" {
+			if con[1] != "system_u" {
 				t.Errorf("DupSecOpt Failed user incorrect")
 			}
 			continue
 		}
-		if con[1] == "role" {
-			if con[2] != "system_r" {
+		if con[0] == "role" {
+			if con[1] != "system_r" {
 				t.Errorf("DupSecOpt Failed role incorrect")
 			}
 			continue
 		}
-		if con[1] == "type" {
-			if con[2] != "svirt_lxc_net_t" {
+		if con[0] == "type" {
+			if con[1] != "svirt_lxc_net_t" {
 				t.Errorf("DupSecOpt Failed type incorrect")
 			}
 			continue
 		}
-		if con[1] == "level" {
-			if con[2] != "s0:c1,c2" {
+		if con[0] == "level" {
+			if con[1] != "s0:c1,c2" {
 				t.Errorf("DupSecOpt Failed level incorrect")
 			}
 			continue
 		}
-		t.Errorf("DupSecOpt Failed invalid field %q", con[1])
+		t.Errorf("DupSecOpt Failed invalid field %q", con[0])
 	}
 	secopt = DisableSecOpt()
-	if secopt[0] != "label:disable" {
+	if secopt[0] != "label=disable" {
 		t.Errorf("DisableSecOpt Failed level incorrect")
 	}
 }
