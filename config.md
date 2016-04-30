@@ -195,7 +195,7 @@ Hooks allow one to run code before/after various lifecycle events of the contain
 Hooks MUST be called in the listed order.
 The state of the container is passed to the hooks over stdin, so the hooks could get the information they need to do their work.
 
-Hook paths are absolute and are executed from the host's filesystem.
+Hook paths are absolute and are executed from the host's filesystem in the [runtime namespace][runtime-namespace].
 
 ### Prestart
 
@@ -615,5 +615,5 @@ Here is a full example `config.json` for reference.
 }
 ```
 
-
+[runtime-namespace]: glossary.md#runtime-namespace
 [uts-namespace]: http://man7.org/linux/man-pages/man7/namespaces.7.html
