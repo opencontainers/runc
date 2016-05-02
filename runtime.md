@@ -47,7 +47,7 @@ The lifecycle describes the timeline of events that happen from when a container
 6. Additional actions such as pausing the container, resuming the container or signaling the container MAY be performed using the runtime interface.
    The container MAY also error out, exit or crash.
 7. The container MUST be destroyed by undoing the steps performed during create phase (step 2).
-8. The poststop hooks MUST be invoked by the runtime and errors, if any, MAY be logged.
+8. The poststop hooks MUST be invoked by the runtime and errors, if any, SHOULD be logged.
 
 Note: The lifecycle is a WIP and it will evolve as we have more use cases and more information on the viability of a separate create phase.
 
