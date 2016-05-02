@@ -165,7 +165,7 @@ _Note: symbolic name for uid and gid, such as uname and gname respectively, are 
 "hostname": "mrsdalloway"
 ```
 
-## Platform-specific configuration
+## Platform
 
 * **`os`** (string, required) specifies the operating system family this image must run on. Values for os must be in the list specified by the Go Language document for [`$GOOS`](https://golang.org/doc/install/source#environment).
 * **`arch`** (string, required) specifies the instruction set for which the binaries in the image have been compiled. Values for arch must be in the list specified by the Go Language document for [`$GOARCH`](https://golang.org/doc/install/source#environment).
@@ -179,8 +179,30 @@ _Note: symbolic name for uid and gid, such as uname and gname respectively, are 
 }
 ```
 
-Interpretation of the platform section of the JSON file is used to find which platform-specific sections may be available in the document.
-For example, if `os` is set to `linux`, then a JSON object conforming to the [Linux-specific schema](config-linux.md) SHOULD be found at the key `linux` in the `config.json`.
+## Platform-specific configuration
+
+[**`platform.os`**](#platform) is used to lookup further platform-specific configuration.
+
+* **`linux`** (object, optional) [Linux-specific configuration](config-linux.md).
+  This should only be set if **`platform.os`** is `linux`.
+
+### Example (Linux)
+
+```json
+{
+    "platform": {
+        "os": "linux",
+        "arch": "amd64"
+    },
+    "linux": {
+        "namespaces": [
+          {
+            "type": "pid"
+          }
+        ]
+    }
+}
+```
 
 ## Hooks
 
