@@ -40,10 +40,10 @@ The lifecycle describes the timeline of events that happen from when a container
 2. The container's runtime environment MUST be created according to the configuration in [`config.json`](config.md).
    Any updates to `config.json` after container is running MUST not affect the container.
 3. The prestart hooks MUST be invoked by the runtime.
-   If any prestart hook fails, then the container MUST be stopped and the lifecycle continues at step 8.
+   If any prestart hook fails, then the container MUST be stopped and the lifecycle continues at step 7.
 4. The user specified process MUST be executed in the container.
 5. The poststart hooks MUST be invoked by the runtime.
-   If any poststart hook fails, then the container MUST be stopped and the lifecycle continues at step 8.
+   If any poststart hook fails, then the container MUST be stopped and the lifecycle continues at step 7.
 6. Additional actions such as pausing the container, resuming the container or signaling the container MAY be performed using the runtime interface.
    The container MAY also error out, exit or crash.
 7. The container MUST be destroyed by undoing the steps performed during create phase (step 2).
