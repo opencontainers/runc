@@ -22,7 +22,7 @@ default: docs
 .PHONY: docs
 docs: output/docs.pdf output/docs.html
 
-output/docs.pdf:
+output/docs.pdf: $(DOC_FILES)
 	mkdir -p output/ && \
 	$(DOCKER) run \
 	-it \
@@ -32,7 +32,7 @@ output/docs.pdf:
 	-u $(shell id -u) \
 	vbatts/pandoc -f markdown_github -t latex -o /$@ $(patsubst %,/input/%,$(DOC_FILES))
 
-output/docs.html:
+output/docs.html: $(DOC_FILES)
 	mkdir -p output/ && \
 	$(DOCKER) run \
 	-it \
@@ -42,6 +42,8 @@ output/docs.html:
 	-u $(shell id -u) \
 	vbatts/pandoc -f markdown_github -t html5 -o /$@ $(patsubst %,/input/%,$(DOC_FILES))
 
+code-of-conduct.md:
+	curl -o $@ https://raw.githubusercontent.com/opencontainers/tob/d2f9d68c1332870e40693fe077d311e0742bc73d/code-of-conduct.md
 
 HOST_GOLANG_VERSION	= $(shell go version | cut -d ' ' -f3 | cut -c 3-)
 # this variable is used like a function. First arg is the minimum version, Second arg is the version to be checked.

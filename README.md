@@ -6,7 +6,7 @@ The [Open Container Initiative](http://www.opencontainers.org/) develops specifi
 Table of Contents
 
 - [Introduction](README.md)
-  - [Code of Conduct](code-of-conduct.md)
+  - [Code of Conduct](#code-of-conduct)
   - [Container Principles](principles.md)
   - [Style and Conventions](style.md)
   - [Roadmap](ROADMAP.md)
@@ -59,7 +59,7 @@ The specification and code is licensed under the Apache 2.0 license found in the
 
 ## Code of Conduct
 
-Participation in the OpenContainers community is governed by [OpenContainer's Code of Conduct](https://github.com/opencontainers/tob/blob/master/code-of-conduct.md).
+Participation in the OpenContainers community is governed by [OpenContainer's Code of Conduct](https://github.com/opencontainers/tob/blob/d2f9d68c1332870e40693fe077d311e0742bc73d/code-of-conduct.md).
 
 ## Discuss your design
 
