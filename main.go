@@ -20,7 +20,7 @@ const (
 	usage      = `Open Container Initiative runtime
 	
 runc is a command line client for running applications packaged according to
-the Open Container Format (OCF) and is a compliant implementation of the
+the Open Container Initiative (OCI) format and is a compliant implementation of the
 Open Container Initiative specification.
 
 runc integrates well with existing process supervisors to provide a production
