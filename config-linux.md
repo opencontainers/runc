@@ -88,7 +88,7 @@ Also, when a path is specified, a runtime MUST assume that the setup for that pa
 ```
 
 uid/gid mappings describe the user namespace mappings from the host to the container.
-The mappings represent how the bundle `rootfs` expects the user namespace to be setup and the runtime SHOULD NOT modify the permissions on the rootfs to realize the mapping.
+The runtime SHOULD NOT modify the ownership of referenced filesystems to realize the mapping.
 *hostID* is the starting uid/gid on the host to be mapped to *containerID* which is the starting uid/gid in the container and *size* refers to the number of ids to be mapped.
 There is a limit of 5 mappings which is the Linux kernel hard limit.
 
