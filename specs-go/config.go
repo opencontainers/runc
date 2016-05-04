@@ -2,9 +2,7 @@ package specs
 
 import "os"
 
-// Spec is the base configuration for the container.  It specifies platform
-// independent configuration. This information must be included when the
-// bundle is packaged for distribution.
+// Spec is the base configuration for the container.
 type Spec struct {
 	// Version is the version of the specification that is supported.
 	Version string `json:"ociVersion"`
