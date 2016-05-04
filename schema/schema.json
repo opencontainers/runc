@@ -167,6 +167,9 @@
         },
         "linux": {
             "$ref": "schema-linux.json#/linux"
+        },
+        "solaris": {
+            "$ref": "schema-solaris.json#/solaris"
         }
     },
     "required": [

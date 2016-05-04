@@ -25,6 +25,8 @@ type Spec struct {
 
 	// Linux is platform specific configuration for Linux based containers.
 	Linux Linux `json:"linux" platform:"linux"`
+	// Solaris is platform specific configuration for Solaris containers.
+	Solaris Solaris `json:"solaris" platform:"solaris"`
 }
 
 // Process contains information to start a specific application inside the container.
@@ -356,6 +358,51 @@ type Seccomp struct {
 	DefaultAction Action    `json:"defaultAction"`
 	Architectures []Arch    `json:"architectures"`
 	Syscalls      []Syscall `json:"syscalls,omitempty"`
+}
+
+// Solaris contains platform specific configuration for Solaris application containers.
+type Solaris struct {
+	// SMF FMRI which should go "online" before we start the container process.
+	Milestone string `json:"milestone,omitempty"`
+	// Maximum set of privileges any process in this container can obtain.
+	LimitPriv string `json:"limitpriv,omitempty"`
+	// The maximum amount of shared memory allowed for this container.
+	MaxShmMemory string `json:"maxShmMemory,omitempty"`
+	// Specification for automatic creation of network resources for this container.
+	Anet []Anet `json:"anet,omitempty"`
+	// Set limit on the amount of CPU time that can be used by container.
+	CappedCPU CappedCPU `json:"cappedCPU,omitempty"`
+	// The physical and swap caps on the memory that can be used by this container.
+	CappedMemory CappedMemory `json:"cappedMemory,omitempty"`
+}
+
+// CappedCPU allows users to set limit on the amount of CPU time that can be used by container.
+type CappedCPU struct {
+	Ncpus string `json:"ncpus,omitempty"`
+}
+
+// CappedMemory allows users to set the physical and swap caps on the memory that can be used by this container.
+type CappedMemory struct {
+	Physical string `json:"physical,omitempty"`
+	Swap     string `json:"swap,omitempty"`
+}
+
+// Anet provides the specification for automatic creation of network resources for this container.
+type Anet struct {
+	// Specify a name for the automatically created VNIC datalink.
+	Linkname string `json:"linkname,omitempty"`
+	// Specify the link over which the VNIC will be created.
+	Lowerlink string `json:"lowerLink,omitempty"`
+	// The set of IP addresses that the container can use.
+	Allowedaddr string `json:"allowedAddress,omitempty"`
+	// Specifies whether allowedAddress limitation is to be applied to the VNIC.
+	Configallowedaddr string `json:"configureAllowedAddress,omitempty"`
+	// The value of the optional default router.
+	Defrouter string `json:"defrouter,omitempty"`
+	// Enable one or more types of link protection.
+	Linkprotection string `json:"linkProtection,omitempty"`
+	// Set the VNIC's macAddress
+	Macaddress string `json:"macAddress,omitempty"`
 }
 
 // Arch used for additional architectures

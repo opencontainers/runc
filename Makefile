@@ -15,6 +15,7 @@ DOC_FILES := \
 	runtime-linux.md \
 	config.md \
 	config-linux.md \
+	config-solaris.md \
 	glossary.md
 EPOCH_TEST_COMMIT := 78e6667ae2d67aad100b28ee9580b41b7a24e667
 
