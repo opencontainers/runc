@@ -614,7 +614,7 @@ func pivotRoot(rootfs, pivotBaseDir string) (err error) {
 	// path to pivot dir now changed, update
 	pivotDir = filepath.Join(pivotBaseDir, filepath.Base(pivotDir))
 
-	// Make pivotDir rprivate to make sure any of the unmounts don't
+	// Make pivotDir private to make sure any of the unmounts don't
 	// propagate to parent.
 	if err := syscall.Mount("", pivotDir, "", syscall.MS_PRIVATE|syscall.MS_REC, ""); err != nil {
 		return err
