@@ -1,5 +1,6 @@
 
 DOCKER ?= $(shell command -v docker)
+PANDOC ?= $(shell command -v pandoc)
 # These docs are in an order that determines how they show up in the PDF/HTML docs.
 DOC_FILES := \
 	version.md \
@@ -32,7 +33,7 @@ output/docs.pdf: $(DOC_FILES)
 	-v $(shell pwd)/:/input/:ro \
 	-v $(shell pwd)/output/:/output/ \
 	-u $(shell id -u) \
-	vbatts/pandoc -f markdown_github -t latex -o /$@ $(patsubst %,/input/%,$(DOC_FILES))
+	$(PANDOC) -f markdown_github -t latex -o /$@ $(patsubst %,/input/%,$(DOC_FILES))
 
 output/docs.html: $(DOC_FILES)
 	mkdir -p output/ && \
@@ -42,7 +43,7 @@ output/docs.html: $(DOC_FILES)
 	-v $(shell pwd)/:/input/:ro \
 	-v $(shell pwd)/output/:/output/ \
 	-u $(shell id -u) \
-	vbatts/pandoc -f markdown_github -t html5 -o /$@ $(patsubst %,/input/%,$(DOC_FILES))
+	$(PANDOC) -f markdown_github -t html5 -o /$@ $(patsubst %,/input/%,$(DOC_FILES))
 
 code-of-conduct.md:
 	curl -o $@ https://raw.githubusercontent.com/opencontainers/tob/d2f9d68c1332870e40693fe077d311e0742bc73d/code-of-conduct.md
