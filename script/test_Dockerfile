@@ -18,7 +18,7 @@ RUN apt-get update && apt-get install -y \
     python-minimal \
     --no-install-recommends
 
-# install bats 
+# install bats
 RUN cd /tmp \
     && git clone https://github.com/sstephenson/bats.git \
     && cd bats \
@@ -33,10 +33,9 @@ RUN mkdir -p /usr/src/criu \
     && make install-criu
 
 # setup a playground for us to spawn containers in
-RUN mkdir /busybox \
-    && mkdir /testdata \
-    && curl -o /testdata/busybox.tar -sSL 'https://github.com/jpetazzo/docker-busybox/raw/buildroot-2014.11/rootfs.tar' \
-    && tar -C /busybox -xf /testdata/busybox.tar 
+ENV ROOTFS /busybox
+RUN mkdir -p ${ROOTFS} \
+    && curl -o- -sSL 'https://github.com/jpetazzo/docker-busybox/raw/buildroot-2014.11/rootfs.tar' | tar -C ${ROOTFS} -xf -
 
 COPY script/tmpmount /
 WORKDIR /go/src/github.com/opencontainers/runc
