@@ -310,19 +310,24 @@ For Windows based systems the user structure has the following fields:
 
 ## Hooks
 
-**`hooks`** (object, OPTIONAL) configures callbacks for container lifecycle events.
 Lifecycle hooks allow custom events for different points in a container's runtime.
-Presently there are `Prestart`, `Poststart` and `Poststop`.
 
-* [`Prestart`](#prestart) is a list of hooks to be run before the container process is executed
-* [`Poststart`](#poststart) is a list of hooks to be run immediately after the container process is started
-* [`Poststop`](#poststop) is a list of hooks to be run after the container process exits
+* **`hooks`** (object, OPTIONAL) MAY contain any of the following properties:
+  * **`prestart`** (array, OPTIONAL) is an array of [pre-start hooks](#prestart).
+    Entries in the array contain the following properties:
+    * **`path`** (string, REQUIRED) with similar semantics to [IEEE Std 1003.1-2001 `execv`'s *path*][ieee-1003.1-2001-xsh-exec].
+      This specification extends the IEEE standard in that **`path`** MUST be absolute.
+    * **`args`** (array of strings, REQUIRED) with the same semantics as [IEEE Std 1003.1-2001 `execv`'s *argv*][ieee-1003.1-2001-xsh-exec].
+    * **`env`** (array of strings, OPTIONAL) with the same semantics as [IEEE Std 1003.1-2001's `environ`][ieee-1003.1-2001-xbd-c8.1].
+    * **`timeout`** (int, OPTIONAL) is the number of seconds before aborting the hook.
+  * **`poststart`** (array, OPTIONAL) is an array of [post-start hooks](#poststart).
+    Entries in the array have the same schema as pre-start entries.
+  * **`poststop`** (array, OPTIONAL) is an array of [post-stop hooks](#poststop).
+    Entries in the array have the same schema as pre-start entries.
 
 Hooks allow one to run programs before/after various lifecycle events of the container.
 Hooks MUST be called in the listed order.
-The state of the container is passed to the hooks over stdin, so the hooks could get the information they need to do their work.
-
-Hook paths are absolute and are executed from the host's filesystem in the [runtime namespace][runtime-namespace].
+The [state](runtime.md#state) of the container is passed to the hooks over stdin, so the hooks could get the information they need to do their work.
 
 ### Prestart
 
@@ -373,11 +378,6 @@ If a hook returns a non-zero exit code, then an error is logged and the remainin
         ]
     }
 ```
-
-`path` is REQUIRED for a hook.
-`args` and `env` are OPTIONAL.
-`timeout` is the number of seconds before aborting the hook.
-The semantics are the same as `Path`, `Args` and `Env` in [golang Cmd](https://golang.org/pkg/os/exec/#Cmd).
 
 ## Annotations
 

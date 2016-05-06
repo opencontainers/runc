@@ -17,7 +17,7 @@ type Spec struct {
 	// Mounts configures additional mounts (on top of Root).
 	Mounts []Mount `json:"mounts,omitempty"`
 	// Hooks configures callbacks for container lifecycle events.
-	Hooks Hooks `json:"hooks"`
+	Hooks *Hooks `json:"hooks,omitempty"`
 	// Annotations contains arbitrary metadata for the container.
 	Annotations map[string]string `json:"annotations,omitempty"`
 
