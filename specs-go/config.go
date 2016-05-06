@@ -59,9 +59,9 @@ type Process struct {
 // main process.
 type User struct {
 	// UID is the user id. (this field is platform dependent)
-	UID uint32 `json:"uid,omitempty" platform:"linux"`
+	UID uint32 `json:"uid" platform:"linux"`
 	// GID is the group id. (this field is platform dependent)
-	GID uint32 `json:"gid,omitempty" platform:"linux"`
+	GID uint32 `json:"gid" platform:"linux"`
 	// AdditionalGids are additional group ids set for the container's process. (this field is platform dependent)
 	AdditionalGids []uint32 `json:"additionalGids,omitempty" platform:"linux"`
 }
