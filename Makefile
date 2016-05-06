@@ -1,5 +1,5 @@
 
-DOCKER ?= $(shell which docker)
+DOCKER ?= $(shell command -v docker)
 # These docs are in an order that determines how they show up in the PDF/HTML docs.
 DOC_FILES := \
 	version.md \
