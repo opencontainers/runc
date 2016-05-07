@@ -24,9 +24,9 @@ type Spec struct {
 	Annotations map[string]string `json:"annotations,omitempty"`
 
 	// Linux is platform specific configuration for Linux based containers.
-	Linux Linux `json:"linux" platform:"linux"`
+	Linux Linux `json:"linux" platform:"linux,omitempty"`
 	// Solaris is platform specific configuration for Solaris containers.
-	Solaris Solaris `json:"solaris" platform:"solaris"`
+	Solaris Solaris `json:"solaris" platform:"solaris,omitempty"`
 }
 
 // Process contains information to start a specific application inside the container.
