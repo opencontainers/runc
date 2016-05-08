@@ -64,7 +64,16 @@ func (v *ConfigValidator) network(config *configs.Config) error {
 		if len(config.Networks) > 0 || len(config.Routes) > 0 {
 			return fmt.Errorf("unable to apply network settings without a private NET namespace")
 		}
+
+		if config.Namespaces.Contains(configs.NEWUSER) {
+			for _, mount := range config.Mounts {
+				if mount.Device == "sysfs" {
+					return fmt.Errorf("unable to mount sysfs in a USER namespace without a private NET namespace")
+				}
+			}
+		}
 	}
+
 	return nil
 }
 

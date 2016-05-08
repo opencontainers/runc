@@ -36,6 +36,28 @@ func TestValidateWithInvalidRootfs(t *testing.T) {
 	}
 }
 
+func TestValidateSysfsWithoutNETNamespace(t *testing.T) {
+	config := &configs.Config{
+		Rootfs:      "/var",
+		Namespaces:  []configs.Namespace{{Type: configs.NEWUSER}},
+		UidMappings: []configs.IDMap{{ContainerID: 0, HostID: 1000, Size: 1}},
+		GidMappings: []configs.IDMap{{ContainerID: 0, HostID: 1000, Size: 1}},
+		Mounts: []*configs.Mount{
+			{
+				Destination: "/sys",
+				Device:      "sysfs",
+				Source:      "sysfs",
+			},
+		},
+	}
+
+	validator := validate.New()
+	err := validator.Validate(config)
+	if err == nil {
+		t.Error("Expected error to occur but it was nil")
+	}
+}
+
 func TestValidateNetworkWithoutNETNamespace(t *testing.T) {
 	network := &configs.Network{Type: "loopback"}
 	config := &configs.Config{
