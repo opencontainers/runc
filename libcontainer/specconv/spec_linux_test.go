@@ -3,7 +3,6 @@
 package specconv
 
 import (
-	"os"
 	"testing"
 
 	"github.com/opencontainers/runc/libcontainer/configs/validate"
@@ -53,8 +52,9 @@ func TestLinuxCgroupsPathNotSpecified(t *testing.T) {
 }
 
 func TestSpecconvExampleValidate(t *testing.T) {
-	spec := ExampleSpec()
+	spec := Example()
 	spec.Root.Path = "/"
+
 	opts := &CreateOpts{
 		CgroupName:       "ContainerID",
 		UseSystemdCgroup: false,
@@ -97,29 +97,9 @@ func TestDupNamespaces(t *testing.T) {
 }
 
 func TestRootlessSpecconvValidate(t *testing.T) {
-	spec := &specs.Spec{
-		Linux: specs.Linux{
-			Namespaces: []specs.Namespace{
-				{
-					Type: specs.UserNamespace,
-				},
-			},
-			UIDMappings: []specs.IDMapping{
-				{
-					HostID:      uint32(os.Geteuid()),
-					ContainerID: 0,
-					Size:        1,
-				},
-			},
-			GIDMappings: []specs.IDMapping{
-				{
-					HostID:      uint32(os.Getegid()),
-					ContainerID: 0,
-					Size:        1,
-				},
-			},
-		},
-	}
+	spec := Example()
+	spec.Root.Path = "/"
+	ToRootless(spec)
 
 	opts := &CreateOpts{
 		CgroupName:       "ContainerID",

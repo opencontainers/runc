@@ -64,12 +64,21 @@ container on your host.`,
 			Value: "",
 			Usage: "path to the root of the bundle directory",
 		},
+		cli.BoolFlag{
+			Name:  "rootless",
+			Usage: "generate a configuration for a rootless container",
+		},
 	},
 	Action: func(context *cli.Context) error {
 		if err := checkArgs(context, 0, exactArgs); err != nil {
 			return err
 		}
-		spec := specconv.ExampleSpec()
+		spec := specconv.Example()
+
+		rootless := context.Bool("rootless")
+		if rootless {
+			specconv.ToRootless(spec)
+		}
 
 		checkNoFile := func(name string) error {
 			_, err := os.Stat(name)
