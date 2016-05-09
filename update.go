@@ -64,7 +64,7 @@ other options are ignored.
 			Usage: "CPU hardcap limit (in usecs). Allowed cpu time in a given period.",
 		},
 		cli.StringFlag{
-			Name:  "cpu-share",
+			Name:  "cpu-shares",
 			Usage: "CPU shares (relative weight vs. other containers)",
 		},
 		cli.StringFlag{
