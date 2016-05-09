@@ -13,7 +13,7 @@ function teardown() {
 
 @test "runc start" {
   # start hello-world
-  run "$RUNC" start test_hello
+  runc start test_hello
   [ "$status" -eq 0 ]
 
   # check expected output
@@ -27,14 +27,14 @@ function teardown() {
   sed -i 's;"rootfs";".";' config.json
 
   # start hello-world
-  run "$RUNC" start test_hello
+  runc start test_hello
   [ "$status" -eq 0 ]
   [[ "${output}" == *"Hello"* ]]
 }
 
 @test "runc start --pid-file" {
   # start hello-world
-  run "$RUNC" start --pid-file pid.txt test_hello
+  runc start --pid-file pid.txt test_hello
   [ "$status" -eq 0 ]
   [[ "${output}" == *"Hello"* ]]
 

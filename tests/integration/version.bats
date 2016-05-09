@@ -3,7 +3,7 @@
 load helpers
 
 @test "runc version" {
-  run "$RUNC" -v
+  runc -v
   [ "$status" -eq 0 ]
   [[ ${lines[0]} =~ runc\ version\ [0-9]+\.[0-9]+\.[0-9]+ ]]
   [[ ${lines[1]} =~ commit:+ ]]

@@ -25,6 +25,18 @@ KERNEL_MAJOR="${KERNEL_VERSION%%.*}"
 KERNEL_MINOR="${KERNEL_VERSION#$KERNEL_MAJOR.}"
 KERNEL_MINOR="${KERNEL_MINOR%%.*}"
 
+# Root state path.
+ROOT="$BATS_TMPDIR/runc"
+
+# Wrapper for runc.
+function runc() {
+  run __runc "$@"
+}
+
+function __runc() {
+  "$RUNC" --root "$ROOT" "$@"
+}
+
 # Retry a command $1 times until it succeeds. Wait $2 seconds between retries.
 function retry() {
   local attempts=$1
@@ -53,7 +65,7 @@ function wait_for_container() {
   local i
 
   for ((i=0; i < attempts; i++)); do
-    run "$RUNC" state $cid
+    runc state $cid
     if [[ "$status" -eq 0 ]] ; then
       return 0
     fi
@@ -72,7 +84,7 @@ function wait_for_container_inroot() {
   local i
 
   for ((i=0; i < attempts; i++)); do
-    run "$RUNC" --root $4 state $cid
+    ROOT=$4 runc state $cid
     if [[ "$status" -eq 0 ]] ; then
       return 0
     fi
@@ -85,7 +97,7 @@ function wait_for_container_inroot() {
 
 function testcontainer() {
   # test state of container
-  run "$RUNC" state $1
+  runc state $1
   [ "$status" -eq 0 ]
   [[ "${output}" == *"$2"* ]]
 }
@@ -101,7 +113,7 @@ function setup_busybox() {
   fi
   tar -C "$BUSYBOX_BUNDLE"/rootfs -xf "$BUSYBOX_IMAGE"
   cd "$BUSYBOX_BUNDLE"
-  run "$RUNC" spec
+  runc spec
 }
 
 function setup_hello() {
@@ -109,25 +121,25 @@ function setup_hello() {
   run mkdir "$HELLO_BUNDLE"/rootfs
   tar -C "$HELLO_BUNDLE"/rootfs -xf "$HELLO_IMAGE"
   cd "$HELLO_BUNDLE"
-  "$RUNC" spec
+  runc spec
   sed -i 's;"sh";"/hello";' config.json
 }
 
 function teardown_running_container() {
-  run "$RUNC" list
+  runc list
   if [[ "${output}" == *"$1"* ]]; then
-    run "$RUNC" kill $1 KILL
-    retry 10 1 eval "'$RUNC' state '$1' | grep -q 'destroyed'"
-    run "$RUNC" delete $1
+    runc kill $1 KILL
+    retry 10 1 eval "__runc state '$1' | grep -q 'destroyed'"
+    runc delete $1
   fi
 }
 
 function teardown_running_container_inroot() {
-  run "$RUNC" --root $2 list
+  ROOT=$2 runc list
   if [[ "${output}" == *"$1"* ]]; then
-    run "$RUNC" --root $2 kill $1 KILL
-    retry 10 1 eval "'$RUNC' --root '$2' state '$1' | grep -q 'destroyed'"
-    run "$RUNC" --root $2 delete $1
+    ROOT=$2 runc kill $1 KILL
+    retry 10 1 eval "ROOT='$2' __runc state '$1' | grep -q 'destroyed'"
+    ROOT=$2 runc delete $1
   fi
 }
 

@@ -13,14 +13,14 @@ function teardown() {
 
 @test "global --debug" {
   # start hello-world
-  run "$RUNC" --debug start test_hello
+  runc --debug start test_hello
   echo "${output}"
   [ "$status" -eq 0 ]
 }
 
 @test "global --debug to --log" {
   # start hello-world
-  run "$RUNC" --log log.out --debug start test_hello
+  runc --log log.out --debug start test_hello
   [ "$status" -eq 0 ]
 
   # check output does not include debug info
@@ -37,7 +37,7 @@ function teardown() {
 
 @test "global --debug to --log --log-format 'text'" {
   # start hello-world
-  run "$RUNC" --log log.out --log-format "text" --debug start test_hello
+  runc --log log.out --log-format "text" --debug start test_hello
   [ "$status" -eq 0 ]
 
   # check output does not include debug info
@@ -54,7 +54,7 @@ function teardown() {
 
 @test "global --debug to --log --log-format 'json'" {
   # start hello-world
-  run "$RUNC" --log log.out --log-format "json" --debug start test_hello
+  runc --log log.out --log-format "json" --debug start test_hello
   [ "$status" -eq 0 ]
 
   # check output does not include debug info

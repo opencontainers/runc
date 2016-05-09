@@ -15,7 +15,7 @@ function teardown() {
 @test "kill detached busybox" {
 
   # start busybox detached
-  run "$RUNC" start -d --console /dev/pts/ptmx test_busybox
+  runc start -d --console /dev/pts/ptmx test_busybox
   [ "$status" -eq 0 ]
 
   # check state
@@ -23,11 +23,11 @@ function teardown() {
 
   testcontainer test_busybox running
 
-  run "$RUNC" kill test_busybox KILL
+  runc kill test_busybox KILL
   [ "$status" -eq 0 ]
 
-  retry 10 1 eval "'$RUNC' state test_busybox | grep -q 'destroyed'"
+  retry 10 1 eval "__runc state test_busybox | grep -q 'destroyed'"
 
-  run "$RUNC" delete test_busybox
+  runc delete test_busybox
   [ "$status" -eq 0 ]
 }
