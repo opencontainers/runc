@@ -34,7 +34,8 @@ function setup() {
     "memory": {
         "limit": 33554432,
         "reservation": 25165824,
-        "kernel": 16777216
+        "kernel": 16777216,
+        "kernelTCP": 11534336
     },
     "cpu": {
         "shares": 100,
@@ -75,6 +76,7 @@ function check_cgroup_value() {
     check_cgroup_value $CGROUP_CPU "cpu.shares" 100
     check_cgroup_value $CGROUP_CPUSET "cpuset.cpus" 0
     check_cgroup_value $CGROUP_MEMORY "memory.kmem.limit_in_bytes" 16777216
+    check_cgroup_value $CGROUP_MEMORY "memory.kmem.tcp.limit_in_bytes" 11534336
     check_cgroup_value $CGROUP_MEMORY "memory.limit_in_bytes" 33554432
     check_cgroup_value $CGROUP_MEMORY "memory.soft_limit_in_bytes" 25165824
 
@@ -128,13 +130,19 @@ function check_cgroup_value() {
     [ "$status" -eq 0 ]
     check_cgroup_value $CGROUP_MEMORY "memory.kmem.limit_in_bytes" 50331648
 
+    # update kernel memory tcp limit
+    run "$RUNC" --root $UPDATE_TEST_RUNC_ROOT update test_update --kernel-memory-tcp 41943040
+    [ "$status" -eq 0 ]
+    check_cgroup_value $CGROUP_MEMORY "memory.kmem.tcp.limit_in_bytes" 41943040
+
     # Revert to the test initial value via json on stding
     run "$RUNC" --root $UPDATE_TEST_RUNC_ROOT update  -r - test_update <<EOF
 {
   "memory": {
     "limit": 33554432,
     "reservation": 25165824,
-    "kernel": 16777216
+    "kernel": 16777216,
+    "kernelTCP": 11534336
   },
   "cpu": {
     "shares": 100,
@@ -154,19 +162,21 @@ EOF
     check_cgroup_value $CGROUP_CPU "cpu.shares" 100
     check_cgroup_value $CGROUP_CPUSET "cpuset.cpus" 0
     check_cgroup_value $CGROUP_MEMORY "memory.kmem.limit_in_bytes" 16777216
+    check_cgroup_value $CGROUP_MEMORY "memory.kmem.tcp.limit_in_bytes" 11534336
     check_cgroup_value $CGROUP_MEMORY "memory.limit_in_bytes" 33554432
     check_cgroup_value $CGROUP_MEMORY "memory.soft_limit_in_bytes" 25165824
 
     # redo all the changes at once
     run "$RUNC" --root $UPDATE_TEST_RUNC_ROOT update test_update --blkio-weight 500 \
         --cpu-period 900000 --cpu-quota 600000 --cpu-share 200 --memory 67108864 \
-        --memory-reservation 33554432 --kernel-memory 50331648
+        --memory-reservation 33554432 --kernel-memory 50331648 --kernel-memory-tcp 41943040
     [ "$status" -eq 0 ]
     check_cgroup_value $CGROUP_BLKIO "blkio.weight" 500
     check_cgroup_value $CGROUP_CPU "cpu.cfs_period_us" 900000
     check_cgroup_value $CGROUP_CPU "cpu.cfs_quota_us" 600000
     check_cgroup_value $CGROUP_CPU "cpu.shares" 200
     check_cgroup_value $CGROUP_MEMORY "memory.kmem.limit_in_bytes" 50331648
+    check_cgroup_value $CGROUP_MEMORY "memory.kmem.tcp.limit_in_bytes" 41943040
     check_cgroup_value $CGROUP_MEMORY "memory.limit_in_bytes" 67108864
     check_cgroup_value $CGROUP_MEMORY "memory.soft_limit_in_bytes" 33554432
 
@@ -176,7 +186,8 @@ EOF
   "memory": {
     "limit": 33554432,
     "reservation": 25165824,
-    "kernel": 16777216
+    "kernel": 16777216,
+    "kernelTCP": 11534336
   },
   "cpu": {
     "shares": 100,
@@ -200,6 +211,7 @@ EOF
     check_cgroup_value $CGROUP_CPU "cpu.shares" 100
     check_cgroup_value $CGROUP_CPUSET "cpuset.cpus" 0
     check_cgroup_value $CGROUP_MEMORY "memory.kmem.limit_in_bytes" 16777216
+    check_cgroup_value $CGROUP_MEMORY "memory.kmem.tcp.limit_in_bytes" 11534336
     check_cgroup_value $CGROUP_MEMORY "memory.limit_in_bytes" 33554432
     check_cgroup_value $CGROUP_MEMORY "memory.soft_limit_in_bytes" 25165824
 }
