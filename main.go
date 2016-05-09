@@ -18,7 +18,7 @@ const (
 	version    = "0.1.1"
 	specConfig = "config.json"
 	usage      = `Open Container Initiative runtime
-	
+
 runc is a command line client for running applications packaged according to
 the Open Container Initiative (OCI) format and is a compliant implementation of the
 Open Container Initiative specification.
@@ -30,7 +30,7 @@ direct child of the process supervisor.
 
 Containers are configured using bundles. A bundle for a container is a directory
 that includes a specification file named "` + specConfig + `" and a root filesystem.
-The root filesystem contains the contents of the container. 
+The root filesystem contains the contents of the container.
 
 To start a new instance of a container:
 
@@ -99,6 +99,7 @@ func main() {
 		specCommand,
 		startCommand,
 		stateCommand,
+		updateCommand,
 	}
 	app.Before = func(context *cli.Context) error {
 		if context.GlobalBool("debug") {
