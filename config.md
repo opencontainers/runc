@@ -207,6 +207,8 @@ _Note: For Solaris, uid and gid specify the uid and gid of the process inside th
 
 * **`linux`** (object, optional) [Linux-specific configuration](config-linux.md).
   This should only be set if **`platform.os`** is `linux`.
+* **`solaris`** (object, optional) [Solaris-specific configuration](config-solaris.md).
+  This should only be set if **`platform.os`** is `solaris`.
 
 ### Example (Linux)
 
