@@ -94,7 +94,7 @@ function check_cgroup_value() {
     check_cgroup_value $CGROUP_CPU "cpu.cfs_quota_us" 600000
 
     # update cpu-shares
-    run "$RUNC" --root $UPDATE_TEST_RUNC_ROOT update test_update --cpu-share 200
+    run "$RUNC" --root $UPDATE_TEST_RUNC_ROOT update test_update --cpu-shares 200
     [ "$status" -eq 0 ]
     check_cgroup_value $CGROUP_CPU "cpu.shares" 200
 
@@ -159,7 +159,7 @@ EOF
 
     # redo all the changes at once
     run "$RUNC" --root $UPDATE_TEST_RUNC_ROOT update test_update --blkio-weight 500 \
-        --cpu-period 900000 --cpu-quota 600000 --cpu-share 200 --memory 67108864 \
+        --cpu-period 900000 --cpu-quota 600000 --cpu-shares 200 --memory 67108864 \
         --memory-reservation 33554432 --kernel-memory 50331648
     [ "$status" -eq 0 ]
     check_cgroup_value $CGROUP_BLKIO "blkio.weight" 500

@@ -38,7 +38,8 @@ other options are ignored.
    --cpu-share             CPU shares (relative weight vs. other containers)
    --cpuset-cpus           CPU(s) to use
    --cpuset-mems           Memory node(s) to use
-   --kernel-memory         Kernel memory limit (in bytes) for tcp buffer
+   --kernel-memory         Kernel memory limit (in bytes)
+   --kernel-memory-tcp     Kernel memory limit (in bytes) for tcp buffer
    --memory                Memory limit (in bytes)
    --memory-reservation    Memory reservation or soft_limit (in bytes)
    --memory-swap           Total memory usage (memory + swap); set `-1` to enable unlimited swap
