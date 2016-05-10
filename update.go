@@ -92,10 +92,10 @@ other options are ignored.
 			Usage: "Total memory usage (memory + swap); set `-1` to enable unlimited swap",
 		},
 	},
-	Action: func(context *cli.Context) {
+	Action: func(context *cli.Context) error {
 		container, err := getContainer(context)
 		if err != nil {
-			fatal(err)
+			return err
 		}
 
 		r := specs.Resources{
@@ -130,12 +130,12 @@ other options are ignored.
 			default:
 				f, err = os.Open(in)
 				if err != nil {
-					fatal(err)
+					return err
 				}
 			}
 			err = json.NewDecoder(f).Decode(&r)
 			if err != nil {
-				fatal(err)
+				return err
 			}
 		} else {
 			if val := context.Int("blkio-weight"); val != 0 {
@@ -161,7 +161,7 @@ other options are ignored.
 					var err error
 					*dest, err = strconv.ParseUint(val, 10, 64)
 					if err != nil {
-						fatal(fmt.Errorf("invalid value for %s: %s", opt, err))
+						return fmt.Errorf("invalid value for %s: %s", opt, err)
 					}
 				}
 			}
@@ -180,7 +180,8 @@ other options are ignored.
 		config.Cgroups.Resources.MemorySwap = int64(*r.Memory.Swap)
 
 		if err := container.Set(config); err != nil {
-			fatal(err)
+			return err
 		}
+		return nil
 	},
 }

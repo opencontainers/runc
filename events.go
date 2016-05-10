@@ -4,6 +4,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"sync"
 	"time"
@@ -106,17 +107,17 @@ information is displayed once every 5 seconds.`,
 		cli.DurationFlag{Name: "interval", Value: 5 * time.Second, Usage: "set the stats collection interval"},
 		cli.BoolFlag{Name: "stats", Usage: "display the container's stats then exit"},
 	},
-	Action: func(context *cli.Context) {
+	Action: func(context *cli.Context) error {
 		container, err := getContainer(context)
 		if err != nil {
-			fatal(err)
+			return err
 		}
 		status, err := container.Status()
 		if err != nil {
-			fatal(err)
+			return err
 		}
 		if status == libcontainer.Destroyed {
-			fatalf("container with id %s is not running", container.ID())
+			return fmt.Errorf("container with id %s is not running", container.ID())
 		}
 		var (
 			stats  = make(chan *libcontainer.Stats, 1)
@@ -136,12 +137,12 @@ information is displayed once every 5 seconds.`,
 		if context.Bool("stats") {
 			s, err := container.Stats()
 			if err != nil {
-				fatal(err)
+				return err
 			}
 			events <- &event{Type: "stats", ID: container.ID(), Data: convertLibcontainerStats(s)}
 			close(events)
 			group.Wait()
-			return
+			return nil
 		}
 		go func() {
 			for range time.Tick(context.Duration("interval")) {
@@ -155,7 +156,7 @@ information is displayed once every 5 seconds.`,
 		}()
 		n, err := container.NotifyOOM()
 		if err != nil {
-			fatal(err)
+			return err
 		}
 		for {
 			select {
@@ -177,6 +178,7 @@ information is displayed once every 5 seconds.`,
 			}
 		}
 		group.Wait()
+		return nil
 	},
 }
 
