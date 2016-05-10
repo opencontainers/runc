@@ -40,6 +40,9 @@ CGROUP_CPU_BASE_PATH=$(grep "cgroup" /proc/self/mountinfo | gawk 'toupper($NF) ~
 KMEM="${CGROUP_MEMORY_BASE_PATH}/memory.kmem.limit_in_bytes"
 RT_PERIOD="${CGROUP_CPU_BASE_PATH}/cpu.rt_period_us"
 
+# Check if we're in rootless mode.
+ROOTLESS=$(id -u)
+
 # Wrapper for runc.
 function runc() {
 	run __runc "$@"
@@ -68,7 +71,12 @@ function requires() {
 		case $var in
 			criu)
 				if [ ! -e "$CRIU" ]; then
-					skip "Test requires ${var}."
+					skip "test requires ${var}"
+				fi
+				;;
+			root)
+				if [ "$ROOTLESS" -ne 0 ]; then
+					skip "test requires ${var}"
 				fi
 				;;
 			cgroups_kmem)

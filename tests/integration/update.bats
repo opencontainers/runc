@@ -50,7 +50,11 @@ function check_cgroup_value() {
 
 # TODO: test rt cgroup updating
 @test "update" {
-    requires cgroups_kmem
+    # XXX: currently cgroups require root containers.
+	# XXX: Also, this test should be split into separate sections so that we
+	#      can skip kmem without skipping update tests overall.
+    requires cgroups_kmem root
+
     # run a few busyboxes detached
     runc run -d --console-socket $CONSOLE_SOCKET test_update
     [ "$status" -eq 0 ]

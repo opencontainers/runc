@@ -28,7 +28,9 @@ function check_cgroup_value() {
 }
 
 @test "runc update --kernel-memory (initialized)" {
-    requires cgroups_kmem
+	# XXX: currently cgroups require root containers.
+    requires cgroups_kmem root
+
     # Add cgroup path
     sed -i 's/\("linux": {\)/\1\n    "cgroupsPath": "\/runc-cgroups-integration-test",/'  ${BUSYBOX_BUNDLE}/config.json
 
@@ -56,7 +58,9 @@ EOF
 }
 
 @test "runc update --kernel-memory (uninitialized)" {
-    requires cgroups_kmem
+	# XXX: currently cgroups require root containers.
+    requires cgroups_kmem root
+
     # Add cgroup path
     sed -i 's/\("linux": {\)/\1\n    "cgroupsPath": "\/runc-cgroups-integration-test",/'  ${BUSYBOX_BUNDLE}/config.json
 
