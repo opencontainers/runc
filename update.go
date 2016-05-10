@@ -18,7 +18,7 @@ func u16Ptr(i uint16) *uint16 { return &i }
 var updateCommand = cli.Command{
 	Name:      "update",
 	Usage:     "update container resource constraints",
-	ArgsUsage: `<container-id> <ps options>`,
+	ArgsUsage: `<container-id>`,
 	Flags: []cli.Flag{
 		cli.StringFlag{
 			Name:  "resources, r",
@@ -46,7 +46,7 @@ The accepted format is as follow (unchanged values can be omitted):
   },
 }
 
-Note: if data is to be read from a file or the standard output all
+Note: if data is to be read from a file or the standard input, all
 other options are ignored.
 `,
 		},
