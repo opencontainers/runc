@@ -71,7 +71,7 @@ type Root struct {
 	// Path is the absolute path to the container's root filesystem.
 	Path string `json:"path"`
 	// Readonly makes the root filesystem for the container readonly before the process is executed.
-	Readonly bool `json:"readonly"`
+	Readonly bool `json:"readonly,omitempty"`
 }
 
 // Platform specifies OS and arch information for the host system that the container
