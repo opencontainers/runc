@@ -12,9 +12,7 @@ function teardown() {
 }
 
 @test "checkpoint and restore" {
-  if [ ! -e "$CRIU" ] ; then
-    skip
-  fi
+  requires criu
 
   # criu does not work with external terminals so..
   # setting terminal and root:readonly: to false

@@ -33,8 +33,32 @@ function runc() {
   run __runc "$@"
 }
 
+# Raw wrapper for runc.
 function __runc() {
   "$RUNC" --root "$ROOT" "$@"
+}
+
+# Fails the current test, providing the error given.
+function fail() {
+	echo "$@" >&2
+	exit 1
+}
+
+# Allows a test to specify what things it requires. If the environment can't
+# support it, the test is skipped with a message.
+function requires() {
+	for var in "$@"; do
+		case $var in
+			criu)
+				if [ ! -e "$CRIU" ]; then
+					skip "Test requires ${var}."
+				fi
+				;;
+			*)
+				fail "BUG: Invalid requires ${var}."
+				;;
+		esac
+	done
 }
 
 # Retry a command $1 times until it succeeds. Wait $2 seconds between retries.
