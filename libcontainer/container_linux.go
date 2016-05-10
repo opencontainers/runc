@@ -92,7 +92,8 @@ type Container interface {
 	// If the Container state is PAUSED, do nothing.
 	//
 	// errors:
-	// ContainerDestroyed - Container no longer exists,
+	// ContainerNotExists - Container no longer exists,
+	// ContainerNotRunning - Container not running,
 	// Systemerror - System error.
 	Pause() error
 
@@ -101,7 +102,8 @@ type Container interface {
 	// If the Container state is RUNNING, do nothing.
 	//
 	// errors:
-	// ContainerDestroyed - Container no longer exists,
+	// ContainerNotExists - Container no longer exists,
+	// ContainerNotPaused - Container is not paused,
 	// Systemerror - System error.
 	Resume() error
 
