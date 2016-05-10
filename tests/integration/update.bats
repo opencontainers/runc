@@ -11,7 +11,7 @@ CGROUP_BLKIO=""
 
 function init_cgroup_path() {
     for g in MEMORY CPUSET CPU BLKIO; do
-        base_path=$(grep "rw,"  /proc/self/mountinfo | grep -i -m 1 "$g\$" | cut -d ' ' -f 5)
+        base_path=$(grep "cgroup"  /proc/self/mountinfo | gawk 'toupper($NF) ~ /\<'${g}'\>/ { print $5; exit }')
         eval CGROUP_${g}="${base_path}/runc-update-integration-test"
     done
 }

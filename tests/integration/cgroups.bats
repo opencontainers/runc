@@ -9,8 +9,8 @@ CGROUP_MEMORY=""
 TEST_CGROUP_NAME="runc-cgroups-integration-test"
 
 function init_cgroup_path() {
-   base_path=$(grep "rw,"  /proc/self/mountinfo | grep -i -m 1 'MEMORY$' | cut -d ' ' -f 5)
-   CGROUP_MEMORY="${base_path}/${TEST_CGROUP_NAME}"
+	base_path=$(grep "cgroup"  /proc/self/mountinfo | gawk 'toupper($NF) ~ /\<MEMORY\>/ { print $5; exit }')
+	CGROUP_MEMORY="${base_path}/${TEST_CGROUP_NAME}"
 }
 
 function teardown() {
