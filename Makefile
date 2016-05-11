@@ -2,6 +2,8 @@
 	    localtest localunittest localintegration \
 	    test unittest integration
 
+PREFIX := $(DESTDIR)/usr/local
+BINDIR := $(PREFIX)/sbin
 RUNC_IMAGE := runc_dev
 RUNC_TEST_IMAGE := runc_test
 PROJECT := github.com/opencontainers/runc
@@ -16,7 +18,7 @@ export GOPATH := $(CURDIR)/Godeps/_workspace
 MAN_DIR := $(CURDIR)/man/man8
 MAN_PAGES = $(shell ls $(MAN_DIR)/*.8)
 MAN_PAGES_BASE = $(notdir $(MAN_PAGES))
-MAN_INSTALL_PATH := /usr/local/share/man/man8/
+MAN_INSTALL_PATH := ${PREFIX}/share/man/man8/
 
 all: $(RUNC_LINK)
 	go build -i -ldflags "-X main.gitCommit=${COMMIT}" -tags "$(BUILDTAGS)" -o runc .
@@ -62,14 +64,20 @@ localintegration: all
 	bats -t tests/integration${TESTFLAGS}
 
 install:
-	install -D -m0755 runc /usr/local/sbin/runc
+	install -D -m0755 runc $(BINDIR)/runc
+
+install-bash:
+	install -D -m0644 contrib/completions/bash/runc $(PREFIX)/share/bash-completion/completions/runc
 
 install-man:
 	install -d -m 755 $(MAN_INSTALL_PATH)
 	install -m 644 $(MAN_PAGES) $(MAN_INSTALL_PATH)
 
 uninstall:
-	rm -f /usr/local/sbin/runc
+	rm -f $(BINDIR)/runc
+
+uninstall-bash:
+	rm -f $(PREFIX)/share/bash-completion/completions/runc
 
 uninstall-man:
 	rm -f $(addprefix $(MAN_INSTALL_PATH),$(MAN_PAGES_BASE))
