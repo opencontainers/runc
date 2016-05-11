@@ -26,7 +26,7 @@ function teardown() {
   [ ! -e config.json ]
 
   # test generation of spec does not return an error
-  runc spec
+  runc_spec
   [ "$status" -eq 0 ]
 
   # test generation of spec created our config.json (spec)
@@ -51,7 +51,7 @@ function teardown() {
   [ ! -e "$HELLO_BUNDLE"/config.json ]
 
   # test generation of spec does not return an error
-  runc spec --bundle "$HELLO_BUNDLE"
+  runc_spec --bundle "$HELLO_BUNDLE"
   [ "$status" -eq 0 ]
 
   # test generation of spec created our config.json (spec)

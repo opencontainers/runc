@@ -79,10 +79,10 @@ runcimage:
 	docker build -t $(RUNC_IMAGE) .
 
 test:
-	make unittest integration
+	make unittest integration rootlessintegration
 
 localtest:
-	make localunittest localintegration
+	make localunittest localintegration localrootlessintegration
 
 unittest: runcimage
 	docker run -e TESTFLAGS -t --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) make localunittest
@@ -95,6 +95,13 @@ integration: runcimage
 
 localintegration: all
 	bats -t tests/integration${TESTFLAGS}
+
+rootlessintegration: runcimage
+	docker run -e TESTFLAGS -t --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) --cap-drop=ALL -u rootless $(RUNC_IMAGE) make localintegration
+
+# FIXME: This should not be separate from rootlessintegration's method of running.
+localrootlessintegration: all
+	sudo -u rootless -H PATH="${PATH}" bats -t tests/integration${TESTFLAGS}
 
 shell: all
 	docker run -e TESTFLAGS -ti --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) bash
