@@ -77,6 +77,10 @@ other options are ignored.
 		},
 		cli.StringFlag{
 			Name:  "kernel-memory",
+			Usage: "Kernel memory limit (in bytes)",
+		},
+		cli.StringFlag{
+			Name:  "kernel-memory-tcp",
 			Usage: "Kernel memory limit (in bytes) for tcp buffer",
 		},
 		cli.StringFlag{
@@ -104,6 +108,7 @@ other options are ignored.
 				Reservation: u64Ptr(0),
 				Swap:        u64Ptr(0),
 				Kernel:      u64Ptr(0),
+				KernelTCP:   u64Ptr(0),
 			},
 			CPU: &specs.CPU{
 				Shares: u64Ptr(0),
@@ -153,6 +158,7 @@ other options are ignored.
 				"cpu-quota":          r.CPU.Quota,
 				"cpu-share":          r.CPU.Shares,
 				"kernel-memory":      r.Memory.Kernel,
+				"kernel-memory-tcp":  r.Memory.KernelTCP,
 				"memory":             r.Memory.Limit,
 				"memory-reservation": r.Memory.Reservation,
 				"memory-swap":        r.Memory.Swap,
@@ -175,6 +181,7 @@ other options are ignored.
 		config.Cgroups.Resources.CpusetCpus = *r.CPU.Cpus
 		config.Cgroups.Resources.CpusetMems = *r.CPU.Mems
 		config.Cgroups.Resources.KernelMemory = int64(*r.Memory.Kernel)
+		config.Cgroups.Resources.KernelMemoryTCP = int64(*r.Memory.KernelTCP)
 		config.Cgroups.Resources.Memory = int64(*r.Memory.Limit)
 		config.Cgroups.Resources.MemoryReservation = int64(*r.Memory.Reservation)
 		config.Cgroups.Resources.MemorySwap = int64(*r.Memory.Swap)
