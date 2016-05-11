@@ -192,7 +192,6 @@ func createContainer(context *cli.Context, id string, spec *specs.Spec) (libcont
 
 type runner struct {
 	enableSubreaper bool
-	shouldDestroy   bool
 	detach          bool
 	listenFDs       []*os.File
 	pidFile         string
@@ -254,7 +253,11 @@ func (r *runner) run(config *specs.Process) (int, error) {
 }
 
 func (r *runner) destroy() {
-	if r.shouldDestroy {
+	pids, err := r.container.Processes()
+	if err != nil {
+		fatal(err)
+	}
+	if len(pids) == 0 {
 		destroy(r.container)
 	}
 }
