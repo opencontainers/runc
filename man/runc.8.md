@@ -39,6 +39,8 @@ value for "bundle" is the current directory.
    resume       resumes all processes that have been previously paused
    spec         create a new specification file
    start        create and run a container
+   update       update container resource constraints 
+   ps           displays the processes running inside a container 
    state        output the state of a container
    help, h      Shows a list of commands or help for one command
    
