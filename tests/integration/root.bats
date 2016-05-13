@@ -14,12 +14,12 @@ function teardown() {
 }
 
 @test "global --root" {
-  # start busybox detached using $HELLO_BUNDLE for state
-  ROOT=$HELLO_BUNDLE runc start -d --console /dev/pts/ptmx test_dotbox
+  # run busybox detached using $HELLO_BUNDLE for state
+  ROOT=$HELLO_BUNDLE runc run -d --console /dev/pts/ptmx test_dotbox
   [ "$status" -eq 0 ]
 
-  # start busybox detached in default root
-  runc start -d --console /dev/pts/ptmx test_busybox
+  # run busybox detached in default root
+  runc run -d --console /dev/pts/ptmx test_busybox
   [ "$status" -eq 0 ]
 
   # check state of the busyboxes are only in their respective root path

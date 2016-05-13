@@ -48,8 +48,8 @@ function check_cgroup_value() {
 }
 
 @test "update" {
-    # start a few busyboxes detached
-    runc start -d --console /dev/pts/ptmx test_update
+    # run a few busyboxes detached
+    runc run -d --console /dev/pts/ptmx test_update
     [ "$status" -eq 0 ]
     wait_for_container 15 1 test_update
 

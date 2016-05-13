@@ -12,8 +12,8 @@ function teardown() {
 }
 
 @test "runc pause and resume" {
-  # start busybox detached
-  runc start -d --console /dev/pts/ptmx test_busybox
+  # run busybox detached
+  runc run -d --console /dev/pts/ptmx test_busybox
   [ "$status" -eq 0 ]
 
   wait_for_container 15 1 test_busybox

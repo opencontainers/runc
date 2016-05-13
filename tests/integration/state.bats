@@ -15,8 +15,8 @@ function teardown() {
   runc state test_busybox
   [ "$status" -ne 0 ]
 
-  # start busybox detached
-  runc start -d --console /dev/pts/ptmx test_busybox
+  # run busybox detached
+  runc run -d --console /dev/pts/ptmx test_busybox
   [ "$status" -eq 0 ]
 
   # check state

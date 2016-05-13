@@ -5,24 +5,22 @@ package main
 import (
 	"fmt"
 	"os"
-	"runtime"
 
 	"github.com/codegangsta/cli"
 	"github.com/coreos/go-systemd/activation"
-	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
 // default action is to start a container
-var startCommand = cli.Command{
-	Name:  "start",
+var runCommand = cli.Command{
+	Name:  "run",
 	Usage: "create and run a container",
 	ArgsUsage: `<container-id>
 
 Where "<container-id>" is your name for the instance of the container that you
 are starting. The name you provide for the container instance must be unique on
 your host.`,
-	Description: `The start command creates an instance of a container for a bundle. The bundle
+	Description: `The run command creates an instance of a container for a bundle. The bundle
 is a directory with a specification file named "` + specConfig + `" and a root
 filesystem.
 
@@ -87,27 +85,6 @@ command(s) that get executed on start, edit the args parameter of the spec. See
 			os.Exit(status)
 		}
 		return err
-	},
-}
-
-func init() {
-	if len(os.Args) > 1 && os.Args[1] == "init" {
-		runtime.GOMAXPROCS(1)
-		runtime.LockOSThread()
-	}
-}
-
-var initCommand = cli.Command{
-	Name:  "init",
-	Usage: `initialize the namespaces and launch the process (do not call it outside of runc)`,
-	Action: func(context *cli.Context) error {
-		factory, _ := libcontainer.New("")
-		if err := factory.StartInitialization(); err != nil {
-			// as the error is sent back to the parent there is no need to log
-			// or write it to stderr because the parent process will handle this
-			os.Exit(1)
-		}
-		panic("libcontainer: container init failed to exec")
 	},
 }
 

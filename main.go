@@ -96,8 +96,8 @@ func main() {
 		psCommand,
 		restoreCommand,
 		resumeCommand,
+		runCommand,
 		specCommand,
-		startCommand,
 		stateCommand,
 		updateCommand,
 	}
