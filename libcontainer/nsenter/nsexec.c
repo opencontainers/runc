@@ -302,7 +302,7 @@ static struct nsenter_config process_nl_attributes(int pipenum, char *data, int 
 			int	fds[nslen];
 			char	*nslist[nslen];
 			char	*ns;
-			char	*saveptr;
+			char	*saveptr = NULL;
 
 			for (i = 0; i < nslen; i++) {
 				char *str = NULL;
