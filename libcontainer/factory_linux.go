@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"regexp"
 	"runtime/debug"
@@ -219,6 +220,9 @@ func (l *LinuxFactory) Type() string {
 // StartInitialization loads a container by opening the pipe fd from the parent to read the configuration and state
 // This is a low level implementation detail of the reexec and should not be consumed externally
 func (l *LinuxFactory) StartInitialization() (err error) {
+	// start the signal handler as soon as we can
+	s := make(chan os.Signal, 1024)
+	signal.Notify(s, syscall.SIGCONT)
 	fdStr := os.Getenv("_LIBCONTAINER_INITPIPE")
 	pipefd, err := strconv.Atoi(fdStr)
 	if err != nil {
@@ -260,7 +264,7 @@ func (l *LinuxFactory) StartInitialization() (err error) {
 	if err != nil {
 		return err
 	}
-	return i.Init()
+	return i.Init(s)
 }
 
 func (l *LinuxFactory) loadState(root string) (*State, error) {

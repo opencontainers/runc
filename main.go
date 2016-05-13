@@ -86,6 +86,7 @@ func main() {
 	}
 	app.Commands = []cli.Command{
 		checkpointCommand,
+		createCommand,
 		deleteCommand,
 		eventsCommand,
 		execCommand,
@@ -98,6 +99,7 @@ func main() {
 		resumeCommand,
 		runCommand,
 		specCommand,
+		startCommand,
 		stateCommand,
 		updateCommand,
 	}

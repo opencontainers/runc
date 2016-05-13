@@ -198,6 +198,7 @@ type runner struct {
 	pidFile         string
 	console         string
 	container       libcontainer.Container
+	create          bool
 }
 
 func (r *runner) run(config *specs.Process) (int, error) {
@@ -220,7 +221,7 @@ func (r *runner) run(config *specs.Process) (int, error) {
 		r.destroy()
 		return -1, err
 	}
-	tty, err := setupIO(process, rootuid, rootgid, r.console, config.Terminal, r.detach)
+	tty, err := setupIO(process, rootuid, rootgid, r.console, config.Terminal, r.detach || r.create)
 	if err != nil {
 		r.destroy()
 		return -1, err
@@ -245,7 +246,15 @@ func (r *runner) run(config *specs.Process) (int, error) {
 			return -1, err
 		}
 	}
-	if r.detach {
+	if !r.create {
+		if err := process.Signal(syscall.SIGCONT); err != nil {
+			r.terminate(process)
+			r.destroy()
+			tty.Close()
+			return -1, err
+		}
+	}
+	if r.detach || r.create {
 		tty.Close()
 		return 0, nil
 	}

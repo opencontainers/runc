@@ -61,7 +61,7 @@ type initConfig struct {
 }
 
 type initer interface {
-	Init() error
+	Init(s chan os.Signal) error
 }
 
 func newContainerInit(t initType, pipe *os.File) (initer, error) {

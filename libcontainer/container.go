@@ -29,6 +29,13 @@ const (
 
 	// Destroyed is the status that denotes the container does not exist.
 	Destroyed
+
+	// Stopped is the status that denotes the container does not have a created or running process.
+	Stopped
+
+	// Initialized is the status where the container has all the namespaces created but the user
+	// process has not been start.
+	Initialized
 )
 
 func (s Status) String() string {
@@ -43,6 +50,10 @@ func (s Status) String() string {
 		return "paused"
 	case Destroyed:
 		return "destroyed"
+	case Stopped:
+		return "stopped"
+	case Initialized:
+		return "initialized"
 	default:
 		return "unknown"
 	}

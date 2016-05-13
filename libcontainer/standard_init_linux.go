@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
+	"os/signal"
 	"syscall"
 
 	"github.com/opencontainers/runc/libcontainer/apparmor"
@@ -17,7 +19,7 @@ import (
 )
 
 type linuxStandardInit struct {
-	pipe      io.ReadWriter
+	pipe      io.ReadWriteCloser
 	parentPid int
 	config    *initConfig
 }
@@ -42,7 +44,7 @@ func (l *linuxStandardInit) getSessionRingParams() (string, uint32, uint32) {
 // the kernel
 const PR_SET_NO_NEW_PRIVS = 0x26
 
-func (l *linuxStandardInit) Init() error {
+func (l *linuxStandardInit) Init(s chan os.Signal) error {
 	ringname, keepperms, newperms := l.getSessionRingParams()
 
 	// do not inherit the parent's session keyring
@@ -150,6 +152,18 @@ func (l *linuxStandardInit) Init() error {
 			return err
 		}
 	}
-
-	return system.Execv(l.config.Args[0], l.config.Args[0:], os.Environ())
+	// check for the arg before waiting to make sure it exists and it is returned
+	// as a create time error
+	name, err := exec.LookPath(l.config.Args[0])
+	if err != nil {
+		return err
+	}
+	// close the pipe to signal that we have completed our init
+	l.pipe.Close()
+	// wait for the signal to exec the users process
+	<-s
+	// clean up the signal handler
+	signal.Stop(s)
+	close(s)
+	return syscall.Exec(name, l.config.Args[0:], os.Environ())
 }

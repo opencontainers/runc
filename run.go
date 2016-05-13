@@ -68,17 +68,14 @@ command(s) that get executed on start, edit the args parameter of the spec. See
 		if err != nil {
 			return err
 		}
-
 		notifySocket := os.Getenv("NOTIFY_SOCKET")
 		if notifySocket != "" {
 			setupSdNotify(spec, notifySocket)
 		}
-
 		if os.Geteuid() != 0 {
 			return fmt.Errorf("runc should be run as root")
 		}
-
-		status, err := startContainer(context, spec)
+		status, err := startContainer(context, spec, false)
 		if err == nil {
 			// exit with the container's exit status so any external supervisor is
 			// notified of the exit with the correct exit status.
@@ -88,7 +85,7 @@ command(s) that get executed on start, edit the args parameter of the spec. See
 	},
 }
 
-func startContainer(context *cli.Context, spec *specs.Spec) (int, error) {
+func startContainer(context *cli.Context, spec *specs.Spec, create bool) (int, error) {
 	id := context.Args().First()
 	if id == "" {
 		return -1, errEmptyID
@@ -111,6 +108,7 @@ func startContainer(context *cli.Context, spec *specs.Spec) (int, error) {
 		console:         context.String("console"),
 		detach:          detach,
 		pidFile:         context.String("pid-file"),
+		create:          create,
 	}
 	return r.run(&spec.Process)
 }

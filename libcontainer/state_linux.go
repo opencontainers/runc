@@ -110,11 +110,11 @@ func (r *runningState) status() Status {
 func (r *runningState) transition(s containerState) error {
 	switch s.(type) {
 	case *stoppedState:
-		running, err := r.c.isRunning()
+		t, err := r.c.runType()
 		if err != nil {
 			return err
 		}
-		if running {
+		if t == Running {
 			return newGenericError(fmt.Errorf("container still running"), ContainerNotStopped)
 		}
 		r.c.state = s
@@ -129,14 +129,36 @@ func (r *runningState) transition(s containerState) error {
 }
 
 func (r *runningState) destroy() error {
-	running, err := r.c.isRunning()
+	t, err := r.c.runType()
 	if err != nil {
 		return err
 	}
-	if running {
+	if t == Running {
 		return newGenericError(fmt.Errorf("container is not destroyed"), ContainerNotStopped)
 	}
 	return destroy(r.c)
+}
+
+type initializedState struct {
+	c *linuxContainer
+}
+
+func (i *initializedState) status() Status {
+	return Initialized
+}
+
+func (i *initializedState) transition(s containerState) error {
+	switch s.(type) {
+	case *runningState:
+		i.c.state = s
+	case *initializedState:
+		return nil
+	}
+	return newStateTransitionError(i, s)
+}
+
+func (i *initializedState) destroy() error {
+	return destroy(i.c)
 }
 
 // pausedState represents a container that is currently pause.  It cannot be destroyed in a
@@ -161,11 +183,11 @@ func (p *pausedState) transition(s containerState) error {
 }
 
 func (p *pausedState) destroy() error {
-	isRunning, err := p.c.isRunning()
+	t, err := p.c.runType()
 	if err != nil {
 		return err
 	}
-	if !isRunning {
+	if t != Running && t != Created {
 		if err := p.c.cgroupManager.Freeze(configs.Thawed); err != nil {
 			return err
 		}

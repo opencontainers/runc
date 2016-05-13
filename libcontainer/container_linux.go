@@ -195,7 +195,6 @@ func (c *linuxContainer) Start(process *Process) error {
 	}
 	// generate a timestamp indicating when the container was started
 	c.created = time.Now().UTC()
-
 	c.state = &runningState{
 		c: c,
 	}
@@ -1034,31 +1033,47 @@ func (c *linuxContainer) refreshState() error {
 	if paused {
 		return c.state.transition(&pausedState{c: c})
 	}
-	running, err := c.isRunning()
+	t, err := c.runType()
 	if err != nil {
 		return err
 	}
-	if running {
+	switch t {
+	case Initialized:
+		return c.state.transition(&initializedState{c: c})
+	case Running:
 		return c.state.transition(&runningState{c: c})
 	}
 	return c.state.transition(&stoppedState{c: c})
 }
 
-func (c *linuxContainer) isRunning() (bool, error) {
+func (c *linuxContainer) runType() (Status, error) {
 	if c.initProcess == nil {
-		return false, nil
+		return Stopped, nil
 	}
+	pid := c.initProcess.pid()
 	// return Running if the init process is alive
-	if err := syscall.Kill(c.initProcess.pid(), 0); err != nil {
+	if err := syscall.Kill(pid, 0); err != nil {
 		if err == syscall.ESRCH {
 			// It means the process does not exist anymore, could happen when the
 			// process exited just when we call the function, we should not return
 			// error in this case.
-			return false, nil
+			return Stopped, nil
 		}
-		return false, newSystemErrorWithCausef(err, "sending signal 0 to pid %d", c.initProcess.pid())
+		return Stopped, newSystemErrorWithCausef(err, "sending signal 0 to pid %d", pid)
 	}
-	return true, nil
+	// check if the process that is running is the init process or the user's process.
+	// this is the difference between the container Running and Created.
+	environ, err := ioutil.ReadFile(fmt.Sprintf("/proc/%d/environ", pid))
+	if err != nil {
+		return Stopped, newSystemErrorWithCausef(err, "reading /proc/%d/environ", pid)
+	}
+	check := []byte("_LIBCONTAINER")
+	for _, v := range bytes.Split(environ, []byte("\x00")) {
+		if bytes.Contains(v, check) {
+			return Initialized, nil
+		}
+	}
+	return Running, nil
 }
 
 func (c *linuxContainer) isPaused() (bool, error) {
