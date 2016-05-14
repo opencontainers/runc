@@ -77,7 +77,7 @@ type stoppedState struct {
 }
 
 func (b *stoppedState) status() Status {
-	return Destroyed
+	return Stopped
 }
 
 func (b *stoppedState) transition(s containerState) error {
@@ -139,25 +139,25 @@ func (r *runningState) destroy() error {
 	return destroy(r.c)
 }
 
-type initializedState struct {
+type createdState struct {
 	c *linuxContainer
 }
 
-func (i *initializedState) status() Status {
-	return Initialized
+func (i *createdState) status() Status {
+	return Created
 }
 
-func (i *initializedState) transition(s containerState) error {
+func (i *createdState) transition(s containerState) error {
 	switch s.(type) {
 	case *runningState:
 		i.c.state = s
-	case *initializedState:
+	case *createdState:
 		return nil
 	}
 	return newStateTransitionError(i, s)
 }
 
-func (i *initializedState) destroy() error {
+func (i *createdState) destroy() error {
 	return destroy(i.c)
 }
 
@@ -226,23 +226,23 @@ func (r *restoredState) destroy() error {
 	return destroy(r.c)
 }
 
-// createdState is used whenever a container is restored, loaded, or setting additional
+// loadedState is used whenever a container is restored, loaded, or setting additional
 // processes inside and it should not be destroyed when it is exiting.
-type createdState struct {
+type loadedState struct {
 	c *linuxContainer
 	s Status
 }
 
-func (n *createdState) status() Status {
+func (n *loadedState) status() Status {
 	return n.s
 }
 
-func (n *createdState) transition(s containerState) error {
+func (n *loadedState) transition(s containerState) error {
 	n.c.state = s
 	return nil
 }
 
-func (n *createdState) destroy() error {
+func (n *loadedState) destroy() error {
 	if err := n.c.refreshState(); err != nil {
 		return err
 	}

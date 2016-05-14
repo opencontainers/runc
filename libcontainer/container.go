@@ -15,7 +15,7 @@ import (
 type Status int
 
 const (
-	// Created is the status that denotes the container exists but has not been run yet
+	// Created is the status that denotes the container exists but has not been run yet.
 	Created Status = iota
 
 	// Running is the status that denotes the container exists and is running.
@@ -27,15 +27,8 @@ const (
 	// Paused is the status that denotes the container exists, but all its processes are paused.
 	Paused
 
-	// Destroyed is the status that denotes the container does not exist.
-	Destroyed
-
 	// Stopped is the status that denotes the container does not have a created or running process.
 	Stopped
-
-	// Initialized is the status where the container has all the namespaces created but the user
-	// process has not been start.
-	Initialized
 )
 
 func (s Status) String() string {
@@ -48,12 +41,8 @@ func (s Status) String() string {
 		return "pausing"
 	case Paused:
 		return "paused"
-	case Destroyed:
-		return "destroyed"
 	case Stopped:
 		return "stopped"
-	case Initialized:
-		return "initialized"
 	default:
 		return "unknown"
 	}

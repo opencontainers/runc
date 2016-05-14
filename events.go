@@ -116,7 +116,8 @@ information is displayed once every 5 seconds.`,
 		if err != nil {
 			return err
 		}
-		if status == libcontainer.Destroyed {
+		if status == libcontainer.Stopped {
+			fatalf("container with id %s is not running", container.ID())
 			return fmt.Errorf("container with id %s is not running", container.ID())
 		}
 		var (

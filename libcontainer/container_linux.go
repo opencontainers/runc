@@ -181,7 +181,7 @@ func (c *linuxContainer) Start(process *Process) error {
 	if err != nil {
 		return err
 	}
-	doInit := status == Destroyed
+	doInit := status == Stopped
 	parent, err := c.newParentProcess(process, doInit)
 	if err != nil {
 		return newSystemErrorWithCause(err, "creating new parent process")
@@ -1038,8 +1038,8 @@ func (c *linuxContainer) refreshState() error {
 		return err
 	}
 	switch t {
-	case Initialized:
-		return c.state.transition(&initializedState{c: c})
+	case Created:
+		return c.state.transition(&createdState{c: c})
 	case Running:
 		return c.state.transition(&runningState{c: c})
 	}
@@ -1070,7 +1070,7 @@ func (c *linuxContainer) runType() (Status, error) {
 	check := []byte("_LIBCONTAINER")
 	for _, v := range bytes.Split(environ, []byte("\x00")) {
 		if bytes.Contains(v, check) {
-			return Initialized, nil
+			return Created, nil
 		}
 	}
 	return Running, nil
