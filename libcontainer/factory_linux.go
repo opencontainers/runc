@@ -221,7 +221,7 @@ func (l *LinuxFactory) Type() string {
 // This is a low level implementation detail of the reexec and should not be consumed externally
 func (l *LinuxFactory) StartInitialization() (err error) {
 	// start the signal handler as soon as we can
-	s := make(chan os.Signal, 1024)
+	s := make(chan os.Signal, 1)
 	signal.Notify(s, syscall.SIGCONT)
 	fdStr := os.Getenv("_LIBCONTAINER_INITPIPE")
 	pipefd, err := strconv.Atoi(fdStr)
