@@ -654,29 +654,6 @@ Here is a full example `config.json` for reference.
         ],
         "mountLabel": "system_u:object_r:svirt_sandbox_file_t:s0:c715,c811"
     },
-    "solaris": {
-        "anet": [
-            {
-                "allowedAddress": "172.17.0.2/16",
-                "configureAllowedAddress": "true",
-                "defrouter": "172.17.0.1/16",
-                "linkProtection": "mac-nospoof, ip-nospoof",
-                "linkname": "net0",
-                "lowerLink": "net2",
-                "macAddress": "02:42:f8:52:c7:16"
-            }
-        ],
-        "cappedCPU": {
-            "ncpus": "0.8"
-        },
-        "cappedMemory": {
-            "physical": "1G",
-            "swap": "512m"
-        },
-        "maxShmMemory": "256m",
-        "limitpriv": "default",
-        "milestone": "svc:/milestone/container:default"
-    },
     "annotations": {
         "key1": "value1",
         "key2": "value2"
