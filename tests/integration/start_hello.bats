@@ -13,9 +13,9 @@ function teardown() {
 
 @test "runc start" {
   # start hello-world
-  run "$RUNC" start test_hello  
+  run "$RUNC" start test_hello
   [ "$status" -eq 0 ]
-  
+
   # check expected output
   [[ "${output}" == *"Hello"* ]]
 }
@@ -37,8 +37,8 @@ function teardown() {
   run "$RUNC" start --pid-file pid.txt test_hello
   [ "$status" -eq 0 ]
   [[ "${output}" == *"Hello"* ]]
-  
-  # check pid.txt was generated 
+
+  # check pid.txt was generated
   [ -e pid.txt ]
 
   run cat pid.txt

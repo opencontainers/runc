@@ -20,14 +20,14 @@ function teardown() {
   wait_for_container 15 1 test_busybox
 
   testcontainer test_busybox running
-  
+
   run "$RUNC" kill test_busybox KILL
   # wait for busybox to be in the destroyed state
-  retry 10 1 eval "'$RUNC' state test_busybox | grep -q 'destroyed'" 
+  retry 10 1 eval "'$RUNC' state test_busybox | grep -q 'destroyed'"
 
   # delete test_busybox
   run "$RUNC" delete test_busybox
-  
+
   run "$RUNC" state test_busybox
   [ "$status" -ne 0 ]
 }
