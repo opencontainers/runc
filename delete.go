@@ -5,6 +5,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"syscall"
 
 	"github.com/codegangsta/cli"
 	"github.com/opencontainers/runc/libcontainer"
@@ -35,6 +36,10 @@ status of "ubuntu01" as "destroyed" the following will delete resources held for
 				}
 			}
 			return nil
+		}
+		s, err := container.Status()
+		if err == nil && s == libcontainer.Created {
+			container.Signal(syscall.SIGKILL)
 		}
 		destroy(container)
 		return nil
