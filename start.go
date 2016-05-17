@@ -4,6 +4,7 @@ import (
 	"syscall"
 
 	"github.com/codegangsta/cli"
+	"github.com/opencontainers/runc/libcontainer"
 )
 
 var startCommand = cli.Command{
@@ -20,8 +21,14 @@ your host.`,
 		if err != nil {
 			fatal(err)
 		}
-		if err := container.Signal(syscall.SIGCONT); err != nil {
+		status, err := container.Status()
+		if err != nil {
 			fatal(err)
+		}
+		if status == libcontainer.Created {
+			if err := container.Signal(syscall.SIGCONT); err != nil {
+				fatal(err)
+			}
 		}
 	},
 }
