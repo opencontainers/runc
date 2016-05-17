@@ -10,8 +10,8 @@ The `nsenter` package will `import "C"` and it uses [cgo](https://golang.org/cmd
 package. In cgo, if the import of "C" is immediately preceded by a comment, that comment, 
 called the preamble, is used as a header when compiling the C parts of the package.
 So every time we  import package `nsenter`, the C code function `nsexec()` would be 
-called. And package `nsenter` is now only imported in Docker execdriver, so every time 
-before we call `execdriver.Exec()`, that C code would run.
+called. And package `nsenter` is now only imported in `main_unix.go`, so every time
+before we call `cmd.Start` on linux, that C code would run.
 
 `nsexec()` will first check the environment variable `_LIBCONTAINER_INITPID` 
 which will give the process of the container that should be joined. Namespaces fd will 
