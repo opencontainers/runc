@@ -297,7 +297,7 @@ a container.
 | -------------- | ------------------------------------------------------------------ |
 | Get processes  | Return all the pids for processes running inside a container       | 
 | Get Stats      | Return resource statistics for the container as a whole            |
-| Wait           | Wait waits on the container's init process ( pid 1 )               |
+| Wait           | Waits on the container's init process ( pid 1 )                    |
 | Wait Process   | Wait on any of the container's processes returning the exit status | 
 | Destroy        | Kill the container's init process and remove any filesystem state  |
 | Signal         | Send a signal to the container's init process                      |
