@@ -1044,6 +1044,9 @@ func (c *linuxContainer) isRunning() (bool, error) {
 	// return Running if the init process is alive
 	if err := syscall.Kill(c.initProcess.pid(), 0); err != nil {
 		if err == syscall.ESRCH {
+			// It means the process does not exist anymore, could happen when the
+			// process exited just when we call the function, we should not return
+			// error in this case.
 			return false, nil
 		}
 		return false, newSystemErrorWithCausef(err, "sending signal 0 to pid %d", c.initProcess.pid())
@@ -1054,6 +1057,7 @@ func (c *linuxContainer) isRunning() (bool, error) {
 func (c *linuxContainer) isPaused() (bool, error) {
 	data, err := ioutil.ReadFile(filepath.Join(c.cgroupManager.GetPaths()["freezer"], "freezer.state"))
 	if err != nil {
+		// If freezer cgroup is not mounted, the container would just be not paused.
 		if os.IsNotExist(err) {
 			return false, nil
 		}
