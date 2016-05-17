@@ -2,20 +2,17 @@
 
 load helpers
 
-UPDATE_TEST_RUNC_ROOT="$BATS_TMPDIR/runc-cgroups-integration-test"
-
 CGROUP_MEMORY=""
-
 TEST_CGROUP_NAME="runc-cgroups-integration-test"
 
 function init_cgroup_path() {
-   base_path=$(grep "rw,"  /proc/self/mountinfo | grep -i -m 1 'MEMORY$' | cut -d ' ' -f 5)
-   CGROUP_MEMORY="${base_path}/${TEST_CGROUP_NAME}"
+	base_path=$(grep "cgroup"  /proc/self/mountinfo | gawk 'toupper($NF) ~ /\<MEMORY\>/ { print $5; exit }')
+	CGROUP_MEMORY="${base_path}/${TEST_CGROUP_NAME}"
 }
 
 function teardown() {
     rm -f $BATS_TMPDIR/runc-update-integration-test.json
-    teardown_running_container_inroot test_cgroups_kmem $UPDATE_TEST_RUNC_ROOT
+    teardown_running_container test_cgroups_kmem
     teardown_busybox
 }
 
@@ -37,7 +34,7 @@ function check_cgroup_value() {
     [ "$current" -eq "$expected" ]
 }
 
-@test "cgroups-kernel-memory-initialized" {
+@test "runc update --kernel-memory (initialized)" {
     # Add cgroup path
     sed -i 's/\("linux": {\)/\1\n    "cgroupsPath": "runc-cgroups-integration-test",/'  ${BUSYBOX_BUNDLE}/config.json
 
@@ -52,26 +49,26 @@ EOF
     sed -i "s/\(\"resources\": {\)/\1\n${DATA}/" ${BUSYBOX_BUNDLE}/config.json
 
     # start a detached busybox to work with
-    "$RUNC" --root $UPDATE_TEST_RUNC_ROOT start -d --console /dev/pts/ptmx test_cgroups_kmem
+    run "$RUNC" start -d --console /dev/pts/ptmx test_cgroups_kmem
     [ "$status" -eq 0 ]
-    wait_for_container_inroot 15 1 test_cgroups_kmem $UPDATE_TEST_RUNC_ROOT
+    wait_for_container 15 1 test_cgroups_kmem
 
     # update kernel memory limit
-    "$RUNC" --root $UPDATE_TEST_RUNC_ROOT update test_cgroups_kmem --kernel-memory 50331648
+    run "$RUNC" update test_cgroups_kmem --kernel-memory 50331648
     [ "$status" -eq 0 ]
     check_cgroup_value $CGROUP_MEMORY "memory.kmem.limit_in_bytes" 50331648
 }
 
-@test "cgroups-kernel-memory-uninitialized" {
+@test "runc update --kernel-memory (uninitialized)" {
     # Add cgroup path
     sed -i 's/\("linux": {\)/\1\n    "cgroupsPath": "runc-cgroups-integration-test",/'  ${BUSYBOX_BUNDLE}/config.json
 
     # start a detached busybox to work with
-    run "$RUNC" --root $UPDATE_TEST_RUNC_ROOT start -d --console /dev/pts/ptmx test_cgroups_kmem
+    run "$RUNC" start -d --console /dev/pts/ptmx test_cgroups_kmem
     [ "$status" -eq 0 ]
-    wait_for_container_inroot 15 1 test_cgroups_kmem $UPDATE_TEST_RUNC_ROOT
+    wait_for_container 15 1 test_cgroups_kmem
 
     # update kernel memory limit
-    run "$RUNC" --root $UPDATE_TEST_RUNC_ROOT update test_cgroups_kmem --kernel-memory 50331648
+    run "$RUNC" update test_cgroups_kmem --kernel-memory 50331648
     [ ! "$status" -eq 0 ]
 }

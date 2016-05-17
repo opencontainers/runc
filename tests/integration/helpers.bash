@@ -8,11 +8,11 @@ GOPATH="${INTEGRATION_ROOT}/../../../.."
 # Test data path.
 TESTDATA="${INTEGRATION_ROOT}/testdata"
 
-# Busybox image 
+# Busybox image
 BUSYBOX_IMAGE="$BATS_TMPDIR/busybox.tar"
 BUSYBOX_BUNDLE="$BATS_TMPDIR/busyboxtest"
 
-# hello-world in tar format 
+# hello-world in tar format
 HELLO_IMAGE="$TESTDATA/hello-world.tar"
 HELLO_BUNDLE="$BATS_TMPDIR/hello-world"
 
@@ -78,20 +78,20 @@ function wait_for_container_inroot() {
 }
 
 function testcontainer() {
-  # test state of container 
+  # test state of container
   run "$RUNC" state $1
   [ "$status" -eq 0 ]
   [[ "${output}" == *"$2"* ]]
 }
 
 function setup_busybox() {
-  run mkdir "$BUSYBOX_BUNDLE" 
+  run mkdir "$BUSYBOX_BUNDLE"
   run mkdir "$BUSYBOX_BUNDLE"/rootfs
   if [ -e "/testdata/busybox.tar" ]; then
     BUSYBOX_IMAGE="/testdata/busybox.tar"
   fi
   if [ ! -e $BUSYBOX_IMAGE ]; then
-    curl -o $BUSYBOX_IMAGE -sSL 'https://github.com/jpetazzo/docker-busybox/raw/buildroot-2014.11/rootfs.tar' 
+    curl -o $BUSYBOX_IMAGE -sSL 'https://github.com/jpetazzo/docker-busybox/raw/buildroot-2014.11/rootfs.tar'
   fi
   tar -C "$BUSYBOX_BUNDLE"/rootfs -xf "$BUSYBOX_IMAGE"
   cd "$BUSYBOX_BUNDLE"
@@ -99,7 +99,7 @@ function setup_busybox() {
 }
 
 function setup_hello() {
-  run mkdir "$HELLO_BUNDLE" 
+  run mkdir "$HELLO_BUNDLE"
   run mkdir "$HELLO_BUNDLE"/rootfs
   tar -C "$HELLO_BUNDLE"/rootfs -xf "$HELLO_IMAGE"
   cd "$HELLO_BUNDLE"
@@ -108,19 +108,19 @@ function setup_hello() {
 }
 
 function teardown_running_container() {
-  run "$RUNC" list 
+  run "$RUNC" list
   if [[ "${output}" == *"$1"* ]]; then
     run "$RUNC" kill $1 KILL
-    retry 10 1 eval "'$RUNC' state '$1' | grep -q 'destroyed'" 
+    retry 10 1 eval "'$RUNC' state '$1' | grep -q 'destroyed'"
     run "$RUNC" delete $1
   fi
 }
 
 function teardown_running_container_inroot() {
-  run "$RUNC" --root $2 list 
+  run "$RUNC" --root $2 list
   if [[ "${output}" == *"$1"* ]]; then
     run "$RUNC" --root $2 kill $1 KILL
-    retry 10 1 eval "'$RUNC' --root '$2' state '$1' | grep -q 'destroyed'" 
+    retry 10 1 eval "'$RUNC' --root '$2' state '$1' | grep -q 'destroyed'"
     run "$RUNC" --root $2 delete $1
   fi
 }

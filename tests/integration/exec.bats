@@ -18,9 +18,9 @@ function teardown() {
 
   wait_for_container 15 1 test_busybox
 
-  run "$RUNC" exec test_busybox echo Hello from exec 
+  run "$RUNC" exec test_busybox echo Hello from exec
   [ "$status" -eq 0 ]
-  echo text echoed = "'""${output}""'" 
+  echo text echoed = "'""${output}""'"
   [[ "${output}" == *"Hello from exec"* ]]
 }
 
@@ -31,12 +31,12 @@ function teardown() {
 
   wait_for_container 15 1 test_busybox
 
-  run "$RUNC" exec --pid-file pid.txt test_busybox echo Hello from exec 
+  run "$RUNC" exec --pid-file pid.txt test_busybox echo Hello from exec
   [ "$status" -eq 0 ]
-  echo text echoed = "'""${output}""'" 
+  echo text echoed = "'""${output}""'"
   [[ "${output}" == *"Hello from exec"* ]]
 
-  # check pid.txt was generated 
+  # check pid.txt was generated
   [ -e pid.txt ]
 
   run cat pid.txt

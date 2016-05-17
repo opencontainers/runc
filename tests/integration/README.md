@@ -21,7 +21,7 @@ Alternatively, you can run integration tests directly on your host through make:
 ```
 $ sudo make localintegration
 ```
-Or you can just run them directly using bats 
+Or you can just run them directly using bats
 ```
 $ sudo bats tests/integration
 ```
@@ -32,17 +32,17 @@ $ make integration TESTFLAGS="/checkpoint.bats"
 
 
 To run them on your host, you will need to setup a development environment plus
-[bats](https://github.com/sstephenson/bats#installing-bats-from-source) 
+[bats](https://github.com/sstephenson/bats#installing-bats-from-source)
 For example:
 ```
-$ cd ~/go/src/github.com 
-$ git clone https://github.com/sstephenson/bats.git 
-$ cd bats 
+$ cd ~/go/src/github.com
+$ git clone https://github.com/sstephenson/bats.git
+$ cd bats
 $ ./install.sh /usr/local
 ```
-		
-> **Note**: There are known issues running the integration tests using 
-> **devicemapper** as a storage driver, make sure that your docker daemon 
+
+> **Note**: There are known issues running the integration tests using
+> **devicemapper** as a storage driver, make sure that your docker daemon
 > is using **aufs** if you want to successfully run the integration tests.
 
 ## Writing integration tests

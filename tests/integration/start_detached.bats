@@ -32,7 +32,7 @@ function teardown() {
 
   testcontainer test_busybox running
 
-  # check pid.txt was generated 
+  # check pid.txt was generated
   [ -e pid.txt ]
 
   run cat pid.txt

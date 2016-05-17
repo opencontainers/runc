@@ -25,10 +25,10 @@ function teardown() {
 
   # check output does not include debug info
   [[ "${output}" != *"level=debug"* ]]
-  
-  # check log.out was generated 
+
+  # check log.out was generated
   [ -e log.out ]
-  
+
   # check expected debug output was sent to log.out
   run cat log.out
   [ "$status" -eq 0 ]
@@ -43,9 +43,9 @@ function teardown() {
   # check output does not include debug info
   [[ "${output}" != *"level=debug"* ]]
 
-  # check log.out was generated 
+  # check log.out was generated
   [ -e log.out ]
-  
+
   # check expected debug output was sent to log.out
   run cat log.out
   [ "$status" -eq 0 ]
@@ -56,13 +56,13 @@ function teardown() {
   # start hello-world
   run "$RUNC" --log log.out --log-format "json" --debug start test_hello
   [ "$status" -eq 0 ]
-  
+
   # check output does not include debug info
   [[ "${output}" != *"level=debug"* ]]
 
-  # check log.out was generated 
+  # check log.out was generated
   [ -e log.out ]
-  
+
   # check expected debug output was sent to log.out
   run cat log.out
   [ "$status" -eq 0 ]

@@ -6,6 +6,7 @@ RUN echo 'deb http://httpredir.debian.org/debian jessie-backports main' > /etc/a
 RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
+    gawk \
     iptables \
     libaio-dev \
     libcap-dev \
