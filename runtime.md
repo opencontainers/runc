@@ -78,6 +78,10 @@ Using the data in `config.json`, that are in the bundle's directory, this operat
 This includes creating the relevant namespaces, resource limits, etc and configuring the appropriate capabilities for the container.
 A new process within the scope of the container MUST be created as specified by the `config.json` file otherwise an error MUST be generated.
 
+The runtime MAY validate `config.json` against this spec, either generically or with respect to the local system capabilities, before creating the container ([step 2](#lifecycle)).
+If the runtime does not perform initial validation and triggers an error due to an invalid or incompatible configuration, it MUST generate an error and jump to cleanup ([step 7](#lifecycle)).
+Runtime callers who are interested in pre-start validation can run [bundle-validation tools](implementations.md#testing--tools) before invoking the start operation.
+
 Attempting to start an already running container MUST have no effect on the container and MUST generate an error.
 
 ### Stop
