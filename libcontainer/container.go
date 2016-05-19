@@ -18,7 +18,7 @@ const (
 	// Created is the status that denotes the container exists but has not been run yet
 	Created Status = iota
 
-	// Created is the status that denotes the container exists and is running.
+	// Running is the status that denotes the container exists and is running.
 	Running
 
 	// Pausing is the status that denotes the container exists, it is in the process of being paused.
