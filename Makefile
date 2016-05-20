@@ -19,10 +19,10 @@ MAN_PAGES_BASE = $(notdir $(MAN_PAGES))
 MAN_INSTALL_PATH := /usr/local/share/man/man8/
 
 all: $(RUNC_LINK)
-	go build -i -ldflags "-X main.gitCommit=${COMMIT}" -tags "$(BUILDTAGS)" -o runc .
+	go build -i -ldflags "-X main.gitCommit ${COMMIT}" -tags "$(BUILDTAGS)" -o runc .
 
 static: $(RUNC_LINK)
-	CGO_ENABLED=1 go build -i -tags "$(BUILDTAGS) cgo static_build" -ldflags "-w -extldflags -static -X main.gitCommit=${COMMIT}" -o runc .
+	CGO_ENABLED=1 go build -i -tags "$(BUILDTAGS) cgo static_build" -ldflags "-w -extldflags -static -X main.gitCommit ${COMMIT}" -o runc .
 
 $(RUNC_LINK):
 	ln -sfn $(CURDIR) $(RUNC_LINK)
