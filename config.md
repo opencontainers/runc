@@ -190,8 +190,14 @@ _Note: For Solaris, uid and gid specify the uid and gid of the process inside th
 
 ## Platform
 
-* **`os`** (string, required) specifies the operating system family this image MUST run on. Values for os MUST be in the list specified by the Go Language document for [`$GOOS`](https://golang.org/doc/install/source#environment).
-* **`arch`** (string, required) specifies the instruction set for which the binaries in the image have been compiled. Values for arch MUST be in the list specified by the Go Language document for [`$GOARCH`](https://golang.org/doc/install/source#environment).
+* **`os`** (string, required) specifies the operating system family this image targets.
+  The runtime MUST generate an error if it does not support the configured **`os`**.
+  Bundles SHOULD use, and runtimes SHOULD understand, **`os`** entries listed in the Go Language document for [`$GOOS`][go-environment].
+  If an operating system is not included in the `$GOOS` documentation, it SHOULD be submitted to this specification for standardization.
+* **`arch`** (string, required) specifies the instruction set for which the binaries in the image have been compiled.
+  The runtime MUST generate an error if it does not support the configured **`arch`**.
+  Values for **`arch`** SHOULD use, and runtimes SHOULD understand, **`arch`** entries listed in the Go Language document for [`$GOARCH`][go-environment].
+  If an architecture is not included in the `$GOARCH` documentation, it SHOULD be submitted to this specification for standardization.
 
 ### Example
 
@@ -664,3 +670,4 @@ Here is a full example `config.json` for reference.
 
 [runtime-namespace]: glossary.md#runtime-namespace
 [uts-namespace]: http://man7.org/linux/man-pages/man7/namespaces.7.html
+[go-environment]: https://golang.org/doc/install/source#environment
