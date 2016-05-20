@@ -125,9 +125,7 @@ See links for details about [mountvol](http://ss64.com/nt/mountvol.html) and [Se
   * **`width`** (uint, REQUIRED)
 * **`cwd`** (string, REQUIRED) is the working directory that will be set for the executable.
   This value MUST be an absolute path.
-* **`env`** (array of strings, OPTIONAL) contains a list of variables that will be set in the process's environment prior to execution.
-  Elements in the array are specified as Strings in the form "KEY=value".
-  The left hand side MUST consist solely of letters, digits, and underscores `_` as outlined in [IEEE Std 1003.1-2001](http://pubs.opengroup.org/onlinepubs/009695399/basedefs/xbd_chap08.html).
+* **`env`** (array of strings, OPTIONAL) with the same semantics as [IEEE Std 1003.1-2001's `environ`][ieee-1003.1-2001-xbd-c8.1].
 * **`args`** (array of strings, REQUIRED) executable to launch and any flags as an array.
   The executable is the first element and MUST be available at the given path inside of the rootfs.
   If the executable path is not an absolute path then the search $PATH is interpreted to find the executable.
@@ -762,6 +760,7 @@ Here is a full example `config.json` for reference.
 
 [container-namespace]: glossary.md#container-namespace
 [go-environment]: https://golang.org/doc/install/source#environment
+[ieee-1003.1-2001-xbd-c8.1]: http://pubs.opengroup.org/onlinepubs/009695399/basedefs/xbd_chap08.html#tag_08_01
 [runtime-namespace]: glossary.md#runtime-namespace
 [uts-namespace]: http://man7.org/linux/man-pages/man7/namespaces.7.html
 [mount.8-filesystem-independent]: http://man7.org/linux/man-pages/man8/mount.8.html#FILESYSTEM-INDEPENDENT_MOUNT%20OPTIONS
