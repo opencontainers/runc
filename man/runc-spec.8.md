@@ -38,7 +38,7 @@ must be unique on your host.
 An alternative for generating a customized spec config is to use "ocitools", the
 sub-command "ocitools generate" has lots of options that can be used to do any
 customizations as you want, see [ocitools](https://github.com/opencontainers/ocitools)
-to get more infomation.
+to get more information.
 
 When starting a container through runc, runc needs root privilege. If not
 already running as root, you can use sudo to give runc root privilege. For
