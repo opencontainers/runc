@@ -29,6 +29,10 @@ import (
 
 const stdioFdCount = 3
 
+// InitContinueSignal is used to signal the container init process to
+// start the users specified process after the container create has finished.
+const InitContinueSignal = syscall.SIGCONT
+
 type linuxContainer struct {
 	id            string
 	root          string
@@ -181,8 +185,28 @@ func (c *linuxContainer) Start(process *Process) error {
 	if err != nil {
 		return err
 	}
-	doInit := status == Stopped
-	parent, err := c.newParentProcess(process, doInit)
+	return c.start(process, status == Stopped)
+}
+
+func (c *linuxContainer) StartI(process *Process) error {
+	c.m.Lock()
+	defer c.m.Unlock()
+	status, err := c.currentStatus()
+	if err != nil {
+		return err
+	}
+	isInit := status == Stopped
+	if err := c.start(process, isInit); err != nil {
+		return err
+	}
+	if isInit {
+		return process.ops.signal(InitContinueSignal)
+	}
+	return nil
+}
+
+func (c *linuxContainer) start(process *Process, isInit bool) error {
+	parent, err := c.newParentProcess(process, isInit)
 	if err != nil {
 		return newSystemErrorWithCause(err, "creating new parent process")
 	}
@@ -198,7 +222,10 @@ func (c *linuxContainer) Start(process *Process) error {
 	c.state = &runningState{
 		c: c,
 	}
-	if doInit {
+	if isInit {
+		c.state = &createdState{
+			c: c,
+		}
 		if err := c.updateState(parent); err != nil {
 			return err
 		}
@@ -370,15 +397,16 @@ func (c *linuxContainer) Pause() error {
 	if err != nil {
 		return err
 	}
-	if status != Running {
-		return newGenericError(fmt.Errorf("container not running"), ContainerNotRunning)
+	switch status {
+	case Running, Created:
+		if err := c.cgroupManager.Freeze(configs.Frozen); err != nil {
+			return err
+		}
+		return c.state.transition(&pausedState{
+			c: c,
+		})
 	}
-	if err := c.cgroupManager.Freeze(configs.Frozen); err != nil {
-		return err
-	}
-	return c.state.transition(&pausedState{
-		c: c,
-	})
+	return newGenericError(fmt.Errorf("container not running: %s", status), ContainerNotRunning)
 }
 
 func (c *linuxContainer) Resume() error {

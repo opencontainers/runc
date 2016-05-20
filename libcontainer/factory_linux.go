@@ -222,7 +222,7 @@ func (l *LinuxFactory) Type() string {
 func (l *LinuxFactory) StartInitialization() (err error) {
 	// start the signal handler as soon as we can
 	s := make(chan os.Signal, 1)
-	signal.Notify(s, syscall.SIGCONT)
+	signal.Notify(s, InitContinueSignal)
 	fdStr := os.Getenv("_LIBCONTAINER_INITPIPE")
 	pipefd, err := strconv.Atoi(fdStr)
 	if err != nil {

@@ -17,16 +17,12 @@ type Status int
 const (
 	// Created is the status that denotes the container exists but has not been run yet.
 	Created Status = iota
-
 	// Running is the status that denotes the container exists and is running.
 	Running
-
 	// Pausing is the status that denotes the container exists, it is in the process of being paused.
 	Pausing
-
 	// Paused is the status that denotes the container exists, but all its processes are paused.
 	Paused
-
 	// Stopped is the status that denotes the container does not have a created or running process.
 	Stopped
 )
@@ -126,6 +122,17 @@ type BaseContainer interface {
 	// ContainerPaused - Container is paused,
 	// Systemerror - System error.
 	Start(process *Process) (err error)
+
+	// StartI immediatly starts the process inside the conatiner.  Returns error if process
+	// fails to start.  It does not block waiting for a SIGCONT after start returns but
+	// sends the signal when the process has completed.
+	//
+	// errors:
+	// ContainerDestroyed - Container no longer exists,
+	// ConfigInvalid - config is invalid,
+	// ContainerPaused - Container is paused,
+	// Systemerror - System error.
+	StartI(process *Process) (err error)
 
 	// Destroys the container after killing all running processes.
 	//

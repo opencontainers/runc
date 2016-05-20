@@ -55,7 +55,7 @@ unittest: runctestimage
 	docker run -e TESTFLAGS -ti --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_TEST_IMAGE) make localunittest
 
 localunittest: all
-	go test -tags "$(BUILDTAGS)" ${TESTFLAGS} -v ./...
+	go test -timeout 3m -tags "$(BUILDTAGS)" ${TESTFLAGS} -v ./...
 
 integration: runctestimage
 	docker run -e TESTFLAGS -t --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_TEST_IMAGE) make localintegration

@@ -26,7 +26,7 @@ function teardown() {
   runc kill test_busybox KILL
   [ "$status" -eq 0 ]
 
-  retry 10 1 eval "__runc state test_busybox | grep -q 'destroyed'"
+  retry 10 1 eval "__runc state test_busybox | grep -q 'stopped'"
 
   runc delete test_busybox
   [ "$status" -eq 0 ]

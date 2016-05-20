@@ -221,6 +221,7 @@ func (p *initProcess) execSetns() error {
 		return err
 	}
 	p.cmd.Process = process
+	p.process.ops = p
 	return nil
 }
 

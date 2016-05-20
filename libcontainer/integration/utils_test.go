@@ -123,11 +123,8 @@ func runContainer(config *configs.Config, console string, args ...string) (buffe
 		Stderr: buffers.Stderr,
 	}
 
-	err = container.Start(process)
+	err = container.StartI(process)
 	if err != nil {
-		return buffers, -1, err
-	}
-	if err := container.Signal(syscall.SIGCONT); err != nil {
 		return buffers, -1, err
 	}
 	ps, err := process.Wait()

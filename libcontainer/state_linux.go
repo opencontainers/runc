@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"syscall"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -149,8 +150,9 @@ func (i *createdState) status() Status {
 
 func (i *createdState) transition(s containerState) error {
 	switch s.(type) {
-	case *runningState:
+	case *runningState, *pausedState, *stoppedState:
 		i.c.state = s
+		return nil
 	case *createdState:
 		return nil
 	}
@@ -158,6 +160,7 @@ func (i *createdState) transition(s containerState) error {
 }
 
 func (i *createdState) destroy() error {
+	i.c.initProcess.signal(syscall.SIGKILL)
 	return destroy(i.c)
 }
 

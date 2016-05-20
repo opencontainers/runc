@@ -153,7 +153,7 @@ function teardown_running_container() {
   runc list
   if [[ "${output}" == *"$1"* ]]; then
     runc kill $1 KILL
-    retry 10 1 eval "__runc state '$1' | grep -q 'destroyed'"
+    retry 10 1 eval "__runc state '$1' | grep -q 'stopped'"
     runc delete $1
   fi
 }
@@ -162,7 +162,7 @@ function teardown_running_container_inroot() {
   ROOT=$2 runc list
   if [[ "${output}" == *"$1"* ]]; then
     ROOT=$2 runc kill $1 KILL
-    retry 10 1 eval "ROOT='$2' __runc state '$1' | grep -q 'destroyed'"
+    retry 10 1 eval "ROOT='$2' __runc state '$1' | grep -q 'stopped'"
     ROOT=$2 runc delete $1
   fi
 }

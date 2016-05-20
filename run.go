@@ -40,7 +40,7 @@ command(s) that get executed on start, edit the args parameter of the spec. See
 			Usage: "specify the pty slave path for use with the container",
 		},
 		cli.BoolFlag{
-			Name:  "detach,d",
+			Name:  "detach, d",
 			Usage: "detach from the container's process",
 		},
 		cli.StringFlag{

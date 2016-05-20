@@ -247,7 +247,7 @@ func (r *runner) run(config *specs.Process) (int, error) {
 		}
 	}
 	if !r.create {
-		if err := process.Signal(syscall.SIGCONT); err != nil {
+		if err := process.Signal(libcontainer.InitContinueSignal); err != nil {
 			r.terminate(process)
 			r.destroy()
 			tty.Close()

@@ -50,7 +50,7 @@ func TestSeccompDenyGetcwd(t *testing.T) {
 		Stderr: buffers.Stderr,
 	}
 
-	err = container.Start(pwd)
+	err = container.StartI(pwd)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -125,7 +125,7 @@ func TestSeccompPermitWriteConditional(t *testing.T) {
 		Stderr: buffers.Stderr,
 	}
 
-	err = container.Start(dmesg)
+	err = container.StartI(dmesg)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -186,7 +186,7 @@ func TestSeccompDenyWriteConditional(t *testing.T) {
 		Stderr: buffers.Stderr,
 	}
 
-	err = container.Start(dmesg)
+	err = container.StartI(dmesg)
 	if err != nil {
 		t.Fatal(err)
 	}

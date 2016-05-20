@@ -89,12 +89,14 @@ func newTemplateConfig(rootfs string) *configs.Config {
 				Data:        "mode=1777,size=65536k",
 				Flags:       defaultMountFlags,
 			},
-			{
-				Source:      "mqueue",
-				Destination: "/dev/mqueue",
-				Device:      "mqueue",
-				Flags:       defaultMountFlags,
-			},
+			/*
+				{
+					Source:      "mqueue",
+					Destination: "/dev/mqueue",
+					Device:      "mqueue",
+					Flags:       defaultMountFlags,
+				},
+			*/
 			{
 				Source:      "sysfs",
 				Destination: "/sys",

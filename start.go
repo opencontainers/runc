@@ -1,8 +1,6 @@
 package main
 
 import (
-	"syscall"
-
 	"github.com/codegangsta/cli"
 	"github.com/opencontainers/runc/libcontainer"
 )
@@ -26,7 +24,7 @@ your host.`,
 			fatal(err)
 		}
 		if status == libcontainer.Created {
-			if err := container.Signal(syscall.SIGCONT); err != nil {
+			if err := container.Signal(libcontainer.InitContinueSignal); err != nil {
 				fatal(err)
 			}
 		}
