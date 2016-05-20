@@ -126,9 +126,8 @@ See links for details about [mountvol](http://ss64.com/nt/mountvol.html) and [Se
 * **`cwd`** (string, REQUIRED) is the working directory that will be set for the executable.
   This value MUST be an absolute path.
 * **`env`** (array of strings, OPTIONAL) with the same semantics as [IEEE Std 1003.1-2001's `environ`][ieee-1003.1-2001-xbd-c8.1].
-* **`args`** (array of strings, REQUIRED) executable to launch and any flags as an array.
-  The executable is the first element and MUST be available at the given path inside of the rootfs.
-  If the executable path is not an absolute path then the search $PATH is interpreted to find the executable.
+* **`args`** (array of strings, REQUIRED) with similar semantics to [IEEE Std 1003.1-2001 `execvp`'s *argv*][ieee-1003.1-2001-xsh-exec].
+  This specification extends the IEEE standard in that at least one entry is REQUIRED, and that entry is used with the same semantics as `execvp`'s *file*.
 
 For Linux-based systems the process structure supports the following process specific fields:
 
@@ -761,6 +760,7 @@ Here is a full example `config.json` for reference.
 [container-namespace]: glossary.md#container-namespace
 [go-environment]: https://golang.org/doc/install/source#environment
 [ieee-1003.1-2001-xbd-c8.1]: http://pubs.opengroup.org/onlinepubs/009695399/basedefs/xbd_chap08.html#tag_08_01
+[ieee-1003.1-2001-xsh-exec]: http://pubs.opengroup.org/onlinepubs/009695399/functions/exec.html
 [runtime-namespace]: glossary.md#runtime-namespace
 [uts-namespace]: http://man7.org/linux/man-pages/man7/namespaces.7.html
 [mount.8-filesystem-independent]: http://man7.org/linux/man-pages/man8/mount.8.html#FILESYSTEM-INDEPENDENT_MOUNT%20OPTIONS
