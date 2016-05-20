@@ -224,7 +224,6 @@ func u32Ptr(i int64) *uint32     { u := uint32(i); return &u }
 func fmPtr(i int64) *os.FileMode { fm := os.FileMode(i); return &fm }
 
 // loadSpec loads the specification from the provided path.
-// If the path is empty then the default path will be "config.json"
 func loadSpec(cPath string) (spec *specs.Spec, err error) {
 	cf, err := os.Open(cPath)
 	if err != nil {
