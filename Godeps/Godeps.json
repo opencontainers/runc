@@ -9,8 +9,8 @@
 		},
 		{
 			"ImportPath": "github.com/codegangsta/cli",
-			"Comment": "1.2.0-187-gc31a797",
-			"Rev": "c31a7975863e7810c92e2e288a9ab074f9a88f29"
+			"Comment": "v1.17.0",
+			"Rev": "01857ac33766ce0c93856370626f9799281c14f4"
 		},
 		{
 			"ImportPath": "github.com/coreos/go-systemd/activation",

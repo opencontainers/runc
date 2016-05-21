@@ -82,15 +82,15 @@ following will output a list of processes running in the container:
 			Usage: "disable the use of the subreaper used to reap reparented processes",
 		},
 	},
-	Action: func(context *cli.Context) {
+	Action: func(context *cli.Context) error {
 		if os.Geteuid() != 0 {
-			fatalf("runc should be run as root")
+			return fmt.Errorf("runc should be run as root")
 		}
 		status, err := execProcess(context)
-		if err != nil {
-			fatalf("exec failed: %v", err)
+		if err == nil {
+			os.Exit(status)
 		}
-		os.Exit(status)
+		return fmt.Errorf("exec failed: %v", err)
 	},
 }
 

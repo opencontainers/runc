@@ -3,6 +3,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"runtime"
 
@@ -58,16 +59,16 @@ command(s) that get executed on start, edit the args parameter of the spec. See
 			Usage: "do not use pivot root to jail process inside rootfs.  This should be used whenever the rootfs is on top of a ramdisk",
 		},
 	},
-	Action: func(context *cli.Context) {
+	Action: func(context *cli.Context) error {
 		bundle := context.String("bundle")
 		if bundle != "" {
 			if err := os.Chdir(bundle); err != nil {
-				fatal(err)
+				return err
 			}
 		}
 		spec, err := loadSpec(specConfig)
 		if err != nil {
-			fatal(err)
+			return err
 		}
 
 		notifySocket := os.Getenv("NOTIFY_SOCKET")
@@ -76,16 +77,16 @@ command(s) that get executed on start, edit the args parameter of the spec. See
 		}
 
 		if os.Geteuid() != 0 {
-			fatalf("runc should be run as root")
+			return fmt.Errorf("runc should be run as root")
 		}
 
 		status, err := startContainer(context, spec)
-		if err != nil {
-			fatal(err)
+		if err == nil {
+			// exit with the container's exit status so any external supervisor is
+			// notified of the exit with the correct exit status.
+			os.Exit(status)
 		}
-		// exit with the container's exit status so any external supervisor is
-		// notified of the exit with the correct exit status.
-		os.Exit(status)
+		return err
 	},
 }
 
@@ -99,7 +100,7 @@ func init() {
 var initCommand = cli.Command{
 	Name:  "init",
 	Usage: `initialize the namespaces and launch the process (do not call it outside of runc)`,
-	Action: func(context *cli.Context) {
+	Action: func(context *cli.Context) error {
 		factory, _ := libcontainer.New("")
 		if err := factory.StartInitialization(); err != nil {
 			// as the error is sent back to the parent there is no need to log

@@ -40,18 +40,18 @@ var stateCommand = cli.Command{
 Where "<container-id>" is your name for the instance of the container.`,
 	Description: `The state command outputs current state information for the
 instance of a container.`,
-	Action: func(context *cli.Context) {
+	Action: func(context *cli.Context) error {
 		container, err := getContainer(context)
 		if err != nil {
-			fatal(err)
+			return err
 		}
 		containerStatus, err := container.Status()
 		if err != nil {
-			fatal(err)
+			return err
 		}
 		state, err := container.State()
 		if err != nil {
-			fatal(err)
+			return err
 		}
 		cs := cState{
 			Version:        state.BaseState.Config.Version,
@@ -63,8 +63,9 @@ instance of a container.`,
 			Created:        state.BaseState.Created}
 		data, err := json.MarshalIndent(cs, "", "  ")
 		if err != nil {
-			fatal(err)
+			return err
 		}
 		os.Stdout.Write(data)
+		return nil
 	},
 }

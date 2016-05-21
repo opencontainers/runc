@@ -77,6 +77,6 @@ load helpers
 
 @test "runc foo -h" {
   run "$RUNC" foo -h
-  [ "$status" -eq 0 ]
+  [ "$status" -ne 0 ]
   [[ "${output}" == *"No help topic for 'foo'"* ]]
 }

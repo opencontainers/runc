@@ -64,7 +64,7 @@ container on your host.`,
 			Usage: "path to the root of the bundle directory",
 		},
 	},
-	Action: func(context *cli.Context) {
+	Action: func(context *cli.Context) error {
 		spec := specs.Spec{
 			Version: specs.Version,
 			Platform: specs.Platform{
@@ -201,19 +201,20 @@ container on your host.`,
 		bundle := context.String("bundle")
 		if bundle != "" {
 			if err := os.Chdir(bundle); err != nil {
-				fatal(err)
+				return err
 			}
 		}
 		if err := checkNoFile(specConfig); err != nil {
-			fatal(err)
+			return err
 		}
 		data, err := json.MarshalIndent(&spec, "", "\t")
 		if err != nil {
-			fatal(err)
+			return err
 		}
 		if err := ioutil.WriteFile(specConfig, data, 0666); err != nil {
-			fatal(err)
+			return err
 		}
+		return nil
 	},
 }
 

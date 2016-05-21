@@ -78,11 +78,11 @@ using the runc checkpoint command.`,
 			Usage: "do not use pivot root to jail process inside rootfs.  This should be used whenever the rootfs is on top of a ramdisk",
 		},
 	},
-	Action: func(context *cli.Context) {
+	Action: func(context *cli.Context) error {
 		imagePath := context.String("image-path")
 		id := context.Args().First()
 		if id == "" {
-			fatal(errEmptyID)
+			return errEmptyID
 		}
 		if imagePath == "" {
 			imagePath = getDefaultImagePath(context)
@@ -90,12 +90,12 @@ using the runc checkpoint command.`,
 		bundle := context.String("bundle")
 		if bundle != "" {
 			if err := os.Chdir(bundle); err != nil {
-				fatal(err)
+				return err
 			}
 		}
 		spec, err := loadSpec(specConfig)
 		if err != nil {
-			fatal(err)
+			return err
 		}
 		config, err := specconv.CreateLibcontainerConfig(&specconv.CreateOpts{
 			CgroupName:       id,
@@ -104,13 +104,13 @@ using the runc checkpoint command.`,
 			Spec:             spec,
 		})
 		if err != nil {
-			fatal(err)
+			return err
 		}
 		status, err := restoreContainer(context, spec, config, imagePath)
-		if err != nil {
-			fatal(err)
+		if err == nil {
+			os.Exit(status)
 		}
-		os.Exit(status)
+		return err
 	},
 }
 

@@ -52,17 +52,17 @@ in json format:
 			Usage: "display only container IDs",
 		},
 	},
-	Action: func(context *cli.Context) {
+	Action: func(context *cli.Context) error {
 		s, err := getContainers(context)
 		if err != nil {
-			fatal(err)
+			return err
 		}
 
 		if context.Bool("quiet") {
 			for _, item := range s {
 				fmt.Println(item.ID)
 			}
-			return
+			return nil
 		}
 
 		switch context.String("format") {
@@ -78,15 +78,16 @@ in json format:
 					item.Created.Format(time.RFC3339Nano))
 			}
 			if err := w.Flush(); err != nil {
-				fatal(err)
+				return err
 			}
 		case "json":
 			if err := json.NewEncoder(os.Stdout).Encode(s); err != nil {
-				fatal(err)
+				return err
 			}
 		default:
-			fatalf("invalid format option")
+			return fmt.Errorf("invalid format option")
 		}
+		return nil
 	},
 }
 

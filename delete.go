@@ -22,19 +22,20 @@ status of "ubuntu01" as "destroyed" the following will delete resources held for
 "ubuntu01" removing "ubuntu01" from the runc list of containers:  
 	 
        # runc delete ubuntu01`,
-	Action: func(context *cli.Context) {
+	Action: func(context *cli.Context) error {
 		container, err := getContainer(context)
 		if err != nil {
 			if lerr, ok := err.(libcontainer.Error); ok && lerr.Code() == libcontainer.ContainerNotExists {
 				// if there was an aborted start or something of the sort then the container's directory could exist but
 				// libcontainer does not see it because the state.json file inside that directory was never created.
 				path := filepath.Join(context.GlobalString("root"), context.Args().First())
-				if err := os.RemoveAll(path); err == nil {
-					return
+				if err := os.RemoveAll(path); err != nil {
+					return err
 				}
 			}
-			fatal(err)
+			return nil
 		}
 		destroy(container)
+		return nil
 	},
 }

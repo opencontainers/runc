@@ -29,21 +29,21 @@ in json format:
     # runc ps -f json`,
 		},
 	},
-	Action: func(context *cli.Context) {
+	Action: func(context *cli.Context) error {
 		container, err := getContainer(context)
 		if err != nil {
-			fatal(err)
+			return err
 		}
 
 		if context.String("format") == "json" {
 			pids, err := container.Processes()
 			if err != nil {
-				fatal(err)
+				return err
 			}
 			if err := json.NewEncoder(os.Stdout).Encode(pids); err != nil {
-				fatal(err)
+				return err
 			}
-			return
+			return nil
 		}
 
 		psArgs := context.Args().Get(1)
@@ -53,18 +53,18 @@ in json format:
 
 		output, err := exec.Command("ps", strings.Split(psArgs, " ")...).Output()
 		if err != nil {
-			fatal(err)
+			return err
 		}
 
 		lines := strings.Split(string(output), "\n")
 		pidIndex, err := getPidIndex(lines[0])
 		if err != nil {
-			fatal(err)
+			return err
 		}
 
 		pids, err := container.Processes()
 		if err != nil {
-			fatal(err)
+			return err
 		}
 		fmt.Println(lines[0])
 		for _, line := range lines[1:] {
@@ -74,7 +74,7 @@ in json format:
 			fields := strings.Fields(line)
 			p, err := strconv.Atoi(fields[pidIndex])
 			if err != nil {
-				fatal(fmt.Errorf("unexpected pid '%s': %s", fields[pidIndex], err))
+				return fmt.Errorf("unexpected pid '%s': %s", fields[pidIndex], err)
 			}
 
 			for _, pid := range pids {
@@ -84,6 +84,7 @@ in json format:
 				}
 			}
 		}
+		return nil
 	},
 }
 

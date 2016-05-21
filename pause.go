@@ -14,14 +14,15 @@ paused. `,
 	Description: `The pause command suspends all processes in the instance of the container.
 
 Use runc list to identiy instances of containers and their current status.`,
-	Action: func(context *cli.Context) {
+	Action: func(context *cli.Context) error {
 		container, err := getContainer(context)
 		if err != nil {
-			fatal(err)
+			return err
 		}
 		if err := container.Pause(); err != nil {
-			fatal(err)
+			return err
 		}
+		return nil
 	},
 }
 
@@ -35,13 +36,14 @@ resumed.`,
 	Description: `The resume command resumes all processes in the instance of the container.
 
 Use runc list to identiy instances of containers and their current status.`,
-	Action: func(context *cli.Context) {
+	Action: func(context *cli.Context) error {
 		container, err := getContainer(context)
 		if err != nil {
-			fatal(err)
+			return err
 		}
 		if err := container.Resume(); err != nil {
-			fatal(err)
+			return err
 		}
+		return nil
 	},
 }

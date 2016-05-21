@@ -30,10 +30,10 @@ checkpointed.`,
 		cli.BoolFlag{Name: "file-locks", Usage: "handle file locks, for safety"},
 		cli.StringFlag{Name: "manage-cgroups-mode", Value: "", Usage: "cgroups mode: 'soft' (default), 'full' and 'strict'."},
 	},
-	Action: func(context *cli.Context) {
+	Action: func(context *cli.Context) error {
 		container, err := getContainer(context)
 		if err != nil {
-			fatal(err)
+			return err
 		}
 		defer destroy(container)
 		options := criuOptions(context)
@@ -41,8 +41,9 @@ checkpointed.`,
 		setPageServer(context, options)
 		setManageCgroupsMode(context, options)
 		if err := container.Checkpoint(options); err != nil {
-			fatal(err)
+			return err
 		}
+		return nil
 	},
 }
 
