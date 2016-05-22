@@ -161,7 +161,6 @@ other options are ignored.
 				"kernel-memory-tcp":  r.Memory.KernelTCP,
 				"memory":             r.Memory.Limit,
 				"memory-reservation": r.Memory.Reservation,
-				"memory-swap":        r.Memory.Swap,
 			} {
 				if val := context.String(opt); val != "" {
 					var err error
@@ -184,8 +183,15 @@ other options are ignored.
 		config.Cgroups.Resources.KernelMemoryTCP = int64(*r.Memory.KernelTCP)
 		config.Cgroups.Resources.Memory = int64(*r.Memory.Limit)
 		config.Cgroups.Resources.MemoryReservation = int64(*r.Memory.Reservation)
-		config.Cgroups.Resources.MemorySwap = int64(*r.Memory.Swap)
-
+		if val := context.String("memory-swap"); val != "" {
+			swap, err := strconv.ParseInt(val, 10, 64)
+			if err != nil {
+				return err
+			}
+			config.Cgroups.Resources.MemorySwap = swap
+		} else {
+			config.Cgroups.Resources.MemorySwap = int64(*r.Memory.Swap)
+		}
 		if err := container.Set(config); err != nil {
 			return err
 		}

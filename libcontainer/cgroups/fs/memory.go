@@ -141,6 +141,20 @@ func setMemoryAndSwap(path string, cgroup *configs.Cgroup) error {
 			}
 		}
 	}
+	if cgroup.Resources.Memory != 0 && cgroup.Resources.MemorySwap == -1 {
+		if err := writeFile(path, "memory.limit_in_bytes", strconv.FormatInt(cgroup.Resources.Memory, 10)); err != nil {
+			return err
+		}
+		if err := writeFile(path, "memory.memsw.limit_in_bytes", strconv.FormatInt(cgroup.Resources.MemorySwap, 10)); err != nil {
+			return err
+		}
+	} else {
+		if cgroup.Resources.MemorySwap == -1 {
+			if err := writeFile(path, "memory.memsw.limit_in_bytes", strconv.FormatInt(cgroup.Resources.MemorySwap, 10)); err != nil {
+				return err
+			}
+		}
+	}
 
 	return nil
 }
