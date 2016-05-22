@@ -9,7 +9,6 @@ import (
 	"strconv"
 
 	"github.com/codegangsta/cli"
-	"github.com/docker/go-units"
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
@@ -125,7 +124,7 @@ other options are ignored.
 		}
 
 		config := container.Config()
-
+		configPtr := &config
 		if in := context.String("resources"); in != "" {
 			var (
 				f   *os.File
@@ -144,6 +143,11 @@ other options are ignored.
 			if err != nil {
 				return err
 			}
+			config.Cgroups.Resources.KernelMemory = int64(*r.Memory.Kernel)
+			config.Cgroups.Resources.KernelMemoryTCP = int64(*r.Memory.KernelTCP)
+			config.Cgroups.Resources.Memory = int64(*r.Memory.Limit)
+			config.Cgroups.Resources.MemoryReservation = int64(*r.Memory.Reservation)
+			config.Cgroups.Resources.MemorySwap = int64(*r.Memory.Swap)
 		} else {
 			if val := context.Int("blkio-weight"); val != 0 {
 				r.BlockIO.Weight = u16Ptr(uint16(val))
@@ -168,24 +172,22 @@ other options are ignored.
 					}
 				}
 			}
-
-			for opt, dest := range map[string]*uint64{
-				"kernel-memory":      r.Memory.Kernel,
-				"kernel-memory-tcp":  r.Memory.KernelTCP,
-				"memory":             r.Memory.Limit,
-				"memory-reservation": r.Memory.Reservation,
-				"memory-swap":        r.Memory.Swap,
-			} {
+			memorymap := map[string]*int64{
+				"kernel-memory":      &configPtr.Cgroups.Resources.KernelMemory,
+				"kernel-memory-tcp":  &configPtr.Cgroups.Resources.KernelMemoryTCP,
+				"memory":             &configPtr.Cgroups.Resources.Memory,
+				"memory-reservation": &configPtr.Cgroups.Resources.MemoryReservation,
+				"memory-swap":        &configPtr.Cgroups.Resources.MemorySwap,
+			}
+			for opt, dest := range memorymap {
 				if val := context.String(opt); val != "" {
-					v, err := units.RAMInBytes(val)
+					*dest, err = strconv.ParseInt(val, 10, 64)
 					if err != nil {
-						return fmt.Errorf("invalid value for %s: %s", opt, err)
+						return err
 					}
-					*dest = uint64(v)
 				}
 			}
 		}
-
 		// Update the value
 		config.Cgroups.Resources.BlkioWeight = *r.BlockIO.Weight
 		config.Cgroups.Resources.CpuPeriod = int64(*r.CPU.Period)
@@ -193,12 +195,6 @@ other options are ignored.
 		config.Cgroups.Resources.CpuShares = int64(*r.CPU.Shares)
 		config.Cgroups.Resources.CpusetCpus = *r.CPU.Cpus
 		config.Cgroups.Resources.CpusetMems = *r.CPU.Mems
-		config.Cgroups.Resources.KernelMemory = int64(*r.Memory.Kernel)
-		config.Cgroups.Resources.KernelMemoryTCP = int64(*r.Memory.KernelTCP)
-		config.Cgroups.Resources.Memory = int64(*r.Memory.Limit)
-		config.Cgroups.Resources.MemoryReservation = int64(*r.Memory.Reservation)
-		config.Cgroups.Resources.MemorySwap = int64(*r.Memory.Swap)
-
 		if err := container.Set(config); err != nil {
 			return err
 		}
