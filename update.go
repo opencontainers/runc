@@ -32,7 +32,8 @@ The accepted format is as follow (unchanged values can be omitted):
     "limit": 0,
     "reservation": 0,
     "swap": 0,
-    "kernel": 0
+    "kernel": 0,
+    "kernelTCP": 0
   },
   "cpu": {
     "shares": 0,
