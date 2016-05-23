@@ -213,9 +213,9 @@ _Note: For Solaris, uid and gid specify the uid and gid of the process inside th
 [**`platform.os`**](#platform) is used to lookup further platform-specific configuration.
 
 * **`linux`** (object, optional) [Linux-specific configuration](config-linux.md).
-  This should only be set if **`platform.os`** is `linux`.
+  This SHOULD only be set if **`platform.os`** is `linux`.
 * **`solaris`** (object, optional) [Solaris-specific configuration](config-solaris.md).
-  This should only be set if **`platform.os`** is `solaris`.
+  This SHOULD only be set if **`platform.os`** is `solaris`.
 
 ### Example (Linux)
 
@@ -308,7 +308,7 @@ The semantics are the same as `Path`, `Args` and `Env` in [golang Cmd](https://g
 ## Annotations
 
 This OPTIONAL property contains arbitrary metadata for the container.
-This information may be structured or unstructured.
+This information MAY be structured or unstructured.
 Annotations are key-value maps.
 
 ```json
