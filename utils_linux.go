@@ -92,7 +92,7 @@ func newProcess(p specs.Process) (*libcontainer.Process, error) {
 	return lp, nil
 }
 
-func dupStdio(process *libcontainer.Process, rootuid int) error {
+func dupStdio(process *libcontainer.Process, rootuid, rootgid int) error {
 	process.Stdin = os.Stdin
 	process.Stdout = os.Stdout
 	process.Stderr = os.Stderr
@@ -101,7 +101,7 @@ func dupStdio(process *libcontainer.Process, rootuid int) error {
 		os.Stdout.Fd(),
 		os.Stderr.Fd(),
 	} {
-		if err := syscall.Fchown(int(fd), rootuid, rootuid); err != nil {
+		if err := syscall.Fchown(int(fd), rootuid, rootgid); err != nil {
 			return err
 		}
 	}
@@ -123,22 +123,22 @@ func destroy(container libcontainer.Container) {
 
 // setupIO sets the proper IO on the process depending on the configuration
 // If there is a nil error then there must be a non nil tty returned
-func setupIO(process *libcontainer.Process, rootuid int, console string, createTTY, detach bool) (*tty, error) {
+func setupIO(process *libcontainer.Process, rootuid, rootgid int, console string, createTTY, detach bool) (*tty, error) {
 	// detach and createTty will not work unless a console path is passed
 	// so error out here before changing any terminal settings
 	if createTTY && detach && console == "" {
 		return nil, fmt.Errorf("cannot allocate tty if runc will detach")
 	}
 	if createTTY {
-		return createTty(process, rootuid, console)
+		return createTty(process, rootuid, rootgid, console)
 	}
 	if detach {
-		if err := dupStdio(process, rootuid); err != nil {
+		if err := dupStdio(process, rootuid, rootgid); err != nil {
 			return nil, err
 		}
 		return &tty{}, nil
 	}
-	return createStdioPipes(process, rootuid)
+	return createStdioPipes(process, rootuid, rootgid)
 }
 
 // createPidFile creates a file with the processes pid inside it atomically
@@ -215,7 +215,12 @@ func (r *runner) run(config *specs.Process) (int, error) {
 		r.destroy()
 		return -1, err
 	}
-	tty, err := setupIO(process, rootuid, r.console, config.Terminal, r.detach)
+	rootgid, err := r.container.Config().HostGID()
+	if err != nil {
+		r.destroy()
+		return -1, err
+	}
+	tty, err := setupIO(process, rootuid, rootgid, r.console, config.Terminal, r.detach)
 	if err != nil {
 		r.destroy()
 		return -1, err

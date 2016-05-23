@@ -14,8 +14,8 @@ import (
 
 // setup standard pipes so that the TTY of the calling runc process
 // is not inherited by the container.
-func createStdioPipes(p *libcontainer.Process, rootuid int) (*tty, error) {
-	i, err := p.InitializeIO(rootuid)
+func createStdioPipes(p *libcontainer.Process, rootuid, rootgid int) (*tty, error) {
+	i, err := p.InitializeIO(rootuid, rootgid)
 	if err != nil {
 		return nil, err
 	}
@@ -52,14 +52,14 @@ func (t *tty) copyIO(w io.Writer, r io.ReadCloser) {
 	r.Close()
 }
 
-func createTty(p *libcontainer.Process, rootuid int, consolePath string) (*tty, error) {
+func createTty(p *libcontainer.Process, rootuid, rootgid int, consolePath string) (*tty, error) {
 	if consolePath != "" {
 		if err := p.ConsoleFromPath(consolePath); err != nil {
 			return nil, err
 		}
 		return &tty{}, nil
 	}
-	console, err := p.NewConsole(rootuid)
+	console, err := p.NewConsole(rootuid, rootgid)
 	if err != nil {
 		return nil, err
 	}

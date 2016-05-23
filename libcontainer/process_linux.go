@@ -447,7 +447,7 @@ func getPipeFds(pid int) ([]string, error) {
 
 // InitializeIO creates pipes for use with the process's STDIO
 // and returns the opposite side for each
-func (p *Process) InitializeIO(rootuid int) (i *IO, err error) {
+func (p *Process) InitializeIO(rootuid, rootgid int) (i *IO, err error) {
 	var fds []uintptr
 	i = &IO{}
 	// cleanup in case of an error
@@ -479,7 +479,7 @@ func (p *Process) InitializeIO(rootuid int) (i *IO, err error) {
 	p.Stderr, i.Stderr = w, r
 	// change ownership of the pipes incase we are in a user namespace
 	for _, fd := range fds {
-		if err := syscall.Fchown(int(fd), rootuid, rootuid); err != nil {
+		if err := syscall.Fchown(int(fd), rootuid, rootgid); err != nil {
 			return nil, err
 		}
 	}
