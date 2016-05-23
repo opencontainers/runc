@@ -56,7 +56,7 @@ During the `0.x` series of OCI releases we make no backwards compatibility guara
 Development happens on GitHub for the spec.
 Issues are used for bugs and actionable items and longer discussions can happen on the [mailing list](#mailing-list).
 
-The specification and code is licensed under the Apache 2.0 license found in the `LICENSE` file of this repository.
+The specification and code is licensed under the Apache 2.0 license found in the [LICENSE](./LICENSE) file.
 
 ## Code of Conduct
 
