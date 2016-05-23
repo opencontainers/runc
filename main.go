@@ -118,7 +118,7 @@ func main() {
 		case "json":
 			logrus.SetFormatter(new(logrus.JSONFormatter))
 		default:
-			logrus.Fatalf("unknown log-format %q", context.GlobalString("log-format"))
+			return fmt.Errorf("unknown log-format %q", context.GlobalString("log-format"))
 		}
 		return nil
 	}
