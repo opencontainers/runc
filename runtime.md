@@ -65,8 +65,6 @@ Unless otherwise stated, generating an error MUST leave the state of the environ
 
 This operation MUST generate an error if it is not provided the ID of a container.
 This operation MUST return the state of a container as specified in the [State](#state) section.
-In particular, the state MUST be serialized as JSON.
-
 
 ### Start
 
