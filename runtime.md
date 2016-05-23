@@ -51,13 +51,14 @@ The lifecycle describes the timeline of events that happen from when a container
 
 Note: The lifecycle is a WIP and it will evolve as we have more use cases and more information on the viability of a separate create phase.
 
+## Errors
+
+In cases where the specified operation generates an error, this specification does not mandate how, or even if, that error is returned or exposed to the user of an implementation.
+Unless otherwise stated, generating an error MUST leave the state of the environment as if the operation were never attempted - modulo any possible trivial ancillary changes such as logging.
+
 ## Operations
 
 OCI compliant runtimes MUST support the following operations, unless the operation is not supported by the base operating system.
-
-### Errors
-In cases where the specified operation generates an error, this specification does not mandate how, or even if, that error is returned or exposed to the user of an implementation.
-Unless otherwise stated, generating an error MUST leave the state of the environment as if the operation were never attempted - modulo any possible trivial ancillary changes such as logging.
 
 ### Query State
 
