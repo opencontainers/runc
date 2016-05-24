@@ -26,3 +26,4 @@ following will output a list of processes running in the container:
    --apparmor                                   set the apparmor profile for the process
    --no-new-privs                               set the no new privileges value for the process
    --cap, -c [--cap option --cap option]        add a capability to the bounding set for the process
+   --no-subreaper                               disable the use of the subreaper used to reap reparented processes
