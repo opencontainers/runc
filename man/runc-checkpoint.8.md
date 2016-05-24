@@ -1,7 +1,7 @@
 # NAME
    runc checkpoint - checkpoint a running container
 
-# USAGE
+# SYNOPSIS
    runc checkpoint [command options] <container-id>
 
 Where "<container-id>" is the name for the instance of the container to be
