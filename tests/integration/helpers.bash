@@ -19,6 +19,12 @@ HELLO_BUNDLE="$BATS_TMPDIR/hello-world"
 # CRIU PATH
 CRIU="/usr/local/sbin/criu"
 
+# Kernel version
+KERNEL_VERSION="$(uname -r)"
+KERNEL_MAJOR="${KERNEL_VERSION%%.*}"
+KERNEL_MINOR="${KERNEL_VERSION#$KERNEL_MAJOR.}"
+KERNEL_MINOR="${KERNEL_MINOR%%.*}"
+
 # Retry a command $1 times until it succeeds. Wait $2 seconds between retries.
 function retry() {
   local attempts=$1

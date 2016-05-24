@@ -70,5 +70,12 @@ EOF
 
     # update kernel memory limit
     run "$RUNC" update test_cgroups_kmem --kernel-memory 50331648
-    [ ! "$status" -eq 0 ]
+    # Since kernel 4.6, we can update kernel memory without initialization
+    # because it's accounted by default.
+    if [ "$KERNEL_MAJOR" -lt 4 ] || [ "$KERNEL_MAJOR" -eq 4 -a "$KERNEL_MINOR" -le 5 ]; then
+        [ ! "$status" -eq 0 ]
+    else
+        [ "$status" -eq 0 ]
+        check_cgroup_value $CGROUP_MEMORY "memory.kmem.limit_in_bytes" 50331648
+    fi
 }
