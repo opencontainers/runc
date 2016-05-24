@@ -1,6 +1,6 @@
 
-DOCKER ?= $(shell command -v docker)
-PANDOC ?= $(shell command -v pandoc)
+DOCKER ?= $(shell command -v docker 2>/dev/null)
+PANDOC ?= $(shell command -v pandoc 2>/dev/null)
 # These docs are in an order that determines how they show up in the PDF/HTML docs.
 DOC_FILES := \
 	version.md \
