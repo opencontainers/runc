@@ -65,7 +65,7 @@
             }
         },
         "root": {
-            "description": "the root filesystem the container's bundle",
+            "description": "The path to the root filesystem for the container.",
             "id": "https://opencontainers.org/schema/bundle/root",
             "type": "object",
             "properties": {
