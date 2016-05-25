@@ -1,4 +1,5 @@
 
+SHELL  ?= $(shell command -v bash 2>/dev/null)
 DOCKER ?= $(shell command -v docker 2>/dev/null)
 PANDOC ?= $(shell command -v pandoc 2>/dev/null)
 ifeq "$(strip $(PANDOC))" ''
