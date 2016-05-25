@@ -1,6 +1,20 @@
 
-DOCKER ?= $(shell command -v docker)
-PANDOC ?= $(shell command -v pandoc)
+DOCKER ?= $(shell command -v docker 2>/dev/null)
+PANDOC ?= $(shell command -v pandoc 2>/dev/null)
+ifeq "$(strip $(PANDOC))" ''
+	ifneq "$(strip $(DOCKER))" ''
+		PANDOC = $(DOCKER) run \
+			-it \
+			--rm \
+			-v $(shell pwd)/:/input/:ro \
+			-v $(shell pwd)/output/:/output/ \
+			-u $(shell id -u) \
+			vbatts/pandoc
+		PANDOC_SRC := /input/
+		PANDOC_DST := /
+	endif
+endif
+
 # These docs are in an order that determines how they show up in the PDF/HTML docs.
 DOC_FILES := \
 	version.md \
@@ -25,25 +39,18 @@ default: docs
 .PHONY: docs
 docs: output/docs.pdf output/docs.html
 
+ifeq "$(strip $(PANDOC))" ''
+output/docs.pdf output/docs.html:
+	$(error cannot build $@ without either pandoc or docker)
+else
 output/docs.pdf: $(DOC_FILES)
 	mkdir -p output/ && \
-	$(DOCKER) run \
-	-it \
-	--rm \
-	-v $(shell pwd)/:/input/:ro \
-	-v $(shell pwd)/output/:/output/ \
-	-u $(shell id -u) \
-	$(PANDOC) -f markdown_github -t latex -o /$@ $(patsubst %,/input/%,$(DOC_FILES))
+	$(PANDOC) -f markdown_github -t latex -o $(PANDOC_DST)$@ $(patsubst %,$(PANDOC_SRC)%,$(DOC_FILES))
 
 output/docs.html: $(DOC_FILES)
 	mkdir -p output/ && \
-	$(DOCKER) run \
-	-it \
-	--rm \
-	-v $(shell pwd)/:/input/:ro \
-	-v $(shell pwd)/output/:/output/ \
-	-u $(shell id -u) \
-	$(PANDOC) -f markdown_github -t html5 -o /$@ $(patsubst %,/input/%,$(DOC_FILES))
+	$(PANDOC) -f markdown_github -t html5 -o $(PANDOC_DST)$@ $(patsubst %,$(PANDOC_SRC)%,$(DOC_FILES))
+endif
 
 code-of-conduct.md:
 	curl -o $@ https://raw.githubusercontent.com/opencontainers/tob/d2f9d68c1332870e40693fe077d311e0742bc73d/code-of-conduct.md
