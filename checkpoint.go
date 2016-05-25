@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/codegangsta/cli"
 	"github.com/opencontainers/runc/libcontainer"
+	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
 var checkpointCommand = cli.Command{
@@ -29,6 +31,7 @@ checkpointed.`,
 		cli.StringFlag{Name: "page-server", Value: "", Usage: "ADDRESS:PORT of the page server"},
 		cli.BoolFlag{Name: "file-locks", Usage: "handle file locks, for safety"},
 		cli.StringFlag{Name: "manage-cgroups-mode", Value: "", Usage: "cgroups mode: 'soft' (default), 'full' and 'strict'."},
+		cli.StringSliceFlag{Name: "empty-ns", Usage: "create a namespace, but don't restore its properies"},
 	},
 	Action: func(context *cli.Context) error {
 		container, err := getContainer(context)
@@ -40,6 +43,9 @@ checkpointed.`,
 		// these are the mandatory criu options for a container
 		setPageServer(context, options)
 		setManageCgroupsMode(context, options)
+		if err := setEmptyNsMask(context, options); err != nil {
+			return err
+		}
 		if err := container.Checkpoint(options); err != nil {
 			return err
 		}
@@ -87,4 +93,23 @@ func setManageCgroupsMode(context *cli.Context, options *libcontainer.CriuOpts) 
 			fatal(fmt.Errorf("Invalid manage cgroups mode"))
 		}
 	}
+}
+
+var namespaceMapping = map[specs.NamespaceType]int{
+	specs.NetworkNamespace: syscall.CLONE_NEWNET,
+}
+
+func setEmptyNsMask(context *cli.Context, options *libcontainer.CriuOpts) error {
+	var nsmask int
+
+	for _, ns := range context.StringSlice("empty-ns") {
+		f, exists := namespaceMapping[specs.NamespaceType(ns)]
+		if !exists {
+			return fmt.Errorf("namespace %q is not supported", ns)
+		}
+		nsmask |= f
+	}
+
+	options.EmptyNs = uint32(nsmask)
+	return nil
 }
