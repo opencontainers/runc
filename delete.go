@@ -3,9 +3,9 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
-	"syscall"
 
 	"github.com/codegangsta/cli"
 	"github.com/opencontainers/runc/libcontainer"
@@ -20,7 +20,7 @@ Where "<container-id>" is the name for the instance of the container.
 
 EXAMPLE:
 For example, if the container id is "ubuntu01" and runc list currently shows the
-status of "ubuntu01" as "destroyed" the following will delete resources held for
+status of "ubuntu01" as "stopped" the following will delete resources held for
 "ubuntu01" removing "ubuntu01" from the runc list of containers:  
 	 
        # runc delete ubuntu01`,
@@ -38,8 +38,11 @@ status of "ubuntu01" as "destroyed" the following will delete resources held for
 			return nil
 		}
 		s, err := container.Status()
-		if err == nil && s == libcontainer.Created {
-			container.Signal(syscall.SIGKILL)
+		if err != nil {
+			return err
+		}
+		if s != libcontainer.Stopped {
+			return fmt.Errorf("cannot delete container that is not stopped: %s", s)
 		}
 		destroy(container)
 		return nil

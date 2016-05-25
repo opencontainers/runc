@@ -43,30 +43,18 @@ command(s) that get executed on start, edit the args parameter of the spec. See
 			Usage: "do not use pivot root to jail process inside rootfs.  This should be used whenever the rootfs is on top of a ramdisk",
 		},
 	},
-	Action: func(context *cli.Context) {
-		bundle := context.String("bundle")
-		if bundle != "" {
-			if err := os.Chdir(bundle); err != nil {
-				fatal(err)
-			}
-		}
-		spec, err := loadSpec(specConfig)
+	Action: func(context *cli.Context) error {
+		spec, err := setupSpec(context)
 		if err != nil {
-			fatal(err)
-		}
-		notifySocket := os.Getenv("NOTIFY_SOCKET")
-		if notifySocket != "" {
-			setupSdNotify(spec, notifySocket)
-		}
-		if os.Geteuid() != 0 {
-			fatalf("runc should be run as root")
+			return err
 		}
 		status, err := startContainer(context, spec, true)
 		if err != nil {
-			fatal(err)
+			return err
 		}
 		// exit with the container's exit status so any external supervisor is
 		// notified of the exit with the correct exit status.
 		os.Exit(status)
+		return nil
 	},
 }

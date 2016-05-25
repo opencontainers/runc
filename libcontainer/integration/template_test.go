@@ -90,12 +90,13 @@ func newTemplateConfig(rootfs string) *configs.Config {
 				Flags:       defaultMountFlags,
 			},
 			/*
-				{
-					Source:      "mqueue",
-					Destination: "/dev/mqueue",
-					Device:      "mqueue",
-					Flags:       defaultMountFlags,
-				},
+				            CI is broken on the debian based kernels with this
+							{
+								Source:      "mqueue",
+								Destination: "/dev/mqueue",
+								Device:      "mqueue",
+								Flags:       defaultMountFlags,
+							},
 			*/
 			{
 				Source:      "sysfs",

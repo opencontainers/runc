@@ -3,12 +3,9 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/codegangsta/cli"
-	"github.com/coreos/go-systemd/activation"
-	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
 // default action is to start a container
@@ -58,22 +55,9 @@ command(s) that get executed on start, edit the args parameter of the spec. See
 		},
 	},
 	Action: func(context *cli.Context) error {
-		bundle := context.String("bundle")
-		if bundle != "" {
-			if err := os.Chdir(bundle); err != nil {
-				return err
-			}
-		}
-		spec, err := loadSpec(specConfig)
+		spec, err := setupSpec(context)
 		if err != nil {
 			return err
-		}
-		notifySocket := os.Getenv("NOTIFY_SOCKET")
-		if notifySocket != "" {
-			setupSdNotify(spec, notifySocket)
-		}
-		if os.Geteuid() != 0 {
-			return fmt.Errorf("runc should be run as root")
 		}
 		status, err := startContainer(context, spec, false)
 		if err == nil {
@@ -83,32 +67,4 @@ command(s) that get executed on start, edit the args parameter of the spec. See
 		}
 		return err
 	},
-}
-
-func startContainer(context *cli.Context, spec *specs.Spec, create bool) (int, error) {
-	id := context.Args().First()
-	if id == "" {
-		return -1, errEmptyID
-	}
-	container, err := createContainer(context, id, spec)
-	if err != nil {
-		return -1, err
-	}
-	detach := context.Bool("detach")
-	// Support on-demand socket activation by passing file descriptors into the container init process.
-	listenFDs := []*os.File{}
-	if os.Getenv("LISTEN_FDS") != "" {
-		listenFDs = activation.Files(false)
-	}
-	r := &runner{
-		enableSubreaper: !context.Bool("no-subreaper"),
-		shouldDestroy:   true,
-		container:       container,
-		listenFDs:       listenFDs,
-		console:         context.String("console"),
-		detach:          detach,
-		pidFile:         context.String("pid-file"),
-		create:          create,
-	}
-	return r.run(&spec.Process)
 }

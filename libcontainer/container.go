@@ -76,13 +76,13 @@ type BaseContainer interface {
 	//
 	// errors:
 	// ContainerDestroyed - Container no longer exists,
-	// Systemerror - System error.
+	// SystemError - System error.
 	Status() (Status, error)
 
 	// State returns the current container's state information.
 	//
 	// errors:
-	// Systemerror - System error.
+	// SystemError - System error.
 	State() (*State, error)
 
 	// Returns the current config of the container.
@@ -92,7 +92,7 @@ type BaseContainer interface {
 	//
 	// errors:
 	// ContainerDestroyed - Container no longer exists,
-	// Systemerror - System error.
+	// SystemError - System error.
 	//
 	// Some of the returned PIDs may no longer refer to processes in the Container, unless
 	// the Container state is PAUSED in which case every PID in the slice is valid.
@@ -102,7 +102,7 @@ type BaseContainer interface {
 	//
 	// errors:
 	// ContainerDestroyed - Container no longer exists,
-	// Systemerror - System error.
+	// SystemError - System error.
 	Stats() (*Stats, error)
 
 	// Set resources of container as configured
@@ -110,7 +110,7 @@ type BaseContainer interface {
 	// We can use this to change resources when containers are running.
 	//
 	// errors:
-	// Systemerror - System error.
+	// SystemError - System error.
 	Set(config configs.Config) error
 
 	// Start a process inside the container. Returns error if process fails to
@@ -120,7 +120,7 @@ type BaseContainer interface {
 	// ContainerDestroyed - Container no longer exists,
 	// ConfigInvalid - config is invalid,
 	// ContainerPaused - Container is paused,
-	// Systemerror - System error.
+	// SystemError - System error.
 	Start(process *Process) (err error)
 
 	// StartI immediatly starts the process inside the conatiner.  Returns error if process
@@ -131,7 +131,7 @@ type BaseContainer interface {
 	// ContainerDestroyed - Container no longer exists,
 	// ConfigInvalid - config is invalid,
 	// ContainerPaused - Container is paused,
-	// Systemerror - System error.
+	// SystemError - System error.
 	StartI(process *Process) (err error)
 
 	// Destroys the container after killing all running processes.
@@ -140,12 +140,12 @@ type BaseContainer interface {
 	// No error is returned if the container is already destroyed.
 	//
 	// errors:
-	// Systemerror - System error.
+	// SystemError - System error.
 	Destroy() error
 
 	// Signal sends the provided signal code to the container's initial process.
 	//
 	// errors:
-	// Systemerror - System error.
+	// SystemError - System error.
 	Signal(s os.Signal) error
 }

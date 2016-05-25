@@ -1096,10 +1096,8 @@ func (c *linuxContainer) runType() (Status, error) {
 		return Stopped, newSystemErrorWithCausef(err, "reading /proc/%d/environ", pid)
 	}
 	check := []byte("_LIBCONTAINER")
-	for _, v := range bytes.Split(environ, []byte("\x00")) {
-		if bytes.Contains(v, check) {
-			return Created, nil
-		}
+	if bytes.Contains(environ, check) {
+		return Created, nil
 	}
 	return Running, nil
 }
