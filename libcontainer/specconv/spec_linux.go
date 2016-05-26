@@ -234,7 +234,7 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 }
 
 func createLibcontainerMount(cwd string, m specs.Mount) *configs.Mount {
-	flags, pgflags, data := parseMountOptions(m.Options)
+	flags, pgflags, data, ext := parseMountOptions(m.Options)
 	source := m.Source
 	if m.Type == "bind" {
 		if !filepath.IsAbs(source) {
@@ -248,6 +248,7 @@ func createLibcontainerMount(cwd string, m specs.Mount) *configs.Mount {
 		Data:             data,
 		Flags:            flags,
 		PropagationFlags: pgflags,
+		Extensions:       ext,
 	}
 }
 
@@ -592,11 +593,12 @@ func setupUserNamespace(spec *specs.Spec, config *configs.Config) error {
 
 // parseMountOptions parses the string and returns the flags, propagation
 // flags and any mount data that it contains.
-func parseMountOptions(options []string) (int, []int, string) {
+func parseMountOptions(options []string) (int, []int, string, int) {
 	var (
-		flag   int
-		pgflag []int
-		data   []string
+		flag     int
+		pgflag   []int
+		data     []string
+		extFlags int
 	)
 	flags := map[string]struct {
 		clear bool
@@ -638,6 +640,12 @@ func parseMountOptions(options []string) (int, []int, string) {
 		"rslave":      syscall.MS_SLAVE | syscall.MS_REC,
 		"runbindable": syscall.MS_UNBINDABLE | syscall.MS_REC,
 	}
+	extensionFlags := map[string]struct {
+		clear bool
+		flag  int
+	}{
+		"tmpcopyup": {false, configs.EXT_COPYUP},
+	}
 	for _, o := range options {
 		// If the option does not exist in the flags table or the flag
 		// is not supported on the platform,
@@ -650,11 +658,17 @@ func parseMountOptions(options []string) (int, []int, string) {
 			}
 		} else if f, exists := propagationFlags[o]; exists && f != 0 {
 			pgflag = append(pgflag, f)
+		} else if f, exists := extensionFlags[o]; exists && f.flag != 0 {
+			if f.clear {
+				extFlags &= ^f.flag
+			} else {
+				extFlags |= f.flag
+			}
 		} else {
 			data = append(data, o)
 		}
 	}
-	return flag, pgflag, strings.Join(data, ",")
+	return flag, pgflag, strings.Join(data, ","), extFlags
 }
 
 func setupSeccomp(config *specs.Seccomp) (*configs.Seccomp, error) {
