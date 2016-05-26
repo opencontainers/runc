@@ -68,8 +68,6 @@ Note: these operations are not specifying any command-line APIs, and the paramen
 
 This operation MUST generate an error if it is not provided the ID of a container.
 This operation MUST return the state of a container as specified in the [State](#state) section.
-In particular, the state MUST be serialized as JSON.
-
 
 ### Start
 
