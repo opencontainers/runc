@@ -1,5 +1,5 @@
 {
-    "description": "Schema for OpenContainer bundle configuration file",
+    "description": "Open Container Runtime Specification Container Configuration Schema",
     "$schema": "http://json-schema.org/draft-04/schema#",
     "id": "https://opencontainers.org/schema/bundle",
     "type": "object",
