@@ -15,9 +15,10 @@ This MUST be unique across all containers on this host.
 There is no requirement that it be unique across hosts.
 * **`status`**: (string) is the runtime state of the container.
 The value MAY be one of:
-    * `created`: the container has been created but the user-specified program has not yet been executed
-    * `running`: the container has been created and the user-specified program is running
-    * `stopped`: the container has been created and the user-specified program has been executed but is no longer running
+
+    * `created`: the container process has neither exited nor executed the user-specified program
+    * `running`: the container process has executed the user-specified program but has not exited
+    * `stopped`: the container process has exited
 
     Additional values MAY be defined by the runtime, however, they MUST be used to represent new runtime states not defined above.
 * **`pid`**: (int) is the ID of the container process, as seen by the host.
@@ -55,8 +56,8 @@ The lifecycle describes the timeline of events that happen from when a container
    However, some actions might only be available based on the current state of the container (e.g. only available while it is started).
 4. Runtime's [`start`](runtime.md#start) command is invoked with the unique identifier of the container.
    The runtime MUST run the user-specified program, as specified by [`process`](config.md#process).
-5. The container's process is stopped.
-   This MAY happen due to them erroring out, exiting, crashing or the runtime's [`kill`](runtime.md#kill) operation being invoked.
+5. The container process exits.
+   This MAY happen due to erroring out, exiting, crashing or the runtime's [`kill`](runtime.md#kill) operation being invoked.
 6. Runtime's [`delete`](runtime.md#delete) command is invoked with the unique identifier of the container.
    The container MUST be destroyed by undoing the steps performed during create phase (step 2).
 
