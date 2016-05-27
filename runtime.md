@@ -38,7 +38,7 @@ The lifecycle describes the timeline of events that happen from when a container
    While the resources requested in the [`config.json`](config.md) MUST be created, the user-specified code (from [`process`](config.md#process-configuration) MUST NOT be run at this time.
    Any updates to `config.json` after this step MUST NOT affect the container.
 3. Once the container is created additional actions MAY be performed based on the features the runtime chooses to support.
-  However, some actions might only be available based on the current state of the container (e.g. only available while it is started).
+   However, some actions might only be available based on the current state of the container (e.g. only available while it is started).
 4. Runtime's `start` command is invoked with the unique identifier of the container.
    The runtime MUST run the user-specified code, as specified by [`process`](config.md#process-configuration).
 5. The container's process is stopped.
