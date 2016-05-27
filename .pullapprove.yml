@@ -4,6 +4,6 @@ reject_regex: ^Rejected
 reset_on_push: true
 reviewers:
   teams:
-  - runtime-spec-maintainers
+    - runc-maintainers
   name: default
   required: 2
