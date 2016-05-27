@@ -32,6 +32,7 @@ See [Query State](#query-state) for information on retrieving the state of a con
 
 ## Lifecycle
 The lifecycle describes the timeline of events that happen from when a container is created to when it ceases to exist.
+
 1. OCI compliant runtime's `create` command is invoked with a reference to the location of the bundle and a unique identifier.
 2. The container's runtime environment MUST be created according to the configuration in [`config.json`](config.md).
    While the resources requested in the [`config.json`](config.md) MUST be created, the user-specified code (from [`process`](config.md#process-configuration) MUST NOT be run at this time.
