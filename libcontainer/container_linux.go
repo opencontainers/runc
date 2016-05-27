@@ -188,7 +188,7 @@ func (c *linuxContainer) Start(process *Process) error {
 	return c.start(process, status == Stopped)
 }
 
-func (c *linuxContainer) StartI(process *Process) error {
+func (c *linuxContainer) Run(process *Process) error {
 	c.m.Lock()
 	defer c.m.Unlock()
 	status, err := c.currentStatus()

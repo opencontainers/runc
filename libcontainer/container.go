@@ -123,7 +123,7 @@ type BaseContainer interface {
 	// SystemError - System error.
 	Start(process *Process) (err error)
 
-	// StartI immediatly starts the process inside the conatiner.  Returns error if process
+	// Run immediatly starts the process inside the conatiner.  Returns error if process
 	// fails to start.  It does not block waiting for a SIGCONT after start returns but
 	// sends the signal when the process has completed.
 	//
@@ -132,7 +132,7 @@ type BaseContainer interface {
 	// ConfigInvalid - config is invalid,
 	// ContainerPaused - Container is paused,
 	// SystemError - System error.
-	StartI(process *Process) (err error)
+	Run(process *Process) (err error)
 
 	// Destroys the container after killing all running processes.
 	//

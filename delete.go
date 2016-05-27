@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"syscall"
+	"time"
 
 	"github.com/codegangsta/cli"
 	"github.com/opencontainers/runc/libcontainer"
@@ -41,10 +43,22 @@ status of "ubuntu01" as "stopped" the following will delete resources held for
 		if err != nil {
 			return err
 		}
-		if s != libcontainer.Stopped {
+		switch s {
+		case libcontainer.Stopped:
+			destroy(container)
+		case libcontainer.Created:
+			container.Signal(syscall.SIGKILL)
+			for i := 0; i < 100; i++ {
+				time.Sleep(100 * time.Millisecond)
+				if err := container.Signal(syscall.Signal(0)); err != nil {
+					destroy(container)
+					return nil
+				}
+			}
+			return fmt.Errorf("container init still running")
+		default:
 			return fmt.Errorf("cannot delete container that is not stopped: %s", s)
 		}
-		destroy(container)
 		return nil
 	},
 }

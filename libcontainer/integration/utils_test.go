@@ -123,7 +123,7 @@ func runContainer(config *configs.Config, console string, args ...string) (buffe
 		Stderr: buffers.Stderr,
 	}
 
-	err = container.StartI(process)
+	err = container.Run(process)
 	if err != nil {
 		return buffers, -1, err
 	}
