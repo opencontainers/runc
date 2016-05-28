@@ -224,7 +224,8 @@
                 "network",
                 "uts",
                 "ipc",
-                "user"
+                "user",
+                "cgroup"
             ]
         },
         "NamespaceReference": {

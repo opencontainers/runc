@@ -27,12 +27,13 @@ Namespaces are specified as an array of entries inside the `namespaces` root fie
 The following parameters can be specified to setup namespaces:
 
 * **`type`** *(string, required)* - namespace type. The following namespaces types are supported:
-    * **`pid`** processes inside the container will only be able to see other processes inside the same container
-    * **`network`** the container will have its own network stack
-    * **`mount`** the container will have an isolated mount table
-    * **`ipc`** processes inside the container will only be able to communicate to other processes inside the same container via system level IPC
-    * **`uts`** the container will be able to have its own hostname and domain name
-    * **`user`** the container will be able to remap user and group IDs from the host to local users and groups within the container
+    * **`pid`** processes inside the container will only be able to see other processes inside the same container.
+    * **`network`** the container will have its own network stack.
+    * **`mount`** the container will have an isolated mount table.
+    * **`ipc`** processes inside the container will only be able to communicate to other processes inside the same container via system level IPC.
+    * **`uts`** the container will be able to have its own hostname and domain name.
+    * **`user`** the container will be able to remap user and group IDs from the host to local users and groups within the container.
+    * **`cgroup`** the container will have an isolated view of the cgroup hierarchy.
 
 * **`path`** *(string, optional)* - path to namespace file in the [runtime mount namespace](glossary.md#runtime-namespace)
 
@@ -62,6 +63,9 @@ Also, when a path is specified, a runtime MUST assume that the setup for that pa
         },
         {
             "type": "user"
+        },
+        {
+            "type": "cgroup"
         }
     ]
 ```
