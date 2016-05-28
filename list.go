@@ -16,7 +16,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/utils"
 )
 
-const formatOptions = `table or json`
+const formatOptions = `table(default) or json`
 
 // containerState represents the platform agnostic pieces relating to a
 // running container's status and state
@@ -40,12 +40,7 @@ var listCommand = cli.Command{
 		cli.StringFlag{
 			Name:  "format, f",
 			Value: "",
-			Usage: `select one of: ` + formatOptions + `.
-
-The default format is table.  The following will output the list of containers
-in json format:
-
-    # runc list -f json`,
+			Usage: `select one of: ` + formatOptions,
 		},
 		cli.BoolFlag{
 			Name:  "quiet, q",

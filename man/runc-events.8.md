@@ -1,5 +1,5 @@
 # NAME
-   runc events - display container events such as OOM notifications, cpu, memory, IO and network stats
+   runc events - display container events such as OOM notifications, cpu, memory, and IO usage statistics
 
 # SYNOPSIS
    runc events [command options] <container-id>
@@ -13,4 +13,3 @@ information is displayed once every 5 seconds.
 # OPTIONS
    --interval "5s"      set the stats collection interval
    --stats              display the container's stats then exit
-   

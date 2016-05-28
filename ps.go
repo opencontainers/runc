@@ -21,12 +21,7 @@ var psCommand = cli.Command{
 		cli.StringFlag{
 			Name:  "format, f",
 			Value: "",
-			Usage: `select one of: ` + formatOptions + `.
-
-The default format is table.  The following will output the processes of a container
-in json format:
-
-    # runc ps -f json`,
+			Usage: `select one of: ` + formatOptions,
 		},
 	},
 	Action: func(context *cli.Context) error {
