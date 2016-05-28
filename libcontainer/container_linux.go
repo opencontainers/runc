@@ -607,6 +607,27 @@ func (c *linuxContainer) addCriuRestoreMount(req *criurpc.CriuReq, m *configs.Mo
 	req.Opts.ExtMnt = append(req.Opts.ExtMnt, extMnt)
 }
 
+func (c *linuxContainer) restoreNetwork(req *criurpc.CriuReq, criuOpts *CriuOpts) {
+	for _, iface := range c.config.Networks {
+		switch iface.Type {
+		case "veth":
+			veth := new(criurpc.CriuVethPair)
+			veth.IfOut = proto.String(iface.HostInterfaceName)
+			veth.IfIn = proto.String(iface.Name)
+			req.Opts.Veths = append(req.Opts.Veths, veth)
+			break
+		case "loopback":
+			break
+		}
+	}
+	for _, i := range criuOpts.VethPairs {
+		veth := new(criurpc.CriuVethPair)
+		veth.IfOut = proto.String(i.HostInterfaceName)
+		veth.IfIn = proto.String(i.ContainerInterfaceName)
+		req.Opts.Veths = append(req.Opts.Veths, veth)
+	}
+}
+
 func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 	c.m.Lock()
 	defer c.m.Unlock()
@@ -690,23 +711,9 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 			break
 		}
 	}
-	for _, iface := range c.config.Networks {
-		switch iface.Type {
-		case "veth":
-			veth := new(criurpc.CriuVethPair)
-			veth.IfOut = proto.String(iface.HostInterfaceName)
-			veth.IfIn = proto.String(iface.Name)
-			req.Opts.Veths = append(req.Opts.Veths, veth)
-			break
-		case "loopback":
-			break
-		}
-	}
-	for _, i := range criuOpts.VethPairs {
-		veth := new(criurpc.CriuVethPair)
-		veth.IfOut = proto.String(i.HostInterfaceName)
-		veth.IfIn = proto.String(i.ContainerInterfaceName)
-		req.Opts.Veths = append(req.Opts.Veths, veth)
+
+	if criuOpts.EmptyNs&syscall.CLONE_NEWNET == 0 {
+		c.restoreNetwork(req, criuOpts)
 	}
 
 	// append optional manage cgroups mode
