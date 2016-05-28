@@ -2,18 +2,6 @@
 
 load helpers
 
-CGROUP_MEMORY=""
-CGROUP_CPUSET=""
-CGROUP_CPU=""
-CGROUP_BLKIO=""
-
-function init_cgroup_path() {
-    for g in MEMORY CPUSET CPU BLKIO; do
-        base_path=$(grep "cgroup"  /proc/self/mountinfo | gawk 'toupper($NF) ~ /\<'${g}'\>/ { print $5; exit }')
-        eval CGROUP_${g}="${base_path}/runc-update-integration-test"
-    done
-}
-
 function teardown() {
     rm -f $BATS_TMPDIR/runc-update-integration-test.json
     teardown_running_container test_update
@@ -60,12 +48,16 @@ function check_cgroup_value() {
 }
 
 @test "update" {
-  # start a few busyboxes detached
-    run "$RUNC" start -d --console /dev/pts/ptmx test_update
+    # start a few busyboxes detached
+    runc start -d --console /dev/pts/ptmx test_update
     [ "$status" -eq 0 ]
     wait_for_container 15 1 test_update
 
-    init_cgroup_path
+    # get the cgroup paths
+    for g in MEMORY CPUSET CPU BLKIO; do
+        base_path=$(grep "cgroup"  /proc/self/mountinfo | gawk 'toupper($NF) ~ /\<'${g}'\>/ { print $5; exit }')
+        eval CGROUP_${g}="${base_path}/runc-update-integration-test"
+    done
 
     # check that initial values were properly set
     check_cgroup_value $CGROUP_BLKIO "blkio.weight" 1000
@@ -79,62 +71,62 @@ function check_cgroup_value() {
     check_cgroup_value $CGROUP_MEMORY "memory.soft_limit_in_bytes" 25165824
 
     # update blkio-weight
-    run "$RUNC" update test_update --blkio-weight 500
+    runc update test_update --blkio-weight 500
     [ "$status" -eq 0 ]
     check_cgroup_value $CGROUP_BLKIO "blkio.weight" 500
 
     # update cpu-period
-    run "$RUNC" update test_update --cpu-period 900000
+    runc update test_update --cpu-period 900000
     [ "$status" -eq 0 ]
     check_cgroup_value $CGROUP_CPU "cpu.cfs_period_us" 900000
 
     # update cpu-quota
-    run "$RUNC" update test_update --cpu-quota 600000
+    runc update test_update --cpu-quota 600000
     [ "$status" -eq 0 ]
     check_cgroup_value $CGROUP_CPU "cpu.cfs_quota_us" 600000
 
     # update cpu-shares
-    run "$RUNC" update test_update --cpu-share 200
+    runc update test_update --cpu-share 200
     [ "$status" -eq 0 ]
     check_cgroup_value $CGROUP_CPU "cpu.shares" 200
 
     # update cpuset if supported (i.e. we're running on a multicore cpu)
     cpu_count=$(grep '^processor' /proc/cpuinfo | wc -l)
     if [ $cpu_count -ge 1 ]; then
-        run "$RUNC" update test_update --cpuset-cpus "1"
+        runc update test_update --cpuset-cpus "1"
         [ "$status" -eq 0 ]
         check_cgroup_value $CGROUP_CPUSET "cpuset.cpus" 1
     fi
 
     # update memory limit
-    run "$RUNC" update test_update --memory 67108864
+    runc update test_update --memory 67108864
     [ "$status" -eq 0 ]
     check_cgroup_value $CGROUP_MEMORY "memory.limit_in_bytes" 67108864
 
     # update memory soft limit
-    run "$RUNC" update test_update --memory-reservation 33554432
+    runc update test_update --memory-reservation 33554432
     [ "$status" -eq 0 ]
     check_cgroup_value $CGROUP_MEMORY "memory.soft_limit_in_bytes" 33554432
 
     # update memory swap (if available)
     if [ -f "$CGROUP_MEMORY/memory.memsw.limit_in_bytes" ]; then
-        run "$RUNC" update test_update --memory-swap 96468992
+        runc update test_update --memory-swap 96468992
         [ "$status" -eq 0 ]
         check_cgroup_value $CGROUP_MEMORY "memory.memsw.limit_in_bytes" 96468992
     fi
 
     # update kernel memory limit
-    run "$RUNC" update test_update --kernel-memory 50331648
+    runc update test_update --kernel-memory 50331648
     [ "$status" -eq 0 ]
     check_cgroup_value $CGROUP_MEMORY "memory.kmem.limit_in_bytes" 50331648
 
     # update kernel memory tcp limit
-    run "$RUNC" update test_update --kernel-memory-tcp 41943040
+    runc update test_update --kernel-memory-tcp 41943040
     [ "$status" -eq 0 ]
     check_cgroup_value $CGROUP_MEMORY "memory.kmem.tcp.limit_in_bytes" 41943040
 
     # Revert to the test initial value via json on stding
-    run "$RUNC" update  -r - test_update <<EOF
+    runc update  -r - test_update <<EOF
 {
   "memory": {
     "limit": 33554432,
@@ -165,7 +157,7 @@ EOF
     check_cgroup_value $CGROUP_MEMORY "memory.soft_limit_in_bytes" 25165824
 
     # redo all the changes at once
-    run "$RUNC" update test_update --blkio-weight 500 \
+    runc update test_update --blkio-weight 500 \
         --cpu-period 900000 --cpu-quota 600000 --cpu-share 200 --memory 67108864 \
         --memory-reservation 33554432 --kernel-memory 50331648 --kernel-memory-tcp 41943040
     [ "$status" -eq 0 ]
@@ -201,7 +193,7 @@ EOF
 )
     echo $DATA > $BATS_TMPDIR/runc-update-integration-test.json
 
-    run "$RUNC" update  -r $BATS_TMPDIR/runc-update-integration-test.json test_update
+    runc update  -r $BATS_TMPDIR/runc-update-integration-test.json test_update
     [ "$status" -eq 0 ]
     check_cgroup_value $CGROUP_BLKIO "blkio.weight" 1000
     check_cgroup_value $CGROUP_CPU "cpu.cfs_period_us" 1000000

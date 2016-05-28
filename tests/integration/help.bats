@@ -3,80 +3,80 @@
 load helpers
 
 @test "runc -h" {
-  run "$RUNC" -h
+  runc -h
   [ "$status" -eq 0 ]
   [[ ${lines[0]} =~ NAME:+ ]]
   [[ ${lines[1]} =~ runc\ '-'\ Open\ Container\ Initiative\ runtime+ ]]
 
-  run "$RUNC" --help
+  runc --help
   [ "$status" -eq 0 ]
   [[ ${lines[0]} =~ NAME:+ ]]
   [[ ${lines[1]} =~ runc\ '-'\ Open\ Container\ Initiative\ runtime+ ]]
 }
 
 @test "runc command -h" {
-  run "$RUNC" checkpoint -h
+  runc checkpoint -h
   [ "$status" -eq 0 ]
   [[ ${lines[1]} =~ runc\ checkpoint+ ]]
 
-  run "$RUNC" delete -h
+  runc delete -h
   [ "$status" -eq 0 ]
   [[ ${lines[1]} =~ runc\ delete+ ]]
 
-  run "$RUNC" events -h
+  runc events -h
   [ "$status" -eq 0 ]
   [[ ${lines[1]} =~ runc\ events+ ]]
 
-  run "$RUNC" exec -h
+  runc exec -h
   [ "$status" -eq 0 ]
   [[ ${lines[1]} =~ runc\ exec+ ]]
 
-  run "$RUNC" kill -h
+  runc kill -h
   [ "$status" -eq 0 ]
   [[ ${lines[1]} =~ runc\ kill+ ]]
 
-  run "$RUNC" list -h
+  runc list -h
   [ "$status" -eq 0 ]
   [[ ${lines[0]} =~ NAME:+ ]]
   [[ ${lines[1]} =~ runc\ list+ ]]
 
-  run "$RUNC" list --help
+  runc list --help
   [ "$status" -eq 0 ]
   [[ ${lines[0]} =~ NAME:+ ]]
   [[ ${lines[1]} =~ runc\ list+ ]]
 
-  run "$RUNC" pause -h
+  runc pause -h
   [ "$status" -eq 0 ]
   [[ ${lines[1]} =~ runc\ pause+ ]]
 
-  run "$RUNC" restore -h
+  runc restore -h
   [ "$status" -eq 0 ]
   [[ ${lines[1]} =~ runc\ restore+ ]]
 
-  run "$RUNC" resume -h
+  runc resume -h
   [ "$status" -eq 0 ]
   [[ ${lines[1]} =~ runc\ resume+ ]]
 
-  run "$RUNC" spec -h
+  runc spec -h
   [ "$status" -eq 0 ]
   [[ ${lines[1]} =~ runc\ spec+ ]]
 
-  run "$RUNC" start -h
+  runc start -h
   [ "$status" -eq 0 ]
   [[ ${lines[1]} =~ runc\ start+ ]]
 
-  run "$RUNC" state -h
+  runc state -h
   [ "$status" -eq 0 ]
   [[ ${lines[1]} =~ runc\ state+ ]]
 
-  run "$RUNC" delete -h
+  runc delete -h
   [ "$status" -eq 0 ]
   [[ ${lines[1]} =~ runc\ delete+ ]]
 
 }
 
 @test "runc foo -h" {
-  run "$RUNC" foo -h
+  runc foo -h
   [ "$status" -ne 0 ]
   [[ "${output}" == *"No help topic for 'foo'"* ]]
 }

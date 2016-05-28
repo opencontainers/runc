@@ -12,9 +12,7 @@ function teardown() {
 }
 
 @test "checkpoint and restore" {
-  if [ ! -e "$CRIU" ] ; then
-    skip
-  fi
+  requires criu
 
   # criu does not work with external terminals so..
   # setting terminal and root:readonly: to false
@@ -24,30 +22,30 @@ function teardown() {
 
   (
     # start busybox (not detached)
-    run "$RUNC" start test_busybox
+    runc start test_busybox
     [ "$status" -eq 0 ]
   ) &
 
   # check state
   wait_for_container 15 1 test_busybox
 
-  run "$RUNC" state test_busybox
+  runc state test_busybox
   [ "$status" -eq 0 ]
   [[ "${output}" == *"running"* ]]
 
   # checkpoint the running container
-  run "$RUNC" --criu "$CRIU" checkpoint test_busybox
+  runc --criu "$CRIU" checkpoint test_busybox
   # if you are having problems getting criu to work uncomment the following dump:
   #cat /run/opencontainer/containers/test_busybox/criu.work/dump.log
   [ "$status" -eq 0 ]
 
   # after checkpoint busybox is no longer running
-  run "$RUNC" state test_busybox
+  runc state test_busybox
   [ "$status" -ne 0 ]
 
   # restore from checkpoint
   (
-    run "$RUNC" --criu "$CRIU" restore test_busybox
+    runc --criu "$CRIU" restore test_busybox
     [ "$status" -eq 0 ]
   ) &
 
@@ -55,7 +53,7 @@ function teardown() {
   wait_for_container 15 1 test_busybox
 
   # busybox should be back up and running
-  run "$RUNC" state test_busybox
+  runc state test_busybox
   [ "$status" -eq 0 ]
   [[ "${output}" == *"running"* ]]
 }

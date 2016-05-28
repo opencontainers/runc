@@ -19,7 +19,6 @@ function teardown() {
 function setup() {
     teardown
     setup_busybox
-
     init_cgroup_path
 }
 
@@ -49,13 +48,15 @@ EOF
     sed -i "s/\(\"resources\": {\)/\1\n${DATA}/" ${BUSYBOX_BUNDLE}/config.json
 
     # start a detached busybox to work with
-    run "$RUNC" start -d --console /dev/pts/ptmx test_cgroups_kmem
+    runc start -d --console /dev/pts/ptmx test_cgroups_kmem
     [ "$status" -eq 0 ]
     wait_for_container 15 1 test_cgroups_kmem
 
     # update kernel memory limit
-    run "$RUNC" update test_cgroups_kmem --kernel-memory 50331648
+    runc update test_cgroups_kmem --kernel-memory 50331648
     [ "$status" -eq 0 ]
+
+	# check the value
     check_cgroup_value $CGROUP_MEMORY "memory.kmem.limit_in_bytes" 50331648
 }
 
@@ -64,12 +65,12 @@ EOF
     sed -i 's/\("linux": {\)/\1\n    "cgroupsPath": "runc-cgroups-integration-test",/'  ${BUSYBOX_BUNDLE}/config.json
 
     # start a detached busybox to work with
-    run "$RUNC" start -d --console /dev/pts/ptmx test_cgroups_kmem
+    runc start -d --console /dev/pts/ptmx test_cgroups_kmem
     [ "$status" -eq 0 ]
     wait_for_container 15 1 test_cgroups_kmem
 
     # update kernel memory limit
-    run "$RUNC" update test_cgroups_kmem --kernel-memory 50331648
+    runc update test_cgroups_kmem --kernel-memory 50331648
     # Since kernel 4.6, we can update kernel memory without initialization
     # because it's accounted by default.
     if [ "$KERNEL_MAJOR" -lt 4 ] || [ "$KERNEL_MAJOR" -eq 4 -a "$KERNEL_MINOR" -le 5 ]; then

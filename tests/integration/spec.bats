@@ -26,7 +26,7 @@ function teardown() {
   [ ! -e config.json ]
 
   # test generation of spec does not return an error
-  run "$RUNC" spec
+  runc spec
   [ "$status" -eq 0 ]
 
   # test generation of spec created our config.json (spec)
@@ -40,7 +40,7 @@ function teardown() {
   sed -i 's;"sh";"/hello";' config.json
 
   # ensure the generated spec works by starting hello-world
-  run "$RUNC" start test_hello
+  runc start test_hello
   [ "$status" -eq 0 ]
 }
 
@@ -51,7 +51,7 @@ function teardown() {
   [ ! -e "$HELLO_BUNDLE"/config.json ]
 
   # test generation of spec does not return an error
-  run "$RUNC" spec --bundle "$HELLO_BUNDLE"
+  runc spec --bundle "$HELLO_BUNDLE"
   [ "$status" -eq 0 ]
 
   # test generation of spec created our config.json (spec)
@@ -61,7 +61,7 @@ function teardown() {
   sed -i 's;"sh";"/hello";' "$HELLO_BUNDLE"/config.json
 
   # ensure the generated spec works by starting hello-world
-  run "$RUNC" start --bundle "$HELLO_BUNDLE" test_hello
+  runc start --bundle "$HELLO_BUNDLE" test_hello
   [ "$status" -eq 0 ]
 }
 
@@ -80,7 +80,7 @@ function teardown() {
   GOPATH="$GOPATH" go build src/runtime-spec/schema/validate.go
   [ -e ./validate ]
 
-  run "$RUNC" spec
+  runc spec
   [ -e config.json ]
 
   run ./validate src/runtime-spec/schema/schema.json config.json
