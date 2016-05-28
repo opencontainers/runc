@@ -11,12 +11,13 @@ checkpointed.
    The checkpoint command saves the state of the container instance.
 
 # OPTIONS
-   --image-path                 path for saving criu image files
-   --work-path                  path for saving work files and logs
+   --image-path value           path for saving criu image files
+   --work-path value            path for saving work files and logs
    --leave-running              leave the process running after checkpointing
    --tcp-established            allow open tcp connections
    --ext-unix-sk                allow external unix sockets
    --shell-job                  allow shell jobs
-   --page-server                ADDRESS:PORT of the page server
+   --page-server value          ADDRESS:PORT of the page server
    --file-locks                 handle file locks, for safety
-   --manage-cgroups-mode        cgroups mode: 'soft' (default), 'full' and 'strict'.
+   --manage-cgroups-mode value  cgroups mode: 'soft' (default), 'full' and 'strict'
+   --empty-ns value             create a namespace, but don't restore its properies

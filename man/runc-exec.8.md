@@ -14,16 +14,16 @@ following will output a list of processes running in the container:
        # runc exec <container-id> ps
 
 # OPTIONS
-   --console                                    specify the pty slave path for use with the container
-   --cwd                                        current working directory in the container
-   --env, -e [--env option --env option]        set environment variables
-   --tty, -t                                    allocate a pseudo-TTY
-   --user, -u                                   UID (format: <uid>[:<gid>])
-   --process, -p                                path to the process.json
-   --detach, -d                                 detach from the container's process
-   --pid-file                                   specify the file to write the process id to
-   --process-label                              set the asm process label for the process commonly used with selinux
-   --apparmor                                   set the apparmor profile for the process
-   --no-new-privs                               set the no new privileges value for the process
-   --cap, -c [--cap option --cap option]        add a capability to the bounding set for the process
-   --no-subreaper                               disable the use of the subreaper used to reap reparented processes
+   --console value              specify the pty slave path for use with the container
+   --cwd value                  current working directory in the container
+   --env value, -e value        set environment variables
+   --tty, -t                    allocate a pseudo-TTY
+   --user value, -u value       UID (format: <uid>[:<gid>])
+   --process value, -p value    path to the process.json
+   --detach, -d                 detach from the container's process
+   --pid-file value             specify the file to write the process id to
+   --process-label value        set the asm process label for the process commonly used with selinux
+   --apparmor value             set the apparmor profile for the process
+   --no-new-privs               set the no new privileges value for the process
+   --cap value, -c value        add a capability to the bounding set for the process
+   --no-subreaper               disable the use of the subreaper used to reap reparented processes

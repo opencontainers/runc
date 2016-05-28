@@ -53,7 +53,7 @@ using the runc checkpoint command.`,
 		cli.StringFlag{
 			Name:  "manage-cgroups-mode",
 			Value: "",
-			Usage: "cgroups mode: 'soft' (default), 'full' and 'strict'.",
+			Usage: "cgroups mode: 'soft' (default), 'full' and 'strict'",
 		},
 		cli.StringFlag{
 			Name:  "bundle, b",

@@ -19,9 +19,9 @@ command(s) that get executed on start, edit the args parameter of the spec. See
 "runc spec --help" for more explanation.
 
 # OPTIONS
-   --bundle, -b         path to the root of the bundle directory, defaults to the current directory
-   --console            specify the pty slave path for use with the container
-   --detach, -d         detach from the container's process
-   --pid-file           specify the file to write the process id to
-   --no-subreaper       disable the use of the subreaper used to reap reparented processes
-   --no-pivot           do not use pivot root to jail process inside rootfs. This should be used whenever the rootfs is on top of a ramdisk
+   --bundle value, -b value     path to the root of the bundle directory, defaults to the current directory
+   --console value              specify the pty slave path for use with the container
+   --detach, -d                 detach from the container's process
+   --pid-file value             specify the file to write the process id to
+   --no-subreaper               disable the use of the subreaper used to reap reparented processes
+   --no-pivot                   do not use pivot root to jail process inside rootfs.  This should be used whenever the rootfs is on top of a ramdisk
