@@ -10,12 +10,15 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
+// version will be populated by the Makefile, read from
+// VERSION file of the source code.
+var version = ""
+
 // gitCommit will be the hash that the binary was built from
 // and will be populated by the Makefile
 var gitCommit = ""
 
 const (
-	version    = "0.1.1"
 	specConfig = "config.json"
 	usage      = `Open Container Initiative runtime
 
@@ -46,8 +49,10 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "runc"
 	app.Usage = usage
-	v := []string{
-		version,
+
+	var v []string
+	if version != "" {
+		v = append(v, version)
 	}
 	if gitCommit != "" {
 		v = append(v, fmt.Sprintf("commit: %s", gitCommit))
