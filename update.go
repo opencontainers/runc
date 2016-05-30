@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	"github.com/codegangsta/cli"
+	"github.com/docker/go-units"
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
@@ -155,14 +156,9 @@ other options are ignored.
 			}
 
 			for opt, dest := range map[string]*uint64{
-				"cpu-period":         r.CPU.Period,
-				"cpu-quota":          r.CPU.Quota,
-				"cpu-share":          r.CPU.Shares,
-				"kernel-memory":      r.Memory.Kernel,
-				"kernel-memory-tcp":  r.Memory.KernelTCP,
-				"memory":             r.Memory.Limit,
-				"memory-reservation": r.Memory.Reservation,
-				"memory-swap":        r.Memory.Swap,
+				"cpu-period": r.CPU.Period,
+				"cpu-quota":  r.CPU.Quota,
+				"cpu-share":  r.CPU.Shares,
 			} {
 				if val := context.String(opt); val != "" {
 					var err error
@@ -170,6 +166,22 @@ other options are ignored.
 					if err != nil {
 						return fmt.Errorf("invalid value for %s: %s", opt, err)
 					}
+				}
+			}
+
+			for opt, dest := range map[string]*uint64{
+				"kernel-memory":      r.Memory.Kernel,
+				"kernel-memory-tcp":  r.Memory.KernelTCP,
+				"memory":             r.Memory.Limit,
+				"memory-reservation": r.Memory.Reservation,
+				"memory-swap":        r.Memory.Swap,
+			} {
+				if val := context.String(opt); val != "" {
+					v, err := units.RAMInBytes(val)
+					if err != nil {
+						return fmt.Errorf("invalid value for %s: %s", opt, err)
+					}
+					*dest = uint64(v)
 				}
 			}
 		}

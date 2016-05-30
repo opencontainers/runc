@@ -103,6 +103,11 @@ function check_cgroup_value() {
     [ "$status" -eq 0 ]
     check_cgroup_value $CGROUP_MEMORY "memory.limit_in_bytes" 67108864
 
+    runc update test_update --memory 50M
+    [ "$status" -eq 0 ]
+    check_cgroup_value $CGROUP_MEMORY "memory.limit_in_bytes" 52428800
+
+
     # update memory soft limit
     runc update test_update --memory-reservation 33554432
     [ "$status" -eq 0 ]
