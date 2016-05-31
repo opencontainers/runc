@@ -13,6 +13,13 @@ The state of a container MUST include, at least, the following properties:
 * **`id`**: (string) is the container's ID.
 This MUST be unique across all containers on this host.
 There is no requirement that it be unique across hosts.
+* **`status`**: (string) is the runtime state of the container.
+The value MAY be one of:
+  * `created` : the container has been created but the user-specified code has not yet been executed
+  * `running` : the container has been created and the user-specified code is running
+  * `stopped` : the container has been created and the user-specified code has been executed but is no longer running
+
+  Additional values MAY be defined by the runtime, however, they MUST be used to represent new runtime states not defined above.
 * **`pid`**: (int) is the ID of the main process within the container, as seen by the host.
 * **`bundlePath`**: (string) is the absolute path to the container's bundle directory.
 This is provided so that consumers can find the container's configuration and root filesystem on the host.
@@ -23,6 +30,7 @@ When serialized in JSON, the format MUST adhere to the following pattern:
 {
     "ociVersion": "0.2.0",
     "id": "oci-container1",
+    "status": "running",
     "pid": 4422,
     "bundlePath": "/containers/redis"
 }
@@ -72,7 +80,9 @@ This operation MUST return the state of a container as specified in the [State](
 This operation MUST generate an error if it is not provided a path to the bundle and the container ID to associate with the container.
 If the ID provided is not unique across all containers within the scope of the runtime, or is not valid in any other way, the implementation MUST generate an error and a new container MUST not be created.
 Using the data in [`config.json`](config.md), this operation MUST create a new container.
-This means that all of the resources associated with the container MUST be created, however, the user-specified process MUST NOT be run at this time.
+This means that all of the resources associated with the container MUST be created, however, the user-specified code MUST NOT be run at this time.
+
+Upon successful completion of this operation the `status` property of this container MUST be `created`.
 
 The runtime MAY validate `config.json` against this spec, either generically or with respect to the local system capabilities, before creating the container ([step 2](#lifecycle)).
 Runtime callers who are interested in pre-create validation can run [bundle-validation tools](implementations.md#testing--tools) before invoking the create operation.
@@ -88,12 +98,16 @@ Attempting to start an already started container MUST have no effect on the cont
 This operation MUST run the user-specified code as specified by [`process`](config.md#process-configuration).
 If the runtime fails to run the code as specified, an error MUST be generated.
 
+Upon successful completion of this operation the `status` property of this container MUST be `running`.
+
 ### Kill
 `kill <container-id> <signal>`
 
 This operation MUST generate an error if it is not provided the container ID.
 Attempting to send a signal to a container that is not running MUST have no effect on the container and MUST generate an error.
 This operation MUST send the specified signal to the process in the container.
+
+When the process in the container is stopped, irrespective of it being as a result of a `kill` operation or any other reason, the `status` property of this container MUST be `stopped`.
 
 ### Delete
 `delete <container-id>`
