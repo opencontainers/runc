@@ -76,22 +76,13 @@ func (s *MemoryGroup) SetKernelMemory(path string, cgroup *configs.Cgroup) error
 		}
 
 		if !kmemInitialized {
-			// If hierarchy is set, we can't change the limit
-			usesHierarchy, err := getCgroupParamUint(path, "memory.use_hierarchy")
-			if err != nil {
-				return err
-			}
-			if usesHierarchy != 0 {
-				return fmt.Errorf("cannot initialize kmem.limit_in_bytes if use_hierarchy is already set")
-			}
-
 			// If there's already tasks in the cgroup, we can't change the limit either
 			tasks, err := getCgroupParamString(path, "tasks")
 			if err != nil {
 				return err
 			}
 			if tasks != "" {
-				return fmt.Errorf("cannot initialize kmem.limit_in_bytes after task have joined this cgroup")
+				return fmt.Errorf("cannot set kmem.limit_in_bytes after task have joined this cgroup")
 			}
 		}
 
