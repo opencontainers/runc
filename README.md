@@ -10,7 +10,7 @@ Currently `runc` is an implementation of the OCI specification.  We are currentl
 to have a v1 of the spec out. So the `runc` config format will be constantly changing until
 the spec is finalized. However, we encourage you to try out the tool and give feedback.
 
-### OCF
+### OCI
 
 How does `runc` integrate with the Open Container Initiative Specification?
 `runc` depends on the types specified in the
