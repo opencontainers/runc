@@ -74,6 +74,7 @@ var (
 	theConn                         *systemdDbus.Conn
 	hasStartTransientUnit           bool
 	hasTransientDefaultDependencies bool
+	hasDelegate                     bool
 )
 
 func newProp(name string, units interface{}) systemdDbus.Property {
@@ -146,6 +147,20 @@ func UseSystemd() bool {
 
 		// Not critical because of the stop unit logic above.
 		theConn.StopUnit(scope, "replace", nil)
+
+		// Assume StartTransientUnit on a scope allows Delegate
+		hasDelegate = true
+		dl := newProp("Delegate", true)
+		if _, err := theConn.StartTransientUnit(scope, "replace", []systemdDbus.Property{dl}, nil); err != nil {
+			if dbusError, ok := err.(dbus.Error); ok {
+				if strings.Contains(dbusError.Name, "org.freedesktop.DBus.Error.PropertyReadOnly") {
+					hasDelegate = false
+				}
+			}
+		}
+
+		// Not critical because of the stop unit logic above.
+		theConn.StopUnit(scope, "replace", nil)
 	}
 	return hasStartTransientUnit
 }
@@ -183,9 +198,12 @@ func (m *Manager) Apply(pid int) error {
 		systemdDbus.PropSlice(slice),
 		systemdDbus.PropDescription("docker container "+c.Name),
 		newProp("PIDs", []uint32{uint32(pid)}),
-		// This is only supported on systemd versions 218 and above.
-		newProp("Delegate", true),
 	)
+
+	if hasDelegate {
+		// This is only supported on systemd versions 218 and above.
+		properties = append(properties, newProp("Delegate", true))
+	}
 
 	// Always enable accounting, this gets us the same behaviour as the fs implementation,
 	// plus the kernel has some problems with joining the memory cgroup at a later time.
