@@ -5,9 +5,8 @@
     "type": "object",
     "properties": {
         "ociVersion": {
-            "description": "The version of OpenContainer specification configuration complies with",
             "id": "https://opencontainers.org/schema/bundle/ociVersion",
-            "type": "string"
+            "$ref": "defs.json#/definitions/ociVersion"
         },
         "hooks": {
             "id": "https://opencontainers.org/schema/bundle/hooks",

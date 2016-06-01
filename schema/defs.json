@@ -155,6 +155,10 @@
                 "source",
                 "type"
             ]
+        },
+        "ociVersion": {
+            "description": "The version of Open Container Runtime Specification that the document complies with",
+            "type": "string"
         }
     }
 }
