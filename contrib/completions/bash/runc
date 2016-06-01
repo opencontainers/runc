@@ -635,6 +635,41 @@ _runc_state() {
 		    ;;
 	esac
 }
+_runc_update() {
+	local boolean_options="
+	   --help
+	"
+
+	local options_with_args="
+	   --blkio-weight
+	   --cpu-period
+	   --cpu-quota
+	   --cpu-share
+	   --cpuset-cpus
+	   --cpuset-mems
+	   --kernel-memory
+	   --kernel-memory-tcp
+	   --memory
+	   --memory-reservation
+	   --memory-swap
+
+	"
+
+	case "$prev" in
+	   $(__runc_to_extglob "$options_with_args"))
+	       return
+	       ;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "$boolean_options $options_with_args" -- "$cur" ) )
+			;;
+		*)
+			__runc_list_all
+			;;
+	esac
+}
 
 _runc() {
 	local previous_extglob_setting=$(shopt -p extglob)
@@ -654,6 +689,7 @@ _runc() {
 	    spec
 	    start
 	    state
+	    update
 	    help
 	    h
 	)
