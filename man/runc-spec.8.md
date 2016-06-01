@@ -46,4 +46,4 @@ example: "sudo runc start container1" will give runc root privilege to start the
 container on your host.
 
 # OPTIONS
-   --bundle, -b         path to the root of the bundle directory
+   --bundle value, -b value     path to the root of the bundle directory

@@ -24,7 +24,7 @@ var updateCommand = cli.Command{
 		cli.StringFlag{
 			Name:  "resources, r",
 			Value: "",
-			Usage: `path to the file containing the resources to update or '-' to read from the standard input.
+			Usage: `path to the file containing the resources to update or '-' to read from the standard input
 
 The accepted format is as follow (unchanged values can be omitted):
 
@@ -55,15 +55,15 @@ other options are ignored.
 
 		cli.IntFlag{
 			Name:  "blkio-weight",
-			Usage: "Specifies per cgroup weight, range is from 10 to 1000.",
+			Usage: "Specifies per cgroup weight, range is from 10 to 1000",
 		},
 		cli.StringFlag{
 			Name:  "cpu-period",
-			Usage: "CPU period to be used for hardcapping (in usecs). 0 to use system default.",
+			Usage: "CPU period to be used for hardcapping (in usecs). 0 to use system default",
 		},
 		cli.StringFlag{
 			Name:  "cpu-quota",
-			Usage: "CPU hardcap limit (in usecs). Allowed cpu time in a given period.",
+			Usage: "CPU hardcap limit (in usecs). Allowed cpu time in a given period",
 		},
 		cli.StringFlag{
 			Name:  "cpu-share",

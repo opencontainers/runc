@@ -5,5 +5,5 @@
    runc list [command options] [arguments...]
 
 # OPTIONS
-   --format, -f         select one of: table(default) or json.
-   --quiet, -q          display only container IDs
+   --format value, -f value     select one of: table(default) or json
+   --quiet, -q                  display only container IDs

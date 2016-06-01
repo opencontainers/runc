@@ -11,5 +11,5 @@ Where "<container-id>" is the name for the instance of the container.
 information is displayed once every 5 seconds.
 
 # OPTIONS
-   --interval "5s"      set the stats collection interval
+   --interval value     set the stats collection interval (default: 5s)
    --stats              display the container's stats then exit
