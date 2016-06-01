@@ -3,10 +3,14 @@ go:
   - 1.6
   - 1.5.3
 
-sudo: false
+sudo: required
+
+services:
+  - docker
 
 before_install:
   - make install.tools
+  - docker pull vbatts/pandoc
 
 install: true
 
@@ -14,4 +18,4 @@ script:
   - make .govet
   - make .golint
   - make .gitvalidation
-  
+  - make docs
