@@ -44,10 +44,8 @@ func (l *linuxSetnsInit) Init() error {
 	if err := apparmor.ApplyProfile(l.config.AppArmorProfile); err != nil {
 		return err
 	}
-	if l.config.ProcessLabel != "" {
-		if err := label.SetProcessLabel(l.config.ProcessLabel); err != nil {
-			return err
-		}
+	if err := label.SetProcessLabel(l.config.ProcessLabel); err != nil {
+		return err
 	}
 	return system.Execv(l.config.Args[0], l.config.Args[0:], os.Environ())
 }
