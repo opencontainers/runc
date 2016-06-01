@@ -166,10 +166,10 @@
             }
         },
         "linux": {
-            "$ref": "schema-linux.json#/linux"
+            "$ref": "config-linux.json#/linux"
         },
         "solaris": {
-            "$ref": "schema-solaris.json#/solaris"
+            "$ref": "config-solaris.json#/solaris"
         }
     },
     "required": [
