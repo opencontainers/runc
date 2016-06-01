@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -9,8 +10,9 @@ import (
 )
 
 func main() {
-	if len(os.Args[1:]) != 2 {
-		fmt.Printf("ERROR: usage is: %s <schema.json> <config.json>\n", os.Args[0])
+	nargs := len(os.Args[1:])
+	if nargs == 0 || nargs > 2 {
+		fmt.Printf("ERROR: usage is: %s <schema.json> [<document.json>]\n", os.Args[0])
 		os.Exit(1)
 	}
 
@@ -19,14 +21,25 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	documentPath, err := filepath.Abs(os.Args[2])
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
 	schemaLoader := gojsonschema.NewReferenceLoader("file://" + schemaPath)
-	documentLoader := gojsonschema.NewReferenceLoader("file://" + documentPath)
+	var documentLoader gojsonschema.JSONLoader
+
+	if nargs > 1 {
+		documentPath, err := filepath.Abs(os.Args[2])
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		documentLoader = gojsonschema.NewReferenceLoader("file://" + documentPath)
+	} else {
+		documentBytes, err := ioutil.ReadAll(os.Stdin)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		documentString := string(documentBytes)
+		documentLoader = gojsonschema.NewStringLoader(documentString)
+	}
 
 	result, err := gojsonschema.Validate(schemaLoader, documentLoader)
 	if err != nil {
