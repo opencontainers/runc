@@ -31,6 +31,8 @@ type containerState struct {
 	Bundle string `json:"bundle"`
 	// Created is the unix timestamp for the creation time of the container in UTC
 	Created time.Time `json:"created"`
+	// Annotations is the user defined annotations added to the config.
+	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
 var listCommand = cli.Command{
@@ -116,12 +118,15 @@ func getContainers(context *cli.Context) ([]containerState, error) {
 			if err != nil {
 				return nil, err
 			}
+			bundle, annotations := utils.Annotations(state.Config.Labels)
 			s = append(s, containerState{
 				ID:             state.BaseState.ID,
 				InitProcessPid: state.BaseState.InitProcessPid,
 				Status:         containerStatus.String(),
-				Bundle:         utils.SearchLabels(state.Config.Labels, "bundle"),
-				Created:        state.BaseState.Created})
+				Bundle:         bundle,
+				Created:        state.BaseState.Created,
+				Annotations:    annotations,
+			})
 		}
 	}
 	return s, nil

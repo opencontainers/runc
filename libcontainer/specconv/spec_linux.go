@@ -165,14 +165,16 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 	if !filepath.IsAbs(rootfsPath) {
 		rootfsPath = filepath.Join(cwd, rootfsPath)
 	}
+	labels := []string{}
+	for k, v := range spec.Annotations {
+		labels = append(labels, fmt.Sprintf("%s=%s", k, v))
+	}
 	config := &configs.Config{
 		Rootfs:      rootfsPath,
 		NoPivotRoot: opts.NoPivotRoot,
 		Readonlyfs:  spec.Root.Readonly,
 		Hostname:    spec.Hostname,
-		Labels: []string{
-			"bundle=" + cwd,
-		},
+		Labels:      append(labels, fmt.Sprintf("bundle=%s", cwd)),
 	}
 
 	exists := false
