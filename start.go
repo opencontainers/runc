@@ -128,7 +128,6 @@ func startContainer(context *cli.Context, spec *specs.Spec) (int, error) {
 	}
 	r := &runner{
 		enableSubreaper: !context.Bool("no-subreaper"),
-		shouldDestroy:   true,
 		container:       container,
 		listenFDs:       listenFDs,
 		console:         context.String("console"),

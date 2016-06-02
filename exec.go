@@ -116,7 +116,6 @@ func execProcess(context *cli.Context) (int, error) {
 	}
 	r := &runner{
 		enableSubreaper: !context.Bool("no-subreaper"),
-		shouldDestroy:   false,
 		container:       container,
 		console:         context.String("console"),
 		detach:          detach,
