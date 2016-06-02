@@ -1,14 +1,17 @@
 
-SHELL  ?= $(shell command -v bash 2>/dev/null)
-DOCKER ?= $(shell command -v docker 2>/dev/null)
-PANDOC ?= $(shell command -v pandoc 2>/dev/null)
+EPOCH_TEST_COMMIT	:= 78e6667ae2d67aad100b28ee9580b41b7a24e667
+OUTPUT_DIRNAME		?= output/
+DOC_FILENAME		?= oci-runtime-spec
+SHELL			?= $(shell command -v bash 2>/dev/null)
+DOCKER			?= $(shell command -v docker 2>/dev/null)
+PANDOC			?= $(shell command -v pandoc 2>/dev/null)
 ifeq "$(strip $(PANDOC))" ''
 	ifneq "$(strip $(DOCKER))" ''
 		PANDOC = $(DOCKER) run \
 			-it \
 			--rm \
 			-v $(shell pwd)/:/input/:ro \
-			-v $(shell pwd)/output/:/output/ \
+			-v $(shell pwd)/$(OUTPUT_DIRNAME)/:/$(OUTPUT_DIRNAME)/ \
 			-u $(shell id -u) \
 			vbatts/pandoc
 		PANDOC_SRC := /input/
@@ -33,23 +36,22 @@ DOC_FILES := \
 	config-linux.md \
 	config-solaris.md \
 	glossary.md
-EPOCH_TEST_COMMIT := 78e6667ae2d67aad100b28ee9580b41b7a24e667
 
 default: docs
 
 .PHONY: docs
-docs: output/docs.pdf output/docs.html
+docs: $(OUTPUT_DIRNAME)/$(DOC_FILENAME).pdf $(OUTPUT_DIRNAME)/$(DOC_FILENAME).html
 
 ifeq "$(strip $(PANDOC))" ''
-output/docs.pdf output/docs.html:
+$(OUTPUT_DIRNAME)/$(DOC_FILENAME).pdf $(OUTPUT_DIRNAME)/$(DOC_FILENAME).html:
 	$(error cannot build $@ without either pandoc or docker)
 else
-output/docs.pdf: $(DOC_FILES)
-	mkdir -p output/ && \
+$(OUTPUT_DIRNAME)/$(DOC_FILENAME).pdf: $(DOC_FILES)
+	mkdir -p $(OUTPUT_DIRNAME)/ && \
 	$(PANDOC) -f markdown_github -t latex -o $(PANDOC_DST)$@ $(patsubst %,$(PANDOC_SRC)%,$(DOC_FILES))
 
-output/docs.html: $(DOC_FILES)
-	mkdir -p output/ && \
+$(OUTPUT_DIRNAME)/$(DOC_FILENAME).html: $(DOC_FILES)
+	mkdir -p $(OUTPUT_DIRNAME)/ && \
 	$(PANDOC) -f markdown_github -t html5 -o $(PANDOC_DST)$@ $(patsubst %,$(PANDOC_SRC)%,$(DOC_FILES))
 endif
 
@@ -111,5 +113,5 @@ endif
 
 .PHONY: clean
 clean:
-	rm -rf output/ *~
+	rm -rf $(OUTPUT_DIRNAME) *~
 
