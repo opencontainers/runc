@@ -342,10 +342,11 @@ func (c *linuxContainer) newInitProcess(p *Process, cmd *exec.Cmd, parentPipe, c
 		}
 	}
 	_, sharePidns := nsMaps[configs.NEWPID]
-	data, err := c.bootstrapData(c.config.Namespaces.CloneFlags(), nsMaps, "")
+	data, err := c.bootstrapData(c.config.Namespaces.CloneFlags(), nsMaps)
 	if err != nil {
 		return nil, err
 	}
+	p.consoleChan = make(chan *os.File, 1)
 	return &initProcess{
 		cmd:           cmd,
 		childPipe:     childPipe,
@@ -368,11 +369,12 @@ func (c *linuxContainer) newSetnsProcess(p *Process, cmd *exec.Cmd, parentPipe, 
 	}
 	// for setns process, we dont have to set cloneflags as the process namespaces
 	// will only be set via setns syscall
-	data, err := c.bootstrapData(0, state.NamespacePaths, p.consolePath)
+	data, err := c.bootstrapData(0, state.NamespacePaths)
 	if err != nil {
 		return nil, err
 	}
 	// TODO: set on container for process management
+	p.consoleChan = make(chan *os.File, 1)
 	return &setnsProcess{
 		cmd:           cmd,
 		cgroupPaths:   c.cgroupManager.GetPaths(),
@@ -393,7 +395,6 @@ func (c *linuxContainer) newInitConfig(process *Process) *initConfig {
 		User:             process.User,
 		AdditionalGroups: process.AdditionalGroups,
 		Cwd:              process.Cwd,
-		Console:          process.consolePath,
 		Capabilities:     process.Capabilities,
 		PassedFilesCount: len(process.ExtraFiles),
 		ContainerId:      c.ID(),
@@ -414,6 +415,17 @@ func (c *linuxContainer) newInitConfig(process *Process) *initConfig {
 	}
 	if len(process.Rlimits) > 0 {
 		cfg.Rlimits = process.Rlimits
+	}
+	/*
+	 * TODO: This should not be automatically computed. We should implement
+	 *       this as a field in libcontainer.Process, and then we only dup the
+	 *       new console over the file descriptors which were not explicitly
+	 *       set with process.Std{in,out,err}. The reason I've left this as-is
+	 *       is because the GetConsole() interface is new, there's no need to
+	 *       polish this interface right now.
+	 */
+	if process.Stdin == nil && process.Stdout == nil && process.Stderr == nil {
+		cfg.CreateConsole = true
 	}
 	return cfg
 }
@@ -1281,7 +1293,7 @@ func encodeIDMapping(idMap []configs.IDMap) ([]byte, error) {
 // such as one that uses nsenter package to bootstrap the container's
 // init process correctly, i.e. with correct namespaces, uid/gid
 // mapping etc.
-func (c *linuxContainer) bootstrapData(cloneFlags uintptr, nsMaps map[configs.NamespaceType]string, consolePath string) (io.Reader, error) {
+func (c *linuxContainer) bootstrapData(cloneFlags uintptr, nsMaps map[configs.NamespaceType]string) (io.Reader, error) {
 	// create the netlink message
 	r := nl.NewNetlinkRequest(int(InitMsg), 0)
 
@@ -1290,14 +1302,6 @@ func (c *linuxContainer) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Na
 		Type:  CloneFlagsAttr,
 		Value: uint32(cloneFlags),
 	})
-
-	// write console path
-	if consolePath != "" {
-		r.AddData(&Bytemsg{
-			Type:  ConsolePathAttr,
-			Value: []byte(consolePath),
-		})
-	}
 
 	// write custom namespace paths
 	if len(nsMaps) > 0 {

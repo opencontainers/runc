@@ -101,8 +101,26 @@ func (p *setnsProcess) start() (err error) {
 	}
 
 	ierr := parseSync(p.parentPipe, func(sync *syncT) error {
-		// Currently this will noop.
 		switch sync.Type {
+		case procConsole:
+			if err := writeSync(p.parentPipe, procConsoleReq); err != nil {
+				return newSystemErrorWithCause(err, "writing syncT 'request fd'")
+			}
+
+			masterFile, err := utils.RecvFd(p.parentPipe)
+			if err != nil {
+				return newSystemErrorWithCause(err, "getting master pty from child pipe")
+			}
+
+			if p.process.consoleChan == nil {
+				// TODO: Don't panic here, do something more sane.
+				panic("consoleChan is nil")
+			}
+			p.process.consoleChan <- masterFile
+
+			if err := writeSync(p.parentPipe, procConsoleAck); err != nil {
+				return newSystemErrorWithCause(err, "writing syncT 'ack fd'")
+			}
 		case procReady:
 			// This shouldn't happen.
 			panic("unexpected procReady in setns")
@@ -285,6 +303,25 @@ func (p *initProcess) start() error {
 
 	ierr := parseSync(p.parentPipe, func(sync *syncT) error {
 		switch sync.Type {
+		case procConsole:
+			if err := writeSync(p.parentPipe, procConsoleReq); err != nil {
+				return newSystemErrorWithCause(err, "writing syncT 'request fd'")
+			}
+
+			masterFile, err := utils.RecvFd(p.parentPipe)
+			if err != nil {
+				return newSystemErrorWithCause(err, "getting master pty from child pipe")
+			}
+
+			if p.process.consoleChan == nil {
+				// TODO: Don't panic here, do something more sane.
+				panic("consoleChan is nil")
+			}
+			p.process.consoleChan <- masterFile
+
+			if err := writeSync(p.parentPipe, procConsoleAck); err != nil {
+				return newSystemErrorWithCause(err, "writing syncT 'ack fd'")
+			}
 		case procReady:
 			if err := p.manager.Set(p.config.Config); err != nil {
 				return newSystemErrorWithCause(err, "setting cgroup config for ready process")
@@ -316,7 +353,7 @@ func (p *initProcess) start() error {
 			}
 			// Sync with child.
 			if err := writeSync(p.parentPipe, procRun); err != nil {
-				return newSystemErrorWithCause(err, "writing syncT run type")
+				return newSystemErrorWithCause(err, "writing syncT 'run'")
 			}
 			sentRun = true
 		case procHooks:
@@ -336,7 +373,7 @@ func (p *initProcess) start() error {
 			}
 			// Sync with child.
 			if err := writeSync(p.parentPipe, procResume); err != nil {
-				return newSystemErrorWithCause(err, "writing syncT resume type")
+				return newSystemErrorWithCause(err, "writing syncT 'resume'")
 			}
 			sentResume = true
 		default:
@@ -432,6 +469,8 @@ func getPipeFds(pid int) ([]string, error) {
 
 	dirPath := filepath.Join("/proc", strconv.Itoa(pid), "/fd")
 	for i := 0; i < 3; i++ {
+		// XXX: This breaks if the path is not a valid symlink (which can
+		//      happen in certain particularly unlucky mount namespace setups).
 		f := filepath.Join(dirPath, strconv.Itoa(i))
 		target, err := os.Readlink(f)
 		if err != nil {
@@ -442,8 +481,10 @@ func getPipeFds(pid int) ([]string, error) {
 	return fds, nil
 }
 
-// InitializeIO creates pipes for use with the process's STDIO
-// and returns the opposite side for each
+// InitializeIO creates pipes for use with the process's stdio and returns the
+// opposite side for each. Do not use this if you want to have a pseudoterminal
+// set up for you by libcontainer (TODO: fix that too).
+// TODO: This is mostly unnecessary, and should be handled by clients.
 func (p *Process) InitializeIO(rootuid, rootgid int) (i *IO, err error) {
 	var fds []uintptr
 	i = &IO{}

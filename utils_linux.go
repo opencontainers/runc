@@ -94,22 +94,6 @@ func newProcess(p specs.Process) (*libcontainer.Process, error) {
 	return lp, nil
 }
 
-func dupStdio(process *libcontainer.Process, rootuid, rootgid int) error {
-	process.Stdin = os.Stdin
-	process.Stdout = os.Stdout
-	process.Stderr = os.Stderr
-	for _, fd := range []uintptr{
-		os.Stdin.Fd(),
-		os.Stdout.Fd(),
-		os.Stderr.Fd(),
-	} {
-		if err := syscall.Fchown(int(fd), rootuid, rootgid); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // If systemd is supporting sd_notify protocol, this function will add support
 // for sd_notify protocol from within the container.
 func setupSdNotify(spec *specs.Spec, notifySocket string) {
@@ -123,23 +107,27 @@ func destroy(container libcontainer.Container) {
 	}
 }
 
-// setupIO sets the proper IO on the process depending on the configuration
-// If there is a nil error then there must be a non nil tty returned
-func setupIO(process *libcontainer.Process, rootuid, rootgid int, console string, createTTY, detach bool) (*tty, error) {
-	// detach and createTty will not work unless a console path is passed
-	// so error out here before changing any terminal settings
-	if createTTY && detach && console == "" {
-		return nil, fmt.Errorf("cannot allocate tty if runc will detach")
-	}
+// setupIO modifies the given process config according to the options.
+func setupIO(process *libcontainer.Process, rootuid, rootgid int, createTTY, detach bool) (*tty, error) {
+	// This is entirely handled by recvtty.
 	if createTTY {
-		return createTty(process, rootuid, rootgid, console)
+		process.Stdin = nil
+		process.Stdout = nil
+		process.Stderr = nil
+		return &tty{}, nil
 	}
+
+	// When we detach, we just dup over stdio and call it a day. There's no
+	// requirement that we set up anything nice for our caller or the
+	// container.
 	if detach {
+		// TODO: Actually set rootuid, rootgid.
 		if err := dupStdio(process, rootuid, rootgid); err != nil {
 			return nil, err
 		}
 		return &tty{}, nil
 	}
+
 	return createStdioPipes(process, rootuid, rootgid)
 }
 
@@ -192,7 +180,6 @@ type runner struct {
 	detach          bool
 	listenFDs       []*os.File
 	pidFile         string
-	console         string
 	container       libcontainer.Container
 	create          bool
 }
@@ -217,21 +204,31 @@ func (r *runner) run(config *specs.Process) (int, error) {
 		r.destroy()
 		return -1, err
 	}
-	tty, err := setupIO(process, rootuid, rootgid, r.console, config.Terminal, r.detach || r.create)
-	if err != nil {
-		r.destroy()
-		return -1, err
-	}
-	handler := newSignalHandler(tty, r.enableSubreaper)
 	startFn := r.container.Start
 	if !r.create {
 		startFn = r.container.Run
 	}
-	defer tty.Close()
+	// Setting up IO is a two stage process. We need to modify process to deal
+	// with detaching containers, and then we get a tty after the container has
+	// started.
+	handler := newSignalHandler(r.enableSubreaper)
+	tty, err := setupIO(process, rootuid, rootgid, config.Terminal, r.detach || r.create)
+	if err != nil {
+		r.destroy()
+		return -1, err
+	}
 	if err := startFn(process); err != nil {
 		r.destroy()
 		return -1, err
 	}
+	if config.Terminal {
+		if err := tty.recvtty(process, r.detach || r.create); err != nil {
+			r.terminate(process)
+			r.destroy()
+			return -1, err
+		}
+	}
+	defer tty.Close()
 	if err := tty.ClosePostStart(); err != nil {
 		r.terminate(process)
 		r.destroy()
@@ -247,7 +244,7 @@ func (r *runner) run(config *specs.Process) (int, error) {
 	if r.detach || r.create {
 		return 0, nil
 	}
-	status, err := handler.forward(process)
+	status, err := handler.forward(process, tty)
 	if err != nil {
 		r.terminate(process)
 	}
@@ -298,7 +295,6 @@ func startContainer(context *cli.Context, spec *specs.Spec, create bool) (int, e
 		shouldDestroy:   true,
 		container:       container,
 		listenFDs:       listenFDs,
-		console:         context.String("console"),
 		detach:          context.Bool("detach"),
 		pidFile:         context.String("pid-file"),
 		create:          create,

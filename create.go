@@ -30,11 +30,6 @@ command(s) that get executed on start, edit the args parameter of the spec. See
 			Usage: `path to the root of the bundle directory, defaults to the current directory`,
 		},
 		cli.StringFlag{
-			Name:  "console",
-			Value: "",
-			Usage: "specify the pty slave path for use with the container",
-		},
-		cli.StringFlag{
 			Name:  "pid-file",
 			Value: "",
 			Usage: "specify the file to write the process id to",

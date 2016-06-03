@@ -3,16 +3,15 @@ package libcontainer
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"syscall"
 	"unsafe"
 
 	"github.com/opencontainers/runc/libcontainer/label"
 )
 
-// NewConsole returns an initialized console that can be used within a container by copying bytes
+// newConsole returns an initialized console that can be used within a container by copying bytes
 // from the master side to the slave that is attached as the tty for the container's init process.
-func NewConsole(uid, gid int) (Console, error) {
+func newConsole(uid, gid int) (Console, error) {
 	master, err := os.OpenFile("/dev/ptmx", syscall.O_RDWR|syscall.O_NOCTTY|syscall.O_CLOEXEC, 0)
 	if err != nil {
 		return nil, err
@@ -37,14 +36,6 @@ func NewConsole(uid, gid int) (Console, error) {
 		slavePath: console,
 		master:    master,
 	}, nil
-}
-
-// newConsoleFromPath is an internal function returning an initialized console for use inside
-// a container's MNT namespace.
-func newConsoleFromPath(slavePath string) *linuxConsole {
-	return &linuxConsole{
-		slavePath: slavePath,
-	}
 }
 
 // linuxConsole is a linux pseudo TTY for use within a container.
@@ -78,21 +69,20 @@ func (c *linuxConsole) Close() error {
 
 // mount initializes the console inside the rootfs mounting with the specified mount label
 // and applying the correct ownership of the console.
-func (c *linuxConsole) mount(rootfs, mountLabel string) error {
+func (c *linuxConsole) mount(mountLabel string) error {
 	oldMask := syscall.Umask(0000)
 	defer syscall.Umask(oldMask)
 	if err := label.SetFileLabel(c.slavePath, mountLabel); err != nil {
 		return err
 	}
-	dest := filepath.Join(rootfs, "/dev/console")
-	f, err := os.Create(dest)
+	f, err := os.Create("/dev/console")
 	if err != nil && !os.IsExist(err) {
 		return err
 	}
 	if f != nil {
 		f.Close()
 	}
-	return syscall.Mount(c.slavePath, dest, "bind", syscall.MS_BIND, "")
+	return syscall.Mount(c.slavePath, "/dev/console", "bind", syscall.MS_BIND, "")
 }
 
 // dupStdio opens the slavePath for the console and dups the fds to the current

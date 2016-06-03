@@ -54,12 +54,12 @@ type initConfig struct {
 	User             string           `json:"user"`
 	AdditionalGroups []string         `json:"additional_groups"`
 	Config           *configs.Config  `json:"config"`
-	Console          string           `json:"console"`
 	Networks         []*network       `json:"network"`
 	PassedFilesCount int              `json:"passed_files_count"`
 	ContainerId      string           `json:"containerid"`
 	Rlimits          []configs.Rlimit `json:"rlimits"`
 	ExecFifoPath     string           `json:"start_pipe_path"`
+	CreateConsole    bool             `json:"create_console"`
 }
 
 type initer interface {
@@ -77,6 +77,7 @@ func newContainerInit(t initType, pipe *os.File, stateDirFD int) (initer, error)
 	switch t {
 	case initSetns:
 		return &linuxSetnsInit{
+			pipe:   pipe,
 			config: config,
 		}, nil
 	case initStandard:
@@ -148,6 +149,60 @@ func finalizeNamespace(config *initConfig) error {
 		}
 	}
 	return nil
+}
+
+// setupConsole sets up the console from inside the container, and sends the
+// master pty fd to the config.Pipe (using cmsg). This is done to ensure that
+// consoles are scoped to a container properly (see runc#814 and the many
+// issues related to that). This has to be run *after* we've pivoted to the new
+// rootfs (and the users' configuration is entirely set up).
+func setupConsole(pipe *os.File, config *initConfig, mount bool) error {
+	// At this point, /dev/ptmx points to something that we would expect.
+	console, err := newConsole(0, 0)
+	if err != nil {
+		return err
+	}
+	// After we return from here, we don't need the console anymore.
+	defer console.Close()
+
+	linuxConsole, ok := console.(*linuxConsole)
+	if !ok {
+		return fmt.Errorf("failed to cast console to *linuxConsole")
+	}
+
+	// Mount the console inside our rootfs.
+	if mount {
+		if err := linuxConsole.mount(config.ProcessLabel); err != nil {
+			return err
+		}
+	}
+
+	if err := writeSync(pipe, procConsole); err != nil {
+		return err
+	}
+
+	// We need to have a two-way synchronisation here. Though it might seem
+	// pointless, it's important to make sure that the sendmsg(2) payload
+	// doesn't get swallowed by an out-of-place read(2) [which happens if the
+	// syscalls get reordered so that sendmsg(2) is before the other side's
+	// read(2) of procConsole].
+	if err := readSync(pipe, procConsoleReq); err != nil {
+		return err
+	}
+
+	// While we can access console.master, using the API is a good idea.
+	consoleFile := os.NewFile(linuxConsole.Fd(), "[master-pty]")
+	if err := utils.SendFd(pipe, consoleFile); err != nil {
+		return err
+	}
+
+	// Make sure the other side recieved the fd.
+	if err := readSync(pipe, procConsoleAck); err != nil {
+		return err
+	}
+
+	// Now, dup over all the things.
+	return linuxConsole.dupStdio()
 }
 
 // syncParentReady sends to the given pipe a JSON payload which indicates that

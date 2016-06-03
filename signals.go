@@ -17,7 +17,7 @@ const signalBufferSize = 2048
 
 // newSignalHandler returns a signal handler for processing SIGCHLD and SIGWINCH signals
 // while still forwarding all other signals to the process.
-func newSignalHandler(tty *tty, enableSubreaper bool) *signalHandler {
+func newSignalHandler(enableSubreaper bool) *signalHandler {
 	if enableSubreaper {
 		// set us as the subreaper before registering the signal handler for the container
 		if err := system.SetSubreaper(1); err != nil {
@@ -30,7 +30,6 @@ func newSignalHandler(tty *tty, enableSubreaper bool) *signalHandler {
 	// handle all signals for the process.
 	signal.Notify(s)
 	return &signalHandler{
-		tty:     tty,
 		signals: s,
 	}
 }
@@ -44,12 +43,11 @@ type exit struct {
 
 type signalHandler struct {
 	signals chan os.Signal
-	tty     *tty
 }
 
 // forward handles the main signal event loop forwarding, resizing, or reaping depending
 // on the signal received.
-func (h *signalHandler) forward(process *libcontainer.Process) (int, error) {
+func (h *signalHandler) forward(process *libcontainer.Process, tty *tty) (int, error) {
 	// make sure we know the pid of our main process so that we can return
 	// after it dies.
 	pid1, err := process.Pid()
@@ -57,11 +55,11 @@ func (h *signalHandler) forward(process *libcontainer.Process) (int, error) {
 		return -1, err
 	}
 	// perform the initial tty resize.
-	h.tty.resize()
+	tty.resize()
 	for s := range h.signals {
 		switch s {
 		case syscall.SIGWINCH:
-			h.tty.resize()
+			tty.resize()
 		case syscall.SIGCHLD:
 			exits, err := h.reap()
 			if err != nil {

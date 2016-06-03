@@ -158,15 +158,16 @@ func restoreContainer(context *cli.Context, spec *specs.Spec, config *configs.Co
 		defer destroy(container)
 	}
 	process := &libcontainer.Process{}
-	tty, err := setupIO(process, rootuid, rootgid, "", false, detach)
+	tty, err := setupIO(process, rootuid, rootgid, false, detach)
 	if err != nil {
 		return -1, err
 	}
-	defer tty.Close()
-	handler := newSignalHandler(tty, !context.Bool("no-subreaper"))
+	handler := newSignalHandler(!context.Bool("no-subreaper"))
 	if err := container.Restore(process, options); err != nil {
 		return -1, err
 	}
+	// We don't need to do a tty.recvtty because config.Terminal is always false.
+	defer tty.Close()
 	if err := tty.ClosePostStart(); err != nil {
 		return -1, err
 	}
@@ -180,7 +181,7 @@ func restoreContainer(context *cli.Context, spec *specs.Spec, config *configs.Co
 	if detach {
 		return 0, nil
 	}
-	return handler.forward(process)
+	return handler.forward(process, tty)
 }
 
 func criuOptions(context *cli.Context) *libcontainer.CriuOpts {

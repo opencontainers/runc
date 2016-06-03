@@ -31,11 +31,6 @@ command(s) that get executed on start, edit the args parameter of the spec. See
 			Value: "",
 			Usage: `path to the root of the bundle directory, defaults to the current directory`,
 		},
-		cli.StringFlag{
-			Name:  "console",
-			Value: "",
-			Usage: "specify the pty slave path for use with the container",
-		},
 		cli.BoolFlag{
 			Name:  "detach, d",
 			Usage: "detach from the container's process",

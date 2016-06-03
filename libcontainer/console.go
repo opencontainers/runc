@@ -13,3 +13,6 @@ type Console interface {
 	// Fd returns the fd for the master of the pty.
 	Fd() uintptr
 }
+
+// ConsoleData represents arbitrary setup data used when setting up console
+// handling. It is
