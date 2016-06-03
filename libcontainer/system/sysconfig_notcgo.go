@@ -2,6 +2,8 @@
 
 package system
 
+import "errors"
+
 func GetClockTicks() int {
 	// TODO figure out a better alternative for platforms where we're missing cgo
 	//
@@ -12,4 +14,8 @@ func GetClockTicks() int {
 	// https://msdn.microsoft.com/en-us/library/windows/desktop/dn553408(v=vs.85).aspx
 
 	return 100
+}
+
+func GetLongBit() (int, error) {
+	return -1, errors.New("GetLongBit only supported when compile with CGO")
 }
