@@ -23,6 +23,8 @@ The value MAY be one of:
 * **`pid`**: (int) is the ID of the main process within the container, as seen by the host.
 * **`bundlePath`**: (string) is the absolute path to the container's bundle directory.
 This is provided so that consumers can find the container's configuration and root filesystem on the host.
+* **`annotations`**: (map) contains the list of annotations associated with the container.
+If no annotations were provided then this property MAY either be absent or an empty map.
 
 When serialized in JSON, the format MUST adhere to the following pattern:
 
@@ -32,7 +34,10 @@ When serialized in JSON, the format MUST adhere to the following pattern:
     "id": "oci-container1",
     "status": "running",
     "pid": 4422,
-    "bundlePath": "/containers/redis"
+    "bundlePath": "/containers/redis",
+    "annotations": {
+        "myKey": "myValue"
+    }
 }
 ```
 
