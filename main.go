@@ -37,7 +37,7 @@ The root filesystem contains the contents of the container.
 
 To start a new instance of a container:
 
-    # runc start [ -b bundle ] <container-id>
+    # runc run [ -b bundle ] <container-id>
 
 Where "<container-id>" is your name for the instance of the container that you
 are starting. The name you provide for the container instance must be unique on

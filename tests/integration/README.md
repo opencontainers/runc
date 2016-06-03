@@ -71,8 +71,8 @@ function teardown() {
 }
 
 @test "this is a simple test" {
-  runc start containerid
-  # "run" automatically populates $status, $output and $lines.
+  runc run containerid
+  # "The runc macro" automatically populates $status, $output and $lines.
   # Please refer to bats documentation to find out more.
   [ "$status" -eq 0 ]
 
