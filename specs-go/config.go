@@ -169,6 +169,8 @@ const (
 	UTSNamespace = "uts"
 	// UserNamespace for isolating user and group IDs
 	UserNamespace = "user"
+	// CgroupNamespace for isolating cgroup hierarchies
+	CgroupNamespace = "cgroup"
 )
 
 // IDMapping specifies UID/GID mappings
