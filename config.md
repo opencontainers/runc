@@ -113,9 +113,9 @@ The user for the process is a platform-specific structure that allows specific c
 
 For Linux and Solaris based systems the user structure has the following fields:
 
-* **`uid`** (int, required) specifies the user id.
-* **`gid`** (int, required) specifies the group id.
-* **`additionalGids`** (array of ints, optional) specifies additional group ids to be added to the process.
+* **`uid`** (int, required) specifies the user ID in the [container namespace][container-namespace].
+* **`gid`** (int, required) specifies the group ID in the [container namespace][container-namespace].
+* **`additionalGids`** (array of ints, optional) specifies additional group IDs (in the [container namespace][container-namespace]) to be added to the process.
 
 _Note: symbolic name for uid and gid, such as uname and gname respectively, are left to upper levels to derive (i.e. `/etc/passwd` parsing, NSS, etc)_
 
@@ -674,6 +674,7 @@ Here is a full example `config.json` for reference.
 }
 ```
 
+[container-namespace]: glossary.md#container-namespace
+[go-environment]: https://golang.org/doc/install/source#environment
 [runtime-namespace]: glossary.md#runtime-namespace
 [uts-namespace]: http://man7.org/linux/man-pages/man7/namespaces.7.html
-[go-environment]: https://golang.org/doc/install/source#environment
