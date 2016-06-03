@@ -15,20 +15,16 @@ import (
 type Status int
 
 const (
-	// Created is the status that denotes the container exists but has not been run yet
+	// Created is the status that denotes the container exists but has not been run yet.
 	Created Status = iota
-
 	// Running is the status that denotes the container exists and is running.
 	Running
-
 	// Pausing is the status that denotes the container exists, it is in the process of being paused.
 	Pausing
-
 	// Paused is the status that denotes the container exists, but all its processes are paused.
 	Paused
-
-	// Destroyed is the status that denotes the container does not exist.
-	Destroyed
+	// Stopped is the status that denotes the container does not have a created or running process.
+	Stopped
 )
 
 func (s Status) String() string {
@@ -41,8 +37,8 @@ func (s Status) String() string {
 		return "pausing"
 	case Paused:
 		return "paused"
-	case Destroyed:
-		return "destroyed"
+	case Stopped:
+		return "stopped"
 	default:
 		return "unknown"
 	}
@@ -80,13 +76,13 @@ type BaseContainer interface {
 	//
 	// errors:
 	// ContainerDestroyed - Container no longer exists,
-	// Systemerror - System error.
+	// SystemError - System error.
 	Status() (Status, error)
 
 	// State returns the current container's state information.
 	//
 	// errors:
-	// Systemerror - System error.
+	// SystemError - System error.
 	State() (*State, error)
 
 	// Returns the current config of the container.
@@ -96,7 +92,7 @@ type BaseContainer interface {
 	//
 	// errors:
 	// ContainerDestroyed - Container no longer exists,
-	// Systemerror - System error.
+	// SystemError - System error.
 	//
 	// Some of the returned PIDs may no longer refer to processes in the Container, unless
 	// the Container state is PAUSED in which case every PID in the slice is valid.
@@ -106,7 +102,7 @@ type BaseContainer interface {
 	//
 	// errors:
 	// ContainerDestroyed - Container no longer exists,
-	// Systemerror - System error.
+	// SystemError - System error.
 	Stats() (*Stats, error)
 
 	// Set resources of container as configured
@@ -114,7 +110,7 @@ type BaseContainer interface {
 	// We can use this to change resources when containers are running.
 	//
 	// errors:
-	// Systemerror - System error.
+	// SystemError - System error.
 	Set(config configs.Config) error
 
 	// Start a process inside the container. Returns error if process fails to
@@ -124,8 +120,19 @@ type BaseContainer interface {
 	// ContainerDestroyed - Container no longer exists,
 	// ConfigInvalid - config is invalid,
 	// ContainerPaused - Container is paused,
-	// Systemerror - System error.
+	// SystemError - System error.
 	Start(process *Process) (err error)
+
+	// Run immediatly starts the process inside the conatiner.  Returns error if process
+	// fails to start.  It does not block waiting for a SIGCONT after start returns but
+	// sends the signal when the process has completed.
+	//
+	// errors:
+	// ContainerDestroyed - Container no longer exists,
+	// ConfigInvalid - config is invalid,
+	// ContainerPaused - Container is paused,
+	// SystemError - System error.
+	Run(process *Process) (err error)
 
 	// Destroys the container after killing all running processes.
 	//
@@ -133,12 +140,12 @@ type BaseContainer interface {
 	// No error is returned if the container is already destroyed.
 	//
 	// errors:
-	// Systemerror - System error.
+	// SystemError - System error.
 	Destroy() error
 
 	// Signal sends the provided signal code to the container's initial process.
 	//
 	// errors:
-	// Systemerror - System error.
+	// SystemError - System error.
 	Signal(s os.Signal) error
 }

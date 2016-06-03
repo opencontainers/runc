@@ -29,6 +29,10 @@ import (
 
 const stdioFdCount = 3
 
+// InitContinueSignal is used to signal the container init process to
+// start the users specified process after the container create has finished.
+const InitContinueSignal = syscall.SIGCONT
+
 type linuxContainer struct {
 	id            string
 	root          string
@@ -181,8 +185,28 @@ func (c *linuxContainer) Start(process *Process) error {
 	if err != nil {
 		return err
 	}
-	doInit := status == Destroyed
-	parent, err := c.newParentProcess(process, doInit)
+	return c.start(process, status == Stopped)
+}
+
+func (c *linuxContainer) Run(process *Process) error {
+	c.m.Lock()
+	defer c.m.Unlock()
+	status, err := c.currentStatus()
+	if err != nil {
+		return err
+	}
+	isInit := status == Stopped
+	if err := c.start(process, isInit); err != nil {
+		return err
+	}
+	if isInit {
+		return process.ops.signal(InitContinueSignal)
+	}
+	return nil
+}
+
+func (c *linuxContainer) start(process *Process, isInit bool) error {
+	parent, err := c.newParentProcess(process, isInit)
 	if err != nil {
 		return newSystemErrorWithCause(err, "creating new parent process")
 	}
@@ -195,11 +219,13 @@ func (c *linuxContainer) Start(process *Process) error {
 	}
 	// generate a timestamp indicating when the container was started
 	c.created = time.Now().UTC()
-
 	c.state = &runningState{
 		c: c,
 	}
-	if doInit {
+	if isInit {
+		c.state = &createdState{
+			c: c,
+		}
 		if err := c.updateState(parent); err != nil {
 			return err
 		}
@@ -371,15 +397,16 @@ func (c *linuxContainer) Pause() error {
 	if err != nil {
 		return err
 	}
-	if status != Running {
-		return newGenericError(fmt.Errorf("container not running"), ContainerNotRunning)
+	switch status {
+	case Running, Created:
+		if err := c.cgroupManager.Freeze(configs.Frozen); err != nil {
+			return err
+		}
+		return c.state.transition(&pausedState{
+			c: c,
+		})
 	}
-	if err := c.cgroupManager.Freeze(configs.Frozen); err != nil {
-		return err
-	}
-	return c.state.transition(&pausedState{
-		c: c,
-	})
+	return newGenericError(fmt.Errorf("container not running: %s", status), ContainerNotRunning)
 }
 
 func (c *linuxContainer) Resume() error {
@@ -1034,31 +1061,45 @@ func (c *linuxContainer) refreshState() error {
 	if paused {
 		return c.state.transition(&pausedState{c: c})
 	}
-	running, err := c.isRunning()
+	t, err := c.runType()
 	if err != nil {
 		return err
 	}
-	if running {
+	switch t {
+	case Created:
+		return c.state.transition(&createdState{c: c})
+	case Running:
 		return c.state.transition(&runningState{c: c})
 	}
 	return c.state.transition(&stoppedState{c: c})
 }
 
-func (c *linuxContainer) isRunning() (bool, error) {
+func (c *linuxContainer) runType() (Status, error) {
 	if c.initProcess == nil {
-		return false, nil
+		return Stopped, nil
 	}
+	pid := c.initProcess.pid()
 	// return Running if the init process is alive
-	if err := syscall.Kill(c.initProcess.pid(), 0); err != nil {
+	if err := syscall.Kill(pid, 0); err != nil {
 		if err == syscall.ESRCH {
 			// It means the process does not exist anymore, could happen when the
 			// process exited just when we call the function, we should not return
 			// error in this case.
-			return false, nil
+			return Stopped, nil
 		}
-		return false, newSystemErrorWithCausef(err, "sending signal 0 to pid %d", c.initProcess.pid())
+		return Stopped, newSystemErrorWithCausef(err, "sending signal 0 to pid %d", pid)
 	}
-	return true, nil
+	// check if the process that is running is the init process or the user's process.
+	// this is the difference between the container Running and Created.
+	environ, err := ioutil.ReadFile(fmt.Sprintf("/proc/%d/environ", pid))
+	if err != nil {
+		return Stopped, newSystemErrorWithCausef(err, "reading /proc/%d/environ", pid)
+	}
+	check := []byte("_LIBCONTAINER")
+	if bytes.Contains(environ, check) {
+		return Created, nil
+	}
+	return Running, nil
 }
 
 func (c *linuxContainer) isPaused() (bool, error) {

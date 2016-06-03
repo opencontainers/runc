@@ -21,8 +21,8 @@ function teardown() {
   sed -i 's/"sh"/"sh","-c","while :; do date; sleep 1; done"/' config.json
 
   (
-    # start busybox (not detached)
-    runc start test_busybox
+    # run busybox (not detached)
+    runc run test_busybox
     [ "$status" -eq 0 ]
   ) &
 

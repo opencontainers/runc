@@ -241,7 +241,7 @@ func TestEnter(t *testing.T) {
 		Stdin:  stdinR,
 		Stdout: &stdout,
 	}
-	err = container.Start(&pconfig)
+	err = container.Run(&pconfig)
 	stdinR.Close()
 	defer stdinW.Close()
 	ok(t, err)
@@ -259,7 +259,7 @@ func TestEnter(t *testing.T) {
 	pconfig2.Stdin = stdinR2
 	pconfig2.Stdout = &stdout2
 
-	err = container.Start(&pconfig2)
+	err = container.Run(&pconfig2)
 	stdinR2.Close()
 	defer stdinW2.Close()
 	ok(t, err)
@@ -330,7 +330,7 @@ func TestProcessEnv(t *testing.T) {
 		Stdin:  nil,
 		Stdout: &stdout,
 	}
-	err = container.Start(&pconfig)
+	err = container.Run(&pconfig)
 	ok(t, err)
 
 	// Wait for process
@@ -378,7 +378,7 @@ func TestProcessCaps(t *testing.T) {
 		Stdin:        nil,
 		Stdout:       &stdout,
 	}
-	err = container.Start(&pconfig)
+	err = container.Run(&pconfig)
 	ok(t, err)
 
 	// Wait for process
@@ -448,7 +448,7 @@ func TestAdditionalGroups(t *testing.T) {
 		Stdin:  nil,
 		Stdout: &stdout,
 	}
-	err = container.Start(&pconfig)
+	err = container.Run(&pconfig)
 	ok(t, err)
 
 	// Wait for process
@@ -508,7 +508,7 @@ func testFreeze(t *testing.T, systemd bool) {
 		Env:   standardEnvironment,
 		Stdin: stdinR,
 	}
-	err = container.Start(pconfig)
+	err = container.Run(pconfig)
 	stdinR.Close()
 	defer stdinW.Close()
 	ok(t, err)
@@ -719,7 +719,7 @@ func TestContainerState(t *testing.T) {
 		Env:   standardEnvironment,
 		Stdin: stdinR,
 	}
-	err = container.Start(p)
+	err = container.Run(p)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -772,7 +772,7 @@ func TestPassExtraFiles(t *testing.T) {
 		Stdin:      nil,
 		Stdout:     &stdout,
 	}
-	err = container.Start(&process)
+	err = container.Run(&process)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -853,7 +853,7 @@ func TestMountCmds(t *testing.T) {
 		Args: []string{"sh", "-c", "env"},
 		Env:  standardEnvironment,
 	}
-	err = container.Start(&pconfig)
+	err = container.Run(&pconfig)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -902,7 +902,7 @@ func TestSysctl(t *testing.T) {
 		Stdin:  nil,
 		Stdout: &stdout,
 	}
-	err = container.Start(&pconfig)
+	err = container.Run(&pconfig)
 	ok(t, err)
 
 	// Wait for process
@@ -1042,7 +1042,7 @@ func TestOomScoreAdj(t *testing.T) {
 		Stdin:  nil,
 		Stdout: &stdout,
 	}
-	err = container.Start(&pconfig)
+	err = container.Run(&pconfig)
 	ok(t, err)
 
 	// Wait for process
@@ -1114,7 +1114,7 @@ func TestHook(t *testing.T) {
 		Stdin:  nil,
 		Stdout: &stdout,
 	}
-	err = container.Start(&pconfig)
+	err = container.Run(&pconfig)
 	ok(t, err)
 
 	// Wait for process
@@ -1231,7 +1231,7 @@ func TestRootfsPropagationSlaveMount(t *testing.T) {
 		Stdin: stdinR,
 	}
 
-	err = container.Start(pconfig)
+	err = container.Run(pconfig)
 	stdinR.Close()
 	defer stdinW.Close()
 	ok(t, err)
@@ -1260,7 +1260,7 @@ func TestRootfsPropagationSlaveMount(t *testing.T) {
 		Stdout: &stdout2,
 	}
 
-	err = container.Start(pconfig2)
+	err = container.Run(pconfig2)
 	stdinR2.Close()
 	defer stdinW2.Close()
 	ok(t, err)
@@ -1348,7 +1348,7 @@ func TestRootfsPropagationSharedMount(t *testing.T) {
 		Stdin: stdinR,
 	}
 
-	err = container.Start(pconfig)
+	err = container.Run(pconfig)
 	stdinR.Close()
 	defer stdinW.Close()
 	ok(t, err)
@@ -1380,7 +1380,7 @@ func TestRootfsPropagationSharedMount(t *testing.T) {
 		Capabilities: processCaps,
 	}
 
-	err = container.Start(pconfig2)
+	err = container.Run(pconfig2)
 	stdinR2.Close()
 	defer stdinW2.Close()
 	ok(t, err)
@@ -1452,7 +1452,7 @@ func TestInitJoinPID(t *testing.T) {
 		Env:   standardEnvironment,
 		Stdin: stdinR1,
 	}
-	err = container1.Start(init1)
+	err = container1.Run(init1)
 	stdinR1.Close()
 	defer stdinW1.Close()
 	ok(t, err)
@@ -1462,7 +1462,7 @@ func TestInitJoinPID(t *testing.T) {
 	ok(t, err)
 	pidns1 := state1.NamespacePaths[configs.NEWPID]
 
-	// Start a container inside the existing pidns but with different cgroups
+	// Run a container inside the existing pidns but with different cgroups
 	config2 := newTemplateConfig(rootfs)
 	config2.Namespaces.Add(configs.NEWPID, pidns1)
 	config2.Cgroups.Path = "integration/test2"
@@ -1478,7 +1478,7 @@ func TestInitJoinPID(t *testing.T) {
 		Env:   standardEnvironment,
 		Stdin: stdinR2,
 	}
-	err = container2.Start(init2)
+	err = container2.Run(init2)
 	stdinR2.Close()
 	defer stdinW2.Close()
 	ok(t, err)
@@ -1508,7 +1508,7 @@ func TestInitJoinPID(t *testing.T) {
 		Env:    standardEnvironment,
 		Stdout: buffers.Stdout,
 	}
-	err = container1.Start(ps)
+	err = container1.Run(ps)
 	ok(t, err)
 	waitProcess(ps, t)
 
@@ -1557,7 +1557,7 @@ func TestInitJoinNetworkAndUser(t *testing.T) {
 		Env:   standardEnvironment,
 		Stdin: stdinR1,
 	}
-	err = container1.Start(init1)
+	err = container1.Run(init1)
 	stdinR1.Close()
 	defer stdinW1.Close()
 	ok(t, err)
@@ -1568,7 +1568,7 @@ func TestInitJoinNetworkAndUser(t *testing.T) {
 	netns1 := state1.NamespacePaths[configs.NEWNET]
 	userns1 := state1.NamespacePaths[configs.NEWUSER]
 
-	// Start a container inside the existing pidns but with different cgroups
+	// Run a container inside the existing pidns but with different cgroups
 	rootfs2, err := newRootfs()
 	ok(t, err)
 	defer remove(rootfs2)
@@ -1591,7 +1591,7 @@ func TestInitJoinNetworkAndUser(t *testing.T) {
 		Env:   standardEnvironment,
 		Stdin: stdinR2,
 	}
-	err = container2.Start(init2)
+	err = container2.Run(init2)
 	stdinR2.Close()
 	defer stdinW2.Close()
 	ok(t, err)

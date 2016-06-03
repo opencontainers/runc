@@ -11,6 +11,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
+	"github.com/coreos/go-systemd/activation"
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
 	"github.com/opencontainers/runc/libcontainer/specconv"
@@ -198,6 +199,7 @@ type runner struct {
 	pidFile         string
 	console         string
 	container       libcontainer.Container
+	create          bool
 }
 
 func (r *runner) run(config *specs.Process) (int, error) {
@@ -220,7 +222,7 @@ func (r *runner) run(config *specs.Process) (int, error) {
 		r.destroy()
 		return -1, err
 	}
-	tty, err := setupIO(process, rootuid, rootgid, r.console, config.Terminal, r.detach)
+	tty, err := setupIO(process, rootuid, rootgid, r.console, config.Terminal, r.detach || r.create)
 	if err != nil {
 		r.destroy()
 		return -1, err
@@ -245,7 +247,15 @@ func (r *runner) run(config *specs.Process) (int, error) {
 			return -1, err
 		}
 	}
-	if r.detach {
+	if !r.create {
+		if err := process.Signal(libcontainer.InitContinueSignal); err != nil {
+			r.terminate(process)
+			r.destroy()
+			tty.Close()
+			return -1, err
+		}
+	}
+	if r.detach || r.create {
 		tty.Close()
 		return 0, nil
 	}
@@ -280,4 +290,32 @@ func validateProcessSpec(spec *specs.Process) error {
 		return fmt.Errorf("args must not be empty")
 	}
 	return nil
+}
+
+func startContainer(context *cli.Context, spec *specs.Spec, create bool) (int, error) {
+	id := context.Args().First()
+	if id == "" {
+		return -1, errEmptyID
+	}
+	container, err := createContainer(context, id, spec)
+	if err != nil {
+		return -1, err
+	}
+	detach := context.Bool("detach")
+	// Support on-demand socket activation by passing file descriptors into the container init process.
+	listenFDs := []*os.File{}
+	if os.Getenv("LISTEN_FDS") != "" {
+		listenFDs = activation.Files(false)
+	}
+	r := &runner{
+		enableSubreaper: !context.Bool("no-subreaper"),
+		shouldDestroy:   true,
+		container:       container,
+		listenFDs:       listenFDs,
+		console:         context.String("console"),
+		detach:          detach,
+		pidFile:         context.String("pid-file"),
+		create:          create,
+	}
+	return r.run(&spec.Process)
 }

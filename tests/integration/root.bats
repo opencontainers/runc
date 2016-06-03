@@ -14,12 +14,12 @@ function teardown() {
 }
 
 @test "global --root" {
-  # start busybox detached using $HELLO_BUNDLE for state
-  ROOT=$HELLO_BUNDLE runc start -d --console /dev/pts/ptmx test_dotbox
+  # run busybox detached using $HELLO_BUNDLE for state
+  ROOT=$HELLO_BUNDLE runc run -d --console /dev/pts/ptmx test_dotbox
   [ "$status" -eq 0 ]
 
-  # start busybox detached in default root
-  runc start -d --console /dev/pts/ptmx test_busybox
+  # run busybox detached in default root
+  runc run -d --console /dev/pts/ptmx test_busybox
   [ "$status" -eq 0 ]
 
   # check state of the busyboxes are only in their respective root path
@@ -42,13 +42,13 @@ function teardown() {
 
   runc kill test_busybox KILL
   [ "$status" -eq 0 ]
-  retry 10 1 eval "__runc state test_busybox | grep -q 'destroyed'"
+  retry 10 1 eval "__runc state test_busybox | grep -q 'stopped'"
   runc delete test_busybox
   [ "$status" -eq 0 ]
 
   ROOT=$HELLO_BUNDLE runc kill test_dotbox KILL
   [ "$status" -eq 0 ]
-  retry 10 1 eval "ROOT='$HELLO_BUNDLE' __runc state test_dotbox | grep -q 'destroyed'"
+  retry 10 1 eval "ROOT='$HELLO_BUNDLE' __runc state test_dotbox | grep -q 'stopped'"
   ROOT=$HELLO_BUNDLE runc delete test_dotbox
   [ "$status" -eq 0 ]
 }
