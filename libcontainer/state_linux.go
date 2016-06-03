@@ -175,7 +175,7 @@ func (p *pausedState) destroy() error {
 }
 
 // restoredState is the same as the running state but also has accociated checkpoint
-// information that maybe need destroyed when the container is stopped and destory is called.
+// information that maybe need destroyed when the container is stopped and destroy is called.
 type restoredState struct {
 	imageDir string
 	c        *linuxContainer
