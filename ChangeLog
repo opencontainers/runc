@@ -1,5 +1,74 @@
 OpenContainers Specifications
 
+Changes with v1.0.0-rc1:
+	Breaking changes:
+
+	* runtime: Split create and start, #384, #450, #463, #464, #467,
+	  #468
+	* runtime: Remove exec, #388
+	* runtime: Enviroment MUST match the configuration, #397
+	* config: Runtime MUST generate errors for unsupported platforms,
+	  #441
+	* config: Windows mount destinations MUST NOT be nested, #437
+
+	Additions:
+
+	* solaris: Added platform-specific configuration, #411, #424, #431,
+	  #436
+	* runtime: Add 'annotations' and 'status' to the state structure,
+	  #462, #484, #485
+	* runtime: State no longer needs to be serialized as JSON, #446
+	* runtime-linux: Add /dev symbolic links, #449
+	* config: Allow absolute paths for root.path (which previously
+	  required relative paths), #394
+	* config-linux: Add linux.mountLabel, #393
+	* config-linux: Add suport for cgroup namespace, #397
+	* config-linux: Runtime SHOULD NOT modify ownership of any
+	  referenced filesystem (previously the restriction only applied to
+	  the root filesystem), #452
+	* specs-go/seccomp: Add ppc and s390x to specs-go/config.go, #475
+
+	Minor fixes and documentation:
+
+	* README: Add project.md to the Table of Contents, #376
+	* README: Consistenly indent the Table of Contents, #400
+	* README: Link to LICENSE, #442
+	* README: Weekly call is OCI-wide, #378
+	* config: Explicit runtime namespace for hooks, #415
+	* config: Explicit container namespace for uid, gid, and
+	  additionalGids, #412
+	* config: Fix 'string' -> 'array of strings' typo for process.args,
+	  #416
+	* runtime: The runtime MAY validate config.json, #418
+	* runtime: Move errors section out of operations, #445
+	* runtime: MAY -> SHOULD for post-stop error logging, #410
+	* schema/README: Document JSON Schema usage, #360, #385
+	* schema: Minor description updates, #456, #461
+	* schema/validate: Support reading documents via stdin, #482
+	* .pullapprove: Automate review approval, #458, #474
+	* .gitignore: Hide more auto-generated files, #386, #392
+	* .travis: git-validation detects Travis now, #366
+	* .travis: Regress on failure to produce docs, #479
+	* Makefile: Filename docs.* -> oci-runtime-spec.*, #478
+	* Makefile: Add install.tools target, #349
+	* Makefile: Allow native pandoc implementations, #428, #448
+	* Makefile: Prefer Bash, #455
+	* Makefile: Travis support for .gitvalidation, #422
+	* specs-go/config: Add missing omitempties for Process.Terminal,
+	  Root.Readonly, Spec.Linux, and Spec.Mounts, #408, #429, #430, #431
+	* specs-go/config: Remove incorrect omitempties for User.UID and
+	  User.GID, #425
+	* specs-go/config: Drop platform-independent comment, #451
+	* version: Include version in generated documentation, #406
+	* *: Anchor examples, #348
+	* *: Fix remnants from SelinuxProcessLabel to SelinuxLabel rename,
+	   #396
+	* *: Outsource code-of-conduct to TOB repository, #375, #413
+	* *: RFC 2119 consistency, #407, #409, #438, #444, #449
+	* *: Typo fixes, #390, #401
+	* *: Whitespace fixes and validation, #380, #381, #426
+	* ROADMAP: Remove stale targets, #435
+
 Changes with v0.5.0:
 	Breaking changes:
 
@@ -277,4 +346,3 @@ Changes with v0.1.0:
 	* Update Typo in ROADMAP.md
 	* Use unsigned for IDs
 	* version: introduce a string for dev indication
-
