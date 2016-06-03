@@ -25,9 +25,11 @@ func (l *linuxSetnsInit) getSessionRingName() string {
 }
 
 func (l *linuxSetnsInit) Init(s chan os.Signal) error {
-	// do not inherit the parent's session keyring
-	if _, err := keyctl.JoinSessionKeyring(l.getSessionRingName()); err != nil {
-		return err
+	if !l.config.Config.NoNewKeyring {
+		// do not inherit the parent's session keyring
+		if _, err := keyctl.JoinSessionKeyring(l.getSessionRingName()); err != nil {
+			return err
+		}
 	}
 	if l.config.NoNewPrivileges {
 		if err := system.Prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0); err != nil {
