@@ -30,6 +30,8 @@ type cState struct {
 	Status string `json:"status"`
 	// Created is the unix timestamp for the creation time of the container in UTC
 	Created time.Time `json:"created"`
+	// Annotations is the user defined annotations added to the config.
+	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
 var stateCommand = cli.Command{
@@ -53,14 +55,17 @@ instance of a container.`,
 		if err != nil {
 			return err
 		}
+		bundle, annotations := utils.Annotations(state.Config.Labels)
 		cs := cState{
 			Version:        state.BaseState.Config.Version,
 			ID:             state.BaseState.ID,
 			InitProcessPid: state.BaseState.InitProcessPid,
 			Status:         containerStatus.String(),
-			Bundle:         utils.SearchLabels(state.Config.Labels, "bundle"),
+			Bundle:         bundle,
 			Rootfs:         state.BaseState.Config.Rootfs,
-			Created:        state.BaseState.Created}
+			Created:        state.BaseState.Created,
+			Annotations:    annotations,
+		}
 		data, err := json.MarshalIndent(cs, "", "  ")
 		if err != nil {
 			return err
