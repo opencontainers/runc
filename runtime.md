@@ -96,7 +96,6 @@ This operation MUST generate an error if it is not provided the container ID.
 Attempting to start a container that does not exist MUST generate an error.
 Attempting to start an already started container MUST have no effect on the container and MUST generate an error.
 This operation MUST run the user-specified code as specified by [`process`](config.md#process-configuration).
-If the runtime fails to run the code as specified, an error MUST be generated.
 
 Upon successful completion of this operation the `status` property of this container MUST be `running`.
 
