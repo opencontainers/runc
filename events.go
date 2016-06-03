@@ -112,6 +112,10 @@ information is displayed once every 5 seconds.`,
 		if err != nil {
 			return err
 		}
+		duration := context.Duration("interval")
+		if duration <= 0 {
+			return fmt.Errorf("duration interval must be greater than 0")
+		}
 		status, err := container.Status()
 		if err != nil {
 			return err
