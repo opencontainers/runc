@@ -30,11 +30,12 @@ var psCommand = cli.Command{
 			return err
 		}
 
+		pids, err := container.Processes()
+		if err != nil {
+			return err
+		}
+
 		if context.String("format") == "json" {
-			pids, err := container.Processes()
-			if err != nil {
-				return err
-			}
 			if err := json.NewEncoder(os.Stdout).Encode(pids); err != nil {
 				return err
 			}
@@ -57,10 +58,6 @@ var psCommand = cli.Command{
 			return err
 		}
 
-		pids, err := container.Processes()
-		if err != nil {
-			return err
-		}
 		fmt.Println(lines[0])
 		for _, line := range lines[1:] {
 			if len(line) == 0 {
