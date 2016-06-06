@@ -12,7 +12,7 @@ function teardown() {
 }
 
 @test "runc create" {
-  runc create --console /dev/pts/ptmx test_busybox
+  runc create test_busybox
   [ "$status" -eq 0 ]
 
   testcontainer test_busybox created
@@ -25,7 +25,7 @@ function teardown() {
 }
 
 @test "runc create exec" {
-  runc create --console /dev/pts/ptmx test_busybox
+  runc create test_busybox
   [ "$status" -eq 0 ]
 
   testcontainer test_busybox created
