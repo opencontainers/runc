@@ -159,6 +159,16 @@
         "ociVersion": {
             "description": "The version of Open Container Runtime Specification that the document complies with",
             "type": "string"
+        },
+        "annotations": {
+            "oneOf": [
+                {
+                    "$ref": "#/definitions/mapStringString"
+                },
+                {
+                    "type": "null"
+                }
+            ]
         }
     }
 }

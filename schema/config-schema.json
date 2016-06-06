@@ -24,15 +24,7 @@
             }
         },
         "annotations": {
-            "id": "https://opencontainers.org/schema/bundle/annotations",
-            "oneOf": [
-                {
-                    "$ref": "defs.json#/definitions/mapStringString"
-                },
-                {
-                    "type": "null"
-                }
-            ]
+            "$ref": "defs.json#/definitions/annotations"
         },
         "hostname": {
             "id": "https://opencontainers.org/schema/bundle/hostname",
