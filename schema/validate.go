@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/xeipuuv/gojsonschema"
 )
@@ -16,12 +17,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	schemaPath, err := filepath.Abs(os.Args[1])
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+	schemaPath := os.Args[1]
+	if !strings.Contains(schemaPath, "://") {
+		schemaPath, err := filepath.Abs(schemaPath)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		schemaPath = "file://" + schemaPath
 	}
-	schemaLoader := gojsonschema.NewReferenceLoader("file://" + schemaPath)
+	schemaLoader := gojsonschema.NewReferenceLoader(schemaPath)
+
 	var documentLoader gojsonschema.JSONLoader
 
 	if nargs > 1 {
