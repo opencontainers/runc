@@ -124,8 +124,8 @@ type BaseContainer interface {
 	Start(process *Process) (err error)
 
 	// Run immediatly starts the process inside the conatiner.  Returns error if process
-	// fails to start.  It does not block waiting for a SIGCONT after start returns but
-	// sends the signal when the process has completed.
+	// fails to start.  It does not block waiting for the exec fifo  after start returns but
+	// opens the fifo after start returns.
 	//
 	// errors:
 	// ContainerDestroyed - Container no longer exists,
@@ -148,4 +148,10 @@ type BaseContainer interface {
 	// errors:
 	// SystemError - System error.
 	Signal(s os.Signal) error
+
+	// Exec signals the container to exec the users process at the end of the init.
+	//
+	// errors:
+	// SystemError - System error.
+	Exec() error
 }

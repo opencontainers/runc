@@ -27,7 +27,7 @@ your host.`,
 		}
 		switch status {
 		case libcontainer.Created:
-			return container.Signal(libcontainer.InitContinueSignal)
+			return container.Exec()
 		case libcontainer.Stopped:
 			return fmt.Errorf("cannot start a container that has run and stopped")
 		case libcontainer.Running:

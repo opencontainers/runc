@@ -2,6 +2,8 @@ package integration
 
 import (
 	"bytes"
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -11,6 +13,7 @@ import (
 	"strings"
 	"syscall"
 	"testing"
+	"time"
 
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -92,7 +95,9 @@ func copyBusybox(dest string) error {
 }
 
 func newContainer(config *configs.Config) (libcontainer.Container, error) {
-	return newContainerWithName("testCT", config)
+	h := md5.New()
+	h.Write([]byte(time.Now().String()))
+	return newContainerWithName(hex.EncodeToString(h.Sum(nil)), config)
 }
 
 func newContainerWithName(name string, config *configs.Config) (libcontainer.Container, error) {

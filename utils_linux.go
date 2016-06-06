@@ -229,7 +229,11 @@ func (r *runner) run(config *specs.Process) (int, error) {
 		return -1, err
 	}
 	handler := newSignalHandler(tty, r.enableSubreaper)
-	if err := r.container.Start(process); err != nil {
+	startFn := r.container.Start
+	if !r.create {
+		startFn = r.container.Run
+	}
+	if err := startFn(process); err != nil {
 		r.destroy()
 		tty.Close()
 		return -1, err
@@ -242,14 +246,6 @@ func (r *runner) run(config *specs.Process) (int, error) {
 	}
 	if r.pidFile != "" {
 		if err := createPidFile(r.pidFile, process); err != nil {
-			r.terminate(process)
-			r.destroy()
-			tty.Close()
-			return -1, err
-		}
-	}
-	if !r.create {
-		if err := process.Signal(libcontainer.InitContinueSignal); err != nil {
 			r.terminate(process)
 			r.destroy()
 			tty.Close()
