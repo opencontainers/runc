@@ -8,9 +8,9 @@
 			"Rev": "26709e2714106fb8ad40b773b711ebce25b78914"
 		},
 		{
-			"ImportPath": "github.com/codegangsta/cli",
-			"Comment": "v1.17.0",
-			"Rev": "01857ac33766ce0c93856370626f9799281c14f4"
+			"ImportPath": "github.com/urfave/cli",
+			"Comment": "v1.17.0-57-gedb24d0",
+			"Rev": "edb24d02aa3cea2319c33f2836d4a5133907fe4c"
 		},
 		{
 			"ImportPath": "github.com/coreos/go-systemd/activation",

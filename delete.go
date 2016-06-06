@@ -9,8 +9,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/codegangsta/cli"
 	"github.com/opencontainers/runc/libcontainer"
+	"github.com/urfave/cli"
 )
 
 var deleteCommand = cli.Command{

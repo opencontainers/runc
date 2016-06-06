@@ -8,9 +8,9 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/codegangsta/cli"
 	"github.com/docker/go-units"
 	"github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/urfave/cli"
 )
 
 func u64Ptr(i uint64) *uint64 { return &i }

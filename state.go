@@ -7,8 +7,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/codegangsta/cli"
 	"github.com/opencontainers/runc/libcontainer/utils"
+	"github.com/urfave/cli"
 )
 
 // cState represents the platform agnostic pieces relating to a running
