@@ -177,7 +177,6 @@
         "platform",
         "process",
         "root",
-        "hostname",
         "mounts",
         "hooks"
     ]
