@@ -29,9 +29,10 @@ import (
 
 const stdioFdCount = 3
 
-// InitContinueSignal is used to signal the container init process to
-// start the users specified process after the container create has finished.
-const InitContinueSignal = syscall.SIGCONT
+// InitContinueSignal is used to signal the container init process to start the
+// users specified process after the container create has finished. We can't
+// use SIGCONT, because Go < 1.6 would not allow us to wait for that signal.
+const InitContinueSignal = syscall.SIGUSR1
 
 type linuxContainer struct {
 	id            string
