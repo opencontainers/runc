@@ -77,6 +77,10 @@ using the runc checkpoint command.`,
 			Name:  "no-pivot",
 			Usage: "do not use pivot root to jail process inside rootfs.  This should be used whenever the rootfs is on top of a ramdisk",
 		},
+		cli.StringSliceFlag{
+			Name:  "empty-ns",
+			Usage: "create a namespace, but don't restore its properies",
+		},
 	},
 	Action: func(context *cli.Context) error {
 		imagePath := context.String("image-path")
@@ -142,6 +146,10 @@ func restoreContainer(context *cli.Context, spec *specs.Spec, config *configs.Co
 	}
 
 	setManageCgroupsMode(context, options)
+
+	if err := setEmptyNsMask(context, options); err != nil {
+		return -1, err
+	}
 
 	// ensure that the container is always removed if we were the process
 	// that created it.
