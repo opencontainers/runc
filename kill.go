@@ -8,7 +8,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/codegangsta/cli"
+	"github.com/urfave/cli"
 )
 
 var signalMap = map[string]syscall.Signal{

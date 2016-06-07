@@ -8,9 +8,9 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/codegangsta/cli"
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/urfave/cli"
 )
 
 var checkpointCommand = cli.Command{

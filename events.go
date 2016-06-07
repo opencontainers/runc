@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/codegangsta/cli"
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
+	"github.com/urfave/cli"
 )
 
 // event struct for encoding the event data to json.

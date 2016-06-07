@@ -6,9 +6,9 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/codegangsta/cli"
 	"github.com/opencontainers/runc/libcontainer"
 	_ "github.com/opencontainers/runc/libcontainer/nsenter"
+	"github.com/urfave/cli"
 )
 
 func init() {

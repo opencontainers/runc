@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/codegangsta/cli"
 	"github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/urfave/cli"
 )
 
 // version will be populated by the Makefile, read from

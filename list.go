@@ -12,8 +12,8 @@ import (
 
 	"encoding/json"
 
-	"github.com/codegangsta/cli"
 	"github.com/opencontainers/runc/libcontainer/utils"
+	"github.com/urfave/cli"
 )
 
 const formatOptions = `table(default) or json`
