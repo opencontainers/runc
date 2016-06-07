@@ -31,6 +31,11 @@ ROOT="$BATS_TMPDIR/runc"
 # Wrapper for runc.
 function runc() {
   run __runc "$@"
+
+  # Some debug information to make life easier. bats will only print it if the
+  # test failed, in which case the output is useful.
+  echo "runc $@ (status=$status):" >&2
+  echo "$output" >&2
 }
 
 # Raw wrapper for runc.
