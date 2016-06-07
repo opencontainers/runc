@@ -68,7 +68,11 @@ func (s *MemoryGroup) SetKernelMemory(path string, cgroup *configs.Cgroup) error
 		if err != nil {
 			return err
 		}
-		switch system.GetLongBit() {
+		lb, err := system.GetLongBit()
+		if err != nil {
+			return err
+		}
+		switch lb {
 		case 32:
 			kmemInitialized = uint32(kmemValue) != uint32(math.MaxUint32)
 		case 64:
