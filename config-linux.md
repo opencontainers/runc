@@ -159,8 +159,13 @@ For more information, see the [kernel cgroups documentation][cgroup-v1].
 
 The path to the cgroups can be specified in the Spec via `cgroupsPath`.
 `cgroupsPath` can be used to either control the cgroup hierarchy for containers or to run a new process in an existing container.
-`cgroupsPath` is expected to be relative to the cgroups mount point.
-If `cgroupsPath` is not specified, implementations can define the default cgroup path.
+If `cgroupsPath` is:
+* ... an absolute path (starting with `/`), the runtime MUST take the path to be relative to the cgroup mount point.
+* ... a relative path (not starting with `/`), the runtime MAY interpret the path relative to a runtime-determined location in the cgroup hierarchy.
+* ... not specified, the runtime MAY define the default cgroup path.
+Runtimes MAY consider certain `cgroupsPath` values to be invalid, and MUST generate an error if this is the case.
+If a `cgroupsPath` value is specified, the runtime MUST consistently attach to the same place in the cgroup hierarchy given the same value of `cgroupsPath`.
+
 Implementations of the Spec can choose to name cgroups in any manner.
 The Spec does not include naming schema for cgroups.
 The Spec does not support per-controller paths for the reasons discussed in the [cgroupv2 documentation][cgroup-v2].
