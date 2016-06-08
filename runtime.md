@@ -15,9 +15,9 @@ This MUST be unique across all containers on this host.
 There is no requirement that it be unique across hosts.
 * **`status`**: (string) is the runtime state of the container.
 The value MAY be one of:
-  * `created` : the container has been created but the user-specified code has not yet been executed
-  * `running` : the container has been created and the user-specified code is running
-  * `stopped` : the container has been created and the user-specified code has been executed but is no longer running
+    * `created` : the container has been created but the user-specified code has not yet been executed
+    * `running` : the container has been created and the user-specified code is running
+    * `stopped` : the container has been created and the user-specified code has been executed but is no longer running
 
   Additional values MAY be defined by the runtime, however, they MUST be used to represent new runtime states not defined above.
 * **`pid`**: (int) is the ID of the main process within the container, as seen by the host.
