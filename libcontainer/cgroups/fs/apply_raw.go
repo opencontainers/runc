@@ -142,7 +142,9 @@ func (m *Manager) Apply(pid int) (err error) {
 		// created then join consists of writing the process pids to cgroup.procs
 		p, err := d.path(sys.Name())
 		if err != nil {
-			if cgroups.IsNotFound(err) {
+			// The non-presence of the devices subsystem is
+			// considered fatal for security reasons.
+			if cgroups.IsNotFound(err) && sys.Name() != "devices" {
 				continue
 			}
 			return err
