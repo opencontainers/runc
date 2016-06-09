@@ -5,9 +5,8 @@
     "type": "object",
     "properties": {
         "ociVersion": {
-            "description": "The version of OpenContainer specification configuration complies with",
             "id": "https://opencontainers.org/schema/bundle/ociVersion",
-            "type": "string"
+            "$ref": "defs.json#/definitions/ociVersion"
         },
         "hooks": {
             "id": "https://opencontainers.org/schema/bundle/hooks",
@@ -25,15 +24,7 @@
             }
         },
         "annotations": {
-            "id": "https://opencontainers.org/schema/bundle/annotations",
-            "oneOf": [
-                {
-                    "$ref": "defs.json#/definitions/mapStringString"
-                },
-                {
-                    "type": "null"
-                }
-            ]
+            "$ref": "defs.json#/definitions/annotations"
         },
         "hostname": {
             "id": "https://opencontainers.org/schema/bundle/hostname",
@@ -166,10 +157,10 @@
             }
         },
         "linux": {
-            "$ref": "schema-linux.json#/linux"
+            "$ref": "config-linux.json#/linux"
         },
         "solaris": {
-            "$ref": "schema-solaris.json#/solaris"
+            "$ref": "config-solaris.json#/solaris"
         }
     },
     "required": [

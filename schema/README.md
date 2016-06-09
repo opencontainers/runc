@@ -2,13 +2,14 @@
 
 ## Overview
 
-This directory contains the [JSON Schema](http://json-schema.org/) for
-validating the `config.json` of this container runtime specification.
+This directory contains the [JSON Schema](http://json-schema.org/) for validating JSON covered by this specification.
 
 The layout of the files is as follows:
-* [schema.json](schema.json) - the primary entrypoint for the whole schema document
-* [schema-linux.json](schema-linux.json) - this schema is for the Linux-specific sub-structure
-* [schema-solaris.json](schema-solaris.json) - this schema is for the Solaris-specific sub-structure
+
+* [config-schema.json](config.json) - the primary entrypoint for the [configuration](../config.md) schema
+* [config-linux.json](config-linux.json) - the [Linux-specific configuration sub-structure](../config-linux.md)
+* [config-solaris.json](config-solaris.json) - the [Solaris-specific configuration sub-structure](../config-solaris.md)
+* [state-schema.json](state.json) - the primary entrypoint for the [state JSON](../runtime.md#state) schema
 * [defs.json](defs.json) - definitions for general types
 * [defs-linux.json](defs-linux.json) - definitions for Linux-specific types
 * [validate.go](validate.go) - validation utility source code
@@ -16,8 +17,8 @@ The layout of the files is as follows:
 
 ## Utility
 
-There is also included a simple utility for facilitating validation of a
-`config.json`. To build it:
+There is also included a simple utility for facilitating validation.
+To build it:
 
 ```bash
 export GOPATH=`mktemp -d`
@@ -35,5 +36,5 @@ make validate
 Then use it like:
 
 ```bash
-./validate schema.json <yourpath>/config.json
+./validate config-schema.json <yourpath>/config.json
 ```
