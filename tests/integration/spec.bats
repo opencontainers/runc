@@ -66,12 +66,15 @@ function teardown() {
 }
 
 @test "spec validator" {
+  TESTDIR=$(pwd)
   cd "$HELLO_BUNDLE"
-  # note this test runs from the temporary bundle directory not the integration root
-  # note this test is brittle against specs changes that lead runc's spec command
-  # todo get the validate program, gojsonschema, and schema/*s.json from godeps?
 
   run git clone https://github.com/opencontainers/runtime-spec.git src/runtime-spec
+  [ "$status" -eq 0 ]
+
+  SPEC_COMMIT=$(grep runtime-spec ${TESTDIR}/../../Godeps/Godeps.json -A 4 | grep Rev | cut -d":" -f 2 | tr -d ' "')
+  run git -C src/runtime-spec reset --hard "${SPEC_COMMIT}"
+  [ "$status" -eq 0 ]
   [ -e src/runtime-spec/schema/schema.json ]
 
   run bash -c "GOPATH='$GOPATH' go get github.com/xeipuuv/gojsonschema"
