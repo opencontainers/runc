@@ -12,6 +12,7 @@ import (
 	"strings"
 	"syscall"
 	"testing"
+	"time"
 
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
@@ -512,6 +513,20 @@ func testFreeze(t *testing.T, systemd bool) {
 	stdinR.Close()
 	defer stdinW.Close()
 	ok(t, err)
+
+	var status libcontainer.Status
+	for i := 0; i < 10; i++ {
+		status, err = container.Status()
+		ok(t, err)
+		if status == libcontainer.Running {
+			break
+		} else {
+			time.Sleep(200 * time.Millisecond)
+		}
+	}
+	if status != libcontainer.Running {
+		t.Fatalf("container status expected to be running but actual: %v", status)
+	}
 
 	err = container.Pause()
 	ok(t, err)
