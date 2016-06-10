@@ -20,7 +20,7 @@ on the specs repository and support the update spec.
 
 ### Building:
 
-At the time of writing, runc only builds on the Linux platform.
+At the time of writing, runc only builds on the Linux platform and requires go version 1.6 or higher.
 
 ```bash
 # create a 'github.com/opencontainers' in your GOPATH/src
