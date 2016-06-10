@@ -154,28 +154,27 @@ In addition to any devices configured with this setting, the runtime MUST also s
 ## Control groups
 
 Also known as cgroups, they are used to restrict resource usage for a container and handle device access.
-cgroups provide controls to restrict cpu, memory, IO, pids and network for the container.
+cgroups provide controls (through controllers) to restrict cpu, memory, IO, pids and network for the container.
 For more information, see the [kernel cgroups documentation][cgroup-v1].
 
 The path to the cgroups can be specified in the Spec via `cgroupsPath`.
+`cgroupsPath` can be used to either control the cgroup hierarchy for containers or to run a new process in an existing container.
 `cgroupsPath` is expected to be relative to the cgroups mount point.
 If `cgroupsPath` is not specified, implementations can define the default cgroup path.
 Implementations of the Spec can choose to name cgroups in any manner.
 The Spec does not include naming schema for cgroups.
-The Spec does not support [split hierarchy][cgroup-v2].
+The Spec does not support per-controller paths for the reasons discussed in the [cgroupv2 documentation][cgroup-v2].
 The cgroups will be created if they don't exist.
+
+You can configure a container's cgroups via the `resources` field of the Linux configuration.
+Do not specify `resources` unless limits have to be updated.
+For example, to run a new process in an existing container without updating limits, `resources` need not be specified.
 
 ###### Example
 
 ```json
    "cgroupsPath": "/myRuntime/myContainer"
 ```
-
-`cgroupsPath` can be used to either control the cgroups hierarchy for containers or to run a new process in an existing container.
-
-You can configure a container's cgroups via the `resources` field of the Linux configuration.
-Do not specify `resources` unless limits have to be updated.
-For example, to run a new process in an existing container without updating limits, `resources` need not be specified.
 
 #### Device whitelist
 
