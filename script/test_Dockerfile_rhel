@@ -1,43 +1,24 @@
 FROM registry.access.redhat.com/rhel7/rhel
 # FROM docker.io/thezxm/redhat7
 
-ENV GOLANG_VERSION 1.5.4
-ENV GOLANG_SRC_URL https://golang.org/dl/go$GOLANG_VERSION.src.tar.gz
-ENV GOLANG_SRC_SHA256 002acabce7ddc140d0d55891f9d4fcfbdd806b9332fb8b110c91bc91afb0bc93
-
-ENV GOLANG_BOOTSTRAP_VERSION 1.4.3
-ENV GOLANG_BOOTSTRAP_URL https://golang.org/dl/go$GOLANG_BOOTSTRAP_VERSION.src.tar.gz
-ENV GOLANG_BOOTSTRAP_SHA1 486db10dc571a55c8d795365070f66d343458c48
-
-RUN set -ex \
-	&& yum -y install \
-		bash \
-		ca-certificates \
+# gcc for cgo
+RUN yum -y update && yum -y install \
 		gcc \
+		gcc-c++ \
 		glibc-devel \
 		glibc-devel.i686 \
 		make \
 		openssl \
-		tar \
-		wget \
-	\
-	&& mkdir -p /usr/local/bootstrap \
-	&& wget -q "$GOLANG_BOOTSTRAP_URL" -O golang.tar.gz \
-	&& echo "$GOLANG_BOOTSTRAP_SHA1  golang.tar.gz" | sha1sum -c - \
-	&& tar -C /usr/local/bootstrap -xzf golang.tar.gz \
-	&& rm golang.tar.gz \
-	&& cd /usr/local/bootstrap/go/src \
-	&& ./make.bash \
-	&& export GOROOT_BOOTSTRAP=/usr/local/bootstrap/go \
-	\
-	&& wget -q "$GOLANG_SRC_URL" -O golang.tar.gz \
-	&& echo "$GOLANG_SRC_SHA256  golang.tar.gz" | sha256sum -c - \
+		tar
+
+ENV GOLANG_VERSION 1.6.2
+ENV GOLANG_DOWNLOAD_URL https://golang.org/dl/go$GOLANG_VERSION.linux-amd64.tar.gz
+ENV GOLANG_DOWNLOAD_SHA256 e40c36ae71756198478624ed1bb4ce17597b3c19d243f3f0899bb5740d56212a
+
+RUN curl -fsSL "$GOLANG_DOWNLOAD_URL" -o golang.tar.gz \
+	&& echo "$GOLANG_DOWNLOAD_SHA256  golang.tar.gz" | sha256sum -c - \
 	&& tar -C /usr/local -xzf golang.tar.gz \
-	&& rm golang.tar.gz \
-	&& cd /usr/local/go/src \
-	&& ./make.bash \
-	\
-	&& rm -rf /usr/local/bootstrap /usr/local/go/pkg/bootstrap
+	&& rm golang.tar.gz
 
 ENV GOPATH /go
 ENV PATH $GOPATH/bin:/usr/local/go/bin:$PATH
@@ -45,8 +26,8 @@ ENV PATH $GOPATH/bin:/usr/local/go/bin:$PATH
 RUN mkdir -p "$GOPATH/src" "$GOPATH/bin" && chmod -R 777 "$GOPATH"
 WORKDIR $GOPATH
 
-#the content until here aims to create a fedora image with golang 1.5.4 installed and should be put into a separate Dockerfile.
-#the content until here tries to mimic its corresponding ubuntu-specific Dockerfile: https://github.com/docker-library/golang/blob/d7e2a8d90a9b8f5dfd5bcd428e0c33b68c40cc19/1.5/alpine/Dockerfile
+#the content until here aims to create a rhel image with golang 1.6.2 installed and should be put into a separate Dockerfile.
+#the content until here tries to mimic its corresponding ubuntu-specific Dockerfile: https://github.com/docker-library/golang/blob/0ce80411b9f41e9c3a21fc0a1bffba6ae761825a/1.6/Dockerfile
 
 #the content below tries to mimic runc/script/test_Dockerfile.
 RUN yum -y update && yum -y install \
