@@ -53,15 +53,15 @@ type Process struct {
 	SelinuxLabel string `json:"selinuxLabel,omitempty" platform:"linux"`
 }
 
-// User specifies Linux specific user and group information for the container's
+// User specifies Linux/Solaris specific user and group information for the container's
 // main process.
 type User struct {
 	// UID is the user id. (this field is platform dependent)
-	UID uint32 `json:"uid" platform:"linux"`
+	UID uint32 `json:"uid" platform:"linux,solaris"`
 	// GID is the group id. (this field is platform dependent)
-	GID uint32 `json:"gid" platform:"linux"`
+	GID uint32 `json:"gid" platform:"linux,solaris"`
 	// AdditionalGids are additional group ids set for the container's process. (this field is platform dependent)
-	AdditionalGids []uint32 `json:"additionalGids,omitempty" platform:"linux"`
+	AdditionalGids []uint32 `json:"additionalGids,omitempty" platform:"linux,solaris"`
 }
 
 // Root contains information about the container's root filesystem on the host.
