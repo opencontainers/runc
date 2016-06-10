@@ -385,6 +385,7 @@ func (c *linuxContainer) newInitConfig(process *Process) *initConfig {
 		Args:             process.Args,
 		Env:              process.Env,
 		User:             process.User,
+		AdditionalGroups: process.AdditionalGroups,
 		Cwd:              process.Cwd,
 		Console:          process.consolePath,
 		Capabilities:     process.Capabilities,

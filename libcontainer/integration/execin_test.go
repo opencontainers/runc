@@ -134,6 +134,64 @@ func testExecInRlimit(t *testing.T, userns bool) {
 	}
 }
 
+func TestExecInAdditionalGroups(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+
+	rootfs, err := newRootfs()
+	ok(t, err)
+	defer remove(rootfs)
+
+	config := newTemplateConfig(rootfs)
+	container, err := newContainer(config)
+	ok(t, err)
+	defer container.Destroy()
+
+	// Execute a first process in the container
+	stdinR, stdinW, err := os.Pipe()
+	ok(t, err)
+	process := &libcontainer.Process{
+		Cwd:   "/",
+		Args:  []string{"cat"},
+		Env:   standardEnvironment,
+		Stdin: stdinR,
+	}
+	err = container.Run(process)
+	stdinR.Close()
+	defer stdinW.Close()
+	ok(t, err)
+
+	var stdout bytes.Buffer
+	pconfig := libcontainer.Process{
+		Cwd:              "/",
+		Args:             []string{"sh", "-c", "id", "-Gn"},
+		Env:              standardEnvironment,
+		Stdin:            nil,
+		Stdout:           &stdout,
+		AdditionalGroups: []string{"plugdev", "audio"},
+	}
+	err = container.Run(&pconfig)
+	ok(t, err)
+
+	// Wait for process
+	waitProcess(&pconfig, t)
+
+	stdinW.Close()
+	waitProcess(process, t)
+
+	outputGroups := string(stdout.Bytes())
+
+	// Check that the groups output has the groups that we specified
+	if !strings.Contains(outputGroups, "audio") {
+		t.Fatalf("Listed groups do not contain the audio group as expected: %v", outputGroups)
+	}
+
+	if !strings.Contains(outputGroups, "plugdev") {
+		t.Fatalf("Listed groups do not contain the plugdev group as expected: %v", outputGroups)
+	}
+}
+
 func TestExecInError(t *testing.T) {
 	if testing.Short() {
 		return

@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -228,9 +227,6 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 	config.Sysctl = spec.Linux.Sysctl
 	if spec.Linux.Resources != nil && spec.Linux.Resources.OOMScoreAdj != nil {
 		config.OomScoreAdj = *spec.Linux.Resources.OOMScoreAdj
-	}
-	for _, g := range spec.Process.User.AdditionalGids {
-		config.AdditionalGroups = append(config.AdditionalGroups, strconv.FormatUint(uint64(g), 10))
 	}
 	createHooks(spec, config)
 	config.MountLabel = spec.Linux.MountLabel
