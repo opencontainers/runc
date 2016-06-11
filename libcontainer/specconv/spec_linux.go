@@ -392,7 +392,14 @@ func createCgroupConfig(name string, useSystemdCgroup bool, spec *specs.Spec) (*
 		}
 		if r.BlockIO.WeightDevice != nil {
 			for _, wd := range r.BlockIO.WeightDevice {
-				weightDevice := configs.NewWeightDevice(wd.Major, wd.Minor, *wd.Weight, *wd.LeafWeight)
+				var weight, leafWeight uint16
+				if wd.Weight != nil {
+					weight = *wd.Weight
+				}
+				if wd.LeafWeight != nil {
+					leafWeight = *wd.LeafWeight
+				}
+				weightDevice := configs.NewWeightDevice(wd.Major, wd.Minor, weight, leafWeight)
 				c.Resources.BlkioWeightDevice = append(c.Resources.BlkioWeightDevice, weightDevice)
 			}
 		}
