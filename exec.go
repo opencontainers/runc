@@ -17,7 +17,7 @@ import (
 var execCommand = cli.Command{
 	Name:  "exec",
 	Usage: "execute new process inside the container",
-	ArgsUsage: `<container-id> <container command>
+	ArgsUsage: `<container-id> -- <container command> [command options]
 
 Where "<container-id>" is the name for the instance of the container and
 "<container command>" is the command to be executed in the container.
@@ -149,6 +149,9 @@ func getProcess(context *cli.Context, bundle string) (*specs.Process, error) {
 	}
 	p := spec.Process
 	p.Args = context.Args()[1:]
+	if len(p.Args) > 1 && p.Args[0] == "--" {
+		p.Args = p.Args[1:]
+	}
 	// override the cwd, if passed
 	if context.String("cwd") != "" {
 		p.Cwd = context.String("cwd")
