@@ -171,6 +171,7 @@ func createContainer(context *cli.Context, id string, spec *specs.Spec) (libcont
 		CgroupName:       id,
 		UseSystemdCgroup: context.GlobalBool("systemd-cgroup"),
 		NoPivotRoot:      context.Bool("no-pivot"),
+		NoNewKeyring:     context.Bool("no-new-keyring"),
 		Spec:             spec,
 	})
 	if err != nil {

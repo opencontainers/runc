@@ -145,6 +145,7 @@ type CreateOpts struct {
 	CgroupName       string
 	UseSystemdCgroup bool
 	NoPivotRoot      bool
+	NoNewKeyring     bool
 	Spec             *specs.Spec
 }
 
@@ -170,11 +171,12 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 		labels = append(labels, fmt.Sprintf("%s=%s", k, v))
 	}
 	config := &configs.Config{
-		Rootfs:      rootfsPath,
-		NoPivotRoot: opts.NoPivotRoot,
-		Readonlyfs:  spec.Root.Readonly,
-		Hostname:    spec.Hostname,
-		Labels:      append(labels, fmt.Sprintf("bundle=%s", cwd)),
+		Rootfs:       rootfsPath,
+		NoPivotRoot:  opts.NoPivotRoot,
+		Readonlyfs:   spec.Root.Readonly,
+		Hostname:     spec.Hostname,
+		Labels:       append(labels, fmt.Sprintf("bundle=%s", cwd)),
+		NoNewKeyring: opts.NoNewKeyring,
 	}
 
 	exists := false

@@ -53,6 +53,10 @@ command(s) that get executed on start, edit the args parameter of the spec. See
 			Name:  "no-pivot",
 			Usage: "do not use pivot root to jail process inside rootfs.  This should be used whenever the rootfs is on top of a ramdisk",
 		},
+		cli.BoolFlag{
+			Name:  "no-new-keyring",
+			Usage: "do not create a new session keyring for the container.  This will cause the container to inherit the calling processes session key",
+		},
 	},
 	Action: func(context *cli.Context) error {
 		spec, err := setupSpec(context)

@@ -45,16 +45,18 @@ func (l *linuxStandardInit) getSessionRingParams() (string, uint32, uint32) {
 const PR_SET_NO_NEW_PRIVS = 0x26
 
 func (l *linuxStandardInit) Init(s chan os.Signal) error {
-	ringname, keepperms, newperms := l.getSessionRingParams()
+	if !l.config.Config.NoNewKeyring {
+		ringname, keepperms, newperms := l.getSessionRingParams()
 
-	// do not inherit the parent's session keyring
-	sessKeyId, err := keyctl.JoinSessionKeyring(ringname)
-	if err != nil {
-		return err
-	}
-	// make session keyring searcheable
-	if err := keyctl.ModKeyringPerm(sessKeyId, keepperms, newperms); err != nil {
-		return err
+		// do not inherit the parent's session keyring
+		sessKeyId, err := keyctl.JoinSessionKeyring(ringname)
+		if err != nil {
+			return err
+		}
+		// make session keyring searcheable
+		if err := keyctl.ModKeyringPerm(sessKeyId, keepperms, newperms); err != nil {
+			return err
+		}
 	}
 
 	var console *linuxConsole
