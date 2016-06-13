@@ -6,4 +6,5 @@
 
 # OPTIONS
    --format value, -f value     select one of: table(default) or json
+
    --quiet, -q                  display only container IDs
