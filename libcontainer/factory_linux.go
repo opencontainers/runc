@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"os/signal"
 	"path/filepath"
 	"regexp"
 	"runtime/debug"
@@ -24,7 +23,8 @@ import (
 )
 
 const (
-	stateFilename = "state.json"
+	stateFilename    = "state.json"
+	execFifoFilename = "exec.fifo"
 )
 
 var (
@@ -168,6 +168,9 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 	if err := os.MkdirAll(containerRoot, 0700); err != nil {
 		return nil, newGenericError(err, SystemError)
 	}
+	if err := syscall.Mkfifo(filepath.Join(containerRoot, execFifoFilename), 0666); err != nil {
+		return nil, newGenericError(err, SystemError)
+	}
 	c := &linuxContainer{
 		id:            id,
 		root:          containerRoot,
@@ -220,13 +223,18 @@ func (l *LinuxFactory) Type() string {
 // StartInitialization loads a container by opening the pipe fd from the parent to read the configuration and state
 // This is a low level implementation detail of the reexec and should not be consumed externally
 func (l *LinuxFactory) StartInitialization() (err error) {
-	// start the signal handler as soon as we can
-	s := make(chan os.Signal, 1)
-	signal.Notify(s, InitContinueSignal)
-	fdStr := os.Getenv("_LIBCONTAINER_INITPIPE")
-	pipefd, err := strconv.Atoi(fdStr)
-	if err != nil {
-		return fmt.Errorf("error converting env var _LIBCONTAINER_INITPIPE(%q) to an int: %s", fdStr, err)
+	var pipefd, rootfd int
+	for k, v := range map[string]*int{
+		"_LIBCONTAINER_INITPIPE": &pipefd,
+		"_LIBCONTAINER_STATEDIR": &rootfd,
+	} {
+		s := os.Getenv(k)
+
+		i, err := strconv.Atoi(s)
+		if err != nil {
+			return fmt.Errorf("unable to convert %s=%s to int", k, s)
+		}
+		*v = i
 	}
 	var (
 		pipe = os.NewFile(uintptr(pipefd), "pipe")
@@ -235,6 +243,7 @@ func (l *LinuxFactory) StartInitialization() (err error) {
 	// clear the current process's environment to clean any libcontainer
 	// specific env vars.
 	os.Clearenv()
+
 	var i initer
 	defer func() {
 		// We have an error during the initialization of the container's init,
@@ -253,18 +262,16 @@ func (l *LinuxFactory) StartInitialization() (err error) {
 		// ensure that this pipe is always closed
 		pipe.Close()
 	}()
-
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("panic from initialization: %v, %v", e, string(debug.Stack()))
 		}
 	}()
-
-	i, err = newContainerInit(it, pipe)
+	i, err = newContainerInit(it, pipe, rootfd)
 	if err != nil {
 		return err
 	}
-	return i.Init(s)
+	return i.Init()
 }
 
 func (l *LinuxFactory) loadState(root string) (*State, error) {

@@ -7,7 +7,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"os/signal"
 	"syscall"
 
 	"github.com/opencontainers/runc/libcontainer/apparmor"
@@ -19,9 +18,10 @@ import (
 )
 
 type linuxStandardInit struct {
-	pipe      io.ReadWriteCloser
-	parentPid int
-	config    *initConfig
+	pipe       io.ReadWriteCloser
+	parentPid  int
+	stateDirFD int
+	config     *initConfig
 }
 
 func (l *linuxStandardInit) getSessionRingParams() (string, uint32, uint32) {
@@ -44,7 +44,7 @@ func (l *linuxStandardInit) getSessionRingParams() (string, uint32, uint32) {
 // the kernel
 const PR_SET_NO_NEW_PRIVS = 0x26
 
-func (l *linuxStandardInit) Init(s chan os.Signal) error {
+func (l *linuxStandardInit) Init() error {
 	if !l.config.Config.NoNewKeyring {
 		ringname, keepperms, newperms := l.getSessionRingParams()
 
@@ -149,23 +149,27 @@ func (l *linuxStandardInit) Init(s chan os.Signal) error {
 	if syscall.Getppid() != l.parentPid {
 		return syscall.Kill(syscall.Getpid(), syscall.SIGKILL)
 	}
+	// check for the arg before waiting to make sure it exists and it is returned
+	// as a create time error.
+	name, err := exec.LookPath(l.config.Args[0])
+	if err != nil {
+		return err
+	}
+	// close the pipe to signal that we have completed our init.
+	l.pipe.Close()
+	// wait for the fifo to be opened on the other side before
+	// exec'ing the users process.
+	fd, err := syscall.Openat(l.stateDirFD, execFifoFilename, os.O_WRONLY|syscall.O_CLOEXEC, 0)
+	if err != nil {
+		return err
+	}
+	if _, err := syscall.Write(fd, []byte("0")); err != nil {
+		return err
+	}
 	if l.config.Config.Seccomp != nil && l.config.NoNewPrivileges {
 		if err := seccomp.InitSeccomp(l.config.Config.Seccomp); err != nil {
 			return err
 		}
 	}
-	// check for the arg before waiting to make sure it exists and it is returned
-	// as a create time error
-	name, err := exec.LookPath(l.config.Args[0])
-	if err != nil {
-		return err
-	}
-	// close the pipe to signal that we have completed our init
-	l.pipe.Close()
-	// wait for the signal to exec the users process
-	<-s
-	// clean up the signal handler
-	signal.Stop(s)
-	close(s)
 	return syscall.Exec(name, l.config.Args[0:], os.Environ())
 }

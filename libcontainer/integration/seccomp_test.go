@@ -101,8 +101,8 @@ func TestSeccompPermitWriteConditional(t *testing.T) {
 				Args: []*configs.Arg{
 					{
 						Index: 0,
-						Value: 1,
-						Op:    configs.GreaterThan,
+						Value: 2,
+						Op:    configs.EqualTo,
 					},
 				},
 			},
@@ -162,8 +162,8 @@ func TestSeccompDenyWriteConditional(t *testing.T) {
 				Args: []*configs.Arg{
 					{
 						Index: 0,
-						Value: 1,
-						Op:    configs.GreaterThan,
+						Value: 2,
+						Op:    configs.EqualTo,
 					},
 				},
 			},
