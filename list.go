@@ -16,7 +16,7 @@ import (
 	"github.com/urfave/cli"
 )
 
-const formatOptions = `table(default) or json`
+const formatOptions = `table or json`
 
 // containerState represents the platform agnostic pieces relating to a
 // running container's status and state
@@ -41,7 +41,7 @@ var listCommand = cli.Command{
 	Flags: []cli.Flag{
 		cli.StringFlag{
 			Name:  "format, f",
-			Value: "",
+			Value: "table",
 			Usage: `select one of: ` + formatOptions,
 		},
 		cli.BoolFlag{
@@ -63,7 +63,7 @@ var listCommand = cli.Command{
 		}
 
 		switch context.String("format") {
-		case "", "table":
+		case "table":
 			w := tabwriter.NewWriter(os.Stdout, 12, 1, 3, ' ', 0)
 			fmt.Fprint(w, "ID\tPID\tSTATUS\tBUNDLE\tCREATED\n")
 			for _, item := range s {
