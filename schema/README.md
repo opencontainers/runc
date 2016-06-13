@@ -6,10 +6,10 @@ This directory contains the [JSON Schema](http://json-schema.org/) for validatin
 
 The layout of the files is as follows:
 
-* [config-schema.json](config.json) - the primary entrypoint for the [configuration](../config.md) schema
+* [config-schema.json](config-schema.json) - the primary entrypoint for the [configuration](../config.md) schema
 * [config-linux.json](config-linux.json) - the [Linux-specific configuration sub-structure](../config-linux.md)
 * [config-solaris.json](config-solaris.json) - the [Solaris-specific configuration sub-structure](../config-solaris.md)
-* [state-schema.json](state.json) - the primary entrypoint for the [state JSON](../runtime.md#state) schema
+* [state-schema.json](state-schema.json) - the primary entrypoint for the [state JSON](../runtime.md#state) schema
 * [defs.json](defs.json) - definitions for general types
 * [defs-linux.json](defs-linux.json) - definitions for Linux-specific types
 * [validate.go](validate.go) - validation utility source code
