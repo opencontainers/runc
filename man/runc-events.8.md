@@ -12,4 +12,5 @@ information is displayed once every 5 seconds.
 
 # OPTIONS
    --interval value     set the stats collection interval (default: 5s)
+
    --stats              display the container's stats then exit
