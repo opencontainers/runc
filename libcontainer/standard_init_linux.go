@@ -161,15 +161,18 @@ func (l *linuxStandardInit) Init() error {
 	// exec'ing the users process.
 	fd, err := syscall.Openat(l.stateDirFD, execFifoFilename, os.O_WRONLY|syscall.O_CLOEXEC, 0)
 	if err != nil {
-		return err
+		return newSystemErrorWithCause(err, "openat exec fifo")
 	}
 	if _, err := syscall.Write(fd, []byte("0")); err != nil {
-		return err
+		return newSystemErrorWithCause(err, "write 0 exec fifo")
 	}
 	if l.config.Config.Seccomp != nil && l.config.NoNewPrivileges {
 		if err := seccomp.InitSeccomp(l.config.Config.Seccomp); err != nil {
-			return err
+			return newSystemErrorWithCause(err, "init seccomp")
 		}
 	}
-	return syscall.Exec(name, l.config.Args[0:], os.Environ())
+	if err := syscall.Exec(name, l.config.Args[0:], os.Environ()); err != nil {
+		return newSystemErrorWithCause(err, "exec user process")
+	}
+	return nil
 }
