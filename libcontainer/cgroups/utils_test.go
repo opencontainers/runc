@@ -4,6 +4,8 @@ package cgroups
 
 import (
 	"bytes"
+	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -189,4 +191,57 @@ func BenchmarkGetCgroupMounts(b *testing.B) {
 			b.Fatal(err)
 		}
 	}
+}
+
+func TestParseCgroupString(t *testing.T) {
+	testCases := []struct {
+		input          string
+		expectedError  error
+		expectedOutput map[string]string
+	}{
+		{
+			// Taken from a CoreOS instance running systemd 225 with CPU/Mem
+			// accounting enabled in systemd
+			input: `9:blkio:/
+8:freezer:/
+7:perf_event:/
+6:devices:/system.slice/system-sshd.slice
+5:cpuset:/
+4:cpu,cpuacct:/system.slice/system-sshd.slice/sshd@126-10.240.0.15:22-xxx.yyy.zzz.aaa:33678.service
+3:net_cls,net_prio:/
+2:memory:/system.slice/system-sshd.slice/sshd@126-10.240.0.15:22-xxx.yyy.zzz.aaa:33678.service
+1:name=systemd:/system.slice/system-sshd.slice/sshd@126-10.240.0.15:22-xxx.yyy.zzz.aaa:33678.service`,
+			expectedOutput: map[string]string{
+				"name=systemd": "/system.slice/system-sshd.slice/sshd@126-10.240.0.15:22-xxx.yyy.zzz.aaa:33678.service",
+				"blkio":        "/",
+				"freezer":      "/",
+				"perf_event":   "/",
+				"devices":      "/system.slice/system-sshd.slice",
+				"cpuset":       "/",
+				"cpu":          "/system.slice/system-sshd.slice/sshd@126-10.240.0.15:22-xxx.yyy.zzz.aaa:33678.service",
+				"cpuacct":      "/system.slice/system-sshd.slice/sshd@126-10.240.0.15:22-xxx.yyy.zzz.aaa:33678.service",
+				"net_cls":      "/",
+				"net_prio":     "/",
+				"memory":       "/system.slice/system-sshd.slice/sshd@126-10.240.0.15:22-xxx.yyy.zzz.aaa:33678.service",
+			},
+		},
+		{
+			input:         `malformed input`,
+			expectedError: fmt.Errorf(`invalid cgroup entry: must contain at least two colons: malformed input`),
+		},
+	}
+
+	for ndx, testCase := range testCases {
+		out, err := parseCgroupFromReader(strings.NewReader(testCase.input))
+		if err != nil {
+			if testCase.expectedError == nil || testCase.expectedError.Error() != err.Error() {
+				t.Errorf("%v: expected error %v, got error %v", ndx, testCase.expectedError, err)
+			}
+		} else {
+			if !reflect.DeepEqual(testCase.expectedOutput, out) {
+				t.Errorf("%v: expected output %v, got error %v", ndx, testCase.expectedOutput, out)
+			}
+		}
+	}
+
 }
