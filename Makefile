@@ -20,13 +20,43 @@ MAN_PAGES = $(shell ls $(MAN_DIR)/*.8)
 MAN_PAGES_BASE = $(notdir $(MAN_PAGES))
 MAN_INSTALL_PATH := ${PREFIX}/share/man/man8/
 
+RELEASE_DIR := $(CURDIR)/release
+
 VERSION := ${shell cat ./VERSION}
+
+SHELL ?= $(shell command -v bash 2>/dev/null)
 
 all: $(RUNC_LINK)
 	go build -i -ldflags "-X main.gitCommit=${COMMIT} -X main.version=${VERSION}" -tags "$(BUILDTAGS)" -o runc .
 
 static: $(RUNC_LINK)
 	CGO_ENABLED=1 go build -i -tags "$(BUILDTAGS) cgo static_build" -ldflags "-w -extldflags -static -X main.gitCommit=${COMMIT} -X main.version=${VERSION}" -o runc .
+
+release: $(RUNC_LINK)
+	@flag_list=(seccomp selinux apparmor static); \
+	unset expression; \
+	for flag in "$${flag_list[@]}"; do \
+		expression+="' '{'',$${flag}}"; \
+	done; \
+	eval profile_list=("$$expression"); \
+	for profile in "$${profile_list[@]}"; do \
+		output=${RELEASE_DIR}/runc; \
+		for flag in $$profile; do \
+			output+=."$$flag"; \
+		done; \
+		tags="$$profile"; \
+		ldflags="-X main.gitCommit=${COMMIT} -X main.version=${VERSION}"; \
+		CGO_ENABLED=; \
+		[[ "$$profile" =~ static ]] && { \
+			tags="$${tags/static/static_build}"; \
+			tags+=" cgo"; \
+			ldflags+=" -w -extldflags -static"; \
+			CGO_ENABLED=1; \
+		}; \
+		echo "Building target: $$output"; \
+		rm -rf "${GOPATH}/pkg"; \
+		go build -i -ldflags "$$ldflags" -tags "$$tags" -o "$$output" .; \
+	done
 
 $(RUNC_LINK):
 	ln -sfn $(CURDIR) $(RUNC_LINK)
@@ -88,6 +118,7 @@ clean:
 	rm -f runc
 	rm -f $(RUNC_LINK)
 	rm -rf $(GOPATH)/pkg
+	rm -rf $(RELEASE_DIR)
 
 validate:
 	script/validate-gofmt
