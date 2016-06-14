@@ -159,6 +159,14 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 	if err := l.Validator.Validate(config); err != nil {
 		return nil, newGenericError(err, ConfigInvalid)
 	}
+	uid, err := config.HostUID()
+	if err != nil {
+		return nil, newGenericError(err, SystemError)
+	}
+	gid, err := config.HostGID()
+	if err != nil {
+		return nil, newGenericError(err, SystemError)
+	}
 	containerRoot := filepath.Join(l.Root, id)
 	if _, err := os.Stat(containerRoot); err == nil {
 		return nil, newGenericError(fmt.Errorf("container with id exists: %v", id), IdInUse)
@@ -168,7 +176,14 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 	if err := os.MkdirAll(containerRoot, 0700); err != nil {
 		return nil, newGenericError(err, SystemError)
 	}
-	if err := syscall.Mkfifo(filepath.Join(containerRoot, execFifoFilename), 0666); err != nil {
+	if err := os.Chown(containerRoot, uid, gid); err != nil {
+		return nil, newGenericError(err, SystemError)
+	}
+	fifoName := filepath.Join(containerRoot, execFifoFilename)
+	if err := syscall.Mkfifo(fifoName, 0666); err != nil {
+		return nil, newGenericError(err, SystemError)
+	}
+	if err := os.Chown(fifoName, uid, gid); err != nil {
 		return nil, newGenericError(err, SystemError)
 	}
 	c := &linuxContainer{
