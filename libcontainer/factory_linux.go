@@ -159,16 +159,34 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 	if err := l.Validator.Validate(config); err != nil {
 		return nil, newGenericError(err, ConfigInvalid)
 	}
+	uid, err := config.HostUID()
+	if err != nil {
+		return nil, newGenericError(err, SystemError)
+	}
+	gid, err := config.HostGID()
+	if err != nil {
+		return nil, newGenericError(err, SystemError)
+	}
 	containerRoot := filepath.Join(l.Root, id)
 	if _, err := os.Stat(containerRoot); err == nil {
 		return nil, newGenericError(fmt.Errorf("container with id exists: %v", id), IdInUse)
 	} else if !os.IsNotExist(err) {
 		return nil, newGenericError(err, SystemError)
 	}
-	if err := os.MkdirAll(containerRoot, 0700); err != nil {
+	if err := os.MkdirAll(containerRoot, 0711); err != nil {
 		return nil, newGenericError(err, SystemError)
 	}
-	if err := syscall.Mkfifo(filepath.Join(containerRoot, execFifoFilename), 0666); err != nil {
+	if err := os.Chown(containerRoot, uid, gid); err != nil {
+		return nil, newGenericError(err, SystemError)
+	}
+	fifoName := filepath.Join(containerRoot, execFifoFilename)
+	oldMask := syscall.Umask(0000)
+	if err := syscall.Mkfifo(fifoName, 0622); err != nil {
+		syscall.Umask(oldMask)
+		return nil, newGenericError(err, SystemError)
+	}
+	syscall.Umask(oldMask)
+	if err := os.Chown(fifoName, uid, gid); err != nil {
 		return nil, newGenericError(err, SystemError)
 	}
 	c := &linuxContainer{
@@ -252,11 +270,11 @@ func (l *LinuxFactory) StartInitialization() (err error) {
 		// this defer function will never be called.
 		if _, ok := i.(*linuxStandardInit); ok {
 			//  Synchronisation only necessary for standard init.
-			if err := utils.WriteJSON(pipe, syncT{procError}); err != nil {
+			if werr := utils.WriteJSON(pipe, syncT{procError}); werr != nil {
 				panic(err)
 			}
 		}
-		if err := utils.WriteJSON(pipe, newSystemError(err)); err != nil {
+		if werr := utils.WriteJSON(pipe, newSystemError(err)); werr != nil {
 			panic(err)
 		}
 		// ensure that this pipe is always closed
