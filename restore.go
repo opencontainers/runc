@@ -118,7 +118,7 @@ using the runc checkpoint command.`,
 	},
 }
 
-func restoreContainer(context *cli.Context, spec *specs.Spec, config *configs.Config, imagePath string) (code int, err error) {
+func restoreContainer(context *cli.Context, spec *specs.Spec, config *configs.Config, imagePath string) (int, error) {
 	var (
 		rootuid = 0
 		rootgid = 0
