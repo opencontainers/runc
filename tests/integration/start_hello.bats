@@ -20,6 +20,20 @@ function teardown() {
   [[ "${output}" == *"Hello"* ]]
 }
 
+@test "runc run ({u,g}id != 0)" {
+  # replace "uid": 0 with "uid": 1000
+  # and do a similar thing for gid.
+  sed -i 's;"uid": 0;"uid": 1000;g' config.json
+  sed -i 's;"gid": 0;"gid": 100;g' config.json
+
+  # run hello-world
+  runc run test_hello
+  [ "$status" -eq 0 ]
+
+  # check expected output
+  [[ "${output}" == *"Hello"* ]]
+}
+
 @test "runc run with rootfs set to ." {
   cp config.json rootfs/.
   rm config.json
