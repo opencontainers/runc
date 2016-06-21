@@ -238,28 +238,15 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 				return err
 			}
 		}
-		// create symlinks for merged cgroups
-		cwd, err := os.Getwd()
-		if err != nil {
-			return err
-		}
-		if err := os.Chdir(filepath.Join(rootfs, m.Destination)); err != nil {
-			return err
-		}
 		for _, mc := range merged {
 			for _, ss := range strings.Split(mc, ",") {
-				if err := os.Symlink(mc, ss); err != nil {
-					// if cgroup already exists, then okay(it could have been created before)
-					if os.IsExist(err) {
-						continue
-					}
-					os.Chdir(cwd)
+				// symlink(2) is very dumb, it will just shove the path into
+				// the link and doesn't do any checks or relative path
+				// conversion. Also, don't error out if the cgroup already exists.
+				if err := os.Symlink(mc, filepath.Join(rootfs, m.Destination, ss)); err != nil && !os.IsExist(err) {
 					return err
 				}
 			}
-		}
-		if err := os.Chdir(cwd); err != nil {
-			return err
 		}
 		if m.Flags&syscall.MS_RDONLY != 0 {
 			// remount cgroup root as readonly
