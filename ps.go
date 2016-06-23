@@ -16,7 +16,7 @@ import (
 var psCommand = cli.Command{
 	Name:      "ps",
 	Usage:     "ps displays the processes running inside a container",
-	ArgsUsage: `<container-id> <ps options>`,
+	ArgsUsage: `<container-id> [ps options]`,
 	Flags: []cli.Flag{
 		cli.StringFlag{
 			Name:  "format, f",
