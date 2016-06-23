@@ -465,7 +465,7 @@ Seccomp provides application sandboxing mechanism in the Linux kernel.
 Seccomp configuration allows one to configure actions to take for matched syscalls and furthermore also allows matching on values passed as arguments to syscalls.
 For more information about Seccomp, see [Seccomp kernel documentation](https://www.kernel.org/doc/Documentation/prctl/seccomp_filter.txt)
 The actions, architectures, and operators are strings that match the definitions in seccomp.h from [libseccomp](https://github.com/seccomp/libseccomp) and are translated to corresponding values.
-A valid list of constants as of Libseccomp v2.2.3 is contained below.
+A valid list of constants as of libseccomp v2.3.0 is shown below.
 
 Architecture Constants
 * `SCMP_ARCH_X86`
@@ -479,6 +479,11 @@ Architecture Constants
 * `SCMP_ARCH_MIPSEL`
 * `SCMP_ARCH_MIPSEL64`
 * `SCMP_ARCH_MIPSEL64N32`
+* `SCMP_ARCH_PPC`
+* `SCMP_ARCH_PPC64`
+* `SCMP_ARCH_PPC64LE`
+* `SCMP_ARCH_S390`
+* `SCMP_ARCH_S390X`
 
 Action Constants:
 * `SCMP_ACT_KILL`
