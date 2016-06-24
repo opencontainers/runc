@@ -28,7 +28,7 @@ const defaultMountFlags = syscall.MS_NOEXEC | syscall.MS_NOSUID | syscall.MS_NOD
 // needsSetupDev returns true if /dev needs to be set up.
 func needsSetupDev(config *configs.Config) bool {
 	for _, m := range config.Mounts {
-		if m.Device == "bind" && (m.Destination == "/dev" || m.Destination == "/dev/") {
+		if m.Device == "bind" && libcontainerUtils.CleanPath(m.Destination) == "/dev" {
 			return false
 		}
 	}
@@ -95,7 +95,7 @@ func setupRootfs(config *configs.Config, console *linuxConsole, pipe io.ReadWrit
 	}
 	// remount dev as ro if specifed
 	for _, m := range config.Mounts {
-		if m.Destination == "/dev" {
+		if libcontainerUtils.CleanPath(m.Destination) == "/dev" {
 			if m.Flags&syscall.MS_RDONLY != 0 {
 				if err := remountReadonly(m.Destination); err != nil {
 					return newSystemErrorWithCausef(err, "remounting %q as readonly", m.Destination)
@@ -238,28 +238,15 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 				return err
 			}
 		}
-		// create symlinks for merged cgroups
-		cwd, err := os.Getwd()
-		if err != nil {
-			return err
-		}
-		if err := os.Chdir(filepath.Join(rootfs, m.Destination)); err != nil {
-			return err
-		}
 		for _, mc := range merged {
 			for _, ss := range strings.Split(mc, ",") {
-				if err := os.Symlink(mc, ss); err != nil {
-					// if cgroup already exists, then okay(it could have been created before)
-					if os.IsExist(err) {
-						continue
-					}
-					os.Chdir(cwd)
+				// symlink(2) is very dumb, it will just shove the path into
+				// the link and doesn't do any checks or relative path
+				// conversion. Also, don't error out if the cgroup already exists.
+				if err := os.Symlink(mc, filepath.Join(rootfs, m.Destination, ss)); err != nil && !os.IsExist(err) {
 					return err
 				}
 			}
-		}
-		if err := os.Chdir(cwd); err != nil {
-			return err
 		}
 		if m.Flags&syscall.MS_RDONLY != 0 {
 			// remount cgroup root as readonly
@@ -713,7 +700,7 @@ func mountPropagate(m *configs.Mount, rootfs string, mountLabel string) error {
 		data  = label.FormatMountLabel(m.Data, mountLabel)
 		flags = m.Flags
 	)
-	if dest == "/dev" {
+	if libcontainerUtils.CleanPath(dest) == "/dev" {
 		flags &= ^syscall.MS_RDONLY
 	}
 	if !strings.HasPrefix(dest, rootfs) {
