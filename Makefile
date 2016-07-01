@@ -4,8 +4,10 @@
 
 PREFIX := $(DESTDIR)/usr/local
 BINDIR := $(PREFIX)/sbin
-RUNC_IMAGE := runc_dev
-RUNC_TEST_IMAGE := runc_test
+GIT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null)
+GIT_BRANCH_CLEAN := $(shell echo $(GIT_BRANCH) | sed -e "s/[^[:alnum:]]/-/g")
+RUNC_IMAGE := runc_dev$(if $(GIT_BRANCH_CLEAN),:$(GIT_BRANCH_CLEAN))
+RUNC_TEST_IMAGE := runc_test$(if $(GIT_BRANCH_CLEAN),:$(GIT_BRANCH_CLEAN))
 PROJECT := github.com/opencontainers/runc
 TEST_DOCKERFILE := script/test_Dockerfile
 BUILDTAGS := seccomp
