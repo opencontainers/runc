@@ -26,6 +26,12 @@ status of "ubuntu01" as "stopped" the following will delete resources held for
 "ubuntu01" removing "ubuntu01" from the runc list of containers:  
 	 
        # runc delete ubuntu01`,
+	Flags: []cli.Flag{
+		cli.BoolFlag{
+			Name:  "force, f",
+			Usage: "Force the removal of a running container (uses SIGKILL)",
+		},
+	},
 	Action: func(context *cli.Context) error {
 		container, err := getContainer(context)
 		if err != nil {
@@ -56,8 +62,18 @@ status of "ubuntu01" as "stopped" the following will delete resources held for
 				}
 			}
 			return fmt.Errorf("container init still running")
+		case libcontainer.Running:
+			force := context.Bool("force")
+			if force {
+				if err := container.Signal(syscall.SIGKILL); err != nil {
+					return fmt.Errorf("Could not stop running container, cannot remove - %v", err)
+				}
+				destroy(container)
+				return nil
+			}
+			return fmt.Errorf("Impossible to remove a running container, please stop it first or use -f")
 		default:
-			return fmt.Errorf("cannot delete container that is not stopped: %s", s)
+			return fmt.Errorf("cannot delete a container in the %s state", s)
 		}
 		return nil
 	},
