@@ -76,7 +76,7 @@ When in doubt, start on the [mailing-list](#mailing-list).
 ## Weekly Call
 
 The contributors and maintainers of all OCI projects have a weekly meeting Wednesdays at 10:00 AM (USA Pacific.)
-Everyone is welcome to participate via [UberConference web][UberConference] or audio-only: 646-494-8704 (no PIN needed.)
+Everyone is welcome to participate via [UberConference web][UberConference] or audio-only: 888-587-9088 or 860-706-8529 (no PIN needed.)
 An initial agenda will be posted to the [mailing list](#mailing-list) earlier in the week, and everyone is welcome to propose additional topics or suggest other agenda alterations there.
 Minutes are posted to the [mailing list](#mailing-list) and minutes from past calls are archived to the [wiki](https://github.com/opencontainers/runtime-spec/wiki) for those who are unable to join the call.
 
@@ -157,5 +157,5 @@ Read more on [How to Write a Git Commit Message](http://chris.beams.io/posts/git
   * If there was important/useful/essential conversation or information, copy or include a reference
 8. When possible, one keyword to scope the change in the subject (i.e. "README: ...", "runtime: ...")
 
-[UberConference]: https://www.uberconference.com/ssaul
+[UberConference]: https://www.uberconference.com/opencontainers
 [irc-logs]: http://ircbot.wl.linuxfoundation.org/eavesdrop/%23opencontainers/
