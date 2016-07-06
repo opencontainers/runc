@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime/debug"
@@ -33,32 +32,9 @@ var (
 )
 
 // InitArgs returns an options func to configure a LinuxFactory with the
-// provided init arguments.
+// provided init binary path and arguments.
 func InitArgs(args ...string) func(*LinuxFactory) error {
 	return func(l *LinuxFactory) error {
-		name := args[0]
-		if filepath.Base(name) == name {
-			if lp, err := exec.LookPath(name); err == nil {
-				name = lp
-			}
-		} else {
-			abs, err := filepath.Abs(name)
-			if err != nil {
-				return err
-			}
-			name = abs
-		}
-		l.InitPath = "/proc/self/exe"
-		l.InitArgs = append([]string{name}, args[1:]...)
-		return nil
-	}
-}
-
-// InitPath returns an options func to configure a LinuxFactory with the
-// provided absolute path to the init binary and arguements.
-func InitPath(path string, args ...string) func(*LinuxFactory) error {
-	return func(l *LinuxFactory) error {
-		l.InitPath = path
 		l.InitArgs = args
 		return nil
 	}
@@ -113,10 +89,10 @@ func New(root string, options ...func(*LinuxFactory) error) (Factory, error) {
 	}
 	l := &LinuxFactory{
 		Root:      root,
+		InitArgs:  []string{"/proc/self/exe", "init"},
 		Validator: validate.New(),
 		CriuPath:  "criu",
 	}
-	InitArgs(os.Args[0], "init")(l)
 	Cgroupfs(l)
 	for _, opt := range options {
 		if err := opt(l); err != nil {
@@ -130,9 +106,6 @@ func New(root string, options ...func(*LinuxFactory) error) (Factory, error) {
 type LinuxFactory struct {
 	// Root directory for the factory to store state.
 	Root string
-
-	// InitPath is the absolute path to the init binary.
-	InitPath string
 
 	// InitArgs are arguments for calling the init responsibilities for spawning
 	// a container.
@@ -193,7 +166,6 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 		id:            id,
 		root:          containerRoot,
 		config:        config,
-		initPath:      l.InitPath,
 		initArgs:      l.InitArgs,
 		criuPath:      l.CriuPath,
 		cgroupManager: l.NewCgroupsManager(config.Cgroups, nil),
@@ -221,7 +193,6 @@ func (l *LinuxFactory) Load(id string) (Container, error) {
 		initProcessStartTime: state.InitProcessStartTime,
 		id:                   id,
 		config:               &state.Config,
-		initPath:             l.InitPath,
 		initArgs:             l.InitArgs,
 		criuPath:             l.CriuPath,
 		cgroupManager:        l.NewCgroupsManager(state.Config.Cgroups, state.CgroupPaths),
