@@ -16,7 +16,7 @@ import (
 var psCommand = cli.Command{
 	Name:      "ps",
 	Usage:     "ps displays the processes running inside a container",
-	ArgsUsage: `<container-id> [ps options]`,
+	ArgsUsage: `<container-id> [-- ps options]`,
 	Flags: []cli.Flag{
 		cli.StringFlag{
 			Name:  "format, f",
@@ -43,6 +43,9 @@ var psCommand = cli.Command{
 		}
 
 		psArgs := context.Args().Get(1)
+		if psArgs == "--" {
+			psArgs = context.Args().Get(2)
+		}
 		if psArgs == "" {
 			psArgs = "-ef"
 		}
