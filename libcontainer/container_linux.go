@@ -22,6 +22,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/criurpc"
+	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/syndtr/gocapability/capability"
 	"github.com/vishvananda/netlink/nl"
@@ -30,18 +31,19 @@ import (
 const stdioFdCount = 3
 
 type linuxContainer struct {
-	id            string
-	root          string
-	config        *configs.Config
-	cgroupManager cgroups.Manager
-	initPath      string
-	initArgs      []string
-	initProcess   parentProcess
-	criuPath      string
-	m             sync.Mutex
-	criuVersion   int
-	state         containerState
-	created       time.Time
+	id                   string
+	root                 string
+	config               *configs.Config
+	cgroupManager        cgroups.Manager
+	initPath             string
+	initArgs             []string
+	initProcess          parentProcess
+	initProcessStartTime string
+	criuPath             string
+	m                    sync.Mutex
+	criuVersion          int
+	state                containerState
+	created              time.Time
 }
 
 // State represents a running container's state
@@ -252,9 +254,12 @@ func (c *linuxContainer) start(process *Process, isInit bool) error {
 		c.state = &createdState{
 			c: c,
 		}
-		if err := c.updateState(parent); err != nil {
+		state, err := c.updateState(parent)
+		if err != nil {
 			return err
 		}
+		c.initProcessStartTime = state.InitProcessStartTime
+
 		if c.config.Hooks != nil {
 			s := configs.HookState{
 				Version:    c.config.Version,
@@ -1043,7 +1048,7 @@ func (c *linuxContainer) criuNotifications(resp *criurpc.CriuResp, process *Proc
 		}); err != nil {
 			return err
 		}
-		if err := c.updateState(r); err != nil {
+		if _, err := c.updateState(r); err != nil {
 			return err
 		}
 		if err := os.Remove(filepath.Join(c.root, "checkpoint")); err != nil {
@@ -1055,13 +1060,17 @@ func (c *linuxContainer) criuNotifications(resp *criurpc.CriuResp, process *Proc
 	return nil
 }
 
-func (c *linuxContainer) updateState(process parentProcess) error {
+func (c *linuxContainer) updateState(process parentProcess) (*State, error) {
 	c.initProcess = process
 	state, err := c.currentState()
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return c.saveState(state)
+	err = c.saveState(state)
+	if err != nil {
+		return nil, err
+	}
+	return state, nil
 }
 
 func (c *linuxContainer) saveState(s *State) error {
@@ -1109,6 +1118,21 @@ func (c *linuxContainer) refreshState() error {
 	return c.state.transition(&stoppedState{c: c})
 }
 
+// doesInitProcessExist checks if the init process is still the same process
+// as the initial one, it could happen that the original process has exited
+// and a new process has been created with the same pid, in this case, the
+// container would already be stopped.
+func (c *linuxContainer) doesInitProcessExist(initPid int) (bool, error) {
+	startTime, err := system.GetProcessStartTime(initPid)
+	if err != nil {
+		return false, newSystemErrorWithCausef(err, "getting init process %d start time", initPid)
+	}
+	if c.initProcessStartTime != startTime {
+		return false, nil
+	}
+	return true, nil
+}
+
 func (c *linuxContainer) runType() (Status, error) {
 	if c.initProcess == nil {
 		return Stopped, nil
@@ -1123,6 +1147,11 @@ func (c *linuxContainer) runType() (Status, error) {
 			return Stopped, nil
 		}
 		return Stopped, newSystemErrorWithCausef(err, "sending signal 0 to pid %d", pid)
+	}
+	// check if the process is still the original init process.
+	exist, err := c.doesInitProcessExist(pid)
+	if !exist || err != nil {
+		return Stopped, err
 	}
 	// check if the process that is running is the init process or the user's process.
 	// this is the difference between the container Running and Created.
