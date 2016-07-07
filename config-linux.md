@@ -181,7 +181,19 @@ However, a runtime MAY attach the container process to additional cgroup control
 ###### Example
 
 ```json
-   "cgroupsPath": "/myRuntime/myContainer"
+   "cgroupsPath": "/myRuntime/myContainer",
+   "resources": {
+      "memory": {
+         "limit": 100000,
+         "reservation": 200000
+      },
+      "devices": [
+         {
+            "allow": false,
+            "access": "rwm"
+         }
+      ]
+   }
 ```
 
 #### Device whitelist
