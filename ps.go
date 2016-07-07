@@ -42,15 +42,21 @@ var psCommand = cli.Command{
 			return nil
 		}
 
-		psArgs := context.Args().Get(1)
-		if psArgs == "--" {
-			psArgs = context.Args().Get(2)
-		}
-		if psArgs == "" {
-			psArgs = "-ef"
+		// [1:] is to remove command name, ex:
+		// context.Args(): [containet_id ps_arg1 ps_arg2 ...]
+		// psArgs:         [ps_arg1 ps_arg2 ...]
+		//
+		psArgs := context.Args()[1:]
+
+		if len(psArgs) > 0 && psArgs[0] == "--" {
+			psArgs = psArgs[1:]
 		}
 
-		output, err := exec.Command("ps", strings.Split(psArgs, " ")...).Output()
+		if len(psArgs) == 0 {
+			psArgs = []string{"-ef"}
+		}
+
+		output, err := exec.Command("ps", psArgs...).Output()
 		if err != nil {
 			return err
 		}
