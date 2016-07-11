@@ -7,11 +7,13 @@ load helpers
   [ "$status" -eq 0 ]
   [[ ${lines[0]} =~ NAME:+ ]]
   [[ ${lines[1]} =~ runc\ '-'\ Open\ Container\ Initiative\ runtime+ ]]
+  [ "${output}" = "${output/VERSION/}" ]
 
   runc --help
   [ "$status" -eq 0 ]
   [[ ${lines[0]} =~ NAME:+ ]]
   [[ ${lines[1]} =~ runc\ '-'\ Open\ Container\ Initiative\ runtime+ ]]
+  [ "${output}" = "${output/VERSION/}" ]
 }
 
 @test "runc command -h" {

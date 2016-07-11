@@ -4,20 +4,10 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/urfave/cli"
 )
-
-// version will be populated by the Makefile, read from
-// VERSION file of the source code.
-var version = ""
-
-// gitCommit will be the hash that the binary was built from
-// and will be populated by the Makefile
-var gitCommit = ""
 
 const (
 	specConfig = "config.json"
@@ -50,16 +40,11 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "runc"
 	app.Usage = usage
+	app.Version = ""
 
-	var v []string
-	if version != "" {
-		v = append(v, version)
+	cli.VersionPrinter = func(context *cli.Context) {
+		printVersion(context)
 	}
-	if gitCommit != "" {
-		v = append(v, fmt.Sprintf("commit: %s", gitCommit))
-	}
-	v = append(v, fmt.Sprintf("spec: %s", specs.Version))
-	app.Version = strings.Join(v, "\n")
 	app.Flags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "debug",
@@ -108,6 +93,7 @@ func main() {
 		startCommand,
 		stateCommand,
 		updateCommand,
+		versionCommand,
 	}
 	app.Before = func(context *cli.Context) error {
 		if context.GlobalBool("debug") {
