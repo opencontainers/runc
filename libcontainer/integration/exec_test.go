@@ -431,7 +431,6 @@ func TestAdditionalGroups(t *testing.T) {
 	defer remove(rootfs)
 
 	config := newTemplateConfig(rootfs)
-	config.AdditionalGroups = []string{"plugdev", "audio"}
 
 	factory, err := libcontainer.New(root, libcontainer.Cgroupfs)
 	ok(t, err)
@@ -442,11 +441,12 @@ func TestAdditionalGroups(t *testing.T) {
 
 	var stdout bytes.Buffer
 	pconfig := libcontainer.Process{
-		Cwd:    "/",
-		Args:   []string{"sh", "-c", "id", "-Gn"},
-		Env:    standardEnvironment,
-		Stdin:  nil,
-		Stdout: &stdout,
+		Cwd:              "/",
+		Args:             []string{"sh", "-c", "id", "-Gn"},
+		Env:              standardEnvironment,
+		Stdin:            nil,
+		Stdout:           &stdout,
+		AdditionalGroups: []string{"plugdev", "audio"},
 	}
 	err = container.Run(&pconfig)
 	ok(t, err)
