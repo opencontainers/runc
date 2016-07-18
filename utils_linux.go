@@ -38,10 +38,7 @@ func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
 			return nil, fmt.Errorf("systemd cgroup flag passed, but systemd support for managing cgroups is not available")
 		}
 	}
-	return libcontainer.New(abs, cgroupManager, func(l *libcontainer.LinuxFactory) error {
-		l.CriuPath = context.GlobalString("criu")
-		return nil
-	})
+	return libcontainer.New(abs, cgroupManager, libcontainer.CriuPath(context.GlobalString("criu")))
 }
 
 // getContainer returns the specified container instance by loading it from state
