@@ -437,7 +437,7 @@ func createCgroupConfig(name string, useSystemdCgroup bool, spec *specs.Spec) (*
 	}
 	if r.Network != nil {
 		if r.Network.ClassID != nil {
-			c.Resources.NetClsClassid = string(*r.Network.ClassID)
+			c.Resources.NetClsClassid = *r.Network.ClassID
 		}
 		for _, m := range r.Network.Priorities {
 			c.Resources.NetPrioIfpriomap = append(c.Resources.NetPrioIfpriomap, &configs.IfPrioMap{
