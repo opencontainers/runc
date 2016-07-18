@@ -148,7 +148,7 @@ In addition to any devices configured with this setting, the runtime MUST also s
 * [`/dev/random`][random.4]
 * [`/dev/urandom`][random.4]
 * [`/dev/tty`][tty.4]
-* [`/dev/console`][console.4]
+* [`/dev/console`][console.4] is setup if terminal is enabled in the config by bind mounting the pseudoterminal slave to /dev/console.
 * [`/dev/ptmx`][pts.4].
   A [bind-mount or symlink of the container's `/dev/pts/ptmx`][devpts].
 
