@@ -1223,16 +1223,21 @@ func (c *linuxContainer) currentState() (*State, error) {
 // can setns in order.
 func (c *linuxContainer) orderNamespacePaths(namespaces map[configs.NamespaceType]string) ([]string, error) {
 	paths := []string{}
-	nsTypes := []configs.NamespaceType{
+	order := []configs.NamespaceType{
 		configs.NEWIPC,
 		configs.NEWUTS,
 		configs.NEWNET,
 		configs.NEWPID,
 		configs.NEWNS,
+		configs.NEWUSER,
 	}
-	// join userns if the init process explicitly requires NEWUSER
-	if c.config.Namespaces.Contains(configs.NEWUSER) {
-		nsTypes = append(nsTypes, configs.NEWUSER)
+
+	// Remove namespaces that we don't need to join.
+	var nsTypes []configs.NamespaceType
+	for _, ns := range order {
+		if c.config.Namespaces.Contains(ns) {
+			nsTypes = append(nsTypes, ns)
+		}
 	}
 	for _, nsType := range nsTypes {
 		if p, ok := namespaces[nsType]; ok && p != "" {
@@ -1249,7 +1254,7 @@ func (c *linuxContainer) orderNamespacePaths(namespaces map[configs.NamespaceTyp
 			if strings.ContainsRune(p, ',') {
 				return nil, newSystemError(fmt.Errorf("invalid path %s", p))
 			}
-			paths = append(paths, p)
+			paths = append(paths, fmt.Sprintf("%s:%s", configs.NsName(nsType), p))
 		}
 	}
 	return paths, nil

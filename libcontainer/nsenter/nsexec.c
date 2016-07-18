@@ -11,6 +11,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -265,6 +266,44 @@ static void start_child(int pipenum, jmp_buf *env, int syncpipe[2], struct nlcon
 	exit(0);
 }
 
+/* Returns the clone(2) flag for a namespace, given the name of a namespace. */
+static int nsflag(char *name)
+{
+	if (false)
+		/* dummy */ ;
+#ifdef CLONE_NEWCGROUP
+	else if (!strcmp(name, "cgroup"))
+		return CLONE_NEWCGROUP;
+#endif
+#ifdef CLONE_NEWIPC
+	else if (!strcmp(name, "ipc"))
+		return CLONE_NEWIPC;
+#endif
+#ifdef CLONE_NEWNS
+	else if (!strcmp(name, "mnt"))
+		return CLONE_NEWNS;
+#endif
+#ifdef CLONE_NEWNET
+	else if (!strcmp(name, "net"))
+		return CLONE_NEWNET;
+#endif
+#ifdef CLONE_NEWPID
+	else if (!strcmp(name, "pid"))
+		return CLONE_NEWPID;
+#endif
+#ifdef CLONE_NEWUSER
+	else if (!strcmp(name, "user"))
+		return CLONE_NEWUSER;
+#endif
+#ifdef CLONE_NEWUTS
+	else if (!strcmp(name, "uts"))
+		return CLONE_NEWUTS;
+#endif
+
+	/* If we don't recognise a name, fallback to 0. */
+	return 0;
+}
+
 static void nl_parse(int fd, struct nlconfig_t *config)
 {
 	size_t len, size;
@@ -328,8 +367,13 @@ static void nl_parse(int fd, struct nlconfig_t *config)
 				 */
 				char *saveptr = NULL;
 				char *ns = strtok_r(current, ",", &saveptr);
-				int *fds = NULL, num = 0, i;
-				char **paths = NULL;
+				int num = 0, i;
+
+				struct namespace_t {
+					int fd;
+					int ns;
+					char *path;
+				} *nses = NULL;
 
 				if (!ns || !strlen(current))
 					bail("ns paths are empty");
@@ -341,32 +385,39 @@ static void nl_parse(int fd, struct nlconfig_t *config)
 				 */
 				do {
 					int fd;
+					char *path;
 
-					/* Resize fds. */
-					num++;
-					fds = realloc(fds, num * sizeof(int));
-					paths = realloc(paths, num * sizeof(char *));
+					/* Resize the namespace array. */
+					nses = realloc(nses, ++num * sizeof(struct namespace_t));
 
-					fd = open(ns, O_RDONLY);
+					/* Split 'ns:path'. */
+					path = strstr(ns, ":");
+					if (!path)
+						bail("failed to parse %s", ns);
+					*path++ = '\0';
+
+					fd = open(path, O_RDONLY);
 					if (fd < 0)
 						bail("failed to open %s", ns);
 
-					fds[num - 1] = fd;
-					paths[num - 1] = ns;
+					nses[num - 1] = (struct namespace_t) {
+						.fd = fd,
+						.ns = nsflag(ns),
+						.path = path,
+					};
 				} while ((ns = strtok_r(NULL, ",", &saveptr)) != NULL);
 
 				for (i = 0; i < num; i++) {
-					int fd = fds[i];
-					char *path = paths[i];
+					struct namespace_t ns = nses[i];
 
-					if (setns(fd, 0) < 0)
-						bail("failed to setns to %s", path);
+					/* Actually join the namespaces. */
+					if (setns(ns.fd, ns.ns) < 0)
+						bail("failed to setns to %s", ns.path);
 
-					close(fd);
+					close(ns.fd);
 				}
 
-				free(fds);
-				free(paths);
+				free(nses);
 				break;
 			}
 		case UIDMAP_ATTR:
