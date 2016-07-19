@@ -45,11 +45,11 @@ Where the given root is specified via the global option "--root"
 
 EXAMPLE 1:
 To list containers created via the default "--root":
-       runc list
+       # runc list
 
 EXAMPLE 2:
 To list containers created using a non-default value for "--root":
-       runc --root value list`,
+       # runc --root value list`,
 	Flags: []cli.Flag{
 		cli.StringFlag{
 			Name:  "format, f",
