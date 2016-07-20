@@ -1139,7 +1139,7 @@ func TestHook(t *testing.T) {
 	}
 
 	if err := container.Destroy(); err != nil {
-		t.Fatalf("container destory %s", err)
+		t.Fatalf("container destroy %s", err)
 	}
 	fi, err := os.Stat(filepath.Join(rootfs, "test"))
 	if err == nil || !os.IsNotExist(err) {
