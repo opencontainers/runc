@@ -37,7 +37,8 @@ struct clone_arg {
 	jmp_buf *env;
 };
 
-struct nsenter_config {
+struct nlconfig_t {
+	char *data;
 	uint32_t cloneflags;
 	char *uidmap;
 	int uidmap_len;
@@ -226,7 +227,7 @@ static void update_gidmap(int pid, char *map, int map_len)
 
 #define JSON_MAX 4096
 
-static void start_child(int pipenum, jmp_buf *env, int syncpipe[2], struct nsenter_config *config)
+static void start_child(int pipenum, jmp_buf *env, int syncpipe[2], struct nlconfig_t *config)
 {
 	int len, childpid;
 	char buf[JSON_MAX];
@@ -264,13 +265,37 @@ static void start_child(int pipenum, jmp_buf *env, int syncpipe[2], struct nsent
 	exit(0);
 }
 
-static struct nsenter_config process_nl_attributes(int pipenum, char *data, int data_size)
+static void nl_parse(int fd, struct nlconfig_t *config)
 {
-	char *current = data;
-	struct nsenter_config config = { 0 };
+	size_t len, size;
+	struct nlmsghdr hdr;
+	char *data, *current;
 
-	config.consolefd = -1;
-	while (current < data + data_size) {
+	/* Retrieve the netlink header. */
+	len = read(fd, &hdr, NLMSG_HDRLEN);
+	if (len != NLMSG_HDRLEN)
+		bail("invalid netlink header length %lu", len);
+
+	if (hdr.nlmsg_type == NLMSG_ERROR)
+		bail("failed to read netlink message");
+
+	if (hdr.nlmsg_type != INIT_MSG)
+		bail("unexpected msg type %d", hdr.nlmsg_type);
+
+	/* Retrieve data. */
+	size = NLMSG_PAYLOAD(&hdr, 0);
+	current = data = malloc(size);
+	if (!data)
+		bail("failed to allocate %d bytes of memory for nl_payload", size);
+
+	len = read(fd, data, size);
+	if (len != size)
+		bail("failed to read netlink payload, %lu != %lu", len, size);
+
+	/* Parse the netlink payload. */
+	config->data = data;
+	config->consolefd = -1;
+	while (current < data + size) {
 		struct nlattr *nlattr = (struct nlattr *)current;
 		size_t payload_len = nlattr->nla_len - NLA_HDRLEN;
 
@@ -280,7 +305,7 @@ static struct nsenter_config process_nl_attributes(int pipenum, char *data, int 
 		/* Handle payload. */
 		switch (nlattr->nla_type) {
 		case CLONE_FLAGS_ATTR:
-			config.cloneflags = readint32(current);
+			config->cloneflags = readint32(current);
 			break;
 		case CONSOLE_PATH_ATTR:
 			/*
@@ -290,8 +315,8 @@ static struct nsenter_config process_nl_attributes(int pipenum, char *data, int 
 			 * decided here, but rather in container_linux.go. We just
 			 * follow the order given by the netlink message.
 			 */
-			config.consolefd = open(current, O_RDWR);
-			if (config.consolefd < 0)
+			config->consolefd = open(current, O_RDWR);
+			if (config->consolefd < 0)
 				bail("failed to open console %s", current);
 			break;
 		case NS_PATHS_ATTR:{
@@ -340,18 +365,20 @@ static struct nsenter_config process_nl_attributes(int pipenum, char *data, int 
 					close(fd);
 				}
 
+				free(fds);
+				free(paths);
 				break;
 			}
 		case UIDMAP_ATTR:
-			config.uidmap = current;
-			config.uidmap_len = payload_len;
+			config->uidmap = current;
+			config->uidmap_len = payload_len;
 			break;
 		case GIDMAP_ATTR:
-			config.gidmap = current;
-			config.gidmap_len = payload_len;
+			config->gidmap = current;
+			config->gidmap_len = payload_len;
 			break;
 		case SETGROUP_ATTR:
-			config.is_setgroup = readint8(current);
+			config->is_setgroup = readint8(current);
 			break;
 		default:
 			bail("unknown netlink message type %d", nlattr->nla_type);
@@ -359,13 +386,19 @@ static struct nsenter_config process_nl_attributes(int pipenum, char *data, int 
 
 		current += NLA_ALIGN(payload_len);
 	}
+}
 
-	return config;
+void nl_free(struct nlconfig_t *config)
+{
+	free(config->data);
 }
 
 void nsexec(void)
 {
 	int pipenum;
+	jmp_buf env;
+	int syncpipe[2];
+	struct nlconfig_t config = {0};
 
 	/*
 	 * If we don't have an init pipe, just return to the go routine.
@@ -375,31 +408,8 @@ void nsexec(void)
 	if (pipenum == -1)
 		return;
 
-	/* Retrieve the netlink header. */
-	int len;
-	struct nlmsghdr hdr;
-
-	len = read(pipenum, &hdr, NLMSG_HDRLEN);
-	if (len != NLMSG_HDRLEN)
-		bail("invalid netlink header length %d", len);
-
-	if (hdr.nlmsg_type == NLMSG_ERROR)
-		bail("failed to read netlink message");
-
-	if (hdr.nlmsg_type != INIT_MSG)
-		bail("unexpected msg type %d", hdr.nlmsg_type);
-
-	/* Retrieve data. */
-	size_t size = NLMSG_PAYLOAD(&hdr, 0);
-	char *data = alloca(size);
-
-	len = read(pipenum, data, size);
-	if (len != size)
-		bail("failed to read netlink payload, %d != %lu", len, size);
-
-	jmp_buf env;
-	int syncpipe[2];
-	struct nsenter_config config = process_nl_attributes(pipenum, data, size);
+	/* Parse all of the netlink configuration. */
+	nl_parse(pipenum, &config);
 
 	/* clone(2) flags are mandatory. */
 	if (config.cloneflags == -1)
@@ -447,6 +457,9 @@ void nsexec(void)
 			if (dup3(consolefd, STDERR_FILENO, 0) != STDERR_FILENO)
 				bail("failed to dup stderr");
 		}
+
+		/* Free netlink data. */
+		nl_free(&config);
 
 		/* Finish executing, let the Go runtime take over. */
 		return;
