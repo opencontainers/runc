@@ -40,8 +40,8 @@ func TestDevicesSetAllow(t *testing.T) {
 	helper.writeFileContents(map[string]string{
 		"devices.deny": "a",
 	})
-
-	helper.CgroupData.config.Resources.AllowAllDevices = false
+	allowAllDevices := false
+	helper.CgroupData.config.Resources.AllowAllDevices = &allowAllDevices
 	helper.CgroupData.config.Resources.AllowedDevices = allowedDevices
 	devices := &DevicesGroup{}
 	if err := devices.Set(helper.CgroupPath, helper.CgroupData.config); err != nil {
@@ -66,7 +66,8 @@ func TestDevicesSetDeny(t *testing.T) {
 		"devices.allow": "a",
 	})
 
-	helper.CgroupData.config.Resources.AllowAllDevices = true
+	allowAllDevices := true
+	helper.CgroupData.config.Resources.AllowAllDevices = &allowAllDevices
 	helper.CgroupData.config.Resources.DeniedDevices = deniedDevices
 	devices := &DevicesGroup{}
 	if err := devices.Set(helper.CgroupPath, helper.CgroupData.config); err != nil {
