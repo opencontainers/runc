@@ -95,7 +95,7 @@ other options are ignored.
 		},
 		cli.StringFlag{
 			Name:  "memory-swap",
-			Usage: "Total memory usage (memory + swap); set `-1` to enable unlimited swap",
+			Usage: "Total memory usage (memory + swap); set '-1' to enable unlimited swap",
 		},
 	},
 	Action: func(context *cli.Context) error {
