@@ -13,9 +13,9 @@ TEST_DOCKERFILE := script/test_Dockerfile
 BUILDTAGS := seccomp
 RUNC_BUILD_PATH := /go/src/github.com/opencontainers/runc/runc
 RUNC_INSTANCE := runc_dev
+PKG_NAME := github.com/opencontainers/runc
 COMMIT := $(shell git rev-parse HEAD 2> /dev/null || true)
-RUNC_LINK := $(CURDIR)/Godeps/_workspace/src/github.com/opencontainers/runc
-export GOPATH := $(CURDIR)/Godeps/_workspace
+TEMP_GOPATH := /tmp/runc-gopath
 
 MAN_DIR := $(CURDIR)/man/man8
 MAN_PAGES = $(shell ls $(MAN_DIR)/*.8)
@@ -24,14 +24,15 @@ MAN_INSTALL_PATH := ${PREFIX}/share/man/man8/
 
 VERSION := ${shell cat ./VERSION}
 
-all: $(RUNC_LINK)
-	go build -i -ldflags "-X main.gitCommit=${COMMIT} -X main.version=${VERSION}" -tags "$(BUILDTAGS)" -o runc .
+all: $(TEMP_GOPATH)
+	GOPATH=$(TEMP_GOPATH) go build -i -ldflags "-X main.gitCommit=${COMMIT} -X main.version=${VERSION}" -tags "$(BUILDTAGS)" -o runc $(PKG_NAME)
 
-static: $(RUNC_LINK)
-	CGO_ENABLED=1 go build -i -tags "$(BUILDTAGS) cgo static_build" -ldflags "-w -extldflags -static -X main.gitCommit=${COMMIT} -X main.version=${VERSION}" -o runc .
+static: $(TEMP_GOPATH)
+	GOPATH=$(TEMP_GOPATH) CGO_ENABLED=1 go build -i -tags "$(BUILDTAGS) cgo static_build" -ldflags "-w -extldflags -static -X main.gitCommit=${COMMIT} -X main.version=${VERSION}" -o runc $(PKG_NAME)
 
-$(RUNC_LINK):
-	ln -sfn $(CURDIR) $(RUNC_LINK)
+$(TEMP_GOPATH):
+	mkdir -p $(TEMP_GOPATH)/src/github.com/opencontainers
+	ln -sfn $(CURDIR) $(TEMP_GOPATH)/src/github.com/opencontainers/runc
 
 dbuild: runctestimage
 	docker build -t $(RUNC_IMAGE) .
@@ -87,12 +88,11 @@ uninstall-man:
 	rm -f $(addprefix $(MAN_INSTALL_PATH),$(MAN_PAGES_BASE))
 
 clean:
+	rm -rf $(GOPATH)
 	rm -f runc
-	rm -f $(RUNC_LINK)
-	rm -rf $(GOPATH)/pkg
 
 validate:
 	script/validate-gofmt
-	go vet ./...
+	go vet $(shell go list ./... | grep -v vendor)
 
 ci: validate localtest
