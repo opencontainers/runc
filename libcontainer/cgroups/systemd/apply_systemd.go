@@ -490,5 +490,8 @@ func setKernelMemory(c *configs.Cgroup) error {
 		return err
 	}
 
-	return os.MkdirAll(path, 0755)
+	if err := os.MkdirAll(path, 0755); err != nil {
+		return err
+	}
+	return fs.EnableKernelMemoryAccounting(path)
 }
