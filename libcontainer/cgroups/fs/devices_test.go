@@ -56,6 +56,19 @@ func TestDevicesSetAllow(t *testing.T) {
 	if value != allowedList {
 		t.Fatal("Got the wrong value, set devices.allow failed.")
 	}
+
+	// When AllowAllDevices is nil, devices.allow file should not be modified.
+	helper.CgroupData.config.Resources.AllowAllDevices = nil
+	if err := devices.Set(helper.CgroupPath, helper.CgroupData.config); err != nil {
+		t.Fatal(err)
+	}
+	value, err = getCgroupParamString(helper.CgroupPath, "devices.allow")
+	if err != nil {
+		t.Fatalf("Failed to parse devices.allow - %s", err)
+	}
+	if value != allowedList {
+		t.Fatal("devices policy shouldn't have changed on AllowedAllDevices=nil.")
+	}
 }
 
 func TestDevicesSetDeny(t *testing.T) {
