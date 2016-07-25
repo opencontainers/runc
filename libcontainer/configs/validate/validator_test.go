@@ -148,6 +148,9 @@ func TestValidateSecurityWithoutNEWNS(t *testing.T) {
 }
 
 func TestValidateUsernamespace(t *testing.T) {
+	if _, err := os.Stat("/proc/self/ns/user"); os.IsNotExist(err) {
+		t.Skip("userns is unsupported")
+	}
 	config := &configs.Config{
 		Rootfs: "/var",
 		Namespaces: configs.Namespaces(
