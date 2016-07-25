@@ -24,8 +24,9 @@ For example, if an implementation is compliant with version 1.0.1 of the spec, i
 
 Each container has exactly one *root filesystem*, specified in the *root* object:
 
-* **`path`** (string, required) Specifies the path to the root filesystem for the container. A directory MUST exist at the path declared by the field.
-* **`readonly`** (bool, optional) If true then the root filesystem MUST be read-only inside the container. Defaults to false.
+* **`path`** (string, required) Specifies the path to the root filesystem for the container.
+  A directory MUST exist at the path declared by the field.
+* **`readonly`** (bool, optional) If true then the root filesystem MUST be read-only inside the container, defaults to false.
 
 ### Example
 
@@ -43,10 +44,14 @@ The runtime MUST mount entries in the listed order.
 The parameters are similar to the ones in [the Linux mount system call](http://man7.org/linux/man-pages/man2/mount.2.html).
 
 * **`destination`** (string, required) Destination of mount point: path inside container.
-For the Windows operating system, one mount destination MUST NOT be nested within another mount.  (Ex: c:\\foo and c:\\foo\\bar).
-* **`type`** (string, required) Linux, *filesystemtype* argument supported by the kernel are listed in */proc/filesystems* (e.g., "minix", "ext2", "ext3", "jfs", "xfs", "reiserfs", "msdos", "proc", "nfs", "iso9660"). Windows: ntfs
-* **`source`** (string, required) a device name, but can also be a directory name or a dummy. Windows, the volume name that is the target of the mount point. \\?\Volume\{GUID}\ (on Windows source is called target)
-* **`options`** (list of strings, optional) in the fstab format [https://wiki.archlinux.org/index.php/Fstab](https://wiki.archlinux.org/index.php/Fstab).
+  For the Windows operating system, one mount destination MUST NOT be nested within another mount (e.g., c:\\foo and c:\\foo\\bar).
+* **`type`** (string, required) The filesystem type of the filesystem to be mounted.
+  Linux: *filesystemtype* argument supported by the kernel are listed in */proc/filesystems* (e.g., "minix", "ext2", "ext3", "jfs", "xfs", "reiserfs", "msdos", "proc", "nfs", "iso9660").
+  Windows: ntfs.
+* **`source`** (string, required) A device name, but can also be a directory name or a dummy.
+  Windows: the volume name that is the target of the mount point, \\?\Volume\{GUID}\ (on Windows source is called target).
+* **`options`** (list of strings, optional) Mount options of the filesystem to be used.
+  Linux: [supported][mount.8-filesystem-independent] [options][mount.8-filesystem-specific] are listed in [mount(8)][mount.8].
 
 ### Example (Linux)
 
@@ -85,10 +90,15 @@ See links for details about [mountvol](http://ss64.com/nt/mountvol.html) and [Se
 
 ## Process configuration
 
-* **`terminal`** (bool, optional) specifies whether you want a terminal attached to that process. Defaults to false.
-* **`cwd`** (string, required) is the working directory that will be set for the executable. This value MUST be an absolute path.
-* **`env`** (array of strings, optional) contains a list of variables that will be set in the process's environment prior to execution. Elements in the array are specified as Strings in the form "KEY=value". The left hand side MUST consist solely of letters, digits, and underscores `_` as outlined in [IEEE Std 1003.1-2001](http://pubs.opengroup.org/onlinepubs/009695399/basedefs/xbd_chap08.html).
-* **`args`** (array of strings, required) executable to launch and any flags as an array. The executable is the first element and MUST be available at the given path inside of the rootfs. If the executable path is not an absolute path then the search $PATH is interpreted to find the executable.
+* **`terminal`** (bool, optional) specifies whether you want a terminal attached to that process, defaults to false.
+* **`cwd`** (string, required) is the working directory that will be set for the executable.
+  This value MUST be an absolute path.
+* **`env`** (array of strings, optional) contains a list of variables that will be set in the process's environment prior to execution.
+  Elements in the array are specified as Strings in the form "KEY=value".
+  The left hand side MUST consist solely of letters, digits, and underscores `_` as outlined in [IEEE Std 1003.1-2001](http://pubs.opengroup.org/onlinepubs/009695399/basedefs/xbd_chap08.html).
+* **`args`** (array of strings, required) executable to launch and any flags as an array.
+  The executable is the first element and MUST be available at the given path inside of the rootfs.
+  If the executable path is not an absolute path then the search $PATH is interpreted to find the executable.
 
 For Linux-based systems the process structure supports the following process specific fields:
 
@@ -179,7 +189,8 @@ _Note: For Solaris, uid and gid specify the uid and gid of the process inside th
 
 ## Hostname
 
-* **`hostname`** (string, optional) as it is accessible to processes running inside.  On Linux, you can only set this if your bundle creates a new [UTS namespace][uts-namespace].
+* **`hostname`** (string, optional) as it is accessible to processes running inside.
+  On Linux, you can only set this if your bundle creates a new [UTS namespace][uts-namespace].
 
 ### Example
 
@@ -677,3 +688,6 @@ Here is a full example `config.json` for reference.
 [go-environment]: https://golang.org/doc/install/source#environment
 [runtime-namespace]: glossary.md#runtime-namespace
 [uts-namespace]: http://man7.org/linux/man-pages/man7/namespaces.7.html
+[mount.8-filesystem-independent]: http://man7.org/linux/man-pages/man8/mount.8.html#FILESYSTEM-INDEPENDENT_MOUNT OPTIONS
+[mount.8-filesystem-specific]: http://man7.org/linux/man-pages/man8/mount.8.html#FILESYSTEM-SPECIFIC_MOUNT OPTIONS
+[mount.8]: http://man7.org/linux/man-pages/man8/mount.8.html
