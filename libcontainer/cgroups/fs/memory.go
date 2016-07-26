@@ -5,7 +5,6 @@ package fs
 import (
 	"bufio"
 	"fmt"
-	"math"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -13,7 +12,6 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/opencontainers/runc/libcontainer/system"
 )
 
 type MemoryGroup struct {
@@ -67,12 +65,15 @@ func (s *MemoryGroup) SetKernelMemory(path string, cgroup *configs.Cgroup) error
 		if err != nil {
 			return err
 		}
-		switch system.GetLongBit() {
-		case 32:
-			kmemInitialized = uint32(kmemValue) != uint32(math.MaxUint32)
-		case 64:
-			kmemInitialized = kmemValue != uint64(math.MaxUint64)
+		memcg, err := cgroups.FindCgroupMountpoint("memory")
+		if err != nil {
+			return err
 		}
+		rootKmemValue, err := getCgroupParamUint(memcg, "memory.kmem.limit_in_bytes")
+		if err != nil {
+			return err
+		}
+		kmemInitialized = kmemValue != rootKmemValue
 		if !kmemInitialized {
 			// If there's already tasks in the cgroup, we can't change the limit either
 			tasks, err := getCgroupParamString(path, "tasks")
