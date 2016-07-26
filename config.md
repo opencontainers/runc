@@ -12,7 +12,7 @@ Below is a detailed description of each field defined in the configuration forma
 
 * **`ociVersion`** (string, required) MUST be in [SemVer v2.0.0](http://semver.org/spec/v2.0.0.html) format and specifies the version of the Open Container Runtime Specification with which the bundle complies.
 The Open Container Runtime Specification follows semantic versioning and retains forward and backward compatibility within major versions.
-For example, if an implementation is compliant with version 1.0.1 of the spec, it is compatible with the complete 1.x series.
+For example, if a configuration is compliant with version 1.1 of this specification, it is compatible with all runtimes that support any 1.1 or later release of this specification, but is not compatible with a runtime that supports 1.0 and not 1.1.
 
 ### Example
 
