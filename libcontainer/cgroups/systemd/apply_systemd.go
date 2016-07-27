@@ -388,6 +388,8 @@ func getSubsystemPath(c *configs.Cgroup, subsystem string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	// if pid 1 is systemd 226 or later, it will be in init.scope, not the root
+	initPath = strings.TrimSuffix(filepath.Clean(initPath), "init.scope")
 
 	slice := "system.slice"
 	if c.Parent != "" {
