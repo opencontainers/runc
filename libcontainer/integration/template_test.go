@@ -20,6 +20,7 @@ const defaultMountFlags = syscall.MS_NOEXEC | syscall.MS_NOSUID | syscall.MS_NOD
 // it uses a network strategy of just setting a loopback interface
 // and the default setup for devices
 func newTemplateConfig(rootfs string) *configs.Config {
+	allowAllDevices := false
 	return &configs.Config{
 		Rootfs: rootfs,
 		Capabilities: []string{
@@ -49,7 +50,7 @@ func newTemplateConfig(rootfs string) *configs.Config {
 			Path: "integration/test",
 			Resources: &configs.Resources{
 				MemorySwappiness: nil,
-				AllowAllDevices:  false,
+				AllowAllDevices:  &allowAllDevices,
 				AllowedDevices:   configs.DefaultAllowedDevices,
 			},
 		},
