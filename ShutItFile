@@ -1,0 +1,31 @@
+# ShutItFile for installing runc.
+# Any errors, contact @ianmiell
+
+# To use, run from this directory:
+
+# $ [sudo] pip install shutit
+# $ shutit run ShutItFile
+
+# Install go, check version
+INSTALL golang
+RUN go version | sed 's/go version go\([0-9]*.[0-9]\).*/\\1/'
+ASSERT_OUTPUT 1.6
+
+# Install required pre-reqs
+INSTALL libseccomp-dev
+
+# Check that GOPATH is in the env
+RUN echo $GOPATH
+ASSERT_OUTPUT ..*
+
+RUN cd $GOPATH
+IF FILE_EXISTS github.com/containers/runc
+	RUN cd github.com/containers/runc
+	RUN git pull
+ELSE
+	RUN git clone https://github.com/opencontainers/runc
+	RUN cd github.com/containers/runc
+ENDIF
+
+RUN make
+RUN sudo make install
