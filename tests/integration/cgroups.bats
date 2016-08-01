@@ -52,6 +52,11 @@ EOF
     [ "$status" -eq 0 ]
     wait_for_container 15 1 test_cgroups_kmem
 
+    # Make sure $CGROUP_MEMORY dir was found correctly
+    if [ ! -e $CGROUP_MEMORY ] ; then
+      CGROUP_MEMORY=$(find $base_path -name "${TEST_CGROUP_NAME}")
+    fi
+
     # update kernel memory limit
     runc update test_cgroups_kmem --kernel-memory 50331648
     [ "$status" -eq 0 ]

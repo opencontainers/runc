@@ -57,6 +57,10 @@ function check_cgroup_value() {
     for g in MEMORY CPUSET CPU BLKIO; do
         base_path=$(grep "cgroup"  /proc/self/mountinfo | gawk 'toupper($NF) ~ /\<'${g}'\>/ { print $5; exit }')
         eval CGROUP_${g}="${base_path}/runc-update-integration-test"
+        # Make sure $CGROUP_${g} dir was found correctly
+        if [ ! -e $CGROUP_${g} ] ; then
+          eval CGROUP_${g}=$(find $base_path -name "runc-update-integration-test")
+        fi
     done
 
     # check that initial values were properly set
