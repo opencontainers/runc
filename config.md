@@ -10,8 +10,8 @@ Below is a detailed description of each field defined in the configuration forma
 
 ## Specification version
 
-* **`ociVersion`** (string, required) MUST be in [SemVer v2.0.0](http://semver.org/spec/v2.0.0.html) format and specifies the version of the OpenContainer specification with which the bundle complies.
-The OpenContainer spec follows semantic versioning and retains forward and backward compatibility within major versions.
+* **`ociVersion`** (string, required) MUST be in [SemVer v2.0.0](http://semver.org/spec/v2.0.0.html) format and specifies the version of the Open Container Runtime Specification with which the bundle complies.
+The Open Container Runtime Specification follows semantic versioning and retains forward and backward compatibility within major versions.
 For example, if an implementation is compliant with version 1.0.1 of the spec, it is compatible with the complete 1.x series.
 
 ### Example

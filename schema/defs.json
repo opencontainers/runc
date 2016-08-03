@@ -1,5 +1,5 @@
 {
-    "description": "Definitions used throughout the OpenContainer Specification",
+    "description": "Definitions used throughout the Open Container Runtime Specification",
     "definitions": {
         "int8": {
             "type": "integer",
