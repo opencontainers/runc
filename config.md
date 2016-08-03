@@ -22,7 +22,7 @@ For example, if an implementation is compliant with version 1.0.1 of the spec, i
 
 ## Root Configuration
 
-Each container has exactly one *root filesystem*, specified in the *root* object:
+**`root`** (object, required) configures the container's root filesystem.
 
 * **`path`** (string, required) Specifies the path to the root filesystem for the container.
   A directory MUST exist at the path declared by the field.

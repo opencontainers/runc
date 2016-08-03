@@ -10,7 +10,7 @@ type Spec struct {
 	Platform Platform `json:"platform"`
 	// Process configures the container process.
 	Process Process `json:"process"`
-	// Root is the root information for the container's filesystem.
+	// Root configures the container's root filesystem.
 	Root Root `json:"root"`
 	// Hostname is the container's host name.
 	Hostname string `json:"hostname,omitempty"`
