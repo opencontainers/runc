@@ -18,7 +18,7 @@ type Spec struct {
 	Mounts []Mount `json:"mounts,omitempty"`
 	// Hooks configures callbacks for container lifecycle events.
 	Hooks Hooks `json:"hooks"`
-	// Annotations is an unstructured key value map that may be set by external tools to store and retrieve arbitrary metadata.
+	// Annotations contains arbitrary metadata for the container.
 	Annotations map[string]string `json:"annotations,omitempty"`
 
 	// Linux is platform specific configuration for Linux based containers.

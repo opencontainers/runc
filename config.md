@@ -322,7 +322,7 @@ The semantics are the same as `Path`, `Args` and `Env` in [golang Cmd](https://g
 
 ## Annotations
 
-This OPTIONAL property contains arbitrary metadata for the container.
+**`annotations`** (object, optional) contains arbitrary metadata for the container.
 This information MAY be structured or unstructured.
 Annotations are key-value maps.
 
