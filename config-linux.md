@@ -98,7 +98,7 @@ There is a limit of 5 mappings which is the Linux kernel hard limit.
 
 ## Devices
 
-`devices` is an array specifying the list of devices that MUST be available in the container.
+**`devices`** (array, optional) lists devices that MUST be available in the container.
 The runtime may supply them however it likes (with [mknod][mknod.2], by bind mounting from the runtime mount namespace, etc.).
 
 The following parameters can be specified:
