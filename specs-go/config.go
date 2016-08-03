@@ -8,7 +8,7 @@ type Spec struct {
 	Version string `json:"ociVersion"`
 	// Platform specifies the configuration's target platform.
 	Platform Platform `json:"platform"`
-	// Process is the container's main process.
+	// Process configures the container process.
 	Process Process `json:"process"`
 	// Root is the root information for the container's filesystem.
 	Root Root `json:"root"`

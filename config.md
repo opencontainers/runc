@@ -90,6 +90,8 @@ See links for details about [mountvol](http://ss64.com/nt/mountvol.html) and [Se
 
 ## Process configuration
 
+**`process`** (object, required) configures the container process.
+
 * **`terminal`** (bool, optional) specifies whether you want a terminal attached to that process, defaults to false.
 * **`cwd`** (string, required) is the working directory that will be set for the executable.
   This value MUST be an absolute path.
