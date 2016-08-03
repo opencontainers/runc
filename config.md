@@ -191,7 +191,7 @@ _Note: For Solaris, uid and gid specify the uid and gid of the process inside th
 
 ## Hostname
 
-* **`hostname`** (string, optional) as it is accessible to processes running inside.
+* **`hostname`** (string, optional) configures the container's hostname as seen by processes running inside the container.
   On Linux, you can only set this if your bundle creates a new [UTS namespace][uts-namespace].
 
 ### Example

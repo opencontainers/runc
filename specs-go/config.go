@@ -12,7 +12,7 @@ type Spec struct {
 	Process Process `json:"process"`
 	// Root configures the container's root filesystem.
 	Root Root `json:"root"`
-	// Hostname is the container's host name.
+	// Hostname configures the container's hostname.
 	Hostname string `json:"hostname,omitempty"`
 	// Mounts profile configuration for adding mounts to the container's filesystem.
 	Mounts []Mount `json:"mounts,omitempty"`
