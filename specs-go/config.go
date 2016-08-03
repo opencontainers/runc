@@ -301,8 +301,8 @@ type Network struct {
 
 // Resources has container runtime resource constraints
 type Resources struct {
-	// Devices are a list of device rules for the whitelist controller
-	Devices []DeviceCgroup `json:"devices"`
+	// Devices configures the device whitelist.
+	Devices []DeviceCgroup `json:"devices,omitempty"`
 	// DisableOOMKiller disables the OOM killer for out of memory conditions
 	DisableOOMKiller *bool `json:"disableOOMKiller,omitempty"`
 	// Specify an oom_score_adj for the container.

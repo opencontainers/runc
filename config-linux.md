@@ -198,7 +198,7 @@ However, a runtime MAY attach the container process to additional cgroup control
 
 #### Device whitelist
 
-`devices` is an array of entries to control the [device whitelist][cgroup-v1-devices].
+**`devices`** (array, optional) configures the [device whitelist][cgroup-v1-devices].
 The runtime MUST apply entries in the listed order.
 
 The following parameters can be specified:
