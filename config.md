@@ -200,6 +200,8 @@ _Note: For Solaris, uid and gid specify the uid and gid of the process inside th
 
 ## Platform
 
+**`platform`** specifies the configuration's target platform.
+
 * **`os`** (string, required) specifies the operating system family this image targets.
   The runtime MUST generate an error if it does not support the configured **`os`**.
   Bundles SHOULD use, and runtimes SHOULD understand, **`os`** entries listed in the Go Language document for [`$GOOS`][go-environment].

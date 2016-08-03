@@ -6,7 +6,7 @@ import "os"
 type Spec struct {
 	// Version of the Open Container Runtime Specification with which the bundle complies.
 	Version string `json:"ociVersion"`
-	// Platform is the host information for OS and Arch.
+	// Platform specifies the configuration's target platform.
 	Platform Platform `json:"platform"`
 	// Process is the container's main process.
 	Process Process `json:"process"`
