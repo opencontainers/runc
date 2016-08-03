@@ -39,7 +39,7 @@ For example, if an implementation is compliant with version 1.0.1 of the spec, i
 
 ## Mounts
 
-You MAY add array of mount points inside container as `mounts`.
+**`mounts`** (array, optional) configures additional mounts (on top of [`root`](#root-configuration)).
 The runtime MUST mount entries in the listed order.
 The parameters are similar to the ones in [the Linux mount system call](http://man7.org/linux/man-pages/man2/mount.2.html).
 

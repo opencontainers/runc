@@ -14,7 +14,7 @@ type Spec struct {
 	Root Root `json:"root"`
 	// Hostname configures the container's hostname.
 	Hostname string `json:"hostname,omitempty"`
-	// Mounts profile configuration for adding mounts to the container's filesystem.
+	// Mounts configures additional mounts (on top of Root).
 	Mounts []Mount `json:"mounts,omitempty"`
 	// Hooks are the commands run at various lifecycle events of the container.
 	Hooks Hooks `json:"hooks"`
