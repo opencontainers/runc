@@ -251,6 +251,7 @@ _Note: For Solaris, uid and gid specify the uid and gid of the process inside th
 
 ## Hooks
 
+**`hooks`** (object, optional) configures callbacks for container lifecycle events.
 Lifecycle hooks allow custom events for different points in a container's runtime.
 Presently there are `Prestart`, `Poststart` and `Poststop`.
 

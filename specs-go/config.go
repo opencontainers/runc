@@ -16,7 +16,7 @@ type Spec struct {
 	Hostname string `json:"hostname,omitempty"`
 	// Mounts configures additional mounts (on top of Root).
 	Mounts []Mount `json:"mounts,omitempty"`
-	// Hooks are the commands run at various lifecycle events of the container.
+	// Hooks configures callbacks for container lifecycle events.
 	Hooks Hooks `json:"hooks"`
 	// Annotations is an unstructured key value map that may be set by external tools to store and retrieve arbitrary metadata.
 	Annotations map[string]string `json:"annotations,omitempty"`
