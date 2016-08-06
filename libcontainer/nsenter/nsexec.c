@@ -19,8 +19,9 @@
 #include <sys/ioctl.h>
 #include <sys/prctl.h>
 #include <sys/socket.h>
-#include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 #include <linux/limits.h>
 #include <linux/netlink.h>
@@ -29,12 +30,16 @@
 /* Get all of the CLONE_NEW* flags. */
 #include "namespace.h"
 
+/* Get the cmsg utilities. */
+#include "cmsg.h"
+
 /* Synchronisation values. */
 enum sync_t {
 	SYNC_USERMAP_PLS = 0x40, /* Request parent to map our users. */
 	SYNC_USERMAP_ACK = 0x41, /* Mapping finished by the parent. */
 	SYNC_RECVPID_PLS = 0x42, /* Tell parent we're sending the PID. */
-	SYNC_RECVPID_ACK = 0x43, /* PID was correctly received by parent. */
+	SYNC_RECVPID_SYN = 0x43, /* Tell init we're ready to receive the PID. */
+	SYNC_RECVPID_ACK = 0x44, /* PID was correctly received by parent. */
 
 	/* XXX: This doesn't help with segfaults and other such issues. */
 	SYNC_ERR = 0xFF, /* Fatal error, no turning back. The error code follows. */
@@ -90,6 +95,9 @@ struct nlconfig_t {
 	gid_t hostgid;
 	uid_t rootuid;
 	gid_t rootgid;
+
+	/* The set of namespace types that we joined with .namespaces. */
+	long joined;
 };
 
 /*
@@ -391,9 +399,35 @@ static void nl_parse(int fd, struct nlconfig_t *config)
 			if (config->consolefd < 0)
 				bail("failed to open console %s", current);
 			break;
-		case NS_PATHS_ATTR:
-			config->namespaces = current;
-			config->namespaces_len = payload_len;
+		case NS_PATHS_ATTR: {
+				char *copy;
+				char *namespace;
+				char *saveptr = NULL;
+
+				config->namespaces = current;
+				config->namespaces_len = payload_len;
+
+				/* We need a copy of the namespaces to parse .joined. */
+				copy = strndup(config->namespaces, config->namespaces_len);
+				if (!copy)
+					bail("failed to allocate buffer for namespaces");
+
+				/* Parse namespace string. */
+				namespace = strtok_r(copy, ",", &saveptr);
+				do {
+					char *path;
+
+					/* Split 'ns:path'. */
+					path = strstr(namespace, ":");
+					if (!path)
+						bail("failed to parse %s", namespace);
+					*path++ = '\0';
+
+					/* Add the namespace cloneflag to joined. */
+					config->joined |= nsflag(namespace);
+				} while ((namespace = strtok_r(NULL, ",", &saveptr)) != NULL);
+				free(copy);
+			}
 			break;
 		case UIDMAP_ATTR:
 			config->uidmap = current;
@@ -526,10 +560,12 @@ static void join_namespaces(struct nlconfig_t *config)
 
 void nsexec(void)
 {
-	int pipenum;
+	int pipenum, arg = 0;
 	jmp_buf env;
-	int syncpipe[2];
 	struct nlconfig_t config = {0};
+
+	/* This is used for communication with 0:PARENT (us). */
+	int parentpipe[2] = {0};
 
 	/*
 	 * If we don't have an init pipe, just return to the go routine.
@@ -548,8 +584,13 @@ void nsexec(void)
 		bail("missing cloneflags");
 
 	/* Pipe so we can tell the child when we've finished setting up. */
-	if (socketpair(AF_LOCAL, SOCK_STREAM, 0, syncpipe) < 0)
+	if (socketpair(AF_LOCAL, SOCK_STREAM, 0, parentpipe) < 0)
 		bail("failed to setup sync pipe between parent and child");
+	arg = 1;
+	if (setsockopt(parentpipe[0], SOL_SOCKET, SO_PASSCRED, &arg, sizeof(arg)) < 0)
+		bail("failed to setsockopt(SO_PASSCRED) on parentpipe[0]");
+	if (setsockopt(parentpipe[1], SOL_SOCKET, SO_PASSCRED, &arg, sizeof(arg)) < 0)
+		bail("failed to setsockopt(SO_PASSCRED) on parentpipe[1]");
 
 	/* TODO: Currently we aren't dealing with child deaths properly. */
 
@@ -580,6 +621,13 @@ void nsexec(void)
 	 * because if we join a PID namespace in the topmost parent then our child
 	 * will be in that namespace (and it will not be able to give us a PID value
 	 * that makes sense without resorting to sending things with cmsg).
+	 *
+	 * In addition, we have to deal with the fact that zombies report to their
+	 * parents, not to the "init inside a PID namespace" by default. This means
+	 * that we also have to double-fork(2) inside the 2:INIT process, while
+	 * also dealing with the fact that the "child PID" mentioned above is no
+	 * longer valid and needs to be updated through yet another pipe. This is
+	 * so much fun.
 	 *
 	 * This also deals with an older issue caused by dumping cloneflags into
 	 * clone(2): On old kernels, CLONE_PARENT didn't work with CLONE_NEWPID, so
@@ -619,7 +667,7 @@ void nsexec(void)
 				enum sync_t s;
 
 				/* This doesn't need to be global, we're in the parent. */
-				int syncfd = syncpipe[1];
+				int syncfd = parentpipe[1];
 
 				if (read(syncfd, &s, sizeof(s)) != sizeof(s))
 					bail("failed to sync with child: next state");
@@ -658,8 +706,19 @@ void nsexec(void)
 				case SYNC_RECVPID_PLS: {
 						pid_t old = child;
 
-						/* Get the init_func pid. */
-						if (read(syncfd, &child, sizeof(child)) != sizeof(child)) {
+						/*
+						 * Send SYN. This is necessary to make sure that the syscalls on the
+						 * other end aren't reordered so that we hit a read at the wrong
+						 * moment.
+						 */
+						s = SYNC_RECVPID_SYN;
+						if (write(syncfd, &s, sizeof(s)) != sizeof(s)) {
+							kill(old, SIGKILL);
+							bail("failed to sync with child: write(SYNC_RECVPID_ACK)");
+						}
+
+						child = recvpid(syncfd);
+						if (child < 0) {
 							kill(old, SIGKILL);
 							bail("failed to sync with child: read(childpid)");
 						}
@@ -679,6 +738,11 @@ void nsexec(void)
 					/* We should _never_ receive acks. */
 					kill(child, SIGKILL);
 					bail("failed to sync with child: unexpected SYNC_RECVPID_ACK");
+					break;
+				case SYNC_RECVPID_SYN:
+					/* We should _never_ receive syns. */
+					kill(child, SIGKILL);
+					bail("failed to sync with child: unexpected SYNC_RECVPID_SYN");
 					break;
 				}
 			}
@@ -704,15 +768,13 @@ void nsexec(void)
 	 *          asked to CLONE_NEWUSER, we will unshare the user namespace and
 	 *          ask our parent (stage 0) to set up our user mappings for us.
 	 *          Then, we unshare the rest of the requested namespaces and
-	 *          create a new child (stage 2: JUMP_INIT).  We then send the
-	 *          child's PID to our parent (stage 0).
+	 *          create a new child (stage 2: JUMP_INIT).
 	 */
 	case JUMP_CHILD: {
-			pid_t child;
 			enum sync_t s;
 
 			/* We're in a child and thus need to tell the parent if we die. */
-			syncfd = syncpipe[0];
+			syncfd = parentpipe[0];
 
 			/* For debugging. */
 			prctl(PR_SET_NAME, (unsigned long) "runc:[1:CHILD]", 0, 0, 0);
@@ -788,33 +850,14 @@ void nsexec(void)
 				bail("failed to unshare namespaces");
 
 			/* TODO: What about non-namespace clone flags that we're dropping here? */
-			child = clone_parent(&env, JUMP_INIT);
-			if (child < 0)
+			if (clone_parent(&env, JUMP_INIT) < 0)
 				bail("unable to fork: init_func");
 
-			/* Send the child to our parent, which knows what it's doing. */
-			s = SYNC_RECVPID_PLS;
-			if (write(syncfd, &s, sizeof(s)) != sizeof(s)) {
-				kill(child, SIGKILL);
-				bail("failed to sync with parent: write(SYNC_RECVPID_PLS)");
-			}
-			if (write(syncfd, &child, sizeof(child)) != sizeof(child)) {
-				kill(child, SIGKILL);
-				bail("failed to sync with parent: write(childpid)");
-			}
-
-			/* ... wait for parent to get the pid ... */
-
-			if (read(syncfd, &s, sizeof(s)) != sizeof(s)) {
-				kill(child, SIGKILL);
-				bail("failed to sync with parent: read(SYNC_RECVPID_ACK)");
-			}
-			if (s != SYNC_RECVPID_ACK) {
-				kill(child, SIGKILL);
-				bail("failed to sync with parent: SYNC_RECVPID_ACK: got %u", s);
-			}
-
-			/* Our work is done. [Stage 2: JUMP_INIT] is doing the rest of the work. */
+			/*
+			 * We don't need to handle anything else, as 2:INIT will send its
+			 * own PID to 0:PARENT. Our only job was to mess around with user
+			 * namespaces.
+			 */
 			exit(0);
 		}
 
@@ -830,12 +873,73 @@ void nsexec(void)
 			 * start_child() code after forking in the parent.
 			 */
 			int consolefd = config.consolefd;
+			enum sync_t s;
 
 			/* We're in a child and thus need to tell the parent if we die. */
-			syncfd = syncpipe[0];
+			syncfd = parentpipe[0];
 
 			/* For debugging. */
-			prctl(PR_SET_NAME, (unsigned long) "runc:[1:INIT]", 0, 0, 0);
+			prctl(PR_SET_NAME, (unsigned long) "runc:[2:INIT]", 0, 0, 0);
+
+			/*
+			 * If we're joining a PID namespace, we need to double-fork(2) in
+			 * order to make sure that we are reparented to the init inside the
+			 * container.  The first fork(2) places us inside the PID
+			 * namespace, the second fork makes us an orphan. All of the other
+			 * clone(2)s are with CLONE_PARENT so we have to do both fork(2)s
+			 * here. See this LWN article for more background:
+			 * https://lwn.net/Articles/532748/
+			 */
+			if (config.joined & CLONE_NEWPID) {
+				pid_t first, second;
+
+				/* Enter the PID namespace. */
+				first = fork();
+				if (first < 0) {
+					bail("failed to fork first process");
+				} else if (first > 0) {
+					if (waitpid(first, NULL, 0) != first)
+						bail("failed to wait for first process");
+					exit(0);
+				}
+
+				/* Orphan ourselves. */
+				second = fork();
+				if (second < 0)
+					bail("failed to fork second process");
+				else if (second > 0)
+					exit(0);
+
+				/* We are now reparented to the init inside the container. */
+			}
+
+			/*
+			 * We now need to send our PID to 0:PARENT. Since we're in a PID
+			 * namespace we need to use SCM_CREDENTIALS. We don't really care
+			 * about the {uid,gid} that we send, all that matters is that we're
+			 * sending our PID.
+			 */
+
+			s = SYNC_RECVPID_PLS;
+			if (write(syncfd, &s, sizeof(s)) != sizeof(s))
+				bail("failed to sync with parent: write(SYNC_RECVPID_PLS)");
+			if (read(syncfd, &s, sizeof(s)) != sizeof(s))
+				bail("failed to sync with parent:  read(SYNC_RECVPID_SYN)");
+			if (s != SYNC_RECVPID_SYN)
+				bail("failed to sync with parent: SYNC_RECVPID_SYN: got %u", s);
+
+			/* Send our PID. */
+			if (sendpid(syncfd, getpid()) < 0)
+				bail("failed to send PID to parent: sendmsg(pid)");
+
+			/* ... wait for parent to receive PID ... */
+
+			if (read(syncfd, &s, sizeof(s)) != sizeof(s))
+				bail("failed to sync with parent: read(SYNC_RECVPID_ACK)");
+			if (s != SYNC_RECVPID_ACK)
+				bail("failed to sync with parent: SYNC_RECVPID_ACK: got %u", s);
+
+			/* Now we can move on with the fun of setting up this container. */
 
 			if (setsid() < 0)
 				bail("setsid failed");
@@ -861,8 +965,8 @@ void nsexec(void)
 			}
 
 			/* Close sync pipes. */
-			close(syncpipe[0]);
-			close(syncpipe[1]);
+			close(parentpipe[0]);
+			close(parentpipe[1]);
 
 			/* Free netlink data. */
 			nl_free(&config);
