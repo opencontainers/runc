@@ -35,7 +35,7 @@ function check_cgroup_value() {
 
 @test "runc update --kernel-memory (initialized)" {
     # Add cgroup path
-    sed -i 's/\("linux": {\)/\1\n    "cgroupsPath": "runc-cgroups-integration-test",/'  ${BUSYBOX_BUNDLE}/config.json
+    sed -i 's/\("linux": {\)/\1\n    "cgroupsPath": "\/runc-cgroups-integration-test",/'  ${BUSYBOX_BUNDLE}/config.json
 
     # Set some initial known values
     DATA=$(cat <<-EOF
@@ -62,7 +62,7 @@ EOF
 
 @test "runc update --kernel-memory (uninitialized)" {
     # Add cgroup path
-    sed -i 's/\("linux": {\)/\1\n    "cgroupsPath": "runc-cgroups-integration-test",/'  ${BUSYBOX_BUNDLE}/config.json
+    sed -i 's/\("linux": {\)/\1\n    "cgroupsPath": "\/runc-cgroups-integration-test",/'  ${BUSYBOX_BUNDLE}/config.json
 
     # run a detached busybox to work with
     runc run -d --console /dev/pts/ptmx test_cgroups_kmem
