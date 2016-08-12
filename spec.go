@@ -149,6 +149,7 @@ container on your host.`,
 				MaskedPaths: []string{
 					"/proc/kcore",
 					"/proc/latency_stats",
+					"/proc/timer_list",
 					"/proc/timer_stats",
 					"/proc/sched_debug",
 				},
