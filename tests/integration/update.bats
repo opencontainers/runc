@@ -48,6 +48,7 @@ function check_cgroup_value() {
 }
 
 @test "update" {
+    requires cgroups_kmem
     # run a few busyboxes detached
     runc run -d --console /dev/pts/ptmx test_update
     [ "$status" -eq 0 ]
