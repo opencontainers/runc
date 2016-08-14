@@ -320,6 +320,8 @@ func checkMountDestination(rootfs, dest string) error {
 		"/proc/diskstats",
 		"/proc/meminfo",
 		"/proc/stat",
+		"/proc/swaps",
+		"/proc/uptime",
 		"/proc/net/dev",
 	}
 	for _, valid := range validDestinations {
