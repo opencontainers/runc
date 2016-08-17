@@ -286,7 +286,7 @@ static void nl_parse(int fd, struct nlconfig_t *config)
 	size = NLMSG_PAYLOAD(&hdr, 0);
 	current = data = malloc(size);
 	if (!data)
-		bail("failed to allocate %d bytes of memory for nl_payload", size);
+		bail("failed to allocate %zu bytes of memory for nl_payload", size);
 
 	len = read(fd, data, size);
 	if (len != size)
