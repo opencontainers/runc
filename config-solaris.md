@@ -1,7 +1,6 @@
 # Solaris Application Container Configuration
 
 Solaris application containers can be configured using the following properties, all of the below properties have mappings to properties specified under zonecfg(1M) man page, except milestone.
-The Solaris specification is entirely optional.
 
 ## milestone
 The SMF(Service Management Facility) FMRI which should go to "online" state before we start the desired process within the container.
