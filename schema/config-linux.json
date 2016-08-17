@@ -69,6 +69,7 @@
                     },
                     "pids": {
                         "id": "https://opencontainers.org/schema/bundle/linux/resources/pids",
+                        "type": "object",
                         "properties": {
                             "limit": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/pids/limit",
@@ -157,6 +158,7 @@
                     },
                     "cpu": {
                         "id": "https://opencontainers.org/schema/bundle/linux/resources/cpu",
+                        "type": "object",
                         "properties": {
                             "cpus": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/cpu/cpus",
@@ -283,6 +285,7 @@
             },
             "seccomp": {
                 "id": "https://opencontainers.org/schema/bundle/linux/seccomp",
+                "type": "object",
                 "properties": {
                     "defaultAction": {
                         "id": "https://opencontainers.org/schema/bundle/linux/seccomp/defaultAction",

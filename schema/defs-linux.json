@@ -44,6 +44,7 @@
             ]
         },
         "SyscallArg": {
+            "type": "object",
             "properties": {
                 "index": {
                     "$ref": "defs.json#/definitions/uint32"
@@ -60,6 +61,7 @@
             }
         },
         "Syscall": {
+            "type": "object",
             "properties": {
                 "name": {
                     "type": "string"
@@ -103,6 +105,7 @@
             "pattern": "^[cbup]$"
         },
         "Device": {
+            "type": "object",
             "properties": {
                 "type": {
                     "$ref": "#/definitions/FileType"
@@ -146,6 +149,7 @@
             ]
         },
         "blockIODevice": {
+            "type": "object",
             "properties": {
                 "major": {
                     "$ref": "#/definitions/Major"
@@ -166,6 +170,7 @@
                     "$ref": "#/definitions/blockIODevice"
                 },
                 {
+                    "type": "object",
                     "properties": {
                         "weight": {
                             "$ref": "#/definitions/blkioWeightPointer"
@@ -193,6 +198,7 @@
                     "$ref": "#/definitions/blockIODevice"
                 },
                 {
+                    "type": "object",
                     "properties": {
                         "rate": {
                             "$ref": "defs.json#/definitions/uint64Pointer"
@@ -212,6 +218,7 @@
             ]
         },
         "NetworkInterfacePriority": {
+            "type": "object",
             "properties": {
                 "name": {
                     "type": "string"
@@ -234,6 +241,7 @@
             ]
         },
         "NamespaceReference": {
+            "type": "object",
             "properties": {
                 "type": {
                     "$ref": "#/definitions/NamespaceType"

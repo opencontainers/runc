@@ -104,6 +104,7 @@
             "$ref": "#/definitions/ArrayOfStrings"
         },
         "Hook": {
+            "type": "object",
             "properties": {
                 "path": {
                     "$ref": "#/definitions/FilePath"
@@ -123,6 +124,7 @@
             }
         },
         "IDMapping": {
+            "type": "object",
             "properties": {
                 "hostID": {
                     "$ref": "#/definitions/uint32"
@@ -136,6 +138,7 @@
             }
         },
         "Mount": {
+            "type": "object",
             "properties": {
                 "source": {
                     "$ref": "#/definitions/FilePath"
