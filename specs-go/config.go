@@ -4,21 +4,21 @@ import "os"
 
 // Spec is the base configuration for the container.
 type Spec struct {
-	// Version is the version of the specification that is supported.
+	// Version of the Open Container Runtime Specification with which the bundle complies.
 	Version string `json:"ociVersion"`
-	// Platform is the host information for OS and Arch.
+	// Platform specifies the configuration's target platform.
 	Platform Platform `json:"platform"`
-	// Process is the container's main process.
+	// Process configures the container process.
 	Process Process `json:"process"`
-	// Root is the root information for the container's filesystem.
+	// Root configures the container's root filesystem.
 	Root Root `json:"root"`
-	// Hostname is the container's host name.
+	// Hostname configures the container's hostname.
 	Hostname string `json:"hostname,omitempty"`
-	// Mounts profile configuration for adding mounts to the container's filesystem.
+	// Mounts configures additional mounts (on top of Root).
 	Mounts []Mount `json:"mounts,omitempty"`
-	// Hooks are the commands run at various lifecycle events of the container.
+	// Hooks configures callbacks for container lifecycle events.
 	Hooks Hooks `json:"hooks"`
-	// Annotations is an unstructured key value map that may be set by external tools to store and retrieve arbitrary metadata.
+	// Annotations contains arbitrary metadata for the container.
 	Annotations map[string]string `json:"annotations,omitempty"`
 
 	// Linux is platform specific configuration for Linux based containers.
@@ -53,8 +53,8 @@ type Process struct {
 	SelinuxLabel string `json:"selinuxLabel,omitempty" platform:"linux"`
 }
 
-// User specifies Linux/Solaris specific user and group information for the container's
-// main process.
+// User specifies Linux/Solaris specific user and group information
+// for the container process.
 type User struct {
 	// UID is the user id. (this field is platform dependent)
 	UID uint32 `json:"uid" platform:"linux,solaris"`

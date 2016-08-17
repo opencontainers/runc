@@ -10,8 +10,8 @@ Below is a detailed description of each field defined in the configuration forma
 
 ## Specification version
 
-* **`ociVersion`** (string, required) MUST be in [SemVer v2.0.0](http://semver.org/spec/v2.0.0.html) format and specifies the version of the OpenContainer specification with which the bundle complies.
-The OpenContainer spec follows semantic versioning and retains forward and backward compatibility within major versions.
+* **`ociVersion`** (string, required) MUST be in [SemVer v2.0.0](http://semver.org/spec/v2.0.0.html) format and specifies the version of the Open Container Runtime Specification with which the bundle complies.
+The Open Container Runtime Specification follows semantic versioning and retains forward and backward compatibility within major versions.
 For example, if an implementation is compliant with version 1.0.1 of the spec, it is compatible with the complete 1.x series.
 
 ### Example
@@ -22,7 +22,7 @@ For example, if an implementation is compliant with version 1.0.1 of the spec, i
 
 ## Root Configuration
 
-Each container has exactly one *root filesystem*, specified in the *root* object:
+**`root`** (object, required) configures the container's root filesystem.
 
 * **`path`** (string, required) Specifies the path to the root filesystem for the container.
   A directory MUST exist at the path declared by the field.
@@ -39,7 +39,7 @@ Each container has exactly one *root filesystem*, specified in the *root* object
 
 ## Mounts
 
-You MAY add array of mount points inside container as `mounts`.
+**`mounts`** (array, optional) configures additional mounts (on top of [`root`](#root-configuration)).
 The runtime MUST mount entries in the listed order.
 The parameters are similar to the ones in [the Linux mount system call](http://man7.org/linux/man-pages/man2/mount.2.html).
 
@@ -89,6 +89,8 @@ See links for details about [mountvol](http://ss64.com/nt/mountvol.html) and [Se
 
 
 ## Process configuration
+
+**`process`** (object, required) configures the container process.
 
 * **`terminal`** (bool, optional) specifies whether you want a terminal attached to that process, defaults to false.
 * **`cwd`** (string, required) is the working directory that will be set for the executable.
@@ -189,7 +191,7 @@ _Note: For Solaris, uid and gid specify the uid and gid of the process inside th
 
 ## Hostname
 
-* **`hostname`** (string, optional) as it is accessible to processes running inside.
+* **`hostname`** (string, optional) configures the container's hostname as seen by processes running inside the container.
   On Linux, you can only set this if your bundle creates a new [UTS namespace][uts-namespace].
 
 ### Example
@@ -199,6 +201,8 @@ _Note: For Solaris, uid and gid specify the uid and gid of the process inside th
 ```
 
 ## Platform
+
+**`platform`** specifies the configuration's target platform.
 
 * **`os`** (string, required) specifies the operating system family this image targets.
   The runtime MUST generate an error if it does not support the configured **`os`**.
@@ -247,6 +251,7 @@ _Note: For Solaris, uid and gid specify the uid and gid of the process inside th
 
 ## Hooks
 
+**`hooks`** (object, optional) configures callbacks for container lifecycle events.
 Lifecycle hooks allow custom events for different points in a container's runtime.
 Presently there are `Prestart`, `Poststart` and `Poststop`.
 
@@ -317,7 +322,7 @@ The semantics are the same as `Path`, `Args` and `Env` in [golang Cmd](https://g
 
 ## Annotations
 
-This OPTIONAL property contains arbitrary metadata for the container.
+**`annotations`** (object, optional) contains arbitrary metadata for the container.
 This information MAY be structured or unstructured.
 Annotations are key-value maps.
 
