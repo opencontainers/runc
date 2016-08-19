@@ -79,8 +79,9 @@ following will output a list of processes running in the container:
 			Usage: "add a capability to the bounding set for the process",
 		},
 		cli.BoolFlag{
-			Name:  "no-subreaper",
-			Usage: "disable the use of the subreaper used to reap reparented processes",
+			Name:   "no-subreaper",
+			Usage:  "disable the use of the subreaper used to reap reparented processes",
+			Hidden: true,
 		},
 	},
 	Action: func(context *cli.Context) error {
@@ -115,7 +116,7 @@ func execProcess(context *cli.Context) (int, error) {
 		return -1, err
 	}
 	r := &runner{
-		enableSubreaper: !context.Bool("no-subreaper"),
+		enableSubreaper: false,
 		shouldDestroy:   false,
 		container:       container,
 		console:         context.String("console"),
