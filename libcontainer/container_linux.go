@@ -1049,6 +1049,8 @@ func (c *linuxContainer) criuNotifications(resp *criurpc.CriuResp, process *Proc
 		}); err != nil {
 			return err
 		}
+		// create a timestamp indicating when the restored checkpoint was started
+		c.created = time.Now().UTC()
 		if _, err := c.updateState(r); err != nil {
 			return err
 		}
