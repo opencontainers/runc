@@ -12,6 +12,7 @@ import (
 
 	"encoding/json"
 
+	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/urfave/cli"
 )
@@ -130,10 +131,14 @@ func getContainers(context *cli.Context) ([]containerState, error) {
 			if err != nil {
 				return nil, err
 			}
+			pid := state.BaseState.InitProcessPid
+			if containerStatus == libcontainer.Stopped {
+				pid = 0
+			}
 			bundle, annotations := utils.Annotations(state.Config.Labels)
 			s = append(s, containerState{
 				ID:             state.BaseState.ID,
-				InitProcessPid: state.BaseState.InitProcessPid,
+				InitProcessPid: pid,
 				Status:         containerStatus.String(),
 				Bundle:         bundle,
 				Created:        state.BaseState.Created,
