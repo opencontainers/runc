@@ -10,6 +10,7 @@ If you know of any associated projects that are not listed here, please file a p
 ## Runtime (Virtual Machine)
 
 * [hyperhq/runv](https://github.com/hyperhq/runv) - Hypervisor-based runtime for OCI
+* [01org/cc-oci-runtime](https://github.com/01org/cc-oci-runtime) - Hypervisor-based OCI runtime for Intel® Architecture
 
 ## Testing & Tools
 
