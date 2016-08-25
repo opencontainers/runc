@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/urfave/cli"
 )
@@ -55,11 +56,15 @@ instance of a container.`,
 		if err != nil {
 			return err
 		}
+		pid := state.BaseState.InitProcessPid
+		if containerStatus == libcontainer.Stopped {
+			pid = 0
+		}
 		bundle, annotations := utils.Annotations(state.Config.Labels)
 		cs := cState{
 			Version:        state.BaseState.Config.Version,
 			ID:             state.BaseState.ID,
-			InitProcessPid: state.BaseState.InitProcessPid,
+			InitProcessPid: pid,
 			Status:         containerStatus.String(),
 			Bundle:         bundle,
 			Rootfs:         state.BaseState.Config.Rootfs,
