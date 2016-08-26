@@ -2,7 +2,6 @@
 EPOCH_TEST_COMMIT	:= 78e6667ae2d67aad100b28ee9580b41b7a24e667
 OUTPUT_DIRNAME		?= output/
 DOC_FILENAME		?= oci-runtime-spec
-SHELL			?= $(shell command -v bash 2>/dev/null)
 DOCKER			?= $(shell command -v docker 2>/dev/null)
 PANDOC			?= $(shell command -v pandoc 2>/dev/null)
 ifeq "$(strip $(PANDOC))" ''
@@ -63,7 +62,7 @@ version.md: ./specs-go/version.go
 
 HOST_GOLANG_VERSION	= $(shell go version | cut -d ' ' -f3 | cut -c 3-)
 # this variable is used like a function. First arg is the minimum version, Second arg is the version to be checked.
-ALLOWED_GO_VERSION	= $(shell test '$(shell /bin/echo -e "$(1)\n$(2)" | sort -V | head -n1)' == '$(1)' && echo 'true')
+ALLOWED_GO_VERSION	= $(shell test '$(shell /bin/echo -e "$(1)\n$(2)" | sort -V | head -n1)' = '$(1)' && echo 'true')
 
 .PHONY: test .govet .golint .gitvalidation
 
