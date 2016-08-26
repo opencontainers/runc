@@ -262,7 +262,7 @@ type Memory struct {
 	// Kernel memory limit (in bytes).
 	Kernel *uint64 `json:"kernel,omitempty"`
 	// Kernel memory limit for tcp (in bytes)
-	KernelTCP *uint64 `json:"kernelTCP"`
+	KernelTCP *uint64 `json:"kernelTCP,omitempty"`
 	// How aggressive the kernel will swap memory pages. Range from 0 to 100.
 	Swappiness *uint64 `json:"swappiness,omitempty"`
 }
@@ -294,7 +294,7 @@ type Pids struct {
 // Network identification and priority configuration
 type Network struct {
 	// Set class identifier for container's network packets
-	ClassID *uint32 `json:"classID"`
+	ClassID *uint32 `json:"classID,omitempty"`
 	// Set priority of network traffic for container
 	Priorities []InterfacePriority `json:"priorities,omitempty"`
 }
