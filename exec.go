@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/urfave/cli"
@@ -100,6 +101,13 @@ func execProcess(context *cli.Context) (int, error) {
 	container, err := getContainer(context)
 	if err != nil {
 		return -1, err
+	}
+	status, err := container.Status()
+	if err != nil {
+		return -1, err
+	}
+	if status == libcontainer.Stopped {
+		return -1, fmt.Errorf("cannot exec a container that has run and stopped")
 	}
 	path := context.String("process")
 	if path == "" && len(context.Args()) == 1 {
