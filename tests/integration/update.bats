@@ -30,7 +30,8 @@ function setup() {
         "cpus": "0"
     },
     "blockio": {
-        "blkioWeight": 1000
+        "blkioWeight": 1000,
+        "blkioLeafWeight": 1000
     },
 EOF
     )
@@ -62,6 +63,7 @@ function check_cgroup_value() {
 
     # check that initial values were properly set
     check_cgroup_value $CGROUP_BLKIO "blkio.weight" 1000
+    check_cgroup_value $CGROUP_BLKIO "blkio.leaf_weight" 1000
     check_cgroup_value $CGROUP_CPU "cpu.cfs_period_us" 1000000
     check_cgroup_value $CGROUP_CPU "cpu.cfs_quota_us" 500000
     check_cgroup_value $CGROUP_CPU "cpu.shares" 100
@@ -75,6 +77,10 @@ function check_cgroup_value() {
     runc update test_update --blkio-weight 500
     [ "$status" -eq 0 ]
     check_cgroup_value $CGROUP_BLKIO "blkio.weight" 500
+
+    # update blkio-leaf-weight
+    runc update test_update --blkio-leaf-weight 500
+    check_cgroup_value $CGROUP_BLKIO "blkio.leaf_weight" 500
 
     # update cpu-period
     runc update test_update --cpu-period 900000
@@ -102,6 +108,7 @@ function check_cgroup_value() {
     # update memory limit
     runc update test_update --memory 67108864
     [ "$status" -eq 0 ]
+
     check_cgroup_value $CGROUP_MEMORY "memory.limit_in_bytes" 67108864
 
     runc update test_update --memory 50M

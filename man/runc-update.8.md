@@ -24,7 +24,13 @@ accepted format is as follow (unchanged values can be omitted):
        "mems": ""
      },
      "blockIO": {
-       "blkioWeight": 0
+       "blkioWeight": 0,
+       "blkioLeafWeight": 0,
+       "blkioWeightDevice": "",
+       "blkioThrottleReadBpsDevice": "",
+       "blkioThrottleWriteBpsDevice": "",
+       "blkioThrottleReadIOPSDevice": "",
+       "blkioThrottleWriteIOPSDevice": ""
      },
    }
 
@@ -32,15 +38,21 @@ Note: if data is to be read from a file or the standard input, all
 other options are ignored.
 
 # OPTIONS
-   --resources value, -r value  path to the file containing the resources to update or '-' to read from the standard input
-   --blkio-weight value         Specifies per cgroup weight, range is from 10 to 1000 (default: 0)
-   --cpu-period value           CPU period to be used for hardcapping (in usecs). 0 to use system default
-   --cpu-quota value            CPU hardcap limit (in usecs). Allowed cpu time in a given period
-   --cpu-share value            CPU shares (relative weight vs. other containers)
-   --cpuset-cpus value          CPU(s) to use
-   --cpuset-mems value          Memory node(s) to use
-   --kernel-memory value        Kernel memory limit (in bytes)
-   --kernel-memory-tcp value    Kernel memory limit (in bytes) for tcp buffer
-   --memory value               Memory limit (in bytes)
-   --memory-reservation value   Memory reservation or soft_limit (in bytes)
-   --memory-swap value          Total memory usage (memory + swap); set '-1' to enable unlimited swap
+   --resources value, -r value                 path to the file containing the resources to update or '-' to read from the standard input
+   --blkio-weight value                        Specifies per cgroup weight
+   --blkio-leaf-weight value                   Specifies tasks' weight in the given cgroup while competing with the cgroup's child cgroups, cfq scheduler only 
+   --blkio-weight-device value                 Weight per cgroup per device, can override blkio-weight. Argument must be of the form "<MAJOR>:<MINOR> <WEIGHT> [LEAF_WEIGHT]"
+   --blkio-throttle-readbps-device value       IO read rate limit per cgroup per device, bytes per second. Argument must be of the form "<MAJOR>:<MINOR> <RATE>"
+   --blkio-throttle-writebps-device value      IO write rate limit per cgroup per divice, bytes per second. Argument must be of the form "<MAJOR>:<MINOR> <RATE>"
+   --blkio-throttle-readiops-device value      IO read rate limit per cgroup per device, IO per second. Argument must be of the form "<MAJOR>:<MINOR> <RATE>"
+   --blkio-throttle-writeiops-device value     IO write rate limit per cgroup per device, IO per second. Argument must be of the form "<MAJOR>:<MINOR> <RATE>"
+   --cpu-period value                          CPU period to be used for hardcapping (in usecs). 0 to use system default
+   --cpu-quota value                           CPU hardcap limit (in usecs). Allowed cpu time in a given period
+   --cpu-share value                           CPU shares (relative weight vs. other containers)
+   --cpuset-cpus value                         CPU(s) to use
+   --cpuset-mems value                         Memory node(s) to use
+   --kernel-memory value                       Kernel memory limit (in bytes)
+   --kernel-memory-tcp value                   Kernel memory limit (in bytes) for tcp buffer
+   --memory value                              Memory limit (in bytes)
+   --memory-reservation value                  Memory reservation or soft_limit (in bytes)
+   --memory-swap value                         Total memory usage (memory + swap); set '-1' to enable unlimited swap

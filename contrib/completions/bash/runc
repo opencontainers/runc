@@ -701,6 +701,12 @@ _runc_update() {
 
 	local options_with_args="
 	   --blkio-weight
+	   --blkio-leaf-weight
+	   --blkio-weight-device
+	   --blkio-throttle-readbps-device
+	   --blkio-throttle-writebps-device
+	   --blkio-throttle-readiops-device
+	   --blkio-throttle-writeiops-device
 	   --cpu-period
 	   --cpu-quota
 	   --cpu-share

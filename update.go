@@ -6,15 +6,20 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
 	"strconv"
 
 	"github.com/docker/go-units"
-	"github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/opencontainers/runc/libcontainer/configs"
+	specs "github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/urfave/cli"
 )
 
 func u64Ptr(i uint64) *uint64 { return &i }
 func u16Ptr(i uint16) *uint16 { return &i }
+
+var regBlkioWeightDevice = regexp.MustCompile(`([0-9]+):([0-9]+) ([0-9]+)(?: ([0-9]+))?`)
+var regBlkioThrottleDevice = regexp.MustCompile(`([0-9]+):([0-9]+) ([0-9]+)`)
 
 var updateCommand = cli.Command{
 	Name:      "update",
@@ -44,7 +49,13 @@ The accepted format is as follow (unchanged values can be omitted):
     "mems": ""
   },
   "blockIO": {
-    "blkioWeight": 0
+    "blkioWeight": 0,
+    "blkioLeafWeight": 0,
+    "blkioWeightDevice": "",
+    "blkioThrottleReadBpsDevice": "",
+    "blkioThrottleWriteBpsDevice": "",
+    "blkioThrottleReadIOPSDevice": "",
+    "blkioThrottleWriteIOPSDevice": ""
   },
 }
 
@@ -55,7 +66,31 @@ other options are ignored.
 
 		cli.IntFlag{
 			Name:  "blkio-weight",
-			Usage: "Specifies per cgroup weight, range is from 10 to 1000",
+			Usage: "Specifies per cgroup weight",
+		},
+		cli.IntFlag{
+			Name:  "blkio-leaf-weight",
+			Usage: "Specifies tasks' weight in the given cgroup while competing with the cgroup's child cgroups, cfq scheduler only",
+		},
+		cli.StringSliceFlag{
+			Name:  "blkio-weight-device",
+			Usage: "Weight per cgroup per device, can override blkio-weight. Argument must be of the form \"<MAJOR>:<MINOR> <WEIGHT> [LEAF_WEIGHT]\"",
+		},
+		cli.StringSliceFlag{
+			Name:  "blkio-throttle-readbps-device",
+			Usage: "IO read rate limit per cgroup per device, bytes per second. Argument must be of the form \"<MAJOR>:<MINOR> <RATE>\"",
+		},
+		cli.StringSliceFlag{
+			Name:  "blkio-throttle-writebps-device",
+			Usage: "IO write rate limit per cgroup per divice, bytes per second. Argument must be of the form \"<MAJOR>:<MINOR> <RATE>\"",
+		},
+		cli.StringSliceFlag{
+			Name:  "blkio-throttle-readiops-device",
+			Usage: "IO read rate limit per cgroup per device, IO per second. Argument must be of the form \"<MAJOR>:<MINOR> <RATE>\"",
+		},
+		cli.StringSliceFlag{
+			Name:  "blkio-throttle-writeiops-device",
+			Usage: "IO write rate limit per cgroup per device, IO per second. Argument must be of the form \"<MAJOR>:<MINOR> <RATE>\"",
 		},
 		cli.StringFlag{
 			Name:  "cpu-period",
@@ -120,7 +155,8 @@ other options are ignored.
 				Mems:   sPtr(""),
 			},
 			BlockIO: &specs.BlockIO{
-				Weight: u16Ptr(0),
+				Weight:     u16Ptr(0),
+				LeafWeight: u16Ptr(0),
 			},
 		}
 
@@ -147,6 +183,26 @@ other options are ignored.
 		} else {
 			if val := context.Int("blkio-weight"); val != 0 {
 				r.BlockIO.Weight = u16Ptr(uint16(val))
+			}
+			if val := context.Int("blkio-leaf-weight"); val != 0 {
+				r.BlockIO.LeafWeight = u16Ptr(uint16(val))
+			}
+			if val := context.StringSlice("blkio-weight-device"); val != nil {
+				if r.BlockIO.WeightDevice, err = getBlkioWeightDeviceFromString(val); err != nil {
+					return fmt.Errorf("invalid value for blkio-weight-device: %v", err)
+				}
+			}
+			for opt, dest := range map[string]*[]specs.ThrottleDevice{
+				"blkio-throttle-readbps-device":   &r.BlockIO.ThrottleReadBpsDevice,
+				"blkio-throttle-writebps-device":  &r.BlockIO.ThrottleWriteBpsDevice,
+				"blkio-throttle-readiops-device":  &r.BlockIO.ThrottleReadIOPSDevice,
+				"blkio-throttle-writeiops-device": &r.BlockIO.ThrottleWriteIOPSDevice,
+			} {
+				if val := context.StringSlice(opt); val != nil {
+					if *dest, err = getBlkioThrottleDeviceFromString(val); err != nil {
+						return fmt.Errorf("invalid value for %s: %v", opt, err)
+					}
+				}
 			}
 			if val := context.String("cpuset-cpus"); val != "" {
 				r.CPU.Cpus = &val
@@ -188,6 +244,12 @@ other options are ignored.
 
 		// Update the value
 		config.Cgroups.Resources.BlkioWeight = *r.BlockIO.Weight
+		config.Cgroups.Resources.BlkioLeafWeight = *r.BlockIO.LeafWeight
+		config.Cgroups.Resources.BlkioWeightDevice = convertSpecWeightDevices(r.BlockIO.WeightDevice)
+		config.Cgroups.Resources.BlkioThrottleReadBpsDevice = convertSpecThrottleDevices(r.BlockIO.ThrottleReadBpsDevice)
+		config.Cgroups.Resources.BlkioThrottleWriteBpsDevice = convertSpecThrottleDevices(r.BlockIO.ThrottleWriteBpsDevice)
+		config.Cgroups.Resources.BlkioThrottleReadIOPSDevice = convertSpecThrottleDevices(r.BlockIO.ThrottleReadIOPSDevice)
+		config.Cgroups.Resources.BlkioThrottleWriteIOPSDevice = convertSpecThrottleDevices(r.BlockIO.ThrottleWriteIOPSDevice)
 		config.Cgroups.Resources.CpuPeriod = int64(*r.CPU.Period)
 		config.Cgroups.Resources.CpuQuota = int64(*r.CPU.Quota)
 		config.Cgroups.Resources.CpuShares = int64(*r.CPU.Shares)
@@ -204,4 +266,83 @@ other options are ignored.
 		}
 		return nil
 	},
+}
+
+func getBlkioWeightDeviceFromString(deviceStr []string) ([]specs.WeightDevice, error) {
+	var devs []specs.WeightDevice
+	for _, s := range deviceStr {
+		elems := regBlkioWeightDevice.FindStringSubmatch(s)
+		if elems == nil || len(elems) < 5 {
+			return nil, fmt.Errorf("invalid value for %s", s)
+		}
+		var dev specs.WeightDevice
+		var err error
+		var weight uint64
+		if dev.Major, err = strconv.ParseInt(elems[1], 10, 64); err != nil {
+			return nil, fmt.Errorf("invalid value for %s, err: %v", elems[1], err)
+		}
+		if dev.Minor, err = strconv.ParseInt(elems[2], 10, 64); err != nil {
+			return nil, fmt.Errorf("invalid value for %s, err: %v", elems[2], err)
+		}
+		if weight, err = strconv.ParseUint(elems[3], 10, 16); err != nil {
+			return nil, fmt.Errorf("invalid value for %s, err: %v", elems[3], err)
+		}
+		dev.Weight = u16Ptr(uint16(weight))
+		if elems[4] != "" {
+			if weight, err = strconv.ParseUint(elems[4], 10, 16); err != nil {
+				return nil, fmt.Errorf("invalid value for %s, err: %v", elems[4], err)
+			}
+			dev.LeafWeight = u16Ptr(uint16(weight))
+		}
+		devs = append(devs, dev)
+	}
+
+	return devs, nil
+}
+
+func getBlkioThrottleDeviceFromString(deviceStr []string) ([]specs.ThrottleDevice, error) {
+	var devs []specs.ThrottleDevice
+	for _, s := range deviceStr {
+		elems := regBlkioThrottleDevice.FindStringSubmatch(s)
+		if elems == nil || len(elems) < 4 {
+			return nil, fmt.Errorf("invalid value for %s", s)
+		}
+		var dev specs.ThrottleDevice
+		var err error
+		var rate uint64
+		if dev.Major, err = strconv.ParseInt(elems[1], 10, 64); err != nil {
+			return nil, fmt.Errorf("invalid value for %s, err: %v", elems[1], err)
+		}
+		if dev.Minor, err = strconv.ParseInt(elems[2], 10, 64); err != nil {
+			return nil, fmt.Errorf("invalid value for %s, err: %v", elems[2], err)
+		}
+		if rate, err = strconv.ParseUint(elems[3], 10, 64); err != nil {
+			return nil, fmt.Errorf("invalid value for %s, err: %v", elems[3], err)
+		}
+		dev.Rate = u64Ptr(rate)
+		devs = append(devs, dev)
+	}
+	return devs, nil
+}
+
+func convertSpecWeightDevices(devices []specs.WeightDevice) []*configs.WeightDevice {
+	var cwds []*configs.WeightDevice
+	for _, d := range devices {
+		leafWeight := uint16(0)
+		if d.LeafWeight != nil {
+			leafWeight = *d.LeafWeight
+		}
+		wd := configs.NewWeightDevice(d.Major, d.Minor, *d.Weight, leafWeight)
+		cwds = append(cwds, wd)
+	}
+	return cwds
+}
+
+func convertSpecThrottleDevices(devices []specs.ThrottleDevice) []*configs.ThrottleDevice {
+	var ctds []*configs.ThrottleDevice
+	for _, d := range devices {
+		td := configs.NewThrottleDevice(d.Major, d.Minor, *d.Rate)
+		ctds = append(ctds, td)
+	}
+	return ctds
 }

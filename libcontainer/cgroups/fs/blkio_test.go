@@ -173,6 +173,45 @@ func TestBlkioSetMultipleWeightDevice(t *testing.T) {
 	}
 }
 
+func TestBlkioSetThrottleDevice(t *testing.T) {
+	helper := NewCgroupTestUtil("blkio", t)
+	defer helper.cleanup()
+
+	const (
+		throttleDeviceBefore = "8:0 400"
+	)
+	deviceSet := map[string]string{"blkio.throttle.read_bps_device": throttleDeviceBefore,
+		"blkio.throttle.write_bps_device":  throttleDeviceBefore,
+		"blkio.throttle.read_iops_device":  throttleDeviceBefore,
+		"blkio.throttle.write_iops_device": throttleDeviceBefore,
+	}
+
+	td := configs.NewThrottleDevice(8, 0, 500)
+	throttleDeviceAfter := td.String()
+
+	helper.writeFileContents(deviceSet)
+
+	helper.CgroupData.config.Resources.BlkioThrottleReadBpsDevice = []*configs.ThrottleDevice{td}
+	helper.CgroupData.config.Resources.BlkioThrottleWriteBpsDevice = []*configs.ThrottleDevice{td}
+	helper.CgroupData.config.Resources.BlkioThrottleReadIOPSDevice = []*configs.ThrottleDevice{td}
+	helper.CgroupData.config.Resources.BlkioThrottleWriteIOPSDevice = []*configs.ThrottleDevice{td}
+	blkio := &BlkioGroup{}
+	if err := blkio.Set(helper.CgroupPath, helper.CgroupData.config); err != nil {
+		t.Fatal(err)
+	}
+
+	for d := range deviceSet {
+		value, err := getCgroupParamString(helper.CgroupPath, d)
+		if err != nil {
+			t.Fatalf("Failed to parse %s - %s", d, err)
+		}
+
+		if value != throttleDeviceAfter {
+			t.Fatalf("Got the wrong value, set %s failed.", d)
+		}
+	}
+}
+
 func TestBlkioStats(t *testing.T) {
 	helper := NewCgroupTestUtil("blkio", t)
 	defer helper.cleanup()
