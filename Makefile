@@ -68,9 +68,7 @@ ALLOWED_GO_VERSION	= $(shell test '$(shell /bin/echo -e "$(1)\n$(2)" | sort -V |
 
 test: .govet .golint .gitvalidation
 
-# `go get golang.org/x/tools/cmd/vet`
 .govet:
-	@go tool | grep -qw vet || (echo "ERROR: 'go vet' not found. Consider 'make install.tools' target" && false)
 	go vet -x ./...
 
 # `go get github.com/golang/lint/golint`
@@ -92,22 +90,16 @@ endif
 
 
 .PHONY: install.tools
-install.tools: .install.golint .install.govet .install.gitvalidation
+install.tools: .install.golint .install.gitvalidation
 
 # golint does not even build for <go1.5
 .install.golint:
 ifeq ($(call ALLOWED_GO_VERSION,1.5,$(HOST_GOLANG_VERSION)),true)
-	go get github.com/golang/lint/golint
-endif
-
-# go vet is now included in >=go1.5, so no need to get it.
-.install.govet:
-ifeq ($(call ALLOWED_GO_VERSION,1.5,$(HOST_GOLANG_VERSION)),true)
-	go get golang.org/x/tools/cmd/vet
+	go get -u github.com/golang/lint/golint
 endif
 
 .install.gitvalidation:
-	go get github.com/vbatts/git-validation
+	go get -u github.com/vbatts/git-validation
 
 
 .PHONY: clean
