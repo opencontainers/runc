@@ -41,6 +41,16 @@
             "minimum": 0,
             "maximum": 18446744073709552000
         },
+        "intPointer" : {
+            "oneOf": [
+                {
+                    "type": "integer"
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
         "uint16Pointer": {
             "oneOf": [
                 {
@@ -114,6 +124,9 @@
                 },
                 "env": {
                     "$ref": "#/definitions/Env"
+                },
+                "timeout": {
+                    "$ref": "#/definitions/intPointer"
                 }
             }
         },
