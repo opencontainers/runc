@@ -113,7 +113,7 @@
                                         "type": "array",
                                         "items": [
                                             {
-                                                "$ref": "defs-linux.json#/definitions/blockIODeviceThrottlePointer"
+                                                "$ref": "defs-linux.json#/definitions/blockIODeviceThrottle"
                                             }
                                         ]
                                     },
@@ -128,7 +128,7 @@
                                     {
                                         "type": "array",
                                         "items": {
-                                            "$ref": "defs-linux.json#/definitions/blockIODeviceThrottlePointer"
+                                            "$ref": "defs-linux.json#/definitions/blockIODeviceThrottle"
                                         }
                                     },
                                     {
@@ -142,7 +142,7 @@
                                     {
                                         "type": "array",
                                         "items": {
-                                            "$ref": "defs-linux.json#/definitions/blockIODeviceThrottlePointer"
+                                            "$ref": "defs-linux.json#/definitions/blockIODeviceThrottle"
                                         }
                                     },
                                     {
@@ -156,7 +156,7 @@
                                     {
                                         "type": "array",
                                         "items": {
-                                            "$ref": "defs-linux.json#/definitions/blockIODeviceThrottlePointer"
+                                            "$ref": "defs-linux.json#/definitions/blockIODeviceThrottle"
                                         }
                                     },
                                     {
@@ -168,7 +168,7 @@
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/blockIO/blkioWeightDevice",
                                 "type": "array",
                                 "items": {
-                                    "$ref": "defs-linux.json#/definitions/blockIODeviceWeightPointer"
+                                    "$ref": "defs-linux.json#/definitions/blockIODeviceWeight"
                                 }
                             }
                         }
