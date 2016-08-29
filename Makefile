@@ -48,6 +48,7 @@ man:
 
 runctestimage:
 	docker build -t $(RUNC_TEST_IMAGE) -f $(TEST_DOCKERFILE) .
+	docker tag $(RUNC_TEST_IMAGE) runc_test
 
 test:
 	make unittest integration
