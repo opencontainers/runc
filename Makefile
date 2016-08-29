@@ -114,4 +114,5 @@ endif
 .PHONY: clean
 clean:
 	rm -rf $(OUTPUT_DIRNAME) *~
+	rm -f code-of-conduct.md version.md
 
