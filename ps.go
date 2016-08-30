@@ -56,10 +56,12 @@ var psCommand = cli.Command{
 			psArgs = []string{"-ef"}
 		}
 
-		output, err := exec.Command("ps", psArgs...).Output()
+		cmd := exec.Command("ps", psArgs...)
+		output, err := cmd.Output()
 		if err != nil {
 			return err
 		}
+		pids = append(pids, cmd.Process.Pid)
 
 		lines := strings.Split(string(output), "\n")
 		pidIndex, err := getPidIndex(lines[0])
