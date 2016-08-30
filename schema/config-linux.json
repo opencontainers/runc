@@ -202,8 +202,7 @@
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/cpu/shares",
                                 "$ref": "defs.json#/definitions/uint64Pointer"
                             }
-                        },
-                        "type": "object"
+                        }
                     },
                     "disableOOMKiller": {
                         "id": "https://opencontainers.org/schema/bundle/linux/resources/disableOOMKiller",

@@ -41,7 +41,7 @@
             "minimum": 0,
             "maximum": 18446744073709552000
         },
-        "intPointer" : {
+        "intPointer": {
             "oneOf": [
                 {
                     "type": "integer"
