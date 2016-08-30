@@ -61,6 +61,20 @@
                 "id": "https://opencontainers.org/schema/bundle/linux/resources",
                 "type": "object",
                 "properties": {
+                    "devices": {
+                        "id": "https://opencontainers.org/schema/bundle/linux/resources/devices",
+                        "oneOf": [
+                            {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "defs-linux.json#/definitions/DeviceCgroup"
+                                }
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
                     "oomScoreAdj": {
                         "id": "https://opencontainers.org/schema/bundle/linux/resources/oomScoreAdj",
                         "type": "integer",

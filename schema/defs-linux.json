@@ -217,6 +217,40 @@
                 }
             ]
         },
+        "DeviceCgroup": {
+            "type": "object",
+            "properties": {
+                "allow": {
+                    "type": "boolean"
+                },
+                "type": {
+                    "$ref": "defs.json#/definitions/stringPointer"
+                },
+                "major": {
+                    "oneOf": [
+                        {
+                            "$ref": "#/definitions/Major"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ]
+                },
+                "minor": {
+                    "oneOf": [
+                        {
+                            "$ref": "#/definitions/Minor"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ]
+                },
+                "access": {
+                    "$ref": "defs.json#/definitions/stringPointer"
+                }
+            }
+        },
         "NetworkInterfacePriority": {
             "type": "object",
             "properties": {
