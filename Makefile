@@ -7,7 +7,6 @@ BINDIR := $(PREFIX)/sbin
 GIT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null)
 GIT_BRANCH_CLEAN := $(shell echo $(GIT_BRANCH) | sed -e "s/[^[:alnum:]]/-/g")
 RUNC_IMAGE := runc_dev$(if $(GIT_BRANCH_CLEAN),:$(GIT_BRANCH_CLEAN))
-RUNC_TEST_IMAGE := runc_test$(if $(GIT_BRANCH_CLEAN),:$(GIT_BRANCH_CLEAN))
 PROJECT := github.com/opencontainers/runc
 TEST_DOCKERFILE := script/test_Dockerfile
 BUILDTAGS := seccomp
@@ -33,9 +32,8 @@ static: $(RUNC_LINK)
 $(RUNC_LINK):
 	ln -sfn $(CURDIR) $(RUNC_LINK)
 
-dbuild: runctestimage
-	docker build -t $(RUNC_IMAGE) .
-	docker create --name=$(RUNC_INSTANCE) $(RUNC_IMAGE)
+dbuild: runcimage
+	docker run --name=$(RUNC_INSTANCE) $(RUNC_IMAGE) make
 	docker cp $(RUNC_INSTANCE):$(RUNC_BUILD_PATH) .
 	docker rm $(RUNC_INSTANCE)
 
@@ -46,8 +44,8 @@ lint:
 man:
 	man/md2man-all.sh
 
-runctestimage:
-	docker build -t $(RUNC_TEST_IMAGE) -f $(TEST_DOCKERFILE) .
+runcimage:
+	docker build -t $(RUNC_IMAGE) .
 
 test:
 	make unittest integration
@@ -55,14 +53,14 @@ test:
 localtest:
 	make localunittest localintegration
 
-unittest: runctestimage
-	docker run -e TESTFLAGS -ti --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_TEST_IMAGE) make localunittest
+unittest: runcimage
+	docker run -e TESTFLAGS -ti --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) make localunittest
 
 localunittest: all
 	go test -timeout 3m -tags "$(BUILDTAGS)" ${TESTFLAGS} -v ./...
 
 integration: runctestimage
-	docker run -e TESTFLAGS -t --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_TEST_IMAGE) make localintegration
+	docker run -e TESTFLAGS -t --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) make localintegration
 
 localintegration: all
 	bats -t tests/integration${TESTFLAGS}
