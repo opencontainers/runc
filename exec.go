@@ -30,6 +30,10 @@ following will output a list of processes running in the container:
        # runc exec <container-id> ps`,
 	Flags: []cli.Flag{
 		cli.StringFlag{
+			Name:  "console-socket",
+			Usage: "path to an AF_UNIX socket which will receive a file descriptor referencing the master end of the console's pseudoterminal",
+		},
+		cli.StringFlag{
 			Name:  "cwd",
 			Usage: "current working directory in the container",
 		},
@@ -127,6 +131,7 @@ func execProcess(context *cli.Context) (int, error) {
 		enableSubreaper: false,
 		shouldDestroy:   false,
 		container:       container,
+		consoleSocket:   context.String("console-socket"),
 		detach:          detach,
 		pidFile:         context.String("pid-file"),
 	}

@@ -11,6 +11,7 @@ import (
 
 	"github.com/docker/docker/pkg/term"
 	"github.com/opencontainers/runc/libcontainer"
+	"github.com/opencontainers/runc/libcontainer/utils"
 )
 
 type tty struct {
@@ -100,6 +101,19 @@ func (t *tty) recvtty(process *libcontainer.Process, detach bool) error {
 	return nil
 }
 
+func (t *tty) sendtty(socket *os.File, ti *libcontainer.TerminalInfo) error {
+	if t.console == nil {
+		return fmt.Errorf("tty.console not set")
+	}
+
+	// Create a fake file to contain the terminal info.
+	console := os.NewFile(t.console.File().Fd(), ti.String())
+	if err := utils.SendFd(socket, console); err != nil {
+		return err
+	}
+	return nil
+}
+
 // ClosePostStart closes any fds that are provided to the container and dup2'd
 // so that we no longer have copy in our process.
 func (t *tty) ClosePostStart() error {
@@ -135,5 +149,5 @@ func (t *tty) resize() error {
 	if err != nil {
 		return err
 	}
-	return term.SetWinsize(t.console.Fd(), ws)
+	return term.SetWinsize(t.console.File().Fd(), ws)
 }

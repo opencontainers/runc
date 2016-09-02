@@ -197,8 +197,7 @@ func setupConsole(pipe *os.File, config *initConfig, mount bool) error {
 	}
 
 	// While we can access console.master, using the API is a good idea.
-	consoleFile := os.NewFile(linuxConsole.Fd(), "[master-pty]")
-	if err := utils.SendFd(pipe, consoleFile); err != nil {
+	if err := utils.SendFd(pipe, linuxConsole.File()); err != nil {
 		return err
 	}
 

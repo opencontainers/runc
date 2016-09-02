@@ -36,8 +36,8 @@ type linuxConsole struct {
 	slavePath string
 }
 
-func (c *linuxConsole) Fd() uintptr {
-	return c.master.Fd()
+func (c *linuxConsole) File() *os.File {
+	return c.master
 }
 
 func (c *linuxConsole) Path() string {
