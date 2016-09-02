@@ -395,25 +395,41 @@ func createCgroupConfig(name string, useSystemdCgroup bool, spec *specs.Spec) (*
 		}
 		if r.BlockIO.ThrottleReadBpsDevice != nil {
 			for _, td := range r.BlockIO.ThrottleReadBpsDevice {
-				throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, *td.Rate)
+				var rate uint64
+				if td.Rate != nil {
+					rate = *td.Rate
+				}
+				throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, rate)
 				c.Resources.BlkioThrottleReadBpsDevice = append(c.Resources.BlkioThrottleReadBpsDevice, throttleDevice)
 			}
 		}
 		if r.BlockIO.ThrottleWriteBpsDevice != nil {
 			for _, td := range r.BlockIO.ThrottleWriteBpsDevice {
-				throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, *td.Rate)
+				var rate uint64
+				if td.Rate != nil {
+					rate = *td.Rate
+				}
+				throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, rate)
 				c.Resources.BlkioThrottleWriteBpsDevice = append(c.Resources.BlkioThrottleWriteBpsDevice, throttleDevice)
 			}
 		}
 		if r.BlockIO.ThrottleReadIOPSDevice != nil {
 			for _, td := range r.BlockIO.ThrottleReadIOPSDevice {
-				throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, *td.Rate)
+				var rate uint64
+				if td.Rate != nil {
+					rate = *td.Rate
+				}
+				throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, rate)
 				c.Resources.BlkioThrottleReadIOPSDevice = append(c.Resources.BlkioThrottleReadIOPSDevice, throttleDevice)
 			}
 		}
 		if r.BlockIO.ThrottleWriteIOPSDevice != nil {
 			for _, td := range r.BlockIO.ThrottleWriteIOPSDevice {
-				throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, *td.Rate)
+				var rate uint64
+				if td.Rate != nil {
+					rate = *td.Rate
+				}
+				throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, rate)
 				c.Resources.BlkioThrottleWriteIOPSDevice = append(c.Resources.BlkioThrottleWriteIOPSDevice, throttleDevice)
 			}
 		}
