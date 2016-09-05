@@ -8,6 +8,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/spf13/cobra"
 	"github.com/urfave/cli"
 )
 
@@ -62,15 +63,31 @@ For example, if the container id is "ubuntu01" the following will send a "KILL"
 signal to the init process of the "ubuntu01" container:
 	 
        # runc kill ubuntu01 KILL`,
+	SkipFlagParsing: true,
 	Action: func(context *cli.Context) error {
-		container, err := getContainer(context)
+		return CobraExecute()
+	},
+}
+
+var killCmd = &cobra.Command{
+	Short: "kill sends the specified signal (default: SIGTERM) to the container's init process",
+	Use: `kill <container-id> <signal>
+
+Where "<container-id>" is the name for the instance of the container and
+"<signal>" is the signal to be sent to the init process.`,
+	Example: `For example, if the container id is "ubuntu01" the following will send a "KILL"
+signal to the init process of the "ubuntu01" container:
+
+       # runc kill ubuntu01 KILL`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		container, err := getContainerCobra(cmd.Flags(), args)
 		if err != nil {
 			return err
 		}
 
-		sigstr := context.Args().Get(1)
-		if sigstr == "" {
-			sigstr = "SIGTERM"
+		sigstr := "SIGTERM"
+		if len(args) >= 2 {
+			sigstr = args[1]
 		}
 
 		signal, err := parseSignal(sigstr)
