@@ -11,6 +11,7 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/spf13/cobra"
 	"github.com/urfave/cli"
 )
 
@@ -64,7 +65,53 @@ container on your host.`,
 			Usage: "path to the root of the bundle directory",
 		},
 	},
+	SkipFlagParsing: true,
 	Action: func(context *cli.Context) error {
+		return CobraExecute()
+	},
+}
+
+var specCmd = &cobra.Command{
+	Short: "create a new specification file",
+	Use:   "spec [command options] [arguments...]",
+	Long: `The spec command creates the new specification file named "` + specConfig + `" for
+the bundle.
+
+The spec generated is just a starter file. Editing of the spec is required to
+achieve desired results. For example, the newly generated spec includes an args
+parameter that is initially set to call the "sh" command when the container is
+started. Calling "sh" may work for an ubuntu container or busybox, but will not
+work for containers that do not include the "sh" program.`,
+	Example: ` To run docker's hello-world container one needs to set the args parameter
+in the spec to call hello. This can be done using the sed command or a text
+editor. The following commands create a bundle for hello-world, change the
+default args parameter in the spec from "sh" to "/hello", then run the hello
+command in a new hello-world container named container1:
+
+    mkdir hello
+    cd hello
+    docker pull hello-world
+    docker export $(docker create hello-world) > hello-world.tar
+    mkdir rootfs
+    tar -C rootfs -xf hello-world.tar
+    runc spec
+    sed -i 's;"sh";"/hello";' ` + specConfig + `
+    runc run container1
+
+In the run command above, "container1" is the name for the instance of the
+container that you are starting. The name you provide for the container instance
+must be unique on your host.
+
+An alternative for generating a customized spec config is to use "ocitools", the
+sub-command "ocitools generate" has lots of options that can be used to do any
+customizations as you want, see [ocitools](https://github.com/opencontainers/ocitools)
+to get more information.
+
+When starting a container through runc, runc needs root privilege. If not
+already running as root, you can use sudo to give runc root privilege. For
+example: "sudo runc start container1" will give runc root privilege to start the
+container on your host.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
 		spec := specs.Spec{
 			Version: specs.Version,
 			Platform: specs.Platform{
@@ -200,8 +247,7 @@ container on your host.`,
 			}
 			return nil
 		}
-		bundle := context.String("bundle")
-		if bundle != "" {
+		if bundle, _ := cmd.Flags().GetString("bundle"); bundle != "" {
 			if err := os.Chdir(bundle); err != nil {
 				return err
 			}
@@ -218,6 +264,10 @@ container on your host.`,
 		}
 		return nil
 	},
+}
+
+func init() {
+	specCmd.Flags().StringP("bundle", "b", "", "path to the root of the bundle directory")
 }
 
 func sPtr(s string) *string      { return &s }

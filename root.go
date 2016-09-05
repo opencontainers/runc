@@ -90,6 +90,7 @@ func (r *runcCommander) GetCommand() *cobra.Command {
 	runcCmd.AddCommand(restoreCmd)
 	runcCmd.AddCommand(resumeCmd)
 	runcCmd.AddCommand(runCmd)
+	runcCmd.AddCommand(specCmd)
 
 	return runcCmd
 }
