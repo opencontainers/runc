@@ -85,7 +85,9 @@ func (r *runcCommander) GetCommand() *cobra.Command {
 	runcCmd.AddCommand(initCmd)
 	runcCmd.AddCommand(killCmd)
 	runcCmd.AddCommand(listCmd)
+	runcCmd.AddCommand(pauseCmd)
 	runcCmd.AddCommand(restoreCmd)
+	runcCmd.AddCommand(resumeCmd)
 	runcCmd.AddCommand(runCmd)
 
 	return runcCmd
