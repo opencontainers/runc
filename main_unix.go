@@ -9,7 +9,6 @@ import (
 	"github.com/opencontainers/runc/libcontainer"
 	_ "github.com/opencontainers/runc/libcontainer/nsenter"
 	"github.com/spf13/cobra"
-	"github.com/urfave/cli"
 )
 
 func init() {
@@ -17,15 +16,6 @@ func init() {
 		runtime.GOMAXPROCS(1)
 		runtime.LockOSThread()
 	}
-}
-
-var initCommand = cli.Command{
-	Name:            "init",
-	Usage:           `initialize the namespaces and launch the process (do not call it outside of runc)`,
-	SkipFlagParsing: true,
-	Action: func(context *cli.Context) error {
-		return CobraExecute()
-	},
 }
 
 var initCmd = &cobra.Command{

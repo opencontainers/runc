@@ -7,24 +7,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/urfave/cli"
 )
-
-var pauseCommand = cli.Command{
-	Name:  "pause",
-	Usage: "pause suspends all processes inside the container",
-	ArgsUsage: `<container-id> [container-id...]
-
-Where "<container-id>" is the name for the instance of the container to be
-paused. `,
-	Description: `The pause command suspends all processes in the instance of the container.
-
-Use runc list to identiy instances of containers and their current status.`,
-	SkipFlagParsing: true,
-	Action: func(context *cli.Context) error {
-		return CobraExecute()
-	},
-}
 
 var pauseCmd = &cobra.Command{
 	Short: "pause suspends all processes inside the container",
@@ -41,7 +24,7 @@ Use runc list to identiy instances of containers and their current status.`,
 			return fmt.Errorf("runc: \"pause\" requires a minimum of 1 argument")
 		}
 
-		factory, err := loadFactoryCobra(cmd.Flags())
+		factory, err := loadFactory(cmd.Flags())
 		if err != nil {
 			return err
 		}
@@ -66,22 +49,6 @@ Use runc list to identiy instances of containers and their current status.`,
 	},
 }
 
-var resumeCommand = cli.Command{
-	Name:  "resume",
-	Usage: "resumes all processes that have been previously paused",
-	ArgsUsage: `<container-id> [container-id...]
-
-Where "<container-id>" is the name for the instance of the container to be
-resumed.`,
-	Description: `The resume command resumes all processes in the instance of the container.
-
-Use runc list to identiy instances of containers and their current status.`,
-	SkipFlagParsing: true,
-	Action: func(context *cli.Context) error {
-		return CobraExecute()
-	},
-}
-
 var resumeCmd = &cobra.Command{
 	Short: "resumes all processes that have been previously paused",
 	Use: `resume <container-id>
@@ -97,7 +64,7 @@ Use runc list to identiy instances of containers and their current status.`,
 			return fmt.Errorf("runc: \"resume\" requires a minimum of 1 argument")
 		}
 
-		factory, err := loadFactoryCobra(cmd.Flags())
+		factory, err := loadFactory(cmd.Flags())
 		if err != nil {
 			return err
 		}

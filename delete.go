@@ -11,7 +11,6 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/spf13/cobra"
-	"github.com/urfave/cli"
 )
 
 func killContainer(container libcontainer.Container) error {
@@ -24,31 +23,6 @@ func killContainer(container libcontainer.Container) error {
 		}
 	}
 	return fmt.Errorf("container init still running")
-}
-
-var deleteCommand = cli.Command{
-	Name:  "delete",
-	Usage: "delete any resources held by one or more containers often used with detached containers",
-	ArgsUsage: `<container-id> [container-id...]
-
-Where "<container-id>" is the name for the instance of the container.
-
-EXAMPLE:
-For example, if the container id is "ubuntu01" and runc list currently shows the
-status of "ubuntu01" as "stopped" the following will delete resources held for
-"ubuntu01" removing "ubuntu01" from the runc list of containers:
-
-       # runc delete ubuntu01`,
-	Flags: []cli.Flag{
-		cli.BoolFlag{
-			Name:  "force, f",
-			Usage: "Forcibly deletes the container if it is still running (uses SIGKILL)",
-		},
-	},
-	SkipFlagParsing: true,
-	Action: func(context *cli.Context) error {
-		return CobraExecute()
-	},
 }
 
 var deleteCmd = &cobra.Command{
@@ -69,7 +43,7 @@ status of "ubuntu01" as "stopped" the following will delete resources held for
 
 		flags := cmd.Flags()
 
-		factory, err := loadFactoryCobra(flags)
+		factory, err := loadFactory(flags)
 		if err != nil {
 			return err
 		}

@@ -16,7 +16,6 @@ import (
 	"github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"github.com/urfave/cli"
 )
 
 const formatOptions = `table or json`
@@ -40,38 +39,6 @@ type containerState struct {
 	Created time.Time `json:"created"`
 	// Annotations is the user defined annotations added to the config.
 	Annotations map[string]string `json:"annotations,omitempty"`
-}
-
-var listCommand = cli.Command{
-	Name:  "list",
-	Usage: "lists containers started by runc with the given root",
-	ArgsUsage: `
-
-Where the given root is specified via the global option "--root"
-(default: "/run/runc").
-
-EXAMPLE 1:
-To list containers created via the default "--root":
-       # runc list
-
-EXAMPLE 2:
-To list containers created using a non-default value for "--root":
-       # runc --root value list`,
-	Flags: []cli.Flag{
-		cli.StringFlag{
-			Name:  "format, f",
-			Value: "table",
-			Usage: `select one of: ` + formatOptions,
-		},
-		cli.BoolFlag{
-			Name:  "quiet, q",
-			Usage: "display only container IDs",
-		},
-	},
-	SkipFlagParsing: true,
-	Action: func(context *cli.Context) error {
-		return CobraExecute()
-	},
 }
 
 var listCmd = &cobra.Command{
@@ -134,7 +101,7 @@ func init() {
 }
 
 func getContainers(flags *pflag.FlagSet) ([]containerState, error) {
-	factory, err := loadFactoryCobra(flags)
+	factory, err := loadFactory(flags)
 	if err != nil {
 		return nil, err
 	}

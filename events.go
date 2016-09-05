@@ -13,7 +13,6 @@ import (
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/spf13/cobra"
-	"github.com/urfave/cli"
 )
 
 // event struct for encoding the event data to json.
@@ -96,24 +95,6 @@ type memory struct {
 	Raw       map[string]uint64 `json:"raw,omitempty"`
 }
 
-var eventsCommand = cli.Command{
-	Name:  "events",
-	Usage: "display container events such as OOM notifications, cpu, memory, and IO usage statistics",
-	ArgsUsage: `<container-id>
-
-Where "<container-id>" is the name for the instance of the container.`,
-	Description: `The events command displays information about the container. By default the
-information is displayed once every 5 seconds.`,
-	Flags: []cli.Flag{
-		cli.DurationFlag{Name: "interval", Value: 5 * time.Second, Usage: "set the stats collection interval"},
-		cli.BoolFlag{Name: "stats", Usage: "display the container's stats then exit"},
-	},
-	SkipFlagParsing: true,
-	Action: func(context *cli.Context) error {
-		return CobraExecute()
-	},
-}
-
 var eventsCmd = &cobra.Command{
 	Short: "display container events such as OOM notifications, cpu, memory, and IO usage statistics",
 	Use: `events [command options] <container-id>
@@ -123,7 +104,7 @@ Where "<container-id>" is the name for the instance of the container.`,
 information is displayed once every 5 seconds.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		flags := cmd.Flags()
-		container, err := getContainerCobra(flags, args)
+		container, err := getContainer(flags, args)
 		if err != nil {
 			return err
 		}

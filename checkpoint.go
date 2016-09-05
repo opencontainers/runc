@@ -12,34 +12,7 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"github.com/urfave/cli"
 )
-
-var checkpointCommand = cli.Command{
-	Name:  "checkpoint",
-	Usage: "checkpoint a running container",
-	ArgsUsage: `<container-id>
-
-Where "<container-id>" is the name for the instance of the container to be
-checkpointed.`,
-	Description: `The checkpoint command saves the state of the container instance.`,
-	Flags: []cli.Flag{
-		cli.StringFlag{Name: "image-path", Value: "", Usage: "path for saving criu image files"},
-		cli.StringFlag{Name: "work-path", Value: "", Usage: "path for saving work files and logs"},
-		cli.BoolFlag{Name: "leave-running", Usage: "leave the process running after checkpointing"},
-		cli.BoolFlag{Name: "tcp-established", Usage: "allow open tcp connections"},
-		cli.BoolFlag{Name: "ext-unix-sk", Usage: "allow external unix sockets"},
-		cli.BoolFlag{Name: "shell-job", Usage: "allow shell jobs"},
-		cli.StringFlag{Name: "page-server", Value: "", Usage: "ADDRESS:PORT of the page server"},
-		cli.BoolFlag{Name: "file-locks", Usage: "handle file locks, for safety"},
-		cli.StringFlag{Name: "manage-cgroups-mode", Value: "", Usage: "cgroups mode: 'soft' (default), 'full' and 'strict'"},
-		cli.StringSliceFlag{Name: "empty-ns", Usage: "create a namespace, but don't restore its properies"},
-	},
-	SkipFlagParsing: true,
-	Action: func(context *cli.Context) error {
-		return CobraExecute()
-	},
-}
 
 var checkpointCmd = &cobra.Command{
 	Short: "checkpoint a running container",
@@ -50,7 +23,7 @@ checkpointed.`,
 	Long: "The checkpoint command saves the state of the container instance.",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		flags := cmd.Flags()
-		container, err := getContainerCobra(flags, args)
+		container, err := getContainer(flags, args)
 		if err != nil {
 			return err
 		}
@@ -94,7 +67,7 @@ func init() {
 func getCheckpointImagePath(flags *pflag.FlagSet) string {
 	imagePath, _ := flags.GetString("image-path")
 	if imagePath == "" {
-		imagePath = getDefaultImagePathCobra()
+		imagePath = getDefaultImagePath()
 	}
 	return imagePath
 }

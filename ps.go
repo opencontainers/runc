@@ -11,33 +11,15 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/urfave/cli"
 )
 
-var psCommand = cli.Command{
-	Name:      "ps",
-	Usage:     "ps displays the processes running inside a container",
-	ArgsUsage: `<container-id> [ps options]`,
-	Flags: []cli.Flag{
-		cli.StringFlag{
-			Name:  "format, f",
-			Value: "",
-			Usage: `select one of: ` + formatOptions,
-		},
-	},
-	SkipFlagParsing: true,
-	SkipArgReorder:  true,
-	Action: func(context *cli.Context) error {
-		return CobraExecute()
-	},
-}
-
+// psCmd represents the ps command
 var psCmd = &cobra.Command{
 	Short: "ps displays the processes running inside a container",
 	Use:   "ps [command options] <container-id> [ps options]",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		flags := cmd.Flags()
-		container, err := getContainerCobra(flags, args)
+		container, err := getContainer(flags, args)
 		if err != nil {
 			return err
 		}

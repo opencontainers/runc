@@ -6,23 +6,7 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/spf13/cobra"
-	"github.com/urfave/cli"
 )
-
-var startCommand = cli.Command{
-	Name:  "start",
-	Usage: "executes the user defined process in a created container",
-	ArgsUsage: `<container-id> [container-id...]
-
-Where "<container-id>" is your name for the instance of the container that you
-are starting. The name you provide for the container instance must be unique on
-your host.`,
-	Description:     `The start command executes the user defined process in a created container.`,
-	SkipFlagParsing: true,
-	Action: func(context *cli.Context) error {
-		return CobraExecute()
-	},
-}
 
 var startCmd = &cobra.Command{
 	Short: "executes the user defined process in a created container",
@@ -38,7 +22,7 @@ your host.`,
 			return fmt.Errorf("runc: \"start\" requires a minimum of 1 argument")
 		}
 
-		factory, err := loadFactoryCobra(cmd.Flags())
+		factory, err := loadFactory(cmd.Flags())
 		if err != nil {
 			return err
 		}

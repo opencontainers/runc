@@ -78,5 +78,5 @@ load helpers
 @test "runc foo -h" {
   runc foo -h
   [ "$status" -ne 0 ]
-  [[ "${output}" == *"No help topic for 'foo'"* ]]
+  [[ "${output}" == *"unknown command \"foo\""* ]]
 }

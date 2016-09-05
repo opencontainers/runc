@@ -9,11 +9,6 @@
 			"Rev": "26709e2714106fb8ad40b773b711ebce25b78914"
 		},
 		{
-			"ImportPath": "github.com/urfave/cli",
-			"Comment": "v1.18.0-67-gd53eb99",
-			"Rev": "d53eb991652b1d438abdd34ce4bfa3ef1539108e"
-		},
-		{
 			"ImportPath": "github.com/coreos/go-systemd/activation",
 			"Comment": "v4",
 			"Rev": "b4a58d95188dd092ae20072bac14cece0e67c388"
