@@ -134,6 +134,10 @@ func main() {
 	// the error on cli.ErrWriter and exit.
 	// Use our own writer here to ensure the log gets sent to the right location.
 	cli.ErrWriter = &FatalWriter{cli.ErrWriter}
+
+	RuncCli = &runcCommander{}
+	RuncCli.Version = strings.Join(v, "\n")
+
 	if err := app.Run(os.Args); err != nil {
 		fatal(err)
 	}
@@ -146,4 +150,10 @@ type FatalWriter struct {
 func (f *FatalWriter) Write(p []byte) (n int, err error) {
 	logrus.Error(string(p))
 	return f.cliErrWriter.Write(p)
+}
+
+var RuncCli *runcCommander
+
+func CobraExecute() error {
+	return RuncCli.GetCommand().Execute()
 }
