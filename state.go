@@ -8,6 +8,7 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/utils"
+	"github.com/spf13/cobra"
 	"github.com/urfave/cli"
 )
 
@@ -19,8 +20,21 @@ var stateCommand = cli.Command{
 Where "<container-id>" is your name for the instance of the container.`,
 	Description: `The state command outputs current state information for the
 instance of a container.`,
+	SkipFlagParsing: true,
 	Action: func(context *cli.Context) error {
-		container, err := getContainer(context)
+		return CobraExecute()
+	},
+}
+
+var stateCmd = &cobra.Command{
+	Short: "output the state of a container",
+	Use: `state [command options] <container-id>
+
+Where "<container-id>" is your name for the instance of the container.`,
+	Long: `The state command outputs current state information for the
+instance of a container.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		container, err := getContainerCobra(cmd.Flags(), args)
 		if err != nil {
 			return err
 		}
