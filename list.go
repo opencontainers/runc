@@ -14,6 +14,8 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/utils"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"github.com/urfave/cli"
 )
 
@@ -66,20 +68,39 @@ To list containers created using a non-default value for "--root":
 			Usage: "display only container IDs",
 		},
 	},
+	SkipFlagParsing: true,
 	Action: func(context *cli.Context) error {
-		s, err := getContainers(context)
+		return CobraExecute()
+	},
+}
+
+var listCmd = &cobra.Command{
+	Short: "lists containers started by runc with the given root",
+	Use: `list [command options]
+
+Where the given root is specified via the global option "--root"
+(default: "/run/runc").`,
+	Example: `  1. To list containers created via the default "--root":
+       # runc list
+
+  2. To list containers created using a non-default value for "--root":
+       # runc --root value list`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		flags := cmd.Flags()
+
+		s, err := getContainers(flags)
 		if err != nil {
 			return err
 		}
 
-		if context.Bool("quiet") {
+		if quiet, _ := flags.GetBool("quiet"); quiet {
 			for _, item := range s {
 				fmt.Println(item.ID)
 			}
 			return nil
 		}
 
-		switch context.String("format") {
+		switch format, _ := flags.GetString("format"); format {
 		case "table":
 			w := tabwriter.NewWriter(os.Stdout, 12, 1, 3, ' ', 0)
 			fmt.Fprint(w, "ID\tPID\tSTATUS\tBUNDLE\tCREATED\n")
@@ -105,12 +126,19 @@ To list containers created using a non-default value for "--root":
 	},
 }
 
-func getContainers(context *cli.Context) ([]containerState, error) {
-	factory, err := loadFactory(context)
+func init() {
+	flags := listCmd.Flags()
+
+	flags.StringP("format", "f", "table", `select one of: `+formatOptions)
+	flags.BoolP("quiet", "q", false, "display only container IDs")
+}
+
+func getContainers(flags *pflag.FlagSet) ([]containerState, error) {
+	factory, err := loadFactoryCobra(flags)
 	if err != nil {
 		return nil, err
 	}
-	root := context.GlobalString("root")
+	root, _ := flags.GetString("root")
 	absRoot, err := filepath.Abs(root)
 	if err != nil {
 		return nil, err
