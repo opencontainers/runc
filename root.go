@@ -79,6 +79,7 @@ func (r *runcCommander) GetCommand() *cobra.Command {
 	// Sub-commands
 	runcCmd.AddCommand(checkpointCmd)
 	runcCmd.AddCommand(createCmd)
+	runcCmd.AddCommand(deleteCmd)
 	runcCmd.AddCommand(initCmd)
 	runcCmd.AddCommand(restoreCmd)
 	runcCmd.AddCommand(runCmd)
