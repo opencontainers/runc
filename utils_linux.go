@@ -203,12 +203,12 @@ func createPidFile(path string, process *libcontainer.Process) error {
 	return os.Rename(tmpName, path)
 }
 
-func createContainer(context *cli.Context, id string, spec *specs.Spec) (libcontainer.Container, error) {
+func createContainer(flags *pflag.FlagSet, id string, spec *specs.Spec) (libcontainer.Container, error) {
 	config, err := specconv.CreateLibcontainerConfig(&specconv.CreateOpts{
 		CgroupName:       id,
-		UseSystemdCgroup: context.GlobalBool("systemd-cgroup"),
-		NoPivotRoot:      context.Bool("no-pivot"),
-		NoNewKeyring:     context.Bool("no-new-keyring"),
+		UseSystemdCgroup: func() bool { v, _ := flags.GetBool("systemd-cgroup"); return v }(),
+		NoPivotRoot:      func() bool { v, _ := flags.GetBool("no-pivot"); return v }(),
+		NoNewKeyring:     func() bool { v, _ := flags.GetBool("no-new-keyring"); return v }(),
 		Spec:             spec,
 	})
 	if err != nil {
@@ -222,7 +222,7 @@ func createContainer(context *cli.Context, id string, spec *specs.Spec) (libcont
 		return nil, err
 	}
 
-	factory, err := loadFactory(context)
+	factory, err := loadFactoryCobra(flags)
 	if err != nil {
 		return nil, err
 	}
@@ -322,12 +322,11 @@ func validateProcessSpec(spec *specs.Process) error {
 	return nil
 }
 
-func startContainer(context *cli.Context, spec *specs.Spec, create bool) (int, error) {
-	id := context.Args().First()
+func startContainer(flags *pflag.FlagSet, id string, spec *specs.Spec, create bool) (int, error) {
 	if id == "" {
 		return -1, errEmptyID
 	}
-	container, err := createContainer(context, id, spec)
+	container, err := createContainer(flags, id, spec)
 	if err != nil {
 		return -1, err
 	}
@@ -337,13 +336,13 @@ func startContainer(context *cli.Context, spec *specs.Spec, create bool) (int, e
 		listenFDs = activation.Files(false)
 	}
 	r := &runner{
-		enableSubreaper: !context.Bool("no-subreaper"),
+		enableSubreaper: func() bool { v, _ := flags.GetBool("no-subreaper"); return !v }(),
 		shouldDestroy:   true,
 		container:       container,
 		listenFDs:       listenFDs,
-		console:         context.String("console"),
-		detach:          context.Bool("detach"),
-		pidFile:         context.String("pid-file"),
+		console:         func() string { v, _ := flags.GetString("console"); return v }(),
+		detach:          func() bool { v, _ := flags.GetBool("detach"); return v }(),
+		pidFile:         func() string { v, _ := flags.GetString("pid-file"); return v }(),
 		create:          create,
 	}
 	return r.run(&spec.Process)
