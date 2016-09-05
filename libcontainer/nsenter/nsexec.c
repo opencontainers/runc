@@ -108,7 +108,7 @@ static int clone_parent(jmp_buf *env, int flags)
 	 * On old kernels, CLONE_PARENT didn't work with CLONE_NEWPID, so we have
 	 * to unshare(2) before clone(2) in order to do this. This was fixed in
 	 * upstream commit 1f7f4dde5c945f41a7abc2285be43d918029ecc5, and was
-	 * introduced by by 40a0d32d1eaffe6aac7324ca92604b6b3977eb0e.
+	 * introduced by 40a0d32d1eaffe6aac7324ca92604b6b3977eb0e.
 	 *
 	 * As far as we're aware, the last mainline kernel which had this bug was
 	 * Linux 3.12. However, we cannot comment on which kernels the broken patch
