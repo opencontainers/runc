@@ -10,6 +10,8 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"github.com/urfave/cli"
 )
 
@@ -33,8 +35,22 @@ checkpointed.`,
 		cli.StringFlag{Name: "manage-cgroups-mode", Value: "", Usage: "cgroups mode: 'soft' (default), 'full' and 'strict'"},
 		cli.StringSliceFlag{Name: "empty-ns", Usage: "create a namespace, but don't restore its properies"},
 	},
+	SkipFlagParsing: true,
 	Action: func(context *cli.Context) error {
-		container, err := getContainer(context)
+		return CobraExecute()
+	},
+}
+
+var checkpointCmd = &cobra.Command{
+	Short: "checkpoint a running container",
+	Use: `checkpoint [command options] <container-id>
+
+Where "<container-id>" is the name for the instance of the container to be
+checkpointed.`,
+	Long: "The checkpoint command saves the state of the container instance.",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		flags := cmd.Flags()
+		container, err := getContainerCobra(flags, args)
 		if err != nil {
 			return err
 		}
@@ -46,11 +62,11 @@ checkpointed.`,
 			fatalf("Container cannot be checkpointed in created state")
 		}
 		defer destroy(container)
-		options := criuOptions(context)
+		options := criuOptions(flags)
 		// these are the mandatory criu options for a container
-		setPageServer(context, options)
-		setManageCgroupsMode(context, options)
-		if err := setEmptyNsMask(context, options); err != nil {
+		setPageServer(flags, options)
+		setManageCgroupsMode(flags, options)
+		if err := setEmptyNsMask(flags, options); err != nil {
 			return err
 		}
 		if err := container.Checkpoint(options); err != nil {
@@ -60,18 +76,33 @@ checkpointed.`,
 	},
 }
 
-func getCheckpointImagePath(context *cli.Context) string {
-	imagePath := context.String("image-path")
+func init() {
+	flags := checkpointCmd.Flags()
+
+	flags.String("image-path", "", "path for saving criu image files")
+	flags.String("work-path", "", "path for saving work files and logs")
+	flags.Bool("leave-running", false, "leave the process running after checkpointing")
+	flags.Bool("tcp-established", false, "allow open tcp connections")
+	flags.Bool("ext-unix-sk", false, "allow external unix sockets")
+	flags.Bool("shell-job", false, "allow shell jobs")
+	flags.String("page-server", "", "ADDRESS:PORT of the page server")
+	flags.Bool("file-locks", false, "handle file locks, for safety")
+	flags.String("manage-cgroups-mode", "soft", "cgroups mode: 'soft', 'full' and 'strict'")
+	flags.StringSlice("empty-ns", []string{}, "create a namespace, but don't restore its properies")
+}
+
+func getCheckpointImagePath(flags *pflag.FlagSet) string {
+	imagePath, _ := flags.GetString("image-path")
 	if imagePath == "" {
-		imagePath = getDefaultImagePath(context)
+		imagePath = getDefaultImagePathCobra()
 	}
 	return imagePath
 }
 
-func setPageServer(context *cli.Context, options *libcontainer.CriuOpts) {
+func setPageServer(flags *pflag.FlagSet, options *libcontainer.CriuOpts) {
 	// xxx following criu opts are optional
 	// The dump image can be sent to a criu page server
-	if psOpt := context.String("page-server"); psOpt != "" {
+	if psOpt, _ := flags.GetString("page-server"); psOpt != "" {
 		addressPort := strings.Split(psOpt, ":")
 		if len(addressPort) != 2 {
 			fatal(fmt.Errorf("Use --page-server ADDRESS:PORT to specify page server"))
@@ -87,8 +118,8 @@ func setPageServer(context *cli.Context, options *libcontainer.CriuOpts) {
 	}
 }
 
-func setManageCgroupsMode(context *cli.Context, options *libcontainer.CriuOpts) {
-	if cgOpt := context.String("manage-cgroups-mode"); cgOpt != "" {
+func setManageCgroupsMode(flags *pflag.FlagSet, options *libcontainer.CriuOpts) {
+	if cgOpt, _ := flags.GetString("manage-cgroups-mode"); cgOpt != "" {
 		switch cgOpt {
 		case "soft":
 			options.ManageCgroupsMode = libcontainer.CRIU_CG_MODE_SOFT
@@ -106,10 +137,11 @@ var namespaceMapping = map[specs.NamespaceType]int{
 	specs.NetworkNamespace: syscall.CLONE_NEWNET,
 }
 
-func setEmptyNsMask(context *cli.Context, options *libcontainer.CriuOpts) error {
+func setEmptyNsMask(flags *pflag.FlagSet, options *libcontainer.CriuOpts) error {
 	var nsmask int
 
-	for _, ns := range context.StringSlice("empty-ns") {
+	emptyNs, _ := flags.GetStringSlice("empty-ns")
+	for _, ns := range emptyNs {
 		f, exists := namespaceMapping[specs.NamespaceType(ns)]
 		if !exists {
 			return fmt.Errorf("namespace %q is not supported", ns)

@@ -16,6 +16,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
 	"github.com/opencontainers/runc/libcontainer/specconv"
 	"github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/spf13/pflag"
 	"github.com/urfave/cli"
 )
 
@@ -40,6 +41,23 @@ func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
 	}
 	return libcontainer.New(abs, cgroupManager, libcontainer.CriuPath(context.GlobalString("criu")))
 }
+func loadFactoryCobra(flags *pflag.FlagSet) (libcontainer.Factory, error) {
+	root, _ := flags.GetString("root")
+	abs, err := filepath.Abs(root)
+	if err != nil {
+		return nil, err
+	}
+	cgroupManager := libcontainer.Cgroupfs
+	if sc, _ := flags.GetBool("systemd-cgroup"); sc {
+		if systemd.UseSystemd() {
+			cgroupManager = libcontainer.SystemdCgroups
+		} else {
+			return nil, fmt.Errorf("systemd cgroup flag passed, but systemd support for managing cgroups is not available")
+		}
+	}
+	criu, _ := flags.GetString("criu")
+	return libcontainer.New(abs, cgroupManager, libcontainer.CriuPath(criu))
+}
 
 // getContainer returns the specified container instance by loading it from state
 // with the default factory.
@@ -54,12 +72,30 @@ func getContainer(context *cli.Context) (libcontainer.Container, error) {
 	}
 	return factory.Load(id)
 }
+func getContainerCobra(flags *pflag.FlagSet, args []string) (libcontainer.Container, error) {
+	if len(args) < 1 {
+		return nil, errEmptyID
+	}
+	factory, err := loadFactoryCobra(flags)
+	if err != nil {
+		return nil, err
+	}
+	return factory.Load(args[0])
+}
 
 func fatalf(t string, v ...interface{}) {
 	fatal(fmt.Errorf(t, v...))
 }
 
 func getDefaultImagePath(context *cli.Context) string {
+	cwd, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	return filepath.Join(cwd, "checkpoint")
+}
+
+func getDefaultImagePathCobra() string {
 	cwd, err := os.Getwd()
 	if err != nil {
 		panic(err)
