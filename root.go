@@ -77,6 +77,7 @@ func (r *runcCommander) GetCommand() *cobra.Command {
 	runcCmd.PersistentFlags().BoolP("version", "v", false, "print the version")
 
 	// Sub-commands
+	runcCmd.AddCommand(initCmd)
 
 	return runcCmd
 }
