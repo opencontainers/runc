@@ -10,7 +10,12 @@ possibleConfigs=(
 	"/usr/src/linux-$(uname -r)/.config"
 	'/usr/src/linux/.config'
 )
-
+possibleConfigFiles=(
+	'config.gz'
+	"config-$(uname -r)"
+	'.config'
+)
+	
 if [ $# -gt 0 ]; then
 	CONFIG="$1"
 else
@@ -110,15 +115,23 @@ check_distro_userns() {
 	fi
 }
 
-if [ ! -e "$CONFIG" ]; then
-	wrap_warning "warning: $CONFIG does not exist, searching other paths for kernel config ..."
-	for tryConfig in "${possibleConfigs[@]}"; do
-		if [ -e "$tryConfig" ]; then
+if [ ! -f "$CONFIG" ]; then
+	wrap_warning "warning: $CONFIG seems not a kernel config, searching other paths for kernel config ..."
+	for tryConfig in "$CONFIG" "${possibleConfigs[@]}"; do
+		[[ -d "$tryConfig" ]] && {
+			for tryFile in "${possibleConfigFiles[@]}"; do
+				[[ -f "$tryConfig/$tryFile" ]] && {
+					tryConfig+="/$tryFile"
+					break
+				}
+			done
+		}
+		[[ -f "$tryConfig" ]] && {
 			CONFIG="$tryConfig"
 			break
-		fi
+		}
 	done
-	if [ ! -e "$CONFIG" ]; then
+	if [ ! -f "$CONFIG" ]; then
 		wrap_warning "error: cannot find kernel config"
 		wrap_warning "  try running this script again, specifying the kernel config:"
 		wrap_warning "    CONFIG=/path/to/kernel/.config $0 or $0 /path/to/kernel/.config"
