@@ -625,18 +625,15 @@ func parseMountOptions(options []string) (int, []int, string) {
 		"suid":          {true, syscall.MS_NOSUID},
 		"sync":          {false, syscall.MS_SYNCHRONOUS},
 	}
-	propagationFlags := map[string]struct {
-		clear bool
-		flag  int
-	}{
-		"private":     {false, syscall.MS_PRIVATE},
-		"shared":      {false, syscall.MS_SHARED},
-		"slave":       {false, syscall.MS_SLAVE},
-		"unbindable":  {false, syscall.MS_UNBINDABLE},
-		"rprivate":    {false, syscall.MS_PRIVATE | syscall.MS_REC},
-		"rshared":     {false, syscall.MS_SHARED | syscall.MS_REC},
-		"rslave":      {false, syscall.MS_SLAVE | syscall.MS_REC},
-		"runbindable": {false, syscall.MS_UNBINDABLE | syscall.MS_REC},
+	propagationFlags := map[string]int{
+		"private":     syscall.MS_PRIVATE,
+		"shared":      syscall.MS_SHARED,
+		"slave":       syscall.MS_SLAVE,
+		"unbindable":  syscall.MS_UNBINDABLE,
+		"rprivate":    syscall.MS_PRIVATE | syscall.MS_REC,
+		"rshared":     syscall.MS_SHARED | syscall.MS_REC,
+		"rslave":      syscall.MS_SLAVE | syscall.MS_REC,
+		"runbindable": syscall.MS_UNBINDABLE | syscall.MS_REC,
 	}
 	for _, o := range options {
 		// If the option does not exist in the flags table or the flag
@@ -648,8 +645,8 @@ func parseMountOptions(options []string) (int, []int, string) {
 			} else {
 				flag |= f.flag
 			}
-		} else if f, exists := propagationFlags[o]; exists && f.flag != 0 {
-			pgflag = append(pgflag, f.flag)
+		} else if f, exists := propagationFlags[o]; exists && f != 0 {
+			pgflag = append(pgflag, f)
 		} else {
 			data = append(data, o)
 		}
