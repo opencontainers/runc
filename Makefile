@@ -59,7 +59,7 @@ unittest: runcimage
 localunittest: all
 	go test -timeout 3m -tags "$(BUILDTAGS)" ${TESTFLAGS} -v ./...
 
-integration: runctestimage
+integration: runcimage
 	docker run -e TESTFLAGS -t --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) make localintegration
 
 localintegration: all
