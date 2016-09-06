@@ -13,7 +13,7 @@ function teardown() {
 
 @test "runc pause and resume" {
   # run busybox detached
-  runc run -d --console /dev/pts/ptmx test_busybox
+  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
   [ "$status" -eq 0 ]
 
   wait_for_container 15 1 test_busybox
@@ -35,13 +35,13 @@ function teardown() {
 
 @test "runc pause and resume with multi-container" {
   # run test_busybox1 detached
-  runc run -d --console /dev/pts/ptmx test_busybox1
+  runc run -d --console-socket $CONSOLE_SOCKET test_busybox1
   [ "$status" -eq 0 ]
 
   wait_for_container 15 1 test_busybox1
 
   # run test_busybox2 detached
-  runc run -d --console /dev/pts/ptmx test_busybox2
+  runc run -d --console-socket $CONSOLE_SOCKET test_busybox2
   [ "$status" -eq 0 ]
 
   wait_for_container 15 1 test_busybox2
@@ -74,27 +74,27 @@ function teardown() {
 
 @test "runc pause and resume with nonexist container" {
   # run test_busybox1 detached
-  runc run -d --console /dev/pts/ptmx test_busybox1
+  runc run -d --console-socket $CONSOLE_SOCKET test_busybox1
   [ "$status" -eq 0 ]
 
   wait_for_container 15 1 test_busybox1
 
   # run test_busybox2 detached
-  runc run -d --console /dev/pts/ptmx test_busybox2
+  runc run -d --console-socket $CONSOLE_SOCKET test_busybox2
   [ "$status" -eq 0 ]
 
   wait_for_container 15 1 test_busybox2
 
-  # pause test_busybox1, test_busybox2 and nonexistant container
-  runc pause test_busybox1 test_busybox2 nonexistant
+  # pause test_busybox1, test_busybox2 and nonexistent container
+  runc pause test_busybox1 test_busybox2 nonexistent
   [ "$status" -ne 0 ]
 
   # test state of test_busybox1 and test_busybox2 is paused
   testcontainer test_busybox1 paused
   testcontainer test_busybox2 paused
 
-  # resume test_busybox1, test_busybox2 and nonexistant container
-  runc resume test_busybox1 test_busybox2 nonexistant
+  # resume test_busybox1, test_busybox2 and nonexistent container
+  runc resume test_busybox1 test_busybox2 nonexistent
   [ "$status" -ne 0 ]
 
   # test state of two containers is back to running

@@ -36,13 +36,13 @@ type Process struct {
 	Cwd string
 
 	// Stdin is a pointer to a reader which provides the standard input stream.
-	Stdin *os.File
+	Stdin io.Reader
 
 	// Stdout is a pointer to a writer which receives the standard output stream.
-	Stdout *os.File
+	Stdout io.Writer
 
 	// Stderr is a pointer to a writer which receives the standard error stream.
-	Stderr *os.File
+	Stderr io.Writer
 
 	// ExtraFiles specifies additional open files to be inherited by the container
 	ExtraFiles []*os.File

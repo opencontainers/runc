@@ -43,7 +43,7 @@ EOF
     sed -i "s/\(\"resources\": {\)/\1\n${DATA}/" ${BUSYBOX_BUNDLE}/config.json
 
     # run a detached busybox to work with
-    runc run -d --console /dev/pts/ptmx test_cgroups_kmem
+    runc run -d --console-socket $CONSOLE_SOCKET test_cgroups_kmem
     [ "$status" -eq 0 ]
     wait_for_container 15 1 test_cgroups_kmem
 
@@ -61,7 +61,7 @@ EOF
     sed -i 's/\("linux": {\)/\1\n    "cgroupsPath": "\/runc-cgroups-integration-test",/'  ${BUSYBOX_BUNDLE}/config.json
 
     # run a detached busybox to work with
-    runc run -d --console /dev/pts/ptmx test_cgroups_kmem
+    runc run -d --console-socket $CONSOLE_SOCKET test_cgroups_kmem
     [ "$status" -eq 0 ]
     wait_for_container 15 1 test_cgroups_kmem
 

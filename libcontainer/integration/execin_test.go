@@ -247,8 +247,6 @@ func TestExecInError(t *testing.T) {
 	}
 }
 
-// XXX: This test will fail.
-/*
 func TestExecInTTY(t *testing.T) {
 	if testing.Short() {
 		return
@@ -281,14 +279,14 @@ func TestExecInTTY(t *testing.T) {
 		Args: []string{"ps"},
 		Env:  standardEnvironment,
 	}
-	console, err := ps.NewConsole(0, 0)
+	err = container.Run(ps)
+	ok(t, err)
+	console, err := ps.GetConsole()
 	copy := make(chan struct{})
 	go func() {
 		io.Copy(&stdout, console)
 		close(copy)
 	}()
-	ok(t, err)
-	err = container.Run(ps)
 	ok(t, err)
 	select {
 	case <-time.After(5 * time.Second):
@@ -308,7 +306,6 @@ func TestExecInTTY(t *testing.T) {
 		t.Fatalf("unexpected carriage-return in output")
 	}
 }
-*/
 
 func TestExecInEnvironment(t *testing.T) {
 	if testing.Short() {

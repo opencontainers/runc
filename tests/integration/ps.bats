@@ -13,7 +13,7 @@ function teardown() {
 
 @test "ps" {
   # start busybox detached
-  runc run -d --console /dev/pts/ptmx test_busybox
+  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
   [ "$status" -eq 0 ]
 
   # check state
@@ -29,7 +29,7 @@ function teardown() {
 
 @test "ps -f json" {
   # start busybox detached
-  runc run -d --console /dev/pts/ptmx test_busybox
+  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
   [ "$status" -eq 0 ]
 
   # check state
@@ -44,7 +44,7 @@ function teardown() {
 
 @test "ps -e -x" {
   # start busybox detached
-  runc run -d --console /dev/pts/ptmx test_busybox
+  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
   [ "$status" -eq 0 ]
 
   # check state

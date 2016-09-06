@@ -13,7 +13,7 @@ function teardown() {
 
 @test "runc delete" {
   # run busybox detached
-  runc run -d --console /dev/pts/ptmx test_busybox
+  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
   [ "$status" -eq 0 ]
 
   # check state
@@ -34,7 +34,7 @@ function teardown() {
 
 @test "runc delete --force" {
   # run busybox detached
-  runc run -d --console /dev/pts/ptmx test_busybox
+  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
   [ "$status" -eq 0 ]
 
   # check state
@@ -51,13 +51,13 @@ function teardown() {
 
 @test "run delete with multi-containers" {
   # create busybox1 detached
-  runc create --console /dev/pts/ptmx test_busybox1
+  runc create --console-socket $CONSOLE_SOCKET test_busybox1
   [ "$status" -eq 0 ]
 
   testcontainer test_busybox1 created
 
   # run busybox2 detached
-  runc run -d --console /dev/pts/ptmx test_busybox2
+  runc run -d --console-socket $CONSOLE_SOCKET test_busybox2
   [ "$status" -eq 0 ]
 
   wait_for_container 15 1 test_busybox2
@@ -86,20 +86,20 @@ function teardown() {
 
 @test "run delete --force with multi-containers" {
   # create busybox1 detached
-  runc create --console /dev/pts/ptmx test_busybox1
+  runc create --console-socket $CONSOLE_SOCKET test_busybox1
   [ "$status" -eq 0 ]
 
   testcontainer test_busybox1 created
 
   # run busybox2 detached
-  runc run -d --console /dev/pts/ptmx test_busybox2
+  runc run -d --console-socket $CONSOLE_SOCKET test_busybox2
   [ "$status" -eq 0 ]
 
   wait_for_container 15 1 test_busybox2
   testcontainer test_busybox2 running
 
   # delete both test_busybox1 and test_busybox2 container
-  runc delete --force  test_busybox1 test_busybox2
+  runc delete --force test_busybox1 test_busybox2
 
   runc state test_busybox1
   [ "$status" -ne 0 ]

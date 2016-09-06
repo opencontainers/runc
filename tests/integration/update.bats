@@ -51,7 +51,7 @@ function check_cgroup_value() {
 @test "update" {
     requires cgroups_kmem
     # run a few busyboxes detached
-    runc run -d --console /dev/pts/ptmx test_update
+    runc run -d --console-socket $CONSOLE_SOCKET test_update
     [ "$status" -eq 0 ]
     wait_for_container 15 1 test_update
 
