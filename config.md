@@ -324,14 +324,23 @@ The semantics are the same as `Path`, `Args` and `Env` in [golang Cmd](https://g
 
 **`annotations`** (object, optional) contains arbitrary metadata for the container.
 This information MAY be structured or unstructured.
-Annotations are key-value maps.
+Annotations MUST be a key-value map where both the key and value MUST be strings.
+While the value MUST be present, it MAY be an empty string.
+Keys MUST be unique within this map, and best practice is to namespace the keys.
+Keys SHOULD be named using a reverse domain notation - e.g. `com.example.myKey`.
+Keys using the `org.opencontainers` namespace are reserved and MUST NOT be used by subsequent specifications.
+If there are no annotations then this property MAY either be absent or an empty map.
+Implementations that are reading/processing this configuration file MUST NOT generate an error if they encounter an unknown annotation key.
 
 ```json
 "annotations": {
-    "key1" : "value1",
-    "key2" : "value2"
+    "com.example.gpu-cores" : "2"
 }
 ```
+
+## Extensibility
+Implementations that are reading/processing this configuration file MUST NOT generate an error if they encounter an unkown property.
+Instead they MUST ignore unknown properties.
 
 ## Configuration Schema Example
 
@@ -683,8 +692,8 @@ Here is a full example `config.json` for reference.
         "mountLabel": "system_u:object_r:svirt_sandbox_file_t:s0:c715,c811"
     },
     "annotations": {
-        "key1": "value1",
-        "key2": "value2"
+        "com.example.key1": "value1",
+        "com.example.key2": "value2"
     }
 }
 ```
