@@ -33,7 +33,7 @@ $(RUNC_LINK):
 	ln -sfn $(CURDIR) $(RUNC_LINK)
 
 dbuild: runcimage
-	docker run --name=$(RUNC_INSTANCE) $(RUNC_IMAGE) make
+	docker run --name=$(RUNC_INSTANCE) --privileged $(RUNC_IMAGE) make
 	docker cp $(RUNC_INSTANCE):$(RUNC_BUILD_PATH) .
 	docker rm $(RUNC_INSTANCE)
 
