@@ -12,7 +12,8 @@ TEST_DOCKERFILE := script/test_Dockerfile
 BUILDTAGS := seccomp
 RUNC_BUILD_PATH := /go/src/github.com/opencontainers/runc/runc
 RUNC_INSTANCE := runc_dev
-COMMIT := $(shell git rev-parse HEAD 2> /dev/null || true)
+COMMIT_NO := $(shell git rev-parse HEAD 2> /dev/null || true)
+COMMIT := $(if $(shell git status --porcelain --untracked-files=no),"${COMMIT_NO}-dirty","${COMMIT_NO}")
 RUNC_LINK := $(CURDIR)/Godeps/_workspace/src/github.com/opencontainers/runc
 export GOPATH := $(CURDIR)/Godeps/_workspace
 
