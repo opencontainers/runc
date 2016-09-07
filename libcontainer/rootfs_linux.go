@@ -16,6 +16,7 @@ import (
 
 	"github.com/docker/docker/pkg/mount"
 	"github.com/docker/docker/pkg/symlink"
+	"github.com/mrunalp/archive"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/label"
@@ -132,6 +133,7 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 		dest = filepath.Join(rootfs, dest)
 	}
 
+	var tarStream io.ReadCloser
 	switch m.Device {
 	case "proc", "sysfs":
 		if err := os.MkdirAll(dest, 0755); err != nil {
@@ -152,10 +154,29 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 		}
 		return nil
 	case "tmpfs":
+		copyUp := m.Extensions&configs.EXT_COPYUP == configs.EXT_COPYUP
+		tmpFilePath := ""
 		stat, err := os.Stat(dest)
 		if err != nil {
 			if err := os.MkdirAll(dest, 0755); err != nil {
 				return err
+			}
+		}
+		if copyUp {
+			tarStream, err = archive.Tar(dest, archive.Uncompressed)
+			if err != nil {
+				return fmt.Errorf("failed to tar archive: %v", err)
+			}
+			tmpFile, err := ioutil.TempFile("/run", "runctmpfile")
+			if err != nil {
+				return fmt.Errorf("failed to create tmpfile %v", err)
+			}
+			tmpFilePath = tmpFile.Name()
+			_, err = io.Copy(tmpFile, tarStream)
+			tmpFile.Close()
+			if err != nil {
+				_ = os.Remove(tmpFilePath)
+				return fmt.Errorf("error in copying tar stream to %v: %v", tmpFilePath, err)
 			}
 		}
 		if err := mountPropagate(m, rootfs, mountLabel); err != nil {
@@ -164,6 +185,17 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 		if stat != nil {
 			if err = os.Chmod(dest, stat.Mode()); err != nil {
 				return err
+			}
+		}
+		if copyUp {
+			defer os.Remove(tmpFilePath)
+			f, err := os.Open(tmpFilePath)
+			if err != nil {
+				return fmt.Errorf("failed to open %v for reading", tmpFilePath)
+			}
+			defer f.Close()
+			if err := archive.UntarUncompressed(f, dest, nil); err != nil {
+				return fmt.Errorf("failed to uncompress tar stream: %v", err)
 			}
 		}
 		return nil
