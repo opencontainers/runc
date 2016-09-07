@@ -10,7 +10,7 @@ The definition of a bundle is only concerned with how a container, and its confi
 A Standard Container bundle contains all the information needed to load and run a container.
 This MUST include the following artifacts:
 
-1. `config.json` : contains configuration data.
+1. `config.json`: contains configuration data.
 This REQUIRED file MUST reside in the root of the bundle directory and MUST be named `config.json`.
 See [`config.json`](config.md) for more details.
 
