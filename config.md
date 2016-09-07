@@ -289,7 +289,7 @@ If a hook returns a non-zero exit code, then an error is logged and the remainin
 ### Example
 
 ```json
-    "hooks" : {
+    "hooks": {
         "prestart": [
             {
                 "path": "/usr/bin/fix-mounts",
@@ -334,7 +334,7 @@ Implementations that are reading/processing this configuration file MUST NOT gen
 
 ```json
 "annotations": {
-    "com.example.gpu-cores" : "2"
+    "com.example.gpu-cores": "2"
 }
 ```
 
