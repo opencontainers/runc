@@ -2,7 +2,6 @@
 EPOCH_TEST_COMMIT	:= 78e6667ae2d67aad100b28ee9580b41b7a24e667
 OUTPUT_DIRNAME		?= output/
 DOC_FILENAME		?= oci-runtime-spec
-SHELL			?= $(shell command -v bash 2>/dev/null)
 DOCKER			?= $(shell command -v docker 2>/dev/null)
 PANDOC			?= $(shell command -v pandoc 2>/dev/null)
 ifeq "$(strip $(PANDOC))" ''
@@ -63,15 +62,13 @@ version.md: ./specs-go/version.go
 
 HOST_GOLANG_VERSION	= $(shell go version | cut -d ' ' -f3 | cut -c 3-)
 # this variable is used like a function. First arg is the minimum version, Second arg is the version to be checked.
-ALLOWED_GO_VERSION	= $(shell test '$(shell /bin/echo -e "$(1)\n$(2)" | sort -V | head -n1)' == '$(1)' && echo 'true')
+ALLOWED_GO_VERSION	= $(shell test '$(shell /bin/echo -e "$(1)\n$(2)" | sort -V | head -n1)' = '$(1)' && echo 'true')
 
 .PHONY: test .govet .golint .gitvalidation
 
 test: .govet .golint .gitvalidation
 
-# `go get golang.org/x/tools/cmd/vet`
 .govet:
-	@go tool | grep -qw vet || (echo "ERROR: 'go vet' not found. Consider 'make install.tools' target" && false)
 	go vet -x ./...
 
 # `go get github.com/golang/lint/golint`
@@ -93,22 +90,16 @@ endif
 
 
 .PHONY: install.tools
-install.tools: .install.golint .install.govet .install.gitvalidation
+install.tools: .install.golint .install.gitvalidation
 
 # golint does not even build for <go1.5
 .install.golint:
 ifeq ($(call ALLOWED_GO_VERSION,1.5,$(HOST_GOLANG_VERSION)),true)
-	go get github.com/golang/lint/golint
-endif
-
-# go vet is now included in >=go1.5, so no need to get it.
-.install.govet:
-ifeq ($(call ALLOWED_GO_VERSION,1.5,$(HOST_GOLANG_VERSION)),true)
-	go get golang.org/x/tools/cmd/vet
+	go get -u github.com/golang/lint/golint
 endif
 
 .install.gitvalidation:
-	go get github.com/vbatts/git-validation
+	go get -u github.com/vbatts/git-validation
 
 
 .PHONY: clean
