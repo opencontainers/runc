@@ -48,10 +48,12 @@ func newTemplateConfig(rootfs string) *configs.Config {
 		}),
 		Cgroups: &configs.Cgroup{
 			Path: "integration/test",
-			Resources: &configs.Resources{
-				MemorySwappiness: nil,
-				AllowAllDevices:  &allowAllDevices,
-				AllowedDevices:   configs.DefaultAllowedDevices,
+			Resources: configs.Resources{
+				BaseResources: configs.BaseResources{
+					MemorySwappiness: nil,
+					AllowAllDevices:  &allowAllDevices,
+					AllowedDevices:   configs.DefaultAllowedDevices,
+				},
 			},
 		},
 		MaskPaths: []string{

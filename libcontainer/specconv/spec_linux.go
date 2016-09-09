@@ -254,10 +254,7 @@ func createLibcontainerMount(cwd string, m specs.Mount) *configs.Mount {
 func createCgroupConfig(name string, useSystemdCgroup bool, spec *specs.Spec) (*configs.Cgroup, error) {
 	var myCgroupPath string
 
-	c := &configs.Cgroup{
-		Resources: &configs.Resources{},
-	}
-
+	c := &configs.Cgroup{}
 	if spec.Linux.CgroupsPath != nil {
 		myCgroupPath = libcontainerUtils.CleanPath(*spec.Linux.CgroupsPath)
 		if useSystemdCgroup {
