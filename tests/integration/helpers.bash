@@ -154,6 +154,7 @@ function setup_busybox() {
   tar -C "$BUSYBOX_BUNDLE"/rootfs -xf "$BUSYBOX_IMAGE"
   cd "$BUSYBOX_BUNDLE"
   runc spec
+  sed -i 's;"terminal": true;"terminal": false;' config.json
 }
 
 function setup_hello() {
@@ -162,6 +163,7 @@ function setup_hello() {
   tar -C "$HELLO_BUNDLE"/rootfs -xf "$HELLO_IMAGE"
   cd "$HELLO_BUNDLE"
   runc spec
+  sed -i 's;"terminal": true;"terminal": false;' config.json
   sed -i 's;"sh";"/hello";' config.json
 }
 
