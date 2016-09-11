@@ -258,7 +258,7 @@ func createCgroupConfig(name string, useSystemdCgroup bool, spec *specs.Spec) (*
 		Resources: &configs.Resources{},
 	}
 
-	if spec.Linux.CgroupsPath != nil {
+	if spec.Linux != nil && spec.Linux.CgroupsPath != nil {
 		myCgroupPath = libcontainerUtils.CleanPath(*spec.Linux.CgroupsPath)
 		if useSystemdCgroup {
 			myCgroupPath = *spec.Linux.CgroupsPath
@@ -289,6 +289,9 @@ func createCgroupConfig(name string, useSystemdCgroup bool, spec *specs.Spec) (*
 	}
 
 	c.Resources.AllowedDevices = allowedDevices
+	if spec.Linux == nil {
+		return c, nil
+	}
 	r := spec.Linux.Resources
 	if r == nil {
 		return c, nil
