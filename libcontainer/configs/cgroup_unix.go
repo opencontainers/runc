@@ -2,6 +2,12 @@
 
 package configs
 
+import (
+	"encoding/json"
+	"strconv"
+	"strings"
+)
+
 type FreezerState string
 
 const (
@@ -30,10 +36,10 @@ type Cgroup struct {
 	Paths map[string]string
 
 	// Resources contains various cgroups settings to apply
-	*Resources
+	Resources
 }
 
-type Resources struct {
+type BaseResources struct {
 	// If this is true allow access to any kind of device within the container.  If false, allow access only to devices explicitly listed in the allowed_devices list.
 	// Deprecated
 	AllowAllDevices *bool `json:"allow_all_devices,omitempty"`
@@ -118,7 +124,48 @@ type Resources struct {
 
 	// Set priority of network traffic for container
 	NetPrioIfpriomap []*IfPrioMap `json:"net_prio_ifpriomap"`
+}
 
+type Resources struct {
+	BaseResources
 	// Set class identifier for container's network packets
 	NetClsClassid uint32 `json:"net_cls_classid"`
+}
+
+// netResources is a copy of Resources for backwards compat handling with
+// the net classid change from string to uint32
+type netResources struct {
+	BaseResources
+	// Set class identifier for container's network packets
+	NetClsClassid string `json:"net_cls_classid"`
+}
+
+// UnmarshalJSON handles the backwards compat change for NetClsClassid's change from
+// string to unint32 for existing containers
+func (r Resources) UnmarshalJSON(b []byte) error {
+	var base struct {
+		BaseResources
+		// Set class identifier for container's network packets
+		NetClsClassid uint32 `json:"net_cls_classid"`
+	}
+	if err := json.Unmarshal(b, &base); err != nil {
+		if !strings.Contains(err.Error(), "cannot unmarshal string into Go value of type uint32") {
+			return err
+		}
+		var nc netResources
+		if err := json.Unmarshal(b, &nc); err != nil {
+			return err
+		}
+		if nc.NetClsClassid != "" {
+			i, err := strconv.ParseUint(nc.NetClsClassid, 10, 32)
+			if err != nil {
+				return err
+			}
+			r.NetClsClassid = uint32(i)
+		}
+		r.BaseResources = nc.BaseResources
+	}
+	r.BaseResources = base.BaseResources
+	r.NetClsClassid = base.NetClsClassid
+	return nil
 }

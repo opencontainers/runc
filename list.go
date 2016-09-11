@@ -113,23 +113,25 @@ func getContainers(context *cli.Context) ([]containerState, error) {
 	}
 	list, err := ioutil.ReadDir(absRoot)
 	if err != nil {
-		fatal(err)
+		return nil, err
 	}
-
 	var s []containerState
 	for _, item := range list {
 		if item.IsDir() {
 			container, err := factory.Load(item.Name())
 			if err != nil {
-				return nil, err
+				fmt.Fprintf(os.Stderr, "unable to load %s: %v\n", item.Name(), err)
+				continue
 			}
 			containerStatus, err := container.Status()
 			if err != nil {
-				return nil, err
+				fmt.Fprintf(os.Stderr, "unable to get status on %s: %v\n", item.Name(), err)
+				continue
 			}
 			state, err := container.State()
 			if err != nil {
-				return nil, err
+				fmt.Fprintf(os.Stderr, "unable to set state for %s: %v\n", item.Name(), err)
+				continue
 			}
 			pid := state.BaseState.InitProcessPid
 			if containerStatus == libcontainer.Stopped {
