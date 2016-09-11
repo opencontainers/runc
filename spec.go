@@ -145,7 +145,7 @@ container on your host.`,
 					Options:     []string{"nosuid", "noexec", "nodev", "relatime", "ro"},
 				},
 			},
-			Linux: specs.Linux{
+			Linux: &specs.Linux{
 				MaskedPaths: []string{
 					"/proc/kcore",
 					"/proc/latency_stats",

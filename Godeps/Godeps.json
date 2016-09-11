@@ -58,8 +58,8 @@
 		},
 		{
 			"ImportPath": "github.com/opencontainers/runtime-spec/specs-go",
-			"Comment": "v1.0.0-rc1",
-			"Rev": "06479209bdc0d4135911688c18157bd39bd99c22"
+			"Comment": "v1.0.0-rc1-89-g7a36e7e",
+			"Rev": "7a36e7ed86ee3b4c6dbcdbd02052ec1ef6787c3c"
 		},
 		{
 			"ImportPath": "github.com/seccomp/libseccomp-golang",
