@@ -26,7 +26,7 @@ RELEASE_DIR := $(CURDIR)/release
 
 VERSION := ${shell cat ./VERSION}
 
-SHELL ?= $(shell command -v bash 2>/dev/null)
+SHELL := $(shell command -v bash 2>/dev/null)
 
 all: $(RUNC_LINK)
 	go build -i -ldflags "-X main.gitCommit=${COMMIT} -X main.version=${VERSION}" -tags "$(BUILDTAGS)" -o runc .
