@@ -196,17 +196,8 @@ func (m *Manager) Set(container *configs.Config) error {
 		return nil
 	}
 	for _, sys := range subsystems {
-		// Generate fake cgroup data.
-		d, err := getCgroupData(container.Cgroups, -1)
-		if err != nil {
-			return err
-		}
-		// Get the path, but don't error out if the cgroup wasn't found.
-		path, err := d.path(sys.Name())
-		if err != nil && !cgroups.IsNotFound(err) {
-			return err
-		}
-
+		paths := m.GetPaths()
+		path := paths[sys.Name()]
 		if err := sys.Set(path, container.Cgroups); err != nil {
 			return err
 		}
@@ -223,14 +214,8 @@ func (m *Manager) Set(container *configs.Config) error {
 // Freeze toggles the container's freezer cgroup depending on the state
 // provided
 func (m *Manager) Freeze(state configs.FreezerState) error {
-	d, err := getCgroupData(m.Cgroups, 0)
-	if err != nil {
-		return err
-	}
-	dir, err := d.path("freezer")
-	if err != nil {
-		return err
-	}
+	paths := m.GetPaths()
+	dir := paths["freezer"]
 	prevState := m.Cgroups.Resources.Freezer
 	m.Cgroups.Resources.Freezer = state
 	freezer, err := subsystems.Get("freezer")
@@ -246,28 +231,13 @@ func (m *Manager) Freeze(state configs.FreezerState) error {
 }
 
 func (m *Manager) GetPids() ([]int, error) {
-	dir, err := getCgroupPath(m.Cgroups)
-	if err != nil {
-		return nil, err
-	}
-	return cgroups.GetPids(dir)
+	paths := m.GetPaths()
+	return cgroups.GetPids(paths["devices"])
 }
 
 func (m *Manager) GetAllPids() ([]int, error) {
-	dir, err := getCgroupPath(m.Cgroups)
-	if err != nil {
-		return nil, err
-	}
-	return cgroups.GetAllPids(dir)
-}
-
-func getCgroupPath(c *configs.Cgroup) (string, error) {
-	d, err := getCgroupData(c, 0)
-	if err != nil {
-		return "", err
-	}
-
-	return d.path("devices")
+	paths := m.GetPaths()
+	return cgroups.GetAllPids(paths["devices"])
 }
 
 func getCgroupData(c *configs.Cgroup, pid int) (*cgroupData, error) {
