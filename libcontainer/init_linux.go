@@ -178,7 +178,7 @@ func setupConsole(pipe *os.File, config *initConfig, mount bool) error {
 
 	// Mount the console inside our rootfs.
 	if mount {
-		if err := linuxConsole.mount(config.ProcessLabel); err != nil {
+		if err := linuxConsole.mount(); err != nil {
 			return err
 		}
 	}
