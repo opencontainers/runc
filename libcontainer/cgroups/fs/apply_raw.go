@@ -195,8 +195,9 @@ func (m *Manager) Set(container *configs.Config) error {
 	if m.Cgroups.Paths != nil {
 		return nil
 	}
+
+	paths := m.GetPaths()
 	for _, sys := range subsystems {
-		paths := m.GetPaths()
 		path := paths[sys.Name()]
 		if err := sys.Set(path, container.Cgroups); err != nil {
 			return err
