@@ -25,6 +25,8 @@ For example, if an implementation is compliant with version 1.0.1 of the spec, i
 **`root`** (object, required) configures the container's root filesystem.
 
 * **`path`** (string, required) Specifies the path to the root filesystem for the container.
+  The path can be an absolute path (starting with /) or a relative path (not starting with /), which is relative to the bundle.
+  For example (Linux), with a bundle at `/to/bundle` and a root filesystem at `/to/bundle/rootfs`, the `path` value can be either `/to/bundle/rootfs` or `rootfs`.
   A directory MUST exist at the path declared by the field.
 * **`readonly`** (bool, optional) If true then the root filesystem MUST be read-only inside the container, defaults to false.
 
