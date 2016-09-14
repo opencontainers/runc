@@ -121,15 +121,18 @@ func getContainers(context *cli.Context) ([]containerState, error) {
 		if item.IsDir() {
 			container, err := factory.Load(item.Name())
 			if err != nil {
-				return nil, err
+				fmt.Fprintf(os.Stderr, "load container %s: %v\n", item.Name(), err)
+				continue
 			}
 			containerStatus, err := container.Status()
 			if err != nil {
-				return nil, err
+				fmt.Fprintf(os.Stderr, "status for %s: %v\n", item.Name(), err)
+				continue
 			}
 			state, err := container.State()
 			if err != nil {
-				return nil, err
+				fmt.Fprintf(os.Stderr, "state for %s: %v\n", item.Name(), err)
+				continue
 			}
 			pid := state.BaseState.InitProcessPid
 			if containerStatus == libcontainer.Stopped {
