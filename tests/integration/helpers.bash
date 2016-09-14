@@ -149,7 +149,7 @@ function setup_busybox() {
 		BUSYBOX_IMAGE="/testdata/busybox.tar"
 	fi
 	if [ ! -e $BUSYBOX_IMAGE ]; then
-		curl -o $BUSYBOX_IMAGE -sSL 'https://github.com/jpetazzo/docker-busybox/raw/buildroot-2014.11/rootfs.tar'
+		curl -o $BUSYBOX_IMAGE -sSL 'https://github.com/docker-library/busybox/raw/a0558a9006ce0dd6f6ec5d56cfd3f32ebeeb815f/glibc/busybox.tar.xz'
 	fi
 	tar -C "$BUSYBOX_BUNDLE"/rootfs -xf "$BUSYBOX_IMAGE"
 	cd "$BUSYBOX_BUNDLE"

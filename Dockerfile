@@ -48,7 +48,8 @@ RUN mkdir -p /go/src/github.com/mvdan \
 # setup a playground for us to spawn containers in
 ENV ROOTFS /busybox
 RUN mkdir -p ${ROOTFS} \
-    && curl -o- -sSL 'https://github.com/jpetazzo/docker-busybox/raw/buildroot-2014.11/rootfs.tar' | tar -C ${ROOTFS} -xf -
+    && curl -o- -sSL 'https://github.com/docker-library/busybox/raw/a0558a9006ce0dd6f6ec5d56cfd3f32ebeeb815f/glibc/busybox.tar.xz' | tar xfJC - ${ROOTFS}
+
 
 COPY script/tmpmount /
 WORKDIR /go/src/github.com/opencontainers/runc

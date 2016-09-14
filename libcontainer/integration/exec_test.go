@@ -43,7 +43,7 @@ func testExecPS(t *testing.T, userns bool) {
 		config.Namespaces = append(config.Namespaces, configs.Namespace{Type: configs.NEWUSER})
 	}
 
-	buffers, exitCode, err := runContainer(config, "", "ps")
+	buffers, exitCode, err := runContainer(config, "", "ps", "-o", "pid,user,comm")
 	if err != nil {
 		t.Fatalf("%s: %s", buffers, err)
 	}
