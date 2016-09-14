@@ -157,8 +157,14 @@ func finalizeNamespace(config *initConfig) error {
 // issues related to that). This has to be run *after* we've pivoted to the new
 // rootfs (and the users' configuration is entirely set up).
 func setupConsole(pipe *os.File, config *initConfig, mount bool) error {
-	// At this point, /dev/ptmx points to something that we would expect.
-	console, err := newConsole(0, 0)
+	// At this point, /dev/ptmx points to something that we would expect. We
+	// used to change the owner of the slave path, but since the /dev/pts mount
+	// can have gid=X set (at the users' option). So touching the owner of the
+	// slave PTY is not necessary, as the kernel will handle that for us. Note
+	// however, that setupUser (specifically fixStdioPermissions) *will* change
+	// the UID owner of the console to be the user the process will run as (so
+	// they can actually control their console).
+	console, err := newConsole()
 	if err != nil {
 		return err
 	}
@@ -309,11 +315,17 @@ func fixStdioPermissions(u *user.ExecUser) error {
 		if err := syscall.Fstat(int(fd), &s); err != nil {
 			return err
 		}
-		// skip chown of /dev/null if it was used as one of the STDIO fds.
+		// Skip chown of /dev/null if it was used as one of the STDIO fds.
 		if s.Rdev == null.Rdev {
 			continue
 		}
-		if err := syscall.Fchown(int(fd), u.Uid, u.Gid); err != nil {
+		// We only change the uid owner (as it is possible for the mount to
+		// prefer a different gid, and there's no reason for us to change it).
+		// The reason why we don't just leave the default uid=X mount setup is
+		// that users expect to be able to actually use their console. Without
+		// this code, you couldn't effectively run as a non-root user inside a
+		// container and also have a console set up.
+		if err := syscall.Fchown(int(fd), u.Uid, int(s.Gid)); err != nil {
 			return err
 		}
 	}
