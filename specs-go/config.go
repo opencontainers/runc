@@ -43,10 +43,9 @@ type Process struct {
 	// Capabilities are Linux capabilities that are kept for the container.
 	Capabilities []string `json:"capabilities,omitempty" platform:"linux"`
 	// Rlimits specifies rlimit options to apply to the process.
-	Rlimits []Rlimit `json:"rlimits,omitempty"`
+	Rlimits []Rlimit `json:"rlimits,omitempty" platform:"linux"`
 	// NoNewPrivileges controls whether additional privileges could be gained by processes in the container.
-	NoNewPrivileges bool `json:"noNewPrivileges,omitempty"`
-
+	NoNewPrivileges bool `json:"noNewPrivileges,omitempty" platform:"linux"`
 	// ApparmorProfile specifies the apparmor profile for the container.
 	ApparmorProfile string `json:"apparmorProfile,omitempty" platform:"linux"`
 	// SelinuxLabel specifies the selinux context that the container process is run as.
