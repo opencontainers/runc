@@ -728,6 +728,6 @@ Here is a full example `config.json` for reference.
 [go-environment]: https://golang.org/doc/install/source#environment
 [runtime-namespace]: glossary.md#runtime-namespace
 [uts-namespace]: http://man7.org/linux/man-pages/man7/namespaces.7.html
-[mount.8-filesystem-independent]: http://man7.org/linux/man-pages/man8/mount.8.html#FILESYSTEM-INDEPENDENT_MOUNT OPTIONS
-[mount.8-filesystem-specific]: http://man7.org/linux/man-pages/man8/mount.8.html#FILESYSTEM-SPECIFIC_MOUNT OPTIONS
+[mount.8-filesystem-independent]: http://man7.org/linux/man-pages/man8/mount.8.html#FILESYSTEM-INDEPENDENT_MOUNT%20OPTIONS
+[mount.8-filesystem-specific]: http://man7.org/linux/man-pages/man8/mount.8.html#FILESYSTEM-SPECIFIC_MOUNT%20OPTIONS
 [mount.8]: http://man7.org/linux/man-pages/man8/mount.8.html
