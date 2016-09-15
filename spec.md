@@ -3,9 +3,10 @@
 The [Open Container Initiative](http://www.opencontainers.org/) develops specifications for standards on Operating System process and application containers.
 
 Protocols defined by this specification are:
-* Linux containers: [runtime.md](runtime.md), [config.md](config.md), [config-linux.md](config-linux.md), and [runtime-linux.md](runtime-linux.md).
-* Solaris containers: [runtime.md](runtime.md), [config.md](config.md), and [config-solaris.md](config-solaris.md).
-* Windows containers: [runtime.md](runtime.md), [config.md](config.md), and [config-windows.md](config-windows.md).
+
+* `linux`: [runtime.md](runtime.md), [config.md](config.md), [config-linux.md](config-linux.md), and [runtime-linux.md](runtime-linux.md).
+* `solaris`: [runtime.md](runtime.md), [config.md](config.md), and [config-solaris.md](config-solaris.md).
+* `windows`: [runtime.md](runtime.md), [config.md](config.md), and [config-windows.md](config-windows.md).
 
 # Table of Contents
 
