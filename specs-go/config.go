@@ -47,20 +47,20 @@ type Process struct {
 	// NoNewPrivileges controls whether additional privileges could be gained by processes in the container.
 	NoNewPrivileges bool `json:"noNewPrivileges,omitempty"`
 
-	// ApparmorProfile specifies the apparmor profile for the container. (this field is platform dependent)
+	// ApparmorProfile specifies the apparmor profile for the container.
 	ApparmorProfile string `json:"apparmorProfile,omitempty" platform:"linux"`
-	// SelinuxLabel specifies the selinux context that the container process is run as. (this field is platform dependent)
+	// SelinuxLabel specifies the selinux context that the container process is run as.
 	SelinuxLabel string `json:"selinuxLabel,omitempty" platform:"linux"`
 }
 
 // User specifies Linux/Solaris specific user and group information
 // for the container process.
 type User struct {
-	// UID is the user id. (this field is platform dependent)
+	// UID is the user id.
 	UID uint32 `json:"uid" platform:"linux,solaris"`
-	// GID is the group id. (this field is platform dependent)
+	// GID is the group id.
 	GID uint32 `json:"gid" platform:"linux,solaris"`
-	// AdditionalGids are additional group ids set for the container's process. (this field is platform dependent)
+	// AdditionalGids are additional group ids set for the container's process.
 	AdditionalGids []uint32 `json:"additionalGids,omitempty" platform:"linux,solaris"`
 }
 
