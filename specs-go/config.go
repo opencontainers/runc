@@ -61,7 +61,7 @@ type User struct {
 	GID uint32 `json:"gid" platform:"linux,solaris"`
 	// AdditionalGids are additional group ids set for the container's process.
 	AdditionalGids []uint32 `json:"additionalGids,omitempty" platform:"linux,solaris"`
-	// Username is the user name. (this field is platform dependent)
+	// Username is the user name.
 	Username string `json:"username,omitempty" platform:"windows"`
 }
 
