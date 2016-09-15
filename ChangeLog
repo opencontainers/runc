@@ -1,5 +1,42 @@
 OpenContainers Specifications
 
+Changes with v1.0.0-rc2:
+	Additions:
+
+	* config-linux: Add new architectures from libseccomp 2.3.0 (#505)
+	* schema: Add JSON Schema for state JSON and move schema.json to
+	  config-schema.json and similar (#481, #498, #519)
+
+	Minor fixes and documentation:
+
+	* Add compliance language for platforms and architectures (#527)
+	* Remove "unconditionally compliant" language (#553)
+	* bundle: Remove distribution references (#487)
+	* runtime: Fix sub-bullet indentation (#495)
+	* config: Replace Arch fstab reference with mount(8) (#443)
+	* config: Synchronize comments between Markdown and Go (#525)
+	* config: Drop v0.x compatibility statement (#488)
+	* config-linux: RFC 2119 wording for cgroupsPath (#493)
+	* config-linux: Make linux.devices and linux.resources.devices
+	  optional (#526)
+	* config-linux: Extend no-tweak requirement to runtime namespaces (#538)
+	* schema: Add hook.timeout (#544)
+	* schema: Add missing '"type": "object"' (#528)
+	* schema: Run 'make fmt' and remove duplicates (#546, #551)
+	* schema/config: Make 'hostname' optional (#491)
+	* schema/config-linux: Add linux.resources.devices (#550)
+	* specs-go/config: Add Solaris tags to User properties (#496)
+	* specs-go/config: Make Linux and Solaris omitempty again (#502)
+	* specs-go/config: Make KernelTCP and ClassID omitempty (#531)
+	* specs-go/config: Fix "specified" typo for ApparmorProfile (#503)
+	* Makefile: Remove code-of-conduct.md and version.md when clean (#541)
+	* implementations: Mention cc-oci-runtime (#539)
+	* Use filesystem instead of file system (#529)
+	* .pullapprove: Add DCO check via PullApprove
+	* GOVERNANCE: Add governance and release process docs (#521)
+	* README: Change meeting time from 10am to 2pm Pacific (#524)
+	* README: Update conference-call phone number (#512, #515)
+
 Changes with v1.0.0-rc1:
 	Breaking changes:
 
