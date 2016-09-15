@@ -270,7 +270,7 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 }
 
 func getCgroupMounts(m *configs.Mount) ([]*configs.Mount, error) {
-	mounts, err := cgroups.GetCgroupMounts()
+	mounts, err := cgroups.GetCgroupMounts(false)
 	if err != nil {
 		return nil, err
 	}
