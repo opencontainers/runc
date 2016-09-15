@@ -186,7 +186,31 @@ _Note: For Solaris, uid and gid specify the uid and gid of the process inside th
     "cwd": "/root",
     "args": [
         "/usr/bin/bash"
+    ]
+}
+```
+
+#### Windows User
+
+For Windows based systems the user structure has the following fields:
+
+* **`username`** (string, optional) specifies the user name for the process.
+
+### Example (Windows)
+
+```json
+"process": {
+    "terminal": true,
+    "user": {
+        "username": "containeradministrator"
+    },
+    "env": [
+        "VARIABLE=1"
     ],
+    "cwd": "c:\\foo",
+    "args": [
+        "someapp.exe",
+    ]
 }
 ```
 
