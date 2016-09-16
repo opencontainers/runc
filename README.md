@@ -20,6 +20,7 @@ Table of Contents
   - [General Configuration](config.md)
   - [Linux-specific Configuration](config-linux.md)
   - [Solaris-specific Configuration](config-solaris.md)
+  - [Windows-specific Configuration](config-windows.md)
 - [Glossary](glossary.md)
 
 In the specifications in the above table of contents, the keywords "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" are to be interpreted as described in [RFC 2119](http://tools.ietf.org/html/rfc2119) (Bradner, S., "Key words for use in RFCs to Indicate Requirement Levels", BCP 14, RFC 2119, March 1997).
@@ -30,6 +31,7 @@ An implementation is compliant for a given CPU architecture if it satisfies all 
 Protocols defined by this specification are:
 * Linux containers: [runtime.md](runtime.md), [config.md](config.md), [config-linux.md](config-linux.md), and [runtime-linux.md](runtime-linux.md).
 * Solaris containers: [runtime.md](runtime.md), [config.md](config.md), and [config-solaris.md](config-solaris.md).
+* Windows containers: [runtime.md](runtime.md), [config.md](config.md), and [config-windows.md](config-windows.md).
 
 # Use Cases
 

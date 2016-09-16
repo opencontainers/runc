@@ -25,6 +25,8 @@ type Spec struct {
 	Linux *Linux `json:"linux,omitempty" platform:"linux"`
 	// Solaris is platform specific configuration for Solaris containers.
 	Solaris *Solaris `json:"solaris,omitempty" platform:"solaris"`
+	// Windows is platform specific configuration for Windows based containers, including Hyper-V containers.
+	Windows *Windows `json:"windows,omitempty" platform:"windows"`
 }
 
 // Process contains information to start a specific application inside the container.
@@ -404,6 +406,58 @@ type Anet struct {
 	Linkprotection string `json:"linkProtection,omitempty"`
 	// Set the VNIC's macAddress
 	Macaddress string `json:"macAddress,omitempty"`
+}
+
+// Windows defines the runtime configuration for Windows based containers, including Hyper-V containers.
+type Windows struct {
+	// Resources contains information for handling resource constraints for the container.
+	Resources *WindowsResources `json:"resources,omitempty"`
+}
+
+// WindowsResources has container runtime resource constraints for containers running on Windows.
+type WindowsResources struct {
+	// Memory restriction configuration.
+	Memory *WindowsMemoryResources `json:"memory,omitempty"`
+	// CPU resource restriction configuration.
+	CPU *WindowsCPUResources `json:"cpu,omitempty"`
+	// Storage restriction configuration.
+	Storage *WindowsStorageResources `json:"storage,omitempty"`
+	// Network restriction configuration.
+	Network *WindowsNetworkResources `json:"network,omitempty"`
+}
+
+// WindowsMemoryResources contains memory resource management settings.
+type WindowsMemoryResources struct {
+	// Memory limit in bytes.
+	Limit *uint64 `json:"limit,omitempty"`
+	// Memory reservation in bytes.
+	Reservation *uint64 `json:"reservation,omitempty"`
+}
+
+// WindowsCPUResources contains CPU resource management settings.
+type WindowsCPUResources struct {
+	// Number of CPUs available to the container.
+	Count *uint64 `json:"count,omitempty"`
+	// CPU shares (relative weight to other containers with cpu shares). Range is from 1 to 10000.
+	Shares *uint16 `json:"shares,omitempty"`
+	// Percent of available CPUs usable by the container.
+	Percent *uint8 `json:"percent,omitempty"`
+}
+
+// WindowsStorageResources contains storage resource management settings.
+type WindowsStorageResources struct {
+	// Specifies maximum Iops for the system drive.
+	Iops *uint64 `json:"iops,omitempty"`
+	// Specifies maximum bytes per second for the system drive.
+	Bps *uint64 `json:"bps,omitempty"`
+	// Sandbox size specifies the minimum size of the system drive in bytes.
+	SandboxSize *uint64 `json:"sandboxSize,omitempty"`
+}
+
+// WindowsNetworkResources contains network resource management settings.
+type WindowsNetworkResources struct {
+	// EgressBandwidth is the maximum egress bandwidth in bytes per second.
+	EgressBandwidth *uint64 `json:"egressBandwidth,omitempty"`
 }
 
 // Arch used for additional architectures

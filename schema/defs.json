@@ -41,6 +41,11 @@
             "minimum": 0,
             "maximum": 18446744073709552000
         },
+        "percent": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+        },
         "intPointer": {
             "oneOf": [
                 {
@@ -65,6 +70,16 @@
             "oneOf": [
                 {
                     "$ref": "#/definitions/uint64"
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
+        "percentPointer": {
+            "oneOf": [
+                {
+                    "$ref": "#/definitions/percent"
                 },
                 {
                     "type": "null"

@@ -9,6 +9,7 @@ The layout of the files is as follows:
 * [config-schema.json](config-schema.json) - the primary entrypoint for the [configuration](../config.md) schema
 * [config-linux.json](config-linux.json) - the [Linux-specific configuration sub-structure](../config-linux.md)
 * [config-solaris.json](config-solaris.json) - the [Solaris-specific configuration sub-structure](../config-solaris.md)
+* [config-windows.json](config-windows.json) - the [Windows-specific configuration sub-structure](../config-windows.md)
 * [state-schema.json](state-schema.json) - the primary entrypoint for the [state JSON](../runtime.md#state) schema
 * [defs.json](defs.json) - definitions for general types
 * [defs-linux.json](defs-linux.json) - definitions for Linux-specific types
