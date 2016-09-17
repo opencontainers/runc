@@ -365,7 +365,7 @@ Implementations that are reading/processing this configuration file MUST NOT gen
 ```
 
 ## Extensibility
-Implementations that are reading/processing this configuration file MUST NOT generate an error if they encounter an unkown property.
+Implementations that are reading/processing this configuration file MUST NOT generate an error if they encounter an unknown property.
 Instead they MUST ignore unknown properties.
 
 ## Configuration Schema Example
