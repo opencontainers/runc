@@ -35,7 +35,7 @@ The following parameters can be specified to setup namespaces:
     * **`user`** the container will be able to remap user and group IDs from the host to local users and groups within the container.
     * **`cgroup`** the container will have an isolated view of the cgroup hierarchy.
 
-* **`path`** *(string, optional)* - path to namespace file in the [runtime mount namespace](glossary.md#runtime-namespace)
+* **`path`** *(string, OPTIONAL)* - path to namespace file in the [runtime mount namespace](glossary.md#runtime-namespace)
 
 If a path is specified, that particular file is used to join that type of namespace.
 If a namespace type is not specified in the `namespaces` array, the container MUST inherit the [runtime namespace](glossary.md#runtime-namespace) of that type.
@@ -99,7 +99,7 @@ There is a limit of 5 mappings which is the Linux kernel hard limit.
 
 ## Devices
 
-**`devices`** (array, optional) lists devices that MUST be available in the container.
+**`devices`** (array, OPTIONAL) lists devices that MUST be available in the container.
 The runtime may supply them however it likes (with [mknod][mknod.2], by bind mounting from the runtime mount namespace, etc.).
 
 The following parameters can be specified:
@@ -108,10 +108,10 @@ The following parameters can be specified:
   More info in [mknod(1)][mknod.1].
 * **`path`** *(string, required)* - full path to device inside container.
 * **`major, minor`** *(int64, required unless **`type`** is `p`)* - [major, minor numbers][devices] for the device.
-* **`fileMode`** *(uint32, optional)* - file mode for the device.
+* **`fileMode`** *(uint32, OPTIONAL)* - file mode for the device.
   You can also control access to devices [with cgroups](#device-whitelist).
-* **`uid`** *(uint32, optional)* - id of device owner.
-* **`gid`** *(uint32, optional)* - id of device group.
+* **`uid`** *(uint32, OPTIONAL)* - id of device owner.
+* **`gid`** *(uint32, OPTIONAL)* - id of device group.
 
 ###### Example
 
@@ -199,17 +199,17 @@ However, a runtime MAY attach the container process to additional cgroup control
 
 #### Device whitelist
 
-**`devices`** (array, optional) configures the [device whitelist][cgroup-v1-devices].
+**`devices`** (array, OPTIONAL) configures the [device whitelist][cgroup-v1-devices].
 The runtime MUST apply entries in the listed order.
 
 The following parameters can be specified:
 
 * **`allow`** *(boolean, required)* - whether the entry is allowed or denied.
-* **`type`** *(string, optional)* - type of device: `a` (all), `c` (char), or `b` (block).
+* **`type`** *(string, OPTIONAL)* - type of device: `a` (all), `c` (char), or `b` (block).
   `null` or unset values mean "all", mapping to `a`.
-* **`major, minor`** *(int64, optional)* - [major, minor numbers][devices] for the device.
+* **`major, minor`** *(int64, OPTIONAL)* - [major, minor numbers][devices] for the device.
   `null` or unset values mean "all", mapping to [`*` in the filesystem API][cgroup-v1-devices].
-* **`access`** *(string, optional)* - cgroup permissions for device.
+* **`access`** *(string, OPTIONAL)* - cgroup permissions for device.
   A composition of `r` (read), `w` (write), and `m` (mknod).
 
 ###### Example
@@ -245,7 +245,7 @@ The OOM killer is enabled by default in every cgroup using the `memory` subsyste
 To disable it, specify a value of `true`.
 For more information, see [the memory cgroup man page][cgroup-v1-memory].
 
-* **`disableOOMKiller`** *(bool, optional)* - enables or disables the OOM killer
+* **`disableOOMKiller`** *(bool, OPTIONAL)* - enables or disables the OOM killer
 
 ###### Example
 
@@ -260,7 +260,7 @@ For more information, see [the proc filesystem documentation section 3.1](https:
 This is a kernel/system level setting, where as `disableOOMKiller` is scoped for a memory cgroup.
 For more information on how these two settings work together, see [the memory cgroup documentation section 10. OOM Contol][cgroup-v1-memory].
 
-* **`oomScoreAdj`** *(int, optional)* - adjust the oom-killer score
+* **`oomScoreAdj`** *(int, OPTIONAL)* - adjust the oom-killer score
 
 ###### Example
 
@@ -275,17 +275,17 @@ For more information, see [the memory cgroup man page][cgroup-v1-memory].
 
 The following parameters can be specified to setup the controller:
 
-* **`limit`** *(uint64, optional)* - sets limit of memory usage in bytes
+* **`limit`** *(uint64, OPTIONAL)* - sets limit of memory usage in bytes
 
-* **`reservation`** *(uint64, optional)* - sets soft limit of memory usage in bytes
+* **`reservation`** *(uint64, OPTIONAL)* - sets soft limit of memory usage in bytes
 
-* **`swap`** *(uint64, optional)* - sets limit of memory+Swap usage
+* **`swap`** *(uint64, OPTIONAL)* - sets limit of memory+Swap usage
 
-* **`kernel`** *(uint64, optional)* - sets hard limit for kernel memory
+* **`kernel`** *(uint64, OPTIONAL)* - sets hard limit for kernel memory
 
-* **`kernelTCP`** *(uint64, optional)* - sets hard limit in bytes for kernel TCP buffer memory
+* **`kernelTCP`** *(uint64, OPTIONAL)* - sets hard limit in bytes for kernel TCP buffer memory
 
-* **`swappiness`** *(uint64, optional)* - sets swappiness parameter of vmscan (See sysctl's vm.swappiness)
+* **`swappiness`** *(uint64, OPTIONAL)* - sets swappiness parameter of vmscan (See sysctl's vm.swappiness)
 
 ###### Example
 
@@ -307,19 +307,19 @@ For more information, see [the cpusets cgroup man page][cgroup-v1-cpusets].
 
 The following parameters can be specified to setup the controller:
 
-* **`shares`** *(uint64, optional)* - specifies a relative share of CPU time available to the tasks in a cgroup
+* **`shares`** *(uint64, OPTIONAL)* - specifies a relative share of CPU time available to the tasks in a cgroup
 
-* **`quota`** *(uint64, optional)* - specifies the total amount of time in microseconds for which all tasks in a cgroup can run during one period (as defined by **`period`** below)
+* **`quota`** *(uint64, OPTIONAL)* - specifies the total amount of time in microseconds for which all tasks in a cgroup can run during one period (as defined by **`period`** below)
 
-* **`period`** *(uint64, optional)* - specifies a period of time in microseconds for how regularly a cgroup's access to CPU resources should be reallocated (CFS scheduler only)
+* **`period`** *(uint64, OPTIONAL)* - specifies a period of time in microseconds for how regularly a cgroup's access to CPU resources should be reallocated (CFS scheduler only)
 
-* **`realtimeRuntime`** *(uint64, optional)* - specifies a period of time in microseconds for the longest continuous period in which the tasks in a cgroup have access to CPU resources
+* **`realtimeRuntime`** *(uint64, OPTIONAL)* - specifies a period of time in microseconds for the longest continuous period in which the tasks in a cgroup have access to CPU resources
 
-* **`realtimePeriod`** *(uint64, optional)* - same as **`period`** but applies to realtime scheduler only
+* **`realtimePeriod`** *(uint64, OPTIONAL)* - same as **`period`** but applies to realtime scheduler only
 
-* **`cpus`** *(string, optional)* - list of CPUs the container will run in
+* **`cpus`** *(string, OPTIONAL)* - list of CPUs the container will run in
 
-* **`mems`** *(string, optional)* - list of Memory Nodes the container will run in
+* **`mems`** *(string, OPTIONAL)* - list of Memory Nodes the container will run in
 
 ###### Example
 
@@ -342,18 +342,18 @@ For more information, see [the kernel cgroups documentation about blkio][cgroup-
 
 The following parameters can be specified to setup the controller:
 
-* **`blkioWeight`** *(uint16, optional)* - specifies per-cgroup weight. This is default weight of the group on all devices until and unless overridden by per-device rules. The range is from 10 to 1000.
+* **`blkioWeight`** *(uint16, OPTIONAL)* - specifies per-cgroup weight. This is default weight of the group on all devices until and unless overridden by per-device rules. The range is from 10 to 1000.
 
-* **`blkioLeafWeight`** *(uint16, optional)* - equivalents of `blkioWeight` for the purpose of deciding how much weight tasks in the given cgroup has while competing with the cgroup's child cgroups. The range is from 10 to 1000.
+* **`blkioLeafWeight`** *(uint16, OPTIONAL)* - equivalents of `blkioWeight` for the purpose of deciding how much weight tasks in the given cgroup has while competing with the cgroup's child cgroups. The range is from 10 to 1000.
 
-* **`blkioWeightDevice`** *(array, optional)* - specifies the list of devices which will be bandwidth rate limited. The following parameters can be specified per-device:
+* **`blkioWeightDevice`** *(array, OPTIONAL)* - specifies the list of devices which will be bandwidth rate limited. The following parameters can be specified per-device:
     * **`major, minor`** *(int64, required)* - major, minor numbers for device. More info in `man mknod`.
-    * **`weight`** *(uint16, optional)* - bandwidth rate for the device, range is from 10 to 1000
-    * **`leafWeight`** *(uint16, optional)* - bandwidth rate for the device while competing with the cgroup's child cgroups, range is from 10 to 1000, CFQ scheduler only
+    * **`weight`** *(uint16, OPTIONAL)* - bandwidth rate for the device, range is from 10 to 1000
+    * **`leafWeight`** *(uint16, OPTIONAL)* - bandwidth rate for the device while competing with the cgroup's child cgroups, range is from 10 to 1000, CFQ scheduler only
 
     You must specify at least one of `weight` or `leafWeight` in a given entry, and can specify both.
 
-* **`blkioThrottleReadBpsDevice`**, **`blkioThrottleWriteBpsDevice`**, **`blkioThrottleReadIOPSDevice`**, **`blkioThrottleWriteIOPSDevice`** *(array, optional)* - specify the list of devices which will be IO rate limited. The following parameters can be specified per-device:
+* **`blkioThrottleReadBpsDevice`**, **`blkioThrottleWriteBpsDevice`**, **`blkioThrottleReadIOPSDevice`**, **`blkioThrottleWriteIOPSDevice`** *(array, OPTIONAL)* - specify the list of devices which will be IO rate limited. The following parameters can be specified per-device:
     * **`major, minor`** *(int64, required)* - major, minor numbers for device. More info in `man mknod`.
     * **`rate`** *(uint64, required)* - IO rate limit for the device
 
@@ -423,9 +423,9 @@ For more information, see [the net\_cls cgroup man page][cgroup-v1-net-cls] and 
 
 The following parameters can be specified to setup these cgroup controllers:
 
-* **`classID`** *(uint32, optional)* - is the network class identifier the cgroup's network packets will be tagged with
+* **`classID`** *(uint32, OPTIONAL)* - is the network class identifier the cgroup's network packets will be tagged with
 
-* **`priorities`** *(array, optional)* - specifies a list of objects of the priorities assigned to traffic originating from
+* **`priorities`** *(array, OPTIONAL)* - specifies a list of objects of the priorities assigned to traffic originating from
 processes in the group and egressing the system on various interfaces. The following parameters can be specified per-priority:
     * **`name`** *(string, required)* - interface name
     * **`priority`** *(uint32, required)* - priority applied to the interface
