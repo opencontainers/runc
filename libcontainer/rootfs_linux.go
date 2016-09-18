@@ -163,6 +163,11 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 		}
 		if stat != nil {
 			if err = os.Chmod(dest, stat.Mode()); err != nil {
+				if perr, ok := err.(*os.PathError); ok {
+					if perr.Err.(syscall.Errno) == syscall.EROFS {
+						return nil
+					}
+				}
 				return err
 			}
 		}
