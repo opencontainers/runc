@@ -26,7 +26,7 @@ For more information, see [the man page](http://man7.org/linux/man-pages/man7/na
 Namespaces are specified as an array of entries inside the `namespaces` root field.
 The following parameters can be specified to setup namespaces:
 
-* **`type`** *(string, required)* - namespace type. The following namespaces types are supported:
+* **`type`** *(string, REQUIRED)* - namespace type. The following namespaces types are supported:
     * **`pid`** processes inside the container will only be able to see other processes inside the same container.
     * **`network`** the container will have its own network stack.
     * **`mount`** the container will have an isolated mount table.
@@ -104,10 +104,10 @@ The runtime may supply them however it likes (with [mknod][mknod.2], by bind mou
 
 The following parameters can be specified:
 
-* **`type`** *(string, required)* - type of device: `c`, `b`, `u` or `p`.
+* **`type`** *(string, REQUIRED)* - type of device: `c`, `b`, `u` or `p`.
   More info in [mknod(1)][mknod.1].
-* **`path`** *(string, required)* - full path to device inside container.
-* **`major, minor`** *(int64, required unless **`type`** is `p`)* - [major, minor numbers][devices] for the device.
+* **`path`** *(string, REQUIRED)* - full path to device inside container.
+* **`major, minor`** *(int64, REQUIRED unless **`type`** is `p`)* - [major, minor numbers][devices] for the device.
 * **`fileMode`** *(uint32, OPTIONAL)* - file mode for the device.
   You can also control access to devices [with cgroups](#device-whitelist).
 * **`uid`** *(uint32, OPTIONAL)* - id of device owner.
@@ -204,7 +204,7 @@ The runtime MUST apply entries in the listed order.
 
 The following parameters can be specified:
 
-* **`allow`** *(boolean, required)* - whether the entry is allowed or denied.
+* **`allow`** *(boolean, REQUIRED)* - whether the entry is allowed or denied.
 * **`type`** *(string, OPTIONAL)* - type of device: `a` (all), `c` (char), or `b` (block).
   `null` or unset values mean "all", mapping to `a`.
 * **`major, minor`** *(int64, OPTIONAL)* - [major, minor numbers][devices] for the device.
@@ -347,15 +347,15 @@ The following parameters can be specified to setup the controller:
 * **`blkioLeafWeight`** *(uint16, OPTIONAL)* - equivalents of `blkioWeight` for the purpose of deciding how much weight tasks in the given cgroup has while competing with the cgroup's child cgroups. The range is from 10 to 1000.
 
 * **`blkioWeightDevice`** *(array, OPTIONAL)* - specifies the list of devices which will be bandwidth rate limited. The following parameters can be specified per-device:
-    * **`major, minor`** *(int64, required)* - major, minor numbers for device. More info in `man mknod`.
+    * **`major, minor`** *(int64, REQUIRED)* - major, minor numbers for device. More info in `man mknod`.
     * **`weight`** *(uint16, OPTIONAL)* - bandwidth rate for the device, range is from 10 to 1000
     * **`leafWeight`** *(uint16, OPTIONAL)* - bandwidth rate for the device while competing with the cgroup's child cgroups, range is from 10 to 1000, CFQ scheduler only
 
     You must specify at least one of `weight` or `leafWeight` in a given entry, and can specify both.
 
 * **`blkioThrottleReadBpsDevice`**, **`blkioThrottleWriteBpsDevice`**, **`blkioThrottleReadIOPSDevice`**, **`blkioThrottleWriteIOPSDevice`** *(array, OPTIONAL)* - specify the list of devices which will be IO rate limited. The following parameters can be specified per-device:
-    * **`major, minor`** *(int64, required)* - major, minor numbers for device. More info in `man mknod`.
-    * **`rate`** *(uint64, required)* - IO rate limit for the device
+    * **`major, minor`** *(int64, REQUIRED)* - major, minor numbers for device. More info in `man mknod`.
+    * **`rate`** *(uint64, REQUIRED)* - IO rate limit for the device
 
 ###### Example
 
@@ -401,9 +401,9 @@ For more information, see the [kernel cgroups documentation about HugeTLB][cgrou
 
 `hugepageLimits` is an array of entries, each having the following structure:
 
-* **`pageSize`** *(string, required)* - hugepage size
+* **`pageSize`** *(string, REQUIRED)* - hugepage size
 
-* **`limit`** *(uint64, required)* - limit in bytes of *hugepagesize* HugeTLB usage
+* **`limit`** *(uint64, REQUIRED)* - limit in bytes of *hugepagesize* HugeTLB usage
 
 ###### Example
 
@@ -427,8 +427,8 @@ The following parameters can be specified to setup these cgroup controllers:
 
 * **`priorities`** *(array, OPTIONAL)* - specifies a list of objects of the priorities assigned to traffic originating from
 processes in the group and egressing the system on various interfaces. The following parameters can be specified per-priority:
-    * **`name`** *(string, required)* - interface name
-    * **`priority`** *(uint32, required)* - priority applied to the interface
+    * **`name`** *(string, REQUIRED)* - interface name
+    * **`priority`** *(uint32, REQUIRED)* - priority applied to the interface
 
 ###### Example
 
@@ -455,7 +455,7 @@ For more information, see [the pids cgroup man page][cgroup-v1-pids].
 
 The following parameters can be specified to setup the controller:
 
-* **`limit`** *(int64, required)* - specifies the maximum number of tasks in the cgroup
+* **`limit`** *(int64, REQUIRED)* - specifies the maximum number of tasks in the cgroup
 
 ###### Example
 
