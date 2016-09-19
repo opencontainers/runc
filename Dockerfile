@@ -1,4 +1,4 @@
-FROM golang:1.7.0
+FROM golang:1.7.1
 
 # libseccomp in jessie is not _quite_ new enough -- need backports version
 RUN echo 'deb http://httpredir.debian.org/debian jessie-backports main' > /etc/apt/sources.list.d/backports.list
