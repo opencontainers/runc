@@ -93,7 +93,7 @@ function check_cgroup_value() {
 
     # update cpuset if supported (i.e. we're running on a multicore cpu)
     cpu_count=$(grep '^processor' /proc/cpuinfo | wc -l)
-    if [ $cpu_count -ge 1 ]; then
+    if [ $cpu_count -gt 1 ]; then
         runc update test_update --cpuset-cpus "1"
         [ "$status" -eq 0 ]
         check_cgroup_value $CGROUP_CPUSET "cpuset.cpus" 1
