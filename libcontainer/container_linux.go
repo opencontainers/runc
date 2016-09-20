@@ -85,14 +85,14 @@ type Container interface {
 	// Systemerror - System error.
 	Restore(process *Process, criuOpts *CriuOpts) error
 
-	// If the Container state is RUNNING, sets the Container state to PAUSING and pauses
+	// If the Container state is RUNNING or CREATED, sets the Container state to PAUSING and pauses
 	// the execution of any user processes. Asynchronously, when the container finished being paused the
 	// state is changed to PAUSED.
 	// If the Container state is PAUSED, do nothing.
 	//
 	// errors:
 	// ContainerNotExists - Container no longer exists,
-	// ContainerNotRunning - Container not running,
+	// ContainerNotRunning - Container not running or created,
 	// Systemerror - System error.
 	Pause() error
 
@@ -445,7 +445,7 @@ func (c *linuxContainer) Pause() error {
 			c: c,
 		})
 	}
-	return newGenericError(fmt.Errorf("container not running: %s", status), ContainerNotRunning)
+	return newGenericError(fmt.Errorf("container not running or created: %s", status), ContainerNotRunning)
 }
 
 func (c *linuxContainer) Resume() error {
