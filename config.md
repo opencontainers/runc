@@ -10,7 +10,7 @@ Below is a detailed description of each field defined in the configuration forma
 
 ## Specification version
 
-* **`ociVersion`** (string, required) MUST be in [SemVer v2.0.0](http://semver.org/spec/v2.0.0.html) format and specifies the version of the Open Container Runtime Specification with which the bundle complies.
+* **`ociVersion`** (string, REQUIRED) MUST be in [SemVer v2.0.0](http://semver.org/spec/v2.0.0.html) format and specifies the version of the Open Container Runtime Specification with which the bundle complies.
 The Open Container Runtime Specification follows semantic versioning and retains forward and backward compatibility within major versions.
 For example, if a configuration is compliant with version 1.1 of this specification, it is compatible with all runtimes that support any 1.1 or later release of this specification, but is not compatible with a runtime that supports 1.0 and not 1.1.
 
@@ -22,13 +22,13 @@ For example, if a configuration is compliant with version 1.1 of this specificat
 
 ## Root Configuration
 
-**`root`** (object, required) configures the container's root filesystem.
+**`root`** (object, REQUIRED) configures the container's root filesystem.
 
-* **`path`** (string, required) Specifies the path to the root filesystem for the container.
+* **`path`** (string, REQUIRED) Specifies the path to the root filesystem for the container.
   The path can be an absolute path (starting with /) or a relative path (not starting with /), which is relative to the bundle.
   For example (Linux), with a bundle at `/to/bundle` and a root filesystem at `/to/bundle/rootfs`, the `path` value can be either `/to/bundle/rootfs` or `rootfs`.
   A directory MUST exist at the path declared by the field.
-* **`readonly`** (bool, optional) If true then the root filesystem MUST be read-only inside the container, defaults to false.
+* **`readonly`** (bool, OPTIONAL) If true then the root filesystem MUST be read-only inside the container, defaults to false.
 
 ### Example
 
@@ -41,18 +41,18 @@ For example, if a configuration is compliant with version 1.1 of this specificat
 
 ## Mounts
 
-**`mounts`** (array, optional) configures additional mounts (on top of [`root`](#root-configuration)).
+**`mounts`** (array, OPTIONAL) configures additional mounts (on top of [`root`](#root-configuration)).
 The runtime MUST mount entries in the listed order.
 The parameters are similar to the ones in [the Linux mount system call](http://man7.org/linux/man-pages/man2/mount.2.html).
 
-* **`destination`** (string, required) Destination of mount point: path inside container.
+* **`destination`** (string, REQUIRED) Destination of mount point: path inside container.
   For the Windows operating system, one mount destination MUST NOT be nested within another mount (e.g., c:\\foo and c:\\foo\\bar).
-* **`type`** (string, required) The filesystem type of the filesystem to be mounted.
+* **`type`** (string, REQUIRED) The filesystem type of the filesystem to be mounted.
   Linux: *filesystemtype* argument supported by the kernel are listed in */proc/filesystems* (e.g., "minix", "ext2", "ext3", "jfs", "xfs", "reiserfs", "msdos", "proc", "nfs", "iso9660").
   Windows: ntfs.
-* **`source`** (string, required) A device name, but can also be a directory name or a dummy.
+* **`source`** (string, REQUIRED) A device name, but can also be a directory name or a dummy.
   Windows: the volume name that is the target of the mount point, \\?\Volume\{GUID}\ (on Windows source is called target).
-* **`options`** (list of strings, optional) Mount options of the filesystem to be used.
+* **`options`** (list of strings, OPTIONAL) Mount options of the filesystem to be used.
   Linux: [supported][mount.8-filesystem-independent] [options][mount.8-filesystem-specific] are listed in [mount(8)][mount.8].
 
 ### Example (Linux)
@@ -92,30 +92,30 @@ See links for details about [mountvol](http://ss64.com/nt/mountvol.html) and [Se
 
 ## Process configuration
 
-**`process`** (object, required) configures the container process.
+**`process`** (object, REQUIRED) configures the container process.
 
-* **`terminal`** (bool, optional) specifies whether you want a terminal attached to that process, defaults to false.
-* **`cwd`** (string, required) is the working directory that will be set for the executable.
+* **`terminal`** (bool, OPTIONAL) specifies whether you want a terminal attached to that process, defaults to false.
+* **`cwd`** (string, REQUIRED) is the working directory that will be set for the executable.
   This value MUST be an absolute path.
-* **`env`** (array of strings, optional) contains a list of variables that will be set in the process's environment prior to execution.
+* **`env`** (array of strings, OPTIONAL) contains a list of variables that will be set in the process's environment prior to execution.
   Elements in the array are specified as Strings in the form "KEY=value".
   The left hand side MUST consist solely of letters, digits, and underscores `_` as outlined in [IEEE Std 1003.1-2001](http://pubs.opengroup.org/onlinepubs/009695399/basedefs/xbd_chap08.html).
-* **`args`** (array of strings, required) executable to launch and any flags as an array.
+* **`args`** (array of strings, REQUIRED) executable to launch and any flags as an array.
   The executable is the first element and MUST be available at the given path inside of the rootfs.
   If the executable path is not an absolute path then the search $PATH is interpreted to find the executable.
 
 For Linux-based systems the process structure supports the following process specific fields:
 
-* **`capabilities`** (array of strings, optional) capabilities is an array that specifies Linux capabilities that can be provided to the process inside the container.
+* **`capabilities`** (array of strings, OPTIONAL) capabilities is an array that specifies Linux capabilities that can be provided to the process inside the container.
 Valid values are the strings for capabilities defined in [the man page](http://man7.org/linux/man-pages/man7/capabilities.7.html)
-* **`rlimits`** (array of rlimits, optional) rlimits is an array of rlimits that allows setting resource limits for a process inside the container.
+* **`rlimits`** (array of rlimits, OPTIONAL) rlimits is an array of rlimits that allows setting resource limits for a process inside the container.
 The kernel enforces the `soft` limit for a resource while the `hard` limit acts as a ceiling for that value that could be set by an unprivileged process.
 Valid values for the 'type' field are the resources defined in [the man page](http://man7.org/linux/man-pages/man2/setrlimit.2.html).
-* **`apparmorProfile`** (string, optional) apparmor profile specifies the name of the apparmor profile that will be used for the container.
+* **`apparmorProfile`** (string, OPTIONAL) apparmor profile specifies the name of the apparmor profile that will be used for the container.
 For more information about Apparmor, see [Apparmor documentation](https://wiki.ubuntu.com/AppArmor)
-* **`selinuxLabel`** (string, optional) SELinux process label specifies the label with which the processes in a container are run.
+* **`selinuxLabel`** (string, OPTIONAL) SELinux process label specifies the label with which the processes in a container are run.
 For more information about SELinux, see  [Selinux documentation](http://selinuxproject.org/page/Main_Page)
-* **`noNewPrivileges`** (bool, optional) setting `noNewPrivileges` to true prevents the processes in the container from gaining additional privileges.
+* **`noNewPrivileges`** (bool, OPTIONAL) setting `noNewPrivileges` to true prevents the processes in the container from gaining additional privileges.
 [The kernel doc](https://www.kernel.org/doc/Documentation/prctl/no_new_privs.txt) has more information on how this is achieved using a prctl system call.
 
 ### User
@@ -126,9 +126,9 @@ The user for the process is a platform-specific structure that allows specific c
 
 For Linux and Solaris based systems the user structure has the following fields:
 
-* **`uid`** (int, required) specifies the user ID in the [container namespace][container-namespace].
-* **`gid`** (int, required) specifies the group ID in the [container namespace][container-namespace].
-* **`additionalGids`** (array of ints, optional) specifies additional group IDs (in the [container namespace][container-namespace]) to be added to the process.
+* **`uid`** (int, REQUIRED) specifies the user ID in the [container namespace][container-namespace].
+* **`gid`** (int, REQUIRED) specifies the group ID in the [container namespace][container-namespace].
+* **`additionalGids`** (array of ints, OPTIONAL) specifies additional group IDs (in the [container namespace][container-namespace]) to be added to the process.
 
 _Note: symbolic name for uid and gid, such as uname and gname respectively, are left to upper levels to derive (i.e. `/etc/passwd` parsing, NSS, etc)_
 
@@ -194,7 +194,7 @@ _Note: For Solaris, uid and gid specify the uid and gid of the process inside th
 
 For Windows based systems the user structure has the following fields:
 
-* **`username`** (string, optional) specifies the user name for the process.
+* **`username`** (string, OPTIONAL) specifies the user name for the process.
 
 ### Example (Windows)
 
@@ -217,7 +217,7 @@ For Windows based systems the user structure has the following fields:
 
 ## Hostname
 
-* **`hostname`** (string, optional) configures the container's hostname as seen by processes running inside the container.
+* **`hostname`** (string, OPTIONAL) configures the container's hostname as seen by processes running inside the container.
   On Linux, you can only set this if your bundle creates a new [UTS namespace][uts-namespace].
 
 ### Example
@@ -230,11 +230,11 @@ For Windows based systems the user structure has the following fields:
 
 **`platform`** specifies the configuration's target platform.
 
-* **`os`** (string, required) specifies the operating system family this image targets.
+* **`os`** (string, REQUIRED) specifies the operating system family this image targets.
   The runtime MUST generate an error if it does not support the configured **`os`**.
   Bundles SHOULD use, and runtimes SHOULD understand, **`os`** entries listed in the Go Language document for [`$GOOS`][go-environment].
   If an operating system is not included in the `$GOOS` documentation, it SHOULD be submitted to this specification for standardization.
-* **`arch`** (string, required) specifies the instruction set for which the binaries in the image have been compiled.
+* **`arch`** (string, REQUIRED) specifies the instruction set for which the binaries in the image have been compiled.
   The runtime MUST generate an error if it does not support the configured **`arch`**.
   Values for **`arch`** SHOULD use, and runtimes SHOULD understand, **`arch`** entries listed in the Go Language document for [`$GOARCH`][go-environment].
   If an architecture is not included in the `$GOARCH` documentation, it SHOULD be submitted to this specification for standardization.
@@ -252,9 +252,9 @@ For Windows based systems the user structure has the following fields:
 
 [**`platform.os`**](#platform) is used to lookup further platform-specific configuration.
 
-* **`linux`** (object, optional) [Linux-specific configuration](config-linux.md).
+* **`linux`** (object, OPTIONAL) [Linux-specific configuration](config-linux.md).
   This SHOULD only be set if **`platform.os`** is `linux`.
-* **`solaris`** (object, optional) [Solaris-specific configuration](config-solaris.md).
+* **`solaris`** (object, OPTIONAL) [Solaris-specific configuration](config-solaris.md).
   This SHOULD only be set if **`platform.os`** is `solaris`.
 
 ### Example (Linux)
@@ -277,7 +277,7 @@ For Windows based systems the user structure has the following fields:
 
 ## Hooks
 
-**`hooks`** (object, optional) configures callbacks for container lifecycle events.
+**`hooks`** (object, OPTIONAL) configures callbacks for container lifecycle events.
 Lifecycle hooks allow custom events for different points in a container's runtime.
 Presently there are `Prestart`, `Poststart` and `Poststop`.
 
@@ -341,14 +341,14 @@ If a hook returns a non-zero exit code, then an error is logged and the remainin
     }
 ```
 
-`path` is required for a hook.
-`args` and `env` are optional.
+`path` is REQUIRED for a hook.
+`args` and `env` are OPTIONAL.
 `timeout` is the number of seconds before aborting the hook.
 The semantics are the same as `Path`, `Args` and `Env` in [golang Cmd](https://golang.org/pkg/os/exec/#Cmd).
 
 ## Annotations
 
-**`annotations`** (object, optional) contains arbitrary metadata for the container.
+**`annotations`** (object, OPTIONAL) contains arbitrary metadata for the container.
 This information MAY be structured or unstructured.
 Annotations MUST be a key-value map where both the key and value MUST be strings.
 While the value MUST be present, it MAY be an empty string.
