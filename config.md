@@ -95,6 +95,9 @@ See links for details about [mountvol](http://ss64.com/nt/mountvol.html) and [Se
 **`process`** (object, REQUIRED) configures the container process.
 
 * **`terminal`** (bool, OPTIONAL) specifies whether you want a terminal attached to that process, defaults to false.
+* **`consoleSize`** (object, OPTIONAL) specifies the console size of the terminal if attached, containing the following properties:
+  * **`height`** (uint, REQUIRED)
+  * **`width`** (uint, REQUIRED)
 * **`cwd`** (string, REQUIRED) is the working directory that will be set for the executable.
   This value MUST be an absolute path.
 * **`env`** (array of strings, OPTIONAL) contains a list of variables that will be set in the process's environment prior to execution.
@@ -139,6 +142,10 @@ _Note: For Solaris, uid and gid specify the uid and gid of the process inside th
 ```json
 "process": {
     "terminal": true,
+    "consoleSize": {
+        "height": 25,
+        "width": 80
+    },
     "user": {
         "uid": 1,
         "gid": 1,
@@ -174,6 +181,10 @@ _Note: For Solaris, uid and gid specify the uid and gid of the process inside th
 ```json
 "process": {
     "terminal": true,
+    "consoleSize": {
+        "height": 25,
+        "width": 80
+    },
     "user": {
         "uid": 1,
         "gid": 1,

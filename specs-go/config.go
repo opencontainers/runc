@@ -31,6 +31,8 @@ type Spec struct {
 type Process struct {
 	// Terminal creates an interactive terminal for the container.
 	Terminal bool `json:"terminal,omitempty"`
+	// ConsoleSize specifies the size of the console.
+	ConsoleSize Box `json:"consoleSize,omitempty"`
 	// User specifies user information for the process.
 	User User `json:"user"`
 	// Args specifies the binary and arguments for the application to execute.
@@ -50,6 +52,14 @@ type Process struct {
 	ApparmorProfile string `json:"apparmorProfile,omitempty" platform:"linux"`
 	// SelinuxLabel specifies the selinux context that the container process is run as.
 	SelinuxLabel string `json:"selinuxLabel,omitempty" platform:"linux"`
+}
+
+// Box specifies dimensions of a rectangle. Used for specifying the size of a console.
+type Box struct {
+	// Height is the vertical dimension of a box.
+	Height uint `json:"height"`
+	// Width is the horizontal dimension of a box.
+	Width uint `json:"width"`
 }
 
 // User specifies specific user (and group) information for the container process.
