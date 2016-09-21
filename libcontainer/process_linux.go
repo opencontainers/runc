@@ -32,7 +32,7 @@ type parentProcess interface {
 	// wait waits on the process returning the process state.
 	wait() (*os.ProcessState, error)
 
-	// startTime return's the process start time.
+	// startTime returns the process start time.
 	startTime() (string, error)
 
 	signal(os.Signal) error
