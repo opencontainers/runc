@@ -76,6 +76,9 @@ func newProcess(p specs.Process) (*libcontainer.Process, error) {
 		// TODO: fix libcontainer's API to better support uid/gid in a typesafe way.
 		User:            fmt.Sprintf("%d:%d", p.User.UID, p.User.GID),
 		Cwd:             p.Cwd,
+		Stdin:           os.Stdin,
+		Stdout:          os.Stdout,
+		Stderr:          os.Stderr,
 		Capabilities:    p.Capabilities,
 		Label:           p.SelinuxLabel,
 		NoNewPrivileges: &p.NoNewPrivileges,
