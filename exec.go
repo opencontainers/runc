@@ -95,6 +95,7 @@ following will output a list of processes running in the container:
 		}
 		return fmt.Errorf("exec failed: %v", err)
 	},
+	SkipArgReorder: true,
 }
 
 func execProcess(context *cli.Context) (int, error) {

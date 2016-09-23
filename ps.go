@@ -87,6 +87,7 @@ var psCommand = cli.Command{
 		}
 		return nil
 	},
+	SkipArgReorder: true,
 }
 
 func getPidIndex(title string) (int, error) {
