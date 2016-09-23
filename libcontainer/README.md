@@ -83,6 +83,7 @@ config := &configs.Config{
 	},
 	MaskPaths: []string{
 		"/proc/kcore",
+		"/sys/firmware",
 	},
 	ReadonlyPaths: []string{
 		"/proc/sys", "/proc/sysrq-trigger", "/proc/irq", "/proc/bus",
