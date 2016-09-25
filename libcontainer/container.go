@@ -61,6 +61,9 @@ type BaseState struct {
 
 	// Config is the container's configuration.
 	Config configs.Config `json:"config"`
+
+	// Process
+	Process Process `json:"process"`
 }
 
 // BaseContainer is a libcontainer container object.

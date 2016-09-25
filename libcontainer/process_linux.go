@@ -35,6 +35,9 @@ type parentProcess interface {
 	// startTime returns the process start time.
 	startTime() (string, error)
 
+	// processInfo returns the process's info
+	processInfo() *Process
+
 	signal(os.Signal) error
 
 	externalDescriptors() []string
@@ -56,6 +59,10 @@ type setnsProcess struct {
 
 func (p *setnsProcess) startTime() (string, error) {
 	return system.GetProcessStartTime(p.pid())
+}
+
+func (p *setnsProcess) processInfo() *Process {
+	return p.process
 }
 
 func (p *setnsProcess) signal(sig os.Signal) error {
@@ -397,6 +404,10 @@ func (p *initProcess) terminate() error {
 
 func (p *initProcess) startTime() (string, error) {
 	return system.GetProcessStartTime(p.pid())
+}
+
+func (p *initProcess) processInfo() *Process {
+	return p.process
 }
 
 func (p *initProcess) sendConfig() error {

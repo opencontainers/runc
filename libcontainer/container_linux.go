@@ -248,6 +248,7 @@ func (c *linuxContainer) start(process *Process, isInit bool) error {
 	}
 	// generate a timestamp indicating when the container was started
 	c.created = time.Now().UTC()
+
 	c.state = &runningState{
 		c: c,
 	}
@@ -1183,12 +1184,17 @@ func (c *linuxContainer) currentState() (*State, error) {
 	var (
 		startTime           string
 		externalDescriptors []string
-		pid                 = -1
+		pid                          = -1
+		process             *Process = &Process{}
 	)
 	if c.initProcess != nil {
 		pid = c.initProcess.pid()
 		startTime, _ = c.initProcess.startTime()
 		externalDescriptors = c.initProcess.externalDescriptors()
+		p := c.initProcess.processInfo()
+		if p != nil {
+			process = p
+		}
 	}
 	state := &State{
 		BaseState: BaseState{
@@ -1197,6 +1203,7 @@ func (c *linuxContainer) currentState() (*State, error) {
 			InitProcessPid:       pid,
 			InitProcessStartTime: startTime,
 			Created:              c.created,
+			Process:              *process,
 		},
 		CgroupPaths:         c.cgroupManager.GetPaths(),
 		NamespacePaths:      make(map[configs.NamespaceType]string),
