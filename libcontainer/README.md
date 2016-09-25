@@ -184,7 +184,7 @@ process := &libcontainer.Process{
 	Stderr: os.Stderr,
 }
 
-err := container.Start(process)
+err := container.Run(process)
 if err != nil {
 	container.Destroy()
 	logrus.Fatal(err)
