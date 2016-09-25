@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"text/tabwriter"
 	"time"
 
@@ -32,6 +33,8 @@ type containerState struct {
 	Status string `json:"status"`
 	// Bundle is the path on the filesystem to the bundle
 	Bundle string `json:"bundle"`
+	// Command is the init process to exec
+	Command []string `json:"command"`
 	// Rootfs is a path to a directory containing the container's root filesystem.
 	Rootfs string `json:"rootfs"`
 	// Created is the unix timestamp for the creation time of the container in UTC
@@ -71,7 +74,6 @@ To list containers created using a non-default value for "--root":
 		if err != nil {
 			return err
 		}
-
 		if context.Bool("quiet") {
 			for _, item := range s {
 				fmt.Println(item.ID)
@@ -82,11 +84,12 @@ To list containers created using a non-default value for "--root":
 		switch context.String("format") {
 		case "table":
 			w := tabwriter.NewWriter(os.Stdout, 12, 1, 3, ' ', 0)
-			fmt.Fprint(w, "ID\tPID\tSTATUS\tBUNDLE\tCREATED\n")
+			fmt.Fprint(w, "ID\tPID\tCOMMAND\tSTATUS\tBUNDLE\tCREATED\n")
 			for _, item := range s {
-				fmt.Fprintf(w, "%s\t%d\t%s\t%s\t%s\n",
+				fmt.Fprintf(w, "%s\t%d\t%s\t%s\t%s\t%s\n",
 					item.ID,
 					item.InitProcessPid,
+					fmt.Sprintf("\"%s\"", strings.Join(item.Command, " ")),
 					item.Status,
 					item.Bundle,
 					item.Created.Format(time.RFC3339Nano))
@@ -149,6 +152,7 @@ func getContainers(context *cli.Context) ([]containerState, error) {
 				InitProcessPid: pid,
 				Status:         containerStatus.String(),
 				Bundle:         bundle,
+				Command:        state.BaseState.Process.Args,
 				Rootfs:         state.BaseState.Config.Rootfs,
 				Created:        state.BaseState.Created,
 				Annotations:    annotations,
