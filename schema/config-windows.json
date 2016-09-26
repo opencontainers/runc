@@ -1,0 +1,75 @@
+{
+    "windows": {
+        "description": "Windows platform-specific configurations",
+        "id": "https://opencontainers.org/schema/bundle/windows",
+        "type": "object",
+        "properties": {
+            "resources": {
+                "id": "https://opencontainers.org/schema/bundle/windows/resources",
+                "type": "object",
+                "properties": {
+                    "memory": {
+                        "id": "https://opencontainers.org/schema/bundle/windows/resources/memory",
+                        "type": "object",
+                        "properties": {
+                            "limit": {
+                                "id": "https://opencontainers.org/schema/bundle/windows/resources/memory/limit",
+                                "$ref": "defs.json#/definitions/uint64Pointer"
+                            },
+                            "reservation": {
+                                "id": "https://opencontainers.org/schema/bundle/windows/resources/memory/reservation",
+                                "$ref": "defs.json#/definitions/uint64Pointer"
+                            }
+                        }
+                    },
+                    "cpu": {
+                        "id": "https://opencontainers.org/schema/bundle/windows/resources/cpu",
+                        "type": "object",
+                        "properties": {
+                            "count": {
+                                "id": "https://opencontainers.org/schema/bundle/windows/resources/cpu/count",
+                                "$ref": "defs.json#/definitions/uint64Pointer"
+                            },
+                            "shares": {
+                                "id": "https://opencontainers.org/schema/bundle/windows/resources/cpu/shares",
+                                "$ref": "defs-windows.json#/definitions/cpuSharesPointer"
+                            },
+                            "percent": {
+                                "id": "https://opencontainers.org/schema/bundle/windows/resources/cpu/percent",
+                                "$ref": "defs.json#/definitions/percentPointer"
+                            }
+                        }
+                    },
+                    "storage": {
+                        "id": "https://opencontainers.org/schema/bundle/windows/resources/storage",
+                        "type": "object",
+                        "properties": {
+                            "iops": {
+                                "id": "https://opencontainers.org/schema/bundle/windows/resources/storage/iops",
+                                "$ref": "defs.json#/definitions/uint64Pointer"
+                            },
+                            "bps": {
+                                "id": "https://opencontainers.org/schema/bundle/windows/resources/storage/bps",
+                                "$ref": "defs.json#/definitions/uint64Pointer"
+                            },
+                            "sandboxSize": {
+                                "id": "https://opencontainers.org/schema/bundle/windows/resources/storage/sandboxSize",
+                                "$ref": "defs.json#/definitions/uint64Pointer"
+                            }
+                        }
+                    },
+                    "network": {
+                        "id": "https://opencontainers.org/schema/bundle/windows/resources/network",
+                        "type": "object",
+                        "properties": {
+                            "egressBandwidth": {
+                                "id": "https://opencontainers.org/schema/bundle/windows/resources/network/egressBandwidth",
+                                "$ref": "defs.json#/definitions/uint64Pointer"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

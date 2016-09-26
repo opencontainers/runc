@@ -161,6 +161,9 @@
         },
         "solaris": {
             "$ref": "config-solaris.json#/solaris"
+        },
+        "windows": {
+            "$ref": "config-windows.json#/windows"
         }
     },
     "required": [
