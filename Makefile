@@ -10,8 +10,6 @@ RUNC_IMAGE := runc_dev$(if $(GIT_BRANCH_CLEAN),:$(GIT_BRANCH_CLEAN))
 PROJECT := github.com/opencontainers/runc
 TEST_DOCKERFILE := script/test_Dockerfile
 BUILDTAGS := seccomp
-RUNC_BUILD_PATH := /go/src/github.com/opencontainers/runc/runc
-RUNC_INSTANCE := runc_dev
 COMMIT_NO := $(shell git rev-parse HEAD 2> /dev/null || true)
 COMMIT := $(if $(shell git status --porcelain --untracked-files=no),"${COMMIT_NO}-dirty","${COMMIT_NO}")
 RUNC_LINK := $(CURDIR)/Godeps/_workspace/src/github.com/opencontainers/runc
@@ -64,9 +62,7 @@ $(RUNC_LINK):
 	ln -sfn $(CURDIR) $(RUNC_LINK)
 
 dbuild: runcimage
-	docker run --name=$(RUNC_INSTANCE) --privileged $(RUNC_IMAGE) make
-	docker cp $(RUNC_INSTANCE):$(RUNC_BUILD_PATH) .
-	docker rm $(RUNC_INSTANCE)
+	docker run --rm -v $(CURDIR):/go/src/$(PROJECT) --privileged $(RUNC_IMAGE) make
 
 lint:
 	go vet ./...
