@@ -223,17 +223,21 @@ func (l *LinuxFactory) Type() string {
 // This is a low level implementation detail of the reexec and should not be consumed externally
 func (l *LinuxFactory) StartInitialization() (err error) {
 	var pipefd, rootfd int
-	for k, v := range map[string]*int{
-		"_LIBCONTAINER_INITPIPE": &pipefd,
-		"_LIBCONTAINER_STATEDIR": &rootfd,
+	for _, pair := range []struct {
+		k string
+		v *int
+	}{
+		{"_LIBCONTAINER_INITPIPE", &pipefd},
+		{"_LIBCONTAINER_STATEDIR", &rootfd},
 	} {
-		s := os.Getenv(k)
+
+		s := os.Getenv(pair.k)
 
 		i, err := strconv.Atoi(s)
 		if err != nil {
-			return fmt.Errorf("unable to convert %s=%s to int", k, s)
+			return fmt.Errorf("unable to convert %s=%s to int", pair.k, s)
 		}
-		*v = i
+		*pair.v = i
 	}
 	var (
 		pipe = os.NewFile(uintptr(pipefd), "pipe")
