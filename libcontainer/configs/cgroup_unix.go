@@ -27,7 +27,7 @@ type Cgroup struct {
 
 	// Paths represent the absolute cgroups paths to join.
 	// This takes precedence over Path.
-	Paths map[string]string
+	Paths map[string]string `json:"paths"`
 
 	// Resources contains various cgroups settings to apply
 	*Resources

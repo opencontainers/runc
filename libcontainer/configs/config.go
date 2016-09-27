@@ -98,7 +98,7 @@ type Config struct {
 	Readonlyfs bool `json:"readonlyfs"`
 
 	// Specifies the mount propagation flags to be applied to /.
-	RootPropagation int `json:"rootPropagation"`
+	RootPropagation int `json:"root_propagation"`
 
 	// Mounts specify additional source and destination paths that will be mounted inside the container's
 	// rootfs and mount namespace if specified
@@ -176,7 +176,7 @@ type Config struct {
 
 	// Hooks are a collection of actions to perform at various container lifecycle events.
 	// CommandHooks are serialized to JSON, but other hooks are not.
-	Hooks *Hooks
+	Hooks *Hooks `json:"hooks"`
 
 	// Version is the version of opencontainer specification that is supported.
 	Version string `json:"version"`
