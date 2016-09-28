@@ -15,5 +15,5 @@ If you know of any associated projects that are not listed here, please file a p
 ## Testing & Tools
 
 * [kunalkushwaha/octool](https://github.com/kunalkushwaha/octool) - A config linter and validator.
-* [opencontainers/ocitools](https://github.com/opencontainers/ocitools) - A config generator and runtime/bundle testing framework.
 * [huawei-openlab/oct](https://github.com/huawei-openlab/oct) - Open Container Testing framework for OCI configuration and runtime
+* [opencontainers/runtime-tools](https://github.com/opencontainers/runtime-tools) - A config generator and runtime/bundle testing framework.
