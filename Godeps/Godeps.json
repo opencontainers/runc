@@ -1,6 +1,7 @@
 {
 	"ImportPath": "github.com/opencontainers/runc",
 	"GoVersion": "go1.5.3",
+	"GodepVersion": "v74",
 	"Deps": [
 		{
 			"ImportPath": "github.com/Sirupsen/logrus",
@@ -58,8 +59,8 @@
 		},
 		{
 			"ImportPath": "github.com/opencontainers/runtime-spec/specs-go",
-			"Comment": "v1.0.0-rc1-89-g7a36e7e",
-			"Rev": "7a36e7ed86ee3b4c6dbcdbd02052ec1ef6787c3c"
+			"Comment": "v1.0.0-rc2-38-g1c7c27d",
+			"Rev": "1c7c27d043c2a5e513a44084d2b10d77d1402b8c"
 		},
 		{
 			"ImportPath": "github.com/seccomp/libseccomp-golang",
