@@ -18,8 +18,8 @@ type Rlimit struct {
 
 // IDMap represents UID/GID Mappings for User Namespaces.
 type IDMap struct {
-	ContainerID int `json:"container_id"`
-	HostID      int `json:"host_id"`
+	ContainerID int `json:"containerID"`
+	HostID      int `json:"hostID"`
 	Size        int `json:"size"`
 }
 
@@ -149,10 +149,10 @@ type Config struct {
 	OomScoreAdj int `json:"oom_score_adj"`
 
 	// UidMappings is an array of User ID mappings for User Namespaces
-	UidMappings []IDMap `json:"uid_mappings"`
+	UidMappings []IDMap `json:"uidMappings"`
 
 	// GidMappings is an array of Group ID mappings for User Namespaces
-	GidMappings []IDMap `json:"gid_mappings"`
+	GidMappings []IDMap `json:"gidMappings"`
 
 	// MaskPaths specifies paths within the container's rootfs to mask over with a bind
 	// mount pointing to /dev/null as to prevent reads of the file.
