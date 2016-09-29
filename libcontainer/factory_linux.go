@@ -281,7 +281,7 @@ func (l *LinuxFactory) loadState(root, id string) (*State, error) {
 	f, err := os.Open(filepath.Join(root, stateFilename))
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, newGenericError(fmt.Errorf("container %q does not exists", id), ContainerNotExists)
+			return nil, newGenericError(fmt.Errorf("container %q does not exist", id), ContainerNotExists)
 		}
 		return nil, newGenericError(err, SystemError)
 	}
