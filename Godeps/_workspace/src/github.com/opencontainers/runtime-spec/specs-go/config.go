@@ -25,12 +25,16 @@ type Spec struct {
 	Linux *Linux `json:"linux,omitempty" platform:"linux"`
 	// Solaris is platform specific configuration for Solaris containers.
 	Solaris *Solaris `json:"solaris,omitempty" platform:"solaris"`
+	// Windows is platform specific configuration for Windows based containers, including Hyper-V containers.
+	Windows *Windows `json:"windows,omitempty" platform:"windows"`
 }
 
 // Process contains information to start a specific application inside the container.
 type Process struct {
 	// Terminal creates an interactive terminal for the container.
 	Terminal bool `json:"terminal,omitempty"`
+	// ConsoleSize specifies the size of the console.
+	ConsoleSize Box `json:"consoleSize,omitempty"`
 	// User specifies user information for the process.
 	User User `json:"user"`
 	// Args specifies the binary and arguments for the application to execute.
@@ -43,25 +47,33 @@ type Process struct {
 	// Capabilities are Linux capabilities that are kept for the container.
 	Capabilities []string `json:"capabilities,omitempty" platform:"linux"`
 	// Rlimits specifies rlimit options to apply to the process.
-	Rlimits []Rlimit `json:"rlimits,omitempty"`
+	Rlimits []Rlimit `json:"rlimits,omitempty" platform:"linux"`
 	// NoNewPrivileges controls whether additional privileges could be gained by processes in the container.
-	NoNewPrivileges bool `json:"noNewPrivileges,omitempty"`
-
-	// ApparmorProfile specifies the apparmor profile for the container. (this field is platform dependent)
+	NoNewPrivileges bool `json:"noNewPrivileges,omitempty" platform:"linux"`
+	// ApparmorProfile specifies the apparmor profile for the container.
 	ApparmorProfile string `json:"apparmorProfile,omitempty" platform:"linux"`
-	// SelinuxLabel specifies the selinux context that the container process is run as. (this field is platform dependent)
+	// SelinuxLabel specifies the selinux context that the container process is run as.
 	SelinuxLabel string `json:"selinuxLabel,omitempty" platform:"linux"`
 }
 
-// User specifies Linux/Solaris specific user and group information
-// for the container process.
+// Box specifies dimensions of a rectangle. Used for specifying the size of a console.
+type Box struct {
+	// Height is the vertical dimension of a box.
+	Height uint `json:"height"`
+	// Width is the horizontal dimension of a box.
+	Width uint `json:"width"`
+}
+
+// User specifies specific user (and group) information for the container process.
 type User struct {
-	// UID is the user id. (this field is platform dependent)
+	// UID is the user id.
 	UID uint32 `json:"uid" platform:"linux,solaris"`
-	// GID is the group id. (this field is platform dependent)
+	// GID is the group id.
 	GID uint32 `json:"gid" platform:"linux,solaris"`
-	// AdditionalGids are additional group ids set for the container's process. (this field is platform dependent)
+	// AdditionalGids are additional group ids set for the container's process.
 	AdditionalGids []uint32 `json:"additionalGids,omitempty" platform:"linux,solaris"`
+	// Username is the user name.
+	Username string `json:"username,omitempty" platform:"windows"`
 }
 
 // Root contains information about the container's root filesystem on the host.
@@ -403,6 +415,58 @@ type Anet struct {
 	Linkprotection string `json:"linkProtection,omitempty"`
 	// Set the VNIC's macAddress
 	Macaddress string `json:"macAddress,omitempty"`
+}
+
+// Windows defines the runtime configuration for Windows based containers, including Hyper-V containers.
+type Windows struct {
+	// Resources contains information for handling resource constraints for the container.
+	Resources *WindowsResources `json:"resources,omitempty"`
+}
+
+// WindowsResources has container runtime resource constraints for containers running on Windows.
+type WindowsResources struct {
+	// Memory restriction configuration.
+	Memory *WindowsMemoryResources `json:"memory,omitempty"`
+	// CPU resource restriction configuration.
+	CPU *WindowsCPUResources `json:"cpu,omitempty"`
+	// Storage restriction configuration.
+	Storage *WindowsStorageResources `json:"storage,omitempty"`
+	// Network restriction configuration.
+	Network *WindowsNetworkResources `json:"network,omitempty"`
+}
+
+// WindowsMemoryResources contains memory resource management settings.
+type WindowsMemoryResources struct {
+	// Memory limit in bytes.
+	Limit *uint64 `json:"limit,omitempty"`
+	// Memory reservation in bytes.
+	Reservation *uint64 `json:"reservation,omitempty"`
+}
+
+// WindowsCPUResources contains CPU resource management settings.
+type WindowsCPUResources struct {
+	// Number of CPUs available to the container.
+	Count *uint64 `json:"count,omitempty"`
+	// CPU shares (relative weight to other containers with cpu shares). Range is from 1 to 10000.
+	Shares *uint16 `json:"shares,omitempty"`
+	// Percent of available CPUs usable by the container.
+	Percent *uint8 `json:"percent,omitempty"`
+}
+
+// WindowsStorageResources contains storage resource management settings.
+type WindowsStorageResources struct {
+	// Specifies maximum Iops for the system drive.
+	Iops *uint64 `json:"iops,omitempty"`
+	// Specifies maximum bytes per second for the system drive.
+	Bps *uint64 `json:"bps,omitempty"`
+	// Sandbox size specifies the minimum size of the system drive in bytes.
+	SandboxSize *uint64 `json:"sandboxSize,omitempty"`
+}
+
+// WindowsNetworkResources contains network resource management settings.
+type WindowsNetworkResources struct {
+	// EgressBandwidth is the maximum egress bandwidth in bytes per second.
+	EgressBandwidth *uint64 `json:"egressBandwidth,omitempty"`
 }
 
 // Arch used for additional architectures
