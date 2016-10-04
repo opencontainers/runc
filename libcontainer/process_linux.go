@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"syscall"
+	"time"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -52,9 +53,11 @@ type setnsProcess struct {
 	process       *Process
 	bootstrapData io.Reader
 	rootDir       *os.File
+	initStartTime string
 }
 
 func (p *setnsProcess) startTime() (string, error) {
+	// We don't touch initStartTime here, because that's for internal use only.
 	return system.GetProcessStartTime(p.pid())
 }
 
@@ -122,18 +125,38 @@ func (p *setnsProcess) start() (err error) {
 // before the go runtime boots, we wait on the process to die and receive the child's pid
 // over the provided pipe.
 func (p *setnsProcess) execSetns() error {
-	status, err := p.cmd.Process.Wait()
-	if err != nil {
-		p.cmd.Wait()
-		return newSystemErrorWithCause(err, "waiting on setns process to finish")
-	}
-	if !status.Success() {
-		p.cmd.Wait()
-		return newSystemError(&exec.ExitError{ProcessState: status})
+	// The zombie reaper. Since we're in an exec here, we can just blindly
+	// wait(-1) and discard the results -- we're only going to get the
+	// nsenter processes.
+	exitChan := make(chan int)
+	go func() {
+		for {
+			var (
+				ws  syscall.WaitStatus
+				rus syscall.Rusage
+			)
+
+			pid, err := syscall.Wait4(-1, &ws, 0, &rus)
+			if err == nil && pid == p.pid() {
+				// This is the process we were waiting for.
+				exitChan <- utils.ExitStatus(ws)
+			}
+
+			// Wait for a bit, so we don't hog the CPU.
+			if err == syscall.ECHILD {
+				time.Sleep(50 * time.Millisecond)
+			}
+		}
+	}()
+
+	// Wait for the exit code.
+	exitCode := <-exitChan
+	if exitCode != 0 {
+		return fmt.Errorf("process exited with status %d", exitCode)
 	}
 	var pid *pid
 	if err := json.NewDecoder(p.parentPipe).Decode(&pid); err != nil {
-		p.cmd.Wait()
+		p.wait()
 		return newSystemErrorWithCause(err, "reading pid from init pipe")
 	}
 	process, err := os.FindProcess(pid.Pid)
@@ -142,6 +165,7 @@ func (p *setnsProcess) execSetns() error {
 	}
 	p.cmd.Process = process
 	p.process.ops = p
+	p.initStartTime, _ = p.startTime()
 	return nil
 }
 
@@ -159,6 +183,49 @@ func (p *setnsProcess) terminate() error {
 }
 
 func (p *setnsProcess) wait() (*os.ProcessState, error) {
+	// We don't have any way of supporting this in a "correct way" because
+	// setnsProcesses that join the PID namespace will double-fork and no
+	// longer be our children. But we fake it anyway.
+	if p.config.Config.Namespaces.Contains(configs.NEWPID) {
+		// There is no worry about missing zombies here, because zombied
+		// processes retain their start time and PID until they have been
+		// reaped.
+		//
+		// TODO: This could all be implemented with inotify, which would avoid
+		//       re-reading /proc/<pid>/state and the requirement for
+		//       time.Sleep().
+		for {
+			// First, check if pid1 inside the container has already reaped it.
+			st, err := system.GetProcessStartTime(p.pid())
+			if err != nil {
+				// The process no longer exists, thus the process has died.
+				break
+			}
+			if st != p.initStartTime {
+				// The process died and the PID has been recycled, but that
+				// still means that we're done.
+				break
+			}
+
+			// Check if the process has become a zombie. If it has, then it's
+			// no longer our problem (pid1 in the container can handle it).
+			state, err := system.GetProcessState(p.pid())
+			if err != nil {
+				// Same logic as above.
+				break
+			}
+			// From proc(5), this is the zombie state character.
+			if state == "Z" {
+				break
+			}
+
+			// Wait for a bit, so we don't hog the CPU.
+			time.Sleep(50 * time.Millisecond)
+		}
+		return new(os.ProcessState), nil
+	}
+
+	// Otherwise, we can just carry on.
 	err := p.cmd.Wait()
 
 	// Return actual ProcessState even on Wait error

@@ -56,38 +56,67 @@ func (h *signalHandler) forward(process *libcontainer.Process) (int, error) {
 	if err != nil {
 		return -1, err
 	}
+
+	// There are cases where we won't get a signal for the death of pid1. This
+	// goroutine handles that case, as best we can.
+	quit := make(chan struct{})
+	go func() {
+		// This code only applies if we are not the parent of pid1.
+		ppid, err := system.GetProcessParent(pid1)
+		if err != nil {
+			// TODO: Figure out what to do if pid1 died before we got here.
+			panic(err)
+		}
+		if ppid == os.Getpid() {
+			return
+		}
+
+		// Inside libcontainer, this is implemented in such a way that you can
+		// "wait" for a process that you do not own. However, you don't get any
+		// of the return information (because UNIX is lovely).
+		process.Wait()
+		close(quit)
+	}()
+
 	// perform the initial tty resize.
 	h.tty.resize()
-	for s := range h.signals {
-		switch s {
-		case syscall.SIGWINCH:
-			h.tty.resize()
-		case syscall.SIGCHLD:
-			exits, err := h.reap()
-			if err != nil {
-				logrus.Error(err)
-			}
-			for _, e := range exits {
-				logrus.WithFields(logrus.Fields{
-					"pid":    e.pid,
-					"status": e.status,
-				}).Debug("process exited")
-				if e.pid == pid1 {
-					// call Wait() on the process even though we already have the exit
-					// status because we must ensure that any of the go specific process
-					// fun such as flushing pipes are complete before we return.
-					process.Wait()
-					return e.status, nil
+	for {
+		select {
+		case <-quit:
+			// Since we are not a parent in this instance, we cannot get the
+			// exit code. While this is unfortunate for people who want to know
+			// the exit code of `exec` there's really nothing we can do here.
+			return 0, nil
+		case s := <-h.signals:
+			switch s {
+			case syscall.SIGWINCH:
+				h.tty.resize()
+			case syscall.SIGCHLD:
+				exits, err := h.reap()
+				if err != nil {
+					logrus.Error(err)
 				}
-			}
-		default:
-			logrus.Debugf("sending signal to process %s", s)
-			if err := syscall.Kill(pid1, s.(syscall.Signal)); err != nil {
-				logrus.Error(err)
+				for _, e := range exits {
+					logrus.WithFields(logrus.Fields{
+						"pid":    e.pid,
+						"status": e.status,
+					}).Debug("process exited")
+					if e.pid == pid1 {
+						// call Wait() on the process even though we already have the exit
+						// status because we must ensure that any of the go specific process
+						// fun such as flushing pipes are complete before we return.
+						process.Wait()
+						return e.status, nil
+					}
+				}
+			default:
+				logrus.Debugf("sending signal to process %s", s)
+				if err := syscall.Kill(pid1, s.(syscall.Signal)); err != nil {
+					logrus.Error(err)
+				}
 			}
 		}
 	}
-	return -1, nil
 }
 
 // reap runs wait4 in a loop until we have finished processing any existing exits

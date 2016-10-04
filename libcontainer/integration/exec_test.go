@@ -232,7 +232,7 @@ func TestEnter(t *testing.T) {
 	}
 	err = container.Run(&pconfig)
 	stdinR.Close()
-	defer stdinW.Close()
+	defer closeStdin(stdinW)
 	ok(t, err)
 	pid, err := pconfig.Pid()
 	ok(t, err)
@@ -273,7 +273,7 @@ func TestEnter(t *testing.T) {
 	stdinW2.Close()
 	waitProcess(&pconfig2, t)
 
-	stdinW.Close()
+	closeStdin(stdinW)
 	waitProcess(&pconfig, t)
 
 	// Check that both processes live in the same pidns
@@ -499,7 +499,7 @@ func testFreeze(t *testing.T, systemd bool) {
 	}
 	err = container.Run(pconfig)
 	stdinR.Close()
-	defer stdinW.Close()
+	defer closeStdin(stdinW)
 	ok(t, err)
 
 	err = container.Pause()
@@ -512,7 +512,7 @@ func testFreeze(t *testing.T, systemd bool) {
 		t.Fatal("Unexpected state: ", state)
 	}
 
-	stdinW.Close()
+	closeStdin(stdinW)
 	waitProcess(pconfig, t)
 }
 
@@ -713,7 +713,7 @@ func TestContainerState(t *testing.T) {
 		t.Fatal(err)
 	}
 	stdinR.Close()
-	defer stdinW.Close()
+	defer closeStdin(stdinW)
 
 	st, err := container.State()
 	if err != nil {
@@ -727,7 +727,7 @@ func TestContainerState(t *testing.T) {
 	if l1 != l {
 		t.Fatal("Container using non-host ipc namespace")
 	}
-	stdinW.Close()
+	closeStdin(stdinW)
 	waitProcess(p, t)
 }
 
@@ -1222,7 +1222,7 @@ func TestRootfsPropagationSlaveMount(t *testing.T) {
 
 	err = container.Run(pconfig)
 	stdinR.Close()
-	defer stdinW.Close()
+	defer closeStdin(stdinW)
 	ok(t, err)
 
 	// Create mnt1host/mnt2host and bind mount itself on top of it. This
@@ -1256,7 +1256,7 @@ func TestRootfsPropagationSlaveMount(t *testing.T) {
 
 	stdinW2.Close()
 	waitProcess(pconfig2, t)
-	stdinW.Close()
+	closeStdin(stdinW)
 	waitProcess(pconfig, t)
 
 	mountPropagated = false
@@ -1339,7 +1339,7 @@ func TestRootfsPropagationSharedMount(t *testing.T) {
 
 	err = container.Run(pconfig)
 	stdinR.Close()
-	defer stdinW.Close()
+	defer closeStdin(stdinW)
 	ok(t, err)
 
 	// Create mnt1host/mnt2cont.  This will become visible inside container
@@ -1377,7 +1377,7 @@ func TestRootfsPropagationSharedMount(t *testing.T) {
 	// Wait for process
 	stdinW2.Close()
 	waitProcess(pconfig2, t)
-	stdinW.Close()
+	closeStdin(stdinW)
 	waitProcess(pconfig, t)
 
 	defer unmountOp(dir2host)

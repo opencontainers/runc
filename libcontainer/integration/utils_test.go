@@ -5,6 +5,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -50,6 +51,14 @@ func ok(t testing.TB, err error) {
 		_, file, line, _ := runtime.Caller(1)
 		t.Fatalf("%s:%d: unexpected error: %s\n\n", filepath.Base(file), line, err.Error())
 	}
+}
+
+func closeStdin(w io.WriteCloser) {
+	// Now, a sane shell wouldn't require this, but busybox is not sane. For
+	// some reason, busybox will not wait(-1) until you enter a newline. It
+	// doesn't make any sense.
+	w.Write([]byte("\n"))
+	w.Close()
 }
 
 func waitProcess(p *libcontainer.Process, t *testing.T) {
