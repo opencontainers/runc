@@ -57,3 +57,15 @@ function teardown() {
   [[ ${lines[1]} == *"."* ]]
   [[ ${lines[2]} == *".."* ]]
 }
+
+@test "runc exec [reparenting]" {
+	# run busybox detached
+	runc run -d --console /dev/pts/ptmx test_busybox
+	[ "$status" -eq 0 ]
+
+	wait_for_container 15 1 test_busybox
+
+	runc exec test_busybox cat /proc/self/status | grep '^PPid:'
+	[ "$status" -eq 0 ]
+	[[ ${lines[0]} == "PPid: 1" ]]
+}
