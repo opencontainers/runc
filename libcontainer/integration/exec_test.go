@@ -1611,3 +1611,52 @@ func TestInitJoinNetworkAndUser(t *testing.T) {
 	stdinW1.Close()
 	waitProcess(init1, t)
 }
+
+func TestTmpfsCopyUp(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+	root, err := newTestRoot()
+	ok(t, err)
+	defer os.RemoveAll(root)
+
+	rootfs, err := newRootfs()
+	ok(t, err)
+	defer remove(rootfs)
+
+	config := newTemplateConfig(rootfs)
+
+	config.Mounts = append(config.Mounts, &configs.Mount{
+		Source:      "tmpfs",
+		Destination: "/etc",
+		Device:      "tmpfs",
+		Extensions:  configs.EXT_COPYUP,
+	})
+
+	factory, err := libcontainer.New(root, libcontainer.Cgroupfs)
+	ok(t, err)
+
+	container, err := factory.Create("test", config)
+	ok(t, err)
+	defer container.Destroy()
+
+	var stdout bytes.Buffer
+	pconfig := libcontainer.Process{
+		Args:   []string{"ls", "/etc/passwd"},
+		Env:    standardEnvironment,
+		Stdin:  nil,
+		Stdout: &stdout,
+	}
+	err = container.Run(&pconfig)
+	ok(t, err)
+
+	// Wait for process
+	waitProcess(&pconfig, t)
+
+	outputLs := string(stdout.Bytes())
+
+	// Check that the ls output has /etc/passwd
+	if !strings.Contains(outputLs, "/etc/passwd") {
+		t.Fatalf("/etc/passwd not copied up as expected: %v", outputLs)
+	}
+}
