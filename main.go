@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"strings"
 
@@ -119,6 +118,8 @@ func main() {
 				return err
 			}
 			logrus.SetOutput(f)
+			app.Writer = &LogWriter{f}
+			app.ErrWriter = app.Writer
 		}
 		switch context.GlobalString("log-format") {
 		case "text":
@@ -130,20 +131,15 @@ func main() {
 		}
 		return nil
 	}
-	// If the command returns an error, cli takes upon itself to print
-	// the error on cli.ErrWriter and exit.
-	// Use our own writer here to ensure the log gets sent to the right location.
-	cli.ErrWriter = &FatalWriter{cli.ErrWriter}
 	if err := app.Run(os.Args); err != nil {
 		fatal(err)
 	}
 }
 
-type FatalWriter struct {
-	cliErrWriter io.Writer
+type LogWriter struct {
+	Writer *os.File
 }
 
-func (f *FatalWriter) Write(p []byte) (n int, err error) {
-	logrus.Error(string(p))
-	return f.cliErrWriter.Write(p)
+func (f *LogWriter) Write(p []byte) (n int, err error) {
+	return f.Writer.Write(p)
 }
