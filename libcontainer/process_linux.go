@@ -264,7 +264,7 @@ func (p *initProcess) start() error {
 		}
 	}()
 	if err := p.createNetworkInterfaces(); err != nil {
-		return newSystemErrorWithCause(err, "creating nework interfaces")
+		return newSystemErrorWithCause(err, "creating network interfaces")
 	}
 	if err := p.sendConfig(); err != nil {
 		return newSystemErrorWithCause(err, "sending config to init process")
