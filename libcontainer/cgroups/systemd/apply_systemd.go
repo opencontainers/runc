@@ -388,7 +388,7 @@ func joinCgroups(c *configs.Cgroup, pid int) error {
 	return nil
 }
 
-// systemd represents slice heirarchy using `-`, so we need to follow suit when
+// systemd represents slice hierarchy using `-`, so we need to follow suit when
 // generating the path of slice. Essentially, test-a-b.slice becomes
 // test.slice/test-a.slice/test-a-b.slice.
 func ExpandSlice(slice string) (string, error) {
