@@ -373,7 +373,7 @@ func createCgroupConfig(name string, useSystemdCgroup bool, spec *specs.Spec) (*
 			c.Resources.CpusetMems = *r.CPU.Mems
 		}
 	}
-	if r.Pids != nil {
+	if r.Pids != nil && r.Pids.Limit != nil {
 		c.Resources.PidsLimit = *r.Pids.Limit
 	}
 	if r.BlockIO != nil {
