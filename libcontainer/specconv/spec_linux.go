@@ -537,6 +537,8 @@ func createDevices(spec *specs.Spec, config *configs.Config) error {
 	// merge in additional devices from the spec
 	for _, d := range spec.Linux.Devices {
 		var uid, gid uint32
+		var filemode os.FileMode = 0666
+
 		if d.UID != nil {
 			uid = *d.UID
 		}
@@ -547,12 +549,15 @@ func createDevices(spec *specs.Spec, config *configs.Config) error {
 		if err != nil {
 			return err
 		}
+		if d.FileMode != nil {
+			filemode = *d.FileMode
+		}
 		device := &configs.Device{
 			Type:     dt,
 			Path:     d.Path,
 			Major:    d.Major,
 			Minor:    d.Minor,
-			FileMode: *d.FileMode,
+			FileMode: filemode,
 			Uid:      uid,
 			Gid:      gid,
 		}
