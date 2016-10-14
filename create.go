@@ -39,6 +39,10 @@ command(s) that get executed on start, edit the args parameter of the spec. See
 			Usage: "specify the file to write the process id to",
 		},
 		cli.BoolFlag{
+			Name:  "no-subreaper",
+			Usage: "disable the use of the subreaper used to reap reparented processes",
+		},
+		cli.BoolFlag{
 			Name:  "no-pivot",
 			Usage: "do not use pivot root to jail process inside rootfs.  This should be used whenever the rootfs is on top of a ramdisk",
 		},
