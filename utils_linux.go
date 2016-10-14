@@ -295,7 +295,6 @@ func startContainer(context *cli.Context, spec *specs.Spec, create bool) (int, e
 	if err != nil {
 		return -1, err
 	}
-	detach := context.Bool("detach")
 	// Support on-demand socket activation by passing file descriptors into the container init process.
 	listenFDs := []*os.File{}
 	if os.Getenv("LISTEN_FDS") != "" {
@@ -307,7 +306,7 @@ func startContainer(context *cli.Context, spec *specs.Spec, create bool) (int, e
 		container:       container,
 		listenFDs:       listenFDs,
 		console:         context.String("console"),
-		detach:          detach,
+		detach:          context.Bool("detach"),
 		pidFile:         context.String("pid-file"),
 		create:          create,
 	}
