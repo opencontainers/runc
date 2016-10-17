@@ -438,6 +438,9 @@ func createCgroupConfig(name string, useSystemdCgroup bool, spec *specs.Spec) (*
 		}
 	}
 	for _, l := range r.HugepageLimits {
+		if l.Pagesize == nil || l.Limit == nil {
+			return nil, fmt.Errorf("pagesize and limit can not be empty")
+		}
 		c.Resources.HugetlbLimit = append(c.Resources.HugetlbLimit, &configs.HugepageLimit{
 			Pagesize: *l.Pagesize,
 			Limit:    *l.Limit,
