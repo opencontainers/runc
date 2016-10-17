@@ -19,6 +19,10 @@ func TestInit(t *testing.T) {
 			t.Fatal(err)
 		}
 		testDisabled := []string{"label=disable"}
+		roMountLabel := GetROMountLabel()
+		if roMountLabel == "" {
+			t.Errorf("GetROMountLabel Failed")
+		}
 		plabel, mlabel, err = InitLabels(testDisabled)
 		if err != nil {
 			t.Log("InitLabels Disabled Failed")

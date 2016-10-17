@@ -59,6 +59,10 @@ func InitLabels(options []string) (string, string, error) {
 	return processLabel, mountLabel, nil
 }
 
+func GetROMountLabel() string {
+	return selinux.GetROFileLabel()
+}
+
 // DEPRECATED: The GenLabels function is only to be used during the transition to the official API.
 func GenLabels(options string) (string, string, error) {
 	return InitLabels(strings.Fields(options))
