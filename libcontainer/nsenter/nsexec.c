@@ -622,15 +622,24 @@ void nsexec(void)
 				join_namespaces(config.namespaces);
 
 			/*
+			 * Unshare all of the namespaces. Now, it should be noted that this
+			 * ordering might break in the future (especially with rootless
+			 * containers). But for now, it's not possible to split this into
+			 * CLONE_NEWUSER + [the rest] because of some RHEL SELinux issues.
+			 *
+			 * We also  can't be sure if the current kernel supports
+			 * clone(CLONE_PARENT | CLONE_NEWPID), so we'll just do it the long
+			 * way anyway.
+			 */
+			if (unshare(config.cloneflags) < 0)
+				bail("failed to unshare namespaces");
+
+			/*
 			 * Deal with user namespaces first. They are quite special, as they
 			 * affect our ability to unshare other namespaces and are used as
 			 * context for privilege checks.
 			 */
 			if (config.cloneflags & CLONE_NEWUSER) {
-				/* Create a new user namespace. */
-				if (unshare(CLONE_NEWUSER) < 0)
-					bail("failed to unshare user namespace");
-
 				/*
 				 * We don't have the privileges to do any mapping here (see the
 				 * clone_parent rant). So signal our parent to hook us up.
@@ -646,17 +655,7 @@ void nsexec(void)
 					bail("failed to sync with parent: read(SYNC_USERMAP_ACK)");
 				if (s != SYNC_USERMAP_ACK)
 					bail("failed to sync with parent: SYNC_USERMAP_ACK: got %u", s);
-
-				config.cloneflags &= ~CLONE_NEWUSER;
 			}
-
-			/*
-			 * Now we can unshare the rest of the namespaces. We can't be sure if the
-			 * current kernel supports clone(CLONE_PARENT | CLONE_NEWPID), so we'll
-			 * just do it the long way anyway.
-			 */
-			if (unshare(config.cloneflags) < 0)
-				bail("failed to unshare namespaces");
 
 			/* TODO: What about non-namespace clone flags that we're dropping here? */
 			child = clone_parent(&env, JUMP_INIT);
