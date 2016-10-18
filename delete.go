@@ -27,8 +27,8 @@ func killContainer(container libcontainer.Container) error {
 
 var deleteCommand = cli.Command{
 	Name:  "delete",
-	Usage: "delete any resources held by one container or more containers often used with detached containers",
-	ArgsUsage: `container-id [container-id...]
+	Usage: "delete any resources held by one or more containers often used with detached containers",
+	ArgsUsage: `<container-id> [container-id...]
 
 Where "<container-id>" is the name for the instance of the container.
 
@@ -41,7 +41,7 @@ status of "ubuntu01" as "stopped" the following will delete resources held for
 	Flags: []cli.Flag{
 		cli.BoolFlag{
 			Name:  "force, f",
-			Usage: "Forcibly kills the container if it is still running",
+			Usage: "Forcibly deletes the container if it is still running (uses SIGKILL)",
 		},
 	},
 	Action: func(context *cli.Context) error {
