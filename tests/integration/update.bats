@@ -45,7 +45,7 @@ function check_cgroup_value() {
     expected=$3
 
     current=$(cat $cgroup/$source)
-    [ "$current" -eq "$expected" ]
+    [ "$current" == "$expected" ]
 }
 
 # TODO: test rt cgroup updating
@@ -61,6 +61,8 @@ function check_cgroup_value() {
         base_path=$(grep "cgroup"  /proc/self/mountinfo | gawk 'toupper($NF) ~ /\<'${g}'\>/ { print $5; exit }')
         eval CGROUP_${g}="${base_path}/runc-update-integration-test"
     done
+
+    CGROUP_SYSTEM_MEMORY=$(grep "cgroup"  /proc/self/mountinfo | gawk 'toupper($NF) ~ /\<'MEMORY'\>/ { print $5; exit }')
 
     # check that initial values were properly set
     check_cgroup_value $CGROUP_BLKIO "blkio.weight" 1000
@@ -110,17 +112,38 @@ function check_cgroup_value() {
     [ "$status" -eq 0 ]
     check_cgroup_value $CGROUP_MEMORY "memory.limit_in_bytes" 52428800
 
-
     # update memory soft limit
     runc update test_update --memory-reservation 33554432
     [ "$status" -eq 0 ]
     check_cgroup_value $CGROUP_MEMORY "memory.soft_limit_in_bytes" 33554432
 
-    # update memory swap (if available)
+    # Run swap memory tests if swap is avaialble
     if [ -f "$CGROUP_MEMORY/memory.memsw.limit_in_bytes" ]; then
+        # try to remove memory swap limit
+        runc update test_update --memory-swap -1
+        [ "$status" -eq 0 ]
+        # Get System memory swap limit
+        SYSTEM_MEMORY_SW=$(cat "${CGROUP_SYSTEM_MEMORY}/memory.memsw.limit_in_bytes")
+        check_cgroup_value $CGROUP_MEMORY "memory.memsw.limit_in_bytes" ${SYSTEM_MEMORY_SW}
+
+        # update memory swap
         runc update test_update --memory-swap 96468992
         [ "$status" -eq 0 ]
         check_cgroup_value $CGROUP_MEMORY "memory.memsw.limit_in_bytes" 96468992
+    fi;
+
+    # try to remove memory limit
+    runc update test_update --memory -1
+    [ "$status" -eq 0 ]
+
+    # Get System memory limit
+    SYSTEM_MEMORY=$(cat "${CGROUP_SYSTEM_MEMORY}/memory.limit_in_bytes")
+   	# check memory limited is gone
+    check_cgroup_value $CGROUP_MEMORY "memory.limit_in_bytes" ${SYSTEM_MEMORY}
+
+    # check swap memory limited is gone
+    if [ -f "$CGROUP_MEMORY/memory.memsw.limit_in_bytes" ]; then
+        check_cgroup_value $CGROUP_MEMORY "memory.memsw.limit_in_bytes" ${SYSTEM_MEMORY}
     fi
 
     # update kernel memory limit
