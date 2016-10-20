@@ -83,10 +83,7 @@ func (b *stoppedState) status() Status {
 
 func (b *stoppedState) transition(s containerState) error {
 	switch s.(type) {
-	case *runningState:
-		b.c.state = s
-		return nil
-	case *restoredState:
+	case *runningState, *restoredState:
 		b.c.state = s
 		return nil
 	case *stoppedState:
@@ -212,9 +209,7 @@ func (r *restoredState) status() Status {
 
 func (r *restoredState) transition(s containerState) error {
 	switch s.(type) {
-	case *stoppedState:
-		return nil
-	case *runningState:
+	case *stoppedState, *runningState:
 		return nil
 	}
 	return newStateTransitionError(r, s)
