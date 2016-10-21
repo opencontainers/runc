@@ -16,6 +16,7 @@ import (
 
 	"github.com/docker/docker/pkg/mount"
 	"github.com/docker/docker/pkg/symlink"
+	"github.com/mrunalp/fileutils"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/label"
@@ -152,14 +153,40 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 		}
 		return nil
 	case "tmpfs":
+		copyUp := m.Extensions&configs.EXT_COPYUP == configs.EXT_COPYUP
+		tmpDir := ""
 		stat, err := os.Stat(dest)
 		if err != nil {
 			if err := os.MkdirAll(dest, 0755); err != nil {
 				return err
 			}
 		}
+		if copyUp {
+			tmpDir, err = ioutil.TempDir("/tmp", "runctmpdir")
+			if err != nil {
+				return newSystemErrorWithCause(err, "tmpcopyup: failed to create tmpdir")
+			}
+			defer os.RemoveAll(tmpDir)
+			m.Destination = tmpDir
+		}
 		if err := mountPropagate(m, rootfs, mountLabel); err != nil {
 			return err
+		}
+		if copyUp {
+			if err := fileutils.CopyDirectory(dest, tmpDir); err != nil {
+				errMsg := fmt.Errorf("tmpcopyup: failed to copy %s to %s: %v", dest, tmpDir, err)
+				if err1 := syscall.Unmount(tmpDir, syscall.MNT_DETACH); err1 != nil {
+					return newSystemErrorWithCausef(err1, "tmpcopyup: %v: failed to unmount", errMsg)
+				}
+				return errMsg
+			}
+			if err := syscall.Mount(tmpDir, dest, "", syscall.MS_MOVE, ""); err != nil {
+				errMsg := fmt.Errorf("tmpcopyup: failed to move mount %s to %s: %v", tmpDir, dest, err)
+				if err1 := syscall.Unmount(tmpDir, syscall.MNT_DETACH); err1 != nil {
+					return newSystemErrorWithCausef(err1, "tmpcopyup: %v: failed to unmount", errMsg)
+				}
+				return errMsg
+			}
 		}
 		if stat != nil {
 			if err = os.Chmod(dest, stat.Mode()); err != nil {
@@ -708,7 +735,9 @@ func mountPropagate(m *configs.Mount, rootfs string, mountLabel string) error {
 	if libcontainerUtils.CleanPath(dest) == "/dev" {
 		flags &= ^syscall.MS_RDONLY
 	}
-	if !strings.HasPrefix(dest, rootfs) {
+
+	copyUp := m.Extensions&configs.EXT_COPYUP == configs.EXT_COPYUP
+	if !(copyUp || strings.HasPrefix(dest, rootfs)) {
 		dest = filepath.Join(rootfs, dest)
 	}
 
