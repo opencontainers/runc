@@ -9,3 +9,6 @@ Where "<container-id>" is your name for the instance of the container.
 # DESCRIPTION
    The state command outputs current state information for the
 instance of a container.
+
+OPTIONS:
+   --output value, -o value  select one of: ociVersion, pid, status, bundle, rootfs, created
