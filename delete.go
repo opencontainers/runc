@@ -64,7 +64,7 @@ status of "ubuntu01" as "stopped" the following will delete resources held for
 					if err := os.RemoveAll(path); err != nil {
 						fmt.Fprintf(os.Stderr, "remove %s: %v\n", path, err)
 					}
-					fmt.Fprintf(os.Stderr, "container %s is not exist\n", id)
+					fmt.Fprintf(os.Stderr, "container %s does not exist\n", id)
 				}
 				hasError = true
 				continue
