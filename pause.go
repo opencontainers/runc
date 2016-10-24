@@ -33,7 +33,7 @@ Use runc list to identiy instances of containers and their current status.`,
 		for _, id := range context.Args() {
 			container, err := factory.Load(id)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "container %s is not exist\n", id)
+				fmt.Fprintf(os.Stderr, "container %s does not exist\n", id)
 				hasError = true
 				continue
 			}
@@ -74,7 +74,7 @@ Use runc list to identiy instances of containers and their current status.`,
 		for _, id := range context.Args() {
 			container, err := factory.Load(id)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "container %s is not exist\n", id)
+				fmt.Fprintf(os.Stderr, "container %s does not exist\n", id)
 				hasError = true
 				continue
 			}

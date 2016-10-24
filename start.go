@@ -31,7 +31,7 @@ your host.`,
 		for _, id := range context.Args() {
 			container, err := factory.Load(id)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "container %s is not exist\n", id)
+				fmt.Fprintf(os.Stderr, "container %s does not exist\n", id)
 				hasError = true
 				continue
 			}
