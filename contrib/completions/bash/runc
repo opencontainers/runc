@@ -289,6 +289,22 @@ _runc_pause() {
 	esac
 }
 
+_runc_ps() {
+	local boolean_options="
+	   --help
+	   -h
+	"
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "$boolean_options $options_with_args" -- "$cur" ) )
+			;;
+		*)
+		    __runc_list_all
+		    ;;
+	esac
+}
+
 _runc_delete() {
 	local boolean_options="
 	   --help
@@ -744,6 +760,7 @@ _runc() {
 	    kill
 	    list
 	    pause
+	    ps
 	    restore
 	    resume
 	    run
