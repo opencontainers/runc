@@ -53,5 +53,5 @@ function teardown() {
 
   run cat pid.txt
   [ "$status" -eq 0 ]
-  [[ ${lines[0]} =~ [0-9]+ ]]
+  [[ ${lines[0]} == $(__runc state test_busybox | jq '.pid') ]]
 }
