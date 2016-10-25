@@ -99,7 +99,7 @@ There is a limit of 5 mappings which is the Linux kernel hard limit.
 
 ## Devices
 
-**`devices`** (array, OPTIONAL) lists devices that MUST be available in the container.
+**`devices`** (array of objects, OPTIONAL) lists devices that MUST be available in the container.
 The runtime may supply them however it likes (with [mknod][mknod.2], by bind mounting from the runtime mount namespace, etc.).
 
 The following parameters can be specified:
@@ -199,7 +199,7 @@ However, a runtime MAY attach the container process to additional cgroup control
 
 #### Device whitelist
 
-**`devices`** (array, OPTIONAL) configures the [device whitelist][cgroup-v1-devices].
+**`devices`** (array of objects, OPTIONAL) configures the [device whitelist][cgroup-v1-devices].
 The runtime MUST apply entries in the listed order.
 
 The following parameters can be specified:
@@ -270,7 +270,7 @@ For more information on how these two settings work together, see [the memory cg
 
 #### Memory
 
-`memory` represents the cgroup subsystem `memory` and it's used to set limits on the container's memory usage.
+**`memory`** (object, OPTIONAL) represents the cgroup subsystem `memory` and it's used to set limits on the container's memory usage.
 For more information, see [the memory cgroup man page][cgroup-v1-memory].
 
 The following parameters can be specified to setup the controller:
@@ -302,7 +302,7 @@ The following parameters can be specified to setup the controller:
 
 #### CPU
 
-`cpu` represents the cgroup subsystems `cpu` and `cpusets`.
+**`cpu`** (object, OPTIONAL) represents the cgroup subsystems `cpu` and `cpusets`.
 For more information, see [the cpusets cgroup man page][cgroup-v1-cpusets].
 
 The following parameters can be specified to setup the controller:
@@ -337,7 +337,7 @@ The following parameters can be specified to setup the controller:
 
 #### Block IO Controller
 
-`blockIO` represents the cgroup subsystem `blkio` which implements the block io controller.
+**`blockIO`** (object, OPTIONAL) represents the cgroup subsystem `blkio` which implements the block io controller.
 For more information, see [the kernel cgroups documentation about blkio][cgroup-v1-blkio].
 
 The following parameters can be specified to setup the controller:
@@ -395,11 +395,11 @@ The following parameters can be specified to setup the controller:
 
 #### Huge page limits
 
-`hugepageLimits` represents the `hugetlb` controller which allows to limit the
+**`hugepageLimits`** (array of objects, OPTIONAL) represents the `hugetlb` controller which allows to limit the
 HugeTLB usage per control group and enforces the controller limit during page fault.
 For more information, see the [kernel cgroups documentation about HugeTLB][cgroup-v1-hugetlb].
 
-`hugepageLimits` is an array of entries, each having the following structure:
+Each entry has the following structure:
 
 * **`pageSize`** *(string, REQUIRED)* - hugepage size
 
@@ -418,7 +418,7 @@ For more information, see the [kernel cgroups documentation about HugeTLB][cgrou
 
 #### Network
 
-`network` represents the cgroup subsystems `net_cls` and `net_prio`.
+**`network`** (object, OPTIONAL) represents the cgroup subsystems `net_cls` and `net_prio`.
 For more information, see [the net\_cls cgroup man page][cgroup-v1-net-cls] and [the net\_prio cgroup man page][cgroup-v1-net-prio].
 
 The following parameters can be specified to setup these cgroup controllers:
@@ -450,7 +450,7 @@ processes in the group and egressing the system on various interfaces. The follo
 
 #### PIDs
 
-`pids` represents the cgroup subsystem `pids`.
+**`pids`** (object, OPTIONAL) represents the cgroup subsystem `pids`.
 For more information, see [the pids cgroup man page][cgroup-v1-pids].
 
 The following parameters can be specified to setup the controller:
@@ -467,7 +467,7 @@ The following parameters can be specified to setup the controller:
 
 ## Sysctl
 
-`sysctl` allows kernel parameters to be modified at runtime for the container.
+**`sysctl`** (object, OPTIONAL) allows kernel parameters to be modified at runtime for the container.
 For more information, see [the man page](http://man7.org/linux/man-pages/man8/sysctl.8.html)
 
 ###### Example
@@ -540,7 +540,7 @@ Operator Constants:
 
 ## Rootfs Mount Propagation
 
-`rootfsPropagation` sets the rootfs's mount propagation.
+**`rootfsPropagation`** (string, OPTIONAL) sets the rootfs's mount propagation.
 Its value is either slave, private, or shared.
 [The kernel doc](https://www.kernel.org/doc/Documentation/filesystems/sharedsubtree.txt) has more information about mount propagation.
 
@@ -552,7 +552,8 @@ Its value is either slave, private, or shared.
 
 ## Masked Paths
 
-`maskedPaths` will mask over the provided paths inside the container so that they cannot be read.
+**`maskedPaths`** (array of strings, OPTIONAL) will mask over the provided paths inside the container so that they cannot be read.
+The values MUST be absolute paths in the [container namespace][container-namespace].
 
 ###### Example
 
@@ -564,7 +565,8 @@ Its value is either slave, private, or shared.
 
 ## Readonly Paths
 
-`readonlyPaths` will set the provided paths as readonly inside the container.
+**`readonlyPaths`** (array of strings, OPTIONAL) will set the provided paths as readonly inside the container.
+The values MUST be absolute paths in the [container namespace][container-namespace].
 
 ###### Example
 
@@ -576,7 +578,7 @@ Its value is either slave, private, or shared.
 
 ## Mount Label
 
-`mountLabel` will set the Selinux context for the mounts in the container.
+**`mountLabel`** (string, OPTIONAL) will set the Selinux context for the mounts in the container.
 
 ###### Example
 
@@ -584,6 +586,7 @@ Its value is either slave, private, or shared.
     "mountLabel": "system_u:object_r:svirt_sandbox_file_t:s0:c715,c811"
 ```
 
+[container-namespace]: glossary.md#container_namespace
 [cgroup-v1]: https://www.kernel.org/doc/Documentation/cgroup-v1/cgroups.txt
 [cgroup-v1-blkio]: https://www.kernel.org/doc/Documentation/cgroup-v1/blkio-controller.txt
 [cgroup-v1-cpusets]: https://www.kernel.org/doc/Documentation/cgroup-v1/cpusets.txt
