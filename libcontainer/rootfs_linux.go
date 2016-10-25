@@ -563,10 +563,12 @@ func prepareRoot(config *configs.Config) error {
 	if err := syscall.Mount("", "/", "", uintptr(flag), ""); err != nil {
 		return err
 	}
-	if config.NoPivotRoot {
-		if err := rootfsParentMountPrivate(config.Rootfs); err != nil {
-			return err
-		}
+
+	// Make parent mount private to make sure following bind mount does
+	// not propagate in other namespaces. Also it will help with kernel
+	// check pass in pivot_root. (IS_SHARED(new_mnt->mnt_parent))
+	if err := rootfsParentMountPrivate(config.Rootfs); err != nil {
+		return err
 	}
 
 	return syscall.Mount(config.Rootfs, config.Rootfs, "bind", syscall.MS_BIND|syscall.MS_REC, "")
@@ -617,15 +619,7 @@ func pivotRoot(rootfs string) error {
 	}
 
 	if err := syscall.PivotRoot(".", "."); err != nil {
-		// Make the parent mount private
-		if err := rootfsParentMountPrivate("."); err != nil {
-			return err
-		}
-
-		// Try again
-		if err := syscall.PivotRoot(".", "."); err != nil {
-			return fmt.Errorf("pivot_root %s", err)
-		}
+		return fmt.Errorf("pivot_root %s", err)
 	}
 
 	// Currently our "." is oldroot (according to the current kernel code).
