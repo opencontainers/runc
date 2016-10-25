@@ -107,7 +107,7 @@ runc run mycontainerid
 If you used the unmodified `runc spec` template this should give you a `sh` session inside the container.
 
 The second way to start a container is using the specs lifecycle operations.
-This gives you move power of how the container is created and managed while it is running.
+This gives you more power over how the container is created and managed while it is running.
 This will also launch the container in the background so you will have to edit the `config.json` to remove the `terminal` setting for the simple examples here.
 Your process field in the `config.json` should look like this below with `"terminal": false` and `"args": ["sleep", "5"]`.
 
