@@ -201,3 +201,38 @@ func TestValidateSysctl(t *testing.T) {
 		}
 	}
 }
+
+func TestValidateSysctlWithSameNs(t *testing.T) {
+	config := &configs.Config{
+		Rootfs: "/var",
+		Sysctl: map[string]string{"net.ctl": "ctl"},
+		Namespaces: configs.Namespaces(
+			[]configs.Namespace{
+				{
+					Type: configs.NEWNET,
+					Path: "/proc/self/ns/net",
+				},
+			},
+		),
+	}
+
+	validator := validate.New()
+	err := validator.Validate(config)
+	if err == nil {
+		t.Error("Expected error to occur but it was nil")
+	}
+}
+
+func TestValidateSysctlWithoutNETNamespace(t *testing.T) {
+	config := &configs.Config{
+		Rootfs:     "/var",
+		Sysctl:     map[string]string{"net.ctl": "ctl"},
+		Namespaces: []configs.Namespace{},
+	}
+
+	validator := validate.New()
+	err := validator.Validate(config)
+	if err == nil {
+		t.Error("Expected error to occur but it was nil")
+	}
+}
