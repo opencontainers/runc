@@ -46,18 +46,18 @@ See [Query State](#query-state) for information on retrieving the state of a con
 ## Lifecycle
 The lifecycle describes the timeline of events that happen from when a container is created to when it ceases to exist.
 
-1. OCI compliant runtime's `create` command is invoked with a reference to the location of the bundle and a unique identifier.
+1. OCI compliant runtime's [`create`](runtime.md#create) command is invoked with a reference to the location of the bundle and a unique identifier.
 2. The container's runtime environment MUST be created according to the configuration in [`config.json`](config.md).
    If the runtime is unable to create the environment specified in the [`config.json`](config.md), it MUST generate an error.
    While the resources requested in the [`config.json`](config.md) MUST be created, the user-specified code (from [`process`](config.md#process-configuration) MUST NOT be run at this time.
-   Any updates to `config.json` after this step MUST NOT affect the container.
+   Any updates to [`config.json`](config.md) after this step MUST NOT affect the container.
 3. Once the container is created additional actions MAY be performed based on the features the runtime chooses to support.
    However, some actions might only be available based on the current state of the container (e.g. only available while it is started).
-4. Runtime's `start` command is invoked with the unique identifier of the container.
+4. Runtime's [`start`](runtime.md#start) command is invoked with the unique identifier of the container.
    The runtime MUST run the user-specified code, as specified by [`process`](config.md#process-configuration).
 5. The container's process is stopped.
-   This MAY happen due to them erroring out, exiting, crashing or the runtime's `kill` operation being invoked.
-6. Runtime's `delete` command is invoked with the unique identifier of the container.
+   This MAY happen due to them erroring out, exiting, crashing or the runtime's [`kill`](runtime.md#kill) operation being invoked.
+6. Runtime's [`delete`](runtime.md#delete) command is invoked with the unique identifier of the container.
    The container MUST be destroyed by undoing the steps performed during create phase (step 2).
 
 ## Errors
@@ -87,7 +87,7 @@ This operation MUST generate an error if it is not provided a path to the bundle
 If the ID provided is not unique across all containers within the scope of the runtime, or is not valid in any other way, the implementation MUST generate an error and a new container MUST NOT be created.
 Using the data in [`config.json`](config.md), this operation MUST create a new container.
 This means that all of the resources associated with the container MUST be created, however, the user-specified code MUST NOT be run at this time.
-If the runtime cannot create the container as specified in `config.md`, it MUST generate an error and a new container MUST NOT be created.
+If the runtime cannot create the container as specified in [`config.md`](config.md), it MUST generate an error and a new container MUST NOT be created.
 
 Upon successful completion of this operation the `status` property of this container MUST be `created`.
 
