@@ -69,7 +69,7 @@ Unless otherwise stated, generating an error MUST leave the state of the environ
 
 OCI compliant runtimes MUST support the following operations, unless the operation is not supported by the base operating system.
 
-Note: these operations are not specifying any command-line APIs, and the paramenters are inputs for general operations.
+Note: these operations are not specifying any command-line APIs, and the parameters are inputs for general operations.
 
 ### Query State
 
