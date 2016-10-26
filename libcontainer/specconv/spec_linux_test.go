@@ -38,3 +38,27 @@ func TestLinuxCgroupsPathNotSpecified(t *testing.T) {
 		t.Errorf("Wrong cgroupsPath, expected it to be empty string, got '%s'", cgroup.Path)
 	}
 }
+
+func TestDupNamespaces(t *testing.T) {
+	spec := &specs.Spec{
+		Linux: &specs.Linux{
+			Namespaces: []specs.Namespace{
+				{
+					Type: "pid",
+				},
+				{
+					Type: "pid",
+					Path: "/proc/1/ns/pid",
+				},
+			},
+		},
+	}
+
+	_, err := CreateLibcontainerConfig(&CreateOpts{
+		Spec: spec,
+	})
+
+	if err == nil {
+		t.Errorf("Duplicated namespaces should be forbidden")
+	}
+}
