@@ -125,13 +125,15 @@ func (v *ConfigValidator) sysctl(config *configs.Config) error {
 			}
 		}
 		if strings.HasPrefix(s, "net.") {
-			if !config.Namespaces.Contains(configs.NEWNET) {
-				return fmt.Errorf("sysctl %q is not allowed in the hosts network namespace", s)
-			}
-			if path := config.Namespaces.PathOf(configs.NEWNET); path != "" {
-				if err := checkHostNs(s, path); err != nil {
-					return err
+			if config.Namespaces.Contains(configs.NEWNET) {
+				if path := config.Namespaces.PathOf(configs.NEWNET); path != "" {
+					if err := checkHostNs(s, path); err != nil {
+						return err
+					}
 				}
+				continue
+			} else {
+				return fmt.Errorf("sysctl %q is not allowed in the hosts network namespace", s)
 			}
 		}
 		return fmt.Errorf("sysctl %q is not in a separate kernel namespace", s)
