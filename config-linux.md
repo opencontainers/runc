@@ -40,6 +40,7 @@ The following parameters can be specified to setup namespaces:
 If a path is specified, that particular file is used to join that type of namespace.
 If a namespace type is not specified in the `namespaces` array, the container MUST inherit the [runtime namespace](glossary.md#runtime-namespace) of that type.
 If a new namespace is not created (because the namespace type is not listed, or because it is listed with a `path`), runtimes MUST assume that the setup for that namespace has already been done and error out if the config specifies anything else related to that namespace.
+If a `namespaces` field contains duplicated namespaces with same `type`, the runtime MUST error out.
 
 ###### Example
 
