@@ -8,7 +8,7 @@ Some of the file descriptors MAY be redirected to `/dev/null` even though they a
 
 ## Dev symbolic links
 
-After the container has `/proc` mounted, the following standard symlinks MUST be setup within `/dev/` for the io.
+After the container has `/proc` mounted, the following standard symlinks MUST be setup within `/dev/` for the IO.
 
 |    Source       | Destination |
 | --------------- | ----------- |
