@@ -73,6 +73,18 @@ If a new namespace is not created (because the namespace type is not listed, or 
 
 ## User namespace mappings
 
+**`uidMappings`** (array of objects, OPTIONAL) describes the user namespace uid mappings from the host to the container.
+**`gidMappings`** (array of objects, OPTIONAL) describes the user namespace gid mappings from the host to the container.
+
+The following parameters can be specified:
+
+* **`hostID`** (uint32, REQUIRED)* - is the starting uid/gid on the host to be mapped to *containerID*.
+* **`containerID`** (uint32, REQUIRED)* - is the starting uid/gid in the container.
+* **`size`** (uint32, REQUIRED)* - is the number of ids to be mapped.
+
+The runtime SHOULD NOT modify the ownership of referenced filesystems to realize the mapping.
+There is a limit of 5 mappings which is the Linux kernel hard limit.
+
 ###### Example
 
 ```json
@@ -91,11 +103,6 @@ If a new namespace is not created (because the namespace type is not listed, or 
         }
     ]
 ```
-
-uid/gid mappings describe the user namespace mappings from the host to the container.
-The runtime SHOULD NOT modify the ownership of referenced filesystems to realize the mapping.
-*hostID* is the starting uid/gid on the host to be mapped to *containerID* which is the starting uid/gid in the container and *size* refers to the number of ids to be mapped.
-There is a limit of 5 mappings which is the Linux kernel hard limit.
 
 ## Devices
 
