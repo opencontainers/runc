@@ -187,6 +187,9 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 		if !exists {
 			return nil, fmt.Errorf("namespace %q does not exist", ns)
 		}
+		if config.Namespaces.Contains(t) {
+			return nil, fmt.Errorf("malformed spec file: duplicated ns %q", ns)
+		}
 		config.Namespaces.Add(t, ns.Path)
 	}
 	if config.Namespaces.Contains(configs.NEWNET) {
