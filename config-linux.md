@@ -337,7 +337,7 @@ The following parameters can be specified to setup the controller:
 
 #### Block IO Controller
 
-**`blockIO`** (object, OPTIONAL) represents the cgroup subsystem `blkio` which implements the block io controller.
+**`blockIO`** (object, OPTIONAL) represents the cgroup subsystem `blkio` which implements the block IO controller.
 For more information, see [the kernel cgroups documentation about blkio][cgroup-v1-blkio].
 
 The following parameters can be specified to setup the controller:
