@@ -45,7 +45,7 @@ The accepted format is as follow (unchanged values can be omitted):
   },
   "blockIO": {
     "blkioWeight": 0
-  },
+  }
 }
 
 Note: if data is to be read from a file or the standard input, all
