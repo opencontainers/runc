@@ -76,7 +76,7 @@ If a new namespace is not created (because the namespace type is not listed, or 
 **`uidMappings`** (array of objects, OPTIONAL) describes the user namespace uid mappings from the host to the container.
 **`gidMappings`** (array of objects, OPTIONAL) describes the user namespace gid mappings from the host to the container.
 
-The following parameters can be specified:
+Each entry has the following structure:
 
 * **`hostID`** (uint32, REQUIRED)* - is the starting uid/gid on the host to be mapped to *containerID*.
 * **`containerID`** (uint32, REQUIRED)* - is the starting uid/gid in the container.
@@ -109,7 +109,7 @@ There is a limit of 5 mappings which is the Linux kernel hard limit.
 **`devices`** (array of objects, OPTIONAL) lists devices that MUST be available in the container.
 The runtime may supply them however it likes (with [mknod][mknod.2], by bind mounting from the runtime mount namespace, etc.).
 
-The following parameters can be specified:
+Each entry has the following structure:
 
 * **`type`** *(string, REQUIRED)* - type of device: `c`, `b`, `u` or `p`.
   More info in [mknod(1)][mknod.1].
@@ -209,7 +209,7 @@ However, a runtime MAY attach the container process to additional cgroup control
 **`devices`** (array of objects, OPTIONAL) configures the [device whitelist][cgroup-v1-devices].
 The runtime MUST apply entries in the listed order.
 
-The following parameters can be specified:
+Each entry has the following structure:
 
 * **`allow`** *(boolean, REQUIRED)* - whether the entry is allowed or denied.
 * **`type`** *(string, OPTIONAL)* - type of device: `a` (all), `c` (char), or `b` (block).
@@ -428,7 +428,7 @@ Each entry has the following structure:
 **`network`** (object, OPTIONAL) represents the cgroup subsystems `net_cls` and `net_prio`.
 For more information, see [the net\_cls cgroup man page][cgroup-v1-net-cls] and [the net\_prio cgroup man page][cgroup-v1-net-prio].
 
-The following parameters can be specified to setup these cgroup controllers:
+The following parameters can be specified to setup the controller:
 
 * **`classID`** *(uint32, OPTIONAL)* - is the network class identifier the cgroup's network packets will be tagged with
 
