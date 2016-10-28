@@ -67,6 +67,9 @@ To list containers created using a non-default value for "--root":
 		},
 	},
 	Action: func(context *cli.Context) error {
+		if err := checkArgs(context, 0, exactArgs); err != nil {
+			return err
+		}
 		s, err := getContainers(context)
 		if err != nil {
 			return err
