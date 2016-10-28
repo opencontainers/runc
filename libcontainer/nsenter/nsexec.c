@@ -438,10 +438,6 @@ void nsexec(void)
 	/* Parse all of the netlink configuration. */
 	nl_parse(pipenum, &config);
 
-	/* clone(2) flags are mandatory. */
-	if (config.cloneflags == -1)
-		bail("missing cloneflags");
-
 	/* Pipe so we can tell the child when we've finished setting up. */
 	if (socketpair(AF_LOCAL, SOCK_STREAM, 0, syncpipe) < 0)
 		bail("failed to setup sync pipe between parent and child");
