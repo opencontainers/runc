@@ -300,7 +300,7 @@ func createCgroupConfig(name string, useSystemdCgroup bool, spec *specs.Spec) (*
 	if r == nil {
 		return c, nil
 	}
-	for i, d := range spec.Linux.Resources.Devices {
+	for i, d := range r.Devices {
 		var (
 			t     = "a"
 			major = int64(-1)
