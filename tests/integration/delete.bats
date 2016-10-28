@@ -81,6 +81,11 @@ function teardown() {
 
   runc state test_busybox2
   [ "$status" -ne 0 ]
+
+  # delete nonexisting containers will report error
+  runc delete non_exists1 non_exists2
+  [ "$status" -ne 0 ]
+  [[ ${lines[-1]} == "failed to delete containers: non_exists1,non_exists2" ]]
 }
 
 

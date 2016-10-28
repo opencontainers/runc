@@ -5,6 +5,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/urfave/cli"
 )
@@ -20,7 +21,7 @@ paused. `,
 
 Use runc list to identiy instances of containers and their current status.`,
 	Action: func(context *cli.Context) error {
-		hasError := false
+		var failedOnes []string
 		if !context.Args().Present() {
 			return fmt.Errorf("runc: \"pause\" requires a minimum of 1 argument")
 		}
@@ -34,17 +35,17 @@ Use runc list to identiy instances of containers and their current status.`,
 			container, err := factory.Load(id)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "container %s does not exist\n", id)
-				hasError = true
+				failedOnes = append(failedOnes, id)
 				continue
 			}
 			if err := container.Pause(); err != nil {
 				fmt.Fprintf(os.Stderr, "pause container %s : %s\n", id, err)
-				hasError = true
+				failedOnes = append(failedOnes, id)
 			}
 		}
 
-		if hasError {
-			return fmt.Errorf("one or more of container pause failed")
+		if len(failedOnes) > 0 {
+			return fmt.Errorf("failed to pause containers: %s", strings.Join(failedOnes, ","))
 		}
 		return nil
 	},
@@ -61,7 +62,7 @@ resumed.`,
 
 Use runc list to identiy instances of containers and their current status.`,
 	Action: func(context *cli.Context) error {
-		hasError := false
+		var failedOnes []string
 		if !context.Args().Present() {
 			return fmt.Errorf("runc: \"resume\" requires a minimum of 1 argument")
 		}
@@ -75,17 +76,17 @@ Use runc list to identiy instances of containers and their current status.`,
 			container, err := factory.Load(id)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "container %s does not exist\n", id)
-				hasError = true
+				failedOnes = append(failedOnes, id)
 				continue
 			}
 			if err := container.Resume(); err != nil {
 				fmt.Fprintf(os.Stderr, "resume container %s : %s\n", id, err)
-				hasError = true
+				failedOnes = append(failedOnes, id)
 			}
 		}
 
-		if hasError {
-			return fmt.Errorf("one or more of container resume failed")
+		if len(failedOnes) > 0 {
+			return fmt.Errorf("failed to resume containers: %s", strings.Join(failedOnes, ","))
 		}
 		return nil
 	},
