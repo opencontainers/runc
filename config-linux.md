@@ -6,9 +6,9 @@ The Linux container specification uses various kernel features like namespaces, 
 ## Default Filesystems
 
 The Linux ABI includes both syscalls and several special file paths.
-Applications expecting a Linux environment will very likely expect these files paths to be setup correctly.
+Applications expecting a Linux environment will very likely expect these file paths to be setup correctly.
 
-The following filesystems MUST be made available in each application's filesystem
+The following filesystems MUST be made available in each application's filesystem:
 
 |   Path   |  Type  |
 | -------- | ------ |
@@ -26,7 +26,7 @@ For more information, see [the man page](http://man7.org/linux/man-pages/man7/na
 Namespaces are specified as an array of entries inside the `namespaces` root field.
 The following parameters can be specified to setup namespaces:
 
-* **`type`** *(string, REQUIRED)* - namespace type. The following namespaces types are supported:
+* **`type`** *(string, REQUIRED)* - namespace type. The following namespace types are supported:
     * **`pid`** processes inside the container will only be able to see other processes inside the same container.
     * **`network`** the container will have its own network stack.
     * **`mount`** the container will have an isolated mount table.
