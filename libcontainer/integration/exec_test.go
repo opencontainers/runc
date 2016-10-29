@@ -602,7 +602,7 @@ func testPids(t *testing.T, systemd bool) {
 	}
 
 	// Enforce a restrictive limit. 64 * /bin/true + 1 * shell should cause this
-	// to fail reliabily.
+	// to fail reliability.
 	config.Cgroups.Resources.PidsLimit = 64
 	out, _, err := runContainer(config, "", "/bin/sh", "-c", `
 	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |

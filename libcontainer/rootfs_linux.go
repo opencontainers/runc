@@ -631,7 +631,7 @@ func pivotRoot(rootfs string) error {
 		return err
 	}
 
-	// Make oldroot rprivate to make sure our unmounts don't propogate to the
+	// Make oldroot rprivate to make sure our unmounts don't propagate to the
 	// host (and thus bork the machine).
 	if err := syscall.Mount("", ".", "", syscall.MS_PRIVATE|syscall.MS_REC, ""); err != nil {
 		return err
