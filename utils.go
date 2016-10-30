@@ -6,7 +6,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/opencontainers/runtime-spec/specs-go"
-	"github.com/urfave/cli"
+	"github.com/spf13/pflag"
 )
 
 // fatal prints the error's details if it is a libcontainer specific error type
@@ -19,9 +19,8 @@ func fatal(err error) {
 }
 
 // setupSpec performs initial setup based on the cli.Context for the container
-func setupSpec(context *cli.Context) (*specs.Spec, error) {
-	bundle := context.String("bundle")
-	if bundle != "" {
+func setupSpec(flags *pflag.FlagSet) (*specs.Spec, error) {
+	if bundle, _ := flags.GetString("bundle"); bundle != "" {
 		if err := os.Chdir(bundle); err != nil {
 			return nil, err
 		}

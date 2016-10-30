@@ -16,7 +16,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
 	"github.com/opencontainers/runc/libcontainer/specconv"
 	"github.com/opencontainers/runtime-spec/specs-go"
-	"github.com/urfave/cli"
+	"github.com/spf13/pflag"
 )
 
 var errEmptyID = errors.New("container id cannot be empty")
@@ -24,42 +24,42 @@ var errEmptyID = errors.New("container id cannot be empty")
 var container libcontainer.Container
 
 // loadFactory returns the configured factory instance for execing containers.
-func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
-	root := context.GlobalString("root")
+func loadFactory(flags *pflag.FlagSet) (libcontainer.Factory, error) {
+	root, _ := flags.GetString("root")
 	abs, err := filepath.Abs(root)
 	if err != nil {
 		return nil, err
 	}
 	cgroupManager := libcontainer.Cgroupfs
-	if context.GlobalBool("systemd-cgroup") {
+	if sc, _ := flags.GetBool("systemd-cgroup"); sc {
 		if systemd.UseSystemd() {
 			cgroupManager = libcontainer.SystemdCgroups
 		} else {
 			return nil, fmt.Errorf("systemd cgroup flag passed, but systemd support for managing cgroups is not available")
 		}
 	}
-	return libcontainer.New(abs, cgroupManager, libcontainer.CriuPath(context.GlobalString("criu")))
+	criu, _ := flags.GetString("criu")
+	return libcontainer.New(abs, cgroupManager, libcontainer.CriuPath(criu))
 }
 
 // getContainer returns the specified container instance by loading it from state
 // with the default factory.
-func getContainer(context *cli.Context) (libcontainer.Container, error) {
-	id := context.Args().First()
-	if id == "" {
+func getContainer(flags *pflag.FlagSet, args []string) (libcontainer.Container, error) {
+	if len(args) < 1 {
 		return nil, errEmptyID
 	}
-	factory, err := loadFactory(context)
+	factory, err := loadFactory(flags)
 	if err != nil {
 		return nil, err
 	}
-	return factory.Load(id)
+	return factory.Load(args[0])
 }
 
 func fatalf(t string, v ...interface{}) {
 	fatal(fmt.Errorf(t, v...))
 }
 
-func getDefaultImagePath(context *cli.Context) string {
+func getDefaultImagePath() string {
 	cwd, err := os.Getwd()
 	if err != nil {
 		panic(err)
@@ -167,12 +167,12 @@ func createPidFile(path string, process *libcontainer.Process) error {
 	return os.Rename(tmpName, path)
 }
 
-func createContainer(context *cli.Context, id string, spec *specs.Spec) (libcontainer.Container, error) {
+func createContainer(flags *pflag.FlagSet, id string, spec *specs.Spec) (libcontainer.Container, error) {
 	config, err := specconv.CreateLibcontainerConfig(&specconv.CreateOpts{
 		CgroupName:       id,
-		UseSystemdCgroup: context.GlobalBool("systemd-cgroup"),
-		NoPivotRoot:      context.Bool("no-pivot"),
-		NoNewKeyring:     context.Bool("no-new-keyring"),
+		UseSystemdCgroup: func() bool { v, _ := flags.GetBool("systemd-cgroup"); return v }(),
+		NoPivotRoot:      func() bool { v, _ := flags.GetBool("no-pivot"); return v }(),
+		NoNewKeyring:     func() bool { v, _ := flags.GetBool("no-new-keyring"); return v }(),
 		Spec:             spec,
 	})
 	if err != nil {
@@ -186,7 +186,7 @@ func createContainer(context *cli.Context, id string, spec *specs.Spec) (libcont
 		return nil, err
 	}
 
-	factory, err := loadFactory(context)
+	factory, err := loadFactory(flags)
 	if err != nil {
 		return nil, err
 	}
@@ -286,12 +286,11 @@ func validateProcessSpec(spec *specs.Process) error {
 	return nil
 }
 
-func startContainer(context *cli.Context, spec *specs.Spec, create bool) (int, error) {
-	id := context.Args().First()
+func startContainer(flags *pflag.FlagSet, id string, spec *specs.Spec, create bool) (int, error) {
 	if id == "" {
 		return -1, errEmptyID
 	}
-	container, err := createContainer(context, id, spec)
+	container, err := createContainer(flags, id, spec)
 	if err != nil {
 		return -1, err
 	}
@@ -301,13 +300,13 @@ func startContainer(context *cli.Context, spec *specs.Spec, create bool) (int, e
 		listenFDs = activation.Files(false)
 	}
 	r := &runner{
-		enableSubreaper: !context.Bool("no-subreaper"),
+		enableSubreaper: func() bool { v, _ := flags.GetBool("no-subreaper"); return !v }(),
 		shouldDestroy:   true,
 		container:       container,
 		listenFDs:       listenFDs,
-		console:         context.String("console"),
-		detach:          context.Bool("detach"),
-		pidFile:         context.String("pid-file"),
+		console:         func() string { v, _ := flags.GetString("console"); return v }(),
+		detach:          func() bool { v, _ := flags.GetBool("detach"); return v }(),
+		pidFile:         func() string { v, _ := flags.GetString("pid-file"); return v }(),
 		create:          create,
 	}
 	return r.run(&spec.Process)

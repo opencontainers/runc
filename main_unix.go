@@ -8,7 +8,7 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer"
 	_ "github.com/opencontainers/runc/libcontainer/nsenter"
-	"github.com/urfave/cli"
+	"github.com/spf13/cobra"
 )
 
 func init() {
@@ -18,10 +18,10 @@ func init() {
 	}
 }
 
-var initCommand = cli.Command{
-	Name:  "init",
-	Usage: `initialize the namespaces and launch the process (do not call it outside of runc)`,
-	Action: func(context *cli.Context) error {
+var initCmd = &cobra.Command{
+	Short: `initialize the namespaces and launch the process (do not call it outside of runc)`,
+	Use:   "init [arguments...]",
+	RunE: func(cmd *cobra.Command, args []string) error {
 		factory, _ := libcontainer.New("")
 		if err := factory.StartInitialization(); err != nil {
 			// as the error is sent back to the parent there is no need to log

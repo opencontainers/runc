@@ -10,96 +10,19 @@ import (
 
 	"github.com/docker/go-units"
 	"github.com/opencontainers/runtime-spec/specs-go"
-	"github.com/urfave/cli"
+	"github.com/spf13/cobra"
 )
 
 func u64Ptr(i uint64) *uint64 { return &i }
 func u16Ptr(i uint16) *uint16 { return &i }
 
-var updateCommand = cli.Command{
-	Name:      "update",
-	Usage:     "update container resource constraints",
-	ArgsUsage: `<container-id>`,
-	Flags: []cli.Flag{
-		cli.StringFlag{
-			Name:  "resources, r",
-			Value: "",
-			Usage: `path to the file containing the resources to update or '-' to read from the standard input
+var updateCmd = &cobra.Command{
+	Short: "update container resource constraints",
+	Use:   `update [command options] <container-id>`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		flags := cmd.Flags()
 
-The accepted format is as follow (unchanged values can be omitted):
-
-{
-  "memory": {
-    "limit": 0,
-    "reservation": 0,
-    "swap": 0,
-    "kernel": 0,
-    "kernelTCP": 0
-  },
-  "cpu": {
-    "shares": 0,
-    "quota": 0,
-    "period": 0,
-    "cpus": "",
-    "mems": ""
-  },
-  "blockIO": {
-    "blkioWeight": 0
-  },
-}
-
-Note: if data is to be read from a file or the standard input, all
-other options are ignored.
-`,
-		},
-
-		cli.IntFlag{
-			Name:  "blkio-weight",
-			Usage: "Specifies per cgroup weight, range is from 10 to 1000",
-		},
-		cli.StringFlag{
-			Name:  "cpu-period",
-			Usage: "CPU period to be used for hardcapping (in usecs). 0 to use system default",
-		},
-		cli.StringFlag{
-			Name:  "cpu-quota",
-			Usage: "CPU hardcap limit (in usecs). Allowed cpu time in a given period",
-		},
-		cli.StringFlag{
-			Name:  "cpu-share",
-			Usage: "CPU shares (relative weight vs. other containers)",
-		},
-		cli.StringFlag{
-			Name:  "cpuset-cpus",
-			Usage: "CPU(s) to use",
-		},
-		cli.StringFlag{
-			Name:  "cpuset-mems",
-			Usage: "Memory node(s) to use",
-		},
-		cli.StringFlag{
-			Name:  "kernel-memory",
-			Usage: "Kernel memory limit (in bytes)",
-		},
-		cli.StringFlag{
-			Name:  "kernel-memory-tcp",
-			Usage: "Kernel memory limit (in bytes) for tcp buffer",
-		},
-		cli.StringFlag{
-			Name:  "memory",
-			Usage: "Memory limit (in bytes)",
-		},
-		cli.StringFlag{
-			Name:  "memory-reservation",
-			Usage: "Memory reservation or soft_limit (in bytes)",
-		},
-		cli.StringFlag{
-			Name:  "memory-swap",
-			Usage: "Total memory usage (memory + swap); set '-1' to enable unlimited swap",
-		},
-	},
-	Action: func(context *cli.Context) error {
-		container, err := getContainer(context)
+		container, err := getContainer(flags, args)
 		if err != nil {
 			return err
 		}
@@ -126,7 +49,7 @@ other options are ignored.
 
 		config := container.Config()
 
-		if in := context.String("resources"); in != "" {
+		if in, _ := flags.GetString("resources"); in != "" {
 			var (
 				f   *os.File
 				err error
@@ -145,13 +68,13 @@ other options are ignored.
 				return err
 			}
 		} else {
-			if val := context.Int("blkio-weight"); val != 0 {
+			if val, _ := flags.GetInt("blkio-weight"); val != 0 {
 				r.BlockIO.Weight = u16Ptr(uint16(val))
 			}
-			if val := context.String("cpuset-cpus"); val != "" {
+			if val, _ := flags.GetString("cpuset-cpus"); val != "" {
 				r.CPU.Cpus = &val
 			}
-			if val := context.String("cpuset-mems"); val != "" {
+			if val, _ := flags.GetString("cpuset-mems"); val != "" {
 				r.CPU.Mems = &val
 			}
 
@@ -164,7 +87,7 @@ other options are ignored.
 				{"cpu-quota", r.CPU.Quota},
 				{"cpu-share", r.CPU.Shares},
 			} {
-				if val := context.String(pair.opt); val != "" {
+				if val, _ := flags.GetString(pair.opt); val != "" {
 					var err error
 					*pair.dest, err = strconv.ParseUint(val, 10, 64)
 					if err != nil {
@@ -182,7 +105,7 @@ other options are ignored.
 				{"memory-reservation", r.Memory.Reservation},
 				{"memory-swap", r.Memory.Swap},
 			} {
-				if val := context.String(pair.opt); val != "" {
+				if val, _ := flags.GetString(pair.opt); val != "" {
 					v, err := units.RAMInBytes(val)
 					if err != nil {
 						return fmt.Errorf("invalid value for %s: %s", pair.opt, err)
@@ -210,4 +133,49 @@ other options are ignored.
 		}
 		return nil
 	},
+}
+
+func init() {
+	flags := updateCmd.Flags()
+
+	flags.StringP("resources", "r", "",
+		`path to the file containing the resources to update or '-' to read from the standard input
+
+The accepted format is as follow (unchanged values can be omitted):
+
+{
+  "memory": {
+    "limit": 0,
+    "reservation": 0,
+    "swap": 0,
+    "kernel": 0,
+    "kernelTCP": 0
+  },
+  "cpu": {
+    "shares": 0,
+    "quota": 0,
+    "period": 0,
+    "cpus": "",
+    "mems": ""
+  },
+  "blockIO": {
+    "blkioWeight": 0
+  },
+}
+
+Note: if data is to be read from a file or the standard input, all
+other options are ignored.
+`)
+
+	flags.Int("blkio-weight", 0, "Specifies per cgroup weight, range is from 10 to 1000")
+	flags.String("cpu-period", "", "CPU period to be used for hardcapping (in usecs). 0 to use system default")
+	flags.String("cpu-quota", "", "CPU hardcap limit (in usecs). Allowed cpu time in a given period")
+	flags.String("cpu-share", "", "CPU shares (relative weight vs. other containers)")
+	flags.String("cpuset-cpus", "", "CPU(s) to use")
+	flags.String("cpuset-mems", "", "Memory node(s) to use")
+	flags.String("kernel-memory", "", "Kernel memory limit (in bytes)")
+	flags.String("kernel-memory-tcp", "", "Kernel memory limit (in bytes) for tcp buffer")
+	flags.String("memory", "", "Memory limit (in bytes)")
+	flags.String("memory-reservation", "", "Memory reservation or soft_limit (in bytes)")
+	flags.String("memory-swap", "", "Total memory usage (memory + swap); set '-1' to enable unlimited swap")
 }

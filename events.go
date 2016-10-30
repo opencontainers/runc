@@ -12,7 +12,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
-	"github.com/urfave/cli"
+	"github.com/spf13/cobra"
 )
 
 // event struct for encoding the event data to json.
@@ -95,24 +95,20 @@ type memory struct {
 	Raw       map[string]uint64 `json:"raw,omitempty"`
 }
 
-var eventsCommand = cli.Command{
-	Name:  "events",
-	Usage: "display container events such as OOM notifications, cpu, memory, and IO usage statistics",
-	ArgsUsage: `<container-id>
+var eventsCmd = &cobra.Command{
+	Short: "display container events such as OOM notifications, cpu, memory, and IO usage statistics",
+	Use: `events [command options] <container-id>
 
 Where "<container-id>" is the name for the instance of the container.`,
-	Description: `The events command displays information about the container. By default the
+	Long: `The events command displays information about the container. By default the
 information is displayed once every 5 seconds.`,
-	Flags: []cli.Flag{
-		cli.DurationFlag{Name: "interval", Value: 5 * time.Second, Usage: "set the stats collection interval"},
-		cli.BoolFlag{Name: "stats", Usage: "display the container's stats then exit"},
-	},
-	Action: func(context *cli.Context) error {
-		container, err := getContainer(context)
+	RunE: func(cmd *cobra.Command, args []string) error {
+		flags := cmd.Flags()
+		container, err := getContainer(flags, args)
 		if err != nil {
 			return err
 		}
-		duration := context.Duration("interval")
+		duration, _ := flags.GetDuration("interval")
 		if duration <= 0 {
 			return fmt.Errorf("duration interval must be greater than 0")
 		}
@@ -138,7 +134,7 @@ information is displayed once every 5 seconds.`,
 				}
 			}
 		}()
-		if context.Bool("stats") {
+		if stats, _ := flags.GetBool("stats"); stats {
 			s, err := container.Stats()
 			if err != nil {
 				return err
@@ -149,7 +145,8 @@ information is displayed once every 5 seconds.`,
 			return nil
 		}
 		go func() {
-			for range time.Tick(context.Duration("interval")) {
+			interval, _ := flags.GetDuration("interval")
+			for range time.Tick(interval) {
 				s, err := container.Stats()
 				if err != nil {
 					logrus.Error(err)
@@ -184,6 +181,13 @@ information is displayed once every 5 seconds.`,
 		group.Wait()
 		return nil
 	},
+}
+
+func init() {
+	flags := eventsCmd.Flags()
+
+	flags.Duration("interval", 5*time.Second, "set the stats collection interval")
+	flags.Bool("stats", false, "display the container's stats then exit")
 }
 
 func convertLibcontainerStats(ls *libcontainer.Stats) *stats {

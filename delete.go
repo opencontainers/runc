@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/opencontainers/runc/libcontainer"
-	"github.com/urfave/cli"
+	"github.com/spf13/cobra"
 )
 
 func killContainer(container libcontainer.Container) error {
@@ -25,42 +25,36 @@ func killContainer(container libcontainer.Container) error {
 	return fmt.Errorf("container init still running")
 }
 
-var deleteCommand = cli.Command{
-	Name:  "delete",
-	Usage: "delete any resources held by one or more containers often used with detached containers",
-	ArgsUsage: `<container-id> [container-id...]
+var deleteCmd = &cobra.Command{
+	Short: "delete any resources held by the container often used with detached containers",
+	Use: `delete [command options] <container-id>
 
-Where "<container-id>" is the name for the instance of the container.
-
-EXAMPLE:
-For example, if the container id is "ubuntu01" and runc list currently shows the
+Where "<container-id>" is the name for the instance of the container.`,
+	Example: `For example, if the container id is "ubuntu01" and runc list currently shows the
 status of "ubuntu01" as "stopped" the following will delete resources held for
 "ubuntu01" removing "ubuntu01" from the runc list of containers:
 
        # runc delete ubuntu01`,
-	Flags: []cli.Flag{
-		cli.BoolFlag{
-			Name:  "force, f",
-			Usage: "Forcibly deletes the container if it is still running (uses SIGKILL)",
-		},
-	},
-	Action: func(context *cli.Context) error {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		hasError := false
-		if !context.Args().Present() {
+		if len(args) < 1 {
 			return fmt.Errorf("runc: \"delete\" requires a minimum of 1 argument")
 		}
 
-		factory, err := loadFactory(context)
+		flags := cmd.Flags()
+
+		factory, err := loadFactory(flags)
 		if err != nil {
 			return err
 		}
-		for _, id := range context.Args() {
+		for _, id := range args {
 			container, err := factory.Load(id)
 			if err != nil {
 				if lerr, ok := err.(libcontainer.Error); ok && lerr.Code() == libcontainer.ContainerNotExists {
 					// if there was an aborted start or something of the sort then the container's directory could exist but
 					// libcontainer does not see it because the state.json file inside that directory was never created.
-					path := filepath.Join(context.GlobalString("root"), id)
+					root, _ := flags.GetString("root")
+					path := filepath.Join(root, id)
 					if err := os.RemoveAll(path); err != nil {
 						fmt.Fprintf(os.Stderr, "remove %s: %v\n", path, err)
 					}
@@ -85,7 +79,7 @@ status of "ubuntu01" as "stopped" the following will delete resources held for
 					hasError = true
 				}
 			default:
-				if context.Bool("force") {
+				if force, _ := flags.GetBool("force"); force {
 					err := killContainer(container)
 					if err != nil {
 						fmt.Fprintf(os.Stderr, "kill container %s: %v\n", id, err)
@@ -103,4 +97,10 @@ status of "ubuntu01" as "stopped" the following will delete resources held for
 		}
 		return nil
 	},
+}
+
+func init() {
+	flags := deleteCmd.Flags()
+
+	flags.BoolP("force", "f", false, "Forcibly deletes the container if it is still running (uses SIGKILL)")
 }

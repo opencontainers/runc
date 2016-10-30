@@ -2,12 +2,12 @@
 
 package main
 
-import "github.com/urfave/cli"
+import "github.com/spf13/cobra"
 
 var (
-	checkpointCommand cli.Command
-	eventsCommand     cli.Command
-	restoreCommand    cli.Command
-	specCommand       cli.Command
-	killCommand       cli.Command
+	checkpointCommand cobra.Command
+	eventsCommand     cobra.Command
+	restoreCommand    cobra.Command
+	specCommand       cobra.Command
+	killCommand       cobra.Command
 )

@@ -10,22 +10,16 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/urfave/cli"
+	"github.com/spf13/cobra"
 )
 
-var psCommand = cli.Command{
-	Name:      "ps",
-	Usage:     "ps displays the processes running inside a container",
-	ArgsUsage: `<container-id> [ps options]`,
-	Flags: []cli.Flag{
-		cli.StringFlag{
-			Name:  "format, f",
-			Value: "",
-			Usage: `select one of: ` + formatOptions,
-		},
-	},
-	Action: func(context *cli.Context) error {
-		container, err := getContainer(context)
+// psCmd represents the ps command
+var psCmd = &cobra.Command{
+	Short: "ps displays the processes running inside a container",
+	Use:   "ps [command options] <container-id> [ps options]",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		flags := cmd.Flags()
+		container, err := getContainer(flags, args)
 		if err != nil {
 			return err
 		}
@@ -35,7 +29,7 @@ var psCommand = cli.Command{
 			return err
 		}
 
-		if context.String("format") == "json" {
+		if format, _ := flags.GetString("format"); format == "json" {
 			if err := json.NewEncoder(os.Stdout).Encode(pids); err != nil {
 				return err
 			}
@@ -46,13 +40,12 @@ var psCommand = cli.Command{
 		// context.Args(): [containet_id ps_arg1 ps_arg2 ...]
 		// psArgs:         [ps_arg1 ps_arg2 ...]
 		//
-		psArgs := context.Args()[1:]
+		psArgs := args[1:]
 		if len(psArgs) == 0 {
 			psArgs = []string{"-ef"}
 		}
 
-		cmd := exec.Command("ps", psArgs...)
-		output, err := cmd.CombinedOutput()
+		output, err := exec.Command("ps", psArgs...).CombinedOutput()
 		if err != nil {
 			return fmt.Errorf("%s: %s", err, output)
 		}
@@ -83,7 +76,13 @@ var psCommand = cli.Command{
 		}
 		return nil
 	},
-	SkipArgReorder: true,
+}
+
+func init() {
+	flags := psCmd.Flags()
+
+	flags.SetInterspersed(false)
+	flags.StringP("format", "f", "table", "select one of: table or json")
 }
 
 func getPidIndex(title string) (int, error) {

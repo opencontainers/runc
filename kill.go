@@ -8,7 +8,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/urfave/cli"
+	"github.com/spf13/cobra"
 )
 
 var signalMap = map[string]syscall.Signal{
@@ -49,28 +49,25 @@ var signalMap = map[string]syscall.Signal{
 	"XFSZ":   syscall.SIGXFSZ,
 }
 
-var killCommand = cli.Command{
-	Name:  "kill",
-	Usage: "kill sends the specified signal (default: SIGTERM) to the container's init process",
-	ArgsUsage: `<container-id> <signal>
+var killCmd = &cobra.Command{
+	Short: "kill sends the specified signal (default: SIGTERM) to the container's init process",
+	Use: `kill <container-id> <signal>
 
 Where "<container-id>" is the name for the instance of the container and
-"<signal>" is the signal to be sent to the init process.
-
-EXAMPLE:
-For example, if the container id is "ubuntu01" the following will send a "KILL"
+"<signal>" is the signal to be sent to the init process.`,
+	Example: `For example, if the container id is "ubuntu01" the following will send a "KILL"
 signal to the init process of the "ubuntu01" container:
-	 
+
        # runc kill ubuntu01 KILL`,
-	Action: func(context *cli.Context) error {
-		container, err := getContainer(context)
+	RunE: func(cmd *cobra.Command, args []string) error {
+		container, err := getContainer(cmd.Flags(), args)
 		if err != nil {
 			return err
 		}
 
-		sigstr := context.Args().Get(1)
-		if sigstr == "" {
-			sigstr = "SIGTERM"
+		sigstr := "SIGTERM"
+		if len(args) >= 2 {
+			sigstr = args[1]
 		}
 
 		signal, err := parseSignal(sigstr)
