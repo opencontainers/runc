@@ -179,13 +179,6 @@ func createContainer(context *cli.Context, id string, spec *specs.Spec) (libcont
 		return nil, err
 	}
 
-	if _, err := os.Stat(config.Rootfs); err != nil {
-		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("rootfs (%q) does not exist", config.Rootfs)
-		}
-		return nil, err
-	}
-
 	factory, err := loadFactory(context)
 	if err != nil {
 		return nil, err

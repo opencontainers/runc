@@ -46,6 +46,12 @@ func (v *ConfigValidator) Validate(config *configs.Config) error {
 // rootfs validates if the rootfs is an absolute path and is not a symlink
 // to the container's root filesystem.
 func (v *ConfigValidator) rootfs(config *configs.Config) error {
+	if _, err := os.Stat(config.Rootfs); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("rootfs (%s) does not exist", config.Rootfs)
+		}
+		return err
+	}
 	cleaned, err := filepath.Abs(config.Rootfs)
 	if err != nil {
 		return err
