@@ -17,6 +17,11 @@ You can find official releases of `runc` on the [release](https://github.com/ope
 `runc` currently supports the Linux platform with various architecture support. 
 It must be built with Go version 1.6 or higher in order for some features to function properly.
 
+In order to enable seccomp support you will need to install `libseccomp` on your platform.
+> e.g. `libseccomp-devel` for CentOS, or `libseccomp-dev` for Ubuntu
+
+Otherwise, if you do not want to build `runc` with seccomp support you can add `BUILDTAGS=""` when running make.
+
 ```bash
 # create a 'github.com/opencontainers' in your GOPATH/src
 cd github.com/opencontainers
@@ -28,9 +33,6 @@ sudo make install
 ```
 
 `runc` will be installed to `/usr/local/sbin/runc` on your system.
-
-In order to enable seccomp support you will need to install libseccomp on your platform.
-If you do not want to build `runc` with seccomp support you can add `BUILDTAGS=""` when running make.
 
 #### Build Tags
 
