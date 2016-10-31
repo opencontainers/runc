@@ -208,9 +208,9 @@ type LinuxRlimit struct {
 // LinuxHugepageLimit structure corresponds to limiting kernel hugepages
 type LinuxHugepageLimit struct {
 	// Pagesize is the hugepage size
-	Pagesize *string `json:"pageSize,omitempty"`
+	Pagesize string `json:"pageSize"`
 	// Limit is the limit of "hugepagesize" hugetlb usage
-	Limit *uint64 `json:"limit,omitempty"`
+	Limit uint64 `json:"limit"`
 }
 
 // LinuxInterfacePriority for network interfaces
@@ -242,7 +242,7 @@ type LinuxWeightDevice struct {
 type LinuxThrottleDevice struct {
 	linuxBlockIODevice
 	// Rate is the IO rate limit per cgroup per device
-	Rate *uint64 `json:"rate,omitempty"`
+	Rate uint64 `json:"rate"`
 }
 
 // LinuxBlockIO for Linux cgroup 'blkio' resource management
@@ -300,7 +300,7 @@ type LinuxCPU struct {
 // LinuxPids for Linux cgroup 'pids' resource management (Linux 4.3)
 type LinuxPids struct {
 	// Maximum number of PIDs. Default is "no limit".
-	Limit *int64 `json:"limit,omitempty"`
+	Limit int64 `json:"limit"`
 }
 
 // LinuxNetwork identification and priority configuration
