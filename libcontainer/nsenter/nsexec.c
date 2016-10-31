@@ -447,10 +447,17 @@ void nsexec(void)
 	/*
 	 * Okay, so this is quite annoying.
 	 *
-	 * In order to make sure that deal with older kernels (when CLONE_NEWUSER
-	 * wasn't guaranteed to be done first if you specify multiple namespaces in
-	 * a clone(2) invocation) as well as with certain usecases like rootless
-	 * containers, we cannot just dump all of the cloneflags into clone(2).
+	 * In order for this unsharing code to be more extensible we need to split
+	 * up unshare(CLONE_NEWUSER) and clone() in various ways. The ideal case
+	 * would be if we did clone(CLONE_NEWUSER) and the other namespaces
+	 * separately, but because of SELinux issues we cannot really do that. But
+	 * we cannot just dump the namespace flags into clone(...) because several
+	 * usecases (such as rootless containers) require more granularity around
+	 * the namespace setup. In addition, some older kernels had issues where
+	 * CLONE_NEWUSER wasn't handled before other namespaces (but we cannot
+	 * handle this while also dealing with SELinux so we choose SELinux support
+	 * over broken kernel support).
+	 *
 	 * However, if we unshare(2) the user namespace *before* we clone(2), then
 	 * all hell breaks loose.
 	 *
@@ -623,9 +630,9 @@ void nsexec(void)
 			 * containers). But for now, it's not possible to split this into
 			 * CLONE_NEWUSER + [the rest] because of some RHEL SELinux issues.
 			 *
-			 * We also  can't be sure if the current kernel supports
-			 * clone(CLONE_PARENT | CLONE_NEWPID), so we'll just do it the long
-			 * way anyway.
+			 * Note that we don't merge this with clone() because there were
+			 * some old kernel versions where clone(CLONE_PARENT | CLONE_NEWPID)
+			 * was broken, so we'll just do it the long way anyway.
 			 */
 			if (unshare(config.cloneflags) < 0)
 				bail("failed to unshare namespaces");
@@ -701,7 +708,7 @@ void nsexec(void)
 			syncfd = syncpipe[0];
 
 			/* For debugging. */
-			prctl(PR_SET_NAME, (unsigned long) "runc:[1:INIT]", 0, 0, 0);
+			prctl(PR_SET_NAME, (unsigned long) "runc:[2:INIT]", 0, 0, 0);
 
 			if (setsid() < 0)
 				bail("setsid failed");
