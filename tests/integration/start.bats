@@ -23,7 +23,7 @@ function teardown() {
   testcontainer test_busybox2 created
 
 
-  # start conatiner test_busybox1 and test_busybox2
+  # start container test_busybox1 and test_busybox2
   runc start test_busybox1 test_busybox2
   [ "$status" -eq 0 ]
 
