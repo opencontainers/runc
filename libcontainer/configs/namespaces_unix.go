@@ -96,13 +96,13 @@ func (n *Namespaces) Remove(t NamespaceType) bool {
 	return true
 }
 
-func (n *Namespaces) Add(t NamespaceType, path string) {
+func (n *Namespaces) Add(t NamespaceType, path string) bool {
 	i := n.index(t)
 	if i == -1 {
 		*n = append(*n, Namespace{Type: t, Path: path})
-		return
+		return true
 	}
-	(*n)[i].Path = path
+	return false
 }
 
 func (n *Namespaces) index(t NamespaceType) int {
