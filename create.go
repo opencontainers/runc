@@ -54,6 +54,9 @@ command(s) that get executed on start, edit the args parameter of the spec. See
 			cli.ShowCommandHelp(context, "create")
 			return fmt.Errorf("runc: \"create\" requires exactly one argument")
 		}
+		if err := revisePidFile(context); err != nil {
+			return err
+		}
 		spec, err := setupSpec(context)
 		if err != nil {
 			return err
