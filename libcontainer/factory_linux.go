@@ -256,11 +256,13 @@ func (l *LinuxFactory) StartInitialization() (err error) {
 		if _, ok := i.(*linuxStandardInit); ok {
 			//  Synchronisation only necessary for standard init.
 			if werr := utils.WriteJSON(pipe, syncT{procError}); werr != nil {
-				panic(err)
+				fmt.Fprintln(os.Stderr, err)
+				return
 			}
 		}
 		if werr := utils.WriteJSON(pipe, newSystemError(err)); werr != nil {
-			panic(err)
+			fmt.Fprintln(os.Stderr, err)
+			return
 		}
 		// ensure that this pipe is always closed
 		pipe.Close()
