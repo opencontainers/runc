@@ -40,7 +40,7 @@ The TOB and project maintainers will work together to notify affected parties be
 
 ## Amendments
 
-The [project governance](#project-governance) rules and procedures MAY be ammended or replaced using the procedures themselves.
+The [project governance](#project-governance) rules and procedures MAY be amended or replaced using the procedures themselves.
 The MAINTAINERS of this project governance document is the total set of MAINTAINERS from all Open Containers projects (runC, runtime-spec, and image-spec).
 
 ## Subject templates
