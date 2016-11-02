@@ -317,7 +317,7 @@ loop:
 			}
 			// Sync with child.
 			if err := utils.WriteJSON(p.parentPipe, syncT{procRun}); err != nil {
-				return newSystemErrorWithCause(err, "reading syncT run type")
+				return newSystemErrorWithCause(err, "writing syncT run type")
 			}
 			sentRun = true
 		case procHooks:
@@ -337,7 +337,7 @@ loop:
 			}
 			// Sync with child.
 			if err := utils.WriteJSON(p.parentPipe, syncT{procResume}); err != nil {
-				return newSystemErrorWithCause(err, "reading syncT resume type")
+				return newSystemErrorWithCause(err, "writing syncT resume type")
 			}
 			sentResume = true
 		case procError:
