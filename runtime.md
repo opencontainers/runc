@@ -19,7 +19,7 @@ The value MAY be one of:
     * `running`: the container has been created and the user-specified code is running
     * `stopped`: the container has been created and the user-specified code has been executed but is no longer running
 
-  Additional values MAY be defined by the runtime, however, they MUST be used to represent new runtime states not defined above.
+    Additional values MAY be defined by the runtime, however, they MUST be used to represent new runtime states not defined above.
 * **`pid`**: (int) is the ID of the container process, as seen by the host.
 * **`bundlePath`**: (string) is the absolute path to the container's bundle directory.
 This is provided so that consumers can find the container's configuration and root filesystem on the host.
