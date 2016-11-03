@@ -110,16 +110,23 @@ See links for details about [mountvol](http://ss64.com/nt/mountvol.html) and [Se
 For Linux-based systems the process structure supports the following process specific fields:
 
 * **`capabilities`** (array of strings, OPTIONAL) capabilities is an array that specifies Linux capabilities that can be provided to the process inside the container.
-Valid values are the strings for capabilities defined in [the man page](http://man7.org/linux/man-pages/man7/capabilities.7.html)
-* **`rlimits`** (array of rlimits, OPTIONAL) rlimits is an array of rlimits that allows setting resource limits for a process inside the container.
-The kernel enforces the `soft` limit for a resource while the `hard` limit acts as a ceiling for that value that could be set by an unprivileged process.
-Valid values for the 'type' field are the resources defined in [the man page](http://man7.org/linux/man-pages/man2/setrlimit.2.html).
+  Valid values are the strings for capabilities defined in [the man page](http://man7.org/linux/man-pages/man7/capabilities.7.html).
+* **`rlimits`** (array of objects, OPTIONAL) allows setting resource limits for a process inside the container.
+  Each entry has the following structure:
+
+    * **`type`** (string, REQUIRED) - the 'type' field are the resources defined in [the man page](http://man7.org/linux/man-pages/man2/setrlimit.2.html).
+    * **`soft`** (uint64, REQUIRED) - the value that the kernel enforces for the corresponding resource.
+    * **`hard`** (uint64, REQUIRED) - the ceiling for the soft limit that could be set by an unprivileged process.
+      Only privileged process (under Linux: one with the CAP_SYS_RESOURCE capability) can raise a hard limit.
+
+    If `rlimits` contains duplicated entries with same `type`, the runtime MUST error out.
+
 * **`apparmorProfile`** (string, OPTIONAL) apparmor profile specifies the name of the apparmor profile that will be used for the container.
-For more information about Apparmor, see [Apparmor documentation](https://wiki.ubuntu.com/AppArmor)
+  For more information about Apparmor, see [Apparmor documentation](https://wiki.ubuntu.com/AppArmor)
 * **`selinuxLabel`** (string, OPTIONAL) SELinux process label specifies the label with which the processes in a container are run.
-For more information about SELinux, see  [Selinux documentation](http://selinuxproject.org/page/Main_Page)
+  For more information about SELinux, see  [Selinux documentation](http://selinuxproject.org/page/Main_Page)
 * **`noNewPrivileges`** (bool, OPTIONAL) setting `noNewPrivileges` to true prevents the processes in the container from gaining additional privileges.
-[The kernel doc](https://www.kernel.org/doc/Documentation/prctl/no_new_privs.txt) has more information on how this is achieved using a prctl system call.
+  [The kernel doc](https://www.kernel.org/doc/Documentation/prctl/no_new_privs.txt) has more information on how this is achieved using a prctl system call.
 
 ### User
 
