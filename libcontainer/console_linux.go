@@ -17,6 +17,9 @@ func NewConsole(uid, gid int) (Console, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := saneTerminal(master); err != nil {
+		return nil, err
+	}
 	console, err := ptsname(master)
 	if err != nil {
 		return nil, err
@@ -142,4 +145,27 @@ func ptsname(f *os.File) (string, error) {
 		return "", err
 	}
 	return fmt.Sprintf("/dev/pts/%d", n), nil
+}
+
+// saneTerminal sets the necessary tty_ioctl(4)s to ensure that a pty pair
+// created by us acts normally. In particular, a not-very-well-known default of
+// Linux unix98 ptys is that they have +onlcr by default. While this isn't a
+// problem for terminal emulators, because we relay data from the terminal we
+// also relay that funky line discipline.
+func saneTerminal(terminal *os.File) error {
+	// Go doesn't have a wrapper for any of the termios ioctls.
+	var termios syscall.Termios
+
+	if err := ioctl(terminal.Fd(), syscall.TCGETS, uintptr(unsafe.Pointer(&termios))); err != nil {
+		return fmt.Errorf("ioctl(tty, tcgets): %s", err.Error())
+	}
+
+	// Set -onlcr so we don't have to deal with \r.
+	termios.Oflag &^= syscall.ONLCR
+
+	if err := ioctl(terminal.Fd(), syscall.TCSETS, uintptr(unsafe.Pointer(&termios))); err != nil {
+		return fmt.Errorf("ioctl(tty, tcsets): %s", err.Error())
+	}
+
+	return nil
 }
