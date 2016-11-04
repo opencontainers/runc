@@ -84,11 +84,11 @@
         },
         "Major": {
             "description": "major device number",
-            "$ref": "defs.json#/definitions/uint16"
+            "$ref": "defs.json#/definitions/int64"
         },
         "Minor": {
             "description": "minor device number",
-            "$ref": "defs.json#/definitions/uint16"
+            "$ref": "defs.json#/definitions/int64"
         },
         "FileMode": {
             "description": "File permissions mode (typically an octal value)",
