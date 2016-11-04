@@ -58,3 +58,41 @@ function teardown() {
   [[ ${lines[1]} == *"."* ]]
   [[ ${lines[2]} == *".."* ]]
 }
+
+@test "runc exec ls -la with --cwd" {
+  # run busybox detached
+  runc run -d --console /dev/pts/ptmx test_busybox
+  [ "$status" -eq 0 ]
+
+  wait_for_container 15 1 test_busybox
+
+  runc exec --cwd /bin test_busybox pwd
+  [ "$status" -eq 0 ]
+  [[ ${output} == "/bin" ]]
+}
+
+@test "runc exec --env" {
+  # run busybox detached
+  runc run -d --console /dev/pts/ptmx test_busybox
+  [ "$status" -eq 0 ]
+
+  wait_for_container 15 1 test_busybox
+
+  runc exec --env RUNC_EXEC_TEST=true test_busybox env
+  [ "$status" -eq 0 ]
+
+  [[ ${output} == *"RUNC_EXEC_TEST=true"* ]]
+}
+
+@test "runc exec --user" {
+  # run busybox detached
+  runc run -d --console /dev/pts/ptmx test_busybox
+  [ "$status" -eq 0 ]
+
+  wait_for_container 15 1 test_busybox
+
+  runc exec --user 1000:1000 test_busybox id
+  [ "$status" -eq 0 ]
+
+  [[ ${output} == "uid=1000 gid=1000" ]]
+}
