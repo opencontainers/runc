@@ -106,6 +106,13 @@ func TestValidateSecurityWithMaskPaths(t *testing.T) {
 				{Type: configs.NEWNS},
 			},
 		),
+		// Required to pass mount validation.
+		Mounts: []*configs.Mount{
+			{Destination: "/proc"},
+			{Destination: "/sys"},
+			{Destination: "/dev/shm"},
+			{Destination: "/dev/pts"},
+		},
 	}
 
 	validator := validate.New()
@@ -124,6 +131,13 @@ func TestValidateSecurityWithROPaths(t *testing.T) {
 				{Type: configs.NEWNS},
 			},
 		),
+		// Required to pass mount validation.
+		Mounts: []*configs.Mount{
+			{Destination: "/proc"},
+			{Destination: "/sys"},
+			{Destination: "/dev/shm"},
+			{Destination: "/dev/pts"},
+		},
 	}
 
 	validator := validate.New()

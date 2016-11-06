@@ -25,6 +25,9 @@ func (v *ConfigValidator) Validate(config *configs.Config) error {
 	if err := v.rootfs(config); err != nil {
 		return err
 	}
+	if err := v.mounts(config); err != nil {
+		return err
+	}
 	if err := v.network(config); err != nil {
 		return err
 	}
@@ -62,6 +65,29 @@ func (v *ConfigValidator) rootfs(config *configs.Config) error {
 	if filepath.Clean(config.Rootfs) != cleaned {
 		return fmt.Errorf("%s is not an absolute path or is a symlink", config.Rootfs)
 	}
+	return nil
+}
+
+// mounts validates that the config actually has all of the required
+// mountpoints as specified by the runtime-spec (config-linux.md#default-filesystems).
+func (v *ConfigValidator) mounts(config *configs.Config) error {
+	if !config.Namespaces.Contains(configs.NEWNS) {
+		// No mount namespace, nothing to check.
+		return nil
+	}
+
+	dests := map[string]bool{}
+	for _, mount := range config.Mounts {
+		dests[filepath.Clean(mount.Destination)] = true
+	}
+
+	// From the spec.
+	for _, mountpoint := range []string{"/proc", "/sys", "/dev/shm", "/dev/pts"} {
+		if ok := dests[mountpoint]; !ok {
+			return fmt.Errorf("mount config is missing required filesystem: %s", mountpoint)
+		}
+	}
+
 	return nil
 }
 
