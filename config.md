@@ -94,7 +94,8 @@ See links for details about [mountvol](http://ss64.com/nt/mountvol.html) and [Se
 
 **`process`** (object, REQUIRED) configures the container process.
 
-* **`terminal`** (bool, OPTIONAL) specifies whether you want a terminal attached to that process, defaults to false.
+* **`terminal`** (bool, optional) specifies whether a terminal is attached to that process, defaults to false.
+  On Linux, a pseudoterminal pair is allocated for the container process and the pseudoterminal slave is duplicated on the container process's [standard streams][stdin.3].
 * **`consoleSize`** (object, OPTIONAL) specifies the console size of the terminal if attached, containing the following properties:
   * **`height`** (uint, REQUIRED)
   * **`width`** (uint, REQUIRED)
@@ -744,3 +745,4 @@ Here is a full example `config.json` for reference.
 [mount.8-filesystem-independent]: http://man7.org/linux/man-pages/man8/mount.8.html#FILESYSTEM-INDEPENDENT_MOUNT%20OPTIONS
 [mount.8-filesystem-specific]: http://man7.org/linux/man-pages/man8/mount.8.html#FILESYSTEM-SPECIFIC_MOUNT%20OPTIONS
 [mount.8]: http://man7.org/linux/man-pages/man8/mount.8.html
+[stdin.3]: http://man7.org/linux/man-pages/man3/stdin.3.html
