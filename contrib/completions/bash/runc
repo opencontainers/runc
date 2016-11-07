@@ -719,6 +719,8 @@ _runc_update() {
 	   --blkio-weight
 	   --cpu-period
 	   --cpu-quota
+	   --cpu-rt-period
+	   --cpu-rt-runtime
 	   --cpu-share
 	   --cpuset-cpus
 	   --cpuset-mems
