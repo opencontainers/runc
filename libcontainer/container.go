@@ -145,9 +145,12 @@ type BaseContainer interface {
 
 	// Signal sends the provided signal code to the container's initial process.
 	//
+	// If all is specified the signal is sent to all processes in the container
+	// including the initial process.
+	//
 	// errors:
 	// SystemError - System error.
-	Signal(s os.Signal) error
+	Signal(s os.Signal, all bool) error
 
 	// Exec signals the container to exec the users process at the end of the init.
 	//

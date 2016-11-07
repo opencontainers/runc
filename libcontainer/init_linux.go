@@ -334,10 +334,10 @@ func setOomScoreAdj(oomScoreAdj int, pid int) error {
 	return ioutil.WriteFile(path, []byte(strconv.Itoa(oomScoreAdj)), 0600)
 }
 
-// killCgroupProcesses freezes then iterates over all the processes inside the
+// signalAllProcesses freezes then iterates over all the processes inside the
 // manager's cgroups sending a SIGKILL to each process then waiting for them to
 // exit.
-func killCgroupProcesses(m cgroups.Manager) error {
+func signalAllProcesses(m cgroups.Manager, s os.Signal) error {
 	var procs []*os.Process
 	if err := m.Freeze(configs.Frozen); err != nil {
 		logrus.Warn(err)
@@ -354,7 +354,7 @@ func killCgroupProcesses(m cgroups.Manager) error {
 			continue
 		}
 		procs = append(procs, p)
-		if err := p.Kill(); err != nil {
+		if err := p.Signal(s); err != nil {
 			logrus.Warn(err)
 		}
 	}
