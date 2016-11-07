@@ -46,6 +46,7 @@ The runtime MUST mount entries in the listed order.
 The parameters are similar to the ones in [the Linux mount system call](http://man7.org/linux/man-pages/man2/mount.2.html).
 
 * **`destination`** (string, REQUIRED) Destination of mount point: path inside container.
+  This value MUST be an absolute path.
   For the Windows operating system, one mount destination MUST NOT be nested within another mount (e.g., c:\\foo and c:\\foo\\bar).
 * **`type`** (string, REQUIRED) The filesystem type of the filesystem to be mounted.
   Linux: *filesystemtype* argument supported by the kernel are listed in */proc/filesystems* (e.g., "minix", "ext2", "ext3", "jfs", "xfs", "reiserfs", "msdos", "proc", "nfs", "iso9660").
