@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	"github.com/docker/go-units"
+	"github.com/opencontainers/runc/libcontainer/specconv"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/urfave/cli"
 )
@@ -24,35 +25,7 @@ var updateCommand = cli.Command{
 		cli.StringFlag{
 			Name:  "resources, r",
 			Value: "",
-			Usage: `path to the file containing the resources to update or '-' to read from the standard input
-
-The accepted format is as follow (unchanged values can be omitted):
-
-{
-  "memory": {
-    "limit": 0,
-    "reservation": 0,
-    "swap": 0,
-    "kernel": 0,
-    "kernelTCP": 0
-  },
-  "cpu": {
-    "shares": 0,
-    "quota": 0,
-    "period": 0,
-    "realtimeRuntime": 0,
-    "realtimePeriod": 0,
-    "cpus": "",
-    "mems": ""
-  },
-  "blockIO": {
-    "blkioWeight": 0
-  }
-}
-
-Note: if data is to be read from a file or the standard input, all
-other options are ignored.
-`,
+			Usage: "path to the file containing the resources to update or '-' to read from the standard input",
 		},
 
 		cli.IntFlag{
@@ -156,6 +129,7 @@ other options are ignored.
 			if err != nil {
 				return err
 			}
+
 		} else {
 			if val := context.Int("blkio-weight"); val != 0 {
 				r.BlockIO.Weight = u16Ptr(uint16(val))
@@ -206,20 +180,20 @@ other options are ignored.
 			}
 		}
 
-		// Update the value
-		config.Cgroups.Resources.BlkioWeight = *r.BlockIO.Weight
-		config.Cgroups.Resources.CpuPeriod = int64(*r.CPU.Period)
-		config.Cgroups.Resources.CpuQuota = int64(*r.CPU.Quota)
-		config.Cgroups.Resources.CpuShares = int64(*r.CPU.Shares)
-		config.Cgroups.Resources.CpuRtPeriod = int64(*r.CPU.RealtimePeriod)
-		config.Cgroups.Resources.CpuRtRuntime = int64(*r.CPU.RealtimeRuntime)
-		config.Cgroups.Resources.CpusetCpus = *r.CPU.Cpus
-		config.Cgroups.Resources.CpusetMems = *r.CPU.Mems
-		config.Cgroups.Resources.KernelMemory = int64(*r.Memory.Kernel)
-		config.Cgroups.Resources.KernelMemoryTCP = int64(*r.Memory.KernelTCP)
-		config.Cgroups.Resources.Memory = int64(*r.Memory.Limit)
-		config.Cgroups.Resources.MemoryReservation = int64(*r.Memory.Reservation)
-		config.Cgroups.Resources.MemorySwap = int64(*r.Memory.Swap)
+		// create temp spec.Spec for carrying the Resources
+		tmpSpec := &specs.Spec{
+			Linux: &specs.Linux{
+				Resources: &r,
+			},
+		}
+
+		// we don't care about first two params('name' and 'useSystemdCgroup')
+		// only need to get formatted Resources
+		tmpCgroups, err := specconv.CreateCgroupConfig(config.Cgroups.Name, false, tmpSpec)
+		if err != nil {
+			return err
+		}
+		config.Cgroups.Resources = tmpCgroups.Resources
 
 		if err := container.Set(config); err != nil {
 			return err

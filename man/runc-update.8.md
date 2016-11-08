@@ -9,6 +9,12 @@
 accepted format is as follow (unchanged values can be omitted):
 
    {
+     "devices": [
+       {
+         "allow": false,
+         "access": "rwm"
+       }
+     ],
      "memory": {
        "limit": 0,
        "reservation": 0,
@@ -25,9 +31,15 @@ accepted format is as follow (unchanged values can be omitted):
        "cpus": "",
        "mems": ""
      },
+     "pids": {
+       "limit": 0
+     },
      "blockIO": {
-       "blkioWeight": 0
-     }
+       "blkioWeight": 0,
+       "blkioLeafWeight": 0
+     },
+     "hugepageLimits": [],
+     "network": {}
    }
 
 Note: if data is to be read from a file or the standard input, all

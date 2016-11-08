@@ -208,7 +208,7 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 	if err := setupUserNamespace(spec, config); err != nil {
 		return nil, err
 	}
-	c, err := createCgroupConfig(opts.CgroupName, opts.UseSystemdCgroup, spec)
+	c, err := CreateCgroupConfig(opts.CgroupName, opts.UseSystemdCgroup, spec)
 	if err != nil {
 		return nil, err
 	}
@@ -255,7 +255,8 @@ func createLibcontainerMount(cwd string, m specs.Mount) *configs.Mount {
 	}
 }
 
-func createCgroupConfig(name string, useSystemdCgroup bool, spec *specs.Spec) (*configs.Cgroup, error) {
+// CreateCgroupConfig convert specs.Spec to config.Cgroups
+func CreateCgroupConfig(name string, useSystemdCgroup bool, spec *specs.Spec) (*configs.Cgroup, error) {
 	var myCgroupPath string
 
 	c := &configs.Cgroup{
