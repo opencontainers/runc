@@ -361,7 +361,8 @@ The following parameters can be specified to setup the controller:
 
     You must specify at least one of `weight` or `leafWeight` in a given entry, and can specify both.
 
-* **`blkioThrottleReadBpsDevice`**, **`blkioThrottleWriteBpsDevice`**, **`blkioThrottleReadIOPSDevice`**, **`blkioThrottleWriteIOPSDevice`** *(array, OPTIONAL)* - specify the list of devices which will be IO rate limited. The following parameters can be specified per-device:
+* **`blkioThrottleReadBpsDevice`**, **`blkioThrottleWriteBpsDevice`**, **`blkioThrottleReadIOPSDevice`**, **`blkioThrottleWriteIOPSDevice`** *(array, OPTIONAL)* - specify the list of devices which will be IO rate limited.
+  The following parameters can be specified per-device:
     * **`major, minor`** *(int64, REQUIRED)* - major, minor numbers for device. More info in `man mknod`.
     * **`rate`** *(uint64, REQUIRED)* - IO rate limit for the device
 
@@ -433,8 +434,8 @@ The following parameters can be specified to setup the controller:
 
 * **`classID`** *(uint32, OPTIONAL)* - is the network class identifier the cgroup's network packets will be tagged with
 
-* **`priorities`** *(array, OPTIONAL)* - specifies a list of objects of the priorities assigned to traffic originating from
-processes in the group and egressing the system on various interfaces. The following parameters can be specified per-priority:
+* **`priorities`** *(array, OPTIONAL)* - specifies a list of objects of the priorities assigned to traffic originating from processes in the group and egressing the system on various interfaces.
+  The following parameters can be specified per-priority:
     * **`name`** *(string, REQUIRED)* - interface name
     * **`priority`** *(uint32, REQUIRED)* - priority applied to the interface
 
