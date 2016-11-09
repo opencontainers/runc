@@ -379,7 +379,7 @@ func (p *initProcess) wait() (*os.ProcessState, error) {
 	}
 	// we should kill all processes in cgroup when init is died if we use host PID namespace
 	if p.sharePidns {
-		killCgroupProcesses(p.manager)
+		signalAllProcesses(p.manager, syscall.SIGKILL)
 	}
 	return p.cmd.ProcessState, nil
 }
