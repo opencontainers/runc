@@ -73,6 +73,10 @@ load helpers
   [ "$status" -eq 0 ]
   [[ ${lines[1]} =~ runc\ state+ ]]
 
+  runc update -h
+  [ "$status" -eq 0 ]
+  [[ ${lines[1]} =~ runc\ update+ ]]
+
 }
 
 @test "runc foo -h" {
