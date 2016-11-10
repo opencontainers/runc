@@ -93,14 +93,14 @@ There is a limit of 5 mappings which is the Linux kernel hard limit.
         {
             "hostID": 1000,
             "containerID": 0,
-            "size": 10
+            "size": 32000
         }
     ],
     "gidMappings": [
         {
             "hostID": 1000,
             "containerID": 0,
-            "size": 10
+            "size": 32000
         }
     ]
 ```
