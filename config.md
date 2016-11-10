@@ -44,17 +44,22 @@ For example, if a configuration is compliant with version 1.1 of this specificat
 **`mounts`** (array, OPTIONAL) configures additional mounts (on top of [`root`](#root-configuration)).
 The runtime MUST mount entries in the listed order.
 The parameters are similar to the ones in [the Linux mount system call](http://man7.org/linux/man-pages/man2/mount.2.html).
+For Solaris, the mounts corresponds to fs resource in zonecfg(8).
 
 * **`destination`** (string, REQUIRED) Destination of mount point: path inside container.
   This value MUST be an absolute path.
   For the Windows operating system, one mount destination MUST NOT be nested within another mount (e.g., c:\\foo and c:\\foo\\bar).
+  For the Solaris operating system, this corresponds to "dir" of the fs resource in zonecfg(8).
 * **`type`** (string, REQUIRED) The filesystem type of the filesystem to be mounted.
   Linux: *filesystemtype* argument supported by the kernel are listed in */proc/filesystems* (e.g., "minix", "ext2", "ext3", "jfs", "xfs", "reiserfs", "msdos", "proc", "nfs", "iso9660").
   Windows: ntfs.
+  Solaris: corresponds to "type" of the fs resource in zonecfg(8).
 * **`source`** (string, REQUIRED) A device name, but can also be a directory name or a dummy.
   Windows: the volume name that is the target of the mount point, \\?\Volume\{GUID}\ (on Windows source is called target).
+  Solaris: corresponds to "special" of the fs resource in zonecfg(8).
 * **`options`** (list of strings, OPTIONAL) Mount options of the filesystem to be used.
   Linux: [supported][mount.8-filesystem-independent] [options][mount.8-filesystem-specific] are listed in [mount(8)][mount.8].
+  Solaris: corresponds to "options" of the fs resource in zonecfg(8).
 
 ### Example (Linux)
 
@@ -89,6 +94,24 @@ The parameters are similar to the ones in [the Linux mount system call](http://m
 ```
 
 See links for details about [mountvol](http://ss64.com/nt/mountvol.html) and [SetVolumeMountPoint](https://msdn.microsoft.com/en-us/library/windows/desktop/aa365561(v=vs.85).aspx) in Windows.
+
+### Example (Solaris)
+
+```json
+"mounts": [
+    {
+        "destination": "/opt/local",
+        "type": "lofs",
+        "source": "/usr/local",
+        "options": ["ro","nodevices"]
+    },
+    {
+        "destination": "/opt/sfw",
+        "type": "lofs",
+        "source": "/opt/sfw"
+    }
+]
+```
 
 
 ## Process configuration
