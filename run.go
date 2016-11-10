@@ -59,6 +59,9 @@ command(s) that get executed on start, edit the args parameter of the spec. See
 		},
 	},
 	Action: func(context *cli.Context) error {
+		if err := revisePidFile(context); err != nil {
+			return err
+		}
 		spec, err := setupSpec(context)
 		if err != nil {
 			return err

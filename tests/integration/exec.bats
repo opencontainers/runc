@@ -45,6 +45,33 @@ function teardown() {
   [[ ${lines[0]} != $(__runc state test_busybox | jq '.pid') ]]
 }
 
+@test "runc exec --pid-file with new CWD" {
+  # create pid_file directory as the CWD
+  run mkdir pid_file
+  [ "$status" -eq 0 ]
+  run cd pid_file
+  [ "$status" -eq 0 ]
+
+  # run busybox detached
+  runc run -d -b $BUSYBOX_BUNDLE --console /dev/pts/ptmx test_busybox
+  [ "$status" -eq 0 ]
+
+  wait_for_container 15 1 test_busybox
+
+  runc exec --pid-file pid.txt test_busybox echo Hello from exec
+  [ "$status" -eq 0 ]
+  echo text echoed = "'""${output}""'"
+  [[ "${output}" == *"Hello from exec"* ]]
+
+  # check pid.txt was generated
+  [ -e pid.txt ]
+
+  run cat pid.txt
+  [ "$status" -eq 0 ]
+  [[ ${lines[0]} =~ [0-9]+ ]]
+  [[ ${lines[0]} != $(__runc state test_busybox | jq '.pid') ]]
+}
+
 @test "runc exec ls -la" {
   # run busybox detached
   runc run -d --console /dev/pts/ptmx test_busybox
