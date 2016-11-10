@@ -118,7 +118,7 @@ See links for details about [mountvol](http://ss64.com/nt/mountvol.html) and [Se
 
 **`process`** (object, REQUIRED) configures the container process.
 
-* **`terminal`** (bool, optional) specifies whether a terminal is attached to that process, defaults to false.
+* **`terminal`** (bool, OPTIONAL) specifies whether a terminal is attached to that process, defaults to false.
   On Linux, a pseudoterminal pair is allocated for the container process and the pseudoterminal slave is duplicated on the container process's [standard streams][stdin.3].
 * **`consoleSize`** (object, OPTIONAL) specifies the console size of the terminal if attached, containing the following properties:
   * **`height`** (uint, REQUIRED)
