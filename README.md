@@ -42,7 +42,7 @@ To provide context for users the following section gives example use cases for e
 #### Application Bundle Builders
 
 Application bundle builders can create a [bundle](bundle.md) directory that includes all of the files required for launching an application as a container.
-The bundle contains an OCI [configuration file](config.md) where the builder can specify host-independent details such as [which executable to launch](config.md#process-configuration) and host-specific settings such as [mount](config.md#mounts) locations, [hook](config.md#hooks) paths, Linux [namespaces](config-linux.md#namespaces) and [cgroups](config-linux.md#control-groups).
+The bundle contains an OCI [configuration file](config.md) where the builder can specify host-independent details such as [which executable to launch](config.md#process) and host-specific settings such as [mount](config.md#mounts) locations, [hook](config.md#hooks) paths, Linux [namespaces](config-linux.md#namespaces) and [cgroups](config-linux.md#control-groups).
 Because the configuration includes host-specific settings, application bundle directories copied between two hosts may require configuration adjustments.
 
 #### Hook Developers
