@@ -9,7 +9,7 @@ func (n *Namespace) Syscall() int {
 }
 
 // This is not yet in the Go stdlib.
-const syscall_CLONE_NEWCGROUP = (1 << 29)
+const syscall_CLONE_NEWCGROUP = (1 << 25)
 
 var namespaceInfo = map[NamespaceType]int{
 	NEWNET:    syscall.CLONE_NEWNET,

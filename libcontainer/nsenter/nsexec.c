@@ -40,6 +40,12 @@ enum sync_t {
 	SYNC_ERR = 0xFF, /* Fatal error, no turning back. The error code follows. */
 };
 
+/*
+ * Synchronisation value for cgroup namespace setup.
+ * The same constant is defined in process_linux.go as "createCgroupns".
+ */
+#define CREATECGROUPNS 0x80
+
 /* longjmp() arguments. */
 #define JUMP_PARENT 0x00
 #define JUMP_CHILD  0xA0
@@ -570,6 +576,17 @@ void nsexec(void)
 							kill(child, SIGKILL);
 							bail("failed to sync with child: write(SYNC_RECVPID_ACK)");
 						}
+
+						/* Send the init_func pid back to our parent. */
+						len = snprintf(buf, JSON_MAX, "{\"pid\": %d}\n", child);
+						if (len < 0) {
+							kill(child, SIGKILL);
+							bail("unable to generate JSON for child pid");
+						}
+						if (write(pipenum, buf, len) != len) {
+							kill(child, SIGKILL);
+							bail("unable to send child pid to bootstrapper");
+						}
 					}
 					break;
 				case SYNC_CHILD_READY:
@@ -614,17 +631,6 @@ void nsexec(void)
 				}
 			}
 
-			/* Send the init_func pid back to our parent. */
-			len = snprintf(buf, JSON_MAX, "{\"pid\": %d}\n", child);
-			if (len < 0) {
-				kill(child, SIGKILL);
-				bail("unable to generate JSON for child pid");
-			}
-			if (write(pipenum, buf, len) != len) {
-				kill(child, SIGKILL);
-				bail("unable to send child pid to bootstrapper");
-			}
-
 			exit(0);
 		}
 
@@ -640,6 +646,7 @@ void nsexec(void)
 	case JUMP_CHILD: {
 			pid_t child;
 			enum sync_t s;
+			uint32_t actual_flags = config.cloneflags;
 
 			/* We're in a child and thus need to tell the parent if we die. */
 			syncfd = sync_child_pipe[0];
@@ -667,7 +674,9 @@ void nsexec(void)
 			 * some old kernel versions where clone(CLONE_PARENT | CLONE_NEWPID)
 			 * was broken, so we'll just do it the long way anyway.
 			 */
-			if (unshare(config.cloneflags) < 0)
+			if (actual_flags & CLONE_NEWCGROUP)
+				actual_flags &= ~CLONE_NEWCGROUP;
+			if (unshare(actual_flags) < 0)
 				bail("failed to unshare namespaces");
 
 			/*
@@ -776,6 +785,19 @@ void nsexec(void)
 
 			if (setgroups(0, NULL) < 0)
 				bail("setgroups failed");
+
+			/* ... wait until our topmost parent has finished cgroup setup in p.manager.Apply() ... */
+                        if (config.cloneflags & CLONE_NEWCGROUP) {
+                                uint8_t value;
+                                if (read(pipenum, &value, sizeof(value)) != sizeof(value))
+                                        bail("read synchronisation value failed");
+                                if (value == CREATECGROUPNS) {
+                                        if (unshare(CLONE_NEWCGROUP) < 0)
+                                                bail("failed to unshare cgroup namespace");
+                                }
+                                else
+                                        bail("received unknown synchronisation value");
+                        }
 
 			s = SYNC_CHILD_READY;
 			if (write(syncfd, &s, sizeof(s)) != sizeof(s))

@@ -1293,6 +1293,7 @@ func (c *linuxContainer) orderNamespacePaths(namespaces map[configs.NamespaceTyp
 		configs.NEWNET,
 		configs.NEWPID,
 		configs.NEWNS,
+		configs.NEWCGROUP,
 	}
 
 	// Remove namespaces that we don't need to join.
