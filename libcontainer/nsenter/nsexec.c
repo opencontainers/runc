@@ -394,7 +394,7 @@ void join_namespaces(char *nslist)
 
 		fd = open(path, O_RDONLY);
 		if (fd < 0)
-			bail("failed to open %s", namespace);
+			bail("failed to open %s", path);
 
 		ns->fd = fd;
 		ns->ns = nsflag(namespace);
