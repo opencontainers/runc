@@ -46,6 +46,7 @@ func prepareRootfs(pipe io.ReadWriter, iConfig *initConfig) (err error) {
 		return newSystemErrorWithCause(err, "preparing rootfs")
 	}
 
+	hasCgroupns := config.Namespaces.Contains(configs.NEWCGROUP)
 	setupDev := needsSetupDev(config)
 	for _, m := range config.Mounts {
 		for _, precmd := range m.PremountCmds {
@@ -53,8 +54,7 @@ func prepareRootfs(pipe io.ReadWriter, iConfig *initConfig) (err error) {
 				return newSystemErrorWithCause(err, "running premount command")
 			}
 		}
-
-		if err := mountToRootfs(m, config.Rootfs, config.MountLabel); err != nil {
+		if err := mountToRootfs(m, config.Rootfs, config.MountLabel, hasCgroupns); err != nil {
 			return newSystemErrorWithCausef(err, "mounting %q to rootfs %q at %q", m.Source, config.Rootfs, m.Destination)
 		}
 
@@ -182,7 +182,7 @@ func mountCmd(cmd configs.Command) error {
 	return nil
 }
 
-func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
+func mountToRootfs(m *configs.Mount, rootfs, mountLabel string, enableCgroupns bool) error {
 	var (
 		dest = m.Destination
 	)
@@ -319,12 +319,33 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 			Data:             "mode=755",
 			PropagationFlags: m.PropagationFlags,
 		}
-		if err := mountToRootfs(tmpfs, rootfs, mountLabel); err != nil {
+		if err := mountToRootfs(tmpfs, rootfs, mountLabel, enableCgroupns); err != nil {
 			return err
 		}
 		for _, b := range binds {
-			if err := mountToRootfs(b, rootfs, mountLabel); err != nil {
-				return err
+			if enableCgroupns {
+				subsystemPath := filepath.Join(rootfs, b.Destination)
+				if err := os.MkdirAll(subsystemPath, 0755); err != nil {
+					return err
+				}
+				flags := defaultMountFlags
+				if m.Flags&unix.MS_RDONLY != 0 {
+					flags = flags | unix.MS_RDONLY
+				}
+				cgroupmount := &configs.Mount{
+					Source:      "cgroup",
+					Device:      "cgroup",
+					Destination: subsystemPath,
+					Flags:       flags,
+					Data:        filepath.Base(subsystemPath),
+				}
+				if err := mountNewCgroup(cgroupmount); err != nil {
+					return err
+				}
+			} else {
+				if err := mountToRootfs(b, rootfs, mountLabel, enableCgroupns); err != nil {
+					return err
+				}
 			}
 		}
 		for _, mc := range merged {
@@ -859,6 +880,21 @@ func mountPropagate(m *configs.Mount, rootfs string, mountLabel string) error {
 		if err := unix.Mount("", dest, "", uintptr(pflag), ""); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func mountNewCgroup(m *configs.Mount) error {
+	var (
+		data   = m.Data
+		source = m.Source
+	)
+	if data == "systemd" {
+		data = cgroups.CgroupNamePrefix + data
+		source = "systemd"
+	}
+	if err := unix.Mount(source, m.Destination, m.Device, uintptr(m.Flags), data); err != nil {
+		return err
 	}
 	return nil
 }

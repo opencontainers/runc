@@ -21,16 +21,17 @@ Minimum requirements:
 
 ### Namespaces
 
-|     Flag      | Enabled | 
-| ------------  | ------- |
-| CLONE_NEWPID  |    1    |
-| CLONE_NEWUTS  |    1    |
-| CLONE_NEWIPC  |    1    |
-| CLONE_NEWNET  |    1    |
-| CLONE_NEWNS   |    1    |
-| CLONE_NEWUSER |    1    |
+|     Flag        | Enabled |
+| --------------- | ------- |
+| CLONE_NEWPID    |    1    |
+| CLONE_NEWUTS    |    1    |
+| CLONE_NEWIPC    |    1    |
+| CLONE_NEWNET    |    1    |
+| CLONE_NEWNS     |    1    |
+| CLONE_NEWUSER   |    1    |
+| CLONE_NEWCGROUP |    1    |
 
-Namespaces are created for the container via the `clone` syscall.  
+Namespaces are created for the container via the `unshare` syscall.
 
 
 ### Filesystem
