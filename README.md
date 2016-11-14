@@ -2,38 +2,17 @@
 
 The [Open Container Initiative](http://www.opencontainers.org/) develops specifications for standards on Operating System process and application containers.
 
+The specification can be found [here](spec.md).
 
-Table of Contents
+Additional documentation about how this group operates:
 
-- [Introduction](README.md)
-    - [Code of Conduct](#code-of-conduct)
-    - [Container Principles](principles.md)
-    - [Style and Conventions](style.md)
-    - [Roadmap](ROADMAP.md)
-    - [Implementations](implementations.md)
-    - [project](project.md)
-- [Filesystem Bundle](bundle.md)
-- Runtime and Lifecycle
-    - [General Runtime and Lifecycle](runtime.md)
-    - [Linux-specific Runtime and Lifecycle](runtime-linux.md)
-- Configuration
-    - [General Configuration](config.md)
-    - [Linux-specific Configuration](config-linux.md)
-    - [Solaris-specific Configuration](config-solaris.md)
-    - [Windows-specific Configuration](config-windows.md)
-- [Glossary](glossary.md)
-
-The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" are to be interpreted as described in [RFC 2119][rfc2119].
-
-The key words "unspecified", "undefined", and "implementation-defined" are to be interpreted as described in the [rationale for the C99 standard][c99-unspecified].
-
-An implementation is not compliant for a given CPU architecture if it fails to satisfy one or more of the MUST, REQUIRED, or SHALL requirements for the protocols it implements.
-An implementation is compliant for a given CPU architecture if it satisfies all the MUST, REQUIRED, and SHALL requirements for the protocols it implements.
-
-Protocols defined by this specification are:
-* Linux containers: [runtime.md](runtime.md), [config.md](config.md), [config-linux.md](config-linux.md), and [runtime-linux.md](runtime-linux.md).
-* Solaris containers: [runtime.md](runtime.md), [config.md](config.md), and [config-solaris.md](config-solaris.md).
-* Windows containers: [runtime.md](runtime.md), [config.md](config.md), and [config-windows.md](config-windows.md).
+- [Code of Conduct](https://github.com/opencontainers/tob/blob/d2f9d68c1332870e40693fe077d311e0742bc73d/code-of-conduct.md)
+- [Style and Conventions](style.md)
+- [Roadmap](ROADMAP.md)
+- [Implementations](implementations.md)
+- [Releases](RELEASES.md)
+- [project](project.md)
+- [charter][charter]
 
 # Use Cases
 
@@ -65,10 +44,6 @@ Development happens on GitHub for the spec.
 Issues are used for bugs and actionable items and longer discussions can happen on the [mailing list](#mailing-list).
 
 The specification and code is licensed under the Apache 2.0 license found in the [LICENSE](./LICENSE) file.
-
-## Code of Conduct
-
-Participation in the OCI community is governed by the [OCI Code of Conduct](https://github.com/opencontainers/tob/blob/d2f9d68c1332870e40693fe077d311e0742bc73d/code-of-conduct.md).
 
 ## Discuss your design
 
@@ -165,7 +140,6 @@ Read more on [How to Write a Git Commit Message](http://chris.beams.io/posts/git
   * If there was important/useful/essential conversation or information, copy or include a reference
 8. When possible, one keyword to scope the change in the subject (i.e. "README: ...", "runtime: ...")
 
-[c99-unspecified]: http://www.open-std.org/jtc1/sc22/wg14/www/C99RationaleV5.10.pdf#page=18
 [UberConference]: https://www.uberconference.com/opencontainers
 [irc-logs]: http://ircbot.wl.linuxfoundation.org/eavesdrop/%23opencontainers/
-[rfc2119]: http://tools.ietf.org/html/rfc2119
+[charter]: https://www.opencontainers.org/about/governance

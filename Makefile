@@ -21,13 +21,8 @@ endif
 # These docs are in an order that determines how they show up in the PDF/HTML docs.
 DOC_FILES := \
 	version.md \
-	README.md \
-	code-of-conduct.md \
+	spec.md \
 	principles.md \
-	style.md \
-	ROADMAP.md \
-	implementations.md \
-	project.md \
 	bundle.md \
 	runtime.md \
 	runtime-linux.md \
@@ -53,9 +48,6 @@ $(OUTPUT_DIRNAME)/$(DOC_FILENAME).html: $(DOC_FILES)
 	mkdir -p $(OUTPUT_DIRNAME)/ && \
 	$(PANDOC) -f markdown_github -t html5 -o $(PANDOC_DST)$@ $(patsubst %,$(PANDOC_SRC)%,$(DOC_FILES))
 endif
-
-code-of-conduct.md:
-	curl -o $@ https://raw.githubusercontent.com/opencontainers/tob/d2f9d68c1332870e40693fe077d311e0742bc73d/code-of-conduct.md
 
 version.md: ./specs-go/version.go
 	go run ./.tool/version-doc.go > $@
@@ -105,5 +97,5 @@ endif
 .PHONY: clean
 clean:
 	rm -rf $(OUTPUT_DIRNAME) *~
-	rm -f code-of-conduct.md version.md
+	rm -f version.md
 
