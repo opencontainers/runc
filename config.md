@@ -292,7 +292,7 @@ For Windows based systems the user structure has the following fields:
   This SHOULD only be set if **`platform.os`** is `linux`.
 * **`solaris`** (object, OPTIONAL) [Solaris-specific configuration](config-solaris.md).
   This SHOULD only be set if **`platform.os`** is `solaris`.
-* **`windows`** (object, optional) [Windows-specific configuration](config-windows.md).
+* **`windows`** (object, OPTIONAL) [Windows-specific configuration](config-windows.md).
   This SHOULD only be set if **`platform.os`** is `windows`.
 
 ### Example (Linux)
