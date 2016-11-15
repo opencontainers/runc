@@ -505,7 +505,7 @@ const (
 	ActAllow LinuxSeccompAction = "SCMP_ACT_ALLOW"
 )
 
-// LinuxOperatorOperator used to match syscall arguments in Seccomp
+// LinuxSeccompOperator used to match syscall arguments in Seccomp
 type LinuxSeccompOperator string
 
 // Define operators for syscall arguments in Seccomp
@@ -519,7 +519,7 @@ const (
 	OpMaskedEqual  LinuxSeccompOperator = "SCMP_CMP_MASKED_EQ"
 )
 
-// Arg used for matching specific syscall arguments in Seccomp
+// LinuxSeccompArg used for matching specific syscall arguments in Seccomp
 type LinuxSeccompArg struct {
 	Index    uint                 `json:"index"`
 	Value    uint64               `json:"value"`
