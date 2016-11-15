@@ -1,6 +1,6 @@
 
 EPOCH_TEST_COMMIT	:= 78e6667ae2d67aad100b28ee9580b41b7a24e667
-OUTPUT_DIRNAME		?= output/
+OUTPUT_DIRNAME		?= output
 DOC_FILENAME		?= oci-runtime-spec
 DOCKER			?= $(shell command -v docker 2>/dev/null)
 PANDOC			?= $(shell command -v pandoc 2>/dev/null)
