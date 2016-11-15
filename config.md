@@ -160,8 +160,6 @@ For Linux and Solaris based systems the user structure has the following fields:
 
 _Note: symbolic name for uid and gid, such as uname and gname respectively, are left to upper levels to derive (i.e. `/etc/passwd` parsing, NSS, etc)_
 
-_Note: For Solaris, uid and gid specify the uid and gid of the process inside the container and need not be same as in the host._
-
 ### Example (Linux)
 
 ```json
