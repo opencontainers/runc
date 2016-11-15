@@ -15,7 +15,7 @@ For example, namespaces, resource limits, and mounts are all part of the contain
 
 ## Container namespace
 
-On Linux, a leaf in the [namespace][namespaces.7] hierarchy in which the [configured process](config.md#process-configuration) executes.
+On Linux, a leaf in the [namespace][namespaces.7] hierarchy in which the [configured process](config.md#process) executes.
 
 ## JSON
 

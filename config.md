@@ -114,7 +114,7 @@ See links for details about [mountvol](http://ss64.com/nt/mountvol.html) and [Se
 ```
 
 
-## Process configuration
+## Process
 
 **`process`** (object, REQUIRED) configures the container process.
 
