@@ -10,8 +10,10 @@ import (
 )
 
 type Manager struct {
-	Cgroups *configs.Cgroup
-	Paths   map[string]string
+	Cgroups      *configs.Cgroup
+	Paths        map[string]string
+	ContainerId  string
+	ResourcePath string
 }
 
 func UseSystemd() bool {

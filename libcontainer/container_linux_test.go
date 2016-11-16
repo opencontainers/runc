@@ -8,14 +8,16 @@ import (
 	"testing"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
+	"github.com/opencontainers/runc/libcontainer/cgroups/fs"
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
 type mockCgroupManager struct {
-	pids    []int
-	allPids []int
-	stats   *cgroups.Stats
-	paths   map[string]string
+	pids         []int
+	allPids      []int
+	stats        *cgroups.Stats
+	paths        map[string]string
+	intelRdtPath string
 }
 
 func (m *mockCgroupManager) GetPids() ([]int, error) {
@@ -44,6 +46,10 @@ func (m *mockCgroupManager) Destroy() error {
 
 func (m *mockCgroupManager) GetPaths() map[string]string {
 	return m.paths
+}
+
+func (m *mockCgroupManager) GetResourcePath() string {
+	return m.intelRdtPath
 }
 
 func (m *mockCgroupManager) Freeze(state configs.FreezerState) error {
@@ -132,9 +138,10 @@ func TestGetContainerStats(t *testing.T) {
 
 func TestGetContainerState(t *testing.T) {
 	var (
-		pid                 = os.Getpid()
-		expectedMemoryPath  = "/sys/fs/cgroup/memory/myid"
-		expectedNetworkPath = "/networks/fd"
+		pid                  = os.Getpid()
+		expectedMemoryPath   = "/sys/fs/cgroup/memory/myid"
+		expectedNetworkPath  = "/networks/fd"
+		expectedIntelRdtPath = "sys/fs/resctrl/myid"
 	)
 	container := &linuxContainer{
 		id: "myid",
@@ -164,6 +171,7 @@ func TestGetContainerState(t *testing.T) {
 			paths: map[string]string{
 				"memory": expectedMemoryPath,
 			},
+			intelRdtPath: expectedIntelRdtPath,
 		},
 	}
 	container.state = &createdState{c: container}
@@ -183,6 +191,12 @@ func TestGetContainerState(t *testing.T) {
 	}
 	if memPath := paths["memory"]; memPath != expectedMemoryPath {
 		t.Fatalf("expected memory path %q but received %q", expectedMemoryPath, memPath)
+	}
+	if fs.IsIntelRdtEnabled() {
+		intelRdtPath := state.IntelRdtPath
+		if intelRdtPath != expectedIntelRdtPath {
+			t.Fatalf("expected intelRdt path %q but received %q", expectedIntelRdtPath, intelRdtPath)
+		}
 	}
 	for _, ns := range container.config.Namespaces {
 		path := state.NamespacePaths[ns.Type]

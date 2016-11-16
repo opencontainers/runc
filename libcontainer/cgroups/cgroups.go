@@ -39,6 +39,9 @@ type Manager interface {
 
 	// Sets the cgroup as configured.
 	Set(container *configs.Config) error
+
+	// Get non-cgroup resource path
+	GetResourcePath() string
 }
 
 type NotFoundError struct {

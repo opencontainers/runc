@@ -43,10 +43,11 @@ func InitArgs(args ...string) func(*LinuxFactory) error {
 // SystemdCgroups is an options func to configure a LinuxFactory to return
 // containers that use systemd to create and manage cgroups.
 func SystemdCgroups(l *LinuxFactory) error {
-	l.NewCgroupsManager = func(config *configs.Cgroup, paths map[string]string) cgroups.Manager {
+	l.NewCgroupsManager = func(config *configs.Cgroup, paths map[string]string, containerId string) cgroups.Manager {
 		return &systemd.Manager{
-			Cgroups: config,
-			Paths:   paths,
+			Cgroups:     config,
+			Paths:       paths,
+			ContainerId: containerId,
 		}
 	}
 	return nil
@@ -56,10 +57,11 @@ func SystemdCgroups(l *LinuxFactory) error {
 // containers that use the native cgroups filesystem implementation to
 // create and manage cgroups.
 func Cgroupfs(l *LinuxFactory) error {
-	l.NewCgroupsManager = func(config *configs.Cgroup, paths map[string]string) cgroups.Manager {
+	l.NewCgroupsManager = func(config *configs.Cgroup, paths map[string]string, containerId string) cgroups.Manager {
 		return &fs.Manager{
-			Cgroups: config,
-			Paths:   paths,
+			Cgroups:     config,
+			Paths:       paths,
+			ContainerId: containerId,
 		}
 	}
 	return nil
@@ -128,7 +130,7 @@ type LinuxFactory struct {
 	Validator validate.Validator
 
 	// NewCgroupsManager returns an initialized cgroups manager for a single container.
-	NewCgroupsManager func(config *configs.Cgroup, paths map[string]string) cgroups.Manager
+	NewCgroupsManager func(config *configs.Cgroup, paths map[string]string, containerId string) cgroups.Manager
 }
 
 func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, error) {
@@ -177,7 +179,7 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 		config:        config,
 		initArgs:      l.InitArgs,
 		criuPath:      l.CriuPath,
-		cgroupManager: l.NewCgroupsManager(config.Cgroups, nil),
+		cgroupManager: l.NewCgroupsManager(config.Cgroups, nil, id),
 	}
 	c.state = &stoppedState{c: c}
 	return c, nil
@@ -204,7 +206,7 @@ func (l *LinuxFactory) Load(id string) (Container, error) {
 		config:               &state.Config,
 		initArgs:             l.InitArgs,
 		criuPath:             l.CriuPath,
-		cgroupManager:        l.NewCgroupsManager(state.Config.Cgroups, state.CgroupPaths),
+		cgroupManager:        l.NewCgroupsManager(state.Config.Cgroups, state.CgroupPaths, id),
 		root:                 containerRoot,
 		created:              state.Created,
 	}

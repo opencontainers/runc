@@ -121,4 +121,8 @@ type Resources struct {
 
 	// Set class identifier for container's network packets
 	NetClsClassid uint32 `json:"net_cls_classid_u"`
+
+	// Intel RDT: the schema for L3 cache id and capacity bitmask (CBM)
+	// Format: "L3:<cache_id0>=<cbm0>;<cache_id1>=<cbm1>;..."
+	IntelRdtL3CacheSchema string `json:"intel_rdt_l3_cache_schema"`
 }

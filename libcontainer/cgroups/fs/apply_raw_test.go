@@ -20,7 +20,7 @@ func TestInvalidCgroupPath(t *testing.T) {
 		Path: "../../../../../../../../../../some/path",
 	}
 
-	data, err := getCgroupData(config, 0)
+	data, err := getCgroupData(config, 0, "")
 	if err != nil {
 		t.Errorf("couldn't get cgroup data: %v", err)
 	}
@@ -51,7 +51,7 @@ func TestInvalidAbsoluteCgroupPath(t *testing.T) {
 		Path: "/../../../../../../../../../../some/path",
 	}
 
-	data, err := getCgroupData(config, 0)
+	data, err := getCgroupData(config, 0, "")
 	if err != nil {
 		t.Errorf("couldn't get cgroup data: %v", err)
 	}
@@ -84,7 +84,7 @@ func TestInvalidCgroupParent(t *testing.T) {
 		Name:   "name",
 	}
 
-	data, err := getCgroupData(config, 0)
+	data, err := getCgroupData(config, 0, "")
 	if err != nil {
 		t.Errorf("couldn't get cgroup data: %v", err)
 	}
@@ -117,7 +117,7 @@ func TestInvalidAbsoluteCgroupParent(t *testing.T) {
 		Name:   "name",
 	}
 
-	data, err := getCgroupData(config, 0)
+	data, err := getCgroupData(config, 0, "")
 	if err != nil {
 		t.Errorf("couldn't get cgroup data: %v", err)
 	}
@@ -150,7 +150,7 @@ func TestInvalidCgroupName(t *testing.T) {
 		Name:   "../../../../../../../../../../some/path",
 	}
 
-	data, err := getCgroupData(config, 0)
+	data, err := getCgroupData(config, 0, "")
 	if err != nil {
 		t.Errorf("couldn't get cgroup data: %v", err)
 	}
@@ -184,7 +184,7 @@ func TestInvalidAbsoluteCgroupName(t *testing.T) {
 		Name:   "/../../../../../../../../../../some/path",
 	}
 
-	data, err := getCgroupData(config, 0)
+	data, err := getCgroupData(config, 0, "")
 	if err != nil {
 		t.Errorf("couldn't get cgroup data: %v", err)
 	}
@@ -217,7 +217,7 @@ func TestInvalidCgroupNameAndParent(t *testing.T) {
 		Name:   "../../../../../../../../../../some/path",
 	}
 
-	data, err := getCgroupData(config, 0)
+	data, err := getCgroupData(config, 0, "")
 	if err != nil {
 		t.Errorf("couldn't get cgroup data: %v", err)
 	}
@@ -250,7 +250,7 @@ func TestInvalidAbsoluteCgroupNameAndParent(t *testing.T) {
 		Name:   "/../../../../../../../../../../some/path",
 	}
 
-	data, err := getCgroupData(config, 0)
+	data, err := getCgroupData(config, 0, "")
 	if err != nil {
 		t.Errorf("couldn't get cgroup data: %v", err)
 	}

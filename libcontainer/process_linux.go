@@ -14,6 +14,7 @@ import (
 	"syscall"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
+	"github.com/opencontainers/runc/libcontainer/cgroups/fs"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runc/libcontainer/utils"
@@ -47,6 +48,7 @@ type setnsProcess struct {
 	parentPipe    *os.File
 	childPipe     *os.File
 	cgroupPaths   map[string]string
+	intelRdtPath  string
 	config        *initConfig
 	fds           []string
 	process       *Process
@@ -85,6 +87,15 @@ func (p *setnsProcess) start() (err error) {
 	if len(p.cgroupPaths) > 0 {
 		if err := cgroups.EnterPid(p.cgroupPaths, p.pid()); err != nil {
 			return newSystemErrorWithCausef(err, "adding pid %d to cgroups", p.pid())
+		}
+	}
+	if p.intelRdtPath != "" {
+		// if Intel RDT "resource control" filesystem path exists
+		_, err := os.Stat(p.intelRdtPath)
+		if err == nil {
+			if err := fs.WriteIntelRdtTasks(p.intelRdtPath, p.pid()); err != nil {
+				return newSystemErrorWithCausef(err, "adding pid %d to Intel RDT resource control filesystem", p.pid())
+			}
 		}
 	}
 	// set oom_score_adj

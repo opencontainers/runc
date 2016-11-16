@@ -90,13 +90,27 @@ type HugetlbStats struct {
 	Failcnt uint64 `json:"failcnt"`
 }
 
+type IntelRdtRootStats struct {
+	L3CacheSchema string `json:"l3_cache_schema,omitempty"`
+}
+
+type IntelRdtGroupStats struct {
+	L3CacheSchema string `json:"l3_cache_schema,omitempty"`
+}
+
+type IntelRdtStats struct {
+	IntelRdtRootStats  IntelRdtRootStats  `json:"intel_rdt_root_stats,omitempty"`
+	IntelRdtGroupStats IntelRdtGroupStats `json:"intel_rdt_group_stats,omitempty"`
+}
+
 type Stats struct {
 	CpuStats    CpuStats    `json:"cpu_stats,omitempty"`
 	MemoryStats MemoryStats `json:"memory_stats,omitempty"`
 	PidsStats   PidsStats   `json:"pids_stats,omitempty"`
 	BlkioStats  BlkioStats  `json:"blkio_stats,omitempty"`
 	// the map is in the format "size of hugepage: stats of the hugepage"
-	HugetlbStats map[string]HugetlbStats `json:"hugetlb_stats,omitempty"`
+	HugetlbStats  map[string]HugetlbStats `json:"hugetlb_stats,omitempty"`
+	IntelRdtStats IntelRdtStats           `json:"intel_rdt_stats,omitempty"`
 }
 
 func NewStats() *Stats {
