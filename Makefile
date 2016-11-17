@@ -119,6 +119,7 @@ clean:
 
 validate:
 	script/validate-gofmt
+	script/validate-shfmt
 	go vet ./...
 
 ci: validate localtest
