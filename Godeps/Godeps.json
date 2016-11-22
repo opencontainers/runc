@@ -1,7 +1,7 @@
 {
 	"ImportPath": "github.com/opencontainers/runc",
 	"GoVersion": "go1.5.3",
-	"GodepVersion": "v74",
+	"GodepVersion": "v75",
 	"Deps": [
 		{
 			"ImportPath": "github.com/Sirupsen/logrus",
@@ -15,18 +15,18 @@
 		},
 		{
 			"ImportPath": "github.com/coreos/go-systemd/activation",
-			"Comment": "v4",
-			"Rev": "b4a58d95188dd092ae20072bac14cece0e67c388"
+			"Comment": "v14",
+			"Rev": "48702e0da86bd25e76cfef347e2adeb434a0d0a6"
 		},
 		{
 			"ImportPath": "github.com/coreos/go-systemd/dbus",
-			"Comment": "v4",
-			"Rev": "b4a58d95188dd092ae20072bac14cece0e67c388"
+			"Comment": "v14",
+			"Rev": "48702e0da86bd25e76cfef347e2adeb434a0d0a6"
 		},
 		{
 			"ImportPath": "github.com/coreos/go-systemd/util",
-			"Comment": "v4",
-			"Rev": "b4a58d95188dd092ae20072bac14cece0e67c388"
+			"Comment": "v14",
+			"Rev": "48702e0da86bd25e76cfef347e2adeb434a0d0a6"
 		},
 		{
 			"ImportPath": "github.com/docker/docker/pkg/mount",
@@ -77,6 +77,11 @@
 		{
 			"ImportPath": "github.com/mrunalp/fileutils",
 			"Rev": "ed869b029674c0e9ce4c0dfa781405c2d9946d08"
+		},
+		{
+			"ImportPath": "github.com/coreos/pkg/dlopen",
+			"Comment": "v3",
+			"Rev": "3ac0863d7acf3bc44daf49afef8919af12f704ef"
 		}
 	]
 }
