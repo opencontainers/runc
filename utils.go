@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -36,7 +37,7 @@ func setupSpec(context *cli.Context) (*specs.Spec, error) {
 		setupSdNotify(spec, notifySocket)
 	}
 	if os.Geteuid() != 0 {
-		return nil, fmt.Errorf("runc should be run as root")
+		return nil, errors.New("runc should be run as root")
 	}
 	return spec, nil
 }

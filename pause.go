@@ -3,6 +3,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -22,7 +23,7 @@ Use runc list to identiy instances of containers and their current status.`,
 	Action: func(context *cli.Context) error {
 		hasError := false
 		if !context.Args().Present() {
-			return fmt.Errorf("runc: \"pause\" requires a minimum of 1 argument")
+			return errors.New("runc: \"pause\" requires a minimum of 1 argument")
 		}
 
 		factory, err := loadFactory(context)
@@ -44,7 +45,7 @@ Use runc list to identiy instances of containers and their current status.`,
 		}
 
 		if hasError {
-			return fmt.Errorf("one or more of container pause failed")
+			return errors.New("one or more of container pause failed")
 		}
 		return nil
 	},
@@ -63,7 +64,7 @@ Use runc list to identiy instances of containers and their current status.`,
 	Action: func(context *cli.Context) error {
 		hasError := false
 		if !context.Args().Present() {
-			return fmt.Errorf("runc: \"resume\" requires a minimum of 1 argument")
+			return errors.New("runc: \"resume\" requires a minimum of 1 argument")
 		}
 
 		factory, err := loadFactory(context)
@@ -85,7 +86,7 @@ Use runc list to identiy instances of containers and their current status.`,
 		}
 
 		if hasError {
-			return fmt.Errorf("one or more of container resume failed")
+			return errors.New("one or more of container resume failed")
 		}
 		return nil
 	},

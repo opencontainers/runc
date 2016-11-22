@@ -2,6 +2,7 @@ package user
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -94,7 +95,7 @@ func ParsePasswdFileFilter(path string, filter func(User) bool) ([]User, error) 
 
 func ParsePasswdFilter(r io.Reader, filter func(User) bool) ([]User, error) {
 	if r == nil {
-		return nil, fmt.Errorf("nil source for passwd-formatted data")
+		return nil, errors.New("nil source for passwd-formatted data")
 	}
 
 	var (
@@ -153,7 +154,7 @@ func ParseGroupFileFilter(path string, filter func(Group) bool) ([]Group, error)
 
 func ParseGroupFilter(r io.Reader, filter func(Group) bool) ([]Group, error) {
 	if r == nil {
-		return nil, fmt.Errorf("nil source for group-formatted data")
+		return nil, errors.New("nil source for group-formatted data")
 	}
 
 	var (

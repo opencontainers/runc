@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -50,9 +51,9 @@ command(s) that get executed on start, edit the args parameter of the spec. See
 	},
 	Action: func(context *cli.Context) error {
 		if context.NArg() != 1 {
-			fmt.Printf("Incorrect Usage.\n\n")
+			fmt.Print("Incorrect Usage.\n\n")
 			cli.ShowCommandHelp(context, "create")
-			return fmt.Errorf("runc: \"create\" requires exactly one argument")
+			return errors.New("runc: \"create\" requires exactly one argument")
 		}
 		if err := revisePidFile(context); err != nil {
 			return err

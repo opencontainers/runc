@@ -1,6 +1,7 @@
 package validate
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -68,7 +69,7 @@ func (v *ConfigValidator) rootfs(config *configs.Config) error {
 func (v *ConfigValidator) network(config *configs.Config) error {
 	if !config.Namespaces.Contains(configs.NEWNET) {
 		if len(config.Networks) > 0 || len(config.Routes) > 0 {
-			return fmt.Errorf("unable to apply network settings without a private NET namespace")
+			return errors.New("unable to apply network settings without a private NET namespace")
 		}
 	}
 	return nil
@@ -76,7 +77,7 @@ func (v *ConfigValidator) network(config *configs.Config) error {
 
 func (v *ConfigValidator) hostname(config *configs.Config) error {
 	if config.Hostname != "" && !config.Namespaces.Contains(configs.NEWUTS) {
-		return fmt.Errorf("unable to set hostname without a private UTS namespace")
+		return errors.New("unable to set hostname without a private UTS namespace")
 	}
 	return nil
 }
@@ -85,10 +86,10 @@ func (v *ConfigValidator) security(config *configs.Config) error {
 	// restrict sys without mount namespace
 	if (len(config.MaskPaths) > 0 || len(config.ReadonlyPaths) > 0) &&
 		!config.Namespaces.Contains(configs.NEWNS) {
-		return fmt.Errorf("unable to restrict sys entries without a private MNT namespace")
+		return errors.New("unable to restrict sys entries without a private MNT namespace")
 	}
 	if config.ProcessLabel != "" && !selinux.SelinuxEnabled() {
-		return fmt.Errorf("selinux label is specified in config, but selinux is disabled or not supported")
+		return errors.New("selinux label is specified in config, but selinux is disabled or not supported")
 	}
 
 	return nil
@@ -97,11 +98,11 @@ func (v *ConfigValidator) security(config *configs.Config) error {
 func (v *ConfigValidator) usernamespace(config *configs.Config) error {
 	if config.Namespaces.Contains(configs.NEWUSER) {
 		if _, err := os.Stat("/proc/self/ns/user"); os.IsNotExist(err) {
-			return fmt.Errorf("USER namespaces aren't enabled in the kernel")
+			return errors.New("USER namespaces aren't enabled in the kernel")
 		}
 	} else {
 		if config.UidMappings != nil || config.GidMappings != nil {
-			return fmt.Errorf("User namespace mappings specified, but USER namespace isn't enabled in the config")
+			return errors.New("User namespace mappings specified, but USER namespace isn't enabled in the config")
 		}
 	}
 	return nil

@@ -1,7 +1,7 @@
 package libcontainer
 
 import (
-	"fmt"
+	"errors"
 	"io"
 	"math"
 	"os"
@@ -75,7 +75,7 @@ type Process struct {
 // Wait releases any resources associated with the Process
 func (p Process) Wait() (*os.ProcessState, error) {
 	if p.ops == nil {
-		return nil, newGenericError(fmt.Errorf("invalid process"), NoProcessOps)
+		return nil, newGenericError(errors.New("invalid process"), NoProcessOps)
 	}
 	return p.ops.wait()
 }
@@ -85,7 +85,7 @@ func (p Process) Pid() (int, error) {
 	// math.MinInt32 is returned here, because it's invalid value
 	// for the kill() system call.
 	if p.ops == nil {
-		return math.MinInt32, newGenericError(fmt.Errorf("invalid process"), NoProcessOps)
+		return math.MinInt32, newGenericError(errors.New("invalid process"), NoProcessOps)
 	}
 	return p.ops.pid(), nil
 }
@@ -93,7 +93,7 @@ func (p Process) Pid() (int, error) {
 // Signal sends a signal to the Process.
 func (p Process) Signal(sig os.Signal) error {
 	if p.ops == nil {
-		return newGenericError(fmt.Errorf("invalid process"), NoProcessOps)
+		return newGenericError(errors.New("invalid process"), NoProcessOps)
 	}
 	return p.ops.signal(sig)
 }
@@ -118,7 +118,7 @@ func (p *Process) NewConsole(rootuid, rootgid int) (Console, error) {
 // ConsoleFromPath sets the process's console with the path provided
 func (p *Process) ConsoleFromPath(path string) error {
 	if p.consolePath != "" {
-		return newGenericError(fmt.Errorf("console path already exists for process"), ConsoleExists)
+		return newGenericError(errors.New("console path already exists for process"), ConsoleExists)
 	}
 	p.consolePath = path
 	return nil
