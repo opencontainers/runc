@@ -149,7 +149,7 @@ information is displayed once every 5 seconds.`,
 			return nil
 		}
 		go func() {
-			for range time.Tick(context.Duration("interval")) {
+			for  _= range time.Tick(context.Duration("interval")) {
 				s, err := container.Stats()
 				if err != nil {
 					logrus.Error(err)
