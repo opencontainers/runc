@@ -5,7 +5,6 @@ package libcontainer
 import (
 	"fmt"
 	"os"
-	"syscall"
 
 	"github.com/opencontainers/runc/libcontainer/apparmor"
 	"github.com/opencontainers/runc/libcontainer/keys"
@@ -17,9 +16,8 @@ import (
 // linuxSetnsInit performs the container's initialization for running a new process
 // inside an existing container.
 type linuxSetnsInit struct {
-	pipe       *os.File
-	config     *initConfig
-	stateDirFD int
+	pipe   *os.File
+	config *initConfig
 }
 
 func (l *linuxSetnsInit) getSessionRingName() string {
@@ -60,8 +58,5 @@ func (l *linuxSetnsInit) Init() error {
 	if err := label.SetProcessLabel(l.config.ProcessLabel); err != nil {
 		return err
 	}
-	// close the statedir fd before exec because the kernel resets dumpable in the wrong order
-	// https://github.com/torvalds/linux/blob/v4.9/fs/exec.c#L1290-L1318
-	syscall.Close(l.stateDirFD)
 	return system.Execv(l.config.Args[0], l.config.Args[0:], os.Environ())
 }
