@@ -33,10 +33,12 @@ ROOT="$BATS_TMPDIR/runc"
 CONSOLE_SOCKET="$BATS_TMPDIR/console.sock"
 
 # Cgroup mount
-CGROUP_BASE_PATH=$(grep "cgroup" /proc/self/mountinfo | gawk 'toupper($NF) ~ /\<MEMORY\>/ { print $5; exit }')
+CGROUP_MEMORY_BASE_PATH=$(grep "cgroup" /proc/self/mountinfo | gawk 'toupper($NF) ~ /\<MEMORY\>/ { print $5; exit }')
+CGROUP_CPU_BASE_PATH=$(grep "cgroup" /proc/self/mountinfo | gawk 'toupper($NF) ~ /\<CPU\>/ { print $5; exit }')
 
 # CONFIG_MEMCG_KMEM support
-KMEM="${CGROUP_BASE_PATH}/memory.kmem.limit_in_bytes"
+KMEM="${CGROUP_MEMORY_BASE_PATH}/memory.kmem.limit_in_bytes"
+RT_PERIOD="${CGROUP_CPU_BASE_PATH}/cpu.rt_period_us"
 
 # Wrapper for runc.
 function runc() {
@@ -71,6 +73,11 @@ function requires() {
 				;;
 			cgroups_kmem)
 				if [ ! -e "$KMEM" ]; then
+					skip "Test requires ${var}."
+				fi
+				;;
+			cgroups_rt)
+				if [ ! -e "$RT_PERIOD" ]; then
 					skip "Test requires ${var}."
 				fi
 				;;
@@ -189,7 +196,10 @@ function setup_hello() {
 
 function teardown_running_container() {
 	runc list
-	if [[ "${output}" == *"$1"* ]]; then
+	# $1 should be a container name such as "test_busybox"
+	# here we detect "test_busybox "(with one extra blank) to avoid conflict prefix
+	# e.g. "test_busybox" and "test_busybox_update"
+	if [[ "${output}" == *"$1 "* ]]; then
 		runc kill $1 KILL
 		retry 10 1 eval "__runc state '$1' | grep -q 'stopped'"
 		runc delete $1
@@ -198,7 +208,10 @@ function teardown_running_container() {
 
 function teardown_running_container_inroot() {
 	ROOT=$2 runc list
-	if [[ "${output}" == *"$1"* ]]; then
+	# $1 should be a container name such as "test_busybox"
+	# here we detect "test_busybox "(with one extra blank) to avoid conflict prefix
+	# e.g. "test_busybox" and "test_busybox_update"
+	if [[ "${output}" == *"$1 "* ]]; then
 		ROOT=$2 runc kill $1 KILL
 		retry 10 1 eval "ROOT='$2' __runc state '$1' | grep -q 'stopped'"
 		ROOT=$2 runc delete $1

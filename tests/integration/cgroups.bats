@@ -3,7 +3,7 @@
 load helpers
 
 TEST_CGROUP_NAME="runc-cgroups-integration-test"
-CGROUP_MEMORY="${CGROUP_BASE_PATH}/${TEST_CGROUP_NAME}"
+CGROUP_MEMORY="${CGROUP_MEMORY_BASE_PATH}/${TEST_CGROUP_NAME}"
 
 function teardown() {
     rm -f $BATS_TMPDIR/runc-update-integration-test.json
