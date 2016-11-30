@@ -4,8 +4,7 @@ import "io"
 
 // Console represents a pseudo TTY.
 type Console interface {
-	io.ReadWriter
-	io.Closer
+	io.ReadWriteCloser
 
 	// Path returns the filesystem path to the slave side of the pty.
 	Path() string
