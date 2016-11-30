@@ -1,8 +1,8 @@
-# Solaris Application Container Configuration
+# <a name="solarisApplicationContainerConfiguration" />Solaris Application Container Configuration
 
 Solaris application containers can be configured using the following properties, all of the below properties have mappings to properties specified under zonecfg(8) man page, except milestone.
 
-## milestone
+## <a name="configSolarisMilestone" />milestone
 The SMF(Service Management Facility) FMRI which should go to "online" state before we start the desired process within the container.
 
 **`milestone`** *(string, OPTIONAL)*
@@ -12,7 +12,7 @@ The SMF(Service Management Facility) FMRI which should go to "online" state befo
 "milestone": "svc:/milestone/container:default"
 ```
 
-## limitpriv
+## <a name="configSolarisLimitpriv" />limitpriv
 The maximum set of privileges any process in this container can obtain.
 The property should consist of a comma-separated privilege set specification as described in priv_str_to_set(3C) man page for the respective release of Solaris.
 
@@ -23,7 +23,7 @@ The property should consist of a comma-separated privilege set specification as 
 "limitpriv": "default"
 ```
 
-## maxShmMemory
+## <a name="configSolarisMaxShmMemory" />maxShmMemory
 The maximum amount of shared memory allowed for this application container.
 A scale (K, M, G, T) can be applied to the value for each of these numbers (for example, 1M is one megabyte).
 Mapped to max-shm-memory in zonecfg(8) man page.
@@ -35,7 +35,7 @@ Mapped to max-shm-memory in zonecfg(8) man page.
 "maxShmMemory": "512m"
 ```
 
-## cappedCPU
+## <a name="configSolarisCappedCpu" />cappedCPU
 Sets a limit on the amount of CPU time that can be used by a container.
 The unit used translates to the percentage of a single CPU that can be used by all user threads in a container, expressed as a fraction (for example, .75) or a mixed number (whole number and fraction, for example, 1.25).
 An ncpu value of 1 means 100% of a CPU, a value of 1.25 means 125%, .75 mean 75%, and so forth.
@@ -51,7 +51,7 @@ cappedCPU is mapped to capped-cpu in zonecfg(8) man page.
 }
 ```
 
-## cappedMemory
+## <a name="configSolarisCappedMemory" />cappedMemory
 The physical and swap caps on the memory that can be used by this application container.
 A scale (K, M, G, T) can be applied to the value for each of these numbers (for example, 1M is one megabyte).
 cappedMemory is mapped to capped-memory in zonecfg(8) man page.
@@ -67,9 +67,9 @@ cappedMemory is mapped to capped-memory in zonecfg(8) man page.
 }
 ```
 
-## Network
+## <a name="configSolarisNetwork" />Network
 
-### Automatic Network (anet)
+### <a name="configSolarisAutomaticNetwork" />Automatic Network (anet)
 anet is specified as an array that is used to setup networking for Solaris application containers.
 The anet resource represents the automatic creation of a network resource for an application container.
 The zones administration daemon, zoneadmd, is the primary process for managing the container's virtual platform.
