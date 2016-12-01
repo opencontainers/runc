@@ -366,7 +366,7 @@ func (c *linuxContainer) newSetnsProcess(p *Process, cmd *exec.Cmd, parentPipe, 
 	if err != nil {
 		return nil, newSystemErrorWithCause(err, "getting container's current state")
 	}
-	// for setns process, we dont have to set cloneflags as the process namespaces
+	// for setns process, we don't have to set cloneflags as the process namespaces
 	// will only be set via setns syscall
 	data, err := c.bootstrapData(0, state.NamespacePaths, p.consolePath)
 	if err != nil {
