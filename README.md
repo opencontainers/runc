@@ -12,9 +12,14 @@ This means that `runc` 1.0.0 should implement the 1.0 version of the specificati
 
 You can find official releases of `runc` on the [release](https://github.com/opencontainers/runc/releases) page.
 
+### Security
+
+If you wish to report a security issue, please disclose the issue responsibly
+to security@opencontainers.org.
+
 ## Building
 
-`runc` currently supports the Linux platform with various architecture support. 
+`runc` currently supports the Linux platform with various architecture support.
 It must be built with Go version 1.6 or higher in order for some features to function properly.
 
 In order to enable seccomp support you will need to install `libseccomp` on your platform.
