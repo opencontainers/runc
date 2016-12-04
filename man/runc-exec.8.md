@@ -4,8 +4,8 @@
 # SYNOPSIS
    runc exec [command options] <container-id> -- <container command> [args...]
 
-Where "<container-id>" is the name for the instance of the container and
-"<container command>" is the command to be executed in the container.
+Where "\<container-id\>" is the name for the instance of the container and
+"\<container command\>" is the command to be executed in the container.
 
 # EXAMPLE
 For example, if the container is configured to run the linux ps command the

@@ -4,7 +4,7 @@
 # SYNOPSIS
    runc resume <container-id> [container-id...]
 
-Where "<container-id>" is the name for the instance of the container to be
+Where "\<container-id\>" is the name for the instance of the container to be
 resumed.
 
 # DESCRIPTION
