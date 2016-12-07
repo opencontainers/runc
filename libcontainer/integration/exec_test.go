@@ -543,7 +543,7 @@ func testCpuShares(t *testing.T, systemd bool) {
 
 	_, _, err = runContainer(config, "", "ps")
 	if err == nil {
-		t.Fatalf("runContainer should failed with invalid CpuShares")
+		t.Fatal("runContainer should failed with invalid CpuShares")
 	}
 }
 
@@ -581,7 +581,7 @@ func testPids(t *testing.T, systemd bool) {
 	ok(t, err)
 
 	if ret != 0 {
-		t.Fatalf("expected fork() to succeed with no pids limit")
+		t.Fatal("expected fork() to succeed with no pids limit")
 	}
 
 	// Enforce a permissive limit. This needs to be fairly hand-wavey due to the
@@ -598,7 +598,7 @@ func testPids(t *testing.T, systemd bool) {
 	ok(t, err)
 
 	if ret != 0 {
-		t.Fatalf("expected fork() to succeed with permissive pids limit")
+		t.Fatal("expected fork() to succeed with permissive pids limit")
 	}
 
 	// Enforce a restrictive limit. 64 * /bin/true + 1 * shell should cause this
@@ -621,7 +621,7 @@ func testPids(t *testing.T, systemd bool) {
 	}
 
 	if err == nil {
-		t.Fatalf("expected fork() to fail with restrictive pids limit")
+		t.Fatal("expected fork() to fail with restrictive pids limit")
 	}
 
 	// Minimal restrictions are not really supported, due to quirks in using Go

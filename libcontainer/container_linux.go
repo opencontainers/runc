@@ -5,6 +5,7 @@ package libcontainer
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -178,7 +179,7 @@ func (c *linuxContainer) Set(config configs.Config) error {
 		return err
 	}
 	if status == Stopped {
-		return newGenericError(fmt.Errorf("container not running"), ContainerNotRunning)
+		return newGenericError(errors.New("container not running"), ContainerNotRunning)
 	}
 	c.config = &config
 	return c.cgroupManager.Set(c.config)
@@ -231,7 +232,7 @@ func (c *linuxContainer) exec() error {
 		os.Remove(path)
 		return nil
 	}
-	return fmt.Errorf("cannot start an already running container")
+	return errors.New("cannot start an already running container")
 }
 
 func (c *linuxContainer) start(process *Process, isInit bool) error {
@@ -459,7 +460,7 @@ func (c *linuxContainer) Resume() error {
 		return err
 	}
 	if status != Paused {
-		return newGenericError(fmt.Errorf("container not paused"), ContainerNotPaused)
+		return newGenericError(errors.New("container not paused"), ContainerNotPaused)
 	}
 	if err := c.cgroupManager.Freeze(configs.Thawed); err != nil {
 		return err
@@ -558,7 +559,7 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 	}
 
 	if criuOpts.ImagesDirectory == "" {
-		return fmt.Errorf("invalid directory to save checkpoint")
+		return errors.New("invalid directory to save checkpoint")
 	}
 
 	// Since a container can be C/R'ed multiple times,
@@ -717,7 +718,7 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 	}
 	defer workDir.Close()
 	if criuOpts.ImagesDirectory == "" {
-		return fmt.Errorf("invalid directory to restore checkpoint")
+		return errors.New("invalid directory to restore checkpoint")
 	}
 	imageDir, err := os.Open(criuOpts.ImagesDirectory)
 	if err != nil {
@@ -917,10 +918,10 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *
 			return err
 		}
 		if n == 0 {
-			return fmt.Errorf("unexpected EOF")
+			return errors.New("unexpected EOF")
 		}
 		if n == len(buf) {
-			return fmt.Errorf("buffer is too small")
+			return errors.New("buffer is too small")
 		}
 
 		resp := new(criurpc.CriuResp)

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -20,7 +21,7 @@ your host.`,
 	Action: func(context *cli.Context) error {
 		hasError := false
 		if !context.Args().Present() {
-			return fmt.Errorf("runc: \"start\" requires a minimum of 1 argument")
+			return errors.New("runc: \"start\" requires a minimum of 1 argument")
 		}
 
 		factory, err := loadFactory(context)
@@ -60,7 +61,7 @@ your host.`,
 		}
 
 		if hasError {
-			return fmt.Errorf("one or more of container start failed")
+			return errors.New("one or more of container start failed")
 		}
 		return nil
 	},

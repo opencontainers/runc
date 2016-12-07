@@ -35,7 +35,7 @@ func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
 		if systemd.UseSystemd() {
 			cgroupManager = libcontainer.SystemdCgroups
 		} else {
-			return nil, fmt.Errorf("systemd cgroup flag passed, but systemd support for managing cgroups is not available")
+			return nil, errors.New("systemd cgroup flag passed, but systemd support for managing cgroups is not available")
 		}
 	}
 	return libcontainer.New(abs, cgroupManager, libcontainer.CriuPath(context.GlobalString("criu")))
@@ -129,7 +129,7 @@ func setupIO(process *libcontainer.Process, rootuid, rootgid int, console string
 	// detach and createTty will not work unless a console path is passed
 	// so error out here before changing any terminal settings
 	if createTTY && detach && console == "" {
-		return nil, fmt.Errorf("cannot allocate tty if runc will detach")
+		return nil, errors.New("cannot allocate tty if runc will detach")
 	}
 	if createTTY {
 		return createTty(process, rootuid, rootgid, console)
@@ -268,13 +268,13 @@ func (r *runner) terminate(p *libcontainer.Process) {
 
 func validateProcessSpec(spec *specs.Process) error {
 	if spec.Cwd == "" {
-		return fmt.Errorf("Cwd property must not be empty")
+		return errors.New("Cwd property must not be empty")
 	}
 	if !filepath.IsAbs(spec.Cwd) {
-		return fmt.Errorf("Cwd must be an absolute path")
+		return errors.New("Cwd must be an absolute path")
 	}
 	if len(spec.Args) == 0 {
-		return fmt.Errorf("args must not be empty")
+		return errors.New("args must not be empty")
 	}
 	return nil
 }
