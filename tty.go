@@ -66,9 +66,12 @@ func createTty(p *libcontainer.Process, rootuid, rootgid int, consolePath string
 	go io.Copy(console, os.Stdin)
 	go io.Copy(os.Stdout, console)
 
-	state, err := term.SetRawTerminal(os.Stdin.Fd())
-	if err != nil {
-		return nil, fmt.Errorf("failed to set the terminal from the stdin: %v", err)
+	var state *term.State
+	if term.IsTerminal(os.Stdin.Fd()) {
+		state, err = term.SetRawTerminal(os.Stdin.Fd())
+		if err != nil {
+			return nil, fmt.Errorf("failed to set the terminal from the stdin: %v", err)
+		}
 	}
 	return &tty{
 		console: console,
