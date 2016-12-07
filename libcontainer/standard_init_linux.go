@@ -179,6 +179,9 @@ func (l *linuxStandardInit) Init() error {
 			return newSystemErrorWithCause(err, "init seccomp")
 		}
 	}
+	// close the statedir fd before exec because the kernel resets dumpable in the wrong order
+	// https://github.com/torvalds/linux/blob/v4.9/fs/exec.c#L1290-L1318
+	syscall.Close(l.stateDirFD)
 	if err := syscall.Exec(name, l.config.Args[0:], os.Environ()); err != nil {
 		return newSystemErrorWithCause(err, "exec user process")
 	}
