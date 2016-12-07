@@ -13,7 +13,7 @@ function teardown() {
 
 @test "events --stats" {
   # run busybox detached
-  runc run -d --console /dev/pts/ptmx test_busybox
+  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
   [ "$status" -eq 0 ]
 
   # check state
@@ -28,7 +28,7 @@ function teardown() {
 
 @test "events --interval default " {
   # run busybox detached
-  runc run -d --console /dev/pts/ptmx test_busybox
+  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
   [ "$status" -eq 0 ]
 
   # check state
@@ -55,7 +55,7 @@ function teardown() {
 
 @test "events --interval 1s " {
   # run busybox detached
-  runc run -d --console /dev/pts/ptmx test_busybox
+  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
   [ "$status" -eq 0 ]
 
   # check state
@@ -81,7 +81,7 @@ function teardown() {
 
 @test "events --interval 100ms " {
   # run busybox detached
-  runc run -d --console /dev/pts/ptmx test_busybox
+  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
   [ "$status" -eq 0 ]
 
   # check state

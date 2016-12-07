@@ -12,12 +12,12 @@ function teardown() {
 }
 
 @test "runc start" {
-  runc create --console /dev/pts/ptmx test_busybox1
+  runc create --console-socket $CONSOLE_SOCKET test_busybox1
   [ "$status" -eq 0 ]
 
   testcontainer test_busybox1 created
 
-  runc create --console /dev/pts/ptmx test_busybox2
+  runc create --console-socket $CONSOLE_SOCKET test_busybox2
   [ "$status" -eq 0 ]
 
   testcontainer test_busybox2 created

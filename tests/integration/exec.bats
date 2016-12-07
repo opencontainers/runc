@@ -13,7 +13,7 @@ function teardown() {
 
 @test "runc exec" {
   # run busybox detached
-  runc run -d --console /dev/pts/ptmx test_busybox
+  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
   [ "$status" -eq 0 ]
 
   wait_for_container 15 1 test_busybox
@@ -26,7 +26,7 @@ function teardown() {
 
 @test "runc exec --pid-file" {
   # run busybox detached
-  runc run -d --console /dev/pts/ptmx test_busybox
+  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
   [ "$status" -eq 0 ]
 
   wait_for_container 15 1 test_busybox
@@ -53,7 +53,7 @@ function teardown() {
   [ "$status" -eq 0 ]
 
   # run busybox detached
-  runc run -d -b $BUSYBOX_BUNDLE --console /dev/pts/ptmx test_busybox
+  runc run -d -b $BUSYBOX_BUNDLE --console-socket $CONSOLE_SOCKET test_busybox
   [ "$status" -eq 0 ]
 
   wait_for_container 15 1 test_busybox
@@ -74,7 +74,7 @@ function teardown() {
 
 @test "runc exec ls -la" {
   # run busybox detached
-  runc run -d --console /dev/pts/ptmx test_busybox
+  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
   [ "$status" -eq 0 ]
 
   wait_for_container 15 1 test_busybox
@@ -88,7 +88,7 @@ function teardown() {
 
 @test "runc exec ls -la with --cwd" {
   # run busybox detached
-  runc run -d --console /dev/pts/ptmx test_busybox
+  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
   [ "$status" -eq 0 ]
 
   wait_for_container 15 1 test_busybox
@@ -100,7 +100,7 @@ function teardown() {
 
 @test "runc exec --env" {
   # run busybox detached
-  runc run -d --console /dev/pts/ptmx test_busybox
+  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
   [ "$status" -eq 0 ]
 
   wait_for_container 15 1 test_busybox
@@ -113,7 +113,7 @@ function teardown() {
 
 @test "runc exec --user" {
   # run busybox detached
-  runc run -d --console /dev/pts/ptmx test_busybox
+  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
   [ "$status" -eq 0 ]
 
   wait_for_container 15 1 test_busybox

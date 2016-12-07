@@ -26,12 +26,12 @@ Where "<container-id>" is the name for the instance of the container and
 EXAMPLE:
 For example, if the container is configured to run the linux ps command the
 following will output a list of processes running in the container:
-	 
+
        # runc exec <container-id> ps`,
 	Flags: []cli.Flag{
 		cli.StringFlag{
-			Name:  "console",
-			Usage: "specify the pty slave path for use with the container",
+			Name:  "console-socket",
+			Usage: "path to an AF_UNIX socket which will receive a file descriptor referencing the master end of the console's pseudoterminal",
 		},
 		cli.StringFlag{
 			Name:  "cwd",
@@ -131,7 +131,7 @@ func execProcess(context *cli.Context) (int, error) {
 		enableSubreaper: false,
 		shouldDestroy:   false,
 		container:       container,
-		console:         context.String("console"),
+		consoleSocket:   context.String("console-socket"),
 		detach:          detach,
 		pidFile:         context.String("pid-file"),
 	}
