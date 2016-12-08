@@ -24,11 +24,11 @@ var ErrIncompatibleLabel = fmt.Errorf("Bad SELinux option z and Z can not be use
 // the container.  A list of options can be passed into this function to alter
 // the labels.  The labels returned will include a random MCS String, that is
 // guaranteed to be unique.
-func InitLabels(options []string) (string, string, error) {
-	if !selinux.SelinuxEnabled() {
+func InitLabels(options []string) (processLabel string, mountLabel string, err error) {
+	if !selinux.SelinuxEnabledHost() {
 		return "", "", nil
 	}
-	processLabel, mountLabel := selinux.GetLxcContexts()
+	processLabel, mountLabel = selinux.GetLxcContexts()
 	if processLabel != "" {
 		pcon := selinux.NewContext(processLabel)
 		mcon := selinux.NewContext(mountLabel)
@@ -41,7 +41,8 @@ func InitLabels(options []string) (string, string, error) {
 				return "", "", fmt.Errorf("bad label option %q, valid options 'disable' or \n'user, role, level, type' followed by ':' and a value", opt)
 			}
 			if val[1] == "disable" {
-				return "", "", nil
+				selinux.SetDisabled()
+				return "", mountLabel, nil
 			}
 			con := strings.SplitN(val[1], ":", 2)
 			if len(con) < 2 || !validOptions[con[0]] {
@@ -177,7 +178,7 @@ func UnreserveLabel(label string) error {
 	return nil
 }
 
-// DupSecOpt takes a process label and returns security options that
+// DupSecOpt takes an process label and returns security options that
 // can be used to set duplicate labels on future container processes
 func DupSecOpt(src string) []string {
 	return selinux.DupSecOpt(src)

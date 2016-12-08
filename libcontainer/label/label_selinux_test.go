@@ -18,11 +18,30 @@ func TestInit(t *testing.T) {
 			t.Log("InitLabels Failed")
 			t.Fatal(err)
 		}
-		testDisabled := []string{"label=disable"}
 		roMountLabel := GetROMountLabel()
 		if roMountLabel == "" {
 			t.Errorf("GetROMountLabel Failed")
 		}
+		testUser := []string{"label=user:user_u", "label=role:user_r", "label=type:user_t", "label=level:s0:c1,c15"}
+		plabel, mlabel, err = InitLabels(testUser)
+		t.Log("plabel=", plabel, "mlabel=", mlabel)
+		if err != nil {
+			t.Log("InitLabels User Failed")
+			t.Log(plabel, mlabel)
+			t.Fatal(err)
+		}
+		if plabel != "user_u:user_r:user_t:s0:c1,c15" || mlabel != "user_u:object_r:container_file_t:s0:c1,c15" {
+			t.Log("InitLabels User Match Failed")
+			t.Log(plabel, mlabel)
+			t.FailNow()
+		}
+
+		testBadData := []string{"label=user", "label=role:user_r", "label=type:user_t", "label=level:s0:c1,c15"}
+		if _, _, err = InitLabels(testBadData); err == nil {
+			t.Log("InitLabels Bad Failed")
+			t.Fatal(err)
+		}
+		testDisabled := []string{"label=disable"}
 		plabel, mlabel, err = InitLabels(testDisabled)
 		if err != nil {
 			t.Log("InitLabels Disabled Failed")
@@ -32,27 +51,11 @@ func TestInit(t *testing.T) {
 			t.Log("InitLabels Disabled Failed")
 			t.FailNow()
 		}
-		testUser := []string{"label=user:user_u", "label=role:user_r", "label=type:user_t", "label=level:s0:c1,c15"}
-		plabel, mlabel, err = InitLabels(testUser)
-		if err != nil {
-			t.Log("InitLabels User Failed")
-			t.Fatal(err)
-		}
-		if plabel != "user_u:user_r:user_t:s0:c1,c15" || mlabel != "user_u:object_r:svirt_sandbox_file_t:s0:c1,c15" {
-			t.Log("InitLabels User Match Failed")
-			t.Log(plabel, mlabel)
-			t.Fatal(err)
-		}
-
-		testBadData := []string{"label=user", "label=role:user_r", "label=type:user_t", "label=level:s0:c1,c15"}
-		if _, _, err = InitLabels(testBadData); err == nil {
-			t.Log("InitLabels Bad Failed")
-			t.Fatal(err)
-		}
+		selinux.SetEnabled()
 	}
 }
 func TestDuplicateLabel(t *testing.T) {
-	secopt := DupSecOpt("system_u:system_r:svirt_lxc_net_t:s0:c1,c2")
+	secopt := DupSecOpt("system_u:system_r:container_t:s0:c1,c2")
 	t.Log(secopt)
 	for _, opt := range secopt {
 		parts := strings.SplitN(opt, "=", 2)
@@ -74,7 +77,7 @@ func TestDuplicateLabel(t *testing.T) {
 			continue
 		}
 		if con[0] == "type" {
-			if con[1] != "svirt_lxc_net_t" {
+			if con[1] != "container_t" {
 				t.Errorf("DupSecOpt Failed type incorrect")
 			}
 			continue
@@ -98,7 +101,7 @@ func TestRelabel(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(testdir)
-	label := "system_u:object_r:svirt_sandbox_file_t:s0:c1,c2"
+	label := "system_u:object_r:container_file_t:s0:c1,c2"
 	if err := Relabel(testdir, "", true); err != nil {
 		t.Fatalf("Relabel with no label failed: %v", err)
 	}
