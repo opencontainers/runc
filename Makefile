@@ -108,6 +108,9 @@ shell: all
 install:
 	install -D -m0755 runc $(BINDIR)/runc
 
+install-recvtty:
+	install -D -m0755 contrib/cmd/recvtty/recvtty $(BINDIR)/recvtty
+
 install-bash:
 	install -D -m0644 contrib/completions/bash/runc $(PREFIX)/share/bash-completion/completions/runc
 
@@ -120,6 +123,9 @@ uninstall:
 
 uninstall-bash:
 	rm -f $(PREFIX)/share/bash-completion/completions/runc
+
+uninstall-recvtty:
+	rm -f $(BINDIR)/recvtty
 
 uninstall-man:
 	rm -f $(addprefix $(MAN_INSTALL_PATH),$(MAN_PAGES_BASE))
