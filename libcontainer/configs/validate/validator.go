@@ -148,6 +148,15 @@ func (v *ConfigValidator) sysctl(config *configs.Config) error {
 	return nil
 }
 
+func isSymbolicLink(path string) (bool, error) {
+	fi, err := os.Lstat(path)
+	if err != nil {
+		return false, err
+	}
+
+	return fi.Mode()&os.ModeSymlink == os.ModeSymlink, nil
+}
+
 // checkHostNs checks whether network sysctl is used in host namespace.
 func checkHostNs(sysctlConfig string, path string) error {
 	var currentProcessNetns = "/proc/self/ns/net"
@@ -156,6 +165,19 @@ func checkHostNs(sysctlConfig string, path string) error {
 	if err != nil {
 		return fmt.Errorf("read soft link %q error", currentProcessNetns)
 	}
+
+	// First check if the provided path is a symbolic link
+	symLink, err := isSymbolicLink(path)
+	if err != nil {
+		return fmt.Errorf("could not check that %q is a symlink: %v", path, err)
+	}
+
+	if symLink == false {
+		// The provided namespace is not a symbolic link,
+		// it is not the host namespace.
+		return nil
+	}
+
 	// readlink on the path provided in the struct
 	destOfContainer, err := os.Readlink(path)
 	if err != nil {
