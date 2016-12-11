@@ -120,8 +120,8 @@ func finalizeRootfs(config *configs.Config) (err error) {
 	// remount dev as ro if specified
 	for _, m := range config.Mounts {
 		if libcontainerUtils.CleanPath(m.Destination) == "/dev" {
-			if m.Flags&syscall.MS_RDONLY != 0 {
-				if err := remountReadonly(m.Destination); err != nil {
+			if m.Flags&syscall.MS_RDONLY == syscall.MS_RDONLY {
+				if err := remountReadonly(m); err != nil {
 					return newSystemErrorWithCausef(err, "remounting %q as readonly", m.Destination)
 				}
 			}
@@ -700,17 +700,26 @@ func createIfNotExists(path string, isDir bool) error {
 	return nil
 }
 
-// remountReadonly will bind over the top of an existing path and ensure that it is read-only.
-func remountReadonly(path string) error {
+// readonlyPath will make a path read only.
+func readonlyPath(path string) error {
+	if err := syscall.Mount(path, path, "", syscall.MS_BIND|syscall.MS_REC, ""); err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	return syscall.Mount(path, path, "", syscall.MS_BIND|syscall.MS_REMOUNT|syscall.MS_RDONLY|syscall.MS_REC, "")
+}
+
+// remountReadonly will remount an existing mount point and ensure that it is read-only.
+func remountReadonly(m *configs.Mount) error {
+	var (
+		dest  = m.Destination
+		flags = m.Flags
+	)
 	for i := 0; i < 5; i++ {
-		if err := syscall.Mount("", path, "", syscall.MS_REMOUNT|syscall.MS_RDONLY, ""); err != nil && !os.IsNotExist(err) {
+		if err := syscall.Mount("", dest, "", uintptr(flags|syscall.MS_REMOUNT|syscall.MS_RDONLY), ""); err != nil {
 			switch err {
-			case syscall.EINVAL:
-				// Probably not a mountpoint, use bind-mount
-				if err := syscall.Mount(path, path, "", syscall.MS_BIND, ""); err != nil {
-					return err
-				}
-				return syscall.Mount(path, path, "", syscall.MS_BIND|syscall.MS_REMOUNT|syscall.MS_RDONLY|syscall.MS_REC|defaultMountFlags, "")
 			case syscall.EBUSY:
 				time.Sleep(100 * time.Millisecond)
 				continue
@@ -720,7 +729,7 @@ func remountReadonly(path string) error {
 		}
 		return nil
 	}
-	return fmt.Errorf("unable to mount %s as readonly max retries reached", path)
+	return fmt.Errorf("unable to mount %s as readonly max retries reached", dest)
 }
 
 // maskPath masks the top of the specified path inside a container to avoid
