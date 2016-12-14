@@ -1,5 +1,56 @@
 OpenContainers Specifications
 
+Changes with v1.0.0-rc3:
+	Additions:
+
+	* config: Add support for Windows-based containers (#565, #573)
+	* config: Add process.consoleSize (#563)
+	* config: Explicitly allow unknown extensions and document
+	  annotations key conventions (#510)
+	* config: Define mounts entries for Solaris (#588)
+
+	Removals and increased restrictions:
+
+	* config: Require absolute paths for mount destinations (#609)
+	* config-linux: Require absolute path for maskedPaths and
+	  readonlyPaths (#587)
+	* config-linux: Only require /dev/console when process.terminal is
+	  true.  Also require /dev/console to be provided by a bind mount
+	  (#518)
+	* runtime: Require runtimes to generate errors when the container
+	  specified in config.json cannot be created (#559)
+
+	Breaking Go changes:
+
+	* specs-go/config: Aggressive namespacing (#567)
+	* specs-go/config: Remove pointers from LinuxHugepageLimit,
+	  LinuxInterfacePriority, and LinuxPids properties (#586)
+	* specs-go/state: Rename version to ociVersion (#633)
+	  LinuxInterfacePriority, and LinuxPids properties (#586)
+
+	Minor fixes and documentation:
+
+	* spec: Separate the spec from project scaffolding (#626)
+	* README: Define "unspecified", "undefined", and
+	 "implementation-defined" (#575)
+	* config: Clarify absolue and relative values for root.path (#558)
+	* config: Clarify ociVersion covering the configuration <->
+	  runtime API (#523)
+	* config-linux: Forbid duplicated namespaces with same `type`
+	  (#597)
+	* glossary: Make objects explicitly unordered and forbid duplicate
+	  names (#584)
+	* specs-go/config: Add platform tags to Rlimits and
+	  NoNewPRivileges (#564)
+	* schema/defs-linux: Use int64 for major/minor types (#610)
+	* Makefile: Add support for Go 1.7 (#547)
+	* Makefile: Require Go >= 1.6 for golint (#589)
+	* Makefile: Use a POSIX-compatible test ('==' -> '=') (#542)
+	* implementations: Rename ocitools -> runtime-tools (#585)
+	* *: Typo fixes and polishing (#556, #566, #568, #569, #571, #572,
+	  #574, #595, #596, #599, #600, #601, #603, #605, #608, #613, #617,
+	  #619, #621, #622, #623, #624, #625, #627, #629)
+
 Changes with v1.0.0-rc2:
 	Additions:
 
