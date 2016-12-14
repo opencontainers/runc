@@ -1,13 +1,13 @@
-# Windows-specific Container Configuration
+# <a name="windowsSpecificContainerConfiguration" />Windows-specific Container Configuration
 
 This document describes the schema for the [Windows-specific section](config.md#platform-specific-configuration) of the [container configuration](config.md).
 The Windows container specification uses APIs provided by the Windows Host Compute Service (HCS) to fulfill the spec.
 
-## Resources
+## <a name="configWindowsResources" />Resources
 
 You can configure a container's resource limits via the OPTIONAL `resources` field of the Windows configuration.
 
-### Memory
+### <a name="configWindowsMemory" />Memory
 
 `memory` is an OPTIONAL configuration for the container's memory usage.
 
@@ -30,7 +30,7 @@ The following parameters can be specified:
     }
 ```
 
-### CPU
+### <a name="configWindowsCpu" />CPU
 
 `cpu` is an OPTIONAL configuration for the container's CPU usage.
 
@@ -54,7 +54,7 @@ The following parameters can be specified:
     }
 ```
 
-### Storage
+### <a name="configWindowsStorage" />Storage
 
 `storage` is an OPTIONAL configuration for the container's storage usage.
 
@@ -78,7 +78,7 @@ The following parameters can be specified:
     }
 ```
 
-### Network
+### <a name="configWindowsNetwork" />Network
 
 `network` is an OPTIONAL configuration for the container's network usage.
 
