@@ -130,6 +130,7 @@ clean:
 	rm -f $(RUNC_LINK)
 	rm -rf $(GOPATH)/pkg
 	rm -rf $(RELEASE_DIR)
+	rm -rf $(MAN_DIR)
 
 validate:
 	script/validate-gofmt
