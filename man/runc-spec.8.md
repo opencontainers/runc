@@ -35,9 +35,9 @@ In the start command above, "container1" is the name for the instance of the
 container that you are starting. The name you provide for the container instance
 must be unique on your host.
 
-An alternative for generating a customized spec config is to use "ocitools", the
-sub-command "ocitools generate" has lots of options that can be used to do any
-customizations as you want, see [ocitools](https://github.com/opencontainers/ocitools)
+An alternative for generating a customized spec config is to use "oci-runtime-tool", the
+sub-command "oci-runtime-tool generate" has lots of options that can be used to do any
+customizations as you want, see [runtime-tools](https://github.com/opencontainers/runtime-tools)
 to get more information.
 
 When starting a container through runc, runc needs root privilege. If not
