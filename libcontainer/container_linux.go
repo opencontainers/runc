@@ -61,6 +61,9 @@ type State struct {
 
 	// Container's standard descriptors (std{in,out,err}), needed for checkpoint and restore
 	ExternalDescriptors []string `json:"external_descriptors,omitempty"`
+
+	// Intel RDT "resource control" filesystem path
+	IntelRdtPath string `json:"intel_rdt_path"`
 }
 
 // Container is a libcontainer container object.
@@ -378,6 +381,7 @@ func (c *linuxContainer) newSetnsProcess(p *Process, cmd *exec.Cmd, parentPipe, 
 	return &setnsProcess{
 		cmd:           cmd,
 		cgroupPaths:   c.cgroupManager.GetPaths(),
+		intelRdtPath:  c.cgroupManager.GetResourcePath(),
 		childPipe:     childPipe,
 		parentPipe:    parentPipe,
 		config:        c.newInitConfig(p),
@@ -1214,6 +1218,7 @@ func (c *linuxContainer) currentState() (*State, error) {
 			Created:              c.created,
 		},
 		CgroupPaths:         c.cgroupManager.GetPaths(),
+		IntelRdtPath:        c.cgroupManager.GetResourcePath(),
 		NamespacePaths:      make(map[configs.NamespaceType]string),
 		ExternalDescriptors: externalDescriptors,
 	}

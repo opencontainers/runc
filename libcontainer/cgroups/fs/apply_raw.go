@@ -31,6 +31,7 @@ var (
 		&PerfEventGroup{},
 		&FreezerGroup{},
 		&NameGroup{GroupName: "name=systemd", Join: true},
+		// If Intel RDT is enabled, will append IntelRdtGroup later
 	}
 	HugePageSizes, _ = cgroups.GetHugePageSize()
 )
@@ -62,9 +63,11 @@ type subsystem interface {
 }
 
 type Manager struct {
-	mu      sync.Mutex
-	Cgroups *configs.Cgroup
-	Paths   map[string]string
+	mu           sync.Mutex
+	Cgroups      *configs.Cgroup
+	Paths        map[string]string
+	ContainerId  string
+	ResourcePath string
 }
 
 // The absolute path to the root of the cgroup hierarchies.
@@ -94,10 +97,11 @@ func getCgroupRoot() (string, error) {
 }
 
 type cgroupData struct {
-	root      string
-	innerPath string
-	config    *configs.Cgroup
-	pid       int
+	root        string
+	innerPath   string
+	config      *configs.Cgroup
+	pid         int
+	containerId string
 }
 
 func (m *Manager) Apply(pid int) (err error) {
@@ -109,7 +113,7 @@ func (m *Manager) Apply(pid int) (err error) {
 
 	var c = m.Cgroups
 
-	d, err := getCgroupData(m.Cgroups, pid)
+	d, err := getCgroupData(m.Cgroups, pid, m.ContainerId)
 	if err != nil {
 		return err
 	}
@@ -131,23 +135,38 @@ func (m *Manager) Apply(pid int) (err error) {
 	}
 
 	paths := make(map[string]string)
+
+	// If Intel RDT is enabled, append IntelRdtGroup to subsystems
+	if IsIntelRdtEnabled() && m.Cgroups.Resources.IntelRdtL3CacheSchema != "" {
+		subsystems = append(subsystems, &IntelRdtGroup{})
+		intelRdtPath, err := GetIntelRdtPath(m.ContainerId)
+		if err != nil {
+			return err
+		}
+		m.ResourcePath = intelRdtPath
+	}
+
 	for _, sys := range subsystems {
 		if err := sys.Apply(d); err != nil {
 			return err
 		}
-		// TODO: Apply should, ideally, be reentrant or be broken up into a separate
-		// create and join phase so that the cgroup hierarchy for a container can be
-		// created then join consists of writing the process pids to cgroup.procs
-		p, err := d.path(sys.Name())
-		if err != nil {
-			// The non-presence of the devices subsystem is
-			// considered fatal for security reasons.
-			if cgroups.IsNotFound(err) && sys.Name() != "devices" {
-				continue
+
+		// Intel RDT "resource control" filesystem is not in cgroup path
+		if sys.Name() != "intel_rdt" {
+			// TODO: Apply should, ideally, be reentrant or be broken up into a separate
+			// create and join phase so that the cgroup hierarchy for a container can be
+			// created then join consists of writing the process pids to cgroup.procs
+			p, err := d.path(sys.Name())
+			if err != nil {
+				// The non-presence of the devices subsystem is
+				// considered fatal for security reasons.
+				if cgroups.IsNotFound(err) && sys.Name() != "devices" {
+					continue
+				}
+				return err
 			}
-			return err
+			paths[sys.Name()] = p
 		}
-		paths[sys.Name()] = p
 	}
 	m.Paths = paths
 	return nil
@@ -163,6 +182,12 @@ func (m *Manager) Destroy() error {
 		return err
 	}
 	m.Paths = make(map[string]string)
+
+	// Intel RDT "resource control" filesystem
+	if m.ResourcePath != "" {
+		return os.RemoveAll(m.ResourcePath)
+	}
+	m.ResourcePath = ""
 	return nil
 }
 
@@ -171,6 +196,13 @@ func (m *Manager) GetPaths() map[string]string {
 	paths := m.Paths
 	m.mu.Unlock()
 	return paths
+}
+
+func (m *Manager) GetResourcePath() string {
+	m.mu.Lock()
+	path := m.ResourcePath
+	m.mu.Unlock()
+	return path
 }
 
 func (m *Manager) GetStats() (*cgroups.Stats, error) {
@@ -186,6 +218,24 @@ func (m *Manager) GetStats() (*cgroups.Stats, error) {
 			return nil, err
 		}
 	}
+
+	// Intel RDT "resource control" filesystem stats
+	if IsIntelRdtEnabled() && m.Cgroups.Resources.IntelRdtL3CacheSchema != "" {
+		intelRdtPath, err := GetIntelRdtPath(m.ContainerId)
+		if err != nil || !cgroups.PathExists(intelRdtPath) {
+			return nil, err
+		}
+		sys, err := subsystems.Get("intel_rdt")
+		if err == errSubsystemDoesNotExist {
+			// In case IntelRdtGroup is not appended to subsystems
+			subsystems = append(subsystems, &IntelRdtGroup{})
+		}
+		sys, _ = subsystems.Get("intel_rdt")
+		if err := sys.GetStats(intelRdtPath, stats); err != nil {
+			return nil, err
+		}
+	}
+
 	return stats, nil
 }
 
@@ -199,6 +249,9 @@ func (m *Manager) Set(container *configs.Config) error {
 	paths := m.GetPaths()
 	for _, sys := range subsystems {
 		path := paths[sys.Name()]
+		if sys.Name() == "intel_rdt" {
+			path = m.GetResourcePath()
+		}
 		if err := sys.Set(path, container.Cgroups); err != nil {
 			return err
 		}
@@ -241,7 +294,7 @@ func (m *Manager) GetAllPids() ([]int, error) {
 	return cgroups.GetAllPids(paths["devices"])
 }
 
-func getCgroupData(c *configs.Cgroup, pid int) (*cgroupData, error) {
+func getCgroupData(c *configs.Cgroup, pid int, containerId string) (*cgroupData, error) {
 	root, err := getCgroupRoot()
 	if err != nil {
 		return nil, err
@@ -262,10 +315,11 @@ func getCgroupData(c *configs.Cgroup, pid int) (*cgroupData, error) {
 	}
 
 	return &cgroupData{
-		root:      root,
-		innerPath: innerPath,
-		config:    c,
-		pid:       pid,
+		root:        root,
+		innerPath:   innerPath,
+		config:      c,
+		pid:         pid,
+		containerId: containerId,
 	}, nil
 }
 

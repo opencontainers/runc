@@ -24,11 +24,12 @@ type event struct {
 
 // stats is the runc specific stats structure for stability when encoding and decoding stats.
 type stats struct {
-	Cpu     cpu                `json:"cpu"`
-	Memory  memory             `json:"memory"`
-	Pids    pids               `json:"pids"`
-	Blkio   blkio              `json:"blkio"`
-	Hugetlb map[string]hugetlb `json:"hugetlb"`
+	Cpu      cpu                `json:"cpu"`
+	Memory   memory             `json:"memory"`
+	Pids     pids               `json:"pids"`
+	Blkio    blkio              `json:"blkio"`
+	Hugetlb  map[string]hugetlb `json:"hugetlb"`
+	IntelRdt intelRdt           `json:"intelRdt"`
 }
 
 type hugetlb struct {
@@ -93,6 +94,12 @@ type memory struct {
 	Kernel    memoryEntry       `json:"kernel,omitempty"`
 	KernelTCP memoryEntry       `json:"kernelTCP,omitempty"`
 	Raw       map[string]uint64 `json:"raw,omitempty"`
+}
+
+type intelRdt struct {
+	// The read-only default "schemas" in root, for reference
+	L3CacheSchemaRoot string `json:"l3CacheSchemaRoot,omitempty"`
+	L3CacheSchema     string `json:"l3CacheSchema,omitempty"`
 }
 
 var eventsCommand = cli.Command{
@@ -223,6 +230,10 @@ func convertLibcontainerStats(ls *libcontainer.Stats) *stats {
 	for k, v := range cg.HugetlbStats {
 		s.Hugetlb[k] = convertHugtlb(v)
 	}
+
+	is := cg.IntelRdtStats
+	s.IntelRdt.L3CacheSchemaRoot = is.IntelRdtRootStats.L3CacheSchema
+	s.IntelRdt.L3CacheSchema = is.IntelRdtGroupStats.L3CacheSchema
 	return &s
 }
 

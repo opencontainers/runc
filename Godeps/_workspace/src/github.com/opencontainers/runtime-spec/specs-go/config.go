@@ -311,6 +311,13 @@ type Network struct {
 	Priorities []InterfacePriority `json:"priorities,omitempty"`
 }
 
+// IntelRdt for Linux Intel RDT/CAT resource management (Linux 4.10)
+type IntelRdt struct {
+	// The schema for L3 cache id and capacity bitmask (CBM)
+	// Format: "L3:<cache_id0>=<cbm0>;<cache_id1>=<cbm1>;..."
+	L3CacheSchema *string `json:"l3CacheSchema,omitempty"`
+}
+
 // Resources has container runtime resource constraints
 type Resources struct {
 	// Devices configures the device whitelist.
@@ -331,6 +338,8 @@ type Resources struct {
 	HugepageLimits []HugepageLimit `json:"hugepageLimits,omitempty"`
 	// Network restriction configuration
 	Network *Network `json:"network,omitempty"`
+	// IntelRdt restriction configuration
+	IntelRdt *IntelRdt `json:"intelRdt,omitempty"`
 }
 
 // Device represents the mknod information for a Linux special device file

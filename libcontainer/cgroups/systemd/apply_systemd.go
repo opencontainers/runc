@@ -21,9 +21,11 @@ import (
 )
 
 type Manager struct {
-	mu      sync.Mutex
-	Cgroups *configs.Cgroup
-	Paths   map[string]string
+	mu           sync.Mutex
+	Cgroups      *configs.Cgroup
+	Paths        map[string]string
+	ContainerId  string
+	ResourcePath string
 }
 
 type subsystem interface {
@@ -62,6 +64,7 @@ var subsystems = subsystemSet{
 	&fs.NetPrioGroup{},
 	&fs.NetClsGroup{},
 	&fs.NameGroup{GroupName: "name=systemd"},
+	// If Intel RDT is enabled, will append IntelRdtGroup later
 }
 
 const (
@@ -286,21 +289,36 @@ func (m *Manager) Apply(pid int) error {
 		return err
 	}
 
+	// If Intel RDT is enabled, append IntelRdtGroup to subsystems
+	if fs.IsIntelRdtEnabled() && m.Cgroups.Resources.IntelRdtL3CacheSchema != "" {
+		subsystems = append(subsystems, &fs.IntelRdtGroup{})
+
+		// Intel RDT "resource control" is not real cgroup, it will not join cgroup path
+		intelRdtPath, err := joinIntelRdt(c, pid, m.ContainerId)
+		if err != nil {
+			return err
+		}
+		m.ResourcePath = intelRdtPath
+	}
+
 	if err := joinCgroups(c, pid); err != nil {
 		return err
 	}
 
 	paths := make(map[string]string)
 	for _, s := range subsystems {
-		subsystemPath, err := getSubsystemPath(m.Cgroups, s.Name())
-		if err != nil {
-			// Don't fail if a cgroup hierarchy was not found, just skip this subsystem
-			if cgroups.IsNotFound(err) {
-				continue
+		// Intel RDT "resource control" filesystem is not in cgroup path
+		if s.Name() != "intel_rdt" {
+			subsystemPath, err := getSubsystemPath(m.Cgroups, s.Name())
+			if err != nil {
+				// Don't fail if a cgroup hierarchy was not found, just skip this subsystem
+				if cgroups.IsNotFound(err) {
+					continue
+				}
+				return err
 			}
-			return err
+			paths[s.Name()] = subsystemPath
 		}
-		paths[s.Name()] = subsystemPath
 	}
 	m.Paths = paths
 	return nil
@@ -317,6 +335,12 @@ func (m *Manager) Destroy() error {
 		return err
 	}
 	m.Paths = make(map[string]string)
+
+	// Intel RDT "resource control" filesystem
+	if m.ResourcePath != "" {
+		return os.RemoveAll(m.ResourcePath)
+	}
+	m.ResourcePath = ""
 	return nil
 }
 
@@ -325,6 +349,13 @@ func (m *Manager) GetPaths() map[string]string {
 	paths := m.Paths
 	m.mu.Unlock()
 	return paths
+}
+
+func (m *Manager) GetResourcePath() string {
+	m.mu.Lock()
+	path := m.ResourcePath
+	m.mu.Unlock()
+	return path
 }
 
 func writeFile(dir, file, data string) error {
@@ -350,12 +381,30 @@ func join(c *configs.Cgroup, subsystem string, pid int) (string, error) {
 	return path, nil
 }
 
+func joinIntelRdt(c *configs.Cgroup, pid int, containerId string) (string, error) {
+	path, err := fs.GetIntelRdtPath(containerId)
+	if err != nil {
+		return "", err
+	}
+	if err := os.MkdirAll(path, 0755); err != nil {
+		return "", err
+	}
+	if err := fs.WriteIntelRdtTasks(path, pid); err != nil {
+		return "", err
+	}
+	return path, nil
+}
+
 func joinCgroups(c *configs.Cgroup, pid int) error {
 	for _, sys := range subsystems {
 		name := sys.Name()
 		switch name {
 		case "name=systemd":
 			// let systemd handle this
+			break
+		case "intel_rdt":
+			// Intel RDT "resource control" is not real cgroup,
+			// it will not join cgroup path
 			break
 		case "cpuset":
 			path, err := getSubsystemPath(c, name)
@@ -498,6 +547,23 @@ func (m *Manager) GetStats() (*cgroups.Stats, error) {
 		}
 	}
 
+	// Intel RDT "resource control" filesystem stats
+	if fs.IsIntelRdtEnabled() && m.Cgroups.Resources.IntelRdtL3CacheSchema != "" {
+		intelRdtPath, err := fs.GetIntelRdtPath(m.ContainerId)
+		if err != nil || !cgroups.PathExists(intelRdtPath) {
+			return nil, err
+		}
+		sys, err := subsystems.Get("intel_rdt")
+		if err == errSubsystemDoesNotExist {
+			// In case IntelRdtGroup is not appended to subsystems
+			subsystems = append(subsystems, &fs.IntelRdtGroup{})
+		}
+		sys, _ = subsystems.Get("intel_rdt")
+		if err := sys.GetStats(intelRdtPath, stats); err != nil {
+			return nil, err
+		}
+	}
+
 	return stats, nil
 }
 
@@ -512,6 +578,10 @@ func (m *Manager) Set(container *configs.Config) error {
 		path, err := getSubsystemPath(container.Cgroups, sys.Name())
 		if err != nil && !cgroups.IsNotFound(err) {
 			return err
+		}
+
+		if sys.Name() == "intel_rdt" {
+			path = m.GetResourcePath()
 		}
 
 		if err := sys.Set(path, container.Cgroups); err != nil {
