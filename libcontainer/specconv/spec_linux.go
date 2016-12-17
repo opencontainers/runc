@@ -20,7 +20,7 @@ import (
 
 const wildcard = -1
 
-var namespaceMapping = map[specs.NamespaceType]configs.NamespaceType{
+var namespaceMapping = map[specs.LinuxNamespaceType]configs.NamespaceType{
 	specs.PIDNamespace:     configs.NEWPID,
 	specs.NetworkNamespace: configs.NEWNET,
 	specs.MountNamespace:   configs.NEWNS,
@@ -377,8 +377,8 @@ func createCgroupConfig(name string, useSystemdCgroup bool, spec *specs.Spec) (*
 			c.Resources.CpusetMems = *r.CPU.Mems
 		}
 	}
-	if r.Pids != nil && r.Pids.Limit != nil {
-		c.Resources.PidsLimit = *r.Pids.Limit
+	if r.Pids != nil {
+		c.Resources.PidsLimit = r.Pids.Limit
 	}
 	if r.BlockIO != nil {
 		if r.BlockIO.Weight != nil {
@@ -402,52 +402,37 @@ func createCgroupConfig(name string, useSystemdCgroup bool, spec *specs.Spec) (*
 		}
 		if r.BlockIO.ThrottleReadBpsDevice != nil {
 			for _, td := range r.BlockIO.ThrottleReadBpsDevice {
-				var rate uint64
-				if td.Rate != nil {
-					rate = *td.Rate
-				}
+				rate := td.Rate
 				throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, rate)
 				c.Resources.BlkioThrottleReadBpsDevice = append(c.Resources.BlkioThrottleReadBpsDevice, throttleDevice)
 			}
 		}
 		if r.BlockIO.ThrottleWriteBpsDevice != nil {
 			for _, td := range r.BlockIO.ThrottleWriteBpsDevice {
-				var rate uint64
-				if td.Rate != nil {
-					rate = *td.Rate
-				}
+				rate := td.Rate
 				throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, rate)
 				c.Resources.BlkioThrottleWriteBpsDevice = append(c.Resources.BlkioThrottleWriteBpsDevice, throttleDevice)
 			}
 		}
 		if r.BlockIO.ThrottleReadIOPSDevice != nil {
 			for _, td := range r.BlockIO.ThrottleReadIOPSDevice {
-				var rate uint64
-				if td.Rate != nil {
-					rate = *td.Rate
-				}
+				rate := td.Rate
 				throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, rate)
 				c.Resources.BlkioThrottleReadIOPSDevice = append(c.Resources.BlkioThrottleReadIOPSDevice, throttleDevice)
 			}
 		}
 		if r.BlockIO.ThrottleWriteIOPSDevice != nil {
 			for _, td := range r.BlockIO.ThrottleWriteIOPSDevice {
-				var rate uint64
-				if td.Rate != nil {
-					rate = *td.Rate
-				}
+				rate := td.Rate
 				throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, rate)
 				c.Resources.BlkioThrottleWriteIOPSDevice = append(c.Resources.BlkioThrottleWriteIOPSDevice, throttleDevice)
 			}
 		}
 	}
 	for _, l := range r.HugepageLimits {
-		if l.Pagesize == nil || l.Limit == nil {
-			return nil, fmt.Errorf("pagesize and limit can not be empty")
-		}
 		c.Resources.HugetlbLimit = append(c.Resources.HugetlbLimit, &configs.HugepageLimit{
-			Pagesize: *l.Pagesize,
-			Limit:    *l.Limit,
+			Pagesize: l.Pagesize,
+			Limit:    l.Limit,
 		})
 	}
 	if r.DisableOOMKiller != nil {
@@ -574,7 +559,7 @@ func setupUserNamespace(spec *specs.Spec, config *configs.Config) error {
 	if len(spec.Linux.UIDMappings) == 0 {
 		return nil
 	}
-	create := func(m specs.IDMapping) configs.IDMap {
+	create := func(m specs.LinuxIDMapping) configs.IDMap {
 		return configs.IDMap{
 			HostID:      int(m.HostID),
 			ContainerID: int(m.ContainerID),
@@ -682,7 +667,7 @@ func parseMountOptions(options []string) (int, []int, string, int) {
 	return flag, pgflag, strings.Join(data, ","), extFlags
 }
 
-func setupSeccomp(config *specs.Seccomp) (*configs.Seccomp, error) {
+func setupSeccomp(config *specs.LinuxSeccomp) (*configs.Seccomp, error) {
 	if config == nil {
 		return nil, nil
 	}

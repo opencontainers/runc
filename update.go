@@ -114,15 +114,15 @@ other options are ignored.
 			return err
 		}
 
-		r := specs.Resources{
-			Memory: &specs.Memory{
+		r := specs.LinuxResources{
+			Memory: &specs.LinuxMemory{
 				Limit:       u64Ptr(0),
 				Reservation: u64Ptr(0),
 				Swap:        u64Ptr(0),
 				Kernel:      u64Ptr(0),
 				KernelTCP:   u64Ptr(0),
 			},
-			CPU: &specs.CPU{
+			CPU: &specs.LinuxCPU{
 				Shares:          u64Ptr(0),
 				Quota:           u64Ptr(0),
 				Period:          u64Ptr(0),
@@ -131,7 +131,7 @@ other options are ignored.
 				Cpus:            sPtr(""),
 				Mems:            sPtr(""),
 			},
-			BlockIO: &specs.BlockIO{
+			BlockIO: &specs.LinuxBlockIO{
 				Weight: u16Ptr(0),
 			},
 		}

@@ -42,7 +42,7 @@ func TestLinuxCgroupsPathNotSpecified(t *testing.T) {
 func TestDupNamespaces(t *testing.T) {
 	spec := &specs.Spec{
 		Linux: &specs.Linux{
-			Namespaces: []specs.Namespace{
+			Namespaces: []specs.LinuxNamespace{
 				{
 					Type: "pid",
 				},
