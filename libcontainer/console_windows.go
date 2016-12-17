@@ -1,5 +1,7 @@
 package libcontainer
 
+import "os"
+
 // newConsole returns an initialized console that can be used within a container
 func newConsole() (Console, error) {
 	return &windowsConsole{}, nil
@@ -7,6 +9,10 @@ func newConsole() (Console, error) {
 
 // windowsConsole is a Windows pseudo TTY for use within a container.
 type windowsConsole struct {
+}
+
+func (c *windowsConsole) File() *os.File {
+	return nil
 }
 
 func (c *windowsConsole) Fd() uintptr {

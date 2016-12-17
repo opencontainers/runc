@@ -523,3 +523,15 @@ func (p *Process) InitializeIO(rootuid, rootgid int) (i *IO, err error) {
 	}
 	return i, nil
 }
+
+func (p *Process) GetConsole() (Console, error) {
+	consoleFd, ok := <-p.consoleChan
+	if !ok {
+		return nil, fmt.Errorf("failed to get console from process")
+	}
+
+	// TODO: Fix this so that it used the console API.
+	return &linuxConsole{
+		master: consoleFd,
+	}, nil
+}
