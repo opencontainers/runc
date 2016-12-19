@@ -92,7 +92,7 @@ container on your host.`,
 					"CAP_KILL",
 					"CAP_NET_BIND_SERVICE",
 				},
-				Rlimits: []specs.Rlimit{
+				Rlimits: []specs.LinuxRlimit{
 					{
 						Type: "RLIMIT_NOFILE",
 						Hard: uint64(1024),
@@ -162,15 +162,15 @@ container on your host.`,
 					"/proc/sys",
 					"/proc/sysrq-trigger",
 				},
-				Resources: &specs.Resources{
-					Devices: []specs.DeviceCgroup{
+				Resources: &specs.LinuxResources{
+					Devices: []specs.LinuxDeviceCgroup{
 						{
 							Allow:  false,
 							Access: sPtr("rwm"),
 						},
 					},
 				},
-				Namespaces: []specs.Namespace{
+				Namespaces: []specs.LinuxNamespace{
 					{
 						Type: "pid",
 					},
@@ -246,7 +246,7 @@ func loadSpec(cPath string) (spec *specs.Spec, err error) {
 	return spec, validateProcessSpec(&spec.Process)
 }
 
-func createLibContainerRlimit(rlimit specs.Rlimit) (configs.Rlimit, error) {
+func createLibContainerRlimit(rlimit specs.LinuxRlimit) (configs.Rlimit, error) {
 	rl, err := strToRlimit(rlimit.Type)
 	if err != nil {
 		return configs.Rlimit{}, err

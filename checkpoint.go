@@ -102,7 +102,7 @@ func setManageCgroupsMode(context *cli.Context, options *libcontainer.CriuOpts) 
 	}
 }
 
-var namespaceMapping = map[specs.NamespaceType]int{
+var namespaceMapping = map[specs.LinuxNamespaceType]int{
 	specs.NetworkNamespace: syscall.CLONE_NEWNET,
 }
 
@@ -110,7 +110,7 @@ func setEmptyNsMask(context *cli.Context, options *libcontainer.CriuOpts) error 
 	var nsmask int
 
 	for _, ns := range context.StringSlice("empty-ns") {
-		f, exists := namespaceMapping[specs.NamespaceType(ns)]
+		f, exists := namespaceMapping[specs.LinuxNamespaceType(ns)]
 		if !exists {
 			return fmt.Errorf("namespace %q is not supported", ns)
 		}
