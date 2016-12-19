@@ -120,10 +120,10 @@ func TestMarshalHooksWithUnexpectedType(t *testing.T) {
 
 func TestFuncHookRun(t *testing.T) {
 	state := configs.HookState{
-		Version: "1",
-		ID:      "1",
-		Pid:     1,
-		Root:    "root",
+		Version:    "1",
+		ID:         "1",
+		Pid:        1,
+		BundlePath: "/bundle",
 	}
 
 	fHook := configs.NewFunctionHook(func(s configs.HookState) error {
@@ -138,10 +138,10 @@ func TestFuncHookRun(t *testing.T) {
 
 func TestCommandHookRun(t *testing.T) {
 	state := configs.HookState{
-		Version: "1",
-		ID:      "1",
-		Pid:     1,
-		Root:    "root",
+		Version:    "1",
+		ID:         "1",
+		Pid:        1,
+		BundlePath: "/bundle",
 	}
 	timeout := time.Second
 
@@ -161,10 +161,10 @@ func TestCommandHookRun(t *testing.T) {
 
 func TestCommandHookRunTimeout(t *testing.T) {
 	state := configs.HookState{
-		Version: "1",
-		ID:      "1",
-		Pid:     1,
-		Root:    "root",
+		Version:    "1",
+		ID:         "1",
+		Pid:        1,
+		BundlePath: "/bundle",
 	}
 	timeout := (10 * time.Millisecond)
 

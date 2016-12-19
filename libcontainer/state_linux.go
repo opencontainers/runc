@@ -60,7 +60,6 @@ func runPoststopHooks(c *linuxContainer) error {
 		s := configs.HookState{
 			Version:    c.config.Version,
 			ID:         c.id,
-			Root:       c.config.Rootfs,
 			BundlePath: utils.SearchLabels(c.config.Labels, "bundle"),
 		}
 		for _, hook := range c.config.Hooks.Poststop {
