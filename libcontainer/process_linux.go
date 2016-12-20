@@ -280,9 +280,6 @@ func (p *initProcess) start() error {
 	ierr := parseSync(p.parentPipe, func(sync *syncT) error {
 		switch sync.Type {
 		case procReady:
-			if err := p.manager.Set(p.config.Config); err != nil {
-				return newSystemErrorWithCause(err, "setting cgroup config for ready process")
-			}
 			// set rlimits, this has to be done here because we lose permissions
 			// to raise the limits once we enter a user-namespace
 			if err := setupRlimits(p.config.Rlimits, p.pid()); err != nil {
@@ -290,6 +287,11 @@ func (p *initProcess) start() error {
 			}
 			// call prestart hooks
 			if !p.config.Config.Namespaces.Contains(configs.NEWNS) {
+				// Setup cgroup before prestart hook, so that the prestart hook could apply cgroup permissions.
+				if err := p.manager.Set(p.config.Config); err != nil {
+					return newSystemErrorWithCause(err, "setting cgroup config for ready process")
+				}
+
 				if p.config.Config.Hooks != nil {
 					s := configs.HookState{
 						Version: p.container.config.Version,
@@ -310,6 +312,10 @@ func (p *initProcess) start() error {
 			}
 			sentRun = true
 		case procHooks:
+			// Setup cgroup before prestart hook, so that the prestart hook could apply cgroup permissions.
+			if err := p.manager.Set(p.config.Config); err != nil {
+				return newSystemErrorWithCause(err, "setting cgroup config for procHooks process")
+			}
 			if p.config.Config.Hooks != nil {
 				s := configs.HookState{
 					Version: p.container.config.Version,
