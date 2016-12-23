@@ -94,6 +94,9 @@ func getDevices(path string) ([]*configs.Device, error) {
 			if err == ErrNotADevice {
 				continue
 			}
+			if os.IsNotExist(err) {
+				continue
+			}
 			return nil, err
 		}
 		out = append(out, device)
