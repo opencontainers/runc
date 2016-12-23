@@ -38,4 +38,8 @@ function teardown() {
 
   runc state test_busybox2
   [ "$status" -ne 0 ]
+
+  runc start non_exists1 non_exists2
+  [ "$status" -ne 0 ]
+  [[ ${lines[-1]} == "failed to start containers: non_exists1,non_exists2" ]]
 }

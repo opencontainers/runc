@@ -88,6 +88,7 @@ function teardown() {
   # pause test_busybox1, test_busybox2 and nonexistent container
   runc pause test_busybox1 test_busybox2 nonexistent
   [ "$status" -ne 0 ]
+  [[ ${lines[-1]} =~ "failed to pause containers: nonexistent" ]] 
 
   # test state of test_busybox1 and test_busybox2 is paused
   testcontainer test_busybox1 paused
@@ -96,6 +97,7 @@ function teardown() {
   # resume test_busybox1, test_busybox2 and nonexistent container
   runc resume test_busybox1 test_busybox2 nonexistent
   [ "$status" -ne 0 ]
+  [[ ${lines[-1]} == "failed to resume containers: nonexistent" ]]
 
   # test state of two containers is back to running
   testcontainer test_busybox1 running
