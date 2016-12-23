@@ -69,6 +69,9 @@ signal to the init process of the "ubuntu01" container:
 		},
 	},
 	Action: func(context *cli.Context) error {
+		if context.NArg() != 2 {
+			return fmt.Errorf("runc: \"kill\" requires 2 arguments")
+		}
 		container, err := getContainer(context)
 		if err != nil {
 			return err
