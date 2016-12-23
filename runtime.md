@@ -87,7 +87,7 @@ This operation MUST generate an error if it is not provided a path to the bundle
 If the ID provided is not unique across all containers within the scope of the runtime, or is not valid in any other way, the implementation MUST generate an error and a new container MUST NOT be created.
 Using the data in [`config.json`](config.md), this operation MUST create a new container.
 This means that all of the resources associated with the container MUST be created, however, the user-specified program MUST NOT be run at this time.
-If the runtime cannot create the container as specified in [`config.md`](config.md), it MUST generate an error and a new container MUST NOT be created.
+If the runtime cannot create the container as specified in [`config.json`](config.md), it MUST generate an error and a new container MUST NOT be created.
 
 Upon successful completion of this operation the `status` property of this container MUST be `created`.
 
