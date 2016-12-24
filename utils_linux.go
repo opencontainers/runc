@@ -47,6 +47,7 @@ func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
 func getContainer(context *cli.Context) (libcontainer.Container, error) {
 	id := context.Args().First()
 	if id == "" {
+		containerUsage(context)
 		return nil, errEmptyID
 	}
 	factory, err := loadFactory(context)
@@ -334,6 +335,7 @@ func validateProcessSpec(spec *specs.Process) error {
 func startContainer(context *cli.Context, spec *specs.Spec, create bool) (int, error) {
 	id := context.Args().First()
 	if id == "" {
+		containerUsage(context)
 		return -1, errEmptyID
 	}
 	container, err := createContainer(context, id, spec)
@@ -356,4 +358,8 @@ func startContainer(context *cli.Context, spec *specs.Spec, create bool) (int, e
 		create:          create,
 	}
 	return r.run(&spec.Process)
+}
+func containerUsage(context *cli.Context) {
+	command := context.Command.FullName()
+	cli.ShowCommandHelp(context, command)
 }

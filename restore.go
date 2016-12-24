@@ -86,6 +86,7 @@ using the runc checkpoint command.`,
 		imagePath := context.String("image-path")
 		id := context.Args().First()
 		if id == "" {
+			containerUsage(context)
 			return errEmptyID
 		}
 		if imagePath == "" {
