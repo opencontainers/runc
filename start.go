@@ -18,11 +18,10 @@ are starting. The name you provide for the container instance must be unique on
 your host.`,
 	Description: `The start command executes the user defined process in a created container .`,
 	Action: func(context *cli.Context) error {
-		hasError := false
-		if !context.Args().Present() {
-			return fmt.Errorf("runc: \"start\" requires a minimum of 1 argument")
+		if err := checkArgs(context, 1, minArgs); err != nil {
+			return err
 		}
-
+		hasError := false
 		factory, err := loadFactory(context)
 		if err != nil {
 			return err

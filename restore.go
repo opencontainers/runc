@@ -83,6 +83,9 @@ using the runc checkpoint command.`,
 		},
 	},
 	Action: func(context *cli.Context) error {
+		if err := checkArgs(context, 1, exactArgs); err != nil {
+			return err
+		}
 		imagePath := context.String("image-path")
 		id := context.Args().First()
 		if id == "" {

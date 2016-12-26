@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/urfave/cli"
@@ -49,10 +48,8 @@ command(s) that get executed on start, edit the args parameter of the spec. See
 		},
 	},
 	Action: func(context *cli.Context) error {
-		if context.NArg() != 1 {
-			fmt.Printf("Incorrect Usage.\n\n")
-			cli.ShowCommandHelp(context, "create")
-			return fmt.Errorf("runc: \"create\" requires exactly one argument")
+		if err := checkArgs(context, 1, exactArgs); err != nil {
+			return err
 		}
 		if err := revisePidFile(context); err != nil {
 			return err
