@@ -1,0 +1,28 @@
+language: go
+go:
+  - 1.7
+
+sudo: false
+
+before_install:
+  - go get github.com/golang/lint/golint
+  - go get github.com/vbatts/git-validation
+
+install:
+  - wget https://github.com/seccomp/libseccomp/archive/v2.3.1.tar.gz
+  - tar -xzvf v2.3.1.tar.gz
+  - pushd libseccomp-2.3.1 && ./configure --prefix=/usr && make && sudo make install && popd
+
+addons:
+  apt:
+    sources:
+    - lucid
+    packages:
+    - bats
+
+script:
+  - go vet -x ./...
+  - $HOME/gopath/bin/golint ./...
+  - $HOME/gopath/bin/git-validation -run DCO,short-subject -v -range ${TRAVIS_COMMIT_RANGE}
+  - make
+  - make localtest
