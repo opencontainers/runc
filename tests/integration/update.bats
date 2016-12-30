@@ -5,6 +5,7 @@ load helpers
 function teardown() {
     rm -f $BATS_TMPDIR/runc-update-integration-test.json
     teardown_running_container test_update
+    teardown_running_container test_update_rt
     teardown_busybox
 }
 
@@ -211,4 +212,32 @@ EOF
     check_cgroup_value $CGROUP_MEMORY "memory.kmem.tcp.limit_in_bytes" 11534336
     check_cgroup_value $CGROUP_MEMORY "memory.limit_in_bytes" 33554432
     check_cgroup_value $CGROUP_MEMORY "memory.soft_limit_in_bytes" 25165824
+}
+
+@test "update rt period and runtime" {
+    requires cgroups_rt
+
+    # run a detached busybox
+    runc run -d --console-socket $CONSOLE_SOCKET test_update_rt
+    [ "$status" -eq 0 ]
+    wait_for_container 15 1 test_update_rt
+
+    # get the cgroup paths
+    eval CGROUP_CPU="${CGROUP_CPU_BASE_PATH}/runc-update-integration-test"
+
+    runc update  -r - test_update_rt <<EOF
+{
+  "cpu": {
+    "realtimePeriod": 800001,
+    "realtimeRuntime": 500001
+  }
+}
+EOF
+    check_cgroup_value $CGROUP_CPU "cpu.rt_period_us" 800001
+    check_cgroup_value $CGROUP_CPU "cpu.rt_runtime_us" 500001
+
+    runc update test_update_rt --cpu-rt-period 900001 --cpu-rt-runtime 600001
+
+    check_cgroup_value $CGROUP_CPU "cpu.rt_period_us" 900001
+    check_cgroup_value $CGROUP_CPU "cpu.rt_runtime_us" 600001
 }
