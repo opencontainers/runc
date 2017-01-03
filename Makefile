@@ -136,4 +136,4 @@ validate:
 	script/validate-shfmt
 	go vet ./...
 
-ci: validate localtest
+ci: validate test
