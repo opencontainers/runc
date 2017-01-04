@@ -39,8 +39,8 @@ func testExecPS(t *testing.T, userns bool) {
 	defer remove(rootfs)
 	config := newTemplateConfig(rootfs)
 	if userns {
-		config.UidMappings = []configs.IDMap{{0, 0, 1000}}
-		config.GidMappings = []configs.IDMap{{0, 0, 1000}}
+		config.UidMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
+		config.GidMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
 		config.Namespaces = append(config.Namespaces, configs.Namespace{Type: configs.NEWUSER})
 	}
 
@@ -181,8 +181,8 @@ func testRlimit(t *testing.T, userns bool) {
 
 	config := newTemplateConfig(rootfs)
 	if userns {
-		config.UidMappings = []configs.IDMap{{0, 0, 1000}}
-		config.GidMappings = []configs.IDMap{{0, 0, 1000}}
+		config.UidMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
+		config.GidMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
 		config.Namespaces = append(config.Namespaces, configs.Namespace{Type: configs.NEWUSER})
 	}
 
@@ -1565,8 +1565,8 @@ func TestInitJoinNetworkAndUser(t *testing.T) {
 
 	// Execute a long-running container
 	config1 := newTemplateConfig(rootfs)
-	config1.UidMappings = []configs.IDMap{{0, 0, 1000}}
-	config1.GidMappings = []configs.IDMap{{0, 0, 1000}}
+	config1.UidMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
+	config1.GidMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
 	config1.Namespaces = append(config1.Namespaces, configs.Namespace{Type: configs.NEWUSER})
 	container1, err := newContainer(config1)
 	ok(t, err)
@@ -1597,8 +1597,8 @@ func TestInitJoinNetworkAndUser(t *testing.T) {
 	defer remove(rootfs2)
 
 	config2 := newTemplateConfig(rootfs2)
-	config2.UidMappings = []configs.IDMap{{0, 0, 1000}}
-	config2.GidMappings = []configs.IDMap{{0, 0, 1000}}
+	config2.UidMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
+	config2.GidMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
 	config2.Namespaces.Add(configs.NEWNET, netns1)
 	config2.Namespaces.Add(configs.NEWUSER, userns1)
 	config2.Cgroups.Path = "integration/test2"
