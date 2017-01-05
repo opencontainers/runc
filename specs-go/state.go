@@ -13,5 +13,5 @@ type State struct {
 	// BundlePath is the path to the container's bundle directory.
 	BundlePath string `json:"bundlePath"`
 	// Annotations are the annotations associated with the container.
-	Annotations map[string]string `json:"annotations"`
+	Annotations map[string]string `json:"annotations,omitempty"`
 }
