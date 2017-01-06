@@ -224,9 +224,6 @@ other options are ignored.
 		config.Cgroups.Resources.MemoryReservation = int64(*r.Memory.Reservation)
 		config.Cgroups.Resources.MemorySwap = int64(*r.Memory.Swap)
 
-		if err := container.Set(config); err != nil {
-			return err
-		}
-		return nil
+		return container.Set(config)
 	},
 }

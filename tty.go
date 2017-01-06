@@ -108,10 +108,7 @@ func (t *tty) sendtty(socket *os.File, ti *libcontainer.TerminalInfo) error {
 
 	// Create a fake file to contain the terminal info.
 	console := os.NewFile(t.console.File().Fd(), ti.String())
-	if err := utils.SendFd(socket, console); err != nil {
-		return err
-	}
-	return nil
+	return utils.SendFd(socket, console)
 }
 
 // ClosePostStart closes any fds that are provided to the container and dup2'd

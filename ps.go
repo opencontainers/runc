@@ -39,10 +39,7 @@ var psCommand = cli.Command{
 		}
 
 		if context.String("format") == "json" {
-			if err := json.NewEncoder(os.Stdout).Encode(pids); err != nil {
-				return err
-			}
-			return nil
+			return json.NewEncoder(os.Stdout).Encode(pids)
 		}
 
 		// [1:] is to remove command name, ex:
