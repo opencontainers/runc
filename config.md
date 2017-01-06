@@ -125,12 +125,9 @@ See links for details about [mountvol](http://ss64.com/nt/mountvol.html) and [Se
   * **`width`** (uint, REQUIRED)
 * **`cwd`** (string, REQUIRED) is the working directory that will be set for the executable.
   This value MUST be an absolute path.
-* **`env`** (array of strings, OPTIONAL) contains a list of variables that will be set in the process's environment prior to execution.
-  Elements in the array are specified as Strings in the form "KEY=value".
-  The left hand side MUST consist solely of letters, digits, and underscores `_` as outlined in [IEEE Std 1003.1-2001](http://pubs.opengroup.org/onlinepubs/009695399/basedefs/xbd_chap08.html).
-* **`args`** (array of strings, REQUIRED) executable to launch and any flags as an array.
-  The executable is the first element and MUST be available at the given path inside of the rootfs.
-  If the executable path is not an absolute path then the search $PATH is interpreted to find the executable.
+* **`env`** (array of strings, OPTIONAL) with the same semantics as [IEEE Std 1003.1-2001's `environ`][ieee-1003.1-2001-xbd-c8.1].
+* **`args`** (array of strings, REQUIRED) with similar semantics to [IEEE Std 1003.1-2001 `execvp`'s *argv*][ieee-1003.1-2001-xsh-exec].
+  This specification extends the IEEE standard in that at least one entry is REQUIRED, and that entry is used with the same semantics as `execvp`'s *file*.
 
 For Linux-based systems the process structure supports the following process specific fields:
 
@@ -313,19 +310,24 @@ For Windows based systems the user structure has the following fields:
 
 ## Hooks
 
-**`hooks`** (object, OPTIONAL) configures callbacks for container lifecycle events.
 Lifecycle hooks allow custom events for different points in a container's runtime.
-Presently there are `Prestart`, `Poststart` and `Poststop`.
 
-* [`Prestart`](#prestart) is a list of hooks to be run before the container process is executed
-* [`Poststart`](#poststart) is a list of hooks to be run immediately after the container process is started
-* [`Poststop`](#poststop) is a list of hooks to be run after the container process exits
+* **`hooks`** (object, OPTIONAL) MAY contain any of the following properties:
+  * **`prestart`** (array, OPTIONAL) is an array of [pre-start hooks](#prestart).
+    Entries in the array contain the following properties:
+    * **`path`** (string, REQUIRED) with similar semantics to [IEEE Std 1003.1-2001 `execv`'s *path*][ieee-1003.1-2001-xsh-exec].
+      This specification extends the IEEE standard in that **`path`** MUST be absolute.
+    * **`args`** (array of strings, REQUIRED) with the same semantics as [IEEE Std 1003.1-2001 `execv`'s *argv*][ieee-1003.1-2001-xsh-exec].
+    * **`env`** (array of strings, OPTIONAL) with the same semantics as [IEEE Std 1003.1-2001's `environ`][ieee-1003.1-2001-xbd-c8.1].
+    * **`timeout`** (int, OPTIONAL) is the number of seconds before aborting the hook.
+  * **`poststart`** (array, OPTIONAL) is an array of [post-start hooks](#poststart).
+    Entries in the array have the same schema as pre-start entries.
+  * **`poststop`** (array, OPTIONAL) is an array of [post-stop hooks](#poststop).
+    Entries in the array have the same schema as pre-start entries.
 
 Hooks allow one to run programs before/after various lifecycle events of the container.
 Hooks MUST be called in the listed order.
-The state of the container is passed to the hooks over stdin, so the hooks could get the information they need to do their work.
-
-Hook paths are absolute and are executed from the host's filesystem in the [runtime namespace][runtime-namespace].
+The [state](runtime.md#state) of the container is passed to the hooks over stdin, so the hooks could get the information they need to do their work.
 
 ### Prestart
 
@@ -376,11 +378,6 @@ If a hook returns a non-zero exit code, then an error is logged and the remainin
         ]
     }
 ```
-
-`path` is REQUIRED for a hook.
-`args` and `env` are OPTIONAL.
-`timeout` is the number of seconds before aborting the hook.
-The semantics are the same as `Path`, `Args` and `Env` in [golang Cmd](https://golang.org/pkg/os/exec/#Cmd).
 
 ## Annotations
 
@@ -762,6 +759,8 @@ Here is a full example `config.json` for reference.
 
 [container-namespace]: glossary.md#container-namespace
 [go-environment]: https://golang.org/doc/install/source#environment
+[ieee-1003.1-2001-xbd-c8.1]: http://pubs.opengroup.org/onlinepubs/009695399/basedefs/xbd_chap08.html#tag_08_01
+[ieee-1003.1-2001-xsh-exec]: http://pubs.opengroup.org/onlinepubs/009695399/functions/exec.html
 [runtime-namespace]: glossary.md#runtime-namespace
 [uts-namespace]: http://man7.org/linux/man-pages/man7/namespaces.7.html
 [mount.8-filesystem-independent]: http://man7.org/linux/man-pages/man8/mount.8.html#FILESYSTEM-INDEPENDENT_MOUNT%20OPTIONS
