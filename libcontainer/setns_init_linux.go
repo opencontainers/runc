@@ -58,5 +58,9 @@ func (l *linuxSetnsInit) Init() error {
 	if err := label.SetProcessLabel(l.config.ProcessLabel); err != nil {
 		return err
 	}
+	if err := setupStdio(); err != nil {
+		return err
+	}
+
 	return system.Execv(l.config.Args[0], l.config.Args[0:], os.Environ())
 }

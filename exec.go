@@ -84,6 +84,18 @@ following will output a list of processes running in the container:
 			Usage:  "disable the use of the subreaper used to reap reparented processes",
 			Hidden: true,
 		},
+		cli.StringFlag{
+			Name:  "stdin",
+			Usage: "redirect process stdin to given filepath",
+		},
+		cli.StringFlag{
+			Name:  "stdout",
+			Usage: "redirect process stdout to given filepath",
+		},
+		cli.StringFlag{
+			Name:  "stderr",
+			Usage: "redirect process stderr to given filepath",
+		},
 	},
 	Action: func(context *cli.Context) error {
 		if err := checkArgs(context, 2, minArgs); err != nil {
@@ -136,6 +148,9 @@ func execProcess(context *cli.Context) (int, error) {
 		container:       container,
 		consoleSocket:   context.String("console-socket"),
 		detach:          detach,
+		stdin:           context.String("stdin"),
+		stdout:          context.String("stdout"),
+		stderr:          context.String("stderr"),
 		pidFile:         context.String("pid-file"),
 	}
 	return r.run(p)

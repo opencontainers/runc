@@ -231,3 +231,11 @@ function teardown_hello() {
 	teardown_running_container test_hello
 	run rm -f -r "$HELLO_BUNDLE"
 }
+
+function setup_fifos() {
+	mkfifo stdinfifo stdoutfifo stderrfifo
+}
+
+function teardown_fifos() {
+	rm -f stdinfifo stdoutfifo stderrfifo
+}

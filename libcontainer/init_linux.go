@@ -426,3 +426,47 @@ func signalAllProcesses(m cgroups.Manager, s os.Signal) error {
 	}
 	return nil
 }
+
+func setupStdio() error {
+	stdinFD := os.Getenv("STDIN_FD")
+	stdoutFD := os.Getenv("STDOUT_FD")
+	stderrFD := os.Getenv("STDERR_FD")
+
+	if len(stdinFD) > 0 {
+		stdinFD, err := strconv.Atoi(stdinFD)
+		if err != nil {
+			return err
+		}
+
+		err = syscall.Dup2(stdinFD, 0)
+		if err != nil {
+			return err
+		}
+	}
+
+	if len(stdoutFD) > 0 {
+		stdoutFD, err := strconv.Atoi(stdoutFD)
+		if err != nil {
+			return err
+		}
+
+		err = syscall.Dup2(stdoutFD, 1)
+		if err != nil {
+			return err
+		}
+	}
+
+	if len(stderrFD) > 0 {
+		stderrFD, err := strconv.Atoi(stderrFD)
+		if err != nil {
+			return err
+		}
+
+		err = syscall.Dup2(stderrFD, 2)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
