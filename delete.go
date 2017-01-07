@@ -14,7 +14,7 @@ import (
 )
 
 func killContainer(container libcontainer.Container) error {
-	container.Signal(syscall.SIGKILL, false)
+	_ = container.Signal(syscall.SIGKILL, false)
 	for i := 0; i < 100; i++ {
 		time.Sleep(100 * time.Millisecond)
 		if err := container.Signal(syscall.Signal(0), false); err != nil {
@@ -61,7 +61,7 @@ status of "ubuntu01" as "stopped" the following will delete resources held for
 					// if there was an aborted start or something of the sort then the container's directory could exist but
 					// libcontainer does not see it because the state.json file inside that directory was never created.
 					path := filepath.Join(context.GlobalString("root"), id)
-					if err := os.RemoveAll(path); err != nil {
+					if err = os.RemoveAll(path); err != nil {
 						fmt.Fprintf(os.Stderr, "remove %s: %v\n", path, err)
 					}
 					fmt.Fprintf(os.Stderr, "container %s does not exist\n", id)
