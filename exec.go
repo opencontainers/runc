@@ -178,9 +178,8 @@ func getProcess(context *cli.Context, bundle string) (*specs.Process, error) {
 		p.Capabilities = caps
 	}
 	// append the passed env variables
-	for _, e := range context.StringSlice("env") {
-		p.Env = append(p.Env, e)
-	}
+	p.Env = append(p.Env, context.StringSlice("env")...)
+
 	// set the tty
 	if context.IsSet("tty") {
 		p.Terminal = context.Bool("tty")
