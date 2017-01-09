@@ -223,11 +223,7 @@ container on your host.`,
 	},
 }
 
-func sPtr(s string) *string      { return &s }
-func rPtr(r rune) *rune          { return &r }
-func iPtr(i int64) *int64        { return &i }
-func u32Ptr(i int64) *uint32     { u := uint32(i); return &u }
-func fmPtr(i int64) *os.FileMode { fm := os.FileMode(i); return &fm }
+func sPtr(s string) *string { return &s }
 
 // loadSpec loads the specification from the provided path.
 func loadSpec(cPath string) (spec *specs.Spec, err error) {
@@ -256,8 +252,8 @@ func createLibContainerRlimit(rlimit specs.LinuxRlimit) (configs.Rlimit, error) 
 	}
 	return configs.Rlimit{
 		Type: rl,
-		Hard: uint64(rlimit.Hard),
-		Soft: uint64(rlimit.Soft),
+		Hard: rlimit.Hard,
+		Soft: rlimit.Soft,
 	}, nil
 }
 
