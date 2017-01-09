@@ -80,9 +80,5 @@ func revisePidFile(context *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	err = context.Set("pid-file", pidFile)
-	if err != nil {
-		return err
-	}
-	return nil
+	return context.Set("pid-file", pidFile)
 }
