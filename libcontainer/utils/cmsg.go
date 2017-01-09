@@ -32,7 +32,7 @@ import (
 
 // RecvFd waits for a file descriptor to be sent over the given AF_UNIX
 // socket. The file name of the remote file descriptor will be recreated
-// locally (it is sent as non-auxilliary data in the same payload).
+// locally (it is sent as non-auxiliary data in the same payload).
 func RecvFd(socket *os.File) (*os.File, error) {
 	file, err := C.recvfd(C.int(socket.Fd()))
 	if err != nil {
@@ -44,7 +44,7 @@ func RecvFd(socket *os.File) (*os.File, error) {
 
 // SendFd sends a file descriptor over the given AF_UNIX socket. In
 // addition, the file.Name() of the given file will also be sent as
-// non-auxilliary data in the same payload (allowing to send contextual
+// non-auxiliary data in the same payload (allowing to send contextual
 // information for a file descriptor).
 func SendFd(socket, file *os.File) error {
 	var cfile C.struct_file_t

@@ -201,7 +201,7 @@ func setupConsole(pipe *os.File, config *initConfig, mount bool) error {
 		return err
 	}
 
-	// Make sure the other side recieved the fd.
+	// Make sure the other side received the fd.
 	if err := readSync(pipe, procConsoleAck); err != nil {
 		return err
 	}
