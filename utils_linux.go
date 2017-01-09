@@ -239,12 +239,12 @@ func (r *runner) run(config *specs.Process) (int, error) {
 		r.destroy()
 		return -1, err
 	}
-	if err := startFn(process); err != nil {
+	if err = startFn(process); err != nil {
 		r.destroy()
 		return -1, err
 	}
 	if config.Terminal {
-		if err := tty.recvtty(process, r.detach || r.create); err != nil {
+		if err = tty.recvtty(process, r.detach || r.create); err != nil {
 			r.terminate(process)
 			r.destroy()
 			return -1, err
@@ -284,13 +284,13 @@ func (r *runner) run(config *specs.Process) (int, error) {
 		}
 	}
 
-	if err := tty.ClosePostStart(); err != nil {
+	if err = tty.ClosePostStart(); err != nil {
 		r.terminate(process)
 		r.destroy()
 		return -1, err
 	}
 	if r.pidFile != "" {
-		if err := createPidFile(r.pidFile, process); err != nil {
+		if err = createPidFile(r.pidFile, process); err != nil {
 			r.terminate(process)
 			r.destroy()
 			return -1, err
@@ -314,8 +314,8 @@ func (r *runner) destroy() {
 }
 
 func (r *runner) terminate(p *libcontainer.Process) {
-	p.Signal(syscall.SIGKILL)
-	p.Wait()
+	_ = p.Signal(syscall.SIGKILL)
+	_, _ = p.Wait()
 }
 
 func validateProcessSpec(spec *specs.Process) error {
