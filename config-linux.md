@@ -283,15 +283,15 @@ For more information, see [the memory cgroup man page][cgroup-v1-memory].
 
 The following parameters can be specified to setup the controller:
 
-* **`limit`** *(uint64, OPTIONAL)* - sets limit of memory usage in bytes
+* **`limit`** *(int64, OPTIONAL)* - sets limit of memory usage in bytes
 
-* **`reservation`** *(uint64, OPTIONAL)* - sets soft limit of memory usage in bytes
+* **`reservation`** *(int64, OPTIONAL)* - sets soft limit of memory usage in bytes
 
-* **`swap`** *(uint64, OPTIONAL)* - sets limit of memory+Swap usage
+* **`swap`** *(int64, OPTIONAL)* - sets limit of memory+Swap usage
 
-* **`kernel`** *(uint64, OPTIONAL)* - sets hard limit for kernel memory
+* **`kernel`** *(int64, OPTIONAL)* - sets hard limit for kernel memory
 
-* **`kernelTCP`** *(uint64, OPTIONAL)* - sets hard limit in bytes for kernel TCP buffer memory
+* **`kernelTCP`** *(int64, OPTIONAL)* - sets hard limit in bytes for kernel TCP buffer memory
 
 * **`swappiness`** *(uint64, OPTIONAL)* - sets swappiness parameter of vmscan (See sysctl's vm.swappiness)
 
@@ -317,11 +317,11 @@ The following parameters can be specified to setup the controller:
 
 * **`shares`** *(uint64, OPTIONAL)* - specifies a relative share of CPU time available to the tasks in a cgroup
 
-* **`quota`** *(uint64, OPTIONAL)* - specifies the total amount of time in microseconds for which all tasks in a cgroup can run during one period (as defined by **`period`** below)
+* **`quota`** *(int64, OPTIONAL)* - specifies the total amount of time in microseconds for which all tasks in a cgroup can run during one period (as defined by **`period`** below)
 
 * **`period`** *(uint64, OPTIONAL)* - specifies a period of time in microseconds for how regularly a cgroup's access to CPU resources should be reallocated (CFS scheduler only)
 
-* **`realtimeRuntime`** *(uint64, OPTIONAL)* - specifies a period of time in microseconds for the longest continuous period in which the tasks in a cgroup have access to CPU resources
+* **`realtimeRuntime`** *(int64, OPTIONAL)* - specifies a period of time in microseconds for the longest continuous period in which the tasks in a cgroup have access to CPU resources
 
 * **`realtimePeriod`** *(uint64, OPTIONAL)* - same as **`period`** but applies to realtime scheduler only
 
@@ -412,7 +412,7 @@ Each entry has the following structure:
 
 * **`pageSize`** *(string, REQUIRED)* - hugepage size
 
-* **`limit`** *(uint64, REQUIRED)* - limit in bytes of *hugepagesize* HugeTLB usage
+* **`limit`** *(int64, REQUIRED)* - limit in bytes of *hugepagesize* HugeTLB usage
 
 ###### Example
 
@@ -420,7 +420,7 @@ Each entry has the following structure:
    "hugepageLimits": [
         {
             "pageSize": "2MB",
-            "limit": 9223372036854771712
+            "limit": 209715200
         }
    ]
 ```

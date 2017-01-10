@@ -188,7 +188,7 @@
                             },
                             "quota": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/cpu/quota",
-                                "$ref": "defs.json#/definitions/uint64Pointer"
+                                "$ref": "defs.json#/definitions/int64Pointer"
                             },
                             "realtimePeriod": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/cpu/realtimePeriod",
@@ -196,7 +196,7 @@
                             },
                             "realtimeRuntime": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/cpu/realtimeRuntime",
-                                "$ref": "defs.json#/definitions/uint64Pointer"
+                                "$ref": "defs.json#/definitions/int64Pointer"
                             },
                             "shares": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/cpu/shares",
@@ -220,7 +220,7 @@
                                             "type": "string"
                                         },
                                         "limit": {
-                                            "$ref": "defs.json#/definitions/uint64"
+                                            "$ref": "defs.json#/definitions/int64"
                                         }
                                     }
                                 }
@@ -236,19 +236,19 @@
                         "properties": {
                             "kernel": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/memory/kernel",
-                                "$ref": "defs.json#/definitions/uint64Pointer"
+                                "$ref": "defs.json#/definitions/int64Pointer"
                             },
                             "limit": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/memory/limit",
-                                "$ref": "defs.json#/definitions/uint64Pointer"
+                                "$ref": "defs.json#/definitions/int64Pointer"
                             },
                             "reservation": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/memory/reservation",
-                                "$ref": "defs.json#/definitions/uint64Pointer"
+                                "$ref": "defs.json#/definitions/int64Pointer"
                             },
                             "swap": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/memory/swap",
-                                "$ref": "defs.json#/definitions/uint64Pointer"
+                                "$ref": "defs.json#/definitions/int64Pointer"
                             },
                             "swappiness": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/memory/swappiness",

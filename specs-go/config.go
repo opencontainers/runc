@@ -210,7 +210,7 @@ type LinuxHugepageLimit struct {
 	// Pagesize is the hugepage size
 	Pagesize string `json:"pageSize"`
 	// Limit is the limit of "hugepagesize" hugetlb usage
-	Limit uint64 `json:"limit"`
+	Limit int64 `json:"limit"`
 }
 
 // LinuxInterfacePriority for network interfaces
@@ -266,15 +266,15 @@ type LinuxBlockIO struct {
 // LinuxMemory for Linux cgroup 'memory' resource management
 type LinuxMemory struct {
 	// Memory limit (in bytes).
-	Limit *uint64 `json:"limit,omitempty"`
+	Limit *int64 `json:"limit,omitempty"`
 	// Memory reservation or soft_limit (in bytes).
-	Reservation *uint64 `json:"reservation,omitempty"`
+	Reservation *int64 `json:"reservation,omitempty"`
 	// Total memory limit (memory + swap).
-	Swap *uint64 `json:"swap,omitempty"`
+	Swap *int64 `json:"swap,omitempty"`
 	// Kernel memory limit (in bytes).
-	Kernel *uint64 `json:"kernel,omitempty"`
+	Kernel *int64 `json:"kernel,omitempty"`
 	// Kernel memory limit for tcp (in bytes)
-	KernelTCP *uint64 `json:"kernelTCP,omitempty"`
+	KernelTCP *int64 `json:"kernelTCP,omitempty"`
 	// How aggressive the kernel will swap memory pages. Range from 0 to 100.
 	Swappiness *uint64 `json:"swappiness,omitempty"`
 }
@@ -284,11 +284,11 @@ type LinuxCPU struct {
 	// CPU shares (relative weight (ratio) vs. other cgroups with cpu shares).
 	Shares *uint64 `json:"shares,omitempty"`
 	// CPU hardcap limit (in usecs). Allowed cpu time in a given period.
-	Quota *uint64 `json:"quota,omitempty"`
+	Quota *int64 `json:"quota,omitempty"`
 	// CPU period to be used for hardcapping (in usecs).
 	Period *uint64 `json:"period,omitempty"`
 	// How much time realtime scheduling may use (in usecs).
-	RealtimeRuntime *uint64 `json:"realtimeRuntime,omitempty"`
+	RealtimeRuntime *int64 `json:"realtimeRuntime,omitempty"`
 	// CPU period to be used for realtime scheduling (in usecs).
 	RealtimePeriod *uint64 `json:"realtimePeriod,omitempty"`
 	// CPUs to use within the cpuset. Default is to use any CPU available.
