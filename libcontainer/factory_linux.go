@@ -90,7 +90,7 @@ func CriuPath(criupath string) func(*LinuxFactory) error {
 
 // New returns a linux based container factory based in the root directory and
 // configures the factory with the provided option funcs.
-func New(root string, options ...func(*LinuxFactory) error) (Factory, error) {
+func New(root string, options ...func(*LinuxFactory) error) (*LinuxFactory, error) {
 	if root != "" {
 		if err := os.MkdirAll(root, 0700); err != nil {
 			return nil, newGenericError(err, SystemError)
