@@ -346,7 +346,7 @@ func getCgroupMounts(m *configs.Mount) ([]*configs.Mount, error) {
 		binds = append(binds, &configs.Mount{
 			Device:           "bind",
 			Source:           filepath.Join(mm.Mountpoint, relDir),
-			Destination:      filepath.Join(m.Destination, strings.Join(mm.Subsystems, ",")),
+			Destination:      filepath.Join(m.Destination, filepath.Base(mm.Mountpoint)),
 			Flags:            syscall.MS_BIND | syscall.MS_REC | m.Flags,
 			PropagationFlags: m.PropagationFlags,
 		})
