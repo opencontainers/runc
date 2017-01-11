@@ -18,14 +18,6 @@ Could be solved by lifecycle/ops and create/start split discussions
 
 *Owner:* vishh & duglin
 
-### Live Container Updates
-
-Should we allow dynamic container updates to runtime options?
-
-Proposal: make it an optional feature
-
-*Owner:* hqhq (was vishh) robdolinms, bcorrie
-
 ### Version Schema
 
 Decide on a robust versioning schema for the spec as it evolves.
