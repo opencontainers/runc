@@ -89,7 +89,10 @@
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/pids/limit",
                                 "$ref": "defs.json#/definitions/int64"
                             }
-                        }
+                        },
+                        "required": [
+                            "limit"
+                        ]
                     },
                     "blockIO": {
                         "id": "https://opencontainers.org/schema/bundle/linux/resources/blockIO",
@@ -222,7 +225,11 @@
                                         "limit": {
                                             "$ref": "defs.json#/definitions/int64"
                                         }
-                                    }
+                                    },
+                                    "required": [
+                                        "pageSize",
+                                        "limit"
+                                    ]
                                 }
                             },
                             {

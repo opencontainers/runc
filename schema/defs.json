@@ -163,7 +163,12 @@
                 "size": {
                     "$ref": "#/definitions/uint32"
                 }
-            }
+            },
+            "required": [
+                "hostID",
+                "containerID",
+                "size"
+            ]
         },
         "Mount": {
             "type": "object",

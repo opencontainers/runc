@@ -106,6 +106,12 @@
         },
         "Device": {
             "type": "object",
+            "required": [
+                "type",
+                "path",
+                "major",
+                "minor"
+            ],
             "properties": {
                 "type": {
                     "$ref": "#/definitions/FileType"
@@ -249,7 +255,10 @@
                 "access": {
                     "$ref": "defs.json#/definitions/stringPointer"
                 }
-            }
+            },
+            "required": [
+                "allow"
+            ]
         },
         "NetworkInterfacePriority": {
             "type": "object",
@@ -260,7 +269,11 @@
                 "priority": {
                     "$ref": "defs.json#/definitions/uint32"
                 }
-            }
+            },
+            "required": [
+                "name",
+                "priority"
+            ]
         },
         "NamespaceType": {
             "type": "string",
@@ -283,7 +296,10 @@
                 "path": {
                     "$ref": "defs.json#/definitions/FilePath"
                 }
-            }
+            },
+            "required": [
+                "type"
+            ]
         }
     }
 }

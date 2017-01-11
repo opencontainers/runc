@@ -59,6 +59,9 @@
             "description": "Configures the container's root filesystem.",
             "id": "https://opencontainers.org/schema/bundle/root",
             "type": "object",
+            "required": [
+                "path"
+            ],
             "properties": {
                 "path": {
                     "id": "https://opencontainers.org/schema/bundle/root/path",
@@ -81,6 +84,24 @@
                 "args": {
                     "id": "https://opencontainers.org/schema/bundle/process/args",
                     "$ref": "defs.json#/definitions/ArrayOfStrings"
+                },
+                "consoleSize": {
+                    "id": "https://opencontainers.org/schema/bundle/process/consoleSize",
+                    "type": "object",
+                    "required": [
+                        "height",
+                        "width"
+                    ],
+                    "properties": {
+                        "height": {
+                            "id": "https://opencontainers.org/schema/bundle/process/consoleSize/height",
+                            "$ref": "defs.json#/definitions/unit64"
+                        },
+                        "width": {
+                            "id": "https://opencontainers.org/schema/bundle/process/consoleSize/width",
+                            "$ref": "defs.json#/definitions/unit64"
+                        }
+                    }
                 },
                 "cwd": {
                     "id": "https://opencontainers.org/schema/bundle/process/cwd",
