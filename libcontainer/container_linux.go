@@ -637,7 +637,7 @@ func (c *linuxContainer) checkCriuVersion(minVersion string) error {
 	c.criuVersion = x*10000 + y*100 + z
 
 	if c.criuVersion < versionReq {
-		return fmt.Errorf("CRIU version must be %s or higher", minVersion)
+		return fmt.Errorf("CRIU version %d must be %d or higher", c.criuVersion, versionReq)
 	}
 
 	return nil
