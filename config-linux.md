@@ -114,11 +114,14 @@ Each entry has the following structure:
 * **`type`** *(string, REQUIRED)* - type of device: `c`, `b`, `u` or `p`.
   More info in [mknod(1)][mknod.1].
 * **`path`** *(string, REQUIRED)* - full path to device inside container.
+  If a [file][file.1] already exists at `path` that does not match the requested device, the runtime MUST generate an error.
 * **`major, minor`** *(int64, REQUIRED unless **`type`** is `p`)* - [major, minor numbers][devices] for the device.
 * **`fileMode`** *(uint32, OPTIONAL)* - file mode for the device.
   You can also control access to devices [with cgroups](#device-whitelist).
 * **`uid`** *(uint32, OPTIONAL)* - id of device owner.
 * **`gid`** *(uint32, OPTIONAL)* - id of device group.
+
+The same `type`, `major` and `minor` SHOULD NOT be used for multiple devices.
 
 ###### Example
 
@@ -607,6 +610,7 @@ The values MUST be absolute paths in the [container namespace][container-namespa
 [cgroup-v2]: https://www.kernel.org/doc/Documentation/cgroup-v2.txt
 [devices]: https://www.kernel.org/doc/Documentation/devices.txt
 [devpts]: https://www.kernel.org/doc/Documentation/filesystems/devpts.txt
+[file.1]: http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap03.html#tag_03_164
 
 [mknod.1]: http://man7.org/linux/man-pages/man1/mknod.1.html
 [mknod.2]: http://man7.org/linux/man-pages/man2/mknod.2.html
