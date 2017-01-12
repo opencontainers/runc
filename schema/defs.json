@@ -86,16 +86,6 @@
                 }
             ]
         },
-        "stringPointer": {
-            "oneOf": [
-                {
-                    "type": "string"
-                },
-                {
-                    "type": "null"
-                }
-            ]
-        },
         "mapStringString": {
             "type": "object",
             "patternProperties": {

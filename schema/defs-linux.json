@@ -230,7 +230,7 @@
                     "type": "boolean"
                 },
                 "type": {
-                    "$ref": "defs.json#/definitions/stringPointer"
+                    "$ref": "defs.json#/definitions/string"
                 },
                 "major": {
                     "oneOf": [
@@ -253,7 +253,7 @@
                     ]
                 },
                 "access": {
-                    "$ref": "defs.json#/definitions/stringPointer"
+                    "$ref": "defs.json#/definitions/string"
                 }
             },
             "required": [
