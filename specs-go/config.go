@@ -139,7 +139,7 @@ type Linux struct {
 	// CgroupsPath specifies the path to cgroups that are created and/or joined by the container.
 	// The path is expected to be relative to the cgroups mountpoint.
 	// If resources are specified, the cgroups at CgroupsPath will be updated based on resources.
-	CgroupsPath *string `json:"cgroupsPath,omitempty"`
+	CgroupsPath string `json:"cgroupsPath,omitempty"`
 	// Namespaces contains the namespaces that are created and/or joined by the container
 	Namespaces []LinuxNamespace `json:"namespaces,omitempty"`
 	// Devices are a list of device nodes that are created for the container
@@ -292,9 +292,9 @@ type LinuxCPU struct {
 	// CPU period to be used for realtime scheduling (in usecs).
 	RealtimePeriod *uint64 `json:"realtimePeriod,omitempty"`
 	// CPUs to use within the cpuset. Default is to use any CPU available.
-	Cpus *string `json:"cpus,omitempty"`
+	Cpus string `json:"cpus,omitempty"`
 	// List of memory nodes in the cpuset. Default is to use any available memory node.
-	Mems *string `json:"mems,omitempty"`
+	Mems string `json:"mems,omitempty"`
 }
 
 // LinuxPids for Linux cgroup 'pids' resource management (Linux 4.3)
@@ -356,13 +356,13 @@ type LinuxDeviceCgroup struct {
 	// Allow or deny
 	Allow bool `json:"allow"`
 	// Device type, block, char, etc.
-	Type *string `json:"type,omitempty"`
+	Type string `json:"type,omitempty"`
 	// Major is the device's major number.
 	Major *int64 `json:"major,omitempty"`
 	// Minor is the device's minor number.
 	Minor *int64 `json:"minor,omitempty"`
 	// Cgroup access permissions format, rwm.
-	Access *string `json:"access,omitempty"`
+	Access string `json:"access,omitempty"`
 }
 
 // LinuxSeccomp represents syscall restrictions
