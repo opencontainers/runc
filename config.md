@@ -256,7 +256,8 @@ For Windows based systems the user structure has the following fields:
 ## Hostname
 
 * **`hostname`** (string, OPTIONAL) configures the container's hostname as seen by processes running inside the container.
-  On Linux, you can only set this if your bundle creates a new [UTS namespace][uts-namespace].
+  On Linux, this will change the hostname in the [container][container-namespace] [UTS namespace][uts-namespace].
+  Depending on your [namespace configuration](config-linux.md#namespaces), the container UTS namespace may be the [runtime UTS namespace][runtime-namespace].
 
 ### Example
 
