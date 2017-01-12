@@ -393,7 +393,8 @@ If a hook returns a non-zero exit code, then an error is logged and the remainin
 This information MAY be structured or unstructured.
 Annotations MUST be a key-value map where both the key and value MUST be strings.
 While the value MUST be present, it MAY be an empty string.
-Keys MUST be unique and MUST NOT be an empty string within this map, and best practice is to namespace the keys.
+Keys MUST be unique within this map.
+Keys MUST NOT be an empty string.
 Keys SHOULD be named using a reverse domain notation - e.g. `com.example.myKey`.
 Keys using the `org.opencontainers` namespace are reserved and MUST NOT be used by subsequent specifications.
 If there are no annotations then this property MAY either be absent or an empty map.
