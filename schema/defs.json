@@ -56,6 +56,16 @@
                 }
             ]
         },
+        "int64Pointer": {
+            "oneOf": [
+                {
+                    "$ref": "#/definitions/int64"
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
         "uint16Pointer": {
             "oneOf": [
                 {
