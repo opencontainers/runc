@@ -96,9 +96,6 @@
             "minimum": 0,
             "maximum": 512
         },
-        "FilePermissions": {
-            "type": "string"
-        },
         "FileType": {
             "description": "Type of a block or special character device",
             "type": "string",
@@ -116,9 +113,6 @@
                 "type": {
                     "$ref": "#/definitions/FileType"
                 },
-                "permissions": {
-                    "$ref": "#/definitions/FilePermissions"
-                },
                 "path": {
                     "$ref": "defs.json#/definitions/FilePath"
                 },
@@ -132,10 +126,24 @@
                     "$ref": "#/definitions/Minor"
                 },
                 "uid": {
-                    "$ref": "defs.json#/definitions/UID"
+                    "oneOf": [
+                        {
+                            "$ref": "defs.json#/definitions/UID"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ]
                 },
                 "gid": {
-                    "$ref": "defs.json#/definitions/GID"
+                    "oneOf": [
+                        {
+                            "$ref": "defs.json#/definitions/GID"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ]
                 }
             }
         },
