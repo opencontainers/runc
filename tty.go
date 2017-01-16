@@ -8,6 +8,7 @@ import (
 	"os"
 	"sync"
 	"syscall"
+	"unsafe"
 
 	"github.com/docker/docker/pkg/term"
 	"github.com/opencontainers/runc/libcontainer"
@@ -94,6 +95,10 @@ func (t *tty) recvtty(process *libcontainer.Process, detach bool) error {
 			return fmt.Errorf("failed to set the terminal from the stdin: %v", err)
 		}
 		t.state = state
+		err = enableOpost(os.Stdin.Fd())
+		if err != nil {
+			return err
+		}
 	}
 
 	t.console = console
@@ -147,4 +152,28 @@ func (t *tty) resize() error {
 		return err
 	}
 	return term.SetWinsize(t.console.File().Fd(), ws)
+}
+
+func ioctl(fd uintptr, flag, data uintptr) error {
+	if _, _, err := syscall.Syscall(syscall.SYS_IOCTL, fd, flag, data); err != 0 {
+		return err
+	}
+	return nil
+}
+
+func enableOpost(fd uintptr) error {
+	// Go doesn't have a wrapper for any of the termios ioctls.
+	var termios syscall.Termios
+
+	if err := ioctl(fd, syscall.TCGETS, uintptr(unsafe.Pointer(&termios))); err != nil {
+		return fmt.Errorf("ioctl(tty, tcgets): %s", err.Error())
+	}
+
+	termios.Oflag |= syscall.OPOST
+
+	if err := ioctl(fd, syscall.TCSETS, uintptr(unsafe.Pointer(&termios))); err != nil {
+		return fmt.Errorf("ioctl(tty, tcsets): %s", err.Error())
+	}
+
+	return nil
 }
