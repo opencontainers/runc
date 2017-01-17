@@ -85,10 +85,6 @@ func (p *setnsProcess) start() (err error) {
 			return newSystemErrorWithCausef(err, "adding pid %d to cgroups", p.pid())
 		}
 	}
-	// set oom_score_adj
-	if err := setOomScoreAdj(p.config.Config.OomScoreAdj, p.pid()); err != nil {
-		return newSystemErrorWithCause(err, "setting oom score")
-	}
 	// set rlimits, this has to be done here because we lose permissions
 	// to raise the limits once we enter a user-namespace
 	if err := setupRlimits(p.config.Rlimits, p.pid()); err != nil {
@@ -284,10 +280,6 @@ func (p *initProcess) start() error {
 		case procReady:
 			if err := p.manager.Set(p.config.Config); err != nil {
 				return newSystemErrorWithCause(err, "setting cgroup config for ready process")
-			}
-			// set oom_score_adj
-			if err := setOomScoreAdj(p.config.Config.OomScoreAdj, p.pid()); err != nil {
-				return newSystemErrorWithCause(err, "setting oom score for ready process")
 			}
 			// set rlimits, this has to be done here because we lose permissions
 			// to raise the limits once we enter a user-namespace

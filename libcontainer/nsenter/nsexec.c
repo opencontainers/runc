@@ -72,18 +72,21 @@ struct nlconfig_t {
 	char *namespaces;
 	size_t namespaces_len;
 	uint8_t is_setgroup;
+	char *oom_score_adj;
+	size_t oom_score_adj_len;
 };
 
 /*
  * List of netlink message types sent to us as part of bootstrapping the init.
  * These constants are defined in libcontainer/message_linux.go.
  */
-#define INIT_MSG		62000
+#define INIT_MSG			62000
 #define CLONE_FLAGS_ATTR	27281
 #define NS_PATHS_ATTR		27282
-#define UIDMAP_ATTR		27283
-#define GIDMAP_ATTR		27284
+#define UIDMAP_ATTR			27283
+#define GIDMAP_ATTR			27284
 #define SETGROUP_ATTR		27285
+#define OOM_SCORE_ADJ_ATTR	27286
 
 /*
  * Use the raw syscall for versions of glibc which don't include a function for
@@ -186,7 +189,7 @@ static void update_setgroups(int pid, enum policy_t setgroup)
 	}
 }
 
-static void update_uidmap(int pid, char *map, int map_len)
+static void update_uidmap(int pid, char *map, size_t map_len)
 {
 	if (map == NULL || map_len <= 0)
 		return;
@@ -195,13 +198,22 @@ static void update_uidmap(int pid, char *map, int map_len)
 		bail("failed to update /proc/%d/uid_map", pid);
 }
 
-static void update_gidmap(int pid, char *map, int map_len)
+static void update_gidmap(int pid, char *map, size_t map_len)
 {
 	if (map == NULL || map_len <= 0)
 		return;
 
 	if (write_file(map, map_len, "/proc/%d/gid_map", pid) < 0)
 		bail("failed to update /proc/%d/gid_map", pid);
+}
+
+static void update_oom_score_adj(char *data, size_t len)
+{
+	if (data == NULL || len <= 0)
+		return;
+
+	if (write_file(data, len, "/proc/self/oom_score_adj") < 0)
+		bail("failed to update /proc/self/oom_score_adj");
 }
 
 /* A dummy function that just jumps to the given jumpval. */
@@ -317,6 +329,10 @@ static void nl_parse(int fd, struct nlconfig_t *config)
 		case CLONE_FLAGS_ATTR:
 			config->cloneflags = readint32(current);
 			break;
+		case OOM_SCORE_ADJ_ATTR:
+			config->oom_score_adj = current;
+			config->oom_score_adj_len = payload_len;
+			break;
 		case NS_PATHS_ATTR:
 			config->namespaces = current;
 			config->namespaces_len = payload_len;
@@ -425,13 +441,31 @@ void nsexec(void)
 	if (pipenum == -1)
 		return;
 
-	/* make the process non-dumpable */
-	if (prctl(PR_SET_DUMPABLE, 0, 0, 0, 0) != 0) {
-		bail("failed to set process as non-dumpable");
-	}
-
 	/* Parse all of the netlink configuration. */
 	nl_parse(pipenum, &config);
+
+	/* Set oom_score_adj. This has to be done before !dumpable because
+	 * /proc/self/oom_score_adj is not writeable unless you're an privileged
+	 * user (if !dumpable is set). All children inherit their parent's
+	 * oom_score_adj value on fork(2) so this will always be propagated
+	 * properly.
+	 */
+	update_oom_score_adj(config.oom_score_adj, config.oom_score_adj_len);
+
+	/*
+	 * Make the process non-dumpable, to avoid various race conditions that
+	 * could cause processes in namespaces we're joining to access host
+	 * resources (or potentially execute code).
+	 *
+	 * However, if the number of namespaces we are joining is 0, we are not
+	 * going to be switching to a different security context. Thus setting
+	 * ourselves to be non-dumpable only breaks things (like rootless
+	 * containers), which is the recommendation from the kernel folks.
+	 */
+	if (config.namespaces) {
+		if (prctl(PR_SET_DUMPABLE, 0, 0, 0, 0) < 0)
+			bail("failed to set process as non-dumpable");
+	}
 
 	/* Pipe so we can tell the child when we've finished setting up. */
 	if (socketpair(AF_LOCAL, SOCK_STREAM, 0, sync_child_pipe) < 0)
@@ -681,6 +715,11 @@ void nsexec(void)
 				 * clone_parent rant). So signal our parent to hook us up.
 				 */
 
+				/* Switching is only necessary if we joined namespaces. */
+				if (config.namespaces) {
+					if (prctl(PR_SET_DUMPABLE, 1, 0, 0, 0) < 0)
+						bail("failed to set process as dumpable");
+				}
 				s = SYNC_USERMAP_PLS;
 				if (write(syncfd, &s, sizeof(s)) != sizeof(s))
 					bail("failed to sync with parent: write(SYNC_USERMAP_PLS)");
@@ -691,6 +730,11 @@ void nsexec(void)
 					bail("failed to sync with parent: read(SYNC_USERMAP_ACK)");
 				if (s != SYNC_USERMAP_ACK)
 					bail("failed to sync with parent: SYNC_USERMAP_ACK: got %u", s);
+				/* Switching is only necessary if we joined namespaces. */
+				if (config.namespaces) {
+					if (prctl(PR_SET_DUMPABLE, 0, 0, 0, 0) < 0)
+						bail("failed to set process as dumpable");
+				}
 			}
 
 			/*

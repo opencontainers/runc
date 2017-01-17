@@ -6,10 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"os"
-	"strconv"
 	"strings"
 	"syscall"
 	"unsafe"
@@ -367,12 +365,6 @@ func setupRlimits(limits []configs.Rlimit, pid int) error {
 		}
 	}
 	return nil
-}
-
-func setOomScoreAdj(oomScoreAdj int, pid int) error {
-	path := fmt.Sprintf("/proc/%d/oom_score_adj", pid)
-
-	return ioutil.WriteFile(path, []byte(strconv.Itoa(oomScoreAdj)), 0600)
 }
 
 const _P_PID = 1

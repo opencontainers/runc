@@ -11,12 +11,14 @@ import (
 // list of known message types we want to send to bootstrap program
 // The number is randomly chosen to not conflict with known netlink types
 const (
-	InitMsg        uint16 = 62000
-	CloneFlagsAttr uint16 = 27281
-	NsPathsAttr    uint16 = 27282
-	UidmapAttr     uint16 = 27283
-	GidmapAttr     uint16 = 27284
-	SetgroupAttr   uint16 = 27285
+	InitMsg         uint16 = 62000
+	CloneFlagsAttr  uint16 = 27281
+	NsPathsAttr     uint16 = 27282
+	UidmapAttr      uint16 = 27283
+	GidmapAttr      uint16 = 27284
+	SetgroupAttr    uint16 = 27285
+	OomScoreAdjAttr uint16 = 27286
+
 	// When syscall.NLA_HDRLEN is in gccgo, take this out.
 	syscall_NLA_HDRLEN = (syscall.SizeofNlAttr + syscall.NLA_ALIGNTO - 1) & ^(syscall.NLA_ALIGNTO - 1)
 )
