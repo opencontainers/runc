@@ -107,7 +107,7 @@ runc spec
 
 Assuming you have an OCI bundle from the previous step you can execute the container in two different ways.
 
-The first way is to use the convenience command `run` that will handle creating, starting, and deleting the container after it exits.
+The first way is to use the convenience of the command `run` that will handle creating, starting, and deleting the container after it exits.
 
 ```bash
 cd /mycontainer
