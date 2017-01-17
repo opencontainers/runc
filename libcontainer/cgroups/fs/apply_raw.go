@@ -21,7 +21,7 @@ var (
 		&CpusetGroup{},
 		&DevicesGroup{},
 		&MemoryGroup{},
-		&CpuGroup{},
+		&CPUGroup{},
 		&CpuacctGroup{},
 		&PidsGroup{},
 		&BlkioGroup{},
@@ -32,6 +32,7 @@ var (
 		&FreezerGroup{},
 		&NameGroup{GroupName: "name=systemd", Join: true},
 	}
+	// HugePageSizes represents hugepage size on the system.
 	HugePageSizes, _ = cgroups.GetHugePageSize()
 )
 
@@ -61,6 +62,7 @@ type subsystem interface {
 	Set(path string, cgroup *configs.Cgroup) error
 }
 
+// Manager is cgroup manager for fs cgroup.
 type Manager struct {
 	mu      sync.Mutex
 	Cgroups *configs.Cgroup
@@ -100,6 +102,7 @@ type cgroupData struct {
 	pid       int
 }
 
+// Apply moves container process to all subsystem cgroups.
 func (m *Manager) Apply(pid int) (err error) {
 	if m.Cgroups == nil {
 		return nil
@@ -151,6 +154,7 @@ func (m *Manager) Apply(pid int) (err error) {
 	return nil
 }
 
+// Destroy removes all cgroup paths.
 func (m *Manager) Destroy() error {
 	if m.Cgroups.Paths != nil {
 		return nil
@@ -164,6 +168,7 @@ func (m *Manager) Destroy() error {
 	return nil
 }
 
+// GetPaths returns all cgroup paths.
 func (m *Manager) GetPaths() map[string]string {
 	m.mu.Lock()
 	paths := m.Paths
@@ -171,6 +176,7 @@ func (m *Manager) GetPaths() map[string]string {
 	return paths
 }
 
+// GetStats returns statistic of all subsystems managed by manager.
 func (m *Manager) GetStats() (*cgroups.Stats, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -187,6 +193,7 @@ func (m *Manager) GetStats() (*cgroups.Stats, error) {
 	return stats, nil
 }
 
+// Set sets resource limits to all subsystems managed by manager.
 func (m *Manager) Set(container *configs.Config) error {
 	// If Paths are set, then we are just joining cgroups paths
 	// and there is no need to set any values.
@@ -229,11 +236,14 @@ func (m *Manager) Freeze(state configs.FreezerState) error {
 	return nil
 }
 
+// GetPids returns all pids that were added to cgroup.
 func (m *Manager) GetPids() ([]int, error) {
 	paths := m.GetPaths()
 	return cgroups.GetPids(paths["devices"])
 }
 
+// GetAllPids returns all pids that were added to cgroup and
+// to all its subcgroups.
 func (m *Manager) GetAllPids() ([]int, error) {
 	paths := m.GetPaths()
 	return cgroups.GetAllPids(paths["devices"])
@@ -346,6 +356,11 @@ func removePath(p string, err error) error {
 	return nil
 }
 
+// CheckCpushares checks if `cpu.shares` value we set is larger
+// than the maximum allowed value of smaller than the minimun
+// allowed value.
+// We compare the config with the actual value because kernel
+// will adjust it if it's too large or too small.
 func CheckCpushares(path string, c int64) error {
 	var cpuShares int64
 

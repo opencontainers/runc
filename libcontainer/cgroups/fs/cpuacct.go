@@ -21,13 +21,17 @@ const (
 
 var clockTicks = uint64(system.GetClockTicks())
 
+// CpuacctGroup represents cpuacct control group.
 type CpuacctGroup struct {
 }
 
+// Name returns the subsystem name of the cgroup.
 func (s *CpuacctGroup) Name() string {
 	return "cpuacct"
 }
 
+// Apply moves the process to the cgroup, without
+// setting the resource limits.
 func (s *CpuacctGroup) Apply(d *cgroupData) error {
 	// we just want to join this group even though we don't set anything
 	if _, err := d.join("cpuacct"); err != nil && !cgroups.IsNotFound(err) {
@@ -37,16 +41,19 @@ func (s *CpuacctGroup) Apply(d *cgroupData) error {
 	return nil
 }
 
+// Set sets the reource limits to the cgroup.
 func (s *CpuacctGroup) Set(path string, cgroup *configs.Cgroup) error {
 	return nil
 }
 
+// Remove deletes the cgroup.
 func (s *CpuacctGroup) Remove(d *cgroupData) error {
 	return removePath(d.path("cpuacct"))
 }
 
+// GetStats returns the statistic of the cgroup.
 func (s *CpuacctGroup) GetStats(path string, stats *cgroups.Stats) error {
-	userModeUsage, kernelModeUsage, err := getCpuUsageBreakdown(path)
+	userModeUsage, kernelModeUsage, err := getCPUUsageBreakdown(path)
 	if err != nil {
 		return err
 	}
@@ -61,15 +68,15 @@ func (s *CpuacctGroup) GetStats(path string, stats *cgroups.Stats) error {
 		return err
 	}
 
-	stats.CpuStats.CpuUsage.TotalUsage = totalUsage
-	stats.CpuStats.CpuUsage.PercpuUsage = percpuUsage
-	stats.CpuStats.CpuUsage.UsageInUsermode = userModeUsage
-	stats.CpuStats.CpuUsage.UsageInKernelmode = kernelModeUsage
+	stats.CPUStats.CPUUsage.TotalUsage = totalUsage
+	stats.CPUStats.CPUUsage.PercpuUsage = percpuUsage
+	stats.CPUStats.CPUUsage.UsageInUsermode = userModeUsage
+	stats.CPUStats.CPUUsage.UsageInKernelmode = kernelModeUsage
 	return nil
 }
 
 // Returns user and kernel usage breakdown in nanoseconds.
-func getCpuUsageBreakdown(path string) (uint64, uint64, error) {
+func getCPUUsageBreakdown(path string) (uint64, uint64, error) {
 	userModeUsage := uint64(0)
 	kernelModeUsage := uint64(0)
 	const (

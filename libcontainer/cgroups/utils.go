@@ -18,15 +18,19 @@ import (
 
 const (
 	cgroupNamePrefix = "name="
-	CgroupProcesses  = "cgroup.procs"
+	// CgroupProcesses is the file name we should put processes in.
+	CgroupProcesses = "cgroup.procs"
 )
 
+// FindCgroupMountpoint returns the mount point of specified subsystem cgroup.
 // https://www.kernel.org/doc/Documentation/cgroup-v1/cgroups.txt
 func FindCgroupMountpoint(subsystem string) (string, error) {
 	mnt, _, err := FindCgroupMountpointAndRoot(subsystem)
 	return mnt, err
 }
 
+// FindCgroupMountpointAndRoot returns mount point and mount root
+// of specified subsystem cgroup.
 func FindCgroupMountpointAndRoot(subsystem string) (string, string, error) {
 	// We are not using mount.GetMounts() because it's super-inefficient,
 	// parsing it directly sped up x10 times because of not using Sscanf.
@@ -66,6 +70,7 @@ func isSubsystemAvailable(subsystem string) bool {
 	return avail
 }
 
+// FindCgroupMountpointDir returns the directory of cgroup mount point.
 func FindCgroupMountpointDir() (string, error) {
 	f, err := os.Open("/proc/self/mountinfo")
 	if err != nil {
@@ -103,12 +108,20 @@ func FindCgroupMountpointDir() (string, error) {
 	return "", NewNotFoundError("cgroup")
 }
 
+// Mount represents mount information.
 type Mount struct {
 	Mountpoint string
 	Root       string
 	Subsystems []string
 }
 
+// GetThisCgroupDir returns cgroup directory of a subsystem.
+// Currently we assume that all subsystems mounted in the same directory,
+// such like:
+//   /sys/fs/cgroup/
+//    - /sys/fs/cgroup/cpu
+//    - /sys/fs/cgroup/cpuset
+//    - /sys/fs/cgroup/memory ...
 func (m Mount) GetThisCgroupDir(cgroups map[string]string) (string, error) {
 	if len(m.Subsystems) == 0 {
 		return "", fmt.Errorf("no subsystem for mount")
@@ -203,7 +216,8 @@ func GetAllSubsystems() ([]string, error) {
 	return subsystems, nil
 }
 
-// GetThisCgroupDir returns the relative path to the cgroup docker is running in.
+// GetThisCgroupDir returns the relative path to the cgroup that
+// current process is running in.
 func GetThisCgroupDir(subsystem string) (string, error) {
 	cgroups, err := ParseCgroupFile("/proc/self/cgroup")
 	if err != nil {
@@ -213,8 +227,9 @@ func GetThisCgroupDir(subsystem string) (string, error) {
 	return getControllerPath(subsystem, cgroups)
 }
 
+// GetInitCgroupDir returns the relative path to the cgroup that
+// init process is running in.
 func GetInitCgroupDir(subsystem string) (string, error) {
-
 	cgroups, err := ParseCgroupFile("/proc/1/cgroup")
 	if err != nil {
 		return "", err
@@ -301,6 +316,7 @@ func getControllerPath(subsystem string, cgroups map[string]string) (string, err
 	return "", NewNotFoundError(subsystem)
 }
 
+// PathExists checks if the given path exists.
 func PathExists(path string) bool {
 	if _, err := os.Stat(path); err != nil {
 		return false
@@ -308,6 +324,7 @@ func PathExists(path string) bool {
 	return true
 }
 
+// EnterPid moves the given pid the the specified cgroup paths.
 func EnterPid(cgroupPaths map[string]string, pid int) error {
 	for _, path := range cgroupPaths {
 		if PathExists(path) {
@@ -348,6 +365,7 @@ func RemovePaths(paths map[string]string) (err error) {
 	return fmt.Errorf("Failed to remove paths: %v", paths)
 }
 
+// GetHugePageSize returns the huge page size on the system.
 func GetHugePageSize() ([]string, error) {
 	var pageSizes []string
 	sizeList := []string{"B", "kB", "MB", "GB", "TB", "PB"}

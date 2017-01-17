@@ -11,7 +11,7 @@ import (
 )
 
 func TestCpuSetShares(t *testing.T) {
-	helper := NewCgroupTestUtil("cpu", t)
+	helper := newCgroupTestUtil("cpu", t)
 	defer helper.cleanup()
 
 	const (
@@ -24,7 +24,7 @@ func TestCpuSetShares(t *testing.T) {
 	})
 
 	helper.CgroupData.config.Resources.CpuShares = sharesAfter
-	cpu := &CpuGroup{}
+	cpu := &CPUGroup{}
 	if err := cpu.Set(helper.CgroupPath, helper.CgroupData.config); err != nil {
 		t.Fatal(err)
 	}
@@ -40,7 +40,7 @@ func TestCpuSetShares(t *testing.T) {
 }
 
 func TestCpuSetBandWidth(t *testing.T) {
-	helper := NewCgroupTestUtil("cpu", t)
+	helper := newCgroupTestUtil("cpu", t)
 	defer helper.cleanup()
 
 	const (
@@ -65,7 +65,7 @@ func TestCpuSetBandWidth(t *testing.T) {
 	helper.CgroupData.config.Resources.CpuPeriod = periodAfter
 	helper.CgroupData.config.Resources.CpuRtRuntime = rtRuntimeAfter
 	helper.CgroupData.config.Resources.CpuRtPeriod = rtPeriodAfter
-	cpu := &CpuGroup{}
+	cpu := &CPUGroup{}
 	if err := cpu.Set(helper.CgroupPath, helper.CgroupData.config); err != nil {
 		t.Fatal(err)
 	}
@@ -101,8 +101,8 @@ func TestCpuSetBandWidth(t *testing.T) {
 	}
 }
 
-func TestCpuStats(t *testing.T) {
-	helper := NewCgroupTestUtil("cpu", t)
+func TestCPUStats(t *testing.T) {
+	helper := newCgroupTestUtil("cpu", t)
 	defer helper.cleanup()
 
 	const (
@@ -117,7 +117,7 @@ func TestCpuStats(t *testing.T) {
 		"cpu.stat": cpuStatContent,
 	})
 
-	cpu := &CpuGroup{}
+	cpu := &CPUGroup{}
 	actualStats := *cgroups.NewStats()
 	err := cpu.GetStats(helper.CgroupPath, &actualStats)
 	if err != nil {
@@ -129,14 +129,14 @@ func TestCpuStats(t *testing.T) {
 		ThrottledPeriods: nrThrottled,
 		ThrottledTime:    throttledTime}
 
-	expectThrottlingDataEquals(t, expectedStats, actualStats.CpuStats.ThrottlingData)
+	expectThrottlingDataEquals(t, expectedStats, actualStats.CPUStats.ThrottlingData)
 }
 
-func TestNoCpuStatFile(t *testing.T) {
-	helper := NewCgroupTestUtil("cpu", t)
+func TestNoCPUStatFile(t *testing.T) {
+	helper := newCgroupTestUtil("cpu", t)
 	defer helper.cleanup()
 
-	cpu := &CpuGroup{}
+	cpu := &CPUGroup{}
 	actualStats := *cgroups.NewStats()
 	err := cpu.GetStats(helper.CgroupPath, &actualStats)
 	if err != nil {
@@ -144,8 +144,8 @@ func TestNoCpuStatFile(t *testing.T) {
 	}
 }
 
-func TestInvalidCpuStat(t *testing.T) {
-	helper := NewCgroupTestUtil("cpu", t)
+func TestInvalidCPUStat(t *testing.T) {
+	helper := newCgroupTestUtil("cpu", t)
 	defer helper.cleanup()
 	cpuStatContent := `nr_periods 2000
 	nr_throttled 200
@@ -154,7 +154,7 @@ func TestInvalidCpuStat(t *testing.T) {
 		"cpu.stat": cpuStatContent,
 	})
 
-	cpu := &CpuGroup{}
+	cpu := &CPUGroup{}
 	actualStats := *cgroups.NewStats()
 	err := cpu.GetStats(helper.CgroupPath, &actualStats)
 	if err == nil {
@@ -163,7 +163,7 @@ func TestInvalidCpuStat(t *testing.T) {
 }
 
 func TestCpuSetRtSchedAtApply(t *testing.T) {
-	helper := NewCgroupTestUtil("cpu", t)
+	helper := newCgroupTestUtil("cpu", t)
 	defer helper.cleanup()
 
 	const (
@@ -180,7 +180,7 @@ func TestCpuSetRtSchedAtApply(t *testing.T) {
 
 	helper.CgroupData.config.Resources.CpuRtRuntime = rtRuntimeAfter
 	helper.CgroupData.config.Resources.CpuRtPeriod = rtPeriodAfter
-	cpu := &CpuGroup{}
+	cpu := &CPUGroup{}
 	if err := cpu.ApplyDir(helper.CgroupPath, helper.CgroupData.config, 1234); err != nil {
 		t.Fatal(err)
 	}

@@ -28,8 +28,8 @@ type cgroupTestUtil struct {
 	t       *testing.T
 }
 
-// Creates a new test util for the specified subsystem
-func NewCgroupTestUtil(subsystem string, t *testing.T) *cgroupTestUtil {
+// newCgroupTestUtil creates a new test util for the specified subsystem
+func newCgroupTestUtil(subsystem string, t *testing.T) *cgroupTestUtil {
 	d := &cgroupData{
 		config: &configs.Cgroup{},
 	}

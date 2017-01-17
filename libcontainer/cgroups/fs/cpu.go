@@ -12,14 +12,18 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
-type CpuGroup struct {
+// CPUGroup represents cpu control group.
+type CPUGroup struct {
 }
 
-func (s *CpuGroup) Name() string {
+// Name returns the subsystem name of the cgroup.
+func (s *CPUGroup) Name() string {
 	return "cpu"
 }
 
-func (s *CpuGroup) Apply(d *cgroupData) error {
+// Apply moves the process to the cgroup, without
+// setting the resource limits.
+func (s *CPUGroup) Apply(d *cgroupData) error {
 	// We always want to join the cpu group, to allow fair cpu scheduling
 	// on a container basis
 	path, err := d.path("cpu")
@@ -29,7 +33,8 @@ func (s *CpuGroup) Apply(d *cgroupData) error {
 	return s.ApplyDir(path, d.config, d.pid)
 }
 
-func (s *CpuGroup) ApplyDir(path string, cgroup *configs.Cgroup, pid int) error {
+// ApplyDir moves the process to the cgroup represented by the directory name.
+func (s *CPUGroup) ApplyDir(path string, cgroup *configs.Cgroup, pid int) error {
 	// This might happen if we have no cpu cgroup mounted.
 	// Just do nothing and don't fail.
 	if path == "" {
@@ -41,7 +46,7 @@ func (s *CpuGroup) ApplyDir(path string, cgroup *configs.Cgroup, pid int) error 
 	// We should set the real-Time group scheduling settings before moving
 	// in the process because if the process is already in SCHED_RR mode
 	// and no RT bandwidth is set, adding it will fail.
-	if err := s.SetRtSched(path, cgroup); err != nil {
+	if err := setRtSched(path, cgroup); err != nil {
 		return err
 	}
 	// because we are not using d.join we need to place the pid into the procs file
@@ -53,7 +58,7 @@ func (s *CpuGroup) ApplyDir(path string, cgroup *configs.Cgroup, pid int) error 
 	return nil
 }
 
-func (s *CpuGroup) SetRtSched(path string, cgroup *configs.Cgroup) error {
+func setRtSched(path string, cgroup *configs.Cgroup) error {
 	if cgroup.Resources.CpuRtPeriod != 0 {
 		if err := writeFile(path, "cpu.rt_period_us", strconv.FormatInt(cgroup.Resources.CpuRtPeriod, 10)); err != nil {
 			return err
@@ -67,7 +72,8 @@ func (s *CpuGroup) SetRtSched(path string, cgroup *configs.Cgroup) error {
 	return nil
 }
 
-func (s *CpuGroup) Set(path string, cgroup *configs.Cgroup) error {
+// Set sets the reource limits to the cgroup.
+func (s *CPUGroup) Set(path string, cgroup *configs.Cgroup) error {
 	if cgroup.Resources.CpuShares != 0 {
 		if err := writeFile(path, "cpu.shares", strconv.FormatInt(cgroup.Resources.CpuShares, 10)); err != nil {
 			return err
@@ -83,18 +89,20 @@ func (s *CpuGroup) Set(path string, cgroup *configs.Cgroup) error {
 			return err
 		}
 	}
-	if err := s.SetRtSched(path, cgroup); err != nil {
+	if err := setRtSched(path, cgroup); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (s *CpuGroup) Remove(d *cgroupData) error {
+// Remove deletes the cgroup.
+func (s *CPUGroup) Remove(d *cgroupData) error {
 	return removePath(d.path("cpu"))
 }
 
-func (s *CpuGroup) GetStats(path string, stats *cgroups.Stats) error {
+// GetStats returns the statistic of the cgroup.
+func (s *CPUGroup) GetStats(path string, stats *cgroups.Stats) error {
 	f, err := os.Open(filepath.Join(path, "cpu.stat"))
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -112,13 +120,13 @@ func (s *CpuGroup) GetStats(path string, stats *cgroups.Stats) error {
 		}
 		switch t {
 		case "nr_periods":
-			stats.CpuStats.ThrottlingData.Periods = v
+			stats.CPUStats.ThrottlingData.Periods = v
 
 		case "nr_throttled":
-			stats.CpuStats.ThrottlingData.ThrottledPeriods = v
+			stats.CPUStats.ThrottlingData.ThrottledPeriods = v
 
 		case "throttled_time":
-			stats.CpuStats.ThrottlingData.ThrottledTime = v
+			stats.CPUStats.ThrottlingData.ThrottledTime = v
 		}
 	}
 	return nil

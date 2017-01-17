@@ -11,13 +11,17 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
+// PidsGroup represents pids control group.
 type PidsGroup struct {
 }
 
+// Name returns the subsystem name of the cgroup.
 func (s *PidsGroup) Name() string {
 	return "pids"
 }
 
+// Apply moves the process to the cgroup, without
+// setting the resource limits.
 func (s *PidsGroup) Apply(d *cgroupData) error {
 	_, err := d.join("pids")
 	if err != nil && !cgroups.IsNotFound(err) {
@@ -26,6 +30,7 @@ func (s *PidsGroup) Apply(d *cgroupData) error {
 	return nil
 }
 
+// Set sets the reource limits to the cgroup.
 func (s *PidsGroup) Set(path string, cgroup *configs.Cgroup) error {
 	if cgroup.Resources.PidsLimit != 0 {
 		// "max" is the fallback value.
@@ -43,10 +48,12 @@ func (s *PidsGroup) Set(path string, cgroup *configs.Cgroup) error {
 	return nil
 }
 
+// Remove deletes the cgroup.
 func (s *PidsGroup) Remove(d *cgroupData) error {
 	return removePath(d.path("pids"))
 }
 
+// GetStats returns the statistic of the cgroup.
 func (s *PidsGroup) GetStats(path string, stats *cgroups.Stats) error {
 	current, err := getCgroupParamUint(path, "pids.current")
 	if err != nil {

@@ -8,13 +8,17 @@ import (
 	"github.com/opencontainers/runc/libcontainer/system"
 )
 
+// DevicesGroup represents devices control group.
 type DevicesGroup struct {
 }
 
+// Name returns the subsystem name of the cgroup.
 func (s *DevicesGroup) Name() string {
 	return "devices"
 }
 
+// Apply moves the process to the cgroup, without
+// setting the resource limits.
 func (s *DevicesGroup) Apply(d *cgroupData) error {
 	_, err := d.join("devices")
 	if err != nil {
@@ -25,6 +29,7 @@ func (s *DevicesGroup) Apply(d *cgroupData) error {
 	return nil
 }
 
+// Set sets the reource limits to the cgroup.
 func (s *DevicesGroup) Set(path string, cgroup *configs.Cgroup) error {
 	if system.RunningInUserNS() {
 		return nil
@@ -71,10 +76,12 @@ func (s *DevicesGroup) Set(path string, cgroup *configs.Cgroup) error {
 	return nil
 }
 
+// Remove deletes the cgroup.
 func (s *DevicesGroup) Remove(d *cgroupData) error {
 	return removePath(d.path("devices"))
 }
 
+// GetStats returns the statistic of the cgroup.
 func (s *DevicesGroup) GetStats(path string, stats *cgroups.Stats) error {
 	return nil
 }

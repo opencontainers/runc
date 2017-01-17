@@ -34,7 +34,7 @@ var (
 )
 
 func TestDevicesSetAllow(t *testing.T) {
-	helper := NewCgroupTestUtil("devices", t)
+	helper := newCgroupTestUtil("devices", t)
 	defer helper.cleanup()
 
 	helper.writeFileContents(map[string]string{
@@ -72,7 +72,7 @@ func TestDevicesSetAllow(t *testing.T) {
 }
 
 func TestDevicesSetDeny(t *testing.T) {
-	helper := NewCgroupTestUtil("devices", t)
+	helper := newCgroupTestUtil("devices", t)
 	defer helper.cleanup()
 
 	helper.writeFileContents(map[string]string{

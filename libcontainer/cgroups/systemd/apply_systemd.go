@@ -20,6 +20,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
+// Manager is cgroup manager for systemd cgroup.
 type Manager struct {
 	mu      sync.Mutex
 	Cgroups *configs.Cgroup
@@ -52,7 +53,7 @@ var subsystems = subsystemSet{
 	&fs.CpusetGroup{},
 	&fs.DevicesGroup{},
 	&fs.MemoryGroup{},
-	&fs.CpuGroup{},
+	&fs.CPUGroup{},
 	&fs.CpuacctGroup{},
 	&fs.PidsGroup{},
 	&fs.BlkioGroup{},
@@ -85,6 +86,7 @@ func newProp(name string, units interface{}) systemdDbus.Property {
 	}
 }
 
+// UseSystemd checks if system is using systemd.
 func UseSystemd() bool {
 	if !systemdUtil.IsRunningSystemd() {
 		return false
@@ -194,6 +196,7 @@ func UseSystemd() bool {
 	return hasStartTransientUnit
 }
 
+// Apply moves container process to all subsystem cgroups.
 func (m *Manager) Apply(pid int) error {
 	var (
 		c          = m.Cgroups
@@ -306,6 +309,7 @@ func (m *Manager) Apply(pid int) error {
 	return nil
 }
 
+// Destroy removes all cgroup paths.
 func (m *Manager) Destroy() error {
 	if m.Cgroups.Paths != nil {
 		return nil
@@ -320,6 +324,7 @@ func (m *Manager) Destroy() error {
 	return nil
 }
 
+// GetPaths returns all cgroup paths.
 func (m *Manager) GetPaths() map[string]string {
 	m.mu.Lock()
 	paths := m.Paths
@@ -388,7 +393,8 @@ func joinCgroups(c *configs.Cgroup, pid int) error {
 	return nil
 }
 
-// systemd represents slice hierarchy using `-`, so we need to follow suit when
+// ExpandSlice interprets slice name from string to a proper slice name.
+// Systemd represents slice hierarchy using `-`, so we need to follow suit when
 // generating the path of slice. Essentially, test-a-b.slice becomes
 // test.slice/test-a.slice/test-a-b.slice.
 func ExpandSlice(slice string) (string, error) {
@@ -449,6 +455,8 @@ func getSubsystemPath(c *configs.Cgroup, subsystem string) (string, error) {
 	return filepath.Join(mountpoint, initPath, slice, getUnitName(c)), nil
 }
 
+// Freeze toggles the container's freezer cgroup depending on the state
+// provided.
 func (m *Manager) Freeze(state configs.FreezerState) error {
 	path, err := getSubsystemPath(m.Cgroups, "freezer")
 	if err != nil {
@@ -468,6 +476,7 @@ func (m *Manager) Freeze(state configs.FreezerState) error {
 	return nil
 }
 
+// GetPids returns all pids that were added to cgroup.
 func (m *Manager) GetPids() ([]int, error) {
 	path, err := getSubsystemPath(m.Cgroups, "devices")
 	if err != nil {
@@ -476,6 +485,8 @@ func (m *Manager) GetPids() ([]int, error) {
 	return cgroups.GetPids(path)
 }
 
+// GetAllPids returns all pids that were added to cgroup and
+// to all its subcgroups.
 func (m *Manager) GetAllPids() ([]int, error) {
 	path, err := getSubsystemPath(m.Cgroups, "devices")
 	if err != nil {
@@ -484,6 +495,7 @@ func (m *Manager) GetAllPids() ([]int, error) {
 	return cgroups.GetAllPids(path)
 }
 
+// GetStats returns statistic of all subsystems managed by manager.
 func (m *Manager) GetStats() (*cgroups.Stats, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -501,6 +513,7 @@ func (m *Manager) GetStats() (*cgroups.Stats, error) {
 	return stats, nil
 }
 
+// Set sets resource limits to all subsystems managed by manager.
 func (m *Manager) Set(container *configs.Config) error {
 	// If Paths are set, then we are just joining cgroups paths
 	// and there is no need to set any values.

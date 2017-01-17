@@ -8,23 +8,24 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
+// Manager implements cgroup manager.
 type Manager interface {
-	// Applies cgroup configuration to the process with the specified pid
+	// Apply moves the process with the specified pid to all subsystem cgroups
 	Apply(pid int) error
 
-	// Returns the PIDs inside the cgroup set
+	// GetPids returns the PIDs inside the cgroup set
 	GetPids() ([]int, error)
 
-	// Returns the PIDs inside the cgroup set & all sub-cgroups
+	// GetAllPids returns the PIDs inside the cgroup set & all sub-cgroups
 	GetAllPids() ([]int, error)
 
-	// Returns statistics for the cgroup set
+	// GetStats returns statistics for the cgroup set
 	GetStats() (*Stats, error)
 
-	// Toggles the freezer cgroup according with specified state
+	// Freeze toggles the freezer cgroup according with specified state
 	Freeze(state configs.FreezerState) error
 
-	// Destroys the cgroup set
+	// Destroy destroys the cgroup set
 	Destroy() error
 
 	// The option func SystemdCgroups() and Cgroupfs() require following attributes:
@@ -33,28 +34,32 @@ type Manager interface {
 	// Paths maps cgroup subsystem to path at which it is mounted.
 	// Cgroups specifies specific cgroup settings for the various subsystems
 
-	// Returns cgroup paths to save in a state file and to be able to
+	// GetPaths returns cgroup paths to save in a state file and to be able to
 	// restore the object later.
 	GetPaths() map[string]string
 
-	// Sets the cgroup as configured.
+	// Set sets the cgroup as configured.
 	Set(container *configs.Config) error
 }
 
+// NotFoundError implements error when subsystem is not found.
 type NotFoundError struct {
 	Subsystem string
 }
 
+// Error returns error message when subsystem is not found.
 func (e *NotFoundError) Error() string {
 	return fmt.Sprintf("mountpoint for %s not found", e.Subsystem)
 }
 
+// NewNotFoundError returns initialized NotFoundError struct.
 func NewNotFoundError(sub string) error {
 	return &NotFoundError{
 		Subsystem: sub,
 	}
 }
 
+// IsNotFound checks if an error is NotFoundError.
 func IsNotFound(err error) bool {
 	if err == nil {
 		return false

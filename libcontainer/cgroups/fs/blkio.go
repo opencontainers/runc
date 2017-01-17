@@ -14,13 +14,17 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
+// BlkioGroup represents blkio control group.
 type BlkioGroup struct {
 }
 
+// Name returns the subsystem name of the cgroup.
 func (s *BlkioGroup) Name() string {
 	return "blkio"
 }
 
+// Apply moves the process to the cgroup, without
+// setting the resource limits.
 func (s *BlkioGroup) Apply(d *cgroupData) error {
 	_, err := d.join("blkio")
 	if err != nil && !cgroups.IsNotFound(err) {
@@ -29,6 +33,7 @@ func (s *BlkioGroup) Apply(d *cgroupData) error {
 	return nil
 }
 
+// Set sets the reource limits to the cgroup.
 func (s *BlkioGroup) Set(path string, cgroup *configs.Cgroup) error {
 	if cgroup.Resources.BlkioWeight != 0 {
 		if err := writeFile(path, "blkio.weight", strconv.FormatUint(uint64(cgroup.Resources.BlkioWeight), 10)); err != nil {
@@ -73,6 +78,7 @@ func (s *BlkioGroup) Set(path string, cgroup *configs.Cgroup) error {
 	return nil
 }
 
+// Remove deletes the cgroup.
 func (s *BlkioGroup) Remove(d *cgroupData) error {
 	return removePath(d.path("blkio"))
 }
@@ -164,6 +170,7 @@ func getBlkioStat(path string) ([]cgroups.BlkioStatEntry, error) {
 	return blkioStats, nil
 }
 
+// GetStats returns the statistic of the cgroup.
 func (s *BlkioGroup) GetStats(path string, stats *cgroups.Stats) error {
 	// Try to read CFQ stats available on all CFQ enabled kernels first
 	if blkioStats, err := getBlkioStat(filepath.Join(path, "blkio.io_serviced_recursive")); err == nil && blkioStats != nil {

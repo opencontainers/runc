@@ -7,7 +7,7 @@ import (
 )
 
 func TestCpusetSetCpus(t *testing.T) {
-	helper := NewCgroupTestUtil("cpuset", t)
+	helper := newCgroupTestUtil("cpuset", t)
 	defer helper.cleanup()
 
 	const (
@@ -36,7 +36,7 @@ func TestCpusetSetCpus(t *testing.T) {
 }
 
 func TestCpusetSetMems(t *testing.T) {
-	helper := NewCgroupTestUtil("cpuset", t)
+	helper := newCgroupTestUtil("cpuset", t)
 	defer helper.cleanup()
 
 	const (

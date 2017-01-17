@@ -15,7 +15,7 @@ const (
 )
 
 func TestPidsSetMax(t *testing.T) {
-	helper := NewCgroupTestUtil("pids", t)
+	helper := newCgroupTestUtil("pids", t)
 	defer helper.cleanup()
 
 	helper.writeFileContents(map[string]string{
@@ -39,7 +39,7 @@ func TestPidsSetMax(t *testing.T) {
 }
 
 func TestPidsSetUnlimited(t *testing.T) {
-	helper := NewCgroupTestUtil("pids", t)
+	helper := newCgroupTestUtil("pids", t)
 	defer helper.cleanup()
 
 	helper.writeFileContents(map[string]string{
@@ -63,7 +63,7 @@ func TestPidsSetUnlimited(t *testing.T) {
 }
 
 func TestPidsStats(t *testing.T) {
-	helper := NewCgroupTestUtil("pids", t)
+	helper := newCgroupTestUtil("pids", t)
 	defer helper.cleanup()
 
 	helper.writeFileContents(map[string]string{
@@ -87,7 +87,7 @@ func TestPidsStats(t *testing.T) {
 }
 
 func TestPidsStatsUnlimited(t *testing.T) {
-	helper := NewCgroupTestUtil("pids", t)
+	helper := newCgroupTestUtil("pids", t)
 	defer helper.cleanup()
 
 	helper.writeFileContents(map[string]string{

@@ -77,7 +77,7 @@ func appendBlkioStatEntry(blkioStatEntries *[]cgroups.BlkioStatEntry, major, min
 }
 
 func TestBlkioSetWeight(t *testing.T) {
-	helper := NewCgroupTestUtil("blkio", t)
+	helper := newCgroupTestUtil("blkio", t)
 	defer helper.cleanup()
 
 	const (
@@ -106,7 +106,7 @@ func TestBlkioSetWeight(t *testing.T) {
 }
 
 func TestBlkioSetWeightDevice(t *testing.T) {
-	helper := NewCgroupTestUtil("blkio", t)
+	helper := newCgroupTestUtil("blkio", t)
 	defer helper.cleanup()
 
 	const (
@@ -138,7 +138,7 @@ func TestBlkioSetWeightDevice(t *testing.T) {
 
 // regression #274
 func TestBlkioSetMultipleWeightDevice(t *testing.T) {
-	helper := NewCgroupTestUtil("blkio", t)
+	helper := newCgroupTestUtil("blkio", t)
 	defer helper.cleanup()
 
 	const (
@@ -174,7 +174,7 @@ func TestBlkioSetMultipleWeightDevice(t *testing.T) {
 }
 
 func TestBlkioStats(t *testing.T) {
-	helper := NewCgroupTestUtil("blkio", t)
+	helper := newCgroupTestUtil("blkio", t)
 	defer helper.cleanup()
 	helper.writeFileContents(map[string]string{
 		"blkio.io_service_bytes_recursive": serviceBytesRecursiveContents,
@@ -240,7 +240,7 @@ func TestBlkioStats(t *testing.T) {
 }
 
 func TestBlkioStatsNoSectorsFile(t *testing.T) {
-	helper := NewCgroupTestUtil("blkio", t)
+	helper := newCgroupTestUtil("blkio", t)
 	defer helper.cleanup()
 	helper.writeFileContents(map[string]string{
 		"blkio.io_service_bytes_recursive": serviceBytesRecursiveContents,
@@ -261,7 +261,7 @@ func TestBlkioStatsNoSectorsFile(t *testing.T) {
 }
 
 func TestBlkioStatsNoServiceBytesFile(t *testing.T) {
-	helper := NewCgroupTestUtil("blkio", t)
+	helper := newCgroupTestUtil("blkio", t)
 	defer helper.cleanup()
 	helper.writeFileContents(map[string]string{
 		"blkio.io_serviced_recursive":     servicedRecursiveContents,
@@ -282,7 +282,7 @@ func TestBlkioStatsNoServiceBytesFile(t *testing.T) {
 }
 
 func TestBlkioStatsNoServicedFile(t *testing.T) {
-	helper := NewCgroupTestUtil("blkio", t)
+	helper := newCgroupTestUtil("blkio", t)
 	defer helper.cleanup()
 	helper.writeFileContents(map[string]string{
 		"blkio.io_service_bytes_recursive": serviceBytesRecursiveContents,
@@ -303,7 +303,7 @@ func TestBlkioStatsNoServicedFile(t *testing.T) {
 }
 
 func TestBlkioStatsNoQueuedFile(t *testing.T) {
-	helper := NewCgroupTestUtil("blkio", t)
+	helper := newCgroupTestUtil("blkio", t)
 	defer helper.cleanup()
 	helper.writeFileContents(map[string]string{
 		"blkio.io_service_bytes_recursive": serviceBytesRecursiveContents,
@@ -327,7 +327,7 @@ func TestBlkioStatsNoServiceTimeFile(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
-	helper := NewCgroupTestUtil("blkio", t)
+	helper := newCgroupTestUtil("blkio", t)
 	defer helper.cleanup()
 	helper.writeFileContents(map[string]string{
 		"blkio.io_service_bytes_recursive": serviceBytesRecursiveContents,
@@ -351,7 +351,7 @@ func TestBlkioStatsNoWaitTimeFile(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
-	helper := NewCgroupTestUtil("blkio", t)
+	helper := newCgroupTestUtil("blkio", t)
 	defer helper.cleanup()
 	helper.writeFileContents(map[string]string{
 		"blkio.io_service_bytes_recursive": serviceBytesRecursiveContents,
@@ -375,7 +375,7 @@ func TestBlkioStatsNoMergedFile(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
-	helper := NewCgroupTestUtil("blkio", t)
+	helper := newCgroupTestUtil("blkio", t)
 	defer helper.cleanup()
 	helper.writeFileContents(map[string]string{
 		"blkio.io_service_bytes_recursive": serviceBytesRecursiveContents,
@@ -399,7 +399,7 @@ func TestBlkioStatsNoTimeFile(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
-	helper := NewCgroupTestUtil("blkio", t)
+	helper := newCgroupTestUtil("blkio", t)
 	defer helper.cleanup()
 	helper.writeFileContents(map[string]string{
 		"blkio.io_service_bytes_recursive": serviceBytesRecursiveContents,
@@ -420,7 +420,7 @@ func TestBlkioStatsNoTimeFile(t *testing.T) {
 }
 
 func TestBlkioStatsUnexpectedNumberOfFields(t *testing.T) {
-	helper := NewCgroupTestUtil("blkio", t)
+	helper := newCgroupTestUtil("blkio", t)
 	defer helper.cleanup()
 	helper.writeFileContents(map[string]string{
 		"blkio.io_service_bytes_recursive": "8:0 Read 100 100",
@@ -442,7 +442,7 @@ func TestBlkioStatsUnexpectedNumberOfFields(t *testing.T) {
 }
 
 func TestBlkioStatsUnexpectedFieldType(t *testing.T) {
-	helper := NewCgroupTestUtil("blkio", t)
+	helper := newCgroupTestUtil("blkio", t)
 	defer helper.cleanup()
 	helper.writeFileContents(map[string]string{
 		"blkio.io_service_bytes_recursive": "8:0 Read Write",
@@ -464,7 +464,7 @@ func TestBlkioStatsUnexpectedFieldType(t *testing.T) {
 }
 
 func TestNonCFQBlkioStats(t *testing.T) {
-	helper := NewCgroupTestUtil("blkio", t)
+	helper := newCgroupTestUtil("blkio", t)
 	defer helper.cleanup()
 	helper.writeFileContents(map[string]string{
 		"blkio.io_service_bytes_recursive": "",
@@ -515,7 +515,7 @@ func TestNonCFQBlkioStats(t *testing.T) {
 }
 
 func TestBlkioSetThrottleReadBpsDevice(t *testing.T) {
-	helper := NewCgroupTestUtil("blkio", t)
+	helper := newCgroupTestUtil("blkio", t)
 	defer helper.cleanup()
 
 	const (
@@ -545,7 +545,7 @@ func TestBlkioSetThrottleReadBpsDevice(t *testing.T) {
 	}
 }
 func TestBlkioSetThrottleWriteBpsDevice(t *testing.T) {
-	helper := NewCgroupTestUtil("blkio", t)
+	helper := newCgroupTestUtil("blkio", t)
 	defer helper.cleanup()
 
 	const (
@@ -575,7 +575,7 @@ func TestBlkioSetThrottleWriteBpsDevice(t *testing.T) {
 	}
 }
 func TestBlkioSetThrottleReadIOpsDevice(t *testing.T) {
-	helper := NewCgroupTestUtil("blkio", t)
+	helper := newCgroupTestUtil("blkio", t)
 	defer helper.cleanup()
 
 	const (
@@ -605,7 +605,7 @@ func TestBlkioSetThrottleReadIOpsDevice(t *testing.T) {
 	}
 }
 func TestBlkioSetThrottleWriteIOpsDevice(t *testing.T) {
-	helper := NewCgroupTestUtil("blkio", t)
+	helper := newCgroupTestUtil("blkio", t)
 	defer helper.cleanup()
 
 	const (

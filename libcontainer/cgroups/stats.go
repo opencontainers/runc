@@ -2,6 +2,7 @@
 
 package cgroups
 
+// ThrottlingData contains throttling related data.
 type ThrottlingData struct {
 	// Number of periods with throttling active
 	Periods uint64 `json:"periods,omitempty"`
@@ -11,9 +12,9 @@ type ThrottlingData struct {
 	ThrottledTime uint64 `json:"throttled_time,omitempty"`
 }
 
-// CpuUsage denotes the usage of a CPU.
+// CPUUsage denotes the usage of a CPU.
 // All CPU stats are aggregate since container inception.
-type CpuUsage struct {
+type CPUUsage struct {
 	// Total CPU time consumed.
 	// Units: nanoseconds.
 	TotalUsage uint64 `json:"total_usage,omitempty"`
@@ -28,11 +29,13 @@ type CpuUsage struct {
 	UsageInUsermode uint64 `json:"usage_in_usermode"`
 }
 
-type CpuStats struct {
-	CpuUsage       CpuUsage       `json:"cpu_usage,omitempty"`
+// CPUStats represents statistic of cpu cgroup.
+type CPUStats struct {
+	CPUUsage       CPUUsage       `json:"cpu_usage,omitempty"`
 	ThrottlingData ThrottlingData `json:"throttling_data,omitempty"`
 }
 
+// MemoryData contains data of memory.
 type MemoryData struct {
 	Usage    uint64 `json:"usage,omitempty"`
 	MaxUsage uint64 `json:"max_usage,omitempty"`
@@ -40,6 +43,7 @@ type MemoryData struct {
 	Limit    uint64 `json:"limit"`
 }
 
+// MemoryStats represents statistic of memory cgroup.
 type MemoryStats struct {
 	// memory used for cache
 	Cache uint64 `json:"cache,omitempty"`
@@ -55,6 +59,7 @@ type MemoryStats struct {
 	Stats map[string]uint64 `json:"stats,omitempty"`
 }
 
+// PidsStats represents statistic of pid cgroup.
 type PidsStats struct {
 	// number of pids in the cgroup
 	Current uint64 `json:"current,omitempty"`
@@ -62,6 +67,7 @@ type PidsStats struct {
 	Limit uint64 `json:"limit,omitempty"`
 }
 
+// BlkioStatEntry denotes blkio statistic entry.
 type BlkioStatEntry struct {
 	Major uint64 `json:"major,omitempty"`
 	Minor uint64 `json:"minor,omitempty"`
@@ -69,6 +75,7 @@ type BlkioStatEntry struct {
 	Value uint64 `json:"value,omitempty"`
 }
 
+// BlkioStats represents statistic of blkio cgroup.
 type BlkioStats struct {
 	// number of bytes tranferred to and from the block device
 	IoServiceBytesRecursive []BlkioStatEntry `json:"io_service_bytes_recursive,omitempty"`
@@ -81,6 +88,7 @@ type BlkioStats struct {
 	SectorsRecursive        []BlkioStatEntry `json:"sectors_recursive,omitempty"`
 }
 
+// HugetlbStats represents statistic of hugetlb cgroup.
 type HugetlbStats struct {
 	// current res_counter usage for hugetlb
 	Usage uint64 `json:"usage,omitempty"`
@@ -90,8 +98,9 @@ type HugetlbStats struct {
 	Failcnt uint64 `json:"failcnt"`
 }
 
+// Stats represents statistic of all cgroups we need.
 type Stats struct {
-	CpuStats    CpuStats    `json:"cpu_stats,omitempty"`
+	CPUStats    CPUStats    `json:"cpu_stats,omitempty"`
 	MemoryStats MemoryStats `json:"memory_stats,omitempty"`
 	PidsStats   PidsStats   `json:"pids_stats,omitempty"`
 	BlkioStats  BlkioStats  `json:"blkio_stats,omitempty"`
@@ -99,6 +108,7 @@ type Stats struct {
 	HugetlbStats map[string]HugetlbStats `json:"hugetlb_stats,omitempty"`
 }
 
+// NewStats returns an initialized Stats struct.
 func NewStats() *Stats {
 	memoryStats := MemoryStats{Stats: make(map[string]uint64)}
 	hugetlbStats := make(map[string]HugetlbStats)

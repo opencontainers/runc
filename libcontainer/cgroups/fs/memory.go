@@ -18,13 +18,21 @@ import (
 
 const cgroupKernelMemoryLimit = "memory.kmem.limit_in_bytes"
 
+// MemoryGroup represents memory control group.
 type MemoryGroup struct {
 }
 
+// Name returns the subsystem name of the cgroup.
 func (s *MemoryGroup) Name() string {
 	return "memory"
 }
 
+// Apply moves the process to the cgroup, without setting the
+// resource limits.
+// Note that we set and unset kernel memory here if it's assigned
+// to enable kernel memory accounting in kernel (initialize kernel
+// memory), because before kernel 4.6, kernel memory can not be
+// set if it's not initialized.
 func (s *MemoryGroup) Apply(d *cgroupData) (err error) {
 	path, err := d.path("memory")
 	if err != nil && !cgroups.IsNotFound(err) {
@@ -57,6 +65,8 @@ func (s *MemoryGroup) Apply(d *cgroupData) (err error) {
 	return nil
 }
 
+// EnableKernelMemoryAccounting set and unset kernel memory limit
+// to enable kernel memory accounting in kernel.
 func EnableKernelMemoryAccounting(path string) error {
 	// Check if kernel memory is enabled
 	// We have to limit the kernel memory here as it won't be accounted at all
@@ -138,6 +148,7 @@ func setMemoryAndSwap(path string, cgroup *configs.Cgroup) error {
 	return nil
 }
 
+// Set sets the reource limits to the cgroup.
 func (s *MemoryGroup) Set(path string, cgroup *configs.Cgroup) error {
 	if err := setMemoryAndSwap(path, cgroup); err != nil {
 		return err
@@ -178,10 +189,12 @@ func (s *MemoryGroup) Set(path string, cgroup *configs.Cgroup) error {
 	return nil
 }
 
+// Remove deletes the cgroup.
 func (s *MemoryGroup) Remove(d *cgroupData) error {
 	return removePath(d.path("memory"))
 }
 
+// GetStats returns the statistic of the cgroup.
 func (s *MemoryGroup) GetStats(path string, stats *cgroups.Stats) error {
 	// Set stats from memory.stat.
 	statsFile, err := os.Open(filepath.Join(path, "memory.stat"))

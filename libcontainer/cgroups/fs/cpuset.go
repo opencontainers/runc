@@ -14,13 +14,17 @@ import (
 	libcontainerUtils "github.com/opencontainers/runc/libcontainer/utils"
 )
 
+// CpusetGroup represents cpuset control group.
 type CpusetGroup struct {
 }
 
+// Name returns the subsystem name of the cgroup.
 func (s *CpusetGroup) Name() string {
 	return "cpuset"
 }
 
+// Apply moves the process to the cgroup, without
+// setting the resource limits.
 func (s *CpusetGroup) Apply(d *cgroupData) error {
 	dir, err := d.path("cpuset")
 	if err != nil && !cgroups.IsNotFound(err) {
@@ -29,6 +33,7 @@ func (s *CpusetGroup) Apply(d *cgroupData) error {
 	return s.ApplyDir(dir, d.config, d.pid)
 }
 
+// Set sets the reource limits to the cgroup.
 func (s *CpusetGroup) Set(path string, cgroup *configs.Cgroup) error {
 	if cgroup.Resources.CpusetCpus != "" {
 		if err := writeFile(path, "cpuset.cpus", cgroup.Resources.CpusetCpus); err != nil {
@@ -43,14 +48,17 @@ func (s *CpusetGroup) Set(path string, cgroup *configs.Cgroup) error {
 	return nil
 }
 
+// Remove deletes the cgroup.
 func (s *CpusetGroup) Remove(d *cgroupData) error {
 	return removePath(d.path("cpuset"))
 }
 
+// GetStats returns the statistic of the cgroup.
 func (s *CpusetGroup) GetStats(path string, stats *cgroups.Stats) error {
 	return nil
 }
 
+// ApplyDir moves the process to the cgroup represented by the directory name.
 func (s *CpusetGroup) ApplyDir(dir string, cgroup *configs.Cgroup, pid int) error {
 	// This might happen if we have no cpuset cgroup mounted.
 	// Just do nothing and don't fail.

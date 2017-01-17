@@ -12,6 +12,7 @@ import (
 )
 
 var (
+	// ErrNotValidFormat is returned when the format is invalid.
 	ErrNotValidFormat = errors.New("line is not a valid key value format")
 )
 

@@ -13,7 +13,7 @@ const (
 )
 
 func TestNetClsSetClassid(t *testing.T) {
-	helper := NewCgroupTestUtil("net_cls", t)
+	helper := newCgroupTestUtil("net_cls", t)
 	defer helper.cleanup()
 
 	helper.writeFileContents(map[string]string{
