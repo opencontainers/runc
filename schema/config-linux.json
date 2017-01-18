@@ -179,11 +179,11 @@
                         "properties": {
                             "cpus": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/cpu/cpus",
-                                "$ref": "defs.json#/definitions/stringPointer"
+                                "$ref": "defs.json#/definitions/string"
                             },
                             "mems": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/cpu/mems",
-                                "$ref": "defs.json#/definitions/stringPointer"
+                                "$ref": "defs.json#/definitions/string"
                             },
                             "period": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/cpu/period",
@@ -290,14 +290,8 @@
                 }
             },
             "cgroupsPath": {
-                "oneOf": [
-                    {
-                        "type": "null"
-                    },
-                    {
-                        "type": "string"
-                    }
-                ]
+                "id": "https://opencontainers.org/schema/bundle/linux/cgroupsPath",
+                "$ref": "defs.json#/definitions/string"
             },
             "rootfsPropagation": {
                 "id": "https://opencontainers.org/schema/bundle/linux/rootfsPropagation",

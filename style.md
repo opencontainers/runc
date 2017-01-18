@@ -16,10 +16,10 @@ The config JSON isn't enough of a UI to be worth jumping through string <-> inte
 For example, `CAP_KILL` instead of `KILL` in [**`linux.capabilities`**][capabilities].
 The redundancy reduction from removing the namespacing prefix is not useful enough to be worth trimming the upstream identifier ([source][keep-prefix]).
 
-## Optional settings should have pointer Go types
+## Optional settings should not have pointer Go types
 
-So we have a consistent way to identify unset values ([source][optional-pointer]).
-The exceptions are entries where the Go default for the type is a no-op in the spec, in which case `omitempty` is sufficient and no pointer is needed (sources [here][no-pointer-for-slices], [here][no-pointer-for-boolean], and [here][pointer-when-updates-require-changes]).
+Because in many cases the Go default for the type is a no-op in the spec (sources [here][no-pointer-for-strings], [here][no-pointer-for-slices], and [here][no-pointer-for-boolean]).
+The exceptions are entries where we need to distinguish between “not set” and “set to the Go default for that type” ([source][pointer-when-updates-require-changes]), and this decision should be made on a per-setting case.
 
 ## Examples
 
@@ -88,10 +88,10 @@ Following is a fully populated example (not necessarily for copy/paste use)
 
 [capabilities]: config-linux.md#capabilities
 [class-id]: config-linux.md#network
-[integer-over-hex]: https://github.com/opencontainers/runtime-spec/pull/267#discussion_r48360013
+[integer-over-hex]: https://github.com/opencontainers/runtime-spec/pull/267#r48360013
 [keep-prefix]: https://github.com/opencontainers/runtime-spec/pull/159#issuecomment-138728337
-[no-pointer-for-boolean]: https://github.com/opencontainers/runtime-spec/pull/290#discussion_r50296396
-[no-pointer-for-slices]: https://github.com/opencontainers/runtime-spec/pull/316/files#r50782982
-[optional-pointer]: https://github.com/opencontainers/runtime-spec/pull/233#discussion_r47829711
-[pointer-when-updates-require-changes]: https://github.com/opencontainers/runtime-spec/pull/317/files#r50932706
+[no-pointer-for-boolean]: https://github.com/opencontainers/runtime-spec/pull/290#r50296396
+[no-pointer-for-slices]: https://github.com/opencontainers/runtime-spec/pull/316#r50782982
+[no-pointer-for-strings]: https://github.com/opencontainers/runtime-spec/pull/653#issue-200439192
+[pointer-when-updates-require-changes]: https://github.com/opencontainers/runtime-spec/pull/317#r50932706
 [markdown-headers]: https://help.github.com/articles/basic-writing-and-formatting-syntax/#headings
