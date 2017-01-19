@@ -46,56 +46,6 @@
             "minimum": 0,
             "maximum": 100
         },
-        "intPointer": {
-            "oneOf": [
-                {
-                    "type": "integer"
-                },
-                {
-                    "type": "null"
-                }
-            ]
-        },
-        "int64Pointer": {
-            "oneOf": [
-                {
-                    "$ref": "#/definitions/int64"
-                },
-                {
-                    "type": "null"
-                }
-            ]
-        },
-        "uint16Pointer": {
-            "oneOf": [
-                {
-                    "$ref": "#/definitions/uint16"
-                },
-                {
-                    "type": "null"
-                }
-            ]
-        },
-        "uint64Pointer": {
-            "oneOf": [
-                {
-                    "$ref": "#/definitions/uint64"
-                },
-                {
-                    "type": "null"
-                }
-            ]
-        },
-        "percentPointer": {
-            "oneOf": [
-                {
-                    "$ref": "#/definitions/percent"
-                },
-                {
-                    "type": "null"
-                }
-            ]
-        },
         "mapStringString": {
             "type": "object",
             "patternProperties": {
@@ -141,9 +91,13 @@
                     "$ref": "#/definitions/Env"
                 },
                 "timeout": {
-                    "$ref": "#/definitions/intPointer"
+                    "$ref": "#/definitions/int"
                 }
-            }
+            },
+            "required": [
+                "args",
+                "path"
+            ]
         },
         "ArrayOfHooks": {
             "type": "array",
@@ -197,14 +151,7 @@
             "type": "string"
         },
         "annotations": {
-            "oneOf": [
-                {
-                    "$ref": "#/definitions/mapStringString"
-                },
-                {
-                    "type": "null"
-                }
-            ]
+            "$ref": "#/definitions/mapStringString"
         }
     }
 }
