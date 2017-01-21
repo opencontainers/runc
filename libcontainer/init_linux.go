@@ -394,8 +394,8 @@ func setOomScoreAdj(oomScoreAdj int, pid int) error {
 }
 
 // signalAllProcesses freezes then iterates over all the processes inside the
-// manager's cgroups sending a SIGKILL to each process then waiting for them to
-// exit.
+// manager's cgroups sending the signal s to them.
+// If s is SIGKILL then it will also wait for each process to exit.
 func signalAllProcesses(m cgroups.Manager, s os.Signal) error {
 	var procs []*os.Process
 	if err := m.Freeze(configs.Frozen); err != nil {
@@ -420,6 +420,11 @@ func signalAllProcesses(m cgroups.Manager, s os.Signal) error {
 	if err := m.Freeze(configs.Thawed); err != nil {
 		logrus.Warn(err)
 	}
+
+	if s != syscall.SIGKILL {
+		return nil
+	}
+
 	for _, p := range procs {
 		if _, err := p.Wait(); err != nil {
 			logrus.Warn(err)
