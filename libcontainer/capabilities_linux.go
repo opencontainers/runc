@@ -60,7 +60,13 @@ func (w *whitelist) dropBoundingSet() error {
 }
 
 // drop drops all capabilities for the current process except those specified in the whitelist.
-func (w *whitelist) drop() error {
+// in the case where NoNewPrivileges is set, so sudo and fs capabilities cannot be used, we can
+// use ambient capabilities so that non root users will gain capabilities
+func (w *whitelist) drop(nnp bool) error {
+	allCapabilityTypes := capability.CAPS | capability.BOUNDS
+	if nnp {
+		allCapabilityTypes |= capability.AMBS
+	}
 	w.pid.Clear(allCapabilityTypes)
 	w.pid.Set(allCapabilityTypes, w.keep...)
 	return w.pid.Apply(allCapabilityTypes)
