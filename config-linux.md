@@ -8,7 +8,7 @@ The Linux container specification uses various kernel features like namespaces, 
 The Linux ABI includes both syscalls and several special file paths.
 Applications expecting a Linux environment will very likely expect these file paths to be setup correctly.
 
-The following filesystems MUST be made available in each application's filesystem:
+The following filesystems MUST be made available in each container's filesystem:
 
 |   Path   |  Type  |
 | -------- | ------ |
