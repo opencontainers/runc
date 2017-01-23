@@ -7,13 +7,13 @@ Whether other entities using the same, or other, instance of the runtime can see
 
 ## State
 
-The state of a container MUST include, at least, the following properties:
+The state of a container includes the following properties:
 
-* **`ociVersion`**: (string) is the OCI specification version used when creating the container.
-* **`id`**: (string) is the container's ID.
+* **`ociVersion`** (string, REQUIRED) is the OCI specification version used when creating the container.
+* **`id`** (string, REQUIRED) is the container's ID.
 This MUST be unique across all containers on this host.
 There is no requirement that it be unique across hosts.
-* **`status`**: (string) is the runtime state of the container.
+* **`status`** (string, REQUIRED) is the runtime state of the container.
 The value MAY be one of:
 
     * `created`: the container process has neither exited nor executed the user-specified program
@@ -21,11 +21,13 @@ The value MAY be one of:
     * `stopped`: the container process has exited
 
     Additional values MAY be defined by the runtime, however, they MUST be used to represent new runtime states not defined above.
-* **`pid`**: (int) is the ID of the container process, as seen by the host.
-* **`bundlePath`**: (string) is the absolute path to the container's bundle directory.
+* **`pid`** (int, REQUIRED when `status` is `created` or `running`) is the ID of the container process, as seen by the host.
+* **`bundlePath`** (string, REQUIRED) is the absolute path to the container's bundle directory.
 This is provided so that consumers can find the container's configuration and root filesystem on the host.
-* **`annotations`**: (map) contains the list of annotations associated with the container.
+* **`annotations`** (map, OPTIONAL) contains the list of annotations associated with the container.
 If no annotations were provided then this property MAY either be absent or an empty map.
+
+The state MAY include additional properties.
 
 When serialized in JSON, the format MUST adhere to the following pattern:
 
