@@ -196,16 +196,6 @@
                 }
             ]
         },
-        "blockIODeviceWeightPointer": {
-            "oneOf": [
-                {
-                    "$ref": "#/definitions/blockIODeviceWeight"
-                },
-                {
-                    "type": "null"
-                }
-            ]
-        },
         "blockIODeviceThrottle": {
             "allOf": [
                 {
@@ -215,19 +205,9 @@
                     "type": "object",
                     "properties": {
                         "rate": {
-                            "$ref": "defs.json#/definitions/uint64Pointer"
+                            "$ref": "defs.json#/definitions/uint64"
                         }
                     }
-                }
-            ]
-        },
-        "blockIODeviceThrottlePointer": {
-            "oneOf": [
-                {
-                    "$ref": "#/definitions/blockIODeviceThrottle"
-                },
-                {
-                    "type": "null"
                 }
             ]
         },
