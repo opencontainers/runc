@@ -238,7 +238,7 @@
                     "type": "boolean"
                 },
                 "type": {
-                    "$ref": "defs.json#/definitions/string"
+                    "$ref": "string"
                 },
                 "major": {
                     "oneOf": [
@@ -261,7 +261,7 @@
                     ]
                 },
                 "access": {
-                    "$ref": "defs.json#/definitions/string"
+                    "$ref": "string"
                 }
             },
             "required": [
