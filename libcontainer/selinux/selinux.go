@@ -374,9 +374,7 @@ func uniqMcs(catRange uint32) string {
 			continue
 		} else {
 			if c1 > c2 {
-				t := c1
-				c1 = c2
-				c2 = t
+				c1, c2 = c2, c1
 			}
 		}
 		mcs = fmt.Sprintf("s0:c%d,c%d", c1, c2)
