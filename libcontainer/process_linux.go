@@ -87,7 +87,7 @@ func (p *setnsProcess) start() (retErr error) {
 	p.messageSockPair.child.Close()
 	p.logFilePair.child.Close()
 	if err != nil {
-		return fmt.Errorf("error starting setns process: %w", err)
+		return parentError(p.messageSockPair.parent, err, "starting setns process")
 	}
 
 	waitInit := initWaiter(p.messageSockPair.parent)
@@ -110,15 +110,15 @@ func (p *setnsProcess) start() (retErr error) {
 
 	if p.bootstrapData != nil {
 		if _, err := io.Copy(p.messageSockPair.parent, p.bootstrapData); err != nil {
-			return fmt.Errorf("error copying bootstrap data to pipe: %w", err)
+			return parentError(p.messageSockPair.parent, err, "copying bootstrap data to pipe")
 		}
 	}
 	err = <-waitInit
 	if err != nil {
 		return err
 	}
-	if err := p.execSetns(); err != nil {
-		return fmt.Errorf("error executing setns process: %w", err)
+	if err = p.execSetns(); err != nil {
+		return parentError(p.messageSockPair.parent, err, "executing setns process")
 	}
 	for _, path := range p.cgroupPaths {
 		if err := cgroups.WriteCgroupProc(path, p.pid()); err != nil && !p.rootlessCgroups {
@@ -158,7 +158,7 @@ func (p *setnsProcess) start() (retErr error) {
 		return fmt.Errorf("error setting rlimits for process: %w", err)
 	}
 	if err := utils.WriteJSON(p.messageSockPair.parent, p.config); err != nil {
-		return fmt.Errorf("error writing config to pipe: %w", err)
+		return parentError(p.messageSockPair.parent, err, "writing config to pipe")
 	}
 
 	ierr := parseSync(p.messageSockPair.parent, func(sync *syncT) error {
@@ -353,6 +353,17 @@ func (p *initProcess) waitForChildExit(childPid int) error {
 	return nil
 }
 
+// parentError attempts to read any error from the parent so we have better context
+// about the cause of the failure. If no error is found then err is combined with cause
+// and returned.
+func parentError(pipe *os.File, err error, cause string) error {
+	if perr := parseSync(pipe, func(sync *syncT) error { return nil }); perr != nil {
+		return fmt.Errorf("%s: %w", cause, perr)
+	}
+
+	return fmt.Errorf("%s: %w", cause, err)
+}
+
 func (p *initProcess) start() (retErr error) {
 	defer p.messageSockPair.parent.Close() //nolint: errcheck
 	err := p.cmd.Start()
@@ -417,7 +428,7 @@ func (p *initProcess) start() (retErr error) {
 		}
 	}
 	if _, err := io.Copy(p.messageSockPair.parent, p.bootstrapData); err != nil {
-		return fmt.Errorf("can't copy bootstrap data to pipe: %w", err)
+		return parentError(p.messageSockPair.parent, err, "copying bootstrap data to pipe")
 	}
 	err = <-waitInit
 	if err != nil {
@@ -426,7 +437,7 @@ func (p *initProcess) start() (retErr error) {
 
 	childPid, err := p.getChildPid()
 	if err != nil {
-		return fmt.Errorf("can't get final child's PID from pipe: %w", err)
+		return parentError(p.messageSockPair.parent, err, "starting init process command")
 	}
 
 	// Save the standard descriptor names before the container process
@@ -450,7 +461,7 @@ func (p *initProcess) start() (retErr error) {
 		return fmt.Errorf("error updating spec state: %w", err)
 	}
 	if err := p.sendConfig(); err != nil {
-		return fmt.Errorf("error sending config to init process: %w", err)
+		return parentError(p.messageSockPair.parent, err, "sending config to init process")
 	}
 	var (
 		sentRun    bool
