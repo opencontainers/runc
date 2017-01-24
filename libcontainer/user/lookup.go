@@ -11,7 +11,7 @@ var (
 	// ErrNoPasswdEntries: No matching password entries found in file.
 	ErrNoPasswdEntries = errors.New("no matching entries in passwd file")
 	// ErrNoGroupEntries: No matching group entries found in file.
-	ErrNoGroupEntries  = errors.New("no matching entries in group file")
+	ErrNoGroupEntries = errors.New("no matching entries in group file")
 )
 
 func lookupUser(filter func(u User) bool) (User, error) {
