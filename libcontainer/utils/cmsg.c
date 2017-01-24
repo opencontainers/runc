@@ -131,7 +131,7 @@ struct file_t recvfd(int sockfd)
 	if (cmsg->cmsg_type != SCM_RIGHTS)
 		error("recvfd: expected SCM_RIGHTS in cmsg: %d", cmsg->cmsg_type);
 	if (cmsg->cmsg_len != CMSG_LEN(sizeof(int)))
-		error("recvfd: expected correct CMSG_LEN in cmsg: %lu", cmsg->cmsg_len);
+		error("recvfd: expected correct CMSG_LEN in cmsg: %lu", (unsigned long)cmsg->cmsg_len);
 
 	fdptr = (int *) CMSG_DATA(cmsg);
 	if (!fdptr || *fdptr < 0)
