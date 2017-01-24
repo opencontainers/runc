@@ -243,16 +243,15 @@ func (l *LinuxFactory) StartInitialization() (err error) {
 		pipe = os.NewFile(uintptr(pipefd), "pipe")
 		it   = initType(os.Getenv("_LIBCONTAINER_INITTYPE"))
 	)
+	defer pipe.Close()
+
 	// clear the current process's environment to clean any libcontainer
 	// specific env vars.
 	os.Clearenv()
 
-	var i initer
 	defer func() {
 		// We have an error during the initialization of the container's init,
 		// send it back to the parent process in the form of an initError.
-		// If container's init successed, syscall.Exec will not return, hence
-		// this defer function will never be called.
 		if werr := utils.WriteJSON(pipe, syncT{procError}); werr != nil {
 			fmt.Fprintln(os.Stderr, err)
 			return
@@ -261,18 +260,19 @@ func (l *LinuxFactory) StartInitialization() (err error) {
 			fmt.Fprintln(os.Stderr, err)
 			return
 		}
-		// ensure that this pipe is always closed
-		pipe.Close()
 	}()
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("panic from initialization: %v, %v", e, string(debug.Stack()))
 		}
 	}()
-	i, err = newContainerInit(it, pipe, rootfd)
+
+	i, err := newContainerInit(it, pipe, rootfd)
 	if err != nil {
 		return err
 	}
+
+	// If Init succeeds, syscall.Exec will not return, hence none of the defers will be called.
 	return i.Init()
 }
 
