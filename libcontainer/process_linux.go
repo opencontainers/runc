@@ -72,15 +72,15 @@ func (p *setnsProcess) start() (err error) {
 	p.childPipe.Close()
 	p.rootDir.Close()
 	if err != nil {
-		return newSystemErrorWithCause(err, "starting setns process")
+		return parentError(p.parentPipe, err, "starting setns process")
 	}
 	if p.bootstrapData != nil {
 		if _, err := io.Copy(p.parentPipe, p.bootstrapData); err != nil {
-			return newSystemErrorWithCause(err, "copying bootstrap data to pipe")
+			return parentError(p.parentPipe, err, "copying bootstrap data to pipe")
 		}
 	}
 	if err = p.execSetns(); err != nil {
-		return newSystemErrorWithCause(err, "executing setns process")
+		return parentError(p.parentPipe, err, "executing setns process")
 	}
 	if len(p.cgroupPaths) > 0 {
 		if err := cgroups.EnterPid(p.cgroupPaths, p.pid()); err != nil {
@@ -263,6 +263,19 @@ func (p *initProcess) execSetns() (err error) {
 	return nil
 }
 
+// parentError attempts to read any error from the parent so we have better context
+// about the cause of the failure. If no error is found then a new system error for
+// err and cause is returned.
+func parentError(pipe *os.File, err error, cause string) error {
+	if ierr := parseSync(pipe, func(sync *syncT) error { return nil }); ierr != nil {
+		if ierr, ok := ierr.(*genericError); ok {
+			ierr.Cause = cause
+		}
+		return ierr
+	}
+	return newSystemErrorWithCause(err, cause)
+}
+
 func (p *initProcess) start() error {
 	defer p.parentPipe.Close()
 	err := p.cmd.Start()
@@ -271,13 +284,13 @@ func (p *initProcess) start() error {
 	p.rootDir.Close()
 	if err != nil {
 		p.process.ops = nil
-		return newSystemErrorWithCause(err, "starting init process command")
+		return parentError(p.parentPipe, err, "starting init process command")
 	}
 	if _, err := io.Copy(p.parentPipe, p.bootstrapData); err != nil {
-		return err
+		return parentError(p.parentPipe, err, "copying bootstrap data to pipe")
 	}
 	if err := p.execSetns(); err != nil {
-		return newSystemErrorWithCause(err, "running exec setns process for init")
+		return parentError(p.parentPipe, err, "running exec setns process for init")
 	}
 	// Save the standard descriptor names before the container process
 	// can potentially move them (e.g., via dup2()).  If we don't do this now,
