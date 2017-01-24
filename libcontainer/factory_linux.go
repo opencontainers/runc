@@ -35,6 +35,14 @@ var (
 // provided init binary path and arguments.
 func InitArgs(args ...string) func(*LinuxFactory) error {
 	return func(l *LinuxFactory) error {
+		if len(args) > 0 {
+			// Resolve relative paths to ensure that its available
+			// after directory changes.
+			if args[0], err = filepath.Abs(args[0]); err != nil {
+				return newGenericError(err, ConfigInvalid)
+			}
+		}
+
 		l.InitArgs = args
 		return nil
 	}
