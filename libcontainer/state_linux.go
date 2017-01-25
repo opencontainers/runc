@@ -126,13 +126,7 @@ func (r *runningState) transition(s containerState) error {
 }
 
 func (r *runningState) destroy() error {
-	t, err := r.c.runType()
-	if err != nil {
-		return err
-	}
-	if t == Running {
-		return newGenericError(fmt.Errorf("container is not destroyed"), ContainerNotStopped)
-	}
+	r.c.initProcess.signal(syscall.SIGKILL)
 	return destroy(r.c)
 }
 
@@ -195,7 +189,7 @@ func (p *pausedState) destroy() error {
 	return newGenericError(fmt.Errorf("container is paused"), ContainerPaused)
 }
 
-// restoredState is the same as the running state but also has accociated checkpoint
+// restoredState is the same as the running state but also has associated checkpoint
 // information that maybe need destroyed when the container is stopped and destroy is called.
 type restoredState struct {
 	imageDir string
