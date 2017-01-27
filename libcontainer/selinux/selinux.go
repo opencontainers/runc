@@ -496,7 +496,7 @@ func badPrefix(fpath string) error {
 
 	for _, prefix := range badprefixes {
 		if fpath == prefix || strings.HasPrefix(fpath, fmt.Sprintf("%s/", prefix)) {
-			return fmt.Errorf("Relabeling content in %s is not allowed.", prefix)
+			return fmt.Errorf("relabeling content in %s is not allowed", prefix)
 		}
 	}
 	return nil
