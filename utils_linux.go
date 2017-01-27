@@ -239,6 +239,7 @@ func (r *runner) run(config *specs.Process) (int, error) {
 		r.destroy()
 		return -1, err
 	}
+	defer tty.Close()
 	if err = startFn(process); err != nil {
 		r.destroy()
 		return -1, err
@@ -250,7 +251,6 @@ func (r *runner) run(config *specs.Process) (int, error) {
 			return -1, err
 		}
 	}
-	defer tty.Close()
 
 	if config.Terminal && detach {
 		conn, err := net.Dial("unix", r.consoleSocket)
