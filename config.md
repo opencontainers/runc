@@ -2,11 +2,15 @@
 
 The container's top-level directory MUST contain a configuration file called `config.json`.
 The canonical schema is defined in this document, but there is a JSON Schema in [`schema/config-schema.json`](schema/config-schema.json) and Go bindings in [`specs-go/config.go`](specs-go/config.go).
+Platform-specific configuration schema are defined in the [platform-specific documents](#platform-specific-configuration) linked below.
 
 The configuration file contains metadata necessary to implement standard operations against the container.
 This includes the process to run, environment variables to inject, sandboxing features to use, etc.
 
-Below is a detailed description of each field defined in the configuration format.
+Below is a detailed description of each field defined in the configuration format and valid values are specified.
+Platform-specific fields are identified as such.
+For all platform-specific configuration values, the scope defined below in the [Platform-specific configuration](#platform-specific-configuration) section applies.
+
 
 ## Specification version
 
@@ -22,11 +26,11 @@ For example, if a configuration is compliant with version 1.1 of this specificat
 
 ## Root Configuration
 
-**`root`** (object, REQUIRED) configures the container's root filesystem.
+**`root`** (object, REQUIRED) specifies the container's root filesystem.
 
 * **`path`** (string, REQUIRED) Specifies the path to the root filesystem for the container.
-  The path can be an absolute path (starting with /) or a relative path (not starting with /), which is relative to the bundle.
-  For example (Linux), with a bundle at `/to/bundle` and a root filesystem at `/to/bundle/rootfs`, the `path` value can be either `/to/bundle/rootfs` or `rootfs`.
+  The path is either an absolute path or a relative path to the bundle.
+  On Linux, for example, with a bundle at `/to/bundle` and a root filesystem at `/to/bundle/rootfs`, the `path` value can be either `/to/bundle/rootfs` or `rootfs`.
   A directory MUST exist at the path declared by the field.
 * **`readonly`** (bool, OPTIONAL) If true then the root filesystem MUST be read-only inside the container, defaults to false.
 
@@ -41,25 +45,27 @@ For example, if a configuration is compliant with version 1.1 of this specificat
 
 ## Mounts
 
-**`mounts`** (array, OPTIONAL) configures additional mounts (on top of [`root`](#root-configuration)).
+**`mounts`** (array, OPTIONAL) specifies additional mounts beyond [`root`](#root-configuration).
 The runtime MUST mount entries in the listed order.
-The parameters are similar to the ones in [the Linux mount system call](http://man7.org/linux/man-pages/man2/mount.2.html).
-For Solaris, the mounts corresponds to fs resource in zonecfg(8).
+For Linux, the parameters are as documented in [the mount system call](http://man7.org/linux/man-pages/man2/mount.2.html).
+For Solaris, the mount entry corresponds to the 'fs' resource in zonecfg(8).
+For Windows, see links for details about [mountvol](http://ss64.com/nt/mountvol.html) and [SetVolumeMountPoint](https://msdn.microsoft.com/en-us/library/windows/desktop/aa365561(v=vs.85).aspx).
+
 
 * **`destination`** (string, REQUIRED) Destination of mount point: path inside container.
   This value MUST be an absolute path.
-  For the Windows operating system, one mount destination MUST NOT be nested within another mount (e.g., c:\\foo and c:\\foo\\bar).
-  For the Solaris operating system, this corresponds to "dir" of the fs resource in zonecfg(8).
+  * Windows: one mount destination MUST NOT be nested within another mount (e.g., c:\\foo and c:\\foo\\bar).
+  * Solaris: corresponds to "dir" of the fs resource in zonecfg(8).
 * **`type`** (string, REQUIRED) The filesystem type of the filesystem to be mounted.
-  Linux: *filesystemtype* argument supported by the kernel are listed in */proc/filesystems* (e.g., "minix", "ext2", "ext3", "jfs", "xfs", "reiserfs", "msdos", "proc", "nfs", "iso9660").
-  Windows: ntfs.
-  Solaris: corresponds to "type" of the fs resource in zonecfg(8).
+  * Linux: valid *filesystemtype* supported by the kernel as listed in */proc/filesystems* (e.g., "minix", "ext2", "ext3", "jfs", "xfs", "reiserfs", "msdos", "proc", "nfs", "iso9660").
+  * Windows: the type of file system on the volume, e.g. "ntfs".
+  * Solaris: corresponds to "type" of the fs resource in zonecfg(8).
 * **`source`** (string, REQUIRED) A device name, but can also be a directory name or a dummy.
-  Windows: the volume name that is the target of the mount point, \\?\Volume\{GUID}\ (on Windows source is called target).
-  Solaris: corresponds to "special" of the fs resource in zonecfg(8).
+  * Windows: the volume name that is the target of the mount point, \\?\Volume\{GUID}\ (on Windows source is called target).
+  * Solaris: corresponds to "special" of the fs resource in zonecfg(8).
 * **`options`** (list of strings, OPTIONAL) Mount options of the filesystem to be used.
-  Linux: [supported][mount.8-filesystem-independent] [options][mount.8-filesystem-specific] are listed in [mount(8)][mount.8].
-  Solaris: corresponds to "options" of the fs resource in zonecfg(8).
+  * Linux: [supported][mount.8-filesystem-independent] [options][mount.8-filesystem-specific] are listed in [mount(8)][mount.8].
+  * Solaris: corresponds to "options" of the fs resource in zonecfg(8).
 
 ### Example (Linux)
 
@@ -93,8 +99,6 @@ For Solaris, the mounts corresponds to fs resource in zonecfg(8).
 ]
 ```
 
-See links for details about [mountvol](http://ss64.com/nt/mountvol.html) and [SetVolumeMountPoint](https://msdn.microsoft.com/en-us/library/windows/desktop/aa365561(v=vs.85).aspx) in Windows.
-
 ### Example (Solaris)
 
 ```json
@@ -113,13 +117,12 @@ See links for details about [mountvol](http://ss64.com/nt/mountvol.html) and [Se
 ]
 ```
 
-
 ## Process
 
-**`process`** (object, REQUIRED) configures the container process.
+**`process`** (object, REQUIRED) specifies the container process.
 
 * **`terminal`** (bool, OPTIONAL) specifies whether a terminal is attached to that process, defaults to false.
-  On Linux, a pseudoterminal pair is allocated for the container process and the pseudoterminal slave is duplicated on the container process's [standard streams][stdin.3].
+  As an example, if set to true on Linux a pseudoterminal pair is allocated for the container process and the pseudoterminal slave is duplicated on the container process's [standard streams][stdin.3].
 * **`consoleSize`** (object, OPTIONAL) specifies the console size of the terminal if attached, containing the following properties:
   * **`height`** (uint, REQUIRED)
   * **`width`** (uint, REQUIRED)
@@ -128,27 +131,25 @@ See links for details about [mountvol](http://ss64.com/nt/mountvol.html) and [Se
 * **`env`** (array of strings, OPTIONAL) with the same semantics as [IEEE Std 1003.1-2001's `environ`][ieee-1003.1-2001-xbd-c8.1].
 * **`args`** (array of strings, REQUIRED) with similar semantics to [IEEE Std 1003.1-2001 `execvp`'s *argv*][ieee-1003.1-2001-xsh-exec].
   This specification extends the IEEE standard in that at least one entry is REQUIRED, and that entry is used with the same semantics as `execvp`'s *file*.
-
-For Linux-based systems the process structure supports the following process specific fields:
-
-* **`capabilities`** (array of strings, OPTIONAL) capabilities is an array that specifies Linux capabilities that can be provided to the process inside the container.
-  Valid values are the strings for capabilities defined in [the man page](http://man7.org/linux/man-pages/man7/capabilities.7.html).
+* **`capabilities`** (array of strings, OPTIONAL) is an array that specifies the set of capabilities of the process(es) inside the container. Valid values are platform-specific. For example, valid values for Linux are defined in the [CAPABILITIES(7)](http://man7.org/linux/man-pages/man7/capabilities.7.html) man page.
 * **`rlimits`** (array of objects, OPTIONAL) allows setting resource limits for a process inside the container.
   Each entry has the following structure:
 
-    * **`type`** (string, REQUIRED) - the 'type' field are the resources defined in [the man page](http://man7.org/linux/man-pages/man2/setrlimit.2.html).
-    * **`soft`** (uint64, REQUIRED) - the value that the kernel enforces for the corresponding resource.
-    * **`hard`** (uint64, REQUIRED) - the ceiling for the soft limit that could be set by an unprivileged process.
-      Only privileged process (under Linux: one with the CAP_SYS_RESOURCE capability) can raise a hard limit.
+    * **`type`** (string, REQUIRED) - the platform resource being limited, for example on Linux as defined in the [SETRLIMIT(2)](http://man7.org/linux/man-pages/man2/setrlimit.2.html) man page.
+    * **`soft`** (uint64, REQUIRED) - the value of the limit enforced for the corresponding resource.
+    * **`hard`** (uint64, REQUIRED) - the ceiling for the soft limit that could be set by an unprivileged process. Only a privileged process (e.g. under Linux: one with the CAP_SYS_RESOURCE capability) can raise a hard limit.
 
     If `rlimits` contains duplicated entries with same `type`, the runtime MUST error out.
 
-* **`apparmorProfile`** (string, OPTIONAL) apparmor profile specifies the name of the apparmor profile that will be used for the container.
-  For more information about Apparmor, see [Apparmor documentation](https://wiki.ubuntu.com/AppArmor)
-* **`selinuxLabel`** (string, OPTIONAL) SELinux process label specifies the label with which the processes in a container are run.
-  For more information about SELinux, see  [Selinux documentation](http://selinuxproject.org/page/Main_Page)
 * **`noNewPrivileges`** (bool, OPTIONAL) setting `noNewPrivileges` to true prevents the processes in the container from gaining additional privileges.
-  [The kernel doc](https://www.kernel.org/doc/Documentation/prctl/no_new_privs.txt) has more information on how this is achieved using a prctl system call.
+  As an example, the ['no_new_privs' kernel doc](https://www.kernel.org/doc/Documentation/prctl/no_new_privs.txt) has more information on how this is achieved using a prctl system call on Linux.
+
+For Linux-based systems the process structure supports the following process specific fields.
+
+* **`apparmorProfile`** (string, OPTIONAL) specifies the name of the AppArmor profile to be applied to processes in the container.
+  For more information about AppArmor, see [AppArmor documentation](https://wiki.ubuntu.com/AppArmor)
+* **`selinuxLabel`** (string, OPTIONAL) specifies the SELinux label to be applied to the processes in the container.
+  For more information about SELinux, see  [SELinux documentation](http://selinuxproject.org/page/Main_Page)
 
 ### User
 
@@ -255,8 +256,8 @@ For Windows based systems the user structure has the following fields:
 
 ## Hostname
 
-* **`hostname`** (string, OPTIONAL) configures the container's hostname as seen by processes running inside the container.
-  On Linux, this will change the hostname in the [container][container-namespace] [UTS namespace][uts-namespace].
+* **`hostname`** (string, OPTIONAL) specifies the container's hostname as seen by processes running inside the container.
+  On Linux, for example, this will change the hostname in the [container][container-namespace] [UTS namespace][uts-namespace].
   Depending on your [namespace configuration](config-linux.md#namespaces), the container UTS namespace may be the [runtime UTS namespace][runtime-namespace].
 
 ### Example
@@ -269,12 +270,12 @@ For Windows based systems the user structure has the following fields:
 
 **`platform`** specifies the configuration's target platform.
 
-* **`os`** (string, REQUIRED) specifies the operating system family this image targets.
-  The runtime MUST generate an error if it does not support the configured **`os`**.
+* **`os`** (string, REQUIRED) specifies the operating system family of the container configuration's specified [`root`](#root-configuration) file system bundle.
+  The runtime MUST generate an error if it does not support the specified **`os`**.
   Bundles SHOULD use, and runtimes SHOULD understand, **`os`** entries listed in the Go Language document for [`$GOOS`][go-environment].
   If an operating system is not included in the `$GOOS` documentation, it SHOULD be submitted to this specification for standardization.
-* **`arch`** (string, REQUIRED) specifies the instruction set for which the binaries in the image have been compiled.
-  The runtime MUST generate an error if it does not support the configured **`arch`**.
+* **`arch`** (string, REQUIRED) specifies the instruction set for which the binaries in the specified [`root`](#root-configuration) file system bundle have been compiled.
+  The runtime MUST generate an error if it does not support the specified **`arch`**.
   Values for **`arch`** SHOULD use, and runtimes SHOULD understand, **`arch`** entries listed in the Go Language document for [`$GOARCH`][go-environment].
   If an architecture is not included in the `$GOARCH` documentation, it SHOULD be submitted to this specification for standardization.
 
@@ -289,14 +290,16 @@ For Windows based systems the user structure has the following fields:
 
 ## Platform-specific configuration
 
-[**`platform.os`**](#platform) is used to lookup further platform-specific configuration.
+[**`platform.os`**](#platform) is used to specify platform-specific configuration.
+Runtime implementations MAY support any valid values for platform-specific fields as part of this configuration.
+Implementations MUST error out when invalid values are encountered and MUST generate an error message and error out when encountering valid values it chooses to not support.
 
 * **`linux`** (object, OPTIONAL) [Linux-specific configuration](config-linux.md).
-  This SHOULD only be set if **`platform.os`** is `linux`.
-* **`solaris`** (object, OPTIONAL) [Solaris-specific configuration](config-solaris.md).
-  This SHOULD only be set if **`platform.os`** is `solaris`.
+  This MAY be set if **`platform.os`** is `linux` and MUST NOT be set otherwise.
 * **`windows`** (object, OPTIONAL) [Windows-specific configuration](config-windows.md).
-  This SHOULD only be set if **`platform.os`** is `windows`.
+  This MAY be set if **`platform.os`** is `windows` and MUST NOT be set otherwise.
+* **`solaris`** (object, OPTIONAL) [Solaris-specific configuration](config-solaris.md).
+  This MAY be set if **`platform.os`** is `solaris` and MUST NOT be set otherwise.
 
 ### Example (Linux)
 
@@ -318,7 +321,7 @@ For Windows based systems the user structure has the following fields:
 
 ## Hooks
 
-Lifecycle hooks allow custom events for different points in a container's runtime.
+Hooks allow for the configuration of custom actions related to the [lifecycle](runtime.md#lifecycle) of the container.
 
 * **`hooks`** (object, OPTIONAL) MAY contain any of the following properties:
   * **`prestart`** (array, OPTIONAL) is an array of [pre-start hooks](#prestart).
@@ -333,30 +336,29 @@ Lifecycle hooks allow custom events for different points in a container's runtim
   * **`poststop`** (array, OPTIONAL) is an array of [post-stop hooks](#poststop).
     Entries in the array have the same schema as pre-start entries.
 
-Hooks allow one to run programs before/after various lifecycle events of the container.
+Hooks allow users to specify programs to run before or after various lifecycle events.
 Hooks MUST be called in the listed order.
-The [state](runtime.md#state) of the container is passed to the hooks over stdin, so the hooks could get the information they need to do their work.
+The [state](runtime.md#state) of the container MUST be passed to hooks over stdin so that they may do work appropriate to the current state of the container.
 
 ### Prestart
 
-The pre-start hooks are called after the container process is spawned, but before the user supplied command is executed.
-They are called after the container namespaces are created on Linux, so they provide an opportunity to customize the container.
-In Linux, for e.g., the network namespace could be configured in this hook.
+The pre-start hooks MUST be called after the container has been created, but before the user supplied command is executed.
+On Linux, for example, they are called after the container namespaces are created, so they provide an opportunity to customize the container (e.g. the network namespace could be specified in this hook).
 
-If a hook returns a non-zero exit code, then an error including the exit code and the stderr is returned to the caller and the container is torn down.
+If a hook returns a non-zero exit code, an error including the exit code and the stderr MUST be returned to the caller and the container MUST be destroyed.
 
 ### Poststart
 
-The post-start hooks are called after the user process is started.
-For example this hook can notify user that real process is spawned.
+The post-start hooks MUST be called after the user process is started.
+For example, this hook can notify the user that the container process is spawned.
 
-If a hook returns a non-zero exit code, then an error is logged and the remaining hooks are executed.
+If a hook returns a non-zero exit code, then an error MUST be logged and the remaining hooks are executed.
 
 ### Poststop
 
-The post-stop hooks are called after the container process is stopped.
-Cleanup or debugging could be performed in such a hook.
-If a hook returns a non-zero exit code, then an error is logged and the remaining hooks are executed.
+The post-stop hooks MUST be called after the container process is stopped.
+Cleanup or debugging functions are examples of such a hook.
+If a hook returns a non-zero exit code, then an error MUST be logged and the remaining hooks are executed.
 
 ### Example
 
