@@ -79,6 +79,25 @@ func TestSELinux(t *testing.T) {
 			t.Fatal(err)
 		}
 		t.Log(selinux.Getpidcon(1))
+		// Verify SELinux Containers Disabled works
+		selinux.SetDisabled()
+		if selinux.SelinuxEnabled() {
+			t.Fatalf("SelinuxEnabled still is enabled after SELinux was disabled")
+		}
+		if !selinux.SelinuxEnabledHost() {
+			t.Fatalf("SelinuxEnabledHost is no longer enabled after SELinux was disabled")
+		}
+		plabel, flabel = selinux.GetLxcContexts()
+		if plabel != "" {
+			t.Fatalf("GetLxcContext returned a process label on enabled system with container labeling disabled")
+		}
+		if flabel == "" {
+			t.Fatalf("GetLxcContext did not return a file label on enabled system with container labeling disabled")
+		}
+		if selinux.SelinuxEnabled() {
+			t.Fatalf("SelinuxEnabled still is enabled after SELinux was disabled")
+		}
+
 	} else {
 		t.Log("Disabled")
 	}

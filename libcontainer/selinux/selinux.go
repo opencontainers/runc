@@ -33,15 +33,15 @@ const (
 )
 
 type selinuxState struct {
-	enabledSet   bool
-	enabled      bool
-	selinuxfsSet bool
-	selinuxfs    string
-	mcsList      map[string]bool
+	enabled     bool
+	enabledHost bool
+	selinuxfs   string
+	mcsList     map[string]bool
 	sync.Mutex
 }
 
 var (
+	once        sync.Once
 	assignRegex = regexp.MustCompile(`^([^=]+)=(.*)$`)
 	state       = selinuxState{
 		mcsList: make(map[string]bool),
@@ -50,61 +50,15 @@ var (
 
 type SELinuxContext map[string]string
 
-func (s *selinuxState) setEnable(enabled bool) bool {
-	s.Lock()
-	defer s.Unlock()
-	s.enabledSet = true
-	s.enabled = enabled
-	return s.enabled
-}
-
-func (s *selinuxState) getEnabled() bool {
-	s.Lock()
-	enabled := s.enabled
-	enabledSet := s.enabledSet
-	s.Unlock()
-	if enabledSet {
-		return enabled
-	}
-
-	enabled = false
-	if fs := getSelinuxMountPoint(); fs != "" {
-		if con, _ := Getcon(); con != "kernel" {
-			enabled = true
-		}
-	}
-	return s.setEnable(enabled)
-}
-
-// SetDisabled disables selinux support for the package
-func SetDisabled() {
-	state.setEnable(false)
-}
-
-func (s *selinuxState) setSELinuxfs(selinuxfs string) string {
-	s.Lock()
-	defer s.Unlock()
-	s.selinuxfsSet = true
-	s.selinuxfs = selinuxfs
-	return s.selinuxfs
-}
-
-func (s *selinuxState) getSELinuxfs() string {
-	s.Lock()
-	selinuxfs := s.selinuxfs
-	selinuxfsSet := s.selinuxfsSet
-	s.Unlock()
-	if selinuxfsSet {
-		return selinuxfs
-	}
-
-	selinuxfs = ""
+// selinuxInit needs to be run once before using state.enabled* variables
+func (s *selinuxState) selinuxInit() {
 	f, err := os.Open("/proc/self/mountinfo")
 	if err != nil {
-		return selinuxfs
+		return
 	}
 	defer f.Close()
 
+	var selinuxfs string
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		txt := scanner.Text()
@@ -131,7 +85,55 @@ func (s *selinuxState) getSELinuxfs() string {
 			selinuxfs = ""
 		}
 	}
-	return s.setSELinuxfs(selinuxfs)
+
+	s.Lock()
+	defer s.Unlock()
+	s.selinuxfs = selinuxfs
+	if fs := s.selinuxfs; fs != "" {
+		if con, _ := Getcon(); con != "kernel" {
+			s.enabled = true
+			s.enabledHost = true
+		}
+	}
+}
+
+func (s *selinuxState) setEnable(enabled bool) bool {
+	once.Do(s.selinuxInit)
+	s.Lock()
+	defer s.Unlock()
+	s.enabled = enabled
+	return s.enabled
+}
+
+func (s *selinuxState) getEnabledHost() bool {
+	once.Do(s.selinuxInit)
+	s.Lock()
+	defer s.Unlock()
+	return s.enabledHost
+}
+
+func (s *selinuxState) getEnabled() bool {
+	once.Do(s.selinuxInit)
+	s.Lock()
+	defer s.Unlock()
+	return s.enabled
+}
+
+func (s *selinuxState) getSELinuxfs() string {
+	once.Do(s.selinuxInit)
+	s.Lock()
+	defer s.Unlock()
+	return s.selinuxfs
+}
+
+// SetEnabled disables selinux support for the package
+func SetEnabled() {
+	state.setEnable(true)
+}
+
+// SetDisabled disables selinux support for the package
+func SetDisabled() {
+	state.setEnable(false)
 }
 
 // getSelinuxMountPoint returns the path to the mountpoint of an selinuxfs
@@ -143,7 +145,12 @@ func getSelinuxMountPoint() string {
 	return state.getSELinuxfs()
 }
 
-// SelinuxEnabled returns whether selinux is currently enabled.
+// SelinuxEnabledHost returns whether selinux is currently enabled on the host.
+func SelinuxEnabledHost() bool {
+	return state.getEnabledHost()
+}
+
+// SelinuxEnabled returns whether selinux is currently enabled for containers.
 func SelinuxEnabled() bool {
 	return state.getEnabled()
 }
@@ -399,15 +406,12 @@ func GetROFileLabel() (fileLabel string) {
 	return roFileLabel
 }
 
-func GetLxcContexts() (processLabel string, fileLabel string) {
+func getDefaultLabels() (processLabel string, fileLabel string) {
 	var (
 		val, key string
 		bufin    *bufio.Reader
 	)
 
-	if !SelinuxEnabled() {
-		return "", ""
-	}
 	lxcPath := fmt.Sprintf("%s/contexts/lxc_contexts", getSELinuxPolicyRoot())
 	in, err := os.Open(lxcPath)
 	if err != nil {
@@ -441,28 +445,41 @@ func GetLxcContexts() (processLabel string, fileLabel string) {
 				processLabel = strings.Trim(val, "\"")
 			}
 			if key == "file" {
-				fileLabel = strings.Trim(val, "\"")
+				scon := NewContext(strings.Trim(val, "\""))
+				// Default s0:c1023, non priv container can't use this level
+				scon["level"] = "s0:c1023"
+				fileLabel = scon.Get()
 			}
 			if key == "ro_file" {
 				roFileLabel = strings.Trim(val, "\"")
 			}
 		}
 	}
-
-	if processLabel == "" || fileLabel == "" {
-		return "", ""
-	}
-
+exit:
 	if roFileLabel == "" {
 		roFileLabel = fileLabel
 	}
-exit:
-	//	mcs := IntToMcs(os.Getpid(), 1024)
-	mcs := uniqMcs(1024)
-	scon := NewContext(processLabel)
+	return processLabel, fileLabel
+}
+
+func GetLxcContexts() (processLabel string, fileLabel string) {
+	if !state.getEnabledHost() {
+		return "", ""
+	}
+
+	defProcessLabel, defFileLabel := getDefaultLabels()
+	if !state.getEnabled() {
+		return "", defFileLabel
+	}
+
+	// 1024 Categories available, 0-1023. Only using 1023 for confinement
+	// Reserving last category, s0:c1023, for privileged containers
+	// Blocks confined containers from useing priv container's content
+	mcs := uniqMcs(1023)
+	scon := NewContext(defProcessLabel)
 	scon["level"] = mcs
 	processLabel = scon.Get()
-	scon = NewContext(fileLabel)
+	scon = NewContext(defFileLabel)
 	scon["level"] = mcs
 	fileLabel = scon.Get()
 	return processLabel, fileLabel
