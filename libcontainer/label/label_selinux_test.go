@@ -18,7 +18,7 @@ func TestInit(t *testing.T) {
 			t.Log("InitLabels Failed")
 			t.Fatal(err)
 		}
-		testDisabled := []string{"label=disable"}
+		testDisabled := []string{"disable"}
 		roMountLabel := GetROMountLabel()
 		if roMountLabel == "" {
 			t.Errorf("GetROMountLabel Failed")
@@ -32,7 +32,7 @@ func TestInit(t *testing.T) {
 			t.Log("InitLabels Disabled Failed")
 			t.FailNow()
 		}
-		testUser := []string{"label=user:user_u", "label=role:user_r", "label=type:user_t", "label=level:s0:c1,c15"}
+		testUser := []string{"user:user_u", "role:user_r", "type:user_t", "level:s0:c1,c15"}
 		plabel, mlabel, err = InitLabels(testUser)
 		if err != nil {
 			t.Log("InitLabels User Failed")
@@ -44,7 +44,7 @@ func TestInit(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		testBadData := []string{"label=user", "label=role:user_r", "label=type:user_t", "label=level:s0:c1,c15"}
+		testBadData := []string{"user", "role:user_r", "type:user_t", "level:s0:c1,c15"}
 		if _, _, err = InitLabels(testBadData); err == nil {
 			t.Log("InitLabels Bad Failed")
 			t.Fatal(err)
