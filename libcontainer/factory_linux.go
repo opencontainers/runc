@@ -222,28 +222,32 @@ func (l *LinuxFactory) Type() string {
 // StartInitialization loads a container by opening the pipe fd from the parent to read the configuration and state
 // This is a low level implementation detail of the reexec and should not be consumed externally
 func (l *LinuxFactory) StartInitialization() (err error) {
-	var pipefd, rootfd int
-	for _, pair := range []struct {
-		k string
-		v *int
-	}{
-		{"_LIBCONTAINER_INITPIPE", &pipefd},
-		{"_LIBCONTAINER_STATEDIR", &rootfd},
-	} {
+	var (
+		pipefd, rootfd int
+		envInitPipe    = os.Getenv("_LIBCONTAINER_INITPIPE")
+		envStateDir    = os.Getenv("_LIBCONTAINER_STATEDIR")
+	)
 
-		s := os.Getenv(pair.k)
-
-		i, err := strconv.Atoi(s)
-		if err != nil {
-			return fmt.Errorf("unable to convert %s=%s to int", pair.k, s)
-		}
-		*pair.v = i
+	// Get the INITPIPE.
+	pipefd, err = strconv.Atoi(envInitPipe)
+	if err != nil {
+		return fmt.Errorf("unable to convert _LIBCONTAINER_INITPIPE=%s to int: %s", envInitPipe, err)
 	}
+
 	var (
 		pipe = os.NewFile(uintptr(pipefd), "pipe")
 		it   = initType(os.Getenv("_LIBCONTAINER_INITTYPE"))
 	)
 	defer pipe.Close()
+
+	// Only init processes have STATEDIR.
+	rootfd = -1
+	if it == initStandard {
+		rootfd, err = strconv.Atoi(envStateDir)
+		if err != nil {
+			return fmt.Errorf("unable to convert _LIBCONTAINER_STATEDIR=%s to int: %s", envStateDir, err)
+		}
+	}
 
 	// clear the current process's environment to clean any libcontainer
 	// specific env vars.
