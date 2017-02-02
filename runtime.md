@@ -22,7 +22,7 @@ The value MAY be one of:
 
     Additional values MAY be defined by the runtime, however, they MUST be used to represent new runtime states not defined above.
 * **`pid`** (int, REQUIRED when `status` is `created` or `running`) is the ID of the container process, as seen by the host.
-* **`bundlePath`** (string, REQUIRED) is the absolute path to the container's bundle directory.
+* **`bundle`** (string, REQUIRED) is the absolute path to the container's bundle directory.
 This is provided so that consumers can find the container's configuration and root filesystem on the host.
 * **`annotations`** (map, OPTIONAL) contains the list of annotations associated with the container.
 If no annotations were provided then this property MAY either be absent or an empty map.
@@ -37,7 +37,7 @@ When serialized in JSON, the format MUST adhere to the following pattern:
     "id": "oci-container1",
     "status": "running",
     "pid": 4422,
-    "bundlePath": "/containers/redis",
+    "bundle": "/containers/redis",
     "annotations": {
         "myKey": "myValue"
     }

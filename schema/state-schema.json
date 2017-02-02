@@ -27,8 +27,8 @@
             "type": "integer",
             "minimum": 0
         },
-        "bundlePath": {
-            "id": "https://opencontainers.org/schema/runtime/state/bundlePath",
+        "bundle": {
+            "id": "https://opencontainers.org/schema/runtime/state/bundle",
             "type": "string"
         },
         "annotations": {
@@ -40,6 +40,6 @@
         "id",
         "status",
         "pid",
-        "bundlePath"
+        "bundle"
     ]
 }
