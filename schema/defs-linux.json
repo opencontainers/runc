@@ -78,7 +78,7 @@
             }
         },
         "Capability": {
-            "description": "Linux process permissions",
+            "description": "Linux process capabilities",
             "type": "string",
             "pattern": "^CAP_([A-Z]|_)+$"
         },
