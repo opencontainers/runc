@@ -13,6 +13,7 @@ import (
 const (
 	exactArgs = iota
 	minArgs
+	maxArgs
 )
 
 func checkArgs(context *cli.Context, expected, checkType int) error {
@@ -26,6 +27,10 @@ func checkArgs(context *cli.Context, expected, checkType int) error {
 	case minArgs:
 		if context.NArg() < expected {
 			err = fmt.Errorf("%s: %q requires a minimum of %d argument(s)", os.Args[0], cmdName, expected)
+		}
+	case maxArgs:
+		if context.NArg() > expected {
+			err = fmt.Errorf("%s: %q requires a maximum of %d argument(s)", os.Args[0], cmdName, expected)
 		}
 	}
 
