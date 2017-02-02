@@ -72,6 +72,9 @@ signal to the init process of the "ubuntu01" container:
 		if err := checkArgs(context, 1, minArgs); err != nil {
 			return err
 		}
+		if err := checkArgs(context, 2, maxArgs); err != nil {
+			return err
+		}
 		container, err := getContainer(context)
 		if err != nil {
 			return err
