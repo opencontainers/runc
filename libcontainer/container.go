@@ -134,12 +134,18 @@ type BaseContainer interface {
 	// SystemError - System error.
 	Run(process *Process) (err error)
 
-	// Destroys the container after killing all running processes.
+	// Destroys the container, if its in a valid state, after killing any
+	// remaining running processes.
 	//
 	// Any event registrations are removed before the container is destroyed.
 	// No error is returned if the container is already destroyed.
 	//
+	// Running containers must first be stopped using Signal(..).
+	// Paused containers must first be resumed using Resume(..).
+	//
 	// errors:
+	// ContainerNotStopped - Container is still running,
+	// ContainerPaused - Container is paused,
 	// SystemError - System error.
 	Destroy() error
 
