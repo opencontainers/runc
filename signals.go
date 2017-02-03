@@ -17,7 +17,9 @@ const signalBufferSize = 2048
 
 // newSignalHandler returns a signal handler for processing SIGCHLD and SIGWINCH signals
 // while still forwarding all other signals to the process.
-func newSignalHandler(enableSubreaper bool) *signalHandler {
+// If notifySocket is present, use it to read systemd notifications from the container and
+// forward them to notifySocketHost.
+func newSignalHandler(enableSubreaper bool, notifySocket *notifySocket) *signalHandler {
 	if enableSubreaper {
 		// set us as the subreaper before registering the signal handler for the container
 		if err := system.SetSubreaper(1); err != nil {
@@ -30,7 +32,8 @@ func newSignalHandler(enableSubreaper bool) *signalHandler {
 	// handle all signals for the process.
 	signal.Notify(s)
 	return &signalHandler{
-		signals: s,
+		signals:      s,
+		notifySocket: notifySocket,
 	}
 }
 
@@ -42,7 +45,8 @@ type exit struct {
 }
 
 type signalHandler struct {
-	signals chan os.Signal
+	signals      chan os.Signal
+	notifySocket *notifySocket
 }
 
 // forward handles the main signal event loop forwarding, resizing, or reaping depending
@@ -54,6 +58,11 @@ func (h *signalHandler) forward(process *libcontainer.Process, tty *tty) (int, e
 	if err != nil {
 		return -1, err
 	}
+
+	if h.notifySocket != nil {
+		go h.notifySocket.run()
+	}
+
 	// perform the initial tty resize.
 	tty.resize()
 	for s := range h.signals {
@@ -75,6 +84,9 @@ func (h *signalHandler) forward(process *libcontainer.Process, tty *tty) (int, e
 					// status because we must ensure that any of the go specific process
 					// fun such as flushing pipes are complete before we return.
 					process.Wait()
+					if h.notifySocket != nil {
+						h.notifySocket.Close()
+					}
 					return e.status, nil
 				}
 			}
