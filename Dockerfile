@@ -56,5 +56,3 @@ RUN mkdir -p ${ROOTFS} \
 COPY script/tmpmount /
 WORKDIR /go/src/github.com/opencontainers/runc
 ENTRYPOINT ["/tmpmount"]
-
-ADD . /go/src/github.com/opencontainers/runc
