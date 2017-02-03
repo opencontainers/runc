@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"unsafe"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
@@ -392,9 +393,50 @@ func setOomScoreAdj(oomScoreAdj int, pid int) error {
 	return ioutil.WriteFile(path, []byte(strconv.Itoa(oomScoreAdj)), 0600)
 }
 
+const _P_PID = 1
+
+type siginfo struct {
+	si_signo int32
+	si_errno int32
+	si_code  int32
+	// below here is a union; si_pid is the only field we use
+	si_pid int32
+	// Pad to 128 bytes as detailed in blockUntilWaitable
+	pad [96]byte
+}
+
+// isWaitable returns true if the process has exited false otherwise.
+// Its based off blockUntilWaitable in src/os/wait_waitid.go
+func isWaitable(pid int) (bool, error) {
+	si := &siginfo{}
+	_, _, e := syscall.Syscall6(syscall.SYS_WAITID, _P_PID, uintptr(pid), uintptr(unsafe.Pointer(si)), syscall.WEXITED|syscall.WNOWAIT|syscall.WNOHANG, 0, 0)
+	if e != 0 {
+		return false, os.NewSyscallError("waitid", e)
+	}
+
+	return si.si_pid != 0, nil
+}
+
+// isNoChildren returns true if err represents a syscall.ECHILD false otherwise
+func isNoChildren(err error) bool {
+	switch err := err.(type) {
+	case syscall.Errno:
+		if err == syscall.ECHILD {
+			return true
+		}
+	case *os.SyscallError:
+		if err.Err == syscall.ECHILD {
+			return true
+		}
+	}
+	return false
+}
+
 // signalAllProcesses freezes then iterates over all the processes inside the
-// manager's cgroups sending a SIGKILL to each process then waiting for them to
-// exit.
+// manager's cgroups sending the signal s to them.
+// If s is SIGKILL then it will wait for each process to exit.
+// For all other signals it will check if the process is ready to report its
+// exit status and only if it is will a wait be performed.
 func signalAllProcesses(m cgroups.Manager, s os.Signal) error {
 	var procs []*os.Process
 	if err := m.Freeze(configs.Frozen); err != nil {
@@ -419,9 +461,24 @@ func signalAllProcesses(m cgroups.Manager, s os.Signal) error {
 	if err := m.Freeze(configs.Thawed); err != nil {
 		logrus.Warn(err)
 	}
+
 	for _, p := range procs {
+		if s != syscall.SIGKILL {
+			if ok, err := isWaitable(p.Pid); err != nil {
+				if !isNoChildren(err) {
+					logrus.Warn("signalAllProcesses: ", p.Pid, err)
+				}
+				continue
+			} else if !ok {
+				// Not ready to report so don't wait
+				continue
+			}
+		}
+
 		if _, err := p.Wait(); err != nil {
-			logrus.Warn(err)
+			if !isNoChildren(err) {
+				logrus.Warn("wait: ", err)
+			}
 		}
 	}
 	return nil

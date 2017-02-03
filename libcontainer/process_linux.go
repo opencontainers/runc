@@ -70,15 +70,15 @@ func (p *setnsProcess) start() (err error) {
 	err = p.cmd.Start()
 	p.childPipe.Close()
 	if err != nil {
-		return newSystemErrorWithCause(err, "starting setns process")
+		return parentError(p.parentPipe, err, "starting setns process")
 	}
 	if p.bootstrapData != nil {
 		if _, err := io.Copy(p.parentPipe, p.bootstrapData); err != nil {
-			return newSystemErrorWithCause(err, "copying bootstrap data to pipe")
+			return parentError(p.parentPipe, err, "copying bootstrap data to pipe")
 		}
 	}
 	if err = p.execSetns(); err != nil {
-		return newSystemErrorWithCause(err, "executing setns process")
+		return parentError(p.parentPipe, err, "executing setns process")
 	}
 	if len(p.cgroupPaths) > 0 {
 		if err := cgroups.EnterPid(p.cgroupPaths, p.pid()); err != nil {
@@ -146,7 +146,11 @@ func (p *setnsProcess) start() (err error) {
 // because setns support requires the C process to fork off a child and perform the setns
 // before the go runtime boots, we wait on the process to die and receive the child's pid
 // over the provided pipe.
-func (p *setnsProcess) execSetns() error {
+func (p *setnsProcess) execSetns() (err error) {
+	defer func() {
+		err = reapChildren(err)
+	}()
+
 	status, err := p.cmd.Process.Wait()
 	if err != nil {
 		p.cmd.Wait()
@@ -229,7 +233,11 @@ func (p *initProcess) externalDescriptors() []string {
 // before the go runtime boots, we wait on the process to die and receive the child's pid
 // over the provided pipe.
 // This is called by initProcess.start function
-func (p *initProcess) execSetns() error {
+func (p *initProcess) execSetns() (err error) {
+	defer func() {
+		err = reapChildren(err)
+	}()
+
 	status, err := p.cmd.Process.Wait()
 	if err != nil {
 		p.cmd.Wait()
@@ -253,6 +261,19 @@ func (p *initProcess) execSetns() error {
 	return nil
 }
 
+// parentError attempts to read any error from the parent so we have better context
+// about the cause of the failure. If no error is found then a new system error for
+// err and cause is returned.
+func parentError(pipe *os.File, err error, cause string) error {
+	if ierr := parseSync(pipe, func(sync *syncT) error { return nil }); ierr != nil {
+		if ierr, ok := ierr.(*genericError); ok {
+			ierr.Cause = cause
+		}
+		return ierr
+	}
+	return newSystemErrorWithCause(err, cause)
+}
+
 func (p *initProcess) start() error {
 	defer p.parentPipe.Close()
 	err := p.cmd.Start()
@@ -261,13 +282,13 @@ func (p *initProcess) start() error {
 	p.rootDir.Close()
 	if err != nil {
 		p.process.ops = nil
-		return newSystemErrorWithCause(err, "starting init process command")
+		return parentError(p.parentPipe, err, "starting init process command")
 	}
 	if _, err := io.Copy(p.parentPipe, p.bootstrapData); err != nil {
-		return err
+		return parentError(p.parentPipe, err, "copying bootstrap data to pipe")
 	}
 	if err := p.execSetns(); err != nil {
-		return newSystemErrorWithCause(err, "running exec setns process for init")
+		return parentError(p.parentPipe, err, "running exec setns process for init")
 	}
 	// Save the standard descriptor names before the container process
 	// can potentially move them (e.g., via dup2()).  If we don't do this now,
@@ -519,4 +540,31 @@ func (p *Process) InitializeIO(rootuid, rootgid int) (i *IO, err error) {
 		}
 	}
 	return i, nil
+}
+
+// reapChildren reaps all exited child processes.
+// If callerErr is not nil then that is returned, otherwise any error encountered is returned.
+func reapChildren(callerErr error) (err error) {
+	defer func() {
+		if callerErr != nil {
+			err = callerErr
+		}
+	}()
+
+	for {
+		var ws syscall.WaitStatus
+		pid, err := syscall.Wait4(-1, &ws, syscall.WNOHANG, nil)
+		if err != nil {
+			if err, ok := err.(syscall.Errno); ok && err == syscall.ECHILD {
+				// No children
+				return nil
+			}
+			return newSystemErrorWithCause(err, "waiting for children")
+		} else if pid == 0 {
+			// No children reported
+			return nil
+		} else if ws.Exited() && ws.ExitStatus() != 0 {
+			return newSystemError(fmt.Errorf("child pid: %v failed exitcode: %v, signal: %v", pid, ws.ExitStatus(), ws.Signal()))
+		}
+	}
 }
