@@ -195,7 +195,7 @@ func (p *pausedState) destroy() error {
 	return newGenericError(fmt.Errorf("container is paused"), ContainerPaused)
 }
 
-// restoredState is the same as the running state but also has accociated checkpoint
+// restoredState is the same as the running state but also has associated checkpoint
 // information that maybe need destroyed when the container is stopped and destroy is called.
 type restoredState struct {
 	imageDir string
