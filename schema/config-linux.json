@@ -72,11 +72,11 @@
                         "properties": {
                             "blkioWeight": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/blockIO/blkioWeight",
-                                "$ref": "defs-linux.json#/definitions/blkioWeightPointer"
+                                "$ref": "defs-linux.json#/definitions/blkioWeight"
                             },
                             "blkioLeafWeight": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/blockIO/blkioLeafWeight",
-                                "$ref": "defs-linux.json#/definitions/blkioWeightPointer"
+                                "$ref": "defs-linux.json#/definitions/blkioWeight"
                             },
                             "blkioThrottleReadBpsDevice": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/blockIO/blkioThrottleReadBpsDevice",
@@ -129,23 +129,23 @@
                             },
                             "period": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/cpu/period",
-                                "$ref": "defs.json#/definitions/uint64Pointer"
+                                "$ref": "defs.json#/definitions/uint64"
                             },
                             "quota": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/cpu/quota",
-                                "$ref": "defs.json#/definitions/int64Pointer"
+                                "$ref": "defs.json#/definitions/int64"
                             },
                             "realtimePeriod": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/cpu/realtimePeriod",
-                                "$ref": "defs.json#/definitions/uint64Pointer"
+                                "$ref": "defs.json#/definitions/uint64"
                             },
                             "realtimeRuntime": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/cpu/realtimeRuntime",
-                                "$ref": "defs.json#/definitions/int64Pointer"
+                                "$ref": "defs.json#/definitions/int64"
                             },
                             "shares": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/cpu/shares",
-                                "$ref": "defs.json#/definitions/uint64Pointer"
+                                "$ref": "defs.json#/definitions/uint64"
                             }
                         }
                     },
@@ -178,27 +178,27 @@
                         "properties": {
                             "kernel": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/memory/kernel",
-                                "$ref": "defs.json#/definitions/int64Pointer"
+                                "$ref": "defs.json#/definitions/int64"
                             },
                             "kernelTCP": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/memory/kernelTCP",
-                                "$ref": "defs.json#/definitions/int64Pointer"
+                                "$ref": "defs.json#/definitions/int64"
                             },
                             "limit": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/memory/limit",
-                                "$ref": "defs.json#/definitions/int64Pointer"
+                                "$ref": "defs.json#/definitions/int64"
                             },
                             "reservation": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/memory/reservation",
-                                "$ref": "defs.json#/definitions/int64Pointer"
+                                "$ref": "defs.json#/definitions/int64"
                             },
                             "swap": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/memory/swap",
-                                "$ref": "defs.json#/definitions/int64Pointer"
+                                "$ref": "defs.json#/definitions/int64"
                             },
                             "swappiness": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/memory/swappiness",
-                                "$ref": "defs.json#/definitions/uint64Pointer"
+                                "$ref": "defs.json#/definitions/uint64"
                             }
                         }
                     },
@@ -255,14 +255,7 @@
             },
             "sysctl": {
                 "id": "https://opencontainers.org/schema/bundle/linux/sysctl",
-                "oneOf": [
-                    {
-                        "$ref": "defs.json#/definitions/mapStringString"
-                    },
-                    {
-                        "type": "null"
-                    }
-                ]
+                "$ref": "defs.json#/definitions/mapStringString"
             },
             "maskedPaths": {
                 "id": "https://opencontainers.org/schema/bundle/linux/maskedPaths",
