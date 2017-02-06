@@ -1,5 +1,45 @@
 OpenContainers Specifications
 
+Changes with v1.0.0-rc4:
+	Additions:
+
+	* config-linux: Allow negative values for some resources (#648)
+	* config-linux: Lift no-tweaking namespace restriction (#649)
+
+	Removals and increased restrictions:
+
+	* config: Rlimit types must be unique (#607)
+	* config: Forbid empty-string keys in 'annotations' (#645, #654)
+	* config-linux: Require runtime errors for pre-existing devices
+	  (#647)
+	* runtime: Only require 'pid' in the state for created/running
+	  statuses (#664)
+	* schema: Add 'consoleSize' and update requirements (#646)
+	* schema: Remove string pointers (#656)
+	* schema/config-linux: Remove blockIODeviceThrottle and other
+	  pointers (#545)
+
+	Breaking Go changes:
+
+	* specs-go/config: Remove string pointers (#653)
+	* specs-go/config: Make Spec.Hooks a pointer (#427)
+	* specs-go/config: Convert some resources from unsigned integers
+	  to signed integers (#648)
+
+	Minor fixes and documentation:
+
+	* config: Explicitly list 'hooks' as optional and cite POSIX for
+	  'env' and 'args' (#427)
+	* runtime: Replace "process is stopped" with "process exits"
+	  (#465)
+	* schema/config-linux: Add missing kernelTCP (#655)
+	* schema/validate: Allow schema identifiers to contain a URL
+	  scheme (#490)
+	* .travis: Fix git-validation commit ranges (#216)
+	* *: Add anchor tags to a number of spec locations (#612, #636,
+	  #637, #638, #639, #640)
+	* *: Typo fixes and polishing (#643, #650, #652, #656, #660, #665)
+
 Changes with v1.0.0-rc3:
 	Additions:
 
