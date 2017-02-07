@@ -3,6 +3,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"net"
 	"path/filepath"
@@ -75,7 +76,25 @@ func (notifySocket *notifySocket) run() {
 		if err != nil {
 			break
 		}
+		var out bytes.Buffer
+		for _, line := range bytes.Split(buf[0:r], []byte{'\n'}) {
+			if bytes.HasPrefix(line, []byte("READY=")) {
+				_, err = out.Write(line)
+				if err != nil {
+					return
+				}
 
-		client.Write(buf[0:r])
+				_, err = out.Write([]byte{'\n'})
+				if err != nil {
+					return
+				}
+
+				_, err = client.Write(out.Bytes())
+				if err != nil {
+					return
+				}
+				return
+			}
+		}
 	}
 }
