@@ -292,7 +292,6 @@ For Windows based systems the user structure has the following fields:
 
 [**`platform.os`**](#platform) is used to specify platform-specific configuration.
 Runtime implementations MAY support any valid values for platform-specific fields as part of this configuration.
-Implementations MUST error out when invalid values are encountered and MUST generate an error message and error out when encountering valid values it chooses to not support.
 
 * **`linux`** (object, OPTIONAL) [Linux-specific configuration](config-linux.md).
   This MAY be set if **`platform.os`** is `linux` and MUST NOT be set otherwise.
@@ -415,6 +414,11 @@ Values MAY be an empty string.
 ## Extensibility
 Implementations that are reading/processing this configuration file MUST NOT generate an error if they encounter an unknown property.
 Instead they MUST ignore unknown properties.
+
+## Valid values
+
+Implementations that are reading/processing this configuration file MUST generate an error when invalid or unsupported values are encountered.
+Unless support for a valid value is explicitly required, runtimes MAY choose which subset of the valid values it will support.
 
 ## Configuration Schema Example
 
