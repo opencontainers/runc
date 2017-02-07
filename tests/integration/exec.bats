@@ -120,8 +120,8 @@ function teardown() {
 
   wait_for_container 15 1 test_busybox
 
-  runc exec --user 1000:1000 --additional-gids 100 test_busybox id
+  runc exec --user 1000:1000 --additional-gids 100 --additional-gids 99 test_busybox id 
   [ "$status" -eq 0 ]
 
-  [[ ${output} == "uid=1000 gid=1000 groups=100(users)" ]]
+  [[ ${output} == "uid=1000 gid=1000 groups=99(nogroup),100(users)" ]]
 }

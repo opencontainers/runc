@@ -50,9 +50,9 @@ following will output a list of processes running in the container:
 			Name:  "user, u",
 			Usage: "UID (format: <uid>[:<gid>])",
 		},
-		cli.StringFlag{
+		cli.Int64SliceFlag{
 			Name:  "additional-gids, g",
-			Usage: "additional gids separated by comma",
+			Usage: "additional gids",
 		},
 		cli.StringFlag{
 			Name:  "process, p",
@@ -212,14 +212,8 @@ func getProcess(context *cli.Context, bundle string) (*specs.Process, error) {
 		}
 		p.User.UID = uint32(uid)
 	}
-	if context.String("additional-gids") != "" {
-		for _, i := range strings.Split(context.String("additional-gids"), ",") {
-			gid, err := strconv.Atoi(i)
-			if err != nil {
-				return nil, fmt.Errorf("parsing %s as int for gid failed: %v", i, err)
-			}
-			p.User.AdditionalGids = append(p.User.AdditionalGids, uint32(gid))
-		}
+	for _, gid := range context.Int64Slice("additional-gids") {
+		p.User.AdditionalGids = append(p.User.AdditionalGids, uint32(gid))
 	}
 	return p, nil
 }

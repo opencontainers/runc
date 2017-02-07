@@ -19,7 +19,7 @@ following will output a list of processes running in the container:
    --env value, -e value                    set environment variables
    --tty, -t                                allocate a pseudo-TTY
    --user value, -u value                   UID (format: <uid>[:<gid>])
-   --additional-gids value, -g value        additional gids separated by comma
+   --additional-gids value, -g value        additional gids
    --process value, -p value                path to the process.json
    --detach, -d                             detach from the container's process
    --pid-file value                         specify the file to write the process id to
