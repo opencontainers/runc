@@ -230,7 +230,7 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 		// any previous mounts can invalidate the next mount's destination.
 		// this can happen when a user specifies mounts within other mounts to cause breakouts or other
 		// evil stuff to try to escape the container's rootfs.
-		if dest, err = symlink.FollowSymlinkInScope(filepath.Join(rootfs, m.Destination), rootfs); err != nil {
+		if dest, err = symlink.FollowSymlinkInScope(dest, rootfs); err != nil {
 			return err
 		}
 		if err := checkMountDestination(rootfs, dest); err != nil {
@@ -318,7 +318,7 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 		// this can happen when a user specifies mounts within other mounts to cause breakouts or other
 		// evil stuff to try to escape the container's rootfs.
 		var err error
-		if dest, err = symlink.FollowSymlinkInScope(filepath.Join(rootfs, m.Destination), rootfs); err != nil {
+		if dest, err = symlink.FollowSymlinkInScope(dest, rootfs); err != nil {
 			return err
 		}
 		if err := checkMountDestination(rootfs, dest); err != nil {
