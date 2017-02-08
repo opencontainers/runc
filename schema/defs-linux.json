@@ -194,7 +194,7 @@
                     "type": "boolean"
                 },
                 "type": {
-                    "$ref": "string"
+                    "type": "string"
                 },
                 "major": {
                     "$ref": "#/definitions/Major"
@@ -203,7 +203,7 @@
                     "$ref": "#/definitions/Minor"
                 },
                 "access": {
-                    "$ref": "string"
+                    "type": "string"
                 }
             },
             "required": [

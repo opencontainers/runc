@@ -95,11 +95,11 @@
                     "properties": {
                         "height": {
                             "id": "https://opencontainers.org/schema/bundle/process/consoleSize/height",
-                            "$ref": "defs.json#/definitions/unit64"
+                            "$ref": "defs.json#/definitions/uint64"
                         },
                         "width": {
                             "id": "https://opencontainers.org/schema/bundle/process/consoleSize/width",
-                            "$ref": "defs.json#/definitions/unit64"
+                            "$ref": "defs.json#/definitions/uint64"
                         }
                     }
                 },

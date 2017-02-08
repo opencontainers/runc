@@ -91,7 +91,7 @@
                     "$ref": "#/definitions/Env"
                 },
                 "timeout": {
-                    "$ref": "#/definitions/int"
+                    "type": "integer"
                 }
             },
             "required": [
