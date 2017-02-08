@@ -16,9 +16,10 @@ There is no requirement that it be unique across hosts.
 * **`status`** (string, REQUIRED) is the runtime state of the container.
 The value MAY be one of:
 
-    * `created`: the container process has neither exited nor executed the user-specified program
-    * `running`: the container process has executed the user-specified program but has not exited
-    * `stopped`: the container process has exited
+    * `creating`: the container is being created (step 2 in the [lifecycle](#lifecycle))
+    * `created`: the runtime has finished the [create operation](#create) (after step 2 in the [lifecycle](#lifecycle)), and the container process has neither exited nor executed the user-specified program
+    * `running`: the container process has executed the user-specified program but has not exited (after step 4 in the [lifecycle](#lifecycle))
+    * `stopped`: the container process has exited (step 5 in the [lifecycle](#lifecycle))
 
     Additional values MAY be defined by the runtime, however, they MUST be used to represent new runtime states not defined above.
 * **`pid`** (int, REQUIRED when `status` is `created` or `running`) is the ID of the container process, as seen by the host.
