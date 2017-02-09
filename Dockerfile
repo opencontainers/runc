@@ -12,6 +12,8 @@ RUN apt-get update && apt-get install -y \
     pkg-config \
     libaio-dev \
     libcap-dev \
+    libnet-dev \
+    libnl-3-dev \
     libprotobuf-dev \
     libprotobuf-c0-dev \
     libseccomp2/jessie-backports \
@@ -31,7 +33,7 @@ RUN cd /tmp \
     && rm -rf /tmp/bats
 
 # install criu
-ENV CRIU_VERSION 1.7
+ENV CRIU_VERSION 2.10
 RUN mkdir -p /usr/src/criu \
     && curl -sSL https://github.com/xemul/criu/archive/v${CRIU_VERSION}.tar.gz | tar -v -C /usr/src/criu/ -xz --strip-components=1 \
     && cd /usr/src/criu \
