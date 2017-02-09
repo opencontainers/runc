@@ -106,6 +106,33 @@ func TestCheckpoint(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	parentDir, err := ioutil.TempDir("", "criu-parent")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(parentDir)
+
+	preDumpOpts := &libcontainer.CriuOpts{
+		ImagesDirectory: parentDir,
+		WorkDirectory:   parentDir,
+		PreDump:         true,
+	}
+	preDumpLog := filepath.Join(preDumpOpts.WorkDirectory, "dump.log")
+
+	if err := container.Checkpoint(preDumpOpts); err != nil {
+		showFile(t, preDumpLog)
+		t.Fatal(err)
+	}
+
+	state, err := container.Status()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if state != libcontainer.Running {
+		t.Fatal("Unexpected preDump state: ", state)
+	}
+
 	imagesDir, err := ioutil.TempDir("", "criu")
 	if err != nil {
 		t.Fatal(err)
@@ -115,6 +142,7 @@ func TestCheckpoint(t *testing.T) {
 	checkpointOpts := &libcontainer.CriuOpts{
 		ImagesDirectory: imagesDir,
 		WorkDirectory:   imagesDir,
+		ParentImage:     "../criu-parent",
 	}
 	dumpLog := filepath.Join(checkpointOpts.WorkDirectory, "dump.log")
 	restoreLog := filepath.Join(checkpointOpts.WorkDirectory, "restore.log")
@@ -124,7 +152,7 @@ func TestCheckpoint(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	state, err := container.Status()
+	state, err = container.Status()
 	if err != nil {
 		t.Fatal(err)
 	}
