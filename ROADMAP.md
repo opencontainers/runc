@@ -6,7 +6,7 @@ The items in the 1.0 roadmap can be broken down into smaller milestones that are
 The topics below are broad and small working groups will be needed for each to define scope and requirements or if the feature is required at all for the OCI level.
 Topics listed in the roadmap do not mean that they will be implemented or added but are areas that need discussion to see if they fit in to the goals of the OCI.
 
-Listed topics may defer to the [project wiki](https://github.com/opencontainers/runtime-spec/wiki/RoadMap:) for collaboration.
+Listed topics may defer to the [project wiki][runtime-wiki] for collaboration.
 
 ## 1.0
 
@@ -32,9 +32,9 @@ Ensure that the base configuration format is viable for various platforms.
 
 Systems:
 
+* Linux
 * Solaris
 * Windows
-* Linux
 
 *Owner:* robdolinms as lead coordinator
 
@@ -45,3 +45,6 @@ Ensure that we have lifecycle hooks in the correct places with full coverage ove
 Will probably go away with Vish's work on splitting create and start, and if we have exec.
 
 *Owner:*
+
+
+[runtime-wiki]: https://github.com/opencontainers/runtime-spec/wiki/RoadMap
