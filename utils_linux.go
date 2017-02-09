@@ -219,10 +219,6 @@ func (r *runner) run(config *specs.Process) (int, error) {
 		r.destroy()
 		return -1, fmt.Errorf("cannot use console socket if runc will not detach or allocate tty")
 	}
-	if detach && r.notifySocket != nil {
-		r.destroy()
-		return -1, fmt.Errorf("cannot detach when using NOTIFY_SOCKET")
-	}
 
 	startFn := r.container.Start
 	if !r.create {
@@ -294,12 +290,12 @@ func (r *runner) run(config *specs.Process) (int, error) {
 			return -1, err
 		}
 	}
-	if detach {
-		return 0, nil
-	}
-	status, err := handler.forward(process, tty)
+	status, err := handler.forward(process, tty, detach)
 	if err != nil {
 		r.terminate(process)
+	}
+	if detach {
+		return 0, nil
 	}
 	r.destroy()
 	return status, err

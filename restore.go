@@ -188,10 +188,7 @@ func restoreContainer(context *cli.Context, spec *specs.Spec, config *configs.Co
 			return -1, err
 		}
 	}
-	if detach {
-		return 0, nil
-	}
-	return handler.forward(process, tty)
+	return handler.forward(process, tty, detach)
 }
 
 func criuOptions(context *cli.Context) *libcontainer.CriuOpts {

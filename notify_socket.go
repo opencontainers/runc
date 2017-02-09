@@ -63,7 +63,9 @@ func (s *notifySocket) setupSocket() error {
 	return nil
 }
 
-func (notifySocket *notifySocket) run() {
+// pid1 must be set only with -d, as it is used to set the new process as the main process
+// for the service in systemd
+func (notifySocket *notifySocket) run(pid1 int) {
 	buf := make([]byte, 512)
 	notifySocketHostAddr := net.UnixAddr{Name: notifySocket.host, Net: "unixgram"}
 	client, err := net.DialUnix("unixgram", nil, &notifySocketHostAddr)
@@ -92,6 +94,12 @@ func (notifySocket *notifySocket) run() {
 				_, err = client.Write(out.Bytes())
 				if err != nil {
 					return
+				}
+
+				// now we can inform systemd to use pid1 as the pid to monitor
+				if pid1 > 0 {
+					newPid := fmt.Sprintf("MAINPID=%d\n", pid1)
+					client.Write([]byte(newPid))
 				}
 				return
 			}

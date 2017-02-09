@@ -51,16 +51,25 @@ type signalHandler struct {
 
 // forward handles the main signal event loop forwarding, resizing, or reaping depending
 // on the signal received.
-func (h *signalHandler) forward(process *libcontainer.Process, tty *tty) (int, error) {
+func (h *signalHandler) forward(process *libcontainer.Process, tty *tty, detach bool) (int, error) {
 	// make sure we know the pid of our main process so that we can return
 	// after it dies.
+	if detach && h.notifySocket == nil {
+		return 0, nil
+	}
+
 	pid1, err := process.Pid()
 	if err != nil {
 		return -1, err
 	}
 
 	if h.notifySocket != nil {
-		go h.notifySocket.run()
+		if detach {
+			h.notifySocket.run(pid1)
+			return 0, nil
+		} else {
+			go h.notifySocket.run(0)
+		}
 	}
 
 	// perform the initial tty resize.
