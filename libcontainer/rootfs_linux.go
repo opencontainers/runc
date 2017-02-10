@@ -510,10 +510,12 @@ func createDeviceNode(rootfs string, node *configs.Device, bind bool) error {
 func mknodDevice(dest string, node *configs.Device) error {
 	fileMode := node.FileMode
 	switch node.Type {
-	case 'c':
+	case 'c', 'u':
 		fileMode |= syscall.S_IFCHR
 	case 'b':
 		fileMode |= syscall.S_IFBLK
+	case 'p':
+		fileMode |= syscall.S_IFIFO
 	default:
 		return fmt.Errorf("%c is not a valid device type for device %s", node.Type, node.Path)
 	}

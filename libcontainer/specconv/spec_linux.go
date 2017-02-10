@@ -318,7 +318,7 @@ func createCgroupConfig(name string, useSystemdCgroup bool, spec *specs.Spec) (*
 		if d.Access == nil || *d.Access == "" {
 			return nil, fmt.Errorf("device access at %d field cannot be empty", i)
 		}
-		dt, err := stringToDeviceRune(t)
+		dt, err := stringToCgroupDeviceRune(t)
 		if err != nil {
 			return nil, err
 		}
@@ -452,10 +452,25 @@ func createCgroupConfig(name string, useSystemdCgroup bool, spec *specs.Spec) (*
 	return c, nil
 }
 
-func stringToDeviceRune(s string) (rune, error) {
+func stringToCgroupDeviceRune(s string) (rune, error) {
 	switch s {
 	case "a":
 		return 'a', nil
+	case "b":
+		return 'b', nil
+	case "c":
+		return 'c', nil
+	default:
+		return 0, fmt.Errorf("invalid cgroup device type %q", s)
+	}
+}
+
+func stringToDeviceRune(s string) (rune, error) {
+	switch s {
+	case "p":
+		return 'p', nil
+	case "u":
+		return 'u', nil
 	case "b":
 		return 'b', nil
 	case "c":
