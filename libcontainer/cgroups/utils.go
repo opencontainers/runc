@@ -21,10 +21,65 @@ const (
 	CgroupProcesses  = "cgroup.procs"
 )
 
+func checkIfCgroupV2(subsystem, txt string) bool {
+	fields := strings.Split(txt, " ")
+	if len(fields) != 10 {
+		return false
+	}
+	cgroupType := fields[len(fields)-3]
+	if cgroupType != "cgroup2" {
+		return false
+	}
+	path := fields[4]
+	if !PathExists(path) {
+		return false
+	}
+	if subsystem == "blkio" {
+		subsystem = "io"
+	}
+	ret, err := ioutil.ReadFile(filepath.Join(path, "cgroup.controllers"))
+	if err != nil {
+		return false
+	}
+	controllers := string(ret)
+	if !strings.Contains(controllers, subsystem) {
+		return false
+	}
+	return true
+}
+
 // https://www.kernel.org/doc/Documentation/cgroup-v1/cgroups.txt
 func FindCgroupMountpoint(subsystem string) (string, error) {
-	mnt, _, err := FindCgroupMountpointAndRoot(subsystem)
-	return mnt, err
+	// We are not using mount.GetMounts() because it's super-inefficient,
+	// parsing it directly sped up x10 times because of not using Sscanf.
+	// It was one of two major performance drawbacks in container start.
+	if !isSubsystemAvailable(subsystem) {
+		return "", NewNotFoundError(subsystem)
+	}
+	f, err := os.Open("/proc/self/mountinfo")
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		txt := scanner.Text()
+		fields := strings.Split(txt, " ")
+		if checkIfCgroupV2(subsystem, txt) {
+			return fields[4], NewV2Error(subsystem)
+		}
+		for _, opt := range strings.Split(fields[len(fields)-1], ",") {
+			if opt == subsystem {
+				return fields[4], nil
+			}
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return "", err
+	}
+
+	return "", NewNotFoundError(subsystem)
 }
 
 func FindCgroupMountpointAndRoot(subsystem string) (string, string, error) {
@@ -44,6 +99,9 @@ func FindCgroupMountpointAndRoot(subsystem string) (string, string, error) {
 	for scanner.Scan() {
 		txt := scanner.Text()
 		fields := strings.Split(txt, " ")
+		if checkIfCgroupV2(subsystem, txt) {
+			return fields[4], fields[3], NewV2Error(subsystem)
+		}
 		for _, opt := range strings.Split(fields[len(fields)-1], ",") {
 			if opt == subsystem {
 				return fields[4], fields[3], nil
