@@ -62,3 +62,25 @@ func IsNotFound(err error) bool {
 	_, ok := err.(*NotFoundError)
 	return ok
 }
+
+type V2Error struct {
+	Subsystem string
+}
+
+func (e *V2Error) Error() string {
+	return fmt.Sprintf("mountpoint for %s is enabled by cgroup v2", e.Subsystem)
+}
+
+func NewV2Error(sub string) error {
+	return &V2Error{
+		Subsystem: sub,
+	}
+}
+
+func IsV2Error(err error) bool {
+	if err == nil {
+		return false
+	}
+	_, ok := err.(*V2Error)
+	return ok
+}
