@@ -105,9 +105,7 @@
             "type": "object",
             "required": [
                 "type",
-                "path",
-                "major",
-                "minor"
+                "path"
             ],
             "properties": {
                 "type": {
