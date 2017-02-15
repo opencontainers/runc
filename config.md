@@ -329,7 +329,7 @@ Hooks allow for the configuration of custom actions related to the [lifecycle](r
     Entries in the array contain the following properties:
     * **`path`** (string, REQUIRED) with similar semantics to [IEEE Std 1003.1-2001 `execv`'s *path*][ieee-1003.1-2001-xsh-exec].
       This specification extends the IEEE standard in that **`path`** MUST be absolute.
-    * **`args`** (array of strings, REQUIRED) with the same semantics as [IEEE Std 1003.1-2001 `execv`'s *argv*][ieee-1003.1-2001-xsh-exec].
+    * **`args`** (array of strings, OPTIONAL) with the same semantics as [IEEE Std 1003.1-2001 `execv`'s *argv*][ieee-1003.1-2001-xsh-exec].
     * **`env`** (array of strings, OPTIONAL) with the same semantics as [IEEE Std 1003.1-2001's `environ`][ieee-1003.1-2001-xbd-c8.1].
     * **`timeout`** (int, OPTIONAL) is the number of seconds before aborting the hook.
   * **`poststart`** (array, OPTIONAL) is an array of [post-start hooks](#poststart).
