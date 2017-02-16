@@ -193,16 +193,22 @@ other options are ignored.
 				opt  string
 				dest *uint64
 			}{
+				{"memory", r.Memory.Limit},
+				{"memory-swap", r.Memory.Swap},
 				{"kernel-memory", r.Memory.Kernel},
 				{"kernel-memory-tcp", r.Memory.KernelTCP},
-				{"memory", r.Memory.Limit},
 				{"memory-reservation", r.Memory.Reservation},
-				{"memory-swap", r.Memory.Swap},
 			} {
 				if val := context.String(pair.opt); val != "" {
-					v, err := units.RAMInBytes(val)
-					if err != nil {
-						return fmt.Errorf("invalid value for %s: %s", pair.opt, err)
+					var v int64
+
+					if val != "-1" {
+						v, err = units.RAMInBytes(val)
+						if err != nil {
+							return fmt.Errorf("invalid value for %s: %s", pair.opt, err)
+						}
+					} else {
+						v = -1
 					}
 					*pair.dest = uint64(v)
 				}
