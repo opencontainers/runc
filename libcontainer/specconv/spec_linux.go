@@ -262,10 +262,10 @@ func createCgroupConfig(name string, useSystemdCgroup bool, spec *specs.Spec) (*
 		Resources: &configs.Resources{},
 	}
 
-	if spec.Linux != nil && spec.Linux.CgroupsPath != nil {
-		myCgroupPath = libcontainerUtils.CleanPath(*spec.Linux.CgroupsPath)
+	if spec.Linux != nil && spec.Linux.CgroupsPath != "" {
+		myCgroupPath = libcontainerUtils.CleanPath(spec.Linux.CgroupsPath)
 		if useSystemdCgroup {
-			myCgroupPath = *spec.Linux.CgroupsPath
+			myCgroupPath = spec.Linux.CgroupsPath
 		}
 	}
 
@@ -306,8 +306,8 @@ func createCgroupConfig(name string, useSystemdCgroup bool, spec *specs.Spec) (*
 			major = int64(-1)
 			minor = int64(-1)
 		)
-		if d.Type != nil {
-			t = *d.Type
+		if d.Type != "" {
+			t = d.Type
 		}
 		if d.Major != nil {
 			major = *d.Major
@@ -315,7 +315,7 @@ func createCgroupConfig(name string, useSystemdCgroup bool, spec *specs.Spec) (*
 		if d.Minor != nil {
 			minor = *d.Minor
 		}
-		if d.Access == nil || *d.Access == "" {
+		if d.Access == "" {
 			return nil, fmt.Errorf("device access at %d field cannot be empty", i)
 		}
 		dt, err := stringToCgroupDeviceRune(t)
@@ -326,7 +326,7 @@ func createCgroupConfig(name string, useSystemdCgroup bool, spec *specs.Spec) (*
 			Type:        dt,
 			Major:       major,
 			Minor:       minor,
-			Permissions: *d.Access,
+			Permissions: d.Access,
 			Allow:       d.Allow,
 		}
 		c.Resources.Devices = append(c.Resources.Devices, dd)
@@ -370,11 +370,11 @@ func createCgroupConfig(name string, useSystemdCgroup bool, spec *specs.Spec) (*
 		if r.CPU.RealtimePeriod != nil {
 			c.Resources.CpuRtPeriod = int64(*r.CPU.RealtimePeriod)
 		}
-		if r.CPU.Cpus != nil {
-			c.Resources.CpusetCpus = *r.CPU.Cpus
+		if r.CPU.Cpus != "" {
+			c.Resources.CpusetCpus = r.CPU.Cpus
 		}
-		if r.CPU.Mems != nil {
-			c.Resources.CpusetMems = *r.CPU.Mems
+		if r.CPU.Mems != "" {
+			c.Resources.CpusetMems = r.CPU.Mems
 		}
 	}
 	if r.Pids != nil {
@@ -432,7 +432,7 @@ func createCgroupConfig(name string, useSystemdCgroup bool, spec *specs.Spec) (*
 	for _, l := range r.HugepageLimits {
 		c.Resources.HugetlbLimit = append(c.Resources.HugetlbLimit, &configs.HugepageLimit{
 			Pagesize: l.Pagesize,
-			Limit:    l.Limit,
+			Limit:    uint64(l.Limit),
 		})
 	}
 	if r.DisableOOMKiller != nil {
