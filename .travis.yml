@@ -1,8 +1,12 @@
 language: go
 go:
-  - 1.6.x
   - 1.7.x
-# - master
+  - 1.8.x
+  - tip
+
+matrix:
+  allow_failures:
+    - go: tip
 
 # `make ci` uses Docker.
 sudo: required
