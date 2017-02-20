@@ -12,6 +12,7 @@ PROJECT := github.com/opencontainers/runc
 BUILDTAGS := seccomp
 COMMIT_NO := $(shell git rev-parse HEAD 2> /dev/null || true)
 COMMIT := $(if $(shell git status --porcelain --untracked-files=no),"${COMMIT_NO}-dirty","${COMMIT_NO}")
+GOPACKAGES=$(shell go list ./... | grep -v /vendor/)
 
 MAN_DIR := $(CURDIR)/man/man8
 MAN_PAGES = $(shell ls $(MAN_DIR)/*.8)
@@ -70,8 +71,8 @@ dbuild: runcimage
 	docker run --rm -v $(CURDIR):/go/src/$(PROJECT) --privileged $(RUNC_IMAGE) make clean all
 
 lint:
-	go vet ./...
-	go fmt ./...
+	go vet $(GOPACKAGES)
+	go fmt $(GOPACKAGES)
 
 man:
 	man/md2man-all.sh
@@ -129,6 +130,6 @@ clean:
 validate:
 	script/validate-gofmt
 	script/validate-shfmt
-	go vet ./...
+	go vet $(GOPACKAGES)
 
 ci: validate localtest
