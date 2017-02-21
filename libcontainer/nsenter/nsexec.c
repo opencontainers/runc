@@ -284,7 +284,7 @@ static void nl_parse(int fd, struct nlconfig_t *config)
 	/* Retrieve the netlink header. */
 	len = read(fd, &hdr, NLMSG_HDRLEN);
 	if (len != NLMSG_HDRLEN)
-		bail("invalid netlink header length %lu", len);
+		bail("invalid netlink header length %zu", len);
 
 	if (hdr.nlmsg_type == NLMSG_ERROR)
 		bail("failed to read netlink message");
@@ -300,7 +300,7 @@ static void nl_parse(int fd, struct nlconfig_t *config)
 
 	len = read(fd, data, size);
 	if (len != size)
-		bail("failed to read netlink payload, %lu != %lu", len, size);
+		bail("failed to read netlink payload, %zu != %zu", len, size);
 
 	/* Parse the netlink payload. */
 	config->data = data;
