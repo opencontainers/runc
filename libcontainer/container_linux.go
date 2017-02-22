@@ -1259,14 +1259,9 @@ func (c *linuxContainer) runType() (Status, error) {
 	if !exist || err != nil {
 		return Stopped, err
 	}
-	// check if the process that is running is the init process or the user's process.
-	// this is the difference between the container Running and Created.
-	environ, err := ioutil.ReadFile(fmt.Sprintf("/proc/%d/environ", pid))
-	if err != nil {
-		return Stopped, newSystemErrorWithCausef(err, "reading /proc/%d/environ", pid)
-	}
-	check := []byte("_LIBCONTAINER")
-	if bytes.Contains(environ, check) {
+	// We'll create exec fifo and blocking on it after container is created,
+	// and delete it after start container.
+	if _, err := os.Stat(filepath.Join(c.root, execFifoFilename)); err == nil {
 		return Created, nil
 	}
 	return Running, nil
