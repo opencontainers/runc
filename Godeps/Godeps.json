@@ -1,7 +1,7 @@
 {
 	"ImportPath": "github.com/opencontainers/runc",
 	"GoVersion": "go1.5.3",
-	"GodepVersion": "v75",
+	"GodepVersion": "v76",
 	"Deps": [
 		{
 			"ImportPath": "github.com/Sirupsen/logrus",
@@ -30,18 +30,18 @@
 		},
 		{
 			"ImportPath": "github.com/docker/docker/pkg/mount",
-			"Comment": "v1.4.1-4831-g0f5c9d3",
-			"Rev": "0f5c9d301b9b1cca66b3ea0f9dec3b5317d3686d"
+			"Comment": "docs-v1.12.0-rc4-2016-07-15-4464-g696ef7a",
+			"Rev": "696ef7a19eccd44732e9c50902c8949e574ef097"
 		},
 		{
 			"ImportPath": "github.com/docker/docker/pkg/symlink",
-			"Comment": "v1.4.1-4831-g0f5c9d3",
-			"Rev": "0f5c9d301b9b1cca66b3ea0f9dec3b5317d3686d"
+			"Comment": "docs-v1.12.0-rc4-2016-07-15-4464-g696ef7a",
+			"Rev": "696ef7a19eccd44732e9c50902c8949e574ef097"
 		},
 		{
 			"ImportPath": "github.com/docker/docker/pkg/term",
-			"Comment": "v1.4.1-4831-g0f5c9d3",
-			"Rev": "0f5c9d301b9b1cca66b3ea0f9dec3b5317d3686d"
+			"Comment": "docs-v1.12.0-rc4-2016-07-15-4464-g696ef7a",
+			"Rev": "696ef7a19eccd44732e9c50902c8949e574ef097"
 		},
 		{
 			"ImportPath": "github.com/docker/go-units",
@@ -82,6 +82,42 @@
 			"ImportPath": "github.com/coreos/pkg/dlopen",
 			"Comment": "v3",
 			"Rev": "3ac0863d7acf3bc44daf49afef8919af12f704ef"
+		},
+		{
+			"ImportPath": "golang.org/x/sys/unix",
+			"Rev": "c200b10b5d5e122be351b67af224adc6128af5bf"
+		},
+		{
+			"ImportPath": "github.com/docker/docker/pkg/longpath",
+			"Comment": "docs-v1.12.0-rc4-2016-07-15-4464-g696ef7a",
+			"Rev": "696ef7a19eccd44732e9c50902c8949e574ef097"
+		},
+		{
+			"ImportPath": "github.com/docker/docker/pkg/system",
+			"Comment": "docs-v1.12.0-rc4-2016-07-15-4464-g696ef7a",
+			"Rev": "696ef7a19eccd44732e9c50902c8949e574ef097"
+		},
+		{
+			"ImportPath": "github.com/Microsoft/go-winio",
+			"Comment": "v0.3.7",
+			"Rev": "24a3e3d3fc7451805e09d11e11e95d9a0a4f205e"
+		},
+		{
+			"ImportPath": "golang.org/x/sys/windows",
+			"Rev": "c200b10b5d5e122be351b67af224adc6128af5bf"
+		},
+		{
+			"ImportPath": "github.com/Azure/go-ansiterm/winterm",
+			"Rev": "fa152c58bc15761d0200cb75fe958b89a9d4888e"
+		},
+		{
+			"ImportPath": "github.com/docker/docker/pkg/term/windows",
+			"Comment": "docs-v1.12.0-rc4-2016-07-15-4464-g696ef7a",
+			"Rev": "696ef7a19eccd44732e9c50902c8949e574ef097"
+		},
+		{
+			"ImportPath": "github.com/Azure/go-ansiterm",
+			"Rev": "fa152c58bc15761d0200cb75fe958b89a9d4888e"
 		}
 	]
 }
