@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"text/tabwriter"
 	"time"
 
@@ -113,12 +112,7 @@ func getContainers(context *cli.Context) ([]containerState, error) {
 	if err != nil {
 		return nil, err
 	}
-	root := context.GlobalString("root")
-	absRoot, err := filepath.Abs(root)
-	if err != nil {
-		return nil, err
-	}
-	list, err := ioutil.ReadDir(absRoot)
+	list, err := ioutil.ReadDir(factory.Root)
 	if err != nil {
 		fatal(err)
 	}
