@@ -83,7 +83,7 @@ Each entry has the following structure:
 * **`size`** (uint32, REQUIRED)* - is the number of ids to be mapped.
 
 The runtime SHOULD NOT modify the ownership of referenced filesystems to realize the mapping.
-There is a limit of 5 mappings which is the Linux kernel hard limit.
+Note that the number of mapping entries MAY be limited by the [kernel][user-namespaces].
 
 ###### Example
 
@@ -621,3 +621,4 @@ The values MUST be absolute paths in the [container namespace][container-namespa
 [random.4]: http://man7.org/linux/man-pages/man4/random.4.html
 [tty.4]: http://man7.org/linux/man-pages/man4/tty.4.html
 [zero.4]: http://man7.org/linux/man-pages/man4/zero.4.html
+[user-namespaces]: http://man7.org/linux/man-pages/man7/user_namespaces.7.html
