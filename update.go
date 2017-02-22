@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	"github.com/docker/go-units"
+	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/urfave/cli"
 )
@@ -115,6 +116,13 @@ other options are ignored.
 		container, err := getContainer(context)
 		if err != nil {
 			return err
+		}
+		status, err := container.Status()
+		if err != nil {
+			return err
+		}
+		if status == libcontainer.Stopped {
+			return fmt.Errorf("cannot update a container that has run and stopped")
 		}
 
 		r := specs.LinuxResources{
