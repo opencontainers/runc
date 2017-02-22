@@ -3,7 +3,7 @@
 badFiles=()
 while read f; do
 	badFiles+=("$f")
-done < <(shfmt -l . | grep -v Godeps/)
+done < <(shfmt -l . | grep -v vendor/)
 
 if [ ${#badFiles[@]} -eq 0 ]; then
 	echo 'Congratulations!  All shell source files are properly formatted.'

@@ -12,8 +12,6 @@ PROJECT := github.com/opencontainers/runc
 BUILDTAGS := seccomp
 COMMIT_NO := $(shell git rev-parse HEAD 2> /dev/null || true)
 COMMIT := $(if $(shell git status --porcelain --untracked-files=no),"${COMMIT_NO}-dirty","${COMMIT_NO}")
-RUNC_LINK := $(CURDIR)/Godeps/_workspace/src/github.com/opencontainers/runc
-export GOPATH := $(CURDIR)/Godeps/_workspace
 
 MAN_DIR := $(CURDIR)/man/man8
 MAN_PAGES = $(shell ls $(MAN_DIR)/*.8)
@@ -28,21 +26,21 @@ SHELL := $(shell command -v bash 2>/dev/null)
 
 .DEFAULT: runc
 
-runc: $(SOURCES) | $(RUNC_LINK)
+runc: $(SOURCES)
 	go build -i -ldflags "-X main.gitCommit=${COMMIT} -X main.version=${VERSION}" -tags "$(BUILDTAGS)" -o runc .
 
 all: runc recvtty
 
 recvtty: contrib/cmd/recvtty/recvtty
 
-contrib/cmd/recvtty/recvtty: $(SOURCES) | $(RUNC_LINK)
+contrib/cmd/recvtty/recvtty: $(SOURCES)
 	go build -i -ldflags "-X main.gitCommit=${COMMIT} -X main.version=${VERSION}" -tags "$(BUILDTAGS)" -o contrib/cmd/recvtty/recvtty ./contrib/cmd/recvtty
 
-static: $(SOURCES) | $(RUNC_LINK)
+static: $(SOURCES)
 	CGO_ENABLED=1 go build -i -tags "$(BUILDTAGS) cgo static_build" -ldflags "-w -extldflags -static -X main.gitCommit=${COMMIT} -X main.version=${VERSION}" -o runc .
 	CGO_ENABLED=1 go build -i -tags "$(BUILDTAGS) cgo static_build" -ldflags "-w -extldflags -static -X main.gitCommit=${COMMIT} -X main.version=${VERSION}" -o contrib/cmd/recvtty/recvtty ./contrib/cmd/recvtty
 
-release: $(RUNC_LINK) | $(RUNC_LINK)
+release:
 	@flag_list=(seccomp selinux apparmor static ambient); \
 	unset expression; \
 	for flag in "$${flag_list[@]}"; do \
@@ -64,19 +62,15 @@ release: $(RUNC_LINK) | $(RUNC_LINK)
 			CGO_ENABLED=1; \
 		}; \
 		echo "Building target: $$output"; \
-		rm -rf "${GOPATH}/pkg"; \
 		go build -i -ldflags "$$ldflags" -tags "$$tags" -o "$$output" .; \
 	done
-
-$(RUNC_LINK):
-	ln -sfn $(CURDIR) $(RUNC_LINK)
 
 dbuild: runcimage
 	docker run --rm -v $(CURDIR):/go/src/$(PROJECT) --privileged $(RUNC_IMAGE) make clean all
 
 lint:
-	go vet ./...
-	go fmt ./...
+	go vet $(allpackages)
+	go fmt $(allpackages)
 
 man:
 	man/md2man-all.sh
@@ -94,7 +88,7 @@ unittest: runcimage
 	docker run -e TESTFLAGS -t --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) make localunittest
 
 localunittest: all
-	go test -timeout 3m -tags "$(BUILDTAGS)" ${TESTFLAGS} -v ./...
+	go test -timeout 3m -tags "$(BUILDTAGS)" ${TESTFLAGS} -v $(allpackages)
 
 integration: runcimage
 	docker run -e TESTFLAGS -t --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) make localintegration
@@ -127,14 +121,16 @@ uninstall-man:
 clean:
 	rm -f runc
 	rm -f contrib/cmd/recvtty/recvtty
-	rm -f $(RUNC_LINK)
-	rm -rf $(GOPATH)/pkg
 	rm -rf $(RELEASE_DIR)
 	rm -rf $(MAN_DIR)
 
 validate:
 	script/validate-gofmt
 	script/validate-shfmt
-	go vet ./...
+	go vet $(allpackages)
 
 ci: validate localtest
+
+# memoize allpackages, so that it's executed only once and only if used
+_allpackages = $(shell go list ./... | grep -v vendor)
+allpackages = $(if $(__allpackages),,$(eval __allpackages := $$(_allpackages)))$(__allpackages)
