@@ -163,7 +163,7 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 	} else if !os.IsNotExist(err) {
 		return nil, newGenericError(err, SystemError)
 	}
-	if err := os.MkdirAll(containerRoot, 0711); err != nil {
+	if err := os.MkdirAll(containerRoot, 0700); err != nil {
 		return nil, newGenericError(err, SystemError)
 	}
 	if err := os.Chown(containerRoot, uid, gid); err != nil {
@@ -171,7 +171,7 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 	}
 	fifoName := filepath.Join(containerRoot, execFifoFilename)
 	oldMask := syscall.Umask(0000)
-	if err := syscall.Mkfifo(fifoName, 0622); err != nil {
+	if err := syscall.Mkfifo(fifoName, 0600); err != nil {
 		syscall.Umask(oldMask)
 		return nil, newGenericError(err, SystemError)
 	}
