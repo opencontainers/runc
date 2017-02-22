@@ -169,16 +169,6 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 	if err := os.Chown(containerRoot, uid, gid); err != nil {
 		return nil, newGenericError(err, SystemError)
 	}
-	fifoName := filepath.Join(containerRoot, execFifoFilename)
-	oldMask := syscall.Umask(0000)
-	if err := syscall.Mkfifo(fifoName, 0622); err != nil {
-		syscall.Umask(oldMask)
-		return nil, newGenericError(err, SystemError)
-	}
-	syscall.Umask(oldMask)
-	if err := os.Chown(fifoName, uid, gid); err != nil {
-		return nil, newGenericError(err, SystemError)
-	}
 	c := &linuxContainer{
 		id:            id,
 		root:          containerRoot,
