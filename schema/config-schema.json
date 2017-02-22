@@ -135,9 +135,43 @@
                 },
                 "capabilities": {
                     "id": "https://opencontainers.org/schema/bundle/process/linux/capabilities",
-                    "type": "array",
-                    "items": {
-                        "$ref": "defs-linux.json#/definitions/Capability"
+                    "type": "object",
+                    "properties": {
+                        "bounding": {
+                            "id": "https://opencontainers.org/schema/bundle/process/linux/capabilities/bounding",
+                            "type": "array",
+                            "items": {
+                                "$ref": "defs-linux.json#/definitions/Capability"
+                            }
+                        },
+                        "permitted": {
+                            "id": "https://opencontainers.org/schema/bundle/process/linux/capabilities/permitted",
+                            "type": "array",
+                            "items": {
+                                "$ref": "defs-linux.json#/definitions/Capability"
+                            }
+                        },
+                        "effective": {
+                            "id": "https://opencontainers.org/schema/bundle/process/linux/capabilities/effective",
+                            "type": "array",
+                            "items": {
+                                "$ref": "defs-linux.json#/definitions/Capability"
+                            }
+                        },
+                        "inheritable": {
+                            "id": "https://opencontainers.org/schema/bundle/process/linux/capabilities/inheritable",
+                            "type": "array",
+                            "items": {
+                                "$ref": "defs-linux.json#/definitions/Capability"
+                            }
+                        },
+                        "ambient": {
+                            "id": "https://opencontainers.org/schema/bundle/process/linux/capabilities/ambient",
+                            "type": "array",
+                            "items": {
+                                "$ref": "defs-linux.json#/definitions/Capability"
+                            }
+                        }
                     }
                 },
                 "apparmorProfile": {

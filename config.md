@@ -132,7 +132,13 @@ For Windows, see links for details about [mountvol](http://ss64.com/nt/mountvol.
 * **`env`** (array of strings, OPTIONAL) with the same semantics as [IEEE Std 1003.1-2001's `environ`][ieee-1003.1-2001-xbd-c8.1].
 * **`args`** (array of strings, REQUIRED) with similar semantics to [IEEE Std 1003.1-2001 `execvp`'s *argv*][ieee-1003.1-2001-xsh-exec].
   This specification extends the IEEE standard in that at least one entry is REQUIRED, and that entry is used with the same semantics as `execvp`'s *file*.
-* **`capabilities`** (array of strings, OPTIONAL) is an array that specifies the set of capabilities of the process(es) inside the container. Valid values are platform-specific. For example, valid values for Linux are defined in the [CAPABILITIES(7)](http://man7.org/linux/man-pages/man7/capabilities.7.html) man page.
+* **`capabilities`** (object, OPTIONAL) is an object containing arrays that specifies the sets of capabilities for the process(es) inside the container. Valid values are platform-specific. For example, valid values for Linux are defined in the [CAPABILITIES(7)](http://man7.org/linux/man-pages/man7/capabilities.7.html) man page.
+  capabilities contains the following properties:
+    * **`effective`** (array of strings, OPTIONAL) - the `effective` field is an array of effective capabilities that are kept for the process.
+    * **`bounding`** (array of strings, OPTIONAL) - the `bounding` field is an array of bounding capabilities that are kept for the process.
+    * **`inheritable`** (array of strings, OPTIONAL) - the `inheritable` field is an array of inheritable capabilities that are kept for the process.
+    * **`permitted`** (array of strings, OPTIONAL) - the `permitted` field is an array of permitted capabilities that are kept for the process.
+    * **`ambient`** (array of strings, OPTIONAL) - the `ambient` field is an array of ambient capabilities that are kept for the process.
 * **`rlimits`** (array of objects, OPTIONAL) allows setting resource limits for a process inside the container.
   Each entry has the following structure:
 
@@ -191,11 +197,30 @@ _Note: symbolic name for uid and gid, such as uname and gname respectively, are 
     "apparmorProfile": "acme_secure_profile",
     "selinuxLabel": "system_u:system_r:svirt_lxc_net_t:s0:c124,c675",
     "noNewPrivileges": true,
-    "capabilities": [
-        "CAP_AUDIT_WRITE",
-        "CAP_KILL",
-        "CAP_NET_BIND_SERVICE"
-    ],
+    "capabilities": {
+        "bounding": [
+            "CAP_AUDIT_WRITE",
+            "CAP_KILL",
+            "CAP_NET_BIND_SERVICE"
+        ],
+       "permitted": [
+            "CAP_AUDIT_WRITE",
+            "CAP_KILL",
+            "CAP_NET_BIND_SERVICE"
+        ],
+       "inheritable": [
+            "CAP_AUDIT_WRITE",
+            "CAP_KILL",
+            "CAP_NET_BIND_SERVICE"
+        ],
+        "effective": [
+            "CAP_AUDIT_WRITE",
+            "CAP_KILL",
+        ],
+        "ambient": [
+            "CAP_NET_BIND_SERVICE"
+        ]
+    },
     "rlimits": [
         {
             "type": "RLIMIT_NOFILE",
@@ -446,11 +471,30 @@ Here is a full example `config.json` for reference.
             "TERM=xterm"
         ],
         "cwd": "/",
-        "capabilities": [
-            "CAP_AUDIT_WRITE",
-            "CAP_KILL",
-            "CAP_NET_BIND_SERVICE"
-        ],
+        "capabilities": {
+            "bounding": [
+                "CAP_AUDIT_WRITE",
+                "CAP_KILL",
+                "CAP_NET_BIND_SERVICE"
+            ],
+            "permitted": [
+                "CAP_AUDIT_WRITE",
+                "CAP_KILL",
+                "CAP_NET_BIND_SERVICE"
+            ],
+            "inheritable": [
+                "CAP_AUDIT_WRITE",
+                "CAP_KILL",
+                "CAP_NET_BIND_SERVICE"
+            ],
+            "effective": [
+                "CAP_AUDIT_WRITE",
+                "CAP_KILL",
+            ],
+            "ambient": [
+                "CAP_NET_BIND_SERVICE"
+            ]
+        },
         "rlimits": [
             {
                 "type": "RLIMIT_CORE",
