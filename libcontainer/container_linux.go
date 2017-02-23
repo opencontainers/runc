@@ -191,17 +191,29 @@ func (c *linuxContainer) Start(process *Process) error {
 	if err != nil {
 		return err
 	}
-	return c.start(process, status == Stopped)
+	if status == Stopped {
+		if err := c.createExecFifo(); err != nil {
+			return err
+		}
+	}
+	if err := c.start(process, status == Stopped); err != nil {
+		if status == Stopped {
+			c.deleteExecFifo()
+		}
+		return err
+	}
+	return nil
 }
 
 func (c *linuxContainer) Run(process *Process) error {
 	c.m.Lock()
-	defer c.m.Unlock()
 	status, err := c.currentStatus()
 	if err != nil {
+		c.m.Unlock()
 		return err
 	}
-	if err := c.start(process, status == Stopped); err != nil {
+	c.m.Unlock()
+	if err := c.Start(process); err != nil {
 		return err
 	}
 	if status == Stopped {
@@ -289,6 +301,37 @@ func (c *linuxContainer) Signal(s os.Signal, all bool) error {
 		return newSystemErrorWithCause(err, "signaling init process")
 	}
 	return nil
+}
+
+func (c *linuxContainer) createExecFifo() error {
+	rootuid, err := c.Config().HostUID()
+	if err != nil {
+		return err
+	}
+	rootgid, err := c.Config().HostGID()
+	if err != nil {
+		return err
+	}
+
+	fifoName := filepath.Join(c.root, execFifoFilename)
+	if _, err := os.Stat(fifoName); err == nil {
+		return fmt.Errorf("exec fifo %s already exists", fifoName)
+	}
+	oldMask := syscall.Umask(0000)
+	if err := syscall.Mkfifo(fifoName, 0622); err != nil {
+		syscall.Umask(oldMask)
+		return err
+	}
+	syscall.Umask(oldMask)
+	if err := os.Chown(fifoName, rootuid, rootgid); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *linuxContainer) deleteExecFifo() {
+	fifoName := filepath.Join(c.root, execFifoFilename)
+	os.Remove(fifoName)
 }
 
 func (c *linuxContainer) newParentProcess(p *Process, doInit bool) (parentProcess, error) {
@@ -1216,14 +1259,9 @@ func (c *linuxContainer) runType() (Status, error) {
 	if !exist || err != nil {
 		return Stopped, err
 	}
-	// check if the process that is running is the init process or the user's process.
-	// this is the difference between the container Running and Created.
-	environ, err := ioutil.ReadFile(fmt.Sprintf("/proc/%d/environ", pid))
-	if err != nil {
-		return Stopped, newSystemErrorWithCausef(err, "reading /proc/%d/environ", pid)
-	}
-	check := []byte("_LIBCONTAINER")
-	if bytes.Contains(environ, check) {
+	// We'll create exec fifo and blocking on it after container is created,
+	// and delete it after start container.
+	if _, err := os.Stat(filepath.Join(c.root, execFifoFilename)); err == nil {
 		return Created, nil
 	}
 	return Running, nil
