@@ -192,6 +192,11 @@
                     "items": {
                         "id": "https://opencontainers.org/schema/bundle/linux/rlimits/0",
                         "type": "object",
+                        "required": [
+                            "type",
+                            "soft",
+                            "hard"
+                        ],
                         "properties": {
                             "hard": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/rlimits/0/hard",
