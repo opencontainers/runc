@@ -294,7 +294,7 @@ For Windows based systems the user structure has the following fields:
 
 ## Platform
 
-**`platform`** specifies the configuration's target platform.
+**`platform`** (object, REQUIRED) specifies the configuration's target platform.
 
 * **`os`** (string, REQUIRED) specifies the operating system family of the container configuration's specified [`root`](#root-configuration) file system bundle.
   The runtime MUST generate an error if it does not support the specified **`os`**.
