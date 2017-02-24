@@ -5,10 +5,12 @@ load helpers
 function setup() {
   teardown_busybox
   setup_busybox
+  setup_fifos
 }
 
 function teardown() {
   teardown_busybox
+  teardown_fifos
 }
 
 @test "runc exec" {
@@ -122,4 +124,49 @@ function teardown() {
   [ "$status" -eq 0 ]
 
   [[ ${output} == "uid=1000 gid=1000" ]]
+}
+
+@test "runc exec --stdin" {
+  # run busybox detached
+  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+  [ "$status" -eq 0 ]
+
+  wait_for_container 15 1 test_busybox
+
+  echo thisisstdin > ./stdinfifo &
+
+  runc exec --stdin=./stdinfifo test_busybox sh -c "cat <&0"
+
+  [ "$status" -eq 0 ]
+  [[ "${output}" == "thisisstdin" ]]
+}
+
+@test "runc exec --stdout" {
+  # run busybox detached
+  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+  [ "$status" -eq 0 ]
+
+  wait_for_container 15 1 test_busybox
+
+  cat ./stdoutfifo > stdoutoutput &
+
+  runc exec --stdout=./stdoutfifo test_busybox echo thisisstdout
+
+  [ "$status" -eq 0 ]
+  [[ "$(cat stdoutoutput)" == "thisisstdout" ]]
+}
+
+@test "runc exec --stderr" {
+  # run busybox detached
+  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+  [ "$status" -eq 0 ]
+
+  wait_for_container 15 1 test_busybox
+
+  cat ./stderrfifo > stderroutput &
+
+  runc exec --stderr=./stderrfifo test_busybox sh -c "1>&2 echo thisisstderr"
+
+  [ "$status" -eq 0 ]
+  [[ "$(cat stderroutput)" == "thisisstderr" ]]
 }

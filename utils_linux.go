@@ -180,6 +180,9 @@ type runner struct {
 	shouldDestroy   bool
 	detach          bool
 	listenFDs       []*os.File
+	stdin           string
+	stdout          string
+	stderr          string
 	pidFile         string
 	consoleSocket   string
 	container       libcontainer.Container
@@ -188,6 +191,12 @@ type runner struct {
 
 func (r *runner) terminalinfo() *libcontainer.TerminalInfo {
 	return libcontainer.NewTerminalInfo(r.container.ID())
+}
+
+func passExtraFD(name string, file *os.File, process *libcontainer.Process) {
+	fd := len(process.ExtraFiles) + 3
+	process.Env = append(process.Env, fmt.Sprintf("%s=%d", name, fd))
+	process.ExtraFiles = append(process.ExtraFiles, file)
 }
 
 func (r *runner) run(config *specs.Process) (int, error) {
@@ -199,6 +208,33 @@ func (r *runner) run(config *specs.Process) (int, error) {
 	if len(r.listenFDs) > 0 {
 		process.Env = append(process.Env, fmt.Sprintf("LISTEN_FDS=%d", len(r.listenFDs)), "LISTEN_PID=1")
 		process.ExtraFiles = append(process.ExtraFiles, r.listenFDs...)
+	}
+	if len(r.stdin) > 0 {
+		stdinFile, err := os.OpenFile(r.stdin, os.O_RDONLY, 0600)
+		defer stdinFile.Close()
+		if err != nil {
+			r.destroy()
+			return -1, err
+		}
+		passExtraFD("STDIN_FD", stdinFile, process)
+	}
+	if len(r.stdout) > 0 {
+		stdoutFile, err := os.OpenFile(r.stdout, os.O_WRONLY|os.O_APPEND, 0600)
+		defer stdoutFile.Close()
+		if err != nil {
+			r.destroy()
+			return -1, err
+		}
+		passExtraFD("STDOUT_FD", stdoutFile, process)
+	}
+	if len(r.stderr) > 0 {
+		stderrFile, err := os.OpenFile(r.stderr, os.O_WRONLY|os.O_APPEND, 0600)
+		defer stderrFile.Close()
+		if err != nil {
+			r.destroy()
+			return -1, err
+		}
+		passExtraFD("STDERR_FD", stderrFile, process)
 	}
 
 	rootuid, err := r.container.Config().HostUID()
