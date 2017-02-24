@@ -180,6 +180,7 @@ type runner struct {
 	shouldDestroy   bool
 	detach          bool
 	listenFDs       []*os.File
+	preserveFDs     int
 	pidFile         string
 	consoleSocket   string
 	container       libcontainer.Container
@@ -196,9 +197,15 @@ func (r *runner) run(config *specs.Process) (int, error) {
 		r.destroy()
 		return -1, err
 	}
+
 	if len(r.listenFDs) > 0 {
 		process.Env = append(process.Env, fmt.Sprintf("LISTEN_FDS=%d", len(r.listenFDs)), "LISTEN_PID=1")
 		process.ExtraFiles = append(process.ExtraFiles, r.listenFDs...)
+	}
+
+	baseFd := 3 + len(process.ExtraFiles)
+	for i := baseFd; i < baseFd+r.preserveFDs; i++ {
+		process.ExtraFiles = append(process.ExtraFiles, os.NewFile(uintptr(i), "PreserveFD:"+strconv.Itoa(i)))
 	}
 
 	rootuid, err := r.container.Config().HostUID()
@@ -353,6 +360,7 @@ func startContainer(context *cli.Context, spec *specs.Spec, create bool) (int, e
 		consoleSocket:   context.String("console-socket"),
 		detach:          context.Bool("detach"),
 		pidFile:         context.String("pid-file"),
+		preserveFDs:     context.Int("preserve-fds"),
 		create:          create,
 	}
 	return r.run(&spec.Process)

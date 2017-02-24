@@ -57,6 +57,10 @@ command(s) that get executed on start, edit the args parameter of the spec. See
 			Name:  "no-new-keyring",
 			Usage: "do not create a new session keyring for the container.  This will cause the container to inherit the calling processes session key",
 		},
+		cli.IntFlag{
+			Name:  "preserve-fds",
+			Usage: "Pass N additional file descriptors to the container (stdio + $LISTEN_FDS + N in total)",
+		},
 	},
 	Action: func(context *cli.Context) error {
 		if err := checkArgs(context, 1, exactArgs); err != nil {
