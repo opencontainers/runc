@@ -141,7 +141,7 @@ func finalizeNamespace(config *initConfig) error {
 		return err
 	}
 	// drop all other capabilities
-	if err := w.drop(); err != nil {
+	if err := w.drop(config.NoNewPrivileges); err != nil {
 		return err
 	}
 	if config.Cwd != "" {
