@@ -56,4 +56,37 @@ function teardown() {
   runc state test_busybox
   [ "$status" -eq 0 ]
   [[ "${output}" == *"running"* ]]
+
+  #test checkpoint pre-dump
+  mkdir parent-dir
+  runc --criu "$CRIU" checkpoint --pre-dump --image-path ./parent-dir test_busybox
+  [ "$status" -eq 0 ]
+
+  # busybox should still be running
+  runc state test_busybox
+  [ "$status" -eq 0 ]
+  [[ "${output}" == *"running"* ]]
+
+  # checkpoint the running container
+  mkdir image-dir
+  runc --criu "$CRIU" checkpoint --parent-path ./parent-dir --image-path ./image-dir test_busybox
+  [ "$status" -eq 0 ]
+
+  # after checkpoint busybox is no longer running
+  runc state test_busybox
+  [ "$status" -ne 0 ]
+
+  # restore from checkpoint
+  (
+    runc --criu "$CRIU" restore --image-path ./image-dir test_busybox
+    [ "$status" -eq 0 ]
+  ) &
+
+  # check state
+  wait_for_container 15 1 test_busybox
+
+  # busybox should be back up and running
+  runc state test_busybox
+  [ "$status" -eq 0 ]
+  [[ "${output}" == *"running"* ]]
 }
