@@ -95,13 +95,6 @@ func newProcess(p specs.Process) (*libcontainer.Process, error) {
 	return lp, nil
 }
 
-// If systemd is supporting sd_notify protocol, this function will add support
-// for sd_notify protocol from within the container.
-func setupSdNotify(spec *specs.Spec, notifySocket string) {
-	spec.Mounts = append(spec.Mounts, specs.Mount{Destination: notifySocket, Type: "bind", Source: notifySocket, Options: []string{"bind"}})
-	spec.Process.Env = append(spec.Process.Env, fmt.Sprintf("NOTIFY_SOCKET=%s", notifySocket))
-}
-
 func destroy(container libcontainer.Container) {
 	if err := container.Destroy(); err != nil {
 		logrus.Error(err)
@@ -185,6 +178,7 @@ type runner struct {
 	consoleSocket   string
 	container       libcontainer.Container
 	create          bool
+	notifySocket    *notifySocket
 }
 
 func (r *runner) terminalinfo() *libcontainer.TerminalInfo {
@@ -240,7 +234,7 @@ func (r *runner) run(config *specs.Process) (int, error) {
 	// Setting up IO is a two stage process. We need to modify process to deal
 	// with detaching containers, and then we get a tty after the container has
 	// started.
-	handler := newSignalHandler(r.enableSubreaper)
+	handler := newSignalHandler(r.enableSubreaper, r.notifySocket)
 	tty, err := setupIO(process, rootuid, rootgid, config.Terminal, detach)
 	if err != nil {
 		r.destroy()
@@ -303,12 +297,12 @@ func (r *runner) run(config *specs.Process) (int, error) {
 			return -1, err
 		}
 	}
-	if detach {
-		return 0, nil
-	}
-	status, err := handler.forward(process, tty)
+	status, err := handler.forward(process, tty, detach)
 	if err != nil {
 		r.terminate(process)
+	}
+	if detach {
+		return 0, nil
 	}
 	r.destroy()
 	return status, err
@@ -343,10 +337,21 @@ func startContainer(context *cli.Context, spec *specs.Spec, create bool) (int, e
 	if id == "" {
 		return -1, errEmptyID
 	}
+
+	notifySocket := newNotifySocket(context, os.Getenv("NOTIFY_SOCKET"), id)
+	if notifySocket != nil {
+		notifySocket.setupSpec(context, spec)
+	}
+
 	container, err := createContainer(context, id, spec)
 	if err != nil {
 		return -1, err
 	}
+
+	if notifySocket != nil {
+		notifySocket.setupSocket()
+	}
+
 	// Support on-demand socket activation by passing file descriptors into the container init process.
 	listenFDs := []*os.File{}
 	if os.Getenv("LISTEN_FDS") != "" {
@@ -357,6 +362,7 @@ func startContainer(context *cli.Context, spec *specs.Spec, create bool) (int, e
 		shouldDestroy:   true,
 		container:       container,
 		listenFDs:       listenFDs,
+		notifySocket:    notifySocket,
 		consoleSocket:   context.String("console-socket"),
 		detach:          context.Bool("detach"),
 		pidFile:         context.String("pid-file"),
