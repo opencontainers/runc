@@ -61,6 +61,20 @@ type Command struct {
 	commandNamePath []string
 }
 
+type CommandsByName []Command
+
+func (c CommandsByName) Len() int {
+	return len(c)
+}
+
+func (c CommandsByName) Less(i, j int) bool {
+	return c[i].Name < c[j].Name
+}
+
+func (c CommandsByName) Swap(i, j int) {
+	c[i], c[j] = c[j], c[i]
+}
+
 // FullName returns the full name of the command.
 // For subcommands this ensures that parent commands are part of the command path
 func (c Command) FullName() string {
@@ -87,11 +101,10 @@ func (c Command) Run(ctx *Context) (err error) {
 		)
 	}
 
-	if ctx.App.EnableBashCompletion {
-		c.Flags = append(c.Flags, BashCompletionFlag)
+	set, err := flagSet(c.Name, c.Flags)
+	if err != nil {
+		return err
 	}
-
-	set := flagSet(c.Name, c.Flags)
 	set.SetOutput(ioutil.Discard)
 
 	if c.SkipFlagParsing {
@@ -132,18 +145,6 @@ func (c Command) Run(ctx *Context) (err error) {
 		err = set.Parse(ctx.Args().Tail())
 	}
 
-	if err != nil {
-		if c.OnUsageError != nil {
-			err := c.OnUsageError(ctx, err, false)
-			HandleExitCoder(err)
-			return err
-		}
-		fmt.Fprintln(ctx.App.Writer, "Incorrect Usage.")
-		fmt.Fprintln(ctx.App.Writer)
-		ShowCommandHelp(ctx, c.Name)
-		return err
-	}
-
 	nerr := normalizeFlags(c.Flags, set)
 	if nerr != nil {
 		fmt.Fprintln(ctx.App.Writer, nerr)
@@ -153,9 +154,20 @@ func (c Command) Run(ctx *Context) (err error) {
 	}
 
 	context := NewContext(ctx.App, set, ctx)
-
 	if checkCommandCompletions(context, c.Name) {
 		return nil
+	}
+
+	if err != nil {
+		if c.OnUsageError != nil {
+			err := c.OnUsageError(ctx, err, false)
+			HandleExitCoder(err)
+			return err
+		}
+		fmt.Fprintln(ctx.App.Writer, "Incorrect Usage:", err.Error())
+		fmt.Fprintln(ctx.App.Writer)
+		ShowCommandHelp(ctx, c.Name)
+		return err
 	}
 
 	if checkCommandHelp(context, c.Name) {
@@ -185,6 +197,10 @@ func (c Command) Run(ctx *Context) (err error) {
 			HandleExitCoder(err)
 			return err
 		}
+	}
+
+	if c.Action == nil {
+		c.Action = helpSubcommand.Action
 	}
 
 	context.Command = c
@@ -228,11 +244,9 @@ func (c Command) startApp(ctx *Context) error {
 		app.HelpName = app.Name
 	}
 
-	if c.Description != "" {
-		app.Usage = c.Description
-	} else {
-		app.Usage = c.Usage
-	}
+	app.Usage = c.Usage
+	app.Description = c.Description
+	app.ArgsUsage = c.ArgsUsage
 
 	// set CommandNotFound
 	app.CommandNotFound = ctx.App.CommandNotFound
@@ -248,6 +262,7 @@ func (c Command) startApp(ctx *Context) error {
 	app.Author = ctx.App.Author
 	app.Email = ctx.App.Email
 	app.Writer = ctx.App.Writer
+	app.ErrWriter = ctx.App.ErrWriter
 
 	app.categories = CommandCategories{}
 	for _, command := range c.Subcommands {

@@ -30,6 +30,7 @@ applications in an expressive way.
   * [Flags](#flags)
     + [Placeholder Values](#placeholder-values)
     + [Alternate Names](#alternate-names)
+    + [Ordering](#ordering)
     + [Values from the Environment](#values-from-the-environment)
     + [Values from alternate input sources (YAML, TOML, and others)](#values-from-alternate-input-sources-yaml-toml-and-others)
   * [Subcommands](#subcommands)
@@ -449,6 +450,76 @@ func main() {
 That flag can then be set with `--lang spanish` or `-l spanish`. Note that
 giving two different forms of the same flag in the same command invocation is an
 error.
+
+#### Ordering
+
+Flags for the application and commands are shown in the order they are defined.
+However, it's possible to sort them from outside this library by using `FlagsByName`
+or `CommandsByName` with `sort`.
+
+For example this:
+
+<!-- {
+  "args": ["&#45;&#45;help"],
+  "output": "add a task to the list\n.*complete a task on the list\n.*\n\n.*\n.*Load configuration from FILE\n.*Language for the greeting.*"
+} -->
+``` go
+package main
+
+import (
+  "os"
+  "sort"
+
+  "github.com/urfave/cli"
+)
+
+func main() {
+  app := cli.NewApp()
+
+  app.Flags = []cli.Flag {
+    cli.StringFlag{
+      Name: "lang, l",
+      Value: "english",
+      Usage: "Language for the greeting",
+    },
+    cli.StringFlag{
+      Name: "config, c",
+      Usage: "Load configuration from `FILE`",
+    },
+  }
+
+  app.Commands = []cli.Command{
+    {
+      Name:    "complete",
+      Aliases: []string{"c"},
+      Usage:   "complete a task on the list",
+      Action:  func(c *cli.Context) error {
+        return nil
+      },
+    },
+    {
+      Name:    "add",
+      Aliases: []string{"a"},
+      Usage:   "add a task to the list",
+      Action:  func(c *cli.Context) error {
+        return nil
+      },
+    },
+  }
+
+  sort.Sort(cli.FlagsByName(app.Flags))
+  sort.Sort(cli.CommandsByName(app.Commands))
+
+  app.Run(os.Args)
+}
+```
+
+Will result in help output like:
+
+```
+--config FILE, -c FILE  Load configuration from FILE
+--lang value, -l value  Language for the greeting (default: "english")
+```
 
 #### Values from the Environment
 
@@ -889,16 +960,13 @@ SUPPORT: support@awesometown.example.com
   cli.AppHelpTemplate = `NAME:
    {{.Name}} - {{.Usage}}
 USAGE:
-   {{.HelpName}} {{if .VisibleFlags}}[global options]{{end}}{{if .Commands}} command
-[command options]{{end}} {{if
-.ArgsUsage}}{{.ArgsUsage}}{{else}}[arguments...]{{end}}
+   {{.HelpName}} {{if .VisibleFlags}}[global options]{{end}}{{if .Commands}} command [command options]{{end}} {{if .ArgsUsage}}{{.ArgsUsage}}{{else}}[arguments...]{{end}}
    {{if len .Authors}}
-AUTHOR(S):
+AUTHOR:
    {{range .Authors}}{{ . }}{{end}}
    {{end}}{{if .Commands}}
 COMMANDS:
-{{range .Commands}}{{if not .HideHelp}}   {{join .Names ", "}}{{ "\t"
-}}{{.Usage}}{{ "\n" }}{{end}}{{end}}{{end}}{{if .VisibleFlags}}
+{{range .Commands}}{{if not .HideHelp}}   {{join .Names ", "}}{{ "\t"}}{{.Usage}}{{ "\n" }}{{end}}{{end}}{{end}}{{if .VisibleFlags}}
 GLOBAL OPTIONS:
    {{range .VisibleFlags}}{{.}}
    {{end}}{{end}}{{if .Copyright }}
