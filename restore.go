@@ -195,10 +195,12 @@ func criuOptions(context *cli.Context) *libcontainer.CriuOpts {
 	return &libcontainer.CriuOpts{
 		ImagesDirectory:         imagePath,
 		WorkDirectory:           context.String("work-path"),
+		ParentImage:             context.String("parent-path"),
 		LeaveRunning:            context.Bool("leave-running"),
 		TcpEstablished:          context.Bool("tcp-established"),
 		ExternalUnixConnections: context.Bool("ext-unix-sk"),
 		ShellJob:                context.Bool("shell-job"),
 		FileLocks:               context.Bool("file-locks"),
+		PreDump:                 context.Bool("pre-dump"),
 	}
 }
