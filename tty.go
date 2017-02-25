@@ -7,7 +7,6 @@ import (
 	"io"
 	"os"
 	"sync"
-	"syscall"
 
 	"github.com/docker/docker/pkg/term"
 	"github.com/opencontainers/runc/libcontainer"
@@ -62,19 +61,18 @@ func createStdioPipes(p *libcontainer.Process, rootuid, rootgid int) (*tty, erro
 	return t, nil
 }
 
-func dupStdio(process *libcontainer.Process, rootuid, rootgid int) error {
-	process.Stdin = os.Stdin
-	process.Stdout = os.Stdout
-	process.Stderr = os.Stderr
-	for _, fd := range []uintptr{
-		os.Stdin.Fd(),
-		os.Stdout.Fd(),
-		os.Stderr.Fd(),
-	} {
-		if err := syscall.Fchown(int(fd), rootuid, rootgid); err != nil {
-			return err
-		}
+// nullStdio dups /dev/null over the container's stdio. This is actually only
+// temporary, because it's effectively just flagging libcontainer that it needs
+// to re-open /dev/null inside the container (see reOpenDevNull).
+func nullStdio(process *libcontainer.Process) error {
+	file, err := os.OpenFile("/dev/null", os.O_RDWR, 0)
+	if err != nil {
+		return fmt.Errorf("failed to open /dev/null: %s", err)
 	}
+
+	process.Stdin = file
+	process.Stdout = file
+	process.Stderr = file
 	return nil
 }
 
