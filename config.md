@@ -762,12 +762,17 @@ Here is a full example `config.json` for reference.
         "seccomp": {
             "defaultAction": "SCMP_ACT_ALLOW",
             "architectures": [
-                "SCMP_ARCH_X86"
+                "SCMP_ARCH_X86",
+                "SCMP_ARCH_X32"
             ],
             "syscalls": [
                 {
-                    "name": "getcwd",
-                    "action": "SCMP_ACT_ERRNO"
+                    "names": [
+                        "getcwd",
+                        "chmod"
+                    ],
+                    "action": "SCMP_ACT_ERRNO",
+                    "comment": "stop exploit x"
                 }
             ]
         },

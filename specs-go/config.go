@@ -380,13 +380,6 @@ type LinuxDeviceCgroup struct {
 	Access string `json:"access,omitempty"`
 }
 
-// LinuxSeccomp represents syscall restrictions
-type LinuxSeccomp struct {
-	DefaultAction LinuxSeccompAction `json:"defaultAction"`
-	Architectures []Arch             `json:"architectures"`
-	Syscalls      []LinuxSyscall     `json:"syscalls,omitempty"`
-}
-
 // Solaris contains platform specific configuration for Solaris application containers.
 type Solaris struct {
 	// SMF FMRI which should go "online" before we start the container process.
@@ -484,6 +477,13 @@ type WindowsNetworkResources struct {
 	EgressBandwidth *uint64 `json:"egressBandwidth,omitempty"`
 }
 
+// LinuxSeccomp represents syscall restrictions
+type LinuxSeccomp struct {
+	DefaultAction LinuxSeccompAction `json:"defaultAction"`
+	Architectures []Arch             `json:"architectures,omitempty"`
+	Syscalls      []LinuxSyscall     `json:"syscalls"`
+}
+
 // Arch used for additional architectures
 type Arch string
 
@@ -544,7 +544,8 @@ type LinuxSeccompArg struct {
 
 // LinuxSyscall is used to match a syscall in Seccomp
 type LinuxSyscall struct {
-	Name   string             `json:"name"`
-	Action LinuxSeccompAction `json:"action"`
-	Args   []LinuxSeccompArg  `json:"args,omitempty"`
+	Names   []string           `json:"names"`
+	Action  LinuxSeccompAction `json:"action"`
+	Args    []LinuxSeccompArg  `json:"args"`
+	Comment string             `json:"comment"`
 }

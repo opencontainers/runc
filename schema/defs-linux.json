@@ -63,8 +63,10 @@
         "Syscall": {
             "type": "object",
             "properties": {
-                "name": {
-                    "type": "string"
+                "names": {
+                    "type": [
+                        "string"
+                    ]
                 },
                 "action": {
                     "$ref": "#/definitions/SeccompAction"
