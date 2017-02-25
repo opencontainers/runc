@@ -32,6 +32,7 @@ type restoredProcess struct {
 	proc             *os.Process
 	processStartTime string
 	fds              []string
+	process          *Process
 }
 
 func (p *restoredProcess) start() error {
@@ -64,6 +65,10 @@ func (p *restoredProcess) startTime() (string, error) {
 	return p.processStartTime, nil
 }
 
+func (p *restoredProcess) processInfo() *Process {
+	return p.process
+}
+
 func (p *restoredProcess) signal(s os.Signal) error {
 	return p.proc.Signal(s)
 }
@@ -83,6 +88,7 @@ type nonChildProcess struct {
 	processPid       int
 	processStartTime string
 	fds              []string
+	process          *Process
 }
 
 func (p *nonChildProcess) start() error {
@@ -103,6 +109,10 @@ func (p *nonChildProcess) wait() (*os.ProcessState, error) {
 
 func (p *nonChildProcess) startTime() (string, error) {
 	return p.processStartTime, nil
+}
+
+func (p *nonChildProcess) processInfo() *Process {
+	return p.process
 }
 
 func (p *nonChildProcess) signal(s os.Signal) error {

@@ -194,6 +194,7 @@ func (l *LinuxFactory) Load(id string) (Container, error) {
 		processPid:       state.InitProcessPid,
 		processStartTime: state.InitProcessStartTime,
 		fds:              state.ExternalDescriptors,
+		process:          &state.BaseState.Process,
 	}
 	c := &linuxContainer{
 		initProcess:          r,

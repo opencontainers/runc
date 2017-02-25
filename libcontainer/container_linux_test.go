@@ -67,6 +67,10 @@ func (m *mockProcess) startTime() (string, error) {
 	return m.started, nil
 }
 
+func (m *mockProcess) processInfo() *Process {
+	return nil
+}
+
 func (m *mockProcess) start() error {
 	return nil
 }

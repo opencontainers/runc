@@ -48,6 +48,7 @@ instance of a container.`,
 			Bundle:         bundle,
 			Rootfs:         state.BaseState.Config.Rootfs,
 			Created:        state.BaseState.Created,
+			Command:        state.BaseState.Process.Args,
 			Annotations:    annotations,
 		}
 		data, err := json.MarshalIndent(cs, "", "  ")

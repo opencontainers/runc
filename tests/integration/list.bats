@@ -33,7 +33,7 @@ function teardown() {
 
   ROOT=$HELLO_BUNDLE runc list
   [ "$status" -eq 0 ]
-  [[ ${lines[0]} =~ ID\ +PID\ +STATUS\ +BUNDLE\ +CREATED+ ]]
+  [[ ${lines[0]} =~ ID\ +PID\ +COMMAND\ +STATUS\ +BUNDLE\ +CREATED+ ]]
   [[ "${lines[1]}" == *"test_box1"*[0-9]*"running"*$BUSYBOX_BUNDLE*[0-9]* ]]
   [[ "${lines[2]}" == *"test_box2"*[0-9]*"running"*$BUSYBOX_BUNDLE*[0-9]* ]]
   [[ "${lines[3]}" == *"test_box3"*[0-9]*"running"*$BUSYBOX_BUNDLE*[0-9]* ]]
@@ -46,7 +46,7 @@ function teardown() {
 
   ROOT=$HELLO_BUNDLE runc list --format table
   [ "$status" -eq 0 ]
-  [[ ${lines[0]} =~ ID\ +PID\ +STATUS\ +BUNDLE\ +CREATED+ ]]
+  [[ ${lines[0]} =~ ID\ +PID\ +COMMAND\ +STATUS\ +BUNDLE\ +CREATED+ ]]
   [[ "${lines[1]}" == *"test_box1"*[0-9]*"running"*$BUSYBOX_BUNDLE*[0-9]* ]]
   [[ "${lines[2]}" == *"test_box2"*[0-9]*"running"*$BUSYBOX_BUNDLE*[0-9]* ]]
   [[ "${lines[3]}" == *"test_box3"*[0-9]*"running"*$BUSYBOX_BUNDLE*[0-9]* ]]
