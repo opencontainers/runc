@@ -169,7 +169,7 @@ container on your host.`,
 					Devices: []specs.LinuxDeviceCgroup{
 						{
 							Allow:  false,
-							Access: sPtr("rwm"),
+							Access: "rwm",
 						},
 					},
 				},
@@ -222,8 +222,6 @@ container on your host.`,
 		return nil
 	},
 }
-
-func sPtr(s string) *string { return &s }
 
 // loadSpec loads the specification from the provided path.
 func loadSpec(cPath string) (spec *specs.Spec, err error) {

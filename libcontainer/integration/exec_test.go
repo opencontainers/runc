@@ -1078,11 +1078,11 @@ func TestHook(t *testing.T) {
 	config.Hooks = &configs.Hooks{
 		Prestart: []configs.Hook{
 			configs.NewFunctionHook(func(s configs.HookState) error {
-				if s.BundlePath != expectedBundlePath {
-					t.Fatalf("Expected prestart hook bundlePath '%s'; got '%s'", expectedBundlePath, s.BundlePath)
+				if s.Bundle != expectedBundlePath {
+					t.Fatalf("Expected prestart hook bundlePath '%s'; got '%s'", expectedBundlePath, s.Bundle)
 				}
 
-				root, err := getRootfsFromBundle(s.BundlePath)
+				root, err := getRootfsFromBundle(s.Bundle)
 				if err != nil {
 					return err
 				}
@@ -1095,11 +1095,11 @@ func TestHook(t *testing.T) {
 		},
 		Poststart: []configs.Hook{
 			configs.NewFunctionHook(func(s configs.HookState) error {
-				if s.BundlePath != expectedBundlePath {
-					t.Fatalf("Expected poststart hook bundlePath '%s'; got '%s'", expectedBundlePath, s.BundlePath)
+				if s.Bundle != expectedBundlePath {
+					t.Fatalf("Expected poststart hook bundlePath '%s'; got '%s'", expectedBundlePath, s.Bundle)
 				}
 
-				root, err := getRootfsFromBundle(s.BundlePath)
+				root, err := getRootfsFromBundle(s.Bundle)
 				if err != nil {
 					return err
 				}
@@ -1108,11 +1108,11 @@ func TestHook(t *testing.T) {
 		},
 		Poststop: []configs.Hook{
 			configs.NewFunctionHook(func(s configs.HookState) error {
-				if s.BundlePath != expectedBundlePath {
-					t.Fatalf("Expected poststop hook bundlePath '%s'; got '%s'", expectedBundlePath, s.BundlePath)
+				if s.Bundle != expectedBundlePath {
+					t.Fatalf("Expected poststop hook bundlePath '%s'; got '%s'", expectedBundlePath, s.Bundle)
 				}
 
-				root, err := getRootfsFromBundle(s.BundlePath)
+				root, err := getRootfsFromBundle(s.Bundle)
 				if err != nil {
 					return err
 				}
