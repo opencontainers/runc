@@ -77,6 +77,12 @@ You can run a specific test case by setting the `TESTFLAGS` variable.
 # make test TESTFLAGS="-run=SomeTestFunction"
 ```
 
+### Dependencies Management
+
+`runc` uses [vndr](https://github.com/LK4D4/vndr) for dependencies management.
+Please refer to [vndr](https://github.com/LK4D4/vndr) for how to add or update
+new dependencies.
+
 ## Using runc
 
 ### Creating an OCI Bundle
