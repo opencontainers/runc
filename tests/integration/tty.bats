@@ -11,6 +11,60 @@ function teardown() {
 	teardown_busybox
 }
 
+@test "runc create [terminal=false]" {
+	# Replace sh script with sleep -- because sh will exit if stdio is /dev/null.
+	sed -i 's|"sh"|"sleep", "9999999"|' config.json
+	sed -i 's|"terminal": true|"terminal": false|' config.json
+
+	runc create test_busybox
+	[ "$status" -eq 0 ]
+
+	# check state
+	wait_for_container 15 1 test_busybox
+
+	# make sure we're created
+	testcontainer test_busybox created
+
+	runc exec test_busybox true
+	[ "$status" -eq 0 ]
+
+	runc start test_busybox
+	[ "$status" -eq 0 ]
+
+	# check state
+	wait_for_container 15 1 test_busybox
+
+	# make sure we're running
+	testcontainer test_busybox running
+
+	runc exec test_busybox sh -c 'for file in /proc/1/fd/[012]; do readlink $file; done'
+	[ "$status" -eq 0 ]
+	[[ "${lines[0]}" == "/dev/null" ]]
+	[[ "${lines[1]}" == "/dev/null" ]]
+	[[ "${lines[2]}" == "/dev/null" ]]
+}
+
+@test "runc run -d [terminal=false]" {
+	# Replace sh script with sleep -- because sh will exit if stdio is /dev/null.
+	sed -i 's|"sh"|"sleep", "9999999"|' config.json
+	sed -i 's|"terminal": true|"terminal": false|' config.json
+
+	runc run -d test_busybox
+	[ "$status" -eq 0 ]
+
+	# check state
+	wait_for_container 15 1 test_busybox
+
+	# make sure we're running
+	testcontainer test_busybox running
+
+	runc exec test_busybox sh -c 'for file in /proc/1/fd/[012]; do readlink $file; done'
+	[ "$status" -eq 0 ]
+	[[ "${lines[0]}" == "/dev/null" ]]
+	[[ "${lines[1]}" == "/dev/null" ]]
+	[[ "${lines[2]}" == "/dev/null" ]]
+}
+
 @test "runc run [tty ptsname]" {
 	# Replace sh script with readlink.
     sed -i 's|"sh"|"sh", "-c", "for file in /proc/self/fd/[012]; do readlink $file; done"|' config.json
