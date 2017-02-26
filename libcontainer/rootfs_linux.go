@@ -525,35 +525,27 @@ func mknodDevice(dest string, node *configs.Device) error {
 	return syscall.Chown(dest, int(node.Uid), int(node.Gid))
 }
 
-func getMountInfo(mountinfo []*mount.Info, dir string) *mount.Info {
-	for _, m := range mountinfo {
+// Get the latest mountinfo of the mount point dir
+func getMountInfo(mountinfos []*mount.Info, dir string) (mountinfo *mount.Info) {
+	for _, m := range mountinfos {
 		if m.Mountpoint == dir {
-			return m
+			mountinfo = m
 		}
 	}
-	return nil
+	return mountinfo
 }
 
 // Get the parent mount point of directory passed in as argument. Also return
 // optional fields.
 func getParentMount(rootfs string) (string, string, error) {
-	var path string
-
 	mountinfos, err := mount.GetMounts()
 	if err != nil {
 		return "", "", err
 	}
 
-	mountinfo := getMountInfo(mountinfos, rootfs)
-	if mountinfo != nil {
-		return rootfs, mountinfo.Optional, nil
-	}
-
-	path = rootfs
+	path := rootfs
 	for {
-		path = filepath.Dir(path)
-
-		mountinfo = getMountInfo(mountinfos, path)
+		mountinfo := getMountInfo(mountinfos, path)
 		if mountinfo != nil {
 			return path, mountinfo.Optional, nil
 		}
@@ -561,6 +553,7 @@ func getParentMount(rootfs string) (string, string, error) {
 		if path == "/" {
 			break
 		}
+		path = filepath.Dir(path)
 	}
 
 	// If we are here, we did not find parent mount. Something is wrong.
