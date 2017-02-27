@@ -230,7 +230,6 @@
         "ociVersion",
         "platform",
         "process",
-        "root",
-        "mounts"
+        "root"
     ]
 }
