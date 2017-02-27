@@ -57,11 +57,11 @@ For Windows, see links for details about [mountvol](http://ss64.com/nt/mountvol.
   This value MUST be an absolute path.
   * Windows: one mount destination MUST NOT be nested within another mount (e.g., c:\\foo and c:\\foo\\bar).
   * Solaris: corresponds to "dir" of the fs resource in zonecfg(8).
-* **`type`** (string, REQUIRED) The filesystem type of the filesystem to be mounted.
+* **`type`** (string, OPTIONAL) The filesystem type of the filesystem to be mounted.
   * Linux: valid *filesystemtype* supported by the kernel as listed in */proc/filesystems* (e.g., "minix", "ext2", "ext3", "jfs", "xfs", "reiserfs", "msdos", "proc", "nfs", "iso9660").
   * Windows: the type of file system on the volume, e.g. "ntfs".
   * Solaris: corresponds to "type" of the fs resource in zonecfg(8).
-* **`source`** (string, REQUIRED) A device name, but can also be a directory name or a dummy.
+* **`source`** (string, OPTIONAL) A device name, but can also be a directory name or a dummy.
   * Windows: the volume name that is the target of the mount point, \\?\Volume\{GUID}\ (on Windows source is called target).
   * Solaris: corresponds to "special" of the fs resource in zonecfg(8).
 * **`options`** (list of strings, OPTIONAL) Mount options of the filesystem to be used.
