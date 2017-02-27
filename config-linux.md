@@ -12,7 +12,7 @@ The following filesystems SHOULD be made available in each container's filesyste
 
 |   Path   |  Type  |
 | -------- | ------ |
-| /proc    | [procfs](https://www.kernel.org/doc/Documentation/filesystems/proc.txt)   |
+| /proc    | [proc](https://www.kernel.org/doc/Documentation/filesystems/proc.txt)   |
 | /sys     | [sysfs](https://www.kernel.org/doc/Documentation/filesystems/sysfs.txt)   |
 | /dev/pts | [devpts](https://www.kernel.org/doc/Documentation/filesystems/devpts.txt) |
 | /dev/shm | [tmpfs](https://www.kernel.org/doc/Documentation/filesystems/tmpfs.txt)   |
@@ -78,9 +78,9 @@ If a `namespaces` field contains duplicated namespaces with same `type`, the run
 
 Each entry has the following structure:
 
-* **`hostID`** (uint32, REQUIRED)* - is the starting uid/gid on the host to be mapped to *containerID*.
-* **`containerID`** (uint32, REQUIRED)* - is the starting uid/gid in the container.
-* **`size`** (uint32, REQUIRED)* - is the number of ids to be mapped.
+* **`hostID`** *(uint32, REQUIRED)* - is the starting uid/gid on the host to be mapped to *containerID*.
+* **`containerID`** *(uint32, REQUIRED)* - is the starting uid/gid in the container.
+* **`size`** *(uint32, REQUIRED)* - is the number of ids to be mapped.
 
 The runtime SHOULD NOT modify the ownership of referenced filesystems to realize the mapping.
 Note that the number of mapping entries MAY be limited by the [kernel][user-namespaces].
@@ -115,7 +115,7 @@ Each entry has the following structure:
   More info in [mknod(1)][mknod.1].
 * **`path`** *(string, REQUIRED)* - full path to device inside container.
   If a [file][file.1] already exists at `path` that does not match the requested device, the runtime MUST generate an error.
-* **`major, minor`** *(int64, REQUIRED unless **`type`** is `p`)* - [major, minor numbers][devices] for the device.
+* **`major, minor`** *(int64, REQUIRED unless `type` is `p`)* - [major, minor numbers][devices] for the device.
 * **`fileMode`** *(uint32, OPTIONAL)* - file mode for the device.
   You can also control access to devices [with cgroups](#device-whitelist).
 * **`uid`** *(uint32, OPTIONAL)* - id of device owner.
