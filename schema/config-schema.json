@@ -229,7 +229,6 @@
     "required": [
         "ociVersion",
         "platform",
-        "process",
         "root"
     ]
 }

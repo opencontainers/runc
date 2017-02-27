@@ -120,7 +120,8 @@ For Windows, see links for details about [mountvol](http://ss64.com/nt/mountvol.
 
 ## Process
 
-**`process`** (object, REQUIRED) specifies the container process.
+**`process`** (object, OPTIONAL) specifies the container process.
+  This property is REQUIRED when [`start`](runtime.md#start) is called.
 
 * **`terminal`** (bool, OPTIONAL) specifies whether a terminal is attached to that process, defaults to false.
   As an example, if set to true on Linux a pseudoterminal pair is allocated for the container process and the pseudoterminal slave is duplicated on the container process's [standard streams][stdin.3].
