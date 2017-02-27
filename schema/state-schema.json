@@ -17,6 +17,7 @@
             "id": "https://opencontainers.org/schema/runtime/state/status",
             "type": "string",
             "enum": [
+                "creating",
                 "created",
                 "running",
                 "stopped"
