@@ -71,6 +71,27 @@ make test
 
 There are additional make targets for running the tests outside of a container but this is not recommended as the tests are written with the expectation that they can write and remove anywhere.
 
+By default, this will run the tests using `runc/script/test_Dockerfile`, which runs the tests inside a ubuntu-based docker container.
+You can also run the tests inside a fedora-based, centos-based, or rhel-based docker container.
+
+To run the tests inside a fedora-based docker container, use command:
+
+```bash
+make TEST_DOCKERFILE=script/test_Dockerfile_fedora test
+```
+
+To run the tests inside a centos-based docker container, use command:
+
+```bash
+make TEST_DOCKERFILE=script/test_Dockerfile_centos test
+```
+
+To run the tests inside a rhel-based docker container, use command:
+
+```bash
+make TEST_DOCKERFILE=script/test_Dockerfile_rhel test
+```
+
 You can run a specific test case by setting the `TESTFLAGS` variable.
 
 ```bash
