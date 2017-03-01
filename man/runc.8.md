@@ -22,7 +22,7 @@ To start a new instance of a container:
 
     # runc start [ -b bundle ] <container-id>
 
-Where "<container-id>" is your name for the instance of the container that you
+Where "\<container-id\>" is your name for the instance of the container that you
 are starting. The name you provide for the container instance must be unique on
 your host. Providing the bundle directory using "-b" is optional. The default
 value for "bundle" is the current directory.

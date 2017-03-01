@@ -4,7 +4,7 @@
 # SYNOPSIS
    runc events [command options] <container-id>
 
-Where "<container-id>" is the name for the instance of the container.
+Where "\<container-id\>" is the name for the instance of the container.
 
 # DESCRIPTION
    The events command displays information about the container. By default the

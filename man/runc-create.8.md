@@ -4,7 +4,7 @@
 # SYNOPSIS
    runc create [command options] <container-id>
 
-Where "<container-id>" is your name for the instance of the container that you
+Where "\<container-id\>" is your name for the instance of the container that you
 are starting. The name you provide for the container instance must be unique on
 your host.
 

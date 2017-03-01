@@ -4,7 +4,7 @@
 # SYNOPSIS
    runc pause <container-id> [container-id...]
 
-Where "<container-id>" is the name for the instance of the container to be
+Where "\<container-id\>" is the name for the instance of the container to be
 paused. 
 
 # DESCRIPTION

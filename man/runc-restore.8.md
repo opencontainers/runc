@@ -4,7 +4,7 @@
 # SYNOPSIS
    runc restore [command options] <container-id>
 
-Where "<container-id>" is the name for the instance of the container to be
+Where "\<container-id\>" is the name for the instance of the container to be
 restored.
 
 # DESCRIPTION
