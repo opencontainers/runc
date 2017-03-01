@@ -225,7 +225,7 @@ type LinuxHugepageLimit struct {
 	// Pagesize is the hugepage size
 	Pagesize string `json:"pageSize"`
 	// Limit is the limit of "hugepagesize" hugetlb usage
-	Limit int64 `json:"limit"`
+	Limit uint64 `json:"limit"`
 }
 
 // LinuxInterfacePriority for network interfaces
@@ -281,15 +281,15 @@ type LinuxBlockIO struct {
 // LinuxMemory for Linux cgroup 'memory' resource management
 type LinuxMemory struct {
 	// Memory limit (in bytes).
-	Limit *int64 `json:"limit,omitempty"`
+	Limit *uint64 `json:"limit,omitempty"`
 	// Memory reservation or soft_limit (in bytes).
-	Reservation *int64 `json:"reservation,omitempty"`
+	Reservation *uint64 `json:"reservation,omitempty"`
 	// Total memory limit (memory + swap).
-	Swap *int64 `json:"swap,omitempty"`
+	Swap *uint64 `json:"swap,omitempty"`
 	// Kernel memory limit (in bytes).
-	Kernel *int64 `json:"kernel,omitempty"`
+	Kernel *uint64 `json:"kernel,omitempty"`
 	// Kernel memory limit for tcp (in bytes)
-	KernelTCP *int64 `json:"kernelTCP,omitempty"`
+	KernelTCP *uint64 `json:"kernelTCP,omitempty"`
 	// How aggressive the kernel will swap memory pages. Range from 0 to 100.
 	Swappiness *uint64 `json:"swappiness,omitempty"`
 }

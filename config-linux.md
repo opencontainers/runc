@@ -285,15 +285,15 @@ For more information, see [the memory cgroup man page][cgroup-v1-memory].
 
 The following parameters can be specified to setup the controller:
 
-* **`limit`** *(int64, OPTIONAL)* - sets limit of memory usage in bytes
+* **`limit`** *(uint64, OPTIONAL)* - sets limit of memory usage in bytes
 
-* **`reservation`** *(int64, OPTIONAL)* - sets soft limit of memory usage in bytes
+* **`reservation`** *(uint64, OPTIONAL)* - sets soft limit of memory usage in bytes
 
-* **`swap`** *(int64, OPTIONAL)* - sets limit of memory+Swap usage
+* **`swap`** *(uint64, OPTIONAL)* - sets limit of memory+Swap usage
 
-* **`kernel`** *(int64, OPTIONAL)* - sets hard limit for kernel memory
+* **`kernel`** *(uint64, OPTIONAL)* - sets hard limit for kernel memory
 
-* **`kernelTCP`** *(int64, OPTIONAL)* - sets hard limit in bytes for kernel TCP buffer memory
+* **`kernelTCP`** *(uint64, OPTIONAL)* - sets hard limit in bytes for kernel TCP buffer memory
 
 * **`swappiness`** *(uint64, OPTIONAL)* - sets swappiness parameter of vmscan (See sysctl's vm.swappiness)
 
@@ -414,7 +414,7 @@ Each entry has the following structure:
 
 * **`pageSize`** *(string, REQUIRED)* - hugepage size
 
-* **`limit`** *(int64, REQUIRED)* - limit in bytes of *hugepagesize* HugeTLB usage
+* **`limit`** *(uint64, REQUIRED)* - limit in bytes of *hugepagesize* HugeTLB usage
 
 ###### Example
 
