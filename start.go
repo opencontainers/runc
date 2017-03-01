@@ -47,7 +47,7 @@ your host.`,
 					hasError = true
 				}
 			case libcontainer.Stopped:
-				fmt.Fprintln(os.Stderr, "cannot start a container that has run and stopped")
+				fmt.Fprintln(os.Stderr, "cannot start a container that has stopped")
 				hasError = true
 			case libcontainer.Running:
 				fmt.Fprintln(os.Stderr, "cannot start an already running container")
