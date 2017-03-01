@@ -110,19 +110,15 @@ func setupIO(process *libcontainer.Process, rootuid, rootgid int, createTTY, det
 		process.Stderr = nil
 		return &tty{}, nil
 	}
-
-	// When we detach, we just dup over stdio and call it a day. There's no
-	// requirement that we set up anything nice for our caller or the
-	// container.
+	// when runc will detach the caller provides the stdio to runc via runc's 0,1,2
+	// and the container's process inherits runc's stdio.
 	if detach {
-		if err := dupStdio(process, rootuid, rootgid); err != nil {
+		if err := inheritStdio(process); err != nil {
 			return nil, err
 		}
 		return &tty{}, nil
 	}
-
-	// XXX: This doesn't sit right with me. It's ugly.
-	return createStdioPipes(process, rootuid, rootgid)
+	return setupProcessPipes(process, rootuid, rootgid)
 }
 
 // createPidFile creates a file with the processes pid inside it atomically
