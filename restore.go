@@ -21,6 +21,11 @@ restored.`,
 using the runc checkpoint command.`,
 	Flags: []cli.Flag{
 		cli.StringFlag{
+			Name:  "console-socket",
+			Value: "",
+			Usage: "path to an AF_UNIX socket which will receive a file descriptor referencing the master end of the console's pseudoterminal",
+		},
+		cli.StringFlag{
 			Name:  "image-path",
 			Value: "",
 			Usage: "path to criu image files for restoring",
