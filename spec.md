@@ -1,15 +1,15 @@
-# Open Container Initiative Runtime Specification
+# <a name="openContainerInitiativeRuntimeSpecification" />Open Container Initiative Runtime Specification
 
 The [Open Container Initiative](http://www.opencontainers.org/) develops specifications for standards on Operating System process and application containers.
 
-# Abstract
+# <a name="ociRuntimeSpecAbstract" />Abstract
 
 The OCI Runtime Specification aims to specify the configuration, execution environment, and lifecycle a container.
 
 A container's configuration is specified as the `config.json` for the supported platforms and details the fields that enable the creation of a container.
 The execution environment is specified to ensure that applications running inside a container have a consistent environment between runtimes along with common actions defined for the container's lifecycle.
 
-# Platforms
+# <a name="ociRuntimeSpecPlatforms" />Platforms
 
 Platforms defined by this specification are:
 
@@ -17,7 +17,7 @@ Platforms defined by this specification are:
 * `solaris`: [runtime.md](runtime.md), [config.md](config.md), and [config-solaris.md](config-solaris.md).
 * `windows`: [runtime.md](runtime.md), [config.md](config.md), and [config-windows.md](config-windows.md).
 
-# Table of Contents
+# <a name="ociRuntimeSpecTOC" />Table of Contents
 
 - [Introduction](spec.md)
     - [Notational Conventions](#notational-conventions)
@@ -31,7 +31,7 @@ Platforms defined by this specification are:
     - [Windows-specific Configuration](config-windows.md)
 - [Glossary](glossary.md)
 
-# Notational Conventions
+# <a name="ociRuntimeSpecNotationalConventions" />Notational Conventions
 
 The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" are to be interpreted as described in [RFC 2119][rfc2119].
 
