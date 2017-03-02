@@ -1,4 +1,4 @@
-# Container Configuration file
+# <a name="containerConfigurationFile" />Container Configuration file
 
 The container's top-level directory MUST contain a configuration file called `config.json`.
 The canonical schema is defined in this document, but there is a JSON Schema in [`schema/config-schema.json`](schema/config-schema.json) and Go bindings in [`specs-go/config.go`](specs-go/config.go).
@@ -13,7 +13,7 @@ Platform-specific fields are identified as such.
 For all platform-specific configuration values, the scope defined below in the [Platform-specific configuration](#platform-specific-configuration) section applies.
 
 
-## Specification version
+## <a name="configSpecificationVersion" />Specification version
 
 * **`ociVersion`** (string, REQUIRED) MUST be in [SemVer v2.0.0](http://semver.org/spec/v2.0.0.html) format and specifies the version of the Open Container Runtime Specification with which the bundle complies.
 The Open Container Runtime Specification follows semantic versioning and retains forward and backward compatibility within major versions.
@@ -25,7 +25,7 @@ For example, if a configuration is compliant with version 1.1 of this specificat
     "ociVersion": "0.1.0"
 ```
 
-## Root Configuration
+## <a name="configRoot" />Root
 
 **`root`** (object, REQUIRED) specifies the container's root filesystem.
 
@@ -44,7 +44,7 @@ For example, if a configuration is compliant with version 1.1 of this specificat
 }
 ```
 
-## Mounts
+## <a name="configMounts" />Mounts
 
 **`mounts`** (array, OPTIONAL) specifies additional mounts beyond [`root`](#root-configuration).
 The runtime MUST mount entries in the listed order.
@@ -118,7 +118,7 @@ For Windows, see links for details about [mountvol](http://ss64.com/nt/mountvol.
 ]
 ```
 
-## Process
+## <a name="configProcess" />Process
 
 **`process`** (object, REQUIRED) specifies the container process.
 
@@ -158,11 +158,11 @@ For Linux-based systems the process structure supports the following process spe
 * **`selinuxLabel`** (string, OPTIONAL) specifies the SELinux label to be applied to the processes in the container.
   For more information about SELinux, see  [SELinux documentation](http://selinuxproject.org/page/Main_Page)
 
-### User
+### <a name="configUser" />User
 
 The user for the process is a platform-specific structure that allows specific control over which user the process runs as.
 
-#### Linux and Solaris User
+#### <a name="configLinuxAndSolarisUser" />Linux and Solaris User
 
 For Linux and Solaris based systems the user structure has the following fields:
 
@@ -255,7 +255,7 @@ _Note: symbolic name for uid and gid, such as uname and gname respectively, are 
 }
 ```
 
-#### Windows User
+#### <a name="configWindowsUser" />Windows User
 
 For Windows based systems the user structure has the following fields:
 
@@ -280,7 +280,7 @@ For Windows based systems the user structure has the following fields:
 ```
 
 
-## Hostname
+## <a name="configHostname" />Hostname
 
 * **`hostname`** (string, OPTIONAL) specifies the container's hostname as seen by processes running inside the container.
   On Linux, for example, this will change the hostname in the [container][container-namespace] [UTS namespace][uts-namespace].
@@ -292,7 +292,7 @@ For Windows based systems the user structure has the following fields:
 "hostname": "mrsdalloway"
 ```
 
-## Platform
+## <a name="configPlatform" />Platform
 
 **`platform`** (object, REQUIRED) specifies the configuration's target platform.
 
@@ -314,7 +314,7 @@ For Windows based systems the user structure has the following fields:
 }
 ```
 
-## Platform-specific configuration
+## <a name="configPlatformSpecificConfiguration" />Platform-specific configuration
 
 [**`platform.os`**](#platform) is used to specify platform-specific configuration.
 Runtime implementations MAY support any valid values for platform-specific fields as part of this configuration.
@@ -345,7 +345,7 @@ Implementations MUST error out when invalid values are encountered and MUST gene
 }
 ```
 
-## Hooks
+## <a name="configHooks" />Hooks
 
 Hooks allow for the configuration of custom actions related to the [lifecycle](runtime.md#lifecycle) of the container.
 
@@ -366,21 +366,21 @@ Hooks allow users to specify programs to run before or after various lifecycle e
 Hooks MUST be called in the listed order.
 The [state](runtime.md#state) of the container MUST be passed to hooks over stdin so that they may do work appropriate to the current state of the container.
 
-### Prestart
+### <a name="configHooksPrestart" />Prestart
 
 The pre-start hooks MUST be called after the container has been created, but before the user supplied command is executed.
 On Linux, for example, they are called after the container namespaces are created, so they provide an opportunity to customize the container (e.g. the network namespace could be specified in this hook).
 
 If a hook returns a non-zero exit code, an error including the exit code and the stderr MUST be returned to the caller and the container MUST be destroyed.
 
-### Poststart
+### <a name="configHooksPoststart" />Poststart
 
 The post-start hooks MUST be called after the user process is started.
 For example, this hook can notify the user that the container process is spawned.
 
 If a hook returns a non-zero exit code, then an error MUST be logged and the remaining hooks are executed.
 
-### Poststop
+### <a name="configHooksPoststop" />Poststop
 
 The post-stop hooks MUST be called after the container process is stopped.
 Cleanup or debugging functions are examples of such a hook.
@@ -415,7 +415,7 @@ If a hook returns a non-zero exit code, then an error MUST be logged and the rem
     }
 ```
 
-## Annotations
+## <a name="configAnnotations" />Annotations
 
 **`annotations`** (object, OPTIONAL) contains arbitrary metadata for the container.
 This information MAY be structured or unstructured.
@@ -438,7 +438,7 @@ Values MAY be an empty string.
 }
 ```
 
-## Extensibility
+## <a name="configExtensibility" />Extensibility
 Implementations that are reading/processing this configuration file MUST NOT generate an error if they encounter an unknown property.
 Instead they MUST ignore unknown properties.
 

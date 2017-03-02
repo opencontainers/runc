@@ -1,9 +1,9 @@
-# Linux-specific Container Configuration
+# <a name="linuxContainerConfiguration" />Linux Container Configuration
 
 This document describes the schema for the [Linux-specific section](config.md#platform-specific-configuration) of the [container configuration](config.md).
 The Linux container specification uses various kernel features like namespaces, cgroups, capabilities, LSM, and filesystem jails to fulfill the spec.
 
-## Default Filesystems
+## <a name="configLinuxDefaultFilesystems" />Default Filesystems
 
 The Linux ABI includes both syscalls and several special file paths.
 Applications expecting a Linux environment will very likely expect these file paths to be setup correctly.
@@ -17,7 +17,7 @@ The following filesystems SHOULD be made available in each container's filesyste
 | /dev/pts | [devpts](https://www.kernel.org/doc/Documentation/filesystems/devpts.txt) |
 | /dev/shm | [tmpfs](https://www.kernel.org/doc/Documentation/filesystems/tmpfs.txt)   |
 
-## Namespaces
+## <a name="configLinuxNamespaces" />Namespaces
 
 A namespace wraps a global system resource in an abstraction that makes it appear to the processes within the namespace that they have their own isolated instance of the global resource.
 Changes to the global resource are visible to other processes that are members of the namespace, but are invisible to other processes.
@@ -71,7 +71,7 @@ If a `namespaces` field contains duplicated namespaces with same `type`, the run
     ]
 ```
 
-## User namespace mappings
+## <a name="configLinuxUserNamespaceMappings" />User namespace mappings
 
 **`uidMappings`** (array of objects, OPTIONAL) describes the user namespace uid mappings from the host to the container.
 **`gidMappings`** (array of objects, OPTIONAL) describes the user namespace gid mappings from the host to the container.
@@ -104,7 +104,7 @@ Note that the number of mapping entries MAY be limited by the [kernel][user-name
     ]
 ```
 
-## Devices
+## <a name="configLinuxDevices" />Devices
 
 **`devices`** (array of objects, OPTIONAL) lists devices that MUST be available in the container.
 The runtime may supply them however it likes (with [mknod][mknod.2], by bind mounting from the runtime mount namespace, etc.).
@@ -148,7 +148,7 @@ The same `type`, `major` and `minor` SHOULD NOT be used for multiple devices.
     ]
 ```
 
-###### Default Devices
+###### <a name="configLinuxDefaultDevices" />Default Devices
 
 In addition to any devices configured with this setting, the runtime MUST also supply:
 
@@ -162,7 +162,7 @@ In addition to any devices configured with this setting, the runtime MUST also s
 * [`/dev/ptmx`][pts.4].
   A [bind-mount or symlink of the container's `/dev/pts/ptmx`][devpts].
 
-## Control groups
+## <a name="configLinuxControlGroups" />Control groups
 
 Also known as cgroups, they are used to restrict resource usage for a container and handle device access.
 cgroups provide controls (through controllers) to restrict cpu, memory, IO, pids and network for the container.
@@ -207,7 +207,7 @@ However, a runtime MAY attach the container process to additional cgroup control
    }
 ```
 
-#### Device whitelist
+#### <a name="configLinuxDeviceWhitelist" />Device whitelist
 
 **`devices`** (array of objects, OPTIONAL) configures the [device whitelist][cgroup-v1-devices].
 The runtime MUST apply entries in the listed order.
@@ -247,7 +247,7 @@ Each entry has the following structure:
     ]
 ```
 
-#### Disable out-of-memory killer
+#### <a name="configLinuxDisableOutOfMemoryKiller" />Disable out-of-memory killer
 
 `disableOOMKiller` contains a boolean (`true` or `false`) that enables or disables the Out of Memory killer for a cgroup.
 If enabled (`false`), tasks that attempt to consume more memory than they are allowed are immediately killed by the OOM killer.
@@ -263,7 +263,7 @@ For more information, see [the memory cgroup man page][cgroup-v1-memory].
     "disableOOMKiller": false
 ```
 
-#### Set oom_score_adj
+#### <a name="configLinuxSetOomScoreAdj" />Set oom_score_adj
 
 `oomScoreAdj` sets heuristic regarding how the process is evaluated by the kernel during memory pressure.
 For more information, see [the proc filesystem documentation section 3.1](https://www.kernel.org/doc/Documentation/filesystems/proc.txt).
@@ -278,7 +278,7 @@ For more information on how these two settings work together, see [the memory cg
     "oomScoreAdj": 100
 ```
 
-#### Memory
+#### <a name="configLinuxMemory" />Memory
 
 **`memory`** (object, OPTIONAL) represents the cgroup subsystem `memory` and it's used to set limits on the container's memory usage.
 For more information, see [the memory cgroup man page][cgroup-v1-memory].
@@ -310,7 +310,7 @@ The following parameters can be specified to setup the controller:
     }
 ```
 
-#### CPU
+#### <a name="configLinuxCPU" />CPU
 
 **`cpu`** (object, OPTIONAL) represents the cgroup subsystems `cpu` and `cpusets`.
 For more information, see [the cpusets cgroup man page][cgroup-v1-cpusets].
@@ -345,7 +345,7 @@ The following parameters can be specified to setup the controller:
     }
 ```
 
-#### Block IO Controller
+#### <a name="configLinuxBlockIO" />Block IO
 
 **`blockIO`** (object, OPTIONAL) represents the cgroup subsystem `blkio` which implements the block IO controller.
 For more information, see [the kernel cgroups documentation about blkio][cgroup-v1-blkio].
@@ -404,7 +404,7 @@ The following parameters can be specified to setup the controller:
     }
 ```
 
-#### Huge page limits
+#### <a name="configLinuxHugePageLimits" />Huge page limits
 
 **`hugepageLimits`** (array of objects, OPTIONAL) represents the `hugetlb` controller which allows to limit the
 HugeTLB usage per control group and enforces the controller limit during page fault.
@@ -427,7 +427,7 @@ Each entry has the following structure:
    ]
 ```
 
-#### Network
+#### <a name="configLinuxNetwork" />Network
 
 **`network`** (object, OPTIONAL) represents the cgroup subsystems `net_cls` and `net_prio`.
 For more information, see [the net\_cls cgroup man page][cgroup-v1-net-cls] and [the net\_prio cgroup man page][cgroup-v1-net-prio].
@@ -459,7 +459,7 @@ The following parameters can be specified to setup the controller:
    }
 ```
 
-#### PIDs
+#### <a name="configLinuxPIDS" />PIDs
 
 **`pids`** (object, OPTIONAL) represents the cgroup subsystem `pids`.
 For more information, see [the pids cgroup man page][cgroup-v1-pids].
@@ -476,7 +476,7 @@ The following parameters can be specified to setup the controller:
    }
 ```
 
-## Sysctl
+## <a name="configLinuxSysctl" />Sysctl
 
 **`sysctl`** (object, OPTIONAL) allows kernel parameters to be modified at runtime for the container.
 For more information, see [the man page](http://man7.org/linux/man-pages/man8/sysctl.8.html)
@@ -490,7 +490,7 @@ For more information, see [the man page](http://man7.org/linux/man-pages/man8/sy
    }
 ```
 
-## seccomp
+## <a name="configLinuxSeccomp" />Seccomp
 
 Seccomp provides application sandboxing mechanism in the Linux kernel.
 Seccomp configuration allows one to configure actions to take for matched syscalls and furthermore also allows matching on values passed as arguments to syscalls.
@@ -554,7 +554,7 @@ Operator Constants:
    }
 ```
 
-## Rootfs Mount Propagation
+## <a name="configLinuxRootfsMountPropagation" />Rootfs Mount Propagation
 
 **`rootfsPropagation`** (string, OPTIONAL) sets the rootfs's mount propagation.
 Its value is either slave, private, or shared.
@@ -566,7 +566,7 @@ Its value is either slave, private, or shared.
     "rootfsPropagation": "slave",
 ```
 
-## Masked Paths
+## <a name="configLinuxMaskedPaths" />Masked Paths
 
 **`maskedPaths`** (array of strings, OPTIONAL) will mask over the provided paths inside the container so that they cannot be read.
 The values MUST be absolute paths in the [container namespace][container-namespace2].
@@ -579,7 +579,7 @@ The values MUST be absolute paths in the [container namespace][container-namespa
     ]
 ```
 
-## Readonly Paths
+## <a name="configLinuxReadonlyPaths" />Readonly Paths
 
 **`readonlyPaths`** (array of strings, OPTIONAL) will set the provided paths as readonly inside the container.
 The values MUST be absolute paths in the [container namespace][container-namespace2].
@@ -592,7 +592,7 @@ The values MUST be absolute paths in the [container namespace][container-namespa
     ]
 ```
 
-## Mount Label
+## <a name"configLinuxMountLabel" />Mount Label
 
 **`mountLabel`** (string, OPTIONAL) will set the Selinux context for the mounts in the container.
 
