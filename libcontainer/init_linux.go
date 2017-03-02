@@ -66,7 +66,7 @@ type initer interface {
 	Init() error
 }
 
-func newContainerInit(t initType, pipe *os.File, stateDirFD int) (initer, error) {
+func newContainerInit(t initType, pipe *os.File, consoleSocket *os.File, stateDirFD int) (initer, error) {
 	var config *initConfig
 	if err := json.NewDecoder(pipe).Decode(&config); err != nil {
 		return nil, err
@@ -77,15 +77,17 @@ func newContainerInit(t initType, pipe *os.File, stateDirFD int) (initer, error)
 	switch t {
 	case initSetns:
 		return &linuxSetnsInit{
-			pipe:   pipe,
-			config: config,
+			pipe:          pipe,
+			consoleSocket: consoleSocket,
+			config:        config,
 		}, nil
 	case initStandard:
 		return &linuxStandardInit{
-			pipe:       pipe,
-			parentPid:  syscall.Getppid(),
-			config:     config,
-			stateDirFD: stateDirFD,
+			pipe:          pipe,
+			consoleSocket: consoleSocket,
+			parentPid:     syscall.Getppid(),
+			config:        config,
+			stateDirFD:    stateDirFD,
 		}, nil
 	}
 	return nil, fmt.Errorf("unknown init type %q", t)
@@ -155,7 +157,8 @@ func finalizeNamespace(config *initConfig) error {
 // consoles are scoped to a container properly (see runc#814 and the many
 // issues related to that). This has to be run *after* we've pivoted to the new
 // rootfs (and the users' configuration is entirely set up).
-func setupConsole(pipe *os.File, config *initConfig, mount bool) error {
+func setupConsole(socket *os.File, config *initConfig, mount bool) error {
+	defer socket.Close()
 	// At this point, /dev/ptmx points to something that we would expect. We
 	// used to change the owner of the slave path, but since the /dev/pts mount
 	// can have gid=X set (at the users' option). So touching the owner of the
@@ -174,37 +177,16 @@ func setupConsole(pipe *os.File, config *initConfig, mount bool) error {
 	if !ok {
 		return fmt.Errorf("failed to cast console to *linuxConsole")
 	}
-
 	// Mount the console inside our rootfs.
 	if mount {
 		if err := linuxConsole.mount(); err != nil {
 			return err
 		}
 	}
-
-	if err := writeSync(pipe, procConsole); err != nil {
-		return err
-	}
-
-	// We need to have a two-way synchronisation here. Though it might seem
-	// pointless, it's important to make sure that the sendmsg(2) payload
-	// doesn't get swallowed by an out-of-place read(2) [which happens if the
-	// syscalls get reordered so that sendmsg(2) is before the other side's
-	// read(2) of procConsole].
-	if err := readSync(pipe, procConsoleReq); err != nil {
-		return err
-	}
-
 	// While we can access console.master, using the API is a good idea.
-	if err := utils.SendFd(pipe, linuxConsole.File()); err != nil {
+	if err := utils.SendFd(socket, linuxConsole.File()); err != nil {
 		return err
 	}
-
-	// Make sure the other side received the fd.
-	if err := readSync(pipe, procConsoleAck); err != nil {
-		return err
-	}
-
 	// Now, dup over all the things.
 	return linuxConsole.dupStdio()
 }

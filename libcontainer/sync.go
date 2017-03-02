@@ -27,14 +27,11 @@ type syncType string
 // procReady   --> [final setup]
 //             <-- procRun
 const (
-	procError      syncType = "procError"
-	procReady      syncType = "procReady"
-	procRun        syncType = "procRun"
-	procHooks      syncType = "procHooks"
-	procResume     syncType = "procResume"
-	procConsole    syncType = "procConsole"
-	procConsoleReq syncType = "procConsoleReq"
-	procConsoleAck syncType = "procConsoleAck"
+	procError  syncType = "procError"
+	procReady  syncType = "procReady"
+	procRun    syncType = "procRun"
+	procHooks  syncType = "procHooks"
+	procResume syncType = "procResume"
 )
 
 type syncT struct {

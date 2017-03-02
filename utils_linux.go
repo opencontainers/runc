@@ -17,6 +17,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/specconv"
+	"github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/urfave/cli"
 )
@@ -110,13 +111,45 @@ func destroy(container libcontainer.Container) {
 }
 
 // setupIO modifies the given process config according to the options.
-func setupIO(process *libcontainer.Process, rootuid, rootgid int, createTTY, detach bool) (*tty, error) {
-	// This is entirely handled by recvtty.
+func setupIO(process *libcontainer.Process, rootuid, rootgid int, createTTY, detach bool, sockpath string) (*tty, error) {
 	if createTTY {
 		process.Stdin = nil
 		process.Stdout = nil
 		process.Stderr = nil
-		return &tty{}, nil
+		t := &tty{}
+		if !detach {
+			parent, child, err := utils.NewSockPair("console")
+			if err != nil {
+				return nil, err
+			}
+			process.ConsoleSocket = child
+			t.postStart = append(t.postStart, parent, child)
+			t.consoleC = make(chan error, 1)
+			go func() {
+				if err := t.recvtty(process, parent); err != nil {
+					t.consoleC <- err
+				}
+				t.consoleC <- nil
+			}()
+		} else {
+			// the caller of runc will handle receiving the console master
+			conn, err := net.Dial("unix", sockpath)
+			if err != nil {
+				return nil, err
+			}
+			uc, ok := conn.(*net.UnixConn)
+			if !ok {
+				return nil, fmt.Errorf("casting to UnixConn failed")
+			}
+			t.postStart = append(t.postStart, uc)
+			socket, err := uc.File()
+			if err != nil {
+				return nil, err
+			}
+			t.postStart = append(t.postStart, socket)
+			process.ConsoleSocket = socket
+		}
+		return t, nil
 	}
 	// when runc will detach the caller provides the stdio to runc via runc's 0,1,2
 	// and the container's process inherits runc's stdio.
@@ -190,48 +223,37 @@ func (r *runner) terminalinfo() *libcontainer.TerminalInfo {
 }
 
 func (r *runner) run(config *specs.Process) (int, error) {
+	if err := r.checkTerminal(config); err != nil {
+		r.destroy()
+		return -1, err
+	}
 	process, err := newProcess(*config)
 	if err != nil {
 		r.destroy()
 		return -1, err
 	}
-
 	if len(r.listenFDs) > 0 {
 		process.Env = append(process.Env, fmt.Sprintf("LISTEN_FDS=%d", len(r.listenFDs)), "LISTEN_PID=1")
 		process.ExtraFiles = append(process.ExtraFiles, r.listenFDs...)
 	}
-
 	baseFd := 3 + len(process.ExtraFiles)
 	for i := baseFd; i < baseFd+r.preserveFDs; i++ {
 		process.ExtraFiles = append(process.ExtraFiles, os.NewFile(uintptr(i), "PreserveFD:"+strconv.Itoa(i)))
 	}
-
 	rootuid, err := r.container.Config().HostUID()
 	if err != nil {
 		r.destroy()
 		return -1, err
 	}
-
 	rootgid, err := r.container.Config().HostGID()
 	if err != nil {
 		r.destroy()
 		return -1, err
 	}
-
-	detach := r.detach || r.create
-
-	// Check command-line for sanity.
-	if detach && config.Terminal && r.consoleSocket == "" {
-		r.destroy()
-		return -1, fmt.Errorf("cannot allocate tty if runc will detach without setting console socket")
-	}
-	// XXX: Should we change this?
-	if (!detach || !config.Terminal) && r.consoleSocket != "" {
-		r.destroy()
-		return -1, fmt.Errorf("cannot use console socket if runc will not detach or allocate tty")
-	}
-
-	startFn := r.container.Start
+	var (
+		detach  = r.detach || r.create
+		startFn = r.container.Start
+	)
 	if !r.create {
 		startFn = r.container.Run
 	}
@@ -239,7 +261,7 @@ func (r *runner) run(config *specs.Process) (int, error) {
 	// with detaching containers, and then we get a tty after the container has
 	// started.
 	handler := newSignalHandler(r.enableSubreaper, r.notifySocket)
-	tty, err := setupIO(process, rootuid, rootgid, config.Terminal, detach)
+	tty, err := setupIO(process, rootuid, rootgid, config.Terminal, detach, r.consoleSocket)
 	if err != nil {
 		r.destroy()
 		return -1, err
@@ -249,46 +271,11 @@ func (r *runner) run(config *specs.Process) (int, error) {
 		r.destroy()
 		return -1, err
 	}
-	if config.Terminal {
-		if err = tty.recvtty(process, r.detach || r.create); err != nil {
-			r.terminate(process)
-			r.destroy()
-			return -1, err
-		}
+	if err := tty.waitConsole(); err != nil {
+		r.terminate(process)
+		r.destroy()
+		return -1, err
 	}
-
-	if config.Terminal && detach {
-		conn, err := net.Dial("unix", r.consoleSocket)
-		if err != nil {
-			r.terminate(process)
-			r.destroy()
-			return -1, err
-		}
-		defer conn.Close()
-
-		unixconn, ok := conn.(*net.UnixConn)
-		if !ok {
-			r.terminate(process)
-			r.destroy()
-			return -1, fmt.Errorf("casting to UnixConn failed")
-		}
-
-		socket, err := unixconn.File()
-		if err != nil {
-			r.terminate(process)
-			r.destroy()
-			return -1, err
-		}
-		defer socket.Close()
-
-		err = tty.sendtty(socket, r.terminalinfo())
-		if err != nil {
-			r.terminate(process)
-			r.destroy()
-			return -1, err
-		}
-	}
-
 	if err = tty.ClosePostStart(); err != nil {
 		r.terminate(process)
 		r.destroy()
@@ -321,6 +308,18 @@ func (r *runner) destroy() {
 func (r *runner) terminate(p *libcontainer.Process) {
 	_ = p.Signal(syscall.SIGKILL)
 	_, _ = p.Wait()
+}
+
+func (r *runner) checkTerminal(config *specs.Process) error {
+	detach := r.detach || r.create
+	// Check command-line for sanity.
+	if detach && config.Terminal && r.consoleSocket == "" {
+		return fmt.Errorf("cannot allocate tty if runc will detach without setting console socket")
+	}
+	if (!detach || !config.Terminal) && r.consoleSocket != "" {
+		return fmt.Errorf("cannot use console socket if runc will not detach or allocate tty")
+	}
+	return nil
 }
 
 func validateProcessSpec(spec *specs.Process) error {

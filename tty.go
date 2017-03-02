@@ -19,6 +19,7 @@ type tty struct {
 	closers   []io.Closer
 	postStart []io.Closer
 	wg        sync.WaitGroup
+	consoleC  chan error
 }
 
 func (t *tty) copyIO(w io.Writer, r io.ReadCloser) {
@@ -68,37 +69,30 @@ func inheritStdio(process *libcontainer.Process) error {
 	return nil
 }
 
-func (t *tty) recvtty(process *libcontainer.Process, detach bool) error {
-	console, err := process.GetConsole()
+func (t *tty) recvtty(process *libcontainer.Process, socket *os.File) error {
+	f, err := utils.RecvFd(socket)
 	if err != nil {
 		return err
 	}
-
-	if !detach {
-		go io.Copy(console, os.Stdin)
-		t.wg.Add(1)
-		go t.copyIO(os.Stdout, console)
-
-		state, err := term.SetRawTerminal(os.Stdin.Fd())
-		if err != nil {
-			return fmt.Errorf("failed to set the terminal from the stdin: %v", err)
-		}
-		t.state = state
+	console := libcontainer.ConsoleFromFile(f)
+	go io.Copy(console, os.Stdin)
+	t.wg.Add(1)
+	go t.copyIO(os.Stdout, console)
+	state, err := term.SetRawTerminal(os.Stdin.Fd())
+	if err != nil {
+		return fmt.Errorf("failed to set the terminal from the stdin: %v", err)
 	}
-
+	t.state = state
 	t.console = console
 	t.closers = []io.Closer{console}
 	return nil
 }
 
-func (t *tty) sendtty(socket *os.File, ti *libcontainer.TerminalInfo) error {
-	if t.console == nil {
-		return fmt.Errorf("tty.console not set")
+func (t *tty) waitConsole() error {
+	if t.consoleC != nil {
+		return <-t.consoleC
 	}
-
-	// Create a fake file to contain the terminal info.
-	console := os.NewFile(t.console.File().Fd(), ti.String())
-	return utils.SendFd(socket, console)
+	return nil
 }
 
 // ClosePostStart closes any fds that are provided to the container and dup2'd
