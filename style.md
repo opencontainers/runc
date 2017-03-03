@@ -32,7 +32,7 @@ The use of referenced links in the markdown body helps to keep files clean and o
 This also facilitates updates of external link targets on a per-file basis.
 
 Referenced links should be kept in two alphabetically sorted sets, a general reference section followed by a man page section.
-To keep Pandoc happy, duplicate naming of links within pages listed in the Makefile's DOC_FILES variable should be avoided by appending an '_N' to the link tagname, where 'N' is some number not currently in use.
+To keep Pandoc happy, duplicate naming of links within pages listed in the Makefile's `DOC_FILES` variable should be avoided by appending an `_N` to the link tagname, where `N` is some number not currently in use.
 The organization and style of an existing reference section should be maintained unless it violates these style guidelines.
 
 An exception to these rules is when a URL is needed contextually, for example when showing an explicit link to the reader.
