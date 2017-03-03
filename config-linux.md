@@ -10,18 +10,18 @@ Applications expecting a Linux environment will very likely expect these file pa
 
 The following filesystems SHOULD be made available in each container's filesystem:
 
-|   Path   |  Type  |
+| Path     | Type   |
 | -------- | ------ |
-| /proc    | [proc](https://www.kernel.org/doc/Documentation/filesystems/proc.txt)   |
-| /sys     | [sysfs](https://www.kernel.org/doc/Documentation/filesystems/sysfs.txt)   |
-| /dev/pts | [devpts](https://www.kernel.org/doc/Documentation/filesystems/devpts.txt) |
-| /dev/shm | [tmpfs](https://www.kernel.org/doc/Documentation/filesystems/tmpfs.txt)   |
+| /proc    | [procfs][procfs]   |
+| /sys     | [sysfs][sysfs]     |
+| /dev/pts | [devpts][devpts]   |
+| /dev/shm | [tmpfs][tmpfs]     |
 
 ## <a name="configLinuxNamespaces" />Namespaces
 
 A namespace wraps a global system resource in an abstraction that makes it appear to the processes within the namespace that they have their own isolated instance of the global resource.
 Changes to the global resource are visible to other processes that are members of the namespace, but are invisible to other processes.
-For more information, see [the man page](http://man7.org/linux/man-pages/man7/namespaces.7.html).
+For more information, see the [namespaces(7)][namespaces.7_2] man page.
 
 Namespaces are specified as an array of entries inside the `namespaces` root field.
 The following parameters can be specified to setup namespaces:
@@ -266,7 +266,7 @@ For more information, see [the memory cgroup man page][cgroup-v1-memory].
 #### <a name="configLinuxSetOomScoreAdj" />Set oom_score_adj
 
 `oomScoreAdj` sets heuristic regarding how the process is evaluated by the kernel during memory pressure.
-For more information, see [the proc filesystem documentation section 3.1](https://www.kernel.org/doc/Documentation/filesystems/proc.txt).
+For more information, see [the proc filesystem documentation section 3.1][procfs].
 This is a kernel/system level setting, where as `disableOOMKiller` is scoped for a memory cgroup.
 For more information on how these two settings work together, see [the memory cgroup documentation section 10. OOM Contol][cgroup-v1-memory].
 
@@ -479,7 +479,7 @@ The following parameters can be specified to setup the controller:
 ## <a name="configLinuxSysctl" />Sysctl
 
 **`sysctl`** (object, OPTIONAL) allows kernel parameters to be modified at runtime for the container.
-For more information, see [the man page](http://man7.org/linux/man-pages/man8/sysctl.8.html)
+For more information, see the [sysctl(8)][sysctl.8] man page.
 
 ###### Example
 
@@ -494,8 +494,8 @@ For more information, see [the man page](http://man7.org/linux/man-pages/man8/sy
 
 Seccomp provides application sandboxing mechanism in the Linux kernel.
 Seccomp configuration allows one to configure actions to take for matched syscalls and furthermore also allows matching on values passed as arguments to syscalls.
-For more information about Seccomp, see [Seccomp kernel documentation](https://www.kernel.org/doc/Documentation/prctl/seccomp_filter.txt)
-The actions, architectures, and operators are strings that match the definitions in seccomp.h from [libseccomp](https://github.com/seccomp/libseccomp) and are translated to corresponding values.
+For more information about Seccomp, see [Seccomp][seccomp] kernel documentation.
+The actions, architectures, and operators are strings that match the definitions in seccomp.h from [libseccomp][] and are translated to corresponding values.
 A valid list of constants as of libseccomp v2.3.2 is shown below.
 
 Architecture Constants
@@ -560,7 +560,7 @@ Operator Constants:
 
 **`rootfsPropagation`** (string, OPTIONAL) sets the rootfs's mount propagation.
 Its value is either slave, private, or shared.
-[The kernel doc](https://www.kernel.org/doc/Documentation/filesystems/sharedsubtree.txt) has more information about mount propagation.
+The [Shared Subtrees][sharedsubtree] article in the kernel documentation has more information about mount propagation.
 
 ###### Example
 
@@ -604,7 +604,9 @@ The values MUST be absolute paths in the [container namespace][container-namespa
     "mountLabel": "system_u:object_r:svirt_sandbox_file_t:s0:c715,c811"
 ```
 
+
 [container-namespace2]: glossary.md#container_namespace
+
 [cgroup-v1]: https://www.kernel.org/doc/Documentation/cgroup-v1/cgroups.txt
 [cgroup-v1-blkio]: https://www.kernel.org/doc/Documentation/cgroup-v1/blkio-controller.txt
 [cgroup-v1-cpusets]: https://www.kernel.org/doc/Documentation/cgroup-v1/cpusets.txt
@@ -617,15 +619,23 @@ The values MUST be absolute paths in the [container namespace][container-namespa
 [cgroup-v2]: https://www.kernel.org/doc/Documentation/cgroup-v2.txt
 [devices]: https://www.kernel.org/doc/Documentation/devices.txt
 [devpts]: https://www.kernel.org/doc/Documentation/filesystems/devpts.txt
-[file.1]: http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap03.html#tag_03_164
+[file]: http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap03.html#tag_03_164
+[libseccomp]: https://github.com/seccomp/libseccomp
+[procfs]: https://www.kernel.org/doc/Documentation/filesystems/proc.txt
+[seccomp]: https://www.kernel.org/doc/Documentation/prctl/seccomp_filter.txt
+[sharedsubtree]: https://www.kernel.org/doc/Documentation/filesystems/sharedsubtree.txt
+[sysfs]: https://www.kernel.org/doc/Documentation/filesystems/sysfs.txt
+[tmpfs]: https://www.kernel.org/doc/Documentation/filesystems/tmpfs.txt
 
-[mknod.1]: http://man7.org/linux/man-pages/man1/mknod.1.html
-[mknod.2]: http://man7.org/linux/man-pages/man2/mknod.2.html
 [console.4]: http://man7.org/linux/man-pages/man4/console.4.html
 [full.4]: http://man7.org/linux/man-pages/man4/full.4.html
+[mknod.1]: http://man7.org/linux/man-pages/man1/mknod.1.html
+[mknod.2]: http://man7.org/linux/man-pages/man2/mknod.2.html
+[namespaces.7_2]: http://man7.org/linux/man-pages/man7/namespaces.7.html
 [null.4]: http://man7.org/linux/man-pages/man4/null.4.html
 [pts.4]: http://man7.org/linux/man-pages/man4/pts.4.html
 [random.4]: http://man7.org/linux/man-pages/man4/random.4.html
+[sysctl.8]: http://man7.org/linux/man-pages/man8/sysctl.8.html
 [tty.4]: http://man7.org/linux/man-pages/man4/tty.4.html
 [zero.4]: http://man7.org/linux/man-pages/man4/zero.4.html
 [user-namespaces]: http://man7.org/linux/man-pages/man7/user_namespaces.7.html

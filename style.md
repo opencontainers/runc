@@ -21,6 +21,22 @@ The redundancy reduction from removing the namespacing prefix is not useful enou
 Because in many cases the Go default for the type is a no-op in the spec (sources [here][no-pointer-for-strings], [here][no-pointer-for-slices], and [here][no-pointer-for-boolean]).
 The exceptions are entries where we need to distinguish between “not set” and “set to the Go default for that type” ([source][pointer-when-updates-require-changes]), and this decision should be made on a per-setting case.
 
+## Links
+
+Internal links should be [relative links][markdown-relative-links] when linking to content within the repository.
+Internal links should be used inline.
+
+External links should be collected at the bottom of a markdown file and used as referenced links.
+See 'Referenced Links' in this [markdown quick reference][markdown-quick-reference].
+The use of referenced links in the markdown body helps to keep files clean and organized.
+This also facilitates updates of external link targets on a per-file basis.
+
+Referenced links should be kept in two alphabetically sorted sets, a general reference section followed by a man page section.
+To keep Pandoc happy, duplicate naming of links within pages listed in the Makefile's DOC_FILES variable should be avoided by appending an '_N' to the link tagname, where 'N' is some number not currently in use.
+The organization and style of an existing reference section should be maintained unless it violates these style guidelines.
+
+An exception to these rules is when a URL is needed contextually, for example when showing an explicit link to the reader.
+
 ## Examples
 
 ### <a name="styleAnchoring" />Anchoring
@@ -86,6 +102,24 @@ Following is a fully populated example (not necessarily for copy/paste use)
 }
 ```
 
+### Links
+
+The following is an example of different types of links.
+This is shown as a complete markdown file, where the referenced links are at the bottom.
+
+```markdown
+The specification repository's [glossary](glossary.md) is where readers can find definitions of commonly used terms.
+
+Readers may click through to the [Open Containers namespace][open-containers] on [GitHub][github].
+
+The URL for the Open Containers link above is: https://github.com/opencontainers
+
+
+[github]: https://github.com
+[open-containers]: https://github.com/opencontainers
+```
+
+
 [capabilities]: config-linux.md#capabilities
 [class-id]: config-linux.md#network
 [integer-over-hex]: https://github.com/opencontainers/runtime-spec/pull/267#r48360013
@@ -95,3 +129,5 @@ Following is a fully populated example (not necessarily for copy/paste use)
 [no-pointer-for-strings]: https://github.com/opencontainers/runtime-spec/pull/653#issue-200439192
 [pointer-when-updates-require-changes]: https://github.com/opencontainers/runtime-spec/pull/317#r50932706
 [markdown-headers]: https://help.github.com/articles/basic-writing-and-formatting-syntax/#headings
+[markdown-quick-reference]: https://en.support.wordpress.com/markdown-quick-reference
+[markdown-relative-links]: https://help.github.com/articles/basic-writing-and-formatting-syntax/#relative-links

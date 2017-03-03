@@ -6,5 +6,7 @@
 * `git commit` version increment
 * `git tag` the prior commit (preferably signed tag)
 * `make docs` to produce PDF and HTML copies of the spec
-* Make a release on [github.com/opencontainers/runtime-spec](https://github.com/opencontainers/runtime-spec/releases) for the version. Attach the produced docs.
+* Make a [release][releases] for the version. Attach the produced docs.
 
+
+[releases]: https://github.com/opencontainers/runtime-spec/releases
