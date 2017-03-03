@@ -7,7 +7,6 @@ import (
 	"io"
 	"os"
 	"sync"
-	"syscall"
 
 	"github.com/docker/docker/pkg/term"
 	"github.com/opencontainers/runc/libcontainer"
@@ -28,9 +27,9 @@ func (t *tty) copyIO(w io.Writer, r io.ReadCloser) {
 	r.Close()
 }
 
-// setup standard pipes so that the TTY of the calling runc process
-// is not inherited by the container.
-func createStdioPipes(p *libcontainer.Process, rootuid, rootgid int) (*tty, error) {
+// setup pipes for the process so that advanced features like c/r are able to easily checkpoint
+// and restore the process's IO without depending on a host specific path or device
+func setupProcessPipes(p *libcontainer.Process, rootuid, rootgid int) (*tty, error) {
 	i, err := p.InitializeIO(rootuid, rootgid)
 	if err != nil {
 		return nil, err
@@ -62,19 +61,10 @@ func createStdioPipes(p *libcontainer.Process, rootuid, rootgid int) (*tty, erro
 	return t, nil
 }
 
-func dupStdio(process *libcontainer.Process, rootuid, rootgid int) error {
+func inheritStdio(process *libcontainer.Process) error {
 	process.Stdin = os.Stdin
 	process.Stdout = os.Stdout
 	process.Stderr = os.Stderr
-	for _, fd := range []uintptr{
-		os.Stdin.Fd(),
-		os.Stdout.Fd(),
-		os.Stderr.Fd(),
-	} {
-		if err := syscall.Fchown(int(fd), rootuid, rootgid); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
