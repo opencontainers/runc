@@ -218,10 +218,6 @@ type runner struct {
 	notifySocket    *notifySocket
 }
 
-func (r *runner) terminalinfo() *libcontainer.TerminalInfo {
-	return libcontainer.NewTerminalInfo(r.container.ID())
-}
-
 func (r *runner) run(config *specs.Process) (int, error) {
 	if err := r.checkTerminal(config); err != nil {
 		r.destroy()
