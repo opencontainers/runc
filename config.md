@@ -368,23 +368,18 @@ The [state](runtime.md#state) of the container MUST be passed to hooks over stdi
 
 ### <a name="configHooksPrestart" />Prestart
 
-The pre-start hooks MUST be called after the container has been created, but before the user supplied command is executed.
+The pre-start hooks MUST be called after the [`start`](runtime.md#start) operation is called but [before the user-specified program command is executed](runtime.md#lifecycle).
 On Linux, for example, they are called after the container namespaces are created, so they provide an opportunity to customize the container (e.g. the network namespace could be specified in this hook).
-
-If a hook returns a non-zero exit code, an error including the exit code and the stderr MUST be returned to the caller and the container MUST be destroyed.
 
 ### <a name="configHooksPoststart" />Poststart
 
-The post-start hooks MUST be called after the user process is started.
+The post-start hooks MUST be called [after the user-specified process is executed](runtime#lifecycle) but before the [`start`](runtime.md#start) operation returns.
 For example, this hook can notify the user that the container process is spawned.
-
-If a hook returns a non-zero exit code, then an error MUST be logged and the remaining hooks are executed.
 
 ### <a name="configHooksPoststop" />Poststop
 
-The post-stop hooks MUST be called after the container process is stopped.
+The post-stop hooks MUST be called [after the container is deleted](runtime#lifecycle) but before the [`delete`](runtime.md#delete) operation returns.
 Cleanup or debugging functions are examples of such a hook.
-If a hook returns a non-zero exit code, then an error MUST be logged and the remaining hooks are executed.
 
 ### Example
 
