@@ -1,11 +1,11 @@
-# Runtime and Lifecycle
+# <a name="runtimeAndLifecycle" />Runtime and Lifecycle
 
-## Scope of a Container
+## <a name="runtimeScopeContainer" />Scope of a Container
 
 Barring access control concerns, the entity using a runtime to create a container MUST be able to use the operations defined in this specification against that same container.
 Whether other entities using the same, or other, instance of the runtime can see that container is out of scope of this specification.
 
-## State
+## <a name="runtimeState" />State
 
 The state of a container includes the following properties:
 
@@ -47,7 +47,7 @@ When serialized in JSON, the format MUST adhere to the following pattern:
 
 See [Query State](#query-state) for information on retrieving the state of a container.
 
-## Lifecycle
+## <a name="runtimeLifecycle" />Lifecycle
 The lifecycle describes the timeline of events that happen from when a container is created to when it ceases to exist.
 
 1. OCI compliant runtime's [`create`](runtime.md#create) command is invoked with a reference to the location of the bundle and a unique identifier.
@@ -64,18 +64,18 @@ The lifecycle describes the timeline of events that happen from when a container
 6. Runtime's [`delete`](runtime.md#delete) command is invoked with the unique identifier of the container.
    The container MUST be destroyed by undoing the steps performed during create phase (step 2).
 
-## Errors
+## <a name="runtimeErrors" />Errors
 
 In cases where the specified operation generates an error, this specification does not mandate how, or even if, that error is returned or exposed to the user of an implementation.
 Unless otherwise stated, generating an error MUST leave the state of the environment as if the operation were never attempted - modulo any possible trivial ancillary changes such as logging.
 
-## Operations
+## <a name="runtimeOperations" />Operations
 
 OCI compliant runtimes MUST support the following operations, unless the operation is not supported by the base operating system.
 
 Note: these operations are not specifying any command-line APIs, and the parameters are inputs for general operations.
 
-### Query State
+### <a name="runtimeQueryState" />Query State
 
 `state <container-id>`
 
@@ -83,7 +83,7 @@ This operation MUST generate an error if it is not provided the ID of a containe
 Attempting to query a container that does not exist MUST generate an error.
 This operation MUST return the state of a container as specified in the [State](#state) section.
 
-### Create
+### <a name="runtimeCreate" />Create
 
 `create <container-id> <path-to-bundle>`
 
@@ -100,7 +100,7 @@ Runtime callers who are interested in pre-create validation can run [bundle-vali
 
 Any changes made to the [`config.json`](config.md) file after this operation will not have an effect on the container.
 
-### Start
+### <a name="runtimeStart" />Start
 `start <container-id>`
 
 This operation MUST generate an error if it is not provided the container ID.
@@ -110,7 +110,7 @@ This operation MUST run the user-specified program as specified by [`process`](c
 
 Upon successful completion of this operation the `status` property of this container MUST be `running`.
 
-### Kill
+### <a name="runtimeKill" />Kill
 `kill <container-id> <signal>`
 
 This operation MUST generate an error if it is not provided the container ID.
@@ -119,7 +119,7 @@ This operation MUST send the specified signal to the process in the container.
 
 When the process in the container is stopped, irrespective of it being as a result of a `kill` operation or any other reason, the `status` property of this container MUST be `stopped`.
 
-### Delete
+### <a name="runtimeDelete" />Delete
 `delete <container-id>`
 
 This operation MUST generate an error if it is not provided the container ID.
@@ -130,6 +130,6 @@ Note that resources associated with the container, but not created by this conta
 Once a container is deleted its ID MAY be used by a subsequent container.
 
 
-## Hooks
+## <a name="runtimeHooks" />Hooks
 Many of the operations specified in this specification have "hooks" that allow for additional actions to be taken before or after each operation.
 See [runtime configuration for hooks](./config.md#hooks) for more information.

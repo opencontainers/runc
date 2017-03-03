@@ -1,29 +1,29 @@
-# Style and conventions
+# <a name="styleAndConventions" />Style and conventions
 
-## One sentence per line
+## <a name="styleOneSentence" />One sentence per line
 
 To keep consistency throughout the Markdown files in the Open Container spec all files should be formatted one sentence per line.
 This fixes two things: it makes diffing easier with git and it resolves fights about line wrapping length.
 For example, this paragraph will span three lines in the Markdown source.
 
-## Traditionally hex settings should use JSON integers, not JSON strings
+## <a name="styleHex" />Traditionally hex settings should use JSON integers, not JSON strings
 
 For example, [`"classID": 1048577`][class-id] instead of `"classID": "0x100001"`.
 The config JSON isn't enough of a UI to be worth jumping through string <-> integer hoops to support an 0x… form ([source][integer-over-hex]).
 
-## Constant names should keep redundant prefixes
+## <a name="styleConstantNames" />Constant names should keep redundant prefixes
 
 For example, `CAP_KILL` instead of `KILL` in [**`linux.capabilities`**][capabilities].
 The redundancy reduction from removing the namespacing prefix is not useful enough to be worth trimming the upstream identifier ([source][keep-prefix]).
 
-## Optional settings should not have pointer Go types
+## <a name="styleOptionalSettings" />Optional settings should not have pointer Go types
 
 Because in many cases the Go default for the type is a no-op in the spec (sources [here][no-pointer-for-strings], [here][no-pointer-for-slices], and [here][no-pointer-for-boolean]).
 The exceptions are entries where we need to distinguish between “not set” and “set to the Go default for that type” ([source][pointer-when-updates-require-changes]), and this decision should be made on a per-setting case.
 
 ## Examples
 
-### Anchoring
+### <a name="styleAnchoring" />Anchoring
 
 For any given section that provides a notable example, it is ideal to have it denoted with [markdown headers][markdown-headers].
 The level of header should be such that it is a subheader of the header it is an example of.
@@ -47,7 +47,7 @@ To use Some Topic, ...
 
 ```
 
-### Content
+### <a name="styleContent" />Content
 
 Where necessary, the values in the example can be empty or unset, but accommodate with comments regarding this intention.
 

@@ -1,6 +1,6 @@
-# Project docs
+# <a name="projectDocs" />Project docs
 
-## Release Process
+## <a name="projectReleaseProcess" />Release Process
 
 * Increment version in [`specs-go/version.go`](specs-go/version.go)
 * `git commit` version increment
