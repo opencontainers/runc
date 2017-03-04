@@ -173,3 +173,58 @@ EOF
 	# test tty width and height against original process.json
 	[[ ${lines[0]} =~ "rows 10; columns 110" ]]
 }
+
+@test "runc create [terminal=false]" {
+	# Disable terminal creation.
+	sed -i 's|"terminal": true,|"terminal": false,|g' config.json
+	# Replace sh script with sleep.
+    sed -i 's|"sh"|"sleep", "1000s"|' config.json
+
+	# Make sure that the handling of detached IO is done properly. See #1354.
+	__runc create test_busybox
+
+	# Start the command.
+	runc start test_busybox
+	[ "$status" -eq 0 ]
+
+	testcontainer test_busybox running
+
+	# Kill the container.
+	runc kill test_busybox KILL
+	[ "$status" -eq 0 ]
+}
+
+@test "runc run [terminal=false]" {
+	# Disable terminal creation.
+	sed -i 's|"terminal": true,|"terminal": false,|g' config.json
+	# Replace sh script with sleep.
+    sed -i 's|"sh"|"sleep", "1000s"|' config.json
+
+	# Make sure that the handling of non-detached IO is done properly. See #1354.
+	(
+		__runc run test_busybox
+	) &
+
+	wait_for_container 15 1 test_busybox
+	testcontainer test_busybox running
+
+	# Kill the container.
+	runc kill test_busybox KILL
+	[ "$status" -eq 0 ]
+}
+
+@test "runc run -d [terminal=false]" {
+	# Disable terminal creation.
+	sed -i 's|"terminal": true,|"terminal": false,|g' config.json
+	# Replace sh script with sleep.
+    sed -i 's|"sh"|"sleep", "1000s"|' config.json
+
+	# Make sure that the handling of detached IO is done properly. See #1354.
+	__runc run -d test_busybox
+
+	testcontainer test_busybox running
+
+	# Kill the container.
+	runc kill test_busybox KILL
+	[ "$status" -eq 0 ]
+}
