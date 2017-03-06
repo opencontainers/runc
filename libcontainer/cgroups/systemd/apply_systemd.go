@@ -269,6 +269,13 @@ func (m *Manager) Apply(pid int) error {
 			newProp("CPUShares", uint64(c.Resources.CpuShares)))
 	}
 
+	// cpu.cfs_quota_us and cpu.cfs_period_us are controlled by systemd.
+	if c.Resources.CpuQuota != 0 && c.Resources.CpuPeriod != 0 {
+		cpuQuotaPerSecUSec := c.Resources.CpuQuota * 1000000 / c.Resources.CpuPeriod
+		properties = append(properties,
+			newProp("CPUQuotaPerSecUSec", uint64(cpuQuotaPerSecUSec)))
+	}
+
 	if c.Resources.BlkioWeight != 0 {
 		properties = append(properties,
 			newProp("BlockIOWeight", uint64(c.Resources.BlkioWeight)))
