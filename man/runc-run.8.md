@@ -26,3 +26,4 @@ command(s) that get executed on start, edit the args parameter of the spec. See
    --no-subreaper            disable the use of the subreaper used to reap reparented processes
    --no-pivot                do not use pivot root to jail process inside rootfs.  This should be used whenever the rootfs is on top of a ramdisk
    --no-new-keyring          do not create a new session keyring for the container.  This will cause the container to inherit the calling processes session key
+   --delete-if-stopped       if a stopped container with the same id exists, delete it
