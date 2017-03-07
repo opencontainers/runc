@@ -549,8 +549,7 @@ Operator Constants:
                    "getcwd",
                    "chmod"
                ],
-               "action": "SCMP_ACT_ERRNO",
-               "comment": "stop exploit x"
+               "action": "SCMP_ACT_ERRNO"
            }
        ]
    }
