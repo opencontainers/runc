@@ -5,7 +5,6 @@ package systemd
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -332,15 +331,6 @@ func (m *Manager) GetPaths() map[string]string {
 	paths := m.Paths
 	m.mu.Unlock()
 	return paths
-}
-
-func writeFile(dir, file, data string) error {
-	// Normally dir should not be empty, one case is that cgroup subsystem
-	// is not mounted, we will get empty dir, and we want it fail here.
-	if dir == "" {
-		return fmt.Errorf("no such directory for %s", file)
-	}
-	return ioutil.WriteFile(filepath.Join(dir, file), []byte(data), 0700)
 }
 
 func join(c *configs.Cgroup, subsystem string, pid int) (string, error) {
