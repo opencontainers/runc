@@ -438,7 +438,7 @@ The following parameters can be specified to setup the controller:
 
 * **`priorities`** *(array, OPTIONAL)* - specifies a list of objects of the priorities assigned to traffic originating from processes in the group and egressing the system on various interfaces.
   The following parameters can be specified per-priority:
-    * **`name`** *(string, REQUIRED)* - interface name
+    * **`name`** *(string, REQUIRED)* - interface name in [runtime network namespace](glossary.md#runtime-namespace)
     * **`priority`** *(uint32, REQUIRED)* - priority applied to the interface
 
 ###### Example
