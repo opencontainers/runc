@@ -91,7 +91,7 @@ Mapped to `allowed-address` in the [zonecfg(1M)][zonecfg.1m] man page.
 When it is set to false, the allowedAddress will not be configured on container start.
 Mapped to `configure-allowed-address` in the [zonecfg(1M)][zonecfg.1m] man page.
 * **`defrouter`** *(string, OPTIONAL)* The value for the OPTIONAL default router.
-* **`macAddress`** *(string, OPTIONAL)* Set the VNIC`s MAC addresses based on the specified value or keyword.
+* **`macAddress`** *(string, OPTIONAL)* Set the VNIC's MAC addresses based on the specified value or keyword.
 If not a keyword, it is interpreted as a unicast MAC address.
 For a list of the supported keywords please refer to the [zonecfg(1M)][zonecfg.1m] man page of the respective Solaris release.
 Mapped to `mac-address` in the [zonecfg(1M)][zonecfg.1m] man page.
