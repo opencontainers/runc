@@ -27,8 +27,8 @@ func killContainer(container libcontainer.Container) error {
 
 var deleteCommand = cli.Command{
 	Name:  "delete",
-	Usage: "delete any resources held by one or more containers often used with detached containers",
-	ArgsUsage: `<container-id> [container-id...]
+	Usage: "delete any resources held by the container often used with detached container",
+	ArgsUsage: `<container-id>
 
 Where "<container-id>" is the name for the instance of the container.
 
@@ -45,62 +45,40 @@ status of "ubuntu01" as "stopped" the following will delete resources held for
 		},
 	},
 	Action: func(context *cli.Context) error {
-		if err := checkArgs(context, 1, minArgs); err != nil {
+		if err := checkArgs(context, 1, exactArgs); err != nil {
 			return err
 		}
 
-		hasError := false
-		factory, err := loadFactory(context)
+		id := context.Args().First()
+		container, err := getContainer(context)
+		if err != nil {
+			if lerr, ok := err.(libcontainer.Error); ok && lerr.Code() == libcontainer.ContainerNotExists {
+				// if there was an aborted start or something of the sort then the container's directory could exist but
+				// libcontainer does not see it because the state.json file inside that directory was never created.
+				path := filepath.Join(context.GlobalString("root"), id)
+				if e := os.RemoveAll(path); e != nil {
+					fmt.Fprintf(os.Stderr, "remove %s: %v\n", path, e)
+				}
+			}
+			return err
+		}
+		s, err := container.Status()
 		if err != nil {
 			return err
 		}
-		for _, id := range context.Args() {
-			container, err := factory.Load(id)
-			if err != nil {
-				if lerr, ok := err.(libcontainer.Error); ok && lerr.Code() == libcontainer.ContainerNotExists {
-					// if there was an aborted start or something of the sort then the container's directory could exist but
-					// libcontainer does not see it because the state.json file inside that directory was never created.
-					path := filepath.Join(context.GlobalString("root"), id)
-					if err = os.RemoveAll(path); err != nil {
-						fmt.Fprintf(os.Stderr, "remove %s: %v\n", path, err)
-					}
-					fmt.Fprintf(os.Stderr, "container %s does not exist\n", id)
-				}
-				hasError = true
-				continue
-			}
-			s, err := container.Status()
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "status for %s: %v\n", id, err)
-				hasError = true
-				continue
-			}
-			switch s {
-			case libcontainer.Stopped:
-				destroy(container)
-			case libcontainer.Created:
-				err := killContainer(container)
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "kill container %s: %v\n", id, err)
-					hasError = true
-				}
-			default:
-				if context.Bool("force") {
-					err := killContainer(container)
-					if err != nil {
-						fmt.Fprintf(os.Stderr, "kill container %s: %v\n", id, err)
-						hasError = true
-					}
-				} else {
-					fmt.Fprintf(os.Stderr, "cannot delete container %s that is not stopped: %s\n", id, s)
-					hasError = true
-				}
+		switch s {
+		case libcontainer.Stopped:
+			destroy(container)
+		case libcontainer.Created:
+			return killContainer(container)
+		default:
+			if context.Bool("force") {
+				return killContainer(container)
+			} else {
+				return fmt.Errorf("cannot delete container %s that is not stopped: %s\n", id, s)
 			}
 		}
 
-		if hasError {
-			return fmt.Errorf("one or more of the container deletions failed")
-		}
 		return nil
 	},
 }
