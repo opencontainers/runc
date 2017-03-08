@@ -1,8 +1,8 @@
 # NAME
-   runc delete - delete any resources held by one or more containers often used with detached containers
+   runc delete - delete any resources held by the container often used with detached container
 
 # SYNOPSIS
-   runc delete [command options] <container-id> [container-id...]
+   runc delete [command options] <container-id>
 
 Where "<container-id>" is the name for the instance of the container.
 
