@@ -215,7 +215,7 @@ _Note: symbolic name for uid and gid, such as uname and gname respectively, are 
         ],
         "effective": [
             "CAP_AUDIT_WRITE",
-            "CAP_KILL",
+            "CAP_KILL"
         ],
         "ambient": [
             "CAP_NET_BIND_SERVICE"
@@ -484,7 +484,7 @@ Here is a full example `config.json` for reference.
             ],
             "effective": [
                 "CAP_AUDIT_WRITE",
-                "CAP_KILL",
+                "CAP_KILL"
             ],
             "ambient": [
                 "CAP_NET_BIND_SERVICE"
