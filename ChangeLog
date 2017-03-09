@@ -1,5 +1,62 @@
 OpenContainers Specifications
 
+Changes with v1.0.0-rc5:
+
+	Breaking changes:
+
+	* config: Explicitly require `platform` (#695).
+	* config: The platform-specific sections (`linux`, `solaris`, and
+	  `windows`) MUST NOT be set unless they match `platform.os` (#673).
+	* config: `process.capabilities` is now an object instead of an
+	  array of strings (#675).
+	* config-linux: No longer allow negative values for some resources,
+	  partially reversing #648 from v1.0.0-rc4 (#704).
+	* config-linux: `linux.seccomp.syscalls` entries have `names`
+	  instead of `name` (#657).
+	* runtime: Rename the state `bundlePath` property to `bundle`
+	  (#674).
+
+	Additions:
+
+	* config: `process.capabilities` is no longer Linux-only (#673).
+	* config-linux: `linux.seccomp.syscalls` entries have a new
+	  `comment` property (#657).
+	* config-linux: Add new architectures from libseccomp 2.3.2 (#705)
+	* runtime: Add a `creating` state `status` (#507, #694).
+
+	Removals and increased restrictions:
+
+	* runtime: Document hook timing and exit code handling (#532).
+	* schema/config-linux: Explicit `null` values are no longer
+	  compliant (#662).
+
+	Decreased restrictions:
+
+	* config: `type` and `source` properties are now optional for
+	  `mounts` entries (#699).
+	* config: `args` property is now optional for hooks (#685).
+	* config-linux: Runtimes no longer need to provide `/proc` and
+	  other filesystems unless they are explicitly requested in the
+	  configuration JSON (#666).
+
+	Minor fixes and documentation:
+
+	* spec: Add OCI Runtime Abstract (#691).
+	* config: Document the Go `platform` tag (#570).
+	* config-linux: Remove local uid/gid mapping limit and punt to the
+	  kernel (#693).
+	* schema: Fix broken `string` and similar `$ref`s (#684).
+	* schema: Remove `mounts` from required properties (#696).
+	* schema: Remove `major` and `minor` from `linux.devices` entries
+	  (#688).
+	* schema: Check for the required `type`, `hard`, and `soft` in
+	  `process.rlimits` entries (#696).
+	* schema/validate: Gained usage documentation and fixed
+	  `schemaPath` logic when the argument did not contain `://` (#552).
+	* *: Add anchor tags to a number of spec locations (#707).
+	* *: Consistent link syntax (#687).
+        * *: Minor cleanup and rewording (#697).
+
 Changes with v1.0.0-rc4:
 	Additions:
 
