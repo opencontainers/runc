@@ -169,6 +169,9 @@ type Linux struct {
 	ReadonlyPaths []string `json:"readonlyPaths,omitempty"`
 	// MountLabel specifies the selinux context for the mounts in the container.
 	MountLabel string `json:"mountLabel,omitempty"`
+	// IntelRdt contains Intel Resource Director Technology (RDT) information
+	// for handling resource constraints (e.g., L3 cache) for the container
+	IntelRdt *LinuxIntelRdt `json:"intelRdt,omitempty"`
 }
 
 // LinuxNamespace is the configuration for a Linux namespace
@@ -550,4 +553,12 @@ type LinuxSyscall struct {
 	Action  LinuxSeccompAction `json:"action"`
 	Args    []LinuxSeccompArg  `json:"args"`
 	Comment string             `json:"comment"`
+}
+
+// LinuxIntelRdt has container runtime resource constraints
+// for Intel RDT/CAT which introduced in Linux 4.10 kernel
+type LinuxIntelRdt struct {
+	// The schema for L3 cache id and capacity bitmask (CBM)
+	// Format: "L3:<cache_id0>=<cbm0>;<cache_id1>=<cbm1>;..."
+	L3CacheSchema string `json:"l3CacheSchema,omitempty"`
 }
