@@ -549,5 +549,4 @@ type LinuxSyscall struct {
 	Names   []string           `json:"names"`
 	Action  LinuxSeccompAction `json:"action"`
 	Args    []LinuxSeccompArg  `json:"args"`
-	Comment string             `json:"comment"`
 }
