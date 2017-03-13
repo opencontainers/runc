@@ -46,7 +46,7 @@ For example, if a configuration is compliant with version 1.1 of this specificat
 
 ## <a name="configMounts" />Mounts
 
-**`mounts`** (array, OPTIONAL) specifies additional mounts beyond [`root`](#root-configuration).
+**`mounts`** (array, OPTIONAL) specifies additional mounts beyond [`root`](#root).
 The runtime MUST mount entries in the listed order.
 For Linux, the parameters are as documented in [mount(2)][mount.2] system call man page.
 For Solaris, the mount entry corresponds to the 'fs' resource in the [zonecfg(1M)][zonecfg.1m] man page.
@@ -284,7 +284,7 @@ For Windows based systems the user structure has the following fields:
 
 * **`hostname`** (string, OPTIONAL) specifies the container's hostname as seen by processes running inside the container.
   On Linux, for example, this will change the hostname in the [container](glossary.md#container-namespace) [UTS namespace][uts-namespace.7].
-  Depending on your [namespace configuration](config-linux.md#namespaces), the container UTS namespace may be the [runtime UTS namespace](glossary.md#runtime-namespace).
+  Depending on your [namespace configuration](config-linux.md#namespaces), the container UTS namespace may be the [runtime](glossary.md#runtime-namespace) [UTS namespace][uts-namespace.7].
 
 ### Example
 
@@ -296,11 +296,11 @@ For Windows based systems the user structure has the following fields:
 
 **`platform`** (object, REQUIRED) specifies the configuration's target platform.
 
-* **`os`** (string, REQUIRED) specifies the operating system family of the container configuration's specified [`root`](#root-configuration) file system bundle.
+* **`os`** (string, REQUIRED) specifies the operating system family of the container configuration's specified [`root`](#root) file system bundle.
   The runtime MUST generate an error if it does not support the specified **`os`**.
   Bundles SHOULD use, and runtimes SHOULD understand, **`os`** entries listed in the Go Language document for [`$GOOS`][go-environment].
   If an operating system is not included in the `$GOOS` documentation, it SHOULD be submitted to this specification for standardization.
-* **`arch`** (string, REQUIRED) specifies the instruction set for which the binaries in the specified [`root`](#root-configuration) file system bundle have been compiled.
+* **`arch`** (string, REQUIRED) specifies the instruction set for which the binaries in the specified [`root`](#root) file system bundle have been compiled.
   The runtime MUST generate an error if it does not support the specified **`arch`**.
   Values for **`arch`** SHOULD use, and runtimes SHOULD understand, **`arch`** entries listed in the Go Language document for [`$GOARCH`][go-environment].
   If an architecture is not included in the `$GOARCH` documentation, it SHOULD be submitted to this specification for standardization.
