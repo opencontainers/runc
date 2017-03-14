@@ -125,8 +125,8 @@ For Windows, see [mountvol][mountvol] and [SetVolumeMountPoint][set-volume-mount
 * **`terminal`** (bool, OPTIONAL) specifies whether a terminal is attached to that process, defaults to false.
   As an example, if set to true on Linux a pseudoterminal pair is allocated for the container process and the pseudoterminal slave is duplicated on the container process's [standard streams][stdin.3].
 * **`consoleSize`** (object, OPTIONAL) specifies the console size in characters of the terminal if attached, containing the following properties:
-  * **`height`** (uint, REQUIRED)
-  * **`width`** (uint, REQUIRED)
+    * **`height`** (uint, REQUIRED)
+    * **`width`** (uint, REQUIRED)
 * **`cwd`** (string, REQUIRED) is the working directory that will be set for the executable.
   This value MUST be an absolute path.
 * **`env`** (array of strings, OPTIONAL) with the same semantics as [IEEE Std 1003.1-2001's `environ`][ieee-1003.1-2001-xbd-c8.1].
@@ -355,18 +355,18 @@ Runtime implementations MAY support any valid values for platform-specific field
 Hooks allow for the configuration of custom actions related to the [lifecycle](runtime.md#lifecycle) of the container.
 
 * **`hooks`** (object, OPTIONAL) MAY contain any of the following properties:
-  * **`prestart`** (array of objects, OPTIONAL) is an array of [pre-start hooks](#prestart).
-    Entries in the array contain the following properties:
-    * **`path`** (string, REQUIRED) with similar semantics to [IEEE Std 1003.1-2001 `execv`'s *path*][ieee-1003.1-2001-xsh-exec].
-      This specification extends the IEEE standard in that **`path`** MUST be absolute.
-    * **`args`** (array of strings, OPTIONAL) with the same semantics as [IEEE Std 1003.1-2001 `execv`'s *argv*][ieee-1003.1-2001-xsh-exec].
-    * **`env`** (array of strings, OPTIONAL) with the same semantics as [IEEE Std 1003.1-2001's `environ`][ieee-1003.1-2001-xbd-c8.1].
-    * **`timeout`** (int, OPTIONAL) is the number of seconds before aborting the hook.
-      If set, `timeout` MUST be greater than zero.
-  * **`poststart`** (array of objects, OPTIONAL) is an array of [post-start hooks](#poststart).
-    Entries in the array have the same schema as pre-start entries.
-  * **`poststop`** (array of objects, OPTIONAL) is an array of [post-stop hooks](#poststop).
-    Entries in the array have the same schema as pre-start entries.
+    * **`prestart`** (array of objects, OPTIONAL) is an array of [pre-start hooks](#prestart).
+        Entries in the array contain the following properties:
+        * **`path`** (string, REQUIRED) with similar semantics to [IEEE Std 1003.1-2001 `execv`'s *path*][ieee-1003.1-2001-xsh-exec].
+            This specification extends the IEEE standard in that **`path`** MUST be absolute.
+        * **`args`** (array of strings, OPTIONAL) with the same semantics as [IEEE Std 1003.1-2001 `execv`'s *argv*][ieee-1003.1-2001-xsh-exec].
+        * **`env`** (array of strings, OPTIONAL) with the same semantics as [IEEE Std 1003.1-2001's `environ`][ieee-1003.1-2001-xbd-c8.1].
+        * **`timeout`** (int, OPTIONAL) is the number of seconds before aborting the hook.
+            If set, `timeout` MUST be greater than zero.
+    * **`poststart`** (array of objects, OPTIONAL) is an array of [post-start hooks](#poststart).
+        Entries in the array have the same schema as pre-start entries.
+    * **`poststop`** (array of objects, OPTIONAL) is an array of [post-stop hooks](#poststop).
+        Entries in the array have the same schema as pre-start entries.
 
 Hooks allow users to specify programs to run before or after various lifecycle events.
 Hooks MUST be called in the listed order.
