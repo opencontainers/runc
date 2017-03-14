@@ -58,9 +58,9 @@ func destroy(c *linuxContainer) error {
 func runPoststopHooks(c *linuxContainer) error {
 	if c.config.Hooks != nil {
 		s := configs.HookState{
-			Version:    c.config.Version,
-			ID:         c.id,
-			BundlePath: utils.SearchLabels(c.config.Labels, "bundle"),
+			Version: c.config.Version,
+			ID:      c.id,
+			Bundle:  utils.SearchLabels(c.config.Labels, "bundle"),
 		}
 		for _, hook := range c.config.Hooks.Poststop {
 			if err := hook.Run(s); err != nil {

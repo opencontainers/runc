@@ -13,6 +13,7 @@ import (
 	"github.com/urfave/cli"
 )
 
+func i64Ptr(i int64) *int64   { return &i }
 func u64Ptr(i uint64) *uint64 { return &i }
 func u16Ptr(i uint16) *uint16 { return &i }
 
@@ -127,12 +128,12 @@ other options are ignored.
 			},
 			CPU: &specs.LinuxCPU{
 				Shares:          u64Ptr(0),
-				Quota:           u64Ptr(0),
+				Quota:           i64Ptr(0),
 				Period:          u64Ptr(0),
-				RealtimeRuntime: u64Ptr(0),
+				RealtimeRuntime: i64Ptr(0),
 				RealtimePeriod:  u64Ptr(0),
-				Cpus:            sPtr(""),
-				Mems:            sPtr(""),
+				Cpus:            "",
+				Mems:            "",
 			},
 			BlockIO: &specs.LinuxBlockIO{
 				Weight: u16Ptr(0),
@@ -164,10 +165,10 @@ other options are ignored.
 				r.BlockIO.Weight = u16Ptr(uint16(val))
 			}
 			if val := context.String("cpuset-cpus"); val != "" {
-				r.CPU.Cpus = &val
+				r.CPU.Cpus = val
 			}
 			if val := context.String("cpuset-mems"); val != "" {
-				r.CPU.Mems = &val
+				r.CPU.Mems = val
 			}
 
 			for _, pair := range []struct {
@@ -176,14 +177,28 @@ other options are ignored.
 			}{
 
 				{"cpu-period", r.CPU.Period},
-				{"cpu-quota", r.CPU.Quota},
 				{"cpu-rt-period", r.CPU.RealtimePeriod},
-				{"cpu-rt-runtime", r.CPU.RealtimeRuntime},
 				{"cpu-share", r.CPU.Shares},
 			} {
 				if val := context.String(pair.opt); val != "" {
 					var err error
 					*pair.dest, err = strconv.ParseUint(val, 10, 64)
+					if err != nil {
+						return fmt.Errorf("invalid value for %s: %s", pair.opt, err)
+					}
+				}
+			}
+			for _, pair := range []struct {
+				opt  string
+				dest *int64
+			}{
+
+				{"cpu-quota", r.CPU.Quota},
+				{"cpu-rt-runtime", r.CPU.RealtimeRuntime},
+			} {
+				if val := context.String(pair.opt); val != "" {
+					var err error
+					*pair.dest, err = strconv.ParseInt(val, 10, 64)
 					if err != nil {
 						return fmt.Errorf("invalid value for %s: %s", pair.opt, err)
 					}
@@ -222,8 +237,8 @@ other options are ignored.
 		config.Cgroups.Resources.CpuShares = int64(*r.CPU.Shares)
 		config.Cgroups.Resources.CpuRtPeriod = int64(*r.CPU.RealtimePeriod)
 		config.Cgroups.Resources.CpuRtRuntime = int64(*r.CPU.RealtimeRuntime)
-		config.Cgroups.Resources.CpusetCpus = *r.CPU.Cpus
-		config.Cgroups.Resources.CpusetMems = *r.CPU.Mems
+		config.Cgroups.Resources.CpusetCpus = r.CPU.Cpus
+		config.Cgroups.Resources.CpusetMems = r.CPU.Mems
 		config.Cgroups.Resources.KernelMemory = int64(*r.Memory.Kernel)
 		config.Cgroups.Resources.KernelMemoryTCP = int64(*r.Memory.KernelTCP)
 		config.Cgroups.Resources.Memory = int64(*r.Memory.Limit)
