@@ -300,3 +300,34 @@ func TestIgnoreCgroup2Mount(t *testing.T) {
 		}
 	}
 }
+
+const fakeMountInfo = ` 18 24 0:17 / /sys rw,nosuid,nodev,noexec,relatime - sysfs sysfs rw
+100 99 1:31 / /foo/bar rw,relatime - fake fake rw,fake
+100 99 1:31 / /foo/bar/baz2 rw,relatime - fake fake rw,fake
+100 99 1:31 / /foo/bar/baz rw,relatime - fake fake rw,fake
+100 99 1:31 / /foo/bar/bazza rw,relatime - fake fake rw,fake
+100 99 1:31 / /foo/bar/baz3 rw,relatime - fake fake rw,fake
+100 99 1:31 / /foo rw,relatime - fake fake rw,fake
+100 99 1:31 / /unrelated rw,relatime - fake fake rw,fake
+100 99 1:31 / / rw,relatime - fake fake rw,fake
+`
+
+func TestGetClosestMountpointAncestor(t *testing.T) {
+	testCases := []struct {
+		input      string
+		mountinfos string
+		output     string
+	}{
+		{input: "/foo/bar/baz/a/b/c", mountinfos: fakeMountInfo, output: "/foo/bar/baz"},
+		{input: "/foo/bar/baz", mountinfos: fakeMountInfo, output: "/foo/bar/baz"},
+		{input: "/foo/bar/bazza", mountinfos: fakeMountInfo, output: "/foo/bar/bazza"},
+		{input: "/a/b/c/d", mountinfos: fakeMountInfo, output: "/"},
+	}
+
+	for _, c := range testCases {
+		mountpoint := GetClosestMountpointAncestor(c.input, c.mountinfos)
+		if mountpoint != c.output {
+			t.Errorf("expected %s, got %s", c.output, mountpoint)
+		}
+	}
+}
