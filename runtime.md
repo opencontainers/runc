@@ -2,7 +2,7 @@
 
 ## <a name="runtimeScopeContainer" />Scope of a Container
 
-Barring access control concerns, the entity using a runtime to create a container MUST be able to use the operations defined in this specification against that same container.
+The entity using a runtime to create a container MUST be able to use the operations defined in this specification against that same container.
 Whether other entities using the same, or other, instance of the runtime can see that container is out of scope of this specification.
 
 ## <a name="runtimeState" />State
