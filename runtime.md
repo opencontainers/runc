@@ -82,7 +82,7 @@ Unless otherwise stated, logging a warning does not change the flow of the opera
 
 ## <a name="runtimeOperations" />Operations
 
-OCI compliant runtimes MUST support the following operations, unless the operation is not supported by the base operating system.
+Unless otherwise stated, runtimes MUST support the following operations.
 
 Note: these operations are not specifying any command-line APIs, and the parameters are inputs for general operations.
 
