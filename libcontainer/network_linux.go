@@ -171,7 +171,7 @@ func (v *veth) create(n *network, nspid int) (err error) {
 			netlink.LinkDel(veth)
 		}
 	}()
-	if err := v.attach(&n.Network); err != nil {
+	if err = v.attach(&n.Network); err != nil {
 		return err
 	}
 	child, err := netlink.LinkByName(n.TempVethPeerName)
