@@ -275,10 +275,10 @@ func (c *linuxContainer) start(process *Process, isInit bool) error {
 
 		if c.config.Hooks != nil {
 			s := configs.HookState{
-				Version:    c.config.Version,
-				ID:         c.id,
-				Pid:        parent.pid(),
-				BundlePath: utils.SearchLabels(c.config.Labels, "bundle"),
+				Version: c.config.Version,
+				ID:      c.id,
+				Pid:     parent.pid(),
+				Bundle:  utils.SearchLabels(c.config.Labels, "bundle"),
 			}
 			for i, hook := range c.config.Hooks.Poststart {
 				if err := hook.Run(s); err != nil {
@@ -1157,10 +1157,10 @@ func (c *linuxContainer) criuNotifications(resp *criurpc.CriuResp, process *Proc
 	case notify.GetScript() == "setup-namespaces":
 		if c.config.Hooks != nil {
 			s := configs.HookState{
-				Version:    c.config.Version,
-				ID:         c.id,
-				Pid:        int(notify.GetPid()),
-				BundlePath: utils.SearchLabels(c.config.Labels, "bundle"),
+				Version: c.config.Version,
+				ID:      c.id,
+				Pid:     int(notify.GetPid()),
+				Bundle:  utils.SearchLabels(c.config.Labels, "bundle"),
 			}
 			for i, hook := range c.config.Hooks.Prestart {
 				if err := hook.Run(s); err != nil {

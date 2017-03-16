@@ -90,10 +90,32 @@ container on your host.`,
 				},
 				Cwd:             "/",
 				NoNewPrivileges: true,
-				Capabilities: []string{
-					"CAP_AUDIT_WRITE",
-					"CAP_KILL",
-					"CAP_NET_BIND_SERVICE",
+				Capabilities: &specs.LinuxCapabilities{
+					Bounding: []string{
+						"CAP_AUDIT_WRITE",
+						"CAP_KILL",
+						"CAP_NET_BIND_SERVICE",
+					},
+					Permitted: []string{
+						"CAP_AUDIT_WRITE",
+						"CAP_KILL",
+						"CAP_NET_BIND_SERVICE",
+					},
+					Inheritable: []string{
+						"CAP_AUDIT_WRITE",
+						"CAP_KILL",
+						"CAP_NET_BIND_SERVICE",
+					},
+					Ambient: []string{
+						"CAP_AUDIT_WRITE",
+						"CAP_KILL",
+						"CAP_NET_BIND_SERVICE",
+					},
+					Effective: []string{
+						"CAP_AUDIT_WRITE",
+						"CAP_KILL",
+						"CAP_NET_BIND_SERVICE",
+					},
 				},
 				Rlimits: []specs.LinuxRlimit{
 					{
@@ -169,7 +191,7 @@ container on your host.`,
 					Devices: []specs.LinuxDeviceCgroup{
 						{
 							Allow:  false,
-							Access: sPtr("rwm"),
+							Access: "rwm",
 						},
 					},
 				},

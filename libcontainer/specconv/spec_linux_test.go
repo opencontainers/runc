@@ -13,7 +13,7 @@ func TestLinuxCgroupsPathSpecified(t *testing.T) {
 
 	spec := &specs.Spec{}
 	spec.Linux = &specs.Linux{
-		CgroupsPath: &cgroupsPath,
+		CgroupsPath: cgroupsPath,
 	}
 
 	cgroup, err := createCgroupConfig("ContainerID", false, spec)

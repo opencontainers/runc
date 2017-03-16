@@ -230,6 +230,15 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 	if spec.Linux.Resources != nil && spec.Linux.Resources.OOMScoreAdj != nil {
 		config.OomScoreAdj = *spec.Linux.Resources.OOMScoreAdj
 	}
+	if spec.Process.Capabilities != nil {
+		config.Capabilities = &configs.Capabilities{
+			Bounding:    spec.Process.Capabilities.Bounding,
+			Effective:   spec.Process.Capabilities.Effective,
+			Permitted:   spec.Process.Capabilities.Permitted,
+			Inheritable: spec.Process.Capabilities.Inheritable,
+			Ambient:     spec.Process.Capabilities.Ambient,
+		}
+	}
 	createHooks(spec, config)
 	config.MountLabel = spec.Linux.MountLabel
 	config.Version = specs.Version
@@ -262,10 +271,10 @@ func createCgroupConfig(name string, useSystemdCgroup bool, spec *specs.Spec) (*
 		Resources: &configs.Resources{},
 	}
 
-	if spec.Linux != nil && spec.Linux.CgroupsPath != nil {
-		myCgroupPath = libcontainerUtils.CleanPath(*spec.Linux.CgroupsPath)
+	if spec.Linux != nil && spec.Linux.CgroupsPath != "" {
+		myCgroupPath = libcontainerUtils.CleanPath(spec.Linux.CgroupsPath)
 		if useSystemdCgroup {
-			myCgroupPath = *spec.Linux.CgroupsPath
+			myCgroupPath = spec.Linux.CgroupsPath
 		}
 	}
 
@@ -306,8 +315,8 @@ func createCgroupConfig(name string, useSystemdCgroup bool, spec *specs.Spec) (*
 			major = int64(-1)
 			minor = int64(-1)
 		)
-		if d.Type != nil {
-			t = *d.Type
+		if d.Type != "" {
+			t = d.Type
 		}
 		if d.Major != nil {
 			major = *d.Major
@@ -315,7 +324,7 @@ func createCgroupConfig(name string, useSystemdCgroup bool, spec *specs.Spec) (*
 		if d.Minor != nil {
 			minor = *d.Minor
 		}
-		if d.Access == nil || *d.Access == "" {
+		if d.Access == "" {
 			return nil, fmt.Errorf("device access at %d field cannot be empty", i)
 		}
 		dt, err := stringToCgroupDeviceRune(t)
@@ -326,7 +335,7 @@ func createCgroupConfig(name string, useSystemdCgroup bool, spec *specs.Spec) (*
 			Type:        dt,
 			Major:       major,
 			Minor:       minor,
-			Permissions: *d.Access,
+			Permissions: d.Access,
 			Allow:       d.Allow,
 		}
 		c.Resources.Devices = append(c.Resources.Devices, dd)
@@ -370,11 +379,11 @@ func createCgroupConfig(name string, useSystemdCgroup bool, spec *specs.Spec) (*
 		if r.CPU.RealtimePeriod != nil {
 			c.Resources.CpuRtPeriod = int64(*r.CPU.RealtimePeriod)
 		}
-		if r.CPU.Cpus != nil {
-			c.Resources.CpusetCpus = *r.CPU.Cpus
+		if r.CPU.Cpus != "" {
+			c.Resources.CpusetCpus = r.CPU.Cpus
 		}
-		if r.CPU.Mems != nil {
-			c.Resources.CpusetMems = *r.CPU.Mems
+		if r.CPU.Mems != "" {
+			c.Resources.CpusetMems = r.CPU.Mems
 		}
 	}
 	if r.Pids != nil {
@@ -720,30 +729,30 @@ func setupSeccomp(config *specs.LinuxSeccomp) (*configs.Seccomp, error) {
 			return nil, err
 		}
 
-		newCall := configs.Syscall{
-			Name:   call.Name,
-			Action: newAction,
-			Args:   []*configs.Arg{},
-		}
-
-		// Loop through all the arguments of the syscall and convert them
-		for _, arg := range call.Args {
-			newOp, err := seccomp.ConvertStringToOperator(string(arg.Op))
-			if err != nil {
-				return nil, err
+		for _, name := range call.Names {
+			newCall := configs.Syscall{
+				Name:   name,
+				Action: newAction,
+				Args:   []*configs.Arg{},
 			}
+			// Loop through all the arguments of the syscall and convert them
+			for _, arg := range call.Args {
+				newOp, err := seccomp.ConvertStringToOperator(string(arg.Op))
+				if err != nil {
+					return nil, err
+				}
 
-			newArg := configs.Arg{
-				Index:    arg.Index,
-				Value:    arg.Value,
-				ValueTwo: arg.ValueTwo,
-				Op:       newOp,
+				newArg := configs.Arg{
+					Index:    arg.Index,
+					Value:    arg.Value,
+					ValueTwo: arg.ValueTwo,
+					Op:       newOp,
+				}
+
+				newCall.Args = append(newCall.Args, &newArg)
 			}
-
-			newCall.Args = append(newCall.Args, &newArg)
+			newConfig.Syscalls = append(newConfig.Syscalls, &newCall)
 		}
-
-		newConfig.Syscalls = append(newConfig.Syscalls, &newCall)
 	}
 
 	return newConfig, nil
@@ -751,17 +760,20 @@ func setupSeccomp(config *specs.LinuxSeccomp) (*configs.Seccomp, error) {
 
 func createHooks(rspec *specs.Spec, config *configs.Config) {
 	config.Hooks = &configs.Hooks{}
-	for _, h := range rspec.Hooks.Prestart {
-		cmd := createCommandHook(h)
-		config.Hooks.Prestart = append(config.Hooks.Prestart, configs.NewCommandHook(cmd))
-	}
-	for _, h := range rspec.Hooks.Poststart {
-		cmd := createCommandHook(h)
-		config.Hooks.Poststart = append(config.Hooks.Poststart, configs.NewCommandHook(cmd))
-	}
-	for _, h := range rspec.Hooks.Poststop {
-		cmd := createCommandHook(h)
-		config.Hooks.Poststop = append(config.Hooks.Poststop, configs.NewCommandHook(cmd))
+	if rspec.Hooks != nil {
+
+		for _, h := range rspec.Hooks.Prestart {
+			cmd := createCommandHook(h)
+			config.Hooks.Prestart = append(config.Hooks.Prestart, configs.NewCommandHook(cmd))
+		}
+		for _, h := range rspec.Hooks.Poststart {
+			cmd := createCommandHook(h)
+			config.Hooks.Poststart = append(config.Hooks.Poststart, configs.NewCommandHook(cmd))
+		}
+		for _, h := range rspec.Hooks.Poststop {
+			cmd := createCommandHook(h)
+			config.Hooks.Poststop = append(config.Hooks.Poststop, configs.NewCommandHook(cmd))
+		}
 	}
 }
 

@@ -45,21 +45,21 @@ type network struct {
 
 // initConfig is used for transferring parameters from Exec() to Init()
 type initConfig struct {
-	Args             []string         `json:"args"`
-	Env              []string         `json:"env"`
-	Cwd              string           `json:"cwd"`
-	Capabilities     []string         `json:"capabilities"`
-	ProcessLabel     string           `json:"process_label"`
-	AppArmorProfile  string           `json:"apparmor_profile"`
-	NoNewPrivileges  bool             `json:"no_new_privileges"`
-	User             string           `json:"user"`
-	AdditionalGroups []string         `json:"additional_groups"`
-	Config           *configs.Config  `json:"config"`
-	Networks         []*network       `json:"network"`
-	PassedFilesCount int              `json:"passed_files_count"`
-	ContainerId      string           `json:"containerid"`
-	Rlimits          []configs.Rlimit `json:"rlimits"`
-	CreateConsole    bool             `json:"create_console"`
+	Args             []string              `json:"args"`
+	Env              []string              `json:"env"`
+	Cwd              string                `json:"cwd"`
+	Capabilities     *configs.Capabilities `json:"capabilities"`
+	ProcessLabel     string                `json:"process_label"`
+	AppArmorProfile  string                `json:"apparmor_profile"`
+	NoNewPrivileges  bool                  `json:"no_new_privileges"`
+	User             string                `json:"user"`
+	AdditionalGroups []string              `json:"additional_groups"`
+	Config           *configs.Config       `json:"config"`
+	Networks         []*network            `json:"network"`
+	PassedFilesCount int                   `json:"passed_files_count"`
+	ContainerId      string                `json:"containerid"`
+	Rlimits          []configs.Rlimit      `json:"rlimits"`
+	CreateConsole    bool                  `json:"create_console"`
 }
 
 type initer interface {
@@ -121,12 +121,12 @@ func finalizeNamespace(config *initConfig) error {
 	if config.Capabilities != nil {
 		capabilities = config.Capabilities
 	}
-	w, err := newCapWhitelist(capabilities)
+	w, err := newContainerCapList(capabilities)
 	if err != nil {
 		return err
 	}
 	// drop capabilities in bounding set before changing user
-	if err := w.dropBoundingSet(); err != nil {
+	if err := w.ApplyBoundingSet(); err != nil {
 		return err
 	}
 	// preserve existing capabilities while we change users
@@ -139,8 +139,7 @@ func finalizeNamespace(config *initConfig) error {
 	if err := system.ClearKeepCaps(); err != nil {
 		return err
 	}
-	// drop all other capabilities
-	if err := w.drop(); err != nil {
+	if err := w.ApplyCaps(); err != nil {
 		return err
 	}
 	if config.Cwd != "" {

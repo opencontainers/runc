@@ -337,10 +337,10 @@ func (p *initProcess) start() error {
 			if !p.config.Config.Namespaces.Contains(configs.NEWNS) {
 				if p.config.Config.Hooks != nil {
 					s := configs.HookState{
-						Version:    p.container.config.Version,
-						ID:         p.container.id,
-						Pid:        p.pid(),
-						BundlePath: utils.SearchLabels(p.config.Config.Labels, "bundle"),
+						Version: p.container.config.Version,
+						ID:      p.container.id,
+						Pid:     p.pid(),
+						Bundle:  utils.SearchLabels(p.config.Config.Labels, "bundle"),
 					}
 					for i, hook := range p.config.Config.Hooks.Prestart {
 						if err := hook.Run(s); err != nil {
@@ -357,10 +357,10 @@ func (p *initProcess) start() error {
 		case procHooks:
 			if p.config.Config.Hooks != nil {
 				s := configs.HookState{
-					Version:    p.container.config.Version,
-					ID:         p.container.id,
-					Pid:        p.pid(),
-					BundlePath: utils.SearchLabels(p.config.Config.Labels, "bundle"),
+					Version: p.container.config.Version,
+					ID:      p.container.id,
+					Pid:     p.pid(),
+					Bundle:  utils.SearchLabels(p.config.Config.Labels, "bundle"),
 				}
 				for i, hook := range p.config.Config.Hooks.Prestart {
 					if err := hook.Run(s); err != nil {

@@ -176,7 +176,13 @@ func getProcess(context *cli.Context, bundle string) (*specs.Process, error) {
 		p.SelinuxLabel = l
 	}
 	if caps := context.StringSlice("cap"); len(caps) > 0 {
-		p.Capabilities = caps
+		for _, c := range caps {
+			p.Capabilities.Bounding = append(p.Capabilities.Bounding, c)
+			p.Capabilities.Inheritable = append(p.Capabilities.Inheritable, c)
+			p.Capabilities.Effective = append(p.Capabilities.Effective, c)
+			p.Capabilities.Permitted = append(p.Capabilities.Permitted, c)
+			p.Capabilities.Ambient = append(p.Capabilities.Ambient, c)
+		}
 	}
 	// append the passed env variables
 	p.Env = append(p.Env, context.StringSlice("env")...)

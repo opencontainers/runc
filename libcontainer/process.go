@@ -53,7 +53,7 @@ type Process struct {
 
 	// Capabilities specify the capabilities to keep when executing the process inside the container
 	// All capabilities not specified will be dropped from the processes capability mask
-	Capabilities []string
+	Capabilities *configs.Capabilities
 
 	// AppArmorProfile specifies the profile to apply to the process and is
 	// changed at the time the process is execed

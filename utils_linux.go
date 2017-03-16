@@ -15,6 +15,7 @@ import (
 	"github.com/coreos/go-systemd/activation"
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
+	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/specconv"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/urfave/cli"
@@ -77,10 +78,17 @@ func newProcess(p specs.Process) (*libcontainer.Process, error) {
 		// TODO: fix libcontainer's API to better support uid/gid in a typesafe way.
 		User:            fmt.Sprintf("%d:%d", p.User.UID, p.User.GID),
 		Cwd:             p.Cwd,
-		Capabilities:    p.Capabilities,
 		Label:           p.SelinuxLabel,
 		NoNewPrivileges: &p.NoNewPrivileges,
 		AppArmorProfile: p.ApparmorProfile,
+	}
+	if p.Capabilities != nil {
+		lp.Capabilities = &configs.Capabilities{}
+		lp.Capabilities.Bounding = p.Capabilities.Bounding
+		lp.Capabilities.Effective = p.Capabilities.Effective
+		lp.Capabilities.Inheritable = p.Capabilities.Inheritable
+		lp.Capabilities.Permitted = p.Capabilities.Permitted
+		lp.Capabilities.Ambient = p.Capabilities.Ambient
 	}
 	for _, gid := range p.User.AdditionalGids {
 		lp.AdditionalGroups = append(lp.AdditionalGroups, strconv.FormatUint(uint64(gid), 10))

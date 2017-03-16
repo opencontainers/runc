@@ -41,7 +41,7 @@ static: $(SOURCES)
 	CGO_ENABLED=1 go build -i -tags "$(BUILDTAGS) cgo static_build" -ldflags "-w -extldflags -static -X main.gitCommit=${COMMIT} -X main.version=${VERSION}" -o contrib/cmd/recvtty/recvtty ./contrib/cmd/recvtty
 
 release:
-	@flag_list=(seccomp selinux apparmor static ambient); \
+	@flag_list=(seccomp selinux apparmor static); \
 	unset expression; \
 	for flag in "$${flag_list[@]}"; do \
 		expression+="' '{'',$${flag}}"; \
