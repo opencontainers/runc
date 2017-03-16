@@ -91,7 +91,7 @@ For Windows, see [mountvol][mountvol] and [SetVolumeMountPoint][set-volume-mount
 
 ```json
 "mounts": [
-    "myfancymountpoint": {
+    {
         "destination": "C:\\Users\\crosbymichael\\My Fancy Mount Point\\",
         "type": "ntfs",
         "source": "\\\\?\\Volume\\{2eca078d-5cbc-43d3-aff8-7e8511f60d0e}\\",
