@@ -277,7 +277,7 @@ func setupUser(config *initConfig) error {
 
 	// before we change to the container's user make sure that the processes STDIO
 	// is correctly owned by the user that we are switching to.
-	if err := fixStdioPermissions(execUser); err != nil {
+	if err := fixStdioPermissions(config, execUser); err != nil {
 		return err
 	}
 
@@ -312,7 +312,7 @@ func setupUser(config *initConfig) error {
 // fixStdioPermissions fixes the permissions of PID 1's STDIO within the container to the specified user.
 // The ownership needs to match because it is created outside of the container and needs to be
 // localized.
-func fixStdioPermissions(u *user.ExecUser) error {
+func fixStdioPermissions(config *initConfig, u *user.ExecUser) error {
 	var null syscall.Stat_t
 	if err := syscall.Stat("/dev/null", &null); err != nil {
 		return err
@@ -326,10 +326,20 @@ func fixStdioPermissions(u *user.ExecUser) error {
 		if err := syscall.Fstat(int(fd), &s); err != nil {
 			return err
 		}
+
 		// Skip chown of /dev/null if it was used as one of the STDIO fds.
 		if s.Rdev == null.Rdev {
 			continue
 		}
+
+		// Skip chown if s.Gid is actually an unmapped gid in the host. While
+		// this is a bit dodgy if it just so happens that the console _is_
+		// owned by overflow_gid, there's no way for us to disambiguate this as
+		// a userspace program.
+		if _, err := config.Config.HostGID(int(s.Gid)); err != nil {
+			continue
+		}
+
 		// We only change the uid owner (as it is possible for the mount to
 		// prefer a different gid, and there's no reason for us to change it).
 		// The reason why we don't just leave the default uid=X mount setup is
