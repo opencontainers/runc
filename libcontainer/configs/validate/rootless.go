@@ -37,7 +37,7 @@ func (v *ConfigValidator) rootless(config *configs.Config) error {
 }
 
 func rootlessMappings(config *configs.Config) error {
-	rootuid, err := config.HostUID()
+	rootuid, err := config.HostRootUID()
 	if err != nil {
 		return fmt.Errorf("failed to get root uid from uidMappings: %v", err)
 	}
@@ -50,7 +50,7 @@ func rootlessMappings(config *configs.Config) error {
 		}
 	}
 
-	rootgid, err := config.HostGID()
+	rootgid, err := config.HostRootGID()
 	if err != nil {
 		return fmt.Errorf("failed to get root gid from gidMappings: %v", err)
 	}

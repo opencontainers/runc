@@ -307,11 +307,11 @@ func (c *linuxContainer) Signal(s os.Signal, all bool) error {
 }
 
 func (c *linuxContainer) createExecFifo() error {
-	rootuid, err := c.Config().HostUID()
+	rootuid, err := c.Config().HostRootUID()
 	if err != nil {
 		return err
 	}
-	rootgid, err := c.Config().HostGID()
+	rootgid, err := c.Config().HostRootGID()
 	if err != nil {
 		return err
 	}

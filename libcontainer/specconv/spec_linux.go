@@ -610,11 +610,11 @@ func setupUserNamespace(spec *specs.Spec, config *configs.Config) error {
 	for _, m := range spec.Linux.GIDMappings {
 		config.GidMappings = append(config.GidMappings, create(m))
 	}
-	rootUID, err := config.HostUID()
+	rootUID, err := config.HostRootUID()
 	if err != nil {
 		return err
 	}
-	rootGID, err := config.HostGID()
+	rootGID, err := config.HostRootGID()
 	if err != nil {
 		return err
 	}

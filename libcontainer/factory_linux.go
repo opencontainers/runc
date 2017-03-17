@@ -164,11 +164,11 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 	if err := l.Validator.Validate(config); err != nil {
 		return nil, newGenericError(err, ConfigInvalid)
 	}
-	uid, err := config.HostUID()
+	uid, err := config.HostRootUID()
 	if err != nil {
 		return nil, newGenericError(err, SystemError)
 	}
-	gid, err := config.HostGID()
+	gid, err := config.HostRootGID()
 	if err != nil {
 		return nil, newGenericError(err, SystemError)
 	}
