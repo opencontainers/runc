@@ -100,25 +100,6 @@ func (p *setnsProcess) start() (err error) {
 
 	ierr := parseSync(p.parentPipe, func(sync *syncT) error {
 		switch sync.Type {
-		case procConsole:
-			if err := writeSync(p.parentPipe, procConsoleReq); err != nil {
-				return newSystemErrorWithCause(err, "writing syncT 'request fd'")
-			}
-
-			masterFile, err := utils.RecvFd(p.parentPipe)
-			if err != nil {
-				return newSystemErrorWithCause(err, "getting master pty from child pipe")
-			}
-
-			if p.process.consoleChan == nil {
-				// TODO: Don't panic here, do something more sane.
-				panic("consoleChan is nil")
-			}
-			p.process.consoleChan <- masterFile
-
-			if err := writeSync(p.parentPipe, procConsoleAck); err != nil {
-				return newSystemErrorWithCause(err, "writing syncT 'ack fd'")
-			}
 		case procReady:
 			// This shouldn't happen.
 			panic("unexpected procReady in setns")
@@ -128,7 +109,6 @@ func (p *setnsProcess) start() (err error) {
 		default:
 			return newSystemError(fmt.Errorf("invalid JSON payload from child"))
 		}
-		return nil
 	})
 
 	if err := syscall.Shutdown(int(p.parentPipe.Fd()), syscall.SHUT_WR); err != nil {
@@ -264,7 +244,7 @@ func (p *initProcess) start() error {
 		return newSystemErrorWithCause(err, "starting init process command")
 	}
 	if _, err := io.Copy(p.parentPipe, p.bootstrapData); err != nil {
-		return err
+		return newSystemErrorWithCause(err, "copying bootstrap data to pipe")
 	}
 	if err := p.execSetns(); err != nil {
 		return newSystemErrorWithCause(err, "running exec setns process for init")
@@ -301,25 +281,6 @@ func (p *initProcess) start() error {
 
 	ierr := parseSync(p.parentPipe, func(sync *syncT) error {
 		switch sync.Type {
-		case procConsole:
-			if err := writeSync(p.parentPipe, procConsoleReq); err != nil {
-				return newSystemErrorWithCause(err, "writing syncT 'request fd'")
-			}
-
-			masterFile, err := utils.RecvFd(p.parentPipe)
-			if err != nil {
-				return newSystemErrorWithCause(err, "getting master pty from child pipe")
-			}
-
-			if p.process.consoleChan == nil {
-				// TODO: Don't panic here, do something more sane.
-				panic("consoleChan is nil")
-			}
-			p.process.consoleChan <- masterFile
-
-			if err := writeSync(p.parentPipe, procConsoleAck); err != nil {
-				return newSystemErrorWithCause(err, "writing syncT 'ack fd'")
-			}
 		case procReady:
 			if err := p.manager.Set(p.config.Config); err != nil {
 				return newSystemErrorWithCause(err, "setting cgroup config for ready process")

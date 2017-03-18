@@ -161,7 +161,7 @@ func restoreContainer(context *cli.Context, spec *specs.Spec, config *configs.Co
 		defer destroy(container)
 	}
 	process := &libcontainer.Process{}
-	tty, err := setupIO(process, rootuid, rootgid, false, detach)
+	tty, err := setupIO(process, rootuid, rootgid, false, detach, "")
 	if err != nil {
 		return -1, err
 	}

@@ -47,10 +47,6 @@ type Process struct {
 	// ExtraFiles specifies additional open files to be inherited by the container
 	ExtraFiles []*os.File
 
-	// consoleChan provides the masterfd console.
-	// TODO: Make this persistent in Process.
-	consoleChan chan *os.File
-
 	// Capabilities specify the capabilities to keep when executing the process inside the container
 	// All capabilities not specified will be dropped from the processes capability mask
 	Capabilities *configs.Capabilities
@@ -68,6 +64,9 @@ type Process struct {
 	// Rlimits specifies the resource limits, such as max open files, to set in the container
 	// If Rlimits are not set, the container will inherit rlimits from the parent process
 	Rlimits []configs.Rlimit
+
+	// ConsoleSocket provides the masterfd console.
+	ConsoleSocket *os.File
 
 	ops processOperations
 }
@@ -104,16 +103,4 @@ type IO struct {
 	Stdin  io.WriteCloser
 	Stdout io.ReadCloser
 	Stderr io.ReadCloser
-}
-
-func (p *Process) GetConsole() (Console, error) {
-	consoleFd, ok := <-p.consoleChan
-	if !ok {
-		return nil, fmt.Errorf("failed to get console from process")
-	}
-
-	// TODO: Fix this so that it used the console API.
-	return &linuxConsole{
-		master: consoleFd,
-	}, nil
 }

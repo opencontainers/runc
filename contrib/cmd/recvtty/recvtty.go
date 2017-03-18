@@ -24,7 +24,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/urfave/cli"
 )
@@ -102,13 +101,6 @@ func handleSingle(path string) error {
 		return err
 	}
 
-	// Print the file descriptor tag.
-	ti, err := libcontainer.GetTerminalInfo(master.Name())
-	if err != nil {
-		return err
-	}
-	fmt.Printf("[recvtty] received masterfd: container '%s'\n", ti.ContainerID)
-
 	// Copy from our stdio to the master fd.
 	quitChan := make(chan struct{})
 	go func() {
@@ -162,13 +154,6 @@ func handleNull(path string) error {
 			if err != nil {
 				return
 			}
-
-			// Print the file descriptor tag.
-			ti, err := libcontainer.GetTerminalInfo(master.Name())
-			if err != nil {
-				bail(err)
-			}
-			fmt.Printf("[recvtty] received masterfd: container '%s'\n", ti.ContainerID)
 
 			// Just do a dumb copy to /dev/null.
 			devnull, err := os.OpenFile("/dev/null", os.O_RDWR, 0)

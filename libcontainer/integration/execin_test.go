@@ -13,6 +13,7 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/utils"
 )
 
 func TestExecIn(t *testing.T) {
@@ -279,9 +280,36 @@ func TestExecInTTY(t *testing.T) {
 		Args: []string{"ps"},
 		Env:  standardEnvironment,
 	}
+	parent, child, err := utils.NewSockPair("console")
+	if err != nil {
+		ok(t, err)
+	}
+	defer parent.Close()
+	defer child.Close()
+	ps.ConsoleSocket = child
+	type cdata struct {
+		c   libcontainer.Console
+		err error
+	}
+	dc := make(chan *cdata, 1)
+	go func() {
+		f, err := utils.RecvFd(parent)
+		if err != nil {
+			dc <- &cdata{
+				err: err,
+			}
+		}
+		dc <- &cdata{
+			c: libcontainer.ConsoleFromFile(f),
+		}
+	}()
 	err = container.Run(ps)
 	ok(t, err)
-	console, err := ps.GetConsole()
+	data := <-dc
+	if data.err != nil {
+		ok(t, data.err)
+	}
+	console := data.c
 	copy := make(chan struct{})
 	go func() {
 		io.Copy(&stdout, console)
