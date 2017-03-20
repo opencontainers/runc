@@ -243,6 +243,14 @@ func (s *MemoryGroup) GetStats(path string, stats *cgroups.Stats) error {
 	}
 	stats.MemoryStats.KernelTCPUsage = kernelTCPUsage
 
+	useHierarchy := strings.Join([]string{"memory", "use_hierarchy"}, ".")
+	value, err := getCgroupParamUint(path, useHierarchy)
+	if err != nil {
+		return err
+	}
+	if value == 1 {
+		stats.MemoryStats.UseHierarchy = true
+	}
 	return nil
 }
 

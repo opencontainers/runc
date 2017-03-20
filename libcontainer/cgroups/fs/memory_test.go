@@ -12,10 +12,11 @@ import (
 const (
 	memoryStatContents = `cache 512
 rss 1024`
-	memoryUsageContents    = "2048\n"
-	memoryMaxUsageContents = "4096\n"
-	memoryFailcnt          = "100\n"
-	memoryLimitContents    = "8192\n"
+	memoryUsageContents        = "2048\n"
+	memoryMaxUsageContents     = "4096\n"
+	memoryFailcnt              = "100\n"
+	memoryLimitContents        = "8192\n"
+	memoryUseHierarchyContents = "1\n"
 )
 
 func TestMemorySetMemory(t *testing.T) {
@@ -273,6 +274,7 @@ func TestMemoryStats(t *testing.T) {
 		"memory.kmem.max_usage_in_bytes":  memoryMaxUsageContents,
 		"memory.kmem.failcnt":             memoryFailcnt,
 		"memory.kmem.limit_in_bytes":      memoryLimitContents,
+		"memory.use_hierarchy":            memoryUseHierarchyContents,
 	})
 
 	memory := &MemoryGroup{}
@@ -281,7 +283,7 @@ func TestMemoryStats(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expectedStats := cgroups.MemoryStats{Cache: 512, Usage: cgroups.MemoryData{Usage: 2048, MaxUsage: 4096, Failcnt: 100, Limit: 8192}, SwapUsage: cgroups.MemoryData{Usage: 2048, MaxUsage: 4096, Failcnt: 100, Limit: 8192}, KernelUsage: cgroups.MemoryData{Usage: 2048, MaxUsage: 4096, Failcnt: 100, Limit: 8192}, Stats: map[string]uint64{"cache": 512, "rss": 1024}}
+	expectedStats := cgroups.MemoryStats{Cache: 512, Usage: cgroups.MemoryData{Usage: 2048, MaxUsage: 4096, Failcnt: 100, Limit: 8192}, SwapUsage: cgroups.MemoryData{Usage: 2048, MaxUsage: 4096, Failcnt: 100, Limit: 8192}, KernelUsage: cgroups.MemoryData{Usage: 2048, MaxUsage: 4096, Failcnt: 100, Limit: 8192}, Stats: map[string]uint64{"cache": 512, "rss": 1024}, UseHierarchy: true}
 	expectMemoryStatEquals(t, expectedStats, actualStats.MemoryStats)
 }
 
