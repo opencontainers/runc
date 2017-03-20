@@ -235,7 +235,7 @@ func TestMemorySetMemorySwappinessDefault(t *testing.T) {
 	defer helper.cleanup()
 
 	swappinessBefore := 60 //default is 60
-	swappinessAfter := int64(0)
+	swappinessAfter := uint64(0)
 
 	helper.writeFileContents(map[string]string{
 		"memory.swappiness": strconv.Itoa(swappinessBefore),
@@ -251,7 +251,7 @@ func TestMemorySetMemorySwappinessDefault(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to parse memory.swappiness - %s", err)
 	}
-	if int64(value) != swappinessAfter {
+	if value != swappinessAfter {
 		t.Fatalf("Got the wrong value (%d), set memory.swappiness = %d failed.", value, swappinessAfter)
 	}
 }
