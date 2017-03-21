@@ -119,9 +119,11 @@ func finalizeNamespace(config *initConfig) error {
 		return err
 	}
 
-	capabilities := config.Config.Capabilities
+	capabilities := &configs.Capabilities{}
 	if config.Capabilities != nil {
 		capabilities = config.Capabilities
+	} else if config.Config.Capabilities != nil {
+		capabilities = config.Config.Capabilities
 	}
 	w, err := newContainerCapList(capabilities)
 	if err != nil {
