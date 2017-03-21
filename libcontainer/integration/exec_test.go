@@ -339,6 +339,57 @@ func TestProcessEnv(t *testing.T) {
 	}
 }
 
+func TestProcessEmptyCaps(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+	root, err := newTestRoot()
+	ok(t, err)
+	defer os.RemoveAll(root)
+
+	rootfs, err := newRootfs()
+	ok(t, err)
+	defer remove(rootfs)
+
+	config := newTemplateConfig(rootfs)
+	config.Capabilities = nil
+
+	container, err := factory.Create("test", config)
+	ok(t, err)
+	defer container.Destroy()
+
+	var stdout bytes.Buffer
+	pconfig := libcontainer.Process{
+		Cwd:    "/",
+		Args:   []string{"sh", "-c", "cat /proc/self/status"},
+		Env:    standardEnvironment,
+		Stdin:  nil,
+		Stdout: &stdout,
+	}
+	err = container.Run(&pconfig)
+	ok(t, err)
+
+	// Wait for process
+	waitProcess(&pconfig, t)
+
+	outputStatus := string(stdout.Bytes())
+
+	lines := strings.Split(outputStatus, "\n")
+
+	effectiveCapsLine := ""
+	for _, l := range lines {
+		line := strings.TrimSpace(l)
+		if strings.Contains(line, "CapEff:") {
+			effectiveCapsLine = line
+			break
+		}
+	}
+
+	if effectiveCapsLine == "" {
+		t.Fatal("Couldn't find effective caps: ", outputStatus)
+	}
+}
+
 func TestProcessCaps(t *testing.T) {
 	if testing.Short() {
 		return
