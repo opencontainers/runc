@@ -760,6 +760,7 @@ _runc() {
 		start
 		state
 		update
+		version
 		help
 		h
 	)

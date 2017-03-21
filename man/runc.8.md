@@ -44,6 +44,7 @@ value for "bundle" is the current directory.
    start        executes the user defined process in a created container
    state        output the state of a container
    update       update container resource constraints
+   version      output the runtime version
    help, h      Shows a list of commands or help for one command
    
 # GLOBAL OPTIONS
