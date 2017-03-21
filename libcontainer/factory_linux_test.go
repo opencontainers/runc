@@ -3,6 +3,7 @@
 package libcontainer
 
 import (
+	"errors"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -10,6 +11,7 @@ import (
 	"syscall"
 	"testing"
 
+	"fmt"
 	"github.com/docker/docker/pkg/mount"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/utils"
@@ -23,6 +25,27 @@ func newTestRoot() (string, error) {
 	return dir, nil
 }
 
+func checkFactory(factory Factory, root string) (*LinuxFactory, error) {
+	if factory == nil {
+		return nil, errors.New("factory should not be nil")
+	}
+
+	lfactory, ok := factory.(*LinuxFactory)
+	if !ok {
+		return nil, errors.New("expected linux factory returned on linux based systems")
+	}
+
+	if lfactory.Root != root {
+		return lfactory, errors.New(fmt.Sprintf("expected factory root to be %q but received %q", root, lfactory.Root))
+	}
+
+	if factory.Type() != "libcontainer" {
+		return lfactory, errors.New(fmt.Sprintf("unexpected factory type: %q, expected %q", factory.Type(), "libcontainer"))
+	}
+
+	return lfactory, nil
+}
+
 func TestFactoryNew(t *testing.T) {
 	root, rerr := newTestRoot()
 	if rerr != nil {
@@ -33,19 +56,28 @@ func TestFactoryNew(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if factory == nil {
-		t.Fatal("factory should not be nil")
+	_, err1 := checkFactory(factory, root)
+	if err1 != nil {
+		t.Fatal(err1)
 	}
-	lfactory, ok := factory.(*LinuxFactory)
-	if !ok {
-		t.Fatal("expected linux factory returned on linux based systems")
-	}
-	if lfactory.Root != root {
-		t.Fatalf("expected factory root to be %q but received %q", root, lfactory.Root)
-	}
+}
 
-	if factory.Type() != "libcontainer" {
-		t.Fatalf("unexpected factory type: %q, expected %q", factory.Type(), "libcontainer")
+func TestNewCriuPath(t *testing.T) {
+	root, rerr := newTestRoot()
+	if rerr != nil {
+		t.Fatal(rerr)
+	}
+	defer os.RemoveAll(root)
+	factory, err := New(root, Cgroupfs, CriuPath("criu"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	lfactory, err := checkFactory(factory, root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if lfactory.CriuPath != "criu" {
+		t.Fatal(fmt.Sprintf("unexpected factory CriuPath: %q, expected %q", lfactory.CriuPath, "criu"))
 	}
 }
 
@@ -59,19 +91,10 @@ func TestFactoryNewTmpfs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if factory == nil {
-		t.Fatal("factory should not be nil")
-	}
-	lfactory, ok := factory.(*LinuxFactory)
-	if !ok {
-		t.Fatal("expected linux factory returned on linux based systems")
-	}
-	if lfactory.Root != root {
-		t.Fatalf("expected factory root to be %q but received %q", root, lfactory.Root)
-	}
 
-	if factory.Type() != "libcontainer" {
-		t.Fatalf("unexpected factory type: %q, expected %q", factory.Type(), "libcontainer")
+	lfactory, err := checkFactory(factory, root)
+	if err != nil {
+		t.Fatal(err)
 	}
 	mounted, err := mount.Mounted(lfactory.Root)
 	if err != nil {
@@ -80,10 +103,12 @@ func TestFactoryNewTmpfs(t *testing.T) {
 	if !mounted {
 		t.Fatalf("Factory Root is not mounted")
 	}
+	defer syscall.Unmount(root, syscall.MNT_DETACH)
 	mounts, err := mount.GetMounts()
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	var found bool
 	for _, m := range mounts {
 		if m.Mountpoint == lfactory.Root {
@@ -99,7 +124,7 @@ func TestFactoryNewTmpfs(t *testing.T) {
 	if !found {
 		t.Fatalf("Factory Root is not listed in mounts list")
 	}
-	defer syscall.Unmount(root, syscall.MNT_DETACH)
+
 }
 
 func TestFactoryLoadNotExists(t *testing.T) {
@@ -116,6 +141,7 @@ func TestFactoryLoadNotExists(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected nil error loading non-existing container")
 	}
+
 	lerr, ok := err.(Error)
 	if !ok {
 		t.Fatal("expected libcontainer error type")
