@@ -25,6 +25,6 @@ before_install:
   - go get -u github.com/mvdan/sh/cmd/shfmt
 
 script:
-  - git-validation -run DCO,short-subject -v -range ${TRAVIS_COMMIT_RANGE}
+  - git-validation -run DCO,short-subject -v -range ${TRAVIS_BRANCH}..FETCH_HEAD
   - make BUILDTAGS="${BUILDTAGS}"
   - make BUILDTAGS="${BUILDTAGS}" clean validate test
