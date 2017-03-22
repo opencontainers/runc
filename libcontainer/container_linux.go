@@ -747,6 +747,11 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 		OrphanPtsMaster: proto.Bool(true),
 	}
 
+	fcg := c.cgroupManager.GetPaths()["freezer"]
+	if fcg != "" {
+		rpcOpts.FreezeCgroup = proto.String(fcg)
+	}
+
 	// append optional criu opts, e.g., page-server and port
 	if criuOpts.PageServer.Address != "" && criuOpts.PageServer.Port != 0 {
 		rpcOpts.Ps = &criurpc.CriuPageServerInfo{
