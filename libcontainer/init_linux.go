@@ -390,7 +390,16 @@ func setupRlimits(limits []configs.Rlimit, pid int) error {
 func setOomScoreAdj(oomScoreAdj int, pid int) error {
 	path := fmt.Sprintf("/proc/%d/oom_score_adj", pid)
 
-	return ioutil.WriteFile(path, []byte(strconv.Itoa(oomScoreAdj)), 0600)
+	// If there's a permission error, continue. In unprivileged LXD containers, this isn't allowed.
+	// See https://github.com/lxc/lxd/issues/2994 .
+	if err := ioutil.WriteFile(path, []byte(strconv.Itoa(oomScoreAdj)), 0600); err != nil {
+		if os.IsPermission(err) {
+			logrus.Warn(err)
+		} else {
+			return err
+		}
+	}
+	return nil
 }
 
 const _P_PID = 1
