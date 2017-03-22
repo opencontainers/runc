@@ -23,8 +23,9 @@ before_install:
   - go get -u github.com/golang/lint/golint
   - go get -u github.com/vbatts/git-validation
   - go get -u github.com/mvdan/sh/cmd/shfmt
+  - env | grep TRAVIS_
 
 script:
-  - git-validation -run DCO,short-subject -v -range ${TRAVIS_BRANCH}..FETCH_HEAD
+  - git-validation -run DCO,short-subject -v
   - make BUILDTAGS="${BUILDTAGS}"
   - make BUILDTAGS="${BUILDTAGS}" clean validate test
