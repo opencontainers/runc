@@ -1284,7 +1284,12 @@ func (c *linuxContainer) runType() (Status, error) {
 }
 
 func (c *linuxContainer) isPaused() (bool, error) {
-	data, err := ioutil.ReadFile(filepath.Join(c.cgroupManager.GetPaths()["freezer"], "freezer.state"))
+	fcg := c.cgroupManager.GetPaths()["freezer"]
+	if fcg == "" {
+		// A container doesn't have a freezer cgroup
+		return false, nil
+	}
+	data, err := ioutil.ReadFile(filepath.Join(fcg, "freezer.state"))
 	if err != nil {
 		// If freezer cgroup is not mounted, the container would just be not paused.
 		if os.IsNotExist(err) {
