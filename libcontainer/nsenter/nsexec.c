@@ -1,4 +1,5 @@
 #define _GNU_SOURCE
+#include <ctype.h>
 #include <endian.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -19,6 +20,7 @@
 #include <sys/prctl.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 
 #include <linux/limits.h>
 #include <linux/netlink.h>
@@ -63,7 +65,13 @@ struct clone_t {
 };
 
 struct nlconfig_t {
+	/*
+	 * Stores a pointer to the netlink data payload. All other pointers
+	 * are inside this block. Free it with nl_free().
+	 */
 	char *data;
+
+	/* Options sent from the bootstrap process. */
 	uint32_t cloneflags;
 	char *uidmap;
 	size_t uidmap_len;
@@ -72,6 +80,17 @@ struct nlconfig_t {
 	char *namespaces;
 	size_t namespaces_len;
 	uint8_t is_setgroup;
+
+	/*
+	 * Namespace uids and gids. If cloneflags doesn't contain
+	 * CLONE_NEWUSER then these will be 0. host{uid,gid} are from the
+	 * host's perspective and root{uid,gid} are from the container's
+	 * perspective.
+	 */
+	uid_t hostuid;
+	gid_t hostgid;
+	uid_t rootuid;
+	gid_t rootgid;
 };
 
 /*
@@ -204,6 +223,51 @@ static void update_gidmap(int pid, char *map, int map_len)
 		bail("failed to update /proc/%d/gid_map", pid);
 }
 
+static char *trim(char *str, char *end, bool space) {
+	char *p = str;
+
+	while (p != end && isspace(*p) == space)
+		p++;
+	if (p == end)
+		return NULL;
+
+	return p;
+}
+
+/*
+ * Get the nth field from a space-separated map. Note that this only handles a
+ * single map line (which is enough for libcontainer at the moment) but might
+ * need to be expanded at a later point.
+ *
+ * TODO: Expand this to handle multiple-line /proc/self/???_map files.
+ */
+static int map_field(char *map, int map_len, int n)
+{
+	char *p = map;
+	char *end = map + map_len;
+	int i, value = 0;
+
+	/* Advance *p to the field. */
+	for (i = 0; i < n; i++) {
+		/* Trim the spaces. */
+		p = trim(p, end, true);
+		if (!p)
+			bail("unexpected end of map: '%s'", map);
+
+		/* Now we can skip over the actual field content. */
+		p = trim(p, end, false);
+		if (!p)
+			bail("unexpected end of map: '%s'", map);
+	}
+
+	/* We don't need to trim spaces, strtol(3) handles it fine. */
+	value = strtol(p, &end, 10);
+	if (p == end || !isspace(*end))
+		bail("failed to parse field %d value: '%s'", n, map);
+
+	return value;
+}
+
 /* A dummy function that just jumps to the given jumpval. */
 static int child_func(void *arg) __attribute__ ((noinline));
 static int child_func(void *arg)
@@ -324,10 +388,18 @@ static void nl_parse(int fd, struct nlconfig_t *config)
 		case UIDMAP_ATTR:
 			config->uidmap = current;
 			config->uidmap_len = payload_len;
+
+			/* The format: "<container> <host> <length>" */
+			config->hostuid = map_field(config->uidmap, config->uidmap_len, 1);
+			config->rootuid = map_field(config->uidmap, config->uidmap_len, 0);
 			break;
 		case GIDMAP_ATTR:
 			config->gidmap = current;
 			config->gidmap_len = payload_len;
+
+			/* The format: "<container> <host> <length>" */
+			config->hostgid = map_field(config->gidmap, config->gidmap_len, 1);
+			config->rootgid = map_field(config->gidmap, config->gidmap_len, 0);
 			break;
 		case SETGROUP_ATTR:
 			config->is_setgroup = readint8(current);
@@ -340,24 +412,25 @@ static void nl_parse(int fd, struct nlconfig_t *config)
 	}
 }
 
-void nl_free(struct nlconfig_t *config)
+static void nl_free(struct nlconfig_t *config)
 {
 	free(config->data);
 }
 
-void join_namespaces(char *nslist)
+static void join_namespaces(struct nlconfig_t *config)
 {
 	int num = 0, i;
 	char *saveptr = NULL;
-	char *namespace = strtok_r(nslist, ",", &saveptr);
+	char *namespace = strtok_r(config->namespaces, ",", &saveptr);
 	struct namespace_t {
 		int fd;
 		int ns;
 		char type[PATH_MAX];
 		char path[PATH_MAX];
 	} *namespaces = NULL;
+	struct namespace_t *userns = NULL;
 
-	if (!namespace || !strlen(namespace) || !strlen(nslist))
+	if (!namespace || !strlen(namespace) || !strlen(config->namespaces))
 		bail("ns paths are empty");
 
 	/*
@@ -389,7 +462,38 @@ void join_namespaces(char *nslist)
 		ns->fd = fd;
 		ns->ns = nsflag(namespace);
 		strncpy(ns->path, path, PATH_MAX);
+
+		/* Cache the user namespace entry. */
+		if (ns->ns == CLONE_NEWUSER || !strcmp(namespace, "user"))
+			userns = ns;
 	} while ((namespace = strtok_r(NULL, ",", &saveptr)) != NULL);
+
+	/*
+	 * Before we join anything, we need to set our {uid,gid}. The ideal way of
+	 * doing this would be to read /proc/<pid>/{uid,gid}_map, but we can't be
+	 * sure if we have access to that (and we don't even know the PID in this
+	 * context). Instead we can just get the owner of the namespace files we're
+	 * joining (logically this should be the root user in the namespace).
+	 *
+	 * This all has to be done to avoid security issues with joining a
+	 * namespace while also having euid=(kuid 0), since unprivileged processes
+	 * inside the namespace have capabilities that are a bit worrying for a
+	 * *real* root process.
+	 */
+
+	if (userns) {
+		struct stat st = {0};
+
+		/* Get the owner of /proc/<pid>/ns/user. */
+		if (lstat(userns->path, &st) < 0)
+			bail("failed to stat path: %s", userns->path);
+
+		/* Switch groups first, the order is important. */
+		if (setresgid(st.st_gid, st.st_gid, st.st_gid) < 0)
+			bail("failed to set gid to st.st_gid of %s", userns->path);
+		if (setresuid(st.st_uid, st.st_uid, st.st_uid) < 0)
+			bail("failed to set uid to st.st_uid of %s", userns->path);
+	}
 
 	/*
 	 * The ordering in which we join namespaces is important. We should
@@ -431,6 +535,7 @@ void nsexec(void)
 	}
 
 	/* Parse all of the netlink configuration. */
+	/* XXX: Make the {root,host}{uid,gid} = 0 explicit. */
 	nl_parse(pipenum, &config);
 
 	/* Pipe so we can tell the child when we've finished setting up. */
@@ -655,7 +760,20 @@ void nsexec(void)
 			 * using cmsg(3) but that's just annoying.
 			 */
 			if (config.namespaces)
-				join_namespaces(config.namespaces);
+				join_namespaces(&config);
+
+			/*
+			 * This needs to be done if we're about to create a user namespace.
+			 * If we already joined a user namespace this is also fine (we do a
+			 * similar operation in join_namespaces). There are some security
+			 * issues with having an euid=(kuid 0) inside a user namespace.
+			 */
+
+			/* Switch groups first, the order is important. */
+			if (setresgid(config.hostgid, config.hostgid, config.hostgid) < 0)
+				bail("failed to set gid to host");
+			if (setresuid(config.hostuid, config.hostuid, config.hostuid) < 0)
+				bail("failed to set uid to host");
 
 			/*
 			 * Unshare all of the namespaces. Now, it should be noted that this
@@ -667,6 +785,7 @@ void nsexec(void)
 			 * some old kernel versions where clone(CLONE_PARENT | CLONE_NEWPID)
 			 * was broken, so we'll just do it the long way anyway.
 			 */
+
 			if (unshare(config.cloneflags) < 0)
 				bail("failed to unshare namespaces");
 
@@ -702,6 +821,12 @@ void nsexec(void)
 			 * which would break many applications and libraries, so we must fork
 			 * to actually enter the new PID namespace.
 			 */
+
+			/* Switch groups first, the order is important. */
+			if (setresgid(config.rootgid, config.rootgid, config.rootgid) < 0)
+				bail("failed to set gid to root");
+			if (setresuid(config.rootuid, config.rootuid, config.rootuid) < 0)
+				bail("failed to set uid to root");
 			child = clone_parent(&env, JUMP_INIT);
 			if (child < 0)
 				bail("unable to fork: init_func");
