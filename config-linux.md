@@ -678,7 +678,7 @@ The values MUST be absolute paths in the [container namespace][container-namespa
     ]
 ```
 
-## <a name"configLinuxMountLabel" />Mount Label
+## <a name="configLinuxMountLabel" />Mount Label
 
 **`mountLabel`** (string, OPTIONAL) will set the Selinux context for the mounts in the container.
 
