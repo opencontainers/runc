@@ -157,6 +157,13 @@ func (c *linuxContainer) Stats() (*Stats, error) {
 		err   error
 		stats = &Stats{}
 	)
+	status, err := c.Status()
+	if err != nil {
+		return stats, err
+	}
+	if status == Destroyed {
+		return stats, newGenericError(fmt.Errorf("container not running"), ContainerNotRunning)
+	}
 	if stats.CgroupStats, err = c.cgroupManager.GetStats(); err != nil {
 		return stats, newSystemErrorWithCause(err, "getting container stats from cgroups")
 	}
