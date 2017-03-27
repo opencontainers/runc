@@ -581,43 +581,70 @@ Seccomp provides application sandboxing mechanism in the Linux kernel.
 Seccomp configuration allows one to configure actions to take for matched syscalls and furthermore also allows matching on values passed as arguments to syscalls.
 For more information about Seccomp, see [Seccomp][seccomp] kernel documentation.
 The actions, architectures, and operators are strings that match the definitions in seccomp.h from [libseccomp][] and are translated to corresponding values.
-A valid list of constants as of libseccomp v2.3.2 is shown below.
 
-Architecture Constants
-* `SCMP_ARCH_X86`
-* `SCMP_ARCH_X86_64`
-* `SCMP_ARCH_X32`
-* `SCMP_ARCH_ARM`
-* `SCMP_ARCH_AARCH64`
-* `SCMP_ARCH_MIPS`
-* `SCMP_ARCH_MIPS64`
-* `SCMP_ARCH_MIPS64N32`
-* `SCMP_ARCH_MIPSEL`
-* `SCMP_ARCH_MIPSEL64`
-* `SCMP_ARCH_MIPSEL64N32`
-* `SCMP_ARCH_PPC`
-* `SCMP_ARCH_PPC64`
-* `SCMP_ARCH_PPC64LE`
-* `SCMP_ARCH_S390`
-* `SCMP_ARCH_S390X`
-* `SCMP_ARCH_PARISC`
-* `SCMP_ARCH_PARISC64`
+**`seccomp`** (object, OPTIONAL)
 
-Action Constants:
-* `SCMP_ACT_KILL`
-* `SCMP_ACT_TRAP`
-* `SCMP_ACT_ERRNO`
-* `SCMP_ACT_TRACE`
-* `SCMP_ACT_ALLOW`
+The following parameters can be specified to setup seccomp:
 
-Operator Constants:
-* `SCMP_CMP_NE`
-* `SCMP_CMP_LT`
-* `SCMP_CMP_LE`
-* `SCMP_CMP_EQ`
-* `SCMP_CMP_GE`
-* `SCMP_CMP_GT`
-* `SCMP_CMP_MASKED_EQ`
+* **`defaultAction`** *(string, REQUIRED)* - the default action for seccomp. Allowed values are the same as `syscalls[].action`.
+
+* **`architectures`** *(array of strings, OPTIONAL)* - the architecture used for system calls.
+    A valid list of constants as of libseccomp v2.3.2 is shown below.
+
+    * `SCMP_ARCH_X86`
+    * `SCMP_ARCH_X86_64`
+    * `SCMP_ARCH_X32`
+    * `SCMP_ARCH_ARM`
+    * `SCMP_ARCH_AARCH64`
+    * `SCMP_ARCH_MIPS`
+    * `SCMP_ARCH_MIPS64`
+    * `SCMP_ARCH_MIPS64N32`
+    * `SCMP_ARCH_MIPSEL`
+    * `SCMP_ARCH_MIPSEL64`
+    * `SCMP_ARCH_MIPSEL64N32`
+    * `SCMP_ARCH_PPC`
+    * `SCMP_ARCH_PPC64`
+    * `SCMP_ARCH_PPC64LE`
+    * `SCMP_ARCH_S390`
+    * `SCMP_ARCH_S390X`
+    * `SCMP_ARCH_PARISC`
+    * `SCMP_ARCH_PARISC64`
+
+* **`syscalls`** *(array of objects, REQUIRED)* - match a syscall in seccomp.
+
+    Each entry has the following structure:
+
+    * **`names`** *(array of strings, REQUIRED)* - the names of the syscalls.
+
+    * **`action`** *(string, REQUIRED)* - the action for seccomp rules.
+        A valid list of constants as of libseccomp v2.3.2 is shown below.
+
+        * `SCMP_ACT_KILL`
+        * `SCMP_ACT_TRAP`
+        * `SCMP_ACT_ERRNO`
+        * `SCMP_ACT_TRACE`
+        * `SCMP_ACT_ALLOW`
+
+    * **`args`** *(array of objects, OPTIONAL)* - the specific syscall in seccomp.
+
+        Each entry has the following structure:
+
+        * **`index`** *(uint, REQUIRED)* - the index for syscall arguments in seccomp.
+
+        * **`value`** *(uint64, REQUIRED)* - the value for syscall arguments in seccomp.
+
+        * **`valueTwo`** *(uint64, REQUIRED)* - the value for syscall arguments in seccomp.
+
+        * **`op`** *(string, REQUIRED)* - the operator for syscall arguments in seccomp.
+            A valid list of constants as of libseccomp v2.3.2 is shown below.
+
+            * `SCMP_CMP_NE`
+            * `SCMP_CMP_LT`
+            * `SCMP_CMP_LE`
+            * `SCMP_CMP_EQ`
+            * `SCMP_CMP_GE`
+            * `SCMP_CMP_GT`
+            * `SCMP_CMP_MASKED_EQ`
 
 ###### Example
 
