@@ -40,6 +40,11 @@ func (v *ConfigValidator) Validate(config *configs.Config) error {
 	if err := v.sysctl(config); err != nil {
 		return err
 	}
+	if config.Rootless {
+		if err := v.rootless(config); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

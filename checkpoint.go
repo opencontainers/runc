@@ -39,6 +39,11 @@ checkpointed.`,
 		if err := checkArgs(context, 1, exactArgs); err != nil {
 			return err
 		}
+		// XXX: Currently this is untested with rootless containers.
+		if isRootless() {
+			return fmt.Errorf("runc checkpoint requires root")
+		}
+
 		container, err := getContainer(context)
 		if err != nil {
 			return err

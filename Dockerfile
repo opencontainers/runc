@@ -6,6 +6,7 @@ RUN echo 'deb http://httpredir.debian.org/debian jessie-backports main' > /etc/a
 RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
+    sudo \
     gawk \
     iptables \
     jq \
@@ -21,6 +22,12 @@ RUN apt-get update && apt-get install -y \
     python-minimal \
     --no-install-recommends \
     && apt-get clean
+
+# Add a dummy user for the rootless integration tests. While runC does
+# not require an entry in /etc/passwd to operate, one of the tests uses
+# `git clone` -- and `git clone` does not allow you to clone a
+# repository if the current uid does not have an entry in /etc/passwd.
+RUN useradd -u1000 -m -d/home/rootless -s/bin/bash rootless
 
 # install bats
 RUN cd /tmp \

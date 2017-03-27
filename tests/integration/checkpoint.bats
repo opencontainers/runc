@@ -12,7 +12,8 @@ function teardown() {
 }
 
 @test "checkpoint and restore" {
-  requires criu
+  # XXX: currently criu require root containers.
+  requires criu root
 
   # criu does not work with external terminals so..
   # setting terminal and root:readonly: to false
@@ -58,8 +59,9 @@ function teardown() {
   [[ "${output}" == *"running"* ]]
 }
 
-@test "checkpoint(pre-dump) and restore" {
-  requires criu
+@test "checkpoint --pre-dump and restore" {
+  # XXX: currently criu require root containers.
+  requires criu root
 
   # criu does not work with external terminals so..
   # setting terminal and root:readonly: to false

@@ -65,11 +65,11 @@ func TestRemoveNamespace(t *testing.T) {
 	}
 }
 
-func TestHostUIDNoUSERNS(t *testing.T) {
+func TestHostRootUIDNoUSERNS(t *testing.T) {
 	config := &Config{
 		Namespaces: Namespaces{},
 	}
-	uid, err := config.HostUID()
+	uid, err := config.HostRootUID()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +78,7 @@ func TestHostUIDNoUSERNS(t *testing.T) {
 	}
 }
 
-func TestHostUIDWithUSERNS(t *testing.T) {
+func TestHostRootUIDWithUSERNS(t *testing.T) {
 	config := &Config{
 		Namespaces: Namespaces{{Type: NEWUSER}},
 		UidMappings: []IDMap{
@@ -89,7 +89,7 @@ func TestHostUIDWithUSERNS(t *testing.T) {
 			},
 		},
 	}
-	uid, err := config.HostUID()
+	uid, err := config.HostRootUID()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,11 +98,11 @@ func TestHostUIDWithUSERNS(t *testing.T) {
 	}
 }
 
-func TestHostGIDNoUSERNS(t *testing.T) {
+func TestHostRootGIDNoUSERNS(t *testing.T) {
 	config := &Config{
 		Namespaces: Namespaces{},
 	}
-	uid, err := config.HostGID()
+	uid, err := config.HostRootGID()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -111,7 +111,7 @@ func TestHostGIDNoUSERNS(t *testing.T) {
 	}
 }
 
-func TestHostGIDWithUSERNS(t *testing.T) {
+func TestHostRootGIDWithUSERNS(t *testing.T) {
 	config := &Config{
 		Namespaces: Namespaces{{Type: NEWUSER}},
 		GidMappings: []IDMap{
@@ -122,7 +122,7 @@ func TestHostGIDWithUSERNS(t *testing.T) {
 			},
 		},
 	}
-	uid, err := config.HostGID()
+	uid, err := config.HostRootGID()
 	if err != nil {
 		t.Fatal(err)
 	}

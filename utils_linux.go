@@ -186,6 +186,11 @@ func createPidFile(path string, process *libcontainer.Process) error {
 	return os.Rename(tmpName, path)
 }
 
+// XXX: Currently we autodetect rootless mode.
+func isRootless() bool {
+	return os.Geteuid() != 0
+}
+
 func createContainer(context *cli.Context, id string, spec *specs.Spec) (libcontainer.Container, error) {
 	config, err := specconv.CreateLibcontainerConfig(&specconv.CreateOpts{
 		CgroupName:       id,
@@ -193,6 +198,7 @@ func createContainer(context *cli.Context, id string, spec *specs.Spec) (libcont
 		NoPivotRoot:      context.Bool("no-pivot"),
 		NoNewKeyring:     context.Bool("no-new-keyring"),
 		Spec:             spec,
+		Rootless:         isRootless(),
 	})
 	if err != nil {
 		return nil, err
@@ -236,12 +242,12 @@ func (r *runner) run(config *specs.Process) (int, error) {
 	for i := baseFd; i < baseFd+r.preserveFDs; i++ {
 		process.ExtraFiles = append(process.ExtraFiles, os.NewFile(uintptr(i), "PreserveFD:"+strconv.Itoa(i)))
 	}
-	rootuid, err := r.container.Config().HostUID()
+	rootuid, err := r.container.Config().HostRootUID()
 	if err != nil {
 		r.destroy()
 		return -1, err
 	}
-	rootgid, err := r.container.Config().HostGID()
+	rootgid, err := r.container.Config().HostRootGID()
 	if err != nil {
 		r.destroy()
 		return -1, err

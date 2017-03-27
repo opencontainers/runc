@@ -4,7 +4,7 @@
 INTEGRATION_ROOT=$(dirname "$(readlink -f "$BASH_SOURCE")")
 RUNC="${INTEGRATION_ROOT}/../../runc"
 RECVTTY="${INTEGRATION_ROOT}/../../contrib/cmd/recvtty/recvtty"
-GOPATH="${INTEGRATION_ROOT}/../../../.."
+GOPATH="$(mktemp -d --tmpdir runc-integration-gopath.XXXXXX)"
 
 # Test data path.
 TESTDATA="${INTEGRATION_ROOT}/testdata"
@@ -27,7 +27,7 @@ KERNEL_MINOR="${KERNEL_VERSION#$KERNEL_MAJOR.}"
 KERNEL_MINOR="${KERNEL_MINOR%%.*}"
 
 # Root state path.
-ROOT="$BATS_TMPDIR/runc"
+ROOT=$(mktemp -d "$BATS_TMPDIR/runc.XXXXXX")
 
 # Path to console socket.
 CONSOLE_SOCKET="$BATS_TMPDIR/console.sock"
@@ -39,6 +39,9 @@ CGROUP_CPU_BASE_PATH=$(grep "cgroup" /proc/self/mountinfo | gawk 'toupper($NF) ~
 # CONFIG_MEMCG_KMEM support
 KMEM="${CGROUP_MEMORY_BASE_PATH}/memory.kmem.limit_in_bytes"
 RT_PERIOD="${CGROUP_CPU_BASE_PATH}/cpu.rt_period_us"
+
+# Check if we're in rootless mode.
+ROOTLESS=$(id -u)
 
 # Wrapper for runc.
 function runc() {
@@ -55,6 +58,17 @@ function __runc() {
 	"$RUNC" --root "$ROOT" "$@"
 }
 
+# Wrapper for runc spec.
+function runc_spec() {
+	local args=""
+
+	if [ "$ROOTLESS" -ne 0 ]; then
+		args+="--rootless"
+	fi
+
+	runc spec $args "$@"
+}
+
 # Fails the current test, providing the error given.
 function fail() {
 	echo "$@" >&2
@@ -68,7 +82,12 @@ function requires() {
 		case $var in
 			criu)
 				if [ ! -e "$CRIU" ]; then
-					skip "Test requires ${var}."
+					skip "test requires ${var}"
+				fi
+				;;
+			root)
+				if [ "$ROOTLESS" -ne 0 ]; then
+					skip "test requires ${var}"
 				fi
 				;;
 			cgroups_kmem)
@@ -179,18 +198,18 @@ function setup_busybox() {
 	if [ ! -e $BUSYBOX_IMAGE ]; then
 		curl -o $BUSYBOX_IMAGE -sSL 'https://github.com/docker-library/busybox/raw/a0558a9006ce0dd6f6ec5d56cfd3f32ebeeb815f/glibc/busybox.tar.xz'
 	fi
-	tar -C "$BUSYBOX_BUNDLE"/rootfs -xf "$BUSYBOX_IMAGE"
+	tar --exclude './dev/*' -C "$BUSYBOX_BUNDLE"/rootfs -xf "$BUSYBOX_IMAGE"
 	cd "$BUSYBOX_BUNDLE"
-	runc spec
+	runc_spec
 }
 
 function setup_hello() {
 	setup_recvtty
 	run mkdir "$HELLO_BUNDLE"
 	run mkdir "$HELLO_BUNDLE"/rootfs
-	tar -C "$HELLO_BUNDLE"/rootfs -xf "$HELLO_IMAGE"
+	tar --exclude './dev/*' -C "$HELLO_BUNDLE"/rootfs -xf "$HELLO_IMAGE"
 	cd "$HELLO_BUNDLE"
-	runc spec
+	runc_spec
 	sed -i 's;"sh";"/hello";' config.json
 }
 

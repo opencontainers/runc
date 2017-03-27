@@ -348,7 +348,7 @@ func getCgroupMounts(m *configs.Mount) ([]*configs.Mount, error) {
 	var binds []*configs.Mount
 
 	for _, mm := range mounts {
-		dir, err := mm.GetThisCgroupDir(cgroupPaths)
+		dir, err := mm.GetOwnCgroup(cgroupPaths)
 		if err != nil {
 			return nil, err
 		}

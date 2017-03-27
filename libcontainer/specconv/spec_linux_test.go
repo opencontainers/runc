@@ -5,6 +5,7 @@ package specconv
 import (
 	"testing"
 
+	"github.com/opencontainers/runc/libcontainer/configs/validate"
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
@@ -16,7 +17,13 @@ func TestLinuxCgroupsPathSpecified(t *testing.T) {
 		CgroupsPath: cgroupsPath,
 	}
 
-	cgroup, err := createCgroupConfig("ContainerID", false, spec)
+	opts := &CreateOpts{
+		CgroupName:       "ContainerID",
+		UseSystemdCgroup: false,
+		Spec:             spec,
+	}
+
+	cgroup, err := createCgroupConfig(opts)
 	if err != nil {
 		t.Errorf("Couldn't create Cgroup config: %v", err)
 	}
@@ -28,14 +35,40 @@ func TestLinuxCgroupsPathSpecified(t *testing.T) {
 
 func TestLinuxCgroupsPathNotSpecified(t *testing.T) {
 	spec := &specs.Spec{}
+	opts := &CreateOpts{
+		CgroupName:       "ContainerID",
+		UseSystemdCgroup: false,
+		Spec:             spec,
+	}
 
-	cgroup, err := createCgroupConfig("ContainerID", false, spec)
+	cgroup, err := createCgroupConfig(opts)
 	if err != nil {
 		t.Errorf("Couldn't create Cgroup config: %v", err)
 	}
 
 	if cgroup.Path != "" {
 		t.Errorf("Wrong cgroupsPath, expected it to be empty string, got '%s'", cgroup.Path)
+	}
+}
+
+func TestSpecconvExampleValidate(t *testing.T) {
+	spec := Example()
+	spec.Root.Path = "/"
+
+	opts := &CreateOpts{
+		CgroupName:       "ContainerID",
+		UseSystemdCgroup: false,
+		Spec:             spec,
+	}
+
+	config, err := CreateLibcontainerConfig(opts)
+	if err != nil {
+		t.Errorf("Couldn't create libcontainer config: %v", err)
+	}
+
+	validator := validate.New()
+	if err := validator.Validate(config); err != nil {
+		t.Errorf("Expected specconv to produce valid container config: %v", err)
 	}
 }
 
@@ -60,5 +93,28 @@ func TestDupNamespaces(t *testing.T) {
 
 	if err == nil {
 		t.Errorf("Duplicated namespaces should be forbidden")
+	}
+}
+
+func TestRootlessSpecconvValidate(t *testing.T) {
+	spec := Example()
+	spec.Root.Path = "/"
+	ToRootless(spec)
+
+	opts := &CreateOpts{
+		CgroupName:       "ContainerID",
+		UseSystemdCgroup: false,
+		Spec:             spec,
+		Rootless:         true,
+	}
+
+	config, err := CreateLibcontainerConfig(opts)
+	if err != nil {
+		t.Errorf("Couldn't create libcontainer config: %v", err)
+	}
+
+	validator := validate.New()
+	if err := validator.Validate(config); err != nil {
+		t.Errorf("Expected specconv to produce valid rootless container config: %v", err)
 	}
 }

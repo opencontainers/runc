@@ -12,6 +12,9 @@ function teardown() {
 }
 
 @test "runc pause and resume" {
+  # XXX: currently cgroups require root containers.
+  requires root
+
   # run busybox detached
   runc run -d --console-socket $CONSOLE_SOCKET test_busybox
   [ "$status" -eq 0 ]
@@ -34,6 +37,9 @@ function teardown() {
 }
 
 @test "runc pause and resume with nonexist container" {
+  # XXX: currently cgroups require root containers.
+  requires root
+
   # run test_busybox detached
   runc run -d --console-socket $CONSOLE_SOCKET test_busybox
   [ "$status" -eq 0 ]
