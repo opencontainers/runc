@@ -67,7 +67,7 @@ The contributors and maintainers of all OCI projects have a weekly meeting on We
 
 There is an [iCalendar][rfc5545] format for the meetings [here](meeting.ics).
 
-Everyone is welcome to participate via [UberConference web][uberconference] or audio-only: 415-968-0849 (no PIN needed.)
+Everyone is welcome to participate via [UberConference web][uberconference] or audio-only: +1 415 968 0849 (no PIN needed).
 An initial agenda will be posted to the [mailing list](#mailing-list) earlier in the week, and everyone is welcome to propose additional topics or suggest other agenda alterations there.
 Minutes are posted to the [mailing list](#mailing-list) and minutes from past calls are archived to the [wiki][runtime-wiki].
 
