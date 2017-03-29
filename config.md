@@ -46,7 +46,7 @@ For example, if a configuration is compliant with version 1.1 of this specificat
 
 ## <a name="configMounts" />Mounts
 
-**`mounts`** (array, OPTIONAL) specifies additional mounts beyond [`root`](#root).
+**`mounts`** (array of objects, OPTIONAL) specifies additional mounts beyond [`root`](#root).
 The runtime MUST mount entries in the listed order.
 For Linux, the parameters are as documented in [mount(2)][mount.2] system call man page.
 For Solaris, the mount entry corresponds to the 'fs' resource in the [zonecfg(1M)][zonecfg.1m] man page.
@@ -350,16 +350,16 @@ Implementations MUST error out when invalid values are encountered and MUST gene
 Hooks allow for the configuration of custom actions related to the [lifecycle](runtime.md#lifecycle) of the container.
 
 * **`hooks`** (object, OPTIONAL) MAY contain any of the following properties:
-  * **`prestart`** (array, OPTIONAL) is an array of [pre-start hooks](#prestart).
+  * **`prestart`** (array of objects, OPTIONAL) is an array of [pre-start hooks](#prestart).
     Entries in the array contain the following properties:
     * **`path`** (string, REQUIRED) with similar semantics to [IEEE Std 1003.1-2001 `execv`'s *path*][ieee-1003.1-2001-xsh-exec].
       This specification extends the IEEE standard in that **`path`** MUST be absolute.
     * **`args`** (array of strings, OPTIONAL) with the same semantics as [IEEE Std 1003.1-2001 `execv`'s *argv*][ieee-1003.1-2001-xsh-exec].
     * **`env`** (array of strings, OPTIONAL) with the same semantics as [IEEE Std 1003.1-2001's `environ`][ieee-1003.1-2001-xbd-c8.1].
     * **`timeout`** (int, OPTIONAL) is the number of seconds before aborting the hook.
-  * **`poststart`** (array, OPTIONAL) is an array of [post-start hooks](#poststart).
+  * **`poststart`** (array of objects, OPTIONAL) is an array of [post-start hooks](#poststart).
     Entries in the array have the same schema as pre-start entries.
-  * **`poststop`** (array, OPTIONAL) is an array of [post-stop hooks](#poststop).
+  * **`poststop`** (array of objects, OPTIONAL) is an array of [post-stop hooks](#poststop).
     Entries in the array have the same schema as pre-start entries.
 
 Hooks allow users to specify programs to run before or after various lifecycle events.
