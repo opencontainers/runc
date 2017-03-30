@@ -1,10 +1,11 @@
 
-default: help
+default: validate
 
 help:
-	@echo "Usage: make <target>"
+	@echo "Usage: make [target]"
 	@echo
 	@echo " * 'fmt' - format the json with indentation"
+	@echo " * 'help' - show this help information"
 	@echo " * 'validate' - build the validation tool"
 
 fmt:
