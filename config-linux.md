@@ -361,7 +361,7 @@ The following parameters can be specified to setup the controller:
     * **`weight`** *(uint16, OPTIONAL)* - bandwidth rate for the device, range is from 10 to 1000
     * **`leafWeight`** *(uint16, OPTIONAL)* - bandwidth rate for the device while competing with the cgroup's child cgroups, range is from 10 to 1000, CFQ scheduler only
 
-    You must specify at least one of `weight` or `leafWeight` in a given entry, and can specify both.
+    You MUST specify at least one of `weight` or `leafWeight` in a given entry, and MAY specify both.
 
 * **`blkioThrottleReadBpsDevice`**, **`blkioThrottleWriteBpsDevice`**, **`blkioThrottleReadIOPSDevice`**, **`blkioThrottleWriteIOPSDevice`** *(array of objects, OPTIONAL)* - specify the list of devices which will be IO rate limited.
   The following parameters can be specified per-device:
