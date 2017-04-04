@@ -263,9 +263,6 @@ func (c *linuxContainer) start(process *Process, isInit bool) error {
 	}
 	// generate a timestamp indicating when the container was started
 	c.created = time.Now().UTC()
-	c.state = &runningState{
-		c: c,
-	}
 	if isInit {
 		c.state = &createdState{
 			c: c,
@@ -291,6 +288,10 @@ func (c *linuxContainer) start(process *Process, isInit bool) error {
 					return newSystemErrorWithCausef(err, "running poststart hook %d", i)
 				}
 			}
+		}
+	} else {
+		c.state = &runningState{
+			c: c,
 		}
 	}
 	return nil
