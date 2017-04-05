@@ -1,6 +1,5 @@
 # <a name="containerConfigurationFile" />Container Configuration file
 
-The container's top-level directory MUST contain a configuration file called `config.json`.
 The canonical schema is defined in this document, but there is a JSON Schema in [`schema/config-schema.json`](schema/config-schema.json) and Go bindings in [`specs-go/config.go`](specs-go/config.go).
 [Platform](spec.md#platforms)-specific configuration schema are defined in the [platform-specific documents](#platform-specific-configuration) linked below.
 For properties that are only defined for some [platforms](spec.md#platforms), the Go property has a `platform` tag listing those protocols (e.g. `platform:"linux,solaris"`).
