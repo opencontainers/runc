@@ -357,6 +357,7 @@ Hooks allow for the configuration of custom actions related to the [lifecycle](r
     * **`args`** (array of strings, OPTIONAL) with the same semantics as [IEEE Std 1003.1-2001 `execv`'s *argv*][ieee-1003.1-2001-xsh-exec].
     * **`env`** (array of strings, OPTIONAL) with the same semantics as [IEEE Std 1003.1-2001's `environ`][ieee-1003.1-2001-xbd-c8.1].
     * **`timeout`** (int, OPTIONAL) is the number of seconds before aborting the hook.
+      If set, `timeout` MUST be greater than zero.
   * **`poststart`** (array of objects, OPTIONAL) is an array of [post-start hooks](#poststart).
     Entries in the array have the same schema as pre-start entries.
   * **`poststop`** (array of objects, OPTIONAL) is an array of [post-stop hooks](#poststop).
