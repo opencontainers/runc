@@ -551,7 +551,7 @@ type LinuxSeccompArg struct {
 type LinuxSyscall struct {
 	Names  []string           `json:"names"`
 	Action LinuxSeccompAction `json:"action"`
-	Args   []LinuxSeccompArg  `json:"args"`
+	Args   []LinuxSeccompArg  `json:"args,omitempty"`
 }
 
 // LinuxIntelRdt has container runtime resource constraints
