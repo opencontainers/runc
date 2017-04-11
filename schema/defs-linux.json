@@ -82,11 +82,6 @@
                 }
             }
         },
-        "Capability": {
-            "description": "Linux process capabilities",
-            "type": "string",
-            "pattern": "^CAP_([A-Z]|_)+$"
-        },
         "Major": {
             "description": "major device number",
             "$ref": "defs.json#/definitions/int64"
