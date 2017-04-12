@@ -192,22 +192,13 @@ static void update_setgroups(int pid, enum policy_t setgroup)
 	}
 }
 
-static void update_uidmap(int pid, char *map, size_t map_len)
-{
-	if (map == NULL || map_len <= 0)
-		return;
+static void update_mappings(char *bin, int child, char *map, size_t map_len) {
+	int cmd_len = strlen(bin) + 10 + map_len;
+	char cmd[cmd_len];
+	snprintf(cmd, cmd_len,"%s %d %s", bin, (int)child, map);
 
-	if (write_file(map, map_len, "/proc/%d/uid_map", pid) < 0)
-		bail("failed to update /proc/%d/uid_map", pid);
-}
-
-static void update_gidmap(int pid, char *map, size_t map_len)
-{
-	if (map == NULL || map_len <= 0)
-		return;
-
-	if (write_file(map, map_len, "/proc/%d/gid_map", pid) < 0)
-		bail("failed to update /proc/%d/gid_map", pid);
+	if (system(cmd) < 0)
+		bail("failed to execute '%s'", cmd);
 }
 
 static void update_oom_score_adj(char *data, size_t len)
@@ -597,8 +588,8 @@ void nsexec(void)
 						update_setgroups(child, SETGROUPS_DENY);
 
 					/* Set up mappings. */
-					update_uidmap(child, config.uidmap, config.uidmap_len);
-					update_gidmap(child, config.gidmap, config.gidmap_len);
+					update_mappings("newuidmap", child, config.uidmap, config.uidmap_len);
+					update_mappings("newgidmap", child, config.gidmap, config.gidmap_len);
 
 					s = SYNC_USERMAP_ACK;
 					if (write(syncfd, &s, sizeof(s)) != sizeof(s)) {

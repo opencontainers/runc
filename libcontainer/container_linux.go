@@ -1480,8 +1480,8 @@ func (c *linuxContainer) orderNamespacePaths(namespaces map[configs.NamespaceTyp
 func encodeIDMapping(idMap []configs.IDMap) ([]byte, error) {
 	data := bytes.NewBuffer(nil)
 	for _, im := range idMap {
-		line := fmt.Sprintf("%d %d %d\n", im.ContainerID, im.HostID, im.Size)
-		if _, err := data.WriteString(line); err != nil {
+		mapping := fmt.Sprintf("%d %d %d ", im.ContainerID, im.HostID, im.Size)
+		if _, err := data.WriteString(mapping); err != nil {
 			return nil, err
 		}
 	}
