@@ -35,11 +35,14 @@ The following parameters can be specified to setup namespaces:
     * **`user`** the container will be able to remap user and group IDs from the host to local users and groups within the container.
     * **`cgroup`** the container will have an isolated view of the cgroup hierarchy.
 
-* **`path`** *(string, OPTIONAL)* - an absolute path to namespace file in the [runtime mount namespace](glossary.md#runtime-namespace)
+* **`path`** *(string, OPTIONAL)* - an absolute path to namespace file in the [runtime mount namespace](glossary.md#runtime-namespace).
+    The runtime MUST place the container process in the namespace associated with that `path`.
+    The runtime MUST [generate an error](runtime.md#errors) if `path` is not associated with a namespace of type `type`.
 
-If a path is specified, that particular file is used to join that type of namespace.
+    If `path` is not specified, the runtime MUST create a new [container namespace](glossary.md#container-namespace) of type `type`.
+
 If a namespace type is not specified in the `namespaces` array, the container MUST inherit the [runtime namespace](glossary.md#runtime-namespace) of that type.
-If a `namespaces` field contains duplicated namespaces with same `type`, the runtime MUST error out.
+If a `namespaces` field contains duplicated namespaces with same `type`, the runtime MUST [generate an error](runtime.md#errors).
 
 ###### Example
 
