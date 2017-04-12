@@ -70,11 +70,11 @@ function runc_spec() {
 }
 
 function runc_spec_additional_mappings() {
-	cat config.json | \
-		jq '.linux.uidMappings |= .+ [{"hostID": 362144, "containerID": 1000, "size": 1}]' | \
-		jq '.linux.gidMappings |= .+ [{"hostID": 362144, "containerID": 100, "size": 1}]' | \
-		jq '.linux.gidMappings |= .+ [{"hostID": 362145, "containerID": 1000, "size": 1}]' \
-		> config.json.tmp
+	cat config.json \
+		| jq '.linux.uidMappings |= .+ [{"hostID": 362144, "containerID": 1000, "size": 1}]' \
+		| jq '.linux.gidMappings |= .+ [{"hostID": 362144, "containerID": 100, "size": 1}]' \
+		| jq '.linux.gidMappings |= .+ [{"hostID": 362145, "containerID": 1000, "size": 1}]' \
+			>config.json.tmp
 	mv config.json.tmp config.json
 }
 
