@@ -620,11 +620,14 @@ void nsexec(void)
 						update_setgroups(child, SETGROUPS_DENY);
 
 					/* Set up mappings. */
-					if (config.is_rootless) {
+					if (config.uidmappath_len > 0) {
 						update_mappings(config.uidmappath, child, config.uidmap, config.uidmap_len);
-						update_mappings(config.gidmappath, child, config.gidmap, config.gidmap_len);
 					} else {
 						update_uidmap(child, config.uidmap, config.uidmap_len);
+					}
+					if (config.gidmappath_len > 0) {
+						update_mappings(config.gidmappath, child, config.gidmap, config.gidmap_len);
+					} else {
 						update_gidmap(child, config.gidmap, config.gidmap_len);
 					}
 

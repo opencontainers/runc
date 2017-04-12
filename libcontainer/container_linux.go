@@ -1479,10 +1479,10 @@ func (c *linuxContainer) orderNamespacePaths(namespaces map[configs.NamespaceTyp
 	return paths, nil
 }
 
-func encodeIDMapping(idMap []configs.IDMap, rootless bool) ([]byte, error) {
+func encodeIDMapping(idMap []configs.IDMap, useExternalIDMapper bool) ([]byte, error) {
 	data := bytes.NewBuffer(nil)
 	separator := "\n"
-	if rootless {
+	if useExternalIDMapper {
 		// pass IDs as args to new{u,g}idmap rather than writing them directly
 		separator = " "
 	}
@@ -1529,7 +1529,12 @@ func (c *linuxContainer) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Na
 	if !joinExistingUser {
 		// write uid mappings
 		if len(c.config.UidMappings) > 0 {
-			b, err := encodeIDMapping(c.config.UidMappings, c.config.Rootless)
+			// user ns created by unprivileged process can only map its own uid/gid,
+			// leading to only one entry in the ID map.
+			// If more than one mapping specified, an external setuid executable must
+			// be used.
+			useExternalIDMapper := c.config.Rootless && len(c.config.UidMappings) > 1
+			b, err := encodeIDMapping(c.config.UidMappings, useExternalIDMapper)
 			if err != nil {
 				return nil, err
 			}
@@ -1537,15 +1542,18 @@ func (c *linuxContainer) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Na
 				Type:  UidmapAttr,
 				Value: b,
 			})
-			r.AddData(&Bytemsg{
-				Type:  UidmapPathAttr,
-				Value: []byte(c.newuidmapPath),
-			})
+			if useExternalIDMapper {
+				r.AddData(&Bytemsg{
+					Type:  UidmapPathAttr,
+					Value: []byte(c.newuidmapPath),
+				})
+			}
 		}
 
 		// write gid mappings
 		if len(c.config.GidMappings) > 0 {
-			b, err := encodeIDMapping(c.config.GidMappings, c.config.Rootless)
+			useExternalIDMapper := c.config.Rootless && len(c.config.GidMappings) > 1
+			b, err := encodeIDMapping(c.config.GidMappings, useExternalIDMapper)
 			if err != nil {
 				return nil, err
 			}
@@ -1553,10 +1561,12 @@ func (c *linuxContainer) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Na
 				Type:  GidmapAttr,
 				Value: b,
 			})
-			r.AddData(&Bytemsg{
-				Type:  GidmapPathAttr,
-				Value: []byte(c.newgidmapPath),
-			})
+			if useExternalIDMapper {
+				r.AddData(&Bytemsg{
+					Type:  GidmapPathAttr,
+					Value: []byte(c.newgidmapPath),
+				})
+			}
 			// The following only applies if we are root.
 			if !c.config.Rootless {
 				// check if we have CAP_SETGID to setgroup properly
