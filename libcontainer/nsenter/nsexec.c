@@ -69,6 +69,10 @@ struct nlconfig_t {
 	size_t uidmap_len;
 	char *gidmap;
 	size_t gidmap_len;
+	char *uidmappath;
+	size_t uidmappath_len;
+	char *gidmappath;
+	size_t gidmappath_len;
 	char *namespaces;
 	size_t namespaces_len;
 	uint8_t is_setgroup;
@@ -89,6 +93,8 @@ struct nlconfig_t {
 #define SETGROUP_ATTR		27285
 #define OOM_SCORE_ADJ_ATTR	27286
 #define ROOTLESS_ATTR	    27287
+#define UIDMAPPATH_ATTR	    27288
+#define GIDMAPPATH_ATTR	    27289
 
 /*
  * Use the raw syscall for versions of glibc which don't include a function for
@@ -333,6 +339,14 @@ static void nl_parse(int fd, struct nlconfig_t *config)
 		case NS_PATHS_ATTR:
 			config->namespaces = current;
 			config->namespaces_len = payload_len;
+			break;
+		case UIDMAPPATH_ATTR:
+			config->uidmappath = current;
+			config->uidmappath_len = payload_len;
+			break;
+		case GIDMAPPATH_ATTR:
+			config->gidmappath = current;
+			config->gidmappath_len = payload_len;
 			break;
 		case UIDMAP_ATTR:
 			config->uidmap = current;
@@ -588,8 +602,8 @@ void nsexec(void)
 						update_setgroups(child, SETGROUPS_DENY);
 
 					/* Set up mappings. */
-					update_mappings("newuidmap", child, config.uidmap, config.uidmap_len);
-					update_mappings("newgidmap", child, config.gidmap, config.gidmap_len);
+					update_mappings(config.uidmappath, child, config.uidmap, config.uidmap_len);
+					update_mappings(config.gidmappath, child, config.gidmap, config.gidmap_len);
 
 					s = SYNC_USERMAP_ACK;
 					if (write(syncfd, &s, sizeof(s)) != sizeof(s)) {
