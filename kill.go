@@ -51,11 +51,11 @@ var signalMap = map[string]syscall.Signal{
 
 var killCommand = cli.Command{
 	Name:  "kill",
-	Usage: "kill sends the specified signal (default: SIGTERM) to the container's init process",
+	Usage: "kill sends the specified signal (default: SIGTERM) to any of the container's processes (default: init process)",
 	ArgsUsage: `<container-id> [signal]
 
 Where "<container-id>" is the name for the instance of the container and
-"[signal]" is the signal to be sent to the init process.
+"[signal]" is the signal to be sent to the process of the container.
 
 EXAMPLE:
 For example, if the container id is "ubuntu01" the following will send a "KILL"
@@ -67,6 +67,10 @@ signal to the init process of the "ubuntu01" container:
 			Name:  "all, a",
 			Usage: "send the specified signal to all processes inside the container",
 		},
+		cli.IntFlag{
+			Name:  "pid, p",
+			Usage: "specify the pid to which process the signal would be sent (default: init process)",
+		},
 	},
 	Action: func(context *cli.Context) error {
 		if err := checkArgs(context, 1, minArgs); err != nil {
@@ -74,6 +78,12 @@ signal to the init process of the "ubuntu01" container:
 		}
 		if err := checkArgs(context, 2, maxArgs); err != nil {
 			return err
+		}
+
+		all := context.Bool("all")
+		pid := context.Int("pid")
+		if pid != 0 && all {
+			return fmt.Errorf("can not set --all and --pid at the same time.")
 		}
 		container, err := getContainer(context)
 		if err != nil {
@@ -89,7 +99,7 @@ signal to the init process of the "ubuntu01" container:
 		if err != nil {
 			return err
 		}
-		if err := container.Signal(signal, context.Bool("all")); err != nil {
+		if err := container.Signal(signal, pid, all); err != nil {
 			return err
 		}
 		return nil

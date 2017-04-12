@@ -14,10 +14,10 @@ import (
 )
 
 func killContainer(container libcontainer.Container) error {
-	_ = container.Signal(syscall.SIGKILL, false)
+	_ = container.Signal(syscall.SIGKILL, 0, false)
 	for i := 0; i < 100; i++ {
 		time.Sleep(100 * time.Millisecond)
-		if err := container.Signal(syscall.Signal(0), false); err != nil {
+		if err := container.Signal(syscall.Signal(0), 0, false); err != nil {
 			destroy(container)
 			return nil
 		}

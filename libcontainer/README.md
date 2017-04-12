@@ -230,7 +230,7 @@ container.Pause()
 container.Resume()
 
 // send signal to container's init process.
-container.Signal(signal)
+container.Signal(signal, 0, false)
 
 // update container resource constraints.
 container.Set(config)

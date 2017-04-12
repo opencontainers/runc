@@ -498,3 +498,29 @@ func signalAllProcesses(m cgroups.Manager, s os.Signal) error {
 	}
 	return nil
 }
+
+func signalProcess(m cgroups.Manager, s os.Signal, pid int) error {
+	found := false
+	pids, err := m.GetAllPids()
+	if err != nil {
+		return err
+	}
+	for _, p := range pids {
+		if pid == p {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return fmt.Errorf("process %d is not in the container", pid)
+	}
+
+	p, err := os.FindProcess(pid)
+	if err != nil {
+		return err
+	}
+	if err := p.Signal(s); err != nil {
+		return err
+	}
+	return nil
+}

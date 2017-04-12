@@ -149,14 +149,16 @@ type BaseContainer interface {
 	// SystemError - System error.
 	Destroy() error
 
-	// Signal sends the provided signal code to the container's initial process.
+	// Signal sends the provided signal code to the container's process.
 	//
 	// If all is specified the signal is sent to all processes in the container
 	// including the initial process.
+	// If pid is specified the signal is sent to the specified process only.
+	// By default, the signal is sent to the container's init process.
 	//
 	// errors:
 	// SystemError - System error.
-	Signal(s os.Signal, all bool) error
+	Signal(s os.Signal, pid int, all bool) error
 
 	// Exec signals the container to exec the users process at the end of the init.
 	//
