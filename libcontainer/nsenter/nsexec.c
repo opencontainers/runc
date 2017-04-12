@@ -198,6 +198,24 @@ static void update_setgroups(int pid, enum policy_t setgroup)
 	}
 }
 
+static void update_uidmap(int pid, char *map, size_t map_len)
+{
+	if (map == NULL || map_len <= 0)
+		return;
+
+	if (write_file(map, map_len, "/proc/%d/uid_map", pid) < 0)
+		bail("failed to update /proc/%d/uid_map", pid);
+}
+
+static void update_gidmap(int pid, char *map, size_t map_len)
+{
+	if (map == NULL || map_len <= 0)
+		return;
+
+	if (write_file(map, map_len, "/proc/%d/gid_map", pid) < 0)
+		bail("failed to update /proc/%d/gid_map", pid);
+}
+
 static void update_mappings(char *bin, int child, char *map, size_t map_len) {
 	int cmd_len = strlen(bin) + 10 + map_len;
 	char cmd[cmd_len];
@@ -602,8 +620,13 @@ void nsexec(void)
 						update_setgroups(child, SETGROUPS_DENY);
 
 					/* Set up mappings. */
-					update_mappings(config.uidmappath, child, config.uidmap, config.uidmap_len);
-					update_mappings(config.gidmappath, child, config.gidmap, config.gidmap_len);
+					if (config.is_rootless) {
+						update_mappings(config.uidmappath, child, config.uidmap, config.uidmap_len);
+						update_mappings(config.gidmappath, child, config.gidmap, config.gidmap_len);
+					} else {
+						update_uidmap(child, config.uidmap, config.uidmap_len);
+						update_gidmap(child, config.gidmap, config.gidmap_len);
+					}
 
 					s = SYNC_USERMAP_ACK;
 					if (write(syncfd, &s, sizeof(s)) != sizeof(s)) {
