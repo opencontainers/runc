@@ -261,14 +261,6 @@ func setupUser(config *initConfig) error {
 	}
 
 	if config.Rootless {
-		if execUser.Uid != 0 {
-			return fmt.Errorf("cannot run as a non-root user in a rootless container")
-		}
-
-		if execUser.Gid != 0 {
-			return fmt.Errorf("cannot run as a non-root group in a rootless container")
-		}
-
 		// We cannot set any additional groups in a rootless container and thus we
 		// bail if the user asked us to do so. TODO: We currently can't do this
 		// earlier, but if libcontainer.Process.User was typesafe this might work.

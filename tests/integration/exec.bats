@@ -100,8 +100,9 @@ function teardown() {
 }
 
 @test "runc exec --user" {
-  # --user can't work in rootless containers
-  requires root
+  if [ "$ROOTLESS" -ne 0 ]; then
+    runc_spec_additional_mappings
+  fi
 
   # run busybox detached
   runc run -d --console-socket $CONSOLE_SOCKET test_busybox

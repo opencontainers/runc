@@ -21,8 +21,9 @@ function teardown() {
 }
 
 @test "runc run ({u,g}id != 0)" {
-  # cannot start containers as another user in rootless setup
-  requires root
+  if [ "$ROOTLESS" -ne 0 ]; then
+    runc_spec_additional_mappings
+  fi
 
   # replace "uid": 0 with "uid": 1000
   # and do a similar thing for gid.
