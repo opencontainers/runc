@@ -610,7 +610,10 @@ The following parameters can be specified to setup seccomp:
     * `SCMP_ARCH_PARISC`
     * `SCMP_ARCH_PARISC64`
 
-* **`syscalls`** *(array of objects, REQUIRED)* - match a syscall in seccomp.
+* **`syscalls`** *(array of objects, OPTIONAL)* - match a syscall in seccomp.
+
+    While this property is OPTIONAL, some values of `defaultAction` are not useful without `syscalls` entries.
+    For example, if `defaultAction` is `SCMP_ACT_KILL` and `syscalls` is empty or unset, the kernel will kill the container process on its first syscall.
 
     Each entry has the following structure:
 
