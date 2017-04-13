@@ -1007,6 +1007,10 @@ func (c *linuxContainer) criuApplyCgroups(pid int, req *criurpc.CriuReq) error {
 		return err
 	}
 
+	if err := c.cgroupManager.Set(c.config); err != nil {
+		return newSystemError(err)
+	}
+
 	path := fmt.Sprintf("/proc/%d/cgroup", pid)
 	cgroupsPaths, err := cgroups.ParseCgroupFile(path)
 	if err != nil {
