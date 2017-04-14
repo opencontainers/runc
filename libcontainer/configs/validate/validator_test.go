@@ -1,7 +1,10 @@
 package validate_test
 
 import (
+	"io/ioutil"
 	"os"
+	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -249,6 +252,40 @@ func TestValidateSysctlWithSameNs(t *testing.T) {
 	err := validator.Validate(config)
 	if err == nil {
 		t.Error("Expected error to occur but it was nil")
+	}
+}
+
+func TestValidateSysctlWithHostNetNs(t *testing.T) {
+	tmpfile, err := ioutil.TempFile("", "runc-test")
+	if err != nil {
+		t.Errorf("Failed to create tmp file: %v", err)
+	}
+	defer os.Remove(tmpfile.Name())
+
+	path := tmpfile.Name()
+	err = syscall.Mount("/proc/self/ns/net", path, "bind", syscall.MS_BIND, "")
+	if err != nil {
+		t.Errorf("Failed to mount host network namespace: %v", err)
+	}
+	defer syscall.Unmount(path, syscall.MNT_DETACH)
+
+	config := &configs.Config{
+		Rootfs: "/var",
+		Sysctl: map[string]string{"net.ipv4.ip_forward": "1"},
+		Namespaces: configs.Namespaces(
+			[]configs.Namespace{
+				{
+					Type: configs.NEWNET,
+					Path: path,
+				},
+			},
+		),
+	}
+
+	validator := validate.New()
+	err = validator.Validate(config)
+	if err == nil || !strings.Contains(err.Error(), "not allowed in the hosts network namespace") {
+		t.Errorf("Expected 'not allowed in the hosts network namespace' error to occur but it was not")
 	}
 }
 

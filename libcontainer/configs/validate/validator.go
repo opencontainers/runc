@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/selinux"
+	"github.com/vishvananda/netns"
 )
 
 type Validator interface {
@@ -164,7 +166,10 @@ func isSymbolicLink(path string) (bool, error) {
 
 // checkHostNs checks whether network sysctl is used in host namespace.
 func checkHostNs(sysctlConfig string, path string) error {
-	var currentProcessNetns = "/proc/self/ns/net"
+	var (
+		currentProcessNetns = "/proc/self/ns/net"
+		destOfContainer     string
+	)
 	// readlink on the current processes network namespace
 	destOfCurrentProcess, err := os.Readlink(currentProcessNetns)
 	if err != nil {
@@ -179,14 +184,35 @@ func checkHostNs(sysctlConfig string, path string) error {
 
 	if symLink == false {
 		// The provided namespace is not a symbolic link,
-		// it is not the host namespace.
-		return nil
-	}
+		// then enter the provided namespace and get the network namespace
+		runtime.LockOSThread()
+		defer runtime.UnlockOSThread()
+		// Save the current network namespace
+		origns, err := netns.Get()
+		if err != nil {
+			return fmt.Errorf("failed to get current netns: %v", err)
+		}
+		defer origns.Close()
 
-	// readlink on the path provided in the struct
-	destOfContainer, err := os.Readlink(path)
-	if err != nil {
-		return fmt.Errorf("read soft link %q error", path)
+		containerns, err := netns.GetFromPath(path)
+		if err != nil {
+			return fmt.Errorf("failed to get netns from path %v:%v", path, err)
+		}
+		defer containerns.Close()
+		netns.Set(containerns)
+
+		destOfContainer, err = os.Readlink(currentProcessNetns)
+		if err != nil {
+			netns.Set(origns)
+			return fmt.Errorf("read soft link %q error", currentProcessNetns)
+		}
+		netns.Set(origns)
+	} else {
+		// readlink on the path provided in the struct
+		destOfContainer, err = os.Readlink(path)
+		if err != nil {
+			return fmt.Errorf("read soft link %q error", path)
+		}
 	}
 	if destOfContainer == destOfCurrentProcess {
 		return fmt.Errorf("sysctl %q is not allowed in the hosts network namespace", sysctlConfig)
