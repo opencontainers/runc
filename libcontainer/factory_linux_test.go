@@ -205,3 +205,83 @@ type unserializableHook struct{}
 func (unserializableHook) Run(configs.HookState) error {
 	return nil
 }
+
+func TestFactoryCreateExistsContainer(t *testing.T) {
+	root, err := newTestRoot()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(root)
+
+	rootfs, err := newRootfs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(rootfs)
+
+	factory, err := New(root, Cgroupfs)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var containerid = "mycontainerid"
+	containerRoot := filepath.Join(root, containerid)
+	if err := os.MkdirAll(containerRoot, 0711); err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(containerRoot)
+
+	config := newTemplateConfig(rootfs)
+	config.UidMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
+	config.GidMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
+
+	_, err = factory.Create(containerid, config)
+	if err == nil {
+		t.Fatal("expected not nil error create have existed container")
+	} else {
+		lerr, ok := err.(Error)
+		if !ok {
+			t.Fatal("expected error type")
+		}
+		if lerr.Code() != IdInUse {
+			t.Fatalf("expected error code %s but received %s", IdInUse, lerr.Code())
+		}
+	}
+}
+
+func newTemplateConfig(rootfs string) *configs.Config {
+	return &configs.Config{
+		Rootfs: rootfs,
+		Namespaces: configs.Namespaces([]configs.Namespace{
+			{Type: configs.NEWNS},
+			{Type: configs.NEWUTS},
+			{Type: configs.NEWIPC},
+			{Type: configs.NEWPID},
+			{Type: configs.NEWNET},
+			{Type: configs.NEWUSER},
+		}),
+		MaskPaths: []string{
+			"",
+		},
+		ReadonlyPaths: []string{
+			"",
+		},
+		Devices:  configs.DefaultAutoCreatedDevices,
+		Hostname: "test",
+		Networks: []*configs.Network{
+			{
+				Type:    "loopback",
+				Address: "127.0.0.1/0",
+				Gateway: "localhost",
+			},
+		},
+	}
+}
+
+func newRootfs() (string, error) {
+	dir, err := ioutil.TempDir("", "")
+	if err != nil {
+		return "", err
+	}
+	return dir, nil
+}
