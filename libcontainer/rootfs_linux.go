@@ -19,9 +19,9 @@ import (
 	"github.com/mrunalp/fileutils"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/opencontainers/runc/libcontainer/label"
 	"github.com/opencontainers/runc/libcontainer/system"
 	libcontainerUtils "github.com/opencontainers/runc/libcontainer/utils"
+	"github.com/opencontainers/selinux/go-selinux/label"
 )
 
 const defaultMountFlags = syscall.MS_NOEXEC | syscall.MS_NOSUID | syscall.MS_NODEV
