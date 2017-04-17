@@ -728,7 +728,7 @@ The values MUST be absolute paths in the [container namespace][container-namespa
 [cgroup-v1-net-prio]: https://www.kernel.org/doc/Documentation/cgroup-v1/net_prio.txt
 [cgroup-v1-pids]: https://www.kernel.org/doc/Documentation/cgroup-v1/pids.txt
 [cgroup-v2]: https://www.kernel.org/doc/Documentation/cgroup-v2.txt
-[devices]: https://www.kernel.org/doc/Documentation/devices.txt
+[devices]: https://www.kernel.org/doc/Documentation/admin-guide/devices.txt
 [devpts]: https://www.kernel.org/doc/Documentation/filesystems/devpts.txt
 [file]: http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap03.html#tag_03_164
 [libseccomp]: https://github.com/seccomp/libseccomp
