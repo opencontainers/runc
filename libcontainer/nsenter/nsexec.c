@@ -19,6 +19,7 @@
 #include <sys/prctl.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 
 #include <linux/limits.h>
 #include <linux/netlink.h>
@@ -217,12 +218,45 @@ static void update_gidmap(int pid, char *map, size_t map_len)
 }
 
 static void update_mappings(char *bin, int child, char *map, size_t map_len) {
-	int cmd_len = strlen(bin) + 10 + map_len;
-	char cmd[cmd_len];
-	snprintf(cmd, cmd_len,"%s %d %s", bin, (int)child, map);
+	pid_t pid = fork();
+	if (pid < 0) {
+		bail("failed to fork");
+	}
+	else if (pid > 0) {
+		int status;
+		waitpid(pid, &status, 0);
+		if (status != 0) {
+			bail("expected mapping update to exit 0, got %d", status);
+		}
+	}
+	else {
+		char childpidstr[10];
+		snprintf(childpidstr, 10, "%d", child);
 
-	if (system(cmd) < 0)
-		bail("failed to execute '%s'", cmd);
+		// binary name, pid + a max of five [containerId hostId size] triplets, then a null pointer
+		int idmap_max_args = 17;
+		char *idmap_argv[idmap_max_args + 1];
+		memset(idmap_argv, 0, idmap_max_args);
+
+		idmap_argv[0] = bin;
+		idmap_argv[1] = childpidstr;
+
+		char mapcpy[map_len];
+		strcpy(mapcpy, map);
+		char *token = strtok(mapcpy, " ");
+		int i = 2;
+		while (token) {
+		  if (i > idmap_max_args - 1) {
+		      bail("more than 5 mapping triplets provided in exec %s %s %s", bin, childpidstr, map);
+		  }
+		  idmap_argv[i++] = strdup(token);
+		  token = strtok(NULL, " ");
+		}
+		idmap_argv[i] = NULL;
+
+		execvp(bin, idmap_argv);
+		bail("failed to exec %s %s %s", bin, childpidstr, map);
+	}
 }
 
 static void update_oom_score_adj(char *data, size_t len)
