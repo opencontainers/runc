@@ -16,3 +16,6 @@ validate: validate.go
 	go get -d ./...
 	go build ./validate.go
 
+clean:
+	rm -f validate
+
