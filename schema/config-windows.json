@@ -34,9 +34,9 @@
                                 "id": "https://opencontainers.org/schema/bundle/windows/resources/cpu/shares",
                                 "$ref": "defs-windows.json#/definitions/cpuShares"
                             },
-                            "percent": {
-                                "id": "https://opencontainers.org/schema/bundle/windows/resources/cpu/percent",
-                                "$ref": "defs.json#/definitions/percent"
+                            "maximum": {
+                                "id": "https://opencontainers.org/schema/bundle/windows/resources/cpu/maximum",
+                                "$ref": "defs.json#/definitions/uint16"
                             }
                         }
                     },

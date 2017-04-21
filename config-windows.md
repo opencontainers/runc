@@ -40,7 +40,7 @@ The following parameters can be specified:
 
 * **`shares`** *(uint16, OPTIONAL)* - specifies the relative weight to other containers with CPU shares.
 
-* **`percent`** *(uint, OPTIONAL)* - specifies the percentage of available CPUs usable by the container.
+* **`maximum`** *(uint, OPTIONAL)* - specifies the portion of processor cycles that this container can use as a percentage times 100.
 
 #### Example
 
@@ -48,7 +48,7 @@ The following parameters can be specified:
     "windows": {
         "resources": {
             "cpu": {
-                "percent": 50
+                "maximum": 5000
             }
         }
     }
