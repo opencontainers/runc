@@ -1,5 +1,14 @@
 {
     "definitions": {
+        "RootfsPropagation": {
+            "type": "string",
+            "enum": [
+                "private",
+                "shared",
+                "slave",
+                "unbindable"
+            ]
+        },
         "SeccompArch": {
             "type": "string",
             "enum": [
