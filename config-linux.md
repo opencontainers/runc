@@ -114,7 +114,7 @@ Each entry has the following structure:
 * **`type`** *(string, REQUIRED)* - type of device: `c`, `b`, `u` or `p`.
   More info in [mknod(1)][mknod.1].
 * **`path`** *(string, REQUIRED)* - full path to device inside container.
-  If a [file][file.1] already exists at `path` that does not match the requested device, the runtime MUST generate an error.
+  If a [file][] already exists at `path` that does not match the requested device, the runtime MUST generate an error.
 * **`major, minor`** *(int64, REQUIRED unless `type` is `p`)* - [major, minor numbers][devices] for the device.
 * **`fileMode`** *(uint32, OPTIONAL)* - file mode for the device.
   You can also control access to devices [with cgroups](#device-whitelist).
