@@ -119,7 +119,7 @@ The first way is to use the convenience command `run` that will handle creating,
 ```bash
 cd /mycontainer
 
-runc run mycontainerid
+runc start mycontainerid
 ```
 
 If you used the unmodified `runc spec` template this should give you a `sh` session inside the container.
@@ -167,12 +167,7 @@ Now we can go though the lifecycle operations in your shell.
 ```bash
 cd /mycontainer
 
-runc create mycontainerid
-
-# view the container is created and in the "created" state
-runc list
-
-# start the process inside the container
+# create and start the process inside the container
 runc start mycontainerid
 
 # after 5 seconds view that the container has exited and is now in the stopped state
