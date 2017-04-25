@@ -670,7 +670,7 @@ The following parameters can be specified to setup seccomp:
 ## <a name="configLinuxRootfsMountPropagation" />Rootfs Mount Propagation
 
 **`rootfsPropagation`** (string, OPTIONAL) sets the rootfs's mount propagation.
-Its value is either slave, private, or shared.
+Its value is either slave, private, shared or unbindable.
 The [Shared Subtrees][sharedsubtree] article in the kernel documentation has more information about mount propagation.
 
 ###### Example
