@@ -225,7 +225,7 @@
             },
             "rootfsPropagation": {
                 "id": "https://opencontainers.org/schema/bundle/linux/rootfsPropagation",
-                "type": "string"
+                "$ref": "defs-linux.json#/definitions/RootfsPropagation"
             },
             "seccomp": {
                 "id": "https://opencontainers.org/schema/bundle/linux/seccomp",
