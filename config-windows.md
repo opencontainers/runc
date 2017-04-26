@@ -38,7 +38,7 @@ The following parameters can be specified:
 
 * **`count`** *(uint64, OPTIONAL)* - specifies the number of CPUs available to the container.
 
-* **`shares`** *(uint16, OPTIONAL)* - specifies the relative weight to other containers with CPU shares. The range is from 1 to 10000.
+* **`shares`** *(uint16, OPTIONAL)* - specifies the relative weight to other containers with CPU shares.
 
 * **`percent`** *(uint, OPTIONAL)* - specifies the percentage of available CPUs usable by the container.
 

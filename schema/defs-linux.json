@@ -138,8 +138,6 @@
         },
         "blkioWeight": {
             "type": "integer",
-            "minimum": 10,
-            "maximum": 1000
         },
         "blockIODevice": {
             "type": "object",

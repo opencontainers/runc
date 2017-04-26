@@ -50,8 +50,6 @@
                     "oomScoreAdj": {
                         "id": "https://opencontainers.org/schema/bundle/linux/resources/oomScoreAdj",
                         "type": "integer",
-                        "minimum": -1000,
-                        "maximum": 1000
                     },
                     "pids": {
                         "id": "https://opencontainers.org/schema/bundle/linux/resources/pids",
