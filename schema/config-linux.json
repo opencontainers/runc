@@ -249,7 +249,10 @@
                             "$ref": "defs-linux.json#/definitions/Syscall"
                         }
                     }
-                }
+                },
+                "required": [
+                    "defaultAction"
+                ]
             },
             "sysctl": {
                 "id": "https://opencontainers.org/schema/bundle/linux/sysctl",

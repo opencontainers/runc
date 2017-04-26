@@ -484,7 +484,7 @@ type WindowsNetworkResources struct {
 type LinuxSeccomp struct {
 	DefaultAction LinuxSeccompAction `json:"defaultAction"`
 	Architectures []Arch             `json:"architectures,omitempty"`
-	Syscalls      []LinuxSyscall     `json:"syscalls"`
+	Syscalls      []LinuxSyscall     `json:"syscalls,omitempty"`
 }
 
 // Arch used for additional architectures
