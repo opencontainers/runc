@@ -615,6 +615,7 @@ The following parameters can be specified to setup seccomp:
     Each entry has the following structure:
 
     * **`names`** *(array of strings, REQUIRED)* - the names of the syscalls.
+        `names` MUST contain at least one entry.
 
     * **`action`** *(string, REQUIRED)* - the action for seccomp rules.
         A valid list of constants as of libseccomp v2.3.2 is shown below.

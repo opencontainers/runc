@@ -69,7 +69,8 @@
                     "type": "array",
                     "items": {
                         "type": "string"
-                    }
+                    },
+                    "minItems": 1
                 },
                 "action": {
                     "$ref": "#/definitions/SeccompAction"
@@ -80,7 +81,10 @@
                         "$ref": "#/definitions/SyscallArg"
                     }
                 }
-            }
+            },
+            "required": [
+                "names"
+            ]
         },
         "Capability": {
             "description": "Linux process capabilities",
