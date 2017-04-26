@@ -250,9 +250,9 @@ type linuxBlockIODevice struct {
 // LinuxWeightDevice struct holds a `major:minor weight` pair for blkioWeightDevice
 type LinuxWeightDevice struct {
 	linuxBlockIODevice
-	// Weight is the bandwidth rate for the device, range is from 10 to 1000
+	// Weight is the bandwidth rate for the device.
 	Weight *uint16 `json:"weight,omitempty"`
-	// LeafWeight is the bandwidth rate for the device while competing with the cgroup's child cgroups, range is from 10 to 1000, CFQ scheduler only
+	// LeafWeight is the bandwidth rate for the device while competing with the cgroup's child cgroups, CFQ scheduler only
 	LeafWeight *uint16 `json:"leafWeight,omitempty"`
 }
 
@@ -265,9 +265,9 @@ type LinuxThrottleDevice struct {
 
 // LinuxBlockIO for Linux cgroup 'blkio' resource management
 type LinuxBlockIO struct {
-	// Specifies per cgroup weight, range is from 10 to 1000
+	// Specifies per cgroup weight
 	Weight *uint16 `json:"blkioWeight,omitempty"`
-	// Specifies tasks' weight in the given cgroup while competing with the cgroup's child cgroups, range is from 10 to 1000, CFQ scheduler only
+	// Specifies tasks' weight in the given cgroup while competing with the cgroup's child cgroups, CFQ scheduler only
 	LeafWeight *uint16 `json:"blkioLeafWeight,omitempty"`
 	// Weight per cgroup per device, can override BlkioWeight
 	WeightDevice []LinuxWeightDevice `json:"blkioWeightDevice,omitempty"`
