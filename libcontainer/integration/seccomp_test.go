@@ -217,3 +217,107 @@ func TestSeccompDenyWriteConditional(t *testing.T) {
 		t.Fatalf("Expected output %s but got %s\n", expected, actual)
 	}
 }
+
+func TestSeccompPermitWriteMultipleConditions(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+
+	rootfs, err := newRootfs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer remove(rootfs)
+
+	config := newTemplateConfig(rootfs)
+	config.Seccomp = &configs.Seccomp{
+		DefaultAction: configs.Allow,
+		Syscalls: []*configs.Syscall{
+			{
+				Name:   "write",
+				Action: configs.Errno,
+				Args: []*configs.Arg{
+					{
+						Index: 0,
+						Value: 2,
+						Op:    configs.EqualTo,
+					},
+					{
+						Index: 2,
+						Value: 0,
+						Op:    configs.NotEqualTo,
+					},
+				},
+			},
+		},
+	}
+
+	buffers, exitCode, err := runContainer(config, "", "ls", "/")
+	if err != nil {
+		t.Fatalf("%s: %s", buffers, err)
+	}
+	if exitCode != 0 {
+		t.Fatalf("exit code not 0. code %d buffers %s", exitCode, buffers)
+	}
+	// We don't need to verify the actual thing printed
+	// Just that something was written to stdout
+	if len(buffers.Stdout.String()) == 0 {
+		t.Fatalf("Nothing was written to stdout, write call failed!\n")
+	}
+}
+
+func TestSeccompDenyWriteMultipleConditions(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+
+	// Only test if library version is v2.2.1 or higher
+	// Conditional filtering will always error in v2.2.0 and lower
+	major, minor, micro := libseccomp.GetLibraryVersion()
+	if (major == 2 && minor < 2) || (major == 2 && minor == 2 && micro < 1) {
+		return
+	}
+
+	rootfs, err := newRootfs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer remove(rootfs)
+
+	config := newTemplateConfig(rootfs)
+	config.Seccomp = &configs.Seccomp{
+		DefaultAction: configs.Allow,
+		Syscalls: []*configs.Syscall{
+			{
+				Name:   "write",
+				Action: configs.Errno,
+				Args: []*configs.Arg{
+					{
+						Index: 0,
+						Value: 2,
+						Op:    configs.EqualTo,
+					},
+					{
+						Index: 2,
+						Value: 0,
+						Op:    configs.NotEqualTo,
+					},
+				},
+			},
+		},
+	}
+
+	buffers, exitCode, err := runContainer(config, "", "ls", "/does_not_exist")
+	if err == nil {
+		t.Fatalf("Expecting error return, instead got 0")
+	}
+	if exitCode == 0 {
+		t.Fatalf("Busybox should fail with negative exit code, instead got %d!", exitCode)
+	}
+
+	expected := ""
+	actual := strings.Trim(buffers.Stderr.String(), "\n")
+	if actual != expected {
+		t.Fatalf("Expected output %s but got %s\n", expected, actual)
+	}
+}
