@@ -265,12 +265,12 @@ For more information, see [the memory cgroup man page][cgroup-v1-memory].
 
 #### <a name="configLinuxSetOomScoreAdj" />Set oom_score_adj
 
-`oomScoreAdj` sets heuristic regarding how the process is evaluated by the kernel during memory pressure.
-For more information, see [the proc filesystem documentation section 3.1][procfs].
+* **`oomScoreAdj`** *(int, OPTIONAL)* adjusts the oom-killer score in `[pid]/oom_score_adj` for the container process's `[pid]` in a [proc pseudo-filesystem][procfs].
+    If `oomScoreAdj` is set, the runtime MUST set `oom_score_adj` to the given value.
+    If `oomScoreAdj` is not set, the runtime MUST NOT change the value of `oom_score_adj`.
+
 This is a kernel/system level setting, where as `disableOOMKiller` is scoped for a memory cgroup.
 For more information on how these two settings work together, see [the memory cgroup documentation section 10. OOM Contol][cgroup-v1-memory].
-
-* **`oomScoreAdj`** *(int, OPTIONAL)* - adjust the oom-killer score
 
 ###### Example
 
