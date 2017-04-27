@@ -150,7 +150,7 @@
             }
         },
         "blkioWeight": {
-            "type": "integer",
+            "type": "integer"
         },
         "blockIODevice": {
             "type": "object",
