@@ -32,7 +32,7 @@
                             },
                             "shares": {
                                 "id": "https://opencontainers.org/schema/bundle/windows/resources/cpu/shares",
-                                "$ref": "defs-windows.json#/definitions/cpuShares"
+                                "$ref": "defs.json#/definitions/uint16"
                             },
                             "percent": {
                                 "id": "https://opencontainers.org/schema/bundle/windows/resources/cpu/percent",
