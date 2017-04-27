@@ -1454,18 +1454,17 @@ func (c *linuxContainer) orderNamespacePaths(namespaces map[configs.NamespaceTyp
 		configs.NEWNS,
 	}
 
-	// Remove namespaces that we don't need to join.
-	var nsTypes []configs.NamespaceType
 	for _, ns := range order {
-		if c.config.Namespaces.Contains(ns) {
-			nsTypes = append(nsTypes, ns)
+
+		// Remove namespaces that we don't need to join.
+		if !c.config.Namespaces.Contains(ns) {
+			continue
 		}
-	}
-	for _, nsType := range nsTypes {
-		if p, ok := namespaces[nsType]; ok && p != "" {
+
+		if p, ok := namespaces[ns]; ok && p != "" {
 			// check if the requested namespace is supported
-			if !configs.IsNamespaceSupported(nsType) {
-				return nil, newSystemError(fmt.Errorf("namespace %s is not supported", nsType))
+			if !configs.IsNamespaceSupported(ns) {
+				return nil, newSystemError(fmt.Errorf("namespace %s is not supported", ns))
 			}
 			// only set to join this namespace if it exists
 			if _, err := os.Lstat(p); err != nil {
@@ -1476,9 +1475,11 @@ func (c *linuxContainer) orderNamespacePaths(namespaces map[configs.NamespaceTyp
 			if strings.ContainsRune(p, ',') {
 				return nil, newSystemError(fmt.Errorf("invalid path %s", p))
 			}
-			paths = append(paths, fmt.Sprintf("%s:%s", configs.NsName(nsType), p))
+			paths = append(paths, fmt.Sprintf("%s:%s", configs.NsName(ns), p))
 		}
+
 	}
+
 	return paths, nil
 }
 
