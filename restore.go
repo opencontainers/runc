@@ -153,7 +153,9 @@ func restoreContainer(context *cli.Context, spec *specs.Spec, config *configs.Co
 	if status == libcontainer.Running {
 		fatalf("Container with id %s already running", id)
 	}
-
+	if status == libcontainer.Created {
+		fatalf("Container cannot be restored from created state")
+	}
 	setManageCgroupsMode(context, options)
 
 	if err = setEmptyNsMask(context, options); err != nil {
