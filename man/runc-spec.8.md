@@ -45,5 +45,8 @@ already running as root, you can use sudo to give runc root privilege. For
 example: "sudo runc start container1" will give runc root privilege to start the
 container on your host.
 
+Alternatively, you can start a rootless container, which has the ability to run without root privileges. For this to work, the specification file needs to be adjusted accordingly. You can pass the parameter --rootless to this command to generate a proper rootless spec file.
+
 # OPTIONS
    --bundle value, -b value     path to the root of the bundle directory
+   --rootless                   generate a configuration for a rootless container

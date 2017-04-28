@@ -51,13 +51,18 @@ must be unique on your host.
 
 An alternative for generating a customized spec config is to use "oci-runtime-tool", the
 sub-command "oci-runtime-tool generate" has lots of options that can be used to do any
-customizations as you want, see [runtime-tools](https://github.com/opencontainers/runtime-tools)
+customizations as you want, see runtime-tools (https://github.com/opencontainers/runtime-tools)
 to get more information.
 
 When starting a container through runc, runc needs root privilege. If not
 already running as root, you can use sudo to give runc root privilege. For
 example: "sudo runc start container1" will give runc root privilege to start the
-container on your host.`,
+container on your host.
+
+Alternatively, you can start a rootless container, which has the ability to run
+without root privileges. For this to work, the specification file needs to be
+adjusted accordingly. You can pass the parameter --rootless to this command to
+generate a proper rootless spec file.`,
 	Flags: []cli.Flag{
 		cli.StringFlag{
 			Name:  "bundle, b",
