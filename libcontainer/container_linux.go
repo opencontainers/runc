@@ -1444,17 +1444,8 @@ func (c *linuxContainer) currentState() (*State, error) {
 // can setns in order.
 func (c *linuxContainer) orderNamespacePaths(namespaces map[configs.NamespaceType]string) ([]string, error) {
 	paths := []string{}
-	order := []configs.NamespaceType{
-		// The user namespace *must* be done first.
-		configs.NEWUSER,
-		configs.NEWIPC,
-		configs.NEWUTS,
-		configs.NEWNET,
-		configs.NEWPID,
-		configs.NEWNS,
-	}
 
-	for _, ns := range order {
+	for _, ns := range configs.NamespaceTypes() {
 
 		// Remove namespaces that we don't need to join.
 		if !c.config.Namespaces.Contains(ns) {
