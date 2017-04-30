@@ -8,13 +8,17 @@ func (n *Namespace) Syscall() int {
 	return namespaceInfo[n.Type]
 }
 
+// This is not yet in the Go stdlib.
+const syscall_CLONE_NEWCGROUP = (1 << 29)
+
 var namespaceInfo = map[NamespaceType]int{
-	NEWNET:  syscall.CLONE_NEWNET,
-	NEWNS:   syscall.CLONE_NEWNS,
-	NEWUSER: syscall.CLONE_NEWUSER,
-	NEWIPC:  syscall.CLONE_NEWIPC,
-	NEWUTS:  syscall.CLONE_NEWUTS,
-	NEWPID:  syscall.CLONE_NEWPID,
+	NEWNET:    syscall.CLONE_NEWNET,
+	NEWNS:     syscall.CLONE_NEWNS,
+	NEWUSER:   syscall.CLONE_NEWUSER,
+	NEWIPC:    syscall.CLONE_NEWIPC,
+	NEWUTS:    syscall.CLONE_NEWUTS,
+	NEWPID:    syscall.CLONE_NEWPID,
+	NEWCGROUP: syscall_CLONE_NEWCGROUP,
 }
 
 // CloneFlags parses the container's Namespaces options to set the correct

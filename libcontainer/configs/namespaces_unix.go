@@ -9,12 +9,13 @@ import (
 )
 
 const (
-	NEWNET  NamespaceType = "NEWNET"
-	NEWPID  NamespaceType = "NEWPID"
-	NEWNS   NamespaceType = "NEWNS"
-	NEWUTS  NamespaceType = "NEWUTS"
-	NEWIPC  NamespaceType = "NEWIPC"
-	NEWUSER NamespaceType = "NEWUSER"
+	NEWNET    NamespaceType = "NEWNET"
+	NEWPID    NamespaceType = "NEWPID"
+	NEWNS     NamespaceType = "NEWNS"
+	NEWUTS    NamespaceType = "NEWUTS"
+	NEWIPC    NamespaceType = "NEWIPC"
+	NEWUSER   NamespaceType = "NEWUSER"
+	NEWCGROUP NamespaceType = "NEWCGROUP"
 )
 
 var (
@@ -37,6 +38,8 @@ func NsName(ns NamespaceType) string {
 		return "user"
 	case NEWUTS:
 		return "uts"
+	case NEWCGROUP:
+		return "cgroup"
 	}
 	return ""
 }
@@ -70,6 +73,7 @@ func NamespaceTypes() []NamespaceType {
 		NEWUTS,
 		NEWIPC,
 		NEWUSER,
+		NEWCGROUP,
 	}
 }
 
