@@ -67,21 +67,33 @@ function teardown() {
   # setting terminal and root:readonly: to false
   sed -i 's;"terminal": true;"terminal": false;' config.json
   sed -i 's;"readonly": true;"readonly": false;' config.json
-  sed -i 's/"sh"/"sh","-c","while :; do date; sleep 1; done"/' config.json
+  sed -i 's/"sh"/"sh","-c","for i in `seq 10`; do read xxx || continue; echo ponG $xxx; done"/' config.json
 
-  (
+  # The following code creates pipes for stdin and stdout.
+  # CRIU can't handle fifo-s, so we need all these tricks.
+  fifo=`mktemp -u /tmp/runc-fifo-XXXXXX`
+  mkfifo $fifo
+
+  # stdout
+  cat $fifo | cat $fifo &
+  pid=$!
+  exec 50</proc/$pid/fd/0
+  exec 51>/proc/$pid/fd/0
+
+  # stdin
+  cat $fifo | cat $fifo &
+  pid=$!
+  exec 60</proc/$pid/fd/0
+  exec 61>/proc/$pid/fd/0
+
+  echo -n > $fifo
+  unlink $fifo
+
     # run busybox (not detached)
-    runc run test_busybox
-    [ "$status" -eq 0 ]
-  ) &
+  __runc run -d test_busybox <&60 >&51 2>&51
+  [ $? -eq 0 ]
 
-  # check state
-  wait_for_container 15 1 test_busybox
-
-  runc state test_busybox
-  [ "$status" -eq 0 ]
-  [[ "${output}" == *"running"* ]]
-
+  testcontainer test_busybox running
 
   #test checkpoint pre-dump
   mkdir parent-dir
@@ -95,7 +107,9 @@ function teardown() {
 
   # checkpoint the running container
   mkdir image-dir
-  runc --criu "$CRIU" checkpoint --parent-path ./parent-dir --image-path ./image-dir test_busybox
+  mkdir work-dir
+  runc --criu "$CRIU" checkpoint --parent-path ./parent-dir --work-path ./work-dir --image-path ./image-dir test_busybox
+  cat ./work-dir/dump.log | grep -B 5 Error || true
   [ "$status" -eq 0 ]
 
   # after checkpoint busybox is no longer running
@@ -103,16 +117,22 @@ function teardown() {
   [ "$status" -ne 0 ]
 
   # restore from checkpoint
-  (
-    runc --criu "$CRIU" restore --image-path ./image-dir test_busybox
-    [ "$status" -eq 0 ]
-  ) &
-
-  # check state
-  wait_for_container 15 1 test_busybox
+  __runc --criu "$CRIU" restore -d --work-path ./work-dir --image-path ./image-dir test_busybox <&60 >&51 2>&51
+  ret=$?
+  cat ./work-dir/restore.log | grep -B 5 Error || true
+  [ $ret -eq 0 ]
 
   # busybox should be back up and running
-  runc state test_busybox
+  testcontainer test_busybox running
+
+  runc exec --cwd /bin test_busybox echo ok
   [ "$status" -eq 0 ]
-  [[ "${output}" == *"running"* ]]
+  [[ ${output} == "ok" ]]
+
+  echo Ping >&61
+  exec 61>&-
+  exec 51>&-
+  run cat <&50
+  [ "$status" -eq 0 ]
+  [[ "${output}" == *"ponG Ping"* ]]
 }
