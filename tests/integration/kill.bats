@@ -18,8 +18,6 @@ function teardown() {
   [ "$status" -eq 0 ]
 
   # check state
-  wait_for_container 15 1 test_busybox
-
   testcontainer test_busybox running
 
   runc kill test_busybox KILL

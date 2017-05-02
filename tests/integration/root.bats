@@ -22,10 +22,6 @@ function teardown() {
   runc run -d --console-socket $CONSOLE_SOCKET test_busybox
   [ "$status" -eq 0 ]
 
-  # check state of the busyboxes are only in their respective root path
-  wait_for_container 15 1 test_busybox
-  wait_for_container_inroot 15 1 test_dotbox $HELLO_BUNDLE
-
   runc state test_busybox
   [ "$status" -eq 0 ]
   [[ "${output}" == *"running"* ]]

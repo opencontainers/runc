@@ -47,7 +47,6 @@ EOF
     # run a detached busybox to work with
     runc run -d --console-socket $CONSOLE_SOCKET test_cgroups_kmem
     [ "$status" -eq 0 ]
-    wait_for_container 15 1 test_cgroups_kmem
 
     # update kernel memory limit
     runc update test_cgroups_kmem --kernel-memory 50331648
@@ -67,7 +66,6 @@ EOF
     # run a detached busybox to work with
     runc run -d --console-socket $CONSOLE_SOCKET test_cgroups_kmem
     [ "$status" -eq 0 ]
-    wait_for_container 15 1 test_cgroups_kmem
 
     # update kernel memory limit
     runc update test_cgroups_kmem --kernel-memory 50331648

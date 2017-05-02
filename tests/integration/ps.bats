@@ -20,8 +20,6 @@ function teardown() {
   [ "$status" -eq 0 ]
 
   # check state
-  wait_for_container 15 1 test_busybox
-
   testcontainer test_busybox running
 
   runc ps test_busybox
@@ -39,8 +37,6 @@ function teardown() {
   [ "$status" -eq 0 ]
 
   # check state
-  wait_for_container 15 1 test_busybox
-
   testcontainer test_busybox running
 
   runc ps -f json test_busybox
@@ -57,8 +53,6 @@ function teardown() {
   [ "$status" -eq 0 ]
 
   # check state
-  wait_for_container 15 1 test_busybox
-
   testcontainer test_busybox running
 
   runc ps test_busybox -e -x
