@@ -27,10 +27,7 @@ const (
 	execFifoFilename = "exec.fifo"
 )
 
-var (
-	idRegex  = regexp.MustCompile(`^[\w+-\.]+$`)
-	maxIdLen = 1024
-)
+var idRegex = regexp.MustCompile(`^[\w+-\.]+$`)
 
 // InitArgs returns an options func to configure a LinuxFactory with the
 // provided init binary path and arguments.
@@ -330,8 +327,6 @@ func (l *LinuxFactory) validateID(id string) error {
 	if !idRegex.MatchString(id) {
 		return newGenericError(fmt.Errorf("invalid id format: %v", id), InvalidIdFormat)
 	}
-	if len(id) > maxIdLen {
-		return newGenericError(fmt.Errorf("invalid id format: %v", id), InvalidIdFormat)
-	}
+
 	return nil
 }
