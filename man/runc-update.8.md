@@ -48,3 +48,4 @@ other options are ignored.
    --memory value               Memory limit (in bytes)
    --memory-reservation value   Memory reservation or soft_limit (in bytes)
    --memory-swap value          Total memory usage (memory + swap); set '-1' to enable unlimited swap
+   --pids-limit value           Maximum number of pids allowed in the container (default: 0)
