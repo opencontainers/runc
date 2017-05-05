@@ -61,7 +61,6 @@ function check_cgroup_value() {
     # run a few busyboxes detached
     runc run -d --console-socket $CONSOLE_SOCKET test_update
     [ "$status" -eq 0 ]
-    wait_for_container 15 1 test_update
 
     # get the cgroup paths
     for g in MEMORY CPUSET CPU BLKIO PIDS; do
@@ -266,7 +265,6 @@ EOF
     # run a detached busybox
     runc run -d --console-socket $CONSOLE_SOCKET test_update_rt
     [ "$status" -eq 0 ]
-    wait_for_container 15 1 test_update_rt
 
     # get the cgroup paths
     eval CGROUP_CPU="${CGROUP_CPU_BASE_PATH}/runc-update-integration-test"

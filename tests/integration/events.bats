@@ -19,9 +19,6 @@ function teardown() {
   runc run -d --console-socket $CONSOLE_SOCKET test_busybox
   [ "$status" -eq 0 ]
 
-  # check state
-  wait_for_container 15 1 test_busybox
-
   # generate stats
   runc events --stats test_busybox
   [ "$status" -eq 0 ]
@@ -36,9 +33,6 @@ function teardown() {
   # run busybox detached
   runc run -d --console-socket $CONSOLE_SOCKET test_busybox
   [ "$status" -eq 0 ]
-
-  # check state
-  wait_for_container 15 1 test_busybox
 
   # spawn two sub processes (shells)
   # the first sub process is an event logger that sends stats events to events.log
@@ -67,9 +61,6 @@ function teardown() {
   runc run -d --console-socket $CONSOLE_SOCKET test_busybox
   [ "$status" -eq 0 ]
 
-  # check state
-  wait_for_container 15 1 test_busybox
-
   # spawn two sub processes (shells)
   # the first sub process is an event logger that sends stats events to events.log once a second
   # the second sub process tries 3 times for an event that incudes test_busybox
@@ -95,9 +86,6 @@ function teardown() {
   # run busybox detached
   runc run -d --console-socket $CONSOLE_SOCKET test_busybox
   [ "$status" -eq 0 ]
-
-  # check state
-  wait_for_container 15 1 test_busybox
 
   #prove there is no carry over of events.log from a prior test
   [ ! -e events.log ]

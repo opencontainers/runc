@@ -19,7 +19,7 @@ function teardown() {
   runc run -d --console-socket $CONSOLE_SOCKET test_busybox
   [ "$status" -eq 0 ]
 
-  wait_for_container 15 1 test_busybox
+  testcontainer test_busybox running
 
   # pause busybox
   runc pause test_busybox
@@ -44,7 +44,7 @@ function teardown() {
   runc run -d --console-socket $CONSOLE_SOCKET test_busybox
   [ "$status" -eq 0 ]
 
-  wait_for_container 15 1 test_busybox
+  testcontainer test_busybox running
 
   # pause test_busybox and nonexistent container
   runc pause test_busybox
