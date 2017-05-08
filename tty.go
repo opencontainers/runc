@@ -15,6 +15,7 @@ import (
 
 type tty struct {
 	console   libcontainer.Console
+	slave     *os.File
 	state     *term.State
 	closers   []io.Closer
 	postStart []io.Closer
@@ -72,7 +73,13 @@ func inheritStdio(process *libcontainer.Process) error {
 func (t *tty) recvtty(process *libcontainer.Process, socket *os.File) error {
 	f, err := utils.RecvFd(socket)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to receive master %s", err)
+	}
+	// read the slave here and hold on to it to make sure that the master-slave
+	// pipe is valid for the container lifetime.
+	slave, err := utils.RecvFd(socket)
+	if err != nil {
+		return fmt.Errorf("failed to receive slave %s", err)
 	}
 	console := libcontainer.ConsoleFromFile(f)
 	go io.Copy(console, os.Stdin)
@@ -84,6 +91,7 @@ func (t *tty) recvtty(process *libcontainer.Process, socket *os.File) error {
 	}
 	t.state = state
 	t.console = console
+	t.slave = slave
 	t.closers = []io.Closer{console}
 	return nil
 }
@@ -111,6 +119,9 @@ func (t *tty) Close() error {
 	for _, c := range t.postStart {
 		c.Close()
 	}
+	// close the slave first before we wait for all io to be done then close the
+	// master in t.closers
+	t.slave.Close()
 	// wait for the copy routines to finish before closing the fds
 	t.wg.Wait()
 	for _, c := range t.closers {
