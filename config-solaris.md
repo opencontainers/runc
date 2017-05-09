@@ -1,6 +1,6 @@
 # <a name="solarisApplicationContainerConfiguration" />Solaris Application Container Configuration
 
-Solaris application containers can be configured using the following properties, all of the below properties have mappings to properties specified under [zonecfg(1M)][zonecfg.1m_2] man page, except milestone.
+Solaris application containers can be configured using the following properties, all of the below properties have mappings to properties specified under [zonecfg(1M)][zonecfg.1m] man page, except milestone.
 
 ## <a name="configSolarisMilestone" />milestone
 The SMF(Service Management Facility) FMRI which should go to "online" state before we start the desired process within the container.
@@ -117,4 +117,4 @@ Mapped to `link-protection` in the [zonecfg(1M)][zonecfg.1m] man page.
 
 [priv-str-to-set.3c]: http://docs.oracle.com/cd/E53394_01/html/E54766/priv-str-to-set-3c.html
 [zoneadmd.1m]: http://docs.oracle.com/cd/E53394_01/html/E54764/zoneadmd-1m.html
-[zonecfg.1m_2]: http://docs.oracle.com/cd/E53394_01/html/E54764/zonecfg-1m.html
+[zonecfg.1m]: https://docs.oracle.com/cd/E36784_01/html/E36871/zonecfg-1m.html
