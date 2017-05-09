@@ -15,16 +15,13 @@ The following parameters can be specified:
 
 * **`limit`** *(uint64, OPTIONAL)* - sets limit of memory usage in bytes.
 
-* **`reservation`** *(uint64, OPTIONAL)* - sets the guaranteed minimum amount of memory for a container in bytes.
-
 #### Example
 
 ```json
     "windows": {
         "resources": {
             "memory": {
-                "limit": 2097152,
-                "reservation": 524288
+                "limit": 2097152
             }
         }
     }

@@ -15,10 +15,6 @@
                             "limit": {
                                 "id": "https://opencontainers.org/schema/bundle/windows/resources/memory/limit",
                                 "$ref": "defs.json#/definitions/uint64"
-                            },
-                            "reservation": {
-                                "id": "https://opencontainers.org/schema/bundle/windows/resources/memory/reservation",
-                                "$ref": "defs.json#/definitions/uint64"
                             }
                         }
                     },

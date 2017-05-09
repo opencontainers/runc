@@ -450,8 +450,6 @@ type WindowsResources struct {
 type WindowsMemoryResources struct {
 	// Memory limit in bytes.
 	Limit *uint64 `json:"limit,omitempty"`
-	// Memory reservation in bytes.
-	Reservation *uint64 `json:"reservation,omitempty"`
 }
 
 // WindowsCPUResources contains CPU resource management settings.
