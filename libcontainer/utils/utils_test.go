@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"syscall"
 	"testing"
+
+	"golang.org/x/sys/unix"
 )
 
 func TestGenerateName(t *testing.T) {
@@ -94,7 +95,7 @@ func TestResolveRootfsWithNonExistingDir(t *testing.T) {
 }
 
 func TestExitStatus(t *testing.T) {
-	status := syscall.WaitStatus(0)
+	status := unix.WaitStatus(0)
 	ex := ExitStatus(status)
 	if ex != 0 {
 		t.Errorf("expected exit status to equal 0 and received %d", ex)
@@ -102,7 +103,7 @@ func TestExitStatus(t *testing.T) {
 }
 
 func TestExitStatusSignaled(t *testing.T) {
-	status := syscall.WaitStatus(2)
+	status := unix.WaitStatus(2)
 	ex := ExitStatus(status)
 	if ex != 130 {
 		t.Errorf("expected exit status to equal 130 and received %d", ex)

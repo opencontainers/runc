@@ -7,13 +7,14 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"syscall"
 	"testing"
 	"time"
 
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/utils"
+
+	"golang.org/x/sys/unix"
 )
 
 func TestExecIn(t *testing.T) {
@@ -122,7 +123,7 @@ func testExecInRlimit(t *testing.T, userns bool) {
 		Stderr: buffers.Stderr,
 		Rlimits: []configs.Rlimit{
 			// increase process rlimit higher than container rlimit to test per-process limit
-			{Type: syscall.RLIMIT_NOFILE, Hard: 1026, Soft: 1026},
+			{Type: unix.RLIMIT_NOFILE, Hard: 1026, Soft: 1026},
 		},
 	}
 	err = container.Run(ps)

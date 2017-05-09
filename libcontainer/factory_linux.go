@@ -10,7 +10,6 @@ import (
 	"regexp"
 	"runtime/debug"
 	"strconv"
-	"syscall"
 
 	"github.com/docker/docker/pkg/mount"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
@@ -20,6 +19,8 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/configs/validate"
 	"github.com/opencontainers/runc/libcontainer/utils"
+
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -92,7 +93,7 @@ func TmpfsRoot(l *LinuxFactory) error {
 		return err
 	}
 	if !mounted {
-		if err := syscall.Mount("tmpfs", l.Root, "tmpfs", 0, ""); err != nil {
+		if err := unix.Mount("tmpfs", l.Root, "tmpfs", 0, ""); err != nil {
 			return err
 		}
 	}

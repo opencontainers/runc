@@ -1,8 +1,9 @@
 package system
 
 import (
-	"syscall"
 	"unsafe"
+
+	"golang.org/x/sys/unix"
 )
 
 var _zero uintptr
@@ -10,7 +11,7 @@ var _zero uintptr
 // Returns the size of xattrs and nil error
 // Requires path, takes allocated []byte or nil as last argument
 func Llistxattr(path string, dest []byte) (size int, err error) {
-	pathBytes, err := syscall.BytePtrFromString(path)
+	pathBytes, err := unix.BytePtrFromString(path)
 	if err != nil {
 		return -1, err
 	}
@@ -21,7 +22,7 @@ func Llistxattr(path string, dest []byte) (size int, err error) {
 		newpathBytes = unsafe.Pointer(&_zero)
 	}
 
-	_size, _, errno := syscall.Syscall6(syscall.SYS_LLISTXATTR, uintptr(unsafe.Pointer(pathBytes)), uintptr(newpathBytes), uintptr(len(dest)), 0, 0, 0)
+	_size, _, errno := unix.Syscall6(unix.SYS_LLISTXATTR, uintptr(unsafe.Pointer(pathBytes)), uintptr(newpathBytes), uintptr(len(dest)), 0, 0, 0)
 	size = int(_size)
 	if errno != 0 {
 		return -1, errno
@@ -34,11 +35,11 @@ func Llistxattr(path string, dest []byte) (size int, err error) {
 // Requires path and its attribute as arguments
 func Lgetxattr(path string, attr string) ([]byte, error) {
 	var sz int
-	pathBytes, err := syscall.BytePtrFromString(path)
+	pathBytes, err := unix.BytePtrFromString(path)
 	if err != nil {
 		return nil, err
 	}
-	attrBytes, err := syscall.BytePtrFromString(attr)
+	attrBytes, err := unix.BytePtrFromString(attr)
 	if err != nil {
 		return nil, err
 	}
@@ -47,25 +48,25 @@ func Lgetxattr(path string, attr string) ([]byte, error) {
 	sz = 128
 	dest := make([]byte, sz)
 	destBytes := unsafe.Pointer(&dest[0])
-	_sz, _, errno := syscall.Syscall6(syscall.SYS_LGETXATTR, uintptr(unsafe.Pointer(pathBytes)), uintptr(unsafe.Pointer(attrBytes)), uintptr(destBytes), uintptr(len(dest)), 0, 0)
+	_sz, _, errno := unix.Syscall6(unix.SYS_LGETXATTR, uintptr(unsafe.Pointer(pathBytes)), uintptr(unsafe.Pointer(attrBytes)), uintptr(destBytes), uintptr(len(dest)), 0, 0)
 
 	switch {
-	case errno == syscall.ENODATA:
+	case errno == unix.ENODATA:
 		return nil, errno
-	case errno == syscall.ENOTSUP:
+	case errno == unix.ENOTSUP:
 		return nil, errno
-	case errno == syscall.ERANGE:
+	case errno == unix.ERANGE:
 		// 128 byte array might just not be good enough,
 		// A dummy buffer is used ``uintptr(0)`` to get real size
 		// of the xattrs on disk
-		_sz, _, errno = syscall.Syscall6(syscall.SYS_LGETXATTR, uintptr(unsafe.Pointer(pathBytes)), uintptr(unsafe.Pointer(attrBytes)), uintptr(unsafe.Pointer(nil)), uintptr(0), 0, 0)
+		_sz, _, errno = unix.Syscall6(unix.SYS_LGETXATTR, uintptr(unsafe.Pointer(pathBytes)), uintptr(unsafe.Pointer(attrBytes)), uintptr(unsafe.Pointer(nil)), uintptr(0), 0, 0)
 		sz = int(_sz)
 		if sz < 0 {
 			return nil, errno
 		}
 		dest = make([]byte, sz)
 		destBytes := unsafe.Pointer(&dest[0])
-		_sz, _, errno = syscall.Syscall6(syscall.SYS_LGETXATTR, uintptr(unsafe.Pointer(pathBytes)), uintptr(unsafe.Pointer(attrBytes)), uintptr(destBytes), uintptr(len(dest)), 0, 0)
+		_sz, _, errno = unix.Syscall6(unix.SYS_LGETXATTR, uintptr(unsafe.Pointer(pathBytes)), uintptr(unsafe.Pointer(attrBytes)), uintptr(destBytes), uintptr(len(dest)), 0, 0)
 		if errno != 0 {
 			return nil, errno
 		}
@@ -77,11 +78,11 @@ func Lgetxattr(path string, attr string) ([]byte, error) {
 }
 
 func Lsetxattr(path string, attr string, data []byte, flags int) error {
-	pathBytes, err := syscall.BytePtrFromString(path)
+	pathBytes, err := unix.BytePtrFromString(path)
 	if err != nil {
 		return err
 	}
-	attrBytes, err := syscall.BytePtrFromString(attr)
+	attrBytes, err := unix.BytePtrFromString(attr)
 	if err != nil {
 		return err
 	}
@@ -91,7 +92,7 @@ func Lsetxattr(path string, attr string, data []byte, flags int) error {
 	} else {
 		dataBytes = unsafe.Pointer(&_zero)
 	}
-	_, _, errno := syscall.Syscall6(syscall.SYS_LSETXATTR, uintptr(unsafe.Pointer(pathBytes)), uintptr(unsafe.Pointer(attrBytes)), uintptr(dataBytes), uintptr(len(data)), uintptr(flags), 0)
+	_, _, errno := unix.Syscall6(unix.SYS_LSETXATTR, uintptr(unsafe.Pointer(pathBytes)), uintptr(unsafe.Pointer(attrBytes)), uintptr(dataBytes), uintptr(len(data)), uintptr(flags), 0)
 	if errno != 0 {
 		return errno
 	}

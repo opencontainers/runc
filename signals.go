@@ -5,12 +5,14 @@ package main
 import (
 	"os"
 	"os/signal"
-	"syscall"
+	"syscall" // only for Signal
 
 	"github.com/Sirupsen/logrus"
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runc/libcontainer/utils"
+
+	"golang.org/x/sys/unix"
 )
 
 const signalBufferSize = 2048
@@ -76,9 +78,9 @@ func (h *signalHandler) forward(process *libcontainer.Process, tty *tty, detach 
 	tty.resize()
 	for s := range h.signals {
 		switch s {
-		case syscall.SIGWINCH:
+		case unix.SIGWINCH:
 			tty.resize()
-		case syscall.SIGCHLD:
+		case unix.SIGCHLD:
 			exits, err := h.reap()
 			if err != nil {
 				logrus.Error(err)
@@ -101,7 +103,7 @@ func (h *signalHandler) forward(process *libcontainer.Process, tty *tty, detach 
 			}
 		default:
 			logrus.Debugf("sending signal to process %s", s)
-			if err := syscall.Kill(pid1, s.(syscall.Signal)); err != nil {
+			if err := unix.Kill(pid1, s.(syscall.Signal)); err != nil {
 				logrus.Error(err)
 			}
 		}
@@ -113,13 +115,13 @@ func (h *signalHandler) forward(process *libcontainer.Process, tty *tty, detach 
 // then returns all exits to the main event loop for further processing.
 func (h *signalHandler) reap() (exits []exit, err error) {
 	var (
-		ws  syscall.WaitStatus
-		rus syscall.Rusage
+		ws  unix.WaitStatus
+		rus unix.Rusage
 	)
 	for {
-		pid, err := syscall.Wait4(-1, &ws, syscall.WNOHANG, &rus)
+		pid, err := unix.Wait4(-1, &ws, unix.WNOHANG, &rus)
 		if err != nil {
-			if err == syscall.ECHILD {
+			if err == unix.ECHILD {
 				return exits, nil
 			}
 			return nil, err

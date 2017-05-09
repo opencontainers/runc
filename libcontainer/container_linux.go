@@ -15,7 +15,7 @@ import (
 	"reflect"
 	"strings"
 	"sync"
-	"syscall"
+	"syscall" // only for SysProcAttr and Signal
 	"time"
 
 	"golang.org/x/sys/unix"
@@ -324,12 +324,12 @@ func (c *linuxContainer) createExecFifo() error {
 	if _, err := os.Stat(fifoName); err == nil {
 		return fmt.Errorf("exec fifo %s already exists", fifoName)
 	}
-	oldMask := syscall.Umask(0000)
-	if err := syscall.Mkfifo(fifoName, 0622); err != nil {
-		syscall.Umask(oldMask)
+	oldMask := unix.Umask(0000)
+	if err := unix.Mkfifo(fifoName, 0622); err != nil {
+		unix.Umask(oldMask)
 		return err
 	}
-	syscall.Umask(oldMask)
+	unix.Umask(oldMask)
 	if err := os.Chown(fifoName, rootuid, rootgid); err != nil {
 		return err
 	}
@@ -923,11 +923,11 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 	if err != nil {
 		return err
 	}
-	err = syscall.Mount(c.config.Rootfs, root, "", syscall.MS_BIND|syscall.MS_REC, "")
+	err = unix.Mount(c.config.Rootfs, root, "", unix.MS_BIND|unix.MS_REC, "")
 	if err != nil {
 		return err
 	}
-	defer syscall.Unmount(root, syscall.MNT_DETACH)
+	defer unix.Unmount(root, unix.MNT_DETACH)
 	t := criurpc.CriuReqType_RESTORE
 	req := &criurpc.CriuReq{
 		Type: &t,
@@ -977,7 +977,7 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 		c.addCriuRestoreMount(req, m)
 	}
 
-	if criuOpts.EmptyNs&syscall.CLONE_NEWNET == 0 {
+	if criuOpts.EmptyNs&unix.CLONE_NEWNET == 0 {
 		c.restoreNetwork(req, criuOpts)
 	}
 
@@ -1040,7 +1040,7 @@ func (c *linuxContainer) criuApplyCgroups(pid int, req *criurpc.CriuReq) error {
 }
 
 func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *CriuOpts, applyCgroups bool) error {
-	fds, err := unix.Socketpair(syscall.AF_LOCAL, syscall.SOCK_SEQPACKET|syscall.SOCK_CLOEXEC, 0)
+	fds, err := unix.Socketpair(unix.AF_LOCAL, unix.SOCK_SEQPACKET|unix.SOCK_CLOEXEC, 0)
 	if err != nil {
 		return err
 	}
@@ -1386,8 +1386,8 @@ func (c *linuxContainer) runType() (Status, error) {
 	}
 	pid := c.initProcess.pid()
 	// return Running if the init process is alive
-	if err := syscall.Kill(pid, 0); err != nil {
-		if err == syscall.ESRCH {
+	if err := unix.Kill(pid, 0); err != nil {
+		if err == unix.ESRCH {
 			// It means the process does not exist anymore, could happen when the
 			// process exited just when we call the function, we should not return
 			// error in this case.
