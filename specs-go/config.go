@@ -293,7 +293,7 @@ type LinuxMemory struct {
 	Kernel *uint64 `json:"kernel,omitempty"`
 	// Kernel memory limit for tcp (in bytes)
 	KernelTCP *uint64 `json:"kernelTCP,omitempty"`
-	// How aggressive the kernel will swap memory pages. Range from 0 to 100.
+	// How aggressive the kernel will swap memory pages.
 	Swappiness *uint64 `json:"swappiness,omitempty"`
 }
 
@@ -456,7 +456,7 @@ type WindowsMemoryResources struct {
 type WindowsCPUResources struct {
 	// Number of CPUs available to the container.
 	Count *uint64 `json:"count,omitempty"`
-	// CPU shares (relative weight to other containers with cpu shares). Range is from 1 to 10000.
+	// CPU shares (relative weight to other containers with cpu shares).
 	Shares *uint16 `json:"shares,omitempty"`
 	// Specifies the portion of processor cycles that this container can use as a percentage times 100.
 	Maximum *uint16 `json:"maximum,omitempty"`
