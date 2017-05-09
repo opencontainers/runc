@@ -34,7 +34,7 @@ type Process struct {
 	// Terminal creates an interactive terminal for the container.
 	Terminal bool `json:"terminal,omitempty"`
 	// ConsoleSize specifies the size of the console.
-	ConsoleSize Box `json:"consoleSize,omitempty"`
+	ConsoleSize *Box `json:"consoleSize,omitempty"`
 	// User specifies user information for the process.
 	User User `json:"user"`
 	// Args specifies the binary and arguments for the application to execute.
