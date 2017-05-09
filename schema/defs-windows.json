@@ -1,8 +1,0 @@
-{
-    "definitions": {
-        "cpuShares": {
-            "description": "Relative weight to other containers with CPU Shares defined",
-            "type": "integer",
-        }
-    }
-}

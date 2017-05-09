@@ -49,7 +49,7 @@
                     },
                     "oomScoreAdj": {
                         "id": "https://opencontainers.org/schema/bundle/linux/resources/oomScoreAdj",
-                        "type": "integer",
+                        "type": "integer"
                     },
                     "pids": {
                         "id": "https://opencontainers.org/schema/bundle/linux/resources/pids",
