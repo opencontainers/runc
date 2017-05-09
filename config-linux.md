@@ -478,86 +478,29 @@ The following parameters can be specified to setup the controller:
 
 ## <a name="configLinuxIntelRdt" />IntelRdt
 
-Intel platforms with new Xeon CPU support Intel Resource Director Technology
-(RDT). Cache Allocation Technology (CAT) is a sub-feature of RDT, which
-currently supports L3 cache resource allocation.
+**`intelRdt`** (object, OPTIONAL) represents the [Intel Resource Director Technology][intel-rdt-cat-kernel-interface].
+    If `intelRdt` is set, the runtime MUST write the container process ID to the `<container-id>/tasks` file in a mounted `resctrl` pseudo-filesystem, using the container ID from [`start`](runtime.md#start) and creating the `<container-id>` directory if necessary.
+    If no mounted `resctrl` pseudo-filesystem is available in the [runtime mount namespace](glossary.md#runtime-namespace), the runtime MUST [generate an error](runtime.md#errors).
 
-This feature provides a way for the software to restrict cache allocation to a
-defined 'subset' of L3 cache which may be overlapping with other 'subsets'.
-The different subsets are identified by class of service (CLOS) and each CLOS
-has a capacity bitmask (CBM).
-
-In Linux kernel, it is exposed via "resource control" filesystem, which is a
-"cgroup-like" interface.
-
-Comparing with cgroups, it has similar process management lifecycle and
-interfaces in a container. But unlike cgroups' hierarchy, it has single level
-filesystem layout.
-
-Intel RDT "resource control" filesystem hierarchy:
-```
-mount -t resctrl resctrl /sys/fs/resctrl
-tree /sys/fs/resctrl
-/sys/fs/resctrl/
-|-- info
-|   |-- L3
-|       |-- cbm_mask
-|       |-- min_cbm_bits
-|       |-- num_closids
-|-- cpus
-|-- schemata
-|-- tasks
-|-- <container_id>
-    |-- cpus
-    |-- schemata
-    |-- tasks
-
-```
-
-For containers, we can make use of `tasks` and `schemata` configuration for
-L3 cache resource constraints if hardware and kernel support Intel RDT/CAT.
-
-The file `tasks` has a list of tasks that belongs to this group (e.g.,
-<container_id>" group). Tasks can be added to a group by writing the task ID
-to the "tasks" file  (which will automatically remove them from the previous
-group to which they belonged). New tasks created by fork(2) and clone(2) are
-added to the same group as their parent. If a pid is not in any sub group, it
-is in root group.
-
-The file `schemata` has allocation masks/values for L3 cache on each socket,
-which contains L3 cache id and capacity bitmask (CBM).
-```
-	Format: "L3:<cache_id0>=<cbm0>;<cache_id1>=<cbm1>;..."
-```
-For example, on a two-socket machine, L3's schema line could be `L3:0=ff;1=c0`
-Which means L3 cache id 0's CBM is 0xff, and L3 cache id 1's CBM is 0xc0.
-
-The valid L3 cache CBM is a *contiguous bits set* and number of bits that can
-be set is less than the max bit. The max bits in the CBM is varied among
-supported Intel Xeon platforms. In Intel RDT "resource control" filesystem
-layout, the CBM in a group should be a subset of the CBM in root. Kernel will
-check if it is valid when writing. e.g., 0xfffff in root indicates the max bits
-of CBM is 20 bits, which mapping to entire L3 cache capacity. Some valid CBM
-values to set in a group: 0xf, 0xf0, 0x3ff, 0x1f00 and etc.
-
-**`intelRdt`** (object, OPTIONAL) represents the L3 cache resource constraints in Intel Xeon platforms.
-
-For more information, see [Intel RDT/CAT kernel interface][intel-rdt-cat-kernel-interface].
+    If `intelRdt` is not set, the runtime MUST NOT manipulate any `resctrl` psuedo-filesystems.
 
 The following parameters can be specified for the container:
 
-* **`l3CacheSchema`** *(string, OPTIONAL)* - specifies the schema for L3 cache id and capacity bitmask (CBM)
+* **`l3CacheSchema`** *(string, OPTIONAL)* - specifies the schema for L3 cache id and capacity bitmask (CBM).
+    If `l3CacheSchema` is set, runtimes MUST write the value to the `schemata` file in the `<container-id>` directory discussed in `intelRdt`.
 
-###### Example
+    If `l3CacheSchema` is not set, runtimes MUST NOT write to `schemata` files in any `resctrl` psuedo-filesystems.
+
+### Example
+
+Consider a two-socket machine with two L3 caches where the default CBM is 0xfffff and the max CBM length is 20 bits.
+Tasks inside the container only have access to the "upper" 80% of L3 cache id 0 and the "lower" 50% L3 cache id 1:
+
 ```json
-There are two L3 caches in the two-socket machine, the default CBM is 0xfffff
-and the max CBM length is 20 bits. This configuration assigns 4/5 of L3 cache
-id 0 and the whole L3 cache id 1 for the container:
-
 "linux": {
-	"intelRdt": {
-		"l3CacheSchema": "L3:0=ffff0;1=fffff"
-	}
+    "intelRdt": {
+        "l3CacheSchema": "L3:0=ffff0;1=3ff"
+    }
 }
 ```
 
