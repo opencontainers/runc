@@ -9,7 +9,7 @@ type Spec struct {
 	// Platform specifies the configuration's target platform.
 	Platform Platform `json:"platform"`
 	// Process configures the container process.
-	Process Process `json:"process"`
+	Process *Process `json:"process,omitempty"`
 	// Root configures the container's root filesystem.
 	Root Root `json:"root"`
 	// Hostname configures the container's hostname.

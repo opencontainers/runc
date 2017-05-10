@@ -116,6 +116,7 @@ This operation MUST [generate an error](#errors) if it is not provided the conta
 Attempting to start a container that does not exist MUST [generate an error](#errors).
 Attempting to start an already started container MUST have no effect on the container and MUST [generate an error](#errors).
 This operation MUST run the user-specified program as specified by [`process`](config.md#process).
+This operation MUST generate an error if `process` was not set.
 
 ### <a name="runtimeKill" />Kill
 `kill <container-id> <signal>`
