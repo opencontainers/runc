@@ -150,7 +150,7 @@ For Windows, see [mountvol][mountvol] and [SetVolumeMountPoint][set-volume-mount
 * **`noNewPrivileges`** (bool, OPTIONAL) setting `noNewPrivileges` to true prevents the processes in the container from gaining additional privileges.
   As an example, the ['no_new_privs'][no-new-privs] article in the kernel documentation has information on how this is achieved using a prctl system call on Linux.
 
-For Linux-based systems the process structure supports the following process specific fields.
+For Linux-based systems the process structure supports the following process-specific fields.
 
 * **`apparmorProfile`** (string, OPTIONAL) specifies the name of the AppArmor profile to be applied to processes in the container.
   For more information about AppArmor, see [AppArmor documentation][apparmor].
