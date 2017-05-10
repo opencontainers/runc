@@ -154,6 +154,12 @@ For Linux-based systems the process structure supports the following process spe
 
 * **`apparmorProfile`** (string, OPTIONAL) specifies the name of the AppArmor profile to be applied to processes in the container.
   For more information about AppArmor, see [AppArmor documentation][apparmor].
+* **`oomScoreAdj`** *(int, OPTIONAL)* adjusts the oom-killer score in `[pid]/oom_score_adj` for the container process's `[pid]` in a [proc pseudo-filesystem][procfs].
+    If `oomScoreAdj` is set, the runtime MUST set `oom_score_adj` to the given value.
+    If `oomScoreAdj` is not set, the runtime MUST NOT change the value of `oom_score_adj`.
+
+    This is a per-process setting, where as [`disableOOMKiller`](config-linux.md#disable-out-of-memory-killer) is scoped for a memory cgroup.
+    For more information on how these two settings work together, see [the memory cgroup documentation section 10. OOM Contol][cgroup-v1-memory_2].
 * **`selinuxLabel`** (string, OPTIONAL) specifies the SELinux label to be applied to the processes in the container.
   For more information about SELinux, see  [SELinux documentation][selinux].
 
@@ -503,6 +509,7 @@ Here is a full example `config.json` for reference.
             }
         ],
         "apparmorProfile": "acme_secure_profile",
+        "oomScoreAdj": 100,
         "selinuxLabel": "system_u:system_r:svirt_lxc_net_t:s0:c124,c675",
         "noNewPrivileges": true
     },
@@ -682,7 +689,6 @@ Here is a full example `config.json` for reference.
                     "limit": 9223372036854772000
                 }
             ],
-            "oomScoreAdj": 100,
             "memory": {
                 "limit": 536870912,
                 "reservation": 536870912,
@@ -818,8 +824,10 @@ Here is a full example `config.json` for reference.
 
 
 [apparmor]: https://wiki.ubuntu.com/AppArmor
+[cgroup-v1-memory_2]: https://www.kernel.org/doc/Documentation/cgroup-v1/memory.txt
 [selinux]:http://selinuxproject.org/page/Main_Page
 [no-new-privs]: https://www.kernel.org/doc/Documentation/prctl/no_new_privs.txt
+[procfs_2]: https://www.kernel.org/doc/Documentation/filesystems/proc.txt
 [semver-v2.0.0]: http://semver.org/spec/v2.0.0.html
 [go-environment]: https://golang.org/doc/install/source#environment
 [ieee-1003.1-2001-xbd-c8.1]: http://pubs.opengroup.org/onlinepubs/009695399/basedefs/xbd_chap08.html#tag_08_01

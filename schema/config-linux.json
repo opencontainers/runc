@@ -47,10 +47,6 @@
                             "$ref": "defs-linux.json#/definitions/DeviceCgroup"
                         }
                     },
-                    "oomScoreAdj": {
-                        "id": "https://opencontainers.org/schema/bundle/linux/resources/oomScoreAdj",
-                        "type": "integer"
-                    },
                     "pids": {
                         "id": "https://opencontainers.org/schema/bundle/linux/resources/pids",
                         "type": "object",

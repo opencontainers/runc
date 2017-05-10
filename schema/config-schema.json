@@ -178,6 +178,10 @@
                     "id": "https://opencontainers.org/schema/bundle/process/linux/apparmorProfile",
                     "type": "string"
                 },
+                "oomScoreAdj": {
+                    "id": "https://opencontainers.org/schema/bundle/process/linux/oomScoreAdj",
+                    "type": "integer"
+                },
                 "selinuxLabel": {
                     "id": "https://opencontainers.org/schema/bundle/process/linux/selinuxLabel",
                     "type": "string"

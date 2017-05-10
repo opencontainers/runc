@@ -52,6 +52,8 @@ type Process struct {
 	NoNewPrivileges bool `json:"noNewPrivileges,omitempty" platform:"linux"`
 	// ApparmorProfile specifies the apparmor profile for the container.
 	ApparmorProfile string `json:"apparmorProfile,omitempty" platform:"linux"`
+	// Specify an oom_score_adj for the container.
+	OOMScoreAdj *int `json:"oomScoreAdj,omitempty"`
 	// SelinuxLabel specifies the selinux context that the container process is run as.
 	SelinuxLabel string `json:"selinuxLabel,omitempty" platform:"linux"`
 }
@@ -335,8 +337,6 @@ type LinuxResources struct {
 	Devices []LinuxDeviceCgroup `json:"devices,omitempty"`
 	// DisableOOMKiller disables the OOM killer for out of memory conditions
 	DisableOOMKiller *bool `json:"disableOOMKiller,omitempty"`
-	// Specify an oom_score_adj for the container.
-	OOMScoreAdj *int `json:"oomScoreAdj,omitempty"`
 	// Memory restriction configuration
 	Memory *LinuxMemory `json:"memory,omitempty"`
 	// CPU resource restriction configuration
