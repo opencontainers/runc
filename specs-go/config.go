@@ -21,11 +21,11 @@ type Spec struct {
 	// Annotations contains arbitrary metadata for the container.
 	Annotations map[string]string `json:"annotations,omitempty"`
 
-	// Linux is platform specific configuration for Linux based containers.
+	// Linux is platform-specific configuration for Linux based containers.
 	Linux *Linux `json:"linux,omitempty" platform:"linux"`
-	// Solaris is platform specific configuration for Solaris containers.
+	// Solaris is platform-specific configuration for Solaris containers.
 	Solaris *Solaris `json:"solaris,omitempty" platform:"solaris"`
-	// Windows is platform specific configuration for Windows based containers, including Hyper-V containers.
+	// Windows is platform-specific configuration for Windows based containers, including Hyper-V containers.
 	Windows *Windows `json:"windows,omitempty" platform:"windows"`
 }
 
@@ -142,7 +142,7 @@ type Hooks struct {
 	Poststop []Hook `json:"poststop,omitempty"`
 }
 
-// Linux contains platform specific configuration for Linux based containers.
+// Linux contains platform-specific configuration for Linux based containers.
 type Linux struct {
 	// UIDMapping specifies user mappings for supporting user namespaces on Linux.
 	UIDMappings []LinuxIDMapping `json:"uidMappings,omitempty"`
@@ -383,7 +383,7 @@ type LinuxDeviceCgroup struct {
 	Access string `json:"access,omitempty"`
 }
 
-// Solaris contains platform specific configuration for Solaris application containers.
+// Solaris contains platform-specific configuration for Solaris application containers.
 type Solaris struct {
 	// SMF FMRI which should go "online" before we start the container process.
 	Milestone string `json:"milestone,omitempty"`

@@ -33,7 +33,7 @@ Example use cases include sophisticated network configuration, volume garbage co
 
 ### Runtime Developers
 
-Runtime developers can build runtime implementations that run OCI-compliant bundles and container configuration, containing low-level OS and host specific details, on a particular platform.
+Runtime developers can build runtime implementations that run OCI-compliant bundles and container configuration, containing low-level OS and host-specific details, on a particular platform.
 
 ## Releases
 
