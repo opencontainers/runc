@@ -75,22 +75,31 @@ The following parameters can be specified:
     }
 ```
 
-### <a name="configWindowsNetwork" />Network
+## <a name="configWindowsNetwork" />Network
 
-`network` is an OPTIONAL configuration for the container's network usage.
+You can configure a container's networking options via the OPTIONAL `network` field of the Windows configuration.
 
 The following parameters can be specified:
 
-* **`egressBandwidth`** *(uint64, OPTIONAL)* - specified the maximum egress bandwidth in bytes per second for the container.
+* **`endpointList`** *(array of strings, OPTIONAL)* - list of HNS (Host Network Service) endpoints that the container should connect to.
+* **`allowUnqualifiedDNSQuery`** *(bool, OPTIONAL)* - specifies if unqualified DNS name resolution is allowed.
+* **`DNSSearchList`** *(array of strings, OPTIONAL)* - comma seperated list of DNS suffixes to use for name resolution.
+* **`networkSharedContainerName`** *(string, OPTIONAL)* - name (ID) of the container that we will share with the network stack.
 
 #### Example
 
 ```json
     "windows": {
-        "resources": {
-            "network": {
-                "egressBandwidth": 1048577
-            }
+        "network": {
+            "endpointList": [
+                "7a010682-17e0-4455-a838-02e5d9655fe6"
+            ],
+            "allowUnqualifiedDNSQuery": true,
+            "DNSSearchList": [
+                "a.com",
+                "b.com"
+            ],
+            "networkSharedContainerName": "containerName"
         }
    }
 ```

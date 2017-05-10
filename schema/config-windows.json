@@ -53,16 +53,28 @@
                                 "$ref": "defs.json#/definitions/uint64"
                             }
                         }
+                    }
+                }
+            },
+            "network": {
+                "id": "https://opencontainers.org/schema/bundle/windows/network",
+                "type": "object",
+                "properties": {
+                    "endpointList": {
+                        "id": "https://opencontainers.org/schema/bundle/windows/network/endpointList",
+                        "$ref": "defs.json#/definitions/ArrayOfStrings"
                     },
-                    "network": {
-                        "id": "https://opencontainers.org/schema/bundle/windows/resources/network",
-                        "type": "object",
-                        "properties": {
-                            "egressBandwidth": {
-                                "id": "https://opencontainers.org/schema/bundle/windows/resources/network/egressBandwidth",
-                                "$ref": "defs.json#/definitions/uint64"
-                            }
-                        }
+                    "allowUnqualifiedDNSQuery": {
+                        "id": "https://opencontainers.org/schema/bundle/windows/network/allowUnqualifiedDNSQuery",
+                        "type": "boolean"
+                    },
+                    "DNSSearchList": {
+                        "id": "https://opencontainers.org/schema/bundle/windows/network/DNSSearchList",
+                        "$ref": "defs.json#/definitions/ArrayOfStrings"
+                    },
+                    "networkSharedContainerName": {
+                        "id": "https://opencontainers.org/schema/bundle/windows/network/networkSharedContainerName",
+                        "type": "string"
                     }
                 }
             },
