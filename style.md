@@ -8,12 +8,12 @@ For example, this paragraph will span three lines in the Markdown source.
 
 ## <a name="styleHex" />Traditionally hex settings should use JSON integers, not JSON strings
 
-For example, [`"classID": 1048577`][class-id] instead of `"classID": "0x100001"`.
+For example, [`"classID": 1048577`](config-linux.md#network) instead of `"classID": "0x100001"`.
 The config JSON isn't enough of a UI to be worth jumping through string <-> integer hoops to support an 0x… form ([source][integer-over-hex]).
 
 ## <a name="styleConstantNames" />Constant names should keep redundant prefixes
 
-For example, `CAP_KILL` instead of `KILL` in [**`linux.capabilities`**][capabilities].
+For example, `CAP_KILL` instead of `KILL` in [**`process.capabilities`**](config.md#process).
 The redundancy reduction from removing the namespacing prefix is not useful enough to be worth trimming the upstream identifier ([source][keep-prefix]).
 
 ## <a name="styleOptionalSettings" />Optional settings should not have pointer Go types
@@ -120,8 +120,6 @@ The URL for the Open Containers link above is: https://github.com/opencontainers
 ```
 
 
-[capabilities]: config-linux.md#capabilities
-[class-id]: config-linux.md#network
 [integer-over-hex]: https://github.com/opencontainers/runtime-spec/pull/267#r48360013
 [keep-prefix]: https://github.com/opencontainers/runtime-spec/pull/159#issuecomment-138728337
 [no-pointer-for-boolean]: https://github.com/opencontainers/runtime-spec/pull/290#r50296396
