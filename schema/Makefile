@@ -1,10 +1,8 @@
 GOOD_TESTS = $(wildcard test/good/*.json)
 BAD_TESTS = $(wildcard test/bad/*.json)
 
-.PHONY: default
 default: validate
 
-.PHONY: help
 help:
 	@echo "Usage: make [target]"
 	@echo
@@ -12,7 +10,6 @@ help:
 	@echo " * 'help' - show this help information"
 	@echo " * 'validate' - build the validation tool"
 
-.PHONY: fmt
 fmt:
 	find . -name '*.json' -exec bash -c 'jq --indent 4 -M . {} > xx && mv xx {} || echo "skipping invalid {}"' \;
 
@@ -21,7 +18,6 @@ validate: validate.go
 	go get -d ./...
 	go build ./validate.go
 
-.PHONY: test
 test: validate $(TESTS)
 	for TYPE in $$(ls test); \
 	do \
@@ -50,6 +46,5 @@ test: validate $(TESTS)
 		done; \
 	done
 
-.PHONY: clean
 clean:
 	rm -f validate
