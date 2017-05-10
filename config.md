@@ -131,7 +131,7 @@ For Windows, see [mountvol][mountvol] and [SetVolumeMountPoint][set-volume-mount
 * **`env`** (array of strings, OPTIONAL) with the same semantics as [IEEE Std 1003.1-2001's `environ`][ieee-1003.1-2001-xbd-c8.1].
 * **`args`** (array of strings, REQUIRED) with similar semantics to [IEEE Std 1003.1-2001 `execvp`'s *argv*][ieee-1003.1-2001-xsh-exec].
   This specification extends the IEEE standard in that at least one entry is REQUIRED, and that entry is used with the same semantics as `execvp`'s *file*.
-* **`capabilities`** (object, OPTIONAL) is an object containing arrays that specifies the sets of capabilities for the process(es) inside the container. Valid values are platform-specific. For example, valid values for Linux are defined in the [capabilities(7)][capabilities.7] man page.
+* **`capabilities`** (object, OPTIONAL) is an object containing arrays that specifies the sets of capabilities for the process(es) inside the container. Valid values are platform-specific. For example, valid values for Linux are defined in the [capabilities(7)][capabilities.7] man page, such as `CAP_CHOWN`. Any value which cannot be mapped to a relevant kernel interface MUST cause an error.
   capabilities contains the following properties:
     * **`effective`** (array of strings, OPTIONAL) - the `effective` field is an array of effective capabilities that are kept for the process.
     * **`bounding`** (array of strings, OPTIONAL) - the `bounding` field is an array of bounding capabilities that are kept for the process.
