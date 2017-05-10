@@ -104,8 +104,6 @@ Using the data in [`config.json`](config.md), this operation MUST create a new c
 This means that all of the resources associated with the container MUST be created, however, the user-specified program MUST NOT be run at this time.
 If the runtime cannot create the container as specified in [`config.json`](config.md), it MUST [generate an error](#errors) and a new container MUST NOT be created.
 
-Upon successful completion of this operation the `status` property of this container MUST be `created`.
-
 The runtime MAY validate `config.json` against this spec, either generically or with respect to the local system capabilities, before creating the container ([step 2](#lifecycle)).
 Runtime callers who are interested in pre-create validation can run [bundle-validation tools](implementations.md#testing--tools) before invoking the create operation.
 
@@ -119,16 +117,12 @@ Attempting to start a container that does not exist MUST [generate an error](#er
 Attempting to start an already started container MUST have no effect on the container and MUST [generate an error](#errors).
 This operation MUST run the user-specified program as specified by [`process`](config.md#process).
 
-Upon successful completion of this operation the `status` property of this container MUST be `running`.
-
 ### <a name="runtimeKill" />Kill
 `kill <container-id> <signal>`
 
 This operation MUST [generate an error](#errors) if it is not provided the container ID.
 Attempting to send a signal to a container that is not running MUST have no effect on the container and MUST [generate an error](#errors).
 This operation MUST send the specified signal to the process in the container.
-
-When the process in the container is stopped, irrespective of it being as a result of a `kill` operation or any other reason, the `status` property of this container MUST be `stopped`.
 
 ### <a name="runtimeDelete" />Delete
 `delete <container-id>`
