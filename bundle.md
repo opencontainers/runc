@@ -16,7 +16,7 @@ See [`config.json`](config.md) for more details.
 
 2. <a name="containerFormat02" />A directory representing the root filesystem of the container.
 While the name of this REQUIRED directory may be arbitrary, users should consider using a conventional name, such as `rootfs`.
-This directory MUST be referenced from within the `config.json` file.
+This directory MUST be referenced by [`root`](config.md#root) within the `config.json` file.
 
 While these artifacts MUST all be present in a single directory on the local filesystem, that directory itself is not part of the bundle.
 In other words, a tar archive of a *bundle* will have these artifacts at the root of the archive, not nested within a top-level directory.
