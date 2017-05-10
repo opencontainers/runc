@@ -613,7 +613,7 @@ The [Shared Subtrees][sharedsubtree] article in the kernel documentation has mor
 ## <a name="configLinuxMaskedPaths" />Masked Paths
 
 **`maskedPaths`** (array of strings, OPTIONAL) will mask over the provided paths inside the container so that they cannot be read.
-The values MUST be absolute paths in the [container namespace][container-namespace2].
+The values MUST be absolute paths in the [container namespace](glossary.md#container_namespace).
 
 ###### Example
 
@@ -626,7 +626,7 @@ The values MUST be absolute paths in the [container namespace][container-namespa
 ## <a name="configLinuxReadonlyPaths" />Readonly Paths
 
 **`readonlyPaths`** (array of strings, OPTIONAL) will set the provided paths as readonly inside the container.
-The values MUST be absolute paths in the [container namespace][container-namespace2].
+The values MUST be absolute paths in the [container namespace](glossary.md#container-namespace).
 
 ###### Example
 
@@ -646,8 +646,6 @@ The values MUST be absolute paths in the [container namespace][container-namespa
     "mountLabel": "system_u:object_r:svirt_sandbox_file_t:s0:c715,c811"
 ```
 
-
-[container-namespace2]: glossary.md#container_namespace
 
 [cgroup-v1]: https://www.kernel.org/doc/Documentation/cgroup-v1/cgroups.txt
 [cgroup-v1-blkio]: https://www.kernel.org/doc/Documentation/cgroup-v1/blkio-controller.txt
