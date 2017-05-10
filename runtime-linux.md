@@ -8,7 +8,7 @@ Some of the file descriptors MAY be redirected to `/dev/null` even though they a
 
 ## <a name="runtimeLinuxDevSymbolicLinks" /> Dev symbolic links
 
-After the container has `/proc` mounted, the following standard symlinks MUST be setup within `/dev/` for the IO.
+While creating the container (step 2 in the [lifecycle](runtime.md#lifecycle)), runtimes MUST create the following symlinks if the source file exists after processing [`mounts`](config.md#mounts):
 
 |    Source       | Destination |
 | --------------- | ----------- |
