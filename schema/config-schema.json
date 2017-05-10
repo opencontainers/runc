@@ -130,6 +130,10 @@
                         "additionalGids": {
                             "id": "https://opencontainers.org/schema/bundle/process/user/additionalGids",
                             "$ref": "defs.json#/definitions/ArrayOfGIDs"
+                        },
+                        "username": {
+                            "id": "https://opencontainers.org/schema/bundle/process/user/username",
+                            "type": "string"
                         }
                     }
                 },
