@@ -447,7 +447,6 @@ func (c *linuxContainer) newSetnsProcess(p *Process, cmd *exec.Cmd, parentPipe, 
 func (c *linuxContainer) newInitConfig(process *Process) *initConfig {
 	cfg := &initConfig{
 		Config:           c.config,
-		Args:             process.Args,
 		Env:              process.Env,
 		User:             process.User,
 		AdditionalGroups: process.AdditionalGroups,
@@ -460,6 +459,11 @@ func (c *linuxContainer) newInitConfig(process *Process) *initConfig {
 		AppArmorProfile:  c.config.AppArmorProfile,
 		ProcessLabel:     c.config.ProcessLabel,
 		Rlimits:          c.config.Rlimits,
+	}
+	if process.Args[0] == "--" {
+		cfg.Args = process.Args[1:]
+	} else {
+		cfg.Args = process.Args
 	}
 	if process.NoNewPrivileges != nil {
 		cfg.NoNewPrivileges = *process.NoNewPrivileges
