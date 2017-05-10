@@ -98,9 +98,12 @@ This operation MUST return the state of a container as specified in the [State](
 
 This operation MUST [generate an error](#errors) if it is not provided a path to the bundle and the container ID to associate with the container.
 If the ID provided is not unique across all containers within the scope of the runtime, or is not valid in any other way, the implementation MUST [generate an error](#errors) and a new container MUST NOT be created.
-Using the data in [`config.json`](config.md), this operation MUST create a new container.
-This means that all of the resources associated with the container MUST be created, however, the user-specified program MUST NOT be run at this time.
-If the runtime cannot create the container as specified in [`config.json`](config.md), it MUST [generate an error](#errors) and a new container MUST NOT be created.
+This operation MUST create a new container.
+
+All of the properties configured in [`config.json`](config.md) except for [`process`](config.md#process) MUST be applied.
+[`process.args`](config.md#process) MUST NOT be applied until triggered by the [`start`](#start) operation.
+The remaining `process` properties MAY be applied by this operation.
+If the runtime cannot apply a property as specified in the [configuration](config.md), it MUST [generate an error](#errors) and a new container MUST NOT be created.
 
 The runtime MAY validate `config.json` against this spec, either generically or with respect to the local system capabilities, before creating the container ([step 2](#lifecycle)).
 Runtime callers who are interested in pre-create validation can run [bundle-validation tools](implementations.md#testing--tools) before invoking the create operation.
