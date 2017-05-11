@@ -1,6 +1,6 @@
 # <a name="containerConfigurationFile" />Container Configuration file
 
-This configuration file contains metadata necessary to implement standard operations against the container.
+This configuration file contains metadata necessary to implement [standard operations](runtime.md#operations) against the container.
 This includes the process to run, environment variables to inject, sandboxing features to use, etc.
 
 The canonical schema is defined in this document, but there is a JSON Schema in [`schema/config-schema.json`](schema/config-schema.json) and Go bindings in [`specs-go/config.go`](specs-go/config.go).
