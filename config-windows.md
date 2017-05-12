@@ -106,17 +106,27 @@ For more information about tooling to generate a gMSA, see [Deployment Overview]
 [gMSAOverview]: https://aka.ms/windowscontainers/manage-serviceaccounts
 [gMSATooling]: https://aka.ms/windowscontainers/credentialspec-tools
 
-
 ## <a name="configWindowsServicing" />Servicing
 
 When a container terminates, the Host Compute Service indicates if a Windows update servicing operation is pending.
 You can indicate that a container should be started in a mode to apply pending servicing operations via the OPTIONAL `servicing` field of the Windows configuration.
-
 
 ### Example
 
 ```json
     "windows": {
         "servicing": true
+    }
+```
+
+## <a name="configWindowsIgnoreFlushesDuringBoot" />IgnoreFlushesDuringBoot
+
+You can indicate that a container should be started in an a mode where disk flushes are not performed during container boot via the OPTIONAL `ignoreflushesduringboot` field of the Windows configuration.
+
+### Example
+
+```json
+    "windows": {
+        "ignoreflushesduringboot": true
     }
 ```

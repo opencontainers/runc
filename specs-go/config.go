@@ -436,6 +436,8 @@ type Windows struct {
 	CredentialSpec interface{} `json:"credentialspec,omitempty"`
 	// Servicing indicates if the container is being started in a mode to apply a Windows Update servicing operation.
 	Servicing bool `json:"servicing,omitempty"`
+	// IgnoreFlushesDuringBoot indicates if the container is being started in a mode where disk writes are not flushed during its boot process.
+	IgnoreFlushesDuringBoot bool `json:"ignoreflushesduringboot,omitempty"`
 }
 
 // WindowsResources has container runtime resource constraints for containers running on Windows.
