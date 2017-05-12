@@ -1,5 +1,3 @@
-// +build linux freebsd
-
 package configs
 
 type FreezerState string
