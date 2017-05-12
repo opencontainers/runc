@@ -65,6 +65,10 @@
                         }
                     }
                 }
+            },
+            "credentialspec": {
+                "id": "https://opencontainers.org/schema/bundle/windows/credentialspec",
+                "type": "object"
             }
         }
     }
