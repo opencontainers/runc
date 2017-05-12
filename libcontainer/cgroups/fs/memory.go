@@ -104,14 +104,12 @@ func setKernelMemory(path string, kernelMemoryLimit uint64) error {
 }
 
 func setMemoryAndSwap(path string, cgroup *configs.Cgroup) error {
-	ulimited := -1
-
-	// If the memory update is set to uint64(-1) we should also
-	// set swap to uint64(-1), it means unlimited memory.
-	if cgroup.Resources.Memory == uint64(ulimited) {
+	// If the memory update is set to MemoryUnlimited we should also
+	// set swap to MemoryUnlimited.
+	if cgroup.Resources.Memory == configs.MemoryUnlimited {
 		// Only set swap if it's enbled in kernel
 		if cgroups.PathExists(filepath.Join(path, cgroupMemorySwapLimit)) {
-			cgroup.Resources.MemorySwap = uint64(ulimited)
+			cgroup.Resources.MemorySwap = uint64(configs.MemoryUnlimited)
 		}
 	}
 
@@ -126,7 +124,7 @@ func setMemoryAndSwap(path string, cgroup *configs.Cgroup) error {
 		// When update memory limit, we should adapt the write sequence
 		// for memory and swap memory, so it won't fail because the new
 		// value and the old value don't fit kernel's validation.
-		if cgroup.Resources.MemorySwap == uint64(ulimited) || memoryUsage.Limit < cgroup.Resources.MemorySwap {
+		if cgroup.Resources.MemorySwap == uint64(configs.MemoryUnlimited) || memoryUsage.Limit < cgroup.Resources.MemorySwap {
 			if err := writeFile(path, cgroupMemorySwapLimit, strconv.FormatUint(cgroup.Resources.MemorySwap, 10)); err != nil {
 				return err
 			}

@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	"github.com/docker/go-units"
+	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/urfave/cli"
 )
@@ -229,10 +230,10 @@ other options are ignored.
 						if err != nil {
 							return fmt.Errorf("invalid value for %s: %s", pair.opt, err)
 						}
+						*pair.dest = uint64(v)
 					} else {
-						v = -1
+						*pair.dest = configs.MemoryUnlimited
 					}
-					*pair.dest = uint64(v)
 				}
 			}
 			r.Pids.Limit = int64(context.Int("pids-limit"))

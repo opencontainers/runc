@@ -2,6 +2,10 @@
 
 package configs
 
+import (
+	"math"
+)
+
 type FreezerState string
 
 const (
@@ -33,6 +37,8 @@ type Cgroup struct {
 	*Resources
 }
 
+const MemoryUnlimited = math.MaxUint64
+
 type Resources struct {
 	// If this is true allow access to any kind of device within the container.  If false, allow access only to devices explicitly listed in the allowed_devices list.
 	// Deprecated
@@ -50,7 +56,7 @@ type Resources struct {
 	// Memory reservation or soft_limit (in bytes)
 	MemoryReservation uint64 `json:"memory_reservation"`
 
-	// Total memory usage (memory + swap); set `-1` to enable unlimited swap
+	// Total memory usage (memory + swap); set MemoryUnlimited to enable unlimited swap
 	MemorySwap uint64 `json:"memory_swap"`
 
 	// Kernel memory limit (in bytes)
