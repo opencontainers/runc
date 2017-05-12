@@ -1,5 +1,3 @@
-// +build solaris
-
 package main
 
 import "github.com/urfave/cli"

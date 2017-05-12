@@ -1,5 +1,3 @@
-// +build linux freebsd
-
 package libcontainer
 
 // cgroup restoring strategy provided by criu
