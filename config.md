@@ -379,12 +379,12 @@ On Linux, for example, they are called after the container namespaces are create
 
 ### <a name="configHooksPoststart" />Poststart
 
-The post-start hooks MUST be called [after the user-specified process is executed](runtime#lifecycle) but before the [`start`](runtime.md#start) operation returns.
+The post-start hooks MUST be called [after the user-specified process is executed](runtime.md#lifecycle) but before the [`start`](runtime.md#start) operation returns.
 For example, this hook can notify the user that the container process is spawned.
 
 ### <a name="configHooksPoststop" />Poststop
 
-The post-stop hooks MUST be called [after the container is deleted](runtime#lifecycle) but before the [`delete`](runtime.md#delete) operation returns.
+The post-stop hooks MUST be called [after the container is deleted](runtime.md#lifecycle) but before the [`delete`](runtime.md#delete) operation returns.
 Cleanup or debugging functions are examples of such a hook.
 
 ### Example
