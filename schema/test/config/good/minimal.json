@@ -6,13 +6,5 @@
     },
     "root": {
         "path": "rootfs"
-    },
-    "process": {
-        "cwd": "/",
-        "args": ["sh"],
-        "user": {
-            "uid": 0,
-            "gid": 0
-        }
     }
 }
