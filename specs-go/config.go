@@ -438,6 +438,8 @@ type Windows struct {
 	Servicing bool `json:"servicing,omitempty"`
 	// IgnoreFlushesDuringBoot indicates if the container is being started in a mode where disk writes are not flushed during its boot process.
 	IgnoreFlushesDuringBoot bool `json:"ignoreflushesduringboot,omitempty"`
+	// HyperV contains information for running a container with Hyper-V isolation.
+	HyperV *WindowsHyperV `json:"hyperv,omitempty"`
 }
 
 // WindowsResources has container runtime resource constraints for containers running on Windows.
@@ -482,6 +484,14 @@ type WindowsStorageResources struct {
 type WindowsNetworkResources struct {
 	// EgressBandwidth is the maximum egress bandwidth in bytes per second.
 	EgressBandwidth *uint64 `json:"egressBandwidth,omitempty"`
+}
+
+// WindowsHyperV contains information for configuring a container to run with Hyper-V isolation.
+type WindowsHyperV struct {
+	// SandboxPath is a required host-path to the sandbox to be used by the container.
+	SandboxPath string `json:"sandboxpath"`
+	// UtilityVMPath is an optional path to the image used for the Utility VM.
+	UtilityVMPath string `json:"utilityvmpath,omitempty"`
 }
 
 // LinuxSeccomp represents syscall restrictions
