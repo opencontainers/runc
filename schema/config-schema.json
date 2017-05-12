@@ -145,35 +145,35 @@
                             "id": "https://opencontainers.org/schema/bundle/process/linux/capabilities/bounding",
                             "type": "array",
                             "items": {
-                                "$ref": "defs-linux.json#/definitions/Capability"
+                                "type": "string"
                             }
                         },
                         "permitted": {
                             "id": "https://opencontainers.org/schema/bundle/process/linux/capabilities/permitted",
                             "type": "array",
                             "items": {
-                                "$ref": "defs-linux.json#/definitions/Capability"
+                                "type": "string"
                             }
                         },
                         "effective": {
                             "id": "https://opencontainers.org/schema/bundle/process/linux/capabilities/effective",
                             "type": "array",
                             "items": {
-                                "$ref": "defs-linux.json#/definitions/Capability"
+                                "type": "string"
                             }
                         },
                         "inheritable": {
                             "id": "https://opencontainers.org/schema/bundle/process/linux/capabilities/inheritable",
                             "type": "array",
                             "items": {
-                                "$ref": "defs-linux.json#/definitions/Capability"
+                                "type": "string"
                             }
                         },
                         "ambient": {
                             "id": "https://opencontainers.org/schema/bundle/process/linux/capabilities/ambient",
                             "type": "array",
                             "items": {
-                                "$ref": "defs-linux.json#/definitions/Capability"
+                                "type": "string"
                             }
                         }
                     }
