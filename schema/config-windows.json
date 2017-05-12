@@ -69,6 +69,10 @@
             "credentialspec": {
                 "id": "https://opencontainers.org/schema/bundle/windows/credentialspec",
                 "type": "object"
+            },
+            "servicing": {
+                "id": "https://opencontainers.org/schema/bundle/windows/servicing",
+                "type": "boolean"
             }
         }
     }
