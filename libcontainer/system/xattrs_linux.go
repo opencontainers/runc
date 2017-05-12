@@ -7,7 +7,7 @@ import (
 
 var _zero uintptr
 
-// Returns the size of xattrs and nil error
+// Llistxattr returns the size of xattrs and nil error
 // Requires path, takes allocated []byte or nil as last argument
 func Llistxattr(path string, dest []byte) (size int, err error) {
 	pathBytes, err := syscall.BytePtrFromString(path)
@@ -30,7 +30,7 @@ func Llistxattr(path string, dest []byte) (size int, err error) {
 	return size, nil
 }
 
-// Returns a []byte slice if the xattr is set and nil otherwise
+// Lgetxattr returns a []byte slice if the xattr is set and nil otherwise
 // Requires path and its attribute as arguments
 func Lgetxattr(path string, attr string) ([]byte, error) {
 	var sz int
@@ -76,6 +76,7 @@ func Lgetxattr(path string, attr string) ([]byte, error) {
 	return dest[:sz], nil
 }
 
+// Lsetxattr sets the value of the extended attribute identified by attr and associated with the given path
 func Lsetxattr(path string, attr string, data []byte, flags int) error {
 	pathBytes, err := syscall.BytePtrFromString(path)
 	if err != nil {
