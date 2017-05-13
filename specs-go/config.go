@@ -96,7 +96,7 @@ type User struct {
 // Root contains information about the container's root filesystem on the host.
 type Root struct {
 	// Path is the absolute path to the container's root filesystem.
-	Path string `json:"path"`
+	Path string `json:"path,omitempty"`
 	// Readonly makes the root filesystem for the container readonly before the process is executed.
 	Readonly bool `json:"readonly,omitempty"`
 }
