@@ -6,7 +6,7 @@ The Linux container specification uses various kernel features like namespaces, 
 ## <a name="configLinuxDefaultFilesystems" />Default Filesystems
 
 The Linux ABI includes both syscalls and several special file paths.
-Applications expecting a Linux environment will very likely expect these file paths to be setup correctly.
+Applications expecting a Linux environment will very likely expect these file paths to be set up correctly.
 
 The following filesystems SHOULD be made available in each container's filesystem:
 
@@ -24,7 +24,7 @@ Changes to the global resource are visible to other processes that are members o
 For more information, see the [namespaces(7)][namespaces.7_2] man page.
 
 Namespaces are specified as an array of entries inside the `namespaces` root field.
-The following parameters can be specified to setup namespaces:
+The following parameters can be specified to set up namespaces:
 
 * **`type`** *(string, REQUIRED)* - namespace type. The following namespace types are supported:
     * **`pid`** processes inside the container will only be able to see other processes inside the same container.
@@ -161,7 +161,7 @@ In addition to any devices configured with this setting, the runtime MUST also s
 * [`/dev/random`][random.4]
 * [`/dev/urandom`][random.4]
 * [`/dev/tty`][tty.4]
-* [`/dev/console`][console.4] is setup if terminal is enabled in the config by bind mounting the pseudoterminal slave to /dev/console.
+* [`/dev/console`][console.4] is set up if terminal is enabled in the config by bind mounting the pseudoterminal slave to /dev/console.
 * [`/dev/ptmx`][pts.4].
   A [bind-mount or symlink of the container's `/dev/pts/ptmx`][devpts].
 
@@ -270,7 +270,7 @@ For more information, see [the memory cgroup man page][cgroup-v1-memory].
 **`memory`** (object, OPTIONAL) represents the cgroup subsystem `memory` and it's used to set limits on the container's memory usage.
 For more information, see [the memory cgroup man page][cgroup-v1-memory].
 
-The following parameters can be specified to setup the controller:
+The following parameters can be specified to set up the controller:
 
 * **`limit`** *(uint64, OPTIONAL)* - sets limit of memory usage in bytes
 
@@ -302,7 +302,7 @@ The following parameters can be specified to setup the controller:
 **`cpu`** (object, OPTIONAL) represents the cgroup subsystems `cpu` and `cpusets`.
 For more information, see [the cpusets cgroup man page][cgroup-v1-cpusets].
 
-The following parameters can be specified to setup the controller:
+The following parameters can be specified to set up the controller:
 
 * **`shares`** *(uint64, OPTIONAL)* - specifies a relative share of CPU time available to the tasks in a cgroup
 
@@ -337,7 +337,7 @@ The following parameters can be specified to setup the controller:
 **`blockIO`** (object, OPTIONAL) represents the cgroup subsystem `blkio` which implements the block IO controller.
 For more information, see [the kernel cgroups documentation about blkio][cgroup-v1-blkio].
 
-The following parameters can be specified to setup the controller:
+The following parameters can be specified to set up the controller:
 
 * **`blkioWeight`** *(uint16, OPTIONAL)* - specifies per-cgroup weight. This is default weight of the group on all devices until and unless overridden by per-device rules.
 
@@ -419,7 +419,7 @@ Each entry has the following structure:
 **`network`** (object, OPTIONAL) represents the cgroup subsystems `net_cls` and `net_prio`.
 For more information, see [the net\_cls cgroup man page][cgroup-v1-net-cls] and [the net\_prio cgroup man page][cgroup-v1-net-prio].
 
-The following parameters can be specified to setup the controller:
+The following parameters can be specified to set up the controller:
 
 * **`classID`** *(uint32, OPTIONAL)* - is the network class identifier the cgroup's network packets will be tagged with
 
@@ -451,7 +451,7 @@ The following parameters can be specified to setup the controller:
 **`pids`** (object, OPTIONAL) represents the cgroup subsystem `pids`.
 For more information, see [the pids cgroup man page][cgroup-v1-pids].
 
-The following parameters can be specified to setup the controller:
+The following parameters can be specified to set up the controller:
 
 * **`limit`** *(int64, REQUIRED)* - specifies the maximum number of tasks in the cgroup
 
@@ -514,7 +514,7 @@ The actions, architectures, and operators are strings that match the definitions
 
 **`seccomp`** (object, OPTIONAL)
 
-The following parameters can be specified to setup seccomp:
+The following parameters can be specified to set up seccomp:
 
 * **`defaultAction`** *(string, REQUIRED)* - the default action for seccomp. Allowed values are the same as `syscalls[].action`.
 

@@ -70,14 +70,14 @@ cappedMemory is mapped to `capped-memory` in [zonecfg(1M)][zonecfg.1m_2] man pag
 ## <a name="configSolarisNetwork" />Network
 
 ### <a name="configSolarisAutomaticNetwork" />Automatic Network (anet)
-anet is specified as an array that is used to setup networking for Solaris application containers.
+anet is specified as an array that is used to set up networking for Solaris application containers.
 The anet resource represents the automatic creation of a network resource for an application container.
 The zones administration daemon, zoneadmd, is the primary process for managing the container's virtual platform.
 One of the daemon's responsibilities is creation and teardown of the networks for the container.
 For more information on the daemon see the [zoneadmd(1M)][zoneadmd.1m] man page.
 When such a container is started, a temporary VNIC(Virtual NIC) is automatically created for the container.
 The VNIC is deleted when the container is torn down.
-The following properties can be used to setup automatic networks.
+The following properties can be used to set up automatic networks.
 For additional information on properties, check the [zonecfg(1M)][zonecfg.1m_2] man page for the respective release of Solaris.
 
 * **`linkname`** *(string, OPTIONAL)* Specify a name for the automatically created VNIC datalink.
