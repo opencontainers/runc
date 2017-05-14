@@ -344,7 +344,7 @@ The following parameters can be specified to setup the controller:
 * **`blkioLeafWeight`** *(uint16, OPTIONAL)* - equivalents of `blkioWeight` for the purpose of deciding how much weight tasks in the given cgroup has while competing with the cgroup's child cgroups.
 
 * **`blkioWeightDevice`** *(array of objects, OPTIONAL)* - specifies the list of devices which will be bandwidth rate limited. The following parameters can be specified per-device:
-    * **`major, minor`** *(int64, REQUIRED)* - major, minor numbers for device. More info in `man mknod`.
+    * **`major, minor`** *(int64, REQUIRED)* - major, minor numbers for device. More info in [mknod(1)][mknod.1] man page.
     * **`weight`** *(uint16, OPTIONAL)* - bandwidth rate for the device.
     * **`leafWeight`** *(uint16, OPTIONAL)* - bandwidth rate for the device while competing with the cgroup's child cgroups, CFQ scheduler only
 
@@ -352,7 +352,7 @@ The following parameters can be specified to setup the controller:
 
 * **`blkioThrottleReadBpsDevice`**, **`blkioThrottleWriteBpsDevice`**, **`blkioThrottleReadIOPSDevice`**, **`blkioThrottleWriteIOPSDevice`** *(array of objects, OPTIONAL)* - specify the list of devices which will be IO rate limited.
   The following parameters can be specified per-device:
-    * **`major, minor`** *(int64, REQUIRED)* - major, minor numbers for device. More info in `man mknod`.
+    * **`major, minor`** *(int64, REQUIRED)* - major, minor numbers for device. More info in [mknod(1)][mknod.1] man page.
     * **`rate`** *(uint64, REQUIRED)* - IO rate limit for the device
 
 ###### Example
