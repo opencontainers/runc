@@ -184,20 +184,6 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 	}
 
 	exists := false
-	if config.RootPropagation, exists = mountPropagationMapping[spec.Linux.RootfsPropagation]; !exists {
-		return nil, fmt.Errorf("rootfsPropagation=%v is not supported", spec.Linux.RootfsPropagation)
-	}
-
-	for _, ns := range spec.Linux.Namespaces {
-		t, exists := namespaceMapping[ns.Type]
-		if !exists {
-			return nil, fmt.Errorf("namespace %q does not exist", ns)
-		}
-		if config.Namespaces.Contains(t) {
-			return nil, fmt.Errorf("malformed spec file: duplicated ns %q", ns)
-		}
-		config.Namespaces.Add(t, ns.Path)
-	}
 	if config.Namespaces.Contains(configs.NEWNET) {
 		config.Networks = []*configs.Network{
 			{
@@ -219,15 +205,33 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 		return nil, err
 	}
 	config.Cgroups = c
-	// set extra path masking for libcontainer for the various unsafe places in proc
-	config.MaskPaths = spec.Linux.MaskedPaths
-	config.ReadonlyPaths = spec.Linux.ReadonlyPaths
-	if spec.Linux.Seccomp != nil {
-		seccomp, err := setupSeccomp(spec.Linux.Seccomp)
-		if err != nil {
-			return nil, err
+	// set linux-specific config
+	if spec.Linux != nil {
+		if config.RootPropagation, exists = mountPropagationMapping[spec.Linux.RootfsPropagation]; !exists {
+			return nil, fmt.Errorf("rootfsPropagation=%v is not supported", spec.Linux.RootfsPropagation)
 		}
-		config.Seccomp = seccomp
+
+		for _, ns := range spec.Linux.Namespaces {
+			t, exists := namespaceMapping[ns.Type]
+			if !exists {
+				return nil, fmt.Errorf("namespace %q does not exist", ns)
+			}
+			if config.Namespaces.Contains(t) {
+				return nil, fmt.Errorf("malformed spec file: duplicated ns %q", ns)
+			}
+			config.Namespaces.Add(t, ns.Path)
+		}
+		config.MaskPaths = spec.Linux.MaskedPaths
+		config.ReadonlyPaths = spec.Linux.ReadonlyPaths
+		config.MountLabel = spec.Linux.MountLabel
+		config.Sysctl = spec.Linux.Sysctl
+		if spec.Linux.Seccomp != nil {
+			seccomp, err := setupSeccomp(spec.Linux.Seccomp)
+			if err != nil {
+				return nil, err
+			}
+			config.Seccomp = seccomp
+		}
 	}
 	if spec.Process.SelinuxLabel != "" {
 		config.ProcessLabel = spec.Process.SelinuxLabel
@@ -246,7 +250,6 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 		}
 	}
 	createHooks(spec, config)
-	config.MountLabel = spec.Linux.MountLabel
 	config.Version = specs.Version
 	return config, nil
 }
@@ -566,41 +569,40 @@ func createDevices(spec *specs.Spec, config *configs.Config) error {
 		},
 	}
 	// merge in additional devices from the spec
-	for _, d := range spec.Linux.Devices {
-		var uid, gid uint32
-		var filemode os.FileMode = 0666
+	if spec.Linux != nil {
+		for _, d := range spec.Linux.Devices {
+			var uid, gid uint32
+			var filemode os.FileMode = 0666
 
-		if d.UID != nil {
-			uid = *d.UID
+			if d.UID != nil {
+				uid = *d.UID
+			}
+			if d.GID != nil {
+				gid = *d.GID
+			}
+			dt, err := stringToDeviceRune(d.Type)
+			if err != nil {
+				return err
+			}
+			if d.FileMode != nil {
+				filemode = *d.FileMode
+			}
+			device := &configs.Device{
+				Type:     dt,
+				Path:     d.Path,
+				Major:    d.Major,
+				Minor:    d.Minor,
+				FileMode: filemode,
+				Uid:      uid,
+				Gid:      gid,
+			}
+			config.Devices = append(config.Devices, device)
 		}
-		if d.GID != nil {
-			gid = *d.GID
-		}
-		dt, err := stringToDeviceRune(d.Type)
-		if err != nil {
-			return err
-		}
-		if d.FileMode != nil {
-			filemode = *d.FileMode
-		}
-		device := &configs.Device{
-			Type:     dt,
-			Path:     d.Path,
-			Major:    d.Major,
-			Minor:    d.Minor,
-			FileMode: filemode,
-			Uid:      uid,
-			Gid:      gid,
-		}
-		config.Devices = append(config.Devices, device)
 	}
 	return nil
 }
 
 func setupUserNamespace(spec *specs.Spec, config *configs.Config) error {
-	if len(spec.Linux.UIDMappings) == 0 {
-		return nil
-	}
 	create := func(m specs.LinuxIDMapping) configs.IDMap {
 		return configs.IDMap{
 			HostID:      int(m.HostID),
@@ -608,11 +610,16 @@ func setupUserNamespace(spec *specs.Spec, config *configs.Config) error {
 			Size:        int(m.Size),
 		}
 	}
-	for _, m := range spec.Linux.UIDMappings {
-		config.UidMappings = append(config.UidMappings, create(m))
-	}
-	for _, m := range spec.Linux.GIDMappings {
-		config.GidMappings = append(config.GidMappings, create(m))
+	if spec.Linux != nil {
+		if len(spec.Linux.UIDMappings) == 0 {
+			return nil
+		}
+		for _, m := range spec.Linux.UIDMappings {
+			config.UidMappings = append(config.UidMappings, create(m))
+		}
+		for _, m := range spec.Linux.GIDMappings {
+			config.GidMappings = append(config.GidMappings, create(m))
+		}
 	}
 	rootUID, err := config.HostRootUID()
 	if err != nil {
