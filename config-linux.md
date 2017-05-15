@@ -255,7 +255,7 @@ Each entry has the following structure:
 If enabled (`false`), tasks that attempt to consume more memory than they are allowed are immediately killed by the OOM killer.
 The OOM killer is enabled by default in every cgroup using the `memory` subsystem.
 To disable it, specify a value of `true`.
-For more information, see [the memory cgroup man page][cgroup-v1-memory].
+For more information, see the kernel cgroups documentation about [memory][cgroup-v1-memory].
 
 * **`disableOOMKiller`** *(bool, OPTIONAL)* - enables or disables the OOM killer
 
@@ -268,7 +268,7 @@ For more information, see [the memory cgroup man page][cgroup-v1-memory].
 #### <a name="configLinuxMemory" />Memory
 
 **`memory`** (object, OPTIONAL) represents the cgroup subsystem `memory` and it's used to set limits on the container's memory usage.
-For more information, see [the memory cgroup man page][cgroup-v1-memory].
+For more information, see the kernel cgroups documentation about [memory][cgroup-v1-memory].
 
 The following parameters can be specified to setup the controller:
 
@@ -300,7 +300,7 @@ The following parameters can be specified to setup the controller:
 #### <a name="configLinuxCPU" />CPU
 
 **`cpu`** (object, OPTIONAL) represents the cgroup subsystems `cpu` and `cpusets`.
-For more information, see [the cpusets cgroup man page][cgroup-v1-cpusets].
+For more information, see the kernel cgroups documentation about [cpusets][cgroup-v1-cpusets].
 
 The following parameters can be specified to setup the controller:
 
@@ -335,7 +335,7 @@ The following parameters can be specified to setup the controller:
 #### <a name="configLinuxBlockIO" />Block IO
 
 **`blockIO`** (object, OPTIONAL) represents the cgroup subsystem `blkio` which implements the block IO controller.
-For more information, see [the kernel cgroups documentation about blkio][cgroup-v1-blkio].
+For more information, see the kernel cgroups documentation about [blkio][cgroup-v1-blkio].
 
 The following parameters can be specified to setup the controller:
 
@@ -395,7 +395,7 @@ The following parameters can be specified to setup the controller:
 
 **`hugepageLimits`** (array of objects, OPTIONAL) represents the `hugetlb` controller which allows to limit the
 HugeTLB usage per control group and enforces the controller limit during page fault.
-For more information, see the [kernel cgroups documentation about HugeTLB][cgroup-v1-hugetlb].
+For more information, see the kernel cgroups documentation about [HugeTLB][cgroup-v1-hugetlb].
 
 Each entry has the following structure:
 
@@ -417,7 +417,7 @@ Each entry has the following structure:
 #### <a name="configLinuxNetwork" />Network
 
 **`network`** (object, OPTIONAL) represents the cgroup subsystems `net_cls` and `net_prio`.
-For more information, see [the net\_cls cgroup man page][cgroup-v1-net-cls] and [the net\_prio cgroup man page][cgroup-v1-net-prio].
+For more information, see the kernel cgroups documentations about [net\_cls cgroup][cgroup-v1-net-cls] and [net\_prio cgroup][cgroup-v1-net-prio].
 
 The following parameters can be specified to setup the controller:
 
@@ -449,7 +449,7 @@ The following parameters can be specified to setup the controller:
 #### <a name="configLinuxPIDS" />PIDs
 
 **`pids`** (object, OPTIONAL) represents the cgroup subsystem `pids`.
-For more information, see [the pids cgroup man page][cgroup-v1-pids].
+For more information, see the kernel cgroups documentation about [pids][cgroup-v1-pids].
 
 The following parameters can be specified to setup the controller:
 
@@ -510,7 +510,7 @@ For more information, see the [sysctl(8)][sysctl.8] man page.
 Seccomp provides application sandboxing mechanism in the Linux kernel.
 Seccomp configuration allows one to configure actions to take for matched syscalls and furthermore also allows matching on values passed as arguments to syscalls.
 For more information about Seccomp, see [Seccomp][seccomp] kernel documentation.
-The actions, architectures, and operators are strings that match the definitions in seccomp.h from [libseccomp][] and are translated to corresponding values.
+The actions, architectures, and operators are strings that match the definitions in seccomp.h from [libseccomp][libseccomp] and are translated to corresponding values.
 
 **`seccomp`** (object, OPTIONAL)
 
