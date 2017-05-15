@@ -12,10 +12,10 @@ The following filesystems SHOULD be made available in each container's filesyste
 
 | Path     | Type   |
 | -------- | ------ |
-| /proc    | [procfs][procfs]   |
-| /sys     | [sysfs][sysfs]     |
-| /dev/pts | [devpts][devpts]   |
-| /dev/shm | [tmpfs][tmpfs]     |
+| /proc    | [procfs][] |
+| /sys     | [sysfs][]  |
+| /dev/pts | [devpts][] |
+| /dev/shm | [tmpfs][]  |
 
 ## <a name="configLinuxNamespaces" />Namespaces
 
@@ -510,7 +510,7 @@ For more information, see the [sysctl(8)][sysctl.8] man page.
 Seccomp provides application sandboxing mechanism in the Linux kernel.
 Seccomp configuration allows one to configure actions to take for matched syscalls and furthermore also allows matching on values passed as arguments to syscalls.
 For more information about Seccomp, see [Seccomp][seccomp] kernel documentation.
-The actions, architectures, and operators are strings that match the definitions in seccomp.h from [libseccomp][libseccomp] and are translated to corresponding values.
+The actions, architectures, and operators are strings that match the definitions in seccomp.h from [libseccomp][] and are translated to corresponding values.
 
 **`seccomp`** (object, OPTIONAL)
 
