@@ -44,7 +44,7 @@ The following parameters can be specified to setup namespaces:
 If a namespace type is not specified in the `namespaces` array, the container MUST inherit the [runtime namespace](glossary.md#runtime-namespace) of that type.
 If a `namespaces` field contains duplicated namespaces with same `type`, the runtime MUST [generate an error](runtime.md#errors).
 
-###### Example
+### Example
 
 ```json
     "namespaces": [
@@ -88,7 +88,7 @@ Each entry has the following structure:
 The runtime SHOULD NOT modify the ownership of referenced filesystems to realize the mapping.
 Note that the number of mapping entries MAY be limited by the [kernel][user-namespaces].
 
-###### Example
+### Example
 
 ```json
     "uidMappings": [
@@ -126,7 +126,7 @@ Each entry has the following structure:
 
 The same `type`, `major` and `minor` SHOULD NOT be used for multiple devices.
 
-###### Example
+### Example
 
 ```json
    "devices": [
@@ -151,7 +151,7 @@ The same `type`, `major` and `minor` SHOULD NOT be used for multiple devices.
     ]
 ```
 
-###### <a name="configLinuxDefaultDevices" />Default Devices
+### <a name="configLinuxDefaultDevices" />Default Devices
 
 In addition to any devices configured with this setting, the runtime MUST also supply:
 
@@ -191,7 +191,7 @@ For example, to run a new process in an existing container without updating limi
 
 Runtimes MAY attach the container process to additional cgroup controllers beyond those necessary to fulfill the `resources` settings.
 
-###### Example
+### Example
 
 ```json
    "cgroupsPath": "/myRuntime/myContainer",
@@ -209,7 +209,7 @@ Runtimes MAY attach the container process to additional cgroup controllers beyon
    }
 ```
 
-#### <a name="configLinuxDeviceWhitelist" />Device whitelist
+### <a name="configLinuxDeviceWhitelist" />Device whitelist
 
 **`devices`** (array of objects, OPTIONAL) configures the [device whitelist][cgroup-v1-devices].
 The runtime MUST apply entries in the listed order.
@@ -224,7 +224,7 @@ Each entry has the following structure:
 * **`access`** *(string, OPTIONAL)* - cgroup permissions for device.
   A composition of `r` (read), `w` (write), and `m` (mknod).
 
-###### Example
+#### Example
 
 ```json
    "devices": [
@@ -249,7 +249,7 @@ Each entry has the following structure:
     ]
 ```
 
-#### <a name="configLinuxDisableOutOfMemoryKiller" />Disable out-of-memory killer
+### <a name="configLinuxDisableOutOfMemoryKiller" />Disable out-of-memory killer
 
 `disableOOMKiller` contains a boolean (`true` or `false`) that enables or disables the Out of Memory killer for a cgroup.
 If enabled (`false`), tasks that attempt to consume more memory than they are allowed are immediately killed by the OOM killer.
@@ -259,13 +259,13 @@ For more information, see the kernel cgroups documentation about [memory][cgroup
 
 * **`disableOOMKiller`** *(bool, OPTIONAL)* - enables or disables the OOM killer
 
-###### Example
+#### Example
 
 ```json
     "disableOOMKiller": false
 ```
 
-#### <a name="configLinuxMemory" />Memory
+### <a name="configLinuxMemory" />Memory
 
 **`memory`** (object, OPTIONAL) represents the cgroup subsystem `memory` and it's used to set limits on the container's memory usage.
 For more information, see the kernel cgroups documentation about [memory][cgroup-v1-memory].
@@ -284,7 +284,7 @@ The following parameters can be specified to setup the controller:
 
 * **`swappiness`** *(uint64, OPTIONAL)* - sets swappiness parameter of vmscan (See sysctl's vm.swappiness)
 
-###### Example
+#### Example
 
 ```json
     "memory": {
@@ -297,7 +297,7 @@ The following parameters can be specified to setup the controller:
     }
 ```
 
-#### <a name="configLinuxCPU" />CPU
+### <a name="configLinuxCPU" />CPU
 
 **`cpu`** (object, OPTIONAL) represents the cgroup subsystems `cpu` and `cpusets`.
 For more information, see the kernel cgroups documentation about [cpusets][cgroup-v1-cpusets].
@@ -318,7 +318,7 @@ The following parameters can be specified to setup the controller:
 
 * **`mems`** *(string, OPTIONAL)* - list of Memory Nodes the container will run in
 
-###### Example
+#### Example
 
 ```json
     "cpu": {
@@ -332,7 +332,7 @@ The following parameters can be specified to setup the controller:
     }
 ```
 
-#### <a name="configLinuxBlockIO" />Block IO
+### <a name="configLinuxBlockIO" />Block IO
 
 **`blockIO`** (object, OPTIONAL) represents the cgroup subsystem `blkio` which implements the block IO controller.
 For more information, see the kernel cgroups documentation about [blkio][cgroup-v1-blkio].
@@ -355,7 +355,7 @@ The following parameters can be specified to setup the controller:
     * **`major, minor`** *(int64, REQUIRED)* - major, minor numbers for device. More info in [mknod(1)][mknod.1] man page.
     * **`rate`** *(uint64, REQUIRED)* - IO rate limit for the device
 
-###### Example
+#### Example
 
 ```json
     "blockIO": {
@@ -391,7 +391,7 @@ The following parameters can be specified to setup the controller:
     }
 ```
 
-#### <a name="configLinuxHugePageLimits" />Huge page limits
+### <a name="configLinuxHugePageLimits" />Huge page limits
 
 **`hugepageLimits`** (array of objects, OPTIONAL) represents the `hugetlb` controller which allows to limit the
 HugeTLB usage per control group and enforces the controller limit during page fault.
@@ -403,7 +403,7 @@ Each entry has the following structure:
 
 * **`limit`** *(uint64, REQUIRED)* - limit in bytes of *hugepagesize* HugeTLB usage
 
-###### Example
+#### Example
 
 ```json
    "hugepageLimits": [
@@ -414,7 +414,7 @@ Each entry has the following structure:
    ]
 ```
 
-#### <a name="configLinuxNetwork" />Network
+### <a name="configLinuxNetwork" />Network
 
 **`network`** (object, OPTIONAL) represents the cgroup subsystems `net_cls` and `net_prio`.
 For more information, see the kernel cgroups documentations about [net\_cls cgroup][cgroup-v1-net-cls] and [net\_prio cgroup][cgroup-v1-net-prio].
@@ -428,7 +428,7 @@ The following parameters can be specified to setup the controller:
     * **`name`** *(string, REQUIRED)* - interface name in [runtime network namespace](glossary.md#runtime-namespace)
     * **`priority`** *(uint32, REQUIRED)* - priority applied to the interface
 
-###### Example
+#### Example
 
 ```json
    "network": {
@@ -446,7 +446,7 @@ The following parameters can be specified to setup the controller:
    }
 ```
 
-#### <a name="configLinuxPIDS" />PIDs
+### <a name="configLinuxPIDS" />PIDs
 
 **`pids`** (object, OPTIONAL) represents the cgroup subsystem `pids`.
 For more information, see the kernel cgroups documentation about [pids][cgroup-v1-pids].
@@ -455,7 +455,7 @@ The following parameters can be specified to setup the controller:
 
 * **`limit`** *(int64, REQUIRED)* - specifies the maximum number of tasks in the cgroup
 
-###### Example
+#### Example
 
 ```json
    "pids": {
@@ -496,7 +496,7 @@ Tasks inside the container only have access to the "upper" 80% of L3 cache id 0 
 **`sysctl`** (object, OPTIONAL) allows kernel parameters to be modified at runtime for the container.
 For more information, see the [sysctl(8)][sysctl.8] man page.
 
-###### Example
+### Example
 
 ```json
    "sysctl": {
@@ -580,7 +580,7 @@ The following parameters can be specified to setup seccomp:
             * `SCMP_CMP_GT`
             * `SCMP_CMP_MASKED_EQ`
 
-###### Example
+### Example
 
 ```json
    "seccomp": {
@@ -607,7 +607,7 @@ The following parameters can be specified to setup seccomp:
 Its value is either slave, private, shared or unbindable.
 The [Shared Subtrees][sharedsubtree] article in the kernel documentation has more information about mount propagation.
 
-###### Example
+### Example
 
 ```json
     "rootfsPropagation": "slave",
@@ -618,7 +618,7 @@ The [Shared Subtrees][sharedsubtree] article in the kernel documentation has mor
 **`maskedPaths`** (array of strings, OPTIONAL) will mask over the provided paths inside the container so that they cannot be read.
 The values MUST be absolute paths in the [container namespace](glossary.md#container_namespace).
 
-###### Example
+### Example
 
 ```json
     "maskedPaths": [
@@ -631,7 +631,7 @@ The values MUST be absolute paths in the [container namespace](glossary.md#conta
 **`readonlyPaths`** (array of strings, OPTIONAL) will set the provided paths as readonly inside the container.
 The values MUST be absolute paths in the [container namespace](glossary.md#container-namespace).
 
-###### Example
+### Example
 
 ```json
     "readonlyPaths": [
@@ -643,7 +643,7 @@ The values MUST be absolute paths in the [container namespace](glossary.md#conta
 
 **`mountLabel`** (string, OPTIONAL) will set the Selinux context for the mounts in the container.
 
-###### Example
+### Example
 
 ```json
     "mountLabel": "system_u:object_r:svirt_sandbox_file_t:s0:c715,c811"
