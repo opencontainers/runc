@@ -49,7 +49,6 @@ For example, if a configuration is compliant with version 1.1 of this specificat
 The runtime MUST mount entries in the listed order.
 For Linux, the parameters are as documented in [mount(2)][mount.2] system call man page.
 For Solaris, the mount entry corresponds to the 'fs' resource in the [zonecfg(1M)][zonecfg.1m] man page.
-For Windows, see [mountvol][mountvol] and [SetVolumeMountPoint][set-volume-mountpoint] for details.
 
 
 * **`destination`** (string, REQUIRED) Destination of mount point: path inside container.
@@ -58,10 +57,10 @@ For Windows, see [mountvol][mountvol] and [SetVolumeMountPoint][set-volume-mount
   * Solaris: corresponds to "dir" of the fs resource in [zonecfg(1M)][zonecfg.1m].
 * **`type`** (string, OPTIONAL) The filesystem type of the filesystem to be mounted.
   * Linux: valid *filesystemtype* supported by the kernel as listed in */proc/filesystems* (e.g., "minix", "ext2", "ext3", "jfs", "xfs", "reiserfs", "msdos", "proc", "nfs", "iso9660").
-  * Windows: the type of file system on the volume, e.g. "ntfs".
+  * Windows: this field MUST NOT be supplied.
   * Solaris: corresponds to "type" of the fs resource in [zonecfg(1M)][zonecfg.1m].
 * **`source`** (string, OPTIONAL) A device name, but can also be a directory name or a dummy.
-  * Windows: the volume name that is the target of the mount point, \\?\Volume\{GUID}\ (on Windows source is called target).
+  * Windows: a local directory on the filesystem of the container host. UNC paths and mapped drives are not supported.
   * Solaris: corresponds to "special" of the fs resource in [zonecfg(1M)][zonecfg.1m].
 * **`options`** (list of strings, OPTIONAL) Mount options of the filesystem to be used.
   * Linux: supported options are listed in the [mount(8)][mount.8] man page. Note both [filesystem-independent][mount.8-filesystem-independent] and [filesystem-specific][mount.8-filesystem-specific] options are listed.
@@ -91,9 +90,8 @@ For Windows, see [mountvol][mountvol] and [SetVolumeMountPoint][set-volume-mount
 ```json
 "mounts": [
     {
-        "destination": "C:\\Users\\crosbymichael\\My Fancy Mount Point\\",
-        "type": "ntfs",
-        "source": "\\\\?\\Volume\\{2eca078d-5cbc-43d3-aff8-7e8511f60d0e}\\",
+        "destination": "C:\\folder-inside-container",
+        "source": "C:\\folder-on-host",
         "options": []
     }
 ]
