@@ -50,6 +50,7 @@ status of "ubuntu01" as "stopped" the following will delete resources held for
 		}
 
 		id := context.Args().First()
+		force := context.Bool("force")
 		container, err := getContainer(context)
 		if err != nil {
 			if lerr, ok := err.(libcontainer.Error); ok && lerr.Code() == libcontainer.ContainerNotExists {
@@ -58,6 +59,9 @@ status of "ubuntu01" as "stopped" the following will delete resources held for
 				path := filepath.Join(context.GlobalString("root"), id)
 				if e := os.RemoveAll(path); e != nil {
 					fmt.Fprintf(os.Stderr, "remove %s: %v\n", path, e)
+				}
+				if force {
+					return nil
 				}
 			}
 			return err
@@ -72,7 +76,7 @@ status of "ubuntu01" as "stopped" the following will delete resources held for
 		case libcontainer.Created:
 			return killContainer(container)
 		default:
-			if context.Bool("force") {
+			if force {
 				return killContainer(container)
 			} else {
 				return fmt.Errorf("cannot delete container %s that is not stopped: %s\n", id, s)
