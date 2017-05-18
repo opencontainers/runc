@@ -28,10 +28,15 @@ For example, if a configuration is compliant with version 1.1 of this specificat
 
 **`root`** (object, REQUIRED) specifies the container's root filesystem.
 
-* **`path`** (string, REQUIRED) Specifies the path to the root filesystem for the container.
-  The path is either an absolute path or a relative path to the bundle.
-  On Linux, for example, with a bundle at `/to/bundle` and a root filesystem at `/to/bundle/rootfs`, the `path` value can be either `/to/bundle/rootfs` or `rootfs`.
-  A directory MUST exist at the path declared by the field.
+* **`path`** (string, OPTIONAL) Specifies the path to the root filesystem for the container. The path is either an absolute path or a relative path to the bundle.
+
+    On Windows, for Windows Server Containers, this field is REQUIRED. For Hyper-V Containers, this field MUST be omitted.
+
+    On all other platforms, this field is REQUIRED.
+
+    On Linux, for example, with a bundle at `/to/bundle` and a root filesystem at `/to/bundle/rootfs`, the `path` value can be either `/to/bundle/rootfs` or `rootfs`.
+
+    If defined, a directory MUST exist at the path declared by the field.
 * **`readonly`** (bool, OPTIONAL) If true then the root filesystem MUST be read-only inside the container, defaults to false. On Windows, this field must be omitted or false.
 
 ### Example
