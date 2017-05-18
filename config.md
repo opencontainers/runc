@@ -156,16 +156,6 @@ For POSIX platforms the `mounts` structure has the following fields:
 * **`env`** (array of strings, OPTIONAL) with the same semantics as [IEEE Std 1003.1-2008's `environ`][ieee-1003.1-2008-xbd-c8.1].
 * **`args`** (array of strings, REQUIRED) with similar semantics to [IEEE Std 1003.1-2008 `execvp`'s *argv*][ieee-1003.1-2008-xsh-exec].
     This specification extends the IEEE standard in that at least one entry is REQUIRED, and that entry is used with the same semantics as `execvp`'s *file*.
-* **`capabilities`** (object, OPTIONAL) is an object containing arrays that specifies the sets of capabilities for the process.
-    Valid values are platform-specific.
-    For example, valid values for Linux are defined in the [capabilities(7)][capabilities.7] man page, such as `CAP_CHOWN`.
-    Any value which cannot be mapped to a relevant kernel interface MUST cause an error.
-    `capabilities` contains the following properties:
-    * **`effective`** (array of strings, OPTIONAL) - the `effective` field is an array of effective capabilities that are kept for the process.
-    * **`bounding`** (array of strings, OPTIONAL) - the `bounding` field is an array of bounding capabilities that are kept for the process.
-    * **`inheritable`** (array of strings, OPTIONAL) - the `inheritable` field is an array of inheritable capabilities that are kept for the process.
-    * **`permitted`** (array of strings, OPTIONAL) - the `permitted` field is an array of permitted capabilities that are kept for the process.
-    * **`ambient`** (array of strings, OPTIONAL) - the `ambient` field is an array of ambient capabilities that are kept for the process.
 * **`rlimits`** (array of objects, OPTIONAL) allows setting resource limits for the process.
     Each entry has the following structure:
 
@@ -176,13 +166,22 @@ For POSIX platforms the `mounts` structure has the following fields:
 
     If `rlimits` contains duplicated entries with same `type`, the runtime MUST error out.
 
-* **`noNewPrivileges`** (bool, OPTIONAL) setting `noNewPrivileges` to true prevents the process from gaining additional privileges.
-    As an example, the ['no_new_privs'][no-new-privs] article in the kernel documentation has information on how this is achieved using a prctl system call on Linux.
-
 For Linux-based systems the process structure supports the following process-specific fields.
 
 * **`apparmorProfile`** (string, OPTIONAL) specifies the name of the AppArmor profile for the process.
     For more information about AppArmor, see [AppArmor documentation][apparmor].
+* **`capabilities`** (object, OPTIONAL) is an object containing arrays that specifies the sets of capabilities for the process.
+    Valid values are defined in the [capabilities(7)][capabilities.7] man page, such as `CAP_CHOWN`.
+    Any value which cannot be mapped to a relevant kernel interface MUST cause an error.
+    `capabilities` contains the following properties:
+
+    * **`effective`** (array of strings, OPTIONAL) the `effective` field is an array of effective capabilities that are kept for the process.
+    * **`bounding`** (array of strings, OPTIONAL) the `bounding` field is an array of bounding capabilities that are kept for the process.
+    * **`inheritable`** (array of strings, OPTIONAL) the `inheritable` field is an array of inheritable capabilities that are kept for the process.
+    * **`permitted`** (array of strings, OPTIONAL) the `permitted` field is an array of permitted capabilities that are kept for the process.
+    * **`ambient`** (array of strings, OPTIONAL) the `ambient` field is an array of ambient capabilities that are kept for the process.
+* **`noNewPrivileges`** (bool, OPTIONAL) setting `noNewPrivileges` to true prevents the process from gaining additional privileges.
+    As an example, the [`no_new_privs`][no-new-privs] article in the kernel documentation has information on how this is achieved using a `prctl` system call on Linux.
 * **`oomScoreAdj`** *(int, OPTIONAL)* adjusts the oom-killer score in `[pid]/oom_score_adj` for the process's `[pid]` in a [proc pseudo-filesystem][procfs].
     If `oomScoreAdj` is set, the runtime MUST set `oom_score_adj` to the given value.
     If `oomScoreAdj` is not set, the runtime MUST NOT change the value of `oom_score_adj`.
