@@ -46,3 +46,8 @@ function teardown() {
   runc state test_busybox
   [ "$status" -ne 0 ]
 }
+
+@test "runc delete --force ignore not exist" {
+  runc delete --force notexists
+  [ "$status" -eq 0 ]
+}
