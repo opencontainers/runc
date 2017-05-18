@@ -14,13 +14,7 @@ This includes the following artifacts:
     This REQUIRED file MUST reside in the root of the bundle directory and MUST be named `config.json`.
     See [`config.json`](config.md) for more details.
 
-2. <a name="containerFormat02" />A directory representing the root filesystem of the container.
-    On Windows, for Windows Server containers, this directory is REQUIRED.
-    For Hyper-V containers, it MUST be omitted.
-
-    On all other platforms, this field is REQUIRED.
-
-    If set, this directory MUST be referenced by [`root`](config.md#root) within the `config.json` file.
+2. <a name="containerFormat02" />container's root filesystem: the directory referenced by [`root.path`](config.md#root), if that property is set in `config.json`.
 
 When supplied, while these artifacts MUST all be present in a single directory on the local filesystem, that directory itself is not part of the bundle.
 In other words, a tar archive of a *bundle* will have these artifacts at the root of the archive, not nested within a top-level directory.
