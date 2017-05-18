@@ -15,8 +15,6 @@ This REQUIRED file MUST reside in the root of the bundle directory and MUST be n
 See [`config.json`](config.md) for more details.
 
 2. <a name="containerFormat02" />A directory representing the root filesystem of the container.
-    While the name of this directory may be arbitrary, users should consider using a conventional name, such as `rootfs`.
-
     On Windows, for Windows Server containers, this directory is REQUIRED. For Hyper-V containers, it MUST be omitted.
 
     On all other platforms, this field is REQUIRED.

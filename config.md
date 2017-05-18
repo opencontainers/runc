@@ -29,6 +29,7 @@ For example, if a configuration is compliant with version 1.1 of this specificat
 **`root`** (object, REQUIRED) specifies the container's root filesystem.
 
 * **`path`** (string, OPTIONAL) Specifies the path to the root filesystem for the container. The path is either an absolute path or a relative path to the bundle.
+    Users SHOULD consider using a conventional name, such as `rootfs`.
 
     On Windows, for Windows Server Containers, this field is REQUIRED. For Hyper-V Containers, this field MUST be omitted.
 
