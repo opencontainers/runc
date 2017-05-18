@@ -53,7 +53,7 @@ type Process struct {
 	// ApparmorProfile specifies the apparmor profile for the container.
 	ApparmorProfile string `json:"apparmorProfile,omitempty" platform:"linux"`
 	// Specify an oom_score_adj for the container.
-	OOMScoreAdj *int `json:"oomScoreAdj,omitempty"`
+	OOMScoreAdj *int `json:"oomScoreAdj,omitempty" platform:"linux"`
 	// SelinuxLabel specifies the selinux context that the container process is run as.
 	SelinuxLabel string `json:"selinuxLabel,omitempty" platform:"linux"`
 }
