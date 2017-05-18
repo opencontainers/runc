@@ -1,5 +1,67 @@
 OpenContainers Specifications
 
+Changes with v1.0.0-rc6:
+
+	Breaking changes:
+
+	* config: Shift oomScoreAdj to process and add RFC 2119 requirements
+	  for the runtime (#781, #789, #836)
+	* config-windows: Change CPU 'percent' to 'maximum' (#777)
+	* config-windows: Remove memory 'reservation' (#788)
+
+	Additions:
+
+	* config-linux: Add Intel RDT/CAT Linux support (#630, #787)
+	* config-linux: Add Markdown specification for syscalls (#706)
+	* config-linux: Add 'unbindable' rootfsPropagation value (#770, #775)
+	* config-windows: Add 'credentialspec' (#814)
+
+	Removals and increased restrictions:
+
+	* config: Forbid 'root.path' on Hyper-V (#820)
+	* config: Require strictly-postitive 'timeout' values (#764)
+	* config: Strengthen punt to kernel for valid capabilities strings
+	  (#766, #790)
+	* config: Forbid setting 'readonly' true on Windows (#819)
+	* config: Forbid setting mount 'type' entirely on Windows and forbid
+	  UNC paths and mapped drives in 'source' on Windows (#821)
+	* config-linux: Clearly require absolute path for namespace (#720)
+	* config-linux: RFC 2119 tightening for namespaces (#767)
+	* config-linux: Require at least one entry in
+	  linux.seccomp.syscalls[].names (#769)
+	* config-linux: Remove syscall.comment (#714)
+	* config-linux: Use MUST and MAY for weight and leafWeight (#751)
+	* config-linux: Remove explicit 'null' from device cgroup values
+	  (#804)
+	* runtime: Remove "features the runtime chooses to support" (#732)
+	* runtime: Drop "not supported by the base OS" loophole (#733)
+	* runtime-linux: Condition /proc/self/fd symlinks on source
+	  existence (#736)
+
+	Decreased restrictions:
+
+	* config: Make 'process' optional (#701, #805)
+	* config-linux: Make linux.seccomp.syscalls optional (#768)
+	* config-linux: Remove local range restrictions for blkioWeight,
+	  blkioLeafWeight, weight, leafWeight, and shares (#780)
+
+	Minor fixes and documentation:
+
+	* config: Specify height/width units (characters) for consoleSize (#761)
+	* config-linux: Explicit namespace for interface names (#713)
+	* runtime: Explicitly make process.* timing implementation-defined (#700)
+	* specs-go/config: Remove range restrictions from Windows comments (#783)
+	* specs-go/config: Add omitempty to LinuxSyscall.Args (#763)
+	* specs-go/config: Use a pointer for Process.ConsoleSize (#792)
+	* schema/Makefile: Make 'validate' the default target (#750)
+	* schema/Makefile: Add 'clean' target (#774)
+	* schema: Add 'test' target to the Makefile (#785)
+	* *: Remove unnecessary .PHONY entries (#750, #778, #802)
+	* *: Typo fixes and polishing (#681, #708, #702, #703, #709, #711,
+	   #712, #721, #722, #723, #724, #730, #737, #738, #741, #744, #749,
+	   #753, #756, #765, #773, #776, #784, #786, #793, #794, #796, #798,
+	   #799, #800, #803, #812, #824, #826, #832)
+
 Changes with v1.0.0-rc5:
 
 	Breaking changes:
