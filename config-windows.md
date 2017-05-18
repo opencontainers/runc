@@ -94,3 +94,14 @@ The following parameters can be specified:
         }
    }
 ```
+
+## <a name="configWindowsCredentialSpec" />Credential Spec
+
+You can configure a container's group Managed Service Account (gMSA) via the OPTIONAL `credentialspec` field of the Windows configuration.
+The `credentialspec` is a JSON object whose properties are implementation-defined.
+For more information about gMSAs, see [Active Directory Service Accounts for Windows Containers][gMSAOverview].
+For more information about tooling to generate a gMSA, see [Deployment Overview][gMSATooling].
+
+
+[gMSAOverview]: https://aka.ms/windowscontainers/manage-serviceaccounts
+[gMSATooling]: https://aka.ms/windowscontainers/credentialspec-tools

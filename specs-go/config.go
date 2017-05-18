@@ -432,6 +432,8 @@ type SolarisAnet struct {
 type Windows struct {
 	// Resources contains information for handling resource constraints for the container.
 	Resources *WindowsResources `json:"resources,omitempty"`
+	// CredentialSpec contains a JSON object describing a group Managed Service Account (gMSA) specification.
+	CredentialSpec interface{} `json:"credentialspec,omitempty"`
 }
 
 // WindowsResources has container runtime resource constraints for containers running on Windows.
