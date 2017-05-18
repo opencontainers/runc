@@ -9,7 +9,7 @@ type Spec struct {
 	// Process configures the container process.
 	Process *Process `json:"process,omitempty"`
 	// Root configures the container's root filesystem.
-	Root Root `json:"root"`
+	Root *Root `json:"root,omitempty"`
 	// Hostname configures the container's hostname.
 	Hostname string `json:"hostname,omitempty"`
 	// Mounts configures additional mounts (on top of Root).
@@ -94,7 +94,7 @@ type User struct {
 // Root contains information about the container's root filesystem on the host.
 type Root struct {
 	// Path is the absolute path to the container's root filesystem.
-	Path string `json:"path,omitempty"`
+	Path string `json:"path"`
 	// Readonly makes the root filesystem for the container readonly before the process is executed.
 	Readonly bool `json:"readonly,omitempty"`
 }
