@@ -12,6 +12,7 @@ It has these top-level messages:
 	CriuPageServerInfo
 	CriuVethPair
 	ExtMountMap
+	JoinNamespace
 	InheritFd
 	CgroupRoot
 	UnixSk
@@ -26,17 +27,25 @@ It has these top-level messages:
 package criurpc
 
 import proto "github.com/golang/protobuf/proto"
+import fmt "fmt"
 import math "math"
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
+var _ = fmt.Errorf
 var _ = math.Inf
+
+// This is a compile-time assertion to ensure that this generated file
+// is compatible with the proto package it is being compiled against.
+// A compilation error at this line likely means your copy of the
+// proto package needs to be updated.
+const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
 type CriuCgMode int32
 
 const (
 	CriuCgMode_IGNORE  CriuCgMode = 0
-	CriuCgMode_NONE    CriuCgMode = 1
+	CriuCgMode_CG_NONE CriuCgMode = 1
 	CriuCgMode_PROPS   CriuCgMode = 2
 	CriuCgMode_SOFT    CriuCgMode = 3
 	CriuCgMode_FULL    CriuCgMode = 4
@@ -46,7 +55,7 @@ const (
 
 var CriuCgMode_name = map[int32]string{
 	0: "IGNORE",
-	1: "NONE",
+	1: "CG_NONE",
 	2: "PROPS",
 	3: "SOFT",
 	4: "FULL",
@@ -55,7 +64,7 @@ var CriuCgMode_name = map[int32]string{
 }
 var CriuCgMode_value = map[string]int32{
 	"IGNORE":  0,
-	"NONE":    1,
+	"CG_NONE": 1,
 	"PROPS":   2,
 	"SOFT":    3,
 	"FULL":    4,
@@ -79,6 +88,7 @@ func (x *CriuCgMode) UnmarshalJSON(data []byte) error {
 	*x = CriuCgMode(value)
 	return nil
 }
+func (CriuCgMode) EnumDescriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
 
 type CriuReqType int32
 
@@ -136,6 +146,7 @@ func (x *CriuReqType) UnmarshalJSON(data []byte) error {
 	*x = CriuReqType(value)
 	return nil
 }
+func (CriuReqType) EnumDescriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
 
 type CriuPageServerInfo struct {
 	Address          *string `protobuf:"bytes,1,opt,name=address" json:"address,omitempty"`
@@ -145,9 +156,10 @@ type CriuPageServerInfo struct {
 	XXX_unrecognized []byte  `json:"-"`
 }
 
-func (m *CriuPageServerInfo) Reset()         { *m = CriuPageServerInfo{} }
-func (m *CriuPageServerInfo) String() string { return proto.CompactTextString(m) }
-func (*CriuPageServerInfo) ProtoMessage()    {}
+func (m *CriuPageServerInfo) Reset()                    { *m = CriuPageServerInfo{} }
+func (m *CriuPageServerInfo) String() string            { return proto.CompactTextString(m) }
+func (*CriuPageServerInfo) ProtoMessage()               {}
+func (*CriuPageServerInfo) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
 
 func (m *CriuPageServerInfo) GetAddress() string {
 	if m != nil && m.Address != nil {
@@ -183,9 +195,10 @@ type CriuVethPair struct {
 	XXX_unrecognized []byte  `json:"-"`
 }
 
-func (m *CriuVethPair) Reset()         { *m = CriuVethPair{} }
-func (m *CriuVethPair) String() string { return proto.CompactTextString(m) }
-func (*CriuVethPair) ProtoMessage()    {}
+func (m *CriuVethPair) Reset()                    { *m = CriuVethPair{} }
+func (m *CriuVethPair) String() string            { return proto.CompactTextString(m) }
+func (*CriuVethPair) ProtoMessage()               {}
+func (*CriuVethPair) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
 
 func (m *CriuVethPair) GetIfIn() string {
 	if m != nil && m.IfIn != nil {
@@ -207,9 +220,10 @@ type ExtMountMap struct {
 	XXX_unrecognized []byte  `json:"-"`
 }
 
-func (m *ExtMountMap) Reset()         { *m = ExtMountMap{} }
-func (m *ExtMountMap) String() string { return proto.CompactTextString(m) }
-func (*ExtMountMap) ProtoMessage()    {}
+func (m *ExtMountMap) Reset()                    { *m = ExtMountMap{} }
+func (m *ExtMountMap) String() string            { return proto.CompactTextString(m) }
+func (*ExtMountMap) ProtoMessage()               {}
+func (*ExtMountMap) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
 
 func (m *ExtMountMap) GetKey() string {
 	if m != nil && m.Key != nil {
@@ -225,15 +239,49 @@ func (m *ExtMountMap) GetVal() string {
 	return ""
 }
 
+type JoinNamespace struct {
+	Ns               *string `protobuf:"bytes,1,req,name=ns" json:"ns,omitempty"`
+	NsFile           *string `protobuf:"bytes,2,req,name=ns_file" json:"ns_file,omitempty"`
+	ExtraOpt         *string `protobuf:"bytes,3,opt,name=extra_opt" json:"extra_opt,omitempty"`
+	XXX_unrecognized []byte  `json:"-"`
+}
+
+func (m *JoinNamespace) Reset()                    { *m = JoinNamespace{} }
+func (m *JoinNamespace) String() string            { return proto.CompactTextString(m) }
+func (*JoinNamespace) ProtoMessage()               {}
+func (*JoinNamespace) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
+
+func (m *JoinNamespace) GetNs() string {
+	if m != nil && m.Ns != nil {
+		return *m.Ns
+	}
+	return ""
+}
+
+func (m *JoinNamespace) GetNsFile() string {
+	if m != nil && m.NsFile != nil {
+		return *m.NsFile
+	}
+	return ""
+}
+
+func (m *JoinNamespace) GetExtraOpt() string {
+	if m != nil && m.ExtraOpt != nil {
+		return *m.ExtraOpt
+	}
+	return ""
+}
+
 type InheritFd struct {
 	Key              *string `protobuf:"bytes,1,req,name=key" json:"key,omitempty"`
 	Fd               *int32  `protobuf:"varint,2,req,name=fd" json:"fd,omitempty"`
 	XXX_unrecognized []byte  `json:"-"`
 }
 
-func (m *InheritFd) Reset()         { *m = InheritFd{} }
-func (m *InheritFd) String() string { return proto.CompactTextString(m) }
-func (*InheritFd) ProtoMessage()    {}
+func (m *InheritFd) Reset()                    { *m = InheritFd{} }
+func (m *InheritFd) String() string            { return proto.CompactTextString(m) }
+func (*InheritFd) ProtoMessage()               {}
+func (*InheritFd) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
 
 func (m *InheritFd) GetKey() string {
 	if m != nil && m.Key != nil {
@@ -255,9 +303,10 @@ type CgroupRoot struct {
 	XXX_unrecognized []byte  `json:"-"`
 }
 
-func (m *CgroupRoot) Reset()         { *m = CgroupRoot{} }
-func (m *CgroupRoot) String() string { return proto.CompactTextString(m) }
-func (*CgroupRoot) ProtoMessage()    {}
+func (m *CgroupRoot) Reset()                    { *m = CgroupRoot{} }
+func (m *CgroupRoot) String() string            { return proto.CompactTextString(m) }
+func (*CgroupRoot) ProtoMessage()               {}
+func (*CgroupRoot) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{5} }
 
 func (m *CgroupRoot) GetCtrl() string {
 	if m != nil && m.Ctrl != nil {
@@ -278,9 +327,10 @@ type UnixSk struct {
 	XXX_unrecognized []byte  `json:"-"`
 }
 
-func (m *UnixSk) Reset()         { *m = UnixSk{} }
-func (m *UnixSk) String() string { return proto.CompactTextString(m) }
-func (*UnixSk) ProtoMessage()    {}
+func (m *UnixSk) Reset()                    { *m = UnixSk{} }
+func (m *UnixSk) String() string            { return proto.CompactTextString(m) }
+func (*UnixSk) ProtoMessage()               {}
+func (*UnixSk) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{6} }
 
 func (m *UnixSk) GetInode() uint32 {
 	if m != nil && m.Inode != nil {
@@ -290,51 +340,62 @@ func (m *UnixSk) GetInode() uint32 {
 }
 
 type CriuOpts struct {
-	ImagesDirFd       *int32              `protobuf:"varint,1,req,name=images_dir_fd" json:"images_dir_fd,omitempty"`
-	Pid               *int32              `protobuf:"varint,2,opt,name=pid" json:"pid,omitempty"`
-	LeaveRunning      *bool               `protobuf:"varint,3,opt,name=leave_running" json:"leave_running,omitempty"`
-	ExtUnixSk         *bool               `protobuf:"varint,4,opt,name=ext_unix_sk" json:"ext_unix_sk,omitempty"`
-	TcpEstablished    *bool               `protobuf:"varint,5,opt,name=tcp_established" json:"tcp_established,omitempty"`
-	EvasiveDevices    *bool               `protobuf:"varint,6,opt,name=evasive_devices" json:"evasive_devices,omitempty"`
-	ShellJob          *bool               `protobuf:"varint,7,opt,name=shell_job" json:"shell_job,omitempty"`
-	FileLocks         *bool               `protobuf:"varint,8,opt,name=file_locks" json:"file_locks,omitempty"`
-	LogLevel          *int32              `protobuf:"varint,9,opt,name=log_level,def=2" json:"log_level,omitempty"`
-	LogFile           *string             `protobuf:"bytes,10,opt,name=log_file" json:"log_file,omitempty"`
-	Ps                *CriuPageServerInfo `protobuf:"bytes,11,opt,name=ps" json:"ps,omitempty"`
-	NotifyScripts     *bool               `protobuf:"varint,12,opt,name=notify_scripts" json:"notify_scripts,omitempty"`
-	Root              *string             `protobuf:"bytes,13,opt,name=root" json:"root,omitempty"`
-	ParentImg         *string             `protobuf:"bytes,14,opt,name=parent_img" json:"parent_img,omitempty"`
-	TrackMem          *bool               `protobuf:"varint,15,opt,name=track_mem" json:"track_mem,omitempty"`
-	AutoDedup         *bool               `protobuf:"varint,16,opt,name=auto_dedup" json:"auto_dedup,omitempty"`
-	WorkDirFd         *int32              `protobuf:"varint,17,opt,name=work_dir_fd" json:"work_dir_fd,omitempty"`
-	LinkRemap         *bool               `protobuf:"varint,18,opt,name=link_remap" json:"link_remap,omitempty"`
-	Veths             []*CriuVethPair     `protobuf:"bytes,19,rep,name=veths" json:"veths,omitempty"`
-	CpuCap            *uint32             `protobuf:"varint,20,opt,name=cpu_cap,def=4294967295" json:"cpu_cap,omitempty"`
-	ForceIrmap        *bool               `protobuf:"varint,21,opt,name=force_irmap" json:"force_irmap,omitempty"`
-	ExecCmd           []string            `protobuf:"bytes,22,rep,name=exec_cmd" json:"exec_cmd,omitempty"`
-	ExtMnt            []*ExtMountMap      `protobuf:"bytes,23,rep,name=ext_mnt" json:"ext_mnt,omitempty"`
-	ManageCgroups     *bool               `protobuf:"varint,24,opt,name=manage_cgroups" json:"manage_cgroups,omitempty"`
-	CgRoot            []*CgroupRoot       `protobuf:"bytes,25,rep,name=cg_root" json:"cg_root,omitempty"`
-	RstSibling        *bool               `protobuf:"varint,26,opt,name=rst_sibling" json:"rst_sibling,omitempty"`
-	InheritFd         []*InheritFd        `protobuf:"bytes,27,rep,name=inherit_fd" json:"inherit_fd,omitempty"`
-	AutoExtMnt        *bool               `protobuf:"varint,28,opt,name=auto_ext_mnt" json:"auto_ext_mnt,omitempty"`
-	ExtSharing        *bool               `protobuf:"varint,29,opt,name=ext_sharing" json:"ext_sharing,omitempty"`
-	ExtMasters        *bool               `protobuf:"varint,30,opt,name=ext_masters" json:"ext_masters,omitempty"`
-	SkipMnt           []string            `protobuf:"bytes,31,rep,name=skip_mnt" json:"skip_mnt,omitempty"`
-	EnableFs          []string            `protobuf:"bytes,32,rep,name=enable_fs" json:"enable_fs,omitempty"`
-	UnixSkIno         []*UnixSk           `protobuf:"bytes,33,rep,name=unix_sk_ino" json:"unix_sk_ino,omitempty"`
-	ManageCgroupsMode *CriuCgMode         `protobuf:"varint,34,opt,name=manage_cgroups_mode,enum=CriuCgMode" json:"manage_cgroups_mode,omitempty"`
-	GhostLimit        *uint32             `protobuf:"varint,35,opt,name=ghost_limit,def=1048576" json:"ghost_limit,omitempty"`
-	IrmapScanPaths    []string            `protobuf:"bytes,36,rep,name=irmap_scan_paths" json:"irmap_scan_paths,omitempty"`
-	External          []string            `protobuf:"bytes,37,rep,name=external" json:"external,omitempty"`
-	EmptyNs           *uint32             `protobuf:"varint,38,opt,name=empty_ns" json:"empty_ns,omitempty"`
-	NoSeccomp         *bool               `protobuf:"varint,39,opt,name=no_seccomp" json:"no_seccomp,omitempty"`
-	XXX_unrecognized  []byte              `json:"-"`
+	ImagesDirFd          *int32              `protobuf:"varint,1,req,name=images_dir_fd" json:"images_dir_fd,omitempty"`
+	Pid                  *int32              `protobuf:"varint,2,opt,name=pid" json:"pid,omitempty"`
+	LeaveRunning         *bool               `protobuf:"varint,3,opt,name=leave_running" json:"leave_running,omitempty"`
+	ExtUnixSk            *bool               `protobuf:"varint,4,opt,name=ext_unix_sk" json:"ext_unix_sk,omitempty"`
+	TcpEstablished       *bool               `protobuf:"varint,5,opt,name=tcp_established" json:"tcp_established,omitempty"`
+	EvasiveDevices       *bool               `protobuf:"varint,6,opt,name=evasive_devices" json:"evasive_devices,omitempty"`
+	ShellJob             *bool               `protobuf:"varint,7,opt,name=shell_job" json:"shell_job,omitempty"`
+	FileLocks            *bool               `protobuf:"varint,8,opt,name=file_locks" json:"file_locks,omitempty"`
+	LogLevel             *int32              `protobuf:"varint,9,opt,name=log_level,def=2" json:"log_level,omitempty"`
+	LogFile              *string             `protobuf:"bytes,10,opt,name=log_file" json:"log_file,omitempty"`
+	Ps                   *CriuPageServerInfo `protobuf:"bytes,11,opt,name=ps" json:"ps,omitempty"`
+	NotifyScripts        *bool               `protobuf:"varint,12,opt,name=notify_scripts" json:"notify_scripts,omitempty"`
+	Root                 *string             `protobuf:"bytes,13,opt,name=root" json:"root,omitempty"`
+	ParentImg            *string             `protobuf:"bytes,14,opt,name=parent_img" json:"parent_img,omitempty"`
+	TrackMem             *bool               `protobuf:"varint,15,opt,name=track_mem" json:"track_mem,omitempty"`
+	AutoDedup            *bool               `protobuf:"varint,16,opt,name=auto_dedup" json:"auto_dedup,omitempty"`
+	WorkDirFd            *int32              `protobuf:"varint,17,opt,name=work_dir_fd" json:"work_dir_fd,omitempty"`
+	LinkRemap            *bool               `protobuf:"varint,18,opt,name=link_remap" json:"link_remap,omitempty"`
+	Veths                []*CriuVethPair     `protobuf:"bytes,19,rep,name=veths" json:"veths,omitempty"`
+	CpuCap               *uint32             `protobuf:"varint,20,opt,name=cpu_cap,def=4294967295" json:"cpu_cap,omitempty"`
+	ForceIrmap           *bool               `protobuf:"varint,21,opt,name=force_irmap" json:"force_irmap,omitempty"`
+	ExecCmd              []string            `protobuf:"bytes,22,rep,name=exec_cmd" json:"exec_cmd,omitempty"`
+	ExtMnt               []*ExtMountMap      `protobuf:"bytes,23,rep,name=ext_mnt" json:"ext_mnt,omitempty"`
+	ManageCgroups        *bool               `protobuf:"varint,24,opt,name=manage_cgroups" json:"manage_cgroups,omitempty"`
+	CgRoot               []*CgroupRoot       `protobuf:"bytes,25,rep,name=cg_root" json:"cg_root,omitempty"`
+	RstSibling           *bool               `protobuf:"varint,26,opt,name=rst_sibling" json:"rst_sibling,omitempty"`
+	InheritFd            []*InheritFd        `protobuf:"bytes,27,rep,name=inherit_fd" json:"inherit_fd,omitempty"`
+	AutoExtMnt           *bool               `protobuf:"varint,28,opt,name=auto_ext_mnt" json:"auto_ext_mnt,omitempty"`
+	ExtSharing           *bool               `protobuf:"varint,29,opt,name=ext_sharing" json:"ext_sharing,omitempty"`
+	ExtMasters           *bool               `protobuf:"varint,30,opt,name=ext_masters" json:"ext_masters,omitempty"`
+	SkipMnt              []string            `protobuf:"bytes,31,rep,name=skip_mnt" json:"skip_mnt,omitempty"`
+	EnableFs             []string            `protobuf:"bytes,32,rep,name=enable_fs" json:"enable_fs,omitempty"`
+	UnixSkIno            []*UnixSk           `protobuf:"bytes,33,rep,name=unix_sk_ino" json:"unix_sk_ino,omitempty"`
+	ManageCgroupsMode    *CriuCgMode         `protobuf:"varint,34,opt,name=manage_cgroups_mode,enum=CriuCgMode" json:"manage_cgroups_mode,omitempty"`
+	GhostLimit           *uint32             `protobuf:"varint,35,opt,name=ghost_limit,def=1048576" json:"ghost_limit,omitempty"`
+	IrmapScanPaths       []string            `protobuf:"bytes,36,rep,name=irmap_scan_paths" json:"irmap_scan_paths,omitempty"`
+	External             []string            `protobuf:"bytes,37,rep,name=external" json:"external,omitempty"`
+	EmptyNs              *uint32             `protobuf:"varint,38,opt,name=empty_ns" json:"empty_ns,omitempty"`
+	JoinNs               []*JoinNamespace    `protobuf:"bytes,39,rep,name=join_ns" json:"join_ns,omitempty"`
+	CgroupProps          *string             `protobuf:"bytes,41,opt,name=cgroup_props" json:"cgroup_props,omitempty"`
+	CgroupPropsFile      *string             `protobuf:"bytes,42,opt,name=cgroup_props_file" json:"cgroup_props_file,omitempty"`
+	CgroupDumpController []string            `protobuf:"bytes,43,rep,name=cgroup_dump_controller" json:"cgroup_dump_controller,omitempty"`
+	FreezeCgroup         *string             `protobuf:"bytes,44,opt,name=freeze_cgroup" json:"freeze_cgroup,omitempty"`
+	Timeout              *uint32             `protobuf:"varint,45,opt,name=timeout" json:"timeout,omitempty"`
+	TcpSkipInFlight      *bool               `protobuf:"varint,46,opt,name=tcp_skip_in_flight" json:"tcp_skip_in_flight,omitempty"`
+	WeakSysctls          *bool               `protobuf:"varint,47,opt,name=weak_sysctls" json:"weak_sysctls,omitempty"`
+	LazyPages            *bool               `protobuf:"varint,48,opt,name=lazy_pages" json:"lazy_pages,omitempty"`
+	StatusFd             *int32              `protobuf:"varint,49,opt,name=status_fd" json:"status_fd,omitempty"`
+	OrphanPtsMaster      *bool               `protobuf:"varint,50,opt,name=orphan_pts_master" json:"orphan_pts_master,omitempty"`
+	XXX_unrecognized     []byte              `json:"-"`
 }
 
-func (m *CriuOpts) Reset()         { *m = CriuOpts{} }
-func (m *CriuOpts) String() string { return proto.CompactTextString(m) }
-func (*CriuOpts) ProtoMessage()    {}
+func (m *CriuOpts) Reset()                    { *m = CriuOpts{} }
+func (m *CriuOpts) String() string            { return proto.CompactTextString(m) }
+func (*CriuOpts) ProtoMessage()               {}
+func (*CriuOpts) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{7} }
 
 const Default_CriuOpts_LogLevel int32 = 2
 const Default_CriuOpts_CpuCap uint32 = 4294967295
@@ -606,9 +667,79 @@ func (m *CriuOpts) GetEmptyNs() uint32 {
 	return 0
 }
 
-func (m *CriuOpts) GetNoSeccomp() bool {
-	if m != nil && m.NoSeccomp != nil {
-		return *m.NoSeccomp
+func (m *CriuOpts) GetJoinNs() []*JoinNamespace {
+	if m != nil {
+		return m.JoinNs
+	}
+	return nil
+}
+
+func (m *CriuOpts) GetCgroupProps() string {
+	if m != nil && m.CgroupProps != nil {
+		return *m.CgroupProps
+	}
+	return ""
+}
+
+func (m *CriuOpts) GetCgroupPropsFile() string {
+	if m != nil && m.CgroupPropsFile != nil {
+		return *m.CgroupPropsFile
+	}
+	return ""
+}
+
+func (m *CriuOpts) GetCgroupDumpController() []string {
+	if m != nil {
+		return m.CgroupDumpController
+	}
+	return nil
+}
+
+func (m *CriuOpts) GetFreezeCgroup() string {
+	if m != nil && m.FreezeCgroup != nil {
+		return *m.FreezeCgroup
+	}
+	return ""
+}
+
+func (m *CriuOpts) GetTimeout() uint32 {
+	if m != nil && m.Timeout != nil {
+		return *m.Timeout
+	}
+	return 0
+}
+
+func (m *CriuOpts) GetTcpSkipInFlight() bool {
+	if m != nil && m.TcpSkipInFlight != nil {
+		return *m.TcpSkipInFlight
+	}
+	return false
+}
+
+func (m *CriuOpts) GetWeakSysctls() bool {
+	if m != nil && m.WeakSysctls != nil {
+		return *m.WeakSysctls
+	}
+	return false
+}
+
+func (m *CriuOpts) GetLazyPages() bool {
+	if m != nil && m.LazyPages != nil {
+		return *m.LazyPages
+	}
+	return false
+}
+
+func (m *CriuOpts) GetStatusFd() int32 {
+	if m != nil && m.StatusFd != nil {
+		return *m.StatusFd
+	}
+	return 0
+}
+
+func (m *CriuOpts) GetOrphanPtsMaster() bool {
+	if m != nil && m.OrphanPtsMaster != nil {
+		return *m.OrphanPtsMaster
 	}
 	return false
 }
@@ -618,9 +749,10 @@ type CriuDumpResp struct {
 	XXX_unrecognized []byte `json:"-"`
 }
 
-func (m *CriuDumpResp) Reset()         { *m = CriuDumpResp{} }
-func (m *CriuDumpResp) String() string { return proto.CompactTextString(m) }
-func (*CriuDumpResp) ProtoMessage()    {}
+func (m *CriuDumpResp) Reset()                    { *m = CriuDumpResp{} }
+func (m *CriuDumpResp) String() string            { return proto.CompactTextString(m) }
+func (*CriuDumpResp) ProtoMessage()               {}
+func (*CriuDumpResp) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{8} }
 
 func (m *CriuDumpResp) GetRestored() bool {
 	if m != nil && m.Restored != nil {
@@ -634,9 +766,10 @@ type CriuRestoreResp struct {
 	XXX_unrecognized []byte `json:"-"`
 }
 
-func (m *CriuRestoreResp) Reset()         { *m = CriuRestoreResp{} }
-func (m *CriuRestoreResp) String() string { return proto.CompactTextString(m) }
-func (*CriuRestoreResp) ProtoMessage()    {}
+func (m *CriuRestoreResp) Reset()                    { *m = CriuRestoreResp{} }
+func (m *CriuRestoreResp) String() string            { return proto.CompactTextString(m) }
+func (*CriuRestoreResp) ProtoMessage()               {}
+func (*CriuRestoreResp) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{9} }
 
 func (m *CriuRestoreResp) GetPid() int32 {
 	if m != nil && m.Pid != nil {
@@ -651,9 +784,10 @@ type CriuNotify struct {
 	XXX_unrecognized []byte  `json:"-"`
 }
 
-func (m *CriuNotify) Reset()         { *m = CriuNotify{} }
-func (m *CriuNotify) String() string { return proto.CompactTextString(m) }
-func (*CriuNotify) ProtoMessage()    {}
+func (m *CriuNotify) Reset()                    { *m = CriuNotify{} }
+func (m *CriuNotify) String() string            { return proto.CompactTextString(m) }
+func (*CriuNotify) ProtoMessage()               {}
+func (*CriuNotify) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{10} }
 
 func (m *CriuNotify) GetScript() string {
 	if m != nil && m.Script != nil {
@@ -677,9 +811,10 @@ type CriuFeatures struct {
 	XXX_unrecognized []byte `json:"-"`
 }
 
-func (m *CriuFeatures) Reset()         { *m = CriuFeatures{} }
-func (m *CriuFeatures) String() string { return proto.CompactTextString(m) }
-func (*CriuFeatures) ProtoMessage()    {}
+func (m *CriuFeatures) Reset()                    { *m = CriuFeatures{} }
+func (m *CriuFeatures) String() string            { return proto.CompactTextString(m) }
+func (*CriuFeatures) ProtoMessage()               {}
+func (*CriuFeatures) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{11} }
 
 func (m *CriuFeatures) GetMemTrack() bool {
 	if m != nil && m.MemTrack != nil {
@@ -705,9 +840,10 @@ type CriuReq struct {
 	XXX_unrecognized []byte        `json:"-"`
 }
 
-func (m *CriuReq) Reset()         { *m = CriuReq{} }
-func (m *CriuReq) String() string { return proto.CompactTextString(m) }
-func (*CriuReq) ProtoMessage()    {}
+func (m *CriuReq) Reset()                    { *m = CriuReq{} }
+func (m *CriuReq) String() string            { return proto.CompactTextString(m) }
+func (*CriuReq) ProtoMessage()               {}
+func (*CriuReq) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{12} }
 
 func (m *CriuReq) GetType() CriuReqType {
 	if m != nil && m.Type != nil {
@@ -753,12 +889,14 @@ type CriuResp struct {
 	Ps               *CriuPageServerInfo `protobuf:"bytes,6,opt,name=ps" json:"ps,omitempty"`
 	CrErrno          *int32              `protobuf:"varint,7,opt,name=cr_errno" json:"cr_errno,omitempty"`
 	Features         *CriuFeatures       `protobuf:"bytes,8,opt,name=features" json:"features,omitempty"`
+	CrErrmsg         *string             `protobuf:"bytes,9,opt,name=cr_errmsg" json:"cr_errmsg,omitempty"`
 	XXX_unrecognized []byte              `json:"-"`
 }
 
-func (m *CriuResp) Reset()         { *m = CriuResp{} }
-func (m *CriuResp) String() string { return proto.CompactTextString(m) }
-func (*CriuResp) ProtoMessage()    {}
+func (m *CriuResp) Reset()                    { *m = CriuResp{} }
+func (m *CriuResp) String() string            { return proto.CompactTextString(m) }
+func (*CriuResp) ProtoMessage()               {}
+func (*CriuResp) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{13} }
 
 func (m *CriuResp) GetType() CriuReqType {
 	if m != nil && m.Type != nil {
@@ -816,7 +954,116 @@ func (m *CriuResp) GetFeatures() *CriuFeatures {
 	return nil
 }
 
+func (m *CriuResp) GetCrErrmsg() string {
+	if m != nil && m.CrErrmsg != nil {
+		return *m.CrErrmsg
+	}
+	return ""
+}
+
 func init() {
+	proto.RegisterType((*CriuPageServerInfo)(nil), "criu_page_server_info")
+	proto.RegisterType((*CriuVethPair)(nil), "criu_veth_pair")
+	proto.RegisterType((*ExtMountMap)(nil), "ext_mount_map")
+	proto.RegisterType((*JoinNamespace)(nil), "join_namespace")
+	proto.RegisterType((*InheritFd)(nil), "inherit_fd")
+	proto.RegisterType((*CgroupRoot)(nil), "cgroup_root")
+	proto.RegisterType((*UnixSk)(nil), "unix_sk")
+	proto.RegisterType((*CriuOpts)(nil), "criu_opts")
+	proto.RegisterType((*CriuDumpResp)(nil), "criu_dump_resp")
+	proto.RegisterType((*CriuRestoreResp)(nil), "criu_restore_resp")
+	proto.RegisterType((*CriuNotify)(nil), "criu_notify")
+	proto.RegisterType((*CriuFeatures)(nil), "criu_features")
+	proto.RegisterType((*CriuReq)(nil), "criu_req")
+	proto.RegisterType((*CriuResp)(nil), "criu_resp")
 	proto.RegisterEnum("CriuCgMode", CriuCgMode_name, CriuCgMode_value)
 	proto.RegisterEnum("CriuReqType", CriuReqType_name, CriuReqType_value)
+}
+
+func init() { proto.RegisterFile("criurpc.proto", fileDescriptor0) }
+
+var fileDescriptor0 = []byte{
+	// 1297 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0x7c, 0x56, 0xdb, 0x77, 0xd3, 0xc6,
+	0x13, 0xfe, 0xc5, 0x71, 0x7c, 0x59, 0x5f, 0x22, 0x04, 0x84, 0xe5, 0x9e, 0x9f, 0x28, 0x6d, 0x49,
+	0x5b, 0x03, 0x3e, 0x5c, 0x0a, 0x4f, 0xe5, 0x04, 0x87, 0xe6, 0x14, 0x62, 0x1f, 0xc7, 0xe9, 0x39,
+	0x3c, 0xed, 0x11, 0xd2, 0xda, 0x5e, 0x2c, 0x69, 0xd5, 0xdd, 0x95, 0x21, 0xfc, 0x03, 0x7d, 0xec,
+	0x63, 0x1f, 0xfb, 0xaf, 0x76, 0x76, 0x24, 0x05, 0x41, 0x39, 0xbc, 0x80, 0x35, 0x9a, 0xcb, 0x37,
+	0xdf, 0xcc, 0x7c, 0x0a, 0xe9, 0x05, 0x4a, 0x64, 0x2a, 0x0d, 0x06, 0xa9, 0x92, 0x46, 0x7a, 0x63,
+	0x72, 0xd1, 0x1a, 0x58, 0xea, 0x2f, 0x38, 0xd3, 0x5c, 0xad, 0xb9, 0x62, 0x22, 0x99, 0x4b, 0x77,
+	0x9b, 0x34, 0xfd, 0x30, 0x54, 0x5c, 0x6b, 0xba, 0xb1, 0xbb, 0xf1, 0x7d, 0xdb, 0xed, 0x92, 0x7a,
+	0x2a, 0x95, 0xa1, 0x35, 0x78, 0xda, 0x72, 0x3b, 0x64, 0x33, 0x15, 0x21, 0xdd, 0xc4, 0x07, 0x42,
+	0x6a, 0xf3, 0x90, 0xd6, 0xed, 0x6f, 0xef, 0x2e, 0xe9, 0x63, 0xc2, 0x35, 0x37, 0x4b, 0xc8, 0x2a,
+	0x94, 0xdb, 0x23, 0x5b, 0x62, 0x0e, 0x49, 0x21, 0x4f, 0x0d, 0xf2, 0xf4, 0x49, 0x03, 0x1e, 0x65,
+	0x66, 0x33, 0xc1, 0xb3, 0x77, 0x87, 0xf4, 0xf8, 0x7b, 0xc3, 0x62, 0x99, 0x25, 0xf0, 0xaf, 0x9f,
+	0xda, 0xd4, 0x2b, 0x7e, 0x5a, 0x78, 0xc3, 0xc3, 0xda, 0x8f, 0x0a, 0xd7, 0x5f, 0x48, 0xff, 0xad,
+	0x14, 0x09, 0x4b, 0xfc, 0x98, 0xeb, 0xd4, 0x0f, 0xb8, 0xad, 0x9c, 0xe8, 0xc2, 0x15, 0x10, 0x27,
+	0x9a, 0xcd, 0x45, 0xc4, 0x73, 0x77, 0xf7, 0x1c, 0x69, 0x43, 0x66, 0xe5, 0x33, 0x99, 0x1a, 0x44,
+	0xda, 0xf6, 0x6e, 0x13, 0x22, 0x92, 0x25, 0x57, 0xc2, 0xb0, 0x79, 0xf8, 0x69, 0xa5, 0xbc, 0x09,
+	0x1b, 0xb9, 0x05, 0x98, 0x3a, 0xc1, 0x42, 0xc9, 0x2c, 0x65, 0x4a, 0x4a, 0x63, 0x5b, 0x0f, 0x8c,
+	0x8a, 0x2a, 0x44, 0xf8, 0x66, 0x59, 0x60, 0xa2, 0xa4, 0x99, 0x25, 0xe2, 0x3d, 0xd3, 0x2b, 0x6c,
+	0x34, 0x91, 0x21, 0xc7, 0x84, 0x3d, 0xef, 0xef, 0x36, 0x69, 0x23, 0x15, 0x50, 0x5e, 0xbb, 0x17,
+	0x49, 0x4f, 0xc4, 0x40, 0xb2, 0x66, 0xa1, 0x50, 0x50, 0x1c, 0x9d, 0xce, 0x78, 0xcc, 0x49, 0x05,
+	0x9f, 0x88, 0xfb, 0x6b, 0xce, 0x54, 0x96, 0x24, 0x22, 0x59, 0x20, 0xe8, 0x96, 0x7b, 0x9e, 0x74,
+	0x2c, 0x43, 0x45, 0x19, 0xe4, 0xb9, 0xe5, 0x5e, 0x22, 0xdb, 0x26, 0x48, 0x19, 0xd7, 0xc6, 0x7f,
+	0x13, 0x09, 0xbd, 0xe4, 0x21, 0xdd, 0x2a, 0x5f, 0xf0, 0xb5, 0xaf, 0x05, 0xa4, 0x09, 0xf9, 0x5a,
+	0x04, 0x5c, 0xd3, 0x06, 0xbe, 0x00, 0x3a, 0xc0, 0x2d, 0x8a, 0xd8, 0x5b, 0xf9, 0x86, 0x36, 0xd1,
+	0x04, 0x4d, 0x5b, 0xbe, 0x58, 0x24, 0x83, 0x95, 0xa6, 0x2d, 0xb4, 0x5d, 0x20, 0xed, 0x48, 0x2e,
+	0x58, 0xc4, 0xd7, 0x3c, 0xa2, 0x6d, 0x8b, 0xeb, 0xe9, 0xc6, 0xd0, 0x75, 0x48, 0xcb, 0x5a, 0x91,
+	0x5d, 0x82, 0x34, 0x78, 0xa4, 0x96, 0x6a, 0xda, 0x81, 0xdf, 0x9d, 0xe1, 0xce, 0xe0, 0xcb, 0x4b,
+	0xb4, 0x43, 0xfa, 0x89, 0x34, 0x62, 0x7e, 0xca, 0x34, 0x38, 0x00, 0x0d, 0xb4, 0x8b, 0x35, 0x80,
+	0x42, 0x4b, 0x2c, 0xed, 0x61, 0x26, 0x40, 0x91, 0xfa, 0x8a, 0xc3, 0xf8, 0x45, 0xbc, 0xa0, 0x7d,
+	0xb4, 0x01, 0x58, 0x98, 0x5c, 0xb0, 0x62, 0x31, 0x8f, 0xe9, 0x76, 0x09, 0xd6, 0xcf, 0x8c, 0x84,
+	0xae, 0xc2, 0x2c, 0xa5, 0x4e, 0x49, 0xcd, 0x3b, 0xa9, 0x56, 0x25, 0xa7, 0xe7, 0x90, 0x46, 0x70,
+	0x8c, 0x44, 0xb2, 0x62, 0x8a, 0xc3, 0x3a, 0x51, 0x17, 0x1d, 0x6f, 0x90, 0x2d, 0xbb, 0x91, 0x9a,
+	0x9e, 0xdf, 0xdd, 0x04, 0xc0, 0xdb, 0x83, 0xcf, 0x96, 0xf4, 0x2a, 0x69, 0x06, 0x69, 0xc6, 0x02,
+	0x08, 0xb8, 0x00, 0x01, 0xbd, 0xa7, 0xe4, 0xc1, 0xf0, 0xc9, 0x83, 0x27, 0x8f, 0x1e, 0x0f, 0x9f,
+	0x3c, 0xb4, 0x55, 0xe6, 0x52, 0x05, 0x9c, 0x09, 0x65, 0x33, 0x5e, 0xc4, 0x8c, 0xc0, 0x08, 0x7f,
+	0xcf, 0x03, 0x16, 0xc4, 0x21, 0xdd, 0x81, 0xa4, 0x6d, 0xf7, 0x26, 0x69, 0xe2, 0x26, 0x27, 0x86,
+	0x5e, 0xc2, 0x2a, 0xfd, 0xc1, 0xa7, 0x9b, 0x0d, 0x74, 0xc4, 0x7e, 0x62, 0x49, 0xca, 0xb7, 0x4b,
+	0x53, 0x8a, 0xa9, 0xae, 0x43, 0xf1, 0x05, 0xae, 0x1a, 0xbd, 0x8c, 0x81, 0xdd, 0x41, 0x75, 0xfd,
+	0xa0, 0xbc, 0xd2, 0x86, 0x69, 0x01, 0x83, 0x86, 0xa5, 0xb8, 0x82, 0x31, 0x37, 0xab, 0x9b, 0x4c,
+	0xaf, 0x62, 0x58, 0x67, 0x50, 0x59, 0xee, 0x0b, 0xa4, 0x8b, 0x74, 0x95, 0x90, 0xae, 0x55, 0x77,
+	0x49, 0x2f, 0x7d, 0x65, 0x73, 0x5d, 0xaf, 0x1a, 0x63, 0x5f, 0x1b, 0xae, 0x34, 0xbd, 0x51, 0xf6,
+	0xa7, 0x57, 0x22, 0xc5, 0xd8, 0x9b, 0xd8, 0x9f, 0xbd, 0xa7, 0x04, 0xb6, 0x8d, 0xb3, 0xb9, 0xa6,
+	0xbb, 0x68, 0xba, 0x4e, 0x3a, 0xc5, 0x5a, 0xc2, 0xc0, 0x25, 0xfd, 0x3f, 0xc2, 0x68, 0x0d, 0xca,
+	0x8b, 0xd8, 0x23, 0xe7, 0x3f, 0x6d, 0x18, 0xc8, 0x80, 0xfb, 0xf0, 0xa0, 0x40, 0x7f, 0xd8, 0xcb,
+	0x67, 0x00, 0x9d, 0x5b, 0xa3, 0x7b, 0x8d, 0x74, 0x16, 0x4b, 0x09, 0x7d, 0x46, 0x22, 0x16, 0x86,
+	0xde, 0xc2, 0x29, 0x34, 0xef, 0xdf, 0x7b, 0xf0, 0xf3, 0xc3, 0xc7, 0x8f, 0x5c, 0x4a, 0x1c, 0x24,
+	0x1f, 0x16, 0xc9, 0x4f, 0x98, 0xbd, 0x3f, 0x4d, 0xbf, 0x41, 0x08, 0x38, 0x07, 0xc0, 0x9d, 0x80,
+	0x4c, 0xdc, 0x3e, 0xb3, 0xc4, 0xa9, 0x39, 0x65, 0x20, 0x0d, 0xdf, 0xda, 0x34, 0xee, 0x2e, 0x69,
+	0xe6, 0xc2, 0xa1, 0xe9, 0x77, 0xc5, 0xfc, 0x3f, 0x13, 0x12, 0x60, 0xab, 0xa0, 0x1c, 0x74, 0x11,
+	0x06, 0x73, 0x07, 0xb7, 0xf0, 0x32, 0x39, 0x57, 0xb5, 0xe6, 0xeb, 0xbf, 0x87, 0xaf, 0x6e, 0x90,
+	0x9d, 0xe2, 0x55, 0x98, 0xc5, 0x29, 0x0b, 0x64, 0x62, 0x94, 0x8c, 0x22, 0xae, 0xe8, 0x0f, 0x08,
+	0x02, 0x6e, 0x79, 0xae, 0x38, 0xff, 0x50, 0xb6, 0x4e, 0x7f, 0xc4, 0x30, 0x10, 0x29, 0x23, 0x62,
+	0x6e, 0xe5, 0xef, 0x27, 0x84, 0x76, 0x85, 0xb8, 0xf6, 0x8e, 0x91, 0x6a, 0x40, 0x34, 0x8f, 0xc4,
+	0x62, 0x69, 0xe8, 0xa0, 0x38, 0xc5, 0xee, 0x3b, 0xee, 0xaf, 0x98, 0x3e, 0xd5, 0x81, 0x89, 0x34,
+	0xbd, 0x5b, 0xde, 0x41, 0xe4, 0x7f, 0x38, 0xc5, 0x6b, 0xd3, 0xf4, 0xde, 0xd9, 0x6d, 0x1b, 0xdf,
+	0x64, 0xda, 0x2e, 0xc3, 0x7d, 0xbc, 0x02, 0xc0, 0x2e, 0x55, 0xba, 0xb4, 0x6c, 0x19, 0x5d, 0xcc,
+	0x96, 0x0e, 0xad, 0xb7, 0xe7, 0x15, 0x1a, 0x8d, 0xc8, 0x41, 0xe2, 0x53, 0x4b, 0x19, 0xfc, 0x6f,
+	0xa4, 0xe2, 0x21, 0xaa, 0x5c, 0xcb, 0xdb, 0x85, 0xd6, 0xad, 0x4f, 0x61, 0xce, 0xdd, 0x0a, 0xb5,
+	0x42, 0xe9, 0xf2, 0xf6, 0x40, 0x24, 0xad, 0x47, 0x7e, 0xe1, 0x56, 0xd7, 0xf3, 0x23, 0x2f, 0x64,
+	0xb2, 0xaa, 0x6c, 0x50, 0x11, 0xbf, 0x3b, 0x6c, 0xce, 0x01, 0x24, 0xa4, 0xb2, 0x80, 0xe1, 0xb2,
+	0x19, 0xde, 0x78, 0x51, 0xf1, 0xaf, 0x0d, 0xd2, 0x2a, 0x4a, 0xfe, 0x01, 0xdb, 0x50, 0x37, 0xa7,
+	0x69, 0x2e, 0xa5, 0x7d, 0x38, 0xa4, 0xf2, 0x05, 0xb3, 0x56, 0xd8, 0x86, 0xba, 0x15, 0x55, 0x4c,
+	0xde, 0x19, 0x92, 0xc1, 0x47, 0x99, 0xad, 0x28, 0x4e, 0x16, 0x04, 0xf6, 0xeb, 0xb5, 0x59, 0x12,
+	0xb4, 0xe2, 0x3c, 0x05, 0x27, 0x9e, 0x14, 0x0a, 0xba, 0x4b, 0x5a, 0x25, 0x1c, 0x94, 0xce, 0x4e,
+	0x59, 0xa6, 0xb4, 0x7a, 0x7f, 0xd6, 0x0a, 0x05, 0xc7, 0xe6, 0xbf, 0x0e, 0x09, 0x06, 0x5b, 0x56,
+	0xb4, 0x1f, 0x06, 0x7b, 0xd4, 0x75, 0xcb, 0x2f, 0xd6, 0x3f, 0x13, 0x9c, 0x8f, 0x8c, 0xdf, 0x22,
+	0xcd, 0x82, 0x5a, 0x84, 0xd3, 0x19, 0xba, 0x83, 0xff, 0xf2, 0x7d, 0x8d, 0x34, 0xf2, 0x6e, 0x0a,
+	0x80, 0xdd, 0x41, 0x95, 0xf1, 0x5c, 0x81, 0x1b, 0x5f, 0x55, 0x60, 0xc7, 0x72, 0xca, 0xb8, 0x52,
+	0x70, 0x9d, 0x4d, 0xdc, 0x8b, 0x6a, 0xdb, 0xad, 0x2f, 0xb5, 0x6d, 0xb9, 0xca, 0x63, 0x62, 0xbd,
+	0xc0, 0x2f, 0x40, 0x7b, 0x8f, 0xc1, 0x79, 0x54, 0x8f, 0x95, 0x90, 0xc6, 0xe1, 0x8b, 0xa3, 0xf1,
+	0x74, 0xe4, 0xfc, 0x0f, 0x06, 0xdd, 0xdc, 0x7f, 0xc1, 0x8e, 0xc6, 0x47, 0x23, 0x67, 0xc3, 0x6d,
+	0x93, 0xad, 0xc9, 0x74, 0x3c, 0x39, 0x76, 0x6a, 0x6e, 0x8b, 0xd4, 0x8f, 0xc7, 0x07, 0x33, 0x67,
+	0xd3, 0xfe, 0x3a, 0x38, 0x79, 0xf9, 0xd2, 0xa9, 0xdb, 0xb8, 0xe3, 0xd9, 0xf4, 0x70, 0x7f, 0xe6,
+	0xd8, 0x4f, 0x5f, 0xf3, 0xf9, 0xe8, 0xe0, 0xd9, 0xc9, 0xcb, 0x99, 0xd3, 0xd8, 0xfb, 0x67, 0xa3,
+	0xd8, 0x90, 0x33, 0x42, 0x21, 0xd3, 0xe8, 0xd5, 0x64, 0xf6, 0x1a, 0x2a, 0x40, 0xfc, 0xf3, 0x93,
+	0x57, 0x13, 0x48, 0x0f, 0x31, 0xd3, 0xd1, 0xf1, 0xcc, 0x16, 0xae, 0x59, 0x8f, 0xfd, 0x5f, 0x47,
+	0xfb, 0xbf, 0x41, 0x85, 0x2e, 0x69, 0x4d, 0xa6, 0x23, 0x86, 0x5e, 0x75, 0x98, 0x45, 0x67, 0xf2,
+	0xec, 0xc5, 0x88, 0x1d, 0x8f, 0xa6, 0xbf, 0x8f, 0xa6, 0x8e, 0xfd, 0x03, 0xa5, 0x71, 0x34, 0x9e,
+	0x1d, 0x1e, 0xbc, 0x76, 0x1a, 0xc0, 0x48, 0x77, 0x7f, 0x72, 0x72, 0x78, 0x74, 0x30, 0xce, 0xdd,
+	0x9b, 0xd0, 0x6f, 0xaf, 0xb4, 0xe4, 0xf9, 0xec, 0xba, 0xf4, 0x0e, 0x46, 0xcf, 0x66, 0x27, 0x90,
+	0x33, 0x37, 0xb5, 0xff, 0x0d, 0x00, 0x00, 0xff, 0xff, 0xed, 0xcb, 0xc7, 0x95, 0x39, 0x09, 0x00,
+	0x00,
 }

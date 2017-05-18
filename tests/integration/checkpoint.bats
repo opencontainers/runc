@@ -17,15 +17,9 @@ function teardown() {
 
   # criu does not work with external terminals so..
   # setting terminal and root:readonly: to false
-  sed -i 's;"terminal": true;"terminal": false;' config.json
-  sed -i 's;"readonly": true;"readonly": false;' config.json
-  sed -i 's/"sh"/"sh","-c","while :; do date; sleep 1; done"/' config.json
 
-  (
-    # run busybox (not detached)
-    runc run test_busybox
-    [ "$status" -eq 0 ]
-  ) &
+  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+  [ "$status" -eq 0 ]
 
   # check state
   wait_for_container 15 1 test_busybox
@@ -34,24 +28,26 @@ function teardown() {
   [ "$status" -eq 0 ]
   [[ "${output}" == *"running"* ]]
 
-  # checkpoint the running container
-  runc --criu "$CRIU" checkpoint test_busybox
-  # if you are having problems getting criu to work uncomment the following dump:
-  #cat /run/opencontainer/containers/test_busybox/criu.work/dump.log
-  [ "$status" -eq 0 ]
+  for i in `seq 2`; do
+	  # checkpoint the running container
+	  runc --criu "$CRIU" checkpoint test_busybox
+	  # if you are having problems getting criu to work uncomment the following dump:
+	  #cat /run/opencontainer/containers/test_busybox/criu.work/dump.log
+	  [ "$status" -eq 0 ]
 
-  # after checkpoint busybox is no longer running
-  runc state test_busybox
-  [ "$status" -ne 0 ]
+	  # after checkpoint busybox is no longer running
+	  runc state test_busybox
+	  [ "$status" -ne 0 ]
 
-  # restore from checkpoint
-  (
-    runc --criu "$CRIU" restore test_busybox
-    [ "$status" -eq 0 ]
-  ) &
+	  # restore from checkpoint
+	  (
+	    runc --criu "$CRIU" restore -d --console-socket $CONSOLE_SOCKET test_busybox
+	    [ "$status" -eq 0 ]
+	  ) &
 
-  # check state
-  wait_for_container 15 1 test_busybox
+	  # check state
+	  wait_for_container 15 1 test_busybox
+  done
 
   # busybox should be back up and running
   runc state test_busybox
@@ -63,8 +59,6 @@ function teardown() {
   # XXX: currently criu require root containers.
   requires criu root
 
-  # criu does not work with external terminals so..
-  # setting terminal and root:readonly: to false
   sed -i 's;"terminal": true;"terminal": false;' config.json
   sed -i 's;"readonly": true;"readonly": false;' config.json
   sed -i 's/"sh"/"sh","-c","for i in `seq 10`; do read xxx || continue; echo ponG $xxx; done"/' config.json
