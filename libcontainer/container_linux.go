@@ -40,6 +40,7 @@ type linuxContainer struct {
 	config               *configs.Config
 	cgroupManager        cgroups.Manager
 	intelRdtManager      intelrdt.Manager
+	initPath             string
 	initArgs             []string
 	initProcess          parentProcess
 	initProcessStartTime uint64
@@ -413,7 +414,8 @@ func (c *linuxContainer) newParentProcess(p *Process, doInit bool) (parentProces
 }
 
 func (c *linuxContainer) commandTemplate(p *Process, childPipe *os.File) (*exec.Cmd, error) {
-	cmd := exec.Command(c.initArgs[0], c.initArgs[1:]...)
+	cmd := exec.Command(c.initPath, c.initArgs[1:]...)
+	cmd.Args[0] = c.initArgs[0]
 	cmd.Stdin = p.Stdin
 	cmd.Stdout = p.Stdout
 	cmd.Stderr = p.Stderr
