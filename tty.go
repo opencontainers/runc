@@ -8,13 +8,15 @@ import (
 	"os"
 	"sync"
 
+	"github.com/containerd/console"
 	"github.com/docker/docker/pkg/term"
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/utils"
 )
 
 type tty struct {
-	console   libcontainer.Console
+	epoller   *console.Epoller
+	console   *console.EpollConsole
 	state     *term.State
 	closers   []io.Closer
 	postStart []io.Closer
@@ -74,20 +76,33 @@ func (t *tty) recvtty(process *libcontainer.Process, socket *os.File) error {
 	if err != nil {
 		return err
 	}
-	if err = libcontainer.SaneTerminal(f); err != nil {
+	cons, err := console.ConsoleFromFile(f)
+	if err != nil {
 		return err
 	}
-	console := libcontainer.ConsoleFromFile(f)
-	go io.Copy(console, os.Stdin)
+	epoller, err := console.NewEpoller()
+	if err != nil {
+		return err
+	}
+	epollConsole, err := epoller.Add(cons)
+	if err != nil {
+		return err
+	}
+	go epoller.Wait()
+	go io.Copy(epollConsole, os.Stdin)
 	t.wg.Add(1)
-	go t.copyIO(os.Stdout, console)
+	go t.copyIO(os.Stdout, epollConsole)
+
+	// TODO: perhaps migrate to console.SetRaw later. Need to handle interrupt
+	// ourselves though
 	state, err := term.SetRawTerminal(os.Stdin.Fd())
 	if err != nil {
 		return fmt.Errorf("failed to set the terminal from the stdin: %v", err)
 	}
+	t.epoller = epoller
 	t.state = state
-	t.console = console
-	t.closers = []io.Closer{console}
+	t.console = epollConsole
+	t.closers = []io.Closer{epollConsole}
 	return nil
 }
 
@@ -114,7 +129,11 @@ func (t *tty) Close() error {
 	for _, c := range t.postStart {
 		c.Close()
 	}
-	// wait for the copy routines to finish before closing the fds
+	// the process is gone at this point, shutting down the console if we have
+	// one and wait for all IO to be finished
+	if t.console != nil && t.epoller != nil {
+		t.console.Shutdown(t.epoller.CloseConsole)
+	}
 	t.wg.Wait()
 	for _, c := range t.closers {
 		c.Close()
@@ -129,9 +148,5 @@ func (t *tty) resize() error {
 	if t.console == nil {
 		return nil
 	}
-	ws, err := term.GetWinsize(os.Stdin.Fd())
-	if err != nil {
-		return err
-	}
-	return term.SetWinsize(t.console.File().Fd(), ws)
+	return t.console.ResizeFrom(console.Current())
 }

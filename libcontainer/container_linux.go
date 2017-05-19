@@ -1300,7 +1300,7 @@ func (c *linuxContainer) criuNotifications(resp *criurpc.CriuResp, process *Proc
 		defer master.Close()
 
 		// While we can access console.master, using the API is a good idea.
-		if err := utils.SendFd(process.ConsoleSocket, master); err != nil {
+		if err := utils.SendFd(process.ConsoleSocket, master.Name(), master.Fd()); err != nil {
 			return err
 		}
 	}
