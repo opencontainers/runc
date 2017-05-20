@@ -76,7 +76,11 @@ man:
 	man/md2man-all.sh
 
 runcimage:
+ifneq ($(FORCE_RUNC_IMAGE), )
+	docker tag $(FORCE_RUNC_IMAGE) $(RUNC_IMAGE)
+else
 	docker build -t $(RUNC_IMAGE) .
+endif
 
 test:
 	make unittest integration rootlessintegration
