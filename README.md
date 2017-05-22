@@ -63,7 +63,7 @@ When in doubt, start on the [mailing-list](#mailing-list).
 The contributors and maintainers of all OCI projects have a weekly meeting on Wednesdays at:
 
 * 8:00 AM (USA Pacific), during [odd weeks][iso-week].
-* 5:00 PM (USA Pacific), during [even weeks][iso-week].
+* 2:00 PM (USA Pacific), during [even weeks][iso-week].
 
 There is an [iCalendar][rfc5545] format for the meetings [here](meeting.ics).
 

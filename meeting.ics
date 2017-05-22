@@ -36,8 +36,8 @@ URL:https://github.com/opencontainers/runtime-spec/blob/master/meeting.ics
 END:VEVENT
 BEGIN:VEVENT
 UID:tdc-meeting-2@opencontainers.org
-DTSTAMP:20170405T220000Z
-DTSTART;TZID=America/Los_Angeles:20170405T170000
+DTSTAMP:20170517T143500Z
+DTSTART;TZID=America/Los_Angeles:20170517T140000
 RRULE:FREQ=WEEKLY;INTERVAL=2;BYDAY=WE
 DURATION:PT1H
 SUMMARY:OCI TDC Meeting
