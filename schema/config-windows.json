@@ -77,6 +77,20 @@
             "ignoreflushesduringboot": {
                 "id": "https://opencontainers.org/schema/bundle/windows/ignoreflushesduringboot",
                 "type": "boolean"
+            },
+            "hyperv": {
+                "id": "https://opencontainers.org/schema/bundle/windows/hyperv",
+                "type": "object",
+                "properties": {
+                    "utilityvmpath": {
+                        "id": "https://opencontainers.org/schema/bundle/windows/hyperv/utilityvmpath",
+                        "type": "string"
+                    },
+                    "sandboxpath": {
+                        "id": "https://opencontainers.org/schema/bundle/windows/hyperv/sandboxpath",
+                        "type": "string"
+                    }
+                }
             }
         }
     }
