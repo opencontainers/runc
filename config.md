@@ -61,14 +61,14 @@ For Solaris, the mount entry corresponds to the 'fs' resource in the [zonecfg(1M
   This value MUST be an absolute path.
   * Windows: one mount destination MUST NOT be nested within another mount (e.g., c:\\foo and c:\\foo\\bar).
   * Solaris: corresponds to "dir" of the fs resource in [zonecfg(1M)][zonecfg.1m].
-* **`type`** (string, OPTIONAL) The filesystem type of the filesystem to be mounted.
-  * Linux: valid *filesystemtype* supported by the kernel as listed in */proc/filesystems* (e.g., "minix", "ext2", "ext3", "jfs", "xfs", "reiserfs", "msdos", "proc", "nfs", "iso9660").
+* **`type`** (string, OPTIONAL) The type of the filesystem to be mounted.
+  * Linux: filesystem types supported by the kernel as listed in */proc/filesystems* (e.g., "minix", "ext2", "ext3", "jfs", "xfs", "reiserfs", "msdos", "proc", "nfs", "iso9660").
   * Windows: this field MUST NOT be supplied.
   * Solaris: corresponds to "type" of the fs resource in [zonecfg(1M)][zonecfg.1m].
 * **`source`** (string, OPTIONAL) A device name, but can also be a directory name or a dummy.
   * Windows: a local directory on the filesystem of the container host. UNC paths and mapped drives are not supported.
   * Solaris: corresponds to "special" of the fs resource in [zonecfg(1M)][zonecfg.1m].
-* **`options`** (list of strings, OPTIONAL) Mount options of the filesystem to be used.
+* **`options`** (array of strings, OPTIONAL) Mount options of the filesystem to be used.
   * Linux: supported options are listed in the [mount(8)][mount.8] man page. Note both [filesystem-independent][mount.8-filesystem-independent] and [filesystem-specific][mount.8-filesystem-specific] options are listed.
   * Solaris: corresponds to "options" of the fs resource in [zonecfg(1M)][zonecfg.1m].
 
