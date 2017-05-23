@@ -156,17 +156,33 @@ For POSIX platforms the `mounts` structure has the following fields:
 * **`env`** (array of strings, OPTIONAL) with the same semantics as [IEEE Std 1003.1-2008's `environ`][ieee-1003.1-2008-xbd-c8.1].
 * **`args`** (array of strings, REQUIRED) with similar semantics to [IEEE Std 1003.1-2008 `execvp`'s *argv*][ieee-1003.1-2008-xsh-exec].
     This specification extends the IEEE standard in that at least one entry is REQUIRED, and that entry is used with the same semantics as `execvp`'s *file*.
+
+### <a name="configLinuxAndSolarisProcess" />Linux and Solaris Process
+
+For POSIX-based systems (Linux and Solaris), the `process` object supports the following process-specific properties:
+
 * **`rlimits`** (array of objects, OPTIONAL) allows setting resource limits for the process.
     Each entry has the following structure:
 
-    * **`type`** (string, REQUIRED) - the platform resource being limited, for example on Linux as defined in the [setrlimit(2)][setrlimit.2] man page.
-    * **`soft`** (uint64, REQUIRED) - the value of the limit enforced for the corresponding resource.
-    * **`hard`** (uint64, REQUIRED) - the ceiling for the soft limit that could be set by an unprivileged process.
-        Only a privileged process (e.g. under Linux: one with the CAP_SYS_RESOURCE capability) can raise a hard limit.
+    * **`type`** (string, REQUIRED) the platform resource being limited.
+        * Linux: valid values are defined in the [`getrlimit(2)`][getrlimit.2] man page, such as `RLIMIT_MSGQUEUE`.
+        * Solaris: valid values are defined in the [`getrlimit(3)`][getrlimit.3] man page, such as `RLIMIT_CORE`.
 
-    If `rlimits` contains duplicated entries with same `type`, the runtime MUST error out.
+        The runtime MUST [generate an error](runtime.md#errors) for any values which cannot be mapped to a relevant kernel interface
+        For each entry in `rlimits`, a [`getrlimit(3)`][getrlimit.3] on `type` MUST succeed.
+        For the following properties, `rlim` refers to the status returned by the `getrlimit(3)` call.
 
-For Linux-based systems the process structure supports the following process-specific fields.
+    * **`soft`** (uint64, REQUIRED) the value of the limit enforced for the corresponding resource.
+        `rlim.rlim_cur` MUST match the configured value.
+    * **`hard`** (uint64, REQUIRED) the ceiling for the soft limit that could be set by an unprivileged process.
+        `rlim.rlim_max` MUST match the configured value.
+        Only a privileged process (e.g. one with the `CAP_SYS_RESOURCE` capability) can raise a hard limit.
+
+    If `rlimits` contains duplicated entries with same `type`, the runtime MUST [generate an error](runtime.md#errors).
+
+### <a name="configLinuxProcess" />Linux Process
+
+For Linux-based systems, the `process` object supports the following process-specific properties.
 
 * **`apparmorProfile`** (string, OPTIONAL) specifies the name of the AppArmor profile for the process.
     For more information about AppArmor, see [AppArmor documentation][apparmor].
@@ -837,7 +853,8 @@ Here is a full example `config.json` for reference.
 [mount.8]: http://man7.org/linux/man-pages/man8/mount.8.html
 [mount.8-filesystem-independent]: http://man7.org/linux/man-pages/man8/mount.8.html#FILESYSTEM-INDEPENDENT_MOUNT%20OPTIONS
 [mount.8-filesystem-specific]: http://man7.org/linux/man-pages/man8/mount.8.html#FILESYSTEM-SPECIFIC_MOUNT%20OPTIONS
-[setrlimit.2]: http://man7.org/linux/man-pages/man2/setrlimit.2.html
+[getrlimit.2]: http://man7.org/linux/man-pages/man2/getrlimit.2.html
+[getrlimit.3]: http://pubs.opengroup.org/onlinepubs/9699919799/functions/getrlimit.html
 [stdin.3]: http://man7.org/linux/man-pages/man3/stdin.3.html
 [uts-namespace.7]: http://man7.org/linux/man-pages/man7/namespaces.7.html
 [zonecfg.1m]: http://docs.oracle.com/cd/E86824_01/html/E54764/zonecfg-1m.html
