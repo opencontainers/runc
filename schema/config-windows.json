@@ -73,6 +73,10 @@
             "servicing": {
                 "id": "https://opencontainers.org/schema/bundle/windows/servicing",
                 "type": "boolean"
+            },
+            "ignoreflushesduringboot": {
+                "id": "https://opencontainers.org/schema/bundle/windows/ignoreflushesduringboot",
+                "type": "boolean"
             }
         }
     }
