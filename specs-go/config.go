@@ -434,6 +434,8 @@ type Windows struct {
 	Resources *WindowsResources `json:"resources,omitempty"`
 	// CredentialSpec contains a JSON object describing a group Managed Service Account (gMSA) specification.
 	CredentialSpec interface{} `json:"credentialspec,omitempty"`
+	// Servicing indicates if the container is being started in a mode to apply a Windows Update servicing operation.
+	Servicing bool `json:"servicing,omitempty"`
 }
 
 // WindowsResources has container runtime resource constraints for containers running on Windows.
