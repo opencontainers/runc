@@ -86,7 +86,7 @@ The following parameters can be specified:
 * **`DNSSearchList`** *(array of strings, OPTIONAL)* - comma seperated list of DNS suffixes to use for name resolution.
 * **`networkSharedContainerName`** *(string, OPTIONAL)* - name (ID) of the container that we will share with the network stack.
 
-#### Example
+### Example
 
 ```json
     "windows": {
