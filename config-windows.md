@@ -3,6 +3,22 @@
 This document describes the schema for the [Windows-specific section](config.md#platform-specific-configuration) of the [container configuration](config.md).
 The Windows container specification uses APIs provided by the Windows Host Compute Service (HCS) to fulfill the spec.
 
+## <a name="configWindowsLayerFolders" />LayerFolders
+
+**`layerFolders`** (array of strings, REQUIRED) specifies a list of layer folders the container image relies on. The list is ordered from topmost layer to base layer.
+  `layerFolders` MUST contain at least one entry.
+
+### Example
+
+```json
+    "windows": {
+        "layerFolders": [
+            "C:\\Layers\\layer1",
+            "C:\\Layers\\layer2"
+        ]
+    }
+```
+
 ## <a name="configWindowsResources" />Resources
 
 You can configure a container's resource limits via the OPTIONAL `resources` field of the Windows configuration.
