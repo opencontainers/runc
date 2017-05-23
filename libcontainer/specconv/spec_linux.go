@@ -641,7 +641,7 @@ func parseMountOptions(options []string) (int, []int, string, int) {
 		"async":         {true, syscall.MS_SYNCHRONOUS},
 		"atime":         {true, syscall.MS_NOATIME},
 		"bind":          {false, syscall.MS_BIND},
-		"defaults":      {false, 0},
+		"defaults":      {true, syscall.MS_NODEV | syscall.MS_NOEXEC | syscall.MS_NOSUID | syscall.MS_RDONLY | syscall.MS_SYNCHRONOUS},
 		"dev":           {true, syscall.MS_NODEV},
 		"diratime":      {true, syscall.MS_NODIRATIME},
 		"dirsync":       {false, syscall.MS_DIRSYNC},
