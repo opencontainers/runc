@@ -31,7 +31,7 @@ For example, if a configuration is compliant with version 1.1 of this specificat
 * **`path`** (string, OPTIONAL) Specifies the path to the root filesystem for the container. The path is either an absolute path or a relative path to the bundle.
     Users SHOULD consider using a conventional name, such as `rootfs`.
 
-    On Windows, for Windows Server Containers, this field is REQUIRED. For Hyper-V Containers, this field MUST be omitted.
+    On Windows, for Windows Server Containers, this field is REQUIRED and MUST be specified as a [volume GUID path][naming-a-volume]. For Hyper-V Containers, this field MUST be omitted.
 
     On all other platforms, this field is REQUIRED.
 
@@ -40,12 +40,20 @@ For example, if a configuration is compliant with version 1.1 of this specificat
     If defined, a directory MUST exist at the path declared by the field.
 * **`readonly`** (bool, OPTIONAL) If true then the root filesystem MUST be read-only inside the container, defaults to false. On Windows, this field must be omitted or false.
 
-### Example
+### Example (POSIX)
 
 ```json
 "root": {
     "path": "rootfs",
     "readonly": true
+}
+```
+
+### Example (Windows)
+
+```json
+"root": {
+    "path": "\\\\?\\Volume{ec84d99e-3f02-11e7-ac6c-00155d7682cf}\\"
 }
 ```
 
@@ -841,8 +849,7 @@ Here is a full example `config.json` for reference.
 [go-environment]: https://golang.org/doc/install/source#environment
 [ieee-1003.1-2001-xbd-c8.1]: http://pubs.opengroup.org/onlinepubs/009695399/basedefs/xbd_chap08.html#tag_08_01
 [ieee-1003.1-2001-xsh-exec]: http://pubs.opengroup.org/onlinepubs/009695399/functions/exec.html
-[mountvol]: http://ss64.com/nt/mountvol.html
-[set-volume-mountpoint]: https://msdn.microsoft.com/en-us/library/windows/desktop/aa365561(v=vs.85).aspx
+[naming-a-volume]: https://aka.ms/nb3hqb
 
 [capabilities.7]: http://man7.org/linux/man-pages/man7/capabilities.7.html
 [mount.2]: http://man7.org/linux/man-pages/man2/mount.2.html
