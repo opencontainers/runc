@@ -11,11 +11,12 @@ A Standard Container bundle contains all the information needed to load and run 
 This includes the following artifacts:
 
 1. <a name="containerFormat01" />`config.json`: contains configuration data.
-This REQUIRED file MUST reside in the root of the bundle directory and MUST be named `config.json`.
-See [`config.json`](config.md) for more details.
+    This REQUIRED file MUST reside in the root of the bundle directory and MUST be named `config.json`.
+    See [`config.json`](config.md) for more details.
 
 2. <a name="containerFormat02" />A directory representing the root filesystem of the container.
-    On Windows, for Windows Server containers, this directory is REQUIRED. For Hyper-V containers, it MUST be omitted.
+    On Windows, for Windows Server containers, this directory is REQUIRED.
+    For Hyper-V containers, it MUST be omitted.
 
     On all other platforms, this field is REQUIRED.
 
