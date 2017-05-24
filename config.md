@@ -39,7 +39,7 @@ For all platform-specific configuration values, the scope defined below in the [
 
     If defined, a directory MUST exist at the path declared by the field.
 * **`readonly`** (bool, OPTIONAL) If true then the root filesystem MUST be read-only inside the container, defaults to false.
-    * On Windows, this field must be omitted or false.
+    * On Windows, this field MUST be omitted or false.
 
 ### Example (POSIX)
 
