@@ -340,7 +340,6 @@ For Windows based systems the user structure has the following fields:
 ## <a name="configPlatformSpecificConfiguration" />Platform-specific configuration
 
 [**`platform.os`**](#platform) is used to specify platform-specific configuration.
-    Runtime implementations MAY support any valid values for platform-specific fields as part of this configuration.
 
 * **`linux`** (object, OPTIONAL) [Linux-specific configuration](config-linux.md).
     This MAY be set if **`platform.os`** is `linux` and MUST NOT be set otherwise.
