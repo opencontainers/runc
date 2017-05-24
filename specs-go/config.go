@@ -23,9 +23,9 @@ type Spec struct {
 
 	// Linux is platform-specific configuration for Linux based containers.
 	Linux *Linux `json:"linux,omitempty" platform:"linux"`
-	// Solaris is platform-specific configuration for Solaris containers.
+	// Solaris is platform-specific configuration for Solaris based containers.
 	Solaris *Solaris `json:"solaris,omitempty" platform:"solaris"`
-	// Windows is platform-specific configuration for Windows based containers, including Hyper-V containers.
+	// Windows is platform-specific configuration for Windows based containers.
 	Windows *Windows `json:"windows,omitempty" platform:"windows"`
 }
 
@@ -144,9 +144,9 @@ type Hooks struct {
 
 // Linux contains platform-specific configuration for Linux based containers.
 type Linux struct {
-	// UIDMapping specifies user mappings for supporting user namespaces on Linux.
+	// UIDMapping specifies user mappings for supporting user namespaces.
 	UIDMappings []LinuxIDMapping `json:"uidMappings,omitempty"`
-	// GIDMapping specifies group mappings for supporting user namespaces on Linux.
+	// GIDMapping specifies group mappings for supporting user namespaces.
 	GIDMappings []LinuxIDMapping `json:"gidMappings,omitempty"`
 	// Sysctl are a set of key value pairs that are set for the container on start
 	Sysctl map[string]string `json:"sysctl,omitempty"`
@@ -178,7 +178,7 @@ type Linux struct {
 
 // LinuxNamespace is the configuration for a Linux namespace
 type LinuxNamespace struct {
-	// Type is the type of Linux namespace
+	// Type is the type of namespace
 	Type LinuxNamespaceType `json:"type"`
 	// Path is a path to an existing namespace persisted on disk that can be joined
 	// and is of the same type
