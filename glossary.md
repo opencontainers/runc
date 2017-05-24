@@ -15,7 +15,7 @@ For example, namespaces, resource limits, and mounts are all part of the contain
 
 ## <a name="glossaryContainerNamespace" />Container namespace
 
-On Linux, a leaf in the [namespace][namespaces.7] hierarchy in which the [configured process](config.md#process) executes.
+On Linux,the [namespaces][namespaces.7] in which the [configured process](config.md#process) executes.
 
 ## <a name="glossaryJson" />JSON
 
