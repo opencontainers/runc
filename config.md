@@ -65,21 +65,36 @@ For all platform-specific configuration values, the scope defined below in the [
     For Linux, the parameters are as documented in [mount(2)][mount.2] system call man page.
     For Solaris, the mount entry corresponds to the 'fs' resource in the [zonecfg(1M)][zonecfg.1m] man page.
 
-
 * **`destination`** (string, REQUIRED) Destination of mount point: path inside container.
     This value MUST be an absolute path.
     * Windows: one mount destination MUST NOT be nested within another mount (e.g., c:\\foo and c:\\foo\\bar).
     * Solaris: corresponds to "dir" of the fs resource in [zonecfg(1M)][zonecfg.1m].
-* **`type`** (string, OPTIONAL) The type of the filesystem to be mounted.
-    * Linux: filesystem types supported by the kernel as listed in */proc/filesystems* (e.g., "minix", "ext2", "ext3", "jfs", "xfs", "reiserfs", "msdos", "proc", "nfs", "iso9660").
-    * Windows: this field MUST NOT be supplied.
-    * Solaris: corresponds to "type" of the fs resource in [zonecfg(1M)][zonecfg.1m].
 * **`source`** (string, OPTIONAL) A device name, but can also be a directory name or a dummy.
     * Windows: a local directory on the filesystem of the container host. UNC paths and mapped drives are not supported.
     * Solaris: corresponds to "special" of the fs resource in [zonecfg(1M)][zonecfg.1m].
 * **`options`** (array of strings, OPTIONAL) Mount options of the filesystem to be used.
     * Linux: supported options are listed in the [mount(8)][mount.8] man page. Note both [filesystem-independent][mount.8-filesystem-independent] and [filesystem-specific][mount.8-filesystem-specific] options are listed.
     * Solaris: corresponds to "options" of the fs resource in [zonecfg(1M)][zonecfg.1m].
+
+### Example (Windows)
+
+```json
+"mounts": [
+    {
+        "destination": "C:\\folder-inside-container",
+        "source": "C:\\folder-on-host",
+        "options": []
+    }
+]
+```
+
+### <a name="configLinuxAndSolarisMounts" />Linux and Solaris Mounts
+
+For Linux and Solaris based systems the mounts structure has the following fields:
+
+* **`type`** (string, OPTIONAL) The type of the filesystem to be mounted.
+  * Linux: filesystem types supported by the kernel as listed in */proc/filesystems* (e.g., "minix", "ext2", "ext3", "jfs", "xfs", "reiserfs", "msdos", "proc", "nfs", "iso9660").
+  * Solaris: corresponds to "type" of the fs resource in [zonecfg(1M)][zonecfg.1m].
 
 ### Example (Linux)
 
@@ -96,18 +111,6 @@ For all platform-specific configuration values, the scope defined below in the [
         "type": "bind",
         "source": "/volumes/testing",
         "options": ["rbind","rw"]
-    }
-]
-```
-
-### Example (Windows)
-
-```json
-"mounts": [
-    {
-        "destination": "C:\\folder-inside-container",
-        "source": "C:\\folder-on-host",
-        "options": []
     }
 ]
 ```

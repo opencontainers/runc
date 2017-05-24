@@ -112,12 +112,11 @@ type Platform struct {
 
 // Mount specifies a mount for a container.
 type Mount struct {
-	// Destination is the path where the mount will be placed relative to the container's root.  The path and child directories MUST exist, a runtime MUST NOT create directories automatically to a mount point.
+	// Destination is the absolute path where the mount will be placed in the container.
 	Destination string `json:"destination"`
 	// Type specifies the mount kind.
-	Type string `json:"type,omitempty"`
-	// Source specifies the source path of the mount.  In the case of bind mounts on
-	// Linux based systems this would be the file on the host.
+	Type string `json:"type,omitempty" platform:"linux,solaris"`
+	// Source specifies the source path of the mount.
 	Source string `json:"source,omitempty"`
 	// Options are fstab style mount options.
 	Options []string `json:"options,omitempty"`
