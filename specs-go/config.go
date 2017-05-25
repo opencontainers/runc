@@ -433,11 +433,11 @@ type Windows struct {
 	// Resources contains information for handling resource constraints for the container.
 	Resources *WindowsResources `json:"resources,omitempty"`
 	// CredentialSpec contains a JSON object describing a group Managed Service Account (gMSA) specification.
-	CredentialSpec interface{} `json:"credentialspec,omitempty"`
+	CredentialSpec interface{} `json:"credentialSpec,omitempty"`
 	// Servicing indicates if the container is being started in a mode to apply a Windows Update servicing operation.
 	Servicing bool `json:"servicing,omitempty"`
 	// IgnoreFlushesDuringBoot indicates if the container is being started in a mode where disk writes are not flushed during its boot process.
-	IgnoreFlushesDuringBoot bool `json:"ignoreflushesduringboot,omitempty"`
+	IgnoreFlushesDuringBoot bool `json:"ignoreFlushesDuringBoot,omitempty"`
 	// HyperV contains information for running a container with Hyper-V isolation.
 	HyperV *WindowsHyperV `json:"hyperv,omitempty"`
 	// Network restriction configuration.
@@ -495,7 +495,7 @@ type WindowsNetwork struct {
 // WindowsHyperV contains information for configuring a container to run with Hyper-V isolation.
 type WindowsHyperV struct {
 	// UtilityVMPath is an optional path to the image used for the Utility VM.
-	UtilityVMPath string `json:"utilityvmpath,omitempty"`
+	UtilityVMPath string `json:"utilityVMPath,omitempty"`
 }
 
 // LinuxSeccomp represents syscall restrictions

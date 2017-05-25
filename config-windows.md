@@ -106,8 +106,8 @@ The following parameters can be specified:
 
 ## <a name="configWindowsCredentialSpec" />Credential Spec
 
-You can configure a container's group Managed Service Account (gMSA) via the OPTIONAL `credentialspec` field of the Windows configuration.
-The `credentialspec` is a JSON object whose properties are implementation-defined.
+You can configure a container's group Managed Service Account (gMSA) via the OPTIONAL `credentialSpec` field of the Windows configuration.
+The `credentialSpec` is a JSON object whose properties are implementation-defined.
 For more information about gMSAs, see [Active Directory Service Accounts for Windows Containers][gMSAOverview].
 For more information about tooling to generate a gMSA, see [Deployment Overview][gMSATooling].
 
@@ -130,13 +130,13 @@ You can indicate that a container should be started in a mode to apply pending s
 
 ## <a name="configWindowsIgnoreFlushesDuringBoot" />IgnoreFlushesDuringBoot
 
-You can indicate that a container should be started in an a mode where disk flushes are not performed during container boot via the OPTIONAL `ignoreflushesduringboot` field of the Windows configuration.
+You can indicate that a container should be started in an a mode where disk flushes are not performed during container boot via the OPTIONAL `ignoreFlushesDuringBoot` field of the Windows configuration.
 
 ### Example
 
 ```json
     "windows": {
-        "ignoreflushesduringboot": true
+        "ignoreFlushesDuringBoot": true
     }
 ```
 
@@ -146,14 +146,14 @@ You can indicate that a container should be started in an a mode where disk flus
 
 The following parameters can be specified:
 
-* **`utilityvmpath`** *(string, OPTIONAL)* - specifies the path to the image used for the utility VM. This would be specified if using a base image which does not contain a utility VM image. If not supplied, the runtime will search the container filesystem layers from the bottom-most layer upwards, until it locates "UtilityVM", and default to that path.
+* **`utilityVMPath`** *(string, OPTIONAL)* - specifies the path to the image used for the utility VM. This would be specified if using a base image which does not contain a utility VM image. If not supplied, the runtime will search the container filesystem layers from the bottom-most layer upwards, until it locates "UtilityVM", and default to that path.
 
 ### Example
 
 ```json
     "windows": {
         "hyperv": {
-            "utilityvmpath": "C:\\path\\to\\utilityvm"
+            "utilityVMPath": "C:\\path\\to\\utilityvm"
         }
     }
 ```
