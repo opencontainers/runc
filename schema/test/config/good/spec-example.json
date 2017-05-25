@@ -278,9 +278,9 @@
                 }
             ],
             "blockIO": {
-                "blkioWeight": 10,
-                "blkioLeafWeight": 10,
-                "blkioWeightDevice": [
+                "weight": 10,
+                "leafWeight": 10,
+                "weightDevice": [
                     {
                         "major": 8,
                         "minor": 0,
@@ -293,14 +293,14 @@
                         "weight": 500
                     }
                 ],
-                "blkioThrottleReadBpsDevice": [
+                "throttleReadBpsDevice": [
                     {
                         "major": 8,
                         "minor": 0,
                         "rate": 600
                     }
                 ],
-                "blkioThrottleWriteIOPSDevice": [
+                "throttleWriteIOPSDevice": [
                     {
                         "major": 8,
                         "minor": 16,

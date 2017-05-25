@@ -752,9 +752,9 @@ Here is a full example `config.json` for reference.
                 }
             ],
             "blockIO": {
-                "blkioWeight": 10,
-                "blkioLeafWeight": 10,
-                "blkioWeightDevice": [
+                "weight": 10,
+                "leafWeight": 10,
+                "weightDevice": [
                     {
                         "major": 8,
                         "minor": 0,
@@ -767,14 +767,14 @@ Here is a full example `config.json` for reference.
                         "weight": 500
                     }
                 ],
-                "blkioThrottleReadBpsDevice": [
+                "throttleReadBpsDevice": [
                     {
                         "major": 8,
                         "minor": 0,
                         "rate": 600
                     }
                 ],
-                "blkioThrottleWriteIOPSDevice": [
+                "throttleWriteIOPSDevice": [
                     {
                         "major": 8,
                         "minor": 16,

@@ -144,7 +144,7 @@
                 }
             }
         },
-        "blkioWeight": {
+        "weight": {
             "type": "integer"
         },
         "blockIODevice": {
@@ -172,10 +172,10 @@
                     "type": "object",
                     "properties": {
                         "weight": {
-                            "$ref": "#/definitions/blkioWeight"
+                            "$ref": "#/definitions/weight"
                         },
                         "leafWeight": {
-                            "$ref": "#/definitions/blkioWeight"
+                            "$ref": "#/definitions/weight"
                         }
                     }
                 }

@@ -328,16 +328,16 @@ For more information, see the kernel cgroups documentation about [blkio][cgroup-
 
 The following parameters can be specified to set up the controller:
 
-* **`blkioWeight`** *(uint16, OPTIONAL)* - specifies per-cgroup weight. This is default weight of the group on all devices until and unless overridden by per-device rules.
-* **`blkioLeafWeight`** *(uint16, OPTIONAL)* - equivalents of `blkioWeight` for the purpose of deciding how much weight tasks in the given cgroup has while competing with the cgroup's child cgroups.
-* **`blkioWeightDevice`** *(array of objects, OPTIONAL)* - specifies the list of devices which will be bandwidth rate limited. The following parameters can be specified per-device:
+* **`weight`** *(uint16, OPTIONAL)* - specifies per-cgroup weight. This is default weight of the group on all devices until and unless overridden by per-device rules.
+* **`leafWeight`** *(uint16, OPTIONAL)* - equivalents of `weight` for the purpose of deciding how much weight tasks in the given cgroup has while competing with the cgroup's child cgroups.
+* **`weightDevice`** *(array of objects, OPTIONAL)* - specifies the list of devices which will be bandwidth rate limited. The following parameters can be specified per-device:
     * **`major, minor`** *(int64, REQUIRED)* - major, minor numbers for device. More info in [mknod(1)][mknod.1] man page.
     * **`weight`** *(uint16, OPTIONAL)* - bandwidth rate for the device.
     * **`leafWeight`** *(uint16, OPTIONAL)* - bandwidth rate for the device while competing with the cgroup's child cgroups, CFQ scheduler only
 
     You MUST specify at least one of `weight` or `leafWeight` in a given entry, and MAY specify both.
 
-* **`blkioThrottleReadBpsDevice`**, **`blkioThrottleWriteBpsDevice`**, **`blkioThrottleReadIOPSDevice`**, **`blkioThrottleWriteIOPSDevice`** *(array of objects, OPTIONAL)* - specify the list of devices which will be IO rate limited.
+* **`throttleReadBpsDevice`**, **`throttleWriteBpsDevice`**, **`throttleReadIOPSDevice`**, **`throttleWriteIOPSDevice`** *(array of objects, OPTIONAL)* - specify the list of devices which will be IO rate limited.
     The following parameters can be specified per-device:
     * **`major, minor`** *(int64, REQUIRED)* - major, minor numbers for device. More info in [mknod(1)][mknod.1] man page.
     * **`rate`** *(uint64, REQUIRED)* - IO rate limit for the device
@@ -346,9 +346,9 @@ The following parameters can be specified to set up the controller:
 
 ```json
     "blockIO": {
-        "blkioWeight": 10,
-        "blkioLeafWeight": 10,
-        "blkioWeightDevice": [
+        "weight": 10,
+        "leafWeight": 10,
+        "weightDevice": [
             {
                 "major": 8,
                 "minor": 0,
@@ -361,14 +361,14 @@ The following parameters can be specified to set up the controller:
                 "weight": 500
             }
         ],
-        "blkioThrottleReadBpsDevice": [
+        "throttleReadBpsDevice": [
             {
                 "major": 8,
                 "minor": 0,
                 "rate": 600
             }
         ],
-        "blkioThrottleWriteIOPSDevice": [
+        "throttleWriteIOPSDevice": [
             {
                 "major": 8,
                 "minor": 16,

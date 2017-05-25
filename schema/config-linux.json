@@ -64,44 +64,44 @@
                         "id": "https://opencontainers.org/schema/bundle/linux/resources/blockIO",
                         "type": "object",
                         "properties": {
-                            "blkioWeight": {
-                                "id": "https://opencontainers.org/schema/bundle/linux/resources/blockIO/blkioWeight",
-                                "$ref": "defs-linux.json#/definitions/blkioWeight"
+                            "weight": {
+                                "id": "https://opencontainers.org/schema/bundle/linux/resources/blockIO/weight",
+                                "$ref": "defs-linux.json#/definitions/weight"
                             },
-                            "blkioLeafWeight": {
-                                "id": "https://opencontainers.org/schema/bundle/linux/resources/blockIO/blkioLeafWeight",
-                                "$ref": "defs-linux.json#/definitions/blkioWeight"
+                            "leafWeight": {
+                                "id": "https://opencontainers.org/schema/bundle/linux/resources/blockIO/leafWeight",
+                                "$ref": "defs-linux.json#/definitions/weight"
                             },
-                            "blkioThrottleReadBpsDevice": {
-                                "id": "https://opencontainers.org/schema/bundle/linux/resources/blockIO/blkioThrottleReadBpsDevice",
+                            "throttleReadBpsDevice": {
+                                "id": "https://opencontainers.org/schema/bundle/linux/resources/blockIO/throttleReadBpsDevice",
                                 "type": "array",
                                 "items": {
                                     "$ref": "defs-linux.json#/definitions/blockIODeviceThrottle"
                                 }
                             },
-                            "blkioThrottleWriteBpsDevice": {
-                                "id": "https://opencontainers.org/schema/bundle/linux/resources/blockIO/blkioThrottleWriteBpsDevice",
+                            "throttleWriteBpsDevice": {
+                                "id": "https://opencontainers.org/schema/bundle/linux/resources/blockIO/throttleWriteBpsDevice",
                                 "type": "array",
                                 "items": {
                                     "$ref": "defs-linux.json#/definitions/blockIODeviceThrottle"
                                 }
                             },
-                            "blkioThrottleReadIopsDevice": {
-                                "id": "https://opencontainers.org/schema/bundle/linux/resources/blockIO/blkioThrottleReadIopsDevice",
+                            "throttleReadIopsDevice": {
+                                "id": "https://opencontainers.org/schema/bundle/linux/resources/blockIO/throttleReadIopsDevice",
                                 "type": "array",
                                 "items": {
                                     "$ref": "defs-linux.json#/definitions/blockIODeviceThrottle"
                                 }
                             },
-                            "blkioThrottleWriteIopsDevice": {
-                                "id": "https://opencontainers.org/schema/bundle/linux/resources/blockIO/blkioThrottleWriteIopsDevice",
+                            "throttleWriteIopsDevice": {
+                                "id": "https://opencontainers.org/schema/bundle/linux/resources/blockIO/throttleWriteIopsDevice",
                                 "type": "array",
                                 "items": {
                                     "$ref": "defs-linux.json#/definitions/blockIODeviceThrottle"
                                 }
                             },
-                            "blkioWeightDevice": {
-                                "id": "https://opencontainers.org/schema/bundle/linux/resources/blockIO/blkioWeightDevice",
+                            "weightDevice": {
+                                "id": "https://opencontainers.org/schema/bundle/linux/resources/blockIO/weightDevice",
                                 "type": "array",
                                 "items": {
                                     "$ref": "defs-linux.json#/definitions/blockIODeviceWeight"
