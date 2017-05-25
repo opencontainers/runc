@@ -494,8 +494,6 @@ type WindowsNetwork struct {
 
 // WindowsHyperV contains information for configuring a container to run with Hyper-V isolation.
 type WindowsHyperV struct {
-	// SandboxPath is a required host-path to the sandbox to be used by the container.
-	SandboxPath string `json:"sandboxpath"`
 	// UtilityVMPath is an optional path to the image used for the Utility VM.
 	UtilityVMPath string `json:"utilityvmpath,omitempty"`
 }

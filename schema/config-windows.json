@@ -97,10 +97,6 @@
                     "utilityvmpath": {
                         "id": "https://opencontainers.org/schema/bundle/windows/hyperv/utilityvmpath",
                         "type": "string"
-                    },
-                    "sandboxpath": {
-                        "id": "https://opencontainers.org/schema/bundle/windows/hyperv/sandboxpath",
-                        "type": "string"
                     }
                 }
             }
