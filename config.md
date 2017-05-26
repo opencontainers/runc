@@ -859,4 +859,4 @@ Here is a full example `config.json` for reference.
 [setrlimit.2]: http://man7.org/linux/man-pages/man2/setrlimit.2.html
 [stdin.3]: http://man7.org/linux/man-pages/man3/stdin.3.html
 [uts-namespace.7]: http://man7.org/linux/man-pages/man7/namespaces.7.html
-[zonecfg.1m]: https://docs.oracle.com/cd/E36784_01/html/E36871/zonecfg-1m.html
+[zonecfg.1m]: http://docs.oracle.com/cd/E86824_01/html/E54764/zonecfg-1m.html
