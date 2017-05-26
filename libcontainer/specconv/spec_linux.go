@@ -639,6 +639,7 @@ func parseMountOptions(options []string) (int, []int, string, int) {
 		clear bool
 		flag  int
 	}{
+		"acl":           {false, unix.MS_POSIXACL},
 		"async":         {true, unix.MS_SYNCHRONOUS},
 		"atime":         {true, unix.MS_NOATIME},
 		"bind":          {false, unix.MS_BIND},
@@ -648,6 +649,7 @@ func parseMountOptions(options []string) (int, []int, string, int) {
 		"dirsync":       {false, unix.MS_DIRSYNC},
 		"exec":          {true, unix.MS_NOEXEC},
 		"mand":          {false, unix.MS_MANDLOCK},
+		"noacl":         {true, unix.MS_POSIXACL},
 		"noatime":       {false, unix.MS_NOATIME},
 		"nodev":         {false, unix.MS_NODEV},
 		"nodiratime":    {false, unix.MS_NODIRATIME},
