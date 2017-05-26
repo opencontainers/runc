@@ -44,17 +44,17 @@ color() {
 		shift
 	fi
 	if [ "$#" -gt 0 ]; then
-		local code=
+		local code
 		case "$1" in
-			# see https://en.wikipedia.org/wiki/ANSI_escape_code#Colors
-			black) code=30 ;;
-			red) code=31 ;;
-			green) code=32 ;;
-			yellow) code=33 ;;
-			blue) code=34 ;;
-			magenta) code=35 ;;
-			cyan) code=36 ;;
-			white) code=37 ;;
+		# see https://en.wikipedia.org/wiki/ANSI_escape_code#Colors
+		black) code=30 ;;
+		red) code=31 ;;
+		green) code=32 ;;
+		yellow) code=33 ;;
+		blue) code=34 ;;
+		magenta) code=35 ;;
+		cyan) code=36 ;;
+		white) code=37 ;;
 		esac
 		if [ "$code" ]; then
 			codes=("${codes[@]}" "$code")

@@ -3,13 +3,13 @@
 package xattr
 
 import (
-	"syscall"
-
 	"github.com/opencontainers/runc/libcontainer/system"
+
+	"golang.org/x/sys/unix"
 )
 
 func XattrEnabled(path string) bool {
-	if Setxattr(path, "user.test", "") == syscall.ENOTSUP {
+	if Setxattr(path, "user.test", "") == unix.ENOTSUP {
 		return false
 	}
 	return true

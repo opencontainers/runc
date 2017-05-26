@@ -11,12 +11,13 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-	"syscall"
 	"testing"
 
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
 	"github.com/opencontainers/runc/libcontainer/configs"
+
+	"golang.org/x/sys/unix"
 )
 
 func TestExecPS(t *testing.T) {
@@ -188,7 +189,7 @@ func testRlimit(t *testing.T, userns bool) {
 
 	// ensure limit is lower than what the config requests to test that in a user namespace
 	// the Setrlimit call happens early enough that we still have permissions to raise the limit.
-	ok(t, syscall.Setrlimit(syscall.RLIMIT_NOFILE, &syscall.Rlimit{
+	ok(t, unix.Setrlimit(unix.RLIMIT_NOFILE, &unix.Rlimit{
 		Max: 1024,
 		Cur: 1024,
 	}))
@@ -874,7 +875,7 @@ func TestMountCmds(t *testing.T) {
 		Source:      tmpDir,
 		Destination: "/tmp",
 		Device:      "bind",
-		Flags:       syscall.MS_BIND | syscall.MS_REC,
+		Flags:       unix.MS_BIND | unix.MS_REC,
 		PremountCmds: []configs.Command{
 			{Path: "touch", Args: []string{filepath.Join(tmpDir, "hello")}},
 			{Path: "touch", Args: []string{filepath.Join(tmpDir, "world")}},
@@ -969,7 +970,7 @@ func TestMountCgroupRO(t *testing.T) {
 	config.Mounts = append(config.Mounts, &configs.Mount{
 		Destination: "/sys/fs/cgroup",
 		Device:      "cgroup",
-		Flags:       defaultMountFlags | syscall.MS_RDONLY,
+		Flags:       defaultMountFlags | unix.MS_RDONLY,
 	})
 
 	buffers, exitCode, err := runContainer(config, "", "mount")
@@ -1244,7 +1245,7 @@ func TestSTDIOPermissions(t *testing.T) {
 }
 
 func unmountOp(path string) error {
-	if err := syscall.Unmount(path, syscall.MNT_DETACH); err != nil {
+	if err := unix.Unmount(path, unix.MNT_DETACH); err != nil {
 		return err
 	}
 	return nil
@@ -1269,7 +1270,7 @@ func TestRootfsPropagationSlaveMount(t *testing.T) {
 	defer remove(rootfs)
 	config := newTemplateConfig(rootfs)
 
-	config.RootPropagation = syscall.MS_SLAVE | syscall.MS_REC
+	config.RootPropagation = unix.MS_SLAVE | unix.MS_REC
 
 	// Bind mount a volume
 	dir1host, err := ioutil.TempDir("", "mnt1host")
@@ -1278,9 +1279,9 @@ func TestRootfsPropagationSlaveMount(t *testing.T) {
 
 	// Make this dir a "shared" mount point. This will make sure a
 	// slave relationship can be established in container.
-	err = syscall.Mount(dir1host, dir1host, "bind", syscall.MS_BIND|syscall.MS_REC, "")
+	err = unix.Mount(dir1host, dir1host, "bind", unix.MS_BIND|unix.MS_REC, "")
 	ok(t, err)
-	err = syscall.Mount("", dir1host, "", syscall.MS_SHARED|syscall.MS_REC, "")
+	err = unix.Mount("", dir1host, "", unix.MS_SHARED|unix.MS_REC, "")
 	ok(t, err)
 	defer unmountOp(dir1host)
 
@@ -1288,7 +1289,7 @@ func TestRootfsPropagationSlaveMount(t *testing.T) {
 		Source:      dir1host,
 		Destination: dir1cont,
 		Device:      "bind",
-		Flags:       syscall.MS_BIND | syscall.MS_REC})
+		Flags:       unix.MS_BIND | unix.MS_REC})
 
 	// TODO: systemd specific processing
 	f := factory
@@ -1318,7 +1319,7 @@ func TestRootfsPropagationSlaveMount(t *testing.T) {
 	ok(t, err)
 	defer os.RemoveAll(dir2host)
 
-	err = syscall.Mount(dir2host, dir2host, "bind", syscall.MS_BIND, "")
+	err = unix.Mount(dir2host, dir2host, "bind", unix.MS_BIND, "")
 	defer unmountOp(dir2host)
 	ok(t, err)
 
@@ -1386,7 +1387,7 @@ func TestRootfsPropagationSharedMount(t *testing.T) {
 	ok(t, err)
 	defer remove(rootfs)
 	config := newTemplateConfig(rootfs)
-	config.RootPropagation = syscall.MS_PRIVATE
+	config.RootPropagation = unix.MS_PRIVATE
 
 	// Bind mount a volume
 	dir1host, err := ioutil.TempDir("", "mnt1host")
@@ -1395,9 +1396,9 @@ func TestRootfsPropagationSharedMount(t *testing.T) {
 
 	// Make this dir a "shared" mount point. This will make sure a
 	// shared relationship can be established in container.
-	err = syscall.Mount(dir1host, dir1host, "bind", syscall.MS_BIND|syscall.MS_REC, "")
+	err = unix.Mount(dir1host, dir1host, "bind", unix.MS_BIND|unix.MS_REC, "")
 	ok(t, err)
-	err = syscall.Mount("", dir1host, "", syscall.MS_SHARED|syscall.MS_REC, "")
+	err = unix.Mount("", dir1host, "", unix.MS_SHARED|unix.MS_REC, "")
 	ok(t, err)
 	defer unmountOp(dir1host)
 
@@ -1405,7 +1406,7 @@ func TestRootfsPropagationSharedMount(t *testing.T) {
 		Source:      dir1host,
 		Destination: dir1cont,
 		Device:      "bind",
-		Flags:       syscall.MS_BIND | syscall.MS_REC})
+		Flags:       unix.MS_BIND | unix.MS_REC})
 
 	// TODO: systemd specific processing
 	f := factory

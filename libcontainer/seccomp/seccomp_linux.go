@@ -7,18 +7,19 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"syscall"
 
 	"github.com/opencontainers/runc/libcontainer/configs"
 	libseccomp "github.com/seccomp/libseccomp-golang"
+
+	"golang.org/x/sys/unix"
 )
 
 var (
 	actAllow = libseccomp.ActAllow
 	actTrap  = libseccomp.ActTrap
 	actKill  = libseccomp.ActKill
-	actTrace = libseccomp.ActTrace.SetReturnCode(int16(syscall.EPERM))
-	actErrno = libseccomp.ActErrno.SetReturnCode(int16(syscall.EPERM))
+	actTrace = libseccomp.ActTrace.SetReturnCode(int16(unix.EPERM))
+	actErrno = libseccomp.ActErrno.SetReturnCode(int16(unix.EPERM))
 
 	// SeccompModeFilter refers to the syscall argument SECCOMP_MODE_FILTER.
 	SeccompModeFilter = uintptr(2)
@@ -84,9 +85,9 @@ func IsEnabled() bool {
 	s, err := parseStatusFile("/proc/self/status")
 	if err != nil {
 		// Check if Seccomp is supported, via CONFIG_SECCOMP.
-		if _, _, err := syscall.RawSyscall(syscall.SYS_PRCTL, syscall.PR_GET_SECCOMP, 0, 0); err != syscall.EINVAL {
+		if _, _, err := unix.RawSyscall(unix.SYS_PRCTL, unix.PR_GET_SECCOMP, 0, 0); err != unix.EINVAL {
 			// Make sure the kernel has CONFIG_SECCOMP_FILTER.
-			if _, _, err := syscall.RawSyscall(syscall.SYS_PRCTL, syscall.PR_SET_SECCOMP, SeccompModeFilter, 0); err != syscall.EINVAL {
+			if _, _, err := unix.RawSyscall(unix.SYS_PRCTL, unix.PR_SET_SECCOMP, SeccompModeFilter, 0); err != unix.EINVAL {
 				return true
 			}
 		}

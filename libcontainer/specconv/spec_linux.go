@@ -9,13 +9,14 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/seccomp"
 	libcontainerUtils "github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/opencontainers/runtime-spec/specs-go"
+
+	"golang.org/x/sys/unix"
 )
 
 const wildcard = -1
@@ -30,13 +31,13 @@ var namespaceMapping = map[specs.LinuxNamespaceType]configs.NamespaceType{
 }
 
 var mountPropagationMapping = map[string]int{
-	"rprivate": syscall.MS_PRIVATE | syscall.MS_REC,
-	"private":  syscall.MS_PRIVATE,
-	"rslave":   syscall.MS_SLAVE | syscall.MS_REC,
-	"slave":    syscall.MS_SLAVE,
-	"rshared":  syscall.MS_SHARED | syscall.MS_REC,
-	"shared":   syscall.MS_SHARED,
-	"":         syscall.MS_PRIVATE | syscall.MS_REC,
+	"rprivate": unix.MS_PRIVATE | unix.MS_REC,
+	"private":  unix.MS_PRIVATE,
+	"rslave":   unix.MS_SLAVE | unix.MS_REC,
+	"slave":    unix.MS_SLAVE,
+	"rshared":  unix.MS_SHARED | unix.MS_REC,
+	"shared":   unix.MS_SHARED,
+	"":         unix.MS_PRIVATE | unix.MS_REC,
 }
 
 var allowedDevices = []*configs.Device{
@@ -638,41 +639,41 @@ func parseMountOptions(options []string) (int, []int, string, int) {
 		clear bool
 		flag  int
 	}{
-		"async":         {true, syscall.MS_SYNCHRONOUS},
-		"atime":         {true, syscall.MS_NOATIME},
-		"bind":          {false, syscall.MS_BIND},
+		"async":         {true, unix.MS_SYNCHRONOUS},
+		"atime":         {true, unix.MS_NOATIME},
+		"bind":          {false, unix.MS_BIND},
 		"defaults":      {false, 0},
-		"dev":           {true, syscall.MS_NODEV},
-		"diratime":      {true, syscall.MS_NODIRATIME},
-		"dirsync":       {false, syscall.MS_DIRSYNC},
-		"exec":          {true, syscall.MS_NOEXEC},
-		"mand":          {false, syscall.MS_MANDLOCK},
-		"noatime":       {false, syscall.MS_NOATIME},
-		"nodev":         {false, syscall.MS_NODEV},
-		"nodiratime":    {false, syscall.MS_NODIRATIME},
-		"noexec":        {false, syscall.MS_NOEXEC},
-		"nomand":        {true, syscall.MS_MANDLOCK},
-		"norelatime":    {true, syscall.MS_RELATIME},
-		"nostrictatime": {true, syscall.MS_STRICTATIME},
-		"nosuid":        {false, syscall.MS_NOSUID},
-		"rbind":         {false, syscall.MS_BIND | syscall.MS_REC},
-		"relatime":      {false, syscall.MS_RELATIME},
-		"remount":       {false, syscall.MS_REMOUNT},
-		"ro":            {false, syscall.MS_RDONLY},
-		"rw":            {true, syscall.MS_RDONLY},
-		"strictatime":   {false, syscall.MS_STRICTATIME},
-		"suid":          {true, syscall.MS_NOSUID},
-		"sync":          {false, syscall.MS_SYNCHRONOUS},
+		"dev":           {true, unix.MS_NODEV},
+		"diratime":      {true, unix.MS_NODIRATIME},
+		"dirsync":       {false, unix.MS_DIRSYNC},
+		"exec":          {true, unix.MS_NOEXEC},
+		"mand":          {false, unix.MS_MANDLOCK},
+		"noatime":       {false, unix.MS_NOATIME},
+		"nodev":         {false, unix.MS_NODEV},
+		"nodiratime":    {false, unix.MS_NODIRATIME},
+		"noexec":        {false, unix.MS_NOEXEC},
+		"nomand":        {true, unix.MS_MANDLOCK},
+		"norelatime":    {true, unix.MS_RELATIME},
+		"nostrictatime": {true, unix.MS_STRICTATIME},
+		"nosuid":        {false, unix.MS_NOSUID},
+		"rbind":         {false, unix.MS_BIND | unix.MS_REC},
+		"relatime":      {false, unix.MS_RELATIME},
+		"remount":       {false, unix.MS_REMOUNT},
+		"ro":            {false, unix.MS_RDONLY},
+		"rw":            {true, unix.MS_RDONLY},
+		"strictatime":   {false, unix.MS_STRICTATIME},
+		"suid":          {true, unix.MS_NOSUID},
+		"sync":          {false, unix.MS_SYNCHRONOUS},
 	}
 	propagationFlags := map[string]int{
-		"private":     syscall.MS_PRIVATE,
-		"shared":      syscall.MS_SHARED,
-		"slave":       syscall.MS_SLAVE,
-		"unbindable":  syscall.MS_UNBINDABLE,
-		"rprivate":    syscall.MS_PRIVATE | syscall.MS_REC,
-		"rshared":     syscall.MS_SHARED | syscall.MS_REC,
-		"rslave":      syscall.MS_SLAVE | syscall.MS_REC,
-		"runbindable": syscall.MS_UNBINDABLE | syscall.MS_REC,
+		"private":     unix.MS_PRIVATE,
+		"shared":      unix.MS_SHARED,
+		"slave":       unix.MS_SLAVE,
+		"unbindable":  unix.MS_UNBINDABLE,
+		"rprivate":    unix.MS_PRIVATE | unix.MS_REC,
+		"rshared":     unix.MS_SHARED | unix.MS_REC,
+		"rslave":      unix.MS_SLAVE | unix.MS_REC,
+		"runbindable": unix.MS_UNBINDABLE | unix.MS_REC,
 	}
 	extensionFlags := map[string]struct {
 		clear bool

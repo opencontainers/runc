@@ -10,10 +10,12 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
+	"syscall" // only for Errno
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
+
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -93,7 +95,7 @@ func setKernelMemory(path string, kernelMemoryLimit uint64) error {
 		// once tasks have been attached to the cgroup
 		if pathErr, ok := err.(*os.PathError); ok {
 			if errNo, ok := pathErr.Err.(syscall.Errno); ok {
-				if errNo == syscall.EBUSY {
+				if errNo == unix.EBUSY {
 					return fmt.Errorf("failed to set %s, because either tasks have already joined this cgroup or it has children", cgroupKernelMemoryLimit)
 				}
 			}

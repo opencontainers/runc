@@ -6,9 +6,11 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"syscall"
+	"syscall" //only for Stat_t
 
 	"github.com/opencontainers/runc/libcontainer/configs"
+
+	"golang.org/x/sys/unix"
 )
 
 var (
@@ -36,10 +38,10 @@ func DeviceFromPath(path, permissions string) (*configs.Device, error) {
 	case mode&os.ModeDevice == 0:
 		return nil, ErrNotADevice
 	case mode&os.ModeCharDevice != 0:
-		fileModePermissionBits |= syscall.S_IFCHR
+		fileModePermissionBits |= unix.S_IFCHR
 		devType = 'c'
 	default:
-		fileModePermissionBits |= syscall.S_IFBLK
+		fileModePermissionBits |= unix.S_IFBLK
 		devType = 'b'
 	}
 	stat_t, ok := fileInfo.Sys().(*syscall.Stat_t)

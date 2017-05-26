@@ -8,11 +8,12 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"testing"
 
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/configs"
+
+	"golang.org/x/sys/unix"
 )
 
 func showFile(t *testing.T, fname string) error {
@@ -75,7 +76,7 @@ func testCheckpoint(t *testing.T, userns bool) {
 	config.Mounts = append(config.Mounts, &configs.Mount{
 		Destination: "/sys/fs/cgroup",
 		Device:      "cgroup",
-		Flags:       defaultMountFlags | syscall.MS_RDONLY,
+		Flags:       defaultMountFlags | unix.MS_RDONLY,
 	})
 
 	if userns {

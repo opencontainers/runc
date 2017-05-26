@@ -37,10 +37,10 @@ __runc_pos_first_nonflag() {
 			((counter++))
 		else
 			case "${words[$counter]}" in
-				-*) ;;
-				*)
-					break
-					;;
+			-*) ;;
+			*)
+				break
+				;;
 			esac
 		fi
 		((counter++))
@@ -81,13 +81,13 @@ __runc_subcommands() {
 	local counter=$(($command_pos + 1))
 	while [ $counter -lt $cword ]; do
 		case "${words[$counter]}" in
-			$(__runc_to_extglob "$subcommands"))
-				subcommand_pos=$counter
-				local subcommand=${words[$counter]}
-				local completions_func=_runc_${command}_${subcommand}
-				declare -F $completions_func >/dev/null && $completions_func
-				return 0
-				;;
+		$(__runc_to_extglob "$subcommands"))
+			subcommand_pos=$counter
+			local subcommand=${words[$counter]}
+			local completions_func=_runc_${command}_${subcommand}
+			declare -F $completions_func >/dev/null && $completions_func
+			return 0
+			;;
 		esac
 		((counter++))
 	done
@@ -173,42 +173,42 @@ _runc_exec() {
 	local all_options="$options_with_args $boolean_options"
 
 	case "$prev" in
-		--cap | -c)
-			__runc_complete_capabilities
-			return
-			;;
+	--cap | -c)
+		__runc_complete_capabilities
+		return
+		;;
 
-		--console | --cwd | --process | --apparmor)
-			case "$cur" in
-				*:*) ;; # TODO somehow do _filedir for stuff inside the image, if it's already specified (which is also somewhat difficult to determine)
-				'')
-					COMPREPLY=($(compgen -W '/' -- "$cur"))
-					__runc_nospace
-					;;
-				/*)
-					_filedir
-					__runc_nospace
-					;;
-			esac
-			return
-			;;
-		--env | -e)
-			COMPREPLY=($(compgen -e -- "$cur"))
+	--console | --cwd | --process | --apparmor)
+		case "$cur" in
+		*:*) ;; # TODO somehow do _filedir for stuff inside the image, if it's already specified (which is also somewhat difficult to determine)
+		'')
+			COMPREPLY=($(compgen -W '/' -- "$cur"))
 			__runc_nospace
-			return
 			;;
-		$(__runc_to_extglob "$options_with_args"))
-			return
+		/*)
+			_filedir
+			__runc_nospace
 			;;
+		esac
+		return
+		;;
+	--env | -e)
+		COMPREPLY=($(compgen -e -- "$cur"))
+		__runc_nospace
+		return
+		;;
+	$(__runc_to_extglob "$options_with_args"))
+		return
+		;;
 	esac
 
 	case "$cur" in
-		-*)
-			COMPREPLY=($(compgen -W "$all_options" -- "$cur"))
-			;;
-		*)
-			__runc_list_all
-			;;
+	-*)
+		COMPREPLY=($(compgen -W "$all_options" -- "$cur"))
+		;;
+	*)
+		__runc_list_all
+		;;
 	esac
 }
 
@@ -228,41 +228,41 @@ _runc_runc() {
 	"
 
 	case "$prev" in
-		--log | --root | --criu)
-			case "$cur" in
-				*:*) ;; # TODO somehow do _filedir for stuff inside the image, if it's already specified (which is also somewhat difficult to determine)
-				'')
-					COMPREPLY=($(compgen -W '/' -- "$cur"))
-					__runc_nospace
-					;;
-				*)
-					_filedir
-					__runc_nospace
-					;;
-			esac
-			return
+	--log | --root | --criu)
+		case "$cur" in
+		*:*) ;; # TODO somehow do _filedir for stuff inside the image, if it's already specified (which is also somewhat difficult to determine)
+		'')
+			COMPREPLY=($(compgen -W '/' -- "$cur"))
+			__runc_nospace
 			;;
+		*)
+			_filedir
+			__runc_nospace
+			;;
+		esac
+		return
+		;;
 
-		--log-format)
-			COMPREPLY=($(compgen -W 'text json' -- "$cur"))
-			return
-			;;
+	--log-format)
+		COMPREPLY=($(compgen -W 'text json' -- "$cur"))
+		return
+		;;
 
-		$(__runc_to_extglob "$options_with_args"))
-			return
-			;;
+	$(__runc_to_extglob "$options_with_args"))
+		return
+		;;
 	esac
 
 	case "$cur" in
-		-*)
-			COMPREPLY=($(compgen -W "$boolean_options $options_with_args" -- "$cur"))
-			;;
-		*)
-			local counter=$(__runc_pos_first_nonflag $(__runc_to_extglob "$options_with_args"))
-			if [ $cword -eq $counter ]; then
-				COMPREPLY=($(compgen -W "${commands[*]} help" -- "$cur"))
-			fi
-			;;
+	-*)
+		COMPREPLY=($(compgen -W "$boolean_options $options_with_args" -- "$cur"))
+		;;
+	*)
+		local counter=$(__runc_pos_first_nonflag $(__runc_to_extglob "$options_with_args"))
+		if [ $cword -eq $counter ]; then
+			COMPREPLY=($(compgen -W "${commands[*]} help" -- "$cur"))
+		fi
+		;;
 	esac
 }
 
@@ -273,12 +273,12 @@ _runc_pause() {
 	"
 
 	case "$cur" in
-		-*)
-			COMPREPLY=($(compgen -W "$boolean_options $options_with_args" -- "$cur"))
-			;;
-		*)
-			__runc_list_all
-			;;
+	-*)
+		COMPREPLY=($(compgen -W "$boolean_options $options_with_args" -- "$cur"))
+		;;
+	*)
+		__runc_list_all
+		;;
 	esac
 }
 
@@ -289,12 +289,12 @@ _runc_ps() {
 	"
 
 	case "$cur" in
-		-*)
-			COMPREPLY=($(compgen -W "$boolean_options $options_with_args" -- "$cur"))
-			;;
-		*)
-			__runc_list_all
-			;;
+	-*)
+		COMPREPLY=($(compgen -W "$boolean_options $options_with_args" -- "$cur"))
+		;;
+	*)
+		__runc_list_all
+		;;
 	esac
 }
 
@@ -305,12 +305,12 @@ _runc_delete() {
 	"
 
 	case "$cur" in
-		-*)
-			COMPREPLY=($(compgen -W "$boolean_options $options_with_args" -- "$cur"))
-			;;
-		*)
-			__runc_list_all
-			;;
+	-*)
+		COMPREPLY=($(compgen -W "$boolean_options $options_with_args" -- "$cur"))
+		;;
+	*)
+		__runc_list_all
+		;;
 	esac
 }
 
@@ -323,22 +323,22 @@ _runc_kill() {
 	"
 
 	case "$prev" in
-		"kill")
-			__runc_list_all
-			return
-			;;
-		*)
-			__runc_list_signals
-			return
-			;;
+	"kill")
+		__runc_list_all
+		return
+		;;
+	*)
+		__runc_list_signals
+		return
+		;;
 	esac
 	case "$cur" in
-		-*)
-			COMPREPLY=($(compgen -W "$boolean_options $options_with_args" -- "$cur"))
-			;;
-		*)
-			__runc_list_all
-			;;
+	-*)
+		COMPREPLY=($(compgen -W "$boolean_options $options_with_args" -- "$cur"))
+		;;
+	*)
+		__runc_list_all
+		;;
 	esac
 }
 
@@ -353,18 +353,18 @@ _runc_events() {
 	"
 
 	case "$prev" in
-		$(__runc_to_extglob "$options_with_args"))
-			return
-			;;
+	$(__runc_to_extglob "$options_with_args"))
+		return
+		;;
 	esac
 
 	case "$cur" in
-		-*)
-			COMPREPLY=($(compgen -W "$boolean_options $options_with_args" -- "$cur"))
-			;;
-		*)
-			__runc_list_all
-			;;
+	-*)
+		COMPREPLY=($(compgen -W "$boolean_options $options_with_args" -- "$cur"))
+		;;
+	*)
+		__runc_list_all
+		;;
 	esac
 }
 
@@ -381,23 +381,23 @@ _runc_list() {
 	"
 
 	case "$prev" in
-		--format | -f)
-			COMPREPLY=($(compgen -W 'text json' -- "$cur"))
-			return
-			;;
+	--format | -f)
+		COMPREPLY=($(compgen -W 'text json' -- "$cur"))
+		return
+		;;
 
-		$(__runc_to_extglob "$options_with_args"))
-			return
-			;;
+	$(__runc_to_extglob "$options_with_args"))
+		return
+		;;
 	esac
 
 	case "$cur" in
-		-*)
-			COMPREPLY=($(compgen -W "$boolean_options $options_with_args" -- "$cur"))
-			;;
-		*)
-			local counter=$(__runc_pos_first_nonflag $(__runc_to_extglob "$options_with_args"))
-			;;
+	-*)
+		COMPREPLY=($(compgen -W "$boolean_options $options_with_args" -- "$cur"))
+		;;
+	*)
+		local counter=$(__runc_pos_first_nonflag $(__runc_to_extglob "$options_with_args"))
+		;;
 	esac
 }
 
@@ -412,32 +412,32 @@ _runc_spec() {
 	"
 
 	case "$prev" in
-		--bundle | -b)
-			case "$cur" in
-				'')
-					COMPREPLY=($(compgen -W '/' -- "$cur"))
-					__runc_nospace
-					;;
-				/*)
-					_filedir
-					__runc_nospace
-					;;
-			esac
-			return
+	--bundle | -b)
+		case "$cur" in
+		'')
+			COMPREPLY=($(compgen -W '/' -- "$cur"))
+			__runc_nospace
 			;;
+		/*)
+			_filedir
+			__runc_nospace
+			;;
+		esac
+		return
+		;;
 
-		$(__runc_to_extglob "$options_with_args"))
-			return
-			;;
+	$(__runc_to_extglob "$options_with_args"))
+		return
+		;;
 	esac
 
 	case "$cur" in
-		-*)
-			COMPREPLY=($(compgen -W "$boolean_options $options_with_args" -- "$cur"))
-			;;
-		*)
-			local counter=$(__runc_pos_first_nonflag $(__runc_to_extglob "$options_with_args"))
-			;;
+	-*)
+		COMPREPLY=($(compgen -W "$boolean_options $options_with_args" -- "$cur"))
+		;;
+	*)
+		local counter=$(__runc_pos_first_nonflag $(__runc_to_extglob "$options_with_args"))
+		;;
 	esac
 }
 
@@ -459,32 +459,32 @@ _runc_run() {
 	"
 
 	case "$prev" in
-		--bundle | -b | --console | --pid-file)
-			case "$cur" in
-				'')
-					COMPREPLY=($(compgen -W '/' -- "$cur"))
-					__runc_nospace
-					;;
-				/*)
-					_filedir
-					__runc_nospace
-					;;
-			esac
-			return
+	--bundle | -b | --console | --pid-file)
+		case "$cur" in
+		'')
+			COMPREPLY=($(compgen -W '/' -- "$cur"))
+			__runc_nospace
 			;;
+		/*)
+			_filedir
+			__runc_nospace
+			;;
+		esac
+		return
+		;;
 
-		$(__runc_to_extglob "$options_with_args"))
-			return
-			;;
+	$(__runc_to_extglob "$options_with_args"))
+		return
+		;;
 	esac
 
 	case "$cur" in
-		-*)
-			COMPREPLY=($(compgen -W "$boolean_options $options_with_args" -- "$cur"))
-			;;
-		*)
-			__runc_list_all
-			;;
+	-*)
+		COMPREPLY=($(compgen -W "$boolean_options $options_with_args" -- "$cur"))
+		;;
+	*)
+		__runc_list_all
+		;;
 	esac
 }
 
@@ -507,40 +507,40 @@ _runc_checkpoint() {
 	"
 
 	case "$prev" in
-		--page-server) ;;
+	--page-server) ;;
 
-		--manage-cgroups-mode)
-			COMPREPLY=($(compgen -W "soft full strict" -- "$cur"))
-			return
-			;;
+	--manage-cgroups-mode)
+		COMPREPLY=($(compgen -W "soft full strict" -- "$cur"))
+		return
+		;;
 
-		--image-path | --work-path)
-			case "$cur" in
-				*:*) ;; # TODO somehow do _filedir for stuff inside the image, if it's already specified (which is also somewhat difficult to determine)
-				'')
-					COMPREPLY=($(compgen -W '/' -- "$cur"))
-					__runc_nospace
-					;;
-				*)
-					_filedir
-					__runc_nospace
-					;;
-			esac
-			return
+	--image-path | --work-path)
+		case "$cur" in
+		*:*) ;; # TODO somehow do _filedir for stuff inside the image, if it's already specified (which is also somewhat difficult to determine)
+		'')
+			COMPREPLY=($(compgen -W '/' -- "$cur"))
+			__runc_nospace
 			;;
+		*)
+			_filedir
+			__runc_nospace
+			;;
+		esac
+		return
+		;;
 
-		$(__runc_to_extglob "$options_with_args"))
-			return
-			;;
+	$(__runc_to_extglob "$options_with_args"))
+		return
+		;;
 	esac
 
 	case "$cur" in
-		-*)
-			COMPREPLY=($(compgen -W "$boolean_options $options_with_args" -- "$cur"))
-			;;
-		*)
-			__runc_list_all
-			;;
+	-*)
+		COMPREPLY=($(compgen -W "$boolean_options $options_with_args" -- "$cur"))
+		;;
+	*)
+		__runc_list_all
+		;;
 	esac
 }
 _runc_create() {
@@ -557,32 +557,32 @@ _runc_create() {
 	   --pid-file
 	"
 	case "$prev" in
-		--bundle | -b | --console | --pid-file)
-			case "$cur" in
-				'')
-					COMPREPLY=($(compgen -W '/' -- "$cur"))
-					__runc_nospace
-					;;
-				/*)
-					_filedir
-					__runc_nospace
-					;;
-			esac
-			return
+	--bundle | -b | --console | --pid-file)
+		case "$cur" in
+		'')
+			COMPREPLY=($(compgen -W '/' -- "$cur"))
+			__runc_nospace
 			;;
+		/*)
+			_filedir
+			__runc_nospace
+			;;
+		esac
+		return
+		;;
 
-		$(__runc_to_extglob "$options_with_args"))
-			return
-			;;
+	$(__runc_to_extglob "$options_with_args"))
+		return
+		;;
 	esac
 
 	case "$cur" in
-		-*)
-			COMPREPLY=($(compgen -W "$boolean_options $options_with_args" -- "$cur"))
-			;;
-		*)
-			__runc_list_all
-			;;
+	-*)
+		COMPREPLY=($(compgen -W "$boolean_options $options_with_args" -- "$cur"))
+		;;
+	*)
+		__runc_list_all
+		;;
 	esac
 
 }
@@ -619,38 +619,38 @@ _runc_restore() {
 	local all_options="$options_with_args $boolean_options"
 
 	case "$prev" in
-		--manage-cgroups-mode)
-			COMPREPLY=($(compgen -W "soft full strict" -- "$cur"))
-			return
-			;;
+	--manage-cgroups-mode)
+		COMPREPLY=($(compgen -W "soft full strict" -- "$cur"))
+		return
+		;;
 
-		--pid-file | --image-path | --work-path | --bundle | -b)
-			case "$cur" in
-				*:*) ;; # TODO somehow do _filedir for stuff inside the image, if it's already specified (which is also somewhat difficult to determine)
-				'')
-					COMPREPLY=($(compgen -W '/' -- "$cur"))
-					__runc_nospace
-					;;
-				/*)
-					_filedir
-					__runc_nospace
-					;;
-			esac
-			return
+	--pid-file | --image-path | --work-path | --bundle | -b)
+		case "$cur" in
+		*:*) ;; # TODO somehow do _filedir for stuff inside the image, if it's already specified (which is also somewhat difficult to determine)
+		'')
+			COMPREPLY=($(compgen -W '/' -- "$cur"))
+			__runc_nospace
 			;;
+		/*)
+			_filedir
+			__runc_nospace
+			;;
+		esac
+		return
+		;;
 
-		$(__runc_to_extglob "$options_with_args"))
-			return
-			;;
+	$(__runc_to_extglob "$options_with_args"))
+		return
+		;;
 	esac
 
 	case "$cur" in
-		-*)
-			COMPREPLY=($(compgen -W "$all_options" -- "$cur"))
-			;;
-		*)
-			__runc_list_all
-			;;
+	-*)
+		COMPREPLY=($(compgen -W "$all_options" -- "$cur"))
+		;;
+	*)
+		__runc_list_all
+		;;
 	esac
 }
 
@@ -661,12 +661,12 @@ _runc_resume() {
 	"
 
 	case "$cur" in
-		-*)
-			COMPREPLY=($(compgen -W "$boolean_options $options_with_args" -- "$cur"))
-			;;
-		*)
-			__runc_list_all
-			;;
+	-*)
+		COMPREPLY=($(compgen -W "$boolean_options $options_with_args" -- "$cur"))
+		;;
+	*)
+		__runc_list_all
+		;;
 	esac
 }
 
@@ -677,12 +677,12 @@ _runc_state() {
 	"
 
 	case "$cur" in
-		-*)
-			COMPREPLY=($(compgen -W "$boolean_options $options_with_args" -- "$cur"))
-			;;
-		*)
-			__runc_list_all
-			;;
+	-*)
+		COMPREPLY=($(compgen -W "$boolean_options $options_with_args" -- "$cur"))
+		;;
+	*)
+		__runc_list_all
+		;;
 	esac
 }
 _runc_start() {
@@ -692,12 +692,12 @@ _runc_start() {
 	"
 
 	case "$cur" in
-		-*)
-			COMPREPLY=($(compgen -W "$boolean_options $options_with_args" -- "$cur"))
-			;;
-		*)
-			__runc_list_all
-			;;
+	-*)
+		COMPREPLY=($(compgen -W "$boolean_options $options_with_args" -- "$cur"))
+		;;
+	*)
+		__runc_list_all
+		;;
 	esac
 }
 _runc_update() {
@@ -723,18 +723,18 @@ _runc_update() {
 	"
 
 	case "$prev" in
-		$(__runc_to_extglob "$options_with_args"))
-			return
-			;;
+	$(__runc_to_extglob "$options_with_args"))
+		return
+		;;
 	esac
 
 	case "$cur" in
-		-*)
-			COMPREPLY=($(compgen -W "$boolean_options $options_with_args" -- "$cur"))
-			;;
-		*)
-			__runc_list_all
-			;;
+	-*)
+		COMPREPLY=($(compgen -W "$boolean_options $options_with_args" -- "$cur"))
+		;;
+	*)
+		__runc_list_all
+		;;
 	esac
 }
 
@@ -779,15 +779,15 @@ _runc() {
 	local counter=1
 	while [ $counter -lt $cword ]; do
 		case "${words[$counter]}" in
-			-*) ;;
-			=)
-				((counter++))
-				;;
-			*)
-				command="${words[$counter]}"
-				command_pos=$counter
-				break
-				;;
+		-*) ;;
+		=)
+			((counter++))
+			;;
+		*)
+			command="${words[$counter]}"
+			command_pos=$counter
+			break
+			;;
 		esac
 		((counter++))
 	done

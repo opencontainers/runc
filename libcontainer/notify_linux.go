@@ -7,7 +7,8 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"syscall"
+
+	"golang.org/x/sys/unix"
 )
 
 const oomCgroupName = "memory"
@@ -25,7 +26,7 @@ func registerMemoryEvent(cgDir string, evName string, arg string) (<-chan struct
 	if err != nil {
 		return nil, err
 	}
-	fd, _, syserr := syscall.RawSyscall(syscall.SYS_EVENTFD2, 0, syscall.FD_CLOEXEC, 0)
+	fd, _, syserr := unix.RawSyscall(unix.SYS_EVENTFD2, 0, unix.FD_CLOEXEC, 0)
 	if syserr != 0 {
 		evFile.Close()
 		return nil, syserr

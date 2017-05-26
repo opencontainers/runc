@@ -6,11 +6,12 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"syscall"
 
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/urfave/cli"
+
+	"golang.org/x/sys/unix"
 )
 
 var checkpointCommand = cli.Command{
@@ -113,7 +114,7 @@ func setManageCgroupsMode(context *cli.Context, options *libcontainer.CriuOpts) 
 }
 
 var namespaceMapping = map[specs.LinuxNamespaceType]int{
-	specs.NetworkNamespace: syscall.CLONE_NEWNET,
+	specs.NetworkNamespace: unix.CLONE_NEWNET,
 }
 
 func setEmptyNsMask(context *cli.Context, options *libcontainer.CriuOpts) error {

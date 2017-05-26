@@ -9,11 +9,12 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"syscall"
 	"testing"
 
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/vishvananda/netlink/nl"
+
+	"golang.org/x/sys/unix"
 )
 
 type pid struct {
@@ -47,7 +48,7 @@ func TestNsenterValidPaths(t *testing.T) {
 	r := nl.NewNetlinkRequest(int(libcontainer.InitMsg), 0)
 	r.AddData(&libcontainer.Int32msg{
 		Type:  libcontainer.CloneFlagsAttr,
-		Value: uint32(syscall.CLONE_NEWNET),
+		Value: uint32(unix.CLONE_NEWNET),
 	})
 	r.AddData(&libcontainer.Bytemsg{
 		Type:  libcontainer.NsPathsAttr,
@@ -103,7 +104,7 @@ func TestNsenterInvalidPaths(t *testing.T) {
 	r := nl.NewNetlinkRequest(int(libcontainer.InitMsg), 0)
 	r.AddData(&libcontainer.Int32msg{
 		Type:  libcontainer.CloneFlagsAttr,
-		Value: uint32(syscall.CLONE_NEWNET),
+		Value: uint32(unix.CLONE_NEWNET),
 	})
 	r.AddData(&libcontainer.Bytemsg{
 		Type:  libcontainer.NsPathsAttr,
@@ -143,7 +144,7 @@ func TestNsenterIncorrectPathType(t *testing.T) {
 	r := nl.NewNetlinkRequest(int(libcontainer.InitMsg), 0)
 	r.AddData(&libcontainer.Int32msg{
 		Type:  libcontainer.CloneFlagsAttr,
-		Value: uint32(syscall.CLONE_NEWNET),
+		Value: uint32(unix.CLONE_NEWNET),
 	})
 	r.AddData(&libcontainer.Bytemsg{
 		Type:  libcontainer.NsPathsAttr,
@@ -166,7 +167,7 @@ func init() {
 }
 
 func newPipe() (parent *os.File, child *os.File, err error) {
-	fds, err := syscall.Socketpair(syscall.AF_LOCAL, syscall.SOCK_STREAM|syscall.SOCK_CLOEXEC, 0)
+	fds, err := unix.Socketpair(unix.AF_LOCAL, unix.SOCK_STREAM|unix.SOCK_CLOEXEC, 0)
 	if err != nil {
 		return nil, nil, err
 	}

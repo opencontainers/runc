@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"syscall"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/coreos/go-systemd/activation"
@@ -20,6 +19,8 @@ import (
 	"github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/urfave/cli"
+
+	"golang.org/x/sys/unix"
 )
 
 var errEmptyID = errors.New("container id cannot be empty")
@@ -316,7 +317,7 @@ func (r *runner) destroy() {
 }
 
 func (r *runner) terminate(p *libcontainer.Process) {
-	_ = p.Signal(syscall.SIGKILL)
+	_ = p.Signal(unix.SIGKILL)
 	_, _ = p.Wait()
 }
 
