@@ -442,7 +442,6 @@ Cleanup or debugging functions are examples of such a hook.
     If there are no annotations then this property MAY either be absent or an empty map.
 
     Keys MUST be strings.
-    Keys MUST be unique within this map.
     Keys MUST NOT be an empty string.
     Keys SHOULD be named using a reverse domain notation - e.g. `com.example.myKey`.
     Keys using the `org.opencontainers` namespace are reserved and MUST NOT be used by subsequent specifications.
