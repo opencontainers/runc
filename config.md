@@ -137,7 +137,8 @@ For all platform-specific configuration values, the scope defined below in the [
 
 * **`terminal`** (bool, OPTIONAL) specifies whether a terminal is attached to that process, defaults to false.
     As an example, if set to true on Linux a pseudoterminal pair is allocated for the container process and the pseudoterminal slave is duplicated on the container process's [standard streams][stdin.3].
-* **`consoleSize`** (object, OPTIONAL) specifies the console size in characters of the terminal if attached, containing the following properties:
+* **`consoleSize`** (object, OPTIONAL) specifies the console size in characters of the terminal.
+    Runtimes MUST ignore `consoleSize` if `terminal` is `false` or unset.
     * **`height`** (uint, REQUIRED)
     * **`width`** (uint, REQUIRED)
 * **`cwd`** (string, REQUIRED) is the working directory that will be set for the executable.
