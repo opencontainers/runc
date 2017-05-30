@@ -4,6 +4,14 @@
         "id": "https://opencontainers.org/schema/bundle/windows",
         "type": "object",
         "properties": {
+            "layerFolders": {
+                "id": "https://opencontainers.org/schema/bundle/windows/layerFolders",
+                "type": "array",
+                "items": {
+                    "$ref": "defs.json#/definitions/FilePath"
+                },
+                "minItems": 1
+            },
             "resources": {
                 "id": "https://opencontainers.org/schema/bundle/windows/resources",
                 "type": "object",
@@ -100,6 +108,9 @@
                     }
                 }
             }
-        }
+        },
+        "required": [
+            "layerFolders"
+        ]
     }
 }

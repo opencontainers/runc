@@ -340,7 +340,7 @@ Runtime implementations MAY support any valid values for platform-specific field
 * **`linux`** (object, OPTIONAL) [Linux-specific configuration](config-linux.md).
   This MAY be set if **`platform.os`** is `linux` and MUST NOT be set otherwise.
 * **`windows`** (object, OPTIONAL) [Windows-specific configuration](config-windows.md).
-  This MAY be set if **`platform.os`** is `windows` and MUST NOT be set otherwise.
+  This MUST be set if **`platform.os`** is `windows` and MUST NOT be set otherwise.
 * **`solaris`** (object, OPTIONAL) [Solaris-specific configuration](config-solaris.md).
   This MAY be set if **`platform.os`** is `solaris` and MUST NOT be set otherwise.
 

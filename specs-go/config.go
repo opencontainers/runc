@@ -430,6 +430,8 @@ type SolarisAnet struct {
 
 // Windows defines the runtime configuration for Windows based containers, including Hyper-V containers.
 type Windows struct {
+	// LayerFolders contains a list of absolute paths to directories containing image layers.
+	LayerFolders []string `json:"layerFolders"`
 	// Resources contains information for handling resource constraints for the container.
 	Resources *WindowsResources `json:"resources,omitempty"`
 	// CredentialSpec contains a JSON object describing a group Managed Service Account (gMSA) specification.
