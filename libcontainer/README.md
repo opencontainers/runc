@@ -56,7 +56,7 @@ Once you have an instance of the factory created we can create a configuration
 struct describing how the container is to be created. A sample would look similar to this:
 
 ```go
-defaultMountFlags := syscall.MS_NOEXEC | syscall.MS_NOSUID | syscall.MS_NODEV
+defaultMountFlags := unix.MS_NOEXEC | unix.MS_NOSUID | unix.MS_NODEV
 config := &configs.Config{
 	Rootfs: "/your/path/to/rootfs",
 	Capabilities: []string{
@@ -112,14 +112,14 @@ config := &configs.Config{
 			Source:      "tmpfs",
 			Destination: "/dev",
 			Device:      "tmpfs",
-			Flags:       syscall.MS_NOSUID | syscall.MS_STRICTATIME,
+			Flags:       unix.MS_NOSUID | unix.MS_STRICTATIME,
 			Data:        "mode=755",
 		},
 		{
 			Source:      "devpts",
 			Destination: "/dev/pts",
 			Device:      "devpts",
-			Flags:       syscall.MS_NOSUID | syscall.MS_NOEXEC,
+			Flags:       unix.MS_NOSUID | unix.MS_NOEXEC,
 			Data:        "newinstance,ptmxmode=0666,mode=0620,gid=5",
 		},
 		{
@@ -139,7 +139,7 @@ config := &configs.Config{
 			Source:      "sysfs",
 			Destination: "/sys",
 			Device:      "sysfs",
-			Flags:       defaultMountFlags | syscall.MS_RDONLY,
+			Flags:       defaultMountFlags | unix.MS_RDONLY,
 		},
 	},
 	UidMappings: []configs.IDMap{
@@ -165,7 +165,7 @@ config := &configs.Config{
 	},
 	Rlimits: []configs.Rlimit{
 		{
-			Type: syscall.RLIMIT_NOFILE,
+			Type: unix.RLIMIT_NOFILE,
 			Hard: uint64(1025),
 			Soft: uint64(1025),
 		},
