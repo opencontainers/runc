@@ -86,24 +86,24 @@
                     }
                 }
             },
-            "credentialspec": {
-                "id": "https://opencontainers.org/schema/bundle/windows/credentialspec",
+            "credentialSpec": {
+                "id": "https://opencontainers.org/schema/bundle/windows/credentialSpec",
                 "type": "object"
             },
             "servicing": {
                 "id": "https://opencontainers.org/schema/bundle/windows/servicing",
                 "type": "boolean"
             },
-            "ignoreflushesduringboot": {
-                "id": "https://opencontainers.org/schema/bundle/windows/ignoreflushesduringboot",
+            "ignoreFlushesDuringBoot": {
+                "id": "https://opencontainers.org/schema/bundle/windows/ignoreFlushesDuringBoot",
                 "type": "boolean"
             },
             "hyperv": {
                 "id": "https://opencontainers.org/schema/bundle/windows/hyperv",
                 "type": "object",
                 "properties": {
-                    "utilityvmpath": {
-                        "id": "https://opencontainers.org/schema/bundle/windows/hyperv/utilityvmpath",
+                    "utilityVMPath": {
+                        "id": "https://opencontainers.org/schema/bundle/windows/hyperv/utilityVMPath",
                         "type": "string"
                     }
                 }
