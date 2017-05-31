@@ -17,7 +17,7 @@ type Spec struct {
 	// Mounts configures additional mounts (on top of Root).
 	Mounts []Mount `json:"mounts,omitempty"`
 	// Hooks configures callbacks for container lifecycle events.
-	Hooks *Hooks `json:"hooks,omitempty"`
+	Hooks *Hooks `json:"hooks,omitempty" platform:"linux,solaris"`
 	// Annotations contains arbitrary metadata for the container.
 	Annotations map[string]string `json:"annotations,omitempty"`
 
@@ -134,7 +134,6 @@ type Hook struct {
 // Hooks for container setup and teardown
 type Hooks struct {
 	// Prestart is a list of hooks to be run before the container process is executed.
-	// On Linux, they are run after the container namespaces are created.
 	Prestart []Hook `json:"prestart,omitempty"`
 	// Poststart is a list of hooks to be run after the container process is started.
 	Poststart []Hook `json:"poststart,omitempty"`
