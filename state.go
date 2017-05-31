@@ -4,6 +4,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 
 	"github.com/opencontainers/runc/libcontainer"
@@ -19,6 +20,13 @@ var stateCommand = cli.Command{
 Where "<container-id>" is your name for the instance of the container.`,
 	Description: `The state command outputs current state information for the
 instance of a container.`,
+	Flags: []cli.Flag{
+		cli.StringFlag{
+			Name:  "output, o",
+			Usage: "select one of: ociVersion, pid, status, bundle, rootfs, created",
+			Value: "",
+		},
+	},
 	Action: func(context *cli.Context) error {
 		if err := checkArgs(context, 1, exactArgs); err != nil {
 			return err
@@ -50,11 +58,29 @@ instance of a container.`,
 			Created:        state.BaseState.Created,
 			Annotations:    annotations,
 		}
-		data, err := json.MarshalIndent(cs, "", "  ")
-		if err != nil {
-			return err
+
+		switch context.String("output") {
+		case "":
+			data, err := json.MarshalIndent(cs, "", "  ")
+			if err != nil {
+				return err
+			}
+			os.Stdout.Write(data)
+		case "ociVersion":
+			fmt.Println(cs.Version)
+		case "pid":
+			fmt.Println(cs.InitProcessPid)
+		case "status":
+			fmt.Println(cs.Status)
+		case "bundle":
+			fmt.Println(cs.Bundle)
+		case "rootfs":
+			fmt.Println(cs.Rootfs)
+		case "created":
+			fmt.Println(cs.Created)
+		default:
+			return fmt.Errorf("invalid output option")
 		}
-		os.Stdout.Write(data)
 		return nil
 	},
 }
