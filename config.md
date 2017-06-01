@@ -142,8 +142,8 @@ For all platform-specific configuration values, the scope defined below in the [
     * **`width`** (uint, REQUIRED)
 * **`cwd`** (string, REQUIRED) is the working directory that will be set for the executable.
     This value MUST be an absolute path.
-* **`env`** (array of strings, OPTIONAL) with the same semantics as [IEEE Std 1003.1-2001's `environ`][ieee-1003.1-2001-xbd-c8.1].
-* **`args`** (array of strings, REQUIRED) with similar semantics to [IEEE Std 1003.1-2001 `execvp`'s *argv*][ieee-1003.1-2001-xsh-exec].
+* **`env`** (array of strings, OPTIONAL) with the same semantics as [IEEE Std 1003.1-2008's `environ`][ieee-1003.1-2008-xbd-c8.1].
+* **`args`** (array of strings, REQUIRED) with similar semantics to [IEEE Std 1003.1-2008 `execvp`'s *argv*][ieee-1003.1-2008-xsh-exec].
     This specification extends the IEEE standard in that at least one entry is REQUIRED, and that entry is used with the same semantics as `execvp`'s *file*.
 * **`capabilities`** (object, OPTIONAL) is an object containing arrays that specifies the sets of capabilities for the process(es) inside the container.
     Valid values are platform-specific.
@@ -374,10 +374,10 @@ For Linux- and Solaris-based systems, the configuration structure supports `hook
 * **`hooks`** (object, OPTIONAL) MAY contain any of the following properties:
     * **`prestart`** (array of objects, OPTIONAL) is an array of [pre-start hooks](#prestart).
         Entries in the array contain the following properties:
-        * **`path`** (string, REQUIRED) with similar semantics to [IEEE Std 1003.1-2001 `execv`'s *path*][ieee-1003.1-2001-xsh-exec].
+        * **`path`** (string, REQUIRED) with similar semantics to [IEEE Std 1003.1-2008 `execv`'s *path*][ieee-1003.1-2008-functions-exec].
             This specification extends the IEEE standard in that **`path`** MUST be absolute.
-        * **`args`** (array of strings, OPTIONAL) with the same semantics as [IEEE Std 1003.1-2001 `execv`'s *argv*][ieee-1003.1-2001-xsh-exec].
-        * **`env`** (array of strings, OPTIONAL) with the same semantics as [IEEE Std 1003.1-2001's `environ`][ieee-1003.1-2001-xbd-c8.1].
+        * **`args`** (array of strings, OPTIONAL) with the same semantics as [IEEE Std 1003.1-2008 `execv`'s *argv*][ieee-1003.1-2008-functions-exec].
+        * **`env`** (array of strings, OPTIONAL) with the same semantics as [IEEE Std 1003.1-2008's `environ`][ieee-1003.1-2008-xbd-c8.1].
         * **`timeout`** (int, OPTIONAL) is the number of seconds before aborting the hook.
             If set, `timeout` MUST be greater than zero.
     * **`poststart`** (array of objects, OPTIONAL) is an array of [post-start hooks](#poststart).
@@ -852,8 +852,8 @@ Here is a full example `config.json` for reference.
 [procfs_2]: https://www.kernel.org/doc/Documentation/filesystems/proc.txt
 [semver-v2.0.0]: http://semver.org/spec/v2.0.0.html
 [go-environment]: https://golang.org/doc/install/source#environment
-[ieee-1003.1-2001-xbd-c8.1]: http://pubs.opengroup.org/onlinepubs/009695399/basedefs/xbd_chap08.html#tag_08_01
-[ieee-1003.1-2001-xsh-exec]: http://pubs.opengroup.org/onlinepubs/009695399/functions/exec.html
+[ieee-1003.1-2008-xbd-c8.1]: http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap08.html#tag_08_01
+[ieee-1003.1-2008-xsh-exec]: http://pubs.opengroup.org/onlinepubs/9699919799/functions/exec.html
 [naming-a-volume]: https://aka.ms/nb3hqb
 
 [capabilities.7]: http://man7.org/linux/man-pages/man7/capabilities.7.html
