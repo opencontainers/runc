@@ -50,9 +50,7 @@ The following parameters can be specified:
 The following parameters can be specified:
 
 * **`count`** *(uint64, OPTIONAL)* - specifies the number of CPUs available to the container.
-
 * **`shares`** *(uint16, OPTIONAL)* - specifies the relative weight to other containers with CPU shares.
-
 * **`maximum`** *(uint, OPTIONAL)* - specifies the portion of processor cycles that this container can use as a percentage times 100.
 
 #### Example
@@ -74,9 +72,7 @@ The following parameters can be specified:
 The following parameters can be specified:
 
 * **`iops`** *(uint64, OPTIONAL)* - specifies the maximum IO operations per second for the system drive of the container.
-
 * **`bps`** *(uint64, OPTIONAL)* - specifies the maximum bytes per second for the system drive of the container.
-
 * **`sandboxSize`** *(uint64, OPTIONAL)* - specifies the minimum size of the system drive in bytes.
 
 #### Example
@@ -158,11 +154,15 @@ You can indicate that a container should be started in an a mode where disk flus
 
 ## <a name="configWindowsHyperV" />HyperV
 
-`hyperv` is an OPTIONAL field of the Windows configuration. If present, the container MUST be run with Hyper-V isolation. If omitted, the container MUST be run as a Windows Server container.
+`hyperv` is an OPTIONAL field of the Windows configuration.
+If present, the container MUST be run with Hyper-V isolation.
+If omitted, the container MUST be run as a Windows Server container.
 
 The following parameters can be specified:
 
-* **`utilityVMPath`** *(string, OPTIONAL)* - specifies the path to the image used for the utility VM. This would be specified if using a base image which does not contain a utility VM image. If not supplied, the runtime will search the container filesystem layers from the bottom-most layer upwards, until it locates "UtilityVM", and default to that path.
+* **`utilityVMPath`** *(string, OPTIONAL)* - specifies the path to the image used for the utility VM.
+    This would be specified if using a base image which does not contain a utility VM image.
+    If not supplied, the runtime will search the container filesystem layers from the bottom-most layer upwards, until it locates "UtilityVM", and default to that path.
 
 ### Example
 

@@ -15,8 +15,8 @@ For all platform-specific configuration values, the scope defined below in the [
 ## <a name="configSpecificationVersion" />Specification version
 
 * **`ociVersion`** (string, REQUIRED) MUST be in [SemVer v2.0.0][semver-v2.0.0] format and specifies the version of the Open Container Runtime Specification with which the bundle complies.
-The Open Container Runtime Specification follows semantic versioning and retains forward and backward compatibility within major versions.
-For example, if a configuration is compliant with version 1.1 of this specification, it is compatible with all runtimes that support any 1.1 or later release of this specification, but is not compatible with a runtime that supports 1.0 and not 1.1.
+    The Open Container Runtime Specification follows semantic versioning and retains forward and backward compatibility within major versions.
+    For example, if a configuration is compliant with version 1.1 of this specification, it is compatible with all runtimes that support any 1.1 or later release of this specification, but is not compatible with a runtime that supports 1.0 and not 1.1.
 
 ### Example
 
@@ -28,17 +28,18 @@ For example, if a configuration is compliant with version 1.1 of this specificat
 
 **`root`** (object, REQUIRED) specifies the container's root filesystem.
 
-* **`path`** (string, OPTIONAL) Specifies the path to the root filesystem for the container. The path is either an absolute path or a relative path to the bundle.
+* **`path`** (string, OPTIONAL) Specifies the path to the root filesystem for the container.
+    The path is either an absolute path or a relative path to the bundle.
     Users SHOULD consider using a conventional name, such as `rootfs`.
 
-    On Windows, for Windows Server Containers, this field is REQUIRED and MUST be specified as a [volume GUID path][naming-a-volume]. For Hyper-V Containers, this field MUST be omitted.
-
-    On all other platforms, this field is REQUIRED.
-
-    On Linux, for example, with a bundle at `/to/bundle` and a root filesystem at `/to/bundle/rootfs`, the `path` value can be either `/to/bundle/rootfs` or `rootfs`.
+    * On Windows, for Windows Server Containers, this field is REQUIRED and MUST be specified as a [volume GUID path][naming-a-volume].
+      For Hyper-V Containers, this field MUST be omitted.
+    * On all other platforms, this field is REQUIRED.
+    * On Linux, for example, with a bundle at `/to/bundle` and a root filesystem at `/to/bundle/rootfs`, the `path` value can be either `/to/bundle/rootfs` or `rootfs`.
 
     If defined, a directory MUST exist at the path declared by the field.
-* **`readonly`** (bool, OPTIONAL) If true then the root filesystem MUST be read-only inside the container, defaults to false. On Windows, this field must be omitted or false.
+* **`readonly`** (bool, OPTIONAL) If true then the root filesystem MUST be read-only inside the container, defaults to false.
+    * On Windows, this field MUST be omitted or false.
 
 ### Example (POSIX)
 
@@ -60,25 +61,25 @@ For example, if a configuration is compliant with version 1.1 of this specificat
 ## <a name="configMounts" />Mounts
 
 **`mounts`** (array of objects, OPTIONAL) specifies additional mounts beyond [`root`](#root).
-The runtime MUST mount entries in the listed order.
-For Linux, the parameters are as documented in [mount(2)][mount.2] system call man page.
-For Solaris, the mount entry corresponds to the 'fs' resource in the [zonecfg(1M)][zonecfg.1m] man page.
+    The runtime MUST mount entries in the listed order.
+    For Linux, the parameters are as documented in [mount(2)][mount.2] system call man page.
+    For Solaris, the mount entry corresponds to the 'fs' resource in the [zonecfg(1M)][zonecfg.1m] man page.
 
 
 * **`destination`** (string, REQUIRED) Destination of mount point: path inside container.
-  This value MUST be an absolute path.
-  * Windows: one mount destination MUST NOT be nested within another mount (e.g., c:\\foo and c:\\foo\\bar).
-  * Solaris: corresponds to "dir" of the fs resource in [zonecfg(1M)][zonecfg.1m].
+    This value MUST be an absolute path.
+    * Windows: one mount destination MUST NOT be nested within another mount (e.g., c:\\foo and c:\\foo\\bar).
+    * Solaris: corresponds to "dir" of the fs resource in [zonecfg(1M)][zonecfg.1m].
 * **`type`** (string, OPTIONAL) The type of the filesystem to be mounted.
-  * Linux: filesystem types supported by the kernel as listed in */proc/filesystems* (e.g., "minix", "ext2", "ext3", "jfs", "xfs", "reiserfs", "msdos", "proc", "nfs", "iso9660").
-  * Windows: this field MUST NOT be supplied.
-  * Solaris: corresponds to "type" of the fs resource in [zonecfg(1M)][zonecfg.1m].
+    * Linux: filesystem types supported by the kernel as listed in */proc/filesystems* (e.g., "minix", "ext2", "ext3", "jfs", "xfs", "reiserfs", "msdos", "proc", "nfs", "iso9660").
+    * Windows: this field MUST NOT be supplied.
+    * Solaris: corresponds to "type" of the fs resource in [zonecfg(1M)][zonecfg.1m].
 * **`source`** (string, OPTIONAL) A device name, but can also be a directory name or a dummy.
-  * Windows: a local directory on the filesystem of the container host. UNC paths and mapped drives are not supported.
-  * Solaris: corresponds to "special" of the fs resource in [zonecfg(1M)][zonecfg.1m].
+    * Windows: a local directory on the filesystem of the container host. UNC paths and mapped drives are not supported.
+    * Solaris: corresponds to "special" of the fs resource in [zonecfg(1M)][zonecfg.1m].
 * **`options`** (array of strings, OPTIONAL) Mount options of the filesystem to be used.
-  * Linux: supported options are listed in the [mount(8)][mount.8] man page. Note both [filesystem-independent][mount.8-filesystem-independent] and [filesystem-specific][mount.8-filesystem-specific] options are listed.
-  * Solaris: corresponds to "options" of the fs resource in [zonecfg(1M)][zonecfg.1m].
+    * Linux: supported options are listed in the [mount(8)][mount.8] man page. Note both [filesystem-independent][mount.8-filesystem-independent] and [filesystem-specific][mount.8-filesystem-specific] options are listed.
+    * Solaris: corresponds to "options" of the fs resource in [zonecfg(1M)][zonecfg.1m].
 
 ### Example (Linux)
 
@@ -132,41 +133,45 @@ For Solaris, the mount entry corresponds to the 'fs' resource in the [zonecfg(1M
 ## <a name="configProcess" />Process
 
 **`process`** (object, OPTIONAL) specifies the container process.
-  This property is REQUIRED when [`start`](runtime.md#start) is called.
+    This property is REQUIRED when [`start`](runtime.md#start) is called.
 
 * **`terminal`** (bool, OPTIONAL) specifies whether a terminal is attached to that process, defaults to false.
-  As an example, if set to true on Linux a pseudoterminal pair is allocated for the container process and the pseudoterminal slave is duplicated on the container process's [standard streams][stdin.3].
+    As an example, if set to true on Linux a pseudoterminal pair is allocated for the container process and the pseudoterminal slave is duplicated on the container process's [standard streams][stdin.3].
 * **`consoleSize`** (object, OPTIONAL) specifies the console size in characters of the terminal if attached, containing the following properties:
     * **`height`** (uint, REQUIRED)
     * **`width`** (uint, REQUIRED)
 * **`cwd`** (string, REQUIRED) is the working directory that will be set for the executable.
-  This value MUST be an absolute path.
+    This value MUST be an absolute path.
 * **`env`** (array of strings, OPTIONAL) with the same semantics as [IEEE Std 1003.1-2001's `environ`][ieee-1003.1-2001-xbd-c8.1].
 * **`args`** (array of strings, REQUIRED) with similar semantics to [IEEE Std 1003.1-2001 `execvp`'s *argv*][ieee-1003.1-2001-xsh-exec].
-  This specification extends the IEEE standard in that at least one entry is REQUIRED, and that entry is used with the same semantics as `execvp`'s *file*.
-* **`capabilities`** (object, OPTIONAL) is an object containing arrays that specifies the sets of capabilities for the process(es) inside the container. Valid values are platform-specific. For example, valid values for Linux are defined in the [capabilities(7)][capabilities.7] man page, such as `CAP_CHOWN`. Any value which cannot be mapped to a relevant kernel interface MUST cause an error.
-  capabilities contains the following properties:
+    This specification extends the IEEE standard in that at least one entry is REQUIRED, and that entry is used with the same semantics as `execvp`'s *file*.
+* **`capabilities`** (object, OPTIONAL) is an object containing arrays that specifies the sets of capabilities for the process(es) inside the container.
+    Valid values are platform-specific.
+    For example, valid values for Linux are defined in the [capabilities(7)][capabilities.7] man page, such as `CAP_CHOWN`.
+    Any value which cannot be mapped to a relevant kernel interface MUST cause an error.
+    capabilities contains the following properties:
     * **`effective`** (array of strings, OPTIONAL) - the `effective` field is an array of effective capabilities that are kept for the process.
     * **`bounding`** (array of strings, OPTIONAL) - the `bounding` field is an array of bounding capabilities that are kept for the process.
     * **`inheritable`** (array of strings, OPTIONAL) - the `inheritable` field is an array of inheritable capabilities that are kept for the process.
     * **`permitted`** (array of strings, OPTIONAL) - the `permitted` field is an array of permitted capabilities that are kept for the process.
     * **`ambient`** (array of strings, OPTIONAL) - the `ambient` field is an array of ambient capabilities that are kept for the process.
 * **`rlimits`** (array of objects, OPTIONAL) allows setting resource limits for a process inside the container.
-  Each entry has the following structure:
+    Each entry has the following structure:
 
     * **`type`** (string, REQUIRED) - the platform resource being limited, for example on Linux as defined in the [setrlimit(2)][setrlimit.2] man page.
     * **`soft`** (uint64, REQUIRED) - the value of the limit enforced for the corresponding resource.
-    * **`hard`** (uint64, REQUIRED) - the ceiling for the soft limit that could be set by an unprivileged process. Only a privileged process (e.g. under Linux: one with the CAP_SYS_RESOURCE capability) can raise a hard limit.
+    * **`hard`** (uint64, REQUIRED) - the ceiling for the soft limit that could be set by an unprivileged process.
+        Only a privileged process (e.g. under Linux: one with the CAP_SYS_RESOURCE capability) can raise a hard limit.
 
     If `rlimits` contains duplicated entries with same `type`, the runtime MUST error out.
 
 * **`noNewPrivileges`** (bool, OPTIONAL) setting `noNewPrivileges` to true prevents the processes in the container from gaining additional privileges.
-  As an example, the ['no_new_privs'][no-new-privs] article in the kernel documentation has information on how this is achieved using a prctl system call on Linux.
+    As an example, the ['no_new_privs'][no-new-privs] article in the kernel documentation has information on how this is achieved using a prctl system call on Linux.
 
 For Linux-based systems the process structure supports the following process-specific fields.
 
 * **`apparmorProfile`** (string, OPTIONAL) specifies the name of the AppArmor profile to be applied to processes in the container.
-  For more information about AppArmor, see [AppArmor documentation][apparmor].
+    For more information about AppArmor, see [AppArmor documentation][apparmor].
 * **`oomScoreAdj`** *(int, OPTIONAL)* adjusts the oom-killer score in `[pid]/oom_score_adj` for the container process's `[pid]` in a [proc pseudo-filesystem][procfs].
     If `oomScoreAdj` is set, the runtime MUST set `oom_score_adj` to the given value.
     If `oomScoreAdj` is not set, the runtime MUST NOT change the value of `oom_score_adj`.
@@ -174,7 +179,7 @@ For Linux-based systems the process structure supports the following process-spe
     This is a per-process setting, where as [`disableOOMKiller`](config-linux.md#disable-out-of-memory-killer) is scoped for a memory cgroup.
     For more information on how these two settings work together, see [the memory cgroup documentation section 10. OOM Contol][cgroup-v1-memory_2].
 * **`selinuxLabel`** (string, OPTIONAL) specifies the SELinux label to be applied to the processes in the container.
-  For more information about SELinux, see  [SELinux documentation][selinux].
+    For more information about SELinux, see  [SELinux documentation][selinux].
 
 ### <a name="configUser" />User
 
@@ -301,8 +306,8 @@ For Windows based systems the user structure has the following fields:
 ## <a name="configHostname" />Hostname
 
 * **`hostname`** (string, OPTIONAL) specifies the container's hostname as seen by processes running inside the container.
-  On Linux, for example, this will change the hostname in the [container](glossary.md#container-namespace) [UTS namespace][uts-namespace.7].
-  Depending on your [namespace configuration](config-linux.md#namespaces), the container UTS namespace may be the [runtime](glossary.md#runtime-namespace) [UTS namespace][uts-namespace.7].
+    On Linux, for example, this will change the hostname in the [container](glossary.md#container-namespace) [UTS namespace][uts-namespace.7].
+    Depending on your [namespace configuration](config-linux.md#namespaces), the container UTS namespace may be the [runtime](glossary.md#runtime-namespace) [UTS namespace][uts-namespace.7].
 
 ### Example
 
@@ -315,13 +320,13 @@ For Windows based systems the user structure has the following fields:
 **`platform`** (object, REQUIRED) specifies the configuration's target platform.
 
 * **`os`** (string, REQUIRED) specifies the operating system family of the container configuration's specified [`root`](#root) file system bundle.
-  The runtime MUST generate an error if it does not support the specified **`os`**.
-  Bundles SHOULD use, and runtimes SHOULD understand, **`os`** entries listed in the Go Language document for [`GOOS`][go-environment].
-  If an operating system is not included in the `GOOS` documentation, it SHOULD be submitted to this specification for standardization.
+    The runtime MUST generate an error if it does not support the specified **`os`**.
+    Bundles SHOULD use, and runtimes SHOULD understand, **`os`** entries listed in the Go Language document for [`GOOS`][go-environment].
+    If an operating system is not included in the `GOOS` documentation, it SHOULD be submitted to this specification for standardization.
 * **`arch`** (string, REQUIRED) specifies the instruction set for which the binaries in the specified [`root`](#root) file system bundle have been compiled.
-  The runtime MUST generate an error if it does not support the specified **`arch`**.
-  Values for **`arch`** SHOULD use, and runtimes SHOULD understand, **`arch`** entries listed in the Go Language document for [`GOARCH`][go-environment].
-  If an architecture is not included in the `GOARCH` documentation, it SHOULD be submitted to this specification for standardization.
+    The runtime MUST generate an error if it does not support the specified **`arch`**.
+    Values for **`arch`** SHOULD use, and runtimes SHOULD understand, **`arch`** entries listed in the Go Language document for [`GOARCH`][go-environment].
+    If an architecture is not included in the `GOARCH` documentation, it SHOULD be submitted to this specification for standardization.
 
 ### Example
 
@@ -335,14 +340,14 @@ For Windows based systems the user structure has the following fields:
 ## <a name="configPlatformSpecificConfiguration" />Platform-specific configuration
 
 [**`platform.os`**](#platform) is used to specify platform-specific configuration.
-Runtime implementations MAY support any valid values for platform-specific fields as part of this configuration.
+    Runtime implementations MAY support any valid values for platform-specific fields as part of this configuration.
 
 * **`linux`** (object, OPTIONAL) [Linux-specific configuration](config-linux.md).
-  This MAY be set if **`platform.os`** is `linux` and MUST NOT be set otherwise.
+    This MAY be set if **`platform.os`** is `linux` and MUST NOT be set otherwise.
 * **`windows`** (object, OPTIONAL) [Windows-specific configuration](config-windows.md).
-  This MUST be set if **`platform.os`** is `windows` and MUST NOT be set otherwise.
+    This MUST be set if **`platform.os`** is `windows` and MUST NOT be set otherwise.
 * **`solaris`** (object, OPTIONAL) [Solaris-specific configuration](config-solaris.md).
-  This MAY be set if **`platform.os`** is `solaris` and MUST NOT be set otherwise.
+    This MAY be set if **`platform.os`** is `solaris` and MUST NOT be set otherwise.
 
 ### Example (Linux)
 
@@ -354,9 +359,9 @@ Runtime implementations MAY support any valid values for platform-specific field
     },
     "linux": {
         "namespaces": [
-          {
-            "type": "pid"
-          }
+            {
+                "type": "pid"
+            }
         ]
     }
 }
@@ -432,19 +437,19 @@ Cleanup or debugging functions are examples of such a hook.
 ## <a name="configAnnotations" />Annotations
 
 **`annotations`** (object, OPTIONAL) contains arbitrary metadata for the container.
-This information MAY be structured or unstructured.
-Annotations MUST be a key-value map.
-If there are no annotations then this property MAY either be absent or an empty map.
+    This information MAY be structured or unstructured.
+    Annotations MUST be a key-value map.
+    If there are no annotations then this property MAY either be absent or an empty map.
 
-Keys MUST be strings.
-Keys MUST be unique within this map.
-Keys MUST NOT be an empty string.
-Keys SHOULD be named using a reverse domain notation - e.g. `com.example.myKey`.
-Keys using the `org.opencontainers` namespace are reserved and MUST NOT be used by subsequent specifications.
-Implementations that are reading/processing this configuration file MUST NOT generate an error if they encounter an unknown annotation key.
+    Keys MUST be strings.
+    Keys MUST be unique within this map.
+    Keys MUST NOT be an empty string.
+    Keys SHOULD be named using a reverse domain notation - e.g. `com.example.myKey`.
+    Keys using the `org.opencontainers` namespace are reserved and MUST NOT be used by subsequent specifications.
+    Implementations that are reading/processing this configuration file MUST NOT generate an error if they encounter an unknown annotation key.
 
-Values MUST be strings.
-Values MAY be an empty string.
+    Values MUST be strings.
+    Values MAY be an empty string.
 
 ```json
 "annotations": {
@@ -453,6 +458,7 @@ Values MAY be an empty string.
 ```
 
 ## <a name="configExtensibility" />Extensibility
+
 Implementations that are reading/processing this configuration file MUST NOT generate an error if they encounter an unknown property.
 Instead they MUST ignore unknown properties.
 

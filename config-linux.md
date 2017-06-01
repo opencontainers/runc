@@ -115,12 +115,12 @@ The runtime may supply them however it likes (with [mknod][mknod.2], by bind mou
 Each entry has the following structure:
 
 * **`type`** *(string, REQUIRED)* - type of device: `c`, `b`, `u` or `p`.
-  More info in [mknod(1)][mknod.1].
+    More info in [mknod(1)][mknod.1].
 * **`path`** *(string, REQUIRED)* - full path to device inside container.
-  If a [file][] already exists at `path` that does not match the requested device, the runtime MUST generate an error.
+    If a [file][] already exists at `path` that does not match the requested device, the runtime MUST generate an error.
 * **`major, minor`** *(int64, REQUIRED unless `type` is `p`)* - [major, minor numbers][devices] for the device.
 * **`fileMode`** *(uint32, OPTIONAL)* - file mode for the device.
-  You can also control access to devices [with cgroups](#device-whitelist).
+    You can also control access to devices [with cgroups](#device-whitelist).
 * **`uid`** *(uint32, OPTIONAL)* - id of device owner.
 * **`gid`** *(uint32, OPTIONAL)* - id of device group.
 
@@ -129,7 +129,7 @@ The same `type`, `major` and `minor` SHOULD NOT be used for multiple devices.
 ### Example
 
 ```json
-   "devices": [
+    "devices": [
         {
             "path": "/dev/fuse",
             "type": "c",
@@ -194,18 +194,18 @@ Runtimes MAY attach the container process to additional cgroup controllers beyon
 ### Example
 
 ```json
-   "cgroupsPath": "/myRuntime/myContainer",
-   "resources": {
-      "memory": {
-         "limit": 100000,
-         "reservation": 200000
-      },
-      "devices": [
-         {
-            "allow": false,
-            "access": "rwm"
-         }
-      ]
+    "cgroupsPath": "/myRuntime/myContainer",
+    "resources": {
+        "memory": {
+        "limit": 100000,
+        "reservation": 200000
+        },
+        "devices": [
+            {
+                "allow": false,
+                "access": "rwm"
+            }
+        ]
    }
 ```
 
@@ -218,16 +218,16 @@ Each entry has the following structure:
 
 * **`allow`** *(boolean, REQUIRED)* - whether the entry is allowed or denied.
 * **`type`** *(string, OPTIONAL)* - type of device: `a` (all), `c` (char), or `b` (block).
-  Unset values mean "all", mapping to `a`.
+    Unset values mean "all", mapping to `a`.
 * **`major, minor`** *(int64, OPTIONAL)* - [major, minor numbers][devices] for the device.
-  Unset values mean "all", mapping to [`*` in the filesystem API][cgroup-v1-devices].
+    Unset values mean "all", mapping to [`*` in the filesystem API][cgroup-v1-devices].
 * **`access`** *(string, OPTIONAL)* - cgroup permissions for device.
-  A composition of `r` (read), `w` (write), and `m` (mknod).
+    A composition of `r` (read), `w` (write), and `m` (mknod).
 
 #### Example
 
 ```json
-   "devices": [
+    "devices": [
         {
             "allow": false,
             "access": "rwm"
@@ -273,15 +273,10 @@ For more information, see the kernel cgroups documentation about [memory][cgroup
 The following parameters can be specified to set up the controller:
 
 * **`limit`** *(uint64, OPTIONAL)* - sets limit of memory usage in bytes
-
 * **`reservation`** *(uint64, OPTIONAL)* - sets soft limit of memory usage in bytes
-
 * **`swap`** *(uint64, OPTIONAL)* - sets limit of memory+Swap usage
-
 * **`kernel`** *(uint64, OPTIONAL)* - sets hard limit for kernel memory
-
 * **`kernelTCP`** *(uint64, OPTIONAL)* - sets hard limit in bytes for kernel TCP buffer memory
-
 * **`swappiness`** *(uint64, OPTIONAL)* - sets swappiness parameter of vmscan (See sysctl's vm.swappiness)
 
 #### Example
@@ -305,17 +300,11 @@ For more information, see the kernel cgroups documentation about [cpusets][cgrou
 The following parameters can be specified to set up the controller:
 
 * **`shares`** *(uint64, OPTIONAL)* - specifies a relative share of CPU time available to the tasks in a cgroup
-
 * **`quota`** *(int64, OPTIONAL)* - specifies the total amount of time in microseconds for which all tasks in a cgroup can run during one period (as defined by **`period`** below)
-
 * **`period`** *(uint64, OPTIONAL)* - specifies a period of time in microseconds for how regularly a cgroup's access to CPU resources should be reallocated (CFS scheduler only)
-
 * **`realtimeRuntime`** *(int64, OPTIONAL)* - specifies a period of time in microseconds for the longest continuous period in which the tasks in a cgroup have access to CPU resources
-
 * **`realtimePeriod`** *(uint64, OPTIONAL)* - same as **`period`** but applies to realtime scheduler only
-
 * **`cpus`** *(string, OPTIONAL)* - list of CPUs the container will run in
-
 * **`mems`** *(string, OPTIONAL)* - list of Memory Nodes the container will run in
 
 #### Example
@@ -340,9 +329,7 @@ For more information, see the kernel cgroups documentation about [blkio][cgroup-
 The following parameters can be specified to set up the controller:
 
 * **`blkioWeight`** *(uint16, OPTIONAL)* - specifies per-cgroup weight. This is default weight of the group on all devices until and unless overridden by per-device rules.
-
 * **`blkioLeafWeight`** *(uint16, OPTIONAL)* - equivalents of `blkioWeight` for the purpose of deciding how much weight tasks in the given cgroup has while competing with the cgroup's child cgroups.
-
 * **`blkioWeightDevice`** *(array of objects, OPTIONAL)* - specifies the list of devices which will be bandwidth rate limited. The following parameters can be specified per-device:
     * **`major, minor`** *(int64, REQUIRED)* - major, minor numbers for device. More info in [mknod(1)][mknod.1] man page.
     * **`weight`** *(uint16, OPTIONAL)* - bandwidth rate for the device.
@@ -351,7 +338,7 @@ The following parameters can be specified to set up the controller:
     You MUST specify at least one of `weight` or `leafWeight` in a given entry, and MAY specify both.
 
 * **`blkioThrottleReadBpsDevice`**, **`blkioThrottleWriteBpsDevice`**, **`blkioThrottleReadIOPSDevice`**, **`blkioThrottleWriteIOPSDevice`** *(array of objects, OPTIONAL)* - specify the list of devices which will be IO rate limited.
-  The following parameters can be specified per-device:
+    The following parameters can be specified per-device:
     * **`major, minor`** *(int64, REQUIRED)* - major, minor numbers for device. More info in [mknod(1)][mknod.1] man page.
     * **`rate`** *(uint64, REQUIRED)* - IO rate limit for the device
 
@@ -400,13 +387,12 @@ For more information, see the kernel cgroups documentation about [HugeTLB][cgrou
 Each entry has the following structure:
 
 * **`pageSize`** *(string, REQUIRED)* - hugepage size
-
 * **`limit`** *(uint64, REQUIRED)* - limit in bytes of *hugepagesize* HugeTLB usage
 
 #### Example
 
 ```json
-   "hugepageLimits": [
+    "hugepageLimits": [
         {
             "pageSize": "2MB",
             "limit": 209715200
@@ -422,16 +408,15 @@ For more information, see the kernel cgroups documentations about [net\_cls cgro
 The following parameters can be specified to set up the controller:
 
 * **`classID`** *(uint32, OPTIONAL)* - is the network class identifier the cgroup's network packets will be tagged with
-
 * **`priorities`** *(array of objects, OPTIONAL)* - specifies a list of objects of the priorities assigned to traffic originating from processes in the group and egressing the system on various interfaces.
-  The following parameters can be specified per-priority:
+    The following parameters can be specified per-priority:
     * **`name`** *(string, REQUIRED)* - interface name in [runtime network namespace](glossary.md#runtime-namespace)
     * **`priority`** *(uint32, REQUIRED)* - priority applied to the interface
 
 #### Example
 
 ```json
-   "network": {
+    "network": {
         "classID": 1048577,
         "priorities": [
             {
@@ -458,7 +443,7 @@ The following parameters can be specified to set up the controller:
 #### Example
 
 ```json
-   "pids": {
+    "pids": {
         "limit": 32771
    }
 ```
@@ -499,7 +484,7 @@ For more information, see the [sysctl(8)][sysctl.8] man page.
 ### Example
 
 ```json
-   "sysctl": {
+    "sysctl": {
         "net.ipv4.ip_forward": "1",
         "net.core.somaxconn": "256"
    }
@@ -549,7 +534,6 @@ The following parameters can be specified to set up seccomp:
 
     * **`names`** *(array of strings, REQUIRED)* - the names of the syscalls.
         `names` MUST contain at least one entry.
-
     * **`action`** *(string, REQUIRED)* - the action for seccomp rules.
         A valid list of constants as of libseccomp v2.3.2 is shown below.
 
@@ -564,11 +548,8 @@ The following parameters can be specified to set up seccomp:
         Each entry has the following structure:
 
         * **`index`** *(uint, REQUIRED)* - the index for syscall arguments in seccomp.
-
         * **`value`** *(uint64, REQUIRED)* - the value for syscall arguments in seccomp.
-
         * **`valueTwo`** *(uint64, REQUIRED)* - the value for syscall arguments in seccomp.
-
         * **`op`** *(string, REQUIRED)* - the operator for syscall arguments in seccomp.
             A valid list of constants as of libseccomp v2.3.2 is shown below.
 
@@ -583,29 +564,29 @@ The following parameters can be specified to set up seccomp:
 ### Example
 
 ```json
-   "seccomp": {
-       "defaultAction": "SCMP_ACT_ALLOW",
-       "architectures": [
-           "SCMP_ARCH_X86",
-           "SCMP_ARCH_X32"
-       ],
-       "syscalls": [
-           {
-               "names": [
-                   "getcwd",
-                   "chmod"
-               ],
-               "action": "SCMP_ACT_ERRNO"
-           }
-       ]
-   }
+    "seccomp": {
+        "defaultAction": "SCMP_ACT_ALLOW",
+        "architectures": [
+            "SCMP_ARCH_X86",
+            "SCMP_ARCH_X32"
+        ],
+        "syscalls": [
+            {
+                "names": [
+                    "getcwd",
+                    "chmod"
+                ],
+                "action": "SCMP_ACT_ERRNO"
+            }
+        ]
+    }
 ```
 
 ## <a name="configLinuxRootfsMountPropagation" />Rootfs Mount Propagation
 
 **`rootfsPropagation`** (string, OPTIONAL) sets the rootfs's mount propagation.
-Its value is either slave, private, shared or unbindable.
-The [Shared Subtrees][sharedsubtree] article in the kernel documentation has more information about mount propagation.
+    Its value is either slave, private, shared or unbindable.
+    The [Shared Subtrees][sharedsubtree] article in the kernel documentation has more information about mount propagation.
 
 ### Example
 
@@ -616,7 +597,7 @@ The [Shared Subtrees][sharedsubtree] article in the kernel documentation has mor
 ## <a name="configLinuxMaskedPaths" />Masked Paths
 
 **`maskedPaths`** (array of strings, OPTIONAL) will mask over the provided paths inside the container so that they cannot be read.
-The values MUST be absolute paths in the [container namespace](glossary.md#container_namespace).
+    The values MUST be absolute paths in the [container namespace](glossary.md#container_namespace).
 
 ### Example
 
@@ -629,7 +610,7 @@ The values MUST be absolute paths in the [container namespace](glossary.md#conta
 ## <a name="configLinuxReadonlyPaths" />Readonly Paths
 
 **`readonlyPaths`** (array of strings, OPTIONAL) will set the provided paths as readonly inside the container.
-The values MUST be absolute paths in the [container namespace](glossary.md#container-namespace).
+    The values MUST be absolute paths in the [container namespace](glossary.md#container-namespace).
 
 ### Example
 
