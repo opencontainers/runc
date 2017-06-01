@@ -78,7 +78,8 @@ For all platform-specific configuration values, the scope defined below in the [
     * Windows: a local directory on the filesystem of the container host. UNC paths and mapped drives are not supported.
     * Solaris: corresponds to "special" of the fs resource in [zonecfg(1M)][zonecfg.1m].
 * **`options`** (array of strings, OPTIONAL) Mount options of the filesystem to be used.
-    * Linux: supported options are listed in the [mount(8)][mount.8] man page. Note both [filesystem-independent][mount.8-filesystem-independent] and [filesystem-specific][mount.8-filesystem-specific] options are listed.
+    * Linux: supported options are listed in the [mount(8)][mount.8] man page.
+      Note both [filesystem-independent][mount.8-filesystem-independent] and [filesystem-specific][mount.8-filesystem-specific] options are listed.
     * Solaris: corresponds to "options" of the fs resource in [zonecfg(1M)][zonecfg.1m].
 
 ### Example (Linux)
@@ -149,7 +150,7 @@ For all platform-specific configuration values, the scope defined below in the [
     Valid values are platform-specific.
     For example, valid values for Linux are defined in the [capabilities(7)][capabilities.7] man page, such as `CAP_CHOWN`.
     Any value which cannot be mapped to a relevant kernel interface MUST cause an error.
-    capabilities contains the following properties:
+    `capabilities` contains the following properties:
     * **`effective`** (array of strings, OPTIONAL) - the `effective` field is an array of effective capabilities that are kept for the process.
     * **`bounding`** (array of strings, OPTIONAL) - the `bounding` field is an array of bounding capabilities that are kept for the process.
     * **`inheritable`** (array of strings, OPTIONAL) - the `inheritable` field is an array of inheritable capabilities that are kept for the process.
@@ -191,7 +192,7 @@ For Linux and Solaris based systems the user structure has the following fields:
 
 * **`uid`** (int, REQUIRED) specifies the user ID in the [container namespace](glossary.md#container-namespace).
 * **`gid`** (int, REQUIRED) specifies the group ID in the [container namespace](glossary.md#container-namespace).
-* **`additionalGids`** (array of ints, OPTIONAL) specifies additional group IDs (in the [container namespace](glossary.md#container-namespace) to be added to the process.
+* **`additionalGids`** (array of ints, OPTIONAL) specifies additional group IDs in the [container namespace](glossary.md#container-namespace) to be added to the process.
 
 _Note: symbolic name for uid and gid, such as uname and gname respectively, are left to upper levels to derive (i.e. `/etc/passwd` parsing, NSS, etc)_
 
@@ -319,13 +320,13 @@ For Windows based systems the user structure has the following fields:
 
 **`platform`** (object, REQUIRED) specifies the configuration's target platform.
 
-* **`os`** (string, REQUIRED) specifies the operating system family of the container configuration's specified [`root`](#root) file system bundle.
+* **`os`** (string, REQUIRED) specifies the operating system family of the container configuration's specified [`root`](#root) filesystem bundle.
     The runtime MUST generate an error if it does not support the specified **`os`**.
-    Bundles SHOULD use, and runtimes SHOULD understand, **`os`** entries listed in the Go Language document for [`GOOS`][go-environment].
+    Values SHOULD be, and runtimes SHOULD understand, **`os`** entries listed in the Go Language document for [`GOOS`][go-environment].
     If an operating system is not included in the `GOOS` documentation, it SHOULD be submitted to this specification for standardization.
-* **`arch`** (string, REQUIRED) specifies the instruction set for which the binaries in the specified [`root`](#root) file system bundle have been compiled.
+* **`arch`** (string, REQUIRED) specifies the instruction set for which the binaries in the specified [`root`](#root) filesystem bundle have been compiled.
     The runtime MUST generate an error if it does not support the specified **`arch`**.
-    Values for **`arch`** SHOULD use, and runtimes SHOULD understand, **`arch`** entries listed in the Go Language document for [`GOARCH`][go-environment].
+    Values SHOULD be, and runtimes SHOULD understand, **`arch`** entries listed in the Go Language document for [`GOARCH`][go-environment].
     If an architecture is not included in the `GOARCH` documentation, it SHOULD be submitted to this specification for standardization.
 
 ### Example
@@ -456,12 +457,12 @@ Cleanup or debugging functions are examples of such a hook.
 
 ## <a name="configExtensibility" />Extensibility
 
-Implementations that are reading/processing this configuration file MUST NOT generate an error if they encounter an unknown property.
+Runtimes that are reading or processing this configuration file MUST NOT generate an error if they encounter an unknown property.
 Instead they MUST ignore unknown properties.
 
 ## Valid values
 
-Implementations that are reading/processing this configuration file MUST generate an error when invalid or unsupported values are encountered.
+Runtimes that are reading or processing this configuration file MUST generate an error when invalid or unsupported values are encountered.
 Unless support for a valid value is explicitly required, runtimes MAY choose which subset of the valid values it will support.
 
 ## Configuration Schema Example
