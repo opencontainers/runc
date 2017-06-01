@@ -367,10 +367,9 @@ For Windows based systems the user structure has the following fields:
 }
 ```
 
-## <a name="configHooks" />Hooks
+## <a name="configHooks" />Linux and Solaris Hooks
 
-Hooks allow for the configuration of custom actions related to the [lifecycle](runtime.md#lifecycle) of the container if supported by the platform.
-On Linux, they are run after the container namespaces are created.
+For Linux- and Solaris-based systems, the configuration structure supports `hooks` for configuring custom actions related to the [lifecycle](runtime.md#lifecycle) of the container.
 
 * **`hooks`** (object, OPTIONAL) MAY contain any of the following properties:
     * **`prestart`** (array of objects, OPTIONAL) is an array of [pre-start hooks](#prestart).
