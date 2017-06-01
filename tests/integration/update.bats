@@ -31,7 +31,7 @@ function setup() {
         "cpus": "0"
     },
     "blockio": {
-        "blkioWeight": 1000
+        "weight": 1000
     },
     "pids": {
         "limit": 20
@@ -184,7 +184,7 @@ function check_cgroup_value() {
     "cpus": "0"
   },
   "blockIO": {
-    "blkioWeight": 1000
+    "weight": 1000
   },
   "pids": {
     "limit": 20
@@ -235,7 +235,7 @@ EOF
     "cpus": "0"
   },
   "blockIO": {
-    "blkioWeight": 1000
+    "weight": 1000
   },
   "pids": {
     "limit": 20

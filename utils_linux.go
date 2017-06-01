@@ -392,5 +392,5 @@ func startContainer(context *cli.Context, spec *specs.Spec, action CtAct, criuOp
 		action:          action,
 		criuOpts:        criuOpts,
 	}
-	return r.run(&spec.Process)
+	return r.run(spec.Process)
 }
