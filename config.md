@@ -30,11 +30,11 @@ For all platform-specific configuration values, the scope defined below in the [
 
 * **`path`** (string, OPTIONAL) Specifies the path to the root filesystem for the container.
     The path is either an absolute path or a relative path to the bundle.
-    Users SHOULD consider using a conventional name, such as `rootfs`.
 
     * On Windows, for Windows Server Containers, this field is REQUIRED and MUST be specified as a [volume GUID path][naming-a-volume].
       For Hyper-V Containers, this field MUST be omitted.
     * On all other platforms, this field is REQUIRED.
+        The value SHOULD be the conventional `rootfs`.
     * On Linux, for example, with a bundle at `/to/bundle` and a root filesystem at `/to/bundle/rootfs`, the `path` value can be either `/to/bundle/rootfs` or `rootfs`.
 
     If defined, a directory MUST exist at the path declared by the field.
