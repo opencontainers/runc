@@ -15,7 +15,7 @@ For example, namespaces, resource limits, and mounts are all part of the contain
 
 ## <a name="glossaryContainerNamespace" />Container namespace
 
-On Linux, a leaf in the [namespace][namespaces.7] hierarchy in which the [configured process](config.md#process) executes.
+On Linux,the [namespaces][namespaces.7] in which the [configured process](config.md#process) executes.
 
 ## <a name="glossaryJson" />JSON
 
@@ -30,9 +30,7 @@ It reads the [configuration files](#configuration) from a [bundle](#bundle), use
 
 ## <a name="glossaryRuntimeNamespace" />Runtime namespace
 
-On Linux, a leaf in the [namespace][namespaces.7] hierarchy from which the [runtime](#runtime) process is executed.
-New container namespaces will be created as children of the runtime namespaces.
-
+On Linux, the namespaces from which new [container namespaces](#container-namespace) are [created](config-linux.md#namespaces) and from which some configured resources are accessed.
 
 [JSON]: https://tools.ietf.org/html/rfc7159
 [UTF-8]: http://www.unicode.org/versions/Unicode8.0.0/ch03.pdf
