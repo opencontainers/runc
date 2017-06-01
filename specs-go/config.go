@@ -248,7 +248,7 @@ type linuxBlockIODevice struct {
 	Minor int64 `json:"minor"`
 }
 
-// LinuxWeightDevice struct holds a `major:minor weight` pair for blkioWeightDevice
+// LinuxWeightDevice struct holds a `major:minor weight` pair for weightDevice
 type LinuxWeightDevice struct {
 	linuxBlockIODevice
 	// Weight is the bandwidth rate for the device.
@@ -267,19 +267,19 @@ type LinuxThrottleDevice struct {
 // LinuxBlockIO for Linux cgroup 'blkio' resource management
 type LinuxBlockIO struct {
 	// Specifies per cgroup weight
-	Weight *uint16 `json:"blkioWeight,omitempty"`
+	Weight *uint16 `json:"weight,omitempty"`
 	// Specifies tasks' weight in the given cgroup while competing with the cgroup's child cgroups, CFQ scheduler only
-	LeafWeight *uint16 `json:"blkioLeafWeight,omitempty"`
+	LeafWeight *uint16 `json:"leafWeight,omitempty"`
 	// Weight per cgroup per device, can override BlkioWeight
-	WeightDevice []LinuxWeightDevice `json:"blkioWeightDevice,omitempty"`
+	WeightDevice []LinuxWeightDevice `json:"weightDevice,omitempty"`
 	// IO read rate limit per cgroup per device, bytes per second
-	ThrottleReadBpsDevice []LinuxThrottleDevice `json:"blkioThrottleReadBpsDevice,omitempty"`
+	ThrottleReadBpsDevice []LinuxThrottleDevice `json:"throttleReadBpsDevice,omitempty"`
 	// IO write rate limit per cgroup per device, bytes per second
-	ThrottleWriteBpsDevice []LinuxThrottleDevice `json:"blkioThrottleWriteBpsDevice,omitempty"`
+	ThrottleWriteBpsDevice []LinuxThrottleDevice `json:"throttleWriteBpsDevice,omitempty"`
 	// IO read rate limit per cgroup per device, IO per second
-	ThrottleReadIOPSDevice []LinuxThrottleDevice `json:"blkioThrottleReadIOPSDevice,omitempty"`
+	ThrottleReadIOPSDevice []LinuxThrottleDevice `json:"throttleReadIOPSDevice,omitempty"`
 	// IO write rate limit per cgroup per device, IO per second
-	ThrottleWriteIOPSDevice []LinuxThrottleDevice `json:"blkioThrottleWriteIOPSDevice,omitempty"`
+	ThrottleWriteIOPSDevice []LinuxThrottleDevice `json:"throttleWriteIOPSDevice,omitempty"`
 }
 
 // LinuxMemory for Linux cgroup 'memory' resource management
