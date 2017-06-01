@@ -36,7 +36,7 @@ For all platform-specific configuration values, the scope defined below in the [
 
     * On Windows, `path` MUST be a [volume GUID path][naming-a-volume].
 
-    * On Linux and Solaris, `path` is either an absolute path or a relative path to the bundle.
+    * On POSIX platforms, `path` is either an absolute path or a relative path to the bundle.
         For example, with a bundle at `/to/bundle` and a root filesystem at `/to/bundle/rootfs`, the `path` value can be either `/to/bundle/rootfs` or `rootfs`.
         The value SHOULD be the conventional `rootfs`.
 
@@ -45,7 +45,7 @@ For all platform-specific configuration values, the scope defined below in the [
 * **`readonly`** (bool, OPTIONAL) If true then the root filesystem MUST be read-only inside the container, defaults to false.
     * On Windows, this field MUST be omitted or false.
 
-### Example (POSIX)
+### Example (POSIX platforms)
 
 ```json
 "root": {
@@ -94,9 +94,9 @@ For all platform-specific configuration values, the scope defined below in the [
 ]
 ```
 
-### <a name="configLinuxAndSolarisMounts" />Linux and Solaris Mounts
+### <a name="configPOSIXMounts" />POSIX-platform Mounts
 
-For Linux and Solaris based systems the mounts structure has the following fields:
+For POSIX platforms the `mounts` structure has the following fields:
 
 * **`type`** (string, OPTIONAL) The type of the filesystem to be mounted.
   * Linux: filesystem types supported by the kernel as listed in */proc/filesystems* (e.g., "minix", "ext2", "ext3", "jfs", "xfs", "reiserfs", "msdos", "proc", "nfs", "iso9660").
@@ -195,9 +195,9 @@ For Linux-based systems the process structure supports the following process-spe
 
 The user for the process is a platform-specific structure that allows specific control over which user the process runs as.
 
-#### <a name="configLinuxAndSolarisUser" />Linux and Solaris User
+#### <a name="configPOSIXUser" />POSIX-platform User
 
-For Linux and Solaris based systems the user structure has the following fields:
+For POSIX platforms the `user` structure has the following fields:
 
 * **`uid`** (int, REQUIRED) specifies the user ID in the [container namespace](glossary.md#container-namespace).
 * **`gid`** (int, REQUIRED) specifies the group ID in the [container namespace](glossary.md#container-namespace).
@@ -348,9 +348,9 @@ For Windows based systems the user structure has the following fields:
 }
 ```
 
-## <a name="configHooks" />Linux and Solaris Hooks
+## <a name="configHooks" />POSIX-platform Hooks
 
-For Linux- and Solaris-based systems, the configuration structure supports `hooks` for configuring custom actions related to the [lifecycle](runtime.md#lifecycle) of the container.
+For POSIX platforms, the configuration structure supports `hooks` for configuring custom actions related to the [lifecycle](runtime.md#lifecycle) of the container.
 
 * **`hooks`** (object, OPTIONAL) MAY contain any of the following properties:
     * **`prestart`** (array of objects, OPTIONAL) is an array of [pre-start hooks](#prestart).
