@@ -33,9 +33,9 @@ type containerState struct {
 	// Status is the current status of the container, running, paused, ...
 	Status string `json:"status"`
 	// Bundle is the path on the filesystem to the bundle
-	Bundle string `json:"bundle"`
+	Bundle string `json:"bundlePath"`
 	// Rootfs is a path to a directory containing the container's root filesystem.
-	Rootfs string `json:"rootfs"`
+	Rootfs string `json:"rootfsPath"`
 	// Created is the unix timestamp for the creation time of the container in UTC
 	Created time.Time `json:"created"`
 	// Annotations is the user defined annotations added to the config.
