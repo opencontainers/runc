@@ -134,7 +134,7 @@ func TestGetContainerState(t *testing.T) {
 	var (
 		pid                 = os.Getpid()
 		expectedMemoryPath  = "/sys/fs/cgroup/memory/myid"
-		expectedNetworkPath = "/networks/fd"
+		expectedNetworkPath = fmt.Sprintf("/proc/%d/ns/net", pid)
 	)
 	container := &linuxContainer{
 		id: "myid",
