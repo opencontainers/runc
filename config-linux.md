@@ -110,7 +110,7 @@ Note that the number of mapping entries MAY be limited by the [kernel][user-name
 ## <a name="configLinuxDevices" />Devices
 
 **`devices`** (array of objects, OPTIONAL) lists devices that MUST be available in the container.
-The runtime MAY supply them however it likes (with [`mknod`][mknod.2], by bind mounting from the runtime mount namespace, etc.).
+The runtime MAY supply them however it likes (with [`mknod`][mknod.2], by bind mounting from the runtime mount namespace, using symlinks, etc.).
 
 Each entry has the following structure:
 
