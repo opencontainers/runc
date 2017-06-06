@@ -23,7 +23,7 @@ func Example() *specs.Spec {
 			Path:     "rootfs",
 			Readonly: true,
 		},
-		Process: specs.Process{
+		Process: &specs.Process{
 			Terminal: true,
 			User:     specs.User{},
 			Args: []string{
