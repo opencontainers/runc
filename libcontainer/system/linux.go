@@ -133,13 +133,5 @@ func RunningInUserNS() bool {
 
 // SetSubreaper sets the value i as the subreaper setting for the calling process
 func SetSubreaper(i int) error {
-	return Prctl(PR_SET_CHILD_SUBREAPER, uintptr(i), 0, 0, 0)
-}
-
-func Prctl(option int, arg2, arg3, arg4, arg5 uintptr) (err error) {
-	_, _, e1 := unix.Syscall6(unix.SYS_PRCTL, uintptr(option), arg2, arg3, arg4, arg5, 0)
-	if e1 != 0 {
-		err = e1
-	}
-	return
+	return unix.Prctl(PR_SET_CHILD_SUBREAPER, uintptr(i), 0, 0, 0)
 }

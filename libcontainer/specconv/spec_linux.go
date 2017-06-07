@@ -230,8 +230,8 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 		config.ProcessLabel = spec.Process.SelinuxLabel
 	}
 	config.Sysctl = spec.Linux.Sysctl
-	if spec.Linux.Resources != nil && spec.Linux.Resources.OOMScoreAdj != nil {
-		config.OomScoreAdj = *spec.Linux.Resources.OOMScoreAdj
+	if spec.Process != nil && spec.Process.OOMScoreAdj != nil {
+		config.OomScoreAdj = *spec.Process.OOMScoreAdj
 	}
 	if spec.Process.Capabilities != nil {
 		config.Capabilities = &configs.Capabilities{

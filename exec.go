@@ -208,5 +208,5 @@ func getProcess(context *cli.Context, bundle string) (*specs.Process, error) {
 		}
 		p.User.UID = uint32(uid)
 	}
-	return &p, nil
+	return p, nil
 }

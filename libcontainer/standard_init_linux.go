@@ -128,7 +128,7 @@ func (l *linuxStandardInit) Init() error {
 		return err
 	}
 	if l.config.NoNewPrivileges {
-		if err := system.Prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0); err != nil {
+		if err := unix.Prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0); err != nil {
 			return err
 		}
 	}

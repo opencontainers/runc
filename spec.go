@@ -134,7 +134,7 @@ func loadSpec(cPath string) (spec *specs.Spec, err error) {
 	if err = validatePlatform(&spec.Platform); err != nil {
 		return nil, err
 	}
-	return spec, validateProcessSpec(&spec.Process)
+	return spec, validateProcessSpec(spec.Process)
 }
 
 func createLibContainerRlimit(rlimit specs.LinuxRlimit) (configs.Rlimit, error) {

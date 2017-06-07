@@ -11,6 +11,8 @@ import (
 	"github.com/opencontainers/runc/libcontainer/seccomp"
 	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/selinux/go-selinux/label"
+
+	"golang.org/x/sys/unix"
 )
 
 // linuxSetnsInit performs the container's initialization for running a new process
@@ -41,7 +43,7 @@ func (l *linuxSetnsInit) Init() error {
 		}
 	}
 	if l.config.NoNewPrivileges {
-		if err := system.Prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0); err != nil {
+		if err := unix.Prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0); err != nil {
 			return err
 		}
 	}
