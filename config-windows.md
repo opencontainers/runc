@@ -95,7 +95,7 @@ The following parameters can be specified:
 
 * **`endpointList`** *(array of strings, OPTIONAL)* - list of HNS (Host Network Service) endpoints that the container should connect to.
 * **`allowUnqualifiedDNSQuery`** *(bool, OPTIONAL)* - specifies if unqualified DNS name resolution is allowed.
-* **`DNSSearchList`** *(array of strings, OPTIONAL)* - comma seperated list of DNS suffixes to use for name resolution.
+* **`DNSSearchList`** *(array of strings, OPTIONAL)* - comma separated list of DNS suffixes to use for name resolution.
 * **`networkSharedContainerName`** *(string, OPTIONAL)* - name (ID) of the container that we will share with the network stack.
 
 ### Example

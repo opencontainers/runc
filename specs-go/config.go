@@ -486,7 +486,7 @@ type WindowsNetwork struct {
 	EndpointList []string `json:"endpointList,omitempty"`
 	// Specifies if unqualified DNS name resolution is allowed.
 	AllowUnqualifiedDNSQuery bool `json:"allowUnqualifiedDNSQuery,omitempty"`
-	// Comma seperated list of DNS suffixes to use for name resolution.
+	// Comma separated list of DNS suffixes to use for name resolution.
 	DNSSearchList []string `json:"DNSSearchList,omitempty"`
 	// Name (ID) of the container that we will share with the network stack.
 	NetworkSharedContainerName string `json:"networkSharedContainerName,omitempty"`
