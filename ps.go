@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/opencontainers/runc/libcontainer"
 	"github.com/urfave/cli"
 )
 
@@ -36,6 +37,13 @@ var psCommand = cli.Command{
 		container, err := getContainer(context)
 		if err != nil {
 			return err
+		}
+		status, err := container.Status()
+		if err != nil {
+			return err
+		}
+		if status == libcontainer.Stopped {
+			return fmt.Errorf("cannot ps a container that has run and stopped")
 		}
 
 		pids, err := container.Processes()

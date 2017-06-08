@@ -179,13 +179,6 @@ func (c *linuxContainer) Stats() (*Stats, error) {
 func (c *linuxContainer) Set(config configs.Config) error {
 	c.m.Lock()
 	defer c.m.Unlock()
-	status, err := c.currentStatus()
-	if err != nil {
-		return err
-	}
-	if status == Stopped {
-		return newGenericError(fmt.Errorf("container not running"), ContainerNotRunning)
-	}
 	c.config = &config
 	return c.cgroupManager.Set(c.config)
 }
