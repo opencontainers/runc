@@ -127,13 +127,7 @@ func (r *runningState) transition(s containerState) error {
 }
 
 func (r *runningState) destroy() error {
-	t, err := r.c.runType()
-	if err != nil {
-		return err
-	}
-	if t == Running {
-		return newGenericError(fmt.Errorf("container is not destroyed"), ContainerNotStopped)
-	}
+	r.c.initProcess.signal(syscall.SIGKILL)
 	return destroy(r.c)
 }
 
