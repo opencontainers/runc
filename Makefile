@@ -106,8 +106,8 @@ localrootlessintegration: all
 shell: all
 	docker run -e TESTFLAGS -ti --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) bash
 
-install:
-	install -D -m0755 runc $(BINDIR)/runc
+install: runc
+	install -D -m0755 $< $(BINDIR)/runc
 
 install-bash:
 	install -D -m0644 contrib/completions/bash/runc $(PREFIX)/share/bash-completion/completions/runc
