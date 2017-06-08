@@ -40,11 +40,16 @@ func newConsole() (Console, error) {
 // linuxConsole is a linux pseudo TTY for use within a container.
 type linuxConsole struct {
 	master    *os.File
+	slave     *os.File
 	slavePath string
 }
 
 func (c *linuxConsole) File() *os.File {
 	return c.master
+}
+
+func (c *linuxConsole) Slave() *os.File {
+	return c.slave
 }
 
 func (c *linuxConsole) Path() string {
@@ -94,6 +99,7 @@ func (c *linuxConsole) dupStdio() error {
 			return err
 		}
 	}
+	c.slave = slave
 	return nil
 }
 

@@ -294,14 +294,21 @@ func TestExecInTTY(t *testing.T) {
 	}
 	dc := make(chan *cdata, 1)
 	go func() {
-		f, err := utils.RecvFd(parent)
+		master, err := utils.RecvFd(parent)
 		if err != nil {
 			dc <- &cdata{
 				err: err,
 			}
 		}
+		slave, err := utils.RecvFd(parent)
+		if err != nil {
+			dc <- &cdata{
+				err: err,
+			}
+		}
+		slave.Close()
 		dc <- &cdata{
-			c: libcontainer.ConsoleFromFile(f),
+			c: libcontainer.ConsoleFromFile(master),
 		}
 	}()
 	err = container.Run(ps)

@@ -191,7 +191,13 @@ func setupConsole(socket *os.File, config *initConfig, mount bool) error {
 		return err
 	}
 	// Now, dup over all the things.
-	return linuxConsole.dupStdio()
+	if err := linuxConsole.dupStdio(); err != nil {
+		return err
+	}
+	// send the slave over to the other side to keep track of it. This makes sure
+	// that no matter what we do on the container side, the master-slave pipe
+	// will never be invalidated as long as we hold on to the valid slavefd.
+	return utils.SendFd(socket, linuxConsole.Slave())
 }
 
 // syncParentReady sends to the given pipe a JSON payload which indicates that
