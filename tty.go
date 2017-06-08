@@ -74,6 +74,9 @@ func (t *tty) recvtty(process *libcontainer.Process, socket *os.File) error {
 	if err != nil {
 		return err
 	}
+	if err = libcontainer.SaneTerminal(f); err != nil {
+		return err
+	}
 	console := libcontainer.ConsoleFromFile(f)
 	go io.Copy(console, os.Stdin)
 	t.wg.Add(1)
