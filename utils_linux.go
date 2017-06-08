@@ -209,6 +209,26 @@ func createContainer(context *cli.Context, id string, spec *specs.Spec) (libcont
 	if err != nil {
 		return nil, err
 	}
+
+	if context.Bool("delete-if-stopped") {
+		containerRoot := filepath.Join(context.GlobalString("root"), id)
+		if _, err := os.Stat(containerRoot); err == nil {
+			container, err := factory.Load(id)
+			if err != nil {
+				return nil, err
+			}
+			status, err := container.Status()
+			if err != nil {
+				return nil, err
+			}
+			if status == libcontainer.Stopped {
+				if err = os.RemoveAll(containerRoot); err != nil {
+					fmt.Fprintf(os.Stderr, "remove %s: %v\n", containerRoot, err)
+				}
+			}
+		}
+	}
+
 	return factory.Create(id, config)
 }
 
