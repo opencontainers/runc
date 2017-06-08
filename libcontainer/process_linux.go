@@ -125,7 +125,11 @@ func (p *setnsProcess) start() (err error) {
 // because setns support requires the C process to fork off a child and perform the setns
 // before the go runtime boots, we wait on the process to die and receive the child's pid
 // over the provided pipe.
-func (p *setnsProcess) execSetns() error {
+func (p *setnsProcess) execSetns() (err error) {
+	defer func() {
+		err = reapChildren(err)
+	}()
+
 	status, err := p.cmd.Process.Wait()
 	if err != nil {
 		p.cmd.Wait()
@@ -208,7 +212,11 @@ func (p *initProcess) externalDescriptors() []string {
 // before the go runtime boots, we wait on the process to die and receive the child's pid
 // over the provided pipe.
 // This is called by initProcess.start function
-func (p *initProcess) execSetns() error {
+func (p *initProcess) execSetns() (err error) {
+	defer func() {
+		err = reapChildren(err)
+	}()
+
 	status, err := p.cmd.Process.Wait()
 	if err != nil {
 		p.cmd.Wait()
@@ -488,4 +496,31 @@ func (p *Process) InitializeIO(rootuid, rootgid int) (i *IO, err error) {
 		}
 	}
 	return i, nil
+}
+
+// reapChildren reaps all exited child processes.
+// If callerErr is not nil then that is returned, otherwise any error encountered is returned.
+func reapChildren(callerErr error) (err error) {
+	defer func() {
+		if callerErr != nil {
+			err = callerErr
+		}
+	}()
+
+	for {
+		var ws syscall.WaitStatus
+		pid, err := syscall.Wait4(-1, &ws, syscall.WNOHANG, nil)
+		if err != nil {
+			if err, ok := err.(syscall.Errno); ok && err == syscall.ECHILD {
+				// No children
+				return nil
+			}
+			return newSystemErrorWithCause(err, "waiting for children")
+		} else if pid == 0 {
+			// No children reported
+			return nil
+		} else if ws.Exited() && ws.ExitStatus() != 0 {
+			return newSystemError(fmt.Errorf("child pid: %v failed exitcode: %v, signal: %v", pid, ws.ExitStatus(), ws.Signal()))
+		}
+	}
 }
