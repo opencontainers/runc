@@ -40,7 +40,7 @@ RUN cd /tmp \
     && rm -rf /tmp/bats
 
 # install criu
-ENV CRIU_VERSION 2.12
+ENV CRIU_VERSION 3.1
 RUN mkdir -p /usr/src/criu \
     && curl -sSL https://github.com/xemul/criu/archive/v${CRIU_VERSION}.tar.gz | tar -v -C /usr/src/criu/ -xz --strip-components=1 \
     && cd /usr/src/criu \
