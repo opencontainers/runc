@@ -55,7 +55,7 @@ function runc() {
 
 # Raw wrapper for runc.
 function __runc() {
-	"$RUNC" --root "$ROOT" "$@"
+	"$RUNC" --log /proc/self/fd/2 --root "$ROOT" "$@"
 }
 
 # Wrapper for runc spec.
