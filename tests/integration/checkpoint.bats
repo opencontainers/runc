@@ -21,12 +21,7 @@ function teardown() {
   runc run -d --console-socket $CONSOLE_SOCKET test_busybox
   [ "$status" -eq 0 ]
 
-  # check state
-  wait_for_container 15 1 test_busybox
-
-  runc state test_busybox
-  [ "$status" -eq 0 ]
-  [[ "${output}" == *"running"* ]]
+  testcontainer test_busybox running
 
   for i in `seq 2`; do
 	  # checkpoint the running container
@@ -40,19 +35,12 @@ function teardown() {
 	  [ "$status" -ne 0 ]
 
 	  # restore from checkpoint
-	  (
-	    runc --criu "$CRIU" restore -d --console-socket $CONSOLE_SOCKET test_busybox
-	    [ "$status" -eq 0 ]
-	  ) &
+	  runc --criu "$CRIU" restore -d --console-socket $CONSOLE_SOCKET test_busybox
+	  [ "$status" -eq 0 ]
 
-	  # check state
-	  wait_for_container 15 1 test_busybox
+	  # busybox should be back up and running
+          testcontainer test_busybox running
   done
-
-  # busybox should be back up and running
-  runc state test_busybox
-  [ "$status" -eq 0 ]
-  [[ "${output}" == *"running"* ]]
 }
 
 @test "checkpoint --pre-dump and restore" {
