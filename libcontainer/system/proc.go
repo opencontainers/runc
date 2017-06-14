@@ -1,23 +1,43 @@
 package system
 
 import (
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"strconv"
 	"strings"
 )
 
-// look in /proc to find the process start time so that we can verify
-// that this pid has started after ourself
+// Stat_t represents the information from /proc/[pid]/stat, as
+// described in proc(5).
+type Stat_t struct {
+	// StartTime is the number of clock ticks after system boot (since
+	// Linux 2.6).
+	StartTime uint64
+}
+
+// Stat returns a Stat_t instance for the specified process.
+func Stat(pid int) (stat Stat_t, err error) {
+	bytes, err := ioutil.ReadFile(filepath.Join("/proc", strconv.Itoa(pid), "stat"))
+	if err != nil {
+		return stat, err
+	}
+	data := string(bytes)
+	stat.StartTime, err = parseStartTime(data)
+	return stat, err
+}
+
+// GetProcessStartTime is deprecated.  Use Stat(pid) and
+// Stat_t.StartTime instead.
 func GetProcessStartTime(pid int) (string, error) {
-	data, err := ioutil.ReadFile(filepath.Join("/proc", strconv.Itoa(pid), "stat"))
+	stat, err := Stat(pid)
 	if err != nil {
 		return "", err
 	}
-	return parseStartTime(string(data))
+	return fmt.Sprintf("%d", stat.StartTime), nil
 }
 
-func parseStartTime(stat string) (string, error) {
+func parseStartTime(stat string) (uint64, error) {
 	// the starttime is located at pos 22
 	// from the man page
 	//
@@ -39,5 +59,8 @@ func parseStartTime(stat string) (string, error) {
 	// get parts after last `)`:
 	s := strings.Split(stat, ")")
 	parts := strings.Split(strings.TrimSpace(s[len(s)-1]), " ")
-	return parts[22-3], nil // starts at 3 (after the filename pos `2`)
+	startTimeString := parts[22-3] // starts at 3 (after the filename pos `2`)
+	var startTime uint64
+	fmt.Sscanf(startTimeString, "%d", &startTime)
+	return startTime, nil
 }
