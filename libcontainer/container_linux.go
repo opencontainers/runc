@@ -1365,40 +1365,17 @@ func (c *linuxContainer) refreshState() error {
 	return c.state.transition(&stoppedState{c: c})
 }
 
-// doesInitProcessExist checks if the init process is still the same process
-// as the initial one, it could happen that the original process has exited
-// and a new process has been created with the same pid, in this case, the
-// container would already be stopped.
-func (c *linuxContainer) doesInitProcessExist(initPid int) (bool, error) {
-	stat, err := system.Stat(initPid)
-	if err != nil {
-		return false, newSystemErrorWithCausef(err, "getting init process %d status", initPid)
-	}
-	if c.initProcessStartTime != stat.StartTime {
-		return false, nil
-	}
-	return true, nil
-}
-
 func (c *linuxContainer) runType() (Status, error) {
 	if c.initProcess == nil {
 		return Stopped, nil
 	}
 	pid := c.initProcess.pid()
-	// return Running if the init process is alive
-	if err := unix.Kill(pid, 0); err != nil {
-		if err == unix.ESRCH {
-			// It means the process does not exist anymore, could happen when the
-			// process exited just when we call the function, we should not return
-			// error in this case.
-			return Stopped, nil
-		}
-		return Stopped, newSystemErrorWithCausef(err, "sending signal 0 to pid %d", pid)
+	stat, err := system.Stat(pid)
+	if err != nil {
+		return Stopped, nil
 	}
-	// check if the process is still the original init process.
-	exist, err := c.doesInitProcessExist(pid)
-	if !exist || err != nil {
-		return Stopped, err
+	if stat.StartTime != c.initProcessStartTime || stat.State == system.Zombie || stat.State == system.Dead {
+		return Stopped, nil
 	}
 	// We'll create exec fifo and blocking on it after container is created,
 	// and delete it after start container.
