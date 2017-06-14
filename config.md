@@ -140,8 +140,8 @@ For Linux and Solaris based systems the mounts structure has the following field
 **`process`** (object, OPTIONAL) specifies the container process.
     This property is REQUIRED when [`start`](runtime.md#start) is called.
 
-* **`terminal`** (bool, OPTIONAL) specifies whether a terminal is attached to that process, defaults to false.
-    As an example, if set to true on Linux a pseudoterminal pair is allocated for the container process and the pseudoterminal slave is duplicated on the container process's [standard streams][stdin.3].
+* **`terminal`** (bool, OPTIONAL) specifies whether a terminal is attached to the process, defaults to false.
+    As an example, if set to true on Linux a pseudoterminal pair is allocated for the process and the pseudoterminal slave is duplicated on the process's [standard streams][stdin.3].
 * **`consoleSize`** (object, OPTIONAL) specifies the console size in characters of the terminal.
     Runtimes MUST ignore `consoleSize` if `terminal` is `false` or unset.
     * **`height`** (uint, REQUIRED)
@@ -151,7 +151,7 @@ For Linux and Solaris based systems the mounts structure has the following field
 * **`env`** (array of strings, OPTIONAL) with the same semantics as [IEEE Std 1003.1-2008's `environ`][ieee-1003.1-2008-xbd-c8.1].
 * **`args`** (array of strings, REQUIRED) with similar semantics to [IEEE Std 1003.1-2008 `execvp`'s *argv*][ieee-1003.1-2008-xsh-exec].
     This specification extends the IEEE standard in that at least one entry is REQUIRED, and that entry is used with the same semantics as `execvp`'s *file*.
-* **`capabilities`** (object, OPTIONAL) is an object containing arrays that specifies the sets of capabilities for the process(es) inside the container.
+* **`capabilities`** (object, OPTIONAL) is an object containing arrays that specifies the sets of capabilities for the process.
     Valid values are platform-specific.
     For example, valid values for Linux are defined in the [capabilities(7)][capabilities.7] man page, such as `CAP_CHOWN`.
     Any value which cannot be mapped to a relevant kernel interface MUST cause an error.
@@ -161,7 +161,7 @@ For Linux and Solaris based systems the mounts structure has the following field
     * **`inheritable`** (array of strings, OPTIONAL) - the `inheritable` field is an array of inheritable capabilities that are kept for the process.
     * **`permitted`** (array of strings, OPTIONAL) - the `permitted` field is an array of permitted capabilities that are kept for the process.
     * **`ambient`** (array of strings, OPTIONAL) - the `ambient` field is an array of ambient capabilities that are kept for the process.
-* **`rlimits`** (array of objects, OPTIONAL) allows setting resource limits for a process inside the container.
+* **`rlimits`** (array of objects, OPTIONAL) allows setting resource limits for the process.
     Each entry has the following structure:
 
     * **`type`** (string, REQUIRED) - the platform resource being limited, for example on Linux as defined in the [setrlimit(2)][setrlimit.2] man page.
@@ -171,20 +171,20 @@ For Linux and Solaris based systems the mounts structure has the following field
 
     If `rlimits` contains duplicated entries with same `type`, the runtime MUST error out.
 
-* **`noNewPrivileges`** (bool, OPTIONAL) setting `noNewPrivileges` to true prevents the processes in the container from gaining additional privileges.
+* **`noNewPrivileges`** (bool, OPTIONAL) setting `noNewPrivileges` to true prevents the process from gaining additional privileges.
     As an example, the ['no_new_privs'][no-new-privs] article in the kernel documentation has information on how this is achieved using a prctl system call on Linux.
 
 For Linux-based systems the process structure supports the following process-specific fields.
 
-* **`apparmorProfile`** (string, OPTIONAL) specifies the name of the AppArmor profile to be applied to processes in the container.
+* **`apparmorProfile`** (string, OPTIONAL) specifies the name of the AppArmor profile for the process.
     For more information about AppArmor, see [AppArmor documentation][apparmor].
-* **`oomScoreAdj`** *(int, OPTIONAL)* adjusts the oom-killer score in `[pid]/oom_score_adj` for the container process's `[pid]` in a [proc pseudo-filesystem][procfs].
+* **`oomScoreAdj`** *(int, OPTIONAL)* adjusts the oom-killer score in `[pid]/oom_score_adj` for the process's `[pid]` in a [proc pseudo-filesystem][procfs].
     If `oomScoreAdj` is set, the runtime MUST set `oom_score_adj` to the given value.
     If `oomScoreAdj` is not set, the runtime MUST NOT change the value of `oom_score_adj`.
 
     This is a per-process setting, where as [`disableOOMKiller`](config-linux.md#disable-out-of-memory-killer) is scoped for a memory cgroup.
     For more information on how these two settings work together, see [the memory cgroup documentation section 10. OOM Contol][cgroup-v1-memory_2].
-* **`selinuxLabel`** (string, OPTIONAL) specifies the SELinux label to be applied to the processes in the container.
+* **`selinuxLabel`** (string, OPTIONAL) specifies the SELinux label for the process.
     For more information about SELinux, see  [SELinux documentation][selinux].
 
 ### <a name="configUser" />User
