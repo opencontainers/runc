@@ -52,7 +52,7 @@ func (m *mockCgroupManager) Freeze(state configs.FreezerState) error {
 
 type mockProcess struct {
 	_pid    int
-	started string
+	started uint64
 }
 
 func (m *mockProcess) terminate() error {
@@ -63,7 +63,7 @@ func (m *mockProcess) pid() int {
 	return m._pid
 }
 
-func (m *mockProcess) startTime() (string, error) {
+func (m *mockProcess) startTime() (uint64, error) {
 	return m.started, nil
 }
 
@@ -150,7 +150,7 @@ func TestGetContainerState(t *testing.T) {
 		},
 		initProcess: &mockProcess{
 			_pid:    pid,
-			started: "010",
+			started: 10,
 		},
 		cgroupManager: &mockCgroupManager{
 			pids: []int{1, 2, 3},
@@ -174,8 +174,8 @@ func TestGetContainerState(t *testing.T) {
 	if state.InitProcessPid != pid {
 		t.Fatalf("expected pid %d but received %d", pid, state.InitProcessPid)
 	}
-	if state.InitProcessStartTime != "010" {
-		t.Fatalf("expected process start time 010 but received %s", state.InitProcessStartTime)
+	if state.InitProcessStartTime != 10 {
+		t.Fatalf("expected process start time 10 but received %d", state.InitProcessStartTime)
 	}
 	paths := state.CgroupPaths
 	if paths == nil {

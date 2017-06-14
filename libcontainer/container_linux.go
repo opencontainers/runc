@@ -40,7 +40,7 @@ type linuxContainer struct {
 	cgroupManager        cgroups.Manager
 	initArgs             []string
 	initProcess          parentProcess
-	initProcessStartTime string
+	initProcessStartTime uint64
 	criuPath             string
 	m                    sync.Mutex
 	criuVersion          int
@@ -1370,11 +1370,11 @@ func (c *linuxContainer) refreshState() error {
 // and a new process has been created with the same pid, in this case, the
 // container would already be stopped.
 func (c *linuxContainer) doesInitProcessExist(initPid int) (bool, error) {
-	startTime, err := system.GetProcessStartTime(initPid)
+	stat, err := system.Stat(initPid)
 	if err != nil {
-		return false, newSystemErrorWithCausef(err, "getting init process %d start time", initPid)
+		return false, newSystemErrorWithCausef(err, "getting init process %d status", initPid)
 	}
-	if c.initProcessStartTime != startTime {
+	if c.initProcessStartTime != stat.StartTime {
 		return false, nil
 	}
 	return true, nil
@@ -1427,7 +1427,7 @@ func (c *linuxContainer) isPaused() (bool, error) {
 
 func (c *linuxContainer) currentState() (*State, error) {
 	var (
-		startTime           string
+		startTime           uint64
 		externalDescriptors []string
 		pid                 = -1
 	)
