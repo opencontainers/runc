@@ -37,24 +37,6 @@
                 "$ref": "defs.json#/definitions/Mount"
             }
         },
-        "platform": {
-            "id": "https://opencontainers.org/schema/bundle/platform",
-            "type": "object",
-            "required": [
-                "arch",
-                "os"
-            ],
-            "properties": {
-                "arch": {
-                    "id": "https://opencontainers.org/schema/bundle/platform/arch",
-                    "type": "string"
-                },
-                "os": {
-                    "id": "https://opencontainers.org/schema/bundle/platform/os",
-                    "type": "string"
-                }
-            }
-        },
         "root": {
             "description": "Configures the container's root filesystem.",
             "id": "https://opencontainers.org/schema/bundle/root",
@@ -233,7 +215,6 @@
     },
     "required": [
         "ociVersion",
-        "platform",
         "root"
     ]
 }
