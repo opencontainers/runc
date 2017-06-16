@@ -321,47 +321,19 @@ For Windows based systems the user structure has the following fields:
 "hostname": "mrsdalloway"
 ```
 
-## <a name="configPlatform" />Platform
-
-**`platform`** (object, REQUIRED) specifies the configuration's target platform.
-
-* **`os`** (string, REQUIRED) specifies the operating system family of the container configuration's specified [`root`](#root) filesystem bundle.
-    The runtime MUST generate an error if it does not support the specified **`os`**.
-    Values SHOULD be, and runtimes SHOULD understand, **`os`** entries listed in the Go Language document for [`GOOS`][go-environment].
-    If an operating system is not included in the `GOOS` documentation, it SHOULD be submitted to this specification for standardization.
-* **`arch`** (string, REQUIRED) specifies the instruction set for which the binaries in the specified [`root`](#root) filesystem bundle have been compiled.
-    The runtime MUST generate an error if it does not support the specified **`arch`**.
-    Values SHOULD be, and runtimes SHOULD understand, **`arch`** entries listed in the Go Language document for [`GOARCH`][go-environment].
-    If an architecture is not included in the `GOARCH` documentation, it SHOULD be submitted to this specification for standardization.
-
-### Example
-
-```json
-"platform": {
-    "os": "linux",
-    "arch": "amd64"
-}
-```
-
 ## <a name="configPlatformSpecificConfiguration" />Platform-specific configuration
 
-[**`platform.os`**](#platform) is used to specify platform-specific configuration.
-
 * **`linux`** (object, OPTIONAL) [Linux-specific configuration](config-linux.md).
-    This MAY be set if **`platform.os`** is `linux` and MUST NOT be set otherwise.
+    This MAY be set if the target platform of this spec is `linux`.
 * **`windows`** (object, OPTIONAL) [Windows-specific configuration](config-windows.md).
-    This MUST be set if **`platform.os`** is `windows` and MUST NOT be set otherwise.
+    This MUST be set if the target platform of this spec is `windows`.
 * **`solaris`** (object, OPTIONAL) [Solaris-specific configuration](config-solaris.md).
-    This MAY be set if **`platform.os`** is `solaris` and MUST NOT be set otherwise.
+    This MAY be set if the target platform of this spec is `solaris`.
 
 ### Example (Linux)
 
 ```json
 {
-    "platform": {
-        "os": "linux",
-        "arch": "amd64"
-    },
     "linux": {
         "namespaces": [
             {
@@ -477,10 +449,6 @@ Here is a full example `config.json` for reference.
 ```json
 {
     "ociVersion": "0.5.0-dev",
-    "platform": {
-        "os": "linux",
-        "arch": "amd64"
-    },
     "process": {
         "terminal": true,
         "user": {
@@ -856,7 +824,6 @@ Here is a full example `config.json` for reference.
 [no-new-privs]: https://www.kernel.org/doc/Documentation/prctl/no_new_privs.txt
 [procfs_2]: https://www.kernel.org/doc/Documentation/filesystems/proc.txt
 [semver-v2.0.0]: http://semver.org/spec/v2.0.0.html
-[go-environment]: https://golang.org/doc/install/source#environment
 [ieee-1003.1-2008-xbd-c8.1]: http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap08.html#tag_08_01
 [ieee-1003.1-2008-xsh-exec]: http://pubs.opengroup.org/onlinepubs/9699919799/functions/exec.html
 [naming-a-volume]: https://aka.ms/nb3hqb

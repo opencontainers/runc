@@ -1,9 +1,5 @@
 {
     "ociVersion": "0.5.0-dev",
-    "platform": {
-        "os": "linux",
-        "arch": "amd64"
-    },
     "process": {
         "terminal": true,
         "user": {

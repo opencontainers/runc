@@ -6,8 +6,6 @@ import "os"
 type Spec struct {
 	// Version of the Open Container Runtime Specification with which the bundle complies.
 	Version string `json:"ociVersion"`
-	// Platform specifies the configuration's target platform.
-	Platform Platform `json:"platform"`
 	// Process configures the container process.
 	Process *Process `json:"process,omitempty"`
 	// Root configures the container's root filesystem.
@@ -99,15 +97,6 @@ type Root struct {
 	Path string `json:"path,omitempty"`
 	// Readonly makes the root filesystem for the container readonly before the process is executed.
 	Readonly bool `json:"readonly,omitempty"`
-}
-
-// Platform specifies OS and arch information for the host system that the container
-// is created for.
-type Platform struct {
-	// OS is the operating system.
-	OS string `json:"os"`
-	// Arch is the architecture
-	Arch string `json:"arch"`
 }
 
 // Mount specifies a mount for a container.
