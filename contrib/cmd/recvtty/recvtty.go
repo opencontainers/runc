@@ -24,6 +24,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/urfave/cli"
 )
@@ -98,6 +99,9 @@ func handleSingle(path string) error {
 	// Get the master file descriptor from runC.
 	master, err := utils.RecvFd(socket)
 	if err != nil {
+		return err
+	}
+	if err = libcontainer.SaneTerminal(master); err != nil {
 		return err
 	}
 

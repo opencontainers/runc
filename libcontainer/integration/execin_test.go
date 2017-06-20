@@ -300,6 +300,7 @@ func TestExecInTTY(t *testing.T) {
 				err: err,
 			}
 		}
+		libcontainer.SaneTerminal(f)
 		dc <- &cdata{
 			c: libcontainer.ConsoleFromFile(f),
 		}

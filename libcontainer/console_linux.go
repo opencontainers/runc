@@ -21,9 +21,6 @@ func newConsole() (Console, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := saneTerminal(master); err != nil {
-		return nil, err
-	}
 	console, err := ptsname(master)
 	if err != nil {
 		return nil, err
@@ -133,12 +130,12 @@ func ptsname(f *os.File) (string, error) {
 	return fmt.Sprintf("/dev/pts/%d", n), nil
 }
 
-// saneTerminal sets the necessary tty_ioctl(4)s to ensure that a pty pair
+// SaneTerminal sets the necessary tty_ioctl(4)s to ensure that a pty pair
 // created by us acts normally. In particular, a not-very-well-known default of
 // Linux unix98 ptys is that they have +onlcr by default. While this isn't a
 // problem for terminal emulators, because we relay data from the terminal we
 // also relay that funky line discipline.
-func saneTerminal(terminal *os.File) error {
+func SaneTerminal(terminal *os.File) error {
 	// Go doesn't have a wrapper for any of the termios ioctls.
 	var termios unix.Termios
 
