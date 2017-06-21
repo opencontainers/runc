@@ -180,7 +180,7 @@ func testCheckpoint(t *testing.T, userns bool) {
 		t.Fatal(err)
 	}
 
-	if state != libcontainer.Running {
+	if state != libcontainer.Stopped {
 		t.Fatal("Unexpected state checkpoint: ", state)
 	}
 
