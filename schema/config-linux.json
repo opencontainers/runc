@@ -172,23 +172,23 @@
                         "properties": {
                             "kernel": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/memory/kernel",
-                                "$ref": "defs.json#/definitions/uint64"
+                                "$ref": "defs.json#/definitions/int64"
                             },
                             "kernelTCP": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/memory/kernelTCP",
-                                "$ref": "defs.json#/definitions/uint64"
+                                "$ref": "defs.json#/definitions/int64"
                             },
                             "limit": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/memory/limit",
-                                "$ref": "defs.json#/definitions/uint64"
+                                "$ref": "defs.json#/definitions/int64"
                             },
                             "reservation": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/memory/reservation",
-                                "$ref": "defs.json#/definitions/uint64"
+                                "$ref": "defs.json#/definitions/int64"
                             },
                             "swap": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/memory/swap",
-                                "$ref": "defs.json#/definitions/uint64"
+                                "$ref": "defs.json#/definitions/int64"
                             },
                             "swappiness": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/memory/swappiness",
