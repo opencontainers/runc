@@ -1,5 +1,9 @@
 package configs
 
+import (
+	"math"
+)
+
 type FreezerState string
 
 const (
@@ -7,6 +11,8 @@ const (
 	Frozen    FreezerState = "FROZEN"
 	Thawed    FreezerState = "THAWED"
 )
+
+const MemoryUnlimited = math.MaxUint64
 
 type Cgroup struct {
 	// Deprecated, use Path instead
@@ -48,7 +54,7 @@ type Resources struct {
 	// Memory reservation or soft_limit (in bytes)
 	MemoryReservation uint64 `json:"memory_reservation"`
 
-	// Total memory usage (memory + swap); set `-1` to enable unlimited swap
+	// Total memory usage (memory + swap); set MemoryUnlimited to enable unlimited swap
 	MemorySwap uint64 `json:"memory_swap"`
 
 	// Kernel memory limit (in bytes)

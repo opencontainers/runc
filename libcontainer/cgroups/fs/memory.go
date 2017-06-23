@@ -5,7 +5,6 @@ package fs
 import (
 	"bufio"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -88,7 +87,8 @@ func setKernelMemory(path string, kernelMemoryLimit uint64) error {
 		// kernel memory is not enabled on the system so we should do nothing
 		return nil
 	}
-	if err := ioutil.WriteFile(filepath.Join(path, cgroupKernelMemoryLimit), []byte(strconv.FormatUint(kernelMemoryLimit, 10)), 0700); err != nil {
+
+	if err := writeMemoryEntries(path, cgroupKernelMemoryLimit, kernelMemoryLimit); err != nil {
 		// Check if the error number returned by the syscall is "EBUSY"
 		// The EBUSY signal is returned on attempts to write to the
 		// memory.kmem.limit_in_bytes file if the cgroup has children or
@@ -106,14 +106,12 @@ func setKernelMemory(path string, kernelMemoryLimit uint64) error {
 }
 
 func setMemoryAndSwap(path string, cgroup *configs.Cgroup) error {
-	ulimited := -1
-
-	// If the memory update is set to uint64(-1) we should also
-	// set swap to uint64(-1), it means unlimited memory.
-	if cgroup.Resources.Memory == uint64(ulimited) {
+	// If the memory update is set to MemoryUnlimited we should also
+	// set swap to MemoryUnlimited.
+	if cgroup.Resources.Memory == configs.MemoryUnlimited {
 		// Only set swap if it's enbled in kernel
 		if cgroups.PathExists(filepath.Join(path, cgroupMemorySwapLimit)) {
-			cgroup.Resources.MemorySwap = uint64(ulimited)
+			cgroup.Resources.MemorySwap = configs.MemoryUnlimited
 		}
 	}
 
@@ -128,29 +126,29 @@ func setMemoryAndSwap(path string, cgroup *configs.Cgroup) error {
 		// When update memory limit, we should adapt the write sequence
 		// for memory and swap memory, so it won't fail because the new
 		// value and the old value don't fit kernel's validation.
-		if cgroup.Resources.MemorySwap == uint64(ulimited) || memoryUsage.Limit < cgroup.Resources.MemorySwap {
-			if err := writeFile(path, cgroupMemorySwapLimit, strconv.FormatUint(cgroup.Resources.MemorySwap, 10)); err != nil {
+		if cgroup.Resources.MemorySwap == configs.MemoryUnlimited || memoryUsage.Limit < cgroup.Resources.MemorySwap {
+			if err := writeMemoryEntries(path, cgroupMemorySwapLimit, cgroup.Resources.MemorySwap); err != nil {
 				return err
 			}
-			if err := writeFile(path, cgroupMemoryLimit, strconv.FormatUint(cgroup.Resources.Memory, 10)); err != nil {
+			if err := writeMemoryEntries(path, cgroupMemoryLimit, cgroup.Resources.Memory); err != nil {
 				return err
 			}
 		} else {
-			if err := writeFile(path, cgroupMemoryLimit, strconv.FormatUint(cgroup.Resources.Memory, 10)); err != nil {
+			if err := writeMemoryEntries(path, cgroupMemoryLimit, cgroup.Resources.Memory); err != nil {
 				return err
 			}
-			if err := writeFile(path, cgroupMemorySwapLimit, strconv.FormatUint(cgroup.Resources.MemorySwap, 10)); err != nil {
+			if err := writeMemoryEntries(path, cgroupMemorySwapLimit, cgroup.Resources.MemorySwap); err != nil {
 				return err
 			}
 		}
 	} else {
 		if cgroup.Resources.Memory != 0 {
-			if err := writeFile(path, cgroupMemoryLimit, strconv.FormatUint(cgroup.Resources.Memory, 10)); err != nil {
+			if err := writeMemoryEntries(path, cgroupMemoryLimit, cgroup.Resources.Memory); err != nil {
 				return err
 			}
 		}
 		if cgroup.Resources.MemorySwap != 0 {
-			if err := writeFile(path, cgroupMemorySwapLimit, strconv.FormatUint(cgroup.Resources.MemorySwap, 10)); err != nil {
+			if err := writeMemoryEntries(path, cgroupMemorySwapLimit, cgroup.Resources.MemorySwap); err != nil {
 				return err
 			}
 		}
@@ -170,16 +168,12 @@ func (s *MemoryGroup) Set(path string, cgroup *configs.Cgroup) error {
 		}
 	}
 
-	if cgroup.Resources.MemoryReservation != 0 {
-		if err := writeFile(path, "memory.soft_limit_in_bytes", strconv.FormatUint(cgroup.Resources.MemoryReservation, 10)); err != nil {
-			return err
-		}
+	if err := writeMemoryEntries(path, "memory.soft_limit_in_bytes", cgroup.Resources.MemoryReservation); err != nil {
+		return err
 	}
 
-	if cgroup.Resources.KernelMemoryTCP != 0 {
-		if err := writeFile(path, "memory.kmem.tcp.limit_in_bytes", strconv.FormatUint(cgroup.Resources.KernelMemoryTCP, 10)); err != nil {
-			return err
-		}
+	if err := writeMemoryEntries(path, "memory.kmem.tcp.limit_in_bytes", cgroup.Resources.KernelMemoryTCP); err != nil {
+		return err
 	}
 	if cgroup.Resources.OomKillDisable {
 		if err := writeFile(path, "memory.oom_control", "1"); err != nil {
@@ -245,6 +239,26 @@ func (s *MemoryGroup) GetStats(path string, stats *cgroups.Stats) error {
 	}
 	stats.MemoryStats.KernelTCPUsage = kernelTCPUsage
 
+	return nil
+}
+
+func writeMemoryEntries(path, file string, value uint64) error {
+	if value == 0 {
+		return nil
+	}
+
+	// We write `-1` instead of MemoryUnlimited for unlimited memory
+	// because in old kernels(before 3.11), the max resource is
+	// LLONG_MAX, so math.MaxUint64 is out of range which will cause
+	// invalid argument.
+	v := strconv.FormatUint(value, 10)
+	if value == configs.MemoryUnlimited {
+		v = "-1"
+	}
+
+	if err := writeFile(path, file, v); err != nil {
+		return err
+	}
 	return nil
 }
 
