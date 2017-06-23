@@ -73,14 +73,14 @@ func EnableKernelMemoryAccounting(path string) error {
 	// until a limit is set on the cgroup and limit cannot be set once the
 	// cgroup has children, or if there are already tasks in the cgroup.
 	for _, i := range []int64{1, -1} {
-		if err := setKernelMemory(path, uint64(i)); err != nil {
+		if err := setKernelMemory(path, i); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func setKernelMemory(path string, kernelMemoryLimit uint64) error {
+func setKernelMemory(path string, kernelMemoryLimit int64) error {
 	if path == "" {
 		return fmt.Errorf("no such directory for %s", cgroupKernelMemoryLimit)
 	}
@@ -88,7 +88,7 @@ func setKernelMemory(path string, kernelMemoryLimit uint64) error {
 		// kernel memory is not enabled on the system so we should do nothing
 		return nil
 	}
-	if err := ioutil.WriteFile(filepath.Join(path, cgroupKernelMemoryLimit), []byte(strconv.FormatUint(kernelMemoryLimit, 10)), 0700); err != nil {
+	if err := ioutil.WriteFile(filepath.Join(path, cgroupKernelMemoryLimit), []byte(strconv.FormatInt(kernelMemoryLimit, 10)), 0700); err != nil {
 		// Check if the error number returned by the syscall is "EBUSY"
 		// The EBUSY signal is returned on attempts to write to the
 		// memory.kmem.limit_in_bytes file if the cgroup has children or
@@ -165,7 +165,7 @@ func (s *MemoryGroup) Set(path string, cgroup *configs.Cgroup) error {
 	}
 
 	if cgroup.Resources.KernelMemory != 0 {
-		if err := setKernelMemory(path, cgroup.Resources.KernelMemory); err != nil {
+		if err := setKernelMemory(path, int64(cgroup.Resources.KernelMemory)); err != nil {
 			return err
 		}
 	}
