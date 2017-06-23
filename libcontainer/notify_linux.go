@@ -26,13 +26,13 @@ func registerMemoryEvent(cgDir string, evName string, arg string) (<-chan struct
 	if err != nil {
 		return nil, err
 	}
-	fd, _, syserr := unix.RawSyscall(unix.SYS_EVENTFD2, 0, unix.FD_CLOEXEC, 0)
-	if syserr != 0 {
+	fd, err := unix.Eventfd(0, unix.EFD_CLOEXEC)
+	if err != nil {
 		evFile.Close()
-		return nil, syserr
+		return nil, err
 	}
 
-	eventfd := os.NewFile(fd, "eventfd")
+	eventfd := os.NewFile(uintptr(fd), "eventfd")
 
 	eventControlPath := filepath.Join(cgDir, "cgroup.event_control")
 	data := fmt.Sprintf("%d %d %s", eventfd.Fd(), evFile.Fd(), arg)
