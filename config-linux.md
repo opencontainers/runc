@@ -270,13 +270,16 @@ For more information, see the kernel cgroups documentation about [memory][cgroup
 **`memory`** (object, OPTIONAL) represents the cgroup subsystem `memory` and it's used to set limits on the container's memory usage.
 For more information, see the kernel cgroups documentation about [memory][cgroup-v1-memory].
 
-The following parameters can be specified to set up the controller:
+Values for memory specify the limit in bytes, or `-1` for unlimited memory.
 
-* **`limit`** *(uint64, OPTIONAL)* - sets limit of memory usage in bytes
-* **`reservation`** *(uint64, OPTIONAL)* - sets soft limit of memory usage in bytes
-* **`swap`** *(uint64, OPTIONAL)* - sets limit of memory+Swap usage
-* **`kernel`** *(uint64, OPTIONAL)* - sets hard limit for kernel memory
-* **`kernelTCP`** *(uint64, OPTIONAL)* - sets hard limit in bytes for kernel TCP buffer memory
+* **`limit`** *(int64, OPTIONAL)* - sets limit of memory usage
+* **`reservation`** *(int64, OPTIONAL)* - sets soft limit of memory usage
+* **`swap`** *(int64, OPTIONAL)* - sets limit of memory+Swap usage
+* **`kernel`** *(int64, OPTIONAL)* - sets hard limit for kernel memory
+* **`kernelTCP`** *(int64, OPTIONAL)* - sets hard limit for kernel TCP buffer memory
+
+For `swappiness` the values are from 0 to 100. Higher means more swappy.
+
 * **`swappiness`** *(uint64, OPTIONAL)* - sets swappiness parameter of vmscan (See sysctl's vm.swappiness)
 
 #### Example
@@ -286,8 +289,8 @@ The following parameters can be specified to set up the controller:
         "limit": 536870912,
         "reservation": 536870912,
         "swap": 536870912,
-        "kernel": 0,
-        "kernelTCP": 0,
+        "kernel": -1,
+        "kernelTCP": -1,
         "swappiness": 0
     }
 ```

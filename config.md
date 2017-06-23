@@ -689,8 +689,8 @@ Here is a full example `config.json` for reference.
                 "limit": 536870912,
                 "reservation": 536870912,
                 "swap": 536870912,
-                "kernel": 0,
-                "kernelTCP": 0,
+                "kernel": -1,
+                "kernelTCP": -1,
                 "swappiness": 0
             },
             "cpu": {
