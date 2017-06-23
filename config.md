@@ -77,6 +77,7 @@ For all platform-specific configuration values, the scope defined below in the [
     * Linux: supported options are listed in the [mount(8)][mount.8] man page.
       Note both [filesystem-independent][mount.8-filesystem-independent] and [filesystem-specific][mount.8-filesystem-specific] options are listed.
     * Solaris: corresponds to "options" of the fs resource in [zonecfg(1M)][zonecfg.1m].
+    * Windows: runtimes MUST support `ro`, mounting the filesystem read-only when `ro` is given.
 
 ### Example (Windows)
 
@@ -85,7 +86,7 @@ For all platform-specific configuration values, the scope defined below in the [
     {
         "destination": "C:\\folder-inside-container",
         "source": "C:\\folder-on-host",
-        "options": []
+        "options": ["ro"]
     }
 ]
 ```
