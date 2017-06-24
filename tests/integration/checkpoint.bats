@@ -24,22 +24,26 @@ function teardown() {
   testcontainer test_busybox running
 
   for i in `seq 2`; do
-	  # checkpoint the running container
-	  runc --criu "$CRIU" checkpoint test_busybox
-	  # if you are having problems getting criu to work uncomment the following dump:
-	  #cat /run/opencontainer/containers/test_busybox/criu.work/dump.log
-	  [ "$status" -eq 0 ]
+    # checkpoint the running container
+    runc --criu "$CRIU" checkpoint --work-path ./work-dir test_busybox
+    ret=$?
+    # if you are having problems getting criu to work uncomment the following dump:
+    #cat /run/opencontainer/containers/test_busybox/criu.work/dump.log
+    cat ./work-dir/dump.log | grep -B 5 Error || true
+    [ "$ret" -eq 0 ]
 
-	  # after checkpoint busybox is no longer running
-	  runc state test_busybox
-	  [ "$status" -ne 0 ]
+    # after checkpoint busybox is no longer running
+    runc state test_busybox
+    [ "$status" -ne 0 ]
 
-	  # restore from checkpoint
-	  runc --criu "$CRIU" restore -d --console-socket $CONSOLE_SOCKET test_busybox
-	  [ "$status" -eq 0 ]
+    # restore from checkpoint
+    runc --criu "$CRIU" restore -d --work-path ./work-dir --console-socket $CONSOLE_SOCKET test_busybox
+    ret=$?
+    cat ./work-dir/restore.log | grep -B 5 Error || true
+    [ "$ret" -eq 0 ]
 
-	  # busybox should be back up and running
-          testcontainer test_busybox running
+    # busybox should be back up and running
+    testcontainer test_busybox running
   done
 }
 
