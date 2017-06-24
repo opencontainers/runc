@@ -6,8 +6,6 @@ import "os"
 type Spec struct {
 	// Version of the Open Container Runtime Specification with which the bundle complies.
 	Version string `json:"ociVersion"`
-	// Platform specifies the configuration's target platform.
-	Platform Platform `json:"platform"`
 	// Process configures the container process.
 	Process *Process `json:"process,omitempty"`
 	// Root configures the container's root filesystem.
@@ -99,15 +97,6 @@ type Root struct {
 	Path string `json:"path,omitempty"`
 	// Readonly makes the root filesystem for the container readonly before the process is executed.
 	Readonly bool `json:"readonly,omitempty"`
-}
-
-// Platform specifies OS and arch information for the host system that the container
-// is created for.
-type Platform struct {
-	// OS is the operating system.
-	OS string `json:"os"`
-	// Arch is the architecture
-	Arch string `json:"arch"`
 }
 
 // Mount specifies a mount for a container.
@@ -284,15 +273,15 @@ type LinuxBlockIO struct {
 // LinuxMemory for Linux cgroup 'memory' resource management
 type LinuxMemory struct {
 	// Memory limit (in bytes).
-	Limit *uint64 `json:"limit,omitempty"`
+	Limit *int64 `json:"limit,omitempty"`
 	// Memory reservation or soft_limit (in bytes).
-	Reservation *uint64 `json:"reservation,omitempty"`
+	Reservation *int64 `json:"reservation,omitempty"`
 	// Total memory limit (memory + swap).
-	Swap *uint64 `json:"swap,omitempty"`
+	Swap *int64 `json:"swap,omitempty"`
 	// Kernel memory limit (in bytes).
-	Kernel *uint64 `json:"kernel,omitempty"`
+	Kernel *int64 `json:"kernel,omitempty"`
 	// Kernel memory limit for tcp (in bytes)
-	KernelTCP *uint64 `json:"kernelTCP,omitempty"`
+	KernelTCP *int64 `json:"kernelTCP,omitempty"`
 	// How aggressive the kernel will swap memory pages.
 	Swappiness *uint64 `json:"swappiness,omitempty"`
 }
@@ -486,7 +475,7 @@ type WindowsNetwork struct {
 	EndpointList []string `json:"endpointList,omitempty"`
 	// Specifies if unqualified DNS name resolution is allowed.
 	AllowUnqualifiedDNSQuery bool `json:"allowUnqualifiedDNSQuery,omitempty"`
-	// Comma seperated list of DNS suffixes to use for name resolution.
+	// Comma separated list of DNS suffixes to use for name resolution.
 	DNSSearchList []string `json:"DNSSearchList,omitempty"`
 	// Name (ID) of the container that we will share with the network stack.
 	NetworkSharedContainerName string `json:"networkSharedContainerName,omitempty"`
