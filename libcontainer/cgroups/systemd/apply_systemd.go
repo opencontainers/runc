@@ -260,19 +260,19 @@ func (m *Manager) Apply(pid int) error {
 
 	if c.Resources.Memory != 0 {
 		properties = append(properties,
-			newProp("MemoryLimit", c.Resources.Memory))
+			newProp("MemoryLimit", uint64(c.Resources.Memory)))
 	}
 
 	if c.Resources.CpuShares != 0 {
 		properties = append(properties,
-			newProp("CPUShares", c.Resources.CpuShares))
+			newProp("CPUShares", uint64(c.Resources.CpuShares)))
 	}
 
 	// cpu.cfs_quota_us and cpu.cfs_period_us are controlled by systemd.
 	if c.Resources.CpuQuota != 0 && c.Resources.CpuPeriod != 0 {
-		cpuQuotaPerSecUSec := uint64(c.Resources.CpuQuota*1000000) / c.Resources.CpuPeriod
+		cpuQuotaPerSecUSec := c.Resources.CpuQuota * 1000000 / c.Resources.CpuPeriod
 		properties = append(properties,
-			newProp("CPUQuotaPerSecUSec", cpuQuotaPerSecUSec))
+			newProp("CPUQuotaPerSecUSec", uint64(cpuQuotaPerSecUSec)))
 	}
 
 	if c.Resources.BlkioWeight != 0 {

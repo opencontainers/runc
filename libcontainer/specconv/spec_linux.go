@@ -360,39 +360,40 @@ func createCgroupConfig(opts *CreateOpts) (*configs.Cgroup, error) {
 	}
 	if r.Memory != nil {
 		if r.Memory.Limit != nil {
-			c.Resources.Memory = *r.Memory.Limit
+			c.Resources.Memory = int64(*r.Memory.Limit)
 		}
 		if r.Memory.Reservation != nil {
-			c.Resources.MemoryReservation = *r.Memory.Reservation
+			c.Resources.MemoryReservation = int64(*r.Memory.Reservation)
 		}
 		if r.Memory.Swap != nil {
-			c.Resources.MemorySwap = *r.Memory.Swap
+			c.Resources.MemorySwap = int64(*r.Memory.Swap)
 		}
 		if r.Memory.Kernel != nil {
-			c.Resources.KernelMemory = *r.Memory.Kernel
+			c.Resources.KernelMemory = int64(*r.Memory.Kernel)
 		}
 		if r.Memory.KernelTCP != nil {
-			c.Resources.KernelMemoryTCP = *r.Memory.KernelTCP
+			c.Resources.KernelMemoryTCP = int64(*r.Memory.KernelTCP)
 		}
 		if r.Memory.Swappiness != nil {
-			c.Resources.MemorySwappiness = r.Memory.Swappiness
+			swappiness := int64(*r.Memory.Swappiness)
+			c.Resources.MemorySwappiness = &swappiness
 		}
 	}
 	if r.CPU != nil {
 		if r.CPU.Shares != nil {
-			c.Resources.CpuShares = *r.CPU.Shares
+			c.Resources.CpuShares = int64(*r.CPU.Shares)
 		}
 		if r.CPU.Quota != nil {
-			c.Resources.CpuQuota = *r.CPU.Quota
+			c.Resources.CpuQuota = int64(*r.CPU.Quota)
 		}
 		if r.CPU.Period != nil {
-			c.Resources.CpuPeriod = *r.CPU.Period
+			c.Resources.CpuPeriod = int64(*r.CPU.Period)
 		}
 		if r.CPU.RealtimeRuntime != nil {
-			c.Resources.CpuRtRuntime = *r.CPU.RealtimeRuntime
+			c.Resources.CpuRtRuntime = int64(*r.CPU.RealtimeRuntime)
 		}
 		if r.CPU.RealtimePeriod != nil {
-			c.Resources.CpuRtPeriod = *r.CPU.RealtimePeriod
+			c.Resources.CpuRtPeriod = int64(*r.CPU.RealtimePeriod)
 		}
 		if r.CPU.Cpus != "" {
 			c.Resources.CpusetCpus = r.CPU.Cpus

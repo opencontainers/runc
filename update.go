@@ -240,18 +240,18 @@ other options are ignored.
 
 		// Update the value
 		config.Cgroups.Resources.BlkioWeight = *r.BlockIO.Weight
-		config.Cgroups.Resources.CpuPeriod = *r.CPU.Period
-		config.Cgroups.Resources.CpuQuota = *r.CPU.Quota
-		config.Cgroups.Resources.CpuShares = *r.CPU.Shares
-		config.Cgroups.Resources.CpuRtPeriod = *r.CPU.RealtimePeriod
-		config.Cgroups.Resources.CpuRtRuntime = *r.CPU.RealtimeRuntime
+		config.Cgroups.Resources.CpuPeriod = int64(*r.CPU.Period)
+		config.Cgroups.Resources.CpuQuota = int64(*r.CPU.Quota)
+		config.Cgroups.Resources.CpuShares = int64(*r.CPU.Shares)
+		config.Cgroups.Resources.CpuRtPeriod = int64(*r.CPU.RealtimePeriod)
+		config.Cgroups.Resources.CpuRtRuntime = int64(*r.CPU.RealtimeRuntime)
 		config.Cgroups.Resources.CpusetCpus = r.CPU.Cpus
 		config.Cgroups.Resources.CpusetMems = r.CPU.Mems
-		config.Cgroups.Resources.KernelMemory = *r.Memory.Kernel
-		config.Cgroups.Resources.KernelMemoryTCP = *r.Memory.KernelTCP
-		config.Cgroups.Resources.Memory = *r.Memory.Limit
-		config.Cgroups.Resources.MemoryReservation = *r.Memory.Reservation
-		config.Cgroups.Resources.MemorySwap = *r.Memory.Swap
+		config.Cgroups.Resources.KernelMemory = int64(*r.Memory.Kernel)
+		config.Cgroups.Resources.KernelMemoryTCP = int64(*r.Memory.KernelTCP)
+		config.Cgroups.Resources.Memory = int64(*r.Memory.Limit)
+		config.Cgroups.Resources.MemoryReservation = int64(*r.Memory.Reservation)
+		config.Cgroups.Resources.MemorySwap = int64(*r.Memory.Swap)
 		config.Cgroups.Resources.PidsLimit = r.Pids.Limit
 
 		return container.Set(config)

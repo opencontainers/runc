@@ -332,8 +332,8 @@ func removePath(p string, err error) error {
 	return nil
 }
 
-func CheckCpushares(path string, c uint64) error {
-	var cpuShares uint64
+func CheckCpushares(path string, c int64) error {
+	var cpuShares int64
 
 	if c == 0 {
 		return nil
