@@ -171,14 +171,18 @@ Also known as cgroups, they are used to restrict resource usage for a container 
 cgroups provide controls (through controllers) to restrict cpu, memory, IO, pids and network for the container.
 For more information, see the [kernel cgroups documentation][cgroup-v1].
 
-The path to the cgroups can be specified in the Spec via `cgroupsPath`.
-`cgroupsPath` can be used to either control the cgroup hierarchy for containers or to run a new process in an existing container.
-If `cgroupsPath` is:
-* ... an absolute path (starting with `/`), the runtime MUST take the path to be relative to the cgroup mount point.
-* ... a relative path (not starting with `/`), the runtime MAY interpret the path relative to a runtime-determined location in the cgroup hierarchy.
-* ... not specified, the runtime MAY define the default cgroup path.
+### <a name="configLinuxCgroupsPath" />Cgroups Path
+
+**`cgroupsPath`** (string, OPTIONAL) path to the cgroups.
+It can be used to either control the cgroups hierarchy for containers or to run a new process in an existing container.
+
+The value of `cgroupsPath` MUST be either an absolute path or a relative path.
+* In the case of an absolute path (starting with `/`), the runtime MUST take the path to be relative to the cgroups mount point.
+* In the case of a relative path (not starting with `/`), the runtime MAY interpret the path relative to a runtime-determined location in the cgroups hierarchy.
+
+If the value is specified, the runtime MUST consistently attach to the same place in the cgroups hierarchy given the same value of `cgroupsPath`.
+If the value is not specified, the runtime MAY define the default cgroups path.
 Runtimes MAY consider certain `cgroupsPath` values to be invalid, and MUST generate an error if this is the case.
-If a `cgroupsPath` value is specified, the runtime MUST consistently attach to the same place in the cgroup hierarchy given the same value of `cgroupsPath`.
 
 Implementations of the Spec can choose to name cgroups in any manner.
 The Spec does not include naming schema for cgroups.
