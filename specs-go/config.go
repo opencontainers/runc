@@ -550,7 +550,7 @@ const (
 type LinuxSeccompArg struct {
 	Index    uint                 `json:"index"`
 	Value    uint64               `json:"value"`
-	ValueTwo uint64               `json:"valueTwo"`
+	ValueTwo uint64               `json:"valueTwo,omiempty"`
 	Op       LinuxSeccompOperator `json:"op"`
 }
 

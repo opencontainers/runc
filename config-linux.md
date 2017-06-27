@@ -556,7 +556,7 @@ The following parameters can be specified to set up seccomp:
 
         * **`index`** *(uint, REQUIRED)* - the index for syscall arguments in seccomp.
         * **`value`** *(uint64, REQUIRED)* - the value for syscall arguments in seccomp.
-        * **`valueTwo`** *(uint64, REQUIRED)* - the value for syscall arguments in seccomp.
+        * **`valueTwo`** *(uint64, OPTIONAL)* - the value for syscall arguments in seccomp.
         * **`op`** *(string, REQUIRED)* - the operator for syscall arguments in seccomp.
             A valid list of constants as of libseccomp v2.3.2 is shown below.
 
