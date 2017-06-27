@@ -69,7 +69,12 @@
                 "op": {
                     "$ref": "#/definitions/SeccompOperators"
                 }
-            }
+            },
+            "required": [
+                "index",
+                "value",
+                "op"
+            ]
         },
         "Syscall": {
             "type": "object",
