@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"runtime"
 
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/specconv"
@@ -131,9 +130,6 @@ func loadSpec(cPath string) (spec *specs.Spec, err error) {
 	if err = json.NewDecoder(cf).Decode(&spec); err != nil {
 		return nil, err
 	}
-	if err = validatePlatform(&spec.Platform); err != nil {
-		return nil, err
-	}
 	return spec, validateProcessSpec(spec.Process)
 }
 
@@ -147,14 +143,4 @@ func createLibContainerRlimit(rlimit specs.LinuxRlimit) (configs.Rlimit, error) 
 		Hard: rlimit.Hard,
 		Soft: rlimit.Soft,
 	}, nil
-}
-
-func validatePlatform(platform *specs.Platform) error {
-	if platform.OS != runtime.GOOS {
-		return fmt.Errorf("target os %s mismatch with current os %s", platform.OS, runtime.GOOS)
-	}
-	if platform.Arch != runtime.GOARCH {
-		return fmt.Errorf("target arch %s mismatch with current arch %s", platform.Arch, runtime.GOARCH)
-	}
-	return nil
 }

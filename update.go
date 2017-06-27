@@ -124,11 +124,11 @@ other options are ignored.
 
 		r := specs.LinuxResources{
 			Memory: &specs.LinuxMemory{
-				Limit:       u64Ptr(0),
-				Reservation: u64Ptr(0),
-				Swap:        u64Ptr(0),
-				Kernel:      u64Ptr(0),
-				KernelTCP:   u64Ptr(0),
+				Limit:       i64Ptr(0),
+				Reservation: i64Ptr(0),
+				Swap:        i64Ptr(0),
+				Kernel:      i64Ptr(0),
+				KernelTCP:   i64Ptr(0),
 			},
 			CPU: &specs.LinuxCPU{
 				Shares:          u64Ptr(0),
@@ -213,7 +213,7 @@ other options are ignored.
 			}
 			for _, pair := range []struct {
 				opt  string
-				dest *uint64
+				dest *int64
 			}{
 				{"memory", r.Memory.Limit},
 				{"memory-swap", r.Memory.Swap},
@@ -232,7 +232,7 @@ other options are ignored.
 					} else {
 						v = -1
 					}
-					*pair.dest = uint64(v)
+					*pair.dest = v
 				}
 			}
 			r.Pids.Limit = int64(context.Int("pids-limit"))

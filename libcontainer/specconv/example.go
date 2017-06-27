@@ -2,7 +2,6 @@ package specconv
 
 import (
 	"os"
-	"runtime"
 	"strings"
 
 	"github.com/opencontainers/runtime-spec/specs-go"
@@ -15,10 +14,6 @@ func sPtr(s string) *string { return &s }
 func Example() *specs.Spec {
 	return &specs.Spec{
 		Version: specs.Version,
-		Platform: specs.Platform{
-			OS:   runtime.GOOS,
-			Arch: runtime.GOARCH,
-		},
 		Root: specs.Root{
 			Path:     "rootfs",
 			Readonly: true,
