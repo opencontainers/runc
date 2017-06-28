@@ -668,9 +668,12 @@ func pivotRoot(rootfs string) error {
 		return err
 	}
 
-	// Make oldroot rprivate to make sure our unmounts don't propagate to the
-	// host (and thus bork the machine).
-	if err := unix.Mount("", ".", "", unix.MS_PRIVATE|unix.MS_REC, ""); err != nil {
+	// Make oldroot rslave to make sure our unmounts don't propagate to the
+	// host (and thus bork the machine). We don't use rprivate because this is
+	// known to cause issues due to races where we still have a reference to a
+	// mount while a process in the host namespace are trying to operate on
+	// something they think has no mounts (devicemapper in particular).
+	if err := unix.Mount("", ".", "", unix.MS_SLAVE|unix.MS_REC, ""); err != nil {
 		return err
 	}
 	// Preform the unmount. MNT_DETACH allows us to unmount /proc/self/cwd.
