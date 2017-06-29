@@ -41,6 +41,9 @@
             "description": "Configures the container's root filesystem.",
             "id": "https://opencontainers.org/schema/bundle/root",
             "type": "object",
+            "required": [
+                "path"
+            ],
             "properties": {
                 "path": {
                     "id": "https://opencontainers.org/schema/bundle/root/path",
@@ -214,7 +217,6 @@
         }
     },
     "required": [
-        "ociVersion",
-        "root"
+        "ociVersion"
     ]
 }
