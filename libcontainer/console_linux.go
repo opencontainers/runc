@@ -123,8 +123,8 @@ func unlockpt(f *os.File) error {
 
 // ptsname retrieves the name of the first available pts for the given master.
 func ptsname(f *os.File) (string, error) {
-	var n int32
-	if err := ioctl(f.Fd(), unix.TIOCGPTN, uintptr(unsafe.Pointer(&n))); err != nil {
+	n, err := unix.IoctlGetInt(int(f.Fd()), unix.TIOCGPTN)
+	if err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("/dev/pts/%d", n), nil
@@ -136,17 +136,15 @@ func ptsname(f *os.File) (string, error) {
 // problem for terminal emulators, because we relay data from the terminal we
 // also relay that funky line discipline.
 func SaneTerminal(terminal *os.File) error {
-	// Go doesn't have a wrapper for any of the termios ioctls.
-	var termios unix.Termios
-
-	if err := ioctl(terminal.Fd(), unix.TCGETS, uintptr(unsafe.Pointer(&termios))); err != nil {
+	termios, err := unix.IoctlGetTermios(int(terminal.Fd()), unix.TCGETS)
+	if err != nil {
 		return fmt.Errorf("ioctl(tty, tcgets): %s", err.Error())
 	}
 
 	// Set -onlcr so we don't have to deal with \r.
 	termios.Oflag &^= unix.ONLCR
 
-	if err := ioctl(terminal.Fd(), unix.TCSETS, uintptr(unsafe.Pointer(&termios))); err != nil {
+	if err := unix.IoctlSetTermios(int(terminal.Fd()), unix.TCSETS, termios); err != nil {
 		return fmt.Errorf("ioctl(tty, tcsets): %s", err.Error())
 	}
 

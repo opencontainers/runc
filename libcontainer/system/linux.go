@@ -95,7 +95,7 @@ func ClearKeepCaps() error {
 }
 
 func Setctty() error {
-	if _, _, err := unix.RawSyscall(unix.SYS_IOCTL, 0, uintptr(unix.TIOCSCTTY), 0); err != 0 {
+	if err := unix.IoctlSetInt(0, unix.TIOCSCTTY, 0); err != nil {
 		return err
 	}
 	return nil
