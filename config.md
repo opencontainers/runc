@@ -157,9 +157,9 @@ For POSIX platforms the `mounts` structure has the following fields:
 * **`args`** (array of strings, REQUIRED) with similar semantics to [IEEE Std 1003.1-2008 `execvp`'s *argv*][ieee-1003.1-2008-xsh-exec].
     This specification extends the IEEE standard in that at least one entry is REQUIRED, and that entry is used with the same semantics as `execvp`'s *file*.
 
-### <a name="configLinuxAndSolarisProcess" />Linux and Solaris Process
+### <a name="configPOSIXProcess" />POSIX process
 
-For POSIX-based systems (Linux and Solaris), the `process` object supports the following process-specific properties:
+For systems that support POSIX rlimits (for example Linux and Solaris), the `process` object supports the following process-specific properties:
 
 * **`rlimits`** (array of objects, OPTIONAL) allows setting resource limits for the process.
     Each entry has the following structure:
