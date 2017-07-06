@@ -133,7 +133,6 @@ clean:
 
 validate:
 	script/validate-gofmt
-	script/validate-shfmt
 	go vet $(allpackages)
 
 ci: validate localtest
