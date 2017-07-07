@@ -9,8 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 	"unsafe"
-
-	"golang.org/x/sys/unix"
 )
 
 const (
@@ -38,15 +36,6 @@ func ResolveRootfs(uncleanRootfs string) (string, error) {
 		return "", err
 	}
 	return filepath.EvalSymlinks(rootfs)
-}
-
-// ExitStatus returns the correct exit status for a process based on if it
-// was signaled or exited cleanly
-func ExitStatus(status unix.WaitStatus) int {
-	if status.Signaled() {
-		return exitSignalOffset + int(status.Signal())
-	}
-	return status.ExitStatus()
 }
 
 // WriteJSON writes the provided struct v to w using standard json marshaling
