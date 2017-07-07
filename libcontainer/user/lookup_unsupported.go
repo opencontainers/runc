@@ -19,3 +19,11 @@ func GetGroupPath() (string, error) {
 func GetGroup() (io.ReadCloser, error) {
 	return nil, ErrUnsupported
 }
+
+func CurrentUser() (User, error) {
+	return LookupUid(-1)
+}
+
+func CurrentGroup() (Group, error) {
+	return LookupGid(-1)
+}

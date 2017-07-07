@@ -42,3 +42,12 @@ func NewSockPair(name string) (parent *os.File, child *os.File, err error) {
 	}
 	return os.NewFile(uintptr(fds[1]), name+"-p"), os.NewFile(uintptr(fds[0]), name+"-c"), nil
 }
+
+// ExitStatus returns the correct exit status for a process based on if it
+// was signaled or exited cleanly
+func ExitStatus(status unix.WaitStatus) int {
+	if status.Signaled() {
+		return exitSignalOffset + int(status.Signal())
+	}
+	return status.ExitStatus()
+}
