@@ -6,25 +6,45 @@ Changes with v1.0.0-rc6:
 
 	* config: Shift oomScoreAdj to process and add RFC 2119 requirements
 	  for the runtime (#781, #789, #836)
+	* config: Forbid 'root' on Hyper-V (#820, #838).
+	* config: process.capabilities and process.noNewPrivileges are
+	  Linux-only again (#880).  This partially reverses #673, which had
+	  landed in v1.0.0-rc5.
+	* config: Remove process.rlimits from Windows (#880).  It is now
+	  POSIX-only, while in v1.0.0-rc5 it was cross-platform (because of
+	  #673).  Before #673 (in v1.0.0-rc4 and earlier), it was
+	  Linux-only.
+	* config-linux: Drop redundant 'blkio' prefix from blockIO
+	  properties (#860)
+	* config-linux: Make memory limits int64 instead of uint64 (#876).
+	  This partially reverses #704, which had landed in v1.0.0-rc5.
 	* config-windows: Change CPU 'percent' to 'maximum' (#777)
 	* config-windows: Remove memory 'reservation' (#788)
+	* config-windows: Remove 'resources.network' and add 'network' (#801)
 
 	Additions:
 
+	* config: Windows runtimes MUST support the 'ro' mount option (#868)
 	* config-linux: Add Intel RDT/CAT Linux support (#630, #787)
 	* config-linux: Add Markdown specification for syscalls (#706)
 	* config-linux: Add 'unbindable' rootfsPropagation value (#770, #775)
-	* config-windows: Add 'credentialspec' (#814)
+	* config-windows: Add 'credentialSpec' (#814, #859)
+	* config-windows: Add 'servicing' (#815)
+	* config-windows: Add 'ignoreFlushesDuringBoot' (#816, #859)
+	* config-windows: Add 'hyperv' (#818, #849, #859)
+	* config-windows: Add 'layerFolders' (#828)
 
 	Removals and increased restrictions:
 
-	* config: Forbid 'root.path' on Hyper-V (#820)
+	* config: Remove 'platform' (#850)
 	* config: Require strictly-postitive 'timeout' values (#764)
 	* config: Strengthen punt to kernel for valid capabilities strings
 	  (#766, #790)
+	* config: Require volume GUID paths for root.path (#849)
 	* config: Forbid setting 'readonly' true on Windows (#819)
 	* config: Forbid setting mount 'type' entirely on Windows and forbid
 	  UNC paths and mapped drives in 'source' on Windows (#821)
+	* config: Remove 'hooks' from Windows spec (#855, #869, #870)
 	* config-linux: Clearly require absolute path for namespace (#720)
 	* config-linux: RFC 2119 tightening for namespaces (#767)
 	* config-linux: Require at least one entry in
@@ -42,25 +62,42 @@ Changes with v1.0.0-rc6:
 
 	* config: Make 'process' optional (#701, #805)
 	* config-linux: Make linux.seccomp.syscalls optional (#768)
+	* config-linux: valueTwo is now optional in
+	  `linux.seccomp.syscalls[].args` entries (#877)
 	* config-linux: Remove local range restrictions for blkioWeight,
 	  blkioLeafWeight, weight, leafWeight, and shares (#780)
+	* config-linux: Explicitly allow symlinks for providing devices (#873)
 
 	Minor fixes and documentation:
 
+	* config: Remove "MAY support any valid values" sentence (#851)
+	* config: Remove the previously-forbidden mounts[].type from the
+	  Windows spec (#854)
+	* config: Clarify mounts[].source relative path anchor (#735)
+	* config: Explicitly make consoleSize ignored if terminal is false or
+	  unset (#863)
 	* config: Specify height/width units (characters) for consoleSize (#761)
+	* config: Use "POSIX platforms" instead of "Linux and Solaris" (#838)
 	* config-linux: Explicit namespace for interface names (#713)
+	* config-linux: Explicitly list cgroupsPath as optional (#823)
+	* runtime: Clarify valid container states for 'start', 'kill', and
+	  'delete' (#875)
 	* runtime: Explicitly make process.* timing implementation-defined (#700)
 	* specs-go/config: Remove range restrictions from Windows comments (#783)
 	* specs-go/config: Add omitempty to LinuxSyscall.Args (#763)
 	* specs-go/config: Use a pointer for Process.ConsoleSize (#792)
+	* schema/README: Use v1.0.0 URL in examples to prepare for the 1.0.0
+	  release (#881)
 	* schema/Makefile: Make 'validate' the default target (#750)
 	* schema/Makefile: Add 'clean' target (#774)
 	* schema: Add 'test' target to the Makefile (#785)
 	* *: Remove unnecessary .PHONY entries (#750, #778, #802)
 	* *: Typo fixes and polishing (#681, #708, #702, #703, #709, #711,
-	   #712, #721, #722, #723, #724, #730, #737, #738, #741, #744, #749,
-	   #753, #756, #765, #773, #776, #784, #786, #793, #794, #796, #798,
-	   #799, #800, #803, #812, #824, #826, #832)
+	  #712, #721, #722, #723, #724, #730, #737, #738, #741, #744, #749,
+	  #753, #756, #765, #773, #776, #784, #786, #793, #794, #796, #798,
+	  #799, #800, #803, #807, #809, #811, #812, #822, #824, #826, #827,
+	  #832, #839, #840, #846, #847, #848, #852, #856, #858, #862, #865,
+	  #871, #874)
 
 Changes with v1.0.0-rc5:
 
