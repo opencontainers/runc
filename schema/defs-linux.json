@@ -97,7 +97,8 @@
                 }
             },
             "required": [
-                "names"
+                "names",
+                "action"
             ]
         },
         "Major": {
