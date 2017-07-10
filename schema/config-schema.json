@@ -125,38 +125,23 @@
                     "properties": {
                         "bounding": {
                             "id": "https://opencontainers.org/schema/bundle/process/linux/capabilities/bounding",
-                            "type": "array",
-                            "items": {
-                                "type": "string"
-                            }
+                            "$ref": "defs.json#/definitions/ArrayOfStrings"
                         },
                         "permitted": {
                             "id": "https://opencontainers.org/schema/bundle/process/linux/capabilities/permitted",
-                            "type": "array",
-                            "items": {
-                                "type": "string"
-                            }
+                            "$ref": "defs.json#/definitions/ArrayOfStrings"
                         },
                         "effective": {
                             "id": "https://opencontainers.org/schema/bundle/process/linux/capabilities/effective",
-                            "type": "array",
-                            "items": {
-                                "type": "string"
-                            }
+                            "$ref": "defs.json#/definitions/ArrayOfStrings"
                         },
                         "inheritable": {
                             "id": "https://opencontainers.org/schema/bundle/process/linux/capabilities/inheritable",
-                            "type": "array",
-                            "items": {
-                                "type": "string"
-                            }
+                            "$ref": "defs.json#/definitions/ArrayOfStrings"
                         },
                         "ambient": {
                             "id": "https://opencontainers.org/schema/bundle/process/linux/capabilities/ambient",
-                            "type": "array",
-                            "items": {
-                                "type": "string"
-                            }
+                            "$ref": "defs.json#/definitions/ArrayOfStrings"
                         }
                     }
                 },
