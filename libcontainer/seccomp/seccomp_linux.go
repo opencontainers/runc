@@ -20,9 +20,6 @@ var (
 	actKill  = libseccomp.ActKill
 	actTrace = libseccomp.ActTrace.SetReturnCode(int16(unix.EPERM))
 	actErrno = libseccomp.ActErrno.SetReturnCode(int16(unix.EPERM))
-
-	// SeccompModeFilter refers to the syscall argument SECCOMP_MODE_FILTER.
-	SeccompModeFilter = uintptr(2)
 )
 
 // Filters given syscalls in a container, preventing them from being used
@@ -85,9 +82,9 @@ func IsEnabled() bool {
 	s, err := parseStatusFile("/proc/self/status")
 	if err != nil {
 		// Check if Seccomp is supported, via CONFIG_SECCOMP.
-		if _, _, err := unix.RawSyscall(unix.SYS_PRCTL, unix.PR_GET_SECCOMP, 0, 0); err != unix.EINVAL {
+		if err := unix.Prctl(unix.PR_GET_SECCOMP, 0, 0, 0, 0); err != unix.EINVAL {
 			// Make sure the kernel has CONFIG_SECCOMP_FILTER.
-			if _, _, err := unix.RawSyscall(unix.SYS_PRCTL, unix.PR_SET_SECCOMP, SeccompModeFilter, 0); err != unix.EINVAL {
+			if err := unix.Prctl(unix.PR_SET_SECCOMP, unix.SECCOMP_MODE_FILTER, 0, 0, 0); err != unix.EINVAL {
 				return true
 			}
 		}
