@@ -162,14 +162,6 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 	if err := l.Validator.Validate(config); err != nil {
 		return nil, newGenericError(err, ConfigInvalid)
 	}
-	uid, err := config.HostRootUID()
-	if err != nil {
-		return nil, newGenericError(err, SystemError)
-	}
-	gid, err := config.HostRootGID()
-	if err != nil {
-		return nil, newGenericError(err, SystemError)
-	}
 	containerRoot := filepath.Join(l.Root, id)
 	if _, err := os.Stat(containerRoot); err == nil {
 		return nil, newGenericError(fmt.Errorf("container with id exists: %v", id), IdInUse)
@@ -179,7 +171,7 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 	if err := os.MkdirAll(containerRoot, 0711); err != nil {
 		return nil, newGenericError(err, SystemError)
 	}
-	if err := os.Chown(containerRoot, uid, gid); err != nil {
+	if err := os.Chown(containerRoot, unix.Geteuid(), unix.Getegid()); err != nil {
 		return nil, newGenericError(err, SystemError)
 	}
 	if config.Rootless {
