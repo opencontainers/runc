@@ -265,6 +265,16 @@
             "mountLabel": {
                 "id": "https://opencontainers.org/schema/bundle/linux/mountLabel",
                 "type": "string"
+            },
+            "intelRdt": {
+                "id": "https://opencontainers.org/schema/bundle/linux/intelRdt",
+                "type": "object",
+                "properties": {
+                    "l3CacheSchema": {
+                        "id": "https://opencontainers.org/schema/bundle/linux/intelRdt/l3CacheSchema",
+                        "type": "string"
+                    }
+                }
             }
         }
     }
