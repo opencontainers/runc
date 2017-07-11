@@ -135,7 +135,7 @@ func getContainers(context *cli.Context) ([]containerState, error) {
 			stat := item.Sys().(*syscall.Stat_t)
 			owner, err := user.LookupUid(int(stat.Uid))
 			if err != nil {
-				owner.Name = string(stat.Uid)
+				owner.Name = fmt.Sprintf("#%d", stat.Uid)
 			}
 
 			container, err := factory.Load(item.Name())
