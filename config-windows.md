@@ -51,7 +51,7 @@ The following parameters can be specified:
 
 * **`count`** *(uint64, OPTIONAL)* - specifies the number of CPUs available to the container.
 * **`shares`** *(uint16, OPTIONAL)* - specifies the relative weight to other containers with CPU shares.
-* **`maximum`** *(uint, OPTIONAL)* - specifies the portion of processor cycles that this container can use as a percentage times 100.
+* **`maximum`** *(uint16, OPTIONAL)* - specifies the portion of processor cycles that this container can use as a percentage times 100.
 
 #### Example
 
