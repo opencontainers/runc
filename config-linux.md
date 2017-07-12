@@ -253,22 +253,6 @@ Each entry has the following structure:
     ]
 ```
 
-### <a name="configLinuxDisableOutOfMemoryKiller" />Disable out-of-memory killer
-
-`disableOOMKiller` contains a boolean (`true` or `false`) that enables or disables the Out of Memory killer for a cgroup.
-If enabled (`false`), tasks that attempt to consume more memory than they are allowed are immediately killed by the OOM killer.
-The OOM killer is enabled by default in every cgroup using the `memory` subsystem.
-To disable it, specify a value of `true`.
-For more information, see the kernel cgroups documentation about [memory][cgroup-v1-memory].
-
-* **`disableOOMKiller`** *(bool, OPTIONAL)* - enables or disables the OOM killer
-
-#### Example
-
-```json
-    "disableOOMKiller": false
-```
-
 ### <a name="configLinuxMemory" />Memory
 
 **`memory`** (object, OPTIONAL) represents the cgroup subsystem `memory` and it's used to set limits on the container's memory usage.
@@ -282,9 +266,14 @@ Values for memory specify the limit in bytes, or `-1` for unlimited memory.
 * **`kernel`** *(int64, OPTIONAL)* - sets hard limit for kernel memory
 * **`kernelTCP`** *(int64, OPTIONAL)* - sets hard limit for kernel TCP buffer memory
 
-For `swappiness` the values are from 0 to 100. Higher means more swappy.
+The following properties do not specify memory limits, but are covered by the `memory` controller:
 
 * **`swappiness`** *(uint64, OPTIONAL)* - sets swappiness parameter of vmscan (See sysctl's vm.swappiness)
+    The values are from 0 to 100. Higher means more swappy.
+* **`disableOOMKiller`** *(bool, OPTIONAL)* - enables or disables the OOM killer.
+    If enabled (`false`), tasks that attempt to consume more memory than they are allowed are immediately killed by the OOM killer.
+    The OOM killer is enabled by default in every cgroup using the `memory` subsystem.
+    To disable it, specify a value of `true`.
 
 #### Example
 
@@ -295,7 +284,8 @@ For `swappiness` the values are from 0 to 100. Higher means more swappy.
         "swap": 536870912,
         "kernel": -1,
         "kernelTCP": -1,
-        "swappiness": 0
+        "swappiness": 0,
+        "disableOOMKiller": false
     }
 ```
 
