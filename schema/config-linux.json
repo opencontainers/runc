@@ -143,10 +143,6 @@
                             }
                         }
                     },
-                    "disableOOMKiller": {
-                        "id": "https://opencontainers.org/schema/bundle/linux/resources/disableOOMKiller",
-                        "type": "boolean"
-                    },
                     "hugepageLimits": {
                         "id": "https://opencontainers.org/schema/bundle/linux/resources/hugepageLimits",
                         "type": "array",
@@ -193,6 +189,10 @@
                             "swappiness": {
                                 "id": "https://opencontainers.org/schema/bundle/linux/resources/memory/swappiness",
                                 "$ref": "defs.json#/definitions/uint64"
+                            },
+                            "disableOOMKiller": {
+                                "id": "https://opencontainers.org/schema/bundle/linux/resources/memory/disableOOMKiller",
+                                "type": "boolean"
                             }
                         }
                     },

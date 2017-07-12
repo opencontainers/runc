@@ -284,6 +284,8 @@ type LinuxMemory struct {
 	KernelTCP *int64 `json:"kernelTCP,omitempty"`
 	// How aggressive the kernel will swap memory pages.
 	Swappiness *uint64 `json:"swappiness,omitempty"`
+	// DisableOOMKiller disables the OOM killer for out of memory conditions
+	DisableOOMKiller *bool `json:"disableOOMKiller,omitempty"`
 }
 
 // LinuxCPU for Linux cgroup 'cpu' resource management
@@ -322,8 +324,6 @@ type LinuxNetwork struct {
 type LinuxResources struct {
 	// Devices configures the device whitelist.
 	Devices []LinuxDeviceCgroup `json:"devices,omitempty"`
-	// DisableOOMKiller disables the OOM killer for out of memory conditions
-	DisableOOMKiller *bool `json:"disableOOMKiller,omitempty"`
 	// Memory restriction configuration
 	Memory *LinuxMemory `json:"memory,omitempty"`
 	// CPU resource restriction configuration

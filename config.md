@@ -202,7 +202,7 @@ For Linux-based systems, the `process` object supports the following process-spe
     If `oomScoreAdj` is set, the runtime MUST set `oom_score_adj` to the given value.
     If `oomScoreAdj` is not set, the runtime MUST NOT change the value of `oom_score_adj`.
 
-    This is a per-process setting, where as [`disableOOMKiller`](config-linux.md#disable-out-of-memory-killer) is scoped for a memory cgroup.
+    This is a per-process setting, where as [`disableOOMKiller`](config-linux.md#memory) is scoped for a memory cgroup.
     For more information on how these two settings work together, see [the memory cgroup documentation section 10. OOM Contol][cgroup-v1-memory_2].
 * **`selinuxLabel`** (string, OPTIONAL) specifies the SELinux label for the process.
     For more information about SELinux, see  [SELinux documentation][selinux].
@@ -710,7 +710,8 @@ Here is a full example `config.json` for reference.
                 "swap": 536870912,
                 "kernel": -1,
                 "kernelTCP": -1,
-                "swappiness": 0
+                "swappiness": 0,
+                "disableOOMKiller": false
             },
             "cpu": {
                 "shares": 1024,
@@ -721,7 +722,6 @@ Here is a full example `config.json` for reference.
                 "cpus": "2-3",
                 "mems": "0-7"
             },
-            "disableOOMKiller": false,
             "devices": [
                 {
                     "allow": false,

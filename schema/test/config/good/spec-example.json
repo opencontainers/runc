@@ -241,7 +241,8 @@
                 "swap": 536870912,
                 "kernel": -1,
                 "kernelTCP": -1,
-                "swappiness": 0
+                "swappiness": 0,
+                "disableOOMKiller": false
             },
             "cpu": {
                 "shares": 1024,
@@ -252,7 +253,6 @@
                 "cpus": "2-3",
                 "mems": "0-7"
             },
-            "disableOOMKiller": false,
             "devices": [
                 {
                     "allow": false,
