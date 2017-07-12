@@ -14,7 +14,7 @@ func sPtr(s string) *string { return &s }
 func Example() *specs.Spec {
 	return &specs.Spec{
 		Version: specs.Version,
-		Root: specs.Root{
+		Root: &specs.Root{
 			Path:     "rootfs",
 			Readonly: true,
 		},
@@ -57,7 +57,7 @@ func Example() *specs.Spec {
 					"CAP_NET_BIND_SERVICE",
 				},
 			},
-			Rlimits: []specs.LinuxRlimit{
+			Rlimits: []specs.POSIXRlimit{
 				{
 					Type: "RLIMIT_NOFILE",
 					Hard: uint64(1024),
