@@ -133,7 +133,7 @@ func loadSpec(cPath string) (spec *specs.Spec, err error) {
 	return spec, validateProcessSpec(spec.Process)
 }
 
-func createLibContainerRlimit(rlimit specs.LinuxRlimit) (configs.Rlimit, error) {
+func createLibContainerRlimit(rlimit specs.POSIXRlimit) (configs.Rlimit, error) {
 	rl, err := strToRlimit(rlimit.Type)
 	if err != nil {
 		return configs.Rlimit{}, err
