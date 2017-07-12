@@ -40,7 +40,6 @@
         "ociVersion",
         "id",
         "status",
-        "pid",
         "bundle"
     ]
 }
