@@ -14,8 +14,8 @@ For all platform-specific configuration values, the scope defined below in the [
 
 ## <a name="configSpecificationVersion" />Specification version
 
-* **`ociVersion`** (string, REQUIRED) MUST be in [SemVer v2.0.0][semver-v2.0.0] format and specifies the version of the Open Container Runtime Specification with which the bundle complies.
-    The Open Container Runtime Specification follows semantic versioning and retains forward and backward compatibility within major versions.
+* **`ociVersion`** (string, REQUIRED) MUST be in [SemVer v2.0.0][semver-v2.0.0] format and specifies the version of the Open Container Initiative Runtime Specification with which the bundle complies.
+    The Open Container Initiative Runtime Specification follows semantic versioning and retains forward and backward compatibility within major versions.
     For example, if a configuration is compliant with version 1.1 of this specification, it is compatible with all runtimes that support any 1.1 or later release of this specification, but is not compatible with a runtime that supports 1.0 and not 1.1.
 
 ### Example
