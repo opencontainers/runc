@@ -1,4 +1,4 @@
-# <a name="containerConfigurationFile" />Container Configuration file
+# <a name="configuration" />Configuration
 
 This configuration file contains metadata necessary to implement [standard operations](runtime.md#operations) against the container.
 This includes the process to run, environment variables to inject, sandboxing features to use, etc.
