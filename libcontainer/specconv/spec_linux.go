@@ -162,6 +162,9 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 		return nil, err
 	}
 	spec := opts.Spec
+	if spec.Root == nil {
+		return nil, fmt.Errorf("Root must be specified")
+	}
 	rootfsPath := spec.Root.Path
 	if !filepath.IsAbs(rootfsPath) {
 		rootfsPath = filepath.Join(cwd, rootfsPath)
@@ -377,6 +380,9 @@ func createCgroupConfig(opts *CreateOpts) (*configs.Cgroup, error) {
 		if r.Memory.Swappiness != nil {
 			c.Resources.MemorySwappiness = r.Memory.Swappiness
 		}
+		if r.Memory.DisableOOMKiller != nil {
+			c.Resources.OomKillDisable = *r.Memory.DisableOOMKiller
+		}
 	}
 	if r.CPU != nil {
 		if r.CPU.Shares != nil {
@@ -458,9 +464,6 @@ func createCgroupConfig(opts *CreateOpts) (*configs.Cgroup, error) {
 			Pagesize: l.Pagesize,
 			Limit:    l.Limit,
 		})
-	}
-	if r.DisableOOMKiller != nil {
-		c.Resources.OomKillDisable = *r.DisableOOMKiller
 	}
 	if r.Network != nil {
 		if r.Network.ClassID != nil {
