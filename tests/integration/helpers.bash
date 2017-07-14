@@ -18,7 +18,7 @@ HELLO_IMAGE="$TESTDATA/hello-world.tar"
 HELLO_BUNDLE="$BATS_TMPDIR/hello-world"
 
 # CRIU PATH
-CRIU="$(which criu)"
+CRIU="$(which criu || true)"
 
 # Kernel version
 KERNEL_VERSION="$(uname -r)"
