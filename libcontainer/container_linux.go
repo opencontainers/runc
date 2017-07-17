@@ -1290,11 +1290,11 @@ func (c *linuxContainer) criuNotifications(resp *criurpc.CriuResp, process *Proc
 			}
 		}
 	case notify.GetScript() == "orphan-pts-master":
-		scm, err := syscall.ParseSocketControlMessage(oob)
+		scm, err := unix.ParseSocketControlMessage(oob)
 		if err != nil {
 			return err
 		}
-		fds, err := syscall.ParseUnixRights(&scm[0])
+		fds, err := unix.ParseUnixRights(&scm[0])
 
 		master := os.NewFile(uintptr(fds[0]), "orphan-pts-master")
 		defer master.Close()

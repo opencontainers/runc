@@ -42,10 +42,6 @@ func (l *linuxStandardInit) getSessionRingParams() (string, uint32, uint32) {
 	return fmt.Sprintf("_ses.%s", l.config.ContainerId), 0xffffffff, newperms
 }
 
-// PR_SET_NO_NEW_PRIVS isn't exposed in Golang so we define it ourselves copying the value
-// the kernel
-const PR_SET_NO_NEW_PRIVS = 0x26
-
 func (l *linuxStandardInit) Init() error {
 	if !l.config.Config.NoNewKeyring {
 		ringname, keepperms, newperms := l.getSessionRingParams()
@@ -128,7 +124,7 @@ func (l *linuxStandardInit) Init() error {
 		return err
 	}
 	if l.config.NoNewPrivileges {
-		if err := unix.Prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0); err != nil {
+		if err := unix.Prctl(unix.PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0); err != nil {
 			return err
 		}
 	}

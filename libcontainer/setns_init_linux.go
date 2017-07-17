@@ -43,7 +43,7 @@ func (l *linuxSetnsInit) Init() error {
 		}
 	}
 	if l.config.NoNewPrivileges {
-		if err := unix.Prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0); err != nil {
+		if err := unix.Prctl(unix.PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0); err != nil {
 			return err
 		}
 	}
