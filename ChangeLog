@@ -1,5 +1,24 @@
 OpenContainers Specifications
 
+Changes with v1.0.0:
+
+	Breaking changes:
+
+	* config: Shift disableOOMKiller from linux.resources to
+	  linux.resources.memory (#896)
+
+	Decreased restrictions:
+
+	* runtime: Make the state JSON's pid optional on non-Linux platforms
+	  (#897)
+
+	Minor fixes and documentation:
+
+	* schema/defs-linux: Require Syscall.action (#885)
+	* specs-go/config: Fix 'omiempty' -> 'omitempty' typo for
+	  LinuxSeccompArg.ValueTwo (#884)
+	* ROAMAP: remove the pre-v1.0.0 roadmap (#890)
+
 Changes with v1.0.0-rc6:
 
 	Breaking changes:
