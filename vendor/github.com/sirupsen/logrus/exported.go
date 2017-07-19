@@ -31,14 +31,14 @@ func SetFormatter(formatter Formatter) {
 func SetLevel(level Level) {
 	std.mu.Lock()
 	defer std.mu.Unlock()
-	std.Level = level
+	std.SetLevel(level)
 }
 
 // GetLevel returns the standard logger level.
 func GetLevel() Level {
 	std.mu.Lock()
 	defer std.mu.Unlock()
-	return std.Level
+	return std.level()
 }
 
 // AddHook adds a hook to the standard logger hooks.
@@ -46,6 +46,11 @@ func AddHook(hook Hook) {
 	std.mu.Lock()
 	defer std.mu.Unlock()
 	std.Hooks.Add(hook)
+}
+
+// WithError creates an entry from the standard logger and adds an error to it, using the value defined in ErrorKey as key.
+func WithError(err error) *Entry {
+	return std.WithField(ErrorKey, err)
 }
 
 // WithField creates an entry from the standard logger and adds a field to
