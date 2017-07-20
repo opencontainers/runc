@@ -1,3 +1,4 @@
+
 #define _GNU_SOURCE
 #include <endian.h>
 #include <errno.h>
@@ -19,6 +20,8 @@
 #include <sys/prctl.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/wait.h>
+
 
 #include <linux/limits.h>
 #include <linux/netlink.h>
@@ -69,6 +72,10 @@ struct nlconfig_t {
 	size_t uidmap_len;
 	char *gidmap;
 	size_t gidmap_len;
+	char *uidmappath;
+	size_t uidmappath_len;
+	char *gidmappath;
+	size_t gidmappath_len;
 	char *namespaces;
 	size_t namespaces_len;
 	uint8_t is_setgroup;
@@ -89,6 +96,8 @@ struct nlconfig_t {
 #define SETGROUP_ATTR		27285
 #define OOM_SCORE_ADJ_ATTR	27286
 #define ROOTLESS_ATTR	    27287
+#define UIDMAPPATH_ATTR	    27288
+#define GIDMAPPATH_ATTR	    27289
 
 /*
  * Use the raw syscall for versions of glibc which don't include a function for
@@ -191,22 +200,81 @@ static void update_setgroups(int pid, enum policy_t setgroup)
 	}
 }
 
-static void update_uidmap(int pid, char *map, size_t map_len)
+static int try_mapping_tool(const char *app, int pid, char *map, size_t map_len)
 {
-	if (map == NULL || map_len <= 0)
-		return;
+	int child = fork();
+	if (child < 0)
+		bail("failed to fork");
 
-	if (write_file(map, map_len, "/proc/%d/uid_map", pid) < 0)
-		bail("failed to update /proc/%d/uid_map", pid);
+	if (child == 0) {
+#define MAX_ARGV 20
+		char *argv[MAX_ARGV];
+		char pid_fmt[16];
+		int argc = 0;
+		char *next;
+
+		snprintf (pid_fmt, 16, "%d", pid);
+
+		argv[argc++] = (char *) app;
+		argv[argc++] = pid_fmt;
+		/*
+		 * Convert the map string into a list of argument that
+		 * newuidmap/newgidmap can understand.
+		 */
+
+		while (argc < MAX_ARGV) {
+			if (*map == '\0') {
+				argv[argc++] = NULL;
+				break;
+			}
+			argv[argc++] = map;
+			next = strpbrk (map, "\n ");
+			if (next == NULL)
+				break;
+			*next++ = '\0';
+			map = next + strspn(next, "\n ");
+		}
+		execvp (app, argv);
+	}
+	else {
+		int status;
+		while (true) {
+			if (waitpid(child, &status, 0) < 0) {
+				if (errno == EINTR)
+					continue;
+				bail("failed to waitpid");
+			}
+			if (WIFEXITED(status) || WIFSIGNALED(status))
+				return WEXITSTATUS(status);
+                  }
+	}
+	return -1;
 }
 
-static void update_gidmap(int pid, char *map, size_t map_len)
+static void update_uidmap(const char *path, int pid, char *map, size_t map_len)
 {
 	if (map == NULL || map_len <= 0)
 		return;
 
-	if (write_file(map, map_len, "/proc/%d/gid_map", pid) < 0)
-		bail("failed to update /proc/%d/gid_map", pid);
+	if (write_file(map, map_len, "/proc/%d/uid_map", pid) < 0) {
+		if(errno != EPERM)
+			bail("failed to update /proc/%d/gid_map", pid);
+		if (try_mapping_tool (path, pid, map, map_len))
+			bail("failed to use newuid map on %d", pid);
+	}
+}
+
+static void update_gidmap(const char *path, int pid, char *map, size_t map_len)
+{
+	if (map == NULL || map_len <= 0)
+		return;
+
+	if (write_file(map, map_len, "/proc/%d/gid_map", pid) < 0) {
+		if(errno != EPERM)
+			bail("failed to update /proc/%d/gid_map", pid);
+		if (try_mapping_tool (path, pid, map, map_len))
+			bail("failed to use newgid map on %d", pid);
+	}
 }
 
 static void update_oom_score_adj(char *data, size_t len)
@@ -349,6 +417,14 @@ static void nl_parse(int fd, struct nlconfig_t *config)
 		case GIDMAP_ATTR:
 			config->gidmap = current;
 			config->gidmap_len = payload_len;
+			break;
+		case UIDMAPPATH_ATTR:
+			config->uidmappath = current;
+			config->uidmappath_len = payload_len;
+			break;
+		case GIDMAPPATH_ATTR:
+			config->gidmappath = current;
+			config->gidmappath_len = payload_len;
 			break;
 		case SETGROUP_ATTR:
 			config->is_setgroup = readint8(current);
@@ -596,8 +672,8 @@ void nsexec(void)
 						update_setgroups(child, SETGROUPS_DENY);
 
 					/* Set up mappings. */
-					update_uidmap(child, config.uidmap, config.uidmap_len);
-					update_gidmap(child, config.gidmap, config.gidmap_len);
+					update_uidmap(config.uidmappath, child, config.uidmap, config.uidmap_len);
+					update_gidmap(config.gidmappath, child, config.gidmap, config.gidmap_len);
 
 					s = SYNC_USERMAP_ACK;
 					if (write(syncfd, &s, sizeof(s)) != sizeof(s)) {

@@ -44,6 +44,8 @@ type linuxContainer struct {
 	initProcess          parentProcess
 	initProcessStartTime uint64
 	criuPath             string
+	newuidmapPath        string
+	newgidmapPath        string
 	m                    sync.Mutex
 	criuVersion          int
 	state                containerState
@@ -1707,6 +1709,10 @@ func (c *linuxContainer) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Na
 	if !joinExistingUser {
 		// write uid mappings
 		if len(c.config.UidMappings) > 0 {
+			r.AddData(&Bytemsg{
+				Type:  UidmapPathAttr,
+				Value: []byte(c.newuidmapPath),
+			})
 			b, err := encodeIDMapping(c.config.UidMappings)
 			if err != nil {
 				return nil, err
@@ -1729,6 +1735,10 @@ func (c *linuxContainer) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Na
 			})
 			// The following only applies if we are root.
 			if !c.config.Rootless {
+				r.AddData(&Bytemsg{
+					Type:  GidmapPathAttr,
+					Value: []byte(c.newgidmapPath),
+				})
 				// check if we have CAP_SETGID to setgroup properly
 				pid, err := capability.NewPid(os.Getpid())
 				if err != nil {
