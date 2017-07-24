@@ -546,7 +546,8 @@ func (c *linuxContainer) checkCriuFeatures(criuOpts *CriuOpts, rpcOpts *criurpc.
 	var t criurpc.CriuReqType
 	t = criurpc.CriuReqType_FEATURE_CHECK
 
-	if err := c.checkCriuVersion("1.8"); err != nil {
+	// criu 1.8 => 10800
+	if err := c.checkCriuVersion(10800); err != nil {
 		// Feature checking was introduced with CRIU 1.8.
 		// Ignore the feature check if an older CRIU version is used
 		// and just act as before.
@@ -590,17 +591,8 @@ func (c *linuxContainer) checkCriuFeatures(criuOpts *CriuOpts, rpcOpts *criurpc.
 }
 
 // checkCriuVersion checks Criu version greater than or equal to minVersion
-func (c *linuxContainer) checkCriuVersion(minVersion string) error {
-	var x, y, z, versionReq int
-
-	_, err := fmt.Sscanf(minVersion, "%d.%d.%d\n", &x, &y, &z) // 1.5.2
-	if err != nil {
-		_, err = fmt.Sscanf(minVersion, "Version: %d.%d\n", &x, &y) // 1.6
-		if err != nil {
-			return fmt.Errorf("Unable to parse the CRIU min version: %s", minVersion)
-		}
-	}
-	versionReq = x*10000 + y*100 + z
+func (c *linuxContainer) checkCriuVersion(minVersion int) error {
+	var x, y, z int
 
 	out, err := exec.Command(c.criuPath, "-V").Output()
 	if err != nil {
@@ -642,8 +634,8 @@ func (c *linuxContainer) checkCriuVersion(minVersion string) error {
 
 	c.criuVersion = x*10000 + y*100 + z
 
-	if c.criuVersion < versionReq {
-		return fmt.Errorf("CRIU version %d must be %d or higher", c.criuVersion, versionReq)
+	if c.criuVersion < minVersion {
+		return fmt.Errorf("CRIU version %d must be %d or higher", c.criuVersion, minVersion)
 	}
 
 	return nil
@@ -698,7 +690,8 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 		return fmt.Errorf("cannot checkpoint a rootless container")
 	}
 
-	if err := c.checkCriuVersion("1.5.2"); err != nil {
+	// criu 1.5.2 => 10502
+	if err := c.checkCriuVersion(10502); err != nil {
 		return err
 	}
 
@@ -771,7 +764,8 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 
 	// append optional manage cgroups mode
 	if criuOpts.ManageCgroupsMode != 0 {
-		if err := c.checkCriuVersion("1.7"); err != nil {
+		// criu 1.7 => 10700
+		if err := c.checkCriuVersion(10700); err != nil {
 			return err
 		}
 		mode := criurpc.CriuCgMode(criuOpts.ManageCgroupsMode)
@@ -885,7 +879,8 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 		return fmt.Errorf("cannot restore a rootless container")
 	}
 
-	if err := c.checkCriuVersion("1.5.2"); err != nil {
+	// criu 1.5.2 => 10502
+	if err := c.checkCriuVersion(10502); err != nil {
 		return err
 	}
 	if criuOpts.WorkDirectory == "" {
@@ -981,7 +976,8 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 
 	// append optional manage cgroups mode
 	if criuOpts.ManageCgroupsMode != 0 {
-		if err := c.checkCriuVersion("1.7"); err != nil {
+		// criu 1.7 => 10700
+		if err := c.checkCriuVersion(10700); err != nil {
 			return err
 		}
 		mode := criurpc.CriuCgMode(criuOpts.ManageCgroupsMode)
