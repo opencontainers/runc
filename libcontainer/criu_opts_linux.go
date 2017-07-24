@@ -35,4 +35,6 @@ type CriuOpts struct {
 	ManageCgroupsMode       cgMode             // dump or restore cgroup mode
 	EmptyNs                 uint32             // don't c/r properties for namespace from this mask
 	AutoDedup               bool               // auto deduplication for incremental dumps
+	LazyPages               bool               // restore memory pages lazily using userfaultfd
+	StatusFd                string             // fd for feedback when lazy server is ready
 }
