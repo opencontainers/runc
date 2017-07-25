@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
 	"sync"
 
 	"github.com/containerd/console"
-	"github.com/docker/docker/pkg/term"
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/utils"
 )
@@ -17,7 +17,7 @@ import (
 type tty struct {
 	epoller   *console.Epoller
 	console   *console.EpollConsole
-	state     *term.State
+	stdin     console.Console
 	closers   []io.Closer
 	postStart []io.Closer
 	wg        sync.WaitGroup
@@ -93,17 +93,29 @@ func (t *tty) recvtty(process *libcontainer.Process, socket *os.File) error {
 	t.wg.Add(1)
 	go t.copyIO(os.Stdout, epollConsole)
 
-	// TODO: perhaps migrate to console.SetRaw later. Need to handle interrupt
-	// ourselves though
-	state, err := term.SetRawTerminal(os.Stdin.Fd())
+	// set raw mode to stdin and also handle interrupt
+	stdin, err := console.ConsoleFromFile(os.Stdin)
 	if err != nil {
+		return err
+	}
+	if err := stdin.SetRaw(); err != nil {
 		return fmt.Errorf("failed to set the terminal from the stdin: %v", err)
 	}
+	go handleInterrupt(stdin)
+
 	t.epoller = epoller
-	t.state = state
+	t.stdin = stdin
 	t.console = epollConsole
 	t.closers = []io.Closer{epollConsole}
 	return nil
+}
+
+func handleInterrupt(c console.Console) {
+	sigchan := make(chan os.Signal, 1)
+	signal.Notify(sigchan, os.Interrupt)
+	<-sigchan
+	c.Reset()
+	os.Exit(0)
 }
 
 func (t *tty) waitConsole() error {
@@ -138,8 +150,8 @@ func (t *tty) Close() error {
 	for _, c := range t.closers {
 		c.Close()
 	}
-	if t.state != nil {
-		term.RestoreTerminal(os.Stdin.Fd(), t.state)
+	if t.stdin != nil {
+		t.stdin.Reset()
 	}
 	return nil
 }
