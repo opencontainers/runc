@@ -590,13 +590,12 @@ func (c *linuxContainer) checkCriuFeatures(criuOpts *CriuOpts, rpcOpts *criurpc.
 	return nil
 }
 
-// checkCriuVersion checks Criu version greater than or equal to minVersion
-func (c *linuxContainer) checkCriuVersion(minVersion int) error {
+func parseCriuVersion(path string) (int, error) {
 	var x, y, z int
 
-	out, err := exec.Command(c.criuPath, "-V").Output()
+	out, err := exec.Command(path, "-V").Output()
 	if err != nil {
-		return fmt.Errorf("Unable to execute CRIU command: %s", c.criuPath)
+		return 0, fmt.Errorf("Unable to execute CRIU command: %s", path)
 	}
 
 	x = 0
@@ -608,7 +607,7 @@ func (c *linuxContainer) checkCriuVersion(minVersion int) error {
 		if sp := strings.Index(string(out), "GitID"); sp > 0 {
 			version = string(out)[sp:ep]
 		} else {
-			return fmt.Errorf("Unable to parse the CRIU version: %s", c.criuPath)
+			return 0, fmt.Errorf("Unable to parse the CRIU version: %s", path)
 		}
 
 		n, err := fmt.Sscanf(string(version), "GitID: v%d.%d.%d", &x, &y, &z) // 1.5.2
@@ -619,7 +618,7 @@ func (c *linuxContainer) checkCriuVersion(minVersion int) error {
 			z++
 		}
 		if n < 2 || err != nil {
-			return fmt.Errorf("Unable to parse the CRIU version: %s %d %s", version, n, err)
+			return 0, fmt.Errorf("Unable to parse the CRIU version: %s %d %s", version, n, err)
 		}
 	} else {
 		// criu release version format
@@ -628,17 +627,38 @@ func (c *linuxContainer) checkCriuVersion(minVersion int) error {
 			n, err = fmt.Sscanf(string(out), "Version: %d.%d\n", &x, &y) // 1.6
 		}
 		if n < 2 || err != nil {
-			return fmt.Errorf("Unable to parse the CRIU version: %s %d %s", out, n, err)
+			return 0, fmt.Errorf("Unable to parse the CRIU version: %s %d %s", out, n, err)
 		}
 	}
 
-	c.criuVersion = x*10000 + y*100 + z
+	return x*10000 + y*100 + z, nil
+}
 
-	if c.criuVersion < minVersion {
-		return fmt.Errorf("CRIU version %d must be %d or higher", c.criuVersion, minVersion)
+func compareCriuVersion(criuVersion int, minVersion int) error {
+	// simple function to perform the actual version compare
+	if criuVersion < minVersion {
+		return fmt.Errorf("CRIU version %d must be %d or higher", criuVersion, minVersion)
 	}
 
 	return nil
+}
+
+// checkCriuVersion checks Criu version greater than or equal to minVersion
+func (c *linuxContainer) checkCriuVersion(minVersion int) error {
+
+	// If the version of criu has already been determined there is no need
+	// to ask criu for the version again. Use the value from c.criuVersion.
+	if c.criuVersion != 0 {
+		return compareCriuVersion(c.criuVersion, minVersion)
+	}
+
+	var err error
+	c.criuVersion, err = parseCriuVersion(c.criuPath)
+	if err != nil {
+		return err
+	}
+
+	return compareCriuVersion(c.criuVersion, minVersion)
 }
 
 const descriptorsFilename = "descriptors.json"
