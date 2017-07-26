@@ -1059,7 +1059,14 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *
 		return err
 	}
 
-	logPath := filepath.Join(opts.WorkDirectory, req.GetOpts().GetLogFile())
+	var logPath string
+	if opts != nil {
+		logPath = filepath.Join(opts.WorkDirectory, req.GetOpts().GetLogFile())
+	} else {
+		// For the VERSION RPC 'opts' is set to 'nil' and therefore
+		// opts.WorkDirectory does not exist. Set logPath to "".
+		logPath = ""
+	}
 	criuClient := os.NewFile(uintptr(fds[0]), "criu-transport-client")
 	criuClientFileCon, err := net.FileConn(criuClient)
 	criuClient.Close()
@@ -1074,7 +1081,11 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *
 	defer criuServer.Close()
 
 	args := []string{"swrk", "3"}
-	logrus.Debugf("Using CRIU %d at: %s", c.criuVersion, c.criuPath)
+	if c.criuVersion != 0 {
+		// If the CRIU Version is still '0' then this is probably
+		// the initial CRIU run to detect the version. Skip it.
+		logrus.Debugf("Using CRIU %d at: %s", c.criuVersion, c.criuPath)
+	}
 	logrus.Debugf("Using CRIU with following args: %s", args)
 	cmd := exec.Command(c.criuPath, args...)
 	if process != nil {
