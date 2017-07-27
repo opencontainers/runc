@@ -28,8 +28,16 @@ type CpuUsage struct {
 	UsageInUsermode uint64 `json:"usage_in_usermode"`
 }
 
+type CpuCfs struct {
+	// CPU time in microseconds that can be consumed (quota) out of a given total (period)
+	// If the Quota is -1, there is not limit for the given period
+	Period uint64 `json:"cfs_period"`
+	Quota  int64  `json:"cfs_usage"`
+}
+
 type CpuStats struct {
 	CpuUsage       CpuUsage       `json:"cpu_usage,omitempty"`
+	CFS            CpuCfs         `json:"cpu_cfs"`
 	ThrottlingData ThrottlingData `json:"throttling_data,omitempty"`
 }
 
