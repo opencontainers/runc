@@ -86,15 +86,15 @@
                                     "$ref": "defs-linux.json#/definitions/blockIODeviceThrottle"
                                 }
                             },
-                            "throttleReadIopsDevice": {
-                                "id": "https://opencontainers.org/schema/bundle/linux/resources/blockIO/throttleReadIopsDevice",
+                            "throttleReadIOPSDevice": {
+                                "id": "https://opencontainers.org/schema/bundle/linux/resources/blockIO/throttleReadIOPSDevice",
                                 "type": "array",
                                 "items": {
                                     "$ref": "defs-linux.json#/definitions/blockIODeviceThrottle"
                                 }
                             },
-                            "throttleWriteIopsDevice": {
-                                "id": "https://opencontainers.org/schema/bundle/linux/resources/blockIO/throttleWriteIopsDevice",
+                            "throttleWriteIOPSDevice": {
+                                "id": "https://opencontainers.org/schema/bundle/linux/resources/blockIO/throttleWriteIOPSDevice",
                                 "type": "array",
                                 "items": {
                                     "$ref": "defs-linux.json#/definitions/blockIODeviceThrottle"
