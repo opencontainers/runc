@@ -234,7 +234,7 @@ func TestExecInError(t *testing.T) {
 			Cwd:    "/",
 			Args:   []string{"unexistent"},
 			Env:    standardEnvironment,
-			Stdout: &out,
+			Stderr: &out,
 		}
 		err = container.Run(unexistent)
 		if err == nil {

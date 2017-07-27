@@ -7,10 +7,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/utils"
 
+	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
 
