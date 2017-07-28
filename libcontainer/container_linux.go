@@ -803,7 +803,6 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 			switch m.Device {
 			case "bind":
 				c.addCriuDumpMount(req, m)
-				break
 			case "cgroup":
 				binds, err := getCgroupMounts(m)
 				if err != nil {
@@ -812,7 +811,6 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 				for _, b := range binds {
 					c.addCriuDumpMount(req, b)
 				}
-				break
 			}
 		}
 
@@ -865,9 +863,8 @@ func (c *linuxContainer) restoreNetwork(req *criurpc.CriuReq, criuOpts *CriuOpts
 			veth.IfOut = proto.String(iface.HostInterfaceName)
 			veth.IfIn = proto.String(iface.Name)
 			req.Opts.Veths = append(req.Opts.Veths, veth)
-			break
 		case "loopback":
-			break
+			// Do nothing
 		}
 	}
 	for _, i := range criuOpts.VethPairs {
@@ -957,7 +954,6 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 		switch m.Device {
 		case "bind":
 			c.addCriuRestoreMount(req, m)
-			break
 		case "cgroup":
 			binds, err := getCgroupMounts(m)
 			if err != nil {
@@ -966,7 +962,6 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 			for _, b := range binds {
 				c.addCriuRestoreMount(req, b)
 			}
-			break
 		}
 	}
 
@@ -1156,7 +1151,6 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *
 		case t == criurpc.CriuReqType_FEATURE_CHECK:
 			logrus.Debugf("Feature check says: %s", resp)
 			criuFeatures = resp.GetFeatures()
-			break
 		case t == criurpc.CriuReqType_NOTIFY:
 			if err := c.criuNotifications(resp, process, opts, extFds, oob[:oobn]); err != nil {
 				return err
