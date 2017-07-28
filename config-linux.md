@@ -12,7 +12,7 @@ The following filesystems SHOULD be made available in each container's filesyste
 
 | Path     | Type   |
 | -------- | ------ |
-| /proc    | [procfs][] |
+| /proc    | [proc][] |
 | /sys     | [sysfs][]  |
 | /dev/pts | [devpts][] |
 | /dev/shm | [tmpfs][]  |
@@ -642,7 +642,7 @@ The following parameters can be specified to set up seccomp:
 [devpts]: https://www.kernel.org/doc/Documentation/filesystems/devpts.txt
 [file]: http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap03.html#tag_03_164
 [libseccomp]: https://github.com/seccomp/libseccomp
-[procfs]: https://www.kernel.org/doc/Documentation/filesystems/proc.txt
+[proc]: https://www.kernel.org/doc/Documentation/filesystems/proc.txt
 [seccomp]: https://www.kernel.org/doc/Documentation/prctl/seccomp_filter.txt
 [sharedsubtree]: https://www.kernel.org/doc/Documentation/filesystems/sharedsubtree.txt
 [sysfs]: https://www.kernel.org/doc/Documentation/filesystems/sysfs.txt
