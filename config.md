@@ -198,7 +198,7 @@ For Linux-based systems, the `process` object supports the following process-spe
     * **`ambient`** (array of strings, OPTIONAL) the `ambient` field is an array of ambient capabilities that are kept for the process.
 * **`noNewPrivileges`** (bool, OPTIONAL) setting `noNewPrivileges` to true prevents the process from gaining additional privileges.
     As an example, the [`no_new_privs`][no-new-privs] article in the kernel documentation has information on how this is achieved using a `prctl` system call on Linux.
-* **`oomScoreAdj`** *(int, OPTIONAL)* adjusts the oom-killer score in `[pid]/oom_score_adj` for the process's `[pid]` in a [proc pseudo-filesystem][procfs].
+* **`oomScoreAdj`** *(int, OPTIONAL)* adjusts the oom-killer score in `[pid]/oom_score_adj` for the process's `[pid]` in a [proc pseudo-filesystem][proc_2].
     If `oomScoreAdj` is set, the runtime MUST set `oom_score_adj` to the given value.
     If `oomScoreAdj` is not set, the runtime MUST NOT change the value of `oom_score_adj`.
 
@@ -842,7 +842,7 @@ Here is a full example `config.json` for reference.
 [cgroup-v1-memory_2]: https://www.kernel.org/doc/Documentation/cgroup-v1/memory.txt
 [selinux]:http://selinuxproject.org/page/Main_Page
 [no-new-privs]: https://www.kernel.org/doc/Documentation/prctl/no_new_privs.txt
-[procfs_2]: https://www.kernel.org/doc/Documentation/filesystems/proc.txt
+[proc_2]: https://www.kernel.org/doc/Documentation/filesystems/proc.txt
 [semver-v2.0.0]: http://semver.org/spec/v2.0.0.html
 [ieee-1003.1-2008-xbd-c8.1]: http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap08.html#tag_08_01
 [ieee-1003.1-2008-xsh-exec]: http://pubs.opengroup.org/onlinepubs/9699919799/functions/exec.html
