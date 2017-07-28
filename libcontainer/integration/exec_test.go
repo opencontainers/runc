@@ -807,7 +807,13 @@ func TestPassExtraFiles(t *testing.T) {
 
 	var stdout bytes.Buffer
 	pipeout1, pipein1, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
 	pipeout2, pipein2, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
 	process := libcontainer.Process{
 		Cwd:        "/",
 		Args:       []string{"sh", "-c", "cd /proc/$$/fd; echo -n *; echo -n 1 >3; echo -n 2 >4"},

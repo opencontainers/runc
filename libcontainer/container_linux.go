@@ -596,6 +596,9 @@ func (c *linuxContainer) checkCriuVersion(minVersion string) error {
 	_, err := fmt.Sscanf(minVersion, "%d.%d.%d\n", &x, &y, &z) // 1.5.2
 	if err != nil {
 		_, err = fmt.Sscanf(minVersion, "Version: %d.%d\n", &x, &y) // 1.6
+		if err != nil {
+			return fmt.Errorf("Unable to parse the CRIU min version: %s", minVersion)
+		}
 	}
 	versionReq = x*10000 + y*100 + z
 
@@ -1295,6 +1298,9 @@ func (c *linuxContainer) criuNotifications(resp *criurpc.CriuResp, process *Proc
 			return err
 		}
 		fds, err := unix.ParseUnixRights(&scm[0])
+		if err != nil {
+			return err
+		}
 
 		master := os.NewFile(uintptr(fds[0]), "orphan-pts-master")
 		defer master.Close()
