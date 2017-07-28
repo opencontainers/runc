@@ -600,9 +600,24 @@ func (c *linuxContainer) checkCriuFeatures(criuOpts *CriuOpts, rpcOpts *criurpc.
 	logrus.Debugf("Feature check says: %s", criuFeatures)
 	missingFeatures := false
 
-	if *criuFeat.MemTrack && !*criuFeatures.MemTrack {
-		missingFeatures = true
-		logrus.Debugf("CRIU does not support MemTrack")
+	// The outer if checks if the fields actually exist
+	if (criuFeat.MemTrack != nil) &&
+		(criuFeatures.MemTrack != nil) {
+		// The inner if checks if they are set to true
+		if *criuFeat.MemTrack && !*criuFeatures.MemTrack {
+			missingFeatures = true
+			logrus.Debugf("CRIU does not support MemTrack")
+		}
+	}
+
+	// This needs to be repeated for every new feature check.
+	// Is there a way to put this in a function. Reflection?
+	if (criuFeat.LazyPages != nil) &&
+		(criuFeatures.LazyPages != nil) {
+		if *criuFeat.LazyPages && !*criuFeatures.LazyPages {
+			missingFeatures = true
+			logrus.Debugf("CRIU does not support LazyPages")
+		}
 	}
 
 	if missingFeatures {
