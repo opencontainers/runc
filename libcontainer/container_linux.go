@@ -596,6 +596,9 @@ func (c *linuxContainer) checkCriuVersion(minVersion string) error {
 	_, err := fmt.Sscanf(minVersion, "%d.%d.%d\n", &x, &y, &z) // 1.5.2
 	if err != nil {
 		_, err = fmt.Sscanf(minVersion, "Version: %d.%d\n", &x, &y) // 1.6
+		if err != nil {
+			return fmt.Errorf("Unable to parse the CRIU min version: %s", minVersion)
+		}
 	}
 	versionReq = x*10000 + y*100 + z
 
@@ -800,7 +803,6 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 			switch m.Device {
 			case "bind":
 				c.addCriuDumpMount(req, m)
-				break
 			case "cgroup":
 				binds, err := getCgroupMounts(m)
 				if err != nil {
@@ -809,7 +811,6 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 				for _, b := range binds {
 					c.addCriuDumpMount(req, b)
 				}
-				break
 			}
 		}
 
@@ -862,9 +863,8 @@ func (c *linuxContainer) restoreNetwork(req *criurpc.CriuReq, criuOpts *CriuOpts
 			veth.IfOut = proto.String(iface.HostInterfaceName)
 			veth.IfIn = proto.String(iface.Name)
 			req.Opts.Veths = append(req.Opts.Veths, veth)
-			break
 		case "loopback":
-			break
+			// Do nothing
 		}
 	}
 	for _, i := range criuOpts.VethPairs {
@@ -954,7 +954,6 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 		switch m.Device {
 		case "bind":
 			c.addCriuRestoreMount(req, m)
-			break
 		case "cgroup":
 			binds, err := getCgroupMounts(m)
 			if err != nil {
@@ -963,7 +962,6 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 			for _, b := range binds {
 				c.addCriuRestoreMount(req, b)
 			}
-			break
 		}
 	}
 
@@ -1153,7 +1151,6 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *
 		case t == criurpc.CriuReqType_FEATURE_CHECK:
 			logrus.Debugf("Feature check says: %s", resp)
 			criuFeatures = resp.GetFeatures()
-			break
 		case t == criurpc.CriuReqType_NOTIFY:
 			if err := c.criuNotifications(resp, process, opts, extFds, oob[:oobn]); err != nil {
 				return err
@@ -1295,6 +1292,9 @@ func (c *linuxContainer) criuNotifications(resp *criurpc.CriuResp, process *Proc
 			return err
 		}
 		fds, err := unix.ParseUnixRights(&scm[0])
+		if err != nil {
+			return err
+		}
 
 		master := os.NewFile(uintptr(fds[0]), "orphan-pts-master")
 		defer master.Close()
