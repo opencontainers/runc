@@ -29,14 +29,14 @@ SHELL := $(shell command -v bash 2>/dev/null)
 .DEFAULT: runc
 
 runc: $(SOURCES)
-	$(GO) build $(EXTRA_FLAGS) -ldflags "-X main.gitCommit=${COMMIT} -X main.version=${VERSION} $(EXTRA_LDFLAGS)" -tags "$(BUILDTAGS)" -o runc .
+	$(GO) build -buildmode=pie $(EXTRA_FLAGS) -ldflags "-X main.gitCommit=${COMMIT} -X main.version=${VERSION} $(EXTRA_LDFLAGS)" -tags "$(BUILDTAGS)" -o runc .
 
 all: runc recvtty
 
 recvtty: contrib/cmd/recvtty/recvtty
 
 contrib/cmd/recvtty/recvtty: $(SOURCES)
-	$(GO) build $(EXTRA_FLAGS) -ldflags "-X main.gitCommit=${COMMIT} -X main.version=${VERSION} $(EXTRA_LDFLAGS)" -tags "$(BUILDTAGS)" -o contrib/cmd/recvtty/recvtty ./contrib/cmd/recvtty
+	$(GO) build -buildmode=pie $(EXTRA_FLAGS) -ldflags "-X main.gitCommit=${COMMIT} -X main.version=${VERSION} $(EXTRA_LDFLAGS)" -tags "$(BUILDTAGS)" -o contrib/cmd/recvtty/recvtty ./contrib/cmd/recvtty
 
 static: $(SOURCES)
 	CGO_ENABLED=1 $(GO) build $(EXTRA_FLAGS) -tags "$(BUILDTAGS) cgo static_build" -ldflags "-w -extldflags -static -X main.gitCommit=${COMMIT} -X main.version=${VERSION} $(EXTRA_LDFLAGS)" -o runc .
@@ -56,15 +56,17 @@ release:
 		done; \
 		tags="$$profile"; \
 		ldflags="-X main.gitCommit=${COMMIT} -X main.version=${VERSION}"; \
+		buildflags="-buildmode=pie"; \
 		CGO_ENABLED=; \
 		[[ "$$profile" =~ static ]] && { \
 			tags="$${tags/static/static_build}"; \
 			tags+=" cgo"; \
+			buildflags=; \
 			ldflags+=" -w -extldflags -static"; \
 			CGO_ENABLED=1; \
 		}; \
 		echo "Building target: $$output"; \
-		$(GO) build $(EXTRA_FLAGS) -ldflags "$$ldflags $(EXTRA_LDFLAGS)" -tags "$$tags" -o "$$output" .; \
+		$(GO) build $$buildflags $(EXTRA_FLAGS) -ldflags "$$ldflags $(EXTRA_LDFLAGS)" -tags "$$tags" -o "$$output" .; \
 	done
 
 dbuild: runcimage
