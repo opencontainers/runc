@@ -643,6 +643,9 @@ func compareCriuVersion(criuVersion int, minVersion int) error {
 	return nil
 }
 
+// This is used to store the result of criu version RPC
+var criuVersionRPC *criurpc.CriuVersion
+
 // checkCriuVersion checks Criu version greater than or equal to minVersion
 func (c *linuxContainer) checkCriuVersion(minVersion int) error {
 
@@ -652,7 +655,45 @@ func (c *linuxContainer) checkCriuVersion(minVersion int) error {
 		return compareCriuVersion(c.criuVersion, minVersion)
 	}
 
-	var err error
+	// First try if this version of CRIU support the version RPC.
+	// The CRIU version RPC was introduced with CRIU 3.0.
+
+	// First, reset the variable for the RPC answer to nil
+	criuVersionRPC = nil
+
+	var t criurpc.CriuReqType
+	t = criurpc.CriuReqType_VERSION
+	req := &criurpc.CriuReq{
+		Type: &t,
+	}
+
+	err := c.criuSwrk(nil, req, nil, false)
+	if err != nil {
+		return fmt.Errorf("CRIU version check failed: %s", err)
+	}
+
+	if criuVersionRPC != nil {
+		logrus.Debugf("CRIU version: %s", criuVersionRPC)
+		// major and minor are always set
+		c.criuVersion = int(*criuVersionRPC.Major) * 10000
+		c.criuVersion += int(*criuVersionRPC.Minor) * 100
+		if criuVersionRPC.Sublevel != nil {
+			c.criuVersion += int(*criuVersionRPC.Sublevel)
+		}
+		if criuVersionRPC.Gitid != nil {
+			// runc's convention is that a CRIU git release is
+			// always the same as increasing the minor by 1
+			c.criuVersion -= (c.criuVersion % 100)
+			c.criuVersion += 100
+		}
+		return compareCriuVersion(c.criuVersion, minVersion)
+	}
+
+	// This is CRIU without the version RPC and therefore
+	// older than 3.0. Parsing the output is required.
+
+	// This can be remove once runc does not work with criu older than 3.0
+
 	c.criuVersion, err = parseCriuVersion(c.criuPath)
 	if err != nil {
 		return err
@@ -1126,8 +1167,11 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *
 	logrus.Debugf("Using CRIU in %s mode", req.GetType().String())
 	// In the case of criurpc.CriuReqType_FEATURE_CHECK req.GetOpts()
 	// should be empty. For older CRIU versions it still will be
-	// available but empty.
-	if req.GetType() != criurpc.CriuReqType_FEATURE_CHECK {
+	// available but empty. criurpc.CriuReqType_VERSION actually
+	// has no req.GetOpts().
+	if !(req.GetType() == criurpc.CriuReqType_FEATURE_CHECK ||
+		req.GetType() == criurpc.CriuReqType_VERSION) {
+
 		val := reflect.ValueOf(req.GetOpts())
 		v := reflect.Indirect(val)
 		for i := 0; i < v.NumField(); i++ {
@@ -1170,11 +1214,20 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *
 		}
 		if !resp.GetSuccess() {
 			typeString := req.GetType().String()
+			if typeString == "VERSION" {
+				// If the VERSION RPC fails this probably means that the CRIU
+				// version is too old for this RPC. Just return 'nil'.
+				return nil
+			}
 			return fmt.Errorf("criu failed: type %s errno %d\nlog file: %s", typeString, resp.GetCrErrno(), logPath)
 		}
 
 		t := resp.GetType()
 		switch {
+		case t == criurpc.CriuReqType_VERSION:
+			logrus.Debugf("CRIU version: %s", resp)
+			criuVersionRPC = resp.GetVersion()
+			break
 		case t == criurpc.CriuReqType_FEATURE_CHECK:
 			logrus.Debugf("Feature check says: %s", resp)
 			criuFeatures = resp.GetFeatures()
