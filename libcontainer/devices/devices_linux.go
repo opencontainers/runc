@@ -33,9 +33,9 @@ func DeviceFromPath(path, permissions string) (*configs.Device, error) {
 		mode    = stat.Mode
 	)
 	switch {
-	case mode&unix.S_IFBLK != 0:
+	case mode&unix.S_IFBLK == unix.S_IFBLK:
 		devType = 'b'
-	case mode&unix.S_IFCHR != 0:
+	case mode&unix.S_IFCHR == unix.S_IFCHR:
 		devType = 'c'
 	default:
 		return nil, ErrNotADevice
