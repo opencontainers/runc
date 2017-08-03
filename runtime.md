@@ -123,7 +123,7 @@ This operation MUST generate an error if `process` was not set.
 
 This operation MUST [generate an error](#errors) if it is not provided the container ID.
 Attempting to send a signal to a container that is neither [`created` nor `running`](#state) MUST have no effect on the container and MUST [generate an error](#errors).
-This operation MUST send the specified signal to the process in the container.
+This operation MUST send the specified signal to the container process.
 
 ### <a name="runtimeDelete" />Delete
 `delete <container-id>`
