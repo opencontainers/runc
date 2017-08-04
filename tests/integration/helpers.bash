@@ -35,10 +35,12 @@ CONSOLE_SOCKET="$BATS_TMPDIR/console.sock"
 # Cgroup mount
 CGROUP_MEMORY_BASE_PATH=$(grep "cgroup" /proc/self/mountinfo | gawk 'toupper($NF) ~ /\<MEMORY\>/ { print $5; exit }')
 CGROUP_CPU_BASE_PATH=$(grep "cgroup" /proc/self/mountinfo | gawk 'toupper($NF) ~ /\<CPU\>/ { print $5; exit }')
+CGROUP_PIDS_BASE_PATH=$(grep "cgroup" /proc/self/mountinfo | gawk 'toupper($NF) ~ /\<PIDS\>/ { print $5; exit }')
 
 # CONFIG_MEMCG_KMEM support
 KMEM="${CGROUP_MEMORY_BASE_PATH}/memory.kmem.limit_in_bytes"
 RT_PERIOD="${CGROUP_CPU_BASE_PATH}/cpu.rt_period_us"
+PIDS_CGROUP="${CGROUP_PIDS_BASE_PATH}/pids.max"
 
 # Check if we're in rootless mode.
 ROOTLESS=$(id -u)
@@ -95,8 +97,19 @@ function requires() {
 				skip "Test requires ${var}."
 			fi
 			;;
+		multi_cores)
+			cpu_count=$(grep '^processor' /proc/cpuinfo | wc -l)
+			if [ $cpu_count -eq 1 ]; then
+				skip "Test requires multi cores."
+			fi
+			;;
 		cgroups_rt)
 			if [ ! -e "$RT_PERIOD" ]; then
+				skip "Test requires ${var}."
+			fi
+			;;
+		cgroups_pids)
+			if [ ! -e "$PIDS_CGROUP" ]; then
 				skip "Test requires ${var}."
 			fi
 			;;
