@@ -187,7 +187,7 @@ func (s *MemoryGroup) Set(path string, cgroup *configs.Cgroup) error {
 	if cgroup.Resources.MemorySwappiness == nil || int64(*cgroup.Resources.MemorySwappiness) == -1 {
 		return nil
 	} else if *cgroup.Resources.MemorySwappiness <= 100 {
-		if err := writeFile(path, "memory.swappiness", strconv.FormatUint(*cgroup.Resources.MemorySwappiness, 10)); err != nil {
+		if err := writeFile(path, "memory.swappiness", strconv.FormatUint(*(*uint64)(cgroup.Resources.MemorySwappiness), 10)); err != nil {
 			return err
 		}
 	} else {
