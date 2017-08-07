@@ -8,7 +8,9 @@ import (
 	"os"
 	"time"
 
+	"encoding/json"
 	"github.com/opencontainers/runc/libcontainer/configs"
+	"strconv"
 )
 
 // Status is the status of a container.
@@ -44,6 +46,27 @@ func (s Status) String() string {
 	}
 }
 
+type Uint64Compat uint64
+
+func (a *Uint64Compat) UnmarshalJSON(b []byte) error {
+	var s uint64
+	if origErr := json.Unmarshal(b, &s); origErr != nil {
+		s2 := ""
+		if err2 := json.Unmarshal(b, &s2); err2 != nil {
+			// return the original error ... not string
+			return origErr
+		}
+		val, convErr := strconv.ParseUint(s2, 10, 64)
+		if convErr != nil {
+			return origErr
+		}
+		*a = Uint64Compat(val)
+		return nil
+	}
+	*a = Uint64Compat(s)
+	return nil
+}
+
 // BaseState represents the platform agnostic pieces relating to a
 // running container's state
 type BaseState struct {
@@ -54,7 +77,7 @@ type BaseState struct {
 	InitProcessPid int `json:"init_process_pid"`
 
 	// InitProcessStartTime is the init process start time in clock cycles since boot time.
-	InitProcessStartTime uint64 `json:"init_process_start"`
+	InitProcessStartTime Uint64Compat `json:"init_process_start"`
 
 	// Created is the unix timestamp for the creation time of the container in UTC
 	Created time.Time `json:"created"`

@@ -378,7 +378,7 @@ func createCgroupConfig(opts *CreateOpts) (*configs.Cgroup, error) {
 			c.Resources.KernelMemoryTCP = *r.Memory.KernelTCP
 		}
 		if r.Memory.Swappiness != nil {
-			xx := configs.Swappiness(  *r.Memory.Swappiness )
+			xx := configs.Swappiness(*r.Memory.Swappiness)
 			c.Resources.MemorySwappiness = &xx
 		}
 		if r.Memory.DisableOOMKiller != nil {

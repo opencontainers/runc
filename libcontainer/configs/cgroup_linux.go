@@ -54,7 +54,6 @@ func (a *Swappiness) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-
 type Resources struct {
 	// If this is true allow access to any kind of device within the container.  If false, allow access only to devices explicitly listed in the allowed_devices list.
 	// Deprecated
