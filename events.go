@@ -75,8 +75,14 @@ type cpuUsage struct {
 	User   uint64   `json:"user"`
 }
 
+type cfs struct {
+	Period uint64 `json:"period,omitempty"`
+	Quota  int64  `json:"quota,omitempty"`
+}
+
 type cpu struct {
 	Usage      cpuUsage   `json:"usage,omitempty"`
+	CFS        cfs        `json:"cfs,omitempty"`
 	Throttling throttling `json:"throttling,omitempty"`
 }
 
@@ -206,6 +212,8 @@ func convertLibcontainerStats(ls *libcontainer.Stats) *stats {
 	s.CPU.Throttling.Periods = cg.CpuStats.ThrottlingData.Periods
 	s.CPU.Throttling.ThrottledPeriods = cg.CpuStats.ThrottlingData.ThrottledPeriods
 	s.CPU.Throttling.ThrottledTime = cg.CpuStats.ThrottlingData.ThrottledTime
+	s.CPU.CFS.Period = cg.CpuStats.CFS.Period
+	s.CPU.CFS.Quota = cg.CpuStats.CFS.Quota
 
 	s.Memory.Cache = cg.MemoryStats.Cache
 	s.Memory.Kernel = convertMemoryEntry(cg.MemoryStats.KernelUsage)

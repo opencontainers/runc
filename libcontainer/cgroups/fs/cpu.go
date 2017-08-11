@@ -4,9 +4,11 @@ package fs
 
 import (
 	"bufio"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -121,5 +123,29 @@ func (s *CpuGroup) GetStats(path string, stats *cgroups.Stats) error {
 			stats.CpuStats.ThrottlingData.ThrottledTime = v
 		}
 	}
-	return nil
+
+	stats.CpuStats.CFS.Period, err = getCfsPeriod(path)
+	if err != nil {
+		return err
+	}
+	stats.CpuStats.CFS.Quota, err = getCfsQuota(path)
+	return err
+}
+
+func getCfsPeriod(path string) (uint64, error) {
+	var period uint64
+	data, err := ioutil.ReadFile(filepath.Join(path, "cpu.cfs_period_us"))
+	if err != nil {
+		return period, err
+	}
+	return strconv.ParseUint(strings.Trim(string(data), "\n \""), 10, 64)
+}
+
+func getCfsQuota(path string) (int64, error) {
+	var period int64
+	data, err := ioutil.ReadFile(filepath.Join(path, "cpu.cfs_quota_us"))
+	if err != nil {
+		return period, err
+	}
+	return strconv.ParseInt(strings.Trim(string(data), "\n \""), 10, 64)
 }

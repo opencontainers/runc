@@ -109,12 +109,21 @@ func TestCpuStats(t *testing.T) {
 		nrPeriods     = 2000
 		nrThrottled   = 200
 		throttledTime = uint64(18446744073709551615)
+
+		cfsPeriod = 10000
+		cfsQuota  = -1
 	)
 
 	cpuStatContent := fmt.Sprintf("nr_periods %d\n nr_throttled %d\n throttled_time %d\n",
 		nrPeriods, nrThrottled, throttledTime)
 	helper.writeFileContents(map[string]string{
 		"cpu.stat": cpuStatContent,
+	})
+	helper.writeFileContents(map[string]string{
+		"cpu.cfs_period_us": fmt.Sprintf("%d\n", cfsPeriod),
+	})
+	helper.writeFileContents(map[string]string{
+		"cpu.cfs_quota_us": fmt.Sprintf("%d\n", cfsQuota),
 	})
 
 	cpu := &CpuGroup{}
