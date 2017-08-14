@@ -18,17 +18,56 @@
             },
             "cappedCPU": {
                 "id": "https://opencontainers.org/schema/bundle/solaris/cappedCPU",
-                "$ref": "defs.json#/definitions/mapStringString"
+                "type": "object",
+                "properties": {
+                    "ncpus": {
+                        "id": "https://opencontainers.org/schema/bundle/solaris/cappedCPU/ncpus",
+                        "type": "string"
+                    }
+                }
             },
             "cappedMemory": {
                 "id": "https://opencontainers.org/schema/bundle/solaris/cappedMemory",
-                "$ref": "defs.json#/definitions/mapStringString"
+                "type": "object",
+                "properties": {
+                    "physical": {
+                        "id": "https://opencontainers.org/schema/bundle/solaris/cappedMemory/physical",
+                        "type": "string"
+                    },
+                    "swap": {
+                        "id": "https://opencontainers.org/schema/bundle/solaris/cappedMemory/swap",
+                        "type": "string"
+                    }
+                }
             },
             "anet": {
                 "id": "https://opencontainers.org/schema/bundle/solaris/anet",
                 "type": "array",
                 "items": {
-                    "$ref": "defs.json#/definitions/mapStringString"
+                    "type": "object",
+                    "properties": {
+                        "linkname": {
+                            "type": "string"
+                        },
+                        "lowerLink": {
+                            "type": "string"
+                        },
+                        "allowedAddress": {
+                            "type": "string"
+                        },
+                        "configureAllowedAddress": {
+                            "type": "string"
+                        },
+                        "defrouter": {
+                            "type": "string"
+                        },
+                        "macAddress": {
+                            "type": "string"
+                        },
+                        "linkProtection": {
+                            "type": "string"
+                        }
+                    }
                 }
             }
         }
