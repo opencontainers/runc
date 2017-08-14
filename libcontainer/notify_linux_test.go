@@ -53,16 +53,12 @@ func testMemoryNotification(t *testing.T, evName string, notify notifyFunc, targ
 		t.Fatalf("invalid control data %q: %s", data, err)
 	}
 
-	// re-open the eventfd
+	// dup the eventfd
 	efd, err := unix.Dup(eventFd)
 	if err != nil {
-		t.Fatal("unable to reopen eventfd:", err)
+		t.Fatal("unable to dup eventfd:", err)
 	}
 	defer unix.Close(efd)
-
-	if err != nil {
-		t.Fatal("unable to dup event fd:", err)
-	}
 
 	buf := make([]byte, 8)
 	binary.LittleEndian.PutUint64(buf, 1)
@@ -93,6 +89,7 @@ func testMemoryNotification(t *testing.T, evName string, notify notifyFunc, targ
 			t.Fatal("expected no notification to be triggered")
 		}
 	case <-time.After(100 * time.Millisecond):
+		t.Fatal("channel not closed after 100ms")
 	}
 
 	if _, _, err := unix.Syscall(unix.SYS_FCNTL, uintptr(evFd), unix.F_GETFD, 0); err != unix.EBADF {
