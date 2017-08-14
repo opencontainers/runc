@@ -115,7 +115,7 @@ validate:
 	script/validate-gofmt
 	$(GO) vet $(allpackages)
 
-ci: validate localtest
+ci: validate test release
 
 # memoize allpackages, so that it's executed only once and only if used
 _allpackages = $(shell $(GO) list ./... | grep -v vendor)
