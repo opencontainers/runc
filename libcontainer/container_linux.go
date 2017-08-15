@@ -186,8 +186,17 @@ func (c *linuxContainer) Set(config configs.Config) error {
 	if status == Stopped {
 		return newGenericError(fmt.Errorf("container not running"), ContainerNotRunning)
 	}
+	if err := c.cgroupManager.Set(&config); err != nil {
+		// Set configs back
+		if err2 := c.cgroupManager.Set(c.config); err2 != nil {
+			logrus.Warnf("Setting back cgroup configs failed due to error: %v, your state.json and actual configs might be inconsistent.", err2)
+		}
+		return err
+	}
+	// After config setting succeed, update config and states
 	c.config = &config
-	return c.cgroupManager.Set(c.config)
+	_, err = c.updateState(nil)
+	return err
 }
 
 func (c *linuxContainer) Start(process *Process) error {
@@ -1388,7 +1397,9 @@ func (c *linuxContainer) criuNotifications(resp *criurpc.CriuResp, process *Proc
 }
 
 func (c *linuxContainer) updateState(process parentProcess) (*State, error) {
-	c.initProcess = process
+	if process != nil {
+		c.initProcess = process
+	}
 	state, err := c.currentState()
 	if err != nil {
 		return nil, err
