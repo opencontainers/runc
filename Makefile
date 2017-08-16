@@ -43,31 +43,7 @@ static: $(SOURCES)
 	CGO_ENABLED=1 $(GO) build $(EXTRA_FLAGS) -tags "$(BUILDTAGS) cgo static_build" -ldflags "-w -extldflags -static -X main.gitCommit=${COMMIT} -X main.version=${VERSION} $(EXTRA_LDFLAGS)" -o contrib/cmd/recvtty/recvtty ./contrib/cmd/recvtty
 
 release:
-	@flag_list=(seccomp selinux apparmor static); \
-	unset expression; \
-	for flag in "$${flag_list[@]}"; do \
-		expression+="' '{'',$${flag}}"; \
-	done; \
-	eval profile_list=("$$expression"); \
-	for profile in "$${profile_list[@]}"; do \
-		output=${RELEASE_DIR}/runc; \
-		for flag in $$profile; do \
-			output+=."$$flag"; \
-		done; \
-		tags="$$profile"; \
-		ldflags="-X main.gitCommit=${COMMIT} -X main.version=${VERSION}"; \
-		buildflags="-buildmode=pie"; \
-		CGO_ENABLED=; \
-		[[ "$$profile" =~ static ]] && { \
-			tags="$${tags/static/static_build}"; \
-			tags+=" cgo"; \
-			buildflags=; \
-			ldflags+=" -w -extldflags -static"; \
-			CGO_ENABLED=1; \
-		}; \
-		echo "Building target: $$output"; \
-		$(GO) build $$buildflags $(EXTRA_FLAGS) -ldflags "$$ldflags $(EXTRA_LDFLAGS)" -tags "$$tags" -o "$$output" .; \
-	done
+	script/release.sh -r release/$(VERSION) -v $(VERSION)
 
 dbuild: runcimage
 	docker run --rm -v $(CURDIR):/go/src/$(PROJECT) --privileged $(RUNC_IMAGE) make clean all
@@ -139,7 +115,7 @@ validate:
 	script/validate-gofmt
 	$(GO) vet $(allpackages)
 
-ci: validate localtest
+ci: validate test release
 
 # memoize allpackages, so that it's executed only once and only if used
 _allpackages = $(shell $(GO) list ./... | grep -v vendor)

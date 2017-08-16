@@ -30,4 +30,4 @@ before_install:
 script:
   - git-validation -run DCO,short-subject -v
   - make BUILDTAGS="${BUILDTAGS}"
-  - make BUILDTAGS="${BUILDTAGS}" clean validate test
+  - make BUILDTAGS="${BUILDTAGS}" clean ci
