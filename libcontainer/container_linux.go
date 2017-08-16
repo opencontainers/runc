@@ -283,7 +283,7 @@ func (c *linuxContainer) start(process *Process, isInit bool) error {
 		if err != nil {
 			return err
 		}
-		c.initProcessStartTime = state.InitProcessStartTime
+		c.initProcessStartTime = uint64(state.InitProcessStartTime)
 
 		if c.config.Hooks != nil {
 			s := configs.HookState{
@@ -1509,7 +1509,7 @@ func (c *linuxContainer) currentState() (*State, error) {
 			ID:                   c.ID(),
 			Config:               *c.config,
 			InitProcessPid:       pid,
-			InitProcessStartTime: startTime,
+			InitProcessStartTime: Uint64Compat(startTime),
 			Created:              c.created,
 		},
 		Rootless:            c.config.Rootless,

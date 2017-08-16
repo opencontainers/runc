@@ -1,5 +1,9 @@
 package configs
 
+import (
+	"encoding/json"
+)
+
 type FreezerState string
 
 const (
@@ -29,6 +33,25 @@ type Cgroup struct {
 
 	// Resources contains various cgroups settings to apply
 	*Resources
+}
+type Swappiness uint64
+
+func (a *Swappiness) UnmarshalJSON(b []byte) error {
+	var s uint64
+	if err := json.Unmarshal(b, &s); err != nil {
+		var s2 int64
+		if err2 := json.Unmarshal(b, &s2); err2 != nil {
+			return err
+		} else if s2 == -1 {
+			// swappiness equivalent of all versions including v1.0.0-v3
+			*a = 60
+			return nil
+		} else {
+			return err
+		}
+	}
+	*a = Swappiness(s)
+	return nil
 }
 
 type Resources struct {
@@ -112,7 +135,7 @@ type Resources struct {
 	OomKillDisable bool `json:"oom_kill_disable"`
 
 	// Tuning swappiness behaviour per cgroup
-	MemorySwappiness *uint64 `json:"memory_swappiness"`
+	MemorySwappiness *Swappiness `json:"memory_swappiness"`
 
 	// Set priority of network traffic for container
 	NetPrioIfpriomap []*IfPrioMap `json:"net_prio_ifpriomap"`
