@@ -371,7 +371,10 @@ func startContainer(context *cli.Context, spec *specs.Spec, action CtAct, criuOp
 	}
 
 	if notifySocket != nil {
-		notifySocket.setupSocket()
+		err := notifySocket.setupSocket()
+		if err != nil {
+			return -1, err
+		}
 	}
 
 	// Support on-demand socket activation by passing file descriptors into the container init process.
