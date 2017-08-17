@@ -811,6 +811,7 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 		FileLocks:       proto.Bool(criuOpts.FileLocks),
 		EmptyNs:         proto.Uint32(criuOpts.EmptyNs),
 		OrphanPtsMaster: proto.Bool(true),
+		AutoDedup:       proto.Bool(criuOpts.AutoDedup),
 	}
 
 	fcg := c.cgroupManager.GetPaths()["freezer"]
@@ -1012,6 +1013,7 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 			FileLocks:       proto.Bool(criuOpts.FileLocks),
 			EmptyNs:         proto.Uint32(criuOpts.EmptyNs),
 			OrphanPtsMaster: proto.Bool(true),
+			AutoDedup:       proto.Bool(criuOpts.AutoDedup),
 		},
 	}
 
