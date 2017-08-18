@@ -34,4 +34,5 @@ type CriuOpts struct {
 	VethPairs               []VethPairName     // pass the veth to criu when restore
 	ManageCgroupsMode       cgMode             // dump or restore cgroup mode
 	EmptyNs                 uint32             // don't c/r properties for namespace from this mask
+	AutoDedup               bool               // auto deduplication for incremental dumps
 }
