@@ -35,6 +35,7 @@ checkpointed.`,
 		cli.BoolFlag{Name: "pre-dump", Usage: "dump container's memory information only, leave the container running after this"},
 		cli.StringFlag{Name: "manage-cgroups-mode", Value: "", Usage: "cgroups mode: 'soft' (default), 'full' and 'strict'"},
 		cli.StringSliceFlag{Name: "empty-ns", Usage: "create a namespace, but don't restore its properties"},
+		cli.BoolFlag{Name: "auto-dedup", Usage: "enable auto deduplication of memory images"},
 	},
 	Action: func(context *cli.Context) error {
 		if err := checkArgs(context, 1, exactArgs); err != nil {

@@ -82,6 +82,10 @@ using the runc checkpoint command.`,
 			Name:  "empty-ns",
 			Usage: "create a namespace, but don't restore its properties",
 		},
+		cli.BoolFlag{
+			Name:  "auto-dedup",
+			Usage: "enable auto deduplication of memory images",
+		},
 	},
 	Action: func(context *cli.Context) error {
 		if err := checkArgs(context, 1, exactArgs); err != nil {
@@ -123,5 +127,6 @@ func criuOptions(context *cli.Context) *libcontainer.CriuOpts {
 		ShellJob:                context.Bool("shell-job"),
 		FileLocks:               context.Bool("file-locks"),
 		PreDump:                 context.Bool("pre-dump"),
+		AutoDedup:               context.Bool("auto-dedup"),
 	}
 }
