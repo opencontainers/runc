@@ -327,16 +327,25 @@ The following parameters can be specified to set up the controller:
 
 * **`weight`** *(uint16, OPTIONAL)* - specifies per-cgroup weight. This is default weight of the group on all devices until and unless overridden by per-device rules.
 * **`leafWeight`** *(uint16, OPTIONAL)* - equivalents of `weight` for the purpose of deciding how much weight tasks in the given cgroup has while competing with the cgroup's child cgroups.
-* **`weightDevice`** *(array of objects, OPTIONAL)* - specifies the list of devices which will be bandwidth rate limited. The following parameters can be specified per-device:
-    * **`major, minor`** *(int64, REQUIRED)* - major, minor numbers for device. More info in [mknod(1)][mknod.1] man page.
-    * **`weight`** *(uint16, OPTIONAL)* - bandwidth rate for the device.
-    * **`leafWeight`** *(uint16, OPTIONAL)* - bandwidth rate for the device while competing with the cgroup's child cgroups, CFQ scheduler only
+* **`weightDevice`** *(array of objects, OPTIONAL)* - an array of per-device bandwidth weights.
+    Each entry has the following structure:
+    * **`major, minor`** *(int64, REQUIRED)* - major, minor numbers for device.
+        For more information, see the [mknod(1)][mknod.1] man page.
+    * **`weight`** *(uint16, OPTIONAL)* - bandwidth weight for the device.
+    * **`leafWeight`** *(uint16, OPTIONAL)* - bandwidth weight for the device while competing with the cgroup's child cgroups, CFQ scheduler only
 
     You MUST specify at least one of `weight` or `leafWeight` in a given entry, and MAY specify both.
 
-* **`throttleReadBpsDevice`**, **`throttleWriteBpsDevice`**, **`throttleReadIOPSDevice`**, **`throttleWriteIOPSDevice`** *(array of objects, OPTIONAL)* - specify the list of devices which will be IO rate limited.
-    The following parameters can be specified per-device:
-    * **`major, minor`** *(int64, REQUIRED)* - major, minor numbers for device. More info in [mknod(1)][mknod.1] man page.
+* **`throttleReadBpsDevice`**, **`throttleWriteBpsDevice`** *(array of objects, OPTIONAL)* - an array of per-device bandwidth rate limits.
+    Each entry has the following structure:
+    * **`major, minor`** *(int64, REQUIRED)* - major, minor numbers for device.
+        For more information, see the [mknod(1)][mknod.1] man page.
+    * **`rate`** *(uint64, REQUIRED)* - bandwidth rate limit in bytes per second for the device
+
+* **`throttleReadIOPSDevice`**, **`throttleWriteIOPSDevice`** *(array of objects, OPTIONAL)* - an array of per-device IO rate limits.
+    Each entry has the following structure:
+    * **`major, minor`** *(int64, REQUIRED)* - major, minor numbers for device.
+        For more information, see the [mknod(1)][mknod.1] man page.
     * **`rate`** *(uint64, REQUIRED)* - IO rate limit for the device
 
 #### Example
