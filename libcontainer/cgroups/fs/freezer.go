@@ -43,6 +43,14 @@ func (s *FreezerGroup) Set(path string, cgroup *configs.Cgroup) error {
 			}
 			time.Sleep(1 * time.Millisecond)
 		}
+		tasks, err := readFile(path, "tasks")
+		if err != nil {
+			return err
+		}
+		if strings.TrimSpace(tasks) == "" {
+			return fmt.Errorf("Error: no tasks running in freeze cgroup")
+		}
+
 	case configs.Undefined:
 		return nil
 	default:
