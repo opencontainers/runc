@@ -1,5 +1,5 @@
 {
-    "description": "Definitions used throughout the Open Container Runtime Specification",
+    "description": "Definitions used throughout the Open Container Initiative Runtime Specification",
     "definitions": {
         "int8": {
             "type": "integer",
@@ -145,7 +145,7 @@
             ]
         },
         "ociVersion": {
-            "description": "The version of Open Container Runtime Specification that the document complies with",
+            "description": "The version of Open Container Initiative Runtime Specification that the document complies with",
             "type": "string"
         },
         "annotations": {

@@ -4,7 +4,7 @@ The [Open Container Initiative][oci] develops specifications for standards on Op
 
 # <a name="ociRuntimeSpecAbstract" />Abstract
 
-The OCI Runtime Specification aims to specify the configuration, execution environment, and lifecycle of a container.
+The Open Container Initiative Runtime Specification aims to specify the configuration, execution environment, and lifecycle of a container.
 
 A container's configuration is specified as the `config.json` for the supported platforms and details the fields that enable the creation of a container.
 The execution environment is specified to ensure that applications running inside a container have a consistent environment between runtimes along with common actions defined for the container's lifecycle.
