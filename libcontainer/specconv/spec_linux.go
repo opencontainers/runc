@@ -508,9 +508,18 @@ func stringToDeviceRune(s string) (rune, error) {
 	}
 }
 
+func deviceIsExist(dev []*configs.Device, path string) bool {
+	for _, d := range dev {
+		if d.Path == path {
+			return true
+		}
+	}
+	return false
+}
+
 func createDevices(spec *specs.Spec, config *configs.Config) error {
 	// add whitelisted devices
-	config.Devices = []*configs.Device{
+	defaultDevices := []*configs.Device{
 		{
 			Type:     'c',
 			Path:     "/dev/null",
@@ -566,6 +575,8 @@ func createDevices(spec *specs.Spec, config *configs.Config) error {
 			Gid:      0,
 		},
 	}
+
+	config.Devices = []*configs.Device{}
 	// merge in additional devices from the spec
 	if spec.Linux != nil {
 		for _, d := range spec.Linux.Devices {
@@ -596,6 +607,13 @@ func createDevices(spec *specs.Spec, config *configs.Config) error {
 			}
 			config.Devices = append(config.Devices, device)
 		}
+	}
+
+	for _, d := range defaultDevices {
+		if deviceIsExist(config.Devices, d.Path) {
+			continue
+		}
+		config.Devices = append(config.Devices, d)
 	}
 	return nil
 }
