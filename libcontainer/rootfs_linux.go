@@ -733,7 +733,14 @@ func remountReadonly(m *configs.Mount) error {
 		flags = m.Flags
 	)
 	for i := 0; i < 5; i++ {
-		if err := unix.Mount("", dest, "", uintptr(flags|unix.MS_REMOUNT|unix.MS_RDONLY), ""); err != nil {
+		// There is a special case in the kernel for
+		// MS_REMOUNT | MS_BIND, which allows us to change only the
+		// flags even as an unprivileged user (i.e. user namespace)
+		// assuming we don't drop any security related flags (nodev,
+		// nosuid, etc.). So, let's use that case so that we can do
+		// this re-mount without failing in a userns.
+		flags |= unix.MS_REMOUNT | unix.MS_BIND | unix.MS_RDONLY
+		if err := unix.Mount("", dest, "", uintptr(flags), ""); err != nil {
 			switch err {
 			case unix.EBUSY:
 				time.Sleep(100 * time.Millisecond)
