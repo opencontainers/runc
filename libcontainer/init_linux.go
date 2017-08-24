@@ -68,7 +68,7 @@ type initer interface {
 	Init() error
 }
 
-func newContainerInit(t initType, pipe *os.File, consoleSocket *os.File, stateDirFD int) (initer, error) {
+func newContainerInit(t initType, pipe *os.File, consoleSocket *os.File, fifoFd int) (initer, error) {
 	var config *initConfig
 	if err := json.NewDecoder(pipe).Decode(&config); err != nil {
 		return nil, err
@@ -89,7 +89,7 @@ func newContainerInit(t initType, pipe *os.File, consoleSocket *os.File, stateDi
 			consoleSocket: consoleSocket,
 			parentPid:     unix.Getppid(),
 			config:        config,
-			stateDirFD:    stateDirFD,
+			fifoFd:        fifoFd,
 		}, nil
 	}
 	return nil, fmt.Errorf("unknown init type %q", t)
