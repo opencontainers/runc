@@ -22,7 +22,7 @@ type linuxStandardInit struct {
 	pipe          *os.File
 	consoleSocket *os.File
 	parentPid     int
-	stateDirFD    int
+	fifoFd        int
 	config        *initConfig
 }
 
@@ -164,9 +164,11 @@ func (l *linuxStandardInit) Init() error {
 	}
 	// close the pipe to signal that we have completed our init.
 	l.pipe.Close()
-	// wait for the fifo to be opened on the other side before
-	// exec'ing the users process.
-	fd, err := unix.Openat(l.stateDirFD, execFifoFilename, os.O_WRONLY|unix.O_CLOEXEC, 0)
+	// Wait for the FIFO to be opened on the other side before exec-ing the
+	// user process. We open it through /proc/self/fd/$fd, because the fd that
+	// was given to us was an O_PATH fd to the fifo itself. Linux allows us to
+	// re-open an O_PATH fd through /proc.
+	fd, err := unix.Open(fmt.Sprintf("/proc/self/fd/%d", l.fifoFd), unix.O_WRONLY|unix.O_CLOEXEC, 0)
 	if err != nil {
 		return newSystemErrorWithCause(err, "openat exec fifo")
 	}
@@ -180,7 +182,7 @@ func (l *linuxStandardInit) Init() error {
 	}
 	// close the statedir fd before exec because the kernel resets dumpable in the wrong order
 	// https://github.com/torvalds/linux/blob/v4.9/fs/exec.c#L1290-L1318
-	unix.Close(l.stateDirFD)
+	unix.Close(l.fifoFd)
 	if err := syscall.Exec(name, l.config.Args[0:], os.Environ()); err != nil {
 		return newSystemErrorWithCause(err, "exec user process")
 	}
