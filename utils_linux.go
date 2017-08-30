@@ -13,6 +13,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
 	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runc/libcontainer/specconv"
 	"github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/opencontainers/runtime-spec/specs-go"
@@ -41,6 +42,10 @@ func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
 		} else {
 			return nil, fmt.Errorf("systemd cgroup flag passed, but systemd support for managing cgroups is not available")
 		}
+	}
+	if intelrdt.IsIntelRdtEnabled() {
+		intelRdtManager := libcontainer.IntelRdtFs
+		return libcontainer.New(abs, cgroupManager, intelRdtManager, libcontainer.CriuPath(context.GlobalString("criu")))
 	}
 	return libcontainer.New(abs, cgroupManager, libcontainer.CriuPath(context.GlobalString("criu")))
 }

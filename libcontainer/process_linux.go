@@ -15,6 +15,7 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runc/libcontainer/utils"
 
@@ -49,6 +50,7 @@ type setnsProcess struct {
 	parentPipe    *os.File
 	childPipe     *os.File
 	cgroupPaths   map[string]string
+	intelRdtPath  string
 	config        *initConfig
 	fds           []string
 	process       *Process
@@ -87,6 +89,15 @@ func (p *setnsProcess) start() (err error) {
 	if !p.config.Rootless && len(p.cgroupPaths) > 0 {
 		if err := cgroups.EnterPid(p.cgroupPaths, p.pid()); err != nil {
 			return newSystemErrorWithCausef(err, "adding pid %d to cgroups", p.pid())
+		}
+	}
+	if p.intelRdtPath != "" {
+		// if Intel RDT "resource control" filesystem path exists
+		_, err := os.Stat(p.intelRdtPath)
+		if err == nil {
+			if err := intelrdt.WriteIntelRdtTasks(p.intelRdtPath, p.pid()); err != nil {
+				return newSystemErrorWithCausef(err, "adding pid %d to Intel RDT resource control filesystem", p.pid())
+			}
 		}
 	}
 	// set rlimits, this has to be done here because we lose permissions
@@ -193,16 +204,17 @@ func (p *setnsProcess) setExternalDescriptors(newFds []string) {
 }
 
 type initProcess struct {
-	cmd           *exec.Cmd
-	parentPipe    *os.File
-	childPipe     *os.File
-	config        *initConfig
-	manager       cgroups.Manager
-	container     *linuxContainer
-	fds           []string
-	process       *Process
-	bootstrapData io.Reader
-	sharePidns    bool
+	cmd             *exec.Cmd
+	parentPipe      *os.File
+	childPipe       *os.File
+	config          *initConfig
+	manager         cgroups.Manager
+	intelRdtManager intelrdt.Manager
+	container       *linuxContainer
+	fds             []string
+	process         *Process
+	bootstrapData   io.Reader
+	sharePidns      bool
 }
 
 func (p *initProcess) pid() int {
@@ -281,10 +293,18 @@ func (p *initProcess) start() error {
 	if err := p.manager.Apply(p.pid()); err != nil {
 		return newSystemErrorWithCause(err, "applying cgroup configuration for process")
 	}
+	if p.intelRdtManager != nil {
+		if err := p.intelRdtManager.Apply(p.pid()); err != nil {
+			return newSystemErrorWithCause(err, "applying Intel RDT configuration for process")
+		}
+	}
 	defer func() {
 		if err != nil {
 			// TODO: should not be the responsibility to call here
 			p.manager.Destroy()
+			if p.intelRdtManager != nil {
+				p.intelRdtManager.Destroy()
+			}
 		}
 	}()
 	if err := p.createNetworkInterfaces(); err != nil {
@@ -312,6 +332,11 @@ func (p *initProcess) start() error {
 				if err := p.manager.Set(p.config.Config); err != nil {
 					return newSystemErrorWithCause(err, "setting cgroup config for ready process")
 				}
+				if p.intelRdtManager != nil {
+					if err := p.intelRdtManager.Set(p.config.Config); err != nil {
+						return newSystemErrorWithCause(err, "setting Intel RDT config for ready process")
+					}
+				}
 
 				if p.config.Config.Hooks != nil {
 					s := configs.HookState{
@@ -336,6 +361,11 @@ func (p *initProcess) start() error {
 			// Setup cgroup before prestart hook, so that the prestart hook could apply cgroup permissions.
 			if err := p.manager.Set(p.config.Config); err != nil {
 				return newSystemErrorWithCause(err, "setting cgroup config for procHooks process")
+			}
+			if p.intelRdtManager != nil {
+				if err := p.intelRdtManager.Set(p.config.Config); err != nil {
+					return newSystemErrorWithCause(err, "setting Intel RDT config for procHooks process")
+				}
 			}
 			if p.config.Config.Hooks != nil {
 				s := configs.HookState{
