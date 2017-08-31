@@ -168,7 +168,7 @@ For systems that support POSIX rlimits (for example Linux and Solaris), the `pro
         * Linux: valid values are defined in the [`getrlimit(2)`][getrlimit.2] man page, such as `RLIMIT_MSGQUEUE`.
         * Solaris: valid values are defined in the [`getrlimit(3)`][getrlimit.3] man page, such as `RLIMIT_CORE`.
 
-        The runtime MUST [generate an error](runtime.md#errors) for any values which cannot be mapped to a relevant kernel interface
+        The runtime MUST [generate an error](runtime.md#errors) for any values which cannot be mapped to a relevant kernel interface.
         For each entry in `rlimits`, a [`getrlimit(3)`][getrlimit.3] on `type` MUST succeed.
         For the following properties, `rlim` refers to the status returned by the `getrlimit(3)` call.
 
