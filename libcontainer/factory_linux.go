@@ -119,7 +119,8 @@ func New(root string, options ...func(*LinuxFactory) error) (Factory, error) {
 	}
 	l := &LinuxFactory{
 		Root:      root,
-		InitArgs:  []string{"/proc/self/exe", "init"},
+		InitPath:  "/proc/self/exe",
+		InitArgs:  []string{os.Args[0], "init"},
 		Validator: validate.New(),
 		CriuPath:  "criu",
 	}
@@ -136,6 +137,10 @@ func New(root string, options ...func(*LinuxFactory) error) (Factory, error) {
 type LinuxFactory struct {
 	// Root directory for the factory to store state.
 	Root string
+
+	// InitPath is the path for calling the init responsibilities for spawning
+	// a container.
+	InitPath string
 
 	// InitArgs are arguments for calling the init responsibilities for spawning
 	// a container.
@@ -181,6 +186,7 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 		id:            id,
 		root:          containerRoot,
 		config:        config,
+		initPath:      l.InitPath,
 		initArgs:      l.InitArgs,
 		criuPath:      l.CriuPath,
 		cgroupManager: l.NewCgroupsManager(config.Cgroups, nil),
@@ -212,6 +218,7 @@ func (l *LinuxFactory) Load(id string) (Container, error) {
 		initProcessStartTime: state.InitProcessStartTime,
 		id:                   id,
 		config:               &state.Config,
+		initPath:             l.InitPath,
 		initArgs:             l.InitArgs,
 		criuPath:             l.CriuPath,
 		cgroupManager:        l.NewCgroupsManager(state.Config.Cgroups, state.CgroupPaths),

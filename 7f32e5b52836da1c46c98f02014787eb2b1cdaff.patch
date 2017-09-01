@@ -1,0 +1,77 @@
+From 7f32e5b52836da1c46c98f02014787eb2b1cdaff Mon Sep 17 00:00:00 2001
+From: Petros Angelatos <petrosagg@gmail.com>
+Date: Thu, 18 May 2017 22:00:05 -0700
+Subject: [PATCH] propagate the correct argv0 when re-execing
+
+This allows runc to be used as a target for docker's rexec module. That
+depends on correct argv0 to select which process entrypoint to invoke.
+
+Signed-off-by: Petros Angelatos <petrosagg@gmail.com>
+---
+ libcontainer/container_linux.go | 4 +++-
+ libcontainer/factory_linux.go   | 9 ++++++++-
+ 2 files changed, 11 insertions(+), 2 deletions(-)
+
+diff --git a/libcontainer/container_linux.go b/libcontainer/container_linux.go
+index 7089cb5f5..1202dcf0f 100644
+--- a/libcontainer/container_linux.go
++++ b/libcontainer/container_linux.go
+@@ -38,6 +38,7 @@ type linuxContainer struct {
+ 	root                 string
+ 	config               *configs.Config
+ 	cgroupManager        cgroups.Manager
++	initPath             string
+ 	initArgs             []string
+ 	initProcess          parentProcess
+ 	initProcessStartTime string
+@@ -369,7 +370,8 @@ func (c *linuxContainer) newParentProcess(p *Process, doInit bool) (parentProces
+ }
+ 
+ func (c *linuxContainer) commandTemplate(p *Process, childPipe *os.File) (*exec.Cmd, error) {
+-	cmd := exec.Command(c.initArgs[0], c.initArgs[1:]...)
++	cmd := exec.Command(c.initPath, c.initArgs[1:]...)
++	cmd.Args[0] = c.initArgs[0]
+ 	cmd.Stdin = p.Stdin
+ 	cmd.Stdout = p.Stdout
+ 	cmd.Stderr = p.Stderr
+diff --git a/libcontainer/factory_linux.go b/libcontainer/factory_linux.go
+index a68d471dd..80dd07df8 100644
+--- a/libcontainer/factory_linux.go
++++ b/libcontainer/factory_linux.go
+@@ -118,7 +118,8 @@ func New(root string, options ...func(*LinuxFactory) error) (Factory, error) {
+ 	}
+ 	l := &LinuxFactory{
+ 		Root:      root,
+-		InitArgs:  []string{"/proc/self/exe", "init"},
++		InitPath:  "/proc/self/exe",
++		InitArgs:  []string{os.Args[0], "init"},
+ 		Validator: validate.New(),
+ 		CriuPath:  "criu",
+ 	}
+@@ -136,6 +137,10 @@ type LinuxFactory struct {
+ 	// Root directory for the factory to store state.
+ 	Root string
+ 
++	// InitPath is the path for calling the init responsibilities for spawning
++	// a container.
++	InitPath string
++
+ 	// InitArgs are arguments for calling the init responsibilities for spawning
+ 	// a container.
+ 	InitArgs []string
+@@ -188,6 +193,7 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
+ 		id:            id,
+ 		root:          containerRoot,
+ 		config:        config,
++		initPath:      l.InitPath,
+ 		initArgs:      l.InitArgs,
+ 		criuPath:      l.CriuPath,
+ 		cgroupManager: l.NewCgroupsManager(config.Cgroups, nil),
+@@ -219,6 +225,7 @@ func (l *LinuxFactory) Load(id string) (Container, error) {
+ 		initProcessStartTime: state.InitProcessStartTime,
+ 		id:                   id,
+ 		config:               &state.Config,
++		initPath:             l.InitPath,
+ 		initArgs:             l.InitArgs,
+ 		criuPath:             l.CriuPath,
+ 		cgroupManager:        l.NewCgroupsManager(state.Config.Cgroups, state.CgroupPaths),
