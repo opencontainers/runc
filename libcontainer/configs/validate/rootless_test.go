@@ -75,8 +75,8 @@ func TestValidateRootlessMappingUid(t *testing.T) {
 
 	config = rootlessConfig()
 	config.UidMappings[0].Size = 1024
-	if err := validator.Validate(config); err == nil {
-		t.Errorf("Expected error to occur if more than one uid mapped")
+	if err := validator.Validate(config); err != nil {
+		t.Errorf("Expected error to not occur if more than one uid mapped")
 	}
 
 	config = rootlessConfig()
@@ -85,8 +85,8 @@ func TestValidateRootlessMappingUid(t *testing.T) {
 		ContainerID: 0,
 		Size:        1,
 	})
-	if err := validator.Validate(config); err == nil {
-		t.Errorf("Expected error to occur if more than one uid extent mapped")
+	if err := validator.Validate(config); err != nil {
+		t.Errorf("Expected error to not occur if more than one uid extent mapped")
 	}
 }
 
@@ -107,8 +107,8 @@ func TestValidateRootlessMappingGid(t *testing.T) {
 
 	config = rootlessConfig()
 	config.GidMappings[0].Size = 1024
-	if err := validator.Validate(config); err == nil {
-		t.Errorf("Expected error to occur if more than one gid mapped")
+	if err := validator.Validate(config); err != nil {
+		t.Errorf("Expected error to not occur if more than one gid mapped")
 	}
 
 	config = rootlessConfig()
@@ -117,8 +117,8 @@ func TestValidateRootlessMappingGid(t *testing.T) {
 		ContainerID: 0,
 		Size:        1,
 	})
-	if err := validator.Validate(config); err == nil {
-		t.Errorf("Expected error to occur if more than one gid extent mapped")
+	if err := validator.Validate(config); err != nil {
+		t.Errorf("Expected error to not occur if more than one gid extent mapped")
 	}
 }
 

@@ -86,6 +86,16 @@ func main() {
 			Value: "criu",
 			Usage: "path to the criu binary used for checkpoint and restore",
 		},
+		cli.StringFlag{
+			Name:  "newuidmap",
+			Value: "newuidmap",
+			Usage: "path to the newuidmap binary used for uid mapping with rootless containers",
+		},
+		cli.StringFlag{
+			Name:  "newgidmap",
+			Value: "newgidmap",
+			Usage: "path to the newgidmap binary used for gid mapping with rootless containers",
+		},
 		cli.BoolFlag{
 			Name:  "systemd-cgroup",
 			Usage: "enable systemd cgroup support, expects cgroupsPath to be of form \"slice:prefix:name\" for e.g. \"system.slice:runc:434234\"",

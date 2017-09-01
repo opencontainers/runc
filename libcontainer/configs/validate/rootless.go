@@ -61,14 +61,6 @@ func rootlessMappings(config *configs.Config) error {
 		return fmt.Errorf("rootless containers cannot map container root to a different host group")
 	}
 
-	// We can only map one user and group inside a container (our own).
-	if len(config.UidMappings) != 1 || config.UidMappings[0].Size != 1 {
-		return fmt.Errorf("rootless containers cannot map more than one user")
-	}
-	if len(config.GidMappings) != 1 || config.GidMappings[0].Size != 1 {
-		return fmt.Errorf("rootless containers cannot map more than one group")
-	}
-
 	return nil
 }
 

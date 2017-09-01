@@ -69,6 +69,15 @@ function runc_spec() {
 	runc spec $args "$@"
 }
 
+function runc_spec_additional_mappings() {
+	cat config.json \
+		| jq '.linux.uidMappings |= .+ [{"hostID": 362144, "containerID": 1000, "size": 1}]' \
+		| jq '.linux.gidMappings |= .+ [{"hostID": 362144, "containerID": 100, "size": 1}]' \
+		| jq '.linux.gidMappings |= .+ [{"hostID": 362145, "containerID": 1000, "size": 1}]' \
+			>config.json.tmp
+	mv config.json.tmp config.json
+}
+
 # Fails the current test, providing the error given.
 function fail() {
 	echo "$@" >&2

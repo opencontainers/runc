@@ -19,6 +19,7 @@
 #include <sys/prctl.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 
 #include <linux/limits.h>
 #include <linux/netlink.h>
@@ -69,6 +70,10 @@ struct nlconfig_t {
 	size_t uidmap_len;
 	char *gidmap;
 	size_t gidmap_len;
+	char *uidmappath;
+	size_t uidmappath_len;
+	char *gidmappath;
+	size_t gidmappath_len;
 	char *namespaces;
 	size_t namespaces_len;
 	uint8_t is_setgroup;
@@ -89,6 +94,8 @@ struct nlconfig_t {
 #define SETGROUP_ATTR		27285
 #define OOM_SCORE_ADJ_ATTR	27286
 #define ROOTLESS_ATTR	    27287
+#define UIDMAPPATH_ATTR	    27288
+#define GIDMAPPATH_ATTR	    27289
 
 /*
  * Use the raw syscall for versions of glibc which don't include a function for
@@ -207,6 +214,48 @@ static void update_gidmap(int pid, char *map, size_t map_len)
 
 	if (write_file(map, map_len, "/proc/%d/gid_map", pid) < 0)
 		bail("failed to update /proc/%d/gid_map", pid);
+}
+
+static void update_mappings(char *bin, int child, char *map, size_t map_len) {
+	pid_t pid = fork();
+	if (pid < 0) {
+		bail("failed to fork");
+	}
+	else if (pid > 0) {
+		int status;
+		waitpid(pid, &status, 0);
+		if (status != 0) {
+			bail("expected mapping update to exit 0, got %d", status);
+		}
+	}
+	else {
+		char childpidstr[10];
+		snprintf(childpidstr, 10, "%d", child);
+
+		// binary name, pid + a max of five [containerId hostId size] triplets, then a null pointer
+		int idmap_max_args = 17;
+		char *idmap_argv[idmap_max_args + 1];
+		memset(idmap_argv, 0, idmap_max_args);
+
+		idmap_argv[0] = bin;
+		idmap_argv[1] = childpidstr;
+
+		char mapcpy[map_len];
+		strcpy(mapcpy, map);
+		char *token = strtok(mapcpy, " ");
+		int i = 2;
+		while (token) {
+		  if (i > idmap_max_args - 1) {
+		      bail("more than 5 mapping triplets provided in exec %s %s %s", bin, childpidstr, map);
+		  }
+		  idmap_argv[i++] = strdup(token);
+		  token = strtok(NULL, " ");
+		}
+		idmap_argv[i] = NULL;
+
+		execvp(bin, idmap_argv);
+		bail("failed to exec %s %s %s", bin, childpidstr, map);
+	}
 }
 
 static void update_oom_score_adj(char *data, size_t len)
@@ -341,6 +390,14 @@ static void nl_parse(int fd, struct nlconfig_t *config)
 		case NS_PATHS_ATTR:
 			config->namespaces = current;
 			config->namespaces_len = payload_len;
+			break;
+		case UIDMAPPATH_ATTR:
+			config->uidmappath = current;
+			config->uidmappath_len = payload_len;
+			break;
+		case GIDMAPPATH_ATTR:
+			config->gidmappath = current;
+			config->gidmappath_len = payload_len;
 			break;
 		case UIDMAP_ATTR:
 			config->uidmap = current;
@@ -596,8 +653,16 @@ void nsexec(void)
 						update_setgroups(child, SETGROUPS_DENY);
 
 					/* Set up mappings. */
-					update_uidmap(child, config.uidmap, config.uidmap_len);
-					update_gidmap(child, config.gidmap, config.gidmap_len);
+					if (config.uidmappath_len > 0) {
+						update_mappings(config.uidmappath, child, config.uidmap, config.uidmap_len);
+					} else {
+						update_uidmap(child, config.uidmap, config.uidmap_len);
+					}
+					if (config.gidmappath_len > 0) {
+						update_mappings(config.gidmappath, child, config.gidmap, config.gidmap_len);
+					} else {
+						update_gidmap(child, config.gidmap, config.gidmap_len);
+					}
 
 					s = SYNC_USERMAP_ACK;
 					if (write(syncfd, &s, sizeof(s)) != sizeof(s)) {
