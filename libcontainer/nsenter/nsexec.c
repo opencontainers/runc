@@ -67,21 +67,27 @@ struct clone_t {
 
 struct nlconfig_t {
 	char *data;
+
+	/* Process settings. */
 	uint32_t cloneflags;
+	char *oom_score_adj;
+	size_t oom_score_adj_len;
+
+	/* User namespace settings.*/
 	char *uidmap;
 	size_t uidmap_len;
 	char *gidmap;
 	size_t gidmap_len;
+	char *namespaces;
+	size_t namespaces_len;
+	uint8_t is_setgroup;
+
+	/* Rootless container settings.*/
+	uint8_t is_rootless;
 	char *uidmappath;
 	size_t uidmappath_len;
 	char *gidmappath;
 	size_t gidmappath_len;
-	char *namespaces;
-	size_t namespaces_len;
-	uint8_t is_setgroup;
-	uint8_t is_rootless;
-	char *oom_score_adj;
-	size_t oom_score_adj_len;
 };
 
 /*
@@ -202,18 +208,29 @@ static void update_setgroups(int pid, enum policy_t setgroup)
 
 static int try_mapping_tool(const char *app, int pid, char *map, size_t map_len)
 {
-	int child = fork();
+	int child;
+
+	/*
+	 * If @app is NULL, execvp will segfault. Just check it here and bail (if
+	 * we're in this path, the caller is already getting desparate and there
+	 * isn't a backup to this failing). This usually would be a configuration
+	 * or programming issue.
+	 */
+	if (!app)
+		bail("mapping tool not present");
+
+	child = fork();
 	if (child < 0)
 		bail("failed to fork");
 
-	if (child == 0) {
+	if (!child) {
 #define MAX_ARGV 20
 		char *argv[MAX_ARGV];
 		char pid_fmt[16];
 		int argc = 0;
 		char *next;
 
-		snprintf (pid_fmt, 16, "%d", pid);
+		snprintf(pid_fmt, 16, "%d", pid);
 
 		argv[argc++] = (char *) app;
 		argv[argc++] = pid_fmt;
@@ -228,16 +245,18 @@ static int try_mapping_tool(const char *app, int pid, char *map, size_t map_len)
 				break;
 			}
 			argv[argc++] = map;
-			next = strpbrk (map, "\n ");
+			next = strpbrk(map, "\n ");
 			if (next == NULL)
 				break;
 			*next++ = '\0';
 			map = next + strspn(next, "\n ");
 		}
-		execvp (app, argv);
-	}
-	else {
+
+		execvp(app, argv);
+		bail("failed to execvp");
+	} else {
 		int status;
+
 		while (true) {
 			if (waitpid(child, &status, 0) < 0) {
 				if (errno == EINTR)
@@ -246,8 +265,9 @@ static int try_mapping_tool(const char *app, int pid, char *map, size_t map_len)
 			}
 			if (WIFEXITED(status) || WIFSIGNALED(status))
 				return WEXITSTATUS(status);
-                  }
+		}
 	}
+
 	return -1;
 }
 
@@ -257,9 +277,9 @@ static void update_uidmap(const char *path, int pid, char *map, size_t map_len)
 		return;
 
 	if (write_file(map, map_len, "/proc/%d/uid_map", pid) < 0) {
-		if(errno != EPERM)
-			bail("failed to update /proc/%d/gid_map", pid);
-		if (try_mapping_tool (path, pid, map, map_len))
+		if (errno != EPERM)
+			bail("failed to update /proc/%d/uid_map", pid);
+		if (try_mapping_tool(path, pid, map, map_len))
 			bail("failed to use newuid map on %d", pid);
 	}
 }
@@ -270,9 +290,9 @@ static void update_gidmap(const char *path, int pid, char *map, size_t map_len)
 		return;
 
 	if (write_file(map, map_len, "/proc/%d/gid_map", pid) < 0) {
-		if(errno != EPERM)
+		if (errno != EPERM)
 			bail("failed to update /proc/%d/gid_map", pid);
-		if (try_mapping_tool (path, pid, map, map_len))
+		if (try_mapping_tool(path, pid, map, map_len))
 			bail("failed to use newgid map on %d", pid);
 	}
 }
