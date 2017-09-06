@@ -19,8 +19,41 @@
 # a new feature, please match the existing style. Add an entry to $ALL_FEATURES,
 # and add an enable_* and disable_* hook.
 
-ALL_FEATURES=()
+ALL_FEATURES=("idmap")
 ROOT="$(readlink -f "$(dirname "${BASH_SOURCE}")/..")"
+
+# FEATURE: Opportunistic new{uid,gid}map support, allowing a rootless container
+#          to be set up with the usage of helper setuid binaries.
+
+function enable_idmap() {
+	export ROOTLESS_UIDMAP_START=100000 ROOTLESS_UIDMAP_LENGTH=65536
+	export ROOTLESS_GIDMAP_START=200000 ROOTLESS_GIDMAP_LENGTH=65536
+
+	# Set up sub{uid,gid} mappings.
+	[ -e /etc/subuid.tmp ] && mv /etc/subuid{.tmp,}
+	( grep -v '^rootless' /etc/subuid ; echo "rootless:$ROOTLESS_UIDMAP_START:$ROOTLESS_UIDMAP_LENGTH" ) > /etc/subuid.tmp
+	mv /etc/subuid{.tmp,}
+	[ -e /etc/subgid.tmp ] && mv /etc/subgid{.tmp,}
+	( grep -v '^rootless' /etc/subgid ; echo "rootless:$ROOTLESS_GIDMAP_START:$ROOTLESS_GIDMAP_LENGTH" ) > /etc/subgid.tmp
+	mv /etc/subgid{.tmp,}
+
+	# Reactivate new{uid,gid}map helpers if applicable.
+	[ -e /usr/bin/unused-newuidmap ] && mv /usr/bin/{unused-,}newuidmap
+	[ -e /usr/bin/unused-newgidmap ] && mv /usr/bin/{unused-,}newgidmap
+}
+
+function disable_idmap() {
+	export ROOTLESS_UIDMAP_START ROOTLESS_UIDMAP_LENGTH
+	export ROOTLESS_GIDMAP_START ROOTLESS_GIDMAP_LENGTH
+
+	# Deactivate sub{uid,gid} mappings.
+	[ -e /etc/subuid ] && mv /etc/subuid{,.tmp}
+	[ -e /etc/subgid ] && mv /etc/subgid{,.tmp}
+
+	# Deactivate new{uid,gid}map helpers. setuid is preserved with mv(1).
+	[ -e /usr/bin/newuidmap ] && mv /usr/bin/{,unused-}newuidmap
+	[ -e /usr/bin/newgidmap ] && mv /usr/bin/{,unused-}newgidmap
+}
 
 # Create a powerset of $ALL_FEATURES (the set of all subsets of $ALL_FEATURES).
 # We test all of the possible combinations (as long as we don't add too many
