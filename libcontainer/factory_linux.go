@@ -18,6 +18,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/configs/validate"
+	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runc/libcontainer/utils"
 
 	"golang.org/x/sys/unix"
@@ -81,6 +82,20 @@ func RootlessCgroups(l *LinuxFactory) error {
 		return &rootless.Manager{
 			Cgroups: config,
 			Paths:   paths,
+		}
+	}
+	return nil
+}
+
+// IntelRdtfs is an options func to configure a LinuxFactory to return
+// containers that use the Intel RDT "resource control" filesystem to
+// create and manage Intel Xeon platform shared resources (e.g., L3 cache).
+func IntelRdtFs(l *LinuxFactory) error {
+	l.NewIntelRdtManager = func(config *configs.Config, id string, path string) intelrdt.Manager {
+		return &intelrdt.IntelRdtManager{
+			Config: config,
+			Id:     id,
+			Path:   path,
 		}
 	}
 	return nil
@@ -150,6 +165,9 @@ type LinuxFactory struct {
 
 	// NewCgroupsManager returns an initialized cgroups manager for a single container.
 	NewCgroupsManager func(config *configs.Cgroup, paths map[string]string) cgroups.Manager
+
+	// NewIntelRdtManager returns an initialized Intel RDT manager for a single container.
+	NewIntelRdtManager func(config *configs.Config, id string, path string) intelrdt.Manager
 }
 
 func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, error) {
@@ -184,6 +202,10 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 		initArgs:      l.InitArgs,
 		criuPath:      l.CriuPath,
 		cgroupManager: l.NewCgroupsManager(config.Cgroups, nil),
+	}
+	c.intelRdtManager = nil
+	if intelrdt.IsIntelRdtEnabled() && c.config.IntelRdt != nil {
+		c.intelRdtManager = l.NewIntelRdtManager(config, id, "")
 	}
 	c.state = &stoppedState{c: c}
 	return c, nil
@@ -221,6 +243,10 @@ func (l *LinuxFactory) Load(id string) (Container, error) {
 	c.state = &loadedState{c: c}
 	if err := c.refreshState(); err != nil {
 		return nil, err
+	}
+	c.intelRdtManager = nil
+	if intelrdt.IsIntelRdtEnabled() && c.config.IntelRdt != nil {
+		c.intelRdtManager = l.NewIntelRdtManager(&state.Config, id, state.IntelRdtPath)
 	}
 	return c, nil
 }
