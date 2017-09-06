@@ -211,7 +211,7 @@ static int try_mapping_tool(const char *app, int pid, char *map, size_t map_len)
 	int child;
 
 	/*
-	 * If @app is NULL, execvp will segfault. Just check it here and bail (if
+	 * If @app is NULL, execve will segfault. Just check it here and bail (if
 	 * we're in this path, the caller is already getting desparate and there
 	 * isn't a backup to this failing). This usually would be a configuration
 	 * or programming issue.
@@ -226,6 +226,7 @@ static int try_mapping_tool(const char *app, int pid, char *map, size_t map_len)
 	if (!child) {
 #define MAX_ARGV 20
 		char *argv[MAX_ARGV];
+		char *envp[] = {NULL};
 		char pid_fmt[16];
 		int argc = 0;
 		char *next;
@@ -252,8 +253,8 @@ static int try_mapping_tool(const char *app, int pid, char *map, size_t map_len)
 			map = next + strspn(next, "\n ");
 		}
 
-		execvp(app, argv);
-		bail("failed to execvp");
+		execve(app, argv, envp);
+		bail("failed to execv");
 	} else {
 		int status;
 
