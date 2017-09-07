@@ -621,9 +621,24 @@ func (c *linuxContainer) checkCriuFeatures(criuOpts *CriuOpts, rpcOpts *criurpc.
 	logrus.Debugf("Feature check says: %s", criuFeatures)
 	missingFeatures := false
 
-	if *criuFeat.MemTrack && !*criuFeatures.MemTrack {
-		missingFeatures = true
-		logrus.Debugf("CRIU does not support MemTrack")
+	// The outer if checks if the fields actually exist
+	if (criuFeat.MemTrack != nil) &&
+		(criuFeatures.MemTrack != nil) {
+		// The inner if checks if they are set to true
+		if *criuFeat.MemTrack && !*criuFeatures.MemTrack {
+			missingFeatures = true
+			logrus.Debugf("CRIU does not support MemTrack")
+		}
+	}
+
+	// This needs to be repeated for every new feature check.
+	// Is there a way to put this in a function. Reflection?
+	if (criuFeat.LazyPages != nil) &&
+		(criuFeatures.LazyPages != nil) {
+		if *criuFeat.LazyPages && !*criuFeatures.LazyPages {
+			missingFeatures = true
+			logrus.Debugf("CRIU does not support LazyPages")
+		}
 	}
 
 	if missingFeatures {
@@ -779,6 +794,25 @@ func (c *linuxContainer) addMaskPaths(req *criurpc.CriuReq) error {
 		}
 		req.Opts.ExtMnt = append(req.Opts.ExtMnt, extMnt)
 	}
+	return nil
+}
+
+func waitForCriuLazyServer(r *os.File, status string) error {
+
+	data := make([]byte, 1)
+	_, err := r.Read(data)
+	if err != nil {
+		return err
+	}
+	fd, err := os.OpenFile(status, os.O_TRUNC|os.O_WRONLY, os.ModeAppend)
+	if err != nil {
+		return err
+	}
+	_, err = fd.Write(data)
+	if err != nil {
+		return err
+	}
+	fd.Close()
 
 	return nil
 }
@@ -846,6 +880,7 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 		EmptyNs:         proto.Uint32(criuOpts.EmptyNs),
 		OrphanPtsMaster: proto.Bool(true),
 		AutoDedup:       proto.Bool(criuOpts.AutoDedup),
+		LazyPages:       proto.Bool(criuOpts.LazyPages),
 	}
 
 	fcg := c.cgroupManager.GetPaths()["freezer"]
@@ -894,6 +929,24 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 	req := &criurpc.CriuReq{
 		Type: &t,
 		Opts: &rpcOpts,
+	}
+
+	if criuOpts.LazyPages {
+		// lazy migration requested; check if criu supports it
+		feat := criurpc.CriuFeatures{
+			LazyPages: proto.Bool(true),
+		}
+
+		if err := c.checkCriuFeatures(criuOpts, &rpcOpts, &feat); err != nil {
+			return err
+		}
+
+		statusRead, statusWrite, err := os.Pipe()
+		if err != nil {
+			return err
+		}
+		rpcOpts.StatusFd = proto.Int32(int32(statusWrite.Fd()))
+		go waitForCriuLazyServer(statusRead, criuOpts.StatusFd)
 	}
 
 	//no need to dump these information in pre-dump
@@ -1048,6 +1101,7 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 			EmptyNs:         proto.Uint32(criuOpts.EmptyNs),
 			OrphanPtsMaster: proto.Bool(true),
 			AutoDedup:       proto.Bool(criuOpts.AutoDedup),
+			LazyPages:       proto.Bool(criuOpts.LazyPages),
 		},
 	}
 
