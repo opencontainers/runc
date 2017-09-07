@@ -475,7 +475,17 @@ func createDevices(config *configs.Config) error {
 	return nil
 }
 
+func exist(name string) bool {
+	_, err := os.Stat(name)
+	return err == nil
+}
+
 func bindMountDeviceNode(dest string, node *configs.Device) error {
+	if exist(node.Path) {
+		// skip if the source of a bind mount does not exist to avoid a failed starting
+		return nil
+	}
+
 	f, err := os.Create(dest)
 	if err != nil && !os.IsExist(err) {
 		return err
