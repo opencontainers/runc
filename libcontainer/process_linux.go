@@ -273,20 +273,6 @@ func (p *initProcess) start() error {
 		p.process.ops = nil
 		return newSystemErrorWithCause(err, "starting init process command")
 	}
-	if _, err := io.Copy(p.parentPipe, p.bootstrapData); err != nil {
-		return newSystemErrorWithCause(err, "copying bootstrap data to pipe")
-	}
-	if err := p.execSetns(); err != nil {
-		return newSystemErrorWithCause(err, "running exec setns process for init")
-	}
-	// Save the standard descriptor names before the container process
-	// can potentially move them (e.g., via dup2()).  If we don't do this now,
-	// we won't know at checkpoint time which file descriptor to look up.
-	fds, err := getPipeFds(p.pid())
-	if err != nil {
-		return newSystemErrorWithCausef(err, "getting pipe fds for pid %d", p.pid())
-	}
-	p.setExternalDescriptors(fds)
 	// Do this before syncing with child so that no children can escape the
 	// cgroup. We don't need to worry about not doing this and not being root
 	// because we'd be using the rootless cgroup manager in that case.
@@ -307,6 +293,23 @@ func (p *initProcess) start() error {
 			}
 		}
 	}()
+
+	if _, err := io.Copy(p.parentPipe, p.bootstrapData); err != nil {
+		return newSystemErrorWithCause(err, "copying bootstrap data to pipe")
+	}
+
+	if err := p.execSetns(); err != nil {
+		return newSystemErrorWithCause(err, "running exec setns process for init")
+	}
+
+	// Save the standard descriptor names before the container process
+	// can potentially move them (e.g., via dup2()).  If we don't do this now,
+	// we won't know at checkpoint time which file descriptor to look up.
+	fds, err := getPipeFds(p.pid())
+	if err != nil {
+		return newSystemErrorWithCausef(err, "getting pipe fds for pid %d", p.pid())
+	}
+	p.setExternalDescriptors(fds)
 	if err := p.createNetworkInterfaces(); err != nil {
 		return newSystemErrorWithCause(err, "creating network interfaces")
 	}
