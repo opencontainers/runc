@@ -7,8 +7,6 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
-func sPtr(s string) *string { return &s }
-
 // Example returns an example spec file, with many options set so a user can
 // see what a standard spec file looks like.
 func Example() *specs.Spec {

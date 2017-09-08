@@ -114,8 +114,6 @@ generate a proper rootless spec file.`,
 	},
 }
 
-func sPtr(s string) *string { return &s }
-
 // loadSpec loads the specification from the provided path.
 func loadSpec(cPath string) (spec *specs.Spec, err error) {
 	cf, err := os.Open(cPath)
