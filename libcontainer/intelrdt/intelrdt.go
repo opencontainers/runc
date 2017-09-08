@@ -130,13 +130,28 @@ var (
 	intelRdtRootLock sync.Mutex
 
 	// The flag to indicate if Intel RDT is supported
-	isIntelRdtEnabled bool
+	isEnabled bool
 )
 
 type intelRdtData struct {
 	root   string
 	config *configs.Config
 	pid    int
+}
+
+// Check if Intel RDT is enabled in init()
+func init() {
+	// 1. Check if hardware and kernel support Intel RDT/CAT feature
+	// "cat_l3" flag is set if supported
+	isFlagSet, err := parseCpuInfoFile("/proc/cpuinfo")
+	if !isFlagSet || err != nil {
+		isEnabled = false
+		return
+	}
+
+	// 2. Check if Intel RDT "resource control" filesystem is mounted
+	// The user guarantees to mount the filesystem
+	isEnabled = isIntelRdtMounted()
 }
 
 // Return the mount point path of Intel RDT "resource control" filesysem
@@ -369,24 +384,8 @@ func WriteIntelRdtTasks(dir string, pid int) error {
 }
 
 // Check if Intel RDT is enabled
-func IsIntelRdtEnabled() bool {
-	// We have checked the flag before
-	if isIntelRdtEnabled {
-		return true
-	}
-
-	// 1. Check if hardware and kernel support Intel RDT/CAT feature
-	// "cat_l3" flag is set if supported
-	isFlagSet, err := parseCpuInfoFile("/proc/cpuinfo")
-	if !isFlagSet || err != nil {
-		isIntelRdtEnabled = false
-		return false
-	}
-
-	// 2. Check if Intel RDT "resource control" filesystem is mounted
-	// The user guarantees to mount the filesystem
-	isIntelRdtEnabled = isIntelRdtMounted()
-	return isIntelRdtEnabled
+func IsEnabled() bool {
+	return isEnabled
 }
 
 // Get the 'container_id' path in Intel RDT "resource control" filesystem
