@@ -184,13 +184,6 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 	}
 
 	exists := false
-	if config.Namespaces.Contains(configs.NEWNET) {
-		config.Networks = []*configs.Network{
-			{
-				Type: "loopback",
-			},
-		}
-	}
 	for _, m := range spec.Mounts {
 		config.Mounts = append(config.Mounts, createLibcontainerMount(cwd, m))
 	}
@@ -220,6 +213,13 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 				return nil, fmt.Errorf("malformed spec file: duplicated ns %q", ns)
 			}
 			config.Namespaces.Add(t, ns.Path)
+		}
+		if config.Namespaces.Contains(configs.NEWNET) {
+			config.Networks = []*configs.Network{
+				{
+					Type: "loopback",
+				},
+			}
 		}
 		config.MaskPaths = spec.Linux.MaskedPaths
 		config.ReadonlyPaths = spec.Linux.ReadonlyPaths
