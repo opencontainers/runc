@@ -772,7 +772,14 @@ Here is a full example `config.json` for reference.
                         "rate": 300
                     }
                 ]
-            }
+            },
+            "vtpms": [
+                {
+                    "Statepath": "/var/run/runc/ubuntu/tpm12_1",
+                    "VTPMVersion": "1.2",
+                    "CreateCertificates": false
+                }
+            ]
         },
         "rootfsPropagation": "slave",
         "seccomp": {

@@ -161,6 +161,8 @@ type Linux struct {
 	// IntelRdt contains Intel Resource Director Technology (RDT) information
 	// for handling resource constraints (e.g., L3 cache) for the container
 	IntelRdt *LinuxIntelRdt `json:"intelRdt,omitempty"`
+	// VTPM configuration
+	VTPMS []*VTPM `json:"vtpms"`
 }
 
 // LinuxNamespace is the configuration for a Linux namespace
@@ -567,4 +569,14 @@ type LinuxIntelRdt struct {
 	// The schema for L3 cache id and capacity bitmask (CBM)
 	// Format: "L3:<cache_id0>=<cbm0>;<cache_id1>=<cbm1>;..."
 	L3CacheSchema string `json:"l3CacheSchema,omitempty"`
+}
+
+// VTPM is used to hold the configiuration state of a VTPM
+type VTPM struct {
+	// Whether to create a certificate for the VTPM
+	Createcerts bool `json:"createcerts"`
+	// The path where the TPM emulator writes the TPM state to
+	Statepath string `json:"statepath"`
+	// Version of the TPM
+	Vtpmversion string `json:"vtpmversion"`
 }

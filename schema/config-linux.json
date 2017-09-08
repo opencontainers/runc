@@ -47,6 +47,13 @@
                             "$ref": "defs-linux.json#/definitions/DeviceCgroup"
                         }
                     },
+                    "vtpms" : {
+                        "id": "https://opencontainers.org/schema/bundle/linux/resources/vtpms",
+                        "type": "array",
+                        "items": {
+                            "$ref": "defs-linux.json#/definitions/vTPM"
+                        }
+                    },
                     "pids": {
                         "id": "https://opencontainers.org/schema/bundle/linux/resources/pids",
                         "type": "object",
