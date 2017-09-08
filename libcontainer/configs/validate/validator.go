@@ -159,7 +159,7 @@ func (v *ConfigValidator) sysctl(config *configs.Config) error {
 
 func (v *ConfigValidator) intelrdt(config *configs.Config) error {
 	if config.IntelRdt != nil {
-		if !intelrdt.IsIntelRdtEnabled() {
+		if !intelrdt.IsEnabled() {
 			return fmt.Errorf("intelRdt is specified in config, but Intel RDT feature is not supported or enabled")
 		}
 		if config.IntelRdt.L3CacheSchema == "" {

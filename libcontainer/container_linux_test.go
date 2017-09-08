@@ -160,7 +160,7 @@ func TestGetContainerStats(t *testing.T) {
 	if stats.CgroupStats.MemoryStats.Usage.Usage != 1024 {
 		t.Fatalf("expected memory usage 1024 but recevied %d", stats.CgroupStats.MemoryStats.Usage.Usage)
 	}
-	if intelrdt.IsIntelRdtEnabled() {
+	if intelrdt.IsEnabled() {
 		if stats.IntelRdtStats == nil {
 			t.Fatal("intel rdt stats are nil")
 		}
@@ -231,7 +231,7 @@ func TestGetContainerState(t *testing.T) {
 	if memPath := paths["memory"]; memPath != expectedMemoryPath {
 		t.Fatalf("expected memory path %q but received %q", expectedMemoryPath, memPath)
 	}
-	if intelrdt.IsIntelRdtEnabled() {
+	if intelrdt.IsEnabled() {
 		intelRdtPath := state.IntelRdtPath
 		if intelRdtPath == "" {
 			t.Fatal("intel rdt path should not be empty")

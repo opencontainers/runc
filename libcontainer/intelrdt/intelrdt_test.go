@@ -8,7 +8,7 @@ import (
 )
 
 func TestIntelRdtSetL3CacheSchema(t *testing.T) {
-	if !IsIntelRdtEnabled() {
+	if !IsEnabled() {
 		return
 	}
 
