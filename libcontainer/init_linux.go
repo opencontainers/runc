@@ -12,15 +12,16 @@ import (
 	"syscall" // only for Errno
 	"unsafe"
 
+	"golang.org/x/sys/unix"
+
+	"github.com/containerd/console"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runc/libcontainer/user"
 	"github.com/opencontainers/runc/libcontainer/utils"
-
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
-	"golang.org/x/sys/unix"
 )
 
 type initType string
@@ -170,29 +171,25 @@ func setupConsole(socket *os.File, config *initConfig, mount bool) error {
 	// however, that setupUser (specifically fixStdioPermissions) *will* change
 	// the UID owner of the console to be the user the process will run as (so
 	// they can actually control their console).
-	console, err := newConsole()
+	console, slavePath, err := console.NewPty()
 	if err != nil {
 		return err
 	}
 	// After we return from here, we don't need the console anymore.
 	defer console.Close()
 
-	linuxConsole, ok := console.(*linuxConsole)
-	if !ok {
-		return fmt.Errorf("failed to cast console to *linuxConsole")
-	}
 	// Mount the console inside our rootfs.
 	if mount {
-		if err := linuxConsole.mount(); err != nil {
+		if err := mountConsole(slavePath); err != nil {
 			return err
 		}
 	}
 	// While we can access console.master, using the API is a good idea.
-	if err := utils.SendFd(socket, linuxConsole.File()); err != nil {
+	if err := utils.SendFd(socket, console.Name(), console.Fd()); err != nil {
 		return err
 	}
 	// Now, dup over all the things.
-	return linuxConsole.dupStdio()
+	return dupStdio(slavePath)
 }
 
 // syncParentReady sends to the given pipe a JSON payload which indicates that

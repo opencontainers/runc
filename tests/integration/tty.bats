@@ -111,7 +111,7 @@ function teardown() {
 	testcontainer test_busybox running
 
 	# run the exec
-    runc exec test_busybox sh -c 'stat -c %u:%g $(tty) | tr : \\n'
+	runc exec test_busybox sh -c 'stat -c %u:%g $(tty) | tr : \\n'
 	[ "$status" -eq 0 ]
 	[[ ${lines[0]} =~ 1000 ]]
 	[[ ${lines[1]} =~ 5 ]]
