@@ -66,28 +66,6 @@ func TestValidateRootlessMappingUid(t *testing.T) {
 	if err := validator.Validate(config); err == nil {
 		t.Errorf("Expected error to occur if no uid mappings provided")
 	}
-
-	config = rootlessConfig()
-	config.UidMappings[0].HostID = geteuid() + 1
-	if err := validator.Validate(config); err == nil {
-		t.Errorf("Expected error to occur if geteuid() != mapped uid")
-	}
-
-	config = rootlessConfig()
-	config.UidMappings[0].Size = 1024
-	if err := validator.Validate(config); err == nil {
-		t.Errorf("Expected error to occur if more than one uid mapped")
-	}
-
-	config = rootlessConfig()
-	config.UidMappings = append(config.UidMappings, configs.IDMap{
-		HostID:      geteuid() + 1,
-		ContainerID: 0,
-		Size:        1,
-	})
-	if err := validator.Validate(config); err == nil {
-		t.Errorf("Expected error to occur if more than one uid extent mapped")
-	}
 }
 
 func TestValidateRootlessMappingGid(t *testing.T) {
@@ -97,28 +75,6 @@ func TestValidateRootlessMappingGid(t *testing.T) {
 	config.GidMappings = nil
 	if err := validator.Validate(config); err == nil {
 		t.Errorf("Expected error to occur if no gid mappings provided")
-	}
-
-	config = rootlessConfig()
-	config.GidMappings[0].HostID = getegid() + 1
-	if err := validator.Validate(config); err == nil {
-		t.Errorf("Expected error to occur if getegid() != mapped gid")
-	}
-
-	config = rootlessConfig()
-	config.GidMappings[0].Size = 1024
-	if err := validator.Validate(config); err == nil {
-		t.Errorf("Expected error to occur if more than one gid mapped")
-	}
-
-	config = rootlessConfig()
-	config.GidMappings = append(config.GidMappings, configs.IDMap{
-		HostID:      getegid() + 1,
-		ContainerID: 0,
-		Size:        1,
-	})
-	if err := validator.Validate(config); err == nil {
-		t.Errorf("Expected error to occur if more than one gid extent mapped")
 	}
 }
 
@@ -149,6 +105,18 @@ func TestValidateRootlessMountUid(t *testing.T) {
 	if err := validator.Validate(config); err != nil {
 		t.Errorf("Expected error to not occur when setting uid=0 in mount options: %+v", err)
 	}
+
+	config.Mounts[0].Data = "uid=2"
+	config.UidMappings[0].Size = 10
+	if err := validator.Validate(config); err != nil {
+		t.Errorf("Expected error to not occur when setting uid=2 in mount options and UidMapping[0].size is 10")
+	}
+
+	config.Mounts[0].Data = "uid=20"
+	config.UidMappings[0].Size = 10
+	if err := validator.Validate(config); err == nil {
+		t.Errorf("Expected error to occur when setting uid=20 in mount options and UidMapping[0].size is 10")
+	}
 }
 
 func TestValidateRootlessMountGid(t *testing.T) {
@@ -175,6 +143,18 @@ func TestValidateRootlessMountGid(t *testing.T) {
 	config.Mounts[0].Data = "gid=0"
 	if err := validator.Validate(config); err != nil {
 		t.Errorf("Expected error to not occur when setting gid=0 in mount options: %+v", err)
+	}
+
+	config.Mounts[0].Data = "gid=5"
+	config.GidMappings[0].Size = 10
+	if err := validator.Validate(config); err != nil {
+		t.Errorf("Expected error to not occur when setting gid=5 in mount options and GidMapping[0].size is 10")
+	}
+
+	config.Mounts[0].Data = "gid=11"
+	config.GidMappings[0].Size = 10
+	if err := validator.Validate(config); err == nil {
+		t.Errorf("Expected error to occur when setting gid=11 in mount options and GidMapping[0].size is 10")
 	}
 }
 

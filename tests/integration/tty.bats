@@ -24,9 +24,9 @@ function teardown() {
 }
 
 @test "runc run [tty owner]" {
-	# tty chmod is not doable in rootless containers.
+	# tty chmod is not doable in rootless containers without idmap.
 	# TODO: this can be made as a change to the gid test.
-	requires root
+	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_idmap
 
 	# Replace sh script with stat.
 	sed -i 's/"sh"/"sh", "-c", "stat -c %u:%g $(tty) | tr : \\\\\\\\n"/' config.json
@@ -40,8 +40,8 @@ function teardown() {
 }
 
 @test "runc run [tty owner] ({u,g}id != 0)" {
-	# tty chmod is not doable in rootless containers.
-	requires root
+	# tty chmod is not doable in rootless containers without idmap.
+	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_idmap
 
 	# replace "uid": 0 with "uid": 1000
 	# and do a similar thing for gid.
@@ -76,9 +76,9 @@ function teardown() {
 }
 
 @test "runc exec [tty owner]" {
-	# tty chmod is not doable in rootless containers.
+	# tty chmod is not doable in rootless containers without idmap.
 	# TODO: this can be made as a change to the gid test.
-	requires root
+	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_idmap
 
 	# run busybox detached
 	runc run -d --console-socket $CONSOLE_SOCKET test_busybox
@@ -95,8 +95,8 @@ function teardown() {
 }
 
 @test "runc exec [tty owner] ({u,g}id != 0)" {
-	# tty chmod is not doable in rootless containers.
-	requires root
+	# tty chmod is not doable in rootless containers without idmap.
+	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_idmap
 
 	# replace "uid": 0 with "uid": 1000
 	# and do a similar thing for gid.

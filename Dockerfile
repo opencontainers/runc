@@ -22,6 +22,7 @@ RUN apt-get update && apt-get install -y \
     protobuf-c-compiler \
     protobuf-compiler \
     python-minimal \
+    uidmap \
     --no-install-recommends \
     && apt-get clean
 

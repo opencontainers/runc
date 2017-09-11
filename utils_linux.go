@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 
@@ -35,6 +36,9 @@ func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// We default to cgroupfs, and can only use systemd if the system is a
+	// systemd box.
 	cgroupManager := libcontainer.Cgroupfs
 	if context.GlobalBool("systemd-cgroup") {
 		if systemd.UseSystemd() {
@@ -43,11 +47,28 @@ func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
 			return nil, fmt.Errorf("systemd cgroup flag passed, but systemd support for managing cgroups is not available")
 		}
 	}
-	if intelrdt.IsEnabled() {
-		intelRdtManager := libcontainer.IntelRdtFs
-		return libcontainer.New(abs, cgroupManager, intelRdtManager, libcontainer.CriuPath(context.GlobalString("criu")))
+
+	intelRdtManager := libcontainer.IntelRdtFs
+	if !intelrdt.IsEnabled() {
+		intelRdtManager = nil
 	}
-	return libcontainer.New(abs, cgroupManager, libcontainer.CriuPath(context.GlobalString("criu")))
+
+	// We resolve the paths for {newuidmap,newgidmap} from the context of runc,
+	// to avoid doing a path lookup in the nsexec context. TODO: The binary
+	// names are not currently configurable.
+	newuidmap, err := exec.LookPath("newuidmap")
+	if err != nil {
+		newuidmap = ""
+	}
+	newgidmap, err := exec.LookPath("newgidmap")
+	if err != nil {
+		newgidmap = ""
+	}
+
+	return libcontainer.New(abs, cgroupManager, intelRdtManager,
+		libcontainer.CriuPath(context.GlobalString("criu")),
+		libcontainer.NewuidmapPath(newuidmap),
+		libcontainer.NewgidmapPath(newgidmap))
 }
 
 // getContainer returns the specified container instance by loading it from state

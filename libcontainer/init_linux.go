@@ -261,25 +261,27 @@ func setupUser(config *initConfig) error {
 		}
 	}
 
+	// Rather than just erroring out later in setuid(2) and setgid(2), check
+	// that the user is mapped here.
+	if _, err := config.Config.HostUID(int(execUser.Uid)); err != nil {
+		return fmt.Errorf("cannot set uid to unmapped user in user namespace")
+	}
+	if _, err := config.Config.HostGID(int(execUser.Gid)); err != nil {
+		return fmt.Errorf("cannot set gid to unmapped user in user namespace")
+	}
+
 	if config.Rootless {
-		if execUser.Uid != 0 {
-			return fmt.Errorf("cannot run as a non-root user in a rootless container")
-		}
-
-		if execUser.Gid != 0 {
-			return fmt.Errorf("cannot run as a non-root group in a rootless container")
-		}
-
-		// We cannot set any additional groups in a rootless container and thus we
-		// bail if the user asked us to do so. TODO: We currently can't do this
-		// earlier, but if libcontainer.Process.User was typesafe this might work.
+		// We cannot set any additional groups in a rootless container and thus
+		// we bail if the user asked us to do so. TODO: We currently can't do
+		// this check earlier, but if libcontainer.Process.User was typesafe
+		// this might work.
 		if len(addGroups) > 0 {
 			return fmt.Errorf("cannot set any additional groups in a rootless container")
 		}
 	}
 
-	// before we change to the container's user make sure that the processes STDIO
-	// is correctly owned by the user that we are switching to.
+	// Before we change to the container's user make sure that the processes
+	// STDIO is correctly owned by the user that we are switching to.
 	if err := fixStdioPermissions(config, execUser); err != nil {
 		return err
 	}
@@ -298,7 +300,6 @@ func setupUser(config *initConfig) error {
 	if err := system.Setgid(execUser.Gid); err != nil {
 		return err
 	}
-
 	if err := system.Setuid(execUser.Uid); err != nil {
 		return err
 	}
