@@ -1,4 +1,4 @@
-// +build linux
+// +build linux,!static_build
 
 package systemd
 
