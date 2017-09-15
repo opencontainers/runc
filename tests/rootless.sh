@@ -19,7 +19,7 @@
 # a new feature, please match the existing style. Add an entry to $ALL_FEATURES,
 # and add an enable_* and disable_* hook.
 
-ALL_FEATURES=("idmap")
+ALL_FEATURES=("idmap" "cgroup")
 ROOT="$(readlink -f "$(dirname "${BASH_SOURCE}")/..")"
 
 # FEATURE: Opportunistic new{uid,gid}map support, allowing a rootless container
@@ -55,6 +55,21 @@ function disable_idmap() {
 	[ -e /usr/bin/newgidmap ] && mv /usr/bin/{,unused-}newgidmap
 }
 
+# FEATURE: Opportunistic cgroups support, allowing a rootless container to set
+#          resource limits on condition that cgroupsPath is set to a path the
+#          rootless user has permissions on.
+
+function enable_cgroup() {
+	# Set up cgroups for use in rootless containers.
+	mkdir -p /sys/fs/cgroup/{blkio,cpu,cpuacct,cpuset,devices,freezer,hugetlb,memory,net_cls,net_prio,openrc,perf_event,pids,systemd}/runc-cgroups-integration-test
+	chown rootless:rootless -R /sys/fs/cgroup/*/runc-cgroups-integration-test
+}
+
+function disable_cgroup() {
+	# Remove cgroups used in rootless containers.
+	[ -d /sys/fs/cgroup/devices/runc-cgroups-integration-test ] && rmdir /sys/fs/cgroup/*/runc-cgroups-integration-test
+}
+
 # Create a powerset of $ALL_FEATURES (the set of all subsets of $ALL_FEATURES).
 # We test all of the possible combinations (as long as we don't add too many
 # feature knobs this shouldn't take too long -- but the number of tested
@@ -83,6 +98,6 @@ do
 	set -e
 	echo path: $PATH
 	export ROOTLESS_FEATURES="$enabled_features"
-	sudo -HE -u rootless PATH="$PATH" bats -t "$ROOT/tests/integration"
+	sudo -HE -u rootless PATH="$PATH" bats -t "$ROOT/tests/integration$TESTFLAGS"
 	set +e
 done

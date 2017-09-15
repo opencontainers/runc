@@ -3,7 +3,7 @@
 load helpers
 
 function teardown() {
-    rm -f $BATS_TMPDIR/runc-update-integration-test.json
+    rm -f $BATS_TMPDIR/runc-cgroups-integration-test.json
     teardown_running_container test_update
     teardown_running_container test_update_rt
     teardown_busybox
@@ -13,8 +13,7 @@ function setup() {
     teardown
     setup_busybox
 
-    # Add cgroup path
-    sed -i 's/\("linux": {\)/\1\n    "cgroupsPath": "\/runc-update-integration-test",/'  ${BUSYBOX_BUNDLE}/config.json
+    set_cgroups_path "$BUSYBOX_BUNDLE"
 
     # Set some initial known values
     DATA=$(cat <<EOF
@@ -53,10 +52,10 @@ function check_cgroup_value() {
 
 # TODO: test rt cgroup updating
 @test "update" {
-    # XXX: currently cgroups require root containers.
-	# XXX: Also, this test should be split into separate sections so that we
-	#      can skip kmem without skipping update tests overall.
-    requires cgroups_kmem root
+    # XXX: Also, this test should be split into separate sections so that we
+    #      can skip kmem without skipping update tests overall.
+    [[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+    requires cgroups_kmem
 
     # run a few busyboxes detached
     runc run -d --console-socket $CONSOLE_SOCKET test_update
@@ -65,7 +64,7 @@ function check_cgroup_value() {
     # get the cgroup paths
     for g in MEMORY CPUSET CPU BLKIO PIDS; do
         base_path=$(grep "cgroup"  /proc/self/mountinfo | gawk 'toupper($NF) ~ /\<'${g}'\>/ { print $5; exit }')
-        eval CGROUP_${g}="${base_path}/runc-update-integration-test"
+        eval CGROUP_${g}="${base_path}${CGROUPS_PATH}"
     done
 
     CGROUP_SYSTEM_MEMORY=$(grep "cgroup"  /proc/self/mountinfo | gawk 'toupper($NF) ~ /\<'MEMORY'\>/ { print $5; exit }')
@@ -243,9 +242,9 @@ EOF
 }
 EOF
 )
-    echo $DATA > $BATS_TMPDIR/runc-update-integration-test.json
+    echo $DATA > $BATS_TMPDIR/runc-cgroups-integration-test.json
 
-    runc update  -r $BATS_TMPDIR/runc-update-integration-test.json test_update
+    runc update  -r $BATS_TMPDIR/runc-cgroups-integration-test.json test_update
     [ "$status" -eq 0 ]
     check_cgroup_value $CGROUP_BLKIO "blkio.weight" 1000
     check_cgroup_value $CGROUP_CPU "cpu.cfs_period_us" 1000000
@@ -260,6 +259,7 @@ EOF
 }
 
 @test "update rt period and runtime" {
+    [[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
     requires cgroups_rt
 
     # run a detached busybox
@@ -267,7 +267,7 @@ EOF
     [ "$status" -eq 0 ]
 
     # get the cgroup paths
-    eval CGROUP_CPU="${CGROUP_CPU_BASE_PATH}/runc-update-integration-test"
+    eval CGROUP_CPU="${CGROUP_CPU_BASE_PATH}${CGROUPS_PATH}"
 
     runc update  -r - test_update_rt <<EOF
 {

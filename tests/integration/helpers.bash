@@ -32,9 +32,11 @@ ROOT=$(mktemp -d "$BATS_TMPDIR/runc.XXXXXX")
 # Path to console socket.
 CONSOLE_SOCKET="$BATS_TMPDIR/console.sock"
 
-# Cgroup mount
+# Cgroup paths
 CGROUP_MEMORY_BASE_PATH=$(grep "cgroup" /proc/self/mountinfo | gawk 'toupper($NF) ~ /\<MEMORY\>/ { print $5; exit }')
 CGROUP_CPU_BASE_PATH=$(grep "cgroup" /proc/self/mountinfo | gawk 'toupper($NF) ~ /\<CPU\>/ { print $5; exit }')
+CGROUPS_PATH="/runc-cgroups-integration-test/test-cgroup"
+CGROUP_MEMORY="${CGROUP_MEMORY_BASE_PATH}${CGROUPS_PATH}"
 
 # CONFIG_MEMCG_KMEM support
 KMEM="${CGROUP_MEMORY_BASE_PATH}/memory.kmem.limit_in_bytes"
@@ -79,6 +81,11 @@ function runc_spec() {
 	if [[ "$ROOTLESS" -ne 0 ]] && [[ "$ROOTLESS_FEATURES" == *"idmap"* ]]; then
 		runc_rootless_idmap "$bundle"
 	fi
+
+	# Ensure config.json contains linux.resources
+	if [[ "$ROOTLESS" -ne 0 ]] && [[ "$ROOTLESS_FEATURES" == *"cgroup"* ]]; then
+		runc_rootless_cgroup "$bundle"
+	fi
 }
 
 # Shortcut to add additional uids and gids, based on the values set as part of
@@ -93,6 +100,27 @@ function runc_rootless_idmap() {
 		| jq '.linux.gidMappings |= .+ [{"hostID": '"$(($ROOTLESS_GIDMAP_START+100))"', "containerID": 1000, "size": '"$(($ROOTLESS_GIDMAP_LENGTH-1000))"'}]' \
 		>"$bundle/config.json.tmp"
 	mv "$bundle/config.json"{.tmp,}
+}
+
+# Shortcut to add empty resources as part of a rootless configuration.
+function runc_rootless_cgroup() {
+	bundle="${1:-.}"
+	cat "$bundle/config.json" \
+		| jq '.linux.resources |= .+ {"memory":{},"cpu":{},"blockio":{},"pids":{}}' \
+		>"$bundle/config.json.tmp"
+	mv "$bundle/config.json"{.tmp,}
+}
+
+# Helper function to set cgroupsPath to the value of $CGROUPS_PATH
+function set_cgroups_path() {
+  bundle="${1:-.}"
+  sed -i 's/\("linux": {\)/\1\n    "cgroupsPath": "\/runc-cgroups-integration-test\/test-cgroup",/' "$bundle/config.json"
+}
+
+# Helper function to set a resouces limit
+function set_resources_limit() {
+  bundle="${1:-.}"
+  sed -i 's/\("linux": {\)/\1\n   "resources": { "pids": { "limit": 100 } },/'  "$bundle/config.json"
 }
 
 # Fails the current test, providing the error given.
@@ -116,8 +144,23 @@ function requires() {
 				skip "test requires ${var}"
 			fi
 			;;
+		rootless)
+			if [ "$ROOTLESS" -eq 0 ]; then
+				skip "test requires ${var}"
+			fi
+			;;
 		rootless_idmap)
 			if [[ "$ROOTLESS_FEATURES" != *"idmap"* ]]; then
+				skip "test requires ${var}"
+			fi
+			;;
+		rootless_cgroup)
+			if [[ "$ROOTLESS_FEATURES" != *"cgroup"* ]]; then
+				skip "test requires ${var}"
+			fi
+			;;
+		rootless_no_cgroup)
+			if [[ "$ROOTLESS_FEATURES" == *"cgroup"* ]]; then
 				skip "test requires ${var}"
 			fi
 			;;

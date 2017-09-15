@@ -157,19 +157,3 @@ func TestValidateRootlessMountGid(t *testing.T) {
 		t.Errorf("Expected error to occur when setting gid=11 in mount options and GidMapping[0].size is 10")
 	}
 }
-
-/* rootlessCgroup() */
-
-func TestValidateRootlessCgroup(t *testing.T) {
-	validator := New()
-
-	config := rootlessConfig()
-	config.Cgroups = &configs.Cgroup{
-		Resources: &configs.Resources{
-			PidsLimit: 1337,
-		},
-	}
-	if err := validator.Validate(config); err == nil {
-		t.Errorf("Expected error to occur if cgroup limits set")
-	}
-}
