@@ -9,6 +9,8 @@ import (
 	"strconv"
 
 	"github.com/docker/go-units"
+	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/urfave/cli"
 )
@@ -111,6 +113,10 @@ other options are ignored.
 		cli.IntFlag{
 			Name:  "pids-limit",
 			Usage: "Maximum number of pids allowed in the container",
+		},
+		cli.StringFlag{
+			Name:  "l3-cache-schema",
+			Usage: "The string of Intel RDT/CAT L3 cache schema",
 		},
 	},
 	Action: func(context *cli.Context) error {
@@ -253,6 +259,34 @@ other options are ignored.
 		config.Cgroups.Resources.MemoryReservation = *r.Memory.Reservation
 		config.Cgroups.Resources.MemorySwap = *r.Memory.Swap
 		config.Cgroups.Resources.PidsLimit = r.Pids.Limit
+
+		// Update Intel RDT/CAT
+		if val := context.String("l3-cache-schema"); val != "" {
+			if !intelrdt.IsEnabled() {
+				return fmt.Errorf("Intel RDT: l3 cache schema is not enabled")
+			}
+
+			// If intelRdt is not specified in original configuration, we just don't
+			// Apply() to create intelRdt group or attach tasks for this container.
+			// In update command, we could re-enable through IntelRdtManager.Apply()
+			// and then update intelrdt constraint.
+			if config.IntelRdt == nil {
+				state, err := container.State()
+				if err != nil {
+					return err
+				}
+				config.IntelRdt = &configs.IntelRdt{}
+				intelRdtManager := intelrdt.IntelRdtManager{
+					Config: &config,
+					Id:     container.ID(),
+					Path:   state.IntelRdtPath,
+				}
+				if err := intelRdtManager.Apply(state.InitProcessPid); err != nil {
+					return err
+				}
+			}
+			config.IntelRdt.L3CacheSchema = val
+		}
 
 		return container.Set(config)
 	},
