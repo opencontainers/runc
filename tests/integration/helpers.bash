@@ -58,15 +58,41 @@ function __runc() {
 	"$RUNC" --log /proc/self/fd/2 --root "$ROOT" "$@"
 }
 
-# Wrapper for runc spec.
+# Wrapper for runc spec, which takes only one argument (the bundle path).
 function runc_spec() {
-	local args=""
+	! [[ "$#" > 1 ]]
+
+	local args=()
+	local bundle=""
 
 	if [ "$ROOTLESS" -ne 0 ]; then
-		args+="--rootless"
+		args+=("--rootless")
+	fi
+	if [ "$#" -ne 0 ]; then
+		bundle="$1"
+		args+=("--bundle" "$bundle")
 	fi
 
-	runc spec $args "$@"
+	runc spec "${args[@]}"
+
+	# Always add additional mappings if we have idmaps.
+	if [[ "$ROOTLESS" -ne 0 ]] && [[ "$ROOTLESS_FEATURES" == *"idmap"* ]]; then
+		runc_rootless_idmap "$bundle"
+	fi
+}
+
+# Shortcut to add additional uids and gids, based on the values set as part of
+# a rootless configuration.
+function runc_rootless_idmap() {
+	bundle="${1:-.}"
+	cat "$bundle/config.json" \
+		| jq '.mounts |= map((select(.type == "devpts") | .options += ["gid=5"]) // .)' \
+		| jq '.linux.uidMappings |= .+ [{"hostID": '"$ROOTLESS_UIDMAP_START"', "containerID": 1000, "size": '"$ROOTLESS_UIDMAP_LENGTH"'}]' \
+		| jq '.linux.gidMappings |= .+ [{"hostID": '"$ROOTLESS_GIDMAP_START"', "containerID": 100, "size": 1}]' \
+		| jq '.linux.gidMappings |= .+ [{"hostID": '"$(($ROOTLESS_GIDMAP_START+10))"', "containerID": 1, "size": 20}]' \
+		| jq '.linux.gidMappings |= .+ [{"hostID": '"$(($ROOTLESS_GIDMAP_START+100))"', "containerID": 1000, "size": '"$(($ROOTLESS_GIDMAP_LENGTH-1000))"'}]' \
+		>"$bundle/config.json.tmp"
+	mv "$bundle/config.json"{.tmp,}
 }
 
 # Fails the current test, providing the error given.
@@ -90,14 +116,19 @@ function requires() {
 				skip "test requires ${var}"
 			fi
 			;;
+		rootless_idmap)
+			if [[ "$ROOTLESS_FEATURES" != *"idmap"* ]]; then
+				skip "test requires ${var}"
+			fi
+			;;
 		cgroups_kmem)
 			if [ ! -e "$KMEM" ]; then
-				skip "Test requires ${var}."
+				skip "Test requires ${var}"
 			fi
 			;;
 		cgroups_rt)
 			if [ ! -e "$RT_PERIOD" ]; then
-				skip "Test requires ${var}."
+				skip "Test requires ${var}"
 			fi
 			;;
 		*)

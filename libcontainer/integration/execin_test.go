@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/containerd/console"
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/utils"
@@ -234,7 +235,7 @@ func TestExecInError(t *testing.T) {
 			Cwd:    "/",
 			Args:   []string{"unexistent"},
 			Env:    standardEnvironment,
-			Stdout: &out,
+			Stderr: &out,
 		}
 		err = container.Run(unexistent)
 		if err == nil {
@@ -289,7 +290,7 @@ func TestExecInTTY(t *testing.T) {
 	defer child.Close()
 	ps.ConsoleSocket = child
 	type cdata struct {
-		c   libcontainer.Console
+		c   console.Console
 		err error
 	}
 	dc := make(chan *cdata, 1)
@@ -299,10 +300,18 @@ func TestExecInTTY(t *testing.T) {
 			dc <- &cdata{
 				err: err,
 			}
+			return
 		}
-		libcontainer.SaneTerminal(f)
+		c, err := console.ConsoleFromFile(f)
+		if err != nil {
+			dc <- &cdata{
+				err: err,
+			}
+			return
+		}
+		console.SaneTerminal(f)
 		dc <- &cdata{
-			c: libcontainer.ConsoleFromFile(f),
+			c: c,
 		}
 	}()
 	err = container.Run(ps)
@@ -431,7 +440,13 @@ func TestExecinPassExtraFiles(t *testing.T) {
 
 	var stdout bytes.Buffer
 	pipeout1, pipein1, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
 	pipeout2, pipein2, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
 	inprocess := &libcontainer.Process{
 		Cwd:        "/",
 		Args:       []string{"sh", "-c", "cd /proc/$$/fd; echo -n *; echo -n 1 >3; echo -n 2 >4"},

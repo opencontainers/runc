@@ -9,9 +9,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
+	"github.com/opencontainers/runc/libcontainer/intelrdt"
+
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
 
@@ -24,11 +26,12 @@ type event struct {
 
 // stats is the runc specific stats structure for stability when encoding and decoding stats.
 type stats struct {
-	CPU     cpu                `json:"cpu"`
-	Memory  memory             `json:"memory"`
-	Pids    pids               `json:"pids"`
-	Blkio   blkio              `json:"blkio"`
-	Hugetlb map[string]hugetlb `json:"hugetlb"`
+	CPU      cpu                `json:"cpu"`
+	Memory   memory             `json:"memory"`
+	Pids     pids               `json:"pids"`
+	Blkio    blkio              `json:"blkio"`
+	Hugetlb  map[string]hugetlb `json:"hugetlb"`
+	IntelRdt intelRdt           `json:"intel_rdt"`
 }
 
 type hugetlb struct {
@@ -93,6 +96,23 @@ type memory struct {
 	Kernel    memoryEntry       `json:"kernel,omitempty"`
 	KernelTCP memoryEntry       `json:"kernelTCP,omitempty"`
 	Raw       map[string]uint64 `json:"raw,omitempty"`
+}
+
+type l3CacheInfo struct {
+	CbmMask    string `json:"cbm_mask,omitempty"`
+	MinCbmBits uint64 `json:"min_cbm_bits,omitempty"`
+	NumClosids uint64 `json:"num_closids,omitempty"`
+}
+
+type intelRdt struct {
+	// The read-only L3 cache information
+	L3CacheInfo *l3CacheInfo `json:"l3_cache_info,omitempty"`
+
+	// The read-only L3 cache schema in root
+	L3CacheSchemaRoot string `json:"l3_cache_schema_root,omitempty"`
+
+	// The L3 cache schema in 'container_id' group
+	L3CacheSchema string `json:"l3_cache_schema,omitempty"`
 }
 
 var eventsCommand = cli.Command{
@@ -226,6 +246,13 @@ func convertLibcontainerStats(ls *libcontainer.Stats) *stats {
 	for k, v := range cg.HugetlbStats {
 		s.Hugetlb[k] = convertHugtlb(v)
 	}
+
+	if is := ls.IntelRdtStats; is != nil {
+		s.IntelRdt.L3CacheInfo = convertL3CacheInfo(is.L3CacheInfo)
+		s.IntelRdt.L3CacheSchemaRoot = is.L3CacheSchemaRoot
+		s.IntelRdt.L3CacheSchema = is.L3CacheSchema
+	}
+
 	return &s
 }
 
@@ -257,4 +284,12 @@ func convertBlkioEntry(c []cgroups.BlkioStatEntry) []blkioEntry {
 		})
 	}
 	return out
+}
+
+func convertL3CacheInfo(i *intelrdt.L3CacheInfo) *l3CacheInfo {
+	return &l3CacheInfo{
+		CbmMask:    i.CbmMask,
+		MinCbmBits: i.MinCbmBits,
+		NumClosids: i.NumClosids,
+	}
 }

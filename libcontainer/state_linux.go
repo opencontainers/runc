@@ -7,10 +7,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/utils"
 
+	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
 
@@ -45,6 +45,11 @@ func destroy(c *linuxContainer) error {
 		}
 	}
 	err := c.cgroupManager.Destroy()
+	if c.intelRdtManager != nil {
+		if ierr := c.intelRdtManager.Destroy(); err == nil {
+			err = ierr
+		}
+	}
 	if rerr := os.RemoveAll(c.root); err == nil {
 		err = rerr
 	}

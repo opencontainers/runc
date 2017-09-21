@@ -6,16 +6,18 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
 	"sync"
 
-	"github.com/docker/docker/pkg/term"
+	"github.com/containerd/console"
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/utils"
 )
 
 type tty struct {
-	console   libcontainer.Console
-	state     *term.State
+	epoller   *console.Epoller
+	console   *console.EpollConsole
+	stdin     console.Console
 	closers   []io.Closer
 	postStart []io.Closer
 	wg        sync.WaitGroup
@@ -74,21 +76,46 @@ func (t *tty) recvtty(process *libcontainer.Process, socket *os.File) error {
 	if err != nil {
 		return err
 	}
-	if err = libcontainer.SaneTerminal(f); err != nil {
+	cons, err := console.ConsoleFromFile(f)
+	if err != nil {
 		return err
 	}
-	console := libcontainer.ConsoleFromFile(f)
-	go io.Copy(console, os.Stdin)
-	t.wg.Add(1)
-	go t.copyIO(os.Stdout, console)
-	state, err := term.SetRawTerminal(os.Stdin.Fd())
+	epoller, err := console.NewEpoller()
 	if err != nil {
+		return err
+	}
+	epollConsole, err := epoller.Add(cons)
+	if err != nil {
+		return err
+	}
+	go epoller.Wait()
+	go io.Copy(epollConsole, os.Stdin)
+	t.wg.Add(1)
+	go t.copyIO(os.Stdout, epollConsole)
+
+	// set raw mode to stdin and also handle interrupt
+	stdin, err := console.ConsoleFromFile(os.Stdin)
+	if err != nil {
+		return err
+	}
+	if err := stdin.SetRaw(); err != nil {
 		return fmt.Errorf("failed to set the terminal from the stdin: %v", err)
 	}
-	t.state = state
-	t.console = console
-	t.closers = []io.Closer{console}
+	go handleInterrupt(stdin)
+
+	t.epoller = epoller
+	t.stdin = stdin
+	t.console = epollConsole
+	t.closers = []io.Closer{epollConsole}
 	return nil
+}
+
+func handleInterrupt(c console.Console) {
+	sigchan := make(chan os.Signal, 1)
+	signal.Notify(sigchan, os.Interrupt)
+	<-sigchan
+	c.Reset()
+	os.Exit(0)
 }
 
 func (t *tty) waitConsole() error {
@@ -114,13 +141,17 @@ func (t *tty) Close() error {
 	for _, c := range t.postStart {
 		c.Close()
 	}
-	// wait for the copy routines to finish before closing the fds
+	// the process is gone at this point, shutting down the console if we have
+	// one and wait for all IO to be finished
+	if t.console != nil && t.epoller != nil {
+		t.console.Shutdown(t.epoller.CloseConsole)
+	}
 	t.wg.Wait()
 	for _, c := range t.closers {
 		c.Close()
 	}
-	if t.state != nil {
-		term.RestoreTerminal(os.Stdin.Fd(), t.state)
+	if t.stdin != nil {
+		t.stdin.Reset()
 	}
 	return nil
 }
@@ -129,9 +160,5 @@ func (t *tty) resize() error {
 	if t.console == nil {
 		return nil
 	}
-	ws, err := term.GetWinsize(os.Stdin.Fd())
-	if err != nil {
-		return err
-	}
-	return term.SetWinsize(t.console.File().Fd(), ws)
+	return t.console.ResizeFrom(console.Current())
 }
