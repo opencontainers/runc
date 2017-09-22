@@ -37,7 +37,7 @@ var mountPropagationMapping = map[string]int{
 	"slave":    unix.MS_SLAVE,
 	"rshared":  unix.MS_SHARED | unix.MS_REC,
 	"shared":   unix.MS_SHARED,
-	"":         unix.MS_PRIVATE | unix.MS_REC,
+	"":         0,
 }
 
 var allowedDevices = []*configs.Device{
