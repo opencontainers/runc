@@ -260,10 +260,10 @@ func setupUser(config *initConfig) error {
 
 	// Rather than just erroring out later in setuid(2) and setgid(2), check
 	// that the user is mapped here.
-	if _, err := config.Config.HostUID(int(execUser.Uid)); err != nil {
+	if _, err := config.Config.HostUID(execUser.Uid); err != nil {
 		return fmt.Errorf("cannot set uid to unmapped user in user namespace")
 	}
-	if _, err := config.Config.HostGID(int(execUser.Gid)); err != nil {
+	if _, err := config.Config.HostGID(execUser.Gid); err != nil {
 		return fmt.Errorf("cannot set gid to unmapped user in user namespace")
 	}
 

@@ -670,9 +670,9 @@ func parseCriuVersion(path string) (int, error) {
 			return 0, fmt.Errorf("Unable to parse the CRIU version: %s", path)
 		}
 
-		n, err := fmt.Sscanf(string(version), "GitID: v%d.%d.%d", &x, &y, &z) // 1.5.2
+		n, err := fmt.Sscanf(version, "GitID: v%d.%d.%d", &x, &y, &z) // 1.5.2
 		if err != nil {
-			n, err = fmt.Sscanf(string(version), "GitID: v%d.%d", &x, &y) // 1.6
+			n, err = fmt.Sscanf(version, "GitID: v%d.%d", &x, &y) // 1.6
 			y++
 		} else {
 			z++
