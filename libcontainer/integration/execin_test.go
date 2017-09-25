@@ -309,7 +309,7 @@ func TestExecInTTY(t *testing.T) {
 			}
 			return
 		}
-		console.SaneTerminal(f)
+		console.ClearONLCR(c.Fd())
 		dc <- &cdata{
 			c: c,
 		}
