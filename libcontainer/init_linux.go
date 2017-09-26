@@ -62,6 +62,8 @@ type initConfig struct {
 	ContainerId      string                `json:"containerid"`
 	Rlimits          []configs.Rlimit      `json:"rlimits"`
 	CreateConsole    bool                  `json:"create_console"`
+	ConsoleWidth     uint16                `json:"console_width"`
+	ConsoleHeight    uint16                `json:"console_height"`
 	Rootless         bool                  `json:"rootless"`
 }
 
@@ -171,12 +173,25 @@ func setupConsole(socket *os.File, config *initConfig, mount bool) error {
 	// however, that setupUser (specifically fixStdioPermissions) *will* change
 	// the UID owner of the console to be the user the process will run as (so
 	// they can actually control their console).
-	console, slavePath, err := console.NewPty()
+
+	pty, slavePath, err := console.NewPty()
 	if err != nil {
 		return err
 	}
+
+	if config.ConsoleHeight != 0 && config.ConsoleWidth != 0 {
+		err = pty.Resize(console.WinSize{
+			Height: config.ConsoleHeight,
+			Width:  config.ConsoleWidth,
+		})
+
+		if err != nil {
+			return err
+		}
+	}
+
 	// After we return from here, we don't need the console anymore.
-	defer console.Close()
+	defer pty.Close()
 
 	// Mount the console inside our rootfs.
 	if mount {
@@ -185,7 +200,7 @@ func setupConsole(socket *os.File, config *initConfig, mount bool) error {
 		}
 	}
 	// While we can access console.master, using the API is a good idea.
-	if err := utils.SendFd(socket, console.Name(), console.Fd()); err != nil {
+	if err := utils.SendFd(socket, pty.Name(), pty.Fd()); err != nil {
 		return err
 	}
 	// Now, dup over all the things.

@@ -116,3 +116,60 @@ function teardown() {
 	[[ ${lines[0]} =~ 1000 ]]
 	[[ ${lines[1]} =~ 5 ]]
 }
+
+@test "runc exec [tty consolesize]" {
+	# allow writing to filesystem
+	sed -i 's/"readonly": true/"readonly": false/' config.json
+
+	# run busybox detached
+	runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+	[ "$status" -eq 0 ]
+
+	# make sure we're running
+	testcontainer test_busybox running
+
+	tty_info_with_consize_size=$( cat <<EOF
+{
+    "terminal": true,
+    "consoleSize": {
+	    "height": 10,
+	    "width": 110
+    },
+    "args": [
+	    "/bin/sh",
+	    "-c",
+	    "/bin/stty -a > /tmp/tty-info"
+    ],
+    "cwd": "/"
+}
+EOF
+	)
+
+	# run the exec
+	runc exec --pid-file pid.txt -d --console-socket $CONSOLE_SOCKET -p <( echo $tty_info_with_consize_size ) test_busybox
+	[ "$status" -eq 0 ]
+
+	# check the pid was generated
+	[ -e pid.txt ]
+
+	#wait user process to finish
+	timeout 1 tail --pid=$(head -n 1 pid.txt) -f /dev/null
+
+	tty_info=$( cat <<EOF
+{
+    "args": [
+	"/bin/cat",
+	"/tmp/tty-info"
+    ],
+    "cwd": "/"
+}
+EOF
+	)
+
+	# run the exec
+	runc exec -p <( echo $tty_info ) test_busybox
+	[ "$status" -eq 0 ]
+
+	# test tty width and height against original process.json
+	[[ ${lines[0]} =~ "rows 10; columns 110" ]]
+}

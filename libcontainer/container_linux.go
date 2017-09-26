@@ -522,6 +522,8 @@ func (c *linuxContainer) newInitConfig(process *Process) *initConfig {
 		cfg.Rlimits = process.Rlimits
 	}
 	cfg.CreateConsole = process.ConsoleSocket != nil
+	cfg.ConsoleWidth = process.ConsoleWidth
+	cfg.ConsoleHeight = process.ConsoleHeight
 	return cfg
 }
 
