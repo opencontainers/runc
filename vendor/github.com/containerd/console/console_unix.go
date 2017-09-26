@@ -1,10 +1,9 @@
-// +build darwin freebsd linux
+// +build darwin freebsd linux solaris
 
 package console
 
 import (
 	"os"
-	"unsafe"
 
 	"golang.org/x/sys/unix"
 )
@@ -17,9 +16,6 @@ func NewPty() (Console, string, error) {
 	if err != nil {
 		return nil, "", err
 	}
-	if err := saneTerminal(f); err != nil {
-		return nil, "", err
-	}
 	slave, err := ptsname(f)
 	if err != nil {
 		return nil, "", err
@@ -27,9 +23,11 @@ func NewPty() (Console, string, error) {
 	if err := unlockpt(f); err != nil {
 		return nil, "", err
 	}
-	return &master{
-		f: f,
-	}, slave, nil
+	m, err := newMaster(f)
+	if err != nil {
+		return nil, "", err
+	}
+	return m, slave, nil
 }
 
 type master struct {
@@ -50,11 +48,7 @@ func (m *master) Close() error {
 }
 
 func (m *master) Resize(ws WinSize) error {
-	return ioctl(
-		m.f.Fd(),
-		uintptr(unix.TIOCSWINSZ),
-		uintptr(unsafe.Pointer(&ws)),
-	)
+	return tcswinsz(m.f.Fd(), ws)
 }
 
 func (m *master) ResizeFrom(c Console) error {
@@ -76,9 +70,6 @@ func (m *master) getCurrent() (unix.Termios, error) {
 	var termios unix.Termios
 	if err := tcget(m.f.Fd(), &termios); err != nil {
 		return unix.Termios{}, err
-	}
-	if m.original == nil {
-		m.original = &termios
 	}
 	return termios, nil
 }
@@ -103,15 +94,7 @@ func (m *master) DisableEcho() error {
 }
 
 func (m *master) Size() (WinSize, error) {
-	var ws WinSize
-	if err := ioctl(
-		m.f.Fd(),
-		uintptr(unix.TIOCGWINSZ),
-		uintptr(unsafe.Pointer(&ws)),
-	); err != nil {
-		return ws, err
-	}
-	return ws, nil
+	return tcgwinsz(m.f.Fd())
 }
 
 func (m *master) Fd() uintptr {
@@ -131,17 +114,29 @@ func checkConsole(f *os.File) error {
 	return nil
 }
 
-func newMaster(f *os.File) Console {
-	return &master{
+func newMaster(f *os.File) (Console, error) {
+	m := &master{
 		f: f,
 	}
+	t, err := m.getCurrent()
+	if err != nil {
+		return nil, err
+	}
+	m.original = &t
+	return m, nil
 }
 
-// SaneTerminal sets the necessary tty_ioctl(4)s to ensure that a pty pair
+// ClearONLCR sets the necessary tty_ioctl(4)s to ensure that a pty pair
 // created by us acts normally. In particular, a not-very-well-known default of
 // Linux unix98 ptys is that they have +onlcr by default. While this isn't a
 // problem for terminal emulators, because we relay data from the terminal we
 // also relay that funky line discipline.
-func SaneTerminal(f *os.File) error {
-	return saneTerminal(f)
+func ClearONLCR(fd uintptr) error {
+	return setONLCR(fd, false)
+}
+
+// SetONLCR sets the necessary tty_ioctl(4)s to ensure that a pty pair
+// created by us acts as intended for a terminal emulator.
+func SetONLCR(fd uintptr) error {
+	return setONLCR(fd, true)
 }

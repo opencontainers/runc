@@ -101,25 +101,26 @@ func handleSingle(path string) error {
 	if err != nil {
 		return err
 	}
-	console, err := console.ConsoleFromFile(master)
+	c, err := console.ConsoleFromFile(master)
 	if err != nil {
 		return err
 	}
+	console.ClearONLCR(c.Fd())
 
 	// Copy from our stdio to the master fd.
 	quitChan := make(chan struct{})
 	go func() {
-		io.Copy(os.Stdout, console)
+		io.Copy(os.Stdout, c)
 		quitChan <- struct{}{}
 	}()
 	go func() {
-		io.Copy(console, os.Stdin)
+		io.Copy(c, os.Stdin)
 		quitChan <- struct{}{}
 	}()
 
 	// Only close the master fd once we've stopped copying.
 	<-quitChan
-	console.Close()
+	c.Close()
 	return nil
 }
 
