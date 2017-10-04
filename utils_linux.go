@@ -108,6 +108,12 @@ func newProcess(p specs.Process) (*libcontainer.Process, error) {
 		NoNewPrivileges: &p.NoNewPrivileges,
 		AppArmorProfile: p.ApparmorProfile,
 	}
+
+	if p.ConsoleSize != nil {
+		lp.ConsoleWidth = uint16(p.ConsoleSize.Width)
+		lp.ConsoleHeight = uint16(p.ConsoleSize.Height)
+	}
+
 	if p.Capabilities != nil {
 		lp.Capabilities = &configs.Capabilities{}
 		lp.Capabilities.Bounding = p.Capabilities.Bounding
