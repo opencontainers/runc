@@ -68,7 +68,7 @@ func (l *linuxStandardInit) Init() error {
 
 	// prepareRootfs() can be executed only for a new mount namespace.
 	if l.config.Config.Namespaces.Contains(configs.NEWNS) {
-		if err := prepareRootfs(l.pipe, l.config.Config); err != nil {
+		if err := prepareRootfs(l.pipe, l.config); err != nil {
 			return err
 		}
 	}
