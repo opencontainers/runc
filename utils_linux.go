@@ -201,6 +201,9 @@ func createPidFile(path string, process *libcontainer.Process) error {
 	if err != nil {
 		return err
 	}
+	if _, err := os.Stat(path); err == nil {
+		return fmt.Errorf("file %s already exists", path)
+	}
 	var (
 		tmpDir  = filepath.Dir(path)
 		tmpName = filepath.Join(tmpDir, fmt.Sprintf(".%s", filepath.Base(path)))
