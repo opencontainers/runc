@@ -813,14 +813,24 @@ void nsexec(void)
 			/*
 			 * Unshare all of the namespaces. Now, it should be noted that this
 			 * ordering might break in the future (especially with rootless
-			 * containers). But for now, it's not possible to split this into
-			 * CLONE_NEWUSER + [the rest] because of some RHEL SELinux issues.
+			 * containers).
+			 *
+			 * CLONE_NEWIPC needs special handling here when CLONE_NEWUSER is
+			 * also specified to ensure that the user namespace root owns
+			 * mqueue. For that case, we unshare CLONE_NEWIPC after
+			 * switching to root user in the user namespace, so we can apply
+			 * the SELinux label to mqueue.
 			 *
 			 * Note that we don't merge this with clone() because there were
 			 * some old kernel versions where clone(CLONE_PARENT | CLONE_NEWPID)
 			 * was broken, so we'll just do it the long way anyway.
 			 */
-			if (unshare(config.cloneflags) < 0)
+			uint32_t apply_cloneflags = config.cloneflags;
+			if ((config.cloneflags & CLONE_NEWUSER) && (config.cloneflags & CLONE_NEWIPC)) {
+				apply_cloneflags &= ~CLONE_NEWIPC;
+			}
+
+			if (unshare(apply_cloneflags) < 0)
 				bail("failed to unshare namespaces");
 
 			/*
@@ -940,6 +950,12 @@ void nsexec(void)
 			if (!config.is_rootless && config.is_setgroup) {
 				if (setgroups(0, NULL) < 0)
 					bail("setgroups failed");
+			}
+
+			/* Unshare CLONE_NEWIPC after becoming root in user namespace */
+			if ((config.cloneflags & CLONE_NEWUSER) && (config.cloneflags & CLONE_NEWIPC)) {
+				if (unshare(CLONE_NEWIPC) < 0)
+					bail("unshare ipc failed");
 			}
 
 			s = SYNC_CHILD_READY;
