@@ -112,13 +112,18 @@ func splitBlkioStatLine(r rune) bool {
 	return r == ' ' || r == ':'
 }
 
+func isCFQEnabled(path string) bool {
+	// blkio.*_recursive are avaible only if kernel haver CFQ enabled and CFQ is io scheduler.
+	if _, err := getBlkioStat(filepath.Join(path, "blkio.io_serviced_recursive")); err == nil {
+		return true
+	}
+	return false
+}
+
 func getBlkioStat(path string) ([]cgroups.BlkioStatEntry, error) {
 	var blkioStats []cgroups.BlkioStatEntry
 	f, err := os.Open(path)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return blkioStats, nil
-		}
 		return nil, err
 	}
 	defer f.Close()
@@ -160,13 +165,12 @@ func getBlkioStat(path string) ([]cgroups.BlkioStatEntry, error) {
 		}
 		blkioStats = append(blkioStats, cgroups.BlkioStatEntry{Major: major, Minor: minor, Op: op, Value: v})
 	}
-
 	return blkioStats, nil
 }
 
 func (s *BlkioGroup) GetStats(path string, stats *cgroups.Stats) error {
 	// Try to read CFQ stats available on all CFQ enabled kernels first
-	if blkioStats, err := getBlkioStat(filepath.Join(path, "blkio.io_serviced_recursive")); err == nil && blkioStats != nil {
+	if isCFQEnabled(path) {
 		return getCFQStats(path, stats)
 	}
 	return getStats(path, stats) // Use generic stats as fallback
@@ -226,12 +230,15 @@ func getStats(path string, stats *cgroups.Stats) error {
 	if blkioStats, err = getBlkioStat(filepath.Join(path, "blkio.throttle.io_service_bytes")); err != nil {
 		return err
 	}
-	stats.BlkioStats.IoServiceBytesRecursive = blkioStats
+	//	stats.BlkioStats.IoServiceBytesRecursive = blkioStats
+	stats.BlkioStats.ThrottleServiceBytes = blkioStats
 
 	if blkioStats, err = getBlkioStat(filepath.Join(path, "blkio.throttle.io_serviced")); err != nil {
 		return err
 	}
-	stats.BlkioStats.IoServicedRecursive = blkioStats
+	//	stats.BlkioStats.IoServicedRecursive = blkioStats
+	stats.BlkioStats.ThrottleServiced = blkioStats
 
 	return nil
+
 }

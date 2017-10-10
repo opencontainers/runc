@@ -4,6 +4,7 @@ package fs
 
 import (
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
@@ -256,7 +257,9 @@ func TestBlkioStatsNoSectorsFile(t *testing.T) {
 	actualStats := *cgroups.NewStats()
 	err := blkio.GetStats(helper.CgroupPath, &actualStats)
 	if err != nil {
-		t.Fatalf("Failed unexpectedly: %s", err)
+		if !strings.Contains(err.Error(), "sectors_recursive") {
+			t.Fatalf("Failed unexpectedly: %s", err)
+		}
 	}
 }
 
@@ -277,7 +280,9 @@ func TestBlkioStatsNoServiceBytesFile(t *testing.T) {
 	actualStats := *cgroups.NewStats()
 	err := blkio.GetStats(helper.CgroupPath, &actualStats)
 	if err != nil {
-		t.Fatalf("Failed unexpectedly: %s", err)
+		if !strings.Contains(err.Error(), "io_service_bytes_recursive") {
+			t.Fatalf("Failed unexpectedly: %s", err)
+		}
 	}
 }
 
@@ -298,7 +303,9 @@ func TestBlkioStatsNoServicedFile(t *testing.T) {
 	actualStats := *cgroups.NewStats()
 	err := blkio.GetStats(helper.CgroupPath, &actualStats)
 	if err != nil {
-		t.Fatalf("Failed unexpectedly: %s", err)
+		if !strings.Contains(err.Error(), "io_service_bytes") {
+			t.Fatalf("Failed unexpectedly: %s", err)
+		}
 	}
 }
 
@@ -319,7 +326,9 @@ func TestBlkioStatsNoQueuedFile(t *testing.T) {
 	actualStats := *cgroups.NewStats()
 	err := blkio.GetStats(helper.CgroupPath, &actualStats)
 	if err != nil {
-		t.Fatalf("Failed unexpectedly: %s", err)
+		if !strings.Contains(err.Error(), "io_queued_recursive") {
+			t.Fatalf("Failed unexpectedly: %s", err)
+		}
 	}
 }
 
@@ -343,7 +352,9 @@ func TestBlkioStatsNoServiceTimeFile(t *testing.T) {
 	actualStats := *cgroups.NewStats()
 	err := blkio.GetStats(helper.CgroupPath, &actualStats)
 	if err != nil {
-		t.Fatalf("Failed unexpectedly: %s", err)
+		if !strings.Contains(err.Error(), "io_service_time_recursive") {
+			t.Fatalf("Failed unexpectedly: %s", err)
+		}
 	}
 }
 
@@ -367,7 +378,9 @@ func TestBlkioStatsNoWaitTimeFile(t *testing.T) {
 	actualStats := *cgroups.NewStats()
 	err := blkio.GetStats(helper.CgroupPath, &actualStats)
 	if err != nil {
-		t.Fatalf("Failed unexpectedly: %s", err)
+		if !strings.Contains(err.Error(), "io_wait_time_recursive") {
+			t.Fatalf("Failed unexpectedly: %s", err)
+		}
 	}
 }
 
@@ -391,7 +404,9 @@ func TestBlkioStatsNoMergedFile(t *testing.T) {
 	actualStats := *cgroups.NewStats()
 	err := blkio.GetStats(helper.CgroupPath, &actualStats)
 	if err != nil {
-		t.Fatalf("Failed unexpectedly: %s", err)
+		if !strings.Contains(err.Error(), "io_merged_recursive") {
+			t.Fatalf("Failed unexpectedly: %s", err)
+		}
 	}
 }
 
@@ -415,7 +430,9 @@ func TestBlkioStatsNoTimeFile(t *testing.T) {
 	actualStats := *cgroups.NewStats()
 	err := blkio.GetStats(helper.CgroupPath, &actualStats)
 	if err != nil {
-		t.Fatalf("Failed unexpectedly: %s", err)
+		if !strings.Contains(err.Error(), "time_recursive") {
+			t.Fatalf("Failed unexpectedly: %s", err)
+		}
 	}
 }
 
@@ -468,7 +485,6 @@ func TestNonCFQBlkioStats(t *testing.T) {
 	defer helper.cleanup()
 	helper.writeFileContents(map[string]string{
 		"blkio.io_service_bytes_recursive": "",
-		"blkio.io_serviced_recursive":      "",
 		"blkio.io_queued_recursive":        "",
 		"blkio.sectors_recursive":          "",
 		"blkio.io_service_time_recursive":  "",
@@ -489,28 +505,27 @@ func TestNonCFQBlkioStats(t *testing.T) {
 	// Verify expected stats.
 	expectedStats := cgroups.BlkioStats{}
 
-	appendBlkioStatEntry(&expectedStats.IoServiceBytesRecursive, 8, 0, 11030528, "Read")
-	appendBlkioStatEntry(&expectedStats.IoServiceBytesRecursive, 8, 0, 23, "Write")
-	appendBlkioStatEntry(&expectedStats.IoServiceBytesRecursive, 8, 0, 42, "Sync")
-	appendBlkioStatEntry(&expectedStats.IoServiceBytesRecursive, 8, 0, 11030528, "Async")
-	appendBlkioStatEntry(&expectedStats.IoServiceBytesRecursive, 8, 0, 11030528, "Total")
-	appendBlkioStatEntry(&expectedStats.IoServiceBytesRecursive, 252, 0, 11030528, "Read")
-	appendBlkioStatEntry(&expectedStats.IoServiceBytesRecursive, 252, 0, 23, "Write")
-	appendBlkioStatEntry(&expectedStats.IoServiceBytesRecursive, 252, 0, 42, "Sync")
-	appendBlkioStatEntry(&expectedStats.IoServiceBytesRecursive, 252, 0, 11030528, "Async")
-	appendBlkioStatEntry(&expectedStats.IoServiceBytesRecursive, 252, 0, 11030528, "Total")
+	appendBlkioStatEntry(&expectedStats.ThrottleServiceBytes, 8, 0, 11030528, "Read")
+	appendBlkioStatEntry(&expectedStats.ThrottleServiceBytes, 8, 0, 23, "Write")
+	appendBlkioStatEntry(&expectedStats.ThrottleServiceBytes, 8, 0, 42, "Sync")
+	appendBlkioStatEntry(&expectedStats.ThrottleServiceBytes, 8, 0, 11030528, "Async")
+	appendBlkioStatEntry(&expectedStats.ThrottleServiceBytes, 8, 0, 11030528, "Total")
+	appendBlkioStatEntry(&expectedStats.ThrottleServiceBytes, 252, 0, 11030528, "Read")
+	appendBlkioStatEntry(&expectedStats.ThrottleServiceBytes, 252, 0, 23, "Write")
+	appendBlkioStatEntry(&expectedStats.ThrottleServiceBytes, 252, 0, 42, "Sync")
+	appendBlkioStatEntry(&expectedStats.ThrottleServiceBytes, 252, 0, 11030528, "Async")
+	appendBlkioStatEntry(&expectedStats.ThrottleServiceBytes, 252, 0, 11030528, "Total")
 
-	appendBlkioStatEntry(&expectedStats.IoServicedRecursive, 8, 0, 164, "Read")
-	appendBlkioStatEntry(&expectedStats.IoServicedRecursive, 8, 0, 23, "Write")
-	appendBlkioStatEntry(&expectedStats.IoServicedRecursive, 8, 0, 42, "Sync")
-	appendBlkioStatEntry(&expectedStats.IoServicedRecursive, 8, 0, 164, "Async")
-	appendBlkioStatEntry(&expectedStats.IoServicedRecursive, 8, 0, 164, "Total")
-	appendBlkioStatEntry(&expectedStats.IoServicedRecursive, 252, 0, 164, "Read")
-	appendBlkioStatEntry(&expectedStats.IoServicedRecursive, 252, 0, 23, "Write")
-	appendBlkioStatEntry(&expectedStats.IoServicedRecursive, 252, 0, 42, "Sync")
-	appendBlkioStatEntry(&expectedStats.IoServicedRecursive, 252, 0, 164, "Async")
-	appendBlkioStatEntry(&expectedStats.IoServicedRecursive, 252, 0, 164, "Total")
-
+	appendBlkioStatEntry(&expectedStats.ThrottleServiced, 8, 0, 164, "Read")
+	appendBlkioStatEntry(&expectedStats.ThrottleServiced, 8, 0, 23, "Write")
+	appendBlkioStatEntry(&expectedStats.ThrottleServiced, 8, 0, 42, "Sync")
+	appendBlkioStatEntry(&expectedStats.ThrottleServiced, 8, 0, 164, "Async")
+	appendBlkioStatEntry(&expectedStats.ThrottleServiced, 8, 0, 164, "Total")
+	appendBlkioStatEntry(&expectedStats.ThrottleServiced, 252, 0, 164, "Read")
+	appendBlkioStatEntry(&expectedStats.ThrottleServiced, 252, 0, 23, "Write")
+	appendBlkioStatEntry(&expectedStats.ThrottleServiced, 252, 0, 42, "Sync")
+	appendBlkioStatEntry(&expectedStats.ThrottleServiced, 252, 0, 164, "Async")
+	appendBlkioStatEntry(&expectedStats.ThrottleServiced, 252, 0, 164, "Total")
 	expectBlkioStatsEquals(t, expectedStats, actualStats.BlkioStats)
 }
 

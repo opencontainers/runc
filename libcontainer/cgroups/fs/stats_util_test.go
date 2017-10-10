@@ -64,6 +64,14 @@ func expectBlkioStatsEquals(t *testing.T, expected, actual cgroups.BlkioStats) {
 		logrus.Printf("blkio IoTimeRecursive do not match - %s\n", err)
 		t.Fail()
 	}
+	if err := blkioStatEntryEquals(expected.ThrottleServiceBytes, actual.ThrottleServiceBytes); err != nil {
+		logrus.Printf("blkio ThrottleServiceBytes do not match - %s\n", err)
+		t.Fail()
+	}
+	if err := blkioStatEntryEquals(expected.ThrottleServiced, actual.ThrottleServiced); err != nil {
+		logrus.Printf("blkio ThrottleServiced do not match - %s\n", err)
+		t.Fail()
+	}
 }
 
 func expectThrottlingDataEquals(t *testing.T, expected, actual cgroups.ThrottlingData) {

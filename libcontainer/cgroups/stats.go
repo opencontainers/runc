@@ -81,6 +81,8 @@ type BlkioStats struct {
 	IoMergedRecursive       []BlkioStatEntry `json:"io_merged_recursive,omitempty"`
 	IoTimeRecursive         []BlkioStatEntry `json:"io_time_recursive,omitempty"`
 	SectorsRecursive        []BlkioStatEntry `json:"sectors_recursive,omitempty"`
+	ThrottleServiceBytes    []BlkioStatEntry `json:"io_service_bytes,omitempty"`
+	ThrottleServiced        []BlkioStatEntry `json:"io_serviced,omitempty"`
 }
 
 type HugetlbStats struct {
