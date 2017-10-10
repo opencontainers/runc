@@ -9,14 +9,141 @@ import (
 )
 
 func TestValidate(t *testing.T) {
-	config := &configs.Config{
-		Rootfs: "/var",
+	for _, s := range []struct {
+		config   *configs.Config
+		testcase string
+		//expectError `true` return error is not nil,`false` is nil.
+		expectError bool
+	}{
+		{
+			config: &configs.Config{
+				Rootfs: "/var",
+			},
+			testcase:    "TestValidate",
+			expectError: false,
+		},
+		{
+			config: &configs.Config{
+				Rootfs:     "/var",
+				Namespaces: []configs.Namespace{},
+				Networks:   []*configs.Network{{Type: "loopback"}},
+			},
+			testcase:    "TestValidateNetworkWithoutNETNamespace",
+			expectError: true,
+		},
+		{
+			config: &configs.Config{
+				Rootfs:     "/var",
+				Namespaces: []configs.Namespace{},
+				Routes:     []*configs.Route{{Gateway: "255.255.255.0"}},
+			},
+			testcase:    "TestValidateNetworkRoutesWithoutNETNamespace",
+			expectError: true,
+		},
+		{
+			config: &configs.Config{
+				Rootfs:   "/var",
+				Hostname: "runc",
+				Namespaces: configs.Namespaces([]configs.Namespace{
+					{Type: configs.NEWUTS},
+				},
+				),
+			},
+			testcase:    "TestValidateHostname",
+			expectError: false,
+		},
+		{
+			config: &configs.Config{
+				Rootfs:   "/var",
+				Hostname: "runc",
+			},
+			testcase:    "TestValidateHostnameWithoutUTSNamespace",
+			expectError: true,
+		},
+		{
+			config: &configs.Config{
+				Rootfs:    "/var",
+				MaskPaths: []string{"/proc/kcore"},
+				Namespaces: configs.Namespaces([]configs.Namespace{
+					{Type: configs.NEWNS},
+				},
+				),
+			},
+			testcase:    "TestValidateSecurityWithMaskPaths",
+			expectError: false,
+		},
+		{
+			config: &configs.Config{
+				Rootfs:        "/var",
+				ReadonlyPaths: []string{"/proc/sys"},
+				Namespaces: configs.Namespaces([]configs.Namespace{
+					{Type: configs.NEWNS},
+				},
+				),
+			},
+			testcase:    "TestValidateSecurityWithROPaths",
+			expectError: false,
+		},
+		{
+			config: &configs.Config{
+				Rootfs:        "/var",
+				MaskPaths:     []string{"/proc/kcore"},
+				ReadonlyPaths: []string{"/proc/sys"},
+			},
+			expectError: true,
+		},
+		{
+			config: &configs.Config{
+				Rootfs:      "/var",
+				UidMappings: []configs.IDMap{{ContainerID: 123}},
+			},
+			testcase:    "TestValidateUsernamespaceWithoutUserNS",
+			expectError: true,
+		},
+		{
+			config: &configs.Config{
+				Rootfs: "/var",
+				Sysctl: map[string]string{"net.ctl": "ctl"},
+				Namespaces: configs.Namespaces(
+					[]configs.Namespace{{
+						Type: configs.NEWNET,
+						Path: "/proc/self/ns/net",
+					},
+					},
+				),
+			},
+			testcase:    "TestValidateSysctlWithSameNs",
+			expectError: true,
+		},
+		{
+			config: &configs.Config{
+				Rootfs:     "/var",
+				Sysctl:     map[string]string{"net.ctl": "ctl"},
+				Namespaces: []configs.Namespace{},
+			},
+			testcase:    "TestValidateSysctlWithoutNETNamespace",
+			expectError: true,
+		},
+	} {
+		t.Run(s.testcase, testValidateHelper(t, s.config, s.expectError))
 	}
 
-	validator := validate.New()
-	err := validator.Validate(config)
-	if err != nil {
-		t.Errorf("Expected error to not occur: %+v", err)
+}
+
+func testValidateHelper(t *testing.T, config *configs.Config, shouldFail bool) func(t *testing.T) {
+
+	return func(t *testing.T) {
+		validator := validate.New()
+		err := validator.Validate(config)
+		if shouldFail == false {
+			if err != nil {
+				t.Errorf("expected error to not occur: %+v", err)
+			}
+		} else {
+			if err == nil {
+				t.Errorf("expected error to occur but it was nil")
+			}
+		}
 	}
 }
 
@@ -27,117 +154,6 @@ func TestValidateWithInvalidRootfs(t *testing.T) {
 
 	config := &configs.Config{
 		Rootfs: dir,
-	}
-
-	validator := validate.New()
-	err := validator.Validate(config)
-	if err == nil {
-		t.Error("Expected error to occur but it was nil")
-	}
-}
-
-func TestValidateNetworkWithoutNETNamespace(t *testing.T) {
-	network := &configs.Network{Type: "loopback"}
-	config := &configs.Config{
-		Rootfs:     "/var",
-		Namespaces: []configs.Namespace{},
-		Networks:   []*configs.Network{network},
-	}
-
-	validator := validate.New()
-	err := validator.Validate(config)
-	if err == nil {
-		t.Error("Expected error to occur but it was nil")
-	}
-}
-
-func TestValidateNetworkRoutesWithoutNETNamespace(t *testing.T) {
-	route := &configs.Route{Gateway: "255.255.255.0"}
-	config := &configs.Config{
-		Rootfs:     "/var",
-		Namespaces: []configs.Namespace{},
-		Routes:     []*configs.Route{route},
-	}
-
-	validator := validate.New()
-	err := validator.Validate(config)
-	if err == nil {
-		t.Error("Expected error to occur but it was nil")
-	}
-}
-
-func TestValidateHostname(t *testing.T) {
-	config := &configs.Config{
-		Rootfs:   "/var",
-		Hostname: "runc",
-		Namespaces: configs.Namespaces(
-			[]configs.Namespace{
-				{Type: configs.NEWUTS},
-			},
-		),
-	}
-
-	validator := validate.New()
-	err := validator.Validate(config)
-	if err != nil {
-		t.Errorf("Expected error to not occur: %+v", err)
-	}
-}
-
-func TestValidateHostnameWithoutUTSNamespace(t *testing.T) {
-	config := &configs.Config{
-		Rootfs:   "/var",
-		Hostname: "runc",
-	}
-
-	validator := validate.New()
-	err := validator.Validate(config)
-	if err == nil {
-		t.Error("Expected error to occur but it was nil")
-	}
-}
-
-func TestValidateSecurityWithMaskPaths(t *testing.T) {
-	config := &configs.Config{
-		Rootfs:    "/var",
-		MaskPaths: []string{"/proc/kcore"},
-		Namespaces: configs.Namespaces(
-			[]configs.Namespace{
-				{Type: configs.NEWNS},
-			},
-		),
-	}
-
-	validator := validate.New()
-	err := validator.Validate(config)
-	if err != nil {
-		t.Errorf("Expected error to not occur: %+v", err)
-	}
-}
-
-func TestValidateSecurityWithROPaths(t *testing.T) {
-	config := &configs.Config{
-		Rootfs:        "/var",
-		ReadonlyPaths: []string{"/proc/sys"},
-		Namespaces: configs.Namespaces(
-			[]configs.Namespace{
-				{Type: configs.NEWNS},
-			},
-		),
-	}
-
-	validator := validate.New()
-	err := validator.Validate(config)
-	if err != nil {
-		t.Errorf("Expected error to not occur: %+v", err)
-	}
-}
-
-func TestValidateSecurityWithoutNEWNS(t *testing.T) {
-	config := &configs.Config{
-		Rootfs:        "/var",
-		MaskPaths:     []string{"/proc/kcore"},
-		ReadonlyPaths: []string{"/proc/sys"},
 	}
 
 	validator := validate.New()
@@ -164,20 +180,6 @@ func TestValidateUsernamespace(t *testing.T) {
 	err := validator.Validate(config)
 	if err != nil {
 		t.Errorf("expected error to not occur %+v", err)
-	}
-}
-
-func TestValidateUsernamespaceWithoutUserNS(t *testing.T) {
-	uidMap := configs.IDMap{ContainerID: 123}
-	config := &configs.Config{
-		Rootfs:      "/var",
-		UidMappings: []configs.IDMap{uidMap},
-	}
-
-	validator := validate.New()
-	err := validator.Validate(config)
-	if err == nil {
-		t.Error("Expected error to occur but it was nil")
 	}
 }
 
@@ -228,40 +230,5 @@ func TestValidateValidSysctl(t *testing.T) {
 		if err != nil {
 			t.Errorf("Expected error to not occur with {%s=%s} but got: %q", k, v, err)
 		}
-	}
-}
-
-func TestValidateSysctlWithSameNs(t *testing.T) {
-	config := &configs.Config{
-		Rootfs: "/var",
-		Sysctl: map[string]string{"net.ctl": "ctl"},
-		Namespaces: configs.Namespaces(
-			[]configs.Namespace{
-				{
-					Type: configs.NEWNET,
-					Path: "/proc/self/ns/net",
-				},
-			},
-		),
-	}
-
-	validator := validate.New()
-	err := validator.Validate(config)
-	if err == nil {
-		t.Error("Expected error to occur but it was nil")
-	}
-}
-
-func TestValidateSysctlWithoutNETNamespace(t *testing.T) {
-	config := &configs.Config{
-		Rootfs:     "/var",
-		Sysctl:     map[string]string{"net.ctl": "ctl"},
-		Namespaces: []configs.Namespace{},
-	}
-
-	validator := validate.New()
-	err := validator.Validate(config)
-	if err == nil {
-		t.Error("Expected error to occur but it was nil")
 	}
 }
