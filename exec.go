@@ -213,6 +213,9 @@ func getProcess(context *cli.Context, bundle string) (*specs.Process, error) {
 		p.User.UID = uint32(uid)
 	}
 	for _, gid := range context.Int64Slice("additional-gids") {
+		if gid < 0 {
+			return nil, fmt.Errorf("additional-gids must be a positive number %d", gid)
+		}
 		p.User.AdditionalGids = append(p.User.AdditionalGids, uint32(gid))
 	}
 	return p, nil
