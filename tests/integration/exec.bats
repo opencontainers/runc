@@ -85,7 +85,7 @@ function teardown() {
 
   runc exec --cwd /bin test_busybox pwd
   [ "$status" -eq 0 ]
-  [[ ${output} == "/bin" ]]
+  [[ ${output} == "/bin"* ]]
 }
 
 @test "runc exec --env" {
