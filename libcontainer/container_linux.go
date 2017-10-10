@@ -1782,12 +1782,10 @@ func ignoreTerminateErrors(err error) error {
 	if err == nil {
 		return nil
 	}
-
-	// TODO(steve): Update these to none string checks if the runtime exports them.
-	switch err.Error() {
-	case "os: process already finished", "exec: Wait was already called":
+	s := err.Error()
+	switch {
+	case strings.Contains(s, "process already finished"), strings.Contains(s, "Wait was already called"):
 		return nil
-	default:
-		return err
 	}
+	return err
 }
