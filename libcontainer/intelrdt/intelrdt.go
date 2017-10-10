@@ -401,6 +401,10 @@ func GetIntelRdtPath(id string) (string, error) {
 
 // Applies Intel RDT configuration to the process with the specified pid
 func (m *IntelRdtManager) Apply(pid int) (err error) {
+	// If intelRdt is not specified in config, we do nothing
+	if m.Config.IntelRdt == nil {
+		return nil
+	}
 	d, err := getIntelRdtData(m.Config, pid)
 	if err != nil && !IsNotFound(err) {
 		return err

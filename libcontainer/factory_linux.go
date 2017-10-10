@@ -213,8 +213,7 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 		newgidmapPath: l.NewgidmapPath,
 		cgroupManager: l.NewCgroupsManager(config.Cgroups, nil),
 	}
-	c.intelRdtManager = nil
-	if intelrdt.IsEnabled() && c.config.IntelRdt != nil {
+	if intelrdt.IsEnabled() {
 		c.intelRdtManager = l.NewIntelRdtManager(config, id, "")
 	}
 	c.state = &stoppedState{c: c}
@@ -256,8 +255,7 @@ func (l *LinuxFactory) Load(id string) (Container, error) {
 	if err := c.refreshState(); err != nil {
 		return nil, err
 	}
-	c.intelRdtManager = nil
-	if intelrdt.IsEnabled() && c.config.IntelRdt != nil {
+	if intelrdt.IsEnabled() {
 		c.intelRdtManager = l.NewIntelRdtManager(&state.Config, id, state.IntelRdtPath)
 	}
 	return c, nil
