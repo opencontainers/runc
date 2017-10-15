@@ -59,15 +59,37 @@ function disable_idmap() {
 #          resource limits on condition that cgroupsPath is set to a path the
 #          rootless user has permissions on.
 
+# List of cgroups. We handle name= cgroups as well as combined
+# (comma-separated) cgroups and correctly split and/or strip them.
+ALL_CGROUPS=( $(cat /proc/self/cgroup | cut -d: -f2 | sed -E '{s/^name=//;s/,/\n/;/^$/D}') )
+CGROUP_MOUNT="/sys/fs/cgroup"
+CGROUP_PATH="/runc-cgroups-integration-test"
+
 function enable_cgroup() {
 	# Set up cgroups for use in rootless containers.
-	mkdir -p /sys/fs/cgroup/{blkio,cpu,cpuacct,cpuset,devices,freezer,hugetlb,memory,net_cls,net_prio,openrc,perf_event,pids,systemd}/runc-cgroups-integration-test
-	chown rootless:rootless -R /sys/fs/cgroup/*/runc-cgroups-integration-test
+	for cg in "${ALL_CGROUPS[@]}"
+	do
+		mkdir -p "$CGROUP_MOUNT/$cg$CGROUP_PATH"
+		# We only need to allow write access to {cgroup.procs,tasks} and the
+		# directory. Rather than changing the owner entirely, we just change
+		# the group and then allow write access to the group (in order to
+		# further limit the possible DAC permissions that runc could use).
+		chown root:rootless "$CGROUP_MOUNT/$cg$CGROUP_PATH/"{,cgroup.procs,tasks}
+		chmod g+rwx "$CGROUP_MOUNT/$cg$CGROUP_PATH/"{,cgroup.procs,tasks}
+		# Due to cpuset's semantics we need to give extra permissions to allow
+		# for runc to set up the hierarchy. XXX: This really shouldn't be
+		# necessary, and might actually be a bug in our impl of cgroup
+		# handling.
+		[[ "$cg" == "cpuset" ]] && chown rootless:rootless "$CGROUP_MOUNT/$cg$CGROUP_PATH/cpuset."{cpus,mems}
+	done
 }
 
 function disable_cgroup() {
 	# Remove cgroups used in rootless containers.
-	[ -d /sys/fs/cgroup/devices/runc-cgroups-integration-test ] && rmdir /sys/fs/cgroup/*/runc-cgroups-integration-test
+	for cg in "${ALL_CGROUPS[@]}"
+	do
+		[ -d "$CGROUP_MOUNT/$cg$CGROUP_PATH" ] && rmdir "$CGROUP_MOUNT/$cg$CGROUP_PATH"
+	done
 }
 
 # Create a powerset of $ALL_FEATURES (the set of all subsets of $ALL_FEATURES).
