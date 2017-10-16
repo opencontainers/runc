@@ -31,6 +31,7 @@ var (
 		&PerfEventGroup{},
 		&FreezerGroup{},
 		&NameGroup{GroupName: "name=systemd", Join: true},
+		&RdmaGroup{},
 	}
 	HugePageSizes, _ = cgroups.GetHugePageSize()
 )

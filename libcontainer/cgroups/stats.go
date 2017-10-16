@@ -92,6 +92,11 @@ type HugetlbStats struct {
 	Failcnt uint64 `json:"failcnt"`
 }
 
+type RdmaStats struct {
+	HcaHandle int64 `json:"hca_handle"`
+	HcaObject int64 `json:"hca_object"`
+}
+
 type Stats struct {
 	CpuStats    CpuStats    `json:"cpu_stats,omitempty"`
 	MemoryStats MemoryStats `json:"memory_stats,omitempty"`
@@ -99,10 +104,13 @@ type Stats struct {
 	BlkioStats  BlkioStats  `json:"blkio_stats,omitempty"`
 	// the map is in the format "size of hugepage: stats of the hugepage"
 	HugetlbStats map[string]HugetlbStats `json:"hugetlb_stats,omitempty"`
+	// RdmaStats is a map from interface name to its stats
+	RdmaStats map[string]RdmaStats `json:"rmda_stats,omitempty"`
 }
 
 func NewStats() *Stats {
 	memoryStats := MemoryStats{Stats: make(map[string]uint64)}
 	hugetlbStats := make(map[string]HugetlbStats)
-	return &Stats{MemoryStats: memoryStats, HugetlbStats: hugetlbStats}
+	rdmaStats := make(map[string]RdmaStats)
+	return &Stats{MemoryStats: memoryStats, HugetlbStats: hugetlbStats, RdmaStats: rdmaStats}
 }
