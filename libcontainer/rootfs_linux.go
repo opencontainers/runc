@@ -257,9 +257,32 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 		// bind mount won't change mount options, we need remount to make mount options effective.
 		// first check that we have non-default options required before attempting a remount
 		if m.Flags&^(unix.MS_REC|unix.MS_REMOUNT|unix.MS_BIND) != 0 {
+			// Make a copy of the previous mount flags, because in a user
+			// namespace we are not allowed to drop mount options from the host
+			// bindmount.
+			var statfs unix.Statfs_t
+			if err := unix.Statfs(dest, &statfs); err != nil {
+				return err
+			}
+
 			// only remount if unique mount options are set
 			if err := remount(m, rootfs); err != nil {
-				return err
+				if !os.IsPermission(err) {
+					return err
+				}
+
+				// We only inherit bits that are locked with CL_UNPRIVILEGED,
+				// if the remount failed with EPERM (meaning we are likely in a
+				// user namespace).
+				var lockedBits int64
+				lockedBits = unix.MS_RDONLY | unix.MS_NODEV |
+					unix.MS_NOEXEC | unix.MS_NOSUID | unix.MS_NOATIME |
+					unix.MS_RELATIME | unix.MS_STRICTATIME
+				m.Flags |= int(statfs.Flags & lockedBits)
+
+				if werr := remount(m, rootfs); werr != nil {
+					return err
+				}
 			}
 		}
 
