@@ -28,6 +28,7 @@ var subsystems = []subsystem{
 	&fs.PerfEventGroup{},
 	&fs.FreezerGroup{},
 	&fs.NameGroup{GroupName: "name=systemd"},
+	&fs.RdmaGroup{},
 }
 
 type subsystem interface {

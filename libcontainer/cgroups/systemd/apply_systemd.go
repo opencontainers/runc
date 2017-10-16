@@ -61,6 +61,7 @@ var subsystems = subsystemSet{
 	&fs.NetPrioGroup{},
 	&fs.NetClsGroup{},
 	&fs.NameGroup{GroupName: "name=systemd"},
+	&fs.RdmaGroup{},
 }
 
 const (
