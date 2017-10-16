@@ -85,8 +85,7 @@ func (p *setnsProcess) start() (err error) {
 	if err = p.execSetns(); err != nil {
 		return newSystemErrorWithCause(err, "executing setns process")
 	}
-	// We can't join cgroups if we're in a rootless container.
-	if !p.config.Rootless && len(p.cgroupPaths) > 0 {
+	if len(p.cgroupPaths) > 0 {
 		if err := cgroups.EnterPid(p.cgroupPaths, p.pid()); err != nil {
 			return newSystemErrorWithCausef(err, "adding pid %d to cgroups", p.pid())
 		}
