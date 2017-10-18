@@ -443,6 +443,11 @@ func (m *IntelRdtManager) GetPath() string {
 
 // Returns statistics for Intel RDT
 func (m *IntelRdtManager) GetStats() (*Stats, error) {
+	// If intelRdt is not specified in config
+	if m.Config.IntelRdt == nil {
+		return nil, nil
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	stats := NewStats()
