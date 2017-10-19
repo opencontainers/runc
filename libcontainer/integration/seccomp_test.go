@@ -321,3 +321,99 @@ func TestSeccompDenyWriteMultipleConditions(t *testing.T) {
 		t.Fatalf("Expected output %s but got %s\n", expected, actual)
 	}
 }
+
+func TestSeccompMultipleConditionSameArgDeniesStdout(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+
+	rootfs, err := newRootfs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer remove(rootfs)
+
+	// Prevent writing to both stdout and stderr
+	config := newTemplateConfig(rootfs)
+	config.Seccomp = &configs.Seccomp{
+		DefaultAction: configs.Allow,
+		Syscalls: []*configs.Syscall{
+			{
+				Name:   "write",
+				Action: configs.Errno,
+				Args: []*configs.Arg{
+					{
+						Index: 0,
+						Value: 1,
+						Op:    configs.EqualTo,
+					},
+					{
+						Index: 0,
+						Value: 2,
+						Op:    configs.EqualTo,
+					},
+				},
+			},
+		},
+	}
+
+	buffers, exitCode, err := runContainer(config, "", "ls", "/")
+	if err != nil {
+		t.Fatalf("%s: %s", buffers, err)
+	}
+	if exitCode != 0 {
+		t.Fatalf("exit code not 0. code %d buffers %s", exitCode, buffers)
+	}
+	// Verify that nothing was printed
+	if len(buffers.Stdout.String()) != 0 {
+		t.Fatalf("Something was written to stdout, write call succeeded!\n")
+	}
+}
+
+func TestSeccompMultipleConditionSameArgDeniesStderr(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+
+	rootfs, err := newRootfs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer remove(rootfs)
+
+	// Prevent writing to both stdout and stderr
+	config := newTemplateConfig(rootfs)
+	config.Seccomp = &configs.Seccomp{
+		DefaultAction: configs.Allow,
+		Syscalls: []*configs.Syscall{
+			{
+				Name:   "write",
+				Action: configs.Errno,
+				Args: []*configs.Arg{
+					{
+						Index: 0,
+						Value: 1,
+						Op:    configs.EqualTo,
+					},
+					{
+						Index: 0,
+						Value: 2,
+						Op:    configs.EqualTo,
+					},
+				},
+			},
+		},
+	}
+
+	buffers, exitCode, err := runContainer(config, "", "ls", "/does_not_exist")
+	if err == nil {
+		t.Fatalf("Expecting error return, instead got 0")
+	}
+	if exitCode == 0 {
+		t.Fatalf("Busybox should fail with negative exit code, instead got %d!", exitCode)
+	}
+	// Verify nothing was printed
+	if len(buffers.Stderr.String()) != 0 {
+		t.Fatalf("Something was written to stderr, write call succeeded!\n")
+	}
+}
