@@ -390,7 +390,7 @@ a container.
 | Exec           | Execute a new process inside of the container  ( requires setns )  |
 | Set            | Setup configs of the container after it's created                  |
 
-### Execute a new process inside of a running container.
+### Execute a new process inside of a running container
 
 User can execute a new process inside of a running container. Any binaries to be
 executed must be accessible within the container's rootfs.
