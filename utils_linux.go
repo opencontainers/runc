@@ -312,6 +312,16 @@ func (r *runner) run(config *specs.Process) (int, error) {
 		r.destroy()
 		return -1, err
 	}
+	if r.pidFile != "" {
+		if err = createPidFile(r.pidFile, process); err != nil {
+			r.terminate(process)
+			r.destroy()
+			return -1, err
+		}
+	}
+	if detach {
+		return 0, nil
+	}
 	if err := tty.waitConsole(); err != nil {
 		r.terminate(process)
 		r.destroy()
@@ -322,19 +332,9 @@ func (r *runner) run(config *specs.Process) (int, error) {
 		r.destroy()
 		return -1, err
 	}
-	if r.pidFile != "" {
-		if err = createPidFile(r.pidFile, process); err != nil {
-			r.terminate(process)
-			r.destroy()
-			return -1, err
-		}
-	}
 	status, err := handler.forward(process, tty, detach)
 	if err != nil {
 		r.terminate(process)
-	}
-	if detach {
-		return 0, nil
 	}
 	r.destroy()
 	return status, err
