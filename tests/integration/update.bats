@@ -260,7 +260,7 @@ EOF
 
 @test "update rt period and runtime" {
     [[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
-    requires cgroups_rt
+    requires cgroups_kmem cgroups_rt
 
     # run a detached busybox
     runc run -d --console-socket $CONSOLE_SOCKET test_update_rt
