@@ -12,6 +12,7 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/utils"
+	"github.com/opencontainers/runc/libcontainer/tctbf"
 	"github.com/vishvananda/netlink"
 )
 
@@ -178,7 +179,19 @@ func (v *veth) create(n *network, nspid int) (err error) {
 	if err != nil {
 		return err
 	}
-	return netlink.LinkSetNsPid(child, nspid)
+	err = netlink.LinkSetNsPid(child, nspid)
+	if err != nil {
+		return err
+	}
+
+	if n.NetworkSpeedLimit != 0 {
+		err := tctbf.AddTcTbf(n.HostInterfaceName, n.NetworkSpeedLimit)
+		if err != nil {
+			return err
+		}
+
+	}
+	return nil
 }
 
 func (v *veth) generateTempPeerName() (string, error) {

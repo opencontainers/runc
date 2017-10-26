@@ -34,6 +34,7 @@ type Network struct {
 	// Note: This does not apply to loopback interfaces.
 	Mtu int `json:"mtu"`
 
+	NetworkSpeedLimit int `json:"network_speed_limit"`
 	// TxQueueLen sets the tx_queuelen value for the interface and will be mirrored on both the host and
 	// container's interfaces if a pair is created, specifically in the case of type veth
 	// Note: This does not apply to loopback interfaces.
