@@ -41,21 +41,6 @@ var mountPropagationMapping = map[string]int{
 }
 
 var allowedDevices = []*configs.Device{
-	// allow mknod for any device
-	{
-		Type:        'c',
-		Major:       wildcard,
-		Minor:       wildcard,
-		Permissions: "m",
-		Allow:       true,
-	},
-	{
-		Type:        'b',
-		Major:       wildcard,
-		Minor:       wildcard,
-		Permissions: "m",
-		Allow:       true,
-	},
 	{
 		Type:        'c',
 		Path:        "/dev/null",

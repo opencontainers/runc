@@ -61,20 +61,6 @@ var (
 		},
 	}
 	DefaultAllowedDevices = append([]*Device{
-		// allow mknod for any device
-		{
-			Type:        'c',
-			Major:       Wildcard,
-			Minor:       Wildcard,
-			Permissions: "m",
-		},
-		{
-			Type:        'b',
-			Major:       Wildcard,
-			Minor:       Wildcard,
-			Permissions: "m",
-		},
-
 		{
 			Path:        "/dev/console",
 			Type:        'c',
