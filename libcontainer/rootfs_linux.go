@@ -127,18 +127,6 @@ func prepareRootfs(pipe io.ReadWriter, iConfig *initConfig) (err error) {
 // finalizeRootfs sets anything to ro if necessary. You must call
 // prepareRootfs first.
 func finalizeRootfs(config *configs.Config) (err error) {
-	// remount dev as ro if specified
-	for _, m := range config.Mounts {
-		if libcontainerUtils.CleanPath(m.Destination) == "/dev" {
-			if m.Flags&unix.MS_RDONLY == unix.MS_RDONLY {
-				if err := remountReadonly(m); err != nil {
-					return newSystemErrorWithCausef(err, "remounting %q as readonly", m.Destination)
-				}
-			}
-			break
-		}
-	}
-
 	// set rootfs ( / ) as readonly
 	if config.Readonlyfs {
 		if err := setReadonly(); err != nil {
