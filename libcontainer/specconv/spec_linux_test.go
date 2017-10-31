@@ -6,9 +6,167 @@ import (
 	"os"
 	"testing"
 
+	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/configs/validate"
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
+
+func TestCreateCommandHookTimeout(t *testing.T) {
+	timeout := 3600
+	hook := specs.Hook{
+		Path:    "/some/hook/path",
+		Args:    []string{"--some", "thing"},
+		Env:     []string{"SOME=value"},
+		Timeout: &timeout,
+	}
+	command := createCommandHook(hook)
+	timeoutStr := command.Timeout.String()
+	if timeoutStr != "1h0m0s" {
+		t.Errorf("Expected the Timeout to be 1h0m0s, got: %s", timeoutStr)
+	}
+}
+
+func TestCreateHooks(t *testing.T) {
+	rspec := &specs.Spec{
+		Hooks: &specs.Hooks{
+			Prestart: []specs.Hook{
+				{
+					Path: "/some/hook/path",
+				},
+				{
+					Path: "/some/hook2/path",
+					Args: []string{"--some", "thing"},
+				},
+			},
+			Poststart: []specs.Hook{
+				{
+					Path: "/some/hook/path",
+					Args: []string{"--some", "thing"},
+					Env:  []string{"SOME=value"},
+				},
+				{
+					Path: "/some/hook2/path",
+				},
+				{
+					Path: "/some/hook3/path",
+				},
+			},
+			Poststop: []specs.Hook{
+				{
+					Path: "/some/hook/path",
+					Args: []string{"--some", "thing"},
+					Env:  []string{"SOME=value"},
+				},
+				{
+					Path: "/some/hook2/path",
+				},
+				{
+					Path: "/some/hook3/path",
+				},
+				{
+					Path: "/some/hook4/path",
+					Args: []string{"--some", "thing"},
+				},
+			},
+		},
+	}
+	conf := &configs.Config{}
+	createHooks(rspec, conf)
+
+	prestart := conf.Hooks.Prestart
+
+	if len(prestart) != 2 {
+		t.Error("Expected 2 Prestart hooks")
+	}
+
+	poststart := conf.Hooks.Poststart
+
+	if len(poststart) != 3 {
+		t.Error("Expected 3 Poststart hooks")
+	}
+
+	poststop := conf.Hooks.Poststop
+
+	if len(poststop) != 4 {
+		t.Error("Expected 4 Poststop hooks")
+	}
+
+}
+func TestSetupSeccomp(t *testing.T) {
+	conf := &specs.LinuxSeccomp{
+		DefaultAction: "SCMP_ACT_ERRNO",
+		Architectures: []specs.Arch{specs.ArchX86_64, specs.ArchARM},
+		Syscalls: []specs.LinuxSyscall{
+			{
+				Names:  []string{"clone"},
+				Action: "SCMP_ACT_ALLOW",
+				Args: []specs.LinuxSeccompArg{
+					{
+						Index:    0,
+						Value:    2080505856,
+						ValueTwo: 0,
+						Op:       "SCMP_CMP_MASKED_EQ",
+					},
+				},
+			},
+			{
+				Names: []string{
+					"select",
+					"semctl",
+					"semget",
+					"semop",
+					"semtimedop",
+					"send",
+					"sendfile",
+				},
+				Action: "SCMP_ACT_ALLOW",
+			},
+		},
+	}
+	seccomp, err := setupSeccomp(conf)
+
+	if err != nil {
+		t.Errorf("Couldn't create Seccomp config: %v", err)
+	}
+
+	if seccomp.DefaultAction != 2 { // SCMP_ACT_ERRNO
+		t.Error("Wrong conversion for DefaultAction")
+	}
+
+	if len(seccomp.Architectures) != 2 {
+		t.Error("Wrong number of architectures")
+	}
+
+	if seccomp.Architectures[0] != "amd64" || seccomp.Architectures[1] != "arm" {
+		t.Error("Expected architectures are not found")
+	}
+
+	calls := seccomp.Syscalls
+
+	callsLength := len(calls)
+	if callsLength != 8 {
+		t.Errorf("Expected 8 syscalls, got :%d", callsLength)
+	}
+
+	for i, call := range calls {
+		if i == 0 {
+			expectedCloneSyscallArgs := configs.Arg{
+				Index:    0,
+				Op:       7, // SCMP_CMP_MASKED_EQ
+				Value:    2080505856,
+				ValueTwo: 0,
+			}
+			if expectedCloneSyscallArgs != *call.Args[0] {
+				t.Errorf("Wrong arguments conversion for the clone syscall under test")
+			}
+		}
+		if call.Action != 4 {
+			t.Error("Wrong conversion for the clone syscall action")
+		}
+
+	}
+
+}
 
 func TestLinuxCgroupWithMemoryResource(t *testing.T) {
 	cgroupsPath := "/user/cgroups/path/id"
