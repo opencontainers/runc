@@ -4,13 +4,19 @@ package xattr_test
 
 import (
 	"os"
+	"os/user"
+	"path/filepath"
 	"testing"
 
 	"github.com/opencontainers/runc/libcontainer/xattr"
 )
 
 func TestXattr(t *testing.T) {
-	tmp := "xattr_test"
+	u, err := user.Current()
+	if err != nil {
+		t.Fatal("failed")
+	}
+	tmp := filepath.Join(u.HomeDir, "xattr_test")
 	out, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE, 0)
 	if err != nil {
 		t.Fatal("failed")
