@@ -134,7 +134,7 @@ type BaseContainer interface {
 	// SystemError - System error.
 	Run(process *Process) (err error)
 
-	// Destroys the container, if its in a valid state, after killing any
+	// Destroy the container, if its in a valid state, after killing any
 	// remaining running processes.
 	//
 	// Any event registrations are removed before the container is destroyed.
