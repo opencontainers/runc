@@ -28,17 +28,28 @@ func (s *CpusetGroup) Apply(path string, d *cgroupData) error {
 }
 
 func (s *CpusetGroup) Set(path string, r *configs.Resources) error {
+	var err error = nil
 	if r.CpusetCpus != "" {
-		if err := cgroups.WriteFile(path, "cpuset.cpus", r.CpusetCpus); err != nil {
-			return err
+		switch r.ChildPolicy {
+		case "", "none":
+			err = cgroups.WriteFile(path, "cpuset.cpus", r.CpusetCpus)
+		case "copy":
+			err = writeNestedFile(path, "cpuset.cpus", r.CpusetCpus)
+		default:
+			err = fmt.Errorf("invalid cpuset.cpus child policy %q", r.ChildPolicy)
 		}
 	}
-	if r.CpusetMems != "" {
-		if err := cgroups.WriteFile(path, "cpuset.mems", r.CpusetMems); err != nil {
-			return err
+	if err == nil && r.CpusetMems != "" {
+		switch r.ChildPolicy {
+		case "":
+			err = cgroups.WriteFile(path, "cpuset.mems", r.CpusetMems)
+		case "copy":
+			err = writeNestedFile(path, "cpuset.mems", r.CpusetMems)
+		default:
+			err = fmt.Errorf("invalid cpuset.mems child policy %q", r.ChildPolicy)
 		}
 	}
-	return nil
+	return err
 }
 
 func getCpusetStat(path string, file string) ([]uint16, error) {

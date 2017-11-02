@@ -5,8 +5,10 @@ package fs
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"golang.org/x/sys/unix"
@@ -414,4 +416,51 @@ func (m *manager) OOMKillCount() (uint64, error) {
 	}
 
 	return c, err
+}
+
+// writeNestedFile writes data into nested cgroup file, note that the function
+// only apply in cpuset cgroup currently, cause child cpusets contain a subset
+// of the parents CPU and Memory resources.
+func writeNestedFile(dir, file, data string) error {
+	oldData, err := cgroups.ReadFile(dir, file)
+	if err != nil {
+		return err
+	}
+
+	oldData = strings.TrimRightFunc(oldData, func(c rune) bool {
+		return c == '\n' || c == '\r'
+	})
+	// oldData will never be null
+	mergedData := oldData + "," + data
+
+	return walk(dir, file, mergedData, data)
+}
+
+// recurse directory, first set mergedData in current cgroup file, then set newData
+// for the file after function return.
+func walk(dir, file, mergedData, newData string) error {
+	if err := cgroups.WriteFile(dir, file, mergedData); err != nil {
+		return err
+	}
+
+	items, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return err
+	}
+
+	for _, item := range items {
+		if !item.IsDir() {
+			continue
+		}
+
+		if err := walk(filepath.Join(dir, item.Name()), file, mergedData, newData); err != nil {
+			return err
+		}
+	}
+
+	if err := cgroups.WriteFile(dir, file, newData); err != nil {
+		return err
+	}
+
+	return nil
 }
