@@ -116,6 +116,7 @@ func Example() *specs.Spec {
 				"/proc/timer_stats",
 				"/proc/sched_debug",
 				"/sys/firmware",
+				"/proc/scsi",
 			},
 			ReadonlyPaths: []string{
 				"/proc/asound",
