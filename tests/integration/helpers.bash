@@ -2,6 +2,9 @@
 
 # Root directory of integration tests.
 INTEGRATION_ROOT=$(dirname "$(readlink -f "$BASH_SOURCE")")
+
+. ${INTEGRATION_ROOT}/multi-arch.bash
+
 RUNC="${INTEGRATION_ROOT}/../../runc"
 RECVTTY="${INTEGRATION_ROOT}/../../contrib/cmd/recvtty/recvtty"
 GOPATH="$(mktemp -d --tmpdir runc-integration-gopath.XXXXXX)"
@@ -14,7 +17,8 @@ BUSYBOX_IMAGE="$BATS_TMPDIR/busybox.tar"
 BUSYBOX_BUNDLE="$BATS_TMPDIR/busyboxtest"
 
 # hello-world in tar format
-HELLO_IMAGE="$TESTDATA/hello-world.tar"
+HELLO_FILE=`get_hello`
+HELLO_IMAGE="$TESTDATA/$HELLO_FILE"
 HELLO_BUNDLE="$BATS_TMPDIR/hello-world"
 
 # CRIU PATH
@@ -270,7 +274,7 @@ function setup_busybox() {
 		BUSYBOX_IMAGE="/testdata/busybox.tar"
 	fi
 	if [ ! -e $BUSYBOX_IMAGE ]; then
-		curl -o $BUSYBOX_IMAGE -sSL 'https://github.com/docker-library/busybox/raw/a0558a9006ce0dd6f6ec5d56cfd3f32ebeeb815f/glibc/busybox.tar.xz'
+		curl -o $BUSYBOX_IMAGE -sSL `get_busybox`
 	fi
 	tar --exclude './dev/*' -C "$BUSYBOX_BUNDLE"/rootfs -xf "$BUSYBOX_IMAGE"
 	cd "$BUSYBOX_BUNDLE"
