@@ -14,10 +14,10 @@ import (
 	"time"
 
 	"github.com/cyphar/filepath-securejoin"
-	"github.com/docker/docker/pkg/mount"
 	"github.com/mrunalp/fileutils"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/mount"
 	"github.com/opencontainers/runc/libcontainer/system"
 	libcontainerUtils "github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/opencontainers/selinux/go-selinux/label"

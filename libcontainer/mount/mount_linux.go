@@ -80,16 +80,3 @@ func parseInfoFile(r io.Reader) ([]*Info, error) {
 	}
 	return out, nil
 }
-
-// PidMountInfo collects the mounts for a specific process ID. If the process
-// ID is unknown, it is better to use `GetMounts` which will inspect
-// "/proc/self/mountinfo" instead.
-func PidMountInfo(pid int) ([]*Info, error) {
-	f, err := os.Open(fmt.Sprintf("/proc/%d/mountinfo", pid))
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	return parseInfoFile(f)
-}
