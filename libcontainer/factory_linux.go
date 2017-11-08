@@ -11,13 +11,13 @@ import (
 	"runtime/debug"
 	"strconv"
 
-	"github.com/docker/docker/pkg/mount"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fs"
 	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/configs/validate"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
+	"github.com/opencontainers/runc/libcontainer/mount"
 	"github.com/opencontainers/runc/libcontainer/utils"
 
 	"golang.org/x/sys/unix"
