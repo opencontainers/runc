@@ -161,11 +161,22 @@ func mountCmd(cmd configs.Command) error {
 }
 
 func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
-	var (
-		dest = m.Destination
-	)
+	// Ensure that the destination of any mount is resolved at mount time.
+	// This avoids cases where a hostile filesystem image could trick us into
+	// modifying the host filesystem in bad ways. Symlinks are the biggest
+	// threat here, and SecureJoin ensures that they are properly handled (both
+	// securely and semantically).
+	dest := m.Destination
 	if !strings.HasPrefix(dest, rootfs) {
-		dest = filepath.Join(rootfs, dest)
+		safeDest, err := securejoin.SecureJoin(rootfs, dest)
+		if err != nil {
+			return err
+		}
+		dest = safeDest
+		if err := checkMountDestination(rootfs, dest); err != nil {
+			return err
+		}
+		m.Destination = dest
 	}
 
 	switch m.Device {
@@ -236,18 +247,6 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 			// unable to bind anything to it.
 			return err
 		}
-		// ensure that the destination of the bind mount is resolved of symlinks at mount time because
-		// any previous mounts can invalidate the next mount's destination.
-		// this can happen when a user specifies mounts within other mounts to cause breakouts or other
-		// evil stuff to try to escape the container's rootfs.
-		if dest, err = securejoin.SecureJoin(rootfs, m.Destination); err != nil {
-			return err
-		}
-		if err := checkMountDestination(rootfs, dest); err != nil {
-			return err
-		}
-		// update the mount with the correct dest after symlinks are resolved.
-		m.Destination = dest
 		if err := createIfNotExists(dest, stat.IsDir()); err != nil {
 			return err
 		}
@@ -305,7 +304,11 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 				// symlink(2) is very dumb, it will just shove the path into
 				// the link and doesn't do any checks or relative path
 				// conversion. Also, don't error out if the cgroup already exists.
-				if err := os.Symlink(mc, filepath.Join(rootfs, m.Destination, ss)); err != nil && !os.IsExist(err) {
+				ssPath, err := securejoin.SecureJoin(rootfs, filepath.Join(m.Destination, ss))
+				if err != nil {
+					return err
+				}
+				if err := os.Symlink(mc, ssPath); err != nil && !os.IsExist(err) {
 					return err
 				}
 			}
@@ -323,17 +326,6 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 			}
 		}
 	default:
-		// ensure that the destination of the mount is resolved of symlinks at mount time because
-		// any previous mounts can invalidate the next mount's destination.
-		// this can happen when a user specifies mounts within other mounts to cause breakouts or other
-		// evil stuff to try to escape the container's rootfs.
-		var err error
-		if dest, err = securejoin.SecureJoin(rootfs, m.Destination); err != nil {
-			return err
-		}
-		if err := checkMountDestination(rootfs, dest); err != nil {
-			return err
-		}
 		// update the mount with the correct dest after symlinks are resolved.
 		m.Destination = dest
 		if err := os.MkdirAll(dest, 0755); err != nil {
