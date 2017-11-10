@@ -199,16 +199,17 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 		}
 		return nil
 	case "tmpfs":
-		copyUp := m.Extensions&configs.EXT_COPYUP == configs.EXT_COPYUP
-		tmpDir := ""
-		stat, err := os.Stat(dest)
-		if err != nil {
+		stat := &unix.Stat_t{}
+		if err := unix.Stat(dest, stat); err != nil {
 			if err := os.MkdirAll(dest, 0755); err != nil {
 				return err
 			}
+			stat = nil
 		}
+		copyUp := m.Extensions&configs.EXT_COPYUP == configs.EXT_COPYUP
+		tmpDir := ""
 		if copyUp {
-			tmpDir, err = ioutil.TempDir("/tmp", "runctmpdir")
+			tmpDir, err := ioutil.TempDir("/tmp", "runctmpdir")
 			if err != nil {
 				return newSystemErrorWithCause(err, "tmpcopyup: failed to create tmpdir")
 			}
@@ -235,7 +236,10 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 			}
 		}
 		if stat != nil {
-			if err = os.Chmod(dest, stat.Mode()); err != nil {
+			if err := os.Chmod(dest, os.FileMode(stat.Mode)); err != nil {
+				return err
+			}
+			if err := os.Chown(dest, int(stat.Uid), int(stat.Gid)); err != nil {
 				return err
 			}
 		}
