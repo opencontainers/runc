@@ -2,9 +2,11 @@ package validate
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
@@ -108,6 +110,27 @@ func (v *ConfigValidator) usernamespace(config *configs.Config) error {
 		if _, err := os.Stat("/proc/self/ns/user"); os.IsNotExist(err) {
 			return fmt.Errorf("USER namespaces aren't enabled in the kernel")
 		}
+
+		root, err := os.Stat("/")
+		if err != nil {
+			return fmt.Errorf("Cannot stat root to check if the process is inside a chroot")
+		}
+
+		// Verify that the current process is not inside a chroot,
+		// the kernel does not allow creating a new user namespace in a chroot.
+		// for information, see: https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/kernel/user_namespace.c
+		if root.Sys().(*syscall.Stat_t).Ino != 2 {
+			return fmt.Errorf("USER namespaces can't be created inside a chroot")
+		}
+
+		// On debian kernels there is specific patch to add a sysctl entry to enable user namespaces since
+		// the kernel is compiled without user namespaces by default.
+		// See:  kernel.unprivileged_userns_clone
+		unc, err := ioutil.ReadFile("/proc/sys/kernel/unprivileged_userns_clone")
+		if err == nil && unc[0] == '0' && os.Getuid() != 0 {
+			return fmt.Errorf("Unprivileged USER namespaces are disabled in this debian kernel, to enable, toggle the sysctl option kernel.unprivileged_userns_clone to 1")
+		}
+
 	} else {
 		if config.UidMappings != nil || config.GidMappings != nil {
 			return fmt.Errorf("User namespace mappings specified, but USER namespace isn't enabled in the config")
