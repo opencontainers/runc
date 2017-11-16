@@ -1,40 +1,36 @@
 package mount
 
-/*
-#include <sys/param.h>
-#include <sys/ucred.h>
-#include <sys/mount.h>
-*/
-import "C"
-
 import (
-	"fmt"
-	"reflect"
-	"unsafe"
+	"golang.org/x/sys/unix"
 )
 
-// Parse /proc/self/mountinfo because comparing Dev and ino does not work from
-// bind mounts.
-func parseMountTable() ([]*Info, error) {
-	var rawEntries *C.struct_statfs
+func nameToString(name []int8) string {
+	buf := make([]byte, 0, len(name))
+	for _, i := range name {
+		buf = append(buf, byte(i))
+	}
+	return string(buf)
+}
 
-	count := int(C.getmntinfo(&rawEntries, C.MNT_WAIT))
-	if count == 0 {
-		return nil, fmt.Errorf("Failed to call getmntinfo")
+// Get the mount table using the getstatfs syscall
+func parseMountTable() ([]*Info, error) {
+	n, err := unix.Getfsstat(nil, unix.MNT_NOWAIT)
+	if err != nil {
+		return nil, err
 	}
 
-	var entries []C.struct_statfs
-	header := (*reflect.SliceHeader)(unsafe.Pointer(&entries))
-	header.Cap = count
-	header.Len = count
-	header.Data = uintptr(unsafe.Pointer(rawEntries))
+	entries := make([]unix.Statfs_t, n)
+	_, err = unix.Getfsstat(entries, unix.MNT_NOWAIT)
+	if err != nil {
+		return nil, err
+	}
 
 	var out []*Info
 	for _, entry := range entries {
 		var mountinfo Info
-		mountinfo.Mountpoint = C.GoString(&entry.f_mntonname[0])
-		mountinfo.Source = C.GoString(&entry.f_mntfromname[0])
-		mountinfo.Fstype = C.GoString(&entry.f_fstypename[0])
+		mountinfo.Mountpoint = nameToString(entry.Mntonname[:])
+		mountinfo.Source = nameToString(entry.Mntfromname[:])
+		mountinfo.Fstype = nameToString(entry.Fstypename[:])
 		out = append(out, &mountinfo)
 	}
 	return out, nil
