@@ -1,4 +1,4 @@
-// +build !windows,!linux,!freebsd
+// +build !windows,!linux
 
 package configs
 
