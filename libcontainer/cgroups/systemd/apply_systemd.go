@@ -295,6 +295,8 @@ func (m *Manager) Apply(pid int) error {
 		}
 	}
 
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if _, err := theConn.StartTransientUnit(unitName, "replace", properties, nil); err != nil && !isUnitExists(err) {
 		return err
 	}
