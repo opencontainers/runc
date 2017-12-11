@@ -31,13 +31,15 @@ var namespaceMapping = map[specs.LinuxNamespaceType]configs.NamespaceType{
 }
 
 var mountPropagationMapping = map[string]int{
-	"rprivate": unix.MS_PRIVATE | unix.MS_REC,
-	"private":  unix.MS_PRIVATE,
-	"rslave":   unix.MS_SLAVE | unix.MS_REC,
-	"slave":    unix.MS_SLAVE,
-	"rshared":  unix.MS_SHARED | unix.MS_REC,
-	"shared":   unix.MS_SHARED,
-	"":         0,
+	"rprivate":    unix.MS_PRIVATE | unix.MS_REC,
+	"private":     unix.MS_PRIVATE,
+	"rslave":      unix.MS_SLAVE | unix.MS_REC,
+	"slave":       unix.MS_SLAVE,
+	"rshared":     unix.MS_SHARED | unix.MS_REC,
+	"shared":      unix.MS_SHARED,
+	"runbindable": unix.MS_UNBINDABLE | unix.MS_REC,
+	"unbindable":  unix.MS_UNBINDABLE,
+	"":            0,
 }
 
 var allowedDevices = []*configs.Device{
