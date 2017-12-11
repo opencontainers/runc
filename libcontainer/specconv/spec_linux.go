@@ -620,9 +620,6 @@ func setupUserNamespace(spec *specs.Spec, config *configs.Config) error {
 		}
 	}
 	if spec.Linux != nil {
-		if len(spec.Linux.UIDMappings) == 0 {
-			return nil
-		}
 		for _, m := range spec.Linux.UIDMappings {
 			config.UidMappings = append(config.UidMappings, create(m))
 		}
