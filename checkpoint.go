@@ -56,8 +56,8 @@ checkpointed.`,
 		if err != nil {
 			return err
 		}
-		if status == libcontainer.Created {
-			fatalf("Container cannot be checkpointed in created state")
+		if status == libcontainer.Created || status == libcontainer.Stopped {
+			fatalf("Container cannot be checkpointed in %s state", status.String())
 		}
 		defer destroy(container)
 		options := criuOptions(context)
