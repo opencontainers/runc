@@ -494,6 +494,16 @@ func signalAllProcesses(m cgroups.Manager, s os.Signal) error {
 		logrus.Warn(err)
 	}
 
+	subreaper, err := system.GetSubreaper()
+	if err != nil {
+		// The error here means that PR_GET_CHILD_SUBREAPER is not
+		// supported because this code might run on a kernel older
+		// than 3.4. We don't want to throw an error in that case,
+		// and we simplify things, considering there is no subreaper
+		// set.
+		subreaper = 0
+	}
+
 	for _, p := range procs {
 		if s != unix.SIGKILL {
 			if ok, err := isWaitable(p.Pid); err != nil {
@@ -507,9 +517,16 @@ func signalAllProcesses(m cgroups.Manager, s os.Signal) error {
 			}
 		}
 
-		if _, err := p.Wait(); err != nil {
-			if !isNoChildren(err) {
-				logrus.Warn("wait: ", err)
+		// In case a subreaper has been setup, this code must not
+		// wait for the process. Otherwise, we cannot be sure the
+		// current process will be reaped by the subreaper, while
+		// the subreaper might be waiting for this process in order
+		// to retrieve its exit code.
+		if subreaper == 0 {
+			if _, err := p.Wait(); err != nil {
+				if !isNoChildren(err) {
+					logrus.Warn("wait: ", err)
+				}
 			}
 		}
 	}
