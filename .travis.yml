@@ -23,7 +23,7 @@ env:
 before_install:
   - echo "deb http://archive.ubuntu.com/ubuntu trusty-backports main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list
   - sudo apt-get -qq update
-  - sudo apt-get install -y libapparmor-dev libseccomp-dev/trusty-backports
+  - sudo apt-get install -y libseccomp-dev/trusty-backports
   - go get -u github.com/golang/lint/golint
   - go get -u github.com/vbatts/git-validation
   - env | grep TRAVIS_
