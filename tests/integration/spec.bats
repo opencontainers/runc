@@ -81,6 +81,9 @@ function teardown() {
   run bash -c "GOPATH='$GOPATH' go get github.com/xeipuuv/gojsonschema"
   [ "$status" -eq 0 ]
 
+  run git -C "${GOPATH}/src/github.com/xeipuuv/gojsonschema" reset --hard 6637feb73ee44cd4640bb3def285c29774234c7f
+  [ "$status" -eq 0 ]
+
   GOPATH="$GOPATH" go build src/runtime-spec/schema/validate.go
   [ -e ./validate ]
 
