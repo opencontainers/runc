@@ -308,11 +308,13 @@ func (c *linuxContainer) start(process *Process, isInit bool) error {
 		c.initProcessStartTime = state.InitProcessStartTime
 
 		if c.config.Hooks != nil {
+			bundle, annotations := utils.Annotations(c.config.Labels)
 			s := configs.HookState{
-				Version: c.config.Version,
-				ID:      c.id,
-				Pid:     parent.pid(),
-				Bundle:  utils.SearchLabels(c.config.Labels, "bundle"),
+				Version:     c.config.Version,
+				ID:          c.id,
+				Pid:         parent.pid(),
+				Bundle:      bundle,
+				Annotations: annotations,
 			}
 			for i, hook := range c.config.Hooks.Poststart {
 				if err := hook.Run(s); err != nil {
@@ -1436,11 +1438,13 @@ func (c *linuxContainer) criuNotifications(resp *criurpc.CriuResp, process *Proc
 		}
 	case notify.GetScript() == "setup-namespaces":
 		if c.config.Hooks != nil {
+			bundle, annotations := utils.Annotations(c.config.Labels)
 			s := configs.HookState{
-				Version: c.config.Version,
-				ID:      c.id,
-				Pid:     int(notify.GetPid()),
-				Bundle:  utils.SearchLabels(c.config.Labels, "bundle"),
+				Version:     c.config.Version,
+				ID:          c.id,
+				Pid:         int(notify.GetPid()),
+				Bundle:      bundle,
+				Annotations: annotations,
 			}
 			for i, hook := range c.config.Hooks.Prestart {
 				if err := hook.Run(s); err != nil {
