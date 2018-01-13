@@ -96,7 +96,11 @@ using the runc checkpoint command.`,
 			return err
 		}
 		// XXX: Currently this is untested with rootless containers.
-		if isRootless() {
+		rootless, err := isRootless(context)
+		if err != nil {
+			return err
+		}
+		if rootless {
 			return fmt.Errorf("runc restore requires root")
 		}
 

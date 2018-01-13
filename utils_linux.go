@@ -16,6 +16,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runc/libcontainer/specconv"
+	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/opencontainers/runtime-spec/specs-go"
 
@@ -217,19 +218,37 @@ func createPidFile(path string, process *libcontainer.Process) error {
 	return os.Rename(tmpName, path)
 }
 
-// XXX: Currently we autodetect rootless mode.
-func isRootless() bool {
-	return os.Geteuid() != 0
+func isRootless(context *cli.Context) (bool, error) {
+	if context != nil {
+		b, err := parseBoolOrAuto(context.GlobalString("rootless"))
+		if err != nil {
+			return false, err
+		}
+		if b != nil {
+			return *b, nil
+		}
+		// nil b stands for "auto detect"
+	}
+	// Even if os.Geteuid() == 0, it might still require rootless mode,
+	// especially when running within userns.
+	// So we use system.GetParentNSeuid() here.
+	//
+	// TODO(AkihiroSuda): how to support nested userns?
+	return system.GetParentNSeuid() != 0, nil
 }
 
 func createContainer(context *cli.Context, id string, spec *specs.Spec) (libcontainer.Container, error) {
+	rootless, err := isRootless(context)
+	if err != nil {
+		return nil, err
+	}
 	config, err := specconv.CreateLibcontainerConfig(&specconv.CreateOpts{
 		CgroupName:       id,
 		UseSystemdCgroup: context.GlobalBool("systemd-cgroup"),
 		NoPivotRoot:      context.Bool("no-pivot"),
 		NoNewKeyring:     context.Bool("no-new-keyring"),
 		Spec:             spec,
-		Rootless:         isRootless(),
+		Rootless:         rootless,
 	})
 	if err != nil {
 		return nil, err
