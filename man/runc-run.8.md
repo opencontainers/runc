@@ -11,7 +11,10 @@ your host.
 # DESCRIPTION
    The run command creates an instance of a container for a bundle. The bundle
 is a directory with a specification file named "config.json" and a root
-filesystem.
+filesystem(default path: "rootfs"). For example, The bundle directory can be like below:
+
+       # ls mycontainer/
+       config.json  rootfs/
 
 The specification file includes an args parameter. The args parameter is used
 to specify command(s) that get run when the container is started. To change the
