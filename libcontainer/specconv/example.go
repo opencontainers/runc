@@ -218,4 +218,5 @@ func ToRootless(spec *specs.Spec) {
 
 	// Remove cgroup settings.
 	spec.Linux.Resources = nil
+	spec.Linux.CgroupsPath = ""
 }
