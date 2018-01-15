@@ -81,7 +81,10 @@ generate a proper rootless spec file.`,
 
 		rootless := context.Bool("rootless")
 		if rootless {
-			specconv.ToRootless(spec)
+			opts := &specconv.RootlessOpts{}
+			if err := specconv.ToRootless(spec, opts); err != nil {
+				return err
+			}
 		}
 
 		checkNoFile := func(name string) error {
