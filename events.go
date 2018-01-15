@@ -4,8 +4,10 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -22,6 +24,10 @@ type event struct {
 	Type string      `json:"type"`
 	ID   string      `json:"id"`
 	Data interface{} `json:"data,omitempty"`
+}
+
+func newEvent(eventType, id string, data interface{}) *event {
+	return &event{Type: eventType, ID: id, Data: data}
 }
 
 // stats is the runc specific stats structure for stability when encoding and decoding stats.
@@ -118,9 +124,9 @@ type intelRdt struct {
 var eventsCommand = cli.Command{
 	Name:  "events",
 	Usage: "display container events such as OOM notifications, cpu, memory, and IO usage statistics",
-	ArgsUsage: `<container-id>
+	ArgsUsage: `<container-ids>
 
-Where "<container-id>" is the name for the instance of the container.`,
+Where "<container-ids>" are the names for the container instances.`,
 	Description: `The events command displays information about the container. By default the
 information is displayed once every 5 seconds.`,
 	Flags: []cli.Flag{
@@ -128,85 +134,95 @@ information is displayed once every 5 seconds.`,
 		cli.BoolFlag{Name: "stats", Usage: "display the container's stats then exit"},
 	},
 	Action: func(context *cli.Context) error {
-		if err := checkArgs(context, 1, exactArgs); err != nil {
-			return err
-		}
-		container, err := getContainer(context)
-		if err != nil {
+		if err := checkArgs(context, 1, minArgs); err != nil {
 			return err
 		}
 		duration := context.Duration("interval")
 		if duration <= 0 {
 			return fmt.Errorf("duration interval must be greater than 0")
 		}
-		status, err := container.Status()
+
+		containers, err := resolveContainers(context)
 		if err != nil {
 			return err
 		}
-		if status == libcontainer.Stopped {
-			return fmt.Errorf("container with id %s is not running", container.ID())
+
+		if err = ensureNotStopped(containers); err != nil {
+			return err
 		}
+
 		var (
-			stats  = make(chan *libcontainer.Stats, 1)
-			events = make(chan *event, 1024)
-			group  = &sync.WaitGroup{}
+			events            = make(chan *event, 1024)
+			eventsLoggerGroup = new(sync.WaitGroup)
 		)
-		group.Add(1)
+
+		defer func() {
+			close(events)
+			eventsLoggerGroup.Wait()
+		}()
+
+		eventsLoggerGroup.Add(1)
 		go func() {
-			defer group.Done()
+			defer eventsLoggerGroup.Done()
 			enc := json.NewEncoder(os.Stdout)
 			for e := range events {
-				if err := enc.Encode(e); err != nil {
-					logrus.Error(err)
+				if encErr := enc.Encode(e); encErr != nil {
+					logrus.Error(encErr)
 				}
 			}
 		}()
-		if context.Bool("stats") {
-			s, err := container.Stats()
-			if err != nil {
-				return err
+
+		pushContainerStatEvent := func(container libcontainer.Container) error {
+			event, getErr := getEventFromContainer(container)
+			if getErr != nil {
+				return getErr
 			}
-			events <- &event{Type: "stats", ID: container.ID(), Data: convertLibcontainerStats(s)}
-			close(events)
-			group.Wait()
+
+			if event != nil {
+				events <- event
+			}
+
 			return nil
 		}
+
+		if context.Bool("stats") {
+			return runForAllContainersSync(containers, pushContainerStatEvent)
+		}
 		go func() {
-			for range time.Tick(context.Duration("interval")) {
-				s, err := container.Stats()
-				if err != nil {
+			for range time.Tick(duration) {
+				if err = runForAllContainersSync(containers, pushContainerStatEvent); err != nil {
 					logrus.Error(err)
-					continue
 				}
-				stats <- s
 			}
 		}()
-		n, err := container.NotifyOOM()
+
+		done, oomEvents, err := wireOomNotifications(containers)
 		if err != nil {
 			return err
 		}
+
 		for {
 			select {
-			case _, ok := <-n:
-				if ok {
-					// this means an oom event was received, if it is !ok then
-					// the channel was closed because the container stopped and
-					// the cgroups no longer exist.
-					events <- &event{Type: "oom", ID: container.ID()}
-				} else {
-					n = nil
-				}
-			case s := <-stats:
-				events <- &event{Type: "stats", ID: container.ID(), Data: convertLibcontainerStats(s)}
-			}
-			if n == nil {
-				close(events)
-				break
+			case oomEvent := <-oomEvents:
+				events <- oomEvent
+			case <-done:
+				return nil
 			}
 		}
-		group.Wait()
-		return nil
 	},
+}
+
+func getEventFromContainer(container libcontainer.Container) (*event, error) {
+	if stopped, e := isStopped(container); e != nil {
+		return nil, e
+	} else if stopped {
+		return nil, nil
+	}
+	s, err := container.Stats()
+	if err != nil {
+		return nil, err
+	}
+	return newEvent("stats", container.ID(), convertLibcontainerStats(s)), nil
 }
 
 func convertLibcontainerStats(ls *libcontainer.Stats) *stats {
@@ -292,4 +308,124 @@ func convertL3CacheInfo(i *intelrdt.L3CacheInfo) *l3CacheInfo {
 		MinCbmBits: i.MinCbmBits,
 		NumClosids: i.NumClosids,
 	}
+}
+
+func resolveContainers(context *cli.Context) ([]libcontainer.Container, error) {
+	var containers []libcontainer.Container
+	errs := []error{}
+	for _, cID := range context.Args() {
+		container, err := getContainerWithID(cID, context)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		containers = append(containers, container)
+	}
+
+	if len(errs) != 0 {
+		return nil, combineErrors(errs)
+	}
+	return containers, nil
+}
+
+func runForAllContainers(containers []libcontainer.Container, routine func(ctr libcontainer.Container) error) chan error {
+	errs := make(chan error, len(containers))
+	for _, c := range containers {
+		go func(ctr libcontainer.Container) {
+			err := routine(ctr)
+			if err != nil {
+				errs <- err
+			}
+		}(c)
+	}
+	return errs
+}
+
+func runForAllContainersSync(containers []libcontainer.Container, routine func(ctr libcontainer.Container) error) error {
+	group := &sync.WaitGroup{}
+	group.Add(len(containers))
+
+	errorsChannel := runForAllContainers(containers, func(ctr libcontainer.Container) error {
+		defer group.Done()
+		return routine(ctr)
+	})
+	group.Wait()
+
+	errs := []error{}
+	for i := 0; i < len(errorsChannel); i++ {
+		errs = append(errs, <-errorsChannel)
+	}
+
+	return combineErrors(errs)
+}
+
+func combineErrors(errs []error) error {
+	if len(errs) == 0 {
+		return nil
+	}
+
+	errorMessages := []string{}
+	for _, err := range errs {
+		errorMessages = append(errorMessages, err.Error())
+	}
+
+	return errors.New(strings.Join(errorMessages, "\n"))
+}
+
+func wireOomNotifications(containers []libcontainer.Container) (chan struct{}, chan *event, error) {
+	var notifications []<-chan struct{}
+
+	for _, c := range containers {
+		notification, err := c.NotifyOOM()
+		if err != nil {
+			return nil, nil, err
+		}
+		notifications = append(notifications, notification)
+	}
+
+	events := make(chan *event)
+	done := make(chan struct{})
+	waitGroup := new(sync.WaitGroup)
+	waitGroup.Add(len(containers))
+	go func() {
+		waitGroup.Wait()
+		done <- struct{}{}
+	}()
+
+	for i, n := range notifications {
+		go func(container libcontainer.Container, notification <-chan struct{}) {
+			for {
+				select {
+				case _, ok := <-notification:
+					if !ok {
+						// the notification channel was closed because the container stopped and the cgroups no longer exist.
+						waitGroup.Done()
+						return
+					}
+					events <- newEvent("oom", container.ID(), nil)
+				}
+			}
+		}(containers[i], n)
+	}
+
+	return done, events, nil
+}
+
+func ensureNotStopped(containers []libcontainer.Container) error {
+	for _, c := range containers {
+		if stopped, err := isStopped(c); err != nil {
+			return err
+		} else if stopped {
+			return fmt.Errorf("container with id %s is not running", c.ID())
+		}
+	}
+	return nil
+}
+
+func isStopped(container libcontainer.Container) (bool, error) {
+	status, err := container.Status()
+	if err != nil {
+		return false, err
+	}
+	return status == libcontainer.Stopped, nil
 }

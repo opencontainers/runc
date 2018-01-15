@@ -76,6 +76,10 @@ func getContainer(context *cli.Context) (libcontainer.Container, error) {
 	if id == "" {
 		return nil, errEmptyID
 	}
+	return getContainerWithID(id, context)
+}
+
+func getContainerWithID(id string, context *cli.Context) (libcontainer.Container, error) {
 	factory, err := loadFactory(context)
 	if err != nil {
 		return nil, err
