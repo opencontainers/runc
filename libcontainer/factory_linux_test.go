@@ -232,3 +232,7 @@ type unserializableHook struct{}
 func (unserializableHook) Run(configs.HookState) error {
 	return nil
 }
+
+func (unserializableHook) Info() string {
+	return ""
+}

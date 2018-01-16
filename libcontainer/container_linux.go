@@ -321,7 +321,7 @@ func (c *linuxContainer) start(process *Process, isInit bool) error {
 					if err := ignoreTerminateErrors(parent.terminate()); err != nil {
 						logrus.Warn(err)
 					}
-					return newSystemErrorWithCausef(err, "running poststart hook %d", i)
+					return newSystemErrorWithCausef(err, "running poststart hook %d:%s", i, hook.Info())
 				}
 			}
 		}
@@ -1448,7 +1448,7 @@ func (c *linuxContainer) criuNotifications(resp *criurpc.CriuResp, process *Proc
 			}
 			for i, hook := range c.config.Hooks.Prestart {
 				if err := hook.Run(s); err != nil {
-					return newSystemErrorWithCausef(err, "running prestart hook %d", i)
+					return newSystemErrorWithCausef(err, "running prestart hook %d:%s", i, hook.Info())
 				}
 			}
 		}

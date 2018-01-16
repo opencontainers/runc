@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
+	"reflect"
+	"runtime"
+	"strings"
 	"time"
 
 	"github.com/opencontainers/runtime-spec/specs-go"
@@ -270,6 +273,7 @@ type HookState specs.State
 type Hook interface {
 	// Run executes the hook with the provided state.
 	Run(HookState) error
+	Info() string
 }
 
 // NewFunctionHook will call the provided function when the hook is run.
@@ -285,6 +289,10 @@ type FuncHook struct {
 
 func (f FuncHook) Run(s HookState) error {
 	return f.run(s)
+}
+
+func (f FuncHook) Info() string {
+	return runtime.FuncForPC(reflect.ValueOf(f.run).Pointer()).Name()
 }
 
 type Command struct {
@@ -304,6 +312,10 @@ func NewCommandHook(cmd Command) CommandHook {
 
 type CommandHook struct {
 	Command
+}
+
+func (c Command) Info() string {
+	return c.Path + "," + strings.Join(c.Args, ",")
 }
 
 func (c Command) Run(s HookState) error {

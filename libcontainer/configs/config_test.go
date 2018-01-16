@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -136,6 +137,18 @@ func TestFuncHookRun(t *testing.T) {
 	fHook.Run(state)
 }
 
+func TestFuncHookInfo(t *testing.T) {
+	fHook := configs.NewFunctionHook(func(s configs.HookState) error {
+		return nil
+	})
+
+	info := fHook.Info()
+	expected := "configs_test.TestFuncHookInfo"
+	if !strings.Contains(info, expected) {
+		t.Errorf("Expected funcHook info: %s, get %s", expected, info)
+	}
+}
+
 func TestCommandHookRun(t *testing.T) {
 	state := configs.HookState{
 		Version: "1",
@@ -156,6 +169,23 @@ func TestCommandHookRun(t *testing.T) {
 	err := cmdHook.Run(state)
 	if err != nil {
 		t.Errorf(fmt.Sprintf("Expected error to not occur but it was %+v", err))
+	}
+}
+
+func TestCommandHookInfo(t *testing.T) {
+	timeout := time.Second
+	cmdHook := configs.NewCommandHook(configs.Command{
+		Path:    os.Args[0],
+		Args:    []string{os.Args[0], "-test.run=TestHelperProcess"},
+		Env:     []string{"FOO=BAR"},
+		Dir:     "/",
+		Timeout: &timeout,
+	})
+
+	info := cmdHook.Info()
+	expected := os.Args[0] + "," + os.Args[0] + ",-test.run=TestHelperProcess"
+	if !strings.Contains(info, expected) {
+		t.Errorf("Expected commandHook info:%s, get: %s", expected, info)
 	}
 }
 

@@ -70,9 +70,9 @@ func runPoststopHooks(c *linuxContainer) error {
 			Bundle:      bundle,
 			Annotations: annotations,
 		}
-		for _, hook := range c.config.Hooks.Poststop {
+		for i, hook := range c.config.Hooks.Poststop {
 			if err := hook.Run(s); err != nil {
-				return err
+				return newSystemErrorWithCausef(err, "running poststop hook %d:%s", i, hook.Info())
 			}
 		}
 	}
