@@ -5,6 +5,7 @@ package libcontainer
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -267,20 +268,70 @@ func (c *linuxContainer) Exec() error {
 
 func (c *linuxContainer) exec() error {
 	path := filepath.Join(c.root, execFifoFilename)
-	f, err := os.OpenFile(path, os.O_RDONLY, 0)
-	if err != nil {
-		return newSystemErrorWithCause(err, "open exec fifo for reading")
+
+	fifoOpen := make(chan struct{})
+	select {
+	case <-awaitProcessExit(c.initProcess.pid(), fifoOpen):
+		return errors.New("container process is already dead")
+	case result := <-awaitFifoOpen(path):
+		close(fifoOpen)
+		if result.err != nil {
+			return result.err
+		}
+		f := result.file
+		defer f.Close()
+		if err := readFromExecFifo(f); err != nil {
+			return err
+		}
+		return os.Remove(path)
 	}
-	defer f.Close()
-	data, err := ioutil.ReadAll(f)
+}
+
+func readFromExecFifo(execFifo io.Reader) error {
+	data, err := ioutil.ReadAll(execFifo)
 	if err != nil {
 		return err
 	}
-	if len(data) > 0 {
-		os.Remove(path)
-		return nil
+	if len(data) <= 0 {
+		return fmt.Errorf("cannot start an already running container")
 	}
-	return fmt.Errorf("cannot start an already running container")
+	return nil
+}
+
+func awaitProcessExit(pid int, exit <-chan struct{}) <-chan struct{} {
+	isDead := make(chan struct{})
+	go func() {
+		for {
+			select {
+			case <-exit:
+				return
+			case <-time.After(time.Millisecond * 100):
+				stat, err := system.Stat(pid)
+				if err != nil || stat.State == system.Zombie {
+					close(isDead)
+					return
+				}
+			}
+		}
+	}()
+	return isDead
+}
+
+func awaitFifoOpen(path string) <-chan openResult {
+	fifoOpened := make(chan openResult)
+	go func() {
+		f, err := os.OpenFile(path, os.O_RDONLY, 0)
+		if err != nil {
+			fifoOpened <- openResult{err: newSystemErrorWithCause(err, "open exec fifo for reading")}
+		}
+		fifoOpened <- openResult{file: f}
+	}()
+	return fifoOpened
+}
+
+type openResult struct {
+	file *os.File
+	err  error
 }
 
 func (c *linuxContainer) start(process *Process, isInit bool) error {
