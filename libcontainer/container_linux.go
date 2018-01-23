@@ -323,6 +323,7 @@ func awaitFifoOpen(path string) <-chan openResult {
 		f, err := os.OpenFile(path, os.O_RDONLY, 0)
 		if err != nil {
 			fifoOpened <- openResult{err: newSystemErrorWithCause(err, "open exec fifo for reading")}
+			return
 		}
 		fifoOpened <- openResult{file: f}
 	}()
