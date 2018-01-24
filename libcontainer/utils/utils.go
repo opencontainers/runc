@@ -8,9 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"unsafe"
-
-	"golang.org/x/sys/unix"
 )
 
 const (
@@ -42,11 +41,18 @@ func ResolveRootfs(uncleanRootfs string) (string, error) {
 
 // ExitStatus returns the correct exit status for a process based on if it
 // was signaled or exited cleanly
-func ExitStatus(status unix.WaitStatus) int {
+func ExitStatus(status ExitStatuser) int {
 	if status.Signaled() {
 		return exitSignalOffset + int(status.Signal())
 	}
 	return status.ExitStatus()
+}
+
+// ExitStatuser is a struct that lets you determine the exit status
+type ExitStatuser interface {
+	ExitStatus() int
+	Signal() syscall.Signal
+	Signaled() bool
 }
 
 // WriteJSON writes the provided struct v to w using standard json marshaling
