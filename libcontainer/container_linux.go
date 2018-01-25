@@ -1588,11 +1588,13 @@ func (c *linuxContainer) currentStatus() (Status, error) {
 // out of process we need to verify the container's status based on runtime
 // information and not rely on our in process info.
 func (c *linuxContainer) refreshState() error {
-	paused, err := c.isPaused()
+	paused, err := c.pausedState()
 	if err != nil {
 		return err
 	}
-	if paused {
+	if paused == Pausing {
+		return c.state.transition(&pausingState{c: c})
+	} else if paused == Paused {
 		return c.state.transition(&pausedState{c: c})
 	}
 	t, err := c.runType()
@@ -1628,21 +1630,31 @@ func (c *linuxContainer) runType() (Status, error) {
 	return Running, nil
 }
 
-func (c *linuxContainer) isPaused() (bool, error) {
+// pausedState returns -1 (for containers that are neither Pausing or
+// Paused), Pausing, or Paused.
+func (c *linuxContainer) pausedState() (Status, error) {
 	fcg := c.cgroupManager.GetPaths()["freezer"]
 	if fcg == "" {
 		// A container doesn't have a freezer cgroup
-		return false, nil
+		return -1, nil
 	}
 	data, err := ioutil.ReadFile(filepath.Join(fcg, "freezer.state"))
 	if err != nil {
 		// If freezer cgroup is not mounted, the container would just be not paused.
 		if os.IsNotExist(err) {
-			return false, nil
+			return -1, nil
 		}
-		return false, newSystemErrorWithCause(err, "checking if container is paused")
+		return -1, newSystemErrorWithCause(err, "checking if container is paused")
 	}
-	return bytes.Equal(bytes.TrimSpace(data), []byte("FROZEN")), nil
+	state := string(bytes.TrimSpace(data))
+	if state == "FREEZING" {
+		return Pausing, nil
+	} else if state == "FROZEN" {
+		return Paused, nil
+	} else if state == "THAWED" {
+		return -1, nil
+	}
+	return -1, fmt.Errorf("unrecognized freezer.state: %s", state)
 }
 
 func (c *linuxContainer) currentState() (*State, error) {

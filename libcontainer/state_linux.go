@@ -124,7 +124,7 @@ func (r *runningState) transition(s containerState) error {
 		}
 		r.c.state = s
 		return nil
-	case *pausedState:
+	case *pausingState, *pausedState:
 		r.c.state = s
 		return nil
 	case *runningState:
@@ -154,7 +154,7 @@ func (i *createdState) status() Status {
 
 func (i *createdState) transition(s containerState) error {
 	switch s.(type) {
-	case *runningState, *pausedState, *stoppedState:
+	case *runningState, *pausingState, *pausedState, *stoppedState:
 		i.c.state = s
 		return nil
 	case *createdState:
@@ -168,7 +168,42 @@ func (i *createdState) destroy() error {
 	return destroy(i.c)
 }
 
-// pausedState represents a container that is currently pause.  It cannot be destroyed in a
+// pausingState represents a container that is currently pausing.  It cannot be destroyed in a
+// pausing state and must transition back to running first.
+type pausingState struct {
+	c *linuxContainer
+}
+
+func (p *pausingState) status() Status {
+	return Pausing
+}
+
+func (p *pausingState) transition(s containerState) error {
+	switch s.(type) {
+	case *pausedState, *runningState, *stoppedState:
+		p.c.state = s
+		return nil
+	case *pausingState:
+		return nil
+	}
+	return newStateTransitionError(p, s)
+}
+
+func (p *pausingState) destroy() error {
+	t, err := p.c.runType()
+	if err != nil {
+		return err
+	}
+	if t != Running && t != Created {
+		if err := p.c.cgroupManager.Freeze(configs.Thawed); err != nil {
+			return err
+		}
+		return destroy(p.c)
+	}
+	return newGenericError(fmt.Errorf("container is pausing"), ContainerPausing)
+}
+
+// pausedState represents a container that is currently paused.  It cannot be destroyed in a
 // paused state and must transition back to running first.
 type pausedState struct {
 	c *linuxContainer
