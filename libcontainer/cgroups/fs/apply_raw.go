@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
@@ -69,7 +70,7 @@ type Manager struct {
 
 // The absolute path to the root of the cgroup hierarchies.
 var cgroupRootLock sync.Mutex
-var cgroupRoot string
+var cgroupRoot, cgroup2Root string
 
 // Gets the cgroupRoot.
 func getCgroupRoot() (string, error) {
@@ -93,11 +94,34 @@ func getCgroupRoot() (string, error) {
 	return cgroupRoot, nil
 }
 
+func getCgroup2Root() (string, error) {
+	cgroupRootLock.Lock()
+	defer cgroupRootLock.Unlock()
+
+	if cgroup2Root != "" {
+		return cgroup2Root, nil
+	}
+
+	root, err := cgroups.FindCgroup2MountpointDir()
+	if err != nil {
+		return "", err
+	}
+
+	if _, err := os.Stat(root.MountPoint); err != nil {
+		return "", err
+	}
+
+	cgroup2Root = root.MountPoint
+	return cgroup2Root, nil
+
+}
+
 type cgroupData struct {
-	root      string
-	innerPath string
-	config    *configs.Cgroup
-	pid       int
+	root        string
+	unifiedRoot string
+	innerPath   string
+	config      *configs.Cgroup
+	pid         int
 }
 
 func (m *Manager) Apply(pid int) (err error) {
@@ -129,6 +153,13 @@ func (m *Manager) Apply(pid int) (err error) {
 		return cgroups.EnterPid(m.Paths, pid)
 	}
 
+	unifiedPath, err := d.joinUnified()
+	if err == nil && unifiedPath != "" {
+		m.Paths[""] = unifiedPath
+	} else {
+		fmt.Println("Join unified error: ", err)
+	}
+
 	for _, sys := range subsystems {
 		// TODO: Apply should, ideally, be reentrant or be broken up into a separate
 		// create and join phase so that the cgroup hierarchy for a container can be
@@ -157,6 +188,9 @@ func (m *Manager) Apply(pid int) (err error) {
 		}
 
 	}
+	fmt.Printf("%+v\n", m.Cgroups)
+	fmt.Printf("%+v\n", m.Paths)
+	fmt.Printf("d: %+v\n", d)
 	return nil
 }
 
@@ -272,12 +306,18 @@ func getCgroupData(c *configs.Cgroup, pid int) (*cgroupData, error) {
 		innerPath = filepath.Join(cgParent, cgName)
 	}
 
-	return &cgroupData{
+	cgData := &cgroupData{
 		root:      root,
 		innerPath: innerPath,
 		config:    c,
 		pid:       pid,
-	}, nil
+	}
+	unifiedRoot, err := getCgroup2Root()
+	if err == nil {
+		// We should ignore this error, if we can't setup / get cgroup2s
+		cgData.unifiedRoot = unifiedRoot
+	}
+	return cgData, nil
 }
 
 func (raw *cgroupData) path(subsystem string) (string, error) {
@@ -302,6 +342,50 @@ func (raw *cgroupData) path(subsystem string) (string, error) {
 	}
 
 	return filepath.Join(parentPath, raw.innerPath), nil
+}
+
+func (raw *cgroupData) unifiedPath() (string, error) {
+	if raw.unifiedRoot == "" {
+		return "", nil
+	}
+
+	// If the cgroup name/path is absolute do not look relative to the cgroup of the init process.
+	if filepath.IsAbs(raw.innerPath) {
+		// Sometimes subsystems can be mounted together as 'cpu,cpuacct'.
+		return filepath.Join(raw.unifiedRoot, raw.innerPath), nil
+	}
+
+	// Use GetOwnCgroupPath instead of GetInitCgroupPath, because the creating
+	// process could in container and shared pid namespace with host, and
+	// /proc/1/cgroup could point to whole other world of cgroups.
+	parentPath, err := cgroups.GetOwnCgroup2Path()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(parentPath, raw.innerPath), nil
+}
+
+func (raw *cgroupData) joinUnified() (string, error) {
+	path, err := raw.unifiedPath()
+	if err != nil {
+		return path, err
+	}
+	if path == "" {
+		return path, err
+	}
+
+	if err := os.MkdirAll(path, 0755); err != nil {
+		return "", err
+	}
+	if raw.pid != -1 {
+		cgroupProcesses := filepath.Join(path, "cgroup.procs")
+		if err := ioutil.WriteFile(cgroupProcesses, []byte(strconv.Itoa(raw.pid)), 0700); err != nil {
+			return path, fmt.Errorf("failed to write %v to %v: %v", raw.pid, cgroupProcesses, err)
+		}
+		return path, nil
+	}
+	return "", nil
 }
 
 func (raw *cgroupData) join(subsystem string) (string, error) {

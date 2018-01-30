@@ -118,6 +118,93 @@ func FindCgroupMountpointDir() (string, error) {
 	return "", NewNotFoundError("cgroup")
 }
 
+func FindCgroup2MountpointDir() (*MountLine, error) {
+	f, err := os.Open("/proc/self/mountinfo")
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		text := scanner.Text()
+		parsedLine, err := parseMountLine(text)
+		if err != nil {
+			return nil, err
+		}
+		if parsedLine.FileSystemType == "cgroup2" {
+			return &parsedLine, nil
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+
+	return nil, NewNotFoundError("cgroup2")
+}
+
+type MountLine struct {
+	MntId       int
+	MntParentId int
+	MajorStDev  int
+	MinorStDev  int
+	Root        string
+	MountPoint  string
+	// options are typically a comma seperated list, optionally as key-value, or single arguments
+	// let the user parse them
+	MountOptions   string
+	OptionalFields map[string]string
+	FileSystemType string
+	MountSource    string
+	SuperOptions   string
+}
+
+func indexOf(item string, slice []string) int {
+	for idx, val := range slice {
+		if val == item {
+			return idx
+		}
+	}
+	return -1
+}
+
+func parseMountLine(line string) (MountLine, error) {
+	var parsedMountLine MountLine
+	var err error
+
+	splitLine := strings.Split(line, " ")
+	optionalFieldSeperator := indexOf("-", splitLine)
+
+	if parsedMountLine.MntId, err = strconv.Atoi(splitLine[0]); err != nil {
+		return parsedMountLine, err
+	}
+	if parsedMountLine.MntParentId, err = strconv.Atoi(splitLine[1]); err != nil {
+		return parsedMountLine, err
+	}
+	dev := strings.Split(splitLine[2], ":")
+	if parsedMountLine.MajorStDev, err = strconv.Atoi(dev[0]); err != nil {
+		return parsedMountLine, err
+	}
+	if parsedMountLine.MinorStDev, err = strconv.Atoi(dev[1]); err != nil {
+		return parsedMountLine, err
+	}
+	parsedMountLine.Root = splitLine[3]
+	parsedMountLine.MountPoint = filepath.Clean(splitLine[4])
+	parsedMountLine.MountOptions = splitLine[5]
+
+	parsedMountLine.OptionalFields = make(map[string]string)
+	for _, kv := range splitLine[6:optionalFieldSeperator] {
+		keyValue := strings.Split(kv, ":")
+		parsedMountLine.OptionalFields[keyValue[0]] = keyValue[1]
+	}
+	parsedMountLine.FileSystemType = splitLine[optionalFieldSeperator+1]
+	parsedMountLine.MountSource = filepath.Clean(splitLine[optionalFieldSeperator+2])
+	parsedMountLine.SuperOptions = filepath.Clean(splitLine[optionalFieldSeperator+3])
+
+	return parsedMountLine, nil
+}
+
 type Mount struct {
 	Mountpoint string
 	Root       string
@@ -237,6 +324,25 @@ func GetOwnCgroupPath(subsystem string) (string, error) {
 	return getCgroupPathHelper(subsystem, cgroup)
 }
 
+func GetOwnCgroup2Path() (string, error) {
+	cgroup, err := GetOwnCgroup("")
+	if err != nil {
+		return "", err
+	}
+
+	mountline, err := FindCgroup2MountpointDir()
+	if err != nil {
+		return "", err
+	}
+
+	relCgroup, err := filepath.Rel(mountline.Root, cgroup)
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(mountline.MountPoint, relCgroup), nil
+}
+
 func GetInitCgroup(subsystem string) (string, error) {
 	cgroups, err := ParseCgroupFile("/proc/1/cgroup")
 	if err != nil {
@@ -328,6 +434,10 @@ func parseCgroupFromReader(r io.Reader) (map[string]string, error) {
 		for _, subs := range strings.Split(parts[1], ",") {
 			cgroups[subs] = parts[2]
 		}
+		// Unified hierarchy
+		if parts[0] == "0" && parts[1] == "" {
+			cgroups[""] = parts[2]
+		}
 	}
 	if err := s.Err(); err != nil {
 		return nil, err
@@ -337,7 +447,6 @@ func parseCgroupFromReader(r io.Reader) (map[string]string, error) {
 }
 
 func getControllerPath(subsystem string, cgroups map[string]string) (string, error) {
-
 	if p, ok := cgroups[subsystem]; ok {
 		return p, nil
 	}
