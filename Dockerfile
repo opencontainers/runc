@@ -1,7 +1,4 @@
-FROM golang:1.8
-
-# libseccomp in jessie is not _quite_ new enough -- need backports version
-RUN echo 'deb http://httpredir.debian.org/debian jessie-backports main' > /etc/apt/sources.list.d/backports.list
+FROM golang:1.10-stretch
 
 RUN apt-get update && apt-get install -y \
     build-essential \
@@ -17,8 +14,8 @@ RUN apt-get update && apt-get install -y \
     libprotobuf-c0-dev \
     libnl-3-dev \
     libnet-dev \
-    libseccomp2/jessie-backports \
-    libseccomp-dev/jessie-backports \
+    libseccomp2 \
+    libseccomp-dev \
     protobuf-c-compiler \
     protobuf-compiler \
     python-minimal \
