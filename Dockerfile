@@ -38,9 +38,9 @@ RUN cd /tmp \
     && rm -rf /tmp/bats
 
 # install criu
-ENV CRIU_VERSION 3ca8e575b49763030d3ddfec4af190a4c9f9deef
+ENV CRIU_VERSION v3.7
 RUN mkdir -p /usr/src/criu \
-    && curl -sSL https://github.com/xemul/criu/archive/${CRIU_VERSION}.tar.gz | tar -v -C /usr/src/criu/ -xz --strip-components=1 \
+    && curl -sSL https://github.com/checkpoint-restore/criu/archive/${CRIU_VERSION}.tar.gz | tar -v -C /usr/src/criu/ -xz --strip-components=1 \
     && cd /usr/src/criu \
     && make install-criu \
     && rm -rf /usr/src/criu
