@@ -9,6 +9,11 @@ cd "$(dirname "$(readlink -f "$BASH_SOURCE")")"
 	pwd
 }
 
+if ! ( which go-md2man &>/dev/null ); then
+	echo "To install man pages, please install 'go-md2man'."
+	exit 0
+fi
+
 for FILE in *.md; do
 	base="$(basename "$FILE")"
 	name="${base%.md}"
