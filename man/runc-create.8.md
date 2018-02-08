@@ -20,7 +20,8 @@ command(s) that get executed on start, edit the args parameter of the spec. See
 
 # OPTIONS
    --bundle value, -b value  path to the root of the bundle directory, defaults to the current directory
-   --console value           specify the pty slave path for use with the container
+   --console-socket value    path to an AF_UNIX socket which will receive a file descriptor referencing the master end of the console's pseudoterminal
    --pid-file value          specify the file to write the process id to
    --no-pivot                do not use pivot root to jail process inside rootfs.  This should be used whenever the rootfs is on top of a ramdisk
    --no-new-keyring          do not create a new session keyring for the container.  This will cause the container to inherit the calling processes session key
+   --preserve-fds value      Pass N additional file descriptors to the container (stdio + $LISTEN_FDS + N in total) (default: 0)
