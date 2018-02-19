@@ -257,7 +257,7 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 	}
 	createHooks(spec, config)
 	config.Version = specs.Version
-	if spec.Linux.IntelRdt != nil {
+	if spec.Linux != nil && spec.Linux.IntelRdt != nil {
 		config.IntelRdt = &configs.IntelRdt{}
 		if spec.Linux.IntelRdt.L3CacheSchema != "" {
 			config.IntelRdt.L3CacheSchema = spec.Linux.IntelRdt.L3CacheSchema
