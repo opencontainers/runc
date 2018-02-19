@@ -97,7 +97,10 @@ func getDefaultImagePath(context *cli.Context) string {
 
 // newProcess returns a new libcontainer Process with the arguments from the
 // spec and stdio from the current process.
-func newProcess(p specs.Process) (*libcontainer.Process, error) {
+func newProcess(p *specs.Process) (*libcontainer.Process, error) {
+	if p == nil {
+		return &libcontainer.Process{}, nil
+	}
 	lp := &libcontainer.Process{
 		Args: p.Args,
 		Env:  p.Env,
@@ -261,7 +264,7 @@ func (r *runner) run(config *specs.Process) (int, error) {
 		r.destroy()
 		return -1, err
 	}
-	process, err := newProcess(*config)
+	process, err := newProcess(config)
 	if err != nil {
 		r.destroy()
 		return -1, err
@@ -291,7 +294,8 @@ func (r *runner) run(config *specs.Process) (int, error) {
 	// with detaching containers, and then we get a tty after the container has
 	// started.
 	handler := newSignalHandler(r.enableSubreaper, r.notifySocket)
-	tty, err := setupIO(process, rootuid, rootgid, config.Terminal, detach, r.consoleSocket)
+	terminal := config != nil && config.Terminal
+	tty, err := setupIO(process, rootuid, rootgid, terminal, detach, r.consoleSocket)
 	if err != nil {
 		r.destroy()
 		return -1, err
@@ -353,17 +357,21 @@ func (r *runner) terminate(p *libcontainer.Process) {
 
 func (r *runner) checkTerminal(config *specs.Process) error {
 	detach := r.detach || (r.action == CT_ACT_CREATE)
+	terminal := config != nil && config.Terminal
 	// Check command-line for sanity.
-	if detach && config.Terminal && r.consoleSocket == "" {
+	if detach && terminal && r.consoleSocket == "" {
 		return fmt.Errorf("cannot allocate tty if runc will detach without setting console socket")
 	}
-	if (!detach || !config.Terminal) && r.consoleSocket != "" {
+	if (!detach || !terminal) && r.consoleSocket != "" {
 		return fmt.Errorf("cannot use console socket if runc will not detach or allocate tty")
 	}
 	return nil
 }
 
 func validateProcessSpec(spec *specs.Process) error {
+	if spec == nil {
+		return nil
+	}
 	if spec.Cwd == "" {
 		return fmt.Errorf("Cwd property must not be empty")
 	}
