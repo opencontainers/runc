@@ -1804,7 +1804,7 @@ func (c *linuxContainer) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Na
 			// The following only applies if we are root.
 			if !c.config.Rootless {
 				// check if we have CAP_SETGID to setgroup properly
-				pid, err := capability.NewPid(os.Getpid())
+				pid, err := capability.NewPid(0)
 				if err != nil {
 					return nil, err
 				}
