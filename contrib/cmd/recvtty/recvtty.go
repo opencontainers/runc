@@ -24,7 +24,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/containerd/console"
 	"github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/urfave/cli"
 )
@@ -67,45 +66,11 @@ func bail(err error) {
 
 func handleSingle(path string) error {
 	// Open a socket.
-	ln, err := net.Listen("unix", path)
+	c, err := utils.ConsoleSocket(path)
 	if err != nil {
 		return err
 	}
-	defer ln.Close()
-
-	// We only accept a single connection, since we can only really have
-	// one reader for os.Stdin. Plus this is all a PoC.
-	conn, err := ln.Accept()
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-
-	// Close ln, to allow for other instances to take over.
-	ln.Close()
-
-	// Get the fd of the connection.
-	unixconn, ok := conn.(*net.UnixConn)
-	if !ok {
-		return fmt.Errorf("failed to cast to unixconn")
-	}
-
-	socket, err := unixconn.File()
-	if err != nil {
-		return err
-	}
-	defer socket.Close()
-
-	// Get the master file descriptor from runC.
-	master, err := utils.RecvFd(socket)
-	if err != nil {
-		return err
-	}
-	c, err := console.ConsoleFromFile(master)
-	if err != nil {
-		return err
-	}
-	console.ClearONLCR(c.Fd())
+	defer c.Close()
 
 	// Copy from our stdio to the master fd.
 	quitChan := make(chan struct{})

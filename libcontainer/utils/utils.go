@@ -4,12 +4,15 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
 	"unsafe"
 
+	"github.com/containerd/console"
 	"golang.org/x/sys/unix"
 )
 
@@ -124,4 +127,50 @@ func Annotations(labels []string) (bundle string, userAnnotations map[string]str
 
 func GetIntSize() int {
 	return int(unsafe.Sizeof(1))
+}
+
+// ConsoleSocket opens a socket on the given path and receives the console file descriptors from there
+func ConsoleSocket(path string) (console.Console, error) {
+	// Open a socket.
+	ln, err := net.Listen("unix", path)
+	if err != nil {
+		return nil, err
+	}
+	defer ln.Close()
+
+	// We only accept a single connection, since we can only really have
+	// one reader for os.Stdin
+	conn, err := ln.Accept()
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	// Close ln, to allow for other instances to take over.
+	ln.Close()
+
+	// Get the fd of the connection.
+	unixconn, ok := conn.(*net.UnixConn)
+	if !ok {
+		return nil, fmt.Errorf("failed to cast to unixconn")
+	}
+
+	socket, err := unixconn.File()
+	if err != nil {
+		return nil, err
+	}
+	defer socket.Close()
+
+	// Get the master file descriptor from runC.
+	master, err := RecvFd(socket)
+	if err != nil {
+		return nil, err
+	}
+	c, err := console.ConsoleFromFile(master)
+	if err != nil {
+		return nil, err
+	}
+	console.ClearONLCR(c.Fd())
+
+	return c, nil
 }
