@@ -19,11 +19,6 @@ type syncType string
 // procHooks   --> [run hooks]
 //             <-- procResume
 //
-// procConsole -->
-//             <-- procConsoleReq
-//  [send(fd)] --> [recv(fd)]
-//             <-- procConsoleAck
-//
 // procReady   --> [final setup]
 //             <-- procRun
 const (
