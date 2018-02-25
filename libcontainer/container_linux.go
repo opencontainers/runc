@@ -25,6 +25,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runc/libcontainer/utils"
+	"github.com/opencontainers/runtime-spec/specs-go"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/sirupsen/logrus"
@@ -154,6 +155,12 @@ func (c *linuxContainer) State() (*State, error) {
 	c.m.Lock()
 	defer c.m.Unlock()
 	return c.currentState()
+}
+
+func (c *linuxContainer) OCIState() (*specs.State, error) {
+	c.m.Lock()
+	defer c.m.Unlock()
+	return c.currentOCIState()
 }
 
 func (c *linuxContainer) Processes() ([]int, error) {
@@ -349,13 +356,9 @@ func (c *linuxContainer) start(process *Process) error {
 		c.initProcessStartTime = state.InitProcessStartTime
 
 		if c.config.Hooks != nil {
-			bundle, annotations := utils.Annotations(c.config.Labels)
-			s := configs.HookState{
-				Version:     c.config.Version,
-				ID:          c.id,
-				Pid:         parent.pid(),
-				Bundle:      bundle,
-				Annotations: annotations,
+			s, err := c.currentOCIState()
+			if err != nil {
+				return err
 			}
 			for i, hook := range c.config.Hooks.Poststart {
 				if err := hook.Run(s); err != nil {
@@ -493,7 +496,7 @@ func (c *linuxContainer) newInitProcess(p *Process, cmd *exec.Cmd, parentPipe, c
 	if err != nil {
 		return nil, err
 	}
-	return &initProcess{
+	init := &initProcess{
 		cmd:             cmd,
 		childPipe:       childPipe,
 		parentPipe:      parentPipe,
@@ -504,7 +507,9 @@ func (c *linuxContainer) newInitProcess(p *Process, cmd *exec.Cmd, parentPipe, c
 		process:         p,
 		bootstrapData:   data,
 		sharePidns:      sharePidns,
-	}, nil
+	}
+	c.initProcess = init
+	return init, nil
 }
 
 func (c *linuxContainer) newSetnsProcess(p *Process, cmd *exec.Cmd, parentPipe, childPipe *os.File) (*setnsProcess, error) {
@@ -1537,13 +1542,9 @@ func (c *linuxContainer) criuNotifications(resp *criurpc.CriuResp, process *Proc
 		}
 	case notify.GetScript() == "setup-namespaces":
 		if c.config.Hooks != nil {
-			bundle, annotations := utils.Annotations(c.config.Labels)
-			s := configs.HookState{
-				Version:     c.config.Version,
-				ID:          c.id,
-				Pid:         int(notify.GetPid()),
-				Bundle:      bundle,
-				Annotations: annotations,
+			s, err := c.currentOCIState()
+			if err != nil {
+				return nil
 			}
 			for i, hook := range c.config.Hooks.Prestart {
 				if err := hook.Run(s); err != nil {
@@ -1733,6 +1734,27 @@ func (c *linuxContainer) currentState() (*State, error) {
 				ns := configs.Namespace{Type: nsType}
 				state.NamespacePaths[ns.Type] = ns.GetPath(pid)
 			}
+		}
+	}
+	return state, nil
+}
+
+func (c *linuxContainer) currentOCIState() (*specs.State, error) {
+	bundle, annotations := utils.Annotations(c.config.Labels)
+	state := &specs.State{
+		Version:     specs.Version,
+		ID:          c.ID(),
+		Bundle:      bundle,
+		Annotations: annotations,
+	}
+	status, err := c.currentStatus()
+	if err != nil {
+		return nil, err
+	}
+	state.Status = status.String()
+	if status != Stopped {
+		if c.initProcess != nil {
+			state.Pid = c.initProcess.pid()
 		}
 	}
 	return state, nil

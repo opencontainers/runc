@@ -16,6 +16,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
 	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runtime-spec/specs-go"
 
 	"golang.org/x/sys/unix"
 )
@@ -1148,7 +1149,7 @@ func TestHook(t *testing.T) {
 
 	config.Hooks = &configs.Hooks{
 		Prestart: []configs.Hook{
-			configs.NewFunctionHook(func(s configs.HookState) error {
+			configs.NewFunctionHook(func(s *specs.State) error {
 				if s.Bundle != expectedBundle {
 					t.Fatalf("Expected prestart hook bundlePath '%s'; got '%s'", expectedBundle, s.Bundle)
 				}
@@ -1165,7 +1166,7 @@ func TestHook(t *testing.T) {
 			}),
 		},
 		Poststart: []configs.Hook{
-			configs.NewFunctionHook(func(s configs.HookState) error {
+			configs.NewFunctionHook(func(s *specs.State) error {
 				if s.Bundle != expectedBundle {
 					t.Fatalf("Expected poststart hook bundlePath '%s'; got '%s'", expectedBundle, s.Bundle)
 				}
@@ -1178,7 +1179,7 @@ func TestHook(t *testing.T) {
 			}),
 		},
 		Poststop: []configs.Hook{
-			configs.NewFunctionHook(func(s configs.HookState) error {
+			configs.NewFunctionHook(func(s *specs.State) error {
 				if s.Bundle != expectedBundle {
 					t.Fatalf("Expected poststop hook bundlePath '%s'; got '%s'", expectedBundle, s.Bundle)
 				}
