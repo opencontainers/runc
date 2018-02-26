@@ -192,9 +192,6 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 	if err := createDevices(spec, config); err != nil {
 		return nil, err
 	}
-	if err := setupUserNamespace(spec, config); err != nil {
-		return nil, err
-	}
 	c, err := createCgroupConfig(opts)
 	if err != nil {
 		return nil, err
@@ -224,6 +221,11 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 				{
 					Type: "loopback",
 				},
+			}
+		}
+		if config.Namespaces.Contains(configs.NEWUSER) {
+			if err := setupUserNamespace(spec, config); err != nil {
+				return nil, err
 			}
 		}
 		config.MaskPaths = spec.Linux.MaskedPaths
