@@ -1,7 +1,4 @@
-FROM golang:1.8
-
-# libseccomp in jessie is not _quite_ new enough -- need backports version
-RUN echo 'deb http://httpredir.debian.org/debian jessie-backports main' > /etc/apt/sources.list.d/backports.list
+FROM golang:1.10-stretch
 
 RUN apt-get update && apt-get install -y \
     build-essential \
@@ -17,8 +14,8 @@ RUN apt-get update && apt-get install -y \
     libprotobuf-c0-dev \
     libnl-3-dev \
     libnet-dev \
-    libseccomp2/jessie-backports \
-    libseccomp-dev/jessie-backports \
+    libseccomp2 \
+    libseccomp-dev \
     protobuf-c-compiler \
     protobuf-compiler \
     python-minimal \
@@ -41,9 +38,9 @@ RUN cd /tmp \
     && rm -rf /tmp/bats
 
 # install criu
-ENV CRIU_VERSION 3ca8e575b49763030d3ddfec4af190a4c9f9deef
+ENV CRIU_VERSION v3.7
 RUN mkdir -p /usr/src/criu \
-    && curl -sSL https://github.com/xemul/criu/archive/${CRIU_VERSION}.tar.gz | tar -v -C /usr/src/criu/ -xz --strip-components=1 \
+    && curl -sSL https://github.com/checkpoint-restore/criu/archive/${CRIU_VERSION}.tar.gz | tar -v -C /usr/src/criu/ -xz --strip-components=1 \
     && cd /usr/src/criu \
     && make install-criu \
     && rm -rf /usr/src/criu
