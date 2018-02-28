@@ -1,4 +1,4 @@
-.PHONY: all shell dbuild man \
+.PHONY: all shell dbuild man release \
 	    localtest localunittest localintegration \
 	    test unittest integration
 
