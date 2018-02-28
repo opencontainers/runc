@@ -11,9 +11,10 @@ GIT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null)
 GIT_BRANCH_CLEAN := $(shell echo $(GIT_BRANCH) | sed -e "s/[^[:alnum:]]/-/g")
 RUNC_IMAGE := runc_dev$(if $(GIT_BRANCH_CLEAN),:$(GIT_BRANCH_CLEAN))
 PROJECT := github.com/opencontainers/runc
-BUILDTAGS := seccomp
+BUILDTAGS ?= seccomp
 COMMIT_NO := $(shell git rev-parse HEAD 2> /dev/null || true)
 COMMIT := $(if $(shell git status --porcelain --untracked-files=no),"${COMMIT_NO}-dirty","${COMMIT_NO}")
+ENVS := -e TESTFLAGS -e BUILDTAGS
 
 MAN_DIR := $(CURDIR)/man/man8
 MAN_PAGES = $(shell ls $(MAN_DIR)/*.8)
@@ -46,7 +47,7 @@ release:
 	script/release.sh -r release/$(VERSION) -v $(VERSION)
 
 dbuild: runcimage
-	docker run --rm -v $(CURDIR):/go/src/$(PROJECT) --privileged $(RUNC_IMAGE) make clean all
+	docker run --rm $(ENVS) -v $(CURDIR):/go/src/$(PROJECT) --privileged $(RUNC_IMAGE) make clean all
 
 lint:
 	$(GO) vet $(allpackages)
@@ -65,25 +66,25 @@ localtest:
 	make localunittest localintegration localrootlessintegration
 
 unittest: runcimage
-	docker run -e TESTFLAGS -t --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) make localunittest
+	docker run $(ENVS) -t --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) make localunittest
 
 localunittest: all
 	$(GO) test -timeout 3m -tags "$(BUILDTAGS)" ${TESTFLAGS} -v $(allpackages)
 
 integration: runcimage
-	docker run -e TESTFLAGS -t --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) make localintegration
+	docker run $(ENVS) -t --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) make localintegration
 
 localintegration: all
 	bats -t tests/integration${TESTFLAGS}
 
 rootlessintegration: runcimage
-	docker run -e TESTFLAGS -t --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) make localrootlessintegration
+	docker run $(ENVS) -t --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) make localrootlessintegration
 
 localrootlessintegration: all
 	tests/rootless.sh
 
 shell: runcimage
-	docker run -e TESTFLAGS -ti --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) bash
+	docker run $(ENVS) -ti --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) bash
 
 install:
 	install -D -m0755 runc $(BINDIR)/runc
