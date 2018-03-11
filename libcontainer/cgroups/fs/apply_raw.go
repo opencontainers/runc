@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"syscall"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -100,6 +101,22 @@ type cgroupData struct {
 	pid       int
 }
 
+func isIgnorableError(err error) bool {
+	if os.IsPermission(err) {
+		return true
+	}
+
+	if perr, ok := err.(*os.PathError); ok {
+		switch perr.Err.(syscall.Errno) {
+		// Read-only file system.
+		case syscall.EROFS:
+			return true
+		}
+	}
+
+	return false
+}
+
 func (m *Manager) Apply(pid int) (err error) {
 	if m.Cgroups == nil {
 		return nil
@@ -145,7 +162,7 @@ func (m *Manager) Apply(pid int) (err error) {
 		m.Paths[sys.Name()] = p
 
 		if err := sys.Apply(d); err != nil {
-			if os.IsPermission(err) && m.Cgroups.Path == "" {
+			if isIgnorableError(err) && m.Cgroups.Path == "" {
 				// If we didn't set a cgroup path, then let's defer the error here
 				// until we know whether we have set limits or not.
 				// If we hadn't set limits, then it's ok that we couldn't join this cgroup, because
