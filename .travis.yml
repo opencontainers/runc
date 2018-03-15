@@ -32,4 +32,5 @@ before_install:
 script:
   - git-validation -run DCO,short-subject -v
   - make BUILDTAGS="${BUILDTAGS}"
+  - make BUILDTAGS="${BUILDTAGS}" oci-runtime-validation
   - make BUILDTAGS="${BUILDTAGS}" clean ci cross
