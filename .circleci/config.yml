@@ -1,0 +1,26 @@
+version: 2
+jobs:
+  build:
+    machine: true
+
+    working_directory: /home/circleci/.go_workspace/src/github.com/opencontainers/runc
+    steps:
+      - checkout
+
+      # Before building runc
+      - run: sudo apt-get -qq update
+      - run: sudo apt-get install -y libseccomp-dev/trusty-backports
+      - run: go get -u github.com/golang/lint/golint
+      - run: go get -u github.com/vbatts/git-validation
+
+      # Build and install runc
+      - run: make BUILDTAGS="seccomp apparmor selinux ambient"
+      - run: sudo cp ./runc /bin/runc
+
+      # Install and run runtime-tools' validation tests
+      - run: npm install -g tap
+      - run: go get -d github.com/opencontainers/runtime-tools || true
+      - run: cd /home/circleci/.go_workspace/src/github.com/opencontainers/runtime-tools &&
+             make &&
+             sudo PATH=$PATH:$(dirname $(which node)) TAP=$(which tap) RUNTIME=runc make localvalidation ||
+             true # All tests don't pass yet. For now, only display results without returning an error.
