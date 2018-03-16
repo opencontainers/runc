@@ -99,7 +99,7 @@ EOF
 
     runc run -d --console-socket $CONSOLE_SOCKET test_cgroups_permissions
     [ "$status" -eq 1 ]
-    [[ ${lines[1]} == *"cannot set limits on the pids cgroup, as the container has not joined it"* ]]
+    [[ ${lines[1]} == *"cannot set pids limit: container could not join or create cgroup"* ]]
 }
 
 @test "runc create (limits + cgrouppath + permission on the cgroup dir) succeeds" {
