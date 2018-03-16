@@ -19,6 +19,10 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
+func ptrInt(v int) *int {
+	return &v
+}
+
 func newStdBuffers() *stdBuffers {
 	return &stdBuffers{
 		Stdin:  bytes.NewBuffer(nil),
