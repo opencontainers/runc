@@ -67,6 +67,15 @@ func main() {
 		runtimeDir := os.Getenv("XDG_RUNTIME_DIR")
 		if runtimeDir != "" {
 			root = runtimeDir + "/runc"
+			// According to the XDG specification, we need to set anything in
+			// XDG_RUNTIME_DIR to have a sticky bit if we don't want it to get
+			// auto-pruned.
+			if err := os.MkdirAll(root, 0700); err != nil {
+				fatal(err)
+			}
+			if err := os.Chmod(root, 0700|os.ModeSticky); err != nil {
+				fatal(err)
+			}
 		}
 	}
 
