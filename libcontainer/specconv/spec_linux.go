@@ -28,6 +28,7 @@ var namespaceMapping = map[specs.LinuxNamespaceType]configs.NamespaceType{
 	specs.UserNamespace:    configs.NEWUSER,
 	specs.IPCNamespace:     configs.NEWIPC,
 	specs.UTSNamespace:     configs.NEWUTS,
+	specs.CgroupNamespace:  configs.NEWCGROUP,
 }
 
 var mountPropagationMapping = map[string]int{
