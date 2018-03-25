@@ -74,7 +74,7 @@ integration: runcimage
 	docker run -e TESTFLAGS -t --privileged --rm -v /lib/modules:/lib/modules:ro -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) make localintegration
 
 localintegration: all
-	bats -t tests/integration${TESTFLAGS}
+	unshare -m bats -t tests/integration${TESTFLAGS}
 
 rootlessintegration: runcimage
 	docker run -e TESTFLAGS -t --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) make localrootlessintegration
