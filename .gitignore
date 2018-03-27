@@ -3,3 +3,4 @@ vendor/pkg
 contrib/cmd/recvtty/recvtty
 man/man8
 release
+.idea
