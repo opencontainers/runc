@@ -30,7 +30,7 @@ func DeviceFromPath(path, permissions string) (*configs.Device, error) {
 	}
 
 	var (
-		devNumber = stat.Rdev
+		devNumber = uint64(stat.Rdev)
 		major     = unix.Major(devNumber)
 	)
 	if major == 0 {
