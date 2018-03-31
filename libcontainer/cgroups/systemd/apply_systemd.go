@@ -297,14 +297,14 @@ func (m *Manager) Apply(pid int) error {
 	}
 
 	statusChan := make(chan string)
-	if _, err := theConn.StartTransientUnit(unitName, "replace", properties, statusChan); err != nil && !isUnitExists(err) {
+	if _, err := theConn.StartTransientUnit(unitName, "replace", properties, statusChan); err == nil {
+		select {
+		case <-statusChan:
+		case <-time.After(time.Second):
+			logrus.Warnf("Timed out while waiting for StartTransientUnit(%s) completion signal from dbus. Continuing...", unitName)
+		}
+	} else if !isUnitExists(err) {
 		return err
-	}
-
-	select {
-	case <-statusChan:
-	case <-time.After(time.Second):
-		logrus.Warnf("Timed out while waiting for StartTransientUnit completion signal from dbus. Continuing...")
 	}
 
 	if err := joinCgroups(c, pid); err != nil {
