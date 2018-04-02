@@ -184,6 +184,11 @@ func (s *MemoryGroup) Set(path string, cgroup *configs.Cgroup) error {
 			return err
 		}
 	}
+	if cgroup.Resources.UseHierarchy {
+		if err := writeFile(path, "memory.use_hierarchy", "1"); err != nil {
+			return err
+		}
+	}
 	if cgroup.Resources.MemorySwappiness == nil || int64(*cgroup.Resources.MemorySwappiness) == -1 {
 		return nil
 	} else if *cgroup.Resources.MemorySwappiness <= 100 {
@@ -261,6 +266,7 @@ func memoryAssigned(cgroup *configs.Cgroup) bool {
 		cgroup.Resources.KernelMemory > 0 ||
 		cgroup.Resources.KernelMemoryTCP > 0 ||
 		cgroup.Resources.OomKillDisable ||
+		cgroup.Resources.UseHierarchy ||
 		(cgroup.Resources.MemorySwappiness != nil && int64(*cgroup.Resources.MemorySwappiness) != -1)
 }
 

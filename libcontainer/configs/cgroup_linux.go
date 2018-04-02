@@ -114,6 +114,9 @@ type Resources struct {
 	// Tuning swappiness behaviour per cgroup
 	MemorySwappiness *uint64 `json:"memory_swappiness"`
 
+	// Whether to use hierarchy
+	UseHierarchy bool `json:"use_hierarchy"`
+
 	// Set priority of network traffic for container
 	NetPrioIfpriomap []*IfPrioMap `json:"net_prio_ifpriomap"`
 
