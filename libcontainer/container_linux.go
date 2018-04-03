@@ -377,10 +377,6 @@ func (c *linuxContainer) start(process *Process, isInit bool) error {
 				}
 			}
 		}
-	} else {
-		c.state = &runningState{
-			c: c,
-		}
 	}
 	return nil
 }
