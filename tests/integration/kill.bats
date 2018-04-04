@@ -20,7 +20,7 @@ function teardown() {
   # check state
   testcontainer test_busybox running
 
-  runc kill test_busybox KILL
+  runc kill --signal KILL test_busybox
   [ "$status" -eq 0 ]
 
   retry 10 1 eval "__runc state test_busybox | grep -q 'stopped'"

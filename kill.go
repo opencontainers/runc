@@ -14,7 +14,7 @@ import (
 var killCommand = cli.Command{
 	Name:  "kill",
 	Usage: "kill sends the specified signal (default: SIGTERM) to the container's init process",
-	ArgsUsage: `<container-id> [signal]
+	ArgsUsage: `<container-id>
 
 Where "<container-id>" is the name for the instance of the container and
 "[signal]" is the signal to be sent to the init process.
@@ -23,18 +23,22 @@ EXAMPLE:
 For example, if the container id is "ubuntu01" the following will send a "KILL"
 signal to the init process of the "ubuntu01" container:
 	 
-       # runc kill ubuntu01 KILL`,
+       # runc kill --signal KILL ubuntu01`,
 	Flags: []cli.Flag{
 		cli.BoolFlag{
 			Name:  "all, a",
 			Usage: "send the specified signal to all processes inside the container",
+		},
+		cli.StringFlag{
+			Name:  "signal",
+			Usage: "specify a signal to be sent to processes",
 		},
 	},
 	Action: func(context *cli.Context) error {
 		if err := checkArgs(context, 1, minArgs); err != nil {
 			return err
 		}
-		if err := checkArgs(context, 2, maxArgs); err != nil {
+		if err := checkArgs(context, 1, maxArgs); err != nil {
 			return err
 		}
 		container, err := getContainer(context)
@@ -42,7 +46,7 @@ signal to the init process of the "ubuntu01" container:
 			return err
 		}
 
-		sigstr := context.Args().Get(1)
+		sigstr := context.String("signal")
 		if sigstr == "" {
 			sigstr = "SIGTERM"
 		}
