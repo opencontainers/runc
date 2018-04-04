@@ -297,7 +297,7 @@ function teardown_running_container() {
 	# here we detect "test_busybox "(with one extra blank) to avoid conflict prefix
 	# e.g. "test_busybox" and "test_busybox_update"
 	if [[ "${output}" == *"$1 "* ]]; then
-		runc kill $1 KILL
+		runc kill --signal KILL $1
 		retry 10 1 eval "__runc state '$1' | grep -q 'stopped'"
 		runc delete $1
 	fi
@@ -309,7 +309,7 @@ function teardown_running_container_inroot() {
 	# here we detect "test_busybox "(with one extra blank) to avoid conflict prefix
 	# e.g. "test_busybox" and "test_busybox_update"
 	if [[ "${output}" == *"$1 "* ]]; then
-		ROOT=$2 runc kill $1 KILL
+		ROOT=$2 runc kill --signal KILL $1
 		retry 10 1 eval "ROOT='$2' __runc state '$1' | grep -q 'stopped'"
 		ROOT=$2 runc delete $1
 	fi

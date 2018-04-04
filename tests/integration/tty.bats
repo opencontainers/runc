@@ -190,7 +190,7 @@ EOF
 	testcontainer test_busybox running
 
 	# Kill the container.
-	runc kill test_busybox KILL
+	runc kill --signal KILL test_busybox
 	[ "$status" -eq 0 ]
 }
 
@@ -209,7 +209,7 @@ EOF
 	testcontainer test_busybox running
 
 	# Kill the container.
-	runc kill test_busybox KILL
+	runc kill --signal KILL test_busybox
 	[ "$status" -eq 0 ]
 }
 
@@ -225,6 +225,6 @@ EOF
 	testcontainer test_busybox running
 
 	# Kill the container.
-	runc kill test_busybox KILL
+	runc kill --signal KILL test_busybox
 	[ "$status" -eq 0 ]
 }

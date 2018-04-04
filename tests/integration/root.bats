@@ -36,13 +36,13 @@ function teardown() {
   runc state test_dotbox
   [ "$status" -ne 0 ]
 
-  runc kill test_busybox KILL
+  runc kill --signal KILL test_busybox
   [ "$status" -eq 0 ]
   retry 10 1 eval "__runc state test_busybox | grep -q 'stopped'"
   runc delete test_busybox
   [ "$status" -eq 0 ]
 
-  ROOT=$HELLO_BUNDLE runc kill test_dotbox KILL
+  ROOT=$HELLO_BUNDLE runc kill --signal KILL test_dotbox
   [ "$status" -eq 0 ]
   retry 10 1 eval "ROOT='$HELLO_BUNDLE' __runc state test_dotbox | grep -q 'stopped'"
   ROOT=$HELLO_BUNDLE runc delete test_dotbox
