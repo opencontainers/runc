@@ -219,7 +219,7 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 			}
 			config.Namespaces.Add(t, ns.Path)
 		}
-		if config.Namespaces.Contains(configs.NEWNET) {
+		if config.Namespaces.Contains(configs.NEWNET) && config.Namespaces.PathOf(configs.NEWNET) == "" {
 			config.Networks = []*configs.Network{
 				{
 					Type: "loopback",
