@@ -505,7 +505,8 @@ void join_namespaces(char *nslist)
 
 		ns->fd = fd;
 		ns->ns = nsflag(namespace);
-		strncpy(ns->path, path, PATH_MAX);
+		strncpy(ns->path, path, PATH_MAX - 1);
+		ns->path[PATH_MAX - 1] = '\0';
 	} while ((namespace = strtok_r(NULL, ",", &saveptr)) != NULL);
 
 	/*
