@@ -269,13 +269,17 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 func createLibcontainerMount(cwd string, m specs.Mount) *configs.Mount {
 	flags, pgflags, data, ext := parseMountOptions(m.Options)
 	source := m.Source
-	if m.Type == "bind" {
+	device := m.Type
+	if flags|unix.MS_BIND != 0 {
+		if device == "" {
+			device = "bind"
+		}
 		if !filepath.IsAbs(source) {
 			source = filepath.Join(cwd, m.Source)
 		}
 	}
 	return &configs.Mount{
-		Device:           m.Type,
+		Device:           device,
 		Source:           source,
 		Destination:      m.Destination,
 		Data:             data,
