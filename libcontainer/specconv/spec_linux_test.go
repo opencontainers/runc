@@ -123,7 +123,7 @@ func TestSetupSeccomp(t *testing.T) {
 			},
 		},
 	}
-	seccomp, err := setupSeccomp(conf)
+	seccomp, err := SetupSeccomp(conf)
 
 	if err != nil {
 		t.Errorf("Couldn't create Seccomp config: %v", err)

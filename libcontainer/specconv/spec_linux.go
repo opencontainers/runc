@@ -233,7 +233,7 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 		config.MountLabel = spec.Linux.MountLabel
 		config.Sysctl = spec.Linux.Sysctl
 		if spec.Linux.Seccomp != nil {
-			seccomp, err := setupSeccomp(spec.Linux.Seccomp)
+			seccomp, err := SetupSeccomp(spec.Linux.Seccomp)
 			if err != nil {
 				return nil, err
 			}
@@ -736,7 +736,7 @@ func parseMountOptions(options []string) (int, []int, string, int) {
 	return flag, pgflag, strings.Join(data, ","), extFlags
 }
 
-func setupSeccomp(config *specs.LinuxSeccomp) (*configs.Seccomp, error) {
+func SetupSeccomp(config *specs.LinuxSeccomp) (*configs.Seccomp, error) {
 	if config == nil {
 		return nil, nil
 	}
