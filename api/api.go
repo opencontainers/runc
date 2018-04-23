@@ -92,7 +92,6 @@ type CreateOpts struct {
 
 type CreateResult struct {
 	Status int
-	Pid    int
 }
 
 // Container represents the platform agnostic pieces relating to a
