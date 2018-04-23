@@ -3,6 +3,7 @@
 package libcontainer
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -152,12 +153,6 @@ func (l *linuxStandardInit) Init() error {
 	if unix.Getppid() != l.parentPid {
 		return unix.Kill(unix.Getpid(), unix.SIGKILL)
 	}
-	// Check for the arg before waiting to make sure it exists and it is
-	// returned as a create time error.
-	name, err := exec.LookPath(l.config.Args[0])
-	if err != nil {
-		return err
-	}
 	// Close the pipe to signal that we have completed our init.
 	l.pipe.Close()
 	// Wait for the FIFO to be opened on the other side before exec-ing the
@@ -185,6 +180,13 @@ func (l *linuxStandardInit) Init() error {
 		if err := seccomp.InitSeccomp(l.config.Config.Seccomp); err != nil {
 			return newSystemErrorWithCause(err, "init seccomp")
 		}
+	}
+	if len(l.config.Args) == 0 {
+		return errors.New("no process arguments configured")
+	}
+	name, err := exec.LookPath(l.config.Args[0])
+	if err != nil {
+		return err
 	}
 	if err := syscall.Exec(name, l.config.Args[0:], os.Environ()); err != nil {
 		return newSystemErrorWithCause(err, "exec user process")
