@@ -64,13 +64,6 @@ func setupProcessPipes(p *libcontainer.Process, rootuid, rootgid int) (*tty, err
 	return t, nil
 }
 
-func inheritStdio(process *libcontainer.Process) error {
-	process.Stdin = os.Stdin
-	process.Stdout = os.Stdout
-	process.Stderr = os.Stderr
-	return nil
-}
-
 func (t *tty) recvtty(process *libcontainer.Process, socket *os.File) error {
 	f, err := utils.RecvFd(socket)
 	if err != nil {

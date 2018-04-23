@@ -77,6 +77,9 @@ command(s) that get executed on start, edit the args parameter of the spec. See
 				PreserveFDs:   context.Int("preserve-fds"),
 				Detach:        context.Bool("detach"),
 				NoSubreaper:   context.Bool("no-subreaper"),
+				Stdin:         os.Stdin,
+				Stdout:        os.Stdout,
+				Stderr:        os.Stderr,
 			}
 			spec, err := setupSpec(context)
 			if err != nil {

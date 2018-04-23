@@ -4,6 +4,7 @@ package linux
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"path/filepath"
@@ -23,7 +24,7 @@ import (
 
 // newProcess returns a new libcontainer Process with the arguments from the
 // spec and stdio from the current process.
-func newProcess(p specs.Process) (*libcontainer.Process, error) {
+func newProcess(p specs.Process, stdin io.Reader, stdout, stderr io.Writer) (*libcontainer.Process, error) {
 	lp := &libcontainer.Process{
 		Args: p.Args,
 		Env:  p.Env,
@@ -33,6 +34,9 @@ func newProcess(p specs.Process) (*libcontainer.Process, error) {
 		Label:           p.SelinuxLabel,
 		NoNewPrivileges: &p.NoNewPrivileges,
 		AppArmorProfile: p.ApparmorProfile,
+		Stdin:           stdin,
+		Stdout:          stdout,
+		Stderr:          stderr,
 	}
 
 	if p.ConsoleSize != nil {
@@ -109,13 +113,12 @@ func setupIO(process *libcontainer.Process, rootuid, rootgid int, createTTY, det
 		return t, nil
 	}
 	// when runc will detach the caller provides the stdio to runc via runc's 0,1,2
-	// and the container's process inherits runc's stdio.
+	// and the container's process will use it's provided IO as-is.  This should be
+	// default but we have to keep the pipe setup for runc backwards compat in the non-detach case
 	if detach {
-		if err := inheritStdio(process); err != nil {
-			return nil, err
-		}
 		return &tty{}, nil
 	}
+	// keep pipe setup for backwards compat for the runc implementation
 	return setupProcessPipes(process, rootuid, rootgid)
 }
 
@@ -181,12 +184,12 @@ type runner struct {
 	criuOpts        *libcontainer.CriuOpts
 }
 
-func (r *runner) run(config *specs.Process) (int, error) {
+func (r *runner) run(config *specs.Process, stdin io.Reader, stdout, stderr io.Writer) (int, error) {
 	if err := r.checkTerminal(config); err != nil {
 		r.destroy()
 		return -1, err
 	}
-	process, err := newProcess(*config)
+	process, err := newProcess(*config, stdin, stdout, stderr)
 	if err != nil {
 		r.destroy()
 		return -1, err
@@ -327,7 +330,7 @@ func (l *Libcontainer) startContainer(id string, opts api.CreateOpts, action CtA
 		action:          action,
 		criuOpts:        criuOpts,
 	}
-	return r.run(opts.Spec.Process)
+	return r.run(opts.Spec.Process, opts.Stdin, opts.Stdout, opts.Stderr)
 }
 
 func createLibContainerRlimit(rlimit specs.POSIXRlimit) (configs.Rlimit, error) {

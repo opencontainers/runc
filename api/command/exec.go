@@ -121,6 +121,9 @@ following will output a list of processes running in the container:
 				Detach:        context.Bool("detach"),
 				Process:       process,
 				ConsoleSocket: context.String("console-socket"),
+				Stdin:         os.Stdin,
+				Stdout:        os.Stdout,
+				Stderr:        os.Stderr,
 			})
 			if err != nil {
 				return err

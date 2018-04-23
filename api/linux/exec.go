@@ -28,7 +28,7 @@ func (l *Libcontainer) Exec(id string, opts api.ExecOpts) (*api.CreateResult, er
 		pidFile:         opts.PidFile,
 		action:          CT_ACT_RUN,
 	}
-	s, err := r.run(opts.Process)
+	s, err := r.run(opts.Process, opts.Stdin, opts.Stdout, opts.Stderr)
 	if err != nil {
 		return nil, err
 	}

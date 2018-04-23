@@ -90,6 +90,9 @@ command(s) that get executed on start, edit the args parameter of the spec. See
 				Detach:        context.Bool("detach"),
 				NoSubreaper:   context.Bool("no-subreaper"),
 				Spec:          spec,
+				Stdin:         os.Stdin,
+				Stdout:        os.Stdout,
+				Stderr:        os.Stderr,
 			}
 			result, err := a.Run(id, opts)
 			if err != nil {

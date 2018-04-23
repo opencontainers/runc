@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"io"
 	"syscall"
 	"time"
 
@@ -34,6 +35,9 @@ type ExecOpts struct {
 	Detach        bool
 	ConsoleSocket string
 	Process       *specs.Process
+	Stdin         io.Reader
+	Stdout        io.Writer
+	Stderr        io.Writer
 }
 
 type RestoreOpts struct {
@@ -81,6 +85,9 @@ type CreateOpts struct {
 	PreserveFDs   int
 	Detach        bool
 	NoSubreaper   bool
+	Stdin         io.Reader
+	Stdout        io.Writer
+	Stderr        io.Writer
 }
 
 type CreateResult struct {
