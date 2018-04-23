@@ -9,8 +9,8 @@ import (
 	"strconv"
 
 	"github.com/docker/go-units"
-	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/opencontainers/runc/libcontainer/intelrdt"
+	"github.com/opencontainers/runc/api/command"
+	"github.com/opencontainers/runc/api/linux"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/urfave/cli"
 )
@@ -120,14 +120,13 @@ other options are ignored.
 		},
 	},
 	Action: func(context *cli.Context) error {
-		if err := checkArgs(context, 1, exactArgs); err != nil {
+		if err := command.CheckArgs(context, 1, command.ExactArgs); err != nil {
 			return err
 		}
-		container, err := getContainer(context)
+		id, err := command.GetID(context)
 		if err != nil {
 			return err
 		}
-
 		r := specs.LinuxResources{
 			Memory: &specs.LinuxMemory{
 				Limit:       i64Ptr(0),
@@ -152,8 +151,6 @@ other options are ignored.
 				Limit: 0,
 			},
 		}
-
-		config := container.Config()
 
 		if in := context.String("resources"); in != "" {
 			var (
@@ -243,51 +240,11 @@ other options are ignored.
 			}
 			r.Pids.Limit = int64(context.Int("pids-limit"))
 		}
-
-		// Update the value
-		config.Cgroups.Resources.BlkioWeight = *r.BlockIO.Weight
-		config.Cgroups.Resources.CpuPeriod = *r.CPU.Period
-		config.Cgroups.Resources.CpuQuota = *r.CPU.Quota
-		config.Cgroups.Resources.CpuShares = *r.CPU.Shares
-		config.Cgroups.Resources.CpuRtPeriod = *r.CPU.RealtimePeriod
-		config.Cgroups.Resources.CpuRtRuntime = *r.CPU.RealtimeRuntime
-		config.Cgroups.Resources.CpusetCpus = r.CPU.Cpus
-		config.Cgroups.Resources.CpusetMems = r.CPU.Mems
-		config.Cgroups.Resources.KernelMemory = *r.Memory.Kernel
-		config.Cgroups.Resources.KernelMemoryTCP = *r.Memory.KernelTCP
-		config.Cgroups.Resources.Memory = *r.Memory.Limit
-		config.Cgroups.Resources.MemoryReservation = *r.Memory.Reservation
-		config.Cgroups.Resources.MemorySwap = *r.Memory.Swap
-		config.Cgroups.Resources.PidsLimit = r.Pids.Limit
-
-		// Update Intel RDT/CAT
-		if val := context.String("l3-cache-schema"); val != "" {
-			if !intelrdt.IsEnabled() {
-				return fmt.Errorf("Intel RDT: l3 cache schema is not enabled")
-			}
-
-			// If intelRdt is not specified in original configuration, we just don't
-			// Apply() to create intelRdt group or attach tasks for this container.
-			// In update command, we could re-enable through IntelRdtManager.Apply()
-			// and then update intelrdt constraint.
-			if config.IntelRdt == nil {
-				state, err := container.State()
-				if err != nil {
-					return err
-				}
-				config.IntelRdt = &configs.IntelRdt{}
-				intelRdtManager := intelrdt.IntelRdtManager{
-					Config: &config,
-					Id:     container.ID(),
-					Path:   state.IntelRdtPath,
-				}
-				if err := intelRdtManager.Apply(state.InitProcessPid); err != nil {
-					return err
-				}
-			}
-			config.IntelRdt.L3CacheSchema = val
+		a, err := linux.New(command.NewGlobalConfig(context))
+		if err != nil {
+			return err
 		}
-
-		return container.Set(config)
+		lx := a.(*linux.Libcontainer)
+		return lx.Update(id, &r, context.String("l3-cache-schema"))
 	},
 }

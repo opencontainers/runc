@@ -121,6 +121,7 @@ using the runc checkpoint command.`,
 					NoPivot:       context.Bool("no-pivot"),
 					NoNewKeyring:  context.Bool("no-new-keyring"),
 					PreserveFDs:   context.Int("preserve-fds"),
+					Detach:        context.Bool("detach"),
 				},
 				CheckpointOpts: *criuOpts,
 			}
