@@ -320,7 +320,7 @@ func (m *Manager) Apply(pid int) error {
 		}
 	}
 
-	statusChan := make(chan string)
+	statusChan := make(chan string, 1)
 	if _, err := theConn.StartTransientUnit(unitName, "replace", properties, statusChan); err == nil {
 		select {
 		case <-statusChan:
