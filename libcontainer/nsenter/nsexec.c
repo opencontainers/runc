@@ -679,17 +679,15 @@ void nsexec(void)
 					/*
 					 * Enable setgroups(2) if we've been asked to. But we also
 					 * have to explicitly disable setgroups(2) if we're
-					 * creating a rootless container (this is required since
-					 * Linux 3.19).
+					 * creating a rootless container for single-entry mapping.
+					 * i.e. config.is_setgroup == false.
+					 * (this is required since Linux 3.19).
+					 *
+					 * For rootless multi-entry mapping, config.is_setgroup shall be true and
+					 * newuidmap/newgidmap shall be used.
 					 */
-					if (config.is_rootless && config.is_setgroup) {
-						kill(child, SIGKILL);
-						bail("cannot allow setgroup in an unprivileged user namespace setup");
-					}
 
-					if (config.is_setgroup)
-						update_setgroups(child, SETGROUPS_ALLOW);
-					if (config.is_rootless)
+					if (config.is_rootless && !config.is_setgroup)
 						update_setgroups(child, SETGROUPS_DENY);
 
 					/* Set up mappings. */
