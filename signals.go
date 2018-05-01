@@ -134,7 +134,7 @@ func (h *signalHandler) reap() (exits []exit, err error) {
 		}
 		exits = append(exits, exit{
 			pid:    pid,
-			status: utils.ExitStatus(ws),
+			status: utils.ExitStatus(syscall.WaitStatus(ws)),
 		})
 	}
 }
