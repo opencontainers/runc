@@ -51,6 +51,10 @@ checkpointed.`,
 			if err != nil {
 				return err
 			}
+			cr, ok := a.(api.CheckpointOperations)
+			if !ok {
+				return api.ErrNotImplemented
+			}
 			opts, err := criuOptions(context)
 			if err != nil {
 				return err
@@ -62,7 +66,7 @@ checkpointed.`,
 			if err := setEmptyNsMask(context, opts); err != nil {
 				return err
 			}
-			return a.Checkpoint(id, *opts)
+			return cr.Checkpoint(id, *opts)
 		},
 	}
 

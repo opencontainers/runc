@@ -15,19 +15,22 @@ var (
 )
 
 type ContainerOperations interface {
-	Checkpoint(id string, opts CheckpointOpts) error
 	Create(id string, opts CreateOpts) (*CreateResult, error)
 	Delete(id string, opts DeleteOpts) error
 	Kill(id string, sig syscall.Signal, opts KillOpts) error
 	List() ([]Container, error)
 	PS(id string) ([]int, error)
 	Pause(id string) error
-	Restore(id string, opts RestoreOpts) (*CreateResult, error)
 	Resume(id string) error
 	Run(id string, opts CreateOpts) (*CreateResult, error)
 	Start(id string) error
 	State(id string) (*Container, error)
 	Exec(id string, opts ExecOpts) (*CreateResult, error)
+}
+
+type CheckpointOperations interface {
+	Checkpoint(id string, opts CheckpointOpts) error
+	Restore(id string, opts RestoreOpts) (*CreateResult, error)
 }
 
 type ExecOpts struct {

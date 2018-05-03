@@ -97,6 +97,14 @@ using the runc checkpoint command.`,
 			if err != nil {
 				return err
 			}
+			a, err := apiNew(NewGlobalConfig(context))
+			if err != nil {
+				return err
+			}
+			cr, ok := a.(api.CheckpointOperations)
+			if !ok {
+				return api.ErrNotImplemented
+			}
 			pidFile, err := revisePidFile(context)
 			if err != nil {
 				return err
@@ -106,10 +114,6 @@ using the runc checkpoint command.`,
 				return err
 			}
 			spec, err := setupSpec(context)
-			if err != nil {
-				return err
-			}
-			a, err := apiNew(NewGlobalConfig(context))
 			if err != nil {
 				return err
 			}
@@ -128,7 +132,7 @@ using the runc checkpoint command.`,
 				},
 				CheckpointOpts: *criuOpts,
 			}
-			result, err := a.Restore(id, opts)
+			result, err := cr.Restore(id, opts)
 			if err != nil {
 				return err
 			}
