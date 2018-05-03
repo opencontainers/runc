@@ -12,7 +12,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 )
 
-func New(config command.GlobalConfig) (api.API, error) {
+func New(config command.GlobalConfig) (api.ContainerOperations, error) {
 	abs, err := filepath.Abs(config.Root)
 	if err != nil {
 		return nil, err

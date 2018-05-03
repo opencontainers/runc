@@ -14,7 +14,7 @@ var (
 	ErrEmptyID        = errors.New("container id cannot be empty")
 )
 
-type API interface {
+type ContainerOperations interface {
 	Checkpoint(id string, opts CheckpointOpts) error
 	Create(id string, opts CreateOpts) (*CreateResult, error)
 	Delete(id string, opts DeleteOpts) error

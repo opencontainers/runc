@@ -27,7 +27,7 @@ type GlobalConfig struct {
 	SystemdCgroup bool
 }
 
-type APINew func(GlobalConfig) (api.API, error)
+type APINew func(GlobalConfig) (api.ContainerOperations, error)
 
 // New returns a cli.App for use with a CLI based application
 func New(apiNew APINew, desc Description, additionalCommands ...cli.Command) (*cli.App, error) {
