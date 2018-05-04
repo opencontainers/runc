@@ -1,8 +1,11 @@
 package linux
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+)
 
-func (l *Libcontainer) PS(id string) ([]int, error) {
+func (l *Libcontainer) PS(ctx context.Context, id string) ([]int, error) {
 	// XXX: Currently not supported with rootless containers.
 	if isRootless() {
 		return nil, fmt.Errorf("runc ps requires root")

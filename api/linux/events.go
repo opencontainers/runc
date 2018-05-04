@@ -1,8 +1,12 @@
 package linux
 
-import "github.com/opencontainers/runc/libcontainer"
+import (
+	"context"
 
-func (l *Libcontainer) NotifyOOM(id string) (<-chan struct{}, error) {
+	"github.com/opencontainers/runc/libcontainer"
+)
+
+func (l *Libcontainer) NotifyOOM(ctx context.Context, id string) (<-chan struct{}, error) {
 	container, err := l.getContainer(id)
 	if err != nil {
 		return nil, err
@@ -10,7 +14,7 @@ func (l *Libcontainer) NotifyOOM(id string) (<-chan struct{}, error) {
 	return container.NotifyOOM()
 }
 
-func (l *Libcontainer) Stats(id string) (*libcontainer.Stats, error) {
+func (l *Libcontainer) Stats(ctx context.Context, id string) (*libcontainer.Stats, error) {
 	container, err := l.getContainer(id)
 	if err != nil {
 		return nil, err

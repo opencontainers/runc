@@ -1,6 +1,10 @@
 package command
 
-import "github.com/urfave/cli"
+import (
+	"context"
+
+	"github.com/urfave/cli"
+)
 
 func NewStartCommand(apiNew APINew) cli.Command {
 	return cli.Command{
@@ -12,19 +16,19 @@ Where "<container-id>" is your name for the instance of the container that you
 are starting. The name you provide for the container instance must be unique on
 your host.`,
 		Description: `The start command executes the user defined process in a created container.`,
-		Action: func(context *cli.Context) error {
-			if err := CheckArgs(context, 1, ExactArgs); err != nil {
+		Action: func(ctx *cli.Context) error {
+			if err := CheckArgs(ctx, 1, ExactArgs); err != nil {
 				return err
 			}
-			id, err := GetID(context)
+			id, err := GetID(ctx)
 			if err != nil {
 				return err
 			}
-			a, err := apiNew(NewGlobalConfig(context))
+			a, err := apiNew(NewGlobalConfig(ctx))
 			if err != nil {
 				return err
 			}
-			return a.Start(id)
+			return a.Start(context.Background(), id)
 		},
 	}
 }

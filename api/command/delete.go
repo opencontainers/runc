@@ -1,6 +1,8 @@
 package command
 
 import (
+	"context"
+
 	"github.com/opencontainers/runc/api"
 	"github.com/urfave/cli"
 )
@@ -25,20 +27,20 @@ status of "ubuntu01" as "stopped" the following will delete resources held for
 				Usage: "Forcibly deletes the container if it is still running (uses SIGKILL)",
 			},
 		},
-		Action: func(context *cli.Context) error {
-			if err := CheckArgs(context, 1, ExactArgs); err != nil {
+		Action: func(ctx *cli.Context) error {
+			if err := CheckArgs(ctx, 1, ExactArgs); err != nil {
 				return err
 			}
-			id, err := GetID(context)
+			id, err := GetID(ctx)
 			if err != nil {
 				return err
 			}
-			force := context.Bool("force")
-			a, err := apiNew(NewGlobalConfig(context))
+			force := ctx.Bool("force")
+			a, err := apiNew(NewGlobalConfig(ctx))
 			if err != nil {
 				return err
 			}
-			return a.Delete(id, api.DeleteOpts{
+			return a.Delete(context.Background(), id, api.DeleteOpts{
 				Force: force,
 			})
 		},

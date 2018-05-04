@@ -71,24 +71,24 @@ func New(apiNew APINew, desc Description, additionalCommands ...cli.Command) (*c
 			Usage: "enable systemd cgroup support, expects cgroupsPath to be of form \"slice:prefix:name\" for e.g. \"system.slice:runc:434234\"",
 		},
 	}
-	app.Before = func(context *cli.Context) error {
-		if context.GlobalBool("debug") {
+	app.Before = func(ctx *cli.Context) error {
+		if ctx.GlobalBool("debug") {
 			logrus.SetLevel(logrus.DebugLevel)
 		}
-		if path := context.GlobalString("log"); path != "" {
+		if path := ctx.GlobalString("log"); path != "" {
 			f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND|os.O_SYNC, 0666)
 			if err != nil {
 				return err
 			}
 			logrus.SetOutput(f)
 		}
-		switch context.GlobalString("log-format") {
+		switch ctx.GlobalString("log-format") {
 		case "text":
 			// retain logrus's default.
 		case "json":
 			logrus.SetFormatter(new(logrus.JSONFormatter))
 		default:
-			return fmt.Errorf("unknown log-format %q", context.GlobalString("log-format"))
+			return fmt.Errorf("unknown log-format %q", ctx.GlobalString("log-format"))
 		}
 		return nil
 	}
@@ -112,12 +112,12 @@ func New(apiNew APINew, desc Description, additionalCommands ...cli.Command) (*c
 	return app, nil
 }
 
-func NewGlobalConfig(context *cli.Context) GlobalConfig {
+func NewGlobalConfig(ctx *cli.Context) GlobalConfig {
 	return GlobalConfig{
-		Root:          context.GlobalString("root"),
-		Debug:         context.GlobalBool("debug"),
-		CriuPath:      context.GlobalString("criu"),
-		SystemdCgroup: context.GlobalBool("systemd-cgroup"),
+		Root:          ctx.GlobalString("root"),
+		Debug:         ctx.GlobalBool("debug"),
+		CriuPath:      ctx.GlobalString("criu"),
+		SystemdCgroup: ctx.GlobalBool("systemd-cgroup"),
 	}
 }
 
@@ -136,33 +136,33 @@ const (
 	MaxArgs
 )
 
-func CheckArgs(context *cli.Context, expected, checkType int) error {
+func CheckArgs(ctx *cli.Context, expected, checkType int) error {
 	var err error
-	cmdName := context.Command.Name
+	cmdName := ctx.Command.Name
 	switch checkType {
 	case ExactArgs:
-		if context.NArg() != expected {
+		if ctx.NArg() != expected {
 			err = fmt.Errorf("%s: %q requires exactly %d argument(s)", os.Args[0], cmdName, expected)
 		}
 	case MinArgs:
-		if context.NArg() < expected {
+		if ctx.NArg() < expected {
 			err = fmt.Errorf("%s: %q requires a minimum of %d argument(s)", os.Args[0], cmdName, expected)
 		}
 	case MaxArgs:
-		if context.NArg() > expected {
+		if ctx.NArg() > expected {
 			err = fmt.Errorf("%s: %q requires a maximum of %d argument(s)", os.Args[0], cmdName, expected)
 		}
 	}
 	if err != nil {
 		fmt.Printf("incorrect usage.\n\n")
-		cli.ShowCommandHelp(context, cmdName)
+		cli.ShowCommandHelp(ctx, cmdName)
 		return err
 	}
 	return nil
 }
 
-func GetID(context *cli.Context) (string, error) {
-	id := context.Args().First()
+func GetID(ctx *cli.Context) (string, error) {
+	id := ctx.Args().First()
 	if id == "" {
 		return "", api.ErrEmptyID
 	}
@@ -170,8 +170,8 @@ func GetID(context *cli.Context) (string, error) {
 }
 
 // setupSpec performs initial setup based on the cli.Context for the container
-func setupSpec(context *cli.Context) (*specs.Spec, error) {
-	bundle := context.String("bundle")
+func setupSpec(ctx *cli.Context) (*specs.Spec, error) {
+	bundle := ctx.String("bundle")
 	if bundle != "" {
 		if err := os.Chdir(bundle); err != nil {
 			return nil, err
@@ -184,8 +184,8 @@ func setupSpec(context *cli.Context) (*specs.Spec, error) {
 	return spec, nil
 }
 
-func revisePidFile(context *cli.Context) (string, error) {
-	pidFile := context.String("pid-file")
+func revisePidFile(ctx *cli.Context) (string, error) {
+	pidFile := ctx.String("pid-file")
 	if pidFile == "" {
 		return "", nil
 	}

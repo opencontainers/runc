@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"io"
 	"syscall"
@@ -15,22 +16,22 @@ var (
 )
 
 type ContainerOperations interface {
-	Create(id string, opts CreateOpts) (*CreateResult, error)
-	Delete(id string, opts DeleteOpts) error
-	Kill(id string, sig syscall.Signal, opts KillOpts) error
-	List() ([]Container, error)
-	PS(id string) ([]int, error)
-	Pause(id string) error
-	Resume(id string) error
-	Run(id string, opts CreateOpts) (*CreateResult, error)
-	Start(id string) error
-	State(id string) (*Container, error)
-	Exec(id string, opts ExecOpts) (*CreateResult, error)
+	Create(ctx context.Context, id string, opts CreateOpts) (*CreateResult, error)
+	Delete(ctx context.Context, id string, opts DeleteOpts) error
+	Kill(ctx context.Context, id string, sig syscall.Signal, opts KillOpts) error
+	List(ctx context.Context) ([]Container, error)
+	PS(ctx context.Context, id string) ([]int, error)
+	Pause(ctx context.Context, id string) error
+	Resume(ctx context.Context, id string) error
+	Run(ctx context.Context, id string, opts CreateOpts) (*CreateResult, error)
+	Start(ctx context.Context, id string) error
+	State(ctx context.Context, id string) (*Container, error)
+	Exec(ctx context.Context, id string, opts ExecOpts) (*CreateResult, error)
 }
 
 type CheckpointOperations interface {
-	Checkpoint(id string, opts CheckpointOpts) error
-	Restore(id string, opts RestoreOpts) (*CreateResult, error)
+	Checkpoint(ctx context.Context, id string, opts CheckpointOpts) error
+	Restore(ctx context.Context, id string, opts RestoreOpts) (*CreateResult, error)
 }
 
 type ExecOpts struct {

@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"os"
 
 	"github.com/opencontainers/runc/api"
@@ -61,40 +62,40 @@ command(s) that get executed on start, edit the args parameter of the spec. See
 				Usage: "Pass N additional file descriptors to the container (stdio + $LISTEN_FDS + N in total)",
 			},
 		},
-		Action: func(context *cli.Context) error {
-			if err := CheckArgs(context, 1, ExactArgs); err != nil {
+		Action: func(ctx *cli.Context) error {
+			if err := CheckArgs(ctx, 1, ExactArgs); err != nil {
 				return err
 			}
-			id, err := GetID(context)
+			id, err := GetID(ctx)
 			if err != nil {
 				return err
 			}
-			pidFile, err := revisePidFile(context)
+			pidFile, err := revisePidFile(ctx)
 			if err != nil {
 				return err
 			}
-			spec, err := setupSpec(context)
+			spec, err := setupSpec(ctx)
 			if err != nil {
 				return err
 			}
-			a, err := apiNew(NewGlobalConfig(context))
+			a, err := apiNew(NewGlobalConfig(ctx))
 			if err != nil {
 				return err
 			}
 			opts := api.CreateOpts{
 				PidFile:       pidFile,
-				ConsoleSocket: context.String("console-socket"),
-				NoPivot:       context.Bool("no-pivot"),
-				NoNewKeyring:  context.Bool("no-new-keyring"),
-				PreserveFDs:   context.Int("preserve-fds"),
-				Detach:        context.Bool("detach"),
-				NoSubreaper:   context.Bool("no-subreaper"),
+				ConsoleSocket: ctx.String("console-socket"),
+				NoPivot:       ctx.Bool("no-pivot"),
+				NoNewKeyring:  ctx.Bool("no-new-keyring"),
+				PreserveFDs:   ctx.Int("preserve-fds"),
+				Detach:        ctx.Bool("detach"),
+				NoSubreaper:   ctx.Bool("no-subreaper"),
 				Spec:          spec,
 				Stdin:         os.Stdin,
 				Stdout:        os.Stdout,
 				Stderr:        os.Stderr,
 			}
-			result, err := a.Run(id, opts)
+			result, err := a.Run(context.Background(), id, opts)
 			if err != nil {
 				return err
 			}

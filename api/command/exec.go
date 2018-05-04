@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -88,39 +89,40 @@ following will output a list of processes running in the container:
 				Hidden: true,
 			},
 		},
-		Action: func(context *cli.Context) error {
-			if err := CheckArgs(context, 1, MinArgs); err != nil {
+		Action: func(ctx *cli.Context) error {
+			if err := CheckArgs(ctx, 1, MinArgs); err != nil {
 				return err
 			}
-			id, err := GetID(context)
+			id, err := GetID(ctx)
 			if err != nil {
 				return err
 			}
-			pidFile, err := revisePidFile(context)
+			pidFile, err := revisePidFile(ctx)
 			if err != nil {
 				return err
 			}
-			a, err := apiNew(NewGlobalConfig(context))
+			a, err := apiNew(NewGlobalConfig(ctx))
 			if err != nil {
 				return err
 			}
-			path := context.String("process")
-			if path == "" && len(context.Args()) == 1 {
+			path := ctx.String("process")
+			if path == "" && len(ctx.Args()) == 1 {
 				return fmt.Errorf("process args cannot be empty")
 			}
-			state, err := a.State(id)
+			c := context.Background()
+			state, err := a.State(c, id)
 			if err != nil {
 				return err
 			}
-			process, err := getProcess(context, state.Bundle)
+			process, err := getProcess(ctx, state.Bundle)
 			if err != nil {
 				return err
 			}
-			result, err := a.Exec(id, api.ExecOpts{
+			result, err := a.Exec(c, id, api.ExecOpts{
 				PidFile:       pidFile,
-				Detach:        context.Bool("detach"),
+				Detach:        ctx.Bool("detach"),
 				Process:       process,
-				ConsoleSocket: context.String("console-socket"),
+				ConsoleSocket: ctx.String("console-socket"),
 				Stdin:         os.Stdin,
 				Stdout:        os.Stdout,
 				Stderr:        os.Stderr,
@@ -135,8 +137,8 @@ following will output a list of processes running in the container:
 	}
 }
 
-func getProcess(context *cli.Context, bundle string) (*specs.Process, error) {
-	if path := context.String("process"); path != "" {
+func getProcess(ctx *cli.Context, bundle string) (*specs.Process, error) {
+	if path := ctx.String("process"); path != "" {
 		f, err := os.Open(path)
 		if err != nil {
 			return nil, err
@@ -158,18 +160,18 @@ func getProcess(context *cli.Context, bundle string) (*specs.Process, error) {
 		return nil, err
 	}
 	p := spec.Process
-	p.Args = context.Args()[1:]
+	p.Args = ctx.Args()[1:]
 	// override the cwd, if passed
-	if context.String("cwd") != "" {
-		p.Cwd = context.String("cwd")
+	if ctx.String("cwd") != "" {
+		p.Cwd = ctx.String("cwd")
 	}
-	if ap := context.String("apparmor"); ap != "" {
+	if ap := ctx.String("apparmor"); ap != "" {
 		p.ApparmorProfile = ap
 	}
-	if l := context.String("process-label"); l != "" {
+	if l := ctx.String("process-label"); l != "" {
 		p.SelinuxLabel = l
 	}
-	if caps := context.StringSlice("cap"); len(caps) > 0 {
+	if caps := ctx.StringSlice("cap"); len(caps) > 0 {
 		for _, c := range caps {
 			p.Capabilities.Bounding = append(p.Capabilities.Bounding, c)
 			p.Capabilities.Inheritable = append(p.Capabilities.Inheritable, c)
@@ -179,18 +181,18 @@ func getProcess(context *cli.Context, bundle string) (*specs.Process, error) {
 		}
 	}
 	// append the passed env variables
-	p.Env = append(p.Env, context.StringSlice("env")...)
+	p.Env = append(p.Env, ctx.StringSlice("env")...)
 
 	// set the tty
-	if context.IsSet("tty") {
-		p.Terminal = context.Bool("tty")
+	if ctx.IsSet("tty") {
+		p.Terminal = ctx.Bool("tty")
 	}
-	if context.IsSet("no-new-privs") {
-		p.NoNewPrivileges = context.Bool("no-new-privs")
+	if ctx.IsSet("no-new-privs") {
+		p.NoNewPrivileges = ctx.Bool("no-new-privs")
 	}
 	// override the user, if passed
-	if context.String("user") != "" {
-		u := strings.SplitN(context.String("user"), ":", 2)
+	if ctx.String("user") != "" {
+		u := strings.SplitN(ctx.String("user"), ":", 2)
 		if len(u) > 1 {
 			gid, err := strconv.Atoi(u[1])
 			if err != nil {
@@ -204,7 +206,7 @@ func getProcess(context *cli.Context, bundle string) (*specs.Process, error) {
 		}
 		p.User.UID = uint32(uid)
 	}
-	for _, gid := range context.Int64Slice("additional-gids") {
+	for _, gid := range ctx.Int64Slice("additional-gids") {
 		if gid < 0 {
 			return nil, fmt.Errorf("additional-gids must be a positive number %d", gid)
 		}

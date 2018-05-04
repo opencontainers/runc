@@ -1,6 +1,7 @@
 package linux
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,7 +13,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func (l *Libcontainer) Delete(id string, opts api.DeleteOpts) error {
+func (l *Libcontainer) Delete(ctx context.Context, id string, opts api.DeleteOpts) error {
 	container, err := l.getContainer(id)
 	if err != nil {
 		if lerr, ok := err.(libcontainer.Error); ok && lerr.Code() == libcontainer.ContainerNotExists {

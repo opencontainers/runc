@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -39,15 +40,15 @@ checkpointed.`,
 			cli.StringSliceFlag{Name: "empty-ns", Usage: "create a namespace, but don't restore its properties"},
 			cli.BoolFlag{Name: "auto-dedup", Usage: "enable auto deduplication of memory images"},
 		},
-		Action: func(context *cli.Context) error {
-			if err := CheckArgs(context, 1, ExactArgs); err != nil {
+		Action: func(ctx *cli.Context) error {
+			if err := CheckArgs(ctx, 1, ExactArgs); err != nil {
 				return err
 			}
-			id, err := GetID(context)
+			id, err := GetID(ctx)
 			if err != nil {
 				return err
 			}
-			a, err := apiNew(NewGlobalConfig(context))
+			a, err := apiNew(NewGlobalConfig(ctx))
 			if err != nil {
 				return err
 			}
@@ -55,35 +56,35 @@ checkpointed.`,
 			if !ok {
 				return api.ErrNotImplemented
 			}
-			opts, err := criuOptions(context)
+			opts, err := criuOptions(ctx)
 			if err != nil {
 				return err
 			}
 			// these are the mandatory criu options for a container
-			if err := setPageServer(context, opts); err != nil {
+			if err := setPageServer(ctx, opts); err != nil {
 				return err
 			}
-			if err := setEmptyNsMask(context, opts); err != nil {
+			if err := setEmptyNsMask(ctx, opts); err != nil {
 				return err
 			}
-			return cr.Checkpoint(id, *opts)
+			return cr.Checkpoint(context.Background(), id, *opts)
 		},
 	}
 
 }
 
-func getCheckpointImagePath(context *cli.Context) string {
-	imagePath := context.String("image-path")
+func getCheckpointImagePath(ctx *cli.Context) string {
+	imagePath := ctx.String("image-path")
 	if imagePath == "" {
-		imagePath = getDefaultImagePath(context)
+		imagePath = getDefaultImagePath(ctx)
 	}
 	return imagePath
 }
 
-func setPageServer(context *cli.Context, options *api.CheckpointOpts) error {
+func setPageServer(ctx *cli.Context, options *api.CheckpointOpts) error {
 	// xxx following criu opts are optional
 	// The dump image can be sent to a criu page server
-	if psOpt := context.String("page-server"); psOpt != "" {
+	if psOpt := ctx.String("page-server"); psOpt != "" {
 		addressPort := strings.Split(psOpt, ":")
 		if len(addressPort) != 2 {
 			return fmt.Errorf("use --page-server ADDRESS:PORT to specify page server")
@@ -104,10 +105,10 @@ var namespaceMapping = map[specs.LinuxNamespaceType]int{
 	specs.NetworkNamespace: unix.CLONE_NEWNET,
 }
 
-func setEmptyNsMask(context *cli.Context, options *api.CheckpointOpts) error {
+func setEmptyNsMask(ctx *cli.Context, options *api.CheckpointOpts) error {
 	var nsmask int
 
-	for _, ns := range context.StringSlice("empty-ns") {
+	for _, ns := range ctx.StringSlice("empty-ns") {
 		f, exists := namespaceMapping[specs.LinuxNamespaceType(ns)]
 		if !exists {
 			return fmt.Errorf("namespace %q is not supported", ns)
@@ -118,7 +119,7 @@ func setEmptyNsMask(context *cli.Context, options *api.CheckpointOpts) error {
 	return nil
 }
 
-func getDefaultImagePath(context *cli.Context) string {
+func getDefaultImagePath(ctx *cli.Context) string {
 	cwd, err := os.Getwd()
 	if err != nil {
 		panic(err)
@@ -126,24 +127,24 @@ func getDefaultImagePath(context *cli.Context) string {
 	return filepath.Join(cwd, "checkpoint")
 }
 
-func criuOptions(context *cli.Context) (*api.CheckpointOpts, error) {
-	imagePath := getCheckpointImagePath(context)
+func criuOptions(ctx *cli.Context) (*api.CheckpointOpts, error) {
+	imagePath := getCheckpointImagePath(ctx)
 	if err := os.MkdirAll(imagePath, 0655); err != nil {
 		return nil, err
 	}
 	return &api.CheckpointOpts{
 		ImagesDirectory:         imagePath,
-		WorkDirectory:           context.String("work-path"),
-		ParentImage:             context.String("parent-path"),
-		LeaveRunning:            context.Bool("leave-running"),
-		TcpEstablished:          context.Bool("tcp-established"),
-		ExternalUnixConnections: context.Bool("ext-unix-sk"),
-		ShellJob:                context.Bool("shell-job"),
-		FileLocks:               context.Bool("file-locks"),
-		PreDump:                 context.Bool("pre-dump"),
-		AutoDedup:               context.Bool("auto-dedup"),
-		LazyPages:               context.Bool("lazy-pages"),
-		StatusFd:                context.String("status-fd"),
-		ManageCgroupsMode:       context.String("manage-cgroups-mode"),
+		WorkDirectory:           ctx.String("work-path"),
+		ParentImage:             ctx.String("parent-path"),
+		LeaveRunning:            ctx.Bool("leave-running"),
+		TcpEstablished:          ctx.Bool("tcp-established"),
+		ExternalUnixConnections: ctx.Bool("ext-unix-sk"),
+		ShellJob:                ctx.Bool("shell-job"),
+		FileLocks:               ctx.Bool("file-locks"),
+		PreDump:                 ctx.Bool("pre-dump"),
+		AutoDedup:               ctx.Bool("auto-dedup"),
+		LazyPages:               ctx.Bool("lazy-pages"),
+		StatusFd:                ctx.String("status-fd"),
+		ManageCgroupsMode:       ctx.String("manage-cgroups-mode"),
 	}, nil
 }

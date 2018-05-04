@@ -1,6 +1,7 @@
 package linux
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -12,7 +13,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/utils"
 )
 
-func (l *Libcontainer) List() ([]api.Container, error) {
+func (l *Libcontainer) List(ctx context.Context) ([]api.Container, error) {
 	factory, err := l.loadFactory()
 	if err != nil {
 		return nil, err

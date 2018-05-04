@@ -1,13 +1,14 @@
 package linux
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/opencontainers/runc/api"
 	"github.com/opencontainers/runc/libcontainer"
 )
 
-func (l *Libcontainer) Exec(id string, opts api.ExecOpts) (*api.CreateResult, error) {
+func (l *Libcontainer) Exec(ctx context.Context, id string, opts api.ExecOpts) (*api.CreateResult, error) {
 	container, err := l.getContainer(id)
 	if err != nil {
 		return nil, err

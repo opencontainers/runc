@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -39,25 +40,25 @@ To list containers created using a non-default value for "--root":
 				Usage: "display only container IDs",
 			},
 		},
-		Action: func(context *cli.Context) error {
-			if err := CheckArgs(context, 0, ExactArgs); err != nil {
+		Action: func(ctx *cli.Context) error {
+			if err := CheckArgs(ctx, 0, ExactArgs); err != nil {
 				return err
 			}
-			a, err := apiNew(NewGlobalConfig(context))
+			a, err := apiNew(NewGlobalConfig(ctx))
 			if err != nil {
 				return err
 			}
-			s, err := a.List()
+			s, err := a.List(context.Background())
 			if err != nil {
 				return err
 			}
-			if context.Bool("quiet") {
+			if ctx.Bool("quiet") {
 				for _, item := range s {
 					fmt.Println(item.ID)
 				}
 				return nil
 			}
-			switch context.String("format") {
+			switch ctx.String("format") {
 			case "table":
 				w := tabwriter.NewWriter(os.Stdout, 12, 1, 3, ' ', 0)
 				fmt.Fprint(w, "ID\tPID\tSTATUS\tBUNDLE\tCREATED\tOWNER\n")

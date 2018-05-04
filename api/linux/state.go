@@ -1,12 +1,14 @@
 package linux
 
 import (
+	"context"
+
 	"github.com/opencontainers/runc/api"
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/utils"
 )
 
-func (l *Libcontainer) State(id string) (*api.Container, error) {
+func (l *Libcontainer) State(ctx context.Context, id string) (*api.Container, error) {
 	container, err := l.getContainer(id)
 	if err != nil {
 		return nil, err

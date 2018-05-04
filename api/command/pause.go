@@ -1,6 +1,10 @@
 package command
 
-import "github.com/urfave/cli"
+import (
+	"context"
+
+	"github.com/urfave/cli"
+)
 
 func NewPauseCommand(apiNew APINew) cli.Command {
 	return cli.Command{
@@ -13,19 +17,19 @@ paused. `,
 		Description: `The pause command suspends all processes in the instance of the container.
 
 Use runc list to identiy instances of containers and their current status.`,
-		Action: func(context *cli.Context) error {
-			if err := CheckArgs(context, 1, ExactArgs); err != nil {
+		Action: func(ctx *cli.Context) error {
+			if err := CheckArgs(ctx, 1, ExactArgs); err != nil {
 				return err
 			}
-			id, err := GetID(context)
+			id, err := GetID(ctx)
 			if err != nil {
 				return err
 			}
-			a, err := apiNew(NewGlobalConfig(context))
+			a, err := apiNew(NewGlobalConfig(ctx))
 			if err != nil {
 				return err
 			}
-			return a.Pause(id)
+			return a.Pause(context.Background(), id)
 		},
 	}
 }
@@ -41,19 +45,19 @@ resumed.`,
 		Description: `The resume command resumes all processes in the instance of the container.
 
 Use runc list to identiy instances of containers and their current status.`,
-		Action: func(context *cli.Context) error {
-			if err := CheckArgs(context, 1, ExactArgs); err != nil {
+		Action: func(ctx *cli.Context) error {
+			if err := CheckArgs(ctx, 1, ExactArgs); err != nil {
 				return err
 			}
-			id, err := GetID(context)
+			id, err := GetID(ctx)
 			if err != nil {
 				return err
 			}
-			a, err := apiNew(NewGlobalConfig(context))
+			a, err := apiNew(NewGlobalConfig(ctx))
 			if err != nil {
 				return err
 			}
-			return a.Resume(id)
+			return a.Resume(context.Background(), id)
 		},
 	}
 }

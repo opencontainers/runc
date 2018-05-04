@@ -1,12 +1,13 @@
 package linux
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/opencontainers/runc/api"
 )
 
-func (l *Libcontainer) Restore(id string, opts api.RestoreOpts) (*api.CreateResult, error) {
+func (l *Libcontainer) Restore(ctx context.Context, id string, opts api.RestoreOpts) (*api.CreateResult, error) {
 	// XXX: Currently this is untested with rootless containers.
 	if isRootless() {
 		return nil, fmt.Errorf("runc restore requires root")

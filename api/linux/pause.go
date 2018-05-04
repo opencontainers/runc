@@ -1,6 +1,8 @@
 package linux
 
-func (l *Libcontainer) Pause(id string) error {
+import "context"
+
+func (l *Libcontainer) Pause(ctx context.Context, id string) error {
 	container, err := l.getContainer(id)
 	if err != nil {
 		return err
@@ -8,7 +10,7 @@ func (l *Libcontainer) Pause(id string) error {
 	return container.Pause()
 }
 
-func (l *Libcontainer) Resume(id string) error {
+func (l *Libcontainer) Resume(ctx context.Context, id string) error {
 	container, err := l.getContainer(id)
 	if err != nil {
 		return err

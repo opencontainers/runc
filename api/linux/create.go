@@ -1,8 +1,12 @@
 package linux
 
-import "github.com/opencontainers/runc/api"
+import (
+	"context"
 
-func (l *Libcontainer) Create(id string, opts api.CreateOpts) (*api.CreateResult, error) {
+	"github.com/opencontainers/runc/api"
+)
+
+func (l *Libcontainer) Create(ctx context.Context, id string, opts api.CreateOpts) (*api.CreateResult, error) {
 	status, err := l.startContainer(id, opts, CT_ACT_CREATE, nil)
 	if err != nil {
 		return nil, err

@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"os"
 
 	"github.com/opencontainers/runc/api"
@@ -89,15 +90,15 @@ using the runc checkpoint command.`,
 				Usage: "use userfaultfd to lazily restore memory pages",
 			},
 		},
-		Action: func(context *cli.Context) error {
-			if err := CheckArgs(context, 1, ExactArgs); err != nil {
+		Action: func(ctx *cli.Context) error {
+			if err := CheckArgs(ctx, 1, ExactArgs); err != nil {
 				return err
 			}
-			id, err := GetID(context)
+			id, err := GetID(ctx)
 			if err != nil {
 				return err
 			}
-			a, err := apiNew(NewGlobalConfig(context))
+			a, err := apiNew(NewGlobalConfig(ctx))
 			if err != nil {
 				return err
 			}
@@ -105,15 +106,15 @@ using the runc checkpoint command.`,
 			if !ok {
 				return api.ErrNotImplemented
 			}
-			pidFile, err := revisePidFile(context)
+			pidFile, err := revisePidFile(ctx)
 			if err != nil {
 				return err
 			}
-			criuOpts, err := criuOptions(context)
+			criuOpts, err := criuOptions(ctx)
 			if err != nil {
 				return err
 			}
-			spec, err := setupSpec(context)
+			spec, err := setupSpec(ctx)
 			if err != nil {
 				return err
 			}
@@ -121,18 +122,18 @@ using the runc checkpoint command.`,
 				CreateOpts: api.CreateOpts{
 					Spec:          spec,
 					PidFile:       pidFile,
-					ConsoleSocket: context.String("console-socket"),
-					NoPivot:       context.Bool("no-pivot"),
-					NoNewKeyring:  context.Bool("no-new-keyring"),
-					PreserveFDs:   context.Int("preserve-fds"),
-					Detach:        context.Bool("detach"),
+					ConsoleSocket: ctx.String("console-socket"),
+					NoPivot:       ctx.Bool("no-pivot"),
+					NoNewKeyring:  ctx.Bool("no-new-keyring"),
+					PreserveFDs:   ctx.Int("preserve-fds"),
+					Detach:        ctx.Bool("detach"),
 					Stdin:         os.Stdin,
 					Stdout:        os.Stdout,
 					Stderr:        os.Stderr,
 				},
 				CheckpointOpts: *criuOpts,
 			}
-			result, err := cr.Restore(id, opts)
+			result, err := cr.Restore(context.Background(), id, opts)
 			if err != nil {
 				return err
 			}

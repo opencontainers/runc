@@ -3,6 +3,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -31,24 +32,25 @@ information is displayed once every 5 seconds.`,
 		cli.DurationFlag{Name: "interval", Value: 5 * time.Second, Usage: "set the stats collection interval"},
 		cli.BoolFlag{Name: "stats", Usage: "display the container's stats then exit"},
 	},
-	Action: func(context *cli.Context) error {
-		if err := command.CheckArgs(context, 1, command.ExactArgs); err != nil {
+	Action: func(ctx *cli.Context) error {
+		if err := command.CheckArgs(ctx, 1, command.ExactArgs); err != nil {
 			return err
 		}
-		a, err := linux.New(command.NewGlobalConfig(context))
+		a, err := linux.New(command.NewGlobalConfig(ctx))
 		if err != nil {
 			return err
 		}
 		lx := a.(*linux.Libcontainer)
-		id, err := command.GetID(context)
+		id, err := command.GetID(ctx)
 		if err != nil {
 			return err
 		}
-		duration := context.Duration("interval")
+		c := context.Background()
+		duration := ctx.Duration("interval")
 		if duration <= 0 {
 			return fmt.Errorf("duration interval must be greater than 0")
 		}
-		state, err := lx.State(id)
+		state, err := lx.State(c, id)
 		if err != nil {
 			return err
 		}
@@ -70,8 +72,8 @@ information is displayed once every 5 seconds.`,
 				}
 			}
 		}()
-		if context.Bool("stats") {
-			s, err := lx.Stats(id)
+		if ctx.Bool("stats") {
+			s, err := lx.Stats(c, id)
 			if err != nil {
 				return err
 			}
@@ -81,8 +83,8 @@ information is displayed once every 5 seconds.`,
 			return nil
 		}
 		go func() {
-			for range time.Tick(context.Duration("interval")) {
-				s, err := lx.Stats(id)
+			for range time.Tick(ctx.Duration("interval")) {
+				s, err := lx.Stats(c, id)
 				if err != nil {
 					logrus.Error(err)
 					continue
@@ -90,7 +92,7 @@ information is displayed once every 5 seconds.`,
 				stats <- s
 			}
 		}()
-		n, err := lx.NotifyOOM(id)
+		n, err := lx.NotifyOOM(c, id)
 		if err != nil {
 			return err
 		}

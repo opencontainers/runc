@@ -1,6 +1,7 @@
 package linux
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -8,7 +9,7 @@ import (
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
-func (l *Libcontainer) Update(id string, r *specs.LinuxResources, l3Cache string) error {
+func (l *Libcontainer) Update(ctx context.Context, id string, r *specs.LinuxResources, l3Cache string) error {
 	container, err := l.getContainer(id)
 	if err != nil {
 		return err

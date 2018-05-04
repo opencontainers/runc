@@ -1,13 +1,14 @@
 package linux
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/opencontainers/runc/api"
 	"github.com/opencontainers/runc/libcontainer"
 )
 
-func (l *Libcontainer) Checkpoint(id string, opts api.CheckpointOpts) error {
+func (l *Libcontainer) Checkpoint(ctx context.Context, id string, opts api.CheckpointOpts) error {
 	// XXX: Currently this is untested with rootless containers.
 	if isRootless() {
 		return fmt.Errorf("checkpoint requires root")

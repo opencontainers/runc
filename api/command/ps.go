@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -23,23 +24,23 @@ func NewPSCommand(apiNew APINew) cli.Command {
 				Usage: `select one of: ` + formatOptions,
 			},
 		},
-		Action: func(context *cli.Context) error {
-			if err := CheckArgs(context, 1, MinArgs); err != nil {
+		Action: func(ctx *cli.Context) error {
+			if err := CheckArgs(ctx, 1, MinArgs); err != nil {
 				return err
 			}
-			id, err := GetID(context)
+			id, err := GetID(ctx)
 			if err != nil {
 				return err
 			}
-			a, err := apiNew(NewGlobalConfig(context))
+			a, err := apiNew(NewGlobalConfig(ctx))
 			if err != nil {
 				return err
 			}
-			pids, err := a.PS(id)
+			pids, err := a.PS(context.Background(), id)
 			if err != nil {
 				return err
 			}
-			switch context.String("format") {
+			switch ctx.String("format") {
 			case "table":
 			case "json":
 				return json.NewEncoder(os.Stdout).Encode(pids)
@@ -48,10 +49,10 @@ func NewPSCommand(apiNew APINew) cli.Command {
 			}
 
 			// [1:] is to remove command name, ex:
-			// context.Args(): [containet_id ps_arg1 ps_arg2 ...]
+			// ctx.Args(): [containet_id ps_arg1 ps_arg2 ...]
 			// psArgs:         [ps_arg1 ps_arg2 ...]
 			//
-			psArgs := context.Args()[1:]
+			psArgs := ctx.Args()[1:]
 			if len(psArgs) == 0 {
 				psArgs = []string{"-ef"}
 			}

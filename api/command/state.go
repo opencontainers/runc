@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 
@@ -16,19 +17,19 @@ func NewStateCommand(apiNew APINew) cli.Command {
 Where "<container-id>" is your name for the instance of the container.`,
 		Description: `The state command outputs current state information for the
 instance of a container.`,
-		Action: func(context *cli.Context) error {
-			if err := CheckArgs(context, 1, ExactArgs); err != nil {
+		Action: func(ctx *cli.Context) error {
+			if err := CheckArgs(ctx, 1, ExactArgs); err != nil {
 				return err
 			}
-			id, err := GetID(context)
+			id, err := GetID(ctx)
 			if err != nil {
 				return err
 			}
-			a, err := apiNew(NewGlobalConfig(context))
+			a, err := apiNew(NewGlobalConfig(ctx))
 			if err != nil {
 				return err
 			}
-			cs, err := a.State(id)
+			cs, err := a.State(context.Background(), id)
 			if err != nil {
 				return err
 			}

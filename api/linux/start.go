@@ -1,13 +1,14 @@
 package linux
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
 	"github.com/opencontainers/runc/libcontainer"
 )
 
-func (l *Libcontainer) Start(id string) error {
+func (l *Libcontainer) Start(ctx context.Context, id string) error {
 	container, err := l.getContainer(id)
 	if err != nil {
 		return err
