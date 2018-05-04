@@ -20,6 +20,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runc/libcontainer/user"
 	"github.com/opencontainers/runc/libcontainer/utils"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 )
@@ -121,7 +122,7 @@ func finalizeNamespace(config *initConfig) error {
 	// inherited are marked close-on-exec so they stay out of the
 	// container
 	if err := utils.CloseExecFrom(config.PassedFilesCount + 3); err != nil {
-		return err
+		return errors.Wrap(err, "close exec fds")
 	}
 
 	capabilities := &configs.Capabilities{}
@@ -136,20 +137,20 @@ func finalizeNamespace(config *initConfig) error {
 	}
 	// drop capabilities in bounding set before changing user
 	if err := w.ApplyBoundingSet(); err != nil {
-		return err
+		return errors.Wrap(err, "apply bounding set")
 	}
 	// preserve existing capabilities while we change users
 	if err := system.SetKeepCaps(); err != nil {
-		return err
+		return errors.Wrap(err, "set keep caps")
 	}
 	if err := setupUser(config); err != nil {
-		return err
+		return errors.Wrap(err, "setup user")
 	}
 	if err := system.ClearKeepCaps(); err != nil {
-		return err
+		return errors.Wrap(err, "clear keep caps")
 	}
 	if err := w.ApplyCaps(); err != nil {
-		return err
+		return errors.Wrap(err, "apply caps")
 	}
 	if config.Cwd != "" {
 		if err := unix.Chdir(config.Cwd); err != nil {
