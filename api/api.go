@@ -15,6 +15,13 @@ var (
 	ErrEmptyID        = errors.New("container id cannot be empty")
 )
 
+type GlobalConfig struct {
+	Debug         bool
+	Root          string
+	CriuPath      string
+	SystemdCgroup bool
+}
+
 type ContainerOperations interface {
 	Create(ctx context.Context, id string, opts CreateOpts) (*CreateResult, error)
 	Delete(ctx context.Context, id string, opts DeleteOpts) error

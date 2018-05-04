@@ -6,13 +6,12 @@ import (
 	"path/filepath"
 
 	"github.com/opencontainers/runc/api"
-	"github.com/opencontainers/runc/api/command"
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 )
 
-func New(config command.GlobalConfig) (api.ContainerOperations, error) {
+func New(config api.GlobalConfig) (api.ContainerOperations, error) {
 	abs, err := filepath.Abs(config.Root)
 	if err != nil {
 		return nil, err

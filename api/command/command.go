@@ -20,14 +20,7 @@ type Description struct {
 	DefaultRoot string
 }
 
-type GlobalConfig struct {
-	Debug         bool
-	Root          string
-	CriuPath      string
-	SystemdCgroup bool
-}
-
-type APINew func(GlobalConfig) (api.ContainerOperations, error)
+type APINew func(api.GlobalConfig) (api.ContainerOperations, error)
 
 // New returns a cli.App for use with a CLI based application
 func New(apiNew APINew, desc Description, additionalCommands ...cli.Command) (*cli.App, error) {
@@ -112,8 +105,8 @@ func New(apiNew APINew, desc Description, additionalCommands ...cli.Command) (*c
 	return app, nil
 }
 
-func NewGlobalConfig(ctx *cli.Context) GlobalConfig {
-	return GlobalConfig{
+func NewGlobalConfig(ctx *cli.Context) api.GlobalConfig {
+	return api.GlobalConfig{
 		Root:          ctx.GlobalString("root"),
 		Debug:         ctx.GlobalBool("debug"),
 		CriuPath:      ctx.GlobalString("criu"),
