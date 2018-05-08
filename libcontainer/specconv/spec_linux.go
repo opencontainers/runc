@@ -270,6 +270,11 @@ func createLibcontainerMount(cwd string, m specs.Mount) *configs.Mount {
 	flags, pgflags, data, ext := parseMountOptions(m.Options)
 	source := m.Source
 	device := m.Type
+
+	if m.Type == "bind" {
+		flags |= unix.MS_BIND
+	}
+
 	if flags|unix.MS_BIND != 0 {
 		if device == "" {
 			device = "bind"
