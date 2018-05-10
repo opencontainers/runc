@@ -234,7 +234,7 @@ func isRootless(context *cli.Context) (bool, error) {
 	// So we use system.GetParentNSeuid() here.
 	//
 	// TODO(AkihiroSuda): how to support nested userns?
-	return system.GetParentNSeuid() != 0, nil
+	return system.GetParentNSeuid() != 0 || system.RunningInUserNS(), nil
 }
 
 func createContainer(context *cli.Context, id string, spec *specs.Spec) (libcontainer.Container, error) {
