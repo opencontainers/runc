@@ -26,7 +26,7 @@ accepted format is as follow (unchanged values can be omitted):
        "mems": ""
      },
      "blockIO": {
-       "blkioWeight": 0
+       "weight": 0
      }
    }
 
