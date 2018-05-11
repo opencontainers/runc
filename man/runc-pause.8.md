@@ -5,7 +5,7 @@
    runc pause <container-id>
 
 Where "<container-id>" is the name for the instance of the container to be
-paused. 
+paused.
 
 # DESCRIPTION
    The pause command suspends all processes in the instance of the container.

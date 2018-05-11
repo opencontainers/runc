@@ -3,7 +3,7 @@
 
 # SYNOPSIS
    runc [global options] command [command options] [arguments...]
-   
+
 # DESCRIPTION
 runc is a command line client for running applications packaged according to
 the Open Container Initiative (OCI) format and is a compliant implementation of the
@@ -16,7 +16,7 @@ direct child of the process supervisor.
 
 Containers are configured using bundles. A bundle for a container is a directory
 that includes a specification file named "config.json" and a root filesystem.
-The root filesystem contains the contents of the container. 
+The root filesystem contains the contents of the container.
 
 To start a new instance of a container:
 
@@ -45,7 +45,7 @@ value for "bundle" is the current directory.
    state        output the state of a container
    update       update container resource constraints
    help, h      Shows a list of commands or help for one command
-   
+
 # GLOBAL OPTIONS
    --debug              enable debug output for logging
    --log value          set the log file path where internal debug information is written (default: "/dev/null")
