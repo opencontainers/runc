@@ -23,3 +23,4 @@ checkpointed.
    --pre-dump                   dump container's memory information only, leave the container running after this
    --manage-cgroups-mode value  cgroups mode: 'soft' (default), 'full' and 'strict'
    --empty-ns value             create a namespace, but don't restore its properties
+   --auto-dedup                 enable auto deduplication of memory images

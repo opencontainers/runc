@@ -12,6 +12,7 @@ restored.
 using the runc checkpoint command.
 
 # OPTIONS
+   --console-socket value       path to an AF_UNIX socket which will receive a file descriptor referencing the master end of the console's pseudoterminal
    --image-path value           path to criu image files for restoring
    --work-path value            path for saving work files and logs
    --tcp-established            allow open tcp connections
@@ -24,3 +25,6 @@ using the runc checkpoint command.
    --pid-file value             specify the file to write the process id to
    --no-subreaper               disable the use of the subreaper used to reap reparented processes
    --no-pivot                   do not use pivot root to jail process inside rootfs.  This should be used whenever the rootfs is on top of a ramdisk
+   --empty-ns value             create a namespace, but don't restore its properties
+   --auto-dedup                 enable auto deduplication of memory images
+   --lazy-pages                 use userfaultfd to lazily restore memory pages

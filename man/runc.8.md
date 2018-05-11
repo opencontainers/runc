@@ -29,6 +29,7 @@ value for "bundle" is the current directory.
 
 # COMMANDS
    checkpoint   checkpoint a running container
+   create       create a container
    delete       delete any resources held by the container often used with detached containers
    events       display container events such as OOM notifications, cpu, memory, IO and network stats
    exec         execute new process inside the container
