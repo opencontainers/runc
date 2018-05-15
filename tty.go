@@ -54,11 +54,12 @@ func setupProcessPipes(p *libcontainer.Process, rootuid, rootgid int) (*tty, err
 			t.postStart = append(t.postStart, c)
 		}
 	}
+	t.wg.Add(3)
 	go func() {
+		defer t.wg.Done()
 		io.Copy(i.Stdin, os.Stdin)
 		i.Stdin.Close()
 	}()
-	t.wg.Add(2)
 	go t.copyIO(os.Stdout, i.Stdout)
 	go t.copyIO(os.Stderr, i.Stderr)
 	return t, nil
