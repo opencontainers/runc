@@ -71,7 +71,7 @@ func newContainerCapList(capConfig *configs.Capabilities) (*containerCapabilitie
 		}
 		ambient = append(ambient, v)
 	}
-	pid, err := capability.NewPid(0)
+	pid, err := capability.NewPid2(0)
 	if err != nil {
 		return nil, err
 	}

@@ -1799,8 +1799,12 @@ func (c *linuxContainer) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Na
 			}
 			if requiresRootOrMappingTool(c.config) {
 				// check if we have CAP_SETGID to setgroup properly
-				pid, err := capability.NewPid(0)
+				pid, err := capability.NewPid2(0)
 				if err != nil {
+					return nil, err
+				}
+				err = pid.Load()
+				if err != nil && !os.IsNotExist(err) {
 					return nil, err
 				}
 				if !pid.Get(capability.EFFECTIVE, capability.CAP_SETGID) {
