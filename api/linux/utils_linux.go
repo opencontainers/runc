@@ -151,7 +151,7 @@ func isRootless() bool {
 	return os.Geteuid() != 0
 }
 
-func (l *Libcontainer) createContainer(id string, opts api.CreateOpts) (libcontainer.Container, error) {
+func (l *Libcontainer) createContainer(id string, opts api.CommandOpts) (libcontainer.Container, error) {
 	config, err := specconv.CreateLibcontainerConfig(&specconv.CreateOpts{
 		CgroupName:       id,
 		UseSystemdCgroup: l.systemdCgroup,
@@ -297,7 +297,7 @@ const (
 	CT_ACT_RESTORE
 )
 
-func (l *Libcontainer) startContainer(id string, opts api.CreateOpts, action CtAct, criuOpts *libcontainer.CriuOpts) (int, error) {
+func (l *Libcontainer) startContainer(id string, opts api.CommandOpts, action CtAct, criuOpts *libcontainer.CriuOpts) (int, error) {
 	notifySocket := newNotifySocket(l.root, os.Getenv("NOTIFY_SOCKET"), id)
 	if notifySocket != nil {
 		notifySocket.setupSpec(opts.Spec)

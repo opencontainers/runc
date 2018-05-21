@@ -8,7 +8,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer"
 )
 
-func (l *Libcontainer) Exec(ctx context.Context, id string, opts api.ExecOpts) (*api.CreateResult, error) {
+func (l *Libcontainer) Exec(ctx context.Context, id string, opts api.ExecOpts) (*api.CommandResult, error) {
 	container, err := l.getContainer(id)
 	if err != nil {
 		return nil, err
@@ -33,7 +33,7 @@ func (l *Libcontainer) Exec(ctx context.Context, id string, opts api.ExecOpts) (
 	if err != nil {
 		return nil, err
 	}
-	return &api.CreateResult{
+	return &api.CommandResult{
 		Status: s,
 	}, nil
 }

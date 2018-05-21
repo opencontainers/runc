@@ -119,7 +119,7 @@ using the runc checkpoint command.`,
 				return err
 			}
 			opts := api.RestoreOpts{
-				CreateOpts: api.CreateOpts{
+				CommandOpts: api.CommandOpts{
 					Spec:          spec,
 					PidFile:       pidFile,
 					ConsoleSocket: ctx.String("console-socket"),

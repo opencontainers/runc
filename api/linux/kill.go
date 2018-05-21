@@ -2,12 +2,12 @@ package linux
 
 import (
 	"context"
-	"syscall"
+	"os"
 
 	"github.com/opencontainers/runc/api"
 )
 
-func (l *Libcontainer) Kill(ctx context.Context, id string, signal syscall.Signal, opts api.KillOpts) error {
+func (l *Libcontainer) Kill(ctx context.Context, id string, signal os.Signal, opts api.KillOpts) error {
 	container, err := l.getContainer(id)
 	if err != nil {
 		return err

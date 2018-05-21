@@ -70,13 +70,12 @@ command(s) that get executed on start, edit the args parameter of the spec. See
 			if err != nil {
 				return err
 			}
-			opts := api.CreateOpts{
+			opts := api.CommandOpts{
 				PidFile:       pidFile,
 				ConsoleSocket: ctx.String("console-socket"),
 				NoPivot:       ctx.Bool("no-pivot"),
 				NoNewKeyring:  ctx.Bool("no-new-keyring"),
 				PreserveFDs:   ctx.Int("preserve-fds"),
-				Detach:        ctx.Bool("detach"),
 				NoSubreaper:   ctx.Bool("no-subreaper"),
 				Stdin:         os.Stdin,
 				Stdout:        os.Stdout,

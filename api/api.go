@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
-	"syscall"
+	"os"
 	"time"
 
 	specs "github.com/opencontainers/runtime-spec/specs-go"
@@ -23,22 +23,22 @@ type GlobalConfig struct {
 }
 
 type ContainerOperations interface {
-	Create(ctx context.Context, id string, opts CreateOpts) (*CreateResult, error)
+	Create(ctx context.Context, id string, opts CommandOpts) (*CommandResult, error)
 	Delete(ctx context.Context, id string, opts DeleteOpts) error
-	Kill(ctx context.Context, id string, sig syscall.Signal, opts KillOpts) error
+	Kill(ctx context.Context, id string, sig os.Signal, opts KillOpts) error
 	List(ctx context.Context) ([]Container, error)
 	PS(ctx context.Context, id string) ([]int, error)
 	Pause(ctx context.Context, id string) error
 	Resume(ctx context.Context, id string) error
-	Run(ctx context.Context, id string, opts CreateOpts) (*CreateResult, error)
+	Run(ctx context.Context, id string, opts CommandOpts) (*CommandResult, error)
 	Start(ctx context.Context, id string) error
 	State(ctx context.Context, id string) (*Container, error)
-	Exec(ctx context.Context, id string, opts ExecOpts) (*CreateResult, error)
+	Exec(ctx context.Context, id string, opts ExecOpts) (*CommandResult, error)
 }
 
 type CheckpointOperations interface {
 	Checkpoint(ctx context.Context, id string, opts CheckpointOpts) error
-	Restore(ctx context.Context, id string, opts RestoreOpts) (*CreateResult, error)
+	Restore(ctx context.Context, id string, opts RestoreOpts) (*CommandResult, error)
 }
 
 type ExecOpts struct {
@@ -52,7 +52,7 @@ type ExecOpts struct {
 }
 
 type RestoreOpts struct {
-	CreateOpts
+	CommandOpts
 	CheckpointOpts
 }
 
@@ -87,7 +87,7 @@ type CheckpointOpts struct {
 	StatusFd                string             // fd for feedback when lazy server is ready
 }
 
-type CreateOpts struct {
+type CommandOpts struct {
 	Spec          *specs.Spec
 	PidFile       string
 	ConsoleSocket string
@@ -101,7 +101,7 @@ type CreateOpts struct {
 	Stderr        io.Writer
 }
 
-type CreateResult struct {
+type CommandResult struct {
 	Status int
 }
 
