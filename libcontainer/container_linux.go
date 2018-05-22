@@ -28,7 +28,6 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/sirupsen/logrus"
-	"github.com/syndtr/gocapability/capability"
 	"github.com/vishvananda/netlink/nl"
 	"golang.org/x/sys/unix"
 )
@@ -1798,17 +1797,10 @@ func (c *linuxContainer) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Na
 				})
 			}
 			if requiresRootOrMappingTool(c.config) {
-				// check if we have CAP_SETGID to setgroup properly
-				pid, err := capability.NewPid(0)
-				if err != nil {
-					return nil, err
-				}
-				if !pid.Get(capability.EFFECTIVE, capability.CAP_SETGID) {
-					r.AddData(&Boolmsg{
-						Type:  SetgroupAttr,
-						Value: true,
-					})
-				}
+				r.AddData(&Boolmsg{
+					Type:  SetgroupAttr,
+					Value: true,
+				})
 			}
 		}
 	}
