@@ -1,6 +1,6 @@
 // +build linux
 
-package main
+package linux
 
 import (
 	"bytes"
@@ -11,7 +11,6 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
 )
 
 type notifySocket struct {
@@ -20,21 +19,16 @@ type notifySocket struct {
 	socketPath string
 }
 
-func newNotifySocket(context *cli.Context, notifySocketHost string, id string) *notifySocket {
+func newNotifySocket(root, notifySocketHost, id string) *notifySocket {
 	if notifySocketHost == "" {
 		return nil
 	}
-
-	root := filepath.Join(context.GlobalString("root"), id)
-	path := filepath.Join(root, "notify.sock")
-
-	notifySocket := &notifySocket{
+	path := filepath.Join(filepath.Join(root, id), "notify.sock")
+	return &notifySocket{
 		socket:     nil,
 		host:       notifySocketHost,
 		socketPath: path,
 	}
-
-	return notifySocket
 }
 
 func (ns *notifySocket) Close() error {
@@ -43,7 +37,7 @@ func (ns *notifySocket) Close() error {
 
 // If systemd is supporting sd_notify protocol, this function will add support
 // for sd_notify protocol from within the container.
-func (s *notifySocket) setupSpec(context *cli.Context, spec *specs.Spec) {
+func (s *notifySocket) setupSpec(spec *specs.Spec) {
 	mount := specs.Mount{Destination: s.host, Source: s.socketPath, Options: []string{"bind"}}
 	spec.Mounts = append(spec.Mounts, mount)
 	spec.Process.Env = append(spec.Process.Env, fmt.Sprintf("NOTIFY_SOCKET=%s", s.host))

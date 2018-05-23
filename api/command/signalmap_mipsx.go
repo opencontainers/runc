@@ -1,7 +1,6 @@
-// +build linux
-// +build !mips,!mipsle,!mips64,!mips64le
+// +build linux,mips linux,mipsle linux,mips64 linux,mips64le
 
-package main
+package command
 
 import (
 	"syscall"
@@ -29,7 +28,6 @@ var signalMap = map[string]syscall.Signal{
 	"PWR":    unix.SIGPWR,
 	"QUIT":   unix.SIGQUIT,
 	"SEGV":   unix.SIGSEGV,
-	"STKFLT": unix.SIGSTKFLT,
 	"STOP":   unix.SIGSTOP,
 	"SYS":    unix.SIGSYS,
 	"TERM":   unix.SIGTERM,
@@ -37,7 +35,6 @@ var signalMap = map[string]syscall.Signal{
 	"TSTP":   unix.SIGTSTP,
 	"TTIN":   unix.SIGTTIN,
 	"TTOU":   unix.SIGTTOU,
-	"UNUSED": unix.SIGUNUSED,
 	"URG":    unix.SIGURG,
 	"USR1":   unix.SIGUSR1,
 	"USR2":   unix.SIGUSR2,

@@ -3,12 +3,15 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"sync"
 	"time"
 
+	"github.com/opencontainers/runc/api/command"
+	"github.com/opencontainers/runc/api/linux"
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
@@ -16,6 +19,106 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
+
+var eventsCommand = cli.Command{
+	Name:  "events",
+	Usage: "display container events such as OOM notifications, cpu, memory, and IO usage statistics",
+	ArgsUsage: `<container-id>
+
+Where "<container-id>" is the name for the instance of the container.`,
+	Description: `The events command displays information about the container. By default the
+information is displayed once every 5 seconds.`,
+	Flags: []cli.Flag{
+		cli.DurationFlag{Name: "interval", Value: 5 * time.Second, Usage: "set the stats collection interval"},
+		cli.BoolFlag{Name: "stats", Usage: "display the container's stats then exit"},
+	},
+	Action: func(ctx *cli.Context) error {
+		if err := command.CheckArgs(ctx, 1, command.ExactArgs); err != nil {
+			return err
+		}
+		a, err := linux.New(command.NewGlobalConfig(ctx))
+		if err != nil {
+			return err
+		}
+		lx := a.(*linux.Libcontainer)
+		id, err := command.GetID(ctx)
+		if err != nil {
+			return err
+		}
+		c := context.Background()
+		duration := ctx.Duration("interval")
+		if duration <= 0 {
+			return fmt.Errorf("duration interval must be greater than 0")
+		}
+		state, err := lx.State(c, id)
+		if err != nil {
+			return err
+		}
+		if state.Status == "stopped" {
+			return fmt.Errorf("container with id %s is not running", id)
+		}
+		var (
+			stats  = make(chan *libcontainer.Stats, 1)
+			events = make(chan *event, 1024)
+			group  = &sync.WaitGroup{}
+		)
+		group.Add(1)
+		go func() {
+			defer group.Done()
+			enc := json.NewEncoder(os.Stdout)
+			for e := range events {
+				if err := enc.Encode(e); err != nil {
+					logrus.Error(err)
+				}
+			}
+		}()
+		if ctx.Bool("stats") {
+			s, err := lx.Stats(c, id)
+			if err != nil {
+				return err
+			}
+			events <- &event{Type: "stats", ID: id, Data: convertLibcontainerStats(s)}
+			close(events)
+			group.Wait()
+			return nil
+		}
+		go func() {
+			for range time.Tick(ctx.Duration("interval")) {
+				s, err := lx.Stats(c, id)
+				if err != nil {
+					logrus.Error(err)
+					continue
+				}
+				stats <- s
+			}
+		}()
+		n, err := lx.NotifyOOM(c, id)
+		if err != nil {
+			return err
+		}
+		for {
+			select {
+			case _, ok := <-n:
+				if ok {
+					// this means an oom event was received, if it is !ok then
+					// the channel was closed because the container stopped and
+					// the cgroups no longer exist.
+					events <- &event{Type: "oom", ID: id}
+				} else {
+					n = nil
+				}
+			case s := <-stats:
+				events <- &event{Type: "stats", ID: id, Data: convertLibcontainerStats(s)}
+			}
+			if n == nil {
+				close(events)
+				break
+			}
+		}
+		group.Wait()
+		return nil
+	},
+}
 
 // event struct for encoding the event data to json.
 type event struct {
@@ -113,100 +216,6 @@ type intelRdt struct {
 
 	// The L3 cache schema in 'container_id' group
 	L3CacheSchema string `json:"l3_cache_schema,omitempty"`
-}
-
-var eventsCommand = cli.Command{
-	Name:  "events",
-	Usage: "display container events such as OOM notifications, cpu, memory, and IO usage statistics",
-	ArgsUsage: `<container-id>
-
-Where "<container-id>" is the name for the instance of the container.`,
-	Description: `The events command displays information about the container. By default the
-information is displayed once every 5 seconds.`,
-	Flags: []cli.Flag{
-		cli.DurationFlag{Name: "interval", Value: 5 * time.Second, Usage: "set the stats collection interval"},
-		cli.BoolFlag{Name: "stats", Usage: "display the container's stats then exit"},
-	},
-	Action: func(context *cli.Context) error {
-		if err := checkArgs(context, 1, exactArgs); err != nil {
-			return err
-		}
-		container, err := getContainer(context)
-		if err != nil {
-			return err
-		}
-		duration := context.Duration("interval")
-		if duration <= 0 {
-			return fmt.Errorf("duration interval must be greater than 0")
-		}
-		status, err := container.Status()
-		if err != nil {
-			return err
-		}
-		if status == libcontainer.Stopped {
-			return fmt.Errorf("container with id %s is not running", container.ID())
-		}
-		var (
-			stats  = make(chan *libcontainer.Stats, 1)
-			events = make(chan *event, 1024)
-			group  = &sync.WaitGroup{}
-		)
-		group.Add(1)
-		go func() {
-			defer group.Done()
-			enc := json.NewEncoder(os.Stdout)
-			for e := range events {
-				if err := enc.Encode(e); err != nil {
-					logrus.Error(err)
-				}
-			}
-		}()
-		if context.Bool("stats") {
-			s, err := container.Stats()
-			if err != nil {
-				return err
-			}
-			events <- &event{Type: "stats", ID: container.ID(), Data: convertLibcontainerStats(s)}
-			close(events)
-			group.Wait()
-			return nil
-		}
-		go func() {
-			for range time.Tick(context.Duration("interval")) {
-				s, err := container.Stats()
-				if err != nil {
-					logrus.Error(err)
-					continue
-				}
-				stats <- s
-			}
-		}()
-		n, err := container.NotifyOOM()
-		if err != nil {
-			return err
-		}
-		for {
-			select {
-			case _, ok := <-n:
-				if ok {
-					// this means an oom event was received, if it is !ok then
-					// the channel was closed because the container stopped and
-					// the cgroups no longer exist.
-					events <- &event{Type: "oom", ID: container.ID()}
-				} else {
-					n = nil
-				}
-			case s := <-stats:
-				events <- &event{Type: "stats", ID: container.ID(), Data: convertLibcontainerStats(s)}
-			}
-			if n == nil {
-				close(events)
-				break
-			}
-		}
-		group.Wait()
-		return nil
-	},
 }
 
 func convertLibcontainerStats(ls *libcontainer.Stats) *stats {

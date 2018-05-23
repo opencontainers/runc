@@ -3,14 +3,15 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
 
 	"github.com/docker/go-units"
-	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/opencontainers/runc/libcontainer/intelrdt"
+	"github.com/opencontainers/runc/api/command"
+	"github.com/opencontainers/runc/api/linux"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/urfave/cli"
 )
@@ -119,15 +120,14 @@ other options are ignored.
 			Usage: "The string of Intel RDT/CAT L3 cache schema",
 		},
 	},
-	Action: func(context *cli.Context) error {
-		if err := checkArgs(context, 1, exactArgs); err != nil {
+	Action: func(ctx *cli.Context) error {
+		if err := command.CheckArgs(ctx, 1, command.ExactArgs); err != nil {
 			return err
 		}
-		container, err := getContainer(context)
+		id, err := command.GetID(ctx)
 		if err != nil {
 			return err
 		}
-
 		r := specs.LinuxResources{
 			Memory: &specs.LinuxMemory{
 				Limit:       i64Ptr(0),
@@ -153,9 +153,7 @@ other options are ignored.
 			},
 		}
 
-		config := container.Config()
-
-		if in := context.String("resources"); in != "" {
+		if in := ctx.String("resources"); in != "" {
 			var (
 				f   *os.File
 				err error
@@ -174,13 +172,13 @@ other options are ignored.
 				return err
 			}
 		} else {
-			if val := context.Int("blkio-weight"); val != 0 {
+			if val := ctx.Int("blkio-weight"); val != 0 {
 				r.BlockIO.Weight = u16Ptr(uint16(val))
 			}
-			if val := context.String("cpuset-cpus"); val != "" {
+			if val := ctx.String("cpuset-cpus"); val != "" {
 				r.CPU.Cpus = val
 			}
-			if val := context.String("cpuset-mems"); val != "" {
+			if val := ctx.String("cpuset-mems"); val != "" {
 				r.CPU.Mems = val
 			}
 
@@ -193,7 +191,7 @@ other options are ignored.
 				{"cpu-rt-period", r.CPU.RealtimePeriod},
 				{"cpu-share", r.CPU.Shares},
 			} {
-				if val := context.String(pair.opt); val != "" {
+				if val := ctx.String(pair.opt); val != "" {
 					var err error
 					*pair.dest, err = strconv.ParseUint(val, 10, 64)
 					if err != nil {
@@ -209,7 +207,7 @@ other options are ignored.
 				{"cpu-quota", r.CPU.Quota},
 				{"cpu-rt-runtime", r.CPU.RealtimeRuntime},
 			} {
-				if val := context.String(pair.opt); val != "" {
+				if val := ctx.String(pair.opt); val != "" {
 					var err error
 					*pair.dest, err = strconv.ParseInt(val, 10, 64)
 					if err != nil {
@@ -227,7 +225,7 @@ other options are ignored.
 				{"kernel-memory-tcp", r.Memory.KernelTCP},
 				{"memory-reservation", r.Memory.Reservation},
 			} {
-				if val := context.String(pair.opt); val != "" {
+				if val := ctx.String(pair.opt); val != "" {
 					var v int64
 
 					if val != "-1" {
@@ -241,53 +239,13 @@ other options are ignored.
 					*pair.dest = v
 				}
 			}
-			r.Pids.Limit = int64(context.Int("pids-limit"))
+			r.Pids.Limit = int64(ctx.Int("pids-limit"))
 		}
-
-		// Update the value
-		config.Cgroups.Resources.BlkioWeight = *r.BlockIO.Weight
-		config.Cgroups.Resources.CpuPeriod = *r.CPU.Period
-		config.Cgroups.Resources.CpuQuota = *r.CPU.Quota
-		config.Cgroups.Resources.CpuShares = *r.CPU.Shares
-		config.Cgroups.Resources.CpuRtPeriod = *r.CPU.RealtimePeriod
-		config.Cgroups.Resources.CpuRtRuntime = *r.CPU.RealtimeRuntime
-		config.Cgroups.Resources.CpusetCpus = r.CPU.Cpus
-		config.Cgroups.Resources.CpusetMems = r.CPU.Mems
-		config.Cgroups.Resources.KernelMemory = *r.Memory.Kernel
-		config.Cgroups.Resources.KernelMemoryTCP = *r.Memory.KernelTCP
-		config.Cgroups.Resources.Memory = *r.Memory.Limit
-		config.Cgroups.Resources.MemoryReservation = *r.Memory.Reservation
-		config.Cgroups.Resources.MemorySwap = *r.Memory.Swap
-		config.Cgroups.Resources.PidsLimit = r.Pids.Limit
-
-		// Update Intel RDT/CAT
-		if val := context.String("l3-cache-schema"); val != "" {
-			if !intelrdt.IsEnabled() {
-				return fmt.Errorf("Intel RDT: l3 cache schema is not enabled")
-			}
-
-			// If intelRdt is not specified in original configuration, we just don't
-			// Apply() to create intelRdt group or attach tasks for this container.
-			// In update command, we could re-enable through IntelRdtManager.Apply()
-			// and then update intelrdt constraint.
-			if config.IntelRdt == nil {
-				state, err := container.State()
-				if err != nil {
-					return err
-				}
-				config.IntelRdt = &configs.IntelRdt{}
-				intelRdtManager := intelrdt.IntelRdtManager{
-					Config: &config,
-					Id:     container.ID(),
-					Path:   state.IntelRdtPath,
-				}
-				if err := intelRdtManager.Apply(state.InitProcessPid); err != nil {
-					return err
-				}
-			}
-			config.IntelRdt.L3CacheSchema = val
+		a, err := linux.New(command.NewGlobalConfig(ctx))
+		if err != nil {
+			return err
 		}
-
-		return container.Set(config)
+		lx := a.(*linux.Libcontainer)
+		return lx.Update(context.Background(), id, &r, ctx.String("l3-cache-schema"))
 	},
 }

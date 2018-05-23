@@ -1,6 +1,6 @@
 // +build linux
 
-package main
+package linux
 
 import (
 	"fmt"
@@ -62,13 +62,6 @@ func setupProcessPipes(p *libcontainer.Process, rootuid, rootgid int) (*tty, err
 	go t.copyIO(os.Stdout, i.Stdout)
 	go t.copyIO(os.Stderr, i.Stderr)
 	return t, nil
-}
-
-func inheritStdio(process *libcontainer.Process) error {
-	process.Stdin = os.Stdin
-	process.Stdout = os.Stdout
-	process.Stderr = os.Stderr
-	return nil
 }
 
 func (t *tty) recvtty(process *libcontainer.Process, socket *os.File) error {
