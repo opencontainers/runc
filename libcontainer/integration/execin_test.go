@@ -497,7 +497,7 @@ func TestExecInOomScoreAdj(t *testing.T) {
 	ok(t, err)
 	defer remove(rootfs)
 	config := newTemplateConfig(rootfs)
-	config.OomScoreAdj = 200
+	config.OomScoreAdj = ptrInt(200)
 	container, err := newContainer(config)
 	ok(t, err)
 	defer container.Destroy()
@@ -532,8 +532,8 @@ func TestExecInOomScoreAdj(t *testing.T) {
 	waitProcess(process, t)
 
 	out := buffers.Stdout.String()
-	if oomScoreAdj := strings.TrimSpace(out); oomScoreAdj != strconv.Itoa(config.OomScoreAdj) {
-		t.Fatalf("expected oomScoreAdj to be %d, got %s", config.OomScoreAdj, oomScoreAdj)
+	if oomScoreAdj := strings.TrimSpace(out); oomScoreAdj != strconv.Itoa(*config.OomScoreAdj) {
+		t.Fatalf("expected oomScoreAdj to be %d, got %s", *config.OomScoreAdj, oomScoreAdj)
 	}
 }
 

@@ -1075,7 +1075,7 @@ func TestOomScoreAdj(t *testing.T) {
 	defer remove(rootfs)
 
 	config := newTemplateConfig(rootfs)
-	config.OomScoreAdj = 200
+	config.OomScoreAdj = ptrInt(200)
 
 	factory, err := libcontainer.New(root, libcontainer.Cgroupfs)
 	ok(t, err)
@@ -1100,8 +1100,8 @@ func TestOomScoreAdj(t *testing.T) {
 	outputOomScoreAdj := strings.TrimSpace(string(stdout.Bytes()))
 
 	// Check that the oom_score_adj matches the value that was set as part of config.
-	if outputOomScoreAdj != strconv.Itoa(config.OomScoreAdj) {
-		t.Fatalf("Expected oom_score_adj %d; got %q", config.OomScoreAdj, outputOomScoreAdj)
+	if outputOomScoreAdj != strconv.Itoa(*config.OomScoreAdj) {
+		t.Fatalf("Expected oom_score_adj %d; got %q", *config.OomScoreAdj, outputOomScoreAdj)
 	}
 }
 

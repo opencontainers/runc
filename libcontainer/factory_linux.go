@@ -59,14 +59,31 @@ func SystemdCgroups(l *LinuxFactory) error {
 	return nil
 }
 
-// Cgroupfs is an options func to configure a LinuxFactory to return
-// containers that use the native cgroups filesystem implementation to
-// create and manage cgroups.
+// Cgroupfs is an options func to configure a LinuxFactory to return containers
+// that use the native cgroups filesystem implementation to create and manage
+// cgroups.
 func Cgroupfs(l *LinuxFactory) error {
 	l.NewCgroupsManager = func(config *configs.Cgroup, paths map[string]string) cgroups.Manager {
 		return &fs.Manager{
 			Cgroups: config,
 			Paths:   paths,
+		}
+	}
+	return nil
+}
+
+// RootlessCgroupfs is an options func to configure a LinuxFactory to return
+// containers that use the native cgroups filesystem implementation to create
+// and manage cgroups. The difference between RootlessCgroupfs and Cgroupfs is
+// that RootlessCgroupfs can transparently handle permission errors that occur
+// during rootless container setup (while still allowing cgroup usage if
+// they've been set up properly).
+func RootlessCgroupfs(l *LinuxFactory) error {
+	l.NewCgroupsManager = func(config *configs.Cgroup, paths map[string]string) cgroups.Manager {
+		return &fs.Manager{
+			Cgroups:  config,
+			Rootless: true,
+			Paths:    paths,
 		}
 	}
 	return nil
