@@ -106,11 +106,17 @@ type cgroupData struct {
 // sense of the word). This includes EROFS (which for an unprivileged user is
 // basically a permission error) and EACCES (for similar reasons) as well as
 // the normal EPERM.
-func isIgnorableError(err error) bool {
+func isIgnorableError(rootless bool, err error) bool {
+	// We do not ignore errors if we are root.
+	if !rootless {
+		return false
+	}
+	// Is it an ordinary EPERM?
 	if os.IsPermission(errors.Cause(err)) {
 		return true
 	}
 
+	// Try to handle other errnos.
 	var errno error
 	switch err := errors.Cause(err).(type) {
 	case *os.PathError:
@@ -172,7 +178,7 @@ func (m *Manager) Apply(pid int) (err error) {
 			// been set, we don't bail on error in case of permission problems.
 			// Cases where limits have been set (and we couldn't create our own
 			// cgroup) are handled by Set.
-			if m.Rootless && isIgnorableError(err) && m.Cgroups.Path == "" {
+			if isIgnorableError(m.Rootless, err) && m.Cgroups.Path == "" {
 				delete(m.Paths, sys.Name())
 				continue
 			}
