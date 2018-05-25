@@ -408,7 +408,9 @@ func startContainer(context *cli.Context, spec *specs.Spec, action CtAct, criuOp
 
 	notifySocket := newNotifySocket(context, os.Getenv("NOTIFY_SOCKET"), id)
 	if notifySocket != nil {
-		notifySocket.setupSpec(context, spec)
+		if err := notifySocket.setupSpec(context, spec); err != nil {
+			return -1, err
+		}
 	}
 
 	container, err := createContainer(context, id, spec)
@@ -417,9 +419,15 @@ func startContainer(context *cli.Context, spec *specs.Spec, action CtAct, criuOp
 	}
 
 	if notifySocket != nil {
-		err := notifySocket.setupSocket()
+		err := notifySocket.setupSocketDirectory()
 		if err != nil {
 			return -1, err
+		}
+		if action == CT_ACT_RUN {
+			err := notifySocket.bindSocket()
+			if err != nil {
+				return -1, err
+			}
 		}
 	}
 

@@ -70,6 +70,7 @@ func (h *signalHandler) forward(process *libcontainer.Process, tty *tty, detach 
 			h.notifySocket.run(pid1)
 			return 0, nil
 		}
+		h.notifySocket.run(os.Getpid())
 		go h.notifySocket.run(0)
 	}
 
@@ -97,9 +98,6 @@ func (h *signalHandler) forward(process *libcontainer.Process, tty *tty, detach 
 					// status because we must ensure that any of the go specific process
 					// fun such as flushing pipes are complete before we return.
 					process.Wait()
-					if h.notifySocket != nil {
-						h.notifySocket.Close()
-					}
 					return e.status, nil
 				}
 			}
