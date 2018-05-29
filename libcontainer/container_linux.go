@@ -230,7 +230,7 @@ func (c *linuxContainer) Set(config configs.Config) error {
 	return err
 }
 
-func (c *linuxContainer) Start(process *Process) error {
+func (c *linuxContainer) Start(process *Process, action CtAct) error {
 	c.m.Lock()
 	defer c.m.Unlock()
 	if process.Init {
@@ -238,7 +238,7 @@ func (c *linuxContainer) Start(process *Process) error {
 			return err
 		}
 	}
-	if err := c.start(process); err != nil {
+	if err := c.start(process, action == CT_ACT_CREATE); err != nil {
 		if process.Init {
 			c.deleteExecFifo()
 		}
@@ -247,8 +247,8 @@ func (c *linuxContainer) Start(process *Process) error {
 	return nil
 }
 
-func (c *linuxContainer) Run(process *Process) error {
-	if err := c.Start(process); err != nil {
+func (c *linuxContainer) Run(process *Process, action CtAct) error {
+	if err := c.Start(process, action); err != nil {
 		return err
 	}
 	if process.Init {
@@ -332,8 +332,8 @@ type openResult struct {
 	err  error
 }
 
-func (c *linuxContainer) start(process *Process) error {
-	parent, err := c.newParentProcess(process)
+func (c *linuxContainer) start(process *Process, isCreate bool) error {
+	parent, err := c.newParentProcess(process, isCreate)
 	if err != nil {
 		return newSystemErrorWithCause(err, "creating new parent process")
 	}
@@ -438,7 +438,7 @@ func (c *linuxContainer) includeExecFifo(cmd *exec.Cmd) error {
 	return nil
 }
 
-func (c *linuxContainer) newParentProcess(p *Process) (parentProcess, error) {
+func (c *linuxContainer) newParentProcess(p *Process, isCreate bool) (parentProcess, error) {
 	parentInitPipe, childInitPipe, err := utils.NewSockPair("init")
 	if err != nil {
 		return nil, newSystemErrorWithCause(err, "creating new init pipe")
@@ -467,7 +467,7 @@ func (c *linuxContainer) newParentProcess(p *Process) (parentProcess, error) {
 	if err := c.includeExecFifo(cmd); err != nil {
 		return nil, newSystemErrorWithCause(err, "including execfifo in cmd.Exec setup")
 	}
-	return c.newInitProcess(p, cmd, messageSockPair, logFilePair)
+	return c.newInitProcess(p, cmd, messageSockPair, logFilePair, isCreate)
 }
 
 func (c *linuxContainer) commandTemplate(p *Process, childInitPipe *os.File, childLogPipe *os.File) (*exec.Cmd, error) {
@@ -509,7 +509,7 @@ func (c *linuxContainer) commandTemplate(p *Process, childInitPipe *os.File, chi
 	return cmd, nil
 }
 
-func (c *linuxContainer) newInitProcess(p *Process, cmd *exec.Cmd, messageSockPair, logFilePair filePair) (*initProcess, error) {
+func (c *linuxContainer) newInitProcess(p *Process, cmd *exec.Cmd, messageSockPair, logFilePair filePair, isCreate bool) (*initProcess, error) {
 	cmd.Env = append(cmd.Env, "_LIBCONTAINER_INITTYPE="+string(initStandard))
 	nsMaps := make(map[configs.NamespaceType]string)
 	for _, ns := range c.config.Namespaces {
@@ -533,6 +533,7 @@ func (c *linuxContainer) newInitProcess(p *Process, cmd *exec.Cmd, messageSockPa
 		process:         p,
 		bootstrapData:   data,
 		sharePidns:      sharePidns,
+		IsCreate:        isCreate,
 	}
 	c.initProcess = init
 	return init, nil

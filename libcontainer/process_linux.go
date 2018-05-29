@@ -231,6 +231,7 @@ type initProcess struct {
 	process         *Process
 	bootstrapData   io.Reader
 	sharePidns      bool
+	IsCreate        bool
 }
 
 func (p *initProcess) pid() int {

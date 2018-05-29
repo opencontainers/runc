@@ -14,6 +14,13 @@ import (
 
 // Status is the status of a container.
 type Status int
+type CtAct uint8
+
+const (
+	CT_ACT_CREATE CtAct = iota + 1
+	CT_ACT_RUN
+	CT_ACT_RESTORE
+)
 
 const (
 	// Created is the status that denotes the container exists but has not been run yet.
@@ -128,7 +135,7 @@ type BaseContainer interface {
 	// ConfigInvalid - config is invalid,
 	// ContainerPaused - Container is paused,
 	// SystemError - System error.
-	Start(process *Process) (err error)
+	Start(process *Process, action CtAct) (err error)
 
 	// Run immediately starts the process inside the container.  Returns error if process
 	// fails to start.  It does not block waiting for the exec fifo  after start returns but
@@ -139,7 +146,7 @@ type BaseContainer interface {
 	// ConfigInvalid - config is invalid,
 	// ContainerPaused - Container is paused,
 	// SystemError - System error.
-	Run(process *Process) (err error)
+	Run(process *Process, action CtAct) (err error)
 
 	// Destroys the container, if its in a valid state, after killing any
 	// remaining running processes.

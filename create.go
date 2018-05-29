@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 
+	"github.com/opencontainers/runc/libcontainer"
 	"github.com/urfave/cli"
 )
 
@@ -62,7 +63,7 @@ command(s) that get executed on start, edit the args parameter of the spec. See
 		if err != nil {
 			return err
 		}
-		status, err := startContainer(context, spec, CT_ACT_CREATE, nil)
+		status, err := startContainer(context, spec, libcontainer.CT_ACT_CREATE, nil)
 		if err != nil {
 			return err
 		}

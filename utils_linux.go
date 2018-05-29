@@ -262,7 +262,7 @@ type runner struct {
 	pidFile         string
 	consoleSocket   string
 	container       libcontainer.Container
-	action          CtAct
+	action          libcontainer.CtAct
 	notifySocket    *notifySocket
 	criuOpts        *libcontainer.CriuOpts
 	logLevel        string
@@ -303,7 +303,7 @@ func (r *runner) run(config *specs.Process) (int, error) {
 		return -1, err
 	}
 	var (
-		detach = r.detach || (r.action == CT_ACT_CREATE)
+		detach = r.detach || (r.action == libcontainer.CT_ACT_CREATE)
 	)
 	// Setting up IO is a two stage process. We need to modify process to deal
 	// with detaching containers, and then we get a tty after the container has
@@ -316,12 +316,12 @@ func (r *runner) run(config *specs.Process) (int, error) {
 	defer tty.Close()
 
 	switch r.action {
-	case CT_ACT_CREATE:
-		err = r.container.Start(process)
-	case CT_ACT_RESTORE:
+	case libcontainer.CT_ACT_CREATE:
+		err = r.container.Start(process, r.action)
+	case libcontainer.CT_ACT_RESTORE:
 		err = r.container.Restore(process, r.criuOpts)
-	case CT_ACT_RUN:
-		err = r.container.Run(process)
+	case libcontainer.CT_ACT_RUN:
+		err = r.container.Run(process, r.action)
 	default:
 		panic("Unknown action")
 	}
@@ -365,7 +365,7 @@ func (r *runner) terminate(p *libcontainer.Process) {
 }
 
 func (r *runner) checkTerminal(config *specs.Process) error {
-	detach := r.detach || (r.action == CT_ACT_CREATE)
+	detach := r.detach || (r.action == libcontainer.CT_ACT_CREATE)
 	// Check command-line for sanity.
 	if detach && config.Terminal && r.consoleSocket == "" {
 		return fmt.Errorf("cannot allocate tty if runc will detach without setting console socket")
@@ -392,15 +392,7 @@ func validateProcessSpec(spec *specs.Process) error {
 	return nil
 }
 
-type CtAct uint8
-
-const (
-	CT_ACT_CREATE CtAct = iota + 1
-	CT_ACT_RUN
-	CT_ACT_RESTORE
-)
-
-func startContainer(context *cli.Context, spec *specs.Spec, action CtAct, criuOpts *libcontainer.CriuOpts) (int, error) {
+func startContainer(context *cli.Context, spec *specs.Spec, action libcontainer.CtAct, criuOpts *libcontainer.CriuOpts) (int, error) {
 	id := context.Args().First()
 	if id == "" {
 		return -1, errEmptyID

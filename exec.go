@@ -149,7 +149,7 @@ func execProcess(context *cli.Context) (int, error) {
 		consoleSocket:   context.String("console-socket"),
 		detach:          detach,
 		pidFile:         context.String("pid-file"),
-		action:          CT_ACT_RUN,
+		action:          libcontainer.CT_ACT_RUN,
 		init:            false,
 		preserveFDs:     context.Int("preserve-fds"),
 		logLevel:        logLevel,
