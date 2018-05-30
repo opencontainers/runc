@@ -39,7 +39,11 @@ func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
 	// We default to cgroupfs, and can only use systemd if the system is a
 	// systemd box.
 	cgroupManager := libcontainer.Cgroupfs
-	if isRootless() {
+	rootless, err := isRootless(context)
+	if err != nil {
+		return nil, err
+	}
+	if rootless {
 		cgroupManager = libcontainer.RootlessCgroupfs
 	}
 	if context.GlobalBool("systemd-cgroup") {
