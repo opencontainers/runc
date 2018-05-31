@@ -370,6 +370,19 @@ func (p *initProcess) start() error {
 		sentResume bool
 	)
 
+	// runc start
+	if !p.IsCreate && p.config.Config.Hooks != nil {
+		s, err := p.container.currentOCIState()
+		if err != nil {
+			return err
+		}
+		for i, hook := range p.config.Config.Hooks.Poststart {
+			if err := hook.Run(s); err != nil {
+				return newSystemErrorWithCausef(err, "running poststart hook %d", i)
+			}
+		}
+	}
+
 	ierr := parseSync(p.messageSockPair.parent, func(sync *syncT) error {
 		switch sync.Type {
 		case procReady:
@@ -378,30 +391,13 @@ func (p *initProcess) start() error {
 			if err := setupRlimits(p.config.Rlimits, p.pid()); err != nil {
 				return newSystemErrorWithCause(err, "setting rlimits for ready process")
 			}
-			// call prestart hooks
 			if !p.config.Config.Namespaces.Contains(configs.NEWNS) {
-				// Setup cgroup before prestart hook, so that the prestart hook could apply cgroup permissions.
 				if err := p.manager.Set(p.config.Config); err != nil {
 					return newSystemErrorWithCause(err, "setting cgroup config for ready process")
 				}
 				if p.intelRdtManager != nil {
 					if err := p.intelRdtManager.Set(p.config.Config); err != nil {
 						return newSystemErrorWithCause(err, "setting Intel RDT config for ready process")
-					}
-				}
-
-				if p.config.Config.Hooks != nil {
-					s, err := p.container.currentOCIState()
-					if err != nil {
-						return err
-					}
-					// initProcessStartTime hasn't been set yet.
-					s.Pid = p.cmd.Process.Pid
-					s.Status = "creating"
-					for i, hook := range p.config.Config.Hooks.Prestart {
-						if err := hook.Run(s); err != nil {
-							return newSystemErrorWithCausef(err, "running prestart hook %d", i)
-						}
 					}
 				}
 			}
@@ -411,27 +407,12 @@ func (p *initProcess) start() error {
 			}
 			sentRun = true
 		case procHooks:
-			// Setup cgroup before prestart hook, so that the prestart hook could apply cgroup permissions.
 			if err := p.manager.Set(p.config.Config); err != nil {
 				return newSystemErrorWithCause(err, "setting cgroup config for procHooks process")
 			}
 			if p.intelRdtManager != nil {
 				if err := p.intelRdtManager.Set(p.config.Config); err != nil {
 					return newSystemErrorWithCause(err, "setting Intel RDT config for procHooks process")
-				}
-			}
-			if p.config.Config.Hooks != nil {
-				s, err := p.container.currentOCIState()
-				if err != nil {
-					return err
-				}
-				// initProcessStartTime hasn't been set yet.
-				s.Pid = p.cmd.Process.Pid
-				s.Status = "creating"
-				for i, hook := range p.config.Config.Hooks.Prestart {
-					if err := hook.Run(s); err != nil {
-						return newSystemErrorWithCausef(err, "running prestart hook %d", i)
-					}
 				}
 			}
 			// Sync with child.

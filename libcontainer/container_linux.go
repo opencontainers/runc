@@ -263,8 +263,24 @@ func (c *linuxContainer) Exec() error {
 	return c.exec()
 }
 
-func (c *linuxContainer) exec() error {
+func (c *linuxContainer) exec() (errExec error) {
 	path := filepath.Join(c.root, execFifoFilename)
+
+	if c.config.Hooks != nil && len(c.config.Hooks.Poststart) > 0 {
+		defer func() {
+			s, err := c.currentOCIState()
+			if err != nil {
+				errExec = err
+				return
+			}
+			for i, hook := range c.config.Hooks.Poststart {
+				if err := hook.Run(s); err != nil {
+					errExec = newSystemErrorWithCausef(err, "running poststart hook %d", i)
+					return
+				}
+			}
+		}()
+	}
 
 	fifoOpen := make(chan struct{})
 	select {
@@ -362,12 +378,9 @@ func (c *linuxContainer) start(process *Process, isCreate bool) error {
 			if err != nil {
 				return err
 			}
-			for i, hook := range c.config.Hooks.Poststart {
+			for i, hook := range c.config.Hooks.Prestart {
 				if err := hook.Run(s); err != nil {
-					if err := ignoreTerminateErrors(parent.terminate()); err != nil {
-						logrus.Warn(err)
-					}
-					return newSystemErrorWithCausef(err, "running poststart hook %d", i)
+					return newSystemErrorWithCausef(err, "running prestart hook %d", i)
 				}
 			}
 		}
