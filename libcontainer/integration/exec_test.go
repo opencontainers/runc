@@ -231,7 +231,7 @@ func TestEnter(t *testing.T) {
 		Stdout: &stdout,
 		Init:   true,
 	}
-	err = container.Run(&pconfig)
+	err = container.Run(&pconfig, libcontainer.CT_ACT_RUN)
 	stdinR.Close()
 	defer stdinW.Close()
 	ok(t, err)
@@ -249,7 +249,7 @@ func TestEnter(t *testing.T) {
 	pconfig2.Stdin = stdinR2
 	pconfig2.Stdout = &stdout2
 
-	err = container.Run(&pconfig2)
+	err = container.Run(&pconfig2, libcontainer.CT_ACT_RUN)
 	stdinR2.Close()
 	defer stdinW2.Close()
 	ok(t, err)
@@ -318,7 +318,7 @@ func TestProcessEnv(t *testing.T) {
 		Stdout: &stdout,
 		Init:   true,
 	}
-	err = container.Run(&pconfig)
+	err = container.Run(&pconfig, libcontainer.CT_ACT_RUN)
 	ok(t, err)
 
 	// Wait for process
@@ -362,7 +362,7 @@ func TestProcessEmptyCaps(t *testing.T) {
 		Stdout: &stdout,
 		Init:   true,
 	}
-	err = container.Run(&pconfig)
+	err = container.Run(&pconfig, libcontainer.CT_ACT_RUN)
 	ok(t, err)
 
 	// Wait for process
@@ -415,7 +415,7 @@ func TestProcessCaps(t *testing.T) {
 	pconfig.Capabilities.Permitted = append(config.Capabilities.Permitted, "CAP_NET_ADMIN")
 	pconfig.Capabilities.Effective = append(config.Capabilities.Effective, "CAP_NET_ADMIN")
 	pconfig.Capabilities.Inheritable = append(config.Capabilities.Inheritable, "CAP_NET_ADMIN")
-	err = container.Run(&pconfig)
+	err = container.Run(&pconfig, libcontainer.CT_ACT_RUN)
 	ok(t, err)
 
 	// Wait for process
@@ -479,7 +479,7 @@ func TestAdditionalGroups(t *testing.T) {
 		AdditionalGroups: []string{"plugdev", "audio"},
 		Init:             true,
 	}
-	err = container.Run(&pconfig)
+	err = container.Run(&pconfig, libcontainer.CT_ACT_RUN)
 	ok(t, err)
 
 	// Wait for process
@@ -532,7 +532,7 @@ func testFreeze(t *testing.T, systemd bool) {
 		Stdin: stdinR,
 		Init:  true,
 	}
-	err = container.Run(pconfig)
+	err = container.Run(pconfig, libcontainer.CT_ACT_RUN)
 	stdinR.Close()
 	defer stdinW.Close()
 	ok(t, err)
@@ -739,7 +739,7 @@ func TestContainerState(t *testing.T) {
 		Stdin: stdinR,
 		Init:  true,
 	}
-	err = container.Run(p)
+	err = container.Run(p, libcontainer.CT_ACT_RUN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -799,7 +799,7 @@ func TestPassExtraFiles(t *testing.T) {
 		Stdout:     &stdout,
 		Init:       true,
 	}
-	err = container.Run(&process)
+	err = container.Run(&process, libcontainer.CT_ACT_RUN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -876,7 +876,7 @@ func TestMountCmds(t *testing.T) {
 		Env:  standardEnvironment,
 		Init: true,
 	}
-	err = container.Run(&pconfig)
+	err = container.Run(&pconfig, libcontainer.CT_ACT_RUN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -923,7 +923,7 @@ func TestSysctl(t *testing.T) {
 		Stdout: &stdout,
 		Init:   true,
 	}
-	err = container.Run(&pconfig)
+	err = container.Run(&pconfig, libcontainer.CT_ACT_RUN)
 	ok(t, err)
 
 	// Wait for process
@@ -1058,7 +1058,7 @@ func TestOomScoreAdj(t *testing.T) {
 		Stdout: &stdout,
 		Init:   true,
 	}
-	err = container.Run(&pconfig)
+	err = container.Run(&pconfig, libcontainer.CT_ACT_RUN)
 	ok(t, err)
 
 	// Wait for process
@@ -1164,7 +1164,7 @@ func TestHook(t *testing.T) {
 		Stdout: &stdout,
 		Init:   true,
 	}
-	err = container.Run(&pconfig)
+	err = container.Run(&pconfig, libcontainer.CT_ACT_RUN)
 	ok(t, err)
 
 	// Wait for process
@@ -1276,7 +1276,7 @@ func TestRootfsPropagationSlaveMount(t *testing.T) {
 		Init:  true,
 	}
 
-	err = container.Run(pconfig)
+	err = container.Run(pconfig, libcontainer.CT_ACT_RUN)
 	stdinR.Close()
 	defer stdinW.Close()
 	ok(t, err)
@@ -1305,7 +1305,7 @@ func TestRootfsPropagationSlaveMount(t *testing.T) {
 		Stdout: &stdout2,
 	}
 
-	err = container.Run(pconfig2)
+	err = container.Run(pconfig2, libcontainer.CT_ACT_RUN)
 	stdinR2.Close()
 	defer stdinW2.Close()
 	ok(t, err)
@@ -1391,7 +1391,7 @@ func TestRootfsPropagationSharedMount(t *testing.T) {
 		Init:  true,
 	}
 
-	err = container.Run(pconfig)
+	err = container.Run(pconfig, libcontainer.CT_ACT_RUN)
 	stdinR.Close()
 	defer stdinW.Close()
 	ok(t, err)
@@ -1426,7 +1426,7 @@ func TestRootfsPropagationSharedMount(t *testing.T) {
 	pconfig2.Capabilities.Effective = append(config.Capabilities.Effective, "CAP_SYS_ADMIN")
 	pconfig2.Capabilities.Inheritable = append(config.Capabilities.Inheritable, "CAP_SYS_ADMIN")
 
-	err = container.Run(pconfig2)
+	err = container.Run(pconfig2, libcontainer.CT_ACT_RUN)
 	stdinR2.Close()
 	defer stdinW2.Close()
 	ok(t, err)
@@ -1499,7 +1499,7 @@ func TestInitJoinPID(t *testing.T) {
 		Stdin: stdinR1,
 		Init:  true,
 	}
-	err = container1.Run(init1)
+	err = container1.Run(init1, libcontainer.CT_ACT_RUN)
 	stdinR1.Close()
 	defer stdinW1.Close()
 	ok(t, err)
@@ -1526,7 +1526,7 @@ func TestInitJoinPID(t *testing.T) {
 		Stdin: stdinR2,
 		Init:  true,
 	}
-	err = container2.Run(init2)
+	err = container2.Run(init2, libcontainer.CT_ACT_RUN)
 	stdinR2.Close()
 	defer stdinW2.Close()
 	ok(t, err)
@@ -1556,7 +1556,7 @@ func TestInitJoinPID(t *testing.T) {
 		Env:    standardEnvironment,
 		Stdout: buffers.Stdout,
 	}
-	err = container1.Run(ps)
+	err = container1.Run(ps, libcontainer.CT_ACT_RUN)
 	ok(t, err)
 	waitProcess(ps, t)
 
@@ -1606,7 +1606,7 @@ func TestInitJoinNetworkAndUser(t *testing.T) {
 		Stdin: stdinR1,
 		Init:  true,
 	}
-	err = container1.Run(init1)
+	err = container1.Run(init1, libcontainer.CT_ACT_RUN)
 	stdinR1.Close()
 	defer stdinW1.Close()
 	ok(t, err)
@@ -1641,7 +1641,7 @@ func TestInitJoinNetworkAndUser(t *testing.T) {
 		Stdin: stdinR2,
 		Init:  true,
 	}
-	err = container2.Run(init2)
+	err = container2.Run(init2, libcontainer.CT_ACT_RUN)
 	stdinR2.Close()
 	defer stdinW2.Close()
 	ok(t, err)
@@ -1703,7 +1703,7 @@ func TestTmpfsCopyUp(t *testing.T) {
 		Stdout: &stdout,
 		Init:   true,
 	}
-	err = container.Run(&pconfig)
+	err = container.Run(&pconfig, libcontainer.CT_ACT_RUN)
 	ok(t, err)
 
 	// Wait for process

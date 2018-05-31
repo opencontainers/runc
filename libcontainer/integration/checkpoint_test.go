@@ -113,7 +113,7 @@ func testCheckpoint(t *testing.T, userns bool) {
 		Init:   true,
 	}
 
-	err = container.Run(&pconfig)
+	err = container.Run(&pconfig, libcontainer.CT_ACT_RUN)
 	stdinR.Close()
 	defer stdinW.Close()
 	if err != nil {

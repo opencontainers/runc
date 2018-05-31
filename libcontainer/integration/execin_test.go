@@ -40,7 +40,7 @@ func TestExecIn(t *testing.T) {
 		Stdin: stdinR,
 		Init:  true,
 	}
-	err = container.Run(process)
+	err = container.Run(process, libcontainer.CT_ACT_RUN)
 	stdinR.Close()
 	defer stdinW.Close()
 	ok(t, err)
@@ -55,7 +55,7 @@ func TestExecIn(t *testing.T) {
 		Stderr: buffers.Stderr,
 	}
 
-	err = container.Run(ps)
+	err = container.Run(ps, libcontainer.CT_ACT_RUN)
 	ok(t, err)
 	waitProcess(ps, t)
 	stdinW.Close()
@@ -111,7 +111,7 @@ func testExecInRlimit(t *testing.T, userns bool) {
 		Stdin: stdinR,
 		Init:  true,
 	}
-	err = container.Run(process)
+	err = container.Run(process, libcontainer.CT_ACT_RUN)
 	stdinR.Close()
 	defer stdinW.Close()
 	ok(t, err)
@@ -130,7 +130,7 @@ func testExecInRlimit(t *testing.T, userns bool) {
 		},
 		Init: true,
 	}
-	err = container.Run(ps)
+	err = container.Run(ps, libcontainer.CT_ACT_RUN)
 	ok(t, err)
 	waitProcess(ps, t)
 
@@ -167,7 +167,7 @@ func TestExecInAdditionalGroups(t *testing.T) {
 		Stdin: stdinR,
 		Init:  true,
 	}
-	err = container.Run(process)
+	err = container.Run(process, libcontainer.CT_ACT_RUN)
 	stdinR.Close()
 	defer stdinW.Close()
 	ok(t, err)
@@ -181,7 +181,7 @@ func TestExecInAdditionalGroups(t *testing.T) {
 		Stdout:           &stdout,
 		AdditionalGroups: []string{"plugdev", "audio"},
 	}
-	err = container.Run(&pconfig)
+	err = container.Run(&pconfig, libcontainer.CT_ACT_RUN)
 	ok(t, err)
 
 	// Wait for process
@@ -224,7 +224,7 @@ func TestExecInError(t *testing.T) {
 		Stdin: stdinR,
 		Init:  true,
 	}
-	err = container.Run(process)
+	err = container.Run(process, libcontainer.CT_ACT_RUN)
 	stdinR.Close()
 	defer func() {
 		stdinW.Close()
@@ -242,7 +242,7 @@ func TestExecInError(t *testing.T) {
 			Env:    standardEnvironment,
 			Stderr: &out,
 		}
-		err = container.Run(unexistent)
+		err = container.Run(unexistent, libcontainer.CT_ACT_RUN)
 		if err == nil {
 			t.Fatal("Should be an error")
 		}
@@ -277,7 +277,7 @@ func TestExecInTTY(t *testing.T) {
 		Stdin: stdinR,
 		Init:  true,
 	}
-	err = container.Run(process)
+	err = container.Run(process, libcontainer.CT_ACT_RUN)
 	stdinR.Close()
 	defer stdinW.Close()
 	ok(t, err)
@@ -320,7 +320,7 @@ func TestExecInTTY(t *testing.T) {
 			c: c,
 		}
 	}()
-	err = container.Run(ps)
+	err = container.Run(ps, libcontainer.CT_ACT_RUN)
 	ok(t, err)
 	data := <-dc
 	if data.err != nil {
@@ -374,7 +374,7 @@ func TestExecInEnvironment(t *testing.T) {
 		Stdin: stdinR,
 		Init:  true,
 	}
-	err = container.Run(process)
+	err = container.Run(process, libcontainer.CT_ACT_RUN)
 	stdinR.Close()
 	defer stdinW.Close()
 	ok(t, err)
@@ -394,7 +394,7 @@ func TestExecInEnvironment(t *testing.T) {
 		Stderr: buffers.Stderr,
 		Init:   true,
 	}
-	err = container.Run(process2)
+	err = container.Run(process2, libcontainer.CT_ACT_RUN)
 	ok(t, err)
 	waitProcess(process2, t)
 
@@ -440,7 +440,7 @@ func TestExecinPassExtraFiles(t *testing.T) {
 		Stdin: stdinR,
 		Init:  true,
 	}
-	err = container.Run(process)
+	err = container.Run(process, libcontainer.CT_ACT_RUN)
 	stdinR.Close()
 	defer stdinW.Close()
 	if err != nil {
@@ -464,7 +464,7 @@ func TestExecinPassExtraFiles(t *testing.T) {
 		Stdin:      nil,
 		Stdout:     &stdout,
 	}
-	err = container.Run(inprocess)
+	err = container.Run(inprocess, libcontainer.CT_ACT_RUN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -520,7 +520,7 @@ func TestExecInOomScoreAdj(t *testing.T) {
 		Stdin: stdinR,
 		Init:  true,
 	}
-	err = container.Run(process)
+	err = container.Run(process, libcontainer.CT_ACT_RUN)
 	stdinR.Close()
 	defer stdinW.Close()
 	ok(t, err)
@@ -534,7 +534,7 @@ func TestExecInOomScoreAdj(t *testing.T) {
 		Stdout: buffers.Stdout,
 		Stderr: buffers.Stderr,
 	}
-	err = container.Run(ps)
+	err = container.Run(ps, libcontainer.CT_ACT_RUN)
 	ok(t, err)
 	waitProcess(ps, t)
 
@@ -576,7 +576,7 @@ func TestExecInUserns(t *testing.T) {
 		Stdin: stdinR,
 		Init:  true,
 	}
-	err = container.Run(process)
+	err = container.Run(process, libcontainer.CT_ACT_RUN)
 	stdinR.Close()
 	defer stdinW.Close()
 	ok(t, err)
@@ -596,7 +596,7 @@ func TestExecInUserns(t *testing.T) {
 		Stdout: buffers.Stdout,
 		Stderr: os.Stderr,
 	}
-	err = container.Run(process2)
+	err = container.Run(process2, libcontainer.CT_ACT_RUN)
 	ok(t, err)
 	waitProcess(process2, t)
 	stdinW.Close()

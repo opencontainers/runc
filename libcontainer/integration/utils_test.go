@@ -167,7 +167,7 @@ func runContainer(config *configs.Config, console string, args ...string) (buffe
 		Init:   true,
 	}
 
-	err = container.Run(process)
+	err = container.Run(process, libcontainer.CT_ACT_RUN)
 	if err != nil {
 		return buffers, -1, err
 	}
