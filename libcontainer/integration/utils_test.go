@@ -152,6 +152,7 @@ func runContainer(config *configs.Config, console string, args ...string) (buffe
 		Stdin:  buffers.Stdin,
 		Stdout: buffers.Stdout,
 		Stderr: buffers.Stderr,
+		Init:   true,
 	}
 
 	err = container.Run(process)
