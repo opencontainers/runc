@@ -105,7 +105,7 @@ func getDefaultImagePath(context *cli.Context) string {
 
 // newProcess returns a new libcontainer Process with the arguments from the
 // spec and stdio from the current process.
-func newProcess(p specs.Process) (*libcontainer.Process, error) {
+func newProcess(p specs.Process, init bool) (*libcontainer.Process, error) {
 	lp := &libcontainer.Process{
 		Args: p.Args,
 		Env:  p.Env,
@@ -115,6 +115,7 @@ func newProcess(p specs.Process) (*libcontainer.Process, error) {
 		Label:           p.SelinuxLabel,
 		NoNewPrivileges: &p.NoNewPrivileges,
 		AppArmorProfile: p.ApparmorProfile,
+		Init:            init,
 	}
 
 	if p.ConsoleSize != nil {
@@ -269,6 +270,7 @@ func createContainer(context *cli.Context, id string, spec *specs.Spec) (libcont
 }
 
 type runner struct {
+	init            bool
 	enableSubreaper bool
 	shouldDestroy   bool
 	detach          bool
@@ -287,7 +289,7 @@ func (r *runner) run(config *specs.Process) (int, error) {
 		r.destroy()
 		return -1, err
 	}
-	process, err := newProcess(*config)
+	process, err := newProcess(*config, r.init)
 	if err != nil {
 		r.destroy()
 		return -1, err
@@ -450,6 +452,7 @@ func startContainer(context *cli.Context, spec *specs.Spec, action CtAct, criuOp
 		preserveFDs:     context.Int("preserve-fds"),
 		action:          action,
 		criuOpts:        criuOpts,
+		init:            true,
 	}
 	return r.run(spec.Process)
 }

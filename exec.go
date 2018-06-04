@@ -140,6 +140,7 @@ func execProcess(context *cli.Context) (int, error) {
 		detach:          detach,
 		pidFile:         context.String("pid-file"),
 		action:          CT_ACT_RUN,
+		init:            false,
 	}
 	return r.run(p)
 }

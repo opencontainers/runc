@@ -38,6 +38,7 @@ func TestExecIn(t *testing.T) {
 		Args:  []string{"cat"},
 		Env:   standardEnvironment,
 		Stdin: stdinR,
+		Init:  true,
 	}
 	err = container.Run(process)
 	stdinR.Close()
@@ -108,6 +109,7 @@ func testExecInRlimit(t *testing.T, userns bool) {
 		Args:  []string{"cat"},
 		Env:   standardEnvironment,
 		Stdin: stdinR,
+		Init:  true,
 	}
 	err = container.Run(process)
 	stdinR.Close()
@@ -126,6 +128,7 @@ func testExecInRlimit(t *testing.T, userns bool) {
 			// increase process rlimit higher than container rlimit to test per-process limit
 			{Type: unix.RLIMIT_NOFILE, Hard: 1026, Soft: 1026},
 		},
+		Init: true,
 	}
 	err = container.Run(ps)
 	ok(t, err)
@@ -162,6 +165,7 @@ func TestExecInAdditionalGroups(t *testing.T) {
 		Args:  []string{"cat"},
 		Env:   standardEnvironment,
 		Stdin: stdinR,
+		Init:  true,
 	}
 	err = container.Run(process)
 	stdinR.Close()
@@ -218,6 +222,7 @@ func TestExecInError(t *testing.T) {
 		Args:  []string{"cat"},
 		Env:   standardEnvironment,
 		Stdin: stdinR,
+		Init:  true,
 	}
 	err = container.Run(process)
 	stdinR.Close()
@@ -270,6 +275,7 @@ func TestExecInTTY(t *testing.T) {
 		Args:  []string{"cat"},
 		Env:   standardEnvironment,
 		Stdin: stdinR,
+		Init:  true,
 	}
 	err = container.Run(process)
 	stdinR.Close()
@@ -366,6 +372,7 @@ func TestExecInEnvironment(t *testing.T) {
 		Args:  []string{"cat"},
 		Env:   standardEnvironment,
 		Stdin: stdinR,
+		Init:  true,
 	}
 	err = container.Run(process)
 	stdinR.Close()
@@ -385,6 +392,7 @@ func TestExecInEnvironment(t *testing.T) {
 		Stdin:  buffers.Stdin,
 		Stdout: buffers.Stdout,
 		Stderr: buffers.Stderr,
+		Init:   true,
 	}
 	err = container.Run(process2)
 	ok(t, err)
@@ -430,6 +438,7 @@ func TestExecinPassExtraFiles(t *testing.T) {
 		Args:  []string{"cat"},
 		Env:   standardEnvironment,
 		Stdin: stdinR,
+		Init:  true,
 	}
 	err = container.Run(process)
 	stdinR.Close()
@@ -509,6 +518,7 @@ func TestExecInOomScoreAdj(t *testing.T) {
 		Args:  []string{"cat"},
 		Env:   standardEnvironment,
 		Stdin: stdinR,
+		Init:  true,
 	}
 	err = container.Run(process)
 	stdinR.Close()
@@ -564,6 +574,7 @@ func TestExecInUserns(t *testing.T) {
 		Args:  []string{"cat"},
 		Env:   standardEnvironment,
 		Stdin: stdinR,
+		Init:  true,
 	}
 	err = container.Run(process)
 	stdinR.Close()

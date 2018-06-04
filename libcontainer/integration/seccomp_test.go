@@ -48,6 +48,7 @@ func TestSeccompDenyGetcwd(t *testing.T) {
 		Stdin:  buffers.Stdin,
 		Stdout: buffers.Stdout,
 		Stderr: buffers.Stderr,
+		Init:   true,
 	}
 
 	err = container.Run(pwd)
@@ -123,6 +124,7 @@ func TestSeccompPermitWriteConditional(t *testing.T) {
 		Stdin:  buffers.Stdin,
 		Stdout: buffers.Stdout,
 		Stderr: buffers.Stderr,
+		Init:   true,
 	}
 
 	err = container.Run(dmesg)
@@ -184,6 +186,7 @@ func TestSeccompDenyWriteConditional(t *testing.T) {
 		Stdin:  buffers.Stdin,
 		Stdout: buffers.Stdout,
 		Stderr: buffers.Stderr,
+		Init:   true,
 	}
 
 	err = container.Run(dmesg)

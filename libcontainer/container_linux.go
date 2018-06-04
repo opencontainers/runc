@@ -224,17 +224,13 @@ func (c *linuxContainer) Set(config configs.Config) error {
 func (c *linuxContainer) Start(process *Process) error {
 	c.m.Lock()
 	defer c.m.Unlock()
-	status, err := c.currentStatus()
-	if err != nil {
-		return err
-	}
-	if status == Stopped {
+	if process.Init {
 		if err := c.createExecFifo(); err != nil {
 			return err
 		}
 	}
-	if err := c.start(process, status == Stopped); err != nil {
-		if status == Stopped {
+	if err := c.start(process); err != nil {
+		if process.Init {
 			c.deleteExecFifo()
 		}
 		return err
@@ -243,17 +239,10 @@ func (c *linuxContainer) Start(process *Process) error {
 }
 
 func (c *linuxContainer) Run(process *Process) error {
-	c.m.Lock()
-	status, err := c.currentStatus()
-	if err != nil {
-		c.m.Unlock()
-		return err
-	}
-	c.m.Unlock()
 	if err := c.Start(process); err != nil {
 		return err
 	}
-	if status == Stopped {
+	if process.Init {
 		return c.exec()
 	}
 	return nil
@@ -334,8 +323,8 @@ type openResult struct {
 	err  error
 }
 
-func (c *linuxContainer) start(process *Process, isInit bool) error {
-	parent, err := c.newParentProcess(process, isInit)
+func (c *linuxContainer) start(process *Process) error {
+	parent, err := c.newParentProcess(process)
 	if err != nil {
 		return newSystemErrorWithCause(err, "creating new parent process")
 	}
@@ -348,7 +337,7 @@ func (c *linuxContainer) start(process *Process, isInit bool) error {
 	}
 	// generate a timestamp indicating when the container was started
 	c.created = time.Now().UTC()
-	if isInit {
+	if process.Init {
 		c.state = &createdState{
 			c: c,
 		}
@@ -438,7 +427,7 @@ func (c *linuxContainer) includeExecFifo(cmd *exec.Cmd) error {
 	return nil
 }
 
-func (c *linuxContainer) newParentProcess(p *Process, doInit bool) (parentProcess, error) {
+func (c *linuxContainer) newParentProcess(p *Process) (parentProcess, error) {
 	parentPipe, childPipe, err := utils.NewSockPair("init")
 	if err != nil {
 		return nil, newSystemErrorWithCause(err, "creating new init pipe")
@@ -447,7 +436,7 @@ func (c *linuxContainer) newParentProcess(p *Process, doInit bool) (parentProces
 	if err != nil {
 		return nil, newSystemErrorWithCause(err, "creating new command template")
 	}
-	if !doInit {
+	if !p.Init {
 		return c.newSetnsProcess(p, cmd, parentPipe, childPipe)
 	}
 
