@@ -612,6 +612,31 @@ func rootfsParentMountPrivate(rootfs string) error {
 	return nil
 }
 
+// Make parent mount shared if it was not shared
+func rootfsParentMountShared(rootfs string) error {
+	sharedMount := false
+
+	parentMount, optionalOpts, err := getParentMount(rootfs)
+	if err != nil {
+		return err
+	}
+
+	optsSplit := strings.Split(optionalOpts, " ")
+	for _, opt := range optsSplit {
+		if strings.HasPrefix(opt, "shared:") {
+			sharedMount = true
+			break
+		}
+	}
+
+	// Make parent mount SHARED if it was not shared.
+	if !sharedMount {
+		return unix.Mount("", parentMount, "", unix.MS_SHARED, "")
+	}
+
+	return nil
+}
+
 func prepareRoot(config *configs.Config) error {
 	flag := unix.MS_SLAVE | unix.MS_REC
 	if config.RootPropagation != 0 {
@@ -626,6 +651,10 @@ func prepareRoot(config *configs.Config) error {
 	// check pass in pivot_root. (IS_SHARED(new_mnt->mnt_parent))
 	if flag&unix.MS_SHARED == 0 {
 		if err := rootfsParentMountPrivate(config.Rootfs); err != nil {
+			return err
+		}
+	} else {
+		if err := rootfsParentMountShared(config.Rootfs); err != nil {
 			return err
 		}
 	}
