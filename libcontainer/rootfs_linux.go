@@ -99,7 +99,11 @@ func prepareRootfs(pipe io.ReadWriter, iConfig *initConfig) (err error) {
 		return newSystemErrorWithCausef(err, "changing dir to %q", config.Rootfs)
 	}
 
-	if config.NoPivotRoot {
+	// mount with MS_SHARED flag does not work well with pivot_root(), because
+	// of the checks in the Linux kernel. So we need to do instead chroot().
+	if config.RootPropagation&unix.MS_SHARED != 0 {
+		err = chroot(config.Rootfs)
+	} else if config.NoPivotRoot {
 		err = msMoveRoot(config.Rootfs)
 	} else if config.Namespaces.Contains(configs.NEWNS) {
 		err = pivotRoot(config.Rootfs)
@@ -608,6 +612,31 @@ func rootfsParentMountPrivate(rootfs string) error {
 	return nil
 }
 
+// Make parent mount shared if it was not shared
+func rootfsParentMountShared(rootfs string) error {
+	sharedMount := false
+
+	parentMount, optionalOpts, err := getParentMount(rootfs)
+	if err != nil {
+		return err
+	}
+
+	optsSplit := strings.Split(optionalOpts, " ")
+	for _, opt := range optsSplit {
+		if strings.HasPrefix(opt, "shared:") {
+			sharedMount = true
+			break
+		}
+	}
+
+	// Make parent mount SHARED if it was not shared.
+	if !sharedMount {
+		return unix.Mount("", parentMount, "", unix.MS_SHARED, "")
+	}
+
+	return nil
+}
+
 func prepareRoot(config *configs.Config) error {
 	flag := unix.MS_SLAVE | unix.MS_REC
 	if config.RootPropagation != 0 {
@@ -620,8 +649,14 @@ func prepareRoot(config *configs.Config) error {
 	// Make parent mount private to make sure following bind mount does
 	// not propagate in other namespaces. Also it will help with kernel
 	// check pass in pivot_root. (IS_SHARED(new_mnt->mnt_parent))
-	if err := rootfsParentMountPrivate(config.Rootfs); err != nil {
-		return err
+	if flag&unix.MS_SHARED == 0 {
+		if err := rootfsParentMountPrivate(config.Rootfs); err != nil {
+			return err
+		}
+	} else {
+		if err := rootfsParentMountShared(config.Rootfs); err != nil {
+			return err
+		}
 	}
 
 	return unix.Mount(config.Rootfs, config.Rootfs, "bind", unix.MS_BIND|unix.MS_REC, "")
