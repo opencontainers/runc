@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"runtime"
 	"syscall" //only for Exec
 
 	"github.com/opencontainers/runc/libcontainer/apparmor"
@@ -44,6 +45,8 @@ func (l *linuxStandardInit) getSessionRingParams() (string, uint32, uint32) {
 }
 
 func (l *linuxStandardInit) Init() error {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
 	if !l.config.Config.NoNewKeyring {
 		ringname, keepperms, newperms := l.getSessionRingParams()
 
@@ -96,9 +99,6 @@ func (l *linuxStandardInit) Init() error {
 	if err := apparmor.ApplyProfile(l.config.AppArmorProfile); err != nil {
 		return errors.Wrap(err, "apply apparmor profile")
 	}
-	if err := label.SetProcessLabel(l.config.ProcessLabel); err != nil {
-		return errors.Wrap(err, "set process label")
-	}
 
 	for key, value := range l.config.Config.Sysctl {
 		if err := writeSystemProperty(key, value); err != nil {
@@ -130,6 +130,10 @@ func (l *linuxStandardInit) Init() error {
 	if err := syncParentReady(l.pipe); err != nil {
 		return errors.Wrap(err, "sync ready")
 	}
+	if err := label.SetProcessLabel(l.config.ProcessLabel); err != nil {
+		return errors.Wrap(err, "set process label")
+	}
+	defer label.SetProcessLabel("")
 	// Without NoNewPrivileges seccomp is a privileged operation, so we need to
 	// do this before dropping capabilities; otherwise do it as late as possible
 	// just before execve so as few syscalls take place after it as possible.
