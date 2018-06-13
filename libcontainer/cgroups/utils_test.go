@@ -93,6 +93,62 @@ const systemdMountinfo = `115 83 0:32 / / rw,relatime - aufs none rw,si=c0bd3d3,
 136 117 0:12 /1 /dev/console rw,nosuid,noexec,relatime - devpts none rw,gid=5,mode=620,ptmxmode=000
 84 115 0:40 / /tmp rw,relatime - tmpfs none rw`
 
+const bedrockMountinfo = `120 17 0:28 / /sys/fs/cgroup ro,nosuid,nodev,noexec shared:16 - tmpfs tmpfs ro,mode=755
+124 28 0:28 / /bedrock/strata/arch/sys/fs/cgroup rw,nosuid,nodev,noexec shared:16 - tmpfs tmpfs ro,mode=755
+123 53 0:28 / /bedrock/strata/fallback/sys/fs/cgroup rw,nosuid,nodev,noexec shared:16 - tmpfs tmpfs ro,mode=755
+122 71 0:28 / /bedrock/strata/gentoo/sys/fs/cgroup rw,nosuid,nodev,noexec shared:16 - tmpfs tmpfs ro,mode=755
+121 89 0:28 / /bedrock/strata/kde/sys/fs/cgroup rw,nosuid,nodev,noexec shared:16 - tmpfs tmpfs ro,mode=755
+125 120 0:29 / /sys/fs/cgroup/systemd rw,nosuid,nodev,noexec,relatime shared:17 - cgroup cgroup rw,xattr,release_agent=/lib/systemd/systemd-cgroups-agent,name=systemd
+129 124 0:29 / /bedrock/strata/arch/sys/fs/cgroup/systemd rw,nosuid,nodev,noexec,relatime shared:17 - cgroup cgroup rw,xattr,release_agent=/lib/systemd/systemd-cgroups-agent,name=systemd
+128 123 0:29 / /bedrock/strata/fallback/sys/fs/cgroup/systemd rw,nosuid,nodev,noexec,relatime shared:17 - cgroup cgroup rw,xattr,release_agent=/lib/systemd/systemd-cgroups-agent,name=systemd
+127 122 0:29 / /bedrock/strata/gentoo/sys/fs/cgroup/systemd rw,nosuid,nodev,noexec,relatime shared:17 - cgroup cgroup rw,xattr,release_agent=/lib/systemd/systemd-cgroups-agent,name=systemd
+126 121 0:29 / /bedrock/strata/kde/sys/fs/cgroup/systemd rw,nosuid,nodev,noexec,relatime shared:17 - cgroup cgroup rw,xattr,release_agent=/lib/systemd/systemd-cgroups-agent,name=systemd
+140 120 0:32 / /sys/fs/cgroup/net_cls,net_prio rw,nosuid,nodev,noexec,relatime shared:48 - cgroup cgroup rw,net_cls,net_prio
+144 124 0:32 / /bedrock/strata/arch/sys/fs/cgroup/net_cls,net_prio rw,nosuid,nodev,noexec,relatime shared:48 - cgroup cgroup rw,net_cls,net_prio
+143 123 0:32 / /bedrock/strata/fallback/sys/fs/cgroup/net_cls,net_prio rw,nosuid,nodev,noexec,relatime shared:48 - cgroup cgroup rw,net_cls,net_prio
+142 122 0:32 / /bedrock/strata/gentoo/sys/fs/cgroup/net_cls,net_prio rw,nosuid,nodev,noexec,relatime shared:48 - cgroup cgroup rw,net_cls,net_prio
+141 121 0:32 / /bedrock/strata/kde/sys/fs/cgroup/net_cls,net_prio rw,nosuid,nodev,noexec,relatime shared:48 - cgroup cgroup rw,net_cls,net_prio
+145 120 0:33 / /sys/fs/cgroup/blkio rw,nosuid,nodev,noexec,relatime shared:49 - cgroup cgroup rw,blkio
+149 124 0:33 / /bedrock/strata/arch/sys/fs/cgroup/blkio rw,nosuid,nodev,noexec,relatime shared:49 - cgroup cgroup rw,blkio
+148 123 0:33 / /bedrock/strata/fallback/sys/fs/cgroup/blkio rw,nosuid,nodev,noexec,relatime shared:49 - cgroup cgroup rw,blkio
+147 122 0:33 / /bedrock/strata/gentoo/sys/fs/cgroup/blkio rw,nosuid,nodev,noexec,relatime shared:49 - cgroup cgroup rw,blkio
+146 121 0:33 / /bedrock/strata/kde/sys/fs/cgroup/blkio rw,nosuid,nodev,noexec,relatime shared:49 - cgroup cgroup rw,blkio
+150 120 0:34 / /sys/fs/cgroup/cpu,cpuacct rw,nosuid,nodev,noexec,relatime shared:50 - cgroup cgroup rw,cpu,cpuacct
+154 124 0:34 / /bedrock/strata/arch/sys/fs/cgroup/cpu,cpuacct rw,nosuid,nodev,noexec,relatime shared:50 - cgroup cgroup rw,cpu,cpuacct
+153 123 0:34 / /bedrock/strata/fallback/sys/fs/cgroup/cpu,cpuacct rw,nosuid,nodev,noexec,relatime shared:50 - cgroup cgroup rw,cpu,cpuacct
+152 122 0:34 / /bedrock/strata/gentoo/sys/fs/cgroup/cpu,cpuacct rw,nosuid,nodev,noexec,relatime shared:50 - cgroup cgroup rw,cpu,cpuacct
+151 121 0:34 / /bedrock/strata/kde/sys/fs/cgroup/cpu,cpuacct rw,nosuid,nodev,noexec,relatime shared:50 - cgroup cgroup rw,cpu,cpuacct
+155 120 0:35 / /sys/fs/cgroup/cpuset rw,nosuid,nodev,noexec,relatime shared:51 - cgroup cgroup rw,cpuset
+159 124 0:35 / /bedrock/strata/arch/sys/fs/cgroup/cpuset rw,nosuid,nodev,noexec,relatime shared:51 - cgroup cgroup rw,cpuset
+158 123 0:35 / /bedrock/strata/fallback/sys/fs/cgroup/cpuset rw,nosuid,nodev,noexec,relatime shared:51 - cgroup cgroup rw,cpuset
+157 122 0:35 / /bedrock/strata/gentoo/sys/fs/cgroup/cpuset rw,nosuid,nodev,noexec,relatime shared:51 - cgroup cgroup rw,cpuset
+156 121 0:35 / /bedrock/strata/kde/sys/fs/cgroup/cpuset rw,nosuid,nodev,noexec,relatime shared:51 - cgroup cgroup rw,cpuset
+160 120 0:36 / /sys/fs/cgroup/devices rw,nosuid,nodev,noexec,relatime shared:52 - cgroup cgroup rw,devices
+164 124 0:36 / /bedrock/strata/arch/sys/fs/cgroup/devices rw,nosuid,nodev,noexec,relatime shared:52 - cgroup cgroup rw,devices
+163 123 0:36 / /bedrock/strata/fallback/sys/fs/cgroup/devices rw,nosuid,nodev,noexec,relatime shared:52 - cgroup cgroup rw,devices
+162 122 0:36 / /bedrock/strata/gentoo/sys/fs/cgroup/devices rw,nosuid,nodev,noexec,relatime shared:52 - cgroup cgroup rw,devices
+161 121 0:36 / /bedrock/strata/kde/sys/fs/cgroup/devices rw,nosuid,nodev,noexec,relatime shared:52 - cgroup cgroup rw,devices
+165 120 0:37 / /sys/fs/cgroup/memory rw,nosuid,nodev,noexec,relatime shared:53 - cgroup cgroup rw,memory
+169 124 0:37 / /bedrock/strata/arch/sys/fs/cgroup/memory rw,nosuid,nodev,noexec,relatime shared:53 - cgroup cgroup rw,memory
+168 123 0:37 / /bedrock/strata/fallback/sys/fs/cgroup/memory rw,nosuid,nodev,noexec,relatime shared:53 - cgroup cgroup rw,memory
+167 122 0:37 / /bedrock/strata/gentoo/sys/fs/cgroup/memory rw,nosuid,nodev,noexec,relatime shared:53 - cgroup cgroup rw,memory
+166 121 0:37 / /bedrock/strata/kde/sys/fs/cgroup/memory rw,nosuid,nodev,noexec,relatime shared:53 - cgroup cgroup rw,memory
+170 120 0:38 / /sys/fs/cgroup/freezer rw,nosuid,nodev,noexec,relatime shared:54 - cgroup cgroup rw,freezer
+174 124 0:38 / /bedrock/strata/arch/sys/fs/cgroup/freezer rw,nosuid,nodev,noexec,relatime shared:54 - cgroup cgroup rw,freezer
+173 123 0:38 / /bedrock/strata/fallback/sys/fs/cgroup/freezer rw,nosuid,nodev,noexec,relatime shared:54 - cgroup cgroup rw,freezer
+172 122 0:38 / /bedrock/strata/gentoo/sys/fs/cgroup/freezer rw,nosuid,nodev,noexec,relatime shared:54 - cgroup cgroup rw,freezer
+171 121 0:38 / /bedrock/strata/kde/sys/fs/cgroup/freezer rw,nosuid,nodev,noexec,relatime shared:54 - cgroup cgroup rw,freezer
+175 120 0:39 / /sys/fs/cgroup/pids rw,nosuid,nodev,noexec,relatime shared:55 - cgroup cgroup rw,pids
+179 124 0:39 / /bedrock/strata/arch/sys/fs/cgroup/pids rw,nosuid,nodev,noexec,relatime shared:55 - cgroup cgroup rw,pids
+178 123 0:39 / /bedrock/strata/fallback/sys/fs/cgroup/pids rw,nosuid,nodev,noexec,relatime shared:55 - cgroup cgroup rw,pids
+177 122 0:39 / /bedrock/strata/gentoo/sys/fs/cgroup/pids rw,nosuid,nodev,noexec,relatime shared:55 - cgroup cgroup rw,pids
+176 121 0:39 / /bedrock/strata/kde/sys/fs/cgroup/pids rw,nosuid,nodev,noexec,relatime shared:55 - cgroup cgroup rw,pids
+180 120 0:40 / /sys/fs/cgroup/perf_event rw,nosuid,nodev,noexec,relatime shared:56 - cgroup cgroup rw,perf_event
+184 124 0:40 / /bedrock/strata/arch/sys/fs/cgroup/perf_event rw,nosuid,nodev,noexec,relatime shared:56 - cgroup cgroup rw,perf_event
+183 123 0:40 / /bedrock/strata/fallback/sys/fs/cgroup/perf_event rw,nosuid,nodev,noexec,relatime shared:56 - cgroup cgroup rw,perf_event
+182 122 0:40 / /bedrock/strata/gentoo/sys/fs/cgroup/perf_event rw,nosuid,nodev,noexec,relatime shared:56 - cgroup cgroup rw,perf_event
+181 121 0:40 / /bedrock/strata/kde/sys/fs/cgroup/perf_event rw,nosuid,nodev,noexec,relatime shared:56 - cgroup cgroup rw,perf_event`
+
 const cgroup2Mountinfo = `18 64 0:18 / /sys rw,nosuid,nodev,noexec,relatime shared:6 - sysfs sysfs rw,seclabel
 19 64 0:4 / /proc rw,nosuid,nodev,noexec,relatime shared:5 - proc proc rw
 20 64 0:6 / /dev rw,nosuid shared:2 - devtmpfs devtmpfs rw,seclabel,size=8171204k,nr_inodes=2042801,mode=755
@@ -147,6 +203,21 @@ func TestGetCgroupMounts(t *testing.T) {
 		{
 			mountInfo: systemdMountinfo,
 			root:      "/system.slice/docker-dc4eaa1a34ec4d593bc0125d31eea823a1d76ae483aeb1409cca80304e34da2e.scope",
+			subsystems: map[string]bool{
+				"cpuset":     false,
+				"cpu":        false,
+				"cpuacct":    false,
+				"memory":     false,
+				"devices":    false,
+				"freezer":    false,
+				"net_cls":    false,
+				"blkio":      false,
+				"perf_event": false,
+			},
+		},
+		{
+			mountInfo: bedrockMountinfo,
+			root:      "/",
 			subsystems: map[string]bool{
 				"cpuset":     false,
 				"cpu":        false,
