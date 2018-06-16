@@ -445,7 +445,7 @@ this is just some garbage data
 	if utils.GetIntSize() > 4 {
 		tests = append(tests, foo{
 			// groups with too large id
-			groups:   []string{strconv.Itoa(1 << 31)},
+			groups:   []string{strconv.Itoa(1<<31 - 1)},
 			expected: nil,
 			hasError: true,
 		})

@@ -473,7 +473,7 @@ func GetAdditionalGroups(additionalGroups []string, group io.Reader) ([]int, err
 				return nil, fmt.Errorf("Unable to find group %s", ag)
 			}
 			// Ensure gid is inside gid range.
-			if gid < minId || gid > maxId {
+			if gid < minId || gid >= maxId {
 				return nil, ErrRange
 			}
 			gidMap[gid] = struct{}{}
