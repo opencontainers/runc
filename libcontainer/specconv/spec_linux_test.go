@@ -585,3 +585,16 @@ func TestInitSystemdProps(t *testing.T) {
 		}
 	}
 }
+
+func TestNullProcess(t *testing.T) {
+	spec := Example()
+	spec.Process = nil
+
+	_, err := CreateLibcontainerConfig(&CreateOpts{
+		Spec: spec,
+	})
+
+	if err != nil {
+		t.Errorf("Null process should be forbidden")
+	}
+}
