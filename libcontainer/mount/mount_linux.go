@@ -64,7 +64,10 @@ func parseInfoFile(r io.Reader) ([]*Info, error) {
 		}
 		// Safe as mountinfo encodes mountpoints with spaces as \040.
 		index := strings.Index(text, " - ")
-		postSeparatorFields := strings.Fields(text[index+3:])
+		// Source can be an empty string ("") so strings.Fields() won't work here.
+		// Test with:
+		//     $ sudo mount -t tmpfs "" /tmp/bb
+		postSeparatorFields := strings.Split(text[index+3:], " ")
 		if len(postSeparatorFields) < 3 {
 			return nil, fmt.Errorf("Error found less than 3 fields post '-' in %q", text)
 		}

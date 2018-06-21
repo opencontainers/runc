@@ -94,7 +94,7 @@ func FindCgroupMountpointDir() (string, error) {
 		fields := strings.Split(text, " ")
 		// Safe as mountinfo encodes mountpoints with spaces as \040.
 		index := strings.Index(text, " - ")
-		postSeparatorFields := strings.Fields(text[index+3:])
+		postSeparatorFields := strings.Split(text[index+3:], " ")
 		numPostFields := len(postSeparatorFields)
 
 		// This is an error as we can't detect if the mount is for "cgroup"
@@ -103,10 +103,7 @@ func FindCgroupMountpointDir() (string, error) {
 		}
 
 		if postSeparatorFields[0] == "cgroup" {
-			// Check that the mount is properly formated.
-			if numPostFields < 3 {
-				return "", fmt.Errorf("Error found less than 3 fields post '-' in %q", text)
-			}
+			// No need to parse the rest of the postSeparatorFields
 
 			return filepath.Dir(fields[4]), nil
 		}
