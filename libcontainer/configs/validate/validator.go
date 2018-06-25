@@ -151,6 +151,16 @@ func (v *ConfigValidator) sysctl(config *configs.Config) error {
 				return fmt.Errorf("sysctl %q is not allowed in the hosts network namespace", s)
 			}
 		}
+		if config.Namespaces.Contains(configs.NEWUTS) {
+			switch s {
+			case "kernel.domainname":
+				// This is namespaced and there's no explicit OCI field for it.
+				continue
+			case "kernel.hostname":
+				// This is namespaced but there's a conflicting (dedicated) OCI field for it.
+				return fmt.Errorf("sysctl %q is not allowed as it conflicts with the OCI %q field", s, "hostname")
+			}
+		}
 		return fmt.Errorf("sysctl %q is not in a separate kernel namespace", s)
 	}
 
