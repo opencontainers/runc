@@ -3,7 +3,6 @@
 package system
 
 import (
-	"os"
 	"os/exec"
 	"syscall" // only for exec
 	"unsafe"
@@ -120,22 +119,6 @@ func UIDMapInUserNS(uidmap []user.IDMap) bool {
 		return false
 	}
 	return true
-}
-
-// GetParentNSeuid returns the euid within the parent user namespace
-func GetParentNSeuid() int64 {
-	euid := int64(os.Geteuid())
-	uidmap, err := user.CurrentProcessUIDMap()
-	if err != nil {
-		// This kernel-provided file only exists if user namespaces are supported
-		return euid
-	}
-	for _, um := range uidmap {
-		if um.ID <= euid && euid <= um.ID+um.Count-1 {
-			return um.ParentID + euid - um.ID
-		}
-	}
-	return euid
 }
 
 // SetSubreaper sets the value i as the subreaper setting for the calling process
