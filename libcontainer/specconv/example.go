@@ -217,5 +217,13 @@ func ToRootless(spec *specs.Spec) {
 	spec.Mounts = mounts
 
 	// Remove cgroup settings.
+	// NOTE: cgroups is supported when the permission is properly configured: https://github.com/opencontainers/runc/pull/1540
+	// The caller can set cgroups configuration after calling ToRootless().
 	spec.Linux.Resources = nil
+	spec.Linux.CgroupsPath = ""
+
+	// Disable unsupported security stuff
+	spec.Process.User.AdditionalGids = nil
+	spec.Process.ApparmorProfile = ""
+	spec.Process.SelinuxLabel = ""
 }
