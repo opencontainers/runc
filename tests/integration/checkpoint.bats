@@ -128,7 +128,7 @@ function teardown() {
   requires criu root
 
   # check if lazy-pages is supported
-  run ${CRIU} check --feature lazy_pages
+  run ${CRIU} check --feature uffd-noncoop
   if [ "$status" -eq 1 ]; then
     # this criu does not support lazy migration; skip the test
     skip "this criu does not support lazy migration"
