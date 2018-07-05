@@ -16,7 +16,6 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runc/libcontainer/specconv"
-	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/opencontainers/runtime-spec/specs-go"
 
@@ -39,11 +38,11 @@ func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
 	// We default to cgroupfs, and can only use systemd if the system is a
 	// systemd box.
 	cgroupManager := libcontainer.Cgroupfs
-	rootless, err := isRootless(context)
+	rootlessCg, err := shouldUseRootlessCgroupManager(context)
 	if err != nil {
 		return nil, err
 	}
-	if rootless {
+	if rootlessCg {
 		cgroupManager = libcontainer.RootlessCgroupfs
 	}
 	if context.GlobalBool("systemd-cgroup") {
@@ -226,27 +225,8 @@ func createPidFile(path string, process *libcontainer.Process) error {
 	return os.Rename(tmpName, path)
 }
 
-func isRootless(context *cli.Context) (bool, error) {
-	if context != nil {
-		b, err := parseBoolOrAuto(context.GlobalString("rootless"))
-		if err != nil {
-			return false, err
-		}
-		if b != nil {
-			return *b, nil
-		}
-		// nil b stands for "auto detect"
-	}
-	// Even if os.Geteuid() == 0, it might still require rootless mode,
-	// especially when running within userns.
-	// So we use system.GetParentNSeuid() here.
-	//
-	// TODO(AkihiroSuda): how to support nested userns?
-	return system.GetParentNSeuid() != 0 || system.RunningInUserNS(), nil
-}
-
 func createContainer(context *cli.Context, id string, spec *specs.Spec) (libcontainer.Container, error) {
-	rootless, err := isRootless(context)
+	rootlessCg, err := shouldUseRootlessCgroupManager(context)
 	if err != nil {
 		return nil, err
 	}
@@ -256,7 +236,8 @@ func createContainer(context *cli.Context, id string, spec *specs.Spec) (libcont
 		NoPivotRoot:      context.Bool("no-pivot"),
 		NoNewKeyring:     context.Bool("no-new-keyring"),
 		Spec:             spec,
-		Rootless:         rootless,
+		RootlessEUID:     os.Geteuid() != 0,
+		RootlessCgroups:  rootlessCg,
 	})
 	if err != nil {
 		return nil, err

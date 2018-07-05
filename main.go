@@ -63,13 +63,8 @@ func main() {
 	app.Version = strings.Join(v, "\n")
 
 	root := "/run/runc"
-	rootless, err := isRootless(nil)
-	if err != nil {
-		fatal(err)
-	}
-	if rootless {
-		runtimeDir := os.Getenv("XDG_RUNTIME_DIR")
-		if runtimeDir != "" {
+	if shouldHonorXDGRuntimeDir() {
+		if runtimeDir := os.Getenv("XDG_RUNTIME_DIR"); runtimeDir != "" {
 			root = runtimeDir + "/runc"
 			// According to the XDG specification, we need to set anything in
 			// XDG_RUNTIME_DIR to have a sticky bit if we don't want it to get
@@ -115,7 +110,7 @@ func main() {
 		cli.StringFlag{
 			Name:  "rootless",
 			Value: "auto",
-			Usage: "enable rootless mode ('true', 'false', or 'auto')",
+			Usage: "ignore cgroup permission errors ('true', 'false', or 'auto')",
 		},
 	}
 	app.Commands = []cli.Command{

@@ -77,7 +77,7 @@ func Cgroupfs(l *LinuxFactory) error {
 // containers that use the native cgroups filesystem implementation to create
 // and manage cgroups. The difference between RootlessCgroupfs and Cgroupfs is
 // that RootlessCgroupfs can transparently handle permission errors that occur
-// during rootless container setup (while still allowing cgroup usage if
+// during rootless container (including euid=0 in userns) setup (while still allowing cgroup usage if
 // they've been set up properly).
 func RootlessCgroupfs(l *LinuxFactory) error {
 	l.NewCgroupsManager = func(config *configs.Cgroup, paths map[string]string) cgroups.Manager {
