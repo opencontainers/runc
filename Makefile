@@ -66,25 +66,25 @@ localtest:
 	make localunittest localintegration localrootlessintegration
 
 unittest: runcimage
-	docker run -e TESTFLAGS -t --privileged --rm -v /lib/modules:/lib/modules:ro -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) make localunittest
+	docker run -t --privileged --rm -v /lib/modules:/lib/modules:ro -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) make localunittest TESTFLAGS=${TESTFLAGS}
 
 localunittest: all
 	$(GO) test -timeout 3m -tags "$(BUILDTAGS)" ${TESTFLAGS} -v $(allpackages)
 
 integration: runcimage
-	docker run -e TESTFLAGS -t --privileged --rm -v /lib/modules:/lib/modules:ro -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) make localintegration
+	docker run -t --privileged --rm -v /lib/modules:/lib/modules:ro -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) make localintegration TESTPATH=${TESTPATH}
 
 localintegration: all
-	bats -t tests/integration${TESTFLAGS}
+	bats -t tests/integration${TESTPATH}
 
 rootlessintegration: runcimage
-	docker run -e TESTFLAGS -t --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) make localrootlessintegration
+	docker run -t --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) make localrootlessintegration
 
 localrootlessintegration: all
 	tests/rootless.sh
 
 shell: runcimage
-	docker run -e TESTFLAGS -ti --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) bash
+	docker run -ti --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) bash
 
 install:
 	install -D -m0755 runc $(BINDIR)/runc
