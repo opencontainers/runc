@@ -1,4 +1,4 @@
-# runc
+<p align="left"><img src="logo/runc-horizontal-color.png" alt="runc" height="100px"></p>
 
 [![Build Status](https://travis-ci.org/opencontainers/runc.svg?branch=master)](https://travis-ci.org/opencontainers/runc)
 [![Go Report Card](https://goreportcard.com/badge/github.com/opencontainers/runc)](https://goreportcard.com/report/github.com/opencontainers/runc)
