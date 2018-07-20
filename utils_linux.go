@@ -392,6 +392,9 @@ func (r *runner) checkTerminal(config *specs.Process) error {
 }
 
 func validateProcessSpec(spec *specs.Process) error {
+	if spec == nil {
+		return fmt.Errorf("process property must not be empty")
+	}
 	if spec.Cwd == "" {
 		return fmt.Errorf("Cwd property must not be empty")
 	}
