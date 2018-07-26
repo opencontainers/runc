@@ -24,7 +24,7 @@ function teardown() {
 
   runc ps test_busybox
   [ "$status" -eq 0 ]
-  [[ ${lines[0]} =~ UID\ +PID\ +PPID\ +C\ +STIME\ +TTY\ +TIME\ +CMD+ ]]
+  [[ ${lines[0]} =~ USER\ +PID\ +PPID\ +%CPU\ +ELAPSED\ +TTY\ +TIME\ +COMMAND+ ]]
   [[ "${lines[1]}" == *"$(id -un 2>/dev/null)"*[0-9]* ]]
 }
 
@@ -44,7 +44,7 @@ function teardown() {
   [[ ${lines[0]} =~ [0-9]+ ]]
 }
 
-@test "ps -e -x" {
+@test "ps  pid tty state time comm" {
   # ps is not supported, it requires cgroups
   requires root
 
@@ -55,8 +55,8 @@ function teardown() {
   # check state
   testcontainer test_busybox running
 
-  runc ps test_busybox -e -x
+  runc ps test_busybox pid tty state time comm
   [ "$status" -eq 0 ]
-  [[ ${lines[0]} =~ \ +PID\ +TTY\ +STAT\ +TIME\ +COMMAND+ ]]
+  [[ ${lines[0]} =~ PID\ +TTY\ +STATE\ +TIME\ +COMMAND+ ]]
   [[ "${lines[1]}" =~ [0-9]+ ]]
 }
