@@ -26,13 +26,12 @@ var psCommand = cli.Command{
 			Usage: `select one of: ` + formatOptions,
 		},
 		cli.BoolFlag{
-			Name:  "print-descriptors",
+			Name:  "list-descriptors",
 			Usage: "print the list of supported format descriptors",
 		},
 	},
 	Action: func(context *cli.Context) error {
-		if context.Bool("print-descriptors") {
-			fmt.Println("Supported format descriptors:")
+		if context.Bool("list-descriptors") {
 			fmt.Println(strings.Join(psgo.ListDescriptors(), ", "))
 			return nil
 		}

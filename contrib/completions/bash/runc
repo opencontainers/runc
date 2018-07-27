@@ -282,11 +282,27 @@ _runc_pause() {
 	esac
 }
 
+__runc_ps_descriptors() {
+        runc ps --list-descriptors
+}
+
+__runc_complete_ps_descriptors() {
+        COMPREPLY=($(IFS=", " compgen -W "$(__runc_ps_descriptors)" -- "$cur"))
+}
+
 _runc_ps() {
 	local boolean_options="
 	   --help
+       --list-descriptors
 	   -h
 	"
+
+    # runc-ps works on only *one* container, which means that when we have
+    # three or more arguments, we can complete with ps descriptors.
+    if [[ "${COMP_CWORD}" -ge 3 ]]; then
+            __runc_complete_ps_descriptors
+            return
+    fi
 
 	case "$cur" in
 	-*)
@@ -371,7 +387,7 @@ _runc_events() {
 _runc_list() {
 	local boolean_options="
 	   --help
-	   --quiet 
+	   --quiet
 	   -q
 	"
 
