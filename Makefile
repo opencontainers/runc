@@ -47,7 +47,7 @@ release:
 	script/release.sh -r release/$(VERSION) -v $(VERSION)
 
 dbuild: runcimage
-	docker run --rm -v $(CURDIR):/go/src/$(PROJECT) --privileged $(RUNC_IMAGE) make clean all
+	docker run ${DOCKER_RUN_PROXY} --rm -v $(CURDIR):/go/src/$(PROJECT) --privileged $(RUNC_IMAGE) make clean all
 
 lint:
 	$(GO) vet $(allpackages)
@@ -57,7 +57,7 @@ man:
 	man/md2man-all.sh
 
 runcimage:
-	docker build -t $(RUNC_IMAGE) .
+	docker build ${DOCKER_BUILD_PROXY} -t $(RUNC_IMAGE) .
 
 test:
 	make unittest integration rootlessintegration
@@ -66,25 +66,25 @@ localtest:
 	make localunittest localintegration localrootlessintegration
 
 unittest: runcimage
-	docker run -t --privileged --rm -v /lib/modules:/lib/modules:ro -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) make localunittest TESTFLAGS=${TESTFLAGS}
+	docker run ${DOCKER_RUN_PROXY} -t --privileged --rm -v /lib/modules:/lib/modules:ro -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) make localunittest TESTFLAGS=${TESTFLAGS}
 
 localunittest: all
 	$(GO) test -timeout 3m -tags "$(BUILDTAGS)" ${TESTFLAGS} -v $(allpackages)
 
 integration: runcimage
-	docker run -t --privileged --rm -v /lib/modules:/lib/modules:ro -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) make localintegration TESTPATH=${TESTPATH}
+	docker run ${DOCKER_RUN_PROXY} -t --privileged --rm -v /lib/modules:/lib/modules:ro -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) make localintegration TESTPATH=${TESTPATH}
 
 localintegration: all
 	bats -t tests/integration${TESTPATH}
 
 rootlessintegration: runcimage
-	docker run -t --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) make localrootlessintegration
+	docker run ${DOCKER_RUN_PROXY} -t --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) make localrootlessintegration
 
 localrootlessintegration: all
 	tests/rootless.sh
 
 shell: runcimage
-	docker run -ti --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) bash
+	docker run ${DOCKER_RUN_PROXY} -ti --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) bash
 
 install:
 	install -D -m0755 runc $(BINDIR)/runc
@@ -119,7 +119,7 @@ validate:
 ci: validate test release
 
 cross: runcimage
-	docker run -e BUILDTAGS="$(BUILDTAGS)" --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) make localcross
+	docker run ${DOCKER_RUN_PROXY} -e BUILDTAGS="$(BUILDTAGS)" --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) make localcross
 
 localcross:
 	CGO_ENABLED=1 GOARCH=arm GOARM=6 CC=arm-linux-gnueabi-gcc $(GO) build -buildmode=pie $(EXTRA_FLAGS) -ldflags "-X main.gitCommit=${COMMIT} -X main.version=${VERSION} $(EXTRA_LDFLAGS)" -tags "$(BUILDTAGS)" -o runc-armel .

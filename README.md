@@ -93,6 +93,12 @@ You can run a specific integration test by setting the `TESTPATH` variable.
 # make test TESTPATH="/checkpoint.bats"
 ```
 
+You can run a test in your proxy environment by setting `DOCKER_BUILD_PROXY` and `DOCKER_RUN_PROXY` variables.
+
+```bash
+# make test DOCKER_BUILD_PROXY="--build-arg HTTP_PROXY=http://yourproxy/" DOCKER_RUN_PROXY="-e HTTP_PROXY=http://yourproxy/"
+```
+
 ### Dependencies Management
 
 `runc` uses [vndr](https://github.com/LK4D4/vndr) for dependencies management.
