@@ -237,12 +237,31 @@ func isRootless(context *cli.Context) (bool, error) {
 		}
 		// nil b stands for "auto detect"
 	}
-	// Even if os.Geteuid() == 0, it might still require rootless mode,
-	// especially when running within userns.
-	// So we use system.GetParentNSeuid() here.
+	if os.Geteuid() != 0 {
+		return true, nil
+	}
+	if !system.RunningInUserNS() {
+		// euid == 0 in the initial namespace
+		return false, nil
+	}
+	// euid == 0 in userns.
+	// TODO: In this case, we should not enable the entire "rootless mode", but we should allow ignoring cgroup permission errors.
+	// See https://github.com/opencontainers/runc/issues/1837
 	//
-	// TODO(AkihiroSuda): how to support nested userns?
-	return system.GetParentNSeuid() != 0 || system.RunningInUserNS(), nil
+	// * When runc is executed via Docker-in-LXD, isRootless() returns false, because systemd in LXD does not set $USER.
+	//   If Docker was launched manually in LXD, isRootless() still returns false, because $USER would be set to "root".
+	//   Note that returning false is the expected behavior for Docker-in-LXD, because LXD sets up cgroups.
+	//
+	// * When runc is executed via rootless img, buildkit, and a few other tools, isRootless() returns true,
+	//   because they don't change environment variables after unsharing the userns and mapping UID=0 to the current user.
+	//
+	// Corner case:
+	// * When runc is executed in Docker-in-rootless-Docker ("rootless dind"), as the root in the contaienr,
+	//   isRootless() returns false, and unlikely to work, unless cgroups is configured.
+	//   The dockerd in the container would need to specify `runc --rootless` explicitly in this case.
+	//   (And user would need to launch dockerd with --rootless explicitly, probably)
+	u := os.Getenv("USER")
+	return u != "" && u != "root", nil
 }
 
 func createContainer(context *cli.Context, id string, spec *specs.Spec) (libcontainer.Container, error) {
