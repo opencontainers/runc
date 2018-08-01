@@ -155,14 +155,16 @@ func getCgroupMountsHelper(ss map[string]bool, mi io.Reader, all bool) ([]Mount,
 			if !known || (!all && seen) {
 				continue
 			}
+			ss[opt] = true
 			if strings.HasPrefix(opt, cgroupNamePrefix) {
 				opt = opt[len(cgroupNamePrefix):]
 			}
 			m.Subsystems = append(m.Subsystems, opt)
-			ss[opt] = true
 			numFound++
 		}
-		res = append(res, m)
+		if len(m.Subsystems) > 0 || all {
+			res = append(res, m)
+		}
 	}
 	if err := scanner.Err(); err != nil {
 		return nil, err
