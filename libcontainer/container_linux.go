@@ -461,6 +461,7 @@ func (c *linuxContainer) commandTemplate(p *Process, childPipe *os.File) (*exec.
 	if cmd.SysProcAttr == nil {
 		cmd.SysProcAttr = &syscall.SysProcAttr{}
 	}
+	cmd.Env = append(cmd.Env, fmt.Sprintf("GOMAXPROCS=%s", os.Getenv("GOMAXPROCS")))
 	cmd.ExtraFiles = append(cmd.ExtraFiles, p.ExtraFiles...)
 	if p.ConsoleSocket != nil {
 		cmd.ExtraFiles = append(cmd.ExtraFiles, p.ConsoleSocket)
