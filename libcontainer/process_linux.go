@@ -43,12 +43,20 @@ type parentProcess interface {
 	externalDescriptors() []string
 
 	setExternalDescriptors(fds []string)
+
+	getChildLogs()
+}
+
+type pipePair struct {
+	r *os.File
+	w *os.File
 }
 
 type setnsProcess struct {
 	cmd           *exec.Cmd
 	parentPipe    *os.File
 	childPipe     *os.File
+	logPipe       pipePair
 	cgroupPaths   map[string]string
 	intelRdtPath  string
 	config        *initConfig
@@ -73,7 +81,9 @@ func (p *setnsProcess) signal(sig os.Signal) error {
 func (p *setnsProcess) start() (err error) {
 	defer p.parentPipe.Close()
 	err = p.cmd.Start()
+	// close the write-side of the pipes (controlled by child)
 	p.childPipe.Close()
+	p.logPipe.w.Close()
 	if err != nil {
 		return newSystemErrorWithCause(err, "starting setns process")
 	}
@@ -202,10 +212,15 @@ func (p *setnsProcess) setExternalDescriptors(newFds []string) {
 	p.fds = newFds
 }
 
+func (p *setnsProcess) getChildLogs() {
+	go forwardLogs(p.logPipe.r)
+}
+
 type initProcess struct {
 	cmd             *exec.Cmd
 	parentPipe      *os.File
 	childPipe       *os.File
+	logPipe         pipePair
 	config          *initConfig
 	manager         cgroups.Manager
 	intelRdtManager intelrdt.Manager
@@ -267,7 +282,9 @@ func (p *initProcess) start() error {
 	defer p.parentPipe.Close()
 	err := p.cmd.Start()
 	p.process.ops = p
+	// close the write-side of the pipes (controlled by child)
 	p.childPipe.Close()
+	p.logPipe.w.Close()
 	if err != nil {
 		p.process.ops = nil
 		return newSystemErrorWithCause(err, "starting init process command")
@@ -478,6 +495,10 @@ func (p *initProcess) signal(sig os.Signal) error {
 
 func (p *initProcess) setExternalDescriptors(newFds []string) {
 	p.fds = newFds
+}
+
+func (p *initProcess) getChildLogs() {
+	go forwardLogs(p.logPipe.r)
 }
 
 func getPipeFds(pid int) ([]string, error) {

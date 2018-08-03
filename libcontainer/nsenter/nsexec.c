@@ -89,6 +89,17 @@ struct nlconfig_t {
 	size_t gidmappath_len;
 };
 
+typedef enum {
+	PANIC = 0,
+	FATAL,
+	ERROR,
+	WARNING,
+	INFO,
+	DEBUG,
+} loglevel_t;
+
+int logfd;
+
 /*
  * List of netlink message types sent to us as part of bootstrapping the init.
  * These constants are defined in libcontainer/message_linux.go.
@@ -346,6 +357,22 @@ static int initpipe(void)
 	return pipenum;
 }
 
+static int logpipe(void)
+{
+	int pipenum;
+	char *logpipe, *endptr;
+
+	logpipe = getenv("_LIBCONTAINER_LOGPIPE");
+	if (logpipe == NULL || *logpipe == '\0')
+		return -1;
+
+	pipenum = strtol(logpipe, &endptr, 10);
+	if (*endptr != '\0')
+		bail("unable to parse _LIBCONTAINER_LOGPIPE");
+
+	return pipenum;
+}
+
 /* Returns the clone(2) flag for a namespace, given the name of a namespace. */
 static int nsflag(char *name)
 {
@@ -528,6 +555,27 @@ void join_namespaces(char *nslist)
 	free(namespaces);
 }
 
+void write_log(loglevel_t level, const char *format, ...)
+{
+	static const char *strlevel[] = {"panic", "fatal", "error", "warning", "info", "debug"};
+	static char jsonbuffer[1024];
+	int len;
+	va_list args;
+	if (logfd < 0 || level >= sizeof(strlevel) / sizeof(strlevel[0])) {
+		return;
+	}
+
+	len = snprintf(jsonbuffer, sizeof(jsonbuffer),
+				   "{\"level\":\"%s\", \"msg\": \"", strlevel[level]);
+
+	va_start(args, format);
+	len += vsnprintf(&jsonbuffer[len], sizeof(jsonbuffer) - len, format, args);
+	va_end(args);
+
+	len += snprintf(&jsonbuffer[len], sizeof(jsonbuffer) - len, "\"}");
+	write(logfd, jsonbuffer, len);
+}
+
 void nsexec(void)
 {
 	int pipenum;
@@ -542,6 +590,11 @@ void nsexec(void)
 	pipenum = initpipe();
 	if (pipenum == -1)
 		return;
+
+	/* Get the log pipe */
+	logfd = logpipe();
+
+	write_log(DEBUG, "%s started", __FUNCTION__);
 
 	/* Parse all of the netlink configuration. */
 	nl_parse(pipenum, &config);
