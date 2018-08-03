@@ -337,6 +337,7 @@ func (c *linuxContainer) start(process *Process) error {
 	if err != nil {
 		return newSystemErrorWithCause(err, "creating new parent process")
 	}
+	parent.getChildLogs()
 	if err := parent.start(); err != nil {
 		// terminate the process to ensure that it properly is reaped.
 		if err := ignoreTerminateErrors(parent.terminate()); err != nil {
@@ -442,12 +443,19 @@ func (c *linuxContainer) newParentProcess(p *Process) (parentProcess, error) {
 	if err != nil {
 		return nil, newSystemErrorWithCause(err, "creating new init pipe")
 	}
-	cmd, err := c.commandTemplate(p, childPipe)
+
+	r, w, err := os.Pipe()
+	if err != nil {
+		return nil, fmt.Errorf("Unable to create the log pipe:  %s", err)
+	}
+	logPipe := pipePair{r, w}
+
+	cmd, err := c.commandTemplate(p, childPipe, logPipe.w)
 	if err != nil {
 		return nil, newSystemErrorWithCause(err, "creating new command template")
 	}
 	if !p.Init {
-		return c.newSetnsProcess(p, cmd, parentPipe, childPipe)
+		return c.newSetnsProcess(p, cmd, parentPipe, childPipe, &logPipe)
 	}
 
 	// We only set up fifoFd if we're not doing a `runc exec`. The historic
@@ -458,10 +466,10 @@ func (c *linuxContainer) newParentProcess(p *Process) (parentProcess, error) {
 	if err := c.includeExecFifo(cmd); err != nil {
 		return nil, newSystemErrorWithCause(err, "including execfifo in cmd.Exec setup")
 	}
-	return c.newInitProcess(p, cmd, parentPipe, childPipe)
+	return c.newInitProcess(p, cmd, parentPipe, childPipe, &logPipe)
 }
 
-func (c *linuxContainer) commandTemplate(p *Process, childPipe *os.File) (*exec.Cmd, error) {
+func (c *linuxContainer) commandTemplate(p *Process, childPipe *os.File, logPipe *os.File) (*exec.Cmd, error) {
 	cmd := exec.Command(c.initPath, c.initArgs[1:]...)
 	cmd.Args[0] = c.initArgs[0]
 	cmd.Stdin = p.Stdin
@@ -484,6 +492,12 @@ func (c *linuxContainer) commandTemplate(p *Process, childPipe *os.File) (*exec.
 		fmt.Sprintf("_LIBCONTAINER_INITPIPE=%d", stdioFdCount+len(cmd.ExtraFiles)-1),
 		fmt.Sprintf("_LIBCONTAINER_STATEDIR=%s", c.root),
 	)
+
+	cmd.ExtraFiles = append(cmd.ExtraFiles, logPipe)
+	cmd.Env = append(cmd.Env,
+		fmt.Sprintf("_LIBCONTAINER_LOGPIPE=%d", stdioFdCount+len(cmd.ExtraFiles)-1),
+	)
+
 	// NOTE: when running a container with no PID namespace and the parent process spawning the container is
 	// PID1 the pdeathsig is being delivered to the container's init process by the kernel for some reason
 	// even with the parent still running.
@@ -493,7 +507,7 @@ func (c *linuxContainer) commandTemplate(p *Process, childPipe *os.File) (*exec.
 	return cmd, nil
 }
 
-func (c *linuxContainer) newInitProcess(p *Process, cmd *exec.Cmd, parentPipe, childPipe *os.File) (*initProcess, error) {
+func (c *linuxContainer) newInitProcess(p *Process, cmd *exec.Cmd, parentPipe, childPipe *os.File, logPipe *pipePair) (*initProcess, error) {
 	cmd.Env = append(cmd.Env, "_LIBCONTAINER_INITTYPE="+string(initStandard))
 	nsMaps := make(map[configs.NamespaceType]string)
 	for _, ns := range c.config.Namespaces {
@@ -510,6 +524,7 @@ func (c *linuxContainer) newInitProcess(p *Process, cmd *exec.Cmd, parentPipe, c
 		cmd:             cmd,
 		childPipe:       childPipe,
 		parentPipe:      parentPipe,
+		logPipe:         *logPipe,
 		manager:         c.cgroupManager,
 		intelRdtManager: c.intelRdtManager,
 		config:          c.newInitConfig(p),
@@ -522,7 +537,7 @@ func (c *linuxContainer) newInitProcess(p *Process, cmd *exec.Cmd, parentPipe, c
 	return init, nil
 }
 
-func (c *linuxContainer) newSetnsProcess(p *Process, cmd *exec.Cmd, parentPipe, childPipe *os.File) (*setnsProcess, error) {
+func (c *linuxContainer) newSetnsProcess(p *Process, cmd *exec.Cmd, parentPipe, childPipe *os.File, logPipe *pipePair) (*setnsProcess, error) {
 	cmd.Env = append(cmd.Env, "_LIBCONTAINER_INITTYPE="+string(initSetns))
 	state, err := c.currentState()
 	if err != nil {
@@ -541,6 +556,7 @@ func (c *linuxContainer) newSetnsProcess(p *Process, cmd *exec.Cmd, parentPipe, 
 		intelRdtPath:    state.IntelRdtPath,
 		childPipe:       childPipe,
 		parentPipe:      parentPipe,
+		logPipe:         *logPipe,
 		config:          c.newInitConfig(p),
 		process:         p,
 		bootstrapData:   data,

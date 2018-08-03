@@ -133,6 +133,12 @@ func main() {
 		updateCommand,
 	}
 	app.Before = func(context *cli.Context) error {
+
+		// do nothing if logrus was already initialized in init.go
+		if logrus.StandardLogger().Out != logrus.New().Out {
+			return nil
+		}
+
 		if context.GlobalBool("debug") {
 			logrus.SetLevel(logrus.DebugLevel)
 		}
