@@ -16,7 +16,6 @@ import (
 	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/selinux/go-selinux/label"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 
 	"golang.org/x/sys/unix"
 )
@@ -208,10 +207,6 @@ func (l *linuxStandardInit) Init() error {
 			return newSystemErrorWithCause(err, "init seccomp")
 		}
 	}
-
-	logPipe, _ := (logrus.StandardLogger().Out).(*(os.File))
-	logPipe.Close()
-
 	if err := syscall.Exec(name, l.config.Args[0:], os.Environ()); err != nil {
 		return newSystemErrorWithCause(err, "exec user process")
 	}
