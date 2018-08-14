@@ -297,6 +297,12 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string) error {
 		if err := mountToRootfs(tmpfs, rootfs, mountLabel); err != nil {
 			return err
 		}
+		// Add a dummy directory for cgroup2.
+		// Without this hack, `df` fails with `df: /sys/fs/cgroup/unified: No such file or directory`
+		// when /sys is bind-mounted from the host to the container (typically when netns is not unshared),
+		if err := os.MkdirAll(filepath.Join(rootfs, m.Destination, "unified"), 0755); err != nil {
+			return err
+		}
 		for _, b := range binds {
 			if err := mountToRootfs(b, rootfs, mountLabel); err != nil {
 				return err
@@ -360,6 +366,12 @@ func getCgroupMounts(m *configs.Mount) ([]*configs.Mount, error) {
 	var binds []*configs.Mount
 
 	for _, mm := range mounts {
+		// when /sys is bind-mounted from the host to the container (typically when netns is not unshared),
+		// mm.Mountpoint can be like "/containers/foo/rootfs/sys/fs/cgroup/systemd/user.slice/user-1001.slice/session-1.scope/foo".
+		//
+		if !strings.HasPrefix(mm.Mountpoint, "/sys/fs/cgroup") {
+			continue
+		}
 		dir, err := mm.GetOwnCgroup(cgroupPaths)
 		if err != nil {
 			return nil, err
