@@ -4,6 +4,7 @@ package fs
 
 import (
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
@@ -299,8 +300,8 @@ func TestMemoryStatsNoStatFile(t *testing.T) {
 	memory := &MemoryGroup{}
 	actualStats := *cgroups.NewStats()
 	err := memory.GetStats(helper.CgroupPath, &actualStats)
-	if err != nil {
-		t.Fatal(err)
+	if err == nil || !strings.Contains(err.Error(), "no such") {
+		t.Fatal("shoud get a error: no such file or directory")
 	}
 }
 
