@@ -87,6 +87,12 @@ You can run a specific test case by setting the `TESTFLAGS` variable.
 # make test TESTFLAGS="-run=SomeTestFunction"
 ```
 
+You can run a specific integration test by setting the `TESTPATH` variable.
+
+```bash
+# make test TESTPATH="/checkpoint.bats"
+```
+
 ### Dependencies Management
 
 `runc` uses [vndr](https://github.com/LK4D4/vndr) for dependencies management.
