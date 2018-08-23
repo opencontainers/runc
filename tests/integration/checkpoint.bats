@@ -230,3 +230,68 @@ function teardown() {
   [ "$status" -eq 0 ]
   [[ "${output}" == *"ponG Ping"* ]]
 }
+
+@test "checkpoint and restore in external network namespace" {
+  # XXX: currently criu require root containers.
+  requires criu root
+
+  # check if external_net_ns is supported; only with criu 3.10++
+  run ${CRIU} check --feature external_net_ns
+  if [ "$status" -eq 1 ]; then
+    # this criu does not support external_net_ns; skip the test
+    skip "this criu does not support external network namespaces"
+  fi
+
+  # create a temporary name for the test network namespace
+  tmp=`mktemp`
+  rm -f $tmp
+  ns_name=`basename $tmp`
+  # create network namespace
+  ip netns add $ns_name
+  ns_path=`ip netns add $ns_name 2>&1 | sed -e 's/.*"\(.*\)".*/\1/'`
+
+  ns_inode=`ls -iL $ns_path | awk '{ print $1 }'`
+
+  # not necessary with criu 3.10 any more
+  sed -i 's;"readonly": true;"readonly": false;' config.json
+  # tell runc which network namespace to use
+  sed -i "s;\"type\": \"network\";\"type\": \"network\",\"path\": \"$ns_path\";" config.json
+
+  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+  [ "$status" -eq 0 ]
+
+  testcontainer test_busybox running
+
+  for i in `seq 2`; do
+    # checkpoint the running container; this automatically tells CRIU to
+    # handle the network namespace defined in config.json as an external
+    runc --criu "$CRIU" checkpoint --work-path ./work-dir test_busybox
+    ret=$?
+    # if you are having problems getting criu to work uncomment the following dump:
+    #cat /run/opencontainer/containers/test_busybox/criu.work/dump.log
+    cat ./work-dir/dump.log | grep -B 5 Error || true
+    [ "$ret" -eq 0 ]
+
+    # after checkpoint busybox is no longer running
+    runc state test_busybox
+    [ "$status" -ne 0 ]
+
+    # restore from checkpoint; this should restore the container into the existing network namespace
+    runc --criu "$CRIU" restore -d --work-path ./work-dir --console-socket $CONSOLE_SOCKET test_busybox
+    ret=$?
+    cat ./work-dir/restore.log | grep -B 5 Error || true
+    [ "$ret" -eq 0 ]
+
+    # busybox should be back up and running
+    testcontainer test_busybox running
+
+    # container should be running in same network namespace as before
+    pid=`__runc state test_busybox | jq '.pid'`
+    ns_inode_new=`readlink /proc/$pid/ns/net | sed -e 's/.*\[\(.*\)\]/\1/'`
+    echo "old network namespace inode $ns_inode"
+    echo "new network namespace inode $ns_inode_new"
+    [ "$ns_inode" -eq "$ns_inode_new" ]
+  done
+  ip netns del $ns_name
+}
+
