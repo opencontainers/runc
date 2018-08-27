@@ -142,6 +142,14 @@ func main() {
 			logrus.SetLevel(logrus.DebugLevel)
 		}
 		if path := context.GlobalString("log"); path != "" {
+			for _, flags := range app.Flags {
+				for _, flag := range strings.Split(flags.GetName(), ",") {
+					flagtrim := strings.TrimSpace(flag)
+					if (len(flagtrim) == 1 && (path == "-"+flagtrim)) || (len(flagtrim) > 1 && (path == "--"+flagtrim)) {
+						path = "/dev/null"
+					}
+				}
+			}
 			f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND|os.O_SYNC, 0666)
 			if err != nil {
 				return err
