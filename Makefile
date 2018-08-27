@@ -79,7 +79,7 @@ localintegration: all
 	bats -t tests/integration${TESTPATH}
 
 rootlessintegration: runcimage
-	$(CONTAINER_ENGINE) run ${CONTAINER_ENGINE_RUN_FLAGS} -t --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) make localrootlessintegration
+	$(CONTAINER_ENGINE) run -e ROOTLESS_TESTPATH ${CONTAINER_ENGINE_RUN_FLAGS} -t --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) make localrootlessintegration
 
 localrootlessintegration: all
 	tests/rootless.sh
