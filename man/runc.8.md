@@ -29,6 +29,7 @@ value for "bundle" is the current directory.
 
 # COMMANDS
    checkpoint   checkpoint a running container
+   create       create a container
    delete       delete any resources held by the container often used with detached containers
    events       display container events such as OOM notifications, cpu, memory, IO and network stats
    exec         execute new process inside the container
@@ -53,5 +54,6 @@ value for "bundle" is the current directory.
    --root value         root directory for storage of container state (this should be located in tmpfs) (default: "/run/runc" or $XDG_RUNTIME_DIR/runc for rootless containers)
    --criu value         path to the criu binary used for checkpoint and restore (default: "criu")
    --systemd-cgroup     enable systemd cgroup support, expects cgroupsPath to be of form "slice:prefix:name" for e.g. "system.slice:runc:434234"
+   --rootless value    enable rootless mode ('true', 'false', or 'auto') (default: "auto")
    --help, -h           show help
    --version, -v        print the version
