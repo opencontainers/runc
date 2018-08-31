@@ -229,6 +229,10 @@ func (l *LinuxFactory) Load(id string) (Container, error) {
 	if l.Root == "" {
 		return nil, newGenericError(fmt.Errorf("invalid root"), ConfigInvalid)
 	}
+	//when load, we need to check id is valid or not.
+	if err := l.validateID(id); err != nil {
+		return nil, err
+	}
 	containerRoot := filepath.Join(l.Root, id)
 	state, err := l.loadState(containerRoot, id)
 	if err != nil {
@@ -355,7 +359,23 @@ func (l *LinuxFactory) loadState(root, id string) (*State, error) {
 }
 
 func (l *LinuxFactory) validateID(id string) error {
-	if !idRegex.MatchString(id) {
+	if !idRegex.MatchString(id) || id == ".." || id == "." {
+		return newGenericError(fmt.Errorf("invalid id format: %v", id), InvalidIdFormat)
+	}
+
+	//For unforeseen invalid id situations, can checked by is SubDir?
+	rootPath, err := filepath.Abs(l.Root)
+	if err != nil {
+		return err
+	}
+
+	containerRoot := filepath.Join(l.Root, id)
+	rootCheckPath, err := filepath.Abs(filepath.Join(containerRoot, ".."))
+	if err != nil {
+		return err
+	}
+
+	if rootPath != rootCheckPath {
 		return newGenericError(fmt.Errorf("invalid id format: %v", id), InvalidIdFormat)
 	}
 
