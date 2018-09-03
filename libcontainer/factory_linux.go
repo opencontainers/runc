@@ -359,23 +359,7 @@ func (l *LinuxFactory) loadState(root, id string) (*State, error) {
 }
 
 func (l *LinuxFactory) validateID(id string) error {
-	if !idRegex.MatchString(id) || id == ".." || id == "." {
-		return newGenericError(fmt.Errorf("invalid id format: %v", id), InvalidIdFormat)
-	}
-
-	//For unforeseen invalid id situations, can checked by is SubDir?
-	rootPath, err := filepath.Abs(l.Root)
-	if err != nil {
-		return err
-	}
-
-	containerRoot := filepath.Join(l.Root, id)
-	rootCheckPath, err := filepath.Abs(filepath.Join(containerRoot, ".."))
-	if err != nil {
-		return err
-	}
-
-	if rootPath != rootCheckPath {
+	if id == "." || !idRegex.MatchString(id) || utils.CleanPath(id) != id {
 		return newGenericError(fmt.Errorf("invalid id format: %v", id), InvalidIdFormat)
 	}
 
