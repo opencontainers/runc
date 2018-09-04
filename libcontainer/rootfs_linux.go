@@ -438,7 +438,7 @@ func checkMountDestination(rootfs, dest string) error {
 		if err != nil {
 			return err
 		}
-		if path == "." || !strings.HasPrefix(path, "..") {
+		if path != "." && !strings.HasPrefix(path, "..") {
 			return fmt.Errorf("%q cannot be mounted because it is located inside %q", dest, invalid)
 		}
 	}
