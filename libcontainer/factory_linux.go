@@ -11,6 +11,7 @@ import (
 	"runtime/debug"
 	"strconv"
 
+	"github.com/cyphar/filepath-securejoin"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fs"
 	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
@@ -195,7 +196,10 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 	if err := l.Validator.Validate(config); err != nil {
 		return nil, newGenericError(err, ConfigInvalid)
 	}
-	containerRoot := filepath.Join(l.Root, id)
+	containerRoot, err := securejoin.SecureJoin(l.Root, id)
+	if err != nil {
+		return nil, err
+	}
 	if _, err := os.Stat(containerRoot); err == nil {
 		return nil, newGenericError(fmt.Errorf("container with id exists: %v", id), IdInUse)
 	} else if !os.IsNotExist(err) {
@@ -233,7 +237,10 @@ func (l *LinuxFactory) Load(id string) (Container, error) {
 	if err := l.validateID(id); err != nil {
 		return nil, err
 	}
-	containerRoot := filepath.Join(l.Root, id)
+	containerRoot, err := securejoin.SecureJoin(l.Root, id)
+	if err != nil {
+		return nil, err
+	}
 	state, err := l.loadState(containerRoot, id)
 	if err != nil {
 		return nil, err
@@ -343,7 +350,11 @@ func (l *LinuxFactory) StartInitialization() (err error) {
 }
 
 func (l *LinuxFactory) loadState(root, id string) (*State, error) {
-	f, err := os.Open(filepath.Join(root, stateFilename))
+	stateFilePath, err := securejoin.SecureJoin(root, stateFilename)
+	if err != nil {
+		return nil, err
+	}
+	f, err := os.Open(stateFilePath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, newGenericError(fmt.Errorf("container %q does not exist", id), ContainerNotExists)
@@ -359,7 +370,7 @@ func (l *LinuxFactory) loadState(root, id string) (*State, error) {
 }
 
 func (l *LinuxFactory) validateID(id string) error {
-	if id == "." || !idRegex.MatchString(id) || utils.CleanPath(id) != id {
+	if !idRegex.MatchString(id) || string(os.PathSeparator)+id != utils.CleanPath(string(os.PathSeparator)+id) {
 		return newGenericError(fmt.Errorf("invalid id format: %v", id), InvalidIdFormat)
 	}
 
