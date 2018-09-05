@@ -71,6 +71,12 @@ func inheritStdio(process *libcontainer.Process) error {
 	return nil
 }
 
+func inheritStdioWithoutIn(process *libcontainer.Process) error {
+	process.Stdout = os.Stdout
+	process.Stderr = os.Stderr
+	return nil
+}
+
 func (t *tty) recvtty(process *libcontainer.Process, socket *os.File) error {
 	f, err := utils.RecvFd(socket)
 	if err != nil {

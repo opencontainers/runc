@@ -151,7 +151,7 @@ func destroy(container libcontainer.Container) {
 }
 
 // setupIO modifies the given process config according to the options.
-func setupIO(process *libcontainer.Process, rootuid, rootgid int, createTTY, detach bool, sockpath string) (*tty, error) {
+func setupIO(process *libcontainer.Process, rootuid, rootgid int, act CtAct, createTTY, detach bool, sockpath string) (*tty, error) {
 	if createTTY {
 		process.Stdin = nil
 		process.Stdout = nil
@@ -194,8 +194,14 @@ func setupIO(process *libcontainer.Process, rootuid, rootgid int, createTTY, det
 	// when runc will detach the caller provides the stdio to runc via runc's 0,1,2
 	// and the container's process inherits runc's stdio.
 	if detach {
-		if err := inheritStdio(process); err != nil {
-			return nil, err
+		if createTTY || act != CT_ACT_CREATE {
+			if err := inheritStdio(process); err != nil {
+				return nil, err
+			}
+		} else {
+			if err := inheritStdioWithoutIn(process); err != nil {
+				return nil, err
+			}
 		}
 		return &tty{}, nil
 	}
@@ -319,7 +325,7 @@ func (r *runner) run(config *specs.Process) (int, error) {
 	// with detaching containers, and then we get a tty after the container has
 	// started.
 	handler := newSignalHandler(r.enableSubreaper, r.notifySocket)
-	tty, err := setupIO(process, rootuid, rootgid, config.Terminal, detach, r.consoleSocket)
+	tty, err := setupIO(process, rootuid, rootgid, r.action, config.Terminal, detach, r.consoleSocket)
 	if err != nil {
 		r.destroy()
 		return -1, err
