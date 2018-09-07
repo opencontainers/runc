@@ -1343,6 +1343,7 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *
 	if extraFiles != nil {
 		cmd.ExtraFiles = append(cmd.ExtraFiles, extraFiles...)
 	}
+	cmd.Env = append(cmd.Env, os.Environ()...)
 
 	if err := cmd.Start(); err != nil {
 		return err
