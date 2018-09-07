@@ -159,7 +159,7 @@ func TestGetContainerStats(t *testing.T) {
 		t.Fatal("cgroup stats are nil")
 	}
 	if stats.CgroupStats.MemoryStats.Usage.Usage != 1024 {
-		t.Fatalf("expected memory usage 1024 but recevied %d", stats.CgroupStats.MemoryStats.Usage.Usage)
+		t.Fatalf("expected memory usage 1024 but received %d", stats.CgroupStats.MemoryStats.Usage.Usage)
 	}
 	if intelrdt.IsEnabled() {
 		if stats.IntelRdtStats == nil {

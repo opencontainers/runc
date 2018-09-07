@@ -537,7 +537,7 @@ func (p *Process) InitializeIO(rootuid, rootgid int) (i *IO, err error) {
 	}
 	fds = append(fds, r.Fd(), w.Fd())
 	p.Stderr, i.Stderr = w, r
-	// change ownership of the pipes incase we are in a user namespace
+	// change ownership of the pipes in case we are in a user namespace
 	for _, fd := range fds {
 		if err := unix.Fchown(int(fd), rootuid, rootgid); err != nil {
 			return nil, err
