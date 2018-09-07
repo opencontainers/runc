@@ -50,6 +50,41 @@ func TestFactoryNew(t *testing.T) {
 	}
 }
 
+func TestFactoryNewInitArgs(t *testing.T) {
+	root, rerr := newTestRoot()
+	if rerr != nil {
+		t.Fatal(rerr)
+	}
+	defer os.RemoveAll(root)
+
+	path := "/bin/sleep"
+	args := []string{"100"}
+	combined := append([]string{path}, args...)
+
+	factory, err := New(root, InitArgs(combined...))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if factory == nil {
+		t.Fatal("factory should not be nil")
+	}
+	lfactory, ok := factory.(*LinuxFactory)
+	if !ok {
+		t.Fatal("expected linux factory returned on linux based systems")
+	}
+	if lfactory.InitPath != path {
+		t.Fatalf("expected factory init path: '%s' but recieved: '%s'", path, lfactory.InitPath)
+	}
+	if len(lfactory.InitArgs) != len(args) {
+		t.Fatalf("expected factory args length: '%d' but recieved: '%d'", len(args), len(lfactory.InitArgs))
+	}
+	for i, arg := range args {
+		if lfactory.InitArgs[i] != arg {
+			t.Fatalf("expected factory args[%d]: '%s' but recieved: '%s'", i, arg, lfactory.InitArgs[i])
+		}
+	}
+}
+
 func TestFactoryNewIntelRdt(t *testing.T) {
 	root, rerr := newTestRoot()
 	if rerr != nil {

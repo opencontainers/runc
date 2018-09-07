@@ -43,7 +43,10 @@ func InitArgs(args ...string) func(*LinuxFactory) error {
 			}
 		}
 
-		l.InitArgs = args
+		l.InitPath = args[0]
+		if len(args) > 1 {
+			l.InitArgs = args[1:]
+		}
 		return nil
 	}
 }
