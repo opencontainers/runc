@@ -351,7 +351,7 @@ func (p *initProcess) start() error {
 					}
 					for i, hook := range p.config.Config.Hooks.Prestart {
 						if err := hook.Run(s); err != nil {
-							return newSystemErrorWithCausef(err, "running prestart hook %d", i)
+							return newSystemErrorWithCausef(err, "running prestart hook %d:%s", i, hook.Info())
 						}
 					}
 				}
@@ -382,7 +382,7 @@ func (p *initProcess) start() error {
 				}
 				for i, hook := range p.config.Config.Hooks.Prestart {
 					if err := hook.Run(s); err != nil {
-						return newSystemErrorWithCausef(err, "running prestart hook %d", i)
+						return newSystemErrorWithCausef(err, "running prestart hook %d:%s", i, hook.Info())
 					}
 				}
 			}
