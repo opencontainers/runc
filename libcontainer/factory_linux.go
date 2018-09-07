@@ -141,7 +141,7 @@ func New(root string, options ...func(*LinuxFactory) error) (Factory, error) {
 	l := &LinuxFactory{
 		Root:      root,
 		InitPath:  "/proc/self/exe",
-		InitArgs:  []string{os.Args[0], "init"},
+		InitArgs:  []string{"init"},
 		Validator: validate.New(),
 		CriuPath:  "criu",
 	}
