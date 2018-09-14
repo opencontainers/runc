@@ -280,8 +280,8 @@ func createLibcontainerMount(cwd string, m specs.Mount) *configs.Mount {
 	}
 	return &configs.Mount{
 		Device:           device,
-		Source:           source,
-		Destination:      m.Destination,
+		Source:           libcontainerUtils.CleanPath(source),
+		Destination:      libcontainerUtils.CleanPath(m.Destination),
 		Data:             data,
 		Flags:            flags,
 		PropagationFlags: pgflags,
