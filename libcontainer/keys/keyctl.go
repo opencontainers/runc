@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/pkg/errors"
+
 	"golang.org/x/sys/unix"
 )
 
@@ -15,7 +17,7 @@ type KeySerial uint32
 func JoinSessionKeyring(name string) (KeySerial, error) {
 	sessKeyId, err := unix.KeyctlJoinSessionKeyring(name)
 	if err != nil {
-		return 0, fmt.Errorf("could not create session key: %v", err)
+		return 0, errors.Wrap(err, "create session key")
 	}
 	return KeySerial(sessKeyId), nil
 }

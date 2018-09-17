@@ -11,6 +11,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/seccomp"
 	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/selinux/go-selinux/label"
+	"github.com/pkg/errors"
 
 	"golang.org/x/sys/unix"
 )
@@ -29,9 +30,15 @@ func (l *linuxSetnsInit) getSessionRingName() string {
 
 func (l *linuxSetnsInit) Init() error {
 	if !l.config.Config.NoNewKeyring {
-		// do not inherit the parent's session keyring
+		// Do not inherit the parent's session keyring.
 		if _, err := keys.JoinSessionKeyring(l.getSessionRingName()); err != nil {
-			return err
+			// Same justification as in standart_init_linux.go as to why we
+			// don't bail on ENOSYS.
+			//
+			// TODO(cyphar): And we should have logging here too.
+			if errors.Cause(err) != unix.ENOSYS {
+				return errors.Wrap(err, "join session keyring")
+			}
 		}
 	}
 	if l.config.CreateConsole {
