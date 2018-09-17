@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/docker/go-units"
+	units "github.com/docker/go-units"
 )
 
 const (
@@ -103,7 +103,7 @@ func FindCgroupMountpointDir() (string, error) {
 		}
 
 		if postSeparatorFields[0] == "cgroup" {
-			// Check that the mount is properly formated.
+			// Check that the mount is properly formatted.
 			if numPostFields < 3 {
 				return "", fmt.Errorf("Error found less than 3 fields post '-' in %q", text)
 			}
@@ -262,7 +262,7 @@ func getCgroupPathHelper(subsystem, cgroup string) (string, error) {
 	}
 
 	// This is needed for nested containers, because in /proc/self/cgroup we
-	// see pathes from host, which don't exist in container.
+	// see paths from host, which don't exist in container.
 	relCgroup, err := filepath.Rel(root, cgroup)
 	if err != nil {
 		return "", err

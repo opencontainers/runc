@@ -121,7 +121,7 @@ function set_cgroups_path() {
   sed -i 's/\("linux": {\)/\1\n    "cgroupsPath": "\/runc-cgroups-integration-test\/test-cgroup",/' "$bundle/config.json"
 }
 
-# Helper function to set a resouces limit
+# Helper function to set a resources limit
 function set_resources_limit() {
   bundle="${1:-.}"
   sed -i 's/\("linux": {\)/\1\n   "resources": { "pids": { "limit": 100 } },/'  "$bundle/config.json"

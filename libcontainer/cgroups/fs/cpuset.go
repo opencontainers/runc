@@ -77,7 +77,7 @@ func (s *CpusetGroup) ApplyDir(dir string, cgroup *configs.Cgroup, pid int) erro
 	// The logic is, if user specified cpuset configs, use these
 	// specified configs, otherwise, inherit from parent. This makes
 	// cpuset configs work correctly with 'cpuset.cpu_exclusive', and
-	// keep backward compatbility.
+	// keep backward compatibility.
 	if err := s.ensureCpusAndMems(dir, cgroup); err != nil {
 		return err
 	}

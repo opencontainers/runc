@@ -135,7 +135,7 @@ func (t *tty) ClosePostStart() error {
 	return nil
 }
 
-// Close closes all open fds for the tty and/or restores the orignal
+// Close closes all open fds for the tty and/or restores the original
 // stdin state to what it was prior to the container execution
 func (t *tty) Close() error {
 	// ensure that our side of the fds are always closed

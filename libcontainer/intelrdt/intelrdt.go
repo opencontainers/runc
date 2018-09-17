@@ -177,7 +177,7 @@ func findIntelRdtMountpointDir() (string, error) {
 		}
 
 		if postSeparatorFields[0] == "resctrl" {
-			// Check that the mount is properly formated.
+			// Check that the mount is properly formatted.
 			if numPostFields < 3 {
 				return "", fmt.Errorf("Error found less than 3 fields post '-' in %q", text)
 			}

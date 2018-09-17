@@ -36,7 +36,7 @@ function teardown() {
 
   # spawn two sub processes (shells)
   # the first sub process is an event logger that sends stats events to events.log
-  # the second sub process waits for an event that incudes test_busybox then
+  # the second sub process waits for an event that includes test_busybox then
   # kills the test_busybox container which causes the event logger to exit
   (__runc events test_busybox > events.log) &
   (

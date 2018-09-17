@@ -123,7 +123,7 @@ function check_cgroup_value() {
     [ "$status" -eq 0 ]
     check_cgroup_value $CGROUP_MEMORY "memory.soft_limit_in_bytes" 33554432
 
-    # Run swap memory tests if swap is avaialble
+    # Run swap memory tests if swap is available
     if [ -f "$CGROUP_MEMORY/memory.memsw.limit_in_bytes" ]; then
         # try to remove memory swap limit
         runc update test_update --memory-swap -1
