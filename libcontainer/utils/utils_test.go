@@ -129,4 +129,14 @@ func TestCleanPath(t *testing.T) {
 	if path != "/var" {
 		t.Errorf("expected to receive '/var' and received %s", path)
 	}
+
+	path = CleanPath("/foo/bar/")
+	if path != "/foo/bar" {
+		t.Errorf("expected to receive '/foo/bar' and received %s", path)
+	}
+
+	path = CleanPath("/foo/bar/../")
+	if path != "/foo" {
+		t.Errorf("expected to receive '/foo' and received %s", path)
+	}
 }
