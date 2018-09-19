@@ -151,19 +151,20 @@ func getCgroupMountsHelper(ss map[string]bool, mi io.Reader, all bool) ([]Mount,
 			Root:       fields[3],
 		}
 		for _, opt := range strings.Split(fields[len(fields)-1], ",") {
-			if !ss[opt] {
+			seen, known := ss[opt]
+			if !known || (!all && seen) {
 				continue
 			}
+			ss[opt] = true
 			if strings.HasPrefix(opt, cgroupNamePrefix) {
-				m.Subsystems = append(m.Subsystems, opt[len(cgroupNamePrefix):])
-			} else {
-				m.Subsystems = append(m.Subsystems, opt)
+				opt = opt[len(cgroupNamePrefix):]
 			}
-			if !all {
-				numFound++
-			}
+			m.Subsystems = append(m.Subsystems, opt)
+			numFound++
 		}
-		res = append(res, m)
+		if len(m.Subsystems) > 0 || all {
+			res = append(res, m)
+		}
 	}
 	if err := scanner.Err(); err != nil {
 		return nil, err
@@ -187,7 +188,7 @@ func GetCgroupMounts(all bool) ([]Mount, error) {
 
 	allMap := make(map[string]bool)
 	for s := range allSubsystems {
-		allMap[s] = true
+		allMap[s] = false
 	}
 	return getCgroupMountsHelper(allMap, f, all)
 }
