@@ -97,9 +97,11 @@ func (t *tty) recvtty(process *libcontainer.Process, socket *os.File) error {
 	// set raw mode to stdin and also handle interrupt
 	stdin, err := console.ConsoleFromFile(os.Stdin)
 	if err != nil {
+		epollConsole.Close()
 		return err
 	}
 	if err := stdin.SetRaw(); err != nil {
+		epollConsole.Close()
 		return fmt.Errorf("failed to set the terminal from the stdin: %v", err)
 	}
 	go handleInterrupt(stdin)
