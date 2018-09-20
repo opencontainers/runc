@@ -653,7 +653,7 @@ func prepareRoot(config *configs.Config) error {
 }
 
 func setReadonly() error {
-	return unix.Mount("/", "/", "bind", unix.MS_BIND|unix.MS_REMOUNT|unix.MS_RDONLY|unix.MS_REC, "")
+	return unix.Mount("/", "/", "bind", unix.MS_REMOUNT|unix.MS_RDONLY, "")
 }
 
 func setupPtmx(config *configs.Config) error {
