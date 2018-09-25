@@ -48,13 +48,25 @@ func (l *linuxStandardInit) Init() error {
 		ringname, keepperms, newperms := l.getSessionRingParams()
 
 		// Do not inherit the parent's session keyring.
-		sessKeyId, err := keys.JoinSessionKeyring(ringname)
-		if err != nil {
-			return errors.Wrap(err, "join session keyring")
-		}
-		// Make session keyring searcheable.
-		if err := keys.ModKeyringPerm(sessKeyId, keepperms, newperms); err != nil {
-			return errors.Wrap(err, "mod keyring permissions")
+		if sessKeyId, err := keys.JoinSessionKeyring(ringname); err != nil {
+			// If keyrings aren't supported then it is likely we are on an
+			// older kernel (or inside an LXC container). While we could bail,
+			// the security feature we are using here is best-effort (it only
+			// really provides marignal protection since VFS credentials are
+			// the only significant protection of keyrings).
+			//
+			// TODO(cyphar): Log this so people know what's going on, once we
+			//               have proper logging in 'runc init'.
+			if errors.Cause(err) != unix.ENOSYS {
+				return errors.Wrap(err, "join session keyring")
+			}
+		} else {
+			// Make session keyring searcheable. If we've gotten this far we
+			// bail on any error -- we don't want to have a keyring with bad
+			// permissions.
+			if err := keys.ModKeyringPerm(sessKeyId, keepperms, newperms); err != nil {
+				return errors.Wrap(err, "mod keyring permissions")
+			}
 		}
 	}
 
