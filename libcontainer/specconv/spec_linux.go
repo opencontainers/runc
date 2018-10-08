@@ -239,6 +239,12 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 			}
 			config.Seccomp = seccomp
 		}
+		if spec.Linux.IntelRdt != nil {
+			config.IntelRdt = &configs.IntelRdt{}
+			if spec.Linux.IntelRdt.L3CacheSchema != "" {
+				config.IntelRdt.L3CacheSchema = spec.Linux.IntelRdt.L3CacheSchema
+			}
+		}
 	}
 	if spec.Process.SelinuxLabel != "" {
 		config.ProcessLabel = spec.Process.SelinuxLabel
@@ -257,12 +263,6 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 	}
 	createHooks(spec, config)
 	config.Version = specs.Version
-	if spec.Linux.IntelRdt != nil {
-		config.IntelRdt = &configs.IntelRdt{}
-		if spec.Linux.IntelRdt.L3CacheSchema != "" {
-			config.IntelRdt.L3CacheSchema = spec.Linux.IntelRdt.L3CacheSchema
-		}
-	}
 	return config, nil
 }
 
