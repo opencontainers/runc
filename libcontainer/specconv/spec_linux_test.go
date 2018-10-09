@@ -448,3 +448,17 @@ func TestNonZeroEUIDCompatibleSpecconvValidate(t *testing.T) {
 		t.Errorf("Expected specconv to produce valid rootless container config: %v", err)
 	}
 }
+
+func TestBadSpecExamples(t *testing.T) {
+	_, err := CreateLibcontainerConfig(&CreateOpts{})
+	if err == nil {
+		t.Errorf("Expected specconv to produce error when spec is not specified")
+	}
+
+	spec := Example()
+	spec.Root = nil
+	_, err = CreateLibcontainerConfig(&CreateOpts{Spec: spec})
+	if err == nil {
+		t.Errorf("Expected specconv to produce error when spec.Root is not specified")
+	}
+}
