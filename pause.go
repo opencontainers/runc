@@ -2,7 +2,11 @@
 
 package main
 
-import "github.com/urfave/cli"
+import (
+	"fmt"
+
+	"github.com/urfave/cli"
+)
 
 var pauseCommand = cli.Command{
 	Name:  "pause",
@@ -24,6 +28,20 @@ Use runc list to identiy instances of containers and their current status.`,
 		}
 		if err := container.Pause(); err != nil {
 			return err
+		}
+		processes, err := container.Processes()
+		if err != nil {
+			return err
+		}
+		// It's possible that container is running when we checked the current
+		// status in `container.Pause()` then container process exited, and we
+		// paused container successfully before `runc delete` had deleted cgroup
+		// directory.
+		// And it's also wanted that after `runc pause` succeed, we should get
+		// a paused container instead of an exited container, so check container
+		// processes after `container.Pause()` succeed.
+		if len(processes) == 0 {
+			return fmt.Errorf("container process already exited.")
 		}
 
 		return nil
