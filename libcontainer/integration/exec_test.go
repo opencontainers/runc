@@ -1263,10 +1263,7 @@ func TestSTDIOPermissions(t *testing.T) {
 }
 
 func unmountOp(path string) error {
-	if err := unix.Unmount(path, unix.MNT_DETACH); err != nil {
-		return err
-	}
-	return nil
+	return unix.Unmount(path, unix.MNT_DETACH)
 }
 
 // Launch container with rootfsPropagation in rslave mode. Also

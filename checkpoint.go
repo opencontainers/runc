@@ -71,10 +71,7 @@ checkpointed.`,
 		if err := setEmptyNsMask(context, options); err != nil {
 			return err
 		}
-		if err := container.Checkpoint(options); err != nil {
-			return err
-		}
-		return nil
+		return container.Checkpoint(options)
 	},
 }
 

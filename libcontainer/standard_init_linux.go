@@ -52,7 +52,7 @@ func (l *linuxStandardInit) Init() error {
 			// If keyrings aren't supported then it is likely we are on an
 			// older kernel (or inside an LXC container). While we could bail,
 			// the security feature we are using here is best-effort (it only
-			// really provides marignal protection since VFS credentials are
+			// really provides marginal protection since VFS credentials are
 			// the only significant protection of keyrings).
 			//
 			// TODO(cyphar): Log this so people know what's going on, once we

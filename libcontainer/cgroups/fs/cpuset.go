@@ -84,11 +84,7 @@ func (s *CpusetGroup) ApplyDir(dir string, cgroup *configs.Cgroup, pid int) erro
 
 	// because we are not using d.join we need to place the pid into the procs file
 	// unlike the other subsystems
-	if err := cgroups.WriteCgroupProc(dir, pid); err != nil {
-		return err
-	}
-
-	return nil
+	return cgroups.WriteCgroupProc(dir, pid)
 }
 
 func (s *CpusetGroup) getSubsystemSettings(parent string) (cpus []byte, mems []byte, err error) {

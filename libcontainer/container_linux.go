@@ -399,10 +399,7 @@ func (c *linuxContainer) createExecFifo() error {
 		return err
 	}
 	unix.Umask(oldMask)
-	if err := os.Chown(fifoName, rootuid, rootgid); err != nil {
-		return err
-	}
-	return nil
+	return os.Chown(fifoName, rootuid, rootgid)
 }
 
 func (c *linuxContainer) deleteExecFifo() {

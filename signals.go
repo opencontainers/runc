@@ -69,9 +69,8 @@ func (h *signalHandler) forward(process *libcontainer.Process, tty *tty, detach 
 		if detach {
 			h.notifySocket.run(pid1)
 			return 0, nil
-		} else {
-			go h.notifySocket.run(0)
 		}
+		go h.notifySocket.run(0)
 	}
 
 	// Perform the initial tty resize. Always ignore errors resizing because

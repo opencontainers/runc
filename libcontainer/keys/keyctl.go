@@ -44,9 +44,5 @@ func ModKeyringPerm(ringId KeySerial, mask, setbits uint32) error {
 
 	perm := (uint32(perm64) & mask) | setbits
 
-	if err := unix.KeyctlSetperm(int(ringId), perm); err != nil {
-		return err
-	}
-
-	return nil
+	return unix.KeyctlSetperm(int(ringId), perm)
 }
