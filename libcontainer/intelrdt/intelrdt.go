@@ -179,16 +179,29 @@ func init() {
 	// "cat_l3" flag for CAT and "mba" flag for MBA
 	isCatFlagSet, isMbaFlagSet, err := parseCpuInfoFile("/proc/cpuinfo")
 	if err != nil {
-		isCatEnabled = false
-		isMbaEnabled = false
 		return
 	}
 
 	// 2. Check if Intel RDT "resource control" filesystem is mounted
 	// The user guarantees to mount the filesystem
-	isFsMounted := isIntelRdtMounted()
-	isCatEnabled = isCatFlagSet && isFsMounted
-	isMbaEnabled = isMbaFlagSet && isFsMounted
+	if !isIntelRdtMounted() {
+		return
+	}
+
+	// 3. Double check if Intel RDT sub-features are available in
+	// "resource control" filesystem. Intel RDT sub-features can be
+	// selectively disabled or enabled by kernel command line
+	// (e.g., rdt=!l3cat,mba) in 4.14 and newer kernel
+	if isCatFlagSet {
+		if _, err := os.Stat(filepath.Join(intelRdtRoot, "info", "L3")); err == nil {
+			isCatEnabled = true
+		}
+	}
+	if isMbaFlagSet {
+		if _, err := os.Stat(filepath.Join(intelRdtRoot, "info", "MB")); err == nil {
+			isMbaEnabled = true
+		}
+	}
 }
 
 // Return the mount point path of Intel RDT "resource control" filesysem
