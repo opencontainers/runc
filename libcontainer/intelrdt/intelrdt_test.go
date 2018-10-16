@@ -8,7 +8,7 @@ import (
 )
 
 func TestIntelRdtSetL3CacheSchema(t *testing.T) {
-	if !IsEnabled() {
+	if !IsCatEnabled() {
 		return
 	}
 
@@ -41,6 +41,44 @@ func TestIntelRdtSetL3CacheSchema(t *testing.T) {
 	value := values[0]
 
 	if value != l3CacheSchemeAfter {
+		t.Fatal("Got the wrong value, set 'schemata' failed.")
+	}
+}
+
+func TestIntelRdtSetMemBwSchema(t *testing.T) {
+	if !IsMbaEnabled() {
+		return
+	}
+
+	helper := NewIntelRdtTestUtil(t)
+	defer helper.cleanup()
+
+	const (
+		memBwSchemaBefore = "MB:0=20;1=70"
+		memBwSchemeAfter  = "MB:0=70;1=20"
+	)
+
+	helper.writeFileContents(map[string]string{
+		"schemata": memBwSchemaBefore + "\n",
+	})
+
+	helper.IntelRdtData.config.IntelRdt.MemBwSchema = memBwSchemeAfter
+	intelrdt := &IntelRdtManager{
+		Config: helper.IntelRdtData.config,
+		Path:   helper.IntelRdtPath,
+	}
+	if err := intelrdt.Set(helper.IntelRdtData.config); err != nil {
+		t.Fatal(err)
+	}
+
+	tmpStrings, err := getIntelRdtParamString(helper.IntelRdtPath, "schemata")
+	if err != nil {
+		t.Fatalf("Failed to parse file 'schemata' - %s", err)
+	}
+	values := strings.Split(tmpStrings, "\n")
+	value := values[0]
+
+	if value != memBwSchemeAfter {
 		t.Fatal("Got the wrong value, set 'schemata' failed.")
 	}
 }

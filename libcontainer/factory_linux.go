@@ -92,7 +92,7 @@ func RootlessCgroupfs(l *LinuxFactory) error {
 
 // IntelRdtfs is an options func to configure a LinuxFactory to return
 // containers that use the Intel RDT "resource control" filesystem to
-// create and manage Intel Xeon platform shared resources (e.g., L3 cache).
+// create and manage Intel RDT resources (e.g., L3 cache, memory bandwidth).
 func IntelRdtFs(l *LinuxFactory) error {
 	l.NewIntelRdtManager = func(config *configs.Config, id string, path string) intelrdt.Manager {
 		return &intelrdt.IntelRdtManager{
@@ -222,7 +222,7 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 		newgidmapPath: l.NewgidmapPath,
 		cgroupManager: l.NewCgroupsManager(config.Cgroups, nil),
 	}
-	if intelrdt.IsEnabled() {
+	if intelrdt.IsCatEnabled() || intelrdt.IsMbaEnabled() {
 		c.intelRdtManager = l.NewIntelRdtManager(config, id, "")
 	}
 	c.state = &stoppedState{c: c}
@@ -268,7 +268,7 @@ func (l *LinuxFactory) Load(id string) (Container, error) {
 	if err := c.refreshState(); err != nil {
 		return nil, err
 	}
-	if intelrdt.IsEnabled() {
+	if intelrdt.IsCatEnabled() || intelrdt.IsMbaEnabled() {
 		c.intelRdtManager = l.NewIntelRdtManager(&state.Config, id, state.IntelRdtPath)
 	}
 	return c, nil

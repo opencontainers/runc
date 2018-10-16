@@ -148,6 +148,7 @@ func TestGetContainerStats(t *testing.T) {
 		intelRdtManager: &mockIntelRdtManager{
 			stats: &intelrdt.Stats{
 				L3CacheSchema: "L3:0=f;1=f0",
+				MemBwSchema:   "MB:0=20;1=70",
 			},
 		},
 	}
@@ -161,12 +162,20 @@ func TestGetContainerStats(t *testing.T) {
 	if stats.CgroupStats.MemoryStats.Usage.Usage != 1024 {
 		t.Fatalf("expected memory usage 1024 but received %d", stats.CgroupStats.MemoryStats.Usage.Usage)
 	}
-	if intelrdt.IsEnabled() {
+	if intelrdt.IsCatEnabled() {
 		if stats.IntelRdtStats == nil {
 			t.Fatal("intel rdt stats are nil")
 		}
 		if stats.IntelRdtStats.L3CacheSchema != "L3:0=f;1=f0" {
 			t.Fatalf("expected L3CacheSchema L3:0=f;1=f0 but recevied %s", stats.IntelRdtStats.L3CacheSchema)
+		}
+	}
+	if intelrdt.IsMbaEnabled() {
+		if stats.IntelRdtStats == nil {
+			t.Fatal("intel rdt stats are nil")
+		}
+		if stats.IntelRdtStats.MemBwSchema != "MB:0=20;1=70" {
+			t.Fatalf("expected MemBwSchema MB:0=20;1=70 but recevied %s", stats.IntelRdtStats.MemBwSchema)
 		}
 	}
 }
@@ -210,6 +219,7 @@ func TestGetContainerState(t *testing.T) {
 		intelRdtManager: &mockIntelRdtManager{
 			stats: &intelrdt.Stats{
 				L3CacheSchema: "L3:0=f0;1=f",
+				MemBwSchema:   "MB:0=70;1=20",
 			},
 			path: expectedIntelRdtPath,
 		},
@@ -232,7 +242,7 @@ func TestGetContainerState(t *testing.T) {
 	if memPath := paths["memory"]; memPath != expectedMemoryPath {
 		t.Fatalf("expected memory path %q but received %q", expectedMemoryPath, memPath)
 	}
-	if intelrdt.IsEnabled() {
+	if intelrdt.IsCatEnabled() || intelrdt.IsMbaEnabled() {
 		intelRdtPath := state.IntelRdtPath
 		if intelRdtPath == "" {
 			t.Fatal("intel rdt path should not be empty")

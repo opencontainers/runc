@@ -118,6 +118,10 @@ other options are ignored.
 			Name:  "l3-cache-schema",
 			Usage: "The string of Intel RDT/CAT L3 cache schema",
 		},
+		cli.StringFlag{
+			Name:  "mem-bw-schema",
+			Usage: "The string of Intel RDT/MBA memory bandwidth schema",
+		},
 	},
 	Action: func(context *cli.Context) error {
 		if err := checkArgs(context, 1, exactArgs); err != nil {
@@ -260,12 +264,18 @@ other options are ignored.
 		config.Cgroups.Resources.MemorySwap = *r.Memory.Swap
 		config.Cgroups.Resources.PidsLimit = r.Pids.Limit
 
-		// Update Intel RDT/CAT
-		if val := context.String("l3-cache-schema"); val != "" {
-			if !intelrdt.IsEnabled() {
-				return fmt.Errorf("Intel RDT: l3 cache schema is not enabled")
-			}
+		// Update Intel RDT
+		l3CacheSchema := context.String("l3-cache-schema")
+		memBwSchema := context.String("mem-bw-schema")
+		if l3CacheSchema != "" && !intelrdt.IsCatEnabled() {
+			return fmt.Errorf("Intel RDT/CAT: l3 cache schema is not enabled")
+		}
 
+		if memBwSchema != "" && !intelrdt.IsMbaEnabled() {
+			return fmt.Errorf("Intel RDT/MBA: memory bandwidth schema is not enabled")
+		}
+
+		if l3CacheSchema != "" || memBwSchema != "" {
 			// If intelRdt is not specified in original configuration, we just don't
 			// Apply() to create intelRdt group or attach tasks for this container.
 			// In update command, we could re-enable through IntelRdtManager.Apply()
@@ -285,7 +295,8 @@ other options are ignored.
 					return err
 				}
 			}
-			config.IntelRdt.L3CacheSchema = val
+			config.IntelRdt.L3CacheSchema = l3CacheSchema
+			config.IntelRdt.MemBwSchema = memBwSchema
 		}
 
 		return container.Set(config)
