@@ -4,11 +4,14 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
 	"github.com/opencontainers/runc/libcontainer"
+	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 
 	"golang.org/x/sys/unix"
@@ -44,12 +47,8 @@ checkpointed.`,
 			return err
 		}
 		// XXX: Currently this is untested with rootless containers.
-		rootless, err := isRootless(context)
-		if err != nil {
-			return err
-		}
-		if rootless {
-			return fmt.Errorf("runc checkpoint requires root")
+		if os.Geteuid() != 0 || system.RunningInUserNS() {
+			logrus.Warn("runc checkpoint is untested with rootless containers")
 		}
 
 		container, err := getContainer(context)

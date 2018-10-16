@@ -156,7 +156,7 @@ func Example() *specs.Spec {
 }
 
 // ToRootless converts the given spec file into one that should work with
-// rootless containers, by removing incompatible options and adding others that
+// rootless containers (euid != 0), by removing incompatible options and adding others that
 // are needed.
 func ToRootless(spec *specs.Spec) {
 	var namespaces []specs.LinuxNamespace

@@ -417,7 +417,7 @@ func TestDupNamespaces(t *testing.T) {
 	}
 }
 
-func TestRootlessSpecconvValidate(t *testing.T) {
+func TestNonZeroEUIDCompatibleSpecconvValidate(t *testing.T) {
 	if _, err := os.Stat("/proc/self/ns/user"); os.IsNotExist(err) {
 		t.Skip("userns is unsupported")
 	}
@@ -430,7 +430,8 @@ func TestRootlessSpecconvValidate(t *testing.T) {
 		CgroupName:       "ContainerID",
 		UseSystemdCgroup: false,
 		Spec:             spec,
-		Rootless:         true,
+		RootlessEUID:     true,
+		RootlessCgroups:  true,
 	}
 
 	config, err := CreateLibcontainerConfig(opts)
