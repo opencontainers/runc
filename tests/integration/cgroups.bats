@@ -125,3 +125,19 @@ EOF
     [ "$status" -eq 0 ]
     [[ ${lines[0]} == *"cgroups_exec"* ]]
 }
+
+@test "runc exec write cgroup (limits + cgrouppath + permission on the cgroup dir) fails" {
+   [[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+
+    set_cgroups_path "$BUSYBOX_BUNDLE"
+    set_resources_limit "$BUSYBOX_BUNDLE"
+
+    runc run -d --console-socket $CONSOLE_SOCKET test_cgroups_permissions
+    [ "$status" -eq 0 ]
+
+# In previous version of rootless runc, the whole /sys was just recursively bind-mounted
+# but not recursively read-only
+    runc exec test_cgroups_permissions mkdir -p /sys/fs/cgroup/cpuset/runc-cgroups-integration-test/dummy
+    [ "$status" -eq 1 ]
+    [[ ${lines[0]} == *"Read-only file system"* ]]
+}

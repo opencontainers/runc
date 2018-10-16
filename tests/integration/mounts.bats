@@ -19,3 +19,12 @@ function teardown() {
 	[ "$status" -eq 0 ]
 	[[ "${lines[0]}" =~ '/tmp/bind/config.json' ]]
 }
+
+# make sure there is no "df: /foo/bar: No such file or directory" issue in the default configuration
+@test "runc run [df]" {
+	  CONFIG=$(jq '.process.args = ["df"]' config.json)
+	  echo "${CONFIG}" >config.json
+
+	  runc run test_df
+	  [ "$status" -eq 0 ]
+}

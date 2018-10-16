@@ -2,8 +2,11 @@ package specconv
 
 import (
 	"os"
+	"path/filepath"
+	"sort"
 	"strings"
 
+	"github.com/opencontainers/runc/libcontainer/mount"
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
@@ -189,13 +192,10 @@ func ToRootless(spec *specs.Spec) {
 	}}
 
 	// Fix up mounts.
-	var mounts []specs.Mount
-	for _, mount := range spec.Mounts {
-		// Ignore all mounts that are under /sys.
-		if strings.HasPrefix(mount.Destination, "/sys") {
-			continue
-		}
-
+	mountInfo, _ := mount.GetMounts()
+	fixupRootlessBindSys(spec, mountInfo)
+	for i := range spec.Mounts {
+		mount := &spec.Mounts[i]
 		// Remove all gid= and uid= mappings.
 		var options []string
 		for _, option := range mount.Options {
@@ -203,19 +203,85 @@ func ToRootless(spec *specs.Spec) {
 				options = append(options, option)
 			}
 		}
-
 		mount.Options = options
-		mounts = append(mounts, mount)
 	}
-	// Add the sysfs mount as an rbind.
-	mounts = append(mounts, specs.Mount{
-		Source:      "/sys",
-		Destination: "/sys",
-		Type:        "none",
-		Options:     []string{"rbind", "nosuid", "noexec", "nodev", "ro"},
-	})
-	spec.Mounts = mounts
 
 	// Remove cgroup settings.
 	spec.Linux.Resources = nil
+}
+
+// fixupRootlessBindSys bind-mounts /sys.
+// This is required only when netns is not unshared.
+func fixupRootlessBindSys(spec *specs.Spec, mountInfo []*mount.Info) {
+	// Fix up mounts.
+	var (
+		mounts         []specs.Mount
+		mountsUnderSys []specs.Mount
+	)
+	for _, m := range spec.Mounts {
+		// ignore original /sys (cannot be mounted when netns is not unshared)
+		if filepath.Clean(m.Destination) == "/sys" {
+			continue
+		} else if strings.HasPrefix(m.Destination, "/sys") {
+			// Append all mounts that are under /sys (e.g. /sys/fs/cgroup )later
+			mountsUnderSys = append(mountsUnderSys, m)
+		} else {
+			mounts = append(mounts, m)
+		}
+	}
+	mounts = append(mounts, []specs.Mount{
+		// Add the sysfs mount as an rbind.
+		// Note:
+		// * "ro" does not make submounts read-only recursively.
+		// * rbind work for sysfs but bind does not.
+		{
+			Source:      "/sys",
+			Destination: "/sys",
+			Type:        "none",
+			Options:     []string{"rbind", "nosuid", "noexec", "nodev", "ro"},
+		},
+	}...)
+	spec.Mounts = append(mounts, mountsUnderSys...)
+	var (
+		maskedPaths         []string
+		maskedPathsWritable = make(map[string]struct{})
+	)
+	for _, masked := range spec.Linux.MaskedPaths {
+		// e.g. when /sys/firmware is masked and /sys/firmware/efi/efivars is in /proc/self/mountinfo,
+		// we need to mask /sys/firmware/efi/efivars as well.
+		// (otherwise `df` fails with "df: /sys/firmware/efi/efivars: No such file or directory")
+		// also, to mask /sys/firmware/efi/efivars, we need to mask /sys/firmware as a writable tmpfs
+		if strings.HasPrefix(masked, "/sys") {
+			for _, mi := range mountInfo {
+				// e.g. mi.Mountpoint = /sys/firmware/efi/efivars, masked = /sys/firmware
+				if strings.HasPrefix(mi.Mountpoint, masked) {
+					maskedPathsWritable[masked] = struct{}{}
+					// mi.Mountpoint is added to maskedPathsWritable for ease of supporting nested case
+					maskedPathsWritable[mi.Mountpoint] = struct{}{}
+				}
+			}
+		}
+		if _, ok := maskedPathsWritable[masked]; !ok {
+			maskedPaths = append(maskedPaths, masked)
+		}
+	}
+	spec.Linux.MaskedPaths = maskedPaths
+	for _, s := range sortMapKeyStrings(maskedPathsWritable) {
+		spec.Mounts = append(spec.Mounts,
+			specs.Mount{
+				Source:      "none",
+				Destination: s,
+				Type:        "tmpfs",
+				Options:     []string{"nosuid", "noexec", "nodev", "mode=0755"},
+			})
+	}
+}
+
+func sortMapKeyStrings(m map[string]struct{}) []string {
+	var ss []string
+	for s := range m {
+		ss = append(ss, s)
+	}
+	sort.Strings(ss)
+	return ss
 }
