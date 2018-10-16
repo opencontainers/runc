@@ -262,7 +262,7 @@ other options are ignored.
 
 		// Update Intel RDT/CAT
 		if val := context.String("l3-cache-schema"); val != "" {
-			if !intelrdt.IsEnabled() {
+			if !intelrdt.IsCatEnabled() {
 				return fmt.Errorf("Intel RDT: l3 cache schema is not enabled")
 			}
 

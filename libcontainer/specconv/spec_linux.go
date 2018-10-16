@@ -246,6 +246,9 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 			if spec.Linux.IntelRdt.L3CacheSchema != "" {
 				config.IntelRdt.L3CacheSchema = spec.Linux.IntelRdt.L3CacheSchema
 			}
+			if spec.Linux.IntelRdt.MemBwSchema != "" {
+				config.IntelRdt.MemBwSchema = spec.Linux.IntelRdt.MemBwSchema
+			}
 		}
 	}
 	if spec.Process.SelinuxLabel != "" {
