@@ -1198,7 +1198,7 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 			netns, err := os.Open(nsPath)
 			defer netns.Close()
 			if err != nil {
-				logrus.Error("If a specific network namespace is defined it must exist: %s", err)
+				logrus.Errorf("If a specific network namespace is defined it must exist: %s", err)
 				return fmt.Errorf("Requested network namespace %v does not exist", nsPath)
 			}
 			inheritFd := new(criurpc.InheritFd)
