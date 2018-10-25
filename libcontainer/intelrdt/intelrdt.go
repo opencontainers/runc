@@ -439,6 +439,22 @@ func getMemBwInfo() (*MemBwInfo, error) {
 	return memBwInfo, nil
 }
 
+// Get diagnostics for last filesystem operation error from file info/last_cmd_status
+func getLastCmdStatus() (string, error) {
+	rootPath, err := getIntelRdtRoot()
+	if err != nil {
+		return "", err
+	}
+
+	path := filepath.Join(rootPath, "info")
+	lastCmdStatus, err := getIntelRdtParamString(path, "last_cmd_status")
+	if err != nil {
+		return "", err
+	}
+
+	return lastCmdStatus, nil
+}
+
 // WriteIntelRdtTasks writes the specified pid into the "tasks" file
 func WriteIntelRdtTasks(dir string, pid int) error {
 	if dir == "" {
@@ -637,21 +653,21 @@ func (m *IntelRdtManager) Set(container *configs.Config) error {
 		// Write a single joint schema string to schemata file
 		if l3CacheSchema != "" && memBwSchema != "" {
 			if err := writeFile(path, "schemata", l3CacheSchema+"\n"+memBwSchema); err != nil {
-				return err
+				return NewLastCmdError(err)
 			}
 		}
 
 		// Write only L3 cache schema string to schemata file
 		if l3CacheSchema != "" && memBwSchema == "" {
 			if err := writeFile(path, "schemata", l3CacheSchema); err != nil {
-				return err
+				return NewLastCmdError(err)
 			}
 		}
 
 		// Write only memory bandwidth schema string to schemata file
 		if l3CacheSchema == "" && memBwSchema != "" {
 			if err := writeFile(path, "schemata", memBwSchema); err != nil {
-				return err
+				return NewLastCmdError(err)
 			}
 		}
 	}
@@ -662,11 +678,11 @@ func (m *IntelRdtManager) Set(container *configs.Config) error {
 func (raw *intelRdtData) join(id string) (string, error) {
 	path := filepath.Join(raw.root, id)
 	if err := os.MkdirAll(path, 0755); err != nil {
-		return "", err
+		return "", NewLastCmdError(err)
 	}
 
 	if err := WriteIntelRdtTasks(path, raw.pid); err != nil {
-		return "", err
+		return "", NewLastCmdError(err)
 	}
 	return path, nil
 }
@@ -691,4 +707,24 @@ func IsNotFound(err error) bool {
 	}
 	_, ok := err.(*NotFoundError)
 	return ok
+}
+
+type LastCmdError struct {
+	LastCmdStatus string
+	Err           error
+}
+
+func (e *LastCmdError) Error() string {
+	return fmt.Sprintf(e.Err.Error() + ", last_cmd_status: " + e.LastCmdStatus)
+}
+
+func NewLastCmdError(err error) error {
+	lastCmdStatus, err1 := getLastCmdStatus()
+	if err1 == nil {
+		return &LastCmdError{
+			LastCmdStatus: lastCmdStatus,
+			Err:           err,
+		}
+	}
+	return err
 }
