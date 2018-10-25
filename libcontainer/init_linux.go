@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
 	"os"
 	"strings"
@@ -300,11 +301,18 @@ func setupUser(config *initConfig) error {
 		return err
 	}
 
+	setgroups, err := ioutil.ReadFile("/proc/self/setgroups")
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+
 	// This isn't allowed in an unprivileged user namespace since Linux 3.19.
 	// There's nothing we can do about /etc/group entries, so we silently
 	// ignore setting groups here (since the user didn't explicitly ask us to
 	// set the group).
-	if !config.RootlessEUID {
+	allowSupGroups := !config.RootlessEUID && strings.TrimSpace(string(setgroups)) != "deny"
+
+	if allowSupGroups {
 		suppGroups := append(execUser.Sgids, addGroups...)
 		if err := unix.Setgroups(suppGroups); err != nil {
 			return err
