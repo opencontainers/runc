@@ -4,6 +4,7 @@ package fs
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -26,6 +27,8 @@ const (
 
 type MemoryGroup struct {
 }
+
+var kernelMemoryAccountingBroken = isKernelMemoryAccountingBroken()
 
 func (s *MemoryGroup) Name() string {
 	return "memory"
@@ -68,6 +71,9 @@ func (s *MemoryGroup) Apply(d *cgroupData) (err error) {
 }
 
 func EnableKernelMemoryAccounting(path string) error {
+	if kernelMemoryAccountingBroken {
+		return nil
+	}
 	// Check if kernel memory is enabled
 	// We have to limit the kernel memory here as it won't be accounted at all
 	// until a limit is set on the cgroup and limit cannot be set once the
@@ -310,4 +316,25 @@ func getMemoryData(path, name string) (cgroups.MemoryData, error) {
 	memoryData.Limit = value
 
 	return memoryData, nil
+}
+
+func getKernelRelease() string {
+	uts := &unix.Utsname{}
+	if err := unix.Uname(uts); err != nil {
+		return ""
+	}
+	// trim \0
+	return string(uts.Release[:bytes.IndexByte(uts.Release[:], 0)])
+}
+
+func isRHEL7Kernel() bool {
+	r := getKernelRelease()
+
+	return strings.HasPrefix(r, "3.10.0") && strings.Index(r, ".el7.") != -1
+}
+
+func isKernelMemoryAccountingBroken() bool {
+	// kmem limit is well known to be badly roken for RHEL7 kernels,
+	// (up to and including RHEL 7.5).
+	return isRHEL7Kernel()
 }
