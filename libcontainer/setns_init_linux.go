@@ -5,6 +5,7 @@ package libcontainer
 import (
 	"fmt"
 	"os"
+	"runtime"
 
 	"github.com/opencontainers/runc/libcontainer/apparmor"
 	"github.com/opencontainers/runc/libcontainer/keys"
@@ -29,6 +30,9 @@ func (l *linuxSetnsInit) getSessionRingName() string {
 }
 
 func (l *linuxSetnsInit) Init() error {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
 	if !l.config.Config.NoNewKeyring {
 		// Do not inherit the parent's session keyring.
 		if _, err := keys.JoinSessionKeyring(l.getSessionRingName()); err != nil {
@@ -54,6 +58,10 @@ func (l *linuxSetnsInit) Init() error {
 			return err
 		}
 	}
+	if err := label.SetProcessLabel(l.config.ProcessLabel); err != nil {
+		return err
+	}
+	defer label.SetProcessLabel("")
 	// Without NoNewPrivileges seccomp is a privileged operation, so we need to
 	// do this before dropping capabilities; otherwise do it as late as possible
 	// just before execve so as few syscalls take place after it as possible.
@@ -66,9 +74,6 @@ func (l *linuxSetnsInit) Init() error {
 		return err
 	}
 	if err := apparmor.ApplyProfile(l.config.AppArmorProfile); err != nil {
-		return err
-	}
-	if err := label.SetProcessLabel(l.config.ProcessLabel); err != nil {
 		return err
 	}
 	// Set seccomp as close to execve as possible, so as few syscalls take
