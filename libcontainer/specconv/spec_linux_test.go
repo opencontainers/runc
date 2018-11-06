@@ -4,6 +4,7 @@ package specconv
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -395,6 +396,9 @@ func TestSpecconvExampleValidate(t *testing.T) {
 
 func TestDupNamespaces(t *testing.T) {
 	spec := &specs.Spec{
+		Root: &specs.Root{
+			Path: "rootfs",
+		},
 		Linux: &specs.Linux{
 			Namespaces: []specs.LinuxNamespace{
 				{
@@ -412,7 +416,7 @@ func TestDupNamespaces(t *testing.T) {
 		Spec: spec,
 	})
 
-	if err == nil {
+	if !strings.Contains(err.Error(), "malformed spec file: duplicated ns") {
 		t.Errorf("Duplicated namespaces should be forbidden")
 	}
 }
