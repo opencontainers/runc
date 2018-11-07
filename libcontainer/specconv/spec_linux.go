@@ -251,19 +251,19 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 			}
 		}
 	}
-	if spec.Process.SelinuxLabel != "" {
-		config.ProcessLabel = spec.Process.SelinuxLabel
-	}
 	if spec.Process != nil {
 		config.OomScoreAdj = spec.Process.OOMScoreAdj
-	}
-	if spec.Process.Capabilities != nil {
-		config.Capabilities = &configs.Capabilities{
-			Bounding:    spec.Process.Capabilities.Bounding,
-			Effective:   spec.Process.Capabilities.Effective,
-			Permitted:   spec.Process.Capabilities.Permitted,
-			Inheritable: spec.Process.Capabilities.Inheritable,
-			Ambient:     spec.Process.Capabilities.Ambient,
+		if spec.Process.SelinuxLabel != "" {
+			config.ProcessLabel = spec.Process.SelinuxLabel
+		}
+		if spec.Process.Capabilities != nil {
+			config.Capabilities = &configs.Capabilities{
+				Bounding:    spec.Process.Capabilities.Bounding,
+				Effective:   spec.Process.Capabilities.Effective,
+				Permitted:   spec.Process.Capabilities.Permitted,
+				Inheritable: spec.Process.Capabilities.Inheritable,
+				Ambient:     spec.Process.Capabilities.Ambient,
+			}
 		}
 	}
 	createHooks(spec, config)
