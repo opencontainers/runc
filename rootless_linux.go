@@ -15,13 +15,14 @@ func shouldUseRootlessCgroupManager(context *cli.Context) (bool, error) {
 		if err != nil {
 			return false, err
 		}
+		// nil b stands for "auto detect"
 		if b != nil {
 			return *b, nil
 		}
-		// nil b stands for "auto detect"
-	}
-	if context.GlobalBool("systemd-cgroup") {
-		return false, nil
+
+		if context.GlobalBool("systemd-cgroup") {
+			return false, nil
+		}
 	}
 	if os.Geteuid() != 0 {
 		return true, nil
