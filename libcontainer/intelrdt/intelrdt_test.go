@@ -82,3 +82,41 @@ func TestIntelRdtSetMemBwSchema(t *testing.T) {
 		t.Fatal("Got the wrong value, set 'schemata' failed.")
 	}
 }
+
+func TestIntelRdtSetMemBwScSchema(t *testing.T) {
+	if !IsMbaScEnabled() {
+		return
+	}
+
+	helper := NewIntelRdtTestUtil(t)
+	defer helper.cleanup()
+
+	const (
+		memBwScSchemaBefore = "MB:0=5000;1=7000"
+		memBwScSchemeAfter  = "MB:0=9000;1=4000"
+	)
+
+	helper.writeFileContents(map[string]string{
+		"schemata": memBwScSchemaBefore + "\n",
+	})
+
+	helper.IntelRdtData.config.IntelRdt.MemBwSchema = memBwScSchemeAfter
+	intelrdt := &IntelRdtManager{
+		Config: helper.IntelRdtData.config,
+		Path:   helper.IntelRdtPath,
+	}
+	if err := intelrdt.Set(helper.IntelRdtData.config); err != nil {
+		t.Fatal(err)
+	}
+
+	tmpStrings, err := getIntelRdtParamString(helper.IntelRdtPath, "schemata")
+	if err != nil {
+		t.Fatalf("Failed to parse file 'schemata' - %s", err)
+	}
+	values := strings.Split(tmpStrings, "\n")
+	value := values[0]
+
+	if value != memBwScSchemeAfter {
+		t.Fatal("Got the wrong value, set 'schemata' failed.")
+	}
+}
