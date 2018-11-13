@@ -220,11 +220,7 @@ func syncParentReady(pipe io.ReadWriter) error {
 	}
 
 	// Wait for parent to give the all-clear.
-	if err := readSync(pipe, procRun); err != nil {
-		return err
-	}
-
-	return nil
+	return readSync(pipe, procRun)
 }
 
 // syncParentHooks sends to the given pipe a JSON payload which indicates that
@@ -237,11 +233,7 @@ func syncParentHooks(pipe io.ReadWriter) error {
 	}
 
 	// Wait for parent to give the all-clear.
-	if err := readSync(pipe, procResume); err != nil {
-		return err
-	}
-
-	return nil
+	return readSync(pipe, procResume)
 }
 
 // setupUser changes the groups, gid, and uid for the user inside the container

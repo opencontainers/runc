@@ -111,10 +111,7 @@ created by an unprivileged user.
 		if err != nil {
 			return err
 		}
-		if err := ioutil.WriteFile(specConfig, data, 0666); err != nil {
-			return err
-		}
-		return nil
+		return ioutil.WriteFile(specConfig, data, 0666)
 	},
 }
 
