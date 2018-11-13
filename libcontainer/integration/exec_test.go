@@ -1773,3 +1773,60 @@ func TestTmpfsCopyUp(t *testing.T) {
 		t.Fatalf("/etc/passwd not copied up as expected: %v", outputLs)
 	}
 }
+
+func TestCGROUPPrivate(t *testing.T) {
+	if _, err := os.Stat("/proc/self/ns/cgroup"); os.IsNotExist(err) {
+		t.Skip("cgroupns is unsupported")
+	}
+	if testing.Short() {
+		return
+	}
+
+	rootfs, err := newRootfs()
+	ok(t, err)
+	defer remove(rootfs)
+
+	l, err := os.Readlink("/proc/1/ns/cgroup")
+	ok(t, err)
+
+	config := newTemplateConfig(rootfs)
+	config.Namespaces.Add(configs.NEWCGROUP, "")
+	buffers, exitCode, err := runContainer(config, "", "readlink", "/proc/self/ns/cgroup")
+	ok(t, err)
+
+	if exitCode != 0 {
+		t.Fatalf("exit code not 0. code %d stderr %q", exitCode, buffers.Stderr)
+	}
+
+	if actual := strings.Trim(buffers.Stdout.String(), "\n"); actual == l {
+		t.Fatalf("cgroup link should be private to the container but equals host %q %q", actual, l)
+	}
+}
+
+func TestCGROUPHost(t *testing.T) {
+	if _, err := os.Stat("/proc/self/ns/cgroup"); os.IsNotExist(err) {
+		t.Skip("cgroupns is unsupported")
+	}
+	if testing.Short() {
+		return
+	}
+
+	rootfs, err := newRootfs()
+	ok(t, err)
+	defer remove(rootfs)
+
+	l, err := os.Readlink("/proc/1/ns/cgroup")
+	ok(t, err)
+
+	config := newTemplateConfig(rootfs)
+	buffers, exitCode, err := runContainer(config, "", "readlink", "/proc/self/ns/cgroup")
+	ok(t, err)
+
+	if exitCode != 0 {
+		t.Fatalf("exit code not 0. code %d stderr %q", exitCode, buffers.Stderr)
+	}
+
+	if actual := strings.Trim(buffers.Stdout.String(), "\n"); actual != l {
+		t.Fatalf("cgroup link not equal to host link %q %q", actual, l)
+	}
+}

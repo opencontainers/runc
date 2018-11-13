@@ -1742,7 +1742,6 @@ func (c *linuxContainer) currentState() (*State, error) {
 // can setns in order.
 func (c *linuxContainer) orderNamespacePaths(namespaces map[configs.NamespaceType]string) ([]string, error) {
 	paths := []string{}
-
 	for _, ns := range configs.NamespaceTypes() {
 
 		// Remove namespaces that we don't need to join.
