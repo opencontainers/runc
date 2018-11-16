@@ -230,7 +230,14 @@ runc delete mycontainerid
 This allows higher level systems to augment the containers creation logic with setup of various settings after the container is created and/or before it is deleted. For example, the container's network stack is commonly set up after `create` but before `start`.
 
 #### Rootless containers
-`runc` has the ability to run containers without root privileges. This is called `rootless`. You need to pass some parameters to `runc` in order to run rootless containers. See below and compare with the previous version. Run the following commands as an ordinary user:
+`runc` has the ability to run containers without root privileges. This is called `rootless`. You need to pass some parameters to `runc` in order to run rootless containers. See below and compare with the previous version.
+
+**Note:** In order to use this feature, "User Namespaces" must be compiled and enabled in your kernel. There are various ways to do this depending on your distribution:
+- Confirm `CONFIG_USER_NS=y` is set in your kernel configuration (normally found in `/proc/config.gz`)
+- Arch/Debian: `echo 1 > /proc/sys/kernel/unprivileged_userns_clone`
+- RHEL/CentOS 7: `echo 28633 > /proc/sys/user/max_user_namespaces`
+
+Run the following commands as an ordinary user:
 ```bash
 # Same as the first example
 mkdir ~/mycontainer
