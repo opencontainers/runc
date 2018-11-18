@@ -49,3 +49,5 @@ other options are ignored.
    --memory-reservation value   Memory reservation or soft_limit (in bytes)
    --memory-swap value          Total memory usage (memory + swap); set '-1' to enable unlimited swap
    --pids-limit value           Maximum number of pids allowed in the container (default: 0)
+   --l3-cache-schema            The string of Intel RDT/CAT L3 cache schema
+   --mem-bw-schema              The string of Intel RDT/MBA memory bandwidth schema
