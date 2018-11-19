@@ -15,9 +15,6 @@ function teardown() {
   # XXX: currently criu require root containers.
   requires criu root
 
-  # criu does not work with external terminals so..
-  # setting terminal and root:readonly: to false
-
   runc run -d --console-socket $CONSOLE_SOCKET test_busybox
   [ "$status" -eq 0 ]
 
@@ -51,8 +48,8 @@ function teardown() {
   # XXX: currently criu require root containers.
   requires criu root
 
+  # The changes to 'terminal' are needed for running in detached mode
   sed -i 's;"terminal": true;"terminal": false;' config.json
-  sed -i 's;"readonly": true;"readonly": false;' config.json
   sed -i 's/"sh"/"sh","-c","for i in `seq 10`; do read xxx || continue; echo ponG $xxx; done"/' config.json
 
   # The following code creates pipes for stdin and stdout.
@@ -75,7 +72,7 @@ function teardown() {
   echo -n > $fifo
   unlink $fifo
 
-    # run busybox (not detached)
+  # run busybox
   __runc run -d test_busybox <&60 >&51 2>&51
   [ $? -eq 0 ]
 
@@ -134,7 +131,9 @@ function teardown() {
     skip "this criu does not support lazy migration"
   fi
 
+  # The changes to 'terminal' are needed for running in detached mode
   sed -i 's;"terminal": true;"terminal": false;' config.json
+  # This should not be necessary: https://github.com/checkpoint-restore/criu/issues/575
   sed -i 's;"readonly": true;"readonly": false;' config.json
   sed -i 's/"sh"/"sh","-c","for i in `seq 10`; do read xxx || continue; echo ponG $xxx; done"/' config.json
 
@@ -252,8 +251,6 @@ function teardown() {
 
   ns_inode=`ls -iL $ns_path | awk '{ print $1 }'`
 
-  # not necessary with criu 3.10 any more
-  sed -i 's;"readonly": true;"readonly": false;' config.json
   # tell runc which network namespace to use
   sed -i "s;\"type\": \"network\";\"type\": \"network\",\"path\": \"$ns_path\";" config.json
 
