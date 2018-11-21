@@ -377,10 +377,18 @@ func (c *linuxContainer) Signal(s os.Signal, all bool) error {
 	if all {
 		return signalAllProcesses(c.cgroupManager, s)
 	}
-	if err := c.initProcess.signal(s); err != nil {
-		return newSystemErrorWithCause(err, "signaling init process")
+	status, err := c.currentStatus()
+	if err != nil {
+		return err
 	}
-	return nil
+	// to avoid a PID reuse attack
+	if status == Running || status == Created {
+		if err := c.initProcess.signal(s); err != nil {
+			return newSystemErrorWithCause(err, "signaling init process")
+		}
+		return nil
+	}
+	return newGenericError(fmt.Errorf("container not running"), ContainerNotRunning)
 }
 
 func (c *linuxContainer) createExecFifo() error {
