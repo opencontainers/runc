@@ -16,6 +16,7 @@ import (
 	libcontainerUtils "github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/opencontainers/runtime-spec/specs-go"
 
+	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
 
@@ -190,6 +191,19 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 
 	exists := false
 	for _, m := range spec.Mounts {
+		// check mount options for (r)bind type mount
+		if m.Type == "bind" || m.Type == "rbind" {
+			hasBindOpt := false
+			for _, opt := range m.Options {
+				if opt == "bind" || opt == "rbind" {
+					hasBindOpt = true
+					break
+				}
+			}
+			if !hasBindOpt {
+				logrus.Warnf("options should contain (r)bind for %v type mount: [destination=%v, source=%v].", m.Type, m.Destination, m.Source)
+			}
+		}
 		config.Mounts = append(config.Mounts, createLibcontainerMount(cwd, m))
 	}
 	if err := createDevices(spec, config); err != nil {
