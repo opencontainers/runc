@@ -28,7 +28,8 @@ import (
  *
  * Memory Bandwidth Allocation (MBA) provides indirect and approximate throttle
  * over memory bandwidth for the software. A user controls the resource by
- * indicating the percentage of maximum memory bandwidth.
+ * indicating the percentage of maximum memory bandwidth or memory bandwidth
+ * limit in MBps unit if MBA Software Controller is enabled.
  *
  * More details about Intel RDT CAT and MBA can be found in the section 17.18
  * of Intel Software Developer Manual:
@@ -95,7 +96,7 @@ import (
  *
  * Memory bandwidth schema:
  * It has allocation values for memory bandwidth on each socket, which contains
- * L3 cache id and memory bandwidth percentage.
+ * L3 cache id and memory bandwidth.
  * 	Format: "MB:<cache_id0>=bandwidth0;<cache_id1>=bandwidth1;..."
  * For example, on a two-socket machine, the schema line could be "MB:0=20;1=70"
  *
@@ -105,6 +106,18 @@ import (
  * "info/MB/bandwidth_gran". The available bandwidth control steps are:
  * min_bw + N * bw_gran. Intermediate values are rounded to the next control
  * step available on the hardware.
+ *
+ * If MBA Software Controller is enabled through mount option "-o mba_MBps":
+ * mount -t resctrl resctrl -o mba_MBps /sys/fs/resctrl
+ * We could specify memory bandwidth in "MBps" (Mega Bytes per second) unit
+ * instead of "percentages". The kernel underneath would use a software feedback
+ * mechanism or a "Software Controller" which reads the actual bandwidth using
+ * MBM counters and adjust the memory bandwidth percentages to ensure:
+ * "actual memory bandwidth < user specified memory bandwidth".
+ *
+ * For example, on a two-socket machine, the schema line could be
+ * "MB:0=5000;1=7000" which means 5000 MBps memory bandwidth limit on socket 0
+ * and 7000 MBps memory bandwidth limit on socket 1.
  *
  * For more information about Intel RDT kernel interface:
  * https://www.kernel.org/doc/Documentation/x86/intel_rdt_ui.txt
@@ -165,6 +178,8 @@ var (
 	isCatEnabled bool
 	// The flag to indicate if Intel RDT/MBA is enabled
 	isMbaEnabled bool
+	// The flag to indicate if Intel RDT/MBA Software Controller is enabled
+	isMbaScEnabled bool
 )
 
 type intelRdtData struct {
@@ -197,7 +212,12 @@ func init() {
 			isCatEnabled = true
 		}
 	}
-	if isMbaFlagSet {
+	if isMbaScEnabled {
+		// We confirm MBA Software Controller is enabled in step 2,
+		// MBA should be enabled because MBA Software Controller
+		// depends on MBA
+		isMbaEnabled = true
+	} else if isMbaFlagSet {
 		if _, err := os.Stat(filepath.Join(intelRdtRoot, "info", "MB")); err == nil {
 			isMbaEnabled = true
 		}
@@ -230,6 +250,11 @@ func findIntelRdtMountpointDir() (string, error) {
 			// Check that the mount is properly formatted.
 			if numPostFields < 3 {
 				return "", fmt.Errorf("Error found less than 3 fields post '-' in %q", text)
+			}
+
+			// Check if MBA Software Controller is enabled through mount option "-o mba_MBps"
+			if strings.Contains(postSeparatorFields[2], "mba_MBps") {
+				isMbaScEnabled = true
 			}
 
 			return fields[4], nil
@@ -480,6 +505,11 @@ func IsMbaEnabled() bool {
 	return isMbaEnabled
 }
 
+// Check if Intel RDT/MBA Software Controller is enabled
+func IsMbaScEnabled() bool {
+	return isMbaScEnabled
+}
+
 // Get the 'container_id' path in Intel RDT "resource control" filesystem
 func GetIntelRdtPath(id string) (string, error) {
 	rootPath, err := getIntelRdtRoot()
@@ -633,7 +663,7 @@ func (m *IntelRdtManager) Set(container *configs.Config) error {
 	//
 	// About memory bandwidth schema:
 	// It has allocation values for memory bandwidth on each socket, which
-	// contains L3 cache id and memory bandwidth percentage.
+	// contains L3 cache id and memory bandwidth.
 	// 	Format: "MB:<cache_id0>=bandwidth0;<cache_id1>=bandwidth1;..."
 	// For example, on a two-socket machine, the schema line could be:
 	// 	"MB:0=20;1=70"
@@ -645,6 +675,19 @@ func (m *IntelRdtManager) Set(container *configs.Config) error {
 	// The available bandwidth control steps are: min_bw + N * bw_gran.
 	// Intermediate values are rounded to the next control step available
 	// on the hardware.
+	//
+	// If MBA Software Controller is enabled through mount option
+	// "-o mba_MBps": mount -t resctrl resctrl -o mba_MBps /sys/fs/resctrl
+	// We could specify memory bandwidth in "MBps" (Mega Bytes per second)
+	// unit instead of "percentages". The kernel underneath would use a
+	// software feedback mechanism or a "Software Controller" which reads
+	// the actual bandwidth using MBM counters and adjust the memory
+	// bandwidth percentages to ensure:
+	// "actual memory bandwidth < user specified memory bandwidth".
+	//
+	// For example, on a two-socket machine, the schema line could be
+	// "MB:0=5000;1=7000" which means 5000 MBps memory bandwidth limit on
+	// socket 0 and 7000 MBps memory bandwidth limit on socket 1.
 	if container.IntelRdt != nil {
 		path := m.GetPath()
 		l3CacheSchema := container.IntelRdt.L3CacheSchema
