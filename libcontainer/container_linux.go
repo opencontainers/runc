@@ -382,7 +382,7 @@ func (c *linuxContainer) Signal(s os.Signal, all bool) error {
 		return err
 	}
 	// to avoid a PID reuse attack
-	if status == Running || status == Created {
+	if status == Running || status == Created || status == Paused {
 		if err := c.initProcess.signal(s); err != nil {
 			return newSystemErrorWithCause(err, "signaling init process")
 		}
