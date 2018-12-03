@@ -1554,6 +1554,7 @@ func (c *linuxContainer) criuNotifications(resp *criurpc.CriuResp, process *Proc
 			if err != nil {
 				return nil
 			}
+			s.Pid = int(notify.GetPid())
 			for i, hook := range c.config.Hooks.Prestart {
 				if err := hook.Run(s); err != nil {
 					return newSystemErrorWithCausef(err, "running prestart hook %d", i)
