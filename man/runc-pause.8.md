@@ -9,4 +9,4 @@ paused.
 
 # DESCRIPTION
    The pause command suspends all processes in the instance of the container.
-Use runc list to identiy instances of containers and their current status.
+Use runc list to identify instances of containers and their current status.
