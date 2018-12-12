@@ -292,3 +292,53 @@ function teardown() {
   ip netns del $ns_name
 }
 
+@test "checkpoint and restore with container specific CRIU config" {
+  # XXX: currently criu require root containers.
+  requires criu root
+
+  tmp=`mktemp /tmp/runc-criu-XXXXXX.conf`
+  # This is the file we write to /etc/criu/default.conf
+  tmplog1=`mktemp /tmp/runc-criu-log-XXXXXX.log`
+  unlink $tmplog1
+  tmplog1=`basename $tmplog1`
+  # That is the actual configuration file to be used
+  tmplog2=`mktemp /tmp/runc-criu-log-XXXXXX.log`
+  unlink $tmplog2
+  tmplog2=`basename $tmplog2`
+  # This adds the annotation 'org.criu.config' to set a container
+  # specific CRIU config file.
+  sed -i "s;\"process\";\"annotations\":{\"org.criu.config\": \"$tmp\"},\"process\";" config.json
+  # Tell CRIU to use another configuration file
+  mkdir -p /etc/criu
+  echo "log-file=$tmplog1" > /etc/criu/default.conf
+  # Make sure the RPC defined configuration file overwrites the previous
+  echo "log-file=$tmplog2" > $tmp
+
+  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+  [ "$status" -eq 0 ]
+
+  testcontainer test_busybox running
+
+  # checkpoint the running container
+  runc --criu "$CRIU" checkpoint --work-path ./work-dir test_busybox
+  [ "$status" -eq 0 ]
+  ! test -f ./work-dir/$tmplog1
+  test -f ./work-dir/$tmplog2
+
+  # after checkpoint busybox is no longer running
+  runc state test_busybox
+  [ "$status" -ne 0 ]
+
+  test -f ./work-dir/$tmplog2 && unlink ./work-dir/$tmplog2
+  # restore from checkpoint
+  runc --criu "$CRIU" restore -d --work-path ./work-dir --console-socket $CONSOLE_SOCKET test_busybox
+  [ "$status" -eq 0 ]
+  ! test -f ./work-dir/$tmplog1
+  test -f ./work-dir/$tmplog2
+
+  # busybox should be back up and running
+  testcontainer test_busybox running
+  unlink $tmp
+  test -f ./work-dir/$tmplog2 && unlink ./work-dir/$tmplog2
+}
+
