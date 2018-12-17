@@ -137,6 +137,10 @@ const (
 	ActTrace ScmpAction = iota
 	// ActAllow permits the syscall to continue execution
 	ActAllow ScmpAction = iota
+	// ActLog permits the syscall to continue execution after logging it.
+	// This action is only usable when libseccomp API level 3 or higher is
+	// supported.
+	ActLog ScmpAction = iota
 )
 
 const (
@@ -211,7 +215,7 @@ func GetArchFromString(arch string) (ScmpArch, error) {
 	case "s390x":
 		return ArchS390X, nil
 	default:
-		return ArchInvalid, fmt.Errorf("cannot convert unrecognized string %s", arch)
+		return ArchInvalid, fmt.Errorf("cannot convert unrecognized string %q", arch)
 	}
 }
 
@@ -255,7 +259,7 @@ func (a ScmpArch) String() string {
 	case ArchInvalid:
 		return "Invalid architecture"
 	default:
-		return "Unknown architecture"
+		return fmt.Sprintf("Unknown architecture %#x", uint(a))
 	}
 }
 
@@ -279,7 +283,7 @@ func (a ScmpCompareOp) String() string {
 	case CompareInvalid:
 		return "Invalid comparison operator"
 	default:
-		return "Unrecognized comparison operator"
+		return fmt.Sprintf("Unrecognized comparison operator %#x", uint(a))
 	}
 }
 
@@ -295,10 +299,12 @@ func (a ScmpAction) String() string {
 	case ActTrace:
 		return fmt.Sprintf("Action: Notify tracing processes with code %d",
 			(a >> 16))
+	case ActLog:
+		return "Action: Log system call"
 	case ActAllow:
 		return "Action: Allow system call"
 	default:
-		return "Unrecognized Action"
+		return fmt.Sprintf("Unrecognized Action %#x", uint(a))
 	}
 }
 
@@ -328,6 +334,25 @@ func GetLibraryVersion() (major, minor, micro uint) {
 	return verMajor, verMinor, verMicro
 }
 
+// GetApi returns the API level supported by the system.
+// Returns a positive int containing the API level, or 0 with an error if the
+// API level could not be detected due to the library being older than v2.4.0.
+// See the seccomp_api_get(3) man page for details on available API levels:
+// https://github.com/seccomp/libseccomp/blob/master/doc/man/man3/seccomp_api_get.3
+func GetApi() (uint, error) {
+	return getApi()
+}
+
+// SetApi forcibly sets the API level. General use of this function is strongly
+// discouraged.
+// Returns an error if the API level could not be set. An error is always
+// returned if the library is older than v2.4.0
+// See the seccomp_api_get(3) man page for details on available API levels:
+// https://github.com/seccomp/libseccomp/blob/master/doc/man/man3/seccomp_api_get.3
+func SetApi(api uint) error {
+	return setApi(api)
+}
+
 // Syscall functions
 
 // GetName retrieves the name of a syscall from its number.
@@ -350,7 +375,7 @@ func (s ScmpSyscall) GetNameByArch(arch ScmpArch) (string, error) {
 
 	cString := C.seccomp_syscall_resolve_num_arch(arch.toNative(), C.int(s))
 	if cString == nil {
-		return "", fmt.Errorf("could not resolve syscall name")
+		return "", fmt.Errorf("could not resolve syscall name for %#x", int32(s))
 	}
 	defer C.free(unsafe.Pointer(cString))
 
@@ -373,7 +398,7 @@ func GetSyscallFromName(name string) (ScmpSyscall, error) {
 
 	result := C.seccomp_syscall_resolve_name(cString)
 	if result == scmpError {
-		return 0, fmt.Errorf("could not resolve name to syscall")
+		return 0, fmt.Errorf("could not resolve name to syscall: %q", name)
 	}
 
 	return ScmpSyscall(result), nil
@@ -397,7 +422,7 @@ func GetSyscallFromNameByArch(name string, arch ScmpArch) (ScmpSyscall, error) {
 
 	result := C.seccomp_syscall_resolve_name_arch(arch.toNative(), cString)
 	if result == scmpError {
-		return 0, fmt.Errorf("could not resolve name to syscall")
+		return 0, fmt.Errorf("could not resolve name to syscall: %q on %v", name, arch)
 	}
 
 	return ScmpSyscall(result), nil
@@ -426,9 +451,9 @@ func MakeCondition(arg uint, comparison ScmpCompareOp, values ...uint64) (ScmpCo
 	if comparison == CompareInvalid {
 		return condStruct, fmt.Errorf("invalid comparison operator")
 	} else if arg > 5 {
-		return condStruct, fmt.Errorf("syscalls only have up to 6 arguments")
+		return condStruct, fmt.Errorf("syscalls only have up to 6 arguments (%d given)", arg)
 	} else if len(values) > 2 {
-		return condStruct, fmt.Errorf("conditions can have at most 2 arguments")
+		return condStruct, fmt.Errorf("conditions can have at most 2 arguments (%d given)", len(values))
 	} else if len(values) == 0 {
 		return condStruct, fmt.Errorf("must provide at least one value to compare against")
 	}
@@ -730,6 +755,30 @@ func (f *ScmpFilter) GetNoNewPrivsBit() (bool, error) {
 	return true, nil
 }
 
+// GetLogBit returns the current state the Log bit will be set to on the filter
+// being loaded, or an error if an issue was encountered retrieving the value.
+// The Log bit tells the kernel that all actions taken by the filter, with the
+// exception of ActAllow, should be logged.
+// The Log bit is only usable when libseccomp API level 3 or higher is
+// supported.
+func (f *ScmpFilter) GetLogBit() (bool, error) {
+	log, err := f.getFilterAttr(filterAttrLog)
+	if err != nil {
+		api, apiErr := getApi()
+		if (apiErr != nil && api == 0) || (apiErr == nil && api < 3) {
+			return false, fmt.Errorf("getting the log bit is only supported in libseccomp 2.4.0 and newer with API level 3 or higher")
+		}
+
+		return false, err
+	}
+
+	if log == 0 {
+		return false, nil
+	}
+
+	return true, nil
+}
+
 // SetBadArchAction sets the default action taken on a syscall for an
 // architecture not in the filter, or an error if an issue was encountered
 // setting the value.
@@ -754,6 +803,28 @@ func (f *ScmpFilter) SetNoNewPrivsBit(state bool) error {
 	}
 
 	return f.setFilterAttr(filterAttrNNP, toSet)
+}
+
+// SetLogBit sets the state of the Log bit, which will be applied on filter
+// load, or an error if an issue was encountered setting the value.
+// The Log bit is only usable when libseccomp API level 3 or higher is
+// supported.
+func (f *ScmpFilter) SetLogBit(state bool) error {
+	var toSet C.uint32_t = 0x0
+
+	if state {
+		toSet = 0x1
+	}
+
+	err := f.setFilterAttr(filterAttrLog, toSet)
+	if err != nil {
+		api, apiErr := getApi()
+		if (apiErr != nil && api == 0) || (apiErr == nil && api < 3) {
+			return fmt.Errorf("setting the log bit is only supported in libseccomp 2.4.0 and newer with API level 3 or higher")
+		}
+	}
+
+	return err
 }
 
 // SetSyscallPriority sets a syscall's priority.
