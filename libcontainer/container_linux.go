@@ -901,7 +901,7 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 	}
 
 	if criuOpts.WorkDirectory == "" {
-		criuOpts.WorkDirectory = filepath.Join(c.root, "criu.work")
+		criuOpts.WorkDirectory = criuOpts.ImagesDirectory
 	}
 
 	if err := os.Mkdir(criuOpts.WorkDirectory, 0755); err != nil && !os.IsExist(err) {
@@ -1127,7 +1127,7 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 		return err
 	}
 	if criuOpts.WorkDirectory == "" {
-		criuOpts.WorkDirectory = filepath.Join(c.root, "criu.work")
+		criuOpts.WorkDirectory = criuOpts.ImagesDirectory
 	}
 	// Since a container can be C/R'ed multiple times,
 	// the work directory may already exist.
