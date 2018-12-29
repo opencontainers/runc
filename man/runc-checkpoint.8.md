@@ -16,6 +16,7 @@ checkpointed.
    --parent-path value          path for previous criu image files in pre-dump
    --leave-running              leave the process running after checkpointing
    --tcp-established            allow open tcp connections
+   --skip-in-flight             skip (ignore) in-flight TCP connections
    --ext-unix-sk                allow external unix sockets
    --shell-job                  allow shell jobs
    --lazy-pages                 use userfaultfd to lazily restore memory pages

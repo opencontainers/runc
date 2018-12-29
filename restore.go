@@ -131,6 +131,7 @@ func criuOptions(context *cli.Context) *libcontainer.CriuOpts {
 		ParentImage:             context.String("parent-path"),
 		LeaveRunning:            context.Bool("leave-running"),
 		TcpEstablished:          context.Bool("tcp-established"),
+		TcpSkipInFlight:         context.Bool("skip-in-flight"),
 		ExternalUnixConnections: context.Bool("ext-unix-sk"),
 		ShellJob:                context.Bool("shell-job"),
 		FileLocks:               context.Bool("file-locks"),
