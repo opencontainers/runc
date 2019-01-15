@@ -18,8 +18,11 @@ checkpointed.
    --tcp-established            allow open tcp connections
    --ext-unix-sk                allow external unix sockets
    --shell-job                  allow shell jobs
+   --lazy-pages                 use userfaultfd to lazily restore memory pages
+   --status-fd value            criu writes \0 to this FD once lazy-pages is ready
    --page-server value          ADDRESS:PORT of the page server
    --file-locks                 handle file locks, for safety
    --pre-dump                   dump container's memory information only, leave the container running after this
    --manage-cgroups-mode value  cgroups mode: 'soft' (default), 'full' and 'strict'
    --empty-ns value             create a namespace, but don't restore its properties
+   --auto-dedup                 enable auto deduplication of memory images
