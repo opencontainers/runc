@@ -236,6 +236,15 @@ func (p *initProcess) getChildPid() (int, error) {
 		p.cmd.Wait()
 		return -1, err
 	}
+	// Clean up the zombie parent process && ignore errors like in setnsProcess
+	firstChildProcess, err := os.FindProcess(pid.PidFirstChild)
+	if err != nil {
+		return pid.Pid, nil
+	}
+
+	// Ignore the error in case the child has already been reaped for any reason
+	_, _ = firstChildProcess.Wait()
+
 	return pid.Pid, nil
 }
 
