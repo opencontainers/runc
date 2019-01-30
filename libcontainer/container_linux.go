@@ -19,6 +19,7 @@ import (
 	"syscall" // only for SysProcAttr and Signal
 	"time"
 
+	"github.com/cyphar/filepath-securejoin"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/criurpc"
@@ -1139,6 +1140,75 @@ func (c *linuxContainer) restoreNetwork(req *criurpc.CriuReq, criuOpts *CriuOpts
 	}
 }
 
+// makeCriuRestoreMountpoints makes the actual mountpoints for the
+// restore using CRIU. This function is inspired from the code in
+// rootfs_linux.go
+func (c *linuxContainer) makeCriuRestoreMountpoints(m *configs.Mount) error {
+	switch m.Device {
+	case "cgroup":
+		// Do nothing for cgroup, CRIU should handle it
+	case "bind":
+		// The prepareBindMount() function checks if source
+		// exists. So it cannot be used for other filesystem types.
+		if err := prepareBindMount(m, c.config.Rootfs); err != nil {
+			return err
+		}
+	default:
+		// for all other file-systems just create the mountpoints
+		dest, err := securejoin.SecureJoin(c.config.Rootfs, m.Destination)
+		if err != nil {
+			return err
+		}
+		if err := checkMountDestination(c.config.Rootfs, dest); err != nil {
+			return err
+		}
+		m.Destination = dest
+		if err := os.MkdirAll(dest, 0755); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// isPathInPrefixList is a small function for CRIU restore to make sure
+// mountpoints, which are on a tmpfs, are not created in the roofs
+func isPathInPrefixList(path string, prefix []string) bool {
+	for _, p := range prefix {
+		if strings.HasPrefix(path, p+"/") {
+			return false
+		}
+	}
+	return true
+}
+
+// prepareCriuRestoreMounts tries to set up the rootfs of the
+// container to be restored in the same way runc does it for
+// initial container creation. Even for a read-only rootfs container
+// runc modifies the rootfs to add mountpoints which do not exist.
+// This function also creates missing mountpoints as long as they
+// are not on top of a tmpfs, as CRIU will restore tmpfs content anyway.
+func (c *linuxContainer) prepareCriuRestoreMounts(mounts []*configs.Mount) error {
+	// First get a list of a all tmpfs mounts
+	tmpfs := []string{}
+	for _, m := range mounts {
+		switch m.Device {
+		case "tmpfs":
+			tmpfs = append(tmpfs, m.Destination)
+		}
+	}
+	// Now go through all mounts and create the mountpoints
+	// if the mountpoints are not on a tmpfs, as CRIU will
+	// restore the complete tmpfs content from its checkpoint.
+	for _, m := range mounts {
+		if isPathInPrefixList(m.Destination, tmpfs) {
+			if err := c.makeCriuRestoreMountpoints(m); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 	c.m.Lock()
 	defer c.m.Unlock()
@@ -1250,6 +1320,12 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 			// All open FDs need to be transferred to CRIU via extraFiles
 			extraFiles = append(extraFiles, netns)
 		}
+	}
+
+	// This will modify the rootfs of the container in the same way runc
+	// modifies the container during initial creation.
+	if err := c.prepareCriuRestoreMounts(c.config.Mounts); err != nil {
+		return err
 	}
 
 	for _, m := range c.config.Mounts {
