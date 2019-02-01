@@ -206,9 +206,6 @@ func TestEnter(t *testing.T) {
 	if testing.Short() {
 		return
 	}
-	root, err := newTestRoot()
-	ok(t, err)
-	defer os.RemoveAll(root)
 
 	rootfs, err := newRootfs()
 	ok(t, err)
@@ -216,7 +213,7 @@ func TestEnter(t *testing.T) {
 
 	config := newTemplateConfig(rootfs)
 
-	container, err := factory.Create("test", config)
+	container, err := newContainerWithName("test", config)
 	ok(t, err)
 	defer container.Destroy()
 
@@ -296,9 +293,6 @@ func TestProcessEnv(t *testing.T) {
 	if testing.Short() {
 		return
 	}
-	root, err := newTestRoot()
-	ok(t, err)
-	defer os.RemoveAll(root)
 
 	rootfs, err := newRootfs()
 	ok(t, err)
@@ -306,7 +300,7 @@ func TestProcessEnv(t *testing.T) {
 
 	config := newTemplateConfig(rootfs)
 
-	container, err := factory.Create("test", config)
+	container, err := newContainerWithName("test", config)
 	ok(t, err)
 	defer container.Destroy()
 
@@ -347,9 +341,6 @@ func TestProcessEmptyCaps(t *testing.T) {
 	if testing.Short() {
 		return
 	}
-	root, err := newTestRoot()
-	ok(t, err)
-	defer os.RemoveAll(root)
 
 	rootfs, err := newRootfs()
 	ok(t, err)
@@ -358,7 +349,7 @@ func TestProcessEmptyCaps(t *testing.T) {
 	config := newTemplateConfig(rootfs)
 	config.Capabilities = nil
 
-	container, err := factory.Create("test", config)
+	container, err := newContainerWithName("test", config)
 	ok(t, err)
 	defer container.Destroy()
 
@@ -399,9 +390,6 @@ func TestProcessCaps(t *testing.T) {
 	if testing.Short() {
 		return
 	}
-	root, err := newTestRoot()
-	ok(t, err)
-	defer os.RemoveAll(root)
 
 	rootfs, err := newRootfs()
 	ok(t, err)
@@ -409,7 +397,7 @@ func TestProcessCaps(t *testing.T) {
 
 	config := newTemplateConfig(rootfs)
 
-	container, err := factory.Create("test", config)
+	container, err := newContainerWithName("test", config)
 	ok(t, err)
 	defer container.Destroy()
 
@@ -471,20 +459,13 @@ func TestAdditionalGroups(t *testing.T) {
 	if testing.Short() {
 		return
 	}
-	root, err := newTestRoot()
-	ok(t, err)
-	defer os.RemoveAll(root)
-
 	rootfs, err := newRootfs()
 	ok(t, err)
 	defer remove(rootfs)
 
 	config := newTemplateConfig(rootfs)
 
-	factory, err := libcontainer.New(root, libcontainer.Cgroupfs)
-	ok(t, err)
-
-	container, err := factory.Create("test", config)
+	container, err := newContainerWithName("test", config)
 	ok(t, err)
 	defer container.Destroy()
 
@@ -531,21 +512,13 @@ func testFreeze(t *testing.T, systemd bool) {
 	if testing.Short() {
 		return
 	}
-	root, err := newTestRoot()
-	ok(t, err)
-	defer os.RemoveAll(root)
 
 	rootfs, err := newRootfs()
 	ok(t, err)
 	defer remove(rootfs)
 
 	config := newTemplateConfig(rootfs)
-	f := factory
-	if systemd {
-		f = systemdFactory
-	}
-
-	container, err := f.Create("test", config)
+	container, err := newContainerWithName("test", config)
 	ok(t, err)
 	defer container.Destroy()
 
@@ -727,11 +700,6 @@ func TestContainerState(t *testing.T) {
 	if testing.Short() {
 		return
 	}
-	root, err := newTestRoot()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(root)
 
 	rootfs, err := newRootfs()
 	if err != nil {
@@ -754,7 +722,7 @@ func TestContainerState(t *testing.T) {
 		{Type: configs.NEWNET},
 	})
 
-	container, err := factory.Create("test", config)
+	container, err := newContainerWithName("test", config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -807,7 +775,7 @@ func TestPassExtraFiles(t *testing.T) {
 
 	config := newTemplateConfig(rootfs)
 
-	container, err := factory.Create("test", config)
+	container, err := newContainerWithName("test", config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -867,11 +835,6 @@ func TestMountCmds(t *testing.T) {
 	if testing.Short() {
 		return
 	}
-	root, err := newTestRoot()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(root)
 
 	rootfs, err := newRootfs()
 	if err != nil {
@@ -901,7 +864,7 @@ func TestMountCmds(t *testing.T) {
 		},
 	})
 
-	container, err := factory.Create("test", config)
+	container, err := newContainerWithName("test", config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -937,9 +900,6 @@ func TestSysctl(t *testing.T) {
 	if testing.Short() {
 		return
 	}
-	root, err := newTestRoot()
-	ok(t, err)
-	defer os.RemoveAll(root)
 
 	rootfs, err := newRootfs()
 	ok(t, err)
@@ -950,7 +910,7 @@ func TestSysctl(t *testing.T) {
 		"kernel.shmmni": "8192",
 	}
 
-	container, err := factory.Create("test", config)
+	container, err := newContainerWithName("test", config)
 	ok(t, err)
 	defer container.Destroy()
 
@@ -1077,9 +1037,6 @@ func TestOomScoreAdj(t *testing.T) {
 	if testing.Short() {
 		return
 	}
-	root, err := newTestRoot()
-	ok(t, err)
-	defer os.RemoveAll(root)
 
 	rootfs, err := newRootfs()
 	ok(t, err)
@@ -1088,10 +1045,7 @@ func TestOomScoreAdj(t *testing.T) {
 	config := newTemplateConfig(rootfs)
 	config.OomScoreAdj = ptrInt(200)
 
-	factory, err := libcontainer.New(root, libcontainer.Cgroupfs)
-	ok(t, err)
-
-	container, err := factory.Create("test", config)
+	container, err := newContainerWithName("test", config)
 	ok(t, err)
 	defer container.Destroy()
 
@@ -1198,7 +1152,7 @@ func TestHook(t *testing.T) {
 	ok(t, err)
 	ok(t, json.NewEncoder(f).Encode(config))
 
-	container, err := factory.Create("test", config)
+	container, err := newContainerWithName("test", config)
 	ok(t, err)
 
 	var stdout bytes.Buffer
@@ -1307,10 +1261,7 @@ func TestRootfsPropagationSlaveMount(t *testing.T) {
 		Device:      "bind",
 		Flags:       unix.MS_BIND | unix.MS_REC})
 
-	// TODO: systemd specific processing
-	f := factory
-
-	container, err := f.Create("testSlaveMount", config)
+	container, err := newContainerWithName("testSlaveMount", config)
 	ok(t, err)
 	defer container.Destroy()
 
@@ -1425,10 +1376,7 @@ func TestRootfsPropagationSharedMount(t *testing.T) {
 		Device:      "bind",
 		Flags:       unix.MS_BIND | unix.MS_REC})
 
-	// TODO: systemd specific processing
-	f := factory
-
-	container, err := f.Create("testSharedMount", config)
+	container, err := newContainerWithName("testSharedMount", config)
 	ok(t, err)
 	defer container.Destroy()
 
@@ -1729,9 +1677,6 @@ func TestTmpfsCopyUp(t *testing.T) {
 	if testing.Short() {
 		return
 	}
-	root, err := newTestRoot()
-	ok(t, err)
-	defer os.RemoveAll(root)
 
 	rootfs, err := newRootfs()
 	ok(t, err)
@@ -1746,10 +1691,7 @@ func TestTmpfsCopyUp(t *testing.T) {
 		Extensions:  configs.EXT_COPYUP,
 	})
 
-	factory, err := libcontainer.New(root, libcontainer.Cgroupfs)
-	ok(t, err)
-
-	container, err := factory.Create("test", config)
+	container, err := newContainerWithName("test", config)
 	ok(t, err)
 	defer container.Destroy()
 

@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/opencontainers/runc/libcontainer"
-	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
 	_ "github.com/opencontainers/runc/libcontainer/nsenter"
 
 	"github.com/sirupsen/logrus"
@@ -29,33 +28,19 @@ func init() {
 	}
 }
 
-var (
-	factory        libcontainer.Factory
-	systemdFactory libcontainer.Factory
-)
+var testRoots []string
 
 func TestMain(m *testing.M) {
-	var (
-		err error
-		ret int
-	)
-
 	logrus.SetOutput(os.Stderr)
 	logrus.SetLevel(logrus.InfoLevel)
 
-	factory, err = libcontainer.New("/run/libctTests", libcontainer.Cgroupfs)
-	if err != nil {
-		logrus.Error(err)
-		os.Exit(1)
-	}
-	if systemd.UseSystemd() {
-		systemdFactory, err = libcontainer.New("/run/libctTests", libcontainer.SystemdCgroups)
-		if err != nil {
-			logrus.Error(err)
-			os.Exit(1)
+	// Clean up roots after running everything.
+	defer func() {
+		for _, root := range testRoots {
+			os.RemoveAll(root)
 		}
-	}
+	}()
 
-	ret = m.Run()
+	ret := m.Run()
 	os.Exit(ret)
 }
