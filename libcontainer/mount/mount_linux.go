@@ -37,10 +37,10 @@ func parseMountTable() ([]*Info, error) {
 	}
 	defer f.Close()
 
-	return parseInfoFile(f)
+	return ParseMountinfo(f)
 }
 
-func parseInfoFile(r io.Reader) ([]*Info, error) {
+func ParseMountinfo(r io.Reader) ([]*Info, error) {
 	var (
 		s   = bufio.NewScanner(r)
 		out = []*Info{}
