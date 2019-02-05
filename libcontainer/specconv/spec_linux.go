@@ -167,7 +167,7 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 	}
 	spec := opts.Spec
 	if spec.Root == nil {
-		return nil, fmt.Errorf("Root must be specified")
+		return nil, fmt.Errorf("root must be specified")
 	}
 	rootfsPath := spec.Root.Path
 	if !filepath.IsAbs(rootfsPath) {

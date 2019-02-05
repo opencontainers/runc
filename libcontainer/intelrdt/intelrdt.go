@@ -243,13 +243,13 @@ func findIntelRdtMountpointDir() (string, error) {
 
 		// This is an error as we can't detect if the mount is for "Intel RDT"
 		if numPostFields == 0 {
-			return "", fmt.Errorf("Found no fields post '-' in %q", text)
+			return "", fmt.Errorf("found no fields post '-' in %q", text)
 		}
 
 		if postSeparatorFields[0] == "resctrl" {
 			// Check that the mount is properly formatted.
 			if numPostFields < 3 {
-				return "", fmt.Errorf("Error found less than 3 fields post '-' in %q", text)
+				return "", fmt.Errorf("error found less than 3 fields post '-' in %q", text)
 			}
 
 			// Check if MBA Software Controller is enabled through mount option "-o mba_MBps"

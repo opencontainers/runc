@@ -132,7 +132,7 @@ func getBlkioStat(path string) ([]cgroups.BlkioStatEntry, error) {
 				// skip total line
 				continue
 			} else {
-				return nil, fmt.Errorf("Invalid line found while parsing %s: %s", path, sc.Text())
+				return nil, fmt.Errorf("invalid line found while parsing %s: %s", path, sc.Text())
 			}
 		}
 

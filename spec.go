@@ -91,7 +91,7 @@ created by an unprivileged user.
 		checkNoFile := func(name string) error {
 			_, err := os.Stat(name)
 			if err == nil {
-				return fmt.Errorf("File %s exists. Remove it first", name)
+				return fmt.Errorf("file %s exists. Remove it first", name)
 			}
 			if !os.IsNotExist(err) {
 				return err
@@ -120,7 +120,7 @@ func loadSpec(cPath string) (spec *specs.Spec, err error) {
 	cf, err := os.Open(cPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("JSON specification file %s not found", cPath)
+			return nil, fmt.Errorf("jSON specification file %s not found", cPath)
 		}
 		return nil, err
 	}

@@ -400,9 +400,9 @@ func CheckCpushares(path string, c uint64) error {
 	}
 
 	if c > cpuShares {
-		return fmt.Errorf("The maximum allowed cpu-shares is %d", cpuShares)
+		return fmt.Errorf("the maximum allowed cpu-shares is %d", cpuShares)
 	} else if c < cpuShares {
-		return fmt.Errorf("The minimum allowed cpu-shares is %d", cpuShares)
+		return fmt.Errorf("the minimum allowed cpu-shares is %d", cpuShares)
 	}
 
 	return nil

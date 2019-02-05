@@ -18,7 +18,7 @@ func blkioStatEntryEquals(expected, actual []cgroups.BlkioStatEntry) error {
 	for i, expValue := range expected {
 		actValue := actual[i]
 		if expValue != actValue {
-			return fmt.Errorf("Expected blkio stat entry %v but found %v", expValue, actValue)
+			return fmt.Errorf("expected blkio stat entry %v but found %v", expValue, actValue)
 		}
 	}
 	return nil

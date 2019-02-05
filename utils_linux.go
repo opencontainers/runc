@@ -374,10 +374,10 @@ func (r *runner) checkTerminal(config *specs.Process) error {
 
 func validateProcessSpec(spec *specs.Process) error {
 	if spec.Cwd == "" {
-		return fmt.Errorf("Cwd property must not be empty")
+		return fmt.Errorf("cwd property must not be empty")
 	}
 	if !filepath.IsAbs(spec.Cwd) {
-		return fmt.Errorf("Cwd must be an absolute path")
+		return fmt.Errorf("cwd must be an absolute path")
 	}
 	if len(spec.Args) == 0 {
 		return fmt.Errorf("args must not be empty")

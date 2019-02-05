@@ -88,11 +88,11 @@ func setPageServer(context *cli.Context, options *libcontainer.CriuOpts) {
 	if psOpt := context.String("page-server"); psOpt != "" {
 		addressPort := strings.Split(psOpt, ":")
 		if len(addressPort) != 2 {
-			fatal(fmt.Errorf("Use --page-server ADDRESS:PORT to specify page server"))
+			fatal(fmt.Errorf("use --page-server ADDRESS:PORT to specify page server"))
 		}
 		portInt, err := strconv.Atoi(addressPort[1])
 		if err != nil {
-			fatal(fmt.Errorf("Invalid port number"))
+			fatal(fmt.Errorf("invalid port number"))
 		}
 		options.PageServer = libcontainer.CriuPageServerInfo{
 			Address: addressPort[0],
@@ -111,7 +111,7 @@ func setManageCgroupsMode(context *cli.Context, options *libcontainer.CriuOpts) 
 		case "strict":
 			options.ManageCgroupsMode = libcontainer.CRIU_CG_MODE_STRICT
 		default:
-			fatal(fmt.Errorf("Invalid manage cgroups mode"))
+			fatal(fmt.Errorf("invalid manage cgroups mode"))
 		}
 	}
 }

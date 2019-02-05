@@ -447,7 +447,7 @@ func GetAdditionalGroups(additionalGroups []string, group io.Reader) ([]int, err
 			return false
 		})
 		if err != nil {
-			return nil, fmt.Errorf("Unable to find additional groups %v: %v", additionalGroups, err)
+			return nil, fmt.Errorf("unable to find additional groups %v: %v", additionalGroups, err)
 		}
 	}
 
@@ -470,7 +470,7 @@ func GetAdditionalGroups(additionalGroups []string, group io.Reader) ([]int, err
 		if !found {
 			gid, err := strconv.Atoi(ag)
 			if err != nil {
-				return nil, fmt.Errorf("Unable to find group %s", ag)
+				return nil, fmt.Errorf("unable to find group %s", ag)
 			}
 			// Ensure gid is inside gid range.
 			if gid < minId || gid > maxId {

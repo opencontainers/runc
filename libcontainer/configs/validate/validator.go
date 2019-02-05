@@ -109,11 +109,11 @@ func (v *ConfigValidator) security(config *configs.Config) error {
 func (v *ConfigValidator) usernamespace(config *configs.Config) error {
 	if config.Namespaces.Contains(configs.NEWUSER) {
 		if _, err := os.Stat("/proc/self/ns/user"); os.IsNotExist(err) {
-			return fmt.Errorf("USER namespaces aren't enabled in the kernel")
+			return fmt.Errorf("uSER namespaces aren't enabled in the kernel")
 		}
 	} else {
 		if config.UidMappings != nil || config.GidMappings != nil {
-			return fmt.Errorf("User namespace mappings specified, but USER namespace isn't enabled in the config")
+			return fmt.Errorf("user namespace mappings specified, but USER namespace isn't enabled in the config")
 		}
 	}
 	return nil
@@ -193,10 +193,10 @@ func (v *ConfigValidator) intelrdt(config *configs.Config) error {
 		}
 
 		if intelrdt.IsCatEnabled() && config.IntelRdt.L3CacheSchema == "" {
-			return fmt.Errorf("Intel RDT/CAT is enabled and intelRdt is specified in config, but intelRdt.l3CacheSchema is empty")
+			return fmt.Errorf("intel RDT/CAT is enabled and intelRdt is specified in config, but intelRdt.l3CacheSchema is empty")
 		}
 		if intelrdt.IsMbaEnabled() && config.IntelRdt.MemBwSchema == "" {
-			return fmt.Errorf("Intel RDT/MBA is enabled and intelRdt is specified in config, but intelRdt.memBwSchema is empty")
+			return fmt.Errorf("intel RDT/MBA is enabled and intelRdt is specified in config, but intelRdt.memBwSchema is empty")
 		}
 	}
 

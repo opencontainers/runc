@@ -109,13 +109,13 @@ func FindCgroupMountpointDir() (string, error) {
 
 		// This is an error as we can't detect if the mount is for "cgroup"
 		if numPostFields == 0 {
-			return "", fmt.Errorf("Found no fields post '-' in %q", text)
+			return "", fmt.Errorf("found no fields post '-' in %q", text)
 		}
 
 		if postSeparatorFields[0] == "cgroup" {
 			// Check that the mount is properly formatted.
 			if numPostFields < 3 {
-				return "", fmt.Errorf("Error found less than 3 fields post '-' in %q", text)
+				return "", fmt.Errorf("error found less than 3 fields post '-' in %q", text)
 			}
 
 			return filepath.Dir(fields[4]), nil
@@ -404,7 +404,7 @@ func RemovePaths(paths map[string]string) (err error) {
 			return nil
 		}
 	}
-	return fmt.Errorf("Failed to remove paths: %v", paths)
+	return fmt.Errorf("failed to remove paths: %v", paths)
 }
 
 func GetHugePageSize() ([]string, error) {

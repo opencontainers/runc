@@ -113,7 +113,7 @@ func getPercpuUsage(path string) ([]uint64, error) {
 	for _, value := range strings.Fields(string(data)) {
 		value, err := strconv.ParseUint(value, 10, 64)
 		if err != nil {
-			return percpuUsage, fmt.Errorf("Unable to convert param value to uint64: %s", err)
+			return percpuUsage, fmt.Errorf("unable to convert param value to uint64: %s", err)
 		}
 		percpuUsage = append(percpuUsage, value)
 	}

@@ -673,7 +673,7 @@ func (c *linuxContainer) checkCriuFeatures(criuOpts *CriuOpts, rpcOpts *criurpc.
 	err := c.criuSwrk(nil, req, criuOpts, false, nil)
 	if err != nil {
 		logrus.Debugf("%s", err)
-		return fmt.Errorf("CRIU feature check failed")
+		return fmt.Errorf("cRIU feature check failed")
 	}
 
 	logrus.Debugf("Feature check says: %s", criuFeatures)
@@ -700,7 +700,7 @@ func (c *linuxContainer) checkCriuFeatures(criuOpts *CriuOpts, rpcOpts *criurpc.
 	}
 
 	if missingFeatures {
-		return fmt.Errorf("CRIU is missing features")
+		return fmt.Errorf("cRIU is missing features")
 	}
 
 	return nil
@@ -711,7 +711,7 @@ func parseCriuVersion(path string) (int, error) {
 
 	out, err := exec.Command(path, "-V").Output()
 	if err != nil {
-		return 0, fmt.Errorf("Unable to execute CRIU command: %s", path)
+		return 0, fmt.Errorf("unable to execute CRIU command: %s", path)
 	}
 
 	x = 0
@@ -723,7 +723,7 @@ func parseCriuVersion(path string) (int, error) {
 		if sp := strings.Index(string(out), "GitID"); sp > 0 {
 			version = string(out)[sp:ep]
 		} else {
-			return 0, fmt.Errorf("Unable to parse the CRIU version: %s", path)
+			return 0, fmt.Errorf("unable to parse the CRIU version: %s", path)
 		}
 
 		n, err := fmt.Sscanf(version, "GitID: v%d.%d.%d", &x, &y, &z) // 1.5.2
@@ -734,7 +734,7 @@ func parseCriuVersion(path string) (int, error) {
 			z++
 		}
 		if n < 2 || err != nil {
-			return 0, fmt.Errorf("Unable to parse the CRIU version: %s %d %s", version, n, err)
+			return 0, fmt.Errorf("unable to parse the CRIU version: %s %d %s", version, n, err)
 		}
 	} else {
 		// criu release version format
@@ -743,7 +743,7 @@ func parseCriuVersion(path string) (int, error) {
 			n, err = fmt.Sscanf(string(out), "Version: %d.%d\n", &x, &y) // 1.6
 		}
 		if n < 2 || err != nil {
-			return 0, fmt.Errorf("Unable to parse the CRIU version: %s %d %s", out, n, err)
+			return 0, fmt.Errorf("unable to parse the CRIU version: %s %d %s", out, n, err)
 		}
 	}
 
@@ -753,7 +753,7 @@ func parseCriuVersion(path string) (int, error) {
 func compareCriuVersion(criuVersion int, minVersion int) error {
 	// simple function to perform the actual version compare
 	if criuVersion < minVersion {
-		return fmt.Errorf("CRIU version %d must be %d or higher", criuVersion, minVersion)
+		return fmt.Errorf("cRIU version %d must be %d or higher", criuVersion, minVersion)
 	}
 
 	return nil
@@ -785,7 +785,7 @@ func (c *linuxContainer) checkCriuVersion(minVersion int) error {
 
 	err := c.criuSwrk(nil, req, nil, false, nil)
 	if err != nil {
-		return fmt.Errorf("CRIU version check failed: %s", err)
+		return fmt.Errorf("cRIU version check failed: %s", err)
 	}
 
 	if criuVersionRPC != nil {
@@ -1239,7 +1239,7 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 			defer netns.Close()
 			if err != nil {
 				logrus.Errorf("If a specific network namespace is defined it must exist: %s", err)
-				return fmt.Errorf("Requested network namespace %v does not exist", nsPath)
+				return fmt.Errorf("requested network namespace %v does not exist", nsPath)
 			}
 			inheritFd := new(criurpc.InheritFd)
 			inheritFd.Key = proto.String("extRootNetNS")

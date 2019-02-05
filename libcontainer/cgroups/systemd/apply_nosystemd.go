@@ -19,19 +19,19 @@ func UseSystemd() bool {
 }
 
 func (m *Manager) Apply(pid int) error {
-	return fmt.Errorf("Systemd not supported")
+	return fmt.Errorf("systemd not supported")
 }
 
 func (m *Manager) GetPids() ([]int, error) {
-	return nil, fmt.Errorf("Systemd not supported")
+	return nil, fmt.Errorf("systemd not supported")
 }
 
 func (m *Manager) GetAllPids() ([]int, error) {
-	return nil, fmt.Errorf("Systemd not supported")
+	return nil, fmt.Errorf("systemd not supported")
 }
 
 func (m *Manager) Destroy() error {
-	return fmt.Errorf("Systemd not supported")
+	return fmt.Errorf("systemd not supported")
 }
 
 func (m *Manager) GetPaths() map[string]string {
@@ -39,17 +39,17 @@ func (m *Manager) GetPaths() map[string]string {
 }
 
 func (m *Manager) GetStats() (*cgroups.Stats, error) {
-	return nil, fmt.Errorf("Systemd not supported")
+	return nil, fmt.Errorf("systemd not supported")
 }
 
 func (m *Manager) Set(container *configs.Config) error {
-	return fmt.Errorf("Systemd not supported")
+	return fmt.Errorf("systemd not supported")
 }
 
 func (m *Manager) Freeze(state configs.FreezerState) error {
-	return fmt.Errorf("Systemd not supported")
+	return fmt.Errorf("systemd not supported")
 }
 
 func Freeze(c *configs.Cgroup, state configs.FreezerState) error {
-	return fmt.Errorf("Systemd not supported")
+	return fmt.Errorf("systemd not supported")
 }

@@ -7,11 +7,11 @@ import "fmt"
 func (c Config) HostUID(containerId int) (int, error) {
 	if c.Namespaces.Contains(NEWUSER) {
 		if c.UidMappings == nil {
-			return -1, fmt.Errorf("User namespaces enabled, but no uid mappings found.")
+			return -1, fmt.Errorf("user namespaces enabled, but no uid mappings found")
 		}
 		id, found := c.hostIDFromMapping(containerId, c.UidMappings)
 		if !found {
-			return -1, fmt.Errorf("User namespaces enabled, but no user mapping found.")
+			return -1, fmt.Errorf("user namespaces enabled, but no user mapping found")
 		}
 		return id, nil
 	}
@@ -30,11 +30,11 @@ func (c Config) HostRootUID() (int, error) {
 func (c Config) HostGID(containerId int) (int, error) {
 	if c.Namespaces.Contains(NEWUSER) {
 		if c.GidMappings == nil {
-			return -1, fmt.Errorf("User namespaces enabled, but no gid mappings found.")
+			return -1, fmt.Errorf("user namespaces enabled, but no gid mappings found")
 		}
 		id, found := c.hostIDFromMapping(containerId, c.GidMappings)
 		if !found {
-			return -1, fmt.Errorf("User namespaces enabled, but no group mapping found.")
+			return -1, fmt.Errorf("user namespaces enabled, but no group mapping found")
 		}
 		return id, nil
 	}

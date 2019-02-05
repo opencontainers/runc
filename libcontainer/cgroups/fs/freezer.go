@@ -51,7 +51,7 @@ func (s *FreezerGroup) Set(path string, cgroup *configs.Cgroup) error {
 	case configs.Undefined:
 		return nil
 	default:
-		return fmt.Errorf("Invalid argument '%s' to freezer.state", string(cgroup.Resources.Freezer))
+		return fmt.Errorf("invalid argument '%s' to freezer.state", string(cgroup.Resources.Freezer))
 	}
 
 	return nil

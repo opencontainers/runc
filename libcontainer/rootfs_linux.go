@@ -498,7 +498,7 @@ func reOpenDevNull() error {
 	var stat, devNullStat unix.Stat_t
 	file, err := os.OpenFile("/dev/null", os.O_RDWR, 0)
 	if err != nil {
-		return fmt.Errorf("Failed to open /dev/null - %s", err)
+		return fmt.Errorf("failed to open /dev/null - %s", err)
 	}
 	defer file.Close()
 	if err := unix.Fstat(int(file.Fd()), &devNullStat); err != nil {
@@ -623,7 +623,7 @@ func getParentMount(rootfs string) (string, string, error) {
 	}
 
 	// If we are here, we did not find parent mount. Something is wrong.
-	return "", "", fmt.Errorf("Could not find parent mount of %s", rootfs)
+	return "", "", fmt.Errorf("could not find parent mount of %s", rootfs)
 }
 
 // Make parent mount private if it was shared
