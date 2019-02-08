@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/opencontainers/runc/libcontainer"
+	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runtime-spec/specs-go"
@@ -1718,7 +1719,7 @@ func TestTmpfsCopyUp(t *testing.T) {
 }
 
 func TestCGROUPPrivate(t *testing.T) {
-	if _, err := os.Stat("/proc/self/ns/cgroup"); os.IsNotExist(err) {
+	if supported, _ := cgroups.CgroupNamespacesEnabled(); !supported {
 		t.Skip("cgroupns is unsupported")
 	}
 	if testing.Short() {
@@ -1747,7 +1748,7 @@ func TestCGROUPPrivate(t *testing.T) {
 }
 
 func TestCGROUPHost(t *testing.T) {
-	if _, err := os.Stat("/proc/self/ns/cgroup"); os.IsNotExist(err) {
+	if supported, _ := cgroups.CgroupNamespacesEnabled(); !supported {
 		t.Skip("cgroupns is unsupported")
 	}
 	if testing.Short() {

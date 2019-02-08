@@ -5,6 +5,7 @@ package cgroups
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -419,5 +420,21 @@ func TestFindCgroupMountpointAndRoot(t *testing.T) {
 		if mountpoint != c.output {
 			t.Errorf("expected %s, got %s", c.output, mountpoint)
 		}
+	}
+}
+
+func TestCgroupNamespacesEnabled(t *testing.T) {
+	expectedEnabled := true
+	if _, err := os.Stat("/proc/self/ns/cgroup"); err != nil && os.IsNotExist(err) {
+		expectedEnabled = false
+	}
+
+	enabled, err := CgroupNamespacesEnabled()
+	if err != nil {
+		t.Errorf("unexpected namespace error returned: %s", err)
+	}
+
+	if enabled != expectedEnabled {
+		t.Errorf("expected namespace enabled value of %t but got %t", expectedEnabled, enabled)
 	}
 }

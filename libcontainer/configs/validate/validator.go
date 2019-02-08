@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	selinux "github.com/opencontainers/selinux/go-selinux"
@@ -121,7 +122,7 @@ func (v *ConfigValidator) usernamespace(config *configs.Config) error {
 
 func (v *ConfigValidator) cgroupnamespace(config *configs.Config) error {
 	if config.Namespaces.Contains(configs.NEWCGROUP) {
-		if _, err := os.Stat("/proc/self/ns/cgroup"); os.IsNotExist(err) {
+		if enabled, _ := cgroups.CgroupNamespacesEnabled(); !enabled {
 			return fmt.Errorf("cgroup namespaces aren't enabled in the kernel")
 		}
 	}

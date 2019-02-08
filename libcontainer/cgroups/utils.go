@@ -22,6 +22,19 @@ const (
 	CgroupProcesses  = "cgroup.procs"
 )
 
+// http://man7.org/linux/man-pages/man7/cgroup_namespaces.7.html
+func CgroupNamespacesEnabled() (bool, error) {
+	if _, err := os.Stat("/proc/self/ns/cgroup"); err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+
+		return false, err
+	}
+
+	return true, nil
+}
+
 // https://www.kernel.org/doc/Documentation/cgroup-v1/cgroups.txt
 func FindCgroupMountpoint(cgroupPath, subsystem string) (string, error) {
 	mnt, _, err := FindCgroupMountpointAndRoot(cgroupPath, subsystem)
