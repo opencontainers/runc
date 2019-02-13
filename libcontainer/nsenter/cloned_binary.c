@@ -71,15 +71,6 @@ int memfd_create(const char *name, unsigned int flags)
 	(F_SEAL_SEAL | F_SEAL_SHRINK | F_SEAL_GROW | F_SEAL_WRITE)
 #endif
 
-static void *must_realloc(void *ptr, size_t size)
-{
-	void *old = ptr;
-	do {
-		ptr = realloc(old, size);
-	} while(!ptr);
-	return ptr;
-}
-
 /*
  * Verify whether we are currently in a self-cloned program (namely, is
  * /proc/self/exe a memfd). F_GET_SEALS will only succeed for memfds (or rather
@@ -104,98 +95,6 @@ static int is_self_cloned(void)
 #endif
 	close(fd);
 	return is_cloned;
-}
-
-/*
- * Basic wrapper around mmap(2) that gives you the file length so you can
- * safely treat it as an ordinary buffer. Only gives you read access.
- */
-static char *read_file(char *path, size_t *length)
-{
-	int fd;
-	char buf[4096], *copy = NULL;
-
-	if (!length)
-		return NULL;
-
-	fd = open(path, O_RDONLY | O_CLOEXEC);
-	if (fd < 0)
-		return NULL;
-
-	*length = 0;
-	for (;;) {
-		int n;
-
-		n = read(fd, buf, sizeof(buf));
-		if (n < 0)
-			goto error;
-		if (!n)
-			break;
-
-		copy = must_realloc(copy, (*length + n) * sizeof(*copy));
-		memcpy(copy + *length, buf, n);
-		*length += n;
-	}
-	close(fd);
-	return copy;
-
-error:
-	close(fd);
-	free(copy);
-	return NULL;
-}
-
-/*
- * A poor-man's version of "xargs -0". Basically parses a given block of
- * NUL-delimited data, within the given length and adds a pointer to each entry
- * to the array of pointers.
- */
-static int parse_xargs(char *data, int data_length, char ***output)
-{
-	int num = 0;
-	char *cur = data;
-
-	if (!data || *output != NULL)
-		return -1;
-
-	while (cur < data + data_length) {
-		num++;
-		*output = must_realloc(*output, (num + 1) * sizeof(**output));
-		(*output)[num - 1] = cur;
-		cur += strlen(cur) + 1;
-	}
-	(*output)[num] = NULL;
-	return num;
-}
-
-/*
- * "Parse" out argv and envp from /proc/self/cmdline and /proc/self/environ.
- * This is necessary because we are running in a context where we don't have a
- * main() that we can just get the arguments from.
- */
-static int fetchve(char ***argv, char ***envp)
-{
-	char *cmdline = NULL, *environ = NULL;
-	size_t cmdline_size, environ_size;
-
-	cmdline = read_file("/proc/self/cmdline", &cmdline_size);
-	if (!cmdline)
-		goto error;
-	environ = read_file("/proc/self/environ", &environ_size);
-	if (!environ)
-		goto error;
-
-	if (parse_xargs(cmdline, cmdline_size, argv) <= 0)
-		goto error;
-	if (parse_xargs(environ, environ_size, envp) <= 0)
-		goto error;
-
-	return 0;
-
-error:
-	free(environ);
-	free(cmdline);
-	return -EINVAL;
 }
 
 static int clone_binary(void)
@@ -246,23 +145,19 @@ error:
 	return -EIO;
 }
 
-int ensure_cloned_binary(void)
+int ensure_cloned_binary(char *argv[])
 {
 	int execfd;
-	char **argv = NULL, **envp = NULL;
 
 	/* Check that we're not self-cloned, and if we are then bail. */
 	int cloned = is_self_cloned();
 	if (cloned > 0 || cloned == -ENOTRECOVERABLE)
 		return cloned;
 
-	if (fetchve(&argv, &envp) < 0)
-		return -EINVAL;
-
 	execfd = clone_binary();
 	if (execfd < 0)
 		return -EIO;
 
-	fexecve(execfd, argv, envp);
+	fexecve(execfd, argv, environ);
 	return -ENOEXEC;
 }
