@@ -79,47 +79,77 @@ func newContainerInit(t initType, pipe *os.File, consoleSocket *os.File, fifoFd 
 	if err := json.NewDecoder(pipe).Decode(&config); err != nil {
 		return nil, err
 	}
-	if err := populateProcessEnvironment(config.Env); err != nil {
+	environmentMap, err := populateEnvironmentMap(config.Env)
+	if err != nil {
 		return nil, err
 	}
+
 	switch t {
 	case initSetns:
 		return &linuxSetnsInit{
-			pipe:          pipe,
-			consoleSocket: consoleSocket,
-			config:        config,
+			pipe:           pipe,
+			consoleSocket:  consoleSocket,
+			config:         config,
+			environmentMap: environmentMap,
 		}, nil
 	case initStandard:
 		return &linuxStandardInit{
-			pipe:          pipe,
-			consoleSocket: consoleSocket,
-			parentPid:     unix.Getppid(),
-			config:        config,
-			fifoFd:        fifoFd,
+			pipe:           pipe,
+			consoleSocket:  consoleSocket,
+			parentPid:      unix.Getppid(),
+			config:         config,
+			fifoFd:         fifoFd,
+			environmentMap: environmentMap,
 		}, nil
 	}
 	return nil, fmt.Errorf("unknown init type %q", t)
 }
 
-// populateProcessEnvironment loads the provided environment variables into the
-// current processes's environment.
-func populateProcessEnvironment(env []string) error {
-	for _, pair := range env {
-		p := strings.SplitN(pair, "=", 2)
-		if len(p) < 2 {
-			return fmt.Errorf("invalid environment '%v'", pair)
-		}
-		if err := os.Setenv(p[0], p[1]); err != nil {
-			return err
-		}
+// parseEnvironmentVariable takes a environment variable with the format
+// key=value, and returns the key and value seperated.
+func parseEnvironmentVariable(env string) (key, value string, err error) {
+	p := strings.SplitN(env, "=", 2)
+	if len(p) < 2 {
+		err = fmt.Errorf("invalid environment '%+v'", env)
+		return
 	}
-	return nil
+	key = p[0]
+	value = p[1]
+	return
+}
+
+// createEnvironmentMap loads the provided environment variables into a
+// map.
+func populateEnvironmentMap(env []string) (map[string]string, error) {
+	environ := os.Environ()
+	mappedEnv := make(map[string]string, len(environ)+len(env))
+
+	for _, pair := range environ {
+		key, _, err := parseEnvironmentVariable(pair)
+		if err != nil {
+			return nil, err
+		}
+		mappedEnv[key] = pair
+	}
+	for _, pair := range env {
+		key, _, err := parseEnvironmentVariable(pair)
+		if err != nil {
+			return nil, err
+		}
+		mappedEnv[key] = pair
+	}
+
+	// Certain functions that are used later, such as exec.LookPath, require that the PATH
+	// environment variable is setup with the container's PATH.
+	os.Setenv("PATH", mappedEnv["PATH"])
+
+	return mappedEnv, nil
 }
 
 // finalizeNamespace drops the caps, sets the correct user
 // and working dir, and closes any leaked file descriptors
 // before executing the command inside the namespace
-func finalizeNamespace(config *initConfig) error {
+func finalizeNamespace(config *initConfig, environmentMap map[string]string) error {
 	// Ensure that all unwanted fds we may have accidentally
 	// inherited are marked close-on-exec so they stay out of the
 	// container
@@ -145,7 +175,7 @@ func finalizeNamespace(config *initConfig) error {
 	if err := system.SetKeepCaps(); err != nil {
 		return errors.Wrap(err, "set keep caps")
 	}
-	if err := setupUser(config); err != nil {
+	if err := setupUser(config, environmentMap); err != nil {
 		return errors.Wrap(err, "setup user")
 	}
 	if err := system.ClearKeepCaps(); err != nil {
@@ -237,7 +267,7 @@ func syncParentHooks(pipe io.ReadWriter) error {
 }
 
 // setupUser changes the groups, gid, and uid for the user inside the container
-func setupUser(config *initConfig) error {
+func setupUser(config *initConfig, environmentMap map[string]string) error {
 	// Set up defaults.
 	defaultExecUser := user.ExecUser{
 		Uid:  0,
@@ -319,10 +349,8 @@ func setupUser(config *initConfig) error {
 	}
 
 	// if we didn't get HOME already, set it based on the user's HOME
-	if envHome := os.Getenv("HOME"); envHome == "" {
-		if err := os.Setenv("HOME", execUser.Home); err != nil {
-			return err
-		}
+	if _, ok := environmentMap["HOME"]; !ok {
+		environmentMap["HOME"] = "HOME" + "=" + execUser.Home
 	}
 	return nil
 }

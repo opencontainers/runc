@@ -11,6 +11,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/keys"
 	"github.com/opencontainers/runc/libcontainer/seccomp"
 	"github.com/opencontainers/runc/libcontainer/system"
+	"github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/opencontainers/selinux/go-selinux/label"
 	"github.com/pkg/errors"
 
@@ -20,9 +21,10 @@ import (
 // linuxSetnsInit performs the container's initialization for running a new process
 // inside an existing container.
 type linuxSetnsInit struct {
-	pipe          *os.File
-	consoleSocket *os.File
-	config        *initConfig
+	pipe           *os.File
+	consoleSocket  *os.File
+	config         *initConfig
+	environmentMap map[string]string
 }
 
 func (l *linuxSetnsInit) getSessionRingName() string {
@@ -70,7 +72,7 @@ func (l *linuxSetnsInit) Init() error {
 			return err
 		}
 	}
-	if err := finalizeNamespace(l.config); err != nil {
+	if err := finalizeNamespace(l.config, l.environmentMap); err != nil {
 		return err
 	}
 	if err := apparmor.ApplyProfile(l.config.AppArmorProfile); err != nil {
@@ -84,5 +86,5 @@ func (l *linuxSetnsInit) Init() error {
 			return newSystemErrorWithCause(err, "init seccomp")
 		}
 	}
-	return system.Execv(l.config.Args[0], l.config.Args[0:], os.Environ())
+	return system.Execv(l.config.Args[0], l.config.Args[0:], utils.StringMapToSlice(l.environmentMap))
 }

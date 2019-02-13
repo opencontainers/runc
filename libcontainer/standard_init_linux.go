@@ -14,6 +14,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/keys"
 	"github.com/opencontainers/runc/libcontainer/seccomp"
 	"github.com/opencontainers/runc/libcontainer/system"
+	"github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/opencontainers/selinux/go-selinux/label"
 	"github.com/pkg/errors"
 
@@ -21,11 +22,12 @@ import (
 )
 
 type linuxStandardInit struct {
-	pipe          *os.File
-	consoleSocket *os.File
-	parentPid     int
-	fifoFd        int
-	config        *initConfig
+	pipe           *os.File
+	consoleSocket  *os.File
+	parentPid      int
+	fifoFd         int
+	config         *initConfig
+	environmentMap map[string]string
 }
 
 func (l *linuxStandardInit) getSessionRingParams() (string, uint32, uint32) {
@@ -154,7 +156,7 @@ func (l *linuxStandardInit) Init() error {
 			return err
 		}
 	}
-	if err := finalizeNamespace(l.config); err != nil {
+	if err := finalizeNamespace(l.config, l.environmentMap); err != nil {
 		return err
 	}
 	// finalizeNamespace can change user/group which clears the parent death
@@ -203,7 +205,7 @@ func (l *linuxStandardInit) Init() error {
 			return newSystemErrorWithCause(err, "init seccomp")
 		}
 	}
-	if err := syscall.Exec(name, l.config.Args[0:], os.Environ()); err != nil {
+	if err := syscall.Exec(name, l.config.Args[0:], utils.StringMapToSlice(l.environmentMap)); err != nil {
 		return newSystemErrorWithCause(err, "exec user process")
 	}
 	return nil

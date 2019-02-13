@@ -110,3 +110,15 @@ func Annotations(labels []string) (bundle string, userAnnotations map[string]str
 func GetIntSize() int {
 	return int(unsafe.Sizeof(1))
 }
+
+// StringMapToSlice takes a string map, and converts its values into
+// a slice with an undefined ordering.
+func StringMapToSlice(m map[string]string) []string {
+	slice := make([]string, len(m))
+	i := 0
+	for _, value := range m {
+		slice[i] = value
+		i++
+	}
+	return slice
+}
