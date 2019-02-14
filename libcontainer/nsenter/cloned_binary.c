@@ -169,31 +169,25 @@ static int parse_xargs(char *data, int data_length, char ***output)
 }
 
 /*
- * "Parse" out argv and envp from /proc/self/cmdline and /proc/self/environ.
+ * "Parse" out argv from /proc/self/cmdline.
  * This is necessary because we are running in a context where we don't have a
  * main() that we can just get the arguments from.
  */
-static int fetchve(char ***argv, char ***envp)
+static int fetchve(char ***argv)
 {
-	char *cmdline = NULL, *environ = NULL;
-	size_t cmdline_size, environ_size;
+	char *cmdline = NULL;
+	size_t cmdline_size;
 
 	cmdline = read_file("/proc/self/cmdline", &cmdline_size);
 	if (!cmdline)
 		goto error;
-	environ = read_file("/proc/self/environ", &environ_size);
-	if (!environ)
-		goto error;
 
 	if (parse_xargs(cmdline, cmdline_size, argv) <= 0)
-		goto error;
-	if (parse_xargs(environ, environ_size, envp) <= 0)
 		goto error;
 
 	return 0;
 
 error:
-	free(environ);
 	free(cmdline);
 	return -EINVAL;
 }
@@ -246,23 +240,26 @@ error:
 	return -EIO;
 }
 
+/* Get cheap access to the environment. */
+extern char **environ;
+
 int ensure_cloned_binary(void)
 {
 	int execfd;
-	char **argv = NULL, **envp = NULL;
+	char **argv = NULL;
 
 	/* Check that we're not self-cloned, and if we are then bail. */
 	int cloned = is_self_cloned();
 	if (cloned > 0 || cloned == -ENOTRECOVERABLE)
 		return cloned;
 
-	if (fetchve(&argv, &envp) < 0)
+	if (fetchve(&argv) < 0)
 		return -EINVAL;
 
 	execfd = clone_binary();
 	if (execfd < 0)
 		return -EIO;
 
-	fexecve(execfd, argv, envp);
+	fexecve(execfd, argv, environ);
 	return -ENOEXEC;
 }
