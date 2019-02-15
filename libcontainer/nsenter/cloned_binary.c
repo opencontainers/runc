@@ -64,7 +64,6 @@ int memfd_create(const char *name, unsigned int flags)
 #  define F_SEAL_WRITE  0x0008	/* prevent writes */
 #endif
 
-#define RUNC_SENDFILE_MAX 0x7FFFF000 /* sendfile(2) is limited to 2GB. */
 #ifdef HAVE_MEMFD_CREATE
 #  define RUNC_MEMFD_COMMENT "runc_cloned:/proc/self/exe"
 #  define RUNC_MEMFD_SEALS \
@@ -195,7 +194,8 @@ error:
 static int clone_binary(void)
 {
 	int binfd, memfd;
-	ssize_t sent = 0;
+	struct stat statbuf = {};
+	size_t sent = 0;
 
 #ifdef HAVE_MEMFD_CREATE
 	memfd = memfd_create(RUNC_MEMFD_COMMENT, MFD_CLOEXEC | MFD_ALLOW_SEALING);
@@ -209,9 +209,17 @@ static int clone_binary(void)
 	if (binfd < 0)
 		goto error;
 
-	sent = sendfile(memfd, binfd, NULL, RUNC_SENDFILE_MAX);
+	if (fstat(binfd, &statbuf) < 0)
+		goto error_binfd;
+
+	while (sent < statbuf.st_size) {
+		int n = sendfile(memfd, binfd, NULL, statbuf.st_size - sent);
+		if (n < 0)
+			goto error_binfd;
+		sent += n;
+	}
 	close(binfd);
-	if (sent < 0)
+	if (sent != statbuf.st_size)
 		goto error;
 
 #ifdef HAVE_MEMFD_CREATE
@@ -235,6 +243,8 @@ static int clone_binary(void)
 #endif
 	return memfd;
 
+error_binfd:
+	close(binfd);
 error:
 	close(memfd);
 	return -EIO;
