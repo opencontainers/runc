@@ -36,18 +36,21 @@
 #if !defined(SYS_memfd_create) && defined(__NR_memfd_create)
 #  define SYS_memfd_create __NR_memfd_create
 #endif
-#ifdef SYS_memfd_create
-#  define HAVE_MEMFD_CREATE
 /* memfd_create(2) flags -- copied from <linux/memfd.h>. */
-#  ifndef MFD_CLOEXEC
-#    define MFD_CLOEXEC       0x0001U
-#    define MFD_ALLOW_SEALING 0x0002U
-#  endif
+#ifndef MFD_CLOEXEC
+#  define MFD_CLOEXEC       0x0001U
+#  define MFD_ALLOW_SEALING 0x0002U
+#endif
 int memfd_create(const char *name, unsigned int flags)
 {
+#ifdef SYS_memfd_create
 	return syscall(SYS_memfd_create, name, flags);
-}
+#else
+	errno = ENOSYS;
+	return -1;
 #endif
+}
+
 
 /* This comes directly from <linux/fcntl.h>. */
 #ifndef F_LINUX_SPECIFIC_BASE
@@ -64,11 +67,9 @@ int memfd_create(const char *name, unsigned int flags)
 #  define F_SEAL_WRITE  0x0008	/* prevent writes */
 #endif
 
-#ifdef HAVE_MEMFD_CREATE
-#  define RUNC_MEMFD_COMMENT "runc_cloned:/proc/self/exe"
-#  define RUNC_MEMFD_SEALS \
+#define RUNC_MEMFD_COMMENT "runc_cloned:/proc/self/exe"
+#define RUNC_MEMFD_SEALS \
 	(F_SEAL_SEAL | F_SEAL_SHRINK | F_SEAL_GROW | F_SEAL_WRITE)
-#endif
 
 static void *must_realloc(void *ptr, size_t size)
 {
@@ -92,23 +93,29 @@ static int is_self_cloned(void)
 	if (fd < 0)
 		return -ENOTRECOVERABLE;
 
-#ifdef HAVE_MEMFD_CREATE
+	/* First check memfd. */
 	ret = fcntl(fd, F_GET_SEALS);
-	is_cloned = (ret == RUNC_MEMFD_SEALS);
-#else
-	struct stat statbuf = {0};
-	ret = fstat(fd, &statbuf);
-	if (ret >= 0)
-		is_cloned = (statbuf.st_nlink == 0);
-#endif
+	if (ret >= 0) {
+		is_cloned = (ret == RUNC_MEMFD_SEALS);
+	} else {
+		/*
+		 * Okay, we're a tmpfile -- or we're currently running on RHEL <=7.6
+		 * which appears to have a borked backport of F_GET_SEALS. Either way,
+		 * having a file which has no hardlinks indicates that we aren't using
+		 * a host-side "runc" binary and this is something that a container
+		 * cannot fake (because unlinking requires being able to resolve the
+		 * path that you want to unlink).
+		 */
+		struct stat statbuf = {};
+		if (fstat(fd, &statbuf) >= 0)
+			is_cloned = (statbuf.st_nlink == 0);
+	}
+
 	close(fd);
 	return is_cloned;
 }
 
-/*
- * Basic wrapper around mmap(2) that gives you the file length so you can
- * safely treat it as an ordinary buffer. Only gives you read access.
- */
+/* Read a given file into a new buffer, and providing the length. */
 static char *read_file(char *path, size_t *length)
 {
 	int fd;
@@ -191,18 +198,127 @@ error:
 	return -EINVAL;
 }
 
+enum {
+	EFD_NONE = 0,
+	EFD_MEMFD,
+	EFD_FILE,
+};
+
+/*
+ * This comes from <linux/fcntl.h>. We can't hard-code __O_TMPFILE because it
+ * changes depending on the architecture. If we don't have O_TMPFILE we always
+ * have the mkostemp(3) fallback.
+ */
+#ifndef O_TMPFILE
+#  if defined(__O_TMPFILE) && defined(O_DIRECTORY)
+#    define O_TMPFILE (__O_TMPFILE | O_DIRECTORY)
+#  endif
+#endif
+
+static int make_execfd(int *fdtype)
+{
+	int fd;
+	char template[] = "/tmp/runc-cloned-binary.XXXXXX";
+
+	/*
+	 * Try memfd first, it's much nicer since it's easily detected thanks to
+	 * sealing and also doesn't require assumptions like /tmp.
+	 */
+	*fdtype = EFD_MEMFD;
+	fd = memfd_create(RUNC_MEMFD_COMMENT, MFD_CLOEXEC | MFD_ALLOW_SEALING);
+	if (fd >= 0)
+		return fd;
+	if (errno != ENOSYS)
+		goto err;
+
+#ifdef O_TMPFILE
+	/*
+	 * Try O_TMPFILE to avoid races where someone might snatch our file. Note
+	 * that O_EXCL isn't actually a security measure here (since you can just
+	 * fd re-open it and clear O_EXCL).
+	 */
+	*fdtype = EFD_FILE;
+	fd = open("/tmp", O_TMPFILE | O_EXCL | O_RDWR | O_CLOEXEC, 0700);
+	if (fd >= 0) {
+		struct stat statbuf = {};
+		bool working_otmpfile = false;
+
+		/*
+		 * open(2) ignores unknown O_* flags -- yeah, I was surprised when I
+		 * found this out too. As a result we can't check for EINVAL. However,
+		 * if we get nlink != 0 (or EISDIR) then we know that this kernel
+		 * doesn't support O_TMPFILE.
+		 */
+		if (fstat(fd, &statbuf) >= 0)
+			working_otmpfile = (statbuf.st_nlink == 0);
+
+		if (working_otmpfile)
+			return fd;
+
+		/* Pretend that we got EISDIR since O_TMPFILE failed. */
+		close(fd);
+		errno = EISDIR;
+	}
+	if (errno != EISDIR)
+		goto err;
+#endif /* defined(O_TMPFILE) */
+
+	/*
+	 * Our final option is to create a temporary file the old-school way, and
+	 * then unlink it so that nothing else sees it by accident.
+	 */
+	*fdtype = EFD_FILE;
+	fd = mkostemp(template, O_CLOEXEC);
+	if (fd >= 0) {
+		if (unlink(template) >= 0)
+			return fd;
+		close(fd);
+	}
+
+err:
+	*fdtype = EFD_NONE;
+	return -1;
+}
+
+static int seal_execfd(int *fd, int fdtype)
+{
+	switch (fdtype) {
+	case EFD_MEMFD:
+		return fcntl(*fd, F_ADD_SEALS, RUNC_MEMFD_SEALS);
+	case EFD_FILE: {
+		/* Need to re-open our pseudo-memfd as an O_PATH to avoid execve(2) giving -ETXTBSY. */
+		int newfd;
+		char fdpath[PATH_MAX] = {0};
+
+		if (fchmod(*fd, 0100) < 0)
+			return -1;
+
+		if (snprintf(fdpath, sizeof(fdpath), "/proc/self/fd/%d", *fd) < 0)
+			return -1;
+
+		newfd = open(fdpath, O_PATH | O_CLOEXEC);
+		if (newfd < 0)
+			return -1;
+
+		close(*fd);
+		*fd = newfd;
+		return 0;
+	}
+	default:
+	   break;
+	}
+	return -1;
+}
+
 static int clone_binary(void)
 {
 	int binfd, memfd;
 	struct stat statbuf = {};
 	size_t sent = 0;
+	int fdtype = EFD_NONE;
 
-#ifdef HAVE_MEMFD_CREATE
-	memfd = memfd_create(RUNC_MEMFD_COMMENT, MFD_CLOEXEC | MFD_ALLOW_SEALING);
-#else
-	memfd = open("/tmp", O_TMPFILE | O_EXCL | O_RDWR | O_CLOEXEC, 0711);
-#endif
-	if (memfd < 0)
+	memfd = make_execfd(&fdtype);
+	if (memfd < 0 || fdtype == EFD_NONE)
 		return -ENOTRECOVERABLE;
 
 	binfd = open("/proc/self/exe", O_RDONLY | O_CLOEXEC);
@@ -222,25 +338,8 @@ static int clone_binary(void)
 	if (sent != statbuf.st_size)
 		goto error;
 
-#ifdef HAVE_MEMFD_CREATE
-	int err = fcntl(memfd, F_ADD_SEALS, RUNC_MEMFD_SEALS);
-	if (err < 0)
+	if (seal_execfd(&memfd, fdtype) < 0)
 		goto error;
-#else
-	/* Need to re-open "memfd" as read-only to avoid execve(2) giving -EXTBUSY. */
-	int newfd;
-	char *fdpath = NULL;
-
-	if (asprintf(&fdpath, "/proc/self/fd/%d", memfd) < 0)
-		goto error;
-	newfd = open(fdpath, O_RDONLY | O_CLOEXEC);
-	free(fdpath);
-	if (newfd < 0)
-		goto error;
-
-	close(memfd);
-	memfd = newfd;
-#endif
 	return memfd;
 
 error_binfd:
