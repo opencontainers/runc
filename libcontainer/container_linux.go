@@ -28,6 +28,7 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/pborman/uuid"
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink/nl"
 	"golang.org/x/sys/unix"
@@ -460,7 +461,42 @@ func (c *linuxContainer) newParentProcess(p *Process) (parentProcess, error) {
 	return c.newInitProcess(p, cmd, parentPipe, childPipe)
 }
 
+func runcInTmp() (string, error) {
+	runc, err := os.Readlink("/proc/self/exe")
+	if err != nil {
+		return "", err
+	}
+	id := uuid.New()
+	temp := fmt.Sprintf("/tmp/runc.%s", id)
+
+	sf, err := unix.Open(runc, unix.O_RDONLY, 0)
+	if err != nil {
+		return "", err
+	}
+	defer unix.Close(sf)
+	df, err := unix.Open(temp, unix.O_CREAT|unix.O_WRONLY, 0)
+	if err != nil {
+		return "", err
+	}
+	_, err = syscall.Sendfile(df, sf, nil, 0x7FFFF000)
+	if err == nil {
+		unix.Close(df)
+		// chmod temp runc r-x silently
+		os.Chmod(temp, 0500)
+	} else {
+		unix.Close(df)
+	}
+	return temp, err
+}
+
 func (c *linuxContainer) commandTemplate(p *Process, childPipe *os.File) (*exec.Cmd, error) {
+	tmp, err := runcInTmp()
+	if err != nil {
+		return nil, err
+	}
+	// use temp runc binary file in /tmp
+	c.initPath = tmp
+	c.initArgs[0] = tmp
 	cmd := exec.Command(c.initPath, c.initArgs[1:]...)
 	cmd.Args[0] = c.initArgs[0]
 	cmd.Stdin = p.Stdin

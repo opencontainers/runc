@@ -78,6 +78,8 @@ func (p *setnsProcess) signal(sig os.Signal) error {
 func (p *setnsProcess) start() (err error) {
 	defer p.parentPipe.Close()
 	err = p.cmd.Start()
+	// for runc binary in /tmp, we can remove it
+	os.Remove(p.cmd.Args[0])
 	p.childPipe.Close()
 	if err != nil {
 		return newSystemErrorWithCause(err, "starting setns process")
@@ -262,6 +264,8 @@ func (p *initProcess) waitForChildExit(childPid int) error {
 func (p *initProcess) start() error {
 	defer p.parentPipe.Close()
 	err := p.cmd.Start()
+	// for runc binary in /tmp, we can remove it
+	os.Remove(p.cmd.Args[0])
 	p.process.ops = p
 	p.childPipe.Close()
 	if err != nil {

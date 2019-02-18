@@ -557,8 +557,11 @@ void nsexec(void)
 	 * to ensure that containers won't be able to access the host binary
 	 * through /proc/self/exe. See CVE-2019-5736.
 	 */
-	if (ensure_cloned_binary() < 0)
-		bail("could not ensure we are a cloned binary");
+	/*
+	 * Revert it first to test my code
+	*/
+	//if (ensure_cloned_binary() < 0)
+	//	bail("could not ensure we are a cloned binary");
 
 	/* Parse all of the netlink configuration. */
 	nl_parse(pipenum, &config);
