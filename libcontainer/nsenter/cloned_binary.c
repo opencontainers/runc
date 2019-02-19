@@ -217,8 +217,14 @@ enum {
 
 static int make_execfd(int *fdtype)
 {
-	int fd;
-	char template[] = "/tmp/runc-cloned-binary.XXXXXX";
+	int fd = -1;
+	char template[PATH_MAX] = {0};
+	char *prefix = secure_getenv("_LIBCONTAINER_STATEDIR");
+
+	if (!prefix || *prefix != '/')
+		prefix = "/tmp";
+	if (snprintf(template, sizeof(template), "%s/runc.XXXXXX", prefix) < 0)
+		return -1;
 
 	/*
 	 * Try memfd first, it's much nicer since it's easily detected thanks to
@@ -238,7 +244,7 @@ static int make_execfd(int *fdtype)
 	 * fd re-open it and clear O_EXCL).
 	 */
 	*fdtype = EFD_FILE;
-	fd = open("/tmp", O_TMPFILE | O_EXCL | O_RDWR | O_CLOEXEC, 0700);
+	fd = open(prefix, O_TMPFILE | O_EXCL | O_RDWR | O_CLOEXEC, 0700);
 	if (fd >= 0) {
 		struct stat statbuf = {};
 		bool working_otmpfile = false;
