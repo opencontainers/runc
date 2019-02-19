@@ -44,6 +44,22 @@ func (d *Device) CgroupString() string {
 	return fmt.Sprintf("%c %s:%s %s", d.Type, deviceNumberString(d.Major), deviceNumberString(d.Minor), d.Permissions)
 }
 
+func (d *Device) SystemdCgroupPath() string {
+	sdType := "char"
+	if d.Type == 'b' {
+		sdType = "block"
+	} else if d.Type != 'c' {
+		// TODO: Invalid d.Type, do something about it.
+		return ""
+	}
+	// Start looking for wildcards, blocking a whole major.
+	if d.Minor == Wildcard {
+		return fmt.Sprintf("%s-%s", sdType, deviceNumberString(d.Major))
+	}
+	// Systemd uses /dev/char/x:y or /dev/block/x:y for devices by major/minor.
+	return fmt.Sprintf("/dev/%s/%s:%s", sdType, deviceNumberString(d.Major), deviceNumberString(d.Minor))
+}
+
 func (d *Device) Mkdev() int {
 	return int((d.Major << 8) | (d.Minor & 0xff) | ((d.Minor & 0xfff00) << 12))
 }
