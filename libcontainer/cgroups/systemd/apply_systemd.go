@@ -37,6 +37,14 @@ type subsystem interface {
 	Set(path string, cgroup *configs.Cgroup) error
 }
 
+type systemdSubsystem interface {
+	// Returns a list of systemd properties to manage the underlying cgroups.
+	ToSystemdProperties(cgroup *configs.Cgroup) ([]systemdDbus.Property, error)
+	// Set the cgroupv1 attributes only, which can be used when in hybrid or legacy mode
+	// to keep setting properties that are not (and will not be) managed by systemd.
+	SetCgroupv1(path string, cgroup *configs.Cgroup) error
+}
+
 var errSubsystemDoesNotExist = errors.New("cgroup: subsystem does not exist")
 
 type subsystemSet []subsystem
@@ -282,6 +290,18 @@ func (m *Manager) Apply(pid int) error {
 		}
 	}
 
+	// Set the systemd properties coming from subsystems.
+	for _, sys := range subsystems {
+		if sdSys, ok := sys.(systemdSubsystem); ok {
+			sdProp, err := sdSys.ToSystemdProperties(c)
+			if err != nil {
+				return err
+			}
+			logrus.Debugf("Setting properties on unit %s from subsystem %s: %#v", unitName, sys.Name(), sdProp)
+			properties = append(properties, sdProp...)
+		}
+	}
+
 	statusChan := make(chan string, 1)
 	if _, err := theConn.StartTransientUnit(unitName, "replace", properties, statusChan); err == nil {
 		select {
@@ -351,6 +371,10 @@ func join(c *configs.Cgroup, subsystem string, pid int) (string, error) {
 func joinCgroups(c *configs.Cgroup, pid int) error {
 	for _, sys := range subsystems {
 		name := sys.Name()
+		if _, ok := sys.(systemdSubsystem); ok {
+			// Skip it if it's a systemd subsystem, it's been done already.
+			continue
+		}
 		switch name {
 		case "name=systemd":
 			// let systemd handle this
@@ -507,6 +531,14 @@ func (m *Manager) Set(container *configs.Config) error {
 		path, err := getSubsystemPath(container.Cgroups, sys.Name())
 		if err != nil && !cgroups.IsNotFound(err) {
 			return err
+		}
+
+		if sdSys, ok := sys.(systemdSubsystem); ok {
+			// Only set the cgroupv1 properties.
+			if err := sdSys.SetCgroupv1(path, container.Cgroups); err != nil {
+				return err
+			}
+			continue
 		}
 
 		if err := sys.Set(path, container.Cgroups); err != nil {
