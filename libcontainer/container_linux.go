@@ -26,6 +26,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/opencontainers/selinux/go-selinux/label"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/sirupsen/logrus"
@@ -1385,10 +1386,33 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *
 		cmd.ExtraFiles = append(cmd.ExtraFiles, extraFiles...)
 	}
 
+	if opts != nil && opts.SELinuxSocketLabel != "" {
+		// If the container is running on a system with SELinux the sockets
+		// created by CRIU might need to be labelled correctly.
+		// CRIU opens a socket and the parasite code which is running in the
+		// process in the container, with the SELinux labelling of the container,
+		// tries to connect to this socket. Even if this is part of the parasite
+		// code, for SELinux it looks like the process in the container tries
+		// to randomly connect to sockets. Using this option the container engine
+		// above runc can tell how those sockets should be labelled and enable
+		// CRIU checkpointing.
+		if err := label.SetSocketLabel(opts.SELinuxSocketLabel); err != nil {
+			return errors.New("failed to set SELinux socket label for CRIU")
+		}
+	}
+
 	if err := cmd.Start(); err != nil {
 		return err
 	}
 	criuServer.Close()
+
+	if opts != nil && opts.SELinuxSocketLabel != "" {
+		// This resets the socket label to the default label. Only the sockets
+		// used by CRIU need a special labelling.
+		if err := label.SetSocketLabel(""); err != nil {
+			return errors.New("failed to reset SELinux socket label after CRIU")
+		}
+	}
 
 	defer func() {
 		criuClientCon.Close()

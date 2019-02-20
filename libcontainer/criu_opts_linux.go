@@ -37,4 +37,5 @@ type CriuOpts struct {
 	AutoDedup               bool               // auto deduplication for incremental dumps
 	LazyPages               bool               // restore memory pages lazily using userfaultfd
 	StatusFd                string             // fd for feedback when lazy server is ready
+	SELinuxSocketLabel      string             // if this is set runc will use this label to tell SELinux how to label new sockets
 }
