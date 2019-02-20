@@ -5,6 +5,8 @@ package libcontainer
 import (
 	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"runtime"
 
 	"github.com/opencontainers/runc/libcontainer/apparmor"
@@ -84,5 +86,28 @@ func (l *linuxSetnsInit) Init() error {
 			return newSystemErrorWithCause(err, "init seccomp")
 		}
 	}
-	return system.Execv(l.config.Args[0], l.config.Args[0:], os.Environ())
+	name, err := exec.LookPath(l.config.Args[0])
+	if err != nil {
+		return err
+	}
+	absName, err := filepath.Abs(name)
+	if err != nil {
+		return err
+	}
+	// For CVE-2019-5736, we need to use /proc/self/exe to start init process
+	// If /proc/self/exe can't load it's dependencies, syscall.Exec will return
+	// Then there is no attack, so we can start init process directly.
+	// TODO: if we can use fexecve like in c, it will be better.
+	cmd := exec.Command("/proc/self/exe")
+	_, err = cmd.Output()
+	if err == nil {
+		l.config.Args[0] = absName
+		args := append([]string{"/proc/self/exe", "execve"}, l.config.Args...)
+		if err := system.Execv(args[0], args[0:], os.Environ()); err != nil {
+			return system.Execv(l.config.Args[0], l.config.Args[0:], os.Environ())
+		}
+	} else {
+		return system.Execv(l.config.Args[0], l.config.Args[0:], os.Environ())
+	}
+	return nil
 }

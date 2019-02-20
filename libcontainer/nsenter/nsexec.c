@@ -535,7 +535,7 @@ void join_namespaces(char *nslist)
 }
 
 /* Defined in cloned_binary.c. */
-extern int ensure_cloned_binary(void);
+extern int use_self_execve(void);
 
 void nsexec(void)
 {
@@ -545,20 +545,20 @@ void nsexec(void)
 	struct nlconfig_t config = { 0 };
 
 	/*
+	 * We need to start init process use /proc/self/exe
+	 * to ensure that containers won't be able to access the host binary
+	 * through /proc/self/exe. See CVE-2019-5736.
+	 */
+	if (use_self_execve() < 0)
+		bail("failed to start container's init process");
+
+	/*
 	 * If we don't have an init pipe, just return to the go routine.
 	 * We'll only get an init pipe for start or exec.
 	 */
 	pipenum = initpipe();
 	if (pipenum == -1)
 		return;
-
-	/*
-	 * We need to re-exec if we are not in a cloned binary. This is necessary
-	 * to ensure that containers won't be able to access the host binary
-	 * through /proc/self/exe. See CVE-2019-5736.
-	 */
-	if (ensure_cloned_binary() < 0)
-		bail("could not ensure we are a cloned binary");
 
 	/* Parse all of the netlink configuration. */
 	nl_parse(pipenum, &config);

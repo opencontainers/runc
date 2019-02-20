@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"syscall" //only for Exec
 
@@ -175,6 +176,10 @@ func (l *linuxStandardInit) Init() error {
 	if err != nil {
 		return err
 	}
+	absName, err := filepath.Abs(name)
+	if err != nil {
+		return err
+	}
 	// Close the pipe to signal that we have completed our init.
 	l.pipe.Close()
 	// Wait for the FIFO to be opened on the other side before exec-ing the
@@ -203,8 +208,24 @@ func (l *linuxStandardInit) Init() error {
 			return newSystemErrorWithCause(err, "init seccomp")
 		}
 	}
-	if err := syscall.Exec(name, l.config.Args[0:], os.Environ()); err != nil {
-		return newSystemErrorWithCause(err, "exec user process")
+	// For CVE-2019-5736, we need to use /proc/self/exe to start init process
+	// If /proc/self/exe can't load it's dependencies, syscall.Exec will return
+	// Then there is no attack, so we can start init process directly.
+	// TODO: if we can use fexecve like in c, it will be better.
+	cmd := exec.Command("/proc/self/exe")
+	_, err = cmd.Output()
+	if err == nil {
+		l.config.Args[0] = absName
+		args := append([]string{"/proc/self/exe", "execve"}, l.config.Args...)
+		if err = syscall.Exec(args[0], args[0:], os.Environ()); err != nil {
+			if err = syscall.Exec(name, l.config.Args[0:], os.Environ()); err != nil {
+				return newSystemErrorWithCause(err, "exec user process")
+			}
+		}
+	} else {
+		if err = syscall.Exec(name, l.config.Args[0:], os.Environ()); err != nil {
+			return newSystemErrorWithCause(err, "exec user process")
+		}
 	}
 	return nil
 }

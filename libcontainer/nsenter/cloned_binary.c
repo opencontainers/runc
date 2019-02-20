@@ -177,15 +177,17 @@ static int fetchve(char ***argv)
 {
 	char *cmdline = NULL;
 	size_t cmdline_size;
+	int argc;
 
 	cmdline = read_file("/proc/self/cmdline", &cmdline_size);
 	if (!cmdline)
 		goto error;
 
-	if (parse_xargs(cmdline, cmdline_size, argv) <= 0)
+	argc = parse_xargs(cmdline, cmdline_size, argv);
+	if (argc <= 0)
 		goto error;
 
-	return 0;
+	return argc;
 
 error:
 	free(cmdline);
@@ -262,4 +264,21 @@ int ensure_cloned_binary(void)
 
 	fexecve(execfd, argv, environ);
 	return -ENOEXEC;
+}
+
+int use_self_execve(void)
+{       
+	char **argv = NULL;
+	int argc;
+
+	argc = fetchve(&argv);
+	if (argc < 0)
+		return -EINVAL;
+	if (argc > 2) {
+		if (strcmp(argv[1], "execve") == 0) {
+			char **newargv = argv+2;
+			execve(newargv[0], newargv, environ);
+		}
+	}
+	return 0;
 }
