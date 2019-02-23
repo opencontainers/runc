@@ -21,12 +21,12 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/opencontainers/runc/libcontainer/criurpc"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/opencontainers/runtime-spec/specs-go"
 
+	criurpc "github.com/checkpoint-restore/go-criu/rpc"
 	"github.com/golang/protobuf/proto"
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink/nl"
