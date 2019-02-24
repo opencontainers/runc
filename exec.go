@@ -115,6 +115,9 @@ func execProcess(context *cli.Context) (int, error) {
 	if err != nil {
 		return -1, err
 	}
+	if status == libcontainer.Created {
+		return -1, fmt.Errorf("cannot exec a container which is in a created state")
+	}
 	if status == libcontainer.Stopped {
 		return -1, fmt.Errorf("cannot exec a container that has stopped")
 	}

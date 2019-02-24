@@ -31,7 +31,7 @@ function teardown() {
   testcontainer test_busybox created
 
   runc exec test_busybox true
-  [ "$status" -eq 0 ]
+  [ "$status" -eq 1 ]
 
   testcontainer test_busybox created
 
@@ -40,6 +40,9 @@ function teardown() {
   [ "$status" -eq 0 ]
 
   testcontainer test_busybox running
+
+  runc exec test_busybox true
+  [ "$status" -eq 0 ]
 }
 
 @test "runc create --pid-file" {
