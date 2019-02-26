@@ -28,3 +28,4 @@ following will output a list of processes running in the container:
    --no-new-privs                           set the no new privileges value for the process
    --cap value, -c value                    add a capability to the bounding set for the process
    --no-subreaper                           disable the use of the subreaper used to reap reparented processes
+   --preserve-fds value                     pass N additional file descriptors to the container (stdio + $LISTEN_FDS + N in total) (default: 0)
