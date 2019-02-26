@@ -139,7 +139,7 @@ Read more on [How to Write a Git Commit Message][how-to-git-commit] or the Discu
 
 
 [charter]: https://www.opencontainers.org/about/governance
-[code-of-conduct]: https://github.com/opencontainers/tob/blob/master/code-of-conduct.md
+[code-of-conduct]: https://github.com/opencontainers/org/blob/master/.github/CODE_OF_CONDUCT.md
 [dev-list]: https://groups.google.com/a/opencontainers.org/forum/#!forum/dev
 [how-to-git-commit]: http://chris.beams.io/posts/git-commit
 [irc-logs]: http://ircbot.wl.linuxfoundation.org/eavesdrop/%23opencontainers/
