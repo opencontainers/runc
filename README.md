@@ -18,7 +18,7 @@ You can find official releases of `runc` on the [release](https://github.com/ope
 
 ### Security
 
-If you wish to report a security issue, please see the protocol under [security](security).
+If you wish to report a security issue, please see the protocol under [security].
 
 ## Building
 
