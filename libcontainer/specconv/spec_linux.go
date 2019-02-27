@@ -145,6 +145,7 @@ var allowedDevices = []*configs.Device{
 
 type CreateOpts struct {
 	CgroupName       string
+	ContainerUUID    string
 	UseSystemdCgroup bool
 	NoPivotRoot      bool
 	NoNewKeyring     bool
@@ -178,14 +179,15 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 		labels = append(labels, fmt.Sprintf("%s=%s", k, v))
 	}
 	config := &configs.Config{
-		Rootfs:          rootfsPath,
-		NoPivotRoot:     opts.NoPivotRoot,
-		Readonlyfs:      spec.Root.Readonly,
-		Hostname:        spec.Hostname,
-		Labels:          append(labels, fmt.Sprintf("bundle=%s", cwd)),
-		NoNewKeyring:    opts.NoNewKeyring,
-		RootlessEUID:    opts.RootlessEUID,
-		RootlessCgroups: opts.RootlessCgroups,
+		CgroupUniqueName: opts.ContainerUUID,
+		Rootfs:           rootfsPath,
+		NoPivotRoot:      opts.NoPivotRoot,
+		Readonlyfs:       spec.Root.Readonly,
+		Hostname:         spec.Hostname,
+		Labels:           append(labels, fmt.Sprintf("bundle=%s", cwd)),
+		NoNewKeyring:     opts.NoNewKeyring,
+		RootlessEUID:     opts.RootlessEUID,
+		RootlessCgroups:  opts.RootlessCgroups,
 	}
 
 	exists := false
@@ -303,6 +305,9 @@ func createCgroupConfig(opts *CreateOpts) (*configs.Cgroup, error) {
 		useSystemdCgroup = opts.UseSystemdCgroup
 		name             = opts.CgroupName
 	)
+	if opts.ContainerUUID != "" {
+		name = fmt.Sprintf("%s_%s", name, opts.ContainerUUID)
+	}
 
 	c := &configs.Cgroup{
 		Resources: &configs.Resources{},

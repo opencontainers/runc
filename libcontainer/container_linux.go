@@ -37,6 +37,7 @@ const stdioFdCount = 3
 
 type linuxContainer struct {
 	id                   string
+	uuid                 string
 	root                 string
 	config               *configs.Config
 	cgroupManager        cgroups.Manager
@@ -138,6 +139,11 @@ type Container interface {
 // ID returns the container's unique ID
 func (c *linuxContainer) ID() string {
 	return c.id
+}
+
+// ID returns the container's unique UUID
+func (c *linuxContainer) UUID() string {
+	return c.uuid
 }
 
 // Config returns the container's configuration
@@ -1750,6 +1756,7 @@ func (c *linuxContainer) currentState() (*State, error) {
 	state := &State{
 		BaseState: BaseState{
 			ID:                   c.ID(),
+			UUID:                 c.UUID(),
 			Config:               *c.config,
 			InitProcessPid:       pid,
 			InitProcessStartTime: startTime,

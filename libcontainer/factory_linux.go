@@ -213,6 +213,7 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 	}
 	c := &linuxContainer{
 		id:            id,
+		uuid:          config.CgroupUniqueName,
 		root:          containerRoot,
 		config:        config,
 		initPath:      l.InitPath,
@@ -254,6 +255,7 @@ func (l *LinuxFactory) Load(id string) (Container, error) {
 		initProcess:          r,
 		initProcessStartTime: state.InitProcessStartTime,
 		id:                   id,
+		uuid:                 state.UUID,
 		config:               &state.Config,
 		initPath:             l.InitPath,
 		initArgs:             l.InitArgs,

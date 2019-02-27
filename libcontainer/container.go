@@ -51,6 +51,9 @@ type BaseState struct {
 	// ID is the container ID.
 	ID string `json:"id"`
 
+	// UUID is the ccontainer's unique ID.
+	UUID string `json:"uuid"`
+
 	// InitProcessPid is the init process id in the parent namespace.
 	InitProcessPid int `json:"init_process_pid"`
 
@@ -72,6 +75,9 @@ type BaseState struct {
 type BaseContainer interface {
 	// Returns the ID of the container
 	ID() string
+
+	// Returns the unique ID of the container
+	UUID() string
 
 	// Returns the current status of the container.
 	//
