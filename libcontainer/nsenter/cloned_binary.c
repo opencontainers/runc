@@ -160,7 +160,7 @@ static char *read_file(char *path, size_t *length)
 
 	*length = 0;
 	for (;;) {
-		int n;
+		ssize_t n;
 
 		n = read(fd, buf, sizeof(buf));
 		if (n < 0)
@@ -403,6 +403,33 @@ out:
 	return ret;
 }
 
+static ssize_t fd_to_fd(int outfd, int infd)
+{
+	ssize_t total = 0;
+	char buffer[4096];
+
+	for (;;) {
+		ssize_t nread, nwritten = 0;
+
+		nread = read(infd, buffer, sizeof(buffer));
+		if (nread < 0)
+			return -1;
+		if (!nread)
+			break;
+
+		do {
+			ssize_t n = write(outfd, buffer + nwritten, nread - nwritten);
+			if (n < 0)
+				return -1;
+			nwritten += n;
+		} while(nwritten < nread);
+
+		total += nwritten;
+	}
+
+	return total;
+}
+
 static int clone_binary(void)
 {
 	int binfd, execfd;
@@ -435,8 +462,12 @@ static int clone_binary(void)
 
 	while (sent < statbuf.st_size) {
 		int n = sendfile(execfd, binfd, NULL, statbuf.st_size - sent);
-		if (n < 0)
-			goto error_binfd;
+		if (n < 0) {
+			/* sendfile can fail so we fallback to a dumb user-space copy. */
+			n = fd_to_fd(execfd, binfd);
+			if (n < 0)
+				goto error_binfd;
+		}
 		sent += n;
 	}
 	close(binfd);
