@@ -12,6 +12,9 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
+
+	systemdDbus "github.com/coreos/go-systemd/dbus"
+	"github.com/godbus/dbus"
 )
 
 const (
@@ -119,18 +122,21 @@ func (s *MemoryGroup) Set(path string, cgroup *configs.Cgroup) error {
 		return err
 	}
 
-	if cgroup.Resources.KernelMemory != 0 {
-		if err := setKernelMemory(path, cgroup.Resources.KernelMemory); err != nil {
-			return err
-		}
-	}
-
 	if cgroup.Resources.MemoryReservation != 0 {
 		if err := writeFile(path, "memory.soft_limit_in_bytes", strconv.FormatInt(cgroup.Resources.MemoryReservation, 10)); err != nil {
 			return err
 		}
 	}
 
+	return s.SetCgroupv1(path, cgroup)
+}
+
+func (s *MemoryGroup) SetCgroupv1(path string, cgroup *configs.Cgroup) error {
+	if cgroup.Resources.KernelMemory != 0 {
+		if err := setKernelMemory(path, cgroup.Resources.KernelMemory); err != nil {
+			return err
+		}
+	}
 	if cgroup.Resources.KernelMemoryTCP != 0 {
 		if err := writeFile(path, "memory.kmem.tcp.limit_in_bytes", strconv.FormatInt(cgroup.Resources.KernelMemoryTCP, 10)); err != nil {
 			return err
@@ -152,6 +158,29 @@ func (s *MemoryGroup) Set(path string, cgroup *configs.Cgroup) error {
 	}
 
 	return nil
+}
+
+func (s *MemoryGroup) ToSystemdProperties(cgroup *configs.Cgroup) ([]systemdDbus.Property, error) {
+	properties := []systemdDbus.Property{}
+	if cgroup.Resources.Memory != 0 {
+		properties = append(properties, systemdDbus.Property{
+			Name:  "MemoryMax",
+			Value: dbus.MakeVariant(uint64(cgroup.Resources.Memory)),
+		})
+	}
+	if cgroup.Resources.MemorySwap != 0 {
+		properties = append(properties, systemdDbus.Property{
+			Name:  "MemorySwapMax",
+			Value: dbus.MakeVariant(uint64(cgroup.Resources.MemorySwap)),
+		})
+	}
+	if cgroup.Resources.MemoryReservation != 0 {
+		properties = append(properties, systemdDbus.Property{
+			Name:  "MemoryLow",
+			Value: dbus.MakeVariant(uint64(cgroup.Resources.MemoryReservation)),
+		})
+	}
+	return properties, nil
 }
 
 func (s *MemoryGroup) Remove(d *cgroupData) error {
