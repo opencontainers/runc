@@ -18,7 +18,7 @@ You can find official releases of `runc` on the [release](https://github.com/ope
 
 ## Security
 
-Reporting process and disclosure communications are outlined in [/org/security](https://github.com/opencontainers/org/blob/master/security/)
+If you wish to report a security issue, please see the protocol under [security][security].
 
 ## Building
 
@@ -267,3 +267,6 @@ WantedBy=multi-user.target
 ## License
 
 The code and docs are released under the [Apache 2.0 license](LICENSE).
+
+
+[security]: https://github.com/opencontainers/org/blob/master/security
