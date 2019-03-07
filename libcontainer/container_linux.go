@@ -482,6 +482,7 @@ func (c *linuxContainer) commandTemplate(p *Process, childPipe *os.File) (*exec.
 	cmd.ExtraFiles = append(cmd.ExtraFiles, childPipe)
 	cmd.Env = append(cmd.Env,
 		fmt.Sprintf("_LIBCONTAINER_INITPIPE=%d", stdioFdCount+len(cmd.ExtraFiles)-1),
+		fmt.Sprintf("_LIBCONTAINER_STATEDIR=%s", c.root),
 	)
 	// NOTE: when running a container with no PID namespace and the parent process spawning the container is
 	// PID1 the pdeathsig is being delivered to the container's init process by the kernel for some reason
