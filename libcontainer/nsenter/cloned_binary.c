@@ -24,6 +24,7 @@
 #include <limits.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <libgen.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -53,7 +54,6 @@ int memfd_create(const char *name, unsigned int flags)
 #endif
 }
 
-
 /* This comes directly from <linux/fcntl.h>. */
 #ifndef F_LINUX_SPECIFIC_BASE
 #  define F_LINUX_SPECIFIC_BASE 1024
@@ -69,6 +69,11 @@ int memfd_create(const char *name, unsigned int flags)
 #  define F_SEAL_WRITE  0x0008	/* prevent writes */
 #endif
 
+/* This comes directly from <linux/magic.h>. */
+#ifndef OVERLAYFS_SUPER_MAGIC
+#  define OVERLAYFS_SUPER_MAGIC 0x794c7630
+#endif
+
 #define CLONED_BINARY_ENV "_LIBCONTAINER_CLONED_BINARY"
 #define RUNC_MEMFD_COMMENT "runc_cloned:/proc/self/exe"
 #define RUNC_MEMFD_SEALS \
@@ -81,6 +86,15 @@ static void *must_realloc(void *ptr, size_t size)
 		ptr = realloc(old, size);
 	} while(!ptr);
 	return ptr;
+}
+
+static char *must_strdup(const char *s)
+{
+	char *new = NULL;
+	do {
+		new = strdup(s);
+	} while (!new);
+	return new;
 }
 
 /*
@@ -127,7 +141,7 @@ static int is_self_cloned(void)
 	 * it's *our* bind-mount we check CLONED_BINARY_ENV.
 	 */
 	if (fstatfs(fd, &fsbuf) >= 0)
-		is_cloned |= (fsbuf.f_flags & MS_RDONLY);
+		is_cloned |= (fsbuf.f_type == OVERLAYFS_SUPER_MAGIC);
 
 	/*
 	 * Okay, we're a tmpfile -- or we're currently running on RHEL <=7.6
@@ -347,59 +361,106 @@ static int seal_execfd(int *fd, int fdtype)
 	return -1;
 }
 
-static int try_bindfd(void)
+static char *sane_pathfn(const char *path, char *(*fn)(char *))
 {
-	int fd, ret = -1;
-	char template[PATH_MAX] = {0};
-	char *prefix = secure_getenv("_LIBCONTAINER_STATEDIR");
+	char *dir, *new, *copy;
+
+	copy = must_strdup(path);
+	dir = fn(copy);
+	new = must_strdup(dir);
+
+	free(copy);
+	return new;
+}
+
+#define sane_dirname(path) sane_pathfn((path), dirname)
+#define sane_basename(path) sane_pathfn((path), basename)
+
+static int try_overlayfd(void)
+{
+	int dfd, ret = -1;
+	char template[PATH_MAX] = {0}, binpath[PATH_MAX] = {0},
+		 mountopts[PATH_MAX] = {0},
+		 *bindir = NULL, *binbase = NULL,
+		 *prefix = secure_getenv("_LIBCONTAINER_STATEDIR");
 
 	if (!prefix || *prefix != '/')
 		prefix = "/tmp";
 	if (snprintf(template, sizeof(template), "%s/runc.XXXXXX", prefix) < 0)
 		return ret;
 
-	/*
-	 * We need somewhere to mount it, mounting anything over /proc/self is a
-	 * BAD idea on the host -- even if we do it temporarily.
-	 */
-	fd = mkstemp(template);
-	if (fd < 0)
+	/* We need a place to store upperdir and workdir. */
+	if (!mkdtemp(template))
 		return ret;
-	close(fd);
 
 	/*
-	 * For obvious reasons this won't work in rootless mode because we haven't
-	 * created a userns+mntns -- but getting that to work will be a bit
-	 * complicated and it's only worth doing if someone actually needs it.
+	 * lowerdir is the directory that houses /proc/self/exe. We can't just
+	 * use /proc/self/ as lower -- this is flat-out disallowed by the kernel.
+	 * In addition, we can't just bind-mount /proc/self/exe somewhere because
+	 * overlayfs doesn't care about our mount table. There are some cases where
+	 * /proc/self/exe will give us "/" -- in those cases we cannot access the
+	 * path and so we just give up.
 	 */
-	ret = -EPERM;
-	if (mount("/proc/self/exe", template, "", MS_BIND, "") < 0)
+	if (readlink("/proc/self/exe", binpath, sizeof(binpath)) < 0)
 		goto out;
-	if (mount("", template, "", MS_REMOUNT | MS_BIND | MS_RDONLY, "") < 0)
+	if (!strcmp(binpath, "/"))
+		goto out;
+
+	bindir = sane_dirname(binpath);
+	binbase = sane_basename(binpath);
+
+	/* Construct our mountopts and binpath. */
+	if (snprintf(binpath, sizeof(binpath), "%s/%s", template, binbase) < 0)
+		goto out_free;
+	if (snprintf(mountopts, sizeof(mountopts),
+				 "lowerdir=%s,workdir=%s/work,upperdir=%s/upper",
+				 bindir, template, template) < 0)
+		goto out_free;
+
+	/*
+	 * Mount a tmpfs over template -- so we can clean up afterwards. Obviously
+	 * won't work with rootless containers. We strictly limit the tmpfs since
+	 * it should never actually be used (it's just used to stop writes).
+	 */
+	if (mount("", template, "tmpfs", MS_NOEXEC | MS_NOSUID | MS_NODEV, "size=128k,nr_inodes=32") < 0)
+		goto out_free;
+
+	dfd = open(template, O_DIRECTORY | O_PATH | O_CLOEXEC);
+	if (dfd < 0)
 		goto out_umount;
 
+	if (mkdirat(dfd, "upper", 0700) < 0)
+		goto out_close;
+	if (mkdirat(dfd, "work", 0700) < 0)
+		goto out_close;
 
-	/* Get read-only handle that we're sure can't be made read-write. */
-	ret = open(template, O_PATH | O_CLOEXEC);
+	/*
+	 * For obvious reasons this won't work in rootless mode. Mounting on top of
+	 * template is fine because overlayfs doesn't care about our mount table.
+	 */
+	ret = -EPERM;
+	if (mount("overlay", template, "overlay", MS_RDONLY, mountopts) < 0)
+		goto out_close;
 
+	/* Get our handle in the temporary overlayfs. */
+	ret = open(binpath, O_PATH | O_CLOEXEC);
+
+out_close:
+	close(dfd);
 out_umount:
 	/*
-	 * Make sure the MNT_DETACH works, otherwise we could get remounted
-	 * read-write and that would be quite bad (the fd would be made read-write
-	 * too, invalidating the protection).
+	 * We make sure all of the mounts on template are unmounted. We don't
+	 * really mind if MNT_DETACH fails for either tmpfs or overlayfs, because
+	 * the worst that happens is host mount table pollution -- and there's not
+	 * much we could do to fix that.
 	 */
-	if (umount2(template, MNT_DETACH) < 0) {
-		if (ret >= 0)
-			close(ret);
-		ret = -ENOTRECOVERABLE;
-	}
-
+	while (umount2(template, MNT_DETACH) >= 0)
+		/* noop */;
+out_free:
+	free(bindir);
+	free(binbase);
 out:
-	/*
-	 * We don't care about unlink errors, the worst that happens is that
-	 * there's an empty file left around in STATEDIR.
-	 */
-	unlink(template);
+	rmdir(template);
 	return ret;
 }
 
@@ -441,7 +502,7 @@ static int clone_binary(void)
 	 * Before we resort to copying, let's try creating an ro-binfd in one shot
 	 * by getting a handle for a read-only bind-mount of the execfd.
 	 */
-	execfd = try_bindfd();
+	execfd = try_overlayfd();
 	if (execfd >= 0)
 		return execfd;
 
