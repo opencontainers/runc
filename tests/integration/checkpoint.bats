@@ -3,6 +3,10 @@
 load helpers
 
 function setup() {
+  if [[ -n "${RUNC_USE_SYSTEMD}" ]] ; then
+    skip "CRIU test suite is skipped on systemd cgroup driver for now."
+  fi
+
   teardown_busybox
   setup_busybox
 }

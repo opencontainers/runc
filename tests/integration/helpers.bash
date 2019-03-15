@@ -39,7 +39,11 @@ CONSOLE_SOCKET="$BATS_TMPDIR/console.sock"
 # Cgroup paths
 CGROUP_MEMORY_BASE_PATH=$(grep "cgroup" /proc/self/mountinfo | gawk 'toupper($NF) ~ /\<MEMORY\>/ { print $5; exit }')
 CGROUP_CPU_BASE_PATH=$(grep "cgroup" /proc/self/mountinfo | gawk 'toupper($NF) ~ /\<CPU\>/ { print $5; exit }')
-CGROUPS_PATH="/runc-cgroups-integration-test/test-cgroup"
+if [[ -n "${RUNC_USE_SYSTEMD}" ]] ; then
+	CGROUPS_PATH="/machine.slice/runc-cgroups-integration-test.scope"
+else
+	CGROUPS_PATH="/runc-cgroups-integration-test/test-cgroup"
+fi
 CGROUP_MEMORY="${CGROUP_MEMORY_BASE_PATH}${CGROUPS_PATH}"
 
 # CONFIG_MEMCG_KMEM support
@@ -61,7 +65,7 @@ function runc() {
 
 # Raw wrapper for runc.
 function __runc() {
-	"$RUNC" --log /proc/self/fd/2 --root "$ROOT" "$@"
+	"$RUNC" ${RUNC_USE_SYSTEMD+--systemd-cgroup} --log /proc/self/fd/2 --root "$ROOT" "$@"
 }
 
 # Wrapper for runc spec, which takes only one argument (the bundle path).
@@ -118,7 +122,11 @@ function runc_rootless_cgroup() {
 # Helper function to set cgroupsPath to the value of $CGROUPS_PATH
 function set_cgroups_path() {
   bundle="${1:-.}"
-  sed -i 's/\("linux": {\)/\1\n    "cgroupsPath": "\/runc-cgroups-integration-test\/test-cgroup",/' "$bundle/config.json"
+  cgroups_path="/runc-cgroups-integration-test/test-cgroup"
+  if [[ -n "${RUNC_USE_SYSTEMD}" ]] ; then
+    cgroups_path="machine.slice:runc-cgroups:integration-test"
+  fi
+  sed -i 's#\("linux": {\)#\1\n    "cgroupsPath": "'"${cgroups_path}"'",#' "$bundle/config.json"
 }
 
 # Helper function to set a resources limit
