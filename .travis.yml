@@ -7,6 +7,13 @@ go:
   - tip
 
 matrix:
+  include:
+    - go: 1.11.x
+      env:
+        - RUNC_USE_SYSTEMD=1
+      script:
+        - make BUILDTAGS="${BUILDTAGS}" all
+        - sudo PATH="$PATH" make localintegration RUNC_USE_SYSTEMD=1
   allow_failures:
     - go: tip
 
