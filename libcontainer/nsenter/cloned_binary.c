@@ -95,8 +95,10 @@ static int is_self_cloned(void)
 	struct statfs fsbuf = {};
 
 	fd = open("/proc/self/exe", O_RDONLY|O_CLOEXEC);
-	if (fd < 0)
+	if (fd < 0) {
+		fprintf(stderr, "you have no read access to runc binary file\n");
 		return -ENOTRECOVERABLE;
+	}
 
 	/*
 	 * Is the binary a fully-sealed memfd? We don't need CLONED_BINARY_ENV for
