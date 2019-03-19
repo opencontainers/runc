@@ -14,11 +14,13 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 #include <sys/ioctl.h>
 #include <sys/prctl.h>
 #include <sys/socket.h>
+#include <sys/timeb.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 
@@ -109,6 +111,9 @@ struct nlconfig_t {
 #define ROOTLESS_EUID_ATTR	27287
 #define UIDMAPPATH_ATTR	    27288
 #define GIDMAPPATH_ATTR	    27289
+
+#define MAX_TIMESTAMP_LEN 32
+#define MAX_LOG_MESSAGE_LEN 256
 
 /*
  * Use the raw syscall for versions of glibc which don't include a function for
@@ -331,25 +336,21 @@ static int clone_parent(jmp_buf *env, int jmpval)
 	return clone(child_func, ca.stack_ptr, CLONE_PARENT | SIGCHLD, &ca);
 }
 
-/*
- * Gets the init pipe fd from the environment, which is used to read the
- * bootstrap data and tell the parent what the new pid is after we finish
- * setting up the environment.
- */
-static int initpipe(void)
+/* Get the fd from given envrionment variable. */
+static int getfd(char *envfd)
 {
-	int pipenum;
-	char *initpipe, *endptr;
+	int fdnum;
+	char *fd, *endptr;
 
-	initpipe = getenv("_LIBCONTAINER_INITPIPE");
-	if (initpipe == NULL || *initpipe == '\0')
+	fd = getenv(envfd);
+	if (fd == NULL || *fd == '\0')
 		return -1;
 
-	pipenum = strtol(initpipe, &endptr, 10);
+	fdnum = strtol(fd, &endptr, 10);
 	if (*endptr != '\0')
-		bail("unable to parse _LIBCONTAINER_INITPIPE");
+		bail("unable to parse %s", envfd);
 
-	return pipenum;
+	return fdnum;
 }
 
 /* Returns the clone(2) flag for a namespace, given the name of a namespace. */
@@ -537,20 +538,73 @@ void join_namespaces(char *nslist)
 /* Defined in cloned_binary.c. */
 extern int ensure_cloned_binary(void);
 
+static int nowformatted(char *buf)
+{
+        struct timeb now;
+
+        if (ftime(&now) < 0) return 1;
+
+        if (strftime(buf, MAX_TIMESTAMP_LEN, "%Y-%m-%d-%H:%M:%S", localtime(&now.time)) == 0) return 1;
+        if (sprintf(&buf[strlen(buf)], ":%03u", now.millitm) == 0) return 1;
+
+        return 0;
+}
+
+/* Write a timestamp prefixed message into fd */
+static void dlog(int fd, const char *message)
+{
+	/* Logging is best effort, a failure to log shouldn't impact other
+	 * operations so we just abort the logging attempt if we fail for any
+	 * reason. */
+
+        char timestamp[MAX_TIMESTAMP_LEN], logline[MAX_LOG_MESSAGE_LEN];
+
+	/* There are two reasons for this to fail: either the attempt to open
+	 * the log fd failed or the log fd wasn't set. Either way the outcome
+	 * is the same - we won't or can't log. */
+        if (fd < 0) return;
+
+        if (nowformatted(timestamp) != 0) return;
+        if (snprintf(logline, MAX_LOG_MESSAGE_LEN, "[%s] %s\n", timestamp, message) == 0) return;
+	(void) write(fd, logline, strlen(logline));
+}
+
+static void dlogf(int fd, const char *fmt, ...)
+{
+        va_list argp;
+        char message[MAX_LOG_MESSAGE_LEN];
+
+        if (fd < 0) return;
+
+        va_start(argp, fmt);
+        vsnprintf(message, MAX_LOG_MESSAGE_LEN, fmt, argp);
+        va_end(argp);
+
+        dlog(fd, message);
+}
+
 void nsexec(void)
 {
-	int pipenum;
+	int pipenum, logfd;
 	jmp_buf env;
 	int sync_child_pipe[2], sync_grandchild_pipe[2];
 	struct nlconfig_t config = { 0 };
 
 	/*
-	 * If we don't have an init pipe, just return to the go routine.
-	 * We'll only get an init pipe for start or exec.
+	 * Gets the init pipe fd from the environment, which is used to read the
+	 * bootstrap data and tell the parent what the new pid is after we finish
+	 * setting up the environment. If we don't have an init pipe, just
+	 * return to the go routine. We'll only get an init pipe for start or
+	 * exec.
 	 */
-	pipenum = initpipe();
+	pipenum = getfd("_LIBCONTAINER_INITPIPE");
 	if (pipenum == -1)
 		return;
+
+	logfd = getfd("_LIBCONTAINER_EXECLOG");
+
+	/* TODO: this is a showcase, remove it */
+	dlogf(logfd, "Hi from nsexec! Pid is: %ld", getpid());
 
 	/*
 	 * We need to re-exec if we are not in a cloned binary. This is necessary

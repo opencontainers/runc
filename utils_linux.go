@@ -258,6 +258,7 @@ type runner struct {
 	listenFDs       []*os.File
 	preserveFDs     int
 	pidFile         string
+	execLog         string
 	consoleSocket   string
 	container       libcontainer.Container
 	action          CtAct
@@ -278,6 +279,16 @@ func (r *runner) run(config *specs.Process) (int, error) {
 	if len(r.listenFDs) > 0 {
 		process.Env = append(process.Env, fmt.Sprintf("LISTEN_FDS=%d", len(r.listenFDs)), "LISTEN_PID=1")
 		process.ExtraFiles = append(process.ExtraFiles, r.listenFDs...)
+	}
+	if r.execLog != "" {
+		execLogFile, err := os.OpenFile(r.execLog, os.O_CREATE|os.O_WRONLY, 0755)
+		if err != nil {
+			return -1, err
+		}
+		defer execLogFile.Close()
+
+		process.Env = append(process.Env, fmt.Sprintf("_LIBCONTAINER_EXECLOG=%d", 3+len(r.listenFDs)))
+		process.ExtraFiles = append(process.ExtraFiles, execLogFile)
 	}
 	baseFd := 3 + len(process.ExtraFiles)
 	for i := baseFd; i < baseFd+r.preserveFDs; i++ {
@@ -439,6 +450,7 @@ func startContainer(context *cli.Context, spec *specs.Spec, action CtAct, criuOp
 		action:          action,
 		criuOpts:        criuOpts,
 		init:            true,
+		execLog:         context.String("exec-log"),
 	}
 	return r.run(spec.Process)
 }

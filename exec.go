@@ -93,6 +93,10 @@ following will output a list of processes running in the container:
 			Name:  "preserve-fds",
 			Usage: "Pass N additional file descriptors to the container (stdio + $LISTEN_FDS + N in total)",
 		},
+		cli.StringFlag{
+			Name:  "exec-log",
+			Usage: "exec log file",
+		},
 	},
 	Action: func(context *cli.Context) error {
 		if err := checkArgs(context, 1, minArgs); err != nil {
@@ -143,6 +147,7 @@ func execProcess(context *cli.Context) (int, error) {
 		consoleSocket:   context.String("console-socket"),
 		detach:          detach,
 		pidFile:         context.String("pid-file"),
+		execLog:         context.String("exec-log"),
 		action:          CT_ACT_RUN,
 		init:            false,
 		preserveFDs:     context.Int("preserve-fds"),
