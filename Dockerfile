@@ -34,10 +34,9 @@ RUN dpkg --add-architecture armel \
 # not require an entry in /etc/passwd to operate, one of the tests uses
 # `git clone` -- and `git clone` does not allow you to clone a
 # repository if the current uid does not have an entry in /etc/passwd.
-RUN useradd -u1000 -m -d/home/rootless -s/bin/bash rootless
-
 # install bats
-RUN cd /tmp \
+RUN useradd -u1000 -m -d/home/rootless -s/bin/bash rootless \
+    && cd /tmp \
     && git clone https://github.com/sstephenson/bats.git \
     && cd bats \
     && git reset --hard 03608115df2071fff4eaaff1605768c275e5f81f \
