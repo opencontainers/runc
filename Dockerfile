@@ -37,12 +37,12 @@ RUN dpkg --add-architecture armel \
 RUN useradd -u1000 -m -d/home/rootless -s/bin/bash rootless
 
 # install bats
-RUN cd /tmp \
-    && git clone https://github.com/sstephenson/bats.git \
-    && cd bats \
-    && git reset --hard 03608115df2071fff4eaaff1605768c275e5f81f \
+ENV BATS_VERSION v1.1.0
+RUN mkdir /usr/src/bats \
+    && curl -sSL https://github.com/bats-core/bats-core/archive/${BATS_VERSION}.tar.gz | tar xvzC /usr/src/bats/ --strip-components=1 \
+    && cd /usr/src/bats \
     && ./install.sh /usr/local \
-    && rm -rf /tmp/bats
+    && rm -rf /usr/src/bats
 
 # install criu
 # For CRIU 3.11 one patch is needed for the test 'checkpoint and restore with container specific CRIU config'
@@ -50,7 +50,7 @@ RUN cd /tmp \
 # See https://github.com/opencontainers/runc/pull/1933
 ENV CRIU_VERSION v3.11
 RUN mkdir -p /usr/src/criu \
-    && curl -sSL https://github.com/checkpoint-restore/criu/archive/${CRIU_VERSION}.tar.gz | tar -v -C /usr/src/criu/ -xz --strip-components=1 \
+    && curl -sSL https://github.com/checkpoint-restore/criu/archive/${CRIU_VERSION}.tar.gz | tar xvzC /usr/src/criu/ --strip-components=1 \
     && cd /usr/src/criu \
     && curl https://github.com/checkpoint-restore/criu/commit/bb0b2f2635d71e549851b7c626a1464e42a3b5c7.patch | patch -p1 \
     && make install-criu \
