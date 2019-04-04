@@ -114,6 +114,9 @@ func (m *mockProcess) externalDescriptors() []string {
 func (m *mockProcess) setExternalDescriptors(newFds []string) {
 }
 
+func (m *mockProcess) forwardChildLogs() {
+}
+
 func TestGetContainerPids(t *testing.T) {
 	container := &linuxContainer{
 		id:            "myid",

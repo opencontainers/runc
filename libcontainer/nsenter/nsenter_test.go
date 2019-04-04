@@ -167,10 +167,15 @@ func TestNsenterIncorrectPathType(t *testing.T) {
 func TestNsenterChildLogging(t *testing.T) {
 	args := []string{"nsenter-exec"}
 	parent, child, err := newPipe()
+	if err != nil {
+		t.Fatalf("failed to create exec pipe %v", err)
+	}
 	logread, logwrite, err := os.Pipe()
 	if err != nil {
-		t.Fatalf("failed to create pipe %v", err)
+		t.Fatalf("failed to create log pipe %v", err)
 	}
+	defer logread.Close()
+	defer logwrite.Close()
 
 	namespaces := []string{
 		// join pid ns of the current process

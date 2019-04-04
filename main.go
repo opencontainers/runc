@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/opencontainers/runc/libcontainer/logs"
 	"io"
 	"os"
 	"strings"
@@ -133,32 +134,13 @@ func main() {
 		updateCommand,
 	}
 	app.Before = func(context *cli.Context) error {
-
-		// do nothing if logrus was already initialized in init.go
-		if logrus.StandardLogger().Out != logrus.New().Out {
-			return nil
+		loggingConfig, err := createLoggingConfiguration(context)
+		if err != nil {
+			return fmt.Errorf("failed to create logging configuration: %v", err)
 		}
-
-		if context.GlobalBool("debug") {
-			logrus.SetLevel(logrus.DebugLevel)
-		}
-		if path := context.GlobalString("log"); path != "" {
-			f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND|os.O_SYNC, 0666)
-			if err != nil {
-				return err
-			}
-			logrus.SetOutput(f)
-		}
-		switch context.GlobalString("log-format") {
-		case "text":
-			// retain logrus's default.
-		case "json":
-			logrus.SetFormatter(new(logrus.JSONFormatter))
-		default:
-			return fmt.Errorf("unknown log-format %q", context.GlobalString("log-format"))
-		}
-		return nil
+		return logs.ConfigureLogging(loggingConfig)
 	}
+
 	// If the command returns an error, cli takes upon itself to print
 	// the error on cli.ErrWriter and exit.
 	// Use our own writer here to ensure the log gets sent to the right location.
@@ -175,4 +157,18 @@ type FatalWriter struct {
 func (f *FatalWriter) Write(p []byte) (n int, err error) {
 	logrus.Error(string(p))
 	return f.cliErrWriter.Write(p)
+}
+
+func createLoggingConfiguration(context *cli.Context) (*logs.LoggingConfiguration, error) {
+	config := logs.LoggingConfiguration{
+		IsDebug:     context.GlobalBool("debug"),
+		LogFilePath: context.GlobalString("log"),
+		LogFormat:   context.GlobalString("log-format"),
+	}
+
+	if envLogPipe, ok := os.LookupEnv("_LIBCONTAINER_LOGPIPE"); ok {
+		config.LogPipeFd = envLogPipe
+	}
+
+	return &config, nil
 }

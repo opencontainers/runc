@@ -19,7 +19,7 @@ import (
 	"syscall" // only for SysProcAttr and Signal
 	"time"
 
-	"github.com/cyphar/filepath-securejoin"
+	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
@@ -337,7 +337,7 @@ func (c *linuxContainer) start(process *Process) error {
 	if err != nil {
 		return newSystemErrorWithCause(err, "creating new parent process")
 	}
-	parent.getChildLogs()
+	parent.forwardChildLogs()
 	if err := parent.start(); err != nil {
 		// terminate the process to ensure that it properly is reaped.
 		if err := ignoreTerminateErrors(parent.terminate()); err != nil {
@@ -443,19 +443,20 @@ func (c *linuxContainer) newParentProcess(p *Process) (parentProcess, error) {
 	if err != nil {
 		return nil, newSystemErrorWithCause(err, "creating new init pipe")
 	}
+	messagePipe := readWritePair{parentPipe, childPipe}
 
 	r, w, err := os.Pipe()
 	if err != nil {
 		return nil, fmt.Errorf("Unable to create the log pipe:  %s", err)
 	}
-	logPipe := pipePair{r, w}
+	logPipe := readWritePair{r, w}
 
 	cmd, err := c.commandTemplate(p, childPipe, logPipe.w)
 	if err != nil {
 		return nil, newSystemErrorWithCause(err, "creating new command template")
 	}
 	if !p.Init {
-		return c.newSetnsProcess(p, cmd, parentPipe, childPipe, &logPipe)
+		return c.newSetnsProcess(p, cmd, messagePipe, logPipe)
 	}
 
 	// We only set up fifoFd if we're not doing a `runc exec`. The historic
@@ -466,7 +467,7 @@ func (c *linuxContainer) newParentProcess(p *Process) (parentProcess, error) {
 	if err := c.includeExecFifo(cmd); err != nil {
 		return nil, newSystemErrorWithCause(err, "including execfifo in cmd.Exec setup")
 	}
-	return c.newInitProcess(p, cmd, parentPipe, childPipe, &logPipe)
+	return c.newInitProcess(p, cmd, messagePipe, logPipe)
 }
 
 func (c *linuxContainer) commandTemplate(p *Process, childPipe *os.File, logPipe *os.File) (*exec.Cmd, error) {
@@ -507,7 +508,7 @@ func (c *linuxContainer) commandTemplate(p *Process, childPipe *os.File, logPipe
 	return cmd, nil
 }
 
-func (c *linuxContainer) newInitProcess(p *Process, cmd *exec.Cmd, parentPipe, childPipe *os.File, logPipe *pipePair) (*initProcess, error) {
+func (c *linuxContainer) newInitProcess(p *Process, cmd *exec.Cmd, initPipe, logPipe readWritePair) (*initProcess, error) {
 	cmd.Env = append(cmd.Env, "_LIBCONTAINER_INITTYPE="+string(initStandard))
 	nsMaps := make(map[configs.NamespaceType]string)
 	for _, ns := range c.config.Namespaces {
@@ -522,9 +523,9 @@ func (c *linuxContainer) newInitProcess(p *Process, cmd *exec.Cmd, parentPipe, c
 	}
 	init := &initProcess{
 		cmd:             cmd,
-		childPipe:       childPipe,
-		parentPipe:      parentPipe,
-		logPipe:         *logPipe,
+		childPipe:       initPipe.w,
+		parentPipe:      initPipe.r,
+		logPipe:         logPipe,
 		manager:         c.cgroupManager,
 		intelRdtManager: c.intelRdtManager,
 		config:          c.newInitConfig(p),
@@ -537,7 +538,7 @@ func (c *linuxContainer) newInitProcess(p *Process, cmd *exec.Cmd, parentPipe, c
 	return init, nil
 }
 
-func (c *linuxContainer) newSetnsProcess(p *Process, cmd *exec.Cmd, parentPipe, childPipe *os.File, logPipe *pipePair) (*setnsProcess, error) {
+func (c *linuxContainer) newSetnsProcess(p *Process, cmd *exec.Cmd, nsPipe, logPipe readWritePair) (*setnsProcess, error) {
 	cmd.Env = append(cmd.Env, "_LIBCONTAINER_INITTYPE="+string(initSetns))
 	state, err := c.currentState()
 	if err != nil {
@@ -554,9 +555,9 @@ func (c *linuxContainer) newSetnsProcess(p *Process, cmd *exec.Cmd, parentPipe, 
 		cgroupPaths:     c.cgroupManager.GetPaths(),
 		rootlessCgroups: c.config.RootlessCgroups,
 		intelRdtPath:    state.IntelRdtPath,
-		childPipe:       childPipe,
-		parentPipe:      parentPipe,
-		logPipe:         *logPipe,
+		childPipe:       nsPipe.w,
+		parentPipe:      nsPipe.r,
+		logPipe:         logPipe,
 		config:          c.newInitConfig(p),
 		process:         p,
 		bootstrapData:   data,

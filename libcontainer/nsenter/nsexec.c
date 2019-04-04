@@ -568,7 +568,7 @@ void write_log(loglevel_t level, const char *format, ...)
 {
 	static const char *strlevel[] = {"panic", "fatal", "error", "warning", "info", "debug"};
 	static char jsonbuffer[1024];
-	int len;
+	int len, written;
 	va_list args;
 	if (logfd < 0 || level >= sizeof(strlevel) / sizeof(strlevel[0])) {
 		return;
@@ -576,12 +576,17 @@ void write_log(loglevel_t level, const char *format, ...)
 
 	len = snprintf(jsonbuffer, sizeof(jsonbuffer),
 				   "{\"level\":\"%s\", \"msg\": \"", strlevel[level]);
+	if (len < 0) return;
 
 	va_start(args, format);
-	len += vsnprintf(&jsonbuffer[len], sizeof(jsonbuffer) - len, format, args);
+	written = vsnprintf(&jsonbuffer[len], sizeof(jsonbuffer) - len, format, args);
+	if (written < 0) return;
+	len += written;
 	va_end(args);
 
-	len += snprintf(&jsonbuffer[len], sizeof(jsonbuffer) - len, "\"}");
+	written = snprintf(&jsonbuffer[len], sizeof(jsonbuffer) - len, "\"}\n");
+	if (written < 0) return;
+	len += written;
 	write(logfd, jsonbuffer, len);
 }
 

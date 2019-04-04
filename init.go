@@ -1,14 +1,14 @@
 package main
 
 import (
-	"os"
-	"runtime"
-	"strconv"
-
+	"fmt"
 	"github.com/opencontainers/runc/libcontainer"
+	"github.com/opencontainers/runc/libcontainer/logs"
 	_ "github.com/opencontainers/runc/libcontainer/nsenter"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+	"os"
+	"runtime"
 )
 
 func init() {
@@ -16,17 +16,14 @@ func init() {
 		runtime.GOMAXPROCS(1)
 		runtime.LockOSThread()
 
-		// in child process, we need to retrieve the log pipe
-		envLogPipe := os.Getenv("_LIBCONTAINER_LOGPIPE")
-		logPipeFd, err := strconv.Atoi(envLogPipe)
-
+		err := logs.ConfigureLogging(&logs.LoggingConfiguration{
+			LogPipeFd: os.Getenv("_LIBCONTAINER_LOGPIPE"),
+			LogFormat: "json",
+			IsDebug:   true,
+		})
 		if err != nil {
-			return
+			panic(fmt.Sprintf("libcontainer: failed to configure logging: %v", err))
 		}
-		logPipe := os.NewFile(uintptr(logPipeFd), "logpipe")
-		logrus.SetOutput(logPipe)
-		logrus.SetFormatter(&logrus.JSONFormatter{})
-		logrus.SetLevel(logrus.DebugLevel)
 		logrus.Debug("child process in init()")
 	}
 }

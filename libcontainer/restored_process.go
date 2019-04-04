@@ -76,7 +76,7 @@ func (p *restoredProcess) setExternalDescriptors(newFds []string) {
 	p.fds = newFds
 }
 
-func (p *restoredProcess) getChildLogs() {
+func (p *restoredProcess) forwardChildLogs() {
 }
 
 // nonChildProcess represents a process where the calling process is not
@@ -124,5 +124,5 @@ func (p *nonChildProcess) setExternalDescriptors(newFds []string) {
 	p.fds = newFds
 }
 
-func (p *nonChildProcess) getChildLogs() {
+func (p *nonChildProcess) forwardChildLogs() {
 }
