@@ -37,8 +37,23 @@ type containerState interface {
 	status() Status
 }
 
+func shouldKillAll(c *linuxContainer) bool {
+	blNewPid := false
+	blNewPidPath := false
+	for _, n := range c.config.Namespaces {
+		if n.Type == configs.NEWPID {
+			blNewPid = true
+			if n.Path != "" {
+				blNewPidPath = true
+			}
+			break
+		}
+	}
+	return !blNewPid || blNewPidPath
+}
+
 func destroy(c *linuxContainer) error {
-	if !c.config.Namespaces.Contains(configs.NEWPID) {
+	if shouldKillAll(c) {
 		if err := signalAllProcesses(c.cgroupManager, unix.SIGKILL); err != nil {
 			logrus.Warn(err)
 		}
