@@ -23,9 +23,10 @@ import (
 )
 
 type Manager struct {
-	mu      sync.Mutex
-	Cgroups *configs.Cgroup
-	Paths   map[string]string
+	mu          sync.Mutex
+	Cgroups     *configs.Cgroup
+	Paths       map[string]string
+	ContainerId string
 }
 
 type subsystem interface {
@@ -293,7 +294,7 @@ func (m *Manager) Apply(pid int) error {
 		return err
 	}
 
-	if err := joinCgroups(c, pid); err != nil {
+	if err := joinCgroups(c, pid, m.ContainerId); err != nil {
 		return err
 	}
 
@@ -307,7 +308,12 @@ func (m *Manager) Apply(pid int) error {
 			}
 			return err
 		}
-		paths[s.Name()] = subsystemPath
+		if s.Name() == "freezer" && m.ContainerId != "" {
+			paths[s.Name()] = filepath.Join(subsystemPath, m.ContainerId)
+			paths["freezer_parent"] = subsystemPath
+		} else {
+			paths[s.Name()] = subsystemPath
+		}
 	}
 	m.Paths = paths
 	return nil
@@ -334,10 +340,13 @@ func (m *Manager) GetPaths() map[string]string {
 	return paths
 }
 
-func join(c *configs.Cgroup, subsystem string, pid int) (string, error) {
+func join(c *configs.Cgroup, subsystem string, pid int, ContainerId string) (string, error) {
 	path, err := getSubsystemPath(c, subsystem)
 	if err != nil {
 		return "", err
+	}
+	if subsystem == "freezer" && ContainerId != "" {
+		path = filepath.Join(path, ContainerId)
 	}
 	if err := os.MkdirAll(path, 0755); err != nil {
 		return "", err
@@ -348,7 +357,7 @@ func join(c *configs.Cgroup, subsystem string, pid int) (string, error) {
 	return path, nil
 }
 
-func joinCgroups(c *configs.Cgroup, pid int) error {
+func joinCgroups(c *configs.Cgroup, pid int, ContainerId string) error {
 	for _, sys := range subsystems {
 		name := sys.Name()
 		switch name {
@@ -364,7 +373,7 @@ func joinCgroups(c *configs.Cgroup, pid int) error {
 				return err
 			}
 		default:
-			_, err := join(c, name, pid)
+			_, err := join(c, name, pid, ContainerId)
 			if err != nil {
 				// Even if it's `not found` error, we'll return err
 				// because devices cgroup is hard requirement for
@@ -444,10 +453,15 @@ func getSubsystemPath(c *configs.Cgroup, subsystem string) (string, error) {
 	return filepath.Join(mountpoint, initPath, slice, getUnitName(c)), nil
 }
 
-func (m *Manager) Freeze(state configs.FreezerState) error {
+func (m *Manager) Freeze(state configs.FreezerState, justContainer bool) error {
 	path, err := getSubsystemPath(m.Cgroups, "freezer")
 	if err != nil {
 		return err
+	}
+	if !justContainer {
+		if m.ContainerId != "" {
+			path = filepath.Join(path, "..")
+		}
 	}
 	prevState := m.Cgroups.Resources.Freezer
 	m.Cgroups.Resources.Freezer = state
@@ -464,7 +478,7 @@ func (m *Manager) Freeze(state configs.FreezerState) error {
 }
 
 func (m *Manager) GetPids() ([]int, error) {
-	path, err := getSubsystemPath(m.Cgroups, "devices")
+	path, err := getSubsystemPath(m.Cgroups, "freezer")
 	if err != nil {
 		return nil, err
 	}
@@ -472,9 +486,12 @@ func (m *Manager) GetPids() ([]int, error) {
 }
 
 func (m *Manager) GetAllPids() ([]int, error) {
-	path, err := getSubsystemPath(m.Cgroups, "devices")
+	path, err := getSubsystemPath(m.Cgroups, "freezer")
 	if err != nil {
 		return nil, err
+	}
+	if m.ContainerId != "" {
+		path = filepath.Join(path, "..")
 	}
 	return cgroups.GetAllPids(path)
 }

@@ -38,6 +38,7 @@ const stdioFdCount = 3
 
 type linuxContainer struct {
 	id                   string
+	uuid                 string
 	root                 string
 	config               *configs.Config
 	cgroupManager        cgroups.Manager
@@ -136,9 +137,14 @@ type Container interface {
 	NotifyMemoryPressure(level PressureLevel) (<-chan struct{}, error)
 }
 
-// ID returns the container's unique ID
+// ID returns the container's unique Name
 func (c *linuxContainer) ID() string {
 	return c.id
+}
+
+// ID returns the container's unique ID
+func (c *linuxContainer) UUID() string {
+	return c.uuid
 }
 
 // Config returns the container's configuration
@@ -598,7 +604,7 @@ func (c *linuxContainer) Pause() error {
 	}
 	switch status {
 	case Running, Created:
-		if err := c.cgroupManager.Freeze(configs.Frozen); err != nil {
+		if err := c.cgroupManager.Freeze(configs.Frozen, false); err != nil {
 			return err
 		}
 		return c.state.transition(&pausedState{
@@ -618,7 +624,7 @@ func (c *linuxContainer) Resume() error {
 	if status != Paused {
 		return newGenericError(fmt.Errorf("container not paused"), ContainerNotPaused)
 	}
-	if err := c.cgroupManager.Freeze(configs.Thawed); err != nil {
+	if err := c.cgroupManager.Freeze(configs.Thawed, false); err != nil {
 		return err
 	}
 	return c.state.transition(&runningState{
@@ -1827,6 +1833,7 @@ func (c *linuxContainer) currentState() (*State, error) {
 	state := &State{
 		BaseState: BaseState{
 			ID:                   c.ID(),
+			UUID:                 c.UUID(),
 			Config:               *c.config,
 			InitProcessPid:       pid,
 			InitProcessStartTime: startTime,

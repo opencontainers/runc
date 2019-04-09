@@ -22,7 +22,7 @@ type Manager interface {
 	GetStats() (*Stats, error)
 
 	// Toggles the freezer cgroup according with specified state
-	Freeze(state configs.FreezerState) error
+	Freeze(state configs.FreezerState, justContainer bool) error
 
 	// Destroys the cgroup set
 	Destroy() error

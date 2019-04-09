@@ -48,8 +48,11 @@ func (s Status) String() string {
 // BaseState represents the platform agnostic pieces relating to a
 // running container's state
 type BaseState struct {
-	// ID is the container ID.
+	// ID is the container Name.
 	ID string `json:"id"`
+
+	// ID is the container UUID.
+	UUID string `json:"uuid"`
 
 	// InitProcessPid is the init process id in the parent namespace.
 	InitProcessPid int `json:"init_process_pid"`

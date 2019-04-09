@@ -191,7 +191,7 @@ func (p *pausedState) destroy() error {
 		return err
 	}
 	if t != Running && t != Created {
-		if err := p.c.cgroupManager.Freeze(configs.Thawed); err != nil {
+		if err := p.c.cgroupManager.Freeze(configs.Thawed, true); err != nil {
 			return err
 		}
 		return destroy(p.c)

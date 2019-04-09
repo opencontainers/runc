@@ -145,6 +145,7 @@ var allowedDevices = []*configs.Device{
 
 type CreateOpts struct {
 	CgroupName       string
+	ContainerId      string
 	UseSystemdCgroup bool
 	NoPivotRoot      bool
 	NoNewKeyring     bool
@@ -178,6 +179,7 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 		labels = append(labels, fmt.Sprintf("%s=%s", k, v))
 	}
 	config := &configs.Config{
+		ContainerId:     opts.ContainerId,
 		Rootfs:          rootfsPath,
 		NoPivotRoot:     opts.NoPivotRoot,
 		Readonlyfs:      spec.Root.Readonly,

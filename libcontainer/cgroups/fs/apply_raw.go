@@ -63,10 +63,11 @@ type subsystem interface {
 }
 
 type Manager struct {
-	mu       sync.Mutex
-	Cgroups  *configs.Cgroup
-	Rootless bool // ignore permission-related errors
-	Paths    map[string]string
+	mu          sync.Mutex
+	Cgroups     *configs.Cgroup
+	Rootless    bool // ignore permission-related errors
+	Paths       map[string]string
+	ContainerId string
 }
 
 // The absolute path to the root of the cgroup hierarchies.
@@ -96,10 +97,11 @@ func getCgroupRoot() (string, error) {
 }
 
 type cgroupData struct {
-	root      string
-	innerPath string
-	config    *configs.Cgroup
-	pid       int
+	root        string
+	innerPath   string
+	config      *configs.Cgroup
+	pid         int
+	ContainerId string
 }
 
 // isIgnorableError returns whether err is a permission error (in the loose
@@ -138,7 +140,7 @@ func (m *Manager) Apply(pid int) (err error) {
 
 	var c = m.Cgroups
 
-	d, err := getCgroupData(m.Cgroups, pid)
+	d, err := getCgroupData(m.Cgroups, pid, m.ContainerId)
 	if err != nil {
 		return err
 	}
@@ -172,6 +174,9 @@ func (m *Manager) Apply(pid int) (err error) {
 			return err
 		}
 		m.Paths[sys.Name()] = p
+		if sys.Name() == "freezer" && m.ContainerId != "" {
+			m.Paths["freezer_parent"] = filepath.Join(p, "..")
+		}
 
 		if err := sys.Apply(d); err != nil {
 			// In the case of rootless (including euid=0 in userns), where an explicit cgroup path hasn't
@@ -261,9 +266,12 @@ func (m *Manager) Set(container *configs.Config) error {
 
 // Freeze toggles the container's freezer cgroup depending on the state
 // provided
-func (m *Manager) Freeze(state configs.FreezerState) error {
+func (m *Manager) Freeze(state configs.FreezerState, justContainer bool) error {
 	paths := m.GetPaths()
 	dir := paths["freezer"]
+	if !justContainer {
+		dir = filepath.Join(dir, "../")
+	}
 	prevState := m.Cgroups.Resources.Freezer
 	m.Cgroups.Resources.Freezer = state
 	freezer, err := subsystems.Get("freezer")
@@ -280,15 +288,19 @@ func (m *Manager) Freeze(state configs.FreezerState) error {
 
 func (m *Manager) GetPids() ([]int, error) {
 	paths := m.GetPaths()
-	return cgroups.GetPids(paths["devices"])
+	return cgroups.GetPids(paths["freezer"])
 }
 
 func (m *Manager) GetAllPids() ([]int, error) {
 	paths := m.GetPaths()
-	return cgroups.GetAllPids(paths["devices"])
+	path := paths["freezer"]
+	if m.ContainerId != "" {
+		path = filepath.Join(path, "..")
+	}
+	return cgroups.GetAllPids(path)
 }
 
-func getCgroupData(c *configs.Cgroup, pid int) (*cgroupData, error) {
+func getCgroupData(c *configs.Cgroup, pid int, ContainerId string) (*cgroupData, error) {
 	root, err := getCgroupRoot()
 	if err != nil {
 		return nil, err
@@ -309,10 +321,11 @@ func getCgroupData(c *configs.Cgroup, pid int) (*cgroupData, error) {
 	}
 
 	return &cgroupData{
-		root:      root,
-		innerPath: innerPath,
-		config:    c,
-		pid:       pid,
+		root:        root,
+		innerPath:   innerPath,
+		config:      c,
+		pid:         pid,
+		ContainerId: ContainerId,
 	}, nil
 }
 
@@ -323,10 +336,15 @@ func (raw *cgroupData) path(subsystem string) (string, error) {
 		return "", err
 	}
 
+	innerPath := raw.innerPath
+	if subsystem == "freezer" && raw.ContainerId != "" {
+		innerPath = filepath.Join(innerPath, raw.ContainerId)
+	}
+
 	// If the cgroup name/path is absolute do not look relative to the cgroup of the init process.
-	if filepath.IsAbs(raw.innerPath) {
+	if filepath.IsAbs(innerPath) {
 		// Sometimes subsystems can be mounted together as 'cpu,cpuacct'.
-		return filepath.Join(raw.root, filepath.Base(mnt), raw.innerPath), nil
+		return filepath.Join(raw.root, filepath.Base(mnt), innerPath), nil
 	}
 
 	// Use GetOwnCgroupPath instead of GetInitCgroupPath, because the creating
@@ -337,7 +355,7 @@ func (raw *cgroupData) path(subsystem string) (string, error) {
 		return "", err
 	}
 
-	return filepath.Join(parentPath, raw.innerPath), nil
+	return filepath.Join(parentPath, innerPath), nil
 }
 
 func (raw *cgroupData) join(subsystem string) (string, error) {

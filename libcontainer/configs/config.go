@@ -79,6 +79,8 @@ type Syscall struct {
 
 // Config defines configuration options for executing a process inside a contained environment.
 type Config struct {
+	ContainerId string `json:"container_id"`
+
 	// NoPivotRoot will use MS_MOVE and a chroot to jail the process into the container's rootfs
 	// This is a common option when the container is running in ramdisk
 	NoPivotRoot bool `json:"no_pivot_root"`
