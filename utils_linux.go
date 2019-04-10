@@ -266,13 +266,17 @@ type runner struct {
 }
 
 func (r *runner) run(config *specs.Process) (int, error) {
-	if err := r.checkTerminal(config); err != nil {
-		r.destroy()
+	var err error
+	defer func() {
+		if err != nil {
+			r.destroy()
+		}
+	}()
+	if err = r.checkTerminal(config); err != nil {
 		return -1, err
 	}
 	process, err := newProcess(*config, r.init)
 	if err != nil {
-		r.destroy()
 		return -1, err
 	}
 	if len(r.listenFDs) > 0 {
@@ -281,21 +285,18 @@ func (r *runner) run(config *specs.Process) (int, error) {
 	}
 	baseFd := 3 + len(process.ExtraFiles)
 	for i := baseFd; i < baseFd+r.preserveFDs; i++ {
-		_, err := os.Stat(fmt.Sprintf("/proc/self/fd/%d", i))
+		_, err = os.Stat(fmt.Sprintf("/proc/self/fd/%d", i))
 		if err != nil {
-			r.destroy()
 			return -1, errors.Wrapf(err, "please check that preserved-fd %d (of %d) is present", i-baseFd, r.preserveFDs)
 		}
 		process.ExtraFiles = append(process.ExtraFiles, os.NewFile(uintptr(i), "PreserveFD:"+strconv.Itoa(i)))
 	}
 	rootuid, err := r.container.Config().HostRootUID()
 	if err != nil {
-		r.destroy()
 		return -1, err
 	}
 	rootgid, err := r.container.Config().HostRootGID()
 	if err != nil {
-		r.destroy()
 		return -1, err
 	}
 	var (
@@ -307,7 +308,6 @@ func (r *runner) run(config *specs.Process) (int, error) {
 	handler := newSignalHandler(r.enableSubreaper, r.notifySocket)
 	tty, err := setupIO(process, rootuid, rootgid, config.Terminal, detach, r.consoleSocket)
 	if err != nil {
-		r.destroy()
 		return -1, err
 	}
 	defer tty.Close()
@@ -323,23 +323,19 @@ func (r *runner) run(config *specs.Process) (int, error) {
 		panic("Unknown action")
 	}
 	if err != nil {
-		r.destroy()
 		return -1, err
 	}
-	if err := tty.waitConsole(); err != nil {
+	if err = tty.waitConsole(); err != nil {
 		r.terminate(process)
-		r.destroy()
 		return -1, err
 	}
 	if err = tty.ClosePostStart(); err != nil {
 		r.terminate(process)
-		r.destroy()
 		return -1, err
 	}
 	if r.pidFile != "" {
 		if err = createPidFile(r.pidFile, process); err != nil {
 			r.terminate(process)
-			r.destroy()
 			return -1, err
 		}
 	}
