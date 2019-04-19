@@ -43,7 +43,10 @@ func InitArgs(args ...string) func(*LinuxFactory) error {
 			}
 		}
 
-		l.InitArgs = args
+		l.InitPath = args[0]
+		if len(args) > 1 {
+			l.InitArgs = args[1:]
+		}
 		return nil
 	}
 }
@@ -138,7 +141,7 @@ func New(root string, options ...func(*LinuxFactory) error) (Factory, error) {
 	l := &LinuxFactory{
 		Root:      root,
 		InitPath:  "/proc/self/exe",
-		InitArgs:  []string{os.Args[0], "init"},
+		InitArgs:  []string{"init"},
 		Validator: validate.New(),
 		CriuPath:  "criu",
 	}
