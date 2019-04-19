@@ -95,14 +95,12 @@ struct nlconfig_t {
 	size_t gidmappath_len;
 };
 
-typedef enum {
-	PANIC = 0,
-	FATAL,
-	ERROR,
-	WARNING,
-	INFO,
-	DEBUG,
-} loglevel_t;
+#define PANIC   "panic"
+#define FATAL   "fatal"
+#define ERROR   "error"
+#define WARNING "warning"
+#define INFO    "info"
+#define DEBUG   "debug"
 
 int logfd;
 
@@ -142,6 +140,26 @@ int setns(int fd, int nstype)
 }
 #endif
 
+void write_log_with_info(const char *level, const char *function, int line, const char *format, ...)
+{
+	static char message[1024];
+	va_list args;
+
+	if (logfd < 0 || level == NULL)
+		return;
+
+	va_start(args, format);
+	if (vsnprintf(message, 1024, format, args) < 0)
+		return;
+	va_end(args);
+
+	if (dprintf(logfd, "{\"level\":\"%s\", \"msg\": \"%s:%d %s\"}\n", level, function, line, message) < 0)
+		return;
+}
+
+#define write_log(level, fmt, ...) \
+	write_log_with_info(level, __FUNCTION__, __LINE__, fmt, ##__VA_ARGS__)
+
 /* XXX: This is ugly. */
 static int syncfd = -1;
 
@@ -149,13 +167,13 @@ static int syncfd = -1;
 #define bail(fmt, ...)								\
 	do {									\
 		int ret = __COUNTER__ + 1;					\
-		fprintf(stderr, "nsenter: " fmt ": %m\n", ##__VA_ARGS__);	\
+		write_log(DEBUG, "nsenter: " fmt ": %m", ##__VA_ARGS__);	\
 		if (syncfd >= 0) {						\
 			enum sync_t s = SYNC_ERR;				\
 			if (write(syncfd, &s, sizeof(s)) != sizeof(s))		\
-				fprintf(stderr, "nsenter: failed: write(s)");	\
+				write_log(DEBUG, "nsenter: failed: write(s)");	\
 			if (write(syncfd, &ret, sizeof(ret)) != sizeof(ret))	\
-				fprintf(stderr, "nsenter: failed: write(ret)");	\
+				write_log(DEBUG, "nsenter: failed: write(ret)");	\
 		}								\
 		exit(ret);							\
 	} while(0)
@@ -363,20 +381,22 @@ static int initpipe(void)
 	return pipenum;
 }
 
-static int logpipe(void)
+static void setup_logpipe(void)
 {
-	int pipenum;
 	char *logpipe, *endptr;
 
 	logpipe = getenv("_LIBCONTAINER_LOGPIPE");
-	if (logpipe == NULL || *logpipe == '\0')
-		return -1;
+	if (logpipe == NULL || *logpipe == '\0') {
+		logfd = -1;
+		return;
+	}
 
-	pipenum = strtol(logpipe, &endptr, 10);
-	if (*endptr != '\0')
-		bail("unable to parse _LIBCONTAINER_LOGPIPE");
-
-	return pipenum;
+	logfd = strtol(logpipe, &endptr, 10);
+	if (logpipe == endptr || *endptr != '\0') {
+		fprintf(stderr, "unable to parse _LIBCONTAINER_LOGPIPE, value: %s\n", logpipe);
+		/* It is too early to use bail */
+		exit(1);
+	}
 }
 
 /* Returns the clone(2) flag for a namespace, given the name of a namespace. */
@@ -564,38 +584,18 @@ void join_namespaces(char *nslist)
 /* Defined in cloned_binary.c. */
 extern int ensure_cloned_binary(void);
 
-void write_log(loglevel_t level, const char *format, ...)
-{
-	static const char *strlevel[] = {"panic", "fatal", "error", "warning", "info", "debug"};
-	static char jsonbuffer[1024];
-	int len, written;
-	va_list args;
-	if (logfd < 0 || level >= sizeof(strlevel) / sizeof(strlevel[0])) {
-		return;
-	}
-
-	len = snprintf(jsonbuffer, sizeof(jsonbuffer),
-				   "{\"level\":\"%s\", \"msg\": \"", strlevel[level]);
-	if (len < 0) return;
-
-	va_start(args, format);
-	written = vsnprintf(&jsonbuffer[len], sizeof(jsonbuffer) - len, format, args);
-	if (written < 0) return;
-	len += written;
-	va_end(args);
-
-	written = snprintf(&jsonbuffer[len], sizeof(jsonbuffer) - len, "\"}\n");
-	if (written < 0) return;
-	len += written;
-	write(logfd, jsonbuffer, len);
-}
-
 void nsexec(void)
 {
 	int pipenum;
 	jmp_buf env;
 	int sync_child_pipe[2], sync_grandchild_pipe[2];
 	struct nlconfig_t config = { 0 };
+
+	/*
+	 * Setup a pipe to send logs to the parent. This should happen
+	 * first, because bail will use that pipe.
+	 */
+	setup_logpipe();
 
 	/*
 	 * If we don't have an init pipe, just return to the go routine.
@@ -613,10 +613,7 @@ void nsexec(void)
 	if (ensure_cloned_binary() < 0)
 		bail("could not ensure we are a cloned binary");
 
-	/* Get the log pipe */
-	logfd = logpipe();
-
-	write_log(DEBUG, "%s started", __FUNCTION__);
+	write_log(DEBUG, "nsexec started");
 
 	/* Parse all of the netlink configuration. */
 	nl_parse(pipenum, &config);

@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 func TestLoggingToFile(t *testing.T) {
@@ -104,11 +106,11 @@ func runLogForwarding(t *testing.T) (*os.File, string, chan struct{}) {
 	}
 	logFile := tempFile.Name()
 
-	logConfig := &LoggingConfiguration{LogFormat: "json", LogFilePath: logFile}
+	logConfig := Config{LogLevel: logrus.InfoLevel, LogFormat: "json", LogFilePath: logFile}
 	return logW, logFile, startLogForwarding(t, logConfig, logR)
 }
 
-func startLogForwarding(t *testing.T, logConfig *LoggingConfiguration, logR *os.File) chan struct{} {
+func startLogForwarding(t *testing.T, logConfig Config, logR *os.File) chan struct{} {
 	loggingConfigured = false
 	if err := ConfigureLogging(logConfig); err != nil {
 		t.Fatal(err)

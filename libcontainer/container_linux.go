@@ -19,7 +19,7 @@ import (
 	"syscall" // only for SysProcAttr and Signal
 	"time"
 
-	securejoin "github.com/cyphar/filepath-securejoin"
+	"github.com/cyphar/filepath-securejoin"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
@@ -497,6 +497,7 @@ func (c *linuxContainer) commandTemplate(p *Process, childPipe *os.File, logPipe
 	cmd.ExtraFiles = append(cmd.ExtraFiles, logPipe)
 	cmd.Env = append(cmd.Env,
 		fmt.Sprintf("_LIBCONTAINER_LOGPIPE=%d", stdioFdCount+len(cmd.ExtraFiles)-1),
+		fmt.Sprintf("_LIBCONTAINER_LOGLEVEL=%s", p.LogLevel),
 	)
 
 	// NOTE: when running a container with no PID namespace and the parent process spawning the container is

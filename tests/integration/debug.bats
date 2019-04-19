@@ -33,6 +33,8 @@ function teardown() {
   run cat log.out
   [ "$status" -eq 0 ]
   [[ "${output}" == *"level=debug"* ]]
+  [[ "${output}" == *"nsexec started"* ]]
+  [[ "${output}" == *"child process in init()"* ]]
 }
 
 @test "global --debug to --log --log-format 'text'" {
@@ -50,6 +52,8 @@ function teardown() {
   run cat log.out
   [ "$status" -eq 0 ]
   [[ "${output}" == *"level=debug"* ]]
+  [[ "${output}" == *"nsexec started"* ]]
+  [[ "${output}" == *"child process in init()"* ]]
 }
 
 @test "global --debug to --log --log-format 'json'" {
@@ -67,4 +71,6 @@ function teardown() {
   run cat log.out
   [ "$status" -eq 0 ]
   [[ "${output}" == *'"level":"debug"'* ]]
+  [[ "${output}" == *"nsexec started"* ]]
+  [[ "${output}" == *"child process in init()"* ]]
 }

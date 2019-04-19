@@ -2,13 +2,14 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"runtime"
+
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/logs"
 	_ "github.com/opencontainers/runc/libcontainer/nsenter"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
-	"os"
-	"runtime"
 )
 
 func init() {
@@ -16,10 +17,16 @@ func init() {
 		runtime.GOMAXPROCS(1)
 		runtime.LockOSThread()
 
-		err := logs.ConfigureLogging(&logs.LoggingConfiguration{
+		level := os.Getenv("_LIBCONTAINER_LOGLEVEL")
+		logLevel, err := logrus.ParseLevel(level)
+		if err != nil {
+			panic(fmt.Sprintf("libcontainer: failed to parse log level: %q: %v", level, err))
+		}
+
+		err = logs.ConfigureLogging(logs.Config{
 			LogPipeFd: os.Getenv("_LIBCONTAINER_LOGPIPE"),
 			LogFormat: "json",
-			IsDebug:   true,
+			LogLevel:  logLevel,
 		})
 		if err != nil {
 			panic(fmt.Sprintf("libcontainer: failed to configure logging: %v", err))

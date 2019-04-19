@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/opencontainers/runc/libcontainer/logs"
 	"io"
 	"os"
 	"strings"
+
+	"github.com/opencontainers/runc/libcontainer/logs"
 
 	"github.com/opencontainers/runtime-spec/specs-go"
 
@@ -134,11 +135,7 @@ func main() {
 		updateCommand,
 	}
 	app.Before = func(context *cli.Context) error {
-		loggingConfig, err := createLoggingConfiguration(context)
-		if err != nil {
-			return fmt.Errorf("failed to create logging configuration: %v", err)
-		}
-		return logs.ConfigureLogging(loggingConfig)
+		return logs.ConfigureLogging(createLogConfig(context))
 	}
 
 	// If the command returns an error, cli takes upon itself to print
@@ -159,16 +156,15 @@ func (f *FatalWriter) Write(p []byte) (n int, err error) {
 	return f.cliErrWriter.Write(p)
 }
 
-func createLoggingConfiguration(context *cli.Context) (*logs.LoggingConfiguration, error) {
-	config := logs.LoggingConfiguration{
-		IsDebug:     context.GlobalBool("debug"),
+func createLogConfig(context *cli.Context) logs.Config {
+	config := logs.Config{
+		LogLevel:    logrus.InfoLevel,
 		LogFilePath: context.GlobalString("log"),
 		LogFormat:   context.GlobalString("log-format"),
 	}
-
-	if envLogPipe, ok := os.LookupEnv("_LIBCONTAINER_LOGPIPE"); ok {
-		config.LogPipeFd = envLogPipe
+	if context.GlobalBool("debug") {
+		config.LogLevel = logrus.DebugLevel
 	}
 
-	return &config, nil
+	return config
 }

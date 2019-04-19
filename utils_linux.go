@@ -105,7 +105,7 @@ func getDefaultImagePath(context *cli.Context) string {
 
 // newProcess returns a new libcontainer Process with the arguments from the
 // spec and stdio from the current process.
-func newProcess(p specs.Process, init bool) (*libcontainer.Process, error) {
+func newProcess(p specs.Process, init bool, logLevel string) (*libcontainer.Process, error) {
 	lp := &libcontainer.Process{
 		Args: p.Args,
 		Env:  p.Env,
@@ -116,6 +116,7 @@ func newProcess(p specs.Process, init bool) (*libcontainer.Process, error) {
 		NoNewPrivileges: &p.NoNewPrivileges,
 		AppArmorProfile: p.ApparmorProfile,
 		Init:            init,
+		LogLevel:        logLevel,
 	}
 
 	if p.ConsoleSize != nil {
@@ -264,6 +265,7 @@ type runner struct {
 	action          CtAct
 	notifySocket    *notifySocket
 	criuOpts        *libcontainer.CriuOpts
+	logLevel        string
 }
 
 func (r *runner) run(config *specs.Process) (int, error) {
@@ -271,7 +273,7 @@ func (r *runner) run(config *specs.Process) (int, error) {
 		r.destroy()
 		return -1, err
 	}
-	process, err := newProcess(*config, r.init)
+	process, err := newProcess(*config, r.init, r.logLevel)
 	if err != nil {
 		r.destroy()
 		return -1, err
@@ -430,6 +432,12 @@ func startContainer(context *cli.Context, spec *specs.Spec, action CtAct, criuOp
 	if os.Getenv("LISTEN_FDS") != "" {
 		listenFDs = activation.Files(false)
 	}
+
+	logLevel := "info"
+	if context.GlobalBool("debug") {
+		logLevel = "debug"
+	}
+
 	r := &runner{
 		enableSubreaper: !context.Bool("no-subreaper"),
 		shouldDestroy:   true,
@@ -443,6 +451,7 @@ func startContainer(context *cli.Context, spec *specs.Spec, action CtAct, criuOp
 		action:          action,
 		criuOpts:        criuOpts,
 		init:            true,
+		logLevel:        logLevel,
 	}
 	return r.run(spec.Process)
 }

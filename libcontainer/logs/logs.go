@@ -7,27 +7,26 @@ import (
 	"io"
 	"os"
 	"strconv"
+	"sync"
 
 	"github.com/sirupsen/logrus"
 )
 
-// loggingConfigured will be set once logging has been configured via invoking `ConfigureLogging`.
-// Subsequent invocations of `ConfigureLogging` would be no-op
-var loggingConfigured = false
+var (
+	mutex = &sync.Mutex{}
+	// loggingConfigured will be set once logging has been configured via invoking `ConfigureLogging`.
+	// Subsequent invocations of `ConfigureLogging` would be no-op
+	loggingConfigured = false
+)
 
-type LoggingConfiguration struct {
-	IsDebug     bool
+type Config struct {
+	LogLevel    logrus.Level
 	LogFormat   string
 	LogFilePath string
 	LogPipeFd   string
 }
 
 func ForwardLogs(logPipe io.Reader) {
-	type jsonLog struct {
-		Level string `json:"level"`
-		Msg   string `json:"msg"`
-	}
-
 	lineReader := bufio.NewReader(logPipe)
 	for {
 		line, err := lineReader.ReadBytes('\n')
@@ -83,68 +82,40 @@ func log(level logrus.Level, args ...interface{}) {
 	}
 }
 
-func ConfigureLogging(loggingConfig *LoggingConfiguration) error {
+func ConfigureLogging(config Config) error {
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	if loggingConfigured {
-		logrus.Debug("logging has been already configured")
+		logrus.Debug("logging has already been configured")
 		return nil
 	}
 
-	configureLogLevel(loggingConfig)
-	if err := configureLogOutput(loggingConfig); err != nil {
-		return err
-	}
-	if err := configureLogFormat(loggingConfig); err != nil {
-		return err
-	}
+	logrus.SetLevel(config.LogLevel)
 
-	loggingConfigured = true
-	return nil
-}
-
-func configureLogLevel(loggingConfig *LoggingConfiguration) {
-	if loggingConfig.IsDebug {
-		logrus.SetLevel(logrus.DebugLevel)
-	}
-}
-
-func configureLogOutput(loggingConfig *LoggingConfiguration) error {
-	if loggingConfig.LogFilePath != "" {
-		return configureLogFileOutput(loggingConfig.LogFilePath)
-	}
-
-	if loggingConfig.LogPipeFd != "" {
-		logPipeFdInt, err := strconv.Atoi(loggingConfig.LogPipeFd)
+	if config.LogPipeFd != "" {
+		logPipeFdInt, err := strconv.Atoi(config.LogPipeFd)
 		if err != nil {
-			return fmt.Errorf("failed to convert _LIBCONTAINER_LOGPIPE environment variable value %q to int: %v", loggingConfig.LogPipeFd, err)
+			return fmt.Errorf("failed to convert _LIBCONTAINER_LOGPIPE environment variable value %q to int: %v", config.LogPipeFd, err)
 		}
-		configureLogPipeOutput(logPipeFdInt)
-		return nil
+		logrus.SetOutput(os.NewFile(uintptr(logPipeFdInt), "logpipe"))
+	} else if config.LogFilePath != "" {
+		f, err := os.OpenFile(config.LogFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND|os.O_SYNC, 0644)
+		if err != nil {
+			return err
+		}
+		logrus.SetOutput(f)
 	}
 
-	return nil
-}
-
-func configureLogPipeOutput(logPipeFd int) {
-	logrus.SetOutput(os.NewFile(uintptr(logPipeFd), "logpipe"))
-}
-
-func configureLogFileOutput(logFilePath string) error {
-	f, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND|os.O_SYNC, 0644)
-	if err != nil {
-		return err
-	}
-	logrus.SetOutput(f)
-	return nil
-}
-
-func configureLogFormat(loggingConfig *LoggingConfiguration) error {
-	switch loggingConfig.LogFormat {
+	switch config.LogFormat {
 	case "text":
 		// retain logrus's default.
 	case "json":
 		logrus.SetFormatter(new(logrus.JSONFormatter))
 	default:
-		return fmt.Errorf("unknown log-format %q", loggingConfig.LogFormat)
+		return fmt.Errorf("unknown log-format %q", config.LogFormat)
 	}
+
+	loggingConfigured = true
 	return nil
 }
