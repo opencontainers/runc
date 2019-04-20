@@ -497,13 +497,19 @@ _runc_checkpoint() {
 	   --ext-unix-sk
 	   --shell-job
 	   --file-locks
+	   --lazy-pages
+	   --pre-dump
+	   --auto-dedup
 	"
 
 	local options_with_args="
 	   --image-path
 	   --work-path
+	   --parent-path
+	   --status-fd
 	   --page-server
 	   --manage-cgroups-mode
+	   --empty-ns
 	"
 
 	case "$prev" in
@@ -605,15 +611,19 @@ _runc_restore() {
 	   -d
 	   --no-subreaper
 	   --no-pivot
+	   --auto-dedup
+	   --lazy-pages
 	"
 
 	local options_with_args="
+	   --console-socket
 	   -b
 	   --bundle
 	   --image-path
 	   --work-path
 	   --manage-cgroups-mode
 	   --pid-file
+	   --empty-ns
 	"
 
 	local all_options="$options_with_args $boolean_options"
