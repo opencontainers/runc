@@ -60,26 +60,7 @@ func processEntry(text []byte) {
 		logrus.Errorf("failed to parse log level %q: %v\n", jl.Level, err)
 		return
 	}
-	log(lvl, jl.Msg)
-}
-
-func log(level logrus.Level, args ...interface{}) {
-	switch level {
-	case logrus.PanicLevel:
-		logrus.Panic(args...)
-	case logrus.FatalLevel:
-		logrus.Fatal(args...)
-	case logrus.ErrorLevel:
-		logrus.Error(args...)
-	case logrus.WarnLevel:
-		logrus.Warn(args...)
-	case logrus.InfoLevel:
-		logrus.Info(args...)
-	case logrus.DebugLevel:
-		logrus.Debug(args...)
-	default:
-		logrus.Warnf("Unsupported log level %v while trying to log '%#v'", level, args)
-	}
+	logrus.StandardLogger().Logf(lvl, jl.Msg)
 }
 
 func ConfigureLogging(config Config) error {
