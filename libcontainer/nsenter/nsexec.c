@@ -37,9 +37,6 @@ enum sync_t {
 	SYNC_RECVPID_ACK = 0x43,	/* PID was correctly received by parent. */
 	SYNC_GRANDCHILD = 0x44,	/* The grandchild is ready to run. */
 	SYNC_CHILD_READY = 0x45,	/* The child or grandchild is ready to return. */
-
-	/* XXX: This doesn't help with segfaults and other such issues. */
-	SYNC_ERR = 0xFF,	/* Fatal error, no turning back. The error code follows. */
 };
 
 /*
@@ -102,7 +99,7 @@ struct nlconfig_t {
 #define INFO    "info"
 #define DEBUG   "debug"
 
-int logfd;
+static int logfd = -1;
 
 /*
  * List of netlink message types sent to us as part of bootstrapping the init.
@@ -140,16 +137,17 @@ int setns(int fd, int nstype)
 }
 #endif
 
-void write_log_with_info(const char *level, const char *function, int line, const char *format, ...)
+static void write_log_with_info(const char *level, const char *function, int line, const char *format, ...)
 {
-	static char message[1024];
+	char message[1024] = {};
+
 	va_list args;
 
 	if (logfd < 0 || level == NULL)
 		return;
 
 	va_start(args, format);
-	if (vsnprintf(message, 1024, format, args) < 0)
+	if (vsnprintf(message, sizeof(message), format, args) < 0)
 		return;
 	va_end(args);
 
@@ -158,24 +156,15 @@ void write_log_with_info(const char *level, const char *function, int line, cons
 }
 
 #define write_log(level, fmt, ...) \
-	write_log_with_info(level, __FUNCTION__, __LINE__, fmt, ##__VA_ARGS__)
+	write_log_with_info((level), __FUNCTION__, __LINE__, (fmt), ##__VA_ARGS__)
 
 /* XXX: This is ugly. */
 static int syncfd = -1;
 
-/* TODO(cyphar): Fix this so it correctly deals with syncT. */
-#define bail(fmt, ...)								\
-	do {									\
-		int ret = __COUNTER__ + 1;					\
-		write_log(DEBUG, "nsenter: " fmt ": %m", ##__VA_ARGS__);	\
-		if (syncfd >= 0) {						\
-			enum sync_t s = SYNC_ERR;				\
-			if (write(syncfd, &s, sizeof(s)) != sizeof(s))		\
-				write_log(DEBUG, "nsenter: failed: write(s)");	\
-			if (write(syncfd, &ret, sizeof(ret)) != sizeof(ret))	\
-				write_log(DEBUG, "nsenter: failed: write(ret)");	\
-		}								\
-		exit(ret);							\
+#define bail(fmt, ...)                                       \
+	do {                                                       \
+		write_log(FATAL, "nsenter: " fmt ": %m", ##__VA_ARGS__); \
+		exit(1);                                                 \
 	} while(0)
 
 static int write_file(char *data, size_t data_len, char *pathfmt, ...)
@@ -387,7 +376,6 @@ static void setup_logpipe(void)
 
 	logpipe = getenv("_LIBCONTAINER_LOGPIPE");
 	if (logpipe == NULL || *logpipe == '\0') {
-		logfd = -1;
 		return;
 	}
 
@@ -731,7 +719,6 @@ void nsexec(void)
 			 */
 			while (!ready) {
 				enum sync_t s;
-				int ret;
 
 				syncfd = sync_child_pipe[1];
 				close(sync_child_pipe[0]);
@@ -740,12 +727,6 @@ void nsexec(void)
 					bail("failed to sync with child: next state");
 
 				switch (s) {
-				case SYNC_ERR:
-					/* We have to mirror the error code of the child. */
-					if (read(syncfd, &ret, sizeof(ret)) != sizeof(ret))
-						bail("failed to sync with child: read(error code)");
-
-					exit(ret);
 				case SYNC_USERMAP_PLS:
 					/*
 					 * Enable setgroups(2) if we've been asked to. But we also
@@ -814,7 +795,6 @@ void nsexec(void)
 			ready = false;
 			while (!ready) {
 				enum sync_t s;
-				int ret;
 
 				syncfd = sync_grandchild_pipe[1];
 				close(sync_grandchild_pipe[0]);
@@ -829,12 +809,6 @@ void nsexec(void)
 					bail("failed to sync with child: next state");
 
 				switch (s) {
-				case SYNC_ERR:
-					/* We have to mirror the error code of the child. */
-					if (read(syncfd, &ret, sizeof(ret)) != sizeof(ret))
-						bail("failed to sync with child: read(error code)");
-
-					exit(ret);
 				case SYNC_CHILD_READY:
 					ready = true;
 					break;
