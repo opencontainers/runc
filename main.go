@@ -87,7 +87,7 @@ func main() {
 		},
 		cli.StringFlag{
 			Name:  "log",
-			Value: "/dev/null",
+			Value: "/dev/stderr",
 			Usage: "set the log file path where internal debug information is written",
 		},
 		cli.StringFlag{

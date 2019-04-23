@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	mutex = &sync.Mutex{}
+	configureMutex = sync.Mutex{}
 	// loggingConfigured will be set once logging has been configured via invoking `ConfigureLogging`.
 	// Subsequent invocations of `ConfigureLogging` would be no-op
 	loggingConfigured = false
@@ -64,8 +64,8 @@ func processEntry(text []byte) {
 }
 
 func ConfigureLogging(config Config) error {
-	mutex.Lock()
-	defer mutex.Unlock()
+	configureMutex.Lock()
+	defer configureMutex.Unlock()
 
 	if loggingConfigured {
 		logrus.Debug("logging has already been configured")

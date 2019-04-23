@@ -65,7 +65,7 @@ function runc() {
 
 # Raw wrapper for runc.
 function __runc() {
-	"$RUNC" ${RUNC_USE_SYSTEMD+--systemd-cgroup} --log /proc/self/fd/2 --root "$ROOT" "$@"
+	"$RUNC" ${RUNC_USE_SYSTEMD+--systemd-cgroup} --root "$ROOT" "$@"
 }
 
 # Wrapper for runc spec, which takes only one argument (the bundle path).

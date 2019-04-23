@@ -22,8 +22,8 @@ type pid struct {
 }
 
 type logentry struct {
-	Msg   string
-	Level string
+	Msg   string `json:"msg"`
+	Level string `json:"level"`
 }
 
 func TestNsenterValidPaths(t *testing.T) {

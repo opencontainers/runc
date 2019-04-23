@@ -439,24 +439,24 @@ func (c *linuxContainer) includeExecFifo(cmd *exec.Cmd) error {
 }
 
 func (c *linuxContainer) newParentProcess(p *Process) (parentProcess, error) {
-	parentPipe, childPipe, err := utils.NewSockPair("init")
+	parentInitPipe, childInitPipe, err := utils.NewSockPair("init")
 	if err != nil {
 		return nil, newSystemErrorWithCause(err, "creating new init pipe")
 	}
-	messagePipe := readWritePair{parentPipe, childPipe}
+	messageSockPair := filePair{parentInitPipe, childInitPipe}
 
-	r, w, err := os.Pipe()
+	parentLogPipe, childLogPipe, err := os.Pipe()
 	if err != nil {
 		return nil, fmt.Errorf("Unable to create the log pipe:  %s", err)
 	}
-	logPipe := readWritePair{r, w}
+	logFilePair := filePair{parentLogPipe, childLogPipe}
 
-	cmd, err := c.commandTemplate(p, childPipe, logPipe.w)
+	cmd, err := c.commandTemplate(p, childInitPipe, childLogPipe)
 	if err != nil {
 		return nil, newSystemErrorWithCause(err, "creating new command template")
 	}
 	if !p.Init {
-		return c.newSetnsProcess(p, cmd, messagePipe, logPipe)
+		return c.newSetnsProcess(p, cmd, messageSockPair, logFilePair)
 	}
 
 	// We only set up fifoFd if we're not doing a `runc exec`. The historic
@@ -467,10 +467,10 @@ func (c *linuxContainer) newParentProcess(p *Process) (parentProcess, error) {
 	if err := c.includeExecFifo(cmd); err != nil {
 		return nil, newSystemErrorWithCause(err, "including execfifo in cmd.Exec setup")
 	}
-	return c.newInitProcess(p, cmd, messagePipe, logPipe)
+	return c.newInitProcess(p, cmd, messageSockPair, logFilePair)
 }
 
-func (c *linuxContainer) commandTemplate(p *Process, childPipe *os.File, logPipe *os.File) (*exec.Cmd, error) {
+func (c *linuxContainer) commandTemplate(p *Process, childInitPipe *os.File, childLogPipe *os.File) (*exec.Cmd, error) {
 	cmd := exec.Command(c.initPath, c.initArgs[1:]...)
 	cmd.Args[0] = c.initArgs[0]
 	cmd.Stdin = p.Stdin
@@ -488,13 +488,13 @@ func (c *linuxContainer) commandTemplate(p *Process, childPipe *os.File, logPipe
 			fmt.Sprintf("_LIBCONTAINER_CONSOLE=%d", stdioFdCount+len(cmd.ExtraFiles)-1),
 		)
 	}
-	cmd.ExtraFiles = append(cmd.ExtraFiles, childPipe)
+	cmd.ExtraFiles = append(cmd.ExtraFiles, childInitPipe)
 	cmd.Env = append(cmd.Env,
 		fmt.Sprintf("_LIBCONTAINER_INITPIPE=%d", stdioFdCount+len(cmd.ExtraFiles)-1),
 		fmt.Sprintf("_LIBCONTAINER_STATEDIR=%s", c.root),
 	)
 
-	cmd.ExtraFiles = append(cmd.ExtraFiles, logPipe)
+	cmd.ExtraFiles = append(cmd.ExtraFiles, childLogPipe)
 	cmd.Env = append(cmd.Env,
 		fmt.Sprintf("_LIBCONTAINER_LOGPIPE=%d", stdioFdCount+len(cmd.ExtraFiles)-1),
 		fmt.Sprintf("_LIBCONTAINER_LOGLEVEL=%s", p.LogLevel),
@@ -509,7 +509,7 @@ func (c *linuxContainer) commandTemplate(p *Process, childPipe *os.File, logPipe
 	return cmd, nil
 }
 
-func (c *linuxContainer) newInitProcess(p *Process, cmd *exec.Cmd, initPipe, logPipe readWritePair) (*initProcess, error) {
+func (c *linuxContainer) newInitProcess(p *Process, cmd *exec.Cmd, messageSockPair, logFilePair filePair) (*initProcess, error) {
 	cmd.Env = append(cmd.Env, "_LIBCONTAINER_INITTYPE="+string(initStandard))
 	nsMaps := make(map[configs.NamespaceType]string)
 	for _, ns := range c.config.Namespaces {
@@ -524,9 +524,8 @@ func (c *linuxContainer) newInitProcess(p *Process, cmd *exec.Cmd, initPipe, log
 	}
 	init := &initProcess{
 		cmd:             cmd,
-		childPipe:       initPipe.w,
-		parentPipe:      initPipe.r,
-		logPipe:         logPipe,
+		messageSockPair: messageSockPair,
+		logFilePair:     logFilePair,
 		manager:         c.cgroupManager,
 		intelRdtManager: c.intelRdtManager,
 		config:          c.newInitConfig(p),
@@ -539,7 +538,7 @@ func (c *linuxContainer) newInitProcess(p *Process, cmd *exec.Cmd, initPipe, log
 	return init, nil
 }
 
-func (c *linuxContainer) newSetnsProcess(p *Process, cmd *exec.Cmd, nsPipe, logPipe readWritePair) (*setnsProcess, error) {
+func (c *linuxContainer) newSetnsProcess(p *Process, cmd *exec.Cmd, messageSockPair, logFilePair filePair) (*setnsProcess, error) {
 	cmd.Env = append(cmd.Env, "_LIBCONTAINER_INITTYPE="+string(initSetns))
 	state, err := c.currentState()
 	if err != nil {
@@ -556,9 +555,8 @@ func (c *linuxContainer) newSetnsProcess(p *Process, cmd *exec.Cmd, nsPipe, logP
 		cgroupPaths:     c.cgroupManager.GetPaths(),
 		rootlessCgroups: c.config.RootlessCgroups,
 		intelRdtPath:    state.IntelRdtPath,
-		childPipe:       nsPipe.w,
-		parentPipe:      nsPipe.r,
-		logPipe:         logPipe,
+		messageSockPair: messageSockPair,
+		logFilePair:     logFilePair,
 		config:          c.newInitConfig(p),
 		process:         p,
 		bootstrapData:   data,
