@@ -337,6 +337,9 @@ func (p *initProcess) start() error {
 		if err != nil {
 			// TODO: should not be the responsibility to call here
 			p.manager.Destroy()
+			if p.intelRdtManager != nil {
+				p.intelRdtManager.Destroy()
+			}
 		}
 	}()
 	if err := p.createNetworkInterfaces(); err != nil {
