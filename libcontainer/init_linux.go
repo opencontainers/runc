@@ -473,12 +473,12 @@ func isNoChildren(err error) bool {
 // exit status and only if it is will a wait be performed.
 func signalAllProcesses(m cgroups.Manager, s os.Signal) error {
 	var procs []*os.Process
-	if err := m.Freeze(configs.Frozen); err != nil {
+	if err := m.Freeze(configs.Frozen, true); err != nil {
 		logrus.Warn(err)
 	}
-	pids, err := m.GetAllPids()
+	pids, err := m.GetPids()
 	if err != nil {
-		m.Freeze(configs.Thawed)
+		m.Freeze(configs.Thawed, true)
 		return err
 	}
 	for _, pid := range pids {
@@ -492,7 +492,7 @@ func signalAllProcesses(m cgroups.Manager, s os.Signal) error {
 			logrus.Warn(err)
 		}
 	}
-	if err := m.Freeze(configs.Thawed); err != nil {
+	if err := m.Freeze(configs.Thawed, true); err != nil {
 		logrus.Warn(err)
 	}
 

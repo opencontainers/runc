@@ -20,6 +20,7 @@ import (
 	selinux "github.com/opencontainers/selinux/go-selinux"
 
 	"github.com/coreos/go-systemd/activation"
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -232,6 +233,7 @@ func createContainer(context *cli.Context, id string, spec *specs.Spec) (libcont
 		return nil, err
 	}
 	config, err := specconv.CreateLibcontainerConfig(&specconv.CreateOpts{
+		ContainerId:      uuid.New().String(),
 		CgroupName:       id,
 		UseSystemdCgroup: context.GlobalBool("systemd-cgroup"),
 		NoPivotRoot:      context.Bool("no-pivot"),

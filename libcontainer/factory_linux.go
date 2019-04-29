@@ -51,10 +51,11 @@ func InitArgs(args ...string) func(*LinuxFactory) error {
 // SystemdCgroups is an options func to configure a LinuxFactory to return
 // containers that use systemd to create and manage cgroups.
 func SystemdCgroups(l *LinuxFactory) error {
-	l.NewCgroupsManager = func(config *configs.Cgroup, paths map[string]string) cgroups.Manager {
+	l.NewCgroupsManager = func(containerId string, config *configs.Cgroup, paths map[string]string) cgroups.Manager {
 		return &systemd.Manager{
-			Cgroups: config,
-			Paths:   paths,
+			ContainerId: containerId,
+			Cgroups:     config,
+			Paths:       paths,
 		}
 	}
 	return nil
@@ -64,10 +65,11 @@ func SystemdCgroups(l *LinuxFactory) error {
 // that use the native cgroups filesystem implementation to create and manage
 // cgroups.
 func Cgroupfs(l *LinuxFactory) error {
-	l.NewCgroupsManager = func(config *configs.Cgroup, paths map[string]string) cgroups.Manager {
+	l.NewCgroupsManager = func(containerId string, config *configs.Cgroup, paths map[string]string) cgroups.Manager {
 		return &fs.Manager{
-			Cgroups: config,
-			Paths:   paths,
+			ContainerId: containerId,
+			Cgroups:     config,
+			Paths:       paths,
 		}
 	}
 	return nil
@@ -80,7 +82,7 @@ func Cgroupfs(l *LinuxFactory) error {
 // during rootless container (including euid=0 in userns) setup (while still allowing cgroup usage if
 // they've been set up properly).
 func RootlessCgroupfs(l *LinuxFactory) error {
-	l.NewCgroupsManager = func(config *configs.Cgroup, paths map[string]string) cgroups.Manager {
+	l.NewCgroupsManager = func(containerId string, config *configs.Cgroup, paths map[string]string) cgroups.Manager {
 		return &fs.Manager{
 			Cgroups:  config,
 			Rootless: true,
@@ -180,7 +182,7 @@ type LinuxFactory struct {
 	Validator validate.Validator
 
 	// NewCgroupsManager returns an initialized cgroups manager for a single container.
-	NewCgroupsManager func(config *configs.Cgroup, paths map[string]string) cgroups.Manager
+	NewCgroupsManager func(containerId string, config *configs.Cgroup, paths map[string]string) cgroups.Manager
 
 	// NewIntelRdtManager returns an initialized Intel RDT manager for a single container.
 	NewIntelRdtManager func(config *configs.Config, id string, path string) intelrdt.Manager
@@ -213,6 +215,7 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 	}
 	c := &linuxContainer{
 		id:            id,
+		uuid:          config.ContainerId,
 		root:          containerRoot,
 		config:        config,
 		initPath:      l.InitPath,
@@ -220,7 +223,7 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 		criuPath:      l.CriuPath,
 		newuidmapPath: l.NewuidmapPath,
 		newgidmapPath: l.NewgidmapPath,
-		cgroupManager: l.NewCgroupsManager(config.Cgroups, nil),
+		cgroupManager: l.NewCgroupsManager(config.ContainerId, config.Cgroups, nil),
 	}
 	if intelrdt.IsCatEnabled() || intelrdt.IsMbaEnabled() {
 		c.intelRdtManager = l.NewIntelRdtManager(config, id, "")
@@ -254,13 +257,14 @@ func (l *LinuxFactory) Load(id string) (Container, error) {
 		initProcess:          r,
 		initProcessStartTime: state.InitProcessStartTime,
 		id:                   id,
+		uuid:                 state.UUID,
 		config:               &state.Config,
 		initPath:             l.InitPath,
 		initArgs:             l.InitArgs,
 		criuPath:             l.CriuPath,
 		newuidmapPath:        l.NewuidmapPath,
 		newgidmapPath:        l.NewgidmapPath,
-		cgroupManager:        l.NewCgroupsManager(state.Config.Cgroups, state.CgroupPaths),
+		cgroupManager:        l.NewCgroupsManager(state.UUID, state.Config.Cgroups, state.CgroupPaths),
 		root:                 containerRoot,
 		created:              state.Created,
 	}
