@@ -3,6 +3,8 @@
 package fs
 
 import (
+	"strings"
+
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/system"
@@ -30,10 +32,25 @@ func (s *DevicesGroup) Set(path string, cgroup *configs.Cgroup) error {
 		return nil
 	}
 
+	devList, err := readFile(path, "devices.list")
+	if err != nil {
+		return err
+	}
+
 	devices := cgroup.Resources.Devices
 	if len(devices) > 0 {
 		for _, dev := range devices {
 			file := "devices.deny"
+			//The first time:
+			// 	1. write 'a *:* rwm' to devices.deny
+			//  2. add all allowed devices in a loop
+			//Any further updates(from k8s, or docker cli):
+			//  1. skip 'deny all' procedure if it's not the first time. ( Check if 'a *:* rmw' exists or not)
+			//  2. add all allowed devices to current devices.list (if already exists, nothing happen)
+
+			if !dev.Allow && !strings.HasPrefix(devList, "a *:* rwm") && dev.CgroupString() == "a *:* rwm" {
+				continue
+			}
 			if dev.Allow {
 				file = "devices.allow"
 			}
@@ -45,8 +62,10 @@ func (s *DevicesGroup) Set(path string, cgroup *configs.Cgroup) error {
 	}
 	if cgroup.Resources.AllowAllDevices != nil {
 		if *cgroup.Resources.AllowAllDevices == false {
-			if err := writeFile(path, "devices.deny", "a"); err != nil {
-				return err
+			if strings.HasPrefix(devList, "a *:* rwm") {
+				if err := writeFile(path, "devices.deny", "a"); err != nil {
+					return err
+				}
 			}
 
 			for _, dev := range cgroup.Resources.AllowedDevices {
