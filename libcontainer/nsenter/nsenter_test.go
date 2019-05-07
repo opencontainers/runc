@@ -21,6 +21,11 @@ type pid struct {
 	Pid int `json:"Pid"`
 }
 
+type logentry struct {
+	Msg   string `json:"msg"`
+	Level string `json:"level"`
+}
+
 func TestNsenterValidPaths(t *testing.T) {
 	args := []string{"nsenter-exec"}
 	parent, child, err := newPipe()
@@ -156,6 +161,65 @@ func TestNsenterIncorrectPathType(t *testing.T) {
 
 	if err := cmd.Wait(); err == nil {
 		t.Fatalf("nsenter exits with a zero exit status")
+	}
+}
+
+func TestNsenterChildLogging(t *testing.T) {
+	args := []string{"nsenter-exec"}
+	parent, child, err := newPipe()
+	if err != nil {
+		t.Fatalf("failed to create exec pipe %v", err)
+	}
+	logread, logwrite, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("failed to create log pipe %v", err)
+	}
+	defer logread.Close()
+	defer logwrite.Close()
+
+	namespaces := []string{
+		// join pid ns of the current process
+		fmt.Sprintf("pid:/proc/%d/ns/pid", os.Getpid()),
+	}
+	cmd := &exec.Cmd{
+		Path:       os.Args[0],
+		Args:       args,
+		ExtraFiles: []*os.File{child, logwrite},
+		Env:        []string{"_LIBCONTAINER_INITPIPE=3", "_LIBCONTAINER_LOGPIPE=4"},
+		Stdout:     os.Stdout,
+		Stderr:     os.Stderr,
+	}
+
+	if err := cmd.Start(); err != nil {
+		t.Fatalf("nsenter failed to start %v", err)
+	}
+	// write cloneFlags
+	r := nl.NewNetlinkRequest(int(libcontainer.InitMsg), 0)
+	r.AddData(&libcontainer.Int32msg{
+		Type:  libcontainer.CloneFlagsAttr,
+		Value: uint32(unix.CLONE_NEWNET),
+	})
+	r.AddData(&libcontainer.Bytemsg{
+		Type:  libcontainer.NsPathsAttr,
+		Value: []byte(strings.Join(namespaces, ",")),
+	})
+	if _, err := io.Copy(parent, bytes.NewReader(r.Serialize())); err != nil {
+		t.Fatal(err)
+	}
+
+	logsDecoder := json.NewDecoder(logread)
+	var logentry *logentry
+
+	err = logsDecoder.Decode(&logentry)
+	if err != nil {
+		t.Fatalf("child log: %v", err)
+	}
+	if logentry.Level == "" || logentry.Msg == "" {
+		t.Fatalf("child log: empty log fileds: level=\"%s\" msg=\"%s\"", logentry.Level, logentry.Msg)
+	}
+
+	if err := cmd.Wait(); err != nil {
+		t.Fatalf("nsenter exits with a non-zero exit status")
 	}
 }
 
