@@ -69,6 +69,21 @@ func (s *CpuGroup) Set(path string, cgroup *configs.Cgroup) error {
 			return err
 		}
 	}
+	// The order of setting cfs_quota_us and cfs_period_us is significant, since setting cgroup child node
+	// quota/period ratio to a value higher than its parent would be rejected by linux kernel with invalid arugment.
+	// And setting quota/period is a two-steps no-automic operation in the middle of which the change would
+	// be rejected by kernel if the order of quota/peroid changes is fixed. E.g.
+	// Say parent -> child tree have quota/period set as following n1(100000/100000)->n2 (100000/100000)->n3(100000/100000)
+	// 1. setting n3 to 10000/10000 should have different order than setting n3 to 1000000/1000000, because in the middle,
+	// the quota/period ratio of 100000/10000 and 1000000/100000 is not valid
+	// 2. setting n1 to 10000/10000 or 1000000/1000000 is similiar to case 1
+	// 3. setting n2, a middle node in the cgroup tree,  to 10000/10000 is not possbile without setting quota to infinite first.
+	// To cover all valid cases, set quota to infinite first, and then change period, and then quota.
+	if cgroup.Resources.CpuQuota != 0 {
+		if err := writeFile(path, "cpu.cfs_quota_us", "-1"); err != nil {
+			return err
+		}
+	}
 	if cgroup.Resources.CpuPeriod != 0 {
 		if err := writeFile(path, "cpu.cfs_period_us", strconv.FormatUint(cgroup.Resources.CpuPeriod, 10)); err != nil {
 			return err
