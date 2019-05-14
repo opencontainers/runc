@@ -87,7 +87,7 @@ func main() {
 		},
 		cli.StringFlag{
 			Name:  "log",
-			Value: "/dev/stderr",
+			Value: "",
 			Usage: "set the log file path where internal debug information is written",
 		},
 		cli.StringFlag{
@@ -157,9 +157,15 @@ func (f *FatalWriter) Write(p []byte) (n int, err error) {
 }
 
 func createLogConfig(context *cli.Context) logs.Config {
+	logFilePath := context.GlobalString("log")
+	logPipeFd := ""
+	if logFilePath == "" {
+		logPipeFd = "2"
+	}
 	config := logs.Config{
+		LogPipeFd:   logPipeFd,
 		LogLevel:    logrus.InfoLevel,
-		LogFilePath: context.GlobalString("log"),
+		LogFilePath: logFilePath,
 		LogFormat:   context.GlobalString("log-format"),
 	}
 	if context.GlobalBool("debug") {
