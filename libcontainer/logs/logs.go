@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strconv"
 	"sync"
 
 	"github.com/sirupsen/logrus"
@@ -23,7 +22,7 @@ type Config struct {
 	LogLevel    logrus.Level
 	LogFormat   string
 	LogFilePath string
-	LogPipeFd   string
+	LogFd       uintptr
 }
 
 func ForwardLogs(logPipe io.Reader) {
@@ -74,12 +73,8 @@ func ConfigureLogging(config Config) error {
 
 	logrus.SetLevel(config.LogLevel)
 
-	if config.LogPipeFd != "" {
-		logPipeFdInt, err := strconv.Atoi(config.LogPipeFd)
-		if err != nil {
-			return fmt.Errorf("failed to convert _LIBCONTAINER_LOGPIPE environment variable value %q to int: %v", config.LogPipeFd, err)
-		}
-		logrus.SetOutput(os.NewFile(uintptr(logPipeFdInt), "logpipe"))
+	if config.LogFd != 0 {
+		logrus.SetOutput(os.NewFile(config.LogFd, "log"))
 	} else if config.LogFilePath != "" {
 		f, err := os.OpenFile(config.LogFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND|os.O_SYNC, 0644)
 		if err != nil {

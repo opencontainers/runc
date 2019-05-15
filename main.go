@@ -158,12 +158,12 @@ func (f *FatalWriter) Write(p []byte) (n int, err error) {
 
 func createLogConfig(context *cli.Context) logs.Config {
 	logFilePath := context.GlobalString("log")
-	logPipeFd := ""
+	logFd := 0
 	if logFilePath == "" {
-		logPipeFd = "2"
+		logFd = 2
 	}
 	config := logs.Config{
-		LogPipeFd:   logPipeFd,
+		LogFd:       uintptr(logFd),
 		LogLevel:    logrus.InfoLevel,
 		LogFilePath: logFilePath,
 		LogFormat:   context.GlobalString("log-format"),
