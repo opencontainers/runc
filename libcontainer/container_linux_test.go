@@ -200,6 +200,7 @@ func TestGetContainerState(t *testing.T) {
 				{Type: configs.NEWUTS},
 				// emulate host for IPC
 				//{Type: configs.NEWIPC},
+				{Type: configs.NEWCGROUP},
 			},
 		},
 		initProcess: &mockProcess{
@@ -278,6 +279,8 @@ func TestGetContainerState(t *testing.T) {
 				file = "user"
 			case configs.NEWUTS:
 				file = "uts"
+			case configs.NEWCGROUP:
+				file = "cgroup"
 			}
 			expected := fmt.Sprintf("/proc/%d/ns/%s", pid, file)
 			if expected != path {
