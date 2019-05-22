@@ -23,9 +23,10 @@ import (
 )
 
 type Manager struct {
-	mu      sync.Mutex
-	Cgroups *configs.Cgroup
-	Paths   map[string]string
+	mu         sync.Mutex
+	Cgroups    *configs.Cgroup
+	Paths      map[string]string
+	Properties *configs.SystemdProperties
 }
 
 type subsystem interface {
@@ -163,14 +164,15 @@ func UseSystemd() bool {
 	return hasStartTransientUnit
 }
 
-func NewSystemdCgroupsManager() (func(config *configs.Cgroup, paths map[string]string) cgroups.Manager, error) {
+func NewSystemdCgroupsManager() (func(config *configs.Cgroup, paths map[string]string, systemdProperities *configs.SystemdProperties) cgroups.Manager, error) {
 	if !systemdUtil.IsRunningSystemd() {
 		return nil, fmt.Errorf("systemd not running on this host, can't use systemd as a cgroups.Manager")
 	}
-	return func(config *configs.Cgroup, paths map[string]string) cgroups.Manager {
+	return func(config *configs.Cgroup, paths map[string]string, systemdProperties *configs.SystemdProperties) cgroups.Manager {
 		return &Manager{
-			Cgroups: config,
-			Paths:   paths,
+			Cgroups:    config,
+			Paths:      paths,
+			Properties: systemdProperties,
 		}
 	}, nil
 }
@@ -243,7 +245,7 @@ func (m *Manager) Apply(pid int) error {
 
 	// Assume DefaultDependencies= will always work (the check for it was previously broken.)
 	properties = append(properties,
-		newProp("DefaultDependencies", false))
+		newProp("DefaultDependencies", true))
 
 	if c.Resources.Memory != 0 {
 		properties = append(properties,
@@ -291,6 +293,13 @@ func (m *Manager) Apply(pid int) error {
 	if c.Resources.KernelMemory != 0 {
 		if err := setKernelMemory(c); err != nil {
 			return err
+		}
+	}
+
+	if m.Properties != nil {
+		if m.Properties.TimeoutStopUSec != nil {
+			properties = append(properties,
+				newProp("TimeoutStopUSec", m.Properties.TimeoutStopUSec))
 		}
 	}
 

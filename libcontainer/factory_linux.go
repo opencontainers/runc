@@ -11,7 +11,7 @@ import (
 	"runtime/debug"
 	"strconv"
 
-	"github.com/cyphar/filepath-securejoin"
+	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fs"
 	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
@@ -63,7 +63,7 @@ func SystemdCgroups(l *LinuxFactory) error {
 // that use the native cgroups filesystem implementation to create and manage
 // cgroups.
 func Cgroupfs(l *LinuxFactory) error {
-	l.NewCgroupsManager = func(config *configs.Cgroup, paths map[string]string) cgroups.Manager {
+	l.NewCgroupsManager = func(config *configs.Cgroup, paths map[string]string, systemdProperties *configs.SystemdProperties) cgroups.Manager {
 		return &fs.Manager{
 			Cgroups: config,
 			Paths:   paths,
@@ -79,7 +79,7 @@ func Cgroupfs(l *LinuxFactory) error {
 // during rootless container (including euid=0 in userns) setup (while still allowing cgroup usage if
 // they've been set up properly).
 func RootlessCgroupfs(l *LinuxFactory) error {
-	l.NewCgroupsManager = func(config *configs.Cgroup, paths map[string]string) cgroups.Manager {
+	l.NewCgroupsManager = func(config *configs.Cgroup, paths map[string]string, systemdProperties *configs.SystemdProperties) cgroups.Manager {
 		return &fs.Manager{
 			Cgroups:  config,
 			Rootless: true,
@@ -175,11 +175,13 @@ type LinuxFactory struct {
 	NewuidmapPath string
 	NewgidmapPath string
 
+	SystemdProperties *configs.SystemdProperties
+
 	// Validator provides validation to container configurations.
 	Validator validate.Validator
 
 	// NewCgroupsManager returns an initialized cgroups manager for a single container.
-	NewCgroupsManager func(config *configs.Cgroup, paths map[string]string) cgroups.Manager
+	NewCgroupsManager func(config *configs.Cgroup, paths map[string]string, systemdProperties *configs.SystemdProperties) cgroups.Manager
 
 	// NewIntelRdtManager returns an initialized Intel RDT manager for a single container.
 	NewIntelRdtManager func(config *configs.Config, id string, path string) intelrdt.Manager
@@ -219,7 +221,7 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 		criuPath:      l.CriuPath,
 		newuidmapPath: l.NewuidmapPath,
 		newgidmapPath: l.NewgidmapPath,
-		cgroupManager: l.NewCgroupsManager(config.Cgroups, nil),
+		cgroupManager: l.NewCgroupsManager(config.Cgroups, nil, l.SystemdProperties),
 	}
 	if intelrdt.IsCatEnabled() || intelrdt.IsMbaEnabled() {
 		c.intelRdtManager = l.NewIntelRdtManager(config, id, "")
@@ -259,7 +261,7 @@ func (l *LinuxFactory) Load(id string) (Container, error) {
 		criuPath:             l.CriuPath,
 		newuidmapPath:        l.NewuidmapPath,
 		newgidmapPath:        l.NewgidmapPath,
-		cgroupManager:        l.NewCgroupsManager(state.Config.Cgroups, state.CgroupPaths),
+		cgroupManager:        l.NewCgroupsManager(state.Config.Cgroups, state.CgroupPaths, nil),
 		root:                 containerRoot,
 		created:              state.Created,
 	}
@@ -390,6 +392,13 @@ func NewuidmapPath(newuidmapPath string) func(*LinuxFactory) error {
 func NewgidmapPath(newgidmapPath string) func(*LinuxFactory) error {
 	return func(l *LinuxFactory) error {
 		l.NewgidmapPath = newgidmapPath
+		return nil
+	}
+}
+
+func NewSystemdProperties(sp *configs.SystemdProperties) func(*LinuxFactory) error {
+	return func(l *LinuxFactory) error {
+		l.SystemdProperties = sp
 		return nil
 	}
 }

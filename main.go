@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"html/template"
 	"io"
 	"os"
 	"strings"
@@ -80,6 +82,24 @@ func main() {
 		}
 	}
 
+	SupportedSystemdProperties := map[string]string{
+		"stop-timeout": "TimeoutStopUSec",
+	}
+
+	systemdPropertiesUsageTemplate := `Pass key=value properties to be set for systemd scope. These require --systemd-cgroup to be set.
+	------------------------------
+	{{"Flag\t\t\t    Systemd Property"}}
+	------------------------------
+	{{range $k, $v := $}}{{$k}}{{"\t"}}{{$v}}
+    {{end}}
+	`
+
+	t := template.Must(template.New("").Parse(systemdPropertiesUsageTemplate))
+	var tpl bytes.Buffer
+	if err := t.Execute(&tpl, SupportedSystemdProperties); err != nil {
+		fatal(err)
+	}
+
 	app.Flags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "debug",
@@ -108,6 +128,10 @@ func main() {
 		cli.BoolFlag{
 			Name:  "systemd-cgroup",
 			Usage: "enable systemd cgroup support, expects cgroupsPath to be of form \"slice:prefix:name\" for e.g. \"system.slice:runc:434234\"",
+		},
+		cli.StringSliceFlag{
+			Name:  "systemd-property",
+			Usage: tpl.String(),
 		},
 		cli.StringFlag{
 			Name:  "rootless",

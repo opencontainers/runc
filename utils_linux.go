@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
@@ -46,9 +47,33 @@ func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
 	if rootlessCg {
 		cgroupManager = libcontainer.RootlessCgroupfs
 	}
+
+	var sp *configs.SystemdProperties
 	if context.GlobalBool("systemd-cgroup") {
 		if systemd.UseSystemd() {
 			cgroupManager = libcontainer.SystemdCgroups
+			if context.GlobalIsSet("systemd-property") {
+				sp = &configs.SystemdProperties{}
+				systemdProperties := context.GlobalStringSlice("systemd-property")
+				for _, prop := range systemdProperties {
+					pair := strings.Split(prop, "=")
+					if len(pair) != 2 {
+						return nil, fmt.Errorf("systemd-property %q not of the form key=pair", prop)
+					}
+					switch pair[0] {
+					// TODO: Reuse SupportedStemdProperties here when we add more properties
+					case "stop-timeout":
+						timeout, cerr := strconv.ParseUint(pair[1], 10, 64)
+						if cerr != nil {
+							return nil, fmt.Errorf("failed to convert to systemd stop-timeout value: %v", cerr)
+						}
+						timeout = 1000000 * timeout
+						sp.TimeoutStopUSec = &timeout
+					default:
+						return nil, fmt.Errorf("unsupported or invalid property: %q", prop)
+					}
+				}
+			}
 		} else {
 			return nil, fmt.Errorf("systemd cgroup flag passed, but systemd support for managing cgroups is not available")
 		}
@@ -74,7 +99,8 @@ func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
 	return libcontainer.New(abs, cgroupManager, intelRdtManager,
 		libcontainer.CriuPath(context.GlobalString("criu")),
 		libcontainer.NewuidmapPath(newuidmap),
-		libcontainer.NewgidmapPath(newgidmap))
+		libcontainer.NewgidmapPath(newgidmap),
+		libcontainer.NewSystemdProperties(sp))
 }
 
 // getContainer returns the specified container instance by loading it from state

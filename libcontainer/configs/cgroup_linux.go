@@ -31,6 +31,10 @@ type Cgroup struct {
 	*Resources
 }
 
+type SystemdProperties struct {
+	TimeoutStopUSec *uint64 `json:"timeout_stop_usec"`
+}
+
 type Resources struct {
 	// If this is true allow access to any kind of device within the container.  If false, allow access only to devices explicitly listed in the allowed_devices list.
 	// Deprecated
