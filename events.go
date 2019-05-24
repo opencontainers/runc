@@ -32,6 +32,7 @@ type stats struct {
 	Blkio    blkio              `json:"blkio"`
 	Hugetlb  map[string]hugetlb `json:"hugetlb"`
 	IntelRdt intelRdt           `json:"intel_rdt"`
+	Network  []*libcontainer.NetworkInterface `json:"network"`
 }
 
 type hugetlb struct {
@@ -275,6 +276,8 @@ func convertLibcontainerStats(ls *libcontainer.Stats) *stats {
 			s.IntelRdt.MemBwSchema = is.MemBwSchema
 		}
 	}
+
+	s.Network = append(s.Network, ls.Interfaces...)
 
 	return &s
 }
