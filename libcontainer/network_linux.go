@@ -5,6 +5,7 @@ package libcontainer
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -37,7 +38,7 @@ func getStrategy(tpe string) (networkStrategy, error) {
 }
 
 // Returns the network statistics for the network interfaces represented by the NetworkRuntimeInfo.
-func getNetworkInterfaceStats(interfaceName string) (*NetworkInterface, error) {
+func getNetworkInterfaceStats(interfaceName, nicPath string) (*NetworkInterface, error) {
 	out := &NetworkInterface{Name: interfaceName}
 	// This can happen if the network runtime information is missing - possible if the
 	// container was created by an old version of libcontainer.
@@ -63,7 +64,7 @@ func getNetworkInterfaceStats(interfaceName string) (*NetworkInterface, error) {
 		{Out: &out.TxDropped, File: "rx_dropped"},
 	}
 	for _, netStat := range netStats {
-		data, err := readSysfsNetworkStats(interfaceName, netStat.File)
+		data, err := readSysfsNetworkStats(interfaceName, netStat.File, nicPath)
 		if err != nil {
 			return nil, err
 		}
@@ -72,9 +73,38 @@ func getNetworkInterfaceStats(interfaceName string) (*NetworkInterface, error) {
 	return out, nil
 }
 
-// Reads the specified statistics available under /sys/class/net/<EthInterface>/statistics
-func readSysfsNetworkStats(ethInterface, statsFile string) (uint64, error) {
-	data, err := ioutil.ReadFile(filepath.Join("/sys/class/net", ethInterface, "statistics", statsFile))
+// Returns the network statistics for all network interfaces except loopback
+func getAllInterfaceStats(initPid int) ([]*NetworkInterface, error) {
+	var interfaces []*NetworkInterface
+	// set the nic path
+	nicPath := filepath.Join("/proc", strconv.Itoa(initPid), "root/sys/class/net")
+	// get all the interfaces
+	dirs, err := ioutil.ReadDir(nicPath)
+	if err != nil {
+		return interfaces, err
+	}
+	for _, dir := range dirs {
+		interfaceName := dir.Name()
+		filename := filepath.Join(nicPath, interfaceName)
+		fileInfo, err := os.Lstat(filename)
+		if err != nil {
+			return interfaces, err
+		}
+		// If the file is a symbolic link, it is an interface.
+		if fileInfo.Mode()&os.ModeSymlink == os.ModeSymlink && interfaceName != "lo" {
+			istats, err := getNetworkInterfaceStats(interfaceName, nicPath)
+			if err != nil {
+				return interfaces, err
+			}
+			interfaces = append(interfaces, istats)
+		}
+	}
+	return interfaces, nil
+}
+
+// Reads the specified statistics available under /<nicPath>/<EthInterface>/statistics.
+func readSysfsNetworkStats(ethInterface, statsFile, nicPath string) (uint64, error) {
+	data, err := ioutil.ReadFile(filepath.Join(nicPath, ethInterface, "statistics", statsFile))
 	if err != nil {
 		return 0, err
 	}

@@ -185,14 +185,25 @@ func (c *linuxContainer) Stats() (*Stats, error) {
 			return stats, newSystemErrorWithCause(err, "getting container's Intel RDT stats")
 		}
 	}
-	for _, iface := range c.config.Networks {
-		switch iface.Type {
-		case "veth":
-			istats, err := getNetworkInterfaceStats(iface.HostInterfaceName)
-			if err != nil {
-				return stats, newSystemErrorWithCausef(err, "getting network stats for interface %q", iface.HostInterfaceName)
+
+	// Currently runc does not know the interface, so c.config.Networks is null.
+	// But we can get the network info from "/proc/<initPid>/root/sys/class/net/<EthInterface>/statistics/"
+	if len(c.config.Networks) == 0 {
+		interfaces, err := getAllInterfaceStats(c.initProcess.pid())
+		if err != nil {
+			return stats, newSystemErrorWithCause(err, "getting network stats for interface")
+		}
+		stats.Interfaces = interfaces
+	} else {
+		for _, iface := range c.config.Networks {
+			switch iface.Type {
+			case "veth":
+				istats, err := getNetworkInterfaceStats(iface.HostInterfaceName, "/sys/class/net")
+				if err != nil {
+					return stats, newSystemErrorWithCausef(err, "getting network stats for interface %q", iface.HostInterfaceName)
+				}
+				stats.Interfaces = append(stats.Interfaces, istats)
 			}
-			stats.Interfaces = append(stats.Interfaces, istats)
 		}
 	}
 	return stats, nil
