@@ -1,26 +1,15 @@
 package main
 
 import (
-	"fmt"
 	"io"
 	"os"
-	"strings"
 
+	"github.com/opencontainers/runc/api"
 	"github.com/opencontainers/runc/libcontainer/logs"
-
-	"github.com/opencontainers/runtime-spec/specs-go"
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
-
-// version will be populated by the Makefile, read from
-// VERSION file of the source code.
-var version = ""
-
-// gitCommit will be the hash that the binary was built from
-// and will be populated by the Makefile
-var gitCommit = ""
 
 const (
 	specConfig = "config.json"
@@ -54,17 +43,13 @@ func main() {
 	app.Name = "runc"
 	app.Usage = usage
 
-	var v []string
-	if version != "" {
-		v = append(v, version)
-	}
-	if gitCommit != "" {
-		v = append(v, fmt.Sprintf("commit: %s", gitCommit))
-	}
-	v = append(v, fmt.Sprintf("spec: %s", specs.Version))
-	app.Version = strings.Join(v, "\n")
-
+	// Default variables
 	root := "/run/runc"
+	debug := false
+
+	runc := api.New()
+	app.Version = runc.Version().String()
+
 	if shouldHonorXDGRuntimeDir() {
 		if runtimeDir := os.Getenv("XDG_RUNTIME_DIR"); runtimeDir != "" {
 			root = runtimeDir + "/runc"
@@ -82,8 +67,9 @@ func main() {
 
 	app.Flags = []cli.Flag{
 		cli.BoolFlag{
-			Name:  "debug",
-			Usage: "enable debug output for logging",
+			Name:        "debug",
+			Destination: &debug,
+			Usage:       "enable debug output for logging",
 		},
 		cli.StringFlag{
 			Name:  "log",
@@ -135,6 +121,10 @@ func main() {
 		updateCommand,
 	}
 	app.Before = func(context *cli.Context) error {
+		// Configure the API and set it into the App context for later usage
+		runc = runc.WithRoot(root).WithDebug(debug)
+		app.Metadata = map[string]interface{}{"api": runc}
+
 		return logs.ConfigureLogging(createLogConfig(context))
 	}
 
