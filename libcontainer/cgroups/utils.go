@@ -409,14 +409,22 @@ func RemovePaths(paths map[string]string) (err error) {
 }
 
 func GetHugePageSize() ([]string, error) {
-	var pageSizes []string
-	sizeList := []string{"B", "KB", "MB", "GB", "TB", "PB"}
 	files, err := ioutil.ReadDir("/sys/kernel/mm/hugepages")
 	if err != nil {
-		return pageSizes, err
+		return []string{}, err
 	}
+	var fileNames []string
 	for _, st := range files {
-		nameArray := strings.Split(st.Name(), "-")
+		fileNames = append(fileNames, st.Name())
+	}
+	return getHugePageSizeFromFilenames(fileNames)
+}
+
+func getHugePageSizeFromFilenames(fileNames []string) ([]string, error) {
+	var pageSizes []string
+	sizeList := []string{"B", "KB", "MB", "GB", "TB", "PB"}
+	for _, fileName := range fileNames {
+		nameArray := strings.Split(fileName, "-")
 		pageSize, err := units.RAMInBytes(nameArray[1])
 		if err != nil {
 			return []string{}, err

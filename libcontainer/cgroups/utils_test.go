@@ -4,6 +4,7 @@ package cgroups
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -418,6 +419,41 @@ func TestFindCgroupMountpointAndRoot(t *testing.T) {
 		mountpoint, _, _ := findCgroupMountpointAndRootFromReader(strings.NewReader(fakeMountInfo), c.cgroupPath, "devices")
 		if mountpoint != c.output {
 			t.Errorf("expected %s, got %s", c.output, mountpoint)
+		}
+	}
+}
+
+func TestGetHugePageSizeImpl(t *testing.T) {
+
+	testCases := []struct {
+		inputFiles      []string
+		outputPageSizes []string
+		err             error
+	}{
+		{
+			inputFiles:      []string{"hugepages-1048576kB", "hugepages-2048kB", "hugepages-32768kB", "hugepages-64kB"},
+			outputPageSizes: []string{"1GB", "2MB", "32MB", "64KB"},
+			err:             nil,
+		},
+		{
+			inputFiles:      []string{},
+			outputPageSizes: []string{},
+			err:             nil,
+		},
+		{
+			inputFiles:      []string{"hugepages-a"},
+			outputPageSizes: []string{},
+			err:             errors.New("invalid size: 'a'"),
+		},
+	}
+
+	for _, c := range testCases {
+		pageSizes, err := getHugePageSizeFromFilenames(c.inputFiles)
+		if len(pageSizes) != 0 && len(c.outputPageSizes) != 0 && !reflect.DeepEqual(pageSizes, c.outputPageSizes) {
+			t.Errorf("expected %s, got %s", c.outputPageSizes, pageSizes)
+		}
+		if err != nil && err.Error() != c.err.Error() {
+			t.Errorf("expected error %s, got %s", c.err, err)
 		}
 	}
 }
