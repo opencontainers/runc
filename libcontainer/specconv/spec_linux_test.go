@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"golang.org/x/sys/unix"
+
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/configs/validate"
 	"github.com/opencontainers/runtime-spec/specs-go"
@@ -104,7 +106,7 @@ func TestSetupSeccomp(t *testing.T) {
 				Args: []specs.LinuxSeccompArg{
 					{
 						Index:    0,
-						Value:    2080505856,
+						Value:    unix.CLONE_NEWNS | unix.CLONE_NEWUTS | unix.CLONE_NEWIPC | unix.CLONE_NEWUSER | unix.CLONE_NEWPID | unix.CLONE_NEWNET | unix.CLONE_NEWCGROUP,
 						ValueTwo: 0,
 						Op:       "SCMP_CMP_MASKED_EQ",
 					},
@@ -154,7 +156,7 @@ func TestSetupSeccomp(t *testing.T) {
 			expectedCloneSyscallArgs := configs.Arg{
 				Index:    0,
 				Op:       7, // SCMP_CMP_MASKED_EQ
-				Value:    2080505856,
+				Value:    unix.CLONE_NEWNS | unix.CLONE_NEWUTS | unix.CLONE_NEWIPC | unix.CLONE_NEWUSER | unix.CLONE_NEWPID | unix.CLONE_NEWNET | unix.CLONE_NEWCGROUP,
 				ValueTwo: 0,
 			}
 			if expectedCloneSyscallArgs != *call.Args[0] {
