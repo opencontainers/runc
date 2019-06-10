@@ -35,7 +35,10 @@ func (l *linuxSetnsInit) Init() error {
 
 	if !l.config.Config.NoNewKeyring {
 		if err := label.SetKeyLabel(l.config.ProcessLabel); err != nil {
-			return err
+			// workaround for RHEL7 kernel which may return EACCES for an empty label
+			if !(l.config.ProcessLabel == "" && os.IsPermission(err)) {
+				return err
+			}
 		}
 		defer label.SetKeyLabel("")
 		// Do not inherit the parent's session keyring.
