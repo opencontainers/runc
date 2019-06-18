@@ -72,8 +72,14 @@ function teardown() {
   run git clone https://github.com/opencontainers/runtime-spec.git src/runtime-spec
   [ "$status" -eq 0 ]
 
-  SPEC_COMMIT=$(grep '^github.com/opencontainers/runtime-spec' ${TESTDIR}/../../vendor.conf | tr -s ' ' | cut -d ' ' -f 2)
-  run git -C src/runtime-spec reset --hard "${SPEC_COMMIT}"
+  SPEC_VERSION=$(grep 'github.com/opencontainers/runtime-spec' ${TESTDIR}/../../go.mod | cut -d ' ' -f 2)
+
+  # Will look like this when not pinned to spesific tag: "v0.0.0-20190207185410-29686dbc5559", otherwise "v1.0.0"
+  SPEC_COMMIT=$(cut -d "-" -f 3 <<< $SPEC_VERSION)
+
+  SPEC_REF=$([[ -z "$SPEC_COMMIT" ]] && echo $SPEC_VERSION || echo $SPEC_COMMIT)
+
+  run git -C src/runtime-spec reset --hard "${SPEC_REF}"
 
   [ "$status" -eq 0 ]
   [ -e src/runtime-spec/schema/config-schema.json ]
