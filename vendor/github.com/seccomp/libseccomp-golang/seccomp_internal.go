@@ -16,6 +16,7 @@ import (
 
 // #cgo pkg-config: libseccomp
 /*
+#include <errno.h>
 #include <stdlib.h>
 #include <seccomp.h>
 
@@ -67,16 +68,29 @@ const uint32_t C_ARCH_PPC64LE      = SCMP_ARCH_PPC64LE;
 const uint32_t C_ARCH_S390         = SCMP_ARCH_S390;
 const uint32_t C_ARCH_S390X        = SCMP_ARCH_S390X;
 
+#ifndef SCMP_ACT_LOG
+#define SCMP_ACT_LOG 0x7ffc0000U
+#endif
+
 const uint32_t C_ACT_KILL          = SCMP_ACT_KILL;
 const uint32_t C_ACT_TRAP          = SCMP_ACT_TRAP;
 const uint32_t C_ACT_ERRNO         = SCMP_ACT_ERRNO(0);
 const uint32_t C_ACT_TRACE         = SCMP_ACT_TRACE(0);
+const uint32_t C_ACT_LOG           = SCMP_ACT_LOG;
 const uint32_t C_ACT_ALLOW         = SCMP_ACT_ALLOW;
+
+// The libseccomp SCMP_FLTATR_CTL_LOG member of the scmp_filter_attr enum was
+// added in v2.4.0
+#if (SCMP_VER_MAJOR < 2) || \
+    (SCMP_VER_MAJOR == 2 && SCMP_VER_MINOR < 4)
+#define SCMP_FLTATR_CTL_LOG _SCMP_FLTATR_MIN
+#endif
 
 const uint32_t C_ATTRIBUTE_DEFAULT = (uint32_t)SCMP_FLTATR_ACT_DEFAULT;
 const uint32_t C_ATTRIBUTE_BADARCH = (uint32_t)SCMP_FLTATR_ACT_BADARCH;
 const uint32_t C_ATTRIBUTE_NNP     = (uint32_t)SCMP_FLTATR_CTL_NNP;
 const uint32_t C_ATTRIBUTE_TSYNC   = (uint32_t)SCMP_FLTATR_CTL_TSYNC;
+const uint32_t C_ATTRIBUTE_LOG     = (uint32_t)SCMP_FLTATR_CTL_LOG;
 
 const int      C_CMP_NE            = (int)SCMP_CMP_NE;
 const int      C_CMP_LT            = (int)SCMP_CMP_LT;
@@ -122,6 +136,25 @@ unsigned int get_micro_version()
 }
 #endif
 
+// The libseccomp API level functions were added in v2.4.0
+#if (SCMP_VER_MAJOR < 2) || \
+    (SCMP_VER_MAJOR == 2 && SCMP_VER_MINOR < 4)
+const unsigned int seccomp_api_get(void)
+{
+	// libseccomp-golang requires libseccomp v2.2.0, at a minimum, which
+	// supported API level 2. However, the kernel may not support API level
+	// 2 constructs which are the seccomp() system call and the TSYNC
+	// filter flag. Return the "reserved" value of 0 here to indicate that
+	// proper API level support is not available in libseccomp.
+	return 0;
+}
+
+int seccomp_api_set(unsigned int level)
+{
+	return -EOPNOTSUPP;
+}
+#endif
+
 typedef struct scmp_arg_cmp* scmp_cast_t;
 
 void* make_arg_cmp_array(unsigned int length)
@@ -159,6 +192,7 @@ const (
 	filterAttrActBadArch scmpFilterAttr = iota
 	filterAttrNNP        scmpFilterAttr = iota
 	filterAttrTsync      scmpFilterAttr = iota
+	filterAttrLog        scmpFilterAttr = iota
 )
 
 const (
@@ -169,7 +203,7 @@ const (
 	archEnd   ScmpArch = ArchS390X
 	// Comparison boundaries to check for action validity
 	actionStart ScmpAction = ActKill
-	actionEnd   ScmpAction = ActAllow
+	actionEnd   ScmpAction = ActLog
 	// Comparison boundaries to check for comparison operator validity
 	compareOpStart ScmpCompareOp = CompareNotEqual
 	compareOpEnd   ScmpCompareOp = CompareMaskedEqual
@@ -198,6 +232,29 @@ func ensureSupportedVersion() error {
 	if !checkVersionAbove(2, 2, 0) {
 		return VersionError{}
 	}
+	return nil
+}
+
+// Get the API level
+func getApi() (uint, error) {
+	api := C.seccomp_api_get()
+	if api == 0 {
+		return 0, fmt.Errorf("API level operations are not supported")
+	}
+
+	return uint(api), nil
+}
+
+// Set the API level
+func setApi(api uint) error {
+	if retCode := C.seccomp_api_set(C.uint(api)); retCode != 0 {
+		if syscall.Errno(-1*retCode) == syscall.EOPNOTSUPP {
+			return fmt.Errorf("API level operations are not supported")
+		}
+
+		return fmt.Errorf("could not set API level: %v", retCode)
+	}
+
 	return nil
 }
 
@@ -260,7 +317,7 @@ func (f *ScmpFilter) addRuleWrapper(call ScmpSyscall, action ScmpAction, exact b
 	}
 
 	if syscall.Errno(-1*retCode) == syscall.EFAULT {
-		return fmt.Errorf("unrecognized syscall")
+		return fmt.Errorf("unrecognized syscall %#x", int32(call))
 	} else if syscall.Errno(-1*retCode) == syscall.EPERM {
 		return fmt.Errorf("requested action matches default action of filter")
 	} else if syscall.Errno(-1*retCode) == syscall.EINVAL {
@@ -319,11 +376,11 @@ func (f *ScmpFilter) addRuleGeneric(call ScmpSyscall, action ScmpAction, exact b
 // Helper - Sanitize Arch token input
 func sanitizeArch(in ScmpArch) error {
 	if in < archStart || in > archEnd {
-		return fmt.Errorf("unrecognized architecture")
+		return fmt.Errorf("unrecognized architecture %#x", uint(in))
 	}
 
 	if in.toNative() == C.C_ARCH_BAD {
-		return fmt.Errorf("architecture is not supported on this version of the library")
+		return fmt.Errorf("architecture %v is not supported on this version of the library", in)
 	}
 
 	return nil
@@ -332,7 +389,7 @@ func sanitizeArch(in ScmpArch) error {
 func sanitizeAction(in ScmpAction) error {
 	inTmp := in & 0x0000FFFF
 	if inTmp < actionStart || inTmp > actionEnd {
-		return fmt.Errorf("unrecognized action")
+		return fmt.Errorf("unrecognized action %#x", uint(inTmp))
 	}
 
 	if inTmp != ActTrace && inTmp != ActErrno && (in&0xFFFF0000) != 0 {
@@ -344,7 +401,7 @@ func sanitizeAction(in ScmpAction) error {
 
 func sanitizeCompareOp(in ScmpCompareOp) error {
 	if in < compareOpStart || in > compareOpEnd {
-		return fmt.Errorf("unrecognized comparison operator")
+		return fmt.Errorf("unrecognized comparison operator %#x", uint(in))
 	}
 
 	return nil
@@ -387,7 +444,7 @@ func archFromNative(a C.uint32_t) (ScmpArch, error) {
 	case C.C_ARCH_S390X:
 		return ArchS390X, nil
 	default:
-		return 0x0, fmt.Errorf("unrecognized architecture")
+		return 0x0, fmt.Errorf("unrecognized architecture %#x", uint32(a))
 	}
 }
 
@@ -466,10 +523,12 @@ func actionFromNative(a C.uint32_t) (ScmpAction, error) {
 		return ActErrno.SetReturnCode(int16(aTmp)), nil
 	case C.C_ACT_TRACE:
 		return ActTrace.SetReturnCode(int16(aTmp)), nil
+	case C.C_ACT_LOG:
+		return ActLog, nil
 	case C.C_ACT_ALLOW:
 		return ActAllow, nil
 	default:
-		return 0x0, fmt.Errorf("unrecognized action")
+		return 0x0, fmt.Errorf("unrecognized action %#x", uint32(a))
 	}
 }
 
@@ -484,6 +543,8 @@ func (a ScmpAction) toNative() C.uint32_t {
 		return C.C_ACT_ERRNO | (C.uint32_t(a) >> 16)
 	case ActTrace:
 		return C.C_ACT_TRACE | (C.uint32_t(a) >> 16)
+	case ActLog:
+		return C.C_ACT_LOG
 	case ActAllow:
 		return C.C_ACT_ALLOW
 	default:
@@ -502,6 +563,8 @@ func (a scmpFilterAttr) toNative() uint32 {
 		return uint32(C.C_ATTRIBUTE_NNP)
 	case filterAttrTsync:
 		return uint32(C.C_ATTRIBUTE_TSYNC)
+	case filterAttrLog:
+		return uint32(C.C_ATTRIBUTE_LOG)
 	default:
 		return 0x0
 	}
