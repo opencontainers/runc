@@ -159,15 +159,17 @@ _runc_exec() {
 	"
 
 	local options_with_args="
-	   --console
+	   --console-socket
 	   --cwd
 	   --env, -e
 	   --user, -u
+	   --additional-gids, -g
 	   --process, -p
 	   --pid-file
 	   --process-label
 	   --apparmor
 	   --cap, -c
+	   --preserve-fds
 	"
 
 	local all_options="$options_with_args $boolean_options"
@@ -178,7 +180,7 @@ _runc_exec() {
 		return
 		;;
 
-	--console | --cwd | --process | --apparmor)
+	--console-socket | --cwd | --process | --apparmor)
 		case "$cur" in
 		*:*) ;; # TODO somehow do _filedir for stuff inside the image, if it's already specified (which is also somewhat difficult to determine)
 		'')
@@ -225,6 +227,7 @@ _runc_runc() {
 		--log-format
 		--root
 		--criu
+		--rootless
 	"
 
 	case "$prev" in
@@ -287,6 +290,9 @@ _runc_ps() {
 	   --help
 	   -h
 	"
+	local options_with_args="
+	   --format, -f
+	"
 
 	case "$cur" in
 	-*)
@@ -302,6 +308,7 @@ _runc_delete() {
 	local boolean_options="
 	   --help
 	   -h
+	   --format, -f
 	"
 
 	case "$cur" in
@@ -404,6 +411,7 @@ _runc_list() {
 _runc_spec() {
 	local boolean_options="
 	   --help
+	   --rootless
 	"
 
 	local options_with_args="
@@ -454,12 +462,13 @@ _runc_run() {
 	local options_with_args="
 	   --bundle
 	   -b
-	   --console
+	   --console-socket
 	   --pid-file
+	   --preserve-fds
 	"
 
 	case "$prev" in
-	--bundle | -b | --console | --pid-file)
+	--bundle | -b | --console-socket | --pid-file)
 		case "$cur" in
 		'')
 			COMPREPLY=($(compgen -W '/' -- "$cur"))
@@ -496,14 +505,20 @@ _runc_checkpoint() {
 	   --tcp-established
 	   --ext-unix-sk
 	   --shell-job
+	   --lazy-pages
 	   --file-locks
+	   --pre-dump
+	   --auto-dedup
 	"
 
 	local options_with_args="
 	   --image-path
 	   --work-path
+	   --parent-path
+	   --status-fd
 	   --page-server
 	   --manage-cgroups-mode
+	   --empty-ns
 	"
 
 	case "$prev" in
@@ -514,7 +529,7 @@ _runc_checkpoint() {
 		return
 		;;
 
-	--image-path | --work-path)
+	--image-path | --work-path | --parent-path)
 		case "$cur" in
 		*:*) ;; # TODO somehow do _filedir for stuff inside the image, if it's already specified (which is also somewhat difficult to determine)
 		'')
@@ -553,11 +568,12 @@ _runc_create() {
 	local options_with_args="
 	   --bundle
 	   -b
-	   --console
+	   --console-socket
 	   --pid-file
+	   --preserve-fds
 	"
 	case "$prev" in
-	--bundle | -b | --console | --pid-file)
+	--bundle | -b | --console-socket | --pid-file)
 		case "$cur" in
 		'')
 			COMPREPLY=($(compgen -W '/' -- "$cur"))
@@ -605,6 +621,8 @@ _runc_restore() {
 	   -d
 	   --no-subreaper
 	   --no-pivot
+	   --auto-dedup
+	   --lazy-pages
 	"
 
 	local options_with_args="
@@ -614,6 +632,7 @@ _runc_restore() {
 	   --work-path
 	   --manage-cgroups-mode
 	   --pid-file
+	   --empty-ns
 	"
 
 	local all_options="$options_with_args $boolean_options"
@@ -719,7 +738,9 @@ _runc_update() {
 	   --memory
 	   --memory-reservation
 	   --memory-swap
-
+	   --pids-limit
+	   --l3-cache-schema
+	   --mem-bw-schema
 	"
 
 	case "$prev" in
