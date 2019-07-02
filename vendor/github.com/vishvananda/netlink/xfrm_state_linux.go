@@ -45,11 +45,11 @@ func XfrmStateAdd(state *XfrmState) error {
 
 	msg := &nl.XfrmUsersaInfo{}
 	msg.Family = uint16(nl.GetIPFamily(state.Dst))
-	msg.Id.Daddr.FromIP(state.Dst)
+	msg.ID.Daddr.FromIP(state.Dst)
 	msg.Saddr.FromIP(state.Src)
-	msg.Id.Proto = uint8(state.Proto)
+	msg.ID.Proto = uint8(state.Proto)
 	msg.Mode = uint8(state.Mode)
-	msg.Id.Spi = nl.Swap32(uint32(state.Spi))
+	msg.ID.Spi = nl.Swap32(uint32(state.Spi))
 	msg.Reqid = uint32(state.Reqid)
 	msg.ReplayWindow = uint8(state.ReplayWindow)
 	msg.Lft.SoftByteLimit = nl.XFRM_INF
@@ -128,11 +128,11 @@ func XfrmStateList(family int) ([]XfrmState, error) {
 
 		var state XfrmState
 
-		state.Dst = msg.Id.Daddr.ToIP()
+		state.Dst = msg.ID.Daddr.ToIP()
 		state.Src = msg.Saddr.ToIP()
-		state.Proto = Proto(msg.Id.Proto)
+		state.Proto = Proto(msg.ID.Proto)
 		state.Mode = Mode(msg.Mode)
-		state.Spi = int(nl.Swap32(msg.Id.Spi))
+		state.Spi = int(nl.Swap32(msg.ID.Spi))
 		state.Reqid = int(msg.Reqid)
 		state.ReplayWindow = int(msg.ReplayWindow)
 

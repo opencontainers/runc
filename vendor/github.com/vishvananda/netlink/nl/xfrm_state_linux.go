@@ -92,7 +92,7 @@ func (msg *XfrmStats) Serialize() []byte {
 
 type XfrmUsersaInfo struct {
 	Sel          XfrmSelector
-	Id           XfrmId
+	ID           XfrmId
 	Saddr        XfrmAddress
 	Lft          XfrmLifetimeCfg
 	Curlft       XfrmLifetimeCur
