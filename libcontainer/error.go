@@ -30,7 +30,7 @@ const (
 func (c ErrorCode) String() string {
 	switch c {
 	case IDInUse:
-		return "Id already in use"
+		return "ID already in use"
 	case InvalidIdFormat:
 		return "Invalid format"
 	case ContainerPaused:
