@@ -161,7 +161,7 @@ type Manager interface {
 type IntelRdtManager struct {
 	mu     sync.Mutex
 	Config *configs.Config
-	Id     string
+	ID     string
 	Path   string
 }
 
@@ -534,7 +534,7 @@ func (m *IntelRdtManager) Apply(pid int) (err error) {
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	path, err := d.join(m.Id)
+	path, err := d.join(m.ID)
 	if err != nil {
 		return err
 	}
@@ -558,7 +558,7 @@ func (m *IntelRdtManager) Destroy() error {
 // restore the object later
 func (m *IntelRdtManager) GetPath() string {
 	if m.Path == "" {
-		m.Path, _ = GetIntelRdtPath(m.Id)
+		m.Path, _ = GetIntelRdtPath(m.ID)
 	}
 	return m.Path
 }
