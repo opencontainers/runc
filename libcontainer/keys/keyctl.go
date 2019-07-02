@@ -15,11 +15,11 @@ import (
 type KeySerial uint32
 
 func JoinSessionKeyring(name string) (KeySerial, error) {
-	sessKeyId, err := unix.KeyctlJoinSessionKeyring(name)
+	sessKeyID, err := unix.KeyctlJoinSessionKeyring(name)
 	if err != nil {
 		return 0, errors.Wrap(err, "create session key")
 	}
-	return KeySerial(sessKeyId), nil
+	return KeySerial(sessKeyID), nil
 }
 
 // ModKeyringPerm modifies permissions on a keyring by reading the current permissions,

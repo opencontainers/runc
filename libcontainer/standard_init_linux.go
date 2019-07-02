@@ -55,7 +55,7 @@ func (l *linuxStandardInit) Init() error {
 		ringname, keepperms, newperms := l.getSessionRingParams()
 
 		// Do not inherit the parent's session keyring.
-		if sessKeyId, err := keys.JoinSessionKeyring(ringname); err != nil {
+		if sessKeyID, err := keys.JoinSessionKeyring(ringname); err != nil {
 			// If keyrings aren't supported then it is likely we are on an
 			// older kernel (or inside an LXC container). While we could bail,
 			// the security feature we are using here is best-effort (it only
@@ -71,7 +71,7 @@ func (l *linuxStandardInit) Init() error {
 			// Make session keyring searcheable. If we've gotten this far we
 			// bail on any error -- we don't want to have a keyring with bad
 			// permissions.
-			if err := keys.ModKeyringPerm(sessKeyId, keepperms, newperms); err != nil {
+			if err := keys.ModKeyringPerm(sessKeyID, keepperms, newperms); err != nil {
 				return errors.Wrap(err, "mod keyring permissions")
 			}
 		}
