@@ -41,7 +41,7 @@ func (l *linuxStandardInit) getSessionRingParams() (string, uint32, uint32) {
 
 	// Create a unique per session container name that we can join in setns;
 	// However, other containers can also join it.
-	return fmt.Sprintf("_ses.%s", l.config.ContainerId), 0xffffffff, newperms
+	return fmt.Sprintf("_ses.%s", l.config.ContainerID), 0xffffffff, newperms
 }
 
 func (l *linuxStandardInit) Init() error {

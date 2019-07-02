@@ -26,7 +26,7 @@ type linuxSetnsInit struct {
 }
 
 func (l *linuxSetnsInit) getSessionRingName() string {
-	return fmt.Sprintf("_ses.%s", l.config.ContainerId)
+	return fmt.Sprintf("_ses.%s", l.config.ContainerID)
 }
 
 func (l *linuxSetnsInit) Init() error {

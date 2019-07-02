@@ -61,7 +61,7 @@ type initConfig struct {
 	Config           *configs.Config       `json:"config"`
 	Networks         []*network            `json:"network"`
 	PassedFilesCount int                   `json:"passed_files_count"`
-	ContainerId      string                `json:"containerid"`
+	ContainerID      string                `json:"containerid"`
 	Rlimits          []configs.Rlimit      `json:"rlimits"`
 	CreateConsole    bool                  `json:"create_console"`
 	ConsoleWidth     uint16                `json:"console_width"`

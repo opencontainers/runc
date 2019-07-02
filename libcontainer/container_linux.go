@@ -19,7 +19,7 @@ import (
 	"syscall" // only for SysProcAttr and Signal
 	"time"
 
-	"github.com/cyphar/filepath-securejoin"
+	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
@@ -573,7 +573,7 @@ func (c *linuxContainer) newInitConfig(process *Process) *initConfig {
 		Cwd:              process.Cwd,
 		Capabilities:     process.Capabilities,
 		PassedFilesCount: len(process.ExtraFiles),
-		ContainerId:      c.ID(),
+		ContainerID:      c.ID(),
 		NoNewPrivileges:  c.config.NoNewPrivileges,
 		RootlessEUID:     c.config.RootlessEUID,
 		RootlessCgroups:  c.config.RootlessCgroups,
