@@ -4,7 +4,7 @@ import "testing"
 
 func TestErrorCode(t *testing.T) {
 	codes := map[ErrorCode]string{
-		IdInUse:             "Id already in use",
+		IDInUse:             "Id already in use",
 		InvalidIdFormat:     "Invalid format",
 		ContainerPaused:     "Container paused",
 		ConfigInvalid:       "Invalid configuration",

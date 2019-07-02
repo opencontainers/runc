@@ -15,7 +15,7 @@ type Factory interface {
 	// Returns the new container with a running process.
 	//
 	// errors:
-	// IdInUse - id is already in use by a container
+	// IDInUse - id is already in use by a container
 	// InvalidIdFormat - id has incorrect format
 	// ConfigInvalid - config is invalid
 	// Systemerror - System error

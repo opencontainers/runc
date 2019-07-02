@@ -8,7 +8,7 @@ type ErrorCode int
 // API error codes.
 const (
 	// Factory errors
-	IdInUse ErrorCode = iota
+	IDInUse ErrorCode = iota
 	InvalidIdFormat
 
 	// Container errors
@@ -29,7 +29,7 @@ const (
 
 func (c ErrorCode) String() string {
 	switch c {
-	case IdInUse:
+	case IDInUse:
 		return "Id already in use"
 	case InvalidIdFormat:
 		return "Invalid format"
