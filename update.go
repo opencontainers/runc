@@ -288,7 +288,7 @@ other options are ignored.
 				config.IntelRdt = &configs.IntelRdt{}
 				intelRdtManager := intelrdt.IntelRdtManager{
 					Config: &config,
-					Id:     container.ID(),
+					ID:     container.ID(),
 					Path:   state.IntelRdtPath,
 				}
 				if err := intelRdtManager.Apply(state.InitProcessPid); err != nil {
