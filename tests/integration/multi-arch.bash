@@ -2,10 +2,10 @@
 get_busybox(){
 	case $(go env GOARCH) in
 	arm64)
-		echo 'https://github.com/docker-library/busybox/raw/23fbd9c43e0f4bec7605091bfba23db278c367ac/glibc/busybox.tar.xz'
+		echo 'https://github.com/docker-library/busybox/raw/dist-arm64v8/glibc/busybox.tar.xz'
 	;;
 	*)
-		echo 'https://github.com/docker-library/busybox/raw/a0558a9006ce0dd6f6ec5d56cfd3f32ebeeb815f/glibc/busybox.tar.xz'
+		echo 'https://github.com/docker-library/busybox/raw/dist-amd64/glibc/busybox.tar.xz'
 	;;
 	esac
 }
