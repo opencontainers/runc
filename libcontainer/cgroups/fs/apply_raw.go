@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
@@ -366,9 +367,31 @@ func writeFile(dir, file, data string) error {
 	return nil
 }
 
+//cgroupfs can be mounted with "noprefix" which strips the controller name
+func writeCgroupFile(dir, controller, file, data string) error {
+	fullname := strings.Join([]string{controller, file}, ".")
+	if err := writeFile(dir, fullname, data); err != nil {
+		if err := writeFile(dir, file, data); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func readFile(dir, file string) (string, error) {
 	data, err := ioutil.ReadFile(filepath.Join(dir, file))
 	return string(data), err
+}
+
+//cgroupfs can be mounted with "noprefix" which strips the controller name
+func readCgroupFile(dir, controller, file string) (data []byte, err error) {
+	fullname := strings.Join([]string{controller, file}, ".")
+	if data, err = ioutil.ReadFile(filepath.Join(dir, fullname)); err != nil {
+		if data, err = ioutil.ReadFile(filepath.Join(dir, file)); err != nil {
+			return
+		}
+	}
+	return data, err
 }
 
 func removePath(p string, err error) error {
