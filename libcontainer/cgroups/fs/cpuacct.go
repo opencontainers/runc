@@ -84,21 +84,36 @@ func getCpuUsageBreakdown(path string) (uint64, uint64, error) {
 	if err != nil {
 		return 0, 0, err
 	}
-	fields := strings.Fields(string(data))
-	if len(fields) != 4 {
-		return 0, 0, fmt.Errorf("failure - %s is expected to have 4 fields", filepath.Join(path, cgroupCpuacctStat))
+	
+	var hasUser = false;
+	var hasSystem = false;
+
+	lines := strings.Split(string(data), "\n");
+	for _, line := range lines {
+		kv := strings.Split(line, " ");
+		if (len(kv) != 2) {
+			continue;
+		}
+
+		if kv[0] == userField {
+			hasUser = true;
+			if userModeUsage, err = strconv.ParseUint(kv[1], 10, 64); err != nil {
+				return 0, 0, err
+			}
+		} else if kv[0] == systemField {
+			hasSystem = true;
+			if kernelModeUsage, err = strconv.ParseUint(kv[1], 10, 64); err != nil {
+				return 0, 0, err
+			}
+		}
 	}
-	if fields[0] != userField {
-		return 0, 0, fmt.Errorf("unexpected field %q in %q, expected %q", fields[0], cgroupCpuacctStat, userField)
+
+	if (!hasUser) {
+		return 0, 0, fmt.Errorf("field %q is missing in %q", userField, cgroupCpuacctStat)
 	}
-	if fields[2] != systemField {
-		return 0, 0, fmt.Errorf("unexpected field %q in %q, expected %q", fields[2], cgroupCpuacctStat, systemField)
-	}
-	if userModeUsage, err = strconv.ParseUint(fields[1], 10, 64); err != nil {
-		return 0, 0, err
-	}
-	if kernelModeUsage, err = strconv.ParseUint(fields[3], 10, 64); err != nil {
-		return 0, 0, err
+
+	if (!hasSystem) {
+		return 0, 0, fmt.Errorf("field %q is missing in %q", systemField, cgroupCpuacctStat)
 	}
 
 	return (userModeUsage * nanosecondsInSecond) / clockTicks, (kernelModeUsage * nanosecondsInSecond) / clockTicks, nil
