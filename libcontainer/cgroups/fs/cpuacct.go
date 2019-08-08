@@ -84,35 +84,35 @@ func getCpuUsageBreakdown(path string) (uint64, uint64, error) {
 	if err != nil {
 		return 0, 0, err
 	}
-	
-	var hasUser = false;
-	var hasSystem = false;
 
-	lines := strings.Split(string(data), "\n");
+	var hasUser = false
+	var hasSystem = false
+
+	lines := strings.Split(string(data), "\n")
 	for _, line := range lines {
-		kv := strings.Split(line, " ");
-		if (len(kv) != 2) {
-			continue;
+		kv := strings.Split(line, " ")
+		if len(kv) != 2 {
+			continue
 		}
 
 		if kv[0] == userField {
-			hasUser = true;
+			hasUser = true
 			if userModeUsage, err = strconv.ParseUint(kv[1], 10, 64); err != nil {
 				return 0, 0, err
 			}
 		} else if kv[0] == systemField {
-			hasSystem = true;
+			hasSystem = true
 			if kernelModeUsage, err = strconv.ParseUint(kv[1], 10, 64); err != nil {
 				return 0, 0, err
 			}
 		}
 	}
 
-	if (!hasUser) {
+	if !hasUser {
 		return 0, 0, fmt.Errorf("field %q is missing in %q", userField, cgroupCpuacctStat)
 	}
 
-	if (!hasSystem) {
+	if !hasSystem {
 		return 0, 0, fmt.Errorf("field %q is missing in %q", systemField, cgroupCpuacctStat)
 	}
 
