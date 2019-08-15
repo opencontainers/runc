@@ -492,7 +492,13 @@ func signalAllProcesses(m cgroups.Manager, s os.Signal) error {
 			logrus.Warn(err)
 		}
 	}
-	if err := m.Freeze(configs.Thawed); err != nil {
+
+	if s != unix.SIGKILL {
+		err = m.Freeze(configs.Thawed)
+	} else {
+		err = m.ThawAll()
+	}
+	if err != nil {
 		logrus.Warn(err)
 	}
 

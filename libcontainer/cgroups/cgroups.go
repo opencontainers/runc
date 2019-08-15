@@ -24,6 +24,9 @@ type Manager interface {
 	// Toggles the freezer cgroup according with specified state
 	Freeze(state configs.FreezerState) error
 
+	// Unfreezes the cgroup and all subcgroups
+	ThawAll() error
+
 	// Destroys the cgroup set
 	Destroy() error
 

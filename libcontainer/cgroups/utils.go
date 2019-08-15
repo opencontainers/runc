@@ -494,6 +494,21 @@ func getHugePageSizeFromFilenames(fileNames []string) ([]string, error) {
 	return pageSizes, nil
 }
 
+// WalkCgroups calls walkFn on the cgroup directory at path and on all its
+// subcgroups.
+func WalkCgroups(path string, walkFn func(path string) error) error {
+	return filepath.Walk(path, func(p string, info os.FileInfo, iErr error) error {
+		dir, file := filepath.Split(p)
+		if file != CgroupProcesses {
+			return nil
+		}
+		if iErr != nil {
+			return iErr
+		}
+		return walkFn(dir)
+	})
+}
+
 // GetPids returns all pids, that were added to cgroup at path.
 func GetPids(path string) ([]int, error) {
 	return readProcsFile(path)
@@ -503,15 +518,7 @@ func GetPids(path string) ([]int, error) {
 // subcgroups.
 func GetAllPids(path string) ([]int, error) {
 	var pids []int
-	// collect pids from all sub-cgroups
-	err := filepath.Walk(path, func(p string, info os.FileInfo, iErr error) error {
-		dir, file := filepath.Split(p)
-		if file != CgroupProcesses {
-			return nil
-		}
-		if iErr != nil {
-			return iErr
-		}
+	err := WalkCgroups(path, func(dir string) error {
 		cPids, err := readProcsFile(dir)
 		if err != nil {
 			return err

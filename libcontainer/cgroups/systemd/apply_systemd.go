@@ -427,6 +427,22 @@ func (m *LegacyManager) Freeze(state configs.FreezerState) error {
 	return nil
 }
 
+func (m *LegacyManager) ThawAll() error {
+	err := m.Freeze(configs.Thawed)
+	if err != nil {
+		return err
+	}
+	path, err := getSubsystemPath(m.Cgroups, "freezer")
+	if err != nil {
+		return err
+	}
+	freezer, err := legacySubsystems.Get("freezer")
+	if err != nil {
+		return err
+	}
+	return freezer.(*fs.FreezerGroup).RecursiveThaw(path)
+}
+
 func (m *LegacyManager) GetPids() ([]int, error) {
 	path, err := getSubsystemPath(m.Cgroups, "devices")
 	if err != nil {

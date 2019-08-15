@@ -301,6 +301,21 @@ func (m *Manager) Freeze(state configs.FreezerState) error {
 	return nil
 }
 
+// ThawAll unfreezes the container's freezer cgroup, and all subcgroups
+// recursively.
+func (m *Manager) ThawAll() error {
+	err := m.Freeze(configs.Thawed)
+	if err != nil {
+		return err
+	}
+	paths := m.GetPaths()
+	freezer, err := subsystemsLegacy.Get("freezer")
+	if err != nil {
+		return err
+	}
+	return freezer.(*FreezerGroup).RecursiveThaw(paths["freezer"])
+}
+
 func (m *Manager) GetPids() ([]int, error) {
 	paths := m.GetPaths()
 	return cgroups.GetPids(paths["devices"])

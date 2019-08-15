@@ -58,6 +58,10 @@ func (m *mockCgroupManager) Freeze(state configs.FreezerState) error {
 	return nil
 }
 
+func (m *mockCgroupManager) ThawAll() error {
+	return nil
+}
+
 func (m *mockIntelRdtManager) Apply(pid int) error {
 	return nil
 }

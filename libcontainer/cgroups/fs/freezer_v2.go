@@ -26,16 +26,34 @@ func (s *FreezerGroupV2) Apply(d *cgroupData) error {
 	return nil
 }
 
+func (s *FreezerGroupV2) RecursiveThaw(path string) error {
+	return cgroups.WalkCgroups(path, func(dir string) error {
+		return s.set(dir, configs.Thawed)
+	})
+}
+
+func (s *FreezerGroupV2) Remove(d *cgroupData) error {
+	return removePath(d.path("freezer"))
+}
+
+func (s *FreezerGroupV2) GetStats(path string, stats *cgroups.Stats) error {
+	return nil
+}
+
 func (s *FreezerGroupV2) Set(path string, cgroup *configs.Cgroup) error {
+	return s.set(path, cgroup.Resources.Freezer)
+}
+
+func (s *FreezerGroupV2) set(path string, state configs.FreezerState) error {
 	var desiredState string
 	filename := "cgroup.freeze"
-	if cgroup.Resources.Freezer == configs.Frozen {
+	if state == configs.Frozen {
 		desiredState = "1"
 	} else {
 		desiredState = "0"
 	}
 
-	switch cgroup.Resources.Freezer {
+	switch state {
 	case configs.Frozen, configs.Thawed:
 		for {
 			// In case this loop does not exit because it doesn't get the expected
@@ -59,16 +77,8 @@ func (s *FreezerGroupV2) Set(path string, cgroup *configs.Cgroup) error {
 	case configs.Undefined:
 		return nil
 	default:
-		return fmt.Errorf("Invalid argument '%s' to freezer.state", string(cgroup.Resources.Freezer))
+		return fmt.Errorf("Invalid argument '%s' to freezer.state", string(state))
 	}
 
-	return nil
-}
-
-func (s *FreezerGroupV2) Remove(d *cgroupData) error {
-	return removePath(d.path("freezer"))
-}
-
-func (s *FreezerGroupV2) GetStats(path string, stats *cgroups.Stats) error {
 	return nil
 }

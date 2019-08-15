@@ -34,6 +34,22 @@ var unifiedSubsystems = subsystemSet{
 	&fs.PidsGroupV2{},
 }
 
+func (m *UnifiedManager) ThawAll() error {
+	err := m.Freeze(configs.Thawed)
+	if err != nil {
+		return err
+	}
+	path, err := getSubsystemPath(m.Cgroups, "freezer")
+	if err != nil {
+		return err
+	}
+	freezer, err := unifiedSubsystems.Get("freezer")
+	if err != nil {
+		return err
+	}
+	return freezer.(*fs.FreezerGroupV2).RecursiveThaw(path)
+}
+
 func (m *UnifiedManager) Apply(pid int) error {
 	var (
 		c          = m.Cgroups

@@ -54,6 +54,10 @@ func (m *Manager) Freeze(state configs.FreezerState) error {
 	return fmt.Errorf("Systemd not supported")
 }
 
+func (m *Manager) ThawAll() error {
+	return fmt.Errorf("Systemd not supported")
+}
+
 func Freeze(c *configs.Cgroup, state configs.FreezerState) error {
 	return fmt.Errorf("Systemd not supported")
 }
