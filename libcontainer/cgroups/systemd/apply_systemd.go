@@ -3,6 +3,7 @@
 package systemd
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -67,16 +68,21 @@ var subsystems = subsystemSet{
 }
 
 const (
-	testScopeWait = 4
-	testSliceWait = 4
+	testScopeWait         = 4
+	testSliceWait         = 4
+	systemdDetectFilename = "/var/cache/runc/systemd-detect.json"
 )
 
+type SystemdDetect struct {
+	HasStartTransientUnit      bool
+	HasStartTransientSliceUnit bool
+	HasDelegateSlice           bool
+}
+
 var (
-	connLock                   sync.Mutex
-	theConn                    *systemdDbus.Conn
-	hasStartTransientUnit      bool
-	hasStartTransientSliceUnit bool
-	hasDelegateSlice           bool
+	connLock      sync.Mutex
+	theConn       *systemdDbus.Conn
+	systemdDetect SystemdDetect
 )
 
 func newProp(name string, units interface{}) systemdDbus.Property {
@@ -101,15 +107,20 @@ func UseSystemd() bool {
 			return false
 		}
 
+		// Consult the cached systemd detection results first
+		if loadSystemdDetectJson() {
+			return systemdDetect.HasStartTransientUnit
+		}
+
 		// Assume we have StartTransientUnit
-		hasStartTransientUnit = true
+		systemdDetect.HasStartTransientUnit = true
 
 		// But if we get UnknownMethod error we don't
 		if _, err := theConn.StartTransientUnit("test.scope", "invalid", nil, nil); err != nil {
 			if dbusError, ok := err.(dbus.Error); ok {
 				if dbusError.Name == "org.freedesktop.DBus.Error.UnknownMethod" {
-					hasStartTransientUnit = false
-					return hasStartTransientUnit
+					systemdDetect.HasStartTransientUnit = false
+					return systemdDetect.HasStartTransientUnit
 				}
 			}
 		}
@@ -117,13 +128,13 @@ func UseSystemd() bool {
 		// Assume we have the ability to start a transient unit as a slice
 		// This was broken until systemd v229, but has been back-ported on RHEL environments >= 219
 		// For details, see: https://bugzilla.redhat.com/show_bug.cgi?id=1370299
-		hasStartTransientSliceUnit = true
+		systemdDetect.HasStartTransientSliceUnit = true
 
 		// To ensure simple clean-up, we create a slice off the root with no hierarchy
 		slice := fmt.Sprintf("libcontainer_%d_systemd_test_default.slice", os.Getpid())
 		if _, err := theConn.StartTransientUnit(slice, "replace", nil, nil); err != nil {
 			if _, ok := err.(dbus.Error); ok {
-				hasStartTransientSliceUnit = false
+				systemdDetect.HasStartTransientSliceUnit = false
 			}
 		}
 
@@ -131,7 +142,7 @@ func UseSystemd() bool {
 			if _, err := theConn.StopUnit(slice, "replace", nil); err != nil {
 				if dbusError, ok := err.(dbus.Error); ok {
 					if strings.Contains(dbusError.Name, "org.freedesktop.systemd1.NoSuchUnit") {
-						hasStartTransientSliceUnit = false
+						systemdDetect.HasStartTransientSliceUnit = false
 						break
 					}
 				}
@@ -145,22 +156,50 @@ func UseSystemd() bool {
 		theConn.StopUnit(slice, "replace", nil)
 
 		// Assume StartTransientUnit on a slice allows Delegate
-		hasDelegateSlice = true
+		systemdDetect.HasDelegateSlice = true
 		dlSlice := newProp("Delegate", true)
 		if _, err := theConn.StartTransientUnit(slice, "replace", []systemdDbus.Property{dlSlice}, nil); err != nil {
 			if dbusError, ok := err.(dbus.Error); ok {
 				// Starting with systemd v237, Delegate is not even a property of slices anymore,
 				// so the D-Bus call fails with "InvalidArgs" error.
 				if strings.Contains(dbusError.Name, "org.freedesktop.DBus.Error.PropertyReadOnly") || strings.Contains(dbusError.Name, "org.freedesktop.DBus.Error.InvalidArgs") {
-					hasDelegateSlice = false
+					systemdDetect.HasDelegateSlice = false
 				}
 			}
 		}
 
 		// Not critical because of the stop unit logic above.
 		theConn.StopUnit(slice, "replace", nil)
+
+		// Cache the detected values
+		saveSystemdDetectJson()
 	}
-	return hasStartTransientUnit
+	return systemdDetect.HasStartTransientUnit
+}
+
+func loadSystemdDetectJson() bool {
+	systemdDetectJson, err := ioutil.ReadFile(systemdDetectFilename)
+	if err == nil {
+		if err := json.Unmarshal(systemdDetectJson, &systemdDetect); err != nil {
+			logrus.Warnf("cannot decode systemd-detect json (%s)", err)
+		} else {
+			return true
+		}
+	}
+	return false
+}
+
+func saveSystemdDetectJson() {
+	systemdDetectJson, err := json.MarshalIndent(systemdDetect, "", "  ")
+	if err != nil {
+		logrus.Warnf("cannot marshal systemd-detect json (%s)", err)
+	} else {
+		systemdDetectDirname, _ := filepath.Split(systemdDetectFilename)
+		os.Mkdir(systemdDetectDirname, os.FileMode(0755))
+		if err := ioutil.WriteFile(systemdDetectFilename, systemdDetectJson, 0644); err != nil {
+			logrus.Warnf("cannot write systemd-detect json (%s)", err)
+		}
+	}
 }
 
 func NewSystemdCgroupsManager() (func(config *configs.Cgroup, paths map[string]string) cgroups.Manager, error) {
@@ -209,7 +248,7 @@ func (m *Manager) Apply(pid int) error {
 	// if we create a slice, the parent is defined via a Wants=
 	if strings.HasSuffix(unitName, ".slice") {
 		// This was broken until systemd v229, but has been back-ported on RHEL environments >= 219
-		if !hasStartTransientSliceUnit {
+		if !systemdDetect.HasStartTransientSliceUnit {
 			return fmt.Errorf("systemd version does not support ability to start a slice as transient unit")
 		}
 		properties = append(properties, systemdDbus.PropWants(slice))
@@ -225,7 +264,7 @@ func (m *Manager) Apply(pid int) error {
 
 	// Check if we can delegate. This is only supported on systemd versions 218 and above.
 	if strings.HasSuffix(unitName, ".slice") {
-		if hasDelegateSlice {
+		if systemdDetect.HasDelegateSlice {
 			// systemd 237 and above no longer allows delegation on a slice
 			properties = append(properties, newProp("Delegate", true))
 		}
