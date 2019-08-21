@@ -52,15 +52,15 @@ func getNetworkInterfaceStats(interfaceName string) (*NetworkInterface, error) {
 	}
 	// Ingress for host veth is from the container. Hence tx_bytes stat on the host veth is actually number of bytes received by the container.
 	netStats := []netStatsPair{
-		{Out: &out.RxBytes, File: "tx_bytes"},
-		{Out: &out.RxPackets, File: "tx_packets"},
-		{Out: &out.RxErrors, File: "tx_errors"},
-		{Out: &out.RxDropped, File: "tx_dropped"},
+		{Out: &out.RxBytes, File: "rx_bytes"},
+		{Out: &out.RxPackets, File: "rx_packets"},
+		{Out: &out.RxErrors, File: "rx_errors"},
+		{Out: &out.RxDropped, File: "rx_dropped"},
 
-		{Out: &out.TxBytes, File: "rx_bytes"},
-		{Out: &out.TxPackets, File: "rx_packets"},
-		{Out: &out.TxErrors, File: "rx_errors"},
-		{Out: &out.TxDropped, File: "rx_dropped"},
+		{Out: &out.TxBytes, File: "tx_bytes"},
+		{Out: &out.TxPackets, File: "tx_packets"},
+		{Out: &out.TxErrors, File: "tx_errors"},
+		{Out: &out.TxDropped, File: "tx_dropped"},
 	}
 	for _, netStat := range netStats {
 		data, err := readSysfsNetworkStats(interfaceName, netStat.File)
