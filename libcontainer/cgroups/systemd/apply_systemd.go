@@ -22,7 +22,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type Manager struct {
+type LegacyManager struct {
 	mu      sync.Mutex
 	Cgroups *configs.Cgroup
 	Paths   map[string]string
@@ -167,15 +167,28 @@ func NewSystemdCgroupsManager() (func(config *configs.Cgroup, paths map[string]s
 	if !systemdUtil.IsRunningSystemd() {
 		return nil, fmt.Errorf("systemd not running on this host, can't use systemd as a cgroups.Manager")
 	}
-	return func(config *configs.Cgroup, paths map[string]string) cgroups.Manager {
-		return &Manager{
-			Cgroups: config,
-			Paths:   paths,
-		}
-	}, nil
+	unified, err := IsCgroup2UnifiedMode()
+	if err != nil {
+		return nil, err
+	}
+	if unified {
+		return func(config *configs.Cgroup, paths map[string]string) cgroups.Manager {
+			return &UnifiedManager{
+				Cgroups: config,
+				Paths:   paths,
+			}
+		}, nil
+	} else {
+		return func(config *configs.Cgroup, paths map[string]string) cgroups.Manager {
+			return &LegacyManager{
+				Cgroups: config,
+				Paths:   paths,
+			}
+		}, nil
+	}
 }
 
-func (m *Manager) Apply(pid int) error {
+func (m *LegacyManager) Apply(pid int) error {
 	var (
 		c          = m.Cgroups
 		unitName   = getUnitName(c)
@@ -325,7 +338,7 @@ func (m *Manager) Apply(pid int) error {
 	return nil
 }
 
-func (m *Manager) Destroy() error {
+func (m *LegacyManager) Destroy() error {
 	if m.Cgroups.Paths != nil {
 		return nil
 	}
@@ -339,7 +352,7 @@ func (m *Manager) Destroy() error {
 	return nil
 }
 
-func (m *Manager) GetPaths() map[string]string {
+func (m *LegacyManager) GetPaths() map[string]string {
 	m.mu.Lock()
 	paths := m.Paths
 	m.mu.Unlock()
@@ -456,7 +469,7 @@ func getSubsystemPath(c *configs.Cgroup, subsystem string) (string, error) {
 	return filepath.Join(mountpoint, initPath, slice, getUnitName(c)), nil
 }
 
-func (m *Manager) Freeze(state configs.FreezerState) error {
+func (m *LegacyManager) Freeze(state configs.FreezerState) error {
 	path, err := getSubsystemPath(m.Cgroups, "freezer")
 	if err != nil {
 		return err
@@ -475,7 +488,7 @@ func (m *Manager) Freeze(state configs.FreezerState) error {
 	return nil
 }
 
-func (m *Manager) GetPids() ([]int, error) {
+func (m *LegacyManager) GetPids() ([]int, error) {
 	path, err := getSubsystemPath(m.Cgroups, "devices")
 	if err != nil {
 		return nil, err
@@ -483,7 +496,7 @@ func (m *Manager) GetPids() ([]int, error) {
 	return cgroups.GetPids(path)
 }
 
-func (m *Manager) GetAllPids() ([]int, error) {
+func (m *LegacyManager) GetAllPids() ([]int, error) {
 	path, err := getSubsystemPath(m.Cgroups, "devices")
 	if err != nil {
 		return nil, err
@@ -491,7 +504,7 @@ func (m *Manager) GetAllPids() ([]int, error) {
 	return cgroups.GetAllPids(path)
 }
 
-func (m *Manager) GetStats() (*cgroups.Stats, error) {
+func (m *LegacyManager) GetStats() (*cgroups.Stats, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	stats := cgroups.NewStats()
@@ -508,7 +521,7 @@ func (m *Manager) GetStats() (*cgroups.Stats, error) {
 	return stats, nil
 }
 
-func (m *Manager) Set(container *configs.Config) error {
+func (m *LegacyManager) Set(container *configs.Config) error {
 	// If Paths are set, then we are just joining cgroups paths
 	// and there is no need to set any values.
 	if m.Cgroups.Paths != nil {
