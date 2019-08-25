@@ -14,7 +14,6 @@ import (
 	"time"
 
 	systemdDbus "github.com/coreos/go-systemd/dbus"
-	systemdUtil "github.com/coreos/go-systemd/util"
 	"github.com/godbus/dbus"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fs"
@@ -86,8 +85,23 @@ func newProp(name string, units interface{}) systemdDbus.Property {
 	}
 }
 
+// NOTE: This function comes from package github.com/coreos/go-systemd/util
+// It was borrowed here to avoid a dependency on cgo.
+//
+// IsRunningSystemd checks whether the host was booted with systemd as its init
+// system. This functions similarly to systemd's `sd_booted(3)`: internally, it
+// checks whether /run/systemd/system/ exists and is a directory.
+// http://www.freedesktop.org/software/systemd/man/sd_booted.html
+func isRunningSystemd() bool {
+	fi, err := os.Lstat("/run/systemd/system")
+	if err != nil {
+		return false
+	}
+	return fi.IsDir()
+}
+
 func UseSystemd() bool {
-	if !systemdUtil.IsRunningSystemd() {
+	if !isRunningSystemd() {
 		return false
 	}
 
@@ -164,7 +178,7 @@ func UseSystemd() bool {
 }
 
 func NewSystemdCgroupsManager() (func(config *configs.Cgroup, paths map[string]string) cgroups.Manager, error) {
-	if !systemdUtil.IsRunningSystemd() {
+	if !isRunningSystemd() {
 		return nil, fmt.Errorf("systemd not running on this host, can't use systemd as a cgroups.Manager")
 	}
 	return func(config *configs.Cgroup, paths map[string]string) cgroups.Manager {
