@@ -50,9 +50,6 @@ enum sync_t {
 #define JUMP_CHILD  0xA0
 #define JUMP_INIT   0xA1
 
-/* JSON buffer. */
-#define JSON_MAX 4096
-
 /* Assume the stack grows down, so arguments should be above it. */
 struct clone_t {
 	/*
