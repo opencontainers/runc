@@ -119,6 +119,14 @@ func NewSystemdCgroupsManager() (func(config *configs.Cgroup, paths map[string]s
 	if !isRunningSystemd() {
 		return nil, fmt.Errorf("systemd not running on this host, can't use systemd as a cgroups.Manager")
 	}
+	if cgroups.IsCgroup2UnifiedMode() {
+		return func(config *configs.Cgroup, paths map[string]string) cgroups.Manager {
+			return &UnifiedManager{
+				Cgroups: config,
+				Paths:   paths,
+			}
+		}, nil
+	}
 	return func(config *configs.Cgroup, paths map[string]string) cgroups.Manager {
 		return &LegacyManager{
 			Cgroups: config,
@@ -407,7 +415,7 @@ func (m *LegacyManager) Freeze(state configs.FreezerState) error {
 	}
 	prevState := m.Cgroups.Resources.Freezer
 	m.Cgroups.Resources.Freezer = state
-	freezer, err := subsystems.Get("freezer")
+	freezer, err := legacySubsystems.Get("freezer")
 	if err != nil {
 		return err
 	}
@@ -440,7 +448,7 @@ func (m *LegacyManager) GetStats() (*cgroups.Stats, error) {
 	defer m.mu.Unlock()
 	stats := cgroups.NewStats()
 	for name, path := range m.Paths {
-		sys, err := subsystems.Get(name)
+		sys, err := legacySubsystems.Get(name)
 		if err == errSubsystemDoesNotExist || !cgroups.PathExists(path) {
 			continue
 		}
