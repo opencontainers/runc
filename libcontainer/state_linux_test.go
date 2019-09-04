@@ -11,6 +11,7 @@ var states = map[containerState]Status{
 	&createdState{}:          Created,
 	&runningState{}:          Running,
 	&restoredState{}:         Running,
+	&pausingState{}:          Pausing,
 	&pausedState{}:           Paused,
 	&stoppedState{}:          Stopped,
 	&loadedState{s: Running}: Running,
@@ -67,6 +68,19 @@ func TestStoppedStateTransition(t *testing.T) {
 	)
 }
 
+func TestPausingStateTransition(t *testing.T) {
+	testTransitions(
+		t,
+		&pausingState{c: &linuxContainer{}},
+		[]containerState{
+			&pausingState{},
+			&pausedState{},
+			&runningState{},
+			&stoppedState{},
+		},
+	)
+}
+
 func TestPausedStateTransition(t *testing.T) {
 	testTransitions(
 		t,
@@ -96,6 +110,7 @@ func TestRunningStateTransition(t *testing.T) {
 		&runningState{c: &linuxContainer{}},
 		[]containerState{
 			&stoppedState{},
+			&pausingState{},
 			&pausedState{},
 			&runningState{},
 		},
@@ -108,6 +123,7 @@ func TestCreatedStateTransition(t *testing.T) {
 		&createdState{c: &linuxContainer{}},
 		[]containerState{
 			&stoppedState{},
+			&pausingState{},
 			&pausedState{},
 			&runningState{},
 			&createdState{},
