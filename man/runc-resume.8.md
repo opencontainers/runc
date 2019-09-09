@@ -1,10 +1,12 @@
+% runc-resume "8"
+
 # NAME
    runc resume - resumes all processes that have been previously paused
 
 # SYNOPSIS
-   runc resume <container-id>
+   runc resume `<container-id>`
 
-Where "<container-id>" is the name for the instance of the container to be
+Where "`<container-id>`" is the name for the instance of the container to be
 resumed.
 
 # DESCRIPTION
