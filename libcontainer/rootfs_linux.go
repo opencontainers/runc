@@ -209,6 +209,80 @@ func prepareBindMount(m *configs.Mount, rootfs string) error {
 	return nil
 }
 
+func mountCgroupV1(m *configs.Mount, rootfs, mountLabel string, enableCgroupns bool) error {
+	binds, err := getCgroupMounts(m)
+	if err != nil {
+		return err
+	}
+	var merged []string
+	for _, b := range binds {
+		ss := filepath.Base(b.Destination)
+		if strings.Contains(ss, ",") {
+			merged = append(merged, ss)
+		}
+	}
+	tmpfs := &configs.Mount{
+		Source:           "tmpfs",
+		Device:           "tmpfs",
+		Destination:      m.Destination,
+		Flags:            defaultMountFlags,
+		Data:             "mode=755",
+		PropagationFlags: m.PropagationFlags,
+	}
+	if err := mountToRootfs(tmpfs, rootfs, mountLabel, enableCgroupns); err != nil {
+		return err
+	}
+	for _, b := range binds {
+		if enableCgroupns {
+			subsystemPath := filepath.Join(rootfs, b.Destination)
+			if err := os.MkdirAll(subsystemPath, 0755); err != nil {
+				return err
+			}
+			flags := defaultMountFlags
+			if m.Flags&unix.MS_RDONLY != 0 {
+				flags = flags | unix.MS_RDONLY
+			}
+			cgroupmount := &configs.Mount{
+				Source:      "cgroup",
+				Device:      "cgroup",
+				Destination: subsystemPath,
+				Flags:       flags,
+				Data:        filepath.Base(subsystemPath),
+			}
+			if err := mountNewCgroup(cgroupmount); err != nil {
+				return err
+			}
+		} else {
+			if err := mountToRootfs(b, rootfs, mountLabel, enableCgroupns); err != nil {
+				return err
+			}
+		}
+	}
+	for _, mc := range merged {
+		for _, ss := range strings.Split(mc, ",") {
+			// symlink(2) is very dumb, it will just shove the path into
+			// the link and doesn't do any checks or relative path
+			// conversion. Also, don't error out if the cgroup already exists.
+			if err := os.Symlink(mc, filepath.Join(rootfs, m.Destination, ss)); err != nil && !os.IsExist(err) {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func mountCgroupV2(m *configs.Mount, rootfs, mountLabel string, enableCgroupns bool) error {
+	cgroupPath, err := securejoin.SecureJoin(rootfs, m.Destination)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(cgroupPath, 0755); err != nil {
+		return err
+	}
+
+	return unix.Mount(m.Source, cgroupPath, "cgroup2", uintptr(m.Flags), m.Data)
+}
+
 func mountToRootfs(m *configs.Mount, rootfs, mountLabel string, enableCgroupns bool) error {
 	var (
 		dest = m.Destination
@@ -309,62 +383,14 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string, enableCgroupns b
 			}
 		}
 	case "cgroup":
-		binds, err := getCgroupMounts(m)
-		if err != nil {
-			return err
-		}
-		var merged []string
-		for _, b := range binds {
-			ss := filepath.Base(b.Destination)
-			if strings.Contains(ss, ",") {
-				merged = append(merged, ss)
+		if cgroups.IsCgroup2UnifiedMode() {
+			if err := mountCgroupV2(m, rootfs, mountLabel, enableCgroupns); err != nil {
+				return err
 			}
-		}
-		tmpfs := &configs.Mount{
-			Source:           "tmpfs",
-			Device:           "tmpfs",
-			Destination:      m.Destination,
-			Flags:            defaultMountFlags,
-			Data:             "mode=755",
-			PropagationFlags: m.PropagationFlags,
-		}
-		if err := mountToRootfs(tmpfs, rootfs, mountLabel, enableCgroupns); err != nil {
-			return err
-		}
-		for _, b := range binds {
-			if enableCgroupns {
-				subsystemPath := filepath.Join(rootfs, b.Destination)
-				if err := os.MkdirAll(subsystemPath, 0755); err != nil {
-					return err
-				}
-				flags := defaultMountFlags
-				if m.Flags&unix.MS_RDONLY != 0 {
-					flags = flags | unix.MS_RDONLY
-				}
-				cgroupmount := &configs.Mount{
-					Source:      "cgroup",
-					Device:      "cgroup",
-					Destination: subsystemPath,
-					Flags:       flags,
-					Data:        filepath.Base(subsystemPath),
-				}
-				if err := mountNewCgroup(cgroupmount); err != nil {
-					return err
-				}
-			} else {
-				if err := mountToRootfs(b, rootfs, mountLabel, enableCgroupns); err != nil {
-					return err
-				}
-			}
-		}
-		for _, mc := range merged {
-			for _, ss := range strings.Split(mc, ",") {
-				// symlink(2) is very dumb, it will just shove the path into
-				// the link and doesn't do any checks or relative path
-				// conversion. Also, don't error out if the cgroup already exists.
-				if err := os.Symlink(mc, filepath.Join(rootfs, m.Destination, ss)); err != nil && !os.IsExist(err) {
-					return err
-				}
+		} else {
+
+			if err := mountCgroupV1(m, rootfs, mountLabel, enableCgroupns); err != nil {
+				return err
 			}
 		}
 		if m.Flags&unix.MS_RDONLY != 0 {
