@@ -19,7 +19,7 @@ import (
 	"syscall" // only for SysProcAttr and Signal
 	"time"
 
-	"github.com/cyphar/filepath-securejoin"
+	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
@@ -1176,7 +1176,7 @@ func (c *linuxContainer) makeCriuRestoreMountpoints(m *configs.Mount) error {
 		if err != nil {
 			return err
 		}
-		if err := checkMountDestination(c.config.Rootfs, dest); err != nil {
+		if err := checkProcMount(c.config.Rootfs, dest, ""); err != nil {
 			return err
 		}
 		m.Destination = dest
