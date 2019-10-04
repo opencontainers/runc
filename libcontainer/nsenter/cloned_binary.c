@@ -28,6 +28,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/statfs.h>
+#include <sys/statvfs.h>
 #include <sys/vfs.h>
 #include <sys/mman.h>
 #include <sys/mount.h>
@@ -86,15 +87,36 @@ static void *must_realloc(void *ptr, size_t size)
 /*
  * Verify whether we are currently in a self-cloned program (namely, is
  * /proc/self/exe a memfd). F_GET_SEALS will only succeed for memfds (or rather
- * for shmem files), and we want to be sure it's actually sealed.
+ * for shmem files), and we want to be sure it's actually sealed. In case the
+ * the program is on a read-only rootfs, do not clone.
  */
 static int is_self_cloned(void)
 {
 	int fd, ret, is_cloned = 0;
 	struct stat statbuf = {};
 	struct statfs fsbuf = {};
+	struct statvfs stat;
+	char abs_path[1024];
 
-	fd = open("/proc/self/exe", O_RDONLY|O_CLOEXEC);
+	memset(&stat, 0, sizeof(struct statvfs));
+	const char *path = "/proc/self/exe";
+
+	ssize_t len = readlink(path, abs_path, sizeof(abs_path)-1);
+	if (len == -1)
+		return -ENOTRECOVERABLE;
+
+	/* readlink does not provide the path with null terminated character. */
+	abs_path[len] = '\0';
+
+	if (statvfs(abs_path, &stat) != 0)
+		return -ENOTRECOVERABLE;
+
+	/* Checks whether a program is on a read-only rootfs. */
+	if (stat.f_flag & ST_RDONLY) {
+		return true;
+	}
+
+	fd = open(path, O_RDONLY|O_CLOEXEC);
 	if (fd < 0)
 		return -ENOTRECOVERABLE;
 
