@@ -143,6 +143,7 @@ var allowedDevices = []*configs.Device{
 	},
 }
 
+// CreateOpts - libcontainer configuration options passed to CreateLibcontainerConfig()
 type CreateOpts struct {
 	CgroupName       string
 	UseSystemdCgroup bool
@@ -154,7 +155,7 @@ type CreateOpts struct {
 }
 
 // CreateLibcontainerConfig creates a new libcontainer configuration from a
-// given specification and a cgroup name
+// given specification and a cgroup name.
 func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 	// runc's cwd will always be the bundle path
 	rcwd, err := os.Getwd()
@@ -166,10 +167,14 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 		return nil, err
 	}
 	spec := opts.Spec
-	if spec.Root == nil {
+	if spec == nil {
+		return nil, fmt.Errorf("Spec must be specified")
+	}
+	root := spec.Root
+	if root == nil {
 		return nil, fmt.Errorf("Root must be specified")
 	}
-	rootfsPath := spec.Root.Path
+	rootfsPath := root.Path
 	if !filepath.IsAbs(rootfsPath) {
 		rootfsPath = filepath.Join(cwd, rootfsPath)
 	}
@@ -188,7 +193,6 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 		RootlessCgroups: opts.RootlessCgroups,
 	}
 
-	exists := false
 	for _, m := range spec.Mounts {
 		config.Mounts = append(config.Mounts, createLibcontainerMount(cwd, m))
 	}
@@ -201,15 +205,18 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 	}
 	config.Cgroups = c
 	// set linux-specific config
-	if spec.Linux != nil {
-		if config.RootPropagation, exists = mountPropagationMapping[spec.Linux.RootfsPropagation]; !exists {
-			return nil, fmt.Errorf("rootfsPropagation=%v is not supported", spec.Linux.RootfsPropagation)
+	lx := spec.Linux
+	if lx != nil {
+		rp, exists := mountPropagationMapping[lx.RootfsPropagation]
+		if !exists {
+			return nil, fmt.Errorf("rootfsPropagation=%v is not supported", lx.RootfsPropagation)
 		}
+		config.RootPropagation = rp
 		if config.NoPivotRoot && (config.RootPropagation&unix.MS_PRIVATE != 0) {
 			return nil, fmt.Errorf("rootfsPropagation of [r]private is not safe without pivot_root")
 		}
 
-		for _, ns := range spec.Linux.Namespaces {
+		for _, ns := range lx.Namespaces {
 			t, exists := namespaceMapping[ns.Type]
 			if !exists {
 				return nil, fmt.Errorf("namespace %q does not exist", ns)
@@ -231,42 +238,47 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 				return nil, err
 			}
 		}
-		config.MaskPaths = spec.Linux.MaskedPaths
-		config.ReadonlyPaths = spec.Linux.ReadonlyPaths
-		config.MountLabel = spec.Linux.MountLabel
-		config.Sysctl = spec.Linux.Sysctl
-		if spec.Linux.Seccomp != nil {
-			seccomp, err := SetupSeccomp(spec.Linux.Seccomp)
+		config.MaskPaths = lx.MaskedPaths
+		config.ReadonlyPaths = lx.ReadonlyPaths
+		config.MountLabel = lx.MountLabel
+		config.Sysctl = lx.Sysctl
+		if lx.Seccomp != nil {
+			seccomp, err := SetupSeccomp(lx.Seccomp)
 			if err != nil {
 				return nil, err
 			}
 			config.Seccomp = seccomp
 		}
-		if spec.Linux.IntelRdt != nil {
+		if lx.IntelRdt != nil {
 			config.IntelRdt = &configs.IntelRdt{}
-			if spec.Linux.IntelRdt.L3CacheSchema != "" {
-				config.IntelRdt.L3CacheSchema = spec.Linux.IntelRdt.L3CacheSchema
+			if lx.IntelRdt.L3CacheSchema != "" {
+				config.IntelRdt.L3CacheSchema = lx.IntelRdt.L3CacheSchema
 			}
 			if spec.Linux.IntelRdt.MemBwSchema != "" {
 				config.IntelRdt.MemBwSchema = spec.Linux.IntelRdt.MemBwSchema
 			}
 		}
 	}
-	if spec.Process != nil {
-		config.OomScoreAdj = spec.Process.OOMScoreAdj
-		if spec.Process.SelinuxLabel != "" {
-			config.ProcessLabel = spec.Process.SelinuxLabel
+
+	p := spec.Process
+	if p != nil {
+		if p.SelinuxLabel != "" {
+			config.ProcessLabel = p.SelinuxLabel
 		}
-		if spec.Process.Capabilities != nil {
+		if p.OOMScoreAdj != nil {
+			config.OomScoreAdj = p.OOMScoreAdj
+		}
+		if p.Capabilities != nil {
 			config.Capabilities = &configs.Capabilities{
-				Bounding:    spec.Process.Capabilities.Bounding,
-				Effective:   spec.Process.Capabilities.Effective,
-				Permitted:   spec.Process.Capabilities.Permitted,
-				Inheritable: spec.Process.Capabilities.Inheritable,
-				Ambient:     spec.Process.Capabilities.Ambient,
+				Bounding:    p.Capabilities.Bounding,
+				Effective:   p.Capabilities.Effective,
+				Permitted:   p.Capabilities.Permitted,
+				Inheritable: p.Capabilities.Inheritable,
+				Ambient:     p.Capabilities.Ambient,
 			}
 		}
 	}
+
 	createHooks(spec, config)
 	config.Version = specs.Version
 	return config, nil
@@ -309,10 +321,11 @@ func createCgroupConfig(opts *CreateOpts) (*configs.Cgroup, error) {
 		Resources: &configs.Resources{},
 	}
 
-	if spec.Linux != nil && spec.Linux.CgroupsPath != "" {
-		myCgroupPath = libcontainerUtils.CleanPath(spec.Linux.CgroupsPath)
+	lx := spec.Linux
+	if lx != nil && lx.CgroupsPath != "" {
+		myCgroupPath = libcontainerUtils.CleanPath(lx.CgroupsPath)
 		if useSystemdCgroup {
-			myCgroupPath = spec.Linux.CgroupsPath
+			myCgroupPath = lx.CgroupsPath
 		}
 	}
 
@@ -342,12 +355,12 @@ func createCgroupConfig(opts *CreateOpts) (*configs.Cgroup, error) {
 	// In rootless containers, any attempt to make cgroup changes is likely to fail.
 	// libcontainer will validate this but ignores the error.
 	c.Resources.AllowedDevices = allowedDevices
-	if spec.Linux != nil {
-		r := spec.Linux.Resources
+	if lx != nil {
+		r := lx.Resources
 		if r == nil {
 			return c, nil
 		}
-		for i, d := range spec.Linux.Resources.Devices {
+		for i, d := range lx.Resources.Devices {
 			var (
 				t     = "a"
 				major = int64(-1)
@@ -378,50 +391,52 @@ func createCgroupConfig(opts *CreateOpts) (*configs.Cgroup, error) {
 			}
 			c.Resources.Devices = append(c.Resources.Devices, dd)
 		}
-		if r.Memory != nil {
-			if r.Memory.Limit != nil {
-				c.Resources.Memory = *r.Memory.Limit
+		mem := r.Memory
+		if mem != nil {
+			if mem.Limit != nil {
+				c.Resources.Memory = *mem.Limit
 			}
-			if r.Memory.Reservation != nil {
-				c.Resources.MemoryReservation = *r.Memory.Reservation
+			if mem.Reservation != nil {
+				c.Resources.MemoryReservation = *mem.Reservation
 			}
-			if r.Memory.Swap != nil {
-				c.Resources.MemorySwap = *r.Memory.Swap
+			if mem.Swap != nil {
+				c.Resources.MemorySwap = *mem.Swap
 			}
-			if r.Memory.Kernel != nil {
-				c.Resources.KernelMemory = *r.Memory.Kernel
+			if mem.Kernel != nil {
+				c.Resources.KernelMemory = *mem.Kernel
 			}
-			if r.Memory.KernelTCP != nil {
-				c.Resources.KernelMemoryTCP = *r.Memory.KernelTCP
+			if mem.KernelTCP != nil {
+				c.Resources.KernelMemoryTCP = *mem.KernelTCP
 			}
-			if r.Memory.Swappiness != nil {
-				c.Resources.MemorySwappiness = r.Memory.Swappiness
+			if mem.Swappiness != nil {
+				c.Resources.MemorySwappiness = mem.Swappiness
 			}
-			if r.Memory.DisableOOMKiller != nil {
-				c.Resources.OomKillDisable = *r.Memory.DisableOOMKiller
+			if mem.DisableOOMKiller != nil {
+				c.Resources.OomKillDisable = *mem.DisableOOMKiller
 			}
 		}
-		if r.CPU != nil {
-			if r.CPU.Shares != nil {
-				c.Resources.CpuShares = *r.CPU.Shares
+		cpu := r.CPU
+		if cpu != nil {
+			if cpu.Shares != nil {
+				c.Resources.CpuShares = *cpu.Shares
 			}
-			if r.CPU.Quota != nil {
-				c.Resources.CpuQuota = *r.CPU.Quota
+			if cpu.Quota != nil {
+				c.Resources.CpuQuota = *cpu.Quota
 			}
-			if r.CPU.Period != nil {
-				c.Resources.CpuPeriod = *r.CPU.Period
+			if cpu.Period != nil {
+				c.Resources.CpuPeriod = *cpu.Period
 			}
-			if r.CPU.RealtimeRuntime != nil {
-				c.Resources.CpuRtRuntime = *r.CPU.RealtimeRuntime
+			if cpu.RealtimeRuntime != nil {
+				c.Resources.CpuRtRuntime = *cpu.RealtimeRuntime
 			}
-			if r.CPU.RealtimePeriod != nil {
-				c.Resources.CpuRtPeriod = *r.CPU.RealtimePeriod
+			if cpu.RealtimePeriod != nil {
+				c.Resources.CpuRtPeriod = *cpu.RealtimePeriod
 			}
-			if r.CPU.Cpus != "" {
-				c.Resources.CpusetCpus = r.CPU.Cpus
+			if cpu.Cpus != "" {
+				c.Resources.CpusetCpus = cpu.Cpus
 			}
-			if r.CPU.Mems != "" {
-				c.Resources.CpusetMems = r.CPU.Mems
+			if cpu.Mems != "" {
+				c.Resources.CpusetMems = cpu.Mems
 			}
 		}
 		if r.Pids != nil {
@@ -738,6 +753,7 @@ func parseMountOptions(options []string) (int, []int, string, int) {
 	return flag, pgflag, strings.Join(data, ","), extFlags
 }
 
+// SetupSeccomp - returns a new libcontainer seccomp config
 func SetupSeccomp(config *specs.LinuxSeccomp) (*configs.Seccomp, error) {
 	if config == nil {
 		return nil, nil
