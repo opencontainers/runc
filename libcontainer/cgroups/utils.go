@@ -20,8 +20,9 @@ import (
 )
 
 const (
-	CgroupNamePrefix = "name="
-	CgroupProcesses  = "cgroup.procs"
+	CgroupNamePrefix  = "name="
+	CgroupProcesses   = "cgroup.procs"
+	unifiedMountpoint = "/sys/fs/cgroup"
 )
 
 var (
@@ -40,7 +41,7 @@ var HugePageSizeUnitList = []string{"B", "KB", "MB", "GB", "TB", "PB"}
 func IsCgroup2UnifiedMode() bool {
 	isUnifiedOnce.Do(func() {
 		var st syscall.Statfs_t
-		if err := syscall.Statfs("/sys/fs/cgroup", &st); err != nil {
+		if err := syscall.Statfs(unifiedMountpoint, &st); err != nil {
 			panic("cannot statfs cgroup root")
 		}
 		isUnified = st.Type == unix.CGROUP2_SUPER_MAGIC
@@ -50,6 +51,9 @@ func IsCgroup2UnifiedMode() bool {
 
 // https://www.kernel.org/doc/Documentation/cgroup-v1/cgroups.txt
 func FindCgroupMountpoint(cgroupPath, subsystem string) (string, error) {
+	if IsCgroup2UnifiedMode() {
+		return unifiedMountpoint, nil
+	}
 	mnt, _, err := FindCgroupMountpointAndRoot(cgroupPath, subsystem)
 	return mnt, err
 }
@@ -235,8 +239,8 @@ func GetCgroupMounts(all bool) ([]Mount, error) {
 			return nil, err
 		}
 		m := Mount{
-			Mountpoint: "/sys/fs/cgroup",
-			Root:       "/sys/fs/cgroup",
+			Mountpoint: unifiedMountpoint,
+			Root:       unifiedMountpoint,
 			Subsystems: availableControllers,
 		}
 		return []Mount{m}, nil
