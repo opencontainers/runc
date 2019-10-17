@@ -33,6 +33,7 @@ var unifiedSubsystems = subsystemSet{
 	&fs.MemoryGroupV2{},
 	&fs.IOGroupV2{},
 	&fs.PidsGroupV2{},
+	&fs.DevicesGroupV2{},
 }
 
 func (m *UnifiedManager) Apply(pid int) error {

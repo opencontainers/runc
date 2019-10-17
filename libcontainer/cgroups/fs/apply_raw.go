@@ -40,6 +40,7 @@ var (
 		&MemoryGroupV2{},
 		&IOGroupV2{},
 		&PidsGroupV2{},
+		&DevicesGroupV2{},
 	}
 	HugePageSizes, _ = cgroups.GetHugePageSize()
 )
