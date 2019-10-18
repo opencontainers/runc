@@ -224,6 +224,28 @@ func (m *Manager) GetPaths() map[string]string {
 	return paths
 }
 
+func (m *Manager) GetUnifiedPath() (string, error) {
+	if !cgroups.IsCgroup2UnifiedMode() {
+		return "", errors.New("unified path is only supported when running in unified mode")
+	}
+	unifiedPath := ""
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for k, v := range m.Paths {
+		if unifiedPath == "" {
+			unifiedPath = v
+		} else if v != unifiedPath {
+			return unifiedPath,
+				errors.Errorf("expected %q path to be unified path %q, got %q", k, unifiedPath, v)
+		}
+	}
+	if unifiedPath == "" {
+		// FIXME: unified path could be detected even when no controller is available
+		return unifiedPath, errors.New("cannot detect unified path")
+	}
+	return unifiedPath, nil
+}
+
 func (m *Manager) GetStats() (*cgroups.Stats, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -302,11 +324,25 @@ func (m *Manager) Freeze(state configs.FreezerState) error {
 }
 
 func (m *Manager) GetPids() ([]int, error) {
+	if cgroups.IsCgroup2UnifiedMode() {
+		path, err := m.GetUnifiedPath()
+		if err != nil {
+			return nil, err
+		}
+		return cgroups.GetPids(path)
+	}
 	paths := m.GetPaths()
 	return cgroups.GetPids(paths["devices"])
 }
 
 func (m *Manager) GetAllPids() ([]int, error) {
+	if cgroups.IsCgroup2UnifiedMode() {
+		path, err := m.GetUnifiedPath()
+		if err != nil {
+			return nil, err
+		}
+		return cgroups.GetAllPids(path)
+	}
 	paths := m.GetPaths()
 	return cgroups.GetAllPids(paths["devices"])
 }

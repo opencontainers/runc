@@ -54,6 +54,10 @@ func (m *mockCgroupManager) GetPaths() map[string]string {
 	return m.paths
 }
 
+func (m *mockCgroupManager) GetUnifiedPath() (string, error) {
+	return "", fmt.Errorf("unimplemented")
+}
+
 func (m *mockCgroupManager) Freeze(state configs.FreezerState) error {
 	return nil
 }

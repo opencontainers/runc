@@ -16,6 +16,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fs"
 	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -195,7 +196,24 @@ func (m *UnifiedManager) GetPaths() map[string]string {
 	m.mu.Unlock()
 	return paths
 }
-
+func (m *UnifiedManager) GetUnifiedPath() (string, error) {
+	unifiedPath := ""
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for k, v := range m.Paths {
+		if unifiedPath == "" {
+			unifiedPath = v
+		} else if v != unifiedPath {
+			return unifiedPath,
+				errors.Errorf("expected %q path to be unified path %q, got %q", k, unifiedPath, v)
+		}
+	}
+	if unifiedPath == "" {
+		// FIXME: unified path could be detected even when no controller is available
+		return unifiedPath, errors.New("cannot detect unified path")
+	}
+	return unifiedPath, nil
+}
 func createCgroupsv2Path(path string) (Err error) {
 	content, err := ioutil.ReadFile("/sys/fs/cgroup/cgroup.controllers")
 	if err != nil {
@@ -270,7 +288,7 @@ func (m *UnifiedManager) Freeze(state configs.FreezerState) error {
 }
 
 func (m *UnifiedManager) GetPids() ([]int, error) {
-	path, err := getSubsystemPath(m.Cgroups, "devices")
+	path, err := m.GetUnifiedPath()
 	if err != nil {
 		return nil, err
 	}
@@ -278,7 +296,7 @@ func (m *UnifiedManager) GetPids() ([]int, error) {
 }
 
 func (m *UnifiedManager) GetAllPids() ([]int, error) {
-	path, err := getSubsystemPath(m.Cgroups, "devices")
+	path, err := m.GetUnifiedPath()
 	if err != nil {
 		return nil, err
 	}
