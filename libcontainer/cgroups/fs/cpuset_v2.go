@@ -22,11 +22,14 @@ func (s *CpusetGroupV2) Name() string {
 }
 
 func (s *CpusetGroupV2) Apply(d *cgroupData) error {
+	if d.config.Resources.CpusetCpus == "" && d.config.Resources.CpusetMems == "" {
+		return nil
+	}
 	dir, err := d.path("cpuset")
 	if err != nil && !cgroups.IsNotFound(err) {
 		return err
 	}
-	return s.ApplyDir(dir, d.config, d.pid)
+	return s.applyDir(dir, d.config, d.pid)
 }
 
 func (s *CpusetGroupV2) Set(path string, cgroup *configs.Cgroup) error {
@@ -51,7 +54,7 @@ func (s *CpusetGroupV2) GetStats(path string, stats *cgroups.Stats) error {
 	return nil
 }
 
-func (s *CpusetGroupV2) ApplyDir(dir string, cgroup *configs.Cgroup, pid int) error {
+func (s *CpusetGroupV2) applyDir(dir string, cgroup *configs.Cgroup, pid int) error {
 	// This might happen if we have no cpuset cgroup mounted.
 	// Just do nothing and don't fail.
 	if dir == "" {
