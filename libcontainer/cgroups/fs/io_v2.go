@@ -17,12 +17,11 @@ type IOGroupV2 struct {
 }
 
 func (s *IOGroupV2) Name() string {
-	// for compatibility with v1 blkio controller
-	return "blkio"
+	return "io"
 }
 
 func (s *IOGroupV2) Apply(d *cgroupData) error {
-	_, err := d.join("blkio")
+	_, err := d.join("io")
 	if err != nil && !cgroups.IsNotFound(err) {
 		return err
 	}
@@ -62,7 +61,7 @@ func (s *IOGroupV2) Set(path string, cgroup *configs.Cgroup) error {
 }
 
 func (s *IOGroupV2) Remove(d *cgroupData) error {
-	return removePath(d.path("blkio"))
+	return removePath(d.path("io"))
 }
 
 func readCgroup2MapFile(path string, name string) (map[string][]string, error) {
