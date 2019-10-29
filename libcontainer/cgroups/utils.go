@@ -266,6 +266,21 @@ func GetCgroupMounts(all bool) ([]Mount, error) {
 
 // GetAllSubsystems returns all the cgroup subsystems supported by the kernel
 func GetAllSubsystems() ([]string, error) {
+	// /proc/cgroups is meaningless for v2
+	// https://github.com/torvalds/linux/blob/v5.3/Documentation/admin-guide/cgroup-v2.rst#deprecated-v1-core-features
+	if IsCgroup2UnifiedMode() {
+		// "pseudo" controllers do not appear in /sys/fs/cgroup/cgroup.controllers.
+		// - devices: implemented in kernel 4.15
+		// - freezer: implemented in kernel 5.2
+		// We assume these are always available, as it is hard to detect availability.
+		pseudo := []string{"devices", "freezer"}
+		data, err := ioutil.ReadFile("/sys/fs/cgroup/cgroup.controllers")
+		if err != nil {
+			return nil, err
+		}
+		subsystems := append(pseudo, strings.Fields(string(data))...)
+		return subsystems, nil
+	}
 	f, err := os.Open("/proc/cgroups")
 	if err != nil {
 		return nil, err
