@@ -279,8 +279,14 @@ func mountCgroupV2(m *configs.Mount, rootfs, mountLabel string, enableCgroupns b
 	if err := os.MkdirAll(cgroupPath, 0755); err != nil {
 		return err
 	}
-
-	return unix.Mount(m.Source, cgroupPath, "cgroup2", uintptr(m.Flags), m.Data)
+	if err := unix.Mount(m.Source, cgroupPath, "cgroup2", uintptr(m.Flags), m.Data); err != nil {
+		// when we are in UserNS but CgroupNS is not unshared, we cannot mount cgroup2 (#2158)
+		if err == unix.EPERM || err == unix.EBUSY {
+			return unix.Mount("/sys/fs/cgroup", cgroupPath, "", uintptr(m.Flags)|unix.MS_BIND, "")
+		}
+		return err
+	}
+	return nil
 }
 
 func mountToRootfs(m *configs.Mount, rootfs, mountLabel string, enableCgroupns bool) error {
