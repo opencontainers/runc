@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/opencontainers/runc/libcontainer"
+	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runtime-spec/specs-go"
@@ -205,6 +206,9 @@ func testRlimit(t *testing.T, userns bool) {
 func TestEnter(t *testing.T) {
 	if testing.Short() {
 		return
+	}
+	if cgroups.IsCgroup2UnifiedMode() {
+		t.Skip("cgroup v1 is not supported")
 	}
 
 	rootfs, err := newRootfs()
@@ -512,6 +516,9 @@ func testFreeze(t *testing.T, systemd bool) {
 	if testing.Short() {
 		return
 	}
+	if cgroups.IsCgroup2UnifiedMode() {
+		t.Skip("cgroup v1 is not supported")
+	}
 
 	rootfs, err := newRootfs()
 	ok(t, err)
@@ -566,6 +573,10 @@ func testCpuShares(t *testing.T, systemd bool) {
 	if testing.Short() {
 		return
 	}
+	if cgroups.IsCgroup2UnifiedMode() {
+		t.Skip("cgroup v1 is not supported")
+	}
+
 	rootfs, err := newRootfs()
 	ok(t, err)
 	defer remove(rootfs)
@@ -596,6 +607,9 @@ func TestPidsSystemd(t *testing.T) {
 func testPids(t *testing.T, systemd bool) {
 	if testing.Short() {
 		return
+	}
+	if cgroups.IsCgroup2UnifiedMode() {
+		t.Skip("cgroup v1 is not supported")
 	}
 
 	rootfs, err := newRootfs()
@@ -680,6 +694,10 @@ func testRunWithKernelMemory(t *testing.T, systemd bool) {
 	if testing.Short() {
 		return
 	}
+	if cgroups.IsCgroup2UnifiedMode() {
+		t.Skip("cgroup v1 is not supported")
+	}
+
 	rootfs, err := newRootfs()
 	ok(t, err)
 	defer remove(rootfs)

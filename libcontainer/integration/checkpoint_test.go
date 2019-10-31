@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/opencontainers/runc/libcontainer"
+	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
 
 	"golang.org/x/sys/unix"
@@ -59,6 +60,10 @@ func testCheckpoint(t *testing.T, userns bool) {
 	if testing.Short() {
 		return
 	}
+	if cgroups.IsCgroup2UnifiedMode() {
+		t.Skip("cgroup v1 is not supported")
+	}
+
 	root, err := newTestRoot()
 	if err != nil {
 		t.Fatal(err)
