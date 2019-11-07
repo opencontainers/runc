@@ -1,6 +1,6 @@
 // +build linux
 
-package fs
+package fscommon
 
 import (
 	"io/ioutil"
@@ -31,7 +31,7 @@ func TestGetCgroupParamsInt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	value, err := getCgroupParamUint(tempDir, cgroupFile)
+	value, err := GetCgroupParamUint(tempDir, cgroupFile)
 	if err != nil {
 		t.Fatal(err)
 	} else if value != floatValue {
@@ -43,7 +43,7 @@ func TestGetCgroupParamsInt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	value, err = getCgroupParamUint(tempDir, cgroupFile)
+	value, err = GetCgroupParamUint(tempDir, cgroupFile)
 	if err != nil {
 		t.Fatal(err)
 	} else if value != floatValue {
@@ -55,7 +55,7 @@ func TestGetCgroupParamsInt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	value, err = getCgroupParamUint(tempDir, cgroupFile)
+	value, err = GetCgroupParamUint(tempDir, cgroupFile)
 	if err != nil {
 		t.Fatal(err)
 	} else if value != 0 {
@@ -68,7 +68,7 @@ func TestGetCgroupParamsInt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	value, err = getCgroupParamUint(tempDir, cgroupFile)
+	value, err = GetCgroupParamUint(tempDir, cgroupFile)
 	if err != nil {
 		t.Fatal(err)
 	} else if value != 0 {
@@ -80,7 +80,7 @@ func TestGetCgroupParamsInt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = getCgroupParamUint(tempDir, cgroupFile)
+	_, err = GetCgroupParamUint(tempDir, cgroupFile)
 	if err == nil {
 		t.Fatal("Expecting error, got none")
 	}
@@ -90,7 +90,7 @@ func TestGetCgroupParamsInt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = getCgroupParamUint(tempDir, cgroupFile)
+	_, err = GetCgroupParamUint(tempDir, cgroupFile)
 	if err == nil {
 		t.Fatal("Expecting error, got none")
 	}

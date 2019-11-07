@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
+	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/system"
 )
@@ -51,7 +52,7 @@ func (s *CpuacctGroup) GetStats(path string, stats *cgroups.Stats) error {
 		return err
 	}
 
-	totalUsage, err := getCgroupParamUint(path, "cpuacct.usage")
+	totalUsage, err := fscommon.GetCgroupParamUint(path, "cpuacct.usage")
 	if err != nil {
 		return err
 	}

@@ -1,26 +1,14 @@
 // +build linux
 
-package fs
+package fs2
 
 import (
-	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/ebpf"
 	"github.com/opencontainers/runc/libcontainer/cgroups/ebpf/devicefilter"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/pkg/errors"
 	"golang.org/x/sys/unix"
 )
-
-type DevicesGroupV2 struct {
-}
-
-func (s *DevicesGroupV2) Name() string {
-	return "devices"
-}
-
-func (s *DevicesGroupV2) Apply(d *cgroupData) error {
-	return nil
-}
 
 func isRWM(cgroupPermissions string) bool {
 	r := false
@@ -50,7 +38,7 @@ func canSkipEBPFError(cgroup *configs.Cgroup) bool {
 	return true
 }
 
-func (s *DevicesGroupV2) Set(path string, cgroup *configs.Cgroup) error {
+func setDevices(dirPath string, cgroup *configs.Cgroup) error {
 	if cgroup.Resources.AllowAllDevices != nil {
 		// never set by OCI specconv
 		return errors.New("libcontainer AllowAllDevices is not supported, use Devices")
@@ -63,9 +51,9 @@ func (s *DevicesGroupV2) Set(path string, cgroup *configs.Cgroup) error {
 	if err != nil {
 		return err
 	}
-	dirFD, err := unix.Open(path, unix.O_DIRECTORY|unix.O_RDONLY, 0600)
+	dirFD, err := unix.Open(dirPath, unix.O_DIRECTORY|unix.O_RDONLY, 0600)
 	if err != nil {
-		return errors.Errorf("cannot get dir FD for %s", path)
+		return errors.Errorf("cannot get dir FD for %s", dirPath)
 	}
 	defer unix.Close(dirFD)
 	if _, err := ebpf.LoadAttachCgroupDeviceFilter(insts, license, dirFD); err != nil {
@@ -73,13 +61,5 @@ func (s *DevicesGroupV2) Set(path string, cgroup *configs.Cgroup) error {
 			return err
 		}
 	}
-	return nil
-}
-
-func (s *DevicesGroupV2) Remove(d *cgroupData) error {
-	return nil
-}
-
-func (s *DevicesGroupV2) GetStats(path string, stats *cgroups.Stats) error {
 	return nil
 }

@@ -5,6 +5,8 @@ package fs
 import (
 	"strconv"
 	"testing"
+
+	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 )
 
 const (
@@ -29,7 +31,7 @@ func TestNetClsSetClassid(t *testing.T) {
 	// As we are in mock environment, we can't get correct value of classid from
 	// net_cls.classid.
 	// So. we just judge if we successfully write classid into file
-	value, err := getCgroupParamUint(helper.CgroupPath, "net_cls.classid")
+	value, err := fscommon.GetCgroupParamUint(helper.CgroupPath, "net_cls.classid")
 	if err != nil {
 		t.Fatalf("Failed to parse net_cls.classid - %s", err)
 	}
