@@ -107,8 +107,8 @@ You can run a test using your container engine's flags by setting `CONTAINER_ENG
 
 ### Dependencies Management
 
-`runc` uses [vndr](https://github.com/LK4D4/vndr) for dependencies management.
-Please refer to [vndr](https://github.com/LK4D4/vndr) for how to add or update
+`runc` uses [Go Modules](https://github.com/golang/go/wiki/Modules) for dependencies management.
+Please refer to [Go Modules](https://github.com/golang/go/wiki/Modules) for how to add or update
 new dependencies.
 
 ## Using runc
