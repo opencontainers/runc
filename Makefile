@@ -112,7 +112,7 @@ clean:
 	rm -rf $(RELEASE_DIR)
 	rm -rf $(MAN_DIR)
 
-validate: verify-dependencies
+validate:
 	script/validate-gofmt
 	script/validate-c
 	$(GO) vet $(allpackages)

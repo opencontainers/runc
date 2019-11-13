@@ -8,6 +8,10 @@ go:
 
 matrix:
   include:
+    - go: 1.x
+      name: "verify-dependencies"
+      script:
+        - make verify-dependencies
     - go: 1.12.x
       name: "cgroup-systemd"
       env:

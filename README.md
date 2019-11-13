@@ -109,7 +109,14 @@ You can run a test using your container engine's flags by setting `CONTAINER_ENG
 
 `runc` uses [Go Modules](https://github.com/golang/go/wiki/Modules) for dependencies management.
 Please refer to [Go Modules](https://github.com/golang/go/wiki/Modules) for how to add or update
-new dependencies.
+new dependencies. When updating dependencies, be sure that you are running Go `1.14` or newer.
+
+```
+# Update vendored dependencies
+make vendor
+# Verify all dependencies
+make verify-dependencies
+```
 
 ## Using runc
 
