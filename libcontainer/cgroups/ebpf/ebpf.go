@@ -16,6 +16,13 @@ func LoadAttachCgroupDeviceFilter(insts asm.Instructions, license string, dirFD 
 	nilCloser := func() error {
 		return nil
 	}
+	// Increase `ulimit -l` limit to avoid BPF_PROG_LOAD error (#2167).
+	// This limit is not inherited into the container.
+	memlockLimit := &unix.Rlimit{
+		Cur: unix.RLIM_INFINITY,
+		Max: unix.RLIM_INFINITY,
+	}
+	_ = unix.Setrlimit(unix.RLIMIT_MEMLOCK, memlockLimit)
 	spec := &ebpf.ProgramSpec{
 		Type:         ebpf.CGroupDevice,
 		Instructions: insts,
