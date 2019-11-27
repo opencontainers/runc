@@ -2,14 +2,14 @@ package libcontainer
 
 type NetworkInterface struct {
 	// Name is the name of the network interface.
-	Name string
+	Name string `json:"name,omitempty"`
 
-	RxBytes   uint64
-	RxPackets uint64
-	RxErrors  uint64
-	RxDropped uint64
-	TxBytes   uint64
-	TxPackets uint64
-	TxErrors  uint64
-	TxDropped uint64
+	RxBytes   uint64 `json:"rx_bytes,omitempty"`
+	RxPackets uint64 `json:"rx_packets,omitempty"`
+	RxErrors  uint64 `json:"rx_errors,omitempty"`
+	RxDropped uint64 `json:"rx_dropped,omitempty"`
+	TxBytes   uint64 `json:"tx_bytes,omitempty"`
+	TxPackets uint64 `json:"tx_packets,omitempty"`
+	TxErrors  uint64 `json:"tx_errors,omitempty"`
+	TxDropped uint64 `json:"tx_dropped,omitempty"`
 }
