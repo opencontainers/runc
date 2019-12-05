@@ -163,6 +163,7 @@ func convertLibcontainerStats(ls *libcontainer.Stats) *types.Stats {
 		}
 	}
 
+	s.NetworkInterfaces = ls.Interfaces
 	return &s
 }
 
