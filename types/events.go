@@ -9,12 +9,13 @@ type Event struct {
 
 // stats is the runc specific stats structure for stability when encoding and decoding stats.
 type Stats struct {
-	CPU      Cpu                `json:"cpu"`
-	Memory   Memory             `json:"memory"`
-	Pids     Pids               `json:"pids"`
-	Blkio    Blkio              `json:"blkio"`
-	Hugetlb  map[string]Hugetlb `json:"hugetlb"`
-	IntelRdt IntelRdt           `json:"intel_rdt"`
+	CPU               Cpu                 `json:"cpu"`
+	Memory            Memory              `json:"memory"`
+	Pids              Pids                `json:"pids"`
+	Blkio             Blkio               `json:"blkio"`
+	Hugetlb           map[string]Hugetlb  `json:"hugetlb"`
+	IntelRdt          IntelRdt            `json:"intel_rdt"`
+	NetworkInterfaces []*NetworkInterface `json:"network_interfaces"`
 }
 
 type Hugetlb struct {
@@ -112,4 +113,18 @@ type IntelRdt struct {
 
 	// The memory bandwidth schema in 'container_id' group
 	MemBwSchema string `json:"mem_bw_schema,omitempty"`
+}
+
+type NetworkInterface struct {
+	// Name is the name of the network interface.
+	Name string
+
+	RxBytes   uint64
+	RxPackets uint64
+	RxErrors  uint64
+	RxDropped uint64
+	TxBytes   uint64
+	TxPackets uint64
+	TxErrors  uint64
+	TxDropped uint64
 }
