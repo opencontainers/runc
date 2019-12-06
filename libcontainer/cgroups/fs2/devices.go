@@ -39,15 +39,23 @@ func canSkipEBPFError(cgroup *configs.Cgroup) bool {
 }
 
 func setDevices(dirPath string, cgroup *configs.Cgroup) error {
-	if cgroup.Resources.AllowAllDevices != nil {
-		// never set by OCI specconv
-		return errors.New("libcontainer AllowAllDevices is not supported, use Devices")
+	devices := cgroup.Devices
+	if allowAllDevices := cgroup.Resources.AllowAllDevices; allowAllDevices != nil {
+		// never set by OCI specconv, but *allowAllDevices=false is still used by the integration test
+		if *allowAllDevices == true {
+			return errors.New("libcontainer AllowAllDevices is not supported, use Devices")
+		}
+		for _, ad := range cgroup.Resources.AllowedDevices {
+			d := *ad
+			d.Allow = true
+			devices = append(devices, &d)
+		}
 	}
 	if len(cgroup.Resources.DeniedDevices) != 0 {
 		// never set by OCI specconv
 		return errors.New("libcontainer DeniedDevices is not supported, use Devices")
 	}
-	insts, license, err := devicefilter.DeviceFilter(cgroup.Devices)
+	insts, license, err := devicefilter.DeviceFilter(devices)
 	if err != nil {
 		return err
 	}
