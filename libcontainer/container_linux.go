@@ -940,7 +940,7 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 
 	// Since a container can be C/R'ed multiple times,
 	// the checkpoint directory may already exist.
-	if err := os.Mkdir(criuOpts.ImagesDirectory, 0755); err != nil && !os.IsExist(err) {
+	if err := os.Mkdir(criuOpts.ImagesDirectory, 0700); err != nil && !os.IsExist(err) {
 		return err
 	}
 
@@ -948,7 +948,7 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 		criuOpts.WorkDirectory = filepath.Join(c.root, "criu.work")
 	}
 
-	if err := os.Mkdir(criuOpts.WorkDirectory, 0755); err != nil && !os.IsExist(err) {
+	if err := os.Mkdir(criuOpts.WorkDirectory, 0700); err != nil && !os.IsExist(err) {
 		return err
 	}
 
@@ -1246,7 +1246,7 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 	}
 	// Since a container can be C/R'ed multiple times,
 	// the work directory may already exist.
-	if err := os.Mkdir(criuOpts.WorkDirectory, 0655); err != nil && !os.IsExist(err) {
+	if err := os.Mkdir(criuOpts.WorkDirectory, 0700); err != nil && !os.IsExist(err) {
 		return err
 	}
 	workDir, err := os.Open(criuOpts.WorkDirectory)
