@@ -346,3 +346,7 @@ func (m *UnifiedManager) Set(container *configs.Config) error {
 	}
 	return nil
 }
+
+func (m *UnifiedManager) GetCgroups() (*configs.Cgroup, error) {
+	return m.Cgroups, nil
+}
