@@ -265,22 +265,24 @@ func (c *linuxContainer) Exec() error {
 
 func (c *linuxContainer) exec() error {
 	path := filepath.Join(c.root, execFifoFilename)
+	pid := c.initProcess.pid()
+	blockingFifoOpenCh := awaitFifoOpen(path)
+	for {
+		select {
+		case result := <-blockingFifoOpenCh:
+			return handleFifoResult(result)
 
-	fifoOpen := make(chan struct{})
-	select {
-	case <-awaitProcessExit(c.initProcess.pid(), fifoOpen):
-		return errors.New("container process is already dead")
-	case result := <-awaitFifoOpen(path):
-		close(fifoOpen)
-		if result.err != nil {
-			return result.err
+		case <-time.After(time.Millisecond * 100):
+			stat, err := system.Stat(pid)
+			if err != nil || stat.State == system.Zombie {
+				// could be because process started, ran, and completed between our 100ms timeout and our system.Stat() check.
+				// see if the fifo exists and has data (with a non-blocking open, which will succeed if the writing process is complete).
+				if err := handleFifoResult(fifoOpen(path, false)); err != nil {
+					return errors.New("container process is already dead")
+				}
+				return nil
+			}
 		}
-		f := result.file
-		defer f.Close()
-		if err := readFromExecFifo(f); err != nil {
-			return err
-		}
-		return os.Remove(path)
 	}
 }
 
@@ -295,36 +297,37 @@ func readFromExecFifo(execFifo io.Reader) error {
 	return nil
 }
 
-func awaitProcessExit(pid int, exit <-chan struct{}) <-chan struct{} {
-	isDead := make(chan struct{})
-	go func() {
-		for {
-			select {
-			case <-exit:
-				return
-			case <-time.After(time.Millisecond * 100):
-				stat, err := system.Stat(pid)
-				if err != nil || stat.State == system.Zombie {
-					close(isDead)
-					return
-				}
-			}
-		}
-	}()
-	return isDead
-}
-
 func awaitFifoOpen(path string) <-chan openResult {
 	fifoOpened := make(chan openResult)
 	go func() {
-		f, err := os.OpenFile(path, os.O_RDONLY, 0)
-		if err != nil {
-			fifoOpened <- openResult{err: newSystemErrorWithCause(err, "open exec fifo for reading")}
-			return
-		}
-		fifoOpened <- openResult{file: f}
+		result := fifoOpen(path, true)
+		fifoOpened <- result
 	}()
 	return fifoOpened
+}
+
+func fifoOpen(path string, block bool) openResult {
+	flags := os.O_RDONLY
+	if !block {
+		flags |= syscall.O_NONBLOCK
+	}
+	f, err := os.OpenFile(path, flags, 0)
+	if err != nil {
+		return openResult{err: newSystemErrorWithCause(err, "open exec fifo for reading")}
+	}
+	return openResult{file: f}
+}
+
+func handleFifoResult(result openResult) error {
+	if result.err != nil {
+		return result.err
+	}
+	f := result.file
+	defer f.Close()
+	if err := readFromExecFifo(f); err != nil {
+		return err
+	}
+	return os.Remove(f.Name())
 }
 
 type openResult struct {
