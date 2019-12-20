@@ -19,10 +19,12 @@ You can find official releases of `runc` on the [release](https://github.com/ope
 Currently, the following features are not considered to be production-ready:
 
 * Support for cgroup v2
-
 ## Security
 
 The reporting process and disclosure communications are outlined [here](https://github.com/opencontainers/org/blob/master/SECURITY.md).
+
+### Security Audit
+A third party security audit was performed by Cure53, you can see the full report [here](https://github.com/opencontainers/runc/blob/master/docs/Security-Audit.pdf).
 
 ## Building
 
