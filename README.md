@@ -22,7 +22,7 @@ Currently, the following features are not considered to be production-ready:
 
 ## Security
 
-The reporting process and disclosure communications are outlined in [/org/security](https://github.com/opencontainers/org/blob/master/SECURITY.md).
+The reporting process and disclosure communications are outlined in [/org/security.](https://github.com/opencontainers/org/blob/master/SECURITY.md)
 
 ### Security Audit
 A third party security audit was performed by Cure53, you can see the full report [here.](https://github.com/opencontainers/runc/docs/Security-Audit.pdf)
