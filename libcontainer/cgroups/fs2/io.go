@@ -81,11 +81,11 @@ func statIo(dirPath string, stats *cgroups.Stats) error {
 		if len(d) != 2 {
 			continue
 		}
-		minor, err := strconv.ParseUint(d[0], 10, 0)
+		major, err := strconv.ParseUint(d[0], 10, 0)
 		if err != nil {
 			return err
 		}
-		major, err := strconv.ParseUint(d[1], 10, 0)
+		minor, err := strconv.ParseUint(d[1], 10, 0)
 		if err != nil {
 			return err
 		}
