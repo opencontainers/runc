@@ -205,7 +205,7 @@ EOF
 		__runc run test_busybox
 	) &
 
-	wait_for_container 15 1 test_busybox
+	wait_for_container 15 1 test_busybox running
 	testcontainer test_busybox running
 
 	# Kill the container.
