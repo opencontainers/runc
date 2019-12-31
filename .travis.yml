@@ -13,6 +13,7 @@ matrix:
       script:
         - make BUILDTAGS="${BUILDTAGS}" all
         - sudo PATH="$PATH" make localintegration RUNC_USE_SYSTEMD=1
+  allow_failures:
     - go: 1.12.x
       env:
         - VIRTUALBOX_VERSION=6.0
@@ -27,7 +28,6 @@ matrix:
       script:
         - ssh default sudo podman build -t test /vagrant
         - ssh default sudo podman run --privileged --cgroupns=private test make localunittest
-  allow_failures:
     - go: tip
 
 go_import_path: github.com/opencontainers/runc
