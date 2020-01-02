@@ -29,6 +29,8 @@ matrix:
         - ssh default sudo podman run --privileged --cgroupns=private test make localunittest
   allow_failures:
     - go: tip
+    - go: 1.12.x
+      env: VAGRANT_VERSION=2.2.6
 
 go_import_path: github.com/opencontainers/runc
 
