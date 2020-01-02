@@ -528,3 +528,7 @@ func isUnitExists(err error) bool {
 	}
 	return false
 }
+
+func (m *LegacyManager) GetCgroups() (*configs.Cgroup, error) {
+	return m.Cgroups, nil
+}

@@ -196,7 +196,7 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 	if err := createDevices(spec, config); err != nil {
 		return nil, err
 	}
-	c, err := createCgroupConfig(opts)
+	c, err := CreateCgroupConfig(opts)
 	if err != nil {
 		return nil, err
 	}
@@ -297,7 +297,7 @@ func createLibcontainerMount(cwd string, m specs.Mount) *configs.Mount {
 	}
 }
 
-func createCgroupConfig(opts *CreateOpts) (*configs.Cgroup, error) {
+func CreateCgroupConfig(opts *CreateOpts) (*configs.Cgroup, error) {
 	var (
 		myCgroupPath string
 

@@ -61,6 +61,9 @@ func (m *mockCgroupManager) GetUnifiedPath() (string, error) {
 func (m *mockCgroupManager) Freeze(state configs.FreezerState) error {
 	return nil
 }
+func (m *mockCgroupManager) GetCgroups() (*configs.Cgroup, error) {
+	return nil, nil
+}
 
 func (m *mockIntelRdtManager) Apply(pid int) error {
 	return nil
@@ -80,6 +83,10 @@ func (m *mockIntelRdtManager) GetPath() string {
 
 func (m *mockIntelRdtManager) Set(container *configs.Config) error {
 	return nil
+}
+
+func (m *mockIntelRdtManager) GetCgroups() (*configs.Cgroup, error) {
+	return nil, nil
 }
 
 type mockProcess struct {

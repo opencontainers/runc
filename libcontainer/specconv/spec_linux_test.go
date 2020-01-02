@@ -213,7 +213,7 @@ func TestLinuxCgroupWithMemoryResource(t *testing.T) {
 		Spec:             spec,
 	}
 
-	cgroup, err := createCgroupConfig(opts)
+	cgroup, err := CreateCgroupConfig(opts)
 	if err != nil {
 		t.Errorf("Couldn't create Cgroup config: %v", err)
 	}
@@ -257,7 +257,7 @@ func TestLinuxCgroupSystemd(t *testing.T) {
 		Spec:             spec,
 	}
 
-	cgroup, err := createCgroupConfig(opts)
+	cgroup, err := CreateCgroupConfig(opts)
 
 	if err != nil {
 		t.Errorf("Couldn't create Cgroup config: %v", err)
@@ -293,7 +293,7 @@ func TestLinuxCgroupSystemdWithEmptyPath(t *testing.T) {
 		Spec:             spec,
 	}
 
-	cgroup, err := createCgroupConfig(opts)
+	cgroup, err := CreateCgroupConfig(opts)
 
 	if err != nil {
 		t.Errorf("Couldn't create Cgroup config: %v", err)
@@ -328,7 +328,7 @@ func TestLinuxCgroupSystemdWithInvalidPath(t *testing.T) {
 		Spec:             spec,
 	}
 
-	_, err := createCgroupConfig(opts)
+	_, err := CreateCgroupConfig(opts)
 	if err == nil {
 		t.Error("Expected to produce an error if not using the correct format for cgroup paths belonging to systemd")
 	}
@@ -347,7 +347,7 @@ func TestLinuxCgroupsPathSpecified(t *testing.T) {
 		Spec:             spec,
 	}
 
-	cgroup, err := createCgroupConfig(opts)
+	cgroup, err := CreateCgroupConfig(opts)
 	if err != nil {
 		t.Errorf("Couldn't create Cgroup config: %v", err)
 	}
@@ -365,7 +365,7 @@ func TestLinuxCgroupsPathNotSpecified(t *testing.T) {
 		Spec:             spec,
 	}
 
-	cgroup, err := createCgroupConfig(opts)
+	cgroup, err := CreateCgroupConfig(opts)
 	if err != nil {
 		t.Errorf("Couldn't create Cgroup config: %v", err)
 	}

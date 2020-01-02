@@ -46,6 +46,9 @@ type Manager interface {
 
 	// Sets the cgroup as configured.
 	Set(container *configs.Config) error
+
+	// Gets the cgroup as configured.
+	GetCgroups() (*configs.Cgroup, error)
 }
 
 type NotFoundError struct {

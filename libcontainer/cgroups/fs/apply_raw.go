@@ -467,3 +467,7 @@ func CheckCpushares(path string, c uint64) error {
 
 	return nil
 }
+
+func (m *Manager) GetCgroups() (*configs.Cgroup, error) {
+	return m.Cgroups, nil
+}
