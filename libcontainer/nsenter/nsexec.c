@@ -1020,6 +1020,10 @@ void nsexec(void)
 			/* Free netlink data. */
 			nl_free(&config);
 
+			/* Close log pipe. */
+			if (logfd != -1)
+				close(logfd);
+
 			/* Finish executing, let the Go runtime take over. */
 			return;
 		}
