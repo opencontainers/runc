@@ -39,6 +39,9 @@ func TestDevicesSetAllow(t *testing.T) {
 	defer helper.cleanup()
 
 	helper.writeFileContents(map[string]string{
+		"devices.list": "a *:* rwm",
+	})
+	helper.writeFileContents(map[string]string{
 		"devices.deny": "a",
 	})
 	allowAllDevices := false
@@ -76,6 +79,9 @@ func TestDevicesSetDeny(t *testing.T) {
 	helper := NewCgroupTestUtil("devices", t)
 	defer helper.cleanup()
 
+	helper.writeFileContents(map[string]string{
+		"devices.list": "a *:* rwm",
+	})
 	helper.writeFileContents(map[string]string{
 		"devices.allow": "a",
 	})
