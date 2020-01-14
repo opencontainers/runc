@@ -205,5 +205,10 @@ func (m *manager) Set(container *configs.Config) error {
 	if len(errs) > 0 && !m.rootless {
 		return errors.Errorf("error while setting cgroup v2: %+v", errs)
 	}
+	m.config = container.Cgroups
 	return nil
+}
+
+func (m *manager) GetCgroups() (*configs.Cgroup, error) {
+	return m.config, nil
 }
