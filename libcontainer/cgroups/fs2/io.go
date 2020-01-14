@@ -1,6 +1,6 @@
 // +build linux
 
-package fs
+package fs2
 
 import (
 	"bufio"
@@ -10,49 +10,35 @@ import (
 	"strings"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
+	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
-type IOGroupV2 struct {
-}
-
-func (s *IOGroupV2) Name() string {
-	return "io"
-}
-
-func (s *IOGroupV2) Apply(d *cgroupData) error {
-	_, err := d.join("io")
-	if err != nil && !cgroups.IsNotFound(err) {
-		return err
-	}
-	return nil
-}
-
-func (s *IOGroupV2) Set(path string, cgroup *configs.Cgroup) error {
+func setIo(dirPath string, cgroup *configs.Cgroup) error {
 	if cgroup.Resources.BlkioWeight != 0 {
 		filename := "io.bfq.weight"
-		if err := writeFile(path, filename, strconv.FormatUint(uint64(cgroup.Resources.BlkioWeight), 10)); err != nil {
+		if err := fscommon.WriteFile(dirPath, filename, strconv.FormatUint(uint64(cgroup.Resources.BlkioWeight), 10)); err != nil {
 			return err
 		}
 	}
 
 	for _, td := range cgroup.Resources.BlkioThrottleReadBpsDevice {
-		if err := writeFile(path, "io.max", td.StringName("rbps")); err != nil {
+		if err := fscommon.WriteFile(dirPath, "io.max", td.StringName("rbps")); err != nil {
 			return err
 		}
 	}
 	for _, td := range cgroup.Resources.BlkioThrottleWriteBpsDevice {
-		if err := writeFile(path, "io.max", td.StringName("wbps")); err != nil {
+		if err := fscommon.WriteFile(dirPath, "io.max", td.StringName("wbps")); err != nil {
 			return err
 		}
 	}
 	for _, td := range cgroup.Resources.BlkioThrottleReadIOPSDevice {
-		if err := writeFile(path, "io.max", td.StringName("riops")); err != nil {
+		if err := fscommon.WriteFile(dirPath, "io.max", td.StringName("riops")); err != nil {
 			return err
 		}
 	}
 	for _, td := range cgroup.Resources.BlkioThrottleWriteIOPSDevice {
-		if err := writeFile(path, "io.max", td.StringName("wiops")); err != nil {
+		if err := fscommon.WriteFile(dirPath, "io.max", td.StringName("wiops")); err != nil {
 			return err
 		}
 	}
@@ -60,18 +46,11 @@ func (s *IOGroupV2) Set(path string, cgroup *configs.Cgroup) error {
 	return nil
 }
 
-func (s *IOGroupV2) Remove(d *cgroupData) error {
-	return removePath(d.path("io"))
-}
-
-func readCgroup2MapFile(path string, name string) (map[string][]string, error) {
+func readCgroup2MapFile(dirPath string, name string) (map[string][]string, error) {
 	ret := map[string][]string{}
-	p := filepath.Join("/sys/fs/cgroup", path, name)
+	p := filepath.Join(dirPath, name)
 	f, err := os.Open(p)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return ret, nil
-		}
 		return nil, err
 	}
 	defer f.Close()
@@ -90,10 +69,10 @@ func readCgroup2MapFile(path string, name string) (map[string][]string, error) {
 	return ret, nil
 }
 
-func (s *IOGroupV2) getCgroupV2Stats(path string, stats *cgroups.Stats) error {
+func statIo(dirPath string, stats *cgroups.Stats) error {
 	// more details on the io.stat file format: https://www.kernel.org/doc/Documentation/cgroup-v2.txt
 	var ioServiceBytesRecursive []cgroups.BlkioStatEntry
-	values, err := readCgroup2MapFile(path, "io.stat")
+	values, err := readCgroup2MapFile(dirPath, "io.stat")
 	if err != nil {
 		return err
 	}
@@ -142,8 +121,4 @@ func (s *IOGroupV2) getCgroupV2Stats(path string, stats *cgroups.Stats) error {
 	}
 	stats.BlkioStats = cgroups.BlkioStats{IoServiceBytesRecursive: ioServiceBytesRecursive}
 	return nil
-}
-
-func (s *IOGroupV2) GetStats(path string, stats *cgroups.Stats) error {
-	return s.getCgroupV2Stats(path, stats)
 }

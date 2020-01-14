@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
+	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 )
 
 const (
@@ -42,7 +43,7 @@ func TestMemorySetMemory(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	value, err := getCgroupParamUint(helper.CgroupPath, "memory.limit_in_bytes")
+	value, err := fscommon.GetCgroupParamUint(helper.CgroupPath, "memory.limit_in_bytes")
 	if err != nil {
 		t.Fatalf("Failed to parse memory.limit_in_bytes - %s", err)
 	}
@@ -50,7 +51,7 @@ func TestMemorySetMemory(t *testing.T) {
 		t.Fatal("Got the wrong value, set memory.limit_in_bytes failed.")
 	}
 
-	value, err = getCgroupParamUint(helper.CgroupPath, "memory.soft_limit_in_bytes")
+	value, err = fscommon.GetCgroupParamUint(helper.CgroupPath, "memory.soft_limit_in_bytes")
 	if err != nil {
 		t.Fatalf("Failed to parse memory.soft_limit_in_bytes - %s", err)
 	}
@@ -78,7 +79,7 @@ func TestMemorySetMemoryswap(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	value, err := getCgroupParamUint(helper.CgroupPath, "memory.memsw.limit_in_bytes")
+	value, err := fscommon.GetCgroupParamUint(helper.CgroupPath, "memory.memsw.limit_in_bytes")
 	if err != nil {
 		t.Fatalf("Failed to parse memory.memsw.limit_in_bytes - %s", err)
 	}
@@ -115,14 +116,14 @@ func TestMemorySetMemoryLargerThanSwap(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	value, err := getCgroupParamUint(helper.CgroupPath, "memory.limit_in_bytes")
+	value, err := fscommon.GetCgroupParamUint(helper.CgroupPath, "memory.limit_in_bytes")
 	if err != nil {
 		t.Fatalf("Failed to parse memory.limit_in_bytes - %s", err)
 	}
 	if value != memoryAfter {
 		t.Fatal("Got the wrong value, set memory.limit_in_bytes failed.")
 	}
-	value, err = getCgroupParamUint(helper.CgroupPath, "memory.memsw.limit_in_bytes")
+	value, err = fscommon.GetCgroupParamUint(helper.CgroupPath, "memory.memsw.limit_in_bytes")
 	if err != nil {
 		t.Fatalf("Failed to parse memory.memsw.limit_in_bytes - %s", err)
 	}
@@ -159,14 +160,14 @@ func TestMemorySetSwapSmallerThanMemory(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	value, err := getCgroupParamUint(helper.CgroupPath, "memory.limit_in_bytes")
+	value, err := fscommon.GetCgroupParamUint(helper.CgroupPath, "memory.limit_in_bytes")
 	if err != nil {
 		t.Fatalf("Failed to parse memory.limit_in_bytes - %s", err)
 	}
 	if value != memoryAfter {
 		t.Fatal("Got the wrong value, set memory.limit_in_bytes failed.")
 	}
-	value, err = getCgroupParamUint(helper.CgroupPath, "memory.memsw.limit_in_bytes")
+	value, err = fscommon.GetCgroupParamUint(helper.CgroupPath, "memory.memsw.limit_in_bytes")
 	if err != nil {
 		t.Fatalf("Failed to parse memory.memsw.limit_in_bytes - %s", err)
 	}
@@ -194,7 +195,7 @@ func TestMemorySetKernelMemory(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	value, err := getCgroupParamUint(helper.CgroupPath, "memory.kmem.limit_in_bytes")
+	value, err := fscommon.GetCgroupParamUint(helper.CgroupPath, "memory.kmem.limit_in_bytes")
 	if err != nil {
 		t.Fatalf("Failed to parse memory.kmem.limit_in_bytes - %s", err)
 	}
@@ -222,7 +223,7 @@ func TestMemorySetKernelMemoryTCP(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	value, err := getCgroupParamUint(helper.CgroupPath, "memory.kmem.tcp.limit_in_bytes")
+	value, err := fscommon.GetCgroupParamUint(helper.CgroupPath, "memory.kmem.tcp.limit_in_bytes")
 	if err != nil {
 		t.Fatalf("Failed to parse memory.kmem.tcp.limit_in_bytes - %s", err)
 	}
@@ -248,7 +249,7 @@ func TestMemorySetMemorySwappinessDefault(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	value, err := getCgroupParamUint(helper.CgroupPath, "memory.swappiness")
+	value, err := fscommon.GetCgroupParamUint(helper.CgroupPath, "memory.swappiness")
 	if err != nil {
 		t.Fatalf("Failed to parse memory.swappiness - %s", err)
 	}
@@ -444,7 +445,7 @@ func TestMemorySetOomControl(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	value, err := getCgroupParamUint(helper.CgroupPath, "memory.oom_control")
+	value, err := fscommon.GetCgroupParamUint(helper.CgroupPath, "memory.oom_control")
 	if err != nil {
 		t.Fatalf("Failed to parse memory.oom_control - %s", err)
 	}

@@ -1,0 +1,76 @@
+/*
+   Copyright The containerd Authors.
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*/
+
+package fs2
+
+import (
+	"strings"
+	"testing"
+)
+
+func TestParseCgroupFromReader(t *testing.T) {
+	cases := map[string]string{
+		"0::/user.slice/user-1001.slice/session-1.scope\n":                                  "/user.slice/user-1001.slice/session-1.scope",
+		"2:cpuset:/foo\n1:name=systemd:/\n":                                                 "",
+		"2:cpuset:/foo\n1:name=systemd:/\n0::/user.slice/user-1001.slice/session-1.scope\n": "/user.slice/user-1001.slice/session-1.scope",
+	}
+	for s, expected := range cases {
+		g, err := parseCgroupFromReader(strings.NewReader(s))
+		if expected != "" {
+			if string(g) != expected {
+				t.Errorf("expected %q, got %q", expected, string(g))
+			}
+			if err != nil {
+				t.Error(err)
+			}
+		} else {
+			if err == nil {
+				t.Error("error is expected")
+			}
+		}
+	}
+}
+
+func TestDefaultDirPath(t *testing.T) {
+	root := "/sys/fs/cgroup"
+	cases := []struct {
+		cgPath    string
+		cgParent  string
+		cgName    string
+		ownCgroup string
+		expected  string
+	}{
+		{
+			cgPath:    "/foo/bar",
+			ownCgroup: "/apple/banana",
+			expected:  "/sys/fs/cgroup/foo/bar",
+		},
+		{
+			cgPath:    "foo/bar",
+			ownCgroup: "/apple/banana",
+			expected:  "/sys/fs/cgroup/apple/banana/foo/bar",
+		},
+	}
+	for _, c := range cases {
+		got, err := _defaultDirPath(root, c.cgPath, c.cgParent, c.cgName, c.ownCgroup)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got != c.expected {
+			t.Fatalf("expected %q, got %q", c.expected, got)
+		}
+	}
+}

@@ -5,6 +5,7 @@ package fs
 import (
 	"testing"
 
+	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
@@ -48,7 +49,7 @@ func TestDevicesSetAllow(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	value, err := getCgroupParamString(helper.CgroupPath, "devices.allow")
+	value, err := fscommon.GetCgroupParamString(helper.CgroupPath, "devices.allow")
 	if err != nil {
 		t.Fatalf("Failed to parse devices.allow - %s", err)
 	}
@@ -62,7 +63,7 @@ func TestDevicesSetAllow(t *testing.T) {
 	if err := devices.Set(helper.CgroupPath, helper.CgroupData.config); err != nil {
 		t.Fatal(err)
 	}
-	value, err = getCgroupParamString(helper.CgroupPath, "devices.allow")
+	value, err = fscommon.GetCgroupParamString(helper.CgroupPath, "devices.allow")
 	if err != nil {
 		t.Fatalf("Failed to parse devices.allow - %s", err)
 	}
@@ -87,7 +88,7 @@ func TestDevicesSetDeny(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	value, err := getCgroupParamString(helper.CgroupPath, "devices.deny")
+	value, err := fscommon.GetCgroupParamString(helper.CgroupPath, "devices.deny")
 	if err != nil {
 		t.Fatalf("Failed to parse devices.deny - %s", err)
 	}
