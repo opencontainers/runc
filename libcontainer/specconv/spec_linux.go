@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/opencontainers/runc/libcontainer/cgroups"
+
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/seccomp"
 	libcontainerUtils "github.com/opencontainers/runc/libcontainer/utils"
@@ -405,6 +407,9 @@ func CreateCgroupConfig(opts *CreateOpts) (*configs.Cgroup, error) {
 		if r.CPU != nil {
 			if r.CPU.Shares != nil {
 				c.Resources.CpuShares = *r.CPU.Shares
+
+				//CpuWeight is used for cgroupv2 and should be converted
+				c.Resources.CpuWeight = cgroups.ConvertCPUSharesToCgroupV2Value(c.Resources.CpuShares)
 			}
 			if r.CPU.Quota != nil {
 				c.Resources.CpuQuota = *r.CPU.Quota
