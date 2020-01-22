@@ -299,6 +299,18 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string, enableCgroupns b
 
 	switch m.Device {
 	case "proc", "sysfs":
+		// If the destination already exists and is not a directory, we bail
+		// out This is to avoid mounting through a symlink or similar -- which
+		// has been a "fun" attack scenario in the past.
+		// TODO: This won't be necessary once we switch to libpathrs and we can
+		//       stop all of these symlink-exchange attacks.
+		if fi, err := os.Lstat(dest); err != nil {
+			if !os.IsNotExist(err) {
+				return err
+			}
+		} else if fi.Mode()&os.ModeDir == 0 {
+			return fmt.Errorf("filesystem %q must be mounted on ordinary directory", m.Device)
+		}
 		if err := os.MkdirAll(dest, 0755); err != nil {
 			return err
 		}
