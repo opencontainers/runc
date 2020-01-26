@@ -22,7 +22,7 @@ Currently, the following features are not considered to be production-ready:
 
 ## Security
 
-The reporting process and disclosure communications are outlined in [/org/SECURITY.md](https://github.com/opencontainers/org/blob/master/SECURITY.md).
+The reporting process and disclosure communications are outlined [here](https://github.com/opencontainers/org/blob/master/SECURITY.md).
 
 ## Building
 
