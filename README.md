@@ -99,10 +99,10 @@ You can run a specific integration test by setting the `TESTPATH` variable.
 # make test TESTPATH="/checkpoint.bats"
 ```
 
-You can run a test in your proxy environment by setting `DOCKER_BUILD_PROXY` and `DOCKER_RUN_PROXY` variables.
+You can run a test using your container engine's flags by setting `CONTAINER_ENGINE_BUILD_FLAGS` and `CONTAINER_ENGINE_RUN_FLAGS` variables.
 
 ```bash
-# make test DOCKER_BUILD_PROXY="--build-arg HTTP_PROXY=http://yourproxy/" DOCKER_RUN_PROXY="-e HTTP_PROXY=http://yourproxy/"
+# make test CONTAINER_ENGINE_BUILD_FLAGS="--build-arg http_proxy=http://yourproxy/" CONTAINER_ENGINE_RUN_FLAGS="-e http_proxy=http://yourproxy/"
 ```
 
 ### Dependencies Management
