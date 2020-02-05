@@ -60,9 +60,6 @@ func testCheckpoint(t *testing.T, userns bool) {
 	if testing.Short() {
 		return
 	}
-	if cgroups.IsCgroup2UnifiedMode() {
-		t.Skip("cgroup v2 is not supported")
-	}
 
 	root, err := newTestRoot()
 	if err != nil {
@@ -78,16 +75,24 @@ func testCheckpoint(t *testing.T, userns bool) {
 
 	config := newTemplateConfig(rootfs)
 
-	config.Mounts = append(config.Mounts, &configs.Mount{
-		Destination: "/sys/fs/cgroup",
-		Device:      "cgroup",
-		Flags:       defaultMountFlags | unix.MS_RDONLY,
-	})
-
 	if userns {
 		config.UidMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
 		config.GidMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
 		config.Namespaces = append(config.Namespaces, configs.Namespace{Type: configs.NEWUSER})
+	} else {
+		var cgroupDevice string
+
+		if cgroups.IsCgroup2UnifiedMode() {
+			cgroupDevice = "cgroup2"
+		} else {
+			cgroupDevice = "cgroup"
+		}
+
+		config.Mounts = append(config.Mounts, &configs.Mount{
+			Destination: "/sys/fs/cgroup",
+			Device:      cgroupDevice,
+			Flags:       defaultMountFlags | unix.MS_RDONLY,
+		})
 	}
 
 	factory, err := libcontainer.New(root, libcontainer.Cgroupfs)
