@@ -157,14 +157,14 @@ func TestFactoryLoadContainer(t *testing.T) {
 	// setup default container config and state for mocking
 	var (
 		id            = "1"
-		expectedHooks = &configs.Hooks{
-			Prestart: []configs.Hook{
+		expectedHooks = configs.Hooks{
+			configs.Prestart: configs.HookList{
 				configs.CommandHook{Command: configs.Command{Path: "prestart-hook"}},
 			},
-			Poststart: []configs.Hook{
+			configs.Poststart: configs.HookList{
 				configs.CommandHook{Command: configs.Command{Path: "poststart-hook"}},
 			},
-			Poststop: []configs.Hook{
+			configs.Poststop: configs.HookList{
 				unserializableHook{},
 				configs.CommandHook{Command: configs.Command{Path: "poststop-hook"}},
 			},
@@ -201,7 +201,7 @@ func TestFactoryLoadContainer(t *testing.T) {
 	if config.Rootfs != expectedConfig.Rootfs {
 		t.Fatalf("expected rootfs %q but received %q", expectedConfig.Rootfs, config.Rootfs)
 	}
-	expectedHooks.Poststop = expectedHooks.Poststop[1:] // expect unserializable hook to be skipped
+	expectedHooks[configs.Poststop] = expectedHooks[configs.Poststop][1:] // expect unserializable hook to be skipped
 	if !reflect.DeepEqual(config.Hooks, expectedHooks) {
 		t.Fatalf("expects hooks %q but received %q", expectedHooks, config.Hooks)
 	}

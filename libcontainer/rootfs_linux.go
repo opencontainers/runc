@@ -98,6 +98,13 @@ func prepareRootfs(pipe io.ReadWriter, iConfig *initConfig) (err error) {
 		return newSystemErrorWithCausef(err, "changing dir to %q", config.Rootfs)
 	}
 
+	s := iConfig.SpecState
+	s.Pid = unix.Getpid()
+	s.Status = configs.Creating
+	if err := iConfig.Config.Hooks[configs.CreateContainer].RunHooks(s); err != nil {
+		return err
+	}
+
 	if config.NoPivotRoot {
 		err = msMoveRoot(config.Rootfs)
 	} else if config.Namespaces.Contains(configs.NEWNS) {

@@ -362,6 +362,9 @@ func (p *initProcess) start() (retErr error) {
 	if err := p.createNetworkInterfaces(); err != nil {
 		return newSystemErrorWithCause(err, "creating network interfaces")
 	}
+	if err := p.updateSpecState(); err != nil {
+		return newSystemErrorWithCause(err, "updating the spec state")
+	}
 	if err := p.sendConfig(); err != nil {
 		return newSystemErrorWithCause(err, "sending config to init process")
 	}
@@ -378,9 +381,9 @@ func (p *initProcess) start() (retErr error) {
 			if err := setupRlimits(p.config.Rlimits, p.pid()); err != nil {
 				return newSystemErrorWithCause(err, "setting rlimits for ready process")
 			}
-			// call prestart hooks
+			// call prestart and CreateRuntime hooks
 			if !p.config.Config.Namespaces.Contains(configs.NEWNS) {
-				// Setup cgroup before prestart hook, so that the prestart hook could apply cgroup permissions.
+				// Setup cgroup before the hook, so that the prestart and CreateRuntime hook could apply cgroup permissions.
 				if err := p.manager.Set(p.config.Config); err != nil {
 					return newSystemErrorWithCause(err, "setting cgroup config for ready process")
 				}
@@ -397,11 +400,14 @@ func (p *initProcess) start() (retErr error) {
 					}
 					// initProcessStartTime hasn't been set yet.
 					s.Pid = p.cmd.Process.Pid
-					s.Status = "creating"
-					for i, hook := range p.config.Config.Hooks.Prestart {
-						if err := hook.Run(s); err != nil {
-							return newSystemErrorWithCausef(err, "running prestart hook %d", i)
-						}
+					s.Status = configs.Creating
+					hooks := p.config.Config.Hooks
+
+					if err := hooks[configs.Prestart].RunHooks(s); err != nil {
+						return err
+					}
+					if err := hooks[configs.CreateRuntime].RunHooks(s); err != nil {
+						return err
 					}
 				}
 			}
@@ -427,11 +433,14 @@ func (p *initProcess) start() (retErr error) {
 				}
 				// initProcessStartTime hasn't been set yet.
 				s.Pid = p.cmd.Process.Pid
-				s.Status = "creating"
-				for i, hook := range p.config.Config.Hooks.Prestart {
-					if err := hook.Run(s); err != nil {
-						return newSystemErrorWithCausef(err, "running prestart hook %d", i)
-					}
+				s.Status = configs.Creating
+				hooks := p.config.Config.Hooks
+
+				if err := hooks[configs.Prestart].RunHooks(s); err != nil {
+					return err
+				}
+				if err := hooks[configs.CreateRuntime].RunHooks(s); err != nil {
+					return err
 				}
 			}
 			// Sync with child.
@@ -450,7 +459,7 @@ func (p *initProcess) start() (retErr error) {
 		return newSystemErrorWithCause(ierr, "container init")
 	}
 	if p.config.Config.Namespaces.Contains(configs.NEWNS) && !sentResume {
-		return newSystemError(errors.New("could not synchronise after executing prestart hooks with container process"))
+		return newSystemError(errors.New("could not synchronise after executing prestart and CreateRuntime hooks with container process"))
 	}
 	if err := unix.Shutdown(int(p.messageSockPair.parent.Fd()), unix.SHUT_WR); err != nil {
 		return newSystemErrorWithCause(err, "shutting down init pipe")
@@ -490,6 +499,16 @@ func (p *initProcess) terminate() error {
 func (p *initProcess) startTime() (uint64, error) {
 	stat, err := system.Stat(p.pid())
 	return stat.StartTime, err
+}
+
+func (p *initProcess) updateSpecState() error {
+	s, err := p.container.currentOCIState()
+	if err != nil {
+		return err
+	}
+
+	p.config.SpecState = s
+	return nil
 }
 
 func (p *initProcess) sendConfig() error {

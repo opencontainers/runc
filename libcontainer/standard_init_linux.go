@@ -207,6 +207,14 @@ func (l *linuxStandardInit) Init() error {
 			return newSystemErrorWithCause(err, "init seccomp")
 		}
 	}
+
+	s := l.config.SpecState
+	s.Pid = unix.Getpid()
+	s.Status = configs.Created
+	if err := l.config.Config.Hooks[configs.StartContainer].RunHooks(s); err != nil {
+		return err
+	}
+
 	if err := unix.Exec(name, l.config.Args[0:], os.Environ()); err != nil {
 		return newSystemErrorWithCause(err, "exec user process")
 	}

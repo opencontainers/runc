@@ -20,6 +20,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runc/libcontainer/user"
 	"github.com/opencontainers/runc/libcontainer/utils"
+	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
@@ -67,6 +68,7 @@ type initConfig struct {
 	ConsoleHeight    uint16                `json:"console_height"`
 	RootlessEUID     bool                  `json:"rootless_euid,omitempty"`
 	RootlessCgroups  bool                  `json:"rootless_cgroups,omitempty"`
+	SpecState        *specs.State          `json:"spec_state,omitempty"`
 }
 
 type initer interface {

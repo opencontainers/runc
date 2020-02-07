@@ -29,6 +29,7 @@ import (
 	"github.com/checkpoint-restore/go-criu/v4"
 	criurpc "github.com/checkpoint-restore/go-criu/v4/rpc"
 	"github.com/golang/protobuf/proto"
+	errorsf "github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink/nl"
 	"golang.org/x/sys/unix"
@@ -379,13 +380,12 @@ func (c *linuxContainer) start(process *Process) error {
 			if err != nil {
 				return err
 			}
-			for i, hook := range c.config.Hooks.Poststart {
-				if err := hook.Run(s); err != nil {
-					if err := ignoreTerminateErrors(parent.terminate()); err != nil {
-						logrus.Warn(err)
-					}
-					return newSystemErrorWithCausef(err, "running poststart hook %d", i)
+
+			if err := c.config.Hooks[configs.Poststart].RunHooks(s); err != nil {
+				if err := ignoreTerminateErrors(parent.terminate()); err != nil {
+					logrus.Warn(errorsf.Wrapf(err, "Running Poststart hook"))
 				}
+				return err
 			}
 		}
 	}
@@ -1621,10 +1621,12 @@ func (c *linuxContainer) criuNotifications(resp *criurpc.CriuResp, process *Proc
 				return nil
 			}
 			s.Pid = int(notify.GetPid())
-			for i, hook := range c.config.Hooks.Prestart {
-				if err := hook.Run(s); err != nil {
-					return newSystemErrorWithCausef(err, "running prestart hook %d", i)
-				}
+
+			if err := c.config.Hooks[configs.Prestart].RunHooks(s); err != nil {
+				return err
+			}
+			if err := c.config.Hooks[configs.CreateRuntime].RunHooks(s); err != nil {
+				return err
 			}
 		}
 	case "post-restore":
