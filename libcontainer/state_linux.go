@@ -61,17 +61,20 @@ func destroy(c *linuxContainer) error {
 }
 
 func runPoststopHooks(c *linuxContainer) error {
-	if c.config.Hooks != nil {
-		s, err := c.currentOCIState()
-		if err != nil {
-			return err
-		}
-		for _, hook := range c.config.Hooks.Poststop {
-			if err := hook.Run(s); err != nil {
-				return err
-			}
-		}
+	hooks := c.config.Hooks
+	if hooks == nil {
+		return nil
 	}
+
+	s, err := c.currentOCIState()
+	if err != nil {
+		return err
+	}
+
+	if err := hooks.RunHooks(configs.Poststop, s); err != nil {
+		return err
+	}
+
 	return nil
 }
 

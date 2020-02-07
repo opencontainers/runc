@@ -359,18 +359,19 @@ func (c *linuxContainer) start(process *Process) error {
 		}
 		c.initProcessStartTime = state.InitProcessStartTime
 
-		if c.config.Hooks != nil {
+		hooks := c.config.Hooks
+		if hooks != nil {
+
 			s, err := c.currentOCIState()
 			if err != nil {
 				return err
 			}
-			for i, hook := range c.config.Hooks.Poststart {
-				if err := hook.Run(s); err != nil {
-					if err := ignoreTerminateErrors(parent.terminate()); err != nil {
-						logrus.Warn(err)
-					}
-					return newSystemErrorWithCausef(err, "running poststart hook %d", i)
+
+			if err := hooks.RunHooks(configs.Poststart, s); err != nil {
+				if err := ignoreTerminateErrors(parent.terminate()); err != nil {
+					logrus.Warn(err)
 				}
+				return err
 			}
 		}
 	}
@@ -1715,10 +1716,12 @@ func (c *linuxContainer) criuNotifications(resp *criurpc.CriuResp, process *Proc
 				return nil
 			}
 			s.Pid = int(notify.GetPid())
-			for i, hook := range c.config.Hooks.Prestart {
-				if err := hook.Run(s); err != nil {
-					return newSystemErrorWithCausef(err, "running prestart hook %d", i)
-				}
+
+			if err := c.config.Hooks.RunHooks(configs.Prestart, s); err != nil {
+				return err
+			}
+			if err := c.config.Hooks.RunHooks(configs.CreateRuntime, s); err != nil {
+				return err
 			}
 		}
 	case notify.GetScript() == "post-restore":
