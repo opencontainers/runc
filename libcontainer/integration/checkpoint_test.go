@@ -42,7 +42,6 @@ func showFile(t *testing.T, fname string) error {
 }
 
 func TestUsernsCheckpoint(t *testing.T) {
-	t.Skip("Ubuntu kernel is broken to run criu (#2196, #2198)")
 	if _, err := os.Stat("/proc/self/ns/user"); os.IsNotExist(err) {
 		t.Skip("userns is unsupported")
 	}
@@ -54,7 +53,6 @@ func TestUsernsCheckpoint(t *testing.T) {
 }
 
 func TestCheckpoint(t *testing.T) {
-	t.Skip("Ubuntu kernel is broken to run criu (#2196, #2198)")
 	testCheckpoint(t, false)
 }
 
@@ -248,7 +246,7 @@ func testCheckpoint(t *testing.T, userns bool) {
 	}
 
 	restoreStdinW.Close()
-	s, err := process.Wait()
+	s, err := restoreProcessConfig.Wait()
 	if err != nil {
 		t.Fatal(err)
 	}

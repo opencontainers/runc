@@ -1485,17 +1485,19 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *
 		return err
 	}
 	criuServer.Close()
+	// cmd.Process will be replaced by a restored init.
+	criuProcess := cmd.Process
 
 	defer func() {
 		criuClientCon.Close()
-		_, err := cmd.Process.Wait()
+		_, err := criuProcess.Wait()
 		if err != nil {
 			return
 		}
 	}()
 
 	if applyCgroups {
-		err := c.criuApplyCgroups(cmd.Process.Pid, req)
+		err := c.criuApplyCgroups(criuProcess.Pid, req)
 		if err != nil {
 			return err
 		}
@@ -1503,7 +1505,7 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *
 
 	var extFds []string
 	if process != nil {
-		extFds, err = getPipeFds(cmd.Process.Pid)
+		extFds, err = getPipeFds(criuProcess.Pid)
 		if err != nil {
 			return err
 		}
@@ -1577,7 +1579,7 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *
 			logrus.Debugf("Feature check says: %s", resp)
 			criuFeatures = resp.GetFeatures()
 		case t == criurpc.CriuReqType_NOTIFY:
-			if err := c.criuNotifications(resp, process, opts, extFds, oob[:oobn]); err != nil {
+			if err := c.criuNotifications(resp, process, cmd, opts, extFds, oob[:oobn]); err != nil {
 				return err
 			}
 			t = criurpc.CriuReqType_NOTIFY
@@ -1607,7 +1609,7 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *
 	criuClientCon.CloseWrite()
 	// cmd.Wait() waits cmd.goroutines which are used for proxying file descriptors.
 	// Here we want to wait only the CRIU process.
-	st, err := cmd.Process.Wait()
+	st, err := criuProcess.Wait()
 	if err != nil {
 		return err
 	}
@@ -1653,7 +1655,7 @@ func unlockNetwork(config *configs.Config) error {
 	return nil
 }
 
-func (c *linuxContainer) criuNotifications(resp *criurpc.CriuResp, process *Process, opts *CriuOpts, fds []string, oob []byte) error {
+func (c *linuxContainer) criuNotifications(resp *criurpc.CriuResp, process *Process, cmd *exec.Cmd, opts *CriuOpts, fds []string, oob []byte) error {
 	notify := resp.GetNotify()
 	if notify == nil {
 		return fmt.Errorf("invalid response: %s", resp.String())
@@ -1689,7 +1691,14 @@ func (c *linuxContainer) criuNotifications(resp *criurpc.CriuResp, process *Proc
 		}
 	case notify.GetScript() == "post-restore":
 		pid := notify.GetPid()
-		r, err := newRestoredProcess(int(pid), fds)
+
+		p, err := os.FindProcess(int(pid))
+		if err != nil {
+			return err
+		}
+		cmd.Process = p
+
+		r, err := newRestoredProcess(cmd, fds)
 		if err != nil {
 			return err
 		}
