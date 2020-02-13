@@ -24,11 +24,4 @@ The values must be in the gvariant format (for details, see
 [gvariant documentation](https://developer.gnome.org/glib/stable/gvariant-text.html)).
 
 To find out which type systemd expects for a particular parameter, please
-consult systemd sources. In particular, parameters with `USec` suffix are
-in microseconds, and those require an `uint64` typed argument. Since
-gvariant assumes int32 for a numeric values, the explicit type is required.
-
-**Note** that time-typed systemd parameter names must have the `USec`
-suffix, while they are documented with `Sec` suffix.
-For example, the stop timeout used in the example above must be
-set as `TimeoutStopUSec` but is shown and documented as `TimeoutStopSec`.
+consult systemd sources.

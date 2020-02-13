@@ -472,6 +472,61 @@ func TestInitSystemdProps(t *testing.T) {
 			exp: expT{false, "TimeoutStopUSec", uint64(123456789)},
 		},
 		{
+			desc: "convert USec to Sec (default numeric type)",
+			in:   inT{"org.systemd.property.TimeoutStopSec", "456"},
+			exp:  expT{false, "TimeoutStopUSec", uint64(456000000)},
+		},
+		{
+			desc: "convert USec to Sec (byte)",
+			in:   inT{"org.systemd.property.TimeoutStopSec", "byte 234"},
+			exp:  expT{false, "TimeoutStopUSec", uint64(234000000)},
+		},
+		{
+			desc: "convert USec to Sec (int16)",
+			in:   inT{"org.systemd.property.TimeoutStopSec", "int16 234"},
+			exp:  expT{false, "TimeoutStopUSec", uint64(234000000)},
+		},
+		{
+			desc: "convert USec to Sec (uint16)",
+			in:   inT{"org.systemd.property.TimeoutStopSec", "uint16 234"},
+			exp:  expT{false, "TimeoutStopUSec", uint64(234000000)},
+		},
+		{
+			desc: "convert USec to Sec (int32)",
+			in:   inT{"org.systemd.property.TimeoutStopSec", "int32 234"},
+			exp:  expT{false, "TimeoutStopUSec", uint64(234000000)},
+		},
+		{
+			desc: "convert USec to Sec (uint32)",
+			in:   inT{"org.systemd.property.TimeoutStopSec", "uint32 234"},
+			exp:  expT{false, "TimeoutStopUSec", uint64(234000000)},
+		},
+		{
+			desc: "convert USec to Sec (int64)",
+			in:   inT{"org.systemd.property.TimeoutStopSec", "int64 234"},
+			exp:  expT{false, "TimeoutStopUSec", uint64(234000000)},
+		},
+		{
+			desc: "convert USec to Sec (uint64)",
+			in:   inT{"org.systemd.property.TimeoutStopSec", "uint64 234"},
+			exp:  expT{false, "TimeoutStopUSec", uint64(234000000)},
+		},
+		{
+			desc: "convert USec to Sec (float)",
+			in:   inT{"org.systemd.property.TimeoutStopSec", "234.789"},
+			exp:  expT{false, "TimeoutStopUSec", uint64(234789000)},
+		},
+		{
+			desc: "convert USec to Sec (bool -- invalid value)",
+			in:   inT{"org.systemd.property.TimeoutStopSec", "false"},
+			exp:  expT{true, "", ""},
+		},
+		{
+			desc: "convert USec to Sec (string -- invalid value)",
+			in:   inT{"org.systemd.property.TimeoutStopSec", "'covfefe'"},
+			exp:  expT{true, "", ""},
+		},
+		{
 			in:  inT{"org.systemd.property.CollectMode", "'inactive-or-failed'"},
 			exp: expT{false, "CollectMode", "inactive-or-failed"},
 		},
