@@ -8,6 +8,8 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/opencontainers/runc/libcontainer/cgroups"
+
 	"github.com/docker/go-units"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
@@ -253,6 +255,8 @@ other options are ignored.
 		config.Cgroups.Resources.CpuPeriod = *r.CPU.Period
 		config.Cgroups.Resources.CpuQuota = *r.CPU.Quota
 		config.Cgroups.Resources.CpuShares = *r.CPU.Shares
+		//CpuWeight is used for cgroupv2 and should be converted
+		config.Cgroups.Resources.CpuWeight = cgroups.ConvertCPUSharesToCgroupV2Value(*r.CPU.Shares)
 		config.Cgroups.Resources.CpuRtPeriod = *r.CPU.RealtimePeriod
 		config.Cgroups.Resources.CpuRtRuntime = *r.CPU.RealtimeRuntime
 		config.Cgroups.Resources.CpusetCpus = r.CPU.Cpus
