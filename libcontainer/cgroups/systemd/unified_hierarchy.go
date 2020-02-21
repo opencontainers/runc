@@ -128,6 +128,8 @@ func (m *UnifiedManager) Apply(pid int) error {
 			newProp("TasksMax", uint64(c.Resources.PidsLimit)))
 	}
 
+	properties = append(properties, c.SystemdProps...)
+
 	// We have to set kernel memory here, as we can't change it once
 	// processes have been attached to the cgroup.
 	if c.Resources.KernelMemory != 0 {

@@ -9,6 +9,7 @@ import (
 
 	"golang.org/x/sys/unix"
 
+	"github.com/godbus/dbus"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/configs/validate"
 	"github.com/opencontainers/runtime-spec/specs-go"
@@ -448,5 +449,139 @@ func TestNonZeroEUIDCompatibleSpecconvValidate(t *testing.T) {
 	validator := validate.New()
 	if err := validator.Validate(config); err != nil {
 		t.Errorf("Expected specconv to produce valid rootless container config: %v", err)
+	}
+}
+
+func TestInitSystemdProps(t *testing.T) {
+	type inT struct {
+		name, value string
+	}
+	type expT struct {
+		isErr bool
+		name  string
+		value interface{}
+	}
+
+	testCases := []struct {
+		desc string
+		in   inT
+		exp  expT
+	}{
+		{
+			in:  inT{"org.systemd.property.TimeoutStopUSec", "uint64 123456789"},
+			exp: expT{false, "TimeoutStopUSec", uint64(123456789)},
+		},
+		{
+			desc: "convert USec to Sec (default numeric type)",
+			in:   inT{"org.systemd.property.TimeoutStopSec", "456"},
+			exp:  expT{false, "TimeoutStopUSec", uint64(456000000)},
+		},
+		{
+			desc: "convert USec to Sec (byte)",
+			in:   inT{"org.systemd.property.TimeoutStopSec", "byte 234"},
+			exp:  expT{false, "TimeoutStopUSec", uint64(234000000)},
+		},
+		{
+			desc: "convert USec to Sec (int16)",
+			in:   inT{"org.systemd.property.TimeoutStopSec", "int16 234"},
+			exp:  expT{false, "TimeoutStopUSec", uint64(234000000)},
+		},
+		{
+			desc: "convert USec to Sec (uint16)",
+			in:   inT{"org.systemd.property.TimeoutStopSec", "uint16 234"},
+			exp:  expT{false, "TimeoutStopUSec", uint64(234000000)},
+		},
+		{
+			desc: "convert USec to Sec (int32)",
+			in:   inT{"org.systemd.property.TimeoutStopSec", "int32 234"},
+			exp:  expT{false, "TimeoutStopUSec", uint64(234000000)},
+		},
+		{
+			desc: "convert USec to Sec (uint32)",
+			in:   inT{"org.systemd.property.TimeoutStopSec", "uint32 234"},
+			exp:  expT{false, "TimeoutStopUSec", uint64(234000000)},
+		},
+		{
+			desc: "convert USec to Sec (int64)",
+			in:   inT{"org.systemd.property.TimeoutStopSec", "int64 234"},
+			exp:  expT{false, "TimeoutStopUSec", uint64(234000000)},
+		},
+		{
+			desc: "convert USec to Sec (uint64)",
+			in:   inT{"org.systemd.property.TimeoutStopSec", "uint64 234"},
+			exp:  expT{false, "TimeoutStopUSec", uint64(234000000)},
+		},
+		{
+			desc: "convert USec to Sec (float)",
+			in:   inT{"org.systemd.property.TimeoutStopSec", "234.789"},
+			exp:  expT{false, "TimeoutStopUSec", uint64(234789000)},
+		},
+		{
+			desc: "convert USec to Sec (bool -- invalid value)",
+			in:   inT{"org.systemd.property.TimeoutStopSec", "false"},
+			exp:  expT{true, "", ""},
+		},
+		{
+			desc: "convert USec to Sec (string -- invalid value)",
+			in:   inT{"org.systemd.property.TimeoutStopSec", "'covfefe'"},
+			exp:  expT{true, "", ""},
+		},
+		{
+			in:  inT{"org.systemd.property.CollectMode", "'inactive-or-failed'"},
+			exp: expT{false, "CollectMode", "inactive-or-failed"},
+		},
+		{
+			desc: "unrelated property",
+			in:   inT{"some.other.annotation", "0"},
+			exp:  expT{false, "", ""},
+		},
+		{
+			desc: "too short property name",
+			in:   inT{"org.systemd.property.Xo", "1"},
+			exp:  expT{true, "", ""},
+		},
+		{
+			desc: "invalid character in property name",
+			in:   inT{"org.systemd.property.Number1", "1"},
+			exp:  expT{true, "", ""},
+		},
+		{
+			desc: "invalid property value",
+			in:   inT{"org.systemd.property.ValidName", "invalid-value"},
+			exp:  expT{true, "", ""},
+		},
+	}
+
+	spec := &specs.Spec{}
+
+	for _, tc := range testCases {
+		tc := tc
+		spec.Annotations = map[string]string{tc.in.name: tc.in.value}
+
+		outMap, err := initSystemdProps(spec)
+		//t.Logf("input %+v, expected %+v, got err:%v out:%+v", tc.in, tc.exp, err, outMap)
+
+		if tc.exp.isErr != (err != nil) {
+			t.Errorf("input %+v, expecting error: %v, got %v", tc.in, tc.exp.isErr, err)
+		}
+		expLen := 1 // expect a single item
+		if tc.exp.name == "" {
+			expLen = 0 // expect nothing
+		}
+		if len(outMap) != expLen {
+			t.Fatalf("input %+v, expected %d, got %d entries: %v", tc.in, expLen, len(outMap), outMap)
+		}
+		if expLen == 0 {
+			continue
+		}
+
+		out := outMap[0]
+		if tc.exp.name != out.Name {
+			t.Errorf("input %+v, expecting name: %q, got %q", tc.in, tc.exp.name, out.Name)
+		}
+		expValue := dbus.MakeVariant(tc.exp.value).String()
+		if expValue != out.Value.String() {
+			t.Errorf("input %+v, expecting value: %s, got %s", tc.in, expValue, out.Value)
+		}
 	}
 }

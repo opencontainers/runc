@@ -245,6 +245,8 @@ func (m *LegacyManager) Apply(pid int) error {
 		}
 	}
 
+	properties = append(properties, c.SystemdProps...)
+
 	statusChan := make(chan string, 1)
 	if _, err := theConn.StartTransientUnit(unitName, "replace", properties, statusChan); err == nil {
 		select {

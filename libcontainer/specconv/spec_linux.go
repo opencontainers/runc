@@ -5,14 +5,17 @@
 package specconv
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
+	systemdDbus "github.com/coreos/go-systemd/dbus"
+	"github.com/godbus/dbus"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
-
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/seccomp"
 	libcontainerUtils "github.com/opencontainers/runc/libcontainer/utils"
@@ -299,6 +302,70 @@ func createLibcontainerMount(cwd string, m specs.Mount) *configs.Mount {
 	}
 }
 
+// systemd property name check: latin letters only, at least 3 of them
+var isValidName = regexp.MustCompile(`^[a-zA-Z]{3,}$`).MatchString
+
+var isSecSuffix = regexp.MustCompile(`[a-z]Sec$`).MatchString
+
+// Some systemd properties are documented as having "Sec" suffix
+// (e.g. TimeoutStopSec) but are expected to have "USec" suffix
+// here, so let's provide conversion to improve compatibility.
+func convertSecToUSec(value dbus.Variant) (dbus.Variant, error) {
+	var sec uint64
+	const M = 1000000
+	vi := value.Value()
+	switch value.Signature().String() {
+	case "y":
+		sec = uint64(vi.(byte)) * M
+	case "n":
+		sec = uint64(vi.(int16)) * M
+	case "q":
+		sec = uint64(vi.(uint16)) * M
+	case "i":
+		sec = uint64(vi.(int32)) * M
+	case "u":
+		sec = uint64(vi.(uint32)) * M
+	case "x":
+		sec = uint64(vi.(int64)) * M
+	case "t":
+		sec = vi.(uint64) * M
+	case "d":
+		sec = uint64(vi.(float64) * M)
+	default:
+		return value, errors.New("not a number")
+	}
+	return dbus.MakeVariant(sec), nil
+}
+
+func initSystemdProps(spec *specs.Spec) ([]systemdDbus.Property, error) {
+	const keyPrefix = "org.systemd.property."
+	var sp []systemdDbus.Property
+
+	for k, v := range spec.Annotations {
+		name := strings.TrimPrefix(k, keyPrefix)
+		if len(name) == len(k) { // prefix not there
+			continue
+		}
+		if !isValidName(name) {
+			return nil, fmt.Errorf("Annotation %s name incorrect: %s", k, name)
+		}
+		value, err := dbus.ParseVariant(v, dbus.Signature{})
+		if err != nil {
+			return nil, fmt.Errorf("Annotation %s=%s value parse error: %v", k, v, err)
+		}
+		if isSecSuffix(name) {
+			name = strings.TrimSuffix(name, "Sec") + "USec"
+			value, err = convertSecToUSec(value)
+			if err != nil {
+				return nil, fmt.Errorf("Annotation %s=%s value parse error: %v", k, v, err)
+			}
+		}
+		sp = append(sp, systemdDbus.Property{Name: name, Value: value})
+	}
+
+	return sp, nil
+}
+
 func CreateCgroupConfig(opts *CreateOpts) (*configs.Cgroup, error) {
 	var (
 		myCgroupPath string
@@ -310,6 +377,14 @@ func CreateCgroupConfig(opts *CreateOpts) (*configs.Cgroup, error) {
 
 	c := &configs.Cgroup{
 		Resources: &configs.Resources{},
+	}
+
+	if useSystemdCgroup {
+		sp, err := initSystemdProps(spec)
+		if err != nil {
+			return nil, err
+		}
+		c.SystemdProps = sp
 	}
 
 	if spec.Linux != nil && spec.Linux.CgroupsPath != "" {
