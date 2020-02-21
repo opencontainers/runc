@@ -63,7 +63,7 @@ func testCheckpoint(t *testing.T, userns bool) {
 		return
 	}
 	if cgroups.IsCgroup2UnifiedMode() {
-		t.Skip("cgroup v1 is not supported")
+		t.Skip("cgroup v2 is not supported")
 	}
 
 	root, err := newTestRoot()
