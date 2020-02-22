@@ -1,4 +1,8 @@
-FROM golang:1.12-stretch
+ARG GO_VERSION=1.12.17
+ARG BATS_VERSION=03608115df2071fff4eaaff1605768c275e5f81f
+ARG CRIU_VERSION=v3.12
+
+FROM golang:${GO_VERSION}-stretch
 
 RUN dpkg --add-architecture armel \
     && dpkg --add-architecture armhf \
@@ -37,15 +41,16 @@ RUN dpkg --add-architecture armel \
 RUN useradd -u1000 -m -d/home/rootless -s/bin/bash rootless
 
 # install bats
+ARG BATS_VERSION
 RUN cd /tmp \
     && git clone https://github.com/sstephenson/bats.git \
     && cd bats \
-    && git reset --hard 03608115df2071fff4eaaff1605768c275e5f81f \
+    && git reset --hard "${BATS_VERSION}" \
     && ./install.sh /usr/local \
     && rm -rf /tmp/bats
 
 # install criu
-ENV CRIU_VERSION v3.12
+ARG CRIU_VERSION
 RUN mkdir -p /usr/src/criu \
     && curl -sSL https://github.com/checkpoint-restore/criu/archive/${CRIU_VERSION}.tar.gz | tar -v -C /usr/src/criu/ -xz --strip-components=1 \
     && cd /usr/src/criu \
