@@ -1,8 +1,10 @@
 ARG GO_VERSION=1.12.17
 ARG BATS_VERSION=03608115df2071fff4eaaff1605768c275e5f81f
 ARG CRIU_VERSION=v3.12
+ARG DEBIAN_FRONTEND=noninteractive
 
 FROM golang:${GO_VERSION}-stretch
+ARG DEBIAN_FRONTEND
 
 RUN dpkg --add-architecture armel \
     && dpkg --add-architecture armhf \
