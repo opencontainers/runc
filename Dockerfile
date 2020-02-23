@@ -3,7 +3,7 @@ ARG BATS_VERSION=03608115df2071fff4eaaff1605768c275e5f81f
 ARG CRIU_VERSION=v3.12
 ARG DEBIAN_FRONTEND=noninteractive
 
-FROM golang:${GO_VERSION}-stretch
+FROM golang:${GO_VERSION}-buster
 ARG DEBIAN_FRONTEND
 
 RUN dpkg --add-architecture armel \
@@ -26,7 +26,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libcap-dev \
         libnet-dev \
         libnl-3-dev \
-        libprotobuf-c0-dev \
+        libprotobuf-c-dev \
         libprotobuf-dev \
         libseccomp-dev \
         libseccomp-dev:arm64 \
