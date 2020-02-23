@@ -66,15 +66,15 @@ RUN mkdir -p /usr/src/criu \
     && make install-criu \
     && rm -rf /usr/src/criu
 
-# setup a playground for us to spawn containers in
-ENV ROOTFS /busybox
-RUN mkdir -p ${ROOTFS}
-
 COPY script/tmpmount /
 WORKDIR /go/src/github.com/opencontainers/runc
 ENTRYPOINT ["/tmpmount"]
 
-ADD . /go/src/github.com/opencontainers/runc
-
+# setup a playground for us to spawn containers in
+COPY tests/integration/multi-arch.bash tests/integration/
+ENV ROOTFS /busybox
+RUN mkdir -p ${ROOTFS}
 RUN . tests/integration/multi-arch.bash \
     && curl -o- -sSL `get_busybox` | tar xfJC - ${ROOTFS}
+
+COPY . .
