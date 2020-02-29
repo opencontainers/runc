@@ -81,7 +81,7 @@ func (m *UnifiedManager) Apply(pid int) error {
 	properties = append(properties,
 		newProp("MemoryAccounting", true),
 		newProp("CPUAccounting", true),
-		newProp("BlockIOAccounting", true))
+		newProp("IOAccounting", true))
 
 	// Assume DefaultDependencies= will always work (the check for it was previously broken.)
 	properties = append(properties,
@@ -89,12 +89,12 @@ func (m *UnifiedManager) Apply(pid int) error {
 
 	if c.Resources.Memory != 0 {
 		properties = append(properties,
-			newProp("MemoryLimit", uint64(c.Resources.Memory)))
+			newProp("MemoryMax", uint64(c.Resources.Memory)))
 	}
 
-	if c.Resources.CpuShares != 0 {
+	if c.Resources.CpuWeight != 0 {
 		properties = append(properties,
-			newProp("CPUShares", c.Resources.CpuShares))
+			newProp("CPUWeight", c.Resources.CpuWeight))
 	}
 
 	// cpu.cfs_quota_us and cpu.cfs_period_us are controlled by systemd.
@@ -115,11 +115,6 @@ func (m *UnifiedManager) Apply(pid int) error {
 		}
 		properties = append(properties,
 			newProp("CPUQuotaPerSecUSec", cpuQuotaPerSecUSec))
-	}
-
-	if c.Resources.BlkioWeight != 0 {
-		properties = append(properties,
-			newProp("BlockIOWeight", uint64(c.Resources.BlkioWeight)))
 	}
 
 	if c.Resources.PidsLimit > 0 {
