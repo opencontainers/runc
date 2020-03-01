@@ -97,9 +97,9 @@ func isRunningSystemd() bool {
 	return fi.IsDir()
 }
 
-func UseSystemd() bool {
+func UseSystemd() error {
 	if !isRunningSystemd() {
-		return false
+		return fmt.Errorf("systemd not running on this host, can't use systemd as a cgroups.Manager")
 	}
 
 	connLock.Lock()
@@ -109,10 +109,10 @@ func UseSystemd() bool {
 		var err error
 		theConn, err = systemdDbus.New()
 		if err != nil {
-			return false
+			return err
 		}
 	}
-	return true
+	return nil
 }
 
 func NewSystemdCgroupsManager() (func(config *configs.Cgroup, paths map[string]string) cgroups.Manager, error) {

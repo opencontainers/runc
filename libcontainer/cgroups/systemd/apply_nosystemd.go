@@ -14,8 +14,8 @@ type Manager struct {
 	Paths   map[string]string
 }
 
-func UseSystemd() bool {
-	return false
+func UseSystemd() error {
+	return fmt.Errorf("Systemd not supported")
 }
 
 func NewSystemdCgroupsManager() (func(config *configs.Cgroup, paths map[string]string) cgroups.Manager, error) {

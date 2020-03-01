@@ -47,11 +47,10 @@ func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
 		cgroupManager = libcontainer.RootlessCgroupfs
 	}
 	if context.GlobalBool("systemd-cgroup") {
-		if systemd.UseSystemd() {
-			cgroupManager = libcontainer.SystemdCgroups
-		} else {
-			return nil, fmt.Errorf("systemd cgroup flag passed, but systemd support for managing cgroups is not available")
+		if err := systemd.UseSystemd(); err != nil {
+			return nil, errors.Wrap(err, "systemd cgroup flag passed, but systemd support for managing cgroups is not available")
 		}
+		cgroupManager = libcontainer.SystemdCgroups
 	}
 
 	intelRdtManager := libcontainer.IntelRdtFs

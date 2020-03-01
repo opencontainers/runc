@@ -506,7 +506,7 @@ func TestFreeze(t *testing.T) {
 }
 
 func TestSystemdFreeze(t *testing.T) {
-	if !systemd.UseSystemd() {
+	if err := systemd.UseSystemd(); err != nil {
 		t.Skip("Systemd is unsupported")
 	}
 	testFreeze(t, true)
@@ -563,7 +563,7 @@ func TestCpuShares(t *testing.T) {
 }
 
 func TestCpuSharesSystemd(t *testing.T) {
-	if !systemd.UseSystemd() {
+	if err := systemd.UseSystemd(); err != nil {
 		t.Skip("Systemd is unsupported")
 	}
 	testCpuShares(t, true)
@@ -598,7 +598,7 @@ func TestPids(t *testing.T) {
 }
 
 func TestPidsSystemd(t *testing.T) {
-	if !systemd.UseSystemd() {
+	if err := systemd.UseSystemd(); err != nil {
 		t.Skip("Systemd is unsupported")
 	}
 	testPids(t, true)
@@ -684,7 +684,7 @@ func TestRunWithKernelMemory(t *testing.T) {
 }
 
 func TestRunWithKernelMemorySystemd(t *testing.T) {
-	if !systemd.UseSystemd() {
+	if err := systemd.UseSystemd(); err != nil {
 		t.Skip("Systemd is unsupported")
 	}
 	testRunWithKernelMemory(t, true)
