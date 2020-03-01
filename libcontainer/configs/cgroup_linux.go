@@ -1,7 +1,7 @@
 package configs
 
 import (
-	systemdDbus "github.com/coreos/go-systemd/dbus"
+	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
 )
 
 type FreezerState string
