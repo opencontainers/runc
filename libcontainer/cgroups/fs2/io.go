@@ -17,11 +17,11 @@ import (
 func setIo(dirPath string, cgroup *configs.Cgroup) error {
 	if cgroup.Resources.BlkioWeight != 0 {
 		filename := "io.bfq.weight"
-		if err := fscommon.WriteFile(dirPath, filename, strconv.FormatUint(uint64(cgroup.Resources.BlkioWeight), 10)); err != nil {
+		if err := fscommon.WriteFile(dirPath, filename,
+			strconv.FormatUint(cgroups.ConvertBlkIOToCgroupV2Value(cgroup.Resources.BlkioWeight), 10)); err != nil {
 			return err
 		}
 	}
-
 	for _, td := range cgroup.Resources.BlkioThrottleReadBpsDevice {
 		if err := fscommon.WriteFile(dirPath, "io.max", td.StringName("rbps")); err != nil {
 			return err
