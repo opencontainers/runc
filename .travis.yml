@@ -1,19 +1,22 @@
 dist: bionic
 language: go
 go:
-  - 1.11.x
   - 1.12.x
+  - 1.13.x
+  - 1.x
   - tip
 
 matrix:
   include:
     - go: 1.12.x
+      name: "cgroup-systemd"
       env:
         - RUNC_USE_SYSTEMD=1
       script:
         - make BUILDTAGS="${BUILDTAGS}" all
         - sudo PATH="$PATH" make localintegration RUNC_USE_SYSTEMD=1
     - go: 1.12.x
+      name: "cgroup-v2"
       env:
         - VIRTUALBOX_VERSION=6.0
         - VAGRANT_VERSION=2.2.6
@@ -29,6 +32,7 @@ matrix:
         - ssh default sudo podman run --privileged --cgroupns=private test make localunittest
   allow_failures:
     - go: tip
+    - name: "cgroup-v2"
 
 go_import_path: github.com/opencontainers/runc
 
