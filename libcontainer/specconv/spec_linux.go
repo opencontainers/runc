@@ -492,6 +492,9 @@ func CreateCgroupConfig(opts *CreateOpts) (*configs.Cgroup, error) {
 			if r.CPU.Period != nil {
 				c.Resources.CpuPeriod = *r.CPU.Period
 			}
+			//CpuMax is used for cgroupv2 and should be converted
+			c.Resources.CpuMax = cgroups.ConvertCPUQuotaCPUPeriodToCgroupV2Value(c.Resources.CpuQuota, c.Resources.CpuPeriod)
+
 			if r.CPU.RealtimeRuntime != nil {
 				c.Resources.CpuRtRuntime = *r.CPU.RealtimeRuntime
 			}
