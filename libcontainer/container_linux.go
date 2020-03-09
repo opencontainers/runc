@@ -379,6 +379,8 @@ func (c *linuxContainer) start(process *Process) error {
 }
 
 func (c *linuxContainer) Signal(s os.Signal, all bool) error {
+	c.m.Lock()
+	defer c.m.Unlock()
 	if all {
 		return signalAllProcesses(c.cgroupManager, s)
 	}
