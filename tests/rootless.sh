@@ -120,6 +120,6 @@ do
 	set -e
 	echo path: $PATH
 	export ROOTLESS_FEATURES="$enabled_features"
-	sudo -HE -u rootless PATH="$PATH" bats -t "$ROOT/tests/integration$TESTFLAGS"
+	sudo -HE -u rootless PATH="$PATH" bats -t "$ROOT/tests/integration$ROOTLESS_TESTPATH"
 	set +e
 done

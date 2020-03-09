@@ -99,6 +99,12 @@ You can run a specific integration test by setting the `TESTPATH` variable.
 # make test TESTPATH="/checkpoint.bats"
 ```
 
+You can run a specific rootless integration test by setting the `ROOTLESS_TESTPATH` variable.
+
+```bash
+# make test ROOTLESS_TESTPATH="/checkpoint.bats"
+```
+
 You can run a test using your container engine's flags by setting `CONTAINER_ENGINE_BUILD_FLAGS` and `CONTAINER_ENGINE_RUN_FLAGS` variables.
 
 ```bash
