@@ -457,3 +457,31 @@ func TestGetHugePageSizeImpl(t *testing.T) {
 		}
 	}
 }
+
+func TestConvertBlkIOToCgroupV2Value(t *testing.T) {
+	cases := map[uint16]uint64{
+		0:    0,
+		10:   1,
+		1000: 10000,
+	}
+	for i, expected := range cases {
+		got := ConvertBlkIOToCgroupV2Value(i)
+		if got != expected {
+			t.Errorf("expected ConvertBlkIOToCgroupV2Value(%d) to be %d, got %d", i, expected, got)
+		}
+	}
+}
+
+func TestConvertCPUSharesToCgroupV2Value(t *testing.T) {
+	cases := map[uint64]uint64{
+		0:      0,
+		2:      1,
+		262144: 10000,
+	}
+	for i, expected := range cases {
+		got := ConvertCPUSharesToCgroupV2Value(i)
+		if got != expected {
+			t.Errorf("expected ConvertCPUSharesToCgroupV2Value(%d) to be %d, got %d", i, expected, got)
+		}
+	}
+}
