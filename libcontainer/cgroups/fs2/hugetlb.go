@@ -25,30 +25,34 @@ func setHugeTlb(dirPath string, cgroup *configs.Cgroup) error {
 	return nil
 }
 
-func statHugeTlb(dirPath string, stats *cgroups.Stats, cgroup *configs.Cgroup) error {
+func statHugeTlb(dirPath string, stats *cgroups.Stats) error {
+	hugePageSizes, err := cgroups.GetHugePageSize()
+	if err != nil {
+		return errors.Wrap(err, "failed to fetch hugetlb info")
+	}
 	hugetlbStats := cgroups.HugetlbStats{}
 
-	for _, entry := range cgroup.Resources.HugetlbLimit {
-		usage := strings.Join([]string{"hugetlb", entry.Pagesize, "current"}, ".")
+	for _, pagesize := range hugePageSizes {
+		usage := strings.Join([]string{"hugetlb", pagesize, "current"}, ".")
 		value, err := fscommon.GetCgroupParamUint(dirPath, usage)
 		if err != nil {
-			return errors.Wrapf(err, "failed to parse hugetlb.%s.current file", entry.Pagesize)
+			return errors.Wrapf(err, "failed to parse hugetlb.%s.current file", pagesize)
 		}
 		hugetlbStats.Usage = value
 
-		fileName := strings.Join([]string{"hugetlb", entry.Pagesize, "events"}, ".")
+		fileName := strings.Join([]string{"hugetlb", pagesize, "events"}, ".")
 		filePath := filepath.Join(dirPath, fileName)
 		contents, err := ioutil.ReadFile(filePath)
 		if err != nil {
-			return errors.Wrapf(err, "failed to parse hugetlb.%s.events file", entry.Pagesize)
+			return errors.Wrapf(err, "failed to parse hugetlb.%s.events file", pagesize)
 		}
 		_, value, err = fscommon.GetCgroupParamKeyValue(string(contents))
 		if err != nil {
-			return errors.Wrapf(err, "failed to parse hugetlb.%s.events file", entry.Pagesize)
+			return errors.Wrapf(err, "failed to parse hugetlb.%s.events file", pagesize)
 		}
 		hugetlbStats.Failcnt = value
 
-		stats.HugetlbStats[entry.Pagesize] = hugetlbStats
+		stats.HugetlbStats[pagesize] = hugetlbStats
 	}
 
 	return nil

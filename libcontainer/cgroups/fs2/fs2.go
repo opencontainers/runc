@@ -126,7 +126,7 @@ func (m *manager) GetStats() (*cgroups.Stats, error) {
 	}
 	// hugetlb (since kernel 5.6)
 	if _, ok := m.controllers["hugetlb"]; ok {
-		if err := statHugeTlb(m.dirPath, &st, m.config); err != nil {
+		if err := statHugeTlb(m.dirPath, &st); err != nil {
 			errs = append(errs, err)
 		}
 	}
