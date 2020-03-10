@@ -3,9 +3,12 @@
 package fs2
 
 import (
-	"fmt"
+	"io/ioutil"
+	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/pkg/errors"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
@@ -24,20 +27,26 @@ func setHugeTlb(dirPath string, cgroup *configs.Cgroup) error {
 
 func statHugeTlb(dirPath string, stats *cgroups.Stats, cgroup *configs.Cgroup) error {
 	hugetlbStats := cgroups.HugetlbStats{}
+
 	for _, entry := range cgroup.Resources.HugetlbLimit {
-		max := strings.Join([]string{"hugetlb", entry.Pagesize, "max"}, ".")
-		value, err := fscommon.GetCgroupParamUint(dirPath, max)
+		usage := strings.Join([]string{"hugetlb", entry.Pagesize, "current"}, ".")
+		value, err := fscommon.GetCgroupParamUint(dirPath, usage)
 		if err != nil {
-			return fmt.Errorf("failed to parse %s - %v", max, err)
+			return errors.Wrapf(err, "failed to parse hugetlb.%s.current file", entry.Pagesize)
 		}
 		hugetlbStats.Usage = value
 
-		usage := strings.Join([]string{"hugetlb", entry.Pagesize, "current"}, ".")
-		value, err = fscommon.GetCgroupParamUint(dirPath, usage)
+		fileName := strings.Join([]string{"hugetlb", entry.Pagesize, "events"}, ".")
+		filePath := filepath.Join(dirPath, fileName)
+		contents, err := ioutil.ReadFile(filePath)
 		if err != nil {
-			return fmt.Errorf("failed to parse %s - %v", usage, err)
+			return errors.Wrapf(err, "failed to parse hugetlb.%s.events file", entry.Pagesize)
 		}
-		hugetlbStats.Usage = value
+		_, value, err = fscommon.GetCgroupParamKeyValue(string(contents))
+		if err != nil {
+			return errors.Wrapf(err, "failed to parse hugetlb.%s.events file", entry.Pagesize)
+		}
+		hugetlbStats.Failcnt = value
 
 		stats.HugetlbStats[entry.Pagesize] = hugetlbStats
 	}
