@@ -279,7 +279,7 @@ func (p *initProcess) waitForChildExit(childPid int) error {
 	return nil
 }
 
-func (p *initProcess) start() error {
+func (p *initProcess) start() (retErr error) {
 	defer p.messageSockPair.parent.Close()
 	err := p.cmd.Start()
 	p.process.ops = p
@@ -290,6 +290,15 @@ func (p *initProcess) start() error {
 		p.process.ops = nil
 		return newSystemErrorWithCause(err, "starting init process command")
 	}
+	defer func() {
+		if retErr != nil {
+			p.manager.Destroy()
+			if p.intelRdtManager != nil {
+				p.intelRdtManager.Destroy()
+			}
+		}
+	}()
+
 	// Do this before syncing with child so that no children can escape the
 	// cgroup. We don't need to worry about not doing this and not being root
 	// because we'd be using the rootless cgroup manager in that case.
@@ -301,16 +310,6 @@ func (p *initProcess) start() error {
 			return newSystemErrorWithCause(err, "applying Intel RDT configuration for process")
 		}
 	}
-	defer func() {
-		if err != nil {
-			// TODO: should not be the responsibility to call here
-			p.manager.Destroy()
-			if p.intelRdtManager != nil {
-				p.intelRdtManager.Destroy()
-			}
-		}
-	}()
-
 	if _, err := io.Copy(p.messageSockPair.parent, p.bootstrapData); err != nil {
 		return newSystemErrorWithCause(err, "copying bootstrap data to pipe")
 	}
@@ -349,15 +348,6 @@ func (p *initProcess) start() error {
 		return newSystemErrorWithCause(err, "waiting for our first child to exit")
 	}
 
-	defer func() {
-		if err != nil {
-			// TODO: should not be the responsibility to call here
-			p.manager.Destroy()
-			if p.intelRdtManager != nil {
-				p.intelRdtManager.Destroy()
-			}
-		}
-	}()
 	if err := p.createNetworkInterfaces(); err != nil {
 		return newSystemErrorWithCause(err, "creating network interfaces")
 	}
