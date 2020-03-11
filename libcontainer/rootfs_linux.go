@@ -867,10 +867,7 @@ func msMoveRoot(rootfs string) error {
 }
 
 func chroot(rootfs string) error {
-	if rootfs == "" {
-		rootfs = "."
-	}
-	if err := unix.Chroot(rootfs); err != nil {
+	if err := unix.Chroot(filepath.Clean(rootfs)); err != nil {
 		return err
 	}
 	return unix.Chdir("/")
