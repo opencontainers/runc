@@ -108,7 +108,7 @@ func TestFactoryNewTmpfs(t *testing.T) {
 	if !mounted {
 		t.Fatalf("Factory Root is not mounted")
 	}
-	mounts, err := mount.GetMounts()
+	mounts, err := mount.GetMounts(nil)
 	if err != nil {
 		t.Fatal(err)
 	}

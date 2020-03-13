@@ -675,7 +675,7 @@ func getMountInfo(mountinfo []*mount.Info, dir string) *mount.Info {
 func getParentMount(rootfs string) (string, string, error) {
 	var path string
 
-	mountinfos, err := mount.GetMounts()
+	mountinfos, err := mount.GetMounts(nil)
 	if err != nil {
 		return "", "", err
 	}
@@ -825,7 +825,7 @@ func pivotRoot(rootfs string) error {
 }
 
 func msMoveRoot(rootfs string) error {
-	mountinfos, err := mount.GetMounts()
+	mountinfos, err := mount.GetMounts(nil)
 	if err != nil {
 		return err
 	}

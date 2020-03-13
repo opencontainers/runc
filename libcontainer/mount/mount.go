@@ -1,23 +1,18 @@
 package mount
 
-// GetMounts retrieves a list of mounts for the current running process.
-func GetMounts() ([]*Info, error) {
-	return parseMountTable()
+// GetMounts retrieves a list of mounts for the current running process,
+// with an optional filter applied (use nil for no filter).
+func GetMounts(f FilterFunc) ([]*Info, error) {
+	return parseMountTable(f)
 }
 
-// Mounted looks at /proc/self/mountinfo to determine of the specified
-// mountpoint has been mounted
+// Mounted determines if a specified mountpoint has been mounted.
+// On Linux it looks at /proc/self/mountinfo.
 func Mounted(mountpoint string) (bool, error) {
-	entries, err := parseMountTable()
+	entries, err := GetMounts(SingleEntryFilter(mountpoint))
 	if err != nil {
 		return false, err
 	}
 
-	// Search the table for the mountpoint
-	for _, e := range entries {
-		if e.Mountpoint == mountpoint {
-			return true, nil
-		}
-	}
-	return false, nil
+	return len(entries) > 0, nil
 }
