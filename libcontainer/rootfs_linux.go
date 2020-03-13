@@ -810,18 +810,10 @@ func msMoveRoot(rootfs string) error {
 		return err
 	}
 
-	absRootfs, err := filepath.Abs(rootfs)
-	if err != nil {
-		return err
-	}
-
 	for _, info := range mountinfos {
-		p, err := filepath.Abs(info.Mountpoint)
-		if err != nil {
-			return err
-		}
+		p := info.Mountpoint
 		// Umount every syfs and proc file systems, except those under the container rootfs
-		if (info.Fstype != "proc" && info.Fstype != "sysfs") || filepath.HasPrefix(p, absRootfs) {
+		if (info.Fstype != "proc" && info.Fstype != "sysfs") || filepath.HasPrefix(p, rootfs) {
 			continue
 		}
 		// Be sure umount events are not propagated to the host.
