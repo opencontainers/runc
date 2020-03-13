@@ -108,26 +108,21 @@ func TestFactoryNewTmpfs(t *testing.T) {
 	if !mounted {
 		t.Fatalf("Factory Root is not mounted")
 	}
-	mounts, err := mount.GetMounts(nil)
+	mounts, err := mount.GetMounts(mount.SingleEntryFilter(lfactory.Root))
 	if err != nil {
 		t.Fatal(err)
 	}
-	var found bool
-	for _, m := range mounts {
-		if m.Mountpoint == lfactory.Root {
-			if m.Fstype != "tmpfs" {
-				t.Fatalf("Fstype of root: %s, expected %s", m.Fstype, "tmpfs")
-			}
-			if m.Source != "tmpfs" {
-				t.Fatalf("Source of root: %s, expected %s", m.Source, "tmpfs")
-			}
-			found = true
-		}
-	}
-	if !found {
+	if len(mounts) != 1 {
 		t.Fatalf("Factory Root is not listed in mounts list")
 	}
-	defer unix.Unmount(root, unix.MNT_DETACH)
+	m := mounts[0]
+	if m.Fstype != "tmpfs" {
+		t.Fatalf("Fstype of root: %s, expected %s", m.Fstype, "tmpfs")
+	}
+	if m.Source != "tmpfs" {
+		t.Fatalf("Source of root: %s, expected %s", m.Source, "tmpfs")
+	}
+	unix.Unmount(root, unix.MNT_DETACH)
 }
 
 func TestFactoryLoadNotExists(t *testing.T) {
