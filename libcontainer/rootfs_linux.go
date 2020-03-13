@@ -805,17 +805,22 @@ func pivotRoot(rootfs string) error {
 }
 
 func msMoveRoot(rootfs string) error {
-	mountinfos, err := mount.GetMounts(nil)
+	mountinfos, err := mount.GetMounts(func(info *mount.Info) (skip, stop bool) {
+		skip = false
+		stop = false
+		// Collect every sysfs and proc file systems, except those under the container rootfs
+		if (info.Fstype != "proc" && info.Fstype != "sysfs") || strings.HasPrefix(info.Mountpoint, rootfs) {
+			skip = true
+			return
+		}
+		return
+	})
 	if err != nil {
 		return err
 	}
 
 	for _, info := range mountinfos {
 		p := info.Mountpoint
-		// Umount every syfs and proc file systems, except those under the container rootfs
-		if (info.Fstype != "proc" && info.Fstype != "sysfs") || filepath.HasPrefix(p, rootfs) {
-			continue
-		}
 		// Be sure umount events are not propagated to the host.
 		if err := unix.Mount("", p, "", unix.MS_SLAVE|unix.MS_REC, ""); err != nil {
 			return err
