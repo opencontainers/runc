@@ -72,7 +72,6 @@ make BUILDTAGS='seccomp apparmor'
 | seccomp   | Syscall filtering                  | libseccomp  |
 | selinux   | selinux process and mount labeling | <none>      |
 | apparmor  | apparmor profile support           | <none>      |
-| ambient   | ambient capability support         | kernel 4.3  |
 | nokmem    | disable kernel memory account      | <none>      |
 
 

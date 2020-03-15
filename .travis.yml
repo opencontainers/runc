@@ -43,7 +43,7 @@ services:
 
 env:
   global:
-    - BUILDTAGS="seccomp apparmor selinux ambient"
+    - BUILDTAGS="seccomp apparmor selinux"
 
 before_install:
   - sudo apt-get -qq update
