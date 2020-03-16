@@ -592,7 +592,10 @@ func isEINVAL(err error) bool {
 // the formula for BlkIOWeight is y = (1 + (x - 10) * 9999 / 990)
 // convert linearly from [10-1000] to [1-10000]
 func ConvertBlkIOToCgroupV2Value(blkIoWeight uint16) uint64 {
-	return uint64(1 + (blkIoWeight-10)*9999/990)
+	if blkIoWeight == 0 {
+		return 0
+	}
+	return uint64(1 + (uint64(blkIoWeight)-10)*9999/990)
 }
 
 // Since the OCI spec is designed for cgroup v1, in some cases
@@ -601,5 +604,23 @@ func ConvertBlkIOToCgroupV2Value(blkIoWeight uint16) uint64 {
 // convert from [2-262144] to [1-10000]
 // 262144 comes from Linux kernel definition "#define MAX_SHARES (1UL << 18)"
 func ConvertCPUSharesToCgroupV2Value(cpuShares uint64) uint64 {
+	if cpuShares == 0 {
+		return 0
+	}
 	return (1 + ((cpuShares-2)*9999)/262142)
+}
+
+// ConvertCPUQuotaCPUPeriodToCgroupV2Value generates cpu.max string.
+func ConvertCPUQuotaCPUPeriodToCgroupV2Value(quota int64, period uint64) string {
+	if quota <= 0 && period == 0 {
+		return ""
+	}
+	if period == 0 {
+		// This default value is documented in https://www.kernel.org/doc/html/latest/admin-guide/cgroup-v2.html
+		period = 100000
+	}
+	if quota <= 0 {
+		return fmt.Sprintf("max %d", period)
+	}
+	return fmt.Sprintf("%d %d", quota, period)
 }

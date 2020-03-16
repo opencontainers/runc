@@ -457,3 +457,76 @@ func TestGetHugePageSizeImpl(t *testing.T) {
 		}
 	}
 }
+
+func TestConvertBlkIOToCgroupV2Value(t *testing.T) {
+	cases := map[uint16]uint64{
+		0:    0,
+		10:   1,
+		1000: 10000,
+	}
+	for i, expected := range cases {
+		got := ConvertBlkIOToCgroupV2Value(i)
+		if got != expected {
+			t.Errorf("expected ConvertBlkIOToCgroupV2Value(%d) to be %d, got %d", i, expected, got)
+		}
+	}
+}
+
+func TestConvertCPUSharesToCgroupV2Value(t *testing.T) {
+	cases := map[uint64]uint64{
+		0:      0,
+		2:      1,
+		262144: 10000,
+	}
+	for i, expected := range cases {
+		got := ConvertCPUSharesToCgroupV2Value(i)
+		if got != expected {
+			t.Errorf("expected ConvertCPUSharesToCgroupV2Value(%d) to be %d, got %d", i, expected, got)
+		}
+	}
+}
+
+func TestConvertCPUQuotaCPUPeriodToCgroupV2Value(t *testing.T) {
+	cases := []struct {
+		quota    int64
+		period   uint64
+		expected string
+	}{
+		{
+			quota:    0,
+			period:   0,
+			expected: "",
+		},
+		{
+			quota:    -1,
+			period:   0,
+			expected: "",
+		},
+		{
+			quota:    1000,
+			period:   5000,
+			expected: "1000 5000",
+		},
+		{
+			quota:    0,
+			period:   5000,
+			expected: "max 5000",
+		},
+		{
+			quota:    -1,
+			period:   5000,
+			expected: "max 5000",
+		},
+		{
+			quota:    1000,
+			period:   0,
+			expected: "1000 100000",
+		},
+	}
+	for _, c := range cases {
+		got := ConvertCPUQuotaCPUPeriodToCgroupV2Value(c.quota, c.period)
+		if got != c.expected {
+			t.Errorf("expected ConvertCPUQuotaCPUPeriodToCgroupV2Value(%d, %d) to be %s, got %s", c.quota, c.period, c.expected, got)
+		}
+	}
+}
