@@ -8,6 +8,10 @@ go:
 
 matrix:
   include:
+    - go: 1.x
+      name: "verify-dependencies"
+      script:
+        - make verify-dependencies
     - go: 1.12.x
       name: "cgroup-systemd"
       env:
@@ -48,8 +52,8 @@ env:
 before_install:
   - sudo apt-get -qq update
   - sudo apt-get install -y libseccomp-dev
-  - go get -u golang.org/x/lint/golint
-  - go get -u github.com/vbatts/git-validation
+  - GO111MODULE=off go get -u golang.org/x/lint/golint
+  - GO111MODULE=off go get -u github.com/vbatts/git-validation
   - env | grep TRAVIS_
 
 script:
