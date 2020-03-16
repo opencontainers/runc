@@ -456,10 +456,7 @@ func (c *linuxContainer) newParentProcess(p *Process) (parentProcess, error) {
 	}
 	logFilePair := filePair{parentLogPipe, childLogPipe}
 
-	cmd, err := c.commandTemplate(p, childInitPipe, childLogPipe)
-	if err != nil {
-		return nil, newSystemErrorWithCause(err, "creating new command template")
-	}
+	cmd := c.commandTemplate(p, childInitPipe, childLogPipe)
 	if !p.Init {
 		return c.newSetnsProcess(p, cmd, messageSockPair, logFilePair)
 	}
@@ -475,7 +472,7 @@ func (c *linuxContainer) newParentProcess(p *Process) (parentProcess, error) {
 	return c.newInitProcess(p, cmd, messageSockPair, logFilePair)
 }
 
-func (c *linuxContainer) commandTemplate(p *Process, childInitPipe *os.File, childLogPipe *os.File) (*exec.Cmd, error) {
+func (c *linuxContainer) commandTemplate(p *Process, childInitPipe *os.File, childLogPipe *os.File) *exec.Cmd {
 	cmd := exec.Command(c.initPath, c.initArgs[1:]...)
 	cmd.Args[0] = c.initArgs[0]
 	cmd.Stdin = p.Stdin
@@ -511,7 +508,7 @@ func (c *linuxContainer) commandTemplate(p *Process, childInitPipe *os.File, chi
 	if c.config.ParentDeathSignal > 0 {
 		cmd.SysProcAttr.Pdeathsig = syscall.Signal(c.config.ParentDeathSignal)
 	}
-	return cmd, nil
+	return cmd
 }
 
 func (c *linuxContainer) newInitProcess(p *Process, cmd *exec.Cmd, messageSockPair, logFilePair filePair) (*initProcess, error) {
@@ -1789,10 +1786,7 @@ func (c *linuxContainer) refreshState() error {
 	if paused {
 		return c.state.transition(&pausedState{c: c})
 	}
-	t, err := c.runType()
-	if err != nil {
-		return err
-	}
+	t := c.runType()
 	switch t {
 	case Created:
 		return c.state.transition(&createdState{c: c})
@@ -1802,24 +1796,24 @@ func (c *linuxContainer) refreshState() error {
 	return c.state.transition(&stoppedState{c: c})
 }
 
-func (c *linuxContainer) runType() (Status, error) {
+func (c *linuxContainer) runType() Status {
 	if c.initProcess == nil {
-		return Stopped, nil
+		return Stopped
 	}
 	pid := c.initProcess.pid()
 	stat, err := system.Stat(pid)
 	if err != nil {
-		return Stopped, nil
+		return Stopped
 	}
 	if stat.StartTime != c.initProcessStartTime || stat.State == system.Zombie || stat.State == system.Dead {
-		return Stopped, nil
+		return Stopped
 	}
 	// We'll create exec fifo and blocking on it after container is created,
 	// and delete it after start container.
 	if _, err := os.Stat(filepath.Join(c.root, execFifoFilename)); err == nil {
-		return Created, nil
+		return Created
 	}
-	return Running, nil
+	return Running
 }
 
 func (c *linuxContainer) isPaused() (bool, error) {
