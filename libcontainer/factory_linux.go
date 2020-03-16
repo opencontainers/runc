@@ -11,7 +11,8 @@ import (
 	"runtime/debug"
 	"strconv"
 
-	"github.com/cyphar/filepath-securejoin"
+	securejoin "github.com/cyphar/filepath-securejoin"
+	"github.com/moby/sys/mountinfo"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fs"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fs2"
@@ -19,7 +20,6 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/configs/validate"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
-	"github.com/opencontainers/runc/libcontainer/mount"
 	"github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/pkg/errors"
 
@@ -137,7 +137,7 @@ func IntelRdtFs(l *LinuxFactory) error {
 
 // TmpfsRoot is an option func to mount LinuxFactory.Root to tmpfs.
 func TmpfsRoot(l *LinuxFactory) error {
-	mounted, err := mount.Mounted(l.Root)
+	mounted, err := mountinfo.Mounted(l.Root)
 	if err != nil {
 		return err
 	}

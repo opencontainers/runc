@@ -28,6 +28,9 @@ github.com/godbus/dbus
 github.com/golang/protobuf/proto
 # github.com/konsorten/go-windows-terminal-sequences v1.0.1
 github.com/konsorten/go-windows-terminal-sequences
+# github.com/moby/sys/mountinfo v0.1.0
+## explicit
+github.com/moby/sys/mountinfo
 # github.com/mrunalp/fileutils v0.0.0-20171103030105-7d4729fb3618
 ## explicit
 github.com/mrunalp/fileutils

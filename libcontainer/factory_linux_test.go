@@ -9,8 +9,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/moby/sys/mountinfo"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/opencontainers/runc/libcontainer/mount"
 	"github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/opencontainers/runtime-spec/specs-go"
 
@@ -101,14 +101,14 @@ func TestFactoryNewTmpfs(t *testing.T) {
 	if factory.Type() != "libcontainer" {
 		t.Fatalf("unexpected factory type: %q, expected %q", factory.Type(), "libcontainer")
 	}
-	mounted, err := mount.Mounted(lfactory.Root)
+	mounted, err := mountinfo.Mounted(lfactory.Root)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !mounted {
 		t.Fatalf("Factory Root is not mounted")
 	}
-	mounts, err := mount.GetMounts()
+	mounts, err := mountinfo.GetMounts(nil)
 	if err != nil {
 		t.Fatal(err)
 	}

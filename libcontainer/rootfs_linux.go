@@ -14,10 +14,10 @@ import (
 	"time"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
+	"github.com/moby/sys/mountinfo"
 	"github.com/mrunalp/fileutils"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/opencontainers/runc/libcontainer/mount"
 	"github.com/opencontainers/runc/libcontainer/system"
 	libcontainerUtils "github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/opencontainers/selinux/go-selinux/label"
@@ -661,7 +661,7 @@ func mknodDevice(dest string, node *configs.Device) error {
 	return unix.Chown(dest, int(node.Uid), int(node.Gid))
 }
 
-func getMountInfo(mountinfo []*mount.Info, dir string) *mount.Info {
+func getMountInfo(mountinfo []*mountinfo.Info, dir string) *mountinfo.Info {
 	for _, m := range mountinfo {
 		if m.Mountpoint == dir {
 			return m
@@ -675,7 +675,7 @@ func getMountInfo(mountinfo []*mount.Info, dir string) *mount.Info {
 func getParentMount(rootfs string) (string, string, error) {
 	var path string
 
-	mountinfos, err := mount.GetMounts()
+	mountinfos, err := mountinfo.GetMounts(nil)
 	if err != nil {
 		return "", "", err
 	}
@@ -825,7 +825,7 @@ func pivotRoot(rootfs string) error {
 }
 
 func msMoveRoot(rootfs string) error {
-	mountinfos, err := mount.GetMounts()
+	mountinfos, err := mountinfo.GetMounts(nil)
 	if err != nil {
 		return err
 	}
