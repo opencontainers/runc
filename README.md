@@ -34,8 +34,6 @@ It must be built with Go version 1.6 or higher in order for some features to fun
 In order to enable seccomp support you will need to install `libseccomp` on your platform.
 > e.g. `libseccomp-devel` for CentOS, or `libseccomp-dev` for Ubuntu
 
-Otherwise, if you do not want to build `runc` with seccomp support you can add `BUILDTAGS=""` when running make.
-
 ```bash
 # create a 'github.com/opencontainers' in your GOPATH/src
 cd github.com/opencontainers
@@ -60,20 +58,22 @@ sudo make install
 
 #### Build Tags
 
-`runc` supports optional build tags for compiling support of various features.
-To add build tags to the make option the `BUILDTAGS` variable must be set.
+`runc` supports optional build tags for compiling support of various features,
+with some of them enabled by default (see `BUILDTAGS` in top-level `Makefile`).
+
+To change build tags from the default, set the `BUILDTAGS` variable for make,
+e.g.
 
 ```bash
 make BUILDTAGS='seccomp apparmor'
 ```
 
-| Build Tag | Feature                            | Dependency  |
-|-----------|------------------------------------|-------------|
-| seccomp   | Syscall filtering                  | libseccomp  |
-| selinux   | selinux process and mount labeling | <none>      |
-| apparmor  | apparmor profile support           | <none>      |
-| ambient   | ambient capability support         | kernel 4.3  |
-| nokmem    | disable kernel memory account      | <none>      |
+| Build Tag | Feature                            | Enabled by default | Dependency |
+|-----------|------------------------------------|--------------------|------------|
+| seccomp   | Syscall filtering                  | yes                | libseccomp |
+| selinux   | selinux process and mount labeling | yes                | <none>     |
+| apparmor  | apparmor profile support           | yes                | <none>     |
+| nokmem    | disable kernel memory accounting   | no                 | <none>     |
 
 
 ### Running the test suite
