@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"github.com/urfave/cli"
+	"golang.org/x/sys/unix"
 )
 
 var killCommand = cli.Command{
@@ -60,8 +61,12 @@ func parseSignal(rawSignal string) (syscall.Signal, error) {
 	if err == nil {
 		return syscall.Signal(s), nil
 	}
-	signal, ok := signalMap[strings.TrimPrefix(strings.ToUpper(rawSignal), "SIG")]
-	if !ok {
+	sig := strings.ToUpper(rawSignal)
+	if !strings.HasPrefix(sig, "SIG") {
+		sig = "SIG" + sig
+	}
+	signal := unix.SignalNum(sig)
+	if signal == 0 {
 		return -1, fmt.Errorf("unknown signal %q", rawSignal)
 	}
 	return signal, nil
