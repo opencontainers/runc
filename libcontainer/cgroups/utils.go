@@ -58,70 +58,112 @@ func FindCgroupMountpoint(cgroupPath, subsystem string) (string, error) {
 	return mnt, err
 }
 
+type cgMountCacheEntry struct {
+	mountpoint string
+	root       string
+	err        error
+}
+
+type cgMountCacheForPrefix map[string]cgMountCacheEntry // key: subsystem
+
+var (
+	cgMountCacheOnce    sync.Once
+	cgMountCacheMu      sync.RWMutex
+	cgMountCacheEntryMu sync.RWMutex
+	cgMountCache        map[string]cgMountCacheForPrefix // key: prefix
+)
+
+func (m cgMountCacheForPrefix) get(subsystem string) (string, string, error) {
+	cgMountCacheEntryMu.RLock()
+	e, ok := m[subsystem]
+	cgMountCacheEntryMu.RUnlock()
+	if !ok {
+		e = cgMountCacheEntry{mountpoint: "", root: "", err: NewNotFoundError(subsystem)}
+		cgMountCacheEntryMu.Lock()
+		m[subsystem] = e
+		cgMountCacheEntryMu.Unlock()
+	}
+	return e.mountpoint, e.root, e.err
+}
+
 func FindCgroupMountpointAndRoot(cgroupPath, subsystem string) (string, string, error) {
-	// We are not using mount.GetMounts() because it's super-inefficient,
-	// parsing it directly sped up x10 times because of not using Sscanf.
-	// It was one of two major performance drawbacks in container start.
-	if !isSubsystemAvailable(subsystem) {
-		return "", "", NewNotFoundError(subsystem)
+	cgMountCacheOnce.Do(func() {
+		cgMountCache = make(map[string]cgMountCacheForPrefix, 1)
+	})
+	// try cache first
+	cgMountCacheMu.RLock()
+	c, ok := cgMountCache[cgroupPath]
+	cgMountCacheMu.RUnlock()
+	if ok {
+		return c.get(subsystem)
 	}
 
+	// get the list of all subsystems; for cgroupv2 it is nil
+	var subs map[string]string // map values are unused
+	if !IsCgroup2UnifiedMode() {
+		var err error
+		subs, err = ParseCgroupFile("/proc/self/cgroup")
+		if err != nil {
+			return "", "", err
+		}
+		// sometimes there's an empty subsystem -- drop it
+		delete(subs, "")
+	}
+
+	// parse mountinfo for all subsystems under cgroupPath
 	f, err := os.Open("/proc/self/mountinfo")
 	if err != nil {
 		return "", "", err
 	}
-	defer f.Close()
-
-	if IsCgroup2UnifiedMode() {
-		subsystem = ""
+	c, err = findCgroupMountpointsForPrefix(f, cgroupPath, subs)
+	f.Close()
+	if err != nil {
+		return "", "", err
 	}
-
-	return findCgroupMountpointAndRootFromReader(f, cgroupPath, subsystem)
+	cgMountCacheMu.Lock()
+	cgMountCache[cgroupPath] = c
+	cgMountCacheMu.Unlock()
+	return c.get(subsystem)
 }
 
-func findCgroupMountpointAndRootFromReader(reader io.Reader, cgroupPath, subsystem string) (string, string, error) {
+func findCgroupMountpointsForPrefix(reader io.Reader, cgroupPath string, subs map[string]string) (cgMountCacheForPrefix, error) {
+	ret := make(cgMountCacheForPrefix)
+	toFind := len(subs)
+
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
 		txt := scanner.Text()
-		fields := strings.Fields(txt)
+		fields := strings.Split(txt, " ")
 		if len(fields) < 9 {
 			continue
 		}
-		if strings.HasPrefix(fields[4], cgroupPath) {
-			for _, opt := range strings.Split(fields[len(fields)-1], ",") {
-				if (subsystem == "" && fields[9] == "cgroup2") || opt == subsystem {
-					return fields[4], fields[3], nil
+		mp := fields[4]
+		root := fields[3]
+		opts := fields[len(fields)-1]
+		fstype := fields[len(fields)-3]
+		// cgroupv2
+		if subs == nil && fstype == "cgroup2" {
+			ret[""] = cgMountCacheEntry{mountpoint: mp, root: root, err: nil}
+			return ret, nil
+		}
+		if fstype == "cgroup" && strings.HasPrefix(mp, cgroupPath) {
+			for _, opt := range strings.Split(opts, ",") {
+				if _, ok := subs[opt]; ok {
+					// TODO: what if we see the same opt again?
+					ret[opt] = cgMountCacheEntry{mountpoint: mp, root: root, err: nil}
+					toFind--
+					if toFind == 0 {
+						return ret, nil
+					}
 				}
 			}
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		return "", "", err
+		return nil, err
 	}
 
-	return "", "", NewNotFoundError(subsystem)
-}
-
-func isSubsystemAvailable(subsystem string) bool {
-	if IsCgroup2UnifiedMode() {
-		controllers, err := GetAllSubsystems()
-		if err != nil {
-			return false
-		}
-		for _, c := range controllers {
-			if c == subsystem {
-				return true
-			}
-		}
-		return false
-	}
-
-	cgroups, err := ParseCgroupFile("/proc/self/cgroup")
-	if err != nil {
-		return false
-	}
-	_, avail := cgroups[subsystem]
-	return avail
+	return ret, nil
 }
 
 func GetClosestMountpointAncestor(dir, mountinfo string) string {

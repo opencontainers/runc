@@ -414,11 +414,24 @@ func TestFindCgroupMountpointAndRoot(t *testing.T) {
 		{cgroupPath: "/sys/fs", output: "/sys/fs/cgroup/devices"},
 		{cgroupPath: "", output: "/foo"},
 	}
+	subs := make(map[string]string, 1)
+	subs["devices"] = ""
 
 	for _, c := range testCases {
-		mountpoint, _, _ := findCgroupMountpointAndRootFromReader(strings.NewReader(fakeMountInfo), c.cgroupPath, "devices")
-		if mountpoint != c.output {
-			t.Errorf("expected %s, got %s", c.output, mountpoint)
+		mps, err := findCgroupMountpointsForPrefix(strings.NewReader(fakeMountInfo), c.cgroupPath, subs)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		t.Logf("%v", mps)
+		if len(mps) != 1 {
+			t.Fatalf("expected one entry, got %+v", mps)
+		}
+		m, ok := mps["devices"]
+		if !ok {
+			t.Fatalf("devices cgroup not found")
+		}
+		if m.mountpoint != c.output {
+			t.Errorf("expected %s, got %s", c.output, m.mountpoint)
 		}
 	}
 }
