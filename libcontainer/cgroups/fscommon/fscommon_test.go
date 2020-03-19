@@ -14,6 +14,10 @@ import (
 )
 
 func TestWriteCgroupFileHandlesInterrupt(t *testing.T) {
+	if cgroups.IsCgroup2UnifiedMode() {
+		t.Skip("cgroup v2 is not supported")
+	}
+
 	memoryCgroupMount, err := cgroups.FindCgroupMountpoint("", "memory")
 	if err != nil {
 		t.Fatal(err)
