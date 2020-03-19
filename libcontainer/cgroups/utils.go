@@ -307,6 +307,10 @@ func GetAllSubsystems() ([]string, error) {
 
 // GetOwnCgroup returns the relative path to the cgroup docker is running in.
 func GetOwnCgroup(subsystem string) (string, error) {
+	if IsCgroup2UnifiedMode() {
+		return "/", nil
+	}
+
 	cgroups, err := ParseCgroupFile("/proc/self/cgroup")
 	if err != nil {
 		return "", err
@@ -325,6 +329,10 @@ func GetOwnCgroupPath(subsystem string) (string, error) {
 }
 
 func GetInitCgroup(subsystem string) (string, error) {
+	if IsCgroup2UnifiedMode() {
+		return "/", nil
+	}
+
 	cgroups, err := ParseCgroupFile("/proc/1/cgroup")
 	if err != nil {
 		return "", err
