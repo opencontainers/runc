@@ -758,7 +758,7 @@ type LastCmdError struct {
 }
 
 func (e *LastCmdError) Error() string {
-	return fmt.Sprintf(e.Err.Error() + ", last_cmd_status: " + e.LastCmdStatus)
+	return e.Err.Error() + ", last_cmd_status: " + e.LastCmdStatus
 }
 
 func NewLastCmdError(err error) error {
