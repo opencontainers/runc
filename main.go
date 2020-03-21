@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/opencontainers/runc/libcontainer/logs"
-
 	"github.com/opencontainers/runtime-spec/specs-go"
 
 	"github.com/sirupsen/logrus"
