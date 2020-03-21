@@ -47,7 +47,7 @@ RUN cd /tmp \
 # install criu
 ENV CRIU_VERSION v3.12
 RUN mkdir -p /usr/src/criu \
-    && curl -sSL https://github.com/checkpoint-restore/criu/archive/${CRIU_VERSION}.tar.gz | tar -v -C /usr/src/criu/ -xz --strip-components=1 \
+    && curl -fsSL https://github.com/checkpoint-restore/criu/archive/${CRIU_VERSION}.tar.gz | tar -C /usr/src/criu/ -xz --strip-components=1 \
     && cd /usr/src/criu \
     && make install-criu \
     && rm -rf /usr/src/criu
@@ -63,4 +63,4 @@ ENTRYPOINT ["/tmpmount"]
 ADD . /go/src/github.com/opencontainers/runc
 
 RUN . tests/integration/multi-arch.bash \
-    && curl -o- -sSL `get_busybox` | tar xfJC - ${ROOTFS}
+    && curl -fsSL `get_busybox` | tar xfJC - ${ROOTFS}
