@@ -349,7 +349,9 @@ func (r *runner) run(config *specs.Process) (int, error) {
 	if detach {
 		return 0, nil
 	}
-	r.destroy()
+	if err == nil {
+		r.destroy()
+	}
 	return status, err
 }
 
