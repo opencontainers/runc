@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	systemdDbus "github.com/coreos/go-systemd/dbus"
+	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fs2"
 	"github.com/opencontainers/runc/libcontainer/configs"
