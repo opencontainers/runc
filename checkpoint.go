@@ -62,8 +62,15 @@ checkpointed.`,
 		if status == libcontainer.Created || status == libcontainer.Stopped {
 			fatalf("Container cannot be checkpointed in %s state", status.String())
 		}
-		defer destroy(container)
 		options := criuOptions(context)
+		if !options.LeaveRunning || !options.PreDump {
+			// destroy prints out an error if we tell CRIU to
+			// leave the container running:
+			// ERRO[0000] container is not destroyed
+			// The message is correct, but we actually do not want
+			// to destroy the container in this case.
+			defer destroy(container)
+		}
 		// these are the mandatory criu options for a container
 		setPageServer(context, options)
 		setManageCgroupsMode(context, options)
