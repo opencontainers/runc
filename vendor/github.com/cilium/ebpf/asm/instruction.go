@@ -7,7 +7,7 @@ import (
 	"math"
 	"strings"
 
-	"github.com/pkg/errors"
+	"golang.org/x/xerrors"
 )
 
 // InstructionSize is the size of a BPF instruction in bytes
@@ -51,10 +51,10 @@ func (ins *Instruction) Unmarshal(r io.Reader, bo binary.ByteOrder) (uint64, err
 	var bi2 bpfInstruction
 	if err := binary.Read(r, bo, &bi2); err != nil {
 		// No Wrap, to avoid io.EOF clash
-		return 0, errors.New("64bit immediate is missing second half")
+		return 0, xerrors.New("64bit immediate is missing second half")
 	}
 	if bi2.OpCode != 0 || bi2.Offset != 0 || bi2.Registers != 0 {
-		return 0, errors.New("64bit immediate has non-zero fields")
+		return 0, xerrors.New("64bit immediate has non-zero fields")
 	}
 	ins.Constant = int64(uint64(uint32(bi2.Constant))<<32 | uint64(uint32(bi.Constant)))
 
@@ -64,7 +64,7 @@ func (ins *Instruction) Unmarshal(r io.Reader, bo binary.ByteOrder) (uint64, err
 // Marshal encodes a BPF instruction.
 func (ins Instruction) Marshal(w io.Writer, bo binary.ByteOrder) (uint64, error) {
 	if ins.OpCode == InvalidOpCode {
-		return 0, errors.New("invalid opcode")
+		return 0, xerrors.New("invalid opcode")
 	}
 
 	isDWordLoad := ins.OpCode.isDWordLoad()
@@ -103,20 +103,50 @@ func (ins Instruction) Marshal(w io.Writer, bo binary.ByteOrder) (uint64, error)
 
 // RewriteMapPtr changes an instruction to use a new map fd.
 //
-// Returns an error if the fd is invalid, or the instruction
-// is incorrect.
+// Returns an error if the instruction doesn't load a map.
 func (ins *Instruction) RewriteMapPtr(fd int) error {
 	if !ins.OpCode.isDWordLoad() {
-		return errors.Errorf("%s is not a 64 bit load", ins.OpCode)
+		return xerrors.Errorf("%s is not a 64 bit load", ins.OpCode)
 	}
 
-	if fd < 0 {
-		return errors.New("invalid fd")
+	if ins.Src != PseudoMapFD && ins.Src != PseudoMapValue {
+		return xerrors.New("not a load from a map")
 	}
 
-	ins.Src = R1
-	ins.Constant = int64(fd)
+	// Preserve the offset value for direct map loads.
+	offset := uint64(ins.Constant) & (math.MaxUint32 << 32)
+	rawFd := uint64(uint32(fd))
+	ins.Constant = int64(offset | rawFd)
 	return nil
+}
+
+func (ins *Instruction) mapPtr() uint32 {
+	return uint32(uint64(ins.Constant) & math.MaxUint32)
+}
+
+// RewriteMapOffset changes the offset of a direct load from a map.
+//
+// Returns an error if the instruction is not a direct load.
+func (ins *Instruction) RewriteMapOffset(offset uint32) error {
+	if !ins.OpCode.isDWordLoad() {
+		return xerrors.Errorf("%s is not a 64 bit load", ins.OpCode)
+	}
+
+	if ins.Src != PseudoMapValue {
+		return xerrors.New("not a direct load from a map")
+	}
+
+	fd := uint64(ins.Constant) & math.MaxUint32
+	ins.Constant = int64(uint64(offset)<<32 | fd)
+	return nil
+}
+
+func (ins *Instruction) mapOffset() uint32 {
+	return uint32(uint64(ins.Constant) >> 32)
+}
+
+func (ins *Instruction) isLoadFromMap() bool {
+	return ins.OpCode == LoadImmOp(DWord) && (ins.Src == PseudoMapFD || ins.Src == PseudoMapValue)
 }
 
 // Format implements fmt.Formatter.
@@ -137,6 +167,19 @@ func (ins Instruction) Format(f fmt.State, c rune) {
 	if op.JumpOp() == Exit {
 		fmt.Fprint(f, op)
 		return
+	}
+
+	if ins.isLoadFromMap() {
+		fd := int32(ins.mapPtr())
+		switch ins.Src {
+		case PseudoMapFD:
+			fmt.Fprintf(f, "LoadMapPtr dst: %s fd: %d", ins.Dst, fd)
+
+		case PseudoMapValue:
+			fmt.Fprintf(f, "LoadMapValue dst: %s, fd: %d off: %d", ins.Dst, fd, ins.mapOffset())
+		}
+
+		goto ref
 	}
 
 	fmt.Fprintf(f, "%v ", op)
@@ -166,7 +209,7 @@ func (ins Instruction) Format(f fmt.State, c rune) {
 	case JumpClass:
 		switch jop := op.JumpOp(); jop {
 		case Call:
-			if ins.Src == R1 {
+			if ins.Src == PseudoCall {
 				// bpf-to-bpf call
 				fmt.Fprint(f, ins.Constant)
 			} else {
@@ -183,6 +226,7 @@ func (ins Instruction) Format(f fmt.State, c rune) {
 		}
 	}
 
+ref:
 	if ins.Reference != "" {
 		fmt.Fprintf(f, " <%s>", ins.Reference)
 	}
@@ -200,7 +244,7 @@ func (insns Instructions) String() string {
 // Returns an error if the symbol isn't used, see IsUnreferencedSymbol.
 func (insns Instructions) RewriteMapPtr(symbol string, fd int) error {
 	if symbol == "" {
-		return errors.New("empty symbol")
+		return xerrors.New("empty symbol")
 	}
 
 	found := false
@@ -235,7 +279,7 @@ func (insns Instructions) SymbolOffsets() (map[string]int, error) {
 		}
 
 		if _, ok := offsets[ins.Symbol]; ok {
-			return nil, errors.Errorf("duplicate symbol %s", ins.Symbol)
+			return nil, xerrors.Errorf("duplicate symbol %s", ins.Symbol)
 		}
 
 		offsets[ins.Symbol] = i
@@ -273,7 +317,7 @@ func (insns Instructions) marshalledOffsets() (map[string]int, error) {
 		}
 
 		if _, ok := symbols[ins.Symbol]; ok {
-			return nil, errors.Errorf("duplicate symbol %s", ins.Symbol)
+			return nil, xerrors.Errorf("duplicate symbol %s", ins.Symbol)
 		}
 
 		symbols[ins.Symbol] = currentPos
@@ -350,11 +394,11 @@ func (insns Instructions) Marshal(w io.Writer, bo binary.ByteOrder) error {
 	num := 0
 	for i, ins := range insns {
 		switch {
-		case ins.OpCode.JumpOp() == Call && ins.Constant == -1:
+		case ins.OpCode.JumpOp() == Call && ins.Src == PseudoCall && ins.Constant == -1:
 			// Rewrite bpf to bpf call
 			offset, ok := absoluteOffsets[ins.Reference]
 			if !ok {
-				return errors.Errorf("instruction %d: reference to missing symbol %s", i, ins.Reference)
+				return xerrors.Errorf("instruction %d: reference to missing symbol %s", i, ins.Reference)
 			}
 
 			ins.Constant = int64(offset - num - 1)
@@ -363,7 +407,7 @@ func (insns Instructions) Marshal(w io.Writer, bo binary.ByteOrder) error {
 			// Rewrite jump to label
 			offset, ok := absoluteOffsets[ins.Reference]
 			if !ok {
-				return errors.Errorf("instruction %d: reference to missing symbol %s", i, ins.Reference)
+				return xerrors.Errorf("instruction %d: reference to missing symbol %s", i, ins.Reference)
 			}
 
 			ins.Offset = int16(offset - num - 1)
@@ -371,7 +415,7 @@ func (insns Instructions) Marshal(w io.Writer, bo binary.ByteOrder) error {
 
 		n, err := ins.Marshal(w, bo)
 		if err != nil {
-			return errors.Wrapf(err, "instruction %d", i)
+			return xerrors.Errorf("instruction %d: %w", i, err)
 		}
 
 		num += int(n / InstructionSize)

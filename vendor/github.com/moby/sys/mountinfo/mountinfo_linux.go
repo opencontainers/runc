@@ -71,12 +71,13 @@ func parseInfoFile(r io.Reader, filter FilterFunc) ([]*Info, error) {
 		p := &Info{}
 
 		// Fill in the fields that a filter might check
-		// (currently only Mountpoint and Fstype)
 		p.Mountpoint, err = strconv.Unquote(`"` + fields[4] + `"`)
 		if err != nil {
 			return nil, fmt.Errorf("Parsing '%s' failed: unable to unquote mount point field: %w", fields[4], err)
 		}
 		p.Fstype = fields[sepIdx+1]
+		p.Source = fields[sepIdx+2]
+		p.VfsOpts = fields[sepIdx+3]
 
 		// Run a filter soon so we can skip parsing/adding entries
 		// the caller is not interested in
@@ -116,9 +117,6 @@ func parseInfoFile(r io.Reader, filter FilterFunc) ([]*Info, error) {
 		default:
 			p.Optional = strings.Join(fields[6:sepIdx-1], " ")
 		}
-
-		p.Source = fields[sepIdx+2]
-		p.VfsOpts = fields[sepIdx+3]
 
 		out = append(out, p)
 		if stop {

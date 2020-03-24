@@ -1,70 +1,79 @@
-# github.com/checkpoint-restore/go-criu v0.0.0-20181120144056-17b0214f6c48
+# github.com/checkpoint-restore/go-criu v0.0.0-20191125063657-fcdcd07065c5
 ## explicit
 github.com/checkpoint-restore/go-criu/rpc
-# github.com/cilium/ebpf v0.0.0-20191025125908-95b36a581eed
+# github.com/cilium/ebpf v0.0.0-20200319110858-a7172c01168f
 ## explicit
 github.com/cilium/ebpf
 github.com/cilium/ebpf/asm
 github.com/cilium/ebpf/internal
+github.com/cilium/ebpf/internal/btf
 github.com/cilium/ebpf/internal/unix
-# github.com/containerd/console v0.0.0-20181022165439-0650fd9eeb50
+# github.com/containerd/console v1.0.0
 ## explicit
 github.com/containerd/console
 # github.com/coreos/go-systemd/v22 v22.0.0
 ## explicit
 github.com/coreos/go-systemd/v22/activation
 github.com/coreos/go-systemd/v22/dbus
+# github.com/cpuguy83/go-md2man/v2 v2.0.0-20190314233015-f79a8a8ca69d
+github.com/cpuguy83/go-md2man/v2/md2man
 # github.com/cyphar/filepath-securejoin v0.2.2
 ## explicit
 github.com/cyphar/filepath-securejoin
-# github.com/docker/go-units v0.3.3
+# github.com/docker/go-units v0.4.0
 ## explicit
 github.com/docker/go-units
 # github.com/godbus/dbus/v5 v5.0.3
 ## explicit
 github.com/godbus/dbus/v5
-# github.com/golang/protobuf v1.0.0
+# github.com/golang/protobuf v1.3.5
 ## explicit
 github.com/golang/protobuf/proto
 # github.com/konsorten/go-windows-terminal-sequences v1.0.1
 github.com/konsorten/go-windows-terminal-sequences
-# github.com/moby/sys/mountinfo v0.1.0
+# github.com/moby/sys/mountinfo v0.1.3
 ## explicit
 github.com/moby/sys/mountinfo
 # github.com/mrunalp/fileutils v0.0.0-20171103030105-7d4729fb3618
 ## explicit
 github.com/mrunalp/fileutils
-# github.com/opencontainers/runtime-spec v1.0.2-0.20190207185410-29686dbc5559
+# github.com/opencontainers/runtime-spec v1.0.2
 ## explicit
 github.com/opencontainers/runtime-spec/specs-go
-# github.com/opencontainers/selinux v1.3.3
+# github.com/opencontainers/selinux v1.4.0
 ## explicit
 github.com/opencontainers/selinux/go-selinux
 github.com/opencontainers/selinux/go-selinux/label
-# github.com/pkg/errors v0.8.1
+github.com/opencontainers/selinux/pkg/pwalk
+# github.com/pkg/errors v0.9.1
 ## explicit
 github.com/pkg/errors
+# github.com/russross/blackfriday/v2 v2.0.1
+github.com/russross/blackfriday/v2
 # github.com/seccomp/libseccomp-golang v0.9.1
 ## explicit
 github.com/seccomp/libseccomp-golang
-# github.com/sirupsen/logrus v1.4.1
+# github.com/shurcooL/sanitized_anchor_name v1.0.0
+github.com/shurcooL/sanitized_anchor_name
+# github.com/sirupsen/logrus v1.5.0
 ## explicit
 github.com/sirupsen/logrus
 # github.com/syndtr/gocapability v0.0.0-20180916011248-d98352740cb2
 ## explicit
 github.com/syndtr/gocapability/capability
-# github.com/urfave/cli v1.20.0
+# github.com/urfave/cli v1.22.1
 ## explicit
 github.com/urfave/cli
-# github.com/vishvananda/netlink v0.0.0-20150820014904-1e2e08e8a2dc
+# github.com/vishvananda/netlink v1.1.0
 ## explicit
 github.com/vishvananda/netlink
 github.com/vishvananda/netlink/nl
 # github.com/vishvananda/netns v0.0.0-20191106174202-0a2b9b5464df
-## explicit
-# golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
-## explicit
-# golang.org/x/sys v0.0.0-20191115151921-52ab43148777
+github.com/vishvananda/netns
+# golang.org/x/sys v0.0.0-20200327173247-9dae0f8f5775
 ## explicit
 golang.org/x/sys/unix
 golang.org/x/sys/windows
+# golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543
+golang.org/x/xerrors
+golang.org/x/xerrors/internal

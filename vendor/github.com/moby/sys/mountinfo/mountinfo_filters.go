@@ -3,10 +3,12 @@ package mountinfo
 import "strings"
 
 // FilterFunc is a type defining a callback function for GetMount(),
-// used to filter out mountinfo entries we're not interested in.
+// used to filter out mountinfo entries we're not interested in,
+// and/or stop further processing if we found what we wanted.
 //
 // It takes a pointer to the Info struct (not fully populated,
-// currently only Mountpoint is filled in), and returns two booleans:
+// currently only Mountpoint, Fstype, Source, and (on Linux)
+// VfsOpts are filled in), and returns two booleans:
 //
 //  - skip: true if the entry should be skipped
 //  - stop: true if parsing should be stopped after the entry
