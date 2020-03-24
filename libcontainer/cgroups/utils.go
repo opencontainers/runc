@@ -358,8 +358,8 @@ func getCgroupPathHelper(subsystem, cgroup string) (string, error) {
 	return filepath.Join(mnt, relCgroup), nil
 }
 
-func readProcsFile(dir string) ([]int, error) {
-	f, err := os.Open(filepath.Join(dir, CgroupProcesses))
+func readProcsFile(file string) ([]int, error) {
+	f, err := os.Open(file)
 	if err != nil {
 		return nil, err
 	}
@@ -514,8 +514,8 @@ func getHugePageSizeFromFilenames(fileNames []string) ([]string, error) {
 }
 
 // GetPids returns all pids, that were added to cgroup at path.
-func GetPids(path string) ([]int, error) {
-	return readProcsFile(path)
+func GetPids(dir string) ([]int, error) {
+	return readProcsFile(filepath.Join(dir, CgroupProcesses))
 }
 
 // GetAllPids returns all pids, that were added to cgroup at path and to all its
@@ -524,14 +524,13 @@ func GetAllPids(path string) ([]int, error) {
 	var pids []int
 	// collect pids from all sub-cgroups
 	err := filepath.Walk(path, func(p string, info os.FileInfo, iErr error) error {
-		dir, file := filepath.Split(p)
-		if file != CgroupProcesses {
-			return nil
-		}
 		if iErr != nil {
 			return iErr
 		}
-		cPids, err := readProcsFile(dir)
+		if info.IsDir() || info.Name() != CgroupProcesses {
+			return nil
+		}
+		cPids, err := readProcsFile(p)
 		if err != nil {
 			return err
 		}

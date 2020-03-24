@@ -3,6 +3,7 @@
 package systemd
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"math"
@@ -211,15 +212,8 @@ func createCgroupsv2Path(path string) (Err error) {
 		return fmt.Errorf("invalid cgroup path %s", path)
 	}
 
-	res := ""
-	for i, c := range strings.Split(strings.TrimSpace(string(content)), " ") {
-		if i == 0 {
-			res = fmt.Sprintf("+%s", c)
-		} else {
-			res = res + fmt.Sprintf(" +%s", c)
-		}
-	}
-	resByte := []byte(res)
+	ctrs := bytes.Fields(content)
+	res := append([]byte("+"), bytes.Join(ctrs, []byte(" +"))...)
 
 	current := "/sys/fs"
 	elements := strings.Split(path, "/")
@@ -240,7 +234,7 @@ func createCgroupsv2Path(path string) (Err error) {
 			}
 		}
 		if i < len(elements[3:])-1 {
-			if err := ioutil.WriteFile(filepath.Join(current, "cgroup.subtree_control"), resByte, 0755); err != nil {
+			if err := ioutil.WriteFile(filepath.Join(current, "cgroup.subtree_control"), res, 0755); err != nil {
 				return err
 			}
 		}
