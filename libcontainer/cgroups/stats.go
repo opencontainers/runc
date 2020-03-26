@@ -20,6 +20,12 @@ type CpuUsage struct {
 	// Total CPU time consumed per core.
 	// Units: nanoseconds.
 	PercpuUsage []uint64 `json:"percpu_usage,omitempty"`
+	// CPU time consumed per core in kernel mode
+	// Units: nanoseconds.
+	PercpuUsageInKernelmode []uint64 `json:"percpu_usage_in_kernelmode"`
+	// CPU time consumed per core in user mode
+	// Units: nanoseconds.
+	PercpuUsageInUsermode []uint64 `json:"percpu_usage_in_usermode"`
 	// Time spent by tasks of the cgroup in kernel mode.
 	// Units: nanoseconds.
 	UsageInKernelmode uint64 `json:"usage_in_kernelmode"`
