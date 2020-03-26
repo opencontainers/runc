@@ -4,6 +4,7 @@ package cgroups
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -28,6 +29,8 @@ const (
 var (
 	isUnifiedOnce sync.Once
 	isUnified     bool
+
+	errUnified = errors.New("not implemented for cgroup v2 unified hierarchy")
 )
 
 // HugePageSizeUnitList is a list of the units used by the linux kernel when
@@ -307,6 +310,9 @@ func GetAllSubsystems() ([]string, error) {
 
 // GetOwnCgroup returns the relative path to the cgroup docker is running in.
 func GetOwnCgroup(subsystem string) (string, error) {
+	if IsCgroup2UnifiedMode() {
+		return "", errUnified
+	}
 	cgroups, err := ParseCgroupFile("/proc/self/cgroup")
 	if err != nil {
 		return "", err
@@ -325,6 +331,9 @@ func GetOwnCgroupPath(subsystem string) (string, error) {
 }
 
 func GetInitCgroup(subsystem string) (string, error) {
+	if IsCgroup2UnifiedMode() {
+		return "", errUnified
+	}
 	cgroups, err := ParseCgroupFile("/proc/1/cgroup")
 	if err != nil {
 		return "", err
