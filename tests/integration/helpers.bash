@@ -129,6 +129,20 @@ function set_cgroups_path() {
   sed -i 's#\("linux": {\)#\1\n    "cgroupsPath": "'"${cgroups_path}"'",#' "$bundle/config.json"
 }
 
+# Helper to check a value in cgroups.
+function check_cgroup_value() {
+	source=$1
+	expected=$2
+
+	ctrl=${source%%.*}
+	eval cgroup=\$CGROUP_${ctrl^^}
+
+	current=$(cat $cgroup/$source)
+	echo $cgroup/$source
+	echo "current" $current "!?" "$expected"
+	[ "$current" -eq "$expected" ]
+}
+
 # Helper function to set a resources limit
 function set_resources_limit() {
   bundle="${1:-.}"
