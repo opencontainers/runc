@@ -38,14 +38,6 @@ func (m *UnifiedManager) Apply(pid int) error {
 	if c.Paths != nil {
 		paths := make(map[string]string)
 		for name, path := range c.Paths {
-			_, err := getSubsystemPath(m.Cgroups, name)
-			if err != nil {
-				// Don't fail if a cgroup hierarchy was not found, just skip this subsystem
-				if cgroups.IsNotFound(err) {
-					continue
-				}
-				return err
-			}
 			paths[name] = path
 		}
 		m.Paths = paths
