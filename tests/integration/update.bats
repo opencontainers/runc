@@ -49,14 +49,6 @@ EOF
     runc run -d --console-socket $CONSOLE_SOCKET test_update
     [ "$status" -eq 0 ]
 
-    # get the cgroup paths
-    for g in MEMORY CPUSET CPU BLKIO PIDS; do
-        base_path=$(grep "cgroup"  /proc/self/mountinfo | gawk 'toupper($NF) ~ /\<'${g}'\>/ { print $5; exit }')
-        eval CGROUP_${g}="${base_path}${CGROUPS_PATH}"
-    done
-
-    CGROUP_SYSTEM_MEMORY=$(grep "cgroup"  /proc/self/mountinfo | gawk 'toupper($NF) ~ /\<'MEMORY'\>/ { print $5; exit }')
-
     # check that initial values were properly set
     check_cgroup_value "cpu.cfs_period_us" 1000000
     check_cgroup_value "cpu.cfs_quota_us" 500000
@@ -111,7 +103,7 @@ EOF
         runc update test_update --memory-swap -1
         [ "$status" -eq 0 ]
         # Get System memory swap limit
-        SYSTEM_MEMORY_SW=$(cat "${CGROUP_SYSTEM_MEMORY}/memory.memsw.limit_in_bytes")
+        SYSTEM_MEMORY_SW=$(cat "${CGROUP_MEMORY_BASE_PATH}/memory.memsw.limit_in_bytes")
         check_cgroup_value "memory.memsw.limit_in_bytes" ${SYSTEM_MEMORY_SW}
 
         # update memory swap
@@ -125,7 +117,7 @@ EOF
     [ "$status" -eq 0 ]
 
     # Get System memory limit
-    SYSTEM_MEMORY=$(cat "${CGROUP_SYSTEM_MEMORY}/memory.limit_in_bytes")
+    SYSTEM_MEMORY=$(cat "${CGROUP_MEMORY_BASE_PATH}/memory.limit_in_bytes")
    	# check memory limited is gone
     check_cgroup_value "memory.limit_in_bytes" ${SYSTEM_MEMORY}
 
@@ -238,9 +230,6 @@ EOF
     # run a detached busybox
     runc run -d --console-socket $CONSOLE_SOCKET test_update_rt
     [ "$status" -eq 0 ]
-
-    # get the cgroup paths
-    eval CGROUP_CPU="${CGROUP_CPU_BASE_PATH}${CGROUPS_PATH}"
 
     runc update  -r - test_update_rt <<EOF
 {
