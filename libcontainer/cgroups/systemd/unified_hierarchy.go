@@ -130,12 +130,11 @@ func (m *UnifiedManager) Apply(pid int) error {
 		return err
 	}
 
-	if err := joinCgroupsV2(c, pid); err != nil {
-		return err
-	}
-
 	path, err := getv2Path(m.Cgroups)
 	if err != nil {
+		return err
+	}
+	if err := createCgroupsv2Path(path); err != nil {
 		return err
 	}
 	m.Paths = map[string]string{
@@ -237,14 +236,6 @@ func createCgroupsv2Path(path string) (Err error) {
 		}
 	}
 	return nil
-}
-
-func joinCgroupsV2(c *configs.Cgroup, pid int) error {
-	path, err := getv2Path(c)
-	if err != nil {
-		return err
-	}
-	return createCgroupsv2Path(path)
 }
 
 func (m *UnifiedManager) fsManager() (cgroups.Manager, error) {
