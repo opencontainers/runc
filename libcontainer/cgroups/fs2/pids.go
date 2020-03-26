@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
@@ -17,15 +16,8 @@ import (
 )
 
 func setPids(dirPath string, cgroup *configs.Cgroup) error {
-	if cgroup.Resources.PidsLimit != 0 {
-		// "max" is the fallback value.
-		limit := "max"
-
-		if cgroup.Resources.PidsLimit > 0 {
-			limit = strconv.FormatInt(cgroup.Resources.PidsLimit, 10)
-		}
-
-		if err := fscommon.WriteFile(dirPath, "pids.max", limit); err != nil {
+	if val := numToStr(cgroup.Resources.PidsLimit); val != "" {
+		if err := fscommon.WriteFile(dirPath, "pids.max", val); err != nil {
 			return err
 		}
 	}
