@@ -126,13 +126,7 @@ func (m *UnifiedManager) Apply(pid int) error {
 
 	properties = append(properties, c.SystemdProps...)
 
-	// We have to set kernel memory here, as we can't change it once
-	// processes have been attached to the cgroup.
-	if c.Resources.KernelMemory != 0 {
-		if err := setKernelMemory(c); err != nil {
-			return err
-		}
-	}
+	// ignore c.Resources.KernelMemory
 
 	statusChan := make(chan string, 1)
 	if _, err := theConn.StartTransientUnit(unitName, "replace", properties, statusChan); err == nil {
