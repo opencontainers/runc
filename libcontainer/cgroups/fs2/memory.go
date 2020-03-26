@@ -15,22 +15,38 @@ import (
 	"github.com/pkg/errors"
 )
 
+// numToStr converts an int64 value to a string for writing to a
+// cgroupv2 files with .min, .max, .low, or .high suffix.
+// Negative values are converted to "max" for cgroupv1 compatibility
+// (which used to write -1 to remove the limit).
+func numToStr(value int64) (ret string) {
+	if value > 0 {
+		ret = strconv.FormatInt(value, 10)
+	} else if value < 0 {
+		ret = "max"
+	} else {
+		ret = ""
+	}
+
+	return ret
+}
+
 func setMemory(dirPath string, cgroup *configs.Cgroup) error {
-	if cgroup.Resources.MemorySwap != 0 {
-		if err := fscommon.WriteFile(dirPath, "memory.swap.max", strconv.FormatInt(cgroup.Resources.MemorySwap, 10)); err != nil {
+	if val := numToStr(cgroup.Resources.MemorySwap); val != "" {
+		if err := fscommon.WriteFile(dirPath, "memory.swap.max", val); err != nil {
 			return err
 		}
 	}
-	if cgroup.Resources.Memory != 0 {
-		if err := fscommon.WriteFile(dirPath, "memory.max", strconv.FormatInt(cgroup.Resources.Memory, 10)); err != nil {
+	if val := numToStr(cgroup.Resources.Memory); val != "" {
+		if err := fscommon.WriteFile(dirPath, "memory.max", val); err != nil {
 			return err
 		}
 	}
 
 	// cgroup.Resources.KernelMemory is ignored
 
-	if cgroup.Resources.MemoryReservation != 0 {
-		if err := fscommon.WriteFile(dirPath, "memory.low", strconv.FormatInt(cgroup.Resources.MemoryReservation, 10)); err != nil {
+	if val := numToStr(cgroup.Resources.MemoryReservation); val != "" {
+		if err := fscommon.WriteFile(dirPath, "memory.low", val); err != nil {
 			return err
 		}
 	}
