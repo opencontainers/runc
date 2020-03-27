@@ -89,7 +89,7 @@ func newProp(name string, units interface{}) systemdDbus.Property {
 // system. This functions similarly to systemd's `sd_booted(3)`: internally, it
 // checks whether /run/systemd/system/ exists and is a directory.
 // http://www.freedesktop.org/software/systemd/man/sd_booted.html
-func isRunningSystemd() bool {
+func IsRunningSystemd() bool {
 	fi, err := os.Lstat("/run/systemd/system")
 	if err != nil {
 		return false
@@ -116,7 +116,7 @@ func UseSystemd() bool {
 }
 
 func NewSystemdCgroupsManager() (func(config *configs.Cgroup, paths map[string]string) cgroups.Manager, error) {
-	if !isRunningSystemd() {
+	if !IsRunningSystemd() {
 		return nil, fmt.Errorf("systemd not running on this host, can't use systemd as a cgroups.Manager")
 	}
 	if cgroups.IsCgroup2UnifiedMode() {
