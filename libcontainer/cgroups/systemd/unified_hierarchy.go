@@ -4,7 +4,6 @@ package systemd
 
 import (
 	"bytes"
-	"fmt"
 	"io/ioutil"
 	"math"
 	"os"
@@ -38,14 +37,6 @@ func (m *UnifiedManager) Apply(pid int) error {
 	if c.Paths != nil {
 		paths := make(map[string]string)
 		for name, path := range c.Paths {
-			_, err := getSubsystemPath(m.Cgroups, name)
-			if err != nil {
-				// Don't fail if a cgroup hierarchy was not found, just skip this subsystem
-				if cgroups.IsNotFound(err) {
-					continue
-				}
-				return err
-			}
 			paths[name] = path
 		}
 		m.Paths = paths
@@ -139,12 +130,11 @@ func (m *UnifiedManager) Apply(pid int) error {
 		return err
 	}
 
-	if err := joinCgroupsV2(c, pid); err != nil {
+	path, err := getv2Path(m.Cgroups)
+	if err != nil {
 		return err
 	}
-
-	path, err := getSubsystemPath(m.Cgroups, "")
-	if err != nil {
+	if err := createCgroupsv2Path(path); err != nil {
 		return err
 	}
 	m.Paths = map[string]string{
@@ -197,13 +187,25 @@ func (m *UnifiedManager) GetUnifiedPath() (string, error) {
 	}
 	return unifiedPath, nil
 }
+
+func getv2Path(c *configs.Cgroup) (string, error) {
+	slice := "system.slice"
+	if c.Parent != "" {
+		slice = c.Parent
+	}
+
+	slice, err := ExpandSlice(slice)
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(fs2.UnifiedMountpoint, slice, getUnitName(c)), nil
+}
+
 func createCgroupsv2Path(path string) (Err error) {
 	content, err := ioutil.ReadFile("/sys/fs/cgroup/cgroup.controllers")
 	if err != nil {
 		return err
-	}
-	if !filepath.HasPrefix(path, "/sys/fs/cgroup") {
-		return fmt.Errorf("invalid cgroup path %s", path)
 	}
 
 	ctrs := bytes.Fields(content)
@@ -234,14 +236,6 @@ func createCgroupsv2Path(path string) (Err error) {
 		}
 	}
 	return nil
-}
-
-func joinCgroupsV2(c *configs.Cgroup, pid int) error {
-	path, err := getSubsystemPath(c, "memory")
-	if err != nil {
-		return err
-	}
-	return createCgroupsv2Path(path)
 }
 
 func (m *UnifiedManager) fsManager() (cgroups.Manager, error) {
