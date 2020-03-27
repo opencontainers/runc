@@ -310,10 +310,6 @@ func parseCpuInfoFile(path string) (bool, bool, error) {
 
 	s := bufio.NewScanner(f)
 	for s.Scan() {
-		if err := s.Err(); err != nil {
-			return false, false, err
-		}
-
 		line := s.Text()
 
 		// Search "cat_l3" and "mba" flags in first "flags" line
@@ -331,6 +327,10 @@ func parseCpuInfoFile(path string) (bool, bool, error) {
 			return isCatFlagSet, isMbaFlagSet, nil
 		}
 	}
+	if err := s.Err(); err != nil {
+		return false, false, err
+	}
+
 	return isCatFlagSet, isMbaFlagSet, nil
 }
 
