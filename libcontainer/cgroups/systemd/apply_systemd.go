@@ -71,8 +71,9 @@ const (
 )
 
 var (
-	connLock sync.Mutex
-	theConn  *systemdDbus.Conn
+	connOnce sync.Once
+	connDbus *systemdDbus.Conn
+	connErr  error
 )
 
 func newProp(name string, units interface{}) systemdDbus.Property {
@@ -97,22 +98,13 @@ func IsRunningSystemd() bool {
 	return fi.IsDir()
 }
 
-func UseSystemd() bool {
-	if !isRunningSystemd() {
-		return false
-	}
-
-	connLock.Lock()
-	defer connLock.Unlock()
-
-	if theConn == nil {
-		var err error
-		theConn, err = systemdDbus.New()
-		if err != nil {
-			return false
-		}
-	}
-	return true
+// getDbusConnection lazy initializes systemd dbus connection
+// and returns it
+func getDbusConnection() (*systemdDbus.Conn, error) {
+	connOnce.Do(func() {
+		connDbus, connErr = systemdDbus.New()
+	})
+	return connDbus, connErr
 }
 
 func NewSystemdCgroupsManager() (func(config *configs.Cgroup, paths map[string]string) cgroups.Manager, error) {
@@ -247,8 +239,12 @@ func (m *LegacyManager) Apply(pid int) error {
 
 	properties = append(properties, c.SystemdProps...)
 
+	dbusConnection, err := getDbusConnection()
+	if err != nil {
+		return err
+	}
 	statusChan := make(chan string, 1)
-	if _, err := theConn.StartTransientUnit(unitName, "replace", properties, statusChan); err == nil {
+	if _, err := dbusConnection.StartTransientUnit(unitName, "replace", properties, statusChan); err == nil {
 		select {
 		case <-statusChan:
 		case <-time.After(time.Second):
@@ -284,7 +280,13 @@ func (m *LegacyManager) Destroy() error {
 	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	theConn.StopUnit(getUnitName(m.Cgroups), "replace", nil)
+
+	dbusConnection, err := getDbusConnection()
+	if err != nil {
+		return err
+	}
+
+	dbusConnection.StopUnit(getUnitName(m.Cgroups), "replace", nil)
 	if err := cgroups.RemovePaths(m.Paths); err != nil {
 		return err
 	}
