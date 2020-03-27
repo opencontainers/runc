@@ -9,8 +9,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/moby/sys/mountinfo"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/opencontainers/runc/libcontainer/mount"
 	"github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/opencontainers/runtime-spec/specs-go"
 
@@ -101,33 +101,28 @@ func TestFactoryNewTmpfs(t *testing.T) {
 	if factory.Type() != "libcontainer" {
 		t.Fatalf("unexpected factory type: %q, expected %q", factory.Type(), "libcontainer")
 	}
-	mounted, err := mount.Mounted(lfactory.Root)
+	mounted, err := mountinfo.Mounted(lfactory.Root)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !mounted {
 		t.Fatalf("Factory Root is not mounted")
 	}
-	mounts, err := mount.GetMounts()
+	mounts, err := mountinfo.GetMounts(mountinfo.SingleEntryFilter(lfactory.Root))
 	if err != nil {
 		t.Fatal(err)
 	}
-	var found bool
-	for _, m := range mounts {
-		if m.Mountpoint == lfactory.Root {
-			if m.Fstype != "tmpfs" {
-				t.Fatalf("Fstype of root: %s, expected %s", m.Fstype, "tmpfs")
-			}
-			if m.Source != "tmpfs" {
-				t.Fatalf("Source of root: %s, expected %s", m.Source, "tmpfs")
-			}
-			found = true
-		}
-	}
-	if !found {
+	if len(mounts) != 1 {
 		t.Fatalf("Factory Root is not listed in mounts list")
 	}
-	defer unix.Unmount(root, unix.MNT_DETACH)
+	m := mounts[0]
+	if m.Fstype != "tmpfs" {
+		t.Fatalf("Fstype of root: %s, expected %s", m.Fstype, "tmpfs")
+	}
+	if m.Source != "tmpfs" {
+		t.Fatalf("Source of root: %s, expected %s", m.Source, "tmpfs")
+	}
+	unix.Unmount(root, unix.MNT_DETACH)
 }
 
 func TestFactoryLoadNotExists(t *testing.T) {

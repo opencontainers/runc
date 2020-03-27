@@ -14,10 +14,10 @@ import (
 	"time"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
+	"github.com/moby/sys/mountinfo"
 	"github.com/mrunalp/fileutils"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/opencontainers/runc/libcontainer/mount"
 	"github.com/opencontainers/runc/libcontainer/system"
 	libcontainerUtils "github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/opencontainers/selinux/go-selinux/label"
@@ -661,46 +661,26 @@ func mknodDevice(dest string, node *configs.Device) error {
 	return unix.Chown(dest, int(node.Uid), int(node.Gid))
 }
 
-func getMountInfo(mountinfo []*mount.Info, dir string) *mount.Info {
-	for _, m := range mountinfo {
-		if m.Mountpoint == dir {
-			return m
-		}
-	}
-	return nil
-}
-
 // Get the parent mount point of directory passed in as argument. Also return
 // optional fields.
 func getParentMount(rootfs string) (string, string, error) {
-	var path string
-
-	mountinfos, err := mount.GetMounts()
+	mi, err := mountinfo.GetMounts(mountinfo.ParentsFilter(rootfs))
 	if err != nil {
 		return "", "", err
 	}
-
-	mountinfo := getMountInfo(mountinfos, rootfs)
-	if mountinfo != nil {
-		return rootfs, mountinfo.Optional, nil
+	if len(mi) < 1 {
+		return "", "", fmt.Errorf("could not find parent mount of %s", rootfs)
 	}
 
-	path = rootfs
-	for {
-		path = filepath.Dir(path)
-
-		mountinfo = getMountInfo(mountinfos, path)
-		if mountinfo != nil {
-			return path, mountinfo.Optional, nil
-		}
-
-		if path == "/" {
-			break
+	// find the longest mount point
+	var idx, maxlen int
+	for i := range mi {
+		if len(mi[i].Mountpoint) > maxlen {
+			maxlen = len(mi[i].Mountpoint)
+			idx = i
 		}
 	}
-
-	// If we are here, we did not find parent mount. Something is wrong.
-	return "", "", fmt.Errorf("Could not find parent mount of %s", rootfs)
+	return mi[idx].Mountpoint, mi[idx].Optional, nil
 }
 
 // Make parent mount private if it was shared
@@ -825,25 +805,22 @@ func pivotRoot(rootfs string) error {
 }
 
 func msMoveRoot(rootfs string) error {
-	mountinfos, err := mount.GetMounts()
-	if err != nil {
-		return err
-	}
-
-	absRootfs, err := filepath.Abs(rootfs)
+	mountinfos, err := mountinfo.GetMounts(func(info *mountinfo.Info) (skip, stop bool) {
+		skip = false
+		stop = false
+		// Collect every sysfs and proc file systems, except those under the container rootfs
+		if (info.Fstype != "proc" && info.Fstype != "sysfs") || strings.HasPrefix(info.Mountpoint, rootfs) {
+			skip = true
+			return
+		}
+		return
+	})
 	if err != nil {
 		return err
 	}
 
 	for _, info := range mountinfos {
-		p, err := filepath.Abs(info.Mountpoint)
-		if err != nil {
-			return err
-		}
-		// Umount every syfs and proc file systems, except those under the container rootfs
-		if (info.Fstype != "proc" && info.Fstype != "sysfs") || filepath.HasPrefix(p, absRootfs) {
-			continue
-		}
+		p := info.Mountpoint
 		// Be sure umount events are not propagated to the host.
 		if err := unix.Mount("", p, "", unix.MS_SLAVE|unix.MS_REC, ""); err != nil {
 			return err
