@@ -80,9 +80,6 @@ func parseCgroupFromReader(r io.Reader) (string, error) {
 		s = bufio.NewScanner(r)
 	)
 	for s.Scan() {
-		if err := s.Err(); err != nil {
-			return "", err
-		}
 		var (
 			text  = s.Text()
 			parts = strings.SplitN(text, ":", 3)
@@ -94,6 +91,9 @@ func parseCgroupFromReader(r io.Reader) (string, error) {
 		if parts[0] == "0" && parts[1] == "" {
 			return parts[2], nil
 		}
+	}
+	if err := s.Err(); err != nil {
+		return "", err
 	}
 	return "", errors.New("cgroup path not found")
 }
