@@ -313,7 +313,7 @@ func parseCpuInfoFile(path string) (bool, bool, error) {
 		line := s.Text()
 
 		// Search "cat_l3" and "mba" flags in first "flags" line
-		if strings.Contains(line, "flags") {
+		if strings.HasPrefix(line, "flags") {
 			flags := strings.Split(line, " ")
 			// "cat_l3" flag for CAT and "mba" flag for MBA
 			for _, flag := range flags {
