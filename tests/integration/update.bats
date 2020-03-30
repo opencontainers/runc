@@ -19,9 +19,7 @@ function setup() {
     DATA=$(cat <<EOF
     "memory": {
         "limit": 33554432,
-        "reservation": 25165824,
-        "kernel": 16777216,
-        "kernelTCP": 11534336
+        "reservation": 25165824
     },
     "cpu": {
         "shares": 100,
@@ -39,10 +37,7 @@ EOF
 }
 
 @test "update" {
-    # XXX: Also, this test should be split into separate sections so that we
-    #      can skip kmem without skipping update tests overall.
     [[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
-    requires cgroups_kmem
 
     # run a few busyboxes detached
     runc run -d --console-socket $CONSOLE_SOCKET test_update
@@ -53,8 +48,6 @@ EOF
     check_cgroup_value "cpu.cfs_quota_us" 500000
     check_cgroup_value "cpu.shares" 100
     check_cgroup_value "cpuset.cpus" 0
-    check_cgroup_value "memory.kmem.limit_in_bytes" 16777216
-    check_cgroup_value "memory.kmem.tcp.limit_in_bytes" 11534336
     check_cgroup_value "memory.limit_in_bytes" 33554432
     check_cgroup_value "memory.soft_limit_in_bytes" 25165824
     check_cgroup_value "pids.max" 20
@@ -125,16 +118,6 @@ EOF
         check_cgroup_value "memory.memsw.limit_in_bytes" ${SYSTEM_MEMORY}
     fi
 
-    # update kernel memory limit
-    runc update test_update --kernel-memory 50331648
-    [ "$status" -eq 0 ]
-    check_cgroup_value "memory.kmem.limit_in_bytes" 50331648
-
-    # update kernel memory tcp limit
-    runc update test_update --kernel-memory-tcp 41943040
-    [ "$status" -eq 0 ]
-    check_cgroup_value "memory.kmem.tcp.limit_in_bytes" 41943040
-
     # update pids limit
     runc update test_update --pids-limit 10
     [ "$status" -eq 0 ]
@@ -145,9 +128,7 @@ EOF
 {
   "memory": {
     "limit": 33554432,
-    "reservation": 25165824,
-    "kernel": 16777216,
-    "kernelTCP": 11534336
+    "reservation": 25165824
   },
   "cpu": {
     "shares": 100,
@@ -165,23 +146,19 @@ EOF
     check_cgroup_value "cpu.cfs_quota_us" 500000
     check_cgroup_value "cpu.shares" 100
     check_cgroup_value "cpuset.cpus" 0
-    check_cgroup_value "memory.kmem.limit_in_bytes" 16777216
-    check_cgroup_value "memory.kmem.tcp.limit_in_bytes" 11534336
     check_cgroup_value "memory.limit_in_bytes" 33554432
     check_cgroup_value "memory.soft_limit_in_bytes" 25165824
     check_cgroup_value "pids.max" 20
 
     # redo all the changes at once
     runc update test_update \
-        --cpu-period 900000 --cpu-quota 600000 --cpu-share 200 --memory 67108864 \
-        --memory-reservation 33554432 --kernel-memory 50331648 --kernel-memory-tcp 41943040 \
+        --cpu-period 900000 --cpu-quota 600000 --cpu-share 200 \
+        --memory 67108864 --memory-reservation 33554432 \
         --pids-limit 10
     [ "$status" -eq 0 ]
     check_cgroup_value "cpu.cfs_period_us" 900000
     check_cgroup_value "cpu.cfs_quota_us" 600000
     check_cgroup_value "cpu.shares" 200
-    check_cgroup_value "memory.kmem.limit_in_bytes" 50331648
-    check_cgroup_value "memory.kmem.tcp.limit_in_bytes" 41943040
     check_cgroup_value "memory.limit_in_bytes" 67108864
     check_cgroup_value "memory.soft_limit_in_bytes" 33554432
     check_cgroup_value "pids.max" 10
@@ -191,9 +168,7 @@ EOF
 {
   "memory": {
     "limit": 33554432,
-    "reservation": 25165824,
-    "kernel": 16777216,
-    "kernelTCP": 11534336
+    "reservation": 25165824
   },
   "cpu": {
     "shares": 100,
@@ -215,8 +190,6 @@ EOF
     check_cgroup_value "cpu.cfs_quota_us" 500000
     check_cgroup_value "cpu.shares" 100
     check_cgroup_value "cpuset.cpus" 0
-    check_cgroup_value "memory.kmem.limit_in_bytes" 16777216
-    check_cgroup_value "memory.kmem.tcp.limit_in_bytes" 11534336
     check_cgroup_value "memory.limit_in_bytes" 33554432
     check_cgroup_value "memory.soft_limit_in_bytes" 25165824
     check_cgroup_value "pids.max" 20
@@ -224,7 +197,7 @@ EOF
 
 @test "update rt period and runtime" {
     [[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
-    requires cgroups_kmem cgroups_rt
+    requires cgroups_rt
 
     # run a detached busybox
     runc run -d --console-socket $CONSOLE_SOCKET test_update_rt
