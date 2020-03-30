@@ -18,6 +18,18 @@ rss 1024`
 	memoryFailcnt              = "100\n"
 	memoryLimitContents        = "8192\n"
 	memoryUseHierarchyContents = "1\n"
+	memoryNUMAStatContents     = `total=44611 N0=32631 N1=7501 N2=1982 N3=2497
+file=44428 N0=32614 N1=7335 N2=1982 N3=2497
+anon=183 N0=17 N1=166 N2=0 N3=0
+unevictable=0 N0=0 N1=0 N2=0 N3=0
+hierarchical_total=768133 N0=509113 N1=138887 N2=20464 N3=99669
+hierarchical_file=722017 N0=496516 N1=119997 N2=20181 N3=85323
+hierarchical_anon=46096 N0=12597 N1=18890 N2=283 N3=14326
+hierarchical_unevictable=20 N0=0 N1=0 N2=0 N3=20`
+	memoryNUMAStatNoHierarchyContents = `total=44611 N0=32631 N1=7501 N2=1982 N3=2497
+file=44428 N0=32614 N1=7335 N2=1982 N3=2497
+anon=183 N0=17 N1=166 N2=0 N3=0
+unevictable=0 N0=0 N1=0 N2=0 N3=0`
 )
 
 func TestMemorySetMemory(t *testing.T) {
@@ -276,6 +288,7 @@ func TestMemoryStats(t *testing.T) {
 		"memory.kmem.failcnt":             memoryFailcnt,
 		"memory.kmem.limit_in_bytes":      memoryLimitContents,
 		"memory.use_hierarchy":            memoryUseHierarchyContents,
+		"memory.numa_stat":                memoryNUMAStatContents,
 	})
 
 	memory := &MemoryGroup{}
@@ -284,7 +297,21 @@ func TestMemoryStats(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expectedStats := cgroups.MemoryStats{Cache: 512, Usage: cgroups.MemoryData{Usage: 2048, MaxUsage: 4096, Failcnt: 100, Limit: 8192}, SwapUsage: cgroups.MemoryData{Usage: 2048, MaxUsage: 4096, Failcnt: 100, Limit: 8192}, KernelUsage: cgroups.MemoryData{Usage: 2048, MaxUsage: 4096, Failcnt: 100, Limit: 8192}, Stats: map[string]uint64{"cache": 512, "rss": 1024}, UseHierarchy: true}
+	expectedStats := cgroups.MemoryStats{Cache: 512, Usage: cgroups.MemoryData{Usage: 2048, MaxUsage: 4096, Failcnt: 100, Limit: 8192}, SwapUsage: cgroups.MemoryData{Usage: 2048, MaxUsage: 4096, Failcnt: 100, Limit: 8192}, KernelUsage: cgroups.MemoryData{Usage: 2048, MaxUsage: 4096, Failcnt: 100, Limit: 8192}, Stats: map[string]uint64{"cache": 512, "rss": 1024}, UseHierarchy: true,
+		PageUsageByNUMA: cgroups.PageUsageByNUMA{
+			PageUsageByNUMAInner: cgroups.PageUsageByNUMAInner{
+				Total:       cgroups.PageStats{Total: 44611, Nodes: map[uint8]uint64{0: 32631, 1: 7501, 2: 1982, 3: 2497}},
+				File:        cgroups.PageStats{Total: 44428, Nodes: map[uint8]uint64{0: 32614, 1: 7335, 2: 1982, 3: 2497}},
+				Anon:        cgroups.PageStats{Total: 183, Nodes: map[uint8]uint64{0: 17, 1: 166, 2: 0, 3: 0}},
+				Unevictable: cgroups.PageStats{Total: 0, Nodes: map[uint8]uint64{0: 0, 1: 0, 2: 0, 3: 0}},
+			},
+			Hierarchical: cgroups.PageUsageByNUMAInner{
+				Total:       cgroups.PageStats{Total: 768133, Nodes: map[uint8]uint64{0: 509113, 1: 138887, 2: 20464, 3: 99669}},
+				File:        cgroups.PageStats{Total: 722017, Nodes: map[uint8]uint64{0: 496516, 1: 119997, 2: 20181, 3: 85323}},
+				Anon:        cgroups.PageStats{Total: 46096, Nodes: map[uint8]uint64{0: 12597, 1: 18890, 2: 283, 3: 14326}},
+				Unevictable: cgroups.PageStats{Total: 20, Nodes: map[uint8]uint64{0: 0, 1: 0, 2: 0, 3: 20}},
+			},
+		}}
 	expectMemoryStatEquals(t, expectedStats, actualStats.MemoryStats)
 }
 
@@ -453,4 +480,27 @@ func TestMemorySetOomControl(t *testing.T) {
 	if value != oomKillDisable {
 		t.Fatalf("Got the wrong value, set memory.oom_control failed.")
 	}
+}
+
+func TestNoHierarchicalNumaStat(t *testing.T) {
+	helper := NewCgroupTestUtil("memory", t)
+	defer helper.cleanup()
+	helper.writeFileContents(map[string]string{
+		"memory.numa_stat": memoryNUMAStatNoHierarchyContents,
+	})
+
+	actualStats, err := getPageUsageByNUMA(helper.CgroupPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pageUsageByNUMA := cgroups.PageUsageByNUMA{
+		PageUsageByNUMAInner: cgroups.PageUsageByNUMAInner{
+			Total:       cgroups.PageStats{Total: 44611, Nodes: map[uint8]uint64{0: 32631, 1: 7501, 2: 1982, 3: 2497}},
+			File:        cgroups.PageStats{Total: 44428, Nodes: map[uint8]uint64{0: 32614, 1: 7335, 2: 1982, 3: 2497}},
+			Anon:        cgroups.PageStats{Total: 183, Nodes: map[uint8]uint64{0: 17, 1: 166, 2: 0, 3: 0}},
+			Unevictable: cgroups.PageStats{Total: 0, Nodes: map[uint8]uint64{0: 0, 1: 0, 2: 0, 3: 0}},
+		},
+		Hierarchical: cgroups.PageUsageByNUMAInner{},
+	}
+	expectPageUsageByNUMAEquals(t, pageUsageByNUMA, actualStats)
 }

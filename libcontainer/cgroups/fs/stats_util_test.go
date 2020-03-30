@@ -4,11 +4,10 @@ package fs
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
-
-	"github.com/sirupsen/logrus"
 )
 
 func blkioStatEntryEquals(expected, actual []cgroups.BlkioStatEntry) error {
@@ -26,57 +25,47 @@ func blkioStatEntryEquals(expected, actual []cgroups.BlkioStatEntry) error {
 
 func expectBlkioStatsEquals(t *testing.T, expected, actual cgroups.BlkioStats) {
 	if err := blkioStatEntryEquals(expected.IoServiceBytesRecursive, actual.IoServiceBytesRecursive); err != nil {
-		logrus.Printf("blkio IoServiceBytesRecursive do not match - %s\n", err)
-		t.Fail()
+		t.Errorf("blkio IoServiceBytesRecursive do not match - %s\n", err)
 	}
 
 	if err := blkioStatEntryEquals(expected.IoServicedRecursive, actual.IoServicedRecursive); err != nil {
-		logrus.Printf("blkio IoServicedRecursive do not match - %s\n", err)
-		t.Fail()
+		t.Errorf("blkio IoServicedRecursive do not match - %s\n", err)
 	}
 
 	if err := blkioStatEntryEquals(expected.IoQueuedRecursive, actual.IoQueuedRecursive); err != nil {
-		logrus.Printf("blkio IoQueuedRecursive do not match - %s\n", err)
-		t.Fail()
+		t.Errorf("blkio IoQueuedRecursive do not match - %s\n", err)
 	}
 
 	if err := blkioStatEntryEquals(expected.SectorsRecursive, actual.SectorsRecursive); err != nil {
-		logrus.Printf("blkio SectorsRecursive do not match - %s\n", err)
-		t.Fail()
+		t.Errorf("blkio SectorsRecursive do not match - %s\n", err)
 	}
 
 	if err := blkioStatEntryEquals(expected.IoServiceTimeRecursive, actual.IoServiceTimeRecursive); err != nil {
-		logrus.Printf("blkio IoServiceTimeRecursive do not match - %s\n", err)
-		t.Fail()
+		t.Errorf("blkio IoServiceTimeRecursive do not match - %s\n", err)
 	}
 
 	if err := blkioStatEntryEquals(expected.IoWaitTimeRecursive, actual.IoWaitTimeRecursive); err != nil {
-		logrus.Printf("blkio IoWaitTimeRecursive do not match - %s\n", err)
-		t.Fail()
+		t.Errorf("blkio IoWaitTimeRecursive do not match - %s\n", err)
 	}
 
 	if err := blkioStatEntryEquals(expected.IoMergedRecursive, actual.IoMergedRecursive); err != nil {
-		logrus.Printf("blkio IoMergedRecursive do not match - %v vs %v\n", expected.IoMergedRecursive, actual.IoMergedRecursive)
-		t.Fail()
+		t.Errorf("blkio IoMergedRecursive do not match - %v vs %v\n", expected.IoMergedRecursive, actual.IoMergedRecursive)
 	}
 
 	if err := blkioStatEntryEquals(expected.IoTimeRecursive, actual.IoTimeRecursive); err != nil {
-		logrus.Printf("blkio IoTimeRecursive do not match - %s\n", err)
-		t.Fail()
+		t.Errorf("blkio IoTimeRecursive do not match - %s\n", err)
 	}
 }
 
 func expectThrottlingDataEquals(t *testing.T, expected, actual cgroups.ThrottlingData) {
 	if expected != actual {
-		logrus.Printf("Expected throttling data %v but found %v\n", expected, actual)
-		t.Fail()
+		t.Errorf("Expected throttling data %v but found %v\n", expected, actual)
 	}
 }
 
 func expectHugetlbStatEquals(t *testing.T, expected, actual cgroups.HugetlbStats) {
 	if expected != actual {
-		logrus.Printf("Expected hugetlb stats %v but found %v\n", expected, actual)
-		t.Fail()
+		t.Errorf("Expected hugetlb stats %v but found %v\n", expected, actual)
 	}
 }
 
@@ -84,40 +73,61 @@ func expectMemoryStatEquals(t *testing.T, expected, actual cgroups.MemoryStats) 
 	expectMemoryDataEquals(t, expected.Usage, actual.Usage)
 	expectMemoryDataEquals(t, expected.SwapUsage, actual.SwapUsage)
 	expectMemoryDataEquals(t, expected.KernelUsage, actual.KernelUsage)
+	expectPageUsageByNUMAEquals(t, expected.PageUsageByNUMA, actual.PageUsageByNUMA)
 
 	if expected.UseHierarchy != actual.UseHierarchy {
-		logrus.Printf("Expected memory use hierarchy %v, but found %v\n", expected.UseHierarchy, actual.UseHierarchy)
-		t.Fail()
+		t.Errorf("Expected memory use hierarchy %v, but found %v\n", expected.UseHierarchy, actual.UseHierarchy)
 	}
 
 	for key, expValue := range expected.Stats {
 		actValue, ok := actual.Stats[key]
 		if !ok {
-			logrus.Printf("Expected memory stat key %s not found\n", key)
-			t.Fail()
+			t.Errorf("Expected memory stat key %s not found\n", key)
 		}
 		if expValue != actValue {
-			logrus.Printf("Expected memory stat value %d but found %d\n", expValue, actValue)
-			t.Fail()
+			t.Errorf("Expected memory stat value %d but found %d\n", expValue, actValue)
 		}
 	}
 }
 
 func expectMemoryDataEquals(t *testing.T, expected, actual cgroups.MemoryData) {
 	if expected.Usage != actual.Usage {
-		logrus.Printf("Expected memory usage %d but found %d\n", expected.Usage, actual.Usage)
-		t.Fail()
+		t.Errorf("Expected memory usage %d but found %d\n", expected.Usage, actual.Usage)
 	}
 	if expected.MaxUsage != actual.MaxUsage {
-		logrus.Printf("Expected memory max usage %d but found %d\n", expected.MaxUsage, actual.MaxUsage)
-		t.Fail()
+		t.Errorf("Expected memory max usage %d but found %d\n", expected.MaxUsage, actual.MaxUsage)
 	}
 	if expected.Failcnt != actual.Failcnt {
-		logrus.Printf("Expected memory failcnt %d but found %d\n", expected.Failcnt, actual.Failcnt)
-		t.Fail()
+		t.Errorf("Expected memory failcnt %d but found %d\n", expected.Failcnt, actual.Failcnt)
 	}
 	if expected.Limit != actual.Limit {
-		logrus.Printf("Expected memory limit %d but found %d\n", expected.Limit, actual.Limit)
-		t.Fail()
+		t.Errorf("Expected memory limit %d but found %d\n", expected.Limit, actual.Limit)
+	}
+}
+
+func expectPageUsageByNUMAEquals(t *testing.T, expected, actual cgroups.PageUsageByNUMA) {
+	if !reflect.DeepEqual(expected.Total, actual.Total) {
+		t.Errorf("Expected total page usage by NUMA %#v but found %#v", expected.Total, actual.Total)
+	}
+	if !reflect.DeepEqual(expected.File, actual.File) {
+		t.Errorf("Expected file page usage by NUMA %#v but found %#v", expected.File, actual.File)
+	}
+	if !reflect.DeepEqual(expected.Anon, actual.Anon) {
+		t.Errorf("Expected anon page usage by NUMA %#v but found %#v", expected.Anon, actual.Anon)
+	}
+	if !reflect.DeepEqual(expected.Unevictable, actual.Unevictable) {
+		t.Errorf("Expected unevictable page usage by NUMA %#v but found %#v", expected.Unevictable, actual.Unevictable)
+	}
+	if !reflect.DeepEqual(expected.Hierarchical.Total, actual.Hierarchical.Total) {
+		t.Errorf("Expected hierarchical total page usage by NUMA %#v but found %#v", expected.Hierarchical.Total, actual.Hierarchical.Total)
+	}
+	if !reflect.DeepEqual(expected.Hierarchical.File, actual.Hierarchical.File) {
+		t.Errorf("Expected hierarchical file page usage by NUMA %#v but found %#v", expected.Hierarchical.File, actual.Hierarchical.File)
+	}
+	if !reflect.DeepEqual(expected.Hierarchical.Anon, actual.Hierarchical.Anon) {
+		t.Errorf("Expected hierarchical anon page usage by NUMA %#v but found %#v", expected.Hierarchical.Anon, actual.Hierarchical.Anon)
+	}
+	if !reflect.DeepEqual(expected.Hierarchical.Unevictable, actual.Hierarchical.Unevictable) {
+		t.Errorf("Expected hierarchical total page usage by NUMA %#v but found %#v", expected.Hierarchical.Unevictable, actual.Hierarchical.Unevictable)
 	}
 }
