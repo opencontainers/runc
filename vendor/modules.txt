@@ -34,7 +34,7 @@ github.com/moby/sys/mountinfo
 # github.com/mrunalp/fileutils v0.0.0-20171103030105-7d4729fb3618
 ## explicit
 github.com/mrunalp/fileutils
-# github.com/opencontainers/runtime-spec v1.0.2-0.20190207185410-29686dbc5559
+# github.com/opencontainers/runtime-spec v1.0.2
 ## explicit
 github.com/opencontainers/runtime-spec/specs-go
 # github.com/opencontainers/selinux v1.3.3
