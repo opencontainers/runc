@@ -164,7 +164,7 @@ EOF
     check_cgroup_value "pids.max" 10
 
     # reset to initial test value via json file
-    DATA=$(cat <<"EOF"
+    cat << EOF > $BATS_TMPDIR/runc-cgroups-integration-test.json
 {
   "memory": {
     "limit": 33554432,
@@ -181,8 +181,6 @@ EOF
   }
 }
 EOF
-)
-    echo $DATA > $BATS_TMPDIR/runc-cgroups-integration-test.json
 
     runc update  -r $BATS_TMPDIR/runc-cgroups-integration-test.json test_update
     [ "$status" -eq 0 ]
