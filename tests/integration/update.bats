@@ -38,7 +38,6 @@ EOF
     sed -i "s/\(\"resources\": {\)/\1\n${DATA}/" ${BUSYBOX_BUNDLE}/config.json
 }
 
-# TODO: test rt cgroup updating
 @test "update" {
     # XXX: Also, this test should be split into separate sections so that we
     #      can skip kmem without skipping update tests overall.
