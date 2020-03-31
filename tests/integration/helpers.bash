@@ -150,13 +150,17 @@ function check_cgroup_value() {
 	source=$1
 	expected=$2
 
-	ctrl=${source%%.*}
-	eval cgroup=\$CGROUP_${ctrl^^}
+	if [ "x$CGROUP_UNIFIED" = "xyes" ] ; then
+		cgroup=$CGROUP_PATH
+	else
+		ctrl=${source%%.*}
+		eval cgroup=\$CGROUP_${ctrl^^}
+	fi
 
 	current=$(cat $cgroup/$source)
 	echo $cgroup/$source
 	echo "current" $current "!?" "$expected"
-	[ "$current" -eq "$expected" ]
+	[ "$current" = "$expected" ]
 }
 
 # Helper function to set a resources limit
@@ -216,6 +220,18 @@ function requires() {
 			init_cgroup_paths
 			if [ ! -e "${CGROUP_CPU_BASE_PATH}/cpu.rt_period_us" ]; then
 				skip "Test requires ${var}"
+			fi
+			;;
+		cgroups_v1)
+			init_cgroup_paths
+			if [ "$CGROUP_UNIFIED" != "no" ]; then
+				skip "Test requires cgroups v1"
+			fi
+			;;
+		cgroups_v2)
+			init_cgroup_paths
+			if [ "$CGROUP_UNIFIED" != "yes" ]; then
+				skip "Test requires cgroups v2 (unified)"
 			fi
 			;;
 		*)
