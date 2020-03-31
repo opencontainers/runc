@@ -32,7 +32,8 @@ matrix:
         - ssh default sudo dnf install -y podman
       script:
         - ssh default sudo podman build -t test /vagrant
-        - ssh default sudo podman run --privileged --cgroupns=private test make localunittest
+        # Mounting /lib/modules into the container is necessary as CRIU wants to load (via iptables) additional modules
+        - ssh default sudo podman run --privileged --cgroupns=private -v /lib/modules:/lib/modules:ro test make localunittest
   allow_failures:
     - go: tip
     - name: "cgroup-v2"
