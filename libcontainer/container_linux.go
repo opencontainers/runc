@@ -1832,7 +1832,10 @@ func (c *linuxContainer) isPaused() (bool, error) {
 	data, err := ioutil.ReadFile(filepath.Join(fcg, filename))
 	if err != nil {
 		// If freezer cgroup is not mounted, the container would just be not paused.
-		if os.IsNotExist(err) || err == syscall.ENODEV {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		if pathError, isPathError := err.(*os.PathError); isPathError && pathError.Err == syscall.ENODEV {
 			return false, nil
 		}
 		return false, newSystemErrorWithCause(err, "checking if container is paused")
