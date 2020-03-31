@@ -47,7 +47,7 @@ func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
 		cgroupManager = libcontainer.RootlessCgroupfs
 	}
 	if context.GlobalBool("systemd-cgroup") {
-		if systemd.UseSystemd() {
+		if systemd.IsRunningSystemd() {
 			cgroupManager = libcontainer.SystemdCgroups
 		} else {
 			return nil, fmt.Errorf("systemd cgroup flag passed, but systemd support for managing cgroups is not available")

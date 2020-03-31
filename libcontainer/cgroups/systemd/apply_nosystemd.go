@@ -14,7 +14,7 @@ type Manager struct {
 	Paths   map[string]string
 }
 
-func UseSystemd() bool {
+func IsRunningSystemd() bool {
 	return false
 }
 
