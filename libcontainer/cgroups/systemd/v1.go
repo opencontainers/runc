@@ -182,7 +182,11 @@ func (m *LegacyManager) Apply(pid int) error {
 	properties = append(properties, resourcesProperties...)
 	properties = append(properties, c.SystemdProps...)
 
-	if err := startUnit(unitName, properties); err != nil {
+	dbusConnection, err := getDbusConnection(false)
+	if err != nil {
+		return err
+	}
+	if err := startUnit(dbusConnection, unitName, properties); err != nil {
 		return err
 	}
 
@@ -213,8 +217,12 @@ func (m *LegacyManager) Destroy() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	dbusConnection, err := getDbusConnection(false)
+	if err != nil {
+		return err
+	}
 	unitName := getUnitName(m.Cgroups)
-	if err := stopUnit(unitName); err != nil {
+	if err := stopUnit(dbusConnection, unitName); err != nil {
 		return err
 	}
 	m.Paths = make(map[string]string)
@@ -371,7 +379,7 @@ func (m *LegacyManager) Set(container *configs.Config) error {
 	if err != nil {
 		return err
 	}
-	dbusConnection, err := getDbusConnection()
+	dbusConnection, err := getDbusConnection(false)
 	if err != nil {
 		return err
 	}

@@ -6,6 +6,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fs2"
 	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/pkg/errors"
 )
 
 type unifiedManager struct {
@@ -89,7 +91,6 @@ func (m *unifiedManager) Apply(pid int) error {
 	var (
 		c          = m.cgroups
 		unitName   = getUnitName(c)
-		slice      = "system.slice"
 		properties []systemdDbus.Property
 	)
 
@@ -97,6 +98,10 @@ func (m *unifiedManager) Apply(pid int) error {
 		return cgroups.WriteCgroupProc(m.path, pid)
 	}
 
+	slice := "system.slice"
+	if m.rootless {
+		slice = "user.slice"
+	}
 	if c.Parent != "" {
 		slice = c.Parent
 	}
@@ -140,8 +145,12 @@ func (m *unifiedManager) Apply(pid int) error {
 	properties = append(properties, resourcesProperties...)
 	properties = append(properties, c.SystemdProps...)
 
-	if err := startUnit(unitName, properties); err != nil {
+	dbusConnection, err := getDbusConnection(m.rootless)
+	if err != nil {
 		return err
+	}
+	if err := startUnit(dbusConnection, unitName, properties); err != nil {
+		return errors.Wrapf(err, "error while starting unit %q with properties %+v", unitName, properties)
 	}
 
 	_, err = m.GetUnifiedPath()
@@ -161,13 +170,17 @@ func (m *unifiedManager) Destroy() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	dbusConnection, err := getDbusConnection(m.rootless)
+	if err != nil {
+		return err
+	}
 	unitName := getUnitName(m.cgroups)
-	if err := stopUnit(unitName); err != nil {
+	if err := stopUnit(dbusConnection, unitName); err != nil {
 		return err
 	}
 
 	// XXX this is probably not needed, systemd should handle it
-	err := os.Remove(m.path)
+	err = os.Remove(m.path)
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
@@ -190,6 +203,44 @@ func (m *unifiedManager) GetPaths() map[string]string {
 	return paths
 }
 
+// getSliceFull value is used in GetUnifiedPath.
+// The value is incompatible with systemdDbus.PropSlice.
+func (m *unifiedManager) getSliceFull() (string, error) {
+	c := m.cgroups
+	slice := "system.slice"
+	if m.rootless {
+		slice = "user.slice"
+	}
+	if c.Parent != "" {
+		var err error
+		slice, err = ExpandSlice(c.Parent)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	if m.rootless {
+		dbusConnection, err := getDbusConnection(m.rootless)
+		if err != nil {
+			return "", err
+		}
+		// managerCGQuoted is typically "/user.slice/user-${uid}.slice/user@${uid}.service" including the quote symbols
+		managerCGQuoted, err := dbusConnection.GetManagerProperty("ControlGroup")
+		if err != nil {
+			return "", err
+		}
+		managerCG, err := strconv.Unquote(managerCGQuoted)
+		if err != nil {
+			return "", err
+		}
+		slice = filepath.Join(managerCG, slice)
+	}
+
+	// an example of the final slice in rootless: "/user.slice/user-1001.slice/user@1001.service/user.slice"
+	// NOTE: systemdDbus.PropSlice requires the "/user.slice/user-1001.slice/user@1001.service/" prefix NOT to be specified.
+	return slice, nil
+}
+
 func (m *unifiedManager) GetUnifiedPath() (string, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -197,24 +248,21 @@ func (m *unifiedManager) GetUnifiedPath() (string, error) {
 		return m.path, nil
 	}
 
-	c := m.cgroups
-	slice := "system.slice"
-	if c.Parent != "" {
-		slice = c.Parent
-	}
-
-	slice, err := ExpandSlice(slice)
+	sliceFull, err := m.getSliceFull()
 	if err != nil {
 		return "", err
 	}
 
-	path := filepath.Join(slice, getUnitName(c))
+	c := m.cgroups
+	path := filepath.Join(sliceFull, getUnitName(c))
 	path, err = securejoin.SecureJoin(fs2.UnifiedMountpoint, path)
 	if err != nil {
 		return "", err
 	}
 	m.path = path
 
+	// an example of the final path in rootless:
+	// "/sys/fs/cgroup/user.slice/user-1001.slice/user@1001.service/user.slice/libpod-132ff0d72245e6f13a3bbc6cdc5376886897b60ac59eaa8dea1df7ab959cbf1c.scope"
 	return m.path, nil
 }
 
@@ -263,12 +311,12 @@ func (m *unifiedManager) Set(container *configs.Config) error {
 	if err != nil {
 		return err
 	}
-	dbusConnection, err := getDbusConnection()
+	dbusConnection, err := getDbusConnection(m.rootless)
 	if err != nil {
 		return err
 	}
 	if err := dbusConnection.SetUnitProperties(getUnitName(m.cgroups), true, properties...); err != nil {
-		return err
+		return errors.Wrap(err, "error while setting unit properties")
 	}
 
 	fsMgr, err := m.fsManager()

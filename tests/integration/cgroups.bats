@@ -79,6 +79,8 @@ EOF
 @test "runc create (rootless + no limits + cgrouppath + no permission) fails with permission error" {
     requires rootless
     requires rootless_no_cgroup
+    # systemd controls the permission, so error does not happen
+    requires no_systemd
 
     set_cgroups_path "$BUSYBOX_BUNDLE"
 
@@ -90,6 +92,8 @@ EOF
 @test "runc create (rootless + limits + no cgrouppath + no permission) fails with informative error" {
     requires rootless
     requires rootless_no_cgroup
+    # systemd controls the permission, so error does not happen
+    requires no_systemd
 
     set_resources_limit "$BUSYBOX_BUNDLE"
 

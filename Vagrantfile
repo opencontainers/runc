@@ -28,9 +28,25 @@ EOF
     # Add a user for rootless tests
     useradd -u2000 -m -d/home/rootless -s/bin/bash rootless
 
+    # Allow root to execute `ssh rootless@localhost` in tests/rootless.sh
+    ssh-keygen -t ecdsa -N "" -f /root/rootless.key
+    mkdir -m 0700 -p /home/rootless/.ssh
+    cat /root/rootless.key.pub >> /home/rootless/.ssh/authorized_keys
+    chown -R rootless.rootless /home/rootless
+
     # Add busybox for libcontainer/integration tests
     . /vagrant/tests/integration/multi-arch.bash \
         && mkdir /busybox \
         && curl -fsSL $(get_busybox) | tar xfJC - /busybox
+
+    # Delegate cgroup v2 controllers to rootless user via --systemd-cgroup
+    mkdir -p /etc/systemd/system/user@.service.d
+    cat > /etc/systemd/system/user@.service.d/delegate.conf << EOF
+[Service]
+# default: Delegate=pids memory
+# NOTE: delegation of cpuset requires systemd >= 244 (Fedora >= 32, Ubuntu >= 20.04). cpuset is ignored on Fedora 31.
+Delegate=cpu cpuset io memory pids
+EOF
+    systemctl daemon-reload
   SHELL
 end

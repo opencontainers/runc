@@ -110,8 +110,14 @@ function init_cgroup_paths() {
 	test -n "$CGROUP_UNIFIED" && return
 
 	if [ -n "${RUNC_USE_SYSTEMD}" ] ; then
-		REL_CGROUPS_PATH="/machine.slice/runc-cgroups-integration-test.scope"
-		OCI_CGROUPS_PATH="machine.slice:runc-cgroups:integration-test"
+		if [ $(id -u) = "0" ]; then
+			REL_CGROUPS_PATH="/machine.slice/runc-cgroups-integration-test.scope"
+			OCI_CGROUPS_PATH="machine.slice:runc-cgroups:integration-test"
+		else
+			REL_CGROUPS_PATH="/user.slice/user-$(id -u).slice/user@$(id -u).service/machine.slice/runc-cgroups-integration-test.scope"
+			# OCI path doesn't contain "/user.slice/user-$(id -u).slice/user@$(id -u).service/" prefix
+			OCI_CGROUPS_PATH="machine.slice:runc-cgroups:integration-test"
+		fi
 	else
 		REL_CGROUPS_PATH="/runc-cgroups-integration-test/test-cgroup"
 		OCI_CGROUPS_PATH=$REL_CGROUPS_PATH
@@ -169,7 +175,11 @@ function check_systemd_value() {
 	source=$2
 	expected=$3
 	
-	current=$(systemctl show $unitname | grep $source)
+	if [ $(id -u) = "0" ]; then
+		current=$(systemctl show $unitname | grep $source)
+	else
+		current=$(systemctl --user show $unitname | grep $source)
+	fi
 	echo "current" $current "!?" "$expected"
 	[ "$current" = "$expected" ]
 }
@@ -243,6 +253,16 @@ function requires() {
 			init_cgroup_paths
 			if [ "$CGROUP_UNIFIED" != "yes" ]; then
 				skip "Test requires cgroups v2 (unified)"
+			fi
+			;;
+		systemd)
+			if [ -z "${RUNC_USE_SYSTEMD}" ]; then
+				skip "Test requires systemd"
+			fi
+			;;
+		no_systemd)
+			if [ -n "${RUNC_USE_SYSTEMD}" ]; then
+				skip "Test requires no systemd"
 			fi
 			;;
 		*)
