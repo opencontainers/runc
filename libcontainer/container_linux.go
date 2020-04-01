@@ -1199,10 +1199,10 @@ func (c *linuxContainer) makeCriuRestoreMountpoints(m *configs.Mount) error {
 func isPathInPrefixList(path string, prefix []string) bool {
 	for _, p := range prefix {
 		if strings.HasPrefix(path, p+"/") {
-			return false
+			return true
 		}
 	}
-	return true
+	return false
 }
 
 // prepareCriuRestoreMounts tries to set up the rootfs of the
@@ -1224,7 +1224,7 @@ func (c *linuxContainer) prepareCriuRestoreMounts(mounts []*configs.Mount) error
 	// if the mountpoints are not on a tmpfs, as CRIU will
 	// restore the complete tmpfs content from its checkpoint.
 	for _, m := range mounts {
-		if isPathInPrefixList(m.Destination, tmpfs) {
+		if !isPathInPrefixList(m.Destination, tmpfs) {
 			if err := c.makeCriuRestoreMountpoints(m); err != nil {
 				return err
 			}
