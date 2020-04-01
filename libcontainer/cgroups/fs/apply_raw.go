@@ -110,21 +110,13 @@ func isIgnorableError(rootless bool, err error) bool {
 	if !rootless {
 		return false
 	}
+	err = errors.Cause(err)
 	// Is it an ordinary EPERM?
-	if os.IsPermission(errors.Cause(err)) {
+	if os.IsPermission(err) {
 		return true
 	}
-
-	// Try to handle other errnos.
-	var errno error
-	switch err := errors.Cause(err).(type) {
-	case *os.PathError:
-		errno = err.Err
-	case *os.LinkError:
-		errno = err.Err
-	case *os.SyscallError:
-		errno = err.Err
-	}
+	// Handle some specific syscall errors.
+	errno := errors.Unwrap(err)
 	return errno == unix.EROFS || errno == unix.EPERM || errno == unix.EACCES
 }
 
