@@ -41,20 +41,10 @@ func ReadFile(dir, file string) (string, error) {
 func retryingWriteFile(filename string, data []byte, perm os.FileMode) error {
 	for {
 		err := ioutil.WriteFile(filename, data, perm)
-		if isInterruptedWriteFile(err) {
+		if errors.Unwrap(err) == syscall.EINTR {
 			logrus.Infof("interrupted while writing %s to %s", string(data), filename)
 			continue
 		}
 		return err
 	}
-}
-
-func isInterruptedWriteFile(err error) bool {
-	if patherr, ok := err.(*os.PathError); ok {
-		errno, ok2 := patherr.Err.(syscall.Errno)
-		if ok2 && errno == syscall.EINTR {
-			return true
-		}
-	}
-	return false
 }
