@@ -15,10 +15,11 @@ import (
 )
 
 type mockCgroupManager struct {
-	pids    []int
-	allPids []int
-	stats   *cgroups.Stats
-	paths   map[string]string
+	pids        []int
+	allPids     []int
+	stats       *cgroups.Stats
+	paths       map[string]string
+	unifiedPath string
 }
 
 type mockIntelRdtManager struct {
@@ -55,7 +56,7 @@ func (m *mockCgroupManager) GetPaths() map[string]string {
 }
 
 func (m *mockCgroupManager) GetUnifiedPath() (string, error) {
-	return "", fmt.Errorf("unimplemented")
+	return m.unifiedPath, nil
 }
 
 func (m *mockCgroupManager) Freeze(state configs.FreezerState) error {
