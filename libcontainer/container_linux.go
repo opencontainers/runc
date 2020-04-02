@@ -1498,7 +1498,6 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *
 	if err := cmd.Start(); err != nil {
 		return err
 	}
-	criuServer.Close()
 	// cmd.Process will be replaced by a restored init.
 	criuProcess := cmd.Process
 
