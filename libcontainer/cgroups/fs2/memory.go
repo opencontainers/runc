@@ -32,11 +32,16 @@ func numToStr(value int64) (ret string) {
 }
 
 func setMemory(dirPath string, cgroup *configs.Cgroup) error {
-	if val := numToStr(cgroup.Resources.MemorySwap); val != "" {
+	swap, err := cgroups.ConvertMemorySwapToCgroupV2Value(cgroup.Resources.MemorySwap, cgroup.Resources.Memory)
+	if err != nil {
+		return err
+	}
+	if val := numToStr(swap); val != "" {
 		if err := fscommon.WriteFile(dirPath, "memory.swap.max", val); err != nil {
 			return err
 		}
 	}
+
 	if val := numToStr(cgroup.Resources.Memory); val != "" {
 		if err := fscommon.WriteFile(dirPath, "memory.max", val); err != nil {
 			return err

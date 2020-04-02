@@ -84,6 +84,15 @@ func (m *UnifiedManager) Apply(pid int) error {
 			newProp("MemoryMax", uint64(c.Resources.Memory)))
 	}
 
+	swap, err := cgroups.ConvertMemorySwapToCgroupV2Value(c.Resources.MemorySwap, c.Resources.Memory)
+	if err != nil {
+		return err
+	}
+	if swap > 0 {
+		properties = append(properties,
+			newProp("MemorySwapMax", uint64(swap)))
+	}
+
 	if c.Resources.CpuWeight != 0 {
 		properties = append(properties,
 			newProp("CPUWeight", c.Resources.CpuWeight))
