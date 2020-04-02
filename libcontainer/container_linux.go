@@ -1822,14 +1822,23 @@ func (c *linuxContainer) runType() Status {
 }
 
 func (c *linuxContainer) isPaused() (bool, error) {
-	fcg := c.cgroupManager.GetPaths()["freezer"]
-	if fcg == "" {
-		// A container doesn't have a freezer cgroup
-		return false, nil
-	}
-	pausedState := "FROZEN"
-	filename := "freezer.state"
-	if cgroups.IsCgroup2UnifiedMode() {
+	var fcg, filename, pausedState string
+
+	if !cgroups.IsCgroup2UnifiedMode() {
+		fcg = c.cgroupManager.GetPaths()["freezer"]
+		if fcg == "" {
+			// A container doesn't have a freezer cgroup
+			return false, nil
+		}
+		filename = "freezer.state"
+		pausedState = "FROZEN"
+	} else {
+		var err error
+		fcg, err = c.cgroupManager.GetUnifiedPath()
+		if err != nil {
+			// should not happen
+			return false, err
+		}
 		filename = "cgroup.freeze"
 		pausedState = "1"
 	}
