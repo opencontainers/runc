@@ -1093,6 +1093,11 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 			case "bind":
 				c.addCriuDumpMount(req, m)
 			case "cgroup":
+				if cgroups.IsCgroup2UnifiedMode() {
+					c.addCriuDumpMount(req, m)
+					continue
+				}
+				// cgroup v1
 				binds, err := getCgroupMounts(m)
 				if err != nil {
 					return err
@@ -1357,6 +1362,11 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 		case "bind":
 			c.addCriuRestoreMount(req, m)
 		case "cgroup":
+			if cgroups.IsCgroup2UnifiedMode() {
+				c.addCriuRestoreMount(req, m)
+				continue
+			}
+			// cgroup v1
 			binds, err := getCgroupMounts(m)
 			if err != nil {
 				return err
