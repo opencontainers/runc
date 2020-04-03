@@ -65,11 +65,6 @@ var legacySubsystems = subsystemSet{
 	&fs.NameGroup{GroupName: "name=systemd"},
 }
 
-const (
-	testScopeWait = 4
-	testSliceWait = 4
-)
-
 var (
 	connOnce sync.Once
 	connDbus *systemdDbus.Conn
