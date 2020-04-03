@@ -576,7 +576,7 @@ func WriteCgroupProc(dir string, pid int) error {
 
 		// EINVAL might mean that the task being added to cgroup.procs is in state
 		// TASK_NEW. We should attempt to do so again.
-		if errors.Unwrap(err) == unix.EINVAL {
+		if errors.Is(err, unix.EINVAL) {
 			time.Sleep(30 * time.Millisecond)
 			continue
 		}

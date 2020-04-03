@@ -28,7 +28,7 @@ func statPidsWithoutController(dirPath string, stats *cgroups.Stats) error {
 	// if the controller is not enabled, let's read PIDS from cgroups.procs
 	// (or threads if cgroup.threads is enabled)
 	contents, err := ioutil.ReadFile(filepath.Join(dirPath, "cgroup.procs"))
-	if err != nil && errors.Unwrap(err) == unix.ENOTSUP {
+	if errors.Is(err, unix.ENOTSUP) {
 		contents, err = ioutil.ReadFile(filepath.Join(dirPath, "cgroup.threads"))
 	}
 	if err != nil {

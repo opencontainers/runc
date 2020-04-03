@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"syscall"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -110,14 +111,18 @@ func isIgnorableError(rootless bool, err error) bool {
 	if !rootless {
 		return false
 	}
+	// TODO: rm errors.Cause once we switch to %w everywhere
 	err = errors.Cause(err)
 	// Is it an ordinary EPERM?
-	if os.IsPermission(err) {
+	if errors.Is(err, os.ErrPermission) {
 		return true
 	}
 	// Handle some specific syscall errors.
-	errno := errors.Unwrap(err)
-	return errno == unix.EROFS || errno == unix.EPERM || errno == unix.EACCES
+	var errno syscall.Errno
+	if errors.As(err, &errno) {
+		return errno == unix.EROFS || errno == unix.EPERM || errno == unix.EACCES
+	}
+	return false
 }
 
 func (m *Manager) getSubsystems() subsystemSet {
