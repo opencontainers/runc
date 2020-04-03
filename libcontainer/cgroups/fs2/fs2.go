@@ -124,6 +124,12 @@ func (m *manager) GetStats() (*cgroups.Stats, error) {
 			errs = append(errs, err)
 		}
 	}
+	// hugetlb (since kernel 5.6)
+	if _, ok := m.controllers["hugetlb"]; ok {
+		if err := statHugeTlb(m.dirPath, &st); err != nil {
+			errs = append(errs, err)
+		}
+	}
 	if len(errs) > 0 && !m.rootless {
 		return &st, errors.Errorf("error while statting cgroup v2: %+v", errs)
 	}
@@ -195,6 +201,12 @@ func (m *manager) Set(container *configs.Config) error {
 	// cpuset (since kernel 5.0)
 	if _, ok := m.controllers["cpuset"]; ok {
 		if err := setCpuset(m.dirPath, container.Cgroups); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	// hugetlb (since kernel 5.6)
+	if _, ok := m.controllers["hugetlb"]; ok {
+		if err := setHugeTlb(m.dirPath, container.Cgroups); err != nil {
 			errs = append(errs, err)
 		}
 	}
