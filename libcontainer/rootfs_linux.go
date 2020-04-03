@@ -167,9 +167,9 @@ func prepareTmp(topTmpDir string) (string, error) {
 	return tmpdir, nil
 }
 
-func cleanupTmp(tmpdir string) error {
+func cleanupTmp(tmpdir string) {
 	unix.Unmount(tmpdir, 0)
-	return os.RemoveAll(tmpdir)
+	os.RemoveAll(tmpdir)
 }
 
 func mountCmd(cmd configs.Command) error {
