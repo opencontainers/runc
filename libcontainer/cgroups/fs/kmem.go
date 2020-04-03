@@ -6,8 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strconv"
+	"syscall" // for Errno type only
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"golang.org/x/sys/unix"
@@ -47,8 +49,12 @@ func setKernelMemory(path string, kernelMemoryLimit int64) error {
 		// The EBUSY signal is returned on attempts to write to the
 		// memory.kmem.limit_in_bytes file if the cgroup has children or
 		// once tasks have been attached to the cgroup
-		if errors.Unwrap(err) == unix.EBUSY {
-			return fmt.Errorf("failed to set %s, because either tasks have already joined this cgroup or it has children", cgroupKernelMemoryLimit)
+		if pathErr, ok := err.(*os.PathError); ok {
+			if errNo, ok := pathErr.Err.(syscall.Errno); ok {
+				if errNo == unix.EBUSY {
+					return fmt.Errorf("failed to set %s, because either tasks have already joined this cgroup or it has children", cgroupKernelMemoryLimit)
+				}
+			}
 		}
 		return fmt.Errorf("failed to write %v to %v: %v", kernelMemoryLimit, cgroupKernelMemoryLimit, err)
 	}
