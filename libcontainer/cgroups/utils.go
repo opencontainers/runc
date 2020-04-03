@@ -576,7 +576,7 @@ func WriteCgroupProc(dir string, pid int) error {
 
 		// EINVAL might mean that the task being added to cgroup.procs is in state
 		// TASK_NEW. We should attempt to do so again.
-		if isEINVAL(err) {
+		if errors.Is(err, unix.EINVAL) {
 			time.Sleep(30 * time.Millisecond)
 			continue
 		}
@@ -584,15 +584,6 @@ func WriteCgroupProc(dir string, pid int) error {
 		return fmt.Errorf("failed to write %v to %v: %v", pid, CgroupProcesses, err)
 	}
 	return err
-}
-
-func isEINVAL(err error) bool {
-	switch err := err.(type) {
-	case *os.PathError:
-		return err.Err == unix.EINVAL
-	default:
-		return false
-	}
 }
 
 // Since the OCI spec is designed for cgroup v1, in some cases

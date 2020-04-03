@@ -4,7 +4,6 @@ package fs2
 
 import (
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -25,20 +24,11 @@ func setPids(dirPath string, cgroup *configs.Cgroup) error {
 	return nil
 }
 
-func isNOTSUP(err error) bool {
-	switch err := err.(type) {
-	case *os.PathError:
-		return err.Err == unix.ENOTSUP
-	default:
-		return false
-	}
-}
-
 func statPidsWithoutController(dirPath string, stats *cgroups.Stats) error {
 	// if the controller is not enabled, let's read PIDS from cgroups.procs
 	// (or threads if cgroup.threads is enabled)
 	contents, err := ioutil.ReadFile(filepath.Join(dirPath, "cgroup.procs"))
-	if err != nil && isNOTSUP(err) {
+	if errors.Is(err, unix.ENOTSUP) {
 		contents, err = ioutil.ReadFile(filepath.Join(dirPath, "cgroup.threads"))
 	}
 	if err != nil {
