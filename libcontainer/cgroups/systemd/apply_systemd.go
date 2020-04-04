@@ -102,26 +102,6 @@ func getDbusConnection() (*systemdDbus.Conn, error) {
 	return connDbus, connErr
 }
 
-func NewSystemdCgroupsManager() (func(config *configs.Cgroup, paths map[string]string) cgroups.Manager, error) {
-	if !IsRunningSystemd() {
-		return nil, fmt.Errorf("systemd not running on this host, can't use systemd as a cgroups.Manager")
-	}
-	if cgroups.IsCgroup2UnifiedMode() {
-		return func(config *configs.Cgroup, paths map[string]string) cgroups.Manager {
-			return &UnifiedManager{
-				Cgroups: config,
-				Paths:   paths,
-			}
-		}, nil
-	}
-	return func(config *configs.Cgroup, paths map[string]string) cgroups.Manager {
-		return &LegacyManager{
-			Cgroups: config,
-			Paths:   paths,
-		}
-	}, nil
-}
-
 func (m *LegacyManager) Apply(pid int) error {
 	var (
 		c          = m.Cgroups

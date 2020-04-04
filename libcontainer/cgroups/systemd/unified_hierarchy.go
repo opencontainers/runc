@@ -16,14 +16,23 @@ import (
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fs2"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
 type UnifiedManager struct {
 	mu      sync.Mutex
 	Cgroups *configs.Cgroup
-	Paths   map[string]string
+	// path is like "/sys/fs/cgroup/user.slice/user-1001.slice/session-1.scope"
+	path     string
+	rootless bool
+}
+
+func NewUnifiedManager(config *configs.Cgroup, path string, rootless bool) *UnifiedManager {
+	return &UnifiedManager{
+		Cgroups:  config,
+		path:     path,
+		rootless: rootless,
+	}
 }
 
 func (m *UnifiedManager) Apply(pid int) error {
@@ -35,12 +44,7 @@ func (m *UnifiedManager) Apply(pid int) error {
 	)
 
 	if c.Paths != nil {
-		paths := make(map[string]string)
-		for name, path := range c.Paths {
-			paths[name] = path
-		}
-		m.Paths = paths
-		return cgroups.EnterPid(m.Paths, pid)
+		return cgroups.WriteCgroupProc(m.path, pid)
 	}
 
 	if c.Parent != "" {
@@ -144,21 +148,12 @@ func (m *UnifiedManager) Apply(pid int) error {
 		return err
 	}
 
-	path, err := getv2Path(m.Cgroups)
+	_, err = m.GetUnifiedPath()
 	if err != nil {
 		return err
 	}
-	if err := createCgroupsv2Path(path); err != nil {
+	if err := createCgroupsv2Path(m.path); err != nil {
 		return err
-	}
-	m.Paths = map[string]string{
-		"pids":    path,
-		"memory":  path,
-		"io":      path,
-		"cpu":     path,
-		"devices": path,
-		"cpuset":  path,
-		"freezer": path,
 	}
 	return nil
 }
@@ -175,39 +170,39 @@ func (m *UnifiedManager) Destroy() error {
 		return err
 	}
 	dbusConnection.StopUnit(getUnitName(m.Cgroups), "replace", nil)
-	if err := cgroups.RemovePaths(m.Paths); err != nil {
+
+	// XXX this is probably not needed, systemd should handle it
+	err = os.Remove(m.path)
+	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
-	m.Paths = make(map[string]string)
+
 	return nil
 }
 
+// this method is for v1 backward compatibility and will be removed
 func (m *UnifiedManager) GetPaths() map[string]string {
-	m.mu.Lock()
-	paths := m.Paths
-	m.mu.Unlock()
+	_, _ = m.GetUnifiedPath()
+	paths := map[string]string{
+		"pids":    m.path,
+		"memory":  m.path,
+		"io":      m.path,
+		"cpu":     m.path,
+		"devices": m.path,
+		"cpuset":  m.path,
+		"freezer": m.path,
+	}
 	return paths
 }
+
 func (m *UnifiedManager) GetUnifiedPath() (string, error) {
-	unifiedPath := ""
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	for k, v := range m.Paths {
-		if unifiedPath == "" {
-			unifiedPath = v
-		} else if v != unifiedPath {
-			return unifiedPath,
-				errors.Errorf("expected %q path to be unified path %q, got %q", k, unifiedPath, v)
-		}
+	if m.path != "" {
+		return m.path, nil
 	}
-	if unifiedPath == "" {
-		// FIXME: unified path could be detected even when no controller is available
-		return unifiedPath, errors.New("cannot detect unified path")
-	}
-	return unifiedPath, nil
-}
 
-func getv2Path(c *configs.Cgroup) (string, error) {
+	c := m.Cgroups
 	slice := "system.slice"
 	if c.Parent != "" {
 		slice = c.Parent
@@ -218,7 +213,8 @@ func getv2Path(c *configs.Cgroup) (string, error) {
 		return "", err
 	}
 
-	return filepath.Join(fs2.UnifiedMountpoint, slice, getUnitName(c)), nil
+	m.path = filepath.Join(fs2.UnifiedMountpoint, slice, getUnitName(c))
+	return m.path, nil
 }
 
 func createCgroupsv2Path(path string) (Err error) {
@@ -263,7 +259,7 @@ func (m *UnifiedManager) fsManager() (cgroups.Manager, error) {
 	if err != nil {
 		return nil, err
 	}
-	return fs2.NewManager(m.Cgroups, path, false)
+	return fs2.NewManager(m.Cgroups, path, m.rootless)
 }
 
 func (m *UnifiedManager) Freeze(state configs.FreezerState) error {
