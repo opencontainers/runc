@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/pkg/errors"
@@ -50,10 +49,7 @@ func detectControllers(dirPath string) (map[string]struct{}, error) {
 	if err := os.MkdirAll(dirPath, 0755); err != nil {
 		return nil, err
 	}
-	controllersPath, err := securejoin.SecureJoin(dirPath, "cgroup.controllers")
-	if err != nil {
-		return nil, err
-	}
+	controllersPath := filepath.Join(dirPath, "cgroup.controllers")
 	controllersData, err := ioutil.ReadFile(controllersPath)
 	if err != nil {
 		return nil, err
