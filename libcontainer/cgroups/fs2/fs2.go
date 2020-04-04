@@ -13,6 +13,16 @@ import (
 	"github.com/pkg/errors"
 )
 
+type manager struct {
+	config *configs.Cgroup
+	// dirPath is like "/sys/fs/cgroup/user.slice/user-1001.slice/session-1.scope"
+	dirPath string
+	// controllers is content of "cgroup.controllers" file.
+	// excludes pseudo-controllers ("devices" and "freezer").
+	controllers map[string]struct{}
+	rootless    bool
+}
+
 // NewManager creates a manager for cgroup v2 unified hierarchy.
 // dirPath is like "/sys/fs/cgroup/user.slice/user-1001.slice/session-1.scope".
 // If dirPath is empty, it is automatically set using config.
@@ -60,16 +70,6 @@ func detectControllers(dirPath string) (map[string]struct{}, error) {
 		controllers[c] = struct{}{}
 	}
 	return controllers, nil
-}
-
-type manager struct {
-	config *configs.Cgroup
-	// dirPath is like "/sys/fs/cgroup/user.slice/user-1001.slice/session-1.scope"
-	dirPath string
-	// controllers is content of "cgroup.controllers" file.
-	// excludes pseudo-controllers ("devices" and "freezer").
-	controllers map[string]struct{}
-	rootless    bool
 }
 
 func (m *manager) Apply(pid int) error {
