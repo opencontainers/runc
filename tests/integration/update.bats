@@ -61,7 +61,8 @@ EOF
         MEM_SWAP="memory.swap.max"
         SYSTEM_MEM="max"
         SYSTEM_MEM_SWAP="max"
-        CGROUP_MEMORY=$CGROUP_PATH
+        # checking swap is currently disabled for v2
+        #CGROUP_MEMORY=$CGROUP_PATH
         ;;
     esac
 
