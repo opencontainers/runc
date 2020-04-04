@@ -34,6 +34,8 @@ matrix:
         - sudo ssh default sudo podman build -t test /vagrant
         # Mounting /lib/modules into the container is necessary as CRIU wants to load (via iptables) additional modules
         - sudo ssh default sudo podman run --privileged --cgroupns=private -v /lib/modules:/lib/modules:ro test make localunittest
+        # cgroupv2+systemd: test on vagrant host itself as we need systemd
+        - sudo ssh default -t 'cd /vagrant && sudo make localintegration RUNC_USE_SYSTEMD=yes'
   allow_failures:
     - go: tip
 
