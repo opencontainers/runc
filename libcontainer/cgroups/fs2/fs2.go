@@ -37,38 +37,38 @@ func NewManager(config *configs.Cgroup, dirPath string, rootless bool) (cgroups.
 			return nil, err
 		}
 	}
-	controllers, err := detectControllers(dirPath)
-	if err != nil && !rootless {
-		return nil, err
-	}
 
 	m := &manager{
-		config:      config,
-		dirPath:     dirPath,
-		controllers: controllers,
-		rootless:    rootless,
+		config:   config,
+		dirPath:  dirPath,
+		rootless: rootless,
 	}
 	return m, nil
 }
 
-func detectControllers(dirPath string) (map[string]struct{}, error) {
-	if err := os.MkdirAll(dirPath, 0755); err != nil {
-		return nil, err
+func (m *manager) getControllers() error {
+	if m.controllers != nil {
+		return nil
 	}
-	controllersPath := filepath.Join(dirPath, "cgroup.controllers")
-	controllersData, err := ioutil.ReadFile(controllersPath)
-	if err != nil {
-		return nil, err
+
+	file := filepath.Join(m.dirPath, "cgroup.controllers")
+	data, err := ioutil.ReadFile(file)
+	if err != nil && !m.rootless {
+		return err
 	}
-	controllersFields := strings.Fields(string(controllersData))
-	controllers := make(map[string]struct{}, len(controllersFields))
-	for _, c := range controllersFields {
-		controllers[c] = struct{}{}
+	fields := strings.Fields(string(data))
+	m.controllers = make(map[string]struct{}, len(fields))
+	for _, c := range fields {
+		m.controllers[c] = struct{}{}
 	}
-	return controllers, nil
+
+	return nil
 }
 
 func (m *manager) Apply(pid int) error {
+	if err := CreateCgroupPath(m.dirPath); err != nil {
+		return err
+	}
 	if err := cgroups.WriteCgroupProc(m.dirPath, pid); err != nil && !m.rootless {
 		return err
 	}
@@ -89,6 +89,9 @@ func (m *manager) GetStats() (*cgroups.Stats, error) {
 	)
 
 	st := cgroups.NewStats()
+	if err := m.getControllers(); err != nil {
+		return st, err
+	}
 
 	// pids (since kernel 4.5)
 	if _, ok := m.controllers["pids"]; ok {
@@ -144,6 +147,7 @@ func (m *manager) Destroy() error {
 
 // GetPaths is for compatibility purpose and should be removed in future
 func (m *manager) GetPaths() map[string]string {
+	_ = m.getControllers()
 	paths := map[string]string{
 		// pseudo-controller for compatibility
 		"devices": m.dirPath,
@@ -162,6 +166,9 @@ func (m *manager) GetUnifiedPath() (string, error) {
 func (m *manager) Set(container *configs.Config) error {
 	if container == nil || container.Cgroups == nil {
 		return nil
+	}
+	if err := m.getControllers(); err != nil {
+		return err
 	}
 	var errs []error
 	// pids (since kernel 4.5)

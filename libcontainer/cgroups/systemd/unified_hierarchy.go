@@ -3,8 +3,6 @@
 package systemd
 
 import (
-	"bytes"
-	"io/ioutil"
 	"math"
 	"os"
 	"path/filepath"
@@ -153,7 +151,7 @@ func (m *unifiedManager) Apply(pid int) error {
 	if err != nil {
 		return err
 	}
-	if err := createCgroupsv2Path(m.path); err != nil {
+	if err := fs2.CreateCgroupPath(m.path); err != nil {
 		return err
 	}
 	return nil
@@ -222,43 +220,6 @@ func (m *unifiedManager) GetUnifiedPath() (string, error) {
 	m.path = path
 
 	return m.path, nil
-}
-
-func createCgroupsv2Path(path string) (Err error) {
-	content, err := ioutil.ReadFile("/sys/fs/cgroup/cgroup.controllers")
-	if err != nil {
-		return err
-	}
-
-	ctrs := bytes.Fields(content)
-	res := append([]byte("+"), bytes.Join(ctrs, []byte(" +"))...)
-
-	current := "/sys/fs"
-	elements := strings.Split(path, "/")
-	for i, e := range elements[3:] {
-		current = filepath.Join(current, e)
-		if i > 0 {
-			if err := os.Mkdir(current, 0755); err != nil {
-				if !os.IsExist(err) {
-					return err
-				}
-			} else {
-				// If the directory was created, be sure it is not left around on errors.
-				current := current
-				defer func() {
-					if Err != nil {
-						os.Remove(current)
-					}
-				}()
-			}
-		}
-		if i < len(elements[3:])-1 {
-			if err := ioutil.WriteFile(filepath.Join(current, "cgroup.subtree_control"), res, 0755); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
 }
 
 func (m *unifiedManager) fsManager() (cgroups.Manager, error) {
