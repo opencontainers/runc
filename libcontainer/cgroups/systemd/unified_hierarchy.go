@@ -20,25 +20,25 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type UnifiedManager struct {
+type unifiedManager struct {
 	mu      sync.Mutex
-	Cgroups *configs.Cgroup
+	cgroups *configs.Cgroup
 	// path is like "/sys/fs/cgroup/user.slice/user-1001.slice/session-1.scope"
 	path     string
 	rootless bool
 }
 
-func NewUnifiedManager(config *configs.Cgroup, path string, rootless bool) *UnifiedManager {
-	return &UnifiedManager{
-		Cgroups:  config,
+func NewUnifiedManager(config *configs.Cgroup, path string, rootless bool) *unifiedManager {
+	return &unifiedManager{
+		cgroups:  config,
 		path:     path,
 		rootless: rootless,
 	}
 }
 
-func (m *UnifiedManager) Apply(pid int) error {
+func (m *unifiedManager) Apply(pid int) error {
 	var (
-		c          = m.Cgroups
+		c          = m.cgroups
 		unitName   = getUnitName(c)
 		slice      = "system.slice"
 		properties []systemdDbus.Property
@@ -159,8 +159,8 @@ func (m *UnifiedManager) Apply(pid int) error {
 	return nil
 }
 
-func (m *UnifiedManager) Destroy() error {
-	if m.Cgroups.Paths != nil {
+func (m *unifiedManager) Destroy() error {
+	if m.cgroups.Paths != nil {
 		return nil
 	}
 	m.mu.Lock()
@@ -170,7 +170,7 @@ func (m *UnifiedManager) Destroy() error {
 	if err != nil {
 		return err
 	}
-	dbusConnection.StopUnit(getUnitName(m.Cgroups), "replace", nil)
+	dbusConnection.StopUnit(getUnitName(m.cgroups), "replace", nil)
 
 	// XXX this is probably not needed, systemd should handle it
 	err = os.Remove(m.path)
@@ -182,7 +182,7 @@ func (m *UnifiedManager) Destroy() error {
 }
 
 // this method is for v1 backward compatibility and will be removed
-func (m *UnifiedManager) GetPaths() map[string]string {
+func (m *unifiedManager) GetPaths() map[string]string {
 	_, _ = m.GetUnifiedPath()
 	paths := map[string]string{
 		"pids":    m.path,
@@ -196,14 +196,14 @@ func (m *UnifiedManager) GetPaths() map[string]string {
 	return paths
 }
 
-func (m *UnifiedManager) GetUnifiedPath() (string, error) {
+func (m *unifiedManager) GetUnifiedPath() (string, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.path != "" {
 		return m.path, nil
 	}
 
-	c := m.Cgroups
+	c := m.cgroups
 	slice := "system.slice"
 	if c.Parent != "" {
 		slice = c.Parent
@@ -261,15 +261,15 @@ func createCgroupsv2Path(path string) (Err error) {
 	return nil
 }
 
-func (m *UnifiedManager) fsManager() (cgroups.Manager, error) {
+func (m *unifiedManager) fsManager() (cgroups.Manager, error) {
 	path, err := m.GetUnifiedPath()
 	if err != nil {
 		return nil, err
 	}
-	return fs2.NewManager(m.Cgroups, path, m.rootless)
+	return fs2.NewManager(m.cgroups, path, m.rootless)
 }
 
-func (m *UnifiedManager) Freeze(state configs.FreezerState) error {
+func (m *unifiedManager) Freeze(state configs.FreezerState) error {
 	fsMgr, err := m.fsManager()
 	if err != nil {
 		return err
@@ -277,7 +277,7 @@ func (m *UnifiedManager) Freeze(state configs.FreezerState) error {
 	return fsMgr.Freeze(state)
 }
 
-func (m *UnifiedManager) GetPids() ([]int, error) {
+func (m *unifiedManager) GetPids() ([]int, error) {
 	path, err := m.GetUnifiedPath()
 	if err != nil {
 		return nil, err
@@ -285,7 +285,7 @@ func (m *UnifiedManager) GetPids() ([]int, error) {
 	return cgroups.GetPids(path)
 }
 
-func (m *UnifiedManager) GetAllPids() ([]int, error) {
+func (m *unifiedManager) GetAllPids() ([]int, error) {
 	path, err := m.GetUnifiedPath()
 	if err != nil {
 		return nil, err
@@ -293,7 +293,7 @@ func (m *UnifiedManager) GetAllPids() ([]int, error) {
 	return cgroups.GetAllPids(path)
 }
 
-func (m *UnifiedManager) GetStats() (*cgroups.Stats, error) {
+func (m *unifiedManager) GetStats() (*cgroups.Stats, error) {
 	fsMgr, err := m.fsManager()
 	if err != nil {
 		return nil, err
@@ -301,7 +301,7 @@ func (m *UnifiedManager) GetStats() (*cgroups.Stats, error) {
 	return fsMgr.GetStats()
 }
 
-func (m *UnifiedManager) Set(container *configs.Config) error {
+func (m *unifiedManager) Set(container *configs.Config) error {
 	fsMgr, err := m.fsManager()
 	if err != nil {
 		return err
@@ -309,6 +309,6 @@ func (m *UnifiedManager) Set(container *configs.Config) error {
 	return fsMgr.Set(container)
 }
 
-func (m *UnifiedManager) GetCgroups() (*configs.Cgroup, error) {
-	return m.Cgroups, nil
+func (m *unifiedManager) GetCgroups() (*configs.Cgroup, error) {
+	return m.cgroups, nil
 }
