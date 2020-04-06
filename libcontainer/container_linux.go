@@ -1498,6 +1498,8 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *
 	if err := cmd.Start(); err != nil {
 		return err
 	}
+	// we close criuServer so that even if CRIU crashes or unexpectedly exits, runc will not hang.
+	criuServer.Close()
 	// cmd.Process will be replaced by a restored init.
 	criuProcess := cmd.Process
 
