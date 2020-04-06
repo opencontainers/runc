@@ -51,16 +51,22 @@ func InitArgs(args ...string) func(*LinuxFactory) error {
 }
 
 func getUnifiedPath(paths map[string]string) string {
-	unifiedPath := ""
+	path := ""
 	for k, v := range paths {
-		if unifiedPath == "" {
-			unifiedPath = v
-		} else if v != unifiedPath {
-			panic(errors.Errorf("expected %q path to be unified path %q, got %q", k, unifiedPath, v))
+		if path == "" {
+			path = v
+		} else if v != path {
+			panic(errors.Errorf("expected %q path to be unified path %q, got %q", k, path, v))
 		}
 	}
 	// can be empty
-	return unifiedPath
+	if path != "" {
+		if filepath.Clean(path) != path || !filepath.IsAbs(path) {
+			panic(errors.Errorf("invalid dir path %q", path))
+		}
+	}
+
+	return path
 }
 
 func systemdCgroupV2(l *LinuxFactory, rootless bool) error {

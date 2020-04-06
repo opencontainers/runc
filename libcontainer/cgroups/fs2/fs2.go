@@ -30,11 +30,7 @@ func NewManager(config *configs.Cgroup, dirPath string, rootless bool) (cgroups.
 	if config == nil {
 		config = &configs.Cgroup{}
 	}
-	if dirPath != "" {
-		if filepath.Clean(dirPath) != dirPath || !filepath.IsAbs(dirPath) {
-			return nil, errors.Errorf("invalid dir path %q", dirPath)
-		}
-	} else {
+	if dirPath == "" {
 		var err error
 		dirPath, err = defaultDirPath(config)
 		if err != nil {
