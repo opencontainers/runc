@@ -13,6 +13,7 @@ import (
 	"time"
 
 	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
+	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fs2"
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -213,7 +214,13 @@ func (m *UnifiedManager) GetUnifiedPath() (string, error) {
 		return "", err
 	}
 
-	m.path = filepath.Join(fs2.UnifiedMountpoint, slice, getUnitName(c))
+	path := filepath.Join(slice, getUnitName(c))
+	path, err = securejoin.SecureJoin(fs2.UnifiedMountpoint, path)
+	if err != nil {
+		return "", err
+	}
+	m.path = path
+
 	return m.path, nil
 }
 
