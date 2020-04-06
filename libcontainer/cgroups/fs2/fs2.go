@@ -93,47 +93,49 @@ func (m *manager) GetAllPids() ([]int, error) {
 
 func (m *manager) GetStats() (*cgroups.Stats, error) {
 	var (
-		st   cgroups.Stats
 		errs []error
 	)
+
+	st := cgroups.NewStats()
+
 	// pids (since kernel 4.5)
 	if _, ok := m.controllers["pids"]; ok {
-		if err := statPids(m.dirPath, &st); err != nil {
+		if err := statPids(m.dirPath, st); err != nil {
 			errs = append(errs, err)
 		}
 	} else {
-		if err := statPidsWithoutController(m.dirPath, &st); err != nil {
+		if err := statPidsWithoutController(m.dirPath, st); err != nil {
 			errs = append(errs, err)
 		}
 	}
-	// memory (since kenrel 4.5)
+	// memory (since kernel 4.5)
 	if _, ok := m.controllers["memory"]; ok {
-		if err := statMemory(m.dirPath, &st); err != nil {
+		if err := statMemory(m.dirPath, st); err != nil {
 			errs = append(errs, err)
 		}
 	}
 	// io (since kernel 4.5)
 	if _, ok := m.controllers["io"]; ok {
-		if err := statIo(m.dirPath, &st); err != nil {
+		if err := statIo(m.dirPath, st); err != nil {
 			errs = append(errs, err)
 		}
 	}
 	// cpu (since kernel 4.15)
 	if _, ok := m.controllers["cpu"]; ok {
-		if err := statCpu(m.dirPath, &st); err != nil {
+		if err := statCpu(m.dirPath, st); err != nil {
 			errs = append(errs, err)
 		}
 	}
 	// hugetlb (since kernel 5.6)
 	if _, ok := m.controllers["hugetlb"]; ok {
-		if err := statHugeTlb(m.dirPath, &st); err != nil {
+		if err := statHugeTlb(m.dirPath, st); err != nil {
 			errs = append(errs, err)
 		}
 	}
 	if len(errs) > 0 && !m.rootless {
-		return &st, errors.Errorf("error while statting cgroup v2: %+v", errs)
+		return st, errors.Errorf("error while statting cgroup v2: %+v", errs)
 	}
-	return &st, nil
+	return st, nil
 }
 
 func (m *manager) Freeze(state configs.FreezerState) error {
