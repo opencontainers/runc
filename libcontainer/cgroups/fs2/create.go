@@ -2,6 +2,7 @@ package fs2
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -11,6 +12,10 @@ import (
 // CreateCgroupPath creates cgroupv2 path, enabling all the
 // available controllers in the process.
 func CreateCgroupPath(path string) (Err error) {
+	if !strings.HasPrefix(path, UnifiedMountpoint) {
+		return fmt.Errorf("invalid cgroup path %s", path)
+	}
+
 	const file = UnifiedMountpoint + "/cgroup.controllers"
 	content, err := ioutil.ReadFile(file)
 	if err != nil {
