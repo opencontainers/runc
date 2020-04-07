@@ -4,7 +4,6 @@ package systemd
 
 import (
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"math"
 	"os"
@@ -14,7 +13,6 @@ import (
 	"time"
 
 	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
-	dbus "github.com/godbus/dbus/v5"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fs"
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -63,43 +61,6 @@ var legacySubsystems = subsystemSet{
 	&fs.NetPrioGroup{},
 	&fs.NetClsGroup{},
 	&fs.NameGroup{GroupName: "name=systemd"},
-}
-
-var (
-	connOnce sync.Once
-	connDbus *systemdDbus.Conn
-	connErr  error
-)
-
-func newProp(name string, units interface{}) systemdDbus.Property {
-	return systemdDbus.Property{
-		Name:  name,
-		Value: dbus.MakeVariant(units),
-	}
-}
-
-// NOTE: This function comes from package github.com/coreos/go-systemd/util
-// It was borrowed here to avoid a dependency on cgo.
-//
-// IsRunningSystemd checks whether the host was booted with systemd as its init
-// system. This functions similarly to systemd's `sd_booted(3)`: internally, it
-// checks whether /run/systemd/system/ exists and is a directory.
-// http://www.freedesktop.org/software/systemd/man/sd_booted.html
-func IsRunningSystemd() bool {
-	fi, err := os.Lstat("/run/systemd/system")
-	if err != nil {
-		return false
-	}
-	return fi.IsDir()
-}
-
-// getDbusConnection lazy initializes systemd dbus connection
-// and returns it
-func getDbusConnection() (*systemdDbus.Conn, error) {
-	connOnce.Do(func() {
-		connDbus, connErr = systemdDbus.New()
-	})
-	return connDbus, connErr
 }
 
 func (m *LegacyManager) Apply(pid int) error {
@@ -331,40 +292,6 @@ func joinCgroups(c *configs.Cgroup, pid int) error {
 	return nil
 }
 
-// systemd represents slice hierarchy using `-`, so we need to follow suit when
-// generating the path of slice. Essentially, test-a-b.slice becomes
-// /test.slice/test-a.slice/test-a-b.slice.
-func ExpandSlice(slice string) (string, error) {
-	suffix := ".slice"
-	// Name has to end with ".slice", but can't be just ".slice".
-	if len(slice) < len(suffix) || !strings.HasSuffix(slice, suffix) {
-		return "", fmt.Errorf("invalid slice name: %s", slice)
-	}
-
-	// Path-separators are not allowed.
-	if strings.Contains(slice, "/") {
-		return "", fmt.Errorf("invalid slice name: %s", slice)
-	}
-
-	var path, prefix string
-	sliceName := strings.TrimSuffix(slice, suffix)
-	// if input was -.slice, we should just return root now
-	if sliceName == "-" {
-		return "/", nil
-	}
-	for _, component := range strings.Split(sliceName, "-") {
-		// test--a.slice isn't permitted, nor is -test.slice.
-		if component == "" {
-			return "", fmt.Errorf("invalid slice name: %s", slice)
-		}
-
-		// Append the component to the path and to the prefix.
-		path += "/" + prefix + component + suffix
-		prefix += component + "-"
-	}
-	return path, nil
-}
-
 func getSubsystemPath(c *configs.Cgroup, subsystem string) (string, error) {
 	mountpoint, err := cgroups.FindCgroupMountpoint(c.Path, subsystem)
 	if err != nil {
@@ -469,14 +396,6 @@ func (m *LegacyManager) Set(container *configs.Config) error {
 	return nil
 }
 
-func getUnitName(c *configs.Cgroup) string {
-	// by default, we create a scope unless the user explicitly asks for a slice.
-	if !strings.HasSuffix(c.Name, ".slice") {
-		return fmt.Sprintf("%s-%s.scope", c.ScopePrefix, c.Name)
-	}
-	return c.Name
-}
-
 func setKernelMemory(c *configs.Cgroup) error {
 	path, err := getSubsystemPath(c, "memory")
 	if err != nil && !cgroups.IsNotFound(err) {
@@ -497,17 +416,6 @@ func setKernelMemory(c *configs.Cgroup) error {
 	}
 	return fs.EnableKernelMemoryAccounting(path)
 }
-
-// isUnitExists returns true if the error is that a systemd unit already exists.
-func isUnitExists(err error) bool {
-	if err != nil {
-		if dbusError, ok := err.(dbus.Error); ok {
-			return strings.Contains(dbusError.Name, "org.freedesktop.systemd1.UnitExists")
-		}
-	}
-	return false
-}
-
 func (m *LegacyManager) GetCgroups() (*configs.Cgroup, error) {
 	return m.Cgroups, nil
 }
