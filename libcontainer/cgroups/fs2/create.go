@@ -25,9 +25,10 @@ func CreateCgroupPath(path string) (Err error) {
 	ctrs := bytes.Fields(content)
 	res := append([]byte("+"), bytes.Join(ctrs, []byte(" +"))...)
 
-	current := "/sys/fs"
 	elements := strings.Split(path, "/")
-	for i, e := range elements[3:] {
+	elements = elements[3:]
+	current := "/sys/fs"
+	for i, e := range elements {
 		current = filepath.Join(current, e)
 		if i > 0 {
 			if err := os.Mkdir(current, 0755); err != nil {
@@ -44,7 +45,7 @@ func CreateCgroupPath(path string) (Err error) {
 				}()
 			}
 		}
-		if i < len(elements[3:])-1 {
+		if i < len(elements)-1 {
 			if err := ioutil.WriteFile(filepath.Join(current, "cgroup.subtree_control"), res, 0755); err != nil {
 				return err
 			}
