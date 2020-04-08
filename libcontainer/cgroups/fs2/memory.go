@@ -17,15 +17,16 @@ import (
 
 // numToStr converts an int64 value to a string for writing to a
 // cgroupv2 files with .min, .max, .low, or .high suffix.
-// Negative values are converted to "max" for cgroupv1 compatibility
+// The value of -1 is converted to "max" for cgroupv1 compatibility
 // (which used to write -1 to remove the limit).
 func numToStr(value int64) (ret string) {
-	if value > 0 {
-		ret = strconv.FormatInt(value, 10)
-	} else if value < 0 {
-		ret = "max"
-	} else {
+	switch {
+	case value == 0:
 		ret = ""
+	case value == -1:
+		ret = "max"
+	default:
+		ret = strconv.FormatInt(value, 10)
 	}
 
 	return ret
