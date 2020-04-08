@@ -623,3 +623,25 @@ func ConvertCPUQuotaCPUPeriodToCgroupV2Value(quota int64, period uint64) string 
 	}
 	return fmt.Sprintf("%d %d", quota, period)
 }
+
+// ConvertMemorySwapToCgroupV2Value converts MemorySwap value from OCI spec
+// for use by cgroup v2 drivers. A conversion is needed since Resources.MemorySwap
+// is defined as memory+swap combined, while in cgroup v2 swap is a separate value.
+func ConvertMemorySwapToCgroupV2Value(memorySwap, memory int64) (int64, error) {
+	if memorySwap == -1 || memorySwap == 0 {
+		// -1 is "max", 0 is "unset", so treat as is
+		return memorySwap, nil
+	}
+	// sanity checks
+	if memory == 0 || memory == -1 {
+		return 0, errors.New("unable to set swap limit without memory limit")
+	}
+	if memory < 0 {
+		return 0, fmt.Errorf("invalid memory value: %d", memory)
+	}
+	if memorySwap < memory {
+		return 0, errors.New("memory+swap limit should be > memory limit")
+	}
+
+	return memorySwap - memory, nil
+}
