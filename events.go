@@ -161,6 +161,9 @@ func convertLibcontainerStats(ls *libcontainer.Stats) *types.Stats {
 			s.IntelRdt.MemBwSchemaRoot = is.MemBwSchemaRoot
 			s.IntelRdt.MemBwSchema = is.MemBwSchema
 		}
+		if intelrdt.IsMbmEnabled() {
+			s.IntelRdt.MBMStats = is.MBMStats
+		}
 	}
 
 	s.NetworkInterfaces = ls.Interfaces

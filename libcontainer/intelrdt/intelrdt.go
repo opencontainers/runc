@@ -55,6 +55,10 @@ import (
  * |   |   |-- cbm_mask
  * |   |   |-- min_cbm_bits
  * |   |   |-- num_closids
+ * |   |-- L3_MON
+ * |   |   |-- max_threshold_occupancy
+ * |   |   |-- mon_features
+ * |   |   |-- num_rmids
  * |   |-- MB
  * |       |-- bandwidth_gran
  * |       |-- delay_linear
@@ -221,6 +225,17 @@ func init() {
 			isMbaEnabled = true
 		}
 	}
+
+	if flagsSet.MBMTotal || flagsSet.MBMLocal {
+		if _, err := os.Stat(filepath.Join(intelRdtRoot, "info", "L3_MON")); err == nil {
+			isMbmEnabled = true
+		}
+
+		enabledMonFeatures, err = getMonFeatures(intelRdtRoot)
+		if err != nil {
+			return
+		}
+	}
 }
 
 // Return the mount point path of Intel RDT "resource control" filesysem
@@ -300,6 +315,10 @@ func isIntelRdtMounted() bool {
 type cpuInfoFlags struct {
 	CAT bool // Cache Allocation Technology
 	MBA bool // Memory Bandwidth Allocation
+
+	// Memory Bandwidth Monitoring related.
+	MBMTotal bool
+	MBMLocal bool
 }
 
 func parseCpuInfoFile(path string) (cpuInfoFlags, error) {
@@ -325,6 +344,10 @@ func parseCpuInfoFile(path string) (cpuInfoFlags, error) {
 					infoFlags.CAT = true
 				case "mba":
 					infoFlags.MBA = true
+				case "cqm_mbm_total":
+					infoFlags.MBMTotal = true
+				case "cqm_mbm_local":
+					infoFlags.MBMLocal = true
 				}
 			}
 			return infoFlags, nil
@@ -589,7 +612,8 @@ func (m *IntelRdtManager) GetStats() (*Stats, error) {
 	schemaRootStrings := strings.Split(tmpRootStrings, "\n")
 
 	// The L3 cache and memory bandwidth schemata in 'container_id' group
-	tmpStrings, err := getIntelRdtParamString(m.GetPath(), "schemata")
+	containerPath := m.GetPath()
+	tmpStrings, err := getIntelRdtParamString(containerPath, "schemata")
 	if err != nil {
 		return nil, err
 	}
@@ -639,6 +663,14 @@ func (m *IntelRdtManager) GetStats() (*Stats, error) {
 				stats.MemBwSchema = strings.TrimSpace(schema)
 			}
 		}
+	}
+
+	if IsMbmEnabled() {
+		mbmStats, err := getMBMStats(containerPath)
+		if err != nil {
+			return stats, err
+		}
+		stats.MBMStats = mbmStats
 	}
 
 	return stats, nil
