@@ -66,7 +66,7 @@ func (m *manager) getControllers() error {
 }
 
 func (m *manager) Apply(pid int) error {
-	if err := CreateCgroupPath(m.dirPath); err != nil {
+	if err := CreateCgroupPath(m.dirPath, m.config); err != nil {
 		return err
 	}
 	if err := cgroups.WriteCgroupProc(m.dirPath, pid); err != nil && !m.rootless {

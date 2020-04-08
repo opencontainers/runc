@@ -151,7 +151,7 @@ func (m *unifiedManager) Apply(pid int) error {
 	if err != nil {
 		return err
 	}
-	if err := fs2.CreateCgroupPath(m.path); err != nil {
+	if err := fs2.CreateCgroupPath(m.path, m.cgroups); err != nil {
 		return err
 	}
 	return nil

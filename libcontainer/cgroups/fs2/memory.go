@@ -32,7 +32,15 @@ func numToStr(value int64) (ret string) {
 	return ret
 }
 
+func isMemorySet(cgroup *configs.Cgroup) bool {
+	return cgroup.Resources.MemoryReservation != 0 ||
+		cgroup.Resources.Memory != 0 || cgroup.Resources.MemorySwap != 0
+}
+
 func setMemory(dirPath string, cgroup *configs.Cgroup) error {
+	if !isMemorySet(cgroup) {
+		return nil
+	}
 	swap, err := cgroups.ConvertMemorySwapToCgroupV2Value(cgroup.Resources.MemorySwap, cgroup.Resources.Memory)
 	if err != nil {
 		return err

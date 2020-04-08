@@ -13,7 +13,15 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
+func isCpuSet(cgroup *configs.Cgroup) bool {
+	return cgroup.Resources.CpuWeight != 0 || cgroup.Resources.CpuMax != ""
+}
+
 func setCpu(dirPath string, cgroup *configs.Cgroup) error {
+	if !isCpuSet(cgroup) {
+		return nil
+	}
+
 	// NOTE: .CpuShares is not used here. Conversion is the caller's responsibility.
 	if cgroup.Resources.CpuWeight != 0 {
 		if err := fscommon.WriteFile(dirPath, "cpu.weight", strconv.FormatUint(cgroup.Resources.CpuWeight, 10)); err != nil {
