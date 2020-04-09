@@ -36,7 +36,6 @@ matrix:
         - sudo ssh default sudo podman run --privileged --cgroupns=private -v /lib/modules:/lib/modules:ro test make localunittest
   allow_failures:
     - go: tip
-    - name: "cgroup-v2"
 
 go_import_path: github.com/opencontainers/runc
 
