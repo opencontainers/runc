@@ -1,5 +1,4 @@
 ARG GO_VERSION=1.13
-ARG BATS_VERSION=03608115df2071fff4eaaff1605768c275e5f81f
 ARG CRIU_VERSION=v3.13
 
 FROM golang:${GO_VERSION}-buster
@@ -33,6 +32,7 @@ RUN dpkg --add-architecture armel \
         libseccomp-dev:armhf \
         libseccomp-dev:ppc64el \
         libseccomp2 \
+        npm \
         pkg-config \
         protobuf-c-compiler \
         protobuf-compiler \
@@ -49,13 +49,7 @@ RUN dpkg --add-architecture armel \
 RUN useradd -u1000 -m -d/home/rootless -s/bin/bash rootless
 
 # install bats
-ARG BATS_VERSION
-RUN cd /tmp \
-    && git clone https://github.com/sstephenson/bats.git \
-    && cd bats \
-    && git reset --hard "${BATS_VERSION}" \
-    && ./install.sh /usr/local \
-    && rm -rf /tmp/bats
+RUN npm install -g bats
 
 # install criu
 ARG CRIU_VERSION
