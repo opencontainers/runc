@@ -29,11 +29,11 @@ matrix:
 # https://github.com/alvistack/ansible-role-virtualbox/blob/6887b020b0ca5c59ddb6620d73f053ffb84f4126/.travis.yml#L30
         - sudo apt-get install -q -y bridge-utils dnsmasq-base ebtables libvirt-bin libvirt-dev qemu-kvm qemu-utils ruby-dev && wget https://releases.hashicorp.com/vagrant/${VAGRANT_VERSION}/vagrant_${VAGRANT_VERSION}_$(uname -m).deb && sudo dpkg -i vagrant_${VAGRANT_VERSION}_$(uname -m).deb && rm -f vagrant_${VAGRANT_VERSION}_$(uname -m).deb
         - sudo vagrant plugin install vagrant-libvirt
-        - sudo vagrant up && sudo mkdir -p /root/.ssh && sudo sh -c "vagrant ssh-config >> /root/.ssh/config"
+        - sudo vagrant up
       script:
-        - sudo ssh default sudo podman build -t test /vagrant
+        - sudo vagrant ssh -c 'sudo podman build -t test /vagrant'
         # Mounting /lib/modules into the container is necessary as CRIU wants to load (via iptables) additional modules
-        - sudo ssh default sudo podman run --privileged --cgroupns=private -v /lib/modules:/lib/modules:ro test make localunittest
+        - sudo vagrant ssh -c 'sudo podman run --privileged --cgroupns=private -v /lib/modules:/lib/modules:ro test make localunittest'
   allow_failures:
     - go: tip
 
