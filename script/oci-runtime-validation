@@ -1,0 +1,14 @@
+#!/bin/bash
+
+set -e
+set -x
+
+# Install and run runtime-tools' validation tests
+npm install -g tap
+go get -d -u github.com/opencontainers/runtime-tools || true
+
+cd $GOPATH/src/github.com/opencontainers/runtime-tools
+make
+sudo PATH="$PATH:$(dirname $(which node))" TAP="$(which tap)" RUNTIME="${RUNTIME}" make localvalidation \
+ || true # All tests don't pass yet. For now, only display results without returning an error.
+

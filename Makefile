@@ -117,6 +117,9 @@ validate:
 	script/validate-c
 	$(GO) vet $(allpackages)
 
+oci-runtime-validation:
+	RUNTIME=$(CURDIR)/runc script/oci-runtime-validation
+
 ci: validate test release
 
 vendor:
