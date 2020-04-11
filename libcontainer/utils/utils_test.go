@@ -140,3 +140,36 @@ func TestCleanPath(t *testing.T) {
 		t.Errorf("expected to receive '/foo' and received %s", path)
 	}
 }
+
+func contains(slice []string, item string) bool {
+	for _, v := range slice {
+		if v == item {
+			return true
+		}
+	}
+	return false
+}
+
+func TestStringMapToSlice(t *testing.T) {
+	slice := StringMapToSlice(nil)
+	if len(slice) != 0 || slice == nil {
+		t.Errorf("expected 0 length slice, instead got %+v", slice)
+	}
+
+	m := make(map[string]string)
+	slice = StringMapToSlice(m)
+	if len(slice) != 0 || slice == nil {
+		t.Errorf("expected 0 length slice, instead got %+v", slice)
+	}
+
+	m = make(map[string]string)
+	m["key1"] = "value1"
+	m["key2"] = "value2"
+	slice = StringMapToSlice(m)
+	if len(slice) != 2 {
+		t.Errorf("expected slice of length 2, instead got slice of length %d", len(slice))
+	}
+	if !contains(slice, "value1") || !contains(slice, "value2") {
+		t.Errorf("expected slice to contain both value1 and value2, instead got %+v", slice)
+	}
+}
