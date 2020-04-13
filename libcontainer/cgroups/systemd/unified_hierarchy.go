@@ -151,6 +151,9 @@ func (m *UnifiedManager) Apply(pid int) error {
 	if err := createCgroupsv2Path(path); err != nil {
 		return err
 	}
+	if err := cgroups.WriteCgroupProc(path, pid); err != nil {
+		return err
+	}
 	m.Paths = map[string]string{
 		"pids":    path,
 		"memory":  path,
