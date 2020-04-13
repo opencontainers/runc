@@ -241,6 +241,7 @@ func createCgroupsv2Path(path string) (Err error) {
 				}
 			} else {
 				// If the directory was created, be sure it is not left around on errors.
+				current := current
 				defer func() {
 					if Err != nil {
 						os.Remove(current)
