@@ -36,6 +36,8 @@ matrix:
         - sudo ssh default sudo podman run --privileged --cgroupns=private -v /lib/modules:/lib/modules:ro test make localunittest
         # cgroupv2+systemd: test on vagrant host itself as we need systemd
         - sudo ssh default -t 'cd /vagrant && sudo make localintegration RUNC_USE_SYSTEMD=yes'
+        # same setup but with fs2 driver instead of systemd
+        - sudo ssh default -t 'cd /vagrant && sudo make localintegration'
   allow_failures:
     - go: tip
 
