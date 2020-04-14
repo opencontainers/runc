@@ -13,6 +13,12 @@ Vagrant.configure("2") do |config|
     v.cpus = 2
   end
   config.vm.provision "shell", inline: <<-SHELL
-    dnf install -y podman
+    cat << EOF | dnf -y shell
+config install_weak_deps: False
+update
+install podman make golang-go libseccomp-devel bats jq
+ts run
+EOF
+    dnf clean all
   SHELL
 end

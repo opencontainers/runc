@@ -36,20 +36,6 @@ ROOT=$(mktemp -d "$BATS_TMPDIR/runc.XXXXXX")
 # Path to console socket.
 CONSOLE_SOCKET="$BATS_TMPDIR/console.sock"
 
-# Cgroup paths
-CGROUP_MEMORY_BASE_PATH=$(grep "cgroup" /proc/self/mountinfo | gawk 'toupper($NF) ~ /\<MEMORY\>/ { print $5; exit }')
-CGROUP_CPU_BASE_PATH=$(grep "cgroup" /proc/self/mountinfo | gawk 'toupper($NF) ~ /\<CPU\>/ { print $5; exit }')
-if [[ -n "${RUNC_USE_SYSTEMD}" ]] ; then
-	CGROUPS_PATH="/machine.slice/runc-cgroups-integration-test.scope"
-else
-	CGROUPS_PATH="/runc-cgroups-integration-test/test-cgroup"
-fi
-CGROUP_MEMORY="${CGROUP_MEMORY_BASE_PATH}${CGROUPS_PATH}"
-
-# CONFIG_MEMCG_KMEM support
-KMEM="${CGROUP_MEMORY_BASE_PATH}/memory.kmem.limit_in_bytes"
-RT_PERIOD="${CGROUP_CPU_BASE_PATH}/cpu.rt_period_us"
-
 # Check if we're in rootless mode.
 ROOTLESS=$(id -u)
 
@@ -119,14 +105,62 @@ function runc_rootless_cgroup() {
 	mv "$bundle/config.json"{.tmp,}
 }
 
-# Helper function to set cgroupsPath to the value of $CGROUPS_PATH
+function init_cgroup_paths() {
+	# init once
+	test -n "$CGROUP_UNIFIED" && return
+
+	if [ -n "${RUNC_USE_SYSTEMD}" ] ; then
+		REL_CGROUPS_PATH="/machine.slice/runc-cgroups-integration-test.scope"
+		OCI_CGROUPS_PATH="machine.slice:runc-cgroups:integration-test"
+	else
+		REL_CGROUPS_PATH="/runc-cgroups-integration-test/test-cgroup"
+		OCI_CGROUPS_PATH=$REL_CGROUPS_PATH
+	fi
+
+	if stat -f -c %t /sys/fs/cgroup | grep -qFw 63677270; then
+		CGROUP_UNIFIED=yes
+		# "pseudo" controllers do not appear in /sys/fs/cgroup/cgroup.controllers.
+		# - devices (since kernel 4.15)
+		# - freezer (since kernel 5.2)
+		# Assume these are always available, as it is hard to detect
+		CGROUP_SUBSYSTEMS=$(cat /sys/fs/cgroup/cgroup.controllers; echo devices freezer)
+		CGROUP_BASE_PATH=/sys/fs/cgroup
+		CGROUP_PATH=${CGROUP_BASE_PATH}${REL_CGROUPS_PATH}
+	else
+		CGROUP_UNIFIED=no
+		CGROUP_SUBSYSTEMS=$(awk '!/^#/ {print $1}' /proc/cgroups)
+		for g in ${CGROUP_SUBSYSTEMS}; do
+			base_path=$(gawk '$(NF-2) == "cgroup" && $NF ~ /\<'${g}'\>/ { print $5; exit }' /proc/self/mountinfo)
+			test -z "$base_path" && continue
+			eval CGROUP_${g^^}_BASE_PATH="${base_path}"
+			eval CGROUP_${g^^}="${base_path}${REL_CGROUPS_PATH}"
+		done
+	fi
+}
+
+# Helper function to set cgroupsPath to the value of $OCI_CGROUPS_PATH
 function set_cgroups_path() {
   bundle="${1:-.}"
-  cgroups_path="/runc-cgroups-integration-test/test-cgroup"
-  if [[ -n "${RUNC_USE_SYSTEMD}" ]] ; then
-    cgroups_path="machine.slice:runc-cgroups:integration-test"
-  fi
-  sed -i 's#\("linux": {\)#\1\n    "cgroupsPath": "'"${cgroups_path}"'",#' "$bundle/config.json"
+  init_cgroup_paths
+  sed -i 's#\("linux": {\)#\1\n    "cgroupsPath": "'"${OCI_CGROUPS_PATH}"'",#' "$bundle/config.json"
+}
+
+# Helper to check a value in cgroups.
+function check_cgroup_value() {
+	source=$1
+	expected=$2
+
+	if [ "x$CGROUP_UNIFIED" = "xyes" ] ; then
+		cgroup=$CGROUP_PATH
+	else
+		ctrl=${source%%.*}
+		eval cgroup=\$CGROUP_${ctrl^^}
+	fi
+
+	current=$(cat $cgroup/$source)
+	echo $cgroup/$source
+	echo "current" $current "!?" "$expected"
+	[ "$current" = "$expected" ]
 }
 
 # Helper function to set a resources limit
@@ -177,13 +211,27 @@ function requires() {
 			fi
 			;;
 		cgroups_kmem)
-			if [ ! -e "$KMEM" ]; then
+			init_cgroup_paths
+			if [ ! -e "${CGROUP_MEMORY_BASE_PATH}/memory.kmem.limit_in_bytes" ]; then
 				skip "Test requires ${var}"
 			fi
 			;;
 		cgroups_rt)
-			if [ ! -e "$RT_PERIOD" ]; then
+			init_cgroup_paths
+			if [ ! -e "${CGROUP_CPU_BASE_PATH}/cpu.rt_period_us" ]; then
 				skip "Test requires ${var}"
+			fi
+			;;
+		cgroups_v1)
+			init_cgroup_paths
+			if [ "$CGROUP_UNIFIED" != "no" ]; then
+				skip "Test requires cgroups v1"
+			fi
+			;;
+		cgroups_v2)
+			init_cgroup_paths
+			if [ "$CGROUP_UNIFIED" != "yes" ]; then
+				skip "Test requires cgroups v2 (unified)"
 			fi
 			;;
 		*)

@@ -13,7 +13,8 @@ function teardown() {
 
 @test "events --stats" {
   # XXX: currently cgroups require root containers.
-  requires root
+  # TODO: support cgroup v2 memory.events
+  requires root cgroups_v1
 
   # run busybox detached
   runc run -d --console-socket $CONSOLE_SOCKET test_busybox
@@ -28,7 +29,8 @@ function teardown() {
 
 @test "events --interval default " {
   # XXX: currently cgroups require root containers.
-  requires root
+  # TODO: support cgroup v2 memory.events
+  requires root cgroups_v1
 
   # run busybox detached
   runc run -d --console-socket $CONSOLE_SOCKET test_busybox
@@ -55,7 +57,8 @@ function teardown() {
 
 @test "events --interval 1s " {
   # XXX: currently cgroups require root containers.
-  requires root
+  # TODO: support cgroup v2 memory.events
+  requires root cgroups_v1
 
   # run busybox detached
   runc run -d --console-socket $CONSOLE_SOCKET test_busybox
@@ -81,7 +84,8 @@ function teardown() {
 
 @test "events --interval 100ms " {
   # XXX: currently cgroups require root containers.
-  requires root
+  # TODO: support cgroup v2 memory.events
+  requires root cgroups_v1
 
   # run busybox detached
   runc run -d --console-socket $CONSOLE_SOCKET test_busybox

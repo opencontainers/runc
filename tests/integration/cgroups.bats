@@ -14,18 +14,7 @@ function setup() {
     setup_busybox
 }
 
-function check_cgroup_value() {
-    cgroup=$1
-    source=$2
-    expected=$3
-
-    current=$(cat $cgroup/$source)
-    echo  $cgroup/$source
-    echo "current" $current "!?" "$expected"
-    [ "$current" -eq "$expected" ]
-}
-
-@test "runc update --kernel-memory (initialized)" {
+@test "runc update --kernel-memory{,-tcp} (initialized)" {
     [[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
     requires cgroups_kmem
 
@@ -34,7 +23,8 @@ function check_cgroup_value() {
     # Set some initial known values
     DATA=$(cat <<-EOF
     "memory": {
-        "kernel": 16777216
+        "kernel": 16777216,
+        "kernelTCP": 11534336
     },
 EOF
     )
@@ -45,12 +35,18 @@ EOF
     runc run -d --console-socket $CONSOLE_SOCKET test_cgroups_kmem
     [ "$status" -eq 0 ]
 
+    check_cgroup_value "memory.kmem.limit_in_bytes" 16777216
+    check_cgroup_value "memory.kmem.tcp.limit_in_bytes" 11534336
+
     # update kernel memory limit
     runc update test_cgroups_kmem --kernel-memory 50331648
     [ "$status" -eq 0 ]
+    check_cgroup_value "memory.kmem.limit_in_bytes" 50331648
 
-	# check the value
-    check_cgroup_value $CGROUP_MEMORY "memory.kmem.limit_in_bytes" 50331648
+    # update kernel memory tcp limit
+    runc update test_cgroups_kmem --kernel-memory-tcp 41943040
+    [ "$status" -eq 0 ]
+    check_cgroup_value "memory.kmem.tcp.limit_in_bytes" 41943040
 }
 
 @test "runc update --kernel-memory (uninitialized)" {
@@ -71,7 +67,7 @@ EOF
         [ ! "$status" -eq 0 ]
     else
         [ "$status" -eq 0 ]
-        check_cgroup_value $CGROUP_MEMORY "memory.kmem.limit_in_bytes" 50331648
+        check_cgroup_value "memory.kmem.limit_in_bytes" 50331648
     fi
 }
 
