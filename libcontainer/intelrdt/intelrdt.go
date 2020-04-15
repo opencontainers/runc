@@ -228,7 +228,8 @@ func init() {
 
 	if flagsSet.MBMTotal || flagsSet.MBMLocal {
 		if _, err := os.Stat(filepath.Join(intelRdtRoot, "info", "L3_MON")); err == nil {
-			isMbmEnabled = true
+			mbmEnabled = true
+			cmtEnabled = true
 		}
 
 		enabledMonFeatures, err = getMonFeatures(intelRdtRoot)
@@ -665,12 +666,9 @@ func (m *IntelRdtManager) GetStats() (*Stats, error) {
 		}
 	}
 
-	if IsMbmEnabled() {
-		mbmStats, err := getMBMStats(containerPath)
-		if err != nil {
-			return stats, err
-		}
-		stats.MBMStats = mbmStats
+	err = getMonitoringStats(containerPath, stats)
+	if err != nil {
+		return nil, err
 	}
 
 	return stats, nil

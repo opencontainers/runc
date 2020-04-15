@@ -161,8 +161,11 @@ func convertLibcontainerStats(ls *libcontainer.Stats) *types.Stats {
 			s.IntelRdt.MemBwSchemaRoot = is.MemBwSchemaRoot
 			s.IntelRdt.MemBwSchema = is.MemBwSchema
 		}
-		if intelrdt.IsMbmEnabled() {
+		if intelrdt.IsMBMEnabled() {
 			s.IntelRdt.MBMStats = is.MBMStats
+		}
+		if intelrdt.IsCMTEnabled() {
+			s.IntelRdt.CMTStats = is.CMTStats
 		}
 	}
 
