@@ -68,7 +68,7 @@ function teardown() {
 	testcontainer test_busybox running
 
 	# run the exec
-    runc exec test_busybox sh -c 'for file in /proc/self/fd/[012]; do readlink $file; done'
+    runc exec -t test_busybox sh -c 'for file in /proc/self/fd/[012]; do readlink $file; done'
 	[ "$status" -eq 0 ]
 	[[ ${lines[0]} =~ /dev/pts/+ ]]
 	[[ ${lines[1]} =~ /dev/pts/+ ]]
@@ -88,7 +88,7 @@ function teardown() {
 	testcontainer test_busybox running
 
 	# run the exec
-    runc exec test_busybox sh -c 'stat -c %u:%g $(tty) | tr : \\n'
+    runc exec -t test_busybox sh -c 'stat -c %u:%g $(tty) | tr : \\n'
 	[ "$status" -eq 0 ]
 	[[ ${lines[0]} =~ 0 ]]
 	[[ ${lines[1]} =~ 5 ]]
@@ -111,7 +111,7 @@ function teardown() {
 	testcontainer test_busybox running
 
 	# run the exec
-	runc exec test_busybox sh -c 'stat -c %u:%g $(tty) | tr : \\n'
+	runc exec -t test_busybox sh -c 'stat -c %u:%g $(tty) | tr : \\n'
 	[ "$status" -eq 0 ]
 	[[ ${lines[0]} =~ 1000 ]]
 	[[ ${lines[1]} =~ 5 ]]
@@ -146,7 +146,7 @@ EOF
 	)
 
 	# run the exec
-	runc exec --pid-file pid.txt -d --console-socket $CONSOLE_SOCKET -p <( echo $tty_info_with_consize_size ) test_busybox
+	runc exec -t --pid-file pid.txt -d --console-socket $CONSOLE_SOCKET -p <( echo $tty_info_with_consize_size ) test_busybox
 	[ "$status" -eq 0 ]
 
 	# check the pid was generated
@@ -167,7 +167,7 @@ EOF
 	)
 
 	# run the exec
-	runc exec -p <( echo $tty_info ) test_busybox
+	runc exec -t -p <( echo $tty_info ) test_busybox
 	[ "$status" -eq 0 ]
 
 	# test tty width and height against original process.json
