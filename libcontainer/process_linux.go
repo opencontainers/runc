@@ -72,7 +72,10 @@ type setnsProcess struct {
 
 func (p *setnsProcess) startTime() (uint64, error) {
 	stat, err := system.Stat(p.pid())
-	return stat.StartTime, err
+	if err != nil {
+		return 0, err
+	}
+	return stat.StartTime, nil
 }
 
 func (p *setnsProcess) signal(sig os.Signal) error {
@@ -478,6 +481,9 @@ func (p *initProcess) terminate() error {
 
 func (p *initProcess) startTime() (uint64, error) {
 	stat, err := system.Stat(p.pid())
+	if err != nil {
+		return 0, err
+	}
 	return stat.StartTime, err
 }
 
