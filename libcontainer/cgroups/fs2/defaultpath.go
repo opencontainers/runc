@@ -48,6 +48,11 @@ func defaultDirPath(c *configs.Cgroup) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	// The current user scope most probably has tasks in it already,
+	// making it impossible to enable controllers for its sub-cgroup.
+	// A parent cgroup (with no tasks in it) is what we need.
+	ownCgroup = filepath.Dir(ownCgroup)
+
 	return _defaultDirPath(UnifiedMountpoint, cgPath, cgParent, cgName, ownCgroup)
 }
 
