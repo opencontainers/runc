@@ -135,10 +135,15 @@ func (m *UnifiedManager) Apply(pid int) error {
 
 	statusChan := make(chan string, 1)
 	if _, err := dbusConnection.StartTransientUnit(unitName, "replace", properties, statusChan); err == nil {
-		select {
-		case <-statusChan:
-		case <-time.After(time.Second):
-			logrus.Warnf("Timed out while waiting for StartTransientUnit(%s) completion signal from dbus. Continuing...", unitName)
+	forLoop:
+		for {
+			select {
+			case <-statusChan:
+				break forLoop
+			case <-time.After(time.Second):
+				logrus.Warnf("Timed out while waiting for StartTransientUnit(%s) completion signal from dbus. Continuing...", unitName)
+				break forLoop
+			}
 		}
 	} else if !isUnitExists(err) {
 		return err
