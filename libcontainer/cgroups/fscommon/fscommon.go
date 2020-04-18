@@ -5,11 +5,11 @@ package fscommon
 import (
 	"io/ioutil"
 	"os"
-	"syscall"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sys/unix"
 )
 
 func WriteFile(dir, file, data string) error {
@@ -41,20 +41,10 @@ func ReadFile(dir, file string) (string, error) {
 func retryingWriteFile(filename string, data []byte, perm os.FileMode) error {
 	for {
 		err := ioutil.WriteFile(filename, data, perm)
-		if isInterruptedWriteFile(err) {
+		if errors.Is(err, unix.EINTR) {
 			logrus.Infof("interrupted while writing %s to %s", string(data), filename)
 			continue
 		}
 		return err
 	}
-}
-
-func isInterruptedWriteFile(err error) bool {
-	if patherr, ok := err.(*os.PathError); ok {
-		errno, ok2 := patherr.Err.(syscall.Errno)
-		if ok2 && errno == syscall.EINTR {
-			return true
-		}
-	}
-	return false
 }
