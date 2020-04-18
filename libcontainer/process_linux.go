@@ -11,7 +11,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
-	"syscall" // only for Signal
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -76,7 +75,7 @@ func (p *setnsProcess) startTime() (uint64, error) {
 }
 
 func (p *setnsProcess) signal(sig os.Signal) error {
-	s, ok := sig.(syscall.Signal)
+	s, ok := sig.(unix.Signal)
 	if !ok {
 		return errors.New("os: unsupported signal type")
 	}
@@ -506,7 +505,7 @@ func (p *initProcess) createNetworkInterfaces() error {
 }
 
 func (p *initProcess) signal(sig os.Signal) error {
-	s, ok := sig.(syscall.Signal)
+	s, ok := sig.(unix.Signal)
 	if !ok {
 		return errors.New("os: unsupported signal type")
 	}

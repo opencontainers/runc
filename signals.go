@@ -5,7 +5,6 @@ package main
 import (
 	"os"
 	"os/signal"
-	"syscall" // only for Signal
 
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/system"
@@ -103,7 +102,7 @@ func (h *signalHandler) forward(process *libcontainer.Process, tty *tty, detach 
 			}
 		default:
 			logrus.Debugf("sending signal to process %s", s)
-			if err := unix.Kill(pid1, s.(syscall.Signal)); err != nil {
+			if err := unix.Kill(pid1, s.(unix.Signal)); err != nil {
 				logrus.Error(err)
 			}
 		}

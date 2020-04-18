@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-	"syscall"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -118,7 +117,7 @@ func isIgnorableError(rootless bool, err error) bool {
 		return true
 	}
 	// Handle some specific syscall errors.
-	var errno syscall.Errno
+	var errno unix.Errno
 	if errors.As(err, &errno) {
 		return errno == unix.EROFS || errno == unix.EPERM || errno == unix.EACCES
 	}

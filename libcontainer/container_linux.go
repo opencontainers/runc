@@ -16,7 +16,6 @@ import (
 	"reflect"
 	"strings"
 	"sync"
-	"syscall" // only for SysProcAttr and Signal
 	"time"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
@@ -309,7 +308,7 @@ func awaitFifoOpen(path string) <-chan openResult {
 func fifoOpen(path string, block bool) openResult {
 	flags := os.O_RDONLY
 	if !block {
-		flags |= syscall.O_NONBLOCK
+		flags |= unix.O_NONBLOCK
 	}
 	f, err := os.OpenFile(path, flags, 0)
 	if err != nil {
@@ -480,7 +479,7 @@ func (c *linuxContainer) commandTemplate(p *Process, childInitPipe *os.File, chi
 	cmd.Stderr = p.Stderr
 	cmd.Dir = c.config.Rootfs
 	if cmd.SysProcAttr == nil {
-		cmd.SysProcAttr = &syscall.SysProcAttr{}
+		cmd.SysProcAttr = &unix.SysProcAttr{}
 	}
 	cmd.Env = append(cmd.Env, fmt.Sprintf("GOMAXPROCS=%s", os.Getenv("GOMAXPROCS")))
 	cmd.ExtraFiles = append(cmd.ExtraFiles, p.ExtraFiles...)
@@ -506,7 +505,7 @@ func (c *linuxContainer) commandTemplate(p *Process, childInitPipe *os.File, chi
 	// PID1 the pdeathsig is being delivered to the container's init process by the kernel for some reason
 	// even with the parent still running.
 	if c.config.ParentDeathSignal > 0 {
-		cmd.SysProcAttr.Pdeathsig = syscall.Signal(c.config.ParentDeathSignal)
+		cmd.SysProcAttr.Pdeathsig = unix.Signal(c.config.ParentDeathSignal)
 	}
 	return cmd
 }
@@ -1005,8 +1004,8 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 			// CRIU expects the information about an external namespace
 			// like this: --external net[<inode>]:<key>
 			// This <key> is always 'extRootNetNS'.
-			var netns syscall.Stat_t
-			err = syscall.Stat(nsPath, &netns)
+			var netns unix.Stat_t
+			err = unix.Stat(nsPath, &netns)
 			if err != nil {
 				return err
 			}
@@ -1857,7 +1856,7 @@ func (c *linuxContainer) isPaused() (bool, error) {
 	data, err := ioutil.ReadFile(filepath.Join(fcg, filename))
 	if err != nil {
 		// If freezer cgroup is not mounted, the container would just be not paused.
-		if os.IsNotExist(err) || errors.Is(err, syscall.ENODEV) {
+		if os.IsNotExist(err) || errors.Is(err, unix.ENODEV) {
 			return false, nil
 		}
 		return false, newSystemErrorWithCause(err, "checking if container is paused")
