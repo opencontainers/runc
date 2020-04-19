@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"syscall"
 
 	"github.com/urfave/cli"
 	"golang.org/x/sys/unix"
@@ -23,7 +22,7 @@ Where "<container-id>" is the name for the instance of the container and
 EXAMPLE:
 For example, if the container id is "ubuntu01" the following will send a "KILL"
 signal to the init process of the "ubuntu01" container:
-	 
+
        # runc kill ubuntu01 KILL`,
 	Flags: []cli.Flag{
 		cli.BoolFlag{
@@ -56,10 +55,10 @@ signal to the init process of the "ubuntu01" container:
 	},
 }
 
-func parseSignal(rawSignal string) (syscall.Signal, error) {
+func parseSignal(rawSignal string) (unix.Signal, error) {
 	s, err := strconv.Atoi(rawSignal)
 	if err == nil {
-		return syscall.Signal(s), nil
+		return unix.Signal(s), nil
 	}
 	sig := strings.ToUpper(rawSignal)
 	if !strings.HasPrefix(sig, "SIG") {

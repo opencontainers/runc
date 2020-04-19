@@ -5,7 +5,6 @@ package system
 import (
 	"os"
 	"os/exec"
-	"syscall" // only for exec
 	"unsafe"
 
 	"github.com/opencontainers/runc/libcontainer/user"
@@ -51,7 +50,7 @@ func Execv(cmd string, args []string, env []string) error {
 		return err
 	}
 
-	return syscall.Exec(name, args, env)
+	return unix.Exec(name, args, env)
 }
 
 func Prlimit(pid, resource int, limit unix.Rlimit) error {

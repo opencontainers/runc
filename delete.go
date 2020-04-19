@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"syscall"
 	"time"
 
 	"github.com/opencontainers/runc/libcontainer"
@@ -19,7 +18,7 @@ func killContainer(container libcontainer.Container) error {
 	_ = container.Signal(unix.SIGKILL, false)
 	for i := 0; i < 100; i++ {
 		time.Sleep(100 * time.Millisecond)
-		if err := container.Signal(syscall.Signal(0), false); err != nil {
+		if err := container.Signal(unix.Signal(0), false); err != nil {
 			destroy(container)
 			return nil
 		}
