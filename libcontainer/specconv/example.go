@@ -139,26 +139,26 @@ func Example() *specs.Spec {
 			},
 			Namespaces: []specs.LinuxNamespace{
 				{
-					Type: "pid",
+					Type: specs.PIDNamespace,
 				},
 				{
-					Type: "network",
+					Type: specs.NetworkNamespace,
 				},
 				{
-					Type: "ipc",
+					Type: specs.IPCNamespace,
 				},
 				{
-					Type: "uts",
+					Type: specs.UTSNamespace,
 				},
 				{
-					Type: "mount",
+					Type: specs.MountNamespace,
 				},
 			},
 		},
 	}
 	if cgroups.IsCgroup2UnifiedMode() {
 		spec.Linux.Namespaces = append(spec.Linux.Namespaces, specs.LinuxNamespace{
-			Type: "cgroup",
+			Type: specs.CgroupNamespace,
 		})
 	}
 	return spec
