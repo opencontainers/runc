@@ -142,7 +142,10 @@ func (m *manager) Freeze(state configs.FreezerState) error {
 }
 
 func (m *manager) Destroy() error {
-	return os.RemoveAll(m.dirPath)
+	if err := os.Remove(m.dirPath); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return nil
 }
 
 // GetPaths is for compatibility purpose and should be removed in future
