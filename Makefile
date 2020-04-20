@@ -52,7 +52,10 @@ release:
 	script/release.sh -r release/$(VERSION) -v $(VERSION)
 
 dbuild: runcimage
-	$(CONTAINER_ENGINE) run ${CONTAINER_ENGINE_RUN_FLAGS} --rm -v $(CURDIR):/go/src/$(PROJECT) --privileged $(RUNC_IMAGE) make clean all
+	$(CONTAINER_ENGINE) run $(CONTAINER_ENGINE_RUN_FLAGS) \
+		--privileged --rm \
+		-v $(CURDIR):/go/src/$(PROJECT) \
+		$(RUNC_IMAGE) make clean all
 
 lint:
 	$(GO) vet $(allpackages)
@@ -62,7 +65,7 @@ man:
 	man/md2man-all.sh
 
 runcimage:
-	$(CONTAINER_ENGINE) build ${CONTAINER_ENGINE_BUILD_FLAGS} -t $(RUNC_IMAGE) .
+	$(CONTAINER_ENGINE) build $(CONTAINER_ENGINE_BUILD_FLAGS) -t $(RUNC_IMAGE) .
 
 test:
 	make unittest integration rootlessintegration
@@ -71,25 +74,40 @@ localtest:
 	make localunittest localintegration localrootlessintegration
 
 unittest: runcimage
-	$(CONTAINER_ENGINE) run ${CONTAINER_ENGINE_RUN_FLAGS} -t --privileged --rm -v /lib/modules:/lib/modules:ro -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) make localunittest TESTFLAGS=${TESTFLAGS}
+	$(CONTAINER_ENGINE) run $(CONTAINER_ENGINE_RUN_FLAGS) \
+		-t --privileged --rm \
+		-v /lib/modules:/lib/modules:ro \
+		-v $(CURDIR):/go/src/$(PROJECT) \
+		$(RUNC_IMAGE) make localunittest TESTFLAGS=$(TESTFLAGS)
 
 localunittest: all
-	$(GO) test -timeout 3m -tags "$(BUILDTAGS)" ${TESTFLAGS} -v $(allpackages)
+	$(GO) test -timeout 3m -tags "$(BUILDTAGS)" $(TESTFLAGS) -v $(allpackages)
 
 integration: runcimage
-	$(CONTAINER_ENGINE) run ${CONTAINER_ENGINE_RUN_FLAGS} -t --privileged --rm -v /lib/modules:/lib/modules:ro -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) make localintegration TESTPATH=${TESTPATH}
+	$(CONTAINER_ENGINE) run $(CONTAINER_ENGINE_RUN_FLAGS) \
+		-t --privileged --rm \
+		-v /lib/modules:/lib/modules:ro \
+		-v $(CURDIR):/go/src/$(PROJECT) \
+		$(RUNC_IMAGE) make localintegration TESTPATH=$(TESTPATH)
 
 localintegration: all
 	bats -t tests/integration${TESTPATH}
 
 rootlessintegration: runcimage
-	$(CONTAINER_ENGINE) run -e ROOTLESS_TESTPATH ${CONTAINER_ENGINE_RUN_FLAGS} -t --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) make localrootlessintegration
+	$(CONTAINER_ENGINE) run $(CONTAINER_ENGINE_RUN_FLAGS) \
+		-t --privileged --rm \
+		-v $(CURDIR):/go/src/$(PROJECT) \
+		-e ROOTLESS_TESTPATH \
+		$(RUNC_IMAGE) make localrootlessintegration
 
 localrootlessintegration: all
 	tests/rootless.sh
 
 shell: runcimage
-	$(CONTAINER_ENGINE) run ${CONTAINER_ENGINE_RUN_FLAGS} -ti --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) bash
+	$(CONTAINER_ENGINE) run $(CONTAINER_ENGINE_RUN_FLAGS) \
+		-ti --privileged --rm \
+		-v $(CURDIR):/go/src/$(PROJECT) \
+		$(RUNC_IMAGE) bash
 
 install:
 	install -D -m0755 runc $(BINDIR)/runc
@@ -135,7 +153,7 @@ verify-dependencies: vendor
 		&& echo "all vendor files are up to date."
 
 cross: runcimage
-	$(CONTAINER_ENGINE) run ${CONTAINER_ENGINE_RUN_FLAGS} \
+	$(CONTAINER_ENGINE) run $(CONTAINER_ENGINE_RUN_FLAGS) \
 		-e BUILDTAGS="$(BUILDTAGS)" --rm \
 		-v $(CURDIR):/go/src/$(PROJECT) \
 		$(RUNC_IMAGE) make localcross
