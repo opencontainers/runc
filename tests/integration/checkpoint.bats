@@ -33,8 +33,7 @@ function teardown() {
     [ "$status" -eq 0 ]
 
     # after checkpoint busybox is no longer running
-    runc state test_busybox
-    [ "$status" -ne 0 ]
+    testcontainer test_busybox checkpointed
 
     # restore from checkpoint
     runc --criu "$CRIU" restore -d --work-path ./work-dir --console-socket $CONSOLE_SOCKET test_busybox
@@ -87,9 +86,7 @@ function teardown() {
   [ "$status" -eq 0 ]
 
   # busybox should still be running
-  runc state test_busybox
-  [ "$status" -eq 0 ]
-  [[ "${output}" == *"running"* ]]
+  testcontainer test_busybox running
 
   # checkpoint the running container
   mkdir image-dir
@@ -99,8 +96,7 @@ function teardown() {
   [ "$status" -eq 0 ]
 
   # after checkpoint busybox is no longer running
-  runc state test_busybox
-  [ "$status" -ne 0 ]
+  testcontainer test_busybox checkpointed
 
   # restore from checkpoint
   __runc --criu "$CRIU" restore -d --work-path ./work-dir --image-path ./image-dir test_busybox <&60 >&51 2>&51
@@ -271,8 +267,7 @@ function teardown() {
     [ "$status" -eq 0 ]
 
     # after checkpoint busybox is no longer running
-    runc state test_busybox
-    [ "$status" -ne 0 ]
+    testcontainer test_busybox checkpointed
 
     # restore from checkpoint; this should restore the container into the existing network namespace
     runc --criu "$CRIU" restore -d --work-path ./work-dir --console-socket $CONSOLE_SOCKET test_busybox
@@ -327,8 +322,7 @@ function teardown() {
   test -f ./work-dir/$tmplog2
 
   # after checkpoint busybox is no longer running
-  runc state test_busybox
-  [ "$status" -ne 0 ]
+  testcontainer test_busybox checkpointed
 
   test -f ./work-dir/$tmplog2 && unlink ./work-dir/$tmplog2
   # restore from checkpoint

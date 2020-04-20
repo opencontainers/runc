@@ -310,6 +310,10 @@ function wait_for_container_inroot() {
 function testcontainer() {
 	# test state of container
 	runc state $1
+	if [ $2 == "checkpointed" ]; then
+		[ "$status" -eq 1 ]
+		return
+	fi
 	[ "$status" -eq 0 ]
 	[[ "${output}" == *"$2"* ]]
 }
