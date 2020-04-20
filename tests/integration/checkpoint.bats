@@ -8,6 +8,8 @@ function setup() {
   fi
   # All checkpoint tests are currently failing on v2
   requires cgroups_v1
+  # XXX: currently criu require root containers.
+  requires criu root
 
   teardown_busybox
   setup_busybox
@@ -18,9 +20,6 @@ function teardown() {
 }
 
 @test "checkpoint and restore" {
-  # XXX: currently criu require root containers.
-  requires criu root
-
   runc run -d --console-socket $CONSOLE_SOCKET test_busybox
   [ "$status" -eq 0 ]
 
@@ -47,9 +46,6 @@ function teardown() {
 }
 
 @test "checkpoint --pre-dump and restore" {
-  # XXX: currently criu require root containers.
-  requires criu root
-
   # The changes to 'terminal' are needed for running in detached mode
   sed -i 's;"terminal": true;"terminal": false;' config.json
   sed -i 's/"sh"/"sh","-c","for i in `seq 10`; do read xxx || continue; echo ponG $xxx; done"/' config.json
@@ -120,13 +116,9 @@ function teardown() {
 }
 
 @test "checkpoint --lazy-pages and restore" {
-  # XXX: currently criu require root containers.
-  requires criu root
-
   # check if lazy-pages is supported
   run ${CRIU} check --feature uffd-noncoop
   if [ "$status" -eq 1 ]; then
-    # this criu does not support lazy migration; skip the test
     skip "this criu does not support lazy migration"
   fi
 
@@ -229,9 +221,6 @@ function teardown() {
 }
 
 @test "checkpoint and restore in external network namespace" {
-  # XXX: currently criu require root containers.
-  requires criu root
-
   # check if external_net_ns is supported; only with criu 3.10++
   run ${CRIU} check --feature external_net_ns
   if [ "$status" -eq 1 ]; then
@@ -289,9 +278,6 @@ function teardown() {
 }
 
 @test "checkpoint and restore with container specific CRIU config" {
-  # XXX: currently criu require root containers.
-  requires criu root
-
   tmp=`mktemp /tmp/runc-criu-XXXXXX.conf`
   # This is the file we write to /etc/criu/default.conf
   tmplog1=`mktemp /tmp/runc-criu-log-XXXXXX.log`
