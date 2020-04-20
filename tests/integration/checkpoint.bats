@@ -29,11 +29,8 @@ function teardown() {
   for i in `seq 2`; do
     # checkpoint the running container
     runc --criu "$CRIU" checkpoint --work-path ./work-dir test_busybox
-    ret=$?
-    # if you are having problems getting criu to work uncomment the following dump:
-    #cat /run/opencontainer/containers/test_busybox/criu.work/dump.log
     cat ./work-dir/dump.log | grep -B 5 Error || true
-    [ "$ret" -eq 0 ]
+    [ "$status" -eq 0 ]
 
     # after checkpoint busybox is no longer running
     runc state test_busybox
@@ -216,8 +213,7 @@ function teardown() {
   # Killing the CRIU on the checkpoint side will let the container
   # continue to run if the migration failed at some point.
   __runc --criu "$CRIU" restore -d --work-path ./image-dir --image-path ./image-dir --lazy-pages test_busybox_restore <&60 >&51 2>&51
-  ret=$?
-  [ $ret -eq 0 ]
+  [ $? -eq 0 ]
   run grep -B 5 Error ./work-dir/dump.log -q
   [ "$status" -eq 1 ]
 
@@ -269,11 +265,10 @@ function teardown() {
     # checkpoint the running container; this automatically tells CRIU to
     # handle the network namespace defined in config.json as an external
     runc --criu "$CRIU" checkpoint --work-path ./work-dir test_busybox
-    ret=$?
     # if you are having problems getting criu to work uncomment the following dump:
     #cat /run/opencontainer/containers/test_busybox/criu.work/dump.log
     cat ./work-dir/dump.log | grep -B 5 Error || true
-    [ "$ret" -eq 0 ]
+    [ "$status" -eq 0 ]
 
     # after checkpoint busybox is no longer running
     runc state test_busybox
