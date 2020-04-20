@@ -15,7 +15,7 @@ RUNC_IMAGE := runc_dev$(if $(GIT_BRANCH_CLEAN),:$(GIT_BRANCH_CLEAN))
 PROJECT := github.com/opencontainers/runc
 BUILDTAGS ?= seccomp selinux apparmor
 COMMIT_NO := $(shell git rev-parse HEAD 2> /dev/null || true)
-COMMIT ?= $(if $(shell git status --porcelain --untracked-files=no),"${COMMIT_NO}-dirty","${COMMIT_NO}")
+COMMIT ?= $(if $(shell git status --porcelain --untracked-files=no),"$(COMMIT_NO)-dirty","$(COMMIT_NO)")
 VERSION := $(shell cat ./VERSION)
 
 GO_BUILD := $(GO) build -buildmode=pie $(EXTRA_FLAGS) -tags "$(BUILDTAGS)" \
@@ -26,7 +26,7 @@ GO_BUILD_STATIC := CGO_ENABLED=1 $(GO) build $(EXTRA_FLAGS) -tags "$(BUILDTAGS) 
 MAN_DIR := $(CURDIR)/man/man8
 MAN_PAGES = $(shell ls $(MAN_DIR)/*.8)
 MAN_PAGES_BASE = $(notdir $(MAN_PAGES))
-MAN_INSTALL_PATH := ${PREFIX}/share/man/man8/
+MAN_INSTALL_PATH := $(PREFIX)/share/man/man8/
 
 RELEASE_DIR := $(CURDIR)/release
 
@@ -91,7 +91,7 @@ integration: runcimage
 		$(RUNC_IMAGE) make localintegration TESTPATH=$(TESTPATH)
 
 localintegration: all
-	bats -t tests/integration${TESTPATH}
+	bats -t tests/integration$(TESTPATH)
 
 rootlessintegration: runcimage
 	$(CONTAINER_ENGINE) run $(CONTAINER_ENGINE_RUN_FLAGS) \
