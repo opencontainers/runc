@@ -167,6 +167,10 @@ func (m *UnifiedManager) Destroy() error {
 	if m.Cgroups.Paths != nil {
 		return nil
 	}
+	dirPath, err := m.GetUnifiedPath()
+	if err != nil {
+		return err
+	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -174,11 +178,28 @@ func (m *UnifiedManager) Destroy() error {
 	if err != nil {
 		return err
 	}
-	dbusConnection.StopUnit(getUnitName(m.Cgroups), "replace", nil)
-	if err := cgroups.RemovePaths(m.Paths); err != nil {
-		return err
+	unitName := getUnitName(m.Cgroups)
+	statusChan := make(chan string, 1)
+	if _, err := dbusConnection.StopUnit(unitName, "replace", statusChan); err == nil {
+		select {
+		case s := <-statusChan:
+			if s != "done" {
+				logrus.Warnf("error stopping systemd unit `%s`: got `%s`. Continuing...", unitName, s)
+			}
+		case <-time.After(time.Second):
+			logrus.Warnf("Timed out while waiting for StopUnit(%s) completion signal from dbus. Continuing...", unitName)
+		}
+	} else {
+		// TODO: When we destroy cgroup, the initProcess has been killed, so we will always get `Unit **** not loaded` err.
+		// Because the unit is created by StartTransientUnit method,
+		// so when process exited, the cgroup path may has been deleted by systemd.
+		// Because of this, we should not return the error.
+		// But if the system is very busy, we may not get this error by chance.
+		// So, shall we need to always warn this information?
+		logrus.Warnf("error stopping systemd unit `%s`: got `%s`. Continuing...", unitName, err)
 	}
-	m.Paths = make(map[string]string)
+	// Always retry remove the cgroup path, and ignore any errors
+	os.RemoveAll(dirPath)
 	return nil
 }
 
