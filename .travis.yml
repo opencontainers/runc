@@ -18,7 +18,7 @@ matrix:
       env:
         - RUNC_USE_SYSTEMD=1
       script:
-        - make BUILDTAGS="${BUILDTAGS}" all
+        - make all
         - sudo PATH="$PATH" make localintegration RUNC_USE_SYSTEMD=1
     - go: 1.13.x
       name: "cgroup-v2"
@@ -46,10 +46,6 @@ sudo: required
 services:
   - docker
 
-env:
-  global:
-    - BUILDTAGS="seccomp apparmor selinux"
-
 before_install:
   - sudo apt-get -qq update
   - sudo apt-get install -y libseccomp-dev
@@ -59,5 +55,5 @@ before_install:
 
 script:
   - git-validation -run DCO,short-subject -v
-  - make BUILDTAGS="${BUILDTAGS}"
-  - make BUILDTAGS="${BUILDTAGS}" clean ci cross
+  - make
+  - make clean ci cross

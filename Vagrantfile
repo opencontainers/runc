@@ -14,7 +14,6 @@ Vagrant.configure("2") do |config|
   end
   config.vm.provision "shell", inline: <<-SHELL
     cat << EOF | dnf -y shell
-config install_weak_deps: False
 update
 install podman make golang-go libseccomp-devel bats jq
 ts run
