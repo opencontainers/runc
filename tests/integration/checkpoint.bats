@@ -3,9 +3,6 @@
 load helpers
 
 function setup() {
-  if [[ -n "${RUNC_USE_SYSTEMD}" ]] ; then
-    skip "CRIU test suite is skipped on systemd cgroup driver for now."
-  fi
   # All checkpoint tests are currently failing on v2
   requires cgroups_v1
   # XXX: currently criu require root containers.
@@ -17,6 +14,33 @@ function setup() {
 
 function teardown() {
   teardown_busybox
+}
+
+function setup_pipes() {
+	# The changes to 'terminal' are needed for running in detached mode
+	sed -i 's;"terminal": true;"terminal": false;' config.json
+	sed -i 's/"sh"/"sh","-c","for i in `seq 10`; do read xxx || continue; echo ponG $xxx; done"/' config.json
+
+	# Create two sets of pipes
+	# for stdout/stderr
+	exec 52<> <(:)
+	exec 50</proc/self/fd/52
+	exec 51>/proc/self/fd/52
+	exec 52>&-
+	# ... and stdin
+	exec 62<> <(:)
+	exec 60</proc/self/fd/62
+	exec 61>/proc/self/fd/62
+	exec 62>&-
+}
+
+function check_pipes() {
+	echo Ping >&61
+	exec 61>&-
+	exec 51>&-
+	run cat <&50
+	[ "$status" -eq 0 ]
+	[[ "${output}" == *"ponG Ping"* ]]
 }
 
 @test "checkpoint and restore" {
@@ -46,29 +70,7 @@ function teardown() {
 }
 
 @test "checkpoint --pre-dump and restore" {
-  # The changes to 'terminal' are needed for running in detached mode
-  sed -i 's;"terminal": true;"terminal": false;' config.json
-  sed -i 's/"sh"/"sh","-c","for i in `seq 10`; do read xxx || continue; echo ponG $xxx; done"/' config.json
-
-  # The following code creates pipes for stdin and stdout.
-  # CRIU can't handle fifo-s, so we need all these tricks.
-  fifo=`mktemp -u /tmp/runc-fifo-XXXXXX`
-  mkfifo $fifo
-
-  # stdout
-  cat $fifo | cat $fifo &
-  pid=$!
-  exec 50</proc/$pid/fd/0
-  exec 51>/proc/$pid/fd/0
-
-  # stdin
-  cat $fifo | cat $fifo &
-  pid=$!
-  exec 60</proc/$pid/fd/0
-  exec 61>/proc/$pid/fd/0
-
-  echo -n > $fifo
-  unlink $fifo
+  setup_pipes
 
   # run busybox
   __runc run -d test_busybox <&60 >&51 2>&51
@@ -107,12 +109,7 @@ function teardown() {
   [ "$status" -eq 0 ]
   [[ ${output} == "ok" ]]
 
-  echo Ping >&61
-  exec 61>&-
-  exec 51>&-
-  run cat <&50
-  [ "$status" -eq 0 ]
-  [[ "${output}" == *"ponG Ping"* ]]
+  check_pipes
 }
 
 @test "checkpoint --lazy-pages and restore" {
@@ -122,16 +119,10 @@ function teardown() {
     skip "this criu does not support lazy migration"
   fi
 
-  # The changes to 'terminal' are needed for running in detached mode
-  sed -i 's;"terminal": true;"terminal": false;' config.json
+  setup_pipes
+
   # This should not be necessary: https://github.com/checkpoint-restore/criu/issues/575
   sed -i 's;"readonly": true;"readonly": false;' config.json
-  sed -i 's/"sh"/"sh","-c","for i in `seq 10`; do read xxx || continue; echo ponG $xxx; done"/' config.json
-
-  # The following code creates pipes for stdin and stdout.
-  # CRIU can't handle fifo-s, so we need all these tricks.
-  fifo=`mktemp -u /tmp/runc-fifo-XXXXXX`
-  mkfifo $fifo
 
   # For lazy migration we need to know when CRIU is ready to serve
   # the memory pages via TCP.
@@ -140,21 +131,6 @@ function teardown() {
 
   # TCP port for lazy migration
   port=27277
-
-  # stdout
-  cat $fifo | cat $fifo &
-  pid=$!
-  exec 50</proc/$pid/fd/0
-  exec 51>/proc/$pid/fd/0
-
-  # stdin
-  cat $fifo | cat $fifo &
-  pid=$!
-  exec 60</proc/$pid/fd/0
-  exec 61>/proc/$pid/fd/0
-
-  echo -n > $fifo
-  unlink $fifo
 
   # run busybox
   __runc run -d test_busybox <&60 >&51 2>&51
@@ -212,12 +188,7 @@ function teardown() {
   [ "$status" -eq 0 ]
   [[ ${output} == "ok" ]]
 
-  echo Ping >&61
-  exec 61>&-
-  exec 51>&-
-  run cat <&50
-  [ "$status" -eq 0 ]
-  [[ "${output}" == *"ponG Ping"* ]]
+  check_pipes
 }
 
 @test "checkpoint and restore in external network namespace" {
