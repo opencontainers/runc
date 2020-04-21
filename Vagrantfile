@@ -23,6 +23,14 @@ ts run
 EOF
     dnf clean all
 
+    # Add a user for rootless tests
+    useradd -u2000 -m -d/home/rootless -s/bin/bash rootless
+
+    # Add busybox for libcontainer/integration tests
+    . /vagrant/tests/integration/multi-arch.bash \
+        && mkdir /busybox \
+        && curl -fsSL $(get_busybox) | tar xfJC - /busybox
+
     # TODO: remove this after criu 3.14 is released
     rpm -e --nodeps criu || true
     CRIU_VERSION=v3.13
