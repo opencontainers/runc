@@ -244,7 +244,7 @@ func mountCgroupV1(m *configs.Mount, rootfs, mountLabel string, enableCgroupns b
 			}
 			cgroupmount := &configs.Mount{
 				Source:      "cgroup",
-				Device:      "cgroup",
+				Device:      "cgroup", // this is actually fstype
 				Destination: subsystemPath,
 				Flags:       flags,
 				Data:        filepath.Base(subsystemPath),
