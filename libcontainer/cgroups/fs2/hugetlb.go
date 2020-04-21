@@ -15,7 +15,14 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
+func isHugeTlbSet(cgroup *configs.Cgroup) bool {
+	return len(cgroup.Resources.HugetlbLimit) > 0
+}
+
 func setHugeTlb(dirPath string, cgroup *configs.Cgroup) error {
+	if !isHugeTlbSet(cgroup) {
+		return nil
+	}
 	for _, hugetlb := range cgroup.Resources.HugetlbLimit {
 		if err := fscommon.WriteFile(dirPath, strings.Join([]string{"hugetlb", hugetlb.Pagesize, "max"}, "."), strconv.FormatUint(hugetlb.Limit, 10)); err != nil {
 			return err

@@ -50,28 +50,51 @@ func InitArgs(args ...string) func(*LinuxFactory) error {
 	}
 }
 
-// SystemdCgroups is an options func to configure a LinuxFactory to return
-// containers that use systemd to create and manage cgroups.
-func SystemdCgroups(l *LinuxFactory) error {
-	systemdCgroupsManager, err := systemd.NewSystemdCgroupsManager()
-	if err != nil {
-		return err
-	}
-	l.NewCgroupsManager = systemdCgroupsManager
-	return nil
-}
-
 func getUnifiedPath(paths map[string]string) string {
-	unifiedPath := ""
+	path := ""
 	for k, v := range paths {
-		if unifiedPath == "" {
-			unifiedPath = v
-		} else if v != unifiedPath {
-			panic(errors.Errorf("expected %q path to be unified path %q, got %q", k, unifiedPath, v))
+		if path == "" {
+			path = v
+		} else if v != path {
+			panic(errors.Errorf("expected %q path to be unified path %q, got %q", k, path, v))
 		}
 	}
 	// can be empty
-	return unifiedPath
+	if path != "" {
+		if filepath.Clean(path) != path || !filepath.IsAbs(path) {
+			panic(errors.Errorf("invalid dir path %q", path))
+		}
+	}
+
+	return path
+}
+
+func systemdCgroupV2(l *LinuxFactory, rootless bool) error {
+	l.NewCgroupsManager = func(config *configs.Cgroup, paths map[string]string) cgroups.Manager {
+		return systemd.NewUnifiedManager(config, getUnifiedPath(paths), rootless)
+	}
+	return nil
+}
+
+// SystemdCgroups is an options func to configure a LinuxFactory to return
+// containers that use systemd to create and manage cgroups.
+func SystemdCgroups(l *LinuxFactory) error {
+	if !systemd.IsRunningSystemd() {
+		return fmt.Errorf("systemd not running on this host, can't use systemd as cgroups manager")
+	}
+
+	if cgroups.IsCgroup2UnifiedMode() {
+		return systemdCgroupV2(l, false)
+	}
+
+	l.NewCgroupsManager = func(config *configs.Cgroup, paths map[string]string) cgroups.Manager {
+		return &systemd.LegacyManager{
+			Cgroups: config,
+			Paths:   paths,
+		}
+	}
+
+	return nil
 }
 
 func cgroupfs2(l *LinuxFactory, rootless bool) error {

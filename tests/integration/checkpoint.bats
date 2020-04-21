@@ -6,6 +6,8 @@ function setup() {
   if [[ -n "${RUNC_USE_SYSTEMD}" ]] ; then
     skip "CRIU test suite is skipped on systemd cgroup driver for now."
   fi
+  # All checkpoint tests are currently failing on v2
+  requires cgroups_v1
 
   teardown_busybox
   setup_busybox

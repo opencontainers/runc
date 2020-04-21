@@ -14,7 +14,19 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
+func isIoSet(cgroup *configs.Cgroup) bool {
+	return cgroup.Resources.BlkioWeight != 0 ||
+		len(cgroup.Resources.BlkioThrottleReadBpsDevice) > 0 ||
+		len(cgroup.Resources.BlkioThrottleWriteBpsDevice) > 0 ||
+		len(cgroup.Resources.BlkioThrottleReadIOPSDevice) > 0 ||
+		len(cgroup.Resources.BlkioThrottleWriteIOPSDevice) > 0
+}
+
 func setIo(dirPath string, cgroup *configs.Cgroup) error {
+	if !isIoSet(cgroup) {
+		return nil
+	}
+
 	if cgroup.Resources.BlkioWeight != 0 {
 		filename := "io.bfq.weight"
 		if err := fscommon.WriteFile(dirPath, filename,

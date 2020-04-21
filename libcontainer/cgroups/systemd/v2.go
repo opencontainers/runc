@@ -3,8 +3,6 @@
 package systemd
 
 import (
-	"bytes"
-	"io/ioutil"
 	"math"
 	"os"
 	"path/filepath"
@@ -13,34 +11,39 @@ import (
 	"time"
 
 	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
+	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fs2"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
-type UnifiedManager struct {
+type unifiedManager struct {
 	mu      sync.Mutex
-	Cgroups *configs.Cgroup
-	Paths   map[string]string
+	cgroups *configs.Cgroup
+	// path is like "/sys/fs/cgroup/user.slice/user-1001.slice/session-1.scope"
+	path     string
+	rootless bool
 }
 
-func (m *UnifiedManager) Apply(pid int) error {
+func NewUnifiedManager(config *configs.Cgroup, path string, rootless bool) *unifiedManager {
+	return &unifiedManager{
+		cgroups:  config,
+		path:     path,
+		rootless: rootless,
+	}
+}
+
+func (m *unifiedManager) Apply(pid int) error {
 	var (
-		c          = m.Cgroups
+		c          = m.cgroups
 		unitName   = getUnitName(c)
 		slice      = "system.slice"
 		properties []systemdDbus.Property
 	)
 
 	if c.Paths != nil {
-		paths := make(map[string]string)
-		for name, path := range c.Paths {
-			paths[name] = path
-		}
-		m.Paths = paths
-		return cgroups.EnterPid(m.Paths, pid)
+		return cgroups.WriteCgroupProc(m.path, pid)
 	}
 
 	if c.Parent != "" {
@@ -144,27 +147,18 @@ func (m *UnifiedManager) Apply(pid int) error {
 		return err
 	}
 
-	path, err := getv2Path(m.Cgroups)
+	_, err = m.GetUnifiedPath()
 	if err != nil {
 		return err
 	}
-	if err := createCgroupsv2Path(path); err != nil {
+	if err := fs2.CreateCgroupPath(m.path, m.cgroups); err != nil {
 		return err
-	}
-	m.Paths = map[string]string{
-		"pids":    path,
-		"memory":  path,
-		"io":      path,
-		"cpu":     path,
-		"devices": path,
-		"cpuset":  path,
-		"freezer": path,
 	}
 	return nil
 }
 
-func (m *UnifiedManager) Destroy() error {
-	if m.Cgroups.Paths != nil {
+func (m *unifiedManager) Destroy() error {
+	if m.cgroups.Paths != nil {
 		return nil
 	}
 	m.mu.Lock()
@@ -174,40 +168,40 @@ func (m *UnifiedManager) Destroy() error {
 	if err != nil {
 		return err
 	}
-	dbusConnection.StopUnit(getUnitName(m.Cgroups), "replace", nil)
-	if err := cgroups.RemovePaths(m.Paths); err != nil {
+	dbusConnection.StopUnit(getUnitName(m.cgroups), "replace", nil)
+
+	// XXX this is probably not needed, systemd should handle it
+	err = os.Remove(m.path)
+	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
-	m.Paths = make(map[string]string)
+
 	return nil
 }
 
-func (m *UnifiedManager) GetPaths() map[string]string {
-	m.mu.Lock()
-	paths := m.Paths
-	m.mu.Unlock()
+// this method is for v1 backward compatibility and will be removed
+func (m *unifiedManager) GetPaths() map[string]string {
+	_, _ = m.GetUnifiedPath()
+	paths := map[string]string{
+		"pids":    m.path,
+		"memory":  m.path,
+		"io":      m.path,
+		"cpu":     m.path,
+		"devices": m.path,
+		"cpuset":  m.path,
+		"freezer": m.path,
+	}
 	return paths
 }
-func (m *UnifiedManager) GetUnifiedPath() (string, error) {
-	unifiedPath := ""
+
+func (m *unifiedManager) GetUnifiedPath() (string, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	for k, v := range m.Paths {
-		if unifiedPath == "" {
-			unifiedPath = v
-		} else if v != unifiedPath {
-			return unifiedPath,
-				errors.Errorf("expected %q path to be unified path %q, got %q", k, unifiedPath, v)
-		}
+	if m.path != "" {
+		return m.path, nil
 	}
-	if unifiedPath == "" {
-		// FIXME: unified path could be detected even when no controller is available
-		return unifiedPath, errors.New("cannot detect unified path")
-	}
-	return unifiedPath, nil
-}
 
-func getv2Path(c *configs.Cgroup) (string, error) {
+	c := m.cgroups
 	slice := "system.slice"
 	if c.Parent != "" {
 		slice = c.Parent
@@ -218,55 +212,25 @@ func getv2Path(c *configs.Cgroup) (string, error) {
 		return "", err
 	}
 
-	return filepath.Join(fs2.UnifiedMountpoint, slice, getUnitName(c)), nil
-}
-
-func createCgroupsv2Path(path string) (Err error) {
-	content, err := ioutil.ReadFile("/sys/fs/cgroup/cgroup.controllers")
+	path := filepath.Join(slice, getUnitName(c))
+	path, err = securejoin.SecureJoin(fs2.UnifiedMountpoint, path)
 	if err != nil {
-		return err
+		return "", err
 	}
+	m.path = path
 
-	ctrs := bytes.Fields(content)
-	res := append([]byte("+"), bytes.Join(ctrs, []byte(" +"))...)
-
-	current := "/sys/fs"
-	elements := strings.Split(path, "/")
-	for i, e := range elements[3:] {
-		current = filepath.Join(current, e)
-		if i > 0 {
-			if err := os.Mkdir(current, 0755); err != nil {
-				if !os.IsExist(err) {
-					return err
-				}
-			} else {
-				// If the directory was created, be sure it is not left around on errors.
-				current := current
-				defer func() {
-					if Err != nil {
-						os.Remove(current)
-					}
-				}()
-			}
-		}
-		if i < len(elements[3:])-1 {
-			if err := ioutil.WriteFile(filepath.Join(current, "cgroup.subtree_control"), res, 0755); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
+	return m.path, nil
 }
 
-func (m *UnifiedManager) fsManager() (cgroups.Manager, error) {
+func (m *unifiedManager) fsManager() (cgroups.Manager, error) {
 	path, err := m.GetUnifiedPath()
 	if err != nil {
 		return nil, err
 	}
-	return fs2.NewManager(m.Cgroups, path, false)
+	return fs2.NewManager(m.cgroups, path, m.rootless)
 }
 
-func (m *UnifiedManager) Freeze(state configs.FreezerState) error {
+func (m *unifiedManager) Freeze(state configs.FreezerState) error {
 	fsMgr, err := m.fsManager()
 	if err != nil {
 		return err
@@ -274,7 +238,7 @@ func (m *UnifiedManager) Freeze(state configs.FreezerState) error {
 	return fsMgr.Freeze(state)
 }
 
-func (m *UnifiedManager) GetPids() ([]int, error) {
+func (m *unifiedManager) GetPids() ([]int, error) {
 	path, err := m.GetUnifiedPath()
 	if err != nil {
 		return nil, err
@@ -282,7 +246,7 @@ func (m *UnifiedManager) GetPids() ([]int, error) {
 	return cgroups.GetPids(path)
 }
 
-func (m *UnifiedManager) GetAllPids() ([]int, error) {
+func (m *unifiedManager) GetAllPids() ([]int, error) {
 	path, err := m.GetUnifiedPath()
 	if err != nil {
 		return nil, err
@@ -290,7 +254,7 @@ func (m *UnifiedManager) GetAllPids() ([]int, error) {
 	return cgroups.GetAllPids(path)
 }
 
-func (m *UnifiedManager) GetStats() (*cgroups.Stats, error) {
+func (m *unifiedManager) GetStats() (*cgroups.Stats, error) {
 	fsMgr, err := m.fsManager()
 	if err != nil {
 		return nil, err
@@ -298,7 +262,7 @@ func (m *UnifiedManager) GetStats() (*cgroups.Stats, error) {
 	return fsMgr.GetStats()
 }
 
-func (m *UnifiedManager) Set(container *configs.Config) error {
+func (m *unifiedManager) Set(container *configs.Config) error {
 	fsMgr, err := m.fsManager()
 	if err != nil {
 		return err
@@ -306,6 +270,6 @@ func (m *UnifiedManager) Set(container *configs.Config) error {
 	return fsMgr.Set(container)
 }
 
-func (m *UnifiedManager) GetCgroups() (*configs.Cgroup, error) {
-	return m.Cgroups, nil
+func (m *unifiedManager) GetCgroups() (*configs.Cgroup, error) {
+	return m.cgroups, nil
 }

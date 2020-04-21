@@ -14,7 +14,14 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+func isPidsSet(cgroup *configs.Cgroup) bool {
+	return cgroup.Resources.PidsLimit != 0
+}
+
 func setPids(dirPath string, cgroup *configs.Cgroup) error {
+	if !isPidsSet(cgroup) {
+		return nil
+	}
 	if val := numToStr(cgroup.Resources.PidsLimit); val != "" {
 		if err := fscommon.WriteFile(dirPath, "pids.max", val); err != nil {
 			return err
