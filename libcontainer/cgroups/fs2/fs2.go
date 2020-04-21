@@ -53,7 +53,10 @@ func (m *manager) getControllers() error {
 
 	file := filepath.Join(m.dirPath, "cgroup.controllers")
 	data, err := ioutil.ReadFile(file)
-	if err != nil && !m.rootless {
+	if err != nil {
+		if m.rootless && m.config.Path == "" {
+			return nil
+		}
 		return err
 	}
 	fields := strings.Fields(string(data))
@@ -67,9 +70,22 @@ func (m *manager) getControllers() error {
 
 func (m *manager) Apply(pid int) error {
 	if err := CreateCgroupPath(m.dirPath, m.config); err != nil {
+		// Related tests:
+		// - "runc create (no limits + no cgrouppath + no permission) succeeds"
+		// - "runc create (rootless + no limits + cgrouppath + no permission) fails with permission error"
+		// - "runc create (rootless + limits + no cgrouppath + no permission) fails with informative error"
+		if m.rootless {
+			if m.config.Path == "" {
+				cl, clErr := neededControllers(m.config)
+				if clErr == nil && len(cl) == 0 {
+					return nil
+				}
+				return errors.Wrap(err, "rootless needs no limits + no cgrouppath when no permission is granted for cgroups")
+			}
+		}
 		return err
 	}
-	if err := cgroups.WriteCgroupProc(m.dirPath, pid); err != nil && !m.rootless {
+	if err := cgroups.WriteCgroupProc(m.dirPath, pid); err != nil {
 		return err
 	}
 	return nil
@@ -199,7 +215,11 @@ func (m *manager) Set(container *configs.Config) error {
 		}
 	}
 	// devices (since kernel 4.15, pseudo-controller)
-	if err := setDevices(m.dirPath, container.Cgroups); err != nil {
+	//
+	// When m.Rootless is true, errors from the device subsystem are ignored because it is really not expected to work.
+	// However, errors from other subsystems are not ignored.
+	// see @test "runc create (rootless + limits + no cgrouppath + no permission) fails with informative error"
+	if err := setDevices(m.dirPath, container.Cgroups); err != nil && !m.rootless {
 		errs = append(errs, err)
 	}
 	// cpuset (since kernel 5.0)
@@ -218,7 +238,7 @@ func (m *manager) Set(container *configs.Config) error {
 	if err := setFreezer(m.dirPath, container.Cgroups.Freezer); err != nil {
 		errs = append(errs, err)
 	}
-	if len(errs) > 0 && !m.rootless {
+	if len(errs) > 0 {
 		return errors.Errorf("error while setting cgroup v2: %+v", errs)
 	}
 	m.config = container.Cgroups

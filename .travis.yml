@@ -36,6 +36,8 @@ matrix:
         - sudo ssh default -t 'cd /vagrant && sudo make localintegration RUNC_USE_SYSTEMD=yes'
         # same setup but with fs2 driver instead of systemd
         - sudo ssh default -t 'cd /vagrant && sudo make localintegration'
+        # rootless
+        - sudo ssh default -t 'cd /vagrant && sudo make localrootlessintegration'
   allow_failures:
     - go: tip
 
