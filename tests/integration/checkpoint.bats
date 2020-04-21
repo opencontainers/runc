@@ -3,8 +3,6 @@
 load helpers
 
 function setup() {
-  # All checkpoint tests are currently failing on v2
-  requires cgroups_v1
   # XXX: currently criu require root containers.
   requires criu root
 
