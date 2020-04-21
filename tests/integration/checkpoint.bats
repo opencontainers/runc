@@ -43,7 +43,7 @@ function check_pipes() {
 	[[ "${output}" == *"ponG Ping"* ]]
 }
 
-@test "checkpoint and restore" {
+function simple_cr() {
   runc run -d --console-socket $CONSOLE_SOCKET test_busybox
   [ "$status" -eq 0 ]
 
@@ -67,6 +67,20 @@ function check_pipes() {
     # busybox should be back up and running
     testcontainer test_busybox running
   done
+}
+
+@test "checkpoint and restore " {
+	simple_cr
+}
+
+@test "checkpoint and restore (cgroupns)" {
+  # cgroupv2 already enables cgroupns so this case was tested above already
+  requires cgroups_v1
+
+  # enable CGROUPNS
+  sed -i 's|\("namespaces": \[\)|\1\n\t\t\t{"type": "cgroup"},|' config.json
+
+  simple_cr
 }
 
 @test "checkpoint --pre-dump and restore" {
