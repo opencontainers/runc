@@ -881,26 +881,6 @@ func (c *linuxContainer) addMaskPaths(req *criurpc.CriuReq) error {
 	return nil
 }
 
-func waitForCriuLazyServer(r *os.File, status string) error {
-
-	data := make([]byte, 1)
-	_, err := r.Read(data)
-	if err != nil {
-		return err
-	}
-	fd, err := os.OpenFile(status, os.O_TRUNC|os.O_WRONLY, os.ModeAppend)
-	if err != nil {
-		return err
-	}
-	_, err = fd.Write(data)
-	fd.Close()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (c *linuxContainer) handleCriuConfigurationFile(rpcOpts *criurpc.CriuOpts) {
 	// CRIU will evaluate a configuration starting with release 3.11.
 	// Settings in the configuration file will overwrite RPC settings.
@@ -1079,27 +1059,34 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 	} else {
 		t = criurpc.CriuReqType_DUMP
 	}
-	req := &criurpc.CriuReq{
-		Type: &t,
-		Opts: &rpcOpts,
-	}
 
 	if criuOpts.LazyPages {
 		// lazy migration requested; check if criu supports it
 		feat := criurpc.CriuFeatures{
 			LazyPages: proto.Bool(true),
 		}
-
 		if err := c.checkCriuFeatures(criuOpts, &rpcOpts, &feat); err != nil {
 			return err
 		}
 
-		statusRead, statusWrite, err := os.Pipe()
-		if err != nil {
-			return err
+		if fd := criuOpts.StatusFd; fd != -1 {
+			// check that the FD is valid
+			flags, err := unix.FcntlInt(uintptr(fd), unix.F_GETFL, 0)
+			if err != nil {
+				return fmt.Errorf("invalid --status-fd argument %d: %w", fd, err)
+			}
+			// and writable
+			if flags&unix.O_WRONLY == 0 {
+				return fmt.Errorf("invalid --status-fd argument %d: not writable", fd)
+			}
+
+			rpcOpts.StatusFd = proto.Int32(int32(fd))
 		}
-		rpcOpts.StatusFd = proto.Int32(int32(statusWrite.Fd()))
-		go waitForCriuLazyServer(statusRead, criuOpts.StatusFd)
+	}
+
+	req := &criurpc.CriuReq{
+		Type: &t,
+		Opts: &rpcOpts,
 	}
 
 	// no need to dump all this in pre-dump
@@ -1583,6 +1570,15 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *
 	oob := make([]byte, 4096)
 	for true {
 		n, oobn, _, _, err := criuClientCon.ReadMsgUnix(buf, oob)
+		if req.Opts != nil && req.Opts.StatusFd != nil {
+			// Close status_fd as soon as we got something back from criu,
+			// assuming it has consumed (reopened) it by this time.
+			// Otherwise it will might be left open forever and whoever
+			// is waiting on it will wait forever.
+			fd := int(*req.Opts.StatusFd)
+			_ = unix.Close(fd)
+			req.Opts.StatusFd = nil
+		}
 		if err != nil {
 			return err
 		}
