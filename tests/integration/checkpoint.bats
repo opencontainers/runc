@@ -3,11 +3,10 @@
 load helpers
 
 function setup() {
-  if [[ -n "${RUNC_USE_SYSTEMD}" ]] ; then
-    skip "CRIU test suite is skipped on systemd cgroup driver for now."
-  fi
   # All checkpoint tests are currently failing on v2
   requires cgroups_v1
+  # XXX: currently criu require root containers.
+  requires criu root
 
   teardown_busybox
   setup_busybox
@@ -17,10 +16,34 @@ function teardown() {
   teardown_busybox
 }
 
-@test "checkpoint and restore" {
-  # XXX: currently criu require root containers.
-  requires criu root
+function setup_pipes() {
+	# The changes to 'terminal' are needed for running in detached mode
+	sed -i 's;"terminal": true;"terminal": false;' config.json
+	sed -i 's/"sh"/"sh","-c","for i in `seq 10`; do read xxx || continue; echo ponG $xxx; done"/' config.json
 
+	# Create two sets of pipes
+	# for stdout/stderr
+	exec 52<> <(:)
+	exec 50</proc/self/fd/52
+	exec 51>/proc/self/fd/52
+	exec 52>&-
+	# ... and stdin
+	exec 62<> <(:)
+	exec 60</proc/self/fd/62
+	exec 61>/proc/self/fd/62
+	exec 62>&-
+}
+
+function check_pipes() {
+	echo Ping >&61
+	exec 61>&-
+	exec 51>&-
+	run cat <&50
+	[ "$status" -eq 0 ]
+	[[ "${output}" == *"ponG Ping"* ]]
+}
+
+@test "checkpoint and restore" {
   runc run -d --console-socket $CONSOLE_SOCKET test_busybox
   [ "$status" -eq 0 ]
 
@@ -29,15 +52,11 @@ function teardown() {
   for i in `seq 2`; do
     # checkpoint the running container
     runc --criu "$CRIU" checkpoint --work-path ./work-dir test_busybox
-    ret=$?
-    # if you are having problems getting criu to work uncomment the following dump:
-    #cat /run/opencontainer/containers/test_busybox/criu.work/dump.log
     cat ./work-dir/dump.log | grep -B 5 Error || true
-    [ "$ret" -eq 0 ]
+    [ "$status" -eq 0 ]
 
     # after checkpoint busybox is no longer running
-    runc state test_busybox
-    [ "$status" -ne 0 ]
+    testcontainer test_busybox checkpointed
 
     # restore from checkpoint
     runc --criu "$CRIU" restore -d --work-path ./work-dir --console-socket $CONSOLE_SOCKET test_busybox
@@ -51,32 +70,7 @@ function teardown() {
 }
 
 @test "checkpoint --pre-dump and restore" {
-  # XXX: currently criu require root containers.
-  requires criu root
-
-  # The changes to 'terminal' are needed for running in detached mode
-  sed -i 's;"terminal": true;"terminal": false;' config.json
-  sed -i 's/"sh"/"sh","-c","for i in `seq 10`; do read xxx || continue; echo ponG $xxx; done"/' config.json
-
-  # The following code creates pipes for stdin and stdout.
-  # CRIU can't handle fifo-s, so we need all these tricks.
-  fifo=`mktemp -u /tmp/runc-fifo-XXXXXX`
-  mkfifo $fifo
-
-  # stdout
-  cat $fifo | cat $fifo &
-  pid=$!
-  exec 50</proc/$pid/fd/0
-  exec 51>/proc/$pid/fd/0
-
-  # stdin
-  cat $fifo | cat $fifo &
-  pid=$!
-  exec 60</proc/$pid/fd/0
-  exec 61>/proc/$pid/fd/0
-
-  echo -n > $fifo
-  unlink $fifo
+  setup_pipes
 
   # run busybox
   __runc run -d test_busybox <&60 >&51 2>&51
@@ -90,9 +84,7 @@ function teardown() {
   [ "$status" -eq 0 ]
 
   # busybox should still be running
-  runc state test_busybox
-  [ "$status" -eq 0 ]
-  [[ "${output}" == *"running"* ]]
+  testcontainer test_busybox running
 
   # checkpoint the running container
   mkdir image-dir
@@ -102,8 +94,7 @@ function teardown() {
   [ "$status" -eq 0 ]
 
   # after checkpoint busybox is no longer running
-  runc state test_busybox
-  [ "$status" -ne 0 ]
+  testcontainer test_busybox checkpointed
 
   # restore from checkpoint
   __runc --criu "$CRIU" restore -d --work-path ./work-dir --image-path ./image-dir test_busybox <&60 >&51 2>&51
@@ -118,35 +109,20 @@ function teardown() {
   [ "$status" -eq 0 ]
   [[ ${output} == "ok" ]]
 
-  echo Ping >&61
-  exec 61>&-
-  exec 51>&-
-  run cat <&50
-  [ "$status" -eq 0 ]
-  [[ "${output}" == *"ponG Ping"* ]]
+  check_pipes
 }
 
 @test "checkpoint --lazy-pages and restore" {
-  # XXX: currently criu require root containers.
-  requires criu root
-
   # check if lazy-pages is supported
   run ${CRIU} check --feature uffd-noncoop
   if [ "$status" -eq 1 ]; then
-    # this criu does not support lazy migration; skip the test
     skip "this criu does not support lazy migration"
   fi
 
-  # The changes to 'terminal' are needed for running in detached mode
-  sed -i 's;"terminal": true;"terminal": false;' config.json
+  setup_pipes
+
   # This should not be necessary: https://github.com/checkpoint-restore/criu/issues/575
   sed -i 's;"readonly": true;"readonly": false;' config.json
-  sed -i 's/"sh"/"sh","-c","for i in `seq 10`; do read xxx || continue; echo ponG $xxx; done"/' config.json
-
-  # The following code creates pipes for stdin and stdout.
-  # CRIU can't handle fifo-s, so we need all these tricks.
-  fifo=`mktemp -u /tmp/runc-fifo-XXXXXX`
-  mkfifo $fifo
 
   # For lazy migration we need to know when CRIU is ready to serve
   # the memory pages via TCP.
@@ -155,21 +131,6 @@ function teardown() {
 
   # TCP port for lazy migration
   port=27277
-
-  # stdout
-  cat $fifo | cat $fifo &
-  pid=$!
-  exec 50</proc/$pid/fd/0
-  exec 51>/proc/$pid/fd/0
-
-  # stdin
-  cat $fifo | cat $fifo &
-  pid=$!
-  exec 60</proc/$pid/fd/0
-  exec 61>/proc/$pid/fd/0
-
-  echo -n > $fifo
-  unlink $fifo
 
   # run busybox
   __runc run -d test_busybox <&60 >&51 2>&51
@@ -216,8 +177,7 @@ function teardown() {
   # Killing the CRIU on the checkpoint side will let the container
   # continue to run if the migration failed at some point.
   __runc --criu "$CRIU" restore -d --work-path ./image-dir --image-path ./image-dir --lazy-pages test_busybox_restore <&60 >&51 2>&51
-  ret=$?
-  [ $ret -eq 0 ]
+  [ $? -eq 0 ]
   run grep -B 5 Error ./work-dir/dump.log -q
   [ "$status" -eq 1 ]
 
@@ -228,18 +188,10 @@ function teardown() {
   [ "$status" -eq 0 ]
   [[ ${output} == "ok" ]]
 
-  echo Ping >&61
-  exec 61>&-
-  exec 51>&-
-  run cat <&50
-  [ "$status" -eq 0 ]
-  [[ "${output}" == *"ponG Ping"* ]]
+  check_pipes
 }
 
 @test "checkpoint and restore in external network namespace" {
-  # XXX: currently criu require root containers.
-  requires criu root
-
   # check if external_net_ns is supported; only with criu 3.10++
   run ${CRIU} check --feature external_net_ns
   if [ "$status" -eq 1 ]; then
@@ -269,15 +221,13 @@ function teardown() {
     # checkpoint the running container; this automatically tells CRIU to
     # handle the network namespace defined in config.json as an external
     runc --criu "$CRIU" checkpoint --work-path ./work-dir test_busybox
-    ret=$?
     # if you are having problems getting criu to work uncomment the following dump:
     #cat /run/opencontainer/containers/test_busybox/criu.work/dump.log
     cat ./work-dir/dump.log | grep -B 5 Error || true
-    [ "$ret" -eq 0 ]
+    [ "$status" -eq 0 ]
 
     # after checkpoint busybox is no longer running
-    runc state test_busybox
-    [ "$status" -ne 0 ]
+    testcontainer test_busybox checkpointed
 
     # restore from checkpoint; this should restore the container into the existing network namespace
     runc --criu "$CRIU" restore -d --work-path ./work-dir --console-socket $CONSOLE_SOCKET test_busybox
@@ -299,9 +249,6 @@ function teardown() {
 }
 
 @test "checkpoint and restore with container specific CRIU config" {
-  # XXX: currently criu require root containers.
-  requires criu root
-
   tmp=`mktemp /tmp/runc-criu-XXXXXX.conf`
   # This is the file we write to /etc/criu/default.conf
   tmplog1=`mktemp /tmp/runc-criu-log-XXXXXX.log`
@@ -332,8 +279,7 @@ function teardown() {
   test -f ./work-dir/$tmplog2
 
   # after checkpoint busybox is no longer running
-  runc state test_busybox
-  [ "$status" -ne 0 ]
+  testcontainer test_busybox checkpointed
 
   test -f ./work-dir/$tmplog2 && unlink ./work-dir/$tmplog2
   # restore from checkpoint
