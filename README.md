@@ -55,6 +55,20 @@ sudo make install
 
 `runc` will be installed to `/usr/local/sbin/runc` on your system.
 
+#### Install with Ansible
+
+An [Ansible Role](https://github.com/alvistack/ansible-role-runc) is also available to automate the above steps:
+
+``` bash
+sudo su -
+mkdir -p ~/.ansible/roles
+cd ~/.ansible/roles
+git clone https://github.com/alvistack/ansible-role-runc.git runc
+cd ~/.ansible/roles/runc
+pip3 install --upgrade --ignore-installed --requirement requirements.txt
+molecule converge
+molecule verify
+```
 
 #### Build Tags
 
