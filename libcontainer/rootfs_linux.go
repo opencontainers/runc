@@ -402,27 +402,9 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string, enableCgroupns b
 		}
 	case "cgroup":
 		if cgroups.IsCgroup2UnifiedMode() {
-			if err := mountCgroupV2(m, rootfs, mountLabel, enableCgroupns); err != nil {
-				return err
-			}
-		} else {
-
-			if err := mountCgroupV1(m, rootfs, mountLabel, enableCgroupns); err != nil {
-				return err
-			}
+			return mountCgroupV2(m, rootfs, mountLabel, enableCgroupns)
 		}
-		if m.Flags&unix.MS_RDONLY != 0 {
-			// remount cgroup root as readonly
-			mcgrouproot := &configs.Mount{
-				Source:      m.Destination,
-				Device:      "bind",
-				Destination: m.Destination,
-				Flags:       defaultMountFlags | unix.MS_RDONLY | unix.MS_BIND,
-			}
-			if err := remount(mcgrouproot, rootfs); err != nil {
-				return err
-			}
-		}
+		return mountCgroupV1(m, rootfs, mountLabel, enableCgroupns)
 	default:
 		// ensure that the destination of the mount is resolved of symlinks at mount time because
 		// any previous mounts can invalidate the next mount's destination.
