@@ -262,3 +262,7 @@ func (m *manager) GetCgroups() (*configs.Cgroup, error) {
 func (m *manager) GetFreezerState() (configs.FreezerState, error) {
 	return getFreezer(m.dirPath)
 }
+
+func (m *manager) Exists() bool {
+	return cgroups.PathExists(m.dirPath)
+}

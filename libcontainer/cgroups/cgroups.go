@@ -47,6 +47,9 @@ type Manager interface {
 
 	// GetFreezerState retrieves the current FreezerState of the cgroup.
 	GetFreezerState() (configs.FreezerState, error)
+
+	// Whether the cgroup path exists or not
+	Exists() bool
 }
 
 type NotFoundError struct {

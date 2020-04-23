@@ -169,7 +169,17 @@ func (c *linuxContainer) OCIState() (*specs.State, error) {
 }
 
 func (c *linuxContainer) Processes() ([]int, error) {
-	pids, err := c.cgroupManager.GetAllPids()
+	var pids []int
+	status, err := c.currentStatus()
+	if err != nil {
+		return pids, err
+	}
+	// for systemd cgroup, the unit's cgroup path will be auto removed if container's all processes exited
+	if status == Stopped && !c.cgroupManager.Exists() {
+		return pids, nil
+	}
+
+	pids, err = c.cgroupManager.GetAllPids()
 	if err != nil {
 		return nil, newSystemErrorWithCause(err, "getting all container pids from cgroups")
 	}
@@ -385,12 +395,16 @@ func (c *linuxContainer) start(process *Process) error {
 func (c *linuxContainer) Signal(s os.Signal, all bool) error {
 	c.m.Lock()
 	defer c.m.Unlock()
-	if all {
-		return signalAllProcesses(c.cgroupManager, s)
-	}
 	status, err := c.currentStatus()
 	if err != nil {
 		return err
+	}
+	if all {
+		// for systemd cgroup, the unit's cgroup path will be auto removed if container's all processes exited
+		if status == Stopped && !c.cgroupManager.Exists() {
+			return nil
+		}
+		return signalAllProcesses(c.cgroupManager, s)
 	}
 	// to avoid a PID reuse attack
 	if status == Running || status == Created || status == Paused {
