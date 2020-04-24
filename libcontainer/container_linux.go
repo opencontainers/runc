@@ -1014,14 +1014,24 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 		}
 	}
 
-	if !cgroups.IsCgroup2UnifiedMode() && c.checkCriuVersion(31400) == nil {
-		// CRIU currently cannot handle the v2 freezer correctly
-		// before release 3.14. For older releases we are telling
-		// CRIU to not use the cgroup v2 freezer. CRIU will pause
-		// each process manually using ptrace().
-		if fcg := c.cgroupManager.GetPaths()["freezer"]; fcg != "" {
-			rpcOpts.FreezeCgroup = proto.String(fcg)
+	// CRIU can use cgroup freezer; when rpcOpts.FreezeCgroup
+	// is not set, CRIU uses ptrace() to pause the processes.
+	var fcg string
+	switch cgroups.IsCgroup2UnifiedMode() {
+	case false:
+		fcg = c.cgroupManager.GetPaths()["freezer"]
+	case true:
+		// cgroup v2 freezer is only supported since CRIU release 3.14
+		if c.checkCriuVersion(31400) == nil {
+			fcg, err = c.cgroupManager.GetUnifiedPath()
+			if err != nil {
+				// should not happen
+				return err
+			}
 		}
+	}
+	if fcg != "" {
+		rpcOpts.FreezeCgroup = proto.String(fcg)
 	}
 
 	// append optional criu opts, e.g., page-server and port
