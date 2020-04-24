@@ -163,6 +163,17 @@ function check_cgroup_value() {
 	[ "$current" = "$expected" ]
 }
 
+# Helper to check a value in systemd.
+function check_systemd_value() {
+	unitname=$1
+	source=$2
+	expected=$3
+	
+	current=$(systemctl show $unitname | grep $source)
+	echo "current" $current "!?" "$expected"
+	[ "$current" = "$expected" ]
+}
+
 # Helper function to set a resources limit
 function set_resources_limit() {
   bundle="${1:-.}"
