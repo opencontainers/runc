@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/opencontainers/runc/libcontainer"
-	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
 
 	"golang.org/x/sys/unix"
@@ -80,17 +79,9 @@ func testCheckpoint(t *testing.T, userns bool) {
 		config.GidMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
 		config.Namespaces = append(config.Namespaces, configs.Namespace{Type: configs.NEWUSER})
 	} else {
-		var cgroupDevice string
-
-		if cgroups.IsCgroup2UnifiedMode() {
-			cgroupDevice = "cgroup2"
-		} else {
-			cgroupDevice = "cgroup"
-		}
-
 		config.Mounts = append(config.Mounts, &configs.Mount{
 			Destination: "/sys/fs/cgroup",
-			Device:      cgroupDevice,
+			Device:      "cgroup",
 			Flags:       defaultMountFlags | unix.MS_RDONLY,
 		})
 	}

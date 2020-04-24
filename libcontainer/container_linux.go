@@ -1095,18 +1095,19 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 		go waitForCriuLazyServer(statusRead, criuOpts.StatusFd)
 	}
 
-	//no need to dump these information in pre-dump
+	// no need to dump all this in pre-dump
 	if !criuOpts.PreDump {
+		hasCgroupns := c.config.Namespaces.Contains(configs.NEWCGROUP)
 		for _, m := range c.config.Mounts {
 			switch m.Device {
 			case "bind":
 				c.addCriuDumpMount(req, m)
 			case "cgroup":
-				if cgroups.IsCgroup2UnifiedMode() {
-					c.addCriuDumpMount(req, m)
+				if cgroups.IsCgroup2UnifiedMode() || hasCgroupns {
+					// real mount(s)
 					continue
 				}
-				// cgroup v1
+				// a set of "external" bind mounts
 				binds, err := getCgroupMounts(m)
 				if err != nil {
 					return err
@@ -1184,7 +1185,14 @@ func (c *linuxContainer) restoreNetwork(req *criurpc.CriuReq, criuOpts *CriuOpts
 func (c *linuxContainer) makeCriuRestoreMountpoints(m *configs.Mount) error {
 	switch m.Device {
 	case "cgroup":
-		// Do nothing for cgroup, CRIU should handle it
+		// No mount point(s) need to be created:
+		//
+		// * for v1, mount points are saved by CRIU because
+		//   /sys/fs/cgroup is a tmpfs mount
+		//
+		// * for v2, /sys/fs/cgroup is a real mount, but
+		//   the mountpoint appears as soon as /sys is mounted
+		return nil
 	case "bind":
 		// The prepareBindMount() function checks if source
 		// exists. So it cannot be used for other filesystem types.
@@ -1192,7 +1200,7 @@ func (c *linuxContainer) makeCriuRestoreMountpoints(m *configs.Mount) error {
 			return err
 		}
 	default:
-		// for all other file-systems just create the mountpoints
+		// for all other filesystems just create the mountpoints
 		dest, err := securejoin.SecureJoin(c.config.Rootfs, m.Destination)
 		if err != nil {
 			return err
@@ -1366,16 +1374,16 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 		return err
 	}
 
+	hasCgroupns := c.config.Namespaces.Contains(configs.NEWCGROUP)
 	for _, m := range c.config.Mounts {
 		switch m.Device {
 		case "bind":
 			c.addCriuRestoreMount(req, m)
 		case "cgroup":
-			if cgroups.IsCgroup2UnifiedMode() {
-				c.addCriuRestoreMount(req, m)
+			if cgroups.IsCgroup2UnifiedMode() || hasCgroupns {
 				continue
 			}
-			// cgroup v1
+			// cgroup v1 is a set of bind mounts, unless cgroupns is used
 			binds, err := getCgroupMounts(m)
 			if err != nil {
 				return err
