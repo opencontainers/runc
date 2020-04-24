@@ -15,40 +15,48 @@ RUNC_IMAGE := runc_dev$(if $(GIT_BRANCH_CLEAN),:$(GIT_BRANCH_CLEAN))
 PROJECT := github.com/opencontainers/runc
 BUILDTAGS ?= seccomp selinux apparmor
 COMMIT_NO := $(shell git rev-parse HEAD 2> /dev/null || true)
-COMMIT ?= $(if $(shell git status --porcelain --untracked-files=no),"${COMMIT_NO}-dirty","${COMMIT_NO}")
+COMMIT ?= $(if $(shell git status --porcelain --untracked-files=no),"$(COMMIT_NO)-dirty","$(COMMIT_NO)")
+VERSION := $(shell cat ./VERSION)
+
+# TODO: rm -mod=vendor once go 1.13 will be unsupported
+GO_BUILD := $(GO) build -mod=vendor -buildmode=pie $(EXTRA_FLAGS) -tags "$(BUILDTAGS)" \
+	-ldflags "-X main.gitCommit=$(COMMIT) -X main.version=$(VERSION) $(EXTRA_LDFLAGS)"
+GO_BUILD_STATIC := CGO_ENABLED=1 $(GO) build -mod=vendor $(EXTRA_FLAGS) -tags "$(BUILDTAGS) netgo osusergo" \
+	-ldflags "-w -extldflags -static -X main.gitCommit=$(COMMIT) -X main.version=$(VERSION) $(EXTRA_LDFLAGS)"
 
 MAN_DIR := $(CURDIR)/man/man8
 MAN_PAGES = $(shell ls $(MAN_DIR)/*.8)
 MAN_PAGES_BASE = $(notdir $(MAN_PAGES))
-MAN_INSTALL_PATH := ${PREFIX}/share/man/man8/
+MAN_INSTALL_PATH := $(PREFIX)/share/man/man8/
 
 RELEASE_DIR := $(CURDIR)/release
-
-VERSION := ${shell cat ./VERSION}
 
 SHELL := $(shell command -v bash 2>/dev/null)
 
 .DEFAULT: runc
 
 runc: $(SOURCES)
-	$(GO) build -buildmode=pie $(EXTRA_FLAGS) -ldflags "-X main.gitCommit=${COMMIT} -X main.version=${VERSION} $(EXTRA_LDFLAGS)" -tags "$(BUILDTAGS)" -o runc .
+	$(GO_BUILD) -o runc .
 
 all: runc recvtty
 
 recvtty: contrib/cmd/recvtty/recvtty
 
 contrib/cmd/recvtty/recvtty: $(SOURCES)
-	$(GO) build -buildmode=pie $(EXTRA_FLAGS) -ldflags "-X main.gitCommit=${COMMIT} -X main.version=${VERSION} $(EXTRA_LDFLAGS)" -tags "$(BUILDTAGS)" -o contrib/cmd/recvtty/recvtty ./contrib/cmd/recvtty
+	$(GO_BUILD) -o contrib/cmd/recvtty/recvtty ./contrib/cmd/recvtty
 
 static: $(SOURCES)
-	CGO_ENABLED=1 $(GO) build $(EXTRA_FLAGS) -tags "$(BUILDTAGS) netgo osusergo" -installsuffix netgo -ldflags "-w -extldflags -static -X main.gitCommit=${COMMIT} -X main.version=${VERSION} $(EXTRA_LDFLAGS)" -o runc .
-	CGO_ENABLED=1 $(GO) build $(EXTRA_FLAGS) -tags "$(BUILDTAGS) netgo osusergo" -installsuffix netgo -ldflags "-w -extldflags -static -X main.gitCommit=${COMMIT} -X main.version=${VERSION} $(EXTRA_LDFLAGS)" -o contrib/cmd/recvtty/recvtty ./contrib/cmd/recvtty
+	$(GO_BUILD_STATIC) -o runc .
+	$(GO_BUILD_STATIC) -o contrib/cmd/recvtty/recvtty ./contrib/cmd/recvtty
 
 release:
 	script/release.sh -r release/$(VERSION) -v $(VERSION)
 
 dbuild: runcimage
-	$(CONTAINER_ENGINE) run ${CONTAINER_ENGINE_RUN_FLAGS} --rm -v $(CURDIR):/go/src/$(PROJECT) --privileged $(RUNC_IMAGE) make clean all
+	$(CONTAINER_ENGINE) run $(CONTAINER_ENGINE_RUN_FLAGS) \
+		--privileged --rm \
+		-v $(CURDIR):/go/src/$(PROJECT) \
+		$(RUNC_IMAGE) make clean all
 
 lint:
 	$(GO) vet $(allpackages)
@@ -58,7 +66,7 @@ man:
 	man/md2man-all.sh
 
 runcimage:
-	$(CONTAINER_ENGINE) build ${CONTAINER_ENGINE_BUILD_FLAGS} -t $(RUNC_IMAGE) .
+	$(CONTAINER_ENGINE) build $(CONTAINER_ENGINE_BUILD_FLAGS) -t $(RUNC_IMAGE) .
 
 test:
 	make unittest integration rootlessintegration
@@ -67,25 +75,40 @@ localtest:
 	make localunittest localintegration localrootlessintegration
 
 unittest: runcimage
-	$(CONTAINER_ENGINE) run ${CONTAINER_ENGINE_RUN_FLAGS} -t --privileged --rm -v /lib/modules:/lib/modules:ro -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) make localunittest TESTFLAGS=${TESTFLAGS}
+	$(CONTAINER_ENGINE) run $(CONTAINER_ENGINE_RUN_FLAGS) \
+		-t --privileged --rm \
+		-v /lib/modules:/lib/modules:ro \
+		-v $(CURDIR):/go/src/$(PROJECT) \
+		$(RUNC_IMAGE) make localunittest TESTFLAGS=$(TESTFLAGS)
 
 localunittest: all
-	$(GO) test -timeout 3m -tags "$(BUILDTAGS)" ${TESTFLAGS} -v $(allpackages)
+	$(GO) test -timeout 3m -tags "$(BUILDTAGS)" $(TESTFLAGS) -v $(allpackages)
 
 integration: runcimage
-	$(CONTAINER_ENGINE) run ${CONTAINER_ENGINE_RUN_FLAGS} -t --privileged --rm -v /lib/modules:/lib/modules:ro -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) make localintegration TESTPATH=${TESTPATH}
+	$(CONTAINER_ENGINE) run $(CONTAINER_ENGINE_RUN_FLAGS) \
+		-t --privileged --rm \
+		-v /lib/modules:/lib/modules:ro \
+		-v $(CURDIR):/go/src/$(PROJECT) \
+		$(RUNC_IMAGE) make localintegration TESTPATH=$(TESTPATH)
 
 localintegration: all
-	bats -t tests/integration${TESTPATH}
+	bats -t tests/integration$(TESTPATH)
 
 rootlessintegration: runcimage
-	$(CONTAINER_ENGINE) run -e ROOTLESS_TESTPATH ${CONTAINER_ENGINE_RUN_FLAGS} -t --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) make localrootlessintegration
+	$(CONTAINER_ENGINE) run $(CONTAINER_ENGINE_RUN_FLAGS) \
+		-t --privileged --rm \
+		-v $(CURDIR):/go/src/$(PROJECT) \
+		-e ROOTLESS_TESTPATH \
+		$(RUNC_IMAGE) make localrootlessintegration
 
 localrootlessintegration: all
 	tests/rootless.sh
 
 shell: runcimage
-	$(CONTAINER_ENGINE) run ${CONTAINER_ENGINE_RUN_FLAGS} -ti --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) bash
+	$(CONTAINER_ENGINE) run $(CONTAINER_ENGINE_RUN_FLAGS) \
+		-ti --privileged --rm \
+		-v $(CURDIR):/go/src/$(PROJECT) \
+		$(RUNC_IMAGE) bash
 
 install:
 	install -D -m0755 runc $(BINDIR)/runc
@@ -131,13 +154,16 @@ verify-dependencies: vendor
 		&& echo "all vendor files are up to date."
 
 cross: runcimage
-	$(CONTAINER_ENGINE) run ${CONTAINER_ENGINE_RUN_FLAGS} -e BUILDTAGS="$(BUILDTAGS)" --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_IMAGE) make localcross
+	$(CONTAINER_ENGINE) run $(CONTAINER_ENGINE_RUN_FLAGS) \
+		-e BUILDTAGS="$(BUILDTAGS)" --rm \
+		-v $(CURDIR):/go/src/$(PROJECT) \
+		$(RUNC_IMAGE) make localcross
 
 localcross:
-	CGO_ENABLED=1 GOARCH=arm GOARM=6 CC=arm-linux-gnueabi-gcc $(GO) build -buildmode=pie $(EXTRA_FLAGS) -ldflags "-X main.gitCommit=${COMMIT} -X main.version=${VERSION} $(EXTRA_LDFLAGS)" -tags "$(BUILDTAGS)" -o runc-armel .
-	CGO_ENABLED=1 GOARCH=arm GOARM=7 CC=arm-linux-gnueabihf-gcc $(GO) build -buildmode=pie $(EXTRA_FLAGS) -ldflags "-X main.gitCommit=${COMMIT} -X main.version=${VERSION} $(EXTRA_LDFLAGS)" -tags "$(BUILDTAGS)" -o runc-armhf .
-	CGO_ENABLED=1 GOARCH=arm64 CC=aarch64-linux-gnu-gcc $(GO) build -buildmode=pie $(EXTRA_FLAGS) -ldflags "-X main.gitCommit=${COMMIT} -X main.version=${VERSION} $(EXTRA_LDFLAGS)" -tags "$(BUILDTAGS)" -o runc-arm64 .
-	CGO_ENABLED=1 GOARCH=ppc64le CC=powerpc64le-linux-gnu-gcc $(GO) build -buildmode=pie $(EXTRA_FLAGS) -ldflags "-X main.gitCommit=${COMMIT} -X main.version=${VERSION} $(EXTRA_LDFLAGS)" -tags "$(BUILDTAGS)" -o runc-ppc64le .
+	CGO_ENABLED=1 GOARCH=arm GOARM=6 CC=arm-linux-gnueabi-gcc   $(GO_BUILD) -o runc-armel .
+	CGO_ENABLED=1 GOARCH=arm GOARM=7 CC=arm-linux-gnueabihf-gcc $(GO_BUILD) -o runc-armhf .
+	CGO_ENABLED=1 GOARCH=arm64 CC=aarch64-linux-gnu-gcc         $(GO_BUILD) -o runc-arm64 .
+	CGO_ENABLED=1 GOARCH=ppc64le CC=powerpc64le-linux-gnu-gcc   $(GO_BUILD) -o runc-ppc64le .
 
 # memoize allpackages, so that it's executed only once and only if used
 _allpackages = $(shell $(GO) list ./... | grep -v vendor)
