@@ -1,5 +1,5 @@
 ARG GO_VERSION=1.13
-ARG BATS_VERSION=03608115df2071fff4eaaff1605768c275e5f81f
+ARG BATS_VERSION=v1.1.0
 ARG CRIU_VERSION=v3.13
 
 FROM golang:${GO_VERSION}-buster
@@ -51,11 +51,11 @@ RUN useradd -u1000 -m -d/home/rootless -s/bin/bash rootless
 # install bats
 ARG BATS_VERSION
 RUN cd /tmp \
-    && git clone https://github.com/sstephenson/bats.git \
-    && cd bats \
+    && git clone https://github.com/bats-core/bats-core.git \
+    && cd bats-core \
     && git reset --hard "${BATS_VERSION}" \
     && ./install.sh /usr/local \
-    && rm -rf /tmp/bats
+    && rm -rf /tmp/bats-core
 
 # install criu
 ARG CRIU_VERSION
