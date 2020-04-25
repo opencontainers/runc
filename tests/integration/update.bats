@@ -84,10 +84,24 @@ EOF
     runc update test_update --memory 67108864
     [ "$status" -eq 0 ]
     check_cgroup_value $MEM_LIMIT 67108864
+    if [[ -n "${RUNC_USE_SYSTEMD}" ]] ; then
+        if [ "$CGROUP_UNIFIED" != "yes" ]; then
+            check_systemd_value "runc-cgroups-integration-test.scope" "MemoryLimit=" "MemoryLimit=67108864"
+        else
+            check_systemd_value "runc-cgroups-integration-test.scope" "MemoryMax=" "MemoryMax=67108864"
+        fi
+    fi
 
     runc update test_update --memory 50M
     [ "$status" -eq 0 ]
     check_cgroup_value $MEM_LIMIT 52428800
+    if [[ -n "${RUNC_USE_SYSTEMD}" ]] ; then
+        if [ "$CGROUP_UNIFIED" != "yes" ]; then
+            check_systemd_value "runc-cgroups-integration-test.scope" "MemoryLimit=" "MemoryLimit=52428800"
+        else
+            check_systemd_value "runc-cgroups-integration-test.scope" "MemoryMax=" "MemoryMax=52428800"
+        fi
+    fi
 
     # update memory soft limit
     runc update test_update --memory-reservation 33554432
@@ -123,6 +137,9 @@ EOF
     runc update test_update --pids-limit 10
     [ "$status" -eq 0 ]
     check_cgroup_value "pids.max" 10
+    if [[ -n "${RUNC_USE_SYSTEMD}" ]] ; then
+        check_systemd_value "runc-cgroups-integration-test.scope" "TasksMax=" "TasksMax=10"
+    fi
 
     # Revert to the test initial value via json on stdin
     runc update  -r - test_update <<EOF

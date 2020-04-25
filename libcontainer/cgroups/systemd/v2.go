@@ -34,6 +34,59 @@ func NewUnifiedManager(config *configs.Cgroup, path string, rootless bool) *unif
 	}
 }
 
+func genV2ResourcesProperties(c *configs.Cgroup) ([]systemdDbus.Property, error) {
+	var properties []systemdDbus.Property
+
+	if c.Resources.Memory != 0 {
+		properties = append(properties,
+			newProp("MemoryMax", uint64(c.Resources.Memory)))
+	}
+
+	swap, err := cgroups.ConvertMemorySwapToCgroupV2Value(c.Resources.MemorySwap, c.Resources.Memory)
+	if err != nil {
+		return nil, err
+	}
+	if swap > 0 {
+		properties = append(properties,
+			newProp("MemorySwapMax", uint64(swap)))
+	}
+
+	if c.Resources.CpuWeight != 0 {
+		properties = append(properties,
+			newProp("CPUWeight", c.Resources.CpuWeight))
+	}
+
+	// cpu.cfs_quota_us and cpu.cfs_period_us are controlled by systemd.
+	if c.Resources.CpuQuota != 0 && c.Resources.CpuPeriod != 0 {
+		// corresponds to USEC_INFINITY in systemd
+		// if USEC_INFINITY is provided, CPUQuota is left unbound by systemd
+		// always setting a property value ensures we can apply a quota and remove it later
+		cpuQuotaPerSecUSec := uint64(math.MaxUint64)
+		if c.Resources.CpuQuota > 0 {
+			// systemd converts CPUQuotaPerSecUSec (microseconds per CPU second) to CPUQuota
+			// (integer percentage of CPU) internally.  This means that if a fractional percent of
+			// CPU is indicated by Resources.CpuQuota, we need to round up to the nearest
+			// 10ms (1% of a second) such that child cgroups can set the cpu.cfs_quota_us they expect.
+			cpuQuotaPerSecUSec = uint64(c.Resources.CpuQuota*1000000) / c.Resources.CpuPeriod
+			if cpuQuotaPerSecUSec%10000 != 0 {
+				cpuQuotaPerSecUSec = ((cpuQuotaPerSecUSec / 10000) + 1) * 10000
+			}
+		}
+		properties = append(properties,
+			newProp("CPUQuotaPerSecUSec", cpuQuotaPerSecUSec))
+	}
+
+	if c.Resources.PidsLimit > 0 {
+		properties = append(properties,
+			newProp("TasksAccounting", true),
+			newProp("TasksMax", uint64(c.Resources.PidsLimit)))
+	}
+
+	// ignore c.Resources.KernelMemory
+
+	return properties, nil
+}
+
 func (m *unifiedManager) Apply(pid int) error {
 	var (
 		c          = m.cgroups
@@ -82,54 +135,12 @@ func (m *unifiedManager) Apply(pid int) error {
 	properties = append(properties,
 		newProp("DefaultDependencies", false))
 
-	if c.Resources.Memory != 0 {
-		properties = append(properties,
-			newProp("MemoryMax", uint64(c.Resources.Memory)))
-	}
-
-	swap, err := cgroups.ConvertMemorySwapToCgroupV2Value(c.Resources.MemorySwap, c.Resources.Memory)
+	resourcesProperties, err := genV2ResourcesProperties(c)
 	if err != nil {
 		return err
 	}
-	if swap > 0 {
-		properties = append(properties,
-			newProp("MemorySwapMax", uint64(swap)))
-	}
-
-	if c.Resources.CpuWeight != 0 {
-		properties = append(properties,
-			newProp("CPUWeight", c.Resources.CpuWeight))
-	}
-
-	// cpu.cfs_quota_us and cpu.cfs_period_us are controlled by systemd.
-	if c.Resources.CpuQuota != 0 && c.Resources.CpuPeriod != 0 {
-		// corresponds to USEC_INFINITY in systemd
-		// if USEC_INFINITY is provided, CPUQuota is left unbound by systemd
-		// always setting a property value ensures we can apply a quota and remove it later
-		cpuQuotaPerSecUSec := uint64(math.MaxUint64)
-		if c.Resources.CpuQuota > 0 {
-			// systemd converts CPUQuotaPerSecUSec (microseconds per CPU second) to CPUQuota
-			// (integer percentage of CPU) internally.  This means that if a fractional percent of
-			// CPU is indicated by Resources.CpuQuota, we need to round up to the nearest
-			// 10ms (1% of a second) such that child cgroups can set the cpu.cfs_quota_us they expect.
-			cpuQuotaPerSecUSec = uint64(c.Resources.CpuQuota*1000000) / c.Resources.CpuPeriod
-			if cpuQuotaPerSecUSec%10000 != 0 {
-				cpuQuotaPerSecUSec = ((cpuQuotaPerSecUSec / 10000) + 1) * 10000
-			}
-		}
-		properties = append(properties,
-			newProp("CPUQuotaPerSecUSec", cpuQuotaPerSecUSec))
-	}
-
-	if c.Resources.PidsLimit > 0 {
-		properties = append(properties,
-			newProp("TasksAccounting", true),
-			newProp("TasksMax", uint64(c.Resources.PidsLimit)))
-	}
-
+	properties = append(properties, resourcesProperties...)
 	properties = append(properties, c.SystemdProps...)
-
-	// ignore c.Resources.KernelMemory
 
 	dbusConnection, err := getDbusConnection()
 	if err != nil {
@@ -263,6 +274,18 @@ func (m *unifiedManager) GetStats() (*cgroups.Stats, error) {
 }
 
 func (m *unifiedManager) Set(container *configs.Config) error {
+	properties, err := genV2ResourcesProperties(m.cgroups)
+	if err != nil {
+		return err
+	}
+	dbusConnection, err := getDbusConnection()
+	if err != nil {
+		return err
+	}
+	if err := dbusConnection.SetUnitProperties(getUnitName(m.cgroups), true, properties...); err != nil {
+		return err
+	}
+
 	fsMgr, err := m.fsManager()
 	if err != nil {
 		return err
