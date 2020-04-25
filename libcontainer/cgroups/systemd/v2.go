@@ -8,14 +8,12 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"time"
 
 	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
 	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fs2"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/sirupsen/logrus"
 )
 
 type unifiedManager struct {
@@ -142,19 +140,7 @@ func (m *unifiedManager) Apply(pid int) error {
 	properties = append(properties, resourcesProperties...)
 	properties = append(properties, c.SystemdProps...)
 
-	dbusConnection, err := getDbusConnection()
-	if err != nil {
-		return err
-	}
-
-	statusChan := make(chan string, 1)
-	if _, err := dbusConnection.StartTransientUnit(unitName, "replace", properties, statusChan); err == nil {
-		select {
-		case <-statusChan:
-		case <-time.After(time.Second):
-			logrus.Warnf("Timed out while waiting for StartTransientUnit(%s) completion signal from dbus. Continuing...", unitName)
-		}
-	} else if !isUnitExists(err) {
+	if err := startUnit(unitName, properties); err != nil {
 		return err
 	}
 
@@ -175,14 +161,13 @@ func (m *unifiedManager) Destroy() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	dbusConnection, err := getDbusConnection()
-	if err != nil {
+	unitName := getUnitName(m.cgroups)
+	if err := stopUnit(unitName); err != nil {
 		return err
 	}
-	dbusConnection.StopUnit(getUnitName(m.cgroups), "replace", nil)
 
 	// XXX this is probably not needed, systemd should handle it
-	err = os.Remove(m.path)
+	err := os.Remove(m.path)
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
