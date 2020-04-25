@@ -13,8 +13,8 @@ function teardown() {
 
 @test "events --stats" {
   # XXX: currently cgroups require root containers.
-  # TODO: support cgroup v2 memory.events
-  requires root cgroups_v1
+  requires root
+  init_cgroup_paths
 
   # run busybox detached
   runc run -d --console-socket $CONSOLE_SOCKET test_busybox
@@ -27,10 +27,10 @@ function teardown() {
   [[ "${lines[0]}" == *"data"* ]]
 }
 
-@test "events --interval default " {
+@test "events --interval default" {
   # XXX: currently cgroups require root containers.
-  # TODO: support cgroup v2 memory.events
-  requires root cgroups_v1
+  requires root
+  init_cgroup_paths
 
   # run busybox detached
   runc run -d --console-socket $CONSOLE_SOCKET test_busybox
@@ -55,10 +55,10 @@ function teardown() {
   [[ "${lines[0]}" == *"data"* ]]
 }
 
-@test "events --interval 1s " {
+@test "events --interval 1s" {
   # XXX: currently cgroups require root containers.
-  # TODO: support cgroup v2 memory.events
-  requires root cgroups_v1
+  requires root
+  init_cgroup_paths
 
   # run busybox detached
   runc run -d --console-socket $CONSOLE_SOCKET test_busybox
@@ -82,10 +82,10 @@ function teardown() {
   [ "$status" -eq 0 ]
 }
 
-@test "events --interval 100ms " {
+@test "events --interval 100ms" {
   # XXX: currently cgroups require root containers.
-  # TODO: support cgroup v2 memory.events
-  requires root cgroups_v1
+  requires root
+  init_cgroup_paths
 
   # run busybox detached
   runc run -d --console-socket $CONSOLE_SOCKET test_busybox
@@ -110,4 +110,41 @@ function teardown() {
 
   run eval "grep -q 'test_busybox' events.log"
   [ "$status" -eq 0 ]
+}
+
+@test "events oom " {
+  # XXX: currently cgroups require root containers.
+  requires root
+  init_cgroup_paths
+  
+  # we need the container to hit OOM, so disable swap
+  # ("swap" here is actually memory+swap)
+  DATA=$(cat <<EOF
+  "memory": {
+    "limit": 33554432,
+    "swap": 33554432
+  },
+EOF
+  )
+  DATA=$(echo ${DATA} | sed 's/\n/\\n/g')
+  sed -i "s/\(\"resources\": {\)/\1\n${DATA}/" ${BUSYBOX_BUNDLE}/config.json
+
+  # run busybox detached
+  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+  [ "$status" -eq 0 ]
+
+  # spawn two sub processes (shells)
+  # the first sub process is an event logger that sends stats events to events.log
+  # the second sub process exec a memory hog process to cause a oom condition
+  # and waits for an oom event
+  (__runc events test_busybox > events.log) &
+  (
+    retry 10 1 eval "grep -q 'test_busybox' events.log"
+    __runc exec -d test_busybox sh -c 'test=$(dd if=/dev/urandom ibs=5120k)'
+    retry 10 1 eval "grep -q 'oom' events.log"
+    __runc delete -f test_busybox
+  ) &
+  wait # wait for the above sub shells to finish
+
+  grep -q '{"type":"oom","id":"test_busybox"}' events.log
 }

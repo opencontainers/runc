@@ -648,6 +648,13 @@ func (c *linuxContainer) NotifyOOM() (<-chan struct{}, error) {
 	if c.config.RootlessCgroups {
 		logrus.Warn("getting OOM notifications may fail if you don't have the full access to cgroups")
 	}
+	if cgroups.IsCgroup2UnifiedMode() {
+		path, err := c.cgroupManager.GetUnifiedPath()
+		if err != nil {
+			return nil, err
+		}
+		return notifyOnOOMV2(path)
+	}
 	return notifyOnOOM(c.cgroupManager.GetPaths())
 }
 
