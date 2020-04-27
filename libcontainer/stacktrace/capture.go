@@ -7,19 +7,22 @@ import "runtime"
 // skip is the number of frames to skip
 func Capture(userSkip int) Stacktrace {
 	var (
-		skip   = userSkip + 1 // add one for our own function
+		skip   = userSkip + 2 // add one for our own function, one for runtime.Callers
 		frames []Frame
-		prevPc uintptr
 	)
-	for i := skip; ; i++ {
-		pc, file, line, ok := runtime.Caller(i)
-		//detect if caller is repeated to avoid loop, gccgo
-		//currently runs  into a loop without this check
-		if !ok || pc == prevPc {
+
+	pc := make([]uintptr, 10)
+	n := runtime.Callers(skip, pc)
+	if n == 0 {
+		return Stacktrace{}
+	}
+	f := runtime.CallersFrames(pc)
+	for {
+		frame, more := f.Next()
+		frames = append(frames, newFrame(frame))
+		if !more {
 			break
 		}
-		frames = append(frames, NewFrame(pc, file, line))
-		prevPc = pc
 	}
 	return Stacktrace{
 		Frames: frames,

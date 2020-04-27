@@ -21,8 +21,8 @@ func TestCaptureTestFunc(t *testing.T) {
 	if expected := "captureFunc"; frame.Function != expected {
 		t.Fatalf("expected function %q but received %q", expected, frame.Function)
 	}
-	expected := "/runc/libcontainer/stacktrace"
-	if !strings.HasSuffix(frame.Package, expected) {
+	// captureFunc is inlined in gccgo, so don't expect the full package path
+	if expected := "stacktrace"; !strings.HasSuffix(frame.Package, expected) {
 		t.Fatalf("expected package %q but received %q", expected, frame.Package)
 	}
 	if expected := "capture_test.go"; frame.File != expected {

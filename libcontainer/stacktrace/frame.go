@@ -6,18 +6,13 @@ import (
 	"strings"
 )
 
-// NewFrame returns a new stack frame for the provided information
-func NewFrame(pc uintptr, file string, line int) Frame {
-	fn := runtime.FuncForPC(pc)
-	if fn == nil {
-		return Frame{}
-	}
-	pack, name := parseFunctionName(fn.Name())
+func newFrame(frame runtime.Frame) Frame {
+	pack, name := parseFunctionName(frame.Function)
 	return Frame{
-		Line:     line,
-		File:     filepath.Base(file),
-		Package:  pack,
+		File:     filepath.Base(frame.File),
 		Function: name,
+		Package:  pack,
+		Line:     frame.Line,
 	}
 }
 
