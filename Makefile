@@ -75,7 +75,7 @@ unittest: runcimage
 		$(RUNC_IMAGE) make localunittest TESTFLAGS=$(TESTFLAGS)
 
 localunittest: all
-	$(GO) test -timeout 3m -tags "$(BUILDTAGS)" $(TESTFLAGS) -v ./...
+	$(GO) $(MOD_VENDOR) test -timeout 3m -tags "$(BUILDTAGS)" $(TESTFLAGS) -v ./...
 
 integration: runcimage
 	$(CONTAINER_ENGINE) run $(CONTAINER_ENGINE_RUN_FLAGS) \
