@@ -23,10 +23,6 @@ GO_BUILD := $(GO) build $(MOD_VENDOR) -buildmode=pie $(EXTRA_FLAGS) -tags "$(BUI
 GO_BUILD_STATIC := CGO_ENABLED=1 $(GO) build $(MOD_VENDOR) $(EXTRA_FLAGS) -tags "$(BUILDTAGS) netgo osusergo" \
 	-ldflags "-w -extldflags -static -X main.gitCommit=$(COMMIT) -X main.version=$(VERSION) $(EXTRA_LDFLAGS)"
 
-RELEASE_DIR := $(CURDIR)/release
-
-SHELL := $(shell command -v bash 2>/dev/null)
-
 .DEFAULT: runc
 
 runc:
@@ -113,7 +109,7 @@ install-man: man
 clean:
 	rm -f runc runc-*
 	rm -f contrib/cmd/recvtty/recvtty
-	rm -rf $(RELEASE_DIR)
+	rm -rf release
 	rm -rf man/man8
 
 validate:
