@@ -60,11 +60,9 @@ man:
 runcimage:
 	$(CONTAINER_ENGINE) build $(CONTAINER_ENGINE_BUILD_FLAGS) -t $(RUNC_IMAGE) .
 
-test:
-	make unittest integration rootlessintegration
+test: unittest integration rootlessintegration
 
-localtest:
-	make localunittest localintegration localrootlessintegration
+localtest: localunittest localintegration localrootlessintegration
 
 unittest: runcimage
 	$(CONTAINER_ENGINE) run $(CONTAINER_ENGINE_RUN_FLAGS) \
