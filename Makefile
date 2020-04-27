@@ -3,6 +3,8 @@ GO := go
 
 PREFIX := $(DESTDIR)/usr/local
 BINDIR := $(PREFIX)/sbin
+MANDIR := $(PREFIX)/share/man
+
 GIT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null)
 GIT_BRANCH_CLEAN := $(shell echo $(GIT_BRANCH) | sed -e "s/[^[:alnum:]]/-/g")
 RUNC_IMAGE := runc_dev$(if $(GIT_BRANCH_CLEAN),:$(GIT_BRANCH_CLEAN))
@@ -20,11 +22,6 @@ GO_BUILD := $(GO) build $(MOD_VENDOR) -buildmode=pie $(EXTRA_FLAGS) -tags "$(BUI
 	-ldflags "-X main.gitCommit=$(COMMIT) -X main.version=$(VERSION) $(EXTRA_LDFLAGS)"
 GO_BUILD_STATIC := CGO_ENABLED=1 $(GO) build $(MOD_VENDOR) $(EXTRA_FLAGS) -tags "$(BUILDTAGS) netgo osusergo" \
 	-ldflags "-w -extldflags -static -X main.gitCommit=$(COMMIT) -X main.version=$(VERSION) $(EXTRA_LDFLAGS)"
-
-MAN_DIR := $(CURDIR)/man/man8
-MAN_PAGES = $(shell ls $(MAN_DIR)/*.8)
-MAN_PAGES_BASE = $(notdir $(MAN_PAGES))
-MAN_INSTALL_PATH := $(PREFIX)/share/man/man8/
 
 RELEASE_DIR := $(CURDIR)/release
 
@@ -109,15 +106,15 @@ install:
 install-bash:
 	install -D -m0644 contrib/completions/bash/runc $(PREFIX)/share/bash-completion/completions/runc
 
-install-man:
-	install -d -m 755 $(MAN_INSTALL_PATH)
-	install -m 644 $(MAN_PAGES) $(MAN_INSTALL_PATH)
+install-man: man
+	install -d -m 755 $(MANDIR)/man8
+	install -D -m 644 man/man8/*.8 $(MANDIR)/man8
 
 clean:
 	rm -f runc runc-*
 	rm -f contrib/cmd/recvtty/recvtty
 	rm -rf $(RELEASE_DIR)
-	rm -rf $(MAN_DIR)
+	rm -rf man/man8
 
 validate:
 	script/validate-gofmt
