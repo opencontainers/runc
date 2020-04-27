@@ -1,12 +1,6 @@
-.PHONY: all shell dbuild man release \
-	    localtest localunittest localintegration \
-	    test unittest integration \
-	    cross localcross vendor verify-dependencies
-
 CONTAINER_ENGINE := docker
 GO := go
 
-SOURCES := $(shell find . 2>&1 | grep -E '.*\.(c|h|go)$$')
 PREFIX := $(DESTDIR)/usr/local
 BINDIR := $(PREFIX)/sbin
 GIT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null)
@@ -35,17 +29,15 @@ SHELL := $(shell command -v bash 2>/dev/null)
 
 .DEFAULT: runc
 
-runc: $(SOURCES)
+runc:
 	$(GO_BUILD) -o runc .
 
 all: runc recvtty
 
-recvtty: contrib/cmd/recvtty/recvtty
-
-contrib/cmd/recvtty/recvtty: $(SOURCES)
+recvtty:
 	$(GO_BUILD) -o contrib/cmd/recvtty/recvtty ./contrib/cmd/recvtty
 
-static: $(SOURCES)
+static:
 	$(GO_BUILD_STATIC) -o runc .
 	$(GO_BUILD_STATIC) -o contrib/cmd/recvtty/recvtty ./contrib/cmd/recvtty
 
@@ -164,3 +156,9 @@ localcross:
 	CGO_ENABLED=1 GOARCH=arm GOARM=7 CC=arm-linux-gnueabihf-gcc $(GO_BUILD) -o runc-armhf .
 	CGO_ENABLED=1 GOARCH=arm64 CC=aarch64-linux-gnu-gcc         $(GO_BUILD) -o runc-arm64 .
 	CGO_ENABLED=1 GOARCH=ppc64le CC=powerpc64le-linux-gnu-gcc   $(GO_BUILD) -o runc-ppc64le .
+
+.PHONY: runc all recvtty static release dbuild lint man runcimage \
+	test localtest unittest localunittest integration localintegration \
+	rootlessintegration localrootlessintegration shell install install-bash \
+	install-man uninstall uninstall-bash uninstall-man clean validate ci \
+	vendor verify-dependencies cross localcross
