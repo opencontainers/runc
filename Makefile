@@ -12,10 +12,13 @@ COMMIT_NO := $(shell git rev-parse HEAD 2> /dev/null || true)
 COMMIT ?= $(if $(shell git status --porcelain --untracked-files=no),"$(COMMIT_NO)-dirty","$(COMMIT_NO)")
 VERSION := $(shell cat ./VERSION)
 
-# TODO: rm -mod=vendor once go 1.13 will be unsupported
-GO_BUILD := $(GO) build -mod=vendor -buildmode=pie $(EXTRA_FLAGS) -tags "$(BUILDTAGS)" \
+# TODO: rm -mod=vendor once go 1.13 is unsupported
+ifneq ($(GO111MODULE),off)
+	MOD_VENDOR := "-mod=vendor"
+endif
+GO_BUILD := $(GO) build $(MOD_VENDOR) -buildmode=pie $(EXTRA_FLAGS) -tags "$(BUILDTAGS)" \
 	-ldflags "-X main.gitCommit=$(COMMIT) -X main.version=$(VERSION) $(EXTRA_LDFLAGS)"
-GO_BUILD_STATIC := CGO_ENABLED=1 $(GO) build -mod=vendor $(EXTRA_FLAGS) -tags "$(BUILDTAGS) netgo osusergo" \
+GO_BUILD_STATIC := CGO_ENABLED=1 $(GO) build $(MOD_VENDOR) $(EXTRA_FLAGS) -tags "$(BUILDTAGS) netgo osusergo" \
 	-ldflags "-w -extldflags -static -X main.gitCommit=$(COMMIT) -X main.version=$(VERSION) $(EXTRA_LDFLAGS)"
 
 MAN_DIR := $(CURDIR)/man/man8
