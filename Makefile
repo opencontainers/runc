@@ -59,8 +59,8 @@ dbuild: runcimage
 		$(RUNC_IMAGE) make clean all
 
 lint:
-	$(GO) vet $(allpackages)
-	$(GO) fmt $(allpackages)
+	$(GO) vet ./...
+	$(GO) fmt ./...
 
 man:
 	man/md2man-all.sh
@@ -82,7 +82,7 @@ unittest: runcimage
 		$(RUNC_IMAGE) make localunittest TESTFLAGS=$(TESTFLAGS)
 
 localunittest: all
-	$(GO) test -timeout 3m -tags "$(BUILDTAGS)" $(TESTFLAGS) -v $(allpackages)
+	$(GO) test -timeout 3m -tags "$(BUILDTAGS)" $(TESTFLAGS) -v ./...
 
 integration: runcimage
 	$(CONTAINER_ENGINE) run $(CONTAINER_ENGINE_RUN_FLAGS) \
@@ -138,7 +138,7 @@ clean:
 validate:
 	script/validate-gofmt
 	script/validate-c
-	$(GO) vet $(allpackages)
+	$(GO) vet ./...
 
 ci: validate test release
 
@@ -164,7 +164,3 @@ localcross:
 	CGO_ENABLED=1 GOARCH=arm GOARM=7 CC=arm-linux-gnueabihf-gcc $(GO_BUILD) -o runc-armhf .
 	CGO_ENABLED=1 GOARCH=arm64 CC=aarch64-linux-gnu-gcc         $(GO_BUILD) -o runc-arm64 .
 	CGO_ENABLED=1 GOARCH=ppc64le CC=powerpc64le-linux-gnu-gcc   $(GO_BUILD) -o runc-ppc64le .
-
-# memoize allpackages, so that it's executed only once and only if used
-_allpackages = $(shell $(GO) list ./... | grep -v vendor)
-allpackages = $(if $(__allpackages),,$(eval __allpackages := $$(_allpackages)))$(__allpackages)
