@@ -75,7 +75,7 @@ unittest: runcimage
 		$(RUNC_IMAGE) make localunittest TESTFLAGS=$(TESTFLAGS)
 
 localunittest: all
-	$(GO) $(MOD_VENDOR) test -timeout 3m -tags "$(BUILDTAGS)" $(TESTFLAGS) -v ./...
+	$(GO) test $(MOD_VENDOR) -timeout 3m -tags "$(BUILDTAGS)" $(TESTFLAGS) -v ./...
 
 integration: runcimage
 	$(CONTAINER_ENGINE) run $(CONTAINER_ENGINE_RUN_FLAGS) \
@@ -112,15 +112,6 @@ install-bash:
 install-man:
 	install -d -m 755 $(MAN_INSTALL_PATH)
 	install -m 644 $(MAN_PAGES) $(MAN_INSTALL_PATH)
-
-uninstall:
-	rm -f $(BINDIR)/runc
-
-uninstall-bash:
-	rm -f $(PREFIX)/share/bash-completion/completions/runc
-
-uninstall-man:
-	rm -f $(addprefix $(MAN_INSTALL_PATH),$(MAN_PAGES_BASE))
 
 clean:
 	rm -f runc runc-*
@@ -161,5 +152,5 @@ localcross:
 .PHONY: runc all recvtty static release dbuild lint man runcimage \
 	test localtest unittest localunittest integration localintegration \
 	rootlessintegration localrootlessintegration shell install install-bash \
-	install-man uninstall uninstall-bash uninstall-man clean validate ci \
+	install-man clean validate ci \
 	vendor verify-dependencies cross localcross
