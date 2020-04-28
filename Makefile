@@ -1,14 +1,10 @@
-.PHONY: all shell dbuild man release \
-	    localtest localunittest localintegration \
-	    test unittest integration \
-	    cross localcross vendor verify-dependencies
-
 CONTAINER_ENGINE := docker
 GO := go
 
-SOURCES := $(shell find . 2>&1 | grep -E '.*\.(c|h|go)$$')
 PREFIX := $(DESTDIR)/usr/local
 BINDIR := $(PREFIX)/sbin
+MANDIR := $(PREFIX)/share/man
+
 GIT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null)
 GIT_BRANCH_CLEAN := $(shell echo $(GIT_BRANCH) | sed -e "s/[^[:alnum:]]/-/g")
 RUNC_IMAGE := runc_dev$(if $(GIT_BRANCH_CLEAN),:$(GIT_BRANCH_CLEAN))
@@ -18,34 +14,26 @@ COMMIT_NO := $(shell git rev-parse HEAD 2> /dev/null || true)
 COMMIT ?= $(if $(shell git status --porcelain --untracked-files=no),"$(COMMIT_NO)-dirty","$(COMMIT_NO)")
 VERSION := $(shell cat ./VERSION)
 
-# TODO: rm -mod=vendor once go 1.13 will be unsupported
-GO_BUILD := $(GO) build -mod=vendor -buildmode=pie $(EXTRA_FLAGS) -tags "$(BUILDTAGS)" \
+# TODO: rm -mod=vendor once go 1.13 is unsupported
+ifneq ($(GO111MODULE),off)
+	MOD_VENDOR := "-mod=vendor"
+endif
+GO_BUILD := $(GO) build $(MOD_VENDOR) -buildmode=pie $(EXTRA_FLAGS) -tags "$(BUILDTAGS)" \
 	-ldflags "-X main.gitCommit=$(COMMIT) -X main.version=$(VERSION) $(EXTRA_LDFLAGS)"
-GO_BUILD_STATIC := CGO_ENABLED=1 $(GO) build -mod=vendor $(EXTRA_FLAGS) -tags "$(BUILDTAGS) netgo osusergo" \
+GO_BUILD_STATIC := CGO_ENABLED=1 $(GO) build $(MOD_VENDOR) $(EXTRA_FLAGS) -tags "$(BUILDTAGS) netgo osusergo" \
 	-ldflags "-w -extldflags -static -X main.gitCommit=$(COMMIT) -X main.version=$(VERSION) $(EXTRA_LDFLAGS)"
-
-MAN_DIR := $(CURDIR)/man/man8
-MAN_PAGES = $(shell ls $(MAN_DIR)/*.8)
-MAN_PAGES_BASE = $(notdir $(MAN_PAGES))
-MAN_INSTALL_PATH := $(PREFIX)/share/man/man8/
-
-RELEASE_DIR := $(CURDIR)/release
-
-SHELL := $(shell command -v bash 2>/dev/null)
 
 .DEFAULT: runc
 
-runc: $(SOURCES)
+runc:
 	$(GO_BUILD) -o runc .
 
 all: runc recvtty
 
-recvtty: contrib/cmd/recvtty/recvtty
-
-contrib/cmd/recvtty/recvtty: $(SOURCES)
+recvtty:
 	$(GO_BUILD) -o contrib/cmd/recvtty/recvtty ./contrib/cmd/recvtty
 
-static: $(SOURCES)
+static:
 	$(GO_BUILD_STATIC) -o runc .
 	$(GO_BUILD_STATIC) -o contrib/cmd/recvtty/recvtty ./contrib/cmd/recvtty
 
@@ -59,8 +47,8 @@ dbuild: runcimage
 		$(RUNC_IMAGE) make clean all
 
 lint:
-	$(GO) vet $(allpackages)
-	$(GO) fmt $(allpackages)
+	$(GO) vet ./...
+	$(GO) fmt ./...
 
 man:
 	man/md2man-all.sh
@@ -68,11 +56,9 @@ man:
 runcimage:
 	$(CONTAINER_ENGINE) build $(CONTAINER_ENGINE_BUILD_FLAGS) -t $(RUNC_IMAGE) .
 
-test:
-	make unittest integration rootlessintegration
+test: unittest integration rootlessintegration
 
-localtest:
-	make localunittest localintegration localrootlessintegration
+localtest: localunittest localintegration localrootlessintegration
 
 unittest: runcimage
 	$(CONTAINER_ENGINE) run $(CONTAINER_ENGINE_RUN_FLAGS) \
@@ -82,7 +68,7 @@ unittest: runcimage
 		$(RUNC_IMAGE) make localunittest TESTFLAGS=$(TESTFLAGS)
 
 localunittest: all
-	$(GO) test -timeout 3m -tags "$(BUILDTAGS)" $(TESTFLAGS) -v $(allpackages)
+	$(GO) test $(MOD_VENDOR) -timeout 3m -tags "$(BUILDTAGS)" $(TESTFLAGS) -v ./...
 
 integration: runcimage
 	$(CONTAINER_ENGINE) run $(CONTAINER_ENGINE_RUN_FLAGS) \
@@ -116,29 +102,20 @@ install:
 install-bash:
 	install -D -m0644 contrib/completions/bash/runc $(PREFIX)/share/bash-completion/completions/runc
 
-install-man:
-	install -d -m 755 $(MAN_INSTALL_PATH)
-	install -m 644 $(MAN_PAGES) $(MAN_INSTALL_PATH)
-
-uninstall:
-	rm -f $(BINDIR)/runc
-
-uninstall-bash:
-	rm -f $(PREFIX)/share/bash-completion/completions/runc
-
-uninstall-man:
-	rm -f $(addprefix $(MAN_INSTALL_PATH),$(MAN_PAGES_BASE))
+install-man: man
+	install -d -m 755 $(MANDIR)/man8
+	install -D -m 644 man/man8/*.8 $(MANDIR)/man8
 
 clean:
 	rm -f runc runc-*
 	rm -f contrib/cmd/recvtty/recvtty
-	rm -rf $(RELEASE_DIR)
-	rm -rf $(MAN_DIR)
+	rm -rf release
+	rm -rf man/man8
 
 validate:
 	script/validate-gofmt
 	script/validate-c
-	$(GO) vet $(allpackages)
+	$(GO) vet ./...
 
 ci: validate test release
 
@@ -165,6 +142,8 @@ localcross:
 	CGO_ENABLED=1 GOARCH=arm64 CC=aarch64-linux-gnu-gcc         $(GO_BUILD) -o runc-arm64 .
 	CGO_ENABLED=1 GOARCH=ppc64le CC=powerpc64le-linux-gnu-gcc   $(GO_BUILD) -o runc-ppc64le .
 
-# memoize allpackages, so that it's executed only once and only if used
-_allpackages = $(shell $(GO) list ./... | grep -v vendor)
-allpackages = $(if $(__allpackages),,$(eval __allpackages := $$(_allpackages)))$(__allpackages)
+.PHONY: runc all recvtty static release dbuild lint man runcimage \
+	test localtest unittest localunittest integration localintegration \
+	rootlessintegration localrootlessintegration shell install install-bash \
+	install-man clean validate ci \
+	vendor verify-dependencies cross localcross
