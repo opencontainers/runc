@@ -23,6 +23,11 @@ var (
 	limit    = "hugetlb.%s.limit_in_bytes"
 	maxUsage = "hugetlb.%s.max_usage_in_bytes"
 	failcnt  = "hugetlb.%s.failcnt"
+
+	rsvdUsage    = "hugetlb.%s.rsvd.usage_in_bytes"
+	rsvdLimit    = "hugetlb.%s.rsvd.limit_in_bytes"
+	rsvdMaxUsage = "hugetlb.%s.rsvd.max_usage_in_bytes"
+	rsvdFailcnt  = "hugetlb.%s.rsvd.failcnt"
 )
 
 func TestHugetlbSetHugetlb(t *testing.T) {
@@ -61,6 +66,58 @@ func TestHugetlbSetHugetlb(t *testing.T) {
 		}
 		if value != hugetlbAfter {
 			t.Fatalf("Set hugetlb.limit_in_bytes failed. Expected: %v, Got: %v", hugetlbAfter, value)
+		}
+	}
+}
+
+func TestHugetlbSetHugetlbWithReservedAccounting(t *testing.T) {
+	helper := NewCgroupTestUtil("hugetlb", t)
+	defer helper.cleanup()
+
+	const (
+		hugetlbBefore = 256
+		hugetlbAfter  = 512
+	)
+
+	for _, pageSize := range HugePageSizes {
+		helper.writeFileContents(map[string]string{
+			fmt.Sprintf(limit, pageSize): strconv.Itoa(hugetlbBefore),
+		})
+		helper.writeFileContents(map[string]string{
+			fmt.Sprintf(rsvdLimit, pageSize): strconv.Itoa(hugetlbBefore),
+		})
+	}
+
+	for _, pageSize := range HugePageSizes {
+		helper.CgroupData.config.Resources.HugetlbLimit = []*configs.HugepageLimit{
+			{
+				Pagesize: pageSize,
+				Limit:    hugetlbAfter,
+			},
+		}
+		hugetlb := &HugetlbGroup{}
+		if err := hugetlb.Set(helper.CgroupPath, helper.CgroupData.config); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	for _, pageSize := range HugePageSizes {
+		limitFile := fmt.Sprintf(limit, pageSize)
+		value, err := fscommon.GetCgroupParamUint(helper.CgroupPath, limitFile)
+		if err != nil {
+			t.Fatalf("Failed to parse %s - %s", limitFile, err)
+		}
+		if value != hugetlbAfter {
+			t.Fatalf("Set hugetlb.limit_in_bytes failed. Expected: %v, Got: %v", hugetlbAfter, value)
+		}
+
+		rsvdLimitFile := fmt.Sprintf(rsvdLimit, pageSize)
+		rsvdValue, err := fscommon.GetCgroupParamUint(helper.CgroupPath, rsvdLimitFile)
+		if err != nil {
+			t.Fatalf("Failed to parse %s - %s", rsvdLimitFile, err)
+		}
+		if rsvdValue != hugetlbAfter {
+			t.Fatalf("Set hugetlb.limit_in_bytes failed. Expected: %v, Got: %v", hugetlbAfter, rsvdValue)
 		}
 	}
 }
