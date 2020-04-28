@@ -68,6 +68,10 @@ EOF
 
     # check that initial values were properly set
     check_cgroup_value "cpuset.cpus" 0
+    if [[ "$CGROUP_UNIFIED" = "yes" ]] && ! grep -qw memory "$CGROUP_PATH/cgroup.controllers"; then
+    # This happen on containerized environment because "echo +memory > /sys/fs/cgroup/cgroup.subtree_control" fails with EINVAL
+        skip "memory controller not available"
+    fi
     check_cgroup_value $MEM_LIMIT 33554432
     check_cgroup_value $MEM_RESERVE 25165824
     check_cgroup_value "pids.max" 20

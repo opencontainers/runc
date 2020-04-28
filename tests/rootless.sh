@@ -82,6 +82,27 @@ function enable_cgroup() {
 		# handling.
 		[[ "$cg" == "cpuset" ]] && chown rootless:rootless "$CGROUP_MOUNT/$cg$CGROUP_PATH/cpuset."{cpus,mems}
 	done
+	# cgroup v2
+	if [[ -e "$CGROUP_MOUNT/cgroup.controllers" ]]; then
+		# Enable controllers. Some controller (e.g. memory) may fail on containerized environment.
+		set -x
+		for f in $(cat "$CGROUP_MOUNT/cgroup.controllers"); do echo +$f > "$CGROUP_MOUNT/cgroup.subtree_control"; done
+		set +x
+		# Create the cgroup.
+		mkdir -p "$CGROUP_MOUNT/$CGROUP_PATH"
+		# chown/chmod dir + cgroup.subtree_control + cgroup.procs + parent's cgroup.procs.
+		# See https://www.kernel.org/doc/html/latest/admin-guide/cgroup-v2.html#delegation-containment
+		chown root:rootless "$CGROUP_MOUNT/$CGROUP_PATH" "$CGROUP_MOUNT/$CGROUP_PATH/cgroup.subtree_control" "$CGROUP_MOUNT/$CGROUP_PATH/cgroup.procs" "$CGROUP_MOUNT/cgroup.procs"
+		chmod g+rwx "$CGROUP_MOUNT/$CGROUP_PATH"
+		chmod g+rw "$CGROUP_MOUNT/$CGROUP_PATH/cgroup.subtree_control" "$CGROUP_MOUNT/$CGROUP_PATH/cgroup.procs" "$CGROUP_MOUNT/cgroup.procs"
+		# Fix up cgroup.type.
+		echo threaded > "$CGROUP_MOUNT/$CGROUP_PATH/cgroup.type"
+		# Make sure cgroup.type doesn't contain "invalid". Otherwise write ops will fail with ENOTSUP.
+		# See http://man7.org/linux/man-pages/man7/cgroups.7.html
+		if grep -qw invalid "$CGROUP_MOUNT/$CGROUP_PATH/cgroup.type"; then
+			exit 1
+		fi
+	fi
 }
 
 function disable_cgroup() {
@@ -90,6 +111,8 @@ function disable_cgroup() {
 	do
 		[ -d "$CGROUP_MOUNT/$cg$CGROUP_PATH" ] && rmdir "$CGROUP_MOUNT/$cg$CGROUP_PATH"
 	done
+	# cgroup v2
+	[ -d "$CGROUP_MOUNT/$CGROUP_PATH" ] && rmdir "$CGROUP_MOUNT/$CGROUP_PATH"
 }
 
 # Create a powerset of $ALL_FEATURES (the set of all subsets of $ALL_FEATURES).

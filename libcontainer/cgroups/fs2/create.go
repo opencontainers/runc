@@ -95,15 +95,22 @@ func CreateCgroupPath(path string, c *configs.Cgroup) (Err error) {
 					}
 				}()
 			}
+			// Write cgroup.type explicitly.
+			// Otherwise ENOTSUP may happen.
+			cgType := filepath.Join(current, "cgroup.type")
+			_ = ioutil.WriteFile(cgType, []byte("threaded"), 0644)
 		}
 		// enable needed controllers
 		if i < len(elements)-1 {
 			file := filepath.Join(current, "cgroup.subtree_control")
-			if err := ioutil.WriteFile(file, []byte(allCtrs), 0755); err != nil {
-				// XXX: we can enable _some_ controllers doing it one-by one
-				// instead of erroring out -- does it makes sense to do so?
-				return err
+			if err := ioutil.WriteFile(file, []byte(allCtrs), 0644); err != nil {
+				// try write one by one
+				for _, ctr := range ctrs {
+					_ = ioutil.WriteFile(file, []byte(ctr), 0644)
+				}
 			}
+			// Some controllers might not be enabled when rootless or containerized,
+			// but we don't catch the error here. (Caught in setXXX() functions.)
 		}
 	}
 
