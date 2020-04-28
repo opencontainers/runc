@@ -15,7 +15,7 @@ Vagrant.configure("2") do |config|
   config.vm.provision "shell", inline: <<-SHELL
     cat << EOF | dnf -y shell
 update
-install podman make golang-go libseccomp-devel bats jq \
+install iptables make golang-go libseccomp-devel bats jq \
  patch protobuf protobuf-c protobuf-c-devel protobuf-compiler \
  protobuf-devel protobuf-python libnl3-devel libcap-devel libnet-devel \
  nftables-devel libbsd-devel gnutls-devel
