@@ -228,6 +228,19 @@ Unfortunately using detached mode is a bit more complicated and requires more
 care than the foreground mode -- mainly because it is now up to the caller to
 handle the `stdio` of the container.
 
+Another complication is that the parent process is responsible for acting as
+the subreaper for the container. In short, you need to call
+`prctl(PR_SET_CHILD_SUBREAPER, 1, ...)` in the parent process and correctly
+handle the implications of being a subreaper. Failing to do so may result in
+zombie processes being accumulated on your host.
+
+These tasks are usually performed by a dedicated (and minimal) monitor process
+per-container. For the sake of comparison, other runtimes such as LXC do not
+have an equivalent detached mode and instead integrate this monitor process
+into the container runtime itself -- this has several tradeoffs, and runc has
+opted to support delegating the monitoring responsibility to the parent process
+through this detached mode.
+
 #### Detached Pass-Through ####
 
 In detached mode, pass-through actually does what it says on the tin -- the
