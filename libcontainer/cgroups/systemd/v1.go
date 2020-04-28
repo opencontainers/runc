@@ -10,13 +10,11 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"time"
 
 	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fs"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/sirupsen/logrus"
 )
 
 type LegacyManager struct {
@@ -184,18 +182,7 @@ func (m *LegacyManager) Apply(pid int) error {
 	properties = append(properties, resourcesProperties...)
 	properties = append(properties, c.SystemdProps...)
 
-	dbusConnection, err := getDbusConnection()
-	if err != nil {
-		return err
-	}
-	statusChan := make(chan string, 1)
-	if _, err := dbusConnection.StartTransientUnit(unitName, "replace", properties, statusChan); err == nil {
-		select {
-		case <-statusChan:
-		case <-time.After(time.Second):
-			logrus.Warnf("Timed out while waiting for StartTransientUnit(%s) completion signal from dbus. Continuing...", unitName)
-		}
-	} else if !isUnitExists(err) {
+	if err := startUnit(unitName, properties); err != nil {
 		return err
 	}
 
@@ -226,13 +213,8 @@ func (m *LegacyManager) Destroy() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	dbusConnection, err := getDbusConnection()
-	if err != nil {
-		return err
-	}
-
-	dbusConnection.StopUnit(getUnitName(m.Cgroups), "replace", nil)
-	if err := cgroups.RemovePaths(m.Paths); err != nil {
+	unitName := getUnitName(m.Cgroups)
+	if err := stopUnit(unitName); err != nil {
 		return err
 	}
 	m.Paths = make(map[string]string)

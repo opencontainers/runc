@@ -5,10 +5,13 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
 	dbus "github.com/godbus/dbus/v5"
 	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -98,4 +101,52 @@ func isUnitExists(err error) bool {
 		}
 	}
 	return false
+}
+
+func startUnit(unitName string, properties []systemdDbus.Property) error {
+	dbusConnection, err := getDbusConnection()
+	if err != nil {
+		return err
+	}
+
+	statusChan := make(chan string, 1)
+	if _, err := dbusConnection.StartTransientUnit(unitName, "replace", properties, statusChan); err == nil {
+		select {
+		case s := <-statusChan:
+			close(statusChan)
+			// Please refer to https://godoc.org/github.com/coreos/go-systemd/dbus#Conn.StartUnit
+			if s != "done" {
+				dbusConnection.ResetFailedUnit(unitName)
+				return errors.Errorf("error creating systemd unit `%s`: got `%s`", unitName, s)
+			}
+		case <-time.After(time.Second):
+			logrus.Warnf("Timed out while waiting for StartTransientUnit(%s) completion signal from dbus. Continuing...", unitName)
+		}
+	} else if !isUnitExists(err) {
+		return err
+	}
+
+	return nil
+}
+
+func stopUnit(unitName string) error {
+	dbusConnection, err := getDbusConnection()
+	if err != nil {
+		return err
+	}
+
+	statusChan := make(chan string, 1)
+	if _, err := dbusConnection.StopUnit(unitName, "replace", statusChan); err == nil {
+		select {
+		case s := <-statusChan:
+			close(statusChan)
+			// Please refer to https://godoc.org/github.com/coreos/go-systemd/dbus#Conn.StartUnit
+			if s != "done" {
+				logrus.Warnf("error removing unit `%s`: got `%s`. Continuing...", unitName, s)
+			}
+		case <-time.After(time.Second):
+			logrus.Warnf("Timed out while waiting for StopUnit(%s) completion signal from dbus. Continuing...", unitName)
+		}
+	}
+	return nil
 }
