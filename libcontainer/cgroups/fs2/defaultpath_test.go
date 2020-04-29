@@ -17,8 +17,11 @@
 package fs2
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/opencontainers/runc/libcontainer/cgroups"
 )
 
 func TestParseCgroupFromReader(t *testing.T) {
@@ -45,27 +48,35 @@ func TestParseCgroupFromReader(t *testing.T) {
 }
 
 func TestDefaultDirPath(t *testing.T) {
-	root := "/sys/fs/cgroup"
+	if !cgroups.IsCgroup2UnifiedMode() {
+		t.Skip("need cgroupv2")
+	}
+	// same code as in defaultDirPath()
+	ownCgroup, err := parseCgroupFile("/proc/self/cgroup")
+	if err != nil {
+		// Not a test failure, but rather some weird
+		// environment so we can't run this test.
+		t.Skipf("can't get own cgroup: %v", err)
+	}
+	ownCgroup = filepath.Dir(ownCgroup)
+
 	cases := []struct {
-		cgPath    string
-		cgParent  string
-		cgName    string
-		ownCgroup string
-		expected  string
+		cgPath   string
+		cgParent string
+		cgName   string
+		expected string
 	}{
 		{
-			cgPath:    "/foo/bar",
-			ownCgroup: "/apple/banana",
-			expected:  "/sys/fs/cgroup/foo/bar",
+			cgPath:   "/foo/bar",
+			expected: "/sys/fs/cgroup/foo/bar",
 		},
 		{
-			cgPath:    "foo/bar",
-			ownCgroup: "/apple/banana",
-			expected:  "/sys/fs/cgroup/apple/banana/foo/bar",
+			cgPath:   "foo/bar",
+			expected: filepath.Join(UnifiedMountpoint, ownCgroup, "foo/bar"),
 		},
 	}
 	for _, c := range cases {
-		got, err := _defaultDirPath(root, c.cgPath, c.cgParent, c.cgName, c.ownCgroup)
+		got, err := _defaultDirPath(UnifiedMountpoint, c.cgPath, c.cgParent, c.cgName)
 		if err != nil {
 			t.Fatal(err)
 		}
