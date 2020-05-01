@@ -639,7 +639,7 @@ func ConvertMemorySwapToCgroupV2Value(memorySwap, memory int64) (int64, error) {
 		return 0, fmt.Errorf("invalid memory value: %d", memory)
 	}
 	if memorySwap < memory {
-		return 0, errors.New("memory+swap limit should be > memory limit")
+		return 0, errors.New("memory+swap limit should be >= memory limit")
 	}
 
 	return memorySwap - memory, nil

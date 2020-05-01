@@ -45,10 +45,13 @@ func setMemory(dirPath string, cgroup *configs.Cgroup) error {
 	if err != nil {
 		return err
 	}
-	if val := numToStr(swap); val != "" {
-		if err := fscommon.WriteFile(dirPath, "memory.swap.max", val); err != nil {
-			return err
-		}
+	swapStr := numToStr(swap)
+	if swapStr == "" && swap == 0 && cgroup.Resources.MemorySwap > 0 {
+		// memory and memorySwap set to the same value -- disable swap
+		swapStr = "0"
+	}
+	if err := fscommon.WriteFile(dirPath, "memory.swap.max", swapStr); err != nil {
+		return err
 	}
 
 	if val := numToStr(cgroup.Resources.Memory); val != "" {

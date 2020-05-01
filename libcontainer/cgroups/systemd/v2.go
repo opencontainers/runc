@@ -39,12 +39,12 @@ func genV2ResourcesProperties(c *configs.Cgroup) ([]systemdDbus.Property, error)
 		properties = append(properties,
 			newProp("MemoryMax", uint64(c.Resources.Memory)))
 	}
-
-	swap, err := cgroups.ConvertMemorySwapToCgroupV2Value(c.Resources.MemorySwap, c.Resources.Memory)
-	if err != nil {
-		return nil, err
-	}
-	if swap > 0 {
+	// swap is set
+	if c.Resources.MemorySwap != 0 {
+		swap, err := cgroups.ConvertMemorySwapToCgroupV2Value(c.Resources.MemorySwap, c.Resources.Memory)
+		if err != nil {
+			return nil, err
+		}
 		properties = append(properties,
 			newProp("MemorySwapMax", uint64(swap)))
 	}
