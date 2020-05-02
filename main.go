@@ -159,7 +159,10 @@ type FatalWriter struct {
 
 func (f *FatalWriter) Write(p []byte) (n int, err error) {
 	logrus.Error(string(p))
-	return f.cliErrWriter.Write(p)
+	if !logrusToStderr() {
+		return f.cliErrWriter.Write(p)
+	}
+	return len(p), nil
 }
 
 func createLogConfig(context *cli.Context) logs.Config {
