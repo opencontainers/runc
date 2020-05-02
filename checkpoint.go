@@ -60,7 +60,7 @@ checkpointed.`,
 			return err
 		}
 		if status == libcontainer.Created || status == libcontainer.Stopped {
-			fatalf("Container cannot be checkpointed in %s state", status.String())
+			fatal(fmt.Errorf("Container cannot be checkpointed in %s state", status.String()))
 		}
 		options := criuOptions(context)
 		if !(options.LeaveRunning || options.PreDump) {
