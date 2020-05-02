@@ -1,6 +1,6 @@
 ARG GO_VERSION=1.13
 ARG BATS_VERSION=v1.1.0
-ARG CRIU_VERSION=v3.13
+ARG CRIU_VERSION=v3.14
 
 FROM golang:${GO_VERSION}-buster
 ARG DEBIAN_FRONTEND=noninteractive
@@ -63,10 +63,6 @@ RUN mkdir -p /usr/src/criu \
     && curl -fsSL https://github.com/checkpoint-restore/criu/archive/${CRIU_VERSION}.tar.gz | tar -C /usr/src/criu/ -xz --strip-components=1 \
     && cd /usr/src/criu \
     && echo 1 > .gitid \
-    && curl -sSL https://github.com/checkpoint-restore/criu/commit/4c27b3db4f4325a311d8bfa9a50ea3efb4d6e377.patch | patch -p1 \
-    && curl -sSL https://github.com/checkpoint-restore/criu/commit/aac41164b2cd7f0d2047f207b32844524682e43f.patch | patch -p1 \
-    && curl -sSL https://github.com/checkpoint-restore/criu/commit/6f19249b2565f3f7c0a1f8f65b4ae180e8f7f34b.patch | patch -p1 \
-    && curl -sSL https://github.com/checkpoint-restore/criu/commit/378337a496ca759848180bc5411e4446298c5e4e.patch | patch -p1 \
     && make install-criu \
     && cd - \
     && rm -rf /usr/src/criu
