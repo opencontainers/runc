@@ -15,9 +15,11 @@ Vagrant.configure("2") do |config|
   config.vm.provision "shell", inline: <<-SHELL
     curl -OSs https://kojipkgs.fedoraproject.org/packages/criu/3.14/1.fc32/x86_64/criu-3.14-1.fc32.x86_64.rpm
     cat << EOF | dnf -y shell
+config exclude kernel,kernel-core
+config install_weak_deps false
 localinstall criu-3.14-1.fc32.x86_64.rpm
 update
-install iptables gcc make golang-go libseccomp-devel bats jq
+install iptables gcc make golang-go libseccomp-devel bats jq git-core
 ts run
 EOF
     dnf clean all
