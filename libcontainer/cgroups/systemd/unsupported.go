@@ -42,8 +42,8 @@ func (m *Manager) GetPaths() map[string]string {
 	return nil
 }
 
-func (m *Manager) GetUnifiedPath() (string, error) {
-	return "", fmt.Errorf("Systemd not supported")
+func (m *Manager) GetUnifiedPath() string {
+	return ""
 }
 
 func (m *Manager) GetStats() (*cgroups.Stats, error) {

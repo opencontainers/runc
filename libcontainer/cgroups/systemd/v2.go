@@ -144,8 +144,7 @@ func (m *unifiedManager) Apply(pid int) error {
 		return err
 	}
 
-	_, err = m.GetUnifiedPath()
-	if err != nil {
+	if err = m.initPath(); err != nil {
 		return err
 	}
 	if err := fs2.CreateCgroupPath(m.path, m.cgroups); err != nil {
@@ -177,7 +176,7 @@ func (m *unifiedManager) Destroy() error {
 
 // this method is for v1 backward compatibility and will be removed
 func (m *unifiedManager) GetPaths() map[string]string {
-	_, _ = m.GetUnifiedPath()
+	_ = m.initPath()
 	paths := map[string]string{
 		"pids":    m.path,
 		"memory":  m.path,
@@ -190,11 +189,13 @@ func (m *unifiedManager) GetPaths() map[string]string {
 	return paths
 }
 
-func (m *unifiedManager) GetUnifiedPath() (string, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+func (m *unifiedManager) GetUnifiedPath() string {
+	return m.path
+}
+
+func (m *unifiedManager) initPath() error {
 	if m.path != "" {
-		return m.path, nil
+		return nil
 	}
 
 	c := m.cgroups
@@ -205,25 +206,24 @@ func (m *unifiedManager) GetUnifiedPath() (string, error) {
 
 	slice, err := ExpandSlice(slice)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	path := filepath.Join(slice, getUnitName(c))
 	path, err = securejoin.SecureJoin(fs2.UnifiedMountpoint, path)
 	if err != nil {
-		return "", err
+		return err
 	}
 	m.path = path
 
-	return m.path, nil
+	return nil
 }
 
 func (m *unifiedManager) fsManager() (cgroups.Manager, error) {
-	path, err := m.GetUnifiedPath()
-	if err != nil {
+	if err := m.initPath(); err != nil {
 		return nil, err
 	}
-	return fs2.NewManager(m.cgroups, path, m.rootless)
+	return fs2.NewManager(m.cgroups, m.path, m.rootless)
 }
 
 func (m *unifiedManager) Freeze(state configs.FreezerState) error {
@@ -235,19 +235,17 @@ func (m *unifiedManager) Freeze(state configs.FreezerState) error {
 }
 
 func (m *unifiedManager) GetPids() ([]int, error) {
-	path, err := m.GetUnifiedPath()
-	if err != nil {
+	if err := m.initPath(); err != nil {
 		return nil, err
 	}
-	return cgroups.GetPids(path)
+	return cgroups.GetPids(m.path)
 }
 
 func (m *unifiedManager) GetAllPids() ([]int, error) {
-	path, err := m.GetUnifiedPath()
-	if err != nil {
+	if err := m.initPath(); err != nil {
 		return nil, err
 	}
-	return cgroups.GetAllPids(path)
+	return cgroups.GetAllPids(m.path)
 }
 
 func (m *unifiedManager) GetStats() (*cgroups.Stats, error) {

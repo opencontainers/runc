@@ -178,8 +178,8 @@ func (m *manager) GetPaths() map[string]string {
 	return paths
 }
 
-func (m *manager) GetUnifiedPath() (string, error) {
-	return m.dirPath, nil
+func (m *manager) GetUnifiedPath() string {
+	return m.dirPath
 }
 
 func (m *manager) Set(container *configs.Config) error {

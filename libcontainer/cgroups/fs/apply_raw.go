@@ -208,8 +208,8 @@ func (m *Manager) GetPaths() map[string]string {
 	return paths
 }
 
-func (m *Manager) GetUnifiedPath() (string, error) {
-	return "", errors.New("unified path is only supported when running in unified mode")
+func (m *Manager) GetUnifiedPath() string {
+	panic("GetUnifiedPath is only supported when running in unified mode")
 }
 
 func (m *Manager) GetStats() (*cgroups.Stats, error) {

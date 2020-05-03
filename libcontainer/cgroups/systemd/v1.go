@@ -228,8 +228,8 @@ func (m *LegacyManager) GetPaths() map[string]string {
 	return paths
 }
 
-func (m *LegacyManager) GetUnifiedPath() (string, error) {
-	return "", errors.New("unified path is only supported when running in unified mode")
+func (m *LegacyManager) GetUnifiedPath() string {
+	panic("GetUnifiedPath is only supported when running in unified mode")
 }
 
 func join(c *configs.Cgroup, subsystem string, pid int) (string, error) {

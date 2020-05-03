@@ -1023,11 +1023,7 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 	case true:
 		// cgroup v2 freezer is only supported since CRIU release 3.14
 		if c.checkCriuVersion(31400) == nil {
-			fcg, err = c.cgroupManager.GetUnifiedPath()
-			if err != nil {
-				// should not happen
-				return err
-			}
+			fcg = c.cgroupManager.GetUnifiedPath()
 		}
 	}
 	if fcg != "" {
@@ -1861,12 +1857,7 @@ func (c *linuxContainer) isPaused() (bool, error) {
 		filename = "freezer.state"
 		pausedState = "FROZEN"
 	} else {
-		var err error
-		fcg, err = c.cgroupManager.GetUnifiedPath()
-		if err != nil {
-			// should not happen
-			return false, err
-		}
+		fcg = c.cgroupManager.GetUnifiedPath()
 		filename = "cgroup.freeze"
 		pausedState = "1"
 	}

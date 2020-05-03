@@ -40,9 +40,9 @@ type Manager interface {
 	// GetUnifiedPath returns the unified path when running in unified mode.
 	// The value corresponds to the all values of GetPaths() map.
 	//
-	// GetUnifiedPath returns error when running in hybrid mode as well as
+	// GetUnifiedPath panics when running in hybrid mode as well as
 	// in legacy mode.
-	GetUnifiedPath() (string, error)
+	GetUnifiedPath() string
 
 	// Sets the cgroup as configured.
 	Set(container *configs.Config) error
