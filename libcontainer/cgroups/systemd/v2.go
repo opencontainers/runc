@@ -174,19 +174,9 @@ func (m *unifiedManager) Destroy() error {
 	return nil
 }
 
-// this method is for v1 backward compatibility and will be removed
+// must not be called for this controller
 func (m *unifiedManager) GetPaths() map[string]string {
-	_ = m.initPath()
-	paths := map[string]string{
-		"pids":    m.path,
-		"memory":  m.path,
-		"io":      m.path,
-		"cpu":     m.path,
-		"devices": m.path,
-		"cpuset":  m.path,
-		"freezer": m.path,
-	}
-	return paths
+	panic("GetPaths can only be used for cgroupv1")
 }
 
 func (m *unifiedManager) GetUnifiedPath() string {

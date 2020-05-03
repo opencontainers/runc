@@ -164,18 +164,8 @@ func (m *manager) Destroy() error {
 	return nil
 }
 
-// GetPaths is for compatibility purpose and should be removed in future
 func (m *manager) GetPaths() map[string]string {
-	_ = m.getControllers()
-	paths := map[string]string{
-		// pseudo-controller for compatibility
-		"devices": m.dirPath,
-		"freezer": m.dirPath,
-	}
-	for c := range m.controllers {
-		paths[c] = m.dirPath
-	}
-	return paths
+	panic("GetPaths can only be used for cgroupv1")
 }
 
 func (m *manager) GetUnifiedPath() string {
