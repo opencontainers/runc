@@ -13,15 +13,17 @@ Vagrant.configure("2") do |config|
     v.cpus = 2
   end
   config.vm.provision "shell", inline: <<-SHELL
+    curl -OSs https://kojipkgs.fedoraproject.org/packages/criu/3.14/1.fc32/x86_64/criu-3.14-1.fc32.x86_64.rpm
     cat << EOF | dnf -y shell
+config exclude kernel,kernel-core
+config install_weak_deps false
+localinstall criu-3.14-1.fc32.x86_64.rpm
 update
-install iptables gcc make golang-go libseccomp-devel bats jq \
- patch protobuf protobuf-c protobuf-c-compiler protobuf-c-devel protobuf-compiler \
- protobuf-devel libnl3-devel libcap-devel libnet-devel \
- nftables-devel libbsd-devel gnutls-devel
+install iptables gcc make golang-go libseccomp-devel bats jq git-core
 ts run
 EOF
     dnf clean all
+    rm -f criu-3.14-1.fc32.x86_64.rpm
 
     # Add a user for rootless tests
     useradd -u2000 -m -d/home/rootless -s/bin/bash rootless
@@ -30,12 +32,5 @@ EOF
     . /vagrant/tests/integration/multi-arch.bash \
         && mkdir /busybox \
         && curl -fsSL $(get_busybox) | tar xfJC - /busybox
-
-    # Apr 25, 2020 (master)
-    ( git clone https://github.com/checkpoint-restore/criu.git /usr/src/criu \
-     && cd /usr/src/criu \
-     && git checkout 5c5e7695a51318b17e3d982df8231ac83971641c  \
-     && make install-criu )
-    rm -rf /usr/src/criu
   SHELL
 end
