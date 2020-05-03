@@ -886,10 +886,10 @@ func waitForCriuLazyServer(r *os.File, status string) error {
 		return err
 	}
 	_, err = fd.Write(data)
+	fd.Close()
 	if err != nil {
 		return err
 	}
-	fd.Close()
 
 	return nil
 }
