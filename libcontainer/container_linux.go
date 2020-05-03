@@ -551,9 +551,18 @@ func (c *linuxContainer) newSetnsProcess(p *Process, cmd *exec.Cmd, messageSockP
 	if err != nil {
 		return nil, err
 	}
+	var paths map[string]string
+	if cgroups.IsCgroup2UnifiedMode() {
+		// there's only one path to enter, add it to the map
+		paths = make(map[string]string, 1)
+		paths[""] = c.cgroupManager.GetUnifiedPath()
+	} else {
+		paths = c.cgroupManager.GetPaths()
+	}
+
 	return &setnsProcess{
 		cmd:             cmd,
-		cgroupPaths:     c.cgroupManager.GetPaths(),
+		cgroupPaths:     paths,
 		rootlessCgroups: c.config.RootlessCgroups,
 		intelRdtPath:    state.IntelRdtPath,
 		messageSockPair: messageSockPair,
