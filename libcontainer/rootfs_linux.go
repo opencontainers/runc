@@ -55,7 +55,7 @@ func prepareRootfs(pipe io.ReadWriter, iConfig *initConfig) (err error) {
 			}
 		}
 		if err := mountToRootfs(m, config.Rootfs, config.MountLabel, hasCgroupns); err != nil {
-			return newSystemErrorWithCausef(err, "mounting %q to rootfs %q at %q", m.Source, config.Rootfs, m.Destination)
+			return newSystemErrorWithCausef(err, "mounting %q to rootfs at %q", m.Source, m.Destination)
 		}
 
 		for _, postcmd := range m.PostmountCmds {
