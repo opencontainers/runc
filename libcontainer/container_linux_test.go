@@ -199,6 +199,7 @@ func TestGetContainerState(t *testing.T) {
 	var (
 		pid                  = os.Getpid()
 		expectedMemoryPath   = "/sys/fs/cgroup/memory/myid"
+		expectedUnifiedPath  = "/sys/fs/cgroup/myid"
 		expectedNetworkPath  = fmt.Sprintf("/proc/%d/ns/net", pid)
 		expectedIntelRdtPath = "/sys/fs/resctrl/myid"
 	)
@@ -228,9 +229,12 @@ func TestGetContainerState(t *testing.T) {
 					},
 				},
 			},
+			// cgroupv1
 			paths: map[string]string{
 				"memory": expectedMemoryPath,
 			},
+			// cgroupv2
+			unifiedPath: expectedUnifiedPath,
 		},
 		intelRdtManager: &mockIntelRdtManager{
 			stats: &intelrdt.Stats{
@@ -255,8 +259,16 @@ func TestGetContainerState(t *testing.T) {
 	if paths == nil {
 		t.Fatal("cgroup paths should not be nil")
 	}
-	if memPath := paths["memory"]; memPath != expectedMemoryPath {
-		t.Fatalf("expected memory path %q but received %q", expectedMemoryPath, memPath)
+	if cgroups.IsCgroup2UnifiedMode() {
+		// cgroupv2
+		if path := paths[""]; path != expectedUnifiedPath {
+			t.Fatalf("expected memory path %q but received %q", expectedUnifiedPath, path)
+		}
+	} else {
+		// cgroupv1
+		if memPath := paths["memory"]; memPath != expectedMemoryPath {
+			t.Fatalf("expected memory path %q but received %q", expectedMemoryPath, memPath)
+		}
 	}
 	if intelrdt.IsCatEnabled() || intelrdt.IsMbaEnabled() {
 		intelRdtPath := state.IntelRdtPath

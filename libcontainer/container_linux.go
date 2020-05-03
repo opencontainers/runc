@@ -64,8 +64,10 @@ type State struct {
 	// Set to true if BaseState.Config.RootlessEUID && BaseState.Config.RootlessCgroups
 	Rootless bool `json:"rootless"`
 
-	// Path to all the cgroups setup for a container. Key is cgroup subsystem name
-	// with the value as the path.
+	// Path to all the cgroups setup for a container. For cgroup v1,
+	// a key is cgroup subsystem name, and the value as the path.
+	// For cgroup v2, a key is the empty string, and the value
+	// is the unified cgroup path.
 	CgroupPaths map[string]string `json:"cgroup_paths"`
 
 	// NamespacePaths are filepaths to the container's namespaces. Key is the namespace type
@@ -1906,10 +1908,16 @@ func (c *linuxContainer) currentState() (*State, error) {
 			Created:              c.created,
 		},
 		Rootless:            c.config.RootlessEUID && c.config.RootlessCgroups,
-		CgroupPaths:         c.cgroupManager.GetPaths(),
 		IntelRdtPath:        intelRdtPath,
 		NamespacePaths:      make(map[configs.NamespaceType]string),
 		ExternalDescriptors: externalDescriptors,
+	}
+	if cgroups.IsCgroup2UnifiedMode() {
+		paths := make(map[string]string, 1)
+		paths[""] = c.cgroupManager.GetUnifiedPath()
+		state.CgroupPaths = paths
+	} else {
+		state.CgroupPaths = c.cgroupManager.GetPaths()
 	}
 	if pid > 0 {
 		for _, ns := range c.config.Namespaces {
