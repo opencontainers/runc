@@ -12,15 +12,18 @@ import (
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/opencontainers/runc/libcontainer/system"
 )
 
 const (
 	cgroupCpuacctStat   = "cpuacct.stat"
 	nanosecondsInSecond = 1000000000
-)
 
-var clockTicks = uint64(system.GetClockTicks())
+	// The value comes from `C.sysconf(C._SC_CLK_TCK)`, and
+	// on Linux it's a constant which is safe to be hard coded,
+	// so we can avoid using cgo here. For details, see:
+	// https://github.com/containerd/cgroups/pull/12
+	clockTicks uint64 = 100
+)
 
 type CpuacctGroup struct {
 }
