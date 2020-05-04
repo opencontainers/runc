@@ -1890,7 +1890,10 @@ func (c *linuxContainer) currentState() (*State, error) {
 	)
 	if c.initProcess != nil {
 		pid = c.initProcess.pid()
-		startTime, _ = c.initProcess.startTime()
+		var err error
+		if startTime, err = c.initProcess.startTime(); err != nil {
+			return nil, err
+		}
 		externalDescriptors = c.initProcess.externalDescriptors()
 	}
 	intelRdtPath, err := intelrdt.GetIntelRdtPath(c.ID())
