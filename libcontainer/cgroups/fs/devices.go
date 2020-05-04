@@ -31,44 +31,24 @@ func (s *DevicesGroup) Set(path string, cgroup *configs.Cgroup) error {
 		return nil
 	}
 
+	// The devices list is a whitelist, so we must first deny all devices.
+	// XXX: This is incorrect for device list updates as it will result in
+	//      spurrious errors in the container, but we will solve that
+	//      separately.
+	if err := fscommon.WriteFile(path, "devices.deny", "a"); err != nil {
+		return err
+	}
+
 	devices := cgroup.Resources.Devices
-	if len(devices) > 0 {
-		for _, dev := range devices {
-			file := "devices.deny"
-			if dev.Allow {
-				file = "devices.allow"
-			}
-			if err := fscommon.WriteFile(path, file, dev.CgroupString()); err != nil {
-				return err
-			}
+	for _, dev := range devices {
+		file := "devices.deny"
+		if dev.Allow {
+			file = "devices.allow"
 		}
-		return nil
-	}
-	if cgroup.Resources.AllowAllDevices != nil {
-		if *cgroup.Resources.AllowAllDevices == false {
-			if err := fscommon.WriteFile(path, "devices.deny", "a"); err != nil {
-				return err
-			}
-
-			for _, dev := range cgroup.Resources.AllowedDevices {
-				if err := fscommon.WriteFile(path, "devices.allow", dev.CgroupString()); err != nil {
-					return err
-				}
-			}
-			return nil
-		}
-
-		if err := fscommon.WriteFile(path, "devices.allow", "a"); err != nil {
+		if err := fscommon.WriteFile(path, file, dev.CgroupString()); err != nil {
 			return err
 		}
 	}
-
-	for _, dev := range cgroup.Resources.DeniedDevices {
-		if err := fscommon.WriteFile(path, "devices.deny", dev.CgroupString()); err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 

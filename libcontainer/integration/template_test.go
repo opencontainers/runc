@@ -2,6 +2,7 @@ package integration
 
 import (
 	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/specconv"
 
 	"golang.org/x/sys/unix"
 )
@@ -20,7 +21,6 @@ const defaultMountFlags = unix.MS_NOEXEC | unix.MS_NOSUID | unix.MS_NODEV
 // it uses a network strategy of just setting a loopback interface
 // and the default setup for devices
 func newTemplateConfig(rootfs string) *configs.Config {
-	allowAllDevices := false
 	return &configs.Config{
 		Rootfs: rootfs,
 		Capabilities: &configs.Capabilities{
@@ -116,8 +116,7 @@ func newTemplateConfig(rootfs string) *configs.Config {
 			Path: "integration/test",
 			Resources: &configs.Resources{
 				MemorySwappiness: nil,
-				AllowAllDevices:  &allowAllDevices,
-				AllowedDevices:   configs.DefaultAllowedDevices,
+				Devices:          specconv.AllowedDevices,
 			},
 		},
 		MaskPaths: []string{
@@ -127,7 +126,7 @@ func newTemplateConfig(rootfs string) *configs.Config {
 		ReadonlyPaths: []string{
 			"/proc/sys", "/proc/sysrq-trigger", "/proc/irq", "/proc/bus",
 		},
-		Devices:  configs.DefaultAutoCreatedDevices,
+		Devices:  specconv.AllowedDevices,
 		Hostname: "integration",
 		Mounts: []*configs.Mount{
 			{

@@ -48,7 +48,21 @@ var mountPropagationMapping = map[string]int{
 	"":            0,
 }
 
-// AllowedDevices is exposed for devicefilter_test.go
+// AllowedDevices is the set of devices which are automatically included for
+// all containers.
+//
+// XXX (cyphar)
+//    This behaviour is at the very least "questionable" (if not outright
+//    wrong) according to the runtime-spec.
+//
+//    Yes, we have to include certain devices other than the ones the user
+//    specifies, but several devices listed here are not part of the spec
+//    (including "mknod for any device"?!). In addition, these rules are
+//    appended to the user-provided set which means that users *cannot disable
+//    this behaviour*.
+//
+//    ... unfortunately I'm too scared to change this now because who knows how
+//    many people depend on this (incorrect and arguably insecure) behaviour.
 var AllowedDevices = []*configs.Device{
 	// allow mknod for any device
 	{
@@ -420,7 +434,6 @@ func CreateCgroupConfig(opts *CreateOpts) (*configs.Cgroup, error) {
 
 	// In rootless containers, any attempt to make cgroup changes is likely to fail.
 	// libcontainer will validate this but ignores the error.
-	c.Resources.AllowedDevices = AllowedDevices
 	if spec.Linux != nil {
 		r := spec.Linux.Resources
 		if r != nil {
