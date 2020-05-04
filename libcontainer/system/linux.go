@@ -5,6 +5,7 @@ package system
 import (
 	"os"
 	"os/exec"
+	"sync"
 	"unsafe"
 
 	"github.com/opencontainers/runc/libcontainer/user"
@@ -86,15 +87,23 @@ func Setctty() error {
 	return nil
 }
 
+var (
+	inUserNS bool
+	nsOnce   sync.Once
+)
+
 // RunningInUserNS detects whether we are currently running in a user namespace.
 // Originally copied from github.com/lxc/lxd/shared/util.go
 func RunningInUserNS() bool {
-	uidmap, err := user.CurrentProcessUIDMap()
-	if err != nil {
-		// This kernel-provided file only exists if user namespaces are supported
-		return false
-	}
-	return UIDMapInUserNS(uidmap)
+	nsOnce.Do(func() {
+		uidmap, err := user.CurrentProcessUIDMap()
+		if err != nil {
+			// This kernel-provided file only exists if user namespaces are supported
+			return
+		}
+		inUserNS = UIDMapInUserNS(uidmap)
+	})
+	return inUserNS
 }
 
 func UIDMapInUserNS(uidmap []user.IDMap) bool {
