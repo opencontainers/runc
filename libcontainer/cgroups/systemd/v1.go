@@ -125,7 +125,7 @@ func genV1ResourcesProperties(c *configs.Cgroup) ([]systemdDbus.Property, error)
 			newProp("BlockIOWeight", uint64(c.Resources.BlkioWeight)))
 	}
 
-	if c.Resources.PidsLimit > 0 {
+	if c.Resources.PidsLimit > 0 || c.Resources.PidsLimit == -1 {
 		properties = append(properties,
 			newProp("TasksAccounting", true),
 			newProp("TasksMax", uint64(c.Resources.PidsLimit)))

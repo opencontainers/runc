@@ -92,7 +92,7 @@ func genV2ResourcesProperties(c *configs.Cgroup) ([]systemdDbus.Property, error)
 			newProp("CPUQuotaPerSecUSec", cpuQuotaPerSecUSec))
 	}
 
-	if c.Resources.PidsLimit > 0 {
+	if c.Resources.PidsLimit > 0 || c.Resources.PidsLimit == -1 {
 		properties = append(properties,
 			newProp("TasksAccounting", true),
 			newProp("TasksMax", uint64(c.Resources.PidsLimit)))

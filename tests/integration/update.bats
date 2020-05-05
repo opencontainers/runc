@@ -161,6 +161,12 @@ EOF
     check_cgroup_value "pids.max" 10
     check_systemd_value "TasksMax" 10
 
+    # unlimited
+    runc update test_update --pids-limit -1
+    [ "$status" -eq 0 ]
+    check_cgroup_value "pids.max" max
+    check_systemd_value "TasksMax" $SD_UNLIMITED
+
     # Revert to the test initial value via json on stdin
     runc update  -r - test_update <<EOF
 {
