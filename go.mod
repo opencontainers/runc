@@ -14,7 +14,7 @@ require (
 	github.com/moby/sys/mountinfo v0.1.3
 	github.com/mrunalp/fileutils v0.0.0-20171103030105-7d4729fb3618
 	github.com/opencontainers/runtime-spec v1.0.2
-	github.com/opencontainers/selinux v1.4.0
+	github.com/opencontainers/selinux v1.5.1
 	github.com/pkg/errors v0.9.1
 	github.com/seccomp/libseccomp-golang v0.9.1
 	github.com/sirupsen/logrus v1.6.0
