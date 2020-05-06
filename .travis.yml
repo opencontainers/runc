@@ -51,9 +51,20 @@ matrix:
         - sudo ssh default -t 'sudo -i make -C /vagrant localintegration RUNC_USE_SYSTEMD=1'
         # FIXME: rootless is skipped because of EPERM on writing cgroup.procs
         # - sudo ssh default -t 'sudo -i make -C /vagrant localrootlessintegration'
-
+    - go: 1.13.x
+      name: "multi-arch"
+      arch:
+       - arm64
+       - ppc64le
+       - s390x
+      before_install:
+        - sudo apt-get install -y jq
+      script:
+        - make all
+        - sudo PATH="$PATH" make localintegration
   allow_failures:
     - go: tip
+    - name: "multi-arch"
 
 go_import_path: github.com/opencontainers/runc
 
@@ -72,4 +83,5 @@ before_install:
 script:
   - git-validation -run DCO,short-subject -v
   - make
-  - make clean ci cross
+  - make clean ci
+  - make cross
