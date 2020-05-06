@@ -5,17 +5,30 @@ ARG CRIU_VERSION=v3.14
 FROM golang:${GO_VERSION}-buster
 ARG DEBIAN_FRONTEND=noninteractive
 
-RUN dpkg --add-architecture armel \
+# Install cross-compilation dependencies only on x86_64
+RUN [ $(uname -m) = x86_64  ] \
+    && dpkg --add-architecture armel \
     && dpkg --add-architecture armhf \
     && dpkg --add-architecture arm64 \
     && dpkg --add-architecture ppc64el \
+    && dpkg --add-architecture s390x \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
-        build-essential \
         crossbuild-essential-arm64 \
         crossbuild-essential-armel \
         crossbuild-essential-armhf \
         crossbuild-essential-ppc64el \
+        crossbuild-essential-s390x \
+        libseccomp-dev:arm64 \
+        libseccomp-dev:armel \
+        libseccomp-dev:armhf \
+        libseccomp-dev:ppc64el \
+        libseccomp-dev:s390x \
+   || true
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        build-essential \
         curl \
         gawk \
         iptables \
@@ -28,10 +41,6 @@ RUN dpkg --add-architecture armel \
         libprotobuf-c-dev \
         libprotobuf-dev \
         libseccomp-dev \
-        libseccomp-dev:arm64 \
-        libseccomp-dev:armel \
-        libseccomp-dev:armhf \
-        libseccomp-dev:ppc64el \
         libseccomp2 \
         pkg-config \
         protobuf-c-compiler \

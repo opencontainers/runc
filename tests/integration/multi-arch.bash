@@ -4,6 +4,12 @@ get_busybox(){
 	arm64)
 		echo 'https://github.com/docker-library/busybox/raw/dist-arm64v8/glibc/busybox.tar.xz'
 	;;
+	s390x)
+		echo 'https://github.com/docker-library/busybox/raw/dist-s390x/glibc/busybox.tar.xz'
+	;;
+	ppc64le)
+		echo 'https://github.com/docker-library/busybox/raw/dist-ppc64le/glibc/busybox.tar.xz'
+	;;
 	*)
 		echo 'https://github.com/docker-library/busybox/raw/dist-amd64/glibc/busybox.tar.xz'
 	;;
@@ -15,6 +21,12 @@ get_hello(){
         arm64)
                 echo 'hello-world-aarch64.tar'
         ;;
+	s390x)
+		echo 'hello-world-s390x.tar'
+	;;
+	ppc64le)
+		echo 'hello-world-ppc64le.tar'
+	;;
         *)
                 echo 'hello-world.tar'
         ;;

@@ -40,8 +40,35 @@ matrix:
         - sudo ssh default -t 'cd /vagrant && sudo make localrootlessintegration RUNC_USE_SYSTEMD=yes'
         # same setup but with fs2 driver (rootless) instead of systemd
         - sudo ssh default -t 'cd /vagrant && sudo make localrootlessintegration'
+    - go: 1.13.x
+      name: "test-local-arm64"
+      arch: arm64
+      before_install:
+        - sudo apt-get install -y jq seccomp libseccomp-dev bats
+      script:
+        - make all
+        - sudo PATH="$PATH" make localintegration
+    - go: 1.13.x
+      name: "test-local-ppc64le"
+      arch: ppc64le
+      before_install:
+        - sudo apt-get install -y jq seccomp libseccomp-dev bats
+      script:
+        - make all
+        - sudo PATH="$PATH" make localintegration
+    - go: 1.13.x
+      name: "test-local-s390x"
+      arch: s390x
+      before_install:
+        - sudo apt-get install -y jq seccomp libseccomp-dev bats
+      script:
+        - make all
+        - sudo PATH="$PATH" make localintegration
   allow_failures:
     - go: tip
+    - name: "test-local-arm64"
+    - name: "test-local-ppc64le"
+    - name: "test-local-s390x"
 
 go_import_path: github.com/opencontainers/runc
 
