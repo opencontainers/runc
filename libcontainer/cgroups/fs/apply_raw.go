@@ -209,15 +209,10 @@ func (m *manager) Destroy() error {
 	return nil
 }
 
-func (m *manager) GetPaths() map[string]string {
+func (m *manager) Path(subsys string) string {
 	m.mu.Lock()
-	paths := m.paths
-	m.mu.Unlock()
-	return paths
-}
-
-func (m *manager) GetUnifiedPath() (string, error) {
-	return "", errors.New("unified path is only supported when running in unified mode")
+	defer m.mu.Unlock()
+	return m.paths[subsys]
 }
 
 func (m *manager) GetStats() (*cgroups.Stats, error) {
@@ -299,13 +294,11 @@ func (m *manager) Freeze(state configs.FreezerState) error {
 }
 
 func (m *manager) GetPids() ([]int, error) {
-	paths := m.GetPaths()
-	return cgroups.GetPids(paths["devices"])
+	return cgroups.GetPids(m.Path("devices"))
 }
 
 func (m *manager) GetAllPids() ([]int, error) {
-	paths := m.GetPaths()
-	return cgroups.GetAllPids(paths["devices"])
+	return cgroups.GetAllPids(m.Path("devices"))
 }
 
 func getCgroupData(c *configs.Cgroup, pid int) (*cgroupData, error) {
@@ -409,6 +402,12 @@ func CheckCpushares(path string, c uint64) error {
 	}
 
 	return nil
+}
+
+func (m *manager) GetPaths() map[string]string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.paths
 }
 
 func (m *manager) GetCgroups() (*configs.Cgroup, error) {

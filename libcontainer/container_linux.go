@@ -64,8 +64,12 @@ type State struct {
 	// Set to true if BaseState.Config.RootlessEUID && BaseState.Config.RootlessCgroups
 	Rootless bool `json:"rootless"`
 
-	// Path to all the cgroups setup for a container. Key is cgroup subsystem name
-	// with the value as the path.
+	// Paths to all the container's cgroups, as returned by (*cgroups.Manager).GetPaths
+	//
+	// For cgroup v1, a key is cgroup subsystem name, and the value is the path
+	// to the cgroup for this subsystem.
+	//
+	// For cgroup v2 unified hierarchy, a key is "", and the value is the unified path.
 	CgroupPaths map[string]string `json:"cgroup_paths"`
 
 	// NamespacePaths are filepaths to the container's namespaces. Key is the namespace type
@@ -648,14 +652,11 @@ func (c *linuxContainer) NotifyOOM() (<-chan struct{}, error) {
 	if c.config.RootlessCgroups {
 		logrus.Warn("getting OOM notifications may fail if you don't have the full access to cgroups")
 	}
+	path := c.cgroupManager.Path("memory")
 	if cgroups.IsCgroup2UnifiedMode() {
-		path, err := c.cgroupManager.GetUnifiedPath()
-		if err != nil {
-			return nil, err
-		}
 		return notifyOnOOMV2(path)
 	}
-	return notifyOnOOM(c.cgroupManager.GetPaths()["memory"])
+	return notifyOnOOM(path)
 }
 
 func (c *linuxContainer) NotifyMemoryPressure(level PressureLevel) (<-chan struct{}, error) {
@@ -663,7 +664,7 @@ func (c *linuxContainer) NotifyMemoryPressure(level PressureLevel) (<-chan struc
 	if c.config.RootlessCgroups {
 		logrus.Warn("getting memory pressure notifications may fail if you don't have the full access to cgroups")
 	}
-	return notifyMemoryPressure(c.cgroupManager.GetPaths()["memory"], level)
+	return notifyMemoryPressure(c.cgroupManager.Path("memory"), level)
 }
 
 var criuFeatures *criurpc.CriuFeatures
@@ -1023,22 +1024,11 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 
 	// CRIU can use cgroup freezer; when rpcOpts.FreezeCgroup
 	// is not set, CRIU uses ptrace() to pause the processes.
-	var fcg string
-	switch cgroups.IsCgroup2UnifiedMode() {
-	case false:
-		fcg = c.cgroupManager.GetPaths()["freezer"]
-	case true:
-		// cgroup v2 freezer is only supported since CRIU release 3.14
-		if c.checkCriuVersion(31400) == nil {
-			fcg, err = c.cgroupManager.GetUnifiedPath()
-			if err != nil {
-				// should not happen
-				return err
-			}
+	// Note cgroup v2 freezer is only supported since CRIU release 3.14.
+	if !cgroups.IsCgroup2UnifiedMode() || c.checkCriuVersion(31400) == nil {
+		if fcg := c.cgroupManager.Path("freezer"); fcg != "" {
+			rpcOpts.FreezeCgroup = proto.String(fcg)
 		}
-	}
-	if fcg != "" {
-		rpcOpts.FreezeCgroup = proto.String(fcg)
 	}
 
 	// append optional criu opts, e.g., page-server and port
@@ -1857,23 +1847,17 @@ func (c *linuxContainer) runType() Status {
 }
 
 func (c *linuxContainer) isPaused() (bool, error) {
-	var fcg, filename, pausedState string
+	var filename, pausedState string
 
+	fcg := c.cgroupManager.Path("freezer")
 	if !cgroups.IsCgroup2UnifiedMode() {
-		fcg = c.cgroupManager.GetPaths()["freezer"]
 		if fcg == "" {
-			// A container doesn't have a freezer cgroup
+			// container doesn't have a freezer cgroup
 			return false, nil
 		}
 		filename = "freezer.state"
 		pausedState = "FROZEN"
 	} else {
-		var err error
-		fcg, err = c.cgroupManager.GetUnifiedPath()
-		if err != nil {
-			// should not happen
-			return false, err
-		}
 		filename = "cgroup.freeze"
 		pausedState = "1"
 	}
