@@ -655,7 +655,7 @@ func (c *linuxContainer) NotifyOOM() (<-chan struct{}, error) {
 		}
 		return notifyOnOOMV2(path)
 	}
-	return notifyOnOOM(c.cgroupManager.GetPaths())
+	return notifyOnOOM(c.cgroupManager.GetPaths()["memory"])
 }
 
 func (c *linuxContainer) NotifyMemoryPressure(level PressureLevel) (<-chan struct{}, error) {
@@ -663,7 +663,7 @@ func (c *linuxContainer) NotifyMemoryPressure(level PressureLevel) (<-chan struc
 	if c.config.RootlessCgroups {
 		logrus.Warn("getting memory pressure notifications may fail if you don't have the full access to cgroups")
 	}
-	return notifyMemoryPressure(c.cgroupManager.GetPaths(), level)
+	return notifyMemoryPressure(c.cgroupManager.GetPaths()["memory"], level)
 }
 
 var criuFeatures *criurpc.CriuFeatures
