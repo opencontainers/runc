@@ -18,14 +18,12 @@ func TestDevicesSetAllow(t *testing.T) {
 		"devices.deny":  "",
 	})
 
-	helper.CgroupData.config.Resources.Devices = []*configs.Device{
+	helper.CgroupData.config.Resources.Devices = []*configs.DeviceRule{
 		{
-			Path:        "/dev/zero",
-			Type:        'c',
+			Type:        configs.CharDevice,
 			Major:       1,
 			Minor:       5,
-			Permissions: "rwm",
-			FileMode:    0666,
+			Permissions: configs.DevicePermissions("rwm"),
 			Allow:       true,
 		},
 	}

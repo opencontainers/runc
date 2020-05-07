@@ -20,7 +20,7 @@ func hash(s, comm string) string {
 	return strings.Join(res, "\n")
 }
 
-func testDeviceFilter(t testing.TB, devices []*configs.Device, expectedStr string) {
+func testDeviceFilter(t testing.TB, devices []*configs.DeviceRule, expectedStr string) {
 	insts, _, err := DeviceFilter(devices)
 	if err != nil {
 		t.Fatalf("%s: %v (devices: %+v)", t.Name(), err, devices)
@@ -137,11 +137,15 @@ block-11:
         62: Mov32Imm dst: r0 imm: 0
         63: Exit
 `
-	testDeviceFilter(t, specconv.AllowedDevices, expected)
+	var devices []*configs.DeviceRule
+	for _, device := range specconv.AllowedDevices {
+		devices = append(devices, &device.DeviceRule)
+	}
+	testDeviceFilter(t, devices, expected)
 }
 
 func TestDeviceFilter_Privileged(t *testing.T) {
-	devices := []*configs.Device{
+	devices := []*configs.DeviceRule{
 		{
 			Type:        'a',
 			Major:       -1,
@@ -168,7 +172,7 @@ block-0:
 }
 
 func TestDeviceFilter_PrivilegedExceptSingleDevice(t *testing.T) {
-	devices := []*configs.Device{
+	devices := []*configs.DeviceRule{
 		{
 			Type:        'a',
 			Major:       -1,
@@ -208,7 +212,7 @@ block-1:
 }
 
 func TestDeviceFilter_Weird(t *testing.T) {
-	devices := []*configs.Device{
+	devices := []*configs.DeviceRule{
 		{
 			Type:        'b',
 			Major:       8,

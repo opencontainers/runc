@@ -66,92 +66,129 @@ var mountPropagationMapping = map[string]int{
 var AllowedDevices = []*configs.Device{
 	// allow mknod for any device
 	{
-		Type:        'c',
-		Major:       wildcard,
-		Minor:       wildcard,
-		Permissions: "m",
-		Allow:       true,
+		DeviceRule: configs.DeviceRule{
+			Type:        configs.CharDevice,
+			Major:       configs.Wildcard,
+			Minor:       configs.Wildcard,
+			Permissions: "m",
+			Allow:       true,
+		},
 	},
 	{
-		Type:        'b',
-		Major:       wildcard,
-		Minor:       wildcard,
-		Permissions: "m",
-		Allow:       true,
+		DeviceRule: configs.DeviceRule{
+			Type:        configs.BlockDevice,
+			Major:       configs.Wildcard,
+			Minor:       configs.Wildcard,
+			Permissions: "m",
+			Allow:       true,
+		},
 	},
 	{
-		Type:        'c',
-		Path:        "/dev/null",
-		Major:       1,
-		Minor:       3,
-		Permissions: "rwm",
-		Allow:       true,
+		Path:     "/dev/null",
+		FileMode: 0666,
+		Uid:      0,
+		Gid:      0,
+		DeviceRule: configs.DeviceRule{
+			Type:        configs.CharDevice,
+			Major:       1,
+			Minor:       3,
+			Permissions: "rwm",
+			Allow:       true,
+		},
 	},
 	{
-		Type:        'c',
-		Path:        "/dev/random",
-		Major:       1,
-		Minor:       8,
-		Permissions: "rwm",
-		Allow:       true,
+		Path:     "/dev/random",
+		FileMode: 0666,
+		Uid:      0,
+		Gid:      0,
+		DeviceRule: configs.DeviceRule{
+			Type:        configs.CharDevice,
+			Major:       1,
+			Minor:       8,
+			Permissions: "rwm",
+			Allow:       true,
+		},
 	},
 	{
-		Type:        'c',
-		Path:        "/dev/full",
-		Major:       1,
-		Minor:       7,
-		Permissions: "rwm",
-		Allow:       true,
+		Path:     "/dev/full",
+		FileMode: 0666,
+		Uid:      0,
+		Gid:      0,
+		DeviceRule: configs.DeviceRule{
+			Type:        configs.CharDevice,
+			Major:       1,
+			Minor:       7,
+			Permissions: "rwm",
+			Allow:       true,
+		},
 	},
 	{
-		Type:        'c',
-		Path:        "/dev/tty",
-		Major:       5,
-		Minor:       0,
-		Permissions: "rwm",
-		Allow:       true,
+		Path:     "/dev/tty",
+		FileMode: 0666,
+		Uid:      0,
+		Gid:      0,
+		DeviceRule: configs.DeviceRule{
+			Type:        configs.CharDevice,
+			Major:       5,
+			Minor:       0,
+			Permissions: "rwm",
+			Allow:       true,
+		},
 	},
 	{
-		Type:        'c',
-		Path:        "/dev/zero",
-		Major:       1,
-		Minor:       5,
-		Permissions: "rwm",
-		Allow:       true,
+		Path:     "/dev/zero",
+		FileMode: 0666,
+		Uid:      0,
+		Gid:      0,
+		DeviceRule: configs.DeviceRule{
+			Type:        configs.CharDevice,
+			Major:       1,
+			Minor:       5,
+			Permissions: "rwm",
+			Allow:       true,
+		},
 	},
 	{
-		Type:        'c',
-		Path:        "/dev/urandom",
-		Major:       1,
-		Minor:       9,
-		Permissions: "rwm",
-		Allow:       true,
+		Path:     "/dev/urandom",
+		FileMode: 0666,
+		Uid:      0,
+		Gid:      0,
+		DeviceRule: configs.DeviceRule{
+			Type:        configs.CharDevice,
+			Major:       1,
+			Minor:       9,
+			Permissions: "rwm",
+			Allow:       true,
+		},
 	},
 	// /dev/pts/ - pts namespaces are "coming soon"
 	{
-		Path:        "",
-		Type:        'c',
-		Major:       136,
-		Minor:       wildcard,
-		Permissions: "rwm",
-		Allow:       true,
+		DeviceRule: configs.DeviceRule{
+			Type:        configs.CharDevice,
+			Major:       136,
+			Minor:       configs.Wildcard,
+			Permissions: "rwm",
+			Allow:       true,
+		},
 	},
 	{
-		Path:        "",
-		Type:        'c',
-		Major:       5,
-		Minor:       2,
-		Permissions: "rwm",
-		Allow:       true,
+		DeviceRule: configs.DeviceRule{
+			Type:        configs.CharDevice,
+			Major:       5,
+			Minor:       2,
+			Permissions: "rwm",
+			Allow:       true,
+		},
 	},
 	// tuntap
 	{
-		Path:        "",
-		Type:        'c',
-		Major:       10,
-		Minor:       200,
-		Permissions: "rwm",
-		Allow:       true,
+		DeviceRule: configs.DeviceRule{
+			Type:        configs.CharDevice,
+			Major:       10,
+			Minor:       200,
+			Permissions: "rwm",
+			Allow:       true,
+		},
 	},
 }
 
@@ -451,14 +488,13 @@ func CreateCgroupConfig(opts *CreateOpts) (*configs.Cgroup, error) {
 				if err != nil {
 					return nil, err
 				}
-				dd := &configs.Device{
+				c.Resources.Devices = append(c.Resources.Devices, &configs.DeviceRule{
 					Type:        dt,
 					Major:       major,
 					Minor:       minor,
-					Permissions: d.Access,
+					Permissions: configs.DevicePermissions(d.Access),
 					Allow:       d.Allow,
-				}
-				c.Resources.Devices = append(c.Resources.Devices, dd)
+				})
 			}
 			if r.Memory != nil {
 				if r.Memory.Limit != nil {
@@ -583,98 +619,48 @@ func CreateCgroupConfig(opts *CreateOpts) (*configs.Cgroup, error) {
 			}
 		}
 	}
-	// append the default allowed devices to the end of the list
-	c.Resources.Devices = append(c.Resources.Devices, AllowedDevices...)
+	// Append the default allowed devices to the end of the list.
+	// XXX: Really this should be prefixed...
+	for _, device := range AllowedDevices {
+		c.Resources.Devices = append(c.Resources.Devices, &device.DeviceRule)
+	}
 	return c, nil
 }
 
-func stringToCgroupDeviceRune(s string) (rune, error) {
+func stringToCgroupDeviceRune(s string) (configs.DeviceType, error) {
 	switch s {
 	case "a":
-		return 'a', nil
+		return configs.WildcardDevice, nil
 	case "b":
-		return 'b', nil
+		return configs.BlockDevice, nil
 	case "c":
-		return 'c', nil
+		return configs.CharDevice, nil
 	default:
 		return 0, fmt.Errorf("invalid cgroup device type %q", s)
 	}
 }
 
-func stringToDeviceRune(s string) (rune, error) {
+func stringToDeviceRune(s string) (configs.DeviceType, error) {
 	switch s {
 	case "p":
-		return 'p', nil
-	case "u":
-		return 'u', nil
+		return configs.FifoDevice, nil
+	case "u", "c":
+		return configs.CharDevice, nil
 	case "b":
-		return 'b', nil
-	case "c":
-		return 'c', nil
+		return configs.BlockDevice, nil
 	default:
 		return 0, fmt.Errorf("invalid device type %q", s)
 	}
 }
 
 func createDevices(spec *specs.Spec, config *configs.Config) error {
-	// add whitelisted devices
-	config.Devices = []*configs.Device{
-		{
-			Type:     'c',
-			Path:     "/dev/null",
-			Major:    1,
-			Minor:    3,
-			FileMode: 0666,
-			Uid:      0,
-			Gid:      0,
-		},
-		{
-			Type:     'c',
-			Path:     "/dev/random",
-			Major:    1,
-			Minor:    8,
-			FileMode: 0666,
-			Uid:      0,
-			Gid:      0,
-		},
-		{
-			Type:     'c',
-			Path:     "/dev/full",
-			Major:    1,
-			Minor:    7,
-			FileMode: 0666,
-			Uid:      0,
-			Gid:      0,
-		},
-		{
-			Type:     'c',
-			Path:     "/dev/tty",
-			Major:    5,
-			Minor:    0,
-			FileMode: 0666,
-			Uid:      0,
-			Gid:      0,
-		},
-		{
-			Type:     'c',
-			Path:     "/dev/zero",
-			Major:    1,
-			Minor:    5,
-			FileMode: 0666,
-			Uid:      0,
-			Gid:      0,
-		},
-		{
-			Type:     'c',
-			Path:     "/dev/urandom",
-			Major:    1,
-			Minor:    9,
-			FileMode: 0666,
-			Uid:      0,
-			Gid:      0,
-		},
+	// Add default set of devices.
+	for _, device := range AllowedDevices {
+		if device.Path != "" {
+			config.Devices = append(config.Devices, device)
+		}
 	}
-	// merge in additional devices from the spec
+	// Merge in additional devices from the spec.
 	if spec.Linux != nil {
 		for _, d := range spec.Linux.Devices {
 			var uid, gid uint32
@@ -694,10 +680,12 @@ func createDevices(spec *specs.Spec, config *configs.Config) error {
 				filemode = *d.FileMode
 			}
 			device := &configs.Device{
-				Type:     dt,
+				DeviceRule: configs.DeviceRule{
+					Type:  dt,
+					Major: d.Major,
+					Minor: d.Minor,
+				},
 				Path:     d.Path,
-				Major:    d.Major,
-				Minor:    d.Minor,
 				FileMode: filemode,
 				Uid:      uid,
 				Gid:      gid,

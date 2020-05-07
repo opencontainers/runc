@@ -10,12 +10,10 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func isRWM(cgroupPermissions string) bool {
-	r := false
-	w := false
-	m := false
-	for _, rn := range cgroupPermissions {
-		switch rn {
+func isRWM(perms configs.DevicePermissions) bool {
+	var r, w, m bool
+	for _, perm := range perms {
+		switch perm {
 		case 'r':
 			r = true
 		case 'w':
