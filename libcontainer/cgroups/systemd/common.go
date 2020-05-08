@@ -71,9 +71,13 @@ func ExpandSlice(slice string) (string, error) {
 
 // getDbusConnection lazy initializes systemd dbus connection
 // and returns it
-func getDbusConnection() (*systemdDbus.Conn, error) {
+func getDbusConnection(rootless bool) (*systemdDbus.Conn, error) {
 	connOnce.Do(func() {
-		connDbus, connErr = systemdDbus.New()
+		if rootless {
+			connDbus, connErr = NewUserSystemdDbus()
+		} else {
+			connDbus, connErr = systemdDbus.New()
+		}
 	})
 	return connDbus, connErr
 }
@@ -103,12 +107,7 @@ func isUnitExists(err error) bool {
 	return false
 }
 
-func startUnit(unitName string, properties []systemdDbus.Property) error {
-	dbusConnection, err := getDbusConnection()
-	if err != nil {
-		return err
-	}
-
+func startUnit(dbusConnection *systemdDbus.Conn, unitName string, properties []systemdDbus.Property) error {
 	statusChan := make(chan string, 1)
 	if _, err := dbusConnection.StartTransientUnit(unitName, "replace", properties, statusChan); err == nil {
 		select {
@@ -129,12 +128,7 @@ func startUnit(unitName string, properties []systemdDbus.Property) error {
 	return nil
 }
 
-func stopUnit(unitName string) error {
-	dbusConnection, err := getDbusConnection()
-	if err != nil {
-		return err
-	}
-
+func stopUnit(dbusConnection *systemdDbus.Conn, unitName string) error {
 	statusChan := make(chan string, 1)
 	if _, err := dbusConnection.StopUnit(unitName, "replace", statusChan); err == nil {
 		select {

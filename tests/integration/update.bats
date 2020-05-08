@@ -29,17 +29,30 @@ function setup() {
     },
     "pids": {
         "limit": 20
-    },
+    }
 EOF
     )
     DATA=$(echo ${DATA} | sed 's/\n/\\n/g')
-    sed -i "s/\(\"resources\": {\)/\1\n${DATA}/" ${BUSYBOX_BUNDLE}/config.json
+    if grep -qw \"resources\" ${BUSYBOX_BUNDLE}/config.json; then
+        sed -i "s/\(\"resources\": {\)/\1\n${DATA},/" ${BUSYBOX_BUNDLE}/config.json
+    else
+        sed -i "s/\(\"linux\": {\)/\1\n\"resources\": {${DATA}},/" ${BUSYBOX_BUNDLE}/config.json
+    fi
 }
 
 # Tests whatever limits are (more or less) common between cgroup
 # v1 and v2: memory/swap, pids, and cpuset.
 @test "update cgroup v1/v2 common limits" {
-    [[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+    [[ "$ROOTLESS" -ne 0 && -z "$RUNC_USE_SYSTEMD" ]] && requires rootless_cgroup
+    if [[ "$ROOTLESS" -ne 0 && -n "$RUNC_USE_SYSTEMD" ]]; then
+        file="/sys/fs/cgroup/user.slice/user-$(id -u).slice/user@$(id -u).service/cgroup.controllers"
+        # NOTE: delegation of cpuset requires systemd >= 244 (Fedora >= 32, Ubuntu >= 20.04).
+        for f in memory pids cpuset; do
+            if grep -qwv $f $file; then
+                skip "$f is not enabled in $file"
+            fi
+        done
+    fi
     init_cgroup_paths
 
     # run a few busyboxes detached
