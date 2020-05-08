@@ -247,9 +247,10 @@ func (m *manager) Set(container *configs.Config) error {
 		return nil
 	}
 
-	paths := m.GetPaths()
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	for _, sys := range m.getSubsystems() {
-		path := paths[sys.Name()]
+		path := m.paths[sys.Name()]
 		if err := sys.Set(path, container.Cgroups); err != nil {
 			if m.rootless && sys.Name() == "devices" {
 				continue
