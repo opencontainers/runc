@@ -49,7 +49,8 @@ func (p *program) init() {
 	*/
 	// R2 <- type (lower 16 bit of u32 access_type at R1[0])
 	p.insts = append(p.insts,
-		asm.LoadMem(asm.R2, asm.R1, 0, asm.Half))
+		asm.LoadMem(asm.R2, asm.R1, 0, asm.Word),
+		asm.And.Imm32(asm.R2, 0xFFFF))
 
 	// R3 <- access (upper 16 bit of u32 access_type at R1[0])
 	p.insts = append(p.insts,

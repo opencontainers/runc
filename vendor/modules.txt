@@ -1,7 +1,7 @@
 # github.com/checkpoint-restore/go-criu v0.0.0-20191125063657-fcdcd07065c5
 ## explicit
 github.com/checkpoint-restore/go-criu/rpc
-# github.com/cilium/ebpf v0.0.0-20200319110858-a7172c01168f
+# github.com/cilium/ebpf v0.0.0-20200507155900-a9f01edf17e3
 ## explicit
 github.com/cilium/ebpf
 github.com/cilium/ebpf/asm

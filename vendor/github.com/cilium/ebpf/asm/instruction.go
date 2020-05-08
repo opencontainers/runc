@@ -3,6 +3,7 @@ package asm
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/cilium/ebpf/internal"
 	"io"
 	"math"
 	"strings"
@@ -433,15 +434,27 @@ type bpfInstruction struct {
 type bpfRegisters uint8
 
 func newBPFRegisters(dst, src Register) bpfRegisters {
-	return bpfRegisters((src << 4) | (dst & 0xF))
+	if internal.NativeEndian == binary.LittleEndian {
+		return bpfRegisters((src << 4) | (dst & 0xF))
+	} else {
+		return bpfRegisters((dst << 4) | (src & 0xF))
+	}
 }
 
 func (r bpfRegisters) Dst() Register {
-	return Register(r & 0xF)
+	if internal.NativeEndian == binary.LittleEndian {
+		return Register(r & 0xF)
+	}else {
+		return Register(r >> 4)
+	}
 }
 
 func (r bpfRegisters) Src() Register {
-	return Register(r >> 4)
+	if internal.NativeEndian == binary.LittleEndian {
+		return Register(r >> 4)
+	} else {
+		return Register(r & 0xf)
+	}
 }
 
 type unreferencedSymbolError struct {
