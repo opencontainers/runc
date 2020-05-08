@@ -23,6 +23,13 @@ type LegacyManager struct {
 	Paths   map[string]string
 }
 
+func NewLegacyManager(cg *configs.Cgroup, paths map[string]string) cgroups.Manager {
+	return &LegacyManager{
+		Cgroups: cg,
+		Paths:   paths,
+	}
+}
+
 type subsystem interface {
 	// Name returns the name of the subsystem.
 	Name() string

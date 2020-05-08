@@ -88,10 +88,7 @@ func SystemdCgroups(l *LinuxFactory) error {
 	}
 
 	l.NewCgroupsManager = func(config *configs.Cgroup, paths map[string]string) cgroups.Manager {
-		return &systemd.LegacyManager{
-			Cgroups: config,
-			Paths:   paths,
-		}
+		return systemd.NewLegacyManager(config, paths)
 	}
 
 	return nil
