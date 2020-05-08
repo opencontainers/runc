@@ -16,6 +16,7 @@ func TestDevicesSetAllow(t *testing.T) {
 	helper.writeFileContents(map[string]string{
 		"devices.allow": "",
 		"devices.deny":  "",
+		"devices.list":  "a *:* rwm",
 	})
 
 	helper.CgroupData.config.Resources.Devices = []*configs.DeviceRule{
@@ -28,7 +29,7 @@ func TestDevicesSetAllow(t *testing.T) {
 		},
 	}
 
-	devices := &DevicesGroup{}
+	devices := &DevicesGroup{testingSkipFinalCheck: true}
 	if err := devices.Set(helper.CgroupPath, helper.CgroupData.config); err != nil {
 		t.Fatal(err)
 	}
