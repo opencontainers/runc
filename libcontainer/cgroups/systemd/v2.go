@@ -26,7 +26,7 @@ type unifiedManager struct {
 	rootless bool
 }
 
-func NewUnifiedManager(config *configs.Cgroup, path string, rootless bool) *unifiedManager {
+func NewUnifiedManager(config *configs.Cgroup, path string, rootless bool) cgroups.Manager {
 	return &unifiedManager{
 		cgroups:  config,
 		path:     path,

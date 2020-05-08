@@ -14,7 +14,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-type notifyFunc func(paths map[string]string) (<-chan struct{}, error)
+type notifyFunc func(path string) (<-chan struct{}, error)
 
 func testMemoryNotification(t *testing.T, evName string, notify notifyFunc, targ string) {
 	memoryPath, err := ioutil.TempDir("", "testmemnotification-"+evName)
@@ -29,10 +29,7 @@ func testMemoryNotification(t *testing.T, evName string, notify notifyFunc, targ
 	if err := ioutil.WriteFile(eventPath, []byte{}, 0700); err != nil {
 		t.Fatal(err)
 	}
-	paths := map[string]string{
-		"memory": memoryPath,
-	}
-	ch, err := notify(paths)
+	ch, err := notify(memoryPath)
 	if err != nil {
 		t.Fatal("expected no error, got:", err)
 	}
@@ -102,8 +99,8 @@ func testMemoryNotification(t *testing.T, evName string, notify notifyFunc, targ
 }
 
 func TestNotifyOnOOM(t *testing.T) {
-	f := func(paths map[string]string) (<-chan struct{}, error) {
-		return notifyOnOOM(paths)
+	f := func(path string) (<-chan struct{}, error) {
+		return notifyOnOOM(path)
 	}
 
 	testMemoryNotification(t, "memory.oom_control", f, "")
@@ -117,8 +114,8 @@ func TestNotifyMemoryPressure(t *testing.T) {
 	}
 
 	for level, arg := range tests {
-		f := func(paths map[string]string) (<-chan struct{}, error) {
-			return notifyMemoryPressure(paths, level)
+		f := func(path string) (<-chan struct{}, error) {
+			return notifyMemoryPressure(path, level)
 		}
 
 		testMemoryNotification(t, "memory.pressure_level", f, arg)

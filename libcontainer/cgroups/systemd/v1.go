@@ -17,10 +17,17 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
-type LegacyManager struct {
+type legacyManager struct {
 	mu      sync.Mutex
-	Cgroups *configs.Cgroup
-	Paths   map[string]string
+	cgroups *configs.Cgroup
+	paths   map[string]string
+}
+
+func NewLegacyManager(cg *configs.Cgroup, paths map[string]string) cgroups.Manager {
+	return &legacyManager{
+		cgroups: cg,
+		paths:   paths,
+	}
 }
 
 type subsystem interface {
@@ -114,9 +121,9 @@ func genV1ResourcesProperties(c *configs.Cgroup) ([]systemdDbus.Property, error)
 	return properties, nil
 }
 
-func (m *LegacyManager) Apply(pid int) error {
+func (m *legacyManager) Apply(pid int) error {
 	var (
-		c          = m.Cgroups
+		c          = m.cgroups
 		unitName   = getUnitName(c)
 		slice      = "system.slice"
 		properties []systemdDbus.Property
@@ -125,7 +132,7 @@ func (m *LegacyManager) Apply(pid int) error {
 	if c.Paths != nil {
 		paths := make(map[string]string)
 		for name, path := range c.Paths {
-			_, err := getSubsystemPath(m.Cgroups, name)
+			_, err := getSubsystemPath(m.cgroups, name)
 			if err != nil {
 				// Don't fail if a cgroup hierarchy was not found, just skip this subsystem
 				if cgroups.IsNotFound(err) {
@@ -135,8 +142,8 @@ func (m *LegacyManager) Apply(pid int) error {
 			}
 			paths[name] = path
 		}
-		m.Paths = paths
-		return cgroups.EnterPid(m.Paths, pid)
+		m.paths = paths
+		return cgroups.EnterPid(m.paths, pid)
 	}
 
 	if c.Parent != "" {
@@ -196,7 +203,7 @@ func (m *LegacyManager) Apply(pid int) error {
 
 	paths := make(map[string]string)
 	for _, s := range legacySubsystems {
-		subsystemPath, err := getSubsystemPath(m.Cgroups, s.Name())
+		subsystemPath, err := getSubsystemPath(m.cgroups, s.Name())
 		if err != nil {
 			// Don't fail if a cgroup hierarchy was not found, just skip this subsystem
 			if cgroups.IsNotFound(err) {
@@ -206,12 +213,12 @@ func (m *LegacyManager) Apply(pid int) error {
 		}
 		paths[s.Name()] = subsystemPath
 	}
-	m.Paths = paths
+	m.paths = paths
 	return nil
 }
 
-func (m *LegacyManager) Destroy() error {
-	if m.Cgroups.Paths != nil {
+func (m *legacyManager) Destroy() error {
+	if m.cgroups.Paths != nil {
 		return nil
 	}
 	m.mu.Lock()
@@ -221,22 +228,22 @@ func (m *LegacyManager) Destroy() error {
 	if err != nil {
 		return err
 	}
-	unitName := getUnitName(m.Cgroups)
+	unitName := getUnitName(m.cgroups)
 	if err := stopUnit(dbusConnection, unitName); err != nil {
 		return err
 	}
-	m.Paths = make(map[string]string)
+	m.paths = make(map[string]string)
 	return nil
 }
 
-func (m *LegacyManager) GetPaths() map[string]string {
+func (m *legacyManager) GetPaths() map[string]string {
 	m.mu.Lock()
-	paths := m.Paths
+	paths := m.paths
 	m.mu.Unlock()
 	return paths
 }
 
-func (m *LegacyManager) GetUnifiedPath() (string, error) {
+func (m *legacyManager) GetUnifiedPath() (string, error) {
 	return "", errors.New("unified path is only supported when running in unified mode")
 }
 
@@ -317,46 +324,46 @@ func getSubsystemPath(c *configs.Cgroup, subsystem string) (string, error) {
 	return filepath.Join(mountpoint, initPath, slice, getUnitName(c)), nil
 }
 
-func (m *LegacyManager) Freeze(state configs.FreezerState) error {
-	path, err := getSubsystemPath(m.Cgroups, "freezer")
+func (m *legacyManager) Freeze(state configs.FreezerState) error {
+	path, err := getSubsystemPath(m.cgroups, "freezer")
 	if err != nil {
 		return err
 	}
-	prevState := m.Cgroups.Resources.Freezer
-	m.Cgroups.Resources.Freezer = state
+	prevState := m.cgroups.Resources.Freezer
+	m.cgroups.Resources.Freezer = state
 	freezer, err := legacySubsystems.Get("freezer")
 	if err != nil {
 		return err
 	}
-	err = freezer.Set(path, m.Cgroups)
+	err = freezer.Set(path, m.cgroups)
 	if err != nil {
-		m.Cgroups.Resources.Freezer = prevState
+		m.cgroups.Resources.Freezer = prevState
 		return err
 	}
 	return nil
 }
 
-func (m *LegacyManager) GetPids() ([]int, error) {
-	path, err := getSubsystemPath(m.Cgroups, "devices")
+func (m *legacyManager) GetPids() ([]int, error) {
+	path, err := getSubsystemPath(m.cgroups, "devices")
 	if err != nil {
 		return nil, err
 	}
 	return cgroups.GetPids(path)
 }
 
-func (m *LegacyManager) GetAllPids() ([]int, error) {
-	path, err := getSubsystemPath(m.Cgroups, "devices")
+func (m *legacyManager) GetAllPids() ([]int, error) {
+	path, err := getSubsystemPath(m.cgroups, "devices")
 	if err != nil {
 		return nil, err
 	}
 	return cgroups.GetAllPids(path)
 }
 
-func (m *LegacyManager) GetStats() (*cgroups.Stats, error) {
+func (m *legacyManager) GetStats() (*cgroups.Stats, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	stats := cgroups.NewStats()
-	for name, path := range m.Paths {
+	for name, path := range m.paths {
 		sys, err := legacySubsystems.Get(name)
 		if err == errSubsystemDoesNotExist || !cgroups.PathExists(path) {
 			continue
@@ -369,10 +376,10 @@ func (m *LegacyManager) GetStats() (*cgroups.Stats, error) {
 	return stats, nil
 }
 
-func (m *LegacyManager) Set(container *configs.Config) error {
+func (m *legacyManager) Set(container *configs.Config) error {
 	// If Paths are set, then we are just joining cgroups paths
 	// and there is no need to set any values.
-	if m.Cgroups.Paths != nil {
+	if m.cgroups.Paths != nil {
 		return nil
 	}
 	properties, err := genV1ResourcesProperties(container.Cgroups)
@@ -399,8 +406,8 @@ func (m *LegacyManager) Set(container *configs.Config) error {
 		}
 	}
 
-	if m.Paths["cpu"] != "" {
-		if err := fs.CheckCpushares(m.Paths["cpu"], container.Cgroups.Resources.CpuShares); err != nil {
+	if m.paths["cpu"] != "" {
+		if err := fs.CheckCpushares(m.paths["cpu"], container.Cgroups.Resources.CpuShares); err != nil {
 			return err
 		}
 	}
@@ -427,6 +434,6 @@ func setKernelMemory(c *configs.Cgroup) error {
 	}
 	return fs.EnableKernelMemoryAccounting(path)
 }
-func (m *LegacyManager) GetCgroups() (*configs.Cgroup, error) {
-	return m.Cgroups, nil
+func (m *legacyManager) GetCgroups() (*configs.Cgroup, error) {
+	return m.cgroups, nil
 }

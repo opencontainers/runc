@@ -88,10 +88,7 @@ func SystemdCgroups(l *LinuxFactory) error {
 	}
 
 	l.NewCgroupsManager = func(config *configs.Cgroup, paths map[string]string) cgroups.Manager {
-		return &systemd.LegacyManager{
-			Cgroups: config,
-			Paths:   paths,
-		}
+		return systemd.NewLegacyManager(config, paths)
 	}
 
 	return nil
@@ -120,20 +117,21 @@ func cgroupfs2(l *LinuxFactory, rootless bool) error {
 	return nil
 }
 
+func cgroupfs(l *LinuxFactory, rootless bool) error {
+	if cgroups.IsCgroup2UnifiedMode() {
+		return cgroupfs2(l, rootless)
+	}
+	l.NewCgroupsManager = func(config *configs.Cgroup, paths map[string]string) cgroups.Manager {
+		return fs.NewManager(config, paths, rootless)
+	}
+	return nil
+}
+
 // Cgroupfs is an options func to configure a LinuxFactory to return containers
 // that use the native cgroups filesystem implementation to create and manage
 // cgroups.
 func Cgroupfs(l *LinuxFactory) error {
-	if cgroups.IsCgroup2UnifiedMode() {
-		return cgroupfs2(l, false)
-	}
-	l.NewCgroupsManager = func(config *configs.Cgroup, paths map[string]string) cgroups.Manager {
-		return &fs.Manager{
-			Cgroups: config,
-			Paths:   paths,
-		}
-	}
-	return nil
+	return cgroupfs(l, false)
 }
 
 // RootlessCgroupfs is an options func to configure a LinuxFactory to return
@@ -143,17 +141,7 @@ func Cgroupfs(l *LinuxFactory) error {
 // during rootless container (including euid=0 in userns) setup (while still allowing cgroup usage if
 // they've been set up properly).
 func RootlessCgroupfs(l *LinuxFactory) error {
-	if cgroups.IsCgroup2UnifiedMode() {
-		return cgroupfs2(l, true)
-	}
-	l.NewCgroupsManager = func(config *configs.Cgroup, paths map[string]string) cgroups.Manager {
-		return &fs.Manager{
-			Cgroups:  config,
-			Rootless: true,
-			Paths:    paths,
-		}
-	}
-	return nil
+	return cgroupfs(l, true)
 }
 
 // IntelRdtfs is an options func to configure a LinuxFactory to return
