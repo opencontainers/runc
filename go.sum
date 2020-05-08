@@ -3,6 +3,8 @@ github.com/checkpoint-restore/go-criu v0.0.0-20191125063657-fcdcd07065c5 h1:950d
 github.com/checkpoint-restore/go-criu v0.0.0-20191125063657-fcdcd07065c5/go.mod h1:TrMrLQfeENAPYPRsJuq3jsqdlRh3lvi6trTZJG8+tho=
 github.com/cilium/ebpf v0.0.0-20200319110858-a7172c01168f h1:W1RQPz3nR8RxUw/Uqk71GU3JlZ7pNa1pXrHs98h0o9U=
 github.com/cilium/ebpf v0.0.0-20200319110858-a7172c01168f/go.mod h1:XT+cAw5wfvsodedcijoh1l9cf7v1x9FlFB/3VmF/O8s=
+github.com/cilium/ebpf v0.0.0-20200507155900-a9f01edf17e3 h1:qcqzLJa2xCo9sgdCzpT/SJSYxROTEstuhf7ZBHMirms=
+github.com/cilium/ebpf v0.0.0-20200507155900-a9f01edf17e3/go.mod h1:XT+cAw5wfvsodedcijoh1l9cf7v1x9FlFB/3VmF/O8s=
 github.com/containerd/console v1.0.0 h1:fU3UuQapBs+zLJu82NhR11Rif1ny2zfMMAyPJzSN5tQ=
 github.com/containerd/console v1.0.0/go.mod h1:8Pf4gM6VEbTNRIT26AyyU7hxdQU3MvAvxVI0sc00XBE=
 github.com/coreos/go-systemd/v22 v22.0.0 h1:XJIw/+VlJ+87J+doOxznsAWIdmWuViOVhkQamW5YV28=

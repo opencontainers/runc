@@ -44,7 +44,7 @@ readonly tmp_dir="${TMPDIR:-$(mktemp -d)}"
 
 test -e "${tmp_dir}/${kernel}" || {
   echo Fetching "${kernel}"
-  curl --fail -L "https://github.com/newtools/ci-kernels/blob/master/${kernel}?raw=true" -o "${tmp_dir}/${kernel}"
+  curl --fail -L "https://github.com/cilium/ci-kernels/blob/master/${kernel}?raw=true" -o "${tmp_dir}/${kernel}"
 }
 
 echo Testing on "${kernel_version}"
