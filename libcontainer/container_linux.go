@@ -553,7 +553,7 @@ func (c *linuxContainer) newSetnsProcess(p *Process, cmd *exec.Cmd, messageSockP
 	}
 	return &setnsProcess{
 		cmd:             cmd,
-		cgroupPaths:     c.cgroupManager.GetPaths(),
+		cgroupPaths:     state.CgroupPaths,
 		rootlessCgroups: c.config.RootlessCgroups,
 		intelRdtPath:    state.IntelRdtPath,
 		messageSockPair: messageSockPair,
