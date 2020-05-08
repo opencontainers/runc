@@ -68,6 +68,14 @@ type Manager struct {
 	Paths    map[string]string
 }
 
+func NewManager(cg *configs.Cgroup, paths map[string]string, rootless bool) cgroups.Manager {
+	return &Manager{
+		Cgroups:  cg,
+		Paths:    paths,
+		Rootless: rootless,
+	}
+}
+
 // The absolute path to the root of the cgroup hierarchies.
 var cgroupRootLock sync.Mutex
 var cgroupRoot string
