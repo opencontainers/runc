@@ -15,27 +15,37 @@ import (
 func TestUnmarshalHooks(t *testing.T) {
 	timeout := time.Second
 
-	prestartCmd := configs.NewCommandHook(configs.Command{
-		Path:    "/var/vcap/hooks/prestart",
+	hookCmd := configs.NewCommandHook(configs.Command{
+		Path:    "/var/vcap/hooks/hook",
 		Args:    []string{"--pid=123"},
 		Env:     []string{"FOO=BAR"},
 		Dir:     "/var/vcap",
 		Timeout: &timeout,
 	})
-	prestart, err := json.Marshal(prestartCmd.Command)
+
+	hookJson, err := json.Marshal(hookCmd)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	hook := configs.Hooks{}
-	err = hook.UnmarshalJSON([]byte(fmt.Sprintf(`{"Prestart" :[%s]}`, prestart)))
-	if err != nil {
-		t.Fatal(err)
-	}
+	for hookName, hookString := range configs.HookToName {
+		hook := configs.Hooks{}
+		err = hook.UnmarshalJSON([]byte(fmt.Sprintf(`{"%s" :[%s]}`, hookString, hookJson)))
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	if !reflect.DeepEqual(hook.Prestart[0], prestartCmd) {
-		t.Errorf("Expected prestart to equal %+v but it was %+v",
-			prestartCmd, hook.Prestart[0])
+		hooksMap := map[configs.HookName][]configs.Hook{
+			configs.Prestart:      hook.Prestart,
+			configs.CreateRuntime: hook.CreateRuntime,
+			configs.Poststart:     hook.Poststart,
+			configs.Poststop:      hook.Poststop,
+		}
+
+		if !reflect.DeepEqual(hooksMap[hookName][0], hookCmd) {
+			t.Errorf("Expected %s to equal %+v but it was %+v",
+				hookString, hookCmd, hooksMap[hookName])
+		}
 	}
 }
 
@@ -50,8 +60,8 @@ func TestUnmarshalHooksWithInvalidData(t *testing.T) {
 func TestMarshalHooks(t *testing.T) {
 	timeout := time.Second
 
-	prestartCmd := configs.NewCommandHook(configs.Command{
-		Path:    "/var/vcap/hooks/prestart",
+	hookCmd := configs.NewCommandHook(configs.Command{
+		Path:    "/var/vcap/hooks/hook",
 		Args:    []string{"--pid=123"},
 		Env:     []string{"FOO=BAR"},
 		Dir:     "/var/vcap",
@@ -59,14 +69,19 @@ func TestMarshalHooks(t *testing.T) {
 	})
 
 	hook := configs.Hooks{
-		Prestart: []configs.Hook{prestartCmd},
+		Prestart:      []configs.Hook{hookCmd},
+		CreateRuntime: []configs.Hook{hookCmd},
+		Poststart:     []configs.Hook{hookCmd},
+		Poststop:      []configs.Hook{hookCmd},
 	}
 	hooks, err := hook.MarshalJSON()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	h := `{"poststart":null,"poststop":null,"prestart":[{"path":"/var/vcap/hooks/prestart","args":["--pid=123"],"env":["FOO=BAR"],"dir":"/var/vcap","timeout":1000000000}]}`
+	// Note Marshal seems to output fields in alphabetical order
+	hookCmdJson := `[{"path":"/var/vcap/hooks/hook","args":["--pid=123"],"env":["FOO=BAR"],"dir":"/var/vcap","timeout":1000000000}]`
+	h := fmt.Sprintf(`{"createRuntime":%[1]s,"poststart":%[1]s,"poststop":%[1]s,"prestart":%[1]s}`, hookCmdJson)
 	if string(hooks) != h {
 		t.Errorf("Expected hooks %s to equal %s", string(hooks), h)
 	}
@@ -75,8 +90,8 @@ func TestMarshalHooks(t *testing.T) {
 func TestMarshalUnmarshalHooks(t *testing.T) {
 	timeout := time.Second
 
-	prestart := configs.NewCommandHook(configs.Command{
-		Path:    "/var/vcap/hooks/prestart",
+	hookCmd := configs.NewCommandHook(configs.Command{
+		Path:    "/var/vcap/hooks/hook",
 		Args:    []string{"--pid=123"},
 		Env:     []string{"FOO=BAR"},
 		Dir:     "/var/vcap",
@@ -84,7 +99,10 @@ func TestMarshalUnmarshalHooks(t *testing.T) {
 	})
 
 	hook := configs.Hooks{
-		Prestart: []configs.Hook{prestart},
+		Prestart:      []configs.Hook{hookCmd},
+		CreateRuntime: []configs.Hook{hookCmd},
+		Poststart:     []configs.Hook{hookCmd},
+		Poststop:      []configs.Hook{hookCmd},
 	}
 	hooks, err := hook.MarshalJSON()
 	if err != nil {
@@ -96,8 +114,8 @@ func TestMarshalUnmarshalHooks(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(umMhook.Prestart[0], prestart) {
-		t.Errorf("Expected hooks to be equal after mashaling -> unmarshaling them: %+v, %+v", umMhook.Prestart[0], prestart)
+	if !reflect.DeepEqual(umMhook, hook) {
+		t.Errorf("Expected hooks to be equal after mashaling -> unmarshaling them: %+v, %+v", umMhook, hook)
 	}
 }
 
@@ -106,14 +124,14 @@ func TestMarshalHooksWithUnexpectedType(t *testing.T) {
 		return nil
 	})
 	hook := configs.Hooks{
-		Prestart: []configs.Hook{fHook},
+		CreateRuntime: []configs.Hook{fHook},
 	}
 	hooks, err := hook.MarshalJSON()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	h := `{"poststart":null,"poststop":null,"prestart":null}`
+	h := `{"createRuntime":null,"poststart":null,"poststop":null,"prestart":null}`
 	if string(hooks) != h {
 		t.Errorf("Expected hooks %s to equal %s", string(hooks), h)
 	}

@@ -246,12 +246,12 @@ const (
 )
 
 var HookToName = map[HookName]string{
-	Prestart:        "Prestart",
-	CreateRuntime:   "CreateRuntime",
-	CreateContainer: "CreateContainer",
-	StartContainer:  "StartContainer",
-	Poststart:       "Poststart",
-	Poststop:        "Poststop",
+	Prestart:        "prestart",
+	CreateRuntime:   "createRuntime",
+	CreateContainer: "createContainer",
+	StartContainer:  "startContainer",
+	Poststart:       "poststart",
+	Poststop:        "poststop",
 }
 
 type Capabilities struct {

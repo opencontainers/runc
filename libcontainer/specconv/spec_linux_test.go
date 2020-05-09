@@ -42,6 +42,15 @@ func TestCreateHooks(t *testing.T) {
 					Args: []string{"--some", "thing"},
 				},
 			},
+			CreateRuntime: []specs.Hook{
+				{
+					Path: "/some/hook/path",
+				},
+				{
+					Path: "/some/hook2/path",
+					Args: []string{"--some", "thing"},
+				},
+			},
 			Poststart: []specs.Hook{
 				{
 					Path: "/some/hook/path",
@@ -81,6 +90,12 @@ func TestCreateHooks(t *testing.T) {
 
 	if len(prestart) != 2 {
 		t.Error("Expected 2 Prestart hooks")
+	}
+
+	createRuntime := conf.Hooks.CreateRuntime
+
+	if len(createRuntime) != 2 {
+		t.Error("Expected 2 createRuntime hooks")
 	}
 
 	poststart := conf.Hooks.Poststart

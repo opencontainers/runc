@@ -1118,6 +1118,24 @@ func TestHook(t *testing.T) {
 		}
 		return config.Rootfs, nil
 	}
+	createFileFromBundle := func(filename, bundle string) error {
+		root, err := getRootfsFromBundle(bundle)
+		if err != nil {
+			return err
+		}
+
+		f, err := os.Create(filepath.Join(root, filename))
+		if err != nil {
+			return err
+		}
+		return f.Close()
+	}
+
+	hookFiles := map[configs.HookName]string{
+		configs.Prestart:      "prestart",
+		configs.CreateRuntime: "createRuntime",
+		configs.Poststart:     "poststart",
+	}
 
 	config.Hooks = &configs.Hooks{
 		Prestart: []configs.Hook{
@@ -1125,16 +1143,15 @@ func TestHook(t *testing.T) {
 				if s.Bundle != expectedBundle {
 					t.Fatalf("Expected prestart hook bundlePath '%s'; got '%s'", expectedBundle, s.Bundle)
 				}
-
-				root, err := getRootfsFromBundle(s.Bundle)
-				if err != nil {
-					return err
+				return createFileFromBundle(hookFiles[configs.Prestart], s.Bundle)
+			}),
+		},
+		CreateRuntime: []configs.Hook{
+			configs.NewFunctionHook(func(s *specs.State) error {
+				if s.Bundle != expectedBundle {
+					t.Fatalf("Expected createRuntime hook bundlePath '%s'; got '%s'", expectedBundle, s.Bundle)
 				}
-				f, err := os.Create(filepath.Join(root, "test"))
-				if err != nil {
-					return err
-				}
-				return f.Close()
+				return createFileFromBundle(hookFiles[configs.CreateRuntime], s.Bundle)
 			}),
 		},
 		Poststart: []configs.Hook{
@@ -1142,12 +1159,7 @@ func TestHook(t *testing.T) {
 				if s.Bundle != expectedBundle {
 					t.Fatalf("Expected poststart hook bundlePath '%s'; got '%s'", expectedBundle, s.Bundle)
 				}
-
-				root, err := getRootfsFromBundle(s.Bundle)
-				if err != nil {
-					return err
-				}
-				return ioutil.WriteFile(filepath.Join(root, "test"), []byte("hello world"), 0755)
+				return createFileFromBundle(hookFiles[configs.Poststart], s.Bundle)
 			}),
 		},
 		Poststop: []configs.Hook{
@@ -1160,7 +1172,13 @@ func TestHook(t *testing.T) {
 				if err != nil {
 					return err
 				}
-				return os.RemoveAll(filepath.Join(root, "test"))
+
+				for _, hook := range hookFiles {
+					if err = os.RemoveAll(filepath.Join(root, hook)); err != nil {
+						return err
+					}
+				}
+				return nil
 			}),
 		},
 	}
@@ -1173,10 +1191,16 @@ func TestHook(t *testing.T) {
 	container, err := newContainerWithName("test", config)
 	ok(t, err)
 
+	// e.g: 'ls /prestart ...'
+	cmd := "ls "
+	for _, hook := range hookFiles {
+		cmd += "/" + hook + " "
+	}
+
 	var stdout bytes.Buffer
 	pconfig := libcontainer.Process{
 		Cwd:    "/",
-		Args:   []string{"sh", "-c", "ls /test"},
+		Args:   []string{"sh", "-c", cmd},
 		Env:    standardEnvironment,
 		Stdin:  nil,
 		Stdout: &stdout,
@@ -1188,30 +1212,15 @@ func TestHook(t *testing.T) {
 	// Wait for process
 	waitProcess(&pconfig, t)
 
-	outputLs := string(stdout.Bytes())
-
-	// Check that the ls output has the expected file touched by the prestart hook
-	if !strings.Contains(outputLs, "/test") {
-		container.Destroy()
-		t.Fatalf("ls output doesn't have the expected file: %s", outputLs)
-	}
-
-	// Check that the file is written by the poststart hook
-	testFilePath := filepath.Join(rootfs, "test")
-	contents, err := ioutil.ReadFile(testFilePath)
-	if err != nil {
-		t.Fatalf("cannot read file '%s': %s", testFilePath, err)
-	}
-	if string(contents) != "hello world" {
-		t.Fatalf("Expected test file to contain 'hello world'; got '%s'", string(contents))
-	}
-
 	if err := container.Destroy(); err != nil {
 		t.Fatalf("container destroy %s", err)
 	}
-	fi, err := os.Stat(filepath.Join(rootfs, "test"))
-	if err == nil || !os.IsNotExist(err) {
-		t.Fatalf("expected file to not exist, got %s", fi.Name())
+
+	for _, hook := range []string{"prestart", "createRuntime", "poststart"} {
+		fi, err := os.Stat(filepath.Join(rootfs, hook))
+		if err == nil || !os.IsNotExist(err) {
+			t.Fatalf("expected file '%s to not exists, but it does", fi.Name())
+		}
 	}
 }
 
