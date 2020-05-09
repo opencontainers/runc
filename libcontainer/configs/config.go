@@ -220,6 +220,11 @@ type Hooks struct {
 	// CreateContainer commands are called in the Container namespace.
 	CreateContainer []Hook
 
+	// StartContainer commands MUST be called as part of the start operation and before
+	// the container process is started.
+	// StartContainer commands are called in the Container namespace.
+	StartContainer []Hook
+
 	// Poststart commands are executed after the container init process starts.
 	// Poststart commands are called in the Runtime Namespace.
 	Poststart []Hook
@@ -235,6 +240,7 @@ const (
 	Prestart HookName = iota
 	CreateRuntime
 	CreateContainer
+	StartContainer
 	Poststart
 	Poststop
 )
@@ -243,6 +249,7 @@ var HookToName = map[HookName]string{
 	Prestart:        "Prestart",
 	CreateRuntime:   "CreateRuntime",
 	CreateContainer: "CreateContainer",
+	StartContainer:  "StartContainer",
 	Poststart:       "Poststart",
 	Poststop:        "Poststop",
 }
@@ -265,6 +272,7 @@ func (hooks *Hooks) RunHooks(name HookName, spec *specs.State) error {
 		Prestart:        hooks.Prestart,
 		CreateRuntime:   hooks.CreateRuntime,
 		CreateContainer: hooks.CreateContainer,
+		StartContainer:  hooks.StartContainer,
 		Poststart:       hooks.Poststart,
 		Poststop:        hooks.Poststop,
 	}
@@ -282,6 +290,7 @@ func (hooks *Hooks) UnmarshalJSON(b []byte) error {
 		Prestart        []CommandHook
 		CreateRuntime   []CommandHook
 		CreateContainer []CommandHook
+		StartContainer  []CommandHook
 		Poststart       []CommandHook
 		Poststop        []CommandHook
 	}
@@ -301,6 +310,7 @@ func (hooks *Hooks) UnmarshalJSON(b []byte) error {
 	hooks.Prestart = deserialize(state.Prestart)
 	hooks.CreateRuntime = deserialize(state.CreateRuntime)
 	hooks.CreateContainer = deserialize(state.CreateContainer)
+	hooks.StartContainer = deserialize(state.StartContainer)
 	hooks.Poststart = deserialize(state.Poststart)
 	hooks.Poststop = deserialize(state.Poststop)
 	return nil
@@ -324,6 +334,7 @@ func (hooks Hooks) MarshalJSON() ([]byte, error) {
 		"prestart":        serialize(hooks.Prestart),
 		"createRuntime":   serialize(hooks.CreateRuntime),
 		"createContainer": serialize(hooks.CreateContainer),
+		"startContainer":  serialize(hooks.StartContainer),
 		"poststart":       serialize(hooks.Poststart),
 		"poststop":        serialize(hooks.Poststop),
 	})

@@ -904,6 +904,10 @@ func createHooks(rspec *specs.Spec, config *configs.Config) {
 			cmd := createCommandHook(h)
 			config.Hooks.CreateContainer = append(config.Hooks.CreateContainer, configs.NewCommandHook(cmd))
 		}
+		for _, h := range rspec.Hooks.StartContainer {
+			cmd := createCommandHook(h)
+			config.Hooks.StartContainer = append(config.Hooks.StartContainer, configs.NewCommandHook(cmd))
+		}
 		for _, h := range rspec.Hooks.Poststart {
 			cmd := createCommandHook(h)
 			config.Hooks.Poststart = append(config.Hooks.Poststart, configs.NewCommandHook(cmd))
