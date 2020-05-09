@@ -76,8 +76,7 @@ func (m *manager) Apply(pid int) error {
 		// - "runc create (rootless + limits + no cgrouppath + no permission) fails with informative error"
 		if m.rootless {
 			if m.config.Path == "" {
-				cl, clErr := neededControllers(m.config)
-				if clErr == nil && len(cl) == 0 {
+				if blNeed, nErr := needAnyControllers(m.config); nErr == nil && !blNeed {
 					return nil
 				}
 				return errors.Wrap(err, "rootless needs no limits + no cgrouppath when no permission is granted for cgroups")
@@ -175,30 +174,21 @@ func (m *manager) Set(container *configs.Config) error {
 	if err := m.getControllers(); err != nil {
 		return err
 	}
-	var errs []error
 	// pids (since kernel 4.5)
-	if _, ok := m.controllers["pids"]; ok {
-		if err := setPids(m.dirPath, container.Cgroups); err != nil {
-			errs = append(errs, err)
-		}
+	if err := setPids(m.dirPath, container.Cgroups); err != nil {
+		return err
 	}
 	// memory (since kernel 4.5)
-	if _, ok := m.controllers["memory"]; ok {
-		if err := setMemory(m.dirPath, container.Cgroups); err != nil {
-			errs = append(errs, err)
-		}
+	if err := setMemory(m.dirPath, container.Cgroups); err != nil {
+		return err
 	}
 	// io (since kernel 4.5)
-	if _, ok := m.controllers["io"]; ok {
-		if err := setIo(m.dirPath, container.Cgroups); err != nil {
-			errs = append(errs, err)
-		}
+	if err := setIo(m.dirPath, container.Cgroups); err != nil {
+		return err
 	}
 	// cpu (since kernel 4.15)
-	if _, ok := m.controllers["cpu"]; ok {
-		if err := setCpu(m.dirPath, container.Cgroups); err != nil {
-			errs = append(errs, err)
-		}
+	if err := setCpu(m.dirPath, container.Cgroups); err != nil {
+		return err
 	}
 	// devices (since kernel 4.15, pseudo-controller)
 	//
@@ -206,26 +196,19 @@ func (m *manager) Set(container *configs.Config) error {
 	// However, errors from other subsystems are not ignored.
 	// see @test "runc create (rootless + limits + no cgrouppath + no permission) fails with informative error"
 	if err := setDevices(m.dirPath, container.Cgroups); err != nil && !m.rootless {
-		errs = append(errs, err)
+		return err
 	}
 	// cpuset (since kernel 5.0)
-	if _, ok := m.controllers["cpuset"]; ok {
-		if err := setCpuset(m.dirPath, container.Cgroups); err != nil {
-			errs = append(errs, err)
-		}
+	if err := setCpuset(m.dirPath, container.Cgroups); err != nil {
+		return err
 	}
 	// hugetlb (since kernel 5.6)
-	if _, ok := m.controllers["hugetlb"]; ok {
-		if err := setHugeTlb(m.dirPath, container.Cgroups); err != nil {
-			errs = append(errs, err)
-		}
+	if err := setHugeTlb(m.dirPath, container.Cgroups); err != nil {
+		return err
 	}
 	// freezer (since kernel 5.2, pseudo-controller)
 	if err := setFreezer(m.dirPath, container.Cgroups.Freezer); err != nil {
-		errs = append(errs, err)
-	}
-	if len(errs) > 0 {
-		return errors.Errorf("error while setting cgroup v2: %+v", errs)
+		return err
 	}
 	m.config = container.Cgroups
 	return nil
