@@ -215,6 +215,11 @@ type Hooks struct {
 	// CreateRuntime commands are called in the Runtime Namespace.
 	CreateRuntime []Hook
 
+	// CreateContainer commands MUST be called as part of the create operation after
+	// the runtime environment has been created but before the pivot_root has been executed.
+	// CreateContainer commands are called in the Container namespace.
+	CreateContainer []Hook
+
 	// Poststart commands are executed after the container init process starts.
 	// Poststart commands are called in the Runtime Namespace.
 	Poststart []Hook
@@ -229,15 +234,17 @@ type HookName int
 const (
 	Prestart HookName = iota
 	CreateRuntime
+	CreateContainer
 	Poststart
 	Poststop
 )
 
 var HookToName = map[HookName]string{
-	Prestart:      "Prestart",
-	CreateRuntime: "CreateRuntime",
-	Poststart:     "Poststart",
-	Poststop:      "Poststop",
+	Prestart:        "Prestart",
+	CreateRuntime:   "CreateRuntime",
+	CreateContainer: "CreateContainer",
+	Poststart:       "Poststart",
+	Poststop:        "Poststop",
 }
 
 type Capabilities struct {
@@ -255,12 +262,12 @@ type Capabilities struct {
 
 func (hooks *Hooks) RunHooks(name HookName, spec *specs.State) error {
 	hooksMap := map[HookName][]Hook{
-		Prestart:      hooks.Prestart,
-		CreateRuntime: hooks.CreateRuntime,
-		Poststart:     hooks.Poststart,
-		Poststop:      hooks.Poststop,
+		Prestart:        hooks.Prestart,
+		CreateRuntime:   hooks.CreateRuntime,
+		CreateContainer: hooks.CreateContainer,
+		Poststart:       hooks.Poststart,
+		Poststop:        hooks.Poststop,
 	}
-
 	for i, hook := range hooksMap[name] {
 		if err := hook.Run(spec); err != nil {
 			return errors.Wrapf(err, "%s hook #%d:", HookToName[name], i)
@@ -272,10 +279,11 @@ func (hooks *Hooks) RunHooks(name HookName, spec *specs.State) error {
 
 func (hooks *Hooks) UnmarshalJSON(b []byte) error {
 	var state struct {
-		Prestart      []CommandHook
-		CreateRuntime []CommandHook
-		Poststart     []CommandHook
-		Poststop      []CommandHook
+		Prestart        []CommandHook
+		CreateRuntime   []CommandHook
+		CreateContainer []CommandHook
+		Poststart       []CommandHook
+		Poststop        []CommandHook
 	}
 
 	if err := json.Unmarshal(b, &state); err != nil {
@@ -292,6 +300,7 @@ func (hooks *Hooks) UnmarshalJSON(b []byte) error {
 
 	hooks.Prestart = deserialize(state.Prestart)
 	hooks.CreateRuntime = deserialize(state.CreateRuntime)
+	hooks.CreateContainer = deserialize(state.CreateContainer)
 	hooks.Poststart = deserialize(state.Poststart)
 	hooks.Poststop = deserialize(state.Poststop)
 	return nil
@@ -312,10 +321,11 @@ func (hooks Hooks) MarshalJSON() ([]byte, error) {
 	}
 
 	return json.Marshal(map[string]interface{}{
-		"prestart":      serialize(hooks.Prestart),
-		"createRuntime": serialize(hooks.CreateRuntime),
-		"poststart":     serialize(hooks.Poststart),
-		"poststop":      serialize(hooks.Poststop),
+		"prestart":        serialize(hooks.Prestart),
+		"createRuntime":   serialize(hooks.CreateRuntime),
+		"createContainer": serialize(hooks.CreateContainer),
+		"poststart":       serialize(hooks.Poststart),
+		"poststop":        serialize(hooks.Poststop),
 	})
 }
 

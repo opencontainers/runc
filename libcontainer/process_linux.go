@@ -487,6 +487,15 @@ func (p *initProcess) startTime() (uint64, error) {
 }
 
 func (p *initProcess) sendConfig() error {
+	if p.config.Config.Hooks != nil {
+		s, err := p.container.currentOCIState()
+		if err != nil {
+			return err
+		}
+
+		p.config.SpecState = s
+	}
+
 	// send the config to the container's init process, we don't use JSON Encode
 	// here because there might be a problem in JSON decoder in some cases, see:
 	// https://github.com/docker/docker/issues/14203#issuecomment-174177790
