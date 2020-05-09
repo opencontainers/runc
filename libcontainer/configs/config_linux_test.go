@@ -8,6 +8,10 @@ import (
 	"testing"
 )
 
+var (
+	HookNameList = []HookName{Prestart, CreateRuntime, CreateContainer, StartContainer, Poststart, Poststop}
+)
+
 func loadConfig(name string) (*Config, error) {
 	f, err := os.Open(filepath.Join("../sample_configs", name))
 	if err != nil {

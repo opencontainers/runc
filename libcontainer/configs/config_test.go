@@ -15,27 +15,29 @@ import (
 func TestUnmarshalHooks(t *testing.T) {
 	timeout := time.Second
 
-	prestartCmd := configs.NewCommandHook(configs.Command{
-		Path:    "/var/vcap/hooks/prestart",
+	hookCmd := configs.NewCommandHook(configs.Command{
+		Path:    "/var/vcap/hooks/hook",
 		Args:    []string{"--pid=123"},
 		Env:     []string{"FOO=BAR"},
 		Dir:     "/var/vcap",
 		Timeout: &timeout,
 	})
-	prestart, err := json.Marshal(prestartCmd.Command)
+
+	hookJson, err := json.Marshal(hookCmd)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	hook := configs.Hooks{}
-	err = hook.UnmarshalJSON([]byte(fmt.Sprintf(`{"Prestart" :[%s]}`, prestart)))
-	if err != nil {
-		t.Fatal(err)
-	}
+	for _, hookName := range configs.HookNameList {
+		hooks := configs.Hooks{}
+		err = hooks.UnmarshalJSON([]byte(fmt.Sprintf(`{"%s" :[%s]}`, hookName, hookJson)))
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	if !reflect.DeepEqual(hook.Prestart[0], prestartCmd) {
-		t.Errorf("Expected prestart to equal %+v but it was %+v",
-			prestartCmd, hook.Prestart[0])
+		if !reflect.DeepEqual(hooks[hookName], hookCmd) {
+			t.Errorf("Expected %s to equal %+v but it was %+v", hookName, hookCmd, hooks[hookName])
+		}
 	}
 }
 
@@ -50,8 +52,8 @@ func TestUnmarshalHooksWithInvalidData(t *testing.T) {
 func TestMarshalHooks(t *testing.T) {
 	timeout := time.Second
 
-	prestartCmd := configs.NewCommandHook(configs.Command{
-		Path:    "/var/vcap/hooks/prestart",
+	hookCmd := configs.NewCommandHook(configs.Command{
+		Path:    "/var/vcap/hooks/hook",
 		Args:    []string{"--pid=123"},
 		Env:     []string{"FOO=BAR"},
 		Dir:     "/var/vcap",
@@ -59,14 +61,21 @@ func TestMarshalHooks(t *testing.T) {
 	})
 
 	hook := configs.Hooks{
-		Prestart: []configs.Hook{prestartCmd},
+		configs.Prestart:        configs.HookList{hookCmd},
+		configs.CreateRuntime:   configs.HookList{hookCmd},
+		configs.CreateContainer: configs.HookList{hookCmd},
+		configs.StartContainer:  configs.HookList{hookCmd},
+		configs.Poststart:       configs.HookList{hookCmd},
+		configs.Poststop:        configs.HookList{hookCmd},
 	}
 	hooks, err := hook.MarshalJSON()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	h := `{"poststart":null,"poststop":null,"prestart":[{"path":"/var/vcap/hooks/prestart","args":["--pid=123"],"env":["FOO=BAR"],"dir":"/var/vcap","timeout":1000000000}]}`
+	// Note Marshal seems to output fields in alphabetical order
+	hookCmdJson := `[{"path":"/var/vcap/hooks/hook","args":["--pid=123"],"env":["FOO=BAR"],"dir":"/var/vcap","timeout":1000000000}]`
+	h := fmt.Sprintf(`{"createContainer":%[1]s,"createRuntime":%[1]s,"poststart":%[1]s,"poststop":%[1]s,"prestart":%[1]s,"startContainer":%[1]s}`, hookCmdJson)
 	if string(hooks) != h {
 		t.Errorf("Expected hooks %s to equal %s", string(hooks), h)
 	}
@@ -75,8 +84,8 @@ func TestMarshalHooks(t *testing.T) {
 func TestMarshalUnmarshalHooks(t *testing.T) {
 	timeout := time.Second
 
-	prestart := configs.NewCommandHook(configs.Command{
-		Path:    "/var/vcap/hooks/prestart",
+	hookCmd := configs.NewCommandHook(configs.Command{
+		Path:    "/var/vcap/hooks/hook",
 		Args:    []string{"--pid=123"},
 		Env:     []string{"FOO=BAR"},
 		Dir:     "/var/vcap",
@@ -84,7 +93,12 @@ func TestMarshalUnmarshalHooks(t *testing.T) {
 	})
 
 	hook := configs.Hooks{
-		Prestart: []configs.Hook{prestart},
+		configs.Prestart:        configs.HookList{hookCmd},
+		configs.CreateRuntime:   configs.HookList{hookCmd},
+		configs.CreateContainer: configs.HookList{hookCmd},
+		configs.StartContainer:  configs.HookList{hookCmd},
+		configs.Poststart:       configs.HookList{hookCmd},
+		configs.Poststop:        configs.HookList{hookCmd},
 	}
 	hooks, err := hook.MarshalJSON()
 	if err != nil {
@@ -96,8 +110,8 @@ func TestMarshalUnmarshalHooks(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(umMhook.Prestart[0], prestart) {
-		t.Errorf("Expected hooks to be equal after mashaling -> unmarshaling them: %+v, %+v", umMhook.Prestart[0], prestart)
+	if !reflect.DeepEqual(umMhook, hook) {
+		t.Errorf("Expected hooks to be equal after mashaling -> unmarshaling them: %+v, %+v", umMhook, hook)
 	}
 }
 
@@ -106,14 +120,14 @@ func TestMarshalHooksWithUnexpectedType(t *testing.T) {
 		return nil
 	})
 	hook := configs.Hooks{
-		Prestart: []configs.Hook{fHook},
+		configs.CreateRuntime: configs.HookList{fHook},
 	}
 	hooks, err := hook.MarshalJSON()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	h := `{"poststart":null,"poststop":null,"prestart":null}`
+	h := `{"createContainer":null,"createRuntime":null,"poststart":null,"poststop":null,"prestart":null,"startContainer":null}`
 	if string(hooks) != h {
 		t.Errorf("Expected hooks %s to equal %s", string(hooks), h)
 	}

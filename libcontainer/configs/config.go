@@ -239,10 +239,6 @@ const (
 	Poststop = "poststop"
 )
 
-var (
-	HookNameList = []HookName{Prestart, CreateRuntime, CreateContainer, StartContainer, Poststart, Poststop}
-)
-
 // TODO move this to runtime-spec
 // See: https://github.com/opencontainers/runtime-spec/pull/1046
 const (
