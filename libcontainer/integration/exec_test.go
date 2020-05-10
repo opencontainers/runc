@@ -1131,10 +1131,13 @@ func TestHook(t *testing.T) {
 		return f.Close()
 	}
 
+	// Note FunctionHooks can't be serialized to json this means they won't be passed down to the container
+	// For CreateContainer and StartContainer which run in the container namespace, this means we need to pass Command Hooks.
 	hookFiles := map[configs.HookName]string{
 		configs.Prestart:        "prestart",
 		configs.CreateRuntime:   "createRuntime",
 		configs.CreateContainer: "createContainer",
+		configs.StartContainer:  "startContainer",
 		configs.Poststart:       "poststart",
 	}
 
@@ -1159,6 +1162,12 @@ func TestHook(t *testing.T) {
 			configs.NewCommandHook(configs.Command{
 				Path: "/bin/bash",
 				Args: []string{"/bin/bash", "-c", fmt.Sprintf("touch ./%s", hookFiles[configs.CreateContainer])},
+			}),
+		},
+		StartContainer: []configs.Hook{
+			configs.NewCommandHook(configs.Command{
+				Path: "/bin/sh",
+				Args: []string{"/bin/sh", "-c", fmt.Sprintf("touch /%s", hookFiles[configs.StartContainer])},
 			}),
 		},
 		Poststart: []configs.Hook{
