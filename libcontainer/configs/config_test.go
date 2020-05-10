@@ -36,10 +36,11 @@ func TestUnmarshalHooks(t *testing.T) {
 		}
 
 		hooksMap := map[configs.HookName][]configs.Hook{
-			configs.Prestart:      hook.Prestart,
-			configs.CreateRuntime: hook.CreateRuntime,
-			configs.Poststart:     hook.Poststart,
-			configs.Poststop:      hook.Poststop,
+			configs.Prestart:        hook.Prestart,
+			configs.CreateRuntime:   hook.CreateRuntime,
+			configs.CreateContainer: hook.CreateContainer,
+			configs.Poststart:       hook.Poststart,
+			configs.Poststop:        hook.Poststop,
 		}
 
 		if !reflect.DeepEqual(hooksMap[hookName][0], hookCmd) {
@@ -81,7 +82,7 @@ func TestMarshalHooks(t *testing.T) {
 
 	// Note Marshal seems to output fields in alphabetical order
 	hookCmdJson := `[{"path":"/var/vcap/hooks/hook","args":["--pid=123"],"env":["FOO=BAR"],"dir":"/var/vcap","timeout":1000000000}]`
-	h := fmt.Sprintf(`{"createRuntime":%[1]s,"poststart":%[1]s,"poststop":%[1]s,"prestart":%[1]s}`, hookCmdJson)
+	h := fmt.Sprintf(`{"createContainer":null,"createRuntime":%[1]s,"poststart":%[1]s,"poststop":%[1]s,"prestart":%[1]s}`, hookCmdJson)
 	if string(hooks) != h {
 		t.Errorf("Expected hooks %s to equal %s", string(hooks), h)
 	}
@@ -131,7 +132,7 @@ func TestMarshalHooksWithUnexpectedType(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	h := `{"createRuntime":null,"poststart":null,"poststop":null,"prestart":null}`
+	h := `{"createContainer":null,"createRuntime":null,"poststart":null,"poststop":null,"prestart":null}`
 	if string(hooks) != h {
 		t.Errorf("Expected hooks %s to equal %s", string(hooks), h)
 	}

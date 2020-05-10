@@ -51,6 +51,15 @@ func TestCreateHooks(t *testing.T) {
 					Args: []string{"--some", "thing"},
 				},
 			},
+			CreateContainer: []specs.Hook{
+				{
+					Path: "/some/hook/path",
+				},
+				{
+					Path: "/some/hook2/path",
+					Args: []string{"--some", "thing"},
+				},
+			},
 			Poststart: []specs.Hook{
 				{
 					Path: "/some/hook/path",
@@ -96,6 +105,12 @@ func TestCreateHooks(t *testing.T) {
 
 	if len(createRuntime) != 2 {
 		t.Error("Expected 2 createRuntime hooks")
+	}
+
+	createContainer := conf.Hooks.CreateContainer
+
+	if len(createContainer) != 2 {
+		t.Error("Expected 2 createContainer hooks")
 	}
 
 	poststart := conf.Hooks.Poststart

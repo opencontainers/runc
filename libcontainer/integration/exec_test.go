@@ -1132,9 +1132,10 @@ func TestHook(t *testing.T) {
 	}
 
 	hookFiles := map[configs.HookName]string{
-		configs.Prestart:      "prestart",
-		configs.CreateRuntime: "createRuntime",
-		configs.Poststart:     "poststart",
+		configs.Prestart:        "prestart",
+		configs.CreateRuntime:   "createRuntime",
+		configs.CreateContainer: "createContainer",
+		configs.Poststart:       "poststart",
 	}
 
 	config.Hooks = &configs.Hooks{
@@ -1152,6 +1153,12 @@ func TestHook(t *testing.T) {
 					t.Fatalf("Expected createRuntime hook bundlePath '%s'; got '%s'", expectedBundle, s.Bundle)
 				}
 				return createFileFromBundle(hookFiles[configs.CreateRuntime], s.Bundle)
+			}),
+		},
+		CreateContainer: []configs.Hook{
+			configs.NewCommandHook(configs.Command{
+				Path: "/bin/bash",
+				Args: []string{"/bin/bash", "-c", fmt.Sprintf("touch ./%s", hookFiles[configs.CreateContainer])},
 			}),
 		},
 		Poststart: []configs.Hook{
