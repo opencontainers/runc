@@ -63,6 +63,13 @@ func neededControllers(cgroup *configs.Cgroup) ([]string, error) {
 	return list, nil
 }
 
+// containsDomainController returns whether the current config contains domain controller or not.
+// Refer to: http://man7.org/linux/man-pages/man7/cgroups.7.html
+// As at Linux 4.19, the following controllers are threaded: cpu, perf_event, and pids.
+func containsDomainController(cg *configs.Cgroup) bool {
+	return isMemorySet(cg) || isIoSet(cg) || isCpuSet(cg) || isHugeTlbSet(cg)
+}
+
 // CreateCgroupPath creates cgroupv2 path, enabling all the
 // needed controllers in the process.
 func CreateCgroupPath(path string, c *configs.Cgroup) (Err error) {
@@ -95,10 +102,34 @@ func CreateCgroupPath(path string, c *configs.Cgroup) (Err error) {
 					}
 				}()
 			}
-			// Write cgroup.type explicitly.
-			// Otherwise ENOTSUP may happen.
-			cgType := filepath.Join(current, "cgroup.type")
-			_ = ioutil.WriteFile(cgType, []byte("threaded"), 0644)
+			cgTypeFile := filepath.Join(current, "cgroup.type")
+			cgType, _ := ioutil.ReadFile(cgTypeFile)
+			switch strings.TrimSpace(string(cgType)) {
+			// If the cgroup is in an invalid mode (usually this means there's an internal
+			// process in the cgroup tree, because we created a cgroup under an
+			// already-populated-by-other-processes cgroup), then we have to error out if
+			// the user requested controllers which are not thread-aware. However, if all
+			// the controllers requested are thread-aware we can simply put the cgroup into
+			// threaded mode.
+			case "domain invalid":
+				if containsDomainController(c) {
+					return fmt.Errorf("cannot enter cgroupv2 %q with domain controllers -- it is in an invalid state", current)
+				} else {
+					// Not entirely correct (in theory we'd always want to be a domain --
+					// since that means we're a properly delegated cgroup subtree) but in
+					// this case there's not much we can do and it's better than giving an
+					// error.
+					_ = ioutil.WriteFile(cgTypeFile, []byte("threaded"), 0644)
+				}
+			// If the cgroup is in (threaded) or (domain threaded) mode, we can only use thread-aware controllers
+			// (and you cannot usually take a cgroup out of threaded mode).
+			case "domain threaded":
+				fallthrough
+			case "threaded":
+				if containsDomainController(c) {
+					return fmt.Errorf("cannot enter cgroupv2 %q with domain controllers -- it is in %s mode", current, strings.TrimSpace(string(cgType)))
+				}
+			}
 		}
 		// enable needed controllers
 		if i < len(elements)-1 {
