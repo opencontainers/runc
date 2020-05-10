@@ -1,6 +1,7 @@
 package systemd
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"strings"
@@ -9,6 +10,7 @@ import (
 
 	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
 	dbus "github.com/godbus/dbus/v5"
+	"github.com/opencontainers/runc/libcontainer/cgroups/devices"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -67,6 +69,209 @@ func ExpandSlice(slice string) (string, error) {
 		prefix += component + "-"
 	}
 	return path, nil
+}
+
+func groupPrefix(ruleType configs.DeviceType) (string, error) {
+	switch ruleType {
+	case configs.BlockDevice:
+		return "block-", nil
+	case configs.CharDevice:
+		return "char-", nil
+	default:
+		return "", errors.Errorf("device type %v has no group prefix", ruleType)
+	}
+}
+
+// findDeviceGroup tries to find the device group name (as listed in
+// /proc/devices) with the type prefixed as requried for DeviceAllow, for a
+// given (type, major) combination. If more than one device group exists, an
+// arbitrary one is chosen.
+func findDeviceGroup(ruleType configs.DeviceType, ruleMajor int64) (string, error) {
+	fh, err := os.Open("/proc/devices")
+	if err != nil {
+		return "", err
+	}
+	defer fh.Close()
+
+	prefix, err := groupPrefix(ruleType)
+	if err != nil {
+		return "", err
+	}
+
+	scanner := bufio.NewScanner(fh)
+	var currentType configs.DeviceType
+	for scanner.Scan() {
+		// We need to strip spaces because the first number is column-aligned.
+		line := strings.TrimSpace(scanner.Text())
+
+		// Handle the "header" lines.
+		switch line {
+		case "Block devices:":
+			currentType = configs.BlockDevice
+			continue
+		case "Character devices:":
+			currentType = configs.CharDevice
+			continue
+		case "":
+			continue
+		}
+
+		// Skip lines unrelated to our type.
+		if currentType != ruleType {
+			continue
+		}
+
+		// Parse out the (major, name).
+		var (
+			currMajor int64
+			currName  string
+		)
+		if n, err := fmt.Sscanf(line, "%d %s", &currMajor, &currName); err != nil || n != 2 {
+			if err == nil {
+				err = errors.Errorf("wrong number of fields")
+			}
+			return "", errors.Wrapf(err, "scan /proc/devices line %q", line)
+		}
+
+		if currMajor == ruleMajor {
+			return prefix + currName, nil
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return "", errors.Wrap(err, "reading /proc/devices")
+	}
+	// Couldn't find the device group.
+	return "", nil
+}
+
+// generateDeviceProperties takes the configured device rules and generates a
+// corresponding set of systemd properties to configure the devices correctly.
+func generateDeviceProperties(rules []*configs.DeviceRule) ([]systemdDbus.Property, error) {
+	// DeviceAllow is the type "a(ss)" which means we need a temporary struct
+	// to represent it in Go.
+	type deviceAllowEntry struct {
+		Path  string
+		Perms string
+	}
+
+	properties := []systemdDbus.Property{
+		// Always run in the strictest white-list mode.
+		newProp("DevicePolicy", "strict"),
+		// Empty the DeviceAllow array before filling it.
+		newProp("DeviceAllow", []deviceAllowEntry{}),
+	}
+
+	// Figure out the set of rules.
+	configEmu := &devices.Emulator{}
+	for _, rule := range rules {
+		if err := configEmu.Apply(*rule); err != nil {
+			return nil, errors.Wrap(err, "apply rule for systemd")
+		}
+	}
+	// systemd doesn't support blacklists. So we log a warning, and tell
+	// systemd to act as a deny-all whitelist. This ruleset will be replaced
+	// with our normal fallback code. This may result in spurrious errors, but
+	// the only other option is to error out here.
+	if configEmu.IsBlacklist() {
+		// However, if we're dealing with an allow-all rule then we can do it.
+		if configEmu.IsAllowAll() {
+			return []systemdDbus.Property{
+				// Run in white-list mode by setting to "auto" and removing all
+				// DeviceAllow rules.
+				newProp("DevicePolicy", "auto"),
+				newProp("DeviceAllow", []deviceAllowEntry{}),
+			}, nil
+		}
+		logrus.Warn("systemd doesn't support blacklist device rules -- applying temporary deny-all rule")
+		return properties, nil
+	}
+
+	// Now generate the set of rules we actually need to apply. Unlike the
+	// normal devices cgroup, in "strict" mode systemd defaults to a deny-all
+	// whitelist which is the default for devices.Emulator.
+	baseEmu := &devices.Emulator{}
+	finalRules, err := baseEmu.Transition(configEmu)
+	if err != nil {
+		return nil, errors.Wrap(err, "get simplified rules for systemd")
+	}
+	var deviceAllowList []deviceAllowEntry
+	for _, rule := range finalRules {
+		if !rule.Allow {
+			// Should never happen.
+			return nil, errors.Errorf("[internal error] cannot add deny rule to systemd DeviceAllow list: %v", *rule)
+		}
+		switch rule.Type {
+		case configs.BlockDevice, configs.CharDevice:
+		default:
+			// Should never happen.
+			return nil, errors.Errorf("invalid device type for DeviceAllow: %v", rule.Type)
+		}
+
+		entry := deviceAllowEntry{
+			Perms: string(rule.Permissions),
+		}
+
+		// systemd has a fairly odd (though understandable) syntax here, and
+		// because of the OCI configuration format we have to do quite a bit of
+		// trickery to convert things:
+		//
+		//  * Concrete rules with non-wildcard major/minor numbers have to use
+		//    /dev/{block,char} paths. This is slightly odd because it means
+		//    that we cannot add whitelist rules for devices that don't exist,
+		//    but there's not too much we can do about that.
+		//
+		//    However, path globbing is not support for path-based rules so we
+		//    need to handle wildcards in some other manner.
+		//
+		//  * Wildcard-minor rules have to specify a "device group name" (the
+		//    second column in /proc/devices).
+		//
+		//  * Wildcard (major and minor) rules can just specify a glob with the
+		//    type ("char-*" or "block-*").
+		//
+		// The only type of rule we can't handle is wildcard-major rules, and
+		// so we'll give a warning in that case (note that the fallback code
+		// will insert any rules systemd couldn't handle). What amazing fun.
+
+		if rule.Major == configs.Wildcard {
+			// "_ *:n _" rules aren't supported by systemd.
+			if rule.Minor != configs.Wildcard {
+				logrus.Warnf("systemd doesn't support '*:n' device rules -- temporarily ignoring rule: %v", *rule)
+				continue
+			}
+
+			// "_ *:* _" rules just wildcard everything.
+			prefix, err := groupPrefix(rule.Type)
+			if err != nil {
+				return nil, err
+			}
+			entry.Path = prefix + "*"
+		} else if rule.Minor == configs.Wildcard {
+			// "_ n:* _" rules require a device group from /proc/devices.
+			group, err := findDeviceGroup(rule.Type, rule.Major)
+			if err != nil {
+				return nil, errors.Wrapf(err, "find device '%v/%d'", rule.Type, rule.Major)
+			}
+			if group == "" {
+				// Couldn't find a group.
+				logrus.Warnf("could not find device group for '%v/%d' in /proc/devices -- temporarily ignoring rule: %v", rule.Type, rule.Major, *rule)
+				continue
+			}
+			entry.Path = group
+		} else {
+			// "_ n:m _" rules are just a path in /dev/{block,char}/.
+			switch rule.Type {
+			case configs.BlockDevice:
+				entry.Path = fmt.Sprintf("/dev/block/%d:%d", rule.Major, rule.Minor)
+			case configs.CharDevice:
+				entry.Path = fmt.Sprintf("/dev/char/%d:%d", rule.Major, rule.Minor)
+			}
+		}
+		deviceAllowList = append(deviceAllowList, entry)
+	}
+
+	properties = append(properties, newProp("DeviceAllow", deviceAllowList))
+	return properties, nil
 }
 
 // getDbusConnection lazy initializes systemd dbus connection

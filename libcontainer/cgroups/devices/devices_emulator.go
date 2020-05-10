@@ -57,6 +57,10 @@ func (e *Emulator) IsBlacklist() bool {
 	return e.defaultAllow
 }
 
+func (e *Emulator) IsAllowAll() bool {
+	return e.IsBlacklist() && len(e.rules) == 0
+}
+
 var devicesListRegexp = regexp.MustCompile(`^([abc])\s+(\d+|\*):(\d+|\*)\s+([rwm]+)$`)
 
 func parseLine(line string) (*deviceRule, error) {

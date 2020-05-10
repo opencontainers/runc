@@ -15,6 +15,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fs"
 	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/sirupsen/logrus"
 )
 
 type legacyManager struct {
@@ -70,6 +71,13 @@ var legacySubsystems = subsystemSet{
 
 func genV1ResourcesProperties(c *configs.Cgroup) ([]systemdDbus.Property, error) {
 	var properties []systemdDbus.Property
+
+	deviceProperties, err := generateDeviceProperties(c.Resources.Devices)
+	if err != nil {
+		return nil, err
+	}
+	properties = append(properties, deviceProperties...)
+
 	if c.Resources.Memory != 0 {
 		properties = append(properties,
 			newProp("MemoryLimit", uint64(c.Resources.Memory)))
@@ -381,13 +389,40 @@ func (m *legacyManager) Set(container *configs.Config) error {
 	if err != nil {
 		return err
 	}
-	dbusConnection, err := getDbusConnection(false)
+
+	// Figure out the current freezer state, so we can revert to it after we
+	// temporarily freeze the container.
+	targetFreezerState, err := m.GetFreezerState()
 	if err != nil {
 		return err
 	}
-	if err := dbusConnection.SetUnitProperties(getUnitName(container.Cgroups), true, properties...); err != nil {
+	if targetFreezerState == configs.Undefined {
+		targetFreezerState = configs.Thawed
+	}
+
+	// We have to freeze the container while systemd sets the cgroup settings.
+	// The reason for this is that systemd's application of DeviceAllow rules
+	// is done disruptively, resulting in spurrious errors to common devices
+	// (unlike our fs driver, they will happily write deny-all rules to running
+	// containers). So we freeze the container to avoid them hitting the cgroup
+	// error. But if the freezer cgroup isn't supported, we just warn about it.
+	if err := m.Freeze(configs.Frozen); err != nil {
+		logrus.Infof("freeze container before SetUnitProperties failed: %v", err)
+	}
+
+	dbusConnection, err := getDbusConnection(false)
+	if err != nil {
+		_ = m.Freeze(targetFreezerState)
 		return err
 	}
+	if err := dbusConnection.SetUnitProperties(getUnitName(container.Cgroups), true, properties...); err != nil {
+		_ = m.Freeze(targetFreezerState)
+		return err
+	}
+
+	// Reset freezer state before we apply the configuration, to avoid clashing
+	// with the freezer setting in the configuration.
+	_ = m.Freeze(targetFreezerState)
 
 	for _, sys := range legacySubsystems {
 		// Get the subsystem path, but don't error out for not found cgroups.
@@ -395,7 +430,6 @@ func (m *legacyManager) Set(container *configs.Config) error {
 		if err != nil && !cgroups.IsNotFound(err) {
 			return err
 		}
-
 		if err := sys.Set(path, container.Cgroups); err != nil {
 			return err
 		}
