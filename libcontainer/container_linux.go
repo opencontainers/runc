@@ -1575,23 +1575,24 @@ func (c *linuxContainer) criuNotifications(resp *criurpc.CriuResp, process *Proc
 	if notify == nil {
 		return fmt.Errorf("invalid response: %s", resp.String())
 	}
-	logrus.Debugf("notify: %s\n", notify.GetScript())
-	switch {
-	case notify.GetScript() == "post-dump":
+	script := notify.GetScript()
+	logrus.Debugf("notify: %s\n", script)
+	switch script {
+	case "post-dump":
 		f, err := os.Create(filepath.Join(c.root, "checkpoint"))
 		if err != nil {
 			return err
 		}
 		f.Close()
-	case notify.GetScript() == "network-unlock":
+	case "network-unlock":
 		if err := unlockNetwork(c.config); err != nil {
 			return err
 		}
-	case notify.GetScript() == "network-lock":
+	case "network-lock":
 		if err := lockNetwork(c.config); err != nil {
 			return err
 		}
-	case notify.GetScript() == "setup-namespaces":
+	case "setup-namespaces":
 		if c.config.Hooks != nil {
 			s, err := c.currentOCIState()
 			if err != nil {
@@ -1604,7 +1605,7 @@ func (c *linuxContainer) criuNotifications(resp *criurpc.CriuResp, process *Proc
 				}
 			}
 		}
-	case notify.GetScript() == "post-restore":
+	case "post-restore":
 		pid := notify.GetPid()
 
 		p, err := os.FindProcess(int(pid))
@@ -1634,7 +1635,7 @@ func (c *linuxContainer) criuNotifications(resp *criurpc.CriuResp, process *Proc
 				logrus.Error(err)
 			}
 		}
-	case notify.GetScript() == "orphan-pts-master":
+	case "orphan-pts-master":
 		scm, err := unix.ParseSocketControlMessage(oob)
 		if err != nil {
 			return err
