@@ -260,6 +260,7 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 	}
 	if spec.Process != nil {
 		config.OomScoreAdj = spec.Process.OOMScoreAdj
+		config.NoNewPrivileges = spec.Process.NoNewPrivileges
 		if spec.Process.SelinuxLabel != "" {
 			config.ProcessLabel = spec.Process.SelinuxLabel
 		}
