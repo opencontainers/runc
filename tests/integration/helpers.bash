@@ -126,12 +126,19 @@ function init_cgroup_paths() {
 	if stat -f -c %t /sys/fs/cgroup | grep -qFw 63677270; then
 		CGROUP_UNIFIED=yes
 		# "pseudo" controllers do not appear in /sys/fs/cgroup/cgroup.controllers.
-		# - devices (since kernel 4.15)
-		# - freezer (since kernel 5.2)
-		# Assume these are always available, as it is hard to detect
-		CGROUP_SUBSYSTEMS=$(cat /sys/fs/cgroup/cgroup.controllers; echo devices freezer)
+		# - devices (since kernel 4.15) we must assume to be supported because
+		#   it's quite hard to test.
+		# - freezer (since kernel 5.2) we can auto-detect by looking for the
+		#   "cgroup.freeze" file a *non-root* cgroup.
+		CGROUP_SUBSYSTEMS=$(cat /sys/fs/cgroup/cgroup.controllers; echo devices)
 		CGROUP_BASE_PATH=/sys/fs/cgroup
 		CGROUP_PATH=${CGROUP_BASE_PATH}${REL_CGROUPS_PATH}
+
+		# Find any cgroup.freeze files...
+		if [ -n "$(find "$CGROUP_BASE_PATH" -type f -name "cgroup.freeze" -print -quit)" ]
+		then
+			CGROUP_SUBSYSTEMS+=" freezer"
+		fi
 	else
 		CGROUP_UNIFIED=no
 		CGROUP_SUBSYSTEMS=$(awk '!/^#/ {print $1}' /proc/cgroups)
@@ -174,7 +181,7 @@ function check_systemd_value() {
 	unitname=$1
 	source=$2
 	expected=$3
-	
+
 	if [ $(id -u) = "0" ]; then
 		current=$(systemctl show $unitname | grep $source)
 	else
@@ -200,75 +207,85 @@ function fail() {
 # support it, the test is skipped with a message.
 function requires() {
 	for var in "$@"; do
+		local skip_me
 		case $var in
 		criu)
 			if [ ! -e "$CRIU" ]; then
-				skip "test requires ${var}"
+				skip_me=1
 			fi
 			;;
 		root)
 			if [ "$ROOTLESS" -ne 0 ]; then
-				skip "test requires ${var}"
+				skip_me=1
 			fi
 			;;
 		rootless)
 			if [ "$ROOTLESS" -eq 0 ]; then
-				skip "test requires ${var}"
+				skip_me=1
 			fi
 			;;
 		rootless_idmap)
 			if [[ "$ROOTLESS_FEATURES" != *"idmap"* ]]; then
-				skip "test requires ${var}"
+				skip_me=1
 			fi
 			;;
 		rootless_cgroup)
 			if [[ "$ROOTLESS_FEATURES" != *"cgroup"* ]]; then
-				skip "test requires ${var}"
+				skip_me=1
 			fi
 			;;
 		rootless_no_cgroup)
 			if [[ "$ROOTLESS_FEATURES" == *"cgroup"* ]]; then
-				skip "test requires ${var}"
+				skip_me=1
+			fi
+			;;
+		cgroups_freezer)
+			init_cgroup_paths
+			if [[ "$CGROUP_SUBSYSTEMS" != *"freezer"* ]]; then
+				skip_me=1
 			fi
 			;;
 		cgroups_kmem)
 			init_cgroup_paths
 			if [ ! -e "${CGROUP_MEMORY_BASE_PATH}/memory.kmem.limit_in_bytes" ]; then
-				skip "Test requires ${var}"
+				skip_me=1
 			fi
 			;;
 		cgroups_rt)
 			init_cgroup_paths
 			if [ ! -e "${CGROUP_CPU_BASE_PATH}/cpu.rt_period_us" ]; then
-				skip "Test requires ${var}"
+				skip_me=1
 			fi
 			;;
 		cgroups_v1)
 			init_cgroup_paths
 			if [ "$CGROUP_UNIFIED" != "no" ]; then
-				skip "Test requires cgroups v1"
+				skip_me=1
 			fi
 			;;
 		cgroups_v2)
 			init_cgroup_paths
 			if [ "$CGROUP_UNIFIED" != "yes" ]; then
-				skip "Test requires cgroups v2 (unified)"
+				skip_me=1
 			fi
 			;;
 		systemd)
 			if [ -z "${RUNC_USE_SYSTEMD}" ]; then
-				skip "Test requires systemd"
+				skip_me=1
 			fi
 			;;
 		no_systemd)
 			if [ -n "${RUNC_USE_SYSTEMD}" ]; then
-				skip "Test requires no systemd"
+				skip_me=1
 			fi
 			;;
 		*)
-			fail "BUG: Invalid requires ${var}."
+			fail "BUG: Invalid requires $var."
 			;;
 		esac
+		if [ -n "$skip_me" ]; then
+			skip "test requires $var"
+		fi
 	done
 }
 

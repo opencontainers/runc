@@ -355,3 +355,27 @@ EOF
     cat "$CONTAINER_OUTPUT"
     [ -z "$(<"$CONTAINER_OUTPUT")" ]
 }
+
+@test "update paused container" {
+    [[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+    requires cgroups_freezer
+
+    # Run the container in the background.
+    runc run -d --console-socket "$CONSOLE_SOCKET" test_update
+    [ "$status" -eq 0 ]
+
+    # Pause the container.
+    runc pause test_update
+    [ "$status" -eq 0 ]
+
+    # Trigger an unrelated update.
+    runc update --pids-limit 30 test_update
+    [ "$status" -eq 0 ]
+
+    # The container should still be paused.
+    testcontainer test_update paused
+
+    # Resume the container.
+    runc resume test_update
+    [ "$status" -eq 0 ]
+}
