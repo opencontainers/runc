@@ -439,3 +439,15 @@ func (m *legacyManager) GetPaths() map[string]string {
 func (m *legacyManager) GetCgroups() (*configs.Cgroup, error) {
 	return m.cgroups, nil
 }
+
+func (m *legacyManager) GetFreezerState() (configs.FreezerState, error) {
+	path, err := getSubsystemPath(m.cgroups, "freezer")
+	if err != nil && !cgroups.IsNotFound(err) {
+		return configs.Undefined, err
+	}
+	freezer, err := legacySubsystems.Get("freezer")
+	if err != nil {
+		return configs.Undefined, err
+	}
+	return freezer.(*fs.FreezerGroup).GetState(path)
+}

@@ -44,6 +44,9 @@ type Manager interface {
 
 	// GetCgroups returns the cgroup data as configured.
 	GetCgroups() (*configs.Cgroup, error)
+
+	// GetFreezerState retrieves the current FreezerState of the cgroup.
+	GetFreezerState() (configs.FreezerState, error)
 }
 
 type NotFoundError struct {

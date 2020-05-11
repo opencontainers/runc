@@ -61,8 +61,13 @@ func (m *mockCgroupManager) Path(subsys string) string {
 func (m *mockCgroupManager) Freeze(state configs.FreezerState) error {
 	return nil
 }
+
 func (m *mockCgroupManager) GetCgroups() (*configs.Cgroup, error) {
 	return nil, nil
+}
+
+func (m *mockCgroupManager) GetFreezerState() (configs.FreezerState, error) {
+	return configs.Thawed, nil
 }
 
 func (m *mockIntelRdtManager) Apply(pid int) error {

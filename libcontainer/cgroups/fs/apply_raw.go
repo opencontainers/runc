@@ -166,9 +166,6 @@ func (m *manager) Apply(pid int) (err error) {
 	}
 
 	for _, sys := range m.getSubsystems() {
-		// TODO: Apply should, ideally, be reentrant or be broken up into a separate
-		// create and join phase so that the cgroup hierarchy for a container can be
-		// created then join consists of writing the process pids to cgroup.procs
 		p, err := d.path(sys.Name())
 		if err != nil {
 			// The non-presence of the devices subsystem is
@@ -181,10 +178,10 @@ func (m *manager) Apply(pid int) (err error) {
 		m.paths[sys.Name()] = p
 
 		if err := sys.Apply(d); err != nil {
-			// In the case of rootless (including euid=0 in userns), where an explicit cgroup path hasn't
-			// been set, we don't bail on error in case of permission problems.
-			// Cases where limits have been set (and we couldn't create our own
-			// cgroup) are handled by Set.
+			// In the case of rootless (including euid=0 in userns), where an
+			// explicit cgroup path hasn't been set, we don't bail on error in
+			// case of permission problems. Cases where limits have been set
+			// (and we couldn't create our own cgroup) are handled by Set.
 			if isIgnorableError(m.rootless, err) && m.cgroups.Path == "" {
 				delete(m.paths, sys.Name())
 				continue
@@ -272,22 +269,25 @@ func (m *manager) Set(container *configs.Config) error {
 
 // Freeze toggles the container's freezer cgroup depending on the state
 // provided
-func (m *manager) Freeze(state configs.FreezerState) error {
-	if m.cgroups == nil {
+func (m *manager) Freeze(state configs.FreezerState) (Err error) {
+	path := m.GetPaths()["freezer"]
+	if m.cgroups == nil || path == "" {
 		return errors.New("cannot toggle freezer: cgroups not configured for container")
 	}
 
-	paths := m.GetPaths()
-	dir := paths["freezer"]
 	prevState := m.cgroups.Resources.Freezer
 	m.cgroups.Resources.Freezer = state
+	defer func() {
+		if Err != nil {
+			m.cgroups.Resources.Freezer = prevState
+		}
+	}()
+
 	freezer, err := m.getSubsystems().Get("freezer")
 	if err != nil {
 		return err
 	}
-	err = freezer.Set(dir, m.cgroups)
-	if err != nil {
-		m.cgroups.Resources.Freezer = prevState
+	if err := freezer.Set(path, m.cgroups); err != nil {
 		return err
 	}
 	return nil
@@ -412,4 +412,16 @@ func (m *manager) GetPaths() map[string]string {
 
 func (m *manager) GetCgroups() (*configs.Cgroup, error) {
 	return m.cgroups, nil
+}
+
+func (m *manager) GetFreezerState() (configs.FreezerState, error) {
+	paths := m.GetPaths()
+	dir := paths["freezer"]
+	freezer, err := m.getSubsystems().Get("freezer")
+
+	// If the container doesn't have the freezer cgroup, say it's undefined.
+	if err != nil || dir == "" {
+		return configs.Undefined, nil
+	}
+	return freezer.(*FreezerGroup).GetState(dir)
 }

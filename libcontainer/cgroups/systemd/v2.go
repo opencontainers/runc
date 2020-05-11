@@ -319,3 +319,11 @@ func (m *unifiedManager) GetPaths() map[string]string {
 func (m *unifiedManager) GetCgroups() (*configs.Cgroup, error) {
 	return m.cgroups, nil
 }
+
+func (m *unifiedManager) GetFreezerState() (configs.FreezerState, error) {
+	fsMgr, err := m.fsManager()
+	if err != nil {
+		return configs.Undefined, err
+	}
+	return fsMgr.GetFreezerState()
+}
