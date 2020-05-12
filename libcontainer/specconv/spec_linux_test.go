@@ -391,6 +391,11 @@ func TestSpecconvExampleValidate(t *testing.T) {
 		t.Errorf("Couldn't create libcontainer config: %v", err)
 	}
 
+	if config.NoNewPrivileges != spec.Process.NoNewPrivileges {
+		t.Errorf("specconv NoNewPrivileges mismatch. Expected %v got %v",
+			spec.Process.NoNewPrivileges, config.NoNewPrivileges)
+	}
+
 	validator := validate.New()
 	if err := validator.Validate(config); err != nil {
 		t.Errorf("Expected specconv to produce valid container config: %v", err)
