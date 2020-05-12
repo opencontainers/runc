@@ -153,8 +153,7 @@ func (m *unifiedManager) Apply(pid int) error {
 		return errors.Wrapf(err, "error while starting unit %q with properties %+v", unitName, properties)
 	}
 
-	_, err = m.GetUnifiedPath()
-	if err != nil {
+	if err = m.initPath(); err != nil {
 		return err
 	}
 	if err := fs2.CreateCgroupPath(m.path, m.cgroups); err != nil {
@@ -188,22 +187,11 @@ func (m *unifiedManager) Destroy() error {
 	return nil
 }
 
-// this method is for v1 backward compatibility and will be removed
-func (m *unifiedManager) GetPaths() map[string]string {
-	_, _ = m.GetUnifiedPath()
-	paths := map[string]string{
-		"pids":    m.path,
-		"memory":  m.path,
-		"io":      m.path,
-		"cpu":     m.path,
-		"devices": m.path,
-		"cpuset":  m.path,
-		"freezer": m.path,
-	}
-	return paths
+func (m *unifiedManager) Path(_ string) string {
+	return m.path
 }
 
-// getSliceFull value is used in GetUnifiedPath.
+// getSliceFull value is used in initPath.
 // The value is incompatible with systemdDbus.PropSlice.
 func (m *unifiedManager) getSliceFull() (string, error) {
 	c := m.cgroups
@@ -241,37 +229,35 @@ func (m *unifiedManager) getSliceFull() (string, error) {
 	return slice, nil
 }
 
-func (m *unifiedManager) GetUnifiedPath() (string, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+func (m *unifiedManager) initPath() error {
 	if m.path != "" {
-		return m.path, nil
+		return nil
 	}
 
 	sliceFull, err := m.getSliceFull()
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	c := m.cgroups
 	path := filepath.Join(sliceFull, getUnitName(c))
 	path, err = securejoin.SecureJoin(fs2.UnifiedMountpoint, path)
 	if err != nil {
-		return "", err
+		return err
 	}
-	m.path = path
 
 	// an example of the final path in rootless:
 	// "/sys/fs/cgroup/user.slice/user-1001.slice/user@1001.service/user.slice/libpod-132ff0d72245e6f13a3bbc6cdc5376886897b60ac59eaa8dea1df7ab959cbf1c.scope"
-	return m.path, nil
+	m.path = path
+
+	return nil
 }
 
 func (m *unifiedManager) fsManager() (cgroups.Manager, error) {
-	path, err := m.GetUnifiedPath()
-	if err != nil {
+	if err := m.initPath(); err != nil {
 		return nil, err
 	}
-	return fs2.NewManager(m.cgroups, path, m.rootless)
+	return fs2.NewManager(m.cgroups, m.path, m.rootless)
 }
 
 func (m *unifiedManager) Freeze(state configs.FreezerState) error {
@@ -283,19 +269,17 @@ func (m *unifiedManager) Freeze(state configs.FreezerState) error {
 }
 
 func (m *unifiedManager) GetPids() ([]int, error) {
-	path, err := m.GetUnifiedPath()
-	if err != nil {
+	if err := m.initPath(); err != nil {
 		return nil, err
 	}
-	return cgroups.GetPids(path)
+	return cgroups.GetPids(m.path)
 }
 
 func (m *unifiedManager) GetAllPids() ([]int, error) {
-	path, err := m.GetUnifiedPath()
-	if err != nil {
+	if err := m.initPath(); err != nil {
 		return nil, err
 	}
-	return cgroups.GetAllPids(path)
+	return cgroups.GetAllPids(m.path)
 }
 
 func (m *unifiedManager) GetStats() (*cgroups.Stats, error) {
@@ -324,6 +308,12 @@ func (m *unifiedManager) Set(container *configs.Config) error {
 		return err
 	}
 	return fsMgr.Set(container)
+}
+
+func (m *unifiedManager) GetPaths() map[string]string {
+	paths := make(map[string]string, 1)
+	paths[""] = m.path
+	return paths
 }
 
 func (m *unifiedManager) GetCgroups() (*configs.Cgroup, error) {

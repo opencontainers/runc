@@ -236,15 +236,10 @@ func (m *legacyManager) Destroy() error {
 	return nil
 }
 
-func (m *legacyManager) GetPaths() map[string]string {
+func (m *legacyManager) Path(subsys string) string {
 	m.mu.Lock()
-	paths := m.paths
-	m.mu.Unlock()
-	return paths
-}
-
-func (m *legacyManager) GetUnifiedPath() (string, error) {
-	return "", errors.New("unified path is only supported when running in unified mode")
+	defer m.mu.Unlock()
+	return m.paths[subsys]
 }
 
 func join(c *configs.Cgroup, subsystem string, pid int) (string, error) {
@@ -434,6 +429,13 @@ func setKernelMemory(c *configs.Cgroup) error {
 	}
 	return fs.EnableKernelMemoryAccounting(path)
 }
+
+func (m *legacyManager) GetPaths() map[string]string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.paths
+}
+
 func (m *legacyManager) GetCgroups() (*configs.Cgroup, error) {
 	return m.cgroups, nil
 }

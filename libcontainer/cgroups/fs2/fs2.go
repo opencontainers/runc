@@ -164,22 +164,8 @@ func (m *manager) Destroy() error {
 	return nil
 }
 
-// GetPaths is for compatibility purpose and should be removed in future
-func (m *manager) GetPaths() map[string]string {
-	_ = m.getControllers()
-	paths := map[string]string{
-		// pseudo-controller for compatibility
-		"devices": m.dirPath,
-		"freezer": m.dirPath,
-	}
-	for c := range m.controllers {
-		paths[c] = m.dirPath
-	}
-	return paths
-}
-
-func (m *manager) GetUnifiedPath() (string, error) {
-	return m.dirPath, nil
+func (m *manager) Path(_ string) string {
+	return m.dirPath
 }
 
 func (m *manager) Set(container *configs.Config) error {
@@ -243,6 +229,12 @@ func (m *manager) Set(container *configs.Config) error {
 	}
 	m.config = container.Cgroups
 	return nil
+}
+
+func (m *manager) GetPaths() map[string]string {
+	paths := make(map[string]string, 1)
+	paths[""] = m.dirPath
+	return paths
 }
 
 func (m *manager) GetCgroups() (*configs.Cgroup, error) {
