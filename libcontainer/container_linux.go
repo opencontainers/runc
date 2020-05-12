@@ -973,7 +973,11 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 				return fmt.Errorf("invalid --status-fd argument %d: not writable", fd)
 			}
 
-			rpcOpts.StatusFd = proto.Int32(int32(fd))
+			if c.checkCriuVersion(31500) != nil {
+				// For criu 3.15+, use notifications (see case "status-ready"
+				// in criuNotifications). Otherwise, rely on criu status fd.
+				rpcOpts.StatusFd = proto.Int32(int32(fd))
+			}
 		}
 	}
 
@@ -1651,6 +1655,16 @@ func (c *linuxContainer) criuNotifications(resp *criurpc.CriuResp, process *Proc
 		// While we can access console.master, using the API is a good idea.
 		if err := utils.SendFd(process.ConsoleSocket, master.Name(), master.Fd()); err != nil {
 			return err
+		}
+	case "status-ready":
+		if opts.StatusFd != -1 {
+			// write \0 to status fd to notify that lazy page server is ready
+			_, err := unix.Write(opts.StatusFd, []byte{0})
+			if err != nil {
+				logrus.Warnf("can't write \\0 to status fd: %v", err)
+			}
+			_ = unix.Close(opts.StatusFd)
+			opts.StatusFd = -1
 		}
 	}
 	return nil
