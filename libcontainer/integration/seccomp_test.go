@@ -12,6 +12,78 @@ import (
 	libseccomp "github.com/seccomp/libseccomp-golang"
 )
 
+func TestSeccompDenyGetcwdWithErrno(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+
+	rootfs, err := newRootfs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer remove(rootfs)
+
+	errnoRet := uint(syscall.ESRCH)
+
+	config := newTemplateConfig(rootfs)
+	config.Seccomp = &configs.Seccomp{
+		DefaultAction: configs.Allow,
+		Syscalls: []*configs.Syscall{
+			{
+				Name:     "getcwd",
+				Action:   configs.Errno,
+				ErrnoRet: &errnoRet,
+			},
+		},
+	}
+
+	container, err := newContainer(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer container.Destroy()
+
+	buffers := newStdBuffers()
+	pwd := &libcontainer.Process{
+		Cwd:    "/",
+		Args:   []string{"pwd"},
+		Env:    standardEnvironment,
+		Stdin:  buffers.Stdin,
+		Stdout: buffers.Stdout,
+		Stderr: buffers.Stderr,
+		Init:   true,
+	}
+
+	err = container.Run(pwd)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ps, err := pwd.Wait()
+	if err == nil {
+		t.Fatal("Expecting error (negative return code); instead exited cleanly!")
+	}
+
+	var exitCode int
+	status := ps.Sys().(syscall.WaitStatus)
+	if status.Exited() {
+		exitCode = status.ExitStatus()
+	} else if status.Signaled() {
+		exitCode = -int(status.Signal())
+	} else {
+		t.Fatalf("Unrecognized exit reason!")
+	}
+
+	if exitCode == 0 {
+		t.Fatalf("Getcwd should fail with negative exit code, instead got %d!", exitCode)
+	}
+
+	expected := "pwd: getcwd: No such process"
+	actual := strings.Trim(buffers.Stderr.String(), "\n")
+	if actual != expected {
+		t.Fatalf("Expected output %s but got %s\n", expected, actual)
+	}
+}
+
 func TestSeccompDenyGetcwd(t *testing.T) {
 	if testing.Short() {
 		return

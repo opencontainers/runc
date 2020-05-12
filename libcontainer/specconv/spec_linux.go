@@ -855,9 +855,10 @@ func SetupSeccomp(config *specs.LinuxSeccomp) (*configs.Seccomp, error) {
 
 		for _, name := range call.Names {
 			newCall := configs.Syscall{
-				Name:   name,
-				Action: newAction,
-				Args:   []*configs.Arg{},
+				Name:     name,
+				Action:   newAction,
+				ErrnoRet: call.ErrnoRet,
+				Args:     []*configs.Arg{},
 			}
 			// Loop through all the arguments of the syscall and convert them
 			for _, arg := range call.Args {

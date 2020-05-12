@@ -38,7 +38,7 @@ func InitSeccomp(config *configs.Seccomp) error {
 		return errors.New("cannot initialize Seccomp - nil config passed")
 	}
 
-	defaultAction, err := getAction(config.DefaultAction)
+	defaultAction, err := getAction(config.DefaultAction, nil)
 	if err != nil {
 		return errors.New("error initializing seccomp - invalid default action")
 	}
@@ -102,17 +102,23 @@ func IsEnabled() bool {
 }
 
 // Convert Libcontainer Action to Libseccomp ScmpAction
-func getAction(act configs.Action) (libseccomp.ScmpAction, error) {
+func getAction(act configs.Action, errnoRet *uint) (libseccomp.ScmpAction, error) {
 	switch act {
 	case configs.Kill:
 		return actKill, nil
 	case configs.Errno:
+		if errnoRet != nil {
+			return libseccomp.ActErrno.SetReturnCode(int16(*errnoRet)), nil
+		}
 		return actErrno, nil
 	case configs.Trap:
 		return actTrap, nil
 	case configs.Allow:
 		return actAllow, nil
 	case configs.Trace:
+		if errnoRet != nil {
+			return libseccomp.ActTrace.SetReturnCode(int16(*errnoRet)), nil
+		}
 		return actTrace, nil
 	case configs.Log:
 		return actLog, nil
@@ -177,7 +183,7 @@ func matchCall(filter *libseccomp.ScmpFilter, call *configs.Syscall) error {
 	}
 
 	// Convert the call's action to the libseccomp equivalent
-	callAct, err := getAction(call.Action)
+	callAct, err := getAction(call.Action, call.ErrnoRet)
 	if err != nil {
 		return fmt.Errorf("action in seccomp profile is invalid: %s", err)
 	}
