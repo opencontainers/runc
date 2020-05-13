@@ -16,6 +16,7 @@ import (
 	"time"
 
 	units "github.com/docker/go-units"
+	"github.com/moby/sys/mountinfo"
 	"golang.org/x/sys/unix"
 )
 
@@ -126,19 +127,25 @@ func isSubsystemAvailable(subsystem string) bool {
 	return avail
 }
 
-func GetClosestMountpointAncestor(dir, mountinfo string) string {
-	deepestMountPoint := ""
-	for _, mountInfoEntry := range strings.Split(mountinfo, "\n") {
-		mountInfoParts := strings.Fields(mountInfoEntry)
-		if len(mountInfoParts) < 5 {
-			continue
-		}
-		mountPoint := mountInfoParts[4]
-		if strings.HasPrefix(mountPoint, deepestMountPoint) && strings.HasPrefix(dir, mountPoint) {
-			deepestMountPoint = mountPoint
+func GetClosestMountpointAncestor(dir, data string) (string, error) {
+	mi, err := mountinfo.GetMountsFromReader(strings.NewReader(data), mountinfo.ParentsFilter(dir))
+	if err != nil {
+		return "", err
+	}
+	if len(mi) < 1 {
+		return "", err
+	}
+
+	// find the longest mount point
+	var idx, maxlen int
+	for i := range mi {
+		if len(mi[i].Mountpoint) > maxlen {
+			maxlen = len(mi[i].Mountpoint)
+			idx = i
 		}
 	}
-	return deepestMountPoint
+
+	return mi[idx].Mountpoint, nil
 }
 
 func FindCgroupMountpointDir() (string, error) {

@@ -62,7 +62,11 @@ func (s *CpusetGroup) ApplyDir(dir string, cgroup *configs.Cgroup, pid int) erro
 	if err != nil {
 		return err
 	}
-	root := filepath.Dir(cgroups.GetClosestMountpointAncestor(dir, string(mountInfo)))
+	root, err := cgroups.GetClosestMountpointAncestor(dir, string(mountInfo))
+	if err != nil {
+		return err
+	}
+	root = filepath.Dir(root)
 	// 'ensureParent' start with parent because we don't want to
 	// explicitly inherit from parent, it could conflict with
 	// 'cpuset.cpu_exclusive'.

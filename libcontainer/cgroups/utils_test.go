@@ -374,7 +374,7 @@ func TestIgnoreCgroup2Mount(t *testing.T) {
 }
 
 func TestGetClosestMountpointAncestor(t *testing.T) {
-	fakeMountInfo := ` 18 24 0:17 / /sys rw,nosuid,nodev,noexec,relatime - sysfs sysfs rw
+	const fakeMountInfo = `18 24 0:17 / /sys rw,nosuid,nodev,noexec,relatime - sysfs sysfs rw
 100 99 1:31 / /foo/bar rw,relatime - fake fake rw,fake
 100 99 1:31 / /foo/bar/baz2 rw,relatime - fake fake rw,fake
 100 99 1:31 / /foo/bar/baz rw,relatime - fake fake rw,fake
@@ -382,8 +382,8 @@ func TestGetClosestMountpointAncestor(t *testing.T) {
 100 99 1:31 / /foo/bar/baz3 rw,relatime - fake fake rw,fake
 100 99 1:31 / /foo rw,relatime - fake fake rw,fake
 100 99 1:31 / /unrelated rw,relatime - fake fake rw,fake
-100 99 1:31 / / rw,relatime - fake fake rw,fake
-`
+100 99 1:31 / / rw,relatime - fake fake rw,fake`
+
 	testCases := []struct {
 		input  string
 		output string
@@ -395,7 +395,10 @@ func TestGetClosestMountpointAncestor(t *testing.T) {
 	}
 
 	for _, c := range testCases {
-		mountpoint := GetClosestMountpointAncestor(c.input, fakeMountInfo)
+		mountpoint, err := GetClosestMountpointAncestor(c.input, fakeMountInfo)
+		if err != nil {
+			t.Fatal(err)
+		}
 		if mountpoint != c.output {
 			t.Errorf("expected %s, got %s", c.output, mountpoint)
 		}
