@@ -99,13 +99,6 @@ function enable_cgroup() {
 		chown root:rootless "$CGROUP_MOUNT/$CGROUP_PATH" "$CGROUP_MOUNT/$CGROUP_PATH/cgroup.subtree_control" "$CGROUP_MOUNT/$CGROUP_PATH/cgroup.procs" "$CGROUP_MOUNT/cgroup.procs"
 		chmod g+rwx "$CGROUP_MOUNT/$CGROUP_PATH"
 		chmod g+rw "$CGROUP_MOUNT/$CGROUP_PATH/cgroup.subtree_control" "$CGROUP_MOUNT/$CGROUP_PATH/cgroup.procs" "$CGROUP_MOUNT/cgroup.procs"
-		# Fix up cgroup.type.
-		echo threaded > "$CGROUP_MOUNT/$CGROUP_PATH/cgroup.type"
-		# Make sure cgroup.type doesn't contain "invalid". Otherwise write ops will fail with ENOTSUP.
-		# See http://man7.org/linux/man-pages/man7/cgroups.7.html
-		if grep -qw invalid "$CGROUP_MOUNT/$CGROUP_PATH/cgroup.type"; then
-			exit 1
-		fi
 	fi
 }
 
