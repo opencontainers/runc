@@ -55,6 +55,10 @@ import (
  * |   |   |-- cbm_mask
  * |   |   |-- min_cbm_bits
  * |   |   |-- num_closids
+ * |   |-- L3_MON
+ * |   |   |-- max_threshold_occupancy
+ * |   |   |-- mon_features
+ * |   |   |-- num_rmids
  * |   |-- MB
  * |       |-- bandwidth_gran
  * |       |-- delay_linear
@@ -191,8 +195,7 @@ type intelRdtData struct {
 // Check if Intel RDT sub-features are enabled in init()
 func init() {
 	// 1. Check if hardware and kernel support Intel RDT sub-features
-	// "cat_l3" flag for CAT and "mba" flag for MBA
-	isCatFlagSet, isMbaFlagSet, err := parseCpuInfoFile("/proc/cpuinfo")
+	flagsSet, err := parseCpuInfoFile("/proc/cpuinfo")
 	if err != nil {
 		return
 	}
@@ -207,7 +210,7 @@ func init() {
 	// "resource control" filesystem. Intel RDT sub-features can be
 	// selectively disabled or enabled by kernel command line
 	// (e.g., rdt=!l3cat,mba) in 4.14 and newer kernel
-	if isCatFlagSet {
+	if flagsSet.CAT {
 		if _, err := os.Stat(filepath.Join(intelRdtRoot, "info", "L3")); err == nil {
 			isCatEnabled = true
 		}
@@ -217,9 +220,21 @@ func init() {
 		// MBA should be enabled because MBA Software Controller
 		// depends on MBA
 		isMbaEnabled = true
-	} else if isMbaFlagSet {
+	} else if flagsSet.MBA {
 		if _, err := os.Stat(filepath.Join(intelRdtRoot, "info", "MB")); err == nil {
 			isMbaEnabled = true
+		}
+	}
+
+	if flagsSet.MBMTotal || flagsSet.MBMLocal {
+		if _, err := os.Stat(filepath.Join(intelRdtRoot, "info", "L3_MON")); err == nil {
+			mbmEnabled = true
+			cmtEnabled = true
+		}
+
+		enabledMonFeatures, err = getMonFeatures(intelRdtRoot)
+		if err != nil {
+			return
 		}
 	}
 }
@@ -298,13 +313,21 @@ func isIntelRdtMounted() bool {
 	return true
 }
 
-func parseCpuInfoFile(path string) (bool, bool, error) {
-	isCatFlagSet := false
-	isMbaFlagSet := false
+type cpuInfoFlags struct {
+	CAT bool // Cache Allocation Technology
+	MBA bool // Memory Bandwidth Allocation
+
+	// Memory Bandwidth Monitoring related.
+	MBMTotal bool
+	MBMLocal bool
+}
+
+func parseCpuInfoFile(path string) (cpuInfoFlags, error) {
+	infoFlags := cpuInfoFlags{}
 
 	f, err := os.Open(path)
 	if err != nil {
-		return false, false, err
+		return infoFlags, err
 	}
 	defer f.Close()
 
@@ -319,19 +342,23 @@ func parseCpuInfoFile(path string) (bool, bool, error) {
 			for _, flag := range flags {
 				switch flag {
 				case "cat_l3":
-					isCatFlagSet = true
+					infoFlags.CAT = true
 				case "mba":
-					isMbaFlagSet = true
+					infoFlags.MBA = true
+				case "cqm_mbm_total":
+					infoFlags.MBMTotal = true
+				case "cqm_mbm_local":
+					infoFlags.MBMLocal = true
 				}
 			}
-			return isCatFlagSet, isMbaFlagSet, nil
+			return infoFlags, nil
 		}
 	}
 	if err := s.Err(); err != nil {
-		return false, false, err
+		return infoFlags, err
 	}
 
-	return isCatFlagSet, isMbaFlagSet, nil
+	return infoFlags, nil
 }
 
 func parseUint(s string, base, bitSize int) (uint64, error) {
@@ -586,7 +613,8 @@ func (m *IntelRdtManager) GetStats() (*Stats, error) {
 	schemaRootStrings := strings.Split(tmpRootStrings, "\n")
 
 	// The L3 cache and memory bandwidth schemata in 'container_id' group
-	tmpStrings, err := getIntelRdtParamString(m.GetPath(), "schemata")
+	containerPath := m.GetPath()
+	tmpStrings, err := getIntelRdtParamString(containerPath, "schemata")
 	if err != nil {
 		return nil, err
 	}
@@ -636,6 +664,11 @@ func (m *IntelRdtManager) GetStats() (*Stats, error) {
 				stats.MemBwSchema = strings.TrimSpace(schema)
 			}
 		}
+	}
+
+	err = getMonitoringStats(containerPath, stats)
+	if err != nil {
+		return nil, err
 	}
 
 	return stats, nil
