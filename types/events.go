@@ -55,10 +55,12 @@ type Throttling struct {
 
 type CpuUsage struct {
 	// Units: nanoseconds.
-	Total  uint64   `json:"total,omitempty"`
-	Percpu []uint64 `json:"percpu,omitempty"`
-	Kernel uint64   `json:"kernel"`
-	User   uint64   `json:"user"`
+	Total        uint64   `json:"total,omitempty"`
+	Percpu       []uint64 `json:"percpu,omitempty"`
+	PercpuKernel []uint64 `json:"percpu_kernel,omitempty"`
+	PercpuUser   []uint64 `json:"percpu_user,omitempty"`
+	Kernel       uint64   `json:"kernel"`
+	User         uint64   `json:"user"`
 }
 
 type Cpu struct {

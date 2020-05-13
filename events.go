@@ -125,6 +125,8 @@ func convertLibcontainerStats(ls *libcontainer.Stats) *types.Stats {
 	s.CPU.Usage.User = cg.CpuStats.CpuUsage.UsageInUsermode
 	s.CPU.Usage.Total = cg.CpuStats.CpuUsage.TotalUsage
 	s.CPU.Usage.Percpu = cg.CpuStats.CpuUsage.PercpuUsage
+	s.CPU.Usage.PercpuKernel = cg.CpuStats.CpuUsage.PercpuUsageInKernelmode
+	s.CPU.Usage.PercpuUser = cg.CpuStats.CpuUsage.PercpuUsageInUsermode
 	s.CPU.Throttling.Periods = cg.CpuStats.ThrottlingData.Periods
 	s.CPU.Throttling.ThrottledPeriods = cg.CpuStats.ThrottlingData.ThrottledPeriods
 	s.CPU.Throttling.ThrottledTime = cg.CpuStats.ThrottlingData.ThrottledTime
