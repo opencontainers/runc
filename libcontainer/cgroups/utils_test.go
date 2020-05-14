@@ -588,9 +588,9 @@ func TestConvertMemorySwapToCgroupV2Value(t *testing.T) {
 			expErr:  true,
 		},
 		{
-			memswap: 300,
-			memory:  -1,
-			expErr:  true,
+			memswap:  300,
+			memory:   -1,
+			expected: -1,
 		},
 	}
 

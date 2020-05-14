@@ -75,7 +75,7 @@ EOF
         SYSTEM_MEM="max"
         SYSTEM_MEM_SWAP="max"
         # checking swap is currently disabled for v2
-        #CGROUP_MEMORY=$CGROUP_PATH
+        CGROUP_MEMORY=$CGROUP_PATH
         ;;
     esac
 
@@ -133,9 +133,22 @@ EOF
         check_cgroup_value "$MEM_SWAP" $SYSTEM_MEM_SWAP
 
         # update memory swap
-        runc update test_update --memory-swap 96468992
+        runc update test_update --memory 50M --memory-swap 96468992
         [ "$status" -eq 0 ]
-        check_cgroup_value "$MEM_SWAP" 96468992
+        if [ "$CGROUP_UNIFIED" != "yes" ]; then
+            check_cgroup_value "$MEM_SWAP" 96468992
+        else
+            check_cgroup_value "$MEM_SWAP" 44040192
+        fi
+        
+        # check we don't set swap to 0
+        runc update test_update --memory 50M
+        [ "$status" -eq 0 ]
+        if [ "$CGROUP_UNIFIED" != "yes" ]; then
+            check_cgroup_value "$MEM_SWAP" 96468992
+        else
+            check_cgroup_value "$MEM_SWAP" 44040192
+        fi
     fi
 
     # try to remove memory limit
