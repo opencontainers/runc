@@ -606,11 +606,14 @@ func bindMountDeviceNode(dest string, node *configs.Device) error {
 
 // Creates the device node in the rootfs of the container.
 func createDeviceNode(rootfs string, node *configs.Device, bind bool) error {
+	if node.Path == "" {
+		// The node only exists for cgroup reasons, ignore it here.
+		return nil
+	}
 	dest := filepath.Join(rootfs, node.Path)
 	if err := os.MkdirAll(filepath.Dir(dest), 0755); err != nil {
 		return err
 	}
-
 	if bind {
 		return bindMountDeviceNode(dest, node)
 	}
@@ -628,16 +631,20 @@ func createDeviceNode(rootfs string, node *configs.Device, bind bool) error {
 func mknodDevice(dest string, node *configs.Device) error {
 	fileMode := node.FileMode
 	switch node.Type {
-	case 'c', 'u':
-		fileMode |= unix.S_IFCHR
-	case 'b':
+	case configs.BlockDevice:
 		fileMode |= unix.S_IFBLK
-	case 'p':
+	case configs.CharDevice:
+		fileMode |= unix.S_IFCHR
+	case configs.FifoDevice:
 		fileMode |= unix.S_IFIFO
 	default:
 		return fmt.Errorf("%c is not a valid device type for device %s", node.Type, node.Path)
 	}
-	if err := unix.Mknod(dest, uint32(fileMode), node.Mkdev()); err != nil {
+	dev, err := node.Mkdev()
+	if err != nil {
+		return err
+	}
+	if err := unix.Mknod(dest, uint32(fileMode), int(dev)); err != nil {
 		return err
 	}
 	return unix.Chown(dest, int(node.Uid), int(node.Gid))

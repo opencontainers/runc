@@ -312,3 +312,70 @@ EOF
     check_cgroup_value "cpu.rt_period_us" 900001
     check_cgroup_value "cpu.rt_runtime_us" 600001
 }
+
+@test "update devices [minimal transition rules]" {
+    [[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+    # This test currently only makes sense on cgroupv1.
+    requires cgroups_v1
+
+    # Run a basic shell script that tries to write to /dev/null. If "runc
+    # update" makes use of minimal transition rules, updates should not cause
+    # writes to fail at any point.
+    jq '.process.args = ["sh", "-c", "while true; do echo >/dev/null; done"]' config.json > config.json.tmp
+    mv config.json{.tmp,}
+
+    # Set up a temporary console socket and recvtty so we can get the stdio.
+    TMP_RECVTTY_DIR="$(mktemp -d "$BATS_TMPDIR/runc-tmp-recvtty.XXXXXX")"
+    TMP_RECVTTY_PID="$TMP_RECVTTY_DIR/recvtty.pid"
+    TMP_CONSOLE_SOCKET="$TMP_RECVTTY_DIR/console.sock"
+    CONTAINER_OUTPUT="$TMP_RECVTTY_DIR/output"
+    ("$RECVTTY" --no-stdin --pid-file "$TMP_RECVTTY_PID" \
+                --mode single "$TMP_CONSOLE_SOCKET" &>"$CONTAINER_OUTPUT" ) &
+    retry 10 0.1 [ -e "$TMP_CONSOLE_SOCKET" ]
+
+    # Run the container in the background.
+    runc run -d --console-socket "$TMP_CONSOLE_SOCKET" test_update
+    cat "$CONTAINER_OUTPUT"
+    [ "$status" -eq 0 ]
+
+    # Trigger an update. This update doesn't actually change the device rules,
+    # but it will trigger the devices cgroup code to reapply the current rules.
+    # We trigger the update a few times to make sure we hit the race.
+    for _ in {1..12}
+    do
+        # TODO: Update "runc update" so we can change the device rules.
+        runc update --pids-limit 30 test_update
+        [ "$status" -eq 0 ]
+    done
+
+    # Kill recvtty.
+    kill -9 "$(<"$TMP_RECVTTY_PID")"
+
+    # There should've been no output from the container.
+    cat "$CONTAINER_OUTPUT"
+    [ -z "$(<"$CONTAINER_OUTPUT")" ]
+}
+
+@test "update paused container" {
+    [[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+    requires cgroups_freezer
+
+    # Run the container in the background.
+    runc run -d --console-socket "$CONSOLE_SOCKET" test_update
+    [ "$status" -eq 0 ]
+
+    # Pause the container.
+    runc pause test_update
+    [ "$status" -eq 0 ]
+
+    # Trigger an unrelated update.
+    runc update --pids-limit 30 test_update
+    [ "$status" -eq 0 ]
+
+    # The container should still be paused.
+    testcontainer test_update paused
+
+    # Resume the container.
+    runc resume test_update
+    [ "$status" -eq 0 ]
+}

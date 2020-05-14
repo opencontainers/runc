@@ -20,7 +20,7 @@ func hash(s, comm string) string {
 	return strings.Join(res, "\n")
 }
 
-func testDeviceFilter(t testing.TB, devices []*configs.Device, expectedStr string) {
+func testDeviceFilter(t testing.TB, devices []*configs.DeviceRule, expectedStr string) {
 	insts, _, err := DeviceFilter(devices)
 	if err != nil {
 		t.Fatalf("%s: %v (devices: %+v)", t.Name(), err, devices)
@@ -83,71 +83,69 @@ block-2:
         19: Exit
 block-3:
         20: JNEImm dst: r2 off: -1 imm: 2 <block-4>
-        21: JNEImm dst: r4 off: -1 imm: 5 <block-4>
-        22: JNEImm dst: r5 off: -1 imm: 1 <block-4>
+        21: JNEImm dst: r4 off: -1 imm: 1 <block-4>
+        22: JNEImm dst: r5 off: -1 imm: 9 <block-4>
         23: Mov32Imm dst: r0 imm: 1
         24: Exit
 block-4:
         25: JNEImm dst: r2 off: -1 imm: 2 <block-5>
         26: JNEImm dst: r4 off: -1 imm: 1 <block-5>
-        27: JNEImm dst: r5 off: -1 imm: 9 <block-5>
+        27: JNEImm dst: r5 off: -1 imm: 5 <block-5>
         28: Mov32Imm dst: r0 imm: 1
         29: Exit
 block-5:
         30: JNEImm dst: r2 off: -1 imm: 2 <block-6>
-        31: JNEImm dst: r4 off: -1 imm: 1 <block-6>
-        32: JNEImm dst: r5 off: -1 imm: 5 <block-6>
+        31: JNEImm dst: r4 off: -1 imm: 5 <block-6>
+        32: JNEImm dst: r5 off: -1 imm: 0 <block-6>
         33: Mov32Imm dst: r0 imm: 1
         34: Exit
 block-6:
         35: JNEImm dst: r2 off: -1 imm: 2 <block-7>
-        36: JNEImm dst: r4 off: -1 imm: 5 <block-7>
-        37: JNEImm dst: r5 off: -1 imm: 0 <block-7>
+        36: JNEImm dst: r4 off: -1 imm: 1 <block-7>
+        37: JNEImm dst: r5 off: -1 imm: 7 <block-7>
         38: Mov32Imm dst: r0 imm: 1
         39: Exit
 block-7:
         40: JNEImm dst: r2 off: -1 imm: 2 <block-8>
         41: JNEImm dst: r4 off: -1 imm: 1 <block-8>
-        42: JNEImm dst: r5 off: -1 imm: 7 <block-8>
+        42: JNEImm dst: r5 off: -1 imm: 8 <block-8>
         43: Mov32Imm dst: r0 imm: 1
         44: Exit
 block-8:
         45: JNEImm dst: r2 off: -1 imm: 2 <block-9>
         46: JNEImm dst: r4 off: -1 imm: 1 <block-9>
-        47: JNEImm dst: r5 off: -1 imm: 8 <block-9>
+        47: JNEImm dst: r5 off: -1 imm: 3 <block-9>
         48: Mov32Imm dst: r0 imm: 1
         49: Exit
 block-9:
-        50: JNEImm dst: r2 off: -1 imm: 2 <block-10>
-        51: JNEImm dst: r4 off: -1 imm: 1 <block-10>
-        52: JNEImm dst: r5 off: -1 imm: 3 <block-10>
-        53: Mov32Imm dst: r0 imm: 1
-        54: Exit
-block-10:
 // (b, wildcard, wildcard, m, true)
-        55: JNEImm dst: r2 off: -1 imm: 1 <block-11>
-        56: Mov32Reg dst: r1 src: r3
-        57: And32Imm dst: r1 imm: 1
-        58: JEqImm dst: r1 off: -1 imm: 0 <block-11>
-        59: Mov32Imm dst: r0 imm: 1
-        60: Exit
-block-11:
+        50: JNEImm dst: r2 off: -1 imm: 1 <block-10>
+        51: Mov32Reg dst: r1 src: r3
+        52: And32Imm dst: r1 imm: 1
+        53: JEqImm dst: r1 off: -1 imm: 0 <block-10>
+        54: Mov32Imm dst: r0 imm: 1
+        55: Exit
+block-10:
 // (c, wildcard, wildcard, m, true)
-        61: JNEImm dst: r2 off: -1 imm: 2 <block-12>
-        62: Mov32Reg dst: r1 src: r3
-        63: And32Imm dst: r1 imm: 1
-        64: JEqImm dst: r1 off: -1 imm: 0 <block-12>
-        65: Mov32Imm dst: r0 imm: 1
-        66: Exit
-block-12:
-        67: Mov32Imm dst: r0 imm: 0
-        68: Exit
+        56: JNEImm dst: r2 off: -1 imm: 2 <block-11>
+        57: Mov32Reg dst: r1 src: r3
+        58: And32Imm dst: r1 imm: 1
+        59: JEqImm dst: r1 off: -1 imm: 0 <block-11>
+        60: Mov32Imm dst: r0 imm: 1
+        61: Exit
+block-11:
+        62: Mov32Imm dst: r0 imm: 0
+        63: Exit
 `
-	testDeviceFilter(t, specconv.AllowedDevices, expected)
+	var devices []*configs.DeviceRule
+	for _, device := range specconv.AllowedDevices {
+		devices = append(devices, &device.DeviceRule)
+	}
+	testDeviceFilter(t, devices, expected)
 }
 
 func TestDeviceFilter_Privileged(t *testing.T) {
-	devices := []*configs.Device{
+	devices := []*configs.DeviceRule{
 		{
 			Type:        'a',
 			Major:       -1,
@@ -174,7 +172,7 @@ block-0:
 }
 
 func TestDeviceFilter_PrivilegedExceptSingleDevice(t *testing.T) {
-	devices := []*configs.Device{
+	devices := []*configs.DeviceRule{
 		{
 			Type:        'a',
 			Major:       -1,
@@ -214,7 +212,7 @@ block-1:
 }
 
 func TestDeviceFilter_Weird(t *testing.T) {
-	devices := []*configs.Device{
+	devices := []*configs.DeviceRule{
 		{
 			Type:        'b',
 			Major:       8,

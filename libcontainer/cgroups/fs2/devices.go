@@ -10,12 +10,10 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func isRWM(cgroupPermissions string) bool {
-	r := false
-	w := false
-	m := false
-	for _, rn := range cgroupPermissions {
-		switch rn {
+func isRWM(perms configs.DevicePermissions) bool {
+	var r, w, m bool
+	for _, perm := range perms {
+		switch perm {
 		case 'r':
 			r = true
 		case 'w':
@@ -39,26 +37,10 @@ func canSkipEBPFError(cgroup *configs.Cgroup) bool {
 }
 
 func setDevices(dirPath string, cgroup *configs.Cgroup) error {
+	// XXX: This is currently a white-list (but all callers pass a blacklist of
+	//      devices). This is bad for a whole variety of reasons, but will need
+	//      to be fixed with co-ordinated effort with downstreams.
 	devices := cgroup.Devices
-	// never set by OCI specconv
-	if allowAllDevices := cgroup.Resources.AllowAllDevices; allowAllDevices != nil {
-		if *allowAllDevices == true {
-			if len(cgroup.Resources.DeniedDevices) != 0 {
-				return errors.New("libcontainer: can't use DeniedDevices together with AllowAllDevices")
-			}
-			return nil
-		}
-		// *allowAllDevices=false is still used by the integration test
-		for _, ad := range cgroup.Resources.AllowedDevices {
-			d := *ad
-			d.Allow = true
-			devices = append(devices, &d)
-		}
-	}
-	if len(cgroup.Resources.DeniedDevices) != 0 {
-		// never set by OCI specconv
-		return errors.New("libcontainer DeniedDevices is not supported, use Devices")
-	}
 	insts, license, err := devicefilter.DeviceFilter(devices)
 	if err != nil {
 		return err
@@ -68,6 +50,17 @@ func setDevices(dirPath string, cgroup *configs.Cgroup) error {
 		return errors.Errorf("cannot get dir FD for %s", dirPath)
 	}
 	defer unix.Close(dirFD)
+	// XXX: This code is currently incorrect when it comes to updating an
+	//      existing cgroup with new rules (new rulesets are just appended to
+	//      the program list because this uses BPF_F_ALLOW_MULTI). If we didn't
+	//      use BPF_F_ALLOW_MULTI we could actually atomically swap the
+	//      programs.
+	//
+	//      The real issue is that BPF_F_ALLOW_MULTI makes it hard to have a
+	//      race-free blacklist because it acts as a whitelist by default, and
+	//      having a deny-everything program cannot be overriden by other
+	//      programs. You could temporarily insert a deny-everything program
+	//      but that would result in spurrious failures during updates.
 	if _, err := ebpf.LoadAttachCgroupDeviceFilter(insts, license, dirFD); err != nil {
 		if !canSkipEBPFError(cgroup) {
 			return err

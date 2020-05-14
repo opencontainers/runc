@@ -16,6 +16,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/cgroups/fs2"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 type unifiedManager struct {
@@ -36,6 +37,17 @@ func NewUnifiedManager(config *configs.Cgroup, path string, rootless bool) cgrou
 
 func genV2ResourcesProperties(c *configs.Cgroup) ([]systemdDbus.Property, error) {
 	var properties []systemdDbus.Property
+
+	// NOTE: This is of questionable correctness because we insert our own
+	//       devices eBPF program later. Two programs with identical rules
+	//       aren't the end of the world, but it is a bit concerning. However
+	//       it's unclear if systemd removes all eBPF programs attached when
+	//       doing SetUnitProperties...
+	deviceProperties, err := generateDeviceProperties(c.Resources.Devices)
+	if err != nil {
+		return nil, err
+	}
+	properties = append(properties, deviceProperties...)
 
 	if c.Resources.Memory != 0 {
 		properties = append(properties,
@@ -295,13 +307,40 @@ func (m *unifiedManager) Set(container *configs.Config) error {
 	if err != nil {
 		return err
 	}
-	dbusConnection, err := getDbusConnection(m.rootless)
+
+	// Figure out the current freezer state, so we can revert to it after we
+	// temporarily freeze the container.
+	targetFreezerState, err := m.GetFreezerState()
 	if err != nil {
 		return err
 	}
+	if targetFreezerState == configs.Undefined {
+		targetFreezerState = configs.Thawed
+	}
+
+	// We have to freeze the container while systemd sets the cgroup settings.
+	// The reason for this is that systemd's application of DeviceAllow rules
+	// is done disruptively, resulting in spurrious errors to common devices
+	// (unlike our fs driver, they will happily write deny-all rules to running
+	// containers). So we freeze the container to avoid them hitting the cgroup
+	// error. But if the freezer cgroup isn't supported, we just warn about it.
+	if err := m.Freeze(configs.Frozen); err != nil {
+		logrus.Infof("freeze container before SetUnitProperties failed: %v", err)
+	}
+
+	dbusConnection, err := getDbusConnection(m.rootless)
+	if err != nil {
+		_ = m.Freeze(targetFreezerState)
+		return err
+	}
 	if err := dbusConnection.SetUnitProperties(getUnitName(m.cgroups), true, properties...); err != nil {
+		_ = m.Freeze(targetFreezerState)
 		return errors.Wrap(err, "error while setting unit properties")
 	}
+
+	// Reset freezer state before we apply the configuration, to avoid clashing
+	// with the freezer setting in the configuration.
+	_ = m.Freeze(targetFreezerState)
 
 	fsMgr, err := m.fsManager()
 	if err != nil {
@@ -318,4 +357,12 @@ func (m *unifiedManager) GetPaths() map[string]string {
 
 func (m *unifiedManager) GetCgroups() (*configs.Cgroup, error) {
 	return m.cgroups, nil
+}
+
+func (m *unifiedManager) GetFreezerState() (configs.FreezerState, error) {
+	fsMgr, err := m.fsManager()
+	if err != nil {
+		return configs.Undefined, err
+	}
+	return fsMgr.GetFreezerState()
 }
