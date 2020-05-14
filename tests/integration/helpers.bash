@@ -21,6 +21,9 @@ HELLO_FILE=`get_hello`
 HELLO_IMAGE="$TESTDATA/$HELLO_FILE"
 HELLO_BUNDLE="$BATS_TMPDIR/hello-world"
 
+# debian image
+DEBIAN_BUNDLE="$BATS_TMPDIR/debiantest"
+
 # CRIU PATH
 CRIU="$(which criu 2>/dev/null || true)"
 
@@ -422,6 +425,27 @@ function setup_hello() {
 	update_config '(.. | select(.? == "sh")) |= "/hello"'
 }
 
+function setup_debian() {
+	# skopeo and umoci are not installed on the travis runner
+	if [ -n "${RUNC_USE_SYSTEMD}" ]; then
+		return
+	fi
+
+	setup_recvtty
+	run mkdir "$DEBIAN_BUNDLE"
+
+	if [ ! -d "$DEBIAN_ROOTFS/rootfs" ]; then
+		get_and_extract_debian "$DEBIAN_BUNDLE"
+	fi
+
+	# Use the cached version
+	if [ ! -d "$DEBIAN_BUNDLE/rootfs" ]; then
+		cp -r "$DEBIAN_ROOTFS"/* "$DEBIAN_BUNDLE/"
+	fi
+
+	cd "$DEBIAN_BUNDLE"
+}
+
 function teardown_running_container() {
 	runc list
 	# $1 should be a container name such as "test_busybox"
@@ -458,4 +482,11 @@ function teardown_hello() {
 	teardown_recvtty
 	teardown_running_container test_hello
 	run rm -f -r "$HELLO_BUNDLE"
+}
+
+function teardown_debian() {
+	cd "$INTEGRATION_ROOT"
+	teardown_recvtty
+	teardown_running_container test_debian
+	run rm -f -r "$DEBIAN_BUNDLE"
 }

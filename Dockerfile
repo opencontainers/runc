@@ -67,6 +67,19 @@ RUN mkdir -p /usr/src/criu \
     && cd - \
     && rm -rf /usr/src/criu
 
+# install skopeo
+RUN echo 'deb http://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/Debian_Unstable/ /' > /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list \
+    && wget -nv https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/Debian_Unstable/Release.key -O- | sudo apt-key add - \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends skopeo \
+    && rm -rf /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list \
+    && apt-get clean \
+    && rm -rf /var/cache/apt /var/lib/apt/lists/*;
+
+# install umoci
+RUN curl -o /usr/local/bin/umoci -fsSL https://github.com/opencontainers/umoci/releases/download/v0.4.5/umoci.amd64 \
+    && chmod +x /usr/local/bin/umoci
+
 COPY script/tmpmount /
 WORKDIR /go/src/github.com/opencontainers/runc
 ENTRYPOINT ["/tmpmount"]
@@ -77,5 +90,10 @@ ENV ROOTFS /busybox
 RUN mkdir -p "${ROOTFS}"
 RUN . tests/integration/multi-arch.bash \
     && curl -fsSL `get_busybox` | tar xfJC - "${ROOTFS}"
+
+ENV DEBIAN_ROOTFS /debian
+RUN mkdir -p "${DEBIAN_ROOTFS}"
+RUN . tests/integration/multi-arch.bash \
+    && get_and_extract_debian "$DEBIAN_ROOTFS"
 
 COPY . .

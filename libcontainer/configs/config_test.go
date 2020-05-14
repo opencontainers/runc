@@ -35,7 +35,7 @@ func TestUnmarshalHooks(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if !reflect.DeepEqual(hooks[hookName], hookCmd) {
+		if !reflect.DeepEqual(hooks[hookName], configs.HookList{hookCmd}) {
 			t.Errorf("Expected %s to equal %+v but it was %+v", hookName, hookCmd, hooks[hookName])
 		}
 	}
