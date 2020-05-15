@@ -1357,6 +1357,11 @@ func (c *linuxContainer) criuApplyCgroups(pid int, req *criurpc.CriuReq) error {
 		return newSystemError(err)
 	}
 
+	if cgroups.IsCgroup2UnifiedMode() {
+		return nil
+	}
+	// the stuff below is cgroupv1-specific
+
 	path := fmt.Sprintf("/proc/%d/cgroup", pid)
 	cgroupsPaths, err := cgroups.ParseCgroupFile(path)
 	if err != nil {
