@@ -106,16 +106,7 @@ func findCgroupMountpointAndRootFromReader(reader io.Reader, cgroupPath, subsyst
 
 func isSubsystemAvailable(subsystem string) bool {
 	if IsCgroup2UnifiedMode() {
-		controllers, err := GetAllSubsystems()
-		if err != nil {
-			return false
-		}
-		for _, c := range controllers {
-			if c == subsystem {
-				return true
-			}
-		}
-		return false
+		panic("don't call isSubsystemAvailable from cgroupv2 code")
 	}
 
 	cgroups, err := ParseCgroupFile("/proc/self/cgroup")
