@@ -54,13 +54,17 @@ func IsCgroup2UnifiedMode() bool {
 // https://www.kernel.org/doc/Documentation/cgroup-v1/cgroups.txt
 func FindCgroupMountpoint(cgroupPath, subsystem string) (string, error) {
 	if IsCgroup2UnifiedMode() {
-		return unifiedMountpoint, nil
+		return "", errUnified
 	}
 	mnt, _, err := FindCgroupMountpointAndRoot(cgroupPath, subsystem)
 	return mnt, err
 }
 
 func FindCgroupMountpointAndRoot(cgroupPath, subsystem string) (string, string, error) {
+	if IsCgroup2UnifiedMode() {
+		return "", "", errUnified
+	}
+
 	// We are not using mount.GetMounts() because it's super-inefficient,
 	// parsing it directly sped up x10 times because of not using Sscanf.
 	// It was one of two major performance drawbacks in container start.
@@ -73,10 +77,6 @@ func FindCgroupMountpointAndRoot(cgroupPath, subsystem string) (string, string, 
 		return "", "", err
 	}
 	defer f.Close()
-
-	if IsCgroup2UnifiedMode() {
-		subsystem = ""
-	}
 
 	return findCgroupMountpointAndRootFromReader(f, cgroupPath, subsystem)
 }
@@ -91,7 +91,7 @@ func findCgroupMountpointAndRootFromReader(reader io.Reader, cgroupPath, subsyst
 		}
 		if strings.HasPrefix(fields[4], cgroupPath) {
 			for _, opt := range strings.Split(fields[len(fields)-1], ",") {
-				if (subsystem == "" && fields[9] == "cgroup2") || opt == subsystem {
+				if opt == subsystem {
 					return fields[4], fields[3], nil
 				}
 			}
