@@ -418,7 +418,7 @@ func parseCgroupFromReader(r io.Reader) (map[string]string, error) {
 
 func getControllerPath(subsystem string, cgroups map[string]string) (string, error) {
 	if IsCgroup2UnifiedMode() {
-		return "/", nil
+		return "", errUnified
 	}
 
 	if p, ok := cgroups[subsystem]; ok {
