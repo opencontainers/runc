@@ -3,6 +3,7 @@
 package fs
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"testing"
@@ -12,7 +13,7 @@ import (
 
 func blkioStatEntryEquals(expected, actual []cgroups.BlkioStatEntry) error {
 	if len(expected) != len(actual) {
-		return fmt.Errorf("blkioStatEntries length do not match")
+		return errors.New("blkioStatEntries length do not match")
 	}
 	for i, expValue := range expected {
 		actValue := actual[i]

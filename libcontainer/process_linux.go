@@ -5,7 +5,6 @@ package libcontainer
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -131,7 +130,7 @@ func (p *setnsProcess) start() (err error) {
 			// This shouldn't happen.
 			panic("unexpected procHooks in setns")
 		default:
-			return newSystemError(fmt.Errorf("invalid JSON payload from child"))
+			return newSystemError(errors.New("invalid JSON payload from child"))
 		}
 	})
 
@@ -428,7 +427,7 @@ func (p *initProcess) start() (retErr error) {
 			}
 			sentResume = true
 		default:
-			return newSystemError(fmt.Errorf("invalid JSON payload from child"))
+			return newSystemError(errors.New("invalid JSON payload from child"))
 		}
 
 		return nil
@@ -438,7 +437,7 @@ func (p *initProcess) start() (retErr error) {
 		return newSystemErrorWithCause(ierr, "container init")
 	}
 	if p.config.Config.Namespaces.Contains(configs.NEWNS) && !sentResume {
-		return newSystemError(fmt.Errorf("could not synchronise after executing prestart hooks with container process"))
+		return newSystemError(errors.New("could not synchronise after executing prestart hooks with container process"))
 	}
 	if err := unix.Shutdown(int(p.messageSockPair.parent.Fd()), unix.SHUT_WR); err != nil {
 		return newSystemErrorWithCause(err, "shutting down init pipe")

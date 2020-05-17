@@ -271,10 +271,10 @@ func setupUser(config *initConfig) error {
 	// Rather than just erroring out later in setuid(2) and setgid(2), check
 	// that the user is mapped here.
 	if _, err := config.Config.HostUID(execUser.Uid); err != nil {
-		return fmt.Errorf("cannot set uid to unmapped user in user namespace")
+		return errors.New("cannot set uid to unmapped user in user namespace")
 	}
 	if _, err := config.Config.HostGID(execUser.Gid); err != nil {
-		return fmt.Errorf("cannot set gid to unmapped user in user namespace")
+		return errors.New("cannot set gid to unmapped user in user namespace")
 	}
 
 	if config.RootlessEUID {
@@ -283,7 +283,7 @@ func setupUser(config *initConfig) error {
 		// this check earlier, but if libcontainer.Process.User was typesafe
 		// this might work.
 		if len(addGroups) > 0 {
-			return fmt.Errorf("cannot set any additional groups in a rootless container")
+			return errors.New("cannot set any additional groups in a rootless container")
 		}
 	}
 

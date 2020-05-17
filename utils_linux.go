@@ -53,7 +53,7 @@ func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
 				cgroupManager = libcontainer.RootlessSystemdCgroups
 			}
 		} else {
-			return nil, fmt.Errorf("systemd cgroup flag passed, but systemd support for managing cgroups is not available")
+			return nil, errors.New("systemd cgroup flag passed, but systemd support for managing cgroups is not available")
 		}
 	}
 
@@ -179,7 +179,7 @@ func setupIO(process *libcontainer.Process, rootuid, rootgid int, createTTY, det
 			}
 			uc, ok := conn.(*net.UnixConn)
 			if !ok {
-				return nil, fmt.Errorf("casting to UnixConn failed")
+				return nil, errors.New("casting to UnixConn failed")
 			}
 			t.postStart = append(t.postStart, uc)
 			socket, err := uc.File()
@@ -369,26 +369,26 @@ func (r *runner) checkTerminal(config *specs.Process) error {
 	detach := r.detach || (r.action == CT_ACT_CREATE)
 	// Check command-line for sanity.
 	if detach && config.Terminal && r.consoleSocket == "" {
-		return fmt.Errorf("cannot allocate tty if runc will detach without setting console socket")
+		return errors.New("cannot allocate tty if runc will detach without setting console socket")
 	}
 	if (!detach || !config.Terminal) && r.consoleSocket != "" {
-		return fmt.Errorf("cannot use console socket if runc will not detach or allocate tty")
+		return errors.New("cannot use console socket if runc will not detach or allocate tty")
 	}
 	return nil
 }
 
 func validateProcessSpec(spec *specs.Process) error {
 	if spec.Cwd == "" {
-		return fmt.Errorf("Cwd property must not be empty")
+		return errors.New("Cwd property must not be empty")
 	}
 	if !filepath.IsAbs(spec.Cwd) {
-		return fmt.Errorf("Cwd must be an absolute path")
+		return errors.New("Cwd must be an absolute path")
 	}
 	if len(spec.Args) == 0 {
-		return fmt.Errorf("args must not be empty")
+		return errors.New("args must not be empty")
 	}
 	if spec.SelinuxLabel != "" && !selinux.GetEnabled() {
-		return fmt.Errorf("selinux label is specified in config, but selinux is disabled or not supported")
+		return errors.New("selinux label is specified in config, but selinux is disabled or not supported")
 	}
 	return nil
 }
