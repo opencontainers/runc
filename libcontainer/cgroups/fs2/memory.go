@@ -50,8 +50,11 @@ func setMemory(dirPath string, cgroup *configs.Cgroup) error {
 		// memory and memorySwap set to the same value -- disable swap
 		swapStr = "0"
 	}
-	if err := fscommon.WriteFile(dirPath, "memory.swap.max", swapStr); err != nil {
-		return err
+	// never write empty string to `memory.swap.max`, it means set to 0.
+	if swapStr != "" {
+		if err := fscommon.WriteFile(dirPath, "memory.swap.max", swapStr); err != nil {
+			return err
+		}
 	}
 
 	if val := numToStr(cgroup.Resources.Memory); val != "" {
