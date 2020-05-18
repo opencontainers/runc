@@ -136,11 +136,6 @@ function simple_cr() {
   # This should not be necessary: https://github.com/checkpoint-restore/criu/issues/575
   sed -i 's;"readonly": true;"readonly": false;' config.json
 
-  # For lazy migration we need to know when CRIU is ready to serve
-  # the memory pages via TCP.
-  lazy_pipe=`mktemp -u /tmp/lazy-pipe-XXXXXX`
-  mkfifo $lazy_pipe
-
   # TCP port for lazy migration
   port=27277
 
@@ -153,34 +148,31 @@ function simple_cr() {
   # checkpoint the running container
   mkdir image-dir
   mkdir work-dir
-  # Double fork taken from helpers.bats
-  # We need to start 'runc checkpoint --lazy-pages' in the background,
-  # so we double fork in the shell.
-  (runc --criu "$CRIU" checkpoint --lazy-pages --page-server 0.0.0.0:${port} --status-fd ${lazy_pipe} --work-path ./work-dir --image-path ./image-dir test_busybox & ) &
-  # Sleeping here. This is ugly, but not sure how else to handle it.
-  # The return code of the in the background running runc is needed, if
-  # there is some basic error. If the lazy migration is ready can
-  # be handled by $lazy_pipe. Which probably will always be ready
-  # after sleeping two seconds.
-  sleep 2
+
+  # For lazy migration we need to know when CRIU is ready to serve
+  # the memory pages via TCP.
+  exec 72<> <(:)
+  exec 70</proc/self/fd/72 71>/proc/self/fd/72
+  exec 72>&-
+
+  __runc --criu "$CRIU" checkpoint --lazy-pages --page-server 0.0.0.0:${port} --status-fd 71 --work-path ./work-dir --image-path ./image-dir test_busybox &
+  cpt_pid=$!
+
+  # wait for lazy page server to be ready
+  out=$(timeout 2 dd if=/proc/self/fd/70 bs=1 count=1 2>/dev/null | od)
+  exec 71>&-
+  out=$(echo $out) # rm newlines
+  # show errors if there are any before we fail
+  grep -B5 Error ./work-dir/dump.log || true
+  # expecting \0 which od prints as
+  [ "$out" = "0000000 000000 0000001" ]
+
   # Check if inventory.img was written
   [ -e image-dir/inventory.img ]
-  # If the inventory.img exists criu checkpointed some things, let's see
-  # if there were other errors in the log file.
-  run grep -B 5 Error ./work-dir/dump.log -q
-  [ "$status" -eq 1 ]
 
-  # This will block until CRIU is ready to serve memory pages
-  cat $lazy_pipe
-  [ "$status" -eq 1 ]
-
-  unlink $lazy_pipe
-
-  # Double fork taken from helpers.bats
-  # We need to start 'criu lazy-pages' in the background,
-  # so we double fork in the shell.
   # Start CRIU in lazy-daemon mode
-  $(${CRIU} lazy-pages --page-server --address 127.0.0.1 --port ${port} -D image-dir &) &
+  ${CRIU} lazy-pages --page-server --address 127.0.0.1 --port ${port} -D image-dir &
+  lp_pid=$!
 
   # Restore lazily from checkpoint.
   # The restored container needs a different name as the checkpointed
@@ -190,8 +182,6 @@ function simple_cr() {
   # continue to run if the migration failed at some point.
   __runc --criu "$CRIU" restore -d --work-path ./image-dir --image-path ./image-dir --lazy-pages test_busybox_restore <&60 >&51 2>&51
   [ $? -eq 0 ]
-  run grep -B 5 Error ./work-dir/dump.log -q
-  [ "$status" -eq 1 ]
 
   # busybox should be back up and running
   testcontainer test_busybox_restore running
@@ -199,6 +189,12 @@ function simple_cr() {
   runc exec --cwd /bin test_busybox_restore echo ok
   [ "$status" -eq 0 ]
   [[ ${output} == "ok" ]]
+
+  wait $cpt_pid
+  [ $? -eq 0 ]
+
+  wait $lp_pid
+  [ $? -eq 0 ]
 
   check_pipes
 }
