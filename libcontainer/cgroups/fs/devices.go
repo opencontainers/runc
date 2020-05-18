@@ -4,7 +4,7 @@ package fs
 
 import (
 	"bytes"
-	"fmt"
+	"errors"
 	"reflect"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
@@ -95,9 +95,9 @@ func (s *DevicesGroup) Set(path string, cgroup *configs.Cgroup) error {
 			return err
 		}
 		if !target.IsBlacklist() && !reflect.DeepEqual(currentAfter, target) {
-			return fmt.Errorf("resulting devices cgroup doesn't precisely match target")
+			return errors.New("resulting devices cgroup doesn't precisely match target")
 		} else if target.IsBlacklist() != currentAfter.IsBlacklist() {
-			return fmt.Errorf("resulting devices cgroup doesn't match target mode")
+			return errors.New("resulting devices cgroup doesn't match target mode")
 		}
 	}
 	return nil

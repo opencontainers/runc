@@ -209,7 +209,7 @@ func (c *linuxContainer) Set(config configs.Config) error {
 		return err
 	}
 	if status == Stopped {
-		return newGenericError(fmt.Errorf("container not running"), ContainerNotRunning)
+		return newGenericError(errors.New("container not running"), ContainerNotRunning)
 	}
 	if err := c.cgroupManager.Set(&config); err != nil {
 		// Set configs back
@@ -295,7 +295,7 @@ func readFromExecFifo(execFifo io.Reader) error {
 		return err
 	}
 	if len(data) <= 0 {
-		return fmt.Errorf("cannot start an already running container")
+		return errors.New("cannot start an already running container")
 	}
 	return nil
 }
@@ -398,7 +398,7 @@ func (c *linuxContainer) Signal(s os.Signal, all bool) error {
 		}
 		return nil
 	}
-	return newGenericError(fmt.Errorf("container not running"), ContainerNotRunning)
+	return newGenericError(errors.New("container not running"), ContainerNotRunning)
 }
 
 func (c *linuxContainer) createExecFifo() error {
@@ -700,7 +700,7 @@ func (c *linuxContainer) checkCriuFeatures(criuOpts *CriuOpts, rpcOpts *criurpc.
 	err := c.criuSwrk(nil, req, criuOpts, false, nil)
 	if err != nil {
 		logrus.Debugf("%s", err)
-		return fmt.Errorf("CRIU feature check failed")
+		return errors.New("CRIU feature check failed")
 	}
 
 	logrus.Debugf("Feature check says: %s", criuFeatures)
@@ -727,7 +727,7 @@ func (c *linuxContainer) checkCriuFeatures(criuOpts *CriuOpts, rpcOpts *criurpc.
 	}
 
 	if missingFeatures {
-		return fmt.Errorf("CRIU is missing features")
+		return errors.New("CRIU is missing features")
 	}
 
 	return nil
@@ -924,7 +924,7 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 	}
 
 	if criuOpts.ImagesDirectory == "" {
-		return fmt.Errorf("invalid directory to save checkpoint")
+		return errors.New("invalid directory to save checkpoint")
 	}
 
 	// Since a container can be C/R'ed multiple times,
@@ -1268,7 +1268,7 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 	}
 	defer workDir.Close()
 	if criuOpts.ImagesDirectory == "" {
-		return fmt.Errorf("invalid directory to restore checkpoint")
+		return errors.New("invalid directory to restore checkpoint")
 	}
 	imageDir, err := os.Open(criuOpts.ImagesDirectory)
 	if err != nil {
@@ -1573,10 +1573,10 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *
 			return err
 		}
 		if n == 0 {
-			return fmt.Errorf("unexpected EOF")
+			return errors.New("unexpected EOF")
 		}
 		if n == len(buf) {
-			return fmt.Errorf("buffer is too small")
+			return errors.New("buffer is too small")
 		}
 
 		resp := new(criurpc.CriuResp)

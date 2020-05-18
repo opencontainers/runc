@@ -3,6 +3,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -23,7 +24,7 @@ func killContainer(container libcontainer.Container) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("container init still running")
+	return errors.New("container init still running")
 }
 
 var deleteCommand = cli.Command{

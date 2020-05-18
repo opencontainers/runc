@@ -4,6 +4,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"sync"
@@ -40,7 +41,7 @@ information is displayed once every 5 seconds.`,
 		}
 		duration := context.Duration("interval")
 		if duration <= 0 {
-			return fmt.Errorf("duration interval must be greater than 0")
+			return errors.New("duration interval must be greater than 0")
 		}
 		status, err := container.Status()
 		if err != nil {

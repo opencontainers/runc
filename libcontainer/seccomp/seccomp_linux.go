@@ -4,6 +4,7 @@ package seccomp
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -34,12 +35,12 @@ const (
 // of the init until they join the namespace
 func InitSeccomp(config *configs.Seccomp) error {
 	if config == nil {
-		return fmt.Errorf("cannot initialize Seccomp - nil config passed")
+		return errors.New("cannot initialize Seccomp - nil config passed")
 	}
 
 	defaultAction, err := getAction(config.DefaultAction)
 	if err != nil {
-		return fmt.Errorf("error initializing seccomp - invalid default action")
+		return errors.New("error initializing seccomp - invalid default action")
 	}
 
 	filter, err := libseccomp.NewFilter(defaultAction)
@@ -67,7 +68,7 @@ func InitSeccomp(config *configs.Seccomp) error {
 	// Add a rule for each syscall
 	for _, call := range config.Syscalls {
 		if call == nil {
-			return fmt.Errorf("encountered nil syscall while initializing Seccomp")
+			return errors.New("encountered nil syscall while initializing Seccomp")
 		}
 
 		if err = matchCall(filter, call); err != nil {
@@ -116,7 +117,7 @@ func getAction(act configs.Action) (libseccomp.ScmpAction, error) {
 	case configs.Log:
 		return actLog, nil
 	default:
-		return libseccomp.ActInvalid, fmt.Errorf("invalid action, cannot use in rule")
+		return libseccomp.ActInvalid, errors.New("invalid action, cannot use in rule")
 	}
 }
 
@@ -138,7 +139,7 @@ func getOperator(op configs.Operator) (libseccomp.ScmpCompareOp, error) {
 	case configs.MaskEqualTo:
 		return libseccomp.CompareMaskedEqual, nil
 	default:
-		return libseccomp.CompareInvalid, fmt.Errorf("invalid operator, cannot use in rule")
+		return libseccomp.CompareInvalid, errors.New("invalid operator, cannot use in rule")
 	}
 }
 
@@ -147,7 +148,7 @@ func getCondition(arg *configs.Arg) (libseccomp.ScmpCondition, error) {
 	cond := libseccomp.ScmpCondition{}
 
 	if arg == nil {
-		return cond, fmt.Errorf("cannot convert nil to syscall condition")
+		return cond, errors.New("cannot convert nil to syscall condition")
 	}
 
 	op, err := getOperator(arg.Op)
@@ -161,11 +162,11 @@ func getCondition(arg *configs.Arg) (libseccomp.ScmpCondition, error) {
 // Add a rule to match a single syscall
 func matchCall(filter *libseccomp.ScmpFilter, call *configs.Syscall) error {
 	if call == nil || filter == nil {
-		return fmt.Errorf("cannot use nil as syscall to block")
+		return errors.New("cannot use nil as syscall to block")
 	}
 
 	if len(call.Name) == 0 {
-		return fmt.Errorf("empty string is not a valid syscall")
+		return errors.New("empty string is not a valid syscall")
 	}
 
 	// If we can't resolve the syscall, assume it's not supported on this kernel

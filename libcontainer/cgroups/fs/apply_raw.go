@@ -35,7 +35,7 @@ var (
 	HugePageSizes, _ = cgroups.GetHugePageSize()
 )
 
-var errSubsystemDoesNotExist = fmt.Errorf("cgroup: subsystem does not exist")
+var errSubsystemDoesNotExist = errors.New("cgroup: subsystem does not exist")
 
 type subsystemSet []subsystem
 
@@ -308,7 +308,7 @@ func getCgroupData(c *configs.Cgroup, pid int) (*cgroupData, error) {
 	}
 
 	if (c.Name != "" || c.Parent != "") && c.Path != "" {
-		return nil, fmt.Errorf("cgroup: either Path or Name and Parent should be used")
+		return nil, errors.New("cgroup: either Path or Name and Parent should be used")
 	}
 
 	// XXX: Do not remove this code. Path safety is important! -- cyphar
