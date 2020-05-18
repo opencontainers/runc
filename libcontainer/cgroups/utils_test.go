@@ -373,35 +373,6 @@ func TestIgnoreCgroup2Mount(t *testing.T) {
 	}
 }
 
-func TestGetClosestMountpointAncestor(t *testing.T) {
-	fakeMountInfo := ` 18 24 0:17 / /sys rw,nosuid,nodev,noexec,relatime - sysfs sysfs rw
-100 99 1:31 / /foo/bar rw,relatime - fake fake rw,fake
-100 99 1:31 / /foo/bar/baz2 rw,relatime - fake fake rw,fake
-100 99 1:31 / /foo/bar/baz rw,relatime - fake fake rw,fake
-100 99 1:31 / /foo/bar/bazza rw,relatime - fake fake rw,fake
-100 99 1:31 / /foo/bar/baz3 rw,relatime - fake fake rw,fake
-100 99 1:31 / /foo rw,relatime - fake fake rw,fake
-100 99 1:31 / /unrelated rw,relatime - fake fake rw,fake
-100 99 1:31 / / rw,relatime - fake fake rw,fake
-`
-	testCases := []struct {
-		input  string
-		output string
-	}{
-		{input: "/foo/bar/baz/a/b/c", output: "/foo/bar/baz"},
-		{input: "/foo/bar/baz", output: "/foo/bar/baz"},
-		{input: "/foo/bar/bazza", output: "/foo/bar/bazza"},
-		{input: "/a/b/c/d", output: "/"},
-	}
-
-	for _, c := range testCases {
-		mountpoint := GetClosestMountpointAncestor(c.input, fakeMountInfo)
-		if mountpoint != c.output {
-			t.Errorf("expected %s, got %s", c.output, mountpoint)
-		}
-	}
-}
-
 func TestFindCgroupMountpointAndRoot(t *testing.T) {
 	fakeMountInfo := `
 35 27 0:29 / /foo rw,nosuid,nodev,noexec,relatime shared:18 - cgroup cgroup rw,devices

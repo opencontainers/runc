@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/moby/sys/mountinfo"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -52,17 +53,39 @@ func (s *CpusetGroup) GetStats(path string, stats *cgroups.Stats) error {
 	return nil
 }
 
+// Get the source mount point of directory passed in as argument.
+func getMount(dir string) (string, error) {
+	mi, err := mountinfo.GetMounts(mountinfo.ParentsFilter(dir))
+	if err != nil {
+		return "", err
+	}
+	if len(mi) < 1 {
+		return "", fmt.Errorf("Can't find mount point of %s", dir)
+	}
+
+	// find the longest mount point
+	var idx, maxlen int
+	for i := range mi {
+		if len(mi[i].Mountpoint) > maxlen {
+			maxlen = len(mi[i].Mountpoint)
+			idx = i
+		}
+	}
+
+	return mi[idx].Mountpoint, nil
+}
+
 func (s *CpusetGroup) ApplyDir(dir string, cgroup *configs.Cgroup, pid int) error {
 	// This might happen if we have no cpuset cgroup mounted.
 	// Just do nothing and don't fail.
 	if dir == "" {
 		return nil
 	}
-	mountInfo, err := ioutil.ReadFile("/proc/self/mountinfo")
+	root, err := getMount(dir)
 	if err != nil {
 		return err
 	}
-	root := filepath.Dir(cgroups.GetClosestMountpointAncestor(dir, string(mountInfo)))
+	root = filepath.Dir(root)
 	// 'ensureParent' start with parent because we don't want to
 	// explicitly inherit from parent, it could conflict with
 	// 'cpuset.cpu_exclusive'.
