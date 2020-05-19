@@ -156,11 +156,35 @@ func (m *manager) Freeze(state configs.FreezerState) error {
 	return nil
 }
 
-func (m *manager) Destroy() error {
-	if err := os.Remove(m.dirPath); err != nil && !os.IsNotExist(err) {
+// removeCgroupPath aims to remove cgroup path recursively
+// Because there may be subcgroups in it.
+func removeCgroupPath(path string) error {
+	infos, err := ioutil.ReadDir(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			err = nil
+		}
 		return err
 	}
-	return nil
+	for _, info := range infos {
+		if info.IsDir() {
+			// We should remove subcgroups dir first
+			if err = removeCgroupPath(filepath.Join(path, info.Name())); err != nil {
+				break
+			}
+		}
+	}
+	if err == nil {
+		err = os.Remove(path)
+		if os.IsNotExist(err) {
+			err = nil
+		}
+	}
+	return err
+}
+
+func (m *manager) Destroy() error {
+	return removeCgroupPath(m.dirPath)
 }
 
 func (m *manager) Path(_ string) string {
