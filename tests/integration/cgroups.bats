@@ -136,3 +136,49 @@ EOF
     [ "$status" -eq 0 ]
     [[ ${lines[0]} == *"cgroups_exec"* ]]
 }
+
+@test "runc exec (cgroup v2 + init process in non-root cgroup) succeeds" {
+    requires root cgroups_v2
+
+    set_cgroups_path "$BUSYBOX_BUNDLE"
+    set_cgroup_mount_writable "$BUSYBOX_BUNDLE"
+
+    runc run -d --console-socket $CONSOLE_SOCKET test_cgroups_group
+    [ "$status" -eq 0 ]
+
+    runc exec test_cgroups_group cat /sys/fs/cgroup/cgroup.controllers
+    [ "$status" -eq 0 ]
+    [[ ${lines[0]} == *"memory"* ]]
+
+    runc exec test_cgroups_group cat /proc/self/cgroup
+    [ "$status" -eq 0 ]
+    [[ ${lines[0]} == "0::/" ]]
+
+    runc exec test_cgroups_group mkdir /sys/fs/cgroup/foo
+    [ "$status" -eq 0 ]
+
+    runc exec test_cgroups_group sh -c "echo 1 > /sys/fs/cgroup/foo/cgroup.procs"
+    [ "$status" -eq 0 ]
+
+# the init process is now in "/foo", but an exec process can still join "/"
+# because we haven't enabled any domain controller.
+    runc exec test_cgroups_group cat /proc/self/cgroup
+    [ "$status" -eq 0 ]
+    [[ ${lines[0]} == "0::/" ]]
+
+# turn on a domain controller (memory)
+    runc exec test_cgroups_group sh -euxc 'echo $$ > /sys/fs/cgroup/foo/cgroup.procs; echo +memory > /sys/fs/cgroup/cgroup.subtree_control'
+    [ "$status" -eq 0 ]
+
+# an exec process can no longer join "/" after turning on a domain controller.
+# falls back to "/foo".
+    runc exec test_cgroups_group cat /proc/self/cgroup
+    [ "$status" -eq 0 ]
+    [[ ${lines[0]} == "0::/foo" ]]
+
+# teardown: remove "/foo"
+    runc exec test_cgroups_group sh -uxc 'echo -memory > /sys/fs/cgroup/cgroup.subtree_control; for f in $(cat /sys/fs/cgroup/foo/cgroup.procs); do echo $f > /sys/fs/cgroup/cgroup.procs; done; rmdir /sys/fs/cgroup/foo'
+    runc exec test_cgroups_group test ! -d /sys/fs/cgroup/foo
+    [ "$status" -eq 0 ]
+#
+}
