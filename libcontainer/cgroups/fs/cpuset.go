@@ -4,7 +4,6 @@ package fs
 
 import (
 	"bytes"
-	"errors"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -14,6 +13,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	libcontainerUtils "github.com/opencontainers/runc/libcontainer/utils"
+	"github.com/pkg/errors"
 )
 
 type CpusetGroup struct {
@@ -60,7 +60,7 @@ func getMount(dir string) (string, error) {
 		return "", err
 	}
 	if len(mi) < 1 {
-		return "", fmt.Errorf("Can't find mount point of %s", dir)
+		return "", errors.Errorf("Can't find mount point of %s", dir)
 	}
 
 	// find the longest mount point
