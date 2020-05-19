@@ -141,9 +141,7 @@ func getCgroupMountsHelper(ss map[string]bool, mi io.Reader, all bool) ([]Mount,
 				continue
 			}
 			ss[opt] = true
-			if strings.HasPrefix(opt, CgroupNamePrefix) {
-				opt = opt[len(CgroupNamePrefix):]
-			}
+			opt = strings.TrimPrefix(opt, CgroupNamePrefix)
 			m.Subsystems = append(m.Subsystems, opt)
 			numFound++
 		}
