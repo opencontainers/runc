@@ -63,6 +63,7 @@ EOF
     case $CGROUP_UNIFIED in
     no)
         MEM_LIMIT="memory.limit_in_bytes"
+        SD_MEM_LIMIT="MemoryLimit"
         MEM_RESERVE="memory.soft_limit_in_bytes"
         MEM_SWAP="memory.memsw.limit_in_bytes"
         SYSTEM_MEM=$(cat "${CGROUP_MEMORY_BASE_PATH}/${MEM_LIMIT}")
@@ -70,6 +71,7 @@ EOF
         ;;
     yes)
         MEM_LIMIT="memory.max"
+        SD_MEM_LIMIT="MemoryMax"
         MEM_RESERVE="memory.low"
         MEM_SWAP="memory.swap.max"
         SYSTEM_MEM="max"
@@ -101,24 +103,12 @@ EOF
     runc update test_update --memory 67108864
     [ "$status" -eq 0 ]
     check_cgroup_value $MEM_LIMIT 67108864
-    if [[ -n "${RUNC_USE_SYSTEMD}" ]] ; then
-        if [ "$CGROUP_UNIFIED" != "yes" ]; then
-            check_systemd_value "runc-cgroups-integration-test.scope" "MemoryLimit=" "MemoryLimit=67108864"
-        else
-            check_systemd_value "runc-cgroups-integration-test.scope" "MemoryMax=" "MemoryMax=67108864"
-        fi
-    fi
+    check_systemd_value $SD_MEM_LIMIT 67108864
 
     runc update test_update --memory 50M
     [ "$status" -eq 0 ]
     check_cgroup_value $MEM_LIMIT 52428800
-    if [[ -n "${RUNC_USE_SYSTEMD}" ]] ; then
-        if [ "$CGROUP_UNIFIED" != "yes" ]; then
-            check_systemd_value "runc-cgroups-integration-test.scope" "MemoryLimit=" "MemoryLimit=52428800"
-        else
-            check_systemd_value "runc-cgroups-integration-test.scope" "MemoryMax=" "MemoryMax=52428800"
-        fi
-    fi
+    check_systemd_value $SD_MEM_LIMIT 52428800
 
     # update memory soft limit
     runc update test_update --memory-reservation 33554432
@@ -154,9 +144,7 @@ EOF
     runc update test_update --pids-limit 10
     [ "$status" -eq 0 ]
     check_cgroup_value "pids.max" 10
-    if [[ -n "${RUNC_USE_SYSTEMD}" ]] ; then
-        check_systemd_value "runc-cgroups-integration-test.scope" "TasksMax=" "TasksMax=10"
-    fi
+    check_systemd_value "TasksMax" 10
 
     # Revert to the test initial value via json on stdin
     runc update  -r - test_update <<EOF
