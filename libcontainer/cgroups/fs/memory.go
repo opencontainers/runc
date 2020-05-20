@@ -74,9 +74,9 @@ func (s *MemoryGroup) Apply(d *cgroupData) (err error) {
 }
 
 func setMemoryAndSwap(path string, cgroup *configs.Cgroup) error {
-	// If the memory update is set to -1 we should also
-	// set swap to -1, it means unlimited memory.
-	if cgroup.Resources.Memory == -1 {
+	// If the memory update is set to -1 and the swap is not explicitly
+	// set, we should also set swap to -1, it means unlimited memory.
+	if cgroup.Resources.Memory == -1 && cgroup.Resources.MemorySwap == 0 {
 		// Only set swap if it's enabled in kernel
 		if cgroups.PathExists(filepath.Join(path, cgroupMemorySwapLimit)) {
 			cgroup.Resources.MemorySwap = -1
