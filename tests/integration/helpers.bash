@@ -110,11 +110,12 @@ function init_cgroup_paths() {
 	test -n "$CGROUP_UNIFIED" && return
 
 	if [ -n "${RUNC_USE_SYSTEMD}" ] ; then
+		SD_UNIT_NAME="runc-cgroups-integration-test.scope"
 		if [ $(id -u) = "0" ]; then
-			REL_CGROUPS_PATH="/machine.slice/runc-cgroups-integration-test.scope"
+			REL_CGROUPS_PATH="/machine.slice/$SD_UNIT_NAME"
 			OCI_CGROUPS_PATH="machine.slice:runc-cgroups:integration-test"
 		else
-			REL_CGROUPS_PATH="/user.slice/user-$(id -u).slice/user@$(id -u).service/machine.slice/runc-cgroups-integration-test.scope"
+			REL_CGROUPS_PATH="/user.slice/user-$(id -u).slice/user@$(id -u).service/machine.slice/$SD_UNIT_NAME"
 			# OCI path doesn't contain "/user.slice/user-$(id -u).slice/user@$(id -u).service/" prefix
 			OCI_CGROUPS_PATH="machine.slice:runc-cgroups:integration-test"
 		fi
@@ -178,16 +179,15 @@ function check_cgroup_value() {
 
 # Helper to check a value in systemd.
 function check_systemd_value() {
-	unitname=$1
-	source=$2
-	expected=$3
+	[ -z "${RUNC_USE_SYSTEMD}" ] && return
+	source=$1
+	[ "$source" = "unsupported" ] && return
+	expected="$2"
+	user=""
+	[ $(id -u) != "0" ] && user="--user"
 
-	if [ $(id -u) = "0" ]; then
-		current=$(systemctl show $unitname | grep $source)
-	else
-		current=$(systemctl --user show $unitname | grep $source)
-	fi
-	echo "current" $current "!?" "$expected"
+	current=$(systemctl show $user --property $source $SD_UNIT_NAME | awk -F= '{print $2}')
+	echo "systemd $source: current $current !? $expected"
 	[ "$current" = "$expected" ]
 }
 
