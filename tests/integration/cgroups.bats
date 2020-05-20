@@ -110,6 +110,17 @@ EOF
 
     runc run -d --console-socket $CONSOLE_SOCKET test_cgroups_permissions
     [ "$status" -eq 0 ]
+    if [ "$CGROUP_UNIFIED" != "no" ]; then
+        if [ -n "${RUNC_USE_SYSTEMD}" ] ; then
+            if [ $(id -u) = "0" ]; then
+                check_cgroup_value "cgroup.controllers" "$(cat /sys/fs/cgroup/machine.slice/cgroup.controllers)"
+            else
+                check_cgroup_value "cgroup.controllers" "$(cat /sys/fs/cgroup/user.slice/user-$(id -u).slice/cgroup.controllers)"
+            fi
+        else
+            check_cgroup_value "cgroup.controllers" "$(cat /sys/fs/cgroup/cgroup.controllers)"
+        fi
+    fi
 }
 
 @test "runc exec (limits + cgrouppath + permission on the cgroup dir) succeeds" {
