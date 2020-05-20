@@ -250,7 +250,10 @@ EOF
     # check that initial values were properly set
     check_cgroup_value "cpu.cfs_period_us" 1000000
     check_cgroup_value "cpu.cfs_quota_us" 500000
+    check_systemd_value "CPUQuotaPerSecUSec" 500ms
+
     check_cgroup_value "cpu.shares" 100
+    check_systemd_value "CPUShares" 100
 
     # systemd driver does not allow to update quota and period separately
     if [ -z "$RUNC_USE_SYSTEMD" ]; then
@@ -269,12 +272,14 @@ EOF
         [ "$status" -eq 0 ]
         check_cgroup_value "cpu.cfs_period_us" 900000
         check_cgroup_value "cpu.cfs_quota_us" 600000
+        check_systemd_value "CPUQuotaPerSecUSec" 670ms
     fi
 
     # update cpu-shares
     runc update test_update --cpu-share 200
     [ "$status" -eq 0 ]
     check_cgroup_value "cpu.shares" 200
+    check_systemd_value "CPUShares" 200
 
     # Revert to the test initial value via json on stding
     runc update  -r - test_update <<EOF
@@ -289,7 +294,10 @@ EOF
     [ "$status" -eq 0 ]
     check_cgroup_value "cpu.cfs_period_us" 1000000
     check_cgroup_value "cpu.cfs_quota_us" 500000
+    check_systemd_value "CPUQuotaPerSecUSec" 500ms
+
     check_cgroup_value "cpu.shares" 100
+    check_systemd_value "CPUShares" 100
 
     # redo all the changes at once
     runc update test_update \
@@ -297,7 +305,10 @@ EOF
     [ "$status" -eq 0 ]
     check_cgroup_value "cpu.cfs_period_us" 900000
     check_cgroup_value "cpu.cfs_quota_us" 600000
+    check_systemd_value "CPUQuotaPerSecUSec" 670ms
+
     check_cgroup_value "cpu.shares" 200
+    check_systemd_value "CPUShares" 200
 
     # reset to initial test value via json file
     cat << EOF > $BATS_TMPDIR/runc-cgroups-integration-test.json
@@ -314,7 +325,10 @@ EOF
     [ "$status" -eq 0 ]
     check_cgroup_value "cpu.cfs_period_us" 1000000
     check_cgroup_value "cpu.cfs_quota_us" 500000
+    check_systemd_value "CPUQuotaPerSecUSec" 500ms
+
     check_cgroup_value "cpu.shares" 100
+    check_systemd_value "CPUShares" 100
 }
 
 @test "update rt period and runtime" {
