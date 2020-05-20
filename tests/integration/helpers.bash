@@ -181,6 +181,7 @@ function check_cgroup_value() {
 function check_systemd_value() {
 	[ -z "${RUNC_USE_SYSTEMD}" ] && return
 	source=$1
+	[ "$source" = "unsupported" ] && return
 	expected="$2"
 	user=""
 	[ $(id -u) != "0" ] && user="--user"

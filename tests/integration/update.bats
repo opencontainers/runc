@@ -65,7 +65,9 @@ EOF
         MEM_LIMIT="memory.limit_in_bytes"
         SD_MEM_LIMIT="MemoryLimit"
         MEM_RESERVE="memory.soft_limit_in_bytes"
+        SD_MEM_RESERVE="unsupported"
         MEM_SWAP="memory.memsw.limit_in_bytes"
+        SD_MEM_SWAP="unsupported"
         SYSTEM_MEM=$(cat "${CGROUP_MEMORY_BASE_PATH}/${MEM_LIMIT}")
         SYSTEM_MEM_SWAP=$(cat "${CGROUP_MEMORY_BASE_PATH}/$MEM_SWAP")
         ;;
@@ -73,13 +75,16 @@ EOF
         MEM_LIMIT="memory.max"
         SD_MEM_LIMIT="MemoryMax"
         MEM_RESERVE="memory.low"
+        SD_MEM_RESERVE="MemoryLow"
         MEM_SWAP="memory.swap.max"
+        SD_MEM_SWAP="MemorySwapMax"
         SYSTEM_MEM="max"
         SYSTEM_MEM_SWAP="max"
         # checking swap is currently disabled for v2
         #CGROUP_MEMORY=$CGROUP_PATH
         ;;
     esac
+    SD_UNLIMITED="infinity"
 
     # check that initial values were properly set
     check_cgroup_value "cpuset.cpus" 0
@@ -88,8 +93,13 @@ EOF
         skip "memory controller not available"
     fi
     check_cgroup_value $MEM_LIMIT 33554432
+    check_systemd_value $SD_MEM_LIMIT 33554432
+
     check_cgroup_value $MEM_RESERVE 25165824
+    check_systemd_value $SD_MEM_RESERVE 25165824
+
     check_cgroup_value "pids.max" 20
+    check_systemd_value "TasksMax" 20
 
     # update cpuset if supported (i.e. we're running on a multicore cpu)
     cpu_count=$(grep -c '^processor' /proc/cpuinfo)
@@ -114,6 +124,7 @@ EOF
     runc update test_update --memory-reservation 33554432
     [ "$status" -eq 0 ]
     check_cgroup_value "$MEM_RESERVE" 33554432
+    check_systemd_value "$SD_MEM_RESERVE" 33554432
 
     # Run swap memory tests if swap is available
     if [ -f "$CGROUP_MEMORY/$MEM_SWAP" ]; then
@@ -121,11 +132,13 @@ EOF
         runc update test_update --memory-swap -1
         [ "$status" -eq 0 ]
         check_cgroup_value "$MEM_SWAP" $SYSTEM_MEM_SWAP
+        check_systemd_value "$SD_MEM_SWAP" $SD_UNLIMITED
 
         # update memory swap
         runc update test_update --memory-swap 96468992
         [ "$status" -eq 0 ]
         check_cgroup_value "$MEM_SWAP" 96468992
+        check_systemd_value "$SD_MEM_SWAP" 96468992
     fi
 
     # try to remove memory limit
@@ -134,10 +147,12 @@ EOF
 
     # check memory limit is gone
     check_cgroup_value $MEM_LIMIT $SYSTEM_MEM
+    check_systemd_value $SD_MEM_LIMIT $SD_UNLIMITED
 
     # check swap memory limited is gone
     if [ -f "$CGROUP_MEMORY/$MEM_SWAP" ]; then
         check_cgroup_value $MEM_SWAP $SYSTEM_MEM
+        check_systemd_value "$SD_MEM_SWAP" $SD_UNLIMITED
     fi
 
     # update pids limit
@@ -166,9 +181,15 @@ EOF
 EOF
     [ "$status" -eq 0 ]
     check_cgroup_value "cpuset.cpus" 0
+
     check_cgroup_value $MEM_LIMIT 33554432
+    check_systemd_value $SD_MEM_LIMIT 33554432
+
     check_cgroup_value $MEM_RESERVE 25165824
+    check_systemd_value $SD_MEM_RESERVE 25165824
+
     check_cgroup_value "pids.max" 20
+    check_systemd_value "TasksMax" 20
 
     # redo all the changes at once
     runc update test_update \
@@ -177,8 +198,13 @@ EOF
         --pids-limit 10
     [ "$status" -eq 0 ]
     check_cgroup_value $MEM_LIMIT 67108864
+    check_systemd_value $SD_MEM_LIMIT 67108864
+
     check_cgroup_value $MEM_RESERVE 33554432
+    check_systemd_value $SD_MEM_RESERVE 33554432
+
     check_cgroup_value "pids.max" 10
+    check_systemd_value "TasksMax" 10
 
     # reset to initial test value via json file
     cat << EOF > $BATS_TMPDIR/runc-cgroups-integration-test.json
@@ -202,9 +228,15 @@ EOF
     runc update  -r $BATS_TMPDIR/runc-cgroups-integration-test.json test_update
     [ "$status" -eq 0 ]
     check_cgroup_value "cpuset.cpus" 0
+
     check_cgroup_value $MEM_LIMIT 33554432
+    check_systemd_value $SD_MEM_LIMIT 33554432
+
     check_cgroup_value $MEM_RESERVE 25165824
+    check_systemd_value $SD_MEM_RESERVE 25165824
+
     check_cgroup_value "pids.max" 20
+    check_systemd_value "TasksMax" 20
 }
 
 @test "update cgroup v1 cpu limits" {
