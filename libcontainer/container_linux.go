@@ -26,7 +26,8 @@ import (
 	"github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/opencontainers/runtime-spec/specs-go"
 
-	criurpc "github.com/checkpoint-restore/go-criu/rpc"
+	"github.com/checkpoint-restore/go-criu/v4"
+	criurpc "github.com/checkpoint-restore/go-criu/v4/rpc"
 	"github.com/golang/protobuf/proto"
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink/nl"
@@ -674,16 +675,6 @@ func (c *linuxContainer) checkCriuFeatures(criuOpts *CriuOpts, rpcOpts *criurpc.
 	var t criurpc.CriuReqType
 	t = criurpc.CriuReqType_FEATURE_CHECK
 
-	// criu 1.8 => 10800
-	if err := c.checkCriuVersion(10800); err != nil {
-		// Feature checking was introduced with CRIU 1.8.
-		// Ignore the feature check if an older CRIU version is used
-		// and just act as before.
-		// As all automated PR testing is done using CRIU 1.7 this
-		// code will not be tested by automated PR testing.
-		return nil
-	}
-
 	// make sure the features we are looking for are really not from
 	// some previous check
 	criuFeatures = nil
@@ -733,50 +724,6 @@ func (c *linuxContainer) checkCriuFeatures(criuOpts *CriuOpts, rpcOpts *criurpc.
 	return nil
 }
 
-func parseCriuVersion(path string) (int, error) {
-	var x, y, z int
-
-	out, err := exec.Command(path, "-V").Output()
-	if err != nil {
-		return 0, fmt.Errorf("Unable to execute CRIU command: %s", path)
-	}
-
-	x = 0
-	y = 0
-	z = 0
-	if ep := strings.Index(string(out), "-"); ep >= 0 {
-		// criu Git version format
-		var version string
-		if sp := strings.Index(string(out), "GitID"); sp > 0 {
-			version = string(out)[sp:ep]
-		} else {
-			return 0, fmt.Errorf("Unable to parse the CRIU version: %s", path)
-		}
-
-		n, err := fmt.Sscanf(version, "GitID: v%d.%d.%d", &x, &y, &z) // 1.5.2
-		if err != nil {
-			n, err = fmt.Sscanf(version, "GitID: v%d.%d", &x, &y) // 1.6
-			y++
-		} else {
-			z++
-		}
-		if n < 2 || err != nil {
-			return 0, fmt.Errorf("Unable to parse the CRIU version: %s %d %s", version, n, err)
-		}
-	} else {
-		// criu release version format
-		n, err := fmt.Sscanf(string(out), "Version: %d.%d.%d\n", &x, &y, &z) // 1.5.2
-		if err != nil {
-			n, err = fmt.Sscanf(string(out), "Version: %d.%d\n", &x, &y) // 1.6
-		}
-		if n < 2 || err != nil {
-			return 0, fmt.Errorf("Unable to parse the CRIU version: %s %d %s", out, n, err)
-		}
-	}
-
-	return x*10000 + y*100 + z, nil
-}
-
 func compareCriuVersion(criuVersion int, minVersion int) error {
 	// simple function to perform the actual version compare
 	if criuVersion < minVersion {
@@ -785,9 +732,6 @@ func compareCriuVersion(criuVersion int, minVersion int) error {
 
 	return nil
 }
-
-// This is used to store the result of criu version RPC
-var criuVersionRPC *criurpc.CriuVersion
 
 // checkCriuVersion checks Criu version greater than or equal to minVersion
 func (c *linuxContainer) checkCriuVersion(minVersion int) error {
@@ -798,48 +742,11 @@ func (c *linuxContainer) checkCriuVersion(minVersion int) error {
 		return compareCriuVersion(c.criuVersion, minVersion)
 	}
 
-	// First try if this version of CRIU support the version RPC.
-	// The CRIU version RPC was introduced with CRIU 3.0.
-
-	// First, reset the variable for the RPC answer to nil
-	criuVersionRPC = nil
-
-	var t criurpc.CriuReqType
-	t = criurpc.CriuReqType_VERSION
-	req := &criurpc.CriuReq{
-		Type: &t,
-	}
-
-	err := c.criuSwrk(nil, req, nil, false, nil)
+	criu := criu.MakeCriu()
+	var err error
+	c.criuVersion, err = criu.GetCriuVersion()
 	if err != nil {
 		return fmt.Errorf("CRIU version check failed: %s", err)
-	}
-
-	if criuVersionRPC != nil {
-		logrus.Debugf("CRIU version: %s", criuVersionRPC)
-		// major and minor are always set
-		c.criuVersion = int(*criuVersionRPC.Major) * 10000
-		c.criuVersion += int(*criuVersionRPC.Minor) * 100
-		if criuVersionRPC.Sublevel != nil {
-			c.criuVersion += int(*criuVersionRPC.Sublevel)
-		}
-		if criuVersionRPC.Gitid != nil {
-			// runc's convention is that a CRIU git release is
-			// always the same as increasing the minor by 1
-			c.criuVersion -= (c.criuVersion % 100)
-			c.criuVersion += 100
-		}
-		return compareCriuVersion(c.criuVersion, minVersion)
-	}
-
-	// This is CRIU without the version RPC and therefore
-	// older than 3.0. Parsing the output is required.
-
-	// This can be remove once runc does not work with criu older than 3.0
-
-	c.criuVersion, err = parseCriuVersion(c.criuPath)
-	if err != nil {
-		return err
 	}
 
 	return compareCriuVersion(c.criuVersion, minVersion)
@@ -918,8 +825,8 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 	//               support for doing unprivileged dumps, but the setup of
 	//               rootless containers might make this complicated.
 
-	// criu 1.5.2 => 10502
-	if err := c.checkCriuVersion(10502); err != nil {
+	// We are relying on the CRIU version RPC which was introduced with CRIU 3.0.0
+	if err := c.checkCriuVersion(30000); err != nil {
 		return err
 	}
 
@@ -1027,10 +934,6 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 
 	// append optional manage cgroups mode
 	if criuOpts.ManageCgroupsMode != 0 {
-		// criu 1.7 => 10700
-		if err := c.checkCriuVersion(10700); err != nil {
-			return err
-		}
 		mode := criurpc.CriuCgMode(criuOpts.ManageCgroupsMode)
 		rpcOpts.ManageCgroupsMode = &mode
 	}
@@ -1250,8 +1153,8 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 	// TODO(avagin): Figure out how to make this work nicely. CRIU doesn't have
 	//               support for unprivileged restore at the moment.
 
-	// criu 1.5.2 => 10502
-	if err := c.checkCriuVersion(10502); err != nil {
+	// We are relying on the CRIU version RPC which was introduced with CRIU 3.0.0
+	if err := c.checkCriuVersion(30000); err != nil {
 		return err
 	}
 	if criuOpts.WorkDirectory == "" {
@@ -1394,10 +1297,6 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 
 	// append optional manage cgroups mode
 	if criuOpts.ManageCgroupsMode != 0 {
-		// criu 1.7 => 10700
-		if err := c.checkCriuVersion(10700); err != nil {
-			return err
-		}
 		mode := criurpc.CriuCgMode(criuOpts.ManageCgroupsMode)
 		req.Opts.ManageCgroupsMode = &mode
 	}
@@ -1586,20 +1485,11 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *
 		}
 		if !resp.GetSuccess() {
 			typeString := req.GetType().String()
-			if typeString == "VERSION" {
-				// If the VERSION RPC fails this probably means that the CRIU
-				// version is too old for this RPC. Just return 'nil'.
-				return nil
-			}
 			return fmt.Errorf("criu failed: type %s errno %d\nlog file: %s", typeString, resp.GetCrErrno(), logPath)
 		}
 
 		t := resp.GetType()
 		switch {
-		case t == criurpc.CriuReqType_VERSION:
-			logrus.Debugf("CRIU version: %s", resp)
-			criuVersionRPC = resp.GetVersion()
-			break
 		case t == criurpc.CriuReqType_FEATURE_CHECK:
 			logrus.Debugf("Feature check says: %s", resp)
 			criuFeatures = resp.GetFeatures()
