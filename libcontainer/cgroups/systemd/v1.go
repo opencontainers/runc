@@ -4,6 +4,7 @@ package systemd
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"math"
 	"os"
@@ -89,7 +90,18 @@ func genV1ResourcesProperties(c *configs.Cgroup) ([]systemdDbus.Property, error)
 	}
 
 	// cpu.cfs_quota_us and cpu.cfs_period_us are controlled by systemd.
-	if c.Resources.CpuQuota != 0 && c.Resources.CpuPeriod != 0 {
+	if c.Resources.CpuQuota != 0 || c.Resources.CpuPeriod != 0 {
+		if c.Resources.CpuQuota < -1 {
+			return nil, fmt.Errorf("Invalid CPU quota value: %d", c.Resources.CpuQuota)
+		}
+		if c.Resources.CpuQuota != -1 {
+			if c.Resources.CpuQuota == 0 || c.Resources.CpuPeriod == 0 {
+				return nil, errors.New("CPU quota and period should both be set")
+			}
+			if c.Resources.CpuPeriod < 0 {
+				return nil, fmt.Errorf("Invalid CPU period value: %d", c.Resources.CpuPeriod)
+			}
+		}
 		// corresponds to USEC_INFINITY in systemd
 		// if USEC_INFINITY is provided, CPUQuota is left unbound by systemd
 		// always setting a property value ensures we can apply a quota and remove it later
