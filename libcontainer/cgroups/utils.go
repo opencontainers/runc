@@ -612,6 +612,12 @@ func ConvertCPUQuotaCPUPeriodToCgroupV2Value(quota int64, period uint64) string 
 // for use by cgroup v2 drivers. A conversion is needed since Resources.MemorySwap
 // is defined as memory+swap combined, while in cgroup v2 swap is a separate value.
 func ConvertMemorySwapToCgroupV2Value(memorySwap, memory int64) (int64, error) {
+	// for compatibility with cgroup1 controller, set swap to unlimited in
+	// case the memory is set to unlimited, and swap is not explicitly set,
+	// treating the request as "set both memory and swap to unlimited".
+	if memory == -1 && memorySwap == 0 {
+		return -1, nil
+	}
 	if memorySwap == -1 || memorySwap == 0 {
 		// -1 is "max", 0 is "unset", so treat as is
 		return memorySwap, nil
