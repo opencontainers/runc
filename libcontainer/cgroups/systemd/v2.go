@@ -53,6 +53,10 @@ func genV2ResourcesProperties(c *configs.Cgroup) ([]systemdDbus.Property, error)
 		properties = append(properties,
 			newProp("MemoryMax", uint64(c.Resources.Memory)))
 	}
+	if c.Resources.MemoryReservation != 0 {
+		properties = append(properties,
+			newProp("MemoryLow", uint64(c.Resources.MemoryReservation)))
+	}
 	// swap is set
 	if c.Resources.MemorySwap != 0 {
 		swap, err := cgroups.ConvertMemorySwapToCgroupV2Value(c.Resources.MemorySwap, c.Resources.Memory)
