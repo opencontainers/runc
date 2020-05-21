@@ -488,11 +488,6 @@ func TestConvertCPUQuotaCPUPeriodToCgroupV2Value(t *testing.T) {
 			period:   5000,
 			expected: "max 5000",
 		},
-		{
-			quota:    1000,
-			period:   0,
-			expected: "1000 100000",
-		},
 	}
 	for _, c := range cases {
 		got := ConvertCPUQuotaCPUPeriodToCgroupV2Value(c.quota, c.period)

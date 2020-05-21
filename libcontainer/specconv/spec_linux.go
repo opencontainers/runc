@@ -540,11 +540,17 @@ func ConvertResources(r *specs.LinuxResources, c *configs.Resources) error {
 			//CpuWeight is used for cgroupv2 and should be converted
 			c.CpuWeight = cgroups.ConvertCPUSharesToCgroupV2Value(c.CpuShares)
 		}
-		if r.CPU.Quota != nil {
-			c.CpuQuota = *r.CPU.Quota
-		}
 		if r.CPU.Period != nil {
 			c.CpuPeriod = *r.CPU.Period
+		}
+		if r.CPU.Quota != nil {
+			c.CpuQuota = *r.CPU.Quota
+			if c.CpuPeriod == 0 {
+				// assume the default kernel value of 100000 us (100 ms) as per
+				// https://www.kernel.org/doc/html/latest/scheduler/sched-bwc.html and
+				// https://www.kernel.org/doc/html/latest/admin-guide/cgroup-v2.html
+				c.CpuPeriod = 100000
+			}
 		}
 		//CpuMax is used for cgroupv2 and should be converted
 		c.CpuMax = cgroups.ConvertCPUQuotaCPUPeriodToCgroupV2Value(c.CpuQuota, c.CpuPeriod)
