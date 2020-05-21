@@ -542,6 +542,9 @@ func ConvertResources(r *specs.LinuxResources, c *configs.Resources) error {
 		}
 		if r.CPU.Period != nil {
 			c.CpuPeriod = *r.CPU.Period
+			if r.CPU.Quota == nil {
+				return errors.New("can not set CpuPeriod without setting CpuQuota")
+			}
 		}
 		if r.CPU.Quota != nil {
 			c.CpuQuota = *r.CPU.Quota

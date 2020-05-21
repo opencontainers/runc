@@ -269,25 +269,22 @@ EOF
     check_cgroup_value "cpu.shares" 100
     check_systemd_value "CPUShares" 100
 
-    # systemd driver does not allow to update quota and period separately
-    if [ -z "$RUNC_USE_SYSTEMD" ]; then
-        # update cpu period
-        runc update test_update --cpu-period 900000
-        [ "$status" -eq 0 ]
-        check_cgroup_value "cpu.cfs_period_us" 900000
+    # updating cpu period alone is not allowed
+    runc update test_update --cpu-period 900000
+    [ "$status" -eq 1 ]
 
-        # update cpu quota
-        runc update test_update --cpu-quota 600000
-        [ "$status" -eq 0 ]
-        check_cgroup_value "cpu.cfs_quota_us" 600000
-    else
-        # update cpu quota and period together
-        runc update test_update --cpu-period 900000 --cpu-quota 600000
-        [ "$status" -eq 0 ]
-        check_cgroup_value "cpu.cfs_period_us" 900000
-        check_cgroup_value "cpu.cfs_quota_us" 600000
-        check_systemd_value "CPUQuotaPerSecUSec" 670ms
-    fi
+    # update cpu quota
+    runc update test_update --cpu-quota 600000
+    [ "$status" -eq 0 ]
+    check_cgroup_value "cpu.cfs_quota_us" 600000
+    check_systemd_value "CPUQuotaPerSecUSec" 600ms
+
+    # update cpu quota and period together
+    runc update test_update --cpu-period 900000 --cpu-quota 600000
+    [ "$status" -eq 0 ]
+    check_cgroup_value "cpu.cfs_period_us" 900000
+    check_cgroup_value "cpu.cfs_quota_us" 600000
+    check_systemd_value "CPUQuotaPerSecUSec" 670ms
 
     # update cpu-shares
     runc update test_update --cpu-share 200
