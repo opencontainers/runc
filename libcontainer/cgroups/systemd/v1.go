@@ -99,9 +99,6 @@ func genV1ResourcesProperties(c *configs.Cgroup) ([]systemdDbus.Property, error)
 			if r.CpuQuota == 0 || r.CpuPeriod == 0 {
 				return nil, errors.New("CPU quota and period should both be set")
 			}
-			if r.CpuPeriod < 0 {
-				return nil, fmt.Errorf("Invalid CPU period value: %d", r.CpuPeriod)
-			}
 		}
 		// corresponds to USEC_INFINITY in systemd
 		// if USEC_INFINITY is provided, CPUQuota is left unbound by systemd
