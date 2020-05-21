@@ -14,24 +14,29 @@ import (
 )
 
 func isCpuSet(cgroup *configs.Cgroup) bool {
-	return cgroup.Resources.CpuWeight != 0 || cgroup.Resources.CpuMax != ""
+	return cgroup.Resources.CpuWeight != 0 || cgroup.Resources.CpuQuota != 0 || cgroup.Resources.CpuPeriod != 0
 }
 
 func setCpu(dirPath string, cgroup *configs.Cgroup) error {
 	if !isCpuSet(cgroup) {
 		return nil
 	}
+	r := cgroup.Resources
 
 	// NOTE: .CpuShares is not used here. Conversion is the caller's responsibility.
-	if cgroup.Resources.CpuWeight != 0 {
-		if err := fscommon.WriteFile(dirPath, "cpu.weight", strconv.FormatUint(cgroup.Resources.CpuWeight, 10)); err != nil {
+	if r.CpuWeight != 0 {
+		if err := fscommon.WriteFile(dirPath, "cpu.weight", strconv.FormatUint(r.CpuWeight, 10)); err != nil {
 			return err
 		}
 	}
 
-	// NOTE: .CpuQuota and .CpuPeriod are not used here. Conversion is the caller's responsibility.
-	if cgroup.Resources.CpuMax != "" {
-		if err := fscommon.WriteFile(dirPath, "cpu.max", cgroup.Resources.CpuMax); err != nil {
+	if r.CpuQuota != 0 {
+		str := "max"
+		if r.CpuQuota > 0 {
+			str = strconv.FormatInt(r.CpuQuota, 10)
+		}
+		str += " " + strconv.FormatUint(r.CpuPeriod, 10)
+		if err := fscommon.WriteFile(dirPath, "cpu.max", str); err != nil {
 			return err
 		}
 	}

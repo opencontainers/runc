@@ -555,8 +555,6 @@ func ConvertResources(r *specs.LinuxResources, c *configs.Resources) error {
 				c.CpuPeriod = 100000
 			}
 		}
-		//CpuMax is used for cgroupv2 and should be converted
-		c.CpuMax = cgroups.ConvertCPUQuotaCPUPeriodToCgroupV2Value(c.CpuQuota, c.CpuPeriod)
 
 		if r.CPU.RealtimeRuntime != nil {
 			c.CpuRtRuntime = *r.CPU.RealtimeRuntime
