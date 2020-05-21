@@ -72,46 +72,47 @@ var legacySubsystems = subsystemSet{
 
 func genV1ResourcesProperties(c *configs.Cgroup) ([]systemdDbus.Property, error) {
 	var properties []systemdDbus.Property
+	r := c.Resources
 
-	deviceProperties, err := generateDeviceProperties(c.Resources.Devices)
+	deviceProperties, err := generateDeviceProperties(r.Devices)
 	if err != nil {
 		return nil, err
 	}
 	properties = append(properties, deviceProperties...)
 
-	if c.Resources.Memory != 0 {
+	if r.Memory != 0 {
 		properties = append(properties,
-			newProp("MemoryLimit", uint64(c.Resources.Memory)))
+			newProp("MemoryLimit", uint64(r.Memory)))
 	}
 
-	if c.Resources.CpuShares != 0 {
+	if r.CpuShares != 0 {
 		properties = append(properties,
-			newProp("CPUShares", c.Resources.CpuShares))
+			newProp("CPUShares", r.CpuShares))
 	}
 
 	// cpu.cfs_quota_us and cpu.cfs_period_us are controlled by systemd.
-	if c.Resources.CpuQuota != 0 || c.Resources.CpuPeriod != 0 {
-		if c.Resources.CpuQuota < -1 {
-			return nil, fmt.Errorf("Invalid CPU quota value: %d", c.Resources.CpuQuota)
+	if r.CpuQuota != 0 || r.CpuPeriod != 0 {
+		if r.CpuQuota < -1 {
+			return nil, fmt.Errorf("Invalid CPU quota value: %d", r.CpuQuota)
 		}
-		if c.Resources.CpuQuota != -1 {
-			if c.Resources.CpuQuota == 0 || c.Resources.CpuPeriod == 0 {
+		if r.CpuQuota != -1 {
+			if r.CpuQuota == 0 || r.CpuPeriod == 0 {
 				return nil, errors.New("CPU quota and period should both be set")
 			}
-			if c.Resources.CpuPeriod < 0 {
-				return nil, fmt.Errorf("Invalid CPU period value: %d", c.Resources.CpuPeriod)
+			if r.CpuPeriod < 0 {
+				return nil, fmt.Errorf("Invalid CPU period value: %d", r.CpuPeriod)
 			}
 		}
 		// corresponds to USEC_INFINITY in systemd
 		// if USEC_INFINITY is provided, CPUQuota is left unbound by systemd
 		// always setting a property value ensures we can apply a quota and remove it later
 		cpuQuotaPerSecUSec := uint64(math.MaxUint64)
-		if c.Resources.CpuQuota > 0 {
+		if r.CpuQuota > 0 {
 			// systemd converts CPUQuotaPerSecUSec (microseconds per CPU second) to CPUQuota
 			// (integer percentage of CPU) internally.  This means that if a fractional percent of
-			// CPU is indicated by Resources.CpuQuota, we need to round up to the nearest
+			// CPU is indicated by r.CpuQuota, we need to round up to the nearest
 			// 10ms (1% of a second) such that child cgroups can set the cpu.cfs_quota_us they expect.
-			cpuQuotaPerSecUSec = uint64(c.Resources.CpuQuota*1000000) / c.Resources.CpuPeriod
+			cpuQuotaPerSecUSec = uint64(r.CpuQuota*1000000) / r.CpuPeriod
 			if cpuQuotaPerSecUSec%10000 != 0 {
 				cpuQuotaPerSecUSec = ((cpuQuotaPerSecUSec / 10000) + 1) * 10000
 			}
@@ -120,20 +121,20 @@ func genV1ResourcesProperties(c *configs.Cgroup) ([]systemdDbus.Property, error)
 			newProp("CPUQuotaPerSecUSec", cpuQuotaPerSecUSec))
 	}
 
-	if c.Resources.BlkioWeight != 0 {
+	if r.BlkioWeight != 0 {
 		properties = append(properties,
-			newProp("BlockIOWeight", uint64(c.Resources.BlkioWeight)))
+			newProp("BlockIOWeight", uint64(r.BlkioWeight)))
 	}
 
-	if c.Resources.PidsLimit > 0 || c.Resources.PidsLimit == -1 {
+	if r.PidsLimit > 0 || r.PidsLimit == -1 {
 		properties = append(properties,
 			newProp("TasksAccounting", true),
-			newProp("TasksMax", uint64(c.Resources.PidsLimit)))
+			newProp("TasksMax", uint64(r.PidsLimit)))
 	}
 
 	// We have to set kernel memory here, as we can't change it once
 	// processes have been attached to the cgroup.
-	if c.Resources.KernelMemory != 0 {
+	if r.KernelMemory != 0 {
 		if err := setKernelMemory(c); err != nil {
 			return nil, err
 		}
