@@ -63,7 +63,7 @@ RUN mkdir -p /usr/src/criu \
     && curl -fsSL https://github.com/checkpoint-restore/criu/archive/${CRIU_VERSION}.tar.gz | tar -C /usr/src/criu/ -xz --strip-components=1 \
     && cd /usr/src/criu \
     && echo 1 > .gitid \
-    && make install-criu \
+    && make -j $(nproc) install-criu \
     && cd - \
     && rm -rf /usr/src/criu
 
