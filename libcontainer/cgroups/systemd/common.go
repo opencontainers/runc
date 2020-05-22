@@ -3,6 +3,7 @@ package systemd
 import (
 	"bufio"
 	"fmt"
+	"math"
 	"os"
 	"strings"
 	"sync"
@@ -347,5 +348,38 @@ func stopUnit(dbusConnection *systemdDbus.Conn, unitName string) error {
 			logrus.Warnf("Timed out while waiting for StopUnit(%s) completion signal from dbus. Continuing...", unitName)
 		}
 	}
+	return nil
+}
+
+func addCpuQuota(properties *[]systemdDbus.Property, r *configs.Resources) error {
+	// cpu.cfs_quota_us and cpu.cfs_period_us are controlled by systemd.
+	if r.CpuQuota == 0 && r.CpuPeriod == 0 {
+		return nil
+	}
+	if r.CpuQuota < -1 {
+		return fmt.Errorf("Invalid CPU quota value: %d", r.CpuQuota)
+	}
+	if r.CpuQuota != -1 {
+		if r.CpuQuota == 0 || r.CpuPeriod == 0 {
+			return errors.New("CPU quota and period should both be set")
+		}
+	}
+	// corresponds to USEC_INFINITY in systemd
+	// if USEC_INFINITY is provided, CPUQuota is left unbound by systemd
+	// always setting a property value ensures we can apply a quota and remove it later
+	cpuQuotaPerSecUSec := uint64(math.MaxUint64)
+	if r.CpuQuota > 0 {
+		// systemd converts CPUQuotaPerSecUSec (microseconds per CPU second) to CPUQuota
+		// (integer percentage of CPU) internally.  This means that if a fractional percent of
+		// CPU is indicated by r.CpuQuota, we need to round up to the nearest
+		// 10ms (1% of a second) such that child cgroups can set the cpu.cfs_quota_us they expect.
+		cpuQuotaPerSecUSec = uint64(r.CpuQuota*1000000) / r.CpuPeriod
+		if cpuQuotaPerSecUSec%10000 != 0 {
+			cpuQuotaPerSecUSec = ((cpuQuotaPerSecUSec / 10000) + 1) * 10000
+		}
+	}
+	*properties = append(*properties,
+		newProp("CPUQuotaPerSecUSec", cpuQuotaPerSecUSec))
+
 	return nil
 }
