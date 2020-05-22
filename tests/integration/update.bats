@@ -288,8 +288,8 @@ function check_cpu_shares() {
 	check_cpu_shares 100
 
 	# updating cpu period alone is not allowed
-	runc update test_update --cpu-period 900000
-	[ "$status" -eq 1 ]
+	#runc update test_update --cpu-period 900000
+	#[ "$status" -eq 1 ]
 
 	# update cpu quota
 	runc update test_update --cpu-quota 600000
