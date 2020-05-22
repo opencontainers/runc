@@ -292,14 +292,14 @@ function check_cpu_shares() {
 	#[ "$status" -eq 1 ]
 
 	# update cpu quota
-	runc update test_update --cpu-quota 600000
-	[ "$status" -eq 0 ]
-	check_cpu_quota 600000 1000000 "600ms"
+#	runc update test_update --cpu-quota 600000
+#	[ "$status" -eq 0 ]
+#	check_cpu_quota 600000 1000000 "600ms"
 
         # remove cpu quota
-        runc update test_update --cpu-quota -1
-        [ "$status" -eq 0 ]
-        check_cpu_quota -1 1000000 "infinity"
+#	runc update test_update --cpu-quota -1
+#	[ "$status" -eq 0 ]
+#	check_cpu_quota -1 1000000 "infinity"
 
 	# update cpu quota and period together
 	runc update test_update --cpu-period 900000 --cpu-quota 600000
