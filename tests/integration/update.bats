@@ -259,6 +259,9 @@ function check_cpu_quota() {
 	local sd_quota=$3
 
 	if [ "$CGROUP_UNIFIED" = "yes" ]; then
+		if [ "$quota" = "-1" ]; then
+			quota="max"
+		fi
 		check_cgroup_value "cpu.max" "$quota $period"
 		check_systemd_value "CPUQuotaPerSecUSec" $sd_quota
 	else
@@ -301,10 +304,20 @@ function check_cpu_shares() {
 	[ "$status" -eq 0 ]
 	check_cpu_quota 600000 1000000 "600ms"
 
+	# remove cpu quota
+	runc update test_update --cpu-quota -1
+	[ "$status" -eq 0 ]
+	check_cpu_quota -1 1000000 "infinity"
+
 	# update cpu quota and period together
 	runc update test_update --cpu-period 900000 --cpu-quota 600000
 	[ "$status" -eq 0 ]
 	check_cpu_quota 600000 900000 "670ms"
+
+	# remove cpu quota and reset the period
+	runc update test_update --cpu-quota -1 --cpu-period 100000
+	[ "$status" -eq 0 ]
+	check_cpu_quota -1 100000 "infinity"
 
 	# update cpu-shares
 	runc update test_update --cpu-share 200
