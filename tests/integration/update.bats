@@ -245,50 +245,79 @@ EOF
     check_systemd_value "TasksMax" 20
 }
 
-@test "update cgroup v1 cpu limits" {
-    [[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
-    requires cgroups_v1
+function check_cpu_quota() {
+	local quota=$1
+	local period=$2
+	local sd_quota=$3
 
-    # run a few busyboxes detached
-    runc run -d --console-socket $CONSOLE_SOCKET test_update
-    [ "$status" -eq 0 ]
+	if [ "$CGROUP_UNIFIED" = "yes" ]; then
+		if [ "$quota" = "-1" ]; then
+			quota="max"
+		fi
+		check_cgroup_value "cpu.max" "$quota $period"
+		check_systemd_value "CPUQuotaPerSecUSec" $sd_quota
+	else
+		check_cgroup_value "cpu.cfs_quota_us" $quota
+		check_cgroup_value "cpu.cfs_period_us" $period
+		# no systemd support in v1
+	fi
+}
 
-    # check that initial values were properly set
-    check_cgroup_value "cpu.cfs_period_us" 1000000
-    check_cgroup_value "cpu.cfs_quota_us" 500000
-    check_systemd_value "CPUQuotaPerSecUSec" 500ms
+function check_cpu_shares() {
+	local shares=$1
 
-    check_cgroup_value "cpu.shares" 100
-    check_systemd_value "CPUShares" 100
+	if [ "$CGROUP_UNIFIED" = "yes" ]; then
+		local weight=$((1 + ((shares - 2) * 9999) / 262142))
+		check_cgroup_value "cpu.weight" $weight
+		check_systemd_value "CPUWeight" $weight
+	else
+		check_cgroup_value "cpu.shares" $shares
+		check_systemd_value "CPUShares" $shares
+	fi
+}
 
-    # systemd driver does not allow to update quota and period separately
-    if [ -z "$RUNC_USE_SYSTEMD" ]; then
-        # update cpu period
-        runc update test_update --cpu-period 900000
+@test "update cgroup cpu limits" {
+	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+
+	# run a few busyboxes detached
+	runc run -d --console-socket $CONSOLE_SOCKET test_update
+	[ "$status" -eq 0 ]
+
+	# check that initial values were properly set
+	check_cpu_quota 500000 1000000 "500ms"
+	check_cpu_shares 100
+
+	# updating cpu period alone is not allowed
+	runc update test_update --cpu-period 900000
+	[ "$status" -eq 1 ]
+
+	# update cpu quota
+	runc update test_update --cpu-quota 600000
+	[ "$status" -eq 0 ]
+	check_cpu_quota 600000 1000000 "600ms"
+
+        # remove cpu quota
+        runc update test_update --cpu-quota -1
         [ "$status" -eq 0 ]
-        check_cgroup_value "cpu.cfs_period_us" 900000
+        check_cpu_quota -1 1000000 "infinity"
 
-        # update cpu quota
-        runc update test_update --cpu-quota 600000
+	# update cpu quota and period together
+	runc update test_update --cpu-period 900000 --cpu-quota 600000
+	[ "$status" -eq 0 ]
+	check_cpu_quota 600000 900000 "670ms"
+
+        # remove cpu quota and reset the period
+        runc update test_update --cpu-quota -1 --cpu-period 100000
         [ "$status" -eq 0 ]
-        check_cgroup_value "cpu.cfs_quota_us" 600000
-    else
-        # update cpu quota and period together
-        runc update test_update --cpu-period 900000 --cpu-quota 600000
-        [ "$status" -eq 0 ]
-        check_cgroup_value "cpu.cfs_period_us" 900000
-        check_cgroup_value "cpu.cfs_quota_us" 600000
-        check_systemd_value "CPUQuotaPerSecUSec" 670ms
-    fi
+        check_cpu_quota -1 100000 "infinity"
 
-    # update cpu-shares
-    runc update test_update --cpu-share 200
-    [ "$status" -eq 0 ]
-    check_cgroup_value "cpu.shares" 200
-    check_systemd_value "CPUShares" 200
+	# update cpu-shares
+	runc update test_update --cpu-share 200
+	[ "$status" -eq 0 ]
+	check_cpu_shares 200
 
-    # Revert to the test initial value via json on stding
-    runc update  -r - test_update <<EOF
+	# Revert to the test initial value via json on stding
+	runc update -r - test_update <<EOF
 {
   "cpu": {
     "shares": 100,
@@ -297,27 +326,19 @@ EOF
   }
 }
 EOF
-    [ "$status" -eq 0 ]
-    check_cgroup_value "cpu.cfs_period_us" 1000000
-    check_cgroup_value "cpu.cfs_quota_us" 500000
-    check_systemd_value "CPUQuotaPerSecUSec" 500ms
+	[ "$status" -eq 0 ]
+	check_cpu_quota 500000 1000000 "500ms"
+	check_cpu_shares 100
 
-    check_cgroup_value "cpu.shares" 100
-    check_systemd_value "CPUShares" 100
+	# redo all the changes at once
+	runc update test_update \
+		--cpu-period 900000 --cpu-quota 600000 --cpu-share 200
+	[ "$status" -eq 0 ]
+	check_cpu_quota 600000 900000 "670ms"
+	check_cpu_shares 200
 
-    # redo all the changes at once
-    runc update test_update \
-        --cpu-period 900000 --cpu-quota 600000 --cpu-share 200
-    [ "$status" -eq 0 ]
-    check_cgroup_value "cpu.cfs_period_us" 900000
-    check_cgroup_value "cpu.cfs_quota_us" 600000
-    check_systemd_value "CPUQuotaPerSecUSec" 670ms
-
-    check_cgroup_value "cpu.shares" 200
-    check_systemd_value "CPUShares" 200
-
-    # reset to initial test value via json file
-    cat << EOF > $BATS_TMPDIR/runc-cgroups-integration-test.json
+# reset to initial test value via json file
+	     cat << EOF > $BATS_TMPDIR/runc-cgroups-integration-test.json
 {
   "cpu": {
     "shares": 100,
@@ -327,14 +348,10 @@ EOF
 }
 EOF
 
-    runc update  -r $BATS_TMPDIR/runc-cgroups-integration-test.json test_update
-    [ "$status" -eq 0 ]
-    check_cgroup_value "cpu.cfs_period_us" 1000000
-    check_cgroup_value "cpu.cfs_quota_us" 500000
-    check_systemd_value "CPUQuotaPerSecUSec" 500ms
-
-    check_cgroup_value "cpu.shares" 100
-    check_systemd_value "CPUShares" 100
+	runc update -r $BATS_TMPDIR/runc-cgroups-integration-test.json test_update
+	[ "$status" -eq 0 ]
+	check_cpu_quota 500000 1000000 "500ms"
+	check_cpu_shares 100
 }
 
 @test "update rt period and runtime" {
