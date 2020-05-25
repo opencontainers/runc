@@ -1,6 +1,7 @@
 package fs2
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -10,57 +11,56 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
-// neededControllers returns the string to write to cgroup.subtree_control,
-// containing the list of controllers to enable (for example, "+cpu +pids"),
-// based on (1) controllers available and (2) resources that are being set.
-//
-// The resulting string does not include "pseudo" controllers such as
-// "freezer" and "devices".
-func neededControllers(cgroup *configs.Cgroup) ([]string, error) {
-	var list []string
+func supportedControllers(cgroup *configs.Cgroup) ([]byte, error) {
+	const file = UnifiedMountpoint + "/cgroup.controllers"
+	return ioutil.ReadFile(file)
+}
 
+// needAnyControllers returns whether we enable some supported controllers or not,
+// based on (1) controllers available and (2) resources that are being set.
+// We don't check "pseudo" controllers such as
+// "freezer" and "devices".
+func needAnyControllers(cgroup *configs.Cgroup) (bool, error) {
 	if cgroup == nil {
-		return list, nil
+		return false, nil
 	}
 
 	// list of all available controllers
-	const file = UnifiedMountpoint + "/cgroup.controllers"
-	content, err := ioutil.ReadFile(file)
+	content, err := supportedControllers(cgroup)
 	if err != nil {
-		return list, err
+		return false, err
 	}
 	avail := make(map[string]struct{})
 	for _, ctr := range strings.Fields(string(content)) {
 		avail[ctr] = struct{}{}
 	}
 
-	// add the controller if available
-	add := func(controller string) {
-		if _, ok := avail[controller]; ok {
-			list = append(list, "+"+controller)
-		}
+	// check whether the controller if available or not
+	have := func(controller string) bool {
+		_, ok := avail[controller]
+		return ok
 	}
 
-	if isPidsSet(cgroup) {
-		add("pids")
+	if isPidsSet(cgroup) && have("pids") {
+		return true, nil
 	}
-	if isMemorySet(cgroup) {
-		add("memory")
+	if isMemorySet(cgroup) && have("memory") {
+		return true, nil
 	}
-	if isIoSet(cgroup) {
-		add("io")
+	if isIoSet(cgroup) && have("io") {
+		return true, nil
 	}
-	if isCpuSet(cgroup) {
-		add("cpu")
+	if isCpuSet(cgroup) && have("cpu") {
+		return true, nil
 	}
-	if isCpusetSet(cgroup) {
-		add("cpuset")
+	if isCpusetSet(cgroup) && have("cpuset") {
+		return true, nil
 	}
-	if isHugeTlbSet(cgroup) {
-		add("hugetlb")
+	if isHugeTlbSet(cgroup) && have("hugetlb") {
+		return true, nil
 	}
 
-	return list, nil
+	return false, nil
 }
 
 // containsDomainController returns whether the current config contains domain controller or not.
@@ -70,18 +70,19 @@ func containsDomainController(cg *configs.Cgroup) bool {
 	return isMemorySet(cg) || isIoSet(cg) || isCpuSet(cg) || isHugeTlbSet(cg)
 }
 
-// CreateCgroupPath creates cgroupv2 path, enabling all the
-// needed controllers in the process.
+// CreateCgroupPath creates cgroupv2 path, enabling all the supported controllers.
 func CreateCgroupPath(path string, c *configs.Cgroup) (Err error) {
 	if !strings.HasPrefix(path, UnifiedMountpoint) {
 		return fmt.Errorf("invalid cgroup path %s", path)
 	}
 
-	ctrs, err := neededControllers(c)
+	content, err := supportedControllers(c)
 	if err != nil {
 		return err
 	}
-	allCtrs := strings.Join(ctrs, " ")
+
+	ctrs := bytes.Fields(content)
+	res := append([]byte("+"), bytes.Join(ctrs, []byte(" +"))...)
 
 	elements := strings.Split(path, "/")
 	elements = elements[3:]
@@ -131,13 +132,14 @@ func CreateCgroupPath(path string, c *configs.Cgroup) (Err error) {
 				}
 			}
 		}
-		// enable needed controllers
+		// enable all supported controllers
 		if i < len(elements)-1 {
 			file := filepath.Join(current, "cgroup.subtree_control")
-			if err := ioutil.WriteFile(file, []byte(allCtrs), 0644); err != nil {
+			if err := ioutil.WriteFile(file, res, 0644); err != nil {
 				// try write one by one
-				for _, ctr := range ctrs {
-					_ = ioutil.WriteFile(file, []byte(ctr), 0644)
+				allCtrs := bytes.Split(res, []byte(" "))
+				for _, ctr := range allCtrs {
+					_ = ioutil.WriteFile(file, ctr, 0644)
 				}
 			}
 			// Some controllers might not be enabled when rootless or containerized,
