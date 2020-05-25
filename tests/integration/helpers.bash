@@ -82,27 +82,27 @@ function runc_spec() {
 	fi
 }
 
+# Helper function to reformat config.json file. Input uses jq syntax.
+function update_config() {
+	bundle="${2:-.}"
+	jq "$1" "$bundle/config.json" | awk 'BEGIN{RS="";getline<"-";print>ARGV[1]}' "$bundle/config.json"
+}
+
 # Shortcut to add additional uids and gids, based on the values set as part of
 # a rootless configuration.
 function runc_rootless_idmap() {
 	bundle="${1:-.}"
-	cat "$bundle/config.json" \
-		| jq '.mounts |= map((select(.type == "devpts") | .options += ["gid=5"]) // .)' \
-		| jq '.linux.uidMappings |= .+ [{"hostID": '"$ROOTLESS_UIDMAP_START"', "containerID": 1000, "size": '"$ROOTLESS_UIDMAP_LENGTH"'}]' \
-		| jq '.linux.gidMappings |= .+ [{"hostID": '"$ROOTLESS_GIDMAP_START"', "containerID": 100, "size": 1}]' \
-		| jq '.linux.gidMappings |= .+ [{"hostID": '"$(($ROOTLESS_GIDMAP_START+10))"', "containerID": 1, "size": 20}]' \
-		| jq '.linux.gidMappings |= .+ [{"hostID": '"$(($ROOTLESS_GIDMAP_START+100))"', "containerID": 1000, "size": '"$(($ROOTLESS_GIDMAP_LENGTH-1000))"'}]' \
-		>"$bundle/config.json.tmp"
-	mv "$bundle/config.json"{.tmp,}
+	update_config 	' .mounts |= map((select(.type == "devpts") | .options += ["gid=5"]) // .)
+			| .linux.uidMappings += [{"hostID": '"$ROOTLESS_UIDMAP_START"', "containerID": 1000, "size": '"$ROOTLESS_UIDMAP_LENGTH"'}]
+			| .linux.gidMappings += [{"hostID": '"$ROOTLESS_GIDMAP_START"', "containerID": 100, "size": 1}]
+			| .linux.gidMappings += [{"hostID": '"$(($ROOTLESS_GIDMAP_START+10))"', "containerID": 1, "size": 20}]
+			| .linux.gidMappings += [{"hostID": '"$(($ROOTLESS_GIDMAP_START+100))"', "containerID": 1000, "size": '"$(($ROOTLESS_GIDMAP_LENGTH-1000))"'}]' $bundle
 }
 
 # Shortcut to add empty resources as part of a rootless configuration.
 function runc_rootless_cgroup() {
 	bundle="${1:-.}"
-	cat "$bundle/config.json" \
-		| jq '.linux.resources |= .+ {"memory":{},"cpu":{},"blockio":{},"pids":{}}' \
-		>"$bundle/config.json.tmp"
-	mv "$bundle/config.json"{.tmp,}
+	update_config '.linux.resources += {"memory":{},"cpu":{},"blockio":{},"pids":{}}' $bundle
 }
 
 function init_cgroup_paths() {
@@ -155,7 +155,7 @@ function init_cgroup_paths() {
 function set_cgroups_path() {
   bundle="${1:-.}"
   init_cgroup_paths
-  sed -i 's#\("linux": {\)#\1\n    "cgroupsPath": "'"${OCI_CGROUPS_PATH}"'",#' "$bundle/config.json"
+  update_config '.linux.cgroupsPath |= "'"${OCI_CGROUPS_PATH}"'"' $bundle
 }
 
 # Helper to check a value in cgroups.
@@ -194,7 +194,7 @@ function check_systemd_value() {
 # Helper function to set a resources limit
 function set_resources_limit() {
   bundle="${1:-.}"
-  sed -i 's/\("linux": {\)/\1\n   "resources": { "pids": { "limit": 100 } },/'  "$bundle/config.json"
+  update_config '.linux.resources.pids.limit |= 100' $bundle
 }
 
 # Fails the current test, providing the error given.
@@ -404,7 +404,7 @@ function setup_hello() {
 	tar --exclude './dev/*' -C "$HELLO_BUNDLE"/rootfs -xf "$HELLO_IMAGE"
 	cd "$HELLO_BUNDLE"
 	runc_spec
-	sed -i 's;"sh";"/hello";' config.json
+	update_config '(.. | select(.? == "sh")) |= "/hello"'
 }
 
 function teardown_running_container() {

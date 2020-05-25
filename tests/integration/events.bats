@@ -118,16 +118,7 @@ function teardown() {
   init_cgroup_paths
   
   # we need the container to hit OOM, so disable swap
-  # ("swap" here is actually memory+swap)
-  DATA=$(cat <<EOF
-  "memory": {
-    "limit": 33554432,
-    "swap": 33554432
-  },
-EOF
-  )
-  DATA=$(echo ${DATA} | sed 's/\n/\\n/g')
-  sed -i "s/\(\"resources\": {\)/\1\n${DATA}/" ${BUSYBOX_BUNDLE}/config.json
+  update_config '(.. | select(.resources? != null)) .resources.memory |= {"limit": 33554432, "swap": 33554432}' ${BUSYBOX_BUNDLE}
 
   # run busybox detached
   runc run -d --console-socket $CONSOLE_SOCKET test_busybox

@@ -21,15 +21,7 @@ function setup() {
     set_cgroups_path "$BUSYBOX_BUNDLE"
 
     # Set some initial known values
-    DATA=$(cat <<-EOF
-    "memory": {
-        "kernel": 16777216,
-        "kernelTCP": 11534336
-    },
-EOF
-    )
-    DATA=$(echo ${DATA} | sed 's/\n/\\n/g')
-    sed -i "s/\(\"resources\": {\)/\1\n${DATA}/" ${BUSYBOX_BUNDLE}/config.json
+    update_config '.linux.resources.memory |= {"kernel": 16777216, "kernelTCP": 11534336}' ${BUSYBOX_BUNDLE}
 
     # run a detached busybox to work with
     runc run -d --console-socket $CONSOLE_SOCKET test_cgroups_kmem
