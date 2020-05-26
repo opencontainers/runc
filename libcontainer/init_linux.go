@@ -55,6 +55,7 @@ type initConfig struct {
 	ProcessLabel     string                `json:"process_label"`
 	AppArmorProfile  string                `json:"apparmor_profile"`
 	NoNewPrivileges  bool                  `json:"no_new_privileges"`
+	AllowSpeculation bool                  `json:"allow_speculation"`
 	User             string                `json:"user"`
 	AdditionalGroups []string              `json:"additional_groups"`
 	Config           *configs.Config       `json:"config"`

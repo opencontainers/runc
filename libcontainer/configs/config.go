@@ -85,6 +85,9 @@ type Config struct {
 	// This is a common option when the container is running in ramdisk
 	NoPivotRoot bool `json:"no_pivot_root"`
 
+	// AllowSpeculation will disable IBPB/STIBP mitigation.
+	AllowSpeculation bool `json:"allow_speculation"`
+
 	// ParentDeathSignal specifies the signal that is sent to the container's process in the case
 	// that the parent process dies.
 	ParentDeathSignal int `json:"parent_death_signal"`

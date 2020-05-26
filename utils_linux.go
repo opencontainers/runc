@@ -236,6 +236,7 @@ func createContainer(context *cli.Context, id string, spec *specs.Spec) (libcont
 		UseSystemdCgroup: context.GlobalBool("systemd-cgroup"),
 		NoPivotRoot:      context.Bool("no-pivot"),
 		NoNewKeyring:     context.Bool("no-new-keyring"),
+		AllowSpeculation: context.Bool("allow-speculation"),
 		Spec:             spec,
 		RootlessEUID:     os.Geteuid() != 0,
 		RootlessCgroups:  rootlessCg,

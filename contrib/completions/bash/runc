@@ -457,6 +457,7 @@ _runc_run() {
 	   --no-subreaper
 	   --no-pivot
 	   --no-new-keyring
+	   --allow-speculation
 	"
 
 	local options_with_args="
@@ -563,6 +564,7 @@ _runc_create() {
 	   --help
 	   --no-pivot
 	   --no-new-keyring
+	   --allow-speculation
 	"
 
 	local options_with_args="

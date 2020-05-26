@@ -50,6 +50,10 @@ command(s) that get executed on start, edit the args parameter of the spec. See
 			Name:  "preserve-fds",
 			Usage: "Pass N additional file descriptors to the container (stdio + $LISTEN_FDS + N in total)",
 		},
+		cli.BoolFlag{
+			Name:  "allow-speculation",
+			Usage: "disable spectre mitigations",
+		},
 	},
 	Action: func(context *cli.Context) error {
 		if err := checkArgs(context, 1, exactArgs); err != nil {

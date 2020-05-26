@@ -207,6 +207,11 @@ func (l *linuxStandardInit) Init() error {
 			return newSystemErrorWithCause(err, "init seccomp")
 		}
 	}
+	if l.config.Config.AllowSpeculation {
+		if err := unix.Prctl(unix.PR_SET_SPECULATION_CTRL, unix.PR_SPEC_INDIRECT_BRANCH, unix.PR_SPEC_ENABLE, 0, 0); err != nil {
+			return errors.Wrap(err, "disable IBPB/STIBP mitigation")
+		}
+	}
 	if err := unix.Exec(name, l.config.Args[0:], os.Environ()); err != nil {
 		return newSystemErrorWithCause(err, "exec user process")
 	}
