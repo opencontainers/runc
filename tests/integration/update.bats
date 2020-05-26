@@ -80,8 +80,7 @@ EOF
         SD_MEM_SWAP="MemorySwapMax"
         SYSTEM_MEM="max"
         SYSTEM_MEM_SWAP="max"
-        # checking swap is currently disabled for v2
-        #CGROUP_MEMORY=$CGROUP_PATH
+        CGROUP_MEMORY=$CGROUP_PATH
         ;;
     esac
     SD_UNLIMITED="infinity"
@@ -135,10 +134,19 @@ EOF
         check_systemd_value "$SD_MEM_SWAP" $SD_UNLIMITED
 
         # update memory swap
-        runc update test_update --memory-swap 96468992
-        [ "$status" -eq 0 ]
-        check_cgroup_value "$MEM_SWAP" 96468992
-        check_systemd_value "$SD_MEM_SWAP" 96468992
+        if [ "$CGROUP_UNIFIED" = "yes" ]; then
+            # for cgroupv2, memory and swap can only be set together
+            runc update test_update --memory 52428800 --memory-swap 96468992
+            [ "$status" -eq 0 ]
+            # for cgroupv2, swap is a separate limit (it does not include mem)
+            check_cgroup_value "$MEM_SWAP" $((96468992-52428800))
+            check_systemd_value "$SD_MEM_SWAP" $((96468992-52428800))
+        else
+            runc update test_update --memory-swap 96468992
+            [ "$status" -eq 0 ]
+            check_cgroup_value "$MEM_SWAP" 96468992
+            check_systemd_value "$SD_MEM_SWAP" 96468992
+        fi
     fi
 
     # try to remove memory limit
