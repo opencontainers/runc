@@ -9,7 +9,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/opencontainers/runc/libcontainer/cgroups"
+	"github.com/opencontainers/runc/libcontainer/specconv"
 
 	"github.com/docker/go-units"
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -135,6 +135,13 @@ other options are ignored.
 			return err
 		}
 
+		// These need to be set to zeroes explicitly, as the storage is
+		// reused in assignments below, but most importantly because
+		// container config is already populated with the current
+		// (previously set) values (which we actually don't need) and
+		// unless we set to values to zeroes here
+		// specconv.ConvertResources() won't assign anything and config
+		// will end up having old values, rather than 0 ("unset").
 		r := specs.LinuxResources{
 			Memory: &specs.LinuxMemory{
 				Limit:       i64Ptr(0),
@@ -251,25 +258,9 @@ other options are ignored.
 			r.Pids.Limit = int64(context.Int("pids-limit"))
 		}
 
-		// Update the value
-		config.Cgroups.Resources.BlkioWeight = *r.BlockIO.Weight
-		config.Cgroups.Resources.CpuPeriod = *r.CPU.Period
-		config.Cgroups.Resources.CpuQuota = *r.CPU.Quota
-		config.Cgroups.Resources.CpuShares = *r.CPU.Shares
-		//CpuWeight is used for cgroupv2 and should be converted
-		config.Cgroups.Resources.CpuWeight = cgroups.ConvertCPUSharesToCgroupV2Value(*r.CPU.Shares)
-		//CpuMax is used for cgroupv2 and should be converted
-		config.Cgroups.Resources.CpuMax = cgroups.ConvertCPUQuotaCPUPeriodToCgroupV2Value(*r.CPU.Quota, *r.CPU.Period)
-		config.Cgroups.Resources.CpuRtPeriod = *r.CPU.RealtimePeriod
-		config.Cgroups.Resources.CpuRtRuntime = *r.CPU.RealtimeRuntime
-		config.Cgroups.Resources.CpusetCpus = r.CPU.Cpus
-		config.Cgroups.Resources.CpusetMems = r.CPU.Mems
-		config.Cgroups.Resources.KernelMemory = *r.Memory.Kernel
-		config.Cgroups.Resources.KernelMemoryTCP = *r.Memory.KernelTCP
-		config.Cgroups.Resources.Memory = *r.Memory.Limit
-		config.Cgroups.Resources.MemoryReservation = *r.Memory.Reservation
-		config.Cgroups.Resources.MemorySwap = *r.Memory.Swap
-		config.Cgroups.Resources.PidsLimit = r.Pids.Limit
+		if err := specconv.ConvertResources(&r, config.Cgroups.Resources); err != nil {
+			return err
+		}
 
 		// Update Intel RDT
 		l3CacheSchema := context.String("l3-cache-schema")
