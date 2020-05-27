@@ -281,6 +281,13 @@ EOF
         [ "$status" -eq 0 ]
         check_cgroup_value "cpu.cfs_quota_us" 600000
     else
+        # update cpu quota
+        runc update test_update --cpu-quota 600000
+        [ "$status" -eq 0 ]
+        check_cgroup_value "cpu.cfs_quota_us" 600000
+        # this is currently broken
+        #check_systemd_value "CPUQuotaPerSecUSec" 600ms
+
         # update cpu quota and period together
         runc update test_update --cpu-period 900000 --cpu-quota 600000
         [ "$status" -eq 0 ]
