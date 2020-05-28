@@ -373,8 +373,15 @@ func readProcsFile(file string) ([]int, error) {
 	return out, nil
 }
 
-// ParseCgroupFile parses the given cgroup file, typically from
-// /proc/<pid>/cgroup, into a map of subgroups to cgroup names.
+// ParseCgroupFile parses the given cgroup file, typically /proc/self/cgroup
+// or /proc/<pid>/cgroup, into a map of subsystems to cgroup paths, e.g.
+//   "cpu": "/user.slice/user-1000.slice"
+//   "pids": "/user.slice/user-1000.slice"
+// etc.
+//
+// Note that for cgroup v2 unified hierarchy, there are no per-controller
+// cgroup paths, so the resulting map will have a single element where the key
+// is empty string ("") and the value is the cgroup path the <pid> is in.
 func ParseCgroupFile(path string) (map[string]string, error) {
 	f, err := os.Open(path)
 	if err != nil {
