@@ -11,6 +11,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/pkg/errors"
+	"golang.org/x/sys/unix"
 )
 
 type manager struct {
@@ -156,9 +157,22 @@ func (m *manager) Freeze(state configs.FreezerState) error {
 	return nil
 }
 
+func rmdir(path string) error {
+	err := unix.Rmdir(path)
+	if err == nil || err == unix.ENOENT {
+		return nil
+	}
+	return &os.PathError{Op: "rmdir", Path: path, Err: err}
+}
+
 // removeCgroupPath aims to remove cgroup path recursively
 // Because there may be subcgroups in it.
 func removeCgroupPath(path string) error {
+	// try the fast path first
+	if err := rmdir(path); err == nil {
+		return nil
+	}
+
 	infos, err := ioutil.ReadDir(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -175,10 +189,7 @@ func removeCgroupPath(path string) error {
 		}
 	}
 	if err == nil {
-		err = os.Remove(path)
-		if os.IsNotExist(err) {
-			err = nil
-		}
+		err = rmdir(path)
 	}
 	return err
 }
