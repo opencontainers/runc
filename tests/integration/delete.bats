@@ -71,7 +71,6 @@ function teardown() {
 
   # create a sub process
   __runc exec -d test_busybox sleep 1d
-  [ "$status" -eq 0 ]
 
   # find the pid of sleep
   pid=$(__runc exec test_busybox ps -a | grep 1d | awk '{print $1}')
@@ -79,8 +78,9 @@ function teardown() {
 
   # create subcgroups
   cat <<EOF > nest.sh
+  set -e -u -x
   cd /sys/fs/cgroup
-  for f in \$(cat cgroup.controllers); do echo +\$f > cgroup.subtree_control; done
+  echo +pids > cgroup.subtree_control
   mkdir foo
   cd foo
   echo threaded > cgroup.type
@@ -88,14 +88,11 @@ function teardown() {
   cat cgroup.threads
 EOF
   cat nest.sh | runc exec test_busybox sh
-  [[ ${output} =~ [0-9]+ ]]
+  [ "$status" -eq 0 ]
+  [[ "$output" =~ [0-9]+ ]]
 
   # check create subcgroups success
   [ -d $CGROUP_PATH/foo ]
-
-  # check cgroup.threads' value
-  runc exec test_busybox cat /sys/fs/cgroup/foo/cgroup.threads
-  [[ ${output} =~ [0-9]+ ]]
 
   # force delete test_busybox
   runc delete --force test_busybox
