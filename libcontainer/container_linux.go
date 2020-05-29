@@ -1403,11 +1403,14 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *
 	// cmd.Process will be replaced by a restored init.
 	criuProcess := cmd.Process
 
+	var criuProcessState *os.ProcessState
 	defer func() {
-		criuClientCon.Close()
-		_, err := criuProcess.Wait()
-		if err != nil {
-			return
+		if criuProcessState == nil {
+			criuClientCon.Close()
+			_, err := criuProcess.Wait()
+			if err != nil {
+				logrus.Warnf("wait on criuProcess returned %v", err)
+			}
 		}
 	}()
 
@@ -1524,7 +1527,7 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *
 	criuClientCon.CloseWrite()
 	// cmd.Wait() waits cmd.goroutines which are used for proxying file descriptors.
 	// Here we want to wait only the CRIU process.
-	st, err := criuProcess.Wait()
+	criuProcessState, err = criuProcess.Wait()
 	if err != nil {
 		return err
 	}
@@ -1536,8 +1539,8 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *
 	// and not the whole series of pre-dump, pre-dump, ...m, dump
 	// If we got the message CriuReqType_PRE_DUMP it means
 	// CRIU was successful and we need to forcefully stop CRIU
-	if !st.Success() && *req.Type != criurpc.CriuReqType_PRE_DUMP {
-		return fmt.Errorf("criu failed: %s\nlog file: %s", st.String(), logPath)
+	if !criuProcessState.Success() && *req.Type != criurpc.CriuReqType_PRE_DUMP {
+		return fmt.Errorf("criu failed: %s\nlog file: %s", criuProcessState.String(), logPath)
 	}
 	return nil
 }
