@@ -435,11 +435,6 @@ func (m *legacyManager) Set(container *configs.Config) error {
 		}
 	}
 
-	if m.paths["cpu"] != "" {
-		if err := fs.CheckCpushares(m.paths["cpu"], container.Cgroups.Resources.CpuShares); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
