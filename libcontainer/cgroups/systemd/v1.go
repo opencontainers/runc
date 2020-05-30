@@ -105,16 +105,15 @@ func (m *legacyManager) Apply(pid int) error {
 	defer m.mu.Unlock()
 	if c.Paths != nil {
 		paths := make(map[string]string)
+		cgMap, err := cgroups.ParseCgroupFile("/proc/self/cgroup")
+		if err != nil {
+			return err
+		}
+		// XXX(kolyshkin@): why this check is needed?
 		for name, path := range c.Paths {
-			_, err := getSubsystemPath(m.cgroups, name)
-			if err != nil {
-				// Don't fail if a cgroup hierarchy was not found, just skip this subsystem
-				if cgroups.IsNotFound(err) {
-					continue
-				}
-				return err
+			if _, ok := cgMap[name]; ok {
+				paths[name] = path
 			}
-			paths[name] = path
 		}
 		m.paths = paths
 		return cgroups.EnterPid(m.paths, pid)

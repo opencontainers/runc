@@ -220,24 +220,24 @@ func (m *manager) Apply(pid int) (err error) {
 
 	var c = m.cgroups
 
+	m.paths = make(map[string]string)
+	if c.Paths != nil {
+		cgMap, err := cgroups.ParseCgroupFile("/proc/self/cgroup")
+		if err != nil {
+			return err
+		}
+		for name, path := range c.Paths {
+			// XXX(kolyshkin@): why this check is needed?
+			if _, ok := cgMap[name]; ok {
+				m.paths[name] = path
+			}
+		}
+		return cgroups.EnterPid(m.paths, pid)
+	}
+
 	d, err := getCgroupData(m.cgroups, pid)
 	if err != nil {
 		return err
-	}
-
-	m.paths = make(map[string]string)
-	if c.Paths != nil {
-		for name, path := range c.Paths {
-			_, err := d.path(name)
-			if err != nil {
-				if cgroups.IsNotFound(err) {
-					continue
-				}
-				return err
-			}
-			m.paths[name] = path
-		}
-		return cgroups.EnterPid(m.paths, pid)
 	}
 
 	for _, sys := range subsystems {
