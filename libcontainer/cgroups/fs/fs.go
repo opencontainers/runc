@@ -179,24 +179,23 @@ func (m *manager) Apply(pid int) (err error) {
 
 	var c = m.cgroups
 
-	d, err := getCgroupData(m.cgroups, pid)
-	if err != nil {
-		return err
-	}
-
 	m.paths = make(map[string]string)
 	if c.Paths != nil {
 		for name, path := range c.Paths {
-			_, err := d.path(name)
+			cgMap, err := cgroups.ParseCgroupFile("/proc/self/cgroup")
 			if err != nil {
-				if cgroups.IsNotFound(err) {
-					continue
-				}
 				return err
 			}
-			m.paths[name] = path
+			if _, ok := cgMap[name]; ok {
+				m.paths[name] = path
+			}
 		}
 		return cgroups.EnterPid(m.paths, pid)
+	}
+
+	d, err := getCgroupData(m.cgroups, pid)
+	if err != nil {
+		return err
 	}
 
 	for _, sys := range m.getSubsystems() {
