@@ -69,7 +69,6 @@ EOF
         MEM_SWAP="memory.memsw.limit_in_bytes"
         SD_MEM_SWAP="unsupported"
         SYSTEM_MEM=$(cat "${CGROUP_MEMORY_BASE_PATH}/${MEM_LIMIT}")
-        SYSTEM_MEM_SWAP=$(cat "${CGROUP_MEMORY_BASE_PATH}/$MEM_SWAP")
         ;;
     yes)
         MEM_LIMIT="memory.max"
@@ -79,7 +78,6 @@ EOF
         MEM_SWAP="memory.swap.max"
         SD_MEM_SWAP="MemorySwapMax"
         SYSTEM_MEM="max"
-        SYSTEM_MEM_SWAP="max"
         CGROUP_MEMORY=$CGROUP_PATH
         ;;
     esac
@@ -130,7 +128,7 @@ EOF
         # try to remove memory swap limit
         runc update test_update --memory-swap -1
         [ "$status" -eq 0 ]
-        check_cgroup_value "$MEM_SWAP" $SYSTEM_MEM_SWAP
+        check_cgroup_value "$MEM_SWAP" $SYSTEM_MEM
         check_systemd_value "$SD_MEM_SWAP" $SD_UNLIMITED
 
         # update memory swap
