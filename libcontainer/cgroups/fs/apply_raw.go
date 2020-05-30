@@ -4,7 +4,6 @@ package fs
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"sync"
@@ -259,11 +258,6 @@ func (m *manager) Set(container *configs.Config) error {
 		}
 	}
 
-	if m.paths["cpu"] != "" {
-		if err := CheckCpushares(m.paths["cpu"], container.Cgroups.Resources.CpuShares); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
@@ -374,33 +368,6 @@ func removePath(p string, err error) error {
 	if p != "" {
 		return os.RemoveAll(p)
 	}
-	return nil
-}
-
-func CheckCpushares(path string, c uint64) error {
-	var cpuShares uint64
-
-	if c == 0 {
-		return nil
-	}
-
-	fd, err := os.Open(filepath.Join(path, "cpu.shares"))
-	if err != nil {
-		return err
-	}
-	defer fd.Close()
-
-	_, err = fmt.Fscanf(fd, "%d", &cpuShares)
-	if err != nil && err != io.EOF {
-		return err
-	}
-
-	if c > cpuShares {
-		return fmt.Errorf("The maximum allowed cpu-shares is %d", cpuShares)
-	} else if c < cpuShares {
-		return fmt.Errorf("The minimum allowed cpu-shares is %d", cpuShares)
-	}
-
 	return nil
 }
 
