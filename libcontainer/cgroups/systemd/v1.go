@@ -295,9 +295,9 @@ func getSubsystemPath(c *configs.Cgroup, subsystem string) (string, error) {
 }
 
 func (m *legacyManager) Freeze(state configs.FreezerState) error {
-	path, err := getSubsystemPath(m.cgroups, "freezer")
-	if err != nil {
-		return err
+	path, ok := m.paths["freezer"]
+	if !ok {
+		return errSubsystemDoesNotExist
 	}
 	prevState := m.cgroups.Resources.Freezer
 	m.cgroups.Resources.Freezer = state
@@ -314,17 +314,17 @@ func (m *legacyManager) Freeze(state configs.FreezerState) error {
 }
 
 func (m *legacyManager) GetPids() ([]int, error) {
-	path, err := getSubsystemPath(m.cgroups, "devices")
-	if err != nil {
-		return nil, err
+	path, ok := m.paths["devices"]
+	if !ok {
+		return nil, errSubsystemDoesNotExist
 	}
 	return cgroups.GetPids(path)
 }
 
 func (m *legacyManager) GetAllPids() ([]int, error) {
-	path, err := getSubsystemPath(m.cgroups, "devices")
-	if err != nil {
-		return nil, err
+	path, ok := m.paths["devices"]
+	if !ok {
+		return nil, errSubsystemDoesNotExist
 	}
 	return cgroups.GetAllPids(path)
 }
@@ -393,9 +393,9 @@ func (m *legacyManager) Set(container *configs.Config) error {
 
 	for _, sys := range legacySubsystems {
 		// Get the subsystem path, but don't error out for not found cgroups.
-		path, err := getSubsystemPath(container.Cgroups, sys.Name())
-		if err != nil && !cgroups.IsNotFound(err) {
-			return err
+		path, ok := m.paths[sys.Name()]
+		if !ok {
+			continue
 		}
 		if err := sys.Set(path, container.Cgroups); err != nil {
 			return err
@@ -437,9 +437,9 @@ func (m *legacyManager) GetCgroups() (*configs.Cgroup, error) {
 }
 
 func (m *legacyManager) GetFreezerState() (configs.FreezerState, error) {
-	path, err := getSubsystemPath(m.cgroups, "freezer")
-	if err != nil && !cgroups.IsNotFound(err) {
-		return configs.Undefined, err
+	path, ok := m.paths["freezer"]
+	if !ok {
+		return configs.Undefined, nil
 	}
 	freezer, err := legacySubsystems.Get("freezer")
 	if err != nil {
