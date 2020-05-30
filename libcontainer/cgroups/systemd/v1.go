@@ -188,14 +188,16 @@ func (m *legacyManager) Apply(pid int) error {
 		return err
 	}
 
-	if err := joinCgroups(c, pid); err != nil {
-		return err
-	}
-
 	paths := make(map[string]string)
 	for _, s := range legacySubsystems {
 		subsystemPath, err := getSubsystemPath(m.cgroups, s.Name())
 		if err != nil {
+			// Even if it's `not found` error, we'll return err
+			// because devices cgroup is hard requirement for
+			// container security.
+			if s.Name() == "devices" {
+				return err
+			}
 			// Don't fail if a cgroup hierarchy was not found, just skip this subsystem
 			if cgroups.IsNotFound(err) {
 				continue
@@ -205,6 +207,11 @@ func (m *legacyManager) Apply(pid int) error {
 		paths[s.Name()] = subsystemPath
 	}
 	m.paths = paths
+
+	if err := m.joinCgroups(pid); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -233,48 +240,25 @@ func (m *legacyManager) Path(subsys string) string {
 	return m.paths[subsys]
 }
 
-func join(c *configs.Cgroup, subsystem string, pid int) (string, error) {
-	path, err := getSubsystemPath(c, subsystem)
-	if err != nil {
-		return "", err
-	}
-
-	if err := os.MkdirAll(path, 0755); err != nil {
-		return "", err
-	}
-	if err := cgroups.WriteCgroupProc(path, pid); err != nil {
-		return "", err
-	}
-	return path, nil
-}
-
-func joinCgroups(c *configs.Cgroup, pid int) error {
+func (m *legacyManager) joinCgroups(pid int) error {
 	for _, sys := range legacySubsystems {
 		name := sys.Name()
 		switch name {
 		case "name=systemd":
 			// let systemd handle this
 		case "cpuset":
-			path, err := getSubsystemPath(c, name)
-			if err != nil && !cgroups.IsNotFound(err) {
-				return err
-			}
-			s := &fs.CpusetGroup{}
-			if err := s.ApplyDir(path, c, pid); err != nil {
-				return err
-			}
-		default:
-			_, err := join(c, name, pid)
-			if err != nil {
-				// Even if it's `not found` error, we'll return err
-				// because devices cgroup is hard requirement for
-				// container security.
-				if name == "devices" {
+			if path, ok := m.paths[name]; ok {
+				s := &fs.CpusetGroup{}
+				if err := s.ApplyDir(path, m.cgroups, pid); err != nil {
 					return err
 				}
-				// For other subsystems, omit the `not found` error
-				// because they are optional.
-				if !cgroups.IsNotFound(err) {
+			}
+		default:
+			if path, ok := m.paths[name]; ok {
+				if err := os.MkdirAll(path, 0755); err != nil {
+					return err
+				}
+				if err := cgroups.WriteCgroupProc(path, pid); err != nil {
 					return err
 				}
 			}
