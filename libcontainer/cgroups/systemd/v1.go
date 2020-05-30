@@ -119,13 +119,6 @@ func genV1ResourcesProperties(c *configs.Cgroup) ([]systemdDbus.Property, error)
 			newProp("TasksMax", uint64(c.Resources.PidsLimit)))
 	}
 
-	// We have to set kernel memory here, as we can't change it once
-	// processes have been attached to the cgroup.
-	if c.Resources.KernelMemory != 0 {
-		if err := setKernelMemory(c); err != nil {
-			return nil, err
-		}
-	}
 	return properties, nil
 }
 
@@ -196,6 +189,14 @@ func (m *legacyManager) Apply(pid int) error {
 	}
 	properties = append(properties, resourcesProperties...)
 	properties = append(properties, c.SystemdProps...)
+
+	// We have to set kernel memory here, as we can't change it once
+	// processes have been attached to the cgroup.
+	if c.Resources.KernelMemory != 0 {
+		if err := enableKmem(c); err != nil {
+			return err
+		}
+	}
 
 	dbusConnection, err := getDbusConnection(false)
 	if err != nil {
@@ -443,7 +444,7 @@ func (m *legacyManager) Set(container *configs.Config) error {
 	return nil
 }
 
-func setKernelMemory(c *configs.Cgroup) error {
+func enableKmem(c *configs.Cgroup) error {
 	path, err := getSubsystemPath(c, "memory")
 	if err != nil && !cgroups.IsNotFound(err) {
 		return err
