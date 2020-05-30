@@ -69,6 +69,10 @@ EOF
         MEM_SWAP="memory.memsw.limit_in_bytes"
         SD_MEM_SWAP="unsupported"
         SYSTEM_MEM=$(cat "${CGROUP_MEMORY_BASE_PATH}/${MEM_LIMIT}")
+        HAVE_SWAP="no"
+        if [ -f "${CGROUP_MEMORY_BASE_PATH}/${MEM_SWAP}" ]; then
+            HAVE_SWAP="yes"
+        fi
         ;;
     yes)
         MEM_LIMIT="memory.max"
@@ -78,7 +82,7 @@ EOF
         MEM_SWAP="memory.swap.max"
         SD_MEM_SWAP="MemorySwapMax"
         SYSTEM_MEM="max"
-        CGROUP_MEMORY=$CGROUP_PATH
+        HAVE_SWAP="yes"
         ;;
     esac
     SD_UNLIMITED="infinity"
@@ -124,7 +128,7 @@ EOF
     check_systemd_value "$SD_MEM_RESERVE" 33554432
 
     # Run swap memory tests if swap is available
-    if [ -f "$CGROUP_MEMORY/$MEM_SWAP" ]; then
+    if [ "$HAVE_SWAP" = "yes" ]; then
         # try to remove memory swap limit
         runc update test_update --memory-swap -1
         [ "$status" -eq 0 ]
@@ -156,7 +160,7 @@ EOF
     check_systemd_value $SD_MEM_LIMIT $SD_UNLIMITED
 
     # check swap memory limited is gone
-    if [ -f "$CGROUP_MEMORY/$MEM_SWAP" ]; then
+    if [ "$HAVE_SWAP" = "yes" ]; then
         check_cgroup_value $MEM_SWAP $SYSTEM_MEM
         check_systemd_value "$SD_MEM_SWAP" $SD_UNLIMITED
     fi
