@@ -45,10 +45,6 @@ func (s *CpusetGroup) Set(path string, cgroup *configs.Cgroup) error {
 	return nil
 }
 
-func (s *CpusetGroup) Remove(d *cgroupData) error {
-	return removePath(d.path("cpuset"))
-}
-
 func (s *CpusetGroup) GetStats(path string, stats *cgroups.Stats) error {
 	return nil
 }

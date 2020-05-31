@@ -74,10 +74,6 @@ func (s *BlkioGroup) Set(path string, cgroup *configs.Cgroup) error {
 	return nil
 }
 
-func (s *BlkioGroup) Remove(d *cgroupData) error {
-	return removePath(d.path("blkio"))
-}
-
 /*
 examples:
 

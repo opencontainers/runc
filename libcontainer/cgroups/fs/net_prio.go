@@ -33,10 +33,6 @@ func (s *NetPrioGroup) Set(path string, cgroup *configs.Cgroup) error {
 	return nil
 }
 
-func (s *NetPrioGroup) Remove(d *cgroupData) error {
-	return removePath(d.path("net_prio"))
-}
-
 func (s *NetPrioGroup) GetStats(path string, stats *cgroups.Stats) error {
 	return nil
 }

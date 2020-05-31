@@ -53,10 +53,6 @@ func (s *CpuacctGroup) Set(path string, cgroup *configs.Cgroup) error {
 	return nil
 }
 
-func (s *CpuacctGroup) Remove(d *cgroupData) error {
-	return removePath(d.path("cpuacct"))
-}
-
 func (s *CpuacctGroup) GetStats(path string, stats *cgroups.Stats) error {
 	userModeUsage, kernelModeUsage, err := getCpuUsageBreakdown(path)
 	if err != nil {
