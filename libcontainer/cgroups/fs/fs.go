@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	subsystemsLegacy = subsystemSet{
+	subsystems = subsystemSet{
 		&CpusetGroup{},
 		&DevicesGroup{},
 		&MemoryGroup{},
@@ -164,10 +164,6 @@ func isIgnorableError(rootless bool, err error) bool {
 	return false
 }
 
-func (m *manager) getSubsystems() subsystemSet {
-	return subsystemsLegacy
-}
-
 func (m *manager) Apply(pid int) (err error) {
 	if m.cgroups == nil {
 		return nil
@@ -197,7 +193,7 @@ func (m *manager) Apply(pid int) (err error) {
 		return cgroups.EnterPid(m.paths, pid)
 	}
 
-	for _, sys := range m.getSubsystems() {
+	for _, sys := range subsystems {
 		p, err := d.path(sys.Name())
 		if err != nil {
 			// The non-presence of the devices subsystem is
@@ -249,7 +245,7 @@ func (m *manager) GetStats() (*cgroups.Stats, error) {
 	defer m.mu.Unlock()
 	stats := cgroups.NewStats()
 	for name, path := range m.paths {
-		sys, err := m.getSubsystems().Get(name)
+		sys, err := subsystems.Get(name)
 		if err == errSubsystemDoesNotExist {
 			continue
 		}
@@ -273,7 +269,7 @@ func (m *manager) Set(container *configs.Config) error {
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	for _, sys := range m.getSubsystems() {
+	for _, sys := range subsystems {
 		path := m.paths[sys.Name()]
 		if err := sys.Set(path, container.Cgroups); err != nil {
 			if m.rootless && sys.Name() == "devices" {
