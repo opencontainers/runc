@@ -566,6 +566,7 @@ func (c *linuxContainer) newSetnsProcess(p *Process, cmd *exec.Cmd, messageSockP
 		config:          c.newInitConfig(p),
 		process:         p,
 		bootstrapData:   data,
+		initProcessPid:  state.InitProcessPid,
 	}, nil
 }
 

@@ -55,12 +55,7 @@ function teardown() {
 @test "runc delete --force in cgroupv2 with subcgroups" {
   requires cgroups_v2 root
   set_cgroups_path "$BUSYBOX_BUNDLE"
-
-  # grant `rw` priviledge to `/sys/fs/cgroup`
-  cat "${BUSYBOX_BUNDLE}/config.json"\
-   | jq '.mounts |= map((select(.type=="cgroup") | .options -= ["ro"]) // .)'\
-   > "${BUSYBOX_BUNDLE}/config.json.tmp"
-  mv "${BUSYBOX_BUNDLE}/config.json"{.tmp,}
+  set_cgroup_mount_writable "$BUSYBOX_BUNDLE"
 
   # run busybox detached
   runc run -d --console-socket $CONSOLE_SOCKET test_busybox

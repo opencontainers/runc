@@ -5,6 +5,7 @@ package libcontainer
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -12,12 +13,14 @@ import (
 	"strconv"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
+	"github.com/opencontainers/runc/libcontainer/cgroups/fs2"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runc/libcontainer/logs"
 	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runc/libcontainer/utils"
 
+	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
 
@@ -66,6 +69,7 @@ type setnsProcess struct {
 	fds             []string
 	process         *Process
 	bootstrapData   io.Reader
+	initProcessPid  int
 }
 
 func (p *setnsProcess) startTime() (uint64, error) {
@@ -100,7 +104,25 @@ func (p *setnsProcess) start() (err error) {
 	}
 	if len(p.cgroupPaths) > 0 {
 		if err := cgroups.EnterPid(p.cgroupPaths, p.pid()); err != nil && !p.rootlessCgroups {
-			return newSystemErrorWithCausef(err, "adding pid %d to cgroups", p.pid())
+			// On cgroup v2 + nesting + domain controllers, EnterPid may fail with EBUSY.
+			// https://github.com/opencontainers/runc/issues/2356#issuecomment-621277643
+			// Try to join the cgroup of InitProcessPid.
+			if cgroups.IsCgroup2UnifiedMode() {
+				initProcCgroupFile := fmt.Sprintf("/proc/%d/cgroup", p.initProcessPid)
+				initCg, initCgErr := cgroups.ParseCgroupFile(initProcCgroupFile)
+				if initCgErr == nil {
+					if initCgPath, ok := initCg[""]; ok {
+						initCgDirpath := filepath.Join(fs2.UnifiedMountpoint, initCgPath)
+						logrus.Debugf("adding pid %d to cgroups %v failed (%v), attempting to join %q (obtained from %s)",
+							p.pid(), p.cgroupPaths, err, initCg, initCgDirpath)
+						// NOTE: initCgDirPath is not guaranteed to exist because we didn't pause the container.
+						err = cgroups.WriteCgroupProc(initCgDirpath, p.pid())
+					}
+				}
+			}
+			if err != nil {
+				return newSystemErrorWithCausef(err, "adding pid %d to cgroups", p.pid())
+			}
 		}
 	}
 	if p.intelRdtPath != "" {

@@ -197,6 +197,15 @@ function set_resources_limit() {
   sed -i 's/\("linux": {\)/\1\n   "resources": { "pids": { "limit": 100 } },/'  "$bundle/config.json"
 }
 
+# Helper function to make /sys/fs/cgroup writable
+function set_cgroup_mount_writable() {
+	bundle="${1:-.}"
+	cat "$bundle/config.json" \
+        |  jq '.mounts |= map((select(.type == "cgroup") | .options -= ["ro"]) // .)' \
+		>"$bundle/config.json.tmp"
+	mv "$bundle/config.json"{.tmp,}
+}
+
 # Fails the current test, providing the error given.
 function fail() {
 	echo "$@" >&2
