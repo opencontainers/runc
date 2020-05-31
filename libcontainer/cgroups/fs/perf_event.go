@@ -26,10 +26,6 @@ func (s *PerfEventGroup) Set(path string, cgroup *configs.Cgroup) error {
 	return nil
 }
 
-func (s *PerfEventGroup) Remove(d *cgroupData) error {
-	return removePath(d.path("perf_event"))
-}
-
 func (s *PerfEventGroup) GetStats(path string, stats *cgroups.Stats) error {
 	return nil
 }

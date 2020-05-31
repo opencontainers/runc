@@ -37,10 +37,6 @@ func (s *HugetlbGroup) Set(path string, cgroup *configs.Cgroup) error {
 	return nil
 }
 
-func (s *HugetlbGroup) Remove(d *cgroupData) error {
-	return removePath(d.path("hugetlb"))
-}
-
 func (s *HugetlbGroup) GetStats(path string, stats *cgroups.Stats) error {
 	hugetlbStats := cgroups.HugetlbStats{}
 	for _, pageSize := range HugePageSizes {

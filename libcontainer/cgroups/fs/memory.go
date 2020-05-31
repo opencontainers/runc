@@ -165,10 +165,6 @@ func (s *MemoryGroup) Set(path string, cgroup *configs.Cgroup) error {
 	return nil
 }
 
-func (s *MemoryGroup) Remove(d *cgroupData) error {
-	return removePath(d.path("memory"))
-}
-
 func (s *MemoryGroup) GetStats(path string, stats *cgroups.Stats) error {
 	// Set stats from memory.stat.
 	statsFile, err := os.Open(filepath.Join(path, "memory.stat"))

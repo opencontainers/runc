@@ -106,10 +106,6 @@ func (s *DevicesGroup) Set(path string, cgroup *configs.Cgroup) error {
 	return nil
 }
 
-func (s *DevicesGroup) Remove(d *cgroupData) error {
-	return removePath(d.path("devices"))
-}
-
 func (s *DevicesGroup) GetStats(path string, stats *cgroups.Stats) error {
 	return nil
 }

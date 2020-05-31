@@ -54,8 +54,6 @@ type subsystem interface {
 	Name() string
 	// Returns the stats, as 'stats', corresponding to the cgroup under 'path'.
 	GetStats(path string, stats *cgroups.Stats) error
-	// Removes the cgroup represented by 'cgroupData'.
-	Remove(*cgroupData) error
 	// Creates and joins the cgroup represented by 'cgroupData'.
 	Apply(*cgroupData) error
 	// Set the cgroup represented by cgroup.
