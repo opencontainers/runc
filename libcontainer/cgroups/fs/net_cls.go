@@ -17,12 +17,8 @@ func (s *NetClsGroup) Name() string {
 	return "net_cls"
 }
 
-func (s *NetClsGroup) Apply(d *cgroupData) error {
-	_, err := d.join("net_cls")
-	if err != nil && !cgroups.IsNotFound(err) {
-		return err
-	}
-	return nil
+func (s *NetClsGroup) Apply(path string, d *cgroupData) error {
+	return join(path, d.pid)
 }
 
 func (s *NetClsGroup) Set(path string, cgroup *configs.Cgroup) error {
