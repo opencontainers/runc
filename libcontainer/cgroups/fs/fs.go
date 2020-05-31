@@ -57,7 +57,7 @@ type subsystem interface {
 	// Removes the cgroup represented by 'cgroupData'.
 	Remove(*cgroupData) error
 	// Creates and joins the cgroup represented by 'cgroupData'.
-	Apply(*cgroupData) error
+	Apply(path string, c *cgroupData) error
 	// Set the cgroup represented by cgroup.
 	Set(path string, cgroup *configs.Cgroup) error
 }
@@ -211,7 +211,7 @@ func (m *manager) Apply(pid int) (err error) {
 		}
 		m.paths[sys.Name()] = p
 
-		if err := sys.Apply(d); err != nil {
+		if err := sys.Apply(p, d); err != nil {
 			// In the case of rootless (including euid=0 in userns), where an
 			// explicit cgroup path hasn't been set, we don't bail on error in
 			// case of permission problems. Cases where limits have been set
@@ -374,18 +374,14 @@ func (raw *cgroupData) path(subsystem string) (string, error) {
 	return filepath.Join(parentPath, raw.innerPath), nil
 }
 
-func (raw *cgroupData) join(subsystem string) (string, error) {
-	path, err := raw.path(subsystem)
-	if err != nil {
-		return "", err
+func join(path string, pid int) error {
+	if path == "" {
+		return nil
 	}
 	if err := os.MkdirAll(path, 0755); err != nil {
-		return "", err
+		return err
 	}
-	if err := cgroups.WriteCgroupProc(path, raw.pid); err != nil {
-		return "", err
-	}
-	return path, nil
+	return cgroups.WriteCgroupProc(path, pid)
 }
 
 func removePath(p string, err error) error {

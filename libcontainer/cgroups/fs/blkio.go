@@ -22,12 +22,8 @@ func (s *BlkioGroup) Name() string {
 	return "blkio"
 }
 
-func (s *BlkioGroup) Apply(d *cgroupData) error {
-	_, err := d.join("blkio")
-	if err != nil && !cgroups.IsNotFound(err) {
-		return err
-	}
-	return nil
+func (s *BlkioGroup) Apply(path string, d *cgroupData) error {
+	return join(path, d.pid)
 }
 
 func (s *BlkioGroup) Set(path string, cgroup *configs.Cgroup) error {

@@ -182,7 +182,9 @@ func TestCpuSetRtSchedAtApply(t *testing.T) {
 	helper.CgroupData.config.Resources.CpuRtRuntime = rtRuntimeAfter
 	helper.CgroupData.config.Resources.CpuRtPeriod = rtPeriodAfter
 	cpu := &CpuGroup{}
-	if err := cpu.ApplyDir(helper.CgroupPath, helper.CgroupData.config, 1234); err != nil {
+
+	helper.CgroupData.pid = 1234
+	if err := cpu.Apply(helper.CgroupPath, helper.CgroupData); err != nil {
 		t.Fatal(err)
 	}
 

@@ -19,12 +19,8 @@ func (s *PidsGroup) Name() string {
 	return "pids"
 }
 
-func (s *PidsGroup) Apply(d *cgroupData) error {
-	_, err := d.join("pids")
-	if err != nil && !cgroups.IsNotFound(err) {
-		return err
-	}
-	return nil
+func (s *PidsGroup) Apply(path string, d *cgroupData) error {
+	return join(path, d.pid)
 }
 
 func (s *PidsGroup) Set(path string, cgroup *configs.Cgroup) error {
