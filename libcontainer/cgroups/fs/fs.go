@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	subsystemsLegacy = subsystemSet{
+	subsystems = subsystemSet{
 		&CpusetGroup{},
 		&DevicesGroup{},
 		&MemoryGroup{},
@@ -166,10 +166,6 @@ func isIgnorableError(rootless bool, err error) bool {
 	return false
 }
 
-func (m *manager) getSubsystems() subsystemSet {
-	return subsystemsLegacy
-}
-
 func (m *manager) Apply(pid int) (err error) {
 	if m.cgroups == nil {
 		return nil
@@ -198,7 +194,7 @@ func (m *manager) Apply(pid int) (err error) {
 		return err
 	}
 
-	for _, sys := range m.getSubsystems() {
+	for _, sys := range subsystems {
 		p, err := d.path(sys.Name())
 		if err != nil {
 			// The non-presence of the devices subsystem is
@@ -250,7 +246,7 @@ func (m *manager) GetStats() (*cgroups.Stats, error) {
 	defer m.mu.Unlock()
 	stats := cgroups.NewStats()
 	for name, path := range m.paths {
-		sys, err := m.getSubsystems().Get(name)
+		sys, err := subsystems.Get(name)
 		if err == errSubsystemDoesNotExist || !cgroups.PathExists(path) {
 			continue
 		}
@@ -274,7 +270,7 @@ func (m *manager) Set(container *configs.Config) error {
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	for _, sys := range m.getSubsystems() {
+	for _, sys := range subsystems {
 		path := m.paths[sys.Name()]
 		if err := sys.Set(path, container.Cgroups); err != nil {
 			if m.rootless && sys.Name() == "devices" {
@@ -311,7 +307,7 @@ func (m *manager) Freeze(state configs.FreezerState) (Err error) {
 		}
 	}()
 
-	freezer, err := m.getSubsystems().Get("freezer")
+	freezer, err := subsystems.Get("freezer")
 	if err != nil {
 		return err
 	}
@@ -417,7 +413,7 @@ func (m *manager) GetCgroups() (*configs.Cgroup, error) {
 
 func (m *manager) GetFreezerState() (configs.FreezerState, error) {
 	dir := m.Path("freezer")
-	freezer, err := m.getSubsystems().Get("freezer")
+	freezer, err := subsystems.Get("freezer")
 
 	// If the container doesn't have the freezer cgroup, say it's undefined.
 	if err != nil || dir == "" {
