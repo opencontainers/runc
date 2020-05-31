@@ -359,14 +359,14 @@ func getCgroupData(c *configs.Cgroup, pid int) (*cgroupData, error) {
 }
 
 func (raw *cgroupData) path(subsystem string) (string, error) {
-	mnt, err := cgroups.FindCgroupMountpoint(raw.root, subsystem)
-	// If we didn't mount the subsystem, there is no point we make the path.
-	if err != nil {
-		return "", err
-	}
-
 	// If the cgroup name/path is absolute do not look relative to the cgroup of the init process.
 	if filepath.IsAbs(raw.innerPath) {
+		mnt, err := cgroups.FindCgroupMountpoint(raw.root, subsystem)
+		// If we didn't mount the subsystem, there is no point we make the path.
+		if err != nil {
+			return "", err
+		}
+
 		// Sometimes subsystems can be mounted together as 'cpu,cpuacct'.
 		return filepath.Join(raw.root, filepath.Base(mnt), raw.innerPath), nil
 	}
