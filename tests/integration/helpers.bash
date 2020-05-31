@@ -266,6 +266,12 @@ function requires() {
 				skip_me=1
 			fi
 			;;
+		cgroups_swap)
+			init_cgroup_paths
+			if [ $CGROUP_UNIFIED = "no" -a ! -e "${CGROUP_MEMORY_BASE_PATH}/memory.memsw.limit_in_bytes" ]; then
+				skip_me=1
+			fi
+			;;
 		cgroups_v1)
 			init_cgroup_paths
 			if [ "$CGROUP_UNIFIED" != "no" ]; then

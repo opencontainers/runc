@@ -112,11 +112,11 @@ function teardown() {
   [ "$status" -eq 0 ]
 }
 
-@test "events oom " {
+@test "events oom" {
   # XXX: currently cgroups require root containers.
-  requires root
+  requires root cgroups_swap
   init_cgroup_paths
-  
+
   # we need the container to hit OOM, so disable swap
   # ("swap" here is actually memory+swap)
   DATA=$(cat <<EOF
