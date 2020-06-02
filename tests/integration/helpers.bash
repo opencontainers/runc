@@ -22,7 +22,7 @@ HELLO_IMAGE="$TESTDATA/$HELLO_FILE"
 HELLO_BUNDLE="$BATS_TMPDIR/hello-world"
 
 # CRIU PATH
-CRIU="$(which criu || true)"
+CRIU="$(which criu 2>/dev/null || true)"
 
 # Kernel version
 KERNEL_VERSION="$(uname -r)"
