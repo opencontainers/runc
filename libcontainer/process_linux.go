@@ -346,16 +346,7 @@ func (p *initProcess) start() (retErr error) {
 		return newSystemErrorWithCausef(err, "getting pipe fds for pid %d", childPid)
 	}
 	p.setExternalDescriptors(fds)
-	// Do this before syncing with child so that no children
-	// can escape the cgroup
-	if err := p.manager.Apply(childPid); err != nil {
-		return newSystemErrorWithCause(err, "applying cgroup configuration for process")
-	}
-	if p.intelRdtManager != nil {
-		if err := p.intelRdtManager.Apply(childPid); err != nil {
-			return newSystemErrorWithCause(err, "applying Intel RDT configuration for process")
-		}
-	}
+
 	// Now it's time to setup cgroup namesapce
 	if p.config.Config.Namespaces.Contains(configs.NEWCGROUP) && p.config.Config.Namespaces.PathOf(configs.NEWCGROUP) == "" {
 		if _, err := p.messageSockPair.parent.Write([]byte{createCgroupns}); err != nil {
