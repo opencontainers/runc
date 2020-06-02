@@ -25,6 +25,10 @@ function teardown() {
 
   retry 10 1 eval "__runc state test_busybox | grep -q 'stopped'"
 
+  # we should ensure kill work after the container stopped
+  runc kill -a test_busybox 0
+  [ "$status" -eq 0 ]
+
   runc delete test_busybox
   [ "$status" -eq 0 ]
 }
