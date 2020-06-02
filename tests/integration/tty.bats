@@ -231,3 +231,10 @@ EOF
 	runc kill test_busybox KILL
 	[ "$status" -eq 0 ]
 }
+
+@test "runc run [tty and ptmx in devices (#2450)]" {
+	update_config '.process.terminal=true | .process.args=["true"] | .linux.devices = [{"path":"/dev/tty","type":"c","major":5,"minor":0,"fileMode":8630},{"path":"/dev/ptmx","type":"c","major":5,"minor":2,"fileMode":8630}]'
+	# run busybox
+	runc run test_busybox
+	[ "$status" -eq 0 ]
+}

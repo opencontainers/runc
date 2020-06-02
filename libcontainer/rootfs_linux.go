@@ -21,6 +21,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/system"
 	libcontainerUtils "github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/opencontainers/selinux/go-selinux/label"
+	"github.com/pkg/errors"
 
 	"golang.org/x/sys/unix"
 )
@@ -594,6 +595,36 @@ func createDevices(config *configs.Config) error {
 }
 
 func bindMountDeviceNode(dest string, node *configs.Device) error {
+	var st unix.Stat_t
+	if err := unix.Lstat(dest, &st); err != nil {
+		if !os.IsNotExist(err) {
+			return errors.Wrapf(err, "could not stat existing path for device node: %q", dest)
+		}
+	} else if st.Mode&unix.S_IFMT == unix.S_IFLNK {
+		// If the path is a symlink, we remove it.
+		if err := unix.Unlink(dest); err != nil {
+			return errors.Wrapf(err, "device node %q already exists and is a symlink", dest)
+		}
+	} else {
+		// If there already exists a device inode with the correct (type,
+		// major, minor), we can skip over setting it up. This logic only
+		// really makes sense for rootless containers.
+		var gotType configs.DeviceType
+		switch st.Mode & unix.S_IFMT {
+		case unix.S_IFBLK:
+			gotType = configs.BlockDevice
+		case unix.S_IFCHR:
+			gotType = configs.CharDevice
+		default:
+			return errors.Errorf("device node %q already exists but not a valid device: %#o", dest, st.Mode)
+		}
+		gotMajor := int64(unix.Major(st.Rdev))
+		gotMinor := int64(unix.Minor(st.Rdev))
+		if gotType != node.Type || gotMajor != node.Major || gotMinor != node.Minor {
+			return errors.Errorf("device node %q already exists but incorrect type [%v %d:%d] (wanted [%v %d:%d])", dest, gotType, gotMajor, gotMinor, node.Type, node.Major, node.Minor)
+		}
+		return nil
+	}
 	f, err := os.Create(dest)
 	if err != nil && !os.IsExist(err) {
 		return err
@@ -726,7 +757,15 @@ func setReadonly() error {
 func setupPtmx(config *configs.Config) error {
 	ptmx := filepath.Join(config.Rootfs, "dev/ptmx")
 	if err := os.Remove(ptmx); err != nil && !os.IsNotExist(err) {
-		return err
+		if errors.Is(err, unix.EBUSY) {
+			// EBUSY can happen when ptmx is bind-mounted, mostly when rootless && linux.devices contains ptmx
+			if umErr := unix.Unmount(ptmx, unix.MNT_DETACH); umErr == nil {
+				err = os.Remove(ptmx)
+			}
+		}
+		if err != nil {
+			return err
+		}
 	}
 	if err := os.Symlink("pts/ptmx", ptmx); err != nil {
 		return fmt.Errorf("symlink dev ptmx %s", err)
