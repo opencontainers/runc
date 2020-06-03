@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	subsystems = subsystemSet{
+	subsystems = []subsystem{
 		&CpusetGroup{},
 		&DevicesGroup{},
 		&MemoryGroup{},
@@ -37,17 +37,6 @@ var (
 )
 
 var errSubsystemDoesNotExist = errors.New("cgroup: subsystem does not exist")
-
-type subsystemSet []subsystem
-
-func (s subsystemSet) Get(name string) (subsystem, error) {
-	for _, ss := range s {
-		if ss.Name() == name {
-			return ss, nil
-		}
-	}
-	return nil, errSubsystemDoesNotExist
-}
 
 type subsystem interface {
 	// Name returns the name of the subsystem.
@@ -243,9 +232,9 @@ func (m *manager) GetStats() (*cgroups.Stats, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	stats := cgroups.NewStats()
-	for name, path := range m.paths {
-		sys, err := subsystems.Get(name)
-		if err == errSubsystemDoesNotExist || !cgroups.PathExists(path) {
+	for _, sys := range subsystems {
+		path := m.paths[sys.Name()]
+		if path == "" {
 			continue
 		}
 		if err := sys.GetStats(path, stats); err != nil {
