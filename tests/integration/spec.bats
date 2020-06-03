@@ -79,7 +79,7 @@ function teardown() {
 
   SPEC_REF=$([[ -z "$SPEC_COMMIT" ]] && echo $SPEC_VERSION || echo $SPEC_COMMIT)
 
-  run git -C src/runtime-spec reset --hard "${SPEC_REF}"
+  run bash -c "cd src/runtime-spec && git reset --hard ${SPEC_REF}"
 
   [ "$status" -eq 0 ]
   [ -e src/runtime-spec/schema/config-schema.json ]
@@ -87,7 +87,7 @@ function teardown() {
   run bash -c "GOPATH='$GOPATH' go get github.com/xeipuuv/gojsonschema"
   [ "$status" -eq 0 ]
 
-  run git -C "${GOPATH}/src/github.com/xeipuuv/gojsonschema" reset --hard 6637feb73ee44cd4640bb3def285c29774234c7f
+  run bash -c "cd ${GOPATH}/src/github.com/xeipuuv/gojsonschema && git reset --hard 6637feb73ee44cd4640bb3def285c29774234c7f"
   [ "$status" -eq 0 ]
 
   GOPATH="$GOPATH" go build src/runtime-spec/schema/validate.go
