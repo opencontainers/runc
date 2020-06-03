@@ -60,6 +60,10 @@ func testCheckpoint(t *testing.T, userns bool) {
 		return
 	}
 
+	if _, err := exec.LookPath("criu"); err != nil {
+		t.Skipf("criu binary not found: %v", err)
+	}
+
 	root, err := newTestRoot()
 	if err != nil {
 		t.Fatal(err)
