@@ -3,11 +3,9 @@
 package fs
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
@@ -65,66 +63,9 @@ func NewManager(cg *configs.Cgroup, paths map[string]string, rootless bool) cgro
 }
 
 // The absolute path to the root of the cgroup hierarchies.
-var cgroupRootLock sync.Mutex
-var cgroupRoot string
-
-// Gets the cgroupRoot.
-func getCgroupRoot() (string, error) {
-	cgroupRootLock.Lock()
-	defer cgroupRootLock.Unlock()
-
-	if cgroupRoot != "" {
-		return cgroupRoot, nil
-	}
-
-	f, err := os.Open("/proc/self/mountinfo")
-	if err != nil {
-		return "", err
-	}
-	defer f.Close()
-
-	var root string
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		text := scanner.Text()
-		fields := strings.Split(text, " ")
-		// Safe as mountinfo encodes mountpoints with spaces as \040.
-		index := strings.Index(text, " - ")
-		postSeparatorFields := strings.Fields(text[index+3:])
-		numPostFields := len(postSeparatorFields)
-
-		// This is an error as we can't detect if the mount is for "cgroup"
-		if numPostFields == 0 {
-			return "", fmt.Errorf("mountinfo: found no fields post '-' in %q", text)
-		}
-
-		if postSeparatorFields[0] == "cgroup" {
-			// Check that the mount is properly formatted.
-			if numPostFields < 3 {
-				return "", fmt.Errorf("Error found less than 3 fields post '-' in %q", text)
-			}
-
-			root = filepath.Dir(fields[4])
-			break
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		return "", err
-	}
-	if root == "" {
-		return "", errors.New("no cgroup mount found in mountinfo")
-	}
-
-	if _, err := os.Stat(root); err != nil {
-		return "", err
-	}
-
-	cgroupRoot = root
-	return cgroupRoot, nil
-}
+const cgroupRoot = "/sys/fs/cgroup"
 
 type cgroupData struct {
-	root      string
 	innerPath string
 	config    *configs.Cgroup
 	pid       int
@@ -305,11 +246,6 @@ func (m *manager) GetAllPids() ([]int, error) {
 }
 
 func getCgroupData(c *configs.Cgroup, pid int) (*cgroupData, error) {
-	root, err := getCgroupRoot()
-	if err != nil {
-		return nil, err
-	}
-
 	if (c.Name != "" || c.Parent != "") && c.Path != "" {
 		return nil, errors.New("cgroup: either Path or Name and Parent should be used")
 	}
@@ -325,7 +261,6 @@ func getCgroupData(c *configs.Cgroup, pid int) (*cgroupData, error) {
 	}
 
 	return &cgroupData{
-		root:      root,
 		innerPath: innerPath,
 		config:    c,
 		pid:       pid,
@@ -335,14 +270,14 @@ func getCgroupData(c *configs.Cgroup, pid int) (*cgroupData, error) {
 func (raw *cgroupData) path(subsystem string) (string, error) {
 	// If the cgroup name/path is absolute do not look relative to the cgroup of the init process.
 	if filepath.IsAbs(raw.innerPath) {
-		mnt, err := cgroups.FindCgroupMountpoint(raw.root, subsystem)
+		mnt, err := cgroups.FindCgroupMountpoint(cgroupRoot, subsystem)
 		// If we didn't mount the subsystem, there is no point we make the path.
 		if err != nil {
 			return "", err
 		}
 
 		// Sometimes subsystems can be mounted together as 'cpu,cpuacct'.
-		return filepath.Join(raw.root, filepath.Base(mnt), raw.innerPath), nil
+		return filepath.Join(cgroupRoot, filepath.Base(mnt), raw.innerPath), nil
 	}
 
 	// Use GetOwnCgroupPath instead of GetInitCgroupPath, because the creating
