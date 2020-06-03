@@ -298,7 +298,7 @@ func (m *manager) Set(container *configs.Config) error {
 
 // Freeze toggles the container's freezer cgroup depending on the state
 // provided
-func (m *manager) Freeze(state configs.FreezerState) (Err error) {
+func (m *manager) Freeze(state configs.FreezerState) error {
 	path := m.Path("freezer")
 	if m.cgroups == nil || path == "" {
 		return errors.New("cannot toggle freezer: cgroups not configured for container")
@@ -306,14 +306,9 @@ func (m *manager) Freeze(state configs.FreezerState) (Err error) {
 
 	prevState := m.cgroups.Resources.Freezer
 	m.cgroups.Resources.Freezer = state
-	defer func() {
-		if Err != nil {
-			m.cgroups.Resources.Freezer = prevState
-		}
-	}()
-
 	freezer := &FreezerGroup{}
 	if err := freezer.Set(path, m.cgroups); err != nil {
+		m.cgroups.Resources.Freezer = prevState
 		return err
 	}
 	return nil
