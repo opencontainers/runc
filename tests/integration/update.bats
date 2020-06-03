@@ -67,6 +67,10 @@ function setup() {
         ;;
     esac
     SD_UNLIMITED="infinity"
+    SD_VERSION=$(systemctl --version | awk '{print $2; exit}')
+    if [ $SD_VERSION -lt 227 ]; then
+        SD_UNLIMITED="18446744073709551615"
+    fi
 
     # check that initial values were properly set
     check_cgroup_value "cpuset.cpus" 0
