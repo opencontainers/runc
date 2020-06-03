@@ -305,10 +305,7 @@ func (m *manager) Freeze(state configs.FreezerState) (Err error) {
 		}
 	}()
 
-	freezer, err := subsystems.Get("freezer")
-	if err != nil {
-		return err
-	}
+	freezer := &FreezerGroup{}
 	if err := freezer.Set(path, m.cgroups); err != nil {
 		return err
 	}
@@ -407,13 +404,12 @@ func (m *manager) GetCgroups() (*configs.Cgroup, error) {
 
 func (m *manager) GetFreezerState() (configs.FreezerState, error) {
 	dir := m.Path("freezer")
-	freezer, err := subsystems.Get("freezer")
-
 	// If the container doesn't have the freezer cgroup, say it's undefined.
-	if err != nil || dir == "" {
+	if dir == "" {
 		return configs.Undefined, nil
 	}
-	return freezer.(*FreezerGroup).GetState(dir)
+	freezer := &FreezerGroup{}
+	return freezer.GetState(dir)
 }
 
 func (m *manager) Exists() bool {

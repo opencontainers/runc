@@ -301,11 +301,8 @@ func (m *legacyManager) Freeze(state configs.FreezerState) error {
 	}
 	prevState := m.cgroups.Resources.Freezer
 	m.cgroups.Resources.Freezer = state
-	freezer, err := legacySubsystems.Get("freezer")
-	if err != nil {
-		return err
-	}
-	err = freezer.Set(path, m.cgroups)
+	freezer := &fs.FreezerGroup{}
+	err := freezer.Set(path, m.cgroups)
 	if err != nil {
 		m.cgroups.Resources.Freezer = prevState
 		return err
@@ -441,11 +438,8 @@ func (m *legacyManager) GetFreezerState() (configs.FreezerState, error) {
 	if !ok {
 		return configs.Undefined, nil
 	}
-	freezer, err := legacySubsystems.Get("freezer")
-	if err != nil {
-		return configs.Undefined, err
-	}
-	return freezer.(*fs.FreezerGroup).GetState(path)
+	freezer := &fs.FreezerGroup{}
+	return freezer.GetState(path)
 }
 
 func (m *legacyManager) Exists() bool {
