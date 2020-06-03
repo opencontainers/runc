@@ -3,6 +3,7 @@ package systemd
 import (
 	"bufio"
 	"fmt"
+	"math"
 	"os"
 	"strings"
 	"sync"
@@ -348,4 +349,23 @@ func stopUnit(dbusConnection *systemdDbus.Conn, unitName string) error {
 		}
 	}
 	return nil
+}
+
+func addCpuQuota(properties *[]systemdDbus.Property, quota int64, period uint64) {
+	if quota != 0 && period != 0 {
+		// corresponds to USEC_INFINITY in systemd
+		cpuQuotaPerSecUSec := uint64(math.MaxUint64)
+		if quota > 0 {
+			// systemd converts CPUQuotaPerSecUSec (microseconds per CPU second) to CPUQuota
+			// (integer percentage of CPU) internally.  This means that if a fractional percent of
+			// CPU is indicated by Resources.CpuQuota, we need to round up to the nearest
+			// 10ms (1% of a second) such that child cgroups can set the cpu.cfs_quota_us they expect.
+			cpuQuotaPerSecUSec = uint64(quota*1000000) / period
+			if cpuQuotaPerSecUSec%10000 != 0 {
+				cpuQuotaPerSecUSec = ((cpuQuotaPerSecUSec / 10000) + 1) * 10000
+			}
+		}
+		*properties = append(*properties,
+			newProp("CPUQuotaPerSecUSec", cpuQuotaPerSecUSec))
+	}
 }

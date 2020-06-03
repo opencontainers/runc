@@ -5,7 +5,6 @@ package systemd
 import (
 	"errors"
 	"io/ioutil"
-	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -89,25 +88,7 @@ func genV1ResourcesProperties(c *configs.Cgroup) ([]systemdDbus.Property, error)
 			newProp("CPUShares", r.CpuShares))
 	}
 
-	// cpu.cfs_quota_us and cpu.cfs_period_us are controlled by systemd.
-	if r.CpuQuota != 0 && r.CpuPeriod != 0 {
-		// corresponds to USEC_INFINITY in systemd
-		// if USEC_INFINITY is provided, CPUQuota is left unbound by systemd
-		// always setting a property value ensures we can apply a quota and remove it later
-		cpuQuotaPerSecUSec := uint64(math.MaxUint64)
-		if r.CpuQuota > 0 {
-			// systemd converts CPUQuotaPerSecUSec (microseconds per CPU second) to CPUQuota
-			// (integer percentage of CPU) internally.  This means that if a fractional percent of
-			// CPU is indicated by Resources.CpuQuota, we need to round up to the nearest
-			// 10ms (1% of a second) such that child cgroups can set the cpu.cfs_quota_us they expect.
-			cpuQuotaPerSecUSec = uint64(r.CpuQuota*1000000) / r.CpuPeriod
-			if cpuQuotaPerSecUSec%10000 != 0 {
-				cpuQuotaPerSecUSec = ((cpuQuotaPerSecUSec / 10000) + 1) * 10000
-			}
-		}
-		properties = append(properties,
-			newProp("CPUQuotaPerSecUSec", cpuQuotaPerSecUSec))
-	}
+	addCpuQuota(&properties, r.CpuQuota, r.CpuPeriod)
 
 	if r.BlkioWeight != 0 {
 		properties = append(properties,
