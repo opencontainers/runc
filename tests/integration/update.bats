@@ -354,6 +354,36 @@ EOF
     check_systemd_value "CPUShares" 100
 }
 
+@test "update cgroup v2 cpu limits" {
+    [[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+    requires cgroups_v2
+
+    # run a few busyboxes detached
+    runc run -d --console-socket $CONSOLE_SOCKET test_update
+    [ "$status" -eq 0 ]
+
+    # check that initial values were properly set.
+    # The period has six zeros.
+    check_cgroup_value "cpu.max" "500000 1000000"
+    check_systemd_value "CPUQuotaPerSecUSec" 500ms
+
+    # systemd driver does not allow to update quota and period separately
+    # (the same issue as in v1)
+    if [ -z "$RUNC_USE_SYSTEMD" ]; then
+        # update cpu quota without explicit period
+        runc update test_update --cpu-quota 600000
+        [ "$status" -eq 0 ]
+        # make sure the initial period (six zeros) is preserved
+        check_cgroup_value "cpu.max" "600000 1000000"
+
+        # update cpu quota to -1 without explicit period
+        runc update test_update --cpu-quota -1
+        [ "$status" -eq 0 ]
+        # make sure quota is set to "max" and the initial period (six zeros) is preserved
+        check_cgroup_value "cpu.max" "max 1000000"
+    fi
+}
+
 @test "update rt period and runtime" {
     [[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
     requires cgroups_rt
