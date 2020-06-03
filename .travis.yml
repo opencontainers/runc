@@ -20,15 +20,10 @@ matrix:
       script:
         - make all
         - sudo PATH="$PATH" make localintegration RUNC_USE_SYSTEMD=1
-    - go: 1.13.x
-      name: "cgroup-v2"
-      env:
-        - VAGRANT_VERSION=2.2.7
+    - name: "fedora32"
       before_install:
-        - cat /proc/cpuinfo
-# https://github.com/alvistack/ansible-role-virtualbox/blob/6887b020b0ca5c59ddb6620d73f053ffb84f4126/.travis.yml#L30
-        - sudo apt-get install -q -y bridge-utils dnsmasq-base ebtables libvirt-bin libvirt-dev qemu-kvm qemu-utils ruby-dev && wget https://releases.hashicorp.com/vagrant/${VAGRANT_VERSION}/vagrant_${VAGRANT_VERSION}_$(uname -m).deb && sudo dpkg -i vagrant_${VAGRANT_VERSION}_$(uname -m).deb && rm -f vagrant_${VAGRANT_VERSION}_$(uname -m).deb
-        - sudo vagrant plugin install vagrant-libvirt
+        - sudo ./script/install-vagrant.sh
+        - ln -sf Vagrantfile.fedora32 Vagrantfile
         - sudo vagrant up && sudo mkdir -p /root/.ssh && sudo sh -c "vagrant ssh-config >> /root/.ssh/config"
       script:
         - sudo ssh default -t 'cd /vagrant && sudo make localunittest'
@@ -40,6 +35,23 @@ matrix:
         - sudo ssh default -t 'cd /vagrant && sudo make localrootlessintegration RUNC_USE_SYSTEMD=yes'
         # same setup but with fs2 driver (rootless) instead of systemd
         - sudo ssh default -t 'cd /vagrant && sudo make localrootlessintegration'
+    - name: "centos7"
+      before_install:
+        - sudo ./script/install-vagrant.sh
+        - ln -sf Vagrantfile.centos7 Vagrantfile
+        - sudo vagrant up && sudo mkdir -p /root/.ssh && sudo sh -c "vagrant ssh-config >> /root/.ssh/config"
+      script:
+        # kernel 3.10 (frankenized), systemd 219
+        - sudo ssh default 'rpm -q centos-release kernel systemd'
+        # FIXME: the following unit tests are skipped (TESTFLAGS=-short):
+        #        FAIL: TestPidsSystemd: utils_test.go:55: exec_test.go:630: unexpected error: container_linux.go:353: starting container process caused: process_linux.go:326: applying cgroup configuration for process caused: mountpoint for devices not found
+        #        FAIL: TestRunWithKernelMemorySystemd: exec_test.go:713: runContainer failed with kernel memory limit: container_linux.go:353: starting container process caused: process_linux.go:326: applying cgroup configuration for process caused: mkdir : no such file or directory
+        - sudo ssh default -t 'sudo -i make -C /vagrant localunittest TESTFLAGS=-short'
+        - sudo ssh default -t 'sudo -i make -C /vagrant localintegration'
+        - sudo ssh default -t 'sudo -i make -C /vagrant localintegration RUNC_USE_SYSTEMD=1'
+        # FIXME: rootless is skipped because of EPERM on writing cgroup.procs
+        # - sudo ssh default -t 'sudo -i make -C /vagrant localrootlessintegration'
+
   allow_failures:
     - go: tip
 
