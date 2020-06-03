@@ -39,8 +39,7 @@ func NewCgroupTestUtil(subsystem string, t *testing.T) *cgroupTestUtil {
 	if err != nil {
 		t.Fatal(err)
 	}
-	d.root = tempDir
-	testCgroupPath := filepath.Join(d.root, subsystem)
+	testCgroupPath := filepath.Join(tempDir, subsystem)
 	if err != nil {
 		t.Fatal(err)
 	}

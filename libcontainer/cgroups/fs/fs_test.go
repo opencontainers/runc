@@ -16,11 +16,6 @@ func TestInvalidCgroupPath(t *testing.T) {
 		t.Skip("cgroup v2 is not supported")
 	}
 
-	root, err := getCgroupRoot()
-	if err != nil {
-		t.Fatalf("couldn't get cgroup root: %v", err)
-	}
-
 	testCases := []struct {
 		test               string
 		path, name, parent string
@@ -80,7 +75,7 @@ func TestInvalidCgroupPath(t *testing.T) {
 			}
 
 			// Double-check, using an actual cgroup.
-			deviceRoot := filepath.Join(root, "devices")
+			deviceRoot := filepath.Join(cgroupRoot, "devices")
 			devicePath, err := data.path("devices")
 			if err != nil {
 				t.Fatalf("couldn't get cgroup path: %v", err)
