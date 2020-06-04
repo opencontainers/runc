@@ -457,51 +457,6 @@ func TestConvertCPUSharesToCgroupV2Value(t *testing.T) {
 	}
 }
 
-func TestConvertCPUQuotaCPUPeriodToCgroupV2Value(t *testing.T) {
-	cases := []struct {
-		quota    int64
-		period   uint64
-		expected string
-	}{
-		{
-			quota:    0,
-			period:   0,
-			expected: "",
-		},
-		{
-			quota:    -1,
-			period:   0,
-			expected: "",
-		},
-		{
-			quota:    1000,
-			period:   5000,
-			expected: "1000 5000",
-		},
-		{
-			quota:    0,
-			period:   5000,
-			expected: "max 5000",
-		},
-		{
-			quota:    -1,
-			period:   5000,
-			expected: "max 5000",
-		},
-		{
-			quota:    1000,
-			period:   0,
-			expected: "1000 100000",
-		},
-	}
-	for _, c := range cases {
-		got := ConvertCPUQuotaCPUPeriodToCgroupV2Value(c.quota, c.period)
-		if got != c.expected {
-			t.Errorf("expected ConvertCPUQuotaCPUPeriodToCgroupV2Value(%d, %d) to be %s, got %s", c.quota, c.period, c.expected, got)
-		}
-	}
-}
-
 func TestConvertMemorySwapToCgroupV2Value(t *testing.T) {
 	cases := []struct {
 		memswap, memory int64

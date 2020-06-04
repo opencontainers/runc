@@ -258,8 +258,6 @@ other options are ignored.
 		config.Cgroups.Resources.CpuShares = *r.CPU.Shares
 		//CpuWeight is used for cgroupv2 and should be converted
 		config.Cgroups.Resources.CpuWeight = cgroups.ConvertCPUSharesToCgroupV2Value(*r.CPU.Shares)
-		//CpuMax is used for cgroupv2 and should be converted
-		config.Cgroups.Resources.CpuMax = cgroups.ConvertCPUQuotaCPUPeriodToCgroupV2Value(*r.CPU.Quota, *r.CPU.Period)
 		config.Cgroups.Resources.CpuRtPeriod = *r.CPU.RealtimePeriod
 		config.Cgroups.Resources.CpuRtRuntime = *r.CPU.RealtimeRuntime
 		config.Cgroups.Resources.CpusetCpus = r.CPU.Cpus

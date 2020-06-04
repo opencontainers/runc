@@ -126,7 +126,4 @@ type Resources struct {
 
 	// CpuWeight sets a proportional bandwidth limit.
 	CpuWeight uint64 `json:"cpu_weight"`
-
-	// CpuMax sets she maximum bandwidth limit (format: max period).
-	CpuMax string `json:"cpu_max"`
 }
