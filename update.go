@@ -251,10 +251,36 @@ other options are ignored.
 			r.Pids.Limit = int64(context.Int("pids-limit"))
 		}
 
-		// Update the value
+		// Update the values
 		config.Cgroups.Resources.BlkioWeight = *r.BlockIO.Weight
-		config.Cgroups.Resources.CpuPeriod = *r.CPU.Period
-		config.Cgroups.Resources.CpuQuota = *r.CPU.Quota
+
+		// Seting CPU quota and period independently does not make much sense,
+		// but historically runc allowed it and this needs to be supported
+		// to not break compatibility.
+		//
+		// For systemd cgroup drivers to set CPU quota/period correctly,
+		// it needs to know both values. For fs2 cgroup driver to be compatible
+		// with the fs driver, it also needs to know both values.
+		//
+		// Here in update, previously set values are available from config.
+		// If only one of {quota,period} is set and the other is not, leave
+		// the unset parameter at the old value (don't overwrite config).
+		p, q := *r.CPU.Period, *r.CPU.Quota
+		if (p == 0 && q == 0) || (p != 0 && q != 0) {
+			// both values are either set or unset (0)
+			config.Cgroups.Resources.CpuPeriod = p
+			config.Cgroups.Resources.CpuQuota = q
+		} else {
+			// one is set and the other is not
+			if p != 0 {
+				// set new period, leave quota at old value
+				config.Cgroups.Resources.CpuPeriod = p
+			} else if q != 0 {
+				// set new quota, leave period at old value
+				config.Cgroups.Resources.CpuQuota = q
+			}
+		}
+
 		config.Cgroups.Resources.CpuShares = *r.CPU.Shares
 		//CpuWeight is used for cgroupv2 and should be converted
 		config.Cgroups.Resources.CpuWeight = cgroups.ConvertCPUSharesToCgroupV2Value(*r.CPU.Shares)
