@@ -26,8 +26,8 @@ function teardown() {
 
   # replace "uid": 0 with "uid": 1000
   # and do a similar thing for gid.
-  sed -i 's;"uid": 0;"uid": 1000;g' config.json
-  sed -i 's;"gid": 0;"gid": 100;g' config.json
+  update_config ' (.. | select(.uid? == 0)) .uid |= 1000	
+		| (.. | select(.gid? == 0)) .gid |= 100' 
 
   # run hello-world
   runc run test_hello
@@ -41,7 +41,7 @@ function teardown() {
   cp config.json rootfs/.
   rm config.json
   cd rootfs
-  sed -i 's;"rootfs";".";' config.json
+  update_config '(.. | select(. == "rootfs")) |= "."'
 
   # run hello-world
   runc run test_hello

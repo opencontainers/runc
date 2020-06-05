@@ -13,7 +13,7 @@ function teardown() {
 
 @test "runc run [tty ptsname]" {
 	# Replace sh script with readlink.
-    sed -i 's|"sh"|"sh", "-c", "for file in /proc/self/fd/[012]; do readlink $file; done"|' config.json
+	update_config '(.. | select(.[]? == "sh")) += ["-c", "for file in /proc/self/fd/[012]; do readlink $file; done"]' 
 
 	# run busybox
 	runc run test_busybox
@@ -29,7 +29,7 @@ function teardown() {
 	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_idmap
 
 	# Replace sh script with stat.
-	sed -i 's/"sh"/"sh", "-c", "stat -c %u:%g $(tty) | tr : \\\\\\\\n"/' config.json
+	update_config '(.. | select(.[]? == "sh")) += ["-c", "stat -c %u:%g $(tty) | tr : \\\\n"]' 
 
 	# run busybox
 	runc run test_busybox
@@ -45,11 +45,10 @@ function teardown() {
 
 	# replace "uid": 0 with "uid": 1000
 	# and do a similar thing for gid.
-	sed -i 's;"uid": 0;"uid": 1000;g' config.json
-	sed -i 's;"gid": 0;"gid": 100;g' config.json
-
 	# Replace sh script with stat.
-	sed -i 's/"sh"/"sh", "-c", "stat -c %u:%g $(tty) | tr : \\\\\\\\n"/' config.json
+	update_config 	' (.. | select(.uid? == 0)) .uid |= 1000 
+			| (.. | select(.gid? == 0)) .gid |= 100
+			| (.. | select(.[]? == "sh")) += ["-c", "stat -c %u:%g $(tty) | tr : \\\\n"]'
 
 	# run busybox
 	runc run test_busybox
@@ -100,8 +99,8 @@ function teardown() {
 
 	# replace "uid": 0 with "uid": 1000
 	# and do a similar thing for gid.
-	sed -i 's;"uid": 0;"uid": 1000;g' config.json
-	sed -i 's;"gid": 0;"gid": 100;g' config.json
+	update_config 	' (.. | select(.uid? == 0)) .uid |= 1000
+  			| (.. | select(.gid? == 0)) .gid |= 100' 
 
 	# run busybox detached
 	runc run -d --console-socket $CONSOLE_SOCKET test_busybox
@@ -119,7 +118,7 @@ function teardown() {
 
 @test "runc exec [tty consolesize]" {
 	# allow writing to filesystem
-	sed -i 's/"readonly": true/"readonly": false/' config.json
+	update_config '(.. | select(.readonly? != null)) .readonly |= false'
 
 	# run busybox detached
 	runc run -d --console-socket $CONSOLE_SOCKET test_busybox
@@ -176,9 +175,10 @@ EOF
 
 @test "runc create [terminal=false]" {
 	# Disable terminal creation.
-	sed -i 's|"terminal": true,|"terminal": false,|g' config.json
 	# Replace sh script with sleep.
-    sed -i 's|"sh"|"sleep", "1000s"|' config.json
+	update_config 	' (.. | select(.terminal? != null)) .terminal |= false
+			| (.. | select(.[]? == "sh")) += ["sleep", "1000s"]
+			| del(.. | select(.? == "sh"))'
 
 	# Make sure that the handling of detached IO is done properly. See #1354.
 	__runc create test_busybox
@@ -196,9 +196,11 @@ EOF
 
 @test "runc run [terminal=false]" {
 	# Disable terminal creation.
-	sed -i 's|"terminal": true,|"terminal": false,|g' config.json
 	# Replace sh script with sleep.
-    sed -i 's|"sh"|"sleep", "1000s"|' config.json
+	
+	update_config   ' (.. | select(.terminal? != null)) .terminal |= false
+			| (.. | select(.[]? == "sh")) += ["sleep", "1000s"]
+			| del(.. | select(.? == "sh"))'
 
 	# Make sure that the handling of non-detached IO is done properly. See #1354.
 	(
@@ -215,9 +217,10 @@ EOF
 
 @test "runc run -d [terminal=false]" {
 	# Disable terminal creation.
-	sed -i 's|"terminal": true,|"terminal": false,|g' config.json
 	# Replace sh script with sleep.
-    sed -i 's|"sh"|"sleep", "1000s"|' config.json
+	update_config 	' (.. | select(.terminal? != null)) .terminal |= false
+			| (.. | select(.[]? == "sh")) += ["sleep", "1000s"] 
+			| del(.. | select(.? == "sh"))'
 
 	# Make sure that the handling of detached IO is done properly. See #1354.
 	__runc run -d test_busybox

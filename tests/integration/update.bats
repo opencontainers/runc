@@ -16,28 +16,9 @@ function setup() {
     set_cgroups_path "$BUSYBOX_BUNDLE"
 
     # Set some initial known values
-    DATA=$(cat <<EOF
-    "memory": {
-        "limit": 33554432,
-        "reservation": 25165824
-    },
-    "cpu": {
-        "shares": 100,
-        "quota": 500000,
-        "period": 1000000,
-        "cpus": "0"
-    },
-    "pids": {
-        "limit": 20
-    }
-EOF
-    )
-    DATA=$(echo ${DATA} | sed 's/\n/\\n/g')
-    if grep -qw \"resources\" ${BUSYBOX_BUNDLE}/config.json; then
-        sed -i "s/\(\"resources\": {\)/\1\n${DATA},/" ${BUSYBOX_BUNDLE}/config.json
-    else
-        sed -i "s/\(\"linux\": {\)/\1\n\"resources\": {${DATA}},/" ${BUSYBOX_BUNDLE}/config.json
-    fi
+    update_config 	' .linux.resources.memory |= {"limit": 33554432, "reservation": 25165824}
+			| .linux.resources.cpu |= {"shares": 100, "quota": 500000, "period": 1000000, "cpus": "0"}
+			| .linux.resources.pids |= {"limit": 20}' ${BUSYBOX_BUNDLE}
 }
 
 # Tests whatever limits are (more or less) common between cgroup
@@ -387,8 +368,7 @@ EOF
     # Run a basic shell script that tries to write to /dev/null. If "runc
     # update" makes use of minimal transition rules, updates should not cause
     # writes to fail at any point.
-    jq '.process.args = ["sh", "-c", "while true; do echo >/dev/null; done"]' config.json > config.json.tmp
-    mv config.json{.tmp,}
+    update_config '.process.args |= ["sh", "-c", "while true; do echo >/dev/null; done"]' 
 
     # Set up a temporary console socket and recvtty so we can get the stdio.
     TMP_RECVTTY_DIR="$(mktemp -d "$BATS_TMPDIR/runc-tmp-recvtty.XXXXXX")"
