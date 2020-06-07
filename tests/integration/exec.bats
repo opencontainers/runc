@@ -138,7 +138,7 @@ function teardown() {
 }
 
 function check_exec_debug() {
-	[[ "$*" == *"nsexec started"* ]]
+	[[ "$*" == *"nsexec container setup"* ]]
 	[[ "$*" == *"child process in init()"* ]]
 	[[ "$*" == *"setns_init: about to exec"* ]]
 }
