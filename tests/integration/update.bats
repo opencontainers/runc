@@ -288,6 +288,11 @@ function check_cpu_shares() {
     [ "$status" -eq 0 ]
     check_cpu_quota 600000 900000 "670ms"
 
+    # remove cpu quota
+    runc update test_update --cpu-quota -1
+    [ "$status" -eq 0 ]
+    check_cpu_quota -1 900000 "infinity"
+
     # update cpu-shares
     runc update test_update --cpu-share 200
     [ "$status" -eq 0 ]
@@ -312,6 +317,11 @@ EOF
     [ "$status" -eq 0 ]
     check_cpu_quota 600000 900000 "670ms"
     check_cpu_shares 200
+
+    # remove cpu quota and reset the period
+    runc update test_update --cpu-quota -1 --cpu-period 100000
+    [ "$status" -eq 0 ]
+    check_cpu_quota -1 100000 "infinity"
 
     # reset to initial test value via json file
     cat << EOF > $BATS_TMPDIR/runc-cgroups-integration-test.json
