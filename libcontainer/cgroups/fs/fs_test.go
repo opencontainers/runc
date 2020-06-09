@@ -15,284 +15,80 @@ func TestInvalidCgroupPath(t *testing.T) {
 	if cgroups.IsCgroup2UnifiedMode() {
 		t.Skip("cgroup v2 is not supported")
 	}
+
 	root, err := getCgroupRoot()
 	if err != nil {
-		t.Errorf("couldn't get cgroup root: %v", err)
+		t.Fatalf("couldn't get cgroup root: %v", err)
 	}
 
-	config := &configs.Cgroup{
-		Path: "../../../../../../../../../../some/path",
+	testCases := []struct {
+		test               string
+		path, name, parent string
+	}{
+		{
+			test: "invalid cgroup path",
+			path: "../../../../../../../../../../some/path",
+		},
+		{
+			test: "invalid absolute cgroup path",
+			path: "/../../../../../../../../../../some/path",
+		},
+		{
+			test:   "invalid cgroup parent",
+			parent: "../../../../../../../../../../some/path",
+			name:   "name",
+		},
+		{
+			test:   "invalid absolute cgroup parent",
+			parent: "/../../../../../../../../../../some/path",
+			name:   "name",
+		},
+		{
+			test:   "invalid cgroup name",
+			parent: "parent",
+			name:   "../../../../../../../../../../some/path",
+		},
+		{
+			test:   "invalid absolute cgroup name",
+			parent: "parent",
+			name:   "/../../../../../../../../../../some/path",
+		},
+		{
+			test:   "invalid cgroup name and parent",
+			parent: "../../../../../../../../../../some/path",
+			name:   "../../../../../../../../../../some/path",
+		},
+		{
+			test:   "invalid absolute cgroup name and parent",
+			parent: "/../../../../../../../../../../some/path",
+			name:   "/../../../../../../../../../../some/path",
+		},
 	}
 
-	data, err := getCgroupData(config, 0)
-	if err != nil {
-		t.Errorf("couldn't get cgroup data: %v", err)
-	}
+	for _, tc := range testCases {
+		t.Run(tc.test, func(t *testing.T) {
+			config := &configs.Cgroup{Path: tc.path, Name: tc.name, Parent: tc.parent}
 
-	// Make sure the final innerPath doesn't go outside the cgroup mountpoint.
-	if strings.HasPrefix(data.innerPath, "..") {
-		t.Errorf("SECURITY: cgroup innerPath is outside cgroup mountpoint!")
-	}
+			data, err := getCgroupData(config, 0)
+			if err != nil {
+				t.Fatalf("couldn't get cgroup data: %v", err)
+			}
 
-	// Double-check, using an actual cgroup.
-	deviceRoot := filepath.Join(root, "devices")
-	devicePath, err := data.path("devices")
-	if err != nil {
-		t.Errorf("couldn't get cgroup path: %v", err)
-	}
-	if !strings.HasPrefix(devicePath, deviceRoot) {
-		t.Errorf("SECURITY: cgroup path() is outside cgroup mountpoint!")
-	}
-}
+			// Make sure the final innerPath doesn't go outside the cgroup mountpoint.
+			if strings.HasPrefix(data.innerPath, "..") {
+				t.Errorf("SECURITY: cgroup innerPath is outside cgroup mountpoint!")
+			}
 
-func TestInvalidAbsoluteCgroupPath(t *testing.T) {
-	if cgroups.IsCgroup2UnifiedMode() {
-		t.Skip("cgroup v2 is not supported")
-	}
-	root, err := getCgroupRoot()
-	if err != nil {
-		t.Errorf("couldn't get cgroup root: %v", err)
-	}
-
-	config := &configs.Cgroup{
-		Path: "/../../../../../../../../../../some/path",
-	}
-
-	data, err := getCgroupData(config, 0)
-	if err != nil {
-		t.Errorf("couldn't get cgroup data: %v", err)
-	}
-
-	// Make sure the final innerPath doesn't go outside the cgroup mountpoint.
-	if strings.HasPrefix(data.innerPath, "..") {
-		t.Errorf("SECURITY: cgroup innerPath is outside cgroup mountpoint!")
-	}
-
-	// Double-check, using an actual cgroup.
-	deviceRoot := filepath.Join(root, "devices")
-	devicePath, err := data.path("devices")
-	if err != nil {
-		t.Errorf("couldn't get cgroup path: %v", err)
-	}
-	if !strings.HasPrefix(devicePath, deviceRoot) {
-		t.Errorf("SECURITY: cgroup path() is outside cgroup mountpoint!")
-	}
-}
-
-// XXX: Remove me after we get rid of configs.Cgroup.Name and configs.Cgroup.Parent.
-func TestInvalidCgroupParent(t *testing.T) {
-	if cgroups.IsCgroup2UnifiedMode() {
-		t.Skip("cgroup v2 is not supported")
-	}
-	root, err := getCgroupRoot()
-	if err != nil {
-		t.Errorf("couldn't get cgroup root: %v", err)
-	}
-
-	config := &configs.Cgroup{
-		Parent: "../../../../../../../../../../some/path",
-		Name:   "name",
-	}
-
-	data, err := getCgroupData(config, 0)
-	if err != nil {
-		t.Errorf("couldn't get cgroup data: %v", err)
-	}
-
-	// Make sure the final innerPath doesn't go outside the cgroup mountpoint.
-	if strings.HasPrefix(data.innerPath, "..") {
-		t.Errorf("SECURITY: cgroup innerPath is outside cgroup mountpoint!")
-	}
-
-	// Double-check, using an actual cgroup.
-	deviceRoot := filepath.Join(root, "devices")
-	devicePath, err := data.path("devices")
-	if err != nil {
-		t.Errorf("couldn't get cgroup path: %v", err)
-	}
-	if !strings.HasPrefix(devicePath, deviceRoot) {
-		t.Errorf("SECURITY: cgroup path() is outside cgroup mountpoint!")
-	}
-}
-
-// XXX: Remove me after we get rid of configs.Cgroup.Name and configs.Cgroup.Parent.
-func TestInvalidAbsoluteCgroupParent(t *testing.T) {
-	if cgroups.IsCgroup2UnifiedMode() {
-		t.Skip("cgroup v2 is not supported")
-	}
-	root, err := getCgroupRoot()
-	if err != nil {
-		t.Errorf("couldn't get cgroup root: %v", err)
-	}
-
-	config := &configs.Cgroup{
-		Parent: "/../../../../../../../../../../some/path",
-		Name:   "name",
-	}
-
-	data, err := getCgroupData(config, 0)
-	if err != nil {
-		t.Errorf("couldn't get cgroup data: %v", err)
-	}
-
-	// Make sure the final innerPath doesn't go outside the cgroup mountpoint.
-	if strings.HasPrefix(data.innerPath, "..") {
-		t.Errorf("SECURITY: cgroup innerPath is outside cgroup mountpoint!")
-	}
-
-	// Double-check, using an actual cgroup.
-	deviceRoot := filepath.Join(root, "devices")
-	devicePath, err := data.path("devices")
-	if err != nil {
-		t.Errorf("couldn't get cgroup path: %v", err)
-	}
-	if !strings.HasPrefix(devicePath, deviceRoot) {
-		t.Errorf("SECURITY: cgroup path() is outside cgroup mountpoint!")
-	}
-}
-
-// XXX: Remove me after we get rid of configs.Cgroup.Name and configs.Cgroup.Parent.
-func TestInvalidCgroupName(t *testing.T) {
-	if cgroups.IsCgroup2UnifiedMode() {
-		t.Skip("cgroup v2 is not supported")
-	}
-	root, err := getCgroupRoot()
-	if err != nil {
-		t.Errorf("couldn't get cgroup root: %v", err)
-	}
-
-	config := &configs.Cgroup{
-		Parent: "parent",
-		Name:   "../../../../../../../../../../some/path",
-	}
-
-	data, err := getCgroupData(config, 0)
-	if err != nil {
-		t.Errorf("couldn't get cgroup data: %v", err)
-	}
-
-	// Make sure the final innerPath doesn't go outside the cgroup mountpoint.
-	if strings.HasPrefix(data.innerPath, "..") {
-		t.Errorf("SECURITY: cgroup innerPath is outside cgroup mountpoint!")
-	}
-
-	// Double-check, using an actual cgroup.
-	deviceRoot := filepath.Join(root, "devices")
-	devicePath, err := data.path("devices")
-	if err != nil {
-		t.Errorf("couldn't get cgroup path: %v", err)
-	}
-	if !strings.HasPrefix(devicePath, deviceRoot) {
-		t.Errorf("SECURITY: cgroup path() is outside cgroup mountpoint!")
-	}
-
-}
-
-// XXX: Remove me after we get rid of configs.Cgroup.Name and configs.Cgroup.Parent.
-func TestInvalidAbsoluteCgroupName(t *testing.T) {
-	if cgroups.IsCgroup2UnifiedMode() {
-		t.Skip("cgroup v2 is not supported")
-	}
-	root, err := getCgroupRoot()
-	if err != nil {
-		t.Errorf("couldn't get cgroup root: %v", err)
-	}
-
-	config := &configs.Cgroup{
-		Parent: "parent",
-		Name:   "/../../../../../../../../../../some/path",
-	}
-
-	data, err := getCgroupData(config, 0)
-	if err != nil {
-		t.Errorf("couldn't get cgroup data: %v", err)
-	}
-
-	// Make sure the final innerPath doesn't go outside the cgroup mountpoint.
-	if strings.HasPrefix(data.innerPath, "..") {
-		t.Errorf("SECURITY: cgroup innerPath is outside cgroup mountpoint!")
-	}
-
-	// Double-check, using an actual cgroup.
-	deviceRoot := filepath.Join(root, "devices")
-	devicePath, err := data.path("devices")
-	if err != nil {
-		t.Errorf("couldn't get cgroup path: %v", err)
-	}
-	if !strings.HasPrefix(devicePath, deviceRoot) {
-		t.Errorf("SECURITY: cgroup path() is outside cgroup mountpoint!")
-	}
-}
-
-// XXX: Remove me after we get rid of configs.Cgroup.Name and configs.Cgroup.Parent.
-func TestInvalidCgroupNameAndParent(t *testing.T) {
-	if cgroups.IsCgroup2UnifiedMode() {
-		t.Skip("cgroup v2 is not supported")
-	}
-	root, err := getCgroupRoot()
-	if err != nil {
-		t.Errorf("couldn't get cgroup root: %v", err)
-	}
-
-	config := &configs.Cgroup{
-		Parent: "../../../../../../../../../../some/path",
-		Name:   "../../../../../../../../../../some/path",
-	}
-
-	data, err := getCgroupData(config, 0)
-	if err != nil {
-		t.Errorf("couldn't get cgroup data: %v", err)
-	}
-
-	// Make sure the final innerPath doesn't go outside the cgroup mountpoint.
-	if strings.HasPrefix(data.innerPath, "..") {
-		t.Errorf("SECURITY: cgroup innerPath is outside cgroup mountpoint!")
-	}
-
-	// Double-check, using an actual cgroup.
-	deviceRoot := filepath.Join(root, "devices")
-	devicePath, err := data.path("devices")
-	if err != nil {
-		t.Errorf("couldn't get cgroup path: %v", err)
-	}
-	if !strings.HasPrefix(devicePath, deviceRoot) {
-		t.Errorf("SECURITY: cgroup path() is outside cgroup mountpoint!")
-	}
-}
-
-// XXX: Remove me after we get rid of configs.Cgroup.Name and configs.Cgroup.Parent.
-func TestInvalidAbsoluteCgroupNameAndParent(t *testing.T) {
-	if cgroups.IsCgroup2UnifiedMode() {
-		t.Skip("cgroup v2 is not supported")
-	}
-	root, err := getCgroupRoot()
-	if err != nil {
-		t.Errorf("couldn't get cgroup root: %v", err)
-	}
-
-	config := &configs.Cgroup{
-		Parent: "/../../../../../../../../../../some/path",
-		Name:   "/../../../../../../../../../../some/path",
-	}
-
-	data, err := getCgroupData(config, 0)
-	if err != nil {
-		t.Errorf("couldn't get cgroup data: %v", err)
-	}
-
-	// Make sure the final innerPath doesn't go outside the cgroup mountpoint.
-	if strings.HasPrefix(data.innerPath, "..") {
-		t.Errorf("SECURITY: cgroup innerPath is outside cgroup mountpoint!")
-	}
-
-	// Double-check, using an actual cgroup.
-	deviceRoot := filepath.Join(root, "devices")
-	devicePath, err := data.path("devices")
-	if err != nil {
-		t.Errorf("couldn't get cgroup path: %v", err)
-	}
-	if !strings.HasPrefix(devicePath, deviceRoot) {
-		t.Errorf("SECURITY: cgroup path() is outside cgroup mountpoint!")
+			// Double-check, using an actual cgroup.
+			deviceRoot := filepath.Join(root, "devices")
+			devicePath, err := data.path("devices")
+			if err != nil {
+				t.Fatalf("couldn't get cgroup path: %v", err)
+			}
+			if !strings.HasPrefix(devicePath, deviceRoot) {
+				t.Errorf("SECURITY: cgroup path() is outside cgroup mountpoint!")
+			}
+		})
 	}
 }
 
