@@ -340,6 +340,55 @@ EOF
     check_cpu_shares 100
 }
 
+@test "set cpu period with no quota" {
+    [[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+
+    update_config '.linux.resources.cpu |= { "period": 1000000 }' ${BUSYBOX_BUNDLE}
+
+    runc run -d --console-socket $CONSOLE_SOCKET test_update
+    [ "$status" -eq 0 ]
+
+    check_cpu_quota -1 1000000 "infinity"
+}
+
+@test "set cpu quota with no period" {
+    [[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+
+    update_config '.linux.resources.cpu |= { "quota": 5000 }' ${BUSYBOX_BUNDLE}
+
+    runc run -d --console-socket $CONSOLE_SOCKET test_update
+    [ "$status" -eq 0 ]
+    check_cpu_quota 5000 100000 "50ms"
+}
+
+@test "update cpu period with no previous period/quota set" {
+    [[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+
+    update_config '.linux.resources.cpu |= {}' ${BUSYBOX_BUNDLE}
+
+    runc run -d --console-socket $CONSOLE_SOCKET test_update
+    [ "$status" -eq 0 ]
+
+    # update the period alone, no old values were set
+    runc update --cpu-period 50000 test_update
+    [ "$status" -eq 0 ]
+    check_cpu_quota -1 50000 "infinity"
+}
+
+@test "update cpu quota with no previous period/quota set" {
+    [[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+
+    update_config '.linux.resources.cpu |= {}' ${BUSYBOX_BUNDLE}
+
+    runc run -d --console-socket $CONSOLE_SOCKET test_update
+    [ "$status" -eq 0 ]
+
+    # update the quota alone, no old values were set
+    runc update --cpu-quota 30000 test_update
+    [ "$status" -eq 0 ]
+    check_cpu_quota 30000 100000 "300ms"
+}
+
 @test "update rt period and runtime" {
     [[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
     requires cgroups_rt
