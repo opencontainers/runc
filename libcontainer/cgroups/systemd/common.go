@@ -352,7 +352,7 @@ func stopUnit(dbusConnection *systemdDbus.Conn, unitName string) error {
 }
 
 func addCpuQuota(properties *[]systemdDbus.Property, quota int64, period uint64) {
-	if quota != 0 && period != 0 {
+	if quota != 0 || period != 0 {
 		// corresponds to USEC_INFINITY in systemd
 		cpuQuotaPerSecUSec := uint64(math.MaxUint64)
 		if quota > 0 {
@@ -360,6 +360,12 @@ func addCpuQuota(properties *[]systemdDbus.Property, quota int64, period uint64)
 			// (integer percentage of CPU) internally.  This means that if a fractional percent of
 			// CPU is indicated by Resources.CpuQuota, we need to round up to the nearest
 			// 10ms (1% of a second) such that child cgroups can set the cpu.cfs_quota_us they expect.
+			if period == 0 {
+				// assume the default kernel value of 100000 us (100 ms), same for v1 and v2.
+				// v1: https://www.kernel.org/doc/html/latest/scheduler/sched-bwc.html and
+				// v2: https://www.kernel.org/doc/html/latest/admin-guide/cgroup-v2.html
+				period = 100000
+			}
 			cpuQuotaPerSecUSec = uint64(quota*1000000) / period
 			if cpuQuotaPerSecUSec%10000 != 0 {
 				cpuQuotaPerSecUSec = ((cpuQuotaPerSecUSec / 10000) + 1) * 10000
