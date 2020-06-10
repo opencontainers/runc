@@ -337,11 +337,50 @@ EOF
 
 @test "update rt period and runtime" {
     [[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
-    requires cgroups_rt
+    requires cgroups_v1 cgroups_rt no_systemd
+
+    # By default, "${CGROUP_CPU}/cpu.rt_runtime_us" is set to 0, which inhibits
+    # setting the container's realtimeRuntime. (#2046)
+    #
+    # When $CGROUP_CPU is "/sys/fs/cgroup/cpu,cpuacct/runc-cgroups-integration-test/test-cgroup",
+    # we write the values of /sys/fs/cgroup/cpu,cpuacct/cpu.rt_{period,runtime}_us to:
+    # - sys/fs/cgroup/cpu,cpuacct/runc-cgroups-integration-test/cpu.rt_{period,runtime}_us
+    # - sys/fs/cgroup/cpu,cpuacct/runc-cgroups-integration-test/test-cgroup/cpu.rt_{period,runtime}_us
+    #
+    # Typically period=1000000 runtime=950000 .
+    #
+    # TODO: support systemd
+    mkdir -p "$CGROUP_CPU"
+    local root_period=$(cat "${CGROUP_CPU_BASE_PATH}/cpu.rt_period_us")
+    local root_runtime=$(cat "${CGROUP_CPU_BASE_PATH}/cpu.rt_runtime_us")
+    # the following IFS magic sets dirs=("runc-cgroups-integration-test" "test-cgroup")
+    IFS='/' read -r -a dirs <<< $(echo ${CGROUP_CPU} | sed -e s@^${CGROUP_CPU_BASE_PATH}/@@)
+    for (( i = 0; i < ${#dirs[@]}; i++ )); do
+        local target="$CGROUP_CPU_BASE_PATH"
+        for (( j = 0; j <= i; j++ )); do
+            target="${target}/${dirs[$j]}"
+        done
+        target_period="${target}/cpu.rt_period_us"
+        echo "Writing ${root_period} to ${target_period}"
+        echo "$root_period" > "$target_period"
+        target_runtime="${target}/cpu.rt_runtime_us"
+        echo "Writing ${root_runtime} to ${target_runtime}"
+        echo "$root_runtime" > "$target_runtime"
+    done
 
     # run a detached busybox
     runc run -d --console-socket $CONSOLE_SOCKET test_update_rt
     [ "$status" -eq 0 ]
+
+    runc update  -r - test_update_rt <<EOF
+{
+  "cpu": {
+    "realtimeRuntime": 500001
+  }
+}
+EOF
+    check_cgroup_value "cpu.rt_period_us" "$root_period"
+    check_cgroup_value "cpu.rt_runtime_us" 500001
 
     runc update  -r - test_update_rt <<EOF
 {
