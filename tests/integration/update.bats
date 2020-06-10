@@ -250,8 +250,18 @@ function check_cpu_quota() {
         check_cgroup_value "cpu.cfs_quota_us" $quota
         check_cgroup_value "cpu.cfs_period_us" $period
     fi
-    # systemd value is the same for v1 and v2
+    # systemd values are the same for v1 and v2
     check_systemd_value "CPUQuotaPerSecUSec" $sd_quota
+
+    # CPUQuotaPeriodUSec requires systemd >= v242
+    [ "$(systemd_version)" -lt 242 ] && return
+
+    local sd_period=$(( period/1000 ))ms
+    [ "$sd_period" = "1000ms" ] && sd_period="1s"
+    local sd_infinity=""
+    # 100ms is the default value, and if not set, shown as infinity
+    [ "$sd_period" = "100ms" ] && sd_infinity="infinity"
+    check_systemd_value "CPUQuotaPeriodUSec" $sd_period $sd_infinity
 }
 
 function check_cpu_shares() {

@@ -34,7 +34,7 @@ func NewUnifiedManager(config *configs.Cgroup, path string, rootless bool) cgrou
 	}
 }
 
-func genV2ResourcesProperties(c *configs.Cgroup) ([]systemdDbus.Property, error) {
+func genV2ResourcesProperties(c *configs.Cgroup, conn *systemdDbus.Conn) ([]systemdDbus.Property, error) {
 	var properties []systemdDbus.Property
 	r := c.Resources
 
@@ -72,7 +72,7 @@ func genV2ResourcesProperties(c *configs.Cgroup) ([]systemdDbus.Property, error)
 			newProp("CPUWeight", r.CpuWeight))
 	}
 
-	addCpuQuota(&properties, r.CpuQuota, r.CpuPeriod)
+	addCpuQuota(conn, &properties, r.CpuQuota, r.CpuPeriod)
 
 	if r.PidsLimit > 0 || r.PidsLimit == -1 {
 		properties = append(properties,
@@ -136,17 +136,17 @@ func (m *unifiedManager) Apply(pid int) error {
 	properties = append(properties,
 		newProp("DefaultDependencies", false))
 
-	resourcesProperties, err := genV2ResourcesProperties(c)
+	dbusConnection, err := getDbusConnection(m.rootless)
+	if err != nil {
+		return err
+	}
+	resourcesProperties, err := genV2ResourcesProperties(c, dbusConnection)
 	if err != nil {
 		return err
 	}
 	properties = append(properties, resourcesProperties...)
 	properties = append(properties, c.SystemdProps...)
 
-	dbusConnection, err := getDbusConnection(m.rootless)
-	if err != nil {
-		return err
-	}
 	if err := startUnit(dbusConnection, unitName, properties); err != nil {
 		return errors.Wrapf(err, "error while starting unit %q with properties %+v", unitName, properties)
 	}
@@ -289,7 +289,11 @@ func (m *unifiedManager) GetStats() (*cgroups.Stats, error) {
 }
 
 func (m *unifiedManager) Set(container *configs.Config) error {
-	properties, err := genV2ResourcesProperties(m.cgroups)
+	dbusConnection, err := getDbusConnection(m.rootless)
+	if err != nil {
+		return err
+	}
+	properties, err := genV2ResourcesProperties(m.cgroups, dbusConnection)
 	if err != nil {
 		return err
 	}
@@ -314,11 +318,6 @@ func (m *unifiedManager) Set(container *configs.Config) error {
 		logrus.Infof("freeze container before SetUnitProperties failed: %v", err)
 	}
 
-	dbusConnection, err := getDbusConnection(m.rootless)
-	if err != nil {
-		_ = m.Freeze(targetFreezerState)
-		return err
-	}
 	if err := dbusConnection.SetUnitProperties(getUnitName(m.cgroups), true, properties...); err != nil {
 		_ = m.Freeze(targetFreezerState)
 		return errors.Wrap(err, "error while setting unit properties")
