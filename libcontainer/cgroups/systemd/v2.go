@@ -3,7 +3,6 @@
 package systemd
 
 import (
-	"math"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -37,28 +36,29 @@ func NewUnifiedManager(config *configs.Cgroup, path string, rootless bool) cgrou
 
 func genV2ResourcesProperties(c *configs.Cgroup) ([]systemdDbus.Property, error) {
 	var properties []systemdDbus.Property
+	r := c.Resources
 
 	// NOTE: This is of questionable correctness because we insert our own
 	//       devices eBPF program later. Two programs with identical rules
 	//       aren't the end of the world, but it is a bit concerning. However
 	//       it's unclear if systemd removes all eBPF programs attached when
 	//       doing SetUnitProperties...
-	deviceProperties, err := generateDeviceProperties(c.Resources.Devices)
+	deviceProperties, err := generateDeviceProperties(r.Devices)
 	if err != nil {
 		return nil, err
 	}
 	properties = append(properties, deviceProperties...)
 
-	if c.Resources.Memory != 0 {
+	if r.Memory != 0 {
 		properties = append(properties,
-			newProp("MemoryMax", uint64(c.Resources.Memory)))
+			newProp("MemoryMax", uint64(r.Memory)))
 	}
-	if c.Resources.MemoryReservation != 0 {
+	if r.MemoryReservation != 0 {
 		properties = append(properties,
-			newProp("MemoryLow", uint64(c.Resources.MemoryReservation)))
+			newProp("MemoryLow", uint64(r.MemoryReservation)))
 	}
 
-	swap, err := cgroups.ConvertMemorySwapToCgroupV2Value(c.Resources.MemorySwap, c.Resources.Memory)
+	swap, err := cgroups.ConvertMemorySwapToCgroupV2Value(r.MemorySwap, r.Memory)
 	if err != nil {
 		return nil, err
 	}
@@ -67,38 +67,20 @@ func genV2ResourcesProperties(c *configs.Cgroup) ([]systemdDbus.Property, error)
 			newProp("MemorySwapMax", uint64(swap)))
 	}
 
-	if c.Resources.CpuWeight != 0 {
+	if r.CpuWeight != 0 {
 		properties = append(properties,
-			newProp("CPUWeight", c.Resources.CpuWeight))
+			newProp("CPUWeight", r.CpuWeight))
 	}
 
-	// cpu.cfs_quota_us and cpu.cfs_period_us are controlled by systemd.
-	if c.Resources.CpuQuota != 0 && c.Resources.CpuPeriod != 0 {
-		// corresponds to USEC_INFINITY in systemd
-		// if USEC_INFINITY is provided, CPUQuota is left unbound by systemd
-		// always setting a property value ensures we can apply a quota and remove it later
-		cpuQuotaPerSecUSec := uint64(math.MaxUint64)
-		if c.Resources.CpuQuota > 0 {
-			// systemd converts CPUQuotaPerSecUSec (microseconds per CPU second) to CPUQuota
-			// (integer percentage of CPU) internally.  This means that if a fractional percent of
-			// CPU is indicated by Resources.CpuQuota, we need to round up to the nearest
-			// 10ms (1% of a second) such that child cgroups can set the cpu.cfs_quota_us they expect.
-			cpuQuotaPerSecUSec = uint64(c.Resources.CpuQuota*1000000) / c.Resources.CpuPeriod
-			if cpuQuotaPerSecUSec%10000 != 0 {
-				cpuQuotaPerSecUSec = ((cpuQuotaPerSecUSec / 10000) + 1) * 10000
-			}
-		}
-		properties = append(properties,
-			newProp("CPUQuotaPerSecUSec", cpuQuotaPerSecUSec))
-	}
+	addCpuQuota(&properties, r.CpuQuota, r.CpuPeriod)
 
-	if c.Resources.PidsLimit > 0 || c.Resources.PidsLimit == -1 {
+	if r.PidsLimit > 0 || r.PidsLimit == -1 {
 		properties = append(properties,
 			newProp("TasksAccounting", true),
-			newProp("TasksMax", uint64(c.Resources.PidsLimit)))
+			newProp("TasksMax", uint64(r.PidsLimit)))
 	}
 
-	// ignore c.Resources.KernelMemory
+	// ignore r.KernelMemory
 
 	return properties, nil
 }

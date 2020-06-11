@@ -236,54 +236,67 @@ EOF
     check_systemd_value "TasksMax" 20
 }
 
-@test "update cgroup v1 cpu limits" {
+function check_cpu_quota() {
+    local quota=$1
+    local period=$2
+    local sd_quota=$3
+
+    if [ "$CGROUP_UNIFIED" = "yes" ]; then
+        if [ "$quota" = "-1" ]; then
+            quota="max"
+        fi
+        check_cgroup_value "cpu.max" "$quota $period"
+    else
+        check_cgroup_value "cpu.cfs_quota_us" $quota
+        check_cgroup_value "cpu.cfs_period_us" $period
+    fi
+    # systemd value is the same for v1 and v2
+    check_systemd_value "CPUQuotaPerSecUSec" $sd_quota
+}
+
+function check_cpu_shares() {
+    local shares=$1
+
+    if [ "$CGROUP_UNIFIED" = "yes" ]; then
+        local weight=$((1 + ((shares - 2) * 9999) / 262142))
+        check_cgroup_value "cpu.weight" $weight
+        check_systemd_value "CPUWeight" $weight
+    else
+        check_cgroup_value "cpu.shares" $shares
+        check_systemd_value "CPUShares" $shares
+    fi
+}
+
+@test "update cgroup cpu limits" {
     [[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
-    requires cgroups_v1
 
     # run a few busyboxes detached
     runc run -d --console-socket $CONSOLE_SOCKET test_update
     [ "$status" -eq 0 ]
 
     # check that initial values were properly set
-    check_cgroup_value "cpu.cfs_period_us" 1000000
-    check_cgroup_value "cpu.cfs_quota_us" 500000
-    check_systemd_value "CPUQuotaPerSecUSec" 500ms
+    check_cpu_quota 500000 1000000 "500ms"
+    check_cpu_shares 100
 
-    check_cgroup_value "cpu.shares" 100
-    check_systemd_value "CPUShares" 100
+    # update cpu period
+    runc update test_update --cpu-period 900000
+    [ "$status" -eq 0 ]
+    check_cpu_quota 500000 900000 "560ms"
 
-    # systemd driver does not allow to update quota and period separately
-    if [ -z "$RUNC_USE_SYSTEMD" ]; then
-        # update cpu period
-        runc update test_update --cpu-period 900000
-        [ "$status" -eq 0 ]
-        check_cgroup_value "cpu.cfs_period_us" 900000
+    # update cpu quota
+    runc update test_update --cpu-quota 600000
+    [ "$status" -eq 0 ]
+    check_cpu_quota 600000 900000 "670ms"
 
-        # update cpu quota
-        runc update test_update --cpu-quota 600000
-        [ "$status" -eq 0 ]
-        check_cgroup_value "cpu.cfs_quota_us" 600000
-    else
-        # update cpu quota
-        runc update test_update --cpu-quota 600000
-        [ "$status" -eq 0 ]
-        check_cgroup_value "cpu.cfs_quota_us" 600000
-        # this is currently broken
-        #check_systemd_value "CPUQuotaPerSecUSec" 600ms
-
-        # update cpu quota and period together
-        runc update test_update --cpu-period 900000 --cpu-quota 600000
-        [ "$status" -eq 0 ]
-        check_cgroup_value "cpu.cfs_period_us" 900000
-        check_cgroup_value "cpu.cfs_quota_us" 600000
-        check_systemd_value "CPUQuotaPerSecUSec" 670ms
-    fi
+    # remove cpu quota
+    runc update test_update --cpu-quota -1
+    [ "$status" -eq 0 ]
+    check_cpu_quota -1 900000 "infinity"
 
     # update cpu-shares
     runc update test_update --cpu-share 200
     [ "$status" -eq 0 ]
-    check_cgroup_value "cpu.shares" 200
-    check_systemd_value "CPUShares" 200
+    check_cpu_shares 200
 
     # Revert to the test initial value via json on stding
     runc update  -r - test_update <<EOF
@@ -296,23 +309,19 @@ EOF
 }
 EOF
     [ "$status" -eq 0 ]
-    check_cgroup_value "cpu.cfs_period_us" 1000000
-    check_cgroup_value "cpu.cfs_quota_us" 500000
-    check_systemd_value "CPUQuotaPerSecUSec" 500ms
-
-    check_cgroup_value "cpu.shares" 100
-    check_systemd_value "CPUShares" 100
+    check_cpu_quota 500000 1000000 "500ms"
 
     # redo all the changes at once
     runc update test_update \
         --cpu-period 900000 --cpu-quota 600000 --cpu-share 200
     [ "$status" -eq 0 ]
-    check_cgroup_value "cpu.cfs_period_us" 900000
-    check_cgroup_value "cpu.cfs_quota_us" 600000
-    check_systemd_value "CPUQuotaPerSecUSec" 670ms
+    check_cpu_quota 600000 900000 "670ms"
+    check_cpu_shares 200
 
-    check_cgroup_value "cpu.shares" 200
-    check_systemd_value "CPUShares" 200
+    # remove cpu quota and reset the period
+    runc update test_update --cpu-quota -1 --cpu-period 100000
+    [ "$status" -eq 0 ]
+    check_cpu_quota -1 100000 "infinity"
 
     # reset to initial test value via json file
     cat << EOF > $BATS_TMPDIR/runc-cgroups-integration-test.json
@@ -327,12 +336,57 @@ EOF
 
     runc update  -r $BATS_TMPDIR/runc-cgroups-integration-test.json test_update
     [ "$status" -eq 0 ]
-    check_cgroup_value "cpu.cfs_period_us" 1000000
-    check_cgroup_value "cpu.cfs_quota_us" 500000
-    check_systemd_value "CPUQuotaPerSecUSec" 500ms
+    check_cpu_quota 500000 1000000 "500ms"
+    check_cpu_shares 100
+}
 
-    check_cgroup_value "cpu.shares" 100
-    check_systemd_value "CPUShares" 100
+@test "set cpu period with no quota" {
+    [[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+
+    update_config '.linux.resources.cpu |= { "period": 1000000 }' ${BUSYBOX_BUNDLE}
+
+    runc run -d --console-socket $CONSOLE_SOCKET test_update
+    [ "$status" -eq 0 ]
+
+    check_cpu_quota -1 1000000 "infinity"
+}
+
+@test "set cpu quota with no period" {
+    [[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+
+    update_config '.linux.resources.cpu |= { "quota": 5000 }' ${BUSYBOX_BUNDLE}
+
+    runc run -d --console-socket $CONSOLE_SOCKET test_update
+    [ "$status" -eq 0 ]
+    check_cpu_quota 5000 100000 "50ms"
+}
+
+@test "update cpu period with no previous period/quota set" {
+    [[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+
+    update_config '.linux.resources.cpu |= {}' ${BUSYBOX_BUNDLE}
+
+    runc run -d --console-socket $CONSOLE_SOCKET test_update
+    [ "$status" -eq 0 ]
+
+    # update the period alone, no old values were set
+    runc update --cpu-period 50000 test_update
+    [ "$status" -eq 0 ]
+    check_cpu_quota -1 50000 "infinity"
+}
+
+@test "update cpu quota with no previous period/quota set" {
+    [[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+
+    update_config '.linux.resources.cpu |= {}' ${BUSYBOX_BUNDLE}
+
+    runc run -d --console-socket $CONSOLE_SOCKET test_update
+    [ "$status" -eq 0 ]
+
+    # update the quota alone, no old values were set
+    runc update --cpu-quota 30000 test_update
+    [ "$status" -eq 0 ]
+    check_cpu_quota 30000 100000 "300ms"
 }
 
 @test "update rt period and runtime" {

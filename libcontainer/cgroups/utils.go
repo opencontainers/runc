@@ -593,21 +593,6 @@ func ConvertCPUSharesToCgroupV2Value(cpuShares uint64) uint64 {
 	return (1 + ((cpuShares-2)*9999)/262142)
 }
 
-// ConvertCPUQuotaCPUPeriodToCgroupV2Value generates cpu.max string.
-func ConvertCPUQuotaCPUPeriodToCgroupV2Value(quota int64, period uint64) string {
-	if quota <= 0 && period == 0 {
-		return ""
-	}
-	if period == 0 {
-		// This default value is documented in https://www.kernel.org/doc/html/latest/admin-guide/cgroup-v2.html
-		period = 100000
-	}
-	if quota <= 0 {
-		return fmt.Sprintf("max %d", period)
-	}
-	return fmt.Sprintf("%d %d", quota, period)
-}
-
 // ConvertMemorySwapToCgroupV2Value converts MemorySwap value from OCI spec
 // for use by cgroup v2 drivers. A conversion is needed since Resources.MemorySwap
 // is defined as memory+swap combined, while in cgroup v2 swap is a separate value.
