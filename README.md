@@ -19,7 +19,8 @@ You can find official releases of `runc` on the [release](https://github.com/ope
 
 Currently, the following features are not considered to be production-ready:
 
-* Support for cgroup v2
+* [Support for cgroup v2](./docs/cgroup-v2.md)
+
 ## Security
 
 The reporting process and disclosure communications are outlined [here](https://github.com/opencontainers/org/blob/master/SECURITY.md).
@@ -290,6 +291,9 @@ PIDFile=/run/mycontainerid.pid
 [Install]
 WantedBy=multi-user.target
 ```
+
+#### cgroup v2
+See [`./docs/cgroup-v2.md`](./docs/cgroup-v2.md).
 
 ## License
 
