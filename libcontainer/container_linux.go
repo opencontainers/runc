@@ -1674,13 +1674,30 @@ func (c *linuxContainer) updateState(process parentProcess) (*State, error) {
 	return state, nil
 }
 
-func (c *linuxContainer) saveState(s *State) error {
-	f, err := os.Create(filepath.Join(c.root, stateFilename))
+func (c *linuxContainer) saveState(s *State) (retErr error) {
+	tmpFile, err := ioutil.TempFile(c.root, "state-")
 	if err != nil {
 		return err
 	}
-	defer f.Close()
-	return utils.WriteJSON(f, s)
+
+	defer func() {
+		if retErr != nil {
+			tmpFile.Close()
+			os.Remove(tmpFile.Name())
+		}
+	}()
+
+	err = utils.WriteJSON(tmpFile, s)
+	if err != nil {
+		return err
+	}
+	err = tmpFile.Close()
+	if err != nil {
+		return err
+	}
+
+	stateFilePath := filepath.Join(c.root, stateFilename)
+	return os.Rename(tmpFile.Name(), stateFilePath)
 }
 
 func (c *linuxContainer) deleteState() error {
