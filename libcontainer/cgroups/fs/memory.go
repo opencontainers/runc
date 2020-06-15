@@ -291,7 +291,9 @@ func getPageUsageByNUMA(cgroupPath string) (cgroups.PageUsageByNUMA, error) {
 	stats := cgroups.PageUsageByNUMA{}
 
 	file, err := os.Open(path.Join(cgroupPath, cgroupMemoryPagesByNuma))
-	if err != nil {
+	if os.IsNotExist(err) {
+		return stats, nil
+	} else if err != nil {
 		return stats, err
 	}
 
