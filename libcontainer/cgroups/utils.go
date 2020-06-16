@@ -219,8 +219,11 @@ func getCgroupMountsHelper(ss map[string]bool, mi io.Reader, all bool) ([]Mount,
 
 // GetCgroupMounts returns the mounts for the cgroup subsystems.
 // all indicates whether to return just the first instance or all the mounts.
+// This function should not be used from cgroupv2 code, as in this case
+// all the controllers are available under the constant unifiedMountpoint.
 func GetCgroupMounts(all bool) ([]Mount, error) {
 	if IsCgroup2UnifiedMode() {
+		// TODO: remove cgroupv2 case once all external users are converted
 		availableControllers, err := GetAllSubsystems()
 		if err != nil {
 			return nil, err
@@ -233,6 +236,10 @@ func GetCgroupMounts(all bool) ([]Mount, error) {
 		return []Mount{m}, nil
 	}
 
+	return getCgroupMountsV1(all)
+}
+
+func getCgroupMountsV1(all bool) ([]Mount, error) {
 	f, err := os.Open("/proc/self/mountinfo")
 	if err != nil {
 		return nil, err
