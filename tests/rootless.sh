@@ -146,7 +146,7 @@ do
 		# https://bugzilla.redhat.com/show_bug.cgi?id=1788616
 	        ssh -t -t -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i $HOME/rootless.key rootless@localhost -- PATH="$PATH" RUNC_USE_SYSTEMD="$RUNC_USE_SYSTEMD" bats -t "$ROOT/tests/integration$ROOTLESS_TESTPATH"
 	else
-		sudo -HE -u rootless PATH="$PATH" bats -t "$ROOT/tests/integration$ROOTLESS_TESTPATH"
+		sudo -HE -u rootless PATH="$PATH" $(which bats) -t "$ROOT/tests/integration$ROOTLESS_TESTPATH"
 	fi
 	set +e
 done
