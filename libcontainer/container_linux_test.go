@@ -51,12 +51,8 @@ func (m *mockCgroupManager) Destroy() error {
 }
 
 func (m *mockCgroupManager) Exists() bool {
-	paths := m.GetPaths()
-	if paths != nil {
-		_, err := os.Lstat(paths["devices"])
-		return err == nil
-	}
-	return false
+	_, err := os.Lstat(m.Path("devices"))
+	return err == nil
 }
 
 func (m *mockCgroupManager) GetPaths() map[string]string {

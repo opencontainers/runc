@@ -112,6 +112,8 @@ func (m *legacyManager) Apply(pid int) error {
 		properties []systemdDbus.Property
 	)
 
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if c.Paths != nil {
 		paths := make(map[string]string)
 		for name, path := range c.Paths {
@@ -465,5 +467,5 @@ func (m *legacyManager) GetFreezerState() (configs.FreezerState, error) {
 }
 
 func (m *legacyManager) Exists() bool {
-	return cgroups.PathExists(m.paths["devices"])
+	return cgroups.PathExists(m.Path("devices"))
 }
