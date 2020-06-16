@@ -504,3 +504,14 @@ func TestNoHierarchicalNumaStat(t *testing.T) {
 	}
 	expectPageUsageByNUMAEquals(t, pageUsageByNUMA, actualStats)
 }
+
+func TestWithoutNumaStat(t *testing.T) {
+	helper := NewCgroupTestUtil("memory", t)
+	defer helper.cleanup()
+
+	actualStats, err := getPageUsageByNUMA(helper.CgroupPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expectPageUsageByNUMAEquals(t, cgroups.PageUsageByNUMA{}, actualStats)
+}
