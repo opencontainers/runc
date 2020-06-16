@@ -392,3 +392,7 @@ func (m *manager) GetFreezerState() (configs.FreezerState, error) {
 	}
 	return freezer.(*FreezerGroup).GetState(dir)
 }
+
+func (m *manager) Exists() bool {
+	return cgroups.PathExists(m.paths["devices"])
+}

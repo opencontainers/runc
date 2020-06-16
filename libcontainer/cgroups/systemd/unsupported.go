@@ -65,3 +65,7 @@ func Freeze(c *configs.Cgroup, state configs.FreezerState) error {
 func (m *Manager) GetCgroups() (*configs.Cgroup, error) {
 	return nil, errors.New("Systemd not supported")
 }
+
+func (m *Manager) Exists() bool {
+	return false
+}

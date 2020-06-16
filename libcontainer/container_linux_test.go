@@ -50,6 +50,15 @@ func (m *mockCgroupManager) Destroy() error {
 	return nil
 }
 
+func (m *mockCgroupManager) Exists() bool {
+	paths := m.GetPaths()
+	if paths != nil {
+		_, err := os.Lstat(paths["devices"])
+		return err == nil
+	}
+	return false
+}
+
 func (m *mockCgroupManager) GetPaths() map[string]string {
 	return m.paths
 }
@@ -134,11 +143,27 @@ func (m *mockProcess) forwardChildLogs() {
 }
 
 func TestGetContainerPids(t *testing.T) {
-	container := &linuxContainer{
-		id:            "myid",
-		config:        &configs.Config{},
-		cgroupManager: &mockCgroupManager{allPids: []int{1, 2, 3}},
+	pid := 1
+	stat, err := system.Stat(pid)
+	if err != nil {
+		t.Fatalf("can't stat pid %d, got %v", pid, err)
 	}
+	container := &linuxContainer{
+		id:     "myid",
+		config: &configs.Config{},
+		cgroupManager: &mockCgroupManager{
+			allPids: []int{1, 2, 3},
+			paths: map[string]string{
+				"device": "/proc/self/cgroups",
+			},
+		},
+		initProcess: &mockProcess{
+			_pid:    1,
+			started: 10,
+		},
+		initProcessStartTime: stat.StartTime,
+	}
+	container.state = &runningState{c: container}
 	pids, err := container.Processes()
 	if err != nil {
 		t.Fatal(err)

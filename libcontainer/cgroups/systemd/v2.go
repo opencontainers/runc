@@ -352,3 +352,7 @@ func (m *unifiedManager) GetFreezerState() (configs.FreezerState, error) {
 	}
 	return fsMgr.GetFreezerState()
 }
+
+func (m *unifiedManager) Exists() bool {
+	return cgroups.PathExists(m.path)
+}

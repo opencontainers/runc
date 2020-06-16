@@ -463,3 +463,7 @@ func (m *legacyManager) GetFreezerState() (configs.FreezerState, error) {
 	}
 	return freezer.(*fs.FreezerGroup).GetState(path)
 }
+
+func (m *legacyManager) Exists() bool {
+	return cgroups.PathExists(m.paths["devices"])
+}
