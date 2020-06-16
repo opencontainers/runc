@@ -393,5 +393,5 @@ func (m *manager) GetFreezerState() (configs.FreezerState, error) {
 }
 
 func (m *manager) Exists() bool {
-	return cgroups.PathExists(m.paths["devices"])
+	return cgroups.PathExists(m.Path("devices"))
 }
