@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -365,20 +366,26 @@ func systemdVersion(conn *systemdDbus.Conn) (int, error) {
 			return
 		}
 
-		// verStr is like "v245.4-1.fc32" (including quotes)
-		if !strings.HasPrefix(verStr, `"v`) {
-			versionErr = fmt.Errorf("can't parse version %s", verStr)
-			return
-		}
-		// remove `"v` prefix and everything after the first dot
-		ver, err := strconv.Atoi(strings.SplitN(verStr[2:], ".", 2)[0])
-		if err != nil {
-			versionErr = err
-		}
-		version = ver
+		version, versionErr = systemdVersionAtoi(verStr)
+		return
 	})
 
 	return version, versionErr
+}
+
+func systemdVersionAtoi(verStr string) (int, error) {
+	// verStr should be of the form:
+	// "v245.4-1.fc32", "245", "v245-1.fc32", "245-1.fc32"
+	// all the input strings include quotes, and the output int should be 245
+	// thus, we unconditionally remove the `"v`
+	// and then match on the first integer we can grab
+	re := regexp.MustCompile(`"?v?([0-9]+)`)
+	matches := re.FindStringSubmatch(verStr)
+	if len(matches) < 2 {
+		return 0, errors.Errorf("can't parse version %s: incorrect number of matches %v", verStr, matches)
+	}
+	ver, err := strconv.Atoi(matches[1])
+	return ver, errors.Wrapf(err, "can't parse version %s", verStr)
 }
 
 func addCpuQuota(conn *systemdDbus.Conn, properties *[]systemdDbus.Property, quota int64, period uint64) {
