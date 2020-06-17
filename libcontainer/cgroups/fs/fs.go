@@ -3,9 +3,11 @@
 package fs
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
@@ -88,9 +90,42 @@ func getCgroupRoot() (string, error) {
 		return cgroupRoot, nil
 	}
 
-	root, err := cgroups.FindCgroupMountpointDir()
+	f, err := os.Open("/proc/self/mountinfo")
 	if err != nil {
 		return "", err
+	}
+	defer f.Close()
+
+	var root string
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		text := scanner.Text()
+		fields := strings.Split(text, " ")
+		// Safe as mountinfo encodes mountpoints with spaces as \040.
+		index := strings.Index(text, " - ")
+		postSeparatorFields := strings.Fields(text[index+3:])
+		numPostFields := len(postSeparatorFields)
+
+		// This is an error as we can't detect if the mount is for "cgroup"
+		if numPostFields == 0 {
+			return "", fmt.Errorf("mountinfo: found no fields post '-' in %q", text)
+		}
+
+		if postSeparatorFields[0] == "cgroup" {
+			// Check that the mount is properly formatted.
+			if numPostFields < 3 {
+				return "", fmt.Errorf("Error found less than 3 fields post '-' in %q", text)
+			}
+
+			root = filepath.Dir(fields[4])
+			break
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return "", err
+	}
+	if root == "" {
+		return "", errors.New("no cgroup mount found in mountinfo")
 	}
 
 	if _, err := os.Stat(root); err != nil {

@@ -20,7 +20,6 @@ import (
 )
 
 const (
-	CgroupNamePrefix  = "name="
 	CgroupProcesses   = "cgroup.procs"
 	unifiedMountpoint = "/sys/fs/cgroup"
 )
@@ -28,8 +27,6 @@ const (
 var (
 	isUnifiedOnce sync.Once
 	isUnified     bool
-
-	errUnified = errors.New("not implemented for cgroup v2 unified hierarchy")
 )
 
 // HugePageSizeUnitList is a list of the units used by the linux kernel when
@@ -51,176 +48,19 @@ func IsCgroup2UnifiedMode() bool {
 	return isUnified
 }
 
-// https://www.kernel.org/doc/Documentation/cgroup-v1/cgroups.txt
-func FindCgroupMountpoint(cgroupPath, subsystem string) (string, error) {
-	if IsCgroup2UnifiedMode() {
-		return unifiedMountpoint, nil
-	}
-	mnt, _, err := FindCgroupMountpointAndRoot(cgroupPath, subsystem)
-	return mnt, err
-}
-
-func FindCgroupMountpointAndRoot(cgroupPath, subsystem string) (string, string, error) {
-	// We are not using mount.GetMounts() because it's super-inefficient,
-	// parsing it directly sped up x10 times because of not using Sscanf.
-	// It was one of two major performance drawbacks in container start.
-	if !isSubsystemAvailable(subsystem) {
-		return "", "", NewNotFoundError(subsystem)
-	}
-
-	f, err := os.Open("/proc/self/mountinfo")
-	if err != nil {
-		return "", "", err
-	}
-	defer f.Close()
-
-	if IsCgroup2UnifiedMode() {
-		subsystem = ""
-	}
-
-	return findCgroupMountpointAndRootFromReader(f, cgroupPath, subsystem)
-}
-
-func findCgroupMountpointAndRootFromReader(reader io.Reader, cgroupPath, subsystem string) (string, string, error) {
-	scanner := bufio.NewScanner(reader)
-	for scanner.Scan() {
-		txt := scanner.Text()
-		fields := strings.Fields(txt)
-		if len(fields) < 9 {
-			continue
-		}
-		if strings.HasPrefix(fields[4], cgroupPath) {
-			for _, opt := range strings.Split(fields[len(fields)-1], ",") {
-				if (subsystem == "" && fields[9] == "cgroup2") || opt == subsystem {
-					return fields[4], fields[3], nil
-				}
-			}
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		return "", "", err
-	}
-
-	return "", "", NewNotFoundError(subsystem)
-}
-
-func isSubsystemAvailable(subsystem string) bool {
-	if IsCgroup2UnifiedMode() {
-		controllers, err := GetAllSubsystems()
-		if err != nil {
-			return false
-		}
-		for _, c := range controllers {
-			if c == subsystem {
-				return true
-			}
-		}
-		return false
-	}
-
-	cgroups, err := ParseCgroupFile("/proc/self/cgroup")
-	if err != nil {
-		return false
-	}
-	_, avail := cgroups[subsystem]
-	return avail
-}
-
-func FindCgroupMountpointDir() (string, error) {
-	f, err := os.Open("/proc/self/mountinfo")
-	if err != nil {
-		return "", err
-	}
-	defer f.Close()
-
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		text := scanner.Text()
-		fields := strings.Split(text, " ")
-		// Safe as mountinfo encodes mountpoints with spaces as \040.
-		index := strings.Index(text, " - ")
-		postSeparatorFields := strings.Fields(text[index+3:])
-		numPostFields := len(postSeparatorFields)
-
-		// This is an error as we can't detect if the mount is for "cgroup"
-		if numPostFields == 0 {
-			return "", fmt.Errorf("Found no fields post '-' in %q", text)
-		}
-
-		if postSeparatorFields[0] == "cgroup" || postSeparatorFields[0] == "cgroup2" {
-			// Check that the mount is properly formatted.
-			if numPostFields < 3 {
-				return "", fmt.Errorf("Error found less than 3 fields post '-' in %q", text)
-			}
-
-			return filepath.Dir(fields[4]), nil
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		return "", err
-	}
-
-	return "", NewNotFoundError("cgroup")
-}
-
 type Mount struct {
 	Mountpoint string
 	Root       string
 	Subsystems []string
 }
 
-func (m Mount) GetOwnCgroup(cgroups map[string]string) (string, error) {
-	if len(m.Subsystems) == 0 {
-		return "", fmt.Errorf("no subsystem for mount")
-	}
-
-	return getControllerPath(m.Subsystems[0], cgroups)
-}
-
-func getCgroupMountsHelper(ss map[string]bool, mi io.Reader, all bool) ([]Mount, error) {
-	res := make([]Mount, 0, len(ss))
-	scanner := bufio.NewScanner(mi)
-	numFound := 0
-	for scanner.Scan() && numFound < len(ss) {
-		txt := scanner.Text()
-		sepIdx := strings.Index(txt, " - ")
-		if sepIdx == -1 {
-			return nil, fmt.Errorf("invalid mountinfo format")
-		}
-		if txt[sepIdx+3:sepIdx+10] == "cgroup2" || txt[sepIdx+3:sepIdx+9] != "cgroup" {
-			continue
-		}
-		fields := strings.Split(txt, " ")
-		m := Mount{
-			Mountpoint: fields[4],
-			Root:       fields[3],
-		}
-		for _, opt := range strings.Split(fields[len(fields)-1], ",") {
-			seen, known := ss[opt]
-			if !known || (!all && seen) {
-				continue
-			}
-			ss[opt] = true
-			if strings.HasPrefix(opt, CgroupNamePrefix) {
-				opt = opt[len(CgroupNamePrefix):]
-			}
-			m.Subsystems = append(m.Subsystems, opt)
-			numFound++
-		}
-		if len(m.Subsystems) > 0 || all {
-			res = append(res, m)
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-	return res, nil
-}
-
 // GetCgroupMounts returns the mounts for the cgroup subsystems.
 // all indicates whether to return just the first instance or all the mounts.
+// This function should not be used from cgroupv2 code, as in this case
+// all the controllers are available under the constant unifiedMountpoint.
 func GetCgroupMounts(all bool) ([]Mount, error) {
 	if IsCgroup2UnifiedMode() {
+		// TODO: remove cgroupv2 case once all external users are converted
 		availableControllers, err := GetAllSubsystems()
 		if err != nil {
 			return nil, err
@@ -233,22 +73,7 @@ func GetCgroupMounts(all bool) ([]Mount, error) {
 		return []Mount{m}, nil
 	}
 
-	f, err := os.Open("/proc/self/mountinfo")
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	allSubsystems, err := ParseCgroupFile("/proc/self/cgroup")
-	if err != nil {
-		return nil, err
-	}
-
-	allMap := make(map[string]bool)
-	for s := range allSubsystems {
-		allMap[s] = false
-	}
-	return getCgroupMountsHelper(allMap, f, all)
+	return getCgroupMountsV1(all)
 }
 
 // GetAllSubsystems returns all the cgroup subsystems supported by the kernel
@@ -292,65 +117,6 @@ func GetAllSubsystems() ([]string, error) {
 	return subsystems, nil
 }
 
-// GetOwnCgroup returns the relative path to the cgroup docker is running in.
-func GetOwnCgroup(subsystem string) (string, error) {
-	if IsCgroup2UnifiedMode() {
-		return "", errUnified
-	}
-	cgroups, err := ParseCgroupFile("/proc/self/cgroup")
-	if err != nil {
-		return "", err
-	}
-
-	return getControllerPath(subsystem, cgroups)
-}
-
-func GetOwnCgroupPath(subsystem string) (string, error) {
-	cgroup, err := GetOwnCgroup(subsystem)
-	if err != nil {
-		return "", err
-	}
-
-	return getCgroupPathHelper(subsystem, cgroup)
-}
-
-func GetInitCgroup(subsystem string) (string, error) {
-	if IsCgroup2UnifiedMode() {
-		return "", errUnified
-	}
-	cgroups, err := ParseCgroupFile("/proc/1/cgroup")
-	if err != nil {
-		return "", err
-	}
-
-	return getControllerPath(subsystem, cgroups)
-}
-
-func GetInitCgroupPath(subsystem string) (string, error) {
-	cgroup, err := GetInitCgroup(subsystem)
-	if err != nil {
-		return "", err
-	}
-
-	return getCgroupPathHelper(subsystem, cgroup)
-}
-
-func getCgroupPathHelper(subsystem, cgroup string) (string, error) {
-	mnt, root, err := FindCgroupMountpointAndRoot("", subsystem)
-	if err != nil {
-		return "", err
-	}
-
-	// This is needed for nested containers, because in /proc/self/cgroup we
-	// see paths from host, which don't exist in container.
-	relCgroup, err := filepath.Rel(root, cgroup)
-	if err != nil {
-		return "", err
-	}
-
-	return filepath.Join(mnt, relCgroup), nil
-}
-
 func readProcsFile(file string) ([]int, error) {
 	f, err := os.Open(file)
 	if err != nil {
@@ -375,8 +141,15 @@ func readProcsFile(file string) ([]int, error) {
 	return out, nil
 }
 
-// ParseCgroupFile parses the given cgroup file, typically from
-// /proc/<pid>/cgroup, into a map of subgroups to cgroup names.
+// ParseCgroupFile parses the given cgroup file, typically /proc/self/cgroup
+// or /proc/<pid>/cgroup, into a map of subsystems to cgroup paths, e.g.
+//   "cpu": "/user.slice/user-1000.slice"
+//   "pids": "/user.slice/user-1000.slice"
+// etc.
+//
+// Note that for cgroup v2 unified hierarchy, there are no per-controller
+// cgroup paths, so the resulting map will have a single element where the key
+// is empty string ("") and the value is the cgroup path the <pid> is in.
 func ParseCgroupFile(path string) (map[string]string, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -414,22 +187,6 @@ func parseCgroupFromReader(r io.Reader) (map[string]string, error) {
 	}
 
 	return cgroups, nil
-}
-
-func getControllerPath(subsystem string, cgroups map[string]string) (string, error) {
-	if IsCgroup2UnifiedMode() {
-		return "/", nil
-	}
-
-	if p, ok := cgroups[subsystem]; ok {
-		return p, nil
-	}
-
-	if p, ok := cgroups[CgroupNamePrefix+subsystem]; ok {
-		return p, nil
-	}
-
-	return "", NewNotFoundError(subsystem)
 }
 
 func PathExists(path string) bool {

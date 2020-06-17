@@ -703,7 +703,7 @@ func (c *linuxContainer) checkCriuFeatures(criuOpts *CriuOpts, rpcOpts *criurpc.
 		Features: criuFeat,
 	}
 
-	err := c.criuSwrk(nil, req, criuOpts, false, nil)
+	err := c.criuSwrk(nil, req, criuOpts, nil)
 	if err != nil {
 		logrus.Debugf("%s", err)
 		return errors.New("CRIU feature check failed")
@@ -1045,7 +1045,7 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 		}
 	}
 
-	err = c.criuSwrk(nil, req, criuOpts, false, nil)
+	err = c.criuSwrk(nil, req, criuOpts, nil)
 	if err != nil {
 		return err
 	}
@@ -1339,10 +1339,15 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 			req.Opts.InheritFd = append(req.Opts.InheritFd, inheritFd)
 		}
 	}
-	return c.criuSwrk(process, req, criuOpts, true, extraFiles)
+	return c.criuSwrk(process, req, criuOpts, extraFiles)
 }
 
 func (c *linuxContainer) criuApplyCgroups(pid int, req *criurpc.CriuReq) error {
+	// need to apply cgroups only on restore
+	if req.GetType() != criurpc.CriuReqType_RESTORE {
+		return nil
+	}
+
 	// XXX: Do we need to deal with this case? AFAIK criu still requires root.
 	if err := c.cgroupManager.Apply(pid); err != nil {
 		return err
@@ -1351,6 +1356,11 @@ func (c *linuxContainer) criuApplyCgroups(pid int, req *criurpc.CriuReq) error {
 	if err := c.cgroupManager.Set(c.config); err != nil {
 		return newSystemError(err)
 	}
+
+	if cgroups.IsCgroup2UnifiedMode() {
+		return nil
+	}
+	// the stuff below is cgroupv1-specific
 
 	path := fmt.Sprintf("/proc/%d/cgroup", pid)
 	cgroupsPaths, err := cgroups.ParseCgroupFile(path)
@@ -1369,7 +1379,7 @@ func (c *linuxContainer) criuApplyCgroups(pid int, req *criurpc.CriuReq) error {
 	return nil
 }
 
-func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *CriuOpts, applyCgroups bool, extraFiles []*os.File) error {
+func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *CriuOpts, extraFiles []*os.File) error {
 	fds, err := unix.Socketpair(unix.AF_LOCAL, unix.SOCK_SEQPACKET|unix.SOCK_CLOEXEC, 0)
 	if err != nil {
 		return err
@@ -1433,11 +1443,8 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *
 		}
 	}()
 
-	if applyCgroups {
-		err := c.criuApplyCgroups(criuProcess.Pid, req)
-		if err != nil {
-			return err
-		}
+	if err := c.criuApplyCgroups(criuProcess.Pid, req); err != nil {
+		return err
 	}
 
 	var extFds []string
