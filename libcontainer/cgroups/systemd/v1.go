@@ -68,7 +68,7 @@ var legacySubsystems = subsystemSet{
 	&fs.NameGroup{GroupName: "name=systemd"},
 }
 
-func genV1ResourcesProperties(c *configs.Cgroup) ([]systemdDbus.Property, error) {
+func genV1ResourcesProperties(c *configs.Cgroup, conn *systemdDbus.Conn) ([]systemdDbus.Property, error) {
 	var properties []systemdDbus.Property
 	r := c.Resources
 
@@ -88,7 +88,7 @@ func genV1ResourcesProperties(c *configs.Cgroup) ([]systemdDbus.Property, error)
 			newProp("CPUShares", r.CpuShares))
 	}
 
-	addCpuQuota(&properties, r.CpuQuota, r.CpuPeriod)
+	addCpuQuota(conn, &properties, r.CpuQuota, r.CpuPeriod)
 
 	if r.BlkioWeight != 0 {
 		properties = append(properties,
@@ -167,7 +167,11 @@ func (m *legacyManager) Apply(pid int) error {
 	properties = append(properties,
 		newProp("DefaultDependencies", false))
 
-	resourcesProperties, err := genV1ResourcesProperties(c)
+	dbusConnection, err := getDbusConnection(false)
+	if err != nil {
+		return err
+	}
+	resourcesProperties, err := genV1ResourcesProperties(c, dbusConnection)
 	if err != nil {
 		return err
 	}
@@ -182,10 +186,6 @@ func (m *legacyManager) Apply(pid int) error {
 		}
 	}
 
-	dbusConnection, err := getDbusConnection(false)
-	if err != nil {
-		return err
-	}
 	if err := startUnit(dbusConnection, unitName, properties); err != nil {
 		return err
 	}
@@ -370,7 +370,11 @@ func (m *legacyManager) Set(container *configs.Config) error {
 	if m.cgroups.Paths != nil {
 		return nil
 	}
-	properties, err := genV1ResourcesProperties(container.Cgroups)
+	dbusConnection, err := getDbusConnection(false)
+	if err != nil {
+		return err
+	}
+	properties, err := genV1ResourcesProperties(container.Cgroups, dbusConnection)
 	if err != nil {
 		return err
 	}
@@ -395,11 +399,6 @@ func (m *legacyManager) Set(container *configs.Config) error {
 		logrus.Infof("freeze container before SetUnitProperties failed: %v", err)
 	}
 
-	dbusConnection, err := getDbusConnection(false)
-	if err != nil {
-		_ = m.Freeze(targetFreezerState)
-		return err
-	}
 	if err := dbusConnection.SetUnitProperties(getUnitName(container.Cgroups), true, properties...); err != nil {
 		_ = m.Freeze(targetFreezerState)
 		return err

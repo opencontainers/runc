@@ -105,6 +105,16 @@ function runc_rootless_cgroup() {
 	update_config '.linux.resources += {"memory":{},"cpu":{},"blockio":{},"pids":{}}' $bundle
 }
 
+# Returns systemd version as a number (-1 if systemd is not enabled/supported).
+function systemd_version() {
+	if [ -n "${RUNC_USE_SYSTEMD}" ]; then
+		systemctl --version | awk '/^systemd / {print $2; exit}'
+		return
+	fi
+
+	echo "-1"
+}
+
 function init_cgroup_paths() {
 	# init once
 	test -n "$CGROUP_UNIFIED" && return
@@ -180,15 +190,16 @@ function check_cgroup_value() {
 # Helper to check a value in systemd.
 function check_systemd_value() {
 	[ -z "${RUNC_USE_SYSTEMD}" ] && return
-	source=$1
+	local source=$1
 	[ "$source" = "unsupported" ] && return
-	expected="$2"
-	user=""
+	local expected="$2"
+	local expected2="$3"
+	local user=""
 	[ $(id -u) != "0" ] && user="--user"
 
 	current=$(systemctl show $user --property $source $SD_UNIT_NAME | awk -F= '{print $2}')
-	echo "systemd $source: current $current !? $expected"
-	[ "$current" = "$expected" ]
+	echo "systemd $source: current $current !? $expected $expected2"
+	[ "$current" = "$expected" ] || [ -n "$expected2" -a "$current" = "$expected2" ]
 }
 
 # Helper function to set a resources limit

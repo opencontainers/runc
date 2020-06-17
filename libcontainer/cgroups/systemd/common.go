@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -21,6 +22,10 @@ var (
 	connOnce sync.Once
 	connDbus *systemdDbus.Conn
 	connErr  error
+
+	versionOnce sync.Once
+	version     int
+	versionErr  error
 )
 
 // NOTE: This function comes from package github.com/coreos/go-systemd/util
@@ -351,21 +356,56 @@ func stopUnit(dbusConnection *systemdDbus.Conn, unitName string) error {
 	return nil
 }
 
-func addCpuQuota(properties *[]systemdDbus.Property, quota int64, period uint64) {
+func systemdVersion(conn *systemdDbus.Conn) (int, error) {
+	versionOnce.Do(func() {
+		version = -1
+		verStr, err := conn.GetManagerProperty("Version")
+		if err != nil {
+			versionErr = err
+			return
+		}
+
+		// verStr is like "v245.4-1.fc32" (including quotes)
+		if !strings.HasPrefix(verStr, `"v`) {
+			versionErr = fmt.Errorf("can't parse version %s", verStr)
+			return
+		}
+		// remove `"v` prefix and everything after the first dot
+		ver, err := strconv.Atoi(strings.SplitN(verStr[2:], ".", 2)[0])
+		if err != nil {
+			versionErr = err
+		}
+		version = ver
+	})
+
+	return version, versionErr
+}
+
+func addCpuQuota(conn *systemdDbus.Conn, properties *[]systemdDbus.Property, quota int64, period uint64) {
+	if period != 0 {
+		// systemd only supports CPUQuotaPeriodUSec since v242
+		sdVer, err := systemdVersion(conn)
+		if err != nil {
+			logrus.Warnf("systemdVersion: %s", err)
+		} else if sdVer >= 242 {
+			*properties = append(*properties,
+				newProp("CPUQuotaPeriodUSec", period))
+		}
+	}
 	if quota != 0 || period != 0 {
 		// corresponds to USEC_INFINITY in systemd
 		cpuQuotaPerSecUSec := uint64(math.MaxUint64)
 		if quota > 0 {
-			// systemd converts CPUQuotaPerSecUSec (microseconds per CPU second) to CPUQuota
-			// (integer percentage of CPU) internally.  This means that if a fractional percent of
-			// CPU is indicated by Resources.CpuQuota, we need to round up to the nearest
-			// 10ms (1% of a second) such that child cgroups can set the cpu.cfs_quota_us they expect.
 			if period == 0 {
 				// assume the default kernel value of 100000 us (100 ms), same for v1 and v2.
 				// v1: https://www.kernel.org/doc/html/latest/scheduler/sched-bwc.html and
 				// v2: https://www.kernel.org/doc/html/latest/admin-guide/cgroup-v2.html
 				period = 100000
 			}
+			// systemd converts CPUQuotaPerSecUSec (microseconds per CPU second) to CPUQuota
+			// (integer percentage of CPU) internally.  This means that if a fractional percent of
+			// CPU is indicated by Resources.CpuQuota, we need to round up to the nearest
+			// 10ms (1% of a second) such that child cgroups can set the cpu.cfs_quota_us they expect.
 			cpuQuotaPerSecUSec = uint64(quota*1000000) / period
 			if cpuQuotaPerSecUSec%10000 != 0 {
 				cpuQuotaPerSecUSec = ((cpuQuotaPerSecUSec / 10000) + 1) * 10000
