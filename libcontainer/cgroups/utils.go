@@ -138,7 +138,7 @@ func readProcsFile(file string) ([]int, error) {
 			out = append(out, pid)
 		}
 	}
-	return out, nil
+	return out, s.Err()
 }
 
 // ParseCgroupFile parses the given cgroup file, typically /proc/self/cgroup
