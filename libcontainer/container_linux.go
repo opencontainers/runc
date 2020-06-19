@@ -233,6 +233,9 @@ func (c *linuxContainer) Set(config configs.Config) error {
 	if c.intelRdtManager != nil {
 		if err := c.intelRdtManager.Set(&config); err != nil {
 			// Set configs back
+			if err2 := c.cgroupManager.Set(c.config); err2 != nil {
+				logrus.Warnf("Setting back cgroup configs failed due to error: %v, your state.json and actual configs might be inconsistent.", err2)
+			}
 			if err2 := c.intelRdtManager.Set(c.config); err2 != nil {
 				logrus.Warnf("Setting back intelrdt configs failed due to error: %v, your state.json and actual configs might be inconsistent.", err2)
 			}
