@@ -42,6 +42,33 @@ func TestCreateHooks(t *testing.T) {
 					Args: []string{"--some", "thing"},
 				},
 			},
+			CreateRuntime: []specs.Hook{
+				{
+					Path: "/some/hook/path",
+				},
+				{
+					Path: "/some/hook2/path",
+					Args: []string{"--some", "thing"},
+				},
+			},
+			CreateContainer: []specs.Hook{
+				{
+					Path: "/some/hook/path",
+				},
+				{
+					Path: "/some/hook2/path",
+					Args: []string{"--some", "thing"},
+				},
+			},
+			StartContainer: []specs.Hook{
+				{
+					Path: "/some/hook/path",
+				},
+				{
+					Path: "/some/hook2/path",
+					Args: []string{"--some", "thing"},
+				},
+			},
 			Poststart: []specs.Hook{
 				{
 					Path: "/some/hook/path",
@@ -77,19 +104,37 @@ func TestCreateHooks(t *testing.T) {
 	conf := &configs.Config{}
 	createHooks(rspec, conf)
 
-	prestart := conf.Hooks.Prestart
+	prestart := conf.Hooks[configs.Prestart]
 
 	if len(prestart) != 2 {
 		t.Error("Expected 2 Prestart hooks")
 	}
 
-	poststart := conf.Hooks.Poststart
+	createRuntime := conf.Hooks[configs.CreateRuntime]
+
+	if len(createRuntime) != 2 {
+		t.Error("Expected 2 createRuntime hooks")
+	}
+
+	createContainer := conf.Hooks[configs.CreateContainer]
+
+	if len(createContainer) != 2 {
+		t.Error("Expected 2 createContainer hooks")
+	}
+
+	startContainer := conf.Hooks[configs.StartContainer]
+
+	if len(startContainer) != 2 {
+		t.Error("Expected 2 startContainer hooks")
+	}
+
+	poststart := conf.Hooks[configs.Poststart]
 
 	if len(poststart) != 3 {
 		t.Error("Expected 3 Poststart hooks")
 	}
 
-	poststop := conf.Hooks.Poststop
+	poststop := conf.Hooks[configs.Poststop]
 
 	if len(poststop) != 4 {
 		t.Error("Expected 4 Poststop hooks")
