@@ -48,7 +48,7 @@ $ ./install.sh /usr/local
 ## Writing integration tests
 
 [helper functions]
-(https://github.com/opencontainers/runc/blob/master/test/integration/helpers.bash)
+(https://github.com/opencontainers/runc/blob/master/tests/integration/helpers.bash)
 are provided in order to facilitate writing tests.
 
 ```sh
