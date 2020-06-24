@@ -17,7 +17,7 @@ function teardown() {
 function setup_pipes() {
 	# The changes to 'terminal' are needed for running in detached mode
 	update_config 	' (.. | select(.terminal? != null)) .terminal |= false
-			| (.. | select(.[]? == "sh")) += ["-c", "for i in `seq 10`; do read xxx || continue; echo ponG $xxx; done"]' 
+			| (.. | select(.[]? == "sh")) += ["-c", "for i in `seq 10`; do read xxx || continue; echo ponG $xxx; done"]'
 
 	# Create two sets of pipes
 	# for stdout/stderr
@@ -58,9 +58,8 @@ function simple_cr() {
 
     # restore from checkpoint
     runc --criu "$CRIU" restore -d --work-path ./work-dir --console-socket $CONSOLE_SOCKET test_busybox
-    ret=$?
     cat ./work-dir/restore.log | grep -B 5 Error || true
-    [ "$ret" -eq 0 ]
+    [ "$status" -eq 0 ]
 
     # busybox should be back up and running
     testcontainer test_busybox running
@@ -76,7 +75,7 @@ function simple_cr() {
   requires cgroups_v1
 
   # enable CGROUPNS
-  update_config '.linux.namespaces += [{"type": "cgroup"}]' 
+  update_config '.linux.namespaces += [{"type": "cgroup"}]'
 
   simple_cr
 }
@@ -134,7 +133,7 @@ function simple_cr() {
   setup_pipes
 
   # This should not be necessary: https://github.com/checkpoint-restore/criu/issues/575
-  update_config '(.. | select(.readonly? != null)) .readonly |= false' 
+  update_config '(.. | select(.readonly? != null)) .readonly |= false'
 
   # TCP port for lazy migration
   port=27277
@@ -181,7 +180,9 @@ function simple_cr() {
   # Killing the CRIU on the checkpoint side will let the container
   # continue to run if the migration failed at some point.
   __runc --criu "$CRIU" restore -d --work-path ./image-dir --image-path ./image-dir --lazy-pages test_busybox_restore <&60 >&51 2>&51
-  [ $? -eq 0 ]
+  ret=$?
+  cat ./work-dir/restore.log | grep -B 5 Error || true
+  [ $ret -eq 0 ]
 
   # busybox should be back up and running
   testcontainer test_busybox_restore running
@@ -268,7 +269,7 @@ function simple_cr() {
   tmplog2=`basename $tmplog2`
   # This adds the annotation 'org.criu.config' to set a container
   # specific CRIU config file.
-  update_config '.annotations += {"org.criu.config": "'"$tmp"'"}' 
+  update_config '.annotations += {"org.criu.config": "'"$tmp"'"}'
 
   # Tell CRIU to use another configuration file
   mkdir -p /etc/criu
@@ -283,6 +284,7 @@ function simple_cr() {
 
   # checkpoint the running container
   runc --criu "$CRIU" checkpoint --work-path ./work-dir test_busybox
+  cat ./work-dir/dump.log | grep -B 5 Error || true
   [ "$status" -eq 0 ]
   ! test -f ./work-dir/$tmplog1
   test -f ./work-dir/$tmplog2
@@ -293,6 +295,7 @@ function simple_cr() {
   test -f ./work-dir/$tmplog2 && unlink ./work-dir/$tmplog2
   # restore from checkpoint
   runc --criu "$CRIU" restore -d --work-path ./work-dir --console-socket $CONSOLE_SOCKET test_busybox
+  cat ./work-dir/restore.log | grep -B 5 Error || true
   [ "$status" -eq 0 ]
   ! test -f ./work-dir/$tmplog1
   test -f ./work-dir/$tmplog2
