@@ -11,7 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// init runs the libcontainer initialization code because of the busybox style needs
+// init runs the libcontainer initialization code because of the need
 // to work around the go runtime and the issues with forking
 func init() {
 	if len(os.Args) < 2 || os.Args[1] != "init" {

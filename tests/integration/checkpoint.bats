@@ -6,12 +6,12 @@ function setup() {
   # XXX: currently criu require root containers.
   requires criu root
 
-  teardown_busybox
-  setup_busybox
+  teardown_container
+  setup_container
 }
 
 function teardown() {
-  teardown_busybox
+  teardown_container
   local pid fd
 
   for pid in "${PIDS_TO_KILL[@]}"; do
@@ -54,27 +54,27 @@ function check_pipes() {
 }
 
 function simple_cr() {
-  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+  runc run -d --console-socket $CONSOLE_SOCKET test_container
   [ "$status" -eq 0 ]
 
-  testcontainer test_busybox running
+  testcontainer test_container running
 
   for i in `seq 2`; do
     # checkpoint the running container
-    runc --criu "$CRIU" checkpoint --work-path ./work-dir test_busybox
+    runc --criu "$CRIU" checkpoint --work-path ./work-dir test_container
     cat ./work-dir/dump.log | grep -B 5 Error || true
     [ "$status" -eq 0 ]
 
-    # after checkpoint busybox is no longer running
-    testcontainer test_busybox checkpointed
+    # after checkpoint container is no longer running
+    testcontainer test_container checkpointed
 
     # restore from checkpoint
-    runc --criu "$CRIU" restore -d --work-path ./work-dir --console-socket $CONSOLE_SOCKET test_busybox
+    runc --criu "$CRIU" restore -d --work-path ./work-dir --console-socket $CONSOLE_SOCKET test_container
     cat ./work-dir/restore.log | grep -B 5 Error || true
     [ "$status" -eq 0 ]
 
-    # busybox should be back up and running
-    testcontainer test_busybox running
+    # container should be back up and running
+    testcontainer test_container running
   done
 }
 
@@ -95,40 +95,39 @@ function simple_cr() {
 @test "checkpoint --pre-dump and restore" {
   setup_pipes
 
-  # run busybox
-  __runc run -d test_busybox <&${in_r} >&${out_w} 2>&${out_w}
+  __runc run -d test_container <&${in_r} >&${out_w} 2>&${out_w}
   [ $? -eq 0 ]
 
-  testcontainer test_busybox running
+  testcontainer test_container running
 
   #test checkpoint pre-dump
   mkdir parent-dir
-  runc --criu "$CRIU" checkpoint --pre-dump --image-path ./parent-dir test_busybox
+  runc --criu "$CRIU" checkpoint --pre-dump --image-path ./parent-dir test_container
   [ "$status" -eq 0 ]
 
-  # busybox should still be running
-  testcontainer test_busybox running
+  # container should still be running
+  testcontainer test_container running
 
   # checkpoint the running container
   mkdir image-dir
   mkdir work-dir
-  runc --criu "$CRIU" checkpoint --parent-path ./parent-dir --work-path ./work-dir --image-path ./image-dir test_busybox
+  runc --criu "$CRIU" checkpoint --parent-path ./parent-dir --work-path ./work-dir --image-path ./image-dir test_container
   cat ./work-dir/dump.log | grep -B 5 Error || true
   [ "$status" -eq 0 ]
 
-  # after checkpoint busybox is no longer running
-  testcontainer test_busybox checkpointed
+  # after checkpoint container is no longer running
+  testcontainer test_container checkpointed
 
   # restore from checkpoint
-  __runc --criu "$CRIU" restore -d --work-path ./work-dir --image-path ./image-dir test_busybox <&${in_r} >&${out_w} 2>&${out_w}
+  __runc --criu "$CRIU" restore -d --work-path ./work-dir --image-path ./image-dir test_container <&${in_r} >&${out_w} 2>&${out_w}
   ret=$?
   cat ./work-dir/restore.log | grep -B 5 Error || true
   [ $ret -eq 0 ]
 
-  # busybox should be back up and running
-  testcontainer test_busybox running
+  # container should be back up and running
+  testcontainer test_container running
 
-  runc exec --cwd /bin test_busybox echo ok
+  runc exec --cwd /bin test_container echo ok
   [ "$status" -eq 0 ]
   [[ ${output} == "ok" ]]
 
@@ -148,10 +147,10 @@ function simple_cr() {
   port=27277
 
   # run busybox
-  __runc run -d test_busybox <&${in_r} >&${out_w} 2>&${out_w}
+  __runc run -d test_container <&${in_r} >&${out_w} 2>&${out_w}
   [ $? -eq 0 ]
 
-  testcontainer test_busybox running
+  testcontainer test_container running
 
   # checkpoint the running container
   mkdir image-dir
@@ -164,7 +163,7 @@ function simple_cr() {
   exec {pipe}>&-
   FDS_TO_CLOSE+=($lazy_r $lazy_w)
 
-  __runc --criu "$CRIU" checkpoint --lazy-pages --page-server 0.0.0.0:${port} --status-fd ${lazy_w} --work-path ./work-dir --image-path ./image-dir test_busybox &
+  __runc --criu "$CRIU" checkpoint --lazy-pages --page-server 0.0.0.0:${port} --status-fd ${lazy_w} --work-path ./work-dir --image-path ./image-dir test_container &
   cpt_pid=$!
   PIDS_TO_KILL=($cpt_pid)
 
@@ -191,15 +190,15 @@ function simple_cr() {
   # in time when the last page is lazily transferred to the destination.
   # Killing the CRIU on the checkpoint side will let the container
   # continue to run if the migration failed at some point.
-  __runc --criu "$CRIU" restore -d --work-path ./image-dir --image-path ./image-dir --lazy-pages test_busybox_restore <&${in_r} >&${out_w} 2>&${out_w}
+  __runc --criu "$CRIU" restore -d --work-path ./image-dir --image-path ./image-dir --lazy-pages test_container_restore <&${in_r} >&${out_w} 2>&${out_w}
   ret=$?
   cat ./work-dir/restore.log | grep -B 5 Error || true
   [ $ret -eq 0 ]
 
-  # busybox should be back up and running
-  testcontainer test_busybox_restore running
+  # container should be back up and running
+  testcontainer test_container_restore running
 
-  runc exec --cwd /bin test_busybox_restore echo ok
+  runc exec --cwd /bin test_container_restore echo ok
   [ "$status" -eq 0 ]
   [[ ${output} == "ok" ]]
 
@@ -234,34 +233,34 @@ function simple_cr() {
   # tell runc which network namespace to use
   update_config '(.. | select(.type? == "network")) .path |= "'"$ns_path"'"'
 
-  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+  runc run -d --console-socket $CONSOLE_SOCKET test_container
   [ "$status" -eq 0 ]
 
-  testcontainer test_busybox running
+  testcontainer test_container running
 
   for i in `seq 2`; do
     # checkpoint the running container; this automatically tells CRIU to
     # handle the network namespace defined in config.json as an external
-    runc --criu "$CRIU" checkpoint --work-path ./work-dir test_busybox
+    runc --criu "$CRIU" checkpoint --work-path ./work-dir test_container
     # if you are having problems getting criu to work uncomment the following dump:
-    #cat /run/opencontainer/containers/test_busybox/criu.work/dump.log
+    #cat /run/opencontainer/containers/test_container/criu.work/dump.log
     cat ./work-dir/dump.log | grep -B 5 Error || true
     [ "$status" -eq 0 ]
 
-    # after checkpoint busybox is no longer running
-    testcontainer test_busybox checkpointed
+    # after checkpoint container is no longer running
+    testcontainer test_container checkpointed
 
     # restore from checkpoint; this should restore the container into the existing network namespace
-    runc --criu "$CRIU" restore -d --work-path ./work-dir --console-socket $CONSOLE_SOCKET test_busybox
+    runc --criu "$CRIU" restore -d --work-path ./work-dir --console-socket $CONSOLE_SOCKET test_container
     ret=$?
     cat ./work-dir/restore.log | grep -B 5 Error || true
     [ "$ret" -eq 0 ]
 
-    # busybox should be back up and running
-    testcontainer test_busybox running
+    # container should be back up and running
+    testcontainer test_container running
 
     # container should be running in same network namespace as before
-    pid=`__runc state test_busybox | jq '.pid'`
+    pid=`__runc state test_container | jq '.pid'`
     ns_inode_new=`readlink /proc/$pid/ns/net | sed -e 's/.*\[\(.*\)\]/\1/'`
     echo "old network namespace inode $ns_inode"
     echo "new network namespace inode $ns_inode_new"
@@ -290,31 +289,31 @@ function simple_cr() {
   # Make sure the RPC defined configuration file overwrites the previous
   echo "log-file=$tmplog2" > $tmp
 
-  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+  runc run -d --console-socket $CONSOLE_SOCKET test_container
   [ "$status" -eq 0 ]
 
-  testcontainer test_busybox running
+  testcontainer test_container running
 
   # checkpoint the running container
-  runc --criu "$CRIU" checkpoint --work-path ./work-dir test_busybox
+  runc --criu "$CRIU" checkpoint --work-path ./work-dir test_container
   cat ./work-dir/dump.log | grep -B 5 Error || true
   [ "$status" -eq 0 ]
   ! test -f ./work-dir/$tmplog1
   test -f ./work-dir/$tmplog2
 
-  # after checkpoint busybox is no longer running
-  testcontainer test_busybox checkpointed
+  # after checkpoint container is no longer running
+  testcontainer test_container checkpointed
 
   test -f ./work-dir/$tmplog2 && unlink ./work-dir/$tmplog2
   # restore from checkpoint
-  runc --criu "$CRIU" restore -d --work-path ./work-dir --console-socket $CONSOLE_SOCKET test_busybox
+  runc --criu "$CRIU" restore -d --work-path ./work-dir --console-socket $CONSOLE_SOCKET test_container
   cat ./work-dir/restore.log | grep -B 5 Error || true
   [ "$status" -eq 0 ]
   ! test -f ./work-dir/$tmplog1
   test -f ./work-dir/$tmplog2
 
-  # busybox should be back up and running
-  testcontainer test_busybox running
+  # container should be back up and running
+  testcontainer test_container running
   unlink $tmp
   test -f ./work-dir/$tmplog2 && unlink ./work-dir/$tmplog2
 }

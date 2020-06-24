@@ -12,17 +12,8 @@ GOPATH="$(mktemp -d --tmpdir runc-integration-gopath.XXXXXX)"
 # Test data path.
 TESTDATA="${INTEGRATION_ROOT}/testdata"
 
-# Busybox image
-BUSYBOX_IMAGE="$BATS_TMPDIR/busybox.tar"
-BUSYBOX_BUNDLE="$BATS_TMPDIR/busyboxtest"
-
-# hello-world in tar format
-HELLO_FILE=`get_hello`
-HELLO_IMAGE="$TESTDATA/$HELLO_FILE"
-HELLO_BUNDLE="$BATS_TMPDIR/hello-world"
-
-# debian image
-DEBIAN_BUNDLE="$BATS_TMPDIR/debiantest"
+# container image
+BUNDLE="$BATS_TMPDIR/containertest"
 
 # CRIU PATH
 CRIU="$(which criu 2>/dev/null || true)"
@@ -416,57 +407,22 @@ function teardown_recvtty() {
 	rm -f "$CONSOLE_SOCKET"
 }
 
-function setup_busybox() {
+function setup_container() {
+	local rootless_rootfs="/tmp/cached-rootfs"
 	setup_recvtty
-	run mkdir "$BUSYBOX_BUNDLE"
-	run mkdir "$BUSYBOX_BUNDLE"/rootfs
-	if [ -e "/testdata/busybox.tar" ]; then
-		BUSYBOX_IMAGE="/testdata/busybox.tar"
-	fi
-	if [ ! -e $BUSYBOX_IMAGE ]; then
-		curl -o $BUSYBOX_IMAGE -sSL `get_busybox`
-	fi
-	tar --exclude './dev/*' -C "$BUSYBOX_BUNDLE"/rootfs -xf "$BUSYBOX_IMAGE"
-	cd "$BUSYBOX_BUNDLE"
+
+	get_and_extract_ubuntu $BUNDLE
+
+	cd "$BUNDLE"
+	rm -f ./config.json
 	runc_spec
-}
-
-function setup_hello() {
-	setup_recvtty
-	run mkdir "$HELLO_BUNDLE"
-	run mkdir "$HELLO_BUNDLE"/rootfs
-	tar --exclude './dev/*' -C "$HELLO_BUNDLE"/rootfs -xf "$HELLO_IMAGE"
-	cd "$HELLO_BUNDLE"
-	runc_spec
-	update_config '(.. | select(.? == "sh")) |= "/hello"'
-}
-
-function setup_debian() {
-	# skopeo and umoci are not installed on the travis runner
-	if [ -n "${RUNC_USE_SYSTEMD}" ]; then
-		return
-	fi
-
-	setup_recvtty
-	run mkdir "$DEBIAN_BUNDLE"
-
-	if [ ! -d "$DEBIAN_ROOTFS/rootfs" ]; then
-		get_and_extract_debian "$DEBIAN_BUNDLE"
-	fi
-
-	# Use the cached version
-	if [ ! -d "$DEBIAN_BUNDLE/rootfs" ]; then
-		cp -r "$DEBIAN_ROOTFS"/* "$DEBIAN_BUNDLE/"
-	fi
-
-	cd "$DEBIAN_BUNDLE"
 }
 
 function teardown_running_container() {
 	runc list
-	# $1 should be a container name such as "test_busybox"
-	# here we detect "test_busybox "(with one extra blank) to avoid conflict prefix
-	# e.g. "test_busybox" and "test_busybox_update"
+	# $1 should be a container name such as "test_container"
+	# here we detect "test_container"(with one extra blank) to avoid conflict prefix
+	# e.g. "test_container" and "test_container_update"
 	if [[ "${output}" == *"$1 "* ]]; then
 		runc kill $1 KILL
 		retry 10 1 eval "__runc state '$1' | grep -q 'stopped'"
@@ -476,9 +432,9 @@ function teardown_running_container() {
 
 function teardown_running_container_inroot() {
 	ROOT=$2 runc list
-	# $1 should be a container name such as "test_busybox"
-	# here we detect "test_busybox "(with one extra blank) to avoid conflict prefix
-	# e.g. "test_busybox" and "test_busybox_update"
+	# $1 should be a container name such as "test_container"
+	# here we detect "test_container "(with one extra blank) to avoid conflict prefix
+	# e.g. "test_container" and "test_container_update"
 	if [[ "${output}" == *"$1 "* ]]; then
 		ROOT=$2 runc kill $1 KILL
 		retry 10 1 eval "ROOT='$2' __runc state '$1' | grep -q 'stopped'"
@@ -486,23 +442,15 @@ function teardown_running_container_inroot() {
 	fi
 }
 
-function teardown_busybox() {
+function teardown_container() {
 	cd "$INTEGRATION_ROOT"
 	teardown_recvtty
-	teardown_running_container test_busybox
-	run rm -f -r "$BUSYBOX_BUNDLE"
-}
+	teardown_running_container test_container
 
-function teardown_hello() {
-	cd "$INTEGRATION_ROOT"
-	teardown_recvtty
-	teardown_running_container test_hello
-	run rm -f -r "$HELLO_BUNDLE"
-}
-
-function teardown_debian() {
-	cd "$INTEGRATION_ROOT"
-	teardown_recvtty
-	teardown_running_container test_debian
-	run rm -f -r "$DEBIAN_BUNDLE"
+	# With the CI there is a recurrent issue where we can't remove
+	# the folder if we don't reset the permissions.
+	if [ -d "$BUNDLE" ]; then
+		chmod -R 755 "$BUNDLE"
+	fi
+	run rm -f -r "$BUNDLE"
 }

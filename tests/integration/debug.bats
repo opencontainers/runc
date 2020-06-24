@@ -3,17 +3,19 @@
 load helpers
 
 function setup() {
-  teardown_hello
-  setup_hello
+  teardown_container
+  setup_container
+
+  # Setup a process that terminates (instead of /bin/bash)
+  update_config '.process.args = ["echo", "DEFAULT_COMMAND"]' $BUNDLE
 }
 
 function teardown() {
-  teardown_hello
+  teardown_container
 }
 
 @test "global --debug" {
-  # run hello-world
-  runc --debug run test_hello
+  runc --debug run test_container
   echo "${output}"
   [ "$status" -eq 0 ]
 
@@ -24,8 +26,7 @@ function teardown() {
 }
 
 @test "global --debug to --log" {
-  # run hello-world
-  runc --log log.out --debug run test_hello
+  runc --log log.out --debug run test_container
   [ "$status" -eq 0 ]
 
   # check output does not include debug info
@@ -43,8 +44,7 @@ function teardown() {
 }
 
 @test "global --debug to --log --log-format 'text'" {
-  # run hello-world
-  runc --log log.out --log-format "text" --debug run test_hello
+  runc --log log.out --log-format "text" --debug run test_container
   [ "$status" -eq 0 ]
 
   # check output does not include debug info
@@ -62,8 +62,7 @@ function teardown() {
 }
 
 @test "global --debug to --log --log-format 'json'" {
-  # run hello-world
-  runc --log log.out --log-format "json" --debug run test_hello
+  runc --log log.out --log-format "json" --debug run test_container
   [ "$status" -eq 0 ]
 
   # check output does not include debug info

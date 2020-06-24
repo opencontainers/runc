@@ -3,17 +3,19 @@
 load helpers
 
 function setup() {
-  teardown_hello
-  setup_hello
+  teardown_container
+  setup_container
+
+  # Setup a process that terminates (instead of /bin/bash)
+  update_config '.process.args = ["echo", "Hello"]' $BUNDLE
 }
 
 function teardown() {
-  teardown_hello
+  teardown_container
 }
 
 @test "runc run" {
-  # run hello-world
-  runc run test_hello
+  runc run test_container
   [ "$status" -eq 0 ]
 
   # check expected output
@@ -26,11 +28,10 @@ function teardown() {
 
   # replace "uid": 0 with "uid": 1000
   # and do a similar thing for gid.
-  update_config ' (.. | select(.uid? == 0)) .uid |= 1000	
-		| (.. | select(.gid? == 0)) .gid |= 100' 
+  update_config ' (.. | select(.uid? == 0)) .uid |= 1000
+		| (.. | select(.gid? == 0)) .gid |= 100'
 
-  # run hello-world
-  runc run test_hello
+  runc run test_container
   [ "$status" -eq 0 ]
 
   # check expected output
@@ -43,15 +44,13 @@ function teardown() {
   cd rootfs
   update_config '(.. | select(. == "rootfs")) |= "."'
 
-  # run hello-world
-  runc run test_hello
+  runc run test_container
   [ "$status" -eq 0 ]
   [[ "${output}" == *"Hello"* ]]
 }
 
 @test "runc run --pid-file" {
-  # run hello-world
-  runc run --pid-file pid.txt test_hello
+  runc run --pid-file pid.txt test_container
   [ "$status" -eq 0 ]
   [[ "${output}" == *"Hello"* ]]
 

@@ -1,6 +1,7 @@
 ARG GO_VERSION=1.13
 ARG BATS_VERSION=v1.2.0
 ARG CRIU_VERSION=v3.14
+ARG UMOCI_VERSION=v0.4.6
 
 FROM golang:${GO_VERSION}-buster
 ARG DEBIAN_FRONTEND=noninteractive
@@ -76,8 +77,10 @@ RUN echo 'deb http://download.opensuse.org/repositories/devel:/kubic:/libcontain
     && apt-get clean \
     && rm -rf /var/cache/apt /var/lib/apt/lists/*;
 
-# install umoci
-RUN curl -o /usr/local/bin/umoci -fsSL https://github.com/opencontainers/umoci/releases/download/v0.4.5/umoci.amd64 \
+# install umoci, retry with an exponential backoff strategy
+ARG UMOCI_VERSION
+RUN curl --connect-timeout 5 --max-time 10 --retry 5 --retry-delay 0 --retry-max-time 40 -o /usr/local/bin/umoci \
+         -fsSL "https://github.com/opencontainers/umoci/releases/download/$UMOCI_VERSION/umoci.amd64" \
     && chmod +x /usr/local/bin/umoci
 
 COPY script/tmpmount /
@@ -86,12 +89,9 @@ ENTRYPOINT ["/tmpmount"]
 
 # setup a playground for us to spawn containers in
 COPY tests/integration/multi-arch.bash tests/integration/
-ENV ROOTFS /busybox
+ENV ROOTFS /ubuntu
 RUN mkdir -p "${ROOTFS}"
-RUN . tests/integration/multi-arch.bash \
-    && curl -fsSL `get_busybox` | tar xfJC - "${ROOTFS}"
+RUN /bin/bash -c '. tests/integration/multi-arch.bash \
+    && get_and_extract_ubuntu "$ROOTFS"'
 
-ENV DEBIAN_ROOTFS /debian
-RUN mkdir -p "${DEBIAN_ROOTFS}"
-RUN . tests/integration/multi-arch.bash \
-    && get_and_extract_debian "$DEBIAN_ROOTFS"
+COPY . .

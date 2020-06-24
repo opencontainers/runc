@@ -46,7 +46,7 @@ func TestSeccompDenyGetcwdWithErrno(t *testing.T) {
 	buffers := newStdBuffers()
 	pwd := &libcontainer.Process{
 		Cwd:    "/",
-		Args:   []string{"pwd"},
+		Args:   []string{"/bin/sh", "-c", "pwd"},
 		Env:    standardEnvironment,
 		Stdin:  buffers.Stdin,
 		Stdout: buffers.Stdout,
@@ -58,29 +58,12 @@ func TestSeccompDenyGetcwdWithErrno(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ps, err := pwd.Wait()
-	if err == nil {
-		t.Fatal("Expecting error (negative return code); instead exited cleanly!")
-	}
+	pwd.Wait()
 
-	var exitCode int
-	status := ps.Sys().(syscall.WaitStatus)
-	if status.Exited() {
-		exitCode = status.ExitStatus()
-	} else if status.Signaled() {
-		exitCode = -int(status.Signal())
-	} else {
-		t.Fatalf("Unrecognized exit reason!")
-	}
-
-	if exitCode == 0 {
-		t.Fatalf("Getcwd should fail with negative exit code, instead got %d!", exitCode)
-	}
-
-	expected := "pwd: getcwd: No such process"
+	expected := "getcwd() failed: No such process"
 	actual := strings.Trim(buffers.Stderr.String(), "\n")
-	if actual != expected {
-		t.Fatalf("Expected output %s but got %s\n", expected, actual)
+	if !strings.Contains(actual, expected) {
+		t.Fatalf("Expected output to contain %q but got %q\n", expected, actual)
 	}
 }
 
@@ -115,7 +98,7 @@ func TestSeccompDenyGetcwd(t *testing.T) {
 	buffers := newStdBuffers()
 	pwd := &libcontainer.Process{
 		Cwd:    "/",
-		Args:   []string{"pwd"},
+		Args:   []string{"/bin/sh", "-c", "pwd"},
 		Env:    standardEnvironment,
 		Stdin:  buffers.Stdin,
 		Stdout: buffers.Stdout,
@@ -127,29 +110,12 @@ func TestSeccompDenyGetcwd(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ps, err := pwd.Wait()
-	if err == nil {
-		t.Fatal("Expecting error (negative return code); instead exited cleanly!")
-	}
+	pwd.Wait()
 
-	var exitCode int
-	status := ps.Sys().(syscall.WaitStatus)
-	if status.Exited() {
-		exitCode = status.ExitStatus()
-	} else if status.Signaled() {
-		exitCode = -int(status.Signal())
-	} else {
-		t.Fatalf("Unrecognized exit reason!")
-	}
-
-	if exitCode == 0 {
-		t.Fatalf("Getcwd should fail with negative exit code, instead got %d!", exitCode)
-	}
-
-	expected := "pwd: getcwd: Operation not permitted"
+	expected := "getcwd() failed: Operation not permitted"
 	actual := strings.Trim(buffers.Stderr.String(), "\n")
-	if actual != expected {
-		t.Fatalf("Expected output %s but got %s\n", expected, actual)
+	if !strings.Contains(actual, expected) {
+		t.Fatalf("Expected output to contain %q but got %q\n", expected, actual)
 	}
 }
 
@@ -191,7 +157,7 @@ func TestSeccompPermitWriteConditional(t *testing.T) {
 	buffers := newStdBuffers()
 	dmesg := &libcontainer.Process{
 		Cwd:    "/",
-		Args:   []string{"busybox", "ls", "/"},
+		Args:   []string{"ls", "/"},
 		Env:    standardEnvironment,
 		Stdin:  buffers.Stdin,
 		Stdout: buffers.Stdout,
@@ -253,7 +219,7 @@ func TestSeccompDenyWriteConditional(t *testing.T) {
 	buffers := newStdBuffers()
 	dmesg := &libcontainer.Process{
 		Cwd:    "/",
-		Args:   []string{"busybox", "ls", "does_not_exist"},
+		Args:   []string{"ls", "does_not_exist"},
 		Env:    standardEnvironment,
 		Stdin:  buffers.Stdin,
 		Stdout: buffers.Stdout,
@@ -433,11 +399,11 @@ func TestSeccompMultipleConditionSameArgDeniesStdout(t *testing.T) {
 	}
 
 	buffers, exitCode, err := runContainer(config, "", "ls", "/")
-	if err != nil {
-		t.Fatalf("%s: %s", buffers, err)
+	if err == nil {
+		t.Fatalf("Container returned without error when we expected an error, code: %d, stdout: %q, stderr: %q", exitCode, buffers.Stdout.String(), buffers.Stderr.String())
 	}
-	if exitCode != 0 {
-		t.Fatalf("exit code not 0. code %d buffers %s", exitCode, buffers)
+	if exitCode != -1 {
+		t.Fatalf("exit code not -1. code: %d, stdout: %q, stderr: %q", exitCode, buffers.Stdout.String(), buffers.Stderr.String())
 	}
 	// Verify that nothing was printed
 	if len(buffers.Stdout.String()) != 0 {

@@ -3,78 +3,75 @@
 load helpers
 
 function setup() {
-  teardown_busybox
-  setup_busybox
+  teardown_container
+  setup_container
 }
 
 function teardown() {
-  teardown_busybox
+  teardown_container
 }
 
 @test "runc pause and resume" {
   if [[ "$ROOTLESS" -ne 0 ]]
   then
     requires rootless_cgroup
-    set_cgroups_path "$BUSYBOX_BUNDLE"
+    set_cgroups_path "$BUNDLE"
   fi
   requires cgroups_freezer
 
-  # run busybox detached
-  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+  runc run -d --console-socket $CONSOLE_SOCKET test_container
   [ "$status" -eq 0 ]
 
-  testcontainer test_busybox running
+  testcontainer test_container running
 
-  # pause busybox
-  runc pause test_busybox
+  # pause container
+  runc pause test_container
   [ "$status" -eq 0 ]
 
-  # test state of busybox is paused
-  testcontainer test_busybox paused
+  # test state of container is paused
+  testcontainer test_container paused
 
-  # resume busybox
-  runc resume test_busybox
+  # resume container
+  runc resume test_container
   [ "$status" -eq 0 ]
 
-  # test state of busybox is back to running
-  testcontainer test_busybox running
+  # test state of container is back to running
+  testcontainer test_container running
 }
 
 @test "runc pause and resume with nonexist container" {
   if [[ "$ROOTLESS" -ne 0 ]]
   then
     requires rootless_cgroup
-    set_cgroups_path "$BUSYBOX_BUNDLE"
+    set_cgroups_path "$BUNDLE"
   fi
   requires cgroups_freezer
 
-  # run test_busybox detached
-  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+  runc run -d --console-socket $CONSOLE_SOCKET test_container
   [ "$status" -eq 0 ]
 
-  testcontainer test_busybox running
+  testcontainer test_container running
 
-  # pause test_busybox and nonexistent container
-  runc pause test_busybox
+  # pause test_container and nonexistent container
+  runc pause test_container
   [ "$status" -eq 0 ]
   runc pause nonexistent
   [ "$status" -ne 0 ]
 
-  # test state of test_busybox is paused
-  testcontainer test_busybox paused
+  # test state of test_container is paused
+  testcontainer test_container paused
 
-  # resume test_busybox and nonexistent container
-  runc resume test_busybox
+  # resume test_container and nonexistent container
+  runc resume test_container
   [ "$status" -eq 0 ]
   runc resume nonexistent
   [ "$status" -ne 0 ]
 
-  # test state of test_busybox is back to running
-  testcontainer test_busybox running
+  # test state of test_container is back to running
+  testcontainer test_container running
 
-  # delete test_busybox
-  runc delete --force test_busybox
+  runc delete --force test_container
 
-  runc state test_busybox
+  runc state test_container
   [ "$status" -ne 0 ]
 }

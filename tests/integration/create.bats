@@ -3,63 +3,62 @@
 load helpers
 
 function setup() {
-  teardown_busybox
-  setup_busybox
+  teardown_container
+  setup_container
 }
 
 function teardown() {
-  teardown_busybox
+  teardown_container
+  return 0
 }
 
 @test "runc create" {
-  runc create --console-socket $CONSOLE_SOCKET test_busybox
+  runc create --console-socket $CONSOLE_SOCKET test_container
   [ "$status" -eq 0 ]
 
-  testcontainer test_busybox created
+  testcontainer test_container created
 
-  # start the command
-  runc start test_busybox
+  runc start test_container
   [ "$status" -eq 0 ]
 
-  testcontainer test_busybox running
+  testcontainer test_container running
 }
 
 @test "runc create exec" {
-  runc create --console-socket $CONSOLE_SOCKET test_busybox
+  runc create --console-socket $CONSOLE_SOCKET test_container
   [ "$status" -eq 0 ]
 
-  testcontainer test_busybox created
+  testcontainer test_container created
 
-  runc exec test_busybox true
+  runc exec test_container true
   [ "$status" -eq 0 ]
 
-  testcontainer test_busybox created
+  testcontainer test_container created
 
-  # start the command
-  runc start test_busybox
+  runc start test_container
   [ "$status" -eq 0 ]
 
-  testcontainer test_busybox running
+  testcontainer test_container running
 }
 
 @test "runc create --pid-file" {
-  runc create --pid-file pid.txt --console-socket $CONSOLE_SOCKET test_busybox
+  runc create --pid-file pid.txt --console-socket $CONSOLE_SOCKET test_container
   [ "$status" -eq 0 ]
 
-  testcontainer test_busybox created
+  testcontainer test_container created
 
   # check pid.txt was generated
   [ -e pid.txt ]
 
   run cat pid.txt
   [ "$status" -eq 0 ]
-  [[ ${lines[0]} == $(__runc state test_busybox | jq '.pid') ]]
+  [[ ${lines[0]} == $(__runc state test_container | jq '.pid') ]]
 
   # start the command
-  runc start test_busybox
+  runc start test_container
   [ "$status" -eq 0 ]
 
-  testcontainer test_busybox running
+  testcontainer test_container running
 }
 
 @test "runc create --pid-file with new CWD" {
@@ -69,21 +68,20 @@ function teardown() {
   run cd pid_file
   [ "$status" -eq 0 ]
 
-  runc create --pid-file pid.txt -b $BUSYBOX_BUNDLE --console-socket $CONSOLE_SOCKET  test_busybox
+  runc create --pid-file pid.txt -b $BUNDLE --console-socket $CONSOLE_SOCKET  test_container
   [ "$status" -eq 0 ]
 
-  testcontainer test_busybox created
+  testcontainer test_container created
 
   # check pid.txt was generated
   [ -e pid.txt ]
 
   run cat pid.txt
   [ "$status" -eq 0 ]
-  [[ ${lines[0]} == $(__runc state test_busybox | jq '.pid') ]]
+  [[ ${lines[0]} == $(__runc state test_container | jq '.pid') ]]
 
-  # start the command
-  runc start test_busybox
+  runc start test_container
   [ "$status" -eq 0 ]
 
-  testcontainer test_busybox running
+  testcontainer test_container running
 }

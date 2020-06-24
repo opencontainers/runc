@@ -1,44 +1,37 @@
-#!/bin/bash
-get_busybox() {
-	case $(go env GOARCH) in
-	arm64)
-		echo 'https://github.com/docker-library/busybox/raw/dist-arm64v8/glibc/busybox.tar.xz'
-	;;
-	*)
-		echo 'https://github.com/docker-library/busybox/raw/dist-amd64/glibc/busybox.tar.xz'
-	;;
-	esac
-}
+#! /bin/bash
 
-get_hello() {
-	case $(go env GOARCH) in
-	arm64)
-		echo 'hello-world-aarch64.tar'
-	;;
-	*)
-		echo 'hello-world.tar'
-	;;
-	esac
-}
+get_and_extract_ubuntu() {
+	local cache="/tmp/ubuntu-cache"
+	local ubuntu="ubuntu:latest"
+	local rootless=$(id -u)
 
-get_and_extract_debian() {
-	tmp=$(mktemp -d)
-	cd "$tmp"
+	if [ "$rootless" -ne 0 ]; then
+		cache="/tmp/ubuntu-cache-rootless"
+	fi
 
-	debian="debian:3.11.6"
+	mkdir -p "$cache"
+	cd "$cache" || return
 
-	case $(go env GOARCH) in
-	arm64)
-		skopeo copy docker://arm64v8/debian:buster "oci:$debian"
-	;;
-	*)
-		skopeo copy docker://amd64/debian:buster "oci:$debian"
-	;;
-	esac
+	if [ ! -d "$cache/ubuntu" ]; then
+		case $(go env GOARCH) in
+		arm64)
+			skopeo copy docker://arm64v8/ubuntu:focal "oci:$ubuntu"
+		;;
+		*)
+			skopeo copy docker://ubuntu:focal "oci:$ubuntu"
+		;;
+		esac
+	fi
 
-	args="$([ -z "${ROOTLESS_TESTPATH+x}" ] && echo "--rootless")"
-	umoci unpack $args --image "$debian" "$1"
+	if [ ! -d "$cache/rootfs" ]; then
+		if [ "$rootless" -ne 0 ]; then
+			umoci unpack --rootless --image "$ubuntu" "$cache"
+		else
+			umoci unpack --image "$ubuntu" "$cache"
+		fi
+	fi
 
-	cd -
-	rm -rf "$tmp"
+	rm -r -f "$1"
+	cp -a $cache "$1"
+	cd - || return
 }

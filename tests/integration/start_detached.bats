@@ -3,21 +3,20 @@
 load helpers
 
 function setup() {
-  teardown_busybox
-  setup_busybox
+  teardown_container
+  setup_container
 }
 
 function teardown() {
-  teardown_busybox
+  teardown_container
 }
 
 @test "runc run detached" {
-  # run busybox detached
-  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+  runc run -d --console-socket $CONSOLE_SOCKET test_container
   [ "$status" -eq 0 ]
 
   # check state
-  testcontainer test_busybox running
+  testcontainer test_container running
 }
 
 @test "runc run detached ({u,g}id != 0)" {
@@ -29,28 +28,26 @@ function teardown() {
   update_config ' (.. | select(.uid? == 0)) .uid |= 1000
 		| (.. | select(.gid? == 0)) .gid |= 100' 
 
-  # run busybox detached
-  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+  runc run -d --console-socket $CONSOLE_SOCKET test_container
   [ "$status" -eq 0 ]
 
   # check state
-  testcontainer test_busybox running
+  testcontainer test_container running
 }
 
 @test "runc run detached --pid-file" {
-  # run busybox detached
-  runc run --pid-file pid.txt -d --console-socket $CONSOLE_SOCKET test_busybox
+  runc run --pid-file pid.txt -d --console-socket $CONSOLE_SOCKET test_container
   [ "$status" -eq 0 ]
 
   # check state
-  testcontainer test_busybox running
+  testcontainer test_container running
 
   # check pid.txt was generated
   [ -e pid.txt ]
 
   run cat pid.txt
   [ "$status" -eq 0 ]
-  [[ ${lines[0]} == $(__runc state test_busybox | jq '.pid') ]]
+  [[ ${lines[0]} == $(__runc state test_container | jq '.pid') ]]
 }
 
 @test "runc run detached --pid-file with new CWD" {
@@ -60,17 +57,16 @@ function teardown() {
   run cd pid_file
   [ "$status" -eq 0 ]
 
-  # run busybox detached
-  runc run --pid-file pid.txt -d  -b $BUSYBOX_BUNDLE --console-socket $CONSOLE_SOCKET test_busybox
+  runc run --pid-file pid.txt -d  -b $BUNDLE --console-socket $CONSOLE_SOCKET test_container
   [ "$status" -eq 0 ]
 
   # check state
-  testcontainer test_busybox running
+  testcontainer test_container running
 
   # check pid.txt was generated
   [ -e pid.txt ]
 
   run cat pid.txt
   [ "$status" -eq 0 ]
-  [[ ${lines[0]} == $(__runc state test_busybox | jq '.pid') ]]
+  [[ ${lines[0]} == $(__runc state test_container | jq '.pid') ]]
 }
