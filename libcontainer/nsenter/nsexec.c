@@ -29,6 +29,8 @@
 /* Get all of the CLONE_NEW* flags. */
 #include "namespace.h"
 
+extern char *escape_json_string(char *str);
+
 /* Synchronisation values. */
 enum sync_t {
 	SYNC_USERMAP_PLS = 0x40,	/* Request parent to map our users. */
@@ -152,6 +154,8 @@ static void write_log(const char *level, const char *format, ...)
 	va_end(args);
 	if (ret < 0)
 		goto out;
+
+	message = escape_json_string(message);
 
 	if (current_stage == STAGE_SETUP)
 		stage = strdup("nsexec");
