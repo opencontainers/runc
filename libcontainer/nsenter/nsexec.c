@@ -28,6 +28,7 @@
 
 /* Get all of the CLONE_NEW* flags. */
 #include "namespace.h"
+#include "escape.h"
 
 /* Synchronisation values. */
 enum sync_t {
@@ -152,6 +153,8 @@ static void write_log(const char *level, const char *format, ...)
 	va_end(args);
 	if (ret < 0)
 		goto out;
+
+	message = escape_json_string(message);
 
 	if (current_stage == STAGE_SETUP)
 		stage = strdup("nsexec");
