@@ -204,7 +204,7 @@ func (m *manager) Apply(pid int) (err error) {
 		if err != nil {
 			// The non-presence of the devices subsystem is
 			// considered fatal for security reasons.
-			if cgroups.IsNotFound(err) && sys.Name() != "devices" {
+			if cgroups.IsNotFound(err) && (c.SkipDevices || sys.Name() != "devices") {
 				continue
 			}
 			return err
