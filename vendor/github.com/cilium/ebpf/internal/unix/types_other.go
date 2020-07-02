@@ -12,10 +12,12 @@ var errNonLinux = fmt.Errorf("unsupported platform %s/%s", runtime.GOOS, runtime
 
 const (
 	ENOENT                   = syscall.ENOENT
+	EEXIST                   = syscall.EEXIST
 	EAGAIN                   = syscall.EAGAIN
 	ENOSPC                   = syscall.ENOSPC
 	EINVAL                   = syscall.EINVAL
 	EINTR                    = syscall.EINTR
+	EPERM                    = syscall.EPERM
 	ESRCH                    = syscall.ESRCH
 	ENODEV                   = syscall.ENODEV
 	BPF_F_RDONLY_PROG        = 0

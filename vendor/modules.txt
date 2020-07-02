@@ -2,7 +2,7 @@
 ## explicit
 github.com/checkpoint-restore/go-criu/v4
 github.com/checkpoint-restore/go-criu/v4/rpc
-# github.com/cilium/ebpf v0.0.0-20200507155900-a9f01edf17e3
+# github.com/cilium/ebpf v0.0.0-20200702112145-1c8d4c9ef775
 ## explicit
 github.com/cilium/ebpf
 github.com/cilium/ebpf/asm
@@ -75,6 +75,3 @@ github.com/vishvananda/netns
 ## explicit
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543
-golang.org/x/xerrors
-golang.org/x/xerrors/internal
