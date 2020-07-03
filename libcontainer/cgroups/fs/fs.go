@@ -250,7 +250,7 @@ func (m *manager) GetStats() (*cgroups.Stats, error) {
 	stats := cgroups.NewStats()
 	for name, path := range m.paths {
 		sys, err := m.getSubsystems().Get(name)
-		if err == errSubsystemDoesNotExist || !cgroups.PathExists(path) {
+		if err == errSubsystemDoesNotExist {
 			continue
 		}
 		if err := sys.GetStats(path, stats); err != nil {

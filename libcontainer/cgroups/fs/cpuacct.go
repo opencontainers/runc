@@ -54,6 +54,9 @@ func (s *CpuacctGroup) Set(path string, cgroup *configs.Cgroup) error {
 }
 
 func (s *CpuacctGroup) GetStats(path string, stats *cgroups.Stats) error {
+	if !cgroups.PathExists(path) {
+		return nil
+	}
 	userModeUsage, kernelModeUsage, err := getCpuUsageBreakdown(path)
 	if err != nil {
 		return err
