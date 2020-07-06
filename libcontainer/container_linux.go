@@ -24,6 +24,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runc/libcontainer/utils"
+	"github.com/opencontainers/runc/libcontainer/vtpm/vtpm-helper"
 	"github.com/opencontainers/runtime-spec/specs-go"
 
 	"github.com/checkpoint-restore/go-criu/v4"
@@ -388,6 +389,11 @@ func (c *linuxContainer) start(process *Process) error {
 				if err := ignoreTerminateErrors(parent.terminate()); err != nil {
 					logrus.Warn(errorsf.Wrapf(err, "Running Poststart hook"))
 				}
+				return err
+			}
+		}
+		if len(c.config.VTPMs) > 0 {
+			if err := vtpmhelper.ApplyCGroupVTPMs(c.config.VTPMs, c.cgroupManager); err != nil {
 				return err
 			}
 		}
