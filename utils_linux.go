@@ -10,6 +10,8 @@ import (
 	"strconv"
 
 	"github.com/coreos/go-systemd/v22/activation"
+	"github.com/opencontainers/runc/libcontainer/vtpm"
+	vtpmhelper "github.com/opencontainers/runc/libcontainer/vtpm/vtpm-helper"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	selinux "github.com/opencontainers/selinux/go-selinux"
 	"github.com/sirupsen/logrus"
@@ -179,7 +181,7 @@ func createPidFile(path string, process *libcontainer.Process) error {
 	return os.Rename(tmpName, path)
 }
 
-func createContainer(context *cli.Context, id string, spec *specs.Spec) (*libcontainer.Container, error) {
+func createContainer(context *cli.Context, id string, spec *specs.Spec, vtpms []*vtpm.VTPM) (*libcontainer.Container, error) {
 	rootlessCg, err := shouldUseRootlessCgroupManager(context)
 	if err != nil {
 		return nil, err
@@ -192,7 +194,13 @@ func createContainer(context *cli.Context, id string, spec *specs.Spec) (*libcon
 		Spec:             spec,
 		RootlessEUID:     os.Geteuid() != 0,
 		RootlessCgroups:  rootlessCg,
+		VTPMs:            vtpms,
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	err = setHostDevsOwner(config)
 	if err != nil {
 		return nil, err
 	}
@@ -378,7 +386,17 @@ func startContainer(context *cli.Context, action CtAct, criuOpts *libcontainer.C
 		notifySocket.setupSpec(spec)
 	}
 
-	container, err := createContainer(context, id, spec)
+	vtpms, err := createVTPMs(spec)
+	if err != nil {
+		return -1, err
+	}
+	defer func() {
+		if err != nil {
+			destroyVTPMs(vtpms)
+		}
+	}()
+
+	container, err := createContainer(context, id, spec, vtpms)
 	if err != nil {
 		return -1, err
 	}
@@ -449,4 +467,45 @@ func maybeLogCgroupWarning(op string, err error) {
 	if errors.Is(err, fs.ErrPermission) {
 		logrus.Warn("runc " + op + " failure might be caused by lack of full access to cgroups")
 	}
+}
+
+func createVTPMs(spec *specs.Spec) ([]*vtpm.VTPM, error) {
+	var vtpms []*vtpm.VTPM
+
+	r := spec.Linux.Resources
+	if r == nil {
+		return vtpms, nil
+	}
+
+	devnum := 0
+	for _, vtpm := range r.VTPMs {
+		v, err := vtpmhelper.CreateVTPM(spec, &vtpm, devnum)
+		if err != nil {
+			destroyVTPMs(vtpms)
+			return vtpms, err
+		}
+		vtpms = append(vtpms, v)
+		devnum++
+	}
+	return vtpms, nil
+}
+
+func destroyVTPMs(vtpms []*vtpm.VTPM) {
+	vtpmhelper.DestroyVTPMs(vtpms)
+}
+
+func setVTPMHostDevsOwner(config *configs.Config) error {
+	rootUID, err := config.HostRootUID()
+	if err != nil {
+		return err
+	}
+	rootGID, err := config.HostRootGID()
+	if err != nil {
+		return err
+	}
+	return vtpmhelper.SetVTPMHostDevsOwner(config, rootUID, rootGID)
+}
+
+func setHostDevsOwner(config *configs.Config) error {
+	return setVTPMHostDevsOwner(config)
 }

@@ -22,6 +22,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/internal/userns"
 	"github.com/opencontainers/runc/libcontainer/seccomp"
 	libcontainerUtils "github.com/opencontainers/runc/libcontainer/utils"
+	"github.com/opencontainers/runc/libcontainer/vtpm"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/sirupsen/logrus"
 
@@ -344,6 +345,7 @@ type CreateOpts struct {
 	Spec             *specs.Spec
 	RootlessEUID     bool
 	RootlessCgroups  bool
+	VTPMs            []*vtpm.VTPM
 }
 
 // CreateLibcontainerConfig creates a new libcontainer configuration from a
@@ -378,6 +380,7 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 		NoNewKeyring:    opts.NoNewKeyring,
 		RootlessEUID:    opts.RootlessEUID,
 		RootlessCgroups: opts.RootlessCgroups,
+		VTPMs:           opts.VTPMs,
 	}
 
 	for _, m := range spec.Mounts {
@@ -1009,6 +1012,7 @@ next:
 					Minor: d.Minor,
 				},
 				Path:     d.Path,
+				Devpath:  d.Devpath,
 				FileMode: filemode,
 				Uid:      uid,
 				Gid:      gid,
