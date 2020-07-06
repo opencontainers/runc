@@ -21,10 +21,15 @@ func IsEnabled() bool {
 	return false
 }
 
-func setProcAttr(attr, value string) error {
+func setProcAttr(attr, value string, useThread bool) error {
 	// Under AppArmor you can only change your own attr, so use /proc/self/
 	// instead of /proc/<tid>/ like libapparmor does
-	path := fmt.Sprintf("/proc/self/attr/%s", attr)
+	var path string
+	if useThread {
+		path = fmt.Sprintf("/proc/thread-self/attr/%s", attr)
+	} else {
+		path = fmt.Sprintf("/proc/self/attr/%s", attr)
+	}
 
 	f, err := os.OpenFile(path, os.O_WRONLY, 0)
 	if err != nil {
@@ -41,12 +46,21 @@ func setProcAttr(attr, value string) error {
 }
 
 // changeOnExec reimplements aa_change_onexec from libapparmor in Go
-func changeOnExec(name string) error {
+func changeOnExec(name string, useThread bool) error {
 	value := "exec " + name
-	if err := setProcAttr("exec", value); err != nil {
+	if err := setProcAttr("exec", value, useThread); err != nil {
 		return fmt.Errorf("apparmor failed to apply profile: %s", err)
 	}
 	return nil
+}
+
+// ApplyProfileThread will apply the profile with the specified name to the process
+// after the next exec using /proc/self-thread rather than /proc/self
+func ApplyProfileThread(name string) error {
+	if name == "" {
+		return nil
+	}
+	return changeOnExec(name, true)
 }
 
 // ApplyProfile will apply the profile with the specified name to the process after
@@ -56,5 +70,5 @@ func ApplyProfile(name string) error {
 		return nil
 	}
 
-	return changeOnExec(name)
+	return changeOnExec(name, false)
 }
