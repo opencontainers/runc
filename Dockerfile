@@ -95,5 +95,3 @@ ENV DEBIAN_ROOTFS /debian
 RUN mkdir -p "${DEBIAN_ROOTFS}"
 RUN . tests/integration/multi-arch.bash \
     && get_and_extract_debian "$DEBIAN_ROOTFS"
-
-COPY . .
