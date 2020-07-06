@@ -16,6 +16,7 @@ import (
 	"unsafe"
 
 	"github.com/opencontainers/runc/libcontainer/apparmor"
+	selinux "github.com/opencontainers/selinux/go-selinux"
 
 	"github.com/sirupsen/logrus"
 )
@@ -465,6 +466,10 @@ func (vtpm *VTPM) startSwtpm() error {
 	if err != nil {
 		return err
 	}
+	err = vtpm.setupSELinux()
+	if err != nil {
+		return err
+	}
 
 	tpmstate := fmt.Sprintf("dir=%s", vtpm.StatePath)
 	pidfile := fmt.Sprintf("file=%s", vtpm.getPidFile())
@@ -496,6 +501,7 @@ func (vtpm *VTPM) startSwtpm() error {
 		return err
 	}
 
+	vtpm.resetSELinux()
 	vtpm.resetAppArmor()
 
 	return nil
@@ -578,6 +584,7 @@ func (vtpm *VTPM) Stop(deleteStatePath bool) error {
 
 	vtpm.CloseServer()
 
+	vtpm.teardownSELinux()
 	vtpm.teardownAppArmor()
 
 	vtpm.Tpm_dev_num = VTPM_DEV_NUM_INVALID
@@ -709,4 +716,53 @@ func (vtpm *VTPM) teardownAppArmor() {
 		os.Remove(vtpm.aaprofile)
 		vtpm.aaprofile = ""
 	}
+}
+
+// setupSELinux labels the swtpm files with SELinux labels if SELinux is enabled
+func (vtpm *VTPM) setupSELinux() error {
+	if !selinux.GetEnabled() {
+		return nil
+	}
+
+	processLabel, fileLabel := selinux.ContainerLabels()
+	if len(processLabel) == 0 || len(fileLabel) == 0 {
+		return nil
+	}
+
+	err := filepath.Walk(vtpm.StatePath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() && path != vtpm.StatePath {
+			return filepath.SkipDir
+		}
+		return selinux.SetFileLabel(path, fileLabel)
+	})
+
+	err = selinux.SetFSCreateLabel(fileLabel)
+	if err != nil {
+		return err
+	}
+	err = ioutil.WriteFile("/sys/fs/selinux/context", []byte(processLabel), 0000)
+	if err != nil {
+		return err
+	}
+	err = selinux.SetExecLabel(processLabel)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// resetSELinux resets the prepared SELinux labels
+func (vtpm *VTPM) resetSELinux() {
+	selinux.SetExecLabel("")
+	selinux.SetFSCreateLabel("")
+	ioutil.WriteFile("/sys/fs/selinux/context", []byte(""), 0000)
+}
+
+// teardownSELinux cleans up SELinux for next spawned process
+func (vtpm *VTPM) teardownSELinux() {
+	vtpm.resetSELinux()
 }
