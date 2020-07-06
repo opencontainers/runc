@@ -43,6 +43,12 @@ type VTPM struct {
 	// Set of active PCR banks
 	PcrBanks string `json:"pcrbanks"`
 
+	// plain text encryption password used by vTPM
+	encryptionPassword []byte
+
+	// whether an error occurred writing the password to the pipe
+	passwordPipeError error
+
 	// The user under which to run the TPM emulator
 	user string
 
@@ -185,7 +191,7 @@ func hasCapability(capabilities []string, capability string) bool {
 //	with account tss; TPM 2 has more flexibility
 //
 // After successful creation of the object the Start() method can be called
-func NewVTPM(statepath string, statepathismanaged bool, vtpmversion string, createcerts bool, runas string, pcrbanks string) (*VTPM, error) {
+func NewVTPM(statepath string, statepathismanaged bool, vtpmversion string, createcerts bool, runas string, pcrbanks string, encryptionpassword []byte) (*VTPM, error) {
 	if len(statepath) == 0 {
 		return nil, fmt.Errorf("Missing required statpath for vTPM.")
 	}
@@ -234,6 +240,7 @@ func NewVTPM(statepath string, statepathismanaged bool, vtpmversion string, crea
 		Vtpmversion:        vtpmversion,
 		CreateCerts:        createcerts,
 		PcrBanks:           pcrbanks,
+		encryptionPassword: encryptionpassword,
 		Tpm_dev_num:        VTPM_DEV_NUM_INVALID,
 		fd:                 ILLEGAL_FD,
 		swtpmSetupCaps:     swtpmSetupCaps,
@@ -456,6 +463,34 @@ func (vtpm *VTPM) chownStatePath() error {
 	return nil
 }
 
+// setup the password pipe so that we can transfer the TPM state encryption via
+// a pipe where the read-end is passed to swtpm / swtpm_setup as a file descriptor
+func (vtpm *VTPM) setupPasswordPipe(password []byte) (*os.File, error) {
+	if !hasCapability(vtpm.swtpmSetupCaps, "cmdarg-pwdfile-fd") {
+		return nil, fmt.Errorf("Requiring newer version of swtpm for state encryption; needs cmdarg-pwd-fd feature")
+	}
+
+	piper, pipew, err := os.Pipe()
+	if err != nil {
+		return nil, fmt.Errorf("Could not create pipe")
+	}
+	vtpm.passwordPipeError = nil
+
+	go func() {
+		tot := 0
+		for tot < len(password) {
+			var n int
+			n, vtpm.passwordPipeError = pipew.Write(password)
+			if vtpm.passwordPipeError != nil {
+				break
+			}
+			tot = tot + n
+		}
+		pipew.Close()
+	}()
+	return piper, nil
+}
+
 // runSwtpmSetup runs swtpm_setup to simulate TPM manufacturing by creating
 // EK and platform certificates and enabling TPM 2 PCR banks
 func (vtpm *VTPM) runSwtpmSetup() error {
@@ -473,6 +508,16 @@ func (vtpm *VTPM) runSwtpmSetup() error {
 	if vtpm.CreateCerts {
 		cmd.Args = append(cmd.Args, "--create-ek-cert", "--create-platform-cert", "--lock-nvram")
 	}
+	if len(vtpm.encryptionPassword) > 0 {
+		piper, err := vtpm.setupPasswordPipe(vtpm.encryptionPassword)
+		if err != nil {
+			return err
+		}
+		cmd.ExtraFiles = append(cmd.ExtraFiles, piper)
+		pwdfile_fd := fmt.Sprintf("%d", 3+len(cmd.ExtraFiles)-1)
+		cmd.Args = append(cmd.Args, "--cipher", "aes-256-cbc", "--pwdfile-fd", pwdfile_fd)
+		defer piper.Close()
+	}
 
 	if vtpm.Vtpmversion == VTPM_VERSION_2 {
 		cmd.Args = append(cmd.Args, "--tpm2")
@@ -489,6 +534,10 @@ func (vtpm *VTPM) runSwtpmSetup() error {
 	if err != nil {
 		logrus.Errorf("swtpm_setup failed: %s", string(output))
 		return fmt.Errorf("swtpm_setup failed: %s\nlog: %s", string(output), vtpm.ReadLog())
+	}
+
+	if vtpm.passwordPipeError != nil {
+		return fmt.Errorf("Error transferring password using pipe: %v", vtpm.passwordPipeError)
 	}
 
 	return nil
@@ -552,9 +601,23 @@ func (vtpm *VTPM) startSwtpm() error {
 	file := os.NewFile(uintptr(vtpm.fd), "[vtpm]")
 	cmd.ExtraFiles = append(cmd.ExtraFiles, file)
 
+	if len(vtpm.encryptionPassword) > 0 {
+		piper, err := vtpm.setupPasswordPipe(vtpm.encryptionPassword)
+		if err != nil {
+			return err
+		}
+		cmd.ExtraFiles = append(cmd.ExtraFiles, piper)
+		cmd.Args = append(cmd.Args, "--key",
+			fmt.Sprintf("pwdfd=%d,mode=aes-256-cbc,kdf=pbkdf2", 3+len(cmd.ExtraFiles)-1))
+		defer piper.Close()
+	}
+
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("swtpm failed on fd %d: %s\nlog: %s", vtpm.fd, string(output), vtpm.ReadLog())
+	}
+	if vtpm.passwordPipeError != nil {
+		return fmt.Errorf("Error transferring password using pipe: %v", vtpm.passwordPipeError)
 	}
 
 	vtpm.Pid, err = vtpm.waitForPidFile(10)
