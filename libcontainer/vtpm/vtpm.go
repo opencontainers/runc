@@ -536,10 +536,15 @@ func (vtpm *VTPM) startSwtpm() error {
 	pidfile := fmt.Sprintf("file=%s", vtpm.getPidFile())
 	logfile := fmt.Sprintf("file=%s", vtpm.getLogFile())
 
+	flags := "not-need-init"
+	if hasCapability(vtpm.swtpmCaps, "flags-opt-startup") {
+		flags += ",startup-clear"
+	}
+
 	// child will get first passed fd as '3'
 	cmd := exec.Command("swtpm", "chardev", "--tpmstate", tpmstate,
 		"--daemon", "--fd", "3", "--pid", pidfile, "--log", logfile,
-		"--runas", vtpm.user, "--flags", "not-need-init",
+		"--runas", vtpm.user, "--flags", flags,
 		"--locality", "reject-locality-4,allow-set-locality")
 	if vtpm.Vtpmversion == VTPM_VERSION_2 {
 		cmd.Args = append(cmd.Args, "--tpm2")
