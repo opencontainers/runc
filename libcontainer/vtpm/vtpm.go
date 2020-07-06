@@ -15,6 +15,8 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/opencontainers/runc/libcontainer/apparmor"
+
 	"github.com/sirupsen/logrus"
 )
 
@@ -56,6 +58,9 @@ type VTPM struct {
 
 	// process id of this vtpm
 	Pid int
+
+	// The AppArmor profile's full path
+	aaprofile string
 }
 
 // ioctl
@@ -452,6 +457,11 @@ func (vtpm *VTPM) startSwtpm() error {
 		return err
 	}
 
+	err = vtpm.setupAppArmor()
+	if err != nil {
+		return err
+	}
+
 	tpmstate := fmt.Sprintf("dir=%s", vtpm.StatePath)
 	pidfile := fmt.Sprintf("file=%s", vtpm.getPidFile())
 	logfile := fmt.Sprintf("file=%s", vtpm.getLogFile())
@@ -481,6 +491,9 @@ func (vtpm *VTPM) startSwtpm() error {
 	if err != nil {
 		return err
 	}
+
+	vtpm.resetAppArmor()
+
 	return nil
 }
 
@@ -561,6 +574,8 @@ func (vtpm *VTPM) Stop(deleteStatePath bool) error {
 
 	vtpm.CloseServer()
 
+	vtpm.teardownAppArmor()
+
 	vtpm.Tpm_dev_num = VTPM_DEV_NUM_INVALID
 
 	if deleteStatePath {
@@ -609,5 +624,85 @@ func (vtpm *VTPM) CloseServer() error {
 		os.NewFile(uintptr(vtpm.fd), "[vtpm]").Close()
 		vtpm.fd = ILLEGAL_FD
 	}
+
 	return nil
+}
+
+// setupAppArmor creates an apparmor profile for swtpm if AppArmor is enabled and
+// compiles it using apparmor_parser -r <filename> and activates it for the next
+// exec.
+func (vtpm *VTPM) setupAppArmor() error {
+	var statefilepattern string
+
+	if !apparmor.IsEnabled() {
+		return nil
+	}
+
+	profilename := fmt.Sprintf("runc_%d_swtpm_tpm%d", os.Getpid(), vtpm.GetTPMDevNum())
+	if vtpm.Vtpmversion == VTPM_VERSION_1_2 {
+		statefilepattern = path.Join(vtpm.StatePath, "tpm-00.*")
+	} else {
+		statefilepattern = path.Join(vtpm.StatePath, "tpm2-00.*")
+	}
+
+	profile := fmt.Sprintf("\n#include <tunables/global>\n"+
+		"profile %s {\n"+
+		"  #include <abstractions/base>\n"+
+		"  capability setgid,\n"+
+		"  capability setuid,\n"+
+		"  /dev/tpm[0-9]* rw,\n"+
+		"  owner /etc/group r,\n"+
+		"  owner /etc/nsswitch.conf r,\n"+
+		"  owner /etc/passwd r,\n"+
+		"  %s/.lock wk,\n"+
+		"  %s w,\n"+
+		"  %s rw,\n"+
+		"  %s rw,\n"+
+		"}\n",
+		profilename,
+		vtpm.StatePath,
+		vtpm.getLogFile(),
+		vtpm.getPidFile(),
+		statefilepattern)
+
+	vtpm.aaprofile = path.Join(vtpm.StatePath, "swtpm.apparmor")
+
+	err := ioutil.WriteFile(vtpm.aaprofile, []byte(profile), 0600)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			vtpm.teardownAppArmor()
+		}
+	}()
+
+	cmd := exec.Command("/sbin/apparmor_parser", "-r", vtpm.aaprofile)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("apparmor_parser -r failed: %s", string(output))
+	}
+
+	err = apparmor.ApplyProfileThread(profilename)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (vtpm *VTPM) resetAppArmor() {
+	apparmor.ApplyProfileThread("unconfined")
+}
+
+// teardownAppArmor removes the AppArmor profile from the system and ensures
+// that the next time the process exec's no swtpm related profile is applied
+func (vtpm *VTPM) teardownAppArmor() {
+	vtpm.resetAppArmor()
+	if len(vtpm.aaprofile) > 0 {
+		cmd := exec.Command("/sbin/apparmor_parser", "-R", vtpm.aaprofile)
+		cmd.Run()
+		os.Remove(vtpm.aaprofile)
+		vtpm.aaprofile = ""
+	}
 }
