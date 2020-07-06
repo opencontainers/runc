@@ -4,7 +4,10 @@ package vtpmhelper
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
+	"strconv"
+	"strings"
 	"syscall"
 
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -43,10 +46,46 @@ func addVTPMDevice(spec *specs.Spec, hostpath, devpath string, major, minor uint
 	spec.Linux.Resources.Devices = append(spec.Linux.Resources.Devices, *ld)
 }
 
+// getEncryptionPassword gets the plain password from the caller
+// valid formats passed to this function are:
+// - <password>
+// - pass=<password>
+// - fd=<filedescriptor>
+// - file=<filename>
+func getEncryptionPassword(pwdString string) ([]byte, error) {
+	if strings.HasPrefix(pwdString, "file=") {
+		return ioutil.ReadFile(pwdString[5:])
+	} else if strings.HasPrefix(pwdString, "pass=") {
+		return []byte(pwdString[5:]), nil
+	} else if strings.HasPrefix(pwdString, "fd=") {
+		fdStr := pwdString[3:]
+		fd, err := strconv.Atoi(fdStr)
+		if err != nil {
+			return nil, fmt.Errorf("could not parse file descriptor %s", fdStr)
+		}
+		f := os.NewFile(uintptr(fd), "pwdfile")
+		if f == nil {
+			return nil, fmt.Errorf("%s is not a valid file descriptor", fdStr)
+		}
+		defer f.Close()
+		pwd := make([]byte, 1024)
+		n, err := f.Read(pwd)
+		if err != nil {
+			return nil, fmt.Errorf("could not read from file descriptor: %v", err)
+		}
+		return pwd[:n], nil
+	}
+	return []byte(pwdString), nil
+}
+
 // CreateVTPM create a VTPM proxy device and starts the TPM emulator with it
 func CreateVTPM(spec *specs.Spec, vtpmdev *specs.LinuxVTPM, devnum int) (*vtpm.VTPM, error) {
+	encryptionPassword, err := getEncryptionPassword(vtpmdev.EncryptionPassword)
+	if err != nil {
+		return nil, err
+	}
 
-	vtpm, err := vtpm.NewVTPM(vtpmdev.StatePath, vtpmdev.StatePathIsManaged, vtpmdev.TPMVersion, vtpmdev.CreateCertificates, vtpmdev.RunAs, vtpmdev.PcrBanks)
+	vtpm, err := vtpm.NewVTPM(vtpmdev.StatePath, vtpmdev.StatePathIsManaged, vtpmdev.TPMVersion, vtpmdev.CreateCertificates, vtpmdev.RunAs, vtpmdev.PcrBanks, encryptionPassword)
 	if err != nil {
 		return nil, err
 	}
