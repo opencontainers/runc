@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"time"
 
+	"github.com/opencontainers/runc/libcontainer/vtpm"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -201,6 +202,9 @@ type Config struct {
 	// RootlessCgroups is set when unlikely to have the full access to cgroups.
 	// When RootlessCgroups is set, cgroups errors are ignored.
 	RootlessCgroups bool `json:"rootless_cgroups,omitempty"`
+
+	// VTPM configuration
+	VTPMs []*vtpm.VTPM `json:"vtpms"`
 }
 
 type HookName string
