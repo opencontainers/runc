@@ -10,6 +10,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/opencontainers/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/vtpm"
 
@@ -152,4 +153,14 @@ func DestroyVTPMs(vtpms []*vtpm.VTPM) {
 	for _, vtpm := range vtpms {
 		vtpm.Stop(vtpm.CreatedStatepath)
 	}
+}
+
+// ApplyCGroupVTPMs puts all VTPMs into the given Cgroup manager's cgroup
+func ApplyCGroupVTPMs(vtpms []*vtpm.VTPM, cgroupManager cgroups.Manager) error {
+	for _, vtpm := range vtpms {
+		if err := cgroupManager.Apply(vtpm.Pid); err != nil {
+			return fmt.Errorf("cGroupManager failed to apply vtpm with pid %d: %v", vtpm.Pid, err)
+		}
+	}
+	return nil
 }

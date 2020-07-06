@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	vtpmhelper "github.com/opencontainers/runc/libcontainer/vtpm/vtpm-helper"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink/nl"
@@ -368,6 +369,11 @@ func (c *Container) start(process *Process) (retErr error) {
 				if err := ignoreTerminateErrors(parent.terminate()); err != nil {
 					logrus.Warn(fmt.Errorf("error running poststart hook: %w", err))
 				}
+				return err
+			}
+		}
+		if len(c.config.VTPMs) > 0 {
+			if err := vtpmhelper.ApplyCGroupVTPMs(c.config.VTPMs, c.cgroupManager); err != nil {
 				return err
 			}
 		}
