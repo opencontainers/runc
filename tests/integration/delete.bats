@@ -12,24 +12,24 @@ function teardown() {
 }
 
 @test "runc delete" {
-  # run busybox detached
-  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+  runc run -d --console-socket $CONSOLE_SOCKET testbusyboxdelete
   [ "$status" -eq 0 ]
 
-  # check state
-  testcontainer test_busybox running
+  testcontainer testbusyboxdelete running
 
-  runc kill test_busybox KILL
+  runc kill testbusyboxdelete KILL
   [ "$status" -eq 0 ]
-  # wait for busybox to be in the destroyed state
-  retry 10 1 eval "__runc state test_busybox | grep -q 'stopped'"
+  retry 10 1 eval "__runc state testbusyboxdelete | grep -q 'stopped'"
 
-  # delete test_busybox
-  runc delete test_busybox
+  runc delete testbusyboxdelete
   [ "$status" -eq 0 ]
 
-  runc state test_busybox
+  runc state testbusyboxdelete
   [ "$status" -ne 0 ]
+
+  run find /sys/fs/cgroup -wholename '*testbusyboxdelete*' -type d
+  [ "$status" -eq 0 ]
+  [ "$output" = "" ] || fail "cgroup not cleaned up correctly: $output"
 }
 
 @test "runc delete --force" {
