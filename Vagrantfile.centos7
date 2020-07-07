@@ -18,7 +18,8 @@ Vagrant.configure("2") do |config|
 
     # install yum packages
     yum install -y -q epel-release
-    yum install -y -q gcc git iptables jq libseccomp-devel make skopeo
+    (cd /etc/yum.repos.d && curl -O https://copr.fedorainfracloud.org/coprs/adrian/criu-el7/repo/epel-7/adrian-criu-el7-epel-7.repo)
+    yum install -y -q gcc git iptables jq libseccomp-devel make skopeo criu
     yum clean all
 
     # install Go
@@ -33,8 +34,6 @@ Vagrant.configure("2") do |config|
     cd bats-core
     git checkout $BATS_VERSION
     ./install.sh /usr/local
-
-    # NOTE: criu is NOT installed. criu tests are skipped.
 
     # set PATH (NOTE: sudo without -i ignores this PATH)
     cat >> /etc/profile.d/sh.local <<EOF
