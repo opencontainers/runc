@@ -295,3 +295,16 @@ func TestInvalidAbsoluteCgroupNameAndParent(t *testing.T) {
 		t.Errorf("SECURITY: cgroup path() is outside cgroup mountpoint!")
 	}
 }
+
+func TestTryDefaultCgroupRoot(t *testing.T) {
+	res := tryDefaultCgroupRoot()
+	exp := defaultCgroupRoot
+	if cgroups.IsCgroup2UnifiedMode() {
+		// checking that tryDefaultCgroupRoot does return ""
+		// in case /sys/fs/cgroup is not cgroup v1 root dir.
+		exp = ""
+	}
+	if res != exp {
+		t.Errorf("tryDefaultCgroupRoot: want %q, got %q", exp, res)
+	}
+}
