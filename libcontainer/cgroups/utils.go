@@ -16,6 +16,7 @@ import (
 	"time"
 
 	units "github.com/docker/go-units"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
 
@@ -249,15 +250,24 @@ func RemovePath(path string) error {
 // If after all there are not removed cgroups - appropriate error will be
 // returned.
 func RemovePaths(paths map[string]string) (err error) {
+	const retries = 5
 	delay := 10 * time.Millisecond
-	for i := 0; i < 5; i++ {
+	for i := 0; i < retries; i++ {
 		if i != 0 {
 			time.Sleep(delay)
 			delay *= 2
 		}
 		for s, p := range paths {
-			os.RemoveAll(p)
-			// TODO: here probably should be logging
+			if err := RemovePath(p); err != nil {
+				// do not log intermediate iterations
+				switch i {
+				case 0:
+					logrus.WithError(err).Warnf("Failed to remove cgroup (will retry)")
+				case retries - 1:
+					logrus.WithError(err).Error("Failed to remove cgroup")
+				}
+
+			}
 			_, err := os.Stat(p)
 			// We need this strange way of checking cgroups existence because
 			// RemoveAll almost always returns error, even on already removed
