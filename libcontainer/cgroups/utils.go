@@ -207,6 +207,43 @@ func EnterPid(cgroupPaths map[string]string, pid int) error {
 	return nil
 }
 
+func rmdir(path string) error {
+	err := unix.Rmdir(path)
+	if err == nil || err == unix.ENOENT {
+		return nil
+	}
+	return &os.PathError{Op: "rmdir", Path: path, Err: err}
+}
+
+// RemovePath aims to remove cgroup path. It does so recursively,
+// by removing any subdirectories (sub-cgroups) first.
+func RemovePath(path string) error {
+	// try the fast path first
+	if err := rmdir(path); err == nil {
+		return nil
+	}
+
+	infos, err := ioutil.ReadDir(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			err = nil
+		}
+		return err
+	}
+	for _, info := range infos {
+		if info.IsDir() {
+			// We should remove subcgroups dir first
+			if err = RemovePath(filepath.Join(path, info.Name())); err != nil {
+				break
+			}
+		}
+	}
+	if err == nil {
+		err = rmdir(path)
+	}
+	return err
+}
+
 // RemovePaths iterates over the provided paths removing them.
 // We trying to remove all paths five times with increasing delay between tries.
 // If after all there are not removed cgroups - appropriate error will be
