@@ -12,6 +12,17 @@ function setup() {
 
 function teardown() {
   teardown_busybox
+  local pid fd
+
+  for pid in "${PIDS_TO_KILL[@]}"; do
+    kill -9 $pid || true
+  done
+  PIDS_TO_KILL=()
+
+  for fd in "${FDS_TO_CLOSE[@]}"; do
+    exec {fd}>&-
+  done
+  FDS_TO_CLOSE=()
 }
 
 function setup_pipes() {
@@ -21,22 +32,23 @@ function setup_pipes() {
 
 	# Create two sets of pipes
 	# for stdout/stderr
-	exec 52<> <(:)
-	exec 50</proc/self/fd/52
-	exec 51>/proc/self/fd/52
-	exec 52>&-
+	exec {pipe}<> <(:)
+	exec {out_r}</proc/self/fd/$pipe
+	exec {out_w}>/proc/self/fd/$pipe
+	exec {pipe}>&-
 	# ... and stdin
-	exec 62<> <(:)
-	exec 60</proc/self/fd/62
-	exec 61>/proc/self/fd/62
-	exec 62>&-
+	exec {pipe}<> <(:)
+	exec {in_r}</proc/self/fd/$pipe
+	exec {in_w}>/proc/self/fd/$pipe
+	exec {pipe}>&-
+	FDS_TO_CLOSE=($in_r $in_w $out_r $out_w)
 }
 
 function check_pipes() {
-	echo Ping >&61
-	exec 61>&-
-	exec 51>&-
-	run cat <&50
+	echo Ping >&${in_w}
+	exec {in_w}>&-
+	exec {out_w}>&-
+	run cat <&${out_r}
 	[ "$status" -eq 0 ]
 	[[ "${output}" == *"ponG Ping"* ]]
 }
@@ -84,7 +96,7 @@ function simple_cr() {
   setup_pipes
 
   # run busybox
-  __runc run -d test_busybox <&60 >&51 2>&51
+  __runc run -d test_busybox <&${in_r} >&${out_w} 2>&${out_w}
   [ $? -eq 0 ]
 
   testcontainer test_busybox running
@@ -108,7 +120,7 @@ function simple_cr() {
   testcontainer test_busybox checkpointed
 
   # restore from checkpoint
-  __runc --criu "$CRIU" restore -d --work-path ./work-dir --image-path ./image-dir test_busybox <&60 >&51 2>&51
+  __runc --criu "$CRIU" restore -d --work-path ./work-dir --image-path ./image-dir test_busybox <&${in_r} >&${out_w} 2>&${out_w}
   ret=$?
   cat ./work-dir/restore.log | grep -B 5 Error || true
   [ $ret -eq 0 ]
@@ -139,7 +151,7 @@ function simple_cr() {
   port=27277
 
   # run busybox
-  __runc run -d test_busybox <&60 >&51 2>&51
+  __runc run -d test_busybox <&${in_r} >&${out_w} 2>&${out_w}
   [ $? -eq 0 ]
 
   testcontainer test_busybox running
@@ -150,16 +162,18 @@ function simple_cr() {
 
   # For lazy migration we need to know when CRIU is ready to serve
   # the memory pages via TCP.
-  exec 72<> <(:)
-  exec 70</proc/self/fd/72 71>/proc/self/fd/72
-  exec 72>&-
+  exec {pipe}<> <(:)
+  exec {lazy_r}</proc/self/fd/$pipe {lazy_w}>/proc/self/fd/$pipe
+  exec {pipe}>&-
+  FDS_TO_CLOSE+=($lazy_r $lazy_w)
 
-  __runc --criu "$CRIU" checkpoint --lazy-pages --page-server 0.0.0.0:${port} --status-fd 71 --work-path ./work-dir --image-path ./image-dir test_busybox &
+  __runc --criu "$CRIU" checkpoint --lazy-pages --page-server 0.0.0.0:${port} --status-fd ${lazy_w} --work-path ./work-dir --image-path ./image-dir test_busybox &
   cpt_pid=$!
+  PIDS_TO_KILL=($cpt_pid)
 
   # wait for lazy page server to be ready
-  out=$(timeout 2 dd if=/proc/self/fd/70 bs=1 count=1 2>/dev/null | od)
-  exec 71>&-
+  out=$(timeout 2 dd if=/proc/self/fd/${lazy_r} bs=1 count=1 2>/dev/null | od)
+  exec {lazy_w}>&-
   out=$(echo $out) # rm newlines
   # show errors if there are any before we fail
   grep -B5 Error ./work-dir/dump.log || true
@@ -172,6 +186,7 @@ function simple_cr() {
   # Start CRIU in lazy-daemon mode
   ${CRIU} lazy-pages --page-server --address 127.0.0.1 --port ${port} -D image-dir &
   lp_pid=$!
+  PIDS_TO_KILL+=($lp_pid)
 
   # Restore lazily from checkpoint.
   # The restored container needs a different name as the checkpointed
@@ -179,7 +194,7 @@ function simple_cr() {
   # in time when the last page is lazily transferred to the destination.
   # Killing the CRIU on the checkpoint side will let the container
   # continue to run if the migration failed at some point.
-  __runc --criu "$CRIU" restore -d --work-path ./image-dir --image-path ./image-dir --lazy-pages test_busybox_restore <&60 >&51 2>&51
+  __runc --criu "$CRIU" restore -d --work-path ./image-dir --image-path ./image-dir --lazy-pages test_busybox_restore <&${in_r} >&${out_w} 2>&${out_w}
   ret=$?
   cat ./work-dir/restore.log | grep -B 5 Error || true
   [ $ret -eq 0 ]
@@ -196,6 +211,7 @@ function simple_cr() {
 
   wait $lp_pid
   [ $? -eq 0 ]
+  PIDS_TO_KILL=()
 
   check_pipes
 }
