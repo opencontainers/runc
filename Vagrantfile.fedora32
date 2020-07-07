@@ -13,13 +13,18 @@ Vagrant.configure("2") do |config|
     v.cpus = 2
   end
   config.vm.provision "shell", inline: <<-SHELL
-    cat << EOF | dnf -y shell
+    set -e -u -o pipefail
+    # Work around dnf mirror failures by retrying a few times
+    for i in $(seq 0 2); do
+      sleep $i
+      cat << EOF | dnf -y shell && break
 config exclude kernel,kernel-core
 config install_weak_deps false
 update
 install iptables gcc make golang-go libseccomp-devel bats jq git-core criu skopeo
 ts run
 EOF
+    done
     dnf clean all
 
     # Add a user for rootless tests
