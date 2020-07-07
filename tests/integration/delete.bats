@@ -52,6 +52,60 @@ function teardown() {
   [ "$status" -eq 0 ]
 }
 
+@test "runc delete --force in cgroupv1 with subcgroups" {
+  requires cgroups_v1 root cgroupns
+  set_cgroups_path "$BUSYBOX_BUNDLE"
+  set_cgroup_mount_writable "$BUSYBOX_BUNDLE"
+  # enable cgroupns
+  update_config '.linux.namespaces += [{"type": "cgroup"}]'
+
+  local subsystems="memory freezer"
+
+  for i in $(seq 1); do
+    runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+    [ "$status" -eq 0 ]
+
+    testcontainer test_busybox running
+
+    __runc exec -d test_busybox sleep 1d
+
+    # find the pid of sleep
+    pid=$(__runc exec test_busybox ps -a | grep 1d | awk '{print $1}')
+    [[ ${pid} =~ [0-9]+ ]]
+
+    # create a sub-cgroup
+    cat <<EOF | runc exec test_busybox sh
+set -e -u -x
+for s in ${subsystems}; do
+  cd /sys/fs/cgroup/\$s
+  mkdir foo
+  cd foo
+  echo ${pid} > tasks
+  cat tasks
+done
+EOF
+    [ "$status" -eq 0 ]
+    [[ "$output" =~ [0-9]+ ]]
+
+    for s in ${subsystems}; do
+      name=CGROUP_${s^^}
+      eval path=\$${name}/foo
+      echo $path
+      [ -d ${path} ] || fail "test failed to create memory sub-cgroup"
+    done
+
+    runc delete --force test_busybox
+
+    runc state test_busybox
+    [ "$status" -ne 0 ]
+
+    run find /sys/fs/cgroup -wholename '*testbusyboxdelete*' -type d
+    [ "$status" -eq 0 ]
+    [ "$output" = "" ] || fail "cgroup not cleaned up correctly: $output"
+
+  done
+}
+
 @test "runc delete --force in cgroupv2 with subcgroups" {
   requires cgroups_v2 root
   set_cgroups_path "$BUSYBOX_BUNDLE"
