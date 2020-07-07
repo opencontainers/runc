@@ -72,7 +72,7 @@ function simple_cr() {
 
 @test "checkpoint and restore (cgroupns)" {
   # cgroupv2 already enables cgroupns so this case was tested above already
-  requires cgroups_v1
+  requires cgroups_v1 cgroupns
 
   # enable CGROUPNS
   update_config '.linux.namespaces += [{"type": "cgroup"}]'
