@@ -144,9 +144,6 @@ function simple_cr() {
 
   setup_pipes
 
-  # This should not be necessary: https://github.com/checkpoint-restore/criu/issues/575
-  update_config '(.. | select(.readonly? != null)) .readonly |= false'
-
   # TCP port for lazy migration
   port=27277
 
