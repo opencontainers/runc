@@ -1,7 +1,7 @@
 CONTAINER_ENGINE := docker
 GO := go
 
-PREFIX := $(DESTDIR)/usr/local
+PREFIX ?= $(DESTDIR)/usr/local
 BINDIR := $(PREFIX)/sbin
 MANDIR := $(PREFIX)/share/man
 
