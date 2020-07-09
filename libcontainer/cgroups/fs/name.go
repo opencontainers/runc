@@ -28,13 +28,6 @@ func (s *NameGroup) Set(path string, cgroup *configs.Cgroup) error {
 	return nil
 }
 
-func (s *NameGroup) Remove(d *cgroupData) error {
-	if s.Join {
-		removePath(d.path(s.GroupName))
-	}
-	return nil
-}
-
 func (s *NameGroup) GetStats(path string, stats *cgroups.Stats) error {
 	return nil
 }

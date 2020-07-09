@@ -61,10 +61,6 @@ func (s *FreezerGroup) Set(path string, cgroup *configs.Cgroup) error {
 	return nil
 }
 
-func (s *FreezerGroup) Remove(d *cgroupData) error {
-	return removePath(d.path("freezer"))
-}
-
 func (s *FreezerGroup) GetStats(path string, stats *cgroups.Stats) error {
 	return nil
 }

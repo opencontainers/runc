@@ -96,10 +96,6 @@ func (s *CpuGroup) Set(path string, cgroup *configs.Cgroup) error {
 	return s.SetRtSched(path, cgroup)
 }
 
-func (s *CpuGroup) Remove(d *cgroupData) error {
-	return removePath(d.path("cpu"))
-}
-
 func (s *CpuGroup) GetStats(path string, stats *cgroups.Stats) error {
 	f, err := os.Open(filepath.Join(path, "cpu.stat"))
 	if err != nil {

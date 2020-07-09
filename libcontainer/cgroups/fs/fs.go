@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	subsystemsLegacy = subsystemSet{
+	subsystems = []subsystem{
 		&CpusetGroup{},
 		&DevicesGroup{},
 		&MemoryGroup{},
@@ -38,24 +38,11 @@ var (
 
 var errSubsystemDoesNotExist = errors.New("cgroup: subsystem does not exist")
 
-type subsystemSet []subsystem
-
-func (s subsystemSet) Get(name string) (subsystem, error) {
-	for _, ss := range s {
-		if ss.Name() == name {
-			return ss, nil
-		}
-	}
-	return nil, errSubsystemDoesNotExist
-}
-
 type subsystem interface {
 	// Name returns the name of the subsystem.
 	Name() string
 	// Returns the stats, as 'stats', corresponding to the cgroup under 'path'.
 	GetStats(path string, stats *cgroups.Stats) error
-	// Removes the cgroup represented by 'cgroupData'.
-	Remove(*cgroupData) error
 	// Creates and joins the cgroup represented by 'cgroupData'.
 	Apply(*cgroupData) error
 	// Set the cgroup represented by cgroup.
@@ -166,10 +153,6 @@ func isIgnorableError(rootless bool, err error) bool {
 	return false
 }
 
-func (m *manager) getSubsystems() subsystemSet {
-	return subsystemsLegacy
-}
-
 func (m *manager) Apply(pid int) (err error) {
 	if m.cgroups == nil {
 		return nil
@@ -199,7 +182,7 @@ func (m *manager) Apply(pid int) (err error) {
 		return cgroups.EnterPid(m.paths, pid)
 	}
 
-	for _, sys := range m.getSubsystems() {
+	for _, sys := range subsystems {
 		p, err := d.path(sys.Name())
 		if err != nil {
 			// The non-presence of the devices subsystem is
@@ -250,9 +233,9 @@ func (m *manager) GetStats() (*cgroups.Stats, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	stats := cgroups.NewStats()
-	for name, path := range m.paths {
-		sys, err := m.getSubsystems().Get(name)
-		if err == errSubsystemDoesNotExist || !cgroups.PathExists(path) {
+	for _, sys := range subsystems {
+		path := m.paths[sys.Name()]
+		if path == "" {
 			continue
 		}
 		if err := sys.GetStats(path, stats); err != nil {
@@ -275,7 +258,7 @@ func (m *manager) Set(container *configs.Config) error {
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	for _, sys := range m.getSubsystems() {
+	for _, sys := range subsystems {
 		path := m.paths[sys.Name()]
 		if err := sys.Set(path, container.Cgroups); err != nil {
 			if m.rootless && sys.Name() == "devices" {
