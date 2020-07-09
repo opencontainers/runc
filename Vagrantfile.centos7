@@ -12,6 +12,8 @@ Vagrant.configure("2") do |config|
     v.cpus = 2
   end
   config.vm.provision "shell", inline: <<-SHELL
+    set -e -u -o pipefail
+
     # configuration
     GO_VERSION="1.13.11"
     BATS_VERSION="v1.2.0"
