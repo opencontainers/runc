@@ -117,7 +117,7 @@ func newTemplateConfig(rootfs string) *configs.Config {
 			{Type: configs.NEWNET},
 		}),
 		Cgroups: &configs.Cgroup{
-			Path: "integration/test",
+			Path: "/sys/fs/cgroup/",
 			Resources: &configs.Resources{
 				MemorySwappiness: nil,
 				Devices:          allowedDevices,
