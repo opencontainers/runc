@@ -57,7 +57,7 @@ var psCommand = cli.Command{
 		}
 
 		// [1:] is to remove command name, ex:
-		// context.Args(): [containet_id ps_arg1 ps_arg2 ...]
+		// context.Args(): [container_id ps_arg1 ps_arg2 ...]
 		// psArgs:         [ps_arg1 ps_arg2 ...]
 		//
 		psArgs := context.Args()[1:]
