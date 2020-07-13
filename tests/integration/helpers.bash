@@ -286,6 +286,11 @@ function requires() {
 				skip_me=1
 			fi
 			;;
+		cgroupns)
+			if [ ! -e "/proc/self/ns/cgroup" ]; then
+				skip_me=1
+			fi
+			;;
 		cgroups_v1)
 			init_cgroup_paths
 			if [ "$CGROUP_UNIFIED" != "no" ]; then
