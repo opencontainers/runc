@@ -176,9 +176,9 @@ func (f *FatalWriter) Write(p []byte) (n int, err error) {
 
 func createLogConfig(context *cli.Context) logs.Config {
 	logFilePath := context.GlobalString("log")
-	logPipeFd := ""
+	logPipeFd := 0
 	if logFilePath == "" {
-		logPipeFd = "2"
+		logPipeFd = 2
 	}
 	config := logs.Config{
 		LogPipeFd:   logPipeFd,
