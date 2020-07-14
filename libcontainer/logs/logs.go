@@ -26,37 +26,34 @@ type Config struct {
 }
 
 func ForwardLogs(logPipe io.Reader) {
-	lineReader := bufio.NewReader(logPipe)
-	for {
-		line, err := lineReader.ReadBytes('\n')
-		if len(line) > 0 {
-			processEntry(line)
-		}
-		if err == io.EOF {
-			logrus.Debugf("log pipe has been closed: %+v", err)
-			return
-		}
-		if err != nil {
-			logrus.Errorf("log pipe read error: %+v", err)
-		}
+	s := bufio.NewScanner(logPipe)
+	for s.Scan() {
+		processEntry(s.Bytes())
+	}
+	if err := s.Err(); err != nil {
+		logrus.Errorf("log pipe read error: %+v", err)
+	} else {
+		logrus.Debugf("log pipe closed")
 	}
 }
 
 func processEntry(text []byte) {
-	type jsonLog struct {
+	if len(text) == 0 {
+		return
+	}
+
+	var jl struct {
 		Level string `json:"level"`
 		Msg   string `json:"msg"`
 	}
-
-	var jl jsonLog
 	if err := json.Unmarshal(text, &jl); err != nil {
-		logrus.Errorf("failed to decode %q to json: %+v", text, err)
+		logrus.Errorf("failed to decode %q to json: %v", text, err)
 		return
 	}
 
 	lvl, err := logrus.ParseLevel(jl.Level)
 	if err != nil {
-		logrus.Errorf("failed to parse log level %q: %v\n", jl.Level, err)
+		logrus.Errorf("failed to parse log level %q: %v", jl.Level, err)
 		return
 	}
 	logrus.StandardLogger().Logf(lvl, jl.Msg)
