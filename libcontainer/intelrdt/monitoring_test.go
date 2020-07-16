@@ -80,7 +80,7 @@ func TestGetMonitoringStats(t *testing.T) {
 
 	t.Run("Gather monitoring stats", func(t *testing.T) {
 		var stats Stats
-		err := getMonitoringStats(mockedL3_MON, &stats)
+		err := getMonitoringStats(mockedL3_MON, &stats, true, true)
 		if err != nil {
 			t.Fatal(err)
 		}

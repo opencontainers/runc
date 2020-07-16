@@ -13,4 +13,12 @@ type IntelRdt struct {
 	// The unit of memory bandwidth is specified in "percentages" by
 	// default, and in "MBps" if MBA Software Controller is enabled.
 	MemBwSchema string `json:"memBwSchema,omitempty"`
+
+	// The flag to indicate if Intel RDT CMT is enabled. CMT (Cache Monitoring Technology) supports monitoring of
+	// the last-level cache (LLC) occupancy for the container.
+	EnableCMT bool `json:"enableCMT,omitempty"`
+
+	// The flag to indicate if Intel RDT MBM is enabled. MBM (Memory Bandwidth Monitoring) supports monitoring of
+	// total and local memory bandwidth for the container.
+	EnableMBM bool `json:"enableMBM,omitempty"`
 }

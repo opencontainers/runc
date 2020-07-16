@@ -2009,6 +2009,7 @@ func (c *Container) currentState() (*State, error) {
 	if c.intelRdtManager != nil {
 		intelRdtPath = c.intelRdtManager.GetPath()
 	}
+
 	state := &State{
 		BaseState: BaseState{
 			ID:                   c.ID(),
