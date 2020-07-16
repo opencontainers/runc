@@ -121,6 +121,7 @@ func Example() *specs.Spec {
 				"/proc/sched_debug",
 				"/sys/firmware",
 				"/proc/scsi",
+				"/sys/devices/virtual/tpm",
 			},
 			ReadonlyPaths: []string{
 				"/proc/bus",

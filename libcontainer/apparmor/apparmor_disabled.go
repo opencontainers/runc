@@ -12,6 +12,13 @@ func IsEnabled() bool {
 	return false
 }
 
+func ApplyProfileThread(name string) error {
+	if name != "" {
+		return ErrApparmorNotEnabled
+	}
+	return nil
+}
+
 func ApplyProfile(name string) error {
 	if name != "" {
 		return ErrApparmorNotEnabled

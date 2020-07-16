@@ -352,6 +352,24 @@ type LinuxRdma struct {
 	HcaObjects *uint32 `json:"hcaObjects,omitempty"`
 }
 
+// LinuxVTPM for vTPM definition
+type LinuxVTPM struct {
+	// Path on host where vTPM writes state to
+	StatePath string `json:"statePath,omitempty"`
+	// Whether runc is allowed to delete the 'Statepath' once the TPM is destroyed
+	StatePathIsManaged bool `json:"statePathIsManaged,omitempty"`
+	// Version of the TPM that is emulated
+	TPMVersion string `json:"vtpmVersion,omitempty"`
+	// Whether to create certificates upon first start of vTPM
+	CreateCertificates bool `json:"createCerts,omitempty"`
+	// The PCR banks to enable
+	PcrBanks string `json:"pcrBanks,omitempty"`
+	// Under what user to run the vTPM process
+	RunAs string `json:"runAs,omitempty"`
+	// The password to derive the encryption key from
+	EncryptionPassword string `json:"encryptionPassword,omitempty"`
+}
+
 // LinuxResources has container runtime resource constraints
 type LinuxResources struct {
 	// Devices configures the device whitelist.
@@ -372,12 +390,16 @@ type LinuxResources struct {
 	// Limits are a set of key value pairs that define RDMA resource limits,
 	// where the key is device name and value is resource limits.
 	Rdma map[string]LinuxRdma `json:"rdma,omitempty"`
+	// VTPM configuration
+	VTPMs []LinuxVTPM `json:"vtpms,omitempty"`
 }
 
 // LinuxDevice represents the mknod information for a Linux special device file
 type LinuxDevice struct {
 	// Path to the device.
 	Path string `json:"path"`
+	// Path of passed-through device on host
+	Devpath string `json:"devpath"`
 	// Device type, block, char, etc.
 	Type string `json:"type"`
 	// Major is the device's major number.

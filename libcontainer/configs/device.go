@@ -16,6 +16,10 @@ type Device struct {
 	// Path to the device.
 	Path string `json:"path"`
 
+	// the name of the device inside the container (optional)
+	// allows a host device to appear under different name inside container
+	Devpath string `json:"devpath"`
+
 	// FileMode permission bits for the device.
 	FileMode os.FileMode `json:"file_mode"`
 

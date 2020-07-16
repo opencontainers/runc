@@ -617,7 +617,12 @@ func createDeviceNode(rootfs string, node *configs.Device, bind bool) error {
 		// The node only exists for cgroup reasons, ignore it here.
 		return nil
 	}
-	dest := filepath.Join(rootfs, node.Path)
+	var dest string
+	if node.Devpath != "" {
+		dest = filepath.Join(rootfs, node.Devpath)
+	} else {
+		dest = filepath.Join(rootfs, node.Path)
+	}
 	if err := os.MkdirAll(filepath.Dir(dest), 0755); err != nil {
 		return err
 	}
