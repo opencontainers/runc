@@ -1863,7 +1863,7 @@ func (c *linuxContainer) currentOCIState() (*specs.State, error) {
 	if err != nil {
 		return nil, err
 	}
-	state.Status = status.String()
+	state.Status = specs.ContainerState(status.String())
 	if status != Stopped {
 		if c.initProcess != nil {
 			state.Pid = c.initProcess.pid()
