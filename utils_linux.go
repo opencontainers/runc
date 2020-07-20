@@ -47,13 +47,12 @@ func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
 		cgroupManager = libcontainer.RootlessCgroupfs
 	}
 	if context.GlobalBool("systemd-cgroup") {
-		if systemd.IsRunningSystemd() {
-			cgroupManager = libcontainer.SystemdCgroups
-			if rootlessCg {
-				cgroupManager = libcontainer.RootlessSystemdCgroups
-			}
-		} else {
+		if !systemd.IsRunningSystemd() {
 			return nil, errors.New("systemd cgroup flag passed, but systemd support for managing cgroups is not available")
+		}
+		cgroupManager = libcontainer.SystemdCgroups
+		if rootlessCg {
+			cgroupManager = libcontainer.RootlessSystemdCgroups
 		}
 	}
 
@@ -423,13 +422,11 @@ func startContainer(context *cli.Context, spec *specs.Spec, action CtAct, criuOp
 	}
 
 	if notifySocket != nil {
-		err := notifySocket.setupSocketDirectory()
-		if err != nil {
+		if err := notifySocket.setupSocketDirectory(); err != nil {
 			return -1, err
 		}
 		if action == CT_ACT_RUN {
-			err := notifySocket.bindSocket()
-			if err != nil {
+			if err := notifySocket.bindSocket(); err != nil {
 				return -1, err
 			}
 		}
