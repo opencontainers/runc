@@ -837,13 +837,19 @@ func (c *linuxContainer) handleCriuConfigurationFile(rpcOpts *criurpc.CriuOpts) 
 }
 
 func (c *linuxContainer) criuSupportsExtNS(t configs.NamespaceType) bool {
+	var minVersion int
 	switch t {
 	case configs.NEWNET:
 		// CRIU supports different external namespace with different released CRIU versions.
 		// For network namespaces to work we need at least criu 3.11.0 => 31100.
-		return c.checkCriuVersion(31100) == nil
+		minVersion = 31100
+	case configs.NEWPID:
+		// For PID namespaces criu 31500 is needed.
+		minVersion = 31500
+	default:
+		return false
 	}
-	return false
+	return c.checkCriuVersion(minVersion) == nil
 }
 
 func (c *linuxContainer) criuNsToKey(t configs.NamespaceType) string {
@@ -976,6 +982,11 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 	// This basically means that CRIU will ignore the namespace
 	// and expect to be setup correctly.
 	if err := c.handleCheckpointingExternalNamespaces(&rpcOpts, configs.NEWNET); err != nil {
+		return err
+	}
+
+	// Same for possible external PID namespaces
+	if err := c.handleCheckpointingExternalNamespaces(&rpcOpts, configs.NEWPID); err != nil {
 		return err
 	}
 
@@ -1301,6 +1312,11 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 	// assigned to it, this now expects that the checkpoint will be restored in a
 	// already created network namespace.
 	if err := c.handleRestoringExternalNamespaces(req.Opts, &extraFiles, configs.NEWNET); err != nil {
+		return err
+	}
+
+	// Same for PID namespaces.
+	if err := c.handleRestoringExternalNamespaces(req.Opts, &extraFiles, configs.NEWPID); err != nil {
 		return err
 	}
 
