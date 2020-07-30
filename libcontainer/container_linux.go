@@ -764,6 +764,7 @@ func (c *linuxContainer) checkCriuVersion(minVersion int) error {
 	}
 
 	criu := criu.MakeCriu()
+	criu.SetCriuPath(c.criuPath)
 	var err error
 	c.criuVersion, err = criu.GetCriuVersion()
 	if err != nil {
