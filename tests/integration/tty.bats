@@ -11,6 +11,14 @@ function teardown() {
 	teardown_busybox
 }
 
+@test "runc run [stdin not a tty]" {
+	# stty size fails without a tty
+	update_config '(.. | select(.[]? == "sh")) += ["-c", "stty size"]'
+	# note that stdout/stderr are already redirected by bats' run
+	runc run test_busybox < /dev/null
+	[ "$status" -eq 0 ]
+}
+
 @test "runc run [tty ptsname]" {
 	# Replace sh script with readlink.
 	# shellcheck disable=SC2016
@@ -59,6 +67,18 @@ function teardown() {
 	[[ ${lines[0]} =~ 1000 ]]
 	# This is set by the default config.json (it corresponds to the standard tty group).
 	[[ ${lines[1]} =~ 5 ]]
+}
+
+@test "runc exec [stdin not a tty]" {
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	[ "$status" -eq 0 ]
+
+	# make sure we're running
+	testcontainer test_busybox running
+
+	# note that stdout/stderr are already redirected by bats' run
+	runc exec -t test_busybox sh -c "stty size" < /dev/null
+	[ "$status" -eq 0 ]
 }
 
 @test "runc exec [tty ptsname]" {
