@@ -157,6 +157,9 @@ func setupIO(process *libcontainer.Process, rootuid, rootgid int, createTTY, det
 		process.Stderr = nil
 		t := &tty{}
 		if !detach {
+			if err := t.initHostConsole(); err != nil {
+				return nil, err
+			}
 			parent, child, err := utils.NewSockPair("console")
 			if err != nil {
 				return nil, err
