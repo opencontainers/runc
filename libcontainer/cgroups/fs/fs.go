@@ -68,6 +68,56 @@ func NewManager(cg *configs.Cgroup, paths map[string]string, rootless bool) cgro
 var cgroupRootLock sync.Mutex
 var cgroupRoot string
 
+const defaultCgroupRoot = "/sys/fs/cgroup"
+
+func tryDefaultCgroupRoot() string {
+	var st, pst unix.Stat_t
+
+	// (1) it should be a directory...
+	err := unix.Lstat(defaultCgroupRoot, &st)
+	if err != nil || st.Mode&unix.S_IFDIR == 0 {
+		return ""
+	}
+
+	// (2) ... and a mount point ...
+	err = unix.Lstat(filepath.Dir(defaultCgroupRoot), &pst)
+	if err != nil {
+		return ""
+	}
+
+	if st.Dev == pst.Dev {
+		// parent dir has the same dev -- not a mount point
+		return ""
+	}
+
+	// (3) ... of 'tmpfs' fs type.
+	var fst unix.Statfs_t
+	err = unix.Statfs(defaultCgroupRoot, &fst)
+	if err != nil || fst.Type != unix.TMPFS_MAGIC {
+		return ""
+	}
+
+	// (4) it should have at least 1 entry ...
+	dir, err := os.Open(defaultCgroupRoot)
+	if err != nil {
+		return ""
+	}
+	names, err := dir.Readdirnames(1)
+	if err != nil {
+		return ""
+	}
+	if len(names) < 1 {
+		return ""
+	}
+	// ... which is a cgroup mount point.
+	err = unix.Statfs(filepath.Join(defaultCgroupRoot, names[0]), &fst)
+	if err != nil || fst.Type != unix.CGROUP_SUPER_MAGIC {
+		return ""
+	}
+
+	return defaultCgroupRoot
+}
+
 // Gets the cgroupRoot.
 func getCgroupRoot() (string, error) {
 	cgroupRootLock.Lock()
@@ -77,6 +127,14 @@ func getCgroupRoot() (string, error) {
 		return cgroupRoot, nil
 	}
 
+	// fast path
+	cgroupRoot = tryDefaultCgroupRoot()
+	if cgroupRoot != "" {
+		return cgroupRoot, nil
+	}
+
+	// slow path: parse mountinfo, find the first mount where fs=cgroup
+	// (e.g. "/sys/fs/cgroup/memory"), use its parent.
 	f, err := os.Open("/proc/self/mountinfo")
 	if err != nil {
 		return "", err
