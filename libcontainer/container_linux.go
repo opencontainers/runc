@@ -852,7 +852,7 @@ func (c *linuxContainer) criuSupportsExtNS(t configs.NamespaceType) bool {
 	return c.checkCriuVersion(minVersion) == nil
 }
 
-func (c *linuxContainer) criuNsToKey(t configs.NamespaceType) string {
+func criuNsToKey(t configs.NamespaceType) string {
 	return "extRoot" + strings.Title(configs.NsName(t)) + "NS"
 }
 
@@ -872,7 +872,7 @@ func (c *linuxContainer) handleCheckpointingExternalNamespaces(rpcOpts *criurpc.
 	if err := unix.Stat(nsPath, &ns); err != nil {
 		return err
 	}
-	criuExternal := fmt.Sprintf("%s[%d]:%s", configs.NsName(t), ns.Ino, c.criuNsToKey(t))
+	criuExternal := fmt.Sprintf("%s[%d]:%s", configs.NsName(t), ns.Ino, criuNsToKey(t))
 	rpcOpts.External = append(rpcOpts.External, criuExternal)
 
 	return nil
@@ -897,7 +897,7 @@ func (c *linuxContainer) handleRestoringExternalNamespaces(rpcOpts *criurpc.Criu
 		return fmt.Errorf("Requested network namespace %v does not exist", nsPath)
 	}
 	inheritFd := new(criurpc.InheritFd)
-	inheritFd.Key = proto.String(c.criuNsToKey(t))
+	inheritFd.Key = proto.String(criuNsToKey(t))
 	// The offset of four is necessary because 0, 1, 2 and 3 is already
 	// used by stdin, stdout, stderr, 'criu swrk' socket.
 	inheritFd.Fd = proto.Int32(int32(4 + len(*extraFiles)))
