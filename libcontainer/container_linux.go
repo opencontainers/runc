@@ -896,11 +896,12 @@ func (c *linuxContainer) handleRestoringExternalNamespaces(rpcOpts *criurpc.Criu
 		logrus.Errorf("If a specific network namespace is defined it must exist: %s", err)
 		return fmt.Errorf("Requested network namespace %v does not exist", nsPath)
 	}
-	inheritFd := new(criurpc.InheritFd)
-	inheritFd.Key = proto.String(criuNsToKey(t))
-	// The offset of four is necessary because 0, 1, 2 and 3 is already
-	// used by stdin, stdout, stderr, 'criu swrk' socket.
-	inheritFd.Fd = proto.Int32(int32(4 + len(*extraFiles)))
+	inheritFd := &criurpc.InheritFd{
+		Key: proto.String(criuNsToKey(t)),
+		// The offset of four is necessary because 0, 1, 2 and 3 are
+		// already used by stdin, stdout, stderr, 'criu swrk' socket.
+		Fd: proto.Int32(int32(4 + len(*extraFiles))),
+	}
 	rpcOpts.InheritFd = append(rpcOpts.InheritFd, inheritFd)
 	// All open FDs need to be transferred to CRIU via extraFiles
 	*extraFiles = append(*extraFiles, nsFd)
