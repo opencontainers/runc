@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime"
 	"strings"
 
 	"github.com/opencontainers/runc/libcontainer/logs"
@@ -62,6 +63,7 @@ func main() {
 		v = append(v, fmt.Sprintf("commit: %s", gitCommit))
 	}
 	v = append(v, fmt.Sprintf("spec: %s", specs.Version))
+	v = append(v, fmt.Sprintf("go: %s", runtime.Version()))
 	app.Version = strings.Join(v, "\n")
 
 	xdgRuntimeDir := ""
