@@ -213,27 +213,29 @@ func EnterPid(cgroupPaths map[string]string, pid int) error {
 // returned.
 func RemovePaths(paths map[string]string) (err error) {
 	delay := 10 * time.Millisecond
+	errList := []error{}
 	for i := 0; i < 5; i++ {
 		if i != 0 {
 			time.Sleep(delay)
 			delay *= 2
 		}
 		for s, p := range paths {
-			os.RemoveAll(p)
-			// TODO: here probably should be logging
+			removeErr := os.RemoveAll(p)
 			_, err := os.Stat(p)
 			// We need this strange way of checking cgroups existence because
 			// RemoveAll almost always returns error, even on already removed
 			// cgroups
 			if os.IsNotExist(err) {
 				delete(paths, s)
+			} else if i == 4 && removeErr != nil {
+				errList = append(errList, fmt.Errorf("remove path %s error : %v ", p, removeErr))
 			}
 		}
 		if len(paths) == 0 {
 			return nil
 		}
 	}
-	return fmt.Errorf("Failed to remove paths: %v", paths)
+	return fmt.Errorf("failed to remove paths : %v", errList)
 }
 
 func GetHugePageSize() ([]string, error) {
