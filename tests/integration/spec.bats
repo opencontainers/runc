@@ -4,18 +4,15 @@ load helpers
 
 function setup() {
   # initial cleanup in case a prior test exited and did not cleanup
-  cd "$INTEGRATION_ROOT"
-  run rm -f -r "$HELLO_BUNDLE"
+  rm -rf "$HELLO_BUNDLE"
 
   # setup hello-world for spec generation testing
-  run mkdir "$HELLO_BUNDLE"
-  run mkdir "$HELLO_BUNDLE"/rootfs
-  run tar -C "$HELLO_BUNDLE"/rootfs -xf "$HELLO_IMAGE"
+  mkdir -p "$HELLO_BUNDLE"/rootfs
+  tar -C "$HELLO_BUNDLE"/rootfs -xf "$HELLO_IMAGE"
 }
 
 function teardown() {
-  cd "$INTEGRATION_ROOT"
-  run rm -f -r "$HELLO_BUNDLE"
+  rm -rf "$HELLO_BUNDLE"
 }
 
 @test "spec generation cwd" {
