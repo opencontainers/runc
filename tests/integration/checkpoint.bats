@@ -41,6 +41,7 @@ function setup_pipes() {
 	exec {in_r}</proc/self/fd/$pipe
 	exec {in_w}>/proc/self/fd/$pipe
 	exec {pipe}>&-
+	# shellcheck disable=SC2206
 	FDS_TO_CLOSE=($in_r $in_w $out_r $out_w)
 }
 
@@ -162,10 +163,12 @@ function simple_cr() {
   # shellcheck disable=SC2094
   exec {lazy_r}</proc/self/fd/$pipe {lazy_w}>/proc/self/fd/$pipe
   exec {pipe}>&-
+  # shellcheck disable=SC2206
   FDS_TO_CLOSE+=($lazy_r $lazy_w)
 
   __runc --criu "$CRIU" checkpoint --lazy-pages --page-server 0.0.0.0:${port} --status-fd ${lazy_w} --work-path ./work-dir --image-path ./image-dir test_busybox &
   cpt_pid=$!
+  # shellcheck disable=SC2206
   PIDS_TO_KILL=($cpt_pid)
 
   # wait for lazy page server to be ready
@@ -184,6 +187,7 @@ function simple_cr() {
   # Start CRIU in lazy-daemon mode
   ${CRIU} lazy-pages --page-server --address 127.0.0.1 --port ${port} -D image-dir &
   lp_pid=$!
+  # shellcheck disable=SC2206
   PIDS_TO_KILL+=($lp_pid)
 
   # Restore lazily from checkpoint.
