@@ -17,5 +17,5 @@ function teardown() {
 
 	runc run test_bind_mount
 	[ "$status" -eq 0 ]
-	[[ "${lines[0]}" =~ '/tmp/bind/config.json' ]]
+	[[ "${lines[0]}" == *'/tmp/bind/config.json'* ]]
 }
