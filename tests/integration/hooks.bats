@@ -39,7 +39,8 @@ function teardown() {
 		pid=\$(cat - | jq -r '.pid')
 		touch "$LIBPATH/$HOOKLIBCR.1.0.0"
 		nsenter -m \$ns -t \$pid mount --bind "$current_pwd/$HOOKLIBCR.1.0.0" "$LIBPATH/$HOOKLIBCR.1.0.0"
-	EOF)
+EOF
+)
 
 	create_container_hook="touch ./lib/$HOOKLIBCC.1.0.0 && mount --bind $current_pwd/$HOOKLIBCC.1.0.0 ./lib/$HOOKLIBCC.1.0.0"
 
