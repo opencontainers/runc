@@ -82,7 +82,7 @@ function teardown() {
   echo ${pid} > cgroup.threads
   cat cgroup.threads
 EOF
-  cat nest.sh | runc exec test_busybox sh
+  runc exec test_busybox sh < nest.sh
   [ "$status" -eq 0 ]
   [[ "$output" =~ [0-9]+ ]]
 
