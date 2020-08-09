@@ -55,9 +55,7 @@ function teardown() {
 
 	echo "Checking create-runtime library"
 	echo $output | grep $HOOKLIBCR
-	[ "$?" -eq 0 ]
 
 	echo "Checking create-container library"
 	echo $output | grep $HOOKLIBCC
-	[ "$?" -eq 0 ]
 }
