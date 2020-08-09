@@ -59,6 +59,7 @@ function simple_cr() {
 
   testcontainer test_busybox running
 
+  # shellcheck disable=SC2034
   for i in `seq 2`; do
     # checkpoint the running container
     runc --criu "$CRIU" checkpoint --work-path ./work-dir test_busybox
@@ -158,6 +159,7 @@ function simple_cr() {
   # For lazy migration we need to know when CRIU is ready to serve
   # the memory pages via TCP.
   exec {pipe}<> <(:)
+  # shellcheck disable=SC2094
   exec {lazy_r}</proc/self/fd/$pipe {lazy_w}>/proc/self/fd/$pipe
   exec {pipe}>&-
   FDS_TO_CLOSE+=($lazy_r $lazy_w)
@@ -169,6 +171,7 @@ function simple_cr() {
   # wait for lazy page server to be ready
   out=$(timeout 2 dd if=/proc/self/fd/${lazy_r} bs=1 count=1 2>/dev/null | od)
   exec {lazy_w}>&-
+  # shellcheck disable=SC2116,SC2086
   out=$(echo $out) # rm newlines
   # show errors if there are any before we fail
   grep -B5 Error ./work-dir/dump.log || true
@@ -224,7 +227,7 @@ function simple_cr() {
   # create network namespace
   ip netns add $ns_name
   ns_path=`ip netns add $ns_name 2>&1 | sed -e 's/.*"\(.*\)".*/\1/'`
-
+  # shellcheck disable=SC2012
   ns_inode=`ls -iL $ns_path | awk '{ print $1 }'`
 
   # tell runc which network namespace to use
@@ -235,6 +238,7 @@ function simple_cr() {
 
   testcontainer test_busybox running
 
+  # shellcheck disable=SC2034
   for i in `seq 2`; do
     # checkpoint the running container; this automatically tells CRIU to
     # handle the network namespace defined in config.json as an external
