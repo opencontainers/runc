@@ -20,6 +20,10 @@ jobs:
         - RUNC_USE_SYSTEMD=1
       script:
         - make all
+        - sudo curl -o /usr/local/bin/umoci -fsSL https://github.com/opencontainers/umoci/releases/download/v0.4.5/umoci.amd64
+        - sudo chmod +x /usr/local/bin/umoci
+        - . /etc/os-release && sudo sh -c "echo 'deb http://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/x${NAME}_${VERSION_ID}/ /' > /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list" && wget -nv https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/x${NAME}_${VERSION_ID}/Release.key -O- | sudo apt-key add -
+        - sudo apt-get update -qq && sudo apt-get install skopeo
         - sudo PATH="$PATH" make localintegration RUNC_USE_SYSTEMD=1
     - name: "fedora32"
       before_install:

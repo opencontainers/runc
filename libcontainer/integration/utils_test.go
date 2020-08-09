@@ -92,7 +92,7 @@ func newTestBundle() (string, error) {
 	return dir, nil
 }
 
-// newRootfs creates a new tmp directory and copies the busybox root filesystem
+// newRootfs creates a new tmp directory and copies the ubuntu root filesystem
 func newRootfs() (string, error) {
 	dir, err := ioutil.TempDir("", "")
 	if err != nil {
@@ -101,7 +101,7 @@ func newRootfs() (string, error) {
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return "", err
 	}
-	if err := copyBusybox(dir); err != nil {
+	if err := copyUbuntu(dir); err != nil {
 		return "", err
 	}
 	return dir, nil
@@ -111,10 +111,10 @@ func remove(dir string) {
 	os.RemoveAll(dir)
 }
 
-// copyBusybox copies the rootfs for a busybox container created for the test image
+// copyUbuntu copies the rootfs for an Ubuntu container created for the test image
 // into the new directory for the specific test
-func copyBusybox(dest string) error {
-	out, err := exec.Command("sh", "-c", fmt.Sprintf("cp -a /busybox/* %s/", dest)).CombinedOutput()
+func copyUbuntu(dest string) error {
+	out, err := exec.Command("sh", "-c", fmt.Sprintf("cp -a /ubuntu/rootfs/* %s/", dest)).CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("copy error %q: %q", err, out)
 	}

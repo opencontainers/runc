@@ -6,14 +6,14 @@ load helpers
 # CC = CreataContainer
 HOOKLIBCR=librunc-hooks-create-runtime.so
 HOOKLIBCC=librunc-hooks-create-container.so
-LIBPATH="$DEBIAN_BUNDLE/rootfs/lib/"
+LIBPATH="$BUNDLE/rootfs/lib/"
 
 function setup() {
 	umount $LIBPATH/$HOOKLIBCR.1.0.0 &> /dev/null || true
 	umount $LIBPATH/$HOOKLIBCC.1.0.0 &> /dev/null || true
 
-	teardown_debian
-	setup_debian
+	teardown_container
+	setup_container
 }
 
 function teardown() {
@@ -21,7 +21,7 @@ function teardown() {
 	umount $LIBPATH/$HOOKLIBCC.1.0.0 &> /dev/null || true
 
 	rm -f $HOOKLIBCR.1.0.0 $HOOKLIBCC.1.0.0
-	teardown_debian
+	teardown_container
 }
 
 @test "runc run (hooks library tests)" {
@@ -47,10 +47,11 @@ function teardown() {
 		.hooks |= . + {"createRuntime": [{"path": "/bin/sh", "args": ["/bin/sh", "-c", $create_runtime_hook]}]} |
 		.hooks |= . + {"createContainer": [{"path": "/bin/sh", "args": ["/bin/sh", "-c", $create_container_hook]}]} |
 		.hooks |= . + {"startContainer": [{"path": "/bin/sh", "args": ["/bin/sh", "-c", "ldconfig"]}]} |
-		.process.args = ["/bin/sh", "-c", "ldconfig -p | grep librunc"]' $DEBIAN_BUNDLE/config.json)
+		.process.args = ["/bin/sh", "-c", "ldconfig -p | grep librunc"]' $BUNDLE/config.json)
 	echo "${CONFIG}" > config.json
+	update_config '.root.readonly = false' $bundle
 
-	runc run test_debian
+	runc run test_container
 	[ "$status" -eq 0 ]
 
 	echo "Checking create-runtime library"

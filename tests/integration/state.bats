@@ -3,36 +3,34 @@
 load helpers
 
 function setup() {
-  teardown_busybox
-  setup_busybox
+  teardown_container
+  setup_container
 }
 
 function teardown() {
-  teardown_busybox
+  teardown_container
 }
 
 @test "state (kill + delete)" {
-  runc state test_busybox
+  runc state test_container
   [ "$status" -ne 0 ]
 
-  # run busybox detached
-  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+  runc run -d --console-socket $CONSOLE_SOCKET test_container
   [ "$status" -eq 0 ]
 
   # check state
-  testcontainer test_busybox running
+  testcontainer test_container running
 
-  runc kill test_busybox KILL
+  runc kill test_container KILL
   [ "$status" -eq 0 ]
 
-  # wait for busybox to be in the destroyed state
-  retry 10 1 eval "__runc state test_busybox | grep -q 'stopped'"
+  # wait for container to be in the destroyed state
+  retry 10 1 eval "__runc state test_container | grep -q 'stopped'"
 
-  # delete test_busybox
-  runc delete test_busybox
+  runc delete test_container
   [ "$status" -eq 0 ]
 
-  runc state test_busybox
+  runc state test_container
   [ "$status" -ne 0 ]
 }
 
@@ -40,27 +38,24 @@ function teardown() {
   # XXX: pause and resume require cgroups.
   requires root
 
-  runc state test_busybox
+  runc state test_container
   [ "$status" -ne 0 ]
 
-  # run busybox detached
-  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+  runc run -d --console-socket $CONSOLE_SOCKET test_container
   [ "$status" -eq 0 ]
 
   # check state
-  testcontainer test_busybox running
+  testcontainer test_container running
 
-  # pause busybox
-  runc pause test_busybox
+  runc pause test_container
   [ "$status" -eq 0 ]
 
-  # test state of busybox is paused
-  testcontainer test_busybox paused
+  # test state of container is paused
+  testcontainer test_container paused
 
-  # resume busybox
-  runc resume test_busybox
+  runc resume test_container
   [ "$status" -eq 0 ]
 
-  # test state of busybox is back to running
-  testcontainer test_busybox running
+  # test state of container is back to running
+  testcontainer test_container running
 }

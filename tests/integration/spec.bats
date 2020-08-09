@@ -3,23 +3,17 @@
 load helpers
 
 function setup() {
-  # initial cleanup in case a prior test exited and did not cleanup
-  cd "$INTEGRATION_ROOT"
-  run rm -f -r "$HELLO_BUNDLE"
-
-  # setup hello-world for spec generation testing
-  run mkdir "$HELLO_BUNDLE"
-  run mkdir "$HELLO_BUNDLE"/rootfs
-  run tar -C "$HELLO_BUNDLE"/rootfs -xf "$HELLO_IMAGE"
+  teardown_container
+  setup_container
+  rm "$BUNDLE"/config.json
 }
 
 function teardown() {
-  cd "$INTEGRATION_ROOT"
-  run rm -f -r "$HELLO_BUNDLE"
+  teardown_container
 }
 
 @test "spec generation cwd" {
-  cd "$HELLO_BUNDLE"
+  cd "$BUNDLE"
   # note this test runs from the bundle not the integration root
 
   # test that config.json does not exist after the above partial setup
@@ -36,11 +30,11 @@ function teardown() {
   run bash -c "grep -A2 'args' config.json | grep 'sh'"
   [[ "${output}" == *"sh"* ]]
 
-  # change the default args parameter from sh to hello
-  update_config '(.. | select(.? == "sh")) |= "/hello"'
+  # change the default args parameter from sh to echo
+  update_config '.process.args = ["echo",  "hello"]' $BUNDLE
 
-  # ensure the generated spec works by running hello-world
-  runc run test_hello
+  # ensure the generated spec works by running container-world
+  runc run test_container
   [ "$status" -eq 0 ]
 }
 
@@ -48,26 +42,26 @@ function teardown() {
   # note this test runs from the integration root not the bundle
 
   # test that config.json does not exist after the above partial setup
-  [ ! -e "$HELLO_BUNDLE"/config.json ]
+  [ ! -e "$BUNDLE"/config.json ]
 
   # test generation of spec does not return an error
-  runc_spec "$HELLO_BUNDLE"
+  runc_spec "$BUNDLE"
   [ "$status" -eq 0 ]
 
   # test generation of spec created our config.json (spec)
-  [ -e "$HELLO_BUNDLE"/config.json ]
+  [ -e "$BUNDLE"/config.json ]
 
-  # change the default args parameter from sh to hello
-  update_config '(.. | select(.? == "sh")) |= "/hello"' $HELLO_BUNDLE
+  # change the default args parameter from sh to echo
+  update_config '.process.args = ["echo",  "hello"]' $BUNDLE
 
-  # ensure the generated spec works by running hello-world
-  runc run --bundle "$HELLO_BUNDLE" test_hello
+  # ensure the generated spec works by running container-world
+  runc run --bundle "$BUNDLE" test_container
   [ "$status" -eq 0 ]
 }
 
 @test "spec validator" {
   TESTDIR=$(pwd)
-  cd "$HELLO_BUNDLE"
+  cd "$BUNDLE"
 
   run git clone https://github.com/opencontainers/runtime-spec.git src/runtime-spec
   [ "$status" -eq 0 ]

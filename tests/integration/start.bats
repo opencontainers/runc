@@ -3,29 +3,29 @@
 load helpers
 
 function setup() {
-  teardown_busybox
-  setup_busybox
+  teardown_container
+  setup_container
 }
 
 function teardown() {
-  teardown_busybox
+  teardown_container
 }
 
 @test "runc start" {
-  runc create --console-socket $CONSOLE_SOCKET test_busybox
+  runc create --console-socket $CONSOLE_SOCKET test_container
   [ "$status" -eq 0 ]
 
-  testcontainer test_busybox created
+  testcontainer test_container created
 
-  # start container test_busybox
-  runc start test_busybox
+  # start container test_container
+  runc start test_container
   [ "$status" -eq 0 ]
 
-  testcontainer test_busybox running
+  testcontainer test_container running
 
-  # delete test_busybox
-  runc delete --force test_busybox
+  # delete test_container
+  runc delete --force test_container
 
-  runc state test_busybox
+  runc state test_container
   [ "$status" -ne 0 ]
 }

@@ -3,47 +3,45 @@
 load helpers
 
 function setup() {
-  teardown_busybox
-  setup_busybox
+  teardown_container
+  setup_container
 }
 
 function teardown() {
-  teardown_busybox
+  teardown_container
 }
 
 @test "runc delete" {
-  runc run -d --console-socket $CONSOLE_SOCKET testbusyboxdelete
+  runc run -d --console-socket $CONSOLE_SOCKET testcontainerdelete
   [ "$status" -eq 0 ]
 
-  testcontainer testbusyboxdelete running
+  testcontainer testcontainerdelete running
 
-  runc kill testbusyboxdelete KILL
+  runc kill testcontainerdelete KILL
   [ "$status" -eq 0 ]
-  retry 10 1 eval "__runc state testbusyboxdelete | grep -q 'stopped'"
+  retry 10 1 eval "__runc state testcontainerdelete | grep -q 'stopped'"
 
-  runc delete testbusyboxdelete
+  runc delete testcontainerdelete
   [ "$status" -eq 0 ]
 
-  runc state testbusyboxdelete
+  runc state testcontainerdelete
   [ "$status" -ne 0 ]
 
-  run find /sys/fs/cgroup -wholename '*testbusyboxdelete*' -type d
+  run find /sys/fs/cgroup -wholename '*testcontainerdelete*' -type d
   [ "$status" -eq 0 ]
   [ "$output" = "" ] || fail "cgroup not cleaned up correctly: $output"
 }
 
 @test "runc delete --force" {
-  # run busybox detached
-  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+  runc run -d --console-socket $CONSOLE_SOCKET test_container
   [ "$status" -eq 0 ]
 
   # check state
-  testcontainer test_busybox running
+  testcontainer test_container running
 
-  # force delete test_busybox
-  runc delete --force test_busybox
+  runc delete --force test_container
 
-  runc state test_busybox
+  runc state test_container
   [ "$status" -ne 0 ]
 }
 
@@ -54,21 +52,20 @@ function teardown() {
 
 @test "runc delete --force in cgroupv2 with subcgroups" {
   requires cgroups_v2 root
-  set_cgroups_path "$BUSYBOX_BUNDLE"
-  set_cgroup_mount_writable "$BUSYBOX_BUNDLE"
+  set_cgroups_path "$BUNDLE"
+  set_cgroup_mount_writable "$BUNDLE"
 
-  # run busybox detached
-  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+  runc run -d --console-socket $CONSOLE_SOCKET test_container
   [ "$status" -eq 0 ]
 
   # check state
-  testcontainer test_busybox running
+  testcontainer test_container running
 
   # create a sub process
-  __runc exec -d test_busybox sleep 1d
+  __runc exec -d test_container sleep 1d
 
   # find the pid of sleep
-  pid=$(__runc exec test_busybox ps -a | grep 1d | awk '{print $1}')
+  pid=$(__runc exec test_container ps ax | grep 1d | awk '{print $1}')
   [[ ${pid} =~ [0-9]+ ]]
 
   # create subcgroups
@@ -82,17 +79,16 @@ function teardown() {
   echo ${pid} > cgroup.threads
   cat cgroup.threads
 EOF
-  cat nest.sh | runc exec test_busybox sh
+  cat nest.sh | runc exec test_container sh
   [ "$status" -eq 0 ]
   [[ "$output" =~ [0-9]+ ]]
 
   # check create subcgroups success
   [ -d $CGROUP_PATH/foo ]
 
-  # force delete test_busybox
-  runc delete --force test_busybox
+  runc delete --force test_container
 
-  runc state test_busybox
+  runc state test_container
   [ "$status" -ne 0 ]
 
   # check delete subcgroups success

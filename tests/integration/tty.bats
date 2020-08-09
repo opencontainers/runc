@@ -3,20 +3,19 @@
 load helpers
 
 function setup() {
-	teardown_busybox
-	setup_busybox
+	teardown_container
+	setup_container
 }
 
 function teardown() {
-	teardown_busybox
+	teardown_container
 }
 
 @test "runc run [tty ptsname]" {
 	# Replace sh script with readlink.
 	update_config '(.. | select(.[]? == "sh")) += ["-c", "for file in /proc/self/fd/[012]; do readlink $file; done"]' 
 
-	# run busybox
-	runc run test_busybox
+	runc run test_container
 	[ "$status" -eq 0 ]
 	[[ ${lines[0]} =~ /dev/pts/+ ]]
 	[[ ${lines[1]} =~ /dev/pts/+ ]]
@@ -31,8 +30,7 @@ function teardown() {
 	# Replace sh script with stat.
 	update_config '(.. | select(.[]? == "sh")) += ["-c", "stat -c %u:%g $(tty) | tr : \\\\n"]' 
 
-	# run busybox
-	runc run test_busybox
+	runc run test_container
 	[ "$status" -eq 0 ]
 	[[ ${lines[0]} =~ 0 ]]
 	# This is set by the default config.json (it corresponds to the standard tty group).
@@ -50,8 +48,7 @@ function teardown() {
 			| (.. | select(.gid? == 0)) .gid |= 100
 			| (.. | select(.[]? == "sh")) += ["-c", "stat -c %u:%g $(tty) | tr : \\\\n"]'
 
-	# run busybox
-	runc run test_busybox
+	runc run test_container
 	[ "$status" -eq 0 ]
 	[[ ${lines[0]} =~ 1000 ]]
 	# This is set by the default config.json (it corresponds to the standard tty group).
@@ -59,15 +56,14 @@ function teardown() {
 }
 
 @test "runc exec [tty ptsname]" {
-	# run busybox detached
-	runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+	runc run -d --console-socket $CONSOLE_SOCKET test_container
 	[ "$status" -eq 0 ]
 
 	# make sure we're running
-	testcontainer test_busybox running
+	testcontainer test_container running
 
 	# run the exec
-    runc exec -t test_busybox sh -c 'for file in /proc/self/fd/[012]; do readlink $file; done'
+    runc exec -t test_container sh -c 'for file in /proc/self/fd/[012]; do readlink $file; done'
 	[ "$status" -eq 0 ]
 	[[ ${lines[0]} =~ /dev/pts/+ ]]
 	[[ ${lines[1]} =~ /dev/pts/+ ]]
@@ -79,15 +75,14 @@ function teardown() {
 	# TODO: this can be made as a change to the gid test.
 	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_idmap
 
-	# run busybox detached
-	runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+	runc run -d --console-socket $CONSOLE_SOCKET test_container
 	[ "$status" -eq 0 ]
 
 	# make sure we're running
-	testcontainer test_busybox running
+	testcontainer test_container running
 
 	# run the exec
-    runc exec -t test_busybox sh -c 'stat -c %u:%g $(tty) | tr : \\n'
+	runc exec -t test_container sh -c 'stat -c %u:%g $(tty) | tr : \\n'
 	[ "$status" -eq 0 ]
 	[[ ${lines[0]} =~ 0 ]]
 	[[ ${lines[1]} =~ 5 ]]
@@ -102,15 +97,14 @@ function teardown() {
 	update_config 	' (.. | select(.uid? == 0)) .uid |= 1000
   			| (.. | select(.gid? == 0)) .gid |= 100' 
 
-	# run busybox detached
-	runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+	runc run -d --console-socket $CONSOLE_SOCKET test_container
 	[ "$status" -eq 0 ]
 
 	# make sure we're running
-	testcontainer test_busybox running
+	testcontainer test_container running
 
 	# run the exec
-	runc exec -t test_busybox sh -c 'stat -c %u:%g $(tty) | tr : \\n'
+	runc exec -t test_container sh -c 'stat -c %u:%g $(tty) | tr : \\n'
 	[ "$status" -eq 0 ]
 	[[ ${lines[0]} =~ 1000 ]]
 	[[ ${lines[1]} =~ 5 ]]
@@ -120,12 +114,11 @@ function teardown() {
 	# allow writing to filesystem
 	update_config '(.. | select(.readonly? != null)) .readonly |= false'
 
-	# run busybox detached
-	runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+	runc run -d --console-socket $CONSOLE_SOCKET test_container
 	[ "$status" -eq 0 ]
 
 	# make sure we're running
-	testcontainer test_busybox running
+	testcontainer test_container running
 
 	tty_info_with_consize_size=$( cat <<EOF
 {
@@ -145,14 +138,14 @@ EOF
 	)
 
 	# run the exec
-	runc exec -t --pid-file pid.txt -d --console-socket $CONSOLE_SOCKET -p <( echo $tty_info_with_consize_size ) test_busybox
+	runc exec -t --pid-file pid.txt -d --console-socket $CONSOLE_SOCKET -p <( echo $tty_info_with_consize_size ) test_container
 	[ "$status" -eq 0 ]
 
 	# check the pid was generated
 	[ -e pid.txt ]
 
 	#wait user process to finish
-	timeout 1 tail --pid=$(head -n 1 pid.txt) -f /dev/null
+	timeout 3 tail --pid=$(head -n 1 pid.txt) -f /dev/null
 
 	tty_info=$( cat <<EOF
 {
@@ -166,7 +159,7 @@ EOF
 	)
 
 	# run the exec
-	runc exec -t -p <( echo $tty_info ) test_busybox
+	runc exec -t -p <( echo $tty_info ) test_container
 	[ "$status" -eq 0 ]
 
 	# test tty width and height against original process.json
@@ -181,16 +174,16 @@ EOF
 			| del(.. | select(.? == "sh"))'
 
 	# Make sure that the handling of detached IO is done properly. See #1354.
-	__runc create test_busybox
+	__runc create test_container
 
 	# Start the command.
-	runc start test_busybox
+	runc start test_container
 	[ "$status" -eq 0 ]
 
-	testcontainer test_busybox running
+	testcontainer test_container running
 
 	# Kill the container.
-	runc kill test_busybox KILL
+	runc kill test_container KILL
 	[ "$status" -eq 0 ]
 }
 
@@ -204,14 +197,14 @@ EOF
 
 	# Make sure that the handling of non-detached IO is done properly. See #1354.
 	(
-		__runc run test_busybox
+		__runc run test_container
 	) &
 
-	wait_for_container 15 1 test_busybox running
-	testcontainer test_busybox running
+	wait_for_container 15 1 test_container running
+	testcontainer test_container running
 
 	# Kill the container.
-	runc kill test_busybox KILL
+	runc kill test_container KILL
 	[ "$status" -eq 0 ]
 }
 
@@ -223,11 +216,11 @@ EOF
 			| del(.. | select(.? == "sh"))'
 
 	# Make sure that the handling of detached IO is done properly. See #1354.
-	__runc run -d test_busybox
+	__runc run -d test_container
 
-	testcontainer test_busybox running
+	testcontainer test_container running
 
 	# Kill the container.
-	runc kill test_busybox KILL
+	runc kill test_container KILL
 	[ "$status" -eq 0 ]
 }

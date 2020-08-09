@@ -3,12 +3,12 @@
 load helpers
 
 function setup() {
-	teardown_busybox
-	setup_busybox
+	teardown_container
+	setup_container
 }
 
 function teardown() {
-	teardown_busybox
+	teardown_container
 }
 
 @test "runc run [bind mount]" {

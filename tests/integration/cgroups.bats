@@ -6,24 +6,23 @@ function teardown() {
     rm -f $BATS_TMPDIR/runc-cgroups-integration-test.json
     teardown_running_container test_cgroups_kmem
     teardown_running_container test_cgroups_permissions
-    teardown_busybox
+    teardown_container
 }
 
 function setup() {
     teardown
-    setup_busybox
+    setup_container
 }
 
 @test "runc update --kernel-memory{,-tcp} (initialized)" {
     [[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
     requires cgroups_kmem
 
-    set_cgroups_path "$BUSYBOX_BUNDLE"
+    set_cgroups_path "$BUNDLE"
 
     # Set some initial known values
-    update_config '.linux.resources.memory |= {"kernel": 16777216, "kernelTCP": 11534336}' ${BUSYBOX_BUNDLE}
+    update_config '.linux.resources.memory |= {"kernel": 16777216, "kernelTCP": 11534336}' ${BUNDLE}
 
-    # run a detached busybox to work with
     runc run -d --console-socket $CONSOLE_SOCKET test_cgroups_kmem
     [ "$status" -eq 0 ]
 
@@ -45,9 +44,8 @@ function setup() {
     [[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
     requires cgroups_kmem
 
-    set_cgroups_path "$BUSYBOX_BUNDLE"
+    set_cgroups_path "$BUNDLE"
 
-    # run a detached busybox to work with
     runc run -d --console-socket $CONSOLE_SOCKET test_cgroups_kmem
     [ "$status" -eq 0 ]
 
@@ -74,7 +72,7 @@ function setup() {
     # systemd controls the permission, so error does not happen
     requires no_systemd
 
-    set_cgroups_path "$BUSYBOX_BUNDLE"
+    set_cgroups_path "$BUNDLE"
 
     runc run -d --console-socket $CONSOLE_SOCKET test_cgroups_permissions
     [ "$status" -eq 1 ]
@@ -87,7 +85,7 @@ function setup() {
     # systemd controls the permission, so error does not happen
     requires no_systemd
 
-    set_resources_limit "$BUSYBOX_BUNDLE"
+    set_resources_limit "$BUNDLE"
 
     runc run -d --console-socket $CONSOLE_SOCKET test_cgroups_permissions
     [ "$status" -eq 1 ]
@@ -97,8 +95,8 @@ function setup() {
 @test "runc create (limits + cgrouppath + permission on the cgroup dir) succeeds" {
    [[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
 
-    set_cgroups_path "$BUSYBOX_BUNDLE"
-    set_resources_limit "$BUSYBOX_BUNDLE"
+    set_cgroups_path "$BUNDLE"
+    set_resources_limit "$BUNDLE"
 
     runc run -d --console-socket $CONSOLE_SOCKET test_cgroups_permissions
     [ "$status" -eq 0 ]
@@ -118,8 +116,8 @@ function setup() {
 @test "runc exec (limits + cgrouppath + permission on the cgroup dir) succeeds" {
    [[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
 
-    set_cgroups_path "$BUSYBOX_BUNDLE"
-    set_resources_limit "$BUSYBOX_BUNDLE"
+    set_cgroups_path "$BUNDLE"
+    set_resources_limit "$BUNDLE"
 
     runc run -d --console-socket $CONSOLE_SOCKET test_cgroups_permissions
     [ "$status" -eq 0 ]
@@ -132,8 +130,8 @@ function setup() {
 @test "runc exec (cgroup v2 + init process in non-root cgroup) succeeds" {
     requires root cgroups_v2
 
-    set_cgroups_path "$BUSYBOX_BUNDLE"
-    set_cgroup_mount_writable "$BUSYBOX_BUNDLE"
+    set_cgroups_path "$BUNDLE"
+    set_cgroup_mount_writable "$BUNDLE"
 
     runc run -d --console-socket $CONSOLE_SOCKET test_cgroups_group
     [ "$status" -eq 0 ]

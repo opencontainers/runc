@@ -179,7 +179,7 @@ func TestExecInAdditionalGroups(t *testing.T) {
 		Env:              standardEnvironment,
 		Stdin:            nil,
 		Stdout:           &stdout,
-		AdditionalGroups: []string{"plugdev", "audio"},
+		AdditionalGroups: []string{"video", "audio"},
 	}
 	err = container.Run(&pconfig)
 	ok(t, err)
@@ -197,8 +197,8 @@ func TestExecInAdditionalGroups(t *testing.T) {
 		t.Fatalf("Listed groups do not contain the audio group as expected: %v", outputGroups)
 	}
 
-	if !strings.Contains(outputGroups, "plugdev") {
-		t.Fatalf("Listed groups do not contain the plugdev group as expected: %v", outputGroups)
+	if !strings.Contains(outputGroups, "video") {
+		t.Fatalf("Listed groups do not contain the video group as expected: %v", outputGroups)
 	}
 }
 
@@ -285,7 +285,7 @@ func TestExecInTTY(t *testing.T) {
 	var stdout bytes.Buffer
 	ps := &libcontainer.Process{
 		Cwd:  "/",
-		Args: []string{"ps"},
+		Args: []string{"ps", "x"},
 		Env:  standardEnvironment,
 	}
 	parent, child, err := utils.NewSockPair("console")
@@ -345,7 +345,7 @@ func TestExecInTTY(t *testing.T) {
 
 	out := stdout.String()
 	if !strings.Contains(out, "cat") || !strings.Contains(out, "ps") {
-		t.Fatalf("unexpected running process, output %q", out)
+		t.Fatalf("unexpected running process, output:\n%q", out)
 	}
 	if strings.Contains(out, "\r") {
 		t.Fatalf("unexpected carriage-return in output")

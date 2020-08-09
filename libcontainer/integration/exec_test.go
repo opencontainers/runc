@@ -480,7 +480,7 @@ func TestAdditionalGroups(t *testing.T) {
 		Env:              standardEnvironment,
 		Stdin:            nil,
 		Stdout:           &stdout,
-		AdditionalGroups: []string{"plugdev", "audio"},
+		AdditionalGroups: []string{"video", "audio"},
 		Init:             true,
 	}
 	err = container.Run(&pconfig)
@@ -496,8 +496,8 @@ func TestAdditionalGroups(t *testing.T) {
 		t.Fatalf("Listed groups do not contain the audio group as expected: %v", outputGroups)
 	}
 
-	if !strings.Contains(outputGroups, "plugdev") {
-		t.Fatalf("Listed groups do not contain the plugdev group as expected: %v", outputGroups)
+	if !strings.Contains(outputGroups, "video") {
+		t.Fatalf("Listed groups do not contain the video group as expected: %v", outputGroups)
 	}
 }
 
@@ -665,12 +665,8 @@ func testPids(t *testing.T, systemd bool) {
 	if err != nil && strings.Contains(err.Error(), "no such directory for pids.max") {
 		t.Skip("PIDs cgroup is unsupported")
 	}
-	if err != nil && !strings.Contains(out.String(), "sh: can't fork") {
-		ok(t, err)
-	}
-
-	if err == nil {
-		t.Fatalf("expected fork() to fail with restrictive pids limit")
+	if !strings.Contains(out.String(), "/bin/sh: 0: Cannot fork") {
+		t.Fatalf("expected fork() to fail with restrictive pids limit, stdout: %q", out.String())
 	}
 
 	// Minimal restrictions are not really supported, due to quirks in using Go
