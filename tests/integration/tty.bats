@@ -13,7 +13,8 @@ function teardown() {
 
 @test "runc run [tty ptsname]" {
 	# Replace sh script with readlink.
-	update_config '(.. | select(.[]? == "sh")) += ["-c", "for file in /proc/self/fd/[012]; do readlink $file; done"]' 
+	# shellcheck disable=SC2016
+	update_config '(.. | select(.[]? == "sh")) += ["-c", "for file in /proc/self/fd/[012]; do readlink $file; done"]'
 
 	# run busybox
 	runc run test_busybox
@@ -29,7 +30,8 @@ function teardown() {
 	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_idmap
 
 	# Replace sh script with stat.
-	update_config '(.. | select(.[]? == "sh")) += ["-c", "stat -c %u:%g $(tty) | tr : \\\\n"]' 
+	# shellcheck disable=SC2016
+	update_config '(.. | select(.[]? == "sh")) += ["-c", "stat -c %u:%g $(tty) | tr : \\\\n"]'
 
 	# run busybox
 	runc run test_busybox
@@ -46,7 +48,8 @@ function teardown() {
 	# replace "uid": 0 with "uid": 1000
 	# and do a similar thing for gid.
 	# Replace sh script with stat.
-	update_config 	' (.. | select(.uid? == 0)) .uid |= 1000 
+	# shellcheck disable=SC2016
+	update_config 	' (.. | select(.uid? == 0)) .uid |= 1000
 			| (.. | select(.gid? == 0)) .gid |= 100
 			| (.. | select(.[]? == "sh")) += ["-c", "stat -c %u:%g $(tty) | tr : \\\\n"]'
 
@@ -67,7 +70,8 @@ function teardown() {
 	testcontainer test_busybox running
 
 	# run the exec
-    runc exec -t test_busybox sh -c 'for file in /proc/self/fd/[012]; do readlink $file; done'
+	# shellcheck disable=SC2016
+	runc exec -t test_busybox sh -c 'for file in /proc/self/fd/[012]; do readlink $file; done'
 	[ "$status" -eq 0 ]
 	[[ ${lines[0]} =~ /dev/pts/+ ]]
 	[[ ${lines[1]} =~ /dev/pts/+ ]]
@@ -87,7 +91,8 @@ function teardown() {
 	testcontainer test_busybox running
 
 	# run the exec
-    runc exec -t test_busybox sh -c 'stat -c %u:%g $(tty) | tr : \\n'
+	# shellcheck disable=SC2016
+	runc exec -t test_busybox sh -c 'stat -c %u:%g $(tty) | tr : \\n'
 	[ "$status" -eq 0 ]
 	[[ ${lines[0]} =~ 0 ]]
 	[[ ${lines[1]} =~ 5 ]]
@@ -99,8 +104,9 @@ function teardown() {
 
 	# replace "uid": 0 with "uid": 1000
 	# and do a similar thing for gid.
+	# shellcheck disable=SC2016
 	update_config 	' (.. | select(.uid? == 0)) .uid |= 1000
-  			| (.. | select(.gid? == 0)) .gid |= 100' 
+			| (.. | select(.gid? == 0)) .gid |= 100'
 
 	# run busybox detached
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
@@ -110,6 +116,7 @@ function teardown() {
 	testcontainer test_busybox running
 
 	# run the exec
+	# shellcheck disable=SC2016
 	runc exec -t test_busybox sh -c 'stat -c %u:%g $(tty) | tr : \\n'
 	[ "$status" -eq 0 ]
 	[[ ${lines[0]} =~ 1000 ]]
@@ -197,7 +204,7 @@ EOF
 @test "runc run [terminal=false]" {
 	# Disable terminal creation.
 	# Replace sh script with sleep.
-	
+
 	update_config   ' (.. | select(.terminal? != null)) .terminal |= false
 			| (.. | select(.[]? == "sh")) += ["sleep", "1000s"]
 			| del(.. | select(.? == "sh"))'
@@ -219,7 +226,7 @@ EOF
 	# Disable terminal creation.
 	# Replace sh script with sleep.
 	update_config 	' (.. | select(.terminal? != null)) .terminal |= false
-			| (.. | select(.[]? == "sh")) += ["sleep", "1000s"] 
+			| (.. | select(.[]? == "sh")) += ["sleep", "1000s"]
 			| del(.. | select(.? == "sh"))'
 
 	# Make sure that the handling of detached IO is done properly. See #1354.

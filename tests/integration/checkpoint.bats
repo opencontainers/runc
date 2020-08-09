@@ -27,6 +27,7 @@ function teardown() {
 
 function setup_pipes() {
 	# The changes to 'terminal' are needed for running in detached mode
+	# shellcheck disable=SC2016
 	update_config 	' (.. | select(.terminal? != null)) .terminal |= false
 			| (.. | select(.[]? == "sh")) += ["-c", "for i in `seq 10`; do read xxx || continue; echo ponG $xxx; done"]'
 

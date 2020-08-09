@@ -131,6 +131,7 @@ function teardown() {
   (__runc events test_busybox > events.log) &
   (
     retry 10 1 eval "grep -q 'test_busybox' events.log"
+    # shellcheck disable=SC2016
     __runc exec -d test_busybox sh -c 'test=$(dd if=/dev/urandom ibs=5120k)'
     retry 10 1 eval "grep -q 'oom' events.log"
     __runc delete -f test_busybox

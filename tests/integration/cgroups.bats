@@ -170,6 +170,7 @@ function setup() {
     [[ ${lines[0]} == "0::/foo" ]]
 
 # teardown: remove "/foo"
+    # shellcheck disable=SC2016
     runc exec test_cgroups_group sh -uxc 'echo -memory > /sys/fs/cgroup/cgroup.subtree_control; for f in $(cat /sys/fs/cgroup/foo/cgroup.procs); do echo $f > /sys/fs/cgroup/cgroup.procs; done; rmdir /sys/fs/cgroup/foo'
     runc exec test_cgroups_group test ! -d /sys/fs/cgroup/foo
     [ "$status" -eq 0 ]
