@@ -3,7 +3,7 @@
 load helpers
 
 function teardown() {
-    rm -f $BATS_TMPDIR/runc-cgroups-integration-test.json
+    rm -f "$BATS_TMPDIR"/runc-cgroups-integration-test.json
     teardown_running_container test_cgroups_kmem
     teardown_running_container test_cgroups_permissions
     teardown_busybox
@@ -21,10 +21,10 @@ function setup() {
     set_cgroups_path "$BUSYBOX_BUNDLE"
 
     # Set some initial known values
-    update_config '.linux.resources.memory |= {"kernel": 16777216, "kernelTCP": 11534336}' ${BUSYBOX_BUNDLE}
+    update_config '.linux.resources.memory |= {"kernel": 16777216, "kernelTCP": 11534336}' "${BUSYBOX_BUNDLE}"
 
     # run a detached busybox to work with
-    runc run -d --console-socket $CONSOLE_SOCKET test_cgroups_kmem
+    runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_kmem
     [ "$status" -eq 0 ]
 
     check_cgroup_value "memory.kmem.limit_in_bytes" 16777216
@@ -48,7 +48,7 @@ function setup() {
     set_cgroups_path "$BUSYBOX_BUNDLE"
 
     # run a detached busybox to work with
-    runc run -d --console-socket $CONSOLE_SOCKET test_cgroups_kmem
+    runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_kmem
     [ "$status" -eq 0 ]
 
     # update kernel memory limit
@@ -64,7 +64,7 @@ function setup() {
 }
 
 @test "runc create (no limits + no cgrouppath + no permission) succeeds" {
-    runc run -d --console-socket $CONSOLE_SOCKET test_cgroups_permissions
+    runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_permissions
     [ "$status" -eq 0 ]
 }
 
@@ -76,7 +76,7 @@ function setup() {
 
     set_cgroups_path "$BUSYBOX_BUNDLE"
 
-    runc run -d --console-socket $CONSOLE_SOCKET test_cgroups_permissions
+    runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_permissions
     [ "$status" -eq 1 ]
     [[ ${lines[1]} == *"permission denied"* ]]
 }
@@ -89,7 +89,7 @@ function setup() {
 
     set_resources_limit "$BUSYBOX_BUNDLE"
 
-    runc run -d --console-socket $CONSOLE_SOCKET test_cgroups_permissions
+    runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_permissions
     [ "$status" -eq 1 ]
     [[ ${lines[1]} == *"rootless needs no limits + no cgrouppath when no permission is granted for cgroups"* ]] || [[ ${lines[1]} == *"cannot set pids limit: container could not join or create cgroup"* ]]
 }
@@ -100,7 +100,7 @@ function setup() {
     set_cgroups_path "$BUSYBOX_BUNDLE"
     set_resources_limit "$BUSYBOX_BUNDLE"
 
-    runc run -d --console-socket $CONSOLE_SOCKET test_cgroups_permissions
+    runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_permissions
     [ "$status" -eq 0 ]
     if [ "$CGROUP_UNIFIED" != "no" ]; then
         if [ -n "${RUNC_USE_SYSTEMD}" ] ; then
@@ -121,7 +121,7 @@ function setup() {
     set_cgroups_path "$BUSYBOX_BUNDLE"
     set_resources_limit "$BUSYBOX_BUNDLE"
 
-    runc run -d --console-socket $CONSOLE_SOCKET test_cgroups_permissions
+    runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_permissions
     [ "$status" -eq 0 ]
 
     runc exec test_cgroups_permissions echo "cgroups_exec"
@@ -135,7 +135,7 @@ function setup() {
     set_cgroups_path "$BUSYBOX_BUNDLE"
     set_cgroup_mount_writable "$BUSYBOX_BUNDLE"
 
-    runc run -d --console-socket $CONSOLE_SOCKET test_cgroups_group
+    runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_group
     [ "$status" -eq 0 ]
 
     runc exec test_cgroups_group cat /sys/fs/cgroup/cgroup.controllers

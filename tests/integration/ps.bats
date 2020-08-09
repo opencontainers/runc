@@ -16,7 +16,7 @@ function teardown() {
   requires root
 
   # start busybox detached
-  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+  runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
   [ "$status" -eq 0 ]
 
   # check state
@@ -33,7 +33,7 @@ function teardown() {
   requires root
 
   # start busybox detached
-  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+  runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
   [ "$status" -eq 0 ]
 
   # check state
@@ -49,7 +49,7 @@ function teardown() {
   requires root
 
   # start busybox detached
-  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+  runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
   [ "$status" -eq 0 ]
 
   # check state
@@ -67,7 +67,7 @@ function teardown() {
   set_cgroups_path "$BUSYBOX_BUNDLE"
 
   # start busybox detached
-  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+  runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
   [ "$status" -eq 0 ]
 
   # check state

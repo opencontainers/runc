@@ -3,7 +3,7 @@
 load helpers
 
 function teardown() {
-    rm -f $BATS_TMPDIR/runc-cgroups-integration-test.json
+    rm -f "$BATS_TMPDIR"/runc-cgroups-integration-test.json
     teardown_running_container test_update
     teardown_running_container test_update_rt
     teardown_busybox
@@ -18,7 +18,7 @@ function setup() {
     # Set some initial known values
     update_config 	' .linux.resources.memory |= {"limit": 33554432, "reservation": 25165824}
 			| .linux.resources.cpu |= {"shares": 100, "quota": 500000, "period": 1000000, "cpus": "0"}
-			| .linux.resources.pids |= {"limit": 20}' ${BUSYBOX_BUNDLE}
+			| .linux.resources.pids |= {"limit": 20}' "${BUSYBOX_BUNDLE}"
 }
 
 # Tests whatever limits are (more or less) common between cgroup
@@ -29,7 +29,7 @@ function setup() {
         file="/sys/fs/cgroup/user.slice/user-$(id -u).slice/user@$(id -u).service/cgroup.controllers"
         # NOTE: delegation of cpuset requires systemd >= 244 (Fedora >= 32, Ubuntu >= 20.04).
         for f in memory pids cpuset; do
-            if grep -qwv $f $file; then
+            if grep -qwv $f "$file"; then
                 skip "$f is not enabled in $file"
             fi
         done
@@ -37,7 +37,7 @@ function setup() {
     init_cgroup_paths
 
     # run a few busyboxes detached
-    runc run -d --console-socket $CONSOLE_SOCKET test_update
+    runc run -d --console-socket "$CONSOLE_SOCKET" test_update
     [ "$status" -eq 0 ]
 
     # Set a few variables to make the code below work for both v1 and v2
@@ -68,7 +68,7 @@ function setup() {
     esac
     SD_UNLIMITED="infinity"
     SD_VERSION=$(systemctl --version | awk '{print $2; exit}')
-    if [ $SD_VERSION -lt 227 ]; then
+    if [ "$SD_VERSION" -lt 227 ]; then
         SD_UNLIMITED="18446744073709551615"
     fi
 
@@ -89,7 +89,7 @@ function setup() {
 
     # update cpuset if supported (i.e. we're running on a multicore cpu)
     cpu_count=$(grep -c '^processor' /proc/cpuinfo)
-    if [ $cpu_count -gt 1 ]; then
+    if [ "$cpu_count" -gt 1 ]; then
         runc update test_update --cpuset-cpus "1"
         [ "$status" -eq 0 ]
         check_cgroup_value "cpuset.cpus" 1
@@ -208,7 +208,7 @@ EOF
     check_systemd_value "TasksMax" 10
 
     # reset to initial test value via json file
-    cat << EOF > $BATS_TMPDIR/runc-cgroups-integration-test.json
+    cat << EOF > "$BATS_TMPDIR"/runc-cgroups-integration-test.json
 {
   "memory": {
     "limit": 33554432,
@@ -226,7 +226,7 @@ EOF
 }
 EOF
 
-    runc update  -r $BATS_TMPDIR/runc-cgroups-integration-test.json test_update
+    runc update  -r "$BATS_TMPDIR"/runc-cgroups-integration-test.json test_update
     [ "$status" -eq 0 ]
     check_cgroup_value "cpuset.cpus" 0
 
@@ -252,10 +252,10 @@ function check_cpu_quota() {
         check_cgroup_value "cpu.max" "$quota $period"
     else
         check_cgroup_value "cpu.cfs_quota_us" $quota
-        check_cgroup_value "cpu.cfs_period_us" $period
+        check_cgroup_value "cpu.cfs_period_us" "$period"
     fi
     # systemd values are the same for v1 and v2
-    check_systemd_value "CPUQuotaPerSecUSec" $sd_quota
+    check_systemd_value "CPUQuotaPerSecUSec" "$sd_quota"
 
     # CPUQuotaPeriodUSec requires systemd >= v242
     [ "$(systemd_version)" -lt 242 ] && return
@@ -276,8 +276,8 @@ function check_cpu_shares() {
         check_cgroup_value "cpu.weight" $weight
         check_systemd_value "CPUWeight" $weight
     else
-        check_cgroup_value "cpu.shares" $shares
-        check_systemd_value "CPUShares" $shares
+        check_cgroup_value "cpu.shares" "$shares"
+        check_systemd_value "CPUShares" "$shares"
     fi
 }
 
@@ -285,7 +285,7 @@ function check_cpu_shares() {
     [[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
 
     # run a few busyboxes detached
-    runc run -d --console-socket $CONSOLE_SOCKET test_update
+    runc run -d --console-socket "$CONSOLE_SOCKET" test_update
     [ "$status" -eq 0 ]
 
     # check that initial values were properly set
@@ -338,7 +338,7 @@ EOF
     check_cpu_quota -1 100000 "infinity"
 
     # reset to initial test value via json file
-    cat << EOF > $BATS_TMPDIR/runc-cgroups-integration-test.json
+    cat << EOF > "$BATS_TMPDIR"/runc-cgroups-integration-test.json
 {
   "cpu": {
     "shares": 100,
@@ -348,7 +348,7 @@ EOF
 }
 EOF
 
-    runc update  -r $BATS_TMPDIR/runc-cgroups-integration-test.json test_update
+    runc update  -r "$BATS_TMPDIR"/runc-cgroups-integration-test.json test_update
     [ "$status" -eq 0 ]
     check_cpu_quota 500000 1000000 "500ms"
     check_cpu_shares 100
@@ -357,9 +357,9 @@ EOF
 @test "set cpu period with no quota" {
     [[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
 
-    update_config '.linux.resources.cpu |= { "period": 1000000 }' ${BUSYBOX_BUNDLE}
+    update_config '.linux.resources.cpu |= { "period": 1000000 }' "${BUSYBOX_BUNDLE}"
 
-    runc run -d --console-socket $CONSOLE_SOCKET test_update
+    runc run -d --console-socket "$CONSOLE_SOCKET" test_update
     [ "$status" -eq 0 ]
 
     check_cpu_quota -1 1000000 "infinity"
@@ -368,9 +368,9 @@ EOF
 @test "set cpu quota with no period" {
     [[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
 
-    update_config '.linux.resources.cpu |= { "quota": 5000 }' ${BUSYBOX_BUNDLE}
+    update_config '.linux.resources.cpu |= { "quota": 5000 }' "${BUSYBOX_BUNDLE}"
 
-    runc run -d --console-socket $CONSOLE_SOCKET test_update
+    runc run -d --console-socket "$CONSOLE_SOCKET" test_update
     [ "$status" -eq 0 ]
     check_cpu_quota 5000 100000 "50ms"
 }
@@ -378,9 +378,9 @@ EOF
 @test "update cpu period with no previous period/quota set" {
     [[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
 
-    update_config '.linux.resources.cpu |= {}' ${BUSYBOX_BUNDLE}
+    update_config '.linux.resources.cpu |= {}' "${BUSYBOX_BUNDLE}"
 
-    runc run -d --console-socket $CONSOLE_SOCKET test_update
+    runc run -d --console-socket "$CONSOLE_SOCKET" test_update
     [ "$status" -eq 0 ]
 
     # update the period alone, no old values were set
@@ -392,9 +392,9 @@ EOF
 @test "update cpu quota with no previous period/quota set" {
     [[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
 
-    update_config '.linux.resources.cpu |= {}' ${BUSYBOX_BUNDLE}
+    update_config '.linux.resources.cpu |= {}' "${BUSYBOX_BUNDLE}"
 
-    runc run -d --console-socket $CONSOLE_SOCKET test_update
+    runc run -d --console-socket "$CONSOLE_SOCKET" test_update
     [ "$status" -eq 0 ]
 
     # update the quota alone, no old values were set
@@ -438,7 +438,7 @@ EOF
     done
 
     # run a detached busybox
-    runc run -d --console-socket $CONSOLE_SOCKET test_update_rt
+    runc run -d --console-socket "$CONSOLE_SOCKET" test_update_rt
     [ "$status" -eq 0 ]
 
     runc update  -r - test_update_rt <<EOF

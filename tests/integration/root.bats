@@ -3,23 +3,23 @@
 load helpers
 
 function setup() {
-  teardown_running_container_inroot test_dotbox $HELLO_BUNDLE
+  teardown_running_container_inroot test_dotbox "$HELLO_BUNDLE"
   teardown_busybox
   setup_busybox
 }
 
 function teardown() {
-  teardown_running_container_inroot test_dotbox $HELLO_BUNDLE
+  teardown_running_container_inroot test_dotbox "$HELLO_BUNDLE"
   teardown_busybox
 }
 
 @test "global --root" {
   # run busybox detached using $HELLO_BUNDLE for state
-  ROOT=$HELLO_BUNDLE runc run -d --console-socket $CONSOLE_SOCKET test_dotbox
+  ROOT=$HELLO_BUNDLE runc run -d --console-socket "$CONSOLE_SOCKET" test_dotbox
   [ "$status" -eq 0 ]
 
   # run busybox detached in default root
-  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+  runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
   [ "$status" -eq 0 ]
 
   runc state test_busybox

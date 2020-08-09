@@ -60,7 +60,7 @@ function teardown() {
 
 @test "runc exec [tty ptsname]" {
 	# run busybox detached
-	runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 	[ "$status" -eq 0 ]
 
 	# make sure we're running
@@ -80,7 +80,7 @@ function teardown() {
 	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_idmap
 
 	# run busybox detached
-	runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 	[ "$status" -eq 0 ]
 
 	# make sure we're running
@@ -103,7 +103,7 @@ function teardown() {
   			| (.. | select(.gid? == 0)) .gid |= 100' 
 
 	# run busybox detached
-	runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 	[ "$status" -eq 0 ]
 
 	# make sure we're running
@@ -121,7 +121,7 @@ function teardown() {
 	update_config '(.. | select(.readonly? != null)) .readonly |= false'
 
 	# run busybox detached
-	runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 	[ "$status" -eq 0 ]
 
 	# make sure we're running
@@ -145,7 +145,7 @@ EOF
 	)
 
 	# run the exec
-	runc exec -t --pid-file pid.txt -d --console-socket $CONSOLE_SOCKET -p <( echo $tty_info_with_consize_size ) test_busybox
+	runc exec -t --pid-file pid.txt -d --console-socket "$CONSOLE_SOCKET" -p <( echo "$tty_info_with_consize_size" ) test_busybox
 	[ "$status" -eq 0 ]
 
 	# check the pid was generated
@@ -166,7 +166,7 @@ EOF
 	)
 
 	# run the exec
-	runc exec -t -p <( echo $tty_info ) test_busybox
+	runc exec -t -p <( echo "$tty_info" ) test_busybox
 	[ "$status" -eq 0 ]
 
 	# test tty width and height against original process.json

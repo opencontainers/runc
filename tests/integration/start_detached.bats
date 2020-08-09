@@ -13,7 +13,7 @@ function teardown() {
 
 @test "runc run detached" {
   # run busybox detached
-  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+  runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
   [ "$status" -eq 0 ]
 
   # check state
@@ -30,7 +30,7 @@ function teardown() {
 		| (.. | select(.gid? == 0)) .gid |= 100' 
 
   # run busybox detached
-  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+  runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
   [ "$status" -eq 0 ]
 
   # check state
@@ -39,7 +39,7 @@ function teardown() {
 
 @test "runc run detached --pid-file" {
   # run busybox detached
-  runc run --pid-file pid.txt -d --console-socket $CONSOLE_SOCKET test_busybox
+  runc run --pid-file pid.txt -d --console-socket "$CONSOLE_SOCKET" test_busybox
   [ "$status" -eq 0 ]
 
   # check state
@@ -61,7 +61,7 @@ function teardown() {
   [ "$status" -eq 0 ]
 
   # run busybox detached
-  runc run --pid-file pid.txt -d  -b $BUSYBOX_BUNDLE --console-socket $CONSOLE_SOCKET test_busybox
+  runc run --pid-file pid.txt -d  -b "$BUSYBOX_BUNDLE" --console-socket "$CONSOLE_SOCKET" test_busybox
   [ "$status" -eq 0 ]
 
   # check state

@@ -12,7 +12,7 @@ function teardown() {
 }
 
 @test "runc create" {
-  runc create --console-socket $CONSOLE_SOCKET test_busybox
+  runc create --console-socket "$CONSOLE_SOCKET" test_busybox
   [ "$status" -eq 0 ]
 
   testcontainer test_busybox created
@@ -25,7 +25,7 @@ function teardown() {
 }
 
 @test "runc create exec" {
-  runc create --console-socket $CONSOLE_SOCKET test_busybox
+  runc create --console-socket "$CONSOLE_SOCKET" test_busybox
   [ "$status" -eq 0 ]
 
   testcontainer test_busybox created
@@ -43,7 +43,7 @@ function teardown() {
 }
 
 @test "runc create --pid-file" {
-  runc create --pid-file pid.txt --console-socket $CONSOLE_SOCKET test_busybox
+  runc create --pid-file pid.txt --console-socket "$CONSOLE_SOCKET" test_busybox
   [ "$status" -eq 0 ]
 
   testcontainer test_busybox created
@@ -69,7 +69,7 @@ function teardown() {
   run cd pid_file
   [ "$status" -eq 0 ]
 
-  runc create --pid-file pid.txt -b $BUSYBOX_BUNDLE --console-socket $CONSOLE_SOCKET  test_busybox
+  runc create --pid-file pid.txt -b "$BUSYBOX_BUNDLE" --console-socket "$CONSOLE_SOCKET"  test_busybox
   [ "$status" -eq 0 ]
 
   testcontainer test_busybox created

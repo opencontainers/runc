@@ -13,7 +13,7 @@ function teardown() {
 
 @test "runc exec" {
   # run busybox detached
-  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+  runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
   [ "$status" -eq 0 ]
 
   runc exec test_busybox echo Hello from exec
@@ -24,7 +24,7 @@ function teardown() {
 
 @test "runc exec --pid-file" {
   # run busybox detached
-  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+  runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
   [ "$status" -eq 0 ]
 
   runc exec --pid-file pid.txt test_busybox echo Hello from exec
@@ -49,7 +49,7 @@ function teardown() {
   [ "$status" -eq 0 ]
 
   # run busybox detached
-  runc run -d -b $BUSYBOX_BUNDLE --console-socket $CONSOLE_SOCKET test_busybox
+  runc run -d -b "$BUSYBOX_BUNDLE" --console-socket "$CONSOLE_SOCKET" test_busybox
   [ "$status" -eq 0 ]
 
   runc exec --pid-file pid.txt test_busybox echo Hello from exec
@@ -68,7 +68,7 @@ function teardown() {
 
 @test "runc exec ls -la" {
   # run busybox detached
-  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+  runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
   [ "$status" -eq 0 ]
 
   runc exec test_busybox ls -la
@@ -80,7 +80,7 @@ function teardown() {
 
 @test "runc exec ls -la with --cwd" {
   # run busybox detached
-  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+  runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
   [ "$status" -eq 0 ]
 
   runc exec --cwd /bin test_busybox pwd
@@ -90,7 +90,7 @@ function teardown() {
 
 @test "runc exec --env" {
   # run busybox detached
-  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+  runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
   [ "$status" -eq 0 ]
 
   runc exec --env RUNC_EXEC_TEST=true test_busybox env
@@ -104,7 +104,7 @@ function teardown() {
   [[ "$ROOTLESS" -ne 0 ]] && requires rootless_idmap
 
   # run busybox detached
-  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+  runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
   [ "$status" -eq 0 ]
 
   runc exec --user 1000:1000 test_busybox id
@@ -117,7 +117,7 @@ function teardown() {
   requires root
 
   # run busybox detached
-  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+  runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
   [ "$status" -eq 0 ]
 
   wait_for_container 15 1 test_busybox
@@ -130,7 +130,7 @@ function teardown() {
 
 @test "runc exec --preserve-fds" {
   # run busybox detached
-  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+  runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
   [ "$status" -eq 0 ]
 
   run bash -c "cat hello > preserve-fds.test; exec 3<preserve-fds.test; $RUNC ${RUNC_USE_SYSTEMD:+--systemd-cgroup} --log /proc/self/fd/2 --root $ROOT exec --preserve-fds=1 test_busybox cat /proc/self/fd/3"

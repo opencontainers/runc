@@ -55,7 +55,7 @@ function teardown() {
   [ -e "$HELLO_BUNDLE"/config.json ]
 
   # change the default args parameter from sh to hello
-  update_config '(.. | select(.? == "sh")) |= "/hello"' $HELLO_BUNDLE
+  update_config '(.. | select(.? == "sh")) |= "/hello"' "$HELLO_BUNDLE"
 
   # ensure the generated spec works by running hello-world
   runc run --bundle "$HELLO_BUNDLE" test_hello
@@ -69,12 +69,12 @@ function teardown() {
   run git clone https://github.com/opencontainers/runtime-spec.git src/runtime-spec
   [ "$status" -eq 0 ]
 
-  SPEC_VERSION=$(grep 'github.com/opencontainers/runtime-spec' ${TESTDIR}/../../go.mod | cut -d ' ' -f 2)
+  SPEC_VERSION=$(grep 'github.com/opencontainers/runtime-spec' "${TESTDIR}"/../../go.mod | cut -d ' ' -f 2)
 
   # Will look like this when not pinned to spesific tag: "v0.0.0-20190207185410-29686dbc5559", otherwise "v1.0.0"
-  SPEC_COMMIT=$(cut -d "-" -f 3 <<< $SPEC_VERSION)
+  SPEC_COMMIT=$(cut -d "-" -f 3 <<< "$SPEC_VERSION")
 
-  SPEC_REF=$([[ -z "$SPEC_COMMIT" ]] && echo $SPEC_VERSION || echo $SPEC_COMMIT)
+  SPEC_REF=$([[ -z "$SPEC_COMMIT" ]] && echo "$SPEC_VERSION" || echo "$SPEC_COMMIT")
 
   run bash -c "cd src/runtime-spec && git reset --hard ${SPEC_REF}"
 

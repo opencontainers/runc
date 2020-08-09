@@ -17,7 +17,7 @@ function teardown() {
   init_cgroup_paths
 
   # run busybox detached
-  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+  runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
   [ "$status" -eq 0 ]
 
   # generate stats
@@ -33,7 +33,7 @@ function teardown() {
   init_cgroup_paths
 
   # run busybox detached
-  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+  runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
   [ "$status" -eq 0 ]
 
   # spawn two sub processes (shells)
@@ -61,7 +61,7 @@ function teardown() {
   init_cgroup_paths
 
   # run busybox detached
-  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+  runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
   [ "$status" -eq 0 ]
 
   # spawn two sub processes (shells)
@@ -88,7 +88,7 @@ function teardown() {
   init_cgroup_paths
 
   # run busybox detached
-  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+  runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
   [ "$status" -eq 0 ]
 
   #prove there is no carry over of events.log from a prior test
@@ -118,10 +118,10 @@ function teardown() {
   init_cgroup_paths
 
   # we need the container to hit OOM, so disable swap
-  update_config '(.. | select(.resources? != null)) .resources.memory |= {"limit": 33554432, "swap": 33554432}' ${BUSYBOX_BUNDLE}
+  update_config '(.. | select(.resources? != null)) .resources.memory |= {"limit": 33554432, "swap": 33554432}' "${BUSYBOX_BUNDLE}"
 
   # run busybox detached
-  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+  runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
   [ "$status" -eq 0 ]
 
   # spawn two sub processes (shells)
