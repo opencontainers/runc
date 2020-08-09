@@ -419,8 +419,9 @@ EOF
     #
     # TODO: support systemd
     mkdir -p "$CGROUP_CPU"
-    local root_period=$(cat "${CGROUP_CPU_BASE_PATH}/cpu.rt_period_us")
-    local root_runtime=$(cat "${CGROUP_CPU_BASE_PATH}/cpu.rt_runtime_us")
+    local root_period root_runtime
+    root_period=$(cat "${CGROUP_CPU_BASE_PATH}/cpu.rt_period_us")
+    root_runtime=$(cat "${CGROUP_CPU_BASE_PATH}/cpu.rt_runtime_us")
     # the following IFS magic sets dirs=("runc-cgroups-integration-test" "test-cgroup")
     IFS='/' read -r -a dirs <<< $(echo ${CGROUP_CPU} | sed -e s@^${CGROUP_CPU_BASE_PATH}/@@)
     for (( i = 0; i < ${#dirs[@]}; i++ )); do
