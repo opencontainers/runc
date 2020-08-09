@@ -152,7 +152,7 @@ EOF
 	[ -e pid.txt ]
 
 	#wait user process to finish
-	timeout 1 tail --pid=$(head -n 1 pid.txt) -f /dev/null
+	timeout 1 tail --pid="$(head -n 1 pid.txt)" -f /dev/null
 
 	tty_info=$( cat <<EOF
 {

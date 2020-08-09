@@ -104,9 +104,10 @@ function setup() {
     [ "$status" -eq 0 ]
     if [ "$CGROUP_UNIFIED" != "no" ]; then
         if [ -n "${RUNC_USE_SYSTEMD}" ] ; then
-            if [ $(id -u) = "0" ]; then
+            if [ "$(id -u)" = "0" ]; then
                 check_cgroup_value "cgroup.controllers" "$(cat /sys/fs/cgroup/machine.slice/cgroup.controllers)"
             else
+                # shellcheck disable=SC2046
                 check_cgroup_value "cgroup.controllers" "$(cat /sys/fs/cgroup/user.slice/user-$(id -u).slice/cgroup.controllers)"
             fi
         else
