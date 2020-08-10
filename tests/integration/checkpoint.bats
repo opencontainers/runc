@@ -97,7 +97,6 @@ function simple_cr() {
 
   # run busybox
   __runc run -d test_busybox <&${in_r} >&${out_w} 2>&${out_w}
-  [ $? -eq 0 ]
 
   testcontainer test_busybox running
 
@@ -120,8 +119,8 @@ function simple_cr() {
   testcontainer test_busybox checkpointed
 
   # restore from checkpoint
-  __runc --criu "$CRIU" restore -d --work-path ./work-dir --image-path ./image-dir test_busybox <&${in_r} >&${out_w} 2>&${out_w}
-  ret=$?
+  ret=0
+  __runc --criu "$CRIU" restore -d --work-path ./work-dir --image-path ./image-dir test_busybox <&${in_r} >&${out_w} 2>&${out_w} || ret=$?
   cat ./work-dir/restore.log | grep -B 5 Error || true
   [ $ret -eq 0 ]
 
@@ -149,7 +148,6 @@ function simple_cr() {
 
   # run busybox
   __runc run -d test_busybox <&${in_r} >&${out_w} 2>&${out_w}
-  [ $? -eq 0 ]
 
   testcontainer test_busybox running
 
@@ -191,8 +189,8 @@ function simple_cr() {
   # in time when the last page is lazily transferred to the destination.
   # Killing the CRIU on the checkpoint side will let the container
   # continue to run if the migration failed at some point.
-  __runc --criu "$CRIU" restore -d --work-path ./image-dir --image-path ./image-dir --lazy-pages test_busybox_restore <&${in_r} >&${out_w} 2>&${out_w}
-  ret=$?
+  ret=0
+  __runc --criu "$CRIU" restore -d --work-path ./image-dir --image-path ./image-dir --lazy-pages test_busybox_restore <&${in_r} >&${out_w} 2>&${out_w} || ret=$?
   cat ./work-dir/restore.log | grep -B 5 Error || true
   [ $ret -eq 0 ]
 
@@ -204,10 +202,8 @@ function simple_cr() {
   [[ ${output} == "ok" ]]
 
   wait $cpt_pid
-  [ $? -eq 0 ]
 
   wait $lp_pid
-  [ $? -eq 0 ]
   PIDS_TO_KILL=()
 
   check_pipes
@@ -253,9 +249,8 @@ function simple_cr() {
 
     # restore from checkpoint; this should restore the container into the existing network namespace
     runc --criu "$CRIU" restore -d --work-path ./work-dir --console-socket $CONSOLE_SOCKET test_busybox
-    ret=$?
     cat ./work-dir/restore.log | grep -B 5 Error || true
-    [ "$ret" -eq 0 ]
+    [ "$status" -eq 0 ]
 
     # busybox should be back up and running
     testcontainer test_busybox running
