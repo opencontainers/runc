@@ -52,8 +52,8 @@ dbuild: runcimage
 		$(RUNC_IMAGE) make clean all
 
 lint:
-	$(GO) vet ./...
-	$(GO) fmt ./...
+	$(GO) vet $(MOD_VENDOR) ./...
+	$(GO) fmt $(MOD_VENDOR) ./...
 
 man:
 	man/md2man-all.sh
@@ -120,7 +120,7 @@ clean:
 validate:
 	script/validate-gofmt
 	script/validate-c
-	$(GO) vet ./...
+	$(GO) vet $(MOD_VENDOR) ./...
 
 ci: validate test release
 
