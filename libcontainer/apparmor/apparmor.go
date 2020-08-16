@@ -3,6 +3,7 @@
 package apparmor
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -12,11 +13,9 @@ import (
 
 // IsEnabled returns true if apparmor is enabled for the host.
 func IsEnabled() bool {
-	if _, err := os.Stat("/sys/kernel/security/apparmor"); err == nil && os.Getenv("container") == "" {
-		if _, err = os.Stat("/sbin/apparmor_parser"); err == nil {
-			buf, err := ioutil.ReadFile("/sys/module/apparmor/parameters/enabled")
-			return err == nil && len(buf) > 1 && buf[0] == 'Y'
-		}
+	if _, err := os.Stat("/sys/kernel/security/apparmor"); err == nil {
+		buf, err := ioutil.ReadFile("/sys/module/apparmor/parameters/enabled")
+		return err == nil && bytes.HasPrefix(buf, []byte("Y"))
 	}
 	return false
 }
