@@ -207,9 +207,6 @@ func TestEnter(t *testing.T) {
 	if testing.Short() {
 		return
 	}
-	if cgroups.IsCgroup2UnifiedMode() {
-		t.Skip("cgroup v2 is not supported")
-	}
 
 	rootfs, err := newRootfs()
 	ok(t, err)
@@ -516,9 +513,6 @@ func testFreeze(t *testing.T, systemd bool) {
 	if testing.Short() {
 		return
 	}
-	if cgroups.IsCgroup2UnifiedMode() {
-		t.Skip("cgroup v2 is not supported")
-	}
 
 	rootfs, err := newRootfs()
 	ok(t, err)
@@ -574,7 +568,7 @@ func testCpuShares(t *testing.T, systemd bool) {
 		return
 	}
 	if cgroups.IsCgroup2UnifiedMode() {
-		t.Skip("cgroup v2 is not supported")
+		t.Skip("cgroup v2 does not support CpuShares")
 	}
 
 	rootfs, err := newRootfs()
@@ -607,9 +601,6 @@ func TestPidsSystemd(t *testing.T) {
 func testPids(t *testing.T, systemd bool) {
 	if testing.Short() {
 		return
-	}
-	if cgroups.IsCgroup2UnifiedMode() {
-		t.Skip("cgroup v2 is not supported")
 	}
 
 	rootfs, err := newRootfs()
@@ -695,7 +686,7 @@ func testRunWithKernelMemory(t *testing.T, systemd bool) {
 		return
 	}
 	if cgroups.IsCgroup2UnifiedMode() {
-		t.Skip("cgroup v2 is not supported")
+		t.Skip("cgroup v2 does not support kernel memory limit")
 	}
 
 	rootfs, err := newRootfs()
