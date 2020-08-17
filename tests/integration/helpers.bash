@@ -3,8 +3,6 @@
 # Root directory of integration tests.
 INTEGRATION_ROOT=$(dirname "$(readlink -f "$BASH_SOURCE")")
 
-. ${INTEGRATION_ROOT}/multi-arch.bash
-
 RUNC="${INTEGRATION_ROOT}/../../runc"
 RECVTTY="${INTEGRATION_ROOT}/../../contrib/cmd/recvtty/recvtty"
 GOPATH="$(mktemp -d --tmpdir runc-integration-gopath.XXXXXX)"
@@ -13,15 +11,15 @@ GOPATH="$(mktemp -d --tmpdir runc-integration-gopath.XXXXXX)"
 TESTDATA="${INTEGRATION_ROOT}/testdata"
 
 # Busybox image
-BUSYBOX_IMAGE="$BATS_TMPDIR/busybox.tar"
+BUSYBOX_IMAGE="$TESTDATA/busybox.tar"
 BUSYBOX_BUNDLE="$BATS_TMPDIR/busyboxtest"
 
 # hello-world in tar format
-HELLO_FILE=`get_hello`
-HELLO_IMAGE="$TESTDATA/$HELLO_FILE"
+HELLO_IMAGE="$TESTDATA/hello-world.tar"
 HELLO_BUNDLE="$BATS_TMPDIR/hello-world"
 
 # debian image
+DEBIAN_IMAGE="$TESTDATA/debian.tar"
 DEBIAN_BUNDLE="$BATS_TMPDIR/debiantest"
 
 # CRIU PATH
@@ -420,11 +418,9 @@ function setup_busybox() {
 	setup_recvtty
 	run mkdir "$BUSYBOX_BUNDLE"
 	run mkdir "$BUSYBOX_BUNDLE"/rootfs
-	if [ -e "/testdata/busybox.tar" ]; then
-		BUSYBOX_IMAGE="/testdata/busybox.tar"
-	fi
 	if [ ! -e $BUSYBOX_IMAGE ]; then
-		curl -o $BUSYBOX_IMAGE -sSL `get_busybox`
+		echo "busybox image does not exist"
+		exit 1
 	fi
 	tar --exclude './dev/*' -C "$BUSYBOX_BUNDLE"/rootfs -xf "$BUSYBOX_IMAGE"
 	cd "$BUSYBOX_BUNDLE"
@@ -435,6 +431,10 @@ function setup_hello() {
 	setup_recvtty
 	run mkdir "$HELLO_BUNDLE"
 	run mkdir "$HELLO_BUNDLE"/rootfs
+	if [ ! -e "$HELLO_IMAGE" ]; then
+		echo "hello-world image does not exist"
+		exit 2
+	fi
 	tar --exclude './dev/*' -C "$HELLO_BUNDLE"/rootfs -xf "$HELLO_IMAGE"
 	cd "$HELLO_BUNDLE"
 	runc_spec
@@ -449,17 +449,14 @@ function setup_debian() {
 
 	setup_recvtty
 	run mkdir "$DEBIAN_BUNDLE"
-
-	if [ ! -d "$DEBIAN_ROOTFS/rootfs" ]; then
-		get_and_extract_debian "$DEBIAN_BUNDLE"
+	run mkdir "$DEBIAN_BUNDLE"/rootfs
+	if [ ! -e "$DEBIAN_IMAGE" ]; then
+		echo "debian image does not exist"
+		exit 3
 	fi
-
-	# Use the cached version
-	if [ ! -d "$DEBIAN_BUNDLE/rootfs" ]; then
-		cp -r "$DEBIAN_ROOTFS"/* "$DEBIAN_BUNDLE/"
-	fi
-
+	tar --exclude './dev/*' -C "$DEBIAN_BUNDLE"/rootfs -xf "$DEBIAN_IMAGE"
 	cd "$DEBIAN_BUNDLE"
+	runc_spec
 }
 
 function teardown_running_container() {

@@ -1,5 +1,6 @@
 CONTAINER_ENGINE := docker
 GO := go
+export CONTAINER_ENGINE
 
 PREFIX ?= $(DESTDIR)/usr/local
 BINDIR := $(PREFIX)/sbin
@@ -58,8 +59,12 @@ lint:
 man:
 	man/md2man-all.sh
 
-runcimage:
+runcimage: | .download_test_images
 	$(CONTAINER_ENGINE) build $(CONTAINER_ENGINE_BUILD_FLAGS) -t $(RUNC_IMAGE) .
+
+.download_test_images:
+	make -C tests/integration/testdata/
+	ln -sf tests/integration/testdata/ "$@"
 
 test: unittest integration rootlessintegration
 
@@ -72,7 +77,7 @@ unittest: runcimage
 		-v $(CURDIR):/go/src/$(PROJECT) \
 		$(RUNC_IMAGE) make localunittest TESTFLAGS=$(TESTFLAGS)
 
-localunittest: all
+localunittest: all | .download_test_images 
 	$(GO) test $(MOD_VENDOR) -timeout 3m -tags "$(BUILDTAGS)" $(TESTFLAGS) -v ./...
 
 integration: runcimage
@@ -82,7 +87,7 @@ integration: runcimage
 		-v $(CURDIR):/go/src/$(PROJECT) \
 		$(RUNC_IMAGE) make localintegration TESTPATH=$(TESTPATH)
 
-localintegration: all
+localintegration: all | .download_test_images
 	bats -t tests/integration$(TESTPATH)
 
 rootlessintegration: runcimage
@@ -92,7 +97,7 @@ rootlessintegration: runcimage
 		-e ROOTLESS_TESTPATH \
 		$(RUNC_IMAGE) make localrootlessintegration
 
-localrootlessintegration: all
+localrootlessintegration: all | .download_test_images
 	tests/rootless.sh
 
 shell: runcimage
@@ -116,6 +121,8 @@ clean:
 	rm -f contrib/cmd/recvtty/recvtty
 	rm -rf release
 	rm -rf man/man8
+	rm -f .download_test_images
+	make -C tests/integration/testdata/ clean
 
 validate:
 	script/validate-gofmt

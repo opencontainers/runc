@@ -51,9 +51,9 @@ EOF
     # Add a user for rootless tests
     useradd -u2000 -m -d/home/rootless -s/bin/bash rootless
 
+    make -C /vagrant .download_test_images
     # Add busybox for libcontainer/integration tests
-    . /vagrant/tests/integration/multi-arch.bash \
-        && mkdir /busybox \
-        && curl -fsSL $(get_busybox) | tar xfJC - /busybox
+    mkdir /busybox
+    tar --exclude './dev/*' -C /busybox -xf /vagrant/tests/integration/testdata/busybox.tar
   SHELL
 end

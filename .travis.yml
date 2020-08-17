@@ -60,8 +60,12 @@ services:
   - docker
 
 before_install:
+  - sudo su - root -c 'echo "deb http://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/Debian_Unstable/  /" | sudo cat > /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list'
+  - wget -nv https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/Debian_Unstable/Release.key -O- | sudo apt-key add -
   - sudo apt-get -qq update
-  - sudo apt-get install -y libseccomp-dev
+  - sudo apt-get install -y libseccomp-dev skopeo
+  - sudo curl -o /usr/local/bin/umoci -fsSL https://github.com/opencontainers/umoci/releases/download/v0.4.5/umoci.amd64
+  - sudo chmod a+x /usr/local/bin/umoci
   - GO111MODULE=off go get -u golang.org/x/lint/golint
   - GO111MODULE=off go get -u github.com/vbatts/git-validation
   - env | grep TRAVIS_
