@@ -85,16 +85,17 @@ func InitSeccomp(config *configs.Seccomp) error {
 
 // IsEnabled returns if the kernel has been configured to support seccomp.
 func IsEnabled() bool {
+	// Check if Seccomp is supported, via CONFIG_SECCOMP.
+	if err := unix.Prctl(unix.PR_GET_SECCOMP, 0, 0, 0, 0); err != unix.EINVAL {
+		// Make sure the kernel has CONFIG_SECCOMP_FILTER.
+		if err := unix.Prctl(unix.PR_SET_SECCOMP, unix.SECCOMP_MODE_FILTER, 0, 0, 0); err != unix.EINVAL {
+			return true
+		}
+	}
+
 	// Try to read from /proc/self/status for kernels > 3.8
 	s, err := parseStatusFile("/proc/self/status")
 	if err != nil {
-		// Check if Seccomp is supported, via CONFIG_SECCOMP.
-		if err := unix.Prctl(unix.PR_GET_SECCOMP, 0, 0, 0, 0); err != unix.EINVAL {
-			// Make sure the kernel has CONFIG_SECCOMP_FILTER.
-			if err := unix.Prctl(unix.PR_SET_SECCOMP, unix.SECCOMP_MODE_FILTER, 0, 0, 0); err != unix.EINVAL {
-				return true
-			}
-		}
 		return false
 	}
 	_, ok := s["Seccomp"]
