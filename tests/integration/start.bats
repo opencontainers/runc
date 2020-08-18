@@ -12,7 +12,7 @@ function teardown() {
 }
 
 @test "runc start" {
-  runc create --console-socket $CONSOLE_SOCKET test_busybox
+  runc create --console-socket "$CONSOLE_SOCKET" test_busybox
   [ "$status" -eq 0 ]
 
   testcontainer test_busybox created

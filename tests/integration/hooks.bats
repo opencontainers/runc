@@ -9,16 +9,16 @@ HOOKLIBCC=librunc-hooks-create-container.so
 LIBPATH="$DEBIAN_BUNDLE/rootfs/lib/"
 
 function setup() {
-	umount $LIBPATH/$HOOKLIBCR.1.0.0 &> /dev/null || true
-	umount $LIBPATH/$HOOKLIBCC.1.0.0 &> /dev/null || true
+	umount "$LIBPATH"/$HOOKLIBCR.1.0.0 &> /dev/null || true
+	umount "$LIBPATH"/$HOOKLIBCC.1.0.0 &> /dev/null || true
 
 	teardown_debian
 	setup_debian
 }
 
 function teardown() {
-	umount $LIBPATH/$HOOKLIBCR.1.0.0 &> /dev/null || true
-	umount $LIBPATH/$HOOKLIBCC.1.0.0 &> /dev/null || true
+	umount "$LIBPATH"/$HOOKLIBCR.1.0.0 &> /dev/null || true
+	umount "$LIBPATH"/$HOOKLIBCC.1.0.0 &> /dev/null || true
 
 	rm -f $HOOKLIBCR.1.0.0 $HOOKLIBCC.1.0.0
 	teardown_debian
@@ -39,7 +39,8 @@ function teardown() {
 		pid=\$(cat - | jq -r '.pid')
 		touch "$LIBPATH/$HOOKLIBCR.1.0.0"
 		nsenter -m \$ns -t \$pid mount --bind "$current_pwd/$HOOKLIBCR.1.0.0" "$LIBPATH/$HOOKLIBCR.1.0.0"
-	EOF)
+EOF
+)
 
 	create_container_hook="touch ./lib/$HOOKLIBCC.1.0.0 && mount --bind $current_pwd/$HOOKLIBCC.1.0.0 ./lib/$HOOKLIBCC.1.0.0"
 
@@ -47,15 +48,15 @@ function teardown() {
 		.hooks |= . + {"createRuntime": [{"path": "/bin/sh", "args": ["/bin/sh", "-c", $create_runtime_hook]}]} |
 		.hooks |= . + {"createContainer": [{"path": "/bin/sh", "args": ["/bin/sh", "-c", $create_container_hook]}]} |
 		.hooks |= . + {"startContainer": [{"path": "/bin/sh", "args": ["/bin/sh", "-c", "ldconfig"]}]} |
-		.process.args = ["/bin/sh", "-c", "ldconfig -p | grep librunc"]' $DEBIAN_BUNDLE/config.json)
+		.process.args = ["/bin/sh", "-c", "ldconfig -p | grep librunc"]' "$DEBIAN_BUNDLE"/config.json)
 	echo "${CONFIG}" > config.json
 
 	runc run test_debian
 	[ "$status" -eq 0 ]
 
 	echo "Checking create-runtime library"
-	echo $output | grep $HOOKLIBCR
+	echo "$output" | grep $HOOKLIBCR
 
 	echo "Checking create-container library"
-	echo $output | grep $HOOKLIBCC
+	echo "$output" | grep $HOOKLIBCC
 }

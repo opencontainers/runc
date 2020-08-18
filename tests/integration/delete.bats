@@ -12,7 +12,7 @@ function teardown() {
 }
 
 @test "runc delete" {
-  runc run -d --console-socket $CONSOLE_SOCKET testbusyboxdelete
+  runc run -d --console-socket "$CONSOLE_SOCKET" testbusyboxdelete
   [ "$status" -eq 0 ]
 
   testcontainer testbusyboxdelete running
@@ -34,7 +34,7 @@ function teardown() {
 
 @test "runc delete --force" {
   # run busybox detached
-  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+  runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
   [ "$status" -eq 0 ]
 
   # check state
@@ -58,7 +58,7 @@ function teardown() {
   set_cgroup_mount_writable "$BUSYBOX_BUNDLE"
 
   # run busybox detached
-  runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+  runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
   [ "$status" -eq 0 ]
 
   # check state
@@ -82,12 +82,12 @@ function teardown() {
   echo ${pid} > cgroup.threads
   cat cgroup.threads
 EOF
-  cat nest.sh | runc exec test_busybox sh
+  runc exec test_busybox sh < nest.sh
   [ "$status" -eq 0 ]
   [[ "$output" =~ [0-9]+ ]]
 
   # check create subcgroups success
-  [ -d $CGROUP_PATH/foo ]
+  [ -d "$CGROUP_PATH"/foo ]
 
   # force delete test_busybox
   runc delete --force test_busybox
@@ -96,5 +96,5 @@ EOF
   [ "$status" -ne 0 ]
 
   # check delete subcgroups success
-  [ ! -d $CGROUP_PATH/foo ]
+  [ ! -d "$CGROUP_PATH"/foo ]
 }

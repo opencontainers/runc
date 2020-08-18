@@ -121,6 +121,7 @@ validate:
 	script/validate-gofmt
 	script/validate-c
 	$(GO) vet $(MOD_VENDOR) ./...
+	shellcheck tests/integration/*.bats
 
 ci: validate test release
 
