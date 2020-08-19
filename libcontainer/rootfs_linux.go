@@ -329,14 +329,10 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string, enableCgroupns b
 		if err := os.MkdirAll(dest, 0755); err != nil {
 			return err
 		}
-		if err := mountPropagate(m, rootfs, mountLabel); err != nil {
-			// older kernels do not support labeling of /dev/mqueue
-			if err := mountPropagate(m, rootfs, ""); err != nil {
-				return err
-			}
-			return label.SetFileLabel(dest, mountLabel)
+		if err := mountPropagate(m, rootfs, ""); err != nil {
+			return err
 		}
-		return nil
+		return label.SetFileLabel(dest, mountLabel)
 	case "tmpfs":
 		copyUp := m.Extensions&configs.EXT_COPYUP == configs.EXT_COPYUP
 		tmpDir := ""
