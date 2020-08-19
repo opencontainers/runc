@@ -241,13 +241,17 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 	for _, m := range spec.Mounts {
 		config.Mounts = append(config.Mounts, createLibcontainerMount(cwd, m))
 	}
-	if err := createDevices(spec, config); err != nil {
-		return nil, err
-	}
-	c, err := CreateCgroupConfig(opts)
+
+	defaultDevs, err := createDevices(spec, config)
 	if err != nil {
 		return nil, err
 	}
+
+	c, err := CreateCgroupConfig(opts, defaultDevs)
+	if err != nil {
+		return nil, err
+	}
+
 	config.Cgroups = c
 	// set linux-specific config
 	if spec.Linux != nil {
@@ -410,7 +414,7 @@ func initSystemdProps(spec *specs.Spec) ([]systemdDbus.Property, error) {
 	return sp, nil
 }
 
-func CreateCgroupConfig(opts *CreateOpts) (*configs.Cgroup, error) {
+func CreateCgroupConfig(opts *CreateOpts, defaultDevs []*configs.Device) (*configs.Cgroup, error) {
 	var (
 		myCgroupPath string
 
@@ -616,9 +620,9 @@ func CreateCgroupConfig(opts *CreateOpts) (*configs.Cgroup, error) {
 			}
 		}
 	}
+
 	// Append the default allowed devices to the end of the list.
-	// XXX: Really this should be prefixed...
-	for _, device := range AllowedDevices {
+	for _, device := range defaultDevs {
 		c.Resources.Devices = append(c.Resources.Devices, &device.DeviceRule)
 	}
 	return c, nil
@@ -650,13 +654,26 @@ func stringToDeviceRune(s string) (configs.DeviceType, error) {
 	}
 }
 
-func createDevices(spec *specs.Spec, config *configs.Config) error {
-	// Add default set of devices.
-	for _, device := range AllowedDevices {
-		if device.Path != "" {
-			config.Devices = append(config.Devices, device)
+func createDevices(spec *specs.Spec, config *configs.Config) ([]*configs.Device, error) {
+	// If a spec device is redundant with a default device, remove that default
+	// device (the spec one takes priority).
+	dedupedAllowDevs := []*configs.Device{}
+
+next:
+	for _, ad := range AllowedDevices {
+		if ad.Path != "" {
+			for _, sd := range spec.Linux.Devices {
+				if sd.Path == ad.Path {
+					continue next
+				}
+			}
+		}
+		dedupedAllowDevs = append(dedupedAllowDevs, ad)
+		if ad.Path != "" {
+			config.Devices = append(config.Devices, ad)
 		}
 	}
+
 	// Merge in additional devices from the spec.
 	if spec.Linux != nil {
 		for _, d := range spec.Linux.Devices {
@@ -671,7 +688,7 @@ func createDevices(spec *specs.Spec, config *configs.Config) error {
 			}
 			dt, err := stringToDeviceRune(d.Type)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			if d.FileMode != nil {
 				filemode = *d.FileMode
@@ -690,7 +707,8 @@ func createDevices(spec *specs.Spec, config *configs.Config) error {
 			config.Devices = append(config.Devices, device)
 		}
 	}
-	return nil
+
+	return dedupedAllowDevs, nil
 }
 
 func setupUserNamespace(spec *specs.Spec, config *configs.Config) error {

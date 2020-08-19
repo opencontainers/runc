@@ -259,7 +259,7 @@ func TestLinuxCgroupWithMemoryResource(t *testing.T) {
 		Spec:             spec,
 	}
 
-	cgroup, err := CreateCgroupConfig(opts)
+	cgroup, err := CreateCgroupConfig(opts, nil)
 	if err != nil {
 		t.Errorf("Couldn't create Cgroup config: %v", err)
 	}
@@ -303,7 +303,7 @@ func TestLinuxCgroupSystemd(t *testing.T) {
 		Spec:             spec,
 	}
 
-	cgroup, err := CreateCgroupConfig(opts)
+	cgroup, err := CreateCgroupConfig(opts, nil)
 
 	if err != nil {
 		t.Errorf("Couldn't create Cgroup config: %v", err)
@@ -339,7 +339,7 @@ func TestLinuxCgroupSystemdWithEmptyPath(t *testing.T) {
 		Spec:             spec,
 	}
 
-	cgroup, err := CreateCgroupConfig(opts)
+	cgroup, err := CreateCgroupConfig(opts, nil)
 
 	if err != nil {
 		t.Errorf("Couldn't create Cgroup config: %v", err)
@@ -374,7 +374,7 @@ func TestLinuxCgroupSystemdWithInvalidPath(t *testing.T) {
 		Spec:             spec,
 	}
 
-	_, err := CreateCgroupConfig(opts)
+	_, err := CreateCgroupConfig(opts, nil)
 	if err == nil {
 		t.Error("Expected to produce an error if not using the correct format for cgroup paths belonging to systemd")
 	}
@@ -393,7 +393,7 @@ func TestLinuxCgroupsPathSpecified(t *testing.T) {
 		Spec:             spec,
 	}
 
-	cgroup, err := CreateCgroupConfig(opts)
+	cgroup, err := CreateCgroupConfig(opts, nil)
 	if err != nil {
 		t.Errorf("Couldn't create Cgroup config: %v", err)
 	}
@@ -411,7 +411,7 @@ func TestLinuxCgroupsPathNotSpecified(t *testing.T) {
 		Spec:             spec,
 	}
 
-	cgroup, err := CreateCgroupConfig(opts)
+	cgroup, err := CreateCgroupConfig(opts, nil)
 	if err != nil {
 		t.Errorf("Couldn't create Cgroup config: %v", err)
 	}
@@ -646,5 +646,109 @@ func TestNullProcess(t *testing.T) {
 
 	if err != nil {
 		t.Errorf("Null process should be forbidden")
+	}
+}
+
+func TestCreateDevices(t *testing.T) {
+	spec := Example()
+
+	// dummy uid/gid for /dev/tty; will enable the test to check if createDevices()
+	// preferred the spec's device over the redundant default device
+	ttyUid := uint32(1000)
+	ttyGid := uint32(1000)
+	fm := os.FileMode(0666)
+
+	spec.Linux = &specs.Linux{
+		Devices: []specs.LinuxDevice{
+			{
+				// This is purposely redundant with one of runc's default devices
+				Path:     "/dev/tty",
+				Type:     "c",
+				Major:    5,
+				Minor:    0,
+				FileMode: &fm,
+				UID:      &ttyUid,
+				GID:      &ttyGid,
+			},
+			{
+				// This is purposely not redundant with one of runc's default devices
+				Path:  "/dev/ram0",
+				Type:  "b",
+				Major: 1,
+				Minor: 0,
+			},
+		},
+	}
+
+	conf := &configs.Config{}
+
+	defaultDevs, err := createDevices(spec, conf)
+	if err != nil {
+		t.Errorf("failed to create devices: %v", err)
+	}
+
+	// Verify the returned default devices has the /dev/tty entry deduplicated
+	found := false
+	for _, d := range defaultDevs {
+		if d.Path == "/dev/tty" {
+			if found {
+				t.Errorf("createDevices failed: returned a duplicated device entry: %v", defaultDevs)
+			}
+			found = true
+		}
+	}
+
+	// Verify that createDevices() placed all default devices in the config
+	for _, allowedDev := range AllowedDevices {
+		if allowedDev.Path == "" {
+			continue
+		}
+
+		found := false
+		for _, configDev := range conf.Devices {
+			if configDev.Path == allowedDev.Path {
+				found = true
+			}
+		}
+		if !found {
+			configDevPaths := []string{}
+			for _, configDev := range conf.Devices {
+				configDevPaths = append(configDevPaths, configDev.Path)
+			}
+			t.Errorf("allowedDevice %s was not found in the config's devices: %v", allowedDev.Path, configDevPaths)
+		}
+	}
+
+	// Verify that createDevices() deduplicated the /dev/tty entry in the config
+	for _, configDev := range conf.Devices {
+		if configDev.Path == "/dev/tty" {
+			wantDev := &configs.Device{
+				Path:     "/dev/tty",
+				FileMode: 0666,
+				Uid:      1000,
+				Gid:      1000,
+				DeviceRule: configs.DeviceRule{
+					Type:  configs.CharDevice,
+					Major: 5,
+					Minor: 0,
+				},
+			}
+
+			if *configDev != *wantDev {
+				t.Errorf("redundant dev was not deduplicated correctly: want %v, got %v", wantDev, configDev)
+			}
+		}
+	}
+
+	// Verify that createDevices() added the entry for /dev/ram0 in the config
+	found = false
+	for _, configDev := range conf.Devices {
+		if configDev.Path == "/dev/ram0" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("device /dev/ram0 not found in config devices; got %v", conf.Devices)
 	}
 }
