@@ -61,8 +61,7 @@ function simple_cr() {
 
   testcontainer test_busybox running
 
-  # shellcheck disable=SC2034
-  for i in $(seq 2); do
+  for _ in $(seq 2); do
     # checkpoint the running container
     runc --criu "$CRIU" checkpoint --work-path ./work-dir test_busybox
     grep -B 5 Error ./work-dir/dump.log || true
@@ -243,8 +242,7 @@ function simple_cr() {
 
   testcontainer test_busybox running
 
-  # shellcheck disable=SC2034
-  for i in $(seq 2); do
+  for _ in $(seq 2); do
     # checkpoint the running container; this automatically tells CRIU to
     # handle the network namespace defined in config.json as an external
     runc --criu "$CRIU" checkpoint --work-path ./work-dir test_busybox

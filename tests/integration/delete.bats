@@ -61,8 +61,7 @@ function teardown() {
 
   local subsystems="memory freezer"
 
-  for i in $(seq 1); do
-    runc run -d --console-socket $CONSOLE_SOCKET test_busybox
+    runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
     [ "$status" -eq 0 ]
 
     testcontainer test_busybox running
@@ -89,9 +88,9 @@ EOF
 
     for s in ${subsystems}; do
       name=CGROUP_${s^^}
-      eval path=\$${name}/foo
-      echo $path
-      [ -d ${path} ] || fail "test failed to create memory sub-cgroup"
+      eval path=\$"${name}"/foo
+      # shellcheck disable=SC2154
+      [ -d "${path}" ] || fail "test failed to create memory sub-cgroup ($path not found)"
     done
 
     runc delete --force test_busybox
@@ -102,8 +101,6 @@ EOF
     run find /sys/fs/cgroup -wholename '*testbusyboxdelete*' -type d
     [ "$status" -eq 0 ]
     [ "$output" = "" ] || fail "cgroup not cleaned up correctly: $output"
-
-  done
 }
 
 @test "runc delete --force in cgroupv2 with subcgroups" {
