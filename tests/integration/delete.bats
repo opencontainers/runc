@@ -61,7 +61,6 @@ function teardown() {
 
   local subsystems="memory freezer"
 
-  for i in $(seq 1); do
     runc run -d --console-socket $CONSOLE_SOCKET test_busybox
     [ "$status" -eq 0 ]
 
@@ -102,8 +101,6 @@ EOF
     run find /sys/fs/cgroup -wholename '*testbusyboxdelete*' -type d
     [ "$status" -eq 0 ]
     [ "$output" = "" ] || fail "cgroup not cleaned up correctly: $output"
-
-  done
 }
 
 @test "runc delete --force in cgroupv2 with subcgroups" {
