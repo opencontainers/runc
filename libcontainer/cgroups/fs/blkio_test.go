@@ -322,6 +322,62 @@ func TestBlkioBFQDebugStats(t *testing.T) {
 	expectBlkioStatsEquals(t, expectedStats, actualStats.BlkioStats)
 }
 
+func TestBlkioMultipleStatsFiles(t *testing.T) {
+	helper := NewCgroupTestUtil("blkio", t)
+	defer helper.cleanup()
+	helper.writeFileContents(blkioBFQDebugStatsTestFiles)
+	helper.writeFileContents(blkioCFQStatsTestFiles)
+	blkio := &BlkioGroup{}
+	actualStats := *cgroups.NewStats()
+	err := blkio.GetStats(helper.CgroupPath, &actualStats)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expectedStats := cgroups.BlkioStats{}
+	appendBlkioStatEntry(&expectedStats.SectorsRecursive, 8, 0, 2048, "")
+
+	appendBlkioStatEntry(&expectedStats.IoServiceBytesRecursive, 8, 0, 1100, "Read")
+	appendBlkioStatEntry(&expectedStats.IoServiceBytesRecursive, 8, 0, 1200, "Write")
+	appendBlkioStatEntry(&expectedStats.IoServiceBytesRecursive, 8, 0, 1300, "Sync")
+	appendBlkioStatEntry(&expectedStats.IoServiceBytesRecursive, 8, 0, 1500, "Async")
+	appendBlkioStatEntry(&expectedStats.IoServiceBytesRecursive, 8, 0, 1500, "Total")
+
+	appendBlkioStatEntry(&expectedStats.IoServicedRecursive, 8, 0, 11, "Read")
+	appendBlkioStatEntry(&expectedStats.IoServicedRecursive, 8, 0, 41, "Write")
+	appendBlkioStatEntry(&expectedStats.IoServicedRecursive, 8, 0, 21, "Sync")
+	appendBlkioStatEntry(&expectedStats.IoServicedRecursive, 8, 0, 31, "Async")
+	appendBlkioStatEntry(&expectedStats.IoServicedRecursive, 8, 0, 51, "Total")
+
+	appendBlkioStatEntry(&expectedStats.IoQueuedRecursive, 8, 0, 2, "Read")
+	appendBlkioStatEntry(&expectedStats.IoQueuedRecursive, 8, 0, 3, "Write")
+	appendBlkioStatEntry(&expectedStats.IoQueuedRecursive, 8, 0, 4, "Sync")
+	appendBlkioStatEntry(&expectedStats.IoQueuedRecursive, 8, 0, 5, "Async")
+	appendBlkioStatEntry(&expectedStats.IoQueuedRecursive, 8, 0, 6, "Total")
+
+	appendBlkioStatEntry(&expectedStats.IoServiceTimeRecursive, 8, 0, 173959, "Read")
+	appendBlkioStatEntry(&expectedStats.IoServiceTimeRecursive, 8, 0, 0, "Write")
+	appendBlkioStatEntry(&expectedStats.IoServiceTimeRecursive, 8, 0, 0, "Sync")
+	appendBlkioStatEntry(&expectedStats.IoServiceTimeRecursive, 8, 0, 173, "Async")
+	appendBlkioStatEntry(&expectedStats.IoServiceTimeRecursive, 8, 0, 174, "Total")
+
+	appendBlkioStatEntry(&expectedStats.IoWaitTimeRecursive, 8, 0, 1557, "Read")
+	appendBlkioStatEntry(&expectedStats.IoWaitTimeRecursive, 8, 0, 0, "Write")
+	appendBlkioStatEntry(&expectedStats.IoWaitTimeRecursive, 8, 0, 0, "Sync")
+	appendBlkioStatEntry(&expectedStats.IoWaitTimeRecursive, 8, 0, 1557, "Async")
+	appendBlkioStatEntry(&expectedStats.IoWaitTimeRecursive, 8, 0, 1557, "Total")
+
+	appendBlkioStatEntry(&expectedStats.IoMergedRecursive, 8, 0, 51, "Read")
+	appendBlkioStatEntry(&expectedStats.IoMergedRecursive, 8, 0, 101, "Write")
+	appendBlkioStatEntry(&expectedStats.IoMergedRecursive, 8, 0, 0, "Sync")
+	appendBlkioStatEntry(&expectedStats.IoMergedRecursive, 8, 0, 0, "Async")
+	appendBlkioStatEntry(&expectedStats.IoMergedRecursive, 8, 0, 151, "Total")
+
+	appendBlkioStatEntry(&expectedStats.IoTimeRecursive, 8, 0, 16, "")
+
+	expectBlkioStatsEquals(t, expectedStats, actualStats.BlkioStats)
+}
+
 func TestBlkioBFQStats(t *testing.T) {
 	helper := NewCgroupTestUtil("blkio", t)
 	defer helper.cleanup()
