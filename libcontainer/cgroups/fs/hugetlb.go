@@ -24,10 +24,12 @@ func (s *HugetlbGroup) Apply(path string, d *cgroupData) error {
 }
 
 func (s *HugetlbGroup) Set(path string, cgroup *configs.Cgroup) error {
-	for _, hugetlb := range cgroup.Resources.HugetlbLimit {
-		if err := fscommon.WriteFile(path, strings.Join([]string{"hugetlb", hugetlb.Pagesize, "limit_in_bytes"}, "."), strconv.FormatUint(hugetlb.Limit, 10)); err != nil {
-			return err
-		}
+	if len(cgroup.Resources.HugetlbLimit) == 0 {
+		return nil
+	}
+	hugetlb := cgroup.Resources.HugetlbLimit[len(cgroup.Resources.HugetlbLimit)-1]
+	if err := fscommon.WriteFile(path, strings.Join([]string{"hugetlb", hugetlb.Pagesize, "limit_in_bytes"}, "."), strconv.FormatUint(hugetlb.Limit, 10)); err != nil {
+		return err
 	}
 
 	return nil

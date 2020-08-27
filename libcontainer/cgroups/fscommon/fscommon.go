@@ -13,10 +13,7 @@ import (
 )
 
 func WriteFile(dir, file, data string) error {
-	if dir == "" {
-		return errors.Errorf("no directory specified for %s", file)
-	}
-	path, err := securejoin.SecureJoin(dir, file)
+	path, err := joinPath(dir, file)
 	if err != nil {
 		return err
 	}
@@ -27,6 +24,15 @@ func WriteFile(dir, file, data string) error {
 }
 
 func ReadFile(dir, file string) (string, error) {
+	path, err := joinPath(dir, file)
+	if err != nil {
+		return "", err
+	}
+	data, err := ioutil.ReadFile(path)
+	return string(data), err
+}
+
+func joinPath(dir, file string) (string, error) {
 	if dir == "" {
 		return "", errors.Errorf("no directory specified for %s", file)
 	}
@@ -34,8 +40,7 @@ func ReadFile(dir, file string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	data, err := ioutil.ReadFile(path)
-	return string(data), err
+	return path, nil
 }
 
 func retryingWriteFile(filename string, data []byte, perm os.FileMode) error {

@@ -20,10 +20,12 @@ func (s *NetPrioGroup) Apply(path string, d *cgroupData) error {
 }
 
 func (s *NetPrioGroup) Set(path string, cgroup *configs.Cgroup) error {
-	for _, prioMap := range cgroup.Resources.NetPrioIfpriomap {
-		if err := fscommon.WriteFile(path, "net_prio.ifpriomap", prioMap.CgroupString()); err != nil {
-			return err
-		}
+	if len(cgroup.Resources.NetPrioIfpriomap) == 0 {
+		return nil
+	}
+	prioMap := cgroup.Resources.NetPrioIfpriomap[len(cgroup.Resources.NetPrioIfpriomap)-1]
+	if err := fscommon.WriteFile(path, "net_prio.ifpriomap", prioMap.CgroupString()); err != nil {
+		return err
 	}
 
 	return nil
