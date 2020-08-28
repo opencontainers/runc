@@ -7,8 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"golang.org/x/sys/unix"
-
 	dbus "github.com/godbus/dbus/v5"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/configs/validate"
@@ -138,81 +136,6 @@ func TestCreateHooks(t *testing.T) {
 
 	if len(poststop) != 4 {
 		t.Error("Expected 4 Poststop hooks")
-	}
-
-}
-func TestSetupSeccomp(t *testing.T) {
-	conf := &specs.LinuxSeccomp{
-		DefaultAction: "SCMP_ACT_ERRNO",
-		Architectures: []specs.Arch{specs.ArchX86_64, specs.ArchARM},
-		Syscalls: []specs.LinuxSyscall{
-			{
-				Names:  []string{"clone"},
-				Action: "SCMP_ACT_ALLOW",
-				Args: []specs.LinuxSeccompArg{
-					{
-						Index:    0,
-						Value:    unix.CLONE_NEWNS | unix.CLONE_NEWUTS | unix.CLONE_NEWIPC | unix.CLONE_NEWUSER | unix.CLONE_NEWPID | unix.CLONE_NEWNET | unix.CLONE_NEWCGROUP,
-						ValueTwo: 0,
-						Op:       "SCMP_CMP_MASKED_EQ",
-					},
-				},
-			},
-			{
-				Names: []string{
-					"select",
-					"semctl",
-					"semget",
-					"semop",
-					"semtimedop",
-					"send",
-					"sendfile",
-				},
-				Action: "SCMP_ACT_ALLOW",
-			},
-		},
-	}
-	seccomp, err := SetupSeccomp(conf)
-
-	if err != nil {
-		t.Errorf("Couldn't create Seccomp config: %v", err)
-	}
-
-	if seccomp.DefaultAction != 2 { // SCMP_ACT_ERRNO
-		t.Error("Wrong conversion for DefaultAction")
-	}
-
-	if len(seccomp.Architectures) != 2 {
-		t.Error("Wrong number of architectures")
-	}
-
-	if seccomp.Architectures[0] != "amd64" || seccomp.Architectures[1] != "arm" {
-		t.Error("Expected architectures are not found")
-	}
-
-	calls := seccomp.Syscalls
-
-	callsLength := len(calls)
-	if callsLength != 8 {
-		t.Errorf("Expected 8 syscalls, got :%d", callsLength)
-	}
-
-	for i, call := range calls {
-		if i == 0 {
-			expectedCloneSyscallArgs := configs.Arg{
-				Index:    0,
-				Op:       7, // SCMP_CMP_MASKED_EQ
-				Value:    unix.CLONE_NEWNS | unix.CLONE_NEWUTS | unix.CLONE_NEWIPC | unix.CLONE_NEWUSER | unix.CLONE_NEWPID | unix.CLONE_NEWNET | unix.CLONE_NEWCGROUP,
-				ValueTwo: 0,
-			}
-			if expectedCloneSyscallArgs != *call.Args[0] {
-				t.Errorf("Wrong arguments conversion for the clone syscall under test")
-			}
-		}
-		if call.Action != 4 {
-			t.Error("Wrong conversion for the clone syscall action")
-		}
-
 	}
 
 }

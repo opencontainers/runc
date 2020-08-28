@@ -7,9 +7,9 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/opencontainers/runc/internal/seccomp"
 	"github.com/opencontainers/runc/libcontainer/apparmor"
 	"github.com/opencontainers/runc/libcontainer/keys"
-	"github.com/opencontainers/runc/libcontainer/seccomp"
 	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/selinux/go-selinux"
 	"github.com/pkg/errors"
@@ -69,8 +69,8 @@ func (l *linuxSetnsInit) Init() error {
 	// do this before dropping capabilities; otherwise do it as late as possible
 	// just before execve so as few syscalls take place after it as possible.
 	if l.config.Config.Seccomp != nil && !l.config.NoNewPrivileges {
-		if err := seccomp.InitSeccomp(l.config.Config.Seccomp); err != nil {
-			return err
+		if err := seccomp.Setup(l.config.Config.Seccomp); err != nil {
+			return errors.Wrap(err, "setup seccomp")
 		}
 	}
 	if err := finalizeNamespace(l.config); err != nil {
@@ -83,8 +83,8 @@ func (l *linuxSetnsInit) Init() error {
 	// place afterward (reducing the amount of syscalls that users need to
 	// enable in their seccomp profiles).
 	if l.config.Config.Seccomp != nil && l.config.NoNewPrivileges {
-		if err := seccomp.InitSeccomp(l.config.Config.Seccomp); err != nil {
-			return newSystemErrorWithCause(err, "init seccomp")
+		if err := seccomp.Setup(l.config.Config.Seccomp); err != nil {
+			return newSystemErrorWithCause(err, "setup seccomp")
 		}
 	}
 	return system.Execv(l.config.Args[0], l.config.Args[0:], os.Environ())

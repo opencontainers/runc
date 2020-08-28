@@ -25,57 +25,6 @@ type IDMap struct {
 	Size        int `json:"size"`
 }
 
-// Seccomp represents syscall restrictions
-// By default, only the native architecture of the kernel is allowed to be used
-// for syscalls. Additional architectures can be added by specifying them in
-// Architectures.
-type Seccomp struct {
-	DefaultAction Action     `json:"default_action"`
-	Architectures []string   `json:"architectures"`
-	Syscalls      []*Syscall `json:"syscalls"`
-}
-
-// Action is taken upon rule match in Seccomp
-type Action int
-
-const (
-	Kill Action = iota + 1
-	Errno
-	Trap
-	Allow
-	Trace
-	Log
-)
-
-// Operator is a comparison operator to be used when matching syscall arguments in Seccomp
-type Operator int
-
-const (
-	EqualTo Operator = iota + 1
-	NotEqualTo
-	GreaterThan
-	GreaterThanOrEqualTo
-	LessThan
-	LessThanOrEqualTo
-	MaskEqualTo
-)
-
-// Arg is a rule to match a specific syscall argument in Seccomp
-type Arg struct {
-	Index    uint     `json:"index"`
-	Value    uint64   `json:"value"`
-	ValueTwo uint64   `json:"value_two"`
-	Op       Operator `json:"op"`
-}
-
-// Syscall is a rule to match a syscall in Seccomp
-type Syscall struct {
-	Name     string `json:"name"`
-	Action   Action `json:"action"`
-	ErrnoRet *uint  `json:"errnoRet"`
-	Args     []*Arg `json:"args"`
-}
-
 // TODO Windows. Many of these fields should be factored out into those parts
 // which are common across platforms, and those which are platform specific.
 
@@ -172,7 +121,7 @@ type Config struct {
 	// Seccomp allows actions to be taken whenever a syscall is made within the container.
 	// A number of rules are given, each having an action to be taken if a syscall matches it.
 	// A default action to be taken if no rules match is also given.
-	Seccomp *Seccomp `json:"seccomp"`
+	Seccomp *specs.LinuxSeccomp `json:"seccomp"`
 
 	// NoNewPrivileges controls whether processes in the container can gain additional privileges.
 	NoNewPrivileges bool `json:"no_new_privileges,omitempty"`

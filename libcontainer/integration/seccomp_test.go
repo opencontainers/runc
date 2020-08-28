@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/opencontainers/runc/libcontainer"
-	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runtime-spec/specs-go"
 	libseccomp "github.com/seccomp/libseccomp-golang"
 )
 
@@ -26,12 +26,12 @@ func TestSeccompDenyGetcwdWithErrno(t *testing.T) {
 	errnoRet := uint(syscall.ESRCH)
 
 	config := newTemplateConfig(rootfs)
-	config.Seccomp = &configs.Seccomp{
-		DefaultAction: configs.Allow,
-		Syscalls: []*configs.Syscall{
+	config.Seccomp = &specs.LinuxSeccomp{
+		DefaultAction: specs.ActAllow,
+		Syscalls: []specs.LinuxSyscall{
 			{
-				Name:     "getcwd",
-				Action:   configs.Errno,
+				Names:    []string{"getcwd"},
+				Action:   specs.ActErrno,
 				ErrnoRet: &errnoRet,
 			},
 		},
@@ -96,12 +96,12 @@ func TestSeccompDenyGetcwd(t *testing.T) {
 	defer remove(rootfs)
 
 	config := newTemplateConfig(rootfs)
-	config.Seccomp = &configs.Seccomp{
-		DefaultAction: configs.Allow,
-		Syscalls: []*configs.Syscall{
+	config.Seccomp = &specs.LinuxSeccomp{
+		DefaultAction: specs.ActAllow,
+		Syscalls: []specs.LinuxSyscall{
 			{
-				Name:   "getcwd",
-				Action: configs.Errno,
+				Names:  []string{"getcwd"},
+				Action: specs.ActErrno,
 			},
 		},
 	}
@@ -165,17 +165,17 @@ func TestSeccompPermitWriteConditional(t *testing.T) {
 	defer remove(rootfs)
 
 	config := newTemplateConfig(rootfs)
-	config.Seccomp = &configs.Seccomp{
-		DefaultAction: configs.Allow,
-		Syscalls: []*configs.Syscall{
+	config.Seccomp = &specs.LinuxSeccomp{
+		DefaultAction: specs.ActAllow,
+		Syscalls: []specs.LinuxSyscall{
 			{
-				Name:   "write",
-				Action: configs.Errno,
-				Args: []*configs.Arg{
+				Names:  []string{"write"},
+				Action: specs.ActErrno,
+				Args: []specs.LinuxSeccompArg{
 					{
 						Index: 0,
 						Value: 2,
-						Op:    configs.EqualTo,
+						Op:    specs.OpEqualTo,
 					},
 				},
 			},
@@ -227,17 +227,17 @@ func TestSeccompDenyWriteConditional(t *testing.T) {
 	defer remove(rootfs)
 
 	config := newTemplateConfig(rootfs)
-	config.Seccomp = &configs.Seccomp{
-		DefaultAction: configs.Allow,
-		Syscalls: []*configs.Syscall{
+	config.Seccomp = &specs.LinuxSeccomp{
+		DefaultAction: specs.ActAllow,
+		Syscalls: []specs.LinuxSyscall{
 			{
-				Name:   "write",
-				Action: configs.Errno,
-				Args: []*configs.Arg{
+				Names:  []string{"write"},
+				Action: specs.ActErrno,
+				Args: []specs.LinuxSeccompArg{
 					{
 						Index: 0,
 						Value: 2,
-						Op:    configs.EqualTo,
+						Op:    specs.OpEqualTo,
 					},
 				},
 			},
@@ -305,22 +305,22 @@ func TestSeccompPermitWriteMultipleConditions(t *testing.T) {
 	defer remove(rootfs)
 
 	config := newTemplateConfig(rootfs)
-	config.Seccomp = &configs.Seccomp{
-		DefaultAction: configs.Allow,
-		Syscalls: []*configs.Syscall{
+	config.Seccomp = &specs.LinuxSeccomp{
+		DefaultAction: specs.ActAllow,
+		Syscalls: []specs.LinuxSyscall{
 			{
-				Name:   "write",
-				Action: configs.Errno,
-				Args: []*configs.Arg{
+				Names:  []string{"write"},
+				Action: specs.ActErrno,
+				Args: []specs.LinuxSeccompArg{
 					{
 						Index: 0,
 						Value: 2,
-						Op:    configs.EqualTo,
+						Op:    specs.OpEqualTo,
 					},
 					{
 						Index: 2,
 						Value: 0,
-						Op:    configs.NotEqualTo,
+						Op:    specs.OpNotEqual,
 					},
 				},
 			},
@@ -360,22 +360,22 @@ func TestSeccompDenyWriteMultipleConditions(t *testing.T) {
 	defer remove(rootfs)
 
 	config := newTemplateConfig(rootfs)
-	config.Seccomp = &configs.Seccomp{
-		DefaultAction: configs.Allow,
-		Syscalls: []*configs.Syscall{
+	config.Seccomp = &specs.LinuxSeccomp{
+		DefaultAction: specs.ActAllow,
+		Syscalls: []specs.LinuxSyscall{
 			{
-				Name:   "write",
-				Action: configs.Errno,
-				Args: []*configs.Arg{
+				Names:  []string{"write"},
+				Action: specs.ActErrno,
+				Args: []specs.LinuxSeccompArg{
 					{
 						Index: 0,
 						Value: 2,
-						Op:    configs.EqualTo,
+						Op:    specs.OpEqualTo,
 					},
 					{
 						Index: 2,
 						Value: 0,
-						Op:    configs.NotEqualTo,
+						Op:    specs.OpNotEqual,
 					},
 				},
 			},
@@ -410,22 +410,22 @@ func TestSeccompMultipleConditionSameArgDeniesStdout(t *testing.T) {
 
 	// Prevent writing to both stdout and stderr
 	config := newTemplateConfig(rootfs)
-	config.Seccomp = &configs.Seccomp{
-		DefaultAction: configs.Allow,
-		Syscalls: []*configs.Syscall{
+	config.Seccomp = &specs.LinuxSeccomp{
+		DefaultAction: specs.ActAllow,
+		Syscalls: []specs.LinuxSyscall{
 			{
-				Name:   "write",
-				Action: configs.Errno,
-				Args: []*configs.Arg{
+				Names:  []string{"write"},
+				Action: specs.ActErrno,
+				Args: []specs.LinuxSeccompArg{
 					{
 						Index: 0,
 						Value: 1,
-						Op:    configs.EqualTo,
+						Op:    specs.OpEqualTo,
 					},
 					{
 						Index: 0,
 						Value: 2,
-						Op:    configs.EqualTo,
+						Op:    specs.OpEqualTo,
 					},
 				},
 			},
@@ -458,22 +458,22 @@ func TestSeccompMultipleConditionSameArgDeniesStderr(t *testing.T) {
 
 	// Prevent writing to both stdout and stderr
 	config := newTemplateConfig(rootfs)
-	config.Seccomp = &configs.Seccomp{
-		DefaultAction: configs.Allow,
-		Syscalls: []*configs.Syscall{
+	config.Seccomp = &specs.LinuxSeccomp{
+		DefaultAction: specs.ActAllow,
+		Syscalls: []specs.LinuxSyscall{
 			{
-				Name:   "write",
-				Action: configs.Errno,
-				Args: []*configs.Arg{
+				Names:  []string{"write"},
+				Action: specs.ActErrno,
+				Args: []specs.LinuxSeccompArg{
 					{
 						Index: 0,
 						Value: 1,
-						Op:    configs.EqualTo,
+						Op:    specs.OpEqualTo,
 					},
 					{
 						Index: 0,
 						Value: 2,
-						Op:    configs.EqualTo,
+						Op:    specs.OpEqualTo,
 					},
 				},
 			},
