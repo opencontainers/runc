@@ -1,5 +1,7 @@
 package configs
 
+import "golang.org/x/sys/unix"
+
 const (
 	// EXT_COPYUP is a directive to copy up the contents of a directory when
 	// a tmpfs is mounted over it.
@@ -36,4 +38,8 @@ type Mount struct {
 
 	// Optional Command to be run after Source is mounted.
 	PostmountCmds []Command `json:"postmount_cmds"`
+}
+
+func (m *Mount) IsBind() bool {
+	return m.Flags&unix.MS_BIND != 0
 }

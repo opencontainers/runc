@@ -26,6 +26,7 @@ type linuxStandardInit struct {
 	parentPid     int
 	fifoFd        int
 	logFd         int
+	mountFds      []int
 	config        *initConfig
 }
 
@@ -87,9 +88,23 @@ func (l *linuxStandardInit) Init() error {
 
 	// initialises the labeling system
 	selinux.GetEnabled()
-	if err := prepareRootfs(l.pipe, l.config); err != nil {
+
+	// We don't need the mountFds after prepareRootfs() nor if it fails.
+	err := prepareRootfs(l.pipe, l.config, l.mountFds)
+	for _, m := range l.mountFds {
+		if m == -1 {
+			continue
+		}
+
+		if err := unix.Close(m); err != nil {
+			return fmt.Errorf("Unable to close mountFds fds: %w", err)
+		}
+	}
+
+	if err != nil {
 		return err
 	}
+
 	// Set up the console. This has to be done *before* we finalize the rootfs,
 	// but *after* we've given the user the chance to set up all of the mounts
 	// they wanted.
