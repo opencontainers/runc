@@ -369,18 +369,8 @@ func (c *linuxContainer) start(process *Process) error {
 		}
 		return newSystemErrorWithCause(err, "starting container process")
 	}
-	// generate a timestamp indicating when the container was started
-	c.created = time.Now().UTC()
-	if process.Init {
-		c.state = &createdState{
-			c: c,
-		}
-		state, err := c.updateState(parent)
-		if err != nil {
-			return err
-		}
-		c.initProcessStartTime = state.InitProcessStartTime
 
+	if process.Init {
 		if c.config.Hooks != nil {
 			s, err := c.currentOCIState()
 			if err != nil {
