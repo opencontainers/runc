@@ -1,7 +1,7 @@
 CONTAINER_ENGINE := docker
 GO := go
 
-PREFIX ?= $(DESTDIR)/usr/local
+PREFIX ?= /usr/local
 BINDIR := $(PREFIX)/sbin
 MANDIR := $(PREFIX)/share/man
 
@@ -102,14 +102,14 @@ shell: runcimage
 		$(RUNC_IMAGE) bash
 
 install:
-	install -D -m0755 runc $(BINDIR)/runc
+	install -D -m0755 runc $(DESTDIR)$(BINDIR)/runc
 
 install-bash:
-	install -D -m0644 contrib/completions/bash/runc $(PREFIX)/share/bash-completion/completions/runc
+	install -D -m0644 contrib/completions/bash/runc $(DESTDIR)$(PREFIX)/share/bash-completion/completions/runc
 
 install-man: man
-	install -d -m 755 $(MANDIR)/man8
-	install -D -m 644 man/man8/*.8 $(MANDIR)/man8
+	install -d -m 755 $(DESTDIR)$(MANDIR)/man8
+	install -D -m 644 man/man8/*.8 $(DESTDIR)$(MANDIR)/man8
 
 clean:
 	rm -f runc runc-*
