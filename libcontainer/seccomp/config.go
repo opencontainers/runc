@@ -17,12 +17,13 @@ var operators = map[string]configs.Operator{
 }
 
 var actions = map[string]configs.Action{
-	"SCMP_ACT_KILL":  configs.Kill,
-	"SCMP_ACT_ERRNO": configs.Errno,
-	"SCMP_ACT_TRAP":  configs.Trap,
-	"SCMP_ACT_ALLOW": configs.Allow,
-	"SCMP_ACT_TRACE": configs.Trace,
-	"SCMP_ACT_LOG":   configs.Log,
+	"SCMP_ACT_KILL":   configs.Kill,
+	"SCMP_ACT_ERRNO":  configs.Errno,
+	"SCMP_ACT_TRAP":   configs.Trap,
+	"SCMP_ACT_ALLOW":  configs.Allow,
+	"SCMP_ACT_TRACE":  configs.Trace,
+	"SCMP_ACT_LOG":    configs.Log,
+	"SCMP_ACT_NOTIFY": configs.Notify,
 }
 
 var archs = map[string]string{

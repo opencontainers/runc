@@ -16,12 +16,13 @@ import (
 )
 
 var (
-	actAllow = libseccomp.ActAllow
-	actTrap  = libseccomp.ActTrap
-	actKill  = libseccomp.ActKill
-	actTrace = libseccomp.ActTrace.SetReturnCode(int16(unix.EPERM))
-	actLog   = libseccomp.ActLog
-	actErrno = libseccomp.ActErrno.SetReturnCode(int16(unix.EPERM))
+	actAllow  = libseccomp.ActAllow
+	actTrap   = libseccomp.ActTrap
+	actKill   = libseccomp.ActKill
+	actTrace  = libseccomp.ActTrace.SetReturnCode(int16(unix.EPERM))
+	actLog    = libseccomp.ActLog
+	actErrno  = libseccomp.ActErrno.SetReturnCode(int16(unix.EPERM))
+	actNotify = libseccomp.ActNotify
 )
 
 const (
@@ -29,54 +30,89 @@ const (
 	syscallMaxArguments int = 6
 )
 
-// Filters given syscalls in a container, preventing them from being used
-// Started in the container init process, and carried over to all child processes
-// Setns calls, however, require a separate invocation, as they are not children
-// of the init until they join the namespace
-func InitSeccomp(config *configs.Seccomp) error {
+// InitSeccomp installs the seccomp filters to be used in the container as
+// specified in config.
+// Returns the seccomp file descriptor if any of the filters include a
+// SCMP_ACT_NOTIFY action, otherwise returns -1.
+func InitSeccomp(config *configs.Seccomp) (int, error) {
 	if config == nil {
-		return errors.New("cannot initialize Seccomp - nil config passed")
+		return -1, errors.New("cannot initialize Seccomp - nil config passed")
 	}
 
 	defaultAction, err := getAction(config.DefaultAction, config.DefaultErrnoRet)
 	if err != nil {
-		return errors.New("error initializing seccomp - invalid default action")
+		return -1, errors.New("error initializing seccomp - invalid default action")
+	}
+
+	// Ignore the error since pre-2.4 libseccomp is treated as API level 0.
+	apiLevel, _ := libseccomp.GetAPI()
+	for _, call := range config.Syscalls {
+		if call.Action == configs.Notify {
+			if apiLevel < 6 {
+				return -1, fmt.Errorf("seccomp notify unsupported: API level: got %d, want at least 6. Please try with libseccomp >= 2.5.0 and Linux >= 5.7", apiLevel)
+			}
+
+			// We can't allow the write syscall to notify to the seccomp agent.
+			// After InitSeccomp() is called, we need to syncParentSeccomp() to write the seccomp fd plain
+			// number, so the parent sends it to the seccomp agent. If we use SCMP_ACT_NOTIFY on write, we
+			// never can write the seccomp fd to the parent and therefore the seccomp agent never receives
+			// the seccomp fd and runc is hang during initialization.
+			//
+			// Note that read()/close(), that are also used in syncParentSeccomp(), _can_ use SCMP_ACT_NOTIFY.
+			// Because we write the seccomp fd on the pipe to the parent, the parent is able to proceed and
+			// send the seccomp fd to the agent (it is another process and not subject to the seccomp
+			// filter). We will be blocked on read()/close() inside syncParentSeccomp() but if the seccomp
+			// agent allows those syscalls to proceed, initialization works just fine and the agent can
+			// handle future read()/close() syscalls as it wanted.
+			if call.Name == "write" {
+				return -1, errors.New("SCMP_ACT_NOTIFY cannot be used for the write syscall")
+			}
+		}
+	}
+
+	// See comment on why write is not allowed. The same reason applies, as this can mean handling write too.
+	if defaultAction == actNotify {
+		return -1, errors.New("SCMP_ACT_NOTIFY cannot be used as default action")
 	}
 
 	filter, err := libseccomp.NewFilter(defaultAction)
 	if err != nil {
-		return fmt.Errorf("error creating filter: %w", err)
+		return -1, fmt.Errorf("error creating filter: %w", err)
 	}
 
 	// Add extra architectures
 	for _, arch := range config.Architectures {
 		scmpArch, err := libseccomp.GetArchFromString(arch)
 		if err != nil {
-			return fmt.Errorf("error validating Seccomp architecture: %w", err)
+			return -1, fmt.Errorf("error validating Seccomp architecture: %w", err)
 		}
 		if err := filter.AddArch(scmpArch); err != nil {
-			return fmt.Errorf("error adding architecture to seccomp filter: %w", err)
+			return -1, fmt.Errorf("error adding architecture to seccomp filter: %w", err)
 		}
 	}
 
 	// Unset no new privs bit
 	if err := filter.SetNoNewPrivsBit(false); err != nil {
-		return fmt.Errorf("error setting no new privileges: %w", err)
+		return -1, fmt.Errorf("error setting no new privileges: %w", err)
 	}
 
 	// Add a rule for each syscall
 	for _, call := range config.Syscalls {
 		if call == nil {
-			return errors.New("encountered nil syscall while initializing Seccomp")
+			return -1, errors.New("encountered nil syscall while initializing Seccomp")
 		}
+
 		if err := matchCall(filter, call, defaultAction); err != nil {
-			return err
+			return -1, err
 		}
 	}
-	if err := patchbpf.PatchAndLoad(config, filter); err != nil {
-		return fmt.Errorf("error loading seccomp filter into kernel: %w", err)
+
+	seccompFd, err := patchbpf.PatchAndLoad(config, filter)
+	if err != nil {
+		return -1, fmt.Errorf("error loading seccomp filter into kernel: %w", err)
 	}
-	return nil
+
+	return seccompFd, nil
 }
 
 // Convert Libcontainer Action to Libseccomp ScmpAction
@@ -100,6 +136,8 @@ func getAction(act configs.Action, errnoRet *uint) (libseccomp.ScmpAction, error
 		return actTrace, nil
 	case configs.Log:
 		return actLog, nil
+	case configs.Notify:
+		return actNotify, nil
 	default:
 		return libseccomp.ActInvalid, errors.New("invalid action, cannot use in rule")
 	}
