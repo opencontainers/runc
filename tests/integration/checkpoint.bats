@@ -12,17 +12,6 @@ function setup() {
 
 function teardown() {
   teardown_busybox
-  local pid fd
-
-  for pid in "${PIDS_TO_KILL[@]}"; do
-    kill -9 "$pid" || true
-  done
-  PIDS_TO_KILL=()
-
-  for fd in "${FDS_TO_CLOSE[@]}"; do
-    exec {fd}>&-
-  done
-  FDS_TO_CLOSE=()
 }
 
 function setup_pipes() {
@@ -42,8 +31,6 @@ function setup_pipes() {
 	exec {in_r}</proc/self/fd/$pipe
 	exec {in_w}>/proc/self/fd/$pipe
 	exec {pipe}>&-
-	# shellcheck disable=SC2206
-	FDS_TO_CLOSE=($in_r $in_w $out_r $out_w)
 }
 
 function check_pipes() {
@@ -163,13 +150,9 @@ function simple_cr() {
   # shellcheck disable=SC2094
   exec {lazy_r}</proc/self/fd/$pipe {lazy_w}>/proc/self/fd/$pipe
   exec {pipe}>&-
-  # shellcheck disable=SC2206
-  FDS_TO_CLOSE+=($lazy_r $lazy_w)
 
   __runc --criu "$CRIU" checkpoint --lazy-pages --page-server 0.0.0.0:${port} --status-fd ${lazy_w} --work-path ./work-dir --image-path ./image-dir test_busybox &
   cpt_pid=$!
-  # shellcheck disable=SC2206
-  PIDS_TO_KILL=($cpt_pid)
 
   # wait for lazy page server to be ready
   out=$(timeout 2 dd if=/proc/self/fd/${lazy_r} bs=1 count=1 2>/dev/null | od)
@@ -187,8 +170,6 @@ function simple_cr() {
   # Start CRIU in lazy-daemon mode
   ${CRIU} lazy-pages --page-server --address 127.0.0.1 --port ${port} -D image-dir &
   lp_pid=$!
-  # shellcheck disable=SC2206
-  PIDS_TO_KILL+=($lp_pid)
 
   # Restore lazily from checkpoint.
   # The restored container needs a different name as the checkpointed
@@ -211,7 +192,6 @@ function simple_cr() {
   wait $cpt_pid
 
   wait $lp_pid
-  PIDS_TO_KILL=()
 
   check_pipes
 }
