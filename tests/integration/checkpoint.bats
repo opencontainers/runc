@@ -198,7 +198,7 @@ function simple_cr() {
   # continue to run if the migration failed at some point.
   ret=0
   __runc --criu "$CRIU" restore -d --work-path ./image-dir --image-path ./image-dir --lazy-pages test_busybox_restore <&${in_r} >&${out_w} 2>&${out_w} || ret=$?
-  grep -B 5 Error ./work-dir/restore.log || true
+  grep -B 5 Error ./image-dir/restore.log || true
   [ $ret -eq 0 ]
 
   # busybox should be back up and running
