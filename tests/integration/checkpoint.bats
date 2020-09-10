@@ -20,13 +20,18 @@ function setup_pipes() {
 	update_config 	' (.. | select(.terminal? != null)) .terminal |= false
 			| (.. | select(.[]? == "sh")) += ["-c", "for i in `seq 10`; do read xxx || continue; echo ponG $xxx; done"]'
 
-	# Create two sets of pipes
-	# for stdout/stderr
+	# Create three sets of pipes for __runc run.
+	# for stderr
+	exec {pipe}<> <(:)
+	exec {err_r}</proc/self/fd/$pipe
+	exec {err_w}>/proc/self/fd/$pipe
+	exec {pipe}>&-
+	# for stdout
 	exec {pipe}<> <(:)
 	exec {out_r}</proc/self/fd/$pipe
 	exec {out_w}>/proc/self/fd/$pipe
 	exec {pipe}>&-
-	# ... and stdin
+	# for stdin
 	exec {pipe}<> <(:)
 	exec {in_r}</proc/self/fd/$pipe
 	exec {in_w}>/proc/self/fd/$pipe
@@ -40,6 +45,50 @@ function check_pipes() {
 	run cat <&${out_r}
 	[ "$status" -eq 0 ]
 	[[ "${output}" == *"ponG Ping"* ]]
+}
+
+# Usage: runc_run_with_pipes container-name
+function runc_run_with_pipes() {
+	# Start a container to be checkpointed, with stdin/stdout redirected
+	# so that check_pipes can be used to check it's working fine.
+	# We have to redirect stderr as well because otherwise it is
+	# redirected to a bats log file, which is not accessible to CRIU
+	# (i.e. outside of container) so checkpointing will fail.
+	ret=0
+	__runc run -d "$1" <&${in_r} >&${out_w} 2>&${err_w} || ret=$?
+	if [ "$ret" -ne 0 ]; then
+		echo "runc run -d $1 (status: $ret):"
+		exec {err_w}>&-
+		cat <&${err_r}
+		fail "runc run failed"
+	fi
+
+	testcontainer "$1" running
+}
+
+# Usage: runc_restore_with_pipes work-dir container-name [optional-arguments ...]
+function runc_restore_with_pipes() {
+	workdir="$1"
+	shift
+	name="$1"
+	shift
+
+	ret=0
+	__runc --criu "$CRIU" restore -d --work-path "$workdir" --image-path ./image-dir "$@" "$name" <&${in_r} >&${out_w} 2>&${err_w} || ret=$?
+	if [ "$ret" -ne 0 ]; then
+		echo "__runc restore $name failed (status: $ret)"
+		exec {err_w}>&-
+		cat <&${err_r}
+		echo "CRIU restore log errors (if any):"
+		grep -B 5 Error "$workdir"/restore.log || true
+		fail "runc restore failed"
+	fi
+
+	testcontainer "$name" running
+
+	runc exec --cwd /bin "$name" echo ok
+	[ "$status" -eq 0 ]
+	[[ ${output} == "ok" ]]
 }
 
 function simple_cr() {
@@ -83,11 +132,7 @@ function simple_cr() {
 
 @test "checkpoint --pre-dump and restore" {
   setup_pipes
-
-  # run busybox
-  __runc run -d test_busybox <&${in_r} >&${out_w} 2>&${out_w}
-
-  testcontainer test_busybox running
+  runc_run_with_pipes test_busybox
 
   #test checkpoint pre-dump
   mkdir parent-dir
@@ -107,19 +152,7 @@ function simple_cr() {
   # after checkpoint busybox is no longer running
   testcontainer test_busybox checkpointed
 
-  # restore from checkpoint
-  ret=0
-  __runc --criu "$CRIU" restore -d --work-path ./work-dir --image-path ./image-dir test_busybox <&${in_r} >&${out_w} 2>&${out_w} || ret=$?
-  grep -B 5 Error ./work-dir/restore.log || true
-  [ $ret -eq 0 ]
-
-  # busybox should be back up and running
-  testcontainer test_busybox running
-
-  runc exec --cwd /bin test_busybox echo ok
-  [ "$status" -eq 0 ]
-  [[ ${output} == "ok" ]]
-
+  runc_restore_with_pipes ./work-dir test_busybox
   check_pipes
 }
 
@@ -131,14 +164,7 @@ function simple_cr() {
   fi
 
   setup_pipes
-
-  # TCP port for lazy migration
-  port=27277
-
-  # run busybox
-  __runc run -d test_busybox <&${in_r} >&${out_w} 2>&${out_w}
-
-  testcontainer test_busybox running
+  runc_run_with_pipes test_busybox
 
   # checkpoint the running container
   mkdir image-dir
@@ -150,6 +176,9 @@ function simple_cr() {
   # shellcheck disable=SC2094
   exec {lazy_r}</proc/self/fd/$pipe {lazy_w}>/proc/self/fd/$pipe
   exec {pipe}>&-
+
+  # TCP port for lazy migration
+  port=27277
 
   __runc --criu "$CRIU" checkpoint --lazy-pages --page-server 0.0.0.0:${port} --status-fd ${lazy_w} --work-path ./work-dir --image-path ./image-dir test_busybox &
   cpt_pid=$!
@@ -177,17 +206,7 @@ function simple_cr() {
   # in time when the last page is lazily transferred to the destination.
   # Killing the CRIU on the checkpoint side will let the container
   # continue to run if the migration failed at some point.
-  ret=0
-  __runc --criu "$CRIU" restore -d --work-path ./image-dir --image-path ./image-dir --lazy-pages test_busybox_restore <&${in_r} >&${out_w} 2>&${out_w} || ret=$?
-  grep -B 5 Error ./image-dir/restore.log || true
-  [ $ret -eq 0 ]
-
-  # busybox should be back up and running
-  testcontainer test_busybox_restore running
-
-  runc exec --cwd /bin test_busybox_restore echo ok
-  [ "$status" -eq 0 ]
-  [[ ${output} == "ok" ]]
+  runc_restore_with_pipes ./image-dir test_busybox_restore --lazy-pages
 
   wait $cpt_pid
 
