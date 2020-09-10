@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime"
 	"strings"
 
 	"github.com/opencontainers/runc/libcontainer/logs"
-
+	"github.com/opencontainers/runc/libcontainer/seccomp"
 	"github.com/opencontainers/runtime-spec/specs-go"
 
 	"github.com/sirupsen/logrus"
@@ -62,6 +63,11 @@ func main() {
 		v = append(v, fmt.Sprintf("commit: %s", gitCommit))
 	}
 	v = append(v, fmt.Sprintf("spec: %s", specs.Version))
+	v = append(v, fmt.Sprintf("go: %s", runtime.Version()))
+	if seccomp.IsEnabled() {
+		major, minor, micro := seccomp.Version()
+		v = append(v, fmt.Sprintf("libseccomp: %d.%d.%d", major, minor, micro))
+	}
 	app.Version = strings.Join(v, "\n")
 
 	xdgRuntimeDir := ""

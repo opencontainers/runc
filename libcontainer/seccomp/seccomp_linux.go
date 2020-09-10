@@ -266,3 +266,8 @@ func parseStatusFile(path string) (map[string]string, error) {
 
 	return status, nil
 }
+
+// Version returns major, minor, and micro.
+func Version() (uint, uint, uint) {
+	return libseccomp.GetLibraryVersion()
+}
