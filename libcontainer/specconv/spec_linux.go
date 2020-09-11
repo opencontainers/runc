@@ -619,6 +619,13 @@ func CreateCgroupConfig(opts *CreateOpts, defaultDevs []*configs.Device) (*confi
 					})
 				}
 			}
+			if len(r.Unified) > 0 {
+				// copy the map
+				c.Resources.Unified = make(map[string]string, len(r.Unified))
+				for k, v := range r.Unified {
+					c.Resources.Unified[k] = v
+				}
+			}
 		}
 	}
 

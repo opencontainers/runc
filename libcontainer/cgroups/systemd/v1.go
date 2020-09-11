@@ -101,6 +101,10 @@ func (m *legacyManager) Apply(pid int) error {
 		properties []systemdDbus.Property
 	)
 
+	if c.Resources.Unified != nil {
+		return cgroups.ErrV1NoUnified
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if c.Paths != nil {
@@ -341,6 +345,9 @@ func (m *legacyManager) Set(container *configs.Config) error {
 	// and there is no need to set any values.
 	if m.cgroups.Paths != nil {
 		return nil
+	}
+	if container.Cgroups.Resources.Unified != nil {
+		return cgroups.ErrV1NoUnified
 	}
 	dbusConnection, err := getDbusConnection(false)
 	if err != nil {

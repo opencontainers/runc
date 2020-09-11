@@ -705,6 +705,155 @@ func testRunWithKernelMemory(t *testing.T, systemd bool) {
 	}
 }
 
+func TestCgroupResourcesUnifiedErrorOnV1(t *testing.T) {
+	testCgroupResourcesUnifiedErrorOnV1(t, false)
+}
+
+func TestCgroupResourcesUnifiedErrorOnV1Systemd(t *testing.T) {
+	if !systemd.IsRunningSystemd() {
+		t.Skip("Systemd is unsupported")
+	}
+	testCgroupResourcesUnifiedErrorOnV1(t, true)
+}
+
+func testCgroupResourcesUnifiedErrorOnV1(t *testing.T, systemd bool) {
+	if testing.Short() {
+		return
+	}
+	if cgroups.IsCgroup2UnifiedMode() {
+		t.Skip("requires cgroup v1")
+	}
+	rootfs, err := newRootfs()
+	ok(t, err)
+	defer remove(rootfs)
+
+	config := newTemplateConfig(rootfs)
+	if systemd {
+		config.Cgroups.Parent = "system.slice"
+	}
+	config.Cgroups.Resources.Unified = map[string]string{
+		"memory.min": "10240",
+	}
+	_, _, err = runContainer(config, "", "true")
+	if !strings.Contains(err.Error(), cgroups.ErrV1NoUnified.Error()) {
+		t.Fatalf("expected error to contain %v, got %v", cgroups.ErrV1NoUnified, err)
+	}
+}
+
+func TestCgroupResourcesUnified(t *testing.T) {
+	testCgroupResourcesUnified(t, false)
+}
+
+func TestCgroupResourcesUnifiedSystemd(t *testing.T) {
+	if !systemd.IsRunningSystemd() {
+		t.Skip("Systemd is unsupported")
+	}
+	testCgroupResourcesUnified(t, true)
+}
+
+func testCgroupResourcesUnified(t *testing.T, systemd bool) {
+	if testing.Short() {
+		return
+	}
+	if !cgroups.IsCgroup2UnifiedMode() {
+		t.Skip("requires cgroup v2")
+	}
+	rootfs, err := newRootfs()
+	ok(t, err)
+	defer remove(rootfs)
+
+	config := newTemplateConfig(rootfs)
+	config.Cgroups.Resources.Memory = 536870912     // 512M
+	config.Cgroups.Resources.MemorySwap = 536870912 // 512M, i.e. no swap
+	config.Namespaces.Add(configs.NEWCGROUP, "")
+	config.Mounts = append(config.Mounts, &configs.Mount{
+		Destination: "/sys/fs/cgroup",
+		Device:      "cgroup",
+		Flags:       defaultMountFlags | unix.MS_RDONLY,
+	})
+	if systemd {
+		config.Cgroups.Parent = "system.slice"
+	}
+
+	testCases := []struct {
+		name     string
+		cfg      map[string]string
+		expError string
+		cmd      []string
+		exp      string
+	}{
+		{
+			name: "dummy",
+			cmd:  []string{"true"},
+			exp:  "",
+		},
+		{
+			name: "set memory.min",
+			cfg:  map[string]string{"memory.min": "131072"},
+			cmd:  []string{"cat", "/sys/fs/cgroup/memory.min"},
+			exp:  "131072\n",
+		},
+		{
+			name: "check memory.max",
+			cmd:  []string{"cat", "/sys/fs/cgroup/memory.max"},
+			exp:  strconv.Itoa(int(config.Cgroups.Resources.Memory)) + "\n",
+		},
+
+		{
+			name: "overwrite memory.max",
+			cfg:  map[string]string{"memory.max": "268435456"},
+			cmd:  []string{"cat", "/sys/fs/cgroup/memory.max"},
+			exp:  "268435456\n",
+		},
+		{
+			name:     "no such controller error",
+			cfg:      map[string]string{"privet.vsem": "vam"},
+			expError: "controller \"privet\" not available",
+		},
+		{
+			name:     "slash in key error",
+			cfg:      map[string]string{"bad/key": "val"},
+			expError: "must be a file name (no slashes)",
+		},
+		{
+			name:     "no dot in key error",
+			cfg:      map[string]string{"badkey": "val"},
+			expError: "must be in the form CONTROLLER.PARAMETER",
+		},
+		{
+			name:     "read-only parameter",
+			cfg:      map[string]string{"pids.current": "42"},
+			expError: "failed to write",
+		},
+	}
+
+	for _, tc := range testCases {
+		config.Cgroups.Resources.Unified = tc.cfg
+		buffers, ret, err := runContainer(config, "", tc.cmd...)
+		if tc.expError != "" {
+			if err == nil {
+				t.Errorf("case %q failed: expected error, got nil", tc.name)
+				continue
+			}
+			if !strings.Contains(err.Error(), tc.expError) {
+				t.Errorf("case %q failed: expected error to contain %q, got %q", tc.name, tc.expError, err)
+			}
+			continue
+		}
+		if err != nil {
+			t.Errorf("case %q failed: expected no error, got %v (command: %v, status: %d, stderr: %q)",
+				tc.name, err, tc.cmd, ret, buffers.Stderr.String())
+			continue
+		}
+		if tc.exp != "" {
+			out := buffers.Stdout.String()
+			if out != tc.exp {
+				t.Errorf("expected %q, got %q", tc.exp, out)
+			}
+		}
+	}
+}
+
 func TestContainerState(t *testing.T) {
 	if testing.Short() {
 		return
