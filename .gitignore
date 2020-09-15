@@ -3,6 +3,7 @@ vendor/pkg
 /runc-*
 contrib/cmd/recvtty/recvtty
 contrib/cmd/sd-helper/sd-helper
+contrib/cmd/seccompagent/seccompagent
 man/man8
 release
 Vagrantfile
