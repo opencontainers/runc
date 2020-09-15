@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"time"
 
 	"github.com/opencontainers/runc/libcontainer/apparmor"
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -184,13 +185,29 @@ func (l *linuxStandardInit) Init() error {
 	// Wait for the FIFO to be opened on the other side before exec-ing the
 	// user process. We open it through /proc/self/fd/$fd, because the fd that
 	// was given to us was an O_PATH fd to the fifo itself. Linux allows us to
-	// re-open an O_PATH fd through /proc.
-	fd, err := unix.Open(fmt.Sprintf("/proc/self/fd/%d", l.fifoFd), unix.O_WRONLY|unix.O_CLOEXEC, 0)
-	if err != nil {
+	// re-open an O_PATH fd through /proc. We need to be sure that if the other
+	// side of the fifo exits early that we do not block forever, otherwise
+	// there will be lingering "runc init" processes that never close.
+	fchan := make(chan int, 1)
+	echan := make(chan error, 1)
+	go func() {
+		fd, err := unix.Open(fmt.Sprintf("/proc/self/fd/%d", l.fifoFd), unix.O_WRONLY|unix.O_CLOEXEC, 0)
+		if err != nil {
+			echan <- err
+			return
+		}
+		fchan <- fd
+	}()
+
+	select {
+	case fd := <-fchan:
+		if _, err := unix.Write(fd, []byte("0")); err != nil {
+			return newSystemErrorWithCause(err, "write 0 exec fifo")
+		}
+	case err := <-echan:
 		return newSystemErrorWithCause(err, "open exec fifo")
-	}
-	if _, err := unix.Write(fd, []byte("0")); err != nil {
-		return newSystemErrorWithCause(err, "write 0 exec fifo")
+	case <-time.After(10 * time.Second):
+		return errors.New("timed out waiting for fifo pipe to open")
 	}
 	// Close the O_PATH fifofd fd before exec because the kernel resets
 	// dumpable in the wrong order. This has been fixed in newer kernels, but
