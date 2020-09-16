@@ -318,4 +318,3 @@ function simple_cr() {
   unlink "$tmp"
   test -f ./work-dir/"$tmplog2" && unlink ./work-dir/"$tmplog2"
 }
-

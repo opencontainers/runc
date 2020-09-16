@@ -27,7 +27,7 @@ function teardown() {
   # replace "uid": 0 with "uid": 1000
   # and do a similar thing for gid.
   update_config ' (.. | select(.uid? == 0)) .uid |= 1000
-		| (.. | select(.gid? == 0)) .gid |= 100' 
+		| (.. | select(.gid? == 0)) .gid |= 100'
 
   # run busybox detached
   runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox

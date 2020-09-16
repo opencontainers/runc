@@ -476,7 +476,7 @@ EOF
     # Run a basic shell script that tries to write to /dev/null. If "runc
     # update" makes use of minimal transition rules, updates should not cause
     # writes to fail at any point.
-    update_config '.process.args |= ["sh", "-c", "while true; do echo >/dev/null; done"]' 
+    update_config '.process.args |= ["sh", "-c", "while true; do echo >/dev/null; done"]'
 
     # Set up a temporary console socket and recvtty so we can get the stdio.
     TMP_RECVTTY_DIR="$(mktemp -d "$BATS_TMPDIR/runc-tmp-recvtty.XXXXXX")"
