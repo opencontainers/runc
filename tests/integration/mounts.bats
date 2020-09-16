@@ -9,6 +9,7 @@ function setup() {
 
 function teardown() {
 	teardown_busybox
+	teardown_running_container test_bind_mount
 }
 
 @test "runc run [bind mount]" {

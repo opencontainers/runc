@@ -12,6 +12,7 @@ function setup() {
 
 function teardown() {
   teardown_busybox
+  teardown_running_container test_busybox_restore
 }
 
 function setup_pipes() {
