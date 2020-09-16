@@ -214,10 +214,8 @@ function set_resources_limit() {
 # Helper function to make /sys/fs/cgroup writable
 function set_cgroup_mount_writable() {
 	bundle="${1:-.}"
-	cat "$bundle/config.json" \
-        |  jq '.mounts |= map((select(.type == "cgroup") | .options -= ["ro"]) // .)' \
-		>"$bundle/config.json.tmp"
-	mv "$bundle/config.json"{.tmp,}
+	update_config '.mounts |= map((select(.type == "cgroup") | .options -= ["ro"]) // .)' \
+		$bundle
 }
 
 # Fails the current test, providing the error given.
