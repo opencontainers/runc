@@ -167,9 +167,9 @@ function init_cgroup_paths() {
 
 # Helper function to set cgroupsPath to the value of $OCI_CGROUPS_PATH
 function set_cgroups_path() {
-  bundle="${1:-.}"
-  init_cgroup_paths
-  update_config '.linux.cgroupsPath |= "'"${OCI_CGROUPS_PATH}"'"' $bundle
+	bundle="${1:-.}"
+	init_cgroup_paths
+	update_config '.linux.cgroupsPath |= "'"${OCI_CGROUPS_PATH}"'"' $bundle
 }
 
 # Helper to check a value in cgroups.
@@ -207,8 +207,8 @@ function check_systemd_value() {
 
 # Helper function to set a resources limit
 function set_resources_limit() {
-  bundle="${1:-.}"
-  update_config '.linux.resources.pids.limit |= 100' $bundle
+	bundle="${1:-.}"
+	update_config '.linux.resources.pids.limit |= 100' $bundle
 }
 
 # Helper function to make /sys/fs/cgroup writable
