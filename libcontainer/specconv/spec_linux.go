@@ -329,6 +329,9 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 
 func createLibcontainerMount(cwd string, m specs.Mount) *configs.Mount {
 	flags, pgflags, data, ext := parseMountOptions(m.Options)
+	if m.Type == "bind" {
+		flags |= unix.MS_BIND
+	}
 	source := m.Source
 	device := m.Type
 	if flags&unix.MS_BIND != 0 {

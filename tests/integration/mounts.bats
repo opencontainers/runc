@@ -19,3 +19,12 @@ function teardown() {
 	[ "$status" -eq 0 ]
 	[[ "${lines[0]}" == *'/tmp/bind/config.json'* ]]
 }
+
+@test "runc run [bind mount w/o explicit \"bind\" opt but w/ explicit \"bind\" type]" {
+	update_config 	' .mounts += [{"source": ".", "destination": "/tmp/bind", "type":"bind"}]
+			| .process.args |= ["ls", "/tmp/bind/config.json"]'
+
+	runc run test_bind_mount
+	[ "$status" -eq 0 ]
+	[[ "${lines[0]}" == *'/tmp/bind/config.json'* ]]
+}
