@@ -11,7 +11,7 @@ require (
 	github.com/docker/go-units v0.4.0
 	github.com/godbus/dbus/v5 v5.0.3
 	github.com/golang/protobuf v1.4.2
-	github.com/moby/sys/mountinfo v0.1.3
+	github.com/moby/sys/mountinfo v0.2.0
 	github.com/mrunalp/fileutils v0.5.0
 	github.com/opencontainers/runtime-spec v1.0.3-0.20200728170252-4d89ac9fbff6
 	github.com/opencontainers/selinux v1.6.0
@@ -22,5 +22,5 @@ require (
 	// NOTE: urfave/cli must be <= v1.22.1 due to a regression: https://github.com/urfave/cli/issues/1092
 	github.com/urfave/cli v1.22.1
 	github.com/vishvananda/netlink v1.1.0
-	golang.org/x/sys v0.0.0-20200728102440-3e129f6d46b1
+	golang.org/x/sys v0.0.0-20200909081042-eff7692f9009
 )
