@@ -13,7 +13,10 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const cgroupKernelMemoryLimit = "memory.kmem.limit_in_bytes"
+const (
+	kmemDisabled            = false
+	cgroupKernelMemoryLimit = "memory.kmem.limit_in_bytes"
+)
 
 func EnableKernelMemoryAccounting(path string) error {
 	// Ensure that kernel memory is available in this kernel build. If it

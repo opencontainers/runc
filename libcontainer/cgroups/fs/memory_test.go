@@ -191,6 +191,9 @@ func TestMemorySetSwapSmallerThanMemory(t *testing.T) {
 }
 
 func TestMemorySetKernelMemory(t *testing.T) {
+	if kmemDisabled {
+		t.Skip("kernel memory limits are disabled")
+	}
 	helper := NewCgroupTestUtil("memory", t)
 	defer helper.cleanup()
 
@@ -219,6 +222,9 @@ func TestMemorySetKernelMemory(t *testing.T) {
 }
 
 func TestMemorySetKernelMemoryTCP(t *testing.T) {
+	if kmemDisabled {
+		t.Skip("kernel memory limits are disabled")
+	}
 	helper := NewCgroupTestUtil("memory", t)
 	defer helper.cleanup()
 

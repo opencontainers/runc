@@ -6,6 +6,8 @@ import (
 	"errors"
 )
 
+const kmemDisabled = true
+
 func EnableKernelMemoryAccounting(path string) error {
 	return nil
 }

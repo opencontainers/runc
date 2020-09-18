@@ -21,6 +21,12 @@ ifeq ($(shell $(GO) env GOOS),linux)
 		endif
 	endif
 endif
+
+# Disable kmem if building on RHEL7 (kernel 3.10.0 el7)
+ifneq ($(shell uname -r | grep '^3\.10\.0.*\.el7\.'),)
+	BUILDTAGS += nokmem
+endif
+
 GO_BUILD := $(GO) build -trimpath $(GO_BUILDMODE) $(EXTRA_FLAGS) -tags "$(BUILDTAGS)" \
 	-ldflags "-X main.gitCommit=$(COMMIT) -X main.version=$(VERSION) $(EXTRA_LDFLAGS)"
 GO_BUILD_STATIC := CGO_ENABLED=1 $(GO) build -trimpath $(EXTRA_FLAGS) -tags "$(BUILDTAGS) netgo osusergo" \
