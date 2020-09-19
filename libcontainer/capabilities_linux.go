@@ -20,8 +20,7 @@ func init() {
 		if c > capability.CAP_LAST_CAP {
 			continue
 		}
-		capKey := fmt.Sprintf("CAP_%s", strings.ToUpper(c.String()))
-		capabilityMap[capKey] = c
+		capabilityMap["CAP_"+strings.ToUpper(c.String())] = c
 	}
 }
 
