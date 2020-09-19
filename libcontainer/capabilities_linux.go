@@ -16,13 +16,8 @@ var capabilityMap map[string]capability.Cap
 
 func init() {
 	capabilityMap = make(map[string]capability.Cap)
-	last := capability.CAP_LAST_CAP
-	// workaround for RHEL6 which has no /proc/sys/kernel/cap_last_cap
-	if last == capability.Cap(63) {
-		last = capability.CAP_BLOCK_SUSPEND
-	}
 	for _, c := range capability.List() {
-		if c > last {
+		if c > capability.CAP_LAST_CAP {
 			continue
 		}
 		capKey := fmt.Sprintf("CAP_%s", strings.ToUpper(c.String()))
