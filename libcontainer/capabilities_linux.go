@@ -21,12 +21,12 @@ func init() {
 	if last == capability.Cap(63) {
 		last = capability.CAP_BLOCK_SUSPEND
 	}
-	for _, cap := range capability.List() {
-		if cap > last {
+	for _, c := range capability.List() {
+		if c > last {
 			continue
 		}
-		capKey := fmt.Sprintf("CAP_%s", strings.ToUpper(cap.String()))
-		capabilityMap[capKey] = cap
+		capKey := fmt.Sprintf("CAP_%s", strings.ToUpper(c.String()))
+		capabilityMap[capKey] = c
 	}
 }
 
