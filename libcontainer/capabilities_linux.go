@@ -15,7 +15,7 @@ const allCapabilityTypes = capability.CAPS | capability.BOUNDS | capability.AMBS
 var capabilityMap map[string]capability.Cap
 
 func init() {
-	capabilityMap = make(map[string]capability.Cap)
+	capabilityMap = make(map[string]capability.Cap, capability.CAP_LAST_CAP+1)
 	for _, c := range capability.List() {
 		if c > capability.CAP_LAST_CAP {
 			continue
@@ -25,45 +25,45 @@ func init() {
 }
 
 func newContainerCapList(capConfig *configs.Capabilities) (*containerCapabilities, error) {
-	bounding := []capability.Cap{}
-	for _, c := range capConfig.Bounding {
+	bounding := make([]capability.Cap, len(capConfig.Bounding))
+	for i, c := range capConfig.Bounding {
 		v, ok := capabilityMap[c]
 		if !ok {
 			return nil, fmt.Errorf("unknown capability %q", c)
 		}
-		bounding = append(bounding, v)
+		bounding[i] = v
 	}
-	effective := []capability.Cap{}
-	for _, c := range capConfig.Effective {
+	effective := make([]capability.Cap, len(capConfig.Effective))
+	for i, c := range capConfig.Effective {
 		v, ok := capabilityMap[c]
 		if !ok {
 			return nil, fmt.Errorf("unknown capability %q", c)
 		}
-		effective = append(effective, v)
+		effective[i] = v
 	}
-	inheritable := []capability.Cap{}
-	for _, c := range capConfig.Inheritable {
+	inheritable := make([]capability.Cap, len(capConfig.Inheritable))
+	for i, c := range capConfig.Inheritable {
 		v, ok := capabilityMap[c]
 		if !ok {
 			return nil, fmt.Errorf("unknown capability %q", c)
 		}
-		inheritable = append(inheritable, v)
+		inheritable[i] = v
 	}
-	permitted := []capability.Cap{}
-	for _, c := range capConfig.Permitted {
+	permitted := make([]capability.Cap, len(capConfig.Permitted))
+	for i, c := range capConfig.Permitted {
 		v, ok := capabilityMap[c]
 		if !ok {
 			return nil, fmt.Errorf("unknown capability %q", c)
 		}
-		permitted = append(permitted, v)
+		permitted[i] = v
 	}
-	ambient := []capability.Cap{}
-	for _, c := range capConfig.Ambient {
+	ambient := make([]capability.Cap, len(capConfig.Ambient))
+	for i, c := range capConfig.Ambient {
 		v, ok := capabilityMap[c]
 		if !ok {
 			return nil, fmt.Errorf("unknown capability %q", c)
 		}
-		ambient = append(ambient, v)
+		ambient[i] = v
 	}
 	pid, err := capability.NewPid2(0)
 	if err != nil {
