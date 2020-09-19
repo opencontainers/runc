@@ -25,62 +25,45 @@ func init() {
 }
 
 func newContainerCapList(capConfig *configs.Capabilities) (*containerCapabilities, error) {
-	bounding := make([]capability.Cap, len(capConfig.Bounding))
-	for i, c := range capConfig.Bounding {
-		v, ok := capabilityMap[c]
-		if !ok {
-			return nil, fmt.Errorf("unknown capability %q", c)
-		}
-		bounding[i] = v
-	}
-	effective := make([]capability.Cap, len(capConfig.Effective))
-	for i, c := range capConfig.Effective {
-		v, ok := capabilityMap[c]
-		if !ok {
-			return nil, fmt.Errorf("unknown capability %q", c)
-		}
-		effective[i] = v
-	}
-	inheritable := make([]capability.Cap, len(capConfig.Inheritable))
-	for i, c := range capConfig.Inheritable {
-		v, ok := capabilityMap[c]
-		if !ok {
-			return nil, fmt.Errorf("unknown capability %q", c)
-		}
-		inheritable[i] = v
-	}
-	permitted := make([]capability.Cap, len(capConfig.Permitted))
-	for i, c := range capConfig.Permitted {
-		v, ok := capabilityMap[c]
-		if !ok {
-			return nil, fmt.Errorf("unknown capability %q", c)
-		}
-		permitted[i] = v
-	}
-	ambient := make([]capability.Cap, len(capConfig.Ambient))
-	for i, c := range capConfig.Ambient {
-		v, ok := capabilityMap[c]
-		if !ok {
-			return nil, fmt.Errorf("unknown capability %q", c)
-		}
-		ambient[i] = v
-	}
-	pid, err := capability.NewPid2(0)
-	if err != nil {
+	var (
+		err  error
+		caps containerCapabilities
+	)
+
+	if caps.bounding, err = capSlice(capConfig.Bounding); err != nil {
 		return nil, err
 	}
-	err = pid.Load()
-	if err != nil {
+	if caps.effective, err = capSlice(capConfig.Effective); err != nil {
 		return nil, err
 	}
-	return &containerCapabilities{
-		bounding:    bounding,
-		effective:   effective,
-		inheritable: inheritable,
-		permitted:   permitted,
-		ambient:     ambient,
-		pid:         pid,
-	}, nil
+	if caps.inheritable, err = capSlice(capConfig.Inheritable); err != nil {
+		return nil, err
+	}
+	if caps.permitted, err = capSlice(capConfig.Permitted); err != nil {
+		return nil, err
+	}
+	if caps.ambient, err = capSlice(capConfig.Ambient); err != nil {
+		return nil, err
+	}
+	if caps.pid, err = capability.NewPid2(0); err != nil {
+		return nil, err
+	}
+	if err = caps.pid.Load(); err != nil {
+		return nil, err
+	}
+	return &caps, nil
+}
+
+func capSlice(caps []string) ([]capability.Cap, error) {
+	out := make([]capability.Cap, len(caps))
+	for i, c := range caps {
+		v, ok := capabilityMap[c]
+		if !ok {
+			return nil, fmt.Errorf("unknown capability %q", c)
+		}
+		out[i] = v
+	}
+	return out, nil
 }
 
 type containerCapabilities struct {
