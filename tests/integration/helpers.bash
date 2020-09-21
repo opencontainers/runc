@@ -260,6 +260,11 @@ function requires() {
 				skip_me=1
 			fi
 			;;
+		rootless_no_features)
+			if [ "$ROOTLESS_FEATURES" != "" ]; then
+				skip_me=1
+			fi
+			;;
 		cgroups_freezer)
 			init_cgroup_paths
 			if [[ "$CGROUP_SUBSYSTEMS" != *"freezer"* ]]; then

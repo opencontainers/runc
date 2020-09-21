@@ -63,6 +63,8 @@ function teardown() {
 }
 
 @test "spec validator" {
+  requires rootless_no_features
+
   TESTDIR=$(pwd)
   cd "$HELLO_BUNDLE"
 
