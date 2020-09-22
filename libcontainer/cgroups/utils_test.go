@@ -401,6 +401,33 @@ func TestFindCgroupMountpointAndRoot(t *testing.T) {
 	}
 }
 
+func BenchmarkGetHugePageSize(b *testing.B) {
+	var (
+		output []string
+		err    error
+	)
+	for i := 0; i < b.N; i++ {
+		output, err = GetHugePageSize()
+	}
+	if err != nil || len(output) == 0 {
+		b.Fatal("unexpected results")
+	}
+}
+
+func BenchmarkGetHugePageSizeImpl(b *testing.B) {
+	var (
+		input  = []string{"hugepages-1048576kB", "hugepages-2048kB", "hugepages-32768kB", "hugepages-64kB"}
+		output []string
+		err    error
+	)
+	for i := 0; i < b.N; i++ {
+		output, err = getHugePageSizeFromFilenames(input)
+	}
+	if err != nil || len(output) != len(input) {
+		b.Fatal("unexpected results")
+	}
+}
+
 func TestGetHugePageSizeImpl(t *testing.T) {
 
 	testCases := []struct {
