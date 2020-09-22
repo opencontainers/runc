@@ -126,9 +126,8 @@ validate:
 ci: validate test release
 
 vendor:
-	export GO111MODULE=on \
-	$(GO) mod tidy && \
-	$(GO) mod vendor && \
+	$(GO) mod tidy
+	$(GO) mod vendor
 	$(GO) mod verify
 
 verify-dependencies: vendor
