@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/moby/sys/mountinfo"
 	"github.com/sirupsen/logrus"
 )
 
@@ -244,7 +245,13 @@ func TestGetCgroupMounts(t *testing.T) {
 		},
 	}
 	for _, td := range testTable {
-		mi := bytes.NewBufferString(td.mountInfo)
+		mi, err := mountinfo.GetMountsFromReader(
+			bytes.NewBufferString(td.mountInfo),
+			mountinfo.FSTypeFilter("cgroup"),
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
 		cgMounts, err := getCgroupMountsHelper(td.subsystems, mi, false)
 		if err != nil {
 			t.Fatal(err)
@@ -281,7 +288,6 @@ func TestGetCgroupMounts(t *testing.T) {
 		// Test the all=true case.
 
 		// Reset the test input.
-		mi = bytes.NewBufferString(td.mountInfo)
 		for k := range td.subsystems {
 			td.subsystems[k] = false
 		}
@@ -317,11 +323,15 @@ func BenchmarkGetCgroupMounts(b *testing.B) {
 		"perf_event": false,
 		"hugetlb":    false,
 	}
+	mi, err := mountinfo.GetMountsFromReader(
+		bytes.NewBufferString(fedoraMountinfo),
+		mountinfo.FSTypeFilter("cgroup"),
+	)
+	if err != nil {
+		b.Fatal(err)
+	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		b.StopTimer()
-		mi := bytes.NewBufferString(fedoraMountinfo)
-		b.StartTimer()
 		if _, err := getCgroupMountsHelper(subsystems, mi, false); err != nil {
 			b.Fatal(err)
 		}
@@ -396,7 +406,13 @@ func TestIgnoreCgroup2Mount(t *testing.T) {
 		"name=systemd": false,
 	}
 
-	mi := bytes.NewBufferString(cgroup2Mountinfo)
+	mi, err := mountinfo.GetMountsFromReader(
+		bytes.NewBufferString(cgroup2Mountinfo),
+		mountinfo.FSTypeFilter("cgroup"),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
 	cgMounts, err := getCgroupMountsHelper(subsystems, mi, false)
 	if err != nil {
 		t.Fatal(err)
@@ -409,10 +425,8 @@ func TestIgnoreCgroup2Mount(t *testing.T) {
 }
 
 func TestFindCgroupMountpointAndRoot(t *testing.T) {
-	fakeMountInfo := `
-35 27 0:29 / /foo rw,nosuid,nodev,noexec,relatime shared:18 - cgroup cgroup rw,devices
-35 27 0:29 / /sys/fs/cgroup/devices rw,nosuid,nodev,noexec,relatime shared:18 - cgroup cgroup rw,devices
-`
+	fakeMountInfo := `35 27 0:29 / /foo rw,nosuid,nodev,noexec,relatime shared:18 - cgroup cgroup rw,devices
+35 27 0:29 / /sys/fs/cgroup/devices rw,nosuid,nodev,noexec,relatime shared:18 - cgroup cgroup rw,devices`
 	testCases := []struct {
 		cgroupPath string
 		output     string
@@ -421,8 +435,16 @@ func TestFindCgroupMountpointAndRoot(t *testing.T) {
 		{cgroupPath: "", output: "/foo"},
 	}
 
+	mi, err := mountinfo.GetMountsFromReader(
+		bytes.NewBufferString(fakeMountInfo),
+		mountinfo.FSTypeFilter("cgroup"),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	for _, c := range testCases {
-		mountpoint, _, _ := findCgroupMountpointAndRootFromReader(strings.NewReader(fakeMountInfo), c.cgroupPath, "devices")
+		mountpoint, _, _ := findCgroupMountpointAndRootFromMI(mi, c.cgroupPath, "devices")
 		if mountpoint != c.output {
 			t.Errorf("expected %s, got %s", c.output, mountpoint)
 		}
