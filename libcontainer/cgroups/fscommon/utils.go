@@ -5,9 +5,7 @@ package fscommon
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"math"
-	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -54,21 +52,21 @@ func GetCgroupParamKeyValue(t string) (string, uint64, error) {
 	}
 }
 
-// Gets a single uint64 value from the specified cgroup file.
-func GetCgroupParamUint(cgroupPath, cgroupFile string) (uint64, error) {
-	fileName := filepath.Join(cgroupPath, cgroupFile)
-	contents, err := ioutil.ReadFile(fileName)
+// GetCgroupParamUint reads a single uint64 value from the specified cgroup file.
+// If the value read is "max", the math.MaxUint64 is returned.
+func GetCgroupParamUint(path, file string) (uint64, error) {
+	contents, err := GetCgroupParamString(path, file)
 	if err != nil {
 		return 0, err
 	}
-	trimmed := strings.TrimSpace(string(contents))
-	if trimmed == "max" {
+	contents = strings.TrimSpace(contents)
+	if contents == "max" {
 		return math.MaxUint64, nil
 	}
 
-	res, err := ParseUint(trimmed, 10, 64)
+	res, err := ParseUint(contents, 10, 64)
 	if err != nil {
-		return res, fmt.Errorf("unable to parse %q as a uint from Cgroup file %q", string(contents), fileName)
+		return res, fmt.Errorf("unable to parse file %q", path+"/"+file)
 	}
 	return res, nil
 }
