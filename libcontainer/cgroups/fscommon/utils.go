@@ -36,15 +36,16 @@ func ParseUint(s string, base, bitSize int) (uint64, error) {
 	return value, nil
 }
 
-// Parses a cgroup param and returns as name, value
-//  i.e. "io_service_bytes 1234" will return as io_service_bytes, 1234
+// GetCgroupParamKeyValue parses a space-separated "name value" kind of cgroup
+// parameter and returns its components. For example, "io_service_bytes 1234"
+// will return as "io_service_bytes", 1234.
 func GetCgroupParamKeyValue(t string) (string, uint64, error) {
 	parts := strings.Fields(t)
 	switch len(parts) {
 	case 2:
 		value, err := ParseUint(parts[1], 10, 64)
 		if err != nil {
-			return "", 0, fmt.Errorf("unable to convert param value (%q) to uint64: %v", parts[1], err)
+			return "", 0, fmt.Errorf("unable to convert to uint64: %v", err)
 		}
 
 		return parts[0], value, nil
