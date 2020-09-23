@@ -73,9 +73,9 @@ func GetCgroupParamUint(cgroupPath, cgroupFile string) (uint64, error) {
 	return res, nil
 }
 
-// Gets a string value from the specified cgroup file
-func GetCgroupParamString(cgroupPath, cgroupFile string) (string, error) {
-	contents, err := ioutil.ReadFile(filepath.Join(cgroupPath, cgroupFile))
+// GetCgroupParamString reads a string from the specified cgroup file.
+func GetCgroupParamString(path, file string) (string, error) {
+	contents, err := ReadFile(path, file)
 	if err != nil {
 		return "", err
 	}
