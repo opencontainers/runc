@@ -17,6 +17,10 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
+func init() {
+	fscommon.TestMode = true
+}
+
 type cgroupTestUtil struct {
 	// cgroup data to use in tests.
 	CgroupData *cgroupData
