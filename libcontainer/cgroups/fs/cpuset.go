@@ -6,12 +6,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/moby/sys/mountinfo"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	libcontainerUtils "github.com/opencontainers/runc/libcontainer/utils"
-	"github.com/pkg/errors"
+	"golang.org/x/sys/unix"
 )
 
 type CpusetGroup struct {
@@ -43,43 +41,16 @@ func (s *CpusetGroup) GetStats(path string, stats *cgroups.Stats) error {
 	return nil
 }
 
-// Get the source mount point of directory passed in as argument.
-func getMount(dir string) (string, error) {
-	mi, err := mountinfo.GetMounts(mountinfo.ParentsFilter(dir))
-	if err != nil {
-		return "", err
-	}
-	if len(mi) < 1 {
-		return "", errors.Errorf("Can't find mount point of %s", dir)
-	}
-
-	// find the longest mount point
-	var idx, maxlen int
-	for i := range mi {
-		if len(mi[i].Mountpoint) > maxlen {
-			maxlen = len(mi[i].Mountpoint)
-			idx = i
-		}
-	}
-
-	return mi[idx].Mountpoint, nil
-}
-
 func (s *CpusetGroup) ApplyDir(dir string, cgroup *configs.Cgroup, pid int) error {
 	// This might happen if we have no cpuset cgroup mounted.
 	// Just do nothing and don't fail.
 	if dir == "" {
 		return nil
 	}
-	root, err := getMount(dir)
-	if err != nil {
-		return err
-	}
-	root = filepath.Dir(root)
 	// 'ensureParent' start with parent because we don't want to
 	// explicitly inherit from parent, it could conflict with
 	// 'cpuset.cpu_exclusive'.
-	if err := cpusetEnsureParent(filepath.Dir(dir), root); err != nil {
+	if err := cpusetEnsureParent(filepath.Dir(dir)); err != nil {
 		return err
 	}
 	if err := os.MkdirAll(dir, 0755); err != nil {
@@ -111,19 +82,25 @@ func getCpusetSubsystemSettings(parent string) (cpus, mems string, err error) {
 	return cpus, mems, nil
 }
 
-// cpusetEnsureParent makes sure that the parent directory of current is created
-// and populated with the proper cpus and mems files copied from
-// its parent.
-func cpusetEnsureParent(current, root string) error {
+// cpusetEnsureParent makes sure that the parent directories of current
+// are created and populated with the proper cpus and mems files copied
+// from their respective parent. It does that recursively, starting from
+// the top of the cpuset hierarchy (i.e. cpuset cgroup mount point).
+func cpusetEnsureParent(current string) error {
+	var st unix.Statfs_t
+
 	parent := filepath.Dir(current)
-	if libcontainerUtils.CleanPath(parent) == root {
+	err := unix.Statfs(parent, &st)
+	if err == nil && st.Type != unix.CGROUP_SUPER_MAGIC {
 		return nil
 	}
-	// Avoid infinite recursion.
-	if parent == current {
-		return errors.New("cpuset: cgroup parent path outside cgroup root")
+	// Treat non-existing directory as cgroupfs as it will be created,
+	// and the root cpuset directory obviously exists.
+	if err != nil && err != unix.ENOENT {
+		return &os.PathError{Op: "statfs", Path: parent, Err: err}
 	}
-	if err := cpusetEnsureParent(parent, root); err != nil {
+
+	if err := cpusetEnsureParent(parent); err != nil {
 		return err
 	}
 	if err := os.MkdirAll(current, 0755); err != nil {
