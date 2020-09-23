@@ -43,7 +43,7 @@ func statHugeTlb(dirPath string, stats *cgroups.Stats) error {
 		usage := strings.Join([]string{"hugetlb", pagesize, "current"}, ".")
 		value, err := fscommon.GetCgroupParamUint(dirPath, usage)
 		if err != nil {
-			return errors.Wrapf(err, "failed to parse hugetlb.%s.current file", pagesize)
+			return errors.Wrap(err, "failed to parse "+usage)
 		}
 		hugetlbStats.Usage = value
 
@@ -51,11 +51,11 @@ func statHugeTlb(dirPath string, stats *cgroups.Stats) error {
 		filePath := filepath.Join(dirPath, fileName)
 		contents, err := ioutil.ReadFile(filePath)
 		if err != nil {
-			return errors.Wrapf(err, "failed to parse hugetlb.%s.events file", pagesize)
+			return errors.Wrap(err, "failed to read stats")
 		}
 		_, value, err = fscommon.GetCgroupParamKeyValue(string(contents))
 		if err != nil {
-			return errors.Wrapf(err, "failed to parse hugetlb.%s.events file", pagesize)
+			return errors.Wrapf(err, "failed to parse "+fileName)
 		}
 		hugetlbStats.Failcnt = value
 
