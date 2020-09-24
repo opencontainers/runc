@@ -12,6 +12,8 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+// WriteFile writes data to a cgroup file in dir.
+// It is supposed to be used for cgroup files only.
 func WriteFile(dir, file, data string) error {
 	if dir == "" {
 		return errors.Errorf("no directory specified for %s", file)
@@ -26,6 +28,8 @@ func WriteFile(dir, file, data string) error {
 	return nil
 }
 
+// ReadFile reads data from a cgroup file in dir.
+// It is supposed to be used for cgroup files only.
 func ReadFile(dir, file string) (string, error) {
 	if dir == "" {
 		return "", errors.Errorf("no directory specified for %s", file)

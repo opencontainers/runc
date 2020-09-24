@@ -14,8 +14,9 @@ var (
 	ErrNotValidFormat = errors.New("line is not a valid key value format")
 )
 
-// Saturates negative values at zero and returns a uint64.
-// Due to kernel bugs, some of the memory cgroup stats can be negative.
+// ParseUint converts a string to an uint64 integer.
+// Negative values are returned at zero as, due to kernel bugs,
+// some of the memory cgroup stats can be negative.
 func ParseUint(s string, base, bitSize int) (uint64, error) {
 	value, err := strconv.ParseUint(s, base, bitSize)
 	if err != nil {
