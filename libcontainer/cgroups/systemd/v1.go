@@ -4,7 +4,6 @@ package systemd
 
 import (
 	"errors"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,6 +12,7 @@ import (
 	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fs"
+	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/sirupsen/logrus"
 )
@@ -415,7 +415,7 @@ func enableKmem(c *configs.Cgroup) error {
 	}
 	// do not try to enable the kernel memory if we already have
 	// tasks in the cgroup.
-	content, err := ioutil.ReadFile(filepath.Join(path, "tasks"))
+	content, err := fscommon.ReadFile(path, "tasks")
 	if err != nil {
 		return err
 	}
