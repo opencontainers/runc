@@ -1,19 +1,17 @@
 package fs2
 
 import (
-	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
-func supportedControllers(cgroup *configs.Cgroup) ([]byte, error) {
-	const file = UnifiedMountpoint + "/cgroup.controllers"
-	return ioutil.ReadFile(file)
+func supportedControllers(cgroup *configs.Cgroup) (string, error) {
+	return fscommon.ReadFile(UnifiedMountpoint, "/cgroup.controllers")
 }
 
 // needAnyControllers returns whether we enable some supported controllers or not,
@@ -31,7 +29,7 @@ func needAnyControllers(cgroup *configs.Cgroup) (bool, error) {
 		return false, err
 	}
 	avail := make(map[string]struct{})
-	for _, ctr := range strings.Fields(string(content)) {
+	for _, ctr := range strings.Fields(content) {
 		avail[ctr] = struct{}{}
 	}
 
@@ -81,8 +79,12 @@ func CreateCgroupPath(path string, c *configs.Cgroup) (Err error) {
 		return err
 	}
 
-	ctrs := bytes.Fields(content)
-	res := append([]byte("+"), bytes.Join(ctrs, []byte(" +"))...)
+	const (
+		cgTypeFile  = "cgroup.type"
+		cgStCtlFile = "cgroup.subtree_control"
+	)
+	ctrs := strings.Fields(content)
+	res := "+" + strings.Join(ctrs, " +")
 
 	elements := strings.Split(path, "/")
 	elements = elements[3:]
@@ -103,9 +105,8 @@ func CreateCgroupPath(path string, c *configs.Cgroup) (Err error) {
 					}
 				}()
 			}
-			cgTypeFile := filepath.Join(current, "cgroup.type")
-			cgType, _ := ioutil.ReadFile(cgTypeFile)
-			switch strings.TrimSpace(string(cgType)) {
+			cgType, _ := fscommon.ReadFile(current, cgTypeFile)
+			switch strings.TrimSpace(cgType) {
 			// If the cgroup is in an invalid mode (usually this means there's an internal
 			// process in the cgroup tree, because we created a cgroup under an
 			// already-populated-by-other-processes cgroup), then we have to error out if
@@ -120,7 +121,7 @@ func CreateCgroupPath(path string, c *configs.Cgroup) (Err error) {
 					// since that means we're a properly delegated cgroup subtree) but in
 					// this case there's not much we can do and it's better than giving an
 					// error.
-					_ = ioutil.WriteFile(cgTypeFile, []byte("threaded"), 0644)
+					_ = fscommon.WriteFile(current, cgTypeFile, "threaded")
 				}
 			// If the cgroup is in (threaded) or (domain threaded) mode, we can only use thread-aware controllers
 			// (and you cannot usually take a cgroup out of threaded mode).
@@ -134,12 +135,11 @@ func CreateCgroupPath(path string, c *configs.Cgroup) (Err error) {
 		}
 		// enable all supported controllers
 		if i < len(elements)-1 {
-			file := filepath.Join(current, "cgroup.subtree_control")
-			if err := ioutil.WriteFile(file, res, 0644); err != nil {
+			if err := fscommon.WriteFile(current, cgStCtlFile, res); err != nil {
 				// try write one by one
-				allCtrs := bytes.Split(res, []byte(" "))
+				allCtrs := strings.Split(res, " ")
 				for _, ctr := range allCtrs {
-					_ = ioutil.WriteFile(file, ctr, 0644)
+					_ = fscommon.WriteFile(current, cgStCtlFile, ctr)
 				}
 			}
 			// Some controllers might not be enabled when rootless or containerized,
