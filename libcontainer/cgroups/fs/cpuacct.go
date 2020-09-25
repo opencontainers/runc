@@ -135,7 +135,7 @@ func getPercpuUsageInModes(path string) ([]uint64, []uint64, error) {
 	usageKernelMode := []uint64{}
 	usageUserMode := []uint64{}
 
-	file, err := os.Open(filepath.Join(path, cgroupCpuacctUsageAll))
+	file, err := fscommon.OpenFile(path, cgroupCpuacctUsageAll, os.O_RDONLY)
 	if os.IsNotExist(err) {
 		return usageKernelMode, usageUserMode, nil
 	} else if err != nil {
