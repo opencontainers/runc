@@ -5,7 +5,6 @@ package fs
 import (
 	"bufio"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -93,11 +92,11 @@ func getCpuUsageBreakdown(path string) (uint64, uint64, error) {
 	// Expected format:
 	// user <usage in ticks>
 	// system <usage in ticks>
-	data, err := ioutil.ReadFile(filepath.Join(path, cgroupCpuacctStat))
+	data, err := fscommon.ReadFile(path, cgroupCpuacctStat)
 	if err != nil {
 		return 0, 0, err
 	}
-	fields := strings.Fields(string(data))
+	fields := strings.Fields(data)
 	if len(fields) < 4 {
 		return 0, 0, fmt.Errorf("failure - %s is expected to have at least 4 fields", filepath.Join(path, cgroupCpuacctStat))
 	}
@@ -119,11 +118,11 @@ func getCpuUsageBreakdown(path string) (uint64, uint64, error) {
 
 func getPercpuUsage(path string) ([]uint64, error) {
 	percpuUsage := []uint64{}
-	data, err := ioutil.ReadFile(filepath.Join(path, "cpuacct.usage_percpu"))
+	data, err := fscommon.ReadFile(path, "cpuacct.usage_percpu")
 	if err != nil {
 		return percpuUsage, err
 	}
-	for _, value := range strings.Fields(string(data)) {
+	for _, value := range strings.Fields(data) {
 		value, err := strconv.ParseUint(value, 10, 64)
 		if err != nil {
 			return percpuUsage, fmt.Errorf("Unable to convert param value to uint64: %s", err)
