@@ -16,6 +16,7 @@ import (
 	"time"
 
 	units "github.com/docker/go-units"
+	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
@@ -87,11 +88,11 @@ func GetAllSubsystems() ([]string, error) {
 		// - freezer: implemented in kernel 5.2
 		// We assume these are always available, as it is hard to detect availability.
 		pseudo := []string{"devices", "freezer"}
-		data, err := ioutil.ReadFile("/sys/fs/cgroup/cgroup.controllers")
+		data, err := fscommon.ReadFile("/sys/fs/cgroup", "cgroup.controllers")
 		if err != nil {
 			return nil, err
 		}
-		subsystems := append(pseudo, strings.Fields(string(data))...)
+		subsystems := append(pseudo, strings.Fields(data)...)
 		return subsystems, nil
 	}
 	f, err := os.Open("/proc/cgroups")
