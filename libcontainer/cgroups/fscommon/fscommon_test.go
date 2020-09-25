@@ -9,18 +9,12 @@ import (
 	"strconv"
 	"testing"
 	"time"
-
-	"github.com/opencontainers/runc/libcontainer/cgroups"
 )
 
 func TestWriteCgroupFileHandlesInterrupt(t *testing.T) {
-	if cgroups.IsCgroup2UnifiedMode() {
-		t.Skip("cgroup v2 is not supported")
-	}
-
-	memoryCgroupMount, err := cgroups.FindCgroupMountpoint("", "memory")
-	if err != nil {
-		t.Fatal(err)
+	const memoryCgroupMount = "/sys/fs/cgroup/memory"
+	if _, err := os.Stat(memoryCgroupMount); err != nil {
+		t.Skip(err)
 	}
 
 	cgroupName := fmt.Sprintf("test-eint-%d", time.Now().Nanosecond())
