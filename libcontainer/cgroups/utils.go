@@ -352,14 +352,14 @@ func WriteCgroupProc(dir string, pid int) error {
 		return nil
 	}
 
-	cgroupProcessesFile, err := os.OpenFile(filepath.Join(dir, CgroupProcesses), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0700)
+	file, err := fscommon.OpenFile(dir, CgroupProcesses, os.O_WRONLY)
 	if err != nil {
 		return fmt.Errorf("failed to write %v to %v: %v", pid, CgroupProcesses, err)
 	}
-	defer cgroupProcessesFile.Close()
+	defer file.Close()
 
 	for i := 0; i < 5; i++ {
-		_, err = cgroupProcessesFile.WriteString(strconv.Itoa(pid))
+		_, err = file.WriteString(strconv.Itoa(pid))
 		if err == nil {
 			return nil
 		}
