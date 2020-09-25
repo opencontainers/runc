@@ -5,7 +5,6 @@ package fs2
 import (
 	"bufio"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -76,7 +75,7 @@ func setMemory(dirPath string, cgroup *configs.Cgroup) error {
 
 func statMemory(dirPath string, stats *cgroups.Stats) error {
 	// Set stats from memory.stat.
-	statsFile, err := os.Open(filepath.Join(dirPath, "memory.stat"))
+	statsFile, err := fscommon.OpenFile(dirPath, "memory.stat", os.O_RDONLY)
 	if err != nil {
 		return err
 	}

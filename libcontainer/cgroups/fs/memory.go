@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"math"
 	"os"
-	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -160,7 +159,7 @@ func (s *MemoryGroup) Set(path string, cgroup *configs.Cgroup) error {
 
 func (s *MemoryGroup) GetStats(path string, stats *cgroups.Stats) error {
 	// Set stats from memory.stat.
-	statsFile, err := os.Open(filepath.Join(path, "memory.stat"))
+	statsFile, err := fscommon.OpenFile(path, "memory.stat", os.O_RDONLY)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil
@@ -279,7 +278,7 @@ func getMemoryData(path, name string) (cgroups.MemoryData, error) {
 func getPageUsageByNUMA(cgroupPath string) (cgroups.PageUsageByNUMA, error) {
 	stats := cgroups.PageUsageByNUMA{}
 
-	file, err := os.Open(path.Join(cgroupPath, cgroupMemoryPagesByNuma))
+	file, err := fscommon.OpenFile(cgroupPath, cgroupMemoryPagesByNuma, os.O_RDONLY)
 	if os.IsNotExist(err) {
 		return stats, nil
 	} else if err != nil {
