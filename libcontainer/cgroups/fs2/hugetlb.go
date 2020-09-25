@@ -3,8 +3,6 @@
 package fs2
 
 import (
-	"io/ioutil"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -48,12 +46,11 @@ func statHugeTlb(dirPath string, stats *cgroups.Stats) error {
 		hugetlbStats.Usage = value
 
 		fileName := strings.Join([]string{"hugetlb", pagesize, "events"}, ".")
-		filePath := filepath.Join(dirPath, fileName)
-		contents, err := ioutil.ReadFile(filePath)
+		contents, err := fscommon.ReadFile(dirPath, fileName)
 		if err != nil {
 			return errors.Wrap(err, "failed to read stats")
 		}
-		_, value, err = fscommon.GetCgroupParamKeyValue(string(contents))
+		_, value, err = fscommon.GetCgroupParamKeyValue(contents)
 		if err != nil {
 			return errors.Wrapf(err, "failed to parse "+fileName)
 		}
