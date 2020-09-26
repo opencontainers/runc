@@ -3,11 +3,14 @@
 package fs2
 
 import (
+	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
+	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/pkg/errors"
 )
@@ -206,7 +209,37 @@ func (m *manager) Set(container *configs.Config) error {
 	if err := setFreezer(m.dirPath, container.Cgroups.Freezer); err != nil {
 		return err
 	}
+	if err := m.setUnified(container.Cgroups.Unified); err != nil {
+		return err
+	}
 	m.config = container.Cgroups
+	return nil
+}
+
+func (m *manager) setUnified(res map[string]string) error {
+	for k, v := range res {
+		if strings.Contains(k, "/") {
+			return fmt.Errorf("unified resource %q must be a file name (no slashes)", k)
+		}
+		if err := fscommon.WriteFile(m.dirPath, k, v); err != nil {
+			errC := errors.Cause(err)
+			// Check for both EPERM and ENOENT since O_CREAT is used by WriteFile.
+			if errors.Is(errC, os.ErrPermission) || errors.Is(errC, os.ErrNotExist) {
+				// Check if a controller is available,
+				// to give more specific error if not.
+				sk := strings.SplitN(k, ".", 2)
+				if len(sk) != 2 {
+					return fmt.Errorf("unified resource %q must be in the form CONTROLLER.PARAMETER", k)
+				}
+				c := sk[0]
+				if _, ok := m.controllers[c]; !ok && c != "cgroup" {
+					return fmt.Errorf("unified resource %q can't be set: controller %q not available", k, c)
+				}
+			}
+			return errors.Wrapf(err, "can't set unified resource %q", k)
+		}
+	}
+
 	return nil
 }
 

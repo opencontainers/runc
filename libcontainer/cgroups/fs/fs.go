@@ -218,7 +218,10 @@ func (m *manager) Apply(pid int) (err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	var c = m.cgroups
+	c := m.cgroups
+	if c.Resources.Unified != nil {
+		return cgroups.ErrV1NoUnified
+	}
 
 	m.paths = make(map[string]string)
 	if c.Paths != nil {
@@ -308,6 +311,9 @@ func (m *manager) Set(container *configs.Config) error {
 	// and there is no need to set any values.
 	if m.cgroups != nil && m.cgroups.Paths != nil {
 		return nil
+	}
+	if container.Cgroups.Resources.Unified != nil {
+		return cgroups.ErrV1NoUnified
 	}
 
 	m.mu.Lock()

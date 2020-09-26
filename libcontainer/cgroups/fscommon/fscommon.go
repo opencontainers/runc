@@ -21,7 +21,7 @@ func WriteFile(dir, file, data string) error {
 		return err
 	}
 	if err := retryingWriteFile(path, []byte(data), 0700); err != nil {
-		return errors.Wrapf(err, "failed to write %q to %q", data, path)
+		return errors.Wrapf(err, "failed to write %q", data)
 	}
 	return nil
 }

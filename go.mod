@@ -13,7 +13,7 @@ require (
 	github.com/golang/protobuf v1.4.2
 	github.com/moby/sys/mountinfo v0.2.0
 	github.com/mrunalp/fileutils v0.5.0
-	github.com/opencontainers/runtime-spec v1.0.3-0.20200728170252-4d89ac9fbff6
+	github.com/opencontainers/runtime-spec v1.0.3-0.20200817204227-f9c09b4ea1df
 	github.com/opencontainers/selinux v1.6.0
 	github.com/pkg/errors v0.9.1
 	github.com/seccomp/libseccomp-golang v0.9.1

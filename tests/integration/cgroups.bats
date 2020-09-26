@@ -6,6 +6,8 @@ function teardown() {
     rm -f "$BATS_TMPDIR"/runc-cgroups-integration-test.json
     teardown_running_container test_cgroups_kmem
     teardown_running_container test_cgroups_permissions
+    teardown_running_container test_cgroups_group
+    teardown_running_container test_cgroups_unified
     teardown_busybox
 }
 
@@ -175,4 +177,65 @@ function setup() {
     runc exec test_cgroups_group test ! -d /sys/fs/cgroup/foo
     [ "$status" -eq 0 ]
 #
+}
+
+@test "runc run (cgroup v1 + unified resources should fail)" {
+    requires root cgroups_v1
+
+    set_cgroups_path "$BUSYBOX_BUNDLE"
+    set_resources_limit "$BUSYBOX_BUNDLE"
+    update_config '.linux.resources.unified |= {"memory.min": "131072"}' "$BUSYBOX_BUNDLE"
+
+    runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_unified
+    [ "$status" -ne 0 ]
+    [[ "$output" == *'invalid configuration'* ]]
+}
+
+@test "runc run (cgroup v2 resources.unified only)" {
+    requires root cgroups_v2
+
+    set_cgroups_path "$BUSYBOX_BUNDLE"
+    update_config ' .linux.resources.unified |= {
+                      "memory.min":   "131072",
+                      "memory.low":   "524288",
+                      "memory.high": "5242880",
+                      "memory.max": "10485760",
+                      "pids.max": "99",
+                      "cpu.max": "10000 100000"
+                     }' "$BUSYBOX_BUNDLE"
+
+    runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_unified
+    [ "$status" -eq 0 ]
+
+    runc exec test_cgroups_unified sh -c 'cd /sys/fs/cgroup && grep . *.min *.max *.low *.high'
+    [ "$status" -eq 0 ]
+    echo "$output"
+
+    echo "$output" | grep -q '^memory.min:131072$'
+    echo "$output" | grep -q '^memory.low:524288$'
+    echo "$output" | grep -q '^memory.high:5242880$'
+    echo "$output" | grep -q '^memory.max:10485760$'
+    echo "$output" | grep -q '^pids.max:99$'
+    echo "$output" | grep -q '^cpu.max:10000 100000$'
+}
+@test "runc run (cgroup v2 resources.unified override)" {
+    requires root cgroups_v2
+
+    set_cgroups_path "$BUSYBOX_BUNDLE"
+    update_config ' .linux.resources.memory |= {"limit": 33554432}
+                  | .linux.resources.memorySwap |= {"limit": 33554432}
+                  | .linux.resources.unified |=
+                      {"memory.min": "131072", "memory.max": "10485760" }' \
+        "$BUSYBOX_BUNDLE"
+
+    runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_unified
+    [ "$status" -eq 0 ]
+
+    runc exec test_cgroups_unified cat /sys/fs/cgroup/memory.min
+    [ "$status" -eq 0 ]
+    [ "$output" = '131072' ]
+
+    runc exec test_cgroups_unified cat /sys/fs/cgroup/memory.max
+    [ "$status" -eq 0 ]
+    [ "$output" = '10485760' ]
 }
