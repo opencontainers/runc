@@ -12,6 +12,7 @@ function setup() {
 
 function teardown() {
   teardown_busybox
+  teardown_running_container test_busybox_restore
 }
 
 function setup_pipes() {
@@ -317,4 +318,3 @@ function simple_cr() {
   unlink "$tmp"
   test -f ./work-dir/"$tmplog2" && unlink ./work-dir/"$tmplog2"
 }
-

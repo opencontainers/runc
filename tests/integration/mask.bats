@@ -11,7 +11,7 @@ function setup() {
 	echo "Forbidden information!" > rootfs/testfile
 
 	# add extra masked paths
-	update_config '(.. | select(.maskedPaths? != null)) .maskedPaths += ["/testdir", "/testfile"]' 
+	update_config '(.. | select(.maskedPaths? != null)) .maskedPaths += ["/testdir", "/testfile"]'
 }
 
 function teardown() {

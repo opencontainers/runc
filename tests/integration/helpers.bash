@@ -167,9 +167,9 @@ function init_cgroup_paths() {
 
 # Helper function to set cgroupsPath to the value of $OCI_CGROUPS_PATH
 function set_cgroups_path() {
-  bundle="${1:-.}"
-  init_cgroup_paths
-  update_config '.linux.cgroupsPath |= "'"${OCI_CGROUPS_PATH}"'"' $bundle
+	bundle="${1:-.}"
+	init_cgroup_paths
+	update_config '.linux.cgroupsPath |= "'"${OCI_CGROUPS_PATH}"'"' $bundle
 }
 
 # Helper to check a value in cgroups.
@@ -207,17 +207,15 @@ function check_systemd_value() {
 
 # Helper function to set a resources limit
 function set_resources_limit() {
-  bundle="${1:-.}"
-  update_config '.linux.resources.pids.limit |= 100' $bundle
+	bundle="${1:-.}"
+	update_config '.linux.resources.pids.limit |= 100' $bundle
 }
 
 # Helper function to make /sys/fs/cgroup writable
 function set_cgroup_mount_writable() {
 	bundle="${1:-.}"
-	cat "$bundle/config.json" \
-        |  jq '.mounts |= map((select(.type == "cgroup") | .options -= ["ro"]) // .)' \
-		>"$bundle/config.json.tmp"
-	mv "$bundle/config.json"{.tmp,}
+	update_config '.mounts |= map((select(.type == "cgroup") | .options -= ["ro"]) // .)' \
+		$bundle
 }
 
 # Fails the current test, providing the error given.
@@ -259,6 +257,11 @@ function requires() {
 			;;
 		rootless_no_cgroup)
 			if [[ "$ROOTLESS_FEATURES" == *"cgroup"* ]]; then
+				skip_me=1
+			fi
+			;;
+		rootless_no_features)
+			if [ "$ROOTLESS_FEATURES" != "" ]; then
 				skip_me=1
 			fi
 			;;

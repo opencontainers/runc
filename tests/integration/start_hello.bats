@@ -26,8 +26,8 @@ function teardown() {
 
   # replace "uid": 0 with "uid": 1000
   # and do a similar thing for gid.
-  update_config ' (.. | select(.uid? == 0)) .uid |= 1000	
-		| (.. | select(.gid? == 0)) .gid |= 100' 
+  update_config ' (.. | select(.uid? == 0)) .uid |= 1000
+		| (.. | select(.gid? == 0)) .gid |= 100'
 
   # run hello-world
   runc run test_hello

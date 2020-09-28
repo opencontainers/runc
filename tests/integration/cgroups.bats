@@ -3,7 +3,6 @@
 load helpers
 
 function teardown() {
-    rm -f "$BATS_TMPDIR"/runc-cgroups-integration-test.json
     teardown_running_container test_cgroups_kmem
     teardown_running_container test_cgroups_permissions
     teardown_running_container test_cgroups_group

@@ -9,6 +9,7 @@ function setup() {
 
 function teardown() {
 	teardown_busybox
+	teardown_running_container test_dev
 }
 
 @test "runc run [redundant default /dev/tty]" {

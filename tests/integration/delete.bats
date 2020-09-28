@@ -9,6 +9,7 @@ function setup() {
 
 function teardown() {
   teardown_busybox
+  teardown_running_container testbusyboxdelete
 }
 
 @test "runc delete" {
