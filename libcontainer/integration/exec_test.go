@@ -40,7 +40,7 @@ func testExecPS(t *testing.T, userns bool) {
 	rootfs, err := newRootfs()
 	ok(t, err)
 	defer remove(rootfs)
-	config := newTemplateConfig(rootfs)
+	config := newTemplateConfig(&tParam{rootfs: rootfs})
 	if userns {
 		config.UidMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
 		config.GidMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
@@ -77,7 +77,7 @@ func TestIPCPrivate(t *testing.T) {
 	l, err := os.Readlink("/proc/1/ns/ipc")
 	ok(t, err)
 
-	config := newTemplateConfig(rootfs)
+	config := newTemplateConfig(&tParam{rootfs: rootfs})
 	buffers, exitCode, err := runContainer(config, "", "readlink", "/proc/self/ns/ipc")
 	ok(t, err)
 
@@ -102,7 +102,7 @@ func TestIPCHost(t *testing.T) {
 	l, err := os.Readlink("/proc/1/ns/ipc")
 	ok(t, err)
 
-	config := newTemplateConfig(rootfs)
+	config := newTemplateConfig(&tParam{rootfs: rootfs})
 	config.Namespaces.Remove(configs.NEWIPC)
 	buffers, exitCode, err := runContainer(config, "", "readlink", "/proc/self/ns/ipc")
 	ok(t, err)
@@ -128,7 +128,7 @@ func TestIPCJoinPath(t *testing.T) {
 	l, err := os.Readlink("/proc/1/ns/ipc")
 	ok(t, err)
 
-	config := newTemplateConfig(rootfs)
+	config := newTemplateConfig(&tParam{rootfs: rootfs})
 	config.Namespaces.Add(configs.NEWIPC, "/proc/1/ns/ipc")
 
 	buffers, exitCode, err := runContainer(config, "", "readlink", "/proc/self/ns/ipc")
@@ -152,7 +152,7 @@ func TestIPCBadPath(t *testing.T) {
 	ok(t, err)
 	defer remove(rootfs)
 
-	config := newTemplateConfig(rootfs)
+	config := newTemplateConfig(&tParam{rootfs: rootfs})
 	config.Namespaces.Add(configs.NEWIPC, "/proc/1/ns/ipcc")
 
 	_, _, err = runContainer(config, "", "true")
@@ -182,7 +182,7 @@ func testRlimit(t *testing.T, userns bool) {
 	ok(t, err)
 	defer remove(rootfs)
 
-	config := newTemplateConfig(rootfs)
+	config := newTemplateConfig(&tParam{rootfs: rootfs})
 	if userns {
 		config.UidMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
 		config.GidMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
@@ -212,7 +212,7 @@ func TestEnter(t *testing.T) {
 	ok(t, err)
 	defer remove(rootfs)
 
-	config := newTemplateConfig(rootfs)
+	config := newTemplateConfig(&tParam{rootfs: rootfs})
 
 	container, err := newContainerWithName("test", config)
 	ok(t, err)
@@ -299,7 +299,7 @@ func TestProcessEnv(t *testing.T) {
 	ok(t, err)
 	defer remove(rootfs)
 
-	config := newTemplateConfig(rootfs)
+	config := newTemplateConfig(&tParam{rootfs: rootfs})
 
 	container, err := newContainerWithName("test", config)
 	ok(t, err)
@@ -347,7 +347,7 @@ func TestProcessEmptyCaps(t *testing.T) {
 	ok(t, err)
 	defer remove(rootfs)
 
-	config := newTemplateConfig(rootfs)
+	config := newTemplateConfig(&tParam{rootfs: rootfs})
 	config.Capabilities = nil
 
 	container, err := newContainerWithName("test", config)
@@ -396,7 +396,7 @@ func TestProcessCaps(t *testing.T) {
 	ok(t, err)
 	defer remove(rootfs)
 
-	config := newTemplateConfig(rootfs)
+	config := newTemplateConfig(&tParam{rootfs: rootfs})
 
 	container, err := newContainerWithName("test", config)
 	ok(t, err)
@@ -464,7 +464,7 @@ func TestAdditionalGroups(t *testing.T) {
 	ok(t, err)
 	defer remove(rootfs)
 
-	config := newTemplateConfig(rootfs)
+	config := newTemplateConfig(&tParam{rootfs: rootfs})
 
 	container, err := newContainerWithName("test", config)
 	ok(t, err)
@@ -518,7 +518,7 @@ func testFreeze(t *testing.T, systemd bool) {
 	ok(t, err)
 	defer remove(rootfs)
 
-	config := newTemplateConfig(rootfs)
+	config := newTemplateConfig(&tParam{rootfs: rootfs})
 	container, err := newContainerWithName("test", config)
 	ok(t, err)
 	defer container.Destroy()
@@ -575,7 +575,7 @@ func testCpuShares(t *testing.T, systemd bool) {
 	ok(t, err)
 	defer remove(rootfs)
 
-	config := newTemplateConfig(rootfs)
+	config := newTemplateConfig(&tParam{rootfs: rootfs})
 	if systemd {
 		config.Cgroups.Parent = "system.slice"
 	}
@@ -607,7 +607,7 @@ func testPids(t *testing.T, systemd bool) {
 	ok(t, err)
 	defer remove(rootfs)
 
-	config := newTemplateConfig(rootfs)
+	config := newTemplateConfig(&tParam{rootfs: rootfs})
 	if systemd {
 		config.Cgroups.Parent = "system.slice"
 	}
@@ -693,7 +693,7 @@ func testRunWithKernelMemory(t *testing.T, systemd bool) {
 	ok(t, err)
 	defer remove(rootfs)
 
-	config := newTemplateConfig(rootfs)
+	config := newTemplateConfig(&tParam{rootfs: rootfs})
 	if systemd {
 		config.Cgroups.Parent = "system.slice"
 	}
@@ -727,7 +727,7 @@ func testCgroupResourcesUnifiedErrorOnV1(t *testing.T, systemd bool) {
 	ok(t, err)
 	defer remove(rootfs)
 
-	config := newTemplateConfig(rootfs)
+	config := newTemplateConfig(&tParam{rootfs: rootfs})
 	if systemd {
 		config.Cgroups.Parent = "system.slice"
 	}
@@ -762,7 +762,7 @@ func testCgroupResourcesUnified(t *testing.T, systemd bool) {
 	ok(t, err)
 	defer remove(rootfs)
 
-	config := newTemplateConfig(rootfs)
+	config := newTemplateConfig(&tParam{rootfs: rootfs})
 	config.Cgroups.Resources.Memory = 536870912     // 512M
 	config.Cgroups.Resources.MemorySwap = 536870912 // 512M, i.e. no swap
 	config.Namespaces.Add(configs.NEWCGROUP, "")
@@ -870,7 +870,7 @@ func TestContainerState(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	config := newTemplateConfig(rootfs)
+	config := newTemplateConfig(&tParam{rootfs: rootfs})
 	config.Namespaces = configs.Namespaces([]configs.Namespace{
 		{Type: configs.NEWNS},
 		{Type: configs.NEWUTS},
@@ -931,7 +931,7 @@ func TestPassExtraFiles(t *testing.T) {
 	}
 	defer remove(rootfs)
 
-	config := newTemplateConfig(rootfs)
+	config := newTemplateConfig(&tParam{rootfs: rootfs})
 
 	container, err := newContainerWithName("test", config)
 	if err != nil {
@@ -1006,7 +1006,7 @@ func TestMountCmds(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDir)
 
-	config := newTemplateConfig(rootfs)
+	config := newTemplateConfig(&tParam{rootfs: rootfs})
 	config.Mounts = append(config.Mounts, &configs.Mount{
 		Source:      tmpDir,
 		Destination: "/tmp",
@@ -1063,7 +1063,7 @@ func TestSysctl(t *testing.T) {
 	ok(t, err)
 	defer remove(rootfs)
 
-	config := newTemplateConfig(rootfs)
+	config := newTemplateConfig(&tParam{rootfs: rootfs})
 	config.Sysctl = map[string]string{
 		"kernel.shmmni": "8192",
 	}
@@ -1100,7 +1100,7 @@ func TestMountCgroupRO(t *testing.T) {
 	rootfs, err := newRootfs()
 	ok(t, err)
 	defer remove(rootfs)
-	config := newTemplateConfig(rootfs)
+	config := newTemplateConfig(&tParam{rootfs: rootfs})
 
 	config.Mounts = append(config.Mounts, &configs.Mount{
 		Destination: "/sys/fs/cgroup",
@@ -1149,7 +1149,7 @@ func TestMountCgroupRW(t *testing.T) {
 	rootfs, err := newRootfs()
 	ok(t, err)
 	defer remove(rootfs)
-	config := newTemplateConfig(rootfs)
+	config := newTemplateConfig(&tParam{rootfs: rootfs})
 
 	config.Mounts = append(config.Mounts, &configs.Mount{
 		Destination: "/sys/fs/cgroup",
@@ -1200,7 +1200,7 @@ func TestOomScoreAdj(t *testing.T) {
 	ok(t, err)
 	defer remove(rootfs)
 
-	config := newTemplateConfig(rootfs)
+	config := newTemplateConfig(&tParam{rootfs: rootfs})
 	config.OomScoreAdj = ptrInt(200)
 
 	container, err := newContainerWithName("test", config)
@@ -1242,7 +1242,7 @@ func TestHook(t *testing.T) {
 	ok(t, err)
 	defer remove(rootfs)
 
-	config := newTemplateConfig(rootfs)
+	config := newTemplateConfig(&tParam{rootfs: rootfs})
 	expectedBundle := bundle
 	config.Labels = append(config.Labels, "bundle="+expectedBundle)
 
@@ -1388,7 +1388,7 @@ func TestSTDIOPermissions(t *testing.T) {
 	rootfs, err := newRootfs()
 	ok(t, err)
 	defer remove(rootfs)
-	config := newTemplateConfig(rootfs)
+	config := newTemplateConfig(&tParam{rootfs: rootfs})
 	buffers, exitCode, err := runContainer(config, "", "sh", "-c", "echo hi > /dev/stderr")
 	ok(t, err)
 	if exitCode != 0 {
@@ -1421,7 +1421,7 @@ func TestRootfsPropagationSlaveMount(t *testing.T) {
 	rootfs, err := newRootfs()
 	ok(t, err)
 	defer remove(rootfs)
-	config := newTemplateConfig(rootfs)
+	config := newTemplateConfig(&tParam{rootfs: rootfs})
 
 	config.RootPropagation = unix.MS_SLAVE | unix.MS_REC
 
@@ -1537,7 +1537,7 @@ func TestRootfsPropagationSharedMount(t *testing.T) {
 	rootfs, err := newRootfs()
 	ok(t, err)
 	defer remove(rootfs)
-	config := newTemplateConfig(rootfs)
+	config := newTemplateConfig(&tParam{rootfs: rootfs})
 	config.RootPropagation = unix.MS_PRIVATE
 
 	// Bind mount a volume
@@ -1646,7 +1646,7 @@ func TestPIDHost(t *testing.T) {
 	l, err := os.Readlink("/proc/1/ns/pid")
 	ok(t, err)
 
-	config := newTemplateConfig(rootfs)
+	config := newTemplateConfig(&tParam{rootfs: rootfs})
 	config.Namespaces.Remove(configs.NEWPID)
 	buffers, exitCode, err := runContainer(config, "", "readlink", "/proc/self/ns/pid")
 	ok(t, err)
@@ -1669,7 +1669,7 @@ func TestInitJoinPID(t *testing.T) {
 	defer remove(rootfs)
 
 	// Execute a long-running container
-	container1, err := newContainer(newTemplateConfig(rootfs))
+	container1, err := newContainer(newTemplateConfig(&tParam{rootfs: rootfs}))
 	ok(t, err)
 	defer container1.Destroy()
 
@@ -1693,7 +1693,7 @@ func TestInitJoinPID(t *testing.T) {
 	pidns1 := state1.NamespacePaths[configs.NEWPID]
 
 	// Run a container inside the existing pidns but with different cgroups
-	config2 := newTemplateConfig(rootfs)
+	config2 := newTemplateConfig(&tParam{rootfs: rootfs})
 	config2.Namespaces.Add(configs.NEWPID, pidns1)
 	config2.Cgroups.Path = "integration/test2"
 	container2, err := newContainerWithName("testCT2", config2)
@@ -1772,7 +1772,7 @@ func TestInitJoinNetworkAndUser(t *testing.T) {
 	defer remove(rootfs)
 
 	// Execute a long-running container
-	config1 := newTemplateConfig(rootfs)
+	config1 := newTemplateConfig(&tParam{rootfs: rootfs})
 	config1.UidMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
 	config1.GidMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
 	config1.Namespaces = append(config1.Namespaces, configs.Namespace{Type: configs.NEWUSER})
@@ -1805,7 +1805,7 @@ func TestInitJoinNetworkAndUser(t *testing.T) {
 	ok(t, err)
 	defer remove(rootfs2)
 
-	config2 := newTemplateConfig(rootfs2)
+	config2 := newTemplateConfig(&tParam{rootfs: rootfs2})
 	config2.UidMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
 	config2.GidMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
 	config2.Namespaces.Add(configs.NEWNET, netns1)
@@ -1865,7 +1865,7 @@ func TestTmpfsCopyUp(t *testing.T) {
 	ok(t, err)
 	defer remove(rootfs)
 
-	config := newTemplateConfig(rootfs)
+	config := newTemplateConfig(&tParam{rootfs: rootfs})
 
 	config.Mounts = append(config.Mounts, &configs.Mount{
 		Source:      "tmpfs",
@@ -1915,7 +1915,7 @@ func TestCGROUPPrivate(t *testing.T) {
 	l, err := os.Readlink("/proc/1/ns/cgroup")
 	ok(t, err)
 
-	config := newTemplateConfig(rootfs)
+	config := newTemplateConfig(&tParam{rootfs: rootfs})
 	config.Namespaces.Add(configs.NEWCGROUP, "")
 	buffers, exitCode, err := runContainer(config, "", "readlink", "/proc/self/ns/cgroup")
 	ok(t, err)
@@ -1944,7 +1944,7 @@ func TestCGROUPHost(t *testing.T) {
 	l, err := os.Readlink("/proc/1/ns/cgroup")
 	ok(t, err)
 
-	config := newTemplateConfig(rootfs)
+	config := newTemplateConfig(&tParam{rootfs: rootfs})
 	buffers, exitCode, err := runContainer(config, "", "readlink", "/proc/self/ns/cgroup")
 	ok(t, err)
 

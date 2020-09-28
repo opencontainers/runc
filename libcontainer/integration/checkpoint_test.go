@@ -76,7 +76,7 @@ func testCheckpoint(t *testing.T, userns bool) {
 	}
 	defer remove(rootfs)
 
-	config := newTemplateConfig(rootfs)
+	config := newTemplateConfig(&tParam{rootfs: rootfs})
 
 	if userns {
 		config.UidMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
