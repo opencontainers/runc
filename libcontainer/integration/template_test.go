@@ -1,6 +1,9 @@
 package integration
 
 import (
+	"math/rand"
+	"strconv"
+
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/specconv"
 
@@ -17,8 +20,9 @@ var standardEnvironment = []string{
 const defaultMountFlags = unix.MS_NOEXEC | unix.MS_NOSUID | unix.MS_NODEV
 
 type tParam struct {
-	rootfs string
-	userns bool
+	rootfs  string
+	userns  bool
+	systemd bool
 }
 
 // newTemplateConfig returns a base template for running a container
@@ -122,7 +126,6 @@ func newTemplateConfig(p *tParam) *configs.Config {
 			{Type: configs.NEWNET},
 		}),
 		Cgroups: &configs.Cgroup{
-			Path: "/sys/fs/cgroup/",
 			Resources: &configs.Resources{
 				MemorySwappiness: nil,
 				Devices:          allowedDevices,
@@ -207,6 +210,16 @@ func newTemplateConfig(p *tParam) *configs.Config {
 			Device:      "cgroup",
 			Flags:       defaultMountFlags | unix.MS_RDONLY,
 		})
+	}
+
+	if p.systemd {
+		id := strconv.FormatUint(rand.Uint64(), 36)
+		config.Cgroups.Name = "test" + id
+		// do not change Parent (see newContainerWithName)
+		config.Cgroups.Parent = "system.slice"
+		config.Cgroups.ScopePrefix = "runc-test"
+	} else {
+		config.Cgroups.Path = "/test/integration"
 	}
 
 	return config

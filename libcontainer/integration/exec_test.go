@@ -514,7 +514,10 @@ func testFreeze(t *testing.T, systemd bool) {
 	ok(t, err)
 	defer remove(rootfs)
 
-	config := newTemplateConfig(&tParam{rootfs: rootfs})
+	config := newTemplateConfig(&tParam{
+		rootfs:  rootfs,
+		systemd: systemd,
+	})
 	container, err := newContainerWithName("test", config)
 	ok(t, err)
 	defer container.Destroy()
@@ -571,10 +574,10 @@ func testCpuShares(t *testing.T, systemd bool) {
 	ok(t, err)
 	defer remove(rootfs)
 
-	config := newTemplateConfig(&tParam{rootfs: rootfs})
-	if systemd {
-		config.Cgroups.Parent = "system.slice"
-	}
+	config := newTemplateConfig(&tParam{
+		rootfs:  rootfs,
+		systemd: systemd,
+	})
 	config.Cgroups.Resources.CpuShares = 1
 
 	_, _, err = runContainer(config, "", "ps")
@@ -603,10 +606,10 @@ func testPids(t *testing.T, systemd bool) {
 	ok(t, err)
 	defer remove(rootfs)
 
-	config := newTemplateConfig(&tParam{rootfs: rootfs})
-	if systemd {
-		config.Cgroups.Parent = "system.slice"
-	}
+	config := newTemplateConfig(&tParam{
+		rootfs:  rootfs,
+		systemd: systemd,
+	})
 	config.Cgroups.Resources.PidsLimit = -1
 
 	// Running multiple processes.
@@ -689,10 +692,10 @@ func testRunWithKernelMemory(t *testing.T, systemd bool) {
 	ok(t, err)
 	defer remove(rootfs)
 
-	config := newTemplateConfig(&tParam{rootfs: rootfs})
-	if systemd {
-		config.Cgroups.Parent = "system.slice"
-	}
+	config := newTemplateConfig(&tParam{
+		rootfs:  rootfs,
+		systemd: systemd,
+	})
 	config.Cgroups.Resources.KernelMemory = 52428800
 
 	_, _, err = runContainer(config, "", "ps")
@@ -723,10 +726,10 @@ func testCgroupResourcesUnifiedErrorOnV1(t *testing.T, systemd bool) {
 	ok(t, err)
 	defer remove(rootfs)
 
-	config := newTemplateConfig(&tParam{rootfs: rootfs})
-	if systemd {
-		config.Cgroups.Parent = "system.slice"
-	}
+	config := newTemplateConfig(&tParam{
+		rootfs:  rootfs,
+		systemd: systemd,
+	})
 	config.Cgroups.Resources.Unified = map[string]string{
 		"memory.min": "10240",
 	}
@@ -758,13 +761,13 @@ func testCgroupResourcesUnified(t *testing.T, systemd bool) {
 	ok(t, err)
 	defer remove(rootfs)
 
-	config := newTemplateConfig(&tParam{rootfs: rootfs})
+	config := newTemplateConfig(&tParam{
+		rootfs:  rootfs,
+		systemd: systemd,
+	})
 	config.Cgroups.Resources.Memory = 536870912     // 512M
 	config.Cgroups.Resources.MemorySwap = 536870912 // 512M, i.e. no swap
 	config.Namespaces.Add(configs.NEWCGROUP, "")
-	if systemd {
-		config.Cgroups.Parent = "system.slice"
-	}
 
 	testCases := []struct {
 		name     string
