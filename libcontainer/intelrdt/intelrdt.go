@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/moby/sys/mountinfo"
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
@@ -241,45 +242,26 @@ func init() {
 
 // Return the mount point path of Intel RDT "resource control" filesysem
 func findIntelRdtMountpointDir() (string, error) {
-	f, err := os.Open("/proc/self/mountinfo")
+	mi, err := mountinfo.GetMounts(func(m *mountinfo.Info) (bool, bool) {
+		// similar to mountinfo.FstypeFilter but stops after the first match
+		if m.Fstype == "resctrl" {
+			return false, true // don't skip, stop
+		}
+		return true, false // skip, keep going
+	})
 	if err != nil {
 		return "", err
 	}
-	defer f.Close()
-
-	s := bufio.NewScanner(f)
-	for s.Scan() {
-		text := s.Text()
-		fields := strings.Split(text, " ")
-		// Safe as mountinfo encodes mountpoints with spaces as \040.
-		index := strings.Index(text, " - ")
-		postSeparatorFields := strings.Fields(text[index+3:])
-		numPostFields := len(postSeparatorFields)
-
-		// This is an error as we can't detect if the mount is for "Intel RDT"
-		if numPostFields == 0 {
-			return "", fmt.Errorf("Found no fields post '-' in %q", text)
-		}
-
-		if postSeparatorFields[0] == "resctrl" {
-			// Check that the mount is properly formatted.
-			if numPostFields < 3 {
-				return "", fmt.Errorf("Error found less than 3 fields post '-' in %q", text)
-			}
-
-			// Check if MBA Software Controller is enabled through mount option "-o mba_MBps"
-			if strings.Contains(postSeparatorFields[2], "mba_MBps") {
-				isMbaScEnabled = true
-			}
-
-			return fields[4], nil
-		}
-	}
-	if err := s.Err(); err != nil {
-		return "", err
+	if len(mi) < 1 {
+		return "", NewNotFoundError("Intel RDT")
 	}
 
-	return "", NewNotFoundError("Intel RDT")
+	// Check if MBA Software Controller is enabled through mount option "-o mba_MBps"
+	if strings.Contains(","+mi[0].VfsOpts+",", ",mba_MBps,") {
+		isMbaScEnabled = true
+	}
+
+	return mi[0].Mountpoint, nil
 }
 
 // Gets the root path of Intel RDT "resource control" filesystem
