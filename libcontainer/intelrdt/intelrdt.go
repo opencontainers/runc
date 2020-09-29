@@ -4,6 +4,7 @@ package intelrdt
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -375,7 +376,7 @@ func getIntelRdtParamUint(path, file string) (uint64, error) {
 		return 0, err
 	}
 
-	res, err := parseUint(strings.TrimSpace(string(contents)), 10, 64)
+	res, err := parseUint(string(bytes.TrimSpace(contents)), 10, 64)
 	if err != nil {
 		return res, fmt.Errorf("unable to parse %q as a uint from file %q", string(contents), fileName)
 	}
@@ -389,7 +390,7 @@ func getIntelRdtParamString(path, file string) (string, error) {
 		return "", err
 	}
 
-	return strings.TrimSpace(string(contents)), nil
+	return string(bytes.TrimSpace(contents)), nil
 }
 
 func writeFile(dir, file, data string) error {

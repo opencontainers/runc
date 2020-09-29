@@ -33,8 +33,8 @@ func TestParseCgroupFromReader(t *testing.T) {
 	for s, expected := range cases {
 		g, err := parseCgroupFromReader(strings.NewReader(s))
 		if expected != "" {
-			if string(g) != expected {
-				t.Errorf("expected %q, got %q", expected, string(g))
+			if g != expected {
+				t.Errorf("expected %q, got %q", expected, g)
 			}
 			if err != nil {
 				t.Error(err)

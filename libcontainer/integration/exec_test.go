@@ -1629,7 +1629,7 @@ func TestRootfsPropagationSharedMount(t *testing.T) {
 		t.Logf("findmnt error %q: %q", err, outtrim)
 	}
 
-	if string(outtrim) != dir2host {
+	if outtrim != dir2host {
 		t.Fatalf("Mount in container on %s did not propagate to host on %s. finmnt output=%s", dir2cont, dir2host, outtrim)
 	}
 }
