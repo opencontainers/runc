@@ -5,9 +5,9 @@ package main
 import (
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"strconv"
-	"strings"
 
 	criu "github.com/checkpoint-restore/go-criu/v4/rpc"
 	"github.com/opencontainers/runc/libcontainer"
@@ -15,7 +15,6 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
-
 	"golang.org/x/sys/unix"
 )
 
@@ -91,16 +90,17 @@ func setPageServer(context *cli.Context, options *libcontainer.CriuOpts) {
 	// xxx following criu opts are optional
 	// The dump image can be sent to a criu page server
 	if psOpt := context.String("page-server"); psOpt != "" {
-		addressPort := strings.Split(psOpt, ":")
-		if len(addressPort) != 2 {
+		address, port, err := net.SplitHostPort(psOpt)
+
+		if err != nil || address == "" || port == "" {
 			fatal(errors.New("Use --page-server ADDRESS:PORT to specify page server"))
 		}
-		portInt, err := strconv.Atoi(addressPort[1])
+		portInt, err := strconv.Atoi(port)
 		if err != nil {
 			fatal(errors.New("Invalid port number"))
 		}
 		options.PageServer = libcontainer.CriuPageServerInfo{
-			Address: addressPort[0],
+			Address: address,
 			Port:    int32(portInt),
 		}
 	}
