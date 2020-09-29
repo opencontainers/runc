@@ -1087,7 +1087,7 @@ func TestSysctl(t *testing.T) {
 	// Wait for process
 	waitProcess(&pconfig, t)
 
-	shmmniOutput := strings.TrimSpace(string(stdout.Bytes()))
+	shmmniOutput := string(bytes.TrimSpace(stdout.Bytes()))
 	if shmmniOutput != "8192" {
 		t.Fatalf("kernel.shmmni property expected to be 8192, but is %s", shmmniOutput)
 	}
@@ -1221,7 +1221,7 @@ func TestOomScoreAdj(t *testing.T) {
 
 	// Wait for process
 	waitProcess(&pconfig, t)
-	outputOomScoreAdj := strings.TrimSpace(string(stdout.Bytes()))
+	outputOomScoreAdj := string(bytes.TrimSpace(stdout.Bytes()))
 
 	// Check that the oom_score_adj matches the value that was set as part of config.
 	if outputOomScoreAdj != strconv.Itoa(*config.OomScoreAdj) {
@@ -1624,7 +1624,7 @@ func TestRootfsPropagationSharedMount(t *testing.T) {
 
 	// Check if mount is visible on host or not.
 	out, err := exec.Command("findmnt", "-n", "-f", "-oTARGET", dir2host).CombinedOutput()
-	outtrim := strings.TrimSpace(string(out))
+	outtrim := string(bytes.TrimSpace(out))
 	if err != nil {
 		t.Logf("findmnt error %q: %q", err, outtrim)
 	}
