@@ -7,8 +7,8 @@
 package devicefilter
 
 import (
-	"fmt"
 	"math"
+	"strconv"
 
 	"github.com/cilium/ebpf/asm"
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -114,9 +114,11 @@ func (p *program) appendDevice(dev *configs.DeviceRule) error {
 	// If the access is rwm, skip the check.
 	hasAccess := bpfAccess != (unix.BPF_DEVCG_ACC_READ | unix.BPF_DEVCG_ACC_WRITE | unix.BPF_DEVCG_ACC_MKNOD)
 
-	blockSym := fmt.Sprintf("block-%d", p.blockID)
-	nextBlockSym := fmt.Sprintf("block-%d", p.blockID+1)
-	prevBlockLastIdx := len(p.insts) - 1
+	var (
+		blockSym         = "block-" + strconv.Itoa(p.blockID)
+		nextBlockSym     = "block-" + strconv.Itoa(p.blockID+1)
+		prevBlockLastIdx = len(p.insts) - 1
+	)
 	if hasType {
 		p.insts = append(p.insts,
 			// if (R2 != bpfType) goto next
@@ -158,7 +160,7 @@ func (p *program) finalize() (asm.Instructions, error) {
 		// acceptBlock with asm.Return() is already inserted
 		return p.insts, nil
 	}
-	blockSym := fmt.Sprintf("block-%d", p.blockID)
+	blockSym := "block-" + strconv.Itoa(p.blockID)
 	p.insts = append(p.insts,
 		// R0 <- 0
 		asm.Mov.Imm32(asm.R0, 0).Sym(blockSym),

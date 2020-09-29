@@ -78,7 +78,7 @@ func GetProcessStartTime(pid int) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("%d", stat.StartTime), nil
+	return strconv.FormatUint(stat.StartTime, 10), nil
 }
 
 func parseStat(data string) (stat Stat_t, err error) {

@@ -1244,7 +1244,7 @@ func TestHook(t *testing.T) {
 
 	config := newTemplateConfig(rootfs)
 	expectedBundle := bundle
-	config.Labels = append(config.Labels, fmt.Sprintf("bundle=%s", expectedBundle))
+	config.Labels = append(config.Labels, "bundle="+expectedBundle)
 
 	getRootfsFromBundle := func(bundle string) (string, error) {
 		f, err := os.Open(filepath.Join(bundle, "config.json"))

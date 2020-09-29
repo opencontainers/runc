@@ -214,13 +214,13 @@ func createPidFile(path string, process *libcontainer.Process) error {
 	}
 	var (
 		tmpDir  = filepath.Dir(path)
-		tmpName = filepath.Join(tmpDir, fmt.Sprintf(".%s", filepath.Base(path)))
+		tmpName = filepath.Join(tmpDir, "."+filepath.Base(path))
 	)
 	f, err := os.OpenFile(tmpName, os.O_RDWR|os.O_CREATE|os.O_EXCL|os.O_SYNC, 0666)
 	if err != nil {
 		return err
 	}
-	_, err = fmt.Fprintf(f, "%d", pid)
+	_, err = f.WriteString(strconv.Itoa(pid))
 	f.Close()
 	if err != nil {
 		return err
@@ -284,12 +284,12 @@ func (r *runner) run(config *specs.Process) (int, error) {
 		return -1, err
 	}
 	if len(r.listenFDs) > 0 {
-		process.Env = append(process.Env, fmt.Sprintf("LISTEN_FDS=%d", len(r.listenFDs)), "LISTEN_PID=1")
+		process.Env = append(process.Env, "LISTEN_FDS="+strconv.Itoa(len(r.listenFDs)), "LISTEN_PID=1")
 		process.ExtraFiles = append(process.ExtraFiles, r.listenFDs...)
 	}
 	baseFd := 3 + len(process.ExtraFiles)
 	for i := baseFd; i < baseFd+r.preserveFDs; i++ {
-		_, err = os.Stat(fmt.Sprintf("/proc/self/fd/%d", i))
+		_, err = os.Stat("/proc/self/fd/" + strconv.Itoa(i))
 		if err != nil {
 			return -1, errors.Wrapf(err, "please check that preserved-fd %d (of %d) is present", i-baseFd, r.preserveFDs)
 		}

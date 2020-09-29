@@ -2,7 +2,6 @@ package utils
 
 import (
 	"bytes"
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -44,7 +43,7 @@ func TestResolveRootfs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if path != fmt.Sprintf("%s/%s", pwd, "rootfs") {
+	if path != pwd+"/rootfs" {
 		t.Errorf("expected rootfs to be abs and was %s", path)
 	}
 }
