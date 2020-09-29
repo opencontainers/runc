@@ -11,9 +11,6 @@ import (
 	"testing"
 
 	"github.com/opencontainers/runc/libcontainer"
-	"github.com/opencontainers/runc/libcontainer/configs"
-
-	"golang.org/x/sys/unix"
 )
 
 func showFile(t *testing.T, fname string) error {
@@ -76,20 +73,10 @@ func testCheckpoint(t *testing.T, userns bool) {
 	}
 	defer remove(rootfs)
 
-	config := newTemplateConfig(&tParam{rootfs: rootfs})
-
-	if userns {
-		config.UidMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
-		config.GidMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
-		config.Namespaces = append(config.Namespaces, configs.Namespace{Type: configs.NEWUSER})
-	} else {
-		config.Mounts = append(config.Mounts, &configs.Mount{
-			Destination: "/sys/fs/cgroup",
-			Device:      "cgroup",
-			Flags:       defaultMountFlags | unix.MS_RDONLY,
-		})
-	}
-
+	config := newTemplateConfig(&tParam{
+		rootfs: rootfs,
+		userns: userns,
+	})
 	factory, err := libcontainer.New(root, libcontainer.Cgroupfs)
 
 	if err != nil {

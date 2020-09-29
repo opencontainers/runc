@@ -91,12 +91,10 @@ func testExecInRlimit(t *testing.T, userns bool) {
 	ok(t, err)
 	defer remove(rootfs)
 
-	config := newTemplateConfig(&tParam{rootfs: rootfs})
-	if userns {
-		config.UidMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
-		config.GidMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
-		config.Namespaces = append(config.Namespaces, configs.Namespace{Type: configs.NEWUSER})
-	}
+	config := newTemplateConfig(&tParam{
+		rootfs: rootfs,
+		userns: userns,
+	})
 
 	container, err := newContainer(config)
 	ok(t, err)
@@ -557,10 +555,10 @@ func TestExecInUserns(t *testing.T) {
 	rootfs, err := newRootfs()
 	ok(t, err)
 	defer remove(rootfs)
-	config := newTemplateConfig(&tParam{rootfs: rootfs})
-	config.UidMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
-	config.GidMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
-	config.Namespaces = append(config.Namespaces, configs.Namespace{Type: configs.NEWUSER})
+	config := newTemplateConfig(&tParam{
+		rootfs: rootfs,
+		userns: true,
+	})
 	container, err := newContainer(config)
 	ok(t, err)
 	defer container.Destroy()

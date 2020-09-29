@@ -40,12 +40,10 @@ func testExecPS(t *testing.T, userns bool) {
 	rootfs, err := newRootfs()
 	ok(t, err)
 	defer remove(rootfs)
-	config := newTemplateConfig(&tParam{rootfs: rootfs})
-	if userns {
-		config.UidMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
-		config.GidMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
-		config.Namespaces = append(config.Namespaces, configs.Namespace{Type: configs.NEWUSER})
-	}
+	config := newTemplateConfig(&tParam{
+		rootfs: rootfs,
+		userns: userns,
+	})
 
 	buffers, exitCode, err := runContainer(config, "", "ps", "-o", "pid,user,comm")
 	if err != nil {
@@ -182,12 +180,10 @@ func testRlimit(t *testing.T, userns bool) {
 	ok(t, err)
 	defer remove(rootfs)
 
-	config := newTemplateConfig(&tParam{rootfs: rootfs})
-	if userns {
-		config.UidMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
-		config.GidMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
-		config.Namespaces = append(config.Namespaces, configs.Namespace{Type: configs.NEWUSER})
-	}
+	config := newTemplateConfig(&tParam{
+		rootfs: rootfs,
+		userns: userns,
+	})
 
 	// ensure limit is lower than what the config requests to test that in a user namespace
 	// the Setrlimit call happens early enough that we still have permissions to raise the limit.
@@ -766,11 +762,6 @@ func testCgroupResourcesUnified(t *testing.T, systemd bool) {
 	config.Cgroups.Resources.Memory = 536870912     // 512M
 	config.Cgroups.Resources.MemorySwap = 536870912 // 512M, i.e. no swap
 	config.Namespaces.Add(configs.NEWCGROUP, "")
-	config.Mounts = append(config.Mounts, &configs.Mount{
-		Destination: "/sys/fs/cgroup",
-		Device:      "cgroup",
-		Flags:       defaultMountFlags | unix.MS_RDONLY,
-	})
 	if systemd {
 		config.Cgroups.Parent = "system.slice"
 	}
@@ -1101,13 +1092,6 @@ func TestMountCgroupRO(t *testing.T) {
 	ok(t, err)
 	defer remove(rootfs)
 	config := newTemplateConfig(&tParam{rootfs: rootfs})
-
-	config.Mounts = append(config.Mounts, &configs.Mount{
-		Destination: "/sys/fs/cgroup",
-		Device:      "cgroup",
-		Flags:       defaultMountFlags | unix.MS_RDONLY,
-	})
-
 	buffers, exitCode, err := runContainer(config, "", "mount")
 	if err != nil {
 		t.Fatalf("%s: %s", buffers, err)
@@ -1150,12 +1134,13 @@ func TestMountCgroupRW(t *testing.T) {
 	ok(t, err)
 	defer remove(rootfs)
 	config := newTemplateConfig(&tParam{rootfs: rootfs})
-
-	config.Mounts = append(config.Mounts, &configs.Mount{
-		Destination: "/sys/fs/cgroup",
-		Device:      "cgroup",
-		Flags:       defaultMountFlags,
-	})
+	// clear the RO flag from cgroup mount
+	for _, m := range config.Mounts {
+		if m.Device == "cgroup" {
+			m.Flags = defaultMountFlags
+			break
+		}
+	}
 
 	buffers, exitCode, err := runContainer(config, "", "mount")
 	if err != nil {
@@ -1772,10 +1757,10 @@ func TestInitJoinNetworkAndUser(t *testing.T) {
 	defer remove(rootfs)
 
 	// Execute a long-running container
-	config1 := newTemplateConfig(&tParam{rootfs: rootfs})
-	config1.UidMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
-	config1.GidMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
-	config1.Namespaces = append(config1.Namespaces, configs.Namespace{Type: configs.NEWUSER})
+	config1 := newTemplateConfig(&tParam{
+		rootfs: rootfs,
+		userns: true,
+	})
 	container1, err := newContainer(config1)
 	ok(t, err)
 	defer container1.Destroy()
@@ -1805,9 +1790,10 @@ func TestInitJoinNetworkAndUser(t *testing.T) {
 	ok(t, err)
 	defer remove(rootfs2)
 
-	config2 := newTemplateConfig(&tParam{rootfs: rootfs2})
-	config2.UidMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
-	config2.GidMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
+	config2 := newTemplateConfig(&tParam{
+		rootfs: rootfs2,
+		userns: true,
+	})
 	config2.Namespaces.Add(configs.NEWNET, netns1)
 	config2.Namespaces.Add(configs.NEWUSER, userns1)
 	config2.Cgroups.Path = "integration/test2"
