@@ -13,9 +13,8 @@ import (
 	"strings"
 	"unsafe"
 
-	"golang.org/x/sys/unix"
-
 	"github.com/containerd/console"
+	"github.com/opencontainers/runc/libcontainer/capabilities"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/system"
@@ -25,6 +24,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
+	"golang.org/x/sys/unix"
 )
 
 type initType string
@@ -129,13 +129,13 @@ func finalizeNamespace(config *initConfig) error {
 		return errors.Wrap(err, "close exec fds")
 	}
 
-	capabilities := &configs.Capabilities{}
+	caps := &configs.Capabilities{}
 	if config.Capabilities != nil {
-		capabilities = config.Capabilities
+		caps = config.Capabilities
 	} else if config.Config.Capabilities != nil {
-		capabilities = config.Config.Capabilities
+		caps = config.Config.Capabilities
 	}
-	w, err := newContainerCapList(capabilities)
+	w, err := capabilities.New(caps)
 	if err != nil {
 		return err
 	}

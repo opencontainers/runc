@@ -1,6 +1,6 @@
 // +build linux
 
-package libcontainer
+package capabilities
 
 import (
 	"fmt"
@@ -24,10 +24,11 @@ func init() {
 	}
 }
 
-func newContainerCapList(capConfig *configs.Capabilities) (*containerCapabilities, error) {
+// New creates a new Caps from the given Capabilities config.
+func New(capConfig *configs.Capabilities) (*Caps, error) {
 	var (
 		err  error
-		caps containerCapabilities
+		caps Caps
 	)
 
 	if caps.bounding, err = capSlice(capConfig.Bounding); err != nil {
@@ -66,7 +67,8 @@ func capSlice(caps []string) ([]capability.Cap, error) {
 	return out, nil
 }
 
-type containerCapabilities struct {
+// Caps holds the capabilities for a container.
+type Caps struct {
 	pid         capability.Capabilities
 	bounding    []capability.Cap
 	effective   []capability.Cap
@@ -76,14 +78,14 @@ type containerCapabilities struct {
 }
 
 // ApplyBoundingSet sets the capability bounding set to those specified in the whitelist.
-func (c *containerCapabilities) ApplyBoundingSet() error {
+func (c *Caps) ApplyBoundingSet() error {
 	c.pid.Clear(capability.BOUNDS)
 	c.pid.Set(capability.BOUNDS, c.bounding...)
 	return c.pid.Apply(capability.BOUNDS)
 }
 
 // Apply sets all the capabilities for the current process in the config.
-func (c *containerCapabilities) ApplyCaps() error {
+func (c *Caps) ApplyCaps() error {
 	c.pid.Clear(allCapabilityTypes)
 	c.pid.Set(capability.BOUNDS, c.bounding...)
 	c.pid.Set(capability.PERMITTED, c.permitted...)
