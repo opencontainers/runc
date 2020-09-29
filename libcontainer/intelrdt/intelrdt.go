@@ -5,6 +5,7 @@ package intelrdt
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -241,8 +242,8 @@ func init() {
 }
 
 // Return the mount point path of Intel RDT "resource control" filesysem
-func findIntelRdtMountpointDir() (string, error) {
-	mi, err := mountinfo.GetMounts(func(m *mountinfo.Info) (bool, bool) {
+func findIntelRdtMountpointDir(f io.Reader) (string, error) {
+	mi, err := mountinfo.GetMountsFromReader(f, func(m *mountinfo.Info) (bool, bool) {
 		// similar to mountinfo.FstypeFilter but stops after the first match
 		if m.Fstype == "resctrl" {
 			return false, true // don't skip, stop
@@ -273,7 +274,12 @@ func getIntelRdtRoot() (string, error) {
 		return intelRdtRoot, nil
 	}
 
-	root, err := findIntelRdtMountpointDir()
+	f, err := os.Open("/proc/self/mountinfo")
+	if err != nil {
+		return "", err
+	}
+	root, err := findIntelRdtMountpointDir(f)
+	f.Close()
 	if err != nil {
 		return "", err
 	}
