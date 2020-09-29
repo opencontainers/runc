@@ -15,78 +15,55 @@ const allCapabilityTypes = capability.CAPS | capability.BOUNDS | capability.AMBS
 var capabilityMap map[string]capability.Cap
 
 func init() {
-	capabilityMap = make(map[string]capability.Cap)
-	last := capability.CAP_LAST_CAP
-	// workaround for RHEL6 which has no /proc/sys/kernel/cap_last_cap
-	if last == capability.Cap(63) {
-		last = capability.CAP_BLOCK_SUSPEND
-	}
-	for _, cap := range capability.List() {
-		if cap > last {
+	capabilityMap = make(map[string]capability.Cap, capability.CAP_LAST_CAP+1)
+	for _, c := range capability.List() {
+		if c > capability.CAP_LAST_CAP {
 			continue
 		}
-		capKey := fmt.Sprintf("CAP_%s", strings.ToUpper(cap.String()))
-		capabilityMap[capKey] = cap
+		capabilityMap["CAP_"+strings.ToUpper(c.String())] = c
 	}
 }
 
 func newContainerCapList(capConfig *configs.Capabilities) (*containerCapabilities, error) {
-	bounding := []capability.Cap{}
-	for _, c := range capConfig.Bounding {
-		v, ok := capabilityMap[c]
-		if !ok {
-			return nil, fmt.Errorf("unknown capability %q", c)
-		}
-		bounding = append(bounding, v)
-	}
-	effective := []capability.Cap{}
-	for _, c := range capConfig.Effective {
-		v, ok := capabilityMap[c]
-		if !ok {
-			return nil, fmt.Errorf("unknown capability %q", c)
-		}
-		effective = append(effective, v)
-	}
-	inheritable := []capability.Cap{}
-	for _, c := range capConfig.Inheritable {
-		v, ok := capabilityMap[c]
-		if !ok {
-			return nil, fmt.Errorf("unknown capability %q", c)
-		}
-		inheritable = append(inheritable, v)
-	}
-	permitted := []capability.Cap{}
-	for _, c := range capConfig.Permitted {
-		v, ok := capabilityMap[c]
-		if !ok {
-			return nil, fmt.Errorf("unknown capability %q", c)
-		}
-		permitted = append(permitted, v)
-	}
-	ambient := []capability.Cap{}
-	for _, c := range capConfig.Ambient {
-		v, ok := capabilityMap[c]
-		if !ok {
-			return nil, fmt.Errorf("unknown capability %q", c)
-		}
-		ambient = append(ambient, v)
-	}
-	pid, err := capability.NewPid2(0)
-	if err != nil {
+	var (
+		err  error
+		caps containerCapabilities
+	)
+
+	if caps.bounding, err = capSlice(capConfig.Bounding); err != nil {
 		return nil, err
 	}
-	err = pid.Load()
-	if err != nil {
+	if caps.effective, err = capSlice(capConfig.Effective); err != nil {
 		return nil, err
 	}
-	return &containerCapabilities{
-		bounding:    bounding,
-		effective:   effective,
-		inheritable: inheritable,
-		permitted:   permitted,
-		ambient:     ambient,
-		pid:         pid,
-	}, nil
+	if caps.inheritable, err = capSlice(capConfig.Inheritable); err != nil {
+		return nil, err
+	}
+	if caps.permitted, err = capSlice(capConfig.Permitted); err != nil {
+		return nil, err
+	}
+	if caps.ambient, err = capSlice(capConfig.Ambient); err != nil {
+		return nil, err
+	}
+	if caps.pid, err = capability.NewPid2(0); err != nil {
+		return nil, err
+	}
+	if err = caps.pid.Load(); err != nil {
+		return nil, err
+	}
+	return &caps, nil
+}
+
+func capSlice(caps []string) ([]capability.Cap, error) {
+	out := make([]capability.Cap, len(caps))
+	for i, c := range caps {
+		v, ok := capabilityMap[c]
+		if !ok {
+			return nil, fmt.Errorf("unknown capability %q", c)
+		}
+		out[i] = v
+	}
+	return out, nil
 }
 
 type containerCapabilities struct {
