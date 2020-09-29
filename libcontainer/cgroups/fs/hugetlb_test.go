@@ -18,7 +18,7 @@ const (
 	hugetlbFailcnt          = "100\n"
 )
 
-var (
+const (
 	usage    = "hugetlb.%s.usage_in_bytes"
 	limit    = "hugetlb.%s.limit_in_bytes"
 	maxUsage = "hugetlb.%s.max_usage_in_bytes"
