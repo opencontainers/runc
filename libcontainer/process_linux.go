@@ -95,6 +95,14 @@ func (p *setnsProcess) start() (retErr error) {
 	if err != nil {
 		return newSystemErrorWithCause(err, "starting setns process")
 	}
+	defer func() {
+		if retErr != nil {
+			err := ignoreTerminateErrors(p.terminate())
+			if err != nil {
+				logrus.WithError(err).Warn("unable to terminate setnsProcess")
+			}
+		}
+	}()
 	if p.bootstrapData != nil {
 		if _, err := io.Copy(p.messageSockPair.parent, p.bootstrapData); err != nil {
 			return newSystemErrorWithCause(err, "copying bootstrap data to pipe")
@@ -313,6 +321,11 @@ func (p *initProcess) start() (retErr error) {
 	}
 	defer func() {
 		if retErr != nil {
+			// terminate the process to ensure we can remove cgroups
+			if err := ignoreTerminateErrors(p.terminate()); err != nil {
+				logrus.WithError(err).Warn("unable to terminate initProcess")
+			}
+
 			p.manager.Destroy()
 			if p.intelRdtManager != nil {
 				p.intelRdtManager.Destroy()

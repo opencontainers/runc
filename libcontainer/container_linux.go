@@ -363,10 +363,6 @@ func (c *linuxContainer) start(process *Process) error {
 	}
 	parent.forwardChildLogs()
 	if err := parent.start(); err != nil {
-		// terminate the process to ensure that it properly is reaped.
-		if err := ignoreTerminateErrors(parent.terminate()); err != nil {
-			logrus.Warn(err)
-		}
 		return newSystemErrorWithCause(err, "starting container process")
 	}
 
