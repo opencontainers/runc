@@ -363,10 +363,6 @@ func (c *linuxContainer) start(process *Process) error {
 	}
 	parent.forwardChildLogs()
 	if err := parent.start(); err != nil {
-		// terminate the process to ensure that it properly is reaped.
-		if err := ignoreTerminateErrors(parent.terminate()); err != nil {
-			logrus.Warn(err)
-		}
 		return newSystemErrorWithCause(err, "starting container process")
 	}
 
@@ -2054,8 +2050,9 @@ func ignoreTerminateErrors(err error) error {
 		return nil
 	}
 	s := err.Error()
-	switch {
-	case strings.Contains(s, "process already finished"), strings.Contains(s, "Wait was already called"):
+	if strings.Contains(s, "signal: killed") ||
+		strings.Contains(s, "process already finished") ||
+		strings.Contains(s, "Wait was already called") {
 		return nil
 	}
 	return err

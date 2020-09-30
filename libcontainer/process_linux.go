@@ -86,21 +86,29 @@ func (p *setnsProcess) signal(sig os.Signal) error {
 	return unix.Kill(p.pid(), s)
 }
 
-func (p *setnsProcess) start() (err error) {
+func (p *setnsProcess) start() (retErr error) {
 	defer p.messageSockPair.parent.Close()
-	err = p.cmd.Start()
+	err := p.cmd.Start()
 	// close the write-side of the pipes (controlled by child)
 	p.messageSockPair.child.Close()
 	p.logFilePair.child.Close()
 	if err != nil {
 		return newSystemErrorWithCause(err, "starting setns process")
 	}
+	defer func() {
+		if retErr != nil {
+			err := ignoreTerminateErrors(p.terminate())
+			if err != nil {
+				logrus.WithError(err).Warn("unable to terminate setnsProcess")
+			}
+		}
+	}()
 	if p.bootstrapData != nil {
 		if _, err := io.Copy(p.messageSockPair.parent, p.bootstrapData); err != nil {
 			return newSystemErrorWithCause(err, "copying bootstrap data to pipe")
 		}
 	}
-	if err = p.execSetns(); err != nil {
+	if err := p.execSetns(); err != nil {
 		return newSystemErrorWithCause(err, "executing setns process")
 	}
 	if len(p.cgroupPaths) > 0 {
@@ -313,6 +321,11 @@ func (p *initProcess) start() (retErr error) {
 	}
 	defer func() {
 		if retErr != nil {
+			// terminate the process to ensure we can remove cgroups
+			if err := ignoreTerminateErrors(p.terminate()); err != nil {
+				logrus.WithError(err).Warn("unable to terminate initProcess")
+			}
+
 			p.manager.Destroy()
 			if p.intelRdtManager != nil {
 				p.intelRdtManager.Destroy()
