@@ -60,10 +60,10 @@ func main() {
 		v = append(v, version)
 	}
 	if gitCommit != "" {
-		v = append(v, fmt.Sprintf("commit: %s", gitCommit))
+		v = append(v, "commit: "+gitCommit)
 	}
-	v = append(v, fmt.Sprintf("spec: %s", specs.Version))
-	v = append(v, fmt.Sprintf("go: %s", runtime.Version()))
+	v = append(v, "spec: "+specs.Version)
+	v = append(v, "go: "+runtime.Version())
 	if seccomp.IsEnabled() {
 		major, minor, micro := seccomp.Version()
 		v = append(v, fmt.Sprintf("libseccomp: %d.%d.%d", major, minor, micro))

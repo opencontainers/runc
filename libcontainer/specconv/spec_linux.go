@@ -224,14 +224,14 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 	}
 	labels := []string{}
 	for k, v := range spec.Annotations {
-		labels = append(labels, fmt.Sprintf("%s=%s", k, v))
+		labels = append(labels, k+"="+v)
 	}
 	config := &configs.Config{
 		Rootfs:          rootfsPath,
 		NoPivotRoot:     opts.NoPivotRoot,
 		Readonlyfs:      spec.Root.Readonly,
 		Hostname:        spec.Hostname,
-		Labels:          append(labels, fmt.Sprintf("bundle=%s", cwd)),
+		Labels:          append(labels, "bundle="+cwd),
 		NoNewKeyring:    opts.NoNewKeyring,
 		RootlessEUID:    opts.RootlessEUID,
 		RootlessCgroups: opts.RootlessCgroups,

@@ -307,7 +307,7 @@ func newProp(name string, units interface{}) systemdDbus.Property {
 func getUnitName(c *configs.Cgroup) string {
 	// by default, we create a scope unless the user explicitly asks for a slice.
 	if !strings.HasSuffix(c.Name, ".slice") {
-		return fmt.Sprintf("%s-%s.scope", c.ScopePrefix, c.Name)
+		return c.ScopePrefix + "-" + c.Name + ".scope"
 	}
 	return c.Name
 }

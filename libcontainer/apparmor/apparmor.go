@@ -23,9 +23,7 @@ func IsEnabled() bool {
 func setProcAttr(attr, value string) error {
 	// Under AppArmor you can only change your own attr, so use /proc/self/
 	// instead of /proc/<tid>/ like libapparmor does
-	path := fmt.Sprintf("/proc/self/attr/%s", attr)
-
-	f, err := os.OpenFile(path, os.O_WRONLY, 0)
+	f, err := os.OpenFile("/proc/self/attr/"+attr, os.O_WRONLY, 0)
 	if err != nil {
 		return err
 	}
@@ -35,14 +33,13 @@ func setProcAttr(attr, value string) error {
 		return err
 	}
 
-	_, err = fmt.Fprintf(f, "%s", value)
+	_, err = f.WriteString(value)
 	return err
 }
 
 // changeOnExec reimplements aa_change_onexec from libapparmor in Go
 func changeOnExec(name string) error {
-	value := "exec " + name
-	if err := setProcAttr("exec", value); err != nil {
+	if err := setProcAttr("exec", "exec "+name); err != nil {
 		return fmt.Errorf("apparmor failed to apply profile: %s", err)
 	}
 	return nil

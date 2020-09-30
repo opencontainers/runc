@@ -14,6 +14,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -449,7 +450,7 @@ func (c *linuxContainer) includeExecFifo(cmd *exec.Cmd) error {
 
 	cmd.ExtraFiles = append(cmd.ExtraFiles, os.NewFile(uintptr(fifoFd), fifoName))
 	cmd.Env = append(cmd.Env,
-		fmt.Sprintf("_LIBCONTAINER_FIFOFD=%d", stdioFdCount+len(cmd.ExtraFiles)-1))
+		"_LIBCONTAINER_FIFOFD="+strconv.Itoa(stdioFdCount+len(cmd.ExtraFiles)-1))
 	return nil
 }
 
@@ -492,24 +493,24 @@ func (c *linuxContainer) commandTemplate(p *Process, childInitPipe *os.File, chi
 	if cmd.SysProcAttr == nil {
 		cmd.SysProcAttr = &unix.SysProcAttr{}
 	}
-	cmd.Env = append(cmd.Env, fmt.Sprintf("GOMAXPROCS=%s", os.Getenv("GOMAXPROCS")))
+	cmd.Env = append(cmd.Env, "GOMAXPROCS="+os.Getenv("GOMAXPROCS"))
 	cmd.ExtraFiles = append(cmd.ExtraFiles, p.ExtraFiles...)
 	if p.ConsoleSocket != nil {
 		cmd.ExtraFiles = append(cmd.ExtraFiles, p.ConsoleSocket)
 		cmd.Env = append(cmd.Env,
-			fmt.Sprintf("_LIBCONTAINER_CONSOLE=%d", stdioFdCount+len(cmd.ExtraFiles)-1),
+			"_LIBCONTAINER_CONSOLE="+strconv.Itoa(stdioFdCount+len(cmd.ExtraFiles)-1),
 		)
 	}
 	cmd.ExtraFiles = append(cmd.ExtraFiles, childInitPipe)
 	cmd.Env = append(cmd.Env,
-		fmt.Sprintf("_LIBCONTAINER_INITPIPE=%d", stdioFdCount+len(cmd.ExtraFiles)-1),
-		fmt.Sprintf("_LIBCONTAINER_STATEDIR=%s", c.root),
+		"_LIBCONTAINER_INITPIPE="+strconv.Itoa(stdioFdCount+len(cmd.ExtraFiles)-1),
+		"_LIBCONTAINER_STATEDIR="+c.root,
 	)
 
 	cmd.ExtraFiles = append(cmd.ExtraFiles, childLogPipe)
 	cmd.Env = append(cmd.Env,
-		fmt.Sprintf("_LIBCONTAINER_LOGPIPE=%d", stdioFdCount+len(cmd.ExtraFiles)-1),
-		fmt.Sprintf("_LIBCONTAINER_LOGLEVEL=%s", p.LogLevel),
+		"_LIBCONTAINER_LOGPIPE="+strconv.Itoa(stdioFdCount+len(cmd.ExtraFiles)-1),
+		"_LIBCONTAINER_LOGLEVEL="+p.LogLevel,
 	)
 
 	// NOTE: when running a container with no PID namespace and the parent process spawning the container is
@@ -2029,7 +2030,7 @@ func (c *linuxContainer) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Na
 		// write oom_score_adj
 		r.AddData(&Bytemsg{
 			Type:  OomScoreAdjAttr,
-			Value: []byte(fmt.Sprintf("%d", *c.config.OomScoreAdj)),
+			Value: []byte(strconv.Itoa(*c.config.OomScoreAdj)),
 		})
 	}
 

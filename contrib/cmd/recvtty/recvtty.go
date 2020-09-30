@@ -187,7 +187,7 @@ func main() {
 		v = append(v, version)
 	}
 	if gitCommit != "" {
-		v = append(v, fmt.Sprintf("commit: %s", gitCommit))
+		v = append(v, "commit: "+gitCommit)
 	}
 	app.Version = strings.Join(v, "\n")
 
