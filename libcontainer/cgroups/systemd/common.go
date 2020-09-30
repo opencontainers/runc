@@ -325,6 +325,9 @@ func isUnitExists(err error) bool {
 func startUnit(dbusConnection *systemdDbus.Conn, unitName string, properties []systemdDbus.Property) error {
 	statusChan := make(chan string, 1)
 	if _, err := dbusConnection.StartTransientUnit(unitName, "replace", properties, statusChan); err == nil {
+		timeout := time.NewTimer(30 * time.Second)
+		defer timeout.Stop()
+
 		select {
 		case s := <-statusChan:
 			close(statusChan)
@@ -333,8 +336,9 @@ func startUnit(dbusConnection *systemdDbus.Conn, unitName string, properties []s
 				dbusConnection.ResetFailedUnit(unitName)
 				return errors.Errorf("error creating systemd unit `%s`: got `%s`", unitName, s)
 			}
-		case <-time.After(time.Second):
-			logrus.Warnf("Timed out while waiting for StartTransientUnit(%s) completion signal from dbus. Continuing...", unitName)
+		case <-timeout.C:
+			dbusConnection.ResetFailedUnit(unitName)
+			return errors.New("Timeout waiting for systemd to create " + unitName)
 		}
 	} else if !isUnitExists(err) {
 		return err
