@@ -508,6 +508,7 @@ func (c *linuxContainer) commandTemplate(p *Process, childInitPipe *os.File, chi
 	cmd.Env = append(cmd.Env,
 		fmt.Sprintf("_LIBCONTAINER_INITPIPE=%d", stdioFdCount+len(cmd.ExtraFiles)-1),
 		fmt.Sprintf("_LIBCONTAINER_STATEDIR=%s", c.root),
+		fmt.Sprintf("_LIBCONTAINER_USERHOME=%s", os.Getenv("HOME")),
 	)
 
 	cmd.ExtraFiles = append(cmd.ExtraFiles, childLogPipe)

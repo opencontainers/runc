@@ -52,6 +52,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/statfs.h>
+#include <sys/statvfs.h>
 #include <sys/vfs.h>
 #include <sys/mman.h>
 #include <sys/mount.h>
@@ -271,16 +272,16 @@ enum {
 #  endif
 #endif
 
+static bool check_noexec(const char *path) {
+	struct statfs fsbuf = {};
+	return statfs(path, &fsbuf) < 0 || (fsbuf.f_flags & ST_NOEXEC);
+}
+
 static int make_execfd(int *fdtype)
 {
 	int fd = -1;
 	char template[PATH_MAX] = {0};
 	char *prefix = getenv("_LIBCONTAINER_STATEDIR");
-
-	if (!prefix || *prefix != '/')
-		prefix = "/tmp";
-	if (snprintf(template, sizeof(template), "%s/runc.XXXXXX", prefix) < 0)
-		return -1;
 
 	/*
 	 * Now try memfd, it's much nicer than actually creating a file in STATEDIR
@@ -293,6 +294,20 @@ static int make_execfd(int *fdtype)
 		return fd;
 	if (errno != ENOSYS && errno != EINVAL)
 		goto error;
+
+	// memfd_create faild, fallback temp file.
+	if (!prefix || *prefix != '/' || check_noexec(prefix)) {
+		prefix = "/tmp";
+		if (check_noexec(prefix)) {
+			prefix = getenv("_LIBCONTAINER_USERHOME");
+			if (!prefix || *prefix != '/' || check_noexec(prefix)) {
+				fprintf(stderr, "no $HOME env or $HOME has noexec mount flag\n");
+				return -1;
+			}
+		}
+	}
+	if (snprintf(template, sizeof(template), "%s/.runc.XXXXXX", prefix) < 0)
+		return -1;
 
 #ifdef O_TMPFILE
 	/*
@@ -381,7 +396,7 @@ static int try_bindfd(void)
 
 	if (!prefix || *prefix != '/')
 		prefix = "/tmp";
-	if (snprintf(template, sizeof(template), "%s/runc.XXXXXX", prefix) < 0)
+	if (snprintf(template, sizeof(template), "%s/.runc.XXXXXX", prefix) < 0)
 		return ret;
 
 	/*
