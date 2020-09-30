@@ -5,7 +5,7 @@ go 1.14
 require (
 	github.com/checkpoint-restore/go-criu/v4 v4.1.0
 	github.com/cilium/ebpf v0.0.0-20200702112145-1c8d4c9ef775
-	github.com/containerd/console v1.0.0
+	github.com/containerd/console v1.0.1
 	github.com/coreos/go-systemd/v22 v22.1.0
 	github.com/cyphar/filepath-securejoin v0.2.2
 	github.com/docker/go-units v0.4.0
@@ -22,5 +22,5 @@ require (
 	// NOTE: urfave/cli must be <= v1.22.1 due to a regression: https://github.com/urfave/cli/issues/1092
 	github.com/urfave/cli v1.22.1
 	github.com/vishvananda/netlink v1.1.0
-	golang.org/x/sys v0.0.0-20200909081042-eff7692f9009
+	golang.org/x/sys v0.0.0-20200916030750-2334cc1a136f
 )

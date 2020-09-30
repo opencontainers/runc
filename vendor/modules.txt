@@ -9,7 +9,7 @@ github.com/cilium/ebpf/asm
 github.com/cilium/ebpf/internal
 github.com/cilium/ebpf/internal/btf
 github.com/cilium/ebpf/internal/unix
-# github.com/containerd/console v1.0.0
+# github.com/containerd/console v1.0.1
 ## explicit
 github.com/containerd/console
 # github.com/coreos/go-systemd/v22 v22.1.0
@@ -73,7 +73,7 @@ github.com/vishvananda/netlink/nl
 github.com/vishvananda/netns
 # github.com/willf/bitset v1.1.11-0.20200630133818-d5bec3311243
 github.com/willf/bitset
-# golang.org/x/sys v0.0.0-20200909081042-eff7692f9009
+# golang.org/x/sys v0.0.0-20200916030750-2334cc1a136f
 ## explicit
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
