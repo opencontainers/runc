@@ -79,7 +79,7 @@ function setup() {
 
     runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_permissions
     [ "$status" -eq 1 ]
-    [[ ${lines[1]} == *"permission denied"* ]]
+    [[ ${lines[0]} == *"permission denied"* ]]
 }
 
 @test "runc create (rootless + limits + no cgrouppath + no permission) fails with informative error" {
@@ -92,7 +92,7 @@ function setup() {
 
     runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_permissions
     [ "$status" -eq 1 ]
-    [[ ${lines[1]} == *"rootless needs no limits + no cgrouppath when no permission is granted for cgroups"* ]] || [[ ${lines[1]} == *"cannot set pids limit: container could not join or create cgroup"* ]]
+    [[ ${lines[0]} == *"rootless needs no limits + no cgrouppath when no permission is granted for cgroups"* ]] || [[ ${lines[0]} == *"cannot set pids limit: container could not join or create cgroup"* ]]
 }
 
 @test "runc create (limits + cgrouppath + permission on the cgroup dir) succeeds" {
