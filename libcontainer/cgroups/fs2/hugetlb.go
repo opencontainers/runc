@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"strconv"
-	"strings"
 
 	"github.com/pkg/errors"
 
@@ -24,7 +23,7 @@ func setHugeTlb(dirPath string, cgroup *configs.Cgroup) error {
 		return nil
 	}
 	for _, hugetlb := range cgroup.Resources.HugetlbLimit {
-		if err := fscommon.WriteFile(dirPath, strings.Join([]string{"hugetlb", hugetlb.Pagesize, "max"}, "."), strconv.FormatUint(hugetlb.Limit, 10)); err != nil {
+		if err := fscommon.WriteFile(dirPath, "hugetlb."+hugetlb.Pagesize+".max", strconv.FormatUint(hugetlb.Limit, 10)); err != nil {
 			return err
 		}
 	}
@@ -40,14 +39,13 @@ func statHugeTlb(dirPath string, stats *cgroups.Stats) error {
 	hugetlbStats := cgroups.HugetlbStats{}
 
 	for _, pagesize := range hugePageSizes {
-		usage := strings.Join([]string{"hugetlb", pagesize, "current"}, ".")
-		value, err := fscommon.GetCgroupParamUint(dirPath, usage)
+		value, err := fscommon.GetCgroupParamUint(dirPath, "hugetlb."+pagesize+".current")
 		if err != nil {
 			return err
 		}
 		hugetlbStats.Usage = value
 
-		fileName := strings.Join([]string{"hugetlb", pagesize, "events"}, ".")
+		fileName := "hugetlb." + pagesize + ".events"
 		filePath := filepath.Join(dirPath, fileName)
 		contents, err := ioutil.ReadFile(filePath)
 		if err != nil {
