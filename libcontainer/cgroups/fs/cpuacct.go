@@ -83,8 +83,7 @@ func (s *CpuacctGroup) GetStats(path string, stats *cgroups.Stats) error {
 
 // Returns user and kernel usage breakdown in nanoseconds.
 func getCpuUsageBreakdown(path string) (uint64, uint64, error) {
-	userModeUsage := uint64(0)
-	kernelModeUsage := uint64(0)
+	var userModeUsage, kernelModeUsage uint64
 	const (
 		userField   = "user"
 		systemField = "system"
