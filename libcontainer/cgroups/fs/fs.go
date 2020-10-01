@@ -427,16 +427,6 @@ func join(path string, pid int) error {
 	return cgroups.WriteCgroupProc(path, pid)
 }
 
-func removePath(p string, err error) error {
-	if err != nil {
-		return err
-	}
-	if p != "" {
-		return os.RemoveAll(p)
-	}
-	return nil
-}
-
 func (m *manager) GetPaths() map[string]string {
 	m.mu.Lock()
 	defer m.mu.Unlock()
