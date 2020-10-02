@@ -295,11 +295,7 @@ func getIntelRdtRoot() (string, error) {
 
 func isIntelRdtMounted() bool {
 	_, err := getIntelRdtRoot()
-	if err != nil {
-		return false
-	}
-
-	return true
+	return err == nil
 }
 
 type cpuInfoFlags struct {
