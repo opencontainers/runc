@@ -116,8 +116,8 @@ func TestFactoryNewTmpfs(t *testing.T) {
 		t.Fatalf("Factory Root is not listed in mounts list")
 	}
 	m := mounts[0]
-	if m.Fstype != "tmpfs" {
-		t.Fatalf("Fstype of root: %s, expected %s", m.Fstype, "tmpfs")
+	if m.FSType != "tmpfs" {
+		t.Fatalf("FSType of root: %s, expected %s", m.FSType, "tmpfs")
 	}
 	if m.Source != "tmpfs" {
 		t.Fatalf("Source of root: %s, expected %s", m.Source, "tmpfs")

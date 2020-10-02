@@ -813,7 +813,7 @@ func msMoveRoot(rootfs string) error {
 		skip = false
 		stop = false
 		// Collect every sysfs and proc file systems, except those under the container rootfs
-		if (info.Fstype != "proc" && info.Fstype != "sysfs") || strings.HasPrefix(info.Mountpoint, rootfs) {
+		if (info.FSType != "proc" && info.FSType != "sysfs") || strings.HasPrefix(info.Mountpoint, rootfs) {
 			skip = true
 			return
 		}

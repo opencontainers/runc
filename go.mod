@@ -11,7 +11,7 @@ require (
 	github.com/docker/go-units v0.4.0
 	github.com/godbus/dbus/v5 v5.0.3
 	github.com/golang/protobuf v1.4.2
-	github.com/moby/sys/mountinfo v0.2.0
+	github.com/moby/sys/mountinfo v0.3.1
 	github.com/mrunalp/fileutils v0.5.0
 	github.com/opencontainers/runtime-spec v1.0.3-0.20200817204227-f9c09b4ea1df
 	github.com/opencontainers/selinux v1.6.0
