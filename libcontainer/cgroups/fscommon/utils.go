@@ -79,5 +79,5 @@ func GetCgroupParamString(path, file string) (string, error) {
 		return "", err
 	}
 
-	return strings.TrimSpace(string(contents)), nil
+	return strings.TrimSpace(contents), nil
 }

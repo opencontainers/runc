@@ -105,7 +105,7 @@ func CreateCgroupPath(path string, c *configs.Cgroup) (Err error) {
 			}
 			cgTypeFile := filepath.Join(current, "cgroup.type")
 			cgType, _ := ioutil.ReadFile(cgTypeFile)
-			switch strings.TrimSpace(string(cgType)) {
+			switch string(bytes.TrimSpace(cgType)) {
 			// If the cgroup is in an invalid mode (usually this means there's an internal
 			// process in the cgroup tree, because we created a cgroup under an
 			// already-populated-by-other-processes cgroup), then we have to error out if
@@ -128,7 +128,7 @@ func CreateCgroupPath(path string, c *configs.Cgroup) (Err error) {
 				fallthrough
 			case "threaded":
 				if containsDomainController(c) {
-					return fmt.Errorf("cannot enter cgroupv2 %q with domain controllers -- it is in %s mode", current, strings.TrimSpace(string(cgType)))
+					return fmt.Errorf("cannot enter cgroupv2 %q with domain controllers -- it is in %s mode", current, string(bytes.TrimSpace(cgType)))
 				}
 			}
 		}

@@ -19,8 +19,8 @@ func TestLoggingToFile(t *testing.T) {
 	logToLogWriter(t, logW, `{"level": "info","msg":"kitten"}`)
 
 	logFileContent := waitForLogContent(t, logFile)
-	if !strings.Contains(string(logFileContent), "kitten") {
-		t.Fatalf("%s does not contain kitten", string(logFileContent))
+	if !strings.Contains(logFileContent, "kitten") {
+		t.Fatalf("%s does not contain kitten", logFileContent)
 	}
 }
 
@@ -32,8 +32,8 @@ func TestLogForwardingDoesNotStopOnJsonDecodeErr(t *testing.T) {
 	logToLogWriter(t, logW, "invalid-json-with-kitten")
 
 	logFileContent := waitForLogContent(t, logFile)
-	if !strings.Contains(string(logFileContent), "failed to decode") {
-		t.Fatalf("%q does not contain decoding error", string(logFileContent))
+	if !strings.Contains(logFileContent, "failed to decode") {
+		t.Fatalf("%q does not contain decoding error", logFileContent)
 	}
 
 	truncateLogFile(t, logFile)
@@ -41,8 +41,8 @@ func TestLogForwardingDoesNotStopOnJsonDecodeErr(t *testing.T) {
 	logToLogWriter(t, logW, `{"level": "info","msg":"puppy"}`)
 
 	logFileContent = waitForLogContent(t, logFile)
-	if !strings.Contains(string(logFileContent), "puppy") {
-		t.Fatalf("%s does not contain puppy", string(logFileContent))
+	if !strings.Contains(logFileContent, "puppy") {
+		t.Fatalf("%s does not contain puppy", logFileContent)
 	}
 }
 
@@ -54,8 +54,8 @@ func TestLogForwardingDoesNotStopOnLogLevelParsingErr(t *testing.T) {
 	logToLogWriter(t, logW, `{"level": "alert","msg":"puppy"}`)
 
 	logFileContent := waitForLogContent(t, logFile)
-	if !strings.Contains(string(logFileContent), "failed to parse log level") {
-		t.Fatalf("%q does not contain log level parsing error", string(logFileContent))
+	if !strings.Contains(logFileContent, "failed to parse log level") {
+		t.Fatalf("%q does not contain log level parsing error", logFileContent)
 	}
 
 	truncateLogFile(t, logFile)
@@ -63,8 +63,8 @@ func TestLogForwardingDoesNotStopOnLogLevelParsingErr(t *testing.T) {
 	logToLogWriter(t, logW, `{"level": "info","msg":"puppy"}`)
 
 	logFileContent = waitForLogContent(t, logFile)
-	if !strings.Contains(string(logFileContent), "puppy") {
-		t.Fatalf("%s does not contain puppy", string(logFileContent))
+	if !strings.Contains(logFileContent, "puppy") {
+		t.Fatalf("%s does not contain puppy", logFileContent)
 	}
 }
 
@@ -75,8 +75,8 @@ func TestLogForwardingStopsAfterClosingTheWriter(t *testing.T) {
 	logToLogWriter(t, logW, `{"level": "info","msg":"sync"}`)
 
 	logFileContent := waitForLogContent(t, logFile)
-	if !strings.Contains(string(logFileContent), "sync") {
-		t.Fatalf("%q does not contain sync message", string(logFileContent))
+	if !strings.Contains(logFileContent, "sync") {
+		t.Fatalf("%q does not contain sync message", logFileContent)
 	}
 
 	logW.Close()

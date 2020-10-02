@@ -3,6 +3,7 @@
 package libcontainer
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -304,7 +305,7 @@ func setupUser(config *initConfig) error {
 	// There's nothing we can do about /etc/group entries, so we silently
 	// ignore setting groups here (since the user didn't explicitly ask us to
 	// set the group).
-	allowSupGroups := !config.RootlessEUID && strings.TrimSpace(string(setgroups)) != "deny"
+	allowSupGroups := !config.RootlessEUID && string(bytes.TrimSpace(setgroups)) != "deny"
 
 	if allowSupGroups {
 		suppGroups := append(execUser.Sgids, addGroups...)
