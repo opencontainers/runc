@@ -245,8 +245,8 @@ func init() {
 // Return the mount point path of Intel RDT "resource control" filesysem
 func findIntelRdtMountpointDir(f io.Reader) (string, error) {
 	mi, err := mountinfo.GetMountsFromReader(f, func(m *mountinfo.Info) (bool, bool) {
-		// similar to mountinfo.FstypeFilter but stops after the first match
-		if m.Fstype == "resctrl" {
+		// similar to mountinfo.FSTypeFilter but stops after the first match
+		if m.FSType == "resctrl" {
 			return false, true // don't skip, stop
 		}
 		return true, false // skip, keep going
@@ -259,7 +259,7 @@ func findIntelRdtMountpointDir(f io.Reader) (string, error) {
 	}
 
 	// Check if MBA Software Controller is enabled through mount option "-o mba_MBps"
-	if strings.Contains(","+mi[0].VfsOpts+",", ",mba_MBps,") {
+	if strings.Contains(","+mi[0].VFSOptions+",", ",mba_MBps,") {
 		isMbaScEnabled = true
 	}
 
