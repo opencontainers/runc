@@ -1,4 +1,4 @@
-// Package devicefilter containes eBPF device filter program
+// Package devicefilter contains eBPF device filter program
 //
 // The implementation is based on https://github.com/containers/crun/blob/0.10.2/src/libcrun/ebpf.c
 //

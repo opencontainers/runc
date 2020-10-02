@@ -235,7 +235,6 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 		RootlessCgroups: opts.RootlessCgroups,
 	}
 
-	exists := false
 	for _, m := range spec.Mounts {
 		config.Mounts = append(config.Mounts, createLibcontainerMount(cwd, m))
 	}
@@ -253,6 +252,7 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 	config.Cgroups = c
 	// set linux-specific config
 	if spec.Linux != nil {
+		var exists bool
 		if config.RootPropagation, exists = mountPropagationMapping[spec.Linux.RootfsPropagation]; !exists {
 			return nil, fmt.Errorf("rootfsPropagation=%v is not supported", spec.Linux.RootfsPropagation)
 		}
