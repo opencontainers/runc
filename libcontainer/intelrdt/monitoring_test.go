@@ -54,7 +54,7 @@ func mockResctrlL3_MON(NUMANodes []string, mocks map[string]uint64) (string, err
 		}
 
 		for fileName, value := range mocks {
-			err := ioutil.WriteFile(filepath.Join(numaPath, fileName), []byte(strconv.FormatUint(value, 10)), 777)
+			err := ioutil.WriteFile(filepath.Join(numaPath, fileName), []byte(strconv.FormatUint(value, 10)), 0o644)
 			if err != nil {
 				return "", err
 			}
