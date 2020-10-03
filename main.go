@@ -141,6 +141,9 @@ func main() {
 				fatal(err)
 			}
 		}
+		if err := reviseRootDir(context); err != nil {
+			return err
+		}
 		return logs.ConfigureLogging(createLogConfig(context))
 	}
 
