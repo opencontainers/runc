@@ -102,5 +102,5 @@ func DetectUserDbusSessionBusAddress() (string, error) {
 			return strings.TrimPrefix(s, "DBUS_SESSION_BUS_ADDRESS="), nil
 		}
 	}
-	return "", errors.New("could not detect DBUS_SESSION_BUS_ADDRESS from `systemctl --user --no-pager show-environment`")
+	return "", errors.New("could not detect DBUS_SESSION_BUS_ADDRESS from `systemctl --user --no-pager show-environment`. Make sure you have installed the dbus-user-session or dbus-daemon package and then run: `systemctl --user start dbus`")
 }
