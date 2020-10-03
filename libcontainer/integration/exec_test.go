@@ -279,10 +279,10 @@ func TestEnter(t *testing.T) {
 	waitProcess(&pconfig, t)
 
 	// Check that both processes live in the same pidns
-	pidns := string(stdout.Bytes())
+	pidns := stdout.String()
 	ok(t, err)
 
-	pidns2 := string(stdout2.Bytes())
+	pidns2 := stdout2.String()
 	ok(t, err)
 
 	if pidns != pidns2 {
@@ -325,7 +325,7 @@ func TestProcessEnv(t *testing.T) {
 	// Wait for process
 	waitProcess(&pconfig, t)
 
-	outputEnv := string(stdout.Bytes())
+	outputEnv := stdout.String()
 
 	// Check that the environment has the key/value pair we added
 	if !strings.Contains(outputEnv, "FOO=BAR") {
@@ -964,7 +964,7 @@ func TestPassExtraFiles(t *testing.T) {
 
 	waitProcess(&process, t)
 
-	out := string(stdout.Bytes())
+	out := stdout.String()
 	// fd 5 is the directory handle for /proc/$$/fd
 	if out != "0 1 2 3 4 5" {
 		t.Fatalf("expected to have the file descriptors '0 1 2 3 4 5' passed to init, got '%s'", out)
@@ -1501,7 +1501,7 @@ func TestRootfsPropagationSlaveMount(t *testing.T) {
 	mountPropagated = false
 	dir2cont = filepath.Join(dir1cont, filepath.Base(dir2host))
 
-	propagationInfo := string(stdout2.Bytes())
+	propagationInfo := stdout2.String()
 	lines := strings.Split(propagationInfo, "\n")
 	for _, l := range lines {
 		linefields := strings.Split(l, " ")
@@ -1892,7 +1892,7 @@ func TestTmpfsCopyUp(t *testing.T) {
 	// Wait for process
 	waitProcess(&pconfig, t)
 
-	outputLs := string(stdout.Bytes())
+	outputLs := stdout.String()
 
 	// Check that the ls output has /etc/passwd
 	if !strings.Contains(outputLs, "/etc/passwd") {

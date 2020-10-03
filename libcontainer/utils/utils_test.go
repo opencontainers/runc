@@ -32,7 +32,9 @@ func TestSearchLabels(t *testing.T) {
 
 func TestResolveRootfs(t *testing.T) {
 	dir := "rootfs"
-	os.Mkdir(dir, 0600)
+	if err := os.Mkdir(dir, 0600); err != nil {
+		t.Fatal(err)
+	}
 	defer os.Remove(dir)
 
 	path, err := ResolveRootfs(dir)
@@ -51,7 +53,9 @@ func TestResolveRootfs(t *testing.T) {
 func TestResolveRootfsWithSymlink(t *testing.T) {
 	dir := "rootfs"
 	tmpDir, _ := filepath.EvalSymlinks(os.TempDir())
-	os.Symlink(tmpDir, dir)
+	if err := os.Symlink(tmpDir, dir); err != nil {
+		t.Fatal(err)
+	}
 	defer os.Remove(dir)
 
 	path, err := ResolveRootfs(dir)

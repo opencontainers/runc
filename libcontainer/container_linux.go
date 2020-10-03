@@ -1528,7 +1528,7 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *
 
 	buf := make([]byte, 10*4096)
 	oob := make([]byte, 4096)
-	for true {
+	for {
 		n, oobn, _, _, err := criuClientCon.ReadMsgUnix(buf, oob)
 		if req.Opts != nil && req.Opts.StatusFd != nil {
 			// Close status_fd as soon as we got something back from criu,

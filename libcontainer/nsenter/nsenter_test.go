@@ -226,7 +226,6 @@ func init() {
 	if strings.HasPrefix(os.Args[0], "nsenter-") {
 		os.Exit(0)
 	}
-	return
 }
 
 func newPipe() (parent *os.File, child *os.File, err error) {

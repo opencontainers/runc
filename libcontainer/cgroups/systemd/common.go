@@ -374,7 +374,6 @@ func systemdVersion(conn *systemdDbus.Conn) (int, error) {
 		}
 
 		version, versionErr = systemdVersionAtoi(verStr)
-		return
 	})
 
 	return version, versionErr

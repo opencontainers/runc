@@ -22,7 +22,9 @@ func TestValidate(t *testing.T) {
 
 func TestValidateWithInvalidRootfs(t *testing.T) {
 	dir := "rootfs"
-	os.Symlink("/var", dir)
+	if err := os.Symlink("/var", dir); err != nil {
+		t.Fatal(err)
+	}
 	defer os.Remove(dir)
 
 	config := &configs.Config{

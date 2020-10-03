@@ -112,7 +112,10 @@ func (t *tty) recvtty(process *libcontainer.Process, socket *os.File) (Err error
 	if err != nil {
 		return err
 	}
-	console.ClearONLCR(cons.Fd())
+	err = console.ClearONLCR(cons.Fd())
+	if err != nil {
+		return err
+	}
 	epoller, err := console.NewEpoller()
 	if err != nil {
 		return err

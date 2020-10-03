@@ -162,7 +162,10 @@ func (n *notifySocket) run(pid1 int) error {
 
 			// now we can inform systemd to use pid1 as the pid to monitor
 			newPid := "MAINPID=" + strconv.Itoa(pid1)
-			client.Write([]byte(newPid + "\n"))
+			_, err := client.Write([]byte(newPid + "\n"))
+			if err != nil {
+				return err
+			}
 			return nil
 		}
 	}

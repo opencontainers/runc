@@ -105,7 +105,9 @@ func handleSingle(path string, noStdin bool) error {
 	if err != nil {
 		return err
 	}
-	console.ClearONLCR(c.Fd())
+	if err := console.ClearONLCR(c.Fd()); err != nil {
+		return err
+	}
 
 	// Copy from our stdio to the master fd.
 	quitChan := make(chan struct{})
