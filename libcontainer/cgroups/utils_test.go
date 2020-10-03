@@ -4,11 +4,12 @@ package cgroups
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/sirupsen/logrus"
 )
 
 const fedoraMountinfo = `15 35 0:3 / /proc rw,nosuid,nodev,noexec,relatime shared:5 - proc proc rw
@@ -401,37 +402,100 @@ func TestFindCgroupMountpointAndRoot(t *testing.T) {
 	}
 }
 
-func TestGetHugePageSizeImpl(t *testing.T) {
+func BenchmarkGetHugePageSize(b *testing.B) {
+	var (
+		output []string
+		err    error
+	)
+	for i := 0; i < b.N; i++ {
+		output, err = GetHugePageSize()
+	}
+	if err != nil || len(output) == 0 {
+		b.Fatal("unexpected results")
+	}
+}
 
+func BenchmarkGetHugePageSizeImpl(b *testing.B) {
+	var (
+		input  = []string{"hugepages-1048576kB", "hugepages-2048kB", "hugepages-32768kB", "hugepages-64kB"}
+		output []string
+		err    error
+	)
+	for i := 0; i < b.N; i++ {
+		output, err = getHugePageSizeFromFilenames(input)
+	}
+	if err != nil || len(output) != len(input) {
+		b.Fatal("unexpected results")
+	}
+}
+
+func TestGetHugePageSizeImpl(t *testing.T) {
 	testCases := []struct {
-		inputFiles      []string
-		outputPageSizes []string
-		err             error
+		input  []string
+		output []string
+		isErr  bool
+		isWarn bool
 	}{
 		{
-			inputFiles:      []string{"hugepages-1048576kB", "hugepages-2048kB", "hugepages-32768kB", "hugepages-64kB"},
-			outputPageSizes: []string{"1GB", "2MB", "32MB", "64KB"},
-			err:             nil,
+			input:  []string{"hugepages-1048576kB", "hugepages-2048kB", "hugepages-32768kB", "hugepages-64kB"},
+			output: []string{"1GB", "2MB", "32MB", "64KB"},
 		},
 		{
-			inputFiles:      []string{},
-			outputPageSizes: []string{},
-			err:             nil,
+			input:  []string{},
+			output: []string{},
 		},
-		{
-			inputFiles:      []string{"hugepages-a"},
-			outputPageSizes: []string{},
-			err:             errors.New("invalid size: 'a'"),
+		{ // not a number
+			input: []string{"hugepages-akB"},
+			isErr: true,
+		},
+		{ // no prefix (silently skipped)
+			input: []string{"1024kB"},
+		},
+		{ // invalid prefix (silently skipped)
+			input: []string{"whatever-1024kB"},
+		},
+		{ // invalid suffix (skipped with a warning)
+			input:  []string{"hugepages-1024gB"},
+			isWarn: true,
+		},
+		{ // no suffix (skipped with a warning)
+			input:  []string{"hugepages-1024"},
+			isWarn: true,
 		},
 	}
 
+	// Need to catch warnings.
+	savedOut := logrus.StandardLogger().Out
+	defer logrus.SetOutput(savedOut)
+	warns := new(bytes.Buffer)
+	logrus.SetOutput(warns)
+
 	for _, c := range testCases {
-		pageSizes, err := getHugePageSizeFromFilenames(c.inputFiles)
-		if len(pageSizes) != 0 && len(c.outputPageSizes) != 0 && !reflect.DeepEqual(pageSizes, c.outputPageSizes) {
-			t.Errorf("expected %s, got %s", c.outputPageSizes, pageSizes)
+		warns.Reset()
+		output, err := getHugePageSizeFromFilenames(c.input)
+		if err != nil {
+			t.Logf("(input %v, error %v)", c.input, err)
+			if !c.isErr {
+				t.Error("unexpected error ^^^^")
+			}
+			// no more checks
+			continue
 		}
-		if err != nil && err.Error() != c.err.Error() {
-			t.Errorf("expected error %s, got %s", c.err, err)
+		if c.isErr {
+			t.Errorf("input %v, expected error, got error: nil, output: %v", c.input, output)
+			// no more checks
+			continue
+		}
+		// check for warnings
+		if c.isWarn && warns.Len() == 0 {
+			t.Errorf("input %v, expected a warning, got none", c.input)
+		}
+		if !c.isWarn && warns.Len() > 0 {
+			t.Errorf("input %v, unexpected warning: %s", c.input, warns.String())
+		}
+		// check output
+		if len(output) != len(c.output) || (len(output) > 0 && !reflect.DeepEqual(output, c.output)) {
+			t.Errorf("input %v, expected %v, got %v", c.input, c.output, output)
 		}
 	}
 }
