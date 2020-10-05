@@ -4,9 +4,7 @@ package fs2
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
@@ -53,15 +51,14 @@ func (m *manager) getControllers() error {
 		return nil
 	}
 
-	file := filepath.Join(m.dirPath, "cgroup.controllers")
-	data, err := ioutil.ReadFile(file)
+	data, err := fscommon.ReadFile(m.dirPath, "cgroup.controllers")
 	if err != nil {
 		if m.rootless && m.config.Path == "" {
 			return nil
 		}
 		return err
 	}
-	fields := strings.Fields(string(data))
+	fields := strings.Fields(data)
 	m.controllers = make(map[string]struct{}, len(fields))
 	for _, c := range fields {
 		m.controllers[c] = struct{}{}

@@ -9,18 +9,16 @@ import (
 	"strconv"
 	"testing"
 	"time"
-
-	"github.com/opencontainers/runc/libcontainer/cgroups"
 )
 
 func TestWriteCgroupFileHandlesInterrupt(t *testing.T) {
-	if cgroups.IsCgroup2UnifiedMode() {
-		t.Skip("cgroup v2 is not supported")
-	}
-
-	memoryCgroupMount, err := cgroups.FindCgroupMountpoint("", "memory")
-	if err != nil {
-		t.Fatal(err)
+	const (
+		memoryCgroupMount = "/sys/fs/cgroup/memory"
+		memoryLimit       = "memory.limit_in_bytes"
+	)
+	if _, err := os.Stat(memoryCgroupMount); err != nil {
+		// most probably cgroupv2
+		t.Skip(err)
 	}
 
 	cgroupName := fmt.Sprintf("test-eint-%d", time.Now().Nanosecond())
@@ -30,9 +28,14 @@ func TestWriteCgroupFileHandlesInterrupt(t *testing.T) {
 	}
 	defer os.RemoveAll(cgroupPath)
 
+	if _, err := os.Stat(filepath.Join(cgroupPath, memoryLimit)); err != nil {
+		// either cgroupv2, or memory controller is not avalable
+		t.Skip(err)
+	}
+
 	for i := 0; i < 100000; i++ {
 		limit := 1024*1024 + i
-		if err := WriteFile(cgroupPath, "memory.limit_in_bytes", strconv.Itoa(limit)); err != nil {
+		if err := WriteFile(cgroupPath, memoryLimit, strconv.Itoa(limit)); err != nil {
 			t.Fatalf("Failed to write %d on attempt %d: %+v", limit, i, err)
 		}
 	}
