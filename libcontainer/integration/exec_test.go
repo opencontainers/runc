@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/opencontainers/runc/libcontainer"
@@ -1657,6 +1658,59 @@ func TestPIDHost(t *testing.T) {
 
 	if actual := strings.Trim(buffers.Stdout.String(), "\n"); actual != l {
 		t.Fatalf("ipc link not equal to host link %q %q", actual, l)
+	}
+}
+
+func TestPIDHostInitProcessWait(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+
+	rootfs, err := newRootfs()
+	ok(t, err)
+	defer remove(rootfs)
+
+	pidns := "/proc/1/ns/pid"
+
+	// Run a container with two long-running processes.
+	config := newTemplateConfig(rootfs)
+	config.Namespaces.Add(configs.NEWPID, pidns)
+	container, err := newContainerWithName("test", config)
+	ok(t, err)
+	defer func() {
+		_ = container.Destroy()
+	}()
+
+	process1 := &libcontainer.Process{
+		Cwd:  "/",
+		Args: []string{"sleep", "100"},
+		Env:  standardEnvironment,
+		Init: true,
+	}
+	err = container.Run(process1)
+	ok(t, err)
+
+	process2 := &libcontainer.Process{
+		Cwd:  "/",
+		Args: []string{"sleep", "100"},
+		Env:  standardEnvironment,
+		Init: false,
+	}
+	err = container.Run(process2)
+	ok(t, err)
+
+	// Kill the init process and Wait for it.
+	err = process1.Signal(syscall.SIGKILL)
+	ok(t, err)
+	_, err = process1.Wait()
+	if err == nil {
+		t.Fatal("expected Wait to indicate failure")
+	}
+
+	// The non-init process must've been killed.
+	err = process2.Signal(syscall.Signal(0))
+	if err == nil || err.Error() != "no such process" {
+		t.Fatalf("expected process to have been killed: %v", err)
 	}
 }
 
