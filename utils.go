@@ -92,6 +92,21 @@ func revisePidFile(context *cli.Context) error {
 	return context.Set("pid-file", pidFile)
 }
 
+// reviseRootDir convert the root to absolute path
+func reviseRootDir(context *cli.Context) error {
+	root := context.GlobalString("root")
+	if root == "" {
+		return nil
+	}
+
+	root, err := filepath.Abs(root)
+	if err != nil {
+		return err
+	}
+
+	return context.GlobalSet("root", root)
+}
+
 // parseBoolOrAuto returns (nil, nil) if s is empty or "auto"
 func parseBoolOrAuto(s string) (*bool, error) {
 	if s == "" || strings.ToLower(s) == "auto" {
