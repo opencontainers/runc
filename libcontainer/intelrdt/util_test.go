@@ -45,7 +45,7 @@ func NewIntelRdtTestUtil(t *testing.T) *intelRdtTestUtil {
 	}
 
 	// Ensure the full mock Intel RDT "resource control" filesystem path exists
-	err = os.MkdirAll(testIntelRdtPath, 0755)
+	err = os.MkdirAll(testIntelRdtPath, 0o755)
 	if err != nil {
 		t.Fatal(err)
 	}

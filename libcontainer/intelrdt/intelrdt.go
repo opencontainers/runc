@@ -413,7 +413,7 @@ func writeFile(dir, file, data string) error {
 	if dir == "" {
 		return fmt.Errorf("no such directory for %s", file)
 	}
-	if err := ioutil.WriteFile(filepath.Join(dir, file), []byte(data+"\n"), 0700); err != nil {
+	if err := ioutil.WriteFile(filepath.Join(dir, file), []byte(data+"\n"), 0o600); err != nil {
 		return fmt.Errorf("failed to write %v to %v: %v", data, file, err)
 	}
 	return nil
@@ -520,7 +520,7 @@ func WriteIntelRdtTasks(dir string, pid int) error {
 
 	// Don't attach any pid if -1 is specified as a pid
 	if pid != -1 {
-		if err := ioutil.WriteFile(filepath.Join(dir, IntelRdtTasks), []byte(strconv.Itoa(pid)), 0700); err != nil {
+		if err := ioutil.WriteFile(filepath.Join(dir, IntelRdtTasks), []byte(strconv.Itoa(pid)), 0o600); err != nil {
 			return fmt.Errorf("failed to write %v to %v: %v", pid, IntelRdtTasks, err)
 		}
 	}
@@ -763,7 +763,7 @@ func (m *intelRdtManager) Set(container *configs.Config) error {
 
 func (raw *intelRdtData) join(id string) (string, error) {
 	path := filepath.Join(raw.root, id)
-	if err := os.MkdirAll(path, 0755); err != nil {
+	if err := os.MkdirAll(path, 0o755); err != nil {
 		return "", NewLastCmdError(err)
 	}
 
