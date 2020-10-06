@@ -432,6 +432,7 @@ func setupRlimits(limits []configs.Rlimit, pid int) error {
 
 const _P_PID = 1
 
+//nolint:structcheck,unused
 type siginfo struct {
 	si_signo int32
 	si_errno int32
