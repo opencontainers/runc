@@ -267,7 +267,7 @@ func (m *legacyManager) joinCgroups(pid int) error {
 }
 
 func getSubsystemPath(c *configs.Cgroup, subsystem string) (string, error) {
-	mountpoint, err := cgroups.FindCgroupMountpoint(c.Path, subsystem)
+	mountpoint, err := cgroups.FindCgroupMountpoint("", subsystem)
 	if err != nil {
 		return "", err
 	}
