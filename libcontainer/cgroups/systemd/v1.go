@@ -406,7 +406,10 @@ func (m *legacyManager) Set(container *configs.Config) error {
 
 func enableKmem(c *configs.Cgroup) error {
 	path, err := getSubsystemPath(c, "memory")
-	if err != nil && !cgroups.IsNotFound(err) {
+	if err != nil {
+		if cgroups.IsNotFound(err) {
+			return nil
+		}
 		return err
 	}
 
