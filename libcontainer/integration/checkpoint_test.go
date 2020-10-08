@@ -235,7 +235,7 @@ func testCheckpoint(t *testing.T, userns bool) {
 		t.Fatal(err)
 	}
 
-	process, err = os.FindProcess(pid)
+	_, err = os.FindProcess(pid)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -255,7 +255,7 @@ func testCheckpoint(t *testing.T, userns bool) {
 		t.Fatal(s.String(), pid)
 	}
 
-	output := string(stdout.Bytes())
+	output := stdout.String()
 	if !strings.Contains(output, "Hello!") {
 		t.Fatal("Did not restore the pipe correctly:", output)
 	}

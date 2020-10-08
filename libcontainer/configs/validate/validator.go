@@ -228,7 +228,7 @@ func checkHostNs(sysctlConfig string, path string) error {
 		return fmt.Errorf("could not check that %q is a symlink: %v", path, err)
 	}
 
-	if symLink == false {
+	if !symLink {
 		// The provided namespace is not a symbolic link,
 		// it is not the host namespace.
 		return nil

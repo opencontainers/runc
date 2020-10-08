@@ -463,7 +463,7 @@ this is just some garbage data
 			t.Errorf("Parse(%#v) has error %v", test, err)
 			continue
 		}
-		sort.Sort(sort.IntSlice(gids))
+		sort.Ints(gids)
 		if !reflect.DeepEqual(gids, test.expected) {
 			t.Errorf("Gids(%v), expect %v from groups %v", gids, test.expected, test.groups)
 		}
@@ -499,7 +499,7 @@ func TestGetAdditionalGroupsNumeric(t *testing.T) {
 			t.Errorf("Parse(%#v) has error %v", test, err)
 			continue
 		}
-		sort.Sort(sort.IntSlice(gids))
+		sort.Ints(gids)
 		if !reflect.DeepEqual(gids, test.expected) {
 			t.Errorf("Gids(%v), expect %v from groups %v", gids, test.expected, test.groups)
 		}
