@@ -370,7 +370,7 @@ func TestProcessEmptyCaps(t *testing.T) {
 	// Wait for process
 	waitProcess(&pconfig, t)
 
-	outputStatus := string(stdout.Bytes())
+	outputStatus := stdout.String()
 
 	lines := strings.Split(outputStatus, "\n")
 
@@ -423,7 +423,7 @@ func TestProcessCaps(t *testing.T) {
 	// Wait for process
 	waitProcess(&pconfig, t)
 
-	outputStatus := string(stdout.Bytes())
+	outputStatus := stdout.String()
 
 	lines := strings.Split(outputStatus, "\n")
 
@@ -449,8 +449,7 @@ func TestProcessCaps(t *testing.T) {
 	}
 
 	var netAdminMask uint64
-	var netAdminBit uint
-	netAdminBit = 12 // from capability.h
+	var netAdminBit = uint(12) // from capability.h
 	netAdminMask = 1 << netAdminBit
 	if effectiveCaps&netAdminMask != netAdminMask {
 		t.Fatal("CAP_NET_ADMIN is not set as expected")
@@ -487,7 +486,7 @@ func TestAdditionalGroups(t *testing.T) {
 	// Wait for process
 	waitProcess(&pconfig, t)
 
-	outputGroups := string(stdout.Bytes())
+	outputGroups := stdout.String()
 
 	// Check that the groups output has the groups that we specified
 	if !strings.Contains(outputGroups, "audio") {

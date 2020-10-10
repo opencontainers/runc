@@ -16,12 +16,12 @@ func (s *NameGroup) Name() string {
 	return s.GroupName
 }
 
-func (s *NameGroup) Apply(path string, d *cgroupData) error {
+func (s *NameGroup) Apply(path string, d *cgroupData) (retErr error) {
 	if s.Join {
 		// ignore errors if the named cgroup does not exist
-		join(path, d.pid)
+		retErr = join(path, d.pid)
 	}
-	return nil
+	return
 }
 
 func (s *NameGroup) Set(path string, cgroup *configs.Cgroup) error {

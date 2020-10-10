@@ -63,15 +63,15 @@ type Stat_t struct {
 }
 
 // Stat returns a Stat_t instance for the specified process.
-func Stat(pid int) (stat Stat_t, err error) {
-	bytes, err := ioutil.ReadFile(filepath.Join("/proc", strconv.Itoa(pid), "stat"))
-	if err != nil {
-		return stat, err
+func Stat(pid int) (stat Stat_t, retErr error) {
+	bytes, retErr := ioutil.ReadFile(filepath.Join("/proc", strconv.Itoa(pid), "stat"))
+	if retErr != nil {
+		return stat, retErr
 	}
 	return parseStat(string(bytes))
 }
 
-func parseStat(data string) (stat Stat_t, err error) {
+func parseStat(data string) (stat Stat_t, retErr error) {
 	// From proc(5), field 2 could contain space and is inside `(` and `)`.
 	// The following is an example:
 	// 89653 (gunicorn: maste) S 89630 89653 89653 0 -1 4194560 29689 28896 0 3 146 32 76 19 20 0 1 0 2971844 52965376 3920 18446744073709551615 1 1 0 0 0 0 0 16781312 137447943 0 0 0 17 1 0 0 0 0 0 0 0 0 0 0 0 0 0
@@ -86,9 +86,9 @@ func parseStat(data string) (stat Stat_t, err error) {
 	}
 
 	stat.Name = parts[1]
-	_, err = fmt.Sscanf(parts[0], "%d", &stat.PID)
-	if err != nil {
-		return stat, err
+	_, retErr = fmt.Sscanf(parts[0], "%d", &stat.PID)
+	if retErr != nil {
+		return stat, retErr
 	}
 
 	// parts indexes should be offset by 3 from the field number given
@@ -96,8 +96,14 @@ func parseStat(data string) (stat Stat_t, err error) {
 	// one (PID) and two (Name) in the paren-split.
 	parts = strings.Split(data[i+2:], " ")
 	var state int
-	fmt.Sscanf(parts[3-3], "%c", &state)
+
+	if _, retErr = fmt.Sscanf(parts[3-3], "%c", &state); retErr != nil {
+		return Stat_t{}, retErr
+	}
 	stat.State = State(state)
-	fmt.Sscanf(parts[22-3], "%d", &stat.StartTime)
+
+	if _, retErr = fmt.Sscanf(parts[22-3], "%d", &stat.StartTime); retErr != nil {
+		return Stat_t{}, retErr
+	}
 	return stat, nil
 }

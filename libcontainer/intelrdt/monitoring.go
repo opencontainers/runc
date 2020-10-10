@@ -21,7 +21,9 @@ type monFeatures struct {
 
 func getMonFeatures(intelRdtRoot string) (monFeatures, error) {
 	file, err := os.Open(filepath.Join(intelRdtRoot, "info", "L3_MON", "mon_features"))
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 	if err != nil {
 		return monFeatures{}, err
 	}

@@ -680,8 +680,7 @@ var criuFeatures *criurpc.CriuFeatures
 
 func (c *linuxContainer) checkCriuFeatures(criuOpts *CriuOpts, rpcOpts *criurpc.CriuOpts, criuFeat *criurpc.CriuFeatures) error {
 
-	var t criurpc.CriuReqType
-	t = criurpc.CriuReqType_FEATURE_CHECK
+	var t criurpc.CriuReqType = criurpc.CriuReqType_FEATURE_CHECK
 
 	// make sure the features we are looking for are really not from
 	// some previous check
@@ -764,10 +763,7 @@ func (c *linuxContainer) checkCriuVersion(minVersion int) error {
 const descriptorsFilename = "descriptors.json"
 
 func (c *linuxContainer) addCriuDumpMount(req *criurpc.CriuReq, m *configs.Mount) {
-	mountDest := m.Destination
-	if strings.HasPrefix(mountDest, c.config.Rootfs) {
-		mountDest = mountDest[len(c.config.Rootfs):]
-	}
+	mountDest := strings.TrimPrefix(m.Destination, c.config.Rootfs)
 
 	extMnt := &criurpc.ExtMountMap{
 		Key: proto.String(mountDest),
@@ -1108,10 +1104,7 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 }
 
 func (c *linuxContainer) addCriuRestoreMount(req *criurpc.CriuReq, m *configs.Mount) {
-	mountDest := m.Destination
-	if strings.HasPrefix(mountDest, c.config.Rootfs) {
-		mountDest = mountDest[len(c.config.Rootfs):]
-	}
+	mountDest := strings.TrimPrefix(m.Destination, c.config.Rootfs)
 
 	extMnt := &criurpc.ExtMountMap{
 		Key: proto.String(mountDest),
@@ -1216,7 +1209,7 @@ func (c *linuxContainer) prepareCriuRestoreMounts(mounts []*configs.Mount) error
 	return nil
 }
 
-func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
+func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) (err error) {
 	c.m.Lock()
 	defer c.m.Unlock()
 
@@ -1243,7 +1236,10 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 	if err != nil {
 		return err
 	}
-	defer workDir.Close()
+	defer func() {
+		err = workDir.Close()
+	}()
+
 	if criuOpts.ImagesDirectory == "" {
 		return errors.New("invalid directory to restore checkpoint")
 	}
@@ -1251,7 +1247,9 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 	if err != nil {
 		return err
 	}
-	defer imageDir.Close()
+	defer func() {
+		err = imageDir.Close()
+	}()
 	// CRIU has a few requirements for a root directory:
 	// * it must be a mount point
 	// * its parent must not be overmounted
@@ -1261,7 +1259,9 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 	if err := os.Mkdir(root, 0755); err != nil {
 		return err
 	}
-	defer os.Remove(root)
+	defer func() {
+		err = os.Remove(root)
+	}()
 	root, err = filepath.EvalSymlinks(root)
 	if err != nil {
 		return err
@@ -1270,7 +1270,9 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 	if err != nil {
 		return err
 	}
-	defer unix.Unmount(root, unix.MNT_DETACH)
+	defer func() {
+		err = unix.Unmount(root, unix.MNT_DETACH)
+	}()
 	t := criurpc.CriuReqType_RESTORE
 	req := &criurpc.CriuReq{
 		Type: &t,
@@ -1378,7 +1380,7 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 
 	// Now that CRIU is done let's close all opened FDs CRIU needed.
 	for _, fd := range extraFiles {
-		fd.Close()
+		_ = fd.Close()
 	}
 
 	return err
@@ -1592,7 +1594,7 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *
 		break
 	}
 
-	criuClientCon.CloseWrite()
+	_ = criuClientCon.CloseWrite()
 	// cmd.Wait() waits cmd.goroutines which are used for proxying file descriptors.
 	// Here we want to wait only the CRIU process.
 	criuProcessState, err = criuProcess.Wait()
@@ -1780,6 +1782,7 @@ func (c *linuxContainer) saveState(s *State) (retErr error) {
 	return os.Rename(tmpFile.Name(), stateFilePath)
 }
 
+//nolint:unused
 func (c *linuxContainer) deleteState() error {
 	return os.Remove(filepath.Join(c.root, stateFilename))
 }

@@ -333,11 +333,11 @@ func startUnit(dbusConnection *systemdDbus.Conn, unitName string, properties []s
 			close(statusChan)
 			// Please refer to https://godoc.org/github.com/coreos/go-systemd/dbus#Conn.StartUnit
 			if s != "done" {
-				dbusConnection.ResetFailedUnit(unitName)
+				_ = dbusConnection.ResetFailedUnit(unitName)
 				return errors.Errorf("error creating systemd unit `%s`: got `%s`", unitName, s)
 			}
 		case <-timeout.C:
-			dbusConnection.ResetFailedUnit(unitName)
+			_ = dbusConnection.ResetFailedUnit(unitName)
 			return errors.New("Timeout waiting for systemd to create " + unitName)
 		}
 	} else if !isUnitExists(err) {
