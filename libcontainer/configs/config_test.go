@@ -149,7 +149,10 @@ func TestFuncHookRun(t *testing.T) {
 		return nil
 	})
 
-	fHook.Run(state)
+	err := fHook.Run(state)
+	if err != nil {
+		t.Errorf("Unexpected error running hook: %+v", err)
+	}
 }
 
 func TestCommandHookRun(t *testing.T) {
@@ -184,7 +187,7 @@ func TestCommandHookRunTimeout(t *testing.T) {
 		Pid:     1,
 		Bundle:  "/bundle",
 	}
-	timeout := (10 * time.Millisecond)
+	timeout := 10 * time.Millisecond
 
 	cmdHook := configs.NewCommandHook(configs.Command{
 		Path:    os.Args[0],
