@@ -122,7 +122,9 @@ validate:
 	script/validate-c
 	$(GO) vet $(MOD_VENDOR) ./...
 	shellcheck tests/integration/*.bats
+	# TODO: add shellcheck for sh files
 	shfmt -ln bats -d tests/integration/*.bats
+	shfmt -ln bash -d man/*.sh script/*.sh tests/*.sh tests/integration/*.bash
 
 ci: validate test release
 
