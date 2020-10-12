@@ -8,7 +8,7 @@ function setup() {
 
 	# Create fake rootfs.
 	mkdir rootfs/testdir
-	echo "Forbidden information!" > rootfs/testfile
+	echo "Forbidden information!" >rootfs/testfile
 
 	# add extra masked paths
 	update_config '(.. | select(.maskedPaths? != null)) .maskedPaths += ["/testdir", "/testfile"]'

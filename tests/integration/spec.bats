@@ -25,11 +25,11 @@ function teardown() {
 
 	SPEC_VERSION=$(awk '$1 == "github.com/opencontainers/runtime-spec" {print $2}' "$BATS_TEST_DIRNAME"/../../go.mod)
 	# Will look like this when not pinned to specific tag: "v0.0.0-20190207185410-29686dbc5559", otherwise "v1.0.0"
-	SPEC_COMMIT=$(cut -d "-" -f 3 <<< "$SPEC_VERSION")
+	SPEC_COMMIT=$(cut -d "-" -f 3 <<<"$SPEC_VERSION")
 	SPEC_REF=$([[ -z "$SPEC_COMMIT" ]] && echo "$SPEC_VERSION" || echo "$SPEC_COMMIT")
 
 	git clone https://github.com/opencontainers/runtime-spec.git
-	( cd runtime-spec && git reset --hard "$SPEC_REF" )
+	(cd runtime-spec && git reset --hard "$SPEC_REF")
 	SCHEMA='runtime-spec/schema/config-schema.json'
 	[ -e "$SCHEMA" ]
 

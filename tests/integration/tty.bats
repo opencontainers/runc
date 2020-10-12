@@ -15,7 +15,7 @@ function teardown() {
 	# stty size fails without a tty
 	update_config '(.. | select(.[]? == "sh")) += ["-c", "stty size"]'
 	# note that stdout/stderr are already redirected by bats' run
-	runc run test_busybox < /dev/null
+	runc run test_busybox </dev/null
 	[ "$status" -eq 0 ]
 }
 
@@ -57,7 +57,7 @@ function teardown() {
 	# and do a similar thing for gid.
 	# Replace sh script with stat.
 	# shellcheck disable=SC2016
-	update_config 	' (.. | select(.uid? == 0)) .uid |= 1000
+	update_config ' (.. | select(.uid? == 0)) .uid |= 1000
 			| (.. | select(.gid? == 0)) .gid |= 100
 			| (.. | select(.[]? == "sh")) += ["-c", "stat -c %u:%g $(tty) | tr : \\\\n"]'
 
@@ -77,7 +77,7 @@ function teardown() {
 	testcontainer test_busybox running
 
 	# note that stdout/stderr are already redirected by bats' run
-	runc exec -t test_busybox sh -c "stty size" < /dev/null
+	runc exec -t test_busybox sh -c "stty size" </dev/null
 	[ "$status" -eq 0 ]
 }
 
@@ -125,7 +125,7 @@ function teardown() {
 	# replace "uid": 0 with "uid": 1000
 	# and do a similar thing for gid.
 	# shellcheck disable=SC2016
-	update_config 	' (.. | select(.uid? == 0)) .uid |= 1000
+	update_config ' (.. | select(.uid? == 0)) .uid |= 1000
 			| (.. | select(.gid? == 0)) .gid |= 100'
 
 	# run busybox detached
@@ -154,7 +154,8 @@ function teardown() {
 	# make sure we're running
 	testcontainer test_busybox running
 
-	tty_info_with_consize_size=$( cat <<EOF
+	tty_info_with_consize_size=$(
+		cat <<EOF
 {
     "terminal": true,
     "consoleSize": {
@@ -172,7 +173,7 @@ EOF
 	)
 
 	# run the exec
-	runc exec -t --pid-file pid.txt -d --console-socket "$CONSOLE_SOCKET" -p <( echo "$tty_info_with_consize_size" ) test_busybox
+	runc exec -t --pid-file pid.txt -d --console-socket "$CONSOLE_SOCKET" -p <(echo "$tty_info_with_consize_size") test_busybox
 	[ "$status" -eq 0 ]
 
 	# check the pid was generated
@@ -181,7 +182,8 @@ EOF
 	#wait user process to finish
 	timeout 1 tail --pid="$(head -n 1 pid.txt)" -f /dev/null
 
-	tty_info=$( cat <<EOF
+	tty_info=$(
+		cat <<EOF
 {
     "args": [
 	"/bin/cat",
@@ -193,7 +195,7 @@ EOF
 	)
 
 	# run the exec
-	runc exec -t -p <( echo "$tty_info" ) test_busybox
+	runc exec -t -p <(echo "$tty_info") test_busybox
 	[ "$status" -eq 0 ]
 
 	# test tty width and height against original process.json
@@ -203,7 +205,7 @@ EOF
 @test "runc create [terminal=false]" {
 	# Disable terminal creation.
 	# Replace sh script with sleep.
-	update_config 	' (.. | select(.terminal? != null)) .terminal |= false
+	update_config ' (.. | select(.terminal? != null)) .terminal |= false
 			| (.. | select(.[]? == "sh")) += ["sleep", "1000s"]
 			| del(.. | select(.? == "sh"))'
 
@@ -225,7 +227,7 @@ EOF
 	# Disable terminal creation.
 	# Replace sh script with sleep.
 
-	update_config   ' (.. | select(.terminal? != null)) .terminal |= false
+	update_config ' (.. | select(.terminal? != null)) .terminal |= false
 			| (.. | select(.[]? == "sh")) += ["sleep", "1000s"]
 			| del(.. | select(.? == "sh"))'
 
@@ -245,7 +247,7 @@ EOF
 @test "runc run -d [terminal=false]" {
 	# Disable terminal creation.
 	# Replace sh script with sleep.
-	update_config 	' (.. | select(.terminal? != null)) .terminal |= false
+	update_config ' (.. | select(.terminal? != null)) .terminal |= false
 			| (.. | select(.[]? == "sh")) += ["sleep", "1000s"]
 			| del(.. | select(.? == "sh"))'
 
