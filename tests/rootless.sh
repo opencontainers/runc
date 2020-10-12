@@ -21,7 +21,7 @@
 
 ALL_FEATURES=("idmap" "cgroup")
 # cgroup is managed by systemd when RUNC_USE_SYSTEMD is set
-if [[ -n "${RUNC_USE_SYSTEMD}" ]] ; then
+if [[ -n "${RUNC_USE_SYSTEMD}" ]]; then
 	ALL_FEATURES=("idmap")
 fi
 ROOT="$(readlink -f "$(dirname "${BASH_SOURCE}")/..")"
@@ -35,10 +35,16 @@ function enable_idmap() {
 
 	# Set up sub{uid,gid} mappings.
 	[ -e /etc/subuid.tmp ] && mv /etc/subuid{.tmp,}
-	( grep -v '^rootless' /etc/subuid ; echo "rootless:$ROOTLESS_UIDMAP_START:$ROOTLESS_UIDMAP_LENGTH" ) > /etc/subuid.tmp
+	(
+		grep -v '^rootless' /etc/subuid
+		echo "rootless:$ROOTLESS_UIDMAP_START:$ROOTLESS_UIDMAP_LENGTH"
+	) >/etc/subuid.tmp
 	mv /etc/subuid{.tmp,}
 	[ -e /etc/subgid.tmp ] && mv /etc/subgid{.tmp,}
-	( grep -v '^rootless' /etc/subgid ; echo "rootless:$ROOTLESS_GIDMAP_START:$ROOTLESS_GIDMAP_LENGTH" ) > /etc/subgid.tmp
+	(
+		grep -v '^rootless' /etc/subgid
+		echo "rootless:$ROOTLESS_GIDMAP_START:$ROOTLESS_GIDMAP_LENGTH"
+	) >/etc/subgid.tmp
 	mv /etc/subgid{.tmp,}
 
 	# Reactivate new{uid,gid}map helpers if applicable.
@@ -65,14 +71,13 @@ function disable_idmap() {
 
 # List of cgroups. We handle name= cgroups as well as combined
 # (comma-separated) cgroups and correctly split and/or strip them.
-ALL_CGROUPS=( $(cat /proc/self/cgroup | cut -d: -f2 | sed -E '{s/^name=//;s/,/\n/;/^$/D}') )
+ALL_CGROUPS=($(cat /proc/self/cgroup | cut -d: -f2 | sed -E '{s/^name=//;s/,/\n/;/^$/D}'))
 CGROUP_MOUNT="/sys/fs/cgroup"
 CGROUP_PATH="/runc-cgroups-integration-test"
 
 function enable_cgroup() {
 	# Set up cgroups for use in rootless containers.
-	for cg in "${ALL_CGROUPS[@]}"
-	do
+	for cg in "${ALL_CGROUPS[@]}"; do
 		mkdir -p "$CGROUP_MOUNT/$cg$CGROUP_PATH"
 		# We only need to allow write access to {cgroup.procs,tasks} and the
 		# directory. Rather than changing the owner entirely, we just change
@@ -90,7 +95,7 @@ function enable_cgroup() {
 	if [[ -e "$CGROUP_MOUNT/cgroup.controllers" ]]; then
 		# Enable controllers. Some controller (e.g. memory) may fail on containerized environment.
 		set -x
-		for f in $(cat "$CGROUP_MOUNT/cgroup.controllers"); do echo +$f > "$CGROUP_MOUNT/cgroup.subtree_control"; done
+		for f in $(cat "$CGROUP_MOUNT/cgroup.controllers"); do echo +$f >"$CGROUP_MOUNT/cgroup.subtree_control"; done
 		set +x
 		# Create the cgroup.
 		mkdir -p "$CGROUP_MOUNT/$CGROUP_PATH"
@@ -104,8 +109,7 @@ function enable_cgroup() {
 
 function disable_cgroup() {
 	# Remove cgroups used in rootless containers.
-	for cg in "${ALL_CGROUPS[@]}"
-	do
+	for cg in "${ALL_CGROUPS[@]}"; do
 		[ -d "$CGROUP_MOUNT/$cg$CGROUP_PATH" ] && rmdir "$CGROUP_MOUNT/$cg$CGROUP_PATH"
 	done
 	# cgroup v2
@@ -123,14 +127,12 @@ features_powerset="$(powerset "${ALL_FEATURES[@]}")"
 
 # Iterate over the powerset of all features.
 IFS=:
-for enabled_features in $features_powerset
-do
-	idx="$(($idx+1))"
+for enabled_features in $features_powerset; do
+	idx="$(($idx + 1))"
 	echo "[$(printf '%.2d' "$idx")] run rootless tests ... (${enabled_features%%+})"
 
 	unset IFS
-	for feature in "${ALL_FEATURES[@]}"
-	do
+	for feature in "${ALL_FEATURES[@]}"; do
 		hook_func="disable_$feature"
 		grep -E "(^|\+)$feature(\+|$)" <<<$enabled_features &>/dev/null && hook_func="enable_$feature"
 		"$hook_func"
@@ -140,11 +142,11 @@ do
 	set -e
 	echo path: $PATH
 	export ROOTLESS_FEATURES="$enabled_features"
-	if [[ -n "${RUNC_USE_SYSTEMD}" ]] ; then
+	if [[ -n "${RUNC_USE_SYSTEMD}" ]]; then
 		# We use `ssh rootless@localhost` instead of `sudo -u rootless` for creating systemd user session.
 		# Alternatively we could use `machinectl shell`, but it is known not to work well on SELinux-enabled hosts as of April 2020:
 		# https://bugzilla.redhat.com/show_bug.cgi?id=1788616
-	        ssh -t -t -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i $HOME/rootless.key rootless@localhost -- PATH="$PATH" RUNC_USE_SYSTEMD="$RUNC_USE_SYSTEMD" bats -t "$ROOT/tests/integration$ROOTLESS_TESTPATH"
+		ssh -t -t -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i $HOME/rootless.key rootless@localhost -- PATH="$PATH" RUNC_USE_SYSTEMD="$RUNC_USE_SYSTEMD" bats -t "$ROOT/tests/integration$ROOTLESS_TESTPATH"
 	else
 		sudo -HE -u rootless PATH="$PATH" $(which bats) -t "$ROOT/tests/integration$ROOTLESS_TESTPATH"
 	fi

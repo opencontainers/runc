@@ -66,29 +66,29 @@ releasedir=""
 hashcmd=""
 while getopts "S:c:r:v:h:" opt; do
 	case "$opt" in
-		S)
-			keyid="$OPTARG"
-			;;
-		c)
-			commit="$OPTARG"
-			;;
-		r)
-			releasedir="$OPTARG"
-			;;
-		v)
-			version="$OPTARG"
-			;;
-		h)
-			hashcmd="$OPTARG"
-			;;
-		\:)
-			echo "Missing argument: -$OPTARG" >&2
-			usage
-			;;
-		\?)
-			echo "Invalid option: -$OPTARG" >&2
-			usage
-			;;
+	S)
+		keyid="$OPTARG"
+		;;
+	c)
+		commit="$OPTARG"
+		;;
+	r)
+		releasedir="$OPTARG"
+		;;
+	v)
+		version="$OPTARG"
+		;;
+	h)
+		hashcmd="$OPTARG"
+		;;
+	\:)
+		echo "Missing argument: -$OPTARG" >&2
+		usage
+		;;
+	\?)
+		echo "Invalid option: -$OPTARG" >&2
+		usage
+		;;
 	esac
 done
 
@@ -113,10 +113,13 @@ rm -rf "$releasedir" && mkdir -p "$releasedir"
 build_project "$releasedir/$project.$goarch"
 
 # Generate new archive.
-git archive --format=tar --prefix="$project-$version/" "$commit" | xz > "$releasedir/$project.tar.xz"
+git archive --format=tar --prefix="$project-$version/" "$commit" | xz >"$releasedir/$project.tar.xz"
 
 # Generate sha256 checksums for both.
-( cd "$releasedir" ; "$hashcmd" "$project".{"$goarch",tar.xz} > "$project.$hashcmd" ; )
+(
+	cd "$releasedir"
+	"$hashcmd" "$project".{"$goarch",tar.xz} >"$project.$hashcmd"
+)
 
 # Set up the gpgflags.
 [[ "$keyid" ]] && export gpgflags="--default-key $keyid"
@@ -126,5 +129,5 @@ gpg_cansign $gpgflags || bail "Could not find suitable GPG key, skipping signing
 gpg $gpgflags --detach-sign --armor "$releasedir/$project.$goarch"
 gpg $gpgflags --detach-sign --armor "$releasedir/$project.tar.xz"
 gpg $gpgflags --clear-sign --armor \
-	--output "$releasedir/$project.$hashcmd"{.tmp,} && \
+	--output "$releasedir/$project.$hashcmd"{.tmp,} &&
 	mv "$releasedir/$project.$hashcmd"{.tmp,}
