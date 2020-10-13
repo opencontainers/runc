@@ -5,6 +5,7 @@ package libcontainer
 import (
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/syndtr/gocapability/capability"
@@ -12,16 +13,21 @@ import (
 
 const allCapabilityTypes = capability.CAPS | capability.BOUNDS | capability.AMBS
 
-var capabilityMap map[string]capability.Cap
+var (
+	capabilityMap map[string]capability.Cap
+	initCapsOnce  sync.Once
+)
 
-func init() {
-	capabilityMap = make(map[string]capability.Cap, capability.CAP_LAST_CAP+1)
-	for _, c := range capability.List() {
-		if c > capability.CAP_LAST_CAP {
-			continue
+func initCapMap() {
+	initCapsOnce.Do(func() {
+		capabilityMap = make(map[string]capability.Cap, capability.CAP_LAST_CAP+1)
+		for _, c := range capability.List() {
+			if c > capability.CAP_LAST_CAP {
+				continue
+			}
+			capabilityMap["CAP_"+strings.ToUpper(c.String())] = c
 		}
-		capabilityMap["CAP_"+strings.ToUpper(c.String())] = c
-	}
+	})
 }
 
 func newContainerCapList(capConfig *configs.Capabilities) (*containerCapabilities, error) {
@@ -29,6 +35,7 @@ func newContainerCapList(capConfig *configs.Capabilities) (*containerCapabilitie
 		err  error
 		caps containerCapabilities
 	)
+	initCapMap()
 
 	if caps.bounding, err = capSlice(capConfig.Bounding); err != nil {
 		return nil, err
