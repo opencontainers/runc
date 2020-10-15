@@ -61,7 +61,7 @@ terminals:
 )
 
 func bail(err error) {
-	fmt.Fprintf(os.Stderr, "[recvtty] fatal error: %v\n", err)
+	_, _ = fmt.Fprintf(os.Stderr, "[recvtty] fatal error: %v\n", err)
 	os.Exit(1)
 }
 
@@ -71,7 +71,9 @@ func handleSingle(path string, noStdin bool) (retErr error) {
 	if retErr != nil {
 		return retErr
 	}
-	defer ln.Close()
+	defer func() {
+		_ = ln.Close()
+	}()
 
 	// We only accept a single connection, since we can only really have
 	// one reader for os.Stdin. Plus this is all a PoC.
@@ -79,10 +81,12 @@ func handleSingle(path string, noStdin bool) (retErr error) {
 	if retErr != nil {
 		return
 	}
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
 
 	// Close ln, to allow for other instances to take over.
-	ln.Close()
+	_ = ln.Close()
 
 	// Get the fd of the connection.
 	unixconn, ok := conn.(*net.UnixConn)
@@ -94,7 +98,9 @@ func handleSingle(path string, noStdin bool) (retErr error) {
 	if retErr != nil {
 		return
 	}
-	defer socket.Close()
+	defer func() {
+		_ = socket.Close()
+	}()
 
 	// Get the master file descriptor from runC.
 	master, retErr := utils.RecvFd(socket)
@@ -139,24 +145,28 @@ func handleSingle(path string, noStdin bool) (retErr error) {
 	}
 }
 
-func handleNull(path string) error {
+func handleNull(path string) (retErr error) {
 	// Open a socket.
-	ln, err := net.Listen("unix", path)
-	if err != nil {
-		return err
+	ln, retErr := net.Listen("unix", path)
+	if retErr != nil {
+		return retErr
 	}
-	defer ln.Close()
+	defer func() {
+		_ = ln.Close()
+	}()
 
 	// As opposed to handleSingle we accept as many connections as we get, but
 	// we don't interact with Stdin at all (and we copy stdout to /dev/null).
 	for {
-		conn, err := ln.Accept()
-		if err != nil {
-			return err
+		conn, retErr := ln.Accept()
+		if retErr != nil {
+			return retErr
 		}
 		go func(conn net.Conn) {
 			// Don't leave references lying around.
-			defer conn.Close()
+			defer func() {
+				_ = conn.Close()
+			}()
 
 			// Get the fd of the connection.
 			unixconn, ok := conn.(*net.UnixConn)
@@ -164,27 +174,29 @@ func handleNull(path string) error {
 				return
 			}
 
-			socket, err := unixconn.File()
-			if err != nil {
+			socket, retErr := unixconn.File()
+			if retErr != nil {
 				return
 			}
-			defer socket.Close()
+			defer func() {
+				_ = socket.Close()
+			}()
 
 			// Get the master file descriptor from runC.
-			master, err := utils.RecvFd(socket)
-			if err != nil {
+			master, retErr := utils.RecvFd(socket)
+			if retErr != nil {
 				return
 			}
 
 			// Just do a dumb copy to /dev/null.
-			devnull, err := os.OpenFile("/dev/null", os.O_RDWR, 0)
-			if err != nil {
+			devnull, retErr := os.OpenFile("/dev/null", os.O_RDWR, 0)
+			if retErr != nil {
 				// TODO: Handle this nicely.
 				return
 			}
 
-			io.Copy(devnull, master)
-			devnull.Close()
+			_, _ = io.Copy(devnull, master)
+			_ = devnull.Close()
 		}(conn)
 	}
 }
