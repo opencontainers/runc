@@ -65,19 +65,19 @@ func bail(err error) {
 	os.Exit(1)
 }
 
-func handleSingle(path string, noStdin bool) error {
+func handleSingle(path string, noStdin bool) (retErr error) {
 	// Open a socket.
-	ln, err := net.Listen("unix", path)
-	if err != nil {
-		return err
+	ln, retErr := net.Listen("unix", path)
+	if retErr != nil {
+		return retErr
 	}
 	defer ln.Close()
 
 	// We only accept a single connection, since we can only really have
 	// one reader for os.Stdin. Plus this is all a PoC.
-	conn, err := ln.Accept()
-	if err != nil {
-		return err
+	conn, retErr := ln.Accept()
+	if retErr != nil {
+		return
 	}
 	defer conn.Close()
 
@@ -90,20 +90,20 @@ func handleSingle(path string, noStdin bool) error {
 		return fmt.Errorf("failed to cast to unixconn")
 	}
 
-	socket, err := unixconn.File()
-	if err != nil {
-		return err
+	socket, retErr := unixconn.File()
+	if retErr != nil {
+		return
 	}
 	defer socket.Close()
 
 	// Get the master file descriptor from runC.
-	master, err := utils.RecvFd(socket)
-	if err != nil {
-		return err
+	master, retErr := utils.RecvFd(socket)
+	if retErr != nil {
+		return
 	}
-	c, err := console.ConsoleFromFile(master)
-	if err != nil {
-		return err
+	c, retErr := console.ConsoleFromFile(master)
+	if retErr != nil {
+		return
 	}
 	if err := console.ClearONLCR(c.Fd()); err != nil {
 		return err
@@ -111,21 +111,32 @@ func handleSingle(path string, noStdin bool) error {
 
 	// Copy from our stdio to the master fd.
 	quitChan := make(chan struct{})
+	errChan := make(chan error)
 	go func() {
-		io.Copy(os.Stdout, c)
+		_, err := io.Copy(os.Stdout, c)
+		if err != nil {
+			errChan <- err
+		}
 		quitChan <- struct{}{}
 	}()
 	if !noStdin {
 		go func() {
-			io.Copy(c, os.Stdin)
+			_, err := io.Copy(c, os.Stdin)
+			if err != nil {
+				errChan <- err
+			}
 			quitChan <- struct{}{}
 		}()
 	}
 
 	// Only close the master fd once we've stopped copying.
-	<-quitChan
-	c.Close()
-	return nil
+	select {
+	case retErr = <-errChan:
+		return retErr
+	case <-quitChan:
+		retErr = c.Close()
+		return retErr
+	}
 }
 
 func handleNull(path string) error {
