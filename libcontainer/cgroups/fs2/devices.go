@@ -61,7 +61,7 @@ func setDevices(dirPath string, cgroup *configs.Cgroup) error {
 	//
 	//      The real issue is that BPF_F_ALLOW_MULTI makes it hard to have a
 	//      race-free blacklist because it acts as a whitelist by default, and
-	//      having a deny-everything program cannot be overriden by other
+	//      having a deny-everything program cannot be overridden by other
 	//      programs. You could temporarily insert a deny-everything program
 	//      but that would result in spurrious failures during updates.
 	if _, err := ebpf.LoadAttachCgroupDeviceFilter(insts, license, dirFD); err != nil {
