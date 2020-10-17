@@ -26,10 +26,7 @@ func TestIntelRdtSetL3CacheSchema(t *testing.T) {
 	})
 
 	helper.IntelRdtData.config.IntelRdt.L3CacheSchema = l3CacheSchemeAfter
-	intelrdt := &IntelRdtManager{
-		Config: helper.IntelRdtData.config,
-		Path:   helper.IntelRdtPath,
-	}
+	intelrdt := NewManager(helper.IntelRdtData.config, "", helper.IntelRdtPath)
 	if err := intelrdt.Set(helper.IntelRdtData.config); err != nil {
 		t.Fatal(err)
 	}
@@ -64,10 +61,7 @@ func TestIntelRdtSetMemBwSchema(t *testing.T) {
 	})
 
 	helper.IntelRdtData.config.IntelRdt.MemBwSchema = memBwSchemeAfter
-	intelrdt := &IntelRdtManager{
-		Config: helper.IntelRdtData.config,
-		Path:   helper.IntelRdtPath,
-	}
+	intelrdt := NewManager(helper.IntelRdtData.config, "", helper.IntelRdtPath)
 	if err := intelrdt.Set(helper.IntelRdtData.config); err != nil {
 		t.Fatal(err)
 	}
@@ -102,10 +96,7 @@ func TestIntelRdtSetMemBwScSchema(t *testing.T) {
 	})
 
 	helper.IntelRdtData.config.IntelRdt.MemBwSchema = memBwScSchemeAfter
-	intelrdt := &IntelRdtManager{
-		Config: helper.IntelRdtData.config,
-		Path:   helper.IntelRdtPath,
-	}
+	intelrdt := NewManager(helper.IntelRdtData.config, "", helper.IntelRdtPath)
 	if err := intelrdt.Set(helper.IntelRdtData.config); err != nil {
 		t.Fatal(err)
 	}

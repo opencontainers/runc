@@ -172,6 +172,14 @@ type IntelRdtManager struct {
 	Path   string
 }
 
+func NewManager(config *configs.Config, id string, path string) Manager {
+	return &IntelRdtManager{
+		Config: config,
+		Id:     id,
+		Path:   path,
+	}
+}
+
 const (
 	IntelRdtTasks = "tasks"
 )

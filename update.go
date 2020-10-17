@@ -317,11 +317,7 @@ other options are ignored.
 					return err
 				}
 				config.IntelRdt = &configs.IntelRdt{}
-				intelRdtManager := intelrdt.IntelRdtManager{
-					Config: &config,
-					Id:     container.ID(),
-					Path:   state.IntelRdtPath,
-				}
+				intelRdtManager := intelrdt.NewManager(&config, container.ID(), state.IntelRdtPath)
 				if err := intelRdtManager.Apply(state.InitProcessPid); err != nil {
 					return err
 				}
