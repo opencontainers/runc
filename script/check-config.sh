@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-# bits of this were adapted from check_config.sh in docker 
+# bits of this were adapted from check_config.sh in docker
 # see also https://github.com/docker/docker/blob/master/contrib/check-config.sh
 
 possibleConfigs=(
@@ -202,7 +202,7 @@ flags=(
 	NF_NAT_IPV4 IP_NF_FILTER IP_NF_TARGET_MASQUERADE
 	NETFILTER_XT_MATCH_{ADDRTYPE,CONNTRACK,IPVS}
 	IP_NF_NAT NF_NAT NF_NAT_NEEDED
-	
+
 	# required for bind-mounting /dev/mqueue into containers
 	POSIX_MQUEUE
 )

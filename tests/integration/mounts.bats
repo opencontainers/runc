@@ -13,7 +13,7 @@ function teardown() {
 }
 
 @test "runc run [bind mount]" {
-	update_config 	' .mounts += [{"source": ".", "destination": "/tmp/bind", "options": ["bind"]}]
+	update_config ' .mounts += [{"source": ".", "destination": "/tmp/bind", "options": ["bind"]}]
 			| .process.args |= ["ls", "/tmp/bind/config.json"]'
 
 	runc run test_bind_mount

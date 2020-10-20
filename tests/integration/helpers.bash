@@ -17,7 +17,7 @@ BUSYBOX_IMAGE="$BATS_TMPDIR/busybox.tar"
 BUSYBOX_BUNDLE="$BATS_TMPDIR/busyboxtest"
 
 # hello-world in tar format
-HELLO_FILE=`get_hello`
+HELLO_FILE=$(get_hello)
 HELLO_IMAGE="$TESTDATA/$HELLO_FILE"
 HELLO_BUNDLE="$BATS_TMPDIR/hello-world"
 
@@ -95,11 +95,11 @@ function update_config() {
 # a rootless configuration.
 function runc_rootless_idmap() {
 	bundle="${1:-.}"
-	update_config 	' .mounts |= map((select(.type == "devpts") | .options += ["gid=5"]) // .)
+	update_config ' .mounts |= map((select(.type == "devpts") | .options += ["gid=5"]) // .)
 			| .linux.uidMappings += [{"hostID": '"$ROOTLESS_UIDMAP_START"', "containerID": 1000, "size": '"$ROOTLESS_UIDMAP_LENGTH"'}]
 			| .linux.gidMappings += [{"hostID": '"$ROOTLESS_GIDMAP_START"', "containerID": 100, "size": 1}]
-			| .linux.gidMappings += [{"hostID": '"$(($ROOTLESS_GIDMAP_START+10))"', "containerID": 1, "size": 20}]
-			| .linux.gidMappings += [{"hostID": '"$(($ROOTLESS_GIDMAP_START+100))"', "containerID": 1000, "size": '"$(($ROOTLESS_GIDMAP_LENGTH-1000))"'}]' $bundle
+			| .linux.gidMappings += [{"hostID": '"$(($ROOTLESS_GIDMAP_START + 10))"', "containerID": 1, "size": 20}]
+			| .linux.gidMappings += [{"hostID": '"$(($ROOTLESS_GIDMAP_START + 100))"', "containerID": 1000, "size": '"$(($ROOTLESS_GIDMAP_LENGTH - 1000))"'}]' $bundle
 }
 
 # Shortcut to add empty resources as part of a rootless configuration.
@@ -122,7 +122,7 @@ function init_cgroup_paths() {
 	# init once
 	test -n "$CGROUP_UNIFIED" && return
 
-	if [ -n "${RUNC_USE_SYSTEMD}" ] ; then
+	if [ -n "${RUNC_USE_SYSTEMD}" ]; then
 		SD_UNIT_NAME="runc-cgroups-integration-test.scope"
 		if [ $(id -u) = "0" ]; then
 			REL_CGROUPS_PATH="/machine.slice/$SD_UNIT_NAME"
@@ -144,13 +144,15 @@ function init_cgroup_paths() {
 		#   it's quite hard to test.
 		# - freezer (since kernel 5.2) we can auto-detect by looking for the
 		#   "cgroup.freeze" file a *non-root* cgroup.
-		CGROUP_SUBSYSTEMS=$(cat /sys/fs/cgroup/cgroup.controllers; echo devices)
+		CGROUP_SUBSYSTEMS=$(
+			cat /sys/fs/cgroup/cgroup.controllers
+			echo devices
+		)
 		CGROUP_BASE_PATH=/sys/fs/cgroup
 		CGROUP_PATH=${CGROUP_BASE_PATH}${REL_CGROUPS_PATH}
 
 		# Find any cgroup.freeze files...
-		if [ -n "$(find "$CGROUP_BASE_PATH" -type f -name "cgroup.freeze" -print -quit)" ]
-		then
+		if [ -n "$(find "$CGROUP_BASE_PATH" -type f -name "cgroup.freeze" -print -quit)" ]; then
 			CGROUP_SUBSYSTEMS+=" freezer"
 		fi
 	else
@@ -177,7 +179,7 @@ function check_cgroup_value() {
 	source=$1
 	expected=$2
 
-	if [ "x$CGROUP_UNIFIED" = "xyes" ] ; then
+	if [ "x$CGROUP_UNIFIED" = "xyes" ]; then
 		cgroup=$CGROUP_PATH
 	else
 		ctrl=${source%%.*}
@@ -427,7 +429,7 @@ function setup_busybox() {
 		BUSYBOX_IMAGE="/testdata/busybox.tar"
 	fi
 	if [ ! -e $BUSYBOX_IMAGE ]; then
-		curl -o $BUSYBOX_IMAGE -sSL `get_busybox`
+		curl -o $BUSYBOX_IMAGE -sSL $(get_busybox)
 	fi
 	tar --exclude './dev/*' -C "$BUSYBOX_BUNDLE"/rootfs -xf "$BUSYBOX_IMAGE"
 	cd "$BUSYBOX_BUNDLE"
