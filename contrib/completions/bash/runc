@@ -113,6 +113,8 @@ __runc_complete_capabilities() {
 		AUDIT_WRITE
 		AUDIT_READ
 		BLOCK_SUSPEND
+		BPF
+		CHECKPOINT_RESTORE
 		CHOWN
 		DAC_OVERRIDE
 		DAC_READ_SEARCH
@@ -130,6 +132,7 @@ __runc_complete_capabilities() {
 		NET_BIND_SERVICE
 		NET_BROADCAST
 		NET_RAW
+		PERFMON
 		SETFCAP
 		SETGID
 		SETPCAP
