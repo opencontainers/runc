@@ -224,6 +224,7 @@ _runc_runc() {
 		--help
 		--version -v
 		--debug
+		--systemd-cgroup
 	"
 	local options_with_args="
 		--log
