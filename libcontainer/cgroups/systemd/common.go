@@ -93,7 +93,7 @@ func groupPrefix(ruleType configs.DeviceType) (string, error) {
 }
 
 // findDeviceGroup tries to find the device group name (as listed in
-// /proc/devices) with the type prefixed as requried for DeviceAllow, for a
+// /proc/devices) with the type prefixed as required for DeviceAllow, for a
 // given (type, major) combination. If more than one device group exists, an
 // arbitrary one is chosen.
 func findDeviceGroup(ruleType configs.DeviceType, ruleMajor int64) (string, error) {

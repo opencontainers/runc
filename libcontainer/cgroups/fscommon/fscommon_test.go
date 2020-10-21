@@ -29,7 +29,7 @@ func TestWriteCgroupFileHandlesInterrupt(t *testing.T) {
 	defer os.RemoveAll(cgroupPath)
 
 	if _, err := os.Stat(filepath.Join(cgroupPath, memoryLimit)); err != nil {
-		// either cgroupv2, or memory controller is not avalable
+		// either cgroupv2, or memory controller is not available
 		t.Skip(err)
 	}
 
