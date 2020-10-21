@@ -829,8 +829,11 @@ func msMoveRoot(rootfs string) error {
 	mountinfos, err := mountinfo.GetMounts(func(info *mountinfo.Info) (skip, stop bool) {
 		// Collect every sysfs and procfs filesystem, except for those which
 		// are non-full mounts or are inside the rootfs of the container.
-		if info.Root != "/" ||
-			(info.FSType != "proc" && info.FSType != "sysfs") ||
+		//
+		// NOTE: We cannot do the root check here because of an implementation
+		// detail of github.com/moby/sys/mountinfo -- see
+		// <https://github.com/moby/sys/pull/50> for the fix and details.
+		if (info.FSType != "proc" && info.FSType != "sysfs") ||
 			strings.HasPrefix(info.Mountpoint, rootfs) {
 			skip = true
 		}
