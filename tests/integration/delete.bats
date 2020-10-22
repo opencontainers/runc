@@ -28,8 +28,7 @@ function teardown() {
 	runc state testbusyboxdelete
 	[ "$status" -ne 0 ]
 
-	run find /sys/fs/cgroup -wholename '*testbusyboxdelete*' -type d
-	[ "$status" -eq 0 ]
+	output=$(find /sys/fs/cgroup -wholename '*testbusyboxdelete*' -type d)
 	[ "$output" = "" ] || fail "cgroup not cleaned up correctly: $output"
 }
 
@@ -99,8 +98,7 @@ EOF
 	runc state test_busybox
 	[ "$status" -ne 0 ]
 
-	run find /sys/fs/cgroup -wholename '*testbusyboxdelete*' -type d
-	[ "$status" -eq 0 ]
+	output=$(find /sys/fs/cgroup -wholename '*testbusyboxdelete*' -type d)
 	[ "$output" = "" ] || fail "cgroup not cleaned up correctly: $output"
 }
 

@@ -58,7 +58,5 @@ function teardown() {
 	# check pid.txt was generated
 	[ -e pid.txt ]
 
-	run cat pid.txt
-	[ "$status" -eq 0 ]
-	[[ ${lines[0]} =~ [0-9]+ ]]
+	[[ "$(cat pid.txt)" =~ [0-9]+ ]]
 }

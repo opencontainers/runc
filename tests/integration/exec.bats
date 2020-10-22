@@ -35,18 +35,15 @@ function teardown() {
 	# check pid.txt was generated
 	[ -e pid.txt ]
 
-	run cat pid.txt
-	[ "$status" -eq 0 ]
-	[[ ${lines[0]} =~ [0-9]+ ]]
-	[[ ${lines[0]} != $(__runc state test_busybox | jq '.pid') ]]
+	output=$(cat pid.txt)
+	[[ "$output" =~ [0-9]+ ]]
+	[[ "$output" != $(__runc state test_busybox | jq '.pid') ]]
 }
 
 @test "runc exec --pid-file with new CWD" {
 	# create pid_file directory as the CWD
-	run mkdir pid_file
-	[ "$status" -eq 0 ]
-	run cd pid_file
-	[ "$status" -eq 0 ]
+	mkdir pid_file
+	cd pid_file
 
 	# run busybox detached
 	runc run -d -b "$BUSYBOX_BUNDLE" --console-socket "$CONSOLE_SOCKET" test_busybox
@@ -60,10 +57,9 @@ function teardown() {
 	# check pid.txt was generated
 	[ -e pid.txt ]
 
-	run cat pid.txt
-	[ "$status" -eq 0 ]
-	[[ ${lines[0]} =~ [0-9]+ ]]
-	[[ ${lines[0]} != $(__runc state test_busybox | jq '.pid') ]]
+	output=$(cat pid.txt)
+	[[ "$output" =~ [0-9]+ ]]
+	[[ "$output" != $(__runc state test_busybox | jq '.pid') ]]
 }
 
 @test "runc exec ls -la" {

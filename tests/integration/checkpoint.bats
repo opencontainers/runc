@@ -43,8 +43,7 @@ function check_pipes() {
 	echo Ping >&${in_w}
 	exec {in_w}>&-
 	exec {out_w}>&-
-	run cat <&${out_r}
-	[ "$status" -eq 0 ]
+	output=$(cat <&${out_r})
 	[[ "${output}" == *"ponG Ping"* ]]
 }
 
@@ -159,8 +158,7 @@ function simple_cr() {
 
 @test "checkpoint --lazy-pages and restore" {
 	# check if lazy-pages is supported
-	run "${CRIU}" check --feature uffd-noncoop
-	if [ "$status" -eq 1 ]; then
+	if ! "${CRIU}" check --feature uffd-noncoop; then
 		skip "this criu does not support lazy migration"
 	fi
 
@@ -218,8 +216,7 @@ function simple_cr() {
 
 @test "checkpoint and restore in external network namespace" {
 	# check if external_net_ns is supported; only with criu 3.10++
-	run "${CRIU}" check --feature external_net_ns
-	if [ "$status" -eq 1 ]; then
+	if ! "${CRIU}" check --feature external_net_ns; then
 		# this criu does not support external_net_ns; skip the test
 		skip "this criu does not support external network namespaces"
 	fi

@@ -423,8 +423,7 @@ function teardown_recvtty() {
 
 function setup_busybox() {
 	setup_recvtty
-	run mkdir "$BUSYBOX_BUNDLE"
-	run mkdir "$BUSYBOX_BUNDLE"/rootfs
+	mkdir -p "$BUSYBOX_BUNDLE"/rootfs
 	if [ -e "/testdata/busybox.tar" ]; then
 		BUSYBOX_IMAGE="/testdata/busybox.tar"
 	fi
@@ -438,8 +437,7 @@ function setup_busybox() {
 
 function setup_hello() {
 	setup_recvtty
-	run mkdir "$HELLO_BUNDLE"
-	run mkdir "$HELLO_BUNDLE"/rootfs
+	mkdir -p "$HELLO_BUNDLE"/rootfs
 	tar --exclude './dev/*' -C "$HELLO_BUNDLE"/rootfs -xf "$HELLO_IMAGE"
 	cd "$HELLO_BUNDLE"
 	runc_spec
@@ -453,7 +451,7 @@ function setup_debian() {
 	fi
 
 	setup_recvtty
-	run mkdir "$DEBIAN_BUNDLE"
+	mkdir -p "$DEBIAN_BUNDLE"
 
 	if [ ! -d "$DEBIAN_ROOTFS/rootfs" ]; then
 		get_and_extract_debian "$DEBIAN_BUNDLE"
@@ -479,19 +477,19 @@ function teardown_busybox() {
 	cd "$INTEGRATION_ROOT"
 	teardown_recvtty
 	teardown_running_container test_busybox
-	run rm -f -r "$BUSYBOX_BUNDLE"
+	rm -f -r "$BUSYBOX_BUNDLE"
 }
 
 function teardown_hello() {
 	cd "$INTEGRATION_ROOT"
 	teardown_recvtty
 	teardown_running_container test_hello
-	run rm -f -r "$HELLO_BUNDLE"
+	rm -f -r "$HELLO_BUNDLE"
 }
 
 function teardown_debian() {
 	cd "$INTEGRATION_ROOT"
 	teardown_recvtty
 	teardown_running_container test_debian
-	run rm -f -r "$DEBIAN_BUNDLE"
+	rm -f -r "$DEBIAN_BUNDLE"
 }
