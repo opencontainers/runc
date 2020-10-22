@@ -18,11 +18,9 @@ import (
 func GetMountsFromReader(r io.Reader, filter FilterFunc) ([]*Info, error) {
 	s := bufio.NewScanner(r)
 	out := []*Info{}
-	var err error
 	for s.Scan() {
-		if err = s.Err(); err != nil {
-			return nil, err
-		}
+		var err error
+
 		/*
 		   See http://man7.org/linux/man-pages/man5/proc.5.html
 
@@ -74,7 +72,6 @@ func GetMountsFromReader(r io.Reader, filter FilterFunc) ([]*Info, error) {
 
 		p := &Info{}
 
-		// Fill in the fields that a filter might check
 		p.Mountpoint, err = unescape(fields[4])
 		if err != nil {
 			return nil, fmt.Errorf("Parsing '%s' failed: mount point: %w", fields[4], err)
@@ -88,18 +85,6 @@ func GetMountsFromReader(r io.Reader, filter FilterFunc) ([]*Info, error) {
 			return nil, fmt.Errorf("Parsing '%s' failed: source: %w", fields[sepIdx+2], err)
 		}
 		p.VFSOptions = fields[sepIdx+3]
-
-		// Run a filter early so we can skip parsing/adding entries
-		// the caller is not interested in
-		var skip, stop bool
-		if filter != nil {
-			skip, stop = filter(p)
-			if skip {
-				continue
-			}
-		}
-
-		// Fill in the rest of the fields
 
 		// ignore any numbers parsing errors, as there should not be any
 		p.ID, _ = strconv.Atoi(fields[0])
@@ -128,10 +113,22 @@ func GetMountsFromReader(r io.Reader, filter FilterFunc) ([]*Info, error) {
 			p.Optional = strings.Join(fields[6:sepIdx-1], " ")
 		}
 
+		// Run the filter after parsing all of the fields.
+		var skip, stop bool
+		if filter != nil {
+			skip, stop = filter(p)
+			if skip {
+				continue
+			}
+		}
+
 		out = append(out, p)
 		if stop {
 			break
 		}
+	}
+	if err := s.Err(); err != nil {
+		return nil, err
 	}
 	return out, nil
 }
@@ -148,9 +145,14 @@ func parseMountTable(filter FilterFunc) ([]*Info, error) {
 	return GetMountsFromReader(f, filter)
 }
 
-// PidMountInfo collects the mounts for a specific process ID. If the process
-// ID is unknown, it is better to use `GetMounts` which will inspect
-// "/proc/self/mountinfo" instead.
+// PidMountInfo retrieves the list of mounts from a given process' mount
+// namespace. Unless there is a need to get mounts from a mount namespace
+// different from that of a calling process, use GetMounts.
+//
+// This function is Linux-specific.
+//
+// Deprecated: this will be removed before v1; use GetMountsFromReader with
+// opened /proc/<pid>/mountinfo as an argument instead.
 func PidMountInfo(pid int) ([]*Info, error) {
 	f, err := os.Open(fmt.Sprintf("/proc/%d/mountinfo", pid))
 	if err != nil {
