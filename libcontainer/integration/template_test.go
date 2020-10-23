@@ -1,6 +1,9 @@
 package integration
 
 import (
+	"math/rand"
+	"strconv"
+
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/specconv"
 
@@ -16,17 +19,23 @@ var standardEnvironment = []string{
 
 const defaultMountFlags = unix.MS_NOEXEC | unix.MS_NOSUID | unix.MS_NODEV
 
+type tParam struct {
+	rootfs  string
+	userns  bool
+	systemd bool
+}
+
 // newTemplateConfig returns a base template for running a container
 //
 // it uses a network strategy of just setting a loopback interface
 // and the default setup for devices
-func newTemplateConfig(rootfs string) *configs.Config {
+func newTemplateConfig(p *tParam) *configs.Config {
 	var allowedDevices []*configs.DeviceRule
 	for _, device := range specconv.AllowedDevices {
 		allowedDevices = append(allowedDevices, &device.DeviceRule)
 	}
-	return &configs.Config{
-		Rootfs: rootfs,
+	config := &configs.Config{
+		Rootfs: p.rootfs,
 		Capabilities: &configs.Capabilities{
 			Bounding: []string{
 				"CAP_CHOWN",
@@ -117,7 +126,6 @@ func newTemplateConfig(rootfs string) *configs.Config {
 			{Type: configs.NEWNET},
 		}),
 		Cgroups: &configs.Cgroup{
-			Path: "/sys/fs/cgroup/",
 			Resources: &configs.Resources{
 				MemorySwappiness: nil,
 				Devices:          allowedDevices,
@@ -191,4 +199,28 @@ func newTemplateConfig(rootfs string) *configs.Config {
 			},
 		},
 	}
+
+	if p.userns {
+		config.UidMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
+		config.GidMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
+		config.Namespaces = append(config.Namespaces, configs.Namespace{Type: configs.NEWUSER})
+	} else {
+		config.Mounts = append(config.Mounts, &configs.Mount{
+			Destination: "/sys/fs/cgroup",
+			Device:      "cgroup",
+			Flags:       defaultMountFlags | unix.MS_RDONLY,
+		})
+	}
+
+	if p.systemd {
+		id := strconv.FormatUint(rand.Uint64(), 36)
+		config.Cgroups.Name = "test" + id
+		// do not change Parent (see newContainerWithName)
+		config.Cgroups.Parent = "system.slice"
+		config.Cgroups.ScopePrefix = "runc-test"
+	} else {
+		config.Cgroups.Path = "/test/integration"
+	}
+
+	return config
 }
