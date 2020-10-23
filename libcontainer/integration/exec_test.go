@@ -1661,7 +1661,7 @@ func TestPIDHostInitProcessWait(t *testing.T) {
 	pidns := "/proc/1/ns/pid"
 
 	// Run a container with two long-running processes.
-	config := newTemplateConfig(rootfs)
+	config := newTemplateConfig(&tParam{rootfs: rootfs})
 	config.Namespaces.Add(configs.NEWPID, pidns)
 	container, err := newContainerWithName("test", config)
 	ok(t, err)
