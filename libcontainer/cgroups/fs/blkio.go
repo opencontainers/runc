@@ -6,7 +6,6 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -105,9 +104,9 @@ func splitBlkioStatLine(r rune) bool {
 	return r == ' ' || r == ':'
 }
 
-func getBlkioStat(path string) ([]cgroups.BlkioStatEntry, error) {
+func getBlkioStat(dir, file string) ([]cgroups.BlkioStatEntry, error) {
 	var blkioStats []cgroups.BlkioStatEntry
-	f, err := os.Open(path)
+	f, err := fscommon.OpenFile(dir, file, os.O_RDONLY)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return blkioStats, nil
@@ -125,7 +124,7 @@ func getBlkioStat(path string) ([]cgroups.BlkioStatEntry, error) {
 				// skip total line
 				continue
 			} else {
-				return nil, fmt.Errorf("Invalid line found while parsing %s: %s", path, sc.Text())
+				return nil, fmt.Errorf("Invalid line found while parsing %s/%s: %s", dir, file, sc.Text())
 			}
 		}
 
@@ -159,7 +158,7 @@ func getBlkioStat(path string) ([]cgroups.BlkioStatEntry, error) {
 
 func (s *BlkioGroup) GetStats(path string, stats *cgroups.Stats) error {
 	// Try to read CFQ stats available on all CFQ enabled kernels first
-	if blkioStats, err := getBlkioStat(filepath.Join(path, "blkio.io_serviced_recursive")); err == nil && blkioStats != nil {
+	if blkioStats, err := getBlkioStat(path, "blkio.io_serviced_recursive"); err == nil && blkioStats != nil {
 		return getCFQStats(path, stats)
 	}
 	return getStats(path, stats) // Use generic stats as fallback
@@ -169,42 +168,42 @@ func getCFQStats(path string, stats *cgroups.Stats) error {
 	var blkioStats []cgroups.BlkioStatEntry
 	var err error
 
-	if blkioStats, err = getBlkioStat(filepath.Join(path, "blkio.sectors_recursive")); err != nil {
+	if blkioStats, err = getBlkioStat(path, "blkio.sectors_recursive"); err != nil {
 		return err
 	}
 	stats.BlkioStats.SectorsRecursive = blkioStats
 
-	if blkioStats, err = getBlkioStat(filepath.Join(path, "blkio.io_service_bytes_recursive")); err != nil {
+	if blkioStats, err = getBlkioStat(path, "blkio.io_service_bytes_recursive"); err != nil {
 		return err
 	}
 	stats.BlkioStats.IoServiceBytesRecursive = blkioStats
 
-	if blkioStats, err = getBlkioStat(filepath.Join(path, "blkio.io_serviced_recursive")); err != nil {
+	if blkioStats, err = getBlkioStat(path, "blkio.io_serviced_recursive"); err != nil {
 		return err
 	}
 	stats.BlkioStats.IoServicedRecursive = blkioStats
 
-	if blkioStats, err = getBlkioStat(filepath.Join(path, "blkio.io_queued_recursive")); err != nil {
+	if blkioStats, err = getBlkioStat(path, "blkio.io_queued_recursive"); err != nil {
 		return err
 	}
 	stats.BlkioStats.IoQueuedRecursive = blkioStats
 
-	if blkioStats, err = getBlkioStat(filepath.Join(path, "blkio.io_service_time_recursive")); err != nil {
+	if blkioStats, err = getBlkioStat(path, "blkio.io_service_time_recursive"); err != nil {
 		return err
 	}
 	stats.BlkioStats.IoServiceTimeRecursive = blkioStats
 
-	if blkioStats, err = getBlkioStat(filepath.Join(path, "blkio.io_wait_time_recursive")); err != nil {
+	if blkioStats, err = getBlkioStat(path, "blkio.io_wait_time_recursive"); err != nil {
 		return err
 	}
 	stats.BlkioStats.IoWaitTimeRecursive = blkioStats
 
-	if blkioStats, err = getBlkioStat(filepath.Join(path, "blkio.io_merged_recursive")); err != nil {
+	if blkioStats, err = getBlkioStat(path, "blkio.io_merged_recursive"); err != nil {
 		return err
 	}
 	stats.BlkioStats.IoMergedRecursive = blkioStats
 
-	if blkioStats, err = getBlkioStat(filepath.Join(path, "blkio.time_recursive")); err != nil {
+	if blkioStats, err = getBlkioStat(path, "blkio.time_recursive"); err != nil {
 		return err
 	}
 	stats.BlkioStats.IoTimeRecursive = blkioStats
@@ -216,12 +215,12 @@ func getStats(path string, stats *cgroups.Stats) error {
 	var blkioStats []cgroups.BlkioStatEntry
 	var err error
 
-	if blkioStats, err = getBlkioStat(filepath.Join(path, "blkio.throttle.io_service_bytes")); err != nil {
+	if blkioStats, err = getBlkioStat(path, "blkio.throttle.io_service_bytes"); err != nil {
 		return err
 	}
 	stats.BlkioStats.IoServiceBytesRecursive = blkioStats
 
-	if blkioStats, err = getBlkioStat(filepath.Join(path, "blkio.throttle.io_serviced")); err != nil {
+	if blkioStats, err = getBlkioStat(path, "blkio.throttle.io_serviced"); err != nil {
 		return err
 	}
 	stats.BlkioStats.IoServicedRecursive = blkioStats
