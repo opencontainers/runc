@@ -237,15 +237,19 @@ func init() {
 		}
 	}
 
-	if flagsSet.MBMTotal || flagsSet.MBMLocal {
-		if _, err := os.Stat(filepath.Join(intelRdtRoot, "info", "L3_MON")); err == nil {
-			mbmEnabled = true
-			cmtEnabled = true
+	if flagsSet.MBMTotal || flagsSet.MBMLocal || flagsSet.CMT {
+		if _, err := os.Stat(filepath.Join(intelRdtRoot, "info", "L3_MON")); err != nil {
+			return
 		}
-
 		enabledMonFeatures, err = getMonFeatures(intelRdtRoot)
 		if err != nil {
 			return
+		}
+		if enabledMonFeatures.mbmTotalBytes || enabledMonFeatures.mbmLocalBytes {
+			mbmEnabled = true
+		}
+		if enabledMonFeatures.llcOccupancy {
+			cmtEnabled = true
 		}
 	}
 }
@@ -313,6 +317,8 @@ type cpuInfoFlags struct {
 	// Memory Bandwidth Monitoring related.
 	MBMTotal bool
 	MBMLocal bool
+
+	CMT bool // Cache Monitoring Technology
 }
 
 func parseCpuInfoFile(path string) (cpuInfoFlags, error) {
@@ -342,6 +348,8 @@ func parseCpuInfoFile(path string) (cpuInfoFlags, error) {
 					infoFlags.MBMTotal = true
 				case "cqm_mbm_local":
 					infoFlags.MBMLocal = true
+				case "cqm_occup_llc":
+					infoFlags.CMT = true
 				}
 			}
 			return infoFlags, nil
@@ -659,9 +667,11 @@ func (m *intelRdtManager) GetStats() (*Stats, error) {
 		}
 	}
 
-	err = getMonitoringStats(containerPath, stats)
-	if err != nil {
-		return nil, err
+	if IsMBMEnabled() || IsCMTEnabled() {
+		err = getMonitoringStats(containerPath, stats)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return stats, nil
