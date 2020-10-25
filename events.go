@@ -154,12 +154,12 @@ func convertLibcontainerStats(ls *libcontainer.Stats) *types.Stats {
 	}
 
 	if is := ls.IntelRdtStats; is != nil {
-		if intelrdt.IsCatEnabled() {
+		if intelrdt.IsCATEnabled() {
 			s.IntelRdt.L3CacheInfo = convertL3CacheInfo(is.L3CacheInfo)
 			s.IntelRdt.L3CacheSchemaRoot = is.L3CacheSchemaRoot
 			s.IntelRdt.L3CacheSchema = is.L3CacheSchema
 		}
-		if intelrdt.IsMbaEnabled() {
+		if intelrdt.IsMBAEnabled() {
 			s.IntelRdt.MemBwInfo = convertMemBwInfo(is.MemBwInfo)
 			s.IntelRdt.MemBwSchemaRoot = is.MemBwSchemaRoot
 			s.IntelRdt.MemBwSchema = is.MemBwSchema

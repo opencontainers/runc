@@ -182,21 +182,21 @@ func (v *ConfigValidator) sysctl(config *configs.Config) error {
 
 func (v *ConfigValidator) intelrdt(config *configs.Config) error {
 	if config.IntelRdt != nil {
-		if !intelrdt.IsCatEnabled() && !intelrdt.IsMbaEnabled() {
+		if !intelrdt.IsCATEnabled() && !intelrdt.IsMBAEnabled() {
 			return errors.New("intelRdt is specified in config, but Intel RDT is not supported or enabled")
 		}
 
-		if !intelrdt.IsCatEnabled() && config.IntelRdt.L3CacheSchema != "" {
+		if !intelrdt.IsCATEnabled() && config.IntelRdt.L3CacheSchema != "" {
 			return errors.New("intelRdt.l3CacheSchema is specified in config, but Intel RDT/CAT is not enabled")
 		}
-		if !intelrdt.IsMbaEnabled() && config.IntelRdt.MemBwSchema != "" {
+		if !intelrdt.IsMBAEnabled() && config.IntelRdt.MemBwSchema != "" {
 			return errors.New("intelRdt.memBwSchema is specified in config, but Intel RDT/MBA is not enabled")
 		}
 
-		if intelrdt.IsCatEnabled() && config.IntelRdt.L3CacheSchema == "" {
+		if intelrdt.IsCATEnabled() && config.IntelRdt.L3CacheSchema == "" {
 			return errors.New("Intel RDT/CAT is enabled and intelRdt is specified in config, but intelRdt.l3CacheSchema is empty")
 		}
-		if intelrdt.IsMbaEnabled() && config.IntelRdt.MemBwSchema == "" {
+		if intelrdt.IsMBAEnabled() && config.IntelRdt.MemBwSchema == "" {
 			return errors.New("Intel RDT/MBA is enabled and intelRdt is specified in config, but intelRdt.memBwSchema is empty")
 		}
 	}
