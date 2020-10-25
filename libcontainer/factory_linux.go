@@ -149,11 +149,7 @@ func RootlessCgroupfs(l *LinuxFactory) error {
 // create and manage Intel RDT resources (e.g., L3 cache, memory bandwidth).
 func IntelRdtFs(l *LinuxFactory) error {
 	l.NewIntelRdtManager = func(config *configs.Config, id string, path string) intelrdt.Manager {
-		return &intelrdt.IntelRdtManager{
-			Config: config,
-			Id:     id,
-			Path:   path,
-		}
+		return intelrdt.NewManager(config, id, path)
 	}
 	return nil
 }

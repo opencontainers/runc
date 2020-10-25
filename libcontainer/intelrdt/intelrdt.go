@@ -165,11 +165,19 @@ type Manager interface {
 }
 
 // This implements interface Manager
-type IntelRdtManager struct {
+type intelRdtManager struct {
 	mu     sync.Mutex
-	Config *configs.Config
-	Id     string
-	Path   string
+	config *configs.Config
+	id     string
+	path   string
+}
+
+func NewManager(config *configs.Config, id string, path string) Manager {
+	return &intelRdtManager{
+		config: config,
+		id:     id,
+		path:   path,
+	}
 }
 
 const (
@@ -534,51 +542,51 @@ func GetIntelRdtPath(id string) (string, error) {
 }
 
 // Applies Intel RDT configuration to the process with the specified pid
-func (m *IntelRdtManager) Apply(pid int) (err error) {
+func (m *intelRdtManager) Apply(pid int) (err error) {
 	// If intelRdt is not specified in config, we do nothing
-	if m.Config.IntelRdt == nil {
+	if m.config.IntelRdt == nil {
 		return nil
 	}
-	d, err := getIntelRdtData(m.Config, pid)
+	d, err := getIntelRdtData(m.config, pid)
 	if err != nil && !IsNotFound(err) {
 		return err
 	}
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	path, err := d.join(m.Id)
+	path, err := d.join(m.id)
 	if err != nil {
 		return err
 	}
 
-	m.Path = path
+	m.path = path
 	return nil
 }
 
 // Destroys the Intel RDT 'container_id' group
-func (m *IntelRdtManager) Destroy() error {
+func (m *intelRdtManager) Destroy() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if err := os.RemoveAll(m.GetPath()); err != nil {
 		return err
 	}
-	m.Path = ""
+	m.path = ""
 	return nil
 }
 
 // Returns Intel RDT path to save in a state file and to be able to
 // restore the object later
-func (m *IntelRdtManager) GetPath() string {
-	if m.Path == "" {
-		m.Path, _ = GetIntelRdtPath(m.Id)
+func (m *intelRdtManager) GetPath() string {
+	if m.path == "" {
+		m.path, _ = GetIntelRdtPath(m.id)
 	}
-	return m.Path
+	return m.path
 }
 
 // Returns statistics for Intel RDT
-func (m *IntelRdtManager) GetStats() (*Stats, error) {
+func (m *intelRdtManager) GetStats() (*Stats, error) {
 	// If intelRdt is not specified in config
-	if m.Config.IntelRdt == nil {
+	if m.config.IntelRdt == nil {
 		return nil, nil
 	}
 
@@ -660,7 +668,7 @@ func (m *IntelRdtManager) GetStats() (*Stats, error) {
 }
 
 // Set Intel RDT "resource control" filesystem as configured.
-func (m *IntelRdtManager) Set(container *configs.Config) error {
+func (m *intelRdtManager) Set(container *configs.Config) error {
 	// About L3 cache schema:
 	// It has allocation bitmasks/values for L3 cache on each socket,
 	// which contains L3 cache id and capacity bitmask (CBM).
