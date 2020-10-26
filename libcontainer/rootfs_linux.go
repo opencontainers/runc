@@ -383,6 +383,12 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string, enableCgroupns b
 				return err
 			}
 		}
+		// Initially mounted rw in mountPropagate, remount to ro if flag set.
+		if m.Flags&unix.MS_RDONLY != 0 {
+			if err := remount(m, rootfs); err != nil {
+				return err
+			}
+		}
 		return nil
 	case "bind":
 		if err := prepareBindMount(m, rootfs); err != nil {
@@ -978,6 +984,12 @@ func mountPropagate(m *configs.Mount, rootfs string, mountLabel string) error {
 		flags = m.Flags
 	)
 	if libcontainerUtils.CleanPath(dest) == "/dev" {
+		flags &= ^unix.MS_RDONLY
+	}
+
+	// Mount it rw to allow chmod operation. A remount will be performed
+	// later to make it ro if set.
+	if m.Device == "tmpfs" {
 		flags &= ^unix.MS_RDONLY
 	}
 
