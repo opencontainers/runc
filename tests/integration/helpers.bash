@@ -17,6 +17,7 @@ unset IMAGES
 RUNC="${INTEGRATION_ROOT}/../../runc"
 RECVTTY="${INTEGRATION_ROOT}/../../contrib/cmd/recvtty/recvtty"
 SD_HELPER="${INTEGRATION_ROOT}/../../contrib/cmd/sd-helper/sd-helper"
+SECCOMP_AGENT="${INTEGRATION_ROOT}/../../contrib/cmd/seccompagent/seccompagent"
 
 # Test data path.
 # shellcheck disable=SC2034
@@ -30,6 +31,11 @@ KERNEL_VERSION="$(uname -r)"
 KERNEL_MAJOR="${KERNEL_VERSION%%.*}"
 KERNEL_MINOR="${KERNEL_VERSION#$KERNEL_MAJOR.}"
 KERNEL_MINOR="${KERNEL_MINOR%%.*}"
+
+ARCH=$(uname -m)
+
+# Seccomp agent socket.
+SECCCOMP_AGENT_SOCKET="$BATS_TMPDIR/seccomp-agent.sock"
 
 # Check if we're in rootless mode.
 ROOTLESS=$(id -u)
@@ -428,6 +434,11 @@ function requires() {
 				skip_me=1
 			fi
 			;;
+		arch_x86_64)
+			if [ "$ARCH" != "x86_64" ]; then
+				skip_me=1
+			fi
+			;;
 		*)
 			fail "BUG: Invalid requires $var."
 			;;
@@ -505,6 +516,18 @@ function teardown_recvtty() {
 	rm -rf "$dir"
 }
 
+function setup_seccompagent() {
+	("${SECCOMP_AGENT}" -socketfile="$SECCCOMP_AGENT_SOCKET" -pid-file "$BATS_TMPDIR/seccompagent.pid" &) &
+}
+
+function teardown_seccompagent() {
+	if [ -f "$BATS_TMPDIR/seccompagent.pid" ]; then
+		kill -9 "$(cat "$BATS_TMPDIR/seccompagent.pid")"
+	fi
+	rm -f "$BATS_TMPDIR/seccompagent.pid"
+	rm -f "$SECCCOMP_AGENT_SOCKET"
+}
+
 function setup_bundle() {
 	local image="$1"
 
@@ -544,4 +567,13 @@ function teardown_bundle() {
 	done
 	rm -rf "$ROOT"
 	remove_parent
+}
+
+function requires_kernel() {
+	local major_required minor_required
+	major_required=$(echo "$1" | cut -d. -f1)
+	minor_required=$(echo "$1" | cut -d. -f2)
+	if [[ "$KERNEL_MAJOR" -lt $major_required || ("$KERNEL_MAJOR" -eq $major_required && "$KERNEL_MINOR" -lt $minor_required) ]]; then
+		skip "requires kernel $1"
+	fi
 }
