@@ -468,27 +468,11 @@ function setup_debian() {
 }
 
 function teardown_running_container() {
-	runc list
-	# $1 should be a container name such as "test_busybox"
-	# here we detect "test_busybox "(with one extra blank) to avoid conflict prefix
-	# e.g. "test_busybox" and "test_busybox_update"
-	if [[ "${output}" == *"$1 "* ]]; then
-		runc kill $1 KILL
-		retry 10 1 eval "__runc state '$1' | grep -q 'stopped'"
-		runc delete $1
-	fi
+	__runc delete -f "$1"
 }
 
 function teardown_running_container_inroot() {
-	ROOT=$2 runc list
-	# $1 should be a container name such as "test_busybox"
-	# here we detect "test_busybox "(with one extra blank) to avoid conflict prefix
-	# e.g. "test_busybox" and "test_busybox_update"
-	if [[ "${output}" == *"$1 "* ]]; then
-		ROOT=$2 runc kill $1 KILL
-		retry 10 1 eval "ROOT='$2' __runc state '$1' | grep -q 'stopped'"
-		ROOT=$2 runc delete $1
-	fi
+	ROOT="$2" __runc delete -f "$1"
 }
 
 function teardown_busybox() {
