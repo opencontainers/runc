@@ -27,6 +27,7 @@ jobs:
         - ln -sf Vagrantfile.fedora33 Vagrantfile
         - sudo vagrant up && sudo mkdir -p /root/.ssh && sudo sh -c "vagrant ssh-config >> /root/.ssh/config"
       script:
+        - sudo ssh default 'sh -exc "uname -a && systemctl --version && df -T"'
         - sudo ssh default -t 'cd /vagrant && sudo make localunittest'
         # cgroupv2+systemd: test on vagrant host itself as we need systemd
         - sudo ssh default -t 'cd /vagrant && sudo make localintegration RUNC_USE_SYSTEMD=yes'
