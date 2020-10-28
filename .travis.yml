@@ -21,10 +21,10 @@ jobs:
       script:
         - make all
         - sudo PATH="$PATH" make localintegration RUNC_USE_SYSTEMD=1
-    - name: "fedora32"
+    - name: "fedora33"
       before_install:
         - sudo ./script/install-vagrant.sh
-        - ln -sf Vagrantfile.fedora32 Vagrantfile
+        - ln -sf Vagrantfile.fedora33 Vagrantfile
         - sudo vagrant up && sudo mkdir -p /root/.ssh && sudo sh -c "vagrant ssh-config >> /root/.ssh/config"
       script:
         - sudo ssh default -t 'cd /vagrant && sudo make localunittest'
