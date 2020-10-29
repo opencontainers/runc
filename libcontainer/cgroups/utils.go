@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
+	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
@@ -34,8 +35,15 @@ var (
 func IsCgroup2UnifiedMode() bool {
 	isUnifiedOnce.Do(func() {
 		var st unix.Statfs_t
-		if err := unix.Statfs(unifiedMountpoint, &st); err != nil {
-			panic("cannot statfs cgroup root")
+		err := unix.Statfs(unifiedMountpoint, &st)
+		if err != nil {
+			if os.IsNotExist(err) && system.RunningInUserNS() {
+				// ignore the "not found" error if running in userns
+				logrus.WithError(err).Debugf("%s missing, assuming cgroup v1", unifiedMountpoint)
+				isUnified = false
+				return
+			}
+			panic(fmt.Sprintf("cannot statfs cgroup root: %s", err))
 		}
 		isUnified = st.Type == unix.CGROUP2_SUPER_MAGIC
 	})
