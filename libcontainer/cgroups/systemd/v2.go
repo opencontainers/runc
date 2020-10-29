@@ -3,6 +3,8 @@
 package systemd
 
 import (
+	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -32,6 +34,51 @@ func NewUnifiedManager(config *configs.Cgroup, path string, rootless bool) cgrou
 		path:     path,
 		rootless: rootless,
 	}
+}
+
+// unifiedResToSystemdProps tries to convert from Cgroup.Resources.Unified
+// key/value map (where key is cgroupfs file name) to systemd unit properties.
+// This is on a best-effort basis, so the properties that are not known
+// (to this function and/or systemd) are ignored (but logged with "debug"
+// log level).
+//
+// For the list of keys, see https://www.kernel.org/doc/Documentation/cgroup-v2.txt
+//
+// For the list of systemd unit properties, see systemd.resource-control(5).
+func unifiedResToSystemdProps(res map[string]string) (props []systemdDbus.Property, _ error) {
+	for k, v := range res {
+		if strings.Contains(k, "/") {
+			return nil, fmt.Errorf("unified resource %q must be a file name (no slashes)", k)
+		}
+		sk := strings.SplitN(k, ".", 2)
+		if len(sk) != 2 {
+			return nil, fmt.Errorf("unified resource %q must be in the form CONTROLLER.PARAMETER", k)
+		}
+		// Kernel is quite forgiving to extra whitespace
+		// around the value, and so should we.
+		v = strings.TrimSpace(v)
+		switch k {
+		case "pids.max":
+			num := uint64(math.MaxUint64)
+			if v != "max" {
+				var err error
+				num, err = strconv.ParseUint(v, 10, 64)
+				if err != nil {
+					return nil, fmt.Errorf("unified resource %q value conversion error: %w", k, err)
+				}
+			}
+			props = append(props,
+				newProp("TasksAccounting", true),
+				newProp("TasksMax", num))
+
+		default:
+			// Ignore the unknown resource here -- will still be
+			// applied in Set which calls fs2.Set.
+			logrus.Debugf("don't know how to convert unified resource %q=%q to systemd unit property; skipping (will still be applied to cgroupfs)", k, v)
+		}
+	}
+
+	return props, nil
 }
 
 func genV2ResourcesProperties(c *configs.Cgroup, conn *systemdDbus.Conn) ([]systemdDbus.Property, error) {
@@ -81,6 +128,15 @@ func genV2ResourcesProperties(c *configs.Cgroup, conn *systemdDbus.Conn) ([]syst
 	}
 
 	// ignore r.KernelMemory
+
+	// convert Resources.Unified map to systemd properties
+	if r.Unified != nil {
+		unifiedProps, err := unifiedResToSystemdProps(r.Unified)
+		if err != nil {
+			return nil, err
+		}
+		properties = append(properties, unifiedProps...)
+	}
 
 	return properties, nil
 }

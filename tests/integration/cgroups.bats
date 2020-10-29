@@ -216,6 +216,8 @@ function setup() {
 	echo "$output" | grep -q '^memory.max:10485760$'
 	echo "$output" | grep -q '^pids.max:99$'
 	echo "$output" | grep -q '^cpu.max:10000 100000$'
+
+	check_systemd_value "TasksMax" 99
 }
 
 @test "runc run (cgroup v2 resources.unified override)" {
@@ -226,7 +228,8 @@ function setup() {
 			| .linux.resources.memorySwap |= {"limit": 33554432}
 			| .linux.resources.unified |= {
 				"memory.min": "131072",
-				"memory.max": "10485760"
+				"memory.max": "10485760",
+				"pids.max": "42"
 			}' "$BUSYBOX_BUNDLE"
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_unified
@@ -239,4 +242,9 @@ function setup() {
 	runc exec test_cgroups_unified cat /sys/fs/cgroup/memory.max
 	[ "$status" -eq 0 ]
 	[ "$output" = '10485760' ]
+
+	runc exec test_cgroups_unified cat /sys/fs/cgroup/pids.max
+	[ "$status" -eq 0 ]
+	[ "$output" = '42' ]
+	check_systemd_value "TasksMax" 42
 }
