@@ -19,6 +19,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const (
+	// Default kernel value for cpu quota period is 100000 us (100 ms), same for v1 and v2.
+	// v1: https://www.kernel.org/doc/html/latest/scheduler/sched-bwc.html and
+	// v2: https://www.kernel.org/doc/html/latest/admin-guide/cgroup-v2.html
+	defCPUQuotaPeriod = uint64(100000)
+)
+
 var (
 	connOnce sync.Once
 	connDbus *systemdDbus.Conn
@@ -410,10 +417,8 @@ func addCpuQuota(conn *systemdDbus.Conn, properties *[]systemdDbus.Property, quo
 		cpuQuotaPerSecUSec := uint64(math.MaxUint64)
 		if quota > 0 {
 			if period == 0 {
-				// assume the default kernel value of 100000 us (100 ms), same for v1 and v2.
-				// v1: https://www.kernel.org/doc/html/latest/scheduler/sched-bwc.html and
-				// v2: https://www.kernel.org/doc/html/latest/admin-guide/cgroup-v2.html
-				period = 100000
+				// assume the default
+				period = defCPUQuotaPeriod
 			}
 			// systemd converts CPUQuotaPerSecUSec (microseconds per CPU second) to CPUQuota
 			// (integer percentage of CPU) internally.  This means that if a fractional percent of
