@@ -240,47 +240,6 @@ EOF
 	check_systemd_value "TasksMax" 20
 }
 
-function check_cpu_quota() {
-	local quota=$1
-	local period=$2
-	local sd_quota=$3
-
-	if [ "$CGROUP_UNIFIED" = "yes" ]; then
-		if [ "$quota" = "-1" ]; then
-			quota="max"
-		fi
-		check_cgroup_value "cpu.max" "$quota $period"
-	else
-		check_cgroup_value "cpu.cfs_quota_us" $quota
-		check_cgroup_value "cpu.cfs_period_us" "$period"
-	fi
-	# systemd values are the same for v1 and v2
-	check_systemd_value "CPUQuotaPerSecUSec" "$sd_quota"
-
-	# CPUQuotaPeriodUSec requires systemd >= v242
-	[ "$(systemd_version)" -lt 242 ] && return
-
-	local sd_period=$((period / 1000))ms
-	[ "$sd_period" = "1000ms" ] && sd_period="1s"
-	local sd_infinity=""
-	# 100ms is the default value, and if not set, shown as infinity
-	[ "$sd_period" = "100ms" ] && sd_infinity="infinity"
-	check_systemd_value "CPUQuotaPeriodUSec" $sd_period $sd_infinity
-}
-
-function check_cpu_shares() {
-	local shares=$1
-
-	if [ "$CGROUP_UNIFIED" = "yes" ]; then
-		local weight=$((1 + ((shares - 2) * 9999) / 262142))
-		check_cgroup_value "cpu.weight" $weight
-		check_systemd_value "CPUWeight" $weight
-	else
-		check_cgroup_value "cpu.shares" "$shares"
-		check_systemd_value "CPUShares" "$shares"
-	fi
-}
-
 @test "update cgroup cpu limits" {
 	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
 
