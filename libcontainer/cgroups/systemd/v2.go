@@ -45,7 +45,9 @@ func NewUnifiedManager(config *configs.Cgroup, path string, rootless bool) cgrou
 // For the list of keys, see https://www.kernel.org/doc/Documentation/cgroup-v2.txt
 //
 // For the list of systemd unit properties, see systemd.resource-control(5).
-func unifiedResToSystemdProps(res map[string]string) (props []systemdDbus.Property, _ error) {
+func unifiedResToSystemdProps(conn *systemdDbus.Conn, res map[string]string) (props []systemdDbus.Property, _ error) {
+	var err error
+
 	for k, v := range res {
 		if strings.Contains(k, "/") {
 			return nil, fmt.Errorf("unified resource %q must be a file name (no slashes)", k)
@@ -57,7 +59,32 @@ func unifiedResToSystemdProps(res map[string]string) (props []systemdDbus.Proper
 		// Kernel is quite forgiving to extra whitespace
 		// around the value, and so should we.
 		v = strings.TrimSpace(v)
+		// Please keep cases in alphabetical order.
 		switch k {
+		case "cpu.max":
+			// value: quota [period]
+			quota := int64(0) // 0 means "unlimited" for addCpuQuota, if period is set
+			period := defCPUQuotaPeriod
+			sv := strings.Fields(v)
+			if len(sv) < 1 || len(sv) > 2 {
+				return nil, fmt.Errorf("unified resource %q value invalid: %q", k, v)
+			}
+			// quota
+			if sv[0] != "max" {
+				quota, err = strconv.ParseInt(sv[0], 10, 64)
+				if err != nil {
+					return nil, fmt.Errorf("unified resource %q period value conversion error: %w", k, err)
+				}
+			}
+			// period
+			if len(sv) == 2 {
+				period, err = strconv.ParseUint(sv[1], 10, 64)
+				if err != nil {
+					return nil, fmt.Errorf("unified resource %q quota value conversion error: %w", k, err)
+				}
+			}
+			addCpuQuota(conn, &props, quota, period)
+
 		case "pids.max":
 			num := uint64(math.MaxUint64)
 			if v != "max" {
@@ -131,7 +158,7 @@ func genV2ResourcesProperties(c *configs.Cgroup, conn *systemdDbus.Conn) ([]syst
 
 	// convert Resources.Unified map to systemd properties
 	if r.Unified != nil {
-		unifiedProps, err := unifiedResToSystemdProps(r.Unified)
+		unifiedProps, err := unifiedResToSystemdProps(conn, r.Unified)
 		if err != nil {
 			return nil, err
 		}
