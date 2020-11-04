@@ -363,6 +363,31 @@ EOF
 	check_cpu_quota 30000 100000 "300ms"
 }
 
+@test "update cgroup v2 resources via unified map" {
+	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+	requires cgroups_v2
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
+	[ "$status" -eq 0 ]
+
+	# check that initial values were properly set
+	check_cpu_quota 500000 1000000 "500ms"
+	check_systemd_value "TasksMax" 20
+
+	runc update -r - test_update <<EOF
+{
+  "unified": {
+    "cpu.max": "max 100000",
+    "pids.max": "10"
+  }
+}
+EOF
+
+	# check the updated systemd unit properties
+	check_cpu_quota -1 100000 "infinity"
+	check_systemd_value "TasksMax" 10
+}
+
 @test "update rt period and runtime" {
 	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
 	requires cgroups_v1 cgroups_rt no_systemd
