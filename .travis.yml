@@ -64,7 +64,7 @@ before_install:
   - sudo apt-get install -y libseccomp-dev
   - GO111MODULE=off go get -u golang.org/x/lint/golint
   - GO111MODULE=off go get -u github.com/vbatts/git-validation
-  - GO111MODULE=off go get github.com/mvdan/sh/cmd/shfmt
+  - (cd ~ && GO111MODULE=on go get mvdan.cc/sh/v3/cmd/shfmt@v3.2.0)
   - env | grep TRAVIS_
 
 script:
