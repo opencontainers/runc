@@ -195,13 +195,13 @@ function setup() {
 
 	set_cgroups_path "$BUSYBOX_BUNDLE"
 	update_config ' .linux.resources.unified |= {
-                      "memory.min":   "131072",
-                      "memory.low":   "524288",
-                      "memory.high": "5242880",
-                      "memory.max": "10485760",
-                      "pids.max": "99",
-                      "cpu.max": "10000 100000"
-                     }' "$BUSYBOX_BUNDLE"
+				"memory.min":   "131072",
+				"memory.low":   "524288",
+				"memory.high": "5242880",
+				"memory.max": "10485760",
+				"pids.max": "99",
+				"cpu.max": "10000 100000"
+			}' "$BUSYBOX_BUNDLE"
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_unified
 	[ "$status" -eq 0 ]
@@ -217,15 +217,17 @@ function setup() {
 	echo "$output" | grep -q '^pids.max:99$'
 	echo "$output" | grep -q '^cpu.max:10000 100000$'
 }
+
 @test "runc run (cgroup v2 resources.unified override)" {
 	requires root cgroups_v2
 
 	set_cgroups_path "$BUSYBOX_BUNDLE"
-	update_config ' .linux.resources.memory |= {"limit": 33554432}
-                  | .linux.resources.memorySwap |= {"limit": 33554432}
-                  | .linux.resources.unified |=
-                      {"memory.min": "131072", "memory.max": "10485760" }' \
-		"$BUSYBOX_BUNDLE"
+	update_config '   .linux.resources.memory |= {"limit": 33554432}
+			| .linux.resources.memorySwap |= {"limit": 33554432}
+			| .linux.resources.unified |= {
+				"memory.min": "131072",
+				"memory.max": "10485760"
+			}' "$BUSYBOX_BUNDLE"
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_unified
 	[ "$status" -eq 0 ]
