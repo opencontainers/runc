@@ -85,6 +85,14 @@ func unifiedResToSystemdProps(conn *systemdDbus.Conn, res map[string]string) (pr
 			}
 			addCpuQuota(conn, &props, quota, period)
 
+		case "cpu.weight":
+			num, err := strconv.ParseUint(v, 10, 64)
+			if err != nil {
+				return nil, fmt.Errorf("unified resource %q value conversion error: %w", k, err)
+			}
+			props = append(props,
+				newProp("CPUWeight", num))
+
 		case "pids.max":
 			num := uint64(math.MaxUint64)
 			if v != "max" {

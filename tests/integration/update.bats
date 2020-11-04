@@ -372,12 +372,15 @@ EOF
 
 	# check that initial values were properly set
 	check_cpu_quota 500000 1000000 "500ms"
+	# initial cpu shares of 100 corresponds to weight of 4
+	check_cpu_weight 4
 	check_systemd_value "TasksMax" 20
 
 	runc update -r - test_update <<EOF
 {
   "unified": {
     "cpu.max": "max 100000",
+    "cpu.weight": "16",
     "pids.max": "10"
   }
 }
@@ -385,6 +388,7 @@ EOF
 
 	# check the updated systemd unit properties
 	check_cpu_quota -1 100000 "infinity"
+	check_cpu_weight 16
 	check_systemd_value "TasksMax" 10
 }
 

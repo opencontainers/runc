@@ -235,17 +235,25 @@ function check_cpu_quota() {
 	check_systemd_value "CPUQuotaPeriodUSec" $sd_period $sd_infinity
 }
 
+# Works for cgroup v1 and v2, accepts v1 shares as an argument.
 function check_cpu_shares() {
 	local shares=$1
 
 	if [ "$CGROUP_UNIFIED" = "yes" ]; then
 		local weight=$((1 + ((shares - 2) * 9999) / 262142))
-		check_cgroup_value "cpu.weight" $weight
-		check_systemd_value "CPUWeight" $weight
+		check_cpu_weight "$weight"
 	else
 		check_cgroup_value "cpu.shares" "$shares"
 		check_systemd_value "CPUShares" "$shares"
 	fi
+}
+
+# Works only for cgroup v2, accept v2 weight.
+function check_cpu_weight() {
+	local weight=$1
+
+	check_cgroup_value "cpu.weight" $weight
+	check_systemd_value "CPUWeight" $weight
 }
 
 # Helper function to set a resources limit

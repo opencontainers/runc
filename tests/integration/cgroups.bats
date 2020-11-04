@@ -200,7 +200,8 @@ function setup() {
 				"memory.high": "5242880",
 				"memory.max": "10485760",
 				"pids.max": "99",
-				"cpu.max": "10000 100000"
+				"cpu.max": "10000 100000",
+				"cpu.weight": "42"
 			}' "$BUSYBOX_BUNDLE"
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_unified
@@ -219,15 +220,18 @@ function setup() {
 
 	check_systemd_value "TasksMax" 99
 	check_cpu_quota 10000 100000 "100ms"
+	check_cpu_weight 42
 }
 
 @test "runc run (cgroup v2 resources.unified override)" {
 	requires root cgroups_v2
 
 	set_cgroups_path "$BUSYBOX_BUNDLE"
+	# CPU shares of 3333 corresponds to CPU weight of 128.
 	update_config '   .linux.resources.memory |= {"limit": 33554432}
 			| .linux.resources.memorySwap |= {"limit": 33554432}
 			| .linux.resources.cpu |= {
+				"shares": 3333,
 				"quota": 40000,
 				"period": 100000
 			}
@@ -235,7 +239,8 @@ function setup() {
 				"memory.min": "131072",
 				"memory.max": "10485760",
 				"pids.max": "42",
-				"cpu.max": "5000 50000"
+				"cpu.max": "5000 50000",
+				"cpu.weight": "42"
 			}' "$BUSYBOX_BUNDLE"
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_unified
@@ -255,4 +260,6 @@ function setup() {
 	check_systemd_value "TasksMax" 42
 
 	check_cpu_quota 5000 50000 "100ms"
+
+	check_cpu_weight 42
 }
