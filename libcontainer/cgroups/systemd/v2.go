@@ -105,6 +105,24 @@ func unifiedResToSystemdProps(conn *systemdDbus.Conn, res map[string]string) (pr
 			props = append(props,
 				newProp(m[k], bits))
 
+		case "memory.high", "memory.low", "memory.min", "memory.max", "memory.swap.max":
+			num := uint64(math.MaxUint64)
+			if v != "max" {
+				num, err = strconv.ParseUint(v, 10, 64)
+				if err != nil {
+					return nil, fmt.Errorf("unified resource %q value conversion error: %w", k, err)
+				}
+			}
+			m := map[string]string{
+				"memory.high":     "MemoryHigh",
+				"memory.low":      "MemoryLow",
+				"memory.min":      "MemoryMin",
+				"memory.max":      "MemoryMax",
+				"memory.swap.max": "MemorySwapMax",
+			}
+			props = append(props,
+				newProp(m[k], num))
+
 		case "pids.max":
 			num := uint64(math.MaxUint64)
 			if v != "max" {
@@ -117,6 +135,15 @@ func unifiedResToSystemdProps(conn *systemdDbus.Conn, res map[string]string) (pr
 			props = append(props,
 				newProp("TasksAccounting", true),
 				newProp("TasksMax", num))
+
+		case "memory.oom.group":
+			// Setting this to 1 is roughly equivalent to OOMPolicy=kill
+			// (as per systemd.service(5) and
+			// https://www.kernel.org/doc/html/latest/admin-guide/cgroup-v2.html),
+			// but it's not clear what to do if it is unset or set
+			// to 0 in runc update, as there are two other possible
+			// values for OOMPolicy (continue/stop).
+			fallthrough
 
 		default:
 			// Ignore the unknown resource here -- will still be
