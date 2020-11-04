@@ -357,6 +357,12 @@ function requires() {
 				skip_me=1
 			fi
 			;;
+		smp)
+			local cpu_count=$(grep -c '^processor' /proc/cpuinfo)
+			if [ "$cpu_count" -lt 2 ]; then
+				skip_me=1
+			fi
+			;;
 		systemd)
 			if [ -z "${RUNC_USE_SYSTEMD}" ]; then
 				skip_me=1

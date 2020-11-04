@@ -22,5 +22,6 @@ require (
 	// NOTE: urfave/cli must be <= v1.22.1 due to a regression: https://github.com/urfave/cli/issues/1092
 	github.com/urfave/cli v1.22.1
 	github.com/vishvananda/netlink v1.1.0
+	github.com/willf/bitset v1.1.11
 	golang.org/x/sys v0.0.0-20200916030750-2334cc1a136f
 )

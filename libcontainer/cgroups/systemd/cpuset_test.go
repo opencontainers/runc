@@ -1,0 +1,58 @@
+package systemd
+
+import (
+	"bytes"
+	"testing"
+)
+
+func TestRangeToBits(t *testing.T) {
+	testCases := []struct {
+		in    string
+		out   []byte
+		isErr bool
+	}{
+		{in: "", isErr: true},
+		{in: "0", out: []byte{1}},
+		{in: "1", out: []byte{2}},
+		{in: "0-1", out: []byte{3}},
+		{in: "0,1", out: []byte{3}},
+		{in: ",0,1,", out: []byte{3}},
+		{in: "0-3", out: []byte{0x0f}},
+		{in: "0,1,2-3", out: []byte{0x0f}},
+		{in: "4-7", out: []byte{0xf0}},
+		{in: "0-7", out: []byte{0xff}},
+		{in: "0-15", out: []byte{0xff, 0xff}},
+		{in: "16", out: []byte{1, 0, 0}},
+		{in: "0-3,32-33", out: []byte{3, 0, 0, 0, 0x0f}},
+		// extra spaces and tabs are ok
+		{in: "1, 2, 1-2", out: []byte{6}},
+		{in: "    , 1   , 3  ,  5-7,	", out: []byte{0xea}},
+		// somewhat large values
+		{in: "128-130,1", out: []byte{7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}},
+
+		{in: "-", isErr: true},
+		{in: "1-", isErr: true},
+		{in: "-3", isErr: true},
+		// bad range (start > end)
+		{in: "54-53", isErr: true},
+		// kernel does not allow extra spaces inside a range
+		{in: "1 - 2", isErr: true},
+	}
+
+	for _, tc := range testCases {
+		t.Logf("case: %q", tc.in)
+		out, err := rangeToBits(tc.in)
+		if err != nil {
+			t.Logf("   got error: %s", err)
+			if !tc.isErr {
+				t.Error("   ^^^ unexpected error")
+			}
+
+			continue
+		}
+		t.Logf("   expected %v, got %v", tc.out, out)
+		if !bytes.Equal(out, tc.out) {
+			t.Error("   ^^^ unexpected result")
+		}
+	}
+}

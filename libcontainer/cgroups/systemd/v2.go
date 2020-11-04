@@ -93,6 +93,18 @@ func unifiedResToSystemdProps(conn *systemdDbus.Conn, res map[string]string) (pr
 			props = append(props,
 				newProp("CPUWeight", num))
 
+		case "cpuset.cpus", "cpuset.mems":
+			bits, err := rangeToBits(v)
+			if err != nil {
+				return nil, fmt.Errorf("unified resource %q=%q conversion error: %w", k, v, err)
+			}
+			m := map[string]string{
+				"cpuset.cpus": "AllowedCPUs",
+				"cpuset.mems": "AllowedMemoryNodes",
+			}
+			props = append(props,
+				newProp(m[k], bits))
+
 		case "pids.max":
 			num := uint64(math.MaxUint64)
 			if v != "max" {

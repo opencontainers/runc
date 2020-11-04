@@ -69,7 +69,8 @@ github.com/vishvananda/netlink
 github.com/vishvananda/netlink/nl
 # github.com/vishvananda/netns v0.0.0-20191106174202-0a2b9b5464df
 github.com/vishvananda/netns
-# github.com/willf/bitset v1.1.11-0.20200630133818-d5bec3311243
+# github.com/willf/bitset v1.1.11
+## explicit
 github.com/willf/bitset
 # golang.org/x/sys v0.0.0-20200916030750-2334cc1a136f
 ## explicit
