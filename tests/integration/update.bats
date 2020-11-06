@@ -347,6 +347,7 @@ EOF
   }
 }
 EOF
+	[ "$status" -eq 0 ]
 
 	runc update -r "$BATS_TMPDIR"/runc-cgroups-integration-test.json test_update
 	[ "$status" -eq 0 ]
@@ -448,6 +449,7 @@ EOF
   }
 }
 EOF
+	[ "$status" -eq 0 ]
 	check_cgroup_value "cpu.rt_period_us" "$root_period"
 	check_cgroup_value "cpu.rt_runtime_us" 500001
 
@@ -463,6 +465,7 @@ EOF
 	check_cgroup_value "cpu.rt_runtime_us" 500001
 
 	runc update test_update_rt --cpu-rt-period 900001 --cpu-rt-runtime 600001
+	[ "$status" -eq 0 ]
 
 	check_cgroup_value "cpu.rt_period_us" 900001
 	check_cgroup_value "cpu.rt_runtime_us" 600001
