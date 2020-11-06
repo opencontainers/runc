@@ -741,7 +741,19 @@ func prepareRoot(config *configs.Config) error {
 }
 
 func setReadonly() error {
-	return unix.Mount("/", "/", "bind", unix.MS_BIND|unix.MS_REMOUNT|unix.MS_RDONLY|unix.MS_REC, "")
+	flags := uintptr(unix.MS_BIND | unix.MS_REMOUNT | unix.MS_RDONLY)
+
+	err := unix.Mount("", "/", "", flags, "")
+	if err == nil {
+		return nil
+	}
+	var s unix.Statfs_t
+	if err := unix.Statfs("/", &s); err != nil {
+		return &os.PathError{Op: "statfs", Path: "/", Err: err}
+	}
+	flags |= uintptr(s.Flags)
+	return unix.Mount("", "/", "", flags, "")
+
 }
 
 func setupPtmx(config *configs.Config) error {
