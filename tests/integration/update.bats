@@ -240,47 +240,6 @@ EOF
 	check_systemd_value "TasksMax" 20
 }
 
-function check_cpu_quota() {
-	local quota=$1
-	local period=$2
-	local sd_quota=$3
-
-	if [ "$CGROUP_UNIFIED" = "yes" ]; then
-		if [ "$quota" = "-1" ]; then
-			quota="max"
-		fi
-		check_cgroup_value "cpu.max" "$quota $period"
-	else
-		check_cgroup_value "cpu.cfs_quota_us" $quota
-		check_cgroup_value "cpu.cfs_period_us" "$period"
-	fi
-	# systemd values are the same for v1 and v2
-	check_systemd_value "CPUQuotaPerSecUSec" "$sd_quota"
-
-	# CPUQuotaPeriodUSec requires systemd >= v242
-	[ "$(systemd_version)" -lt 242 ] && return
-
-	local sd_period=$((period / 1000))ms
-	[ "$sd_period" = "1000ms" ] && sd_period="1s"
-	local sd_infinity=""
-	# 100ms is the default value, and if not set, shown as infinity
-	[ "$sd_period" = "100ms" ] && sd_infinity="infinity"
-	check_systemd_value "CPUQuotaPeriodUSec" $sd_period $sd_infinity
-}
-
-function check_cpu_shares() {
-	local shares=$1
-
-	if [ "$CGROUP_UNIFIED" = "yes" ]; then
-		local weight=$((1 + ((shares - 2) * 9999) / 262142))
-		check_cgroup_value "cpu.weight" $weight
-		check_systemd_value "CPUWeight" $weight
-	else
-		check_cgroup_value "cpu.shares" "$shares"
-		check_systemd_value "CPUShares" "$shares"
-	fi
-}
-
 @test "update cgroup cpu limits" {
 	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
 
@@ -347,6 +306,7 @@ EOF
   }
 }
 EOF
+	[ "$status" -eq 0 ]
 
 	runc update -r "$BATS_TMPDIR"/runc-cgroups-integration-test.json test_update
 	[ "$status" -eq 0 ]
@@ -403,6 +363,82 @@ EOF
 	check_cpu_quota 30000 100000 "300ms"
 }
 
+@test "update cgroup v2 resources via unified map" {
+	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+	requires cgroups_v2
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
+	[ "$status" -eq 0 ]
+
+	# check that initial values were properly set
+	check_cpu_quota 500000 1000000 "500ms"
+	# initial cpu shares of 100 corresponds to weight of 4
+	check_cpu_weight 4
+	check_systemd_value "TasksMax" 20
+
+	runc update -r - test_update <<EOF
+{
+  "unified": {
+    "cpu.max": "max 100000",
+    "cpu.weight": "16",
+    "pids.max": "10"
+  }
+}
+EOF
+
+	# check the updated systemd unit properties
+	check_cpu_quota -1 100000 "infinity"
+	check_cpu_weight 16
+	check_systemd_value "TasksMax" 10
+}
+
+@test "update cpuset parameters via v2 unified map" {
+	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+	requires cgroups_v2 smp
+
+	update_config ' .linux.resources.unified |= {
+				"cpuset.cpus": "0",
+				"cpuset.mems": "0"
+			}' "${BUSYBOX_BUNDLE}"
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
+	[ "$status" -eq 0 ]
+
+	# check that initial values were properly set
+	check_systemd_value "AllowedCPUs" 0
+	check_systemd_value "AllowedMemoryNodes" 0
+
+	runc update -r - test_update <<EOF
+{
+  "unified": {
+    "cpuset.cpus": "1"
+  }
+}
+EOF
+	[ "$status" -eq 0 ]
+
+	# check the updated systemd unit properties
+	check_systemd_value "AllowedCPUs" 1
+
+	# More than 1 numa memory node is required to test this
+	file="/sys/fs/cgroup/cpuset.mems.effective"
+	if ! test -r $file || grep -q '^0$' $file; then
+		# skip the rest of it
+		return 0
+	fi
+
+	runc update -r - test_update <<EOF
+{
+  "unified": {
+    "cpuset.mems": "1"
+  }
+}
+EOF
+	[ "$status" -eq 0 ]
+
+	# check the updated systemd unit properties
+	check_systemd_value "AllowedMemoryNodes" 1
+}
+
 @test "update rt period and runtime" {
 	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
 	requires cgroups_v1 cgroups_rt no_systemd
@@ -448,6 +484,7 @@ EOF
   }
 }
 EOF
+	[ "$status" -eq 0 ]
 	check_cgroup_value "cpu.rt_period_us" "$root_period"
 	check_cgroup_value "cpu.rt_runtime_us" 500001
 
@@ -463,6 +500,7 @@ EOF
 	check_cgroup_value "cpu.rt_runtime_us" 500001
 
 	runc update test_update_rt --cpu-rt-period 900001 --cpu-rt-runtime 600001
+	[ "$status" -eq 0 ]
 
 	check_cgroup_value "cpu.rt_period_us" 900001
 	check_cgroup_value "cpu.rt_runtime_us" 600001
