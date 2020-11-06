@@ -49,10 +49,9 @@ function teardown() {
 
 	[ -e events.log ]
 
-	run cat events.log
-	[ "$status" -eq 0 ]
-	[[ "${lines[0]}" == [\{]"\"type\""[:]"\"stats\""[,]"\"id\""[:]"\"test_busybox\""[,]* ]]
-	[[ "${lines[0]}" == *"data"* ]]
+	output=$(head -1 events.log)
+	[[ "$output" == [\{]"\"type\""[:]"\"stats\""[,]"\"id\""[:]"\"test_busybox\""[,]* ]]
+	[[ "$output" == *"data"* ]]
 }
 
 @test "events --interval 1s" {
@@ -78,8 +77,7 @@ function teardown() {
 
 	[ -e events.log ]
 
-	run eval "grep -q 'test_busybox' events.log"
-	[ "$status" -eq 0 ]
+	grep -q 'test_busybox' events.log
 }
 
 @test "events --interval 100ms" {
@@ -108,8 +106,7 @@ function teardown() {
 
 	[ -e events.log ]
 
-	run eval "grep -q 'test_busybox' events.log"
-	[ "$status" -eq 0 ]
+	grep -q 'test_busybox' events.log
 }
 
 @test "events oom" {

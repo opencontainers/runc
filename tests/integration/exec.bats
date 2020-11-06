@@ -35,18 +35,15 @@ function teardown() {
 	# check pid.txt was generated
 	[ -e pid.txt ]
 
-	run cat pid.txt
-	[ "$status" -eq 0 ]
-	[[ ${lines[0]} =~ [0-9]+ ]]
-	[[ ${lines[0]} != $(__runc state test_busybox | jq '.pid') ]]
+	output=$(cat pid.txt)
+	[[ "$output" =~ [0-9]+ ]]
+	[[ "$output" != $(__runc state test_busybox | jq '.pid') ]]
 }
 
 @test "runc exec --pid-file with new CWD" {
 	# create pid_file directory as the CWD
-	run mkdir pid_file
-	[ "$status" -eq 0 ]
-	run cd pid_file
-	[ "$status" -eq 0 ]
+	mkdir pid_file
+	cd pid_file
 
 	# run busybox detached
 	runc run -d -b "$BUSYBOX_BUNDLE" --console-socket "$CONSOLE_SOCKET" test_busybox
@@ -60,10 +57,9 @@ function teardown() {
 	# check pid.txt was generated
 	[ -e pid.txt ]
 
-	run cat pid.txt
-	[ "$status" -eq 0 ]
-	[[ ${lines[0]} =~ [0-9]+ ]]
-	[[ ${lines[0]} != $(__runc state test_busybox | jq '.pid') ]]
+	output=$(cat pid.txt)
+	[[ "$output" =~ [0-9]+ ]]
+	[[ "$output" != $(__runc state test_busybox | jq '.pid') ]]
 }
 
 @test "runc exec ls -la" {
@@ -133,8 +129,9 @@ function teardown() {
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 	[ "$status" -eq 0 ]
 
-	run bash -c "cat hello > preserve-fds.test; exec 3<preserve-fds.test; $RUNC ${RUNC_USE_SYSTEMD:+--systemd-cgroup} --log /proc/self/fd/2 --root $ROOT exec --preserve-fds=1 test_busybox cat /proc/self/fd/3"
-	[ "$status" -eq 0 ]
-
-	[[ "${output}" == *"hello"* ]]
+	echo hello >preserve-fds.test
+	# fd 3 is used by bats, so we use 4
+	exec 4<preserve-fds.test
+	output=$(__runc exec --preserve-fds=2 test_busybox cat /proc/self/fd/4)
+	[[ "${output}" == "hello" ]]
 }

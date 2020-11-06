@@ -35,8 +35,7 @@ function teardown() {
 	[ -e log.out ]
 
 	# check expected debug output was sent to log.out
-	run cat log.out
-	[ "$status" -eq 0 ]
+	output=$(cat log.out)
 	[[ "${output}" == *"level=debug"* ]]
 	[[ "${output}" == *"nsexec started"* ]]
 	[[ "${output}" == *"child process in init()"* ]]
@@ -54,8 +53,7 @@ function teardown() {
 	[ -e log.out ]
 
 	# check expected debug output was sent to log.out
-	run cat log.out
-	[ "$status" -eq 0 ]
+	output=$(cat log.out)
 	[[ "${output}" == *"level=debug"* ]]
 	[[ "${output}" == *"nsexec started"* ]]
 	[[ "${output}" == *"child process in init()"* ]]
@@ -73,8 +71,7 @@ function teardown() {
 	[ -e log.out ]
 
 	# check expected debug output was sent to log.out
-	run cat log.out
-	[ "$status" -eq 0 ]
+	output=$(cat log.out)
 	[[ "${output}" == *'"level":"debug"'* ]]
 	[[ "${output}" == *"nsexec started"* ]]
 	[[ "${output}" == *"child process in init()"* ]]
