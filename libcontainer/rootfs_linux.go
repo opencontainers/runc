@@ -741,7 +741,7 @@ func prepareRoot(config *configs.Config) error {
 }
 
 func setReadonly() error {
-	flags := uintptr(unix.MS_BIND | unix.MS_REMOUNT | unix.MS_RDONLY | unix.MS_REC)
+	flags := uintptr(unix.MS_BIND | unix.MS_REMOUNT | unix.MS_RDONLY)
 
 	err := unix.Mount("", "/", "", flags, "")
 	if err == nil {
