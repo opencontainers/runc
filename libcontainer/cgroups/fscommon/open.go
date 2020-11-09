@@ -7,6 +7,7 @@ import (
 
 	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
 
@@ -31,11 +32,17 @@ func prepareOpenat2() error {
 			Flags: unix.O_DIRECTORY | unix.O_PATH})
 		if err != nil {
 			prepErr = &os.PathError{Op: "openat2", Path: cgroupfsDir, Err: err}
+			if err != unix.ENOSYS {
+				logrus.Warnf("falling back to securejoin: %s", prepErr)
+			} else {
+				logrus.Debug("openat2 not available, falling back to securejoin")
+			}
 			return
 		}
 		var st unix.Statfs_t
 		if err = unix.Fstatfs(fd, &st); err != nil {
 			prepErr = &os.PathError{Op: "statfs", Path: cgroupfsDir, Err: err}
+			logrus.Warnf("falling back to securejoin: %s", prepErr)
 			return
 		}
 
