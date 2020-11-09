@@ -866,6 +866,44 @@ func (c *linuxContainer) handleCheckpointingExternalNamespaces(rpcOpts *criurpc.
 	return nil
 }
 
+func (c *linuxContainer) handleRestoringNamespaces(rpcOpts *criurpc.CriuOpts, extraFiles *[]*os.File) error {
+	for _, ns := range c.config.Namespaces {
+		switch ns.Type {
+		case configs.NEWNET, configs.NEWPID:
+			// If the container is running in a network or PID namespace and has
+			// a path to the network or PID namespace configured, we will dump
+			// that network or PID namespace as an external namespace and we
+			// will expect that the namespace exists during restore.
+			// This basically means that CRIU will ignore the namespace
+			// and expect it to be setup correctly.
+			if err := c.handleRestoringExternalNamespaces(rpcOpts, extraFiles, ns.Type); err != nil {
+				return err
+			}
+		default:
+			// For all other namespaces except NET and PID CRIU has
+			// a simpler way of joining the existing namespace if set
+			nsPath := c.config.Namespaces.PathOf(ns.Type)
+			if nsPath == "" {
+				continue
+			}
+			if ns.Type == configs.NEWCGROUP {
+				// CRIU has no code to handle NEWCGROUP
+				return fmt.Errorf("Do not know how to handle namespace %v", ns.Type)
+			}
+			// CRIU has code to handle NEWTIME, but it does not seem to be defined in runc
+
+			// CRIU will issue a warning for NEWUSER:
+			// criu/namespaces.c: 'join-ns with user-namespace is not fully tested and dangerous'
+			rpcOpts.JoinNs = append(rpcOpts.JoinNs, &criurpc.JoinNamespace{
+				Ns:     proto.String(configs.NsName(ns.Type)),
+				NsFile: proto.String(nsPath),
+			})
+		}
+	}
+
+	return nil
+}
+
 func (c *linuxContainer) handleRestoringExternalNamespaces(rpcOpts *criurpc.CriuOpts, extraFiles *[]*os.File, t configs.NamespaceType) error {
 	if !c.criuSupportsExtNS(t) {
 		return nil
@@ -1297,15 +1335,7 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 
 	c.handleCriuConfigurationFile(req.Opts)
 
-	// Same as during checkpointing. If the container has a specific network namespace
-	// assigned to it, this now expects that the checkpoint will be restored in a
-	// already created network namespace.
-	if err := c.handleRestoringExternalNamespaces(req.Opts, &extraFiles, configs.NEWNET); err != nil {
-		return err
-	}
-
-	// Same for PID namespaces.
-	if err := c.handleRestoringExternalNamespaces(req.Opts, &extraFiles, configs.NEWPID); err != nil {
+	if err := c.handleRestoringNamespaces(req.Opts, &extraFiles); err != nil {
 		return err
 	}
 
