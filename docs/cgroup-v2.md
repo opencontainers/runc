@@ -1,6 +1,6 @@
 # cgroup v2
 
-runc supports cgroup v2 (unified mode) experimentally since v1.0.0-rc91.
+runc fully supports cgroup v2 (unified mode) since v1.0.0-rc93.
 
 To use cgroup v2, you might need to change the configuration of the host init system.
 Fedora (>= 31) uses cgroup v2 by default and no extra configuration is required.
