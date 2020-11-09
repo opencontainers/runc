@@ -124,7 +124,7 @@ passing of file descriptors -- [details below](#runc-modes)). As an example
 (assuming that `terminal: false` is set in `config.json`):
 
 ```
-% echo input | runc run some_container > /tmp/log.out 2>& /tmp/log.err
+% echo input | runc run some_container > /tmp/log.out 2> /tmp/log.err
 ```
 
 Here the container's various `stdio` file descriptors will be substituted with
