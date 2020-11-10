@@ -6,7 +6,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/opencontainers/runc/libcontainer/configs"
 	"golang.org/x/sys/unix"
 )
 
@@ -86,11 +85,11 @@ func TestHostDevicesAllValid(t *testing.T) {
 		// Devices should only have file modes that correspond to their type.
 		var expectedType os.FileMode
 		switch device.Type {
-		case configs.BlockDevice:
+		case BlockDevice:
 			expectedType = unix.S_IFBLK
-		case configs.CharDevice:
+		case CharDevice:
 			expectedType = unix.S_IFCHR
-		case configs.FifoDevice:
+		case FifoDevice:
 			t.Logf("fifo devices shouldn't show up from HostDevices")
 			fallthrough
 		default:

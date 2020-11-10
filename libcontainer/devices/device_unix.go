@@ -1,6 +1,6 @@
 // +build !windows
 
-package configs
+package devices
 
 import (
 	"errors"

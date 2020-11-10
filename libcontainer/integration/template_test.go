@@ -5,8 +5,8 @@ import (
 	"strconv"
 
 	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/devices"
 	"github.com/opencontainers/runc/libcontainer/specconv"
-
 	"golang.org/x/sys/unix"
 )
 
@@ -30,7 +30,7 @@ type tParam struct {
 // it uses a network strategy of just setting a loopback interface
 // and the default setup for devices
 func newTemplateConfig(p *tParam) *configs.Config {
-	var allowedDevices []*configs.DeviceRule
+	var allowedDevices []*devices.DeviceRule
 	for _, device := range specconv.AllowedDevices {
 		allowedDevices = append(allowedDevices, &device.DeviceRule)
 	}

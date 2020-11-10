@@ -2,6 +2,7 @@ package configs
 
 import (
 	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
+	"github.com/opencontainers/runc/libcontainer/devices"
 )
 
 type FreezerState string
@@ -42,7 +43,7 @@ type Cgroup struct {
 
 type Resources struct {
 	// Devices is the set of access rules for devices in the container.
-	Devices []*DeviceRule `json:"devices"`
+	Devices []*devices.DeviceRule `json:"devices"`
 
 	// Memory limit (in bytes)
 	Memory int64 `json:"memory"`

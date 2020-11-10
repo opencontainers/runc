@@ -13,8 +13,9 @@ import (
 
 	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
 	dbus "github.com/godbus/dbus/v5"
-	"github.com/opencontainers/runc/libcontainer/cgroups/devices"
+	cgroupdevices "github.com/opencontainers/runc/libcontainer/cgroups/devices"
 	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/devices"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -88,11 +89,11 @@ func ExpandSlice(slice string) (string, error) {
 	return path, nil
 }
 
-func groupPrefix(ruleType configs.DeviceType) (string, error) {
+func groupPrefix(ruleType devices.DeviceType) (string, error) {
 	switch ruleType {
-	case configs.BlockDevice:
+	case devices.BlockDevice:
 		return "block-", nil
-	case configs.CharDevice:
+	case devices.CharDevice:
 		return "char-", nil
 	default:
 		return "", errors.Errorf("device type %v has no group prefix", ruleType)
@@ -103,7 +104,7 @@ func groupPrefix(ruleType configs.DeviceType) (string, error) {
 // /proc/devices) with the type prefixed as required for DeviceAllow, for a
 // given (type, major) combination. If more than one device group exists, an
 // arbitrary one is chosen.
-func findDeviceGroup(ruleType configs.DeviceType, ruleMajor int64) (string, error) {
+func findDeviceGroup(ruleType devices.DeviceType, ruleMajor int64) (string, error) {
 	fh, err := os.Open("/proc/devices")
 	if err != nil {
 		return "", err
@@ -116,7 +117,7 @@ func findDeviceGroup(ruleType configs.DeviceType, ruleMajor int64) (string, erro
 	}
 
 	scanner := bufio.NewScanner(fh)
-	var currentType configs.DeviceType
+	var currentType devices.DeviceType
 	for scanner.Scan() {
 		// We need to strip spaces because the first number is column-aligned.
 		line := strings.TrimSpace(scanner.Text())
@@ -124,10 +125,10 @@ func findDeviceGroup(ruleType configs.DeviceType, ruleMajor int64) (string, erro
 		// Handle the "header" lines.
 		switch line {
 		case "Block devices:":
-			currentType = configs.BlockDevice
+			currentType = devices.BlockDevice
 			continue
 		case "Character devices:":
-			currentType = configs.CharDevice
+			currentType = devices.CharDevice
 			continue
 		case "":
 			continue
@@ -163,7 +164,7 @@ func findDeviceGroup(ruleType configs.DeviceType, ruleMajor int64) (string, erro
 
 // generateDeviceProperties takes the configured device rules and generates a
 // corresponding set of systemd properties to configure the devices correctly.
-func generateDeviceProperties(rules []*configs.DeviceRule) ([]systemdDbus.Property, error) {
+func generateDeviceProperties(rules []*devices.DeviceRule) ([]systemdDbus.Property, error) {
 	// DeviceAllow is the type "a(ss)" which means we need a temporary struct
 	// to represent it in Go.
 	type deviceAllowEntry struct {
@@ -179,7 +180,7 @@ func generateDeviceProperties(rules []*configs.DeviceRule) ([]systemdDbus.Proper
 	}
 
 	// Figure out the set of rules.
-	configEmu := &devices.Emulator{}
+	configEmu := &cgroupdevices.Emulator{}
 	for _, rule := range rules {
 		if err := configEmu.Apply(*rule); err != nil {
 			return nil, errors.Wrap(err, "apply rule for systemd")
@@ -206,7 +207,7 @@ func generateDeviceProperties(rules []*configs.DeviceRule) ([]systemdDbus.Proper
 	// Now generate the set of rules we actually need to apply. Unlike the
 	// normal devices cgroup, in "strict" mode systemd defaults to a deny-all
 	// whitelist which is the default for devices.Emulator.
-	baseEmu := &devices.Emulator{}
+	baseEmu := &cgroupdevices.Emulator{}
 	finalRules, err := baseEmu.Transition(configEmu)
 	if err != nil {
 		return nil, errors.Wrap(err, "get simplified rules for systemd")
@@ -218,7 +219,7 @@ func generateDeviceProperties(rules []*configs.DeviceRule) ([]systemdDbus.Proper
 			return nil, errors.Errorf("[internal error] cannot add deny rule to systemd DeviceAllow list: %v", *rule)
 		}
 		switch rule.Type {
-		case configs.BlockDevice, configs.CharDevice:
+		case devices.BlockDevice, devices.CharDevice:
 		default:
 			// Should never happen.
 			return nil, errors.Errorf("invalid device type for DeviceAllow: %v", rule.Type)
@@ -250,9 +251,9 @@ func generateDeviceProperties(rules []*configs.DeviceRule) ([]systemdDbus.Proper
 		// so we'll give a warning in that case (note that the fallback code
 		// will insert any rules systemd couldn't handle). What amazing fun.
 
-		if rule.Major == configs.Wildcard {
+		if rule.Major == devices.Wildcard {
 			// "_ *:n _" rules aren't supported by systemd.
-			if rule.Minor != configs.Wildcard {
+			if rule.Minor != devices.Wildcard {
 				logrus.Warnf("systemd doesn't support '*:n' device rules -- temporarily ignoring rule: %v", *rule)
 				continue
 			}
@@ -263,7 +264,7 @@ func generateDeviceProperties(rules []*configs.DeviceRule) ([]systemdDbus.Proper
 				return nil, err
 			}
 			entry.Path = prefix + "*"
-		} else if rule.Minor == configs.Wildcard {
+		} else if rule.Minor == devices.Wildcard {
 			// "_ n:* _" rules require a device group from /proc/devices.
 			group, err := findDeviceGroup(rule.Type, rule.Major)
 			if err != nil {
@@ -278,9 +279,9 @@ func generateDeviceProperties(rules []*configs.DeviceRule) ([]systemdDbus.Proper
 		} else {
 			// "_ n:m _" rules are just a path in /dev/{block,char}/.
 			switch rule.Type {
-			case configs.BlockDevice:
+			case devices.BlockDevice:
 				entry.Path = fmt.Sprintf("/dev/block/%d:%d", rule.Major, rule.Minor)
-			case configs.CharDevice:
+			case devices.CharDevice:
 				entry.Path = fmt.Sprintf("/dev/char/%d:%d", rule.Major, rule.Minor)
 			}
 		}

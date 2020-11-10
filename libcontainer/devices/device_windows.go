@@ -1,4 +1,4 @@
-package configs
+package devices
 
 func (d *DeviceRule) Mkdev() (uint64, error) {
 	return 0, nil

@@ -6,11 +6,12 @@ import (
 	"github.com/opencontainers/runc/libcontainer/cgroups/ebpf"
 	"github.com/opencontainers/runc/libcontainer/cgroups/ebpf/devicefilter"
 	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/devices"
 	"github.com/pkg/errors"
 	"golang.org/x/sys/unix"
 )
 
-func isRWM(perms configs.DevicePermissions) bool {
+func isRWM(perms devices.DevicePermissions) bool {
 	var r, w, m bool
 	for _, perm := range perms {
 		switch perm {
