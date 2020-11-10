@@ -21,12 +21,13 @@ jobs:
       script:
         - make all
         - sudo PATH="$PATH" make localintegration RUNC_USE_SYSTEMD=1
-    - name: "fedora32"
+    - name: "fedora33"
       before_install:
         - sudo ./script/install-vagrant.sh
-        - ln -sf Vagrantfile.fedora32 Vagrantfile
+        - ln -sf Vagrantfile.fedora33 Vagrantfile
         - sudo vagrant up && sudo mkdir -p /root/.ssh && sudo sh -c "vagrant ssh-config >> /root/.ssh/config"
       script:
+        - sudo ssh default 'sh -exc "uname -a && systemctl --version && df -T"'
         - sudo ssh default -t 'cd /vagrant && sudo make localunittest'
         # cgroupv2+systemd: test on vagrant host itself as we need systemd
         - sudo ssh default -t 'cd /vagrant && sudo make localintegration RUNC_USE_SYSTEMD=yes'
