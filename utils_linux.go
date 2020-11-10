@@ -57,7 +57,7 @@ func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
 	}
 
 	intelRdtManager := libcontainer.IntelRdtFs
-	if !intelrdt.IsCatEnabled() && !intelrdt.IsMbaEnabled() {
+	if !intelrdt.IsCATEnabled() && !intelrdt.IsMBAEnabled() {
 		intelRdtManager = nil
 	}
 

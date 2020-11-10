@@ -299,11 +299,11 @@ other options are ignored.
 		// Update Intel RDT
 		l3CacheSchema := context.String("l3-cache-schema")
 		memBwSchema := context.String("mem-bw-schema")
-		if l3CacheSchema != "" && !intelrdt.IsCatEnabled() {
+		if l3CacheSchema != "" && !intelrdt.IsCATEnabled() {
 			return errors.New("Intel RDT/CAT: l3 cache schema is not enabled")
 		}
 
-		if memBwSchema != "" && !intelrdt.IsMbaEnabled() {
+		if memBwSchema != "" && !intelrdt.IsMBAEnabled() {
 			return errors.New("Intel RDT/MBA: memory bandwidth schema is not enabled")
 		}
 

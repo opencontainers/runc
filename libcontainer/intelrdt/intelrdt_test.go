@@ -9,7 +9,7 @@ import (
 )
 
 func TestIntelRdtSetL3CacheSchema(t *testing.T) {
-	if !IsCatEnabled() {
+	if !IsCATEnabled() {
 		return
 	}
 
@@ -44,7 +44,7 @@ func TestIntelRdtSetL3CacheSchema(t *testing.T) {
 }
 
 func TestIntelRdtSetMemBwSchema(t *testing.T) {
-	if !IsMbaEnabled() {
+	if !IsMBAEnabled() {
 		return
 	}
 
@@ -79,7 +79,7 @@ func TestIntelRdtSetMemBwSchema(t *testing.T) {
 }
 
 func TestIntelRdtSetMemBwScSchema(t *testing.T) {
-	if !IsMbaScEnabled() {
+	if !IsMBAScEnabled() {
 		return
 	}
 
@@ -191,7 +191,7 @@ func TestFindIntelRdtMountpointDir(t *testing.T) {
 		input           io.Reader
 		isNotFoundError bool
 		isError         bool
-		isMbaScEnabled  bool
+		mbaScEnabled    bool
 		mountpoint      string
 	}{
 		{
@@ -200,10 +200,10 @@ func TestFindIntelRdtMountpointDir(t *testing.T) {
 			mountpoint: "/sys/fs/resctrl",
 		},
 		{
-			name:           "Valid mountinfo with MBA Software Controller enabled",
-			input:          strings.NewReader(mountinfoMbaSc),
-			isMbaScEnabled: true,
-			mountpoint:     "/sys/fs/resctrl",
+			name:         "Valid mountinfo with MBA Software Controller enabled",
+			input:        strings.NewReader(mountinfoMbaSc),
+			mbaScEnabled: true,
+			mountpoint:   "/sys/fs/resctrl",
 		},
 		{
 			name:            "Empty mountinfo",
@@ -239,9 +239,9 @@ func TestFindIntelRdtMountpointDir(t *testing.T) {
 				return
 			}
 			// no errors, check the results
-			if tc.isMbaScEnabled != isMbaScEnabled {
-				t.Errorf("expected isMbaScEnabled=%v, got %v",
-					tc.isMbaScEnabled, isMbaScEnabled)
+			if tc.mbaScEnabled != mbaScEnabled {
+				t.Errorf("expected mbaScEnabled=%v, got %v",
+					tc.mbaScEnabled, mbaScEnabled)
 			}
 			if tc.mountpoint != mp {
 				t.Errorf("expected mountpoint=%q, got %q",

@@ -190,11 +190,11 @@ var (
 	intelRdtRootLock sync.Mutex
 
 	// The flag to indicate if Intel RDT/CAT is enabled
-	isCatEnabled bool
+	catEnabled bool
 	// The flag to indicate if Intel RDT/MBA is enabled
-	isMbaEnabled bool
+	mbaEnabled bool
 	// The flag to indicate if Intel RDT/MBA Software Controller is enabled
-	isMbaScEnabled bool
+	mbaScEnabled bool
 )
 
 type intelRdtData struct {
@@ -223,17 +223,17 @@ func init() {
 	// (e.g., rdt=!l3cat,mba) in 4.14 and newer kernel
 	if flagsSet.CAT {
 		if _, err := os.Stat(filepath.Join(intelRdtRoot, "info", "L3")); err == nil {
-			isCatEnabled = true
+			catEnabled = true
 		}
 	}
-	if isMbaScEnabled {
+	if mbaScEnabled {
 		// We confirm MBA Software Controller is enabled in step 2,
 		// MBA should be enabled because MBA Software Controller
 		// depends on MBA
-		isMbaEnabled = true
+		mbaEnabled = true
 	} else if flagsSet.MBA {
 		if _, err := os.Stat(filepath.Join(intelRdtRoot, "info", "MB")); err == nil {
-			isMbaEnabled = true
+			mbaEnabled = true
 		}
 	}
 
@@ -268,7 +268,7 @@ func findIntelRdtMountpointDir(f io.Reader) (string, error) {
 
 	// Check if MBA Software Controller is enabled through mount option "-o mba_MBps"
 	if strings.Contains(","+mi[0].VFSOptions+",", ",mba_MBps,") {
-		isMbaScEnabled = true
+		mbaScEnabled = true
 	}
 
 	return mi[0].Mountpoint, nil
@@ -516,18 +516,18 @@ func WriteIntelRdtTasks(dir string, pid int) error {
 }
 
 // Check if Intel RDT/CAT is enabled
-func IsCatEnabled() bool {
-	return isCatEnabled
+func IsCATEnabled() bool {
+	return catEnabled
 }
 
 // Check if Intel RDT/MBA is enabled
-func IsMbaEnabled() bool {
-	return isMbaEnabled
+func IsMBAEnabled() bool {
+	return mbaEnabled
 }
 
 // Check if Intel RDT/MBA Software Controller is enabled
-func IsMbaScEnabled() bool {
-	return isMbaScEnabled
+func IsMBAScEnabled() bool {
+	return mbaScEnabled
 }
 
 // Get the 'container_id' path in Intel RDT "resource control" filesystem
@@ -613,7 +613,7 @@ func (m *intelRdtManager) GetStats() (*Stats, error) {
 	}
 	schemaStrings := strings.Split(tmpStrings, "\n")
 
-	if IsCatEnabled() {
+	if IsCATEnabled() {
 		// The read-only L3 cache information
 		l3CacheInfo, err := getL3CacheInfo()
 		if err != nil {
@@ -636,7 +636,7 @@ func (m *intelRdtManager) GetStats() (*Stats, error) {
 		}
 	}
 
-	if IsMbaEnabled() {
+	if IsMBAEnabled() {
 		// The read-only memory bandwidth information
 		memBwInfo, err := getMemBwInfo()
 		if err != nil {

@@ -202,7 +202,7 @@ func TestGetContainerStats(t *testing.T) {
 	if stats.CgroupStats.MemoryStats.Usage.Usage != 1024 {
 		t.Fatalf("expected memory usage 1024 but received %d", stats.CgroupStats.MemoryStats.Usage.Usage)
 	}
-	if intelrdt.IsCatEnabled() {
+	if intelrdt.IsCATEnabled() {
 		if stats.IntelRdtStats == nil {
 			t.Fatal("intel rdt stats are nil")
 		}
@@ -210,7 +210,7 @@ func TestGetContainerStats(t *testing.T) {
 			t.Fatalf("expected L3CacheSchema L3:0=f;1=f0 but received %s", stats.IntelRdtStats.L3CacheSchema)
 		}
 	}
-	if intelrdt.IsMbaEnabled() {
+	if intelrdt.IsMBAEnabled() {
 		if stats.IntelRdtStats == nil {
 			t.Fatal("intel rdt stats are nil")
 		}
@@ -283,7 +283,7 @@ func TestGetContainerState(t *testing.T) {
 	if memPath := paths["memory"]; memPath != expectedMemoryPath {
 		t.Fatalf("expected memory path %q but received %q", expectedMemoryPath, memPath)
 	}
-	if intelrdt.IsCatEnabled() || intelrdt.IsMbaEnabled() {
+	if intelrdt.IsCATEnabled() || intelrdt.IsMBAEnabled() {
 		intelRdtPath := state.IntelRdtPath
 		if intelRdtPath == "" {
 			t.Fatal("intel rdt path should not be empty")
