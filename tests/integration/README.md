@@ -9,7 +9,8 @@ Integration tests on the other hand are meant to test a specific feature end
 to end.
 
 Integration tests are written in *bash* using the
-[bats](https://github.com/sstephenson/bats) framework.
+[bats (Bash Automated Testing System)](https://github.com/bats-core/bats-core)
+framework.
 
 ## Running integration tests
 
@@ -31,13 +32,14 @@ $ make integration TESTPATH="/checkpoint.bats"
 ```
 
 
-To run them on your host, you will need to setup a development environment plus
-[bats](https://github.com/sstephenson/bats#installing-bats-from-source)
+To run them on your host, you need to set up a development environment plus
+[bats (Bash Automated Testing System)](https://github.com/bats-core/bats-core#installing-bats-from-source).
+
 For example:
 ```
 $ cd ~/go/src/github.com
-$ git clone https://github.com/sstephenson/bats.git
-$ cd bats
+$ git clone https://github.com/bats-core/bats-core.git
+$ cd bats-core
 $ ./install.sh /usr/local
 ```
 
