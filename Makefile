@@ -123,8 +123,10 @@ validate:
 	$(GO) vet $(MOD_VENDOR) ./...
 	shellcheck tests/integration/*.bats
 	# TODO: add shellcheck for sh files
-	shfmt -ln bats -d tests/integration/*.bats
-	shfmt -ln bash -d man/*.sh script/*.sh tests/*.sh tests/integration/*.bash
+
+shfmt:
+	shfmt -ln bats -d -w tests/integration/*.bats
+	shfmt -ln bash -d -w man/*.sh script/*.sh tests/*.sh tests/integration/*.bash
 
 ci: validate test release
 
@@ -153,5 +155,5 @@ localcross:
 .PHONY: runc all recvtty static release dbuild lint man runcimage \
 	test localtest unittest localunittest integration localintegration \
 	rootlessintegration localrootlessintegration shell install install-bash \
-	install-man clean validate ci \
+	install-man clean validate ci shfmt \
 	vendor verify-dependencies cross localcross
