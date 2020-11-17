@@ -20,3 +20,27 @@ jobs:
 
           # Only show new issues for a pull request.
           only-new-issues: true
+
+  shfmt:
+    name: shfmt
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: vars
+      run: |
+        echo "VERSION=3.2.0" >> $GITHUB_ENV
+        echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+    - name: cache go mod and $GOCACHE
+      uses: actions/cache@v2
+      with:
+        path: |
+          ~/go/pkg/mod
+          ~/.cache/go-build
+        key: ${{ runner.os }}-shfmt-${{ env.VERSION }}
+        restore-keys: ${{ runner.os }}-shfmt-
+    - name: install shfmt
+      run: |
+        command -v shfmt || \
+          (cd ~ && GO111MODULE=on time go get mvdan.cc/sh/v3/cmd/shfmt@v$VERSION)
+    - name: shfmt
+      run: make shfmt
