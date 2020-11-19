@@ -129,12 +129,6 @@ func finalizeNamespace(config *initConfig) error {
 		return errors.Wrap(err, "close exec fds")
 	}
 
-	if config.Cwd != "" {
-		if err := unix.Chdir(config.Cwd); err != nil {
-			return fmt.Errorf("chdir to cwd (%q) set in config.json failed: %v", config.Cwd, err)
-		}
-	}
-
 	capabilities := &configs.Capabilities{}
 	if config.Capabilities != nil {
 		capabilities = config.Capabilities
@@ -155,6 +149,14 @@ func finalizeNamespace(config *initConfig) error {
 	}
 	if err := setupUser(config); err != nil {
 		return errors.Wrap(err, "setup user")
+	}
+	// Change working directory AFTER the user has been set up.
+	// Otherwise, if the cwd is also a volume that's been chowned to the container user (and not the user running runc),
+	// this command will EPERM.
+	if config.Cwd != "" {
+		if err := unix.Chdir(config.Cwd); err != nil {
+			return fmt.Errorf("chdir to cwd (%q) set in config.json failed: %v", config.Cwd, err)
+		}
 	}
 	if err := system.ClearKeepCaps(); err != nil {
 		return errors.Wrap(err, "clear keep caps")
