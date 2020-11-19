@@ -664,7 +664,7 @@ func (m *Map) Clone() (*Map, error) {
 
 // Pin persists the map past the lifetime of the process that created it.
 //
-// This requires bpffs to be mounted above fileName. See http://cilium.readthedocs.io/en/doc-1.0/kubernetes/install/#mounting-the-bpf-fs-optional
+// This requires bpffs to be mounted above fileName. See https://docs.cilium.io/en/k8s-doc/admin/#admin-mount-bpffs
 func (m *Map) Pin(fileName string) error {
 	return internal.BPFObjPin(fileName, m.fd)
 }
