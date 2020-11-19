@@ -6,12 +6,12 @@ type (
 	// Deprecated: use libcontainer/devices.Device
 	Device = devices.Device
 
-	// Deprecated: use libcontainer/devices.DeviceRule
-	DeviceRule = devices.DeviceRule
+	// Deprecated: use libcontainer/devices.Rule
+	DeviceRule = devices.Rule
 
-	// Deprecated: use libcontainer/devices.DeviceType
-	DeviceType = devices.DeviceType
+	// Deprecated: use libcontainer/devices.Type
+	DeviceType = devices.Type
 
-	// Deprecated: use libcontainer/devices.DevicePermissions
-	DevicePermissions = devices.DevicePermissions
+	// Deprecated: use libcontainer/devices.Permissions
+	DevicePermissions = devices.Permissions
 )

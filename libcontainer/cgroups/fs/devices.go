@@ -43,7 +43,7 @@ func loadEmulator(path string) (*cgroupdevices.Emulator, error) {
 	return cgroupdevices.EmulatorFromList(bytes.NewBufferString(list))
 }
 
-func buildEmulator(rules []*devices.DeviceRule) (*cgroupdevices.Emulator, error) {
+func buildEmulator(rules []*devices.Rule) (*cgroupdevices.Emulator, error) {
 	// This defaults to a white-list -- which is what we want!
 	emu := &cgroupdevices.Emulator{}
 	for _, rule := range rules {

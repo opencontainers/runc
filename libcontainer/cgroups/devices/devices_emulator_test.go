@@ -48,7 +48,7 @@ func TestDeviceEmulatorLoad(t *testing.T) {
 						node:  devices.CharDevice,
 						major: 4,
 						minor: 2,
-					}: devices.DevicePermissions("rw"),
+					}: devices.Permissions("rw"),
 				},
 			},
 		},
@@ -62,7 +62,7 @@ func TestDeviceEmulatorLoad(t *testing.T) {
 						node:  devices.BlockDevice,
 						major: 0,
 						minor: devices.Wildcard,
-					}: devices.DevicePermissions("m"),
+					}: devices.Permissions("m"),
 				},
 			},
 		},
@@ -77,13 +77,13 @@ c 1:1 r`,
 						node:  devices.CharDevice,
 						major: devices.Wildcard,
 						minor: devices.Wildcard,
-					}: devices.DevicePermissions("rwm"),
+					}: devices.Permissions("rwm"),
 					// To match the kernel, we allow redundant rules.
 					{
 						node:  devices.CharDevice,
 						major: 1,
 						minor: 1,
-					}: devices.DevicePermissions("r"),
+					}: devices.Permissions("r"),
 				},
 			},
 		},
@@ -107,57 +107,57 @@ c 10:200 rwm`,
 						node:  devices.CharDevice,
 						major: devices.Wildcard,
 						minor: devices.Wildcard,
-					}: devices.DevicePermissions("m"),
+					}: devices.Permissions("m"),
 					{
 						node:  devices.BlockDevice,
 						major: devices.Wildcard,
 						minor: devices.Wildcard,
-					}: devices.DevicePermissions("m"),
+					}: devices.Permissions("m"),
 					{
 						node:  devices.CharDevice,
 						major: 1,
 						minor: 3,
-					}: devices.DevicePermissions("rwm"),
+					}: devices.Permissions("rwm"),
 					{
 						node:  devices.CharDevice,
 						major: 1,
 						minor: 5,
-					}: devices.DevicePermissions("rwm"),
+					}: devices.Permissions("rwm"),
 					{
 						node:  devices.CharDevice,
 						major: 1,
 						minor: 7,
-					}: devices.DevicePermissions("rwm"),
+					}: devices.Permissions("rwm"),
 					{
 						node:  devices.CharDevice,
 						major: 1,
 						minor: 8,
-					}: devices.DevicePermissions("rwm"),
+					}: devices.Permissions("rwm"),
 					{
 						node:  devices.CharDevice,
 						major: 1,
 						minor: 9,
-					}: devices.DevicePermissions("rwm"),
+					}: devices.Permissions("rwm"),
 					{
 						node:  devices.CharDevice,
 						major: 5,
 						minor: 0,
-					}: devices.DevicePermissions("rwm"),
+					}: devices.Permissions("rwm"),
 					{
 						node:  devices.CharDevice,
 						major: 5,
 						minor: 2,
-					}: devices.DevicePermissions("rwm"),
+					}: devices.Permissions("rwm"),
 					{
 						node:  devices.CharDevice,
 						major: 136,
 						minor: devices.Wildcard,
-					}: devices.DevicePermissions("rwm"),
+					}: devices.Permissions("rwm"),
 					{
 						node:  devices.CharDevice,
 						major: 10,
 						minor: 200,
-					}: devices.DevicePermissions("rwm"),
+					}: devices.Permissions("rwm"),
 				},
 			},
 		},
@@ -220,17 +220,17 @@ c 10:200 rwm`,
 func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 	tests := []struct {
 		name           string
-		rule           devices.DeviceRule
+		rule           devices.Rule
 		base, expected *Emulator
 	}{
 		// Switch between default modes.
 		{
 			name: "SwitchToOtherMode",
-			rule: devices.DeviceRule{
+			rule: devices.Rule{
 				Type:        devices.WildcardDevice,
 				Major:       devices.Wildcard,
 				Minor:       devices.Wildcard,
-				Permissions: devices.DevicePermissions("rwm"),
+				Permissions: devices.Permissions("rwm"),
 				Allow:       !baseDefaultAllow,
 			},
 			base: &Emulator{
@@ -240,12 +240,12 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 						node:  devices.CharDevice,
 						major: devices.Wildcard,
 						minor: devices.Wildcard,
-					}: devices.DevicePermissions("rwm"),
+					}: devices.Permissions("rwm"),
 					{
 						node:  devices.CharDevice,
 						major: 1,
 						minor: 1,
-					}: devices.DevicePermissions("r"),
+					}: devices.Permissions("r"),
 				},
 			},
 			expected: &Emulator{
@@ -255,11 +255,11 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 		},
 		{
 			name: "SwitchToSameModeNoop",
-			rule: devices.DeviceRule{
+			rule: devices.Rule{
 				Type:        devices.WildcardDevice,
 				Major:       devices.Wildcard,
 				Minor:       devices.Wildcard,
-				Permissions: devices.DevicePermissions("rwm"),
+				Permissions: devices.Permissions("rwm"),
 				Allow:       baseDefaultAllow,
 			},
 			base: &Emulator{
@@ -273,11 +273,11 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 		},
 		{
 			name: "SwitchToSameMode",
-			rule: devices.DeviceRule{
+			rule: devices.Rule{
 				Type:        devices.WildcardDevice,
 				Major:       devices.Wildcard,
 				Minor:       devices.Wildcard,
-				Permissions: devices.DevicePermissions("rwm"),
+				Permissions: devices.Permissions("rwm"),
 				Allow:       baseDefaultAllow,
 			},
 			base: &Emulator{
@@ -287,12 +287,12 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 						node:  devices.CharDevice,
 						major: devices.Wildcard,
 						minor: devices.Wildcard,
-					}: devices.DevicePermissions("rwm"),
+					}: devices.Permissions("rwm"),
 					{
 						node:  devices.CharDevice,
 						major: 1,
 						minor: 1,
-					}: devices.DevicePermissions("r"),
+					}: devices.Permissions("r"),
 				},
 			},
 			expected: &Emulator{
@@ -303,11 +303,11 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 		// Rule addition logic.
 		{
 			name: "RuleAdditionBasic",
-			rule: devices.DeviceRule{
+			rule: devices.Rule{
 				Type:        devices.CharDevice,
 				Major:       42,
 				Minor:       1337,
-				Permissions: devices.DevicePermissions("rm"),
+				Permissions: devices.Permissions("rm"),
 				Allow:       !baseDefaultAllow,
 			},
 			base: &Emulator{
@@ -317,12 +317,12 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 						node:  devices.CharDevice,
 						major: 2,
 						minor: 1,
-					}: devices.DevicePermissions("rwm"),
+					}: devices.Permissions("rwm"),
 					{
 						node:  devices.BlockDevice,
 						major: 1,
 						minor: 5,
-					}: devices.DevicePermissions("r"),
+					}: devices.Permissions("r"),
 				},
 			},
 			expected: &Emulator{
@@ -332,27 +332,27 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 						node:  devices.CharDevice,
 						major: 2,
 						minor: 1,
-					}: devices.DevicePermissions("rwm"),
+					}: devices.Permissions("rwm"),
 					{
 						node:  devices.BlockDevice,
 						major: 1,
 						minor: 5,
-					}: devices.DevicePermissions("r"),
+					}: devices.Permissions("r"),
 					{
 						node:  devices.CharDevice,
 						major: 42,
 						minor: 1337,
-					}: devices.DevicePermissions("rm"),
+					}: devices.Permissions("rm"),
 				},
 			},
 		},
 		{
 			name: "RuleAdditionBasicDuplicate",
-			rule: devices.DeviceRule{
+			rule: devices.Rule{
 				Type:        devices.CharDevice,
 				Major:       42,
 				Minor:       1337,
-				Permissions: devices.DevicePermissions("rm"),
+				Permissions: devices.Permissions("rm"),
 				Allow:       !baseDefaultAllow,
 			},
 			base: &Emulator{
@@ -362,7 +362,7 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 						node:  devices.CharDevice,
 						major: 42,
 						minor: devices.Wildcard,
-					}: devices.DevicePermissions("rwm"),
+					}: devices.Permissions("rwm"),
 				},
 			},
 			expected: &Emulator{
@@ -372,23 +372,23 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 						node:  devices.CharDevice,
 						major: 42,
 						minor: devices.Wildcard,
-					}: devices.DevicePermissions("rwm"),
+					}: devices.Permissions("rwm"),
 					// To match the kernel, we allow redundant rules.
 					{
 						node:  devices.CharDevice,
 						major: 42,
 						minor: 1337,
-					}: devices.DevicePermissions("rm"),
+					}: devices.Permissions("rm"),
 				},
 			},
 		},
 		{
 			name: "RuleAdditionBasicDuplicateNoop",
-			rule: devices.DeviceRule{
+			rule: devices.Rule{
 				Type:        devices.CharDevice,
 				Major:       42,
 				Minor:       1337,
-				Permissions: devices.DevicePermissions("rm"),
+				Permissions: devices.Permissions("rm"),
 				Allow:       !baseDefaultAllow,
 			},
 			base: &Emulator{
@@ -398,7 +398,7 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 						node:  devices.CharDevice,
 						major: 42,
 						minor: 1337,
-					}: devices.DevicePermissions("rm"),
+					}: devices.Permissions("rm"),
 				},
 			},
 			expected: &Emulator{
@@ -408,17 +408,17 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 						node:  devices.CharDevice,
 						major: 42,
 						minor: 1337,
-					}: devices.DevicePermissions("rm"),
+					}: devices.Permissions("rm"),
 				},
 			},
 		},
 		{
 			name: "RuleAdditionMerge",
-			rule: devices.DeviceRule{
+			rule: devices.Rule{
 				Type:        devices.BlockDevice,
 				Major:       5,
 				Minor:       12,
-				Permissions: devices.DevicePermissions("rm"),
+				Permissions: devices.Permissions("rm"),
 				Allow:       !baseDefaultAllow,
 			},
 			base: &Emulator{
@@ -428,12 +428,12 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 						node:  devices.CharDevice,
 						major: 2,
 						minor: 1,
-					}: devices.DevicePermissions("rwm"),
+					}: devices.Permissions("rwm"),
 					{
 						node:  devices.BlockDevice,
 						major: 5,
 						minor: 12,
-					}: devices.DevicePermissions("rw"),
+					}: devices.Permissions("rw"),
 				},
 			},
 			expected: &Emulator{
@@ -443,22 +443,22 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 						node:  devices.CharDevice,
 						major: 2,
 						minor: 1,
-					}: devices.DevicePermissions("rwm"),
+					}: devices.Permissions("rwm"),
 					{
 						node:  devices.BlockDevice,
 						major: 5,
 						minor: 12,
-					}: devices.DevicePermissions("rwm"),
+					}: devices.Permissions("rwm"),
 				},
 			},
 		},
 		{
 			name: "RuleAdditionMergeWildcard",
-			rule: devices.DeviceRule{
+			rule: devices.Rule{
 				Type:        devices.BlockDevice,
 				Major:       5,
 				Minor:       devices.Wildcard,
-				Permissions: devices.DevicePermissions("rm"),
+				Permissions: devices.Permissions("rm"),
 				Allow:       !baseDefaultAllow,
 			},
 			base: &Emulator{
@@ -468,12 +468,12 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 						node:  devices.CharDevice,
 						major: 2,
 						minor: 1,
-					}: devices.DevicePermissions("rwm"),
+					}: devices.Permissions("rwm"),
 					{
 						node:  devices.BlockDevice,
 						major: 5,
 						minor: devices.Wildcard,
-					}: devices.DevicePermissions("rw"),
+					}: devices.Permissions("rw"),
 				},
 			},
 			expected: &Emulator{
@@ -483,22 +483,22 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 						node:  devices.CharDevice,
 						major: 2,
 						minor: 1,
-					}: devices.DevicePermissions("rwm"),
+					}: devices.Permissions("rwm"),
 					{
 						node:  devices.BlockDevice,
 						major: 5,
 						minor: devices.Wildcard,
-					}: devices.DevicePermissions("rwm"),
+					}: devices.Permissions("rwm"),
 				},
 			},
 		},
 		{
 			name: "RuleAdditionMergeNoop",
-			rule: devices.DeviceRule{
+			rule: devices.Rule{
 				Type:        devices.BlockDevice,
 				Major:       5,
 				Minor:       12,
-				Permissions: devices.DevicePermissions("r"),
+				Permissions: devices.Permissions("r"),
 				Allow:       !baseDefaultAllow,
 			},
 			base: &Emulator{
@@ -508,12 +508,12 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 						node:  devices.CharDevice,
 						major: 2,
 						minor: 1,
-					}: devices.DevicePermissions("rwm"),
+					}: devices.Permissions("rwm"),
 					{
 						node:  devices.BlockDevice,
 						major: 5,
 						minor: 12,
-					}: devices.DevicePermissions("rw"),
+					}: devices.Permissions("rw"),
 				},
 			},
 			expected: &Emulator{
@@ -523,23 +523,23 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 						node:  devices.CharDevice,
 						major: 2,
 						minor: 1,
-					}: devices.DevicePermissions("rwm"),
+					}: devices.Permissions("rwm"),
 					{
 						node:  devices.BlockDevice,
 						major: 5,
 						minor: 12,
-					}: devices.DevicePermissions("rw"),
+					}: devices.Permissions("rw"),
 				},
 			},
 		},
 		// Rule removal logic.
 		{
 			name: "RuleRemovalBasic",
-			rule: devices.DeviceRule{
+			rule: devices.Rule{
 				Type:        devices.CharDevice,
 				Major:       42,
 				Minor:       1337,
-				Permissions: devices.DevicePermissions("rm"),
+				Permissions: devices.Permissions("rm"),
 				Allow:       baseDefaultAllow,
 			},
 			base: &Emulator{
@@ -549,12 +549,12 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 						node:  devices.CharDevice,
 						major: 42,
 						minor: 1337,
-					}: devices.DevicePermissions("rm"),
+					}: devices.Permissions("rm"),
 					{
 						node:  devices.BlockDevice,
 						major: 1,
 						minor: 5,
-					}: devices.DevicePermissions("r"),
+					}: devices.Permissions("r"),
 				},
 			},
 			expected: &Emulator{
@@ -564,17 +564,17 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 						node:  devices.BlockDevice,
 						major: 1,
 						minor: 5,
-					}: devices.DevicePermissions("r"),
+					}: devices.Permissions("r"),
 				},
 			},
 		},
 		{
 			name: "RuleRemovalNonexistent",
-			rule: devices.DeviceRule{
+			rule: devices.Rule{
 				Type:        devices.CharDevice,
 				Major:       4,
 				Minor:       1,
-				Permissions: devices.DevicePermissions("rw"),
+				Permissions: devices.Permissions("rw"),
 				Allow:       baseDefaultAllow,
 			},
 			base: &Emulator{
@@ -584,7 +584,7 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 						node:  devices.BlockDevice,
 						major: 1,
 						minor: 5,
-					}: devices.DevicePermissions("r"),
+					}: devices.Permissions("r"),
 				},
 			},
 			expected: &Emulator{
@@ -594,17 +594,17 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 						node:  devices.BlockDevice,
 						major: 1,
 						minor: 5,
-					}: devices.DevicePermissions("r"),
+					}: devices.Permissions("r"),
 				},
 			},
 		},
 		{
 			name: "RuleRemovalFull",
-			rule: devices.DeviceRule{
+			rule: devices.Rule{
 				Type:        devices.CharDevice,
 				Major:       42,
 				Minor:       1337,
-				Permissions: devices.DevicePermissions("rw"),
+				Permissions: devices.Permissions("rw"),
 				Allow:       baseDefaultAllow,
 			},
 			base: &Emulator{
@@ -614,12 +614,12 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 						node:  devices.CharDevice,
 						major: 42,
 						minor: 1337,
-					}: devices.DevicePermissions("w"),
+					}: devices.Permissions("w"),
 					{
 						node:  devices.BlockDevice,
 						major: 1,
 						minor: 5,
-					}: devices.DevicePermissions("r"),
+					}: devices.Permissions("r"),
 				},
 			},
 			expected: &Emulator{
@@ -629,17 +629,17 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 						node:  devices.BlockDevice,
 						major: 1,
 						minor: 5,
-					}: devices.DevicePermissions("r"),
+					}: devices.Permissions("r"),
 				},
 			},
 		},
 		{
 			name: "RuleRemovalPartial",
-			rule: devices.DeviceRule{
+			rule: devices.Rule{
 				Type:        devices.CharDevice,
 				Major:       42,
 				Minor:       1337,
-				Permissions: devices.DevicePermissions("r"),
+				Permissions: devices.Permissions("r"),
 				Allow:       baseDefaultAllow,
 			},
 			base: &Emulator{
@@ -649,12 +649,12 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 						node:  devices.CharDevice,
 						major: 42,
 						minor: 1337,
-					}: devices.DevicePermissions("rm"),
+					}: devices.Permissions("rm"),
 					{
 						node:  devices.BlockDevice,
 						major: 1,
 						minor: 5,
-					}: devices.DevicePermissions("r"),
+					}: devices.Permissions("r"),
 				},
 			},
 			expected: &Emulator{
@@ -664,12 +664,12 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 						node:  devices.CharDevice,
 						major: 42,
 						minor: 1337,
-					}: devices.DevicePermissions("m"),
+					}: devices.Permissions("m"),
 					{
 						node:  devices.BlockDevice,
 						major: 1,
 						minor: 5,
-					}: devices.DevicePermissions("r"),
+					}: devices.Permissions("r"),
 				},
 			},
 		},
@@ -677,11 +677,11 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 		// out" holes in a wildcard rule.
 		{
 			name: "RuleRemovalWildcardPunchoutImpossible",
-			rule: devices.DeviceRule{
+			rule: devices.Rule{
 				Type:        devices.CharDevice,
 				Major:       42,
 				Minor:       1337,
-				Permissions: devices.DevicePermissions("r"),
+				Permissions: devices.Permissions("r"),
 				Allow:       baseDefaultAllow,
 			},
 			base: &Emulator{
@@ -691,23 +691,23 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 						node:  devices.CharDevice,
 						major: 42,
 						minor: devices.Wildcard,
-					}: devices.DevicePermissions("rm"),
+					}: devices.Permissions("rm"),
 					{
 						node:  devices.CharDevice,
 						major: 42,
 						minor: 1337,
-					}: devices.DevicePermissions("r"),
+					}: devices.Permissions("r"),
 				},
 			},
 			expected: nil,
 		},
 		{
 			name: "RuleRemovalWildcardPunchoutPossible",
-			rule: devices.DeviceRule{
+			rule: devices.Rule{
 				Type:        devices.CharDevice,
 				Major:       42,
 				Minor:       1337,
-				Permissions: devices.DevicePermissions("r"),
+				Permissions: devices.Permissions("r"),
 				Allow:       baseDefaultAllow,
 			},
 			base: &Emulator{
@@ -717,12 +717,12 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 						node:  devices.CharDevice,
 						major: 42,
 						minor: devices.Wildcard,
-					}: devices.DevicePermissions("wm"),
+					}: devices.Permissions("wm"),
 					{
 						node:  devices.CharDevice,
 						major: 42,
 						minor: 1337,
-					}: devices.DevicePermissions("r"),
+					}: devices.Permissions("r"),
 				},
 			},
 			expected: &Emulator{
@@ -732,7 +732,7 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 						node:  devices.CharDevice,
 						major: 42,
 						minor: devices.Wildcard,
-					}: devices.DevicePermissions("wm"),
+					}: devices.Permissions("wm"),
 				},
 			},
 		},
@@ -767,7 +767,7 @@ func testDeviceEmulatorTransition(t *testing.T, sourceDefaultAllow bool) {
 	tests := []struct {
 		name           string
 		source, target *Emulator
-		expected       []*devices.DeviceRule
+		expected       []*devices.Rule
 	}{
 		// No-op changes.
 		{
@@ -779,7 +779,7 @@ func testDeviceEmulatorTransition(t *testing.T, sourceDefaultAllow bool) {
 						node:  devices.CharDevice,
 						major: 42,
 						minor: devices.Wildcard,
-					}: devices.DevicePermissions("wm"),
+					}: devices.Permissions("wm"),
 				},
 			},
 			target: &Emulator{
@@ -789,7 +789,7 @@ func testDeviceEmulatorTransition(t *testing.T, sourceDefaultAllow bool) {
 						node:  devices.CharDevice,
 						major: 42,
 						minor: devices.Wildcard,
-					}: devices.DevicePermissions("wm"),
+					}: devices.Permissions("wm"),
 				},
 			},
 			// Identical white-lists produce no extra rules.
@@ -805,7 +805,7 @@ func testDeviceEmulatorTransition(t *testing.T, sourceDefaultAllow bool) {
 						node:  devices.CharDevice,
 						major: 1,
 						minor: 2,
-					}: devices.DevicePermissions("rwm"),
+					}: devices.Permissions("rwm"),
 				},
 			},
 			target: &Emulator{
@@ -815,16 +815,16 @@ func testDeviceEmulatorTransition(t *testing.T, sourceDefaultAllow bool) {
 						node:  devices.BlockDevice,
 						major: 42,
 						minor: devices.Wildcard,
-					}: devices.DevicePermissions("wm"),
+					}: devices.Permissions("wm"),
 				},
 			},
-			expected: []*devices.DeviceRule{
+			expected: []*devices.Rule{
 				// Clear-all rule.
 				{
 					Type:        devices.WildcardDevice,
 					Major:       devices.Wildcard,
 					Minor:       devices.Wildcard,
-					Permissions: devices.DevicePermissions("rwm"),
+					Permissions: devices.Permissions("rwm"),
 					Allow:       !sourceDefaultAllow,
 				},
 				// The actual rule-set.
@@ -832,7 +832,7 @@ func testDeviceEmulatorTransition(t *testing.T, sourceDefaultAllow bool) {
 					Type:        devices.BlockDevice,
 					Major:       42,
 					Minor:       devices.Wildcard,
-					Permissions: devices.DevicePermissions("wm"),
+					Permissions: devices.Permissions("wm"),
 					Allow:       sourceDefaultAllow,
 				},
 			},
@@ -847,7 +847,7 @@ func testDeviceEmulatorTransition(t *testing.T, sourceDefaultAllow bool) {
 						node:  devices.CharDevice,
 						major: 1,
 						minor: 2,
-					}: devices.DevicePermissions("rwm"),
+					}: devices.Permissions("rwm"),
 				},
 			},
 			target: &Emulator{
@@ -857,20 +857,20 @@ func testDeviceEmulatorTransition(t *testing.T, sourceDefaultAllow bool) {
 						node:  devices.CharDevice,
 						major: 1,
 						minor: 2,
-					}: devices.DevicePermissions("rwm"),
+					}: devices.Permissions("rwm"),
 					{
 						node:  devices.BlockDevice,
 						major: 42,
 						minor: 1337,
-					}: devices.DevicePermissions("rwm"),
+					}: devices.Permissions("rwm"),
 				},
 			},
-			expected: []*devices.DeviceRule{
+			expected: []*devices.Rule{
 				{
 					Type:        devices.BlockDevice,
 					Major:       42,
 					Minor:       1337,
-					Permissions: devices.DevicePermissions("rwm"),
+					Permissions: devices.Permissions("rwm"),
 					Allow:       !sourceDefaultAllow,
 				},
 			},
@@ -884,12 +884,12 @@ func testDeviceEmulatorTransition(t *testing.T, sourceDefaultAllow bool) {
 						node:  devices.CharDevice,
 						major: 1,
 						minor: 2,
-					}: devices.DevicePermissions("rwm"),
+					}: devices.Permissions("rwm"),
 					{
 						node:  devices.BlockDevice,
 						major: 42,
 						minor: 1337,
-					}: devices.DevicePermissions("rwm"),
+					}: devices.Permissions("rwm"),
 				},
 			},
 			target: &Emulator{
@@ -899,15 +899,15 @@ func testDeviceEmulatorTransition(t *testing.T, sourceDefaultAllow bool) {
 						node:  devices.CharDevice,
 						major: 1,
 						minor: 2,
-					}: devices.DevicePermissions("rwm"),
+					}: devices.Permissions("rwm"),
 				},
 			},
-			expected: []*devices.DeviceRule{
+			expected: []*devices.Rule{
 				{
 					Type:        devices.BlockDevice,
 					Major:       42,
 					Minor:       1337,
-					Permissions: devices.DevicePermissions("rwm"),
+					Permissions: devices.Permissions("rwm"),
 					Allow:       sourceDefaultAllow,
 				},
 			},
@@ -921,12 +921,12 @@ func testDeviceEmulatorTransition(t *testing.T, sourceDefaultAllow bool) {
 						node:  devices.CharDevice,
 						major: 1,
 						minor: 2,
-					}: devices.DevicePermissions("rwm"),
+					}: devices.Permissions("rwm"),
 					{
 						node:  devices.BlockDevice,
 						major: 3,
 						minor: 9,
-					}: devices.DevicePermissions("rw"),
+					}: devices.Permissions("rw"),
 				},
 			},
 			target: &Emulator{
@@ -936,15 +936,15 @@ func testDeviceEmulatorTransition(t *testing.T, sourceDefaultAllow bool) {
 						node:  devices.CharDevice,
 						major: 1,
 						minor: 2,
-					}: devices.DevicePermissions("rwm"),
+					}: devices.Permissions("rwm"),
 				},
 			},
-			expected: []*devices.DeviceRule{
+			expected: []*devices.Rule{
 				{
 					Type:        devices.BlockDevice,
 					Major:       3,
 					Minor:       9,
-					Permissions: devices.DevicePermissions("rw"),
+					Permissions: devices.Permissions("rw"),
 					Allow:       sourceDefaultAllow,
 				},
 			},
@@ -959,7 +959,7 @@ func testDeviceEmulatorTransition(t *testing.T, sourceDefaultAllow bool) {
 						node:  devices.CharDevice,
 						major: 1,
 						minor: 2,
-					}: devices.DevicePermissions("r"),
+					}: devices.Permissions("r"),
 				},
 			},
 			target: &Emulator{
@@ -969,15 +969,15 @@ func testDeviceEmulatorTransition(t *testing.T, sourceDefaultAllow bool) {
 						node:  devices.CharDevice,
 						major: 1,
 						minor: 2,
-					}: devices.DevicePermissions("rwm"),
+					}: devices.Permissions("rwm"),
 				},
 			},
-			expected: []*devices.DeviceRule{
+			expected: []*devices.Rule{
 				{
 					Type:        devices.CharDevice,
 					Major:       1,
 					Minor:       2,
-					Permissions: devices.DevicePermissions("wm"),
+					Permissions: devices.Permissions("wm"),
 					Allow:       !sourceDefaultAllow,
 				},
 			},
@@ -991,7 +991,7 @@ func testDeviceEmulatorTransition(t *testing.T, sourceDefaultAllow bool) {
 						node:  devices.CharDevice,
 						major: 1,
 						minor: 2,
-					}: devices.DevicePermissions("rw"),
+					}: devices.Permissions("rw"),
 				},
 			},
 			target: &Emulator{
@@ -1001,15 +1001,15 @@ func testDeviceEmulatorTransition(t *testing.T, sourceDefaultAllow bool) {
 						node:  devices.CharDevice,
 						major: 1,
 						minor: 2,
-					}: devices.DevicePermissions("w"),
+					}: devices.Permissions("w"),
 				},
 			},
-			expected: []*devices.DeviceRule{
+			expected: []*devices.Rule{
 				{
 					Type:        devices.CharDevice,
 					Major:       1,
 					Minor:       2,
-					Permissions: devices.DevicePermissions("r"),
+					Permissions: devices.Permissions("r"),
 					Allow:       sourceDefaultAllow,
 				},
 			},
@@ -1023,7 +1023,7 @@ func testDeviceEmulatorTransition(t *testing.T, sourceDefaultAllow bool) {
 						node:  devices.CharDevice,
 						major: 1,
 						minor: 2,
-					}: devices.DevicePermissions("rw"),
+					}: devices.Permissions("rw"),
 				},
 			},
 			target: &Emulator{
@@ -1033,22 +1033,22 @@ func testDeviceEmulatorTransition(t *testing.T, sourceDefaultAllow bool) {
 						node:  devices.CharDevice,
 						major: 1,
 						minor: 2,
-					}: devices.DevicePermissions("rm"),
+					}: devices.Permissions("rm"),
 				},
 			},
-			expected: []*devices.DeviceRule{
+			expected: []*devices.Rule{
 				{
 					Type:        devices.CharDevice,
 					Major:       1,
 					Minor:       2,
-					Permissions: devices.DevicePermissions("w"),
+					Permissions: devices.Permissions("w"),
 					Allow:       sourceDefaultAllow,
 				},
 				{
 					Type:        devices.CharDevice,
 					Major:       1,
 					Minor:       2,
-					Permissions: devices.DevicePermissions("m"),
+					Permissions: devices.Permissions("m"),
 					Allow:       !sourceDefaultAllow,
 				},
 			},
@@ -1063,15 +1063,15 @@ func testDeviceEmulatorTransition(t *testing.T, sourceDefaultAllow bool) {
 			// white-list mode in mind), and then make a full copy of the
 			// target rules.
 			if sourceDefaultAllow && test.source.defaultAllow == test.target.defaultAllow {
-				test.expected = []*devices.DeviceRule{{
+				test.expected = []*devices.Rule{{
 					Type:        devices.WildcardDevice,
 					Major:       devices.Wildcard,
 					Minor:       devices.Wildcard,
-					Permissions: devices.DevicePermissions("rwm"),
+					Permissions: devices.Permissions("rwm"),
 					Allow:       test.target.defaultAllow,
 				}}
 				for _, rule := range test.target.rules.orderedEntries() {
-					test.expected = append(test.expected, &devices.DeviceRule{
+					test.expected = append(test.expected, &devices.Rule{
 						Type:        rule.meta.node,
 						Major:       rule.meta.major,
 						Minor:       rule.meta.minor,

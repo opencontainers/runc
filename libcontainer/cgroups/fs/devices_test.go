@@ -19,12 +19,12 @@ func TestDevicesSetAllow(t *testing.T) {
 		"devices.list":  "a *:* rwm",
 	})
 
-	helper.CgroupData.config.Resources.Devices = []*devices.DeviceRule{
+	helper.CgroupData.config.Resources.Devices = []*devices.Rule{
 		{
 			Type:        devices.CharDevice,
 			Major:       1,
 			Minor:       5,
-			Permissions: devices.DevicePermissions("rwm"),
+			Permissions: devices.Permissions("rwm"),
 			Allow:       true,
 		},
 	}

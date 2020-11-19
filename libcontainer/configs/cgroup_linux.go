@@ -43,7 +43,7 @@ type Cgroup struct {
 
 type Resources struct {
 	// Devices is the set of access rules for devices in the container.
-	Devices []*devices.DeviceRule `json:"devices"`
+	Devices []*devices.Rule `json:"devices"`
 
 	// Memory limit (in bytes)
 	Memory int64 `json:"memory"`

@@ -89,7 +89,7 @@ func ExpandSlice(slice string) (string, error) {
 	return path, nil
 }
 
-func groupPrefix(ruleType devices.DeviceType) (string, error) {
+func groupPrefix(ruleType devices.Type) (string, error) {
 	switch ruleType {
 	case devices.BlockDevice:
 		return "block-", nil
@@ -104,7 +104,7 @@ func groupPrefix(ruleType devices.DeviceType) (string, error) {
 // /proc/devices) with the type prefixed as required for DeviceAllow, for a
 // given (type, major) combination. If more than one device group exists, an
 // arbitrary one is chosen.
-func findDeviceGroup(ruleType devices.DeviceType, ruleMajor int64) (string, error) {
+func findDeviceGroup(ruleType devices.Type, ruleMajor int64) (string, error) {
 	fh, err := os.Open("/proc/devices")
 	if err != nil {
 		return "", err
@@ -117,7 +117,7 @@ func findDeviceGroup(ruleType devices.DeviceType, ruleMajor int64) (string, erro
 	}
 
 	scanner := bufio.NewScanner(fh)
-	var currentType devices.DeviceType
+	var currentType devices.Type
 	for scanner.Scan() {
 		// We need to strip spaces because the first number is column-aligned.
 		line := strings.TrimSpace(scanner.Text())
@@ -164,7 +164,7 @@ func findDeviceGroup(ruleType devices.DeviceType, ruleMajor int64) (string, erro
 
 // generateDeviceProperties takes the configured device rules and generates a
 // corresponding set of systemd properties to configure the devices correctly.
-func generateDeviceProperties(rules []*devices.DeviceRule) ([]systemdDbus.Property, error) {
+func generateDeviceProperties(rules []*devices.Rule) ([]systemdDbus.Property, error) {
 	// DeviceAllow is the type "a(ss)" which means we need a temporary struct
 	// to represent it in Go.
 	type deviceAllowEntry struct {

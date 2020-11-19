@@ -11,7 +11,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func isRWM(perms devices.DevicePermissions) bool {
+func isRWM(perms devices.Permissions) bool {
 	var r, w, m bool
 	for _, perm := range perms {
 		switch perm {

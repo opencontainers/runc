@@ -727,7 +727,7 @@ func TestCreateDevices(t *testing.T) {
 				FileMode: 0666,
 				Uid:      1000,
 				Gid:      1000,
-				DeviceRule: devices.DeviceRule{
+				Rule: devices.Rule{
 					Type:  devices.CharDevice,
 					Major: 5,
 					Minor: 0,

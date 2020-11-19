@@ -30,7 +30,7 @@ func DeviceFromPath(path, permissions string) (*Device, error) {
 	}
 
 	var (
-		devType   DeviceType
+		devType   Type
 		mode      = stat.Mode
 		devNumber = uint64(stat.Rdev)
 		major     = unix.Major(devNumber)
@@ -47,11 +47,11 @@ func DeviceFromPath(path, permissions string) (*Device, error) {
 		return nil, ErrNotADevice
 	}
 	return &Device{
-		DeviceRule: DeviceRule{
+		Rule: Rule{
 			Type:        devType,
 			Major:       int64(major),
 			Minor:       int64(minor),
-			Permissions: DevicePermissions(permissions),
+			Permissions: Permissions(permissions),
 		},
 		Path:     path,
 		FileMode: os.FileMode(mode),

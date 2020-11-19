@@ -65,7 +65,7 @@ var mountPropagationMapping = map[string]int{
 var AllowedDevices = []*devices.Device{
 	// allow mknod for any device
 	{
-		DeviceRule: devices.DeviceRule{
+		Rule: devices.Rule{
 			Type:        devices.CharDevice,
 			Major:       devices.Wildcard,
 			Minor:       devices.Wildcard,
@@ -74,7 +74,7 @@ var AllowedDevices = []*devices.Device{
 		},
 	},
 	{
-		DeviceRule: devices.DeviceRule{
+		Rule: devices.Rule{
 			Type:        devices.BlockDevice,
 			Major:       devices.Wildcard,
 			Minor:       devices.Wildcard,
@@ -87,7 +87,7 @@ var AllowedDevices = []*devices.Device{
 		FileMode: 0666,
 		Uid:      0,
 		Gid:      0,
-		DeviceRule: devices.DeviceRule{
+		Rule: devices.Rule{
 			Type:        devices.CharDevice,
 			Major:       1,
 			Minor:       3,
@@ -100,7 +100,7 @@ var AllowedDevices = []*devices.Device{
 		FileMode: 0666,
 		Uid:      0,
 		Gid:      0,
-		DeviceRule: devices.DeviceRule{
+		Rule: devices.Rule{
 			Type:        devices.CharDevice,
 			Major:       1,
 			Minor:       8,
@@ -113,7 +113,7 @@ var AllowedDevices = []*devices.Device{
 		FileMode: 0666,
 		Uid:      0,
 		Gid:      0,
-		DeviceRule: devices.DeviceRule{
+		Rule: devices.Rule{
 			Type:        devices.CharDevice,
 			Major:       1,
 			Minor:       7,
@@ -126,7 +126,7 @@ var AllowedDevices = []*devices.Device{
 		FileMode: 0666,
 		Uid:      0,
 		Gid:      0,
-		DeviceRule: devices.DeviceRule{
+		Rule: devices.Rule{
 			Type:        devices.CharDevice,
 			Major:       5,
 			Minor:       0,
@@ -139,7 +139,7 @@ var AllowedDevices = []*devices.Device{
 		FileMode: 0666,
 		Uid:      0,
 		Gid:      0,
-		DeviceRule: devices.DeviceRule{
+		Rule: devices.Rule{
 			Type:        devices.CharDevice,
 			Major:       1,
 			Minor:       5,
@@ -152,7 +152,7 @@ var AllowedDevices = []*devices.Device{
 		FileMode: 0666,
 		Uid:      0,
 		Gid:      0,
-		DeviceRule: devices.DeviceRule{
+		Rule: devices.Rule{
 			Type:        devices.CharDevice,
 			Major:       1,
 			Minor:       9,
@@ -162,7 +162,7 @@ var AllowedDevices = []*devices.Device{
 	},
 	// /dev/pts/ - pts namespaces are "coming soon"
 	{
-		DeviceRule: devices.DeviceRule{
+		Rule: devices.Rule{
 			Type:        devices.CharDevice,
 			Major:       136,
 			Minor:       devices.Wildcard,
@@ -171,7 +171,7 @@ var AllowedDevices = []*devices.Device{
 		},
 	},
 	{
-		DeviceRule: devices.DeviceRule{
+		Rule: devices.Rule{
 			Type:        devices.CharDevice,
 			Major:       5,
 			Minor:       2,
@@ -181,7 +181,7 @@ var AllowedDevices = []*devices.Device{
 	},
 	// tuntap
 	{
-		DeviceRule: devices.DeviceRule{
+		Rule: devices.Rule{
 			Type:        devices.CharDevice,
 			Major:       10,
 			Minor:       200,
@@ -492,11 +492,11 @@ func CreateCgroupConfig(opts *CreateOpts, defaultDevs []*devices.Device) (*confi
 				if err != nil {
 					return nil, err
 				}
-				c.Resources.Devices = append(c.Resources.Devices, &devices.DeviceRule{
+				c.Resources.Devices = append(c.Resources.Devices, &devices.Rule{
 					Type:        dt,
 					Major:       major,
 					Minor:       minor,
-					Permissions: devices.DevicePermissions(d.Access),
+					Permissions: devices.Permissions(d.Access),
 					Allow:       d.Allow,
 				})
 			}
@@ -630,12 +630,12 @@ func CreateCgroupConfig(opts *CreateOpts, defaultDevs []*devices.Device) (*confi
 
 	// Append the default allowed devices to the end of the list.
 	for _, device := range defaultDevs {
-		c.Resources.Devices = append(c.Resources.Devices, &device.DeviceRule)
+		c.Resources.Devices = append(c.Resources.Devices, &device.Rule)
 	}
 	return c, nil
 }
 
-func stringToCgroupDeviceRune(s string) (devices.DeviceType, error) {
+func stringToCgroupDeviceRune(s string) (devices.Type, error) {
 	switch s {
 	case "a":
 		return devices.WildcardDevice, nil
@@ -648,7 +648,7 @@ func stringToCgroupDeviceRune(s string) (devices.DeviceType, error) {
 	}
 }
 
-func stringToDeviceRune(s string) (devices.DeviceType, error) {
+func stringToDeviceRune(s string) (devices.Type, error) {
 	switch s {
 	case "p":
 		return devices.FifoDevice, nil
@@ -701,7 +701,7 @@ next:
 				filemode = *d.FileMode
 			}
 			device := &devices.Device{
-				DeviceRule: devices.DeviceRule{
+				Rule: devices.Rule{
 					Type:  dt,
 					Major: d.Major,
 					Minor: d.Minor,
