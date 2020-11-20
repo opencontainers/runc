@@ -45,6 +45,30 @@ jobs:
     - name: shfmt
       run: make shfmt
 
+  shellcheck:
+    name: shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: vars
+        run: |
+          echo 'VERSION=v0.7.1' >> $GITHUB_ENV
+          echo 'BASEURL=https://github.com/koalaman/shellcheck/releases/download' >> $GITHUB_ENV
+          echo 'SHA256SUM=1e8499d6f90481bfa2af7a4dce86dd9bcba5c0fbd88bf4793b34ec679c8bb98a' >> $GITHUB_ENV
+          echo ~/bin >> $GITHUB_PATH
+      - name: install shellcheck
+        run: |
+          mkdir ~/bin
+          curl -sSfL $BASEURL/$VERSION/shellcheck-$VERSION.linux.x86_64.tar.xz |
+            tar xfJ - -C ~/bin --strip 1 shellcheck-$VERSION/shellcheck
+          sha256sum ~/bin/shellcheck | grep -q $SHA256SUM
+          # make sure to remove the old version
+          sudo rm -f /usr/bin/shellcheck
+      - uses: lumaxis/shellcheck-problem-matchers@v1
+      - name: shellcheck
+        run: |
+          make shellcheck
+
   deps:
     name: deps
     runs-on: ubuntu-latest
