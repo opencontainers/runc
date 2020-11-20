@@ -68,8 +68,8 @@ RUN mkdir -p /usr/src/criu \
     && rm -rf /usr/src/criu
 
 # install skopeo
-RUN echo 'deb http://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/Debian_Unstable/ /' > /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list \
-    && wget -nv https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/Debian_Unstable/Release.key -O- | sudo apt-key add - \
+RUN echo 'deb http://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/Debian_10/ /' > /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list \
+    && wget -nv https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/Debian_10/Release.key -O- | sudo apt-key add - \
     && apt-get update \
     && apt-get install -y --no-install-recommends skopeo \
     && rm -rf /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list \
