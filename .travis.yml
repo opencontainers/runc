@@ -11,10 +11,6 @@ cache:
 jobs:
   include:
     - go: 1.15.x
-      name: "verify-dependencies"
-      script:
-        - make verify-dependencies
-    - go: 1.15.x
       name: "cgroup-systemd"
       env:
         - RUNC_USE_SYSTEMD=1

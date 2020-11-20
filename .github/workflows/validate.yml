@@ -44,3 +44,19 @@ jobs:
           (cd ~ && GO111MODULE=on time go get mvdan.cc/sh/v3/cmd/shfmt@v$VERSION)
     - name: shfmt
       run: make shfmt
+
+  deps:
+    name: deps
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: cache go mod and $GOCACHE
+      uses: actions/cache@v2
+      with:
+        path: |
+          ~/go/pkg/mod
+          ~/.cache/go-build
+        key: ${{ runner.os }}-go.sum-${{ hashFiles('**/go.sum') }}
+        restore-keys: ${{ runner.os }}-go.sum-
+    - name: verify deps
+      run: make verify-dependencies
