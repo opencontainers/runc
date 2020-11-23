@@ -50,6 +50,18 @@ function enable_idmap() {
 	# Reactivate new{uid,gid}map helpers if applicable.
 	[ -e /usr/bin/unused-newuidmap ] && mv /usr/bin/{unused-,}newuidmap
 	[ -e /usr/bin/unused-newgidmap ] && mv /usr/bin/{unused-,}newgidmap
+
+	# Create a directory owned by $AUX_UID inside container, to be used
+	# by cwd-priv.bats test. This setup can't be done by the test itself,
+	# as it needs root for chown.
+	set -e
+	export AUX_UID=1024
+	AUX_DIR="$(mktemp -d)"
+	# 1000 is linux.uidMappings.containerID value,
+	# as set by runc_rootless_idmap
+	chown "$((ROOTLESS_UIDMAP_START - 1000 + AUX_UID))" "$AUX_DIR"
+	export AUX_DIR
+	set +e
 }
 
 function disable_idmap() {
