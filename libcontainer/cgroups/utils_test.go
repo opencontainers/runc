@@ -181,8 +181,11 @@ const cgroup2Mountinfo = `18 64 0:18 / /sys rw,nosuid,nodev,noexec,relatime shar
 
 func TestGetCgroupMounts(t *testing.T) {
 	type testData struct {
-		mountInfo  string
-		root       string
+		mountInfo string
+		root      string
+		// all is the total number of records expected with all=true,
+		// or 0 for no extra records expected (most cases).
+		all        int
 		subsystems map[string]bool
 	}
 	testTable := []testData{
@@ -223,6 +226,7 @@ func TestGetCgroupMounts(t *testing.T) {
 		{
 			mountInfo: bedrockMountinfo,
 			root:      "/",
+			all:       50,
 			subsystems: map[string]bool{
 				"name=systemd": false,
 				"cpuset":       false,
@@ -274,6 +278,29 @@ func TestGetCgroupMounts(t *testing.T) {
 				t.Fatalf("subsystem %s not found in Subsystems field %v", ss, m.Subsystems)
 			}
 		}
+		// Test the all=true case.
+
+		// Reset the test input.
+		mi = bytes.NewBufferString(td.mountInfo)
+		for k := range td.subsystems {
+			td.subsystems[k] = false
+		}
+		cgMountsAll, err := getCgroupMountsHelper(td.subsystems, mi, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if td.all == 0 {
+			// Results with and without "all" should be the same.
+			if len(cgMounts) != len(cgMountsAll) || !reflect.DeepEqual(cgMounts, cgMountsAll) {
+				t.Errorf("expected same results, got (all=false) %v, (all=true) %v", cgMounts, cgMountsAll)
+			}
+		} else {
+			// Make sure we got all records.
+			if len(cgMountsAll) != td.all {
+				t.Errorf("expected %d records, got %d (%+v)", td.all, len(cgMountsAll), cgMountsAll)
+			}
+		}
+
 	}
 }
 
