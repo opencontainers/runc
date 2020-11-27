@@ -53,7 +53,7 @@ func (s *CpusetGroup) ApplyDir(dir string, cgroup *configs.Cgroup, pid int) erro
 	if err := cpusetEnsureParent(filepath.Dir(dir)); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.Mkdir(dir, 0755); err != nil && !os.IsExist(err) {
 		return err
 	}
 	// We didn't inherit cpuset configs from parent, but we have
@@ -103,7 +103,7 @@ func cpusetEnsureParent(current string) error {
 	if err := cpusetEnsureParent(parent); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(current, 0755); err != nil {
+	if err := os.Mkdir(current, 0755); err != nil && !os.IsExist(err) {
 		return err
 	}
 	return cpusetCopyIfNeeded(current, parent)
