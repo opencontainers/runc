@@ -1,17 +1,21 @@
 ARG GO_VERSION=1.15
 ARG BATS_VERSION=v1.2.0
-ARG CRIU_VERSION=v3.15
 
 FROM golang:${GO_VERSION}-buster
 ARG DEBIAN_FRONTEND=noninteractive
 
-RUN dpkg --add-architecture armel \
+RUN echo 'deb https://download.opensuse.org/repositories/devel:/tools:/criu/Debian_10/ /' > /etc/apt/sources.list.d/criu.list \
+    && wget -nv https://download.opensuse.org/repositories/devel:/tools:/criu/Debian_10/Release.key -O- | apt-key add - \
+    && echo 'deb http://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/Debian_10/ /' > /etc/apt/sources.list.d/skopeo.list \
+    && wget -nv https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/Debian_10/Release.key -O- | apt-key add - \
+    && dpkg --add-architecture armel \
     && dpkg --add-architecture armhf \
     && dpkg --add-architecture arm64 \
     && dpkg --add-architecture ppc64el \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
         build-essential \
+        criu \
         crossbuild-essential-arm64 \
         crossbuild-essential-armel \
         crossbuild-essential-armhf \
@@ -21,12 +25,6 @@ RUN dpkg --add-architecture armel \
         iptables \
         jq \
         kmod \
-        libaio-dev \
-        libcap-dev \
-        libnet-dev \
-        libnl-3-dev \
-        libprotobuf-c-dev \
-        libprotobuf-dev \
         libseccomp-dev \
         libseccomp-dev:arm64 \
         libseccomp-dev:armel \
@@ -34,13 +32,12 @@ RUN dpkg --add-architecture armel \
         libseccomp-dev:ppc64el \
         libseccomp2 \
         pkg-config \
-        protobuf-c-compiler \
-        protobuf-compiler \
         python-minimal \
+        skopeo \
         sudo \
         uidmap \
     && apt-get clean \
-    && rm -rf /var/cache/apt /var/lib/apt/lists/*;
+    && rm -rf /var/cache/apt /var/lib/apt/lists/* /etc/apt/sources.list.d/*.list
 
 # Add a dummy user for the rootless integration tests. While runC does
 # not require an entry in /etc/passwd to operate, one of the tests uses
@@ -56,25 +53,6 @@ RUN cd /tmp \
     && git reset --hard "${BATS_VERSION}" \
     && ./install.sh /usr/local \
     && rm -rf /tmp/bats-core
-
-# install criu
-ARG CRIU_VERSION
-RUN mkdir -p /usr/src/criu \
-    && curl -fsSL https://github.com/checkpoint-restore/criu/archive/${CRIU_VERSION}.tar.gz | tar -C /usr/src/criu/ -xz --strip-components=1 \
-    && cd /usr/src/criu \
-    && echo 1 > .gitid \
-    && make -j $(nproc) install-criu \
-    && cd - \
-    && rm -rf /usr/src/criu
-
-# install skopeo
-RUN echo 'deb http://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/Debian_10/ /' > /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list \
-    && wget -nv https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/Debian_10/Release.key -O- | sudo apt-key add - \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends skopeo \
-    && rm -rf /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list \
-    && apt-get clean \
-    && rm -rf /var/cache/apt /var/lib/apt/lists/*;
 
 # install umoci
 RUN curl -o /usr/local/bin/umoci -fsSL https://github.com/opencontainers/umoci/releases/download/v0.4.5/umoci.amd64 \
