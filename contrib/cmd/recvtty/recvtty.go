@@ -111,16 +111,19 @@ func handleSingle(path string, noStdin bool) error {
 	}
 
 	// Copy from our stdio to the master fd.
-	var wg sync.WaitGroup
+	var (
+		wg            sync.WaitGroup
+		inErr, outErr error
+	)
 	wg.Add(1)
 	go func() {
-		io.Copy(os.Stdout, c)
+		_, outErr = io.Copy(os.Stdout, c)
 		wg.Done()
 	}()
 	if !noStdin {
 		wg.Add(1)
 		go func() {
-			io.Copy(c, os.Stdin)
+			_, inErr = io.Copy(c, os.Stdin)
 			wg.Done()
 		}()
 	}
@@ -128,7 +131,12 @@ func handleSingle(path string, noStdin bool) error {
 	// Only close the master fd once we've stopped copying.
 	wg.Wait()
 	c.Close()
-	return nil
+
+	if outErr != nil {
+		return outErr
+	}
+
+	return inErr
 }
 
 func handleNull(path string) error {
@@ -168,7 +176,7 @@ func handleNull(path string) error {
 				return
 			}
 
-			io.Copy(ioutil.Discard, master)
+			_, _ = io.Copy(ioutil.Discard, master)
 		}(conn)
 	}
 }
