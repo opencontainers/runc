@@ -179,8 +179,8 @@ EOF
 	# check the pid was generated
 	[ -e pid.txt ]
 
-	#wait user process to finish
-	timeout 1 tail --pid="$(head -n 1 pid.txt)" -f /dev/null
+	# wait for the process to finish
+	timeout 5 tail --pid="$(head -n 1 pid.txt)" -f /dev/null
 
 	tty_info=$(
 		cat <<EOF
