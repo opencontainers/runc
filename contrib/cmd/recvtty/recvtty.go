@@ -165,15 +165,7 @@ func handleNull(path string) error {
 				return
 			}
 
-			// Just do a dumb copy to /dev/null.
-			devnull, err := os.OpenFile("/dev/null", os.O_RDWR, 0)
-			if err != nil {
-				// TODO: Handle this nicely.
-				return
-			}
-
-			io.Copy(devnull, master)
-			devnull.Close()
+			io.Copy(ioutil.Discard, master)
 		}(conn)
 	}
 }
