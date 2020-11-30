@@ -23,6 +23,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/containerd/console"
 	"github.com/opencontainers/runc/libcontainer/utils"
@@ -110,20 +111,22 @@ func handleSingle(path string, noStdin bool) error {
 	}
 
 	// Copy from our stdio to the master fd.
-	quitChan := make(chan struct{})
+	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
 		io.Copy(os.Stdout, c)
-		quitChan <- struct{}{}
+		wg.Done()
 	}()
 	if !noStdin {
+		wg.Add(1)
 		go func() {
 			io.Copy(c, os.Stdin)
-			quitChan <- struct{}{}
+			wg.Done()
 		}()
 	}
 
 	// Only close the master fd once we've stopped copying.
-	<-quitChan
+	wg.Wait()
 	c.Close()
 	return nil
 }
