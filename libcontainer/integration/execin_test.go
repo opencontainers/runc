@@ -188,7 +188,7 @@ func TestExecInAdditionalGroups(t *testing.T) {
 	stdinW.Close()
 	waitProcess(process, t)
 
-	outputGroups := string(stdout.Bytes())
+	outputGroups := stdout.String()
 
 	// Check that the groups output has the groups that we specified
 	if !strings.Contains(outputGroups, "audio") {
@@ -471,7 +471,7 @@ func TestExecinPassExtraFiles(t *testing.T) {
 	stdinW.Close()
 	waitProcess(process, t)
 
-	out := string(stdout.Bytes())
+	out := stdout.String()
 	// fd 5 is the directory handle for /proc/$$/fd
 	if out != "0 1 2 3 4 5" {
 		t.Fatalf("expected to have the file descriptors '0 1 2 3 4 5' passed to exec, got '%s'", out)
