@@ -680,8 +680,7 @@ var criuFeatures *criurpc.CriuFeatures
 
 func (c *linuxContainer) checkCriuFeatures(criuOpts *CriuOpts, rpcOpts *criurpc.CriuOpts, criuFeat *criurpc.CriuFeatures) error {
 
-	var t criurpc.CriuReqType
-	t = criurpc.CriuReqType_FEATURE_CHECK
+	t := criurpc.CriuReqType_FEATURE_CHECK
 
 	// make sure the features we are looking for are really not from
 	// some previous check
