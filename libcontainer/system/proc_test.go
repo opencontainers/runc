@@ -47,6 +47,51 @@ func TestParseStat(t *testing.T) {
 	}
 }
 
+func TestParseStatBadInput(t *testing.T) {
+	cases := []struct {
+		desc, input string
+	}{
+		{
+			"no (",
+			"123 ) S 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0",
+		},
+		{
+			"no )",
+			"123 ( S 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0",
+		},
+		{
+			"negative pid",
+			"-1 (cmd) S 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0",
+		},
+		{
+			"empty line",
+			"",
+		},
+		{
+			"short line",
+			"123 (cmd) S 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0",
+		},
+		{
+			"short line (no space after stime)",
+			"123 (cmd) S 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 42",
+		},
+		{
+			"bad stime",
+			"123 (cmd) S 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1 ",
+		},
+		{
+			"bad stime 2", // would be valid if not -1
+			"123 (cmd) S                   -1 ",
+		},
+	}
+	for _, c := range cases {
+		_, err := parseStat(c.input)
+		if err == nil {
+			t.Errorf("case %q, expected error, got nil", c.desc)
+		}
+	}
+}
+
 func BenchmarkParseStat(b *testing.B) {
 	var (
 		st, exp Stat_t
