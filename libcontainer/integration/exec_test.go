@@ -444,10 +444,7 @@ func TestProcessCaps(t *testing.T) {
 		t.Fatal("Could not parse effective caps", err)
 	}
 
-	var netAdminMask uint64
-	var netAdminBit uint
-	netAdminBit = 12 // from capability.h
-	netAdminMask = 1 << netAdminBit
+	const netAdminMask = 1 << unix.CAP_NET_ADMIN
 	if effectiveCaps&netAdminMask != netAdminMask {
 		t.Fatal("CAP_NET_ADMIN is not set as expected")
 	}
