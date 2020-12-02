@@ -18,12 +18,12 @@ import (
 	"github.com/mrunalp/fileutils"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/devices"
 	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runc/libcontainer/utils"
 	libcontainerUtils "github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/opencontainers/selinux/go-selinux/label"
-
 	"golang.org/x/sys/unix"
 )
 
@@ -614,7 +614,7 @@ func createDevices(config *configs.Config) error {
 	return nil
 }
 
-func bindMountDeviceNode(dest string, node *configs.Device) error {
+func bindMountDeviceNode(dest string, node *devices.Device) error {
 	f, err := os.Create(dest)
 	if err != nil && !os.IsExist(err) {
 		return err
@@ -626,7 +626,7 @@ func bindMountDeviceNode(dest string, node *configs.Device) error {
 }
 
 // Creates the device node in the rootfs of the container.
-func createDeviceNode(rootfs string, node *configs.Device, bind bool) error {
+func createDeviceNode(rootfs string, node *devices.Device, bind bool) error {
 	if node.Path == "" {
 		// The node only exists for cgroup reasons, ignore it here.
 		return nil
@@ -649,14 +649,14 @@ func createDeviceNode(rootfs string, node *configs.Device, bind bool) error {
 	return nil
 }
 
-func mknodDevice(dest string, node *configs.Device) error {
+func mknodDevice(dest string, node *devices.Device) error {
 	fileMode := node.FileMode
 	switch node.Type {
-	case configs.BlockDevice:
+	case devices.BlockDevice:
 		fileMode |= unix.S_IFBLK
-	case configs.CharDevice:
+	case devices.CharDevice:
 		fileMode |= unix.S_IFCHR
-	case configs.FifoDevice:
+	case devices.FifoDevice:
 		fileMode |= unix.S_IFIFO
 	default:
 		return fmt.Errorf("%c is not a valid device type for device %s", node.Type, node.Path)

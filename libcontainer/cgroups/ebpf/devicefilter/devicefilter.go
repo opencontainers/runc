@@ -11,7 +11,7 @@ import (
 	"strconv"
 
 	"github.com/cilium/ebpf/asm"
-	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/devices"
 	"github.com/pkg/errors"
 	"golang.org/x/sys/unix"
 )
@@ -22,7 +22,7 @@ const (
 )
 
 // DeviceFilter returns eBPF device filter program and its license string
-func DeviceFilter(devices []*configs.DeviceRule) (asm.Instructions, string, error) {
+func DeviceFilter(devices []*devices.Rule) (asm.Instructions, string, error) {
 	p := &program{}
 	p.init()
 	for i := len(devices) - 1; i >= 0; i-- {
@@ -68,7 +68,7 @@ func (p *program) init() {
 }
 
 // appendDevice needs to be called from the last element of OCI linux.resources.devices to the head element.
-func (p *program) appendDevice(dev *configs.DeviceRule) error {
+func (p *program) appendDevice(dev *devices.Rule) error {
 	if p.blockID < 0 {
 		return errors.New("the program is finalized")
 	}
@@ -88,7 +88,7 @@ func (p *program) appendDevice(dev *configs.DeviceRule) error {
 		hasType = false
 	default:
 		// if not specified in OCI json, typ is set to DeviceTypeAll
-		return errors.Errorf("invalid DeviceType %q", string(dev.Type))
+		return errors.Errorf("invalid Type %q", string(dev.Type))
 	}
 	if dev.Major > math.MaxUint32 {
 		return errors.Errorf("invalid major %d", dev.Major)

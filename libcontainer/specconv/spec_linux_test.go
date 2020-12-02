@@ -7,12 +7,12 @@ import (
 	"strings"
 	"testing"
 
-	"golang.org/x/sys/unix"
-
 	dbus "github.com/godbus/dbus/v5"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/configs/validate"
+	"github.com/opencontainers/runc/libcontainer/devices"
 	"github.com/opencontainers/runtime-spec/specs-go"
+	"golang.org/x/sys/unix"
 )
 
 func TestCreateCommandHookTimeout(t *testing.T) {
@@ -722,13 +722,13 @@ func TestCreateDevices(t *testing.T) {
 	// Verify that createDevices() deduplicated the /dev/tty entry in the config
 	for _, configDev := range conf.Devices {
 		if configDev.Path == "/dev/tty" {
-			wantDev := &configs.Device{
+			wantDev := &devices.Device{
 				Path:     "/dev/tty",
 				FileMode: 0666,
 				Uid:      1000,
 				Gid:      1000,
-				DeviceRule: configs.DeviceRule{
-					Type:  configs.CharDevice,
+				Rule: devices.Rule{
+					Type:  devices.CharDevice,
 					Major: 5,
 					Minor: 0,
 				},

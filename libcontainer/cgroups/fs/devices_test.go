@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
-	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/devices"
 )
 
 func TestDevicesSetAllow(t *testing.T) {
@@ -19,18 +19,18 @@ func TestDevicesSetAllow(t *testing.T) {
 		"devices.list":  "a *:* rwm",
 	})
 
-	helper.CgroupData.config.Resources.Devices = []*configs.DeviceRule{
+	helper.CgroupData.config.Resources.Devices = []*devices.Rule{
 		{
-			Type:        configs.CharDevice,
+			Type:        devices.CharDevice,
 			Major:       1,
 			Minor:       5,
-			Permissions: configs.DevicePermissions("rwm"),
+			Permissions: devices.Permissions("rwm"),
 			Allow:       true,
 		},
 	}
 
-	devices := &DevicesGroup{testingSkipFinalCheck: true}
-	if err := devices.Set(helper.CgroupPath, helper.CgroupData.config); err != nil {
+	d := &DevicesGroup{testingSkipFinalCheck: true}
+	if err := d.Set(helper.CgroupPath, helper.CgroupData.config); err != nil {
 		t.Fatal(err)
 	}
 
