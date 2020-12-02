@@ -6,14 +6,14 @@ on:
     branches:
       - master
   pull_request:
+
 jobs:
-  golangci:
-    name: lint
-    runs-on: ubuntu-latest
+
+  lint:
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v2
+      - uses: golangci/golangci-lint-action@v2
         with:
           # must be specified without patch version
           version: v1.31
@@ -22,8 +22,7 @@ jobs:
           only-new-issues: true
 
   shfmt:
-    name: shfmt
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v2
     - name: vars
@@ -46,8 +45,7 @@ jobs:
       run: make shfmt
 
   shellcheck:
-    name: shellcheck
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - name: vars
@@ -70,8 +68,7 @@ jobs:
           make shellcheck
 
   deps:
-    name: deps
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v2
     - name: cache go mod and $GOCACHE
