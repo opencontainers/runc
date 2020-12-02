@@ -1,5 +1,6 @@
 ARG GO_VERSION=1.15
 ARG BATS_VERSION=v1.2.0
+ARG UMOCI_VERSION=v0.4.6
 
 FROM golang:${GO_VERSION}-buster
 ARG DEBIAN_FRONTEND=noninteractive
@@ -55,7 +56,8 @@ RUN cd /tmp \
     && rm -rf /tmp/bats-core
 
 # install umoci
-RUN curl -o /usr/local/bin/umoci -fsSL https://github.com/opencontainers/umoci/releases/download/v0.4.5/umoci.amd64 \
+ARG UMOCI_VERSION
+RUN curl -o /usr/local/bin/umoci -fsSL https://github.com/opencontainers/umoci/releases/download/${UMOCI_VERSION}/umoci.amd64 \
     && chmod +x /usr/local/bin/umoci
 
 COPY script/tmpmount /

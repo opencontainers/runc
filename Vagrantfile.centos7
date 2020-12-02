@@ -17,6 +17,7 @@ Vagrant.configure("2") do |config|
     # configuration
     GO_VERSION="1.15"
     BATS_VERSION="v1.2.0"
+    UMOCI_VERSION="v0.4.6"
 
     # install yum packages
     yum install -y -q epel-release
@@ -28,7 +29,7 @@ Vagrant.configure("2") do |config|
     curl -fsSL "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz" | tar Cxz /usr/local
 
     # Install umoci
-    curl -o /usr/local/bin/umoci -fsSL https://github.com/opencontainers/umoci/releases/download/v0.4.5/umoci.amd64
+    curl -o /usr/local/bin/umoci -fsSL https://github.com/opencontainers/umoci/releases/download/${UMOCI_VERSION}/umoci.amd64
     chmod +x /usr/local/bin/umoci
 
     # install bats
