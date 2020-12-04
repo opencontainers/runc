@@ -366,7 +366,7 @@ func TestProcessEmptyCaps(t *testing.T) {
 	// Wait for process
 	waitProcess(&pconfig, t)
 
-	outputStatus := string(stdout.Bytes())
+	outputStatus := stdout.String()
 
 	lines := strings.Split(outputStatus, "\n")
 
@@ -419,7 +419,7 @@ func TestProcessCaps(t *testing.T) {
 	// Wait for process
 	waitProcess(&pconfig, t)
 
-	outputStatus := string(stdout.Bytes())
+	outputStatus := stdout.String()
 
 	lines := strings.Split(outputStatus, "\n")
 
@@ -444,10 +444,7 @@ func TestProcessCaps(t *testing.T) {
 		t.Fatal("Could not parse effective caps", err)
 	}
 
-	var netAdminMask uint64
-	var netAdminBit uint
-	netAdminBit = 12 // from capability.h
-	netAdminMask = 1 << netAdminBit
+	const netAdminMask = 1 << unix.CAP_NET_ADMIN
 	if effectiveCaps&netAdminMask != netAdminMask {
 		t.Fatal("CAP_NET_ADMIN is not set as expected")
 	}
@@ -483,7 +480,7 @@ func TestAdditionalGroups(t *testing.T) {
 	// Wait for process
 	waitProcess(&pconfig, t)
 
-	outputGroups := string(stdout.Bytes())
+	outputGroups := stdout.String()
 
 	// Check that the groups output has the groups that we specified
 	if !strings.Contains(outputGroups, "audio") {
@@ -1082,7 +1079,7 @@ func TestSysctl(t *testing.T) {
 	// Wait for process
 	waitProcess(&pconfig, t)
 
-	shmmniOutput := string(bytes.TrimSpace(stdout.Bytes()))
+	shmmniOutput := strings.TrimSpace(stdout.String())
 	if shmmniOutput != "8192" {
 		t.Fatalf("kernel.shmmni property expected to be 8192, but is %s", shmmniOutput)
 	}
@@ -1210,7 +1207,7 @@ func TestOomScoreAdj(t *testing.T) {
 
 	// Wait for process
 	waitProcess(&pconfig, t)
-	outputOomScoreAdj := string(bytes.TrimSpace(stdout.Bytes()))
+	outputOomScoreAdj := strings.TrimSpace(stdout.String())
 
 	// Check that the oom_score_adj matches the value that was set as part of config.
 	if outputOomScoreAdj != strconv.Itoa(*config.OomScoreAdj) {

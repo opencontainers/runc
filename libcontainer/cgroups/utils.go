@@ -278,7 +278,7 @@ func RemovePaths(paths map[string]string) (err error) {
 			}
 		}
 		if len(paths) == 0 {
-			//nolint:ineffassign // done to help garbage collecting: opencontainers/runc#2506
+			//nolint:ineffassign,staticcheck // done to help garbage collecting: opencontainers/runc#2506
 			paths = make(map[string]string)
 			return nil
 		}

@@ -680,8 +680,7 @@ var criuFeatures *criurpc.CriuFeatures
 
 func (c *linuxContainer) checkCriuFeatures(criuOpts *CriuOpts, rpcOpts *criurpc.CriuOpts, criuFeat *criurpc.CriuFeatures) error {
 
-	var t criurpc.CriuReqType
-	t = criurpc.CriuReqType_FEATURE_CHECK
+	t := criurpc.CriuReqType_FEATURE_CHECK
 
 	// make sure the features we are looking for are really not from
 	// some previous check
@@ -764,11 +763,7 @@ func (c *linuxContainer) checkCriuVersion(minVersion int) error {
 const descriptorsFilename = "descriptors.json"
 
 func (c *linuxContainer) addCriuDumpMount(req *criurpc.CriuReq, m *configs.Mount) {
-	mountDest := m.Destination
-	if strings.HasPrefix(mountDest, c.config.Rootfs) {
-		mountDest = mountDest[len(c.config.Rootfs):]
-	}
-
+	mountDest := strings.TrimPrefix(m.Destination, c.config.Rootfs)
 	extMnt := &criurpc.ExtMountMap{
 		Key: proto.String(mountDest),
 		Val: proto.String(mountDest),
@@ -1146,11 +1141,7 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 }
 
 func (c *linuxContainer) addCriuRestoreMount(req *criurpc.CriuReq, m *configs.Mount) {
-	mountDest := m.Destination
-	if strings.HasPrefix(mountDest, c.config.Rootfs) {
-		mountDest = mountDest[len(c.config.Rootfs):]
-	}
-
+	mountDest := strings.TrimPrefix(m.Destination, c.config.Rootfs)
 	extMnt := &criurpc.ExtMountMap{
 		Key: proto.String(mountDest),
 		Val: proto.String(m.Source),
@@ -1808,10 +1799,6 @@ func (c *linuxContainer) saveState(s *State) (retErr error) {
 
 	stateFilePath := filepath.Join(c.root, stateFilename)
 	return os.Rename(tmpFile.Name(), stateFilePath)
-}
-
-func (c *linuxContainer) deleteState() error {
-	return os.Remove(filepath.Join(c.root, stateFilename))
 }
 
 func (c *linuxContainer) currentStatus() (Status, error) {
