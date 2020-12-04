@@ -37,7 +37,8 @@ EOF
     chown -R rootless.rootless /home/rootless
 
     # Install umoci
-    curl -o /usr/local/bin/umoci -fsSL https://github.com/opencontainers/umoci/releases/download/v0.4.5/umoci.amd64
+    UMOCI_VERSION=v0.4.6
+    curl -o /usr/local/bin/umoci -fsSL https://github.com/opencontainers/umoci/releases/download/${UMOCI_VERSION}/umoci.amd64
     chmod +x /usr/local/bin/umoci
 
     # Add busybox for libcontainer/integration tests
