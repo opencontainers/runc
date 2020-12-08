@@ -173,7 +173,7 @@ func getCgroupMountsHelper(ss map[string]bool, mi io.Reader, all bool) ([]Mount,
 	res := make([]Mount, 0, len(ss))
 	scanner := bufio.NewScanner(mi)
 	numFound := 0
-	for scanner.Scan() && numFound < len(ss) {
+	for scanner.Scan() && (all || numFound < len(ss)) {
 		txt := scanner.Text()
 		sepIdx := strings.Index(txt, " - ")
 		if sepIdx == -1 {
