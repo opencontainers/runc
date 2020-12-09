@@ -39,3 +39,20 @@ function teardown() {
 	runc run test_busybox
 	[ "$status" -eq 0 ]
 }
+
+@test "runc exec --user with no access to cwd" {
+	update_config '   .mounts += [{
+				source: "'"$AUX_DIR"'",
+				destination: "'"$AUX_DIR"'",
+				options: ["bind"]
+			    }]
+			| .process.user.uid = '"$AUX_UID"'
+			| .process.cwd = "'"$AUX_DIR"'"
+			| .process.args |= ["sleep", "1h"]'
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	[ "$status" -eq 0 ]
+
+	runc exec --user 0 test_busybox true
+	[ "$status" -eq 0 ]
+}
