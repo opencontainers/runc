@@ -10,6 +10,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	selinux "github.com/opencontainers/selinux/go-selinux"
+	"golang.org/x/sys/unix"
 )
 
 type Validator interface {
@@ -204,42 +205,28 @@ func (v *ConfigValidator) intelrdt(config *configs.Config) error {
 	return nil
 }
 
-func isSymbolicLink(path string) (bool, error) {
-	fi, err := os.Lstat(path)
-	if err != nil {
-		return false, err
+func isHostNetNS(path string) (bool, error) {
+	const currentProcessNetns = "/proc/self/ns/net"
+
+	var st1, st2 unix.Stat_t
+
+	if err := unix.Stat(currentProcessNetns, &st1); err != nil {
+		return false, fmt.Errorf("unable to stat %q: %s", currentProcessNetns, err)
+	}
+	if err := unix.Stat(path, &st2); err != nil {
+		return false, fmt.Errorf("unable to stat %q: %s", path, err)
 	}
 
-	return fi.Mode()&os.ModeSymlink == os.ModeSymlink, nil
+	return (st1.Dev == st2.Dev) && (st1.Ino == st2.Ino), nil
 }
 
 // checkHostNs checks whether network sysctl is used in host namespace.
 func checkHostNs(sysctlConfig string, path string) error {
-	var currentProcessNetns = "/proc/self/ns/net"
-	// readlink on the current processes network namespace
-	destOfCurrentProcess, err := os.Readlink(currentProcessNetns)
+	host, err := isHostNetNS(path)
 	if err != nil {
-		return fmt.Errorf("read soft link %q error", currentProcessNetns)
+		return err
 	}
-
-	// First check if the provided path is a symbolic link
-	symLink, err := isSymbolicLink(path)
-	if err != nil {
-		return fmt.Errorf("could not check that %q is a symlink: %v", path, err)
-	}
-
-	if !symLink {
-		// The provided namespace is not a symbolic link,
-		// it is not the host namespace.
-		return nil
-	}
-
-	// readlink on the path provided in the struct
-	destOfContainer, err := os.Readlink(path)
-	if err != nil {
-		return fmt.Errorf("read soft link %q error", path)
-	}
-	if destOfContainer == destOfCurrentProcess {
+	if host {
 		return fmt.Errorf("sysctl %q is not allowed in the hosts network namespace", sysctlConfig)
 	}
 	return nil
