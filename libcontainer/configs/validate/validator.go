@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
@@ -145,6 +146,12 @@ func (v *ConfigValidator) sysctl(config *configs.Config) error {
 		"kernel.shm_rmid_forced": true,
 	}
 
+	var (
+		netOnce    sync.Once
+		hostnet    bool
+		hostnetErr error
+	)
+
 	for s := range config.Sysctl {
 		if validSysctlMap[s] || strings.HasPrefix(s, "fs.mqueue.") {
 			if config.Namespaces.Contains(configs.NEWIPC) {
@@ -154,16 +161,27 @@ func (v *ConfigValidator) sysctl(config *configs.Config) error {
 			}
 		}
 		if strings.HasPrefix(s, "net.") {
-			if config.Namespaces.Contains(configs.NEWNET) {
-				if path := config.Namespaces.PathOf(configs.NEWNET); path != "" {
-					if err := checkHostNs(s, path); err != nil {
-						return err
-					}
+			// Is container using host netns?
+			// Here "host" means "current", not "initial".
+			netOnce.Do(func() {
+				if !config.Namespaces.Contains(configs.NEWNET) {
+					hostnet = true
+					return
 				}
-				continue
-			} else {
-				return fmt.Errorf("sysctl %q is not allowed in the hosts network namespace", s)
+				path := config.Namespaces.PathOf(configs.NEWNET)
+				if path == "" {
+					// own netns, so hostnet = false
+					return
+				}
+				hostnet, hostnetErr = isHostNetNS(path)
+			})
+			if hostnetErr != nil {
+				return hostnetErr
 			}
+			if hostnet {
+				return fmt.Errorf("sysctl %q not allowed in host network namespace", s)
+			}
+			continue
 		}
 		if config.Namespaces.Contains(configs.NEWUTS) {
 			switch s {
@@ -218,16 +236,4 @@ func isHostNetNS(path string) (bool, error) {
 	}
 
 	return (st1.Dev == st2.Dev) && (st1.Ino == st2.Ino), nil
-}
-
-// checkHostNs checks whether network sysctl is used in host namespace.
-func checkHostNs(sysctlConfig string, path string) error {
-	host, err := isHostNetNS(path)
-	if err != nil {
-		return err
-	}
-	if host {
-		return fmt.Errorf("sysctl %q is not allowed in the hosts network namespace", sysctlConfig)
-	}
-	return nil
 }
