@@ -105,7 +105,50 @@ func newRootfs(t *testing.T) string {
 	if err := copyBusybox(dir); err != nil {
 		t.Fatal(err)
 	}
+
+	// Make sure others can read+exec, so all tests (inside userns too) can
+	// read the rootfs.
+	if err := traversePath(dir); err != nil {
+		t.Fatalf("Error making newRootfs path traversable by others: %v", err)
+	}
+
 	return dir
+}
+
+// traversePath gives read+execute permissions to others for all elements in tPath below
+// os.TempDir() and errors out if elements above it don't have read+exec permissions for others.
+// tPath MUST be a descendant of os.TempDir(). The path returned by testing.TempDir() usually is.
+func traversePath(tPath string) error {
+	// Check the assumption that the argument is under os.TempDir().
+	tempBase := os.TempDir()
+	if !strings.HasPrefix(tPath, tempBase) {
+		return fmt.Errorf("traversePath: %q is not a descendant of %q", tPath, tempBase)
+	}
+
+	var path string
+	for _, p := range strings.SplitAfter(tPath, "/") {
+		path = path + p
+		stats, err := os.Stat(path)
+		if err != nil {
+			return err
+		}
+
+		perm := stats.Mode().Perm()
+
+		if perm&0o5 == 0o5 {
+			continue
+		}
+
+		if strings.HasPrefix(tempBase, path) {
+			return fmt.Errorf("traversePath: directory %q MUST have read+exec permissions for others", path)
+		}
+
+		if err := os.Chmod(path, perm|0o5); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func remove(dir string) {
