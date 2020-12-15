@@ -26,8 +26,7 @@ root="$(readlink -f "$(dirname "${BASH_SOURCE}")/..")"
 function build_project() {
 	builddir="$(dirname "$1")"
 
-	# Build with all tags enabled.
-	make -C "$root" COMMIT_NO= BUILDTAGS="seccomp selinux" static
+	make -C "$root" COMMIT_NO= static
 	mv "$root/$project" "$1"
 }
 
