@@ -27,7 +27,7 @@ function build_project() {
 	builddir="$(dirname "$1")"
 
 	# Build with all tags enabled.
-	make -C "$root" COMMIT_NO= BUILDTAGS="seccomp selinux apparmor" static
+	make -C "$root" COMMIT_NO= BUILDTAGS="seccomp selinux" static
 	mv "$root/$project" "$1"
 }
 
