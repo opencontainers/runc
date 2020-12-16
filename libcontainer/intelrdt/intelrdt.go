@@ -195,6 +195,9 @@ var (
 	mbaEnabled bool
 	// The flag to indicate if Intel RDT/MBA Software Controller is enabled
 	mbaScEnabled bool
+
+	// For Intel RDT initialization
+	initOnce sync.Once
 )
 
 type intelRdtData struct {
@@ -203,55 +206,56 @@ type intelRdtData struct {
 	pid    int
 }
 
-// Check if Intel RDT sub-features are enabled in init()
-func init() {
-	// 1. Check if hardware and kernel support Intel RDT sub-features
-	flagsSet, err := parseCpuInfoFile("/proc/cpuinfo")
-	if err != nil {
-		return
-	}
-
-	// 2. Check if Intel RDT "resource control" filesystem is mounted
-	// The user guarantees to mount the filesystem
-	if !isIntelRdtMounted() {
-		return
-	}
-
-	// 3. Double check if Intel RDT sub-features are available in
-	// "resource control" filesystem. Intel RDT sub-features can be
-	// selectively disabled or enabled by kernel command line
-	// (e.g., rdt=!l3cat,mba) in 4.14 and newer kernel
-	if flagsSet.CAT {
-		if _, err := os.Stat(filepath.Join(intelRdtRoot, "info", "L3")); err == nil {
-			catEnabled = true
-		}
-	}
-	if mbaScEnabled {
-		// We confirm MBA Software Controller is enabled in step 2,
-		// MBA should be enabled because MBA Software Controller
-		// depends on MBA
-		mbaEnabled = true
-	} else if flagsSet.MBA {
-		if _, err := os.Stat(filepath.Join(intelRdtRoot, "info", "MB")); err == nil {
-			mbaEnabled = true
-		}
-	}
-
-	if flagsSet.MBMTotal || flagsSet.MBMLocal || flagsSet.CMT {
-		if _, err := os.Stat(filepath.Join(intelRdtRoot, "info", "L3_MON")); err != nil {
-			return
-		}
-		enabledMonFeatures, err = getMonFeatures(intelRdtRoot)
+// Check if Intel RDT sub-features are enabled in featuresInit()
+func featuresInit() {
+	initOnce.Do(func() {
+		// 1. Check if hardware and kernel support Intel RDT sub-features
+		flagsSet, err := parseCpuInfoFile("/proc/cpuinfo")
 		if err != nil {
 			return
 		}
-		if enabledMonFeatures.mbmTotalBytes || enabledMonFeatures.mbmLocalBytes {
-			mbmEnabled = true
+
+		// 2. Check if Intel RDT "resource control" filesystem is mounted
+		// The user guarantees to mount the filesystem
+		if !isIntelRdtMounted() {
+			return
 		}
-		if enabledMonFeatures.llcOccupancy {
-			cmtEnabled = true
+
+		// 3. Double check if Intel RDT sub-features are available in
+		// "resource control" filesystem. Intel RDT sub-features can be
+		// selectively disabled or enabled by kernel command line
+		// (e.g., rdt=!l3cat,mba) in 4.14 and newer kernel
+		if flagsSet.CAT {
+			if _, err := os.Stat(filepath.Join(intelRdtRoot, "info", "L3")); err == nil {
+				catEnabled = true
+			}
 		}
-	}
+		if mbaScEnabled {
+			// We confirm MBA Software Controller is enabled in step 2,
+			// MBA should be enabled because MBA Software Controller
+			// depends on MBA
+			mbaEnabled = true
+		} else if flagsSet.MBA {
+			if _, err := os.Stat(filepath.Join(intelRdtRoot, "info", "MB")); err == nil {
+				mbaEnabled = true
+			}
+		}
+		if flagsSet.MBMTotal || flagsSet.MBMLocal || flagsSet.CMT {
+			if _, err := os.Stat(filepath.Join(intelRdtRoot, "info", "L3_MON")); err != nil {
+				return
+			}
+			enabledMonFeatures, err = getMonFeatures(intelRdtRoot)
+			if err != nil {
+				return
+			}
+			if enabledMonFeatures.mbmTotalBytes || enabledMonFeatures.mbmLocalBytes {
+				mbmEnabled = true
+			}
+			if enabledMonFeatures.llcOccupancy {
+				cmtEnabled = true
+			}
+		}
+	})
 }
 
 // Return the mount point path of Intel RDT "resource control" filesysem
@@ -525,16 +529,19 @@ func WriteIntelRdtTasks(dir string, pid int) error {
 
 // Check if Intel RDT/CAT is enabled
 func IsCATEnabled() bool {
+	featuresInit()
 	return catEnabled
 }
 
 // Check if Intel RDT/MBA is enabled
 func IsMBAEnabled() bool {
+	featuresInit()
 	return mbaEnabled
 }
 
 // Check if Intel RDT/MBA Software Controller is enabled
 func IsMBAScEnabled() bool {
+	featuresInit()
 	return mbaScEnabled
 }
 

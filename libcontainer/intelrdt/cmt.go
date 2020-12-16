@@ -6,6 +6,7 @@ var (
 
 // Check if Intel RDT/CMT is enabled.
 func IsCMTEnabled() bool {
+	featuresInit()
 	return cmtEnabled
 }
 
