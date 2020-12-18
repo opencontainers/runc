@@ -1,5 +1,3 @@
-// +build apparmor,linux
-
 package apparmor
 
 import (

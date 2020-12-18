@@ -63,16 +63,17 @@ To change build tags from the default, set the `BUILDTAGS` variable for make,
 e.g.
 
 ```bash
-make BUILDTAGS='seccomp apparmor'
+make BUILDTAGS='seccomp'
 ```
 
 | Build Tag | Feature                            | Enabled by default | Dependency |
 |-----------|------------------------------------|--------------------|------------|
 | seccomp   | Syscall filtering                  | yes                | libseccomp |
-| selinux   | selinux process and mount labeling | yes                | <none>     |
-| apparmor  | apparmor profile support           | yes                | <none>     |
 | nokmem    | disable kernel memory accounting   | no                 | <none>     |
 
+The following build tags were used earlier, but are now obsoleted:
+ - **apparmor** (since runc v1.0.0-rc93 the feature is always enabled)
+ - **selinux**  (since runc v1.0.0-rc93 the feature is always enabled)
 
 ### Running the test suite
 
