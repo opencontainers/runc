@@ -32,6 +32,7 @@ func ReadFile(dir, file string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	defer fd.Close()
 	var buf bytes.Buffer
 
 	_, err = buf.ReadFrom(fd)
