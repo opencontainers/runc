@@ -28,3 +28,32 @@ function teardown() {
 	runc exec --user 0 test_busybox true
 	[ "$status" -eq 0 ]
 }
+
+# Verify a cwd owned by the container user can be chdir'd to,
+# even if runc doesn't have the privilege to do so.
+@test "runc create sets up user before chdir to cwd" {
+	requires rootless rootless_idmap
+
+	# Some setup for this test (AUX_DIR and AUX_UID) is done
+	# by rootless.sh. Check that setup is done...
+	if [[ ! -d "$AUX_DIR" || -z "$AUX_UID" ]]; then
+		skip "bad/unset AUX_DIR/AUX_UID"
+	fi
+	# ... and is correct, i.e. the current user
+	# does not have permission to access AUX_DIR.
+	if ls -l "$AUX_DIR" 2>/dev/null; then
+		skip "bad AUX_DIR permissions"
+	fi
+
+	update_config '   .mounts += [{
+				source: "'"$AUX_DIR"'",
+				destination: "'"$AUX_DIR"'",
+				options: ["bind"]
+			    }]
+			| .process.user.uid = '"$AUX_UID"'
+			| .process.cwd = "'"$AUX_DIR"'"
+			| .process.args |= ["ls", "'"$AUX_DIR"'"]'
+
+	runc run test_busybox
+	[ "$status" -eq 0 ]
+}
