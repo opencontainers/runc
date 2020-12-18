@@ -129,6 +129,14 @@ func finalizeNamespace(config *initConfig) error {
 		return errors.Wrap(err, "close exec fds")
 	}
 
+	needChdir := false
+	if config.Cwd != "" {
+		if err := unix.Chdir(config.Cwd); err != nil {
+			// will try again after setupUser
+			needChdir = true
+		}
+	}
+
 	capabilities := &configs.Capabilities{}
 	if config.Capabilities != nil {
 		capabilities = config.Capabilities
@@ -153,7 +161,7 @@ func finalizeNamespace(config *initConfig) error {
 	// Change working directory AFTER the user has been set up.
 	// Otherwise, if the cwd is also a volume that's been chowned to the container user (and not the user running runc),
 	// this command will EPERM.
-	if config.Cwd != "" {
+	if needChdir {
 		if err := unix.Chdir(config.Cwd); err != nil {
 			return fmt.Errorf("chdir to cwd (%q) set in config.json failed: %v", config.Cwd, err)
 		}
