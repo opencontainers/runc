@@ -493,6 +493,7 @@ func checkProcMount(rootfs, dest, source string) error {
 		"/proc/swaps",
 		"/proc/uptime",
 		"/proc/loadavg",
+		"/proc/slabinfo",
 		"/proc/net/dev",
 	}
 	for _, valid := range validDestinations {
