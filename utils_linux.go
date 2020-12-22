@@ -13,7 +13,6 @@ import (
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runc/libcontainer/specconv"
 	"github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/opencontainers/runtime-spec/specs-go"
@@ -57,9 +56,6 @@ func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
 	}
 
 	intelRdtManager := libcontainer.IntelRdtFs
-	if !intelrdt.IsCATEnabled() && !intelrdt.IsMBAEnabled() {
-		intelRdtManager = nil
-	}
 
 	// We resolve the paths for {newuidmap,newgidmap} from the context of runc,
 	// to avoid doing a path lookup in the nsexec context. TODO: The binary

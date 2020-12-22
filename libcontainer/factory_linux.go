@@ -148,8 +148,12 @@ func RootlessCgroupfs(l *LinuxFactory) error {
 // containers that use the Intel RDT "resource control" filesystem to
 // create and manage Intel RDT resources (e.g., L3 cache, memory bandwidth).
 func IntelRdtFs(l *LinuxFactory) error {
-	l.NewIntelRdtManager = func(config *configs.Config, id string, path string) intelrdt.Manager {
-		return intelrdt.NewManager(config, id, path)
+	if !intelrdt.IsCATEnabled() && !intelrdt.IsMBAEnabled() {
+		l.NewIntelRdtManager = nil
+	} else {
+		l.NewIntelRdtManager = func(config *configs.Config, id string, path string) intelrdt.Manager {
+			return intelrdt.NewManager(config, id, path)
+		}
 	}
 	return nil
 }
@@ -272,7 +276,7 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 		newgidmapPath: l.NewgidmapPath,
 		cgroupManager: l.NewCgroupsManager(config.Cgroups, nil),
 	}
-	if intelrdt.IsCATEnabled() || intelrdt.IsMBAEnabled() {
+	if l.NewIntelRdtManager != nil {
 		c.intelRdtManager = l.NewIntelRdtManager(config, id, "")
 	}
 	c.state = &stoppedState{c: c}
@@ -314,12 +318,12 @@ func (l *LinuxFactory) Load(id string) (Container, error) {
 		root:                 containerRoot,
 		created:              state.Created,
 	}
+	if l.NewIntelRdtManager != nil {
+		c.intelRdtManager = l.NewIntelRdtManager(&state.Config, id, state.IntelRdtPath)
+	}
 	c.state = &loadedState{c: c}
 	if err := c.refreshState(); err != nil {
 		return nil, err
-	}
-	if intelrdt.IsCATEnabled() || intelrdt.IsMBAEnabled() {
-		c.intelRdtManager = l.NewIntelRdtManager(&state.Config, id, state.IntelRdtPath)
 	}
 	return c, nil
 }
