@@ -346,7 +346,7 @@ func TestExecInTTY(t *testing.T) {
 		t.Fatalf("unexpected running process, output %q", out)
 	}
 	if strings.Contains(out, "\r") {
-		t.Fatalf("unexpected carriage-return in output")
+		t.Fatalf("unexpected carriage-return in output %q", out)
 	}
 }
 
