@@ -1,11 +1,14 @@
 package validate_test
 
 import (
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/configs/validate"
+	"golang.org/x/sys/unix"
 )
 
 func TestValidate(t *testing.T) {
@@ -250,6 +253,53 @@ func TestValidateSysctlWithSameNs(t *testing.T) {
 	validator := validate.New()
 	err := validator.Validate(config)
 	if err == nil {
+		t.Error("Expected error to occur but it was nil")
+	}
+}
+
+func TestValidateSysctlWithBindHostNetNS(t *testing.T) {
+	if os.Getuid() != 0 {
+		t.Skip("requires root")
+	}
+
+	const selfnet = "/proc/self/ns/net"
+
+	dir, err := ioutil.TempDir("", t.Name()+"-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(dir)
+
+	file := filepath.Join(dir, "default")
+	fd, err := os.Create(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(file)
+	fd.Close()
+
+	if err := unix.Mount(selfnet, file, "bind", unix.MS_BIND, ""); err != nil {
+		t.Fatalf("can't bind-mount %s to %s: %s", selfnet, file, err)
+	}
+	defer func() {
+		_ = unix.Unmount(file, unix.MNT_DETACH)
+	}()
+
+	config := &configs.Config{
+		Rootfs: "/var",
+		Sysctl: map[string]string{"net.ctl": "ctl", "net.foo": "bar"},
+		Namespaces: configs.Namespaces(
+			[]configs.Namespace{
+				{
+					Type: configs.NEWNET,
+					Path: file,
+				},
+			},
+		),
+	}
+
+	validator := validate.New()
+	if err := validator.Validate(config); err == nil {
 		t.Error("Expected error to occur but it was nil")
 	}
 }
