@@ -289,8 +289,12 @@ PIDFile=/run/mycontainerid.pid
 WantedBy=multi-user.target
 ```
 
-#### cgroup v2
-See [`./docs/cgroup-v2.md`](./docs/cgroup-v2.md).
+## More documentation
+
+* [cgroup v2](./docs/cgroup-v2.md)
+* [Checkpoint and restore](./docs/checkpoint-restore.md)
+* [Changing systemd unit properties](./docs/systemd-properties.md)
+* [Terminals and standard IO](./docs/terminals.md)
 
 ## License
 
