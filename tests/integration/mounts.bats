@@ -9,14 +9,13 @@ function setup() {
 
 function teardown() {
 	teardown_busybox
-	teardown_running_container test_bind_mount
 }
 
 @test "runc run [bind mount]" {
 	update_config ' .mounts += [{"source": ".", "destination": "/tmp/bind", "options": ["bind"]}]
 			| .process.args |= ["ls", "/tmp/bind/config.json"]'
 
-	runc run test_bind_mount
+	runc run test_busybox
 	[ "$status" -eq 0 ]
 	[[ "${lines[0]}" == *'/tmp/bind/config.json'* ]]
 }
@@ -25,7 +24,7 @@ function teardown() {
 	update_config ' .mounts += [{"source": "tmpfs", "destination": "/mnt", "type": "tmpfs", "options": ["ro", "nodev", "nosuid", "mode=755"]}] 
 			| .process.args |= ["grep", "^tmpfs /mnt", "/proc/mounts"]'
 
-	runc run test_ro_tmpfs_mount
+	runc run test_busybox
 	[ "$status" -eq 0 ]
 	[[ "${lines[0]}" == *'ro,'* ]]
 }
