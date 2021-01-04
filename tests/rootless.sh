@@ -50,6 +50,18 @@ function enable_idmap() {
 	# Reactivate new{uid,gid}map helpers if applicable.
 	[ -e /usr/bin/unused-newuidmap ] && mv /usr/bin/{unused-,}newuidmap
 	[ -e /usr/bin/unused-newgidmap ] && mv /usr/bin/{unused-,}newgidmap
+
+	# Create a directory owned by $AUX_UID inside container, to be used
+	# by a test case in cwd.bats. This setup can't be done by the test itself,
+	# as it needs root for chown.
+	set -e
+	export AUX_UID=1024
+	AUX_DIR="$(mktemp -d)"
+	# 1000 is linux.uidMappings.containerID value,
+	# as set by runc_rootless_idmap
+	chown "$((ROOTLESS_UIDMAP_START - 1000 + AUX_UID))" "$AUX_DIR"
+	export AUX_DIR
+	set +e
 }
 
 function disable_idmap() {
@@ -63,6 +75,13 @@ function disable_idmap() {
 	# Deactivate new{uid,gid}map helpers. setuid is preserved with mv(1).
 	[ -e /usr/bin/newuidmap ] && mv /usr/bin/{,unused-}newuidmap
 	[ -e /usr/bin/newgidmap ] && mv /usr/bin/{,unused-}newgidmap
+}
+
+function cleanup() {
+	if [ -n "$AUX_DIR" ]; then
+		rmdir "$AUX_DIR"
+		unset AUX_DIX
+	fi
 }
 
 # FEATURE: Opportunistic cgroups support, allowing a rootless container to set
@@ -151,4 +170,5 @@ for enabled_features in $features_powerset; do
 		sudo -HE -u rootless PATH="$PATH" $(which bats) -t "$ROOT/tests/integration$ROOTLESS_TESTPATH"
 	fi
 	set +e
+	cleanup
 done
