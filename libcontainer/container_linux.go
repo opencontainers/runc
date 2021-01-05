@@ -2075,6 +2075,9 @@ func ignoreTerminateErrors(err error) error {
 	if errors.As(err, &exitErr) {
 		return nil
 	}
+	// TODO: use errors.Is(err, os.ErrProcessDone) here and
+	// remove "process already finished" string comparison below
+	// once go 1.16 is minimally supported version.
 
 	s := err.Error()
 	if strings.Contains(s, "process already finished") ||
