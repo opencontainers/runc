@@ -1,6 +1,6 @@
 #!/bin/bash
 set -eux -o pipefail
-VAGRANT_VERSION="2.2.7"
+VAGRANT_VERSION="2.2.14"
 
 # https://github.com/alvistack/ansible-role-virtualbox/blob/6887b020b0ca5c59ddb6620d73f053ffb84f4126/.travis.yml#L30
 apt-get update
