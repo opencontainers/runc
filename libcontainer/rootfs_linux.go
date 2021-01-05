@@ -482,29 +482,6 @@ func getCgroupMounts(m *configs.Mount) ([]*configs.Mount, error) {
 // if source is nil, don't stat the filesystem.  This is used for restore of a checkpoint.
 func checkProcMount(rootfs, dest, source string) error {
 	const procPath = "/proc"
-	// White list, it should be sub directories of invalid destinations
-	validDestinations := []string{
-		// These entries can be bind mounted by files emulated by fuse,
-		// so commands like top, free displays stats in container.
-		"/proc/cpuinfo",
-		"/proc/diskstats",
-		"/proc/meminfo",
-		"/proc/stat",
-		"/proc/swaps",
-		"/proc/uptime",
-		"/proc/loadavg",
-		"/proc/slabinfo",
-		"/proc/net/dev",
-	}
-	for _, valid := range validDestinations {
-		path, err := filepath.Rel(filepath.Join(rootfs, valid), dest)
-		if err != nil {
-			return err
-		}
-		if path == "." {
-			return nil
-		}
-	}
 	path, err := filepath.Rel(filepath.Join(rootfs, procPath), dest)
 	if err != nil {
 		return err
@@ -530,6 +507,30 @@ func checkProcMount(rootfs, dest, source string) error {
 		}
 		return fmt.Errorf("%q cannot be mounted because it is not of type proc", dest)
 	}
+
+	// Here dest is definitely under /proc. Do not allow those,
+	// except for a few specific entries emulated by lxcfs.
+	validProcMounts := []string{
+		"/proc/cpuinfo",
+		"/proc/diskstats",
+		"/proc/meminfo",
+		"/proc/stat",
+		"/proc/swaps",
+		"/proc/uptime",
+		"/proc/loadavg",
+		"/proc/slabinfo",
+		"/proc/net/dev",
+	}
+	for _, valid := range validProcMounts {
+		path, err := filepath.Rel(filepath.Join(rootfs, valid), dest)
+		if err != nil {
+			return err
+		}
+		if path == "." {
+			return nil
+		}
+	}
+
 	return fmt.Errorf("%q cannot be mounted because it is inside /proc", dest)
 }
 
