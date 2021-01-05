@@ -340,6 +340,13 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string, enableCgroupns b
 	case "tmpfs":
 		copyUp := m.Extensions&configs.EXT_COPYUP == configs.EXT_COPYUP
 		tmpDir := ""
+		// dest might be an absolute symlink, so it needs
+		// to be resolved under rootfs.
+		dest, err := securejoin.SecureJoin(rootfs, m.Destination)
+		if err != nil {
+			return err
+		}
+		m.Destination = dest
 		stat, err := os.Stat(dest)
 		if err != nil {
 			if err := os.MkdirAll(dest, 0755); err != nil {
