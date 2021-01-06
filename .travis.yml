@@ -65,4 +65,4 @@ before_install:
 
 script:
   - make
-  - make clean ci cross
+  - make clean ci

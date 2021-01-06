@@ -60,9 +60,7 @@ ARG UMOCI_VERSION
 RUN curl -o /usr/local/bin/umoci -fsSL https://github.com/opencontainers/umoci/releases/download/${UMOCI_VERSION}/umoci.amd64 \
     && chmod +x /usr/local/bin/umoci
 
-COPY script/tmpmount /
 WORKDIR /go/src/github.com/opencontainers/runc
-ENTRYPOINT ["/tmpmount"]
 
 # setup a playground for us to spawn containers in
 COPY tests/integration/multi-arch.bash tests/integration/
