@@ -117,3 +117,20 @@ jobs:
       run: make runcimage
     - name: cross
       run: make cross
+
+
+  misc:
+    runs-on: ubuntu-20.04
+    steps:
+    - name: checkout
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: install deps
+      run: |
+        sudo apt -qq update
+        sudo apt -qq install libseccomp-dev indent
+    - name: make validate
+      run: make validate
+    - name: make release
+      run: make release
