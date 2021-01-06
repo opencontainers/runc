@@ -81,3 +81,56 @@ jobs:
         restore-keys: ${{ runner.os }}-go.sum-
     - name: verify deps
       run: make verify-dependencies
+
+
+  commit:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: get pr commits
+        id: 'get-pr-commits'
+        uses: tim-actions/get-pr-commits@v1.0.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: check subject line length
+        uses: tim-actions/commit-message-checker-with-regex@v0.3.1
+        with:
+          commits: ${{ steps.get-pr-commits.outputs.commits }}
+          pattern: '^.{0,72}(\n.*)*$'
+          error: 'Subject too long (max 72)'
+
+
+  cross:
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v2
+      # We have to run this under Docker as Ubuntu (host) does not support all
+      # the architectures we want to compile test against, and Dockerfile uses
+      # Debian (which does).
+      #
+      # XXX: as currently this is the only job that is using Docker, we are
+      # building and using the runcimage locally. In case more jobs running
+      # under Docker will emerge, it will be good to have a separate make
+      # runcimage job and share its result (the docker image) with whoever
+      # needs it.
+    - name: build docker image
+      run: make runcimage
+    - name: cross
+      run: make cross
+
+
+  misc:
+    runs-on: ubuntu-20.04
+    steps:
+    - name: checkout
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: install deps
+      run: |
+        sudo apt -qq update
+        sudo apt -qq install libseccomp-dev indent
+    - name: make validate
+      run: make validate
+    - name: make release
+      run: make release

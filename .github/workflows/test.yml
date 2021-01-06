@@ -80,3 +80,72 @@ jobs:
       # can't use systemd driver with cgroupv1
       if: matrix.rootless != 'rootless'
       run: sudo -E PATH="$PATH" script -e -c /bin/bash -c 'stty rows 40 cols 80; TERM=xterm make RUNC_USE_SYSTEMD=yes local${{ matrix.rootless }}integration'
+
+
+  # cgroup v2 unified hierarchy + very recent kernel (openat2)
+  fedora:
+    # nested virtualization is only available on macOS hosts
+    runs-on: macos-10.15
+    timeout-minutes: 60
+    # only run it if others have passed
+    needs: [test]
+    steps:
+      - uses: actions/checkout@v2
+      - name: prepare vagrant
+        run: |
+          ln -sf Vagrantfile.fedora33 Vagrantfile
+          vagrant up
+          vagrant ssh-config >> ~/.ssh/config
+
+      - name: system info
+        run: ssh default 'sh -exc "uname -a && systemctl --version && df -T"'
+
+      - name: unit tests
+        run: ssh default 'cd /vagrant && sudo make localunittest'
+
+      # The integration tests require tty which GH actions lack;
+      # wrap those in "script" to emulate tty.
+      - name: cgroupv2 with systemd
+        run: ssh default "script -e -c /bin/bash -c 'stty rows 40 cols 80; TERM=xterm sudo make -C /vagrant localintegration RUNC_USE_SYSTEMD=yes'"
+
+      - name: cgroupv2 with fs2
+        run: ssh default "script -e -c /bin/bash -c 'stty rows 40 cols 80; TERM=xterm sudo make -C /vagrant localintegration'"
+
+      - name: cgroupv2 with systemd (rootless)
+        run: ssh default "script -e -c /bin/bash -c 'stty rows 40 cols 80; TERM=xterm sudo make -C /vagrant localrootlessintegration RUNC_USE_SYSTEMD=yes'"
+
+      - name: cgroupv2 with fs2 (rootless)
+        run: ssh default "script -e -c /bin/bash -c 'stty rows 40 cols 80; TERM=xterm sudo make -C /vagrant localrootlessintegration'"
+
+
+  # kernel 3.10 (frankenized), systemd 219
+  centos7:
+    # nested virtualization is only available on macOS hosts
+    runs-on: macos-10.15
+    timeout-minutes: 60
+    # only run it if others have passed
+    needs: [test]
+    steps:
+      - uses: actions/checkout@v2
+      - name: prepare vagrant
+        run: |
+          ln -sf Vagrantfile.centos7 Vagrantfile
+          vagrant up
+          vagrant ssh-config >> ~/.ssh/config
+
+      - name: system info
+        run: ssh default 'rpm -q centos-release kernel systemd'
+
+      - name: unit tests
+        run: ssh default 'sudo -i make -C /vagrant localunittest'
+
+      - name: integration tests (fs cgroup driver)
+        run: ssh default "script -e -c /bin/bash -c 'stty rows 40 cols 80; TERM=xterm sudo -i make -C /vagrant localintegration'"
+
+      - name: integration tests (systemd cgroup driver)
+        run: ssh default "script -e -c /bin/bash -c 'stty rows 40 cols 80; TERM=xterm sudo -i make -C /vagrant localintegration RUNC_USE_SYSTEMD=1'"
+
+      - name: rootless integration
+      # FIXME: rootless is skipped because of EPERM on writing cgroup.procs
+        if: false
+        run: ssh default "script -e -c /bin/bash -c 'stty rows 40 cols 80; TERM=xterm sudo -i make -C /vagrant localrootlessintegration'"
