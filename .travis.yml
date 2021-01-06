@@ -60,11 +60,9 @@ before_install:
   - sudo apt-get -qq update
   - sudo apt-get install -y libseccomp-dev
   - GO111MODULE=off go get -u golang.org/x/lint/golint
-  - GO111MODULE=off go get -u github.com/vbatts/git-validation
   - (cd ~ && GO111MODULE=on go get mvdan.cc/sh/v3/cmd/shfmt@v3.2.0)
   - env | grep TRAVIS_
 
 script:
-  - git-validation -run DCO,short-subject -v
   - make
   - make clean ci cross
