@@ -277,7 +277,12 @@ func TestExecInTTY(t *testing.T) {
 	}
 	err = container.Run(process)
 	stdinR.Close()
-	defer stdinW.Close()
+	defer func() {
+		stdinW.Close()
+		if _, err := process.Wait(); err != nil {
+			t.Log(err)
+		}
+	}()
 	ok(t, err)
 
 	var stdout bytes.Buffer
@@ -293,52 +298,32 @@ func TestExecInTTY(t *testing.T) {
 	defer parent.Close()
 	defer child.Close()
 	ps.ConsoleSocket = child
-	type cdata struct {
-		c   console.Console
-		err error
-	}
-	dc := make(chan *cdata, 1)
+	done := make(chan (error))
 	go func() {
 		f, err := utils.RecvFd(parent)
 		if err != nil {
-			dc <- &cdata{
-				err: err,
-			}
+			done <- fmt.Errorf("RecvFd: %w", err)
 			return
 		}
 		c, err := console.ConsoleFromFile(f)
 		if err != nil {
-			dc <- &cdata{
-				err: err,
-			}
+			done <- fmt.Errorf("ConsoleFromFile: %w", err)
 			return
 		}
-		dc <- &cdata{
-			c: c,
-		}
+		// An error from io.Copy is expected once the terminal
+		// is gone, so we deliberately ignore it.
+		_, _ = io.Copy(&stdout, c)
+		done <- nil
 	}()
 	err = container.Run(ps)
-	ok(t, err)
-	data := <-dc
-	if data.err != nil {
-		ok(t, data.err)
-	}
-	console := data.c
-	copy := make(chan struct{})
-	go func() {
-		io.Copy(&stdout, console)
-		close(copy)
-	}()
 	ok(t, err)
 	select {
 	case <-time.After(5 * time.Second):
 		t.Fatal("Waiting for copy timed out")
-	case <-copy:
+	case err := <-done:
+		ok(t, err)
 	}
 	waitProcess(ps, t)
-
-	stdinW.Close()
-	waitProcess(process, t)
 
 	out := stdout.String()
 	if !strings.Contains(out, "cat") || !strings.Contains(out, "ps") {
