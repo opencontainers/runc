@@ -484,7 +484,9 @@ func signalAllProcesses(m cgroups.Manager, s os.Signal) error {
 	}
 	pids, err := m.GetAllPids()
 	if err != nil {
-		m.Freeze(configs.Thawed)
+		if err := m.Freeze(configs.Thawed); err != nil {
+			logrus.Warn(err)
+		}
 		return err
 	}
 	for _, pid := range pids {
