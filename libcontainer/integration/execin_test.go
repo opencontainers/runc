@@ -291,46 +291,55 @@ func TestExecInTTY(t *testing.T) {
 		Args: []string{"ps"},
 		Env:  standardEnvironment,
 	}
-	parent, child, err := utils.NewSockPair("console")
-	if err != nil {
-		ok(t, err)
-	}
-	defer parent.Close()
-	defer child.Close()
-	ps.ConsoleSocket = child
-	done := make(chan (error))
-	go func() {
-		f, err := utils.RecvFd(parent)
-		if err != nil {
-			done <- fmt.Errorf("RecvFd: %w", err)
-			return
-		}
-		c, err := console.ConsoleFromFile(f)
-		if err != nil {
-			done <- fmt.Errorf("ConsoleFromFile: %w", err)
-			return
-		}
-		// An error from io.Copy is expected once the terminal
-		// is gone, so we deliberately ignore it.
-		_, _ = io.Copy(&stdout, c)
-		done <- nil
-	}()
-	err = container.Run(ps)
-	ok(t, err)
-	select {
-	case <-time.After(5 * time.Second):
-		t.Fatal("Waiting for copy timed out")
-	case err := <-done:
-		ok(t, err)
-	}
-	waitProcess(ps, t)
 
-	out := stdout.String()
-	if !strings.Contains(out, "cat") || !strings.Contains(out, "ps") {
-		t.Fatalf("unexpected running process, output %q", out)
-	}
-	if strings.Contains(out, "\r") {
-		t.Fatalf("unexpected carriage-return in output %q", out)
+	// Repeat to increase chances to catch a race; see
+	// https://github.com/opencontainers/runc/issues/2425.
+	for i := 0; i < 300; i++ {
+		parent, child, err := utils.NewSockPair("console")
+		if err != nil {
+			ok(t, err)
+		}
+		ps.ConsoleSocket = child
+
+		done := make(chan (error))
+		go func() {
+			f, err := utils.RecvFd(parent)
+			if err != nil {
+				done <- fmt.Errorf("RecvFd: %w", err)
+				return
+			}
+			c, err := console.ConsoleFromFile(f)
+			if err != nil {
+				done <- fmt.Errorf("ConsoleFromFile: %w", err)
+				return
+			}
+			// An error from io.Copy is expected once the terminal
+			// is gone, so we deliberately ignore it.
+			_, _ = io.Copy(&stdout, c)
+			done <- nil
+		}()
+
+		err = container.Run(ps)
+		ok(t, err)
+
+		select {
+		case <-time.After(5 * time.Second):
+			t.Fatal("Waiting for copy timed out")
+		case err := <-done:
+			ok(t, err)
+		}
+
+		waitProcess(ps, t)
+		parent.Close()
+		child.Close()
+
+		out := stdout.String()
+		if !strings.Contains(out, "cat") || !strings.Contains(out, "ps") {
+			t.Fatalf("unexpected running process, output %q", out)
+		}
+		if strings.Contains(out, "\r") {
+			t.Fatalf("unexpected carriage-return in output %q", out)
+		}
 	}
 }
 
