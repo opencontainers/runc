@@ -57,7 +57,7 @@ func DetectUID() (int, error) {
 	}
 	b, err := exec.Command("busctl", "--user", "--no-pager", "status").CombinedOutput()
 	if err != nil {
-		return -1, errors.Wrap(err, "could not execute `busctl --user --no-pager status`")
+		return -1, errors.Wrapf(err, "could not execute `busctl --user --no-pager status`: %q", string(b))
 	}
 	scanner := bufio.NewScanner(bytes.NewReader(b))
 	for scanner.Scan() {
