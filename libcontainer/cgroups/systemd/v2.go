@@ -201,6 +201,11 @@ func genV2ResourcesProperties(c *configs.Cgroup, conn *systemdDbus.Conn) ([]syst
 			newProp("TasksMax", uint64(r.PidsLimit)))
 	}
 
+	err = addCpuset(conn, &properties, r.CpusetCpus, r.CpusetMems)
+	if err != nil {
+		return nil, err
+	}
+
 	// ignore r.KernelMemory
 
 	// convert Resources.Unified map to systemd properties

@@ -90,6 +90,11 @@ func genV1ResourcesProperties(c *configs.Cgroup, conn *systemdDbus.Conn) ([]syst
 			newProp("TasksMax", uint64(r.PidsLimit)))
 	}
 
+	err = addCpuset(conn, &properties, r.CpusetCpus, r.CpusetMems)
+	if err != nil {
+		return nil, err
+	}
+
 	return properties, nil
 }
 

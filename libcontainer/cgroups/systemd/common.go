@@ -432,3 +432,35 @@ func addCpuQuota(conn *systemdDbus.Conn, properties *[]systemdDbus.Property, quo
 			newProp("CPUQuotaPerSecUSec", cpuQuotaPerSecUSec))
 	}
 }
+
+func addCpuset(conn *systemdDbus.Conn, props *[]systemdDbus.Property, cpus, mems string) error {
+	if cpus == "" && mems == "" {
+		return nil
+	}
+
+	// systemd only supports AllowedCPUs/AllowedMemoryNodes since v244
+	sdVer := systemdVersion(conn)
+	if sdVer < 244 {
+		return nil
+	}
+
+	if cpus != "" {
+		bits, err := rangeToBits(cpus)
+		if err != nil {
+			return fmt.Errorf("resources.CPU.Cpus=%q conversion error: %w",
+				cpus, err)
+		}
+		*props = append(*props,
+			newProp("AllowedCPUs", bits))
+	}
+	if mems != "" {
+		bits, err := rangeToBits(mems)
+		if err != nil {
+			return fmt.Errorf("resources.CPU.Mems=%q conversion error: %w",
+				mems, err)
+		}
+		*props = append(*props,
+			newProp("AllowedMemoryNodes", bits))
+	}
+	return nil
+}
