@@ -164,17 +164,21 @@ echo
 echo 'Generally Necessary:'
 
 echo -n '- '
-cgroupSubsystemDir="$(awk '/[, ](cpu|cpuacct|cpuset|devices|freezer|memory)[, ]/ && $3 == "cgroup" { print $2 }' /proc/mounts | head -n1)"
-cgroupDir="$(dirname "$cgroupSubsystemDir")"
-if [ -d "$cgroupDir/cpu" -o -d "$cgroupDir/cpuacct" -o -d "$cgroupDir/cpuset" -o -d "$cgroupDir/devices" -o -d "$cgroupDir/freezer" -o -d "$cgroupDir/memory" ]; then
-	echo "$(wrap_good 'cgroup hierarchy' 'properly mounted') [$cgroupDir]"
+if [ "$(stat -f -c %t /sys/fs/cgroup 2>/dev/null)" = "63677270" ]; then
+	echo "$(wrap_good 'cgroup hierarchy' 'cgroupv2')"
 else
-	if [ "$cgroupSubsystemDir" ]; then
-		echo "$(wrap_bad 'cgroup hierarchy' 'single mountpoint!') [$cgroupSubsystemDir]"
+	cgroupSubsystemDir="$(awk '/[, ](cpu|cpuacct|cpuset|devices|freezer|memory)[, ]/ && $3 == "cgroup" { print $2 }' /proc/mounts | head -n1)"
+	cgroupDir="$(dirname "$cgroupSubsystemDir")"
+	if [ -d "$cgroupDir/cpu" -o -d "$cgroupDir/cpuacct" -o -d "$cgroupDir/cpuset" -o -d "$cgroupDir/devices" -o -d "$cgroupDir/freezer" -o -d "$cgroupDir/memory" ]; then
+		echo "$(wrap_good 'cgroup hierarchy' 'properly mounted') [$cgroupDir]"
 	else
-		echo "$(wrap_bad 'cgroup hierarchy' 'nonexistent??')"
+		if [ "$cgroupSubsystemDir" ]; then
+			echo "$(wrap_bad 'cgroup hierarchy' 'single mountpoint!') [$cgroupSubsystemDir]"
+		else
+			echo "$(wrap_bad 'cgroup hierarchy' 'nonexistent??')"
+		fi
+		echo "    $(wrap_color '(see https://github.com/tianon/cgroupfs-mount)' yellow)"
 	fi
-	echo "    $(wrap_color '(see https://github.com/tianon/cgroupfs-mount)' yellow)"
 fi
 
 if [ "$(cat /sys/module/apparmor/parameters/enabled 2>/dev/null)" = 'Y' ]; then
