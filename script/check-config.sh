@@ -230,9 +230,13 @@ echo 'Optional Features:'
 	check_flags SECCOMP
 	check_flags CGROUP_PIDS
 
-	check_flags MEMCG_SWAP MEMCG_SWAP_ENABLED
-	if is_set MEMCG_SWAP && ! is_set MEMCG_SWAP_ENABLED; then
-		echo "    $(wrap_color '(note that cgroup swap accounting is not enabled in your kernel config, you can enable it by setting boot option "swapaccount=1")' bold black)"
+	check_flags MEMCG_SWAP
+
+	if [ "$kernelMajor" -lt 5 ] || [ "$kernelMajor" -eq 5 -a "$kernelMinor" -le 8 ]; then
+		check_flags MEMCG_SWAP_ENABLED
+		if is_set MEMCG_SWAP && ! is_set MEMCG_SWAP_ENABLED; then
+			echo "    $(wrap_color '(note that cgroup swap accounting is not enabled in your kernel config, you can enable it by setting boot option "swapaccount=1")' bold black)"
+		fi
 	fi
 }
 
