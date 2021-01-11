@@ -203,7 +203,7 @@ flags=(
 	CGROUPS CGROUP_CPUACCT CGROUP_DEVICE CGROUP_FREEZER CGROUP_SCHED CPUSETS MEMCG
 	KEYS
 	VETH BRIDGE BRIDGE_NETFILTER
-	NF_NAT_IPV4 IP_NF_FILTER IP_NF_TARGET_MASQUERADE
+	IP_NF_FILTER IP_NF_TARGET_MASQUERADE
 	NETFILTER_XT_MATCH_{ADDRTYPE,CONNTRACK,IPVS}
 	IP_NF_NAT NF_NAT NF_NAT_NEEDED
 
@@ -211,6 +211,11 @@ flags=(
 	POSIX_MQUEUE
 )
 check_flags "${flags[@]}"
+
+if [ "$kernelMajor" -lt 5 ] || [ "$kernelMajor" -eq 5 -a "$kernelMinor" -le 1 ]; then
+	check_flags NF_NAT_IPV4
+fi
+
 echo
 
 echo 'Optional Features:'
