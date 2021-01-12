@@ -128,7 +128,7 @@ shellcheck:
 
 shfmt:
 	shfmt -ln bats -d -w tests/integration/*.bats
-	shfmt -ln bash -d -w man/*.sh script/*.sh tests/*.sh tests/integration/*.bash
+	shfmt -ln bash -d -w man/*.sh script/* tests/*.sh tests/integration/*.bash
 
 ci: validate test release
 
