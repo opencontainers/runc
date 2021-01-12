@@ -18,7 +18,7 @@ for f in "${files[@]}"; do
 	orig=$(mktemp)
 	formatted=$(mktemp)
 	# we use "git show" here to validate that what's committed is formatted
-	git show "$VALIDATE_HEAD:$f" > ${orig}
+	git show "$VALIDATE_HEAD:$f" >${orig}
 	${INDENT} ${orig} -o ${formatted}
 	if [ "$(diff -u ${orig} ${formatted})" ]; then
 		badFiles+=("$f")
