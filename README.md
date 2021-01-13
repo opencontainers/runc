@@ -125,6 +125,14 @@ make verify-dependencies
 
 ## Using runc
 
+Please note that runc is a low level tool not designed with an end user
+in mind. It is mostly employed by other higher level container software.
+
+Therefore, unless there is some specific use case that prevents the use
+of tools like Docker or Podman, it is not recommended to use runc directly.
+
+If you still want to use runc, here's how.
+
 ### Creating an OCI Bundle
 
 In order to use runc you must have your container in the format of an OCI bundle.
@@ -166,7 +174,9 @@ If you used the unmodified `runc spec` template this should give you a `sh` sess
 
 The second way to start a container is using the specs lifecycle operations.
 This gives you more power over how the container is created and managed while it is running.
-This will also launch the container in the background so you will have to edit the `config.json` to remove the `terminal` setting for the simple examples here.
+This will also launch the container in the background so you will have to edit
+the `config.json` to remove the `terminal` setting for the simple examples
+below (see more details about [docs/terminals.md](runc terminal handling)).
 Your process field in the `config.json` should look like this below with `"terminal": false` and `"args": ["sleep", "5"]`.
 
 
@@ -289,8 +299,12 @@ PIDFile=/run/mycontainerid.pid
 WantedBy=multi-user.target
 ```
 
-#### cgroup v2
-See [`./docs/cgroup-v2.md`](./docs/cgroup-v2.md).
+## More documentation
+
+* [cgroup v2](./docs/cgroup-v2.md)
+* [Checkpoint and restore](./docs/checkpoint-restore.md)
+* [Changing systemd unit properties](./docs/systemd-properties.md)
+* [Terminals and standard IO](./docs/terminals.md)
 
 ## License
 
