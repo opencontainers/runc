@@ -164,10 +164,7 @@ func setupIO(process *libcontainer.Process, rootuid, rootgid int, createTTY, det
 			t.postStart = append(t.postStart, parent, child)
 			t.consoleC = make(chan error, 1)
 			go func() {
-				if err := t.recvtty(process, parent); err != nil {
-					t.consoleC <- err
-				}
-				t.consoleC <- nil
+				t.consoleC <- t.recvtty(process, parent)
 			}()
 		} else {
 			// the caller of runc will handle receiving the console master

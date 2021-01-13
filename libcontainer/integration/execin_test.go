@@ -277,7 +277,12 @@ func TestExecInTTY(t *testing.T) {
 	}
 	err = container.Run(process)
 	stdinR.Close()
-	defer stdinW.Close()
+	defer func() {
+		stdinW.Close()
+		if _, err := process.Wait(); err != nil {
+			t.Log(err)
+		}
+	}()
 	ok(t, err)
 
 	var stdout bytes.Buffer
@@ -286,67 +291,55 @@ func TestExecInTTY(t *testing.T) {
 		Args: []string{"ps"},
 		Env:  standardEnvironment,
 	}
-	parent, child, err := utils.NewSockPair("console")
-	if err != nil {
+
+	// Repeat to increase chances to catch a race; see
+	// https://github.com/opencontainers/runc/issues/2425.
+	for i := 0; i < 300; i++ {
+		parent, child, err := utils.NewSockPair("console")
+		if err != nil {
+			ok(t, err)
+		}
+		ps.ConsoleSocket = child
+
+		done := make(chan (error))
+		go func() {
+			f, err := utils.RecvFd(parent)
+			if err != nil {
+				done <- fmt.Errorf("RecvFd: %w", err)
+				return
+			}
+			c, err := console.ConsoleFromFile(f)
+			if err != nil {
+				done <- fmt.Errorf("ConsoleFromFile: %w", err)
+				return
+			}
+			// An error from io.Copy is expected once the terminal
+			// is gone, so we deliberately ignore it.
+			_, _ = io.Copy(&stdout, c)
+			done <- nil
+		}()
+
+		err = container.Run(ps)
 		ok(t, err)
-	}
-	defer parent.Close()
-	defer child.Close()
-	ps.ConsoleSocket = child
-	type cdata struct {
-		c   console.Console
-		err error
-	}
-	dc := make(chan *cdata, 1)
-	go func() {
-		f, err := utils.RecvFd(parent)
-		if err != nil {
-			dc <- &cdata{
-				err: err,
-			}
-			return
-		}
-		c, err := console.ConsoleFromFile(f)
-		if err != nil {
-			dc <- &cdata{
-				err: err,
-			}
-			return
-		}
-		console.ClearONLCR(c.Fd())
-		dc <- &cdata{
-			c: c,
-		}
-	}()
-	err = container.Run(ps)
-	ok(t, err)
-	data := <-dc
-	if data.err != nil {
-		ok(t, data.err)
-	}
-	console := data.c
-	copy := make(chan struct{})
-	go func() {
-		io.Copy(&stdout, console)
-		close(copy)
-	}()
-	ok(t, err)
-	select {
-	case <-time.After(5 * time.Second):
-		t.Fatal("Waiting for copy timed out")
-	case <-copy:
-	}
-	waitProcess(ps, t)
 
-	stdinW.Close()
-	waitProcess(process, t)
+		select {
+		case <-time.After(5 * time.Second):
+			t.Fatal("Waiting for copy timed out")
+		case err := <-done:
+			ok(t, err)
+		}
 
-	out := stdout.String()
-	if !strings.Contains(out, "cat") || !strings.Contains(out, "ps") {
-		t.Fatalf("unexpected running process, output %q", out)
-	}
-	if strings.Contains(out, "\r") {
-		t.Fatalf("unexpected carriage-return in output %q", out)
+		waitProcess(ps, t)
+		parent.Close()
+		child.Close()
+
+		out := stdout.String()
+		if !strings.Contains(out, "cat") || !strings.Contains(out, "ps") {
+			t.Fatalf("unexpected running process, output %q", out)
+		}
+		if strings.Contains(out, "\r") {
+			t.Fatalf("unexpected carriage-return in output %q", out)
+		}
 	}
 }
 
