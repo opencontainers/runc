@@ -39,6 +39,8 @@ Vagrant.configure("2") do |config|
     cd bats-core
     git checkout $BATS_VERSION
     ./install.sh /usr/local
+    cd ..
+    rm -rf bats-core
 
     # set PATH (NOTE: sudo without -i ignores this PATH)
     cat >> /etc/profile.d/sh.local <<EOF
