@@ -501,9 +501,8 @@ func TestGetHugePageSizeImpl(t *testing.T) {
 		warns.Reset()
 		output, err := getHugePageSizeFromFilenames(c.input)
 		if err != nil {
-			t.Logf("(input %v, error %v)", c.input, err)
 			if !c.isErr {
-				t.Error("unexpected error ^^^^")
+				t.Errorf("input %v, expected nil, got error: %v", c.input, err)
 			}
 			// no more checks
 			continue
