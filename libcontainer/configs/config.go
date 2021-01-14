@@ -39,6 +39,25 @@ type Seccomp struct {
 // Action is taken upon rule match in Seccomp
 type Action int
 
+// String represents the action as the corresponding OCI string.
+func (a Action) String() string {
+	switch a {
+	case Kill:
+		return "SCMP_ACT_KILL"
+	case Errno:
+		return "SCMP_ACT_ERRNO"
+	case Trap:
+		return "SCMP_ACT_TRAP"
+	case Allow:
+		return "SCMP_ACT_ALLOW"
+	case Trace:
+		return "SCMP_ACT_TRACE"
+	case Log:
+		return "SCMP_ACT_LOG"
+	}
+	return fmt.Sprintf("[unknown seccomp action %d]", a)
+}
+
 const (
 	Kill Action = iota + 1
 	Errno

@@ -38,7 +38,9 @@ func InitSeccomp(config *configs.Seccomp) error {
 		return errors.New("cannot initialize Seccomp - nil config passed")
 	}
 
-	defaultAction, err := getAction(config.DefaultAction, nil)
+	// We always default to an errno of ENOSYS for the default action.
+	defaultErrno := uint(unix.ENOSYS)
+	defaultAction, err := getAction(config.DefaultAction, &defaultErrno)
 	if err != nil {
 		return errors.New("error initializing seccomp - invalid default action")
 	}
@@ -54,7 +56,6 @@ func InitSeccomp(config *configs.Seccomp) error {
 		if err != nil {
 			return fmt.Errorf("error validating Seccomp architecture: %s", err)
 		}
-
 		if err := filter.AddArch(scmpArch); err != nil {
 			return fmt.Errorf("error adding architecture to seccomp filter: %s", err)
 		}
@@ -70,10 +71,13 @@ func InitSeccomp(config *configs.Seccomp) error {
 		if call == nil {
 			return errors.New("encountered nil syscall while initializing Seccomp")
 		}
-
-		if err = matchCall(filter, call); err != nil {
+		if err = matchCallUser(filter, call); err != nil {
 			return err
 		}
+	}
+
+	if err := enosysHotfix(filter, config); err != nil {
+		return err
 	}
 
 	if err = filter.Load(); err != nil {
@@ -165,8 +169,25 @@ func getCondition(arg *configs.Arg) (libseccomp.ScmpCondition, error) {
 	return libseccomp.MakeCondition(arg.Index, op, arg.Value, arg.ValueTwo)
 }
 
-// Add a rule to match a single syscall
-func matchCall(filter *libseccomp.ScmpFilter, call *configs.Syscall) error {
+func matchCallInternal(filter *libseccomp.ScmpFilter, call *configs.Syscall) error {
+	return matchCall(filter, call, true)
+}
+
+func matchCallUser(filter *libseccomp.ScmpFilter, call *configs.Syscall) error {
+	return matchCall(filter, call, false)
+}
+
+// Add a rule to match a single syscall. If noCompat is true then we do not
+// generate any compatibility rules and always apply the rule-set as specified
+// (in older runc versions arguments were treated as OR rules, meaning that if
+// a rule matches the same argument more than once we treat it as OR).
+//
+// FIXME: This compatibility code really needs to be reworked or entirely
+//        removed because it leads to significantly counter-intuitive results
+//        and certain things cannot be implemented as a result (such as
+//          (arg0 != X && arg0 != Y)
+//        checks).
+func matchCall(filter *libseccomp.ScmpFilter, call *configs.Syscall, noCompat bool) error {
 	if call == nil || filter == nil {
 		return errors.New("cannot use nil as syscall to block")
 	}
@@ -218,7 +239,7 @@ func matchCall(filter *libseccomp.ScmpFilter, call *configs.Syscall) error {
 			}
 		}
 
-		if hasMultipleArgs {
+		if !noCompat && hasMultipleArgs {
 			// Revert to old behavior
 			// Add each condition attached to a separate rule
 			for _, cond := range conditions {
