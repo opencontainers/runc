@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# Github Actions test execution helper script. The purpose is to hide
+# the complexity of running the tests under GHA.
+#
+# 1. GHA execution environment lacks a terminal, and some tests require it.
+#    Fake the terminal by using script utility with some minimal setup
+#    (stty and TERM value).
+#
+# 2. Use sudo -n -E PATH="$PATH" to run tests as root with proper PATH set.
+#
+# 3. Change to the proper directory (needed for vagrant runs).
+
+set -e -u -o pipefail
+
+cd "$(readlink -f "$(dirname "$0")"/..)"
+
+test -z "$TERM" || TERM=xterm
+export TERM
+
+CMD="/bin/bash -c \"stty rows 40 cols 80 && exec sudo -n -E PATH=\"$PATH\" -- $*\""
+exec script -e -c "$CMD"

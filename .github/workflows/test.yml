@@ -61,7 +61,7 @@ jobs:
 
     - name: unit test
       if: matrix.rootless != 'rootless'
-      run: sudo -E PATH="$PATH" script -e -c /bin/bash -c 'stty rows 40 cols 80; TERM=xterm make localunittest'
+      run: script/gha make localunittest
 
     - name: add rootless user
       if: matrix.rootless == 'rootless'
@@ -74,12 +74,12 @@ jobs:
         sudo chown -R rootless.rootless /home/rootless
 
     - name: integration test (fs driver)
-      run: sudo -E PATH="$PATH" script -e -c /bin/bash -c 'stty rows 40 cols 80; TERM=xterm make local${{ matrix.rootless }}integration'
+      run: script/gha make local${{ matrix.rootless }}integration
 
     - name: integration test (systemd driver)
       # can't use systemd driver with cgroupv1
       if: matrix.rootless != 'rootless'
-      run: sudo -E PATH="$PATH" script -e -c /bin/bash -c 'stty rows 40 cols 80; TERM=xterm make RUNC_USE_SYSTEMD=yes local${{ matrix.rootless }}integration'
+      run: script/gha make RUNC_USE_SYSTEMD=yes local${{ matrix.rootless }}integration
 
 
   # cgroup v2 unified hierarchy + very recent kernel (openat2)
@@ -101,21 +101,21 @@ jobs:
         run: ssh default 'sh -exc "uname -a && systemctl --version && df -T"'
 
       - name: unit tests
-        run: ssh default 'cd /vagrant && sudo make localunittest'
+        run: ssh default '/vagrant/script/gha make localunittest'
 
       # The integration tests require tty which GH actions lack;
       # wrap those in "script" to emulate tty.
       - name: cgroupv2 with systemd
-        run: ssh default "script -e -c /bin/bash -c 'stty rows 40 cols 80; TERM=xterm sudo make -C /vagrant localintegration RUNC_USE_SYSTEMD=yes'"
+        run: ssh default '/vagrant/script/gha make localintegration RUNC_USE_SYSTEMD=yes'
 
       - name: cgroupv2 with fs2
-        run: ssh default "script -e -c /bin/bash -c 'stty rows 40 cols 80; TERM=xterm sudo make -C /vagrant localintegration'"
+        run: ssh default '/vagrant/script/gha make localintegration'
 
       - name: cgroupv2 with systemd (rootless)
-        run: ssh default "script -e -c /bin/bash -c 'stty rows 40 cols 80; TERM=xterm sudo make -C /vagrant localrootlessintegration RUNC_USE_SYSTEMD=yes'"
+        run: ssh default '/vagrant/script/gha make localrootlessintegration RUNC_USE_SYSTEMD=yes'
 
       - name: cgroupv2 with fs2 (rootless)
-        run: ssh default "script -e -c /bin/bash -c 'stty rows 40 cols 80; TERM=xterm sudo make -C /vagrant localrootlessintegration'"
+        run: ssh default '/vagrant/script/gha make localrootlessintegration'
 
 
   # kernel 3.10 (frankenized), systemd 219
@@ -137,15 +137,15 @@ jobs:
         run: ssh default 'rpm -q centos-release kernel systemd'
 
       - name: unit tests
-        run: ssh default 'sudo -i make -C /vagrant localunittest'
+        run: ssh default '/vagrant/script/gha make localunittest'
 
       - name: integration tests (fs cgroup driver)
-        run: ssh default "script -e -c /bin/bash -c 'stty rows 40 cols 80; TERM=xterm sudo -i make -C /vagrant localintegration'"
+        run: ssh default '/vagrant/script/gha make localintegration'
 
       - name: integration tests (systemd cgroup driver)
-        run: ssh default "script -e -c /bin/bash -c 'stty rows 40 cols 80; TERM=xterm sudo -i make -C /vagrant localintegration RUNC_USE_SYSTEMD=1'"
+        run: ssh default '/vagrant/script/gha make localintegration RUNC_USE_SYSTEMD=1'
 
       - name: rootless integration
       # FIXME: rootless is skipped because of EPERM on writing cgroup.procs
         if: false
-        run: ssh default "script -e -c /bin/bash -c 'stty rows 40 cols 80; TERM=xterm sudo -i make -C /vagrant localrootlessintegration'"
+        run: ssh default '/vagrant/script/gha make localrootlessintegration'

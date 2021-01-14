@@ -42,7 +42,7 @@ Vagrant.configure("2") do |config|
     cd ..
     rm -rf bats-core
 
-    # set PATH (NOTE: sudo without -i ignores this PATH)
+    # set PATH (NOTE: sudo ignores this unless run as 'sudo -i' or 'sudo -E PATH="$PATH"'.)
     cat >> /etc/profile.d/sh.local <<EOF
 PATH=/usr/local/go/bin:/usr/local/bin:$PATH
 export PATH
