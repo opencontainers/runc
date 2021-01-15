@@ -21,7 +21,7 @@ Vagrant.configure("2") do |config|
 config exclude kernel,kernel-core
 config install_weak_deps false
 update
-install iptables gcc make golang-go libseccomp-devel bats jq git-core criu skopeo
+install iptables gcc make golang-go libseccomp-devel bats jq git-core criu
 ts run
 EOF
     done
@@ -35,17 +35,6 @@ EOF
     mkdir -m 0700 -p /home/rootless/.ssh
     cat /root/rootless.key.pub >> /home/rootless/.ssh/authorized_keys
     chown -R rootless.rootless /home/rootless
-
-    # Install umoci
-    UMOCI_VERSION=v0.4.6
-    curl -o /usr/local/bin/umoci -fsSL https://github.com/opencontainers/umoci/releases/download/${UMOCI_VERSION}/umoci.amd64
-    chmod +x /usr/local/bin/umoci
-
-    # Add busybox for libcontainer/integration tests
-    . /vagrant/tests/integration/multi-arch.bash \
-        && mkdir /busybox /debian \
-        && curl -fsSL $(get_busybox) | tar xfJC - /busybox \
-        && get_and_extract_debian /debian
 
     # Delegate cgroup v2 controllers to rootless user via --systemd-cgroup
     mkdir -p /etc/systemd/system/user@.service.d

@@ -144,6 +144,10 @@ function powerset() {
 }
 features_powerset="$(powerset "${ALL_FEATURES[@]}")"
 
+# Make sure we have container images downloaded, as otherwise
+# rootless user won't be able to write to $TESTDATA.
+"$ROOT"/tests/integration/get-images.sh >/dev/null
+
 # Iterate over the powerset of all features.
 IFS=:
 for enabled_features in $features_powerset; do
