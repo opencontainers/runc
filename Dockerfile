@@ -23,6 +23,7 @@ RUN echo 'deb https://download.opensuse.org/repositories/devel:/tools:/criu/Debi
         crossbuild-essential-ppc64el \
         curl \
         gawk \
+        gcc \
         iptables \
         jq \
         kmod \
