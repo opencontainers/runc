@@ -12,6 +12,8 @@ function setup() {
 	umount "$LIBPATH"/$HOOKLIBCR.1.0.0 &>/dev/null || true
 	umount "$LIBPATH"/$HOOKLIBCC.1.0.0 &>/dev/null || true
 
+	requires root no_systemd
+
 	teardown_debian
 	setup_debian
 }
@@ -25,9 +27,6 @@ function teardown() {
 }
 
 @test "runc run (hooks library tests)" {
-	requires root
-	requires no_systemd
-
 	# setup some dummy libs
 	gcc -shared -Wl,-soname,librunc-hooks-create-runtime.so.1 -o "$HOOKLIBCR.1.0.0"
 	gcc -shared -Wl,-soname,librunc-hooks-create-container.so.1 -o "$HOOKLIBCC.1.0.0"
