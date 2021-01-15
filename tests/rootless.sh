@@ -19,6 +19,10 @@
 # a new feature, please match the existing style. Add an entry to $ALL_FEATURES,
 # and add an enable_* and disable_* hook.
 
+set -e -u -o pipefail
+[ -v RUNC_USE_SYSTEMD ] || RUNC_USE_SYSTEMD=
+[ -v ROOTLESS_TESTPATH ] || ROOTLESS_TESTPATH=
+
 ALL_FEATURES=("idmap" "cgroup")
 # cgroup is managed by systemd when RUNC_USE_SYSTEMD is set
 if [[ -n "${RUNC_USE_SYSTEMD}" ]]; then
@@ -54,14 +58,12 @@ function enable_idmap() {
 	# Create a directory owned by $AUX_UID inside container, to be used
 	# by a test case in cwd.bats. This setup can't be done by the test itself,
 	# as it needs root for chown.
-	set -e
 	export AUX_UID=1024
 	AUX_DIR="$(mktemp -d)"
 	# 1000 is linux.uidMappings.containerID value,
 	# as set by runc_rootless_idmap
 	chown "$((ROOTLESS_UIDMAP_START - 1000 + AUX_UID))" "$AUX_DIR"
 	export AUX_DIR
-	set +e
 }
 
 function disable_idmap() {
@@ -75,10 +77,12 @@ function disable_idmap() {
 	# Deactivate new{uid,gid}map helpers. setuid is preserved with mv(1).
 	[ -e /usr/bin/newuidmap ] && mv /usr/bin/{,unused-}newuidmap
 	[ -e /usr/bin/newgidmap ] && mv /usr/bin/{,unused-}newgidmap
+
+	return 0
 }
 
 function cleanup() {
-	if [ -n "$AUX_DIR" ]; then
+	if [ -v AUX_DIR ]; then
 		rmdir "$AUX_DIR"
 		unset AUX_DIX
 	fi
@@ -133,6 +137,8 @@ function disable_cgroup() {
 	done
 	# cgroup v2
 	[ -d "$CGROUP_MOUNT/$CGROUP_PATH" ] && rmdir "$CGROUP_MOUNT/$CGROUP_PATH"
+
+	return 0
 }
 
 # Create a powerset of $ALL_FEATURES (the set of all subsets of $ALL_FEATURES).
@@ -150,6 +156,7 @@ features_powerset="$(powerset "${ALL_FEATURES[@]}")"
 
 # Iterate over the powerset of all features.
 IFS=:
+idx=0
 for enabled_features in $features_powerset; do
 	idx="$(($idx + 1))"
 	echo "[$(printf '%.2d' "$idx")] run rootless tests ... (${enabled_features%%+})"
@@ -162,7 +169,6 @@ for enabled_features in $features_powerset; do
 	done
 
 	# Run the test suite!
-	set -e
 	echo path: $PATH
 	export ROOTLESS_FEATURES="$enabled_features"
 	if [[ -n "${RUNC_USE_SYSTEMD}" ]]; then
@@ -173,6 +179,5 @@ for enabled_features in $features_powerset; do
 	else
 		sudo -HE -u rootless PATH="$PATH" $(which bats) -t "$ROOT/tests/integration$ROOTLESS_TESTPATH"
 	fi
-	set +e
 	cleanup
 done
