@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"syscall"
@@ -18,6 +19,36 @@ import (
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
+
+var busyboxTar string
+
+// init makes sure the container images are downloaded,
+// and initializes busyboxTar. If images can't be downloaded,
+// we are unable to run any tests, so panic.
+func init() {
+	// Figure out path to get-images.sh. Note it won't work
+	// in case the compiled test binary is moved elsewhere.
+	_, ex, _, _ := runtime.Caller(0)
+	getImages, err := filepath.Abs(filepath.Join(filepath.Dir(ex), "..", "..", "tests", "integration", "get-images.sh"))
+	if err != nil {
+		panic(err)
+	}
+	// Call it to make sure images are downloaded, and to get the paths.
+	out, err := exec.Command(getImages).CombinedOutput()
+	if err != nil {
+		panic(fmt.Errorf("getImages error %s (output: %s)", err, out))
+	}
+	// Extract the value of BUSYBOX_IMAGE.
+	found := regexp.MustCompile(`(?m)^BUSYBOX_IMAGE=(.*)$`).FindSubmatchIndex(out)
+	if len(found) < 4 {
+		panic(fmt.Errorf("unable to find BUSYBOX_IMAGE=<value> in %q", out))
+	}
+	busyboxTar = string(out[found[2]:found[3]])
+	// Finally, check the file is present
+	if _, err := os.Stat(busyboxTar); err != nil {
+		panic(err)
+	}
+}
 
 func ptrInt(v int) *int {
 	return &v
@@ -114,9 +145,9 @@ func remove(dir string) {
 // copyBusybox copies the rootfs for a busybox container created for the test image
 // into the new directory for the specific test
 func copyBusybox(dest string) error {
-	out, err := exec.Command("sh", "-c", fmt.Sprintf("cp -a /busybox/* %s/", dest)).CombinedOutput()
+	out, err := exec.Command("sh", "-c", fmt.Sprintf("tar --exclude './dev/*' -C %q -xf %q", dest, busyboxTar)).CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("copy error %q: %q", err, out)
+		return fmt.Errorf("untar error %q: %q", err, out)
 	}
 	return nil
 }
