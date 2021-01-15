@@ -123,7 +123,7 @@ validate:
 	$(GO) vet $(MOD_VENDOR) ./...
 
 shellcheck:
-	shellcheck tests/integration/*.bats tests/integration/*.sh
+	shellcheck tests/integration/*.bats tests/integration/*.sh tests/*.sh
 	# TODO: add shellcheck for more sh files
 
 shfmt:
