@@ -7,7 +7,6 @@ INTEGRATION_ROOT=$(dirname "$(readlink -f "$BASH_SOURCE")")
 
 RUNC="${INTEGRATION_ROOT}/../../runc"
 RECVTTY="${INTEGRATION_ROOT}/../../contrib/cmd/recvtty/recvtty"
-GOPATH="$(mktemp -d --tmpdir runc-integration-gopath.XXXXXX)"
 
 # Test data path.
 TESTDATA="${INTEGRATION_ROOT}/testdata"
