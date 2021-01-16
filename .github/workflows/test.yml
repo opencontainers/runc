@@ -92,7 +92,7 @@ jobs:
   fedora:
     # nested virtualization is only available on macOS hosts
     runs-on: macos-10.15
-    timeout-minutes: 60
+    timeout-minutes: 30
     # only run it if others have passed
     needs: [test]
     steps:
@@ -126,7 +126,7 @@ jobs:
   centos7:
     # nested virtualization is only available on macOS hosts
     runs-on: macos-10.15
-    timeout-minutes: 60
+    timeout-minutes: 15
     # only run it if others have passed
     needs: [test]
     steps:
