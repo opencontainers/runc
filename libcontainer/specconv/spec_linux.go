@@ -847,6 +847,11 @@ func SetupSeccomp(config *specs.LinuxSeccomp) (*configs.Seccomp, error) {
 		return nil, nil
 	}
 
+	// We don't currently support seccomp flags.
+	if len(config.Flags) != 0 {
+		return nil, fmt.Errorf("seccomp flags are not yet supported by runc")
+	}
+
 	newConfig := new(configs.Seccomp)
 	newConfig.Syscalls = []*configs.Syscall{}
 

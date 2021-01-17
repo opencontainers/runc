@@ -1,11 +1,13 @@
 package utils
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+	"unsafe"
 
 	"golang.org/x/sys/unix"
 )
@@ -13,6 +15,20 @@ import (
 const (
 	exitSignalOffset = 128
 )
+
+// NativeEndian is the native byte order of the host system.
+var NativeEndian binary.ByteOrder
+
+func init() {
+	// Copied from <golang.org/x/net/internal/socket/sys.go>.
+	i := uint32(1)
+	b := (*[4]byte)(unsafe.Pointer(&i))
+	if b[0] == 1 {
+		NativeEndian = binary.LittleEndian
+	} else {
+		NativeEndian = binary.BigEndian
+	}
+}
 
 // ResolveRootfs ensures that the current working directory is
 // not a symlink and returns the absolute path to the rootfs

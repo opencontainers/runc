@@ -13,11 +13,14 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
+      - name: install deps
+        run: |
+          sudo apt -q update
+          sudo apt -q install libseccomp-dev
       - uses: golangci/golangci-lint-action@v2
         with:
           # must be specified without patch version
           version: v1.31
-
           # Only show new issues for a pull request.
           only-new-issues: true
 
