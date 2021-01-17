@@ -10,8 +10,9 @@ import (
 	"strings"
 
 	"github.com/opencontainers/runc/libcontainer/configs"
-	libseccomp "github.com/seccomp/libseccomp-golang"
 
+	libseccomp "github.com/seccomp/libseccomp-golang"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
 
@@ -29,6 +30,49 @@ const (
 	syscallMaxArguments int = 6
 )
 
+// enosysHotfixFilter adds explicit -EPERM rules for any syscall present in
+// Linux 3.0 (meaning its syscall number is smaller than "setns") which did not
+// have a rule in the filter. This is to avoid giving -ENOSYS for basic
+// syscalls.
+func enosysHotfixFilter(config *configs.Seccomp) error {
+	// Our default actions for hotfixed syscalls.
+	defaultAction := config.DefaultAction
+	defaultErrno := uint(unix.EPERM)
+
+	// Collect all syscalls that had some rule.
+	seenSyscalls := map[string]bool{}
+	for _, rule := range config.Syscalls {
+		seenSyscalls[rule.Name] = true
+	}
+
+	// And now we create unconditional rules for any syscalls not present in
+	// the allow list at all, up to the last syscall number (which is currently
+	// the last syscall added to Linux 3.0 -- "setns").
+	lastSysNo, err := libseccomp.GetSyscallFromName("setns")
+	if err != nil {
+		// TODO: Maybe have a nicer fallback than this?
+		return errors.New("cannot find syscall number for 'setns'")
+	}
+	for sysNo := 0; sysNo <= int(lastSysNo); sysNo++ {
+		sysName, err := libseccomp.ScmpSyscall(sysNo).GetName()
+		if err != nil {
+			// No such syscall...
+			continue
+		}
+		if seenSyscalls[sysName] {
+			// Rule already exists.
+			continue
+		}
+		logrus.Debugf("seccomp hotfix: injecting blanket EPERM rule for %s", sysName)
+		config.Syscalls = append(config.Syscalls, &configs.Syscall{
+			Name:     sysName,
+			Action:   defaultAction,
+			ErrnoRet: &defaultErrno,
+		})
+	}
+	return nil
+}
+
 // Filters given syscalls in a container, preventing them from being used
 // Started in the container init process, and carried over to all child processes
 // Setns calls, however, require a separate invocation, as they are not children
@@ -38,7 +82,18 @@ func InitSeccomp(config *configs.Seccomp) error {
 		return errors.New("cannot initialize Seccomp - nil config passed")
 	}
 
-	defaultAction, err := getAction(config.DefaultAction, nil)
+	// Default to an errno of ENOSYS as the default action if the default
+	// action is SECCOMP_ACT_ERRNO. This is to avoid causing glibc headaches
+	// when new syscalls are added.
+	defaultErrno := uint(unix.EPERM)
+	if config.DefaultAction == configs.Errno {
+		defaultErrno = uint(unix.ENOSYS)
+		if err := enosysHotfixFilter(config); err != nil {
+			return fmt.Errorf("error hotfixing filter: %s", err)
+		}
+	}
+
+	defaultAction, err := getAction(config.DefaultAction, &defaultErrno)
 	if err != nil {
 		return errors.New("error initializing seccomp - invalid default action")
 	}
@@ -54,7 +109,6 @@ func InitSeccomp(config *configs.Seccomp) error {
 		if err != nil {
 			return fmt.Errorf("error validating Seccomp architecture: %s", err)
 		}
-
 		if err := filter.AddArch(scmpArch); err != nil {
 			return fmt.Errorf("error adding architecture to seccomp filter: %s", err)
 		}
@@ -70,7 +124,6 @@ func InitSeccomp(config *configs.Seccomp) error {
 		if call == nil {
 			return errors.New("encountered nil syscall while initializing Seccomp")
 		}
-
 		if err = matchCall(filter, call); err != nil {
 			return err
 		}
