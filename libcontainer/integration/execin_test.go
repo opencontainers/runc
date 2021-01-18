@@ -313,6 +313,11 @@ func TestExecInTTY(t *testing.T) {
 				done <- fmt.Errorf("ConsoleFromFile: %w", err)
 				return
 			}
+			err = console.ClearONLCR(c.Fd())
+			if err != nil {
+				done <- fmt.Errorf("ClearONLCR: %w", err)
+				return
+			}
 			// An error from io.Copy is expected once the terminal
 			// is gone, so we deliberately ignore it.
 			_, _ = io.Copy(&stdout, c)
