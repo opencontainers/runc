@@ -85,6 +85,8 @@ jobs:
 
   commit:
     runs-on: ubuntu-20.04
+    # Only check commits on pull requests.
+    if: github.event_name == 'pull_request'
     steps:
       - name: get pr commits
         id: 'get-pr-commits'
