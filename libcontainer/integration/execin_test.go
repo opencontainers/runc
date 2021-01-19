@@ -285,7 +285,6 @@ func TestExecInTTY(t *testing.T) {
 	}()
 	ok(t, err)
 
-	var stdout bytes.Buffer
 	ps := &libcontainer.Process{
 		Cwd:  "/",
 		Args: []string{"ps"},
@@ -295,6 +294,8 @@ func TestExecInTTY(t *testing.T) {
 	// Repeat to increase chances to catch a race; see
 	// https://github.com/opencontainers/runc/issues/2425.
 	for i := 0; i < 300; i++ {
+		var stdout bytes.Buffer
+
 		parent, child, err := utils.NewSockPair("console")
 		if err != nil {
 			ok(t, err)
