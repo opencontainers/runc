@@ -294,6 +294,9 @@ func getPageUsageByNUMA(cgroupPath string) (cgroups.PageUsageByNUMA, error) {
 
 		for _, column := range columns {
 			pagesByNode := strings.SplitN(column, numaStatKeyValueSeparator, numaStatColumnSliceLength)
+			if len(pagesByNode) != numaStatColumnSliceLength {
+				continue
+			}
 
 			if strings.HasPrefix(pagesByNode[numaStatTypeIndex], numaNodeSymbol) {
 				nodeID, err := strconv.ParseUint(pagesByNode[numaStatTypeIndex][1:], 10, 8)
