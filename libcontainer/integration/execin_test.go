@@ -257,6 +257,7 @@ func TestExecInTTY(t *testing.T) {
 	if testing.Short() {
 		return
 	}
+	t.Skip("racy; see https://github.com/opencontainers/runc/issues/2425")
 	rootfs, err := newRootfs()
 	ok(t, err)
 	defer remove(rootfs)
