@@ -25,11 +25,18 @@ unevictable=0 N0=0 N1=0 N2=0 N3=0
 hierarchical_total=768133 N0=509113 N1=138887 N2=20464 N3=99669
 hierarchical_file=722017 N0=496516 N1=119997 N2=20181 N3=85323
 hierarchical_anon=46096 N0=12597 N1=18890 N2=283 N3=14326
-hierarchical_unevictable=20 N0=0 N1=0 N2=0 N3=20`
+hierarchical_unevictable=20 N0=0 N1=0 N2=0 N3=20
+`
 	memoryNUMAStatNoHierarchyContents = `total=44611 N0=32631 N1=7501 N2=1982 N3=2497
 file=44428 N0=32614 N1=7335 N2=1982 N3=2497
 anon=183 N0=17 N1=166 N2=0 N3=0
-unevictable=0 N0=0 N1=0 N2=0 N3=0`
+unevictable=0 N0=0 N1=0 N2=0 N3=0
+`
+	// Some custom kernels has extra fields that should be ignored
+	memoryNUMAStatExtraContents = `numa_locality 0 0 0 0 0 0 0 0 0 0
+numa_exectime 0
+whatever=100 N0=0
+`
 )
 
 func TestMemorySetMemory(t *testing.T) {
@@ -288,7 +295,7 @@ func TestMemoryStats(t *testing.T) {
 		"memory.kmem.failcnt":             memoryFailcnt,
 		"memory.kmem.limit_in_bytes":      memoryLimitContents,
 		"memory.use_hierarchy":            memoryUseHierarchyContents,
-		"memory.numa_stat":                memoryNUMAStatContents,
+		"memory.numa_stat":                memoryNUMAStatContents + memoryNUMAStatExtraContents,
 	})
 
 	memory := &MemoryGroup{}
@@ -486,7 +493,7 @@ func TestNoHierarchicalNumaStat(t *testing.T) {
 	helper := NewCgroupTestUtil("memory", t)
 	defer helper.cleanup()
 	helper.writeFileContents(map[string]string{
-		"memory.numa_stat": memoryNUMAStatNoHierarchyContents,
+		"memory.numa_stat": memoryNUMAStatNoHierarchyContents + memoryNUMAStatExtraContents,
 	})
 
 	actualStats, err := getPageUsageByNUMA(helper.CgroupPath)
@@ -503,6 +510,49 @@ func TestNoHierarchicalNumaStat(t *testing.T) {
 		Hierarchical: cgroups.PageUsageByNUMAInner{},
 	}
 	expectPageUsageByNUMAEquals(t, pageUsageByNUMA, actualStats)
+}
+
+func TestBadNumaStat(t *testing.T) {
+	memoryNUMAStatBadContents := []struct {
+		desc, contents string
+	}{
+		{
+			desc: "Nx where x is not a number",
+			contents: `total=44611 N0=44611,
+file=44428 Nx=0
+`,
+		}, {
+			desc:     "Nx where x > 255",
+			contents: `total=44611 N333=444`,
+		}, {
+			desc:     "Nx argument missing",
+			contents: `total=44611 N0=123 N1=`,
+		}, {
+			desc:     "Nx argument is not a number",
+			contents: `total=44611 N0=123 N1=a`,
+		}, {
+			desc:     "Missing = after Nx",
+			contents: `total=44611 N0=123 N1`,
+		}, {
+			desc: "No Nx at non-first position",
+			contents: `total=44611 N0=32631
+file=44428 N0=32614
+anon=183 N0=12 badone
+`,
+		},
+	}
+	helper := NewCgroupTestUtil("memory", t)
+	defer helper.cleanup()
+	for _, c := range memoryNUMAStatBadContents {
+		helper.writeFileContents(map[string]string{
+			"memory.numa_stat": c.contents,
+		})
+
+		_, err := getPageUsageByNUMA(helper.CgroupPath)
+		if err == nil {
+			t.Errorf("case %q: expected error, got nil", c.desc)
+		}
+	}
 }
 
 func TestWithoutNumaStat(t *testing.T) {
