@@ -186,10 +186,6 @@ func setupConsole(socket *os.File, config *initConfig, mount bool) error {
 	if err != nil {
 		return err
 	}
-	err = console.ClearONLCR(pty.Fd())
-	if err != nil {
-		return err
-	}
 
 	// After we return from here, we don't need the console anymore.
 	defer pty.Close()

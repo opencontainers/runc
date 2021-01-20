@@ -257,6 +257,7 @@ func TestExecInTTY(t *testing.T) {
 	if testing.Short() {
 		return
 	}
+	t.Skip("racy; see https://github.com/opencontainers/runc/issues/2425")
 	rootfs, err := newRootfs()
 	ok(t, err)
 	defer remove(rootfs)
@@ -285,7 +286,6 @@ func TestExecInTTY(t *testing.T) {
 	}()
 	ok(t, err)
 
-	var stdout bytes.Buffer
 	ps := &libcontainer.Process{
 		Cwd:  "/",
 		Args: []string{"ps"},
@@ -295,6 +295,8 @@ func TestExecInTTY(t *testing.T) {
 	// Repeat to increase chances to catch a race; see
 	// https://github.com/opencontainers/runc/issues/2425.
 	for i := 0; i < 300; i++ {
+		var stdout bytes.Buffer
+
 		parent, child, err := utils.NewSockPair("console")
 		if err != nil {
 			ok(t, err)
@@ -311,6 +313,11 @@ func TestExecInTTY(t *testing.T) {
 			c, err := console.ConsoleFromFile(f)
 			if err != nil {
 				done <- fmt.Errorf("ConsoleFromFile: %w", err)
+				return
+			}
+			err = console.ClearONLCR(c.Fd())
+			if err != nil {
+				done <- fmt.Errorf("ClearONLCR: %w", err)
 				return
 			}
 			// An error from io.Copy is expected once the terminal
