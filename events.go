@@ -196,29 +196,17 @@ func convertMemoryEntry(c cgroups.MemoryData) types.MemoryEntry {
 func convertBlkioEntry(c []cgroups.BlkioStatEntry) []types.BlkioEntry {
 	var out []types.BlkioEntry
 	for _, e := range c {
-		out = append(out, types.BlkioEntry{
-			Major: e.Major,
-			Minor: e.Minor,
-			Op:    e.Op,
-			Value: e.Value,
-		})
+		out = append(out, types.BlkioEntry(e))
 	}
 	return out
 }
 
 func convertL3CacheInfo(i *intelrdt.L3CacheInfo) *types.L3CacheInfo {
-	return &types.L3CacheInfo{
-		CbmMask:    i.CbmMask,
-		MinCbmBits: i.MinCbmBits,
-		NumClosids: i.NumClosids,
-	}
+	ci := types.L3CacheInfo(*i)
+	return &ci
 }
 
 func convertMemBwInfo(i *intelrdt.MemBwInfo) *types.MemBwInfo {
-	return &types.MemBwInfo{
-		BandwidthGran: i.BandwidthGran,
-		DelayLinear:   i.DelayLinear,
-		MinBandwidth:  i.MinBandwidth,
-		NumClosids:    i.NumClosids,
-	}
+	mi := types.MemBwInfo(*i)
+	return &mi
 }
