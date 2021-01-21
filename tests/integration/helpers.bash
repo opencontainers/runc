@@ -421,29 +421,6 @@ function wait_for_container() {
 	false
 }
 
-# retry until the given container has state
-function wait_for_container_inroot() {
-	local attempts=$1
-	local delay=$2
-	local cid=$3
-	# optionally wait for a specific status
-	local wait_for_status="${4:-}"
-	local i
-
-	for ((i = 0; i < attempts; i++)); do
-		ROOT=$4 runc state $cid
-		if [[ "$status" -eq 0 ]]; then
-			if [[ "${output}" == *"${wait_for_status}"* ]]; then
-				return 0
-			fi
-		fi
-		sleep $delay
-	done
-
-	echo "runc state failed to return state $statecheck $attempts times. Output: $output"
-	false
-}
-
 function testcontainer() {
 	# test state of container
 	runc state $1
