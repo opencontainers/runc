@@ -54,8 +54,8 @@ function teardown() {
 
 @test "runc delete --force in cgroupv1 with subcgroups" {
 	requires cgroups_v1 root cgroupns
-	set_cgroups_path "$BUSYBOX_BUNDLE"
-	set_cgroup_mount_writable "$BUSYBOX_BUNDLE"
+	set_cgroups_path
+	set_cgroup_mount_writable
 	# enable cgroupns
 	update_config '.linux.namespaces += [{"type": "cgroup"}]'
 
@@ -104,8 +104,8 @@ EOF
 
 @test "runc delete --force in cgroupv2 with subcgroups" {
 	requires cgroups_v2 root
-	set_cgroups_path "$BUSYBOX_BUNDLE"
-	set_cgroup_mount_writable "$BUSYBOX_BUNDLE"
+	set_cgroups_path
+	set_cgroup_mount_writable
 
 	# run busybox detached
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox

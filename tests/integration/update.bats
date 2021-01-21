@@ -13,12 +13,12 @@ function setup() {
 	teardown
 	setup_busybox
 
-	set_cgroups_path "$BUSYBOX_BUNDLE"
+	set_cgroups_path
 
 	# Set some initial known values
 	update_config ' .linux.resources.memory |= {"limit": 33554432, "reservation": 25165824}
 			| .linux.resources.cpu |= {"shares": 100, "quota": 500000, "period": 1000000, "cpus": "0"}
-			| .linux.resources.pids |= {"limit": 20}' "${BUSYBOX_BUNDLE}"
+			| .linux.resources.pids |= {"limit": 20}'
 }
 
 # Tests whatever limits are (more or less) common between cgroup
@@ -317,7 +317,7 @@ EOF
 @test "set cpu period with no quota" {
 	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
 
-	update_config '.linux.resources.cpu |= { "period": 1000000 }' "${BUSYBOX_BUNDLE}"
+	update_config '.linux.resources.cpu |= { "period": 1000000 }'
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
 	[ "$status" -eq 0 ]
@@ -328,7 +328,7 @@ EOF
 @test "set cpu quota with no period" {
 	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
 
-	update_config '.linux.resources.cpu |= { "quota": 5000 }' "${BUSYBOX_BUNDLE}"
+	update_config '.linux.resources.cpu |= { "quota": 5000 }'
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
 	[ "$status" -eq 0 ]
@@ -338,7 +338,7 @@ EOF
 @test "update cpu period with no previous period/quota set" {
 	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
 
-	update_config '.linux.resources.cpu |= {}' "${BUSYBOX_BUNDLE}"
+	update_config '.linux.resources.cpu |= {}'
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
 	[ "$status" -eq 0 ]
@@ -352,7 +352,7 @@ EOF
 @test "update cpu quota with no previous period/quota set" {
 	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
 
-	update_config '.linux.resources.cpu |= {}' "${BUSYBOX_BUNDLE}"
+	update_config '.linux.resources.cpu |= {}'
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
 	[ "$status" -eq 0 ]
@@ -455,7 +455,7 @@ EOF
 	update_config ' .linux.resources.unified |= {
 				"cpuset.cpus": "0",
 				"cpuset.mems": "0"
-			}' "${BUSYBOX_BUNDLE}"
+			}'
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
 	[ "$status" -eq 0 ]
 

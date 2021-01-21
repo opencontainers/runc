@@ -14,7 +14,7 @@ function teardown() {
 @test "runc pause and resume" {
 	if [[ "$ROOTLESS" -ne 0 ]]; then
 		requires rootless_cgroup
-		set_cgroups_path "$BUSYBOX_BUNDLE"
+		set_cgroups_path
 	fi
 	requires cgroups_freezer
 
@@ -42,7 +42,7 @@ function teardown() {
 @test "runc pause and resume with nonexist container" {
 	if [[ "$ROOTLESS" -ne 0 ]]; then
 		requires rootless_cgroup
-		set_cgroups_path "$BUSYBOX_BUNDLE"
+		set_cgroups_path
 	fi
 	requires cgroups_freezer
 

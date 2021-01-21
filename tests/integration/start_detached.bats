@@ -52,12 +52,13 @@ function teardown() {
 }
 
 @test "runc run detached --pid-file with new CWD" {
+	bundle="$(pwd)"
 	# create pid_file directory as the CWD
 	mkdir pid_file
 	cd pid_file
 
 	# run busybox detached
-	runc run --pid-file pid.txt -d -b "$BUSYBOX_BUNDLE" --console-socket "$CONSOLE_SOCKET" test_busybox
+	runc run --pid-file pid.txt -d -b "$bundle" --console-socket "$CONSOLE_SOCKET" test_busybox
 	[ "$status" -eq 0 ]
 
 	# check state
