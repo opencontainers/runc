@@ -3,17 +3,14 @@
 load helpers
 
 function setup() {
-	teardown_running_container_inroot test_box1 "$HELLO_BUNDLE"
-	teardown_running_container_inroot test_box2 "$HELLO_BUNDLE"
-	teardown_running_container_inroot test_box3 "$HELLO_BUNDLE"
-	teardown_busybox
+	teardown
 	setup_busybox
 }
 
 function teardown() {
-	teardown_running_container_inroot test_box1 "$HELLO_BUNDLE"
-	teardown_running_container_inroot test_box2 "$HELLO_BUNDLE"
-	teardown_running_container_inroot test_box3 "$HELLO_BUNDLE"
+	ROOT="$HELLO_BUNDLE" teardown_running_container test_box1
+	ROOT="$HELLO_BUNDLE" teardown_running_container test_box2
+	ROOT="$HELLO_BUNDLE" teardown_running_container test_box3
 	teardown_busybox
 }
 

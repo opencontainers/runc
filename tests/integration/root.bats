@@ -3,13 +3,12 @@
 load helpers
 
 function setup() {
-	teardown_running_container_inroot test_dotbox "$HELLO_BUNDLE"
-	teardown_busybox
+	teardown
 	setup_busybox
 }
 
 function teardown() {
-	teardown_running_container_inroot test_dotbox "$HELLO_BUNDLE"
+	ROOT="$HELLO_BUNDLE" teardown_running_container test_dotbox
 	teardown_busybox
 }
 
