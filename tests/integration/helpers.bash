@@ -25,7 +25,7 @@ HELLO_BUNDLE="$BATS_RUN_TMPDIR/hello-world"
 DEBIAN_BUNDLE="$BATS_RUN_TMPDIR/debiantest"
 
 # CRIU PATH
-CRIU="$(which criu 2>/dev/null || true)"
+CRIU="$(command -v criu || true)"
 
 # Kernel version
 KERNEL_VERSION="$(uname -r)"
