@@ -47,7 +47,7 @@ function test_events() {
 	# 2. Waits for an event that includes test_busybox then kills the
 	#    test_busybox container which causes the event logger to exit.
 	(
-		retry 10 "$retry_every" eval "grep -q 'test_busybox' events.log"
+		retry 10 "$retry_every" grep -q test_busybox events.log
 		teardown_running_container test_busybox
 	) &
 	wait # for both subshells to finish
@@ -89,10 +89,10 @@ function test_events() {
 	# and waits for an oom event
 	(__runc events test_busybox >events.log) &
 	(
-		retry 10 1 eval "grep -q 'test_busybox' events.log"
+		retry 10 1 grep -q test_busybox events.log
 		# shellcheck disable=SC2016
 		__runc exec -d test_busybox sh -c 'test=$(dd if=/dev/urandom ibs=5120k)'
-		retry 10 1 eval "grep -q 'oom' events.log"
+		retry 10 1 grep -q oom events.log
 		__runc delete -f test_busybox
 	) &
 	wait # wait for the above sub shells to finish
