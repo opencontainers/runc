@@ -77,7 +77,7 @@ function test_events() {
 	init_cgroup_paths
 
 	# we need the container to hit OOM, so disable swap
-	update_config '(.. | select(.resources? != null)) .resources.memory |= {"limit": 33554432, "swap": 33554432}' "${BUSYBOX_BUNDLE}"
+	update_config '(.. | select(.resources? != null)) .resources.memory |= {"limit": 33554432, "swap": 33554432}'
 
 	# run busybox detached
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox

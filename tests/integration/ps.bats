@@ -64,7 +64,7 @@ function teardown() {
 @test "ps after the container stopped" {
 	# ps requires cgroups
 	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
-	set_cgroups_path "$BUSYBOX_BUNDLE"
+	set_cgroups_path
 
 	# start busybox detached
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox

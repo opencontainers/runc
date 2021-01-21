@@ -61,11 +61,12 @@ function teardown() {
 }
 
 @test "runc create --pid-file with new CWD" {
+	bundle="$(pwd)"
 	# create pid_file directory as the CWD
 	mkdir pid_file
 	cd pid_file
 
-	runc create --pid-file pid.txt -b "$BUSYBOX_BUNDLE" --console-socket "$CONSOLE_SOCKET" test_busybox
+	runc create --pid-file pid.txt -b "$bundle" --console-socket "$CONSOLE_SOCKET" test_busybox
 	[ "$status" -eq 0 ]
 
 	testcontainer test_busybox created
