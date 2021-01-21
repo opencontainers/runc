@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# bats-core v1.2.1 defines BATS_RUN_TMPDIR
+if [ -z "$BATS_RUN_TMPDIR" ]; then
+	echo "bats >= v1.2.1 is required. Aborting." >&2
+	exit 1
+fi
+
 # Root directory of integration tests.
 INTEGRATION_ROOT=$(dirname "$(readlink -f "$BASH_SOURCE")")
 
@@ -15,9 +21,9 @@ RECVTTY="${INTEGRATION_ROOT}/../../contrib/cmd/recvtty/recvtty"
 TESTDATA="${INTEGRATION_ROOT}/testdata"
 
 # Destinations for test containers.
-BUSYBOX_BUNDLE="$BATS_TMPDIR/busyboxtest"
-HELLO_BUNDLE="$BATS_TMPDIR/hello-world"
-DEBIAN_BUNDLE="$BATS_TMPDIR/debiantest"
+BUSYBOX_BUNDLE="$BATS_RUN_TMPDIR/busyboxtest"
+HELLO_BUNDLE="$BATS_RUN_TMPDIR/hello-world"
+DEBIAN_BUNDLE="$BATS_RUN_TMPDIR/debiantest"
 
 # CRIU PATH
 CRIU="$(which criu 2>/dev/null || true)"
@@ -29,10 +35,10 @@ KERNEL_MINOR="${KERNEL_VERSION#$KERNEL_MAJOR.}"
 KERNEL_MINOR="${KERNEL_MINOR%%.*}"
 
 # Root state path.
-ROOT=$(mktemp -d "$BATS_TMPDIR/runc.XXXXXX")
+ROOT=$(mktemp -d "$BATS_RUN_TMPDIR/runc.XXXXXX")
 
 # Path to console socket.
-CONSOLE_SOCKET="$BATS_TMPDIR/console.sock"
+CONSOLE_SOCKET="$BATS_RUN_TMPDIR/console.sock"
 
 # Check if we're in rootless mode.
 ROOTLESS=$(id -u)
@@ -423,17 +429,17 @@ function testcontainer() {
 
 function setup_recvtty() {
 	# We need to start recvtty in the background, so we double fork in the shell.
-	("$RECVTTY" --pid-file "$BATS_TMPDIR/recvtty.pid" --mode null "$CONSOLE_SOCKET" &) &
+	("$RECVTTY" --pid-file "$BATS_RUN_TMPDIR/recvtty.pid" --mode null "$CONSOLE_SOCKET" &) &
 }
 
 function teardown_recvtty() {
 	# When we kill recvtty, the container will also be killed.
-	if [ -f "$BATS_TMPDIR/recvtty.pid" ]; then
-		kill -9 $(cat "$BATS_TMPDIR/recvtty.pid")
+	if [ -f "$BATS_RUN_TMPDIR/recvtty.pid" ]; then
+		kill -9 $(cat "$BATS_RUN_TMPDIR/recvtty.pid")
 	fi
 
 	# Clean up the files that might be left over.
-	rm -f "$BATS_TMPDIR/recvtty.pid"
+	rm -f "$BATS_RUN_TMPDIR/recvtty.pid"
 	rm -f "$CONSOLE_SOCKET"
 }
 

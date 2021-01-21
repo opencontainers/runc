@@ -6,7 +6,7 @@ function setup() {
 	unset ALT_ROOT
 	teardown
 	setup_busybox
-	ALT_ROOT=$(mktemp -d "$BATS_TMPDIR/runc-2.XXXXXX")
+	ALT_ROOT=$(mktemp -d "$BATS_RUN_TMPDIR/runc-2.XXXXXX")
 }
 
 function teardown() {
