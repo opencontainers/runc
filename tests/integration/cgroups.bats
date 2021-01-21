@@ -3,15 +3,10 @@
 load helpers
 
 function teardown() {
-	teardown_running_container test_cgroups_kmem
-	teardown_running_container test_cgroups_permissions
-	teardown_running_container test_cgroups_group
-	teardown_running_container test_cgroups_unified
-	teardown_busybox
+	teardown_bundle
 }
 
 function setup() {
-	teardown
 	setup_busybox
 }
 

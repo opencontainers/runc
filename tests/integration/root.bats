@@ -3,18 +3,17 @@
 load helpers
 
 function setup() {
-	unset ALT_ROOT
-	teardown
 	setup_busybox
-	ALT_ROOT=$(mktemp -d "$BATS_RUN_TMPDIR/runc-2.XXXXXX")
+	ALT_ROOT="$ROOT/alt"
+	mkdir -p "$ALT_ROOT/state"
 }
 
 function teardown() {
 	if [ -n "$ALT_ROOT" ]; then
-		ROOT=$ALT_ROOT teardown_running_container test_dotbox
+		ROOT=$ALT_ROOT __runc delete -f test_dotbox
 		rm -rf "$ALT_ROOT"
 	fi
-	teardown_busybox
+	teardown_bundle
 }
 
 @test "global --root" {

@@ -3,13 +3,11 @@
 load helpers
 
 function setup() {
-	teardown_busybox
 	setup_busybox
 }
 
 function teardown() {
-	teardown_busybox
-	teardown_running_container test_dev
+	teardown_bundle
 }
 
 @test "runc run [redundant default /dev/tty]" {

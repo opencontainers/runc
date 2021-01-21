@@ -5,7 +5,6 @@ load helpers
 function setup() {
 	requires root no_systemd
 
-	teardown
 	setup_debian
 	# CR = CreateRuntime, CC = CreataContainer
 	HOOKLIBCR=librunc-hooks-create-runtime.so
@@ -19,7 +18,7 @@ function teardown() {
 		umount "$LIBPATH"/$HOOKLIBCC.1.0.0 &>/dev/null || true
 		rm -f $HOOKLIBCR.1.0.0 $HOOKLIBCC.1.0.0
 	fi
-	teardown_debian
+	teardown_bundle
 }
 
 @test "runc run (hooks library tests)" {

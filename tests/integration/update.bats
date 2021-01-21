@@ -4,13 +4,10 @@ load helpers
 
 function teardown() {
 	rm -f "$BATS_RUN_TMPDIR"/runc-cgroups-integration-test.json
-	teardown_running_container test_update
-	teardown_running_container test_update_rt
-	teardown_busybox
+	teardown_bundle
 }
 
 function setup() {
-	teardown
 	setup_busybox
 
 	set_cgroups_path

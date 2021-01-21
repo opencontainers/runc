@@ -3,12 +3,11 @@
 load helpers
 
 function setup() {
-	teardown_busybox
 	setup_busybox
 }
 
 function teardown() {
-	teardown_busybox
+	teardown_bundle
 }
 
 @test "events --stats" {
@@ -48,7 +47,7 @@ function test_events() {
 	#    test_busybox container which causes the event logger to exit.
 	(
 		retry 10 "$retry_every" grep -q test_busybox events.log
-		teardown_running_container test_busybox
+		__runc delete -f test_busybox
 	) &
 	wait # for both subshells to finish
 

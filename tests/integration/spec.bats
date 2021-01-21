@@ -7,7 +7,7 @@ function setup() {
 }
 
 function teardown() {
-	teardown_hello
+	teardown_bundle
 }
 
 @test "spec generation cwd" {

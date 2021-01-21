@@ -61,15 +61,12 @@ load helpers
 
 # setup is called at the beginning of every test.
 function setup() {
-  # see functions teardown_hello and setup_hello in helpers.bash, used to
-  # create a pristine environment for running your tests
-  teardown_hello
   setup_hello
 }
 
 # teardown is called at the end of every test.
 function teardown() {
-  teardown_hello
+  teardown_bundle
 }
 
 @test "this is a simple test" {
