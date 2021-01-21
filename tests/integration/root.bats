@@ -3,18 +3,23 @@
 load helpers
 
 function setup() {
+	unset ALT_ROOT
 	teardown
 	setup_busybox
+	ALT_ROOT=$(mktemp -d "$BATS_TMPDIR/runc-2.XXXXXX")
 }
 
 function teardown() {
-	ROOT="$HELLO_BUNDLE" teardown_running_container test_dotbox
+	if [ -n "$ALT_ROOT" ]; then
+		ROOT=$ALT_ROOT teardown_running_container test_dotbox
+		rm -rf "$ALT_ROOT"
+	fi
 	teardown_busybox
 }
 
 @test "global --root" {
-	# run busybox detached using $HELLO_BUNDLE for state
-	ROOT=$HELLO_BUNDLE runc run -d --console-socket "$CONSOLE_SOCKET" test_dotbox
+	# run busybox detached using $ALT_ROOT for state
+	ROOT=$ALT_ROOT runc run -d --console-socket "$CONSOLE_SOCKET" test_dotbox
 	[ "$status" -eq 0 ]
 
 	# run busybox detached in default root
@@ -25,11 +30,11 @@ function teardown() {
 	[ "$status" -eq 0 ]
 	[[ "${output}" == *"running"* ]]
 
-	ROOT=$HELLO_BUNDLE runc state test_dotbox
+	ROOT=$ALT_ROOT runc state test_dotbox
 	[ "$status" -eq 0 ]
 	[[ "${output}" == *"running"* ]]
 
-	ROOT=$HELLO_BUNDLE runc state test_busybox
+	ROOT=$ALT_ROOT runc state test_busybox
 	[ "$status" -ne 0 ]
 
 	runc state test_dotbox
@@ -41,9 +46,9 @@ function teardown() {
 	runc delete test_busybox
 	[ "$status" -eq 0 ]
 
-	ROOT=$HELLO_BUNDLE runc kill test_dotbox KILL
+	ROOT=$ALT_ROOT runc kill test_dotbox KILL
 	[ "$status" -eq 0 ]
-	ROOT=$HELLO_BUNDLE wait_for_container 10 1 test_dotbox stopped
-	ROOT=$HELLO_BUNDLE runc delete test_dotbox
+	ROOT=$ALT_ROOT wait_for_container 10 1 test_dotbox stopped
+	ROOT=$ALT_ROOT runc delete test_dotbox
 	[ "$status" -eq 0 ]
 }
