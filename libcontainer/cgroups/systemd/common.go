@@ -410,7 +410,7 @@ func addCpuQuota(conn *systemdDbus.Conn, properties *[]systemdDbus.Property, quo
 			*properties = append(*properties,
 				newProp("CPUQuotaPeriodUSec", period))
 		} else {
-			logrus.Warnf("systemd v%d is too old to support CPUQuotaPeriodSec "+
+			logrus.Debugf("systemd v%d is too old to support CPUQuotaPeriodSec "+
 				" (setting will still be applied to cgroupfs)", sdVer)
 		}
 	}
@@ -444,7 +444,7 @@ func addCpuset(conn *systemdDbus.Conn, props *[]systemdDbus.Property, cpus, mems
 	// systemd only supports AllowedCPUs/AllowedMemoryNodes since v244
 	sdVer := systemdVersion(conn)
 	if sdVer < 244 {
-		logrus.Warnf("systemd v%d is too old to support AllowedCPUs/AllowedMemoryNodes"+
+		logrus.Debugf("systemd v%d is too old to support AllowedCPUs/AllowedMemoryNodes"+
 			" (settings will still be applied to cgroupfs)", sdVer)
 		return nil
 	}
