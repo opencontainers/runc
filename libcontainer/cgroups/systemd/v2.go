@@ -102,8 +102,16 @@ func unifiedResToSystemdProps(conn *systemdDbus.Conn, res map[string]string) (pr
 				"cpuset.cpus": "AllowedCPUs",
 				"cpuset.mems": "AllowedMemoryNodes",
 			}
-			props = append(props,
-				newProp(m[k], bits))
+			// systemd only supports these properties since v244
+			sdVer := systemdVersion(conn)
+			if sdVer >= 244 {
+				props = append(props,
+					newProp(m[k], bits))
+			} else {
+				logrus.Warnf("systemd v%d is too old to support %s"+
+					" (setting will still be applied to cgroupfs)",
+					sdVer, m[k])
+			}
 
 		case "memory.high", "memory.low", "memory.min", "memory.max", "memory.swap.max":
 			num := uint64(math.MaxUint64)
@@ -199,6 +207,11 @@ func genV2ResourcesProperties(c *configs.Cgroup, conn *systemdDbus.Conn) ([]syst
 		properties = append(properties,
 			newProp("TasksAccounting", true),
 			newProp("TasksMax", uint64(r.PidsLimit)))
+	}
+
+	err = addCpuset(conn, &properties, r.CpusetCpus, r.CpusetMems)
+	if err != nil {
+		return nil, err
 	}
 
 	// ignore r.KernelMemory

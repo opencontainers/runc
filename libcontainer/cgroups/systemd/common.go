@@ -34,7 +34,6 @@ var (
 
 	versionOnce sync.Once
 	version     int
-	versionErr  error
 
 	isRunningSystemdOnce sync.Once
 	isRunningSystemd     bool
@@ -372,19 +371,20 @@ func stopUnit(dbusConnection *systemdDbus.Conn, unitName string) error {
 	return nil
 }
 
-func systemdVersion(conn *systemdDbus.Conn) (int, error) {
+func systemdVersion(conn *systemdDbus.Conn) int {
 	versionOnce.Do(func() {
 		version = -1
 		verStr, err := conn.GetManagerProperty("Version")
-		if err != nil {
-			versionErr = err
-			return
+		if err == nil {
+			version, err = systemdVersionAtoi(verStr)
 		}
 
-		version, versionErr = systemdVersionAtoi(verStr)
+		if err != nil {
+			logrus.WithError(err).Error("unable to get systemd version")
+		}
 	})
 
-	return version, versionErr
+	return version
 }
 
 func systemdVersionAtoi(verStr string) (int, error) {
@@ -405,12 +405,13 @@ func systemdVersionAtoi(verStr string) (int, error) {
 func addCpuQuota(conn *systemdDbus.Conn, properties *[]systemdDbus.Property, quota int64, period uint64) {
 	if period != 0 {
 		// systemd only supports CPUQuotaPeriodUSec since v242
-		sdVer, err := systemdVersion(conn)
-		if err != nil {
-			logrus.Warnf("systemdVersion: %s", err)
-		} else if sdVer >= 242 {
+		sdVer := systemdVersion(conn)
+		if sdVer >= 242 {
 			*properties = append(*properties,
 				newProp("CPUQuotaPeriodUSec", period))
+		} else {
+			logrus.Warnf("systemd v%d is too old to support CPUQuotaPeriodSec "+
+				" (setting will still be applied to cgroupfs)", sdVer)
 		}
 	}
 	if quota != 0 || period != 0 {
@@ -433,4 +434,38 @@ func addCpuQuota(conn *systemdDbus.Conn, properties *[]systemdDbus.Property, quo
 		*properties = append(*properties,
 			newProp("CPUQuotaPerSecUSec", cpuQuotaPerSecUSec))
 	}
+}
+
+func addCpuset(conn *systemdDbus.Conn, props *[]systemdDbus.Property, cpus, mems string) error {
+	if cpus == "" && mems == "" {
+		return nil
+	}
+
+	// systemd only supports AllowedCPUs/AllowedMemoryNodes since v244
+	sdVer := systemdVersion(conn)
+	if sdVer < 244 {
+		logrus.Warnf("systemd v%d is too old to support AllowedCPUs/AllowedMemoryNodes"+
+			" (settings will still be applied to cgroupfs)", sdVer)
+		return nil
+	}
+
+	if cpus != "" {
+		bits, err := rangeToBits(cpus)
+		if err != nil {
+			return fmt.Errorf("resources.CPU.Cpus=%q conversion error: %w",
+				cpus, err)
+		}
+		*props = append(*props,
+			newProp("AllowedCPUs", bits))
+	}
+	if mems != "" {
+		bits, err := rangeToBits(mems)
+		if err != nil {
+			return fmt.Errorf("resources.CPU.Mems=%q conversion error: %w",
+				mems, err)
+		}
+		*props = append(*props,
+			newProp("AllowedMemoryNodes", bits))
+	}
+	return nil
 }

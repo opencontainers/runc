@@ -392,7 +392,63 @@ EOF
 	check_systemd_value "TasksMax" 10
 }
 
+@test "update cpuset parameters via resources.CPU" {
+	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+	requires smp
+
+	local AllowedCPUs='AllowedCPUs' AllowedMemoryNodes='AllowedMemoryNodes'
+	# these properties require systemd >= v244
+	if [ "$(systemd_version)" -lt 244 ]; then
+		# a hack to skip checks, see check_systemd_value()
+		AllowedCPUs='unsupported'
+		AllowedMemoryNodes='unsupported'
+	fi
+
+	update_config ' .linux.resources.CPU |= {
+				"Cpus": "0",
+				"Mems": "0"
+			}' "${BUSYBOX_BUNDLE}"
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
+	[ "$status" -eq 0 ]
+
+	# check that initial values were properly set
+	check_systemd_value "$AllowedCPUs" 0
+	check_systemd_value "$AllowedMemoryNodes" 0
+
+	runc update -r - test_update <<EOF
+{
+  "CPU": {
+    "Cpus": "1"
+  }
+}
+EOF
+	[ "$status" -eq 0 ]
+
+	# check the updated systemd unit properties
+	check_systemd_value "$AllowedCPUs" 1
+
+	# More than 1 numa memory node is required to test this
+	file="/sys/fs/cgroup/cpuset.mems.effective"
+	if ! test -r $file || grep -q '^0$' $file; then
+		# skip the rest of it
+		return 0
+	fi
+
+	runc update -r - test_update <<EOF
+{
+  "CPU": {
+    "Mems": "1"
+  }
+}
+EOF
+	[ "$status" -eq 0 ]
+
+	# check the updated systemd unit properties
+	check_systemd_value "$AllowedMemoryNodes" 1
+}
+
 @test "update cpuset parameters via v2 unified map" {
+	# This test assumes systemd >= v244
 	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
 	requires cgroups_v2 smp
 
