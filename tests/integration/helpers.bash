@@ -405,25 +405,14 @@ function retry() {
 
 # retry until the given container has state
 function wait_for_container() {
-	local attempts=$1
-	local delay=$2
-	local cid=$3
-	# optionally wait for a specific status
-	local wait_for_status="${4:-}"
-	local i
-
-	for ((i = 0; i < attempts; i++)); do
-		runc state $cid
-		if [[ "$status" -eq 0 ]]; then
-			if [[ "${output}" == *"${wait_for_status}"* ]]; then
-				return 0
-			fi
-		fi
-		sleep $delay
-	done
-
-	echo "runc state failed to return state $statecheck $attempts times. Output: $output"
-	false
+	if [ $# -eq 3 ]; then
+		retry "$1" "$2" __runc state "$3"
+	elif [ $# -eq 4 ]; then
+		retry "$1" "$2" eval "__runc state $3 | grep -qw $4"
+	else
+		echo "Usage: wait_for_container ATTEMPTS DELAY ID [STATUS]" 1>&2
+		return 1
+	fi
 }
 
 function testcontainer() {
