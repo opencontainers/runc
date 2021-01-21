@@ -478,10 +478,6 @@ function teardown_running_container() {
 	__runc delete -f "$1"
 }
 
-function teardown_running_container_inroot() {
-	ROOT="$2" __runc delete -f "$1"
-}
-
 function teardown_busybox() {
 	cd "$INTEGRATION_ROOT"
 	teardown_recvtty
