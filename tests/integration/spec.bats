@@ -16,7 +16,7 @@ function teardown() {
 }
 
 @test "spec generation --bundle" {
-	runc run --bundle "$HELLO_BUNDLE" test_hello
+	runc run --bundle "$(pwd)" test_hello
 	[ "$status" -eq 0 ]
 }
 
