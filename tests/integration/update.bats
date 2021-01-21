@@ -3,7 +3,7 @@
 load helpers
 
 function teardown() {
-	rm -f "$BATS_TMPDIR"/runc-cgroups-integration-test.json
+	rm -f "$BATS_RUN_TMPDIR"/runc-cgroups-integration-test.json
 	teardown_running_container test_update
 	teardown_running_container test_update_rt
 	teardown_busybox
@@ -208,7 +208,7 @@ EOF
 	check_systemd_value "TasksMax" 10
 
 	# reset to initial test value via json file
-	cat <<EOF >"$BATS_TMPDIR"/runc-cgroups-integration-test.json
+	cat <<EOF >"$BATS_RUN_TMPDIR"/runc-cgroups-integration-test.json
 {
   "memory": {
     "limit": 33554432,
@@ -226,7 +226,7 @@ EOF
 }
 EOF
 
-	runc update -r "$BATS_TMPDIR"/runc-cgroups-integration-test.json test_update
+	runc update -r "$BATS_RUN_TMPDIR"/runc-cgroups-integration-test.json test_update
 	[ "$status" -eq 0 ]
 	check_cgroup_value "cpuset.cpus" 0
 
@@ -297,7 +297,7 @@ EOF
 	check_cpu_quota -1 100000 "infinity"
 
 	# reset to initial test value via json file
-	cat <<EOF >"$BATS_TMPDIR"/runc-cgroups-integration-test.json
+	cat <<EOF >"$BATS_RUN_TMPDIR"/runc-cgroups-integration-test.json
 {
   "cpu": {
     "shares": 100,
@@ -308,7 +308,7 @@ EOF
 EOF
 	[ "$status" -eq 0 ]
 
-	runc update -r "$BATS_TMPDIR"/runc-cgroups-integration-test.json test_update
+	runc update -r "$BATS_RUN_TMPDIR"/runc-cgroups-integration-test.json test_update
 	[ "$status" -eq 0 ]
 	check_cpu_quota 500000 1000000 "500ms"
 	check_cpu_shares 100
@@ -573,7 +573,7 @@ EOF
 	update_config '.process.args |= ["sh", "-c", "while true; do echo >/dev/null; done"]'
 
 	# Set up a temporary console socket and recvtty so we can get the stdio.
-	TMP_RECVTTY_DIR="$(mktemp -d "$BATS_TMPDIR/runc-tmp-recvtty.XXXXXX")"
+	TMP_RECVTTY_DIR="$(mktemp -d "$BATS_RUN_TMPDIR/runc-tmp-recvtty.XXXXXX")"
 	TMP_RECVTTY_PID="$TMP_RECVTTY_DIR/recvtty.pid"
 	TMP_CONSOLE_SOCKET="$TMP_RECVTTY_DIR/console.sock"
 	CONTAINER_OUTPUT="$TMP_RECVTTY_DIR/output"
