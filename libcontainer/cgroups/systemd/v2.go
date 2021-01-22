@@ -108,7 +108,7 @@ func unifiedResToSystemdProps(conn *systemdDbus.Conn, res map[string]string) (pr
 				props = append(props,
 					newProp(m[k], bits))
 			} else {
-				logrus.Warnf("systemd v%d is too old to support %s"+
+				logrus.Debugf("systemd v%d is too old to support %s"+
 					" (setting will still be applied to cgroupfs)",
 					sdVer, m[k])
 			}
