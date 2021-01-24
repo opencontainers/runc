@@ -22,6 +22,7 @@ HELLO_IMAGE="$TESTDATA/$HELLO_FILE"
 HELLO_BUNDLE="$BATS_TMPDIR/hello-world"
 
 # debian image
+DEBIAN_IMAGE="$BATS_TMPDIR/debian.tar"
 DEBIAN_BUNDLE="$BATS_TMPDIR/debiantest"
 
 # CRIU PATH
@@ -500,24 +501,17 @@ function setup_hello() {
 }
 
 function setup_debian() {
-	# skopeo and umoci are not installed on the travis runner
-	if [ -n "${RUNC_USE_SYSTEMD}" ]; then
-		return
-	fi
-
 	setup_recvtty
-	mkdir -p "$DEBIAN_BUNDLE"
-
-	if [ ! -d "$DEBIAN_ROOTFS/rootfs" ]; then
-		get_and_extract_debian "$DEBIAN_BUNDLE"
+	mkdir -p "$DEBIAN_BUNDLE"/rootfs
+	if [ -e "/testdata/debian.tar" ]; then
+		DEBIAN_IMAGE="/testdata/debian.tar"
 	fi
-
-	# Use the cached version
-	if [ ! -d "$DEBIAN_BUNDLE/rootfs" ]; then
-		cp -r "$DEBIAN_ROOTFS"/* "$DEBIAN_BUNDLE/"
+	if [ ! -e $DEBIAN_IMAGE ]; then
+		curl -o $DEBIAN_IMAGE -sSL $(get_debian)
 	fi
-
+	tar --exclude './dev/*' -C "$DEBIAN_BUNDLE"/rootfs -xf "$DEBIAN_IMAGE"
 	cd "$DEBIAN_BUNDLE"
+	runc_spec
 }
 
 function teardown_running_container() {

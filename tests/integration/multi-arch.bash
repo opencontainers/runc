@@ -21,24 +21,13 @@ get_hello() {
 	esac
 }
 
-get_and_extract_debian() {
-	tmp=$(mktemp -d)
-	cd "$tmp"
-
-	debian="debian:3.11.6"
-
+get_debian() {
 	case $(go env GOARCH) in
 	arm64)
-		skopeo copy docker://arm64v8/debian:buster "oci:$debian"
+		echo 'https://github.com/debuerreotype/docker-debian-artifacts/raw/dist-arm64v8/buster/rootfs.tar.xz'
 		;;
 	*)
-		skopeo copy docker://amd64/debian:buster "oci:$debian"
+		echo 'https://github.com/debuerreotype/docker-debian-artifacts/raw/dist-amd64/buster/rootfs.tar.xz'
 		;;
 	esac
-
-	args="$([ -z "${ROOTLESS_TESTPATH+x}" ] && echo "--rootless")"
-	umoci unpack $args --image "$debian" "$1"
-
-	cd -
-	rm -rf "$tmp"
 }

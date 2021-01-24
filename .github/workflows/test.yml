@@ -29,13 +29,10 @@ jobs:
 
     - name: install deps
       run: |
-        # skopeo repo
-        echo 'deb http://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/Debian_10/ /' | sudo tee /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list
-        wget -nv https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/Debian_10/Release.key -O- | sudo apt-key add -
         # criu repo
         sudo add-apt-repository -y ppa:criu/ppa
         # apt-add-repository runs apt update so we don't have to
-        sudo apt -q install libseccomp-dev criu skopeo
+        sudo apt -q install libseccomp-dev criu
 
     - name: install go ${{ matrix.go-version }}
       uses: actions/setup-go@v2
@@ -44,13 +41,6 @@ jobs:
 
     - name: build
       run: sudo -E PATH="$PATH" make all
-
-    - name: install umoci
-      run: |
-        mkdir ~/bin
-        echo "PATH=$HOME/bin:$PATH" >> $GITHUB_ENV
-        curl -o ~/bin/umoci -fsSL https://github.com/opencontainers/umoci/releases/download/v0.4.6/umoci.amd64
-        chmod +x ~/bin/umoci
 
     - name: install bats
       uses: mig4/setup-bats@v1

@@ -1,13 +1,11 @@
 ARG GO_VERSION=1.15
 ARG BATS_VERSION=v1.2.1
-ARG UMOCI_VERSION=v0.4.6
 
 FROM golang:${GO_VERSION}-buster
 ARG DEBIAN_FRONTEND=noninteractive
 
 RUN echo 'deb https://download.opensuse.org/repositories/devel:/tools:/criu/Debian_10/ /' > /etc/apt/sources.list.d/criu.list \
     && wget -nv https://download.opensuse.org/repositories/devel:/tools:/criu/Debian_10/Release.key -O- | apt-key add - \
-    && echo 'deb http://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/Debian_10/ /' > /etc/apt/sources.list.d/skopeo.list \
     && wget -nv https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/Debian_10/Release.key -O- | apt-key add - \
     && dpkg --add-architecture armel \
     && dpkg --add-architecture armhf \
@@ -34,7 +32,6 @@ RUN echo 'deb https://download.opensuse.org/repositories/devel:/tools:/criu/Debi
         libseccomp2 \
         pkg-config \
         python-minimal \
-        skopeo \
         sudo \
         uidmap \
     && apt-get clean \
@@ -55,11 +52,6 @@ RUN cd /tmp \
     && ./install.sh /usr/local \
     && rm -rf /tmp/bats-core
 
-# install umoci
-ARG UMOCI_VERSION
-RUN curl -o /usr/local/bin/umoci -fsSL https://github.com/opencontainers/umoci/releases/download/${UMOCI_VERSION}/umoci.amd64 \
-    && chmod +x /usr/local/bin/umoci
-
 WORKDIR /go/src/github.com/opencontainers/runc
 
 # setup a playground for us to spawn containers in
@@ -72,4 +64,4 @@ RUN . tests/integration/multi-arch.bash \
 ENV DEBIAN_ROOTFS /debian
 RUN mkdir -p "${DEBIAN_ROOTFS}"
 RUN . tests/integration/multi-arch.bash \
-    && get_and_extract_debian "$DEBIAN_ROOTFS"
+    && curl -fsSL `get_debian` | tar xfJC - "${DEBIAN_ROOTFS}"

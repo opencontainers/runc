@@ -27,6 +27,8 @@ function teardown() {
 }
 
 @test "runc run (hooks library tests)" {
+	update_config '(.. | select(.readonly? != null)) .readonly |= false'
+
 	# setup some dummy libs
 	gcc -shared -Wl,-soname,librunc-hooks-create-runtime.so.1 -o "$HOOKLIBCR.1.0.0"
 	gcc -shared -Wl,-soname,librunc-hooks-create-container.so.1 -o "$HOOKLIBCC.1.0.0"
