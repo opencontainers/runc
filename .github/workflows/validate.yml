@@ -156,3 +156,8 @@ jobs:
         sudo apt -qq install libseccomp-dev
     - name: make release
       run: make release
+    - name: upload artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: release-${{ github.run_id }}
+        path: release/*
