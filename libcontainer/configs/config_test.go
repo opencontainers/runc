@@ -3,6 +3,7 @@ package configs_test
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"reflect"
 	"testing"
@@ -160,18 +161,45 @@ func TestCommandHookRun(t *testing.T) {
 		Pid:     1,
 		Bundle:  "/bundle",
 	}
-	timeout := time.Second
+
+	stateJson, err := json.Marshal(state)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	verifyCommandTemplate := `#!/bin/sh
+if [ "$1" != "testarg" ]; then
+	echo "Bad value for $1. Expected 'testarg', found '$1'"
+	exit 1
+fi
+if [ -z "$FOO" ] || [ "$FOO" != BAR ]; then
+	echo "Bad value for FOO. Expected 'BAR', found '$FOO'"
+	exit 1
+fi
+expectedJson=%q
+read JSON
+if [ "$JSON" != "$expectedJson" ]; then
+	echo "Bad JSON received. Expected '$expectedJson', found '$JSON'"
+	exit 1
+fi
+exit 0
+	`
+	verifyCommand := fmt.Sprintf(verifyCommandTemplate, stateJson)
+	filename := "/tmp/runc-hooktest.sh"
+	os.Remove(filename)
+	if err := ioutil.WriteFile(filename, []byte(verifyCommand), 0700); err != nil {
+		t.Fatalf("Failed to create tmp file: %v", err)
+	}
+	defer os.Remove(filename)
 
 	cmdHook := configs.NewCommandHook(configs.Command{
-		Path:    os.Args[0],
-		Args:    []string{os.Args[0], "-test.run=TestHelperProcess"},
-		Env:     []string{"FOO=BAR"},
-		Dir:     "/",
-		Timeout: &timeout,
+		Path: filename,
+		Args: []string{filename, "testarg"},
+		Env:  []string{"FOO=BAR"},
+		Dir:  "/",
 	})
 
-	err := cmdHook.Run(state)
-	if err != nil {
+	if err := cmdHook.Run(state); err != nil {
 		t.Errorf(fmt.Sprintf("Expected error to not occur but it was %+v", err))
 	}
 }
@@ -184,26 +212,15 @@ func TestCommandHookRunTimeout(t *testing.T) {
 		Pid:     1,
 		Bundle:  "/bundle",
 	}
-	timeout := (10 * time.Millisecond)
+	timeout := 100 * time.Millisecond
 
 	cmdHook := configs.NewCommandHook(configs.Command{
-		Path:    os.Args[0],
-		Args:    []string{os.Args[0], "-test.run=TestHelperProcessWithTimeout"},
-		Env:     []string{"FOO=BAR"},
-		Dir:     "/",
+		Path:    "/bin/sleep",
+		Args:    []string{"/bin/sleep", "1"},
 		Timeout: &timeout,
 	})
 
-	err := cmdHook.Run(state)
-	if err == nil {
+	if err := cmdHook.Run(state); err == nil {
 		t.Error("Expected error to occur but it was nil")
 	}
-}
-
-func TestHelperProcess(*testing.T) {
-	fmt.Println("Helper Process")
-	os.Exit(0)
-}
-func TestHelperProcessWithTimeout(*testing.T) {
-	time.Sleep(time.Second)
 }
