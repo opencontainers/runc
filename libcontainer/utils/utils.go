@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"unsafe"
 
 	"golang.org/x/sys/unix"
 )
@@ -105,8 +104,4 @@ func Annotations(labels []string) (bundle string, userAnnotations map[string]str
 		}
 	}
 	return
-}
-
-func GetIntSize() int {
-	return int(unsafe.Sizeof(1))
 }

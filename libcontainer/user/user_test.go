@@ -7,8 +7,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-
-	"github.com/opencontainers/runc/libcontainer/utils"
 )
 
 func TestUserParseLine(t *testing.T) {
@@ -440,15 +438,12 @@ this is just some garbage data
 			expected: nil,
 			hasError: true,
 		},
-	}
-
-	if utils.GetIntSize() > 4 {
-		tests = append(tests, foo{
+		{
 			// groups with too large id
-			groups:   []string{strconv.Itoa(1 << 31)},
+			groups:   []string{strconv.FormatInt(1<<31, 10)},
 			expected: nil,
 			hasError: true,
-		})
+		},
 	}
 
 	for _, test := range tests {
