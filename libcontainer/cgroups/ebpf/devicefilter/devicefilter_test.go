@@ -26,7 +26,6 @@ func testDeviceFilter(t testing.TB, devices []*devices.Rule, expectedStr string)
 		t.Fatalf("%s: %v (devices: %+v)", t.Name(), err, devices)
 	}
 	s := insts.String()
-	t.Logf("%s: devices: %+v\n%s", t.Name(), devices, s)
 	if expectedStr != "" {
 		hashed := hash(s, "//")
 		expectedHashed := hash(expectedStr, "//")

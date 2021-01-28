@@ -40,19 +40,16 @@ func TestRangeToBits(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Logf("case: %q", tc.in)
 		out, err := rangeToBits(tc.in)
 		if err != nil {
-			t.Logf("   got error: %s", err)
 			if !tc.isErr {
-				t.Error("   ^^^ unexpected error")
+				t.Errorf("case %q: unexpected error: %v", tc.in, err)
 			}
 
 			continue
 		}
-		t.Logf("   expected %v, got %v", tc.out, out)
 		if !bytes.Equal(out, tc.out) {
-			t.Error("   ^^^ unexpected result")
+			t.Errorf("case %q: expected %v, got %v", tc.in, tc.out, out)
 		}
 	}
 }
