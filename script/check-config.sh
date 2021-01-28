@@ -164,17 +164,21 @@ echo
 echo 'Generally Necessary:'
 
 echo -n '- '
-cgroupSubsystemDir="$(awk '/[, ](cpu|cpuacct|cpuset|devices|freezer|memory)[, ]/ && $3 == "cgroup" { print $2 }' /proc/mounts | head -n1)"
-cgroupDir="$(dirname "$cgroupSubsystemDir")"
-if [ -d "$cgroupDir/cpu" -o -d "$cgroupDir/cpuacct" -o -d "$cgroupDir/cpuset" -o -d "$cgroupDir/devices" -o -d "$cgroupDir/freezer" -o -d "$cgroupDir/memory" ]; then
-	echo "$(wrap_good 'cgroup hierarchy' 'properly mounted') [$cgroupDir]"
+if [ "$(stat -f -c %t /sys/fs/cgroup 2>/dev/null)" = "63677270" ]; then
+	echo "$(wrap_good 'cgroup hierarchy' 'cgroupv2')"
 else
-	if [ "$cgroupSubsystemDir" ]; then
-		echo "$(wrap_bad 'cgroup hierarchy' 'single mountpoint!') [$cgroupSubsystemDir]"
+	cgroupSubsystemDir="$(awk '/[, ](cpu|cpuacct|cpuset|devices|freezer|memory)[, ]/ && $3 == "cgroup" { print $2 }' /proc/mounts | head -n1)"
+	cgroupDir="$(dirname "$cgroupSubsystemDir")"
+	if [ -d "$cgroupDir/cpu" -o -d "$cgroupDir/cpuacct" -o -d "$cgroupDir/cpuset" -o -d "$cgroupDir/devices" -o -d "$cgroupDir/freezer" -o -d "$cgroupDir/memory" ]; then
+		echo "$(wrap_good 'cgroup hierarchy' 'properly mounted') [$cgroupDir]"
 	else
-		echo "$(wrap_bad 'cgroup hierarchy' 'nonexistent??')"
+		if [ "$cgroupSubsystemDir" ]; then
+			echo "$(wrap_bad 'cgroup hierarchy' 'single mountpoint!') [$cgroupSubsystemDir]"
+		else
+			echo "$(wrap_bad 'cgroup hierarchy' 'nonexistent??')"
+		fi
+		echo "    $(wrap_color '(see https://github.com/tianon/cgroupfs-mount)' yellow)"
 	fi
-	echo "    $(wrap_color '(see https://github.com/tianon/cgroupfs-mount)' yellow)"
 fi
 
 if [ "$(cat /sys/module/apparmor/parameters/enabled 2>/dev/null)" = 'Y' ]; then
@@ -199,14 +203,23 @@ flags=(
 	CGROUPS CGROUP_CPUACCT CGROUP_DEVICE CGROUP_FREEZER CGROUP_SCHED CPUSETS MEMCG
 	KEYS
 	VETH BRIDGE BRIDGE_NETFILTER
-	NF_NAT_IPV4 IP_NF_FILTER IP_NF_TARGET_MASQUERADE
+	IP_NF_FILTER IP_NF_TARGET_MASQUERADE
 	NETFILTER_XT_MATCH_{ADDRTYPE,CONNTRACK,IPVS}
-	IP_NF_NAT NF_NAT NF_NAT_NEEDED
+	IP_NF_NAT NF_NAT
 
 	# required for bind-mounting /dev/mqueue into containers
 	POSIX_MQUEUE
 )
 check_flags "${flags[@]}"
+
+if [ "$kernelMajor" -lt 5 ] || [ "$kernelMajor" -eq 5 -a "$kernelMinor" -le 1 ]; then
+	check_flags NF_NAT_IPV4
+fi
+
+if [ "$kernelMajor" -lt 5 ] || [ "$kernelMajor" -eq 5 -a "$kernelMinor" -le 2 ]; then
+	check_flags NF_NAT_NEEDED
+fi
+
 echo
 
 echo 'Optional Features:'
@@ -217,9 +230,13 @@ echo 'Optional Features:'
 	check_flags SECCOMP
 	check_flags CGROUP_PIDS
 
-	check_flags MEMCG_SWAP MEMCG_SWAP_ENABLED
-	if is_set MEMCG_SWAP && ! is_set MEMCG_SWAP_ENABLED; then
-		echo "    $(wrap_color '(note that cgroup swap accounting is not enabled in your kernel config, you can enable it by setting boot option "swapaccount=1")' bold black)"
+	check_flags MEMCG_SWAP
+
+	if [ "$kernelMajor" -lt 5 ] || [ "$kernelMajor" -eq 5 -a "$kernelMinor" -le 8 ]; then
+		check_flags MEMCG_SWAP_ENABLED
+		if is_set MEMCG_SWAP && ! is_set MEMCG_SWAP_ENABLED; then
+			echo "    $(wrap_color '(note that cgroup swap accounting is not enabled in your kernel config, you can enable it by setting boot option "swapaccount=1")' bold black)"
+		fi
 	fi
 }
 
@@ -237,8 +254,12 @@ else
 	netprio=CGROUP_NET_PRIO
 fi
 
+if [ "$kernelMajor" -lt 5 ]; then
+	check_flags IOSCHED_CFQ CFQ_GROUP_IOSCHED
+fi
+
 flags=(
-	BLK_CGROUP BLK_DEV_THROTTLING IOSCHED_CFQ CFQ_GROUP_IOSCHED
+	BLK_CGROUP BLK_DEV_THROTTLING
 	CGROUP_PERF
 	CGROUP_HUGETLB
 	NET_CLS_CGROUP $netprio
