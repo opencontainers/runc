@@ -15,6 +15,8 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+var FreezerTimeout = errors.New("set freezer status timeout")
+
 type FreezerGroup struct {
 }
 
@@ -29,6 +31,7 @@ func (s *FreezerGroup) Apply(path string, d *cgroupData) error {
 func (s *FreezerGroup) Set(path string, cgroup *configs.Cgroup) error {
 	switch cgroup.Resources.Freezer {
 	case configs.Frozen, configs.Thawed:
+		maxRetry := 5
 		for {
 			// In case this loop does not exit because it doesn't get the expected
 			// state, let's write again this state, hoping it's going to be properly
@@ -38,12 +41,29 @@ func (s *FreezerGroup) Set(path string, cgroup *configs.Cgroup) error {
 				return err
 			}
 
-			state, err := s.GetState(path)
-			if err != nil {
-				return err
+			var state configs.FreezerState
+			var e error
+			c := make(chan bool, 1)
+
+			go func() {
+				state, e = s.GetState(path)
+				c <- true
+			}()
+
+			select {
+			case <-c:
+				if e != nil {
+					return e
+				}
+				if state == cgroup.Resources.Freezer {
+					return nil
+				}
+			case <-time.After(1 * time.Millisecond):
 			}
-			if state == cgroup.Resources.Freezer {
-				break
+
+			maxRetry = maxRetry - 1
+			if maxRetry < 0 {
+				return FreezerTimeout
 			}
 
 			time.Sleep(1 * time.Millisecond)
@@ -53,8 +73,6 @@ func (s *FreezerGroup) Set(path string, cgroup *configs.Cgroup) error {
 	default:
 		return fmt.Errorf("Invalid argument '%s' to freezer.state", string(cgroup.Resources.Freezer))
 	}
-
-	return nil
 }
 
 func (s *FreezerGroup) GetStats(path string, stats *cgroups.Stats) error {
