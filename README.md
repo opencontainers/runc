@@ -175,7 +175,7 @@ The second way to start a container is using the specs lifecycle operations.
 This gives you more power over how the container is created and managed while it is running.
 This will also launch the container in the background so you will have to edit
 the `config.json` to remove the `terminal` setting for the simple examples
-below (see more details about [docs/terminals.md](runc terminal handling)).
+below (see more details about [runc terminal handling](docs/terminals.md)).
 Your process field in the `config.json` should look like this below with `"terminal": false` and `"args": ["sleep", "5"]`.
 
 
