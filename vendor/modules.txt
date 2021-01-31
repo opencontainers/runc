@@ -72,7 +72,10 @@ github.com/vishvananda/netns
 # github.com/willf/bitset v1.1.11
 ## explicit
 github.com/willf/bitset
-# golang.org/x/sys v0.0.0-20201107080550-4d91cf3a1aaf
+# golang.org/x/net v0.0.0-20201224014010-6772e930b67b
+## explicit
+golang.org/x/net/bpf
+# golang.org/x/sys v0.0.0-20201119102817-f84b799fce68
 ## explicit
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
