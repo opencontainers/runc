@@ -196,7 +196,11 @@ func New(root string, options ...func(*LinuxFactory) error) (Factory, error) {
 		Validator: validate.New(),
 		CriuPath:  "criu",
 	}
-	Cgroupfs(l)
+
+	if err := Cgroupfs(l); err != nil {
+		return nil, err
+	}
+
 	for _, opt := range options {
 		if opt == nil {
 			continue
