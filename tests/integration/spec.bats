@@ -33,8 +33,8 @@ function teardown() {
 	SCHEMA='runtime-spec/schema/config-schema.json'
 	[ -e "$SCHEMA" ]
 
-	go get github.com/xeipuuv/gojsonschema
-	go build runtime-spec/schema/validate.go
+	GO111MODULE=auto go get github.com/xeipuuv/gojsonschema
+	GO111MODULE=auto go build runtime-spec/schema/validate.go
 
 	./validate "$SCHEMA" config.json
 }
