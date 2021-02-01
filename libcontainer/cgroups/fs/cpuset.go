@@ -12,6 +12,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/pkg/errors"
 	"golang.org/x/sys/unix"
 )
 
