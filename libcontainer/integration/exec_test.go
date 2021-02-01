@@ -1418,7 +1418,7 @@ func TestRootfsPropagationSlaveMount(t *testing.T) {
 
 	// Make this dir a "shared" mount point. This will make sure a
 	// slave relationship can be established in container.
-	err = unix.Mount(dir1host, dir1host, "bind", unix.MS_BIND|unix.MS_REC, "")
+	err = unix.Mount(dir1host, dir1host, "", unix.MS_BIND|unix.MS_REC, "")
 	ok(t, err)
 	err = unix.Mount("", dir1host, "", unix.MS_SHARED|unix.MS_REC, "")
 	ok(t, err)
@@ -1456,7 +1456,7 @@ func TestRootfsPropagationSlaveMount(t *testing.T) {
 	ok(t, err)
 	defer os.RemoveAll(dir2host)
 
-	err = unix.Mount(dir2host, dir2host, "bind", unix.MS_BIND, "")
+	err = unix.Mount(dir2host, dir2host, "", unix.MS_BIND, "")
 	defer unmountOp(dir2host)
 	ok(t, err)
 
@@ -1533,7 +1533,7 @@ func TestRootfsPropagationSharedMount(t *testing.T) {
 
 	// Make this dir a "shared" mount point. This will make sure a
 	// shared relationship can be established in container.
-	err = unix.Mount(dir1host, dir1host, "bind", unix.MS_BIND|unix.MS_REC, "")
+	err = unix.Mount(dir1host, dir1host, "", unix.MS_BIND|unix.MS_REC, "")
 	ok(t, err)
 	err = unix.Mount("", dir1host, "", unix.MS_SHARED|unix.MS_REC, "")
 	ok(t, err)

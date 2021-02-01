@@ -278,7 +278,7 @@ func TestValidateSysctlWithBindHostNetNS(t *testing.T) {
 	defer os.Remove(file)
 	fd.Close()
 
-	if err := unix.Mount(selfnet, file, "bind", unix.MS_BIND, ""); err != nil {
+	if err := unix.Mount(selfnet, file, "", unix.MS_BIND, ""); err != nil {
 		t.Fatalf("can't bind-mount %s to %s: %s", selfnet, file, err)
 	}
 	defer func() {
