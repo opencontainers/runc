@@ -159,7 +159,7 @@ func testEnosysStub(t *testing.T, defaultAction configs.Action, arches []string)
 			type syscallTest struct {
 				syscall  string
 				sysno    libseccomp.ScmpSyscall
-				expected int
+				expected uint32
 			}
 
 			scmpArch, err := libseccomp.GetArchFromString(arch)
@@ -177,9 +177,9 @@ func testEnosysStub(t *testing.T, defaultAction configs.Action, arches []string)
 			// Add explicit syscalls (whether they will return -ENOSYS
 			// depends on the filter rules).
 			for idx, syscall := range explicitSyscalls {
-				expected := int(retFallthrough)
+				expected := retFallthrough
 				if idx >= enosysStart {
-					expected = int(retErrnoEnosys)
+					expected = retErrnoEnosys
 				}
 				sysno, err := libseccomp.GetSyscallFromNameByArch(syscall, scmpArch)
 				if err != nil {
@@ -201,7 +201,7 @@ func testEnosysStub(t *testing.T, defaultAction configs.Action, arches []string)
 				syscallTests = append(syscallTests, syscallTest{
 					sysno:    sysno,
 					syscall:  syscall,
-					expected: int(retFallthrough),
+					expected: retFallthrough,
 				})
 			}
 
@@ -216,7 +216,7 @@ func testEnosysStub(t *testing.T, defaultAction configs.Action, arches []string)
 				syscallTests = append(syscallTests, syscallTest{
 					sysno:    sysno,
 					syscall:  fmt.Sprintf("syscall_%#x", sysno),
-					expected: int(retErrnoEnosys),
+					expected: retErrnoEnosys,
 				})
 			}
 
@@ -224,14 +224,17 @@ func testEnosysStub(t *testing.T, defaultAction configs.Action, arches []string)
 			for _, test := range syscallTests {
 				// Override the expected value in the two special cases.
 				if !archSet[arch] || isAllowAction(defaultAction) {
-					test.expected = int(retFallthrough)
+					test.expected = retFallthrough
 				}
 
 				payload := mockSyscallPayload(t, test.sysno, nativeArch, 0x1337, 0xF00BA5)
-				ret, err := filter.Run(payload)
+				// NOTE: golang.org/x/net/bpf returns int here rather
+				// than uint32.
+				rawRet, err := filter.Run(payload)
 				if err != nil {
 					t.Fatalf("error running filter: %v", err)
 				}
+				ret := uint32(rawRet)
 				if ret != test.expected {
 					t.Logf("mock filter for %v %v:", arches, allowedSyscalls)
 					for idx, insn := range program {
