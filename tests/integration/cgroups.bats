@@ -190,6 +190,20 @@ function setup() {
 	[[ "$output" == *'invalid configuration'* ]]
 }
 
+@test "runc run (blkio weight)" {
+	requires root cgroups_v2
+
+	set_cgroups_path "$BUSYBOX_BUNDLE"
+	update_config '.linux.resources.blockIO |= {"weight": 750}' "${BUSYBOX_BUNDLE}"
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_unified
+	[ "$status" -eq 0 ]
+
+	runc exec test_cgroups_unified sh -c 'cat /sys/fs/cgroup/io.bfq.weight'
+	[ "$status" -eq 0 ]
+	[ "$output" = 'default 750' ]
+}
+
 @test "runc run (cgroup v2 resources.unified only)" {
 	requires root cgroups_v2
 

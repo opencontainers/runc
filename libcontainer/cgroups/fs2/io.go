@@ -29,7 +29,7 @@ func setIo(dirPath string, cgroup *configs.Cgroup) error {
 	if cgroup.Resources.BlkioWeight != 0 {
 		filename := "io.bfq.weight"
 		if err := fscommon.WriteFile(dirPath, filename,
-			strconv.FormatUint(cgroups.ConvertBlkIOToCgroupV2Value(cgroup.Resources.BlkioWeight), 10)); err != nil {
+			strconv.FormatUint(uint64(cgroup.Resources.BlkioWeight), 10)); err != nil {
 			return err
 		}
 	}
