@@ -29,46 +29,46 @@ func (s *FreezerGroup) Apply(path string, d *cgroupData) error {
 func (s *FreezerGroup) Set(path string, cgroup *configs.Cgroup) error {
 	switch cgroup.Resources.Freezer {
 	case configs.Frozen:
-		// As per older kernel docs (freezer-subsystem.txt before
-		// kernel commit ef9fe980c6fcc1821), if FREEZING is seen,
-		// userspace should either retry or thaw. While current
-		// kernel cgroup v1 docs no longer mention a need to retry,
-		// the kernel (tested on v5.4, Ubuntu 20.04) can't reliably
-		// freeze a cgroup while new processes keep appearing in it
-		// (either via fork/clone or by writing new PIDs to
-		// cgroup.procs).
-		//
-		// The number of retries below is chosen to have a decent
-		// chance to succeed even in the worst case scenario (runc
-		// pause/unpause with parallel runc exec).
-		//
-		// Adding any amount of sleep in between retries did not
-		// increase the chances of successful freeze.
-		for i := 0; i < 1000; i++ {
-			if err := fscommon.WriteFile(path, "freezer.state", string(configs.Frozen)); err != nil {
-				return err
-			}
+		tryFreezeFunc := func() error {
+			// As per older kernel docs (freezer-subsystem.txt before
+			// kernel commit ef9fe980c6fcc1821), if FREEZING is seen,
+			// userspace should either retry or thaw. While current
+			// kernel cgroup v1 docs no longer mention a need to retry,
+			// the kernel (tested on v5.4, Ubuntu 20.04) can't reliably
+			// freeze a cgroup while new processes keep appearing in it
+			// (either via fork/clone or by writing new PIDs to
+			// cgroup.procs).
+			//
+			// The number of retries below is chosen to have a decent
+			// chance to succeed even in the worst case scenario (runc
+			// pause/unpause with parallel runc exec).
+			//
+			// Adding any amount of sleep in between retries did not
+			// increase the chances of successful freeze.
+			for i := 0; i < 1000; i++ {
+				if err := fscommon.WriteFile(path, "freezer.state", string(configs.Frozen)); err != nil {
+					return err
+				}
 
-			state, err := fscommon.ReadFile(path, "freezer.state")
-			if err != nil {
-				return err
+				state, err := fscommon.ReadFile(path, "freezer.state")
+				if err != nil {
+					return err
+				}
+				if strings.TrimSpace(state) == string(configs.Frozen) {
+					return nil
+				}
+				time.Sleep(1 * time.Millisecond)
 			}
-			state = strings.TrimSpace(state)
-			switch state {
-			case "FREEZING":
-				continue
-			case string(configs.Frozen):
-				return nil
-			default:
-				// should never happen
-				return fmt.Errorf("unexpected state %s while freezing", strings.TrimSpace(state))
-			}
+			// Despite our best efforts, it got stuck in FREEZING.
+			// Leaving it in this state is bad and dangerous, so
+			// let's (try to) thaw it back and error out.
+			_ = fscommon.WriteFile(path, "freezer.state", string(configs.Thawed))
+			return errors.New("unable to freeze")
 		}
-		// Despite our best efforts, it got stuck in FREEZING.
-		// Leaving it in this state is bad and dangerous, so
-		// let's (try to) thaw it back and error out.
-		_ = fscommon.WriteFile(path, "freezer.state", string(configs.Thawed))
-		return errors.New("unable to freeze")
+		if err := tryFreezeFunc(); err == nil {
+			return nil
+		}
+		return tryFreezeFunc()
 	case configs.Thawed:
 		return fscommon.WriteFile(path, "freezer.state", string(configs.Thawed))
 	case configs.Undefined:
