@@ -584,9 +584,12 @@ func sysSeccompSetFilter(flags uint, filter []unix.SockFilter) (err error) {
 			unix.SECCOMP_MODE_FILTER,
 			uintptr(unsafe.Pointer(&fprog)), 0, 0)
 	} else {
-		_, _, err = unix.RawSyscall(unix.SYS_SECCOMP,
+		_, _, errno := unix.RawSyscall(unix.SYS_SECCOMP,
 			uintptr(C.C_SET_MODE_FILTER),
 			uintptr(flags), uintptr(unsafe.Pointer(&fprog)))
+		if errno != 0 {
+			err = errno
+		}
 	}
 	runtime.KeepAlive(filter)
 	runtime.KeepAlive(fprog)
