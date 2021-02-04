@@ -55,6 +55,8 @@ func logrusToStderr() bool {
 func fatal(err error) {
 	// make sure the error is written to the logger
 	logrus.Error(err)
+	// If debug is enabled and pkg/errors was used, show its stack trace.
+	logrus.Debugf("%+v", err)
 	if !logrusToStderr() {
 		fmt.Fprintln(os.Stderr, err)
 	}
