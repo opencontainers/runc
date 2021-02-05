@@ -3,25 +3,20 @@
 # Root directory of integration tests.
 INTEGRATION_ROOT=$(dirname "$(readlink -f "$BASH_SOURCE")")
 
-. ${INTEGRATION_ROOT}/multi-arch.bash
+# Download images, get *_IMAGE variables.
+IMAGES=$("${INTEGRATION_ROOT}"/get-images.sh)
+eval "$IMAGES"
+unset IMAGES
 
 RUNC="${INTEGRATION_ROOT}/../../runc"
 RECVTTY="${INTEGRATION_ROOT}/../../contrib/cmd/recvtty/recvtty"
-GOPATH="$(mktemp -d --tmpdir runc-integration-gopath.XXXXXX)"
 
 # Test data path.
 TESTDATA="${INTEGRATION_ROOT}/testdata"
 
-# Busybox image
-BUSYBOX_IMAGE="$BATS_TMPDIR/busybox.tar"
+# Destinations for test containers.
 BUSYBOX_BUNDLE="$BATS_TMPDIR/busyboxtest"
-
-# hello-world in tar format
-HELLO_FILE=$(get_hello)
-HELLO_IMAGE="$TESTDATA/$HELLO_FILE"
 HELLO_BUNDLE="$BATS_TMPDIR/hello-world"
-
-# debian image
 DEBIAN_BUNDLE="$BATS_TMPDIR/debiantest"
 
 # CRIU PATH
@@ -476,48 +471,30 @@ function teardown_recvtty() {
 	rm -f "$CONSOLE_SOCKET"
 }
 
-function setup_busybox() {
+function setup_bundle() {
+	local image="$1"
+	local bundle="$2"
+
 	setup_recvtty
-	mkdir -p "$BUSYBOX_BUNDLE"/rootfs
-	if [ -e "/testdata/busybox.tar" ]; then
-		BUSYBOX_IMAGE="/testdata/busybox.tar"
-	fi
-	if [ ! -e $BUSYBOX_IMAGE ]; then
-		curl -o $BUSYBOX_IMAGE -sSL $(get_busybox)
-	fi
-	tar --exclude './dev/*' -C "$BUSYBOX_BUNDLE"/rootfs -xf "$BUSYBOX_IMAGE"
-	cd "$BUSYBOX_BUNDLE"
+	mkdir -p "$bundle"/rootfs
+	cd "$bundle"
+
+	tar --exclude './dev/*' -C rootfs -xf "$image"
+
 	runc_spec
 }
 
+function setup_busybox() {
+	setup_bundle "$BUSYBOX_IMAGE" "$BUSYBOX_BUNDLE"
+}
+
 function setup_hello() {
-	setup_recvtty
-	mkdir -p "$HELLO_BUNDLE"/rootfs
-	tar --exclude './dev/*' -C "$HELLO_BUNDLE"/rootfs -xf "$HELLO_IMAGE"
-	cd "$HELLO_BUNDLE"
-	runc_spec
+	setup_bundle "$HELLO_IMAGE" "$HELLO_BUNDLE"
 	update_config '(.. | select(.? == "sh")) |= "/hello"'
 }
 
 function setup_debian() {
-	# skopeo and umoci are not installed on the travis runner
-	if [ -n "${RUNC_USE_SYSTEMD}" ]; then
-		return
-	fi
-
-	setup_recvtty
-	mkdir -p "$DEBIAN_BUNDLE"
-
-	if [ ! -d "$DEBIAN_ROOTFS/rootfs" ]; then
-		get_and_extract_debian "$DEBIAN_BUNDLE"
-	fi
-
-	# Use the cached version
-	if [ ! -d "$DEBIAN_BUNDLE/rootfs" ]; then
-		cp -r "$DEBIAN_ROOTFS"/* "$DEBIAN_BUNDLE/"
-	fi
-
-	cd "$DEBIAN_BUNDLE"
+	setup_bundle "$DEBIAN_IMAGE" "$DEBIAN_BUNDLE"
 }
 
 function teardown_running_container() {

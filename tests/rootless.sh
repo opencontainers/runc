@@ -19,12 +19,16 @@
 # a new feature, please match the existing style. Add an entry to $ALL_FEATURES,
 # and add an enable_* and disable_* hook.
 
+set -e -u -o pipefail
+: "${RUNC_USE_SYSTEMD:=}"
+: "${ROOTLESS_TESTPATH:=}"
+
 ALL_FEATURES=("idmap" "cgroup")
 # cgroup is managed by systemd when RUNC_USE_SYSTEMD is set
 if [[ -n "${RUNC_USE_SYSTEMD}" ]]; then
 	ALL_FEATURES=("idmap")
 fi
-ROOT="$(readlink -f "$(dirname "${BASH_SOURCE}")/..")"
+ROOT="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")/..")"
 
 # FEATURE: Opportunistic new{uid,gid}map support, allowing a rootless container
 #          to be set up with the usage of helper setuid binaries.
@@ -54,14 +58,12 @@ function enable_idmap() {
 	# Create a directory owned by $AUX_UID inside container, to be used
 	# by a test case in cwd.bats. This setup can't be done by the test itself,
 	# as it needs root for chown.
-	set -e
 	export AUX_UID=1024
 	AUX_DIR="$(mktemp -d)"
 	# 1000 is linux.uidMappings.containerID value,
 	# as set by runc_rootless_idmap
 	chown "$((ROOTLESS_UIDMAP_START - 1000 + AUX_UID))" "$AUX_DIR"
 	export AUX_DIR
-	set +e
 }
 
 function disable_idmap() {
@@ -75,10 +77,12 @@ function disable_idmap() {
 	# Deactivate new{uid,gid}map helpers. setuid is preserved with mv(1).
 	[ -e /usr/bin/newuidmap ] && mv /usr/bin/{,unused-}newuidmap
 	[ -e /usr/bin/newgidmap ] && mv /usr/bin/{,unused-}newgidmap
+
+	return 0
 }
 
 function cleanup() {
-	if [ -n "$AUX_DIR" ]; then
+	if [ -v AUX_DIR ]; then
 		rmdir "$AUX_DIR"
 		unset AUX_DIX
 	fi
@@ -90,7 +94,8 @@ function cleanup() {
 
 # List of cgroups. We handle name= cgroups as well as combined
 # (comma-separated) cgroups and correctly split and/or strip them.
-ALL_CGROUPS=($(cat /proc/self/cgroup | cut -d: -f2 | sed -E '{s/^name=//;s/,/\n/;/^$/D}'))
+# shellcheck disable=SC2207
+ALL_CGROUPS=($(cut -d: -f2 </proc/self/cgroup | sed -E '{s/^name=//;s/,/\n/;/^$/D}'))
 CGROUP_MOUNT="/sys/fs/cgroup"
 CGROUP_PATH="/runc-cgroups-integration-test"
 
@@ -114,7 +119,8 @@ function enable_cgroup() {
 	if [[ -e "$CGROUP_MOUNT/cgroup.controllers" ]]; then
 		# Enable controllers. Some controller (e.g. memory) may fail on containerized environment.
 		set -x
-		for f in $(cat "$CGROUP_MOUNT/cgroup.controllers"); do echo +$f >"$CGROUP_MOUNT/cgroup.subtree_control"; done
+		# shellcheck disable=SC2013
+		for f in $(cat "$CGROUP_MOUNT/cgroup.controllers"); do echo "+$f" >"$CGROUP_MOUNT/cgroup.subtree_control"; done
 		set +x
 		# Create the cgroup.
 		mkdir -p "$CGROUP_MOUNT/$CGROUP_PATH"
@@ -133,6 +139,8 @@ function disable_cgroup() {
 	done
 	# cgroup v2
 	[ -d "$CGROUP_MOUNT/$CGROUP_PATH" ] && rmdir "$CGROUP_MOUNT/$CGROUP_PATH"
+
+	return 0
 }
 
 # Create a powerset of $ALL_FEATURES (the set of all subsets of $ALL_FEATURES).
@@ -140,35 +148,38 @@ function disable_cgroup() {
 # feature knobs this shouldn't take too long -- but the number of tested
 # combinations is O(2^n)).
 function powerset() {
-	eval printf '%s' $(printf '{,%s+}' "$@"):
+	eval printf '%s' "$(printf '{,%s+}' "$@")":
 }
 features_powerset="$(powerset "${ALL_FEATURES[@]}")"
 
+# Make sure we have container images downloaded, as otherwise
+# rootless user won't be able to write to $TESTDATA.
+"$ROOT"/tests/integration/get-images.sh >/dev/null
+
 # Iterate over the powerset of all features.
 IFS=:
+idx=0
 for enabled_features in $features_powerset; do
-	idx="$(($idx + 1))"
-	echo "[$(printf '%.2d' "$idx")] run rootless tests ... (${enabled_features%%+})"
+	((++idx))
+	printf "[%.2d] run rootless tests ... (${enabled_features%%+})\n" "$idx"
 
 	unset IFS
 	for feature in "${ALL_FEATURES[@]}"; do
 		hook_func="disable_$feature"
-		grep -E "(^|\+)$feature(\+|$)" <<<$enabled_features &>/dev/null && hook_func="enable_$feature"
+		grep -E "(^|\+)$feature(\+|$)" <<<"$enabled_features" &>/dev/null && hook_func="enable_$feature"
 		"$hook_func"
 	done
 
 	# Run the test suite!
-	set -e
-	echo path: $PATH
+	echo "path: $PATH"
 	export ROOTLESS_FEATURES="$enabled_features"
 	if [[ -n "${RUNC_USE_SYSTEMD}" ]]; then
 		# We use `ssh rootless@localhost` instead of `sudo -u rootless` for creating systemd user session.
 		# Alternatively we could use `machinectl shell`, but it is known not to work well on SELinux-enabled hosts as of April 2020:
 		# https://bugzilla.redhat.com/show_bug.cgi?id=1788616
-		ssh -t -t -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i $HOME/rootless.key rootless@localhost -- PATH="$PATH" RUNC_USE_SYSTEMD="$RUNC_USE_SYSTEMD" bats -t "$ROOT/tests/integration$ROOTLESS_TESTPATH"
+		ssh -t -t -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$HOME/rootless.key" rootless@localhost -- PATH="$PATH" RUNC_USE_SYSTEMD="$RUNC_USE_SYSTEMD" bats -t "$ROOT/tests/integration$ROOTLESS_TESTPATH"
 	else
-		sudo -HE -u rootless PATH="$PATH" $(which bats) -t "$ROOT/tests/integration$ROOTLESS_TESTPATH"
+		sudo -HE -u rootless PATH="$PATH" "$(which bats)" -t "$ROOT/tests/integration$ROOTLESS_TESTPATH"
 	fi
-	set +e
 	cleanup
 done

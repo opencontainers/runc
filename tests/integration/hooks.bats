@@ -48,6 +48,7 @@ function teardown() {
 		.hooks |= . + {"createRuntime": [{"path": "/bin/sh", "args": ["/bin/sh", "-c", $create_runtime_hook]}]} |
 		.hooks |= . + {"createContainer": [{"path": "/bin/sh", "args": ["/bin/sh", "-c", $create_container_hook]}]} |
 		.hooks |= . + {"startContainer": [{"path": "/bin/sh", "args": ["/bin/sh", "-c", "ldconfig"]}]} |
+		.root.readonly |= false |
 		.process.args = ["/bin/sh", "-c", "ldconfig -p | grep librunc"]' "$DEBIAN_BUNDLE"/config.json)
 	echo "${CONFIG}" >config.json
 
