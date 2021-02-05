@@ -1,0 +1,5 @@
+# For documentation, see https://golangci-lint.run/usage/configuration/
+
+run:
+  build-tags:
+    - seccomp
