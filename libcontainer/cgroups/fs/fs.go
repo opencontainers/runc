@@ -35,6 +35,14 @@ var (
 
 var errSubsystemDoesNotExist = errors.New("cgroup: subsystem does not exist")
 
+func init() {
+	// If using cgroups-hybrid mode then add a "" controller indicating
+	// it should join the cgroups v2.
+	if cgroups.IsCgroup2HybridMode() {
+		subsystems = append(subsystems, &NameGroup{GroupName: "", Join: true})
+	}
+}
+
 type subsystem interface {
 	// Name returns the name of the subsystem.
 	Name() string

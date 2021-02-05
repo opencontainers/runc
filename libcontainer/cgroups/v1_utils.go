@@ -113,6 +113,11 @@ func FindCgroupMountpoint(cgroupPath, subsystem string) (string, error) {
 		return "", errUnified
 	}
 
+	// If subsystem is empty, we look for the cgroupv2 hybrid path.
+	if len(subsystem) == 0 {
+		return hybridMountpoint, nil
+	}
+
 	// Avoid parsing mountinfo by trying the default path first, if possible.
 	if path := tryDefaultPath(cgroupPath, subsystem); path != "" {
 		return path, nil
@@ -221,6 +226,11 @@ func GetOwnCgroupPath(subsystem string) (string, error) {
 	cgroup, err := GetOwnCgroup(subsystem)
 	if err != nil {
 		return "", err
+	}
+
+	// If subsystem is empty, we look for the cgroupv2 hybrid path.
+	if len(subsystem) == 0 {
+		return hybridMountpoint, nil
 	}
 
 	return getCgroupPathHelper(subsystem, cgroup)
