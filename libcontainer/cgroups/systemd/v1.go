@@ -205,6 +205,19 @@ func (m *legacyManager) Apply(pid int) error {
 		}
 		paths[s.Name()] = subsystemPath
 	}
+
+	// If systemd is using cgroups-hybrid mode then add the slice path of
+	// this container to the paths so the following process executed with
+	// "runc exec" joins that cgroup as well.
+	if cgroups.IsCgroup2HybridMode() {
+		// "" means cgroup-hybrid path
+		cgroupsHybridPath, err := getSubsystemPath(m.cgroups, "")
+		if err != nil && cgroups.IsNotFound(err) {
+			return err
+		}
+		paths[""] = cgroupsHybridPath
+	}
+
 	m.paths = paths
 
 	if err := m.joinCgroups(pid); err != nil {
