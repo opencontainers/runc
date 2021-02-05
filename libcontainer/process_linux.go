@@ -245,7 +245,10 @@ func (p *setnsProcess) setExternalDescriptors(newFds []string) {
 }
 
 func (p *setnsProcess) forwardChildLogs() {
-	go logs.ForwardLogs(p.logFilePair.parent)
+	go func() {
+		logs.ForwardLogs(p.logFilePair.parent)
+		p.logFilePair.parent.Close()
+	}()
 }
 
 type initProcess struct {
@@ -312,6 +315,16 @@ func (p *initProcess) start() (retErr error) {
 	defer p.messageSockPair.parent.Close()
 	err := p.cmd.Start()
 	p.process.ops = p
+
+	// close exec fifo, not required anymore by parent process
+	fifoName := filepath.Join(p.container.root, execFifoFilename)
+	for _, f := range p.cmd.ExtraFiles {
+		if f.Name() == fifoName {
+			f.Close()
+			break
+		}
+	}
+
 	// close the write-side of the pipes (controlled by child)
 	p.messageSockPair.child.Close()
 	p.logFilePair.child.Close()
@@ -581,7 +594,10 @@ func (p *initProcess) setExternalDescriptors(newFds []string) {
 }
 
 func (p *initProcess) forwardChildLogs() {
-	go logs.ForwardLogs(p.logFilePair.parent)
+	go func() {
+		logs.ForwardLogs(p.logFilePair.parent)
+		p.logFilePair.parent.Close()
+	}()
 }
 
 func getPipeFds(pid int) ([]string, error) {
