@@ -121,7 +121,7 @@ block-9:
         50: JNEImm dst: r2 off: -1 imm: 1 <block-10>
         51: Mov32Reg dst: r1 src: r3
         52: And32Imm dst: r1 imm: 1
-        53: JEqImm dst: r1 off: -1 imm: 0 <block-10>
+        53: JNEReg dst: r1 off: -1 src: r3 <block-10>
         54: Mov32Imm dst: r0 imm: 1
         55: Exit
 block-10:
@@ -129,7 +129,7 @@ block-10:
         56: JNEImm dst: r2 off: -1 imm: 2 <block-11>
         57: Mov32Reg dst: r1 src: r3
         58: And32Imm dst: r1 imm: 1
-        59: JEqImm dst: r1 off: -1 imm: 0 <block-11>
+        59: JNEReg dst: r1 off: -1 src: r3 <block-11>
         60: Mov32Imm dst: r0 imm: 1
         61: Exit
 block-11:
