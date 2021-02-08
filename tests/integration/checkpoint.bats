@@ -315,3 +315,45 @@ function simple_cr() {
 	unlink "$tmp"
 	test -f ./work-dir/"$tmplog2" && unlink ./work-dir/"$tmplog2"
 }
+
+@test "checkpoint and restore with nested bind mounts" {
+	bind1=$(mktemp -d -p .)
+	bind2=$(mktemp -d -p .)
+	update_config '	  .mounts += [{
+					type: "bind",
+					source: "'"$bind1"'",
+					destination: "/test",
+					options: ["rw", "bind"]
+				},
+	                        {
+					type: "bind",
+					source: "'"$bind2"'",
+					destination: "/test/for/nested",
+					options: ["rw", "bind"]
+				}]'
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	[ "$status" -eq 0 ]
+
+	testcontainer test_busybox running
+
+	# checkpoint the running container
+	runc --criu "$CRIU" checkpoint --work-path ./work-dir test_busybox
+	grep -B 5 Error ./work-dir/dump.log || true
+	[ "$status" -eq 0 ]
+
+	# after checkpoint busybox is no longer running
+	testcontainer test_busybox checkpointed
+
+	# cleanup mountpoints created by runc during creation
+	# the mountpoints should be recreated during restore - that is the actual thing tested here
+	rm -rf "${bind1:?}"/*
+
+	# restore from checkpoint
+	runc --criu "$CRIU" restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
+	grep -B 5 Error ./work-dir/restore.log || true
+	[ "$status" -eq 0 ]
+
+	# busybox should be back up and running
+	testcontainer test_busybox running
+}
