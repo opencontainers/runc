@@ -1235,10 +1235,37 @@ func (c *linuxContainer) prepareCriuRestoreMounts(mounts []*configs.Mount) error
 	// Now go through all mounts and create the mountpoints
 	// if the mountpoints are not on a tmpfs, as CRIU will
 	// restore the complete tmpfs content from its checkpoint.
+	umounts := []string{}
+	defer func() {
+		for _, u := range umounts {
+			if e := unix.Unmount(u, unix.MNT_DETACH); e != nil {
+				if e != unix.EINVAL {
+					// Ignore EINVAL as it means 'target is not a mount point.'
+					// It probably has already been unmounted.
+					logrus.Warnf("Error during cleanup unmounting of %q (%v)", u, e)
+				}
+			}
+		}
+	}()
 	for _, m := range mounts {
 		if !isPathInPrefixList(m.Destination, tmpfs) {
 			if err := c.makeCriuRestoreMountpoints(m); err != nil {
 				return err
+			}
+			// If the mount point is a bind mount, we need to mount
+			// it now so that runc can create the necessary mount
+			// points for mounts in bind mounts.
+			// This also happens during initial container creation.
+			// Without this CRIU restore will fail
+			// See: https://github.com/opencontainers/runc/issues/2748
+			// It is also not necessary to order the mount points
+			// because during initial container creation mounts are
+			// set up in the order they are configured.
+			if m.Device == "bind" {
+				if err := unix.Mount(m.Source, m.Destination, "", unix.MS_BIND|unix.MS_REC, ""); err != nil {
+					return errorsf.Wrapf(err, "unable to bind mount %q to %q", m.Source, m.Destination)
+				}
+				umounts = append(umounts, m.Destination)
 			}
 		}
 	}
