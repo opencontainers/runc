@@ -59,7 +59,7 @@ function teardown() {
 @test "runc run [device cgroup allow rw char device]" {
 	requires root
 
-	update_config ' .linux.resources.devices = [{"allow": false, "access": "rwm"},{"allow": true, "type": "c", "major": 1, "minor": 11, "access": "rwm"}]
+	update_config ' .linux.resources.devices = [{"allow": false, "access": "rwm"},{"allow": true, "type": "c", "major": 1, "minor": 11, "access": "rw"}]
 			| .linux.devices = [{"path": "/dev/kmsg", "type": "c", "major": 1, "minor": 11}]
 			| .process.args |= ["sh"]
 			| .hostname = "myhostname"'
@@ -74,6 +74,12 @@ function teardown() {
 
 	# test read
 	runc exec test_allow_char sh -c 'head -n 1 /dev/kmsg'
+	[ "$status" -eq 0 ]
+
+	# test access
+	TEST_NAME="dev_access_test"
+	gcc -static -o "rootfs/bin/${TEST_NAME}" "${TESTDATA}/${TEST_NAME}.c"
+	runc exec test_allow_char sh -c "${TEST_NAME} /dev/kmsg"
 	[ "$status" -eq 0 ]
 }
 
