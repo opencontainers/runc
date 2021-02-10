@@ -2,6 +2,7 @@ package apparmor
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -21,7 +22,13 @@ func IsEnabled() bool {
 func setProcAttr(attr, value string) error {
 	// Under AppArmor you can only change your own attr, so use /proc/self/
 	// instead of /proc/<tid>/ like libapparmor does
-	f, err := os.OpenFile("/proc/self/attr/"+attr, os.O_WRONLY, 0)
+	attrPath := "/proc/self/attr/apparmor/" + attr
+	if _, err := os.Stat(attrPath); errors.Is(err, os.ErrNotExist) {
+		// fall back to the old convention
+		attrPath = "/proc/self/attr/" + attr
+	}
+
+	f, err := os.OpenFile(attrPath, os.O_WRONLY, 0)
 	if err != nil {
 		return err
 	}
