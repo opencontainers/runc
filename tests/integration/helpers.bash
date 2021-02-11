@@ -115,20 +115,21 @@ function systemd_version() {
 
 function init_cgroup_paths() {
 	# init once
-	test -n "$CGROUP_UNIFIED" && return
+	test -v CGROUP_UNIFIED && return
 
+	local rnd="$RANDOM"
 	if [ -n "${RUNC_USE_SYSTEMD}" ]; then
-		SD_UNIT_NAME="runc-cgroups-integration-test.scope"
+		SD_UNIT_NAME="runc-cgroups-integration-test-${rnd}.scope"
 		if [ $(id -u) = "0" ]; then
 			REL_CGROUPS_PATH="/machine.slice/$SD_UNIT_NAME"
-			OCI_CGROUPS_PATH="machine.slice:runc-cgroups:integration-test"
+			OCI_CGROUPS_PATH="machine.slice:runc-cgroups:integration-test-${rnd}"
 		else
 			REL_CGROUPS_PATH="/user.slice/user-$(id -u).slice/user@$(id -u).service/machine.slice/$SD_UNIT_NAME"
 			# OCI path doesn't contain "/user.slice/user-$(id -u).slice/user@$(id -u).service/" prefix
-			OCI_CGROUPS_PATH="machine.slice:runc-cgroups:integration-test"
+			OCI_CGROUPS_PATH="machine.slice:runc-cgroups:integration-test-${rnd}"
 		fi
 	else
-		REL_CGROUPS_PATH="/runc-cgroups-integration-test/test-cgroup"
+		REL_CGROUPS_PATH="/runc-cgroups-integration-test/test-cgroup-${rnd}"
 		OCI_CGROUPS_PATH=$REL_CGROUPS_PATH
 	fi
 

@@ -174,6 +174,7 @@ function simple_cr() {
 
 	local max=400
 	for i in $(seq 1 $max); do
+		echo "[$i/$max]" >&3
 		echo " -- iteration $i of $max -- "
 		cpt_lazy_pages
 		teardown_busybox
@@ -182,6 +183,10 @@ function simple_cr() {
 }
 
 function cpt_lazy_pages() {
+	# randomize cgroup path
+	unset CGROUP_UNIFIED
+	set_cgroups_path
+
 	setup_pipes
 	runc_run_with_pipes test_busybox
 
@@ -237,7 +242,8 @@ function cpt_lazy_pages() {
 
 	check_pipes
 
-	__runc delete -f test_busybox_restore
+	runc delete -f test_busybox_restore
+	runc list
 	rm -rf image-dir work-dir
 }
 
