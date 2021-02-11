@@ -31,9 +31,6 @@ jobs:
       - name: system info
         run: ssh default 'sh -exc "uname -a && systemctl --version && df -T && criu --version"'
 
-      - name: unit tests
-        run: ssh default 'cd /vagrant && sudo make localunittest'
-
       - name: cgroupv2 with systemd
         run: ssh -tt default "sudo make -C /vagrant localintegration RUNC_USE_SYSTEMD=yes"
 
@@ -62,9 +59,6 @@ jobs:
 
       - name: system info
         run: ssh default 'rpm -q centos-release kernel systemd criu'
-
-      - name: unit tests
-        run: ssh default 'sudo -i make -C /vagrant localunittest'
 
       - name: integration tests (fs cgroup driver)
         run: ssh -tt default "sudo -i make -C /vagrant localintegration"
