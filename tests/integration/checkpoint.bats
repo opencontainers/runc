@@ -43,8 +43,16 @@ function check_pipes() {
 	echo Ping >&${in_w}
 	exec {in_w}>&-
 	exec {out_w}>&-
+	exec {err_w}>&-
 	output=$(cat <&${out_r})
 	[[ "${output}" == *"ponG Ping"* ]]
+	exec {out_r}>&-
+	exec {in_r}>&-
+	output=$(cat <&${err_r})
+	if [ -n "$output" ]; then
+		fail "runc stderr: $output"
+	fi
+	exec {err_r}>&-
 }
 
 # Usage: runc_run_with_pipes container-name
@@ -162,12 +170,23 @@ function simple_cr() {
 		skip "this criu does not support lazy migration"
 	fi
 
+	set -e -o pipefail
+
+	local max=400
+	for i in $(seq 1 $max); do
+		echo " -- iteration $i of $max -- "
+		cpt_lazy_pages
+		teardown_busybox
+		setup_busybox
+	done
+}
+
+function cpt_lazy_pages() {
 	setup_pipes
 	runc_run_with_pipes test_busybox
 
 	# checkpoint the running container
-	mkdir image-dir
-	mkdir work-dir
+	mkdir image-dir work-dir
 
 	# For lazy migration we need to know when CRIU is ready to serve
 	# the memory pages via TCP.
@@ -184,13 +203,18 @@ function simple_cr() {
 
 	# wait for lazy page server to be ready
 	out=$(timeout 2 dd if=/proc/self/fd/${lazy_r} bs=1 count=1 2>/dev/null | od)
+	exec {lazy_r}>&-
 	exec {lazy_w}>&-
 	# shellcheck disable=SC2116,SC2086
 	out=$(echo $out) # rm newlines
 	# show errors if there are any before we fail
 	grep -B5 Error ./work-dir/dump.log || true
 	# expecting \0 which od prints as
-	[ "$out" = "0000000 000000 0000001" ]
+	if [ "$out" != "0000000 000000 0000001" ]; then
+		echo "-- dump.log follows --"
+		cat ./work-dir/dump.log
+		fail "checkpoint --lazy-pages failed (status-fd: $out)"
+	fi
 
 	# Check if inventory.img was written
 	[ -e image-dir/inventory.img ]
@@ -212,6 +236,9 @@ function simple_cr() {
 	wait $lp_pid
 
 	check_pipes
+
+	__runc delete -f test_busybox_restore
+	rm -rf image-dir work-dir
 }
 
 @test "checkpoint and restore in external network namespace" {
