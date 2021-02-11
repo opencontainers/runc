@@ -56,7 +56,7 @@ function __runc() {
 function runc_spec() {
 	! [[ "$#" > 1 ]]
 
-	local args=()
+	local args=("--debug")
 	local bundle=""
 
 	if [ "$ROOTLESS" -ne 0 ]; then
