@@ -20,7 +20,6 @@ Vagrant.configure("2") do |config|
       cat << EOF | dnf -y shell && break
 config exclude kernel,kernel-core
 config install_weak_deps false
-update
 install iptables gcc make golang-go glibc-static libseccomp-devel bats jq git-core criu
 ts run
 EOF
