@@ -1,7 +1,7 @@
-# github.com/checkpoint-restore/go-criu/v4 v4.1.0
+# github.com/checkpoint-restore/go-criu/v5 v5.0.0
 ## explicit
-github.com/checkpoint-restore/go-criu/v4
-github.com/checkpoint-restore/go-criu/v4/rpc
+github.com/checkpoint-restore/go-criu/v5
+github.com/checkpoint-restore/go-criu/v5/rpc
 # github.com/cilium/ebpf v0.2.0
 ## explicit
 github.com/cilium/ebpf
@@ -28,7 +28,6 @@ github.com/docker/go-units
 ## explicit
 github.com/godbus/dbus/v5
 # github.com/golang/protobuf v1.4.3
-## explicit
 github.com/golang/protobuf/proto
 # github.com/moby/sys/mountinfo v0.4.0
 ## explicit
@@ -75,12 +74,13 @@ github.com/willf/bitset
 # golang.org/x/net v0.0.0-20201224014010-6772e930b67b
 ## explicit
 golang.org/x/net/bpf
-# golang.org/x/sys v0.0.0-20201119102817-f84b799fce68
+# golang.org/x/sys v0.0.0-20210124154548-22da62e12c0c
 ## explicit
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# google.golang.org/protobuf v1.23.0
+# google.golang.org/protobuf v1.25.0
+## explicit
 google.golang.org/protobuf/encoding/prototext
 google.golang.org/protobuf/encoding/protowire
 google.golang.org/protobuf/internal/descfmt
@@ -91,12 +91,11 @@ google.golang.org/protobuf/internal/encoding/messageset
 google.golang.org/protobuf/internal/encoding/tag
 google.golang.org/protobuf/internal/encoding/text
 google.golang.org/protobuf/internal/errors
-google.golang.org/protobuf/internal/fieldnum
 google.golang.org/protobuf/internal/fieldsort
 google.golang.org/protobuf/internal/filedesc
 google.golang.org/protobuf/internal/filetype
 google.golang.org/protobuf/internal/flags
-google.golang.org/protobuf/internal/genname
+google.golang.org/protobuf/internal/genid
 google.golang.org/protobuf/internal/impl
 google.golang.org/protobuf/internal/mapsort
 google.golang.org/protobuf/internal/pragma

@@ -27,13 +27,13 @@ import (
 	"github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/opencontainers/runtime-spec/specs-go"
 
-	"github.com/checkpoint-restore/go-criu/v4"
-	criurpc "github.com/checkpoint-restore/go-criu/v4/rpc"
-	"github.com/golang/protobuf/proto"
+	"github.com/checkpoint-restore/go-criu/v5"
+	criurpc "github.com/checkpoint-restore/go-criu/v5/rpc"
 	errorsf "github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink/nl"
 	"golang.org/x/sys/unix"
+	"google.golang.org/protobuf/proto"
 )
 
 const stdioFdCount = 3
@@ -1533,11 +1533,10 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *
 		for i := 0; i < v.NumField(); i++ {
 			st := v.Type()
 			name := st.Field(i).Name
-			if strings.HasPrefix(name, "XXX_") {
-				continue
+			if 'A' <= name[0] && name[0] <= 'Z' {
+				value := val.MethodByName("Get" + name).Call([]reflect.Value{})
+				logrus.Debugf("CRIU option %s with value %v", name, value[0])
 			}
-			value := val.MethodByName("Get" + name).Call([]reflect.Value{})
-			logrus.Debugf("CRIU option %s with value %v", name, value[0])
 		}
 	}
 	data, err := proto.Marshal(req)

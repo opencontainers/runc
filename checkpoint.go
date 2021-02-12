@@ -9,7 +9,7 @@ import (
 	"os"
 	"strconv"
 
-	criu "github.com/checkpoint-restore/go-criu/v4/rpc"
+	criu "github.com/checkpoint-restore/go-criu/v5/rpc"
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runtime-spec/specs-go"
