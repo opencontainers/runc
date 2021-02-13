@@ -97,7 +97,7 @@ function simple_cr() {
 
 	for _ in $(seq 2); do
 		# checkpoint the running container
-		runc --criu "$CRIU" checkpoint --work-path ./work-dir test_busybox
+		runc --criu "$CRIU" "$@" checkpoint --work-path ./work-dir test_busybox
 		grep -B 5 Error ./work-dir/dump.log || true
 		[ "$status" -eq 0 ]
 
@@ -105,7 +105,7 @@ function simple_cr() {
 		testcontainer test_busybox checkpointed
 
 		# restore from checkpoint
-		runc --criu "$CRIU" restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
+		runc --criu "$CRIU" "$@" restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
 		grep -B 5 Error ./work-dir/restore.log || true
 		[ "$status" -eq 0 ]
 
@@ -116,6 +116,10 @@ function simple_cr() {
 
 @test "checkpoint and restore " {
 	simple_cr
+}
+
+@test "checkpoint and restore (with --debug)" {
+	simple_cr --debug
 }
 
 @test "checkpoint and restore (cgroupns)" {
