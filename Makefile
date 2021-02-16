@@ -129,8 +129,6 @@ shfmt:
 	shfmt -ln bats -d -w tests/integration/*.bats
 	shfmt -ln bash -d -w man/*.sh script/* tests/*.sh tests/integration/*.bash
 
-ci: validate test release
-
 vendor:
 	$(GO) mod tidy
 	$(GO) mod vendor
@@ -156,5 +154,5 @@ localcross:
 .PHONY: runc all recvtty static release dbuild lint man runcimage \
 	test localtest unittest localunittest integration localintegration \
 	rootlessintegration localrootlessintegration shell install install-bash \
-	install-man clean validate ci shfmt shellcheck \
+	install-man clean validate shfmt shellcheck \
 	vendor verify-dependencies cross localcross
