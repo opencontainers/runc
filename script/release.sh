@@ -24,9 +24,46 @@ root="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")/..")"
 # This function takes an output path as an argument, where the built
 # (preferably static) binary should be placed.
 function build_project() {
+	local builddir
 	builddir="$(dirname "$1")"
 
-	make -C "$root" COMMIT_NO= static
+	# Due to libseccomp being LGPL we must include its sources,
+	# so download, install and build against it.
+
+	# Sanity check: check that the build won't use distro-provided
+	# libseccomp.a. If this is the case, explain and abort.
+	#
+	# Note go is not used here as it caches the build heavily,
+	# including, apparently, the results of pkg-config.
+	# shellcheck disable=SC2046
+	if read -ra flags < <(pkg-config --libs --cflags libseccomp 2>/dev/null) &&
+		cat <<EOF | gcc -static -x c -o /dev/null - "${flags[@]}"; then
+#include <seccomp.h>
+int main(void) { seccomp_version(); return 0; }
+EOF
+		set +x
+		echo >&2
+		echo "Distro-provided libseccomp static library is installed." >&2
+		echo "Unable to build a static binary against own libsecomp." >&2
+		echo "Please uninstall libseccomp-static to fix." >&2
+		exit 1
+	fi
+
+	local libseccomp_ver='2.5.1'
+	local tarball="libseccomp-${libseccomp_ver}.tar.gz"
+	local prefix
+	prefix="$(mktemp -d)"
+	wget "https://github.com/seccomp/libseccomp/releases/download/v${libseccomp_ver}/${tarball}"{,.asc}
+	tar xf "$tarball"
+	(
+		cd "libseccomp-${libseccomp_ver}"
+		./configure --prefix="$prefix" --enable-static --disable-shared
+		make install
+	)
+	mv "$tarball"{,.asc} "$builddir"
+
+	make -C "$root" PKG_CONFIG_PATH="${prefix}/lib/pkgconfig" COMMIT_NO= static
+	rm -rf "$prefix"
 	mv "$root/$project" "$1"
 }
 
