@@ -118,7 +118,6 @@ clean:
 	rm -rf man/man8
 
 validate:
-	script/validate-gofmt
 	script/validate-c
 	$(GO) vet $(MOD_VENDOR) ./...
 
