@@ -52,8 +52,7 @@ dbuild: runcimage
 		$(RUNC_IMAGE) make clean all
 
 lint:
-	$(GO) vet $(MOD_VENDOR) ./...
-	$(GO) fmt $(MOD_VENDOR) ./...
+	golangci-lint run ./...
 
 man:
 	man/md2man-all.sh
