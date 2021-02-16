@@ -118,7 +118,6 @@ clean:
 
 validate:
 	script/validate-c
-	$(GO) vet $(MOD_VENDOR) ./...
 
 shellcheck:
 	shellcheck tests/integration/*.bats tests/integration/*.sh tests/*.sh
