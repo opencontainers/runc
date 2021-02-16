@@ -19,7 +19,7 @@ set -e
 # Project-specific options and functions. In *theory* you shouldn't need to
 # touch anything else in this script in order to use this elsewhere.
 project="runc"
-root="$(readlink -f "$(dirname "${BASH_SOURCE}")/..")"
+root="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")/..")"
 
 # This function takes an output path as an argument, where the built
 # (preferably static) binary should be placed.
@@ -80,7 +80,7 @@ while getopts "S:c:r:v:h:" opt; do
 	h)
 		hashcmd="$OPTARG"
 		;;
-	\:)
+	:)
 		echo "Missing argument: -$OPTARG" >&2
 		usage
 		;;
@@ -121,12 +121,13 @@ git archive --format=tar --prefix="$project-$version/" "$commit" | xz >"$release
 )
 
 # Set up the gpgflags.
-[[ "$keyid" ]] && export gpgflags="--default-key $keyid"
-gpg_cansign $gpgflags || bail "Could not find suitable GPG key, skipping signing step."
+gpgflags=()
+[[ "$keyid" ]] && gpgflags=(--default-key "$keyid")
+gpg_cansign "${gpgflags[@]}" || bail "Could not find suitable GPG key, skipping signing step."
 
 # Sign everything.
-gpg $gpgflags --detach-sign --armor "$releasedir/$project.$goarch"
-gpg $gpgflags --detach-sign --armor "$releasedir/$project.tar.xz"
-gpg $gpgflags --clear-sign --armor \
+gpg "${gpgflags[@]}" --detach-sign --armor "$releasedir/$project.$goarch"
+gpg "${gpgflags[@]}" --detach-sign --armor "$releasedir/$project.tar.xz"
+gpg "${gpgflags[@]}" --clear-sign --armor \
 	--output "$releasedir/$project.$hashcmd"{.tmp,} &&
 	mv "$releasedir/$project.$hashcmd"{.tmp,}
