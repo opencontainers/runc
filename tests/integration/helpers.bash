@@ -127,6 +127,9 @@ function init_cgroup_paths() {
 			CGROUP_SUBSYSTEMS+=" freezer"
 		fi
 	else
+		if stat -f -c %t /sys/fs/cgroup/unified | grep -qFw 63677270; then
+			CGROUP_HYBRID=yes
+		fi
 		CGROUP_UNIFIED=no
 		CGROUP_SUBSYSTEMS=$(awk '!/^#/ {print $1}' /proc/cgroups)
 		local g base_path
@@ -407,6 +410,12 @@ function requires() {
 		cgroups_v2)
 			init_cgroup_paths
 			if [ "$CGROUP_UNIFIED" != "yes" ]; then
+				skip_me=1
+			fi
+			;;
+		cgroups_hybrid)
+			init_cgroup_paths
+			if [ "$CGROUP_HYBRID" != "yes" ]; then
 				skip_me=1
 			fi
 			;;
