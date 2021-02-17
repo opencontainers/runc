@@ -282,3 +282,24 @@ function setup() {
 	[ "$status" -eq 0 ]
 	[ "$(wc -l <<<"$output")" -eq 1 ]
 }
+
+@test "runc exec (cgroup v1 + hybrid joins correct cgroup)" {
+	requires root cgroups_hybrid
+
+	set_cgroups_path
+
+	runc run --pid-file pid.txt -d --console-socket "$CONSOLE_SOCKET" test_cgroups_group
+	[ "$status" -eq 0 ]
+
+	pid=$(cat pid.txt)
+	run_cgroup=$(tail -1 </proc/"$pid"/cgroup)
+	[[ "$run_cgroup" == *"runc-cgroups-integration-test"* ]]
+
+	runc exec test_cgroups_group cat /proc/self/cgroup
+	[ "$status" -eq 0 ]
+	exec_cgroup=${lines[-1]}
+	[[ $exec_cgroup == *"runc-cgroups-integration-test"* ]]
+
+	# check that the cgroups v2 path is the same for both processes
+	[[ "$run_cgroup" == "$exec_cgroup" ]]
+}
