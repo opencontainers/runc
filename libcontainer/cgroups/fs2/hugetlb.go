@@ -4,6 +4,7 @@ package fs2
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/pkg/errors"
 
@@ -48,7 +49,7 @@ func statHugeTlb(dirPath string, stats *cgroups.Stats) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to read stats")
 		}
-		_, value, err = fscommon.GetCgroupParamKeyValue(contents)
+		_, value, err = fscommon.ParseKeyValue(strings.TrimSuffix(contents, "\n"))
 		if err != nil {
 			return errors.Wrap(err, "failed to parse "+fileName)
 		}

@@ -35,22 +35,22 @@ func ParseUint(s string, base, bitSize int) (uint64, error) {
 	return value, nil
 }
 
-// GetCgroupParamKeyValue parses a space-separated "name value" kind of cgroup
-// parameter and returns its components. For example, "io_service_bytes 1234"
-// will return as "io_service_bytes", 1234.
-func GetCgroupParamKeyValue(t string) (string, uint64, error) {
-	parts := strings.Fields(t)
-	switch len(parts) {
-	case 2:
-		value, err := ParseUint(parts[1], 10, 64)
-		if err != nil {
-			return "", 0, fmt.Errorf("unable to convert to uint64: %v", err)
-		}
-
-		return parts[0], value, nil
-	default:
-		return "", 0, ErrNotValidFormat
+// ParseKeyValue parses a space-separated "name value" kind of cgroup
+// parameter and returns its key as a string, and its value as uint64
+// (ParseUint is used to convert the value). For example,
+// "io_service_bytes 1234" will be returned as "io_service_bytes", 1234.
+func ParseKeyValue(t string) (string, uint64, error) {
+	parts := strings.SplitN(t, " ", 3)
+	if len(parts) != 2 {
+		return "", 0, fmt.Errorf("line %q is not in key value format", t)
 	}
+
+	value, err := ParseUint(parts[1], 10, 64)
+	if err != nil {
+		return "", 0, fmt.Errorf("unable to convert to uint64: %v", err)
+	}
+
+	return parts[0], value, nil
 }
 
 // GetCgroupParamUint reads a single uint64 value from the specified cgroup file.

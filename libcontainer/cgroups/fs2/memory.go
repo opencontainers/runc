@@ -82,7 +82,7 @@ func statMemory(dirPath string, stats *cgroups.Stats) error {
 
 	sc := bufio.NewScanner(statsFile)
 	for sc.Scan() {
-		t, v, err := fscommon.GetCgroupParamKeyValue(sc.Text())
+		t, v, err := fscommon.ParseKeyValue(sc.Text())
 		if err != nil {
 			return errors.Wrapf(err, "failed to parse memory.stat (%q)", sc.Text())
 		}
