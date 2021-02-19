@@ -238,6 +238,42 @@ EOF
 
 	check_cgroup_value "pids.max" 20
 	check_systemd_value "TasksMax" 20
+
+	if [ "$HAVE_SWAP" = "yes" ]; then
+		# Test case for https://github.com/opencontainers/runc/pull/592,
+		# checking libcontainer/cgroups/fs/memory.go:setMemoryAndSwap.
+
+		runc update test_update --memory 30M --memory-swap 50M
+		[ "$status" -eq 0 ]
+
+		check_cgroup_value $MEM_LIMIT $((30 * 1024 * 1024))
+		check_systemd_value $SD_MEM_LIMIT $((30 * 1024 * 1024))
+
+		if [ "$CGROUP_UNIFIED" = "yes" ]; then
+			# for cgroupv2, swap does not include mem
+			check_cgroup_value "$MEM_SWAP" $((20 * 1024 * 1024))
+			check_systemd_value "$SD_MEM_SWAP" $((20 * 1024 * 1024))
+		else
+			check_cgroup_value "$MEM_SWAP" $((50 * 1024 * 1024))
+			check_systemd_value "$SD_MEM_SWAP" $((50 * 1024 * 1024))
+		fi
+
+		# Now, set new memory to more than old swap
+		runc update test_update --memory 60M --memory-swap 80M
+		[ "$status" -eq 0 ]
+
+		check_cgroup_value $MEM_LIMIT $((60 * 1024 * 1024))
+		check_systemd_value $SD_MEM_LIMIT $((60 * 1024 * 1024))
+
+		if [ "$CGROUP_UNIFIED" = "yes" ]; then
+			# for cgroupv2, swap does not include mem
+			check_cgroup_value "$MEM_SWAP" $((20 * 1024 * 1024))
+			check_systemd_value "$SD_MEM_SWAP" $((20 * 1024 * 1024))
+		else
+			check_cgroup_value "$MEM_SWAP" $((80 * 1024 * 1024))
+			check_systemd_value "$SD_MEM_SWAP" $((80 * 1024 * 1024))
+		fi
+	fi
 }
 
 @test "update cgroup cpu limits" {
