@@ -495,3 +495,7 @@ func (m *unifiedManager) GetFreezerState() (configs.FreezerState, error) {
 func (m *unifiedManager) Exists() bool {
 	return cgroups.PathExists(m.path)
 }
+
+func (m *unifiedManager) OOMKillCount() (uint64, error) {
+	return fs2.OOMKillCount(m.path)
+}

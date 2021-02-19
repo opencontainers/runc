@@ -450,3 +450,7 @@ func (m *legacyManager) GetFreezerState() (configs.FreezerState, error) {
 func (m *legacyManager) Exists() bool {
 	return cgroups.PathExists(m.Path("devices"))
 }
+
+func (m *legacyManager) OOMKillCount() (uint64, error) {
+	return fs.OOMKillCount(m.Path("memory"))
+}

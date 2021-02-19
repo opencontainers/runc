@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
+	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	libcontainerUtils "github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/pkg/errors"
@@ -420,4 +421,12 @@ func (m *manager) GetFreezerState() (configs.FreezerState, error) {
 
 func (m *manager) Exists() bool {
 	return cgroups.PathExists(m.Path("devices"))
+}
+
+func OOMKillCount(path string) (uint64, error) {
+	return fscommon.GetValueByKey(path, "memory.oom_control", "oom_kill")
+}
+
+func (m *manager) OOMKillCount() (uint64, error) {
+	return OOMKillCount(m.Path("memory"))
 }

@@ -321,6 +321,24 @@ func (p *initProcess) start() (retErr error) {
 	}
 	defer func() {
 		if retErr != nil {
+			// init might be killed by the kernel's OOM killer.
+			oom, err := p.manager.OOMKillCount()
+			if err != nil {
+				logrus.WithError(err).Warn("unable to get oom kill count")
+			} else if oom > 0 {
+				// Does not matter what the particular error was,
+				// its cause is most probably OOM, so report that.
+				const oomError = "container init was OOM-killed (memory limit too low?)"
+
+				if logrus.GetLevel() >= logrus.DebugLevel {
+					// Only show the original error if debug is set,
+					// as it is not generally very useful.
+					retErr = newSystemErrorWithCause(retErr, oomError)
+				} else {
+					retErr = newSystemError(errors.New(oomError))
+				}
+			}
+
 			// terminate the process to ensure we can remove cgroups
 			if err := ignoreTerminateErrors(p.terminate()); err != nil {
 				logrus.WithError(err).Warn("unable to terminate initProcess")

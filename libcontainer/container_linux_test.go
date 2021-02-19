@@ -55,6 +55,10 @@ func (m *mockCgroupManager) Exists() bool {
 	return err == nil
 }
 
+func (m *mockCgroupManager) OOMKillCount() (uint64, error) {
+	return 0, nil
+}
+
 func (m *mockCgroupManager) GetPaths() map[string]string {
 	return m.paths
 }
