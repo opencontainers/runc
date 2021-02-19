@@ -14,11 +14,15 @@ import (
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/pkg/errors"
+	"golang.org/x/sys/unix"
 )
 
 const (
 	cgroupMemorySwapLimit = "memory.memsw.limit_in_bytes"
 	cgroupMemoryLimit     = "memory.limit_in_bytes"
+	cgroupMemoryUsage     = "memory.usage_in_bytes"
+	cgroupMemoryMaxUsage  = "memory.max_usage_in_bytes"
 )
 
 type MemoryGroup struct {
@@ -62,7 +66,23 @@ func setMemory(path string, val int64) error {
 		return nil
 	}
 
-	return fscommon.WriteFile(path, cgroupMemoryLimit, strconv.FormatInt(val, 10))
+	err := fscommon.WriteFile(path, cgroupMemoryLimit, strconv.FormatInt(val, 10))
+	if !errors.Is(err, unix.EBUSY) {
+		return err
+	}
+
+	// EBUSY means the kernel can't set new limit as it's too low
+	// (lower than the current usage). Return more specific error.
+	usage, err := fscommon.GetCgroupParamUint(path, cgroupMemoryUsage)
+	if err != nil {
+		return err
+	}
+	max, err := fscommon.GetCgroupParamUint(path, cgroupMemoryMaxUsage)
+	if err != nil {
+		return err
+	}
+
+	return errors.Errorf("unable to set memory limit to %d (current usage: %d, peak usage: %d)", val, usage, max)
 }
 
 func setSwap(path string, val int64) error {
