@@ -4,8 +4,6 @@ package libcontainer
 
 import (
 	"path/filepath"
-	"strconv"
-	"strings"
 	"unsafe"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
@@ -13,22 +11,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
-
-func getValueFromCgroup(path, file, key string) (int, error) {
-	content, err := fscommon.ReadFile(path, file)
-	if err != nil {
-		return 0, err
-	}
-
-	lines := strings.Split(string(content), "\n")
-	for _, line := range lines {
-		arr := strings.Split(line, " ")
-		if len(arr) == 2 && arr[0] == key {
-			return strconv.Atoi(arr[1])
-		}
-	}
-	return 0, nil
-}
 
 func registerMemoryEventV2(cgDir, evName, cgEvName string) (<-chan struct{}, error) {
 	fd, err := unix.InotifyInit()
@@ -77,12 +59,12 @@ func registerMemoryEventV2(cgDir, evName, cgEvName string) (<-chan struct{}, err
 				}
 				switch int(rawEvent.Wd) {
 				case evFd:
-					oom, err := getValueFromCgroup(cgDir, evName, "oom_kill")
+					oom, err := fscommon.GetValueByKey(cgDir, evName, "oom_kill")
 					if err != nil || oom > 0 {
 						ch <- struct{}{}
 					}
 				case cgFd:
-					pids, err := getValueFromCgroup(cgDir, cgEvName, "populated")
+					pids, err := fscommon.GetValueByKey(cgDir, cgEvName, "populated")
 					if err != nil || pids == 0 {
 						return
 					}
