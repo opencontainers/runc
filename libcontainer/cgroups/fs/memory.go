@@ -70,7 +70,7 @@ func setMemoryAndSwap(path string, cgroup *configs.Cgroup) error {
 	// When memory and swap memory are both set, we need to handle the cases
 	// for updating container.
 	if cgroup.Resources.Memory != 0 && cgroup.Resources.MemorySwap != 0 {
-		memoryUsage, err := getMemoryData(path, "")
+		curLimit, err := fscommon.GetCgroupParamUint(path, cgroupMemoryLimit)
 		if err != nil {
 			return err
 		}
@@ -78,7 +78,7 @@ func setMemoryAndSwap(path string, cgroup *configs.Cgroup) error {
 		// When update memory limit, we should adapt the write sequence
 		// for memory and swap memory, so it won't fail because the new
 		// value and the old value don't fit kernel's validation.
-		if cgroup.Resources.MemorySwap == -1 || memoryUsage.Limit < uint64(cgroup.Resources.MemorySwap) {
+		if cgroup.Resources.MemorySwap == -1 || curLimit < uint64(cgroup.Resources.MemorySwap) {
 			if err := fscommon.WriteFile(path, cgroupMemorySwapLimit, strconv.FormatInt(cgroup.Resources.MemorySwap, 10)); err != nil {
 				return err
 			}
