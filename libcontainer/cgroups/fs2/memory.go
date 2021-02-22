@@ -88,7 +88,7 @@ func statMemory(dirPath string, stats *cgroups.Stats) error {
 		}
 		stats.MemoryStats.Stats[t] = v
 	}
-	stats.MemoryStats.Cache = stats.MemoryStats.Stats["cache"]
+	stats.MemoryStats.Cache = stats.MemoryStats.Stats["file"]
 
 	memoryUsage, err := getMemoryDataV2(dirPath, "")
 	if err != nil {
