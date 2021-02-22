@@ -698,7 +698,7 @@ next:
 				return nil, err
 			}
 			if d.FileMode != nil {
-				filemode = *d.FileMode
+				filemode = *d.FileMode &^ unix.S_IFMT
 			}
 			device := &devices.Device{
 				Rule: devices.Rule{

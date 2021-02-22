@@ -54,7 +54,7 @@ func DeviceFromPath(path, permissions string) (*Device, error) {
 			Permissions: Permissions(permissions),
 		},
 		Path:     path,
-		FileMode: os.FileMode(mode),
+		FileMode: os.FileMode(mode &^ unix.S_IFMT),
 		Uid:      stat.Uid,
 		Gid:      stat.Gid,
 	}, nil

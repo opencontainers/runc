@@ -82,22 +82,13 @@ func TestHostDevicesAllValid(t *testing.T) {
 		if device.Major == 0 {
 			t.Errorf("device entry %+v has zero major number", device)
 		}
-		// Devices should only have file modes that correspond to their type.
-		var expectedType os.FileMode
 		switch device.Type {
-		case BlockDevice:
-			expectedType = unix.S_IFBLK
-		case CharDevice:
-			expectedType = unix.S_IFCHR
+		case BlockDevice, CharDevice:
 		case FifoDevice:
 			t.Logf("fifo devices shouldn't show up from HostDevices")
 			fallthrough
 		default:
 			t.Errorf("device entry %+v has unexpected type %v", device, device.Type)
-		}
-		gotType := device.FileMode & unix.S_IFMT
-		if expectedType != gotType {
-			t.Errorf("device entry %+v has mismatched types (expected %#x, got %#x)", device, expectedType, gotType)
 		}
 	}
 }
