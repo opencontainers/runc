@@ -205,7 +205,6 @@ func genV2ResourcesProperties(c *configs.Cgroup, conn *systemdDbus.Conn) ([]syst
 
 	if r.PidsLimit > 0 || r.PidsLimit == -1 {
 		properties = append(properties,
-			newProp("TasksAccounting", true),
 			newProp("TasksMax", uint64(r.PidsLimit)))
 	}
 
@@ -283,11 +282,6 @@ func (m *unifiedManager) Apply(pid int) error {
 	if err != nil {
 		return err
 	}
-	resourcesProperties, err := genV2ResourcesProperties(c, dbusConnection)
-	if err != nil {
-		return err
-	}
-	properties = append(properties, resourcesProperties...)
 	properties = append(properties, c.SystemdProps...)
 
 	if err := startUnit(dbusConnection, unitName, properties); err != nil {

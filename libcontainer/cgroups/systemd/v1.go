@@ -86,7 +86,6 @@ func genV1ResourcesProperties(c *configs.Cgroup, conn *systemdDbus.Conn) ([]syst
 
 	if r.PidsLimit > 0 || r.PidsLimit == -1 {
 		properties = append(properties,
-			newProp("TasksAccounting", true),
 			newProp("TasksMax", uint64(r.PidsLimit)))
 	}
 
@@ -158,7 +157,8 @@ func (m *legacyManager) Apply(pid int) error {
 	properties = append(properties,
 		newProp("MemoryAccounting", true),
 		newProp("CPUAccounting", true),
-		newProp("BlockIOAccounting", true))
+		newProp("BlockIOAccounting", true),
+		newProp("TasksAccounting", true))
 
 	// Assume DefaultDependencies= will always work (the check for it was previously broken.)
 	properties = append(properties,
@@ -168,11 +168,6 @@ func (m *legacyManager) Apply(pid int) error {
 	if err != nil {
 		return err
 	}
-	resourcesProperties, err := genV1ResourcesProperties(c, dbusConnection)
-	if err != nil {
-		return err
-	}
-	properties = append(properties, resourcesProperties...)
 	properties = append(properties, c.SystemdProps...)
 
 	// We have to set kernel memory here, as we can't change it once
