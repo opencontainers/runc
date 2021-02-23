@@ -57,6 +57,10 @@ struct describing how the container is to be created. A sample would look simila
 
 ```go
 defaultMountFlags := unix.MS_NOEXEC | unix.MS_NOSUID | unix.MS_NODEV
+var devices []*configs.DeviceRule
+for _, device := range specconv.AllowedDevices {
+	devices = append(devices, &device.Rule)
+}
 config := &configs.Config{
 	Rootfs: "/your/path/to/rootfs",
 	Capabilities: &configs.Capabilities{
@@ -155,7 +159,7 @@ config := &configs.Config{
 		Parent: "system",
 		Resources: &configs.Resources{
 			MemorySwappiness: nil,
-			Devices:          specconv.AllowedDevices,
+			Devices:          devices,
 		},
 	},
 	MaskPaths: []string{
