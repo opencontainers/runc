@@ -570,6 +570,7 @@ func (c *linuxContainer) newSetnsProcess(p *Process, cmd *exec.Cmd, messageSockP
 		intelRdtPath:    state.IntelRdtPath,
 		messageSockPair: messageSockPair,
 		logFilePair:     logFilePair,
+		manager:         c.cgroupManager,
 		config:          c.newInitConfig(p),
 		process:         p,
 		bootstrapData:   data,
