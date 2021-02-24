@@ -610,6 +610,9 @@ func (c *linuxContainer) newInitConfig(process *Process) *initConfig {
 		AppArmorProfile:  c.config.AppArmorProfile,
 		ProcessLabel:     c.config.ProcessLabel,
 		Rlimits:          c.config.Rlimits,
+		CreateConsole:    process.ConsoleSocket != nil,
+		ConsoleWidth:     process.ConsoleWidth,
+		ConsoleHeight:    process.ConsoleHeight,
 	}
 	if process.NoNewPrivileges != nil {
 		cfg.NoNewPrivileges = *process.NoNewPrivileges
@@ -623,9 +626,7 @@ func (c *linuxContainer) newInitConfig(process *Process) *initConfig {
 	if len(process.Rlimits) > 0 {
 		cfg.Rlimits = process.Rlimits
 	}
-	cfg.CreateConsole = process.ConsoleSocket != nil
-	cfg.ConsoleWidth = process.ConsoleWidth
-	cfg.ConsoleHeight = process.ConsoleHeight
+
 	return cfg
 }
 
