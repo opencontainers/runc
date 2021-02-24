@@ -17,6 +17,7 @@ import (
 	"github.com/moby/sys/mountinfo"
 	"github.com/mrunalp/fileutils"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
+	"github.com/opencontainers/runc/libcontainer/cgroups/fs2"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/devices"
 	"github.com/opencontainers/runc/libcontainer/userns"
@@ -295,17 +296,18 @@ func mountCgroupV1(m *configs.Mount, c *mountConfig) error {
 }
 
 func mountCgroupV2(m *configs.Mount, c *mountConfig) error {
-	cgroupPath, err := securejoin.SecureJoin(c.root, m.Destination)
+	dest, err := securejoin.SecureJoin(c.root, m.Destination)
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(cgroupPath, 0755); err != nil {
+	if err := os.MkdirAll(dest, 0755); err != nil {
 		return err
 	}
-	if err := unix.Mount(m.Source, cgroupPath, "cgroup2", uintptr(m.Flags), m.Data); err != nil {
+	if err := unix.Mount(m.Source, dest, "cgroup2", uintptr(m.Flags), m.Data); err != nil {
 		// when we are in UserNS but CgroupNS is not unshared, we cannot mount cgroup2 (#2158)
 		if err == unix.EPERM || err == unix.EBUSY {
-			return unix.Mount("/sys/fs/cgroup", cgroupPath, "", uintptr(m.Flags)|unix.MS_BIND, "")
+			src := fs2.UnifiedMountpoint
+			return unix.Mount(src, dest, "", uintptr(m.Flags)|unix.MS_BIND, "")
 		}
 		return err
 	}
