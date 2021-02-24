@@ -626,6 +626,9 @@ func (c *linuxContainer) newInitConfig(process *Process) *initConfig {
 	if len(process.Rlimits) > 0 {
 		cfg.Rlimits = process.Rlimits
 	}
+	if cgroups.IsCgroup2UnifiedMode() {
+		cfg.Cgroup2Path = c.cgroupManager.Path("")
+	}
 
 	return cfg
 }

@@ -31,9 +31,11 @@ import (
 const defaultMountFlags = unix.MS_NOEXEC | unix.MS_NOSUID | unix.MS_NODEV
 
 type mountConfig struct {
-	root     string
-	label    string
-	cgroupns bool
+	root            string
+	label           string
+	cgroup2Path     string
+	rootlessCgroups bool
+	cgroupns        bool
 }
 
 // needsSetupDev returns true if /dev needs to be set up.
@@ -56,9 +58,11 @@ func prepareRootfs(pipe io.ReadWriter, iConfig *initConfig) (err error) {
 	}
 
 	mountConfig := &mountConfig{
-		root:     config.Rootfs,
-		label:    config.MountLabel,
-		cgroupns: config.Namespaces.Contains(configs.NEWCGROUP),
+		root:            config.Rootfs,
+		label:           config.MountLabel,
+		cgroup2Path:     iConfig.Cgroup2Path,
+		rootlessCgroups: iConfig.RootlessCgroups,
+		cgroupns:        config.Namespaces.Contains(configs.NEWCGROUP),
 	}
 	setupDev := needsSetupDev(config)
 	for _, m := range config.Mounts {
@@ -307,7 +311,17 @@ func mountCgroupV2(m *configs.Mount, c *mountConfig) error {
 		// when we are in UserNS but CgroupNS is not unshared, we cannot mount cgroup2 (#2158)
 		if err == unix.EPERM || err == unix.EBUSY {
 			src := fs2.UnifiedMountpoint
-			return unix.Mount(src, dest, "", uintptr(m.Flags)|unix.MS_BIND, "")
+			if c.cgroupns && c.cgroup2Path != "" {
+				// Emulate cgroupns by bind-mounting
+				// the container cgroup path rather than
+				// the whole /sys/fs/cgroup.
+				src = c.cgroup2Path
+			}
+			err = unix.Mount(src, dest, "", uintptr(m.Flags)|unix.MS_BIND, "")
+			if err == unix.ENOENT && c.rootlessCgroups {
+				err = nil
+			}
+			return err
 		}
 		return err
 	}
