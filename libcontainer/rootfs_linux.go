@@ -29,6 +29,12 @@ import (
 
 const defaultMountFlags = unix.MS_NOEXEC | unix.MS_NOSUID | unix.MS_NODEV
 
+type mountConfig struct {
+	root     string
+	label    string
+	cgroupns bool
+}
+
 // needsSetupDev returns true if /dev needs to be set up.
 func needsSetupDev(config *configs.Config) bool {
 	for _, m := range config.Mounts {
@@ -48,7 +54,11 @@ func prepareRootfs(pipe io.ReadWriter, iConfig *initConfig) (err error) {
 		return newSystemErrorWithCause(err, "preparing rootfs")
 	}
 
-	hasCgroupns := config.Namespaces.Contains(configs.NEWCGROUP)
+	mountConfig := &mountConfig{
+		root:     config.Rootfs,
+		label:    config.MountLabel,
+		cgroupns: config.Namespaces.Contains(configs.NEWCGROUP),
+	}
 	setupDev := needsSetupDev(config)
 	for _, m := range config.Mounts {
 		for _, precmd := range m.PremountCmds {
@@ -56,7 +66,7 @@ func prepareRootfs(pipe io.ReadWriter, iConfig *initConfig) (err error) {
 				return newSystemErrorWithCause(err, "running premount command")
 			}
 		}
-		if err := mountToRootfs(m, config.Rootfs, config.MountLabel, hasCgroupns); err != nil {
+		if err := mountToRootfs(m, mountConfig); err != nil {
 			return newSystemErrorWithCausef(err, "mounting %q to rootfs at %q", m.Source, m.Destination)
 		}
 
@@ -222,7 +232,7 @@ func prepareBindMount(m *configs.Mount, rootfs string) error {
 	return nil
 }
 
-func mountCgroupV1(m *configs.Mount, rootfs, mountLabel string, enableCgroupns bool) error {
+func mountCgroupV1(m *configs.Mount, c *mountConfig) error {
 	binds, err := getCgroupMounts(m)
 	if err != nil {
 		return err
@@ -242,12 +252,12 @@ func mountCgroupV1(m *configs.Mount, rootfs, mountLabel string, enableCgroupns b
 		Data:             "mode=755",
 		PropagationFlags: m.PropagationFlags,
 	}
-	if err := mountToRootfs(tmpfs, rootfs, mountLabel, enableCgroupns); err != nil {
+	if err := mountToRootfs(tmpfs, c); err != nil {
 		return err
 	}
 	for _, b := range binds {
-		if enableCgroupns {
-			subsystemPath := filepath.Join(rootfs, b.Destination)
+		if c.cgroupns {
+			subsystemPath := filepath.Join(c.root, b.Destination)
 			if err := os.MkdirAll(subsystemPath, 0755); err != nil {
 				return err
 			}
@@ -266,7 +276,7 @@ func mountCgroupV1(m *configs.Mount, rootfs, mountLabel string, enableCgroupns b
 				return err
 			}
 		} else {
-			if err := mountToRootfs(b, rootfs, mountLabel, enableCgroupns); err != nil {
+			if err := mountToRootfs(b, c); err != nil {
 				return err
 			}
 		}
@@ -276,7 +286,7 @@ func mountCgroupV1(m *configs.Mount, rootfs, mountLabel string, enableCgroupns b
 			// symlink(2) is very dumb, it will just shove the path into
 			// the link and doesn't do any checks or relative path
 			// conversion. Also, don't error out if the cgroup already exists.
-			if err := os.Symlink(mc, filepath.Join(rootfs, m.Destination, ss)); err != nil && !os.IsExist(err) {
+			if err := os.Symlink(mc, filepath.Join(c.root, m.Destination, ss)); err != nil && !os.IsExist(err) {
 				return err
 			}
 		}
@@ -284,8 +294,8 @@ func mountCgroupV1(m *configs.Mount, rootfs, mountLabel string, enableCgroupns b
 	return nil
 }
 
-func mountCgroupV2(m *configs.Mount, rootfs, mountLabel string, enableCgroupns bool) error {
-	cgroupPath, err := securejoin.SecureJoin(rootfs, m.Destination)
+func mountCgroupV2(m *configs.Mount, c *mountConfig) error {
+	cgroupPath, err := securejoin.SecureJoin(c.root, m.Destination)
 	if err != nil {
 		return err
 	}
@@ -302,10 +312,10 @@ func mountCgroupV2(m *configs.Mount, rootfs, mountLabel string, enableCgroupns b
 	return nil
 }
 
-func mountToRootfs(m *configs.Mount, rootfs, mountLabel string, enableCgroupns bool) error {
-	var (
-		dest = m.Destination
-	)
+func mountToRootfs(m *configs.Mount, c *mountConfig) error {
+	rootfs := c.root
+	mountLabel := c.label
+	dest := m.Destination
 	if !strings.HasPrefix(dest, rootfs) {
 		dest = filepath.Join(rootfs, dest)
 	}
@@ -424,9 +434,9 @@ func mountToRootfs(m *configs.Mount, rootfs, mountLabel string, enableCgroupns b
 		}
 	case "cgroup":
 		if cgroups.IsCgroup2UnifiedMode() {
-			return mountCgroupV2(m, rootfs, mountLabel, enableCgroupns)
+			return mountCgroupV2(m, c)
 		}
-		return mountCgroupV1(m, rootfs, mountLabel, enableCgroupns)
+		return mountCgroupV1(m, c)
 	default:
 		// ensure that the destination of the mount is resolved of symlinks at mount time because
 		// any previous mounts can invalidate the next mount's destination.
