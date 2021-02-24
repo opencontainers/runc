@@ -439,3 +439,14 @@ func ConvertMemorySwapToCgroupV2Value(memorySwap, memory int64) (int64, error) {
 
 	return memorySwap - memory, nil
 }
+
+// Since the OCI spec is designed for cgroup v1, in some cases
+// there is need to convert from the cgroup v1 configuration to cgroup v2
+// the formula for BlkIOWeight to IOWeight is y = (1 + (x - 10) * 9999 / 990)
+// convert linearly from [10-1000] to [1-10000]
+func ConvertBlkIOToIOWeightValue(blkIoWeight uint16) uint64 {
+	if blkIoWeight == 0 {
+		return 0
+	}
+	return uint64(1 + (uint64(blkIoWeight)-10)*9999/990)
+}
