@@ -3,22 +3,19 @@
 load helpers
 
 function teardown() {
-	rm -f "$BATS_TMPDIR"/runc-cgroups-integration-test.json
-	teardown_running_container test_update
-	teardown_running_container test_update_rt
-	teardown_busybox
+	rm -f "$BATS_RUN_TMPDIR"/runc-cgroups-integration-test.json
+	teardown_bundle
 }
 
 function setup() {
-	teardown
 	setup_busybox
 
-	set_cgroups_path "$BUSYBOX_BUNDLE"
+	set_cgroups_path
 
 	# Set some initial known values
 	update_config ' .linux.resources.memory |= {"limit": 33554432, "reservation": 25165824}
 			| .linux.resources.cpu |= {"shares": 100, "quota": 500000, "period": 1000000, "cpus": "0"}
-			| .linux.resources.pids |= {"limit": 20}' "${BUSYBOX_BUNDLE}"
+			| .linux.resources.pids |= {"limit": 20}'
 }
 
 # Tests whatever limits are (more or less) common between cgroup
@@ -208,7 +205,7 @@ EOF
 	check_systemd_value "TasksMax" 10
 
 	# reset to initial test value via json file
-	cat <<EOF >"$BATS_TMPDIR"/runc-cgroups-integration-test.json
+	cat <<EOF >"$BATS_RUN_TMPDIR"/runc-cgroups-integration-test.json
 {
   "memory": {
     "limit": 33554432,
@@ -226,7 +223,7 @@ EOF
 }
 EOF
 
-	runc update -r "$BATS_TMPDIR"/runc-cgroups-integration-test.json test_update
+	runc update -r "$BATS_RUN_TMPDIR"/runc-cgroups-integration-test.json test_update
 	[ "$status" -eq 0 ]
 	check_cgroup_value "cpuset.cpus" 0
 
@@ -297,7 +294,7 @@ EOF
 	check_cpu_quota -1 100000 "infinity"
 
 	# reset to initial test value via json file
-	cat <<EOF >"$BATS_TMPDIR"/runc-cgroups-integration-test.json
+	cat <<EOF >"$BATS_RUN_TMPDIR"/runc-cgroups-integration-test.json
 {
   "cpu": {
     "shares": 100,
@@ -308,7 +305,7 @@ EOF
 EOF
 	[ "$status" -eq 0 ]
 
-	runc update -r "$BATS_TMPDIR"/runc-cgroups-integration-test.json test_update
+	runc update -r "$BATS_RUN_TMPDIR"/runc-cgroups-integration-test.json test_update
 	[ "$status" -eq 0 ]
 	check_cpu_quota 500000 1000000 "500ms"
 	check_cpu_shares 100
@@ -317,7 +314,7 @@ EOF
 @test "set cpu period with no quota" {
 	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
 
-	update_config '.linux.resources.cpu |= { "period": 1000000 }' "${BUSYBOX_BUNDLE}"
+	update_config '.linux.resources.cpu |= { "period": 1000000 }'
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
 	[ "$status" -eq 0 ]
@@ -328,7 +325,7 @@ EOF
 @test "set cpu quota with no period" {
 	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
 
-	update_config '.linux.resources.cpu |= { "quota": 5000 }' "${BUSYBOX_BUNDLE}"
+	update_config '.linux.resources.cpu |= { "quota": 5000 }'
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
 	[ "$status" -eq 0 ]
@@ -338,7 +335,7 @@ EOF
 @test "update cpu period with no previous period/quota set" {
 	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
 
-	update_config '.linux.resources.cpu |= {}' "${BUSYBOX_BUNDLE}"
+	update_config '.linux.resources.cpu |= {}'
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
 	[ "$status" -eq 0 ]
@@ -352,7 +349,7 @@ EOF
 @test "update cpu quota with no previous period/quota set" {
 	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
 
-	update_config '.linux.resources.cpu |= {}' "${BUSYBOX_BUNDLE}"
+	update_config '.linux.resources.cpu |= {}'
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
 	[ "$status" -eq 0 ]
@@ -407,7 +404,7 @@ EOF
 	update_config ' .linux.resources.CPU |= {
 				"Cpus": "0",
 				"Mems": "0"
-			}' "${BUSYBOX_BUNDLE}"
+			}'
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
 	[ "$status" -eq 0 ]
 
@@ -455,7 +452,7 @@ EOF
 	update_config ' .linux.resources.unified |= {
 				"cpuset.cpus": "0",
 				"cpuset.mems": "0"
-			}' "${BUSYBOX_BUNDLE}"
+			}'
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
 	[ "$status" -eq 0 ]
 
@@ -573,7 +570,7 @@ EOF
 	update_config '.process.args |= ["sh", "-c", "while true; do echo >/dev/null; done"]'
 
 	# Set up a temporary console socket and recvtty so we can get the stdio.
-	TMP_RECVTTY_DIR="$(mktemp -d "$BATS_TMPDIR/runc-tmp-recvtty.XXXXXX")"
+	TMP_RECVTTY_DIR="$(mktemp -d "$BATS_RUN_TMPDIR/runc-tmp-recvtty.XXXXXX")"
 	TMP_RECVTTY_PID="$TMP_RECVTTY_DIR/recvtty.pid"
 	TMP_CONSOLE_SOCKET="$TMP_RECVTTY_DIR/console.sock"
 	CONTAINER_OUTPUT="$TMP_RECVTTY_DIR/output"

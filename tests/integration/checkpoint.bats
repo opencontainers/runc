@@ -6,13 +6,11 @@ function setup() {
 	# XXX: currently criu require root containers.
 	requires criu root
 
-	teardown_busybox
 	setup_busybox
 }
 
 function teardown() {
-	teardown_busybox
-	teardown_running_container test_busybox_restore
+	teardown_bundle
 }
 
 function setup_pipes() {

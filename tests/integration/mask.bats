@@ -3,7 +3,6 @@
 load helpers
 
 function setup() {
-	teardown_busybox
 	setup_busybox
 
 	# Create fake rootfs.
@@ -15,7 +14,7 @@ function setup() {
 }
 
 function teardown() {
-	teardown_busybox
+	teardown_bundle
 }
 
 @test "mask paths [file]" {

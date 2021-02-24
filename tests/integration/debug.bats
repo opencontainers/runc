@@ -3,12 +3,11 @@
 load helpers
 
 function setup() {
-	teardown_hello
 	setup_hello
 }
 
 function teardown() {
-	teardown_hello
+	teardown_bundle
 }
 
 @test "global --debug" {

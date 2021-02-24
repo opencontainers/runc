@@ -3,12 +3,11 @@
 load helpers
 
 function setup() {
-	teardown_busybox
 	setup_busybox
 }
 
 function teardown() {
-	teardown_busybox
+	teardown_bundle
 }
 
 @test "state (kill + delete)" {
@@ -24,9 +23,7 @@ function teardown() {
 
 	runc kill test_busybox KILL
 	[ "$status" -eq 0 ]
-
-	# wait for busybox to be in the destroyed state
-	retry 10 1 eval "__runc state test_busybox | grep -q 'stopped'"
+	wait_for_container 10 1 test_busybox stopped
 
 	# delete test_busybox
 	runc delete test_busybox

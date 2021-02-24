@@ -3,12 +3,11 @@
 load helpers
 
 function setup() {
-	teardown_busybox
 	setup_busybox
 }
 
 function teardown() {
-	teardown_busybox
+	teardown_bundle
 }
 
 @test "runc exec" {
@@ -41,12 +40,13 @@ function teardown() {
 }
 
 @test "runc exec --pid-file with new CWD" {
+	bundle="$(pwd)"
 	# create pid_file directory as the CWD
 	mkdir pid_file
 	cd pid_file
 
 	# run busybox detached
-	runc run -d -b "$BUSYBOX_BUNDLE" --console-socket "$CONSOLE_SOCKET" test_busybox
+	runc run -d -b "$bundle" --console-socket "$CONSOLE_SOCKET" test_busybox
 	[ "$status" -eq 0 ]
 
 	runc exec --pid-file pid.txt test_busybox echo Hello from exec

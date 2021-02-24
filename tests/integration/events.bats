@@ -3,12 +3,11 @@
 load helpers
 
 function setup() {
-	teardown_busybox
 	setup_busybox
 }
 
 function teardown() {
-	teardown_busybox
+	teardown_bundle
 }
 
 @test "events --stats" {
@@ -47,8 +46,8 @@ function test_events() {
 	# 2. Waits for an event that includes test_busybox then kills the
 	#    test_busybox container which causes the event logger to exit.
 	(
-		retry 10 "$retry_every" eval "grep -q 'test_busybox' events.log"
-		teardown_running_container test_busybox
+		retry 10 "$retry_every" grep -q test_busybox events.log
+		__runc delete -f test_busybox
 	) &
 	wait # for both subshells to finish
 
@@ -77,7 +76,7 @@ function test_events() {
 	init_cgroup_paths
 
 	# we need the container to hit OOM, so disable swap
-	update_config '(.. | select(.resources? != null)) .resources.memory |= {"limit": 33554432, "swap": 33554432}' "${BUSYBOX_BUNDLE}"
+	update_config '(.. | select(.resources? != null)) .resources.memory |= {"limit": 33554432, "swap": 33554432}'
 
 	# run busybox detached
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
@@ -89,10 +88,10 @@ function test_events() {
 	# and waits for an oom event
 	(__runc events test_busybox >events.log) &
 	(
-		retry 10 1 eval "grep -q 'test_busybox' events.log"
+		retry 10 1 grep -q test_busybox events.log
 		# shellcheck disable=SC2016
 		__runc exec -d test_busybox sh -c 'test=$(dd if=/dev/urandom ibs=5120k)'
-		retry 10 1 eval "grep -q 'oom' events.log"
+		retry 10 1 grep -q oom events.log
 		__runc delete -f test_busybox
 	) &
 	wait # wait for the above sub shells to finish

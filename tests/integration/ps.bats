@@ -3,12 +3,11 @@
 load helpers
 
 function setup() {
-	teardown_busybox
 	setup_busybox
 }
 
 function teardown() {
-	teardown_busybox
+	teardown_bundle
 }
 
 @test "ps" {
@@ -64,7 +63,7 @@ function teardown() {
 @test "ps after the container stopped" {
 	# ps requires cgroups
 	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
-	set_cgroups_path "$BUSYBOX_BUNDLE"
+	set_cgroups_path
 
 	# start busybox detached
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
@@ -78,8 +77,7 @@ function teardown() {
 
 	runc kill test_busybox KILL
 	[ "$status" -eq 0 ]
-
-	retry 10 1 eval "__runc state test_busybox | grep -q 'stopped'"
+	wait_for_container 10 1 test_busybox stopped
 
 	runc ps test_busybox
 	[ "$status" -eq 0 ]

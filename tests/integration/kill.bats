@@ -3,12 +3,11 @@
 load helpers
 
 function setup() {
-	teardown_busybox
 	setup_busybox
 }
 
 function teardown() {
-	teardown_busybox
+	teardown_bundle
 }
 
 @test "kill detached busybox" {
@@ -21,8 +20,7 @@ function teardown() {
 
 	runc kill test_busybox KILL
 	[ "$status" -eq 0 ]
-
-	retry 10 1 eval "__runc state test_busybox | grep -q 'stopped'"
+	wait_for_container 10 1 test_busybox stopped
 
 	# we should ensure kill work after the container stopped
 	runc kill -a test_busybox 0

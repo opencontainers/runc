@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# bats-core v1.2.1 defines BATS_RUN_TMPDIR
+if [ -z "$BATS_RUN_TMPDIR" ]; then
+	echo "bats >= v1.2.1 is required. Aborting." >&2
+	exit 1
+fi
+
 # Root directory of integration tests.
 INTEGRATION_ROOT=$(dirname "$(readlink -f "$BASH_SOURCE")")
 
@@ -14,11 +20,6 @@ RECVTTY="${INTEGRATION_ROOT}/../../contrib/cmd/recvtty/recvtty"
 # Test data path.
 TESTDATA="${INTEGRATION_ROOT}/testdata"
 
-# Destinations for test containers.
-BUSYBOX_BUNDLE="$BATS_TMPDIR/busyboxtest"
-HELLO_BUNDLE="$BATS_TMPDIR/hello-world"
-DEBIAN_BUNDLE="$BATS_TMPDIR/debiantest"
-
 # CRIU PATH
 CRIU="$(which criu 2>/dev/null || true)"
 
@@ -27,12 +28,6 @@ KERNEL_VERSION="$(uname -r)"
 KERNEL_MAJOR="${KERNEL_VERSION%%.*}"
 KERNEL_MINOR="${KERNEL_VERSION#$KERNEL_MAJOR.}"
 KERNEL_MINOR="${KERNEL_MINOR%%.*}"
-
-# Root state path.
-ROOT=$(mktemp -d "$BATS_TMPDIR/runc.XXXXXX")
-
-# Path to console socket.
-CONSOLE_SOCKET="$BATS_TMPDIR/console.sock"
 
 # Check if we're in rootless mode.
 ROOTLESS=$(id -u)
@@ -49,7 +44,7 @@ function runc() {
 
 # Raw wrapper for runc.
 function __runc() {
-	"$RUNC" ${RUNC_USE_SYSTEMD+--systemd-cgroup} --root "$ROOT" "$@"
+	"$RUNC" ${RUNC_USE_SYSTEMD+--systemd-cgroup} --root "$ROOT/state" "$@"
 }
 
 # Wrapper for runc spec, which takes only one argument (the bundle path).
@@ -117,18 +112,19 @@ function init_cgroup_paths() {
 	# init once
 	test -n "$CGROUP_UNIFIED" && return
 
+	local rnd="$RANDOM"
 	if [ -n "${RUNC_USE_SYSTEMD}" ]; then
-		SD_UNIT_NAME="runc-cgroups-integration-test.scope"
+		SD_UNIT_NAME="runc-cgroups-integration-test-${rnd}.scope"
 		if [ $(id -u) = "0" ]; then
 			REL_CGROUPS_PATH="/machine.slice/$SD_UNIT_NAME"
-			OCI_CGROUPS_PATH="machine.slice:runc-cgroups:integration-test"
+			OCI_CGROUPS_PATH="machine.slice:runc-cgroups:integration-test-${rnd}"
 		else
 			REL_CGROUPS_PATH="/user.slice/user-$(id -u).slice/user@$(id -u).service/machine.slice/$SD_UNIT_NAME"
 			# OCI path doesn't contain "/user.slice/user-$(id -u).slice/user@$(id -u).service/" prefix
-			OCI_CGROUPS_PATH="machine.slice:runc-cgroups:integration-test"
+			OCI_CGROUPS_PATH="machine.slice:runc-cgroups:integration-test-${rnd}"
 		fi
 	else
-		REL_CGROUPS_PATH="/runc-cgroups-integration-test/test-cgroup"
+		REL_CGROUPS_PATH="/runc-cgroups-integration-test/test-cgroup-${rnd}"
 		OCI_CGROUPS_PATH=$REL_CGROUPS_PATH
 	fi
 
@@ -400,48 +396,14 @@ function retry() {
 
 # retry until the given container has state
 function wait_for_container() {
-	local attempts=$1
-	local delay=$2
-	local cid=$3
-	# optionally wait for a specific status
-	local wait_for_status="${4:-}"
-	local i
-
-	for ((i = 0; i < attempts; i++)); do
-		runc state $cid
-		if [[ "$status" -eq 0 ]]; then
-			if [[ "${output}" == *"${wait_for_status}"* ]]; then
-				return 0
-			fi
-		fi
-		sleep $delay
-	done
-
-	echo "runc state failed to return state $statecheck $attempts times. Output: $output"
-	false
-}
-
-# retry until the given container has state
-function wait_for_container_inroot() {
-	local attempts=$1
-	local delay=$2
-	local cid=$3
-	# optionally wait for a specific status
-	local wait_for_status="${4:-}"
-	local i
-
-	for ((i = 0; i < attempts; i++)); do
-		ROOT=$4 runc state $cid
-		if [[ "$status" -eq 0 ]]; then
-			if [[ "${output}" == *"${wait_for_status}"* ]]; then
-				return 0
-			fi
-		fi
-		sleep $delay
-	done
-
-	echo "runc state failed to return state $statecheck $attempts times. Output: $output"
-	false
+	if [ $# -eq 3 ]; then
+		retry "$1" "$2" __runc state "$3"
+	elif [ $# -eq 4 ]; then
+		retry "$1" "$2" eval "__runc state $3 | grep -qw $4"
+	else
+		echo "Usage: wait_for_container ATTEMPTS DELAY ID [STATUS]" 1>&2
+		return 1
+	fi
 }
 
 function testcontainer() {
@@ -456,28 +418,38 @@ function testcontainer() {
 }
 
 function setup_recvtty() {
+	[ -z "$ROOT" ] && return 1 # must not be called without ROOT set
+	local dir="$ROOT/tty"
+
+	mkdir $dir
+	export CONSOLE_SOCKET="$dir/sock"
+
 	# We need to start recvtty in the background, so we double fork in the shell.
-	("$RECVTTY" --pid-file "$BATS_TMPDIR/recvtty.pid" --mode null "$CONSOLE_SOCKET" &) &
+	("$RECVTTY" --pid-file "$dir/pid" --mode null "$CONSOLE_SOCKET" &) &
 }
 
 function teardown_recvtty() {
+	[ -z "$ROOT" ] && return 0 # nothing to teardown
+	local dir="$ROOT/tty"
+
 	# When we kill recvtty, the container will also be killed.
-	if [ -f "$BATS_TMPDIR/recvtty.pid" ]; then
-		kill -9 $(cat "$BATS_TMPDIR/recvtty.pid")
+	if [ -f "$dir/pid" ]; then
+		kill -9 $(cat "$dir/pid")
 	fi
 
 	# Clean up the files that might be left over.
-	rm -f "$BATS_TMPDIR/recvtty.pid"
-	rm -f "$CONSOLE_SOCKET"
+	rm -rf "$dir"
 }
 
 function setup_bundle() {
 	local image="$1"
-	local bundle="$2"
+
+	# Root for various container directories (state, tty, bundle).
+	export ROOT=$(mktemp -d "$BATS_RUN_TMPDIR/runc.XXXXXX")
+	mkdir -p "$ROOT/state" "$ROOT/bundle/rootfs"
 
 	setup_recvtty
-	mkdir -p "$bundle"/rootfs
-	cd "$bundle"
+	cd "$ROOT/bundle"
 
 	tar --exclude './dev/*' -C rootfs -xf "$image"
 
@@ -485,43 +457,26 @@ function setup_bundle() {
 }
 
 function setup_busybox() {
-	setup_bundle "$BUSYBOX_IMAGE" "$BUSYBOX_BUNDLE"
+	setup_bundle "$BUSYBOX_IMAGE"
 }
 
 function setup_hello() {
-	setup_bundle "$HELLO_IMAGE" "$HELLO_BUNDLE"
+	setup_bundle "$HELLO_IMAGE"
 	update_config '(.. | select(.? == "sh")) |= "/hello"'
 }
 
 function setup_debian() {
-	setup_bundle "$DEBIAN_IMAGE" "$DEBIAN_BUNDLE"
+	setup_bundle "$DEBIAN_IMAGE"
 }
 
-function teardown_running_container() {
-	__runc delete -f "$1"
-}
+function teardown_bundle() {
+	[ -z "$ROOT" ] && return 0 # nothing to teardown
 
-function teardown_running_container_inroot() {
-	ROOT="$2" __runc delete -f "$1"
-}
-
-function teardown_busybox() {
 	cd "$INTEGRATION_ROOT"
 	teardown_recvtty
-	teardown_running_container test_busybox
-	rm -f -r "$BUSYBOX_BUNDLE"
-}
-
-function teardown_hello() {
-	cd "$INTEGRATION_ROOT"
-	teardown_recvtty
-	teardown_running_container test_hello
-	rm -f -r "$HELLO_BUNDLE"
-}
-
-function teardown_debian() {
-	cd "$INTEGRATION_ROOT"
-	teardown_recvtty
-	teardown_running_container test_debian
-	rm -f -r "$DEBIAN_BUNDLE"
+	local ct
+	for ct in $(__runc list -q); do
+		__runc delete -f "$ct"
+	done
+	rm -rf "$ROOT"
 }

@@ -3,15 +3,10 @@
 load helpers
 
 function teardown() {
-	teardown_running_container test_cgroups_kmem
-	teardown_running_container test_cgroups_permissions
-	teardown_running_container test_cgroups_group
-	teardown_running_container test_cgroups_unified
-	teardown_busybox
+	teardown_bundle
 }
 
 function setup() {
-	teardown
 	setup_busybox
 }
 
@@ -19,10 +14,10 @@ function setup() {
 	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
 	requires cgroups_kmem
 
-	set_cgroups_path "$BUSYBOX_BUNDLE"
+	set_cgroups_path
 
 	# Set some initial known values
-	update_config '.linux.resources.memory |= {"kernel": 16777216, "kernelTCP": 11534336}' "${BUSYBOX_BUNDLE}"
+	update_config '.linux.resources.memory |= {"kernel": 16777216, "kernelTCP": 11534336}'
 
 	# run a detached busybox to work with
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_kmem
@@ -46,7 +41,7 @@ function setup() {
 	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
 	requires cgroups_kmem
 
-	set_cgroups_path "$BUSYBOX_BUNDLE"
+	set_cgroups_path
 
 	# run a detached busybox to work with
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_kmem
@@ -75,7 +70,7 @@ function setup() {
 	# systemd controls the permission, so error does not happen
 	requires no_systemd
 
-	set_cgroups_path "$BUSYBOX_BUNDLE"
+	set_cgroups_path
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_permissions
 	[ "$status" -eq 1 ]
@@ -88,7 +83,7 @@ function setup() {
 	# systemd controls the permission, so error does not happen
 	requires no_systemd
 
-	set_resources_limit "$BUSYBOX_BUNDLE"
+	set_resources_limit
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_permissions
 	[ "$status" -eq 1 ]
@@ -98,8 +93,8 @@ function setup() {
 @test "runc create (limits + cgrouppath + permission on the cgroup dir) succeeds" {
 	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
 
-	set_cgroups_path "$BUSYBOX_BUNDLE"
-	set_resources_limit "$BUSYBOX_BUNDLE"
+	set_cgroups_path
+	set_resources_limit
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_permissions
 	[ "$status" -eq 0 ]
@@ -120,8 +115,8 @@ function setup() {
 @test "runc exec (limits + cgrouppath + permission on the cgroup dir) succeeds" {
 	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
 
-	set_cgroups_path "$BUSYBOX_BUNDLE"
-	set_resources_limit "$BUSYBOX_BUNDLE"
+	set_cgroups_path
+	set_resources_limit
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_permissions
 	[ "$status" -eq 0 ]
@@ -134,8 +129,8 @@ function setup() {
 @test "runc exec (cgroup v2 + init process in non-root cgroup) succeeds" {
 	requires root cgroups_v2
 
-	set_cgroups_path "$BUSYBOX_BUNDLE"
-	set_cgroup_mount_writable "$BUSYBOX_BUNDLE"
+	set_cgroups_path
+	set_cgroup_mount_writable
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_group
 	[ "$status" -eq 0 ]
@@ -181,9 +176,9 @@ function setup() {
 @test "runc run (cgroup v1 + unified resources should fail)" {
 	requires root cgroups_v1
 
-	set_cgroups_path "$BUSYBOX_BUNDLE"
-	set_resources_limit "$BUSYBOX_BUNDLE"
-	update_config '.linux.resources.unified |= {"memory.min": "131072"}' "$BUSYBOX_BUNDLE"
+	set_cgroups_path
+	set_resources_limit
+	update_config '.linux.resources.unified |= {"memory.min": "131072"}'
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_unified
 	[ "$status" -ne 0 ]
@@ -193,7 +188,7 @@ function setup() {
 @test "runc run (cgroup v2 resources.unified only)" {
 	requires root cgroups_v2
 
-	set_cgroups_path "$BUSYBOX_BUNDLE"
+	set_cgroups_path
 	update_config ' .linux.resources.unified |= {
 				"memory.min":   "131072",
 				"memory.low":   "524288",
@@ -203,7 +198,7 @@ function setup() {
 				"pids.max": "99",
 				"cpu.max": "10000 100000",
 				"cpu.weight": "42"
-			}' "$BUSYBOX_BUNDLE"
+			}'
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_unified
 	[ "$status" -eq 0 ]
@@ -233,7 +228,7 @@ function setup() {
 @test "runc run (cgroup v2 resources.unified override)" {
 	requires root cgroups_v2
 
-	set_cgroups_path "$BUSYBOX_BUNDLE"
+	set_cgroups_path
 	# CPU shares of 3333 corresponds to CPU weight of 128.
 	update_config '   .linux.resources.memory |= {"limit": 33554432}
 			| .linux.resources.memorySwap |= {"limit": 33554432}
@@ -248,7 +243,7 @@ function setup() {
 				"pids.max": "42",
 				"cpu.max": "5000 50000",
 				"cpu.weight": "42"
-			}' "$BUSYBOX_BUNDLE"
+			}'
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_unified
 	[ "$status" -eq 0 ]
