@@ -1888,17 +1888,14 @@ func (c *linuxContainer) currentState() (*State, error) {
 		ExternalDescriptors: externalDescriptors,
 	}
 	if pid > 0 {
-		for _, ns := range c.config.Namespaces {
-			state.NamespacePaths[ns.Type] = ns.GetPath(pid)
-		}
 		for _, nsType := range configs.NamespaceTypes() {
-			if !configs.IsNamespaceSupported(nsType) {
-				continue
-			}
 			if _, ok := state.NamespacePaths[nsType]; !ok {
-				ns := configs.Namespace{Type: nsType}
-				state.NamespacePaths[ns.Type] = ns.GetPath(pid)
+				if !configs.IsNamespaceSupported(nsType) {
+					continue
+				}
 			}
+			ns := configs.Namespace{Type: nsType}
+			state.NamespacePaths[ns.Type] = ns.GetPath(pid)
 		}
 	}
 	return state, nil
