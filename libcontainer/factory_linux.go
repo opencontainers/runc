@@ -225,7 +225,7 @@ type LinuxFactory struct {
 	// containers.
 	CriuPath string
 
-	// New{u,g}uidmapPath is the path to the binaries used for mapping with
+	// New{u,g}idmapPath is the path to the binaries used for mapping with
 	// rootless containers.
 	NewuidmapPath string
 	NewgidmapPath string
