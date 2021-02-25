@@ -21,6 +21,7 @@ jobs:
       matrix:
         go-version: [1.14.x, 1.15.x, 1.16.x]
         rootless: ["rootless", ""]
+        race: ["-race", ""]
 
     steps:
 
@@ -41,7 +42,7 @@ jobs:
         go-version: ${{ matrix.go-version }}
 
     - name: build
-      run: sudo -E PATH="$PATH" make all
+      run: sudo -E PATH="$PATH" make EXTRA_FLAGS="${{ matrix.race }}" all
 
     - name: install bats
       uses: mig4/setup-bats@v1
@@ -50,7 +51,7 @@ jobs:
 
     - name: unit test
       if: matrix.rootless != 'rootless'
-      run: sudo -E PATH="$PATH" -- make localunittest
+      run: sudo -E PATH="$PATH" -- make TESTFLAGS="${{ matrix.race }}" localunittest
 
     - name: add rootless user
       if: matrix.rootless == 'rootless'

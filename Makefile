@@ -20,7 +20,9 @@ ifneq ($(GO111MODULE),off)
 endif
 ifeq ($(shell $(GO) env GOOS),linux)
 	ifeq (,$(filter $(shell $(GO) env GOARCH),mips mipsle mips64 mips64le ppc64))
-		GO_BUILDMODE := "-buildmode=pie"
+		ifeq (,$(findstring -race,$(EXTRA_FLAGS)))
+			GO_BUILDMODE := "-buildmode=pie"
+		endif
 	endif
 endif
 GO_BUILD := $(GO) build -trimpath $(MOD_VENDOR) $(GO_BUILDMODE) $(EXTRA_FLAGS) -tags "$(BUILDTAGS)" \

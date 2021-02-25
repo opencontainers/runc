@@ -194,10 +194,11 @@ func testCheckpoint(t *testing.T, userns bool) {
 		t.Fatal(err)
 	}
 
+	var restoreStdout bytes.Buffer
 	restoreProcessConfig := &libcontainer.Process{
 		Cwd:    "/",
 		Stdin:  restoreStdinR,
-		Stdout: &stdout,
+		Stdout: &restoreStdout,
 		Init:   true,
 	}
 
@@ -242,7 +243,7 @@ func testCheckpoint(t *testing.T, userns bool) {
 		t.Fatal(s.String(), pid)
 	}
 
-	output := stdout.String()
+	output := restoreStdout.String()
 	if !strings.Contains(output, "Hello!") {
 		t.Fatal("Did not restore the pipe correctly:", output)
 	}
