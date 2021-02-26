@@ -165,11 +165,6 @@ func TestMemorySetSwapSmallerThanMemory(t *testing.T) {
 	helper.writeFileContents(map[string]string{
 		"memory.limit_in_bytes":       strconv.Itoa(memoryBefore),
 		"memory.memsw.limit_in_bytes": strconv.Itoa(memoryswapBefore),
-		// Set will call getMemoryData when memory and swap memory are
-		// both set, fake these fields so we don't get error.
-		"memory.usage_in_bytes":     "0",
-		"memory.max_usage_in_bytes": "0",
-		"memory.failcnt":            "0",
 	})
 
 	helper.CgroupData.config.Resources.Memory = memoryAfter
@@ -184,14 +179,14 @@ func TestMemorySetSwapSmallerThanMemory(t *testing.T) {
 		t.Fatalf("Failed to parse memory.limit_in_bytes - %s", err)
 	}
 	if value != memoryAfter {
-		t.Fatal("Got the wrong value, set memory.limit_in_bytes failed.")
+		t.Fatalf("Got the wrong value (%d != %d), set memory.limit_in_bytes failed", value, memoryAfter)
 	}
 	value, err = fscommon.GetCgroupParamUint(helper.CgroupPath, "memory.memsw.limit_in_bytes")
 	if err != nil {
 		t.Fatalf("Failed to parse memory.memsw.limit_in_bytes - %s", err)
 	}
 	if value != memoryswapAfter {
-		t.Fatal("Got the wrong value, set memory.memsw.limit_in_bytes failed.")
+		t.Fatalf("Got the wrong value (%d != %d), set memory.memsw.limit_in_bytes failed", value, memoryswapAfter)
 	}
 }
 

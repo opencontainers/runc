@@ -65,6 +65,7 @@ type setnsProcess struct {
 	logFilePair     filePair
 	cgroupPaths     map[string]string
 	rootlessCgroups bool
+	manager         cgroups.Manager
 	intelRdtPath    string
 	config          *initConfig
 	fds             []string
@@ -88,6 +89,8 @@ func (p *setnsProcess) signal(sig os.Signal) error {
 
 func (p *setnsProcess) start() (retErr error) {
 	defer p.messageSockPair.parent.Close()
+	// get the "before" value of oom kill count
+	oom, _ := p.manager.OOMKillCount()
 	err := p.cmd.Start()
 	// close the write-side of the pipes (controlled by child)
 	p.messageSockPair.child.Close()
@@ -97,6 +100,10 @@ func (p *setnsProcess) start() (retErr error) {
 	}
 	defer func() {
 		if retErr != nil {
+			if newOom, err := p.manager.OOMKillCount(); err == nil && newOom != oom {
+				// Someone in this cgroup was killed, this _might_ be us.
+				retErr = newSystemErrorWithCause(retErr, "possibly OOM-killed")
+			}
 			err := ignoreTerminateErrors(p.terminate())
 			if err != nil {
 				logrus.WithError(err).Warn("unable to terminate setnsProcess")
@@ -321,6 +328,24 @@ func (p *initProcess) start() (retErr error) {
 	}
 	defer func() {
 		if retErr != nil {
+			// init might be killed by the kernel's OOM killer.
+			oom, err := p.manager.OOMKillCount()
+			if err != nil {
+				logrus.WithError(err).Warn("unable to get oom kill count")
+			} else if oom > 0 {
+				// Does not matter what the particular error was,
+				// its cause is most probably OOM, so report that.
+				const oomError = "container init was OOM-killed (memory limit too low?)"
+
+				if logrus.GetLevel() >= logrus.DebugLevel {
+					// Only show the original error if debug is set,
+					// as it is not generally very useful.
+					retErr = newSystemErrorWithCause(retErr, oomError)
+				} else {
+					retErr = newSystemError(errors.New(oomError))
+				}
+			}
+
 			// terminate the process to ensure we can remove cgroups
 			if err := ignoreTerminateErrors(p.terminate()); err != nil {
 				logrus.WithError(err).Warn("unable to terminate initProcess")

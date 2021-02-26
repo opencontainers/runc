@@ -14,11 +14,15 @@ import (
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/pkg/errors"
+	"golang.org/x/sys/unix"
 )
 
 const (
 	cgroupMemorySwapLimit = "memory.memsw.limit_in_bytes"
 	cgroupMemoryLimit     = "memory.limit_in_bytes"
+	cgroupMemoryUsage     = "memory.usage_in_bytes"
+	cgroupMemoryMaxUsage  = "memory.max_usage_in_bytes"
 )
 
 type MemoryGroup struct {
@@ -57,20 +61,52 @@ func (s *MemoryGroup) Apply(path string, d *cgroupData) (err error) {
 	return join(path, d.pid)
 }
 
-func setMemoryAndSwap(path string, cgroup *configs.Cgroup) error {
+func setMemory(path string, val int64) error {
+	if val == 0 {
+		return nil
+	}
+
+	err := fscommon.WriteFile(path, cgroupMemoryLimit, strconv.FormatInt(val, 10))
+	if !errors.Is(err, unix.EBUSY) {
+		return err
+	}
+
+	// EBUSY means the kernel can't set new limit as it's too low
+	// (lower than the current usage). Return more specific error.
+	usage, err := fscommon.GetCgroupParamUint(path, cgroupMemoryUsage)
+	if err != nil {
+		return err
+	}
+	max, err := fscommon.GetCgroupParamUint(path, cgroupMemoryMaxUsage)
+	if err != nil {
+		return err
+	}
+
+	return errors.Errorf("unable to set memory limit to %d (current usage: %d, peak usage: %d)", val, usage, max)
+}
+
+func setSwap(path string, val int64) error {
+	if val == 0 {
+		return nil
+	}
+
+	return fscommon.WriteFile(path, cgroupMemorySwapLimit, strconv.FormatInt(val, 10))
+}
+
+func setMemoryAndSwap(path string, r *configs.Resources) error {
 	// If the memory update is set to -1 and the swap is not explicitly
 	// set, we should also set swap to -1, it means unlimited memory.
-	if cgroup.Resources.Memory == -1 && cgroup.Resources.MemorySwap == 0 {
+	if r.Memory == -1 && r.MemorySwap == 0 {
 		// Only set swap if it's enabled in kernel
 		if cgroups.PathExists(filepath.Join(path, cgroupMemorySwapLimit)) {
-			cgroup.Resources.MemorySwap = -1
+			r.MemorySwap = -1
 		}
 	}
 
 	// When memory and swap memory are both set, we need to handle the cases
 	// for updating container.
-	if cgroup.Resources.Memory != 0 && cgroup.Resources.MemorySwap != 0 {
-		memoryUsage, err := getMemoryData(path, "")
+	if r.Memory != 0 && r.MemorySwap != 0 {
+		curLimit, err := fscommon.GetCgroupParamUint(path, cgroupMemoryLimit)
 		if err != nil {
 			return err
 		}
@@ -78,39 +114,29 @@ func setMemoryAndSwap(path string, cgroup *configs.Cgroup) error {
 		// When update memory limit, we should adapt the write sequence
 		// for memory and swap memory, so it won't fail because the new
 		// value and the old value don't fit kernel's validation.
-		if cgroup.Resources.MemorySwap == -1 || memoryUsage.Limit < uint64(cgroup.Resources.MemorySwap) {
-			if err := fscommon.WriteFile(path, cgroupMemorySwapLimit, strconv.FormatInt(cgroup.Resources.MemorySwap, 10)); err != nil {
+		if r.MemorySwap == -1 || curLimit < uint64(r.MemorySwap) {
+			if err := setSwap(path, r.MemorySwap); err != nil {
 				return err
 			}
-			if err := fscommon.WriteFile(path, cgroupMemoryLimit, strconv.FormatInt(cgroup.Resources.Memory, 10)); err != nil {
+			if err := setMemory(path, r.Memory); err != nil {
 				return err
 			}
-		} else {
-			if err := fscommon.WriteFile(path, cgroupMemoryLimit, strconv.FormatInt(cgroup.Resources.Memory, 10)); err != nil {
-				return err
-			}
-			if err := fscommon.WriteFile(path, cgroupMemorySwapLimit, strconv.FormatInt(cgroup.Resources.MemorySwap, 10)); err != nil {
-				return err
-			}
+			return nil
 		}
-	} else {
-		if cgroup.Resources.Memory != 0 {
-			if err := fscommon.WriteFile(path, cgroupMemoryLimit, strconv.FormatInt(cgroup.Resources.Memory, 10)); err != nil {
-				return err
-			}
-		}
-		if cgroup.Resources.MemorySwap != 0 {
-			if err := fscommon.WriteFile(path, cgroupMemorySwapLimit, strconv.FormatInt(cgroup.Resources.MemorySwap, 10)); err != nil {
-				return err
-			}
-		}
+	}
+
+	if err := setMemory(path, r.Memory); err != nil {
+		return err
+	}
+	if err := setSwap(path, r.MemorySwap); err != nil {
+		return err
 	}
 
 	return nil
 }
 
 func (s *MemoryGroup) Set(path string, cgroup *configs.Cgroup) error {
-	if err := setMemoryAndSwap(path, cgroup); err != nil {
+	if err := setMemoryAndSwap(path, cgroup.Resources); err != nil {
 		return err
 	}
 
@@ -162,7 +188,7 @@ func (s *MemoryGroup) GetStats(path string, stats *cgroups.Stats) error {
 
 	sc := bufio.NewScanner(statsFile)
 	for sc.Scan() {
-		t, v, err := fscommon.GetCgroupParamKeyValue(sc.Text())
+		t, v, err := fscommon.ParseKeyValue(sc.Text())
 		if err != nil {
 			return fmt.Errorf("failed to parse memory.stat (%q) - %v", sc.Text(), err)
 		}

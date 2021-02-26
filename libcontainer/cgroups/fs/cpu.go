@@ -97,7 +97,7 @@ func (s *CpuGroup) GetStats(path string, stats *cgroups.Stats) error {
 
 	sc := bufio.NewScanner(f)
 	for sc.Scan() {
-		t, v, err := fscommon.GetCgroupParamKeyValue(sc.Text())
+		t, v, err := fscommon.ParseKeyValue(sc.Text())
 		if err != nil {
 			return err
 		}

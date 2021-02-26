@@ -112,7 +112,7 @@ func TestCpuStats(t *testing.T) {
 		throttledTime = uint64(18446744073709551615)
 	)
 
-	cpuStatContent := fmt.Sprintf("nr_periods %d\n nr_throttled %d\n throttled_time %d\n",
+	cpuStatContent := fmt.Sprintf("nr_periods %d\nnr_throttled %d\nthrottled_time %d\n",
 		nrPeriods, nrThrottled, throttledTime)
 	helper.writeFileContents(map[string]string{
 		"cpu.stat": cpuStatContent,

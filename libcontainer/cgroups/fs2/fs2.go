@@ -257,3 +257,11 @@ func (m *manager) GetFreezerState() (configs.FreezerState, error) {
 func (m *manager) Exists() bool {
 	return cgroups.PathExists(m.dirPath)
 }
+
+func OOMKillCount(path string) (uint64, error) {
+	return fscommon.GetValueByKey(path, "memory.events", "oom_kill")
+}
+
+func (m *manager) OOMKillCount() (uint64, error) {
+	return OOMKillCount(m.dirPath)
+}
