@@ -40,6 +40,10 @@ command(s) that get executed on start, edit the args parameter of the spec. See
 			Name:  "detach, d",
 			Usage: "detach from the container's process",
 		},
+		cli.BoolFlag{
+			Name:  "keep",
+			Usage: "do not delete the container after it exits",
+		},
 		cli.StringFlag{
 			Name:  "pid-file",
 			Value: "",
