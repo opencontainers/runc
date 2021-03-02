@@ -180,7 +180,7 @@ func TestFactoryLoadContainer(t *testing.T) {
 			},
 		}
 	)
-	if err := os.Mkdir(filepath.Join(root, id), 0700); err != nil {
+	if err := os.Mkdir(filepath.Join(root, id), 0o700); err != nil {
 		t.Fatal(err)
 	}
 	if err := marshal(filepath.Join(root, id, stateFilename), expectedState); err != nil {
