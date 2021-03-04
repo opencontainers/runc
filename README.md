@@ -61,16 +61,19 @@ sudo make install
 with some of them enabled by default (see `BUILDTAGS` in top-level `Makefile`).
 
 To change build tags from the default, set the `BUILDTAGS` variable for make,
-e.g.
+e.g. to disable `seccomp` and enable `nokmem`, run:
 
 ```bash
-make BUILDTAGS='seccomp'
+make BUILDTAGS="nokmem"
 ```
 
 | Build Tag | Feature                            | Enabled by default | Dependency |
 |-----------|------------------------------------|--------------------|------------|
 | seccomp   | Syscall filtering                  | yes                | libseccomp |
-| nokmem    | disable kernel memory accounting   | no                 | <none>     |
+| nokmem    | disable kernel memory accounting   | usually not        | _none_     |
+
+**Note** `nokmem` build tag is now auto-set by the Makefile in case
+the running kernel version looks like one from RHEL7 (3.10.0-\*.el7.)
 
 The following build tags were used earlier, but are now obsoleted:
  - **apparmor** (since runc v1.0.0-rc93 the feature is always enabled)
