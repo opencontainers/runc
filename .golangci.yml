@@ -3,3 +3,7 @@
 run:
   build-tags:
     - seccomp
+
+linters:
+  enable:
+    - gofmt
