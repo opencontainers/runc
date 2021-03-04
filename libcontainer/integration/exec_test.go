@@ -685,6 +685,9 @@ func testRunWithKernelMemory(t *testing.T, systemd bool) {
 	if cgroups.IsCgroup2UnifiedMode() {
 		t.Skip("cgroup v2 does not support kernel memory limit")
 	}
+	if kmemDisabled {
+		t.Skip("kernel memory is disabled in this runc build")
+	}
 
 	rootfs, err := newRootfs()
 	ok(t, err)
