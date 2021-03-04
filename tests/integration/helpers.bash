@@ -318,6 +318,10 @@ function requires() {
 			if [ ! -e "${CGROUP_MEMORY_BASE_PATH}/memory.kmem.limit_in_bytes" ]; then
 				skip_me=1
 			fi
+			if uname -r | grep -q '^3\.10\.0.*\.el7\.'; then
+				# In RHEL7 kernel, kmem is broken so runc disables it.
+				skip_me=1
+			fi
 			;;
 		cgroups_rt)
 			init_cgroup_paths
