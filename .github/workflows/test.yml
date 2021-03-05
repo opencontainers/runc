@@ -81,6 +81,13 @@ jobs:
     needs: [test]
     steps:
       - uses: actions/checkout@v2
+
+      - name: "Cache ~/.vagrant.d/boxes, using hash of Vagrantfile.fedora33"
+        uses: actions/cache@v2
+        with:
+          path: ~/.vagrant.d/boxes
+          key: vagrant-${{ hashFiles('Vagrantfile.fedora33') }}
+
       - name: prepare vagrant
         run: |
           ln -sf Vagrantfile.fedora33 Vagrantfile
@@ -116,6 +123,13 @@ jobs:
     needs: [test]
     steps:
       - uses: actions/checkout@v2
+
+      - name: "Cache ~/.vagrant.d/boxes, using hash of Vagrantfile.centos7"
+        uses: actions/cache@v2
+        with:
+          path: ~/.vagrant.d/boxes
+          key: vagrant-${{ hashFiles('Vagrantfile.centos7') }}
+
       - name: prepare vagrant
         run: |
           ln -sf Vagrantfile.centos7 Vagrantfile
