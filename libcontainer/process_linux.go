@@ -51,7 +51,7 @@ type parentProcess interface {
 
 	setExternalDescriptors(fds []string)
 
-	forwardChildLogs()
+	forwardChildLogs() chan error
 }
 
 type filePair struct {
@@ -251,8 +251,8 @@ func (p *setnsProcess) setExternalDescriptors(newFds []string) {
 	p.fds = newFds
 }
 
-func (p *setnsProcess) forwardChildLogs() {
-	go logs.ForwardLogs(p.logFilePair.parent)
+func (p *setnsProcess) forwardChildLogs() chan error {
+	return logs.ForwardLogs(p.logFilePair.parent)
 }
 
 type initProcess struct {
@@ -605,8 +605,8 @@ func (p *initProcess) setExternalDescriptors(newFds []string) {
 	p.fds = newFds
 }
 
-func (p *initProcess) forwardChildLogs() {
-	go logs.ForwardLogs(p.logFilePair.parent)
+func (p *initProcess) forwardChildLogs() chan error {
+	return logs.ForwardLogs(p.logFilePair.parent)
 }
 
 func getPipeFds(pid int) ([]string, error) {

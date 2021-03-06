@@ -72,7 +72,7 @@ func logToLogWriter(t *testing.T, l *log, message string) {
 type log struct {
 	w    io.WriteCloser
 	file string
-	done chan struct{}
+	done chan error
 }
 
 func runLogForwarding(t *testing.T) *log {
@@ -99,11 +99,8 @@ func runLogForwarding(t *testing.T) *log {
 	if err := ConfigureLogging(logConfig); err != nil {
 		t.Fatal(err)
 	}
-	doneForwarding := make(chan struct{})
-	go func() {
-		ForwardLogs(logR)
-		close(doneForwarding)
-	}()
+
+	doneForwarding := ForwardLogs(logR)
 
 	return &log{w: logW, done: doneForwarding, file: logFile}
 }
@@ -111,7 +108,9 @@ func runLogForwarding(t *testing.T) *log {
 func finish(t *testing.T, l *log) {
 	t.Helper()
 	l.w.Close()
-	<-l.done
+	if err := <-l.done; err != nil {
+		t.Fatalf("ForwardLogs: %v", err)
+	}
 }
 
 func truncateLogFile(t *testing.T, logFile string) {

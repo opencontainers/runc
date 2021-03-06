@@ -139,7 +139,8 @@ func (m *mockProcess) externalDescriptors() []string {
 func (m *mockProcess) setExternalDescriptors(newFds []string) {
 }
 
-func (m *mockProcess) forwardChildLogs() {
+func (m *mockProcess) forwardChildLogs() chan error {
+	return nil
 }
 
 func TestGetContainerPids(t *testing.T) {
