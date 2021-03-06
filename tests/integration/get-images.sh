@@ -36,7 +36,7 @@ function get() {
 		exit 1
 	fi
 
-	if ! curl -o "$dest" -fsSL "$url"; then
+	if ! curl -o "$dest" -fsSL --retry 5 "$url"; then
 		echo "Failed to get $url" 1>&2
 		exit 1
 	fi

@@ -60,7 +60,7 @@ jobs:
       - name: install shellcheck
         run: |
           mkdir ~/bin
-          curl -sSfL $BASEURL/$VERSION/shellcheck-$VERSION.linux.x86_64.tar.xz |
+          curl -sSfL --retry 5 $BASEURL/$VERSION/shellcheck-$VERSION.linux.x86_64.tar.xz |
             tar xfJ - -C ~/bin --strip 1 shellcheck-$VERSION/shellcheck
           sha256sum ~/bin/shellcheck | grep -q $SHA256SUM
           # make sure to remove the old version
