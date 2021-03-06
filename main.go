@@ -142,7 +142,7 @@ func main() {
 				fmt.Fprintln(os.Stderr, "the path in $XDG_RUNTIME_DIR must be writable by the user")
 				fatal(err)
 			}
-			if err := os.Chmod(root, 0700|os.ModeSticky); err != nil {
+			if err := os.Chmod(root, os.FileMode(0o700)|os.ModeSticky); err != nil {
 				fmt.Fprintln(os.Stderr, "you should check permission of the path in $XDG_RUNTIME_DIR")
 				fatal(err)
 			}
