@@ -8,6 +8,7 @@ import (
 	"os"
 	"sync"
 
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -64,8 +65,7 @@ func ConfigureLogging(config Config) error {
 	defer configureMutex.Unlock()
 
 	if loggingConfigured {
-		logrus.Debug("logging has already been configured")
-		return nil
+		return errors.New("logging has already been configured")
 	}
 
 	logrus.SetLevel(config.LogLevel)
