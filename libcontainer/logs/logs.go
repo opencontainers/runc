@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	configureMutex = sync.Mutex{}
+	configureMutex sync.Mutex
 	// loggingConfigured will be set once logging has been configured via invoking `ConfigureLogging`.
 	// Subsequent invocations of `ConfigureLogging` would be no-op
 	loggingConfigured = false
@@ -26,16 +26,22 @@ type Config struct {
 	LogPipeFd   int
 }
 
-func ForwardLogs(logPipe io.Reader) {
+func ForwardLogs(logPipe io.ReadCloser) chan error {
+	done := make(chan error, 1)
 	s := bufio.NewScanner(logPipe)
-	for s.Scan() {
-		processEntry(s.Bytes())
-	}
-	if err := s.Err(); err != nil {
-		logrus.Errorf("log pipe read error: %+v", err)
-	} else {
-		logrus.Debugf("log pipe closed")
-	}
+
+	go func() {
+		for s.Scan() {
+			processEntry(s.Bytes())
+		}
+		if err := logPipe.Close(); err != nil {
+			logrus.Errorf("error closing log source: %v", err)
+		}
+		done <- s.Err()
+		close(done)
+	}()
+
+	return done
 }
 
 func processEntry(text []byte) {

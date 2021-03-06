@@ -1,10 +1,10 @@
 package logs
 
 import (
-	"errors"
+	"bytes"
+	"io"
 	"io/ioutil"
 	"os"
-	"strings"
 	"testing"
 	"time"
 
@@ -12,141 +12,109 @@ import (
 )
 
 func TestLoggingToFile(t *testing.T) {
-	logW, logFile, _ := runLogForwarding(t)
-	defer os.Remove(logFile)
-	defer logW.Close()
+	l := runLogForwarding(t)
 
-	logToLogWriter(t, logW, `{"level": "info","msg":"kitten"}`)
-
-	logFileContent := waitForLogContent(t, logFile)
-	if !strings.Contains(logFileContent, "kitten") {
-		t.Fatalf("%s does not contain kitten", logFileContent)
-	}
+	logToLogWriter(t, l, `{"level": "info","msg":"kitten"}`)
+	finish(t, l)
+	check(t, l, "kitten")
 }
 
 func TestLogForwardingDoesNotStopOnJsonDecodeErr(t *testing.T) {
-	logW, logFile, _ := runLogForwarding(t)
-	defer os.Remove(logFile)
-	defer logW.Close()
+	l := runLogForwarding(t)
 
-	logToLogWriter(t, logW, "invalid-json-with-kitten")
+	logToLogWriter(t, l, "invalid-json-with-kitten")
+	checkWait(t, l, "failed to decode")
 
-	logFileContent := waitForLogContent(t, logFile)
-	if !strings.Contains(logFileContent, "failed to decode") {
-		t.Fatalf("%q does not contain decoding error", logFileContent)
-	}
+	truncateLogFile(t, l.file)
 
-	truncateLogFile(t, logFile)
-
-	logToLogWriter(t, logW, `{"level": "info","msg":"puppy"}`)
-
-	logFileContent = waitForLogContent(t, logFile)
-	if !strings.Contains(logFileContent, "puppy") {
-		t.Fatalf("%s does not contain puppy", logFileContent)
-	}
+	logToLogWriter(t, l, `{"level": "info","msg":"puppy"}`)
+	finish(t, l)
+	check(t, l, "puppy")
 }
 
 func TestLogForwardingDoesNotStopOnLogLevelParsingErr(t *testing.T) {
-	logW, logFile, _ := runLogForwarding(t)
-	defer os.Remove(logFile)
-	defer logW.Close()
+	l := runLogForwarding(t)
 
-	logToLogWriter(t, logW, `{"level": "alert","msg":"puppy"}`)
+	logToLogWriter(t, l, `{"level": "alert","msg":"puppy"}`)
+	checkWait(t, l, "failed to parse log level")
 
-	logFileContent := waitForLogContent(t, logFile)
-	if !strings.Contains(logFileContent, "failed to parse log level") {
-		t.Fatalf("%q does not contain log level parsing error", logFileContent)
-	}
+	truncateLogFile(t, l.file)
 
-	truncateLogFile(t, logFile)
-
-	logToLogWriter(t, logW, `{"level": "info","msg":"puppy"}`)
-
-	logFileContent = waitForLogContent(t, logFile)
-	if !strings.Contains(logFileContent, "puppy") {
-		t.Fatalf("%s does not contain puppy", logFileContent)
-	}
+	logToLogWriter(t, l, `{"level": "info","msg":"puppy"}`)
+	finish(t, l)
+	check(t, l, "puppy")
 }
 
 func TestLogForwardingStopsAfterClosingTheWriter(t *testing.T) {
-	logW, logFile, doneForwarding := runLogForwarding(t)
-	defer os.Remove(logFile)
+	l := runLogForwarding(t)
 
-	logToLogWriter(t, logW, `{"level": "info","msg":"sync"}`)
+	logToLogWriter(t, l, `{"level": "info","msg":"sync"}`)
 
-	logFileContent := waitForLogContent(t, logFile)
-	if !strings.Contains(logFileContent, "sync") {
-		t.Fatalf("%q does not contain sync message", logFileContent)
-	}
-
-	logW.Close()
+	// Do not use finish() here as we check done pipe ourselves.
+	l.w.Close()
 	select {
-	case <-doneForwarding:
+	case <-l.done:
 	case <-time.After(10 * time.Second):
 		t.Fatal("log forwarding did not stop after closing the pipe")
 	}
+
+	check(t, l, "sync")
 }
 
-func logToLogWriter(t *testing.T, logW *os.File, message string) {
-	_, err := logW.Write([]byte(message + "\n"))
+func logToLogWriter(t *testing.T, l *log, message string) {
+	t.Helper()
+	_, err := l.w.Write([]byte(message + "\n"))
 	if err != nil {
 		t.Fatalf("failed to write %q to log writer: %v", message, err)
 	}
 }
 
-func runLogForwarding(t *testing.T) (*os.File, string, chan struct{}) {
+type log struct {
+	w    io.WriteCloser
+	file string
+	done chan error
+}
+
+func runLogForwarding(t *testing.T) *log {
+	t.Helper()
 	logR, logW, err := os.Pipe()
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(func() {
+		logR.Close()
+		logW.Close()
+	})
 
 	tempFile, err := ioutil.TempFile("", "")
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer tempFile.Close()
 	logFile := tempFile.Name()
+	t.Cleanup(func() { os.Remove(logFile) })
 
 	logConfig := Config{LogLevel: logrus.InfoLevel, LogFormat: "json", LogFilePath: logFile}
-	return logW, logFile, startLogForwarding(t, logConfig, logR)
-}
-
-func startLogForwarding(t *testing.T, logConfig Config, logR *os.File) chan struct{} {
 	loggingConfigured = false
 	if err := ConfigureLogging(logConfig); err != nil {
 		t.Fatal(err)
 	}
-	doneForwarding := make(chan struct{})
-	go func() {
-		ForwardLogs(logR)
-		close(doneForwarding)
-	}()
-	return doneForwarding
+
+	done := ForwardLogs(logR)
+
+	return &log{w: logW, done: done, file: logFile}
 }
 
-func waitForLogContent(t *testing.T, logFile string) string {
-	startTime := time.Now()
-
-	for {
-		if time.Now().After(startTime.Add(10 * time.Second)) {
-			t.Fatal(errors.New("No content in log file after 10 seconds"))
-			break
-		}
-
-		fileContent, err := ioutil.ReadFile(logFile)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if len(fileContent) == 0 {
-			continue
-		}
-		return string(fileContent)
+func finish(t *testing.T, l *log) {
+	t.Helper()
+	l.w.Close()
+	if err := <-l.done; err != nil {
+		t.Fatalf("ForwardLogs: %v", err)
 	}
-
-	return ""
 }
 
 func truncateLogFile(t *testing.T, logFile string) {
-	file, err := os.OpenFile(logFile, os.O_RDWR, 0666)
+	file, err := os.OpenFile(logFile, os.O_RDWR, 0o600)
 	if err != nil {
 		t.Fatalf("failed to open log file: %v", err)
 		return
@@ -157,4 +125,41 @@ func truncateLogFile(t *testing.T, logFile string) {
 	if err != nil {
 		t.Fatalf("failed to truncate log file: %v", err)
 	}
+}
+
+// check checks that file contains txt
+func check(t *testing.T, l *log, txt string) {
+	t.Helper()
+	contents, err := ioutil.ReadFile(l.file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(contents, []byte(txt)) {
+		t.Fatalf("%q does not contain %q", string(contents), txt)
+	}
+}
+
+// checkWait checks that file contains txt. If the file is empty,
+// it waits until it's not.
+func checkWait(t *testing.T, l *log, txt string) {
+	t.Helper()
+	const (
+		delay = 100 * time.Millisecond
+		iter  = 3
+	)
+	for i := 0; ; i++ {
+		st, err := os.Stat(l.file)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if st.Size() > 0 {
+			break
+		}
+		if i == iter {
+			t.Fatalf("waited %s for file %s to be non-empty but it still is", iter*delay, l.file)
+		}
+		time.Sleep(delay)
+	}
+
+	check(t, l, txt)
 }

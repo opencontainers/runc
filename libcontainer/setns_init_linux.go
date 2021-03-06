@@ -12,6 +12,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/selinux/go-selinux"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
 
@@ -21,6 +22,7 @@ type linuxSetnsInit struct {
 	pipe          *os.File
 	consoleSocket *os.File
 	config        *initConfig
+	logFd         int
 }
 
 func (l *linuxSetnsInit) getSessionRingName() string {
@@ -86,5 +88,13 @@ func (l *linuxSetnsInit) Init() error {
 			return newSystemErrorWithCause(err, "init seccomp")
 		}
 	}
+	logrus.Debugf("init: about to exec")
+	// Close the log pipe fd so the parent's ForwardLogs can exit.
+	// Usually this would be done upon system.Execv below, as the fd
+	// has CLOEXEC flag set, but it may fail.
+	if err := unix.Close(l.logFd); err != nil {
+		return newSystemErrorWithCause(err, "closing log pipe fd")
+	}
+
 	return system.Execv(l.config.Args[0], l.config.Args[0:], os.Environ())
 }
