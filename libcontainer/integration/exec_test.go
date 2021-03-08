@@ -1326,7 +1326,7 @@ func TestHook(t *testing.T) {
 	}
 
 	// write config of json format into config.json under bundle
-	f, err := os.OpenFile(filepath.Join(bundle, "config.json"), os.O_CREATE|os.O_RDWR, 0644)
+	f, err := os.OpenFile(filepath.Join(bundle, "config.json"), os.O_CREATE|os.O_RDWR, 0o644)
 	ok(t, err)
 	ok(t, json.NewEncoder(f).Encode(config))
 
