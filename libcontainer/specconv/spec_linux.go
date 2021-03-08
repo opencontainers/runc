@@ -21,6 +21,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/seccomp"
 	libcontainerUtils "github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/sirupsen/logrus"
 
 	"golang.org/x/sys/unix"
 )
@@ -510,11 +511,8 @@ func CreateCgroupConfig(opts *CreateOpts, defaultDevs []*devices.Device) (*confi
 				if r.Memory.Swap != nil {
 					c.Resources.MemorySwap = *r.Memory.Swap
 				}
-				if r.Memory.Kernel != nil {
-					c.Resources.KernelMemory = *r.Memory.Kernel
-				}
-				if r.Memory.KernelTCP != nil {
-					c.Resources.KernelMemoryTCP = *r.Memory.KernelTCP
+				if r.Memory.Kernel != nil || r.Memory.KernelTCP != nil {
+					logrus.Warn("Kernel memory settings are ignored and will be removed")
 				}
 				if r.Memory.Swappiness != nil {
 					c.Resources.MemorySwappiness = r.Memory.Swappiness

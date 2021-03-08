@@ -12,7 +12,6 @@ import (
 	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fs"
-	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/sirupsen/logrus"
 )
@@ -169,14 +168,6 @@ func (m *legacyManager) Apply(pid int) error {
 		return err
 	}
 	properties = append(properties, c.SystemdProps...)
-
-	// We have to set kernel memory here, as we can't change it once
-	// processes have been attached to the cgroup.
-	if c.Resources.KernelMemory != 0 {
-		if err := enableKmem(c); err != nil {
-			return err
-		}
-	}
 
 	if err := startUnit(dbusConnection, unitName, properties); err != nil {
 		return err
@@ -402,30 +393,6 @@ func (m *legacyManager) Set(container *configs.Config) error {
 	}
 
 	return nil
-}
-
-func enableKmem(c *configs.Cgroup) error {
-	path, err := getSubsystemPath(c, "memory")
-	if err != nil {
-		if cgroups.IsNotFound(err) {
-			return nil
-		}
-		return err
-	}
-
-	if err := os.MkdirAll(path, 0755); err != nil {
-		return err
-	}
-	// do not try to enable the kernel memory if we already have
-	// tasks in the cgroup.
-	content, err := fscommon.ReadFile(path, "tasks")
-	if err != nil {
-		return err
-	}
-	if len(content) > 0 {
-		return nil
-	}
-	return fs.EnableKernelMemoryAccounting(path)
 }
 
 func (m *legacyManager) GetPaths() map[string]string {

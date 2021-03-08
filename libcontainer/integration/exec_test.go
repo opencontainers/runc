@@ -667,41 +667,6 @@ func testPids(t *testing.T, systemd bool) {
 	// As such, we don't test that case. YMMV.
 }
 
-func TestRunWithKernelMemory(t *testing.T) {
-	testRunWithKernelMemory(t, false)
-}
-
-func TestRunWithKernelMemorySystemd(t *testing.T) {
-	if !systemd.IsRunningSystemd() {
-		t.Skip("Systemd is unsupported")
-	}
-	testRunWithKernelMemory(t, true)
-}
-
-func testRunWithKernelMemory(t *testing.T, systemd bool) {
-	if testing.Short() {
-		return
-	}
-	if cgroups.IsCgroup2UnifiedMode() {
-		t.Skip("cgroup v2 does not support kernel memory limit")
-	}
-
-	rootfs, err := newRootfs()
-	ok(t, err)
-	defer remove(rootfs)
-
-	config := newTemplateConfig(&tParam{
-		rootfs:  rootfs,
-		systemd: systemd,
-	})
-	config.Cgroups.Resources.KernelMemory = 52428800
-
-	_, _, err = runContainer(config, "", "ps")
-	if err != nil {
-		t.Fatalf("runContainer failed with kernel memory limit: %v", err)
-	}
-}
-
 func TestCgroupResourcesUnifiedErrorOnV1(t *testing.T) {
 	testCgroupResourcesUnifiedErrorOnV1(t, false)
 }
