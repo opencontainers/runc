@@ -185,8 +185,8 @@ function simple_cr() {
 	exec {lazy_w}>&-
 	# shellcheck disable=SC2116,SC2086
 	out=$(echo $out) # rm newlines
-	# show errors if there are any before we fail
-	grep -B5 Error ./work-dir/dump.log || true
+	# show log in case something is wrong before we fail
+	cat ./work-dir/dump.log
 	# expecting \0 which od prints as
 	[ "$out" = "0000000 000000 0000001" ]
 
