@@ -59,7 +59,7 @@ status of "ubuntu01" as "stopped" the following will delete resources held for
 				// if there was an aborted start or something of the sort then the container's directory could exist but
 				// libcontainer does not see it because the state.json file inside that directory was never created.
 				path := filepath.Join(context.GlobalString("root"), id)
-				if e := os.RemoveAll(path); e != nil {
+				if e := libcontainer.DelRootDir(path); e != nil {
 					fmt.Fprintf(os.Stderr, "remove %s: %v\n", path, e)
 				}
 				if force {

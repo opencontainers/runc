@@ -4,6 +4,7 @@ package libcontainer
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -50,7 +51,7 @@ func destroy(c *linuxContainer) error {
 			err = ierr
 		}
 	}
-	if rerr := os.RemoveAll(c.root); err == nil {
+	if rerr := DelRootDir(c.root); err == nil {
 		err = rerr
 	}
 	c.initProcess = nil
@@ -59,6 +60,23 @@ func destroy(c *linuxContainer) error {
 	}
 	c.state = &stoppedState{c: c}
 	return err
+}
+
+// DelRootDir is aim to unmount all the mount points in the runc root dir if there is an error
+func DelRootDir(dir string) error {
+	if err := os.RemoveAll(dir); err != nil {
+		if infos, err := ioutil.ReadDir(dir); err == nil {
+			for _, info := range infos {
+				path := filepath.Join(dir, info.Name())
+				if err := unix.Unmount(path, 0); err != nil {
+					logrus.Warn(err)
+				}
+			}
+		}
+		// anyway, try to remove it again
+		return os.RemoveAll(dir)
+	}
+	return nil
 }
 
 func runPoststopHooks(c *linuxContainer) error {
