@@ -158,7 +158,8 @@ func (m *legacyManager) Apply(pid int) error {
 		newProp("MemoryAccounting", true),
 		newProp("CPUAccounting", true),
 		newProp("BlockIOAccounting", true),
-		newProp("TasksAccounting", true))
+		newProp("TasksAccounting", true),
+	)
 
 	// Assume DefaultDependencies= will always work (the check for it was previously broken.)
 	properties = append(properties,

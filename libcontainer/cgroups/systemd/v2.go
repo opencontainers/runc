@@ -141,7 +141,6 @@ func unifiedResToSystemdProps(conn *systemdDbus.Conn, res map[string]string) (pr
 				}
 			}
 			props = append(props,
-				newProp("TasksAccounting", true),
 				newProp("TasksMax", num))
 
 		case "memory.oom.group":
@@ -272,7 +271,9 @@ func (m *unifiedManager) Apply(pid int) error {
 	properties = append(properties,
 		newProp("MemoryAccounting", true),
 		newProp("CPUAccounting", true),
-		newProp("IOAccounting", true))
+		newProp("IOAccounting", true),
+		newProp("TasksAccounting", true),
+	)
 
 	// Assume DefaultDependencies= will always work (the check for it was previously broken.)
 	properties = append(properties,
