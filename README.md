@@ -304,7 +304,7 @@ WantedBy=multi-user.target
 
 * [cgroup v2](./docs/cgroup-v2.md)
 * [Checkpoint and restore](./docs/checkpoint-restore.md)
-* [Changing systemd unit properties](./docs/systemd-properties.md)
+* [systemd cgroup driver](./docs/systemd.md)
 * [Terminals and standard IO](./docs/terminals.md)
 
 ## License
