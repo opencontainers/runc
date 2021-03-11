@@ -1,17 +1,18 @@
 // +build linux
 
-package main
+package util
 
 import (
 	"os"
 
-	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
-	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+
+	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
+	"github.com/opencontainers/runc/libcontainer/system"
 )
 
-func shouldUseRootlessCgroupManager(context *cli.Context) (bool, error) {
+func ShouldUseRootlessCgroupManager(context *cli.Context) (bool, error) {
 	if context != nil {
 		b, err := parseBoolOrAuto(context.GlobalString("rootless"))
 		if err != nil {
@@ -53,7 +54,7 @@ func shouldUseRootlessCgroupManager(context *cli.Context) (bool, error) {
 	return true, nil
 }
 
-func shouldHonorXDGRuntimeDir() bool {
+func ShouldHonorXDGRuntimeDir() bool {
 	if os.Getenv("XDG_RUNTIME_DIR") == "" {
 		return false
 	}

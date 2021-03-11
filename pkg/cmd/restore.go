@@ -1,17 +1,19 @@
 // +build linux
 
-package main
+package cmd
 
 import (
 	"os"
 
-	"github.com/opencontainers/runc/libcontainer"
-	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+
+	"github.com/opencontainers/runc/libcontainer"
+	"github.com/opencontainers/runc/libcontainer/system"
+	"github.com/opencontainers/runc/pkg/util"
 )
 
-var restoreCommand = cli.Command{
+var RestoreCommand = cli.Command{
 	Name:  "restore",
 	Usage: "restore a container from a previous checkpoint",
 	ArgsUsage: `<container-id>
@@ -93,7 +95,7 @@ using the runc checkpoint command.`,
 		},
 	},
 	Action: func(context *cli.Context) error {
-		if err := checkArgs(context, 1, exactArgs); err != nil {
+		if err := util.CheckArgs(context, 1, util.ExactArgs); err != nil {
 			return err
 		}
 		// XXX: Currently this is untested with rootless containers.
@@ -101,7 +103,7 @@ using the runc checkpoint command.`,
 			logrus.Warn("runc checkpoint is untested with rootless containers")
 		}
 
-		spec, err := setupSpec(context)
+		spec, err := util.SetupSpec(context)
 		if err != nil {
 			return err
 		}
@@ -109,7 +111,7 @@ using the runc checkpoint command.`,
 		if err := setEmptyNsMask(context, options); err != nil {
 			return err
 		}
-		status, err := startContainer(context, spec, CT_ACT_RESTORE, options)
+		status, err := util.StartContainer(context, spec, util.CT_ACT_RESTORE, options)
 		if err != nil {
 			return err
 		}
@@ -123,7 +125,7 @@ using the runc checkpoint command.`,
 func criuOptions(context *cli.Context) *libcontainer.CriuOpts {
 	imagePath := getCheckpointImagePath(context)
 	if err := os.MkdirAll(imagePath, 0755); err != nil {
-		fatal(err)
+		util.Fatal(err)
 	}
 	return &libcontainer.CriuOpts{
 		ImagesDirectory:         imagePath,

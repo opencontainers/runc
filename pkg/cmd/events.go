@@ -1,6 +1,6 @@
 // +build linux
 
-package main
+package cmd
 
 import (
 	"encoding/json"
@@ -10,16 +10,17 @@ import (
 	"sync"
 	"time"
 
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli"
+
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
-	"github.com/opencontainers/runc/types"
-
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"github.com/opencontainers/runc/pkg/types"
+	"github.com/opencontainers/runc/pkg/util"
 )
 
-var eventsCommand = cli.Command{
+var EventsCommand = cli.Command{
 	Name:  "events",
 	Usage: "display container events such as OOM notifications, cpu, memory, and IO usage statistics",
 	ArgsUsage: `<container-id>
@@ -32,10 +33,10 @@ information is displayed once every 5 seconds.`,
 		cli.BoolFlag{Name: "stats", Usage: "display the container's stats then exit"},
 	},
 	Action: func(context *cli.Context) error {
-		if err := checkArgs(context, 1, exactArgs); err != nil {
+		if err := util.CheckArgs(context, 1, util.ExactArgs); err != nil {
 			return err
 		}
-		container, err := getContainer(context)
+		container, err := util.GetContainer(context)
 		if err != nil {
 			return err
 		}

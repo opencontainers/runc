@@ -7,12 +7,15 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/opencontainers/runc/libcontainer/logs"
-	"github.com/opencontainers/runc/libcontainer/seccomp"
-	"github.com/opencontainers/runtime-spec/specs-go"
-
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+
+	"github.com/opencontainers/runc/libcontainer/logs"
+	"github.com/opencontainers/runc/libcontainer/seccomp"
+	"github.com/opencontainers/runc/pkg/cmd"
+	"github.com/opencontainers/runc/pkg/constant"
+	"github.com/opencontainers/runc/pkg/util"
+	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
 // version will be populated by the Makefile, read from
@@ -24,8 +27,7 @@ var version = ""
 var gitCommit = ""
 
 const (
-	specConfig = "config.json"
-	usage      = `Open Container Initiative runtime
+	usage = `Open Container Initiative runtime
 
 runc is a command line client for running applications packaged according to
 the Open Container Initiative (OCI) format and is a compliant implementation of the
@@ -37,7 +39,7 @@ existing process monitoring tools and the container will be spawned as a
 direct child of the process supervisor.
 
 Containers are configured using bundles. A bundle for a container is a directory
-that includes a specification file named "` + specConfig + `" and a root filesystem.
+that includes a specification file named "` + constant.SpecConfig + `" and a root filesystem.
 The root filesystem contains the contents of the container.
 
 To start a new instance of a container:
@@ -72,7 +74,7 @@ func main() {
 
 	xdgRuntimeDir := ""
 	root := "/run/runc"
-	if shouldHonorXDGRuntimeDir() {
+	if util.ShouldHonorXDGRuntimeDir() {
 		if runtimeDir := os.Getenv("XDG_RUNTIME_DIR"); runtimeDir != "" {
 			root = runtimeDir + "/runc"
 			xdgRuntimeDir = root
@@ -115,23 +117,23 @@ func main() {
 		},
 	}
 	app.Commands = []cli.Command{
-		checkpointCommand,
-		createCommand,
-		deleteCommand,
-		eventsCommand,
-		execCommand,
-		initCommand,
-		killCommand,
-		listCommand,
-		pauseCommand,
-		psCommand,
-		restoreCommand,
-		resumeCommand,
-		runCommand,
-		specCommand,
-		startCommand,
-		stateCommand,
-		updateCommand,
+		cmd.CheckpointCommand,
+		cmd.CreateCommand,
+		cmd.DeleteCommand,
+		cmd.EventsCommand,
+		cmd.ExecCommand,
+		cmd.InitCommand,
+		cmd.KillCommand,
+		cmd.ListCommand,
+		cmd.PauseCommand,
+		cmd.PsCommand,
+		cmd.RestoreCommand,
+		cmd.ResumeCommand,
+		cmd.RunCommand,
+		cmd.SpecCommand,
+		cmd.StartCommand,
+		cmd.StateCommand,
+		cmd.UpdateCommand,
 	}
 	app.Before = func(context *cli.Context) error {
 		if !context.IsSet("root") && xdgRuntimeDir != "" {
@@ -140,14 +142,14 @@ func main() {
 			// auto-pruned.
 			if err := os.MkdirAll(root, 0700); err != nil {
 				fmt.Fprintln(os.Stderr, "the path in $XDG_RUNTIME_DIR must be writable by the user")
-				fatal(err)
+				util.Fatal(err)
 			}
 			if err := os.Chmod(root, 0700|os.ModeSticky); err != nil {
 				fmt.Fprintln(os.Stderr, "you should check permission of the path in $XDG_RUNTIME_DIR")
-				fatal(err)
+				util.Fatal(err)
 			}
 		}
-		if err := reviseRootDir(context); err != nil {
+		if err := util.ReviseRootDir(context); err != nil {
 			return err
 		}
 		return logs.ConfigureLogging(createLogConfig(context))
@@ -158,7 +160,7 @@ func main() {
 	// Use our own writer here to ensure the log gets sent to the right location.
 	cli.ErrWriter = &FatalWriter{cli.ErrWriter}
 	if err := app.Run(os.Args); err != nil {
-		fatal(err)
+		util.Fatal(err)
 	}
 }
 
@@ -168,7 +170,7 @@ type FatalWriter struct {
 
 func (f *FatalWriter) Write(p []byte) (n int, err error) {
 	logrus.Error(string(p))
-	if !logrusToStderr() {
+	if !util.LogrusToStderr() {
 		return f.cliErrWriter.Write(p)
 	}
 	return len(p), nil

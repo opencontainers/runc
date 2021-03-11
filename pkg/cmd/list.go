@@ -1,8 +1,9 @@
 // +build linux
 
-package main
+package cmd
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -12,12 +13,12 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"encoding/json"
+	"github.com/urfave/cli"
 
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/user"
 	"github.com/opencontainers/runc/libcontainer/utils"
-	"github.com/urfave/cli"
+	"github.com/opencontainers/runc/pkg/util"
 )
 
 const formatOptions = `table or json`
@@ -45,7 +46,7 @@ type containerState struct {
 	Owner string `json:"owner"`
 }
 
-var listCommand = cli.Command{
+var ListCommand = cli.Command{
 	Name:  "list",
 	Usage: "lists containers started by runc with the given root",
 	ArgsUsage: `
@@ -72,7 +73,7 @@ To list containers created using a non-default value for "--root":
 		},
 	},
 	Action: func(context *cli.Context) error {
-		if err := checkArgs(context, 0, exactArgs); err != nil {
+		if err := util.CheckArgs(context, 0, util.ExactArgs); err != nil {
 			return err
 		}
 		s, err := getContainers(context)
@@ -115,7 +116,7 @@ To list containers created using a non-default value for "--root":
 }
 
 func getContainers(context *cli.Context) ([]containerState, error) {
-	factory, err := loadFactory(context)
+	factory, err := util.LoadFactory((context))
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +127,7 @@ func getContainers(context *cli.Context) ([]containerState, error) {
 	}
 	list, err := ioutil.ReadDir(absRoot)
 	if err != nil {
-		fatal(err)
+		util.Fatal(err)
 	}
 
 	var s []containerState

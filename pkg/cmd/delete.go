@@ -1,6 +1,6 @@
 // +build !solaris
 
-package main
+package cmd
 
 import (
 	"errors"
@@ -9,10 +9,11 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/opencontainers/runc/libcontainer"
 	"github.com/urfave/cli"
-
 	"golang.org/x/sys/unix"
+
+	"github.com/opencontainers/runc/libcontainer"
+	"github.com/opencontainers/runc/pkg/util"
 )
 
 func killContainer(container libcontainer.Container) error {
@@ -20,14 +21,14 @@ func killContainer(container libcontainer.Container) error {
 	for i := 0; i < 100; i++ {
 		time.Sleep(100 * time.Millisecond)
 		if err := container.Signal(unix.Signal(0), false); err != nil {
-			destroy(container)
+			util.Destroy(container)
 			return nil
 		}
 	}
 	return errors.New("container init still running")
 }
 
-var deleteCommand = cli.Command{
+var DeleteCommand = cli.Command{
 	Name:  "delete",
 	Usage: "delete any resources held by the container often used with detached container",
 	ArgsUsage: `<container-id>
@@ -47,13 +48,13 @@ status of "ubuntu01" as "stopped" the following will delete resources held for
 		},
 	},
 	Action: func(context *cli.Context) error {
-		if err := checkArgs(context, 1, exactArgs); err != nil {
+		if err := util.CheckArgs(context, 1, util.ExactArgs); err != nil {
 			return err
 		}
 
 		id := context.Args().First()
 		force := context.Bool("force")
-		container, err := getContainer(context)
+		container, err := util.GetContainer(context)
 		if err != nil {
 			if lerr, ok := err.(libcontainer.Error); ok && lerr.Code() == libcontainer.ContainerNotExists {
 				// if there was an aborted start or something of the sort then the container's directory could exist but
@@ -74,7 +75,7 @@ status of "ubuntu01" as "stopped" the following will delete resources held for
 		}
 		switch s {
 		case libcontainer.Stopped:
-			destroy(container)
+			util.Destroy(container)
 		case libcontainer.Created:
 			return killContainer(container)
 		default:

@@ -1,6 +1,6 @@
 // +build linux
 
-package main
+package cmd
 
 import (
 	"fmt"
@@ -9,9 +9,11 @@ import (
 
 	"github.com/urfave/cli"
 	"golang.org/x/sys/unix"
+
+	"github.com/opencontainers/runc/pkg/util"
 )
 
-var killCommand = cli.Command{
+var KillCommand = cli.Command{
 	Name:  "kill",
 	Usage: "kill sends the specified signal (default: SIGTERM) to the container's init process",
 	ArgsUsage: `<container-id> [signal]
@@ -31,13 +33,13 @@ signal to the init process of the "ubuntu01" container:
 		},
 	},
 	Action: func(context *cli.Context) error {
-		if err := checkArgs(context, 1, minArgs); err != nil {
+		if err := util.CheckArgs(context, 1, util.MinArgs); err != nil {
 			return err
 		}
-		if err := checkArgs(context, 2, maxArgs); err != nil {
+		if err := util.CheckArgs(context, 2, util.MaxArgs); err != nil {
 			return err
 		}
-		container, err := getContainer(context)
+		container, err := util.GetContainer(context)
 		if err != nil {
 			return err
 		}

@@ -10,7 +10,7 @@ import (
 	"strconv"
 
 	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/opencontainers/runc/types"
+	"github.com/opencontainers/runc/pkg/types"
 	"github.com/vishvananda/netlink"
 )
 

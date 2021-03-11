@@ -1,6 +1,6 @@
 // +build linux
 
-package main
+package cmd
 
 import (
 	"encoding/json"
@@ -9,20 +9,21 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/opencontainers/runc/libcontainer/cgroups"
-
 	"github.com/docker/go-units"
+	"github.com/urfave/cli"
+
+	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
+	"github.com/opencontainers/runc/pkg/util"
 	"github.com/opencontainers/runtime-spec/specs-go"
-	"github.com/urfave/cli"
 )
 
 func i64Ptr(i int64) *int64   { return &i }
 func u64Ptr(i uint64) *uint64 { return &i }
 func u16Ptr(i uint16) *uint16 { return &i }
 
-var updateCommand = cli.Command{
+var UpdateCommand = cli.Command{
 	Name:      "update",
 	Usage:     "update container resource constraints",
 	ArgsUsage: `<container-id>`,
@@ -127,10 +128,10 @@ other options are ignored.
 		},
 	},
 	Action: func(context *cli.Context) error {
-		if err := checkArgs(context, 1, exactArgs); err != nil {
+		if err := util.CheckArgs(context, 1, util.ExactArgs); err != nil {
 			return err
 		}
-		container, err := getContainer(context)
+		container, err := util.GetContainer(context)
 		if err != nil {
 			return err
 		}

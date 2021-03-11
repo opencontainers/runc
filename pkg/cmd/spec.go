@@ -1,6 +1,6 @@
 // +build linux
 
-package main
+package cmd
 
 import (
 	"encoding/json"
@@ -8,17 +8,18 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/opencontainers/runc/libcontainer/specconv"
-	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/urfave/cli"
+
+	"github.com/opencontainers/runc/libcontainer/specconv"
+	"github.com/opencontainers/runc/pkg/constant"
+	"github.com/opencontainers/runc/pkg/util"
 )
 
-var specCommand = cli.Command{
+var SpecCommand = cli.Command{
 	Name:      "spec",
 	Usage:     "create a new specification file",
 	ArgsUsage: "",
-	Description: `The spec command creates the new specification file named "` + specConfig + `" for
+	Description: `The spec command creates the new specification file named "` + constant.SpecConfig + `" for
 the bundle.
 
 The spec generated is just a starter file. Editing of the spec is required to
@@ -41,7 +42,7 @@ command in a new hello-world container named container1:
     mkdir rootfs
     tar -C rootfs -xf hello-world.tar
     runc spec
-    sed -i 's;"sh";"/hello";' ` + specConfig + `
+    sed -i 's;"sh";"/hello";' ` + constant.SpecConfig + `
     runc run container1
 
 In the run command above, "container1" is the name for the instance of the
@@ -78,7 +79,7 @@ created by an unprivileged user.
 		},
 	},
 	Action: func(context *cli.Context) error {
-		if err := checkArgs(context, 0, exactArgs); err != nil {
+		if err := util.CheckArgs(context, 0, util.ExactArgs); err != nil {
 			return err
 		}
 		spec := specconv.Example()
@@ -104,42 +105,13 @@ created by an unprivileged user.
 				return err
 			}
 		}
-		if err := checkNoFile(specConfig); err != nil {
+		if err := checkNoFile(constant.SpecConfig); err != nil {
 			return err
 		}
 		data, err := json.MarshalIndent(spec, "", "\t")
 		if err != nil {
 			return err
 		}
-		return ioutil.WriteFile(specConfig, data, 0666)
+		return ioutil.WriteFile(constant.SpecConfig, data, 0666)
 	},
-}
-
-// loadSpec loads the specification from the provided path.
-func loadSpec(cPath string) (spec *specs.Spec, err error) {
-	cf, err := os.Open(cPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("JSON specification file %s not found", cPath)
-		}
-		return nil, err
-	}
-	defer cf.Close()
-
-	if err = json.NewDecoder(cf).Decode(&spec); err != nil {
-		return nil, err
-	}
-	return spec, validateProcessSpec(spec.Process)
-}
-
-func createLibContainerRlimit(rlimit specs.POSIXRlimit) (configs.Rlimit, error) {
-	rl, err := strToRlimit(rlimit.Type)
-	if err != nil {
-		return configs.Rlimit{}, err
-	}
-	return configs.Rlimit{
-		Type: rl,
-		Hard: rlimit.Hard,
-		Soft: rlimit.Soft,
-	}, nil
 }

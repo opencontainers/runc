@@ -1,13 +1,15 @@
 // +build linux
 
-package main
+package cmd
 
 import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+
+	"github.com/opencontainers/runc/pkg/util"
 )
 
-var pauseCommand = cli.Command{
+var PauseCommand = cli.Command{
 	Name:  "pause",
 	Usage: "pause suspends all processes inside the container",
 	ArgsUsage: `<container-id>
@@ -18,17 +20,17 @@ paused. `,
 
 Use runc list to identify instances of containers and their current status.`,
 	Action: func(context *cli.Context) error {
-		if err := checkArgs(context, 1, exactArgs); err != nil {
+		if err := util.CheckArgs(context, 1, util.ExactArgs); err != nil {
 			return err
 		}
-		rootlessCg, err := shouldUseRootlessCgroupManager(context)
+		rootlessCg, err := util.ShouldUseRootlessCgroupManager(context)
 		if err != nil {
 			return err
 		}
 		if rootlessCg {
 			logrus.Warnf("runc pause may fail if you don't have the full access to cgroups")
 		}
-		container, err := getContainer(context)
+		container, err := util.GetContainer(context)
 		if err != nil {
 			return err
 		}
@@ -36,7 +38,7 @@ Use runc list to identify instances of containers and their current status.`,
 	},
 }
 
-var resumeCommand = cli.Command{
+var ResumeCommand = cli.Command{
 	Name:  "resume",
 	Usage: "resumes all processes that have been previously paused",
 	ArgsUsage: `<container-id>
@@ -47,17 +49,17 @@ resumed.`,
 
 Use runc list to identify instances of containers and their current status.`,
 	Action: func(context *cli.Context) error {
-		if err := checkArgs(context, 1, exactArgs); err != nil {
+		if err := util.CheckArgs(context, 1, util.ExactArgs); err != nil {
 			return err
 		}
-		rootlessCg, err := shouldUseRootlessCgroupManager(context)
+		rootlessCg, err := util.ShouldUseRootlessCgroupManager(context)
 		if err != nil {
 			return err
 		}
 		if rootlessCg {
 			logrus.Warn("runc resume may fail if you don't have the full access to cgroups")
 		}
-		container, err := getContainer(context)
+		container, err := util.GetContainer(context)
 		if err != nil {
 			return err
 		}

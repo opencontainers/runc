@@ -1,6 +1,6 @@
 // +build linux
 
-package main
+package cmd
 
 import (
 	"encoding/json"
@@ -9,13 +9,16 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/urfave/cli"
+
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/utils"
+	"github.com/opencontainers/runc/pkg/constant"
+	"github.com/opencontainers/runc/pkg/util"
 	"github.com/opencontainers/runtime-spec/specs-go"
-	"github.com/urfave/cli"
 )
 
-var execCommand = cli.Command{
+var ExecCommand = cli.Command{
 	Name:  "exec",
 	Usage: "execute new process inside the container",
 	ArgsUsage: `<container-id> <command> [command options]  || -p process.json <container-id>
@@ -95,10 +98,10 @@ following will output a list of processes running in the container:
 		},
 	},
 	Action: func(context *cli.Context) error {
-		if err := checkArgs(context, 1, minArgs); err != nil {
+		if err := util.CheckArgs(context, 1, util.MinArgs); err != nil {
 			return err
 		}
-		if err := revisePidFile(context); err != nil {
+		if err := util.RevisePidFile(context); err != nil {
 			return err
 		}
 		status, err := execProcess(context)
@@ -111,7 +114,7 @@ following will output a list of processes running in the container:
 }
 
 func execProcess(context *cli.Context) (int, error) {
-	container, err := getContainer(context)
+	container, err := util.GetContainer(context)
 	if err != nil {
 		return -1, err
 	}
@@ -142,19 +145,19 @@ func execProcess(context *cli.Context) (int, error) {
 		logLevel = "debug"
 	}
 
-	r := &runner{
-		enableSubreaper: false,
-		shouldDestroy:   false,
-		container:       container,
-		consoleSocket:   context.String("console-socket"),
-		detach:          detach,
-		pidFile:         context.String("pid-file"),
-		action:          CT_ACT_RUN,
-		init:            false,
-		preserveFDs:     context.Int("preserve-fds"),
-		logLevel:        logLevel,
+	r := &util.Runner{
+		EnableSubreaper: false,
+		ShouldDestroy:   false,
+		Container:       container,
+		ConsoleSocket:   context.String("console-socket"),
+		Detach:          detach,
+		PidFile:         context.String("pid-file"),
+		Action:          util.CT_ACT_RUN,
+		Init:            false,
+		PreserveFDs:     context.Int("preserve-fds"),
+		LogLevel:        logLevel,
 	}
-	return r.run(p)
+	return r.Run(p)
 }
 
 func getProcess(context *cli.Context, bundle string) (*specs.Process, error) {
@@ -168,13 +171,13 @@ func getProcess(context *cli.Context, bundle string) (*specs.Process, error) {
 		if err := json.NewDecoder(f).Decode(&p); err != nil {
 			return nil, err
 		}
-		return &p, validateProcessSpec(&p)
+		return &p, util.ValidateProcessSpec(&p)
 	}
 	// process via cli flags
 	if err := os.Chdir(bundle); err != nil {
 		return nil, err
 	}
-	spec, err := loadSpec(specConfig)
+	spec, err := util.LoadSpec(constant.SpecConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -232,5 +235,5 @@ func getProcess(context *cli.Context, bundle string) (*specs.Process, error) {
 		}
 		p.User.AdditionalGids = append(p.User.AdditionalGids, uint32(gid))
 	}
-	return p, validateProcessSpec(p)
+	return p, util.ValidateProcessSpec(p)
 }

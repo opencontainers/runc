@@ -1,4 +1,4 @@
-package main
+package util
 
 import "fmt"
 import "golang.org/x/sys/unix"
@@ -22,7 +22,7 @@ var rlimitMap = map[string]int{
 	"RLIMIT_RTTIME":     unix.RLIMIT_RTTIME,
 }
 
-func strToRlimit(key string) (int, error) {
+func StrToRlimit(key string) (int, error) {
 	rl, ok := rlimitMap[key]
 	if !ok {
 		return 0, fmt.Errorf("wrong rlimit value: %s", key)

@@ -1,15 +1,17 @@
-package main
+package cmd
 
 import (
 	"errors"
 	"fmt"
 	"os"
 
-	"github.com/opencontainers/runc/libcontainer"
 	"github.com/urfave/cli"
+
+	"github.com/opencontainers/runc/libcontainer"
+	"github.com/opencontainers/runc/pkg/util"
 )
 
-var startCommand = cli.Command{
+var StartCommand = cli.Command{
 	Name:  "start",
 	Usage: "executes the user defined process in a created container",
 	ArgsUsage: `<container-id>
@@ -19,10 +21,10 @@ are starting. The name you provide for the container instance must be unique on
 your host.`,
 	Description: `The start command executes the user defined process in a created container.`,
 	Action: func(context *cli.Context) error {
-		if err := checkArgs(context, 1, exactArgs); err != nil {
+		if err := util.CheckArgs(context, 1, util.ExactArgs); err != nil {
 			return err
 		}
-		container, err := getContainer(context)
+		container, err := util.GetContainer(context)
 		if err != nil {
 			return err
 		}
@@ -32,7 +34,7 @@ your host.`,
 		}
 		switch status {
 		case libcontainer.Created:
-			notifySocket, err := notifySocketStart(context, os.Getenv("NOTIFY_SOCKET"), container.ID())
+			notifySocket, err := util.NotifySocketStart(context, os.Getenv("NOTIFY_SOCKET"), container.ID())
 			if err != nil {
 				return err
 			}
@@ -40,7 +42,7 @@ your host.`,
 				return err
 			}
 			if notifySocket != nil {
-				return notifySocket.waitForContainer(container)
+				return notifySocket.WaitForContainer(container)
 			}
 			return nil
 		case libcontainer.Stopped:

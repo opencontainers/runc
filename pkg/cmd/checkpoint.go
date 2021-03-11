@@ -1,6 +1,6 @@
 // +build linux
 
-package main
+package cmd
 
 import (
 	"errors"
@@ -9,16 +9,18 @@ import (
 	"os"
 	"strconv"
 
-	criu "github.com/checkpoint-restore/go-criu/v4/rpc"
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/system"
+	"github.com/opencontainers/runc/pkg/util"
 	"github.com/opencontainers/runtime-spec/specs-go"
+
+	criu "github.com/checkpoint-restore/go-criu/v4/rpc"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 	"golang.org/x/sys/unix"
 )
 
-var checkpointCommand = cli.Command{
+var CheckpointCommand = cli.Command{
 	Name:  "checkpoint",
 	Usage: "checkpoint a running container",
 	ArgsUsage: `<container-id>
@@ -44,7 +46,7 @@ checkpointed.`,
 		cli.BoolFlag{Name: "auto-dedup", Usage: "enable auto deduplication of memory images"},
 	},
 	Action: func(context *cli.Context) error {
-		if err := checkArgs(context, 1, exactArgs); err != nil {
+		if err := util.CheckArgs(context, 1, util.ExactArgs); err != nil {
 			return err
 		}
 		// XXX: Currently this is untested with rootless containers.
@@ -52,7 +54,7 @@ checkpointed.`,
 			logrus.Warn("runc checkpoint is untested with rootless containers")
 		}
 
-		container, err := getContainer(context)
+		container, err := util.GetContainer(context)
 		if err != nil {
 			return err
 		}
@@ -61,12 +63,12 @@ checkpointed.`,
 			return err
 		}
 		if status == libcontainer.Created || status == libcontainer.Stopped {
-			fatal(fmt.Errorf("Container cannot be checkpointed in %s state", status.String()))
+			util.Fatal(fmt.Errorf("Container cannot be checkpointed in %s state", status.String()))
 		}
 		options := criuOptions(context)
 		if !(options.LeaveRunning || options.PreDump) {
 			// destroy container unless we tell CRIU to keep it
-			defer destroy(container)
+			defer util.Destroy(container)
 		}
 		// these are the mandatory criu options for a container
 		setPageServer(context, options)
@@ -81,7 +83,7 @@ checkpointed.`,
 func getCheckpointImagePath(context *cli.Context) string {
 	imagePath := context.String("image-path")
 	if imagePath == "" {
-		imagePath = getDefaultImagePath(context)
+		imagePath = util.GetDefaultImagePath(context)
 	}
 	return imagePath
 }
@@ -93,11 +95,11 @@ func setPageServer(context *cli.Context, options *libcontainer.CriuOpts) {
 		address, port, err := net.SplitHostPort(psOpt)
 
 		if err != nil || address == "" || port == "" {
-			fatal(errors.New("Use --page-server ADDRESS:PORT to specify page server"))
+			util.Fatal(errors.New("Use --page-server ADDRESS:PORT to specify page server"))
 		}
 		portInt, err := strconv.Atoi(port)
 		if err != nil {
-			fatal(errors.New("Invalid port number"))
+			util.Fatal(errors.New("Invalid port number"))
 		}
 		options.PageServer = libcontainer.CriuPageServerInfo{
 			Address: address,
@@ -116,7 +118,7 @@ func setManageCgroupsMode(context *cli.Context, options *libcontainer.CriuOpts) 
 		case "strict":
 			options.ManageCgroupsMode = criu.CriuCgMode_STRICT
 		default:
-			fatal(errors.New("Invalid manage cgroups mode"))
+			util.Fatal(errors.New("Invalid manage cgroups mode"))
 		}
 	}
 }

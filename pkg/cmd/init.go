@@ -1,15 +1,16 @@
-package main
+package cmd
 
 import (
 	"fmt"
 	"os"
 	"runtime"
 
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli"
+
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/logs"
 	_ "github.com/opencontainers/runc/libcontainer/nsenter"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
 )
 
 func init() {
@@ -35,7 +36,7 @@ func init() {
 	}
 }
 
-var initCommand = cli.Command{
+var InitCommand = cli.Command{
 	Name:  "init",
 	Usage: `initialize the namespaces and launch the process (do not call it outside of runc)`,
 	Action: func(context *cli.Context) error {

@@ -1,6 +1,6 @@
 // +build linux
 
-package main
+package cmd
 
 import (
 	"encoding/json"
@@ -13,9 +13,11 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+
+	"github.com/opencontainers/runc/pkg/util"
 )
 
-var psCommand = cli.Command{
+var PsCommand = cli.Command{
 	Name:      "ps",
 	Usage:     "ps displays the processes running inside a container",
 	ArgsUsage: `<container-id> [ps options]`,
@@ -27,10 +29,10 @@ var psCommand = cli.Command{
 		},
 	},
 	Action: func(context *cli.Context) error {
-		if err := checkArgs(context, 1, minArgs); err != nil {
+		if err := util.CheckArgs(context, 1, util.MinArgs); err != nil {
 			return err
 		}
-		rootlessCg, err := shouldUseRootlessCgroupManager(context)
+		rootlessCg, err := util.ShouldUseRootlessCgroupManager(context)
 		if err != nil {
 			return err
 		}
@@ -38,7 +40,7 @@ var psCommand = cli.Command{
 			logrus.Warn("runc ps may fail if you don't have the full access to cgroups")
 		}
 
-		container, err := getContainer(context)
+		container, err := util.GetContainer(context)
 		if err != nil {
 			return err
 		}

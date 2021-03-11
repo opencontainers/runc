@@ -1,6 +1,6 @@
 // +build linux
 
-package main
+package util
 
 import (
 	"bytes"
@@ -82,7 +82,7 @@ func (s *notifySocket) setupSocketDirectory() error {
 	return os.Mkdir(path.Dir(s.socketPath), 0755)
 }
 
-func notifySocketStart(context *cli.Context, notifySocketHost, id string) (*notifySocket, error) {
+func NotifySocketStart(context *cli.Context, notifySocketHost, id string) (*notifySocket, error) {
 	notifySocket := newNotifySocket(context, notifySocketHost, id)
 	if notifySocket == nil {
 		return nil, nil
@@ -94,7 +94,7 @@ func notifySocketStart(context *cli.Context, notifySocketHost, id string) (*noti
 	return notifySocket, nil
 }
 
-func (n *notifySocket) waitForContainer(container libcontainer.Container) error {
+func (n *notifySocket) WaitForContainer(container libcontainer.Container) error {
 	s, err := container.State()
 	if err != nil {
 		return err
