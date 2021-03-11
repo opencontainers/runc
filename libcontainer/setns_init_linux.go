@@ -12,6 +12,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/selinux/go-selinux"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
 
@@ -87,6 +88,7 @@ func (l *linuxSetnsInit) Init() error {
 			return newSystemErrorWithCause(err, "init seccomp")
 		}
 	}
+	logrus.Debugf("setns_init: about to exec")
 	// Close the log pipe fd so the parent's ForwardLogs can exit.
 	if err := unix.Close(l.logFd); err != nil {
 		return newSystemErrorWithCause(err, "closing log pipe fd")

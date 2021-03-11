@@ -16,6 +16,7 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/opencontainers/selinux/go-selinux"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
 
@@ -181,6 +182,7 @@ func (l *linuxStandardInit) Init() error {
 		return err
 	}
 	// Close the pipe to signal that we have completed our init.
+	logrus.Debugf("init: closing the pipe to signal completion")
 	l.pipe.Close()
 
 	// Close the log pipe fd so the parent's ForwardLogs can exit.

@@ -13,6 +13,7 @@ function teardown() {
 function check_debug() {
 	[[ "$*" == *"nsexec started"* ]]
 	[[ "$*" == *"child process in init()"* ]]
+	[[ "$*" == *"init: closing the pipe to signal completion"* ]]
 }
 
 @test "global --debug" {

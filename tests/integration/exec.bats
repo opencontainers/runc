@@ -132,6 +132,38 @@ function teardown() {
 	echo hello >preserve-fds.test
 	# fd 3 is used by bats, so we use 4
 	exec 4<preserve-fds.test
-	output=$(__runc exec --preserve-fds=2 test_busybox cat /proc/self/fd/4)
+	runc exec --preserve-fds=2 test_busybox cat /proc/self/fd/4
+	[ "$status" -eq 0 ]
 	[[ "${output}" == "hello" ]]
+}
+
+function check_exec_debug() {
+	[[ "$*" == *"nsexec started"* ]]
+	[[ "$*" == *"child process in init()"* ]]
+	[[ "$*" == *"setns_init: about to exec"* ]]
+}
+
+@test "runc --debug exec" {
+	runc run -d --console-socket "$CONSOLE_SOCKET" test
+	[ "$status" -eq 0 ]
+
+	runc --debug exec test true
+	[ "$status" -eq 0 ]
+	[[ "${output}" == *"level=debug"* ]]
+	check_exec_debug "$output"
+}
+
+@test "runc --debug --log exec" {
+	runc run -d --console-socket "$CONSOLE_SOCKET" test
+	[ "$status" -eq 0 ]
+
+	runc --debug --log log.out exec test true
+	# check output does not include debug info
+	[[ "${output}" != *"level=debug"* ]]
+
+	cat log.out >&2
+	# check expected debug output was sent to log.out
+	output=$(cat log.out)
+	[[ "${output}" == *"level=debug"* ]]
+	check_exec_debug "$output"
 }
