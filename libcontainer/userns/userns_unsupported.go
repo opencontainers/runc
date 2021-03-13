@@ -1,14 +1,12 @@
 // +build !linux
 
-package system
+package userns
 
-import (
-	"github.com/opencontainers/runc/libcontainer/user"
-)
+import "github.com/opencontainers/runc/libcontainer/user"
 
-// RunningInUserNS is a stub for non-Linux systems
+// runningInUserNS is a stub for non-Linux systems
 // Always returns false
-func RunningInUserNS() bool {
+func runningInUserNS() bool {
 	return false
 }
 

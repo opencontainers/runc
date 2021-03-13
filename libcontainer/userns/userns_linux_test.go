@@ -1,6 +1,6 @@
 // +build linux
 
-package system
+package userns
 
 import (
 	"strings"

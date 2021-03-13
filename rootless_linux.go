@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
-	"github.com/opencontainers/runc/libcontainer/system"
+	"github.com/opencontainers/runc/libcontainer/userns"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -25,7 +25,7 @@ func shouldUseRootlessCgroupManager(context *cli.Context) (bool, error) {
 	if os.Geteuid() != 0 {
 		return true, nil
 	}
-	if !system.RunningInUserNS() {
+	if !userns.RunningInUserNS() {
 		// euid == 0 , in the initial ns (i.e. the real root)
 		return false, nil
 	}
@@ -60,7 +60,7 @@ func shouldHonorXDGRuntimeDir() bool {
 	if os.Geteuid() != 0 {
 		return true
 	}
-	if !system.RunningInUserNS() {
+	if !userns.RunningInUserNS() {
 		// euid == 0 , in the initial ns (i.e. the real root)
 		// in this case, we should use /run/runc and ignore
 		// $XDG_RUNTIME_DIR (e.g. /run/user/0) for backward

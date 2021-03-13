@@ -1,6 +1,6 @@
 // +build gofuzz
 
-package system
+package userns
 
 import (
 	"strings"

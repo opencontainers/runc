@@ -7,7 +7,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/cgroups/ebpf/devicefilter"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/devices"
-	"github.com/opencontainers/runc/libcontainer/system"
+	"github.com/opencontainers/runc/libcontainer/userns"
 
 	"github.com/pkg/errors"
 	"golang.org/x/sys/unix"
@@ -36,7 +36,7 @@ func canSkipEBPFError(cgroup *configs.Cgroup) bool {
 	// have the necessary privileges to mknod(2) device inodes or access
 	// host-level instances (though ideally we would be blocking device access
 	// for rootless containers anyway).
-	if system.RunningInUserNS() {
+	if userns.RunningInUserNS() {
 		return true
 	}
 
