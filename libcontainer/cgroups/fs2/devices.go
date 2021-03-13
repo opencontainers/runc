@@ -3,14 +3,14 @@
 package fs2
 
 import (
+	"github.com/pkg/errors"
+	"golang.org/x/sys/unix"
+
 	"github.com/opencontainers/runc/libcontainer/cgroups/ebpf"
 	"github.com/opencontainers/runc/libcontainer/cgroups/ebpf/devicefilter"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/devices"
 	"github.com/opencontainers/runc/libcontainer/system"
-
-	"github.com/pkg/errors"
-	"golang.org/x/sys/unix"
 )
 
 func isRWM(perms devices.Permissions) bool {

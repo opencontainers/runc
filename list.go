@@ -3,6 +3,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -12,12 +13,11 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"encoding/json"
+	"github.com/urfave/cli"
 
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/user"
 	"github.com/opencontainers/runc/libcontainer/utils"
-	"github.com/urfave/cli"
 )
 
 const formatOptions = `table or json`

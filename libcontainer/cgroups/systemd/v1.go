@@ -10,11 +10,12 @@ import (
 	"sync"
 
 	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
+	"github.com/sirupsen/logrus"
+
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fs"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/sirupsen/logrus"
 )
 
 type legacyManager struct {

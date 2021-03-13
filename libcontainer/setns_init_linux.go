@@ -6,13 +6,14 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/opencontainers/selinux/go-selinux"
+	"github.com/pkg/errors"
+	"golang.org/x/sys/unix"
+
 	"github.com/opencontainers/runc/libcontainer/apparmor"
 	"github.com/opencontainers/runc/libcontainer/keys"
 	"github.com/opencontainers/runc/libcontainer/seccomp"
 	"github.com/opencontainers/runc/libcontainer/system"
-	"github.com/opencontainers/selinux/go-selinux"
-	"github.com/pkg/errors"
-	"golang.org/x/sys/unix"
 )
 
 // linuxSetnsInit performs the container's initialization for running a new process

@@ -4,10 +4,11 @@ import (
 	"math/rand"
 	"strconv"
 
+	"golang.org/x/sys/unix"
+
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/devices"
 	"github.com/opencontainers/runc/libcontainer/specconv"
-	"golang.org/x/sys/unix"
 )
 
 var standardEnvironment = []string{

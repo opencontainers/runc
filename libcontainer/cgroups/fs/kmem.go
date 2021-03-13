@@ -8,9 +8,10 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"golang.org/x/sys/unix"
+
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
-	"golang.org/x/sys/unix"
 )
 
 const cgroupKernelMemoryLimit = "memory.kmem.limit_in_bytes"

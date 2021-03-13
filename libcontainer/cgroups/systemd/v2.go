@@ -13,11 +13,12 @@ import (
 
 	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
 	securejoin "github.com/cyphar/filepath-securejoin"
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fs2"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
 
 type unifiedManager struct {

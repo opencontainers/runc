@@ -250,7 +250,7 @@ func TestMemorySetMemorySwappinessDefault(t *testing.T) {
 	helper := NewCgroupTestUtil("memory", t)
 	defer helper.cleanup()
 
-	swappinessBefore := 60 //default is 60
+	swappinessBefore := 60 // default is 60
 	swappinessAfter := uint64(0)
 
 	helper.writeFileContents(map[string]string{

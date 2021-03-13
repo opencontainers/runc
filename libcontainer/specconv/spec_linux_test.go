@@ -8,11 +8,12 @@ import (
 	"testing"
 
 	dbus "github.com/godbus/dbus/v5"
+	"github.com/opencontainers/runtime-spec/specs-go"
+	"golang.org/x/sys/unix"
+
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/configs/validate"
 	"github.com/opencontainers/runc/libcontainer/devices"
-	"github.com/opencontainers/runtime-spec/specs-go"
-	"golang.org/x/sys/unix"
 )
 
 func TestCreateCommandHookTimeout(t *testing.T) {
@@ -609,7 +610,7 @@ func TestInitSystemdProps(t *testing.T) {
 		spec.Annotations = map[string]string{tc.in.name: tc.in.value}
 
 		outMap, err := initSystemdProps(spec)
-		//t.Logf("input %+v, expected %+v, got err:%v out:%+v", tc.in, tc.exp, err, outMap)
+		// t.Logf("input %+v, expected %+v, got err:%v out:%+v", tc.in, tc.exp, err, outMap)
 
 		if tc.exp.isErr != (err != nil) {
 			t.Errorf("input %+v, expecting error: %v, got %v", tc.in, tc.exp.isErr, err)

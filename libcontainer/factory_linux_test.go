@@ -10,11 +10,11 @@ import (
 	"testing"
 
 	"github.com/moby/sys/mountinfo"
+	"github.com/opencontainers/runtime-spec/specs-go"
+	"golang.org/x/sys/unix"
+
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/utils"
-	"github.com/opencontainers/runtime-spec/specs-go"
-
-	"golang.org/x/sys/unix"
 )
 
 func newTestRoot() (string, error) {

@@ -15,14 +15,14 @@ import (
 
 	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
 	dbus "github.com/godbus/dbus/v5"
+	"github.com/opencontainers/runtime-spec/specs-go"
+	"golang.org/x/sys/unix"
+
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/devices"
 	"github.com/opencontainers/runc/libcontainer/seccomp"
 	libcontainerUtils "github.com/opencontainers/runc/libcontainer/utils"
-	"github.com/opencontainers/runtime-spec/specs-go"
-
-	"golang.org/x/sys/unix"
 )
 
 var namespaceMapping = map[specs.LinuxNamespaceType]configs.NamespaceType{
@@ -527,7 +527,7 @@ func CreateCgroupConfig(opts *CreateOpts, defaultDevs []*devices.Device) (*confi
 				if r.CPU.Shares != nil {
 					c.Resources.CpuShares = *r.CPU.Shares
 
-					//CpuWeight is used for cgroupv2 and should be converted
+					// CpuWeight is used for cgroupv2 and should be converted
 					c.Resources.CpuWeight = cgroups.ConvertCPUSharesToCgroupV2Value(c.Resources.CpuShares)
 				}
 				if r.CPU.Quota != nil {

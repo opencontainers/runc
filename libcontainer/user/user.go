@@ -12,7 +12,7 @@ import (
 
 const (
 	minId = 0
-	maxId = 1<<31 - 1 //for 32-bit systems compatibility
+	maxId = 1<<31 - 1 // for 32-bit systems compatibility
 )
 
 var (

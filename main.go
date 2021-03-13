@@ -7,12 +7,12 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/opencontainers/runc/libcontainer/logs"
-	"github.com/opencontainers/runc/libcontainer/seccomp"
 	"github.com/opencontainers/runtime-spec/specs-go"
-
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+
+	"github.com/opencontainers/runc/libcontainer/logs"
+	"github.com/opencontainers/runc/libcontainer/seccomp"
 )
 
 // version will be populated by the Makefile, read from

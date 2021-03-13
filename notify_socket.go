@@ -11,9 +11,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/urfave/cli"
+
+	"github.com/opencontainers/runc/libcontainer"
 )
 
 type notifySocket struct {

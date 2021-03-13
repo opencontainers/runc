@@ -4,8 +4,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runtime-spec/specs-go"
+
+	"github.com/opencontainers/runc/libcontainer/cgroups"
 )
 
 // Example returns an example spec file, with many options set so a user can

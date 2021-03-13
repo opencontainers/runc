@@ -26,8 +26,9 @@ import (
 	"sync"
 
 	"github.com/containerd/console"
-	"github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/urfave/cli"
+
+	"github.com/opencontainers/runc/libcontainer/utils"
 )
 
 // version will be populated by the Makefile, read from

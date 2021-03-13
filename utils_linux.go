@@ -10,19 +10,19 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/coreos/go-systemd/v22/activation"
+	"github.com/opencontainers/runtime-spec/specs-go"
+	selinux "github.com/opencontainers/selinux/go-selinux"
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli"
+	"golang.org/x/sys/unix"
+
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/specconv"
 	"github.com/opencontainers/runc/libcontainer/utils"
-	"github.com/opencontainers/runtime-spec/specs-go"
-	selinux "github.com/opencontainers/selinux/go-selinux"
-
-	"github.com/coreos/go-systemd/v22/activation"
-	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
-	"golang.org/x/sys/unix"
 )
 
 var errEmptyID = errors.New("container id cannot be empty")

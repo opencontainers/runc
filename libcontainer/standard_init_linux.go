@@ -8,15 +8,16 @@ import (
 	"runtime"
 	"strconv"
 
+	"github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/opencontainers/selinux/go-selinux"
+	"github.com/pkg/errors"
+	"golang.org/x/sys/unix"
+
 	"github.com/opencontainers/runc/libcontainer/apparmor"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/keys"
 	"github.com/opencontainers/runc/libcontainer/seccomp"
 	"github.com/opencontainers/runc/libcontainer/system"
-	"github.com/opencontainers/runtime-spec/specs-go"
-	"github.com/opencontainers/selinux/go-selinux"
-	"github.com/pkg/errors"
-	"golang.org/x/sys/unix"
 )
 
 type linuxStandardInit struct {

@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/opencontainers/runc/libcontainer/configs"
-
 	libseccomp "github.com/seccomp/libseccomp-golang"
 	"golang.org/x/net/bpf"
+
+	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
 type seccompData struct {

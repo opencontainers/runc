@@ -7,9 +7,10 @@ import (
 	"syscall"
 	"testing"
 
+	libseccomp "github.com/seccomp/libseccomp-golang"
+
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	libseccomp "github.com/seccomp/libseccomp-golang"
 )
 
 func TestSeccompDenyGetcwdWithErrno(t *testing.T) {

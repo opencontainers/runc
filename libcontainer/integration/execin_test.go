@@ -11,11 +11,11 @@ import (
 	"time"
 
 	"github.com/containerd/console"
+	"golang.org/x/sys/unix"
+
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/utils"
-
-	"golang.org/x/sys/unix"
 )
 
 func TestExecIn(t *testing.T) {

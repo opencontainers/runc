@@ -10,12 +10,13 @@ import (
 	"strconv"
 
 	criu "github.com/checkpoint-restore/go-criu/v4/rpc"
-	"github.com/opencontainers/runc/libcontainer"
-	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 	"golang.org/x/sys/unix"
+
+	"github.com/opencontainers/runc/libcontainer"
+	"github.com/opencontainers/runc/libcontainer/system"
 )
 
 var checkpointCommand = cli.Command{

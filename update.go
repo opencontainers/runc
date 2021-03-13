@@ -9,13 +9,13 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/opencontainers/runc/libcontainer/cgroups"
-
 	"github.com/docker/go-units"
-	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/urfave/cli"
+
+	"github.com/opencontainers/runc/libcontainer/cgroups"
+	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/intelrdt"
 )
 
 func i64Ptr(i int64) *int64   { return &i }
@@ -282,7 +282,7 @@ other options are ignored.
 		}
 
 		config.Cgroups.Resources.CpuShares = *r.CPU.Shares
-		//CpuWeight is used for cgroupv2 and should be converted
+		// CpuWeight is used for cgroupv2 and should be converted
 		config.Cgroups.Resources.CpuWeight = cgroups.ConvertCPUSharesToCgroupV2Value(*r.CPU.Shares)
 		config.Cgroups.Resources.CpuRtPeriod = *r.CPU.RealtimePeriod
 		config.Cgroups.Resources.CpuRtRuntime = *r.CPU.RealtimeRuntime

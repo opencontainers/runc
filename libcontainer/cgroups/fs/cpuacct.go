@@ -144,7 +144,7 @@ func getPercpuUsageInModes(path string) ([]uint64, []uint64, error) {
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-	scanner.Scan() //skipping header line
+	scanner.Scan() // skipping header line
 
 	for scanner.Scan() {
 		lineFields := strings.SplitN(scanner.Text(), " ", cuacctUsageAllColumnsNumber+1)

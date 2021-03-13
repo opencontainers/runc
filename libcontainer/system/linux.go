@@ -8,8 +8,9 @@ import (
 	"sync"
 	"unsafe"
 
-	"github.com/opencontainers/runc/libcontainer/user"
 	"golang.org/x/sys/unix"
+
+	"github.com/opencontainers/runc/libcontainer/user"
 )
 
 type ParentDeathSignal int

@@ -11,9 +11,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/opencontainers/runc/libcontainer"
 	"github.com/vishvananda/netlink/nl"
 	"golang.org/x/sys/unix"
+
+	"github.com/opencontainers/runc/libcontainer"
 )
 
 type pid struct {

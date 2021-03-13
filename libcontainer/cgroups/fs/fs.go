@@ -8,12 +8,13 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/pkg/errors"
+	"golang.org/x/sys/unix"
+
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	libcontainerUtils "github.com/opencontainers/runc/libcontainer/utils"
-	"github.com/pkg/errors"
-	"golang.org/x/sys/unix"
 )
 
 var (

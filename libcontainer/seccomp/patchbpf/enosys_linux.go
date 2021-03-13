@@ -9,14 +9,14 @@ import (
 	"runtime"
 	"unsafe"
 
-	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/opencontainers/runc/libcontainer/utils"
-
 	"github.com/pkg/errors"
 	libseccomp "github.com/seccomp/libseccomp-golang"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/bpf"
 	"golang.org/x/sys/unix"
+
+	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/utils"
 )
 
 // #cgo pkg-config: libseccomp

@@ -9,9 +9,10 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/vishvananda/netlink"
+
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/types"
-	"github.com/vishvananda/netlink"
 )
 
 var strategies = map[string]networkStrategy{

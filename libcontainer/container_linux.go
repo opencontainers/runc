@@ -19,21 +19,21 @@ import (
 	"sync"
 	"time"
 
+	"github.com/checkpoint-restore/go-criu/v4"
+	criurpc "github.com/checkpoint-restore/go-criu/v4/rpc"
 	securejoin "github.com/cyphar/filepath-securejoin"
+	"github.com/golang/protobuf/proto"
+	"github.com/opencontainers/runtime-spec/specs-go"
+	errorsf "github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"github.com/vishvananda/netlink/nl"
+	"golang.org/x/sys/unix"
+
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runc/libcontainer/utils"
-	"github.com/opencontainers/runtime-spec/specs-go"
-
-	"github.com/checkpoint-restore/go-criu/v4"
-	criurpc "github.com/checkpoint-restore/go-criu/v4/rpc"
-	"github.com/golang/protobuf/proto"
-	errorsf "github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-	"github.com/vishvananda/netlink/nl"
-	"golang.org/x/sys/unix"
 )
 
 const stdioFdCount = 3
@@ -1030,7 +1030,7 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 		}
 	}
 
-	//pre-dump may need parentImage param to complete iterative migration
+	// pre-dump may need parentImage param to complete iterative migration
 	if criuOpts.ParentImage != "" {
 		rpcOpts.ParentImg = proto.String(criuOpts.ParentImage)
 		rpcOpts.TrackMem = proto.Bool(true)

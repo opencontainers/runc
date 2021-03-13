@@ -27,9 +27,9 @@ import (
 	"sort"
 	"strconv"
 
-	"github.com/opencontainers/runc/libcontainer/devices"
-
 	"github.com/pkg/errors"
+
+	"github.com/opencontainers/runc/libcontainer/devices"
 )
 
 // deviceMeta is a Rule without the Allow or Permissions fields, and no

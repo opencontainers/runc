@@ -9,10 +9,10 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/opencontainers/runc/libcontainer"
 	"github.com/urfave/cli"
-
 	"golang.org/x/sys/unix"
+
+	"github.com/opencontainers/runc/libcontainer"
 )
 
 func killContainer(container libcontainer.Container) error {

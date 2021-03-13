@@ -14,13 +14,13 @@ import (
 	"syscall"
 	"testing"
 
+	"github.com/opencontainers/runtime-spec/specs-go"
+	"golang.org/x/sys/unix"
+
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/opencontainers/runtime-spec/specs-go"
-
-	"golang.org/x/sys/unix"
 )
 
 func TestExecPS(t *testing.T) {
@@ -867,7 +867,7 @@ func TestContainerState(t *testing.T) {
 		{Type: configs.NEWNS},
 		{Type: configs.NEWUTS},
 		// host for IPC
-		//{Type: configs.NEWIPC},
+		// {Type: configs.NEWIPC},
 		{Type: configs.NEWPID},
 		{Type: configs.NEWNET},
 	})

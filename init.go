@@ -5,11 +5,12 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli"
+
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/logs"
 	_ "github.com/opencontainers/runc/libcontainer/nsenter"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
 )
 
 func init() {

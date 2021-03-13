@@ -23,9 +23,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pkg/errors"
+
 	"github.com/opencontainers/runc/libcontainer/configs"
 	libcontainerUtils "github.com/opencontainers/runc/libcontainer/utils"
-	"github.com/pkg/errors"
 )
 
 const UnifiedMountpoint = "/sys/fs/cgroup"

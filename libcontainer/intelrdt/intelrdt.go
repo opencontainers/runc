@@ -15,6 +15,7 @@ import (
 	"sync"
 
 	"github.com/moby/sys/mountinfo"
+
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
 

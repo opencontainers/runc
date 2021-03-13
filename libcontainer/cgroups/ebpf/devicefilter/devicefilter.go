@@ -11,9 +11,10 @@ import (
 	"strconv"
 
 	"github.com/cilium/ebpf/asm"
-	"github.com/opencontainers/runc/libcontainer/devices"
 	"github.com/pkg/errors"
 	"golang.org/x/sys/unix"
+
+	"github.com/opencontainers/runc/libcontainer/devices"
 )
 
 const (

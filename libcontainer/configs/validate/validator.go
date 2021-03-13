@@ -8,10 +8,11 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	selinux "github.com/opencontainers/selinux/go-selinux"
 	"golang.org/x/sys/unix"
+
+	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/intelrdt"
 )
 
 type Validator interface {

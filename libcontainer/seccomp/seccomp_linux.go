@@ -9,11 +9,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/opencontainers/runc/libcontainer/seccomp/patchbpf"
-
 	libseccomp "github.com/seccomp/libseccomp-golang"
 	"golang.org/x/sys/unix"
+
+	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/seccomp/patchbpf"
 )
 
 var (

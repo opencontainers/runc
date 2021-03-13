@@ -6,10 +6,11 @@ import (
 	"path/filepath"
 	"unsafe"
 
-	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
+
+	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 )
 
 func registerMemoryEventV2(cgDir, evName, cgEvName string) (<-chan struct{}, error) {

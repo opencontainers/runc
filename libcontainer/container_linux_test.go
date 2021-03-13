@@ -240,7 +240,7 @@ func TestGetContainerState(t *testing.T) {
 				{Type: configs.NEWNET, Path: expectedNetworkPath},
 				{Type: configs.NEWUTS},
 				// emulate host for IPC
-				//{Type: configs.NEWIPC},
+				// {Type: configs.NEWIPC},
 				{Type: configs.NEWCGROUP},
 			},
 		},

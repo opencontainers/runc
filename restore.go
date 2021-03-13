@@ -5,10 +5,11 @@ package main
 import (
 	"os"
 
-	"github.com/opencontainers/runc/libcontainer"
-	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+
+	"github.com/opencontainers/runc/libcontainer"
+	"github.com/opencontainers/runc/libcontainer/system"
 )
 
 var restoreCommand = cli.Command{

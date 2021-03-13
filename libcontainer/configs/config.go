@@ -7,10 +7,11 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/opencontainers/runc/libcontainer/devices"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+
+	"github.com/opencontainers/runc/libcontainer/devices"
 )
 
 type Rlimit struct {

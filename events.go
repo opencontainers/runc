@@ -10,13 +10,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli"
+
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runc/types"
-
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
 )
 
 var eventsCommand = cli.Command{

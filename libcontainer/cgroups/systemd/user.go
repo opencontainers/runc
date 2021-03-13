@@ -13,8 +13,9 @@ import (
 
 	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
 	dbus "github.com/godbus/dbus/v5"
-	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/pkg/errors"
+
+	"github.com/opencontainers/runc/libcontainer/system"
 )
 
 // NewUserSystemdDbus creates a connection for systemd user-instance.

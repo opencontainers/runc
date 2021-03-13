@@ -6,9 +6,10 @@ import (
 	"encoding/json"
 	"os"
 
+	"github.com/urfave/cli"
+
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/utils"
-	"github.com/urfave/cli"
 )
 
 var stateCommand = cli.Command{

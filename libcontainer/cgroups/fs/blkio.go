@@ -280,7 +280,7 @@ func (s *BlkioGroup) GetStats(path string, stats *cgroups.Stats) error {
 				return err
 			}
 			*statInfo.blkioStatEntriesPtr = blkioStats
-			//finish if all stats are gathered
+			// finish if all stats are gathered
 			if i == len(statGroup)-1 {
 				return nil
 			}

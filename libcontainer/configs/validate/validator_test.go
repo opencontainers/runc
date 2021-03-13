@@ -6,9 +6,10 @@ import (
 	"path/filepath"
 	"testing"
 
+	"golang.org/x/sys/unix"
+
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/configs/validate"
-	"golang.org/x/sys/unix"
 )
 
 func TestValidate(t *testing.T) {
