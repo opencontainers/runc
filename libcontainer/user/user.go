@@ -2,6 +2,7 @@ package user
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -15,6 +16,13 @@ const (
 )
 
 var (
+	// The current operating system does not provide the required data for user lookups.
+	ErrUnsupported = errors.New("user lookup: operating system does not provide passwd-formatted data")
+
+	// No matching entries found in file.
+	ErrNoPasswdEntries = errors.New("no matching entries in passwd file")
+	ErrNoGroupEntries  = errors.New("no matching entries in group file")
+
 	ErrRange = fmt.Errorf("uids and gids must be in range %d-%d", minId, maxId)
 )
 
