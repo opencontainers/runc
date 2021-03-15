@@ -3,10 +3,11 @@
 package capabilities
 
 import (
-	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/sirupsen/logrus"
 	"github.com/syndtr/gocapability/capability"
 )
 
@@ -34,27 +35,21 @@ func init() {
 }
 
 // New creates a new Caps from the given Capabilities config. Unknown Capabilities
-// or Capabilities that are unavailable in the current environment produce an error.
+// or Capabilities that are unavailable in the current environment are ignored,
+// printing a warning instead.
 func New(capConfig *configs.Capabilities) (*Caps, error) {
 	var (
 		err error
-		c   = Caps{caps: make(map[capability.CapType][]capability.Cap, len(capTypes))}
+		c   Caps
 	)
 
-	if c.caps[capability.BOUNDING], err = capSlice(capConfig.Bounding); err != nil {
-		return nil, err
-	}
-	if c.caps[capability.EFFECTIVE], err = capSlice(capConfig.Effective); err != nil {
-		return nil, err
-	}
-	if c.caps[capability.INHERITABLE], err = capSlice(capConfig.Inheritable); err != nil {
-		return nil, err
-	}
-	if c.caps[capability.PERMITTED], err = capSlice(capConfig.Permitted); err != nil {
-		return nil, err
-	}
-	if c.caps[capability.AMBIENT], err = capSlice(capConfig.Ambient); err != nil {
-		return nil, err
+	unknownCaps := make(map[string]struct{})
+	c.caps = map[capability.CapType][]capability.Cap{
+		capability.BOUNDING:    capSlice(capConfig.Bounding, unknownCaps),
+		capability.EFFECTIVE:   capSlice(capConfig.Effective, unknownCaps),
+		capability.INHERITABLE: capSlice(capConfig.Inheritable, unknownCaps),
+		capability.PERMITTED:   capSlice(capConfig.Permitted, unknownCaps),
+		capability.AMBIENT:     capSlice(capConfig.Ambient, unknownCaps),
 	}
 	if c.pid, err = capability.NewPid2(0); err != nil {
 		return nil, err
@@ -62,22 +57,35 @@ func New(capConfig *configs.Capabilities) (*Caps, error) {
 	if err = c.pid.Load(); err != nil {
 		return nil, err
 	}
+	if len(unknownCaps) > 0 {
+		logrus.Warn("ignoring unknown or unavailable capabilities: ", mapKeys(unknownCaps))
+	}
 	return &c, nil
 }
 
 // capSlice converts the slice of capability names in caps, to their numeric
 // equivalent, and returns them as a slice. Unknown or unavailable capabilities
-// produce an error.
-func capSlice(caps []string) ([]capability.Cap, error) {
-	out := make([]capability.Cap, len(caps))
-	for i, c := range caps {
-		v, ok := capabilityMap[c]
-		if !ok {
-			return nil, fmt.Errorf("unknown capability %q", c)
+// are not returned, but appended to unknownCaps.
+func capSlice(caps []string, unknownCaps map[string]struct{}) []capability.Cap {
+	var out []capability.Cap
+	for _, c := range caps {
+		if v, ok := capabilityMap[c]; !ok {
+			unknownCaps[c] = struct{}{}
+		} else {
+			out = append(out, v)
 		}
-		out[i] = v
 	}
-	return out, nil
+	return out
+}
+
+// mapKeys returns the keys of input in sorted order
+func mapKeys(input map[string]struct{}) []string {
+	var keys []string
+	for c := range input {
+		keys = append(keys, c)
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 // Caps holds the capabilities for a container.
