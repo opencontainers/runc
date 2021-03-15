@@ -598,6 +598,13 @@ void nsexec(void)
 	if (ensure_cloned_binary() < 0)
 		bail("could not ensure we are a cloned binary");
 
+	/*
+	 * Inform the parent we're past initial setup.
+	 * For the other side of this, see initWaiter.
+	 */
+	if (write(pipenum, "", 1) != 1)
+		bail("could not inform the parent we are past initial setup");
+
 	write_log(DEBUG, "nsexec started");
 
 	/* Parse all of the netlink configuration. */

@@ -98,11 +98,17 @@ func (p *setnsProcess) start() (retErr error) {
 	if err != nil {
 		return newSystemErrorWithCause(err, "starting setns process")
 	}
+
+	waitInit := initWaiter(p.messageSockPair.parent)
 	defer func() {
 		if retErr != nil {
 			if newOom, err := p.manager.OOMKillCount(); err == nil && newOom != oom {
 				// Someone in this cgroup was killed, this _might_ be us.
 				retErr = newSystemErrorWithCause(retErr, "possibly OOM-killed")
+			}
+			werr := <-waitInit
+			if werr != nil {
+				logrus.WithError(werr).Warn()
 			}
 			err := ignoreTerminateErrors(p.terminate())
 			if err != nil {
@@ -110,10 +116,15 @@ func (p *setnsProcess) start() (retErr error) {
 			}
 		}
 	}()
+
 	if p.bootstrapData != nil {
 		if _, err := io.Copy(p.messageSockPair.parent, p.bootstrapData); err != nil {
 			return newSystemErrorWithCause(err, "copying bootstrap data to pipe")
 		}
+	}
+	err = <-waitInit
+	if err != nil {
+		return err
 	}
 	if err := p.execSetns(); err != nil {
 		return newSystemErrorWithCause(err, "executing setns process")
@@ -326,9 +337,13 @@ func (p *initProcess) start() (retErr error) {
 		p.process.ops = nil
 		return newSystemErrorWithCause(err, "starting init process command")
 	}
+
+	waitInit := initWaiter(p.messageSockPair.parent)
 	defer func() {
 		if retErr != nil {
-			// init might be killed by the kernel's OOM killer.
+			// Find out if init is killed by the kernel's OOM killer.
+			// Get the count before killing init as otherwise cgroup
+			// might be removed by systemd.
 			oom, err := p.manager.OOMKillCount()
 			if err != nil {
 				logrus.WithError(err).Warn("unable to get oom kill count")
@@ -346,7 +361,12 @@ func (p *initProcess) start() (retErr error) {
 				}
 			}
 
-			// terminate the process to ensure we can remove cgroups
+			werr := <-waitInit
+			if werr != nil {
+				logrus.WithError(werr).Warn()
+			}
+
+			// Terminate the process to ensure we can remove cgroups.
 			if err := ignoreTerminateErrors(p.terminate()); err != nil {
 				logrus.WithError(err).Warn("unable to terminate initProcess")
 			}
@@ -372,6 +392,11 @@ func (p *initProcess) start() (retErr error) {
 	if _, err := io.Copy(p.messageSockPair.parent, p.bootstrapData); err != nil {
 		return newSystemErrorWithCause(err, "copying bootstrap data to pipe")
 	}
+	err = <-waitInit
+	if err != nil {
+		return err
+	}
+
 	childPid, err := p.getChildPid()
 	if err != nil {
 		return newSystemErrorWithCause(err, "getting the final child's pid from pipe")
@@ -673,4 +698,29 @@ func (p *Process) InitializeIO(rootuid, rootgid int) (i *IO, err error) {
 		}
 	}
 	return i, nil
+}
+
+// initWaiter returns a channel to wait on for making sure
+// runc init has finished the initial setup.
+func initWaiter(r io.Reader) chan error {
+	ch := make(chan error, 1)
+	go func() {
+		defer close(ch)
+
+		inited := make([]byte, 1)
+		n, err := r.Read(inited)
+		if err == nil {
+			if n < 1 {
+				err = errors.New("short read")
+			} else if inited[0] != 0 {
+				err = fmt.Errorf("unexpected %d != 0", inited[0])
+			} else {
+				ch <- nil
+				return
+			}
+		}
+		ch <- newSystemErrorWithCause(err, "waiting for init preliminary setup")
+	}()
+
+	return ch
 }

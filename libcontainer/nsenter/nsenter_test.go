@@ -3,6 +3,7 @@ package nsenter
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -48,6 +49,7 @@ func TestNsenterValidPaths(t *testing.T) {
 	if err := cmd.Start(); err != nil {
 		t.Fatalf("nsenter failed to start %v", err)
 	}
+
 	// write cloneFlags
 	r := nl.NewNetlinkRequest(int(libcontainer.InitMsg), 0)
 	r.AddData(&libcontainer.Int32msg{
@@ -61,6 +63,8 @@ func TestNsenterValidPaths(t *testing.T) {
 	if _, err := io.Copy(parent, bytes.NewReader(r.Serialize())); err != nil {
 		t.Fatal(err)
 	}
+
+	initWaiter(t, parent)
 
 	decoder := json.NewDecoder(parent)
 	var pid *pid
@@ -118,6 +122,7 @@ func TestNsenterInvalidPaths(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	initWaiter(t, parent)
 	if err := cmd.Wait(); err == nil {
 		t.Fatalf("nsenter exits with a zero exit status")
 	}
@@ -158,6 +163,7 @@ func TestNsenterIncorrectPathType(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	initWaiter(t, parent)
 	if err := cmd.Wait(); err == nil {
 		t.Fatalf("nsenter exits with a zero exit status")
 	}
@@ -206,6 +212,8 @@ func TestNsenterChildLogging(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	initWaiter(t, parent)
+
 	logsDecoder := json.NewDecoder(logread)
 	var logentry *logentry
 
@@ -234,4 +242,20 @@ func newPipe() (parent *os.File, child *os.File, err error) {
 		return nil, nil, err
 	}
 	return os.NewFile(uintptr(fds[1]), "parent"), os.NewFile(uintptr(fds[0]), "child"), nil
+}
+
+// initWaiter reads back the initial \0 from runc init
+func initWaiter(t *testing.T, r io.Reader) {
+	inited := make([]byte, 1)
+	n, err := r.Read(inited)
+	if err == nil {
+		if n < 1 {
+			err = errors.New("short read")
+		} else if inited[0] != 0 {
+			err = fmt.Errorf("unexpected %d != 0", inited[0])
+		} else {
+			return
+		}
+	}
+	t.Fatalf("waiting for init preliminary setup: %v", err)
 }
