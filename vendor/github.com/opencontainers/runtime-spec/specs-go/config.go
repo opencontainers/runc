@@ -598,10 +598,13 @@ type VMImage struct {
 
 // LinuxSeccomp represents syscall restrictions
 type LinuxSeccomp struct {
-	DefaultAction LinuxSeccompAction `json:"defaultAction"`
-	Architectures []Arch             `json:"architectures,omitempty"`
-	Flags         []LinuxSeccompFlag `json:"flags,omitempty"`
-	Syscalls      []LinuxSyscall     `json:"syscalls,omitempty"`
+	DefaultAction    LinuxSeccompAction `json:"defaultAction"`
+	DefaultErrnoRet  *uint              `json:"defaultErrnoRet,omitempty"`
+	Architectures    []Arch             `json:"architectures,omitempty"`
+	Flags            []LinuxSeccompFlag `json:"flags,omitempty"`
+	ListenerPath     string             `json:"listenerPath,omitempty"`
+	ListenerMetadata string             `json:"listenerMetadata,omitempty"`
+	Syscalls         []LinuxSyscall     `json:"syscalls,omitempty"`
 }
 
 // Arch used for additional architectures
@@ -641,6 +644,7 @@ type LinuxSeccompAction string
 const (
 	ActKill        LinuxSeccompAction = "SCMP_ACT_KILL"
 	ActKillProcess LinuxSeccompAction = "SCMP_ACT_KILL_PROCESS"
+	ActKillThread  LinuxSeccompAction = "SCMP_ACT_KILL_THREAD"
 	ActTrap        LinuxSeccompAction = "SCMP_ACT_TRAP"
 	ActErrno       LinuxSeccompAction = "SCMP_ACT_ERRNO"
 	ActTrace       LinuxSeccompAction = "SCMP_ACT_TRACE"
