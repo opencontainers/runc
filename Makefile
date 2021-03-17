@@ -114,8 +114,9 @@ clean:
 	rm -rf release
 	rm -rf man/man8
 
-validate:
-	script/validate-c
+cfmt: C_SRC=$(shell git ls-files '*.c' | grep -v '^vendor/')
+cfmt:
+	indent -linux -l120 -il0 -ppi2 -cp1 -T size_t -T jmp_buf $(C_SRC)
 
 shellcheck:
 	shellcheck tests/integration/*.bats tests/integration/*.sh tests/*.sh
@@ -150,5 +151,5 @@ localcross:
 .PHONY: runc all recvtty static release dbuild lint man runcimage \
 	test localtest unittest localunittest integration localintegration \
 	rootlessintegration localrootlessintegration shell install install-bash \
-	install-man clean validate shfmt shellcheck \
+	install-man clean cfmt shfmt shellcheck \
 	vendor verify-dependencies cross localcross

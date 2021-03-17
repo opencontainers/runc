@@ -56,7 +56,7 @@ struct clone_t {
 	 * Reserve some space for clone() to locate arguments
 	 * and retcode in this place
 	 */
-	char stack[4096] __attribute__ ((aligned(16)));
+	char stack[4096] __attribute__((aligned(16)));
 	char stack_ptr[0];
 
 	/* There's two children. This is used to execute the different code. */
@@ -118,15 +118,15 @@ static int logfd = -1;
  * it, namely (glibc 2.12).
  */
 #if __GLIBC__ == 2 && __GLIBC_MINOR__ < 14
-#	define _GNU_SOURCE
-#	include "syscall.h"
-#	if !defined(SYS_setns) && defined(__NR_setns)
-#		define SYS_setns __NR_setns
-#	endif
+#  define _GNU_SOURCE
+#  include "syscall.h"
+#  if !defined(SYS_setns) && defined(__NR_setns)
+#    define SYS_setns __NR_setns
+#  endif
 
-#ifndef SYS_setns
-#	error "setns(2) syscall not supported by glibc version"
-#endif
+#  ifndef SYS_setns
+#    error "setns(2) syscall not supported by glibc version"
+#  endif
 
 int setns(int fd, int nstype)
 {
@@ -136,7 +136,7 @@ int setns(int fd, int nstype)
 
 static void write_log_with_info(const char *level, const char *function, int line, const char *format, ...)
 {
-	char message[1024] = {};
+	char message[1024] = { };
 
 	va_list args;
 
@@ -187,7 +187,7 @@ static int write_file(char *data, size_t data_len, char *pathfmt, ...)
 		goto out;
 	}
 
- out:
+out:
 	close(fd);
 	return ret;
 }
@@ -328,14 +328,14 @@ static void update_oom_score_adj(char *data, size_t len)
 }
 
 /* A dummy function that just jumps to the given jumpval. */
-static int child_func(void *arg) __attribute__ ((noinline));
+static int child_func(void *arg) __attribute__((noinline));
 static int child_func(void *arg)
 {
 	struct clone_t *ca = (struct clone_t *)arg;
 	longjmp(*ca->env, ca->jmpval);
 }
 
-static int clone_parent(jmp_buf *env, int jmpval) __attribute__ ((noinline));
+static int clone_parent(jmp_buf *env, int jmpval) __attribute__((noinline));
 static int clone_parent(jmp_buf *env, int jmpval)
 {
 	struct clone_t ca = {
