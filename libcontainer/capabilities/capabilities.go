@@ -10,7 +10,7 @@ import (
 	"github.com/syndtr/gocapability/capability"
 )
 
-const allCapabilityTypes = capability.CAPS | capability.BOUNDS | capability.AMBS
+const allCapabilityTypes = capability.CAPS | capability.BOUNDING | capability.AMBIENT
 
 var capabilityMap map[string]capability.Cap
 
@@ -79,15 +79,15 @@ type Caps struct {
 
 // ApplyBoundingSet sets the capability bounding set to those specified in the whitelist.
 func (c *Caps) ApplyBoundingSet() error {
-	c.pid.Clear(capability.BOUNDS)
-	c.pid.Set(capability.BOUNDS, c.bounding...)
-	return c.pid.Apply(capability.BOUNDS)
+	c.pid.Clear(capability.BOUNDING)
+	c.pid.Set(capability.BOUNDING, c.bounding...)
+	return c.pid.Apply(capability.BOUNDING)
 }
 
 // Apply sets all the capabilities for the current process in the config.
 func (c *Caps) ApplyCaps() error {
 	c.pid.Clear(allCapabilityTypes)
-	c.pid.Set(capability.BOUNDS, c.bounding...)
+	c.pid.Set(capability.BOUNDING, c.bounding...)
 	c.pid.Set(capability.PERMITTED, c.permitted...)
 	c.pid.Set(capability.INHERITABLE, c.inheritable...)
 	c.pid.Set(capability.EFFECTIVE, c.effective...)
