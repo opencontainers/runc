@@ -749,34 +749,34 @@ void nsexec(void)
 						bail("failed to sync with child: write(SYNC_USERMAP_ACK)");
 					}
 					break;
-				case SYNC_RECVPID_PLS:{
-						first_child = child;
+				case SYNC_RECVPID_PLS:
+					first_child = child;
 
-						/* Get the init_func pid. */
-						if (read(syncfd, &child, sizeof(child)) != sizeof(child)) {
-							kill(first_child, SIGKILL);
-							bail("failed to sync with child: read(childpid)");
-						}
+					/* Get the init_func pid. */
+					if (read(syncfd, &child, sizeof(child)) != sizeof(child)) {
+						kill(first_child, SIGKILL);
+						bail("failed to sync with child: read(childpid)");
+					}
 
-						/* Send ACK. */
-						s = SYNC_RECVPID_ACK;
-						if (write(syncfd, &s, sizeof(s)) != sizeof(s)) {
-							kill(first_child, SIGKILL);
-							kill(child, SIGKILL);
-							bail("failed to sync with child: write(SYNC_RECVPID_ACK)");
-						}
+					/* Send ACK. */
+					s = SYNC_RECVPID_ACK;
+					if (write(syncfd, &s, sizeof(s)) != sizeof(s)) {
+						kill(first_child, SIGKILL);
+						kill(child, SIGKILL);
+						bail("failed to sync with child: write(SYNC_RECVPID_ACK)");
+					}
 
-						/* Send the init_func pid back to our parent.
-						 *
-						 * Send the init_func pid and the pid of the first child back to our parent.
-						 * We need to send both back because we can't reap the first child we created (CLONE_PARENT).
-						 * It becomes the responsibility of our parent to reap the first child.
-						 */
-						len = dprintf(pipenum, "{\"pid\": %d, \"pid_first\": %d}\n", child, first_child);
-						if (len < 0) {
-							kill(child, SIGKILL);
-							bail("unable to generate JSON for child pid");
-						}
+					/* Send the init_func pid back to our parent.
+					 *
+					 * Send the init_func pid and the pid of the first child back to our parent.
+					 * We need to send both back because we can't reap the first child we created (CLONE_PARENT).
+					 * It becomes the responsibility of our parent to reap the first child.
+					 */
+					len = dprintf(pipenum, "{\"pid\": %d, \"pid_first\": %d}\n",
+						      child, first_child);
+					if (len < 0) {
+						kill(child, SIGKILL);
+						bail("unable to generate JSON for child pid");
 					}
 					break;
 				case SYNC_CHILD_READY:
