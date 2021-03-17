@@ -102,16 +102,16 @@ static int logfd = -1;
  * List of netlink message types sent to us as part of bootstrapping the init.
  * These constants are defined in libcontainer/message_linux.go.
  */
-#define INIT_MSG			62000
+#define INIT_MSG		62000
 #define CLONE_FLAGS_ATTR	27281
 #define NS_PATHS_ATTR		27282
-#define UIDMAP_ATTR			27283
-#define GIDMAP_ATTR			27284
+#define UIDMAP_ATTR		27283
+#define GIDMAP_ATTR		27284
 #define SETGROUP_ATTR		27285
 #define OOM_SCORE_ADJ_ATTR	27286
 #define ROOTLESS_EUID_ATTR	27287
-#define UIDMAPPATH_ATTR	    27288
-#define GIDMAPPATH_ATTR	    27289
+#define UIDMAPPATH_ATTR		27288
+#define GIDMAPPATH_ATTR		27289
 
 /*
  * Use the raw syscall for versions of glibc which don't include a function for
