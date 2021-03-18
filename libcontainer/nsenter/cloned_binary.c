@@ -65,19 +65,19 @@
 #  else
 /* These values come from <https://fedora.juszkiewicz.com.pl/syscalls.html>. */
 #    warning "libc is outdated -- using hard-coded SYS_memfd_create"
-#    if defined(__x86_64__) // x86_64
+#    if defined(__x86_64__)
 #      define SYS_memfd_create 319
-#    elif defined(__i386__) // i386
+#    elif defined(__i386__)
 #      define SYS_memfd_create 356
-#    elif defined(__ia64__) // ia64
+#    elif defined(__ia64__)
 #      define SYS_memfd_create 1340
-#    elif defined(__arm__) // arm
+#    elif defined(__arm__)
 #      define SYS_memfd_create 385
-#    elif defined(__aarch64__) // arm64
+#    elif defined(__aarch64__)
 #      define SYS_memfd_create 279
-#    elif defined(__ppc__) || defined(__ppc64__) // ppc + ppc64
+#    elif defined(__ppc__) || defined(__ppc64__)
 #      define SYS_memfd_create 360
-#    elif defined(__s390__) || defined(__s390x__) // s390(x)
+#    elif defined(__s390__) || defined(__s390x__)
 #      define SYS_memfd_create 350
 #    else
 #      error "unknown architecture -- cannot hard-code SYS_memfd_create"
