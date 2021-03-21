@@ -1,22 +1,29 @@
 package apparmor
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"sync"
 
 	"github.com/opencontainers/runc/libcontainer/utils"
 )
 
+var (
+	appArmorEnabled bool
+	checkAppArmor   sync.Once
+)
+
 // IsEnabled returns true if apparmor is enabled for the host.
 func IsEnabled() bool {
-	if _, err := os.Stat("/sys/kernel/security/apparmor"); err == nil {
-		buf, err := ioutil.ReadFile("/sys/module/apparmor/parameters/enabled")
-		return err == nil && bytes.HasPrefix(buf, []byte("Y"))
-	}
-	return false
+	checkAppArmor.Do(func() {
+		if _, err := os.Stat("/sys/kernel/security/apparmor"); err == nil {
+			buf, err := ioutil.ReadFile("/sys/module/apparmor/parameters/enabled")
+			appArmorEnabled = err == nil && len(buf) > 1 && buf[0] == 'Y'
+		}
+	})
+	return appArmorEnabled
 }
 
 func setProcAttr(attr, value string) error {
