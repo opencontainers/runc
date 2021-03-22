@@ -10,6 +10,6 @@ import (
 
 func FuzzUIDMap(data []byte) int {
 	uidmap, _ := user.ParseIDMap(strings.NewReader(string(data)))
-	_ = UIDMapInUserNS(uidmap)
+	_ = uidMapInUserNS(uidmap)
 	return 1
 }

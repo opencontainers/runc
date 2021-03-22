@@ -12,8 +12,8 @@ func RunningInUserNS() bool {
 	return false
 }
 
-// UIDMapInUserNS is a stub for non-Linux systems
+// uidMapInUserNS is a stub for non-Linux systems
 // Always returns false
-func UIDMapInUserNS(uidmap []user.IDMap) bool {
+func uidMapInUserNS(uidmap []user.IDMap) bool {
 	return false
 }

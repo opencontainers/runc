@@ -100,12 +100,12 @@ func RunningInUserNS() bool {
 			// This kernel-provided file only exists if user namespaces are supported
 			return
 		}
-		inUserNS = UIDMapInUserNS(uidmap)
+		inUserNS = uidMapInUserNS(uidmap)
 	})
 	return inUserNS
 }
 
-func UIDMapInUserNS(uidmap []user.IDMap) bool {
+func uidMapInUserNS(uidmap []user.IDMap) bool {
 	/*
 	 * We assume we are in the initial user namespace if we have a full
 	 * range - 4294967295 uids starting at uid 0.

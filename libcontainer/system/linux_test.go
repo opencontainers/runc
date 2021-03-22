@@ -37,7 +37,7 @@ func TestUIDMapInUserNS(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		actual := UIDMapInUserNS(uidmap)
+		actual := uidMapInUserNS(uidmap)
 		if c.expected != actual {
 			t.Fatalf("expected %v, got %v for %q", c.expected, actual, c.s)
 		}
