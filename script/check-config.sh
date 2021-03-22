@@ -228,6 +228,7 @@ echo 'Optional Features:'
 	check_distro_userns
 
 	check_flags SECCOMP
+	check_flags SECCOMP_FILTER
 	check_flags CGROUP_PIDS
 
 	check_flags MEMCG_SWAP
