@@ -173,6 +173,7 @@ func (m *legacyManager) Apply(pid int) error {
 	properties = append(properties, c.SystemdProps...)
 
 	if err := startUnit(dbusConnection, unitName, properties); err != nil {
+		m.dbus.checkAndReconnect(dbusConnection, err)
 		return err
 	}
 
@@ -376,6 +377,7 @@ func (m *legacyManager) Set(container *configs.Config) error {
 	}
 
 	if err := dbusConnection.SetUnitProperties(getUnitName(container.Cgroups), true, properties...); err != nil {
+		m.dbus.checkAndReconnect(dbusConnection, err)
 		_ = m.Freeze(targetFreezerState)
 		return err
 	}

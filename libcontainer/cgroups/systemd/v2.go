@@ -288,6 +288,7 @@ func (m *unifiedManager) Apply(pid int) error {
 	properties = append(properties, c.SystemdProps...)
 
 	if err := startUnit(dbusConnection, unitName, properties); err != nil {
+		m.dbus.checkAndReconnect(dbusConnection, err)
 		return errors.Wrapf(err, "error while starting unit %q with properties %+v", unitName, properties)
 	}
 
@@ -462,6 +463,7 @@ func (m *unifiedManager) Set(container *configs.Config) error {
 	}
 
 	if err := dbusConnection.SetUnitProperties(getUnitName(m.cgroups), true, properties...); err != nil {
+		m.dbus.checkAndReconnect(dbusConnection, err)
 		_ = m.Freeze(targetFreezerState)
 		return errors.Wrap(err, "error while setting unit properties")
 	}

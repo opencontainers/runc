@@ -312,6 +312,16 @@ func isUnitExists(err error) bool {
 	return false
 }
 
+// isDbusClosed returns true if the error is that connection closed.
+func isDbusClosed(err error) bool {
+	if err != nil {
+		if dbusError, ok := err.(dbus.Error); ok {
+			return strings.Contains(dbusError.Name, "connection closed by user")
+		}
+	}
+	return false
+}
+
 func startUnit(dbusConnection *systemdDbus.Conn, unitName string, properties []systemdDbus.Property) error {
 	statusChan := make(chan string, 1)
 	if _, err := dbusConnection.StartTransientUnit(unitName, "replace", properties, statusChan); err == nil {

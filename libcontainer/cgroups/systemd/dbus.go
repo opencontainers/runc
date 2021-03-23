@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
+	"github.com/sirupsen/logrus"
 )
 
 type dbusConnManager struct {
@@ -56,4 +57,28 @@ func (d *dbusConnManager) newConnection() (*systemdDbus.Conn, error) {
 		return NewUserSystemdDbus()
 	}
 	return systemdDbus.NewWithContext(context.TODO())
+}
+
+// resetConnection reset to initial state
+func (d *dbusConnManager) resetConnection(conn *systemdDbus.Conn) {
+	d.Lock()
+	defer d.Unlock()
+	if d.conn != nil && d.conn == conn {
+		d.conn.Close()
+		d.conn = nil
+	}
+}
+
+// checkAndReconnect check if the connection is disconnected and reconnect
+func (d *dbusConnManager) checkAndReconnect(conn *systemdDbus.Conn, err error) {
+	if !isDbusClosed(err) {
+		return
+	}
+	d.resetConnection(conn)
+
+	// Try to reconnect
+	_, err = d.getConnection()
+	if err != nil {
+		logrus.Warnf("Dbus disconnected and failed to reconnect: %s", err)
+	}
 }
