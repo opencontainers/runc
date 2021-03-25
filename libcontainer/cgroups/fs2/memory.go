@@ -4,6 +4,7 @@ package fs2
 
 import (
 	"bufio"
+	"math"
 	"os"
 	"strconv"
 
@@ -89,6 +90,9 @@ func statMemory(dirPath string, stats *cgroups.Stats) error {
 		stats.MemoryStats.Stats[t] = v
 	}
 	stats.MemoryStats.Cache = stats.MemoryStats.Stats["file"]
+	// Unlike cgroup v1 which has memory.use_hierarchy binary knob,
+	// cgroup v2 is always hierarchical.
+	stats.MemoryStats.UseHierarchy = true
 
 	memoryUsage, err := getMemoryDataV2(dirPath, "")
 	if err != nil {
@@ -99,9 +103,15 @@ func statMemory(dirPath string, stats *cgroups.Stats) error {
 	if err != nil {
 		return err
 	}
+	// As cgroup v1 reports SwapUsage values as mem+swap combined,
+	// while in cgroup v2 swap values do not include memory,
+	// report combined mem+swap for v1 compatibility.
+	swapUsage.Usage += memoryUsage.Usage
+	if swapUsage.Limit != math.MaxUint64 {
+		swapUsage.Limit += memoryUsage.Limit
+	}
 	stats.MemoryStats.SwapUsage = swapUsage
 
-	stats.MemoryStats.UseHierarchy = true
 	return nil
 }
 
