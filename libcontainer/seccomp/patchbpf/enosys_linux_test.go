@@ -282,7 +282,7 @@ func TestEnosysStub_MultiArch(t *testing.T) {
 	}
 }
 
-func TestPatchHugeSeccompFilterDoesNotBlock(t *testing.T) {
+func TestDisassembleHugeFilterDoesNotHang(t *testing.T) {
 	hugeFilter, err := libseccomp.NewFilter(libseccomp.ActAllow)
 	if err != nil {
 		t.Fatalf("failed to create seccomp filter: %v", err)
@@ -294,8 +294,10 @@ func TestPatchHugeSeccompFilterDoesNotBlock(t *testing.T) {
 		}
 	}
 
-	config := fakeConfig(configs.Kill, []string{}, []string{"amd64"})
-	PatchAndLoad(config, hugeFilter)
+	_, err = disassembleFilter(hugeFilter)
+	if err != nil {
+		t.Fatalf("failed to disassembleFilter: %v", err)
+	}
 
-	// if we exit, we did not block
+	// if we exit, we did not hang
 }
