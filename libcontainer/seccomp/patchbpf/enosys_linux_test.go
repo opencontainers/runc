@@ -281,3 +281,21 @@ func TestEnosysStub_MultiArch(t *testing.T) {
 		}
 	}
 }
+
+func TestPatchHugeSeccompFilterDoesNotBlock(t *testing.T) {
+	hugeFilter, err := libseccomp.NewFilter(libseccomp.ActAllow)
+	if err != nil {
+		t.Fatalf("failed to create seccomp filter: %v", err)
+	}
+
+	for i := 1; i < 10000; i++ {
+		if err := hugeFilter.AddRule(libseccomp.ScmpSyscall(i), libseccomp.ActKill); err != nil {
+			t.Fatalf("failed to add rule to filter %d: %v", i, err)
+		}
+	}
+
+	config := fakeConfig(configs.Kill, []string{}, []string{"amd64"})
+	PatchAndLoad(config, hugeFilter)
+
+	// if we exit, we did not block
+}
