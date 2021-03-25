@@ -7,11 +7,13 @@ import (
 	"math"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/pkg/errors"
+	"golang.org/x/sys/unix"
 )
 
 // numToStr converts an int64 value to a string for writing to a
@@ -96,6 +98,11 @@ func statMemory(dirPath string, stats *cgroups.Stats) error {
 
 	memoryUsage, err := getMemoryDataV2(dirPath, "")
 	if err != nil {
+		if errors.Is(err, unix.ENOENT) && dirPath == UnifiedMountpoint {
+			// The root cgroup does not have memory.{current,max}
+			// so emulate those using data from /proc/meminfo.
+			return statsFromMeminfo(stats)
+		}
 		return err
 	}
 	stats.MemoryStats.Usage = memoryUsage
@@ -144,4 +151,64 @@ func getMemoryDataV2(path, name string) (cgroups.MemoryData, error) {
 	memoryData.Limit = value
 
 	return memoryData, nil
+}
+
+func statsFromMeminfo(stats *cgroups.Stats) error {
+	f, err := os.Open("/proc/meminfo")
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	// Fields we are interested in.
+	var (
+		swap_free  uint64
+		swap_total uint64
+		main_total uint64
+		main_free  uint64
+	)
+	mem := map[string]*uint64{
+		"SwapFree":  &swap_free,
+		"SwapTotal": &swap_total,
+		"MemTotal":  &main_total,
+		"MemFree":   &main_free,
+	}
+
+	found := 0
+	sc := bufio.NewScanner(f)
+	for sc.Scan() {
+		parts := strings.SplitN(sc.Text(), ":", 3)
+		if len(parts) != 2 {
+			// Should not happen.
+			continue
+		}
+		k := parts[0]
+		p, ok := mem[k]
+		if !ok {
+			// Unknown field -- not interested.
+			continue
+		}
+		vStr := strings.TrimSpace(strings.TrimSuffix(parts[1], " kB"))
+		*p, err = strconv.ParseUint(vStr, 10, 64)
+		if err != nil {
+			return errors.Wrap(err, "parsing /proc/meminfo "+k)
+		}
+
+		found++
+		if found == len(mem) {
+			// Got everything we need -- skip the rest.
+			break
+		}
+	}
+	if sc.Err() != nil {
+		return sc.Err()
+	}
+
+	stats.MemoryStats.SwapUsage.Usage = (swap_total - swap_free) * 1024
+	stats.MemoryStats.SwapUsage.Limit = math.MaxUint64
+
+	stats.MemoryStats.Usage.Usage = (main_total - main_free) * 1024
+	stats.MemoryStats.Usage.Limit = math.MaxUint64
+
+	return nil
 }
