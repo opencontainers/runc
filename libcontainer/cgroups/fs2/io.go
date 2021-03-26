@@ -30,7 +30,15 @@ func setIo(dirPath string, cgroup *configs.Cgroup) error {
 		filename := "io.bfq.weight"
 		if err := fscommon.WriteFile(dirPath, filename,
 			strconv.FormatUint(uint64(cgroup.Resources.BlkioWeight), 10)); err != nil {
-			return err
+			// if io.bfq.weight does not exist, then bfq module is not loaded.
+			// Fallback to use io.weight with a conversion scheme
+			if !os.IsNotExist(err) {
+				return err
+			}
+			v := cgroups.ConvertBlkIOToIOWeightValue(cgroup.Resources.BlkioWeight)
+			if err := fscommon.WriteFile(dirPath, "io.weight", strconv.FormatUint(v, 10)); err != nil {
+				return err
+			}
 		}
 	}
 	for _, td := range cgroup.Resources.BlkioThrottleReadBpsDevice {

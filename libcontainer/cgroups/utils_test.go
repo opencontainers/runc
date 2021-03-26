@@ -642,3 +642,17 @@ func TestConvertMemorySwapToCgroupV2Value(t *testing.T) {
 		}
 	}
 }
+
+func TestConvertBlkIOToIOWeightValue(t *testing.T) {
+	cases := map[uint16]uint64{
+		0:    0,
+		10:   1,
+		1000: 10000,
+	}
+	for i, expected := range cases {
+		got := ConvertBlkIOToIOWeightValue(i)
+		if got != expected {
+			t.Errorf("expected ConvertBlkIOToIOWeightValue(%d) to be %d, got %d", i, expected, got)
+		}
+	}
+}

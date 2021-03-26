@@ -196,8 +196,12 @@ function setup() {
 	[ "$status" -eq 0 ]
 
 	runc exec test_cgroups_unified sh -c 'cat /sys/fs/cgroup/io.bfq.weight'
-	[ "$status" -eq 0 ]
-	[ "$output" = 'default 750' ]
+	if [[ "$status" -eq 0 ]]; then
+		[ "$output" = 'default 750' ]
+	else
+		runc exec test_cgroups_unified sh -c 'cat /sys/fs/cgroup/io.weight'
+		[ "$output" = 'default 7475' ]
+	fi
 }
 
 @test "runc run (cgroup v2 resources.unified only)" {
