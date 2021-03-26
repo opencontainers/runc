@@ -64,8 +64,9 @@ func main() {
 	}
 	v = append(v, "spec: "+specs.Version)
 	v = append(v, "go: "+runtime.Version())
-	if seccomp.IsEnabled() {
-		major, minor, micro := seccomp.Version()
+
+	major, minor, micro := seccomp.Version()
+	if major+minor+micro > 0 {
 		v = append(v, fmt.Sprintf("libseccomp: %d.%d.%d", major, minor, micro))
 	}
 	app.Version = strings.Join(v, "\n")
