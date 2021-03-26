@@ -357,12 +357,24 @@ type openResult struct {
 	err  error
 }
 
-func (c *linuxContainer) start(process *Process) error {
+func (c *linuxContainer) start(process *Process) (retErr error) {
 	parent, err := c.newParentProcess(process)
 	if err != nil {
 		return newSystemErrorWithCause(err, "creating new parent process")
 	}
-	parent.forwardChildLogs()
+
+	logsDone := parent.forwardChildLogs()
+	if logsDone != nil {
+		defer func() {
+			// Wait for log forwarder to finish. This depends on
+			// runc init closing the _LIBCONTAINER_LOGPIPE log fd.
+			err := <-logsDone
+			if err != nil && retErr == nil {
+				retErr = newSystemErrorWithCause(err, "forwarding init logs")
+			}
+		}()
+	}
+
 	if err := parent.start(); err != nil {
 		return newSystemErrorWithCause(err, "starting container process")
 	}

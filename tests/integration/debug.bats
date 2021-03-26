@@ -10,16 +10,20 @@ function teardown() {
 	teardown_bundle
 }
 
+function check_debug() {
+	[[ "$*" == *"nsexec started"* ]]
+	[[ "$*" == *"child process in init()"* ]]
+	[[ "$*" == *"init: closing the pipe to signal completion"* ]]
+}
+
 @test "global --debug" {
 	# run hello-world
 	runc --debug run test_hello
-	echo "${output}"
 	[ "$status" -eq 0 ]
 
 	# check expected debug output was sent to stderr
 	[[ "${output}" == *"level=debug"* ]]
-	[[ "${output}" == *"nsexec started"* ]]
-	[[ "${output}" == *"child process in init()"* ]]
+	check_debug "$output"
 }
 
 @test "global --debug to --log" {
@@ -30,14 +34,11 @@ function teardown() {
 	# check output does not include debug info
 	[[ "${output}" != *"level=debug"* ]]
 
-	# check log.out was generated
-	[ -e log.out ]
-
+	cat log.out >&2
 	# check expected debug output was sent to log.out
 	output=$(cat log.out)
 	[[ "${output}" == *"level=debug"* ]]
-	[[ "${output}" == *"nsexec started"* ]]
-	[[ "${output}" == *"child process in init()"* ]]
+	check_debug "$output"
 }
 
 @test "global --debug to --log --log-format 'text'" {
@@ -48,14 +49,11 @@ function teardown() {
 	# check output does not include debug info
 	[[ "${output}" != *"level=debug"* ]]
 
-	# check log.out was generated
-	[ -e log.out ]
-
+	cat log.out >&2
 	# check expected debug output was sent to log.out
 	output=$(cat log.out)
 	[[ "${output}" == *"level=debug"* ]]
-	[[ "${output}" == *"nsexec started"* ]]
-	[[ "${output}" == *"child process in init()"* ]]
+	check_debug "$output"
 }
 
 @test "global --debug to --log --log-format 'json'" {
@@ -66,12 +64,9 @@ function teardown() {
 	# check output does not include debug info
 	[[ "${output}" != *"level=debug"* ]]
 
-	# check log.out was generated
-	[ -e log.out ]
-
+	cat log.out >&2
 	# check expected debug output was sent to log.out
 	output=$(cat log.out)
 	[[ "${output}" == *'"level":"debug"'* ]]
-	[[ "${output}" == *"nsexec started"* ]]
-	[[ "${output}" == *"child process in init()"* ]]
+	check_debug "$output"
 }
