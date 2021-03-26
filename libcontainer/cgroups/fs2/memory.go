@@ -127,7 +127,10 @@ func getMemoryDataV2(path, name string) (cgroups.MemoryData, error) {
 
 	value, err := fscommon.GetCgroupParamUint(path, usage)
 	if err != nil {
-		if moduleName != "memory" && os.IsNotExist(err) {
+		if name != "" && os.IsNotExist(err) {
+			// Ignore EEXIST as there's no swap accounting
+			// if kernel CONFIG_MEMCG_SWAP is not set or
+			// swapaccount=0 kernel boot parameter is given.
 			return cgroups.MemoryData{}, nil
 		}
 		return cgroups.MemoryData{}, errors.Wrapf(err, "failed to parse %s", usage)
@@ -136,9 +139,6 @@ func getMemoryDataV2(path, name string) (cgroups.MemoryData, error) {
 
 	value, err = fscommon.GetCgroupParamUint(path, limit)
 	if err != nil {
-		if moduleName != "memory" && os.IsNotExist(err) {
-			return cgroups.MemoryData{}, nil
-		}
 		return cgroups.MemoryData{}, errors.Wrapf(err, "failed to parse %s", limit)
 	}
 	memoryData.Limit = value
