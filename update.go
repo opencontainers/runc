@@ -327,6 +327,9 @@ other options are ignored.
 			config.IntelRdt.MemBwSchema = memBwSchema
 		}
 
+		// Do not set devices cgroup when updating containers to avoid eBPF programs leak
+		config.Cgroups.SkipDevices = true
+
 		return container.Set(config)
 	},
 }
