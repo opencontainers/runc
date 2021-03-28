@@ -126,7 +126,7 @@ jobs:
       run: make cross
 
 
-  misc:
+  cfmt:
     runs-on: ubuntu-20.04
     steps:
     - name: checkout
@@ -136,8 +136,23 @@ jobs:
     - name: install deps
       run: |
         sudo apt -qq update
-        sudo apt -qq install libseccomp-dev indent
-    - name: make validate
-      run: make validate
+        sudo apt -qq install indent
+    - name: cfmt
+      run: |
+        make cfmt
+        git diff --exit-code
+
+
+  release:
+    runs-on: ubuntu-20.04
+    steps:
+    - name: checkout
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: install deps
+      run: |
+        sudo apt -qq update
+        sudo apt -qq install libseccomp-dev
     - name: make release
       run: make release

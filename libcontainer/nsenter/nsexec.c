@@ -56,7 +56,7 @@ struct clone_t {
 	 * Reserve some space for clone() to locate arguments
 	 * and retcode in this place
 	 */
-	char stack[4096] __attribute__ ((aligned(16)));
+	char stack[4096] __attribute__((aligned(16)));
 	char stack_ptr[0];
 
 	/* There's two children. This is used to execute the different code. */
@@ -102,31 +102,31 @@ static int logfd = -1;
  * List of netlink message types sent to us as part of bootstrapping the init.
  * These constants are defined in libcontainer/message_linux.go.
  */
-#define INIT_MSG			62000
+#define INIT_MSG		62000
 #define CLONE_FLAGS_ATTR	27281
 #define NS_PATHS_ATTR		27282
-#define UIDMAP_ATTR			27283
-#define GIDMAP_ATTR			27284
+#define UIDMAP_ATTR		27283
+#define GIDMAP_ATTR		27284
 #define SETGROUP_ATTR		27285
 #define OOM_SCORE_ADJ_ATTR	27286
 #define ROOTLESS_EUID_ATTR	27287
-#define UIDMAPPATH_ATTR	    27288
-#define GIDMAPPATH_ATTR	    27289
+#define UIDMAPPATH_ATTR		27288
+#define GIDMAPPATH_ATTR		27289
 
 /*
  * Use the raw syscall for versions of glibc which don't include a function for
  * it, namely (glibc 2.12).
  */
 #if __GLIBC__ == 2 && __GLIBC_MINOR__ < 14
-#	define _GNU_SOURCE
-#	include "syscall.h"
-#	if !defined(SYS_setns) && defined(__NR_setns)
-#		define SYS_setns __NR_setns
-#	endif
+#  define _GNU_SOURCE
+#  include "syscall.h"
+#  if !defined(SYS_setns) && defined(__NR_setns)
+#    define SYS_setns __NR_setns
+#  endif
 
-#ifndef SYS_setns
-#	error "setns(2) syscall not supported by glibc version"
-#endif
+#  ifndef SYS_setns
+#    error "setns(2) syscall not supported by glibc version"
+#  endif
 
 int setns(int fd, int nstype)
 {
@@ -136,7 +136,7 @@ int setns(int fd, int nstype)
 
 static void write_log_with_info(const char *level, const char *function, int line, const char *format, ...)
 {
-	char message[1024] = {};
+	char message[1024] = { };
 
 	va_list args;
 
@@ -187,7 +187,7 @@ static int write_file(char *data, size_t data_len, char *pathfmt, ...)
 		goto out;
 	}
 
- out:
+out:
 	close(fd);
 	return ret;
 }
@@ -328,14 +328,14 @@ static void update_oom_score_adj(char *data, size_t len)
 }
 
 /* A dummy function that just jumps to the given jumpval. */
-static int child_func(void *arg) __attribute__ ((noinline));
+static int child_func(void *arg) __attribute__((noinline));
 static int child_func(void *arg)
 {
 	struct clone_t *ca = (struct clone_t *)arg;
 	longjmp(*ca->env, ca->jmpval);
 }
 
-static int clone_parent(jmp_buf *env, int jmpval) __attribute__ ((noinline));
+static int clone_parent(jmp_buf *env, int jmpval) __attribute__((noinline));
 static int clone_parent(jmp_buf *env, int jmpval)
 {
 	struct clone_t ca = {
@@ -749,34 +749,34 @@ void nsexec(void)
 						bail("failed to sync with child: write(SYNC_USERMAP_ACK)");
 					}
 					break;
-				case SYNC_RECVPID_PLS:{
-						first_child = child;
+				case SYNC_RECVPID_PLS:
+					first_child = child;
 
-						/* Get the init_func pid. */
-						if (read(syncfd, &child, sizeof(child)) != sizeof(child)) {
-							kill(first_child, SIGKILL);
-							bail("failed to sync with child: read(childpid)");
-						}
+					/* Get the init_func pid. */
+					if (read(syncfd, &child, sizeof(child)) != sizeof(child)) {
+						kill(first_child, SIGKILL);
+						bail("failed to sync with child: read(childpid)");
+					}
 
-						/* Send ACK. */
-						s = SYNC_RECVPID_ACK;
-						if (write(syncfd, &s, sizeof(s)) != sizeof(s)) {
-							kill(first_child, SIGKILL);
-							kill(child, SIGKILL);
-							bail("failed to sync with child: write(SYNC_RECVPID_ACK)");
-						}
+					/* Send ACK. */
+					s = SYNC_RECVPID_ACK;
+					if (write(syncfd, &s, sizeof(s)) != sizeof(s)) {
+						kill(first_child, SIGKILL);
+						kill(child, SIGKILL);
+						bail("failed to sync with child: write(SYNC_RECVPID_ACK)");
+					}
 
-						/* Send the init_func pid back to our parent.
-						 *
-						 * Send the init_func pid and the pid of the first child back to our parent.
-						 * We need to send both back because we can't reap the first child we created (CLONE_PARENT).
-						 * It becomes the responsibility of our parent to reap the first child.
-						 */
-						len = dprintf(pipenum, "{\"pid\": %d, \"pid_first\": %d}\n", child, first_child);
-						if (len < 0) {
-							kill(child, SIGKILL);
-							bail("unable to generate JSON for child pid");
-						}
+					/* Send the init_func pid back to our parent.
+					 *
+					 * Send the init_func pid and the pid of the first child back to our parent.
+					 * We need to send both back because we can't reap the first child we created (CLONE_PARENT).
+					 * It becomes the responsibility of our parent to reap the first child.
+					 */
+					len = dprintf(pipenum, "{\"pid\": %d, \"pid_first\": %d}\n",
+						      child, first_child);
+					if (len < 0) {
+						kill(child, SIGKILL);
+						bail("unable to generate JSON for child pid");
 					}
 					break;
 				case SYNC_CHILD_READY:
