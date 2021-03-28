@@ -77,8 +77,8 @@ function runc_restore_with_pipes() {
 		echo "__runc restore $name failed (status: $ret)"
 		exec {err_w}>&-
 		cat <&${err_r}
-		echo "CRIU restore log errors (if any):"
-		grep -B 5 Error "$workdir"/restore.log || true
+		echo "CRIU log errors (if any):"
+		grep -B 5 Error "$workdir"/*.log ./image-dir/*.log || true
 		fail "runc restore failed"
 	fi
 
