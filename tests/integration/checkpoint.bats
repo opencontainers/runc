@@ -77,8 +77,8 @@ function runc_restore_with_pipes() {
 		echo "__runc restore $name failed (status: $ret)"
 		exec {err_w}>&-
 		cat <&${err_r}
-		echo "CRIU restore log errors (if any):"
-		grep -B 5 Error "$workdir"/restore.log || true
+		echo "CRIU log errors (if any):"
+		grep -B 5 Error "$workdir"/*.log ./image-dir/*.log || true
 		fail "runc restore failed"
 	fi
 
@@ -185,8 +185,8 @@ function simple_cr() {
 	exec {lazy_w}>&-
 	# shellcheck disable=SC2116,SC2086
 	out=$(echo $out) # rm newlines
-	# show log in case something is wrong before we fail
-	cat ./work-dir/dump.log
+	# show errors if there are any before we fail
+	grep -B5 Error ./work-dir/dump.log || true
 	# expecting \0 which od prints as
 	[ "$out" = "0000000 000000 0000001" ]
 
