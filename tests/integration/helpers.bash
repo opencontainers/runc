@@ -112,22 +112,6 @@ function init_cgroup_paths() {
 	# init once
 	test -n "$CGROUP_UNIFIED" && return
 
-	local rnd="$RANDOM"
-	if [ -n "${RUNC_USE_SYSTEMD}" ]; then
-		SD_UNIT_NAME="runc-cgroups-integration-test-${rnd}.scope"
-		if [ $(id -u) = "0" ]; then
-			REL_CGROUPS_PATH="/machine.slice/$SD_UNIT_NAME"
-			OCI_CGROUPS_PATH="machine.slice:runc-cgroups:integration-test-${rnd}"
-		else
-			REL_CGROUPS_PATH="/user.slice/user-$(id -u).slice/user@$(id -u).service/machine.slice/$SD_UNIT_NAME"
-			# OCI path doesn't contain "/user.slice/user-$(id -u).slice/user@$(id -u).service/" prefix
-			OCI_CGROUPS_PATH="machine.slice:runc-cgroups:integration-test-${rnd}"
-		fi
-	else
-		REL_CGROUPS_PATH="/runc-cgroups-integration-test/test-cgroup-${rnd}"
-		OCI_CGROUPS_PATH=$REL_CGROUPS_PATH
-	fi
-
 	if stat -f -c %t /sys/fs/cgroup | grep -qFw 63677270; then
 		CGROUP_UNIFIED=yes
 		# "pseudo" controllers do not appear in /sys/fs/cgroup/cgroup.controllers.
@@ -140,7 +124,6 @@ function init_cgroup_paths() {
 			echo devices
 		)
 		CGROUP_BASE_PATH=/sys/fs/cgroup
-		CGROUP_PATH=${CGROUP_BASE_PATH}${REL_CGROUPS_PATH}
 
 		# Find any cgroup.freeze files...
 		if [ -n "$(find "$CGROUP_BASE_PATH" -type f -name "cgroup.freeze" -print -quit)" ]; then
@@ -158,11 +141,34 @@ function init_cgroup_paths() {
 	fi
 }
 
-# Helper function to set cgroupsPath to the value of $OCI_CGROUPS_PATH
+# Randomize cgroup path(s), and update cgroupsPath in config.json.
+# This function sets a few cgroup-related variables.
 function set_cgroups_path() {
 	bundle="${1:-.}"
 	init_cgroup_paths
-	update_config '.linux.cgroupsPath |= "'"${OCI_CGROUPS_PATH}"'"' $bundle
+
+	local rnd="$RANDOM"
+	if [ -n "${RUNC_USE_SYSTEMD}" ]; then
+		SD_UNIT_NAME="runc-cgroups-integration-test-${rnd}.scope"
+		if [ "$(id -u)" = "0" ]; then
+			REL_CGROUPS_PATH="/machine.slice/$SD_UNIT_NAME"
+			OCI_CGROUPS_PATH="machine.slice:runc-cgroups:integration-test-${rnd}"
+		else
+			REL_CGROUPS_PATH="/user.slice/user-$(id -u).slice/user@$(id -u).service/machine.slice/$SD_UNIT_NAME"
+			# OCI path doesn't contain "/user.slice/user-$(id -u).slice/user@$(id -u).service/" prefix
+			OCI_CGROUPS_PATH="machine.slice:runc-cgroups:integration-test-${rnd}"
+		fi
+	else
+		REL_CGROUPS_PATH="/runc-cgroups-integration-test/test-cgroup-${rnd}"
+		OCI_CGROUPS_PATH=$REL_CGROUPS_PATH
+	fi
+
+	# Absolute path to container's cgroup v2.
+	if [ "$CGROUP_UNIFIED" == "yes" ]; then
+		CGROUP_PATH=${CGROUP_BASE_PATH}${REL_CGROUPS_PATH}
+	fi
+
+	update_config '.linux.cgroupsPath |= "'"${OCI_CGROUPS_PATH}"'"' "$bundle"
 }
 
 # Helper to check a value in cgroups.
