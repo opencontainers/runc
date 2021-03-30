@@ -3,7 +3,6 @@ package libcontainer
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"os"
 
 	gofuzzheaders "github.com/AdaLogics/go-fuzz-headers"
@@ -91,7 +90,6 @@ func FuzzFactory(data []byte) int {
 	fs.Pid = pid
 	fs.Bundle = bundle
 	fs.Annotations = []string{"fuzz"}
-	fmt.Printf("%+v\n", fs)
 	b, err := json.Marshal(&fs)
 	if err != nil {
 		return 0
