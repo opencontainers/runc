@@ -3,11 +3,9 @@
 package libcontainer
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
 	"os"
 
+	gofuzzheaders "github.com/AdaLogics/go-fuzz-headers"
 	"golang.org/x/sys/unix"
 )
 
@@ -23,26 +21,25 @@ func FuzzInit(data []byte) int {
 	defer pipe.Close()
 	defer os.RemoveAll("pipe.txt")
 
-	consoleSocket, err = os.OpenFile("consoleSocket.txt", os.O_RDWR|os.O_CREATE, 0755)
+	consoleSocket, err := os.OpenFile("consoleSocket.txt", os.O_RDWR|os.O_CREATE, 0755)
 	if err != nil {
 		return -1
 	}
 	defer consoleSocket.Close()
 	defer os.RemoveAll("consoleSocket.txt")
 
-	var config *initConfig
-	reader := bytes.NewReader(data)
-	if err := json.NewDecoder(reader).Decode(&config); err != nil {
-		return 0
-	}
+	config := new(initConfig)
+	c := gofuzzheaders.NewConsumer(data)
+	c.GenerateStruct(config)
 
 	fifoFd := int(data[0])
-	_ = &linuxStandardInit{
+	l := &linuxStandardInit{
 		pipe:          pipe,
 		consoleSocket: consoleSocket,
 		parentPid:     unix.Getppid(),
 		config:        config,
 		fifoFd:        fifoFd,
 	}
+	_ = l.Init()
 	return 1
 }
