@@ -194,6 +194,7 @@ function simple_cr() {
 
 	# wait for lazy page server to be ready
 	out=$(timeout 2 dd if=/proc/self/fd/${lazy_r} bs=1 count=1 2>/dev/null | od)
+	exec {lazy_r}>&-
 	exec {lazy_w}>&-
 	# shellcheck disable=SC2116,SC2086
 	out=$(echo $out) # rm newlines
