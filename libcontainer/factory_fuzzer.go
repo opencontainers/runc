@@ -47,11 +47,7 @@ func FuzzFactory(data []byte) int {
 	if err != nil {
 		return -1
 	}
-	factory, err := New(root)
-	if err != nil {
-		return -1
-	}
-	factory = &LinuxFactory{
+	factory := &LinuxFactory{
 		Root:      root,
 		InitPath:  "/proc/self/exe",
 		InitArgs:  []string{os.Args[0], "init"},
@@ -115,7 +111,6 @@ func FuzzFactory(data []byte) int {
 		}
 	}
 	defer f.Close()
-	return 1
 
 	_, _ = factory.Load("fuzz")
 	return 1
