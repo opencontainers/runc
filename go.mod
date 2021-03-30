@@ -3,6 +3,7 @@ module github.com/opencontainers/runc
 go 1.14
 
 require (
+	github.com/AdaLogics/go-fuzz-headers v0.0.0-20210323220609-b81652571c3f
 	github.com/checkpoint-restore/go-criu/v4 v4.1.0
 	github.com/cilium/ebpf v0.2.0
 	github.com/containerd/console v1.0.1

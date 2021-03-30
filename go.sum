@@ -1,3 +1,5 @@
+github.com/AdaLogics/go-fuzz-headers v0.0.0-20210323220609-b81652571c3f h1:YKjQXdVQnwNh4+yusAyy20TF6HsxG3VBT0Ulx/wsHng=
+github.com/AdaLogics/go-fuzz-headers v0.0.0-20210323220609-b81652571c3f/go.mod h1:CzsSbkDixRphAF5hS6wbMKq0eI6ccJRb7/A0M6JBnwg=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/checkpoint-restore/go-criu/v4 v4.1.0 h1:WW2B2uxx9KWF6bGlHqhm8Okiafwwx7Y2kcpn8lCpjgo=
 github.com/checkpoint-restore/go-criu/v4 v4.1.0/go.mod h1:xUQBLp4RLc5zJtWY++yjOoMoB5lihDt7fai+75m+rGw=
