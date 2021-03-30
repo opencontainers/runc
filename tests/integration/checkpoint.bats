@@ -38,11 +38,23 @@ function setup_pipes() {
 }
 
 function check_pipes() {
+	local output stderr
+
 	echo Ping >&${in_w}
 	exec {in_w}>&-
 	exec {out_w}>&-
+	exec {err_w}>&-
+
+	exec {in_r}>&-
 	output=$(cat <&${out_r})
+	exec {out_r}>&-
+	stderr=$(cat <&${err_r})
+	exec {err_r}>&-
+
 	[[ "${output}" == *"ponG Ping"* ]]
+	if [ -n "$stderr" ]; then
+		fail "runc stderr: $stderr"
+	fi
 }
 
 # Usage: runc_run_with_pipes container-name
