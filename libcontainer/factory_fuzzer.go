@@ -1,7 +1,9 @@
 package libcontainer
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 
 	gofuzzheaders "github.com/AdaLogics/go-fuzz-headers"
@@ -9,17 +11,13 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs/validate"
 )
 
-func createFiles(files []string, cf *gofuzzheaders.ConsumeFuzzer) error {
+func createFiles(files []string, b []byte) error {
 	for i := 0; i < len(files); i++ {
 		f, err := os.OpenFile(files[i], os.O_RDWR|os.O_CREATE, 0755)
 		if err != nil {
 			return errors.New("Could not create file")
 		}
 		defer f.Close()
-		b, err := cf.GetBytes()
-		if err != nil {
-			return errors.New("Could not get bytes")
-		}
 		_, err = f.Write(b)
 		if err != nil {
 			return errors.New("Could not write to file")
@@ -28,8 +26,21 @@ func createFiles(files []string, cf *gofuzzheaders.ConsumeFuzzer) error {
 	return nil
 }
 
+type FuzzState struct {
+	OciVersion  string   `json:"ociVersion"`
+	Id          string   `json:"id"`
+	Status      string   `json:"status"`
+	Pid         int      `json:"pid"`
+	Bundle      string   `json:"bundle"`
+	Annotations []string `json:"annotations"`
+}
+
 func FuzzFactory(data []byte) int {
-	err := os.MkdirAll("/tmp/fuzz-root", 0777)
+	if len(data) < 20 {
+		return -1
+	}
+	root := "/tmp/fuzz-root"
+	err := os.MkdirAll(root, 0777)
 	if err != nil {
 		return -1
 	}
@@ -37,11 +48,10 @@ func FuzzFactory(data []byte) int {
 	if err != nil {
 		return -1
 	}
-	factory, err := New("/tmp/fuzz-root")
+	factory, err := New(root)
 	if err != nil {
 		return -1
 	}
-	root := "/tmp/fuzz-root"
 	factory = &LinuxFactory{
 		Root:      root,
 		InitPath:  "/proc/self/exe",
@@ -50,13 +60,51 @@ func FuzzFactory(data []byte) int {
 		CriuPath:  "criu",
 	}
 	c := gofuzzheaders.NewConsumer(data)
-	stateFilename := "state.json"
-	state_json := []string{"/tmp/fuzz-root/fuzz/state.json"}
-	err = createFiles(state_json, c)
+	fs := FuzzState{}
+	ociVersion, err := c.GetString()
 	if err != nil {
-		return -1
+		return 0
 	}
-	defer os.RemoveAll("/tmp/fuzz-root/state.json")
+	id, err := c.GetString()
+	if err != nil {
+		return 0
+	}
+	status, err := c.GetString()
+	if err != nil {
+		return 0
+	}
+	pid, err := c.GetInt()
+	if err != nil {
+		return 0
+	}
+	bundle, err := c.GetString()
+	if err != nil {
+		return 0
+	}
+	if len(ociVersion) < 5 || len(id) < 5 || len(bundle) < 5 {
+		return 0
+	}
+
+	fs.OciVersion = ociVersion
+	fs.Id = id
+	fs.Status = status
+	fs.Pid = pid
+	fs.Bundle = bundle
+	fs.Annotations = []string{"fuzz"}
+	fmt.Printf("%+v\n", fs)
+	b, err := json.Marshal(&fs)
+	if err != nil {
+		return 0
+	}
+
+	stateFilename := "state.json"
+	state_json_path := "/tmp/fuzz-root/fuzz/state.json"
+	state_json := []string{state_json_path}
+	err = createFiles(state_json, b)
+	if err != nil {
+		return 0
+	}
+	defer os.RemoveAll(state_json_path)
 
 	stateFilePath, err := securejoin.SecureJoin("/tmp/fuzz-root/fuzz", stateFilename)
 	if err != nil {
@@ -69,6 +117,7 @@ func FuzzFactory(data []byte) int {
 		}
 	}
 	defer f.Close()
+	return 1
 
 	_, _ = factory.Load("fuzz")
 	return 1
