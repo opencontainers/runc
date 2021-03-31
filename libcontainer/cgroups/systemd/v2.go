@@ -303,14 +303,8 @@ func (m *unifiedManager) Destroy() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	dbusConnection, err := getDbusConnection(m.rootless)
-	if err != nil {
-		return err
-	}
-	unitName := getUnitName(m.cgroups)
-	if err := stopUnit(dbusConnection, unitName); err != nil {
-		return err
-	}
+	// NOTE systemd units are auto-removed as long as the processes are
+	// gone, so there is no need to stop the unit explicitly.
 
 	// XXX this is probably not needed, systemd should handle it.
 	return cgroups.RemovePath(m.path)

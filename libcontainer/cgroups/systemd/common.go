@@ -354,23 +354,6 @@ func startUnit(dbusConnection *systemdDbus.Conn, unitName string, properties []s
 	return nil
 }
 
-func stopUnit(dbusConnection *systemdDbus.Conn, unitName string) error {
-	statusChan := make(chan string, 1)
-	if _, err := dbusConnection.StopUnit(unitName, "replace", statusChan); err == nil {
-		select {
-		case s := <-statusChan:
-			close(statusChan)
-			// Please refer to https://godoc.org/github.com/coreos/go-systemd/dbus#Conn.StartUnit
-			if s != "done" {
-				logrus.Warnf("error removing unit `%s`: got `%s`. Continuing...", unitName, s)
-			}
-		case <-time.After(time.Second):
-			logrus.Warnf("Timed out while waiting for StopUnit(%s) completion signal from dbus. Continuing...", unitName)
-		}
-	}
-	return nil
-}
-
 func systemdVersion(conn *systemdDbus.Conn) int {
 	versionOnce.Do(func() {
 		version = -1

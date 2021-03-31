@@ -216,20 +216,11 @@ func (m *legacyManager) Destroy() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	dbusConnection, err := getDbusConnection(false)
-	if err != nil {
-		return err
-	}
-	unitName := getUnitName(m.cgroups)
-
-	stopErr := stopUnit(dbusConnection, unitName)
-	// Both on success and on error, cleanup all the cgroups we are aware of.
-	// Some of them were created directly by Apply() and are not managed by systemd.
-	if err := cgroups.RemovePaths(m.paths); err != nil {
-		return err
-	}
-
-	return stopErr
+	// NOTE systemd units are auto-removed as long as the processes are
+	// gone, so there is no need to stop the unit explicitly.
+	// Yet, some cgroup directories (created by joinCgroups) are
+	// not known to systemd so they need to be removed here.
+	return cgroups.RemovePaths(m.paths)
 }
 
 func (m *legacyManager) Path(subsys string) string {
