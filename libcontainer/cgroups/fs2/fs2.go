@@ -103,25 +103,18 @@ func (m *manager) GetStats() (*cgroups.Stats, error) {
 	)
 
 	st := cgroups.NewStats()
-	if err := m.getControllers(); err != nil {
-		return st, err
-	}
 
 	// pids (since kernel 4.5)
 	if err := statPids(m.dirPath, st); err != nil {
 		errs = append(errs, err)
 	}
 	// memory (since kernel 4.5)
-	if _, ok := m.controllers["memory"]; ok {
-		if err := statMemory(m.dirPath, st); err != nil {
-			errs = append(errs, err)
-		}
+	if err := statMemory(m.dirPath, st); err != nil && !os.IsNotExist(err) {
+		errs = append(errs, err)
 	}
 	// io (since kernel 4.5)
-	if _, ok := m.controllers["io"]; ok {
-		if err := statIo(m.dirPath, st); err != nil {
-			errs = append(errs, err)
-		}
+	if err := statIo(m.dirPath, st); err != nil && !os.IsNotExist(err) {
+		errs = append(errs, err)
 	}
 	// cpu (since kernel 4.15)
 	// Note cpu.stat is available even if the controller is not enabled.
@@ -129,10 +122,8 @@ func (m *manager) GetStats() (*cgroups.Stats, error) {
 		errs = append(errs, err)
 	}
 	// hugetlb (since kernel 5.6)
-	if _, ok := m.controllers["hugetlb"]; ok {
-		if err := statHugeTlb(m.dirPath, st); err != nil {
-			errs = append(errs, err)
-		}
+	if err := statHugeTlb(m.dirPath, st); err != nil && !os.IsNotExist(err) {
+		errs = append(errs, err)
 	}
 	if len(errs) > 0 && !m.rootless {
 		return st, errors.Errorf("error while statting cgroup v2: %+v", errs)
