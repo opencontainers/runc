@@ -108,14 +108,8 @@ func (m *manager) GetStats() (*cgroups.Stats, error) {
 	}
 
 	// pids (since kernel 4.5)
-	if _, ok := m.controllers["pids"]; ok {
-		if err := statPids(m.dirPath, st); err != nil {
-			errs = append(errs, err)
-		}
-	} else {
-		if err := statPidsWithoutController(m.dirPath, st); err != nil {
-			errs = append(errs, err)
-		}
+	if err := statPids(m.dirPath, st); err != nil {
+		errs = append(errs, err)
 	}
 	// memory (since kernel 4.5)
 	if _, ok := m.controllers["memory"]; ok {

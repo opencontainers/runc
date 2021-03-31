@@ -3,6 +3,7 @@
 package fs2
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -30,7 +31,7 @@ func setPids(dirPath string, cgroup *configs.Cgroup) error {
 	return nil
 }
 
-func statPidsWithoutController(dirPath string, stats *cgroups.Stats) error {
+func statPidsFromCgroupProcs(dirPath string, stats *cgroups.Stats) error {
 	// if the controller is not enabled, let's read PIDS from cgroups.procs
 	// (or threads if cgroup.threads is enabled)
 	contents, err := fscommon.ReadFile(dirPath, "cgroup.procs")
@@ -49,6 +50,9 @@ func statPidsWithoutController(dirPath string, stats *cgroups.Stats) error {
 func statPids(dirPath string, stats *cgroups.Stats) error {
 	current, err := fscommon.GetCgroupParamUint(dirPath, "pids.current")
 	if err != nil {
+		if os.IsNotExist(err) {
+			return statPidsFromCgroupProcs(dirPath, stats)
+		}
 		return errors.Wrap(err, "failed to parse pids.current")
 	}
 
