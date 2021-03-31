@@ -40,13 +40,8 @@ func statPidsWithoutController(dirPath string, stats *cgroups.Stats) error {
 	if err != nil {
 		return err
 	}
-	pids := make(map[string]string)
-	for _, i := range strings.Split(contents, "\n") {
-		if i != "" {
-			pids[i] = i
-		}
-	}
-	stats.PidsStats.Current = uint64(len(pids))
+	pids := strings.Count(contents, "\n")
+	stats.PidsStats.Current = uint64(pids)
 	stats.PidsStats.Limit = 0
 	return nil
 }
