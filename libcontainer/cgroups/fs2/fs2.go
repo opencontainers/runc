@@ -130,10 +130,9 @@ func (m *manager) GetStats() (*cgroups.Stats, error) {
 		}
 	}
 	// cpu (since kernel 4.15)
-	if _, ok := m.controllers["cpu"]; ok {
-		if err := statCpu(m.dirPath, st); err != nil {
-			errs = append(errs, err)
-		}
+	// Note cpu.stat is available even if the controller is not enabled.
+	if err := statCpu(m.dirPath, st); err != nil && !os.IsNotExist(err) {
+		errs = append(errs, err)
 	}
 	// hugetlb (since kernel 5.6)
 	if _, ok := m.controllers["hugetlb"]; ok {
