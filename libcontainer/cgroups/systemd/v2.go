@@ -5,7 +5,6 @@ package systemd
 import (
 	"fmt"
 	"math"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -313,13 +312,8 @@ func (m *unifiedManager) Destroy() error {
 		return err
 	}
 
-	// XXX this is probably not needed, systemd should handle it
-	err = os.Remove(m.path)
-	if err != nil && !os.IsNotExist(err) {
-		return err
-	}
-
-	return nil
+	// XXX this is probably not needed, systemd should handle it.
+	return cgroups.RemovePath(m.path)
 }
 
 func (m *unifiedManager) Path(_ string) string {
