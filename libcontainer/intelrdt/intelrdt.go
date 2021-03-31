@@ -525,7 +525,12 @@ func (m *intelRdtManager) getIntelRdtPath() (string, error) {
 		return "", err
 	}
 
-	return filepath.Join(rootPath, m.id), nil
+	clos := m.id
+	if m.config.IntelRdt != nil && m.config.IntelRdt.ClosID != "" {
+		clos = m.config.IntelRdt.ClosID
+	}
+
+	return filepath.Join(rootPath, clos), nil
 }
 
 // Applies Intel RDT configuration to the process with the specified pid
@@ -557,12 +562,17 @@ func (m *intelRdtManager) Apply(pid int) (err error) {
 
 // Destroys the Intel RDT 'container_id' group
 func (m *intelRdtManager) Destroy() error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if err := os.RemoveAll(m.GetPath()); err != nil {
-		return err
+	// Don't remove resctrl group if closid has been explicitly specified. The
+	// group is likely externally managed, i.e. by some other entity than us.
+	// There are probably other containers/tasks sharing the same group.
+	if m.config.IntelRdt == nil || m.config.IntelRdt.ClosID == "" {
+		m.mu.Lock()
+		defer m.mu.Unlock()
+		if err := os.RemoveAll(m.GetPath()); err != nil {
+			return err
+		}
+		m.path = ""
 	}
-	m.path = ""
 	return nil
 }
 

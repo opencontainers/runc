@@ -205,18 +205,15 @@ func (v *ConfigValidator) intelrdt(config *configs.Config) error {
 			return errors.New("intelRdt is specified in config, but Intel RDT is not supported or enabled")
 		}
 
+		if config.IntelRdt.ClosID == "." || config.IntelRdt.ClosID == ".." || strings.Contains(config.IntelRdt.ClosID, "/") {
+			return fmt.Errorf("invalid intelRdt.ClosID %q", config.IntelRdt.ClosID)
+		}
+
 		if !intelrdt.IsCATEnabled() && config.IntelRdt.L3CacheSchema != "" {
 			return errors.New("intelRdt.l3CacheSchema is specified in config, but Intel RDT/CAT is not enabled")
 		}
 		if !intelrdt.IsMBAEnabled() && config.IntelRdt.MemBwSchema != "" {
 			return errors.New("intelRdt.memBwSchema is specified in config, but Intel RDT/MBA is not enabled")
-		}
-
-		if intelrdt.IsCATEnabled() && config.IntelRdt.L3CacheSchema == "" {
-			return errors.New("Intel RDT/CAT is enabled and intelRdt is specified in config, but intelRdt.l3CacheSchema is empty")
-		}
-		if intelrdt.IsMBAEnabled() && config.IntelRdt.MemBwSchema == "" {
-			return errors.New("Intel RDT/MBA is enabled and intelRdt is specified in config, but intelRdt.memBwSchema is empty")
 		}
 	}
 
