@@ -207,7 +207,6 @@ var (
 type intelRdtData struct {
 	root   string
 	config *configs.Config
-	pid    int
 }
 
 // Check if Intel RDT sub-features are enabled in featuresInit()
@@ -405,18 +404,6 @@ func writeFile(dir, file, data string) error {
 	return nil
 }
 
-func getIntelRdtData(c *configs.Config, pid int) (*intelRdtData, error) {
-	rootPath, err := getIntelRdtRoot()
-	if err != nil {
-		return nil, err
-	}
-	return &intelRdtData{
-		root:   rootPath,
-		config: c,
-		pid:    pid,
-	}, nil
-}
-
 // Get the read-only L3 cache information
 func getL3CacheInfo() (*L3CacheInfo, error) {
 	l3CacheInfo := &L3CacheInfo{}
@@ -532,14 +519,13 @@ func IsMBAScEnabled() bool {
 }
 
 // Get the 'container_id' path in Intel RDT "resource control" filesystem
-func GetIntelRdtPath(id string) (string, error) {
+func (m *intelRdtManager) getIntelRdtPath() (string, error) {
 	rootPath, err := getIntelRdtRoot()
 	if err != nil {
 		return "", err
 	}
 
-	path := filepath.Join(rootPath, id)
-	return path, nil
+	return filepath.Join(rootPath, m.id), nil
 }
 
 // Applies Intel RDT configuration to the process with the specified pid
@@ -548,16 +534,21 @@ func (m *intelRdtManager) Apply(pid int) (err error) {
 	if m.config.IntelRdt == nil {
 		return nil
 	}
-	d, err := getIntelRdtData(m.config, pid)
+
+	path, err := m.getIntelRdtPath()
 	if err != nil {
 		return err
 	}
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	path, err := d.join(m.id)
-	if err != nil {
-		return err
+
+	if err := os.MkdirAll(path, 0o755); err != nil {
+		return newLastCmdError(err)
+	}
+
+	if err := WriteIntelRdtTasks(path, pid); err != nil {
+		return newLastCmdError(err)
 	}
 
 	m.path = path
@@ -579,7 +570,7 @@ func (m *intelRdtManager) Destroy() error {
 // restore the object later
 func (m *intelRdtManager) GetPath() string {
 	if m.path == "" {
-		m.path, _ = GetIntelRdtPath(m.id)
+		m.path, _ = m.getIntelRdtPath()
 	}
 	return m.path
 }
@@ -745,18 +736,6 @@ func (m *intelRdtManager) Set(container *configs.Config) error {
 	}
 
 	return nil
-}
-
-func (raw *intelRdtData) join(id string) (string, error) {
-	path := filepath.Join(raw.root, id)
-	if err := os.MkdirAll(path, 0o755); err != nil {
-		return "", newLastCmdError(err)
-	}
-
-	if err := WriteIntelRdtTasks(path, raw.pid); err != nil {
-		return "", err
-	}
-	return path, nil
 }
 
 func newLastCmdError(err error) error {
