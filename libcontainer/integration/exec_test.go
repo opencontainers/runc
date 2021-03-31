@@ -1996,3 +1996,64 @@ func TestCGROUPHost(t *testing.T) {
 		t.Fatalf("cgroup link not equal to host link %q %q", actual, l)
 	}
 }
+
+func TestFdLeaks(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+
+	rootfs, err := newRootfs()
+	ok(t, err)
+	defer remove(rootfs)
+
+	pfd, err := os.Open("/proc/self/fd")
+	ok(t, err)
+	defer pfd.Close()
+	fds0, err := pfd.Readdirnames(0)
+	ok(t, err)
+	_, err = pfd.Seek(0, 0)
+	ok(t, err)
+
+	config := newTemplateConfig(&tParam{rootfs: rootfs})
+	buffers, exitCode, err := runContainer(config, "", "true")
+	ok(t, err)
+
+	if exitCode != 0 {
+		t.Fatalf("exit code not 0. code %d stderr %q", exitCode, buffers.Stderr)
+	}
+
+	fds1, err := pfd.Readdirnames(0)
+	ok(t, err)
+
+	if len(fds1) == len(fds0) {
+		return
+	}
+	// Show the extra opened files.
+
+	excludedPaths := []string{
+		"/sys/fs/cgroup",      // opened once, see prepareOpenat2
+		"anon_inode:bpf-prog", // FIXME: see https://github.com/opencontainers/runc/issues/2366#issuecomment-776411392
+	}
+
+	count := 0
+next_fd:
+	for _, fd1 := range fds1 {
+		for _, fd0 := range fds0 {
+			if fd0 == fd1 {
+				continue next_fd
+			}
+		}
+		dst, _ := os.Readlink("/proc/self/fd/" + fd1)
+		for _, ex := range excludedPaths {
+			if ex == dst {
+				continue next_fd
+			}
+		}
+
+		count++
+		t.Logf("extra fd %s -> %s", fd1, dst)
+	}
+	if count > 0 {
+		t.Fatalf("found %d extra fds after container.Run", count)
+	}
+}

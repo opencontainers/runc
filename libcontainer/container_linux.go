@@ -55,6 +55,7 @@ type linuxContainer struct {
 	criuVersion          int
 	state                containerState
 	created              time.Time
+	fifo                 *os.File
 }
 
 // State represents a running container's state
@@ -380,6 +381,7 @@ func (c *linuxContainer) start(process *Process) (retErr error) {
 	}
 
 	if process.Init {
+		c.fifo.Close()
 		if c.config.Hooks != nil {
 			s, err := c.currentOCIState()
 			if err != nil {
@@ -455,12 +457,13 @@ func (c *linuxContainer) deleteExecFifo() {
 // fd, with _LIBCONTAINER_FIFOFD set to its fd number.
 func (c *linuxContainer) includeExecFifo(cmd *exec.Cmd) error {
 	fifoName := filepath.Join(c.root, execFifoFilename)
-	fifoFd, err := unix.Open(fifoName, unix.O_PATH|unix.O_CLOEXEC, 0)
+	fifo, err := os.OpenFile(fifoName, unix.O_PATH|unix.O_CLOEXEC, 0)
 	if err != nil {
 		return err
 	}
+	c.fifo = fifo
 
-	cmd.ExtraFiles = append(cmd.ExtraFiles, os.NewFile(uintptr(fifoFd), fifoName))
+	cmd.ExtraFiles = append(cmd.ExtraFiles, fifo)
 	cmd.Env = append(cmd.Env,
 		"_LIBCONTAINER_FIFOFD="+strconv.Itoa(stdioFdCount+len(cmd.ExtraFiles)-1))
 	return nil
