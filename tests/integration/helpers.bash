@@ -149,11 +149,11 @@ function init_cgroup_paths() {
 	else
 		CGROUP_UNIFIED=no
 		CGROUP_SUBSYSTEMS=$(awk '!/^#/ {print $1}' /proc/cgroups)
+		local g base_path
 		for g in ${CGROUP_SUBSYSTEMS}; do
 			base_path=$(gawk '$(NF-2) == "cgroup" && $NF ~ /\<'${g}'\>/ { print $5; exit }' /proc/self/mountinfo)
 			test -z "$base_path" && continue
 			eval CGROUP_${g^^}_BASE_PATH="${base_path}"
-			eval CGROUP_${g^^}="${base_path}${REL_CGROUPS_PATH}"
 		done
 	fi
 }
@@ -167,14 +167,16 @@ function set_cgroups_path() {
 
 # Helper to check a value in cgroups.
 function check_cgroup_value() {
-	source=$1
-	expected=$2
+	local source=$1
+	local expected=$2
+	local cgroup var current
 
 	if [ "x$CGROUP_UNIFIED" = "xyes" ]; then
 		cgroup=$CGROUP_PATH
 	else
-		ctrl=${source%%.*}
-		eval cgroup=\$CGROUP_${ctrl^^}
+		var=${source%%.*}             # controller name (e.g. memory)
+		var=CGROUP_${var^^}_BASE_PATH # variable name (e.g. CGROUP_MEMORY_BASE_PATH)
+		eval cgroup=\$${var}${REL_CGROUPS_PATH}
 	fi
 
 	current=$(cat $cgroup/$source)

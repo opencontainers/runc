@@ -532,10 +532,12 @@ EOF
 	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
 	requires cgroups_v1 cgroups_rt no_systemd
 
-	# By default, "${CGROUP_CPU}/cpu.rt_runtime_us" is set to 0, which inhibits
+	local cgroup_cpu="${CGROUP_CPU_BASE_PATH}/${REL_CGROUPS_PATH}"
+
+	# By default, "${cgroup_cpu}/cpu.rt_runtime_us" is set to 0, which inhibits
 	# setting the container's realtimeRuntime. (#2046)
 	#
-	# When $CGROUP_CPU is "/sys/fs/cgroup/cpu,cpuacct/runc-cgroups-integration-test/test-cgroup",
+	# When ${cgroup_cpu} is "/sys/fs/cgroup/cpu,cpuacct/runc-cgroups-integration-test/test-cgroup",
 	# we write the values of /sys/fs/cgroup/cpu,cpuacct/cpu.rt_{period,runtime}_us to:
 	# - sys/fs/cgroup/cpu,cpuacct/runc-cgroups-integration-test/cpu.rt_{period,runtime}_us
 	# - sys/fs/cgroup/cpu,cpuacct/runc-cgroups-integration-test/test-cgroup/cpu.rt_{period,runtime}_us
@@ -543,12 +545,12 @@ EOF
 	# Typically period=1000000 runtime=950000 .
 	#
 	# TODO: support systemd
-	mkdir -p "$CGROUP_CPU"
+	mkdir -p "$cgroup_cpu"
 	local root_period root_runtime
 	root_period=$(cat "${CGROUP_CPU_BASE_PATH}/cpu.rt_period_us")
 	root_runtime=$(cat "${CGROUP_CPU_BASE_PATH}/cpu.rt_runtime_us")
 	# the following IFS magic sets dirs=("runc-cgroups-integration-test" "test-cgroup")
-	IFS='/' read -r -a dirs <<<"${CGROUP_CPU//${CGROUP_CPU_BASE_PATH}/}"
+	IFS='/' read -r -a dirs <<<"$REL_CGROUPS_PATH"
 	for ((i = 0; i < ${#dirs[@]}; i++)); do
 		local target="$CGROUP_CPU_BASE_PATH"
 		for ((j = 0; j <= i; j++)); do
