@@ -6,10 +6,10 @@ require (
 	github.com/checkpoint-restore/go-criu/v5 v5.0.0
 	github.com/cilium/ebpf v0.2.0
 	github.com/containerd/console v1.0.1
-	github.com/coreos/go-systemd/v22 v22.1.0
+	github.com/coreos/go-systemd/v22 v22.3.1
 	github.com/cyphar/filepath-securejoin v0.2.2
 	github.com/docker/go-units v0.4.0
-	github.com/godbus/dbus/v5 v5.0.3
+	github.com/godbus/dbus/v5 v5.0.4
 	github.com/moby/sys/mountinfo v0.4.0
 	github.com/mrunalp/fileutils v0.5.0
 	github.com/opencontainers/runtime-spec v1.0.3-0.20210316141917-a8c4a9ee0f6b
