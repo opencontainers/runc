@@ -12,7 +12,7 @@ github.com/cilium/ebpf/internal/unix
 # github.com/containerd/console v1.0.1
 ## explicit
 github.com/containerd/console
-# github.com/coreos/go-systemd/v22 v22.1.0
+# github.com/coreos/go-systemd/v22 v22.3.1
 ## explicit
 github.com/coreos/go-systemd/v22/activation
 github.com/coreos/go-systemd/v22/dbus
@@ -24,7 +24,7 @@ github.com/cyphar/filepath-securejoin
 # github.com/docker/go-units v0.4.0
 ## explicit
 github.com/docker/go-units
-# github.com/godbus/dbus/v5 v5.0.3
+# github.com/godbus/dbus/v5 v5.0.4
 ## explicit
 github.com/godbus/dbus/v5
 # github.com/golang/protobuf v1.4.3
