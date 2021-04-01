@@ -607,6 +607,15 @@ func CreateCgroupConfig(opts *CreateOpts, defaultDevs []*devices.Device) (*confi
 					Limit:    l.Limit,
 				})
 			}
+			if len(r.Rdma) > 0 {
+				c.Resources.Rdma = make(map[string]configs.LinuxRdma, len(r.Rdma))
+				for k, v := range r.Rdma {
+					c.Resources.Rdma[k] = configs.LinuxRdma{
+						HcaHandles: v.HcaHandles,
+						HcaObjects: v.HcaObjects,
+					}
+				}
+			}
 			if r.Network != nil {
 				if r.Network.ClassID != nil {
 					c.Resources.NetClsClassid = *r.Network.ClassID

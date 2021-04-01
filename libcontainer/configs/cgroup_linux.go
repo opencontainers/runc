@@ -117,6 +117,9 @@ type Resources struct {
 	// Set class identifier for container's network packets
 	NetClsClassid uint32 `json:"net_cls_classid_u"`
 
+	// Rdma resource restriction configuration
+	Rdma map[string]LinuxRdma `json:"rdma"`
+
 	// Used on cgroups v2:
 
 	// CpuWeight sets a proportional bandwidth limit.
