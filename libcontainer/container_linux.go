@@ -1217,7 +1217,6 @@ func (c *linuxContainer) makeCriuRestoreMountpoints(m *configs.Mount) error {
 		if err := checkProcMount(c.config.Rootfs, dest, ""); err != nil {
 			return err
 		}
-		m.Destination = dest
 		if err := os.MkdirAll(dest, 0755); err != nil {
 			return err
 		}
@@ -1257,13 +1256,16 @@ func (c *linuxContainer) prepareCriuRestoreMounts(mounts []*configs.Mount) error
 	umounts := []string{}
 	defer func() {
 		for _, u := range umounts {
-			if e := unix.Unmount(u, unix.MNT_DETACH); e != nil {
-				if e != unix.EINVAL {
-					// Ignore EINVAL as it means 'target is not a mount point.'
-					// It probably has already been unmounted.
-					logrus.Warnf("Error during cleanup unmounting of %q (%v)", u, e)
+			_ = utils.WithProcfd(c.config.Rootfs, u, func(procfd string) error {
+				if e := unix.Unmount(procfd, unix.MNT_DETACH); e != nil {
+					if e != unix.EINVAL {
+						// Ignore EINVAL as it means 'target is not a mount point.'
+						// It probably has already been unmounted.
+						logrus.Warnf("Error during cleanup unmounting of %s (%s): %v", procfd, u, e)
+					}
 				}
-			}
+				return nil
+			})
 		}
 	}()
 	for _, m := range mounts {
@@ -1281,8 +1283,13 @@ func (c *linuxContainer) prepareCriuRestoreMounts(mounts []*configs.Mount) error
 			// because during initial container creation mounts are
 			// set up in the order they are configured.
 			if m.Device == "bind" {
-				if err := unix.Mount(m.Source, m.Destination, "", unix.MS_BIND|unix.MS_REC, ""); err != nil {
-					return errorsf.Wrapf(err, "unable to bind mount %q to %q", m.Source, m.Destination)
+				if err := utils.WithProcfd(c.config.Rootfs, m.Destination, func(procfd string) error {
+					if err := unix.Mount(m.Source, procfd, "", unix.MS_BIND|unix.MS_REC, ""); err != nil {
+						return errorsf.Wrapf(err, "unable to bind mount %q to %q (through %q)", m.Source, m.Destination, procfd)
+					}
+					return nil
+				}); err != nil {
+					return err
 				}
 				umounts = append(umounts, m.Destination)
 			}
