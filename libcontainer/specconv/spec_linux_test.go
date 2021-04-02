@@ -345,7 +345,7 @@ func TestLinuxCgroupSystemdWithEmptyPath(t *testing.T) {
 		t.Errorf("Couldn't create Cgroup config: %v", err)
 	}
 
-	expectedParent := "system.slice"
+	expectedParent := ""
 	if cgroup.Parent != expectedParent {
 		t.Errorf("Expected to have %s as Parent instead of %s", expectedParent, cgroup.Parent)
 	}
