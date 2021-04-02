@@ -650,6 +650,7 @@ const (
 	ActTrace       LinuxSeccompAction = "SCMP_ACT_TRACE"
 	ActAllow       LinuxSeccompAction = "SCMP_ACT_ALLOW"
 	ActLog         LinuxSeccompAction = "SCMP_ACT_LOG"
+	ActNotify      LinuxSeccompAction = "SCMP_ACT_NOTIFY"
 )
 
 // LinuxSeccompOperator used to match syscall arguments in Seccomp

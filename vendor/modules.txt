@@ -35,7 +35,7 @@ github.com/moby/sys/mountinfo
 # github.com/mrunalp/fileutils v0.5.0
 ## explicit
 github.com/mrunalp/fileutils
-# github.com/opencontainers/runtime-spec v1.0.3-0.20210316141917-a8c4a9ee0f6b
+# github.com/opencontainers/runtime-spec v1.0.3-0.20210326190908-1c3f411f0417
 ## explicit
 github.com/opencontainers/runtime-spec/specs-go
 # github.com/opencontainers/selinux v1.8.0
@@ -56,6 +56,7 @@ github.com/shurcooL/sanitized_anchor_name
 # github.com/sirupsen/logrus v1.7.0
 ## explicit
 github.com/sirupsen/logrus
+github.com/sirupsen/logrus/hooks/test
 # github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635
 ## explicit
 github.com/syndtr/gocapability/capability

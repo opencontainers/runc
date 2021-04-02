@@ -12,7 +12,7 @@ require (
 	github.com/godbus/dbus/v5 v5.0.4
 	github.com/moby/sys/mountinfo v0.4.0
 	github.com/mrunalp/fileutils v0.5.0
-	github.com/opencontainers/runtime-spec v1.0.3-0.20210316141917-a8c4a9ee0f6b
+	github.com/opencontainers/runtime-spec v1.0.3-0.20210326190908-1c3f411f0417
 	github.com/opencontainers/selinux v1.8.0
 	github.com/pkg/errors v0.9.1
 	github.com/seccomp/libseccomp-golang v0.9.1
