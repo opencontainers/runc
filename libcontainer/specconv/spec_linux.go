@@ -436,9 +436,10 @@ func CreateCgroupConfig(opts *CreateOpts, defaultDevs []*devices.Device) (*confi
 	}
 
 	if spec.Linux != nil && spec.Linux.CgroupsPath != "" {
-		myCgroupPath = libcontainerUtils.CleanPath(spec.Linux.CgroupsPath)
 		if useSystemdCgroup {
 			myCgroupPath = spec.Linux.CgroupsPath
+		} else {
+			myCgroupPath = libcontainerUtils.CleanPath(spec.Linux.CgroupsPath)
 		}
 	}
 
