@@ -25,33 +25,22 @@ func New() Validator {
 type ConfigValidator struct {
 }
 
+type check func(config *configs.Config) error
+
 func (v *ConfigValidator) Validate(config *configs.Config) error {
-	if err := v.rootfs(config); err != nil {
-		return err
+	checks := []check{
+		v.rootfs,
+		v.network,
+		v.hostname,
+		v.security,
+		v.usernamespace,
+		v.cgroupnamespace,
+		v.sysctl,
+		v.intelrdt,
+		v.rootlessEUID,
 	}
-	if err := v.network(config); err != nil {
-		return err
-	}
-	if err := v.hostname(config); err != nil {
-		return err
-	}
-	if err := v.security(config); err != nil {
-		return err
-	}
-	if err := v.usernamespace(config); err != nil {
-		return err
-	}
-	if err := v.cgroupnamespace(config); err != nil {
-		return err
-	}
-	if err := v.sysctl(config); err != nil {
-		return err
-	}
-	if err := v.intelrdt(config); err != nil {
-		return err
-	}
-	if config.RootlessEUID {
-		if err := v.rootlessEUID(config); err != nil {
+	for _, c := range checks {
+		if err := c(config); err != nil {
 			return err
 		}
 	}
