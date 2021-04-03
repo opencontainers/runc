@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	selinux "github.com/opencontainers/selinux/go-selinux"
@@ -55,6 +56,10 @@ func (v *ConfigValidator) Validate(config *configs.Config) error {
 			return err
 		}
 	}
+	if err := v.cgroups(config); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -217,6 +222,35 @@ func (v *ConfigValidator) intelrdt(config *configs.Config) error {
 		}
 		if intelrdt.IsMBAEnabled() && config.IntelRdt.MemBwSchema == "" {
 			return errors.New("Intel RDT/MBA is enabled and intelRdt is specified in config, but intelRdt.memBwSchema is empty")
+		}
+	}
+
+	return nil
+}
+
+func (v *ConfigValidator) cgroups(config *configs.Config) error {
+	c := config.Cgroups
+	if c == nil {
+		return nil
+	}
+
+	if (c.Name != "" || c.Parent != "") && c.Path != "" {
+		return fmt.Errorf("cgroup: either Path or Name and Parent should be used, got %+v", c)
+	}
+
+	r := c.Resources
+	if r == nil {
+		return nil
+	}
+
+	if !cgroups.IsCgroup2UnifiedMode() && r.Unified != nil {
+		return cgroups.ErrV1NoUnified
+	}
+
+	if cgroups.IsCgroup2UnifiedMode() {
+		_, err := cgroups.ConvertMemorySwapToCgroupV2Value(r.MemorySwap, r.Memory)
+		if err != nil {
+			return err
 		}
 	}
 
