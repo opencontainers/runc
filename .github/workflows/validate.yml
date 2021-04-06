@@ -153,6 +153,11 @@ jobs:
     - name: install deps
       run: |
         sudo apt -qq update
-        sudo apt -qq install libseccomp-dev
+        sudo apt -qq install gperf
     - name: make release
       run: make release
+    - name: upload artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: release-${{ github.run_id }}
+        path: release/*
