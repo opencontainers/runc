@@ -131,6 +131,26 @@ func finalizeNamespace(config *initConfig) error {
 		return errors.Wrap(err, "close exec fds")
 	}
 
+	// we only do chdir if it's specified
+	doChdir := config.Cwd != ""
+	if doChdir {
+		// First, attempt the chdir before setting up the user.
+		// This could allow us to access a directory that the user running runc can access
+		// but the container user cannot.
+		err := unix.Chdir(config.Cwd)
+		switch {
+		case err == nil:
+			doChdir = false
+		case os.IsPermission(err):
+			// If we hit an EPERM, we should attempt again after setting up user.
+			// This will allow us to successfully chdir if the container user has access
+			// to the directory, but the user running runc does not.
+			// This is useful in cases where the cwd is also a volume that's been chowned to the container user.
+		default:
+			return fmt.Errorf("chdir to cwd (%q) set in config.json failed: %v", config.Cwd, err)
+		}
+	}
+
 	caps := &configs.Capabilities{}
 	if config.Capabilities != nil {
 		caps = config.Capabilities
@@ -152,10 +172,8 @@ func finalizeNamespace(config *initConfig) error {
 	if err := setupUser(config); err != nil {
 		return errors.Wrap(err, "setup user")
 	}
-	// Change working directory AFTER the user has been set up.
-	// Otherwise, if the cwd is also a volume that's been chowned to the container user (and not the user running runc),
-	// this command will EPERM.
-	if config.Cwd != "" {
+	// Change working directory AFTER the user has been set up, if we haven't done it yet.
+	if doChdir {
 		if err := unix.Chdir(config.Cwd); err != nil {
 			return fmt.Errorf("chdir to cwd (%q) set in config.json failed: %v", config.Cwd, err)
 		}
