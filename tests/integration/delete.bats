@@ -85,8 +85,8 @@ EOF
 	[[ "$output" =~ [0-9]+ ]]
 
 	for s in ${subsystems}; do
-		name=CGROUP_${s^^}
-		eval path=\$"${name}"/foo
+		name=CGROUP_${s^^}_BASE_PATH
+		eval path=\$"${name}${REL_CGROUPS_PATH}/foo"
 		# shellcheck disable=SC2154
 		[ -d "${path}" ] || fail "test failed to create memory sub-cgroup ($path not found)"
 	done

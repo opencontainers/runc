@@ -717,7 +717,6 @@ func (c *linuxContainer) checkCriuFeatures(criuOpts *CriuOpts, rpcOpts *criurpc.
 		return errors.New("CRIU feature check failed")
 	}
 
-	logrus.Debugf("Feature check says: %s", criuFeatures)
 	missingFeatures := false
 
 	// The outer if checks if the fields actually exist
@@ -1518,7 +1517,6 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *
 		// the initial CRIU run to detect the version. Skip it.
 		logrus.Debugf("Using CRIU %d at: %s", c.criuVersion, c.criuPath)
 	}
-	logrus.Debugf("Using CRIU with following args: %s", args)
 	cmd := exec.Command(c.criuPath, args...)
 	if process != nil {
 		cmd.Stdin = process.Stdin

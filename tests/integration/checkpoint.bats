@@ -38,11 +38,23 @@ function setup_pipes() {
 }
 
 function check_pipes() {
+	local output stderr
+
 	echo Ping >&${in_w}
 	exec {in_w}>&-
 	exec {out_w}>&-
+	exec {err_w}>&-
+
+	exec {in_r}>&-
 	output=$(cat <&${out_r})
+	exec {out_r}>&-
+	stderr=$(cat <&${err_r})
+	exec {err_r}>&-
+
 	[[ "${output}" == *"ponG Ping"* ]]
+	if [ -n "$stderr" ]; then
+		fail "runc stderr: $stderr"
+	fi
 }
 
 # Usage: runc_run_with_pipes container-name
@@ -186,6 +198,7 @@ function simple_cr() {
 
 	# wait for lazy page server to be ready
 	out=$(timeout 2 dd if=/proc/self/fd/${lazy_r} bs=1 count=1 2>/dev/null | od)
+	exec {lazy_r}>&-
 	exec {lazy_w}>&-
 	# shellcheck disable=SC2116,SC2086
 	out=$(echo $out) # rm newlines
@@ -202,11 +215,13 @@ function simple_cr() {
 	lp_pid=$!
 
 	# Restore lazily from checkpoint.
-	# The restored container needs a different name as the checkpointed
+	# The restored container needs a different name (as well as systemd
+	# unit name, in case systemd cgroup driver is used) as the checkpointed
 	# container is not yet destroyed. It is only destroyed at that point
 	# in time when the last page is lazily transferred to the destination.
 	# Killing the CRIU on the checkpoint side will let the container
 	# continue to run if the migration failed at some point.
+	[ -n "$RUNC_USE_SYSTEMD" ] && set_cgroups_path
 	runc_restore_with_pipes ./image-dir test_busybox_restore --lazy-pages
 
 	wait $cpt_pid
