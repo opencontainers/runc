@@ -30,7 +30,7 @@ function teardown() {
 
 # Verify a cwd owned by the container user can be chdir'd to,
 # even if runc doesn't have the privilege to do so.
-@test "runc create sets up user before chdir to cwd" {
+@test "runc create sets up user before chdir to cwd if needed" {
 	requires rootless rootless_idmap
 
 	# Some setup for this test (AUX_DIR and AUX_UID) is done
@@ -52,6 +52,22 @@ function teardown() {
 			| .process.user.uid = '"$AUX_UID"'
 			| .process.cwd = "'"$AUX_DIR"'"
 			| .process.args |= ["ls", "'"$AUX_DIR"'"]'
+
+	runc run test_busybox
+	[ "$status" -eq 0 ]
+}
+
+# Verify a cwd not owned by the container user can be chdir'd to,
+# if runc does have the privilege to do so.
+@test "runc create can chdir if runc has access" {
+	requires root
+
+	mkdir -p rootfs/home/nonroot
+	chmod 700 rootfs/home/nonroot
+
+	update_config '	  .process.cwd = "/root"
+			| .process.user.uid = 42
+			| .process.args |= ["ls", "/tmp"]'
 
 	runc run test_busybox
 	[ "$status" -eq 0 ]
