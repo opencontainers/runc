@@ -28,6 +28,7 @@ func FuzzInit(data []byte) int {
 	defer consoleSocket.Close()
 	defer os.RemoveAll("consoleSocket.txt")
 
+	// Create fuzzed initConfig
 	config := new(initConfig)
 	c := gofuzzheaders.NewConsumer(data)
 	c.GenerateStruct(config)
