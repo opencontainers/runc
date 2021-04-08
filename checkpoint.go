@@ -11,7 +11,7 @@ import (
 
 	criu "github.com/checkpoint-restore/go-criu/v5/rpc"
 	"github.com/opencontainers/runc/libcontainer"
-	"github.com/opencontainers/runc/libcontainer/system"
+	"github.com/opencontainers/runc/libcontainer/userns"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -48,7 +48,7 @@ checkpointed.`,
 			return err
 		}
 		// XXX: Currently this is untested with rootless containers.
-		if os.Geteuid() != 0 || system.RunningInUserNS() {
+		if os.Geteuid() != 0 || userns.RunningInUserNS() {
 			logrus.Warn("runc checkpoint is untested with rootless containers")
 		}
 
