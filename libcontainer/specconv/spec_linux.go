@@ -436,15 +436,16 @@ func CreateCgroupConfig(opts *CreateOpts, defaultDevs []*devices.Device) (*confi
 	}
 
 	if spec.Linux != nil && spec.Linux.CgroupsPath != "" {
-		myCgroupPath = libcontainerUtils.CleanPath(spec.Linux.CgroupsPath)
 		if useSystemdCgroup {
 			myCgroupPath = spec.Linux.CgroupsPath
+		} else {
+			myCgroupPath = libcontainerUtils.CleanPath(spec.Linux.CgroupsPath)
 		}
 	}
 
 	if useSystemdCgroup {
 		if myCgroupPath == "" {
-			c.Parent = "system.slice"
+			// Default for c.Parent is set by systemd cgroup drivers.
 			c.ScopePrefix = "runc"
 			c.Name = name
 		} else {
