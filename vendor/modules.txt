@@ -9,7 +9,7 @@ github.com/cilium/ebpf/asm
 github.com/cilium/ebpf/internal
 github.com/cilium/ebpf/internal/btf
 github.com/cilium/ebpf/internal/unix
-# github.com/containerd/console v1.0.1
+# github.com/containerd/console v1.0.2
 ## explicit
 github.com/containerd/console
 # github.com/coreos/go-systemd/v22 v22.3.1
