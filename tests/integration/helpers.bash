@@ -321,12 +321,6 @@ function requires() {
 				skip_me=1
 			fi
 			;;
-		cgroups_kmem)
-			init_cgroup_paths
-			if [ ! -e "${CGROUP_MEMORY_BASE_PATH}/memory.kmem.limit_in_bytes" ]; then
-				skip_me=1
-			fi
-			;;
 		cgroups_rt)
 			init_cgroup_paths
 			if [ ! -e "${CGROUP_CPU_BASE_PATH}/cpu.rt_period_us" ]; then

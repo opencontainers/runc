@@ -276,12 +276,6 @@ func TestLinuxCgroupWithMemoryResource(t *testing.T) {
 	if cgroup.Resources.MemorySwap != swap {
 		t.Errorf("Expected to have %d as swap, got %d", swap, cgroup.Resources.MemorySwap)
 	}
-	if cgroup.Resources.KernelMemory != kernel {
-		t.Errorf("Expected to have %d as Kernel Memory, got %d", kernel, cgroup.Resources.KernelMemory)
-	}
-	if cgroup.Resources.KernelMemoryTCP != kernelTCP {
-		t.Errorf("Expected to have %d as TCP Kernel Memory, got %d", kernelTCP, cgroup.Resources.KernelMemoryTCP)
-	}
 	if cgroup.Resources.MemorySwappiness != swappinessPtr {
 		t.Errorf("Expected to have %d as memory swappiness, got %d", swappinessPtr, cgroup.Resources.MemorySwappiness)
 	}

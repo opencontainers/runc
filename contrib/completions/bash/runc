@@ -737,8 +737,6 @@ _runc_update() {
 	   --cpu-share
 	   --cpuset-cpus
 	   --cpuset-mems
-	   --kernel-memory
-	   --kernel-memory-tcp
 	   --memory
 	   --memory-reservation
 	   --memory-swap

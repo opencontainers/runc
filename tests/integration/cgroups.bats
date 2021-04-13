@@ -10,55 +10,6 @@ function setup() {
 	setup_busybox
 }
 
-@test "runc update --kernel-memory{,-tcp} (initialized)" {
-	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
-	requires cgroups_kmem
-
-	set_cgroups_path
-
-	# Set some initial known values
-	update_config '.linux.resources.memory |= {"kernel": 16777216, "kernelTCP": 11534336}'
-
-	# run a detached busybox to work with
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_kmem
-	[ "$status" -eq 0 ]
-
-	check_cgroup_value "memory.kmem.limit_in_bytes" 16777216
-	check_cgroup_value "memory.kmem.tcp.limit_in_bytes" 11534336
-
-	# update kernel memory limit
-	runc update test_cgroups_kmem --kernel-memory 50331648
-	[ "$status" -eq 0 ]
-	check_cgroup_value "memory.kmem.limit_in_bytes" 50331648
-
-	# update kernel memory tcp limit
-	runc update test_cgroups_kmem --kernel-memory-tcp 41943040
-	[ "$status" -eq 0 ]
-	check_cgroup_value "memory.kmem.tcp.limit_in_bytes" 41943040
-}
-
-@test "runc update --kernel-memory (uninitialized)" {
-	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
-	requires cgroups_kmem
-
-	set_cgroups_path
-
-	# run a detached busybox to work with
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_kmem
-	[ "$status" -eq 0 ]
-
-	# update kernel memory limit
-	runc update test_cgroups_kmem --kernel-memory 50331648
-	# Since kernel 4.6, we can update kernel memory without initialization
-	# because it's accounted by default.
-	if [[ "$KERNEL_MAJOR" -lt 4 || ("$KERNEL_MAJOR" -eq 4 && "$KERNEL_MINOR" -le 5) ]]; then
-		[ ! "$status" -eq 0 ]
-	else
-		[ "$status" -eq 0 ]
-		check_cgroup_value "memory.kmem.limit_in_bytes" 50331648
-	fi
-}
-
 @test "runc create (no limits + no cgrouppath + no permission) succeeds" {
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_permissions
 	[ "$status" -eq 0 ]

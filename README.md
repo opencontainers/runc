@@ -61,18 +61,18 @@ sudo make install
 with some of them enabled by default (see `BUILDTAGS` in top-level `Makefile`).
 
 To change build tags from the default, set the `BUILDTAGS` variable for make,
-e.g.
+e.g. to disable seccomp:
 
 ```bash
-make BUILDTAGS='seccomp'
+make BUILDTAGS=""
 ```
 
 | Build Tag | Feature                            | Enabled by default | Dependency |
 |-----------|------------------------------------|--------------------|------------|
 | seccomp   | Syscall filtering                  | yes                | libseccomp |
-| nokmem    | disable kernel memory accounting   | no                 | <none>     |
 
 The following build tags were used earlier, but are now obsoleted:
+ - **nokmem** (since runc v1.0.0-rc94 kernel memory settings are ignored)
  - **apparmor** (since runc v1.0.0-rc93 the feature is always enabled)
  - **selinux**  (since runc v1.0.0-rc93 the feature is always enabled)
 
