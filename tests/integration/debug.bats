@@ -11,7 +11,7 @@ function teardown() {
 }
 
 function check_debug() {
-	[[ "$*" == *"nsexec started"* ]]
+	[[ "$*" == *"nsexec container setup"* ]]
 	[[ "$*" == *"child process in init()"* ]]
 	[[ "$*" == *"init: closing the pipe to signal completion"* ]]
 }
