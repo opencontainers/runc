@@ -421,7 +421,7 @@ func (m *unifiedManager) GetStats() (*cgroups.Stats, error) {
 }
 
 func (m *unifiedManager) Set(container *configs.Config) error {
-	properties, err := genV2ResourcesProperties(m.cgroups, m.dbus)
+	properties, err := genV2ResourcesProperties(container.Cgroups, m.dbus)
 	if err != nil {
 		return err
 	}
