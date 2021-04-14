@@ -73,7 +73,7 @@ func testCheckpoint(t *testing.T, userns bool) {
 	}
 	defer remove(rootfs)
 
-	config := newTemplateConfig(&tParam{
+	config := newTemplateConfig(t, &tParam{
 		rootfs: rootfs,
 		userns: userns,
 	})

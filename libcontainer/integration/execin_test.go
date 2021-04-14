@@ -25,8 +25,8 @@ func TestExecIn(t *testing.T) {
 	rootfs, err := newRootfs()
 	ok(t, err)
 	defer remove(rootfs)
-	config := newTemplateConfig(&tParam{rootfs: rootfs})
-	container, err := newContainer(config)
+	config := newTemplateConfig(t, &tParam{rootfs: rootfs})
+	container, err := newContainer(t, config)
 	ok(t, err)
 	defer container.Destroy()
 
@@ -91,12 +91,12 @@ func testExecInRlimit(t *testing.T, userns bool) {
 	ok(t, err)
 	defer remove(rootfs)
 
-	config := newTemplateConfig(&tParam{
+	config := newTemplateConfig(t, &tParam{
 		rootfs: rootfs,
 		userns: userns,
 	})
 
-	container, err := newContainer(config)
+	container, err := newContainer(t, config)
 	ok(t, err)
 	defer container.Destroy()
 
@@ -150,8 +150,8 @@ func TestExecInAdditionalGroups(t *testing.T) {
 	ok(t, err)
 	defer remove(rootfs)
 
-	config := newTemplateConfig(&tParam{rootfs: rootfs})
-	container, err := newContainer(config)
+	config := newTemplateConfig(t, &tParam{rootfs: rootfs})
+	container, err := newContainer(t, config)
 	ok(t, err)
 	defer container.Destroy()
 
@@ -207,8 +207,8 @@ func TestExecInError(t *testing.T) {
 	rootfs, err := newRootfs()
 	ok(t, err)
 	defer remove(rootfs)
-	config := newTemplateConfig(&tParam{rootfs: rootfs})
-	container, err := newContainer(config)
+	config := newTemplateConfig(t, &tParam{rootfs: rootfs})
+	container, err := newContainer(t, config)
 	ok(t, err)
 	defer container.Destroy()
 
@@ -261,8 +261,8 @@ func TestExecInTTY(t *testing.T) {
 	rootfs, err := newRootfs()
 	ok(t, err)
 	defer remove(rootfs)
-	config := newTemplateConfig(&tParam{rootfs: rootfs})
-	container, err := newContainer(config)
+	config := newTemplateConfig(t, &tParam{rootfs: rootfs})
+	container, err := newContainer(t, config)
 	ok(t, err)
 	defer container.Destroy()
 
@@ -357,8 +357,8 @@ func TestExecInEnvironment(t *testing.T) {
 	rootfs, err := newRootfs()
 	ok(t, err)
 	defer remove(rootfs)
-	config := newTemplateConfig(&tParam{rootfs: rootfs})
-	container, err := newContainer(config)
+	config := newTemplateConfig(t, &tParam{rootfs: rootfs})
+	container, err := newContainer(t, config)
 	ok(t, err)
 	defer container.Destroy()
 
@@ -419,8 +419,8 @@ func TestExecinPassExtraFiles(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer remove(rootfs)
-	config := newTemplateConfig(&tParam{rootfs: rootfs})
-	container, err := newContainer(config)
+	config := newTemplateConfig(t, &tParam{rootfs: rootfs})
+	container, err := newContainer(t, config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -503,9 +503,9 @@ func TestExecInOomScoreAdj(t *testing.T) {
 	rootfs, err := newRootfs()
 	ok(t, err)
 	defer remove(rootfs)
-	config := newTemplateConfig(&tParam{rootfs: rootfs})
+	config := newTemplateConfig(t, &tParam{rootfs: rootfs})
 	config.OomScoreAdj = ptrInt(200)
-	container, err := newContainer(config)
+	container, err := newContainer(t, config)
 	ok(t, err)
 	defer container.Destroy()
 
@@ -555,11 +555,11 @@ func TestExecInUserns(t *testing.T) {
 	rootfs, err := newRootfs()
 	ok(t, err)
 	defer remove(rootfs)
-	config := newTemplateConfig(&tParam{
+	config := newTemplateConfig(t, &tParam{
 		rootfs: rootfs,
 		userns: true,
 	})
-	container, err := newContainer(config)
+	container, err := newContainer(t, config)
 	ok(t, err)
 	defer container.Destroy()
 
