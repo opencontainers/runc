@@ -612,9 +612,6 @@ func testPids(t *testing.T, systemd bool) {
 
 	// Running multiple processes.
 	_, ret, err := runContainer(t, config, "", "/bin/sh", "-c", "/bin/true | /bin/true | /bin/true | /bin/true")
-	if err != nil && strings.Contains(err.Error(), "no such directory for pids.max") {
-		t.Skip("PIDs cgroup is unsupported")
-	}
 	ok(t, err)
 
 	if ret != 0 {
@@ -629,9 +626,6 @@ func testPids(t *testing.T, systemd bool) {
 	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
 	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
 	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true`)
-	if err != nil && strings.Contains(err.Error(), "no such directory for pids.max") {
-		t.Skip("PIDs cgroup is unsupported")
-	}
 	ok(t, err)
 
 	if ret != 0 {
@@ -650,9 +644,6 @@ func testPids(t *testing.T, systemd bool) {
 	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
 	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
 	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true`)
-	if err != nil && strings.Contains(err.Error(), "no such directory for pids.max") {
-		t.Skip("PIDs cgroup is unsupported")
-	}
 	if err != nil && !strings.Contains(out.String(), "sh: can't fork") {
 		ok(t, err)
 	}
