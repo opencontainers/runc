@@ -296,7 +296,7 @@ func (m *manager) Set(container *configs.Config) error {
 			if m.rootless && sys.Name() == "devices" {
 				continue
 			}
-			// When m.Rootless is true, errors from the device subsystem are ignored because it is really not expected to work.
+			// When m.rootless is true, errors from the device subsystem are ignored because it is really not expected to work.
 			// However, errors from other subsystems are not ignored.
 			// see @test "runc create (rootless + limits + no cgrouppath + no permission) fails with informative error"
 			if path == "" {
@@ -428,5 +428,11 @@ func OOMKillCount(path string) (uint64, error) {
 }
 
 func (m *manager) OOMKillCount() (uint64, error) {
-	return OOMKillCount(m.Path("memory"))
+	c, err := OOMKillCount(m.Path("memory"))
+	// Ignore ENOENT when rootless as it couldn't create cgroup.
+	if err != nil && m.rootless && os.IsNotExist(err) {
+		err = nil
+	}
+
+	return c, err
 }
