@@ -263,5 +263,10 @@ func OOMKillCount(path string) (uint64, error) {
 }
 
 func (m *manager) OOMKillCount() (uint64, error) {
-	return OOMKillCount(m.dirPath)
+	c, err := OOMKillCount(m.dirPath)
+	if err != nil && m.rootless && os.IsNotExist(err) {
+		err = nil
+	}
+
+	return c, err
 }

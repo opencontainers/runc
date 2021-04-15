@@ -498,5 +498,9 @@ func (m *unifiedManager) Exists() bool {
 }
 
 func (m *unifiedManager) OOMKillCount() (uint64, error) {
-	return fs2.OOMKillCount(m.path)
+	fsMgr, err := m.fsManager()
+	if err != nil {
+		return 0, err
+	}
+	return fsMgr.OOMKillCount()
 }

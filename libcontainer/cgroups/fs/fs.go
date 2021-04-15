@@ -428,5 +428,11 @@ func OOMKillCount(path string) (uint64, error) {
 }
 
 func (m *manager) OOMKillCount() (uint64, error) {
-	return OOMKillCount(m.Path("memory"))
+	c, err := OOMKillCount(m.Path("memory"))
+	// Ignore ENOENT when rootless as it couldn't create cgroup.
+	if err != nil && m.rootless && os.IsNotExist(err) {
+		err = nil
+	}
+
+	return c, err
 }
