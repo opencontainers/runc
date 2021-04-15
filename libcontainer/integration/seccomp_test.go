@@ -18,9 +18,7 @@ func TestSeccompDenyGetcwdWithErrno(t *testing.T) {
 	}
 
 	rootfs, err := newRootfs()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer remove(rootfs)
 
 	errnoRet := uint(syscall.ESRCH)
@@ -38,9 +36,7 @@ func TestSeccompDenyGetcwdWithErrno(t *testing.T) {
 	}
 
 	container, err := newContainer(t, config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer container.Destroy()
 
 	buffers := newStdBuffers()
@@ -55,9 +51,7 @@ func TestSeccompDenyGetcwdWithErrno(t *testing.T) {
 	}
 
 	err = container.Run(pwd)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	ps, err := pwd.Wait()
 	if err == nil {
 		t.Fatal("Expecting error (negative return code); instead exited cleanly!")
@@ -90,9 +84,7 @@ func TestSeccompDenyGetcwd(t *testing.T) {
 	}
 
 	rootfs, err := newRootfs()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer remove(rootfs)
 
 	config := newTemplateConfig(t, &tParam{rootfs: rootfs})
@@ -107,9 +99,7 @@ func TestSeccompDenyGetcwd(t *testing.T) {
 	}
 
 	container, err := newContainer(t, config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer container.Destroy()
 
 	buffers := newStdBuffers()
@@ -124,9 +114,7 @@ func TestSeccompDenyGetcwd(t *testing.T) {
 	}
 
 	err = container.Run(pwd)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	ps, err := pwd.Wait()
 	if err == nil {
 		t.Fatal("Expecting error (negative return code); instead exited cleanly!")
@@ -159,9 +147,7 @@ func TestSeccompPermitWriteConditional(t *testing.T) {
 	}
 
 	rootfs, err := newRootfs()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer remove(rootfs)
 
 	config := newTemplateConfig(t, &tParam{rootfs: rootfs})
@@ -183,9 +169,7 @@ func TestSeccompPermitWriteConditional(t *testing.T) {
 	}
 
 	container, err := newContainer(t, config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer container.Destroy()
 
 	buffers := newStdBuffers()
@@ -200,9 +184,7 @@ func TestSeccompPermitWriteConditional(t *testing.T) {
 	}
 
 	err = container.Run(dmesg)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	if _, err := dmesg.Wait(); err != nil {
 		t.Fatalf("%s: %s", err, buffers.Stderr)
 	}
@@ -221,9 +203,7 @@ func TestSeccompDenyWriteConditional(t *testing.T) {
 	}
 
 	rootfs, err := newRootfs()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer remove(rootfs)
 
 	config := newTemplateConfig(t, &tParam{rootfs: rootfs})
@@ -245,9 +225,7 @@ func TestSeccompDenyWriteConditional(t *testing.T) {
 	}
 
 	container, err := newContainer(t, config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer container.Destroy()
 
 	buffers := newStdBuffers()
@@ -262,9 +240,7 @@ func TestSeccompDenyWriteConditional(t *testing.T) {
 	}
 
 	err = container.Run(dmesg)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	ps, err := dmesg.Wait()
 	if err == nil {
@@ -299,9 +275,7 @@ func TestSeccompPermitWriteMultipleConditions(t *testing.T) {
 	}
 
 	rootfs, err := newRootfs()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer remove(rootfs)
 
 	config := newTemplateConfig(t, &tParam{rootfs: rootfs})
@@ -354,9 +328,7 @@ func TestSeccompDenyWriteMultipleConditions(t *testing.T) {
 	}
 
 	rootfs, err := newRootfs()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer remove(rootfs)
 
 	config := newTemplateConfig(t, &tParam{rootfs: rootfs})
@@ -403,9 +375,7 @@ func TestSeccompMultipleConditionSameArgDeniesStdout(t *testing.T) {
 	}
 
 	rootfs, err := newRootfs()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer remove(rootfs)
 
 	// Prevent writing to both stdout and stderr
@@ -451,9 +421,7 @@ func TestSeccompMultipleConditionSameArgDeniesStderr(t *testing.T) {
 	}
 
 	rootfs, err := newRootfs()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer remove(rootfs)
 
 	// Prevent writing to both stdout and stderr

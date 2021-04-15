@@ -62,15 +62,11 @@ func testCheckpoint(t *testing.T, userns bool) {
 	}
 
 	root, err := newTestRoot()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer os.RemoveAll(root)
 
 	rootfs, err := newRootfs()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer remove(rootfs)
 
 	config := newTemplateConfig(t, &tParam{
@@ -78,21 +74,14 @@ func testCheckpoint(t *testing.T, userns bool) {
 		userns: userns,
 	})
 	factory, err := libcontainer.New(root, libcontainer.Cgroupfs)
-
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	container, err := factory.Create("test", config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer container.Destroy()
 
 	stdinR, stdinW, err := os.Pipe()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	var stdout bytes.Buffer
 
@@ -108,24 +97,16 @@ func testCheckpoint(t *testing.T, userns bool) {
 	err = container.Run(&pconfig)
 	stdinR.Close()
 	defer stdinW.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	pid, err := pconfig.Pid()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	process, err := os.FindProcess(pid)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	parentDir, err := ioutil.TempDir("", "criu-parent")
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer os.RemoveAll(parentDir)
 
 	preDumpOpts := &libcontainer.CriuOpts{
@@ -141,18 +122,14 @@ func testCheckpoint(t *testing.T, userns bool) {
 	}
 
 	state, err := container.Status()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	if state != libcontainer.Running {
 		t.Fatal("Unexpected preDump state: ", state)
 	}
 
 	imagesDir, err := ioutil.TempDir("", "criu")
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer os.RemoveAll(imagesDir)
 
 	checkpointOpts := &libcontainer.CriuOpts{
@@ -169,9 +146,7 @@ func testCheckpoint(t *testing.T, userns bool) {
 	}
 
 	state, err = container.Status()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	if state != libcontainer.Stopped {
 		t.Fatal("Unexpected state checkpoint: ", state)
@@ -179,20 +154,14 @@ func testCheckpoint(t *testing.T, userns bool) {
 
 	stdinW.Close()
 	_, err = process.Wait()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	// reload the container
 	container, err = factory.Load("test")
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	restoreStdinR, restoreStdinW, err := os.Pipe()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	var restoreStdout bytes.Buffer
 	restoreProcessConfig := &libcontainer.Process{
@@ -211,33 +180,23 @@ func testCheckpoint(t *testing.T, userns bool) {
 	}
 
 	state, err = container.Status()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	if state != libcontainer.Running {
 		t.Fatal("Unexpected restore state: ", state)
 	}
 
 	pid, err = restoreProcessConfig.Pid()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	_, err = os.FindProcess(pid)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	_, err = restoreStdinW.WriteString("Hello!")
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	restoreStdinW.Close()
 	s, err := restoreProcessConfig.Wait()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	if !s.Success() {
 		t.Fatal(s.String(), pid)

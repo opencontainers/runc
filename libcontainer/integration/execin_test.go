@@ -298,9 +298,7 @@ func TestExecInTTY(t *testing.T) {
 		var stdout bytes.Buffer
 
 		parent, child, err := utils.NewSockPair("console")
-		if err != nil {
-			ok(t, err)
-		}
+		ok(t, err)
 		ps.ConsoleSocket = child
 
 		done := make(chan (error))
@@ -415,22 +413,17 @@ func TestExecinPassExtraFiles(t *testing.T) {
 		return
 	}
 	rootfs, err := newRootfs()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer remove(rootfs)
+
 	config := newTemplateConfig(t, &tParam{rootfs: rootfs})
 	container, err := newContainer(t, config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer container.Destroy()
 
 	// Execute a first process in the container
 	stdinR, stdinW, err := os.Pipe()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	process := &libcontainer.Process{
 		Cwd:   "/",
 		Args:  []string{"cat"},
@@ -441,19 +434,13 @@ func TestExecinPassExtraFiles(t *testing.T) {
 	err = container.Run(process)
 	stdinR.Close()
 	defer stdinW.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	var stdout bytes.Buffer
 	pipeout1, pipein1, err := os.Pipe()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	pipeout2, pipein2, err := os.Pipe()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	inprocess := &libcontainer.Process{
 		Cwd:        "/",
 		Args:       []string{"sh", "-c", "cd /proc/$$/fd; echo -n *; echo -n 1 >3; echo -n 2 >4"},
@@ -463,9 +450,7 @@ func TestExecinPassExtraFiles(t *testing.T) {
 		Stdout:     &stdout,
 	}
 	err = container.Run(inprocess)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	waitProcess(inprocess, t)
 	stdinW.Close()
@@ -478,18 +463,14 @@ func TestExecinPassExtraFiles(t *testing.T) {
 	}
 	var buf = []byte{0}
 	_, err = pipeout1.Read(buf)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	out1 := string(buf)
 	if out1 != "1" {
 		t.Fatalf("expected first pipe to receive '1', got '%s'", out1)
 	}
 
 	_, err = pipeout2.Read(buf)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	out2 := string(buf)
 	if out2 != "2" {
 		t.Fatalf("expected second pipe to receive '2', got '%s'", out2)

@@ -808,15 +808,11 @@ func TestContainerState(t *testing.T) {
 	}
 
 	rootfs, err := newRootfs()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer remove(rootfs)
 
 	l, err := os.Readlink("/proc/1/ns/ipc")
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	config := newTemplateConfig(t, &tParam{rootfs: rootfs})
 	config.Namespaces = configs.Namespaces([]configs.Namespace{
@@ -829,15 +825,12 @@ func TestContainerState(t *testing.T) {
 	})
 
 	container, err := newContainer(t, config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer container.Destroy()
 
 	stdinR, stdinW, err := os.Pipe()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
+
 	p := &libcontainer.Process{
 		Cwd:   "/",
 		Args:  []string{"cat"},
@@ -846,21 +839,15 @@ func TestContainerState(t *testing.T) {
 		Init:  true,
 	}
 	err = container.Run(p)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	stdinR.Close()
 	defer stdinW.Close()
 
 	st, err := container.State()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	l1, err := os.Readlink(st.NamespacePaths[configs.NEWIPC])
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	if l1 != l {
 		t.Fatal("Container using non-host ipc namespace")
 	}
@@ -874,28 +861,20 @@ func TestPassExtraFiles(t *testing.T) {
 	}
 
 	rootfs, err := newRootfs()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer remove(rootfs)
 
 	config := newTemplateConfig(t, &tParam{rootfs: rootfs})
 
 	container, err := newContainer(t, config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer container.Destroy()
 
 	var stdout bytes.Buffer
 	pipeout1, pipein1, err := os.Pipe()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	pipeout2, pipein2, err := os.Pipe()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	process := libcontainer.Process{
 		Cwd:        "/",
 		Args:       []string{"sh", "-c", "cd /proc/$$/fd; echo -n *; echo -n 1 >3; echo -n 2 >4"},
@@ -906,9 +885,7 @@ func TestPassExtraFiles(t *testing.T) {
 		Init:       true,
 	}
 	err = container.Run(&process)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	waitProcess(&process, t)
 
@@ -919,18 +896,14 @@ func TestPassExtraFiles(t *testing.T) {
 	}
 	var buf = []byte{0}
 	_, err = pipeout1.Read(buf)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	out1 := string(buf)
 	if out1 != "1" {
 		t.Fatalf("expected first pipe to receive '1', got '%s'", out1)
 	}
 
 	_, err = pipeout2.Read(buf)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	out2 := string(buf)
 	if out2 != "2" {
 		t.Fatalf("expected second pipe to receive '2', got '%s'", out2)
@@ -943,15 +916,11 @@ func TestMountCmds(t *testing.T) {
 	}
 
 	rootfs, err := newRootfs()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer remove(rootfs)
 
 	tmpDir, err := ioutil.TempDir("", "tmpdir")
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer os.RemoveAll(tmpDir)
 
 	config := newTemplateConfig(t, &tParam{rootfs: rootfs})
@@ -971,9 +940,7 @@ func TestMountCmds(t *testing.T) {
 	})
 
 	container, err := newContainer(t, config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	defer container.Destroy()
 
 	pconfig := libcontainer.Process{
@@ -983,17 +950,13 @@ func TestMountCmds(t *testing.T) {
 		Init: true,
 	}
 	err = container.Run(&pconfig)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 
 	// Wait for process
 	waitProcess(&pconfig, t)
 
 	entries, err := ioutil.ReadDir(tmpDir)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ok(t, err)
 	expected := []string{"hello", "hello-backup", "world", "world-backup"}
 	for i, e := range entries {
 		if e.Name() != expected[i] {
