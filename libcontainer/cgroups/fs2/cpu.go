@@ -70,6 +70,15 @@ func statCpu(dirPath string, stats *cgroups.Stats) error {
 
 		case "system_usec":
 			stats.CpuStats.CpuUsage.UsageInKernelmode = v * 1000
+
+		case "nr_periods":
+			stats.CpuStats.ThrottlingData.Periods = v
+
+		case "nr_throttled":
+			stats.CpuStats.ThrottlingData.ThrottledPeriods = v
+
+		case "throttled_usec":
+			stats.CpuStats.ThrottlingData.ThrottledTime = v * 1000
 		}
 	}
 	return nil
