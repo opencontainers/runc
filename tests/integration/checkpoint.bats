@@ -159,9 +159,12 @@ function simple_cr() {
 	# checkpoint the running container
 	mkdir image-dir
 	mkdir work-dir
-	runc --criu "$CRIU" checkpoint --parent-path ./parent-dir --work-path ./work-dir --image-path ./image-dir test_busybox
+	runc --criu "$CRIU" checkpoint --parent-path ../parent-dir --work-path ./work-dir --image-path ./image-dir test_busybox
 	grep -B 5 Error ./work-dir/dump.log || true
 	[ "$status" -eq 0 ]
+
+	# check parent path is valid
+	[ -e ./image-dir/parent ]
 
 	# after checkpoint busybox is no longer running
 	testcontainer test_busybox checkpointed
