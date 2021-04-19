@@ -11,3 +11,7 @@
 compile_go_fuzzer ./libcontainer/system FuzzUIDMap id_map_fuzzer linux
 compile_go_fuzzer ./libcontainer/user FuzzUser user_fuzzer
 compile_go_fuzzer ./libcontainer/configs FuzzUnmarshalJSON configs_fuzzer
+
+# Build fuzzers from an independent repository
+git clone --depth 1 https://github.com/AdaLogics/runc-fuzzers $SRC/runc-fuzzers
+$SRC/runc-fuzzers/build.sh
