@@ -931,9 +931,20 @@ func readonlyPath(path string) error {
 		if os.IsNotExist(err) {
 			return nil
 		}
-		return err
+		return &os.PathError{Op: "bind-mount", Path: path, Err: err}
 	}
-	return unix.Mount(path, path, "", unix.MS_BIND|unix.MS_REMOUNT|unix.MS_RDONLY|unix.MS_REC, "")
+
+	var s unix.Statfs_t
+	if err := unix.Statfs(path, &s); err != nil {
+		return &os.PathError{Op: "statfs", Path: path, Err: err}
+	}
+	flags := uintptr(s.Flags) & (unix.MS_NOSUID | unix.MS_NODEV | unix.MS_NOEXEC)
+
+	if err := unix.Mount(path, path, "", flags|unix.MS_BIND|unix.MS_REMOUNT|unix.MS_RDONLY, ""); err != nil {
+		return &os.PathError{Op: "bind-mount-ro", Path: path, Err: err}
+	}
+
+	return nil
 }
 
 // remountReadonly will remount an existing mount point and ensure that it is read-only.

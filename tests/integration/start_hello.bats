@@ -59,3 +59,20 @@ function teardown() {
 
 	[[ "$(cat pid.txt)" =~ [0-9]+ ]]
 }
+
+# https://github.com/opencontainers/runc/pull/2897
+@test "runc run [rootless with host pidns]" {
+	requires rootless_no_features
+
+	# Remove pid namespace, and replace /proc mount
+	# with a bind mount from the host.
+	update_config '	  .linux.namespaces -= [{"type": "pid"}]
+			| .mounts |= map((select(.type == "proc")
+				| .type = "none"
+				| .source = "/proc"
+				| .options = ["rbind", "nosuid", "nodev", "noexec"]
+			  ) // .)'
+
+	runc run test_hello
+	[ "$status" -eq 0 ]
+}
