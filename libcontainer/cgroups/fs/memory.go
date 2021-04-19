@@ -224,7 +224,9 @@ func getMemoryData(path, name string) (cgroups.MemoryData, error) {
 
 	value, err := fscommon.GetCgroupParamUint(path, usage)
 	if err != nil {
-		if moduleName != "memory" && os.IsNotExist(err) {
+		if name != "" && os.IsNotExist(err) {
+			// Ignore ENOENT as swap and kmem controllers
+			// are optional in the kernel.
 			return cgroups.MemoryData{}, nil
 		}
 		return cgroups.MemoryData{}, fmt.Errorf("failed to parse %s - %v", usage, err)
@@ -232,25 +234,16 @@ func getMemoryData(path, name string) (cgroups.MemoryData, error) {
 	memoryData.Usage = value
 	value, err = fscommon.GetCgroupParamUint(path, maxUsage)
 	if err != nil {
-		if moduleName != "memory" && os.IsNotExist(err) {
-			return cgroups.MemoryData{}, nil
-		}
 		return cgroups.MemoryData{}, fmt.Errorf("failed to parse %s - %v", maxUsage, err)
 	}
 	memoryData.MaxUsage = value
 	value, err = fscommon.GetCgroupParamUint(path, failcnt)
 	if err != nil {
-		if moduleName != "memory" && os.IsNotExist(err) {
-			return cgroups.MemoryData{}, nil
-		}
 		return cgroups.MemoryData{}, fmt.Errorf("failed to parse %s - %v", failcnt, err)
 	}
 	memoryData.Failcnt = value
 	value, err = fscommon.GetCgroupParamUint(path, limit)
 	if err != nil {
-		if moduleName != "memory" && os.IsNotExist(err) {
-			return cgroups.MemoryData{}, nil
-		}
 		return cgroups.MemoryData{}, fmt.Errorf("failed to parse %s - %v", limit, err)
 	}
 	memoryData.Limit = value
