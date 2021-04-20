@@ -27,9 +27,18 @@ func (s *FreezerGroup) Apply(path string, d *cgroupData) error {
 	return join(path, d.pid)
 }
 
-func (s *FreezerGroup) Set(path string, cgroup *configs.Cgroup) error {
+func (s *FreezerGroup) Set(path string, cgroup *configs.Cgroup) (Err error) {
 	switch cgroup.Resources.Freezer {
 	case configs.Frozen:
+		defer func() {
+			if Err != nil {
+				// Freezing failed, and it is bad and dangerous
+				// to leave the cgroup in FROZEN or FREEZING
+				// state, so (try to) thaw it back.
+				_ = fscommon.WriteFile(path, "freezer.state", string(configs.Thawed))
+			}
+		}()
+
 		// As per older kernel docs (freezer-subsystem.txt before
 		// kernel commit ef9fe980c6fcc1821), if FREEZING is seen,
 		// userspace should either retry or thaw. While current
@@ -75,9 +84,6 @@ func (s *FreezerGroup) Set(path string, cgroup *configs.Cgroup) error {
 			}
 		}
 		// Despite our best efforts, it got stuck in FREEZING.
-		// Leaving it in this state is bad and dangerous, so
-		// let's (try to) thaw it back and error out.
-		_ = fscommon.WriteFile(path, "freezer.state", string(configs.Thawed))
 		return errors.New("unable to freeze")
 	case configs.Thawed:
 		return fscommon.WriteFile(path, "freezer.state", string(configs.Thawed))
