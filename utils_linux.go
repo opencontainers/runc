@@ -264,11 +264,6 @@ type runner struct {
 
 func (r *runner) run(config *specs.Process) (int, error) {
 	var err error
-	defer func() {
-		if err != nil {
-			r.destroy()
-		}
-	}()
 	if err = r.checkTerminal(config); err != nil {
 		return -1, err
 	}
@@ -343,9 +338,8 @@ func (r *runner) run(config *specs.Process) (int, error) {
 	if detach {
 		return 0, nil
 	}
-	if err == nil {
-		r.destroy()
-	}
+	r.destroy()
+	
 	return status, err
 }
 
