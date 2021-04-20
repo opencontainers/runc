@@ -2,6 +2,7 @@ package systemd
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"math"
 	"os"
@@ -298,7 +299,7 @@ func getDbusConnection(rootless bool) (*systemdDbus.Conn, error) {
 		if rootless {
 			connDbus, connErr = NewUserSystemdDbus()
 		} else {
-			connDbus, connErr = systemdDbus.New()
+			connDbus, connErr = systemdDbus.NewWithContext(context.TODO())
 		}
 	})
 	return connDbus, connErr
