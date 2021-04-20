@@ -55,7 +55,7 @@ func (d *dbusConnManager) getConnection() (*systemdDbus.Conn, error) {
 
 func (d *dbusConnManager) newConnection() (*systemdDbus.Conn, error) {
 	if d.rootless {
-		return NewUserSystemdDbus()
+		return newUserSystemdDbus()
 	}
 	return systemdDbus.NewWithContext(context.TODO())
 }
