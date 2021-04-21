@@ -24,11 +24,14 @@ import (
 const (
 	CgroupProcesses   = "cgroup.procs"
 	unifiedMountpoint = "/sys/fs/cgroup"
+	hybridMountpoint  = "/sys/fs/cgroup/unified"
 )
 
 var (
 	isUnifiedOnce sync.Once
 	isUnified     bool
+	isHybridOnce  sync.Once
+	isHybrid      bool
 )
 
 // IsCgroup2UnifiedMode returns whether we are running in cgroup v2 unified mode.
@@ -48,6 +51,24 @@ func IsCgroup2UnifiedMode() bool {
 		isUnified = st.Type == unix.CGROUP2_SUPER_MAGIC
 	})
 	return isUnified
+}
+
+// IsCgroup2HybridMode returns whether we are running in cgroup v2 hybrid mode.
+func IsCgroup2HybridMode() bool {
+	isHybridOnce.Do(func() {
+		var st unix.Statfs_t
+		err := unix.Statfs(hybridMountpoint, &st)
+		if err != nil {
+			if os.IsNotExist(err) {
+				// ignore the "not found" error
+				isHybrid = false
+				return
+			}
+			panic(fmt.Sprintf("cannot statfs cgroup root: %s", err))
+		}
+		isHybrid = st.Type == unix.CGROUP2_SUPER_MAGIC
+	})
+	return isHybrid
 }
 
 type Mount struct {
