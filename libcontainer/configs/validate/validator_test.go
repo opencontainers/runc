@@ -317,3 +317,36 @@ func TestValidateSysctlWithoutNETNamespace(t *testing.T) {
 		t.Error("Expected error to occur but it was nil")
 	}
 }
+
+func TestValidateMounts(t *testing.T) {
+	testCases := []struct {
+		isErr bool
+		dest  string
+	}{
+		{isErr: true, dest: "not/an/abs/path"},
+		{isErr: true, dest: "./rel/path"},
+		{isErr: true, dest: "./rel/path"},
+		{isErr: true, dest: "../../path"},
+		{isErr: false, dest: "/abs/path"},
+		{isErr: false, dest: "/abs/but/../unclean"},
+	}
+
+	validator := validate.New()
+
+	for _, tc := range testCases {
+		config := &configs.Config{
+			Rootfs: "/var",
+			Mounts: []*configs.Mount{
+				{Destination: tc.dest},
+			},
+		}
+
+		err := validator.Validate(config)
+		if tc.isErr && err == nil {
+			t.Errorf("mount dest: %s, expected error, got nil", tc.dest)
+		}
+		if !tc.isErr && err != nil {
+			t.Errorf("mount dest: %s, expected nil, got error %v", tc.dest, err)
+		}
+	}
+}
