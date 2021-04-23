@@ -138,7 +138,8 @@ function setup() {
 }
 
 @test "runc run (blkio weight)" {
-	requires root cgroups_v2
+	requires cgroups_v2
+	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
 
 	set_cgroups_path
 	update_config '.linux.resources.blockIO |= {"weight": 750}'
@@ -234,4 +235,19 @@ function setup() {
 	check_cpu_quota 5000 50000 "100ms"
 
 	check_cpu_weight 42
+}
+
+@test "runc run (cgroupv2 mount inside container)" {
+	requires cgroups_v2
+	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+
+	set_cgroups_path
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_unified
+	[ "$status" -eq 0 ]
+
+	# Make sure we don't have any extra cgroups inside
+	runc exec test_cgroups_unified find /sys/fs/cgroup/ -type d
+	[ "$status" -eq 0 ]
+	[ "$(wc -l <<<"$output")" -eq 1 ]
 }
