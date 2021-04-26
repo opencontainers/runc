@@ -2,7 +2,6 @@ package systemd
 
 import (
 	"bufio"
-	"context"
 	"fmt"
 	"math"
 	"os"
@@ -29,10 +28,6 @@ const (
 )
 
 var (
-	connOnce sync.Once
-	connDbus *systemdDbus.Conn
-	connErr  error
-
 	versionOnce sync.Once
 	version     int
 
@@ -290,19 +285,6 @@ func generateDeviceProperties(rules []*devices.Rule) ([]systemdDbus.Property, er
 
 	properties = append(properties, newProp("DeviceAllow", deviceAllowList))
 	return properties, nil
-}
-
-// getDbusConnection lazy initializes systemd dbus connection
-// and returns it
-func getDbusConnection(rootless bool) (*systemdDbus.Conn, error) {
-	connOnce.Do(func() {
-		if rootless {
-			connDbus, connErr = NewUserSystemdDbus()
-		} else {
-			connDbus, connErr = systemdDbus.NewWithContext(context.TODO())
-		}
-	})
-	return connDbus, connErr
 }
 
 func newProp(name string, units interface{}) systemdDbus.Property {
