@@ -38,8 +38,8 @@ func NewIntelRdtTestUtil(t *testing.T) *intelRdtTestUtil {
 	if err != nil {
 		t.Fatal(err)
 	}
-	d.root = tempDir
-	testIntelRdtPath := filepath.Join(d.root, "resctrl")
+	intelRdtRoot = tempDir
+	testIntelRdtPath := filepath.Join(tempDir, "resctrl")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,6 +53,7 @@ func NewIntelRdtTestUtil(t *testing.T) *intelRdtTestUtil {
 }
 
 func (c *intelRdtTestUtil) cleanup() {
+	intelRdtRoot = ""
 	os.RemoveAll(c.tempDir)
 }
 

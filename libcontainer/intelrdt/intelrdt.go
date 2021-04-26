@@ -205,7 +205,6 @@ var (
 )
 
 type intelRdtData struct {
-	root   string
 	config *configs.Config
 }
 
@@ -548,6 +547,14 @@ func (m *intelRdtManager) Apply(pid int) (err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	if m.config.IntelRdt.ClosID != "" && m.config.IntelRdt.L3CacheSchema == "" && m.config.IntelRdt.MemBwSchema == "" {
+		// Check that the CLOS exists, i.e. it has been pre-configured to
+		// conform with the runtime spec
+		if _, err := os.Stat(path); err != nil {
+			return fmt.Errorf("clos dir not accessible (must be pre-created when l3CacheSchema and memBwSchema are empty): %w", err)
+		}
+	}
+
 	if err := os.MkdirAll(path, 0o755); err != nil {
 		return newLastCmdError(err)
 	}
@@ -722,6 +729,12 @@ func (m *intelRdtManager) Set(container *configs.Config) error {
 		path := m.GetPath()
 		l3CacheSchema := container.IntelRdt.L3CacheSchema
 		memBwSchema := container.IntelRdt.MemBwSchema
+
+		// TODO: verify that l3CacheSchema and/or memBwSchema match the
+		// existing schemata if ClosID has been specified. This is a more
+		// involved than reading the file and doing plain string comparison as
+		// the value written in does not necessarily match what gets read out
+		// (leading zeros, cache id ordering etc).
 
 		// Write a single joint schema string to schemata file
 		if l3CacheSchema != "" && memBwSchema != "" {
