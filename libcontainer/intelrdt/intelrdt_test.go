@@ -12,10 +12,6 @@ import (
 )
 
 func TestIntelRdtSetL3CacheSchema(t *testing.T) {
-	if !IsCATEnabled() {
-		return
-	}
-
 	helper := NewIntelRdtTestUtil(t)
 
 	const (
@@ -46,10 +42,6 @@ func TestIntelRdtSetL3CacheSchema(t *testing.T) {
 }
 
 func TestIntelRdtSetMemBwSchema(t *testing.T) {
-	if !IsMBAEnabled() {
-		return
-	}
-
 	helper := NewIntelRdtTestUtil(t)
 
 	const (
@@ -80,10 +72,6 @@ func TestIntelRdtSetMemBwSchema(t *testing.T) {
 }
 
 func TestIntelRdtSetMemBwScSchema(t *testing.T) {
-	if !IsMBAScEnabled() {
-		return
-	}
-
 	helper := NewIntelRdtTestUtil(t)
 
 	const (
