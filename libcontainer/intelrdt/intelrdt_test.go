@@ -5,6 +5,8 @@ package intelrdt
 import (
 	"errors"
 	"io"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -108,6 +110,35 @@ func TestIntelRdtSetMemBwScSchema(t *testing.T) {
 
 	if value != memBwScSchemeAfter {
 		t.Fatal("Got the wrong value, set 'schemata' failed.")
+	}
+}
+
+func TestApply(t *testing.T) {
+	helper := NewIntelRdtTestUtil(t)
+
+	const closID = "test-clos"
+
+	helper.IntelRdtData.config.IntelRdt.ClosID = closID
+	intelrdt := NewManager(helper.IntelRdtData.config, "", helper.IntelRdtPath)
+	if err := intelrdt.Apply(1234); err == nil {
+		t.Fatal("unexpected success when applying pid")
+	}
+	if _, err := os.Stat(filepath.Join(helper.IntelRdtPath, closID)); err == nil {
+		t.Fatal("closid dir should not exist")
+	}
+
+	// Dir should be created if some schema has been specified
+	intelrdt.(*intelRdtManager).config.IntelRdt.L3CacheSchema = "L3:0=f"
+	if err := intelrdt.Apply(1235); err != nil {
+		t.Fatalf("Apply() failed: %v", err)
+	}
+
+	pids, err := getIntelRdtParamString(intelrdt.GetPath(), "tasks")
+	if err != nil {
+		t.Fatalf("failed to read tasks file: %v", err)
+	}
+	if pids != "1235" {
+		t.Fatalf("unexpected tasks file, expected '1235', got %q", pids)
 	}
 }
 
