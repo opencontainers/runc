@@ -8,7 +8,6 @@ import (
 
 	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
 	dbus "github.com/godbus/dbus/v5"
-	"github.com/sirupsen/logrus"
 )
 
 type dbusConnManager struct {
@@ -73,17 +72,19 @@ func (d *dbusConnManager) resetConnection(conn *systemdDbus.Conn) {
 
 var errDbusConnClosed = dbus.ErrClosed.Error()
 
-// checkAndReconnect checks if the connection is disconnected,
-// and tries reconnect if it is.
-func (d *dbusConnManager) checkAndReconnect(conn *systemdDbus.Conn, err error) {
-	if !isDbusError(err, errDbusConnClosed) {
-		return
-	}
-	d.resetConnection(conn)
-
-	// Try to reconnect
-	_, err = d.getConnection()
-	if err != nil {
-		logrus.Warnf("Dbus disconnected and failed to reconnect: %s", err)
+// retryOnDisconnect calls op, and if the error it returns is about closed dbus
+// connection, the connection is re-established and the op is retried. This helps
+// with the situation when dbus is restarted and we have a stale connection.
+func (d *dbusConnManager) retryOnDisconnect(op func(*systemdDbus.Conn) error) error {
+	for {
+		conn, err := d.getConnection()
+		if err != nil {
+			return err
+		}
+		err = op(conn)
+		if !isDbusError(err, errDbusConnClosed) {
+			return err
+		}
+		d.resetConnection(conn)
 	}
 }
