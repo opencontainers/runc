@@ -71,11 +71,11 @@ func OpenFile(dir, file string, flags int) (*os.File, error) {
 		flags |= os.O_TRUNC | os.O_CREATE
 		mode = 0o600
 	}
-	reldir := strings.TrimPrefix(dir, cgroupfsPrefix)
-	if len(reldir) == len(dir) { // non-standard path, old system?
+	if prepareOpenat2() != nil {
 		return openWithSecureJoin(dir, file, flags, mode)
 	}
-	if prepareOpenat2() != nil {
+	reldir := strings.TrimPrefix(dir, cgroupfsPrefix)
+	if len(reldir) == len(dir) { // non-standard path, old system?
 		return openWithSecureJoin(dir, file, flags, mode)
 	}
 
