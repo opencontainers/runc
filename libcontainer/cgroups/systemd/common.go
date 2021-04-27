@@ -302,14 +302,20 @@ func getUnitName(c *configs.Cgroup) string {
 	return c.Name
 }
 
-// isUnitExists returns true if the error is that a systemd unit already exists.
-func isUnitExists(err error) bool {
+// isDbusError returns true if the error is a specific dbus error.
+func isDbusError(err error, name string) bool {
 	if err != nil {
-		if dbusError, ok := err.(dbus.Error); ok {
-			return strings.Contains(dbusError.Name, "org.freedesktop.systemd1.UnitExists")
+		var derr *dbus.Error
+		if errors.As(err, &derr) {
+			return strings.Contains(derr.Name, name)
 		}
 	}
 	return false
+}
+
+// isUnitExists returns true if the error is that a systemd unit already exists.
+func isUnitExists(err error) bool {
+	return isDbusError(err, "org.freedesktop.systemd1.UnitExists")
 }
 
 func startUnit(dbusConnection *systemdDbus.Conn, unitName string, properties []systemdDbus.Property) error {
