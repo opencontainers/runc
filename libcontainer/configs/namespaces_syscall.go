@@ -16,6 +16,7 @@ var namespaceInfo = map[NamespaceType]int{
 	NEWUTS:    unix.CLONE_NEWUTS,
 	NEWPID:    unix.CLONE_NEWPID,
 	NEWCGROUP: unix.CLONE_NEWCGROUP,
+	NEWTIME:   unix.CLONE_NEWTIME,
 }
 
 // CloneFlags parses the container's Namespaces options to set the correct
