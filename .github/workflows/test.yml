@@ -82,15 +82,15 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: "Cache ~/.vagrant.d/boxes, using hash of Vagrantfile.fedora33"
+      - name: "Cache ~/.vagrant.d/boxes, using hash of Vagrantfile.fedora34"
         uses: actions/cache@v2
         with:
           path: ~/.vagrant.d/boxes
-          key: vagrant-${{ hashFiles('Vagrantfile.fedora33') }}
+          key: vagrant-${{ hashFiles('Vagrantfile.fedora34') }}
 
       - name: prepare vagrant
         run: |
-          ln -sf Vagrantfile.fedora33 Vagrantfile
+          ln -sf Vagrantfile.fedora34 Vagrantfile
           # Retry if it fails (download.fedoraproject.org returns 404 sometimes)
           vagrant up || vagrant up
           vagrant ssh-config >> ~/.ssh/config
