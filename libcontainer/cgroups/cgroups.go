@@ -30,7 +30,7 @@ type Manager interface {
 	Path(string) string
 
 	// Sets the cgroup as configured.
-	Set(container *configs.Config) error
+	Set(r *configs.Resources) error
 
 	// GetPaths returns cgroup path(s) to save in a state file in order to restore later.
 	//

@@ -12,15 +12,14 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
-func isCpuSet(cgroup *configs.Cgroup) bool {
-	return cgroup.Resources.CpuWeight != 0 || cgroup.Resources.CpuQuota != 0 || cgroup.Resources.CpuPeriod != 0
+func isCpuSet(r *configs.Resources) bool {
+	return r.CpuWeight != 0 || r.CpuQuota != 0 || r.CpuPeriod != 0
 }
 
-func setCpu(dirPath string, cgroup *configs.Cgroup) error {
-	if !isCpuSet(cgroup) {
+func setCpu(dirPath string, r *configs.Resources) error {
+	if !isCpuSet(r) {
 		return nil
 	}
-	r := cgroup.Resources
 
 	// NOTE: .CpuShares is not used here. Conversion is the caller's responsibility.
 	if r.CpuWeight != 0 {

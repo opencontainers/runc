@@ -58,7 +58,7 @@ func TestMemorySetMemory(t *testing.T) {
 	helper.CgroupData.config.Resources.Memory = memoryAfter
 	helper.CgroupData.config.Resources.MemoryReservation = reservationAfter
 	memory := &MemoryGroup{}
-	if err := memory.Set(helper.CgroupPath, helper.CgroupData.config); err != nil {
+	if err := memory.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
 		t.Fatal(err)
 	}
 
@@ -94,7 +94,7 @@ func TestMemorySetMemoryswap(t *testing.T) {
 
 	helper.CgroupData.config.Resources.MemorySwap = memoryswapAfter
 	memory := &MemoryGroup{}
-	if err := memory.Set(helper.CgroupPath, helper.CgroupData.config); err != nil {
+	if err := memory.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
 		t.Fatal(err)
 	}
 
@@ -131,7 +131,7 @@ func TestMemorySetMemoryLargerThanSwap(t *testing.T) {
 	helper.CgroupData.config.Resources.Memory = memoryAfter
 	helper.CgroupData.config.Resources.MemorySwap = memoryswapAfter
 	memory := &MemoryGroup{}
-	if err := memory.Set(helper.CgroupPath, helper.CgroupData.config); err != nil {
+	if err := memory.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
 		t.Fatal(err)
 	}
 
@@ -170,7 +170,7 @@ func TestMemorySetSwapSmallerThanMemory(t *testing.T) {
 	helper.CgroupData.config.Resources.Memory = memoryAfter
 	helper.CgroupData.config.Resources.MemorySwap = memoryswapAfter
 	memory := &MemoryGroup{}
-	if err := memory.Set(helper.CgroupPath, helper.CgroupData.config); err != nil {
+	if err := memory.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
 		t.Fatal(err)
 	}
 
@@ -203,7 +203,7 @@ func TestMemorySetMemorySwappinessDefault(t *testing.T) {
 
 	helper.CgroupData.config.Resources.MemorySwappiness = &swappinessAfter
 	memory := &MemoryGroup{}
-	if err := memory.Set(helper.CgroupPath, helper.CgroupData.config); err != nil {
+	if err := memory.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
 		t.Fatal(err)
 	}
 
@@ -414,7 +414,7 @@ func TestMemorySetOomControl(t *testing.T) {
 	})
 
 	memory := &MemoryGroup{}
-	if err := memory.Set(helper.CgroupPath, helper.CgroupData.config); err != nil {
+	if err := memory.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
 		t.Fatal(err)
 	}
 

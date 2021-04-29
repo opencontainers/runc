@@ -36,8 +36,8 @@ type subsystem interface {
 	Name() string
 	// Returns the stats, as 'stats', corresponding to the cgroup under 'path'.
 	GetStats(path string, stats *cgroups.Stats) error
-	// Set the cgroup represented by cgroup.
-	Set(path string, cgroup *configs.Cgroup) error
+	// Set sets cgroup resource limits.
+	Set(path string, r *configs.Resources) error
 }
 
 var errSubsystemDoesNotExist = errors.New("cgroup: subsystem does not exist")
@@ -58,9 +58,8 @@ var legacySubsystems = []subsystem{
 	&fs.NameGroup{GroupName: "name=systemd"},
 }
 
-func genV1ResourcesProperties(c *configs.Cgroup, cm *dbusConnManager) ([]systemdDbus.Property, error) {
+func genV1ResourcesProperties(r *configs.Resources, cm *dbusConnManager) ([]systemdDbus.Property, error) {
 	var properties []systemdDbus.Property
-	r := c.Resources
 
 	deviceProperties, err := generateDeviceProperties(r.Devices)
 	if err != nil {
@@ -232,7 +231,7 @@ func (m *legacyManager) joinCgroups(pid int) error {
 		case "cpuset":
 			if path, ok := m.paths[name]; ok {
 				s := &fs.CpusetGroup{}
-				if err := s.ApplyDir(path, m.cgroups, pid); err != nil {
+				if err := s.ApplyDir(path, m.cgroups.Resources, pid); err != nil {
 					return err
 				}
 			}
@@ -285,7 +284,7 @@ func (m *legacyManager) Freeze(state configs.FreezerState) error {
 	prevState := m.cgroups.Resources.Freezer
 	m.cgroups.Resources.Freezer = state
 	freezer := &fs.FreezerGroup{}
-	if err := freezer.Set(path, m.cgroups); err != nil {
+	if err := freezer.Set(path, m.cgroups.Resources); err != nil {
 		m.cgroups.Resources.Freezer = prevState
 		return err
 	}
@@ -325,16 +324,16 @@ func (m *legacyManager) GetStats() (*cgroups.Stats, error) {
 	return stats, nil
 }
 
-func (m *legacyManager) Set(container *configs.Config) error {
+func (m *legacyManager) Set(r *configs.Resources) error {
 	// If Paths are set, then we are just joining cgroups paths
 	// and there is no need to set any values.
 	if m.cgroups.Paths != nil {
 		return nil
 	}
-	if container.Cgroups.Resources.Unified != nil {
+	if r.Unified != nil {
 		return cgroups.ErrV1NoUnified
 	}
-	properties, err := genV1ResourcesProperties(container.Cgroups, m.dbus)
+	properties, err := genV1ResourcesProperties(r, m.dbus)
 	if err != nil {
 		return err
 	}
@@ -362,7 +361,7 @@ func (m *legacyManager) Set(container *configs.Config) error {
 		}
 	}
 
-	if err := setUnitProperties(m.dbus, getUnitName(container.Cgroups), properties...); err != nil {
+	if err := setUnitProperties(m.dbus, getUnitName(m.cgroups), properties...); err != nil {
 		_ = m.Freeze(targetFreezerState)
 		return err
 	}
@@ -377,7 +376,7 @@ func (m *legacyManager) Set(container *configs.Config) error {
 		if !ok {
 			continue
 		}
-		if err := sys.Set(path, container.Cgroups); err != nil {
+		if err := sys.Set(path, r); err != nil {
 			return err
 		}
 	}

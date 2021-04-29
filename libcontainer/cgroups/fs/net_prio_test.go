@@ -25,7 +25,7 @@ func TestNetPrioSetIfPrio(t *testing.T) {
 
 	helper.CgroupData.config.Resources.NetPrioIfpriomap = prioMap
 	netPrio := &NetPrioGroup{}
-	if err := netPrio.Set(helper.CgroupPath, helper.CgroupData.config); err != nil {
+	if err := netPrio.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
 		t.Fatal(err)
 	}
 
