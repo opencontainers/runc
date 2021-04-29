@@ -2,6 +2,7 @@ package systemd
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"math"
 	"os"
@@ -321,7 +322,7 @@ func isUnitExists(err error) bool {
 func startUnit(cm *dbusConnManager, unitName string, properties []systemdDbus.Property) error {
 	statusChan := make(chan string, 1)
 	err := cm.retryOnDisconnect(func(c *systemdDbus.Conn) error {
-		_, err := c.StartTransientUnit(unitName, "replace", properties, statusChan)
+		_, err := c.StartTransientUnitContext(context.TODO(), unitName, "replace", properties, statusChan)
 		return err
 	})
 	if err == nil {
@@ -331,7 +332,7 @@ func startUnit(cm *dbusConnManager, unitName string, properties []systemdDbus.Pr
 		select {
 		case s := <-statusChan:
 			close(statusChan)
-			// Please refer to https://godoc.org/github.com/coreos/go-systemd/dbus#Conn.StartUnit
+			// Please refer to https://pkg.go.dev/github.com/coreos/go-systemd/v22/dbus#Conn.StartUnit
 			if s != "done" {
 				resetFailedUnit(cm, unitName)
 				return errors.Errorf("error creating systemd unit `%s`: got `%s`", unitName, s)
@@ -350,14 +351,14 @@ func startUnit(cm *dbusConnManager, unitName string, properties []systemdDbus.Pr
 func stopUnit(cm *dbusConnManager, unitName string) error {
 	statusChan := make(chan string, 1)
 	err := cm.retryOnDisconnect(func(c *systemdDbus.Conn) error {
-		_, err := c.StopUnit(unitName, "replace", statusChan)
+		_, err := c.StopUnitContext(context.TODO(), unitName, "replace", statusChan)
 		return err
 	})
 	if err == nil {
 		select {
 		case s := <-statusChan:
 			close(statusChan)
-			// Please refer to https://godoc.org/github.com/coreos/go-systemd/dbus#Conn.StartUnit
+			// Please refer to https://godoc.org/github.com/coreos/go-systemd/v22/dbus#Conn.StartUnit
 			if s != "done" {
 				logrus.Warnf("error removing unit `%s`: got `%s`. Continuing...", unitName, s)
 			}
@@ -370,7 +371,7 @@ func stopUnit(cm *dbusConnManager, unitName string) error {
 
 func resetFailedUnit(cm *dbusConnManager, name string) {
 	err := cm.retryOnDisconnect(func(c *systemdDbus.Conn) error {
-		return c.ResetFailedUnit(name)
+		return c.ResetFailedUnitContext(context.TODO(), name)
 	})
 	if err != nil {
 		logrus.Warnf("unable to reset failed unit: %v", err)
@@ -379,7 +380,7 @@ func resetFailedUnit(cm *dbusConnManager, name string) {
 
 func setUnitProperties(cm *dbusConnManager, name string, properties ...systemdDbus.Property) error {
 	return cm.retryOnDisconnect(func(c *systemdDbus.Conn) error {
-		return c.SetUnitProperties(name, true, properties...)
+		return c.SetUnitPropertiesContext(context.TODO(), name, true, properties...)
 	})
 }
 
