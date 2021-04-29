@@ -17,6 +17,10 @@ const (
 	floatString = "2048"
 )
 
+func init() {
+	TestMode = true
+}
+
 func TestGetCgroupParamsInt(t *testing.T) {
 	// Setup tempdir.
 	tempDir, err := ioutil.TempDir("", "cgroup_utils_test")
