@@ -55,7 +55,7 @@ using the runc checkpoint command.`,
 		cli.StringFlag{
 			Name:  "manage-cgroups-mode",
 			Value: "",
-			Usage: "cgroups mode: 'soft' (default), 'full' and 'strict'",
+			Usage: "cgroups mode: none|props|soft|full|strict|ignore (default: soft)",
 		},
 		cli.StringFlag{
 			Name:  "bundle, b",
@@ -106,6 +106,7 @@ using the runc checkpoint command.`,
 			return err
 		}
 		options := criuOptions(context)
+		setManageCgroupsMode(context, options)
 		if err := setEmptyNsMask(context, options); err != nil {
 			return err
 		}
