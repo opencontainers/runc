@@ -27,8 +27,8 @@ func (s *FreezerGroup) Apply(path string, d *cgroupData) error {
 	return join(path, d.pid)
 }
 
-func (s *FreezerGroup) Set(path string, cgroup *configs.Cgroup) (Err error) {
-	switch cgroup.Resources.Freezer {
+func (s *FreezerGroup) Set(path string, r *configs.Resources) (Err error) {
+	switch r.Freezer {
 	case configs.Frozen:
 		defer func() {
 			if Err != nil {
@@ -90,7 +90,7 @@ func (s *FreezerGroup) Set(path string, cgroup *configs.Cgroup) (Err error) {
 	case configs.Undefined:
 		return nil
 	default:
-		return fmt.Errorf("Invalid argument '%s' to freezer.state", string(cgroup.Resources.Freezer))
+		return fmt.Errorf("Invalid argument '%s' to freezer.state", string(r.Freezer))
 	}
 }
 

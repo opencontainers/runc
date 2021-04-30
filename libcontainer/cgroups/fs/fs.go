@@ -44,8 +44,8 @@ type subsystem interface {
 	GetStats(path string, stats *cgroups.Stats) error
 	// Creates and joins the cgroup represented by 'cgroupData'.
 	Apply(path string, c *cgroupData) error
-	// Set the cgroup represented by cgroup.
-	Set(path string, cgroup *configs.Cgroup) error
+	// Set sets the cgroup resources.
+	Set(path string, r *configs.Resources) error
 }
 
 type manager struct {
@@ -274,8 +274,8 @@ func (m *manager) GetStats() (*cgroups.Stats, error) {
 	return stats, nil
 }
 
-func (m *manager) Set(container *configs.Config) error {
-	if container.Cgroups == nil {
+func (m *manager) Set(r *configs.Resources) error {
+	if r == nil {
 		return nil
 	}
 
@@ -284,7 +284,7 @@ func (m *manager) Set(container *configs.Config) error {
 	if m.cgroups != nil && m.cgroups.Paths != nil {
 		return nil
 	}
-	if container.Cgroups.Resources.Unified != nil {
+	if r.Unified != nil {
 		return cgroups.ErrV1NoUnified
 	}
 
@@ -292,7 +292,7 @@ func (m *manager) Set(container *configs.Config) error {
 	defer m.mu.Unlock()
 	for _, sys := range subsystems {
 		path := m.paths[sys.Name()]
-		if err := sys.Set(path, container.Cgroups); err != nil {
+		if err := sys.Set(path, r); err != nil {
 			if m.rootless && sys.Name() == "devices" {
 				continue
 			}
@@ -322,7 +322,7 @@ func (m *manager) Freeze(state configs.FreezerState) error {
 	prevState := m.cgroups.Resources.Freezer
 	m.cgroups.Resources.Freezer = state
 	freezer := &FreezerGroup{}
-	if err := freezer.Set(path, m.cgroups); err != nil {
+	if err := freezer.Set(path, m.cgroups.Resources); err != nil {
 		m.cgroups.Resources.Freezer = prevState
 		return err
 	}

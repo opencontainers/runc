@@ -33,21 +33,20 @@ func numToStr(value int64) (ret string) {
 	return ret
 }
 
-func isMemorySet(cgroup *configs.Cgroup) bool {
-	return cgroup.Resources.MemoryReservation != 0 ||
-		cgroup.Resources.Memory != 0 || cgroup.Resources.MemorySwap != 0
+func isMemorySet(r *configs.Resources) bool {
+	return r.MemoryReservation != 0 || r.Memory != 0 || r.MemorySwap != 0
 }
 
-func setMemory(dirPath string, cgroup *configs.Cgroup) error {
-	if !isMemorySet(cgroup) {
+func setMemory(dirPath string, r *configs.Resources) error {
+	if !isMemorySet(r) {
 		return nil
 	}
-	swap, err := cgroups.ConvertMemorySwapToCgroupV2Value(cgroup.Resources.MemorySwap, cgroup.Resources.Memory)
+	swap, err := cgroups.ConvertMemorySwapToCgroupV2Value(r.MemorySwap, r.Memory)
 	if err != nil {
 		return err
 	}
 	swapStr := numToStr(swap)
-	if swapStr == "" && swap == 0 && cgroup.Resources.MemorySwap > 0 {
+	if swapStr == "" && swap == 0 && r.MemorySwap > 0 {
 		// memory and memorySwap set to the same value -- disable swap
 		swapStr = "0"
 	}
@@ -58,7 +57,7 @@ func setMemory(dirPath string, cgroup *configs.Cgroup) error {
 		}
 	}
 
-	if val := numToStr(cgroup.Resources.Memory); val != "" {
+	if val := numToStr(r.Memory); val != "" {
 		if err := fscommon.WriteFile(dirPath, "memory.max", val); err != nil {
 			return err
 		}
@@ -66,7 +65,7 @@ func setMemory(dirPath string, cgroup *configs.Cgroup) error {
 
 	// cgroup.Resources.KernelMemory is ignored
 
-	if val := numToStr(cgroup.Resources.MemoryReservation); val != "" {
+	if val := numToStr(r.MemoryReservation); val != "" {
 		if err := fscommon.WriteFile(dirPath, "memory.low", val); err != nil {
 			return err
 		}

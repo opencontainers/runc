@@ -26,7 +26,7 @@ func TestCpuSetShares(t *testing.T) {
 
 	helper.CgroupData.config.Resources.CpuShares = sharesAfter
 	cpu := &CpuGroup{}
-	if err := cpu.Set(helper.CgroupPath, helper.CgroupData.config); err != nil {
+	if err := cpu.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
 		t.Fatal(err)
 	}
 
@@ -67,7 +67,7 @@ func TestCpuSetBandWidth(t *testing.T) {
 	helper.CgroupData.config.Resources.CpuRtRuntime = rtRuntimeAfter
 	helper.CgroupData.config.Resources.CpuRtPeriod = rtPeriodAfter
 	cpu := &CpuGroup{}
-	if err := cpu.Set(helper.CgroupPath, helper.CgroupData.config); err != nil {
+	if err := cpu.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
 		t.Fatal(err)
 	}
 

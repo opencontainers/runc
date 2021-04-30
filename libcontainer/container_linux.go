@@ -225,9 +225,9 @@ func (c *linuxContainer) Set(config configs.Config) error {
 	if status == Stopped {
 		return newGenericError(errors.New("container not running"), ContainerNotRunning)
 	}
-	if err := c.cgroupManager.Set(&config); err != nil {
+	if err := c.cgroupManager.Set(config.Cgroups.Resources); err != nil {
 		// Set configs back
-		if err2 := c.cgroupManager.Set(c.config); err2 != nil {
+		if err2 := c.cgroupManager.Set(c.config.Cgroups.Resources); err2 != nil {
 			logrus.Warnf("Setting back cgroup configs failed due to error: %v, your state.json and actual configs might be inconsistent.", err2)
 		}
 		return err
@@ -235,7 +235,7 @@ func (c *linuxContainer) Set(config configs.Config) error {
 	if c.intelRdtManager != nil {
 		if err := c.intelRdtManager.Set(&config); err != nil {
 			// Set configs back
-			if err2 := c.cgroupManager.Set(c.config); err2 != nil {
+			if err2 := c.cgroupManager.Set(c.config.Cgroups.Resources); err2 != nil {
 				logrus.Warnf("Setting back cgroup configs failed due to error: %v, your state.json and actual configs might be inconsistent.", err2)
 			}
 			if err2 := c.intelRdtManager.Set(c.config); err2 != nil {
@@ -1462,7 +1462,7 @@ func (c *linuxContainer) criuApplyCgroups(pid int, req *criurpc.CriuReq) error {
 		return err
 	}
 
-	if err := c.cgroupManager.Set(c.config); err != nil {
+	if err := c.cgroupManager.Set(c.config.Cgroups.Resources); err != nil {
 		return newSystemError(err)
 	}
 

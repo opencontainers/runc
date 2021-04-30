@@ -164,9 +164,8 @@ func unifiedResToSystemdProps(cm *dbusConnManager, res map[string]string) (props
 	return props, nil
 }
 
-func genV2ResourcesProperties(c *configs.Cgroup, cm *dbusConnManager) ([]systemdDbus.Property, error) {
+func genV2ResourcesProperties(r *configs.Resources, cm *dbusConnManager) ([]systemdDbus.Property, error) {
 	var properties []systemdDbus.Property
-	r := c.Resources
 
 	// NOTE: This is of questionable correctness because we insert our own
 	//       devices eBPF program later. Two programs with identical rules
@@ -420,8 +419,8 @@ func (m *unifiedManager) GetStats() (*cgroups.Stats, error) {
 	return fsMgr.GetStats()
 }
 
-func (m *unifiedManager) Set(container *configs.Config) error {
-	properties, err := genV2ResourcesProperties(m.cgroups, m.dbus)
+func (m *unifiedManager) Set(r *configs.Resources) error {
+	properties, err := genV2ResourcesProperties(r, m.dbus)
 	if err != nil {
 		return err
 	}
@@ -462,7 +461,7 @@ func (m *unifiedManager) Set(container *configs.Config) error {
 	if err != nil {
 		return err
 	}
-	return fsMgr.Set(container)
+	return fsMgr.Set(r)
 }
 
 func (m *unifiedManager) GetPaths() map[string]string {

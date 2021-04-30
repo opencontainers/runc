@@ -25,7 +25,7 @@ func TestPidsSetMax(t *testing.T) {
 
 	helper.CgroupData.config.Resources.PidsLimit = maxLimited
 	pids := &PidsGroup{}
-	if err := pids.Set(helper.CgroupPath, helper.CgroupData.config); err != nil {
+	if err := pids.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
 		t.Fatal(err)
 	}
 
@@ -49,7 +49,7 @@ func TestPidsSetUnlimited(t *testing.T) {
 
 	helper.CgroupData.config.Resources.PidsLimit = maxUnlimited
 	pids := &PidsGroup{}
-	if err := pids.Set(helper.CgroupPath, helper.CgroupData.config); err != nil {
+	if err := pids.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
 		t.Fatal(err)
 	}
 

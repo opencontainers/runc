@@ -75,7 +75,7 @@ func (m *manager) Apply(pid int) error {
 		// - "runc create (rootless + limits + no cgrouppath + no permission) fails with informative error"
 		if m.rootless {
 			if m.config.Path == "" {
-				if blNeed, nErr := needAnyControllers(m.config); nErr == nil && !blNeed {
+				if blNeed, nErr := needAnyControllers(m.config.Resources); nErr == nil && !blNeed {
 					return nil
 				}
 				return errors.Wrap(err, "rootless needs no limits + no cgrouppath when no permission is granted for cgroups")
@@ -147,27 +147,24 @@ func (m *manager) Path(_ string) string {
 	return m.dirPath
 }
 
-func (m *manager) Set(container *configs.Config) error {
-	if container == nil || container.Cgroups == nil {
-		return nil
-	}
+func (m *manager) Set(r *configs.Resources) error {
 	if err := m.getControllers(); err != nil {
 		return err
 	}
 	// pids (since kernel 4.5)
-	if err := setPids(m.dirPath, container.Cgroups); err != nil {
+	if err := setPids(m.dirPath, r); err != nil {
 		return err
 	}
 	// memory (since kernel 4.5)
-	if err := setMemory(m.dirPath, container.Cgroups); err != nil {
+	if err := setMemory(m.dirPath, r); err != nil {
 		return err
 	}
 	// io (since kernel 4.5)
-	if err := setIo(m.dirPath, container.Cgroups); err != nil {
+	if err := setIo(m.dirPath, r); err != nil {
 		return err
 	}
 	// cpu (since kernel 4.15)
-	if err := setCpu(m.dirPath, container.Cgroups); err != nil {
+	if err := setCpu(m.dirPath, r); err != nil {
 		return err
 	}
 	// devices (since kernel 4.15, pseudo-controller)
@@ -175,25 +172,25 @@ func (m *manager) Set(container *configs.Config) error {
 	// When m.rootless is true, errors from the device subsystem are ignored because it is really not expected to work.
 	// However, errors from other subsystems are not ignored.
 	// see @test "runc create (rootless + limits + no cgrouppath + no permission) fails with informative error"
-	if err := setDevices(m.dirPath, container.Cgroups); err != nil && !m.rootless {
+	if err := setDevices(m.dirPath, r); err != nil && !m.rootless {
 		return err
 	}
 	// cpuset (since kernel 5.0)
-	if err := setCpuset(m.dirPath, container.Cgroups); err != nil {
+	if err := setCpuset(m.dirPath, r); err != nil {
 		return err
 	}
 	// hugetlb (since kernel 5.6)
-	if err := setHugeTlb(m.dirPath, container.Cgroups); err != nil {
+	if err := setHugeTlb(m.dirPath, r); err != nil {
 		return err
 	}
 	// freezer (since kernel 5.2, pseudo-controller)
-	if err := setFreezer(m.dirPath, container.Cgroups.Freezer); err != nil {
+	if err := setFreezer(m.dirPath, r.Freezer); err != nil {
 		return err
 	}
-	if err := m.setUnified(container.Cgroups.Unified); err != nil {
+	if err := m.setUnified(r.Unified); err != nil {
 		return err
 	}
-	m.config = container.Cgroups
+	m.config.Resources = r
 	return nil
 }
 

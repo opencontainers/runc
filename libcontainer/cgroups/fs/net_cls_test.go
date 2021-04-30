@@ -24,7 +24,7 @@ func TestNetClsSetClassid(t *testing.T) {
 
 	helper.CgroupData.config.Resources.NetClsClassid = classidAfter
 	netcls := &NetClsGroup{}
-	if err := netcls.Set(helper.CgroupPath, helper.CgroupData.config); err != nil {
+	if err := netcls.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
 		t.Fatal(err)
 	}
 

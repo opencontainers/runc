@@ -48,7 +48,7 @@ func TestHugetlbSetHugetlb(t *testing.T) {
 			},
 		}
 		hugetlb := &HugetlbGroup{}
-		if err := hugetlb.Set(helper.CgroupPath, helper.CgroupData.config); err != nil {
+		if err := hugetlb.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
 			t.Fatal(err)
 		}
 	}

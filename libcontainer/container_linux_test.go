@@ -42,7 +42,7 @@ func (m *mockCgroupManager) Apply(pid int) error {
 	return nil
 }
 
-func (m *mockCgroupManager) Set(container *configs.Config) error {
+func (m *mockCgroupManager) Set(_ *configs.Resources) error {
 	return nil
 }
 
