@@ -52,7 +52,7 @@ EOF
 	local libseccomp_ver='2.5.1'
 	local tarball="libseccomp-${libseccomp_ver}.tar.gz"
 	local prefix
-	prefix="$(mktemp -d)"
+	prefix="$(mktemp -dt runc-release-staticlibs.XXXXXX)"
 	wget "https://github.com/seccomp/libseccomp/releases/download/v${libseccomp_ver}/${tarball}"{,.asc}
 	tar xf "$tarball"
 	(
@@ -61,6 +61,10 @@ EOF
 		make install
 	)
 	mv "$tarball"{,.asc} "$builddir"
+
+	# Go caches pkg-config pretty heavily (including from previous
+	# script/release.sh builds) so clean the cache before building.
+	go clean -cache
 
 	make -C "$root" PKG_CONFIG_PATH="${prefix}/lib/pkgconfig" COMMIT_NO= static
 	rm -rf "$prefix"
