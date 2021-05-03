@@ -102,8 +102,9 @@ shell: runcimage
 		-v $(CURDIR):/go/src/$(PROJECT) \
 		$(RUNC_IMAGE) bash
 
-install:
+install: runc recvtty
 	install -D -m0755 runc $(DESTDIR)$(BINDIR)/runc
+	install -D -m0755 contrib/cmd/recvtty/recvtty $(DESTDIR)$(BINDIR)/recvtty
 
 install-bash:
 	install -D -m0644 contrib/completions/bash/runc $(DESTDIR)$(PREFIX)/share/bash-completion/completions/runc
