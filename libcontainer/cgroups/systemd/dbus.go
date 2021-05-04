@@ -4,6 +4,7 @@ package systemd
 
 import (
 	"context"
+	"runtime"
 	"sync"
 
 	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
@@ -18,9 +19,15 @@ type dbusConnManager struct {
 
 // newDbusConnManager initializes systemd dbus connection manager.
 func newDbusConnManager(rootless bool) *dbusConnManager {
-	return &dbusConnManager{
+	m := &dbusConnManager{
 		rootless: rootless,
 	}
+
+	runtime.SetFinalizer(m, func(d *dbusConnManager) {
+		d.closeConnection()
+	})
+
+	return m
 }
 
 // getConnection lazily initializes and returns systemd dbus connection.
@@ -57,6 +64,15 @@ func (d *dbusConnManager) newConnection() (*systemdDbus.Conn, error) {
 		return newUserSystemdDbus()
 	}
 	return systemdDbus.NewWithContext(context.TODO())
+}
+
+func (d *dbusConnManager) closeConnection() {
+	d.Lock()
+	defer d.Unlock()
+	if d.conn != nil {
+		d.conn.Close()
+		d.conn = nil
+	}
 }
 
 // resetConnection resets the connection to its initial state

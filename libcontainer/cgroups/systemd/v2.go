@@ -302,6 +302,7 @@ func (m *unifiedManager) Destroy() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	defer m.dbus.closeConnection()
 	unitName := getUnitName(m.cgroups)
 	if err := stopUnit(m.dbus, unitName); err != nil {
 		return err
