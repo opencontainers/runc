@@ -1,5 +1,5 @@
 CONTAINER_ENGINE := docker
-GO := go
+GO ?= go
 
 PREFIX ?= /usr/local
 BINDIR := $(PREFIX)/sbin
