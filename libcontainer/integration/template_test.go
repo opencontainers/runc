@@ -184,6 +184,11 @@ func newTemplateConfig(t *testing.T, p *tParam) *configs.Config {
 				Device:      "sysfs",
 				Flags:       defaultMountFlags | unix.MS_RDONLY,
 			},
+			{
+				Destination: "/sys/fs/cgroup",
+				Device:      "cgroup",
+				Flags:       defaultMountFlags | unix.MS_RDONLY,
+			},
 		},
 		Networks: []*configs.Network{
 			{
@@ -205,12 +210,6 @@ func newTemplateConfig(t *testing.T, p *tParam) *configs.Config {
 		config.UidMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
 		config.GidMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
 		config.Namespaces = append(config.Namespaces, configs.Namespace{Type: configs.NEWUSER})
-	} else {
-		config.Mounts = append(config.Mounts, &configs.Mount{
-			Destination: "/sys/fs/cgroup",
-			Device:      "cgroup",
-			Flags:       defaultMountFlags | unix.MS_RDONLY,
-		})
 	}
 
 	if p.systemd {
