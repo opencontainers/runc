@@ -14,6 +14,7 @@ import (
 )
 
 func showFile(t *testing.T, fname string) error {
+	t.Helper()
 	t.Logf("=== %s ===\n", fname)
 
 	f, err := os.Open(fname)
