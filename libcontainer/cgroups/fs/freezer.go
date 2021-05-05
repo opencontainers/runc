@@ -43,20 +43,31 @@ func (s *FreezerGroup) Set(path string, r *configs.Resources) (Err error) {
 		// kernel commit ef9fe980c6fcc1821), if FREEZING is seen,
 		// userspace should either retry or thaw. While current
 		// kernel cgroup v1 docs no longer mention a need to retry,
-		// the kernel (tested on v5.4, Ubuntu 20.04) can't reliably
-		// freeze a cgroup while new processes keep appearing in it
+		// even a recent kernel (v5.4, Ubuntu 20.04) can't reliably
+		// freeze a cgroup v1 while new processes keep appearing in it
 		// (either via fork/clone or by writing new PIDs to
 		// cgroup.procs).
 		//
-		// The numbers below are chosen to have a decent chance to
-		// succeed even in the worst case scenario (runc pause/unpause
-		// with parallel runc exec).
+		// The numbers below are empirically chosen to have a decent
+		// chance to succeed in various scenarios ("runc pause/unpause
+		// with parallel runc exec" and "bare freeze/unfreeze on a very
+		// slow system"), tested on RHEL7 and Ubuntu 20.04 kernels.
 		//
 		// Adding any amount of sleep in between retries did not
-		// increase the chances of successful freeze.
+		// increase the chances of successful freeze in "pause/unpause
+		// with parallel exec" reproducer. OTOH, adding an occasional
+		// sleep helped for the case where the system is extremely slow
+		// (CentOS 7 VM on GHA CI).
+		//
+		// Alas, this is still a game of chances, since the real fix
+		// belong to the kernel (cgroup v2 do not have this bug).
+
 		for i := 0; i < 1000; i++ {
 			if i%50 == 49 {
-				// Briefly thawing the cgroup also helps.
+				// Occasional thaw and sleep improves
+				// the chances to succeed in freezing
+				// in case new processes keep appearing
+				// in the cgroup.
 				_ = fscommon.WriteFile(path, "freezer.state", string(configs.Thawed))
 				time.Sleep(10 * time.Millisecond)
 			}
@@ -65,6 +76,13 @@ func (s *FreezerGroup) Set(path string, r *configs.Resources) (Err error) {
 				return err
 			}
 
+			if i%25 == 24 {
+				// Occasional short sleep before reading
+				// the state back also improves the chances to
+				// succeed in freezing in case of a very slow
+				// system.
+				time.Sleep(10 * time.Microsecond)
+			}
 			state, err := fscommon.ReadFile(path, "freezer.state")
 			if err != nil {
 				return err
