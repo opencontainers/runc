@@ -80,22 +80,21 @@ func (b *stdBuffers) String() string {
 
 // ok fails the test if an err is not nil.
 func ok(t testing.TB, err error) {
+	t.Helper()
 	if err != nil {
-		_, file, line, _ := runtime.Caller(1)
-		t.Fatalf("%s:%d: unexpected error: %s\n\n", filepath.Base(file), line, err.Error())
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
 func waitProcess(p *libcontainer.Process, t *testing.T) {
-	_, file, line, _ := runtime.Caller(1)
+	t.Helper()
 	status, err := p.Wait()
-
 	if err != nil {
-		t.Fatalf("%s:%d: unexpected error: %s\n\n", filepath.Base(file), line, err.Error())
+		t.Fatalf("unexpected error: %v", err)
 	}
 
 	if !status.Success() {
-		t.Fatalf("%s:%d: unexpected status: %s\n\n", filepath.Base(file), line, status.String())
+		t.Fatalf("unexpected status: %v", status)
 	}
 }
 
