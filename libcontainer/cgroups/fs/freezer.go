@@ -48,15 +48,16 @@ func (s *FreezerGroup) Set(path string, r *configs.Resources) (Err error) {
 		// (either via fork/clone or by writing new PIDs to
 		// cgroup.procs).
 		//
-		// The numbers below are chosen to have a decent chance to
-		// succeed even in the worst case scenario (runc pause/unpause
-		// with parallel runc exec).
+		// The numbers below are empirically chosen to have a decent
+		// chance to succeed in various scenarios (such as "very slow
+		// VM" and "runc pause/unpause with parallel runc exec"),
+		// tested on RHEL7 kernel.
 		//
-		// Adding any amount of sleep in between retries did not
-		// increase the chances of successful freeze.
+		// Alas, this is still a game of chances.
 		for i := 0; i < 1000; i++ {
 			if i%50 == 49 {
-				// Briefly thawing the cgroup also helps.
+				// Occasional thaw and sleep improves
+				// the chances to succeed in freezing.
 				_ = fscommon.WriteFile(path, "freezer.state", string(configs.Thawed))
 				time.Sleep(10 * time.Millisecond)
 			}
@@ -65,6 +66,12 @@ func (s *FreezerGroup) Set(path string, r *configs.Resources) (Err error) {
 				return err
 			}
 
+			if i%25 == 24 {
+				// Occasional short sleep before reading
+				// the state back also improves the chances
+				// to succeed in freezing.
+				time.Sleep(10 * time.Microsecond)
+			}
 			state, err := fscommon.ReadFile(path, "freezer.state")
 			if err != nil {
 				return err
@@ -74,8 +81,8 @@ func (s *FreezerGroup) Set(path string, r *configs.Resources) (Err error) {
 			case "FREEZING":
 				continue
 			case string(configs.Frozen):
-				if i > 1 {
-					logrus.Infof("frozen after %d retries", i)
+				if i > 0 {
+					logrus.Infof("frozen after %d attempts", i+1)
 				}
 				return nil
 			default:
