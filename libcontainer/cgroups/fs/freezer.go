@@ -75,7 +75,7 @@ func (s *FreezerGroup) Set(path string, r *configs.Resources) (Err error) {
 				continue
 			case string(configs.Frozen):
 				if i > 1 {
-					logrus.Debugf("frozen after %d retries", i)
+					logrus.Infof("frozen after %d retries", i)
 				}
 				return nil
 			default:
