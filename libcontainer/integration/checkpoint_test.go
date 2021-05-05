@@ -196,12 +196,7 @@ func testCheckpoint(t *testing.T, userns bool) {
 	ok(t, err)
 
 	restoreStdinW.Close()
-	s, err := restoreProcessConfig.Wait()
-	ok(t, err)
-
-	if !s.Success() {
-		t.Fatal(s.String(), pid)
-	}
+	waitProcess(restoreProcessConfig, t)
 
 	output := restoreStdout.String()
 	if !strings.Contains(output, "Hello!") {
