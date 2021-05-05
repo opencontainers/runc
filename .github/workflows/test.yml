@@ -14,114 +14,11 @@ on:
   pull_request:
 
 jobs:
-  test:
-    runs-on: ubuntu-20.04
-    strategy:
-      fail-fast: false
-      matrix:
-        # Dockre/Moby still builds runc with Go 1.13, so we should still support Go 1.13.
-        go-version: [1.13.x, 1.15.x, 1.16.x]
-        rootless: ["rootless", ""]
-        race: ["-race", ""]
-
-    steps:
-
-    - name: checkout
-      uses: actions/checkout@v2
-
-    - name: install deps
-      run: |
-        # criu repo
-        sudo add-apt-repository -y ppa:criu/ppa
-        # apt-add-repository runs apt update so we don't have to
-        sudo apt -q install libseccomp-dev criu
-
-    - name: install go ${{ matrix.go-version }}
-      uses: actions/setup-go@v2
-      with:
-        stable: '!contains(${{ matrix.go-version }}, "beta") && !contains(${{ matrix.go-version }}, "rc")'
-        go-version: ${{ matrix.go-version }}
-
-    - name: build
-      run: sudo -E PATH="$PATH" make EXTRA_FLAGS="${{ matrix.race }}" all
-
-    - name: install bats
-      uses: mig4/setup-bats@v1
-      with:
-        bats-version: 1.2.1
-
-    - name: unit test
-      if: matrix.rootless != 'rootless'
-      run: sudo -E PATH="$PATH" -- make TESTFLAGS="${{ matrix.race }}" localunittest
-
-    - name: add rootless user
-      if: matrix.rootless == 'rootless'
-      run: |
-        sudo useradd -u2000 -m -d/home/rootless -s/bin/bash rootless
-        # Allow root to execute `ssh rootless@localhost` in tests/rootless.sh
-        ssh-keygen -t ecdsa -N "" -f $HOME/rootless.key
-        sudo mkdir -m 0700 -p /home/rootless/.ssh
-        sudo cp $HOME/rootless.key.pub /home/rootless/.ssh/authorized_keys
-        sudo chown -R rootless.rootless /home/rootless
-
-    - name: integration test (fs driver)
-      run: sudo -E PATH="$PATH" script -e -c 'make local${{ matrix.rootless }}integration'
-
-    - name: integration test (systemd driver)
-      # can't use systemd driver with cgroupv1
-      if: matrix.rootless != 'rootless'
-      run: sudo -E PATH="$PATH" script -e -c 'make RUNC_USE_SYSTEMD=yes local${{ matrix.rootless }}integration'
-
-
-  # cgroup v2 unified hierarchy + very recent kernel (openat2)
-  fedora:
-    # nested virtualization is only available on macOS hosts
-    runs-on: macos-10.15
-    timeout-minutes: 30
-    # only run it if others have passed
-    needs: [test]
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: "Cache ~/.vagrant.d/boxes, using hash of Vagrantfile.fedora34"
-        uses: actions/cache@v2
-        with:
-          path: ~/.vagrant.d/boxes
-          key: vagrant-${{ hashFiles('Vagrantfile.fedora34') }}
-
-      - name: prepare vagrant
-        run: |
-          ln -sf Vagrantfile.fedora34 Vagrantfile
-          # Retry if it fails (download.fedoraproject.org returns 404 sometimes)
-          vagrant up || vagrant up
-          vagrant ssh-config >> ~/.ssh/config
-
-      - name: system info
-        run: ssh default 'sh -exc "uname -a && systemctl --version && df -T"'
-
-      - name: unit tests
-        run: ssh default 'cd /vagrant && sudo make localunittest'
-
-      - name: cgroupv2 with systemd
-        run: ssh -tt default "sudo make -C /vagrant localintegration RUNC_USE_SYSTEMD=yes"
-
-      - name: cgroupv2 with fs2
-        run: ssh -tt default "sudo make -C /vagrant localintegration"
-
-      - name: cgroupv2 with systemd (rootless)
-        run: ssh -tt default "sudo make -C /vagrant localrootlessintegration RUNC_USE_SYSTEMD=yes"
-
-      - name: cgroupv2 with fs2 (rootless)
-        run: ssh -tt default "sudo make -C /vagrant localrootlessintegration"
-
-
   # kernel 3.10 (frankenized), systemd 219
   centos7:
     # nested virtualization is only available on macOS hosts
     runs-on: macos-10.15
     timeout-minutes: 15
-    # only run it if others have passed
-    needs: [test]
     steps:
       - uses: actions/checkout@v2
 
@@ -153,33 +50,3 @@ jobs:
       # FIXME: rootless is skipped because of EPERM on writing cgroup.procs
         if: false
         run: ssh default "sudo -i make -C /vagrant localrootlessintegration"
-
-  # We need to continue support for 32-bit ARM.
-  # However, we do not have 32-bit ARM CI, so we use i386 for testing 32bit stuff.
-  # We are not interested in providing official support for i386.
-  cross-i386:
-    runs-on: ubuntu-20.04
-
-    steps:
-
-    - name: checkout
-      uses: actions/checkout@v2
-
-    - name: install deps
-      run: |
-        sudo dpkg --add-architecture i386
-        # add criu repo
-        sudo add-apt-repository -y ppa:criu/ppa
-        # apt-add-repository runs apt update so we don't have to.
-
-        # Due to a bug in apt, we have to update it first
-        # (see https://bugs.launchpad.net/ubuntu-cdimage/+bug/1871268)
-        sudo apt -q install apt
-        sudo apt -q install libseccomp-dev libseccomp-dev:i386 gcc-multilib criu
-
-    - name: install go
-      uses: actions/setup-go@v2 # use default Go version
-
-    - name: unit test
-      # cgo is disabled by default when cross-compiling
-      run: sudo -E PATH="$PATH" -- make GOARCH=386 CGO_ENABLED=1 localunittest
