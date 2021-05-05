@@ -74,7 +74,7 @@ unittest: runcimage
 		$(RUNC_IMAGE) make localunittest TESTFLAGS=$(TESTFLAGS)
 
 localunittest: all
-	$(GO) test $(MOD_VENDOR) -timeout 3m -tags "$(BUILDTAGS)" $(TESTFLAGS) -v ./...
+	$(GO) test $(MOD_VENDOR) -timeout 1h -count 500 -tags "$(BUILDTAGS)" $(TESTFLAGS) -v -run 'TestFreeze|TestSystemdFreeze' ./libcontainer/integration
 
 integration: runcimage
 	$(CONTAINER_ENGINE) run $(CONTAINER_ENGINE_RUN_FLAGS) \

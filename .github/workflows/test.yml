@@ -18,7 +18,7 @@ jobs:
   centos7:
     # nested virtualization is only available on macOS hosts
     runs-on: macos-10.15
-    timeout-minutes: 15
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v2
 
