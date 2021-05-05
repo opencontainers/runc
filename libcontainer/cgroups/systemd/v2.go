@@ -337,16 +337,8 @@ func (m *unifiedManager) getSliceFull() (string, error) {
 	}
 
 	if m.rootless {
-		dbusConnection, err := m.dbus.getConnection()
-		if err != nil {
-			return "", err
-		}
-		// managerCGQuoted is typically "/user.slice/user-${uid}.slice/user@${uid}.service" including the quote symbols
-		managerCGQuoted, err := dbusConnection.GetManagerProperty("ControlGroup")
-		if err != nil {
-			return "", err
-		}
-		managerCG, err := strconv.Unquote(managerCGQuoted)
+		// managerCG is typically "/user.slice/user-${uid}.slice/user@${uid}.service".
+		managerCG, err := getManagerProperty(m.dbus, "ControlGroup")
 		if err != nil {
 			return "", err
 		}
