@@ -2,8 +2,6 @@ package integration
 
 import (
 	"bytes"
-	"crypto/md5"
-	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -11,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"syscall"
 	"testing"
@@ -152,13 +151,8 @@ func copyBusybox(dest string) error {
 	return nil
 }
 
-func newContainer(config *configs.Config) (libcontainer.Container, error) {
-	h := md5.New()
-	h.Write([]byte(time.Now().String()))
-	return newContainerWithName(hex.EncodeToString(h.Sum(nil)), config)
-}
-
-func newContainerWithName(name string, config *configs.Config) (libcontainer.Container, error) {
+func newContainer(t *testing.T, config *configs.Config) (libcontainer.Container, error) {
+	name := t.Name() + strconv.FormatInt(int64(time.Now().Nanosecond()), 35)
 	root, err := newTestRoot()
 	if err != nil {
 		return nil, err
@@ -181,8 +175,8 @@ func newContainerWithName(name string, config *configs.Config) (libcontainer.Con
 //
 // buffers are returned containing the STDOUT and STDERR output for the run
 // along with the exit code and any go error
-func runContainer(config *configs.Config, console string, args ...string) (buffers *stdBuffers, exitCode int, err error) {
-	container, err := newContainer(config)
+func runContainer(t *testing.T, config *configs.Config, console string, args ...string) (buffers *stdBuffers, exitCode int, err error) {
+	container, err := newContainer(t, config)
 	if err != nil {
 		return nil, -1, err
 	}

@@ -1,8 +1,9 @@
 package integration
 
 import (
-	"math/rand"
 	"strconv"
+	"testing"
+	"time"
 
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/devices"
@@ -29,7 +30,7 @@ type tParam struct {
 //
 // it uses a network strategy of just setting a loopback interface
 // and the default setup for devices
-func newTemplateConfig(p *tParam) *configs.Config {
+func newTemplateConfig(t *testing.T, p *tParam) *configs.Config {
 	var allowedDevices []*devices.Rule
 	for _, device := range specconv.AllowedDevices {
 		allowedDevices = append(allowedDevices, &device.Rule)
@@ -213,9 +214,9 @@ func newTemplateConfig(p *tParam) *configs.Config {
 	}
 
 	if p.systemd {
-		id := strconv.FormatUint(rand.Uint64(), 36)
-		config.Cgroups.Name = "test" + id
-		// do not change Parent (see newContainerWithName)
+		id := strconv.FormatInt(-int64(time.Now().Nanosecond()), 36)
+		config.Cgroups.Name = t.Name() + id
+		// do not change Parent (see newContainer)
 		config.Cgroups.Parent = "system.slice"
 		config.Cgroups.ScopePrefix = "runc-test"
 	} else {
