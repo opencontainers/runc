@@ -384,15 +384,23 @@ func setUnitProperties(cm *dbusConnManager, name string, properties ...systemdDb
 	})
 }
 
+func getManagerProperty(cm *dbusConnManager, name string) (string, error) {
+	str := ""
+	err := cm.retryOnDisconnect(func(c *systemdDbus.Conn) error {
+		var err error
+		str, err = c.GetManagerProperty(name)
+		return err
+	})
+	if err != nil {
+		return "", err
+	}
+	return strconv.Unquote(str)
+}
+
 func systemdVersion(cm *dbusConnManager) int {
 	versionOnce.Do(func() {
 		version = -1
-		var verStr string
-		err := cm.retryOnDisconnect(func(c *systemdDbus.Conn) error {
-			var err error
-			verStr, err = c.GetManagerProperty("Version")
-			return err
-		})
+		verStr, err := getManagerProperty(cm, "Version")
 		if err == nil {
 			version, err = systemdVersionAtoi(verStr)
 		}
@@ -407,11 +415,11 @@ func systemdVersion(cm *dbusConnManager) int {
 
 func systemdVersionAtoi(verStr string) (int, error) {
 	// verStr should be of the form:
-	// "v245.4-1.fc32", "245", "v245-1.fc32", "245-1.fc32"
-	// all the input strings include quotes, and the output int should be 245
-	// thus, we unconditionally remove the `"v`
-	// and then match on the first integer we can grab
-	re := regexp.MustCompile(`"?v?([0-9]+)`)
+	// "v245.4-1.fc32", "245", "v245-1.fc32", "245-1.fc32" (without quotes).
+	// The result for all of the above should be 245.
+	// Thus, we unconditionally remove the "v" prefix
+	// and then match on the first integer we can grab.
+	re := regexp.MustCompile(`v?([0-9]+)`)
 	matches := re.FindStringSubmatch(verStr)
 	if len(matches) < 2 {
 		return 0, errors.Errorf("can't parse version %s: incorrect number of matches %v", verStr, matches)
