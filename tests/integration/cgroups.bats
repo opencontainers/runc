@@ -16,10 +16,7 @@ function setup() {
 }
 
 @test "runc create (rootless + no limits + cgrouppath + no permission) fails with permission error" {
-	requires rootless
-	requires rootless_no_cgroup
-	# systemd controls the permission, so error does not happen
-	requires no_systemd
+	requires rootless rootless_no_cgroup
 
 	set_cgroups_path
 
@@ -29,10 +26,7 @@ function setup() {
 }
 
 @test "runc create (rootless + limits + no cgrouppath + no permission) fails with informative error" {
-	requires rootless
-	requires rootless_no_cgroup
-	# systemd controls the permission, so error does not happen
-	requires no_systemd
+	requires rootless rootless_no_cgroup
 
 	set_resources_limit
 

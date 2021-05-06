@@ -21,7 +21,7 @@ function setup() {
 # Tests whatever limits are (more or less) common between cgroup
 # v1 and v2: memory/swap, pids, and cpuset.
 @test "update cgroup v1/v2 common limits" {
-	[[ "$ROOTLESS" -ne 0 && -z "$RUNC_USE_SYSTEMD" ]] && requires rootless_cgroup
+	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
 	requires cgroups_memory cgroups_pids cgroups_cpuset
 	init_cgroup_paths
 

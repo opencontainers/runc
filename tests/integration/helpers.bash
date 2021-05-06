@@ -271,6 +271,11 @@ function fail() {
 	exit 1
 }
 
+# Check whether rootless runc can use cgroups.
+function rootless_cgroup() {
+	[[ "$ROOTLESS_FEATURES" == *"cgroup"* || -n "$RUNC_USE_SYSTEMD" ]]
+}
+
 # Allows a test to specify what things it requires. If the environment can't
 # support it, the test is skipped with a message.
 function requires() {
@@ -298,12 +303,12 @@ function requires() {
 			fi
 			;;
 		rootless_cgroup)
-			if [[ "$ROOTLESS_FEATURES" != *"cgroup"* ]]; then
+			if ! rootless_cgroup; then
 				skip_me=1
 			fi
 			;;
 		rootless_no_cgroup)
-			if [[ "$ROOTLESS_FEATURES" == *"cgroup"* ]]; then
+			if rootless_cgroup; then
 				skip_me=1
 			fi
 			;;
