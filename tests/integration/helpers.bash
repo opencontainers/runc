@@ -68,11 +68,6 @@ function runc_spec() {
 	if [[ "$ROOTLESS" -ne 0 ]] && [[ "$ROOTLESS_FEATURES" == *"idmap"* ]]; then
 		runc_rootless_idmap "$bundle"
 	fi
-
-	# Ensure config.json contains linux.resources
-	if [[ "$ROOTLESS" -ne 0 ]] && [[ "$ROOTLESS_FEATURES" == *"cgroup"* ]]; then
-		runc_rootless_cgroup "$bundle"
-	fi
 }
 
 # Helper function to reformat config.json file. Input uses jq syntax.
@@ -90,12 +85,6 @@ function runc_rootless_idmap() {
 			| .linux.gidMappings += [{"hostID": '"$ROOTLESS_GIDMAP_START"', "containerID": 100, "size": 1}]
 			| .linux.gidMappings += [{"hostID": '"$(($ROOTLESS_GIDMAP_START + 10))"', "containerID": 1, "size": 20}]
 			| .linux.gidMappings += [{"hostID": '"$(($ROOTLESS_GIDMAP_START + 100))"', "containerID": 1000, "size": '"$(($ROOTLESS_GIDMAP_LENGTH - 1000))"'}]' $bundle
-}
-
-# Shortcut to add empty resources as part of a rootless configuration.
-function runc_rootless_cgroup() {
-	bundle="${1:-.}"
-	update_config '.linux.resources += {"memory":{},"cpu":{},"blockio":{},"pids":{}}' $bundle
 }
 
 # Returns systemd version as a number (-1 if systemd is not enabled/supported).
