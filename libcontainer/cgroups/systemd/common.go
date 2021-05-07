@@ -355,6 +355,9 @@ func stopUnit(cm *dbusConnManager, unitName string) error {
 		return err
 	})
 	if err == nil {
+		timeout := time.NewTimer(30 * time.Second)
+		defer timeout.Stop()
+
 		select {
 		case s := <-statusChan:
 			close(statusChan)
@@ -362,8 +365,8 @@ func stopUnit(cm *dbusConnManager, unitName string) error {
 			if s != "done" {
 				logrus.Warnf("error removing unit `%s`: got `%s`. Continuing...", unitName, s)
 			}
-		case <-time.After(time.Second):
-			logrus.Warnf("Timed out while waiting for StopUnit(%s) completion signal from dbus. Continuing...", unitName)
+		case <-timeout.C:
+			return errors.New("Timed out while waiting for systemd to remove " + unitName)
 		}
 	}
 	return nil
