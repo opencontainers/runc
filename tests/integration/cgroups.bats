@@ -55,8 +55,8 @@ function setup() {
 			if [ "$(id -u)" = "0" ]; then
 				check_cgroup_value "cgroup.controllers" "$(cat /sys/fs/cgroup/machine.slice/cgroup.controllers)"
 			else
-				# shellcheck disable=SC2046
-				check_cgroup_value "cgroup.controllers" "$(cat /sys/fs/cgroup/user.slice/user-$(id -u).slice/cgroup.controllers)"
+				# Filter out hugetlb as systemd is unable to delegate it.
+				check_cgroup_value "cgroup.controllers" "$(sed 's/ hugetlb//' </sys/fs/cgroup/user.slice/user-"$(id -u)".slice/cgroup.controllers)"
 			fi
 		else
 			check_cgroup_value "cgroup.controllers" "$(cat /sys/fs/cgroup/cgroup.controllers)"
