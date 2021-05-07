@@ -103,13 +103,21 @@ function init_cgroup_paths() {
 
 	if stat -f -c %t /sys/fs/cgroup | grep -qFw 63677270; then
 		CGROUP_UNIFIED=yes
+		local controllers="/sys/fs/cgroup/cgroup.controllers"
+		# For rootless + systemd case, controllers delegation is required,
+		# so check the controllers that the current user has, not the top one.
+		# NOTE: delegation of cpuset requires systemd >= 244 (Fedora >= 32, Ubuntu >= 20.04).
+		if [[ "$ROOTLESS" -ne 0 && -n "$RUNC_USE_SYSTEMD" ]]; then
+			controllers="/sys/fs/cgroup/user.slice/user-$(id -u).slice/user@$(id -u).service/cgroup.controllers"
+		fi
+
 		# "pseudo" controllers do not appear in /sys/fs/cgroup/cgroup.controllers.
 		# - devices (since kernel 4.15) we must assume to be supported because
 		#   it's quite hard to test.
 		# - freezer (since kernel 5.2) we can auto-detect by looking for the
 		#   "cgroup.freeze" file a *non-root* cgroup.
 		CGROUP_SUBSYSTEMS=$(
-			cat /sys/fs/cgroup/cgroup.controllers
+			cat "$controllers"
 			echo devices
 		)
 		CGROUP_BASE_PATH=/sys/fs/cgroup
