@@ -1917,6 +1917,14 @@ func TestCGROUPHost(t *testing.T) {
 }
 
 func TestFdLeaks(t *testing.T) {
+	testFdLeaks(t, false)
+}
+
+func TestFdLeaksSystemd(t *testing.T) {
+	testFdLeaks(t, true)
+}
+
+func testFdLeaks(t *testing.T, systemd bool) {
 	if testing.Short() {
 		return
 	}
@@ -1933,7 +1941,10 @@ func TestFdLeaks(t *testing.T) {
 	_, err = pfd.Seek(0, 0)
 	ok(t, err)
 
-	config := newTemplateConfig(t, &tParam{rootfs: rootfs})
+	config := newTemplateConfig(t, &tParam{
+		rootfs:  rootfs,
+		systemd: systemd,
+	})
 	buffers, exitCode, err := runContainer(t, config, "", "true")
 	ok(t, err)
 
