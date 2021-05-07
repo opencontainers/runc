@@ -304,12 +304,6 @@ function requires() {
 				skip_me=1
 			fi
 			;;
-		cgroups_freezer)
-			init_cgroup_paths
-			if [[ "$CGROUP_SUBSYSTEMS" != *"freezer"* ]]; then
-				skip_me=1
-			fi
-			;;
 		cgroups_rt)
 			init_cgroup_paths
 			if [ ! -e "${CGROUP_CPU_BASE_PATH}/cpu.rt_period_us" ]; then
@@ -336,6 +330,13 @@ function requires() {
 		cgroups_v2)
 			init_cgroup_paths
 			if [ "$CGROUP_UNIFIED" != "yes" ]; then
+				skip_me=1
+			fi
+			;;
+		cgroups_*)
+			init_cgroup_paths
+			var=${var#cgroups_}
+			if [[ "$CGROUP_SUBSYSTEMS" != *"$var"* ]]; then
 				skip_me=1
 			fi
 			;;
