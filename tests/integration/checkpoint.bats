@@ -144,6 +144,23 @@ function simple_cr() {
 	simple_cr
 }
 
+@test "checkpoint --pre-dump (bad --parent-path)" {
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	[ "$status" -eq 0 ]
+
+	testcontainer test_busybox running
+
+	# runc should fail with absolute parent image path.
+	runc --criu "$CRIU" checkpoint --parent-path "$(pwd)"/parent-dir --work-path ./work-dir --image-path ./image-dir test_busybox
+	[[ "${output}" == *"--parent-path"* ]]
+	[ "$status" -ne 0 ]
+
+	# runc should fail with invalid parent image path.
+	runc --criu "$CRIU" checkpoint --parent-path ./parent-dir --work-path ./work-dir --image-path ./image-dir test_busybox
+	[[ "${output}" == *"--parent-path"* ]]
+	[ "$status" -ne 0 ]
+}
+
 @test "checkpoint --pre-dump and restore" {
 	setup_pipes
 	runc_run_with_pipes test_busybox
@@ -159,9 +176,12 @@ function simple_cr() {
 	# checkpoint the running container
 	mkdir image-dir
 	mkdir work-dir
-	runc --criu "$CRIU" checkpoint --parent-path ./parent-dir --work-path ./work-dir --image-path ./image-dir test_busybox
+	runc --criu "$CRIU" checkpoint --parent-path ../parent-dir --work-path ./work-dir --image-path ./image-dir test_busybox
 	grep -B 5 Error ./work-dir/dump.log || true
 	[ "$status" -eq 0 ]
+
+	# check parent path is valid
+	[ -e ./image-dir/parent ]
 
 	# after checkpoint busybox is no longer running
 	testcontainer test_busybox checkpointed
