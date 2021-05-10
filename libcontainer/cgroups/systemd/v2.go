@@ -317,6 +317,7 @@ func (m *unifiedManager) Destroy() error {
 }
 
 func (m *unifiedManager) Path(_ string) string {
+	_ = m.initPath()
 	return m.path
 }
 

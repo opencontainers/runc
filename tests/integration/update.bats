@@ -14,23 +14,15 @@ function setup() {
 
 	# Set some initial known values
 	update_config ' .linux.resources.memory |= {"limit": 33554432, "reservation": 25165824}
-			| .linux.resources.cpu |= {"shares": 100, "quota": 500000, "period": 1000000, "cpus": "0"}
+			| .linux.resources.cpu |= {"shares": 100, "quota": 500000, "period": 1000000}
 			| .linux.resources.pids |= {"limit": 20}'
 }
 
 # Tests whatever limits are (more or less) common between cgroup
 # v1 and v2: memory/swap, pids, and cpuset.
 @test "update cgroup v1/v2 common limits" {
-	[[ "$ROOTLESS" -ne 0 && -z "$RUNC_USE_SYSTEMD" ]] && requires rootless_cgroup
-	if [[ "$ROOTLESS" -ne 0 && -n "$RUNC_USE_SYSTEMD" ]]; then
-		file="/sys/fs/cgroup/user.slice/user-$(id -u).slice/user@$(id -u).service/cgroup.controllers"
-		# NOTE: delegation of cpuset requires systemd >= 244 (Fedora >= 32, Ubuntu >= 20.04).
-		for f in memory pids cpuset; do
-			if grep -qwv $f "$file"; then
-				skip "$f is not enabled in $file"
-			fi
-		done
-	fi
+	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+	requires cgroups_memory cgroups_pids cgroups_cpuset
 	init_cgroup_paths
 
 	# run a few busyboxes detached
@@ -70,11 +62,6 @@ function setup() {
 	fi
 
 	# check that initial values were properly set
-	check_cgroup_value "cpuset.cpus" 0
-	if [[ "$CGROUP_UNIFIED" = "yes" ]] && ! grep -qw memory "$CGROUP_PATH/cgroup.controllers"; then
-		# This happen on containerized environment because "echo +memory > /sys/fs/cgroup/cgroup.subtree_control" fails with EINVAL
-		skip "memory controller not available"
-	fi
 	check_cgroup_value $MEM_LIMIT 33554432
 	check_systemd_value $SD_MEM_LIMIT 33554432
 
@@ -84,7 +71,7 @@ function setup() {
 	check_cgroup_value "pids.max" 20
 	check_systemd_value "TasksMax" 20
 
-	# update cpuset if supported (i.e. we're running on a multicore cpu)
+	# update cpuset if possible (i.e. we're running on a multicore cpu)
 	cpu_count=$(grep -c '^processor' /proc/cpuinfo)
 	if [ "$cpu_count" -gt 1 ]; then
 		runc update test_update --cpuset-cpus "1"
@@ -427,7 +414,7 @@ EOF
 
 @test "update cpuset parameters via resources.CPU" {
 	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
-	requires smp
+	requires smp cgroups_cpuset
 
 	local AllowedCPUs='AllowedCPUs' AllowedMemoryNodes='AllowedMemoryNodes'
 	# these properties require systemd >= v244
@@ -483,7 +470,7 @@ EOF
 @test "update cpuset parameters via v2 unified map" {
 	# This test assumes systemd >= v244
 	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
-	requires cgroups_v2 smp
+	requires cgroups_v2 smp cgroups_cpuset
 
 	update_config ' .linux.resources.unified |= {
 				"cpuset.cpus": "0",

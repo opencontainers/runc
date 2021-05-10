@@ -41,8 +41,8 @@ EOF
     cat > /etc/systemd/system/user@.service.d/delegate.conf << EOF
 [Service]
 # default: Delegate=pids memory
-# NOTE: delegation of cpuset requires systemd >= 244 (Fedora >= 32, Ubuntu >= 20.04). cpuset is ignored on Fedora 31.
-Delegate=cpu cpuset io memory pids
+# NOTE: delegation of cpuset requires systemd >= 244 (Fedora >= 32, Ubuntu >= 20.04).
+Delegate=yes
 EOF
     systemctl daemon-reload
   SHELL
