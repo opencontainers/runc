@@ -58,9 +58,6 @@ func setDevices(dirPath string, r *configs.Resources) error {
 	if r.SkipDevices {
 		return nil
 	}
-	// XXX: This is currently a white-list (but all callers pass a blacklist of
-	//      devices). This is bad for a whole variety of reasons, but will need
-	//      to be fixed with co-ordinated effort with downstreams.
 	insts, license, err := devicefilter.DeviceFilter(r.Devices)
 	if err != nil {
 		return err
