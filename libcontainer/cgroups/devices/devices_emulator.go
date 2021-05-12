@@ -371,3 +371,12 @@ func (source *Emulator) Transition(target *Emulator) ([]*devices.Rule, error) {
 	}
 	return transitionRules, nil
 }
+
+// Rules returns the minimum set of rules necessary to convert a *deny-all*
+// cgroup to the emulated filter state (note that this is not the same as a
+// default cgroupv1 cgroup -- which is allow-all). This is effectively just a
+// wrapper around Transition() with the source emulator being an empty cgroup.
+func (e *Emulator) Rules() ([]*devices.Rule, error) {
+	defaultCgroup := &Emulator{defaultAllow: false}
+	return defaultCgroup.Transition(e)
+}
