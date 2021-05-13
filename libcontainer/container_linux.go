@@ -68,7 +68,10 @@ type State struct {
 	// Set to true if BaseState.Config.RootlessEUID && BaseState.Config.RootlessCgroups
 	Rootless bool `json:"rootless"`
 
-	// Paths to all the container's cgroups, as returned by (*cgroups.Manager).GetPaths
+	// CgroupPaths is a map containing absolute paths to all the
+	// container's cgroups, as returned by (*cgroups.Manager).GetPaths.
+	// Used solely for runc exec, as a quick way to add a new executed
+	// process to all cgroups.
 	//
 	// For cgroup v1, a key is cgroup subsystem name, and the value is the path
 	// to the cgroup for this subsystem.

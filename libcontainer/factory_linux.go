@@ -314,7 +314,7 @@ func (l *LinuxFactory) Load(id string) (Container, error) {
 		criuPath:             l.CriuPath,
 		newuidmapPath:        l.NewuidmapPath,
 		newgidmapPath:        l.NewgidmapPath,
-		cgroupManager:        l.NewCgroupsManager(state.Config.Cgroups, state.CgroupPaths),
+		cgroupManager:        l.NewCgroupsManager(state.Config.Cgroups, nil),
 		root:                 containerRoot,
 		created:              state.Created,
 	}
