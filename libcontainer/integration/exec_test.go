@@ -1921,6 +1921,9 @@ func TestFdLeaks(t *testing.T) {
 }
 
 func TestFdLeaksSystemd(t *testing.T) {
+	if !systemd.IsRunningSystemd() {
+		t.Skip("Test requires systemd.")
+	}
 	testFdLeaks(t, true)
 }
 
