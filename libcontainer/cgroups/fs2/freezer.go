@@ -5,7 +5,6 @@ package fs2
 import (
 	stdErrors "errors"
 	"os"
-	"strings"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -26,7 +25,8 @@ func setFreezer(dirPath string, state configs.FreezerState) error {
 		return errors.Errorf("invalid freezer state %q requested", state)
 	}
 
-	if err := supportsFreezer(dirPath); err != nil {
+	fd, err := fscommon.OpenFile(dirPath, "cgroup.freeze", unix.O_RDWR)
+	if err != nil {
 		// We can ignore this request as long as the user didn't ask us to
 		// freeze the container (since without the freezer cgroup, that's a
 		// no-op).
@@ -35,12 +35,13 @@ func setFreezer(dirPath string, state configs.FreezerState) error {
 		}
 		return errors.Wrap(err, "freezer not supported")
 	}
+	defer fd.Close()
 
-	if err := fscommon.WriteFile(dirPath, "cgroup.freeze", stateStr); err != nil {
+	if _, err := fd.WriteString(stateStr); err != nil {
 		return err
 	}
 	// Confirm that the cgroup did actually change states.
-	if actualState, err := getFreezer(dirPath); err != nil {
+	if actualState, err := readFreezer(fd); err != nil {
 		return err
 	} else if actualState != state {
 		return errors.Errorf(`expected "cgroup.freeze" to be in state %q but was in %q`, state, actualState)
@@ -48,13 +49,8 @@ func setFreezer(dirPath string, state configs.FreezerState) error {
 	return nil
 }
 
-func supportsFreezer(dirPath string) error {
-	_, err := fscommon.ReadFile(dirPath, "cgroup.freeze")
-	return err
-}
-
 func getFreezer(dirPath string) (configs.FreezerState, error) {
-	state, err := fscommon.ReadFile(dirPath, "cgroup.freeze")
+	fd, err := fscommon.OpenFile(dirPath, "cgroup.freeze", unix.O_RDONLY)
 	if err != nil {
 		// If the kernel is too old, then we just treat the freezer as being in
 		// an "undefined" state.
@@ -63,10 +59,23 @@ func getFreezer(dirPath string) (configs.FreezerState, error) {
 		}
 		return configs.Undefined, err
 	}
-	switch strings.TrimSpace(state) {
-	case "0":
+	defer fd.Close()
+
+	return readFreezer(fd)
+}
+
+func readFreezer(fd *os.File) (configs.FreezerState, error) {
+	if _, err := fd.Seek(0, 0); err != nil {
+		return configs.Undefined, err
+	}
+	state := make([]byte, 2)
+	if _, err := fd.Read(state); err != nil {
+		return configs.Undefined, err
+	}
+	switch string(state) {
+	case "0\n":
 		return configs.Thawed, nil
-	case "1":
+	case "1\n":
 		return configs.Frozen, nil
 	default:
 		return configs.Undefined, errors.Errorf(`unknown "cgroup.freeze" state: %q`, state)
