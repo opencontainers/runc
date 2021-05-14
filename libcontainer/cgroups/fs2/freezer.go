@@ -14,16 +14,6 @@ import (
 )
 
 func setFreezer(dirPath string, state configs.FreezerState) error {
-	if err := supportsFreezer(dirPath); err != nil {
-		// We can ignore this request as long as the user didn't ask us to
-		// freeze the container (since without the freezer cgroup, that's a
-		// no-op).
-		if state == configs.Undefined || state == configs.Thawed {
-			return nil
-		}
-		return errors.Wrap(err, "freezer not supported")
-	}
-
 	var stateStr string
 	switch state {
 	case configs.Undefined:
@@ -34,6 +24,16 @@ func setFreezer(dirPath string, state configs.FreezerState) error {
 		stateStr = "0"
 	default:
 		return errors.Errorf("invalid freezer state %q requested", state)
+	}
+
+	if err := supportsFreezer(dirPath); err != nil {
+		// We can ignore this request as long as the user didn't ask us to
+		// freeze the container (since without the freezer cgroup, that's a
+		// no-op).
+		if state != configs.Frozen {
+			return nil
+		}
+		return errors.Wrap(err, "freezer not supported")
 	}
 
 	if err := fscommon.WriteFile(dirPath, "cgroup.freeze", stateStr); err != nil {
