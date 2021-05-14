@@ -11,9 +11,11 @@ import (
 	"testing"
 
 	"github.com/opencontainers/runc/libcontainer"
+	"golang.org/x/sys/unix"
 )
 
 func showFile(t *testing.T, fname string) error {
+	t.Helper()
 	t.Logf("=== %s ===\n", fname)
 
 	f, err := os.Open(fname)
@@ -188,19 +190,14 @@ func testCheckpoint(t *testing.T, userns bool) {
 	pid, err = restoreProcessConfig.Pid()
 	ok(t, err)
 
-	_, err = os.FindProcess(pid)
+	err = unix.Kill(pid, 0)
 	ok(t, err)
 
 	_, err = restoreStdinW.WriteString("Hello!")
 	ok(t, err)
 
 	restoreStdinW.Close()
-	s, err := restoreProcessConfig.Wait()
-	ok(t, err)
-
-	if !s.Success() {
-		t.Fatal(s.String(), pid)
-	}
+	waitProcess(restoreProcessConfig, t)
 
 	output := restoreStdout.String()
 	if !strings.Contains(output, "Hello!") {
