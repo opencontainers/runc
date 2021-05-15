@@ -186,7 +186,7 @@ func prepareTmp(topTmpDir string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err := unix.Mount(tmpdir, tmpdir, "bind", unix.MS_BIND, ""); err != nil {
+	if err := unix.Mount(tmpdir, tmpdir, "", unix.MS_BIND, ""); err != nil {
 		return "", err
 	}
 	if err := unix.Mount("", tmpdir, "", uintptr(unix.MS_PRIVATE), ""); err != nil {
@@ -657,7 +657,7 @@ func bindMountDeviceNode(dest string, node *devices.Device) error {
 	if f != nil {
 		f.Close()
 	}
-	return unix.Mount(node.Path, dest, "bind", unix.MS_BIND, "")
+	return unix.Mount(node.Path, dest, "", unix.MS_BIND, "")
 }
 
 // Creates the device node in the rootfs of the container.
@@ -772,7 +772,7 @@ func prepareRoot(config *configs.Config) error {
 		return err
 	}
 
-	return unix.Mount(config.Rootfs, config.Rootfs, "bind", unix.MS_BIND|unix.MS_REC, "")
+	return unix.Mount(config.Rootfs, config.Rootfs, "", unix.MS_BIND|unix.MS_REC, "")
 }
 
 func setReadonly() error {
