@@ -648,3 +648,29 @@ EOF
 	runc resume test_update
 	[ "$status" -eq 0 ]
 }
+
+@test "runc update replaces devices cgroup program" {
+	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+
+	# Unfortunately we can't update device rules directly with runc ("runc
+	# update" doesn't support it, and adding support would require ironing out
+	# some long-standing design issues with device configuration). So instead
+	# we just run "runc update" many times, relying on the fact that runc will
+	# re-apply devices cgroup rules on each runc update.
+	#
+	# In the past runc would not delete old cgroupv2 eBPF programs, so this
+	# test ensures that once we go past the program limit (64 stacked programs
+	# at time of writing) you can still run "runc" update.
+
+	# Run the container in the background.
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
+	[ "$status" -eq 0 ]
+
+	for new_limit in $(seq 300); do
+		runc update --pids-limit "$((2 * new_limit))" test_update
+		[ "$status" -eq 0 ]
+	done
+
+	# The container should still be running.
+	testcontainer test_update running
+}
