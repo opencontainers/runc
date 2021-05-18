@@ -878,6 +878,7 @@ func SetupSeccomp(config *specs.LinuxSeccomp) (*configs.Seccomp, error) {
 		return nil, err
 	}
 	newConfig.DefaultAction = newDefaultAction
+	newConfig.DefaultErrnoRet = config.DefaultErrnoRet
 
 	// Loop through all syscall blocks and convert them to libcontainer format
 	for _, call := range config.Syscalls {
