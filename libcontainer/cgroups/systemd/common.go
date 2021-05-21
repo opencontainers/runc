@@ -476,7 +476,7 @@ func addCpuset(cm *dbusConnManager, props *[]systemdDbus.Property, cpus, mems st
 	}
 
 	if cpus != "" {
-		bits, err := rangeToBits(cpus)
+		bits, err := RangeToBits(cpus)
 		if err != nil {
 			return fmt.Errorf("resources.CPU.Cpus=%q conversion error: %w",
 				cpus, err)
@@ -485,7 +485,7 @@ func addCpuset(cm *dbusConnManager, props *[]systemdDbus.Property, cpus, mems st
 			newProp("AllowedCPUs", bits))
 	}
 	if mems != "" {
-		bits, err := rangeToBits(mems)
+		bits, err := RangeToBits(mems)
 		if err != nil {
 			return fmt.Errorf("resources.CPU.Mems=%q conversion error: %w",
 				mems, err)

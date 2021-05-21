@@ -96,7 +96,7 @@ func unifiedResToSystemdProps(cm *dbusConnManager, res map[string]string) (props
 				newProp("CPUWeight", num))
 
 		case "cpuset.cpus", "cpuset.mems":
-			bits, err := rangeToBits(v)
+			bits, err := RangeToBits(v)
 			if err != nil {
 				return nil, fmt.Errorf("unified resource %q=%q conversion error: %w", k, v, err)
 			}
