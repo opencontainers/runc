@@ -40,7 +40,7 @@ func TestRangeToBits(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		out, err := rangeToBits(tc.in)
+		out, err := RangeToBits(tc.in)
 		if err != nil {
 			if !tc.isErr {
 				t.Errorf("case %q: unexpected error: %v", tc.in, err)
