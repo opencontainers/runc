@@ -1,3 +1,5 @@
+# github.com/AdaLogics/go-fuzz-headers v0.0.0-20210401092550-0a8691dafd0d
+github.com/AdaLogics/go-fuzz-headers
 # github.com/checkpoint-restore/go-criu/v5 v5.0.0
 github.com/checkpoint-restore/go-criu/v5
 github.com/checkpoint-restore/go-criu/v5/rpc
