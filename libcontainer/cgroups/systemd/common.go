@@ -158,14 +158,27 @@ func findDeviceGroup(ruleType devices.Type, ruleMajor int64) (string, error) {
 	return "", nil
 }
 
+// DeviceAllow is the dbus type "a(ss)" which means we need a struct
+// to represent it in Go.
+type deviceAllowEntry struct {
+	Path  string
+	Perms string
+}
+
+func allowAllDevices() []systemdDbus.Property {
+	// Setting mode to auto and removing all DeviceAllow rules
+	// results in allowing access to all devices.
+	return []systemdDbus.Property{
+		newProp("DevicePolicy", "auto"),
+		newProp("DeviceAllow", []deviceAllowEntry{}),
+	}
+}
+
 // generateDeviceProperties takes the configured device rules and generates a
 // corresponding set of systemd properties to configure the devices correctly.
-func generateDeviceProperties(rules []*devices.Rule) ([]systemdDbus.Property, error) {
-	// DeviceAllow is the type "a(ss)" which means we need a temporary struct
-	// to represent it in Go.
-	type deviceAllowEntry struct {
-		Path  string
-		Perms string
+func generateDeviceProperties(r *configs.Resources) ([]systemdDbus.Property, error) {
+	if r.SkipDevices {
+		return allowAllDevices(), nil
 	}
 
 	properties := []systemdDbus.Property{
@@ -177,7 +190,7 @@ func generateDeviceProperties(rules []*devices.Rule) ([]systemdDbus.Property, er
 
 	// Figure out the set of rules.
 	configEmu := &cgroupdevices.Emulator{}
-	for _, rule := range rules {
+	for _, rule := range r.Devices {
 		if err := configEmu.Apply(*rule); err != nil {
 			return nil, errors.Wrap(err, "apply rule for systemd")
 		}
@@ -189,12 +202,7 @@ func generateDeviceProperties(rules []*devices.Rule) ([]systemdDbus.Property, er
 	if configEmu.IsBlacklist() {
 		// However, if we're dealing with an allow-all rule then we can do it.
 		if configEmu.IsAllowAll() {
-			return []systemdDbus.Property{
-				// Run in white-list mode by setting to "auto" and removing all
-				// DeviceAllow rules.
-				newProp("DevicePolicy", "auto"),
-				newProp("DeviceAllow", []deviceAllowEntry{}),
-			}, nil
+			return allowAllDevices(), nil
 		}
 		logrus.Warn("systemd doesn't support blacklist device rules -- applying temporary deny-all rule")
 		return properties, nil
