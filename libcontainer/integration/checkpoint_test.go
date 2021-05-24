@@ -41,7 +41,7 @@ func showFile(t *testing.T, fname string) error {
 
 func TestUsernsCheckpoint(t *testing.T) {
 	if _, err := os.Stat("/proc/self/ns/user"); os.IsNotExist(err) {
-		t.Skip("userns is unsupported")
+		t.Skip("Test requires userns.")
 	}
 	cmd := exec.Command("criu", "check", "--feature", "userns")
 	if err := cmd.Run(); err != nil {

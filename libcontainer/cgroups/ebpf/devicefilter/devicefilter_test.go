@@ -55,81 +55,81 @@ block-0:
 func TestDeviceFilter_BuiltInAllowList(t *testing.T) {
 	expected := `
 // load parameters into registers
-         0: LdXMemW dst: r2 src: r1 off: 0 imm: 0
-         1: And32Imm dst: r2 imm: 65535
-         2: LdXMemW dst: r3 src: r1 off: 0 imm: 0
-         3: RSh32Imm dst: r3 imm: 16
-         4: LdXMemW dst: r4 src: r1 off: 4 imm: 0
-         5: LdXMemW dst: r5 src: r1 off: 8 imm: 0
+        0: LdXMemW dst: r2 src: r1 off: 0 imm: 0
+        1: And32Imm dst: r2 imm: 65535
+        2: LdXMemW dst: r3 src: r1 off: 0 imm: 0
+        3: RSh32Imm dst: r3 imm: 16
+        4: LdXMemW dst: r4 src: r1 off: 4 imm: 0
+        5: LdXMemW dst: r5 src: r1 off: 8 imm: 0
 block-0:
-// tuntap (c, 10, 200, rwm, allow)
-         6: JNEImm dst: r2 off: -1 imm: 2 <block-1>
-         7: JNEImm dst: r4 off: -1 imm: 10 <block-1>
-         8: JNEImm dst: r5 off: -1 imm: 200 <block-1>
-         9: Mov32Imm dst: r0 imm: 1
-        10: Exit
-block-1:
-        11: JNEImm dst: r2 off: -1 imm: 2 <block-2>
-        12: JNEImm dst: r4 off: -1 imm: 5 <block-2>
-        13: JNEImm dst: r5 off: -1 imm: 2 <block-2>
-        14: Mov32Imm dst: r0 imm: 1
-        15: Exit
-block-2:
-// /dev/pts (c, 136, wildcard, rwm, true)
-        16: JNEImm dst: r2 off: -1 imm: 2 <block-3>
-        17: JNEImm dst: r4 off: -1 imm: 136 <block-3>
-        18: Mov32Imm dst: r0 imm: 1
-        19: Exit
-block-3:
-        20: JNEImm dst: r2 off: -1 imm: 2 <block-4>
-        21: JNEImm dst: r4 off: -1 imm: 1 <block-4>
-        22: JNEImm dst: r5 off: -1 imm: 9 <block-4>
-        23: Mov32Imm dst: r0 imm: 1
-        24: Exit
-block-4:
-        25: JNEImm dst: r2 off: -1 imm: 2 <block-5>
-        26: JNEImm dst: r4 off: -1 imm: 1 <block-5>
-        27: JNEImm dst: r5 off: -1 imm: 5 <block-5>
-        28: Mov32Imm dst: r0 imm: 1
-        29: Exit
-block-5:
-        30: JNEImm dst: r2 off: -1 imm: 2 <block-6>
-        31: JNEImm dst: r4 off: -1 imm: 5 <block-6>
-        32: JNEImm dst: r5 off: -1 imm: 0 <block-6>
-        33: Mov32Imm dst: r0 imm: 1
-        34: Exit
-block-6:
-        35: JNEImm dst: r2 off: -1 imm: 2 <block-7>
-        36: JNEImm dst: r4 off: -1 imm: 1 <block-7>
-        37: JNEImm dst: r5 off: -1 imm: 7 <block-7>
-        38: Mov32Imm dst: r0 imm: 1
-        39: Exit
-block-7:
-        40: JNEImm dst: r2 off: -1 imm: 2 <block-8>
-        41: JNEImm dst: r4 off: -1 imm: 1 <block-8>
-        42: JNEImm dst: r5 off: -1 imm: 8 <block-8>
-        43: Mov32Imm dst: r0 imm: 1
-        44: Exit
-block-8:
-        45: JNEImm dst: r2 off: -1 imm: 2 <block-9>
-        46: JNEImm dst: r4 off: -1 imm: 1 <block-9>
-        47: JNEImm dst: r5 off: -1 imm: 3 <block-9>
-        48: Mov32Imm dst: r0 imm: 1
-        49: Exit
-block-9:
 // (b, wildcard, wildcard, m, true)
-        50: JNEImm dst: r2 off: -1 imm: 1 <block-10>
-        51: Mov32Reg dst: r1 src: r3
-        52: And32Imm dst: r1 imm: 1
-        53: JNEReg dst: r1 off: -1 src: r3 <block-10>
-        54: Mov32Imm dst: r0 imm: 1
-        55: Exit
-block-10:
+        6: JNEImm dst: r2 off: -1 imm: 1 <block-1>
+        7: Mov32Reg dst: r1 src: r3
+        8: And32Imm dst: r1 imm: 1
+        9: JNEReg dst: r1 off: -1 src: r3 <block-1>
+        10: Mov32Imm dst: r0 imm: 1
+        11: Exit
+block-1:
 // (c, wildcard, wildcard, m, true)
-        56: JNEImm dst: r2 off: -1 imm: 2 <block-11>
-        57: Mov32Reg dst: r1 src: r3
-        58: And32Imm dst: r1 imm: 1
-        59: JNEReg dst: r1 off: -1 src: r3 <block-11>
+        12: JNEImm dst: r2 off: -1 imm: 2 <block-2>
+        13: Mov32Reg dst: r1 src: r3
+        14: And32Imm dst: r1 imm: 1
+        15: JNEReg dst: r1 off: -1 src: r3 <block-2>
+        16: Mov32Imm dst: r0 imm: 1
+        17: Exit
+block-2:
+        18: JNEImm dst: r2 off: -1 imm: 2 <block-3>
+        19: JNEImm dst: r4 off: -1 imm: 1 <block-3>
+        20: JNEImm dst: r5 off: -1 imm: 3 <block-3>
+        21: Mov32Imm dst: r0 imm: 1
+        22: Exit
+block-3:
+        23: JNEImm dst: r2 off: -1 imm: 2 <block-4>
+        24: JNEImm dst: r4 off: -1 imm: 1 <block-4>
+        25: JNEImm dst: r5 off: -1 imm: 5 <block-4>
+        26: Mov32Imm dst: r0 imm: 1
+        27: Exit
+block-4:
+        28: JNEImm dst: r2 off: -1 imm: 2 <block-5>
+        29: JNEImm dst: r4 off: -1 imm: 1 <block-5>
+        30: JNEImm dst: r5 off: -1 imm: 7 <block-5>
+        31: Mov32Imm dst: r0 imm: 1
+        32: Exit
+block-5:
+        33: JNEImm dst: r2 off: -1 imm: 2 <block-6>
+        34: JNEImm dst: r4 off: -1 imm: 1 <block-6>
+        35: JNEImm dst: r5 off: -1 imm: 8 <block-6>
+        36: Mov32Imm dst: r0 imm: 1
+        37: Exit
+block-6:
+        38: JNEImm dst: r2 off: -1 imm: 2 <block-7>
+        39: JNEImm dst: r4 off: -1 imm: 1 <block-7>
+        40: JNEImm dst: r5 off: -1 imm: 9 <block-7>
+        41: Mov32Imm dst: r0 imm: 1
+        42: Exit
+block-7:
+        43: JNEImm dst: r2 off: -1 imm: 2 <block-8>
+        44: JNEImm dst: r4 off: -1 imm: 5 <block-8>
+        45: JNEImm dst: r5 off: -1 imm: 0 <block-8>
+        46: Mov32Imm dst: r0 imm: 1
+        47: Exit
+block-8:
+        48: JNEImm dst: r2 off: -1 imm: 2 <block-9>
+        49: JNEImm dst: r4 off: -1 imm: 5 <block-9>
+        50: JNEImm dst: r5 off: -1 imm: 2 <block-9>
+        51: Mov32Imm dst: r0 imm: 1
+        52: Exit
+block-9:
+// tuntap (c, 10, 200, rwm, allow)
+        53: JNEImm dst: r2 off: -1 imm: 2 <block-10>
+        54: JNEImm dst: r4 off: -1 imm: 10 <block-10>
+        55: JNEImm dst: r5 off: -1 imm: 200 <block-10>
+        56: Mov32Imm dst: r0 imm: 1
+        57: Exit
+block-10:
+// /dev/pts (c, 136, wildcard, rwm, true)
+        58: JNEImm dst: r2 off: -1 imm: 2 <block-11>
+        59: JNEImm dst: r4 off: -1 imm: 136 <block-11>
         60: Mov32Imm dst: r0 imm: 1
         61: Exit
 block-11:

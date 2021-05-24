@@ -203,8 +203,7 @@ func generateDeviceProperties(rules []*devices.Rule) ([]systemdDbus.Property, er
 	// Now generate the set of rules we actually need to apply. Unlike the
 	// normal devices cgroup, in "strict" mode systemd defaults to a deny-all
 	// whitelist which is the default for devices.Emulator.
-	baseEmu := &cgroupdevices.Emulator{}
-	finalRules, err := baseEmu.Transition(configEmu)
+	finalRules, err := configEmu.Rules()
 	if err != nil {
 		return nil, errors.Wrap(err, "get simplified rules for systemd")
 	}

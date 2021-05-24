@@ -29,7 +29,7 @@ func TestExecPS(t *testing.T) {
 
 func TestUsernsExecPS(t *testing.T) {
 	if _, err := os.Stat("/proc/self/ns/user"); os.IsNotExist(err) {
-		t.Skip("userns is unsupported")
+		t.Skip("Test requires userns.")
 	}
 	testExecPS(t, true)
 }
@@ -166,7 +166,7 @@ func TestRlimit(t *testing.T) {
 
 func TestUsernsRlimit(t *testing.T) {
 	if _, err := os.Stat("/proc/self/ns/user"); os.IsNotExist(err) {
-		t.Skip("userns is unsupported")
+		t.Skip("Test requires userns.")
 	}
 
 	testRlimit(t, true)
@@ -498,7 +498,7 @@ func TestFreeze(t *testing.T) {
 
 func TestSystemdFreeze(t *testing.T) {
 	if !systemd.IsRunningSystemd() {
-		t.Skip("Systemd is unsupported")
+		t.Skip("Test requires systemd.")
 	}
 	testFreeze(t, true)
 }
@@ -555,7 +555,7 @@ func TestCpuShares(t *testing.T) {
 
 func TestCpuSharesSystemd(t *testing.T) {
 	if !systemd.IsRunningSystemd() {
-		t.Skip("Systemd is unsupported")
+		t.Skip("Test requires systemd.")
 	}
 	testCpuShares(t, true)
 }
@@ -590,7 +590,7 @@ func TestPids(t *testing.T) {
 
 func TestPidsSystemd(t *testing.T) {
 	if !systemd.IsRunningSystemd() {
-		t.Skip("Systemd is unsupported")
+		t.Skip("Test requires systemd.")
 	}
 	testPids(t, true)
 }
@@ -664,7 +664,7 @@ func TestCgroupResourcesUnifiedErrorOnV1(t *testing.T) {
 
 func TestCgroupResourcesUnifiedErrorOnV1Systemd(t *testing.T) {
 	if !systemd.IsRunningSystemd() {
-		t.Skip("Systemd is unsupported")
+		t.Skip("Test requires systemd.")
 	}
 	testCgroupResourcesUnifiedErrorOnV1(t, true)
 }
@@ -699,7 +699,7 @@ func TestCgroupResourcesUnified(t *testing.T) {
 
 func TestCgroupResourcesUnifiedSystemd(t *testing.T) {
 	if !systemd.IsRunningSystemd() {
-		t.Skip("Systemd is unsupported")
+		t.Skip("Test requires systemd.")
 	}
 	testCgroupResourcesUnified(t, true)
 }
@@ -1720,7 +1720,7 @@ func TestInitJoinPID(t *testing.T) {
 
 func TestInitJoinNetworkAndUser(t *testing.T) {
 	if _, err := os.Stat("/proc/self/ns/user"); os.IsNotExist(err) {
-		t.Skip("userns is unsupported")
+		t.Skip("Test requires userns.")
 	}
 	if testing.Short() {
 		return
@@ -1861,7 +1861,7 @@ func TestTmpfsCopyUp(t *testing.T) {
 
 func TestCGROUPPrivate(t *testing.T) {
 	if _, err := os.Stat("/proc/self/ns/cgroup"); os.IsNotExist(err) {
-		t.Skip("cgroupns is unsupported")
+		t.Skip("Test requires cgroupns.")
 	}
 	if testing.Short() {
 		return
@@ -1890,7 +1890,7 @@ func TestCGROUPPrivate(t *testing.T) {
 
 func TestCGROUPHost(t *testing.T) {
 	if _, err := os.Stat("/proc/self/ns/cgroup"); os.IsNotExist(err) {
-		t.Skip("cgroupns is unsupported")
+		t.Skip("Test requires cgroupns.")
 	}
 	if testing.Short() {
 		return
@@ -1921,6 +1921,9 @@ func TestFdLeaks(t *testing.T) {
 }
 
 func TestFdLeaksSystemd(t *testing.T) {
+	if !systemd.IsRunningSystemd() {
+		t.Skip("Test requires systemd.")
+	}
 	testFdLeaks(t, true)
 }
 

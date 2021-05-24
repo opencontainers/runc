@@ -470,7 +470,7 @@ func TestDupNamespaces(t *testing.T) {
 
 func TestNonZeroEUIDCompatibleSpecconvValidate(t *testing.T) {
 	if _, err := os.Stat("/proc/self/ns/user"); os.IsNotExist(err) {
-		t.Skip("userns is unsupported")
+		t.Skip("Test requires userns.")
 	}
 
 	spec := Example()
