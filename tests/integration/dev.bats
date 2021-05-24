@@ -84,10 +84,10 @@ function teardown() {
 @test "runc run [device cgroup allow rm block device]" {
 	requires root
 
-	# get first block device
-	device="/dev/$(lsblk -nd -o NAME | head -n 1)"
-	major="$(lsblk -nd -o MAJ:MIN | head -n 1 | awk -F":" '{print $1}' | sed "s/\s*//g")"
-	minor="$(lsblk -nd -o MAJ:MIN | head -n 1 | awk -F":" '{print $2}')"
+	# Get the first block device.
+	IFS=$' \t:' read -r device major minor <<<"$(lsblk -nd -o NAME,MAJ:MIN)"
+	# Could have used -o PATH but lsblk from CentOS 7 does not have it.
+	device="/dev/$device"
 
 	update_config ' .linux.resources.devices = [{"allow": false, "access": "rwm"},{"allow": true, "type": "b", "major": '"$major"', "minor": '"$minor"', "access": "rwm"}]
 			| .linux.devices = [{"path": "'"$device"'", "type": "b", "major": '"$major"', "minor": '"$minor"'}]
