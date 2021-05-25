@@ -37,7 +37,7 @@ func TestSeccompDenyGetcwdWithErrno(t *testing.T) {
 
 	container, err := newContainer(t, config)
 	ok(t, err)
-	defer container.Destroy()
+	defer container.Destroy() //nolint:errcheck
 
 	buffers := newStdBuffers()
 	pwd := &libcontainer.Process{
@@ -100,7 +100,7 @@ func TestSeccompDenyGetcwd(t *testing.T) {
 
 	container, err := newContainer(t, config)
 	ok(t, err)
-	defer container.Destroy()
+	defer container.Destroy() //nolint:errcheck
 
 	buffers := newStdBuffers()
 	pwd := &libcontainer.Process{
@@ -170,7 +170,7 @@ func TestSeccompPermitWriteConditional(t *testing.T) {
 
 	container, err := newContainer(t, config)
 	ok(t, err)
-	defer container.Destroy()
+	defer container.Destroy() //nolint:errcheck
 
 	buffers := newStdBuffers()
 	dmesg := &libcontainer.Process{
@@ -226,7 +226,7 @@ func TestSeccompDenyWriteConditional(t *testing.T) {
 
 	container, err := newContainer(t, config)
 	ok(t, err)
-	defer container.Destroy()
+	defer container.Destroy() //nolint:errcheck
 
 	buffers := newStdBuffers()
 	dmesg := &libcontainer.Process{

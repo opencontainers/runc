@@ -20,9 +20,7 @@ jobs:
       - uses: golangci/golangci-lint-action@v2
         with:
           # must be specified without patch version
-          version: v1.36
-          # Only show new issues for a pull request.
-          only-new-issues: true
+          version: v1.40
 
   shfmt:
     runs-on: ubuntu-20.04
