@@ -21,8 +21,6 @@ jobs:
         with:
           # must be specified without patch version
           version: v1.40
-          # Only show new issues for a pull request.
-          only-new-issues: true
 
   shfmt:
     runs-on: ubuntu-20.04
