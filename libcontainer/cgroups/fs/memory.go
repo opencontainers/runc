@@ -200,14 +200,6 @@ func (s *MemoryGroup) GetStats(path string, stats *cgroups.Stats) error {
 	return nil
 }
 
-func memoryAssigned(cgroup *configs.Cgroup) bool {
-	return cgroup.Resources.Memory != 0 ||
-		cgroup.Resources.MemoryReservation != 0 ||
-		cgroup.Resources.MemorySwap > 0 ||
-		cgroup.Resources.OomKillDisable ||
-		(cgroup.Resources.MemorySwappiness != nil && int64(*cgroup.Resources.MemorySwappiness) != -1)
-}
-
 func getMemoryData(path, name string) (cgroups.MemoryData, error) {
 	memoryData := cgroups.MemoryData{}
 

@@ -106,14 +106,6 @@ var testArches = []string{
 	"s390x",
 }
 
-func archStringToNative(arch string) (nativeArch, error) {
-	scmpArch, err := libseccomp.GetArchFromString(arch)
-	if err != nil {
-		return 0, fmt.Errorf("unknown architecture %q: %v", arch, err)
-	}
-	return archToNative(scmpArch)
-}
-
 func testEnosysStub(t *testing.T, defaultAction configs.Action, arches []string) {
 	explicitSyscalls := []string{
 		"setns",

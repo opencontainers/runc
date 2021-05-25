@@ -110,8 +110,7 @@ func (p *program) appendRule(rule *devices.Rule) error {
 		return errors.New("the program is finalized")
 	}
 
-	bpfType := int32(-1)
-	hasType := true
+	var bpfType int32
 	switch rule.Type {
 	case devices.CharDevice:
 		bpfType = int32(unix.BPF_DEVCG_DEV_CHAR)
@@ -119,7 +118,7 @@ func (p *program) appendRule(rule *devices.Rule) error {
 		bpfType = int32(unix.BPF_DEVCG_DEV_BLOCK)
 	default:
 		// We do not permit 'a', nor any other types we don't know about.
-		return errors.Errorf("invalid Type %q", string(rule.Type))
+		return errors.Errorf("invalid type %q", string(rule.Type))
 	}
 	if rule.Major > math.MaxUint32 {
 		return errors.Errorf("invalid major %d", rule.Major)
@@ -150,12 +149,10 @@ func (p *program) appendRule(rule *devices.Rule) error {
 		nextBlockSym     = "block-" + strconv.Itoa(p.blockID+1)
 		prevBlockLastIdx = len(p.insts) - 1
 	)
-	if hasType {
-		p.insts = append(p.insts,
-			// if (R2 != bpfType) goto next
-			asm.JNE.Imm(asm.R2, bpfType, nextBlockSym),
-		)
-	}
+	p.insts = append(p.insts,
+		// if (R2 != bpfType) goto next
+		asm.JNE.Imm(asm.R2, bpfType, nextBlockSym),
+	)
 	if hasAccess {
 		p.insts = append(p.insts,
 			// if (R3 & bpfAccess != R3 /* use R1 as a temp var */) goto next
