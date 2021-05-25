@@ -137,7 +137,7 @@ func newRootfs() (string, error) {
 }
 
 func remove(dir string) {
-	os.RemoveAll(dir)
+	_ = os.RemoveAll(dir)
 }
 
 // copyBusybox copies the rootfs for a busybox container created for the test image
@@ -179,7 +179,7 @@ func runContainer(t *testing.T, config *configs.Config, console string, args ...
 	if err != nil {
 		return nil, -1, err
 	}
-	defer container.Destroy()
+	defer destroyContainer(container)
 	buffers = newStdBuffers()
 	process := &libcontainer.Process{
 		Cwd:    "/",
@@ -208,4 +208,8 @@ func runContainer(t *testing.T, config *configs.Config, console string, args ...
 		return buffers, -1, err
 	}
 	return
+}
+
+func destroyContainer(container libcontainer.Container) {
+	_ = container.Destroy()
 }

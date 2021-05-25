@@ -84,7 +84,7 @@ func TestNsenterValidPaths(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
-	p.Wait()
+	_, _ = p.Wait()
 }
 
 func TestNsenterInvalidPaths(t *testing.T) {
@@ -179,8 +179,10 @@ func TestNsenterChildLogging(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create log pipe %v", err)
 	}
-	defer logread.Close()
-	defer logwrite.Close()
+	defer func() {
+		_ = logwrite.Close()
+		_ = logread.Close()
+	}()
 
 	namespaces := []string{
 		// join pid ns of the current process

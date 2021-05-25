@@ -196,9 +196,9 @@ func prepareTmp(topTmpDir string) (string, error) {
 	return tmpdir, nil
 }
 
-func cleanupTmp(tmpdir string) error {
-	unix.Unmount(tmpdir, 0)
-	return os.RemoveAll(tmpdir)
+func cleanupTmp(tmpdir string) {
+	_ = unix.Unmount(tmpdir, 0)
+	_ = os.RemoveAll(tmpdir)
 }
 
 func mountCmd(cmd configs.Command) error {
@@ -615,7 +615,7 @@ func reOpenDevNull() error {
 	if err != nil {
 		return fmt.Errorf("Failed to open /dev/null - %s", err)
 	}
-	defer file.Close()
+	defer file.Close() //nolint: errcheck
 	if err := unix.Fstat(int(file.Fd()), &devNullStat); err != nil {
 		return err
 	}
@@ -661,7 +661,7 @@ func bindMountDeviceNode(rootfs, dest string, node *devices.Device) error {
 		return err
 	}
 	if f != nil {
-		f.Close()
+		_ = f.Close()
 	}
 	return utils.WithProcfd(rootfs, dest, func(procfd string) error {
 		return unix.Mount(node.Path, procfd, "bind", unix.MS_BIND, "")
@@ -826,13 +826,13 @@ func pivotRoot(rootfs string) error {
 	if err != nil {
 		return err
 	}
-	defer unix.Close(oldroot)
+	defer unix.Close(oldroot) //nolint: errcheck
 
 	newroot, err := unix.Open(rootfs, unix.O_DIRECTORY|unix.O_RDONLY, 0)
 	if err != nil {
 		return err
 	}
-	defer unix.Close(newroot)
+	defer unix.Close(newroot) //nolint: errcheck
 
 	// Change to the new root so that the pivot_root actually acts on it.
 	if err := unix.Fchdir(newroot); err != nil {
@@ -956,7 +956,7 @@ func createIfNotExists(path string, isDir bool) error {
 			if err != nil {
 				return err
 			}
-			f.Close()
+			_ = f.Close()
 		}
 	}
 	return nil

@@ -145,12 +145,15 @@ func TestFuncHookRun(t *testing.T) {
 
 	fHook := configs.NewFunctionHook(func(s *specs.State) error {
 		if !reflect.DeepEqual(state, s) {
-			t.Errorf("Expected state %+v to equal %+v", state, s)
+			return fmt.Errorf("expected state %+v to equal %+v", state, s)
 		}
 		return nil
 	})
 
-	fHook.Run(state)
+	err := fHook.Run(state)
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestCommandHookRun(t *testing.T) {

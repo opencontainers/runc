@@ -14,16 +14,16 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func showFile(t *testing.T, fname string) error {
+func showFile(t *testing.T, fname string) {
 	t.Helper()
 	t.Logf("=== %s ===\n", fname)
 
 	f, err := os.Open(fname)
 	if err != nil {
 		t.Log(err)
-		return err
+		return
 	}
-	defer f.Close()
+	defer f.Close() //nolint: errcheck
 
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
@@ -31,12 +31,11 @@ func showFile(t *testing.T, fname string) error {
 	}
 
 	if err := scanner.Err(); err != nil {
-		return err
+		t.Log(err)
+		return
 	}
 
 	t.Logf("=== END ===\n")
-
-	return nil
 }
 
 func TestUsernsCheckpoint(t *testing.T) {
@@ -65,7 +64,7 @@ func testCheckpoint(t *testing.T, userns bool) {
 
 	root, err := newTestRoot()
 	ok(t, err)
-	defer os.RemoveAll(root)
+	defer remove(root)
 
 	rootfs, err := newRootfs()
 	ok(t, err)
@@ -80,7 +79,7 @@ func testCheckpoint(t *testing.T, userns bool) {
 
 	container, err := factory.Create("test", config)
 	ok(t, err)
-	defer container.Destroy()
+	defer destroyContainer(container)
 
 	stdinR, stdinW, err := os.Pipe()
 	ok(t, err)
@@ -97,8 +96,8 @@ func testCheckpoint(t *testing.T, userns bool) {
 	}
 
 	err = container.Run(&pconfig)
-	stdinR.Close()
-	defer stdinW.Close()
+	_ = stdinR.Close()
+	defer stdinW.Close() //nolint: errcheck
 	ok(t, err)
 
 	pid, err := pconfig.Pid()
@@ -109,7 +108,7 @@ func testCheckpoint(t *testing.T, userns bool) {
 
 	parentDir, err := ioutil.TempDir("", "criu-parent")
 	ok(t, err)
-	defer os.RemoveAll(parentDir)
+	defer remove(parentDir)
 
 	preDumpOpts := &libcontainer.CriuOpts{
 		ImagesDirectory: parentDir,
@@ -132,7 +131,7 @@ func testCheckpoint(t *testing.T, userns bool) {
 
 	imagesDir, err := ioutil.TempDir("", "criu")
 	ok(t, err)
-	defer os.RemoveAll(imagesDir)
+	defer remove(imagesDir)
 
 	checkpointOpts := &libcontainer.CriuOpts{
 		ImagesDirectory: imagesDir,
@@ -154,7 +153,7 @@ func testCheckpoint(t *testing.T, userns bool) {
 		t.Fatal("Unexpected state checkpoint: ", state)
 	}
 
-	stdinW.Close()
+	_ = stdinW.Close()
 	_, err = process.Wait()
 	ok(t, err)
 
@@ -174,8 +173,8 @@ func testCheckpoint(t *testing.T, userns bool) {
 	}
 
 	err = container.Restore(restoreProcessConfig, checkpointOpts)
-	restoreStdinR.Close()
-	defer restoreStdinW.Close()
+	_ = restoreStdinR.Close()
+	defer restoreStdinW.Close() //nolint: errcheck
 	if err != nil {
 		showFile(t, restoreLog)
 		t.Fatal(err)
@@ -196,7 +195,7 @@ func testCheckpoint(t *testing.T, userns bool) {
 	_, err = restoreStdinW.WriteString("Hello!")
 	ok(t, err)
 
-	restoreStdinW.Close()
+	_ = restoreStdinW.Close()
 	waitProcess(restoreProcessConfig, t)
 
 	output := restoreStdout.String()

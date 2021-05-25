@@ -1352,7 +1352,7 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 	if err != nil {
 		return err
 	}
-	defer unix.Unmount(root, unix.MNT_DETACH)
+	defer unix.Unmount(root, unix.MNT_DETACH) //nolint: errcheck
 	t := criurpc.CriuReqType_RESTORE
 	req := &criurpc.CriuReq{
 		Type: &t,
@@ -1665,7 +1665,7 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *
 		break
 	}
 
-	criuClientCon.CloseWrite()
+	_ = criuClientCon.CloseWrite()
 	// cmd.Wait() waits cmd.goroutines which are used for proxying file descriptors.
 	// Here we want to wait only the CRIU process.
 	criuProcessState, err = criuProcess.Wait()

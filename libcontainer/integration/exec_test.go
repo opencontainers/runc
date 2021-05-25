@@ -213,7 +213,7 @@ func TestEnter(t *testing.T) {
 
 	container, err := newContainer(t, config)
 	ok(t, err)
-	defer container.Destroy()
+	defer destroyContainer(container)
 
 	// Execute a first process in the container
 	stdinR, stdinW, err := os.Pipe()
@@ -230,8 +230,8 @@ func TestEnter(t *testing.T) {
 		Init:   true,
 	}
 	err = container.Run(&pconfig)
-	stdinR.Close()
-	defer stdinW.Close()
+	_ = stdinR.Close()
+	defer stdinW.Close() //nolint: errcheck
 	ok(t, err)
 	pid, err := pconfig.Pid()
 	ok(t, err)
@@ -248,8 +248,8 @@ func TestEnter(t *testing.T) {
 	pconfig2.Stdout = &stdout2
 
 	err = container.Run(&pconfig2)
-	stdinR2.Close()
-	defer stdinW2.Close()
+	_ = stdinR2.Close()
+	defer stdinW2.Close() //nolint: errcheck
 	ok(t, err)
 
 	pid2, err := pconfig2.Pid()
@@ -269,10 +269,10 @@ func TestEnter(t *testing.T) {
 	}
 
 	// Wait processes
-	stdinW2.Close()
+	_ = stdinW2.Close()
 	waitProcess(&pconfig2, t)
 
-	stdinW.Close()
+	_ = stdinW.Close()
 	waitProcess(&pconfig, t)
 
 	// Check that both processes live in the same pidns
@@ -300,7 +300,7 @@ func TestProcessEnv(t *testing.T) {
 
 	container, err := newContainer(t, config)
 	ok(t, err)
-	defer container.Destroy()
+	defer destroyContainer(container)
 
 	var stdout bytes.Buffer
 	pconfig := libcontainer.Process{
@@ -349,7 +349,7 @@ func TestProcessEmptyCaps(t *testing.T) {
 
 	container, err := newContainer(t, config)
 	ok(t, err)
-	defer container.Destroy()
+	defer destroyContainer(container)
 
 	var stdout bytes.Buffer
 	pconfig := libcontainer.Process{
@@ -397,7 +397,7 @@ func TestProcessCaps(t *testing.T) {
 
 	container, err := newContainer(t, config)
 	ok(t, err)
-	defer container.Destroy()
+	defer destroyContainer(container)
 
 	var stdout bytes.Buffer
 	pconfig := libcontainer.Process{
@@ -462,7 +462,7 @@ func TestAdditionalGroups(t *testing.T) {
 
 	container, err := newContainer(t, config)
 	ok(t, err)
-	defer container.Destroy()
+	defer destroyContainer(container)
 
 	var stdout bytes.Buffer
 	pconfig := libcontainer.Process{
@@ -518,7 +518,7 @@ func testFreeze(t *testing.T, systemd bool) {
 	})
 	container, err := newContainer(t, config)
 	ok(t, err)
-	defer container.Destroy()
+	defer destroyContainer(container)
 
 	stdinR, stdinW, err := os.Pipe()
 	ok(t, err)
@@ -531,8 +531,8 @@ func testFreeze(t *testing.T, systemd bool) {
 		Init:  true,
 	}
 	err = container.Run(pconfig)
-	stdinR.Close()
-	defer stdinW.Close()
+	_ = stdinR.Close()
+	defer stdinW.Close() //nolint: errcheck
 	ok(t, err)
 
 	err = container.Pause()
@@ -545,7 +545,7 @@ func testFreeze(t *testing.T, systemd bool) {
 		t.Fatal("Unexpected state: ", state)
 	}
 
-	stdinW.Close()
+	_ = stdinW.Close()
 	waitProcess(pconfig, t)
 }
 
@@ -826,7 +826,7 @@ func TestContainerState(t *testing.T) {
 
 	container, err := newContainer(t, config)
 	ok(t, err)
-	defer container.Destroy()
+	defer destroyContainer(container)
 
 	stdinR, stdinW, err := os.Pipe()
 	ok(t, err)
@@ -840,8 +840,8 @@ func TestContainerState(t *testing.T) {
 	}
 	err = container.Run(p)
 	ok(t, err)
-	stdinR.Close()
-	defer stdinW.Close()
+	_ = stdinR.Close()
+	defer stdinW.Close() //nolint: errcheck
 
 	st, err := container.State()
 	ok(t, err)
@@ -851,7 +851,7 @@ func TestContainerState(t *testing.T) {
 	if l1 != l {
 		t.Fatal("Container using non-host ipc namespace")
 	}
-	stdinW.Close()
+	_ = stdinW.Close()
 	waitProcess(p, t)
 }
 
@@ -868,7 +868,7 @@ func TestPassExtraFiles(t *testing.T) {
 
 	container, err := newContainer(t, config)
 	ok(t, err)
-	defer container.Destroy()
+	defer destroyContainer(container)
 
 	var stdout bytes.Buffer
 	pipeout1, pipein1, err := os.Pipe()
@@ -921,7 +921,7 @@ func TestMountCmds(t *testing.T) {
 
 	tmpDir, err := ioutil.TempDir("", "tmpdir")
 	ok(t, err)
-	defer os.RemoveAll(tmpDir)
+	defer remove(tmpDir)
 
 	config := newTemplateConfig(t, &tParam{rootfs: rootfs})
 	config.Mounts = append(config.Mounts, &configs.Mount{
@@ -941,7 +941,7 @@ func TestMountCmds(t *testing.T) {
 
 	container, err := newContainer(t, config)
 	ok(t, err)
-	defer container.Destroy()
+	defer destroyContainer(container)
 
 	pconfig := libcontainer.Process{
 		Cwd:  "/",
@@ -981,7 +981,7 @@ func TestSysctl(t *testing.T) {
 
 	container, err := newContainer(t, config)
 	ok(t, err)
-	defer container.Destroy()
+	defer destroyContainer(container)
 
 	var stdout bytes.Buffer
 	pconfig := libcontainer.Process{
@@ -1110,7 +1110,7 @@ func TestOomScoreAdj(t *testing.T) {
 
 	container, err := newContainer(t, config)
 	ok(t, err)
-	defer container.Destroy()
+	defer destroyContainer(container)
 
 	var stdout bytes.Buffer
 	pconfig := libcontainer.Process{
@@ -1305,8 +1305,8 @@ func TestSTDIOPermissions(t *testing.T) {
 	}
 }
 
-func unmountOp(path string) error {
-	return unix.Unmount(path, unix.MNT_DETACH)
+func unmountOp(path string) {
+	_ = unix.Unmount(path, unix.MNT_DETACH)
 }
 
 // Launch container with rootfsPropagation in rslave mode. Also
@@ -1333,7 +1333,7 @@ func TestRootfsPropagationSlaveMount(t *testing.T) {
 	// Bind mount a volume
 	dir1host, err := ioutil.TempDir("", "mnt1host")
 	ok(t, err)
-	defer os.RemoveAll(dir1host)
+	defer remove(dir1host)
 
 	// Make this dir a "shared" mount point. This will make sure a
 	// slave relationship can be established in container.
@@ -1351,7 +1351,7 @@ func TestRootfsPropagationSlaveMount(t *testing.T) {
 
 	container, err := newContainer(t, config)
 	ok(t, err)
-	defer container.Destroy()
+	defer destroyContainer(container)
 
 	stdinR, stdinW, err := os.Pipe()
 	ok(t, err)
@@ -1365,15 +1365,15 @@ func TestRootfsPropagationSlaveMount(t *testing.T) {
 	}
 
 	err = container.Run(pconfig)
-	stdinR.Close()
-	defer stdinW.Close()
+	_ = stdinR.Close()
+	defer stdinW.Close() //nolint: errcheck
 	ok(t, err)
 
 	// Create mnt1host/mnt2host and bind mount itself on top of it. This
 	// should be visible in container.
 	dir2host, err := ioutil.TempDir(dir1host, "mnt2host")
 	ok(t, err)
-	defer os.RemoveAll(dir2host)
+	defer remove(dir2host)
 
 	err = unix.Mount(dir2host, dir2host, "bind", unix.MS_BIND, "")
 	defer unmountOp(dir2host)
@@ -1394,13 +1394,13 @@ func TestRootfsPropagationSlaveMount(t *testing.T) {
 	}
 
 	err = container.Run(pconfig2)
-	stdinR2.Close()
-	defer stdinW2.Close()
+	_ = stdinR2.Close()
+	defer stdinW2.Close() //nolint: errcheck
 	ok(t, err)
 
-	stdinW2.Close()
+	_ = stdinW2.Close()
 	waitProcess(pconfig2, t)
-	stdinW.Close()
+	_ = stdinW.Close()
 	waitProcess(pconfig, t)
 
 	mountPropagated = false
@@ -1448,7 +1448,7 @@ func TestRootfsPropagationSharedMount(t *testing.T) {
 	// Bind mount a volume
 	dir1host, err := ioutil.TempDir("", "mnt1host")
 	ok(t, err)
-	defer os.RemoveAll(dir1host)
+	defer remove(dir1host)
 
 	// Make this dir a "shared" mount point. This will make sure a
 	// shared relationship can be established in container.
@@ -1466,7 +1466,7 @@ func TestRootfsPropagationSharedMount(t *testing.T) {
 
 	container, err := newContainer(t, config)
 	ok(t, err)
-	defer container.Destroy()
+	defer destroyContainer(container)
 
 	stdinR, stdinW, err := os.Pipe()
 	ok(t, err)
@@ -1480,8 +1480,8 @@ func TestRootfsPropagationSharedMount(t *testing.T) {
 	}
 
 	err = container.Run(pconfig)
-	stdinR.Close()
-	defer stdinW.Close()
+	_ = stdinR.Close()
+	defer stdinW.Close() //nolint: errcheck
 	ok(t, err)
 
 	// Create mnt1host/mnt2cont.  This will become visible inside container
@@ -1489,7 +1489,7 @@ func TestRootfsPropagationSharedMount(t *testing.T) {
 	// should be visible on host now.
 	dir2host, err := ioutil.TempDir(dir1host, "mnt2cont")
 	ok(t, err)
-	defer os.RemoveAll(dir2host)
+	defer remove(dir2host)
 
 	dir2cont = filepath.Join(dir1cont, filepath.Base(dir2host))
 
@@ -1515,14 +1515,14 @@ func TestRootfsPropagationSharedMount(t *testing.T) {
 	pconfig2.Capabilities.Inheritable = append(config.Capabilities.Inheritable, "CAP_SYS_ADMIN")
 
 	err = container.Run(pconfig2)
-	stdinR2.Close()
-	defer stdinW2.Close()
+	_ = stdinR2.Close()
+	defer stdinW2.Close() //nolint: errcheck
 	ok(t, err)
 
 	// Wait for process
-	stdinW2.Close()
+	_ = stdinW2.Close()
 	waitProcess(pconfig2, t)
-	stdinW.Close()
+	_ = stdinW.Close()
 	waitProcess(pconfig, t)
 
 	defer unmountOp(dir2host)
@@ -1629,7 +1629,7 @@ func TestInitJoinPID(t *testing.T) {
 	// Execute a long-running container
 	container1, err := newContainer(t, newTemplateConfig(t, &tParam{rootfs: rootfs}))
 	ok(t, err)
-	defer container1.Destroy()
+	defer destroyContainer(container1)
 
 	stdinR1, stdinW1, err := os.Pipe()
 	ok(t, err)
@@ -1641,8 +1641,8 @@ func TestInitJoinPID(t *testing.T) {
 		Init:  true,
 	}
 	err = container1.Run(init1)
-	stdinR1.Close()
-	defer stdinW1.Close()
+	_ = stdinR1.Close()
+	defer stdinW1.Close() //nolint: errcheck
 	ok(t, err)
 
 	// get the state of the first container
@@ -1656,7 +1656,7 @@ func TestInitJoinPID(t *testing.T) {
 	config2.Cgroups.Path = "integration/test2"
 	container2, err := newContainer(t, config2)
 	ok(t, err)
-	defer container2.Destroy()
+	defer destroyContainer(container2)
 
 	stdinR2, stdinW2, err := os.Pipe()
 	ok(t, err)
@@ -1668,8 +1668,8 @@ func TestInitJoinPID(t *testing.T) {
 		Init:  true,
 	}
 	err = container2.Run(init2)
-	stdinR2.Close()
-	defer stdinW2.Close()
+	_ = stdinR2.Close()
+	defer stdinW2.Close() //nolint: errcheck
 	ok(t, err)
 	// get the state of the second container
 	state2, err := container2.State()
@@ -1703,9 +1703,9 @@ func TestInitJoinPID(t *testing.T) {
 
 	// Stop init processes one by one. Stop the second container should
 	// not stop the first.
-	stdinW2.Close()
+	_ = stdinW2.Close()
 	waitProcess(init2, t)
-	stdinW1.Close()
+	_ = stdinW1.Close()
 	waitProcess(init1, t)
 
 	out := strings.TrimSpace(buffers.Stdout.String())
@@ -1736,7 +1736,7 @@ func TestInitJoinNetworkAndUser(t *testing.T) {
 	})
 	container1, err := newContainer(t, config1)
 	ok(t, err)
-	defer container1.Destroy()
+	defer destroyContainer(container1)
 
 	stdinR1, stdinW1, err := os.Pipe()
 	ok(t, err)
@@ -1748,8 +1748,8 @@ func TestInitJoinNetworkAndUser(t *testing.T) {
 		Init:  true,
 	}
 	err = container1.Run(init1)
-	stdinR1.Close()
-	defer stdinW1.Close()
+	_ = stdinR1.Close()
+	defer stdinW1.Close() //nolint: errcheck
 	ok(t, err)
 
 	// get the state of the first container
@@ -1772,7 +1772,7 @@ func TestInitJoinNetworkAndUser(t *testing.T) {
 	config2.Cgroups.Path = "integration/test2"
 	container2, err := newContainer(t, config2)
 	ok(t, err)
-	defer container2.Destroy()
+	defer destroyContainer(container2)
 
 	stdinR2, stdinW2, err := os.Pipe()
 	ok(t, err)
@@ -1784,8 +1784,8 @@ func TestInitJoinNetworkAndUser(t *testing.T) {
 		Init:  true,
 	}
 	err = container2.Run(init2)
-	stdinR2.Close()
-	defer stdinW2.Close()
+	_ = stdinR2.Close()
+	defer stdinW2.Close() //nolint: errcheck
 	ok(t, err)
 
 	// get the state of the second container
@@ -1809,9 +1809,9 @@ func TestInitJoinNetworkAndUser(t *testing.T) {
 	}
 	// Stop init processes one by one. Stop the second container should
 	// not stop the first.
-	stdinW2.Close()
+	_ = stdinW2.Close()
 	waitProcess(init2, t)
-	stdinW1.Close()
+	_ = stdinW1.Close()
 	waitProcess(init1, t)
 }
 
@@ -1835,7 +1835,7 @@ func TestTmpfsCopyUp(t *testing.T) {
 
 	container, err := newContainer(t, config)
 	ok(t, err)
-	defer container.Destroy()
+	defer destroyContainer(container)
 
 	var stdout bytes.Buffer
 	pconfig := libcontainer.Process{

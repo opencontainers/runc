@@ -28,7 +28,7 @@ func TestExecIn(t *testing.T) {
 	config := newTemplateConfig(t, &tParam{rootfs: rootfs})
 	container, err := newContainer(t, config)
 	ok(t, err)
-	defer container.Destroy()
+	defer destroyContainer(container)
 
 	// Execute a first process in the container
 	stdinR, stdinW, err := os.Pipe()
@@ -41,8 +41,8 @@ func TestExecIn(t *testing.T) {
 		Init:  true,
 	}
 	err = container.Run(process)
-	stdinR.Close()
-	defer stdinW.Close()
+	_ = stdinR.Close()
+	defer stdinW.Close() //nolint: errcheck
 	ok(t, err)
 
 	buffers := newStdBuffers()
@@ -58,7 +58,7 @@ func TestExecIn(t *testing.T) {
 	err = container.Run(ps)
 	ok(t, err)
 	waitProcess(ps, t)
-	stdinW.Close()
+	_ = stdinW.Close()
 	waitProcess(process, t)
 
 	out := buffers.Stdout.String()
@@ -98,7 +98,7 @@ func testExecInRlimit(t *testing.T, userns bool) {
 
 	container, err := newContainer(t, config)
 	ok(t, err)
-	defer container.Destroy()
+	defer destroyContainer(container)
 
 	stdinR, stdinW, err := os.Pipe()
 	ok(t, err)
@@ -110,8 +110,8 @@ func testExecInRlimit(t *testing.T, userns bool) {
 		Init:  true,
 	}
 	err = container.Run(process)
-	stdinR.Close()
-	defer stdinW.Close()
+	_ = stdinR.Close()
+	defer stdinW.Close() //nolint: errcheck
 	ok(t, err)
 
 	buffers := newStdBuffers()
@@ -132,7 +132,7 @@ func testExecInRlimit(t *testing.T, userns bool) {
 	ok(t, err)
 	waitProcess(ps, t)
 
-	stdinW.Close()
+	_ = stdinW.Close()
 	waitProcess(process, t)
 
 	out := buffers.Stdout.String()
@@ -153,7 +153,7 @@ func TestExecInAdditionalGroups(t *testing.T) {
 	config := newTemplateConfig(t, &tParam{rootfs: rootfs})
 	container, err := newContainer(t, config)
 	ok(t, err)
-	defer container.Destroy()
+	defer destroyContainer(container)
 
 	// Execute a first process in the container
 	stdinR, stdinW, err := os.Pipe()
@@ -166,8 +166,8 @@ func TestExecInAdditionalGroups(t *testing.T) {
 		Init:  true,
 	}
 	err = container.Run(process)
-	stdinR.Close()
-	defer stdinW.Close()
+	_ = stdinR.Close()
+	defer stdinW.Close() //nolint: errcheck
 	ok(t, err)
 
 	var stdout bytes.Buffer
@@ -185,7 +185,7 @@ func TestExecInAdditionalGroups(t *testing.T) {
 	// Wait for process
 	waitProcess(&pconfig, t)
 
-	stdinW.Close()
+	_ = stdinW.Close()
 	waitProcess(process, t)
 
 	outputGroups := stdout.String()
@@ -210,7 +210,7 @@ func TestExecInError(t *testing.T) {
 	config := newTemplateConfig(t, &tParam{rootfs: rootfs})
 	container, err := newContainer(t, config)
 	ok(t, err)
-	defer container.Destroy()
+	defer destroyContainer(container)
 
 	// Execute a first process in the container
 	stdinR, stdinW, err := os.Pipe()
@@ -223,9 +223,9 @@ func TestExecInError(t *testing.T) {
 		Init:  true,
 	}
 	err = container.Run(process)
-	stdinR.Close()
+	_ = stdinR.Close()
 	defer func() {
-		stdinW.Close()
+		_ = stdinW.Close()
 		if _, err := process.Wait(); err != nil {
 			t.Log(err)
 		}
@@ -264,7 +264,7 @@ func TestExecInTTY(t *testing.T) {
 	config := newTemplateConfig(t, &tParam{rootfs: rootfs})
 	container, err := newContainer(t, config)
 	ok(t, err)
-	defer container.Destroy()
+	defer destroyContainer(container)
 
 	// Execute a first process in the container
 	stdinR, stdinW, err := os.Pipe()
@@ -277,9 +277,9 @@ func TestExecInTTY(t *testing.T) {
 		Init:  true,
 	}
 	err = container.Run(process)
-	stdinR.Close()
+	_ = stdinR.Close()
 	defer func() {
-		stdinW.Close()
+		_ = stdinW.Close()
 		if _, err := process.Wait(); err != nil {
 			t.Log(err)
 		}
@@ -335,8 +335,8 @@ func TestExecInTTY(t *testing.T) {
 		}
 
 		waitProcess(ps, t)
-		parent.Close()
-		child.Close()
+		_ = parent.Close()
+		_ = child.Close()
 
 		out := stdout.String()
 		if !strings.Contains(out, "cat") || !strings.Contains(out, "ps") {
@@ -358,7 +358,7 @@ func TestExecInEnvironment(t *testing.T) {
 	config := newTemplateConfig(t, &tParam{rootfs: rootfs})
 	container, err := newContainer(t, config)
 	ok(t, err)
-	defer container.Destroy()
+	defer destroyContainer(container)
 
 	// Execute a first process in the container
 	stdinR, stdinW, err := os.Pipe()
@@ -371,8 +371,8 @@ func TestExecInEnvironment(t *testing.T) {
 		Init:  true,
 	}
 	err = container.Run(process)
-	stdinR.Close()
-	defer stdinW.Close()
+	_ = stdinR.Close()
+	defer stdinW.Close() //nolint: errcheck
 	ok(t, err)
 
 	buffers := newStdBuffers()
@@ -394,7 +394,7 @@ func TestExecInEnvironment(t *testing.T) {
 	ok(t, err)
 	waitProcess(process2, t)
 
-	stdinW.Close()
+	_ = stdinW.Close()
 	waitProcess(process, t)
 
 	out := buffers.Stdout.String()
@@ -419,7 +419,7 @@ func TestExecinPassExtraFiles(t *testing.T) {
 	config := newTemplateConfig(t, &tParam{rootfs: rootfs})
 	container, err := newContainer(t, config)
 	ok(t, err)
-	defer container.Destroy()
+	defer destroyContainer(container)
 
 	// Execute a first process in the container
 	stdinR, stdinW, err := os.Pipe()
@@ -432,8 +432,8 @@ func TestExecinPassExtraFiles(t *testing.T) {
 		Init:  true,
 	}
 	err = container.Run(process)
-	stdinR.Close()
-	defer stdinW.Close()
+	_ = stdinR.Close()
+	defer stdinW.Close() //nolint: errcheck
 	ok(t, err)
 
 	var stdout bytes.Buffer
@@ -453,7 +453,7 @@ func TestExecinPassExtraFiles(t *testing.T) {
 	ok(t, err)
 
 	waitProcess(inprocess, t)
-	stdinW.Close()
+	_ = stdinW.Close()
 	waitProcess(process, t)
 
 	out := stdout.String()
@@ -488,7 +488,7 @@ func TestExecInOomScoreAdj(t *testing.T) {
 	config.OomScoreAdj = ptrInt(200)
 	container, err := newContainer(t, config)
 	ok(t, err)
-	defer container.Destroy()
+	defer destroyContainer(container)
 
 	stdinR, stdinW, err := os.Pipe()
 	ok(t, err)
@@ -500,8 +500,8 @@ func TestExecInOomScoreAdj(t *testing.T) {
 		Init:  true,
 	}
 	err = container.Run(process)
-	stdinR.Close()
-	defer stdinW.Close()
+	_ = stdinR.Close()
+	defer stdinW.Close() //nolint: errcheck
 	ok(t, err)
 
 	buffers := newStdBuffers()
@@ -517,7 +517,7 @@ func TestExecInOomScoreAdj(t *testing.T) {
 	ok(t, err)
 	waitProcess(ps, t)
 
-	stdinW.Close()
+	_ = stdinW.Close()
 	waitProcess(process, t)
 
 	out := buffers.Stdout.String()
@@ -542,7 +542,7 @@ func TestExecInUserns(t *testing.T) {
 	})
 	container, err := newContainer(t, config)
 	ok(t, err)
-	defer container.Destroy()
+	defer destroyContainer(container)
 
 	// Execute a first process in the container
 	stdinR, stdinW, err := os.Pipe()
@@ -556,8 +556,8 @@ func TestExecInUserns(t *testing.T) {
 		Init:  true,
 	}
 	err = container.Run(process)
-	stdinR.Close()
-	defer stdinW.Close()
+	_ = stdinR.Close()
+	defer stdinW.Close() //nolint: errcheck
 	ok(t, err)
 
 	initPID, err := process.Pid()
@@ -578,7 +578,7 @@ func TestExecInUserns(t *testing.T) {
 	err = container.Run(process2)
 	ok(t, err)
 	waitProcess(process2, t)
-	stdinW.Close()
+	_ = stdinW.Close()
 	waitProcess(process, t)
 
 	if out := strings.TrimSpace(buffers.Stdout.String()); out != initUserns {
