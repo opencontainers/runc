@@ -207,9 +207,10 @@ func (m *legacyManager) Destroy() error {
 
 	stopErr := stopUnit(m.dbus, getUnitName(m.cgroups))
 
-	// Both on success and on error, cleanup all the cgroups we are aware of.
-	// Some of them were created directly by Apply() and are not managed by systemd.
-	if err := cgroups.RemovePaths(m.paths); err != nil {
+	// Both on success and on error, cleanup all the cgroups
+	// we are aware of, as some of them were created directly
+	// by Apply() and are not managed by systemd.
+	if err := cgroups.RemovePaths(m.paths); err != nil && stopErr == nil {
 		return err
 	}
 
