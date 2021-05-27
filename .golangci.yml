@@ -8,3 +8,8 @@ linters:
   enable:
     - gofumpt
     - errorlint
+    - revive
+
+issues:
+  include:
+    - EXC0002
