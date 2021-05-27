@@ -1,4 +1,4 @@
-// +build linux
+// +build linux,!no_systemd
 
 package systemd
 
@@ -280,7 +280,7 @@ func (m *unifiedManager) Apply(pid int) error {
 	properties = append(properties,
 		newProp("DefaultDependencies", false))
 
-	properties = append(properties, c.SystemdProps...)
+	properties = append(properties, c.Sd.SystemdProps...)
 
 	if err := startUnit(m.dbus, unitName, properties); err != nil {
 		return errors.Wrapf(err, "error while starting unit %q with properties %+v", unitName, properties)

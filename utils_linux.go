@@ -11,14 +11,12 @@ import (
 	"strconv"
 
 	"github.com/opencontainers/runc/libcontainer"
-	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/specconv"
 	"github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	selinux "github.com/opencontainers/selinux/go-selinux"
 
-	"github.com/coreos/go-systemd/v22/activation"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -35,27 +33,10 @@ func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
 		return nil, err
 	}
 
-	// We default to cgroupfs, and can only use systemd if the system is a
-	// systemd box.
-	cgroupManager := libcontainer.Cgroupfs
-	rootlessCg, err := shouldUseRootlessCgroupManager(context)
+	cgroupManager, err := getCgroupBackend(context)
 	if err != nil {
 		return nil, err
 	}
-	if rootlessCg {
-		cgroupManager = libcontainer.RootlessCgroupfs
-	}
-	if context.GlobalBool("systemd-cgroup") {
-		if !systemd.IsRunningSystemd() {
-			return nil, errors.New("systemd cgroup flag passed, but systemd support for managing cgroups is not available")
-		}
-		cgroupManager = libcontainer.SystemdCgroups
-		if rootlessCg {
-			cgroupManager = libcontainer.RootlessSystemdCgroups
-		}
-	}
-
-	intelRdtManager := libcontainer.IntelRdtFs
 
 	// We resolve the paths for {newuidmap,newgidmap} from the context of runc,
 	// to avoid doing a path lookup in the nsexec context. TODO: The binary
@@ -68,6 +49,8 @@ func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
 	if err != nil {
 		newgidmap = ""
 	}
+
+	intelRdtManager := libcontainer.IntelRdtFs
 
 	return libcontainer.New(abs, cgroupManager, intelRdtManager,
 		libcontainer.CriuPath(context.GlobalString("criu")),
@@ -426,12 +409,6 @@ func startContainer(context *cli.Context, spec *specs.Spec, action CtAct, criuOp
 		}
 	}
 
-	// Support on-demand socket activation by passing file descriptors into the container init process.
-	listenFDs := []*os.File{}
-	if os.Getenv("LISTEN_FDS") != "" {
-		listenFDs = activation.Files(false)
-	}
-
 	logLevel := "info"
 	if context.GlobalBool("debug") {
 		logLevel = "debug"
@@ -441,7 +418,7 @@ func startContainer(context *cli.Context, spec *specs.Spec, action CtAct, criuOp
 		enableSubreaper: !context.Bool("no-subreaper"),
 		shouldDestroy:   true,
 		container:       container,
-		listenFDs:       listenFDs,
+		listenFDs:       getListenFDs(),
 		notifySocket:    notifySocket,
 		consoleSocket:   context.String("console-socket"),
 		detach:          context.Bool("detach"),

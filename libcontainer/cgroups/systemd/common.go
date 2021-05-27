@@ -1,3 +1,5 @@
+// +build !no_systemd
+
 package systemd
 
 import (
