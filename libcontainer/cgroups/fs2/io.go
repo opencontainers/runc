@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -88,12 +90,12 @@ func readCgroup2MapFile(dirPath string, name string) (map[string][]string, error
 }
 
 func statIo(dirPath string, stats *cgroups.Stats) error {
-	// more details on the io.stat file format: https://www.kernel.org/doc/Documentation/cgroup-v2.txt
-	var ioServiceBytesRecursive []cgroups.BlkioStatEntry
 	values, err := readCgroup2MapFile(dirPath, "io.stat")
 	if err != nil {
 		return err
 	}
+	// more details on the io.stat file format: https://www.kernel.org/doc/Documentation/cgroup-v2.txt
+	var parsedStats cgroups.BlkioStats
 	for k, v := range values {
 		d := strings.Split(k, ":")
 		if len(d) != 2 {
@@ -115,12 +117,29 @@ func statIo(dirPath string, stats *cgroups.Stats) error {
 			}
 			op := d[0]
 
-			// Accommodate the cgroup v1 naming
+			// Map to the cgroupv1 naming and layout (in separate tables).
+			var targetTable *[]cgroups.BlkioStatEntry
 			switch op {
+			// Equivalent to cgroupv1's blkio.io_service_bytes.
 			case "rbytes":
 				op = "Read"
+				targetTable = &parsedStats.IoServiceBytesRecursive
 			case "wbytes":
 				op = "Write"
+				targetTable = &parsedStats.IoServiceBytesRecursive
+			// Equivalent to cgroupv1's blkio.io_serviced.
+			case "rios":
+				op = "Read"
+				targetTable = &parsedStats.IoServicedRecursive
+			case "wios":
+				op = "Write"
+				targetTable = &parsedStats.IoServicedRecursive
+			default:
+				// Skip over entries we cannot map to cgroupv1 stats for now.
+				// In the future we should expand the stats struct to include
+				// them.
+				logrus.Debugf("cgroupv2 io stats: skipping over unmappable %s entry", item)
+				continue
 			}
 
 			value, err := strconv.ParseUint(d[1], 10, 0)
@@ -134,9 +153,9 @@ func statIo(dirPath string, stats *cgroups.Stats) error {
 				Minor: minor,
 				Value: value,
 			}
-			ioServiceBytesRecursive = append(ioServiceBytesRecursive, entry)
+			*targetTable = append(*targetTable, entry)
 		}
 	}
-	stats.BlkioStats = cgroups.BlkioStats{IoServiceBytesRecursive: ioServiceBytesRecursive}
+	stats.BlkioStats = parsedStats
 	return nil
 }
