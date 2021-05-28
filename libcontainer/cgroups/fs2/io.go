@@ -118,9 +118,9 @@ func statIo(dirPath string, stats *cgroups.Stats) error {
 			// Accommodate the cgroup v1 naming
 			switch op {
 			case "rbytes":
-				op = "read"
+				op = "Read"
 			case "wbytes":
-				op = "write"
+				op = "Write"
 			}
 
 			value, err := strconv.ParseUint(d[1], 10, 0)
