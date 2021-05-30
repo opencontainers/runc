@@ -82,6 +82,10 @@ func getAction(act configs.Action, errnoRet *uint) (libseccomp.ScmpAction, error
 	switch act {
 	case configs.Kill:
 		return actKill, nil
+	case configs.KillThread:
+		return libseccomp.ActKillThread, nil
+	case configs.KillProcess:
+		return libseccomp.ActKillProcess, nil
 	case configs.Errno:
 		if errnoRet != nil {
 			return libseccomp.ActErrno.SetReturnCode(int16(*errnoRet)), nil

@@ -47,6 +47,8 @@ const (
 	Allow
 	Trace
 	Log
+	KillThread
+	KillProcess
 )
 
 // Operator is a comparison operator to be used when matching syscall arguments in Seccomp
