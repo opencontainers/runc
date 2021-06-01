@@ -258,9 +258,9 @@ func (e *Emulator) Apply(rule devices.Rule) error {
 
 	if rule.Allow {
 		return e.allow(innerRule)
-	} else {
-		return e.deny(innerRule)
 	}
+
+	return e.deny(innerRule)
 }
 
 // EmulatorFromList takes a reader to a "devices.list"-like source, and returns
