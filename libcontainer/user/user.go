@@ -11,16 +11,17 @@ import (
 )
 
 const (
-	minId = 0
-	maxId = 1<<31 - 1 // for 32-bit systems compatibility
+	minID = 0
+	maxID = 1<<31 - 1 // for 32-bit systems compatibility
 )
 
 var (
-	// No matching entries found in file.
+	// ErrNoPasswdEntries is returned if no matching entries were found in /etc/group.
 	ErrNoPasswdEntries = errors.New("no matching entries in passwd file")
-	ErrNoGroupEntries  = errors.New("no matching entries in group file")
-
-	ErrRange = fmt.Errorf("uids and gids must be in range %d-%d", minId, maxId)
+	// ErrNoGroupEntries is returned if no matching entries were found in /etc/passwd.
+	ErrNoGroupEntries = errors.New("no matching entries in group file")
+	// ErrRange is returned if a UID or GID is outside of the valid range.
+	ErrRange = fmt.Errorf("uids and gids must be in range %d-%d", minID, maxID)
 )
 
 type User struct {
@@ -325,7 +326,7 @@ func GetExecUser(userSpec string, defaults *ExecUser, passwd, group io.Reader) (
 		user.Uid = uidArg
 
 		// Must be inside valid uid range.
-		if user.Uid < minId || user.Uid > maxId {
+		if user.Uid < minID || user.Uid > maxID {
 			return nil, ErrRange
 		}
 
@@ -374,7 +375,7 @@ func GetExecUser(userSpec string, defaults *ExecUser, passwd, group io.Reader) (
 				user.Gid = gidArg
 
 				// Must be inside valid gid range.
-				if user.Gid < minId || user.Gid > maxId {
+				if user.Gid < minID || user.Gid > maxID {
 					return nil, ErrRange
 				}
 
@@ -436,7 +437,7 @@ func GetAdditionalGroups(additionalGroups []string, group io.Reader) ([]int, err
 				return nil, fmt.Errorf("Unable to find group %s", ag)
 			}
 			// Ensure gid is inside gid range.
-			if gid < minId || gid > maxId {
+			if gid < minID || gid > maxID {
 				return nil, ErrRange
 			}
 			gidMap[int(gid)] = struct{}{}
