@@ -139,8 +139,8 @@ func TestCreateHooks(t *testing.T) {
 	if len(poststop) != 4 {
 		t.Error("Expected 4 Poststop hooks")
 	}
-
 }
+
 func TestSetupSeccomp(t *testing.T) {
 	conf := &specs.LinuxSeccomp{
 		DefaultAction: "SCMP_ACT_ERRNO",
@@ -173,7 +173,6 @@ func TestSetupSeccomp(t *testing.T) {
 		},
 	}
 	seccomp, err := SetupSeccomp(conf)
-
 	if err != nil {
 		t.Errorf("Couldn't create Seccomp config: %v", err)
 	}
@@ -214,7 +213,6 @@ func TestSetupSeccomp(t *testing.T) {
 		}
 
 	}
-
 }
 
 func TestLinuxCgroupWithMemoryResource(t *testing.T) {
@@ -298,7 +296,6 @@ func TestLinuxCgroupSystemd(t *testing.T) {
 	}
 
 	cgroup, err := CreateCgroupConfig(opts, nil)
-
 	if err != nil {
 		t.Errorf("Couldn't create Cgroup config: %v", err)
 	}
@@ -334,7 +331,6 @@ func TestLinuxCgroupSystemdWithEmptyPath(t *testing.T) {
 	}
 
 	cgroup, err := CreateCgroupConfig(opts, nil)
-
 	if err != nil {
 		t.Errorf("Couldn't create Cgroup config: %v", err)
 	}
@@ -373,6 +369,7 @@ func TestLinuxCgroupSystemdWithInvalidPath(t *testing.T) {
 		t.Error("Expected to produce an error if not using the correct format for cgroup paths belonging to systemd")
 	}
 }
+
 func TestLinuxCgroupsPathSpecified(t *testing.T) {
 	cgroupsPath := "/user/cgroups/path/id"
 
@@ -603,7 +600,7 @@ func TestInitSystemdProps(t *testing.T) {
 		spec.Annotations = map[string]string{tc.in.name: tc.in.value}
 
 		outMap, err := initSystemdProps(spec)
-		//t.Logf("input %+v, expected %+v, got err:%v out:%+v", tc.in, tc.exp, err, outMap)
+		// t.Logf("input %+v, expected %+v, got err:%v out:%+v", tc.in, tc.exp, err, outMap)
 
 		if tc.exp.isErr != (err != nil) {
 			t.Errorf("input %+v, expecting error: %v, got %v", tc.in, tc.exp.isErr, err)
@@ -637,7 +634,6 @@ func TestNullProcess(t *testing.T) {
 	_, err := CreateLibcontainerConfig(&CreateOpts{
 		Spec: spec,
 	})
-
 	if err != nil {
 		t.Errorf("Null process should be forbidden")
 	}
@@ -650,7 +646,7 @@ func TestCreateDevices(t *testing.T) {
 	// preferred the spec's device over the redundant default device
 	ttyUid := uint32(1000)
 	ttyGid := uint32(1000)
-	fm := os.FileMode(0666)
+	fm := os.FileMode(0o666)
 
 	spec.Linux = &specs.Linux{
 		Devices: []specs.LinuxDevice{
@@ -718,7 +714,7 @@ func TestCreateDevices(t *testing.T) {
 		if configDev.Path == "/dev/tty" {
 			wantDev := &devices.Device{
 				Path:     "/dev/tty",
-				FileMode: 0666,
+				FileMode: 0o666,
 				Uid:      1000,
 				Gid:      1000,
 				Rule: devices.Rule{

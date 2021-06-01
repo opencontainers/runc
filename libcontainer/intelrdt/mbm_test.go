@@ -64,5 +64,4 @@ func checkMBMStatCorrection(got MBMNumaNodeStats, expected MBMNumaNodeStats, t *
 			expected.MBMLocalBytes,
 			got.MBMLocalBytes)
 	}
-
 }

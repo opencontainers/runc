@@ -23,8 +23,7 @@ func New() Validator {
 	return &ConfigValidator{}
 }
 
-type ConfigValidator struct {
-}
+type ConfigValidator struct{}
 
 type check func(config *configs.Config) error
 

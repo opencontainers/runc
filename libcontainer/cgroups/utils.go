@@ -267,7 +267,6 @@ func RemovePaths(paths map[string]string) (err error) {
 				case retries - 1:
 					logrus.WithError(err).Error("Failed to remove cgroup")
 				}
-
 			}
 			_, err := os.Stat(p)
 			// We need this strange way of checking cgroups existence because

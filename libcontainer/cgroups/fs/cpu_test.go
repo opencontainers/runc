@@ -128,7 +128,8 @@ func TestCpuStats(t *testing.T) {
 	expectedStats := cgroups.ThrottlingData{
 		Periods:          nrPeriods,
 		ThrottledPeriods: nrThrottled,
-		ThrottledTime:    throttledTime}
+		ThrottledTime:    throttledTime,
+	}
 
 	expectThrottlingDataEquals(t, expectedStats, actualStats.CpuStats.ThrottlingData)
 }

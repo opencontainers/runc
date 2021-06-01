@@ -92,7 +92,7 @@ func CreateCgroupPath(path string, c *configs.Cgroup) (Err error) {
 	for i, e := range elements {
 		current = filepath.Join(current, e)
 		if i > 0 {
-			if err := os.Mkdir(current, 0755); err != nil {
+			if err := os.Mkdir(current, 0o755); err != nil {
 				if !os.IsExist(err) {
 					return err
 				}

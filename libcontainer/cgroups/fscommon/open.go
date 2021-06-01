@@ -28,7 +28,8 @@ var (
 func prepareOpenat2() error {
 	prepOnce.Do(func() {
 		fd, err := unix.Openat2(-1, cgroupfsDir, &unix.OpenHow{
-			Flags: unix.O_DIRECTORY | unix.O_PATH})
+			Flags: unix.O_DIRECTORY | unix.O_PATH,
+		})
 		if err != nil {
 			prepErr = &os.PathError{Op: "openat2", Path: cgroupfsDir, Err: err}
 			if err != unix.ENOSYS {
@@ -52,7 +53,6 @@ func prepareOpenat2() error {
 			// cgroupv2 has a single mountpoint and no "cpu,cpuacct" symlinks
 			resolveFlags |= unix.RESOLVE_NO_XDEV | unix.RESOLVE_NO_SYMLINKS
 		}
-
 	})
 
 	return prepErr

@@ -16,8 +16,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-type FreezerGroup struct {
-}
+type FreezerGroup struct{}
 
 func (s *FreezerGroup) Name() string {
 	return "freezer"

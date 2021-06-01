@@ -13,8 +13,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
-type CpuGroup struct {
-}
+type CpuGroup struct{}
 
 func (s *CpuGroup) Name() string {
 	return "cpu"
@@ -26,7 +25,7 @@ func (s *CpuGroup) Apply(path string, d *cgroupData) error {
 	if path == "" {
 		return nil
 	}
-	if err := os.MkdirAll(path, 0755); err != nil {
+	if err := os.MkdirAll(path, 0o755); err != nil {
 		return err
 	}
 	// We should set the real-Time group scheduling settings before moving

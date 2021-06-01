@@ -208,9 +208,11 @@ type Config struct {
 	RootlessCgroups bool `json:"rootless_cgroups,omitempty"`
 }
 
-type HookName string
-type HookList []Hook
-type Hooks map[HookName]HookList
+type (
+	HookName string
+	HookList []Hook
+	Hooks    map[HookName]HookList
+)
 
 const (
 	// Prestart commands are executed after the container namespaces are created,

@@ -238,7 +238,7 @@ func (m *legacyManager) joinCgroups(pid int) error {
 			}
 		default:
 			if path, ok := m.paths[name]; ok {
-				if err := os.MkdirAll(path, 0755); err != nil {
+				if err := os.MkdirAll(path, 0o755); err != nil {
 					return err
 				}
 				if err := cgroups.WriteCgroupProc(path, pid); err != nil {

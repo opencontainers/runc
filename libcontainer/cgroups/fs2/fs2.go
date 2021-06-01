@@ -98,9 +98,7 @@ func (m *manager) GetAllPids() ([]int, error) {
 }
 
 func (m *manager) GetStats() (*cgroups.Stats, error) {
-	var (
-		errs []error
-	)
+	var errs []error
 
 	st := cgroups.NewStats()
 

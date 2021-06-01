@@ -286,7 +286,7 @@ other options are ignored.
 		}
 
 		config.Cgroups.Resources.CpuShares = *r.CPU.Shares
-		//CpuWeight is used for cgroupv2 and should be converted
+		// CpuWeight is used for cgroupv2 and should be converted
 		config.Cgroups.Resources.CpuWeight = cgroups.ConvertCPUSharesToCgroupV2Value(*r.CPU.Shares)
 		config.Cgroups.Resources.CpuRtPeriod = *r.CPU.RealtimePeriod
 		config.Cgroups.Resources.CpuRtRuntime = *r.CPU.RealtimeRuntime

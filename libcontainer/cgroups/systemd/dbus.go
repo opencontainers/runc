@@ -17,8 +17,7 @@ var (
 	dbusRootless bool
 )
 
-type dbusConnManager struct {
-}
+type dbusConnManager struct{}
 
 // newDbusConnManager initializes systemd dbus connection manager.
 func newDbusConnManager(rootless bool) *dbusConnManager {

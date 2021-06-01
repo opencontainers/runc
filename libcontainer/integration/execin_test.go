@@ -461,7 +461,7 @@ func TestExecinPassExtraFiles(t *testing.T) {
 	if out != "0 1 2 3 4 5" {
 		t.Fatalf("expected to have the file descriptors '0 1 2 3 4 5' passed to exec, got '%s'", out)
 	}
-	var buf = []byte{0}
+	buf := []byte{0}
 	_, err = pipeout1.Read(buf)
 	ok(t, err)
 	out1 := string(buf)

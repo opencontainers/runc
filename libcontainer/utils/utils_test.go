@@ -32,7 +32,7 @@ func TestSearchLabels(t *testing.T) {
 
 func TestResolveRootfs(t *testing.T) {
 	dir := "rootfs"
-	if err := os.Mkdir(dir, 0600); err != nil {
+	if err := os.Mkdir(dir, 0o600); err != nil {
 		t.Fatal(err)
 	}
 	defer os.Remove(dir)

@@ -10,14 +10,12 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
-var (
-	prioMap = []*configs.IfPrioMap{
-		{
-			Interface: "test",
-			Priority:  5,
-		},
-	}
-)
+var prioMap = []*configs.IfPrioMap{
+	{
+		Interface: "test",
+		Priority:  5,
+	},
+}
 
 func TestNetPrioSetIfPrio(t *testing.T) {
 	helper := NewCgroupTestUtil("net_prio", t)

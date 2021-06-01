@@ -8,8 +8,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
-type NetPrioGroup struct {
-}
+type NetPrioGroup struct{}
 
 func (s *NetPrioGroup) Name() string {
 	return "net_prio"

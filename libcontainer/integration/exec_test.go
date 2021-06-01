@@ -894,7 +894,7 @@ func TestPassExtraFiles(t *testing.T) {
 	if out != "0 1 2 3 4 5" {
 		t.Fatalf("expected to have the file descriptors '0 1 2 3 4 5' passed to init, got '%s'", out)
 	}
-	var buf = []byte{0}
+	buf := []byte{0}
 	_, err = pipeout1.Read(buf)
 	ok(t, err)
 	out1 := string(buf)
@@ -1245,7 +1245,7 @@ func TestHook(t *testing.T) {
 	}
 
 	// write config of json format into config.json under bundle
-	f, err := os.OpenFile(filepath.Join(bundle, "config.json"), os.O_CREATE|os.O_RDWR, 0644)
+	f, err := os.OpenFile(filepath.Join(bundle, "config.json"), os.O_CREATE|os.O_RDWR, 0o644)
 	ok(t, err)
 	ok(t, json.NewEncoder(f).Encode(config))
 
@@ -1347,7 +1347,8 @@ func TestRootfsPropagationSlaveMount(t *testing.T) {
 		Source:      dir1host,
 		Destination: dir1cont,
 		Device:      "bind",
-		Flags:       unix.MS_BIND | unix.MS_REC})
+		Flags:       unix.MS_BIND | unix.MS_REC,
+	})
 
 	container, err := newContainer(t, config)
 	ok(t, err)
@@ -1462,7 +1463,8 @@ func TestRootfsPropagationSharedMount(t *testing.T) {
 		Source:      dir1host,
 		Destination: dir1cont,
 		Device:      "bind",
-		Flags:       unix.MS_BIND | unix.MS_REC})
+		Flags:       unix.MS_BIND | unix.MS_REC,
+	})
 
 	container, err := newContainer(t, config)
 	ok(t, err)

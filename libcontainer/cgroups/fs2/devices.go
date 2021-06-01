@@ -62,7 +62,7 @@ func setDevices(dirPath string, r *configs.Resources) error {
 	if err != nil {
 		return err
 	}
-	dirFD, err := unix.Open(dirPath, unix.O_DIRECTORY|unix.O_RDONLY, 0600)
+	dirFD, err := unix.Open(dirPath, unix.O_DIRECTORY|unix.O_RDONLY, 0o600)
 	if err != nil {
 		return errors.Errorf("cannot get dir FD for %s", dirPath)
 	}

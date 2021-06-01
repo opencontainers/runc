@@ -137,7 +137,7 @@ func main() {
 			// According to the XDG specification, we need to set anything in
 			// XDG_RUNTIME_DIR to have a sticky bit if we don't want it to get
 			// auto-pruned.
-			if err := os.MkdirAll(root, 0700); err != nil {
+			if err := os.MkdirAll(root, 0o700); err != nil {
 				fmt.Fprintln(os.Stderr, "the path in $XDG_RUNTIME_DIR must be writable by the user")
 				fatal(err)
 			}

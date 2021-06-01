@@ -13,7 +13,7 @@ import (
 )
 
 func TestSystemdVersion(t *testing.T) {
-	var systemdVersionTests = []struct {
+	systemdVersionTests := []struct {
 		verStr      string
 		expectedVer int
 		expectErr   bool
