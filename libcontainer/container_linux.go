@@ -225,6 +225,10 @@ func (c *linuxContainer) Set(config configs.Config) error {
 	if status == Stopped {
 		return newGenericError(errors.New("container not running"), ContainerNotRunning)
 	}
+	// Set is only called via the update calls and the update CLI does not support setting
+	// any device information.  It's better to skip devices on the update to not overwrite
+	// any out of band changes like NVIDIA gpu plugins.
+	config.Cgroups.SkipDevices = true
 	if err := c.cgroupManager.Set(config.Cgroups.Resources); err != nil {
 		// Set configs back
 		if err2 := c.cgroupManager.Set(c.config.Cgroups.Resources); err2 != nil {
@@ -244,6 +248,9 @@ func (c *linuxContainer) Set(config configs.Config) error {
 			return err
 		}
 	}
+	// reset SkipDevices before saving the state as this will cause major issues when
+	// trying to exec into the container or other process related actions.
+	config.Cgroups.SkipDevices = false
 	// After config setting succeed, update config and states
 	c.config = &config
 	_, err = c.updateState(nil)
