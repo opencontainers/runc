@@ -193,13 +193,37 @@ func LoadAttachCgroupDeviceFilter(insts asm.Instructions, license string, dirFd 
 		return nil
 	}
 	if !useReplaceProg {
+		logLevel := logrus.DebugLevel
 		// If there was more than one old program, give a warning (since this
 		// really shouldn't happen with runc-managed cgroups) and then detach
 		// all the old programs.
 		if len(oldProgs) > 1 {
-			logrus.Warnf("found more than one filter (%d) attached to a cgroup -- removing extra filters!", len(oldProgs))
+			// NOTE: Ideally this should be a warning but it turns out that
+			//       systemd-managed cgroups trigger this warning (apparently
+			//       systemd doesn't delete old non-systemd programs when
+			//       setting properties).
+			logrus.Infof("found more than one filter (%d) attached to a cgroup -- removing extra filters!", len(oldProgs))
+			logLevel = logrus.InfoLevel
 		}
-		for _, oldProg := range oldProgs {
+		for idx, oldProg := range oldProgs {
+			// Output some extra debug info.
+			if info, err := oldProg.Info(); err == nil {
+				fields := logrus.Fields{
+					"type": info.Type.String(),
+					"tag":  info.Tag,
+					"name": info.Name,
+				}
+				if id, ok := info.ID(); ok {
+					fields["id"] = id
+				}
+				if runCount, ok := info.RunCount(); ok {
+					fields["run_count"] = runCount
+				}
+				if runtime, ok := info.Runtime(); ok {
+					fields["runtime"] = runtime.String()
+				}
+				logrus.WithFields(fields).Logf(logLevel, "removing old filter %d from cgroup", idx)
+			}
 			err = link.RawDetachProgram(link.RawDetachProgramOptions{
 				Target:  dirFd,
 				Program: oldProg,
