@@ -16,7 +16,7 @@ require (
 	github.com/opencontainers/selinux v1.8.0
 	github.com/pkg/errors v0.9.1
 	github.com/seccomp/libseccomp-golang v0.9.1
-	github.com/sirupsen/logrus v1.7.0
+	github.com/sirupsen/logrus v1.8.1
 	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635
 	// NOTE: urfave/cli must be <= v1.22.1 due to a regression: https://github.com/urfave/cli/issues/1092
 	github.com/urfave/cli v1.22.1

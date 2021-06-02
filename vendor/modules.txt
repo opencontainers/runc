@@ -41,7 +41,7 @@ github.com/russross/blackfriday/v2
 github.com/seccomp/libseccomp-golang
 # github.com/shurcooL/sanitized_anchor_name v1.0.0
 github.com/shurcooL/sanitized_anchor_name
-# github.com/sirupsen/logrus v1.7.0
+# github.com/sirupsen/logrus v1.8.1
 github.com/sirupsen/logrus
 github.com/sirupsen/logrus/hooks/test
 # github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635
