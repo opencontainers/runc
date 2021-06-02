@@ -89,19 +89,16 @@ jobs:
     # Only check commits on pull requests.
     if: github.event_name == 'pull_request'
     steps:
-      - name: get pr commits
-        id: 'get-pr-commits'
-        uses: tim-actions/get-pr-commits@v1.0.0
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: check subject line length
-        uses: tim-actions/commit-message-checker-with-regex@v0.3.1
+        uses: gsactions/commit-message-checker@v1
         with:
-          commits: ${{ steps.get-pr-commits.outputs.commits }}
-          pattern: '^.{0,72}(\n.*)*$'
-          error: 'Subject too long (max 72)'
-
+          pattern: '^.{50}'
+          flags: 'gm'
+          error: 'Subject too long (max 50)'
+          excludeDescription: 'true' # exclude the description body of a pull request
+          excludeTitle: 'true' # exclude the title of a pull request
+          checkAllCommitMessages: 'true' # check all commits associated with a pull request
+          accessToken: ${{ secrets.GITHUB_TOKEN }}
 
   cross:
     runs-on: ubuntu-20.04
