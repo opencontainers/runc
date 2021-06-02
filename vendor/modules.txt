@@ -10,7 +10,7 @@ github.com/cilium/ebpf/internal/unix
 github.com/cilium/ebpf/link
 # github.com/containerd/console v1.0.2
 github.com/containerd/console
-# github.com/coreos/go-systemd/v22 v22.3.1
+# github.com/coreos/go-systemd/v22 v22.3.2
 github.com/coreos/go-systemd/v22/activation
 github.com/coreos/go-systemd/v22/dbus
 # github.com/cpuguy83/go-md2man/v2 v2.0.0-20190314233015-f79a8a8ca69d
