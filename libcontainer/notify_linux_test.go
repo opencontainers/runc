@@ -23,10 +23,10 @@ func testMemoryNotification(t *testing.T, evName string, notify notifyFunc, targ
 	}
 	evFile := filepath.Join(memoryPath, evName)
 	eventPath := filepath.Join(memoryPath, "cgroup.event_control")
-	if err := ioutil.WriteFile(evFile, []byte{}, 0700); err != nil {
+	if err := ioutil.WriteFile(evFile, []byte{}, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if err := ioutil.WriteFile(eventPath, []byte{}, 0700); err != nil {
+	if err := ioutil.WriteFile(eventPath, []byte{}, 0o700); err != nil {
 		t.Fatal(err)
 	}
 	ch, err := notify(memoryPath)

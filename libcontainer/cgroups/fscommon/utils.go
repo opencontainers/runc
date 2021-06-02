@@ -10,9 +10,7 @@ import (
 	"strings"
 )
 
-var (
-	ErrNotValidFormat = errors.New("line is not a valid key value format")
-)
+var ErrNotValidFormat = errors.New("line is not a valid key value format")
 
 // ParseUint converts a string to an uint64 integer.
 // Negative values are returned at zero as, due to kernel bugs,

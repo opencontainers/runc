@@ -14,8 +14,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
-type BlkioGroup struct {
-}
+type BlkioGroup struct{}
 
 func (s *BlkioGroup) Name() string {
 	return "blkio"
@@ -161,7 +160,7 @@ func (s *BlkioGroup) GetStats(path string, stats *cgroups.Stats) error {
 		filename            string
 		blkioStatEntriesPtr *[]cgroups.BlkioStatEntry
 	}
-	var bfqDebugStats = []blkioStatInfo{
+	bfqDebugStats := []blkioStatInfo{
 		{
 			filename:            "blkio.bfq.sectors_recursive",
 			blkioStatEntriesPtr: &stats.BlkioStats.SectorsRecursive,
@@ -195,7 +194,7 @@ func (s *BlkioGroup) GetStats(path string, stats *cgroups.Stats) error {
 			blkioStatEntriesPtr: &stats.BlkioStats.IoServiceBytesRecursive,
 		},
 	}
-	var bfqStats = []blkioStatInfo{
+	bfqStats := []blkioStatInfo{
 		{
 			filename:            "blkio.bfq.io_serviced_recursive",
 			blkioStatEntriesPtr: &stats.BlkioStats.IoServicedRecursive,
@@ -205,7 +204,7 @@ func (s *BlkioGroup) GetStats(path string, stats *cgroups.Stats) error {
 			blkioStatEntriesPtr: &stats.BlkioStats.IoServiceBytesRecursive,
 		},
 	}
-	var cfqStats = []blkioStatInfo{
+	cfqStats := []blkioStatInfo{
 		{
 			filename:            "blkio.sectors_recursive",
 			blkioStatEntriesPtr: &stats.BlkioStats.SectorsRecursive,
@@ -239,7 +238,7 @@ func (s *BlkioGroup) GetStats(path string, stats *cgroups.Stats) error {
 			blkioStatEntriesPtr: &stats.BlkioStats.IoServiceBytesRecursive,
 		},
 	}
-	var throttleRecursiveStats = []blkioStatInfo{
+	throttleRecursiveStats := []blkioStatInfo{
 		{
 			filename:            "blkio.throttle.io_serviced_recursive",
 			blkioStatEntriesPtr: &stats.BlkioStats.IoServicedRecursive,
@@ -249,7 +248,7 @@ func (s *BlkioGroup) GetStats(path string, stats *cgroups.Stats) error {
 			blkioStatEntriesPtr: &stats.BlkioStats.IoServiceBytesRecursive,
 		},
 	}
-	var baseStats = []blkioStatInfo{
+	baseStats := []blkioStatInfo{
 		{
 			filename:            "blkio.throttle.io_serviced",
 			blkioStatEntriesPtr: &stats.BlkioStats.IoServicedRecursive,
@@ -259,7 +258,7 @@ func (s *BlkioGroup) GetStats(path string, stats *cgroups.Stats) error {
 			blkioStatEntriesPtr: &stats.BlkioStats.IoServiceBytesRecursive,
 		},
 	}
-	var orderedStats = [][]blkioStatInfo{
+	orderedStats := [][]blkioStatInfo{
 		bfqDebugStats,
 		bfqStats,
 		cfqStats,
@@ -280,7 +279,7 @@ func (s *BlkioGroup) GetStats(path string, stats *cgroups.Stats) error {
 				return err
 			}
 			*statInfo.blkioStatEntriesPtr = blkioStats
-			//finish if all stats are gathered
+			// finish if all stats are gathered
 			if i == len(statGroup)-1 {
 				return nil
 			}

@@ -47,6 +47,7 @@ func setCpu(dirPath string, r *configs.Resources) error {
 
 	return nil
 }
+
 func statCpu(dirPath string, stats *cgroups.Stats) error {
 	f, err := fscommon.OpenFile(dirPath, "cpu.stat", os.O_RDONLY)
 	if err != nil {

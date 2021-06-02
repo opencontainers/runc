@@ -459,7 +459,6 @@ func TestBlkioStatsNoFilesBFQDebug(t *testing.T) {
 		cpuset := &CpusetGroup{}
 		actualStats := *cgroups.NewStats()
 		err := cpuset.GetStats(helper.CgroupPath, &actualStats)
-
 		if err != nil {
 			t.Errorf(fmt.Sprintf("test case '%s' failed unexpectedly: %s", testCase.desc, err))
 		}
@@ -576,7 +575,6 @@ func TestBlkioStatsNoFilesCFQ(t *testing.T) {
 		cpuset := &CpusetGroup{}
 		actualStats := *cgroups.NewStats()
 		err := cpuset.GetStats(helper.CgroupPath, &actualStats)
-
 		if err != nil {
 			t.Errorf(fmt.Sprintf("test case '%s' failed unexpectedly: %s", testCase.desc, err))
 		}
@@ -759,6 +757,7 @@ func TestBlkioSetThrottleReadBpsDevice(t *testing.T) {
 		t.Fatal("Got the wrong value, set blkio.throttle.read_bps_device failed.")
 	}
 }
+
 func TestBlkioSetThrottleWriteBpsDevice(t *testing.T) {
 	helper := NewCgroupTestUtil("blkio", t)
 	defer helper.cleanup()
@@ -789,6 +788,7 @@ func TestBlkioSetThrottleWriteBpsDevice(t *testing.T) {
 		t.Fatal("Got the wrong value, set blkio.throttle.write_bps_device failed.")
 	}
 }
+
 func TestBlkioSetThrottleReadIOpsDevice(t *testing.T) {
 	helper := NewCgroupTestUtil("blkio", t)
 	defer helper.cleanup()
@@ -819,6 +819,7 @@ func TestBlkioSetThrottleReadIOpsDevice(t *testing.T) {
 		t.Fatal("Got the wrong value, set blkio.throttle.read_iops_device failed.")
 	}
 }
+
 func TestBlkioSetThrottleWriteIOpsDevice(t *testing.T) {
 	helper := NewCgroupTestUtil("blkio", t)
 	defer helper.cleanup()

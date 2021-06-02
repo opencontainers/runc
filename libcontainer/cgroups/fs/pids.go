@@ -12,8 +12,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
-type PidsGroup struct {
-}
+type PidsGroup struct{}
 
 func (s *PidsGroup) Name() string {
 	return "pids"

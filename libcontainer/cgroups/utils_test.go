@@ -388,7 +388,6 @@ func TestParseCgroupString(t *testing.T) {
 			}
 		}
 	}
-
 }
 
 func TestIgnoreCgroup2Mount(t *testing.T) {

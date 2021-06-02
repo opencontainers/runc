@@ -68,7 +68,7 @@ func TestStatIo(t *testing.T) {
 	defer os.RemoveAll(fakeCgroupDir)
 	statPath := filepath.Join(fakeCgroupDir, "io.stat")
 
-	if err := ioutil.WriteFile(statPath, []byte(exampleIoStatData), 0644); err != nil {
+	if err := ioutil.WriteFile(statPath, []byte(exampleIoStatData), 0o644); err != nil {
 		t.Fatal(err)
 	}
 

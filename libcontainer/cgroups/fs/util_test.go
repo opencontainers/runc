@@ -50,7 +50,7 @@ func NewCgroupTestUtil(subsystem string, t *testing.T) *cgroupTestUtil {
 	}
 
 	// Ensure the full mock cgroup path exists.
-	err = os.MkdirAll(testCgroupPath, 0755)
+	err = os.MkdirAll(testCgroupPath, 0o755)
 	if err != nil {
 		t.Fatal(err)
 	}

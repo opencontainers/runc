@@ -118,12 +118,12 @@ func TestCPUSetStatsCorrect(t *testing.T) {
 		MemorySpreadSlab:      1,
 		MemoryPressure:        34377,
 		SchedLoadBalance:      1,
-		SchedRelaxDomainLevel: -1}
+		SchedRelaxDomainLevel: -1,
+	}
 	if !reflect.DeepEqual(expectedStats, actualStats.CPUSetStats) {
 		t.Fatalf("Expected Cpuset stats usage %#v but found %#v",
 			expectedStats, actualStats.CPUSetStats)
 	}
-
 }
 
 func TestCPUSetStatsMissingFiles(t *testing.T) {
@@ -226,7 +226,6 @@ func TestCPUSetStatsMissingFiles(t *testing.T) {
 				cpuset := &CpusetGroup{}
 				actualStats := *cgroups.NewStats()
 				err := cpuset.GetStats(helper.CgroupPath, &actualStats)
-
 				if err != nil {
 					t.Errorf("failed unexpectedly: %q", err)
 				}

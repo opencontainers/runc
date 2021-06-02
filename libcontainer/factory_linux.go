@@ -291,7 +291,7 @@ func (l *LinuxFactory) Load(id string) (Container, error) {
 	if l.Root == "" {
 		return nil, newGenericError(fmt.Errorf("invalid root"), ConfigInvalid)
 	}
-	//when load, we need to check id is valid or not.
+	// when load, we need to check id is valid or not.
 	if err := l.validateID(id); err != nil {
 		return nil, err
 	}

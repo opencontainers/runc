@@ -32,8 +32,7 @@ const (
 	clockTicks uint64 = 100
 )
 
-type CpuacctGroup struct {
-}
+type CpuacctGroup struct{}
 
 func (s *CpuacctGroup) Name() string {
 	return "cpuacct"
@@ -144,7 +143,7 @@ func getPercpuUsageInModes(path string) ([]uint64, []uint64, error) {
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-	scanner.Scan() //skipping header line
+	scanner.Scan() // skipping header line
 
 	for scanner.Scan() {
 		lineFields := strings.SplitN(scanner.Text(), " ", cuacctUsageAllColumnsNumber+1)

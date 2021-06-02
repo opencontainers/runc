@@ -26,7 +26,6 @@ func TestParseMonFeatures(t *testing.T) {
 
 	t.Run("No features available", func(t *testing.T) {
 		parsedMonFeatures, err := parseMonFeatures(strings.NewReader(""))
-
 		if err != nil {
 			t.Errorf("Error while parsing mon features err = %v", err)
 		}

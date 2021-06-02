@@ -11,8 +11,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
-type HugetlbGroup struct {
-}
+type HugetlbGroup struct{}
 
 func (s *HugetlbGroup) Name() string {
 	return "hugetlb"

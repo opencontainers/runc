@@ -16,8 +16,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-type CpusetGroup struct {
-}
+type CpusetGroup struct{}
 
 func (s *CpusetGroup) Name() string {
 	return "cpuset"
@@ -156,7 +155,7 @@ func (s *CpusetGroup) ApplyDir(dir string, r *configs.Resources, pid int) error 
 	if err := cpusetEnsureParent(filepath.Dir(dir)); err != nil {
 		return err
 	}
-	if err := os.Mkdir(dir, 0755); err != nil && !os.IsExist(err) {
+	if err := os.Mkdir(dir, 0o755); err != nil && !os.IsExist(err) {
 		return err
 	}
 	// We didn't inherit cpuset configs from parent, but we have
@@ -206,7 +205,7 @@ func cpusetEnsureParent(current string) error {
 	if err := cpusetEnsureParent(parent); err != nil {
 		return err
 	}
-	if err := os.Mkdir(current, 0755); err != nil && !os.IsExist(err) {
+	if err := os.Mkdir(current, 0o755); err != nil && !os.IsExist(err) {
 		return err
 	}
 	return cpusetCopyIfNeeded(current, parent)

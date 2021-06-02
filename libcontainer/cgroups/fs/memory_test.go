@@ -194,7 +194,7 @@ func TestMemorySetMemorySwappinessDefault(t *testing.T) {
 	helper := NewCgroupTestUtil("memory", t)
 	defer helper.cleanup()
 
-	swappinessBefore := 60 //default is 60
+	swappinessBefore := 60 // default is 60
 	swappinessAfter := uint64(0)
 
 	helper.writeFileContents(map[string]string{
@@ -243,7 +243,8 @@ func TestMemoryStats(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expectedStats := cgroups.MemoryStats{Cache: 512, Usage: cgroups.MemoryData{Usage: 2048, MaxUsage: 4096, Failcnt: 100, Limit: 8192}, SwapUsage: cgroups.MemoryData{Usage: 2048, MaxUsage: 4096, Failcnt: 100, Limit: 8192}, KernelUsage: cgroups.MemoryData{Usage: 2048, MaxUsage: 4096, Failcnt: 100, Limit: 8192}, Stats: map[string]uint64{"cache": 512, "rss": 1024}, UseHierarchy: true,
+	expectedStats := cgroups.MemoryStats{
+		Cache: 512, Usage: cgroups.MemoryData{Usage: 2048, MaxUsage: 4096, Failcnt: 100, Limit: 8192}, SwapUsage: cgroups.MemoryData{Usage: 2048, MaxUsage: 4096, Failcnt: 100, Limit: 8192}, KernelUsage: cgroups.MemoryData{Usage: 2048, MaxUsage: 4096, Failcnt: 100, Limit: 8192}, Stats: map[string]uint64{"cache": 512, "rss": 1024}, UseHierarchy: true,
 		PageUsageByNUMA: cgroups.PageUsageByNUMA{
 			PageUsageByNUMAInner: cgroups.PageUsageByNUMAInner{
 				Total:       cgroups.PageStats{Total: 44611, Nodes: map[uint8]uint64{0: 32631, 1: 7501, 2: 1982, 3: 2497}},
@@ -257,7 +258,8 @@ func TestMemoryStats(t *testing.T) {
 				Anon:        cgroups.PageStats{Total: 46096, Nodes: map[uint8]uint64{0: 12597, 1: 18890, 2: 283, 3: 14326}},
 				Unevictable: cgroups.PageStats{Total: 20, Nodes: map[uint8]uint64{0: 0, 1: 0, 2: 0, 3: 20}},
 			},
-		}}
+		},
+	}
 	expectMemoryStatEquals(t, expectedStats, actualStats.MemoryStats)
 }
 

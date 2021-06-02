@@ -12,7 +12,7 @@ import (
 
 const (
 	minId = 0
-	maxId = 1<<31 - 1 //for 32-bit systems compatibility
+	maxId = 1<<31 - 1 // for 32-bit systems compatibility
 )
 
 var (
@@ -401,7 +401,7 @@ func GetExecUser(userSpec string, defaults *ExecUser, passwd, group io.Reader) (
 // or the given group data is nil, the id will be returned as-is
 // provided it is in the legal range.
 func GetAdditionalGroups(additionalGroups []string, group io.Reader) ([]int, error) {
-	var groups = []Group{}
+	groups := []Group{}
 	if group != nil {
 		var err error
 		groups, err = ParseGroupFilter(group, func(g Group) bool {

@@ -437,8 +437,8 @@ func (c *linuxContainer) createExecFifo() error {
 	if _, err := os.Stat(fifoName); err == nil {
 		return fmt.Errorf("exec fifo %s already exists", fifoName)
 	}
-	oldMask := unix.Umask(0000)
-	if err := unix.Mkfifo(fifoName, 0622); err != nil {
+	oldMask := unix.Umask(0o000)
+	if err := unix.Mkfifo(fifoName, 0o622); err != nil {
 		unix.Umask(oldMask)
 		return err
 	}
@@ -699,7 +699,6 @@ func (c *linuxContainer) NotifyMemoryPressure(level PressureLevel) (<-chan struc
 var criuFeatures *criurpc.CriuFeatures
 
 func (c *linuxContainer) checkCriuFeatures(criuOpts *CriuOpts, rpcOpts *criurpc.CriuOpts, criuFeat *criurpc.CriuFeatures) error {
-
 	t := criurpc.CriuReqType_FEATURE_CHECK
 
 	// make sure the features we are looking for are really not from
@@ -761,7 +760,6 @@ func compareCriuVersion(criuVersion int, minVersion int) error {
 
 // checkCriuVersion checks Criu version greater than or equal to minVersion
 func (c *linuxContainer) checkCriuVersion(minVersion int) error {
-
 	// If the version of criu has already been determined there is no need
 	// to ask criu for the version again. Use the value from c.criuVersion.
 	if c.criuVersion != 0 {
@@ -970,7 +968,7 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 
 	// Since a container can be C/R'ed multiple times,
 	// the checkpoint directory may already exist.
-	if err := os.Mkdir(criuOpts.ImagesDirectory, 0700); err != nil && !os.IsExist(err) {
+	if err := os.Mkdir(criuOpts.ImagesDirectory, 0o700); err != nil && !os.IsExist(err) {
 		return err
 	}
 
@@ -978,7 +976,7 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 		criuOpts.WorkDirectory = filepath.Join(c.root, "criu.work")
 	}
 
-	if err := os.Mkdir(criuOpts.WorkDirectory, 0700); err != nil && !os.IsExist(err) {
+	if err := os.Mkdir(criuOpts.WorkDirectory, 0o700); err != nil && !os.IsExist(err) {
 		return err
 	}
 
@@ -1048,7 +1046,7 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 		}
 	}
 
-	//pre-dump may need parentImage param to complete iterative migration
+	// pre-dump may need parentImage param to complete iterative migration
 	if criuOpts.ParentImage != "" {
 		rpcOpts.ParentImg = proto.String(criuOpts.ParentImage)
 		rpcOpts.TrackMem = proto.Bool(true)
@@ -1146,7 +1144,7 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 			return err
 		}
 
-		err = ioutil.WriteFile(filepath.Join(criuOpts.ImagesDirectory, descriptorsFilename), fdsJSON, 0600)
+		err = ioutil.WriteFile(filepath.Join(criuOpts.ImagesDirectory, descriptorsFilename), fdsJSON, 0o600)
 		if err != nil {
 			return err
 		}
@@ -1217,7 +1215,7 @@ func (c *linuxContainer) makeCriuRestoreMountpoints(m *configs.Mount) error {
 		if err := checkProcMount(c.config.Rootfs, dest, ""); err != nil {
 			return err
 		}
-		if err := os.MkdirAll(dest, 0755); err != nil {
+		if err := os.MkdirAll(dest, 0o755); err != nil {
 			return err
 		}
 	}
@@ -1318,7 +1316,7 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 	}
 	// Since a container can be C/R'ed multiple times,
 	// the work directory may already exist.
-	if err := os.Mkdir(criuOpts.WorkDirectory, 0700); err != nil && !os.IsExist(err) {
+	if err := os.Mkdir(criuOpts.WorkDirectory, 0o700); err != nil && !os.IsExist(err) {
 		return err
 	}
 	workDir, err := os.Open(criuOpts.WorkDirectory)
@@ -1340,7 +1338,7 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 	// c.config.Rootfs is bind-mounted to a temporary directory
 	// to satisfy these requirements.
 	root := filepath.Join(c.root, "criu-root")
-	if err := os.Mkdir(root, 0755); err != nil {
+	if err := os.Mkdir(root, 0o755); err != nil {
 		return err
 	}
 	defer os.Remove(root)

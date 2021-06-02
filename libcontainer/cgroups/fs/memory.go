@@ -25,8 +25,7 @@ const (
 	cgroupMemoryMaxUsage  = "memory.max_usage_in_bytes"
 )
 
-type MemoryGroup struct {
-}
+type MemoryGroup struct{}
 
 func (s *MemoryGroup) Name() string {
 	return "memory"

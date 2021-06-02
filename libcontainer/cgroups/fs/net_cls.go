@@ -10,8 +10,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
-type NetClsGroup struct {
-}
+type NetClsGroup struct{}
 
 func (s *NetClsGroup) Name() string {
 	return "net_cls"

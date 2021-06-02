@@ -31,7 +31,7 @@ func TestGetCgroupParamsInt(t *testing.T) {
 	tempFile := filepath.Join(tempDir, cgroupFile)
 
 	// Success.
-	err = ioutil.WriteFile(tempFile, []byte(floatString), 0755)
+	err = ioutil.WriteFile(tempFile, []byte(floatString), 0o755)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,7 +43,7 @@ func TestGetCgroupParamsInt(t *testing.T) {
 	}
 
 	// Success with new line.
-	err = ioutil.WriteFile(tempFile, []byte(floatString+"\n"), 0755)
+	err = ioutil.WriteFile(tempFile, []byte(floatString+"\n"), 0o755)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,7 +55,7 @@ func TestGetCgroupParamsInt(t *testing.T) {
 	}
 
 	// Success with negative values
-	err = ioutil.WriteFile(tempFile, []byte("-12345"), 0755)
+	err = ioutil.WriteFile(tempFile, []byte("-12345"), 0o755)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,7 +68,7 @@ func TestGetCgroupParamsInt(t *testing.T) {
 
 	// Success with negative values lesser than min int64
 	s := strconv.FormatFloat(math.MinInt64, 'f', -1, 64)
-	err = ioutil.WriteFile(tempFile, []byte(s), 0755)
+	err = ioutil.WriteFile(tempFile, []byte(s), 0o755)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,7 +80,7 @@ func TestGetCgroupParamsInt(t *testing.T) {
 	}
 
 	// Not a float.
-	err = ioutil.WriteFile(tempFile, []byte("not-a-float"), 0755)
+	err = ioutil.WriteFile(tempFile, []byte("not-a-float"), 0o755)
 	if err != nil {
 		t.Fatal(err)
 	}

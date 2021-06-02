@@ -23,7 +23,7 @@ func TestWriteCgroupFileHandlesInterrupt(t *testing.T) {
 
 	cgroupName := fmt.Sprintf("test-eint-%d", time.Now().Nanosecond())
 	cgroupPath := filepath.Join(memoryCgroupMount, cgroupName)
-	if err := os.MkdirAll(cgroupPath, 0755); err != nil {
+	if err := os.MkdirAll(cgroupPath, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(cgroupPath)
