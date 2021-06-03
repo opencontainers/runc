@@ -113,6 +113,33 @@ interact with pseudo-terminal `stdio`][tty_ioctl(4)].
 > means that it is not really possible to uniquely distinguish between `stdout`
 > and `stderr` from the caller's perspective.
 
+#### Issues
+
+If you see an error like
+
+```
+open /dev/tty: no such device or address
+```
+
+from runc, it means it can't open a terminal (because there isn't one). This
+can happen when stdin (and possibly also stdout and stderr) are redirected,
+or in some environments that lack a tty (such as GitHub Actions runners).
+
+The solution to this is to *not* use a terminal for the container, i.e. have
+`terminal: false` in `config.json`. If the container really needs a terminal
+(some programs require one), you can provide one, using one of the following
+methods.
+
+One way is to use `ssh` with the `-tt` flag. The second `t` forces a terminal
+allocation even if there's no local one -- and so it is required when stdin is
+not a terminal (some `ssh` implementations only look for a terminal on stdin).
+
+Another way is to run runc under the `script` utility, like this
+
+```console
+$ script -e -c 'runc run <container>'
+```
+
 [tty_ioctl(4)]: https://linux.die.net/man/4/tty_ioctl
 
 ### <a name="pass-through"> Pass-Through ###
