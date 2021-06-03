@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	CgroupProcesses   = "cgroup.procs"
+	cgroupProcesses   = "cgroup.procs"
 	unifiedMountpoint = "/sys/fs/cgroup"
 
 	// maxShares corresponds to MAX_SHARES in the Linux kernel
@@ -340,7 +340,7 @@ func getHugePageSizeFromFilenames(fileNames []string) ([]string, error) {
 
 // GetPids returns all pids, that were added to cgroup at path.
 func GetPids(dir string) ([]int, error) {
-	return readProcsFile(filepath.Join(dir, CgroupProcesses))
+	return readProcsFile(filepath.Join(dir, cgroupProcesses))
 }
 
 // GetAllPids returns all pids, that were added to cgroup at path and to all its
@@ -352,7 +352,7 @@ func GetAllPids(path string) ([]int, error) {
 		if iErr != nil {
 			return iErr
 		}
-		if info.IsDir() || info.Name() != CgroupProcesses {
+		if info.IsDir() || info.Name() != cgroupProcesses {
 			return nil
 		}
 		cPids, err := readProcsFile(p)
@@ -370,7 +370,7 @@ func WriteCgroupProc(dir string, pid int) error {
 	// Normally dir should not be empty, one case is that cgroup subsystem
 	// is not mounted, we will get empty dir, and we want it fail here.
 	if dir == "" {
-		return fmt.Errorf("no such directory for %s", CgroupProcesses)
+		return fmt.Errorf("no such directory for %s", cgroupProcesses)
 	}
 
 	// Dont attach any pid to the cgroup if -1 is specified as a pid
@@ -378,9 +378,9 @@ func WriteCgroupProc(dir string, pid int) error {
 		return nil
 	}
 
-	file, err := OpenFile(dir, CgroupProcesses, os.O_WRONLY)
+	file, err := OpenFile(dir, cgroupProcesses, os.O_WRONLY)
 	if err != nil {
-		return fmt.Errorf("failed to write %v to %v: %w", pid, CgroupProcesses, err)
+		return fmt.Errorf("failed to write %v to %v: %w", pid, cgroupProcesses, err)
 	}
 	defer file.Close()
 
@@ -397,7 +397,7 @@ func WriteCgroupProc(dir string, pid int) error {
 			continue
 		}
 
-		return fmt.Errorf("failed to write %v to %v: %w", pid, CgroupProcesses, err)
+		return fmt.Errorf("failed to write %v to %v: %w", pid, cgroupProcesses, err)
 	}
 	return err
 }
