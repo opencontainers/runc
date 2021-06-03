@@ -146,24 +146,24 @@ import (
  */
 
 type Manager interface {
-	// Applies Intel RDT configuration to the process with the specified pid
+	// Apply applies Intel RDT configuration to the process with the specified pid.
 	Apply(pid int) error
 
-	// Returns statistics for Intel RDT
+	// GetStats returns statistics for Intel RDT.
 	GetStats() (*Stats, error)
 
-	// Destroys the Intel RDT container-specific 'container_id' group
+	// Destroy destroys the Intel RDT container-specific 'container_id' group.
 	Destroy() error
 
-	// Returns Intel RDT path to save in a state file and to be able to
-	// restore the object later
+	// GetPath returns Intel RDT path to save in a state file and to be able to
+	// restore the object later.
 	GetPath() string
 
-	// Set Intel RDT "resource control" filesystem as configured.
+	// Set sets Intel RDT "resource control" filesystem as configured.
 	Set(container *configs.Config) error
 }
 
-// This implements interface Manager
+// intelRdtManager implements interface Manager.
 type intelRdtManager struct {
 	mu     sync.Mutex
 	config *configs.Config
@@ -179,9 +179,7 @@ func NewManager(config *configs.Config, id string, path string) Manager {
 	}
 }
 
-const (
-	intelRdtTasks = "tasks"
-)
+const intelRdtTasks = "tasks"
 
 var (
 	// The flag to indicate if Intel RDT/CAT is enabled
@@ -197,11 +195,11 @@ var (
 	errNotFound = errors.New("Intel RDT resctrl mount point not found")
 )
 
-// Check if Intel RDT sub-features are enabled in featuresInit()
+// featuresInit checks which Intel RDT sub-features are enabled.
 func featuresInit() {
 	initOnce.Do(func() {
 		// 1. Check if hardware and kernel support Intel RDT sub-features
-		flagsSet, err := parseCpuInfoFile("/proc/cpuinfo")
+		flagsSet, err := parseCPUInfoFile("/proc/cpuinfo")
 		if err != nil {
 			return
 		}
@@ -250,7 +248,8 @@ func featuresInit() {
 	})
 }
 
-// Return the mount point path of Intel RDT "resource control" filesysem
+// findIntelRdtMountpointDir returns the mount point of the Intel RDT
+// "resource control" filesystem.
 func findIntelRdtMountpointDir(f io.Reader) (string, error) {
 	mi, err := mountinfo.GetMountsFromReader(f, func(m *mountinfo.Info) (bool, bool) {
 		// similar to mountinfo.FSTypeFilter but stops after the first match
@@ -308,17 +307,17 @@ func Root() (string, error) {
 }
 
 type cpuInfoFlags struct {
-	CAT bool // Cache Allocation Technology
-	MBA bool // Memory Bandwidth Allocation
+	CAT bool // CAT indicates whether Cache Allocation Technology is supported.
+	MBA bool // MBA indicates whether Memory Bandwidth Allocation is supported.
 
 	// Memory Bandwidth Monitoring related.
 	MBMTotal bool
 	MBMLocal bool
 
-	CMT bool // Cache Monitoring Technology
+	CMT bool // CMT indicates whether Cache Monitoring Technology is supported.
 }
 
-func parseCpuInfoFile(path string) (cpuInfoFlags, error) {
+func parseCPUInfoFile(path string) (cpuInfoFlags, error) {
 	infoFlags := cpuInfoFlags{}
 
 	f, err := os.Open(path)
@@ -359,7 +358,7 @@ func parseCpuInfoFile(path string) (cpuInfoFlags, error) {
 	return infoFlags, nil
 }
 
-// Gets a single uint64 value from the specified file.
+// getIntelRdtParamUint returns a single uint64 value from the specified file.
 func getIntelRdtParamUint(path, file string) (uint64, error) {
 	fileName := filepath.Join(path, file)
 	contents, err := os.ReadFile(fileName)
@@ -374,7 +373,7 @@ func getIntelRdtParamUint(path, file string) (uint64, error) {
 	return res, nil
 }
 
-// Gets a string value from the specified file
+// getIntelRdtParamString returns a string value from the specified file.
 func getIntelRdtParamString(path, file string) (string, error) {
 	contents, err := os.ReadFile(filepath.Join(path, file))
 	if err != nil {
@@ -394,7 +393,7 @@ func writeFile(dir, file, data string) error {
 	return nil
 }
 
-// Get the read-only L3 cache information
+// getL3CacheInfo returns the read-only L3 cache information.
 func getL3CacheInfo() (*L3CacheInfo, error) {
 	l3CacheInfo := &L3CacheInfo{}
 
@@ -424,7 +423,7 @@ func getL3CacheInfo() (*L3CacheInfo, error) {
 	return l3CacheInfo, nil
 }
 
-// Get the read-only memory bandwidth information
+// getMemBwInfo returns the read-only memory bandwidth information.
 func getMemBwInfo() (*MemBwInfo, error) {
 	memBwInfo := &MemBwInfo{}
 
@@ -459,7 +458,8 @@ func getMemBwInfo() (*MemBwInfo, error) {
 	return memBwInfo, nil
 }
 
-// Get diagnostics for last filesystem operation error from file info/last_cmd_status
+// getLastCmdStatus returns diagnostics for last filesystem operation error from
+// file info/last_cmd_status.
 func getLastCmdStatus() (string, error) {
 	rootPath, err := Root()
 	if err != nil {
@@ -475,7 +475,7 @@ func getLastCmdStatus() (string, error) {
 	return lastCmdStatus, nil
 }
 
-// WriteIntelRdtTasks writes the specified pid into the "tasks" file
+// WriteIntelRdtTasks writes the specified pid into the "tasks" file.
 func WriteIntelRdtTasks(dir string, pid int) error {
 	if dir == "" {
 		return fmt.Errorf("no such directory for %s", intelRdtTasks)
@@ -490,25 +490,26 @@ func WriteIntelRdtTasks(dir string, pid int) error {
 	return nil
 }
 
-// Check if Intel RDT/CAT is enabled
+// IsCATEnabled checks if Intel RDT/CAT is enabled.
 func IsCATEnabled() bool {
 	featuresInit()
 	return catEnabled
 }
 
-// Check if Intel RDT/MBA is enabled
+// IsMBAEnabled checks if Intel RDT/MBA is enabled.
 func IsMBAEnabled() bool {
 	featuresInit()
 	return mbaEnabled
 }
 
-// Check if Intel RDT/MBA Software Controller is enabled
+// IsMBAScEnabled checks if Intel RDT/MBA Software Controller is enabled.
 func IsMBAScEnabled() bool {
 	featuresInit()
 	return mbaScEnabled
 }
 
-// Get the path of the clos group in "resource control" filesystem that the container belongs to
+// getIntelRdtPath returns the path of the clos group in "resource control"
+// filesystem that the container belongs to.
 func (m *intelRdtManager) getIntelRdtPath() (string, error) {
 	rootPath, err := Root()
 	if err != nil {
@@ -523,7 +524,7 @@ func (m *intelRdtManager) getIntelRdtPath() (string, error) {
 	return filepath.Join(rootPath, clos), nil
 }
 
-// Applies Intel RDT configuration to the process with the specified pid
+// Apply applies Intel RDT configuration to the process with the specified pid.
 func (m *intelRdtManager) Apply(pid int) (err error) {
 	// If intelRdt is not specified in config, we do nothing
 	if m.config.IntelRdt == nil {
@@ -558,7 +559,7 @@ func (m *intelRdtManager) Apply(pid int) (err error) {
 	return nil
 }
 
-// Destroys the Intel RDT container-specific 'container_id' group
+// Destroy destroys the Intel RDT container-specific 'container_id' group.
 func (m *intelRdtManager) Destroy() error {
 	// Don't remove resctrl group if closid has been explicitly specified. The
 	// group is likely externally managed, i.e. by some other entity than us.
@@ -574,8 +575,8 @@ func (m *intelRdtManager) Destroy() error {
 	return nil
 }
 
-// Returns Intel RDT path to save in a state file and to be able to
-// restore the object later
+// GetPath returns Intel RDT path to save in a state file and to be able to
+// restore the object later.
 func (m *intelRdtManager) GetPath() string {
 	if m.path == "" {
 		m.path, _ = m.getIntelRdtPath()
@@ -583,7 +584,7 @@ func (m *intelRdtManager) GetPath() string {
 	return m.path
 }
 
-// Returns statistics for Intel RDT
+// GetStats returns statistics for Intel RDT.
 func (m *intelRdtManager) GetStats() (*Stats, error) {
 	// If intelRdt is not specified in config
 	if m.config.IntelRdt == nil {
@@ -669,7 +670,7 @@ func (m *intelRdtManager) GetStats() (*Stats, error) {
 	return stats, nil
 }
 
-// Set Intel RDT "resource control" filesystem as configured.
+// Set sets Intel RDT "resource control" filesystem as configured.
 func (m *intelRdtManager) Set(container *configs.Config) error {
 	// About L3 cache schema:
 	// It has allocation bitmasks/values for L3 cache on each socket,
