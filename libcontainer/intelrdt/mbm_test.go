@@ -16,10 +16,10 @@ func TestGetMBMNumaNodeStats(t *testing.T) {
 		"mbm_local_bytes": 2361361,
 	}
 
-	mockedL3_MON, err := mockResctrlL3_MON(mocksNUMANodesToCreate, mocksFilesToCreate)
+	mockedL3MON, err := mockResctrlL3MON(mocksNUMANodesToCreate, mocksFilesToCreate)
 
 	defer func() {
-		err := os.RemoveAll(mockedL3_MON)
+		err := os.RemoveAll(mockedL3MON)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -35,7 +35,7 @@ func TestGetMBMNumaNodeStats(t *testing.T) {
 
 		stats := make([]MBMNumaNodeStats, 0, len(mocksNUMANodesToCreate))
 		for _, numa := range mocksNUMANodesToCreate {
-			other, err := getMBMNumaNodeStats(filepath.Join(mockedL3_MON, "mon_data", numa))
+			other, err := getMBMNumaNodeStats(filepath.Join(mockedL3MON, "mon_data", numa))
 			if err != nil {
 				t.Fatal(err)
 			}
