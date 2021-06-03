@@ -11,7 +11,9 @@ import (
 // State is the status of a process.
 type State rune
 
-const ( // Only values for Linux 3.14 and later are listed here
+// Process state values.
+// Only values for Linux 3.14 and later are listed here.
+const (
 	Dead        State = 'X'
 	DiskSleep   State = 'D'
 	Running     State = 'R'
