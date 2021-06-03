@@ -7,6 +7,7 @@ import (
 )
 
 const (
+	// Wildcard is used as value for device major/minor wildcard (*).
 	Wildcard = -1
 )
 
@@ -100,8 +101,10 @@ func (p Permissions) IsValid() bool {
 	return p == fromSet(p.toSet())
 }
 
+// Type describes a device type.
 type Type rune
 
+// Device type values.
 const (
 	WildcardDevice Type = 'a'
 	BlockDevice    Type = 'b'

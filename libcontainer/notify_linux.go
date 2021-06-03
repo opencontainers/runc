@@ -9,8 +9,10 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+// PressureLevel is used for memory pressure levels.
 type PressureLevel uint
 
+// PressureLevel values.
 const (
 	LowPressure PressureLevel = iota
 	MediumPressure

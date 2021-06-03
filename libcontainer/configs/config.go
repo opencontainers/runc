@@ -42,6 +42,7 @@ type Seccomp struct {
 // Action is taken upon rule match in Seccomp
 type Action int
 
+// Possible values for seccomp Action.
 const (
 	Kill Action = iota + 1
 	Errno
@@ -57,6 +58,7 @@ const (
 // Operator is a comparison operator to be used when matching syscall arguments in Seccomp
 type Operator int
 
+// Possible values for seccomp Operator.
 const (
 	EqualTo Operator = iota + 1
 	NotEqualTo

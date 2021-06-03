@@ -5,8 +5,10 @@ import (
 	"github.com/opencontainers/runc/libcontainer/devices"
 )
 
+// FreezerState is a state of the freezer cgroup.
 type FreezerState string
 
+// Possible values for FreezerState.
 const (
 	Undefined FreezerState = ""
 	Frozen    FreezerState = "FROZEN"
