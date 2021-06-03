@@ -244,7 +244,12 @@ func TestMemoryStats(t *testing.T) {
 		t.Fatal(err)
 	}
 	expectedStats := cgroups.MemoryStats{
-		Cache: 512, Usage: cgroups.MemoryData{Usage: 2048, MaxUsage: 4096, Failcnt: 100, Limit: 8192}, SwapUsage: cgroups.MemoryData{Usage: 2048, MaxUsage: 4096, Failcnt: 100, Limit: 8192}, KernelUsage: cgroups.MemoryData{Usage: 2048, MaxUsage: 4096, Failcnt: 100, Limit: 8192}, Stats: map[string]uint64{"cache": 512, "rss": 1024}, UseHierarchy: true,
+		Cache:        512,
+		Usage:        cgroups.MemoryData{Usage: 2048, MaxUsage: 4096, Failcnt: 100, Limit: 8192},
+		SwapUsage:    cgroups.MemoryData{Usage: 2048, MaxUsage: 4096, Failcnt: 100, Limit: 8192},
+		KernelUsage:  cgroups.MemoryData{Usage: 2048, MaxUsage: 4096, Failcnt: 100, Limit: 8192},
+		Stats:        map[string]uint64{"cache": 512, "rss": 1024},
+		UseHierarchy: true,
 		PageUsageByNUMA: cgroups.PageUsageByNUMA{
 			PageUsageByNUMAInner: cgroups.PageUsageByNUMAInner{
 				Total:       cgroups.PageStats{Total: 44611, Nodes: map[uint8]uint64{0: 32631, 1: 7501, 2: 1982, 3: 2497}},
