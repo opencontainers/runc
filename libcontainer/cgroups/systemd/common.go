@@ -444,7 +444,7 @@ func systemdVersionAtoi(verStr string) (int, error) {
 	return ver, nil
 }
 
-func addCpuQuota(cm *dbusConnManager, properties *[]systemdDbus.Property, quota int64, period uint64) {
+func addCPUQuota(cm *dbusConnManager, properties *[]systemdDbus.Property, quota int64, period uint64) {
 	if period != 0 {
 		// systemd only supports CPUQuotaPeriodUSec since v242
 		sdVer := systemdVersion(cm)
@@ -478,7 +478,7 @@ func addCpuQuota(cm *dbusConnManager, properties *[]systemdDbus.Property, quota 
 	}
 }
 
-func addCpuset(cm *dbusConnManager, props *[]systemdDbus.Property, cpus, mems string) error {
+func addCPUSet(cm *dbusConnManager, props *[]systemdDbus.Property, cpus, mems string) error {
 	if cpus == "" && mems == "" {
 		return nil
 	}
