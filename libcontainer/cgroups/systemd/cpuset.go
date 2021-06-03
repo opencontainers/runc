@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/bits-and-blooms/bitset"
 	"github.com/pkg/errors"
-	"github.com/willf/bitset"
 )
 
 // RangeToBits converts a text representation of a CPU mask (as written to
