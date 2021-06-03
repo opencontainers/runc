@@ -260,7 +260,7 @@ func TestGetCgroupMounts(t *testing.T) {
 			}
 		}
 		for ss := range td.subsystems {
-			ss = strings.TrimPrefix(ss, CgroupNamePrefix)
+			ss = strings.TrimPrefix(ss, cgroupNamePrefix)
 			m, ok := cgMap[ss]
 			if !ok {
 				t.Fatalf("%s not found", ss)
