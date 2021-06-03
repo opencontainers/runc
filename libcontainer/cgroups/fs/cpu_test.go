@@ -12,7 +12,7 @@ import (
 )
 
 func TestCpuSetShares(t *testing.T) {
-	helper := NewCgroupTestUtil("cpu", t)
+	helper := newCgroupTestUtil("cpu", t)
 	defer helper.cleanup()
 
 	const (
@@ -40,7 +40,7 @@ func TestCpuSetShares(t *testing.T) {
 }
 
 func TestCpuSetBandWidth(t *testing.T) {
-	helper := NewCgroupTestUtil("cpu", t)
+	helper := newCgroupTestUtil("cpu", t)
 	defer helper.cleanup()
 
 	const (
@@ -104,7 +104,7 @@ func TestCpuSetBandWidth(t *testing.T) {
 }
 
 func TestCpuStats(t *testing.T) {
-	helper := NewCgroupTestUtil("cpu", t)
+	helper := newCgroupTestUtil("cpu", t)
 	defer helper.cleanup()
 
 	const (
@@ -136,7 +136,7 @@ func TestCpuStats(t *testing.T) {
 }
 
 func TestNoCpuStatFile(t *testing.T) {
-	helper := NewCgroupTestUtil("cpu", t)
+	helper := newCgroupTestUtil("cpu", t)
 	defer helper.cleanup()
 
 	cpu := &CpuGroup{}
@@ -148,7 +148,7 @@ func TestNoCpuStatFile(t *testing.T) {
 }
 
 func TestInvalidCpuStat(t *testing.T) {
-	helper := NewCgroupTestUtil("cpu", t)
+	helper := newCgroupTestUtil("cpu", t)
 	defer helper.cleanup()
 	cpuStatContent := `nr_periods 2000
 	nr_throttled 200
@@ -166,7 +166,7 @@ func TestInvalidCpuStat(t *testing.T) {
 }
 
 func TestCpuSetRtSchedAtApply(t *testing.T) {
-	helper := NewCgroupTestUtil("cpu", t)
+	helper := newCgroupTestUtil("cpu", t)
 	defer helper.cleanup()
 
 	const (

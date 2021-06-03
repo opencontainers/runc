@@ -39,7 +39,7 @@ var cpusetTestFiles = map[string]string{
 }
 
 func TestCPUSetSetCpus(t *testing.T) {
-	helper := NewCgroupTestUtil("cpuset", t)
+	helper := newCgroupTestUtil("cpuset", t)
 	defer helper.cleanup()
 
 	const (
@@ -67,7 +67,7 @@ func TestCPUSetSetCpus(t *testing.T) {
 }
 
 func TestCPUSetSetMems(t *testing.T) {
-	helper := NewCgroupTestUtil("cpuset", t)
+	helper := newCgroupTestUtil("cpuset", t)
 	defer helper.cleanup()
 
 	const (
@@ -95,7 +95,7 @@ func TestCPUSetSetMems(t *testing.T) {
 }
 
 func TestCPUSetStatsCorrect(t *testing.T) {
-	helper := NewCgroupTestUtil("cpuset", t)
+	helper := newCgroupTestUtil("cpuset", t)
 	defer helper.cleanup()
 	helper.writeFileContents(cpusetTestFiles)
 
@@ -210,7 +210,7 @@ func TestCPUSetStatsMissingFiles(t *testing.T) {
 		},
 	} {
 		t.Run(testCase.desc, func(t *testing.T) {
-			helper := NewCgroupTestUtil("cpuset", t)
+			helper := newCgroupTestUtil("cpuset", t)
 			defer helper.cleanup()
 
 			tempCpusetTestFiles := map[string]string{}

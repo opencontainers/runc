@@ -10,7 +10,7 @@ import (
 )
 
 func TestFreezerSetState(t *testing.T) {
-	helper := NewCgroupTestUtil("freezer", t)
+	helper := newCgroupTestUtil("freezer", t)
 	defer helper.cleanup()
 
 	helper.writeFileContents(map[string]string{
@@ -33,7 +33,7 @@ func TestFreezerSetState(t *testing.T) {
 }
 
 func TestFreezerSetInvalidState(t *testing.T) {
-	helper := NewCgroupTestUtil("freezer", t)
+	helper := newCgroupTestUtil("freezer", t)
 	defer helper.cleanup()
 
 	const (
