@@ -293,7 +293,7 @@ func mountCgroupV1(m *configs.Mount, c *mountConfig) error {
 					data   = filepath.Base(subsystemPath)
 				)
 				if data == "systemd" {
-					data = cgroups.CgroupNamePrefix + data
+					data = "name=" + data
 					source = "systemd"
 				}
 				return mount(source, b.Destination, procfd, "cgroup", uintptr(flags), data)

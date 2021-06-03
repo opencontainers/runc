@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	CgroupProcesses   = "cgroup.procs"
+	cgroupProcesses   = "cgroup.procs"
 	unifiedMountpoint = "/sys/fs/cgroup"
 	hybridMountpoint  = "/sys/fs/cgroup/unified"
 
@@ -141,7 +141,7 @@ func GetAllSubsystems() ([]string, error) {
 }
 
 func readProcsFile(dir string) ([]int, error) {
-	f, err := OpenFile(dir, CgroupProcesses, os.O_RDONLY)
+	f, err := OpenFile(dir, cgroupProcesses, os.O_RDONLY)
 	if err != nil {
 		return nil, err
 	}
@@ -387,7 +387,7 @@ func WriteCgroupProc(dir string, pid int) error {
 	// Normally dir should not be empty, one case is that cgroup subsystem
 	// is not mounted, we will get empty dir, and we want it fail here.
 	if dir == "" {
-		return fmt.Errorf("no such directory for %s", CgroupProcesses)
+		return fmt.Errorf("no such directory for %s", cgroupProcesses)
 	}
 
 	// Dont attach any pid to the cgroup if -1 is specified as a pid
@@ -395,7 +395,7 @@ func WriteCgroupProc(dir string, pid int) error {
 		return nil
 	}
 
-	file, err := OpenFile(dir, CgroupProcesses, os.O_WRONLY)
+	file, err := OpenFile(dir, cgroupProcesses, os.O_WRONLY)
 	if err != nil {
 		return fmt.Errorf("failed to write %v: %w", pid, err)
 	}
