@@ -245,11 +245,7 @@ func prepareBindMount(m *configs.Mount, rootfs string, mountFd *int) error {
 	if err := checkProcMount(rootfs, dest, source); err != nil {
 		return err
 	}
-	if err := createIfNotExists(dest, stat.IsDir()); err != nil {
-		return err
-	}
-
-	return nil
+	return createIfNotExists(dest, stat.IsDir())
 }
 
 func mountCgroupV1(m *configs.Mount, c *mountConfig) error {
@@ -939,12 +935,11 @@ func msMoveRoot(rootfs string) error {
 		if err := unmount(p, unix.MNT_DETACH); err != nil {
 			if !errors.Is(err, unix.EINVAL) && !errors.Is(err, unix.EPERM) {
 				return err
-			} else {
-				// If we have not privileges for umounting (e.g. rootless), then
-				// cover the path.
-				if err := mount("tmpfs", p, "", "tmpfs", 0, ""); err != nil {
-					return err
-				}
+			}
+			// If we have not privileges for umounting (e.g. rootless), then
+			// cover the path.
+			if err := mount("tmpfs", p, "", "tmpfs", 0, ""); err != nil {
+				return err
 			}
 		}
 	}

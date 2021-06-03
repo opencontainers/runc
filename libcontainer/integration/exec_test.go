@@ -515,18 +515,18 @@ func testFreeze(t *testing.T, withSystemd bool, useSet bool) {
 	waitProcess(pconfig, t)
 }
 
-func TestCpuShares(t *testing.T) {
-	testCpuShares(t, false)
+func TestCPUShares(t *testing.T) {
+	testCPUShares(t, false)
 }
 
-func TestCpuSharesSystemd(t *testing.T) {
+func TestCPUSharesSystemd(t *testing.T) {
 	if !systemd.IsRunningSystemd() {
 		t.Skip("Test requires systemd.")
 	}
-	testCpuShares(t, true)
+	testCPUShares(t, true)
 }
 
-func testCpuShares(t *testing.T, systemd bool) {
+func testCPUShares(t *testing.T, systemd bool) {
 	if testing.Short() {
 		return
 	}
@@ -633,7 +633,7 @@ func testCgroupResourcesUnifiedErrorOnV1(t *testing.T, systemd bool) {
 		"memory.min": "10240",
 	}
 	_, _, err := runContainer(t, config, "true")
-	if !strings.Contains(err.Error(), cgroups.ErrV1NoUnified.Error()) {
+	if err == nil || !strings.Contains(err.Error(), cgroups.ErrV1NoUnified.Error()) {
 		t.Fatalf("expected error to contain %v, got %v", cgroups.ErrV1NoUnified, err)
 	}
 }
@@ -728,8 +728,12 @@ func testCgroupResourcesUnified(t *testing.T, systemd bool) {
 			continue
 		}
 		if err != nil {
+			var stdErr string
+			if buffers != nil {
+				stdErr = buffers.Stderr.String()
+			}
 			t.Errorf("case %q failed: expected no error, got %v (command: %v, status: %d, stderr: %q)",
-				tc.name, err, tc.cmd, ret, buffers.Stderr.String())
+				tc.name, err, tc.cmd, ret, stdErr)
 			continue
 		}
 		if tc.exp != "" {

@@ -812,8 +812,8 @@ func TestCreateDevices(t *testing.T) {
 
 	// dummy uid/gid for /dev/tty; will enable the test to check if createDevices()
 	// preferred the spec's device over the redundant default device
-	ttyUid := uint32(1000)
-	ttyGid := uint32(1000)
+	ttyUID := uint32(1000)
+	ttyGID := uint32(1000)
 	fm := os.FileMode(0o666)
 
 	spec.Linux = &specs.Linux{
@@ -825,8 +825,8 @@ func TestCreateDevices(t *testing.T) {
 				Major:    5,
 				Minor:    0,
 				FileMode: &fm,
-				UID:      &ttyUid,
-				GID:      &ttyGid,
+				UID:      &ttyUID,
+				GID:      &ttyGID,
 			},
 			{
 				// This is purposely not redundant with one of runc's default devices
