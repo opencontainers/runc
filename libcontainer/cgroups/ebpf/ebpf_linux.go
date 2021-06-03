@@ -33,12 +33,12 @@ func findAttachedCgroupDeviceFilters(dirFd int) ([]*ebpf.Program, error) {
 	size := 64
 	retries := 0
 	for retries < 10 {
-		progIds := make([]uint32, size)
+		progIDs := make([]uint32, size)
 		query := bpfAttrQuery{
 			TargetFd:   uint32(dirFd),
 			AttachType: uint32(unix.BPF_CGROUP_DEVICE),
-			ProgIds:    uint64(uintptr(unsafe.Pointer(&progIds[0]))),
-			ProgCnt:    uint32(len(progIds)),
+			ProgIds:    uint64(uintptr(unsafe.Pointer(&progIDs[0]))),
+			ProgCnt:    uint32(len(progIDs)),
 		}
 
 		// Fetch the list of program ids.
@@ -58,10 +58,10 @@ func findAttachedCgroupDeviceFilters(dirFd int) ([]*ebpf.Program, error) {
 		}
 
 		// Convert the ids to program handles.
-		progIds = progIds[:size]
-		programs := make([]*ebpf.Program, 0, len(progIds))
-		for _, progId := range progIds {
-			program, err := ebpf.NewProgramFromID(ebpf.ProgramID(progId))
+		progIDs = progIDs[:size]
+		programs := make([]*ebpf.Program, 0, len(progIDs))
+		for _, progID := range progIDs {
+			program, err := ebpf.NewProgramFromID(ebpf.ProgramID(progID))
 			if err != nil {
 				// We skip over programs that give us -EACCES or -EPERM. This
 				// is necessary because there may be BPF programs that have
@@ -73,14 +73,14 @@ func findAttachedCgroupDeviceFilters(dirFd int) ([]*ebpf.Program, error) {
 				// programs (and stops runc from breaking on distributions with
 				// very strict SELinux policies).
 				if errors.Is(err, os.ErrPermission) {
-					logrus.Debugf("ignoring existing CGROUP_DEVICE program (prog_id=%v) which cannot be accessed by runc -- likely due to LSM policy: %v", progId, err)
+					logrus.Debugf("ignoring existing CGROUP_DEVICE program (prog_id=%v) which cannot be accessed by runc -- likely due to LSM policy: %v", progID, err)
 					continue
 				}
 				return nil, fmt.Errorf("cannot fetch program from id: %w", err)
 			}
 			programs = append(programs, program)
 		}
-		runtime.KeepAlive(progIds)
+		runtime.KeepAlive(progIDs)
 		return programs, nil
 	}
 

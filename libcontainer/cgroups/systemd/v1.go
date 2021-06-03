@@ -92,7 +92,7 @@ func genV1ResourcesProperties(r *configs.Resources, cm *dbusConnManager) ([]syst
 			newProp("CPUShares", r.CpuShares))
 	}
 
-	addCpuQuota(cm, &properties, r.CpuQuota, r.CpuPeriod)
+	addCPUQuota(cm, &properties, r.CpuQuota, r.CpuPeriod)
 
 	if r.BlkioWeight != 0 {
 		properties = append(properties,
@@ -104,7 +104,7 @@ func genV1ResourcesProperties(r *configs.Resources, cm *dbusConnManager) ([]syst
 			newProp("TasksMax", uint64(r.PidsLimit)))
 	}
 
-	err = addCpuset(cm, &properties, r.CpusetCpus, r.CpusetMems)
+	err = addCPUSet(cm, &properties, r.CpusetCpus, r.CpusetMems)
 	if err != nil {
 		return nil, err
 	}
@@ -210,11 +210,7 @@ func (m *legacyManager) Apply(pid int) error {
 		return err
 	}
 
-	if err := m.joinCgroups(pid); err != nil {
-		return err
-	}
-
-	return nil
+	return m.joinCgroups(pid)
 }
 
 func (m *legacyManager) Destroy() error {

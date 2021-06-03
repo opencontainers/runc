@@ -94,7 +94,7 @@ func unifiedResToSystemdProps(cm *dbusConnManager, res map[string]string) (props
 					return nil, fmt.Errorf("unified resource %q quota value conversion error: %w", k, err)
 				}
 			}
-			addCpuQuota(cm, &props, quota, period)
+			addCPUQuota(cm, &props, quota, period)
 
 		case "cpu.weight":
 			num, err := strconv.ParseUint(v, 10, 64)
@@ -210,14 +210,14 @@ func genV2ResourcesProperties(r *configs.Resources, cm *dbusConnManager) ([]syst
 			newProp("CPUWeight", r.CpuWeight))
 	}
 
-	addCpuQuota(cm, &properties, r.CpuQuota, r.CpuPeriod)
+	addCPUQuota(cm, &properties, r.CpuQuota, r.CpuPeriod)
 
 	if r.PidsLimit > 0 || r.PidsLimit == -1 {
 		properties = append(properties,
 			newProp("TasksMax", uint64(r.PidsLimit)))
 	}
 
-	err = addCpuset(cm, &properties, r.CpusetCpus, r.CpusetMems)
+	err = addCPUSet(cm, &properties, r.CpusetCpus, r.CpusetMems)
 	if err != nil {
 		return nil, err
 	}
@@ -339,14 +339,8 @@ func (m *unifiedManager) Destroy() error {
 		return err
 	}
 
-	// systemd 239 do not remove sub-cgroups.
-	err := m.fsMgr.Destroy()
-	// fsMgr.Destroy has handled ErrNotExist
-	if err != nil {
-		return err
-	}
-
-	return nil
+	// systemd 239 does not remove sub-cgroups.
+	return m.fsMgr.Destroy()
 }
 
 func (m *unifiedManager) Path(_ string) string {
