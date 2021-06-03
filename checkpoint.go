@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strconv"
 
-	criu "github.com/checkpoint-restore/go-criu/v5/rpc"
+	criurpc "github.com/checkpoint-restore/go-criu/v5/rpc"
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/userns"
 	"github.com/opencontainers/runtime-spec/specs-go"
@@ -133,11 +133,11 @@ func setManageCgroupsMode(context *cli.Context, options *libcontainer.CriuOpts) 
 	if cgOpt := context.String("manage-cgroups-mode"); cgOpt != "" {
 		switch cgOpt {
 		case "soft":
-			options.ManageCgroupsMode = criu.CriuCgMode_SOFT
+			options.ManageCgroupsMode = criurpc.CriuCgMode_SOFT
 		case "full":
-			options.ManageCgroupsMode = criu.CriuCgMode_FULL
+			options.ManageCgroupsMode = criurpc.CriuCgMode_FULL
 		case "strict":
-			options.ManageCgroupsMode = criu.CriuCgMode_STRICT
+			options.ManageCgroupsMode = criurpc.CriuCgMode_STRICT
 		default:
 			fatal(errors.New("Invalid manage cgroups mode"))
 		}

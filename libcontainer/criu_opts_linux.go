@@ -1,6 +1,6 @@
 package libcontainer
 
-import criu "github.com/checkpoint-restore/go-criu/v5/rpc"
+import criurpc "github.com/checkpoint-restore/go-criu/v5/rpc"
 
 type CriuPageServerInfo struct {
 	Address string // IP address of CRIU page server
@@ -24,7 +24,7 @@ type CriuOpts struct {
 	PreDump                 bool               // call criu predump to perform iterative checkpoint
 	PageServer              CriuPageServerInfo // allow to dump to criu page server
 	VethPairs               []VethPairName     // pass the veth to criu when restore
-	ManageCgroupsMode       criu.CriuCgMode    // dump or restore cgroup mode
+	ManageCgroupsMode       criurpc.CriuCgMode // dump or restore cgroup mode
 	EmptyNs                 uint32             // don't c/r properties for namespace from this mask
 	AutoDedup               bool               // auto deduplication for incremental dumps
 	LazyPages               bool               // restore memory pages lazily using userfaultfd
