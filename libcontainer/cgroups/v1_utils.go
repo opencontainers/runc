@@ -23,7 +23,8 @@ const (
 )
 
 var (
-	errUnified     = errors.New("not implemented for cgroup v2 unified hierarchy")
+	errUnified = errors.New("not implemented for cgroup v2 unified hierarchy")
+	// ErrV1NoUnified is returned when a "unified" config value is used in cgroup v1.
 	ErrV1NoUnified = errors.New("invalid configuration: cannot use unified on cgroup v1")
 
 	readMountinfoOnce sync.Once
@@ -107,7 +108,9 @@ func readCgroupMountinfo() ([]*mountinfo.Info, error) {
 	return cgroupMountinfo, readMountinfoErr
 }
 
-// https://www.kernel.org/doc/Documentation/cgroup-v1/cgroups.txt
+// FindCgroupMountpoint returns the mountpoint for the given subsystem.
+//
+// See https://www.kernel.org/doc/Documentation/cgroup-v1/cgroups.txt.
 func FindCgroupMountpoint(cgroupPath, subsystem string) (string, error) {
 	if IsCgroup2UnifiedMode() {
 		return "", errUnified
