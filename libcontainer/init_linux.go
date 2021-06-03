@@ -500,9 +500,9 @@ func setupRlimits(limits []configs.Rlimit, pid int) error {
 	return nil
 }
 
-const _P_PID = 1
+const pPid = 1 // _P_PID
 
-//nolint:structcheck,unused
+//nolint:revive,structcheck,unused
 type siginfo struct {
 	si_signo int32
 	si_errno int32
@@ -517,7 +517,7 @@ type siginfo struct {
 // Its based off blockUntilWaitable in src/os/wait_waitid.go
 func isWaitable(pid int) (bool, error) {
 	si := &siginfo{}
-	_, _, e := unix.Syscall6(unix.SYS_WAITID, _P_PID, uintptr(pid), uintptr(unsafe.Pointer(si)), unix.WEXITED|unix.WNOWAIT|unix.WNOHANG, 0, 0)
+	_, _, e := unix.Syscall6(unix.SYS_WAITID, pPid, uintptr(pid), uintptr(unsafe.Pointer(si)), unix.WEXITED|unix.WNOWAIT|unix.WNOHANG, 0, 0)
 	if e != 0 {
 		return false, &os.SyscallError{Syscall: "waitid", Err: e}
 	}
