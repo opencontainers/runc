@@ -645,11 +645,11 @@ func testPids(t *testing.T, systemd bool) {
 	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
 	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true`)
 	if err != nil && !strings.Contains(out.String(), "sh: can't fork") {
-		ok(t, err)
+		t.Fatal(err)
 	}
 
 	if err == nil {
-		t.Fatalf("expected fork() to fail with restrictive pids limit")
+		t.Fatal("expected fork() to fail with restrictive pids limit")
 	}
 
 	// Minimal restrictions are not really supported, due to quirks in using Go

@@ -25,6 +25,7 @@ func blkioStatEntryEquals(expected, actual []cgroups.BlkioStatEntry) error {
 }
 
 func expectBlkioStatsEquals(t *testing.T, expected, actual cgroups.BlkioStats) {
+	t.Helper()
 	if err := blkioStatEntryEquals(expected.IoServiceBytesRecursive, actual.IoServiceBytesRecursive); err != nil {
 		t.Errorf("blkio IoServiceBytesRecursive do not match - %s\n", err)
 	}
@@ -59,18 +60,21 @@ func expectBlkioStatsEquals(t *testing.T, expected, actual cgroups.BlkioStats) {
 }
 
 func expectThrottlingDataEquals(t *testing.T, expected, actual cgroups.ThrottlingData) {
+	t.Helper()
 	if expected != actual {
 		t.Errorf("Expected throttling data %v but found %v\n", expected, actual)
 	}
 }
 
 func expectHugetlbStatEquals(t *testing.T, expected, actual cgroups.HugetlbStats) {
+	t.Helper()
 	if expected != actual {
 		t.Errorf("Expected hugetlb stats %v but found %v\n", expected, actual)
 	}
 }
 
 func expectMemoryStatEquals(t *testing.T, expected, actual cgroups.MemoryStats) {
+	t.Helper()
 	expectMemoryDataEquals(t, expected.Usage, actual.Usage)
 	expectMemoryDataEquals(t, expected.SwapUsage, actual.SwapUsage)
 	expectMemoryDataEquals(t, expected.KernelUsage, actual.KernelUsage)
@@ -92,6 +96,7 @@ func expectMemoryStatEquals(t *testing.T, expected, actual cgroups.MemoryStats) 
 }
 
 func expectMemoryDataEquals(t *testing.T, expected, actual cgroups.MemoryData) {
+	t.Helper()
 	if expected.Usage != actual.Usage {
 		t.Errorf("Expected memory usage %d but found %d\n", expected.Usage, actual.Usage)
 	}
@@ -107,6 +112,7 @@ func expectMemoryDataEquals(t *testing.T, expected, actual cgroups.MemoryData) {
 }
 
 func expectPageUsageByNUMAEquals(t *testing.T, expected, actual cgroups.PageUsageByNUMA) {
+	t.Helper()
 	if !reflect.DeepEqual(expected.Total, actual.Total) {
 		t.Errorf("Expected total page usage by NUMA %#v but found %#v", expected.Total, actual.Total)
 	}
