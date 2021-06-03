@@ -127,8 +127,8 @@ type Resources struct {
 
 	// SkipDevices allows to skip configuring device permissions.
 	// Used by e.g. kubelet while creating a parent cgroup (kubepods)
-	// common for many containers.
+	// common for many containers, and by runc update.
 	//
 	// NOTE it is impossible to start a container which has this flag set.
-	SkipDevices bool `json:"skip_devices"`
+	SkipDevices bool `json:"-"`
 }
