@@ -10,12 +10,12 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
-func isCpuSet(r *configs.Resources) bool {
+func isCPUSet(r *configs.Resources) bool {
 	return r.CpuWeight != 0 || r.CpuQuota != 0 || r.CpuPeriod != 0
 }
 
-func setCpu(dirPath string, r *configs.Resources) error {
-	if !isCpuSet(r) {
+func setCPU(dirPath string, r *configs.Resources) error {
+	if !isCPUSet(r) {
 		return nil
 	}
 
@@ -46,7 +46,7 @@ func setCpu(dirPath string, r *configs.Resources) error {
 	return nil
 }
 
-func statCpu(dirPath string, stats *cgroups.Stats) error {
+func statCPU(dirPath string, stats *cgroups.Stats) error {
 	const file = "cpu.stat"
 	f, err := cgroups.OpenFile(dirPath, file, os.O_RDONLY)
 	if err != nil {
