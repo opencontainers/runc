@@ -329,6 +329,13 @@ other options are ignored.
 			config.IntelRdt.MemBwSchema = memBwSchema
 		}
 
+		// XXX(kolyshkin@): currently "runc update" is unable to change
+		// device configuration, so add this to skip device update.
+		// This helps in case an extra plugin (nvidia GPU) applies some
+		// configuration on top of what runc does.
+		// Note this field is not saved into container's state.json.
+		config.Cgroups.SkipDevices = true
+
 		return container.Set(config)
 	},
 }
