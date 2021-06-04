@@ -168,3 +168,28 @@ func TestSkipDevicesFalse(t *testing.T) {
 		"cat: /dev/null: Operation not permitted",
 	})
 }
+
+func TestUnitExistsIgnored(t *testing.T) {
+	if !IsRunningSystemd() {
+		t.Skip("Test requires systemd.")
+	}
+	if os.Geteuid() != 0 {
+		t.Skip("Test requires root.")
+	}
+
+	podConfig := &configs.Cgroup{
+		Parent:    "system.slice",
+		Name:      "system-runc_test_exists.slice",
+		Resources: &configs.Resources{},
+	}
+	// Create "pods" cgroup (a systemd slice to hold containers).
+	pm := newManager(podConfig)
+	defer pm.Destroy() //nolint:errcheck
+
+	// create twice to make sure "UnitExists" error is ignored.
+	for i := 0; i < 2; i++ {
+		if err := pm.Apply(-1); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
