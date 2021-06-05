@@ -181,7 +181,9 @@ func parseCgroupFromReader(r io.Reader) (map[string]string, error) {
 		}
 
 		for _, subs := range strings.Split(parts[1], ",") {
-			cgroups[subs] = parts[2]
+			if subs != "" {
+				cgroups[subs] = parts[2]
+			}
 		}
 	}
 	if err := s.Err(); err != nil {
