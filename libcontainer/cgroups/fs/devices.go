@@ -16,7 +16,7 @@ import (
 )
 
 type DevicesGroup struct {
-	testingSkipFinalCheck bool
+	TestingSkipFinalCheck bool
 }
 
 func (s *DevicesGroup) Name() string {
@@ -92,7 +92,7 @@ func (s *DevicesGroup) Set(path string, r *configs.Resources) error {
 	//
 	// This safety-check is skipped for the unit tests because we cannot
 	// currently mock devices.list correctly.
-	if !s.testingSkipFinalCheck {
+	if !s.TestingSkipFinalCheck {
 		currentAfter, err := loadEmulator(path)
 		if err != nil {
 			return err
