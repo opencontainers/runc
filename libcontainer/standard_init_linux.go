@@ -103,7 +103,7 @@ func (l *linuxStandardInit) Init() error {
 		}
 	}
 	for _, path := range l.config.Config.ReadonlyPaths {
-		if err := remountReadonly(path); err != nil {
+		if err := readonlyPath(path); err != nil {
 			return err
 		}
 	}
