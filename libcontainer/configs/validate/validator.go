@@ -29,6 +29,7 @@ type check func(config *configs.Config) error
 
 func (v *ConfigValidator) Validate(config *configs.Config) error {
 	checks := []check{
+		v.cgroups,
 		v.rootfs,
 		v.network,
 		v.hostname,
@@ -45,10 +46,6 @@ func (v *ConfigValidator) Validate(config *configs.Config) error {
 			return err
 		}
 	}
-	if err := v.cgroups(config); err != nil {
-		return err
-	}
-
 	return nil
 }
 
