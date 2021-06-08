@@ -53,7 +53,7 @@ func ParseKeyValue(t string) (string, uint64, error) {
 
 	value, err := ParseUint(parts[1], 10, 64)
 	if err != nil {
-		return "", 0, fmt.Errorf("unable to convert to uint64: %v", err)
+		return "", 0, err
 	}
 
 	return parts[0], value, nil
