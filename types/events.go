@@ -12,7 +12,7 @@ type Event struct {
 // Stats is the runc specific stats structure for stability when encoding and
 // decoding stats.
 type Stats struct {
-	CPU               Cpu                 `json:"cpu"`
+	CPU               CPU                 `json:"cpu"`
 	CPUSet            CPUSet              `json:"cpuset"`
 	Memory            Memory              `json:"memory"`
 	Pids              Pids                `json:"pids"`
@@ -57,18 +57,18 @@ type Throttling struct {
 	ThrottledTime    uint64 `json:"throttledTime,omitempty"`
 }
 
-type CpuUsage struct {
+type CPUUsage struct {
 	// Units: nanoseconds.
 	Total        uint64   `json:"total,omitempty"`
-	Percpu       []uint64 `json:"percpu,omitempty"`
-	PercpuKernel []uint64 `json:"percpu_kernel,omitempty"`
-	PercpuUser   []uint64 `json:"percpu_user,omitempty"`
+	PerCPU       []uint64 `json:"percpu,omitempty"`
+	PerCPUKernel []uint64 `json:"percpu_kernel,omitempty"`
+	PerCPUUser   []uint64 `json:"percpu_user,omitempty"`
 	Kernel       uint64   `json:"kernel"`
 	User         uint64   `json:"user"`
 }
 
-type Cpu struct {
-	Usage      CpuUsage   `json:"usage,omitempty"`
+type CPU struct {
+	Usage      CPUUsage   `json:"usage,omitempty"`
 	Throttling Throttling `json:"throttling,omitempty"`
 }
 

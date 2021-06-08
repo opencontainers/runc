@@ -576,7 +576,7 @@ func testCPUShares(t *testing.T, systemd bool) {
 		rootfs:  rootfs,
 		systemd: systemd,
 	})
-	config.Cgroups.Resources.CpuShares = 1
+	config.Cgroups.Resources.CPUShares = 1
 
 	_, _, err = runContainer(t, config, "", "ps")
 	if err == nil {
@@ -608,7 +608,7 @@ func testPids(t *testing.T, systemd bool) {
 		rootfs:  rootfs,
 		systemd: systemd,
 	})
-	config.Cgroups.Resources.PidsLimit = -1
+	config.Cgroups.Resources.PIDsLimit = -1
 
 	// Running multiple processes.
 	_, ret, err := runContainer(t, config, "", "/bin/sh", "-c", "/bin/true | /bin/true | /bin/true | /bin/true")
@@ -620,7 +620,7 @@ func testPids(t *testing.T, systemd bool) {
 
 	// Enforce a permissive limit. This needs to be fairly hand-wavey due to the
 	// issues with running Go binaries with pids restrictions (see below).
-	config.Cgroups.Resources.PidsLimit = 64
+	config.Cgroups.Resources.PIDsLimit = 64
 	_, ret, err = runContainer(t, config, "", "/bin/sh", "-c", `
 	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
 	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
@@ -634,7 +634,7 @@ func testPids(t *testing.T, systemd bool) {
 
 	// Enforce a restrictive limit. 64 * /bin/true + 1 * shell should cause this
 	// to fail reliability.
-	config.Cgroups.Resources.PidsLimit = 64
+	config.Cgroups.Resources.PIDsLimit = 64
 	out, _, err := runContainer(t, config, "", "/bin/sh", "-c", `
 	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
 	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
@@ -1110,7 +1110,7 @@ func TestOomScoreAdj(t *testing.T) {
 	defer remove(rootfs)
 
 	config := newTemplateConfig(t, &tParam{rootfs: rootfs})
-	config.OomScoreAdj = ptrInt(200)
+	config.OOMScoreAdj = ptrInt(200)
 
 	container, err := newContainer(t, config)
 	ok(t, err)
@@ -1133,8 +1133,8 @@ func TestOomScoreAdj(t *testing.T) {
 	outputOomScoreAdj := strings.TrimSpace(stdout.String())
 
 	// Check that the oom_score_adj matches the value that was set as part of config.
-	if outputOomScoreAdj != strconv.Itoa(*config.OomScoreAdj) {
-		t.Fatalf("Expected oom_score_adj %d; got %q", *config.OomScoreAdj, outputOomScoreAdj)
+	if outputOomScoreAdj != strconv.Itoa(*config.OOMScoreAdj) {
+		t.Fatalf("Expected oom_score_adj %d; got %q", *config.OOMScoreAdj, outputOomScoreAdj)
 	}
 }
 

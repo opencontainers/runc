@@ -22,7 +22,7 @@ var (
 		&CpusetGroup{},
 		&DevicesGroup{},
 		&MemoryGroup{},
-		&CpuGroup{},
+		&CPUGroup{},
 		&CpuacctGroup{},
 		&PidsGroup{},
 		&BlkioGroup{},

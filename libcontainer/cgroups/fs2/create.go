@@ -51,7 +51,7 @@ func needAnyControllers(r *configs.Resources) (bool, error) {
 	if isCPUSet(r) && have("cpu") {
 		return true, nil
 	}
-	if isCpusetSet(r) && have("cpuset") {
+	if isCPUSetSet(r) && have("cpuset") {
 		return true, nil
 	}
 	if isHugeTlbSet(r) && have("hugetlb") {

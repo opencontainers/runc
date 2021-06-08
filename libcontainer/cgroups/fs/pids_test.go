@@ -23,7 +23,7 @@ func TestPidsSetMax(t *testing.T) {
 		"pids.max": "max",
 	})
 
-	helper.CgroupData.config.Resources.PidsLimit = maxLimited
+	helper.CgroupData.config.Resources.PIDsLimit = maxLimited
 	pids := &PidsGroup{}
 	if err := pids.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
 		t.Fatal(err)
@@ -46,7 +46,7 @@ func TestPidsSetUnlimited(t *testing.T) {
 		"pids.max": strconv.Itoa(maxLimited),
 	})
 
-	helper.CgroupData.config.Resources.PidsLimit = maxUnlimited
+	helper.CgroupData.config.Resources.PIDsLimit = maxUnlimited
 	pids := &PidsGroup{}
 	if err := pids.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
 		t.Fatal(err)
@@ -76,12 +76,12 @@ func TestPidsStats(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if stats.PidsStats.Current != 1337 {
-		t.Fatalf("Expected %d, got %d for pids.current", 1337, stats.PidsStats.Current)
+	if stats.PIDsStats.Current != 1337 {
+		t.Fatalf("Expected %d, got %d for pids.current", 1337, stats.PIDsStats.Current)
 	}
 
-	if stats.PidsStats.Limit != maxLimited {
-		t.Fatalf("Expected %d, got %d for pids.max", maxLimited, stats.PidsStats.Limit)
+	if stats.PIDsStats.Limit != maxLimited {
+		t.Fatalf("Expected %d, got %d for pids.max", maxLimited, stats.PIDsStats.Limit)
 	}
 }
 
@@ -100,11 +100,11 @@ func TestPidsStatsUnlimited(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if stats.PidsStats.Current != 4096 {
-		t.Fatalf("Expected %d, got %d for pids.current", 4096, stats.PidsStats.Current)
+	if stats.PIDsStats.Current != 4096 {
+		t.Fatalf("Expected %d, got %d for pids.current", 4096, stats.PIDsStats.Current)
 	}
 
-	if stats.PidsStats.Limit != 0 {
-		t.Fatalf("Expected %d, got %d for pids.max", 0, stats.PidsStats.Limit)
+	if stats.PIDsStats.Limit != 0 {
+		t.Fatalf("Expected %d, got %d for pids.max", 0, stats.PIDsStats.Limit)
 	}
 }

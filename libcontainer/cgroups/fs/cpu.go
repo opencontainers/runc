@@ -13,13 +13,13 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
-type CpuGroup struct{}
+type CPUGroup struct{}
 
-func (s *CpuGroup) Name() string {
+func (s *CPUGroup) Name() string {
 	return "cpu"
 }
 
-func (s *CpuGroup) Apply(path string, d *cgroupData) error {
+func (s *CPUGroup) Apply(path string, d *cgroupData) error {
 	// This might happen if we have no cpu cgroup mounted.
 	// Just do nothing and don't fail.
 	if path == "" {
@@ -39,23 +39,23 @@ func (s *CpuGroup) Apply(path string, d *cgroupData) error {
 	return cgroups.WriteCgroupProc(path, d.pid)
 }
 
-func (s *CpuGroup) SetRtSched(path string, r *configs.Resources) error {
-	if r.CpuRtPeriod != 0 {
-		if err := cgroups.WriteFile(path, "cpu.rt_period_us", strconv.FormatUint(r.CpuRtPeriod, 10)); err != nil {
+func (s *CPUGroup) SetRtSched(path string, r *configs.Resources) error {
+	if r.CPURtPeriod != 0 {
+		if err := cgroups.WriteFile(path, "cpu.rt_period_us", strconv.FormatUint(r.CPURtPeriod, 10)); err != nil {
 			return err
 		}
 	}
-	if r.CpuRtRuntime != 0 {
-		if err := cgroups.WriteFile(path, "cpu.rt_runtime_us", strconv.FormatInt(r.CpuRtRuntime, 10)); err != nil {
+	if r.CPURtRuntime != 0 {
+		if err := cgroups.WriteFile(path, "cpu.rt_runtime_us", strconv.FormatInt(r.CPURtRuntime, 10)); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (s *CpuGroup) Set(path string, r *configs.Resources) error {
-	if r.CpuShares != 0 {
-		shares := r.CpuShares
+func (s *CPUGroup) Set(path string, r *configs.Resources) error {
+	if r.CPUShares != 0 {
+		shares := r.CPUShares
 		if err := cgroups.WriteFile(path, "cpu.shares", strconv.FormatUint(shares, 10)); err != nil {
 			return err
 		}
@@ -71,20 +71,20 @@ func (s *CpuGroup) Set(path string, r *configs.Resources) error {
 			return fmt.Errorf("the minimum allowed cpu-shares is %d", sharesRead)
 		}
 	}
-	if r.CpuPeriod != 0 {
-		if err := cgroups.WriteFile(path, "cpu.cfs_period_us", strconv.FormatUint(r.CpuPeriod, 10)); err != nil {
+	if r.CPUPeriod != 0 {
+		if err := cgroups.WriteFile(path, "cpu.cfs_period_us", strconv.FormatUint(r.CPUPeriod, 10)); err != nil {
 			return err
 		}
 	}
-	if r.CpuQuota != 0 {
-		if err := cgroups.WriteFile(path, "cpu.cfs_quota_us", strconv.FormatInt(r.CpuQuota, 10)); err != nil {
+	if r.CPUQuota != 0 {
+		if err := cgroups.WriteFile(path, "cpu.cfs_quota_us", strconv.FormatInt(r.CPUQuota, 10)); err != nil {
 			return err
 		}
 	}
 	return s.SetRtSched(path, r)
 }
 
-func (s *CpuGroup) GetStats(path string, stats *cgroups.Stats) error {
+func (s *CPUGroup) GetStats(path string, stats *cgroups.Stats) error {
 	const file = "cpu.stat"
 	f, err := cgroups.OpenFile(path, file, os.O_RDONLY)
 	if err != nil {
@@ -103,13 +103,13 @@ func (s *CpuGroup) GetStats(path string, stats *cgroups.Stats) error {
 		}
 		switch t {
 		case "nr_periods":
-			stats.CpuStats.ThrottlingData.Periods = v
+			stats.CPUStats.ThrottlingData.Periods = v
 
 		case "nr_throttled":
-			stats.CpuStats.ThrottlingData.ThrottledPeriods = v
+			stats.CPUStats.ThrottlingData.ThrottledPeriods = v
 
 		case "throttled_time":
-			stats.CpuStats.ThrottlingData.ThrottledTime = v
+			stats.CPUStats.ThrottlingData.ThrottledTime = v
 		}
 	}
 	return nil

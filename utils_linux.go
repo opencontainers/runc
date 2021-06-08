@@ -70,9 +70,9 @@ func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
 	}
 
 	return libcontainer.New(abs, cgroupManager, intelRdtManager,
-		libcontainer.CriuPath(context.GlobalString("criu")),
-		libcontainer.NewuidmapPath(newuidmap),
-		libcontainer.NewgidmapPath(newgidmap))
+		libcontainer.CRIUPath(context.GlobalString("criu")),
+		libcontainer.NewUIDMapPath(newuidmap),
+		libcontainer.NewGIDMapPath(newgidmap))
 }
 
 // getContainer returns the specified container instance by loading it from state
@@ -258,7 +258,7 @@ type runner struct {
 	container       libcontainer.Container
 	action          ctAct
 	notifySocket    *notifySocket
-	criuOpts        *libcontainer.CriuOpts
+	criuOpts        *libcontainer.CRIUOpts
 	logLevel        string
 }
 
@@ -397,7 +397,7 @@ const (
 	actRestore                  // Restore container
 )
 
-func startContainer(context *cli.Context, spec *specs.Spec, action ctAct, criuOpts *libcontainer.CriuOpts) (int, error) {
+func startContainer(context *cli.Context, spec *specs.Spec, action ctAct, criuOpts *libcontainer.CRIUOpts) (int, error) {
 	id := context.Args().First()
 	if id == "" {
 		return -1, errEmptyID
