@@ -131,7 +131,10 @@ func kprobe(symbol string, prog *ebpf.Program, ret bool) (*perfEvent, error) {
 	}
 
 	// Use kprobe PMU if the kernel has it available.
-	tp, err := pmuKprobe(symbol, ret)
+	tp, err := pmuKprobe(platformPrefix(symbol), ret)
+	if errors.Is(err, os.ErrNotExist) {
+		tp, err = pmuKprobe(symbol, ret)
+	}
 	if err == nil {
 		return tp, nil
 	}
@@ -140,7 +143,10 @@ func kprobe(symbol string, prog *ebpf.Program, ret bool) (*perfEvent, error) {
 	}
 
 	// Use tracefs if kprobe PMU is missing.
-	tp, err = tracefsKprobe(symbol, ret)
+	tp, err = tracefsKprobe(platformPrefix(symbol), ret)
+	if errors.Is(err, os.ErrNotExist) {
+		tp, err = tracefsKprobe(symbol, ret)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("creating trace event '%s' in tracefs: %w", symbol, err)
 	}
