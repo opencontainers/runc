@@ -346,7 +346,7 @@ func (l *LinuxFactory) StartInitialization() (err error) {
 	envInitPipe := os.Getenv("_LIBCONTAINER_INITPIPE")
 	pipefd, err := strconv.Atoi(envInitPipe)
 	if err != nil {
-		return fmt.Errorf("unable to convert _LIBCONTAINER_INITPIPE=%s to int: %s", envInitPipe, err)
+		return fmt.Errorf("unable to convert _LIBCONTAINER_INITPIPE: %w", err)
 	}
 	pipe := os.NewFile(uintptr(pipefd), "pipe")
 	defer pipe.Close()
@@ -358,7 +358,7 @@ func (l *LinuxFactory) StartInitialization() (err error) {
 	if it == initStandard {
 		envFifoFd := os.Getenv("_LIBCONTAINER_FIFOFD")
 		if fifofd, err = strconv.Atoi(envFifoFd); err != nil {
-			return fmt.Errorf("unable to convert _LIBCONTAINER_FIFOFD=%s to int: %s", envFifoFd, err)
+			return fmt.Errorf("unable to convert _LIBCONTAINER_FIFOFD: %w", err)
 		}
 	}
 
@@ -366,7 +366,7 @@ func (l *LinuxFactory) StartInitialization() (err error) {
 	if envConsole := os.Getenv("_LIBCONTAINER_CONSOLE"); envConsole != "" {
 		console, err := strconv.Atoi(envConsole)
 		if err != nil {
-			return fmt.Errorf("unable to convert _LIBCONTAINER_CONSOLE=%s to int: %s", envConsole, err)
+			return fmt.Errorf("unable to convert _LIBCONTAINER_CONSOLE: %w", err)
 		}
 		consoleSocket = os.NewFile(uintptr(console), "console-socket")
 		defer consoleSocket.Close()
@@ -375,7 +375,7 @@ func (l *LinuxFactory) StartInitialization() (err error) {
 	logPipeFdStr := os.Getenv("_LIBCONTAINER_LOGPIPE")
 	logPipeFd, err := strconv.Atoi(logPipeFdStr)
 	if err != nil {
-		return fmt.Errorf("unable to convert _LIBCONTAINER_LOGPIPE=%s to int: %s", logPipeFdStr, err)
+		return fmt.Errorf("unable to convert _LIBCONTAINER_LOGPIPE: %w", err)
 	}
 
 	// clear the current process's environment to clean any libcontainer
