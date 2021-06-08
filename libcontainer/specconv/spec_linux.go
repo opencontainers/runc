@@ -211,8 +211,8 @@ var AllowedDevices = []*devices.Device{
 	{
 		Path:     "/dev/null",
 		FileMode: 0o666,
-		Uid:      0,
-		Gid:      0,
+		UID:      0,
+		GID:      0,
 		Rule: devices.Rule{
 			Type:        devices.CharDevice,
 			Major:       1,
@@ -224,8 +224,8 @@ var AllowedDevices = []*devices.Device{
 	{
 		Path:     "/dev/random",
 		FileMode: 0o666,
-		Uid:      0,
-		Gid:      0,
+		UID:      0,
+		GID:      0,
 		Rule: devices.Rule{
 			Type:        devices.CharDevice,
 			Major:       1,
@@ -237,8 +237,8 @@ var AllowedDevices = []*devices.Device{
 	{
 		Path:     "/dev/full",
 		FileMode: 0o666,
-		Uid:      0,
-		Gid:      0,
+		UID:      0,
+		GID:      0,
 		Rule: devices.Rule{
 			Type:        devices.CharDevice,
 			Major:       1,
@@ -250,8 +250,8 @@ var AllowedDevices = []*devices.Device{
 	{
 		Path:     "/dev/tty",
 		FileMode: 0o666,
-		Uid:      0,
-		Gid:      0,
+		UID:      0,
+		GID:      0,
 		Rule: devices.Rule{
 			Type:        devices.CharDevice,
 			Major:       5,
@@ -263,8 +263,8 @@ var AllowedDevices = []*devices.Device{
 	{
 		Path:     "/dev/zero",
 		FileMode: 0o666,
-		Uid:      0,
-		Gid:      0,
+		UID:      0,
+		GID:      0,
 		Rule: devices.Rule{
 			Type:        devices.CharDevice,
 			Major:       1,
@@ -276,8 +276,8 @@ var AllowedDevices = []*devices.Device{
 	{
 		Path:     "/dev/urandom",
 		FileMode: 0o666,
-		Uid:      0,
-		Gid:      0,
+		UID:      0,
+		GID:      0,
 		Rule: devices.Rule{
 			Type:        devices.CharDevice,
 			Major:       1,
@@ -478,7 +478,7 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 	}
 
 	if spec.Process != nil {
-		config.OomScoreAdj = spec.Process.OOMScoreAdj
+		config.OOMScoreAdj = spec.Process.OOMScoreAdj
 		config.NoNewPrivileges = spec.Process.NoNewPrivileges
 		config.Umask = spec.Process.User.Umask
 		config.ProcessLabel = spec.Process.SelinuxLabel
@@ -719,33 +719,33 @@ func CreateCgroupConfig(opts *CreateOpts, defaultDevs []*devices.Device) (*confi
 					c.Resources.MemorySwappiness = r.Memory.Swappiness
 				}
 				if r.Memory.DisableOOMKiller != nil {
-					c.Resources.OomKillDisable = *r.Memory.DisableOOMKiller
+					c.Resources.OOMKillDisable = *r.Memory.DisableOOMKiller
 				}
 			}
 			if r.CPU != nil {
 				if r.CPU.Shares != nil {
-					c.Resources.CpuShares = *r.CPU.Shares
+					c.Resources.CPUShares = *r.CPU.Shares
 
 					// CpuWeight is used for cgroupv2 and should be converted
-					c.Resources.CpuWeight = cgroups.ConvertCPUSharesToCgroupV2Value(c.Resources.CpuShares)
+					c.Resources.CPUWeight = cgroups.ConvertCPUSharesToCgroupV2Value(c.Resources.CPUShares)
 				}
 				if r.CPU.Quota != nil {
-					c.Resources.CpuQuota = *r.CPU.Quota
+					c.Resources.CPUQuota = *r.CPU.Quota
 				}
 				if r.CPU.Period != nil {
-					c.Resources.CpuPeriod = *r.CPU.Period
+					c.Resources.CPUPeriod = *r.CPU.Period
 				}
 				if r.CPU.RealtimeRuntime != nil {
-					c.Resources.CpuRtRuntime = *r.CPU.RealtimeRuntime
+					c.Resources.CPURtRuntime = *r.CPU.RealtimeRuntime
 				}
 				if r.CPU.RealtimePeriod != nil {
-					c.Resources.CpuRtPeriod = *r.CPU.RealtimePeriod
+					c.Resources.CPURtPeriod = *r.CPU.RealtimePeriod
 				}
-				c.Resources.CpusetCpus = r.CPU.Cpus
-				c.Resources.CpusetMems = r.CPU.Mems
+				c.Resources.CPUSetCPUs = r.CPU.Cpus
+				c.Resources.CPUSetMems = r.CPU.Mems
 			}
 			if r.Pids != nil {
-				c.Resources.PidsLimit = r.Pids.Limit
+				c.Resources.PIDsLimit = r.Pids.Limit
 			}
 			if r.BlockIO != nil {
 				if r.BlockIO.Weight != nil {
@@ -912,8 +912,8 @@ next:
 				},
 				Path:     d.Path,
 				FileMode: filemode,
-				Uid:      uid,
-				Gid:      gid,
+				UID:      uid,
+				GID:      gid,
 			}
 			config.Devices = append(config.Devices, device)
 		}
@@ -932,10 +932,10 @@ func setupUserNamespace(spec *specs.Spec, config *configs.Config) error {
 	}
 	if spec.Linux != nil {
 		for _, m := range spec.Linux.UIDMappings {
-			config.UidMappings = append(config.UidMappings, create(m))
+			config.UIDMappings = append(config.UIDMappings, create(m))
 		}
 		for _, m := range spec.Linux.GIDMappings {
-			config.GidMappings = append(config.GidMappings, create(m))
+			config.GIDMappings = append(config.GIDMappings, create(m))
 		}
 	}
 	rootUID, err := config.HostRootUID()
@@ -947,8 +947,8 @@ func setupUserNamespace(spec *specs.Spec, config *configs.Config) error {
 		return err
 	}
 	for _, node := range config.Devices {
-		node.Uid = uint32(rootUID)
-		node.Gid = uint32(rootGID)
+		node.UID = uint32(rootUID)
+		node.GID = uint32(rootGID)
 	}
 	return nil
 }

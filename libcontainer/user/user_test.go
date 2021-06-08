@@ -70,11 +70,11 @@ this is just some garbage data
 	if len(users) != 3 {
 		t.Fatalf("Expected 3 users, got %v", len(users))
 	}
-	if users[0].Uid != 0 || users[0].Name != "root" {
-		t.Fatalf("Expected users[0] to be 0 - root, got %v - %v", users[0].Uid, users[0].Name)
+	if users[0].UID != 0 || users[0].Name != "root" {
+		t.Fatalf("Expected users[0] to be 0 - root, got %v - %v", users[0].UID, users[0].Name)
 	}
-	if users[1].Uid != 3 || users[1].Name != "adm" {
-		t.Fatalf("Expected users[1] to be 3 - adm, got %v - %v", users[1].Uid, users[1].Name)
+	if users[1].UID != 3 || users[1].Name != "adm" {
+		t.Fatalf("Expected users[1] to be 3 - adm, got %v - %v", users[1].UID, users[1].Name)
 	}
 }
 
@@ -90,11 +90,11 @@ this is just some garbage data
 	if len(groups) != 4 {
 		t.Fatalf("Expected 4 groups, got %v", len(groups))
 	}
-	if groups[0].Gid != 0 || groups[0].Name != "root" || len(groups[0].List) != 1 {
-		t.Fatalf("Expected groups[0] to be 0 - root - 1 member, got %v - %v - %v", groups[0].Gid, groups[0].Name, len(groups[0].List))
+	if groups[0].GID != 0 || groups[0].Name != "root" || len(groups[0].List) != 1 {
+		t.Fatalf("Expected groups[0] to be 0 - root - 1 member, got %v - %v - %v", groups[0].GID, groups[0].Name, len(groups[0].List))
 	}
-	if groups[1].Gid != 4 || groups[1].Name != "adm" || len(groups[1].List) != 3 {
-		t.Fatalf("Expected groups[1] to be 4 - adm - 3 members, got %v - %v - %v", groups[1].Gid, groups[1].Name, len(groups[1].List))
+	if groups[1].GID != 4 || groups[1].Name != "adm" || len(groups[1].List) != 3 {
+		t.Fatalf("Expected groups[1] to be 4 - adm - 3 members, got %v - %v - %v", groups[1].GID, groups[1].Name, len(groups[1].List))
 	}
 }
 
@@ -117,9 +117,9 @@ this is just some garbage data
 ` + largeGroup()
 
 	defaultExecUser := ExecUser{
-		Uid:   8888,
-		Gid:   8888,
-		Sgids: []int{8888},
+		UID:   8888,
+		GID:   8888,
+		SGIDs: []int{8888},
 		Home:  "/8888",
 	}
 
@@ -130,72 +130,72 @@ this is just some garbage data
 		{
 			ref: "root",
 			expected: ExecUser{
-				Uid:   0,
-				Gid:   0,
-				Sgids: []int{0, 1234},
+				UID:   0,
+				GID:   0,
+				SGIDs: []int{0, 1234},
 				Home:  "/root",
 			},
 		},
 		{
 			ref: "adm",
 			expected: ExecUser{
-				Uid:   42,
-				Gid:   43,
-				Sgids: []int{1234},
+				UID:   42,
+				GID:   43,
+				SGIDs: []int{1234},
 				Home:  "/var/adm",
 			},
 		},
 		{
 			ref: "root:adm",
 			expected: ExecUser{
-				Uid:   0,
-				Gid:   43,
-				Sgids: defaultExecUser.Sgids,
+				UID:   0,
+				GID:   43,
+				SGIDs: defaultExecUser.SGIDs,
 				Home:  "/root",
 			},
 		},
 		{
 			ref: "adm:1234",
 			expected: ExecUser{
-				Uid:   42,
-				Gid:   1234,
-				Sgids: defaultExecUser.Sgids,
+				UID:   42,
+				GID:   1234,
+				SGIDs: defaultExecUser.SGIDs,
 				Home:  "/var/adm",
 			},
 		},
 		{
 			ref: "42:1234",
 			expected: ExecUser{
-				Uid:   42,
-				Gid:   1234,
-				Sgids: defaultExecUser.Sgids,
+				UID:   42,
+				GID:   1234,
+				SGIDs: defaultExecUser.SGIDs,
 				Home:  "/var/adm",
 			},
 		},
 		{
 			ref: "1337:1234",
 			expected: ExecUser{
-				Uid:   1337,
-				Gid:   1234,
-				Sgids: defaultExecUser.Sgids,
+				UID:   1337,
+				GID:   1234,
+				SGIDs: defaultExecUser.SGIDs,
 				Home:  defaultExecUser.Home,
 			},
 		},
 		{
 			ref: "1337",
 			expected: ExecUser{
-				Uid:   1337,
-				Gid:   defaultExecUser.Gid,
-				Sgids: defaultExecUser.Sgids,
+				UID:   1337,
+				GID:   defaultExecUser.GID,
+				SGIDs: defaultExecUser.SGIDs,
 				Home:  defaultExecUser.Home,
 			},
 		},
 		{
 			ref: "",
 			expected: ExecUser{
-				Uid:   defaultExecUser.Uid,
-				Gid:   defaultExecUser.Gid,
-				Sgids: defaultExecUser.Sgids,
+				UID:   defaultExecUser.UID,
+				GID:   defaultExecUser.GID,
+				SGIDs: defaultExecUser.SGIDs,
 				Home:  defaultExecUser.Home,
 			},
 		},
@@ -204,18 +204,18 @@ this is just some garbage data
 		{
 			ref: "111",
 			expected: ExecUser{
-				Uid:   111,
-				Gid:   112,
-				Sgids: defaultExecUser.Sgids,
+				UID:   111,
+				GID:   112,
+				SGIDs: defaultExecUser.SGIDs,
 				Home:  "/home/odd",
 			},
 		},
 		{
 			ref: "111:444",
 			expected: ExecUser{
-				Uid:   111,
-				Gid:   444,
-				Sgids: defaultExecUser.Sgids,
+				UID:   111,
+				GID:   444,
+				SGIDs: defaultExecUser.SGIDs,
 				Home:  "/home/odd",
 			},
 		},
@@ -223,9 +223,9 @@ this is just some garbage data
 		{
 			ref: "7456",
 			expected: ExecUser{
-				Uid:   7456,
-				Gid:   100,
-				Sgids: []int{1234, 1000}, // 1000 is largegroup GID
+				UID:   7456,
+				GID:   100,
+				SGIDs: []int{1234, 1000}, // 1000 is largegroup GID
 				Home:  "/home/user7456",
 			},
 		},
@@ -310,9 +310,9 @@ this is just some garbage data
 `
 
 	defaultExecUser := ExecUser{
-		Uid:   8888,
-		Gid:   8888,
-		Sgids: []int{8888},
+		UID:   8888,
+		GID:   8888,
+		SGIDs: []int{8888},
 		Home:  "/8888",
 	}
 
@@ -326,9 +326,9 @@ this is just some garbage data
 			passwd: false,
 			group:  false,
 			expected: ExecUser{
-				Uid:   8888,
-				Gid:   8888,
-				Sgids: []int{8888},
+				UID:   8888,
+				GID:   8888,
+				SGIDs: []int{8888},
 				Home:  "/8888",
 			},
 		},
@@ -337,9 +337,9 @@ this is just some garbage data
 			passwd: true,
 			group:  false,
 			expected: ExecUser{
-				Uid:   0,
-				Gid:   0,
-				Sgids: []int{8888},
+				UID:   0,
+				GID:   0,
+				SGIDs: []int{8888},
 				Home:  "/root",
 			},
 		},
@@ -348,9 +348,9 @@ this is just some garbage data
 			passwd: false,
 			group:  false,
 			expected: ExecUser{
-				Uid:   0,
-				Gid:   8888,
-				Sgids: []int{8888},
+				UID:   0,
+				GID:   8888,
+				SGIDs: []int{8888},
 				Home:  "/8888",
 			},
 		},
@@ -359,9 +359,9 @@ this is just some garbage data
 			passwd: false,
 			group:  false,
 			expected: ExecUser{
-				Uid:   0,
-				Gid:   0,
-				Sgids: []int{8888},
+				UID:   0,
+				GID:   0,
+				SGIDs: []int{8888},
 				Home:  "/8888",
 			},
 		},

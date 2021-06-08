@@ -13,13 +13,13 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-type CpuGroup struct{}
+type CPUGroup struct{}
 
-func (s *CpuGroup) Name() string {
+func (s *CPUGroup) Name() string {
 	return "cpu"
 }
 
-func (s *CpuGroup) Apply(path string, r *configs.Resources, pid int) error {
+func (s *CPUGroup) Apply(path string, r *configs.Resources, pid int) error {
 	if err := os.MkdirAll(path, 0o755); err != nil {
 		return err
 	}
@@ -34,23 +34,23 @@ func (s *CpuGroup) Apply(path string, r *configs.Resources, pid int) error {
 	return cgroups.WriteCgroupProc(path, pid)
 }
 
-func (s *CpuGroup) SetRtSched(path string, r *configs.Resources) error {
-	if r.CpuRtPeriod != 0 {
-		if err := cgroups.WriteFile(path, "cpu.rt_period_us", strconv.FormatUint(r.CpuRtPeriod, 10)); err != nil {
+func (s *CPUGroup) SetRtSched(path string, r *configs.Resources) error {
+	if r.CPURtPeriod != 0 {
+		if err := cgroups.WriteFile(path, "cpu.rt_period_us", strconv.FormatUint(r.CPURtPeriod, 10)); err != nil {
 			return err
 		}
 	}
-	if r.CpuRtRuntime != 0 {
-		if err := cgroups.WriteFile(path, "cpu.rt_runtime_us", strconv.FormatInt(r.CpuRtRuntime, 10)); err != nil {
+	if r.CPURtRuntime != 0 {
+		if err := cgroups.WriteFile(path, "cpu.rt_runtime_us", strconv.FormatInt(r.CPURtRuntime, 10)); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (s *CpuGroup) Set(path string, r *configs.Resources) error {
-	if r.CpuShares != 0 {
-		shares := r.CpuShares
+func (s *CPUGroup) Set(path string, r *configs.Resources) error {
+	if r.CPUShares != 0 {
+		shares := r.CPUShares
 		if err := cgroups.WriteFile(path, "cpu.shares", strconv.FormatUint(shares, 10)); err != nil {
 			return err
 		}
@@ -68,8 +68,8 @@ func (s *CpuGroup) Set(path string, r *configs.Resources) error {
 	}
 
 	var period string
-	if r.CpuPeriod != 0 {
-		period = strconv.FormatUint(r.CpuPeriod, 10)
+	if r.CPUPeriod != 0 {
+		period = strconv.FormatUint(r.CPUPeriod, 10)
 		if err := cgroups.WriteFile(path, "cpu.cfs_period_us", period); err != nil {
 			// Sometimes when the period to be set is smaller
 			// than the current one, it is rejected by the kernel
@@ -77,15 +77,15 @@ func (s *CpuGroup) Set(path string, r *configs.Resources) error {
 			// cgroup quota limit. If this happens and the quota is
 			// going to be set, ignore the error for now and retry
 			// after setting the quota.
-			if !errors.Is(err, unix.EINVAL) || r.CpuQuota == 0 {
+			if !errors.Is(err, unix.EINVAL) || r.CPUQuota == 0 {
 				return err
 			}
 		} else {
 			period = ""
 		}
 	}
-	if r.CpuQuota != 0 {
-		if err := cgroups.WriteFile(path, "cpu.cfs_quota_us", strconv.FormatInt(r.CpuQuota, 10)); err != nil {
+	if r.CPUQuota != 0 {
+		if err := cgroups.WriteFile(path, "cpu.cfs_quota_us", strconv.FormatInt(r.CPUQuota, 10)); err != nil {
 			return err
 		}
 		if period != "" {
@@ -97,7 +97,7 @@ func (s *CpuGroup) Set(path string, r *configs.Resources) error {
 	return s.SetRtSched(path, r)
 }
 
-func (s *CpuGroup) GetStats(path string, stats *cgroups.Stats) error {
+func (s *CPUGroup) GetStats(path string, stats *cgroups.Stats) error {
 	const file = "cpu.stat"
 	f, err := cgroups.OpenFile(path, file, os.O_RDONLY)
 	if err != nil {
@@ -116,13 +116,13 @@ func (s *CpuGroup) GetStats(path string, stats *cgroups.Stats) error {
 		}
 		switch t {
 		case "nr_periods":
-			stats.CpuStats.ThrottlingData.Periods = v
+			stats.CPUStats.ThrottlingData.Periods = v
 
 		case "nr_throttled":
-			stats.CpuStats.ThrottlingData.ThrottledPeriods = v
+			stats.CPUStats.ThrottlingData.ThrottledPeriods = v
 
 		case "throttled_time":
-			stats.CpuStats.ThrottlingData.ThrottledTime = v
+			stats.CPUStats.ThrottlingData.ThrottledTime = v
 		}
 	}
 	return nil

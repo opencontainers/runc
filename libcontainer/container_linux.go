@@ -95,10 +95,10 @@ type Container interface {
 	// Methods below here are platform specific
 
 	// Checkpoint checkpoints the running container's state to disk using the criu(8) utility.
-	Checkpoint(criuOpts *CriuOpts) error
+	Checkpoint(criuOpts *CRIUOpts) error
 
 	// Restore restores the checkpointed container to a running state using the criu(8) utility.
-	Restore(process *Process, criuOpts *CriuOpts) error
+	Restore(process *Process, criuOpts *CRIUOpts) error
 
 	// If the Container state is RUNNING or CREATED, sets the Container state to PAUSING and pauses
 	// the execution of any user processes. Asynchronously, when the container finished being paused the
@@ -580,13 +580,13 @@ func (c *linuxContainer) newInitProcess(p *Process, cmd *exec.Cmd, messageSockPa
 			mountFds[i] = stdioFdCount + len(cmd.ExtraFiles) - 1
 		}
 
-		mountFdsJson, err := json.Marshal(mountFds)
+		mountFdsJSON, err := json.Marshal(mountFds)
 		if err != nil {
 			return nil, fmt.Errorf("Error creating _LIBCONTAINER_MOUNT_FDS: %w", err)
 		}
 
 		cmd.Env = append(cmd.Env,
-			"_LIBCONTAINER_MOUNT_FDS="+string(mountFdsJson),
+			"_LIBCONTAINER_MOUNT_FDS="+string(mountFdsJSON),
 		)
 	}
 
@@ -665,7 +665,7 @@ func (c *linuxContainer) newInitConfig(process *Process) *initConfig {
 		Cwd:              process.Cwd,
 		Capabilities:     process.Capabilities,
 		PassedFilesCount: len(process.ExtraFiles),
-		ContainerId:      c.ID(),
+		ContainerID:      c.ID(),
 		NoNewPrivileges:  c.config.NoNewPrivileges,
 		RootlessEUID:     c.config.RootlessEUID,
 		RootlessCgroups:  c.config.RootlessCgroups,
@@ -760,7 +760,7 @@ func (c *linuxContainer) NotifyMemoryPressure(level PressureLevel) (<-chan struc
 
 var criuFeatures *criurpc.CriuFeatures
 
-func (c *linuxContainer) checkCriuFeatures(criuOpts *CriuOpts, rpcOpts *criurpc.CriuOpts, criuFeat *criurpc.CriuFeatures) error {
+func (c *linuxContainer) checkCRIUFeatures(criuOpts *CRIUOpts, rpcOpts *criurpc.CriuOpts, criuFeat *criurpc.CriuFeatures) error {
 	t := criurpc.CriuReqType_FEATURE_CHECK
 
 	// make sure the features we are looking for are really not from
@@ -811,7 +811,7 @@ func (c *linuxContainer) checkCriuFeatures(criuOpts *CriuOpts, rpcOpts *criurpc.
 	return nil
 }
 
-func compareCriuVersion(criuVersion int, minVersion int) error {
+func compareCRIUVersion(criuVersion int, minVersion int) error {
 	// simple function to perform the actual version compare
 	if criuVersion < minVersion {
 		return fmt.Errorf("CRIU version %d must be %d or higher", criuVersion, minVersion)
@@ -820,12 +820,12 @@ func compareCriuVersion(criuVersion int, minVersion int) error {
 	return nil
 }
 
-// checkCriuVersion checks Criu version greater than or equal to minVersion
-func (c *linuxContainer) checkCriuVersion(minVersion int) error {
+// checkCRIUVersion checks Criu version greater than or equal to minVersion
+func (c *linuxContainer) checkCRIUVersion(minVersion int) error {
 	// If the version of criu has already been determined there is no need
 	// to ask criu for the version again. Use the value from c.criuVersion.
 	if c.criuVersion != 0 {
-		return compareCriuVersion(c.criuVersion, minVersion)
+		return compareCRIUVersion(c.criuVersion, minVersion)
 	}
 
 	criu := criu.MakeCriu()
@@ -836,12 +836,12 @@ func (c *linuxContainer) checkCriuVersion(minVersion int) error {
 		return fmt.Errorf("CRIU version check failed: %w", err)
 	}
 
-	return compareCriuVersion(c.criuVersion, minVersion)
+	return compareCRIUVersion(c.criuVersion, minVersion)
 }
 
 const descriptorsFilename = "descriptors.json"
 
-func (c *linuxContainer) addCriuDumpMount(req *criurpc.CriuReq, m *configs.Mount) {
+func (c *linuxContainer) addCRIUDumpMount(req *criurpc.CriuReq, m *configs.Mount) {
 	mountDest := strings.TrimPrefix(m.Destination, c.config.Rootfs)
 	if dest, err := securejoin.SecureJoin(c.config.Rootfs, mountDest); err == nil {
 		mountDest = dest[len(c.config.Rootfs):]
@@ -875,7 +875,7 @@ func (c *linuxContainer) addMaskPaths(req *criurpc.CriuReq) error {
 	return nil
 }
 
-func (c *linuxContainer) handleCriuConfigurationFile(rpcOpts *criurpc.CriuOpts) {
+func (c *linuxContainer) handleCRIUConfigurationFile(rpcOpts *criurpc.CriuOpts) {
 	// CRIU will evaluate a configuration starting with release 3.11.
 	// Settings in the configuration file will overwrite RPC settings.
 	// Look for annotations. The annotation 'org.criu.config'
@@ -914,7 +914,7 @@ func (c *linuxContainer) criuSupportsExtNS(t configs.NamespaceType) bool {
 	default:
 		return false
 	}
-	return c.checkCriuVersion(minVersion) == nil
+	return c.checkCRIUVersion(minVersion) == nil
 }
 
 func criuNsToKey(t configs.NamespaceType) string {
@@ -1012,7 +1012,7 @@ func (c *linuxContainer) handleRestoringExternalNamespaces(rpcOpts *criurpc.Criu
 	return nil
 }
 
-func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
+func (c *linuxContainer) Checkpoint(criuOpts *CRIUOpts) error {
 	c.m.Lock()
 	defer c.m.Unlock()
 
@@ -1023,7 +1023,7 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 	//               rootless containers might make this complicated.
 
 	// We are relying on the CRIU version RPC which was introduced with CRIU 3.0.0
-	if err := c.checkCriuVersion(30000); err != nil {
+	if err := c.checkCRIUVersion(30000); err != nil {
 		return err
 	}
 
@@ -1053,7 +1053,7 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 		Pid:             proto.Int32(int32(c.initProcess.pid())),
 		ShellJob:        proto.Bool(criuOpts.ShellJob),
 		LeaveRunning:    proto.Bool(criuOpts.LeaveRunning),
-		TcpEstablished:  proto.Bool(criuOpts.TcpEstablished),
+		TcpEstablished:  proto.Bool(criuOpts.TCPEstablished),
 		ExtUnixSk:       proto.Bool(criuOpts.ExternalUnixConnections),
 		FileLocks:       proto.Bool(criuOpts.FileLocks),
 		EmptyNs:         proto.Uint32(criuOpts.EmptyNs),
@@ -1075,7 +1075,7 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 		rpcOpts.WorkDirFd = proto.Int32(int32(workDir.Fd()))
 	}
 
-	c.handleCriuConfigurationFile(&rpcOpts)
+	c.handleCRIUConfigurationFile(&rpcOpts)
 
 	// If the container is running in a network namespace and has
 	// a path to the network namespace configured, we will dump
@@ -1095,7 +1095,7 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 	// CRIU can use cgroup freezer; when rpcOpts.FreezeCgroup
 	// is not set, CRIU uses ptrace() to pause the processes.
 	// Note cgroup v2 freezer is only supported since CRIU release 3.14.
-	if !cgroups.IsCgroup2UnifiedMode() || c.checkCriuVersion(31400) == nil {
+	if !cgroups.IsCgroup2UnifiedMode() || c.checkCRIUVersion(31400) == nil {
 		if fcg := c.cgroupManager.Path("freezer"); fcg != "" {
 			rpcOpts.FreezeCgroup = proto.String(fcg)
 		}
@@ -1127,7 +1127,7 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 			MemTrack: proto.Bool(true),
 		}
 
-		if err := c.checkCriuFeatures(criuOpts, &rpcOpts, &feat); err != nil {
+		if err := c.checkCRIUFeatures(criuOpts, &rpcOpts, &feat); err != nil {
 			return err
 		}
 
@@ -1141,7 +1141,7 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 		feat := criurpc.CriuFeatures{
 			LazyPages: proto.Bool(true),
 		}
-		if err := c.checkCriuFeatures(criuOpts, &rpcOpts, &feat); err != nil {
+		if err := c.checkCRIUFeatures(criuOpts, &rpcOpts, &feat); err != nil {
 			return err
 		}
 
@@ -1156,7 +1156,7 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 				return fmt.Errorf("invalid --status-fd argument %d: not writable", fd)
 			}
 
-			if c.checkCriuVersion(31500) != nil {
+			if c.checkCRIUVersion(31500) != nil {
 				// For criu 3.15+, use notifications (see case "status-ready"
 				// in criuNotifications). Otherwise, rely on criu status fd.
 				rpcOpts.StatusFd = proto.Int32(int32(fd))
@@ -1175,7 +1175,7 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 		for _, m := range c.config.Mounts {
 			switch m.Device {
 			case "bind":
-				c.addCriuDumpMount(req, m)
+				c.addCRIUDumpMount(req, m)
 			case "cgroup":
 				if cgroups.IsCgroup2UnifiedMode() || hasCgroupns {
 					// real mount(s)
@@ -1187,7 +1187,7 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 					return err
 				}
 				for _, b := range binds {
-					c.addCriuDumpMount(req, b)
+					c.addCRIUDumpMount(req, b)
 				}
 			}
 		}
@@ -1198,7 +1198,7 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 
 		for _, node := range c.config.Devices {
 			m := &configs.Mount{Destination: node.Path, Source: node.Path}
-			c.addCriuDumpMount(req, m)
+			c.addCRIUDumpMount(req, m)
 		}
 
 		// Write the FD info to a file in the image directory
@@ -1220,7 +1220,7 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 	return nil
 }
 
-func (c *linuxContainer) addCriuRestoreMount(req *criurpc.CriuReq, m *configs.Mount) {
+func (c *linuxContainer) addCRIURestoreMount(req *criurpc.CriuReq, m *configs.Mount) {
 	mountDest := strings.TrimPrefix(m.Destination, c.config.Rootfs)
 	if dest, err := securejoin.SecureJoin(c.config.Rootfs, mountDest); err == nil {
 		mountDest = dest[len(c.config.Rootfs):]
@@ -1232,7 +1232,7 @@ func (c *linuxContainer) addCriuRestoreMount(req *criurpc.CriuReq, m *configs.Mo
 	req.Opts.ExtMnt = append(req.Opts.ExtMnt, extMnt)
 }
 
-func (c *linuxContainer) restoreNetwork(req *criurpc.CriuReq, criuOpts *CriuOpts) {
+func (c *linuxContainer) restoreNetwork(req *criurpc.CriuReq, criuOpts *CRIUOpts) {
 	for _, iface := range c.config.Networks {
 		switch iface.Type {
 		case "veth":
@@ -1252,10 +1252,10 @@ func (c *linuxContainer) restoreNetwork(req *criurpc.CriuReq, criuOpts *CriuOpts
 	}
 }
 
-// makeCriuRestoreMountpoints makes the actual mountpoints for the
+// makeCRIURestoreMountpoints makes the actual mountpoints for the
 // restore using CRIU. This function is inspired from the code in
 // rootfs_linux.go
-func (c *linuxContainer) makeCriuRestoreMountpoints(m *configs.Mount) error {
+func (c *linuxContainer) makeCRIURestoreMountpoints(m *configs.Mount) error {
 	switch m.Device {
 	case "cgroup":
 		// No mount point(s) need to be created:
@@ -1301,13 +1301,13 @@ func isPathInPrefixList(path string, prefix []string) bool {
 	return false
 }
 
-// prepareCriuRestoreMounts tries to set up the rootfs of the
+// prepareCRIURestoreMounts tries to set up the rootfs of the
 // container to be restored in the same way runc does it for
 // initial container creation. Even for a read-only rootfs container
 // runc modifies the rootfs to add mountpoints which do not exist.
 // This function also creates missing mountpoints as long as they
 // are not on top of a tmpfs, as CRIU will restore tmpfs content anyway.
-func (c *linuxContainer) prepareCriuRestoreMounts(mounts []*configs.Mount) error {
+func (c *linuxContainer) prepareCRIURestoreMounts(mounts []*configs.Mount) error {
 	// First get a list of a all tmpfs mounts
 	tmpfs := []string{}
 	for _, m := range mounts {
@@ -1336,7 +1336,7 @@ func (c *linuxContainer) prepareCriuRestoreMounts(mounts []*configs.Mount) error
 	}()
 	for _, m := range mounts {
 		if !isPathInPrefixList(m.Destination, tmpfs) {
-			if err := c.makeCriuRestoreMountpoints(m); err != nil {
+			if err := c.makeCRIURestoreMountpoints(m); err != nil {
 				return err
 			}
 			// If the mount point is a bind mount, we need to mount
@@ -1364,7 +1364,7 @@ func (c *linuxContainer) prepareCriuRestoreMounts(mounts []*configs.Mount) error
 	return nil
 }
 
-func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
+func (c *linuxContainer) Restore(process *Process, criuOpts *CRIUOpts) error {
 	c.m.Lock()
 	defer c.m.Unlock()
 
@@ -1376,7 +1376,7 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 	//               support for unprivileged restore at the moment.
 
 	// We are relying on the CRIU version RPC which was introduced with CRIU 3.0.0
-	if err := c.checkCriuVersion(30000); err != nil {
+	if err := c.checkCRIUVersion(30000); err != nil {
 		return err
 	}
 	if criuOpts.ImagesDirectory == "" {
@@ -1420,7 +1420,7 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 			NotifyScripts:   proto.Bool(true),
 			ShellJob:        proto.Bool(criuOpts.ShellJob),
 			ExtUnixSk:       proto.Bool(criuOpts.ExternalUnixConnections),
-			TcpEstablished:  proto.Bool(criuOpts.TcpEstablished),
+			TcpEstablished:  proto.Bool(criuOpts.TCPEstablished),
 			FileLocks:       proto.Bool(criuOpts.FileLocks),
 			EmptyNs:         proto.Uint32(criuOpts.EmptyNs),
 			OrphanPtsMaster: proto.Bool(true),
@@ -1432,13 +1432,13 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 	if criuOpts.LsmProfile != "" {
 		// CRIU older than 3.16 has a bug which breaks the possibility
 		// to set a different LSM profile.
-		if err := c.checkCriuVersion(31600); err != nil {
+		if err := c.checkCRIUVersion(31600); err != nil {
 			return errors.New("--lsm-profile requires at least CRIU 3.16")
 		}
 		req.Opts.LsmProfile = proto.String(criuOpts.LsmProfile)
 	}
 	if criuOpts.LsmMountContext != "" {
-		if err := c.checkCriuVersion(31600); err != nil {
+		if err := c.checkCRIUVersion(31600); err != nil {
 			return errors.New("--lsm-mount-context requires at least CRIU 3.16")
 		}
 		req.Opts.LsmMountContext = proto.String(criuOpts.LsmMountContext)
@@ -1457,7 +1457,7 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 		defer workDir.Close()
 		req.Opts.WorkDirFd = proto.Int32(int32(workDir.Fd()))
 	}
-	c.handleCriuConfigurationFile(req.Opts)
+	c.handleCRIUConfigurationFile(req.Opts)
 
 	if err := c.handleRestoringNamespaces(req.Opts, &extraFiles); err != nil {
 		return err
@@ -1465,7 +1465,7 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 
 	// This will modify the rootfs of the container in the same way runc
 	// modifies the container during initial creation.
-	if err := c.prepareCriuRestoreMounts(c.config.Mounts); err != nil {
+	if err := c.prepareCRIURestoreMounts(c.config.Mounts); err != nil {
 		return err
 	}
 
@@ -1473,7 +1473,7 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 	for _, m := range c.config.Mounts {
 		switch m.Device {
 		case "bind":
-			c.addCriuRestoreMount(req, m)
+			c.addCRIURestoreMount(req, m)
 		case "cgroup":
 			if cgroups.IsCgroup2UnifiedMode() || hasCgroupns {
 				continue
@@ -1484,19 +1484,19 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 				return err
 			}
 			for _, b := range binds {
-				c.addCriuRestoreMount(req, b)
+				c.addCRIURestoreMount(req, b)
 			}
 		}
 	}
 
 	if len(c.config.MaskPaths) > 0 {
 		m := &configs.Mount{Destination: "/dev/null", Source: "/dev/null"}
-		c.addCriuRestoreMount(req, m)
+		c.addCRIURestoreMount(req, m)
 	}
 
 	for _, node := range c.config.Devices {
 		m := &configs.Mount{Destination: node.Path, Source: node.Path}
-		c.addCriuRestoreMount(req, m)
+		c.addCRIURestoreMount(req, m)
 	}
 
 	if criuOpts.EmptyNs&unix.CLONE_NEWNET == 0 {
@@ -1575,7 +1575,7 @@ func (c *linuxContainer) criuApplyCgroups(pid int, req *criurpc.CriuReq) error {
 	return nil
 }
 
-func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *CriuOpts, extraFiles []*os.File) error {
+func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *CRIUOpts, extraFiles []*os.File) error {
 	fds, err := unix.Socketpair(unix.AF_LOCAL, unix.SOCK_SEQPACKET|unix.SOCK_CLOEXEC, 0)
 	if err != nil {
 		return err
@@ -1794,7 +1794,7 @@ func unlockNetwork(config *configs.Config) error {
 	return nil
 }
 
-func (c *linuxContainer) criuNotifications(resp *criurpc.CriuResp, process *Process, cmd *exec.Cmd, opts *CriuOpts, fds []string, oob []byte) error {
+func (c *linuxContainer) criuNotifications(resp *criurpc.CriuResp, process *Process, cmd *exec.Cmd, opts *CRIUOpts, fds []string, oob []byte) error {
 	notify := resp.GetNotify()
 	if notify == nil {
 		return fmt.Errorf("invalid response: %s", resp.String())
@@ -2152,14 +2152,14 @@ func (c *linuxContainer) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Na
 	_, joinExistingUser := nsMaps[configs.NEWUSER]
 	if !joinExistingUser {
 		// write uid mappings
-		if len(c.config.UidMappings) > 0 {
+		if len(c.config.UIDMappings) > 0 {
 			if c.config.RootlessEUID && c.newuidmapPath != "" {
 				r.AddData(&Bytemsg{
 					Type:  UidmapPathAttr,
 					Value: []byte(c.newuidmapPath),
 				})
 			}
-			b, err := encodeIDMapping(c.config.UidMappings)
+			b, err := encodeIDMapping(c.config.UIDMappings)
 			if err != nil {
 				return nil, err
 			}
@@ -2170,8 +2170,8 @@ func (c *linuxContainer) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Na
 		}
 
 		// write gid mappings
-		if len(c.config.GidMappings) > 0 {
-			b, err := encodeIDMapping(c.config.GidMappings)
+		if len(c.config.GIDMappings) > 0 {
+			b, err := encodeIDMapping(c.config.GIDMappings)
 			if err != nil {
 				return nil, err
 			}
@@ -2194,11 +2194,11 @@ func (c *linuxContainer) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Na
 		}
 	}
 
-	if c.config.OomScoreAdj != nil {
+	if c.config.OOMScoreAdj != nil {
 		// write oom_score_adj
 		r.AddData(&Bytemsg{
 			Type:  OomScoreAdjAttr,
-			Value: []byte(strconv.Itoa(*c.config.OomScoreAdj)),
+			Value: []byte(strconv.Itoa(*c.config.OOMScoreAdj)),
 		})
 	}
 
@@ -2259,5 +2259,5 @@ func requiresRootOrMappingTool(c *configs.Config) bool {
 	gidMap := []configs.IDMap{
 		{ContainerID: 0, HostID: os.Getegid(), Size: 1},
 	}
-	return !reflect.DeepEqual(c.GidMappings, gidMap)
+	return !reflect.DeepEqual(c.GIDMappings, gidMap)
 }

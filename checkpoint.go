@@ -109,7 +109,7 @@ func prepareImagePaths(context *cli.Context) (string, string, error) {
 	return imagePath, parentPath, nil
 }
 
-func setPageServer(context *cli.Context, options *libcontainer.CriuOpts) {
+func setPageServer(context *cli.Context, options *libcontainer.CRIUOpts) {
 	// xxx following criu opts are optional
 	// The dump image can be sent to a criu page server
 	if psOpt := context.String("page-server"); psOpt != "" {
@@ -122,14 +122,14 @@ func setPageServer(context *cli.Context, options *libcontainer.CriuOpts) {
 		if err != nil {
 			fatal(errors.New("Invalid port number"))
 		}
-		options.PageServer = libcontainer.CriuPageServerInfo{
+		options.PageServer = libcontainer.CRIUPageServerInfo{
 			Address: address,
 			Port:    int32(portInt),
 		}
 	}
 }
 
-func setManageCgroupsMode(context *cli.Context, options *libcontainer.CriuOpts) {
+func setManageCgroupsMode(context *cli.Context, options *libcontainer.CRIUOpts) {
 	if cgOpt := context.String("manage-cgroups-mode"); cgOpt != "" {
 		switch cgOpt {
 		case "soft":
@@ -148,7 +148,7 @@ var namespaceMapping = map[specs.LinuxNamespaceType]int{
 	specs.NetworkNamespace: unix.CLONE_NEWNET,
 }
 
-func setEmptyNsMask(context *cli.Context, options *libcontainer.CriuOpts) error {
+func setEmptyNsMask(context *cli.Context, options *libcontainer.CRIUOpts) error {
 	/* Runc doesn't manage network devices and their configuration */
 	nsmask := unix.CLONE_NEWNET
 

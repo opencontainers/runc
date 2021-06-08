@@ -115,7 +115,7 @@ func (s *MemoryGroup) Set(path string, r *configs.Resources) error {
 		}
 	}
 
-	if r.OomKillDisable {
+	if r.OOMKillDisable {
 		if err := cgroups.WriteFile(path, "memory.oom_control", "1"); err != nil {
 			return err
 		}

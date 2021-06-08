@@ -23,9 +23,9 @@ func TestCpuSetShares(t *testing.T) {
 	})
 
 	r := &configs.Resources{
-		CpuShares: sharesAfter,
+		CPUShares: sharesAfter,
 	}
-	cpu := &CpuGroup{}
+	cpu := &CPUGroup{}
 	if err := cpu.Set(path, r); err != nil {
 		t.Fatal(err)
 	}
@@ -61,12 +61,12 @@ func TestCpuSetBandWidth(t *testing.T) {
 	})
 
 	r := &configs.Resources{
-		CpuQuota:     quotaAfter,
-		CpuPeriod:    periodAfter,
-		CpuRtRuntime: rtRuntimeAfter,
-		CpuRtPeriod:  rtPeriodAfter,
+		CPUQuota:     quotaAfter,
+		CPUPeriod:    periodAfter,
+		CPURtRuntime: rtRuntimeAfter,
+		CPURtPeriod:  rtPeriodAfter,
 	}
-	cpu := &CpuGroup{}
+	cpu := &CPUGroup{}
 	if err := cpu.Set(path, r); err != nil {
 		t.Fatal(err)
 	}
@@ -119,7 +119,7 @@ func TestCpuStats(t *testing.T) {
 		"cpu.stat": cpuStatContent,
 	})
 
-	cpu := &CpuGroup{}
+	cpu := &CPUGroup{}
 	actualStats := *cgroups.NewStats()
 	err := cpu.GetStats(path, &actualStats)
 	if err != nil {
@@ -132,13 +132,13 @@ func TestCpuStats(t *testing.T) {
 		ThrottledTime:    throttledTime,
 	}
 
-	expectThrottlingDataEquals(t, expectedStats, actualStats.CpuStats.ThrottlingData)
+	expectThrottlingDataEquals(t, expectedStats, actualStats.CPUStats.ThrottlingData)
 }
 
 func TestNoCpuStatFile(t *testing.T) {
 	path := tempDir(t, "cpu")
 
-	cpu := &CpuGroup{}
+	cpu := &CPUGroup{}
 	actualStats := *cgroups.NewStats()
 	err := cpu.GetStats(path, &actualStats)
 	if err != nil {
@@ -156,7 +156,7 @@ func TestInvalidCpuStat(t *testing.T) {
 		"cpu.stat": cpuStatContent,
 	})
 
-	cpu := &CpuGroup{}
+	cpu := &CPUGroup{}
 	actualStats := *cgroups.NewStats()
 	err := cpu.GetStats(path, &actualStats)
 	if err == nil {
@@ -180,10 +180,10 @@ func TestCpuSetRtSchedAtApply(t *testing.T) {
 	})
 
 	r := &configs.Resources{
-		CpuRtRuntime: rtRuntimeAfter,
-		CpuRtPeriod:  rtPeriodAfter,
+		CPURtRuntime: rtRuntimeAfter,
+		CPURtPeriod:  rtPeriodAfter,
 	}
-	cpu := &CpuGroup{}
+	cpu := &CPUGroup{}
 
 	if err := cpu.Apply(path, r, 1234); err != nil {
 		t.Fatal(err)

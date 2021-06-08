@@ -60,7 +60,7 @@ var legacySubsystems = []subsystem{
 	&fs.CpusetGroup{},
 	&fs.DevicesGroup{},
 	&fs.MemoryGroup{},
-	&fs.CpuGroup{},
+	&fs.CPUGroup{},
 	&fs.CpuacctGroup{},
 	&fs.PidsGroup{},
 	&fs.BlkioGroup{},
@@ -87,24 +87,24 @@ func genV1ResourcesProperties(r *configs.Resources, cm *dbusConnManager) ([]syst
 			newProp("MemoryLimit", uint64(r.Memory)))
 	}
 
-	if r.CpuShares != 0 {
+	if r.CPUShares != 0 {
 		properties = append(properties,
-			newProp("CPUShares", r.CpuShares))
+			newProp("CPUShares", r.CPUShares))
 	}
 
-	addCPUQuota(cm, &properties, r.CpuQuota, r.CpuPeriod)
+	addCPUQuota(cm, &properties, r.CPUQuota, r.CPUPeriod)
 
 	if r.BlkioWeight != 0 {
 		properties = append(properties,
 			newProp("BlockIOWeight", uint64(r.BlkioWeight)))
 	}
 
-	if r.PidsLimit > 0 || r.PidsLimit == -1 {
+	if r.PIDsLimit > 0 || r.PIDsLimit == -1 {
 		properties = append(properties,
-			newProp("TasksMax", uint64(r.PidsLimit)))
+			newProp("TasksMax", uint64(r.PIDsLimit)))
 	}
 
-	err = addCPUSet(cm, &properties, r.CpusetCpus, r.CpusetMems)
+	err = addCPUSet(cm, &properties, r.CPUSetCPUs, r.CPUSetMems)
 	if err != nil {
 		return nil, err
 	}

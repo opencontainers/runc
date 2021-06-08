@@ -12,7 +12,7 @@ func TestGetCMTNumaNodeStats(t *testing.T) {
 		"llc_occupancy": 9123911,
 	}
 
-	mockedL3_MON := mockResctrlL3_MON(t, mocksNUMANodesToCreate, mocksFilesToCreate)
+	mockedL3_MON := mockResctrlL3_MON(t, mocksNUMANodesToCreate, mocksFilesToCreate) //nolint:revive // ignore var mockedL3_MON should be mockedL3MON
 
 	t.Run("Gather mbm", func(t *testing.T) {
 		enabledMonFeatures.llcOccupancy = true

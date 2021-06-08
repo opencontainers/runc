@@ -20,11 +20,11 @@ type Device struct {
 	// FileMode permission bits for the device.
 	FileMode os.FileMode `json:"file_mode"`
 
-	// Uid of the device.
-	Uid uint32 `json:"uid"`
+	// UID of the device.
+	UID uint32 `json:"uid"`
 
-	// Gid of the device.
-	Gid uint32 `json:"gid"`
+	// GID of the device.
+	GID uint32 `json:"gid"`
 }
 
 // Permissions is a cgroupv1-style string to represent device access. It

@@ -37,7 +37,7 @@ func TestParseMonFeatures(t *testing.T) {
 	})
 }
 
-func mockResctrlL3_MON(t *testing.T, NUMANodes []string, mocks map[string]uint64) string {
+func mockResctrlL3_MON(t *testing.T, NUMANodes []string, mocks map[string]uint64) string { //nolint:revive // ignore func mockResctrlL3_MON should be mockResctrlL3MON
 	t.Helper()
 	testDir := t.TempDir()
 	monDataPath := filepath.Join(testDir, "mon_data")
@@ -76,7 +76,7 @@ func TestGetMonitoringStats(t *testing.T) {
 		"llc_occupancy":   123331,
 	}
 
-	mockedL3_MON := mockResctrlL3_MON(t, mocksNUMANodesToCreate, mocksFilesToCreate)
+	mockedL3_MON := mockResctrlL3_MON(t, mocksNUMANodesToCreate, mocksFilesToCreate) //nolint:revive // ignore var mockedL3_MON should be mockedL3MON
 
 	t.Run("Gather monitoring stats", func(t *testing.T) {
 		var stats Stats

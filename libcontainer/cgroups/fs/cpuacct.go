@@ -66,12 +66,12 @@ func (s *CpuacctGroup) GetStats(path string, stats *cgroups.Stats) error {
 		return err
 	}
 
-	stats.CpuStats.CpuUsage.TotalUsage = totalUsage
-	stats.CpuStats.CpuUsage.PercpuUsage = percpuUsage
-	stats.CpuStats.CpuUsage.PercpuUsageInKernelmode = percpuUsageInKernelmode
-	stats.CpuStats.CpuUsage.PercpuUsageInUsermode = percpuUsageInUsermode
-	stats.CpuStats.CpuUsage.UsageInUsermode = userModeUsage
-	stats.CpuStats.CpuUsage.UsageInKernelmode = kernelModeUsage
+	stats.CPUStats.CPUUsage.TotalUsage = totalUsage
+	stats.CPUStats.CPUUsage.PerCPUUsage = percpuUsage
+	stats.CPUStats.CPUUsage.PerCPUUsageInKernelmode = percpuUsageInKernelmode
+	stats.CPUStats.CPUUsage.PerCPUUsageInUsermode = percpuUsageInUsermode
+	stats.CPUStats.CPUUsage.UsageInUsermode = userModeUsage
+	stats.CPUStats.CPUUsage.UsageInKernelmode = kernelModeUsage
 	return nil
 }
 

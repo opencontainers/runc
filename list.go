@@ -134,7 +134,7 @@ func getContainers(context *cli.Context) ([]containerState, error) {
 			}
 			// This cast is safe on Linux.
 			uid := st.Sys().(*syscall.Stat_t).Uid
-			owner, err := user.LookupUid(int(uid))
+			owner, err := user.LookupUID(int(uid))
 			if err != nil {
 				owner.Name = fmt.Sprintf("#%d", uid)
 			}

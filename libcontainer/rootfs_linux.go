@@ -732,7 +732,7 @@ func mknodDevice(dest string, node *devices.Device) error {
 	if err := unix.Mknod(dest, uint32(fileMode), int(dev)); err != nil {
 		return &os.PathError{Op: "mknod", Path: dest, Err: err}
 	}
-	return os.Chown(dest, int(node.Uid), int(node.Gid))
+	return os.Chown(dest, int(node.UID), int(node.GID))
 }
 
 // Get the parent mount point of directory passed in as argument. Also return

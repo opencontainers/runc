@@ -61,7 +61,7 @@ type initConfig struct {
 	Config           *configs.Config       `json:"config"`
 	Networks         []*network            `json:"network"`
 	PassedFilesCount int                   `json:"passed_files_count"`
-	ContainerId      string                `json:"containerid"`
+	ContainerID      string                `json:"containerid"`
 	Rlimits          []configs.Rlimit      `json:"rlimits"`
 	CreateConsole    bool                  `json:"create_console"`
 	ConsoleWidth     uint16                `json:"console_width"`
@@ -88,7 +88,7 @@ func newContainerInit(t initType, pipe *os.File, consoleSocket *os.File, fifoFd,
 	case initSetns:
 		// mountFds must be nil in this case. We don't mount while doing runc exec.
 		if mountFds != nil {
-			return nil, errors.New("mountFds must be nil. Can't mount while doing runc exec.")
+			return nil, errors.New("mountFds must be nil. Can't mount while doing runc exec")
 		}
 
 		return &linuxSetnsInit{
@@ -311,8 +311,8 @@ func syncParentSeccomp(pipe io.ReadWriter, seccompFd int) error {
 func setupUser(config *initConfig) error {
 	// Set up defaults.
 	defaultExecUser := user.ExecUser{
-		Uid:  0,
-		Gid:  0,
+		UID:  0,
+		GID:  0,
 		Home: "/",
 	}
 
@@ -341,10 +341,10 @@ func setupUser(config *initConfig) error {
 
 	// Rather than just erroring out later in setuid(2) and setgid(2), check
 	// that the user is mapped here.
-	if _, err := config.Config.HostUID(execUser.Uid); err != nil {
+	if _, err := config.Config.HostUID(execUser.UID); err != nil {
 		return errors.New("cannot set uid to unmapped user in user namespace")
 	}
-	if _, err := config.Config.HostGID(execUser.Gid); err != nil {
+	if _, err := config.Config.HostGID(execUser.GID); err != nil {
 		return errors.New("cannot set gid to unmapped user in user namespace")
 	}
 
@@ -376,16 +376,16 @@ func setupUser(config *initConfig) error {
 	allowSupGroups := !config.RootlessEUID && string(bytes.TrimSpace(setgroups)) != "deny"
 
 	if allowSupGroups {
-		suppGroups := append(execUser.Sgids, addGroups...)
+		suppGroups := append(execUser.SGIDs, addGroups...)
 		if err := unix.Setgroups(suppGroups); err != nil {
 			return &os.SyscallError{Syscall: "setgroups", Err: err}
 		}
 	}
 
-	if err := system.Setgid(execUser.Gid); err != nil {
+	if err := system.Setgid(execUser.GID); err != nil {
 		return err
 	}
-	if err := system.Setuid(execUser.Uid); err != nil {
+	if err := system.Setuid(execUser.UID); err != nil {
 		return err
 	}
 
@@ -427,7 +427,7 @@ func fixStdioPermissions(u *user.ExecUser) error {
 		// that users expect to be able to actually use their console. Without
 		// this code, you couldn't effectively run as a non-root user inside a
 		// container and also have a console set up.
-		if err := unix.Fchown(int(fd), u.Uid, int(s.Gid)); err != nil {
+		if err := unix.Fchown(int(fd), u.UID, int(s.Gid)); err != nil {
 			// If we've hit an EINVAL then s.Gid isn't mapped in the user
 			// namespace. If we've hit an EPERM then the inode's current owner
 			// is not mapped in our user namespace (in particular,

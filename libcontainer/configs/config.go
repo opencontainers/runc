@@ -153,18 +153,18 @@ type Config struct {
 	// If Rlimits are not set, the container will inherit rlimits from the parent process
 	Rlimits []Rlimit `json:"rlimits,omitempty"`
 
-	// OomScoreAdj specifies the adjustment to be made by the kernel when calculating oom scores
+	// OOMScoreAdj specifies the adjustment to be made by the kernel when calculating oom scores
 	// for a process. Valid values are between the range [-1000, '1000'], where processes with
 	// higher scores are preferred for being killed. If it is unset then we don't touch the current
 	// value.
 	// More information about kernel oom score calculation here: https://lwn.net/Articles/317814/
-	OomScoreAdj *int `json:"oom_score_adj,omitempty"`
+	OOMScoreAdj *int `json:"oom_score_adj,omitempty"`
 
-	// UidMappings is an array of User ID mappings for User Namespaces
-	UidMappings []IDMap `json:"uid_mappings"`
+	// UIDMappings is an array of User ID mappings for User Namespaces
+	UIDMappings []IDMap `json:"uid_mappings"`
 
-	// GidMappings is an array of Group ID mappings for User Namespaces
-	GidMappings []IDMap `json:"gid_mappings"`
+	// GIDMappings is an array of Group ID mappings for User Namespaces
+	GIDMappings []IDMap `json:"gid_mappings"`
 
 	// MaskPaths specifies paths within the container's rootfs to mask over with a bind
 	// mount pointing to /dev/null as to prevent reads of the file.

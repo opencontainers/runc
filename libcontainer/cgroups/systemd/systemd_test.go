@@ -93,7 +93,7 @@ func TestPodSkipDevicesUpdate(t *testing.T) {
 		Parent:  "system.slice",
 		Name:    podName,
 		Resources: &configs.Resources{
-			PidsLimit:   42,
+			PIDsLimit:   42,
 			Memory:      32 * 1024 * 1024,
 			SkipDevices: true,
 		},
@@ -157,7 +157,7 @@ func TestPodSkipDevicesUpdate(t *testing.T) {
 
 	// Now update the pod a few times.
 	for i := 0; i < 42; i++ {
-		podConfig.Resources.PidsLimit++
+		podConfig.Resources.PIDsLimit++
 		podConfig.Resources.Memory += 1024 * 1024
 		if err := pm.Set(podConfig.Resources); err != nil {
 			t.Fatal(err)

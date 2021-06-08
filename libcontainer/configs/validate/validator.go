@@ -112,7 +112,7 @@ func (v *ConfigValidator) usernamespace(config *configs.Config) error {
 			return errors.New("USER namespaces aren't enabled in the kernel")
 		}
 	} else {
-		if config.UidMappings != nil || config.GidMappings != nil {
+		if config.UIDMappings != nil || config.GIDMappings != nil {
 			return errors.New("User namespace mappings specified, but USER namespace isn't enabled in the config")
 		}
 	}

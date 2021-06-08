@@ -13,7 +13,7 @@ func TestGetMBMNumaNodeStats(t *testing.T) {
 		"mbm_local_bytes": 2361361,
 	}
 
-	mockedL3_MON := mockResctrlL3_MON(t, mocksNUMANodesToCreate, mocksFilesToCreate)
+	mockedL3_MON := mockResctrlL3_MON(t, mocksNUMANodesToCreate, mocksFilesToCreate) //nolint:revive // ignore var mockedL3_MON should be mockedL3MON
 
 	t.Run("Gather mbm", func(t *testing.T) {
 		enabledMonFeatures.mbmTotalBytes = true

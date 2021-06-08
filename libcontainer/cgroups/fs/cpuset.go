@@ -25,13 +25,13 @@ func (s *CpusetGroup) Apply(path string, r *configs.Resources, pid int) error {
 }
 
 func (s *CpusetGroup) Set(path string, r *configs.Resources) error {
-	if r.CpusetCpus != "" {
-		if err := cgroups.WriteFile(path, "cpuset.cpus", r.CpusetCpus); err != nil {
+	if r.CPUSetCPUs != "" {
+		if err := cgroups.WriteFile(path, "cpuset.cpus", r.CPUSetCPUs); err != nil {
 			return err
 		}
 	}
-	if r.CpusetMems != "" {
-		if err := cgroups.WriteFile(path, "cpuset.mems", r.CpusetMems); err != nil {
+	if r.CPUSetMems != "" {
+		if err := cgroups.WriteFile(path, "cpuset.mems", r.CPUSetMems); err != nil {
 			return err
 		}
 	}

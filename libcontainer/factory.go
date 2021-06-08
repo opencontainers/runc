@@ -5,7 +5,7 @@ import (
 )
 
 type Factory interface {
-	// Creates a new container with the given id and starts the initial process inside it.
+	// Create creates a new container with the given id and starts the initial process inside it.
 	// id must be a string containing only letters, digits and underscores and must contain
 	// between 1 and 1024 characters, inclusive.
 	//

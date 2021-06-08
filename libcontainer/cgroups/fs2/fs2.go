@@ -176,7 +176,7 @@ func (m *manager) Set(r *configs.Resources) error {
 		return err
 	}
 	// cpuset (since kernel 5.0)
-	if err := setCpuset(m.dirPath, r); err != nil {
+	if err := setCPUSet(m.dirPath, r); err != nil {
 		return err
 	}
 	// hugetlb (since kernel 5.6)

@@ -385,7 +385,7 @@ func TestLinuxCgroupWithMemoryResource(t *testing.T) {
 	if cgroup.Resources.MemorySwappiness != swappinessPtr {
 		t.Errorf("Expected to have %d as memory swappiness, got %d", swappinessPtr, cgroup.Resources.MemorySwappiness)
 	}
-	if cgroup.Resources.OomKillDisable != disableOOMKiller {
+	if cgroup.Resources.OOMKillDisable != disableOOMKiller {
 		t.Errorf("The OOMKiller should be enabled")
 	}
 }
@@ -883,8 +883,8 @@ func TestCreateDevices(t *testing.T) {
 			wantDev := &devices.Device{
 				Path:     "/dev/tty",
 				FileMode: 0o666,
-				Uid:      1000,
-				Gid:      1000,
+				UID:      1000,
+				GID:      1000,
 				Rule: devices.Rule{
 					Type:  devices.CharDevice,
 					Major: 5,

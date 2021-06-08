@@ -13,10 +13,10 @@ var (
 // different when user namespaces are enabled.
 func (c Config) HostUID(containerID int) (int, error) {
 	if c.Namespaces.Contains(NEWUSER) {
-		if c.UidMappings == nil {
+		if c.UIDMappings == nil {
 			return -1, errNoUIDMap
 		}
-		id, found := c.hostIDFromMapping(containerID, c.UidMappings)
+		id, found := c.hostIDFromMapping(containerID, c.UIDMappings)
 		if !found {
 			return -1, errNoUserMap
 		}
@@ -36,10 +36,10 @@ func (c Config) HostRootUID() (int, error) {
 // different when user namespaces are enabled.
 func (c Config) HostGID(containerID int) (int, error) {
 	if c.Namespaces.Contains(NEWUSER) {
-		if c.GidMappings == nil {
+		if c.GIDMappings == nil {
 			return -1, errNoGIDMap
 		}
-		id, found := c.hostIDFromMapping(containerID, c.GidMappings)
+		id, found := c.hostIDFromMapping(containerID, c.GIDMappings)
 		if !found {
 			return -1, errNoGroupMap
 		}
