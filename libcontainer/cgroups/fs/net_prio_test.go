@@ -29,7 +29,7 @@ func TestNetPrioSetIfPrio(t *testing.T) {
 
 	value, err := fscommon.GetCgroupParamString(helper.CgroupPath, "net_prio.ifpriomap")
 	if err != nil {
-		t.Fatalf("Failed to parse net_prio.ifpriomap - %s", err)
+		t.Fatal(err)
 	}
 	if !strings.Contains(value, "test 5") {
 		t.Fatal("Got the wrong value, set net_prio.ifpriomap failed.")

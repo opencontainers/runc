@@ -283,7 +283,6 @@ func TestBlkioSetMultipleWeightDevice(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	if value != weightDeviceAfter {
 		t.Fatalf("Got the wrong value, set %s failed.", blkio.weightDeviceFilename)
 	}
@@ -772,9 +771,8 @@ func TestBlkioSetThrottleReadBpsDevice(t *testing.T) {
 
 	value, err := fscommon.GetCgroupParamString(helper.CgroupPath, "blkio.throttle.read_bps_device")
 	if err != nil {
-		t.Fatalf("Failed to parse blkio.throttle.read_bps_device - %s", err)
+		t.Fatal(err)
 	}
-
 	if value != throttleAfter {
 		t.Fatal("Got the wrong value, set blkio.throttle.read_bps_device failed.")
 	}
@@ -803,9 +801,8 @@ func TestBlkioSetThrottleWriteBpsDevice(t *testing.T) {
 
 	value, err := fscommon.GetCgroupParamString(helper.CgroupPath, "blkio.throttle.write_bps_device")
 	if err != nil {
-		t.Fatalf("Failed to parse blkio.throttle.write_bps_device - %s", err)
+		t.Fatal(err)
 	}
-
 	if value != throttleAfter {
 		t.Fatal("Got the wrong value, set blkio.throttle.write_bps_device failed.")
 	}
@@ -834,9 +831,8 @@ func TestBlkioSetThrottleReadIOpsDevice(t *testing.T) {
 
 	value, err := fscommon.GetCgroupParamString(helper.CgroupPath, "blkio.throttle.read_iops_device")
 	if err != nil {
-		t.Fatalf("Failed to parse blkio.throttle.read_iops_device - %s", err)
+		t.Fatal(err)
 	}
-
 	if value != throttleAfter {
 		t.Fatal("Got the wrong value, set blkio.throttle.read_iops_device failed.")
 	}
@@ -865,9 +861,8 @@ func TestBlkioSetThrottleWriteIOpsDevice(t *testing.T) {
 
 	value, err := fscommon.GetCgroupParamString(helper.CgroupPath, "blkio.throttle.write_iops_device")
 	if err != nil {
-		t.Fatalf("Failed to parse blkio.throttle.write_iops_device - %s", err)
+		t.Fatal(err)
 	}
-
 	if value != throttleAfter {
 		t.Fatal("Got the wrong value, set blkio.throttle.write_iops_device failed.")
 	}
