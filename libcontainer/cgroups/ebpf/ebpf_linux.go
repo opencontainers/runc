@@ -2,7 +2,9 @@ package ebpf
 
 import (
 	"fmt"
+	"os"
 	"runtime"
+	"sync"
 	"unsafe"
 
 	"github.com/cilium/ebpf"
@@ -72,6 +74,60 @@ func findAttachedCgroupDeviceFilters(dirFd int) ([]*ebpf.Program, error) {
 	return nil, errors.New("could not get complete list of CGROUP_DEVICE programs")
 }
 
+var (
+	haveBpfProgReplaceBool bool
+	haveBpfProgReplaceOnce sync.Once
+)
+
+// Loosely based on the BPF_F_REPLACE support check in
+//   <https://github.com/cilium/ebpf/blob/v0.6.0/link/syscalls.go>.
+func haveBpfProgReplace() bool {
+	haveBpfProgReplaceOnce.Do(func() {
+		prog, err := ebpf.NewProgram(&ebpf.ProgramSpec{
+			Type:    ebpf.CGroupDevice,
+			License: "MIT",
+			Instructions: asm.Instructions{
+				asm.Mov.Imm(asm.R0, 0),
+				asm.Return(),
+			},
+		})
+		if err != nil {
+			logrus.Debugf("checking for BPF_F_REPLACE support: ebpf.NewProgram failed: %v", err)
+			return
+		}
+		defer prog.Close()
+
+		devnull, err := os.Open("/dev/null")
+		if err != nil {
+			logrus.Debugf("checking for BPF_F_REPLACE support: open dummy target fd: %v", err)
+			return
+		}
+		defer devnull.Close()
+
+		// We know that we have BPF_PROG_ATTACH since we can load
+		// BPF_CGROUP_DEVICE programs. If passing BPF_F_REPLACE gives us EINVAL
+		// we know that the feature isn't present.
+		err = link.RawAttachProgram(link.RawAttachProgramOptions{
+			// We rely on this fd being checked after attachFlags.
+			Target: int(devnull.Fd()),
+			// Attempt to "replace" bad fds with this program.
+			Program: prog,
+			Attach:  ebpf.AttachCGroupDevice,
+			Flags:   unix.BPF_F_ALLOW_MULTI | unix.BPF_F_REPLACE,
+		})
+		if errors.Is(err, unix.EINVAL) {
+			// not supported
+			return
+		}
+		// attach_flags test succeded.
+		if !errors.Is(err, unix.EBADF) {
+			logrus.Debugf("checking for BPF_F_REPLACE: got unexpected (not EBADF or EINVAL) error: %v", err)
+		}
+		haveBpfProgReplaceBool = true
+	})
+	return haveBpfProgReplaceBool
+}
+
 // LoadAttachCgroupDeviceFilter installs eBPF device filter program to /sys/fs/cgroup/<foo> directory.
 //
 // Requires the system to be running in cgroup2 unified-mode with kernel >= 4.15 .
@@ -85,11 +141,15 @@ func LoadAttachCgroupDeviceFilter(insts asm.Instructions, license string, dirFd 
 		Max: unix.RLIM_INFINITY,
 	}
 	_ = unix.Setrlimit(unix.RLIMIT_MEMLOCK, memlockLimit)
+
 	// Get the list of existing programs.
 	oldProgs, err := findAttachedCgroupDeviceFilters(dirFd)
 	if err != nil {
 		return nilCloser, err
 	}
+	useReplaceProg := haveBpfProgReplace() && len(oldProgs) == 1
+
+	// Generate new program.
 	spec := &ebpf.ProgramSpec{
 		Type:         ebpf.CGroupDevice,
 		Instructions: insts,
@@ -99,17 +159,22 @@ func LoadAttachCgroupDeviceFilter(insts asm.Instructions, license string, dirFd 
 	if err != nil {
 		return nilCloser, err
 	}
+
 	// If there is only one old program, we can just replace it directly.
-	var replaceProg *ebpf.Program
-	if len(oldProgs) == 1 {
+	var (
+		replaceProg *ebpf.Program
+		attachFlags uint32 = unix.BPF_F_ALLOW_MULTI
+	)
+	if useReplaceProg {
 		replaceProg = oldProgs[0]
+		attachFlags |= unix.BPF_F_REPLACE
 	}
 	err = link.RawAttachProgram(link.RawAttachProgramOptions{
 		Target:  dirFd,
 		Program: prog,
 		Replace: replaceProg,
 		Attach:  ebpf.AttachCGroupDevice,
-		Flags:   unix.BPF_F_ALLOW_MULTI,
+		Flags:   attachFlags,
 	})
 	if err != nil {
 		return nilCloser, fmt.Errorf("failed to call BPF_PROG_ATTACH (BPF_CGROUP_DEVICE, BPF_F_ALLOW_MULTI): %w", err)
@@ -127,12 +192,38 @@ func LoadAttachCgroupDeviceFilter(insts asm.Instructions, license string, dirFd 
 		//       we fail-open on a security feature, which is a bit scary.
 		return nil
 	}
-	// If there was more than one old program, give a warning (since this
-	// really shouldn't happen with runc-managed cgroups) and then detach all
-	// the old programs.
-	if len(oldProgs) > 1 {
-		logrus.Warnf("found more than one filter (%d) attached to a cgroup -- removing extra filters!", len(oldProgs))
-		for _, oldProg := range oldProgs {
+	if !useReplaceProg {
+		logLevel := logrus.DebugLevel
+		// If there was more than one old program, give a warning (since this
+		// really shouldn't happen with runc-managed cgroups) and then detach
+		// all the old programs.
+		if len(oldProgs) > 1 {
+			// NOTE: Ideally this should be a warning but it turns out that
+			//       systemd-managed cgroups trigger this warning (apparently
+			//       systemd doesn't delete old non-systemd programs when
+			//       setting properties).
+			logrus.Infof("found more than one filter (%d) attached to a cgroup -- removing extra filters!", len(oldProgs))
+			logLevel = logrus.InfoLevel
+		}
+		for idx, oldProg := range oldProgs {
+			// Output some extra debug info.
+			if info, err := oldProg.Info(); err == nil {
+				fields := logrus.Fields{
+					"type": info.Type.String(),
+					"tag":  info.Tag,
+					"name": info.Name,
+				}
+				if id, ok := info.ID(); ok {
+					fields["id"] = id
+				}
+				if runCount, ok := info.RunCount(); ok {
+					fields["run_count"] = runCount
+				}
+				if runtime, ok := info.Runtime(); ok {
+					fields["runtime"] = runtime.String()
+				}
+				logrus.WithFields(fields).Logf(logLevel, "removing old filter %d from cgroup", idx)
+			}
 			err = link.RawDetachProgram(link.RawDetachProgramOptions{
 				Target:  dirFd,
 				Program: oldProg,
