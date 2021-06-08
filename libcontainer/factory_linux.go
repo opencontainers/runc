@@ -31,7 +31,10 @@ const (
 	execFifoFilename = "exec.fifo"
 )
 
-var idRegex = regexp.MustCompile(`^[\w+-\.]+$`)
+var (
+	idRegex      = regexp.MustCompile(`^[\w+-\.]+$`)
+	errNoSystemd = errors.New("systemd not running on this host, can't use systemd as cgroups manager")
+)
 
 // InitArgs returns an options func to configure a LinuxFactory with the
 // provided init binary path and arguments.
@@ -80,7 +83,7 @@ func systemdCgroupV2(l *LinuxFactory, rootless bool) error {
 // containers that use systemd to create and manage cgroups.
 func SystemdCgroups(l *LinuxFactory) error {
 	if !systemd.IsRunningSystemd() {
-		return fmt.Errorf("systemd not running on this host, can't use systemd as cgroups manager")
+		return errNoSystemd
 	}
 
 	if cgroups.IsCgroup2UnifiedMode() {
@@ -97,11 +100,11 @@ func SystemdCgroups(l *LinuxFactory) error {
 // RootlessSystemdCgroups is rootless version of SystemdCgroups.
 func RootlessSystemdCgroups(l *LinuxFactory) error {
 	if !systemd.IsRunningSystemd() {
-		return fmt.Errorf("systemd not running on this host, can't use systemd as cgroups manager")
+		return errNoSystemd
 	}
 
 	if !cgroups.IsCgroup2UnifiedMode() {
-		return fmt.Errorf("cgroup v2 not enabled on this host, can't use systemd (rootless) as cgroups manager")
+		return errors.New("cgroup v2 not enabled on this host, can't use systemd (rootless) as cgroups manager")
 	}
 	return systemdCgroupV2(l, true)
 }
@@ -246,7 +249,7 @@ type LinuxFactory struct {
 
 func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, error) {
 	if l.Root == "" {
-		return nil, newGenericError(fmt.Errorf("invalid root"), ConfigInvalid)
+		return nil, newGenericError(errors.New("invalid root"), ConfigInvalid)
 	}
 	if err := l.validateID(id); err != nil {
 		return nil, err
@@ -289,7 +292,7 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 
 func (l *LinuxFactory) Load(id string) (Container, error) {
 	if l.Root == "" {
-		return nil, newGenericError(fmt.Errorf("invalid root"), ConfigInvalid)
+		return nil, newGenericError(errors.New("invalid root"), ConfigInvalid)
 	}
 	// when load, we need to check id is valid or not.
 	if err := l.validateID(id); err != nil {

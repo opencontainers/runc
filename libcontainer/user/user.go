@@ -119,7 +119,7 @@ func ParsePasswdFileFilter(path string, filter func(User) bool) ([]User, error) 
 
 func ParsePasswdFilter(r io.Reader, filter func(User) bool) ([]User, error) {
 	if r == nil {
-		return nil, fmt.Errorf("nil source for passwd-formatted data")
+		return nil, errors.New("nil source for passwd-formatted data")
 	}
 
 	var (
@@ -177,7 +177,7 @@ func ParseGroupFileFilter(path string, filter func(Group) bool) ([]Group, error)
 
 func ParseGroupFilter(r io.Reader, filter func(Group) bool) ([]Group, error) {
 	if r == nil {
-		return nil, fmt.Errorf("nil source for group-formatted data")
+		return nil, errors.New("nil source for group-formatted data")
 	}
 
 	var (
@@ -487,7 +487,7 @@ func ParseSubIDFileFilter(path string, filter func(SubID) bool) ([]SubID, error)
 
 func ParseSubIDFilter(r io.Reader, filter func(SubID) bool) ([]SubID, error) {
 	if r == nil {
-		return nil, fmt.Errorf("nil source for subid-formatted data")
+		return nil, errors.New("nil source for subid-formatted data")
 	}
 
 	var (
@@ -540,7 +540,7 @@ func ParseIDMapFileFilter(path string, filter func(IDMap) bool) ([]IDMap, error)
 
 func ParseIDMapFilter(r io.Reader, filter func(IDMap) bool) ([]IDMap, error) {
 	if r == nil {
-		return nil, fmt.Errorf("nil source for idmap-formatted data")
+		return nil, errors.New("nil source for idmap-formatted data")
 	}
 
 	var (

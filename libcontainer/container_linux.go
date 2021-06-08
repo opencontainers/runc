@@ -666,7 +666,7 @@ func (c *linuxContainer) Resume() error {
 		return err
 	}
 	if status != Paused {
-		return newGenericError(fmt.Errorf("container not paused"), ContainerNotPaused)
+		return newGenericError(errors.New("container not paused"), ContainerNotPaused)
 	}
 	if err := c.cgroupManager.Freeze(configs.Thawed); err != nil {
 		return err

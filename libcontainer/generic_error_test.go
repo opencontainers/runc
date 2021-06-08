@@ -1,20 +1,20 @@
 package libcontainer
 
 import (
-	"fmt"
+	"errors"
 	"io/ioutil"
 	"testing"
 )
 
 func TestErrorDetail(t *testing.T) {
-	err := newGenericError(fmt.Errorf("test error"), SystemError)
+	err := newGenericError(errors.New("test error"), SystemError)
 	if derr := err.Detail(ioutil.Discard); derr != nil {
 		t.Fatal(derr)
 	}
 }
 
 func TestErrorWithCode(t *testing.T) {
-	err := newGenericError(fmt.Errorf("test error"), SystemError)
+	err := newGenericError(errors.New("test error"), SystemError)
 	if code := err.Code(); code != SystemError {
 		t.Fatalf("expected err code %q but %q", SystemError, code)
 	}
@@ -35,7 +35,7 @@ func TestErrorWithError(t *testing.T) {
 	}
 
 	for _, v := range cc {
-		err := newSystemErrorWithCause(fmt.Errorf(v.errmsg), v.cause)
+		err := newSystemErrorWithCause(errors.New(v.errmsg), v.cause)
 
 		msg := err.Error()
 		if v.cause == "" && msg != v.errmsg {

@@ -154,7 +154,7 @@ func findCgroupMountpointAndRootFromMI(mounts []*mountinfo.Info, cgroupPath, sub
 
 func (m Mount) GetOwnCgroup(cgroups map[string]string) (string, error) {
 	if len(m.Subsystems) == 0 {
-		return "", fmt.Errorf("no subsystem for mount")
+		return "", errors.New("no subsystem for mount")
 	}
 
 	return getControllerPath(m.Subsystems[0], cgroups)

@@ -3,7 +3,7 @@
 package libcontainer
 
 import (
-	"fmt"
+	"errors"
 	"os"
 	"os/exec"
 
@@ -31,7 +31,7 @@ type restoredProcess struct {
 }
 
 func (p *restoredProcess) start() error {
-	return newGenericError(fmt.Errorf("restored process cannot be started"), SystemError)
+	return newGenericError(errors.New("restored process cannot be started"), SystemError)
 }
 
 func (p *restoredProcess) pid() int {
@@ -89,7 +89,7 @@ type nonChildProcess struct {
 }
 
 func (p *nonChildProcess) start() error {
-	return newGenericError(fmt.Errorf("restored process cannot be started"), SystemError)
+	return newGenericError(errors.New("restored process cannot be started"), SystemError)
 }
 
 func (p *nonChildProcess) pid() int {
@@ -97,11 +97,11 @@ func (p *nonChildProcess) pid() int {
 }
 
 func (p *nonChildProcess) terminate() error {
-	return newGenericError(fmt.Errorf("restored process cannot be terminated"), SystemError)
+	return newGenericError(errors.New("restored process cannot be terminated"), SystemError)
 }
 
 func (p *nonChildProcess) wait() (*os.ProcessState, error) {
-	return nil, newGenericError(fmt.Errorf("restored process cannot be waited on"), SystemError)
+	return nil, newGenericError(errors.New("restored process cannot be waited on"), SystemError)
 }
 
 func (p *nonChildProcess) startTime() (uint64, error) {

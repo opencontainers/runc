@@ -3,6 +3,7 @@
 package libcontainer
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -117,7 +118,7 @@ func (r *runningState) transition(s containerState) error {
 	switch s.(type) {
 	case *stoppedState:
 		if r.c.runType() == Running {
-			return newGenericError(fmt.Errorf("container still running"), ContainerNotStopped)
+			return newGenericError(errors.New("container still running"), ContainerNotStopped)
 		}
 		r.c.state = s
 		return nil
@@ -132,7 +133,7 @@ func (r *runningState) transition(s containerState) error {
 
 func (r *runningState) destroy() error {
 	if r.c.runType() == Running {
-		return newGenericError(fmt.Errorf("container is not destroyed"), ContainerNotStopped)
+		return newGenericError(errors.New("container is not destroyed"), ContainerNotStopped)
 	}
 	return destroy(r.c)
 }
@@ -190,7 +191,7 @@ func (p *pausedState) destroy() error {
 		}
 		return destroy(p.c)
 	}
-	return newGenericError(fmt.Errorf("container is paused"), ContainerPaused)
+	return newGenericError(errors.New("container is paused"), ContainerPaused)
 }
 
 // restoredState is the same as the running state but also has associated checkpoint

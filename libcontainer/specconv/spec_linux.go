@@ -216,7 +216,7 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 	}
 	spec := opts.Spec
 	if spec.Root == nil {
-		return nil, fmt.Errorf("Root must be specified")
+		return nil, errors.New("Root must be specified")
 	}
 	rootfsPath := spec.Root.Path
 	if !filepath.IsAbs(rootfsPath) {
@@ -263,7 +263,7 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 			return nil, fmt.Errorf("rootfsPropagation=%v is not supported", spec.Linux.RootfsPropagation)
 		}
 		if config.NoPivotRoot && (config.RootPropagation&unix.MS_PRIVATE != 0) {
-			return nil, fmt.Errorf("rootfsPropagation of [r]private is not safe without pivot_root")
+			return nil, errors.New("rootfsPropagation of [r]private is not safe without pivot_root")
 		}
 
 		for _, ns := range spec.Linux.Namespaces {
@@ -858,7 +858,7 @@ func SetupSeccomp(config *specs.LinuxSeccomp) (*configs.Seccomp, error) {
 
 	// We don't currently support seccomp flags.
 	if len(config.Flags) != 0 {
-		return nil, fmt.Errorf("seccomp flags are not yet supported by runc")
+		return nil, errors.New("seccomp flags are not yet supported by runc")
 	}
 
 	newConfig := new(configs.Seccomp)

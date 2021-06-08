@@ -4,6 +4,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -115,11 +116,11 @@ func execProcess(context *cli.Context) (int, error) {
 		return -1, err
 	}
 	if status == libcontainer.Stopped {
-		return -1, fmt.Errorf("cannot exec a container that has stopped")
+		return -1, errors.New("cannot exec a container that has stopped")
 	}
 	path := context.String("process")
 	if path == "" && len(context.Args()) == 1 {
-		return -1, fmt.Errorf("process args cannot be empty")
+		return -1, errors.New("process args cannot be empty")
 	}
 	detach := context.Bool("detach")
 	state, err := container.State()
