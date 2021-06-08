@@ -3,7 +3,6 @@
 package fscommon
 
 import (
-	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -13,8 +12,6 @@ import (
 )
 
 var (
-	ErrNotValidFormat = errors.New("line is not a valid key value format")
-
 	// Deprecated: use cgroups.OpenFile instead.
 	OpenFile = cgroups.OpenFile
 	// Deprecated: use cgroups.ReadFile instead.
