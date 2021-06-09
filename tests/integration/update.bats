@@ -611,10 +611,9 @@ EOF
 	# Trigger an update. This update doesn't actually change the device rules,
 	# but it will trigger the devices cgroup code to reapply the current rules.
 	# We trigger the update a few times to make sure we hit the race.
-	for _ in {1..12}; do
+	for _ in {1..120}; do
 		# TODO: Update "runc update" so we can change the device rules.
-		runc update --pids-limit 30 test_update
-		[ "$status" -eq 0 ]
+		__runc update --pids-limit 30 test_update # use __runc to avoid too much logs
 	done
 
 	# Kill recvtty.
