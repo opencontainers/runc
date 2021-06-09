@@ -268,10 +268,10 @@ func isHostNetNS(path string) (bool, error) {
 	var st1, st2 unix.Stat_t
 
 	if err := unix.Stat(currentProcessNetns, &st1); err != nil {
-		return false, fmt.Errorf("unable to stat %q: %s", currentProcessNetns, err)
+		return false, &os.PathError{Op: "stat", Path: currentProcessNetns, Err: err}
 	}
 	if err := unix.Stat(path, &st2); err != nil {
-		return false, fmt.Errorf("unable to stat %q: %s", path, err)
+		return false, &os.PathError{Op: "stat", Path: path, Err: err}
 	}
 
 	return (st1.Dev == st2.Dev) && (st1.Ino == st2.Ino), nil

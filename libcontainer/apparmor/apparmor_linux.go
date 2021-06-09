@@ -52,7 +52,7 @@ func setProcAttr(attr, value string) error {
 // changeOnExec reimplements aa_change_onexec from libapparmor in Go
 func changeOnExec(name string) error {
 	if err := setProcAttr("exec", "exec "+name); err != nil {
-		return fmt.Errorf("apparmor failed to apply profile: %s", err)
+		return fmt.Errorf("apparmor failed to apply profile: %w", err)
 	}
 	return nil
 }

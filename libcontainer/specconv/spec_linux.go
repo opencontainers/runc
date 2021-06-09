@@ -410,13 +410,13 @@ func initSystemdProps(spec *specs.Spec) ([]systemdDbus.Property, error) {
 		}
 		value, err := dbus.ParseVariant(v, dbus.Signature{})
 		if err != nil {
-			return nil, fmt.Errorf("Annotation %s=%s value parse error: %v", k, v, err)
+			return nil, fmt.Errorf("Annotation %s=%s value parse error: %w", k, v, err)
 		}
 		if isSecSuffix(name) {
 			name = strings.TrimSuffix(name, "Sec") + "USec"
 			value, err = convertSecToUSec(value)
 			if err != nil {
-				return nil, fmt.Errorf("Annotation %s=%s value parse error: %v", k, v, err)
+				return nil, fmt.Errorf("Annotation %s=%s value parse error: %w", k, v, err)
 			}
 		}
 		sp = append(sp, systemdDbus.Property{Name: name, Value: value})

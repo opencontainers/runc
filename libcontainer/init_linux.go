@@ -158,7 +158,7 @@ func finalizeNamespace(config *initConfig) error {
 			// to the directory, but the user running runc does not.
 			// This is useful in cases where the cwd is also a volume that's been chowned to the container user.
 		default:
-			return fmt.Errorf("chdir to cwd (%q) set in config.json failed: %v", config.Cwd, err)
+			return fmt.Errorf("chdir to cwd (%q) set in config.json failed: %w", config.Cwd, err)
 		}
 	}
 
@@ -186,7 +186,7 @@ func finalizeNamespace(config *initConfig) error {
 	// Change working directory AFTER the user has been set up, if we haven't done it yet.
 	if doChdir {
 		if err := unix.Chdir(config.Cwd); err != nil {
-			return fmt.Errorf("chdir to cwd (%q) set in config.json failed: %v", config.Cwd, err)
+			return fmt.Errorf("chdir to cwd (%q) set in config.json failed: %w", config.Cwd, err)
 		}
 	}
 	if err := system.ClearKeepCaps(); err != nil {
@@ -457,7 +457,7 @@ func setupRoute(config *configs.Config) error {
 func setupRlimits(limits []configs.Rlimit, pid int) error {
 	for _, rlimit := range limits {
 		if err := system.Prlimit(pid, rlimit.Type, unix.Rlimit{Max: rlimit.Hard, Cur: rlimit.Soft}); err != nil {
-			return fmt.Errorf("error setting rlimit type %v: %v", rlimit.Type, err)
+			return fmt.Errorf("error setting rlimit type %v: %w", rlimit.Type, err)
 		}
 	}
 	return nil

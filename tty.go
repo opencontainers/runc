@@ -136,7 +136,7 @@ func (t *tty) recvtty(process *libcontainer.Process, socket *os.File) (Err error
 
 	// Set raw mode for the controlling terminal.
 	if err := t.hostConsole.SetRaw(); err != nil {
-		return fmt.Errorf("failed to set the terminal from the stdin: %v", err)
+		return fmt.Errorf("failed to set the terminal from the stdin: %w", err)
 	}
 	go handleInterrupt(t.hostConsole)
 

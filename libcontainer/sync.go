@@ -48,14 +48,14 @@ func readSync(pipe io.Reader, expected syncType) error {
 		if err == io.EOF {
 			return errors.New("parent closed synchronisation channel")
 		}
-		return fmt.Errorf("failed reading error from parent: %v", err)
+		return fmt.Errorf("failed reading error from parent: %w", err)
 	}
 
 	if procSync.Type == procError {
 		var ierr genericError
 
 		if err := json.NewDecoder(pipe).Decode(&ierr); err != nil {
-			return fmt.Errorf("failed reading error from parent: %v", err)
+			return fmt.Errorf("failed reading error from parent: %w", err)
 		}
 
 		return &ierr

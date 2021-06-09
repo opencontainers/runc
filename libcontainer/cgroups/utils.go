@@ -376,7 +376,7 @@ func WriteCgroupProc(dir string, pid int) error {
 
 	file, err := OpenFile(dir, CgroupProcesses, os.O_WRONLY)
 	if err != nil {
-		return fmt.Errorf("failed to write %v to %v: %v", pid, CgroupProcesses, err)
+		return fmt.Errorf("failed to write %v to %v: %w", pid, CgroupProcesses, err)
 	}
 	defer file.Close()
 
@@ -393,7 +393,7 @@ func WriteCgroupProc(dir string, pid int) error {
 			continue
 		}
 
-		return fmt.Errorf("failed to write %v to %v: %v", pid, CgroupProcesses, err)
+		return fmt.Errorf("failed to write %v to %v: %w", pid, CgroupProcesses, err)
 	}
 	return err
 }

@@ -101,7 +101,7 @@ following will output a list of processes running in the container:
 		if err == nil {
 			os.Exit(status)
 		}
-		return fmt.Errorf("exec failed: %v", err)
+		return fmt.Errorf("exec failed: %w", err)
 	},
 	SkipArgReorder: true,
 }
@@ -212,13 +212,13 @@ func getProcess(context *cli.Context, bundle string) (*specs.Process, error) {
 		if len(u) > 1 {
 			gid, err := strconv.Atoi(u[1])
 			if err != nil {
-				return nil, fmt.Errorf("parsing %s as int for gid failed: %v", u[1], err)
+				return nil, fmt.Errorf("parsing %s as int for gid failed: %w", u[1], err)
 			}
 			p.User.GID = uint32(gid)
 		}
 		uid, err := strconv.Atoi(u[0])
 		if err != nil {
-			return nil, fmt.Errorf("parsing %s as int for uid failed: %v", u[0], err)
+			return nil, fmt.Errorf("parsing %s as int for uid failed: %w", u[0], err)
 		}
 		p.User.UID = uint32(uid)
 	}

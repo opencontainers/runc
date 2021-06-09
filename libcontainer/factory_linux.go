@@ -396,7 +396,7 @@ func (l *LinuxFactory) StartInitialization() (err error) {
 	}()
 	defer func() {
 		if e := recover(); e != nil {
-			err = fmt.Errorf("panic from initialization: %v, %v", e, string(debug.Stack()))
+			err = fmt.Errorf("panic from initialization: %w, %v", e, string(debug.Stack()))
 		}
 	}()
 

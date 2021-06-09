@@ -305,7 +305,7 @@ func GetExecUser(userSpec string, defaults *ExecUser, passwd, group io.Reader) (
 		if userArg == "" {
 			userArg = strconv.Itoa(user.Uid)
 		}
-		return nil, fmt.Errorf("unable to find user %s: %v", userArg, err)
+		return nil, fmt.Errorf("unable to find user %s: %w", userArg, err)
 	}
 
 	var matchedUserName string
@@ -321,7 +321,7 @@ func GetExecUser(userSpec string, defaults *ExecUser, passwd, group io.Reader) (
 
 		if uidErr != nil {
 			// Not numeric.
-			return nil, fmt.Errorf("unable to find user %s: %v", userArg, ErrNoPasswdEntries)
+			return nil, fmt.Errorf("unable to find user %s: %w", userArg, ErrNoPasswdEntries)
 		}
 		user.Uid = uidArg
 
@@ -356,7 +356,7 @@ func GetExecUser(userSpec string, defaults *ExecUser, passwd, group io.Reader) (
 			return g.Name == groupArg
 		})
 		if err != nil && group != nil {
-			return nil, fmt.Errorf("unable to find groups for spec %v: %v", matchedUserName, err)
+			return nil, fmt.Errorf("unable to find groups for spec %v: %w", matchedUserName, err)
 		}
 
 		// Only start modifying user.Gid if it is in explicit form.
@@ -370,7 +370,7 @@ func GetExecUser(userSpec string, defaults *ExecUser, passwd, group io.Reader) (
 
 				if gidErr != nil {
 					// Not numeric.
-					return nil, fmt.Errorf("unable to find group %s: %v", groupArg, ErrNoGroupEntries)
+					return nil, fmt.Errorf("unable to find group %s: %w", groupArg, ErrNoGroupEntries)
 				}
 				user.Gid = gidArg
 
@@ -411,7 +411,7 @@ func GetAdditionalGroups(additionalGroups []string, group io.Reader) ([]int, err
 			return false
 		})
 		if err != nil {
-			return nil, fmt.Errorf("Unable to find additional groups %v: %v", additionalGroups, err)
+			return nil, fmt.Errorf("Unable to find additional groups %v: %w", additionalGroups, err)
 		}
 	}
 
@@ -434,7 +434,8 @@ func GetAdditionalGroups(additionalGroups []string, group io.Reader) ([]int, err
 		if !found {
 			gid, err := strconv.ParseInt(ag, 10, 64)
 			if err != nil {
-				return nil, fmt.Errorf("Unable to find group %s", ag)
+				// Not a numeric ID either.
+				return nil, fmt.Errorf("Unable to find group %s: %w", ag, ErrNoGroupEntries)
 			}
 			// Ensure gid is inside gid range.
 			if gid < minID || gid > maxID {

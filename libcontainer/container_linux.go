@@ -478,7 +478,7 @@ func (c *linuxContainer) newParentProcess(p *Process) (parentProcess, error) {
 
 	parentLogPipe, childLogPipe, err := os.Pipe()
 	if err != nil {
-		return nil, fmt.Errorf("Unable to create the log pipe:  %s", err)
+		return nil, fmt.Errorf("unable to create log pipe: %w", err)
 	}
 	logFilePair := filePair{parentLogPipe, childLogPipe}
 
@@ -771,7 +771,7 @@ func (c *linuxContainer) checkCriuVersion(minVersion int) error {
 	var err error
 	c.criuVersion, err = criu.GetCriuVersion()
 	if err != nil {
-		return fmt.Errorf("CRIU version check failed: %s", err)
+		return fmt.Errorf("CRIU version check failed: %w", err)
 	}
 
 	return compareCriuVersion(c.criuVersion, minVersion)

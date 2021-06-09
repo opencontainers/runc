@@ -35,7 +35,7 @@ func init() {
 	// Call it to make sure images are downloaded, and to get the paths.
 	out, err := exec.Command(getImages).CombinedOutput()
 	if err != nil {
-		panic(fmt.Errorf("getImages error %s (output: %s)", err, out))
+		panic(fmt.Errorf("getImages error %w (output: %s)", err, out))
 	}
 	// Extract the value of BUSYBOX_IMAGE.
 	found := regexp.MustCompile(`(?m)^BUSYBOX_IMAGE=(.*)$`).FindSubmatchIndex(out)
@@ -145,7 +145,7 @@ func remove(dir string) {
 func copyBusybox(dest string) error {
 	out, err := exec.Command("sh", "-c", fmt.Sprintf("tar --exclude './dev/*' -C %q -xf %q", dest, busyboxTar)).CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("untar error %q: %q", err, out)
+		return fmt.Errorf("untar error %w: %q", err, out)
 	}
 	return nil
 }
