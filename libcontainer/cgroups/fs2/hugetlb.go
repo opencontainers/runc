@@ -46,7 +46,7 @@ func statHugeTlb(dirPath string, stats *cgroups.Stats) error {
 		fileName := "hugetlb." + pagesize + ".events"
 		value, err = fscommon.GetValueByKey(dirPath, fileName, "max")
 		if err != nil {
-			return errors.Wrap(err, "failed to read stats")
+			return err
 		}
 		hugetlbStats.Failcnt = value
 
