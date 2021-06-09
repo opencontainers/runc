@@ -3,6 +3,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -12,7 +13,6 @@ import (
 	"github.com/containerd/console"
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/utils"
-	"github.com/pkg/errors"
 )
 
 type tty struct {
@@ -77,16 +77,15 @@ func (t *tty) initHostConsole() error {
 	// the terminal, but they might be redirected, so try them all.
 	for _, s := range []*os.File{os.Stderr, os.Stdout, os.Stdin} {
 		c, err := console.ConsoleFromFile(s)
-		switch err {
-		case nil:
+		if err == nil {
 			t.hostConsole = c
 			return nil
-		case console.ErrNotAConsole:
-			continue
-		default:
-			// should not happen
-			return errors.Wrap(err, "unable to get console")
 		}
+		if errors.Is(err, console.ErrNotAConsole) {
+			continue
+		}
+		// should not happen
+		return fmt.Errorf("unable to get console: %w", err)
 	}
 	// If all streams are redirected, but we still have a controlling
 	// terminal, it can be obtained by opening /dev/tty.
@@ -96,7 +95,7 @@ func (t *tty) initHostConsole() error {
 	}
 	c, err := console.ConsoleFromFile(tty)
 	if err != nil {
-		return errors.Wrap(err, "unable to get console")
+		return fmt.Errorf("unable to get console: %w", err)
 	}
 
 	t.hostConsole = c
