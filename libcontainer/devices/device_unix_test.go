@@ -26,7 +26,7 @@ func TestDeviceFromPathLstatFailure(t *testing.T) {
 	defer cleanupTest()
 
 	_, err := DeviceFromPath("", "")
-	if err != testError {
+	if !errors.Is(err, testError) {
 		t.Fatalf("Unexpected error %v, expected %v", err, testError)
 	}
 }
@@ -41,7 +41,7 @@ func TestHostDevicesIoutilReadDirFailure(t *testing.T) {
 	defer cleanupTest()
 
 	_, err := HostDevices()
-	if err != testError {
+	if !errors.Is(err, testError) {
 		t.Fatalf("Unexpected error %v, expected %v", err, testError)
 	}
 }
@@ -68,7 +68,7 @@ func TestHostDevicesIoutilReadDirDeepFailure(t *testing.T) {
 	defer cleanupTest()
 
 	_, err := HostDevices()
-	if err != testError {
+	if !errors.Is(err, testError) {
 		t.Fatalf("Unexpected error %v, expected %v", err, testError)
 	}
 }

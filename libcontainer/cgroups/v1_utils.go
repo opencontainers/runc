@@ -46,11 +46,8 @@ func NewNotFoundError(sub string) error {
 }
 
 func IsNotFound(err error) bool {
-	if err == nil {
-		return false
-	}
-	_, ok := err.(*NotFoundError)
-	return ok
+	var nfErr *NotFoundError
+	return errors.As(err, &nfErr)
 }
 
 func tryDefaultPath(cgroupPath, subsystem string) string {

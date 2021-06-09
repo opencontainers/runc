@@ -488,21 +488,6 @@ func isWaitable(pid int) (bool, error) {
 	return si.si_pid != 0, nil
 }
 
-// isNoChildren returns true if err represents a unix.ECHILD (formerly syscall.ECHILD) false otherwise
-func isNoChildren(err error) bool {
-	switch err := err.(type) {
-	case unix.Errno:
-		if err == unix.ECHILD {
-			return true
-		}
-	case *os.SyscallError:
-		if err.Err == unix.ECHILD {
-			return true
-		}
-	}
-	return false
-}
-
 // signalAllProcesses freezes then iterates over all the processes inside the
 // manager's cgroups sending the signal s to them.
 // If s is SIGKILL then it will wait for each process to exit.
@@ -548,7 +533,7 @@ func signalAllProcesses(m cgroups.Manager, s os.Signal) error {
 	for _, p := range procs {
 		if s != unix.SIGKILL {
 			if ok, err := isWaitable(p.Pid); err != nil {
-				if !isNoChildren(err) {
+				if !errors.Is(err, unix.ECHILD) {
 					logrus.Warn("signalAllProcesses: ", p.Pid, err)
 				}
 				continue
@@ -565,7 +550,7 @@ func signalAllProcesses(m cgroups.Manager, s os.Signal) error {
 		// to retrieve its exit code.
 		if subreaper == 0 {
 			if _, err := p.Wait(); err != nil {
-				if !isNoChildren(err) {
+				if !errors.Is(err, unix.ECHILD) {
 					logrus.Warn("wait: ", err)
 				}
 			}

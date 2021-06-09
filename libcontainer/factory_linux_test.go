@@ -3,6 +3,7 @@
 package libcontainer
 
 import (
+	"errors"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -142,8 +143,8 @@ func TestFactoryLoadNotExists(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected nil error loading non-existing container")
 	}
-	lerr, ok := err.(Error)
-	if !ok {
+	var lerr Error
+	if !errors.As(err, &lerr) {
 		t.Fatal("expected libcontainer error type")
 	}
 	if lerr.Code() != ContainerNotExists {

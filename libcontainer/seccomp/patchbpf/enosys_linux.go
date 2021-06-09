@@ -85,17 +85,16 @@ loop:
 		// seccomp_export_bpf outputs the program in *host* endian-ness.
 		var insn unix.SockFilter
 		if err := binary.Read(rdr, utils.NativeEndian, &insn); err != nil {
-			switch err {
-			case io.EOF:
+			if errors.Is(err, io.EOF) {
 				// Parsing complete.
 				break loop
-			case io.ErrUnexpectedEOF:
+			}
+			if errors.Is(err, io.ErrUnexpectedEOF) {
 				// Parsing stopped mid-instruction.
 				return nil, errors.Wrap(err, "program parsing halted mid-instruction")
-			default:
-				// All other errors.
-				return nil, errors.Wrap(err, "parsing instructions")
 			}
+			// All other errors.
+			return nil, errors.Wrap(err, "parsing instructions")
 		}
 		program = append(program, bpf.RawInstruction{
 			Op: insn.Code,
