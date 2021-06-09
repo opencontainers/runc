@@ -255,6 +255,7 @@ func getPageUsageByNUMA(cgroupPath string) (cgroups.PageUsageByNUMA, error) {
 	} else if err != nil {
 		return stats, err
 	}
+	defer file.Close()
 
 	// File format is documented in linux/Documentation/cgroup-v1/memory.txt
 	// and it looks like this:
