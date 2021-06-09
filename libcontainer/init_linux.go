@@ -399,6 +399,8 @@ func fixStdioPermissions(config *initConfig, u *user.ExecUser) error {
 			// privileged_wrt_inode_uidgid() has failed). In either case, we
 			// are in a configuration where it's better for us to just not
 			// touch the stdio rather than bail at this point.
+
+			// nolint:errorlint // unix errors are bare
 			if err == unix.EINVAL || err == unix.EPERM {
 				continue
 			}

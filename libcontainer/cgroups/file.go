@@ -81,7 +81,7 @@ func prepareOpenat2() error {
 		})
 		if err != nil {
 			prepErr = &os.PathError{Op: "openat2", Path: cgroupfsDir, Err: err}
-			if err != unix.ENOSYS {
+			if err != unix.ENOSYS { //nolint:errorlint // unix errors are bare
 				logrus.Warnf("falling back to securejoin: %s", prepErr)
 			} else {
 				logrus.Debug("openat2 not available, falling back to securejoin")
