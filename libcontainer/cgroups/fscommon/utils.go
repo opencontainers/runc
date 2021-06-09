@@ -45,7 +45,10 @@ func ParseUint(s string, base, bitSize int) (uint64, error) {
 		// 2. Handle negative values lesser than MinInt64
 		if intErr == nil && intValue < 0 {
 			return 0, nil
-		} else if intErr != nil && intErr.(*strconv.NumError).Err == strconv.ErrRange && intValue < 0 {
+			// Note errors.Is is not working for strconv errors in Go 1.13,
+			// see https://github.com/golang/go/issues/36325.
+			// TODO: remove nolint and switch to errors.Is once we stop supporting Go 1.13.
+		} else if intErr != nil && intErr.(*strconv.NumError).Err == strconv.ErrRange && intValue < 0 { //nolint:errorlint
 			return 0, nil
 		}
 

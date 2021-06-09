@@ -15,6 +15,7 @@ import (
 	"sync"
 
 	"github.com/moby/sys/mountinfo"
+	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
@@ -366,24 +367,6 @@ func parseCpuInfoFile(path string) (cpuInfoFlags, error) {
 	return infoFlags, nil
 }
 
-func parseUint(s string, base, bitSize int) (uint64, error) {
-	value, err := strconv.ParseUint(s, base, bitSize)
-	if err != nil {
-		intValue, intErr := strconv.ParseInt(s, base, bitSize)
-		// 1. Handle negative values greater than MinInt64 (and)
-		// 2. Handle negative values lesser than MinInt64
-		if intErr == nil && intValue < 0 {
-			return 0, nil
-		} else if intErr != nil && intErr.(*strconv.NumError).Err == strconv.ErrRange && intValue < 0 {
-			return 0, nil
-		}
-
-		return value, err
-	}
-
-	return value, nil
-}
-
 // Gets a single uint64 value from the specified file.
 func getIntelRdtParamUint(path, file string) (uint64, error) {
 	fileName := filepath.Join(path, file)
@@ -392,7 +375,7 @@ func getIntelRdtParamUint(path, file string) (uint64, error) {
 		return 0, err
 	}
 
-	res, err := parseUint(string(bytes.TrimSpace(contents)), 10, 64)
+	res, err := fscommon.ParseUint(string(bytes.TrimSpace(contents)), 10, 64)
 	if err != nil {
 		return res, fmt.Errorf("unable to parse %q as a uint from file %q", string(contents), fileName)
 	}
