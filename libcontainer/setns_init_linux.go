@@ -44,7 +44,7 @@ func (l *linuxSetnsInit) Init() error {
 			// don't bail on ENOSYS.
 			//
 			// TODO(cyphar): And we should have logging here too.
-			if errors.Cause(err) != unix.ENOSYS {
+			if !errors.Is(err, unix.ENOSYS) {
 				return errors.Wrap(err, "join session keyring")
 			}
 		}
