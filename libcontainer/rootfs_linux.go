@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -577,7 +578,7 @@ func checkProcMount(rootfs, dest, source string) error {
 func isProc(path string) (bool, error) {
 	var s unix.Statfs_t
 	if err := unix.Statfs(path, &s); err != nil {
-		return false, err
+		return false, &os.PathError{Op: "statfs", Path: path, Err: err}
 	}
 	return s.Type == unix.PROC_SUPER_MAGIC, nil
 }
@@ -600,7 +601,7 @@ func setupDevSymlinks(rootfs string) error {
 			dst = filepath.Join(rootfs, link[1])
 		)
 		if err := os.Symlink(src, dst); err != nil && !os.IsExist(err) {
-			return fmt.Errorf("symlink %s %s %s", src, dst, err)
+			return err
 		}
 	}
 	return nil
@@ -614,11 +615,11 @@ func reOpenDevNull() error {
 	var stat, devNullStat unix.Stat_t
 	file, err := os.OpenFile("/dev/null", os.O_RDWR, 0)
 	if err != nil {
-		return fmt.Errorf("Failed to open /dev/null - %s", err)
+		return err
 	}
 	defer file.Close() //nolint: errcheck
 	if err := unix.Fstat(int(file.Fd()), &devNullStat); err != nil {
-		return err
+		return &os.PathError{Op: "fstat", Path: file.Name(), Err: err}
 	}
 	for fd := 0; fd < 3; fd++ {
 		if err := unix.Fstat(fd, &stat); err != nil {
@@ -627,7 +628,11 @@ func reOpenDevNull() error {
 		if stat.Rdev == devNullStat.Rdev {
 			// Close and re-open the fd.
 			if err := unix.Dup3(int(file.Fd()), fd, 0); err != nil {
-				return err
+				return &os.PathError{
+					Op:   "dup3",
+					Path: "fd " + strconv.Itoa(int(file.Fd())),
+					Err:  err,
+				}
 			}
 		}
 	}
@@ -808,7 +813,7 @@ func setupPtmx(config *configs.Config) error {
 		return err
 	}
 	if err := os.Symlink("pts/ptmx", ptmx); err != nil {
-		return fmt.Errorf("symlink dev ptmx %s", err)
+		return err
 	}
 	return nil
 }
@@ -824,23 +829,23 @@ func pivotRoot(rootfs string) error {
 
 	oldroot, err := unix.Open("/", unix.O_DIRECTORY|unix.O_RDONLY, 0)
 	if err != nil {
-		return err
+		return &os.PathError{Op: "open", Path: "/", Err: err}
 	}
 	defer unix.Close(oldroot) //nolint: errcheck
 
 	newroot, err := unix.Open(rootfs, unix.O_DIRECTORY|unix.O_RDONLY, 0)
 	if err != nil {
-		return err
+		return &os.PathError{Op: "open", Path: rootfs, Err: err}
 	}
 	defer unix.Close(newroot) //nolint: errcheck
 
 	// Change to the new root so that the pivot_root actually acts on it.
 	if err := unix.Fchdir(newroot); err != nil {
-		return err
+		return &os.PathError{Op: "fchdir", Path: "fd " + strconv.Itoa(newroot), Err: err}
 	}
 
 	if err := unix.PivotRoot(".", "."); err != nil {
-		return fmt.Errorf("pivot_root %s", err)
+		return &os.PathError{Op: "pivot_root", Path: ".", Err: err}
 	}
 
 	// Currently our "." is oldroot (according to the current kernel code).
@@ -849,7 +854,7 @@ func pivotRoot(rootfs string) error {
 	// pivot_root(2).
 
 	if err := unix.Fchdir(oldroot); err != nil {
-		return err
+		return &os.PathError{Op: "fchdir", Path: "fd " + strconv.Itoa(oldroot), Err: err}
 	}
 
 	// Make oldroot rslave to make sure our unmounts don't propagate to the
@@ -867,7 +872,7 @@ func pivotRoot(rootfs string) error {
 
 	// Switch back to our shiny new root.
 	if err := unix.Chdir("/"); err != nil {
-		return fmt.Errorf("chdir / %s", err)
+		return &os.PathError{Op: "chdir", Path: "/", Err: err}
 	}
 	return nil
 }
@@ -937,9 +942,12 @@ func msMoveRoot(rootfs string) error {
 
 func chroot() error {
 	if err := unix.Chroot("."); err != nil {
-		return err
+		return &os.PathError{Op: "chroot", Path: ".", Err: err}
 	}
-	return unix.Chdir("/")
+	if err := unix.Chdir("/"); err != nil {
+		return &os.PathError{Op: "chdir", Path: "/", Err: err}
+	}
+	return nil
 }
 
 // createIfNotExists creates a file or a directory only if it does not already exist.
