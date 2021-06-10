@@ -333,7 +333,10 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 
 func createLibcontainerMount(cwd string, m specs.Mount) (*configs.Mount, error) {
 	if !filepath.IsAbs(m.Destination) {
-		return nil, fmt.Errorf("mount destination %s not absolute", m.Destination)
+		// Relax validation for backward compatibility
+		// TODO (runc v1.x.x): change warning to an error
+		// return nil, fmt.Errorf("mount destination %s is not absolute", m.Destination)
+		logrus.Warnf("mount destination %s is not absolute. Support for non-absolute mount destinations will be removed in a future release.", m.Destination)
 	}
 	flags, pgflags, data, ext := parseMountOptions(m.Options)
 	source := m.Source
