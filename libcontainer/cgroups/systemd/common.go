@@ -178,7 +178,7 @@ func allowAllDevices() []systemdDbus.Property {
 // corresponding set of systemd properties to configure the devices correctly.
 func generateDeviceProperties(r *configs.Resources) ([]systemdDbus.Property, error) {
 	if r.SkipDevices {
-		return allowAllDevices(), nil
+		return nil, nil
 	}
 
 	properties := []systemdDbus.Property{
