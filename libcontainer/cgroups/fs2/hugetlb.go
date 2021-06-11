@@ -3,9 +3,8 @@
 package fs2
 
 import (
+	"fmt"
 	"strconv"
-
-	"github.com/pkg/errors"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
@@ -32,7 +31,7 @@ func setHugeTlb(dirPath string, r *configs.Resources) error {
 func statHugeTlb(dirPath string, stats *cgroups.Stats) error {
 	hugePageSizes, err := cgroups.GetHugePageSize()
 	if err != nil {
-		return errors.Wrap(err, "failed to fetch hugetlb info")
+		return fmt.Errorf("failed to fetch hugetlb info: %w", err)
 	}
 	hugetlbStats := cgroups.HugetlbStats{}
 

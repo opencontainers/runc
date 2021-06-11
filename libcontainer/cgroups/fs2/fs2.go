@@ -3,6 +3,7 @@
 package fs2
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -10,7 +11,6 @@ import (
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/pkg/errors"
 )
 
 type parseError = fscommon.ParseError
@@ -80,7 +80,7 @@ func (m *manager) Apply(pid int) error {
 				if blNeed, nErr := needAnyControllers(m.config.Resources); nErr == nil && !blNeed {
 					return nil
 				}
-				return errors.Wrap(err, "rootless needs no limits + no cgrouppath when no permission is granted for cgroups")
+				return fmt.Errorf("rootless needs no limits + no cgrouppath when no permission is granted for cgroups: %w", err)
 			}
 		}
 		return err
@@ -126,7 +126,7 @@ func (m *manager) GetStats() (*cgroups.Stats, error) {
 		errs = append(errs, err)
 	}
 	if len(errs) > 0 && !m.rootless {
-		return st, errors.Errorf("error while statting cgroup v2: %+v", errs)
+		return st, fmt.Errorf("error while statting cgroup v2: %+v", errs)
 	}
 	return st, nil
 }
@@ -200,9 +200,8 @@ func (m *manager) setUnified(res map[string]string) error {
 			return fmt.Errorf("unified resource %q must be a file name (no slashes)", k)
 		}
 		if err := cgroups.WriteFile(m.dirPath, k, v); err != nil {
-			errC := errors.Cause(err)
 			// Check for both EPERM and ENOENT since O_CREAT is used by WriteFile.
-			if errors.Is(errC, os.ErrPermission) || errors.Is(errC, os.ErrNotExist) {
+			if errors.Is(err, os.ErrPermission) || errors.Is(err, os.ErrNotExist) {
 				// Check if a controller is available,
 				// to give more specific error if not.
 				sk := strings.SplitN(k, ".", 2)
@@ -214,7 +213,7 @@ func (m *manager) setUnified(res map[string]string) error {
 					return fmt.Errorf("unified resource %q can't be set: controller %q not available", k, c)
 				}
 			}
-			return errors.Wrapf(err, "can't set unified resource %q", k)
+			return fmt.Errorf("unable to set unified resource %q: %w", k, err)
 		}
 	}
 

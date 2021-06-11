@@ -2,11 +2,12 @@ package cgroups
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
 	"os"
 	"strings"
 	"sync"
 
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
@@ -15,7 +16,7 @@ import (
 // It is supposed to be used for cgroup files only.
 func OpenFile(dir, file string, flags int) (*os.File, error) {
 	if dir == "" {
-		return nil, errors.Errorf("no directory specified for %s", file)
+		return nil, fmt.Errorf("no directory specified for %s", file)
 	}
 	return openFile(dir, file, flags)
 }
@@ -43,7 +44,8 @@ func WriteFile(dir, file, data string) error {
 	}
 	defer fd.Close()
 	if err := retryingWriteFile(fd, data); err != nil {
-		return errors.Wrapf(err, "failed to write %q", data)
+		// Having data in the error message helps in debugging.
+		return fmt.Errorf("failed to write %q: %w", data, err)
 	}
 	return nil
 }

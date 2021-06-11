@@ -4,6 +4,7 @@ package fs
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"math"
 	"os"
@@ -11,11 +12,11 @@ import (
 	"strconv"
 	"strings"
 
+	"golang.org/x/sys/unix"
+
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/pkg/errors"
-	"golang.org/x/sys/unix"
 )
 
 const (
@@ -56,7 +57,7 @@ func setMemory(path string, val int64) error {
 		return err
 	}
 
-	return errors.Errorf("unable to set memory limit to %d (current usage: %d, peak usage: %d)", val, usage, max)
+	return fmt.Errorf("unable to set memory limit to %d (current usage: %d, peak usage: %d)", val, usage, max)
 }
 
 func setSwap(path string, val int64) error {

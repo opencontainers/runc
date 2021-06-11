@@ -4,16 +4,17 @@ package fs2
 
 import (
 	"bufio"
+	"errors"
 	"math"
 	"os"
 	"strconv"
 	"strings"
 
+	"golang.org/x/sys/unix"
+
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/pkg/errors"
-	"golang.org/x/sys/unix"
 )
 
 // numToStr converts an int64 value to a string for writing to a
