@@ -5,6 +5,7 @@ package libcontainer
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -14,17 +15,17 @@ import (
 	"unsafe"
 
 	"github.com/containerd/console"
+	"github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/sirupsen/logrus"
+	"github.com/vishvananda/netlink"
+	"golang.org/x/sys/unix"
+
 	"github.com/opencontainers/runc/libcontainer/capabilities"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runc/libcontainer/user"
 	"github.com/opencontainers/runc/libcontainer/utils"
-	"github.com/opencontainers/runtime-spec/specs-go"
-	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-	"github.com/vishvananda/netlink"
-	"golang.org/x/sys/unix"
 )
 
 type initType string
@@ -139,7 +140,7 @@ func finalizeNamespace(config *initConfig) error {
 	// inherited are marked close-on-exec so they stay out of the
 	// container
 	if err := utils.CloseExecFrom(config.PassedFilesCount + 3); err != nil {
-		return errors.Wrap(err, "close exec fds")
+		return fmt.Errorf("error closing exec fds: %w", err)
 	}
 
 	// we only do chdir if it's specified
@@ -174,14 +175,14 @@ func finalizeNamespace(config *initConfig) error {
 	}
 	// drop capabilities in bounding set before changing user
 	if err := w.ApplyBoundingSet(); err != nil {
-		return errors.Wrap(err, "apply bounding set")
+		return fmt.Errorf("unable to apply bounding set: %w", err)
 	}
 	// preserve existing capabilities while we change users
 	if err := system.SetKeepCaps(); err != nil {
-		return errors.Wrap(err, "set keep caps")
+		return fmt.Errorf("unable to set keep caps: %w", err)
 	}
 	if err := setupUser(config); err != nil {
-		return errors.Wrap(err, "setup user")
+		return fmt.Errorf("unable to setup user: %w", err)
 	}
 	// Change working directory AFTER the user has been set up, if we haven't done it yet.
 	if doChdir {
@@ -190,10 +191,10 @@ func finalizeNamespace(config *initConfig) error {
 		}
 	}
 	if err := system.ClearKeepCaps(); err != nil {
-		return errors.Wrap(err, "clear keep caps")
+		return fmt.Errorf("unable to clear keep caps: %w", err)
 	}
 	if err := w.ApplyCaps(); err != nil {
-		return errors.Wrap(err, "apply caps")
+		return fmt.Errorf("unable to apply caps: %w", err)
 	}
 	return nil
 }

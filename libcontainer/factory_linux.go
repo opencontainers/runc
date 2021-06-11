@@ -4,6 +4,7 @@ package libcontainer
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,6 +14,8 @@ import (
 
 	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/moby/sys/mountinfo"
+	"golang.org/x/sys/unix"
+
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fs"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fs2"
@@ -21,9 +24,6 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs/validate"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runc/libcontainer/utils"
-	"github.com/pkg/errors"
-
-	"golang.org/x/sys/unix"
 )
 
 const (
@@ -59,13 +59,13 @@ func getUnifiedPath(paths map[string]string) string {
 		if path == "" {
 			path = v
 		} else if v != path {
-			panic(errors.Errorf("expected %q path to be unified path %q, got %q", k, path, v))
+			panic(fmt.Errorf("expected %q path to be unified path %q, got %q", k, path, v))
 		}
 	}
 	// can be empty
 	if path != "" {
 		if filepath.Clean(path) != path || !filepath.IsAbs(path) {
-			panic(errors.Errorf("invalid dir path %q", path))
+			panic(fmt.Errorf("invalid dir path %q", path))
 		}
 	}
 

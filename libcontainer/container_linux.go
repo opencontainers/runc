@@ -19,21 +19,20 @@ import (
 	"sync"
 	"time"
 
+	"github.com/checkpoint-restore/go-criu/v5"
+	criurpc "github.com/checkpoint-restore/go-criu/v5/rpc"
 	securejoin "github.com/cyphar/filepath-securejoin"
+	"github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/sirupsen/logrus"
+	"github.com/vishvananda/netlink/nl"
+	"golang.org/x/sys/unix"
+	"google.golang.org/protobuf/proto"
+
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runc/libcontainer/utils"
-	"github.com/opencontainers/runtime-spec/specs-go"
-
-	"github.com/checkpoint-restore/go-criu/v5"
-	criurpc "github.com/checkpoint-restore/go-criu/v5/rpc"
-	errorsf "github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-	"github.com/vishvananda/netlink/nl"
-	"golang.org/x/sys/unix"
-	"google.golang.org/protobuf/proto"
 )
 
 const stdioFdCount = 3
@@ -390,7 +389,7 @@ func (c *linuxContainer) start(process *Process) (retErr error) {
 
 			if err := c.config.Hooks[configs.Poststart].RunHooks(s); err != nil {
 				if err := ignoreTerminateErrors(parent.terminate()); err != nil {
-					logrus.Warn(errorsf.Wrapf(err, "Running Poststart hook"))
+					logrus.Warn(fmt.Errorf("error running poststart hook: %w", err))
 				}
 				return err
 			}

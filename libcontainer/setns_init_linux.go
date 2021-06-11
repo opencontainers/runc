@@ -3,17 +3,19 @@
 package libcontainer
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"runtime"
+
+	"github.com/opencontainers/selinux/go-selinux"
+	"github.com/sirupsen/logrus"
+	"golang.org/x/sys/unix"
 
 	"github.com/opencontainers/runc/libcontainer/apparmor"
 	"github.com/opencontainers/runc/libcontainer/keys"
 	"github.com/opencontainers/runc/libcontainer/seccomp"
 	"github.com/opencontainers/runc/libcontainer/system"
-	"github.com/opencontainers/selinux/go-selinux"
-	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-	"golang.org/x/sys/unix"
 )
 
 // linuxSetnsInit performs the container's initialization for running a new process
@@ -45,7 +47,7 @@ func (l *linuxSetnsInit) Init() error {
 			//
 			// TODO(cyphar): And we should have logging here too.
 			if !errors.Is(err, unix.ENOSYS) {
-				return errors.Wrap(err, "join session keyring")
+				return fmt.Errorf("unable to join session keyring: %w", err)
 			}
 		}
 	}

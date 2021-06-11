@@ -3,21 +3,23 @@
 package libcontainer
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"runtime"
 	"strconv"
+
+	"github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/opencontainers/selinux/go-selinux"
+	"github.com/sirupsen/logrus"
+	"golang.org/x/sys/unix"
 
 	"github.com/opencontainers/runc/libcontainer/apparmor"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/keys"
 	"github.com/opencontainers/runc/libcontainer/seccomp"
 	"github.com/opencontainers/runc/libcontainer/system"
-	"github.com/opencontainers/runtime-spec/specs-go"
-	"github.com/opencontainers/selinux/go-selinux"
-	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-	"golang.org/x/sys/unix"
 )
 
 type linuxStandardInit struct {
@@ -66,14 +68,14 @@ func (l *linuxStandardInit) Init() error {
 			// TODO(cyphar): Log this so people know what's going on, once we
 			//               have proper logging in 'runc init'.
 			if !errors.Is(err, unix.ENOSYS) {
-				return errors.Wrap(err, "join session keyring")
+				return fmt.Errorf("unable to join session keyring: %w", err)
 			}
 		} else {
 			// Make session keyring searcheable. If we've gotten this far we
 			// bail on any error -- we don't want to have a keyring with bad
 			// permissions.
 			if err := keys.ModKeyringPerm(sessKeyId, keepperms, newperms); err != nil {
-				return errors.Wrap(err, "mod keyring permissions")
+				return fmt.Errorf("unable to mod keyring permissions: %w", err)
 			}
 		}
 	}
@@ -98,7 +100,7 @@ func (l *linuxStandardInit) Init() error {
 			return err
 		}
 		if err := system.Setctty(); err != nil {
-			return errors.Wrap(err, "setctty")
+			return &os.SyscallError{Syscall: "ioctl(setctty)", Err: err}
 		}
 	}
 
@@ -111,45 +113,45 @@ func (l *linuxStandardInit) Init() error {
 
 	if hostname := l.config.Config.Hostname; hostname != "" {
 		if err := unix.Sethostname([]byte(hostname)); err != nil {
-			return errors.Wrap(err, "sethostname")
+			return &os.SyscallError{Syscall: "sethostname", Err: err}
 		}
 	}
 	if err := apparmor.ApplyProfile(l.config.AppArmorProfile); err != nil {
-		return errors.Wrap(err, "apply apparmor profile")
+		return fmt.Errorf("unable to apply apparmor profile: %w", err)
 	}
 
 	for key, value := range l.config.Config.Sysctl {
 		if err := writeSystemProperty(key, value); err != nil {
-			return errors.Wrapf(err, "write sysctl key %s", key)
+			return err
 		}
 	}
 	for _, path := range l.config.Config.ReadonlyPaths {
 		if err := readonlyPath(path); err != nil {
-			return errors.Wrapf(err, "readonly path %s", path)
+			return fmt.Errorf("can't make %q read-only: %w", path, err)
 		}
 	}
 	for _, path := range l.config.Config.MaskPaths {
 		if err := maskPath(path, l.config.Config.MountLabel); err != nil {
-			return errors.Wrapf(err, "mask path %s", path)
+			return fmt.Errorf("can't mask path %s: %w", path, err)
 		}
 	}
 	pdeath, err := system.GetParentDeathSignal()
 	if err != nil {
-		return errors.Wrap(err, "get pdeath signal")
+		return fmt.Errorf("can't get pdeath signal: %w", err)
 	}
 	if l.config.NoNewPrivileges {
 		if err := unix.Prctl(unix.PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0); err != nil {
-			return errors.Wrap(err, "set nonewprivileges")
+			return &os.SyscallError{Syscall: "prctl(SET_NO_NEW_PRIVS)", Err: err}
 		}
 	}
 	// Tell our parent that we're ready to Execv. This must be done before the
 	// Seccomp rules have been applied, because we need to be able to read and
 	// write to a socket.
 	if err := syncParentReady(l.pipe); err != nil {
-		return errors.Wrap(err, "sync ready")
+		return fmt.Errorf("sync ready: %w", err)
 	}
 	if err := selinux.SetExecLabel(l.config.ProcessLabel); err != nil {
-		return errors.Wrap(err, "set process label")
+		return fmt.Errorf("can't set process label: %w", err)
 	}
 	defer selinux.SetExecLabel("") //nolint: errcheck
 	// Without NoNewPrivileges seccomp is a privileged operation, so we need to
@@ -166,7 +168,7 @@ func (l *linuxStandardInit) Init() error {
 	// finalizeNamespace can change user/group which clears the parent death
 	// signal, so we restore it here.
 	if err := pdeath.Restore(); err != nil {
-		return errors.Wrap(err, "restore pdeath signal")
+		return fmt.Errorf("can't restore pdeath signal: %w", err)
 	}
 	// Compare the parent from the initial start of the init process and make
 	// sure that it did not change.  if the parent changes that means it died

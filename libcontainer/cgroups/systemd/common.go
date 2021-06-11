@@ -436,7 +436,10 @@ func systemdVersionAtoi(verStr string) (int, error) {
 		return 0, fmt.Errorf("can't parse version %s: incorrect number of matches %v", verStr, matches)
 	}
 	ver, err := strconv.Atoi(matches[1])
-	return ver, fmt.Errorf("can't parse version: %w", err)
+	if err != nil {
+		return -1, fmt.Errorf("can't parse version: %w", err)
+	}
+	return ver, nil
 }
 
 func addCpuQuota(cm *dbusConnManager, properties *[]systemdDbus.Property, quota int64, period uint64) {

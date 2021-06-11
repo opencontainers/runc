@@ -3,6 +3,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -10,19 +11,18 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/coreos/go-systemd/v22/activation"
+	"github.com/opencontainers/runtime-spec/specs-go"
+	selinux "github.com/opencontainers/selinux/go-selinux"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli"
+	"golang.org/x/sys/unix"
+
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/specconv"
 	"github.com/opencontainers/runc/libcontainer/utils"
-	"github.com/opencontainers/runtime-spec/specs-go"
-	selinux "github.com/opencontainers/selinux/go-selinux"
-
-	"github.com/coreos/go-systemd/v22/activation"
-	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
-	"golang.org/x/sys/unix"
 )
 
 var errEmptyID = errors.New("container id cannot be empty")
@@ -284,7 +284,7 @@ func (r *runner) run(config *specs.Process) (int, error) {
 	for i := baseFd; i < baseFd+r.preserveFDs; i++ {
 		_, err = os.Stat("/proc/self/fd/" + strconv.Itoa(i))
 		if err != nil {
-			return -1, errors.Wrapf(err, "please check that preserved-fd %d (of %d) is present", i-baseFd, r.preserveFDs)
+			return -1, fmt.Errorf("unable to stat preserved-fd %d (of %d): %w", i-baseFd, r.preserveFDs, err)
 		}
 		process.ExtraFiles = append(process.ExtraFiles, os.NewFile(uintptr(i), "PreserveFD:"+strconv.Itoa(i)))
 	}
