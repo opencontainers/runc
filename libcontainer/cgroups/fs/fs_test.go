@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
-	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
@@ -113,9 +112,9 @@ func BenchmarkGetStats(b *testing.B) {
 
 	// Unset TestMode as we work with real cgroupfs here,
 	// and we want OpenFile to perform the fstype check.
-	fscommon.TestMode = false
+	cgroups.TestMode = false
 	defer func() {
-		fscommon.TestMode = true
+		cgroups.TestMode = true
 	}()
 
 	cg := &configs.Cgroup{

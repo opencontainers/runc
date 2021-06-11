@@ -13,12 +13,13 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
 func init() {
-	fscommon.TestMode = true
+	cgroups.TestMode = true
 }
 
 type cgroupTestUtil struct {

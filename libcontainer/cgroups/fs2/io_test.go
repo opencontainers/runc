@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
-	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 )
 
 const exampleIoStatData = `254:1 rbytes=6901432320 wbytes=14245535744 rios=263278 wios=248603 dbytes=0 dios=0
@@ -59,7 +58,7 @@ func sortBlkioStats(stats *cgroups.BlkioStats) {
 
 func TestStatIo(t *testing.T) {
 	// We're using a fake cgroupfs.
-	fscommon.TestMode = true
+	cgroups.TestMode = true
 
 	fakeCgroupDir, err := ioutil.TempDir("", "runc-stat-io-test.*")
 	if err != nil {

@@ -1,6 +1,6 @@
 // +build linux
 
-package fscommon
+package cgroups
 
 import (
 	"fmt"
