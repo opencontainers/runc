@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -14,7 +15,10 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
-type BlkioGroup struct{}
+type BlkioGroup struct {
+	weightFilename       string
+	weightDeviceFilename string
+}
 
 func (s *BlkioGroup) Name() string {
 	return "blkio"
@@ -25,8 +29,9 @@ func (s *BlkioGroup) Apply(path string, d *cgroupData) error {
 }
 
 func (s *BlkioGroup) Set(path string, r *configs.Resources) error {
+	s.detectWeightFilenames(path)
 	if r.BlkioWeight != 0 {
-		if err := fscommon.WriteFile(path, "blkio.weight", strconv.FormatUint(uint64(r.BlkioWeight), 10)); err != nil {
+		if err := fscommon.WriteFile(path, s.weightFilename, strconv.FormatUint(uint64(r.BlkioWeight), 10)); err != nil {
 			return err
 		}
 	}
@@ -37,7 +42,7 @@ func (s *BlkioGroup) Set(path string, r *configs.Resources) error {
 		}
 	}
 	for _, wd := range r.BlkioWeightDevice {
-		if err := fscommon.WriteFile(path, "blkio.weight_device", wd.WeightString()); err != nil {
+		if err := fscommon.WriteFile(path, s.weightDeviceFilename, wd.WeightString()); err != nil {
 			return err
 		}
 		if err := fscommon.WriteFile(path, "blkio.leaf_weight_device", wd.LeafWeightString()); err != nil {
@@ -286,4 +291,18 @@ func (s *BlkioGroup) GetStats(path string, stats *cgroups.Stats) error {
 		}
 	}
 	return nil
+}
+
+func (s *BlkioGroup) detectWeightFilenames(path string) {
+	if s.weightFilename != "" {
+		// Already detected.
+		return
+	}
+	if cgroups.PathExists(filepath.Join(path, "blkio.weight")) {
+		s.weightFilename = "blkio.weight"
+		s.weightDeviceFilename = "blkio.weight_device"
+	} else {
+		s.weightFilename = "blkio.bfq.weight"
+		s.weightDeviceFilename = "blkio.bfq.weight_device"
+	}
 }
