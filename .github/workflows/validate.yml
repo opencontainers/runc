@@ -91,7 +91,7 @@ jobs:
     steps:
       - name: get pr commits
         id: 'get-pr-commits'
-        uses: tim-actions/get-pr-commits@v1.0.0
+        uses: tim-actions/get-pr-commits@v1.1.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
