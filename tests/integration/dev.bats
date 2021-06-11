@@ -33,7 +33,7 @@ function teardown() {
 	[[ "${lines[0]}" =~ "crw-rw-rw".+"1".+"0".+"0".+"5,".+"2".+"/dev/ptmx" ]]
 }
 
-@test "runc run [device cgroup deny]" {
+@test "runc run/update [device cgroup deny]" {
 	requires root
 
 	update_config ' .linux.resources.devices = [{"allow": false, "access": "rwm"}]
@@ -42,6 +42,18 @@ function teardown() {
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_deny
 	[ "$status" -eq 0 ]
+
+	# test write
+	runc exec test_deny sh -c 'hostname | tee /dev/kmsg'
+	[ "$status" -eq 1 ]
+	[[ "${output}" == *'Operation not permitted'* ]]
+
+	# test read
+	runc exec test_deny sh -c 'head -n 1 /dev/kmsg'
+	[ "$status" -eq 1 ]
+	[[ "${output}" == *'Operation not permitted'* ]]
+
+	runc update test_deny --pids-limit 42
 
 	# test write
 	runc exec test_deny sh -c 'hostname | tee /dev/kmsg'
