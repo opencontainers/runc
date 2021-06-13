@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
+	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/pkg/errors"
 	"golang.org/x/sys/unix"
@@ -29,7 +29,7 @@ func setFreezer(dirPath string, state configs.FreezerState) error {
 		return errors.Errorf("invalid freezer state %q requested", state)
 	}
 
-	fd, err := fscommon.OpenFile(dirPath, "cgroup.freeze", unix.O_RDWR)
+	fd, err := cgroups.OpenFile(dirPath, "cgroup.freeze", unix.O_RDWR)
 	if err != nil {
 		// We can ignore this request as long as the user didn't ask us to
 		// freeze the container (since without the freezer cgroup, that's a
@@ -54,7 +54,7 @@ func setFreezer(dirPath string, state configs.FreezerState) error {
 }
 
 func getFreezer(dirPath string) (configs.FreezerState, error) {
-	fd, err := fscommon.OpenFile(dirPath, "cgroup.freeze", unix.O_RDONLY)
+	fd, err := cgroups.OpenFile(dirPath, "cgroup.freeze", unix.O_RDONLY)
 	if err != nil {
 		// If the kernel is too old, then we just treat the freezer as being in
 		// an "undefined" state.
@@ -88,7 +88,7 @@ func readFreezer(dirPath string, fd *os.File) (configs.FreezerState, error) {
 
 // waitFrozen polls cgroup.events until it sees "frozen 1" in it.
 func waitFrozen(dirPath string) (configs.FreezerState, error) {
-	fd, err := fscommon.OpenFile(dirPath, "cgroup.events", unix.O_RDONLY)
+	fd, err := cgroups.OpenFile(dirPath, "cgroup.events", unix.O_RDONLY)
 	if err != nil {
 		return configs.Undefined, err
 	}

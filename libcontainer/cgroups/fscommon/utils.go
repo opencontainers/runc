@@ -15,8 +15,11 @@ import (
 var (
 	ErrNotValidFormat = errors.New("line is not a valid key value format")
 
-	OpenFile  = cgroups.OpenFile
-	ReadFile  = cgroups.ReadFile
+	// Deprecated: use cgroups.OpenFile instead.
+	OpenFile = cgroups.OpenFile
+	// Deprecated: use cgroups.ReadFile instead.
+	ReadFile = cgroups.ReadFile
+	// Deprecated: use cgroups.WriteFile instead.
 	WriteFile = cgroups.WriteFile
 )
 
