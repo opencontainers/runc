@@ -26,3 +26,19 @@ using the runc checkpoint command.
     --pid-file value             specify the file to write the process id to
     --no-subreaper               disable the use of the subreaper used to reap reparented processes
     --no-pivot                   do not use pivot root to jail process inside rootfs.  This should be used whenever the rootfs is on top of a ramdisk
+    --empty-ns value             create a namespace, but don't restore its properties
+    --auto-dedup                 enable auto deduplication of memory images
+    --lazy-pages                 use userfaultfd to lazily restore memory pages
+    --lsm-profile value          Specify an LSM profile to be used during restore in the form of TYPE:NAME.
+
+## OPTION DETAILS
+
+**--lsm-profile**
+
+Specify an LSM profile to be used during restore in the form of TYPE:NAME.
+
+`TYPE` can either be *apparamor* or *selinux* and is followed by *:* and a
+valid LSM label.
+```
+runc restore --lsm-profile "selinux:system_u:system_r:container_t:s0:c82,c137" <container-id>
+```

@@ -1375,6 +1375,15 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 		},
 	}
 
+	if criuOpts.LsmProfile != "" {
+		// CRIU older than 3.16 has a bug which breaks the possibility
+		// to set a different LSM profile.
+		if err := c.checkCriuVersion(31600); err != nil {
+			return errors.New("--lsm-profile requires at least CRIU 3.16")
+		}
+		req.Opts.LsmProfile = proto.String(criuOpts.LsmProfile)
+	}
+
 	c.handleCriuConfigurationFile(req.Opts)
 
 	if err := c.handleRestoringNamespaces(req.Opts, &extraFiles); err != nil {
