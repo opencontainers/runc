@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"testing"
+
+	"github.com/opencontainers/runc/libcontainer/cgroups"
 )
 
 const (
@@ -18,7 +20,7 @@ const (
 )
 
 func init() {
-	TestMode = true
+	cgroups.TestMode = true
 }
 
 func TestGetCgroupParamsInt(t *testing.T) {

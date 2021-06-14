@@ -1,6 +1,7 @@
-package fscommon
+package cgroups
 
 import (
+	"bytes"
 	"os"
 	"strings"
 	"sync"
@@ -9,6 +10,54 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
+
+// OpenFile opens a cgroup file in a given dir with given flags.
+// It is supposed to be used for cgroup files only.
+func OpenFile(dir, file string, flags int) (*os.File, error) {
+	if dir == "" {
+		return nil, errors.Errorf("no directory specified for %s", file)
+	}
+	return openFile(dir, file, flags)
+}
+
+// ReadFile reads data from a cgroup file in dir.
+// It is supposed to be used for cgroup files only.
+func ReadFile(dir, file string) (string, error) {
+	fd, err := OpenFile(dir, file, unix.O_RDONLY)
+	if err != nil {
+		return "", err
+	}
+	defer fd.Close()
+	var buf bytes.Buffer
+
+	_, err = buf.ReadFrom(fd)
+	return buf.String(), err
+}
+
+// WriteFile writes data to a cgroup file in dir.
+// It is supposed to be used for cgroup files only.
+func WriteFile(dir, file, data string) error {
+	fd, err := OpenFile(dir, file, unix.O_WRONLY)
+	if err != nil {
+		return err
+	}
+	defer fd.Close()
+	if err := retryingWriteFile(fd, data); err != nil {
+		return errors.Wrapf(err, "failed to write %q", data)
+	}
+	return nil
+}
+
+func retryingWriteFile(fd *os.File, data string) error {
+	for {
+		_, err := fd.Write([]byte(data))
+		if errors.Is(err, unix.EINTR) {
+			logrus.Infof("interrupted while writing %s to %s", data, fd.Name())
+			continue
+		}
+		return err
+	}
+}
 
 const (
 	cgroupfsDir    = "/sys/fs/cgroup"
@@ -60,10 +109,7 @@ func prepareOpenat2() error {
 
 // OpenFile opens a cgroup file in a given dir with given flags.
 // It is supposed to be used for cgroup files only.
-func OpenFile(dir, file string, flags int) (*os.File, error) {
-	if dir == "" {
-		return nil, errors.Errorf("no directory specified for %s", file)
-	}
+func openFile(dir, file string, flags int) (*os.File, error) {
 	mode := os.FileMode(0)
 	if TestMode && flags&os.O_WRONLY != 0 {
 		// "emulate" cgroup fs for unit tests

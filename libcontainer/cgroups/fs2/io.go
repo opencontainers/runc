@@ -11,7 +11,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
-	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
@@ -30,7 +29,7 @@ func setIo(dirPath string, r *configs.Resources) error {
 
 	if r.BlkioWeight != 0 {
 		filename := "io.bfq.weight"
-		if err := fscommon.WriteFile(dirPath, filename,
+		if err := cgroups.WriteFile(dirPath, filename,
 			strconv.FormatUint(uint64(r.BlkioWeight), 10)); err != nil {
 			// if io.bfq.weight does not exist, then bfq module is not loaded.
 			// Fallback to use io.weight with a conversion scheme
@@ -38,28 +37,28 @@ func setIo(dirPath string, r *configs.Resources) error {
 				return err
 			}
 			v := cgroups.ConvertBlkIOToIOWeightValue(r.BlkioWeight)
-			if err := fscommon.WriteFile(dirPath, "io.weight", strconv.FormatUint(v, 10)); err != nil {
+			if err := cgroups.WriteFile(dirPath, "io.weight", strconv.FormatUint(v, 10)); err != nil {
 				return err
 			}
 		}
 	}
 	for _, td := range r.BlkioThrottleReadBpsDevice {
-		if err := fscommon.WriteFile(dirPath, "io.max", td.StringName("rbps")); err != nil {
+		if err := cgroups.WriteFile(dirPath, "io.max", td.StringName("rbps")); err != nil {
 			return err
 		}
 	}
 	for _, td := range r.BlkioThrottleWriteBpsDevice {
-		if err := fscommon.WriteFile(dirPath, "io.max", td.StringName("wbps")); err != nil {
+		if err := cgroups.WriteFile(dirPath, "io.max", td.StringName("wbps")); err != nil {
 			return err
 		}
 	}
 	for _, td := range r.BlkioThrottleReadIOPSDevice {
-		if err := fscommon.WriteFile(dirPath, "io.max", td.StringName("riops")); err != nil {
+		if err := cgroups.WriteFile(dirPath, "io.max", td.StringName("riops")); err != nil {
 			return err
 		}
 	}
 	for _, td := range r.BlkioThrottleWriteIOPSDevice {
-		if err := fscommon.WriteFile(dirPath, "io.max", td.StringName("wiops")); err != nil {
+		if err := cgroups.WriteFile(dirPath, "io.max", td.StringName("wiops")); err != nil {
 			return err
 		}
 	}
@@ -69,7 +68,7 @@ func setIo(dirPath string, r *configs.Resources) error {
 
 func readCgroup2MapFile(dirPath string, name string) (map[string][]string, error) {
 	ret := map[string][]string{}
-	f, err := fscommon.OpenFile(dirPath, name, os.O_RDONLY)
+	f, err := cgroups.OpenFile(dirPath, name, os.O_RDONLY)
 	if err != nil {
 		return nil, err
 	}
