@@ -168,10 +168,9 @@ function set_cgroups_path() {
 	update_config '.linux.cgroupsPath |= "'"${OCI_CGROUPS_PATH}"'"' "$bundle"
 }
 
-# Helper to check a value in cgroups.
-function check_cgroup_value() {
+# Get a value from a cgroup file.
+function get_cgroup_value() {
 	local source=$1
-	local expected=$2
 	local cgroup var current
 
 	if [ "x$CGROUP_UNIFIED" = "xyes" ]; then
@@ -181,9 +180,15 @@ function check_cgroup_value() {
 		var=CGROUP_${var^^}_BASE_PATH # variable name (e.g. CGROUP_MEMORY_BASE_PATH)
 		eval cgroup=\$${var}${REL_CGROUPS_PATH}
 	fi
+	cat $cgroup/$source
+}
 
-	current=$(cat $cgroup/$source)
-	echo $cgroup/$source
+# Helper to check a if value in a cgroup file matches the expected one.
+function check_cgroup_value() {
+	local current
+	current="$(get_cgroup_value $1)"
+	local expected=$2
+
 	echo "current" $current "!?" "$expected"
 	[ "$current" = "$expected" ]
 }
