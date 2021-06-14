@@ -41,11 +41,15 @@ func (s *BlkioGroup) Set(path string, r *configs.Resources) error {
 		}
 	}
 	for _, wd := range r.BlkioWeightDevice {
-		if err := cgroups.WriteFile(path, s.weightDeviceFilename, wd.WeightString()); err != nil {
-			return err
+		if wd.Weight != 0 {
+			if err := cgroups.WriteFile(path, s.weightDeviceFilename, wd.WeightString()); err != nil {
+				return err
+			}
 		}
-		if err := cgroups.WriteFile(path, "blkio.leaf_weight_device", wd.LeafWeightString()); err != nil {
-			return err
+		if wd.LeafWeight != 0 {
+			if err := cgroups.WriteFile(path, "blkio.leaf_weight_device", wd.LeafWeightString()); err != nil {
+				return err
+			}
 		}
 	}
 	for _, td := range r.BlkioThrottleReadBpsDevice {
