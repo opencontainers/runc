@@ -3,6 +3,7 @@ package cgroups
 import (
 	"bytes"
 	"os"
+	"path"
 	"strings"
 	"sync"
 
@@ -13,6 +14,9 @@ import (
 
 // OpenFile opens a cgroup file in a given dir with given flags.
 // It is supposed to be used for cgroup files only.
+//
+// Arguments dir and file are joined together to form an absolute path
+// to a file being opened. Both dir and file must not be empty.
 func OpenFile(dir, file string, flags int) (*os.File, error) {
 	if dir == "" {
 		return nil, errors.Errorf("no directory specified for %s", file)
@@ -107,8 +111,6 @@ func prepareOpenat2() error {
 	return prepErr
 }
 
-// OpenFile opens a cgroup file in a given dir with given flags.
-// It is supposed to be used for cgroup files only.
 func openFile(dir, file string, flags int) (*os.File, error) {
 	mode := os.FileMode(0)
 	if TestMode && flags&os.O_WRONLY != 0 {
@@ -116,34 +118,36 @@ func openFile(dir, file string, flags int) (*os.File, error) {
 		flags |= os.O_TRUNC | os.O_CREATE
 		mode = 0o600
 	}
+	path := path.Join(dir, file)
 	if prepareOpenat2() != nil {
-		return openFallback(dir, file, flags, mode)
+		return openFallback(path, flags, mode)
 	}
-	reldir := strings.TrimPrefix(dir, cgroupfsPrefix)
-	if len(reldir) == len(dir) { // non-standard path, old system?
-		return openFallback(dir, file, flags, mode)
+	relPath := strings.TrimPrefix(path, cgroupfsPrefix)
+	if len(relPath) == len(path) { // non-standard path, old system?
+		return openFallback(path, flags, mode)
 	}
 
-	relname := reldir + "/" + file
-	fd, err := unix.Openat2(cgroupFd, relname,
+	fd, err := unix.Openat2(cgroupFd, relPath,
 		&unix.OpenHow{
 			Resolve: resolveFlags,
 			Flags:   uint64(flags) | unix.O_CLOEXEC,
 			Mode:    uint64(mode),
 		})
 	if err != nil {
-		return nil, &os.PathError{Op: "openat2", Path: dir + "/" + file, Err: err}
+		return nil, &os.PathError{Op: "openat2", Path: path, Err: err}
 	}
 
-	return os.NewFile(uintptr(fd), cgroupfsPrefix+relname), nil
+	return os.NewFile(uintptr(fd), relPath), nil
 }
 
 var errNotCgroupfs = errors.New("not a cgroup file")
 
-// openFallback is used when openat2(2) is not available. It checks the opened
+// Can be changed by unit tests.
+var openFallback = openAndCheck
+
+// openAndCheck is used when openat2(2) is not available. It checks the opened
 // file is on cgroupfs, returning an error otherwise.
-func openFallback(dir, file string, flags int, mode os.FileMode) (*os.File, error) {
-	path := dir + "/" + file
+func openAndCheck(path string, flags int, mode os.FileMode) (*os.File, error) {
 	fd, err := os.OpenFile(path, flags, mode)
 	if err != nil {
 		return nil, err

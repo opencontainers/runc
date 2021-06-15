@@ -3,6 +3,7 @@
 package cgroups
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -38,5 +39,37 @@ func TestWriteCgroupFileHandlesInterrupt(t *testing.T) {
 		if err := WriteFile(cgroupPath, memoryLimit, strconv.Itoa(limit)); err != nil {
 			t.Fatalf("Failed to write %d on attempt %d: %+v", limit, i, err)
 		}
+	}
+}
+
+func TestOpenat2(t *testing.T) {
+	if !IsCgroup2UnifiedMode() {
+		// The reason is many test cases below test opening files from
+		// the top-level directory, where cgroup v1 has no files.
+		t.Skip("test requires cgroup v2")
+	}
+
+	// Make sure we test openat2, not its fallback.
+	openFallback = func(_ string, _ int, _ os.FileMode) (*os.File, error) {
+		return nil, errors.New("fallback")
+	}
+	defer func() { openFallback = openAndCheck }()
+
+	for _, tc := range []struct{ dir, file string }{
+		{"/sys/fs/cgroup", "cgroup.controllers"},
+		{"/sys/fs/cgroup", "/cgroup.controllers"},
+		{"/sys/fs/cgroup/", "cgroup.controllers"},
+		{"/sys/fs/cgroup/", "/cgroup.controllers"},
+		{"/sys/fs/cgroup/user.slice", "cgroup.controllers"},
+		{"/sys/fs/cgroup/user.slice/", "/cgroup.controllers"},
+		{"/", "/sys/fs/cgroup/cgroup.controllers"},
+		{"/", "sys/fs/cgroup/cgroup.controllers"},
+		{"/sys/fs/cgroup/cgroup.controllers", ""},
+	} {
+		fd, err := OpenFile(tc.dir, tc.file, os.O_RDONLY)
+		if err != nil {
+			t.Errorf("case %+v: %v", tc, err)
+		}
+		fd.Close()
 	}
 }
