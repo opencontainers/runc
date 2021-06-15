@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -134,6 +135,17 @@ func openFile(dir, file string, flags int) (*os.File, error) {
 			Mode:    uint64(mode),
 		})
 	if err != nil {
+		// Check if cgroupFd is still opened to cgroupfsDir.
+		fdStr := strconv.Itoa(cgroupFd)
+		fdDest, _ := os.Readlink("/proc/self/fd/" + fdStr)
+		if fdDest != cgroupfsDir {
+			// TODO: reopen cgroupFd and retry openat2.
+
+			// Enhance the Path in the error to contain the
+			// cgroupFd value and the directory it is opened to,
+			// for example: "@[fd 7:/!=/sys/fs/cgroup]/cpu.stat".
+			path = "@[fd " + fdStr + ":" + fdDest + "!=" + cgroupfsDir + "]/" + relPath
+		}
 		return nil, &os.PathError{Op: "openat2", Path: path, Err: err}
 	}
 
