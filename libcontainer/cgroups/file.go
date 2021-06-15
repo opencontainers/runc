@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -137,7 +138,23 @@ func openFile(dir, file string, flags int) (*os.File, error) {
 			Mode:    uint64(mode),
 		})
 	if err != nil {
-		return nil, &os.PathError{Op: "openat2", Path: path, Err: err}
+		err = &os.PathError{Op: "openat2", Path: path, Err: err}
+		// Check if cgroupFd is still opened to cgroupfsDir
+		// (happens when this package is incorrectly used
+		// across the chroot/pivot_root/mntns boundary, or
+		// when /sys/fs/cgroup is remounted).
+		//
+		// TODO: if such usage will ever be common, amend this
+		// to reopen cgroupFd and retry openat2.
+		fdStr := strconv.Itoa(cgroupFd)
+		fdDest, _ := os.Readlink("/proc/self/fd/" + fdStr)
+		if fdDest != cgroupfsDir {
+			// Wrap the error so it is clear that cgroupFd
+			// is opened to an unexpected/wrong directory.
+			err = fmt.Errorf("cgroupFd %s unexpectedly opened to %s != %s: %w",
+				fdStr, fdDest, cgroupfsDir, err)
+		}
+		return nil, err
 	}
 
 	return os.NewFile(uintptr(fd), path), nil
