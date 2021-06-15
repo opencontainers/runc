@@ -84,11 +84,6 @@ following will output a list of processes running in the container:
 			Value: &cli.StringSlice{},
 			Usage: "add a capability to the bounding set for the process",
 		},
-		cli.BoolFlag{
-			Name:   "no-subreaper",
-			Usage:  "disable the use of the subreaper used to reap reparented processes",
-			Hidden: true,
-		},
 		cli.IntFlag{
 			Name:  "preserve-fds",
 			Usage: "Pass N additional file descriptors to the container (stdio + $LISTEN_FDS + N in total)",
