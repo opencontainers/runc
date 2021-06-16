@@ -1,31 +1,47 @@
 % runc-run "8"
 
 # NAME
-   runc run - create and run a container
+**runc-run** - create and start a container
 
 # SYNOPSIS
-   runc run [command options] `<container-id>`
-
-Where "`<container-id>`" is your name for the instance of the container that you
-are starting. The name you provide for the container instance must be unique on
-your host.
+**runc run** [_option_ ...] _container-id_
 
 # DESCRIPTION
-   The run command creates an instance of a container for a bundle. The bundle
-is a directory with a specification file named "config.json" and a root
-filesystem.
-
-The specification file includes an args parameter. The args parameter is used
-to specify command(s) that get run when the container is started. To change the
-command(s) that get executed on start, edit the args parameter of the spec. See
-"runc spec --help" for more explanation.
+The **run** command creates an instance of a container from a bundle, and
+starts it.  You can think of **run** as a shortcut for **create** followed by
+**start**.
 
 # OPTIONS
-    --bundle value, -b value  path to the root of the bundle directory, defaults to the current directory
-    --console-socket value    path to an AF_UNIX socket which will receive a file descriptor referencing the master end of the console's pseudoterminal
-    --detach, -d              detach from the container's process
-    --pid-file value          specify the file to write the process id to
-    --no-subreaper            disable the use of the subreaper used to reap reparented processes
-    --no-pivot                do not use pivot root to jail process inside rootfs.  This should be used whenever the rootfs is on top of a ramdisk
-    --no-new-keyring          do not create a new session keyring for the container.  This will cause the container to inherit the calling processes session key
-    --preserve-fds value      Pass N additional file descriptors to the container (stdio + $LISTEN_FDS + N in total) (default: 0)
+**--bundle**|**-b** _path_
+: Path to the root of the bundle directory. Default is current directory.
+
+**--console-socket** _path_
+: Path to an **AF_UNIX**  socket which will receive a file descriptor
+referencing the master end of the console's pseudoterminal.  See
+[docs/terminals](https://github.com/opencontainers/runc/blob/master/docs/terminals.md).
+
+**--detach**|**-d**
+: Detach from the container's process.
+
+**--pid-file** _path_
+: Specify the file to write the initial container process' PID to.
+
+**--no-subreaper**
+: Disable the use of the subreaper used to reap reparented processes.
+
+**--no-pivot**
+: Do not use pivot root to jail process inside rootfs. This should not be used
+except in exceptional circumstances, and may be unsafe from the security
+standpoint.
+
+**--no-new-keyring**
+: Do not create a new session keyring for the container. This will cause the
+container to inherit the calling processes session key.
+
+**--preserve-fds** _N_
+: Pass _N_ additional file descriptors to the container (**stdio** +
+**$LISTEN_FDS** + _N_ in total). Default is **0**.
+
+# SEE ALSO
+
+**runc**(8).

@@ -1,33 +1,70 @@
 % runc-exec "8"
 
 # NAME
-   runc exec - execute new process inside the container
+**runc-exec** - execute new process inside the container
 
 # SYNOPSIS
-   runc exec [command options] `<container-id>` -- `<container command>` [args...]
+**runc exec** [_option_ ...] _container-id_ [--] _command_ [_arg_ ...]
 
-Where "`<container-id>`" is the name for the instance of the container and
-"`<container command>`" is the command to be executed in the container.
-
-# EXAMPLE
-For example, if the container is configured to run the linux ps command the
-following will output a list of processes running in the container:
-
-       # runc exec <container-id> ps
+**runc exec** [_option_ ...] **-p** _process.json_ _container-id_
 
 # OPTIONS
-    --console value                          specify the pty slave path for use with the container
-    --cwd value                              current working directory in the container
-    --env value, -e value                    set environment variables
-    --tty, -t                                allocate a pseudo-TTY
-    --user value, -u value                   UID (format: <uid>[:<gid>])
-    --additional-gids value, -g value        additional gids
-    --process value, -p value                path to the process.json
-    --detach, -d                             detach from the container's process
-    --pid-file value                         specify the file to write the process id to
-    --process-label value                    set the asm process label for the process commonly used with selinux
-    --apparmor value                         set the apparmor profile for the process
-    --no-new-privs                           set the no new privileges value for the process
-    --cap value, -c value                    add a capability to the bounding set for the process
-    --no-subreaper                           disable the use of the subreaper used to reap reparented processes
-    --preserve-fds value                     pass N additional file descriptors to the container (stdio + $LISTEN_FDS + N in total) (default: 0)
+**--console-socket** _path_
+: Path to an **AF_UNIX**  socket which will receive a file descriptor
+referencing the master end of the console's pseudoterminal.  See
+[docs/terminals](https://github.com/opencontainers/runc/blob/master/docs/terminals.md).
+
+**--cwd** _path_
+: Change to _path_ in the container before executing the command.
+
+**--env**|**-e** _name_=_value_
+: Set an environment variable _name_ to _value_. Can be specified multiple times.
+
+**--tty**|**-t**
+: Allocate a pseudo-TTY.
+
+**--user**|**-u** _uid_[:_gid_]
+: Run the _command_ as a user (and, optionally, group) specified by _uid_ (and
+_gid_).
+
+**--additional-gids**|**-g** _gid_
+: Add additional group IDs. Can be specified multiple times.
+
+**--process**|**-p** _process.json_
+: Instead of specifying all the exec parameters directly on the command line,
+get them from a _process.json_, a JSON file containing the process
+specification as defined by the
+[OCI runtime spec](https://github.com/opencontainers/runtime-spec/blob/master/config.md#process).
+
+**--detach**|**-d**
+: Detach from the container's process.
+
+**--pid-file** _path_
+: Specify the file to write the container process' PID to.
+
+**--process-label** _label_
+: Set the asm process label for the process commonly used with **selinux**(7).
+
+**--apparmor** _profile_
+: Set the **apparmor**(7) _profile_ for the process.
+
+**--no-new-privs**
+: Set the "no new privileges" value for the process.
+
+**--cap** _cap_
+: Add a capability to the bounding set for the process. Can be specified
+multiple times.
+
+**--preserve-fds** _N_
+: Pass _N_ additional file descriptors to the container (**stdio** +
+**$LISTEN_FDS** + _N_ in total). Default is **0**.
+
+# EXAMPLES
+If the container can run **ps**(1) command, the following
+will output a list of processes running in the container:
+
+	# runc exec <container-id> ps
+
+# SEE ALSO
+
+**runc**(8).

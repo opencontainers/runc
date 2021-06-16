@@ -1,44 +1,81 @@
 % runc-restore "8"
 
 # NAME
-   runc restore - restore a container from a previous checkpoint
+**runc-restore** - restore a container from a previous checkpoint
 
 # SYNOPSIS
-   runc restore [command options] `<container-id>`
-
-Where "`<container-id>`" is the name for the instance of the container to be
-restored.
+**runc restore** [_option_ ...] _container-id_
 
 # DESCRIPTION
-   Restores the saved state of the container instance that was previously saved
-using the runc checkpoint command.
+Restores the container instance from a previously performed **runc checkpoint**.
 
 # OPTIONS
-    --image-path value           path to criu image files for restoring
-    --work-path value            path for saving work files and logs
-    --tcp-established            allow open tcp connections
-    --ext-unix-sk                allow external unix sockets
-    --shell-job                  allow shell jobs
-    --file-locks                 handle file locks, for safety
-    --manage-cgroups-mode value  cgroups mode: 'soft' (default), 'full' and 'strict'
-    --bundle value, -b value     path to the root of the bundle directory
-    --detach, -d                 detach from the container's process
-    --pid-file value             specify the file to write the process id to
-    --no-subreaper               disable the use of the subreaper used to reap reparented processes
-    --no-pivot                   do not use pivot root to jail process inside rootfs.  This should be used whenever the rootfs is on top of a ramdisk
-    --empty-ns value             create a namespace, but don't restore its properties
-    --auto-dedup                 enable auto deduplication of memory images
-    --lazy-pages                 use userfaultfd to lazily restore memory pages
-    --lsm-profile value          Specify an LSM profile to be used during restore in the form of TYPE:NAME.
+**--console-socket** _path_
+: Path to an **AF_UNIX**  socket which will receive a file descriptor
+referencing the master end of the console's pseudoterminal.  See
+[docs/terminals](https://github.com/opencontainers/runc/blob/master/docs/terminals.md).
 
-## OPTION DETAILS
+**--image-path** _path_
+: Set path to get criu image files to restore from.
 
-**--lsm-profile**
+**--work-path** _path_
+: Set path for saving criu work files and logs. The default is to reuse the
+image files directory.
 
-Specify an LSM profile to be used during restore in the form of TYPE:NAME.
+**--tcp-established**
+: Allow checkpoint/restore of established TCP connections. See
+[criu --tcp-establised option](https://criu.org/CLI/opt/--tcp-established).
 
-`TYPE` can either be *apparamor* or *selinux* and is followed by *:* and a
-valid LSM label.
-```
-runc restore --lsm-profile "selinux:system_u:system_r:container_t:s0:c82,c137" <container-id>
-```
+**--ext-unix-sk**
+: Allow checkpoint/restore of external unix sockets. See
+[criu --ext-unix-sk option](https://criu.org/CLI/opt/--ext-unix-sk).
+
+**--shell-job**
+: Allow checkpoint/restore of shell jobs.
+
+**--file-locks**
+: Allow checkpoint/restore of file locks. See
+[criu --file-locks option](https://criu.org/CLI/opt/--file-locks).
+
+**--manage-cgroups-mode** **soft**|**full**|**strict**.
+: Cgroups mode. Default is **soft**. See
+[criu --manage-cgroups option](https://criu.org/CLI/opt/--manage-cgroups).
+
+**--bundle**|**-b** _path_
+: Path to the root of the bundle directory. Default is current directory.
+
+**--detach**|**-d**
+: Detach from the container's process.
+
+**--pid-file** _path_
+: Specify the file to write the initial container process' PID to.
+
+**--no-subreaper**
+: Disable the use of the subreaper used to reap reparented processes.
+
+**--no-pivot**
+: Do not use pivot root to jail process inside rootfs. This should not be used
+except in exceptional circumstances, and may be unsafe from the security
+standpoint.
+
+**--empty-ns** _namespace_
+: Create a _namespace_, but don't restore its properties. See
+[criu --empty-ns option](https://criu.org/CLI/opt/--empty-ns).
+
+**--auto-dedup**
+: Enable auto deduplication of memory images. See
+[criu --auto-dedup option](https://criu.org/CLI/opt/--auto-dedup).
+
+**--lazy-pages**
+: Use lazy migration mechanism. This requires a running **criu lazy-pages**
+daemon. See [criu --lazy-pages option](https://criu.org/CLI/opt/--lazy-pages).
+
+**--lsm-profile** _type_:_label_
+: Specify an LSM profile to be used during restore. Here _type_ can either be
+**apparamor** or **selinux**, and _label_ is a valid LSM label. For example,
+**--lsm-profile "selinux:system_u:system_r:container_t:s0:c82,c137"**.
+
+# SEE ALSO
+**criu**(8),
+**runc-checkpoint**(8),
+**runc**(8).

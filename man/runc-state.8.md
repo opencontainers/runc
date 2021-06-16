@@ -1,13 +1,15 @@
 % runc-state "8"
 
 # NAME
-   runc state - output the state of a container
+**runc-state** - show the state of a container
 
 # SYNOPSIS
-   runc state `<container-id>`
-
-Where "`<container-id>`" is your name for the instance of the container.
+**runc state** _container-id_
 
 # DESCRIPTION
-   The state command outputs current state information for the
-instance of a container.
+The **state** command outputs current state information for the specified
+_container-id_ in a JSON format.
+
+# SEE ALSO
+
+**runc**(8).
