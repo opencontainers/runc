@@ -309,6 +309,49 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 			}
 		}
 	}
+
+	// Set the host UID that should own the container's cgroup.
+	// This must be performed after setupUserNamespace, so that
+	// config.HostRootUID() returns the correct result.
+	//
+	// Only set it if the container will have its own cgroup
+	// namespace and the cgroupfs will be mounted read/write.
+	//
+	hasCgroupNS := config.Namespaces.Contains(configs.NEWCGROUP) && config.Namespaces.PathOf(configs.NEWCGROUP) == ""
+	hasRwCgroupfs := false
+	if hasCgroupNS {
+		for _, m := range config.Mounts {
+			if m.Source == "cgroup" && filepath.Clean(m.Destination) == "/sys/fs/cgroup" && (m.Flags&unix.MS_RDONLY) == 0 {
+				hasRwCgroupfs = true
+				break
+			}
+		}
+	}
+	processUid := 0
+	if spec.Process != nil {
+		// Chown the cgroup to the UID running the process,
+		// which is not necessarily UID 0 in the container
+		// namespace (e.g., an unprivileged UID in the host
+		// user namespace).
+		processUid = int(spec.Process.User.UID)
+	}
+	if hasCgroupNS && hasRwCgroupfs {
+		ownerUid, err := config.HostUID(processUid)
+		// There are two error cases; we can ignore both.
+		//
+		// 1. uidMappings is unset.  Either there is no user
+		//    namespace (fine), or it is an error (which is
+		//    checked elsewhere).
+		//
+		// 2. The user is unmapped in the user namespace.  This is an
+		//    unusual configuration and might be an error.  But it too
+		//    will be checked elsewhere, so we can ignore it here.
+		//
+		if err == nil {
+			config.Cgroups.OwnerUID = &ownerUid
+		}
+	}
+
 	if spec.Process != nil {
 		config.OomScoreAdj = spec.Process.OOMScoreAdj
 		config.NoNewPrivileges = spec.Process.NoNewPrivileges

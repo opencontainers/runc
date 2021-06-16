@@ -39,6 +39,12 @@ type Cgroup struct {
 	// derived from org.systemd.property.xxx annotations.
 	// Ignored unless systemd is used for managing cgroups.
 	SystemdProps []systemdDbus.Property `json:"-"`
+	// The host UID that should own the cgroup, or nil to accept
+	// the default ownership.  This should only be set when the
+	// cgroupfs is to be mounted read/write.
+	// Not all cgroup manager implementations support changing
+	// the ownership.
+	OwnerUID *int `json:"owner_uid,omitempty"`
 }
 
 type Resources struct {
