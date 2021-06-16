@@ -93,12 +93,14 @@ other options are ignored.
 			Usage: "Memory node(s) to use",
 		},
 		cli.StringFlag{
-			Name:  "kernel-memory",
-			Usage: "(obsoleted; do not use)",
+			Name:   "kernel-memory",
+			Usage:  "(obsoleted; do not use)",
+			Hidden: true,
 		},
 		cli.StringFlag{
-			Name:  "kernel-memory-tcp",
-			Usage: "(obsoleted; do not use)",
+			Name:   "kernel-memory-tcp",
+			Usage:  "(obsoleted; do not use)",
+			Hidden: true,
 		},
 		cli.StringFlag{
 			Name:  "memory",
