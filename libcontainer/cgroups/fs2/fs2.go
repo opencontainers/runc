@@ -69,6 +69,10 @@ func (m *manager) getControllers() error {
 	return nil
 }
 
+func (m *manager) SetUID(_ *int) error {
+	return errors.New("SetUID not supported")
+}
+
 func (m *manager) Apply(pid int) error {
 	if err := CreateCgroupPath(m.dirPath, m.config); err != nil {
 		// Related tests:

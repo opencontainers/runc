@@ -254,8 +254,11 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	config.Cgroups = c
+	if v, _ := spec.Annotations["org.opencontainers.runc.chown-cgroup"]; v == "true" {
+		config.ChownCgroup = true
+	}
+
 	// set linux-specific config
 	if spec.Linux != nil {
 		var exists bool
