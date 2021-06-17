@@ -150,6 +150,43 @@ function setup() {
 	fi
 }
 
+@test "runc run (per-device io weight for bfq)" {
+	requires root # to create a loop device
+
+	dd if=/dev/zero of=backing.img bs=4096 count=1
+	dev=$(losetup --find --show backing.img) || skip "unable to create a loop device"
+
+	# See if BFQ scheduler is available.
+	if ! { grep -qw bfq "/sys/block/${dev#/dev/}/queue/scheduler" &&
+		echo bfq >"/sys/block/${dev#/dev/}/queue/scheduler"; }; then
+		losetup -d "$dev"
+		skip "BFQ scheduler not available"
+	fi
+
+	set_cgroups_path
+
+	IFS=$' \t:' read -r major minor <<<"$(lsblk -nd -o MAJ:MIN "$dev")"
+	update_config '	  .linux.devices += [{path: "'"$dev"'", type: "b", major: '"$major"', minor: '"$minor"'}]
+			| .linux.resources.blockIO.weight |= 333
+			| .linux.resources.blockIO.weightDevice |= [
+				{ major: '"$major"', minor: '"$minor"', weight: 444 }
+			]'
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_dev_weight
+	[ "$status" -eq 0 ]
+
+	# The loop device itself is no longer needed.
+	losetup -d "$dev"
+
+	if [ "$CGROUP_UNIFIED" = "yes" ]; then
+		file="io.bfq.weight"
+	else
+		file="blkio.bfq.weight_device"
+	fi
+	weights=$(get_cgroup_value $file)
+	[[ "$weights" == *"default 333"* ]]
+	[[ "$weights" == *"$major:$minor 444"* ]]
+}
+
 @test "runc run (cgroup v2 resources.unified only)" {
 	requires root cgroups_v2
 

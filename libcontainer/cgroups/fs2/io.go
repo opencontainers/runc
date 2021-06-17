@@ -4,6 +4,8 @@ package fs2
 
 import (
 	"bufio"
+	"bytes"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -16,10 +18,25 @@ import (
 
 func isIoSet(r *configs.Resources) bool {
 	return r.BlkioWeight != 0 ||
+		len(r.BlkioWeightDevice) > 0 ||
 		len(r.BlkioThrottleReadBpsDevice) > 0 ||
 		len(r.BlkioThrottleWriteBpsDevice) > 0 ||
 		len(r.BlkioThrottleReadIOPSDevice) > 0 ||
 		len(r.BlkioThrottleWriteIOPSDevice) > 0
+}
+
+// bfqDeviceWeightSupported checks for per-device BFQ weight support (added
+// in kernel v5.4, commit 795fe54c2a8) by reading from "io.bfq.weight".
+func bfqDeviceWeightSupported(bfq *os.File) bool {
+	if bfq == nil {
+		return false
+	}
+	_, _ = bfq.Seek(0, 0)
+	buf := make([]byte, 32)
+	_, _ = bfq.Read(buf)
+	// If only a single number (default weight) if read back, we have older kernel.
+	_, err := strconv.ParseInt(string(bytes.TrimSpace(buf)), 10, 64)
+	return err != nil
 }
 
 func setIo(dirPath string, r *configs.Resources) error {
@@ -27,18 +44,35 @@ func setIo(dirPath string, r *configs.Resources) error {
 		return nil
 	}
 
+	// If BFQ IO scheduler is available, use it.
+	var bfq *os.File
+	if r.BlkioWeight != 0 || len(r.BlkioWeightDevice) > 0 {
+		var err error
+		bfq, err = cgroups.OpenFile(dirPath, "io.bfq.weight", os.O_RDWR)
+		if err == nil {
+			defer bfq.Close()
+		} else if !os.IsNotExist(err) {
+			return err
+		}
+	}
+
 	if r.BlkioWeight != 0 {
-		filename := "io.bfq.weight"
-		if err := cgroups.WriteFile(dirPath, filename,
-			strconv.FormatUint(uint64(r.BlkioWeight), 10)); err != nil {
-			// if io.bfq.weight does not exist, then bfq module is not loaded.
-			// Fallback to use io.weight with a conversion scheme
-			if !os.IsNotExist(err) {
+		if bfq != nil { // Use BFQ.
+			if _, err := bfq.WriteString(strconv.FormatUint(uint64(r.BlkioWeight), 10)); err != nil {
 				return err
 			}
+		} else {
+			// Fallback to io.weight with a conversion scheme.
 			v := cgroups.ConvertBlkIOToIOWeightValue(r.BlkioWeight)
 			if err := cgroups.WriteFile(dirPath, "io.weight", strconv.FormatUint(v, 10)); err != nil {
 				return err
+			}
+		}
+	}
+	if bfqDeviceWeightSupported(bfq) {
+		for _, wd := range r.BlkioWeightDevice {
+			if _, err := bfq.WriteString(wd.WeightString() + "\n"); err != nil {
+				return fmt.Errorf("setting device weight %q: %w", wd.WeightString(), err)
 			}
 		}
 	}
