@@ -1,14 +1,18 @@
 % runc-resume "8"
 
 # NAME
-   runc resume - resumes all processes that have been previously paused
+**runc-resume** - resume all processes that have been previously paused
 
 # SYNOPSIS
-   runc resume `<container-id>`
-
-Where "`<container-id>`" is the name for the instance of the container to be
-resumed.
+**runc resume** _container-id_
 
 # DESCRIPTION
-   The resume command resumes all processes in the instance of the container.
-Use runc list to identify instances of containers and their current status.
+The **resume** command resumes all processes in the instance of the container
+identified by _container-id_.
+
+Use **runc list** to identify instances of containers and their current status.
+
+# SEE ALSO
+**runc-list**(8),
+**runc-pause**(8),
+**runc**(8).

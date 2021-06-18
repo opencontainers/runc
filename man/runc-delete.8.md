@@ -1,19 +1,24 @@
 % runc-delete "8"
 
 # NAME
-   runc delete - delete any resources held by the container often used with detached container
+**runc-delete** - delete any resources held by the container
 
 # SYNOPSIS
-   runc delete [command options] `<container-id>`
-
-Where "`<container-id>`" is the name for the instance of the container.
+**runc delete** [**--force**|**-f**] _container-id_
 
 # OPTIONS
-    --force, -f		Forcibly deletes the container if it is still running (uses SIGKILL)
+**--force**|**-f**
+: Forcibly delete the running container, using **SIGKILL** **signal**(7)
+to stop it first.
 
-# EXAMPLE
-For example, if the container id is "ubuntu01" and runc list currently shows the
-status of "ubuntu01" as "stopped" the following will delete resources held for
-"ubuntu01" removing "ubuntu01" from the runc list of containers:  
+# EXAMPLES
+If the container id is **ubuntu01** and **runc list** currently shows
+its status as **stopped**, the following will delete resources held for
+**ubuntu01**, removing it from the **runc list**:
 
-       # runc delete ubuntu01
+	# runc delete ubuntu01
+
+# SEE ALSO
+
+**runc-kill**(8),
+**runc**(8).

@@ -81,17 +81,17 @@ func main() {
 	app.Flags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "debug",
-			Usage: "enable debug output for logging",
+			Usage: "enable debug logging",
 		},
 		cli.StringFlag{
 			Name:  "log",
 			Value: "",
-			Usage: "set the log file path where internal debug information is written",
+			Usage: "set the log file to write runc logs to (default is '/dev/stderr')",
 		},
 		cli.StringFlag{
 			Name:  "log-format",
 			Value: "text",
-			Usage: "set the format used by logs ('text' (default), or 'json')",
+			Usage: "set the log format ('text' (default), or 'json')",
 		},
 		cli.StringFlag{
 			Name:  "root",

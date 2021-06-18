@@ -1,11 +1,12 @@
 % runc "8"
 
 # NAME
-   runc - Open Container Initiative runtime
+**runc** - Open Container Initiative runtime
 
 # SYNOPSIS
-   runc [global options] command [command options] [arguments...]
-   
+
+**runc** [_global-option_ ...] _command_ [_command-option_ ...] [_argument_ ...]
+
 # DESCRIPTION
 runc is a command line client for running applications packaged according to
 the Open Container Initiative (OCI) format and is a compliant implementation of the
@@ -17,45 +18,132 @@ existing process monitoring tools and the container will be spawned as a
 direct child of the process supervisor.
 
 Containers are configured using bundles. A bundle for a container is a directory
-that includes a specification file named "config.json" and a root filesystem.
-The root filesystem contains the contents of the container. 
+that includes a specification file named _config.json_ and a root filesystem.
+The root filesystem contains the contents of the container.
 
-To start a new instance of a container:
+To run a new instance of a container:
 
-    # runc start [ -b bundle ] <container-id>
+	# runc run [ -b bundle ] container-id
 
-Where "`<container-id>`" is your name for the instance of the container that you
+Where _container-id_ is your name for the instance of the container that you
 are starting. The name you provide for the container instance must be unique on
-your host. Providing the bundle directory using "-b" is optional. The default
-value for "bundle" is the current directory.
+your host.
+
+Providing the bundle directory using **-b** is optional. The default
+value for _bundle_ is the current directory.
 
 # COMMANDS
-    checkpoint   checkpoint a running container
-    create       create a container
-    delete       delete any resources held by the container often used with detached containers
-    events       display container events such as OOM notifications, cpu, memory, IO and network stats
-    exec         execute new process inside the container
-    init         initialize the namespaces and launch the process (do not call it outside of runc)
-    kill         kill sends the specified signal (default: SIGTERM) to the container's init process
-    list         lists containers started by runc with the given root
-    pause        pause suspends all processes inside the container
-    ps           displays the processes running inside a container
-    restore      restore a container from a previous checkpoint
-    resume       resumes all processes that have been previously paused
-    run          create and run a container
-    spec         create a new specification file
-    start        executes the user defined process in a created container
-    state        output the state of a container
-    update       update container resource constraints
-    help, h      Shows a list of commands or help for one command
-   
+**checkpoint**
+: Checkpoint a running container. See **runc-checkpoint**(8).
+
+**create**
+: Create a container. See **runc-create**(8).
+
+**delete**
+: Delete any resources held by the container often used with detached
+containers. See **runc-delete**(8).
+
+**events**
+: Display container events such as OOM notifications, cpu, memory, IO and
+network stats. See **runc-events**(8).
+
+**exec**
+: Execute a new process inside the container. See **runc-exec**(8).
+
+**init**
+: Initialize the namespaces and launch the container init process. This command
+is not supposed to be used directly.
+
+**kill**
+: Send a specified signal to the container's init process. See
+**runc-kill**(8).
+
+**list**
+: List containers started by runc with the given **--root**. See
+**runc-list**(8).
+
+**pause**
+: Suspend all processes inside the container. See **runc-pause**(8).
+
+**ps**
+: Show processes running inside the container. See **runc-ps**(8).
+
+**restore**
+: Restore a container from a previous checkpoint. See **runc-restore**(8).
+
+**resume**
+: Resume all processes that have been previously paused. See **runc-resume**(8).
+
+**run**
+: Create and start a container. See **runc-run**(8).
+
+**spec**
+: Create a new specification file (_config.json_). See **runc-spec**(8).
+
+**start**
+: Start a container previously created by **runc create**. See **runc-start**(8).
+
+**state**
+: Show the container state. See **runc-state**(8).
+
+**update**
+: Update container resource constraints. See **runc-update**(8).
+
+**help**, **h**
+: Show a list of commands or help for a particular command.
+
 # GLOBAL OPTIONS
-    --debug              enable debug output for logging
-    --log value          set the log file path where internal debug information is written (default: "/dev/null")
-    --log-format value   set the format used by logs ('text' (default), or 'json') (default: "text")
-    --root value         root directory for storage of container state (this should be located in tmpfs) (default: "/run/runc" or $XDG_RUNTIME_DIR/runc for rootless containers)
-    --criu value         path to the criu binary used for checkpoint and restore (default: "criu")
-    --systemd-cgroup     enable systemd cgroup support, expects cgroupsPath to be of form "slice:prefix:name" for e.g. "system.slice:runc:434234"
-    --rootless value    enable rootless mode ('true', 'false', or 'auto') (default: "auto")
-    --help, -h           show help
-    --version, -v        print the version
+
+These options can be used with any command, and must precede the **command**.
+
+**--debug**
+: Enable debug logging.
+
+**--log** _path_
+: Set the log destination to _path_. The default is to log to stderr.
+
+**--log-format** **text**|**json**
+: Set the log format (default is **text**).
+
+**--root** _path_
+: Set the root directory to store containers' state. The _path_ should be
+located on tmpfs. Default is */run/runc*, or *$XDG_RUNTIME_DIR/runc* for
+rootless containers.
+
+**--criu** _path_
+: Set the path to the **criu**(8) binary used for checkpoint and restore.
+Default is **criu**.
+
+**--systemd-cgroup**
+: Enable systemd cgroup support. If this is set, the container spec
+(_config.json_) is expected to have **cgroupsPath** value in the
+*slice:prefix:name* form (e.g. **system.slice:runc:434234**).
+
+**--rootless** **true**|**false**|**auto**
+: Enable or disable rootless mode. Default is **auto**, meaning to auto-detect
+whether rootless should be enabled.
+
+**--help**|**-h**
+: Show help.
+
+**--version**|**-v**
+: Show version.
+
+# SEE ALSO
+
+**runc-checkpoint**(8),
+**runc-create**(8),
+**runc-delete**(8),
+**runc-events**(8),
+**runc-exec**(8),
+**runc-kill**(8),
+**runc-list**(8),
+**runc-pause**(8),
+**runc-ps**(8),
+**runc-restore**(8),
+**runc-resume**(8),
+**runc-run**(8),
+**runc-spec**(8),
+**runc-start**(8),
+**runc-state**(8),
+**runc-update**(8).

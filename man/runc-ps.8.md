@@ -1,15 +1,26 @@
 % runc-ps "8"
 
 # NAME
-   runc ps - ps displays the processes running inside a container
+**runc-ps** - display the processes inside a container
 
 # SYNOPSIS
-   runc ps [command options] `<container-id>` [ps options]
+**runc ps** [_option_ ...] _container-id_ [_ps-option_ ...]
+
+# DESCRIPTION
+The command **ps** is a wrapper around the stock **ps**(1) utility,
+which filters its output to only contain processes belonging to a specified
+_container-id_. Therefore, the PIDs shown are the host PIDs.
+
+Any **ps**(1) options can be used, but some might break the filtering.
+In particular, if PID column is not available, an error is returned,
+and if there are columns with values containing spaces before the PID
+column, the result is undefined.
 
 # OPTIONS
-    --format value, -f value     select one of: table(default) or json
+**--format**|**-f** **table**|**json**
+: Output format. Default is **table**. The **json** format shows a mere array
+of PIDs belonging to a container; if used, all **ps** options are gnored.
 
-The default format is table. The following will output the processes of a container
-in json format:
-
-    # runc ps -f json <container-id>
+# SEE ALSO
+**runc-list**(8),
+**runc**(8).
