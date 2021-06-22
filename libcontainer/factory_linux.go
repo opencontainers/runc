@@ -168,7 +168,7 @@ func TmpfsRoot(l *LinuxFactory) error {
 		return err
 	}
 	if !mounted {
-		if err := unix.Mount("tmpfs", l.Root, "tmpfs", 0, ""); err != nil {
+		if err := mount("tmpfs", l.Root, "", "tmpfs", 0, ""); err != nil {
 			return err
 		}
 	}

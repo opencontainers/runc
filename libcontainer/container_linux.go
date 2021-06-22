@@ -1282,8 +1282,8 @@ func (c *linuxContainer) prepareCriuRestoreMounts(mounts []*configs.Mount) error
 			// set up in the order they are configured.
 			if m.Device == "bind" {
 				if err := utils.WithProcfd(c.config.Rootfs, m.Destination, func(procfd string) error {
-					if err := unix.Mount(m.Source, procfd, "", unix.MS_BIND|unix.MS_REC, ""); err != nil {
-						return errorsf.Wrapf(err, "unable to bind mount %q to %q (through %q)", m.Source, m.Destination, procfd)
+					if err := mount(m.Source, m.Destination, procfd, "", unix.MS_BIND|unix.MS_REC, ""); err != nil {
+						return err
 					}
 					return nil
 				}); err != nil {
@@ -1346,7 +1346,7 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 	if err != nil {
 		return err
 	}
-	err = unix.Mount(c.config.Rootfs, root, "", unix.MS_BIND|unix.MS_REC, "")
+	err = mount(c.config.Rootfs, root, "", "", unix.MS_BIND|unix.MS_REC, "")
 	if err != nil {
 		return err
 	}
