@@ -143,12 +143,8 @@ func TestFactoryLoadNotExists(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected nil error loading non-existing container")
 	}
-	var lerr Error
-	if !errors.As(err, &lerr) {
-		t.Fatal("expected libcontainer error type")
-	}
-	if lerr.Code() != ContainerNotExists {
-		t.Fatalf("expected error code %s but received %s", ContainerNotExists, lerr.Code())
+	if !errors.Is(err, ErrNotExist) {
+		t.Fatalf("expected ErrNotExist, got %v", err)
 	}
 }
 

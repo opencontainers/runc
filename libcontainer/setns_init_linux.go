@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"strconv"
 
 	"github.com/opencontainers/selinux/go-selinux"
 	"github.com/sirupsen/logrus"
@@ -87,13 +88,13 @@ func (l *linuxSetnsInit) Init() error {
 	// enable in their seccomp profiles).
 	if l.config.Config.Seccomp != nil && l.config.NoNewPrivileges {
 		if err := seccomp.InitSeccomp(l.config.Config.Seccomp); err != nil {
-			return newSystemErrorWithCause(err, "init seccomp")
+			return fmt.Errorf("unable to init seccomp: %w", err)
 		}
 	}
 	logrus.Debugf("setns_init: about to exec")
 	// Close the log pipe fd so the parent's ForwardLogs can exit.
 	if err := unix.Close(l.logFd); err != nil {
-		return newSystemErrorWithCause(err, "closing log pipe fd")
+		return &os.PathError{Op: "close log pipe", Path: "fd " + strconv.Itoa(l.logFd), Err: err}
 	}
 
 	return system.Execv(l.config.Args[0], l.config.Args[0:], os.Environ())

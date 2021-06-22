@@ -13,7 +13,7 @@ type syncType string
 
 // Constants that are used for synchronisation between the parent and child
 // during container setup. They come in pairs (with procError being a generic
-// response which is followed by a &genericError).
+// response which is followed by an &initError).
 //
 // [  child  ] <-> [   parent   ]
 //
@@ -34,6 +34,16 @@ type syncT struct {
 	Type syncType `json:"type"`
 }
 
+// initError is used to wrap errors for passing them via JSON,
+// as encoding/json can't unmarshal into error type.
+type initError struct {
+	Message string `json:"message,omitempty"`
+}
+
+func (i initError) Error() string {
+	return i.Message
+}
+
 // writeSync is used to write to a synchronisation pipe. An error is returned
 // if there was a problem writing the payload.
 func writeSync(pipe io.Writer, sync syncType) error {
@@ -41,7 +51,7 @@ func writeSync(pipe io.Writer, sync syncType) error {
 }
 
 // readSync is used to read from a synchronisation pipe. An error is returned
-// if we got a genericError, the pipe was closed, or we got an unexpected flag.
+// if we got an initError, the pipe was closed, or we got an unexpected flag.
 func readSync(pipe io.Reader, expected syncType) error {
 	var procSync syncT
 	if err := json.NewDecoder(pipe).Decode(&procSync); err != nil {
@@ -52,7 +62,7 @@ func readSync(pipe io.Reader, expected syncType) error {
 	}
 
 	if procSync.Type == procError {
-		var ierr genericError
+		var ierr initError
 
 		if err := json.NewDecoder(pipe).Decode(&ierr); err != nil {
 			return fmt.Errorf("failed reading error from parent: %w", err)
@@ -81,10 +91,10 @@ func parseSync(pipe io.Reader, fn func(*syncT) error) error {
 		}
 
 		// We handle this case outside fn for cleanliness reasons.
-		var ierr *genericError
+		var ierr *initError
 		if sync.Type == procError {
 			if err := dec.Decode(&ierr); err != nil && !errors.Is(err, io.EOF) {
-				return newSystemErrorWithCause(err, "decoding proc error from init")
+				return fmt.Errorf("error decoding proc error from init: %w", err)
 			}
 			if ierr != nil {
 				return ierr
