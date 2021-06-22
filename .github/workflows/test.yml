@@ -23,6 +23,7 @@ jobs:
         go-version: [1.13.x, 1.15.x, 1.16.x]
         rootless: ["rootless", ""]
         race: ["-race", ""]
+        buildtags: ["seccomp", "seccomp,no_systemd", "no_systemd", ""]
 
     steps:
 
@@ -42,8 +43,8 @@ jobs:
         stable: '!contains(${{ matrix.go-version }}, "beta") && !contains(${{ matrix.go-version }}, "rc")'
         go-version: ${{ matrix.go-version }}
 
-    - name: build
-      run: sudo -E PATH="$PATH" make EXTRA_FLAGS="${{ matrix.race }}" all
+    - name: build with tags ${{ matrix.buildtags }}
+      run: sudo -E PATH="$PATH" make EXTRA_FLAGS="${{ matrix.race }}" BUILDTAGS="${{ matrix.buildtags }}" all
 
     - name: install bats
       uses: mig4/setup-bats@v1

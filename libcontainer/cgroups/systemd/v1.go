@@ -1,4 +1,4 @@
-// +build linux
+// +build linux,!no_systemd
 
 package systemd
 
@@ -165,7 +165,7 @@ func (m *legacyManager) Apply(pid int) error {
 	properties = append(properties,
 		newProp("DefaultDependencies", false))
 
-	properties = append(properties, c.SystemdProps...)
+	properties = append(properties, c.Sd.SystemdProps...)
 
 	if err := startUnit(m.dbus, unitName, properties); err != nil {
 		return err
