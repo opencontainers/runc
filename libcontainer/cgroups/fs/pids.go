@@ -3,8 +3,7 @@
 package fs
 
 import (
-	"fmt"
-	"path/filepath"
+	"math"
 	"strconv"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
@@ -45,21 +44,18 @@ func (s *PidsGroup) GetStats(path string, stats *cgroups.Stats) error {
 	}
 	current, err := fscommon.GetCgroupParamUint(path, "pids.current")
 	if err != nil {
-		return fmt.Errorf("failed to parse pids.current - %s", err)
+		return err
 	}
 
-	maxString, err := fscommon.GetCgroupParamString(path, "pids.max")
+	max, err := fscommon.GetCgroupParamUint(path, "pids.max")
 	if err != nil {
-		return fmt.Errorf("failed to parse pids.max - %s", err)
+		return err
 	}
-
-	// Default if pids.max == "max" is 0 -- which represents "no limit".
-	var max uint64
-	if maxString != "max" {
-		max, err = fscommon.ParseUint(maxString, 10, 64)
-		if err != nil {
-			return fmt.Errorf("failed to parse pids.max - unable to parse %q as a uint from Cgroup file %q", maxString, filepath.Join(path, "pids.max"))
-		}
+	// If no limit is set, read from pids.max returns "max", which is
+	// converted to MaxUint64 by GetCgroupParamUint. Historically, we
+	// represent "no limit" for pids as 0, thus this conversion.
+	if max == math.MaxUint64 {
+		max = 0
 	}
 
 	stats.PidsStats.Current = current

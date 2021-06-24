@@ -43,23 +43,23 @@ func InitSeccomp(config *configs.Seccomp) error {
 
 	filter, err := libseccomp.NewFilter(defaultAction)
 	if err != nil {
-		return fmt.Errorf("error creating filter: %s", err)
+		return fmt.Errorf("error creating filter: %w", err)
 	}
 
 	// Add extra architectures
 	for _, arch := range config.Architectures {
 		scmpArch, err := libseccomp.GetArchFromString(arch)
 		if err != nil {
-			return fmt.Errorf("error validating Seccomp architecture: %s", err)
+			return fmt.Errorf("error validating Seccomp architecture: %w", err)
 		}
 		if err := filter.AddArch(scmpArch); err != nil {
-			return fmt.Errorf("error adding architecture to seccomp filter: %s", err)
+			return fmt.Errorf("error adding architecture to seccomp filter: %w", err)
 		}
 	}
 
 	// Unset no new privs bit
 	if err := filter.SetNoNewPrivsBit(false); err != nil {
-		return fmt.Errorf("error setting no new privileges: %s", err)
+		return fmt.Errorf("error setting no new privileges: %w", err)
 	}
 
 	// Add a rule for each syscall
@@ -72,7 +72,7 @@ func InitSeccomp(config *configs.Seccomp) error {
 		}
 	}
 	if err := patchbpf.PatchAndLoad(config, filter); err != nil {
-		return fmt.Errorf("error loading seccomp filter into kernel: %s", err)
+		return fmt.Errorf("error loading seccomp filter into kernel: %w", err)
 	}
 	return nil
 }
@@ -161,13 +161,13 @@ func matchCall(filter *libseccomp.ScmpFilter, call *configs.Syscall) error {
 	// Convert the call's action to the libseccomp equivalent
 	callAct, err := getAction(call.Action, call.ErrnoRet)
 	if err != nil {
-		return fmt.Errorf("action in seccomp profile is invalid: %s", err)
+		return fmt.Errorf("action in seccomp profile is invalid: %w", err)
 	}
 
 	// Unconditional match - just add the rule
 	if len(call.Args) == 0 {
 		if err := filter.AddRule(callNum, callAct); err != nil {
-			return fmt.Errorf("error adding seccomp filter rule for syscall %s: %s", call.Name, err)
+			return fmt.Errorf("error adding seccomp filter rule for syscall %s: %w", call.Name, err)
 		}
 	} else {
 		// If two or more arguments have the same condition,
@@ -178,7 +178,7 @@ func matchCall(filter *libseccomp.ScmpFilter, call *configs.Syscall) error {
 		for _, cond := range call.Args {
 			newCond, err := getCondition(cond)
 			if err != nil {
-				return fmt.Errorf("error creating seccomp syscall condition for syscall %s: %s", call.Name, err)
+				return fmt.Errorf("error creating seccomp syscall condition for syscall %s: %w", call.Name, err)
 			}
 
 			argCounts[cond.Index] += 1
@@ -201,14 +201,14 @@ func matchCall(filter *libseccomp.ScmpFilter, call *configs.Syscall) error {
 				condArr := []libseccomp.ScmpCondition{cond}
 
 				if err := filter.AddRuleConditional(callNum, callAct, condArr); err != nil {
-					return fmt.Errorf("error adding seccomp rule for syscall %s: %s", call.Name, err)
+					return fmt.Errorf("error adding seccomp rule for syscall %s: %w", call.Name, err)
 				}
 			}
 		} else {
 			// No conditions share same argument
 			// Use new, proper behavior
 			if err := filter.AddRuleConditional(callNum, callAct, conditions); err != nil {
-				return fmt.Errorf("error adding seccomp rule for syscall %s: %s", call.Name, err)
+				return fmt.Errorf("error adding seccomp rule for syscall %s: %w", call.Name, err)
 			}
 		}
 	}

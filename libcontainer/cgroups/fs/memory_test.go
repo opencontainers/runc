@@ -64,7 +64,7 @@ func TestMemorySetMemory(t *testing.T) {
 
 	value, err := fscommon.GetCgroupParamUint(helper.CgroupPath, "memory.limit_in_bytes")
 	if err != nil {
-		t.Fatalf("Failed to parse memory.limit_in_bytes - %s", err)
+		t.Fatal(err)
 	}
 	if value != memoryAfter {
 		t.Fatal("Got the wrong value, set memory.limit_in_bytes failed.")
@@ -72,7 +72,7 @@ func TestMemorySetMemory(t *testing.T) {
 
 	value, err = fscommon.GetCgroupParamUint(helper.CgroupPath, "memory.soft_limit_in_bytes")
 	if err != nil {
-		t.Fatalf("Failed to parse memory.soft_limit_in_bytes - %s", err)
+		t.Fatal(err)
 	}
 	if value != reservationAfter {
 		t.Fatal("Got the wrong value, set memory.soft_limit_in_bytes failed.")
@@ -100,7 +100,7 @@ func TestMemorySetMemoryswap(t *testing.T) {
 
 	value, err := fscommon.GetCgroupParamUint(helper.CgroupPath, "memory.memsw.limit_in_bytes")
 	if err != nil {
-		t.Fatalf("Failed to parse memory.memsw.limit_in_bytes - %s", err)
+		t.Fatal(err)
 	}
 	if value != memoryswapAfter {
 		t.Fatal("Got the wrong value, set memory.memsw.limit_in_bytes failed.")
@@ -137,14 +137,15 @@ func TestMemorySetMemoryLargerThanSwap(t *testing.T) {
 
 	value, err := fscommon.GetCgroupParamUint(helper.CgroupPath, "memory.limit_in_bytes")
 	if err != nil {
-		t.Fatalf("Failed to parse memory.limit_in_bytes - %s", err)
+		t.Fatal(err)
 	}
 	if value != memoryAfter {
 		t.Fatal("Got the wrong value, set memory.limit_in_bytes failed.")
 	}
+
 	value, err = fscommon.GetCgroupParamUint(helper.CgroupPath, "memory.memsw.limit_in_bytes")
 	if err != nil {
-		t.Fatalf("Failed to parse memory.memsw.limit_in_bytes - %s", err)
+		t.Fatal(err)
 	}
 	if value != memoryswapAfter {
 		t.Fatal("Got the wrong value, set memory.memsw.limit_in_bytes failed.")
@@ -176,14 +177,15 @@ func TestMemorySetSwapSmallerThanMemory(t *testing.T) {
 
 	value, err := fscommon.GetCgroupParamUint(helper.CgroupPath, "memory.limit_in_bytes")
 	if err != nil {
-		t.Fatalf("Failed to parse memory.limit_in_bytes - %s", err)
+		t.Fatal(err)
 	}
 	if value != memoryAfter {
 		t.Fatalf("Got the wrong value (%d != %d), set memory.limit_in_bytes failed", value, memoryAfter)
 	}
+
 	value, err = fscommon.GetCgroupParamUint(helper.CgroupPath, "memory.memsw.limit_in_bytes")
 	if err != nil {
-		t.Fatalf("Failed to parse memory.memsw.limit_in_bytes - %s", err)
+		t.Fatal(err)
 	}
 	if value != memoryswapAfter {
 		t.Fatalf("Got the wrong value (%d != %d), set memory.memsw.limit_in_bytes failed", value, memoryswapAfter)
@@ -209,7 +211,7 @@ func TestMemorySetMemorySwappinessDefault(t *testing.T) {
 
 	value, err := fscommon.GetCgroupParamUint(helper.CgroupPath, "memory.swappiness")
 	if err != nil {
-		t.Fatalf("Failed to parse memory.swappiness - %s", err)
+		t.Fatal(err)
 	}
 	if value != swappinessAfter {
 		t.Fatalf("Got the wrong value (%d), set memory.swappiness = %d failed.", value, swappinessAfter)
@@ -427,9 +429,8 @@ func TestMemorySetOomControl(t *testing.T) {
 
 	value, err := fscommon.GetCgroupParamUint(helper.CgroupPath, "memory.oom_control")
 	if err != nil {
-		t.Fatalf("Failed to parse memory.oom_control - %s", err)
+		t.Fatal(err)
 	}
-
 	if value != oomKillDisable {
 		t.Fatalf("Got the wrong value, set memory.oom_control failed.")
 	}

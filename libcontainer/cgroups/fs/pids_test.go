@@ -31,9 +31,8 @@ func TestPidsSetMax(t *testing.T) {
 
 	value, err := fscommon.GetCgroupParamUint(helper.CgroupPath, "pids.max")
 	if err != nil {
-		t.Fatalf("Failed to parse pids.max - %s", err)
+		t.Fatal(err)
 	}
-
 	if value != maxLimited {
 		t.Fatalf("Expected %d, got %d for setting pids.max - limited", maxLimited, value)
 	}
@@ -55,9 +54,8 @@ func TestPidsSetUnlimited(t *testing.T) {
 
 	value, err := fscommon.GetCgroupParamString(helper.CgroupPath, "pids.max")
 	if err != nil {
-		t.Fatalf("Failed to parse pids.max - %s", err)
+		t.Fatal(err)
 	}
-
 	if value != "max" {
 		t.Fatalf("Expected %s, got %s for setting pids.max - unlimited", "max", value)
 	}

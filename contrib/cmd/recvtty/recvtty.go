@@ -17,6 +17,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -88,7 +89,7 @@ func handleSingle(path string, noStdin bool) error {
 	// Get the fd of the connection.
 	unixconn, ok := conn.(*net.UnixConn)
 	if !ok {
-		return fmt.Errorf("failed to cast to unixconn")
+		return errors.New("failed to cast to unixconn")
 	}
 
 	socket, err := unixconn.File()
@@ -217,7 +218,7 @@ func main() {
 	app.Action = func(ctx *cli.Context) error {
 		args := ctx.Args()
 		if len(args) != 1 {
-			return fmt.Errorf("need to specify a single socket path")
+			return errors.New("need to specify a single socket path")
 		}
 		path := ctx.Args()[0]
 

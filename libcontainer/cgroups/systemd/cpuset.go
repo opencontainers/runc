@@ -2,11 +2,11 @@ package systemd
 
 import (
 	"encoding/binary"
+	"errors"
 	"strconv"
 	"strings"
 
 	"github.com/bits-and-blooms/bitset"
-	"github.com/pkg/errors"
 )
 
 // RangeToBits converts a text representation of a CPU mask (as written to

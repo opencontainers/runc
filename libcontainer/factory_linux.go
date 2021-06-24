@@ -4,6 +4,7 @@ package libcontainer
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,6 +14,8 @@ import (
 
 	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/moby/sys/mountinfo"
+	"golang.org/x/sys/unix"
+
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fs"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fs2"
@@ -21,9 +24,6 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs/validate"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runc/libcontainer/utils"
-	"github.com/pkg/errors"
-
-	"golang.org/x/sys/unix"
 )
 
 const (
@@ -31,7 +31,10 @@ const (
 	execFifoFilename = "exec.fifo"
 )
 
-var idRegex = regexp.MustCompile(`^[\w+-\.]+$`)
+var (
+	idRegex      = regexp.MustCompile(`^[\w+-\.]+$`)
+	errNoSystemd = errors.New("systemd not running on this host, can't use systemd as cgroups manager")
+)
 
 // InitArgs returns an options func to configure a LinuxFactory with the
 // provided init binary path and arguments.
@@ -56,13 +59,13 @@ func getUnifiedPath(paths map[string]string) string {
 		if path == "" {
 			path = v
 		} else if v != path {
-			panic(errors.Errorf("expected %q path to be unified path %q, got %q", k, path, v))
+			panic(fmt.Errorf("expected %q path to be unified path %q, got %q", k, path, v))
 		}
 	}
 	// can be empty
 	if path != "" {
 		if filepath.Clean(path) != path || !filepath.IsAbs(path) {
-			panic(errors.Errorf("invalid dir path %q", path))
+			panic(fmt.Errorf("invalid dir path %q", path))
 		}
 	}
 
@@ -80,7 +83,7 @@ func systemdCgroupV2(l *LinuxFactory, rootless bool) error {
 // containers that use systemd to create and manage cgroups.
 func SystemdCgroups(l *LinuxFactory) error {
 	if !systemd.IsRunningSystemd() {
-		return fmt.Errorf("systemd not running on this host, can't use systemd as cgroups manager")
+		return errNoSystemd
 	}
 
 	if cgroups.IsCgroup2UnifiedMode() {
@@ -97,11 +100,11 @@ func SystemdCgroups(l *LinuxFactory) error {
 // RootlessSystemdCgroups is rootless version of SystemdCgroups.
 func RootlessSystemdCgroups(l *LinuxFactory) error {
 	if !systemd.IsRunningSystemd() {
-		return fmt.Errorf("systemd not running on this host, can't use systemd as cgroups manager")
+		return errNoSystemd
 	}
 
 	if !cgroups.IsCgroup2UnifiedMode() {
-		return fmt.Errorf("cgroup v2 not enabled on this host, can't use systemd (rootless) as cgroups manager")
+		return errors.New("cgroup v2 not enabled on this host, can't use systemd (rootless) as cgroups manager")
 	}
 	return systemdCgroupV2(l, true)
 }
@@ -165,7 +168,7 @@ func TmpfsRoot(l *LinuxFactory) error {
 		return err
 	}
 	if !mounted {
-		if err := unix.Mount("tmpfs", l.Root, "tmpfs", 0, ""); err != nil {
+		if err := mount("tmpfs", l.Root, "", "tmpfs", 0, ""); err != nil {
 			return err
 		}
 	}
@@ -246,7 +249,7 @@ type LinuxFactory struct {
 
 func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, error) {
 	if l.Root == "" {
-		return nil, newGenericError(fmt.Errorf("invalid root"), ConfigInvalid)
+		return nil, newGenericError(errors.New("invalid root"), ConfigInvalid)
 	}
 	if err := l.validateID(id); err != nil {
 		return nil, err
@@ -289,7 +292,7 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 
 func (l *LinuxFactory) Load(id string) (Container, error) {
 	if l.Root == "" {
-		return nil, newGenericError(fmt.Errorf("invalid root"), ConfigInvalid)
+		return nil, newGenericError(errors.New("invalid root"), ConfigInvalid)
 	}
 	// when load, we need to check id is valid or not.
 	if err := l.validateID(id); err != nil {
@@ -343,7 +346,7 @@ func (l *LinuxFactory) StartInitialization() (err error) {
 	envInitPipe := os.Getenv("_LIBCONTAINER_INITPIPE")
 	pipefd, err := strconv.Atoi(envInitPipe)
 	if err != nil {
-		return fmt.Errorf("unable to convert _LIBCONTAINER_INITPIPE=%s to int: %s", envInitPipe, err)
+		return fmt.Errorf("unable to convert _LIBCONTAINER_INITPIPE: %w", err)
 	}
 	pipe := os.NewFile(uintptr(pipefd), "pipe")
 	defer pipe.Close()
@@ -355,7 +358,7 @@ func (l *LinuxFactory) StartInitialization() (err error) {
 	if it == initStandard {
 		envFifoFd := os.Getenv("_LIBCONTAINER_FIFOFD")
 		if fifofd, err = strconv.Atoi(envFifoFd); err != nil {
-			return fmt.Errorf("unable to convert _LIBCONTAINER_FIFOFD=%s to int: %s", envFifoFd, err)
+			return fmt.Errorf("unable to convert _LIBCONTAINER_FIFOFD: %w", err)
 		}
 	}
 
@@ -363,7 +366,7 @@ func (l *LinuxFactory) StartInitialization() (err error) {
 	if envConsole := os.Getenv("_LIBCONTAINER_CONSOLE"); envConsole != "" {
 		console, err := strconv.Atoi(envConsole)
 		if err != nil {
-			return fmt.Errorf("unable to convert _LIBCONTAINER_CONSOLE=%s to int: %s", envConsole, err)
+			return fmt.Errorf("unable to convert _LIBCONTAINER_CONSOLE: %w", err)
 		}
 		consoleSocket = os.NewFile(uintptr(console), "console-socket")
 		defer consoleSocket.Close()
@@ -372,7 +375,7 @@ func (l *LinuxFactory) StartInitialization() (err error) {
 	logPipeFdStr := os.Getenv("_LIBCONTAINER_LOGPIPE")
 	logPipeFd, err := strconv.Atoi(logPipeFdStr)
 	if err != nil {
-		return fmt.Errorf("unable to convert _LIBCONTAINER_LOGPIPE=%s to int: %s", logPipeFdStr, err)
+		return fmt.Errorf("unable to convert _LIBCONTAINER_LOGPIPE: %w", err)
 	}
 
 	// clear the current process's environment to clean any libcontainer
@@ -393,7 +396,7 @@ func (l *LinuxFactory) StartInitialization() (err error) {
 	}()
 	defer func() {
 		if e := recover(); e != nil {
-			err = fmt.Errorf("panic from initialization: %v, %v", e, string(debug.Stack()))
+			err = fmt.Errorf("panic from initialization: %w, %v", e, string(debug.Stack()))
 		}
 	}()
 

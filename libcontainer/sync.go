@@ -45,17 +45,17 @@ func writeSync(pipe io.Writer, sync syncType) error {
 func readSync(pipe io.Reader, expected syncType) error {
 	var procSync syncT
 	if err := json.NewDecoder(pipe).Decode(&procSync); err != nil {
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			return errors.New("parent closed synchronisation channel")
 		}
-		return fmt.Errorf("failed reading error from parent: %v", err)
+		return fmt.Errorf("failed reading error from parent: %w", err)
 	}
 
 	if procSync.Type == procError {
 		var ierr genericError
 
 		if err := json.NewDecoder(pipe).Decode(&ierr); err != nil {
-			return fmt.Errorf("failed reading error from parent: %v", err)
+			return fmt.Errorf("failed reading error from parent: %w", err)
 		}
 
 		return &ierr
@@ -74,7 +74,7 @@ func parseSync(pipe io.Reader, fn func(*syncT) error) error {
 	for {
 		var sync syncT
 		if err := dec.Decode(&sync); err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				break
 			}
 			return err
@@ -83,7 +83,7 @@ func parseSync(pipe io.Reader, fn func(*syncT) error) error {
 		// We handle this case outside fn for cleanliness reasons.
 		var ierr *genericError
 		if sync.Type == procError {
-			if err := dec.Decode(&ierr); err != nil && err != io.EOF {
+			if err := dec.Decode(&ierr); err != nil && !errors.Is(err, io.EOF) {
 				return newSystemErrorWithCause(err, "decoding proc error from init")
 			}
 			if ierr != nil {

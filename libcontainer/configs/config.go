@@ -7,10 +7,10 @@ import (
 	"os/exec"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/opencontainers/runc/libcontainer/devices"
 	"github.com/opencontainers/runtime-spec/specs-go"
-	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
 
 type Rlimit struct {
@@ -262,7 +262,7 @@ type Capabilities struct {
 func (hooks HookList) RunHooks(state *specs.State) error {
 	for i, h := range hooks {
 		if err := h.Run(state); err != nil {
-			return errors.Wrapf(err, "Running hook #%d:", i)
+			return fmt.Errorf("error running hook #%d: %w", i, err)
 		}
 	}
 
@@ -375,7 +375,7 @@ func (c Command) Run(s *specs.State) error {
 	go func() {
 		err := cmd.Wait()
 		if err != nil {
-			err = fmt.Errorf("error running hook: %v, stdout: %s, stderr: %s", err, stdout.String(), stderr.String())
+			err = fmt.Errorf("error running hook: %w, stdout: %s, stderr: %s", err, stdout.String(), stderr.String())
 		}
 		errC <- err
 	}()

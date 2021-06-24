@@ -3,17 +3,17 @@
 package fs
 
 import (
-	"fmt"
+	"errors"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 
+	"golang.org/x/sys/unix"
+
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/pkg/errors"
-	"golang.org/x/sys/unix"
 )
 
 type CpusetGroup struct{}
@@ -40,32 +40,32 @@ func (s *CpusetGroup) Set(path string, r *configs.Resources) error {
 	return nil
 }
 
-func getCpusetStat(path string, filename string) ([]uint16, error) {
+func getCpusetStat(path string, file string) ([]uint16, error) {
 	var extracted []uint16
-	fileContent, err := fscommon.GetCgroupParamString(path, filename)
+	fileContent, err := fscommon.GetCgroupParamString(path, file)
 	if err != nil {
 		return extracted, err
 	}
 	if len(fileContent) == 0 {
-		return extracted, fmt.Errorf("%s found to be empty", filepath.Join(path, filename))
+		return extracted, &parseError{Path: path, File: file, Err: errors.New("empty file")}
 	}
 
 	for _, s := range strings.Split(fileContent, ",") {
 		splitted := strings.SplitN(s, "-", 3)
 		switch len(splitted) {
 		case 3:
-			return extracted, fmt.Errorf("invalid values in %s", filepath.Join(path, filename))
+			return extracted, &parseError{Path: path, File: file, Err: errors.New("extra dash")}
 		case 2:
 			min, err := strconv.ParseUint(splitted[0], 10, 16)
 			if err != nil {
-				return extracted, err
+				return extracted, &parseError{Path: path, File: file, Err: err}
 			}
 			max, err := strconv.ParseUint(splitted[1], 10, 16)
 			if err != nil {
-				return extracted, err
+				return extracted, &parseError{Path: path, File: file, Err: err}
 			}
 			if min > max {
-				return extracted, fmt.Errorf("invalid values in %s", filepath.Join(path, filename))
+				return extracted, &parseError{Path: path, File: file, Err: errors.New("invalid values, min > max")}
 			}
 			for i := min; i <= max; i++ {
 				extracted = append(extracted, uint16(i))
@@ -73,7 +73,7 @@ func getCpusetStat(path string, filename string) ([]uint16, error) {
 		case 1:
 			value, err := strconv.ParseUint(s, 10, 16)
 			if err != nil {
-				return extracted, err
+				return extracted, &parseError{Path: path, File: file, Err: err}
 			}
 			extracted = append(extracted, uint16(value))
 		}
@@ -198,7 +198,7 @@ func cpusetEnsureParent(current string) error {
 	}
 	// Treat non-existing directory as cgroupfs as it will be created,
 	// and the root cpuset directory obviously exists.
-	if err != nil && err != unix.ENOENT {
+	if err != nil && err != unix.ENOENT { //nolint:errorlint // unix errors are bare
 		return &os.PathError{Op: "statfs", Path: parent, Err: err}
 	}
 

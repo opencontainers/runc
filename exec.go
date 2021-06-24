@@ -4,6 +4,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -100,7 +101,7 @@ following will output a list of processes running in the container:
 		if err == nil {
 			os.Exit(status)
 		}
-		return fmt.Errorf("exec failed: %v", err)
+		return fmt.Errorf("exec failed: %w", err)
 	},
 	SkipArgReorder: true,
 }
@@ -115,11 +116,11 @@ func execProcess(context *cli.Context) (int, error) {
 		return -1, err
 	}
 	if status == libcontainer.Stopped {
-		return -1, fmt.Errorf("cannot exec a container that has stopped")
+		return -1, errors.New("cannot exec a container that has stopped")
 	}
 	path := context.String("process")
 	if path == "" && len(context.Args()) == 1 {
-		return -1, fmt.Errorf("process args cannot be empty")
+		return -1, errors.New("process args cannot be empty")
 	}
 	detach := context.Bool("detach")
 	state, err := container.State()
@@ -211,13 +212,13 @@ func getProcess(context *cli.Context, bundle string) (*specs.Process, error) {
 		if len(u) > 1 {
 			gid, err := strconv.Atoi(u[1])
 			if err != nil {
-				return nil, fmt.Errorf("parsing %s as int for gid failed: %v", u[1], err)
+				return nil, fmt.Errorf("parsing %s as int for gid failed: %w", u[1], err)
 			}
 			p.User.GID = uint32(gid)
 		}
 		uid, err := strconv.Atoi(u[0])
 		if err != nil {
-			return nil, fmt.Errorf("parsing %s as int for uid failed: %v", u[0], err)
+			return nil, fmt.Errorf("parsing %s as int for uid failed: %w", u[0], err)
 		}
 		p.User.UID = uint32(uid)
 	}

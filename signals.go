@@ -120,7 +120,7 @@ func (h *signalHandler) reap() (exits []exit, err error) {
 	for {
 		pid, err := unix.Wait4(-1, &ws, unix.WNOHANG, &rus)
 		if err != nil {
-			if err == unix.ECHILD {
+			if err == unix.ECHILD { //nolint:errorlint // unix errors are bare
 				return exits, nil
 			}
 			return nil, err

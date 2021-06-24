@@ -59,9 +59,8 @@ func TestCPUSetSetCpus(t *testing.T) {
 
 	value, err := fscommon.GetCgroupParamString(helper.CgroupPath, "cpuset.cpus")
 	if err != nil {
-		t.Fatalf("Failed to parse cpuset.cpus - %s", err)
+		t.Fatal(err)
 	}
-
 	if value != cpusAfter {
 		t.Fatal("Got the wrong value, set cpuset.cpus failed.")
 	}
@@ -88,9 +87,8 @@ func TestCPUSetSetMems(t *testing.T) {
 
 	value, err := fscommon.GetCgroupParamString(helper.CgroupPath, "cpuset.mems")
 	if err != nil {
-		t.Fatalf("Failed to parse cpuset.mems - %s", err)
+		t.Fatal(err)
 	}
-
 	if value != memsAfter {
 		t.Fatal("Got the wrong value, set cpuset.mems failed.")
 	}

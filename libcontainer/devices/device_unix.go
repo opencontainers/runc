@@ -103,7 +103,7 @@ func GetDevices(path string) ([]*Device, error) {
 		}
 		device, err := DeviceFromPath(filepath.Join(path, f.Name()), "rwm")
 		if err != nil {
-			if err == ErrNotADevice {
+			if errors.Is(err, ErrNotADevice) {
 				continue
 			}
 			if os.IsNotExist(err) {

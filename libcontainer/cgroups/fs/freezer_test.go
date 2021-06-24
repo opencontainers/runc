@@ -25,7 +25,7 @@ func TestFreezerSetState(t *testing.T) {
 
 	value, err := fscommon.GetCgroupParamString(helper.CgroupPath, "freezer.state")
 	if err != nil {
-		t.Fatalf("Failed to parse freezer.state - %s", err)
+		t.Fatal(err)
 	}
 	if value != string(configs.Thawed) {
 		t.Fatal("Got the wrong value, set freezer.state failed.")

@@ -3,17 +3,18 @@
 package fs
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
 
+	"golang.org/x/sys/unix"
+
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	libcontainerUtils "github.com/opencontainers/runc/libcontainer/utils"
-	"github.com/pkg/errors"
-	"golang.org/x/sys/unix"
 )
 
 var (
@@ -171,8 +172,6 @@ func isIgnorableError(rootless bool, err error) bool {
 	if !rootless {
 		return false
 	}
-	// TODO: rm errors.Cause once we switch to %w everywhere
-	err = errors.Cause(err)
 	// Is it an ordinary EPERM?
 	if errors.Is(err, os.ErrPermission) {
 		return true

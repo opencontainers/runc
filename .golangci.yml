@@ -7,3 +7,4 @@ run:
 linters:
   enable:
     - gofumpt
+    - errorlint

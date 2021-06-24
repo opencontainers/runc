@@ -18,6 +18,8 @@ package fs2
 
 import (
 	"bufio"
+	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -25,18 +27,17 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer/configs"
 	libcontainerUtils "github.com/opencontainers/runc/libcontainer/utils"
-	"github.com/pkg/errors"
 )
 
 const UnifiedMountpoint = "/sys/fs/cgroup"
 
 func defaultDirPath(c *configs.Cgroup) (string, error) {
 	if (c.Name != "" || c.Parent != "") && c.Path != "" {
-		return "", errors.Errorf("cgroup: either Path or Name and Parent should be used, got %+v", c)
+		return "", fmt.Errorf("cgroup: either Path or Name and Parent should be used, got %+v", c)
 	}
 	if len(c.Paths) != 0 {
 		// never set by specconv
-		return "", errors.Errorf("cgroup: Paths is unsupported, use Path, got %+v", c)
+		return "", fmt.Errorf("cgroup: Paths is unsupported, use Path, got %+v", c)
 	}
 
 	// XXX: Do not remove this code. Path safety is important! -- cyphar
@@ -89,7 +90,7 @@ func parseCgroupFromReader(r io.Reader) (string, error) {
 			parts = strings.SplitN(text, ":", 3)
 		)
 		if len(parts) < 3 {
-			return "", errors.Errorf("invalid cgroup entry: %q", text)
+			return "", fmt.Errorf("invalid cgroup entry: %q", text)
 		}
 		// text is like "0::/user.slice/user-1001.slice/session-1.scope"
 		if parts[0] == "0" && parts[1] == "" {

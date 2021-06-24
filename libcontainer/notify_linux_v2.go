@@ -3,11 +3,11 @@
 package libcontainer
 
 import (
+	"fmt"
 	"path/filepath"
 	"unsafe"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
@@ -15,19 +15,19 @@ import (
 func registerMemoryEventV2(cgDir, evName, cgEvName string) (<-chan struct{}, error) {
 	fd, err := unix.InotifyInit()
 	if err != nil {
-		return nil, errors.Wrap(err, "unable to init inotify")
+		return nil, fmt.Errorf("unable to init inotify: %w", err)
 	}
 	// watching oom kill
 	evFd, err := unix.InotifyAddWatch(fd, filepath.Join(cgDir, evName), unix.IN_MODIFY)
 	if err != nil {
 		unix.Close(fd)
-		return nil, errors.Wrap(err, "unable to add inotify watch")
+		return nil, fmt.Errorf("unable to add inotify watch: %w", err)
 	}
 	// Because no `unix.IN_DELETE|unix.IN_DELETE_SELF` event for cgroup file system, so watching all process exited
 	cgFd, err := unix.InotifyAddWatch(fd, filepath.Join(cgDir, cgEvName), unix.IN_MODIFY)
 	if err != nil {
 		unix.Close(fd)
-		return nil, errors.Wrap(err, "unable to add inotify watch")
+		return nil, fmt.Errorf("unable to add inotify watch: %w", err)
 	}
 	ch := make(chan struct{})
 	go func() {

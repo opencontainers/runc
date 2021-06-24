@@ -10,6 +10,7 @@ func Lgetxattr(path string, attr string) ([]byte, error) {
 	dest := make([]byte, 128)
 	sz, errno := unix.Lgetxattr(path, attr, dest)
 
+	//nolint:errorlint // unix errors are bare
 	switch {
 	case errno == unix.ENODATA:
 		return nil, errno

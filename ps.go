@@ -68,7 +68,7 @@ var psCommand = cli.Command{
 		cmd := exec.Command("ps", psArgs...)
 		output, err := cmd.CombinedOutput()
 		if err != nil {
-			return fmt.Errorf("%s: %s", err, output)
+			return fmt.Errorf("%w: %s", err, output)
 		}
 
 		lines := strings.Split(string(output), "\n")
@@ -85,7 +85,7 @@ var psCommand = cli.Command{
 			fields := strings.Fields(line)
 			p, err := strconv.Atoi(fields[pidIndex])
 			if err != nil {
-				return fmt.Errorf("unexpected pid '%s': %s", fields[pidIndex], err)
+				return fmt.Errorf("unable to parse pid: %w", err)
 			}
 
 			for _, pid := range pids {

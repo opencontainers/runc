@@ -85,7 +85,8 @@ func (s *CpuGroup) Set(path string, r *configs.Resources) error {
 }
 
 func (s *CpuGroup) GetStats(path string, stats *cgroups.Stats) error {
-	f, err := cgroups.OpenFile(path, "cpu.stat", os.O_RDONLY)
+	const file = "cpu.stat"
+	f, err := cgroups.OpenFile(path, file, os.O_RDONLY)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil
@@ -98,7 +99,7 @@ func (s *CpuGroup) GetStats(path string, stats *cgroups.Stats) error {
 	for sc.Scan() {
 		t, v, err := fscommon.ParseKeyValue(sc.Text())
 		if err != nil {
-			return err
+			return &parseError{Path: path, File: file, Err: err}
 		}
 		switch t {
 		case "nr_periods":

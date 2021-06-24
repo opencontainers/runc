@@ -1,6 +1,7 @@
 package libcontainer
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"text/template"
@@ -22,7 +23,8 @@ File: {{$frame.File}}@{{$frame.Line}}{{end}}
 `))
 
 func newGenericError(err error, c ErrorCode) Error {
-	if le, ok := err.(Error); ok {
+	var le Error
+	if errors.As(err, &le) {
 		return le
 	}
 	gerr := &genericError{

@@ -13,11 +13,11 @@ import (
 
 	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
 	securejoin "github.com/cyphar/filepath-securejoin"
+	"github.com/sirupsen/logrus"
+
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fs2"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
 
 type unifiedManager struct {
@@ -283,7 +283,7 @@ func (m *unifiedManager) Apply(pid int) error {
 	properties = append(properties, c.SystemdProps...)
 
 	if err := startUnit(m.dbus, unitName, properties); err != nil {
-		return errors.Wrapf(err, "error while starting unit %q with properties %+v", unitName, properties)
+		return fmt.Errorf("unable to start unit %q (properties %+v): %w", unitName, properties, err)
 	}
 
 	if err := m.initPath(); err != nil {
@@ -440,7 +440,7 @@ func (m *unifiedManager) Set(r *configs.Resources) error {
 
 	if err := setUnitProperties(m.dbus, getUnitName(m.cgroups), properties...); err != nil {
 		_ = m.Freeze(targetFreezerState)
-		return errors.Wrap(err, "error while setting unit properties")
+		return fmt.Errorf("unable to set unit properties: %w", err)
 	}
 
 	// Reset freezer state before we apply the configuration, to avoid clashing

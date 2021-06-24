@@ -205,7 +205,7 @@ other options are ignored.
 					var err error
 					*pair.dest, err = strconv.ParseUint(val, 10, 64)
 					if err != nil {
-						return fmt.Errorf("invalid value for %s: %s", pair.opt, err)
+						return fmt.Errorf("invalid value for %s: %w", pair.opt, err)
 					}
 				}
 			}
@@ -221,7 +221,7 @@ other options are ignored.
 					var err error
 					*pair.dest, err = strconv.ParseInt(val, 10, 64)
 					if err != nil {
-						return fmt.Errorf("invalid value for %s: %s", pair.opt, err)
+						return fmt.Errorf("invalid value for %s: %w", pair.opt, err)
 					}
 				}
 			}
@@ -241,7 +241,7 @@ other options are ignored.
 					if val != "-1" {
 						v, err = units.RAMInBytes(val)
 						if err != nil {
-							return fmt.Errorf("invalid value for %s: %s", pair.opt, err)
+							return fmt.Errorf("invalid value for %s: %w", pair.opt, err)
 						}
 					} else {
 						v = -1

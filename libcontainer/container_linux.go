@@ -19,21 +19,20 @@ import (
 	"sync"
 	"time"
 
+	"github.com/checkpoint-restore/go-criu/v5"
+	criurpc "github.com/checkpoint-restore/go-criu/v5/rpc"
 	securejoin "github.com/cyphar/filepath-securejoin"
+	"github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/sirupsen/logrus"
+	"github.com/vishvananda/netlink/nl"
+	"golang.org/x/sys/unix"
+	"google.golang.org/protobuf/proto"
+
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runc/libcontainer/utils"
-	"github.com/opencontainers/runtime-spec/specs-go"
-
-	"github.com/checkpoint-restore/go-criu/v5"
-	criurpc "github.com/checkpoint-restore/go-criu/v5/rpc"
-	errorsf "github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-	"github.com/vishvananda/netlink/nl"
-	"golang.org/x/sys/unix"
-	"google.golang.org/protobuf/proto"
 )
 
 const stdioFdCount = 3
@@ -390,7 +389,7 @@ func (c *linuxContainer) start(process *Process) (retErr error) {
 
 			if err := c.config.Hooks[configs.Poststart].RunHooks(s); err != nil {
 				if err := ignoreTerminateErrors(parent.terminate()); err != nil {
-					logrus.Warn(errorsf.Wrapf(err, "Running Poststart hook"))
+					logrus.Warn(fmt.Errorf("error running poststart hook: %w", err))
 				}
 				return err
 			}
@@ -478,7 +477,7 @@ func (c *linuxContainer) newParentProcess(p *Process) (parentProcess, error) {
 
 	parentLogPipe, childLogPipe, err := os.Pipe()
 	if err != nil {
-		return nil, fmt.Errorf("Unable to create the log pipe:  %s", err)
+		return nil, fmt.Errorf("unable to create log pipe: %w", err)
 	}
 	logFilePair := filePair{parentLogPipe, childLogPipe}
 
@@ -666,7 +665,7 @@ func (c *linuxContainer) Resume() error {
 		return err
 	}
 	if status != Paused {
-		return newGenericError(fmt.Errorf("container not paused"), ContainerNotPaused)
+		return newGenericError(errors.New("container not paused"), ContainerNotPaused)
 	}
 	if err := c.cgroupManager.Freeze(configs.Thawed); err != nil {
 		return err
@@ -771,7 +770,7 @@ func (c *linuxContainer) checkCriuVersion(minVersion int) error {
 	var err error
 	c.criuVersion, err = criu.GetCriuVersion()
 	if err != nil {
-		return fmt.Errorf("CRIU version check failed: %s", err)
+		return fmt.Errorf("CRIU version check failed: %w", err)
 	}
 
 	return compareCriuVersion(c.criuVersion, minVersion)
@@ -1256,7 +1255,7 @@ func (c *linuxContainer) prepareCriuRestoreMounts(mounts []*configs.Mount) error
 		for _, u := range umounts {
 			_ = utils.WithProcfd(c.config.Rootfs, u, func(procfd string) error {
 				if e := unix.Unmount(procfd, unix.MNT_DETACH); e != nil {
-					if e != unix.EINVAL {
+					if e != unix.EINVAL { //nolint:errorlint // unix errors are bare
 						// Ignore EINVAL as it means 'target is not a mount point.'
 						// It probably has already been unmounted.
 						logrus.Warnf("Error during cleanup unmounting of %s (%s): %v", procfd, u, e)
@@ -1282,8 +1281,8 @@ func (c *linuxContainer) prepareCriuRestoreMounts(mounts []*configs.Mount) error
 			// set up in the order they are configured.
 			if m.Device == "bind" {
 				if err := utils.WithProcfd(c.config.Rootfs, m.Destination, func(procfd string) error {
-					if err := unix.Mount(m.Source, procfd, "", unix.MS_BIND|unix.MS_REC, ""); err != nil {
-						return errorsf.Wrapf(err, "unable to bind mount %q to %q (through %q)", m.Source, m.Destination, procfd)
+					if err := mount(m.Source, m.Destination, procfd, "", unix.MS_BIND|unix.MS_REC, ""); err != nil {
+						return err
 					}
 					return nil
 				}); err != nil {
@@ -1346,7 +1345,7 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 	if err != nil {
 		return err
 	}
-	err = unix.Mount(c.config.Rootfs, root, "", unix.MS_BIND|unix.MS_REC, "")
+	err = mount(c.config.Rootfs, root, "", "", unix.MS_BIND|unix.MS_REC, "")
 	if err != nil {
 		return err
 	}

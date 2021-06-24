@@ -11,7 +11,7 @@ import (
 	"strings"
 	"unsafe"
 
-	"github.com/cyphar/filepath-securejoin"
+	securejoin "github.com/cyphar/filepath-securejoin"
 	"golang.org/x/sys/unix"
 )
 
@@ -120,7 +120,7 @@ func WithProcfd(root, unsafePath string, fn func(procfd string) error) error {
 	unsafePath = stripRoot(root, unsafePath)
 	path, err := securejoin.SecureJoin(root, unsafePath)
 	if err != nil {
-		return fmt.Errorf("resolving path inside rootfs failed: %v", err)
+		return fmt.Errorf("resolving path inside rootfs failed: %w", err)
 	}
 
 	// Open the target path.

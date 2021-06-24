@@ -5,6 +5,7 @@ package libcontainer
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -14,17 +15,17 @@ import (
 	"unsafe"
 
 	"github.com/containerd/console"
+	"github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/sirupsen/logrus"
+	"github.com/vishvananda/netlink"
+	"golang.org/x/sys/unix"
+
 	"github.com/opencontainers/runc/libcontainer/capabilities"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runc/libcontainer/user"
 	"github.com/opencontainers/runc/libcontainer/utils"
-	"github.com/opencontainers/runtime-spec/specs-go"
-	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-	"github.com/vishvananda/netlink"
-	"golang.org/x/sys/unix"
 )
 
 type initType string
@@ -139,7 +140,7 @@ func finalizeNamespace(config *initConfig) error {
 	// inherited are marked close-on-exec so they stay out of the
 	// container
 	if err := utils.CloseExecFrom(config.PassedFilesCount + 3); err != nil {
-		return errors.Wrap(err, "close exec fds")
+		return fmt.Errorf("error closing exec fds: %w", err)
 	}
 
 	// we only do chdir if it's specified
@@ -158,7 +159,7 @@ func finalizeNamespace(config *initConfig) error {
 			// to the directory, but the user running runc does not.
 			// This is useful in cases where the cwd is also a volume that's been chowned to the container user.
 		default:
-			return fmt.Errorf("chdir to cwd (%q) set in config.json failed: %v", config.Cwd, err)
+			return fmt.Errorf("chdir to cwd (%q) set in config.json failed: %w", config.Cwd, err)
 		}
 	}
 
@@ -174,26 +175,26 @@ func finalizeNamespace(config *initConfig) error {
 	}
 	// drop capabilities in bounding set before changing user
 	if err := w.ApplyBoundingSet(); err != nil {
-		return errors.Wrap(err, "apply bounding set")
+		return fmt.Errorf("unable to apply bounding set: %w", err)
 	}
 	// preserve existing capabilities while we change users
 	if err := system.SetKeepCaps(); err != nil {
-		return errors.Wrap(err, "set keep caps")
+		return fmt.Errorf("unable to set keep caps: %w", err)
 	}
 	if err := setupUser(config); err != nil {
-		return errors.Wrap(err, "setup user")
+		return fmt.Errorf("unable to setup user: %w", err)
 	}
 	// Change working directory AFTER the user has been set up, if we haven't done it yet.
 	if doChdir {
 		if err := unix.Chdir(config.Cwd); err != nil {
-			return fmt.Errorf("chdir to cwd (%q) set in config.json failed: %v", config.Cwd, err)
+			return fmt.Errorf("chdir to cwd (%q) set in config.json failed: %w", config.Cwd, err)
 		}
 	}
 	if err := system.ClearKeepCaps(); err != nil {
-		return errors.Wrap(err, "clear keep caps")
+		return fmt.Errorf("unable to clear keep caps: %w", err)
 	}
 	if err := w.ApplyCaps(); err != nil {
-		return errors.Wrap(err, "apply caps")
+		return fmt.Errorf("unable to apply caps: %w", err)
 	}
 	return nil
 }
@@ -399,6 +400,8 @@ func fixStdioPermissions(config *initConfig, u *user.ExecUser) error {
 			// privileged_wrt_inode_uidgid() has failed). In either case, we
 			// are in a configuration where it's better for us to just not
 			// touch the stdio rather than bail at this point.
+
+			// nolint:errorlint // unix errors are bare
 			if err == unix.EINVAL || err == unix.EPERM {
 				continue
 			}
@@ -457,7 +460,7 @@ func setupRoute(config *configs.Config) error {
 func setupRlimits(limits []configs.Rlimit, pid int) error {
 	for _, rlimit := range limits {
 		if err := system.Prlimit(pid, rlimit.Type, unix.Rlimit{Max: rlimit.Hard, Cur: rlimit.Soft}); err != nil {
-			return fmt.Errorf("error setting rlimit type %v: %v", rlimit.Type, err)
+			return fmt.Errorf("error setting rlimit type %v: %w", rlimit.Type, err)
 		}
 	}
 	return nil
@@ -486,21 +489,6 @@ func isWaitable(pid int) (bool, error) {
 	}
 
 	return si.si_pid != 0, nil
-}
-
-// isNoChildren returns true if err represents a unix.ECHILD (formerly syscall.ECHILD) false otherwise
-func isNoChildren(err error) bool {
-	switch err := err.(type) {
-	case unix.Errno:
-		if err == unix.ECHILD {
-			return true
-		}
-	case *os.SyscallError:
-		if err.Err == unix.ECHILD {
-			return true
-		}
-	}
-	return false
 }
 
 // signalAllProcesses freezes then iterates over all the processes inside the
@@ -548,7 +536,7 @@ func signalAllProcesses(m cgroups.Manager, s os.Signal) error {
 	for _, p := range procs {
 		if s != unix.SIGKILL {
 			if ok, err := isWaitable(p.Pid); err != nil {
-				if !isNoChildren(err) {
+				if !errors.Is(err, unix.ECHILD) {
 					logrus.Warn("signalAllProcesses: ", p.Pid, err)
 				}
 				continue
@@ -565,7 +553,7 @@ func signalAllProcesses(m cgroups.Manager, s os.Signal) error {
 		// to retrieve its exit code.
 		if subreaper == 0 {
 			if _, err := p.Wait(); err != nil {
-				if !isNoChildren(err) {
+				if !errors.Is(err, unix.ECHILD) {
 					logrus.Warn("wait: ", err)
 				}
 			}
