@@ -400,7 +400,7 @@ func writeFile(dir, file, data string) error {
 		return fmt.Errorf("no such directory for %s", file)
 	}
 	if err := ioutil.WriteFile(filepath.Join(dir, file), []byte(data+"\n"), 0o600); err != nil {
-		return fmt.Errorf("failed to write %v: %w", data, err)
+		return NewLastCmdError(fmt.Errorf("intelrdt: unable to write %v: %w", data, err))
 	}
 	return nil
 }
@@ -507,7 +507,7 @@ func WriteIntelRdtTasks(dir string, pid int) error {
 	// Don't attach any pid if -1 is specified as a pid
 	if pid != -1 {
 		if err := ioutil.WriteFile(filepath.Join(dir, IntelRdtTasks), []byte(strconv.Itoa(pid)), 0o600); err != nil {
-			return fmt.Errorf("failed to write %v: %w", pid, err)
+			return NewLastCmdError(fmt.Errorf("intelrdt: unable to add pid %d: %w", pid, err))
 		}
 	}
 	return nil
@@ -725,21 +725,21 @@ func (m *intelRdtManager) Set(container *configs.Config) error {
 		// Write a single joint schema string to schemata file
 		if l3CacheSchema != "" && memBwSchema != "" {
 			if err := writeFile(path, "schemata", l3CacheSchema+"\n"+memBwSchema); err != nil {
-				return NewLastCmdError(err)
+				return err
 			}
 		}
 
 		// Write only L3 cache schema string to schemata file
 		if l3CacheSchema != "" && memBwSchema == "" {
 			if err := writeFile(path, "schemata", l3CacheSchema); err != nil {
-				return NewLastCmdError(err)
+				return err
 			}
 		}
 
 		// Write only memory bandwidth schema string to schemata file
 		if l3CacheSchema == "" && memBwSchema != "" {
 			if err := writeFile(path, "schemata", memBwSchema); err != nil {
-				return NewLastCmdError(err)
+				return err
 			}
 		}
 	}
@@ -754,7 +754,7 @@ func (raw *intelRdtData) join(id string) (string, error) {
 	}
 
 	if err := WriteIntelRdtTasks(path, raw.pid); err != nil {
-		return "", NewLastCmdError(err)
+		return "", err
 	}
 	return path, nil
 }
