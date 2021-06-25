@@ -200,6 +200,8 @@ var (
 
 	// For Intel RDT initialization
 	initOnce sync.Once
+
+	errNotFound = errors.New("Intel RDT resctrl mount point not found")
 )
 
 type intelRdtData struct {
@@ -273,7 +275,7 @@ func findIntelRdtMountpointDir(f io.Reader) (string, error) {
 		return "", err
 	}
 	if len(mi) < 1 {
-		return "", NewNotFoundError("Intel RDT")
+		return "", errNotFound
 	}
 
 	// Check if MBA Software Controller is enabled through mount option "-o mba_MBps"
@@ -755,25 +757,6 @@ func (raw *intelRdtData) join(id string) (string, error) {
 		return "", NewLastCmdError(err)
 	}
 	return path, nil
-}
-
-type NotFoundError struct {
-	ResourceControl string
-}
-
-func (e *NotFoundError) Error() string {
-	return fmt.Sprintf("mountpoint for %s not found", e.ResourceControl)
-}
-
-func NewNotFoundError(res string) error {
-	return &NotFoundError{
-		ResourceControl: res,
-	}
-}
-
-func IsNotFound(err error) bool {
-	var nfErr *NotFoundError
-	return errors.As(err, &nfErr)
 }
 
 type LastCmdError struct {
