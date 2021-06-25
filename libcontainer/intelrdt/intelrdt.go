@@ -759,22 +759,10 @@ func (raw *intelRdtData) join(id string) (string, error) {
 	return path, nil
 }
 
-type LastCmdError struct {
-	LastCmdStatus string
-	Err           error
-}
-
-func (e *LastCmdError) Error() string {
-	return e.Err.Error() + ", last_cmd_status: " + e.LastCmdStatus
-}
-
 func NewLastCmdError(err error) error {
-	lastCmdStatus, err1 := getLastCmdStatus()
+	status, err1 := getLastCmdStatus()
 	if err1 == nil {
-		return &LastCmdError{
-			LastCmdStatus: lastCmdStatus,
-			Err:           err,
-		}
+		return fmt.Errorf("%w, last_cmd_status: %s", err, status)
 	}
 	return err
 }
