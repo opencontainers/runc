@@ -971,20 +971,6 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 		return err
 	}
 
-	if criuOpts.WorkDirectory == "" {
-		criuOpts.WorkDirectory = filepath.Join(c.root, "criu.work")
-	}
-
-	if err := os.Mkdir(criuOpts.WorkDirectory, 0o700); err != nil && !os.IsExist(err) {
-		return err
-	}
-
-	workDir, err := os.Open(criuOpts.WorkDirectory)
-	if err != nil {
-		return err
-	}
-	defer workDir.Close()
-
 	imageDir, err := os.Open(criuOpts.ImagesDirectory)
 	if err != nil {
 		return err
@@ -993,7 +979,6 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 
 	rpcOpts := criurpc.CriuOpts{
 		ImagesDirFd:     proto.Int32(int32(imageDir.Fd())),
-		WorkDirFd:       proto.Int32(int32(workDir.Fd())),
 		LogLevel:        proto.Int32(4),
 		LogFile:         proto.String("dump.log"),
 		Root:            proto.String(c.config.Rootfs),
@@ -1009,6 +994,19 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 		OrphanPtsMaster: proto.Bool(true),
 		AutoDedup:       proto.Bool(criuOpts.AutoDedup),
 		LazyPages:       proto.Bool(criuOpts.LazyPages),
+	}
+
+	// if criuOpts.WorkDirectory is not set, criu default is used.
+	if criuOpts.WorkDirectory != "" {
+		if err := os.Mkdir(criuOpts.WorkDirectory, 0o700); err != nil && !os.IsExist(err) {
+			return err
+		}
+		workDir, err := os.Open(criuOpts.WorkDirectory)
+		if err != nil {
+			return err
+		}
+		defer workDir.Close()
+		rpcOpts.WorkDirFd = proto.Int32(int32(workDir.Fd()))
 	}
 
 	c.handleCriuConfigurationFile(&rpcOpts)
@@ -1310,19 +1308,6 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 	if err := c.checkCriuVersion(30000); err != nil {
 		return err
 	}
-	if criuOpts.WorkDirectory == "" {
-		criuOpts.WorkDirectory = filepath.Join(c.root, "criu.work")
-	}
-	// Since a container can be C/R'ed multiple times,
-	// the work directory may already exist.
-	if err := os.Mkdir(criuOpts.WorkDirectory, 0o700); err != nil && !os.IsExist(err) {
-		return err
-	}
-	workDir, err := os.Open(criuOpts.WorkDirectory)
-	if err != nil {
-		return err
-	}
-	defer workDir.Close()
 	if criuOpts.ImagesDirectory == "" {
 		return errors.New("invalid directory to restore checkpoint")
 	}
@@ -1355,7 +1340,6 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 		Type: &t,
 		Opts: &criurpc.CriuOpts{
 			ImagesDirFd:     proto.Int32(int32(imageDir.Fd())),
-			WorkDirFd:       proto.Int32(int32(workDir.Fd())),
 			EvasiveDevices:  proto.Bool(true),
 			LogLevel:        proto.Int32(4),
 			LogFile:         proto.String("restore.log"),
@@ -1383,6 +1367,19 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 		req.Opts.LsmProfile = proto.String(criuOpts.LsmProfile)
 	}
 
+	if criuOpts.WorkDirectory != "" {
+		// Since a container can be C/R'ed multiple times,
+		// the work directory may already exist.
+		if err := os.Mkdir(criuOpts.WorkDirectory, 0o700); err != nil && !os.IsExist(err) {
+			return err
+		}
+		workDir, err := os.Open(criuOpts.WorkDirectory)
+		if err != nil {
+			return err
+		}
+		defer workDir.Close()
+		req.Opts.WorkDirFd = proto.Int32(int32(workDir.Fd()))
+	}
 	c.handleCriuConfigurationFile(req.Opts)
 
 	if err := c.handleRestoringNamespaces(req.Opts, &extraFiles); err != nil {
