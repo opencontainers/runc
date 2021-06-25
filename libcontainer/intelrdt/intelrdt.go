@@ -547,7 +547,7 @@ func (m *intelRdtManager) Apply(pid int) (err error) {
 		return nil
 	}
 	d, err := getIntelRdtData(m.config, pid)
-	if err != nil && !IsNotFound(err) {
+	if err != nil {
 		return err
 	}
 
