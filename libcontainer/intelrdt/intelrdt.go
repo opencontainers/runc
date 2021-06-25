@@ -183,7 +183,7 @@ func NewManager(config *configs.Config, id string, path string) Manager {
 }
 
 const (
-	IntelRdtTasks = "tasks"
+	intelRdtTasks = "tasks"
 )
 
 var (
@@ -400,7 +400,7 @@ func writeFile(dir, file, data string) error {
 		return fmt.Errorf("no such directory for %s", file)
 	}
 	if err := ioutil.WriteFile(filepath.Join(dir, file), []byte(data+"\n"), 0o600); err != nil {
-		return NewLastCmdError(fmt.Errorf("intelrdt: unable to write %v: %w", data, err))
+		return newLastCmdError(fmt.Errorf("intelrdt: unable to write %v: %w", data, err))
 	}
 	return nil
 }
@@ -501,13 +501,13 @@ func getLastCmdStatus() (string, error) {
 // WriteIntelRdtTasks writes the specified pid into the "tasks" file
 func WriteIntelRdtTasks(dir string, pid int) error {
 	if dir == "" {
-		return fmt.Errorf("no such directory for %s", IntelRdtTasks)
+		return fmt.Errorf("no such directory for %s", intelRdtTasks)
 	}
 
 	// Don't attach any pid if -1 is specified as a pid
 	if pid != -1 {
-		if err := ioutil.WriteFile(filepath.Join(dir, IntelRdtTasks), []byte(strconv.Itoa(pid)), 0o600); err != nil {
-			return NewLastCmdError(fmt.Errorf("intelrdt: unable to add pid %d: %w", pid, err))
+		if err := ioutil.WriteFile(filepath.Join(dir, intelRdtTasks), []byte(strconv.Itoa(pid)), 0o600); err != nil {
+			return newLastCmdError(fmt.Errorf("intelrdt: unable to add pid %d: %w", pid, err))
 		}
 	}
 	return nil
@@ -593,7 +593,7 @@ func (m *intelRdtManager) GetStats() (*Stats, error) {
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	stats := NewStats()
+	stats := newStats()
 
 	rootPath, err := getIntelRdtRoot()
 	if err != nil {
@@ -750,7 +750,7 @@ func (m *intelRdtManager) Set(container *configs.Config) error {
 func (raw *intelRdtData) join(id string) (string, error) {
 	path := filepath.Join(raw.root, id)
 	if err := os.MkdirAll(path, 0o755); err != nil {
-		return "", NewLastCmdError(err)
+		return "", newLastCmdError(err)
 	}
 
 	if err := WriteIntelRdtTasks(path, raw.pid); err != nil {
@@ -759,7 +759,7 @@ func (raw *intelRdtData) join(id string) (string, error) {
 	return path, nil
 }
 
-func NewLastCmdError(err error) error {
+func newLastCmdError(err error) error {
 	status, err1 := getLastCmdStatus()
 	if err1 == nil {
 		return fmt.Errorf("%w, last_cmd_status: %s", err, status)
