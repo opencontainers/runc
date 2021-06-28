@@ -126,18 +126,7 @@ function simple_cr() {
 	done
 }
 
-@test "checkpoint and restore" {
-	simple_cr
-}
-
-@test "checkpoint and restore (bind mount, destination is symlink)" {
-	mkdir -p rootfs/real/conf
-	ln -s /real/conf rootfs/conf
-	update_config '	  .mounts += [{
-					source: ".",
-					destination: "/conf",
-					options: ["bind"]
-				}]'
+@test "checkpoint and restore " {
 	simple_cr
 }
 
