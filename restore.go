@@ -94,6 +94,11 @@ using the runc checkpoint command.`,
 			Value: "",
 			Usage: "Specify an LSM profile to be used during restore in the form of TYPE:NAME.",
 		},
+		cli.StringFlag{
+			Name:  "lsm-mount-context",
+			Value: "",
+			Usage: "Specify an LSM mount context to be used during restore.",
+		},
 	},
 	Action: func(context *cli.Context) error {
 		if err := checkArgs(context, 1, exactArgs); err != nil {
@@ -139,5 +144,6 @@ func criuOptions(context *cli.Context) *libcontainer.CriuOpts {
 		LazyPages:               context.Bool("lazy-pages"),
 		StatusFd:                context.Int("status-fd"),
 		LsmProfile:              context.String("lsm-profile"),
+		LsmMountContext:         context.String("lsm-mount-context"),
 	}
 }

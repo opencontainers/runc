@@ -74,6 +74,14 @@ daemon. See [criu --lazy-pages option](https://criu.org/CLI/opt/--lazy-pages).
 : Specify an LSM profile to be used during restore. Here _type_ can either be
 **apparamor** or **selinux**, and _label_ is a valid LSM label. For example,
 **--lsm-profile "selinux:system_u:system_r:container_t:s0:c82,c137"**.
+By default, the checkpointed LSM profile is used upon restore.
+
+**--lsm-mount-context** _context_
+: Specify an LSM mount context to be used during restore. Only mounts with an
+existing context will have their context replaced. With this option it is
+possible to change SELinux mount options. Instead of mounting with the
+checkpointed context, the specified _context_ will be used.
+For example, **--lsm-mount-context "system_u:object_r:container_file_t:s0:c82,c137"**.
 
 # SEE ALSO
 **criu**(8),
