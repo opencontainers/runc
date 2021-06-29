@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/opencontainers/runc/libcontainer/logs"
+	"github.com/opencontainers/runc/internal/logs"
 	"github.com/opencontainers/runc/libcontainer/seccomp"
 	"github.com/opencontainers/runtime-spec/specs-go"
 
