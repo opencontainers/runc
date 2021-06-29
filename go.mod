@@ -4,7 +4,7 @@ go 1.13
 
 require (
 	github.com/bits-and-blooms/bitset v1.2.0
-	github.com/checkpoint-restore/go-criu/v5 v5.0.0
+	github.com/checkpoint-restore/go-criu/v5 v5.1.0
 	github.com/cilium/ebpf v0.6.2
 	github.com/containerd/console v1.0.2
 	github.com/coreos/go-systemd/v22 v22.3.2
