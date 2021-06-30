@@ -42,6 +42,12 @@ container to inherit the calling processes session key.
 : Pass _N_ additional file descriptors to the container (**stdio** +
 **$LISTEN_FDS** + _N_ in total). Default is **0**.
 
+**--keep**
+: Keep container's state directory and cgroup. This can be helpful if a user
+wants to check the state (e.g. of cgroup controllers) after the container has
+exited. If this option is used, a manual **runc delete** is needed afterwards
+to clean an exited container's artefacts.
+
 # SEE ALSO
 
 **runc**(8).
