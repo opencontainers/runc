@@ -33,6 +33,7 @@ function build_project() {
 	local libseccomp_ver='2.5.1'
 	local tarball="libseccomp-${libseccomp_ver}.tar.gz"
 	local prefix
+	local ldflags="-w -s"
 	prefix="$(mktemp -d)"
 	wget "https://github.com/seccomp/libseccomp/releases/download/v${libseccomp_ver}/${tarball}"{,.asc}
 	tar xf "$tarball"
@@ -46,8 +47,9 @@ function build_project() {
 	# Add -a to go build flags to make sure it links against
 	# the provided libseccomp, not the system one (otherwise
 	# it can reuse cached pkg-config results).
-	make -C "$root" PKG_CONFIG_PATH="${prefix}/lib/pkgconfig" COMMIT_NO= EXTRA_FLAGS="-a" static
+	make -C "$root" PKG_CONFIG_PATH="${prefix}/lib/pkgconfig" COMMIT_NO= EXTRA_FLAGS="-a" EXTRA_LDFLAGS="${ldflags}" static
 	rm -rf "$prefix"
+	strip "$root/$project"
 	mv "$root/$project" "$1"
 }
 
