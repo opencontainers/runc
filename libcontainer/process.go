@@ -80,6 +80,10 @@ type Process struct {
 	ops processOperations
 
 	LogLevel string
+
+	// Cgroup specifies a (sub-cgroup of a container) to run the process in.
+	// If empty, the default top-level container's cgroup is used.
+	Cgroup string
 }
 
 // Wait waits for the process to exit.

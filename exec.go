@@ -89,6 +89,10 @@ following will output a list of processes running in the container:
 			Name:  "preserve-fds",
 			Usage: "Pass N additional file descriptors to the container (stdio + $LISTEN_FDS + N in total)",
 		},
+		cli.StringFlag{
+			Name:  "cgroup",
+			Usage: "run the process in an (existing) sub-cgroup",
+		},
 	},
 	Action: func(context *cli.Context) error {
 		if err := checkArgs(context, 1, minArgs); err != nil {
@@ -148,6 +152,7 @@ func execProcess(context *cli.Context) (int, error) {
 		init:            false,
 		preserveFDs:     context.Int("preserve-fds"),
 		logLevel:        logLevel,
+		cgroup:          context.String("cgroup"),
 	}
 	return r.run(p)
 }

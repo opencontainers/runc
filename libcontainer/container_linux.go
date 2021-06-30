@@ -12,6 +12,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"reflect"
 	"strconv"
@@ -555,7 +556,7 @@ func (c *linuxContainer) newSetnsProcess(p *Process, cmd *exec.Cmd, messageSockP
 	if err != nil {
 		return nil, err
 	}
-	return &setnsProcess{
+	proc := &setnsProcess{
 		cmd:             cmd,
 		cgroupPaths:     state.CgroupPaths,
 		rootlessCgroups: c.config.RootlessCgroups,
@@ -567,7 +568,16 @@ func (c *linuxContainer) newSetnsProcess(p *Process, cmd *exec.Cmd, messageSockP
 		process:         p,
 		bootstrapData:   data,
 		initProcessPid:  state.InitProcessPid,
-	}, nil
+	}
+	if p.Cgroup != "" {
+		for k := range proc.cgroupPaths {
+			proc.cgroupPaths[k] = path.Join(proc.cgroupPaths[k], p.Cgroup)
+		}
+		// Do not try to join init process's cgroup as a fallback
+		// (see (*setnsProcess).start).
+		proc.initProcessPid = 0
+	}
+	return proc, nil
 }
 
 func (c *linuxContainer) newInitConfig(process *Process) *initConfig {

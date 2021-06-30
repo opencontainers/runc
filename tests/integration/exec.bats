@@ -167,3 +167,68 @@ function check_exec_debug() {
 	[[ "${output}" == *"level=debug"* ]]
 	check_exec_debug "$output"
 }
+
+@test "runc exec --cgroup subcgroup [v2]" {
+	requires root cgroups_v2
+
+	set_cgroups_path
+	set_cgroup_mount_writable
+
+	__runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	testcontainer test_busybox running
+
+	# Check we can't join non-existing subcgroup.
+	runc exec --cgroup nonexistent test_busybox cat /proc/self/cgroup
+	[ "$status" -ne 0 ]
+	[[ "$output" == *" adding pid "*"/nonexistent/cgroup.procs: no such file "* ]]
+
+	# Check we can join top-level cgroup (implicit).
+	runc exec test_busybox grep '^0::/$' /proc/self/cgroup
+	[ "$status" -eq 0 ]
+
+	# Check we can join top-level cgroup (explicit).
+	runc exec --cgroup / test_busybox grep '^0::/$' /proc/self/cgroup
+	[ "$status" -eq 0 ]
+
+	# Now move "init" to a subcgroup, and check it was moved.
+	runc exec test_busybox sh -euc "mkdir /sys/fs/cgroup/foobar \
+		&& echo 1 > /sys/fs/cgroup/foobar/cgroup.procs \
+		&& grep -w foobar /proc/1/cgroup"
+	[ "$status" -eq 0 ]
+
+	# The following part is taken from
+	# @test "runc exec (cgroup v2 + init process in non-root cgroup) succeeds"
+
+	# The init process is now in "/foo", but an exec process can still
+	# join "/" because we haven't enabled any domain controller yet.
+	runc exec test_busybox grep '^0::/$' /proc/self/cgroup
+	[ "$status" -eq 0 ]
+
+	# Turn on a domain controller (memory).
+	runc exec test_busybox sh -euc 'echo $$ > /sys/fs/cgroup/foobar/cgroup.procs; echo +memory > /sys/fs/cgroup/cgroup.subtree_control'
+	[ "$status" -eq 0 ]
+
+	# An exec process can no longer join "/" after turning on a domain
+	# controller.  Check that cgroup v2 fallback to init cgroup works.
+	runc exec test_busybox sh -euc "cat /proc/self/cgroup && grep '^0::/foobar$' /proc/self/cgroup"
+	[ "$status" -eq 0 ]
+
+	# Check that --cgroup / disables the init cgroup fallback.
+	runc exec --cgroup / test_busybox true
+	[ "$status" -ne 0 ]
+	[[ "$output" == *" adding pid "*" to cgroups"*"/cgroup.procs: device or resource busy"* ]]
+
+	# Check that explicit --cgroup foobar works.
+	runc exec --cgroup foobar test_busybox grep '^0::/foobar$' /proc/self/cgroup
+	[ "$status" -eq 0 ]
+
+	# Check all processes is in foobar (this check is redundant).
+	runc exec --cgroup foobar test_busybox sh -euc '! grep -vwH foobar /proc/*/cgroup'
+	[ "$status" -eq 0 ]
+
+	# Add a second subcgroup, check we're in it.
+	runc exec --cgroup foobar test_busybox mkdir /sys/fs/cgroup/second
+	[ "$status" -eq 0 ]
+	runc exec --cgroup second test_busybox grep -w second /proc/self/cgroup
+	[ "$status" -eq 0 ]
+}

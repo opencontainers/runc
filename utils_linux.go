@@ -258,6 +258,7 @@ type runner struct {
 	notifySocket    *notifySocket
 	criuOpts        *libcontainer.CriuOpts
 	logLevel        string
+	cgroup          string
 }
 
 func (r *runner) run(config *specs.Process) (int, error) {
@@ -277,6 +278,7 @@ func (r *runner) run(config *specs.Process) (int, error) {
 	// Populate the fields that come from runner.
 	process.Init = r.init
 	process.LogLevel = r.logLevel
+	process.Cgroup = r.cgroup
 	if len(r.listenFDs) > 0 {
 		process.Env = append(process.Env, "LISTEN_FDS="+strconv.Itoa(len(r.listenFDs)), "LISTEN_PID=1")
 		process.ExtraFiles = append(process.ExtraFiles, r.listenFDs...)
