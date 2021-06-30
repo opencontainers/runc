@@ -121,7 +121,6 @@ func execProcess(context *cli.Context) (int, error) {
 	if path == "" && len(context.Args()) == 1 {
 		return -1, errors.New("process args cannot be empty")
 	}
-	detach := context.Bool("detach")
 	state, err := container.State()
 	if err != nil {
 		return -1, err
@@ -137,7 +136,7 @@ func execProcess(context *cli.Context) (int, error) {
 		shouldDestroy:   false,
 		container:       container,
 		consoleSocket:   context.String("console-socket"),
-		detach:          detach,
+		detach:          context.Bool("detach"),
 		pidFile:         context.String("pid-file"),
 		action:          CT_ACT_RUN,
 		init:            false,
