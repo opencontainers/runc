@@ -22,7 +22,6 @@ import (
 	"github.com/opencontainers/runc/libcontainer/devices"
 	"github.com/opencontainers/runc/libcontainer/userns"
 	"github.com/opencontainers/runc/libcontainer/utils"
-	libcontainerUtils "github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/opencontainers/selinux/go-selinux/label"
 	"github.com/sirupsen/logrus"
@@ -42,7 +41,7 @@ type mountConfig struct {
 // needsSetupDev returns true if /dev needs to be set up.
 func needsSetupDev(config *configs.Config) bool {
 	for _, m := range config.Mounts {
-		if m.Device == "bind" && libcontainerUtils.CleanPath(m.Destination) == "/dev" {
+		if m.Device == "bind" && utils.CleanPath(m.Destination) == "/dev" {
 			return false
 		}
 	}
@@ -156,7 +155,7 @@ func prepareRootfs(pipe io.ReadWriter, iConfig *initConfig) (err error) {
 func finalizeRootfs(config *configs.Config) (err error) {
 	// remount dev as ro if specified
 	for _, m := range config.Mounts {
-		if libcontainerUtils.CleanPath(m.Destination) == "/dev" {
+		if utils.CleanPath(m.Destination) == "/dev" {
 			if m.Flags&unix.MS_RDONLY == unix.MS_RDONLY {
 				if err := remountReadonly(m); err != nil {
 					return newSystemErrorWithCausef(err, "remounting %q as readonly", m.Destination)
@@ -1050,7 +1049,7 @@ func mountPropagate(m *configs.Mount, rootfs string, mountLabel string) error {
 	// operations on it. We need to set up files in "/dev" and tmpfs mounts may
 	// need to be chmod-ed after mounting. The mount will be remounted ro later
 	// in finalizeRootfs() if necessary.
-	if libcontainerUtils.CleanPath(m.Destination) == "/dev" || m.Device == "tmpfs" {
+	if utils.CleanPath(m.Destination) == "/dev" || m.Device == "tmpfs" {
 		flags &= ^unix.MS_RDONLY
 	}
 
