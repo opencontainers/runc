@@ -10,6 +10,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"reflect"
 	"strconv"
@@ -561,7 +562,7 @@ func (c *linuxContainer) newSetnsProcess(p *Process, cmd *exec.Cmd, messageSockP
 	if err != nil {
 		return nil, err
 	}
-	return &setnsProcess{
+	proc := &setnsProcess{
 		cmd:             cmd,
 		cgroupPaths:     state.CgroupPaths,
 		rootlessCgroups: c.config.RootlessCgroups,
@@ -573,7 +574,29 @@ func (c *linuxContainer) newSetnsProcess(p *Process, cmd *exec.Cmd, messageSockP
 		process:         p,
 		bootstrapData:   data,
 		initProcessPid:  state.InitProcessPid,
-	}, nil
+	}
+	if len(p.SubCgroupPaths) > 0 {
+		if add, ok := p.SubCgroupPaths[""]; ok {
+			// cgroup v1: using the same path for all controllers.
+			// cgroup v2: the only possible way.
+			for k := range proc.cgroupPaths {
+				proc.cgroupPaths[k] = path.Join(proc.cgroupPaths[k], add)
+			}
+			// cgroup v2: do not try to join init process's cgroup
+			// as a fallback (see (*setnsProcess).start).
+			proc.initProcessPid = 0
+		} else {
+			// Per-controller paths.
+			for ctrl, add := range p.SubCgroupPaths {
+				if val, ok := proc.cgroupPaths[ctrl]; ok {
+					proc.cgroupPaths[ctrl] = path.Join(val, add)
+				} else {
+					return nil, fmt.Errorf("unknown controller %s in SubCgroupPaths", ctrl)
+				}
+			}
+		}
+	}
+	return proc, nil
 }
 
 func (c *linuxContainer) newInitConfig(process *Process) *initConfig {

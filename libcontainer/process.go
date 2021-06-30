@@ -80,6 +80,15 @@ type Process struct {
 	ops processOperations
 
 	LogLevel string
+
+	// SubCgroupPaths specifies sub-cgroups to run the process in.
+	// Map keys are controller names, map values are paths (relative to
+	// container's top-level cgroup).
+	//
+	// If empty, the default top-level container's cgroup is used.
+	//
+	// For cgroup v2, the only key allowed is "".
+	SubCgroupPaths map[string]string
 }
 
 // Wait waits for the process to exit.
