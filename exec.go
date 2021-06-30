@@ -87,6 +87,10 @@ following will output a list of processes running in the container:
 			Name:  "preserve-fds",
 			Usage: "Pass N additional file descriptors to the container (stdio + $LISTEN_FDS + N in total)",
 		},
+		cli.StringSliceFlag{
+			Name:  "cgroup",
+			Usage: "run the process in an (existing) sub-cgroup(s). Format is [<controller>:]<cgroup>.",
+		},
 	},
 	Action: func(context *cli.Context) error {
 		if err := checkArgs(context, 1, minArgs); err != nil {
@@ -103,6 +107,32 @@ following will output a list of processes running in the container:
 		return nil // to satisfy the linter
 	},
 	SkipArgReorder: true,
+}
+
+func getSubCgroupPaths(args []string) (map[string]string, error) {
+	if len(args) == 0 {
+		return nil, nil
+	}
+	paths := make(map[string]string, len(args))
+	for _, c := range args {
+		// Split into controller:path.
+		cs := strings.SplitN(c, ":", 3)
+		if len(cs) > 2 {
+			return nil, fmt.Errorf("invalid --cgroup argument: %s", c)
+		}
+		if len(cs) == 1 { // no controller: prefix
+			if len(args) != 1 {
+				return nil, fmt.Errorf("invalid --cgroup argument: %s (missing <controller>: prefix)", c)
+			}
+			paths[""] = c
+		} else {
+			// There may be a few comma-separated controllers.
+			for _, ctrl := range strings.Split(cs[0], ",") {
+				paths[ctrl] = cs[1]
+			}
+		}
+	}
+	return paths, nil
 }
 
 func execProcess(context *cli.Context) (int, error) {
@@ -131,6 +161,11 @@ func execProcess(context *cli.Context) (int, error) {
 		return -1, err
 	}
 
+	cgPaths, err := getSubCgroupPaths(context.StringSlice("cgroup"))
+	if err != nil {
+		return -1, err
+	}
+
 	r := &runner{
 		enableSubreaper: false,
 		shouldDestroy:   false,
@@ -141,6 +176,7 @@ func execProcess(context *cli.Context) (int, error) {
 		action:          CT_ACT_RUN,
 		init:            false,
 		preserveFDs:     context.Int("preserve-fds"),
+		subCgroupPaths:  cgPaths,
 	}
 	return r.run(p)
 }

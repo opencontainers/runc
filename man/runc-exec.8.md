@@ -59,6 +59,17 @@ multiple times.
 : Pass _N_ additional file descriptors to the container (**stdio** +
 **$LISTEN_FDS** + _N_ in total). Default is **0**.
 
+**--cgroup** _path_ | _controller_[,_controller_...]:_path_
+: Execute a process in a sub-cgroup. If the specified cgroup does not exist, an
+error is returned. Default is empty path, which means to use container's top
+level cgroup.
+: For cgroup v1 only, a particular _controller_ (or multiple comma-separated
+controllers) can be specified, and the option can be used multiple times to set
+different paths for different controllers.
+: Note for cgroup v2, in case the process can't join the top level cgroup,
+**runc exec** fallback is to try joining the cgroup of container's init.
+This fallback can be disabled by using **--cgroup /**.
+
 # EXIT STATUS
 
 Exits with a status of _command_ (unless **-d** is used), or **255** if

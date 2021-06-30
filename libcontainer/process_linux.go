@@ -129,7 +129,7 @@ func (p *setnsProcess) start() (retErr error) {
 			// On cgroup v2 + nesting + domain controllers, WriteCgroupProc may fail with EBUSY.
 			// https://github.com/opencontainers/runc/issues/2356#issuecomment-621277643
 			// Try to join the cgroup of InitProcessPid.
-			if cgroups.IsCgroup2UnifiedMode() {
+			if cgroups.IsCgroup2UnifiedMode() && p.initProcessPid != 0 {
 				initProcCgroupFile := fmt.Sprintf("/proc/%d/cgroup", p.initProcessPid)
 				initCg, initCgErr := cgroups.ParseCgroupFile(initProcCgroupFile)
 				if initCgErr == nil {
