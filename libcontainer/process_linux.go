@@ -124,9 +124,9 @@ func (p *setnsProcess) start() (retErr error) {
 	if err := p.execSetns(); err != nil {
 		return fmt.Errorf("error executing setns process: %w", err)
 	}
-	if len(p.cgroupPaths) > 0 {
-		if err := cgroups.EnterPid(p.cgroupPaths, p.pid()); err != nil && !p.rootlessCgroups {
-			// On cgroup v2 + nesting + domain controllers, EnterPid may fail with EBUSY.
+	for _, path := range p.cgroupPaths {
+		if err := cgroups.WriteCgroupProc(path, p.pid()); err != nil && !p.rootlessCgroups {
+			// On cgroup v2 + nesting + domain controllers, WriteCgroupProc may fail with EBUSY.
 			// https://github.com/opencontainers/runc/issues/2356#issuecomment-621277643
 			// Try to join the cgroup of InitProcessPid.
 			if cgroups.IsCgroup2UnifiedMode() {
