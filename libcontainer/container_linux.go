@@ -231,7 +231,7 @@ func (c *linuxContainer) Start(process *Process) error {
 	c.m.Lock()
 	defer c.m.Unlock()
 	if c.config.Cgroups.Resources.SkipDevices {
-		return &ConfigError{"can't start container with SkipDevices set"}
+		return errors.New("can't start container with SkipDevices set")
 	}
 	if process.Init {
 		if err := c.createExecFifo(); err != nil {
