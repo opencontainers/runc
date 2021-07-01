@@ -1044,7 +1044,6 @@ void nsexec(void)
 			syncfd = sync_grandchild_pipe[0];
 			close(sync_grandchild_pipe[1]);
 			close(sync_child_pipe[0]);
-			close(sync_child_pipe[1]);
 
 			/* For debugging. */
 			prctl(PR_SET_NAME, (unsigned long)"runc:[2:INIT]", 0, 0, 0);
