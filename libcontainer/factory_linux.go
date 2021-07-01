@@ -251,13 +251,13 @@ type LinuxFactory struct {
 
 func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, error) {
 	if l.Root == "" {
-		return nil, &ConfigError{"invalid root"}
+		return nil, fmt.Errorf("%w: invalid root", ErrInvalidConfig)
 	}
 	if err := l.validateID(id); err != nil {
 		return nil, err
 	}
 	if err := l.Validator.Validate(config); err != nil {
-		return nil, &ConfigError{err.Error()}
+		return nil, fmt.Errorf("%w: %v", ErrInvalidConfig, err)
 	}
 	containerRoot, err := securejoin.SecureJoin(l.Root, id)
 	if err != nil {
@@ -294,7 +294,7 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 
 func (l *LinuxFactory) Load(id string) (Container, error) {
 	if l.Root == "" {
-		return nil, &ConfigError{"invalid root"}
+		return nil, fmt.Errorf("%w: invalid root", ErrInvalidConfig)
 	}
 	// when load, we need to check id is valid or not.
 	if err := l.validateID(id); err != nil {
