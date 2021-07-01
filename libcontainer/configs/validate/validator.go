@@ -62,20 +62,17 @@ func (v *ConfigValidator) Validate(config *configs.Config) error {
 // to the container's root filesystem.
 func (v *ConfigValidator) rootfs(config *configs.Config) error {
 	if _, err := os.Stat(config.Rootfs); err != nil {
-		if os.IsNotExist(err) {
-			return fmt.Errorf("rootfs (%s) does not exist", config.Rootfs)
-		}
-		return err
+		return fmt.Errorf("invalid rootfs: %w", err)
 	}
 	cleaned, err := filepath.Abs(config.Rootfs)
 	if err != nil {
-		return err
+		return fmt.Errorf("invalid rootfs: %w", err)
 	}
 	if cleaned, err = filepath.EvalSymlinks(cleaned); err != nil {
-		return err
+		return fmt.Errorf("invalid rootfs: %w", err)
 	}
 	if filepath.Clean(config.Rootfs) != cleaned {
-		return fmt.Errorf("%s is not an absolute path or is a symlink", config.Rootfs)
+		return fmt.Errorf("invalid rootfs: not an absolute path, or a symlink")
 	}
 	return nil
 }
@@ -176,7 +173,7 @@ func (v *ConfigValidator) sysctl(config *configs.Config) error {
 				hostnet, hostnetErr = isHostNetNS(path)
 			})
 			if hostnetErr != nil {
-				return hostnetErr
+				return fmt.Errorf("invalid netns path: %w", hostnetErr)
 			}
 			if hostnet {
 				return fmt.Errorf("sysctl %q not allowed in host network namespace", s)
