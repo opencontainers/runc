@@ -16,6 +16,8 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+var ErrInvalidConfig = errors.New("invalid configuration")
+
 type Validator interface {
 	Validate(*configs.Config) error
 }
@@ -25,6 +27,24 @@ func New() Validator {
 }
 
 type ConfigValidator struct{}
+
+// invalidConfig type is needed to make any error returned from Validator
+// to be ErrInvalidConfig.
+type invalidConfig struct {
+	err error
+}
+
+func (e *invalidConfig) Error() string {
+	return ErrInvalidConfig.Error() + ": " + e.err.Error()
+}
+
+func (e *invalidConfig) Is(target error) bool {
+	return target == ErrInvalidConfig //nolint:errorlint // this method assumes direct comparison
+}
+
+func (e *invalidConfig) Unwrap() error {
+	return e.err
+}
 
 type check func(config *configs.Config) error
 
@@ -43,7 +63,7 @@ func (v *ConfigValidator) Validate(config *configs.Config) error {
 	}
 	for _, c := range checks {
 		if err := c(config); err != nil {
-			return err
+			return &invalidConfig{err: err}
 		}
 	}
 	// Relaxed validation rules for backward compatibility
@@ -52,7 +72,7 @@ func (v *ConfigValidator) Validate(config *configs.Config) error {
 	}
 	for _, c := range warns {
 		if err := c(config); err != nil {
-			logrus.WithError(err).Warnf("invalid configuration")
+			logrus.WithError(err).Warn(ErrInvalidConfig)
 		}
 	}
 	return nil

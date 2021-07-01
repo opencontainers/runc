@@ -35,6 +35,7 @@ func TestValidateWithInvalidRootfs(t *testing.T) {
 
 	validator := validate.New()
 	err := validator.Validate(config)
+	t.Logf("error: %v", err)
 	if err == nil {
 		t.Error("Expected error to occur but it was nil")
 	}
