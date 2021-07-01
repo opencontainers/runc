@@ -59,13 +59,26 @@ func findAttachedCgroupDeviceFilters(dirFd int) ([]*ebpf.Program, error) {
 
 		// Convert the ids to program handles.
 		progIds = progIds[:size]
-		programs := make([]*ebpf.Program, len(progIds))
-		for idx, progId := range progIds {
+		programs := make([]*ebpf.Program, 0, len(progIds))
+		for _, progId := range progIds {
 			program, err := ebpf.NewProgramFromID(ebpf.ProgramID(progId))
 			if err != nil {
+				// We skip over programs that give us -EACCES or -EPERM. This
+				// is necessary because there may be BPF programs that have
+				// been attached (such as with --systemd-cgroup) which have an
+				// LSM label that blocks us from interacting with the program.
+				//
+				// Because additional BPF_CGROUP_DEVICE programs only can add
+				// restrictions, there's no real issue with just ignoring these
+				// programs (and stops runc from breaking on distributions with
+				// very strict SELinux policies).
+				if errors.Is(err, os.ErrPermission) {
+					logrus.Debugf("ignoring existing CGROUP_DEVICE program (prog_id=%v) which cannot be accessed by runc -- likely due to LSM policy: %v", progId, err)
+					continue
+				}
 				return nil, fmt.Errorf("cannot fetch program from id: %w", err)
 			}
-			programs[idx] = program
+			programs = append(programs, program)
 		}
 		runtime.KeepAlive(progIds)
 		return programs, nil
