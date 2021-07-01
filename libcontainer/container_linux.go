@@ -97,48 +97,26 @@ type Container interface {
 	// Methods below here are platform specific
 
 	// Checkpoint checkpoints the running container's state to disk using the criu(8) utility.
-	//
-	// errors:
-	// Systemerror - System error.
 	Checkpoint(criuOpts *CriuOpts) error
 
 	// Restore restores the checkpointed container to a running state using the criu(8) utility.
-	//
-	// errors:
-	// Systemerror - System error.
 	Restore(process *Process, criuOpts *CriuOpts) error
 
 	// If the Container state is RUNNING or CREATED, sets the Container state to PAUSING and pauses
 	// the execution of any user processes. Asynchronously, when the container finished being paused the
 	// state is changed to PAUSED.
 	// If the Container state is PAUSED, do nothing.
-	//
-	// errors:
-	// ContainerNotExists - Container no longer exists,
-	// ContainerNotRunning - Container not running or created,
-	// Systemerror - System error.
 	Pause() error
 
 	// If the Container state is PAUSED, resumes the execution of any user processes in the
 	// Container before setting the Container state to RUNNING.
 	// If the Container state is RUNNING, do nothing.
-	//
-	// errors:
-	// ContainerNotExists - Container no longer exists,
-	// ContainerNotPaused - Container is not paused,
-	// Systemerror - System error.
 	Resume() error
 
 	// NotifyOOM returns a read-only channel signaling when the container receives an OOM notification.
-	//
-	// errors:
-	// Systemerror - System error.
 	NotifyOOM() (<-chan struct{}, error)
 
 	// NotifyMemoryPressure returns a read-only channel signaling when the container reaches a given pressure level
-	//
-	// errors:
-	// Systemerror - System error.
 	NotifyMemoryPressure(level PressureLevel) (<-chan struct{}, error)
 }
 
@@ -183,7 +161,7 @@ func (c *linuxContainer) Processes() ([]int, error) {
 
 	pids, err = c.cgroupManager.GetAllPids()
 	if err != nil {
-		return nil, newSystemErrorWithCause(err, "getting all container pids from cgroups")
+		return nil, fmt.Errorf("unable to get all container pids: %w", err)
 	}
 	return pids, nil
 }
@@ -194,11 +172,11 @@ func (c *linuxContainer) Stats() (*Stats, error) {
 		stats = &Stats{}
 	)
 	if stats.CgroupStats, err = c.cgroupManager.GetStats(); err != nil {
-		return stats, newSystemErrorWithCause(err, "getting container stats from cgroups")
+		return stats, fmt.Errorf("unable to get container cgroup stats: %w", err)
 	}
 	if c.intelRdtManager != nil {
 		if stats.IntelRdtStats, err = c.intelRdtManager.GetStats(); err != nil {
-			return stats, newSystemErrorWithCause(err, "getting container's Intel RDT stats")
+			return stats, fmt.Errorf("unable to get container Intel RDT stats: %w", err)
 		}
 	}
 	for _, iface := range c.config.Networks {
@@ -206,7 +184,7 @@ func (c *linuxContainer) Stats() (*Stats, error) {
 		case "veth":
 			istats, err := getNetworkInterfaceStats(iface.HostInterfaceName)
 			if err != nil {
-				return stats, newSystemErrorWithCausef(err, "getting network stats for interface %q", iface.HostInterfaceName)
+				return stats, fmt.Errorf("unable to get network stats for interface %q: %w", iface.HostInterfaceName, err)
 			}
 			stats.Interfaces = append(stats.Interfaces, istats)
 		}
@@ -222,7 +200,7 @@ func (c *linuxContainer) Set(config configs.Config) error {
 		return err
 	}
 	if status == Stopped {
-		return newGenericError(errors.New("container not running"), ContainerNotRunning)
+		return ErrNotRunning
 	}
 	if err := c.cgroupManager.Set(config.Cgroups.Resources); err != nil {
 		// Set configs back
@@ -253,7 +231,7 @@ func (c *linuxContainer) Start(process *Process) error {
 	c.m.Lock()
 	defer c.m.Unlock()
 	if c.config.Cgroups.Resources.SkipDevices {
-		return newGenericError(errors.New("can't start container with SkipDevices set"), ConfigInvalid)
+		return &ConfigError{"can't start container with SkipDevices set"}
 	}
 	if process.Init {
 		if err := c.createExecFifo(); err != nil {
@@ -335,7 +313,7 @@ func fifoOpen(path string, block bool) openResult {
 	}
 	f, err := os.OpenFile(path, flags, 0)
 	if err != nil {
-		return openResult{err: newSystemErrorWithCause(err, "open exec fifo for reading")}
+		return openResult{err: fmt.Errorf("exec fifo: %w", err)}
 	}
 	return openResult{file: f}
 }
@@ -360,7 +338,7 @@ type openResult struct {
 func (c *linuxContainer) start(process *Process) (retErr error) {
 	parent, err := c.newParentProcess(process)
 	if err != nil {
-		return newSystemErrorWithCause(err, "creating new parent process")
+		return fmt.Errorf("unable to create new parent process: %w", err)
 	}
 
 	logsDone := parent.forwardChildLogs()
@@ -370,13 +348,13 @@ func (c *linuxContainer) start(process *Process) (retErr error) {
 			// runc init closing the _LIBCONTAINER_LOGPIPE log fd.
 			err := <-logsDone
 			if err != nil && retErr == nil {
-				retErr = newSystemErrorWithCause(err, "forwarding init logs")
+				retErr = fmt.Errorf("unable to forward init logs: %w", err)
 			}
 		}()
 	}
 
 	if err := parent.start(); err != nil {
-		return newSystemErrorWithCause(err, "starting container process")
+		return fmt.Errorf("unable to start container process: %w", err)
 	}
 
 	if process.Init {
@@ -415,11 +393,11 @@ func (c *linuxContainer) Signal(s os.Signal, all bool) error {
 	// to avoid a PID reuse attack
 	if status == Running || status == Created || status == Paused {
 		if err := c.initProcess.signal(s); err != nil {
-			return newSystemErrorWithCause(err, "signaling init process")
+			return fmt.Errorf("unable to signal init: %w", err)
 		}
 		return nil
 	}
-	return newGenericError(errors.New("container not running"), ContainerNotRunning)
+	return ErrNotRunning
 }
 
 func (c *linuxContainer) createExecFifo() error {
@@ -471,7 +449,7 @@ func (c *linuxContainer) includeExecFifo(cmd *exec.Cmd) error {
 func (c *linuxContainer) newParentProcess(p *Process) (parentProcess, error) {
 	parentInitPipe, childInitPipe, err := utils.NewSockPair("init")
 	if err != nil {
-		return nil, newSystemErrorWithCause(err, "creating new init pipe")
+		return nil, fmt.Errorf("unable to create init pipe: %w", err)
 	}
 	messageSockPair := filePair{parentInitPipe, childInitPipe}
 
@@ -492,7 +470,7 @@ func (c *linuxContainer) newParentProcess(p *Process) (parentProcess, error) {
 	// that problem), but we no longer do that. However, there's no need to do
 	// this for `runc exec` so we just keep it this way to be safe.
 	if err := c.includeExecFifo(cmd); err != nil {
-		return nil, newSystemErrorWithCause(err, "including execfifo in cmd.Exec setup")
+		return nil, fmt.Errorf("unable to setup exec fifo: %w", err)
 	}
 	return c.newInitProcess(p, cmd, messageSockPair, logFilePair)
 }
@@ -569,7 +547,7 @@ func (c *linuxContainer) newSetnsProcess(p *Process, cmd *exec.Cmd, messageSockP
 	cmd.Env = append(cmd.Env, "_LIBCONTAINER_INITTYPE="+string(initSetns))
 	state, err := c.currentState()
 	if err != nil {
-		return nil, newSystemErrorWithCause(err, "getting container's current state")
+		return nil, fmt.Errorf("unable to get container state: %w", err)
 	}
 	// for setns process, we don't have to set cloneflags as the process namespaces
 	// will only be set via setns syscall
@@ -654,7 +632,7 @@ func (c *linuxContainer) Pause() error {
 			c: c,
 		})
 	}
-	return newGenericError(fmt.Errorf("container not running or created: %s", status), ContainerNotRunning)
+	return ErrNotRunning
 }
 
 func (c *linuxContainer) Resume() error {
@@ -665,7 +643,7 @@ func (c *linuxContainer) Resume() error {
 		return err
 	}
 	if status != Paused {
-		return newGenericError(errors.New("container not paused"), ContainerNotPaused)
+		return ErrNotPaused
 	}
 	if err := c.cgroupManager.Freeze(configs.Thawed); err != nil {
 		return err
@@ -1473,7 +1451,7 @@ func (c *linuxContainer) criuApplyCgroups(pid int, req *criurpc.CriuReq) error {
 	}
 
 	if err := c.cgroupManager.Set(c.config.Cgroups.Resources); err != nil {
-		return newSystemError(err)
+		return err
 	}
 
 	if cgroups.IsCgroup2UnifiedMode() {
@@ -1994,16 +1972,16 @@ func (c *linuxContainer) orderNamespacePaths(namespaces map[configs.NamespaceTyp
 		if p, ok := namespaces[ns]; ok && p != "" {
 			// check if the requested namespace is supported
 			if !configs.IsNamespaceSupported(ns) {
-				return nil, newSystemError(fmt.Errorf("namespace %s is not supported", ns))
+				return nil, fmt.Errorf("namespace %s is not supported", ns)
 			}
 			// only set to join this namespace if it exists
 			if _, err := os.Lstat(p); err != nil {
-				return nil, newSystemErrorWithCausef(err, "running lstat on namespace path %q", p)
+				return nil, fmt.Errorf("namespace path: %w", err)
 			}
 			// do not allow namespace path with comma as we use it to separate
 			// the namespace paths
 			if strings.ContainsRune(p, ',') {
-				return nil, newSystemError(fmt.Errorf("invalid path %s", p))
+				return nil, fmt.Errorf("invalid namespace path %s", p)
 			}
 			paths = append(paths, fmt.Sprintf("%s:%s", configs.NsName(ns), p))
 		}

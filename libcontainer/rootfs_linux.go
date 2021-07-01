@@ -56,7 +56,7 @@ func needsSetupDev(config *configs.Config) bool {
 func prepareRootfs(pipe io.ReadWriter, iConfig *initConfig) (err error) {
 	config := iConfig.Config
 	if err := prepareRoot(config); err != nil {
-		return newSystemErrorWithCause(err, "preparing rootfs")
+		return fmt.Errorf("error preparing rootfs: %w", err)
 	}
 
 	mountConfig := &mountConfig{
@@ -70,29 +70,29 @@ func prepareRootfs(pipe io.ReadWriter, iConfig *initConfig) (err error) {
 	for _, m := range config.Mounts {
 		for _, precmd := range m.PremountCmds {
 			if err := mountCmd(precmd); err != nil {
-				return newSystemErrorWithCause(err, "running premount command")
+				return fmt.Errorf("error running premount command: %w", err)
 			}
 		}
 		if err := mountToRootfs(m, mountConfig); err != nil {
-			return newSystemErrorWithCausef(err, "mounting %q to rootfs at %q", m.Source, m.Destination)
+			return fmt.Errorf("error mounting %q to rootfs at %q: %w", m.Source, m.Destination, err)
 		}
 
 		for _, postcmd := range m.PostmountCmds {
 			if err := mountCmd(postcmd); err != nil {
-				return newSystemErrorWithCause(err, "running postmount command")
+				return fmt.Errorf("error running postmount command: %w", err)
 			}
 		}
 	}
 
 	if setupDev {
 		if err := createDevices(config); err != nil {
-			return newSystemErrorWithCause(err, "creating device nodes")
+			return fmt.Errorf("error creating device nodes: %w", err)
 		}
 		if err := setupPtmx(config); err != nil {
-			return newSystemErrorWithCause(err, "setting up ptmx")
+			return fmt.Errorf("error setting up ptmx: %w", err)
 		}
 		if err := setupDevSymlinks(config.Rootfs); err != nil {
-			return newSystemErrorWithCause(err, "setting up /dev symlinks")
+			return fmt.Errorf("error setting up /dev symlinks: %w", err)
 		}
 	}
 
@@ -114,7 +114,7 @@ func prepareRootfs(pipe io.ReadWriter, iConfig *initConfig) (err error) {
 	// operation not being perfectly split).
 
 	if err := unix.Chdir(config.Rootfs); err != nil {
-		return newSystemErrorWithCausef(err, "changing dir to %q", config.Rootfs)
+		return &os.PathError{Op: "chdir", Path: config.Rootfs, Err: err}
 	}
 
 	s := iConfig.SpecState
@@ -132,12 +132,12 @@ func prepareRootfs(pipe io.ReadWriter, iConfig *initConfig) (err error) {
 		err = chroot()
 	}
 	if err != nil {
-		return newSystemErrorWithCause(err, "jailing process inside rootfs")
+		return fmt.Errorf("error jailing process inside rootfs: %w", err)
 	}
 
 	if setupDev {
 		if err := reOpenDevNull(); err != nil {
-			return newSystemErrorWithCause(err, "reopening /dev/null inside container")
+			return fmt.Errorf("error reopening /dev/null inside container: %w", err)
 		}
 	}
 
@@ -160,7 +160,7 @@ func finalizeRootfs(config *configs.Config) (err error) {
 		if utils.CleanPath(m.Destination) == "/dev" {
 			if m.Flags&unix.MS_RDONLY == unix.MS_RDONLY {
 				if err := remountReadonly(m); err != nil {
-					return newSystemErrorWithCausef(err, "remounting %q as readonly", m.Destination)
+					return err
 				}
 			}
 			break
@@ -170,7 +170,7 @@ func finalizeRootfs(config *configs.Config) (err error) {
 	// set rootfs ( / ) as readonly
 	if config.Readonlyfs {
 		if err := setReadonly(); err != nil {
-			return newSystemErrorWithCause(err, "setting rootfs as readonly")
+			return fmt.Errorf("error setting rootfs as readonly: %w", err)
 		}
 	}
 
@@ -336,12 +336,12 @@ func doTmpfsCopyUp(m *configs.Mount, rootfs, mountLabel string) (Err error) {
 	// Set up a scratch dir for the tmpfs on the host.
 	tmpdir, err := prepareTmp("/tmp")
 	if err != nil {
-		return newSystemErrorWithCause(err, "tmpcopyup: failed to setup tmpdir")
+		return fmt.Errorf("tmpcopyup: failed to setup tmpdir: %w", err)
 	}
 	defer cleanupTmp(tmpdir)
 	tmpDir, err := ioutil.TempDir(tmpdir, "runctmpdir")
 	if err != nil {
-		return newSystemErrorWithCause(err, "tmpcopyup: failed to create tmpdir")
+		return fmt.Errorf("tmpcopyup: failed to create tmpdir: %w", err)
 	}
 	defer os.RemoveAll(tmpDir)
 

@@ -189,19 +189,20 @@ func (l *linuxStandardInit) Init() error {
 
 	// Close the log pipe fd so the parent's ForwardLogs can exit.
 	if err := unix.Close(l.logFd); err != nil {
-		return newSystemErrorWithCause(err, "closing log pipe fd")
+		return &os.PathError{Op: "close log pipe", Path: "fd " + strconv.Itoa(l.logFd), Err: err}
 	}
 
 	// Wait for the FIFO to be opened on the other side before exec-ing the
 	// user process. We open it through /proc/self/fd/$fd, because the fd that
 	// was given to us was an O_PATH fd to the fifo itself. Linux allows us to
 	// re-open an O_PATH fd through /proc.
-	fd, err := unix.Open("/proc/self/fd/"+strconv.Itoa(l.fifoFd), unix.O_WRONLY|unix.O_CLOEXEC, 0)
+	fifoPath := "/proc/self/fd/" + strconv.Itoa(l.fifoFd)
+	fd, err := unix.Open(fifoPath, unix.O_WRONLY|unix.O_CLOEXEC, 0)
 	if err != nil {
-		return newSystemErrorWithCause(err, "open exec fifo")
+		return &os.PathError{Op: "open exec fifo", Path: fifoPath, Err: err}
 	}
 	if _, err := unix.Write(fd, []byte("0")); err != nil {
-		return newSystemErrorWithCause(err, "write 0 exec fifo")
+		return &os.PathError{Op: "write exec fifo", Path: fifoPath, Err: err}
 	}
 	// Close the O_PATH fifofd fd before exec because the kernel resets
 	// dumpable in the wrong order. This has been fixed in newer kernels, but
@@ -215,7 +216,7 @@ func (l *linuxStandardInit) Init() error {
 	// enable in their seccomp profiles).
 	if l.config.Config.Seccomp != nil && l.config.NoNewPrivileges {
 		if err := seccomp.InitSeccomp(l.config.Config.Seccomp); err != nil {
-			return newSystemErrorWithCause(err, "init seccomp")
+			return fmt.Errorf("unable to init seccomp: %w", err)
 		}
 	}
 
@@ -227,7 +228,7 @@ func (l *linuxStandardInit) Init() error {
 	}
 
 	if err := unix.Exec(name, l.config.Args[0:], os.Environ()); err != nil {
-		return newSystemErrorWithCause(err, "exec user process")
+		return fmt.Errorf("can't exec user process: %w", err)
 	}
 	return nil
 }

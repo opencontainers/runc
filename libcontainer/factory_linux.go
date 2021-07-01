@@ -44,7 +44,9 @@ func InitArgs(args ...string) func(*LinuxFactory) error {
 			// Resolve relative paths to ensure that its available
 			// after directory changes.
 			if args[0], err = filepath.Abs(args[0]); err != nil {
-				return newGenericError(err, ConfigInvalid)
+				// The only error returned from filepath.Abs is
+				// the one from os.Getwd, i.e. a system error.
+				return err
 			}
 		}
 
@@ -189,7 +191,7 @@ func CriuPath(criupath string) func(*LinuxFactory) error {
 func New(root string, options ...func(*LinuxFactory) error) (Factory, error) {
 	if root != "" {
 		if err := os.MkdirAll(root, 0o700); err != nil {
-			return nil, newGenericError(err, SystemError)
+			return nil, err
 		}
 	}
 	l := &LinuxFactory{
@@ -249,28 +251,28 @@ type LinuxFactory struct {
 
 func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, error) {
 	if l.Root == "" {
-		return nil, newGenericError(errors.New("invalid root"), ConfigInvalid)
+		return nil, &ConfigError{"invalid root"}
 	}
 	if err := l.validateID(id); err != nil {
 		return nil, err
 	}
 	if err := l.Validator.Validate(config); err != nil {
-		return nil, newGenericError(err, ConfigInvalid)
+		return nil, &ConfigError{err.Error()}
 	}
 	containerRoot, err := securejoin.SecureJoin(l.Root, id)
 	if err != nil {
 		return nil, err
 	}
 	if _, err := os.Stat(containerRoot); err == nil {
-		return nil, newGenericError(fmt.Errorf("container with id exists: %v", id), IdInUse)
+		return nil, ErrExist
 	} else if !os.IsNotExist(err) {
-		return nil, newGenericError(err, SystemError)
+		return nil, err
 	}
 	if err := os.MkdirAll(containerRoot, 0o711); err != nil {
-		return nil, newGenericError(err, SystemError)
+		return nil, err
 	}
 	if err := os.Chown(containerRoot, unix.Geteuid(), unix.Getegid()); err != nil {
-		return nil, newGenericError(err, SystemError)
+		return nil, err
 	}
 	c := &linuxContainer{
 		id:            id,
@@ -292,7 +294,7 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 
 func (l *LinuxFactory) Load(id string) (Container, error) {
 	if l.Root == "" {
-		return nil, newGenericError(errors.New("invalid root"), ConfigInvalid)
+		return nil, &ConfigError{"invalid root"}
 	}
 	// when load, we need to check id is valid or not.
 	if err := l.validateID(id); err != nil {
@@ -389,7 +391,7 @@ func (l *LinuxFactory) StartInitialization() (err error) {
 			fmt.Fprintln(os.Stderr, err)
 			return
 		}
-		if werr := utils.WriteJSON(pipe, newSystemError(err)); werr != nil {
+		if werr := utils.WriteJSON(pipe, &initError{Message: err.Error()}); werr != nil {
 			fmt.Fprintln(os.Stderr, err)
 			return
 		}
@@ -417,21 +419,21 @@ func (l *LinuxFactory) loadState(root, id string) (*State, error) {
 	f, err := os.Open(stateFilePath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, newGenericError(fmt.Errorf("container %q does not exist", id), ContainerNotExists)
+			return nil, ErrNotExist
 		}
-		return nil, newGenericError(err, SystemError)
+		return nil, err
 	}
 	defer f.Close()
 	var state *State
 	if err := json.NewDecoder(f).Decode(&state); err != nil {
-		return nil, newGenericError(err, SystemError)
+		return nil, err
 	}
 	return state, nil
 }
 
 func (l *LinuxFactory) validateID(id string) error {
 	if !idRegex.MatchString(id) || string(os.PathSeparator)+id != utils.CleanPath(string(os.PathSeparator)+id) {
-		return newGenericError(fmt.Errorf("invalid id format: %v", id), InvalidIdFormat)
+		return ErrInvalidID
 	}
 
 	return nil
