@@ -3,7 +3,7 @@ github.com/bits-and-blooms/bitset
 # github.com/checkpoint-restore/go-criu/v5 v5.0.0
 github.com/checkpoint-restore/go-criu/v5
 github.com/checkpoint-restore/go-criu/v5/rpc
-# github.com/cilium/ebpf v0.6.1
+# github.com/cilium/ebpf v0.6.2
 github.com/cilium/ebpf
 github.com/cilium/ebpf/asm
 github.com/cilium/ebpf/internal
