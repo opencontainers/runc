@@ -180,15 +180,53 @@ func ParseGroupFilter(r io.Reader, filter func(Group) bool) ([]Group, error) {
 	if r == nil {
 		return nil, errors.New("nil source for group-formatted data")
 	}
+	rd := bufio.NewReader(r)
+	out := []Group{}
 
-	var (
-		s   = bufio.NewScanner(r)
-		out = []Group{}
-	)
+	// Read the file line-by-line.
+	for {
+		var (
+			isPrefix  bool
+			wholeLine []byte
+			err       error
+		)
 
-	for s.Scan() {
-		text := bytes.TrimSpace(s.Bytes())
-		if len(text) == 0 {
+		// Read the next line. We do so in chunks (as much as reader's
+		// buffer is able to keep), check if we read enough columns
+		// already on each step and store final result in wholeLine.
+		for {
+			var line []byte
+			line, isPrefix, err = rd.ReadLine()
+
+			if err != nil {
+				// We should return no error if EOF is reached
+				// without a match.
+				if err == io.EOF { //nolint:errorlint // comparison with io.EOF is legit, https://github.com/polyfloyd/go-errorlint/pull/12
+					err = nil
+				}
+				return out, err
+			}
+
+			// Simple common case: line is short enough to fit in a
+			// single reader's buffer.
+			if !isPrefix && len(wholeLine) == 0 {
+				wholeLine = line
+				break
+			}
+
+			wholeLine = append(wholeLine, line...)
+
+			// Check if we read the whole line already.
+			if !isPrefix {
+				break
+			}
+		}
+
+		// There's no spec for /etc/passwd or /etc/group, but we try to follow
+		// the same rules as the glibc parser, which allows comments and blank
+		// space at the beginning of a line.
+		wholeLine = bytes.TrimSpace(wholeLine)
+		if len(wholeLine) == 0 || wholeLine[0] == '#' {
 			continue
 		}
 
@@ -198,17 +236,12 @@ func ParseGroupFilter(r io.Reader, filter func(Group) bool) ([]Group, error) {
 		//  root:x:0:root
 		//  adm:x:4:root,adm,daemon
 		p := Group{}
-		parseLine(text, &p.Name, &p.Pass, &p.Gid, &p.List)
+		parseLine(wholeLine, &p.Name, &p.Pass, &p.Gid, &p.List)
 
 		if filter == nil || filter(p) {
 			out = append(out, p)
 		}
 	}
-	if err := s.Err(); err != nil {
-		return nil, err
-	}
-
-	return out, nil
 }
 
 type ExecUser struct {
