@@ -187,7 +187,7 @@ func ParseGroupFilter(r io.Reader, filter func(Group) bool) ([]Group, error) {
 	)
 
 	for s.Scan() {
-		text := s.Bytes()
+		text := bytes.TrimSpace(s.Bytes())
 		if len(text) == 0 {
 			continue
 		}
