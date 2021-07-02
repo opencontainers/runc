@@ -1,6 +1,7 @@
 package user
 
 import (
+	"fmt"
 	"io"
 	"reflect"
 	"sort"
@@ -82,12 +83,12 @@ func TestUserParseGroup(t *testing.T) {
 root:x:0:root
 adm:x:4:root,adm,daemon
 this is just some garbage data
-`), nil)
+`+largeGroup()), nil)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
-	if len(groups) != 3 {
-		t.Fatalf("Expected 3 groups, got %v", len(groups))
+	if len(groups) != 4 {
+		t.Fatalf("Expected 4 groups, got %v", len(groups))
 	}
 	if groups[0].Gid != 0 || groups[0].Name != "root" || len(groups[0].List) != 1 {
 		t.Fatalf("Expected groups[0] to be 0 - root - 1 member, got %v - %v - %v", groups[0].Gid, groups[0].Name, len(groups[0].List))
@@ -103,16 +104,18 @@ root:x:0:0:root user:/root:/bin/bash
 adm:x:42:43:adm:/var/adm:/bin/false
 111:x:222:333::/var/garbage
 odd:x:111:112::/home/odd:::::
+user7456:x:7456:100:Vasya:/home/user7456
 this is just some garbage data
 `
-	const groupContent = `
+	groupContent := `
 root:x:0:root
 adm:x:43:
-grp:x:1234:root,adm
+grp:x:1234:root,adm,user7456
 444:x:555:111
 odd:x:444:
 this is just some garbage data
-`
+` + largeGroup()
+
 	defaultExecUser := ExecUser{
 		Uid:   8888,
 		Gid:   8888,
@@ -214,6 +217,16 @@ this is just some garbage data
 				Gid:   444,
 				Sgids: defaultExecUser.Sgids,
 				Home:  "/home/odd",
+			},
+		},
+		// Test for #3036.
+		{
+			ref: "7456",
+			expected: ExecUser{
+				Uid:   7456,
+				Gid:   100,
+				Sgids: []int{1234, 1000}, // 1000 is largegroup GID
+				Home:  "/home/user7456",
 			},
 		},
 	}
@@ -388,13 +401,13 @@ func TestGetAdditionalGroups(t *testing.T) {
 		hasError bool
 	}
 
-	const groupContent = `
+	groupContent := `
 root:x:0:root
 adm:x:43:
 grp:x:1234:root,adm
 adm:x:4343:root,adm-duplicate
 this is just some garbage data
-`
+` + largeGroup()
 	tests := []foo{
 		{
 			// empty group
@@ -443,6 +456,11 @@ this is just some garbage data
 			groups:   []string{strconv.FormatInt(1<<31, 10)},
 			expected: nil,
 			hasError: true,
+		},
+		{
+			// group with very long list of users
+			groups:   []string{"largegroup"},
+			expected: []int{1000},
 		},
 	}
 
@@ -499,4 +517,14 @@ func TestGetAdditionalGroupsNumeric(t *testing.T) {
 			t.Errorf("Gids(%v), expect %v from groups %v", gids, test.expected, test.groups)
 		}
 	}
+}
+
+// Generate a proper "largegroup" entry for group tests.
+func largeGroup() (res string) {
+	var b strings.Builder
+	b.WriteString("largegroup:x:1000:user1")
+	for i := 2; i <= 7500; i++ {
+		fmt.Fprintf(&b, ",user%d", i)
+	}
+	return b.String()
 }
