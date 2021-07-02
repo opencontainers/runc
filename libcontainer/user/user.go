@@ -2,6 +2,7 @@ package user
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -55,11 +56,11 @@ type IDMap struct {
 	Count    int64
 }
 
-func parseLine(line string, v ...interface{}) {
-	parseParts(strings.Split(line, ":"), v...)
+func parseLine(line []byte, v ...interface{}) {
+	parseParts(bytes.Split(line, []byte(":")), v...)
 }
 
-func parseParts(parts []string, v ...interface{}) {
+func parseParts(parts [][]byte, v ...interface{}) {
 	if len(parts) == 0 {
 		return
 	}
@@ -75,16 +76,16 @@ func parseParts(parts []string, v ...interface{}) {
 		// This is legit.
 		switch e := v[i].(type) {
 		case *string:
-			*e = p
+			*e = string(p)
 		case *int:
 			// "numbers", with conversion errors ignored because of some misbehaving configuration files.
-			*e, _ = strconv.Atoi(p)
+			*e, _ = strconv.Atoi(string(p))
 		case *int64:
-			*e, _ = strconv.ParseInt(p, 10, 64)
+			*e, _ = strconv.ParseInt(string(p), 10, 64)
 		case *[]string:
 			// Comma-separated lists.
-			if p != "" {
-				*e = strings.Split(p, ",")
+			if len(p) != 0 {
+				*e = strings.Split(string(p), ",")
 			} else {
 				*e = []string{}
 			}
@@ -128,8 +129,8 @@ func ParsePasswdFilter(r io.Reader, filter func(User) bool) ([]User, error) {
 	)
 
 	for s.Scan() {
-		line := strings.TrimSpace(s.Text())
-		if line == "" {
+		line := bytes.TrimSpace(s.Bytes())
+		if len(line) == 0 {
 			continue
 		}
 
@@ -186,8 +187,8 @@ func ParseGroupFilter(r io.Reader, filter func(Group) bool) ([]Group, error) {
 	)
 
 	for s.Scan() {
-		text := s.Text()
-		if text == "" {
+		text := s.Bytes()
+		if len(text) == 0 {
 			continue
 		}
 
@@ -278,7 +279,7 @@ func GetExecUser(userSpec string, defaults *ExecUser, passwd, group io.Reader) (
 
 	// Allow for userArg to have either "user" syntax, or optionally "user:group" syntax
 	var userArg, groupArg string
-	parseLine(userSpec, &userArg, &groupArg)
+	parseLine([]byte(userSpec), &userArg, &groupArg)
 
 	// Convert userArg and groupArg to be numeric, so we don't have to execute
 	// Atoi *twice* for each iteration over lines.
@@ -496,8 +497,8 @@ func ParseSubIDFilter(r io.Reader, filter func(SubID) bool) ([]SubID, error) {
 	)
 
 	for s.Scan() {
-		line := strings.TrimSpace(s.Text())
-		if line == "" {
+		line := bytes.TrimSpace(s.Bytes())
+		if len(line) == 0 {
 			continue
 		}
 
@@ -549,14 +550,14 @@ func ParseIDMapFilter(r io.Reader, filter func(IDMap) bool) ([]IDMap, error) {
 	)
 
 	for s.Scan() {
-		line := strings.TrimSpace(s.Text())
-		if line == "" {
+		line := bytes.TrimSpace(s.Bytes())
+		if len(line) == 0 {
 			continue
 		}
 
 		// see: man 7 user_namespaces
 		p := IDMap{}
-		parseParts(strings.Fields(line), &p.ID, &p.ParentID, &p.Count)
+		parseParts(bytes.Fields(line), &p.ID, &p.ParentID, &p.Count)
 
 		if filter == nil || filter(p) {
 			out = append(out, p)
