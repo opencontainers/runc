@@ -133,7 +133,7 @@ func getContainers(context *cli.Context) ([]containerState, error) {
 		if item.IsDir() {
 			// This cast is safe on Linux.
 			stat := item.Sys().(*syscall.Stat_t)
-			owner, err := user.LookupUid(int(stat.Uid))
+			owner, err := user.LookupUID(int(stat.Uid))
 			if err != nil {
 				owner.Name = fmt.Sprintf("#%d", stat.Uid)
 			}

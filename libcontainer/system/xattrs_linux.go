@@ -2,8 +2,8 @@ package system
 
 import "golang.org/x/sys/unix"
 
-// Returns a []byte slice if the xattr is set and nil otherwise
-// Requires path and its attribute as arguments
+// Lgetxattr returns a []byte slice if the xattr is set and nil otherwise.
+// Requires path and its attribute as arguments.
 func Lgetxattr(path string, attr string) ([]byte, error) {
 	var sz int
 	// Start with a 128 length byte array

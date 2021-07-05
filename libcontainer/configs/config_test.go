@@ -24,14 +24,14 @@ func TestUnmarshalHooks(t *testing.T) {
 		Timeout: &timeout,
 	})
 
-	hookJson, err := json.Marshal(hookCmd)
+	hookJSON, err := json.Marshal(hookCmd)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	for _, hookName := range configs.HookNameList {
 		hooks := configs.Hooks{}
-		err = hooks.UnmarshalJSON([]byte(fmt.Sprintf(`{"%s" :[%s]}`, hookName, hookJson)))
+		err = hooks.UnmarshalJSON([]byte(fmt.Sprintf(`{"%s" :[%s]}`, hookName, hookJSON)))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -75,8 +75,8 @@ func TestMarshalHooks(t *testing.T) {
 	}
 
 	// Note Marshal seems to output fields in alphabetical order
-	hookCmdJson := `[{"path":"/var/vcap/hooks/hook","args":["--pid=123"],"env":["FOO=BAR"],"dir":"/var/vcap","timeout":1000000000}]`
-	h := fmt.Sprintf(`{"createContainer":%[1]s,"createRuntime":%[1]s,"poststart":%[1]s,"poststop":%[1]s,"prestart":%[1]s,"startContainer":%[1]s}`, hookCmdJson)
+	hookCmdJSON := `[{"path":"/var/vcap/hooks/hook","args":["--pid=123"],"env":["FOO=BAR"],"dir":"/var/vcap","timeout":1000000000}]`
+	h := fmt.Sprintf(`{"createContainer":%[1]s,"createRuntime":%[1]s,"poststart":%[1]s,"poststop":%[1]s,"prestart":%[1]s,"startContainer":%[1]s}`, hookCmdJSON)
 	if string(hooks) != h {
 		t.Errorf("Expected hooks %s to equal %s", string(hooks), h)
 	}
@@ -165,7 +165,7 @@ func TestCommandHookRun(t *testing.T) {
 		Bundle:  "/bundle",
 	}
 
-	stateJson, err := json.Marshal(state)
+	stateJSON, err := json.Marshal(state)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -187,9 +187,9 @@ if [ "$JSON" != "$expectedJson" ]; then
 fi
 exit 0
 	`
-	verifyCommand := fmt.Sprintf(verifyCommandTemplate, stateJson)
+	verifyCommand := fmt.Sprintf(verifyCommandTemplate, stateJSON)
 	filename := "/tmp/runc-hooktest.sh"
-	os.Remove(filename)
+	_ = os.Remove(filename)
 	if err := ioutil.WriteFile(filename, []byte(verifyCommand), 0o700); err != nil {
 		t.Fatalf("Failed to create tmp file: %v", err)
 	}

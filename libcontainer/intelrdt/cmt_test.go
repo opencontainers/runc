@@ -13,10 +13,10 @@ func TestGetCMTNumaNodeStats(t *testing.T) {
 		"llc_occupancy": 9123911,
 	}
 
-	mockedL3_MON, err := mockResctrlL3_MON(mocksNUMANodesToCreate, mocksFilesToCreate)
+	mockedL3MON, err := mockResctrlL3MON(mocksNUMANodesToCreate, mocksFilesToCreate)
 
 	defer func() {
-		err := os.RemoveAll(mockedL3_MON)
+		err := os.RemoveAll(mockedL3MON)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -31,7 +31,7 @@ func TestGetCMTNumaNodeStats(t *testing.T) {
 
 		stats := make([]CMTNumaNodeStats, 0, len(mocksNUMANodesToCreate))
 		for _, numa := range mocksNUMANodesToCreate {
-			other, err := getCMTNumaNodeStats(filepath.Join(mockedL3_MON, "mon_data", numa))
+			other, err := getCMTNumaNodeStats(filepath.Join(mockedL3MON, "mon_data", numa))
 			if err != nil {
 				t.Fatal(err)
 			}

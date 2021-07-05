@@ -22,7 +22,7 @@ var (
 		&CpusetGroup{},
 		&DevicesGroup{},
 		&MemoryGroup{},
-		&CpuGroup{},
+		&CPUGroup{},
 		&CpuacctGroup{},
 		&PidsGroup{},
 		&BlkioGroup{},
@@ -33,7 +33,7 @@ var (
 		&FreezerGroup{},
 		&NameGroup{GroupName: "name=systemd", Join: true},
 	}
-	HugePageSizes, _ = cgroups.GetHugePageSize()
+	hugePageSizes, _ = cgroups.GetHugePageSize()
 )
 
 var errSubsystemDoesNotExist = errors.New("cgroup: subsystem does not exist")

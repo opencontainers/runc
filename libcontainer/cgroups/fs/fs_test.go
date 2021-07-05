@@ -139,7 +139,7 @@ func BenchmarkGetStats(b *testing.B) {
 			b.Fatal(err)
 		}
 	}
-	if st.CpuStats.CpuUsage.TotalUsage != 0 {
+	if st.CPUStats.CPUUsage.TotalUsage != 0 {
 		b.Fatalf("stats: %+v", st)
 	}
 }

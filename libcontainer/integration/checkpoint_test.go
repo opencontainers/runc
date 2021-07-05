@@ -110,7 +110,7 @@ func testCheckpoint(t *testing.T, userns bool) {
 	ok(t, err)
 	defer remove(parentDir)
 
-	preDumpOpts := &libcontainer.CriuOpts{
+	preDumpOpts := &libcontainer.CRIUOpts{
 		ImagesDirectory: parentDir,
 		WorkDirectory:   parentDir,
 		PreDump:         true,
@@ -133,7 +133,7 @@ func testCheckpoint(t *testing.T, userns bool) {
 	ok(t, err)
 	defer remove(imagesDir)
 
-	checkpointOpts := &libcontainer.CriuOpts{
+	checkpointOpts := &libcontainer.CRIUOpts{
 		ImagesDirectory: imagesDir,
 		WorkDirectory:   imagesDir,
 		ParentImage:     "../criu-parent",

@@ -63,7 +63,7 @@ type initConfig struct {
 	Config           *configs.Config       `json:"config"`
 	Networks         []*network            `json:"network"`
 	PassedFilesCount int                   `json:"passed_files_count"`
-	ContainerId      string                `json:"containerid"`
+	ContainerID      string                `json:"containerid"`
 	Rlimits          []configs.Rlimit      `json:"rlimits"`
 	CreateConsole    bool                  `json:"create_console"`
 	ConsoleWidth     uint16                `json:"console_width"`
@@ -277,8 +277,8 @@ func syncParentHooks(pipe io.ReadWriter) error {
 func setupUser(config *initConfig) error {
 	// Set up defaults.
 	defaultExecUser := user.ExecUser{
-		Uid:  0,
-		Gid:  0,
+		UID:  0,
+		GID:  0,
 		Home: "/",
 	}
 
@@ -307,10 +307,10 @@ func setupUser(config *initConfig) error {
 
 	// Rather than just erroring out later in setuid(2) and setgid(2), check
 	// that the user is mapped here.
-	if _, err := config.Config.HostUID(execUser.Uid); err != nil {
+	if _, err := config.Config.HostUID(execUser.UID); err != nil {
 		return errors.New("cannot set uid to unmapped user in user namespace")
 	}
-	if _, err := config.Config.HostGID(execUser.Gid); err != nil {
+	if _, err := config.Config.HostGID(execUser.GID); err != nil {
 		return errors.New("cannot set gid to unmapped user in user namespace")
 	}
 
@@ -342,16 +342,16 @@ func setupUser(config *initConfig) error {
 	allowSupGroups := !config.RootlessEUID && string(bytes.TrimSpace(setgroups)) != "deny"
 
 	if allowSupGroups {
-		suppGroups := append(execUser.Sgids, addGroups...)
+		suppGroups := append(execUser.SGIDs, addGroups...)
 		if err := unix.Setgroups(suppGroups); err != nil {
 			return err
 		}
 	}
 
-	if err := system.Setgid(execUser.Gid); err != nil {
+	if err := system.Setgid(execUser.GID); err != nil {
 		return err
 	}
-	if err := system.Setuid(execUser.Uid); err != nil {
+	if err := system.Setuid(execUser.UID); err != nil {
 		return err
 	}
 
@@ -393,7 +393,7 @@ func fixStdioPermissions(config *initConfig, u *user.ExecUser) error {
 		// that users expect to be able to actually use their console. Without
 		// this code, you couldn't effectively run as a non-root user inside a
 		// container and also have a console set up.
-		if err := unix.Fchown(int(fd), u.Uid, int(s.Gid)); err != nil {
+		if err := unix.Fchown(int(fd), u.UID, int(s.Gid)); err != nil {
 			// If we've hit an EINVAL then s.Gid isn't mapped in the user
 			// namespace. If we've hit an EPERM then the inode's current owner
 			// is not mapped in our user namespace (in particular,
@@ -466,9 +466,9 @@ func setupRlimits(limits []configs.Rlimit, pid int) error {
 	return nil
 }
 
-const _P_PID = 1
+const pPid = 1 // _P_PID
 
-//nolint:structcheck,unused
+//nolint:revive,structcheck,unused
 type siginfo struct {
 	si_signo int32
 	si_errno int32
@@ -483,7 +483,7 @@ type siginfo struct {
 // Its based off blockUntilWaitable in src/os/wait_waitid.go
 func isWaitable(pid int) (bool, error) {
 	si := &siginfo{}
-	_, _, e := unix.Syscall6(unix.SYS_WAITID, _P_PID, uintptr(pid), uintptr(unsafe.Pointer(si)), unix.WEXITED|unix.WNOWAIT|unix.WNOHANG, 0, 0)
+	_, _, e := unix.Syscall6(unix.SYS_WAITID, pPid, uintptr(pid), uintptr(unsafe.Pointer(si)), unix.WEXITED|unix.WNOWAIT|unix.WNOHANG, 0, 0)
 	if e != 0 {
 		return false, os.NewSyscallError("waitid", e)
 	}

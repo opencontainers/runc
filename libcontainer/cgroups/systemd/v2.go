@@ -85,7 +85,7 @@ func unifiedResToSystemdProps(cm *dbusConnManager, res map[string]string) (props
 					return nil, fmt.Errorf("unified resource %q quota value conversion error: %w", k, err)
 				}
 			}
-			addCpuQuota(cm, &props, quota, period)
+			addCPUQuota(cm, &props, quota, period)
 
 		case "cpu.weight":
 			num, err := strconv.ParseUint(v, 10, 64)
@@ -196,19 +196,19 @@ func genV2ResourcesProperties(r *configs.Resources, cm *dbusConnManager) ([]syst
 			newProp("MemorySwapMax", uint64(swap)))
 	}
 
-	if r.CpuWeight != 0 {
+	if r.CPUWeight != 0 {
 		properties = append(properties,
-			newProp("CPUWeight", r.CpuWeight))
+			newProp("CPUWeight", r.CPUWeight))
 	}
 
-	addCpuQuota(cm, &properties, r.CpuQuota, r.CpuPeriod)
+	addCPUQuota(cm, &properties, r.CPUQuota, r.CPUPeriod)
 
-	if r.PidsLimit > 0 || r.PidsLimit == -1 {
+	if r.PIDsLimit > 0 || r.PIDsLimit == -1 {
 		properties = append(properties,
-			newProp("TasksMax", uint64(r.PidsLimit)))
+			newProp("TasksMax", uint64(r.PIDsLimit)))
 	}
 
-	err = addCpuset(cm, &properties, r.CpusetCpus, r.CpusetMems)
+	err = addCPUSet(cm, &properties, r.CPUSetCPUs, r.CPUSetMems)
 	if err != nil {
 		return nil, err
 	}
@@ -289,10 +289,7 @@ func (m *unifiedManager) Apply(pid int) error {
 	if err := m.initPath(); err != nil {
 		return err
 	}
-	if err := fs2.CreateCgroupPath(m.path, m.cgroups); err != nil {
-		return err
-	}
-	return nil
+	return fs2.CreateCgroupPath(m.path, m.cgroups)
 }
 
 func (m *unifiedManager) Destroy() error {

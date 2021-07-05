@@ -27,8 +27,8 @@ var (
 type User struct {
 	Name  string
 	Pass  string
-	Uid   int
-	Gid   int
+	UID   int
+	GID   int
 	Gecos string
 	Home  string
 	Shell string
@@ -37,7 +37,7 @@ type User struct {
 type Group struct {
 	Name string
 	Pass string
-	Gid  int
+	GID  int
 	List []string
 }
 
@@ -139,7 +139,7 @@ func ParsePasswdFilter(r io.Reader, filter func(User) bool) ([]User, error) {
 		//  root:x:0:0:root:/root:/bin/bash
 		//  adm:x:3:4:adm:/var/adm:/bin/false
 		p := User{}
-		parseLine(line, &p.Name, &p.Pass, &p.Uid, &p.Gid, &p.Gecos, &p.Home, &p.Shell)
+		parseLine(line, &p.Name, &p.Pass, &p.UID, &p.GID, &p.Gecos, &p.Home, &p.Shell)
 
 		if filter == nil || filter(p) {
 			out = append(out, p)
@@ -197,7 +197,7 @@ func ParseGroupFilter(r io.Reader, filter func(Group) bool) ([]Group, error) {
 		//  root:x:0:root
 		//  adm:x:4:root,adm,daemon
 		p := Group{}
-		parseLine(text, &p.Name, &p.Pass, &p.Gid, &p.List)
+		parseLine(text, &p.Name, &p.Pass, &p.GID, &p.List)
 
 		if filter == nil || filter(p) {
 			out = append(out, p)
@@ -211,9 +211,9 @@ func ParseGroupFilter(r io.Reader, filter func(Group) bool) ([]Group, error) {
 }
 
 type ExecUser struct {
-	Uid   int
-	Gid   int
-	Sgids []int
+	UID   int
+	GID   int
+	SGIDs []int
 	Home  string
 }
 
@@ -265,15 +265,15 @@ func GetExecUser(userSpec string, defaults *ExecUser, passwd, group io.Reader) (
 
 	// Copy over defaults.
 	user := &ExecUser{
-		Uid:   defaults.Uid,
-		Gid:   defaults.Gid,
-		Sgids: defaults.Sgids,
+		UID:   defaults.UID,
+		GID:   defaults.GID,
+		SGIDs: defaults.SGIDs,
 		Home:  defaults.Home,
 	}
 
 	// Sgids slice *cannot* be nil.
-	if user.Sgids == nil {
-		user.Sgids = []int{}
+	if user.SGIDs == nil {
+		user.SGIDs = []int{}
 	}
 
 	// Allow for userArg to have either "user" syntax, or optionally "user:group" syntax
@@ -289,12 +289,12 @@ func GetExecUser(userSpec string, defaults *ExecUser, passwd, group io.Reader) (
 	users, err := ParsePasswdFilter(passwd, func(u User) bool {
 		if userArg == "" {
 			// Default to current state of the user.
-			return u.Uid == user.Uid
+			return u.UID == user.UID
 		}
 
 		if uidErr == nil {
 			// If the userArg is numeric, always treat it as a UID.
-			return uidArg == u.Uid
+			return uidArg == u.UID
 		}
 
 		return u.Name == userArg
@@ -303,7 +303,7 @@ func GetExecUser(userSpec string, defaults *ExecUser, passwd, group io.Reader) (
 	// If we can't find the user, we have to bail.
 	if err != nil && passwd != nil {
 		if userArg == "" {
-			userArg = strconv.Itoa(user.Uid)
+			userArg = strconv.Itoa(user.UID)
 		}
 		return nil, fmt.Errorf("unable to find user %s: %w", userArg, err)
 	}
@@ -312,8 +312,8 @@ func GetExecUser(userSpec string, defaults *ExecUser, passwd, group io.Reader) (
 	if len(users) > 0 {
 		// First match wins, even if there's more than one matching entry.
 		matchedUserName = users[0].Name
-		user.Uid = users[0].Uid
-		user.Gid = users[0].Gid
+		user.UID = users[0].UID
+		user.GID = users[0].GID
 		user.Home = users[0].Home
 	} else if userArg != "" {
 		// If we can't find a user with the given username, the only other valid
@@ -323,10 +323,10 @@ func GetExecUser(userSpec string, defaults *ExecUser, passwd, group io.Reader) (
 			// Not numeric.
 			return nil, fmt.Errorf("unable to find user %s: %w", userArg, ErrNoPasswdEntries)
 		}
-		user.Uid = uidArg
+		user.UID = uidArg
 
 		// Must be inside valid uid range.
-		if user.Uid < minID || user.Uid > maxID {
+		if user.UID < minID || user.UID > maxID {
 			return nil, ErrRange
 		}
 
@@ -350,7 +350,7 @@ func GetExecUser(userSpec string, defaults *ExecUser, passwd, group io.Reader) (
 
 			if gidErr == nil {
 				// If the groupArg is numeric, always treat it as a GID.
-				return gidArg == g.Gid
+				return gidArg == g.GID
 			}
 
 			return g.Name == groupArg
@@ -363,7 +363,7 @@ func GetExecUser(userSpec string, defaults *ExecUser, passwd, group io.Reader) (
 		if groupArg != "" {
 			if len(groups) > 0 {
 				// First match wins, even if there's more than one matching entry.
-				user.Gid = groups[0].Gid
+				user.GID = groups[0].GID
 			} else {
 				// If we can't find a group with the given name, the only other valid
 				// option is if it's a numeric group name with no associated entry in group.
@@ -372,10 +372,10 @@ func GetExecUser(userSpec string, defaults *ExecUser, passwd, group io.Reader) (
 					// Not numeric.
 					return nil, fmt.Errorf("unable to find group %s: %w", groupArg, ErrNoGroupEntries)
 				}
-				user.Gid = gidArg
+				user.GID = gidArg
 
 				// Must be inside valid gid range.
-				if user.Gid < minID || user.Gid > maxID {
+				if user.GID < minID || user.GID > maxID {
 					return nil, ErrRange
 				}
 
@@ -383,9 +383,9 @@ func GetExecUser(userSpec string, defaults *ExecUser, passwd, group io.Reader) (
 			}
 		} else if len(groups) > 0 {
 			// Supplementary group ids only make sense if in the implicit form.
-			user.Sgids = make([]int, len(groups))
+			user.SGIDs = make([]int, len(groups))
 			for i, group := range groups {
-				user.Sgids[i] = group.Gid
+				user.SGIDs[i] = group.GID
 			}
 		}
 	}
@@ -404,7 +404,7 @@ func GetAdditionalGroups(additionalGroups []string, group io.Reader) ([]int, err
 		var err error
 		groups, err = ParseGroupFilter(group, func(g Group) bool {
 			for _, ag := range additionalGroups {
-				if g.Name == ag || strconv.Itoa(g.Gid) == ag {
+				if g.Name == ag || strconv.Itoa(g.GID) == ag {
 					return true
 				}
 			}
@@ -421,9 +421,9 @@ func GetAdditionalGroups(additionalGroups []string, group io.Reader) ([]int, err
 		for _, g := range groups {
 			// if we found a matched group either by name or gid, take the
 			// first matched as correct
-			if g.Name == ag || strconv.Itoa(g.Gid) == ag {
-				if _, ok := gidMap[g.Gid]; !ok {
-					gidMap[g.Gid] = struct{}{}
+			if g.Name == ag || strconv.Itoa(g.GID) == ag {
+				if _, ok := gidMap[g.GID]; !ok {
+					gidMap[g.GID] = struct{}{}
 					found = true
 					break
 				}

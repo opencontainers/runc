@@ -176,7 +176,7 @@ func TestValidateUsernamespaceWithoutUserNS(t *testing.T) {
 	uidMap := configs.IDMap{ContainerID: 123}
 	config := &configs.Config{
 		Rootfs:      "/var",
-		UidMappings: []configs.IDMap{uidMap},
+		UIDMappings: []configs.IDMap{uidMap},
 	}
 
 	validator := validate.New()

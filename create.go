@@ -62,7 +62,7 @@ command(s) that get executed on start, edit the args parameter of the spec. See
 		if err != nil {
 			return err
 		}
-		status, err := startContainer(context, spec, CT_ACT_CREATE, nil)
+		status, err := startContainer(context, spec, actCreate, nil)
 		if err != nil {
 			return err
 		}

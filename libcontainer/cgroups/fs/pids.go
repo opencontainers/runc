@@ -22,12 +22,12 @@ func (s *PidsGroup) Apply(path string, d *cgroupData) error {
 }
 
 func (s *PidsGroup) Set(path string, r *configs.Resources) error {
-	if r.PidsLimit != 0 {
+	if r.PIDsLimit != 0 {
 		// "max" is the fallback value.
 		limit := "max"
 
-		if r.PidsLimit > 0 {
-			limit = strconv.FormatInt(r.PidsLimit, 10)
+		if r.PIDsLimit > 0 {
+			limit = strconv.FormatInt(r.PIDsLimit, 10)
 		}
 
 		if err := cgroups.WriteFile(path, "pids.max", limit); err != nil {
@@ -58,7 +58,7 @@ func (s *PidsGroup) GetStats(path string, stats *cgroups.Stats) error {
 		max = 0
 	}
 
-	stats.PidsStats.Current = current
-	stats.PidsStats.Limit = max
+	stats.PIDsStats.Current = current
+	stats.PIDsStats.Limit = max
 	return nil
 }

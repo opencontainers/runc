@@ -48,7 +48,7 @@ your host.`,
 		case libcontainer.Running:
 			return errors.New("cannot start an already running container")
 		default:
-			return fmt.Errorf("cannot start a container in the %s state\n", status)
+			return fmt.Errorf("cannot start a container in the %s state", status)
 		}
 	},
 }
