@@ -129,7 +129,25 @@ func (s *FreezerGroup) GetState(path string) (configs.FreezerState, error) {
 		case "THAWED":
 			return configs.Thawed, nil
 		case "FROZEN":
-			return configs.Frozen, nil
+			// Check freezer state for current control group to check
+			// if it is frozen, or if it is one of its ancestors.
+			self, err := cgroups.ReadFile(path, "freezer.self_freezing")
+			if err != nil {
+				// If the kernel is too old, then we just treat
+				// it as being frozen.
+				if errors.Is(err, os.ErrNotExist) || errors.Is(err, unix.ENODEV) {
+					err = nil
+				}
+				return configs.Frozen, err
+			}
+			switch self {
+			case "0\n":
+				return configs.Thawed, nil
+			case "1\n":
+				return configs.Frozen, nil
+			default:
+				return configs.Undefined, fmt.Errorf(`unknown "freezer.self_freezing" state: %q`, state)
+			}
 		case "FREEZING":
 			// Make sure we get a stable freezer state, so retry if the cgroup
 			// is still undergoing freezing. This should be a temporary delay.
