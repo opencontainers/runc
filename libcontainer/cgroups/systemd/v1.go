@@ -279,18 +279,23 @@ func getSubsystemPath(c *configs.Cgroup, subsystem string) (string, error) {
 }
 
 func (m *legacyManager) Freeze(state configs.FreezerState) error {
+	err := m.doFreeze(state)
+	if err == nil {
+		m.cgroups.Resources.Freezer = state
+	}
+	return err
+}
+
+// doFreeze is the same as Freeze but without
+// changing the m.cgroups.Resources.Frozen field.
+func (m *legacyManager) doFreeze(state configs.FreezerState) error {
 	path, ok := m.paths["freezer"]
 	if !ok {
 		return errSubsystemDoesNotExist
 	}
-	prevState := m.cgroups.Resources.Freezer
-	m.cgroups.Resources.Freezer = state
 	freezer := &fs.FreezerGroup{}
-	if err := freezer.Set(path, m.cgroups.Resources); err != nil {
-		m.cgroups.Resources.Freezer = prevState
-		return err
-	}
-	return nil
+	resources := &configs.Resources{Freezer: state}
+	return freezer.Set(path, resources)
 }
 
 func (m *legacyManager) GetPids() ([]int, error) {
@@ -340,14 +345,21 @@ func (m *legacyManager) Set(r *configs.Resources) error {
 		return err
 	}
 
-	// Figure out the current freezer state, so we can revert to it after we
-	// temporarily freeze the container.
-	targetFreezerState, err := m.GetFreezerState()
+	// Figure out if cgroup needs to be frozen before applying systemd properties
+	// and thawed after, while trying to avoid unnecessary state changes.
+	freezerState, err := m.GetFreezerState()
 	if err != nil {
 		return err
 	}
-	if targetFreezerState == configs.Undefined {
-		targetFreezerState = configs.Thawed
+	needsFreeze := true
+	if freezerState == configs.Frozen {
+		// Already frozen, no need to do anything.
+		needsFreeze = false
+	}
+	needsThaw := needsFreeze
+	if r.Freezer == configs.Frozen {
+		// Will be frozen anyway, so no need to thaw.
+		needsThaw = false
 	}
 
 	// We have to freeze the container while systemd sets the cgroup settings.
@@ -356,18 +368,20 @@ func (m *legacyManager) Set(r *configs.Resources) error {
 	// (unlike our fs driver, they will happily write deny-all rules to running
 	// containers). So we freeze the container to avoid them hitting the cgroup
 	// error. But if the freezer cgroup isn't supported, we just warn about it.
-	if err := m.Freeze(configs.Frozen); err != nil {
-		logrus.Infof("freeze container before SetUnitProperties failed: %v", err)
+	if needsFreeze {
+		if err := m.doFreeze(configs.Frozen); err != nil {
+			logrus.Infof("freeze container before SetUnitProperties failed: %v", err)
+		}
 	}
-
-	if err := setUnitProperties(m.dbus, getUnitName(m.cgroups), properties...); err != nil {
-		_ = m.Freeze(targetFreezerState)
-		return err
+	setErr := setUnitProperties(m.dbus, getUnitName(m.cgroups), properties...)
+	if needsThaw {
+		if err := m.doFreeze(configs.Thawed); err != nil {
+			logrus.Infof("thaw container after SetUnitProperties failed: %v", err)
+		}
 	}
-
-	// Reset freezer state before we apply the configuration, to avoid clashing
-	// with the freezer setting in the configuration.
-	_ = m.Freeze(targetFreezerState)
+	if setErr != nil {
+		return setErr
+	}
 
 	for _, sys := range legacySubsystems {
 		// Get the subsystem path, but don't error out for not found cgroups.
