@@ -2,7 +2,7 @@ package intelrdt
 
 var cmtEnabled bool
 
-// Check if Intel RDT/CMT is enabled.
+// IsCMTEnabled checks if Intel RDT/CMT is enabled.
 func IsCMTEnabled() bool {
 	featuresInit()
 	return cmtEnabled

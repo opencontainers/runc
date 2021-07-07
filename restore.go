@@ -114,7 +114,7 @@ using the runc checkpoint command.`,
 		if err := setEmptyNsMask(context, options); err != nil {
 			return err
 		}
-		status, err := startContainer(context, spec, CT_ACT_RESTORE, options)
+		status, err := startContainer(context, spec, actRestore, options)
 		if err != nil {
 			return err
 		}

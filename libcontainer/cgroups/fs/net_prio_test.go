@@ -18,7 +18,7 @@ var prioMap = []*configs.IfPrioMap{
 }
 
 func TestNetPrioSetIfPrio(t *testing.T) {
-	helper := NewCgroupTestUtil("net_prio", t)
+	helper := newCgroupTestUtil("net_prio", t)
 	defer helper.cleanup()
 
 	helper.CgroupData.config.Resources.NetPrioIfpriomap = prioMap

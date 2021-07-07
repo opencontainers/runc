@@ -6,6 +6,7 @@ import (
 	"sync"
 )
 
+// NamespaceType constants
 const (
 	NEWNET    NamespaceType = "NEWNET"
 	NEWPID    NamespaceType = "NEWPID"
@@ -63,6 +64,7 @@ func IsNamespaceSupported(ns NamespaceType) bool {
 	return supported
 }
 
+// NamespaceTypes returns a slice of supported namespace types.
 func NamespaceTypes() []NamespaceType {
 	return []NamespaceType{
 		NEWUSER, // Keep user NS always first, don't move it.
@@ -82,6 +84,7 @@ type Namespace struct {
 	Path string        `json:"path"`
 }
 
+// GetPath returns the path of the namespace.
 func (n *Namespace) GetPath(pid int) string {
 	return fmt.Sprintf("/proc/%d/ns/%s", pid, NsName(n.Type))
 }

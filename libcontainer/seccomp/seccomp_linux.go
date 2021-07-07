@@ -27,7 +27,7 @@ const (
 	syscallMaxArguments int = 6
 )
 
-// Filters given syscalls in a container, preventing them from being used
+// InitSeccomp filters given syscalls in a container, preventing them from being used
 // Started in the container init process, and carried over to all child processes
 // Setns calls, however, require a separate invocation, as they are not children
 // of the init until they join the namespace
@@ -181,7 +181,7 @@ func matchCall(filter *libseccomp.ScmpFilter, call *configs.Syscall) error {
 				return fmt.Errorf("error creating seccomp syscall condition for syscall %s: %w", call.Name, err)
 			}
 
-			argCounts[cond.Index] += 1
+			argCounts[cond.Index]++
 
 			conditions = append(conditions, newCond)
 		}

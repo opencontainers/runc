@@ -33,12 +33,12 @@ func findAttachedCgroupDeviceFilters(dirFd int) ([]*ebpf.Program, error) {
 	size := 64
 	retries := 0
 	for retries < 10 {
-		progIds := make([]uint32, size)
+		progIDs := make([]uint32, size)
 		query := bpfAttrQuery{
 			TargetFd:   uint32(dirFd),
 			AttachType: uint32(unix.BPF_CGROUP_DEVICE),
-			ProgIds:    uint64(uintptr(unsafe.Pointer(&progIds[0]))),
-			ProgCnt:    uint32(len(progIds)),
+			ProgIds:    uint64(uintptr(unsafe.Pointer(&progIDs[0]))),
+			ProgCnt:    uint32(len(progIDs)),
 		}
 
 		// Fetch the list of program ids.
@@ -58,16 +58,16 @@ func findAttachedCgroupDeviceFilters(dirFd int) ([]*ebpf.Program, error) {
 		}
 
 		// Convert the ids to program handles.
-		progIds = progIds[:size]
-		programs := make([]*ebpf.Program, len(progIds))
-		for idx, progId := range progIds {
-			program, err := ebpf.NewProgramFromID(ebpf.ProgramID(progId))
+		progIDs = progIDs[:size]
+		programs := make([]*ebpf.Program, len(progIDs))
+		for idx, progID := range progIDs {
+			program, err := ebpf.NewProgramFromID(ebpf.ProgramID(progID))
 			if err != nil {
 				return nil, fmt.Errorf("cannot fetch program from id: %w", err)
 			}
 			programs[idx] = program
 		}
-		runtime.KeepAlive(progIds)
+		runtime.KeepAlive(progIDs)
 		return programs, nil
 	}
 

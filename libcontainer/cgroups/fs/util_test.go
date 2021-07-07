@@ -21,20 +21,20 @@ func init() {
 	cgroups.TestMode = true
 }
 
-type cgroupTestUtil struct {
-	// cgroup data to use in tests.
+type CgroupTestUtil struct {
+	// CgroupData holds cgroup data to use in tests.
 	CgroupData *cgroupData
 
-	// Path to the mock cgroup directory.
+	// CgroupPath is the path to the mock cgroup directory.
 	CgroupPath string
 
-	// Temporary directory to store mock cgroup filesystem.
+	// tempDir is the temporary directory to store mock cgroup filesystem.
 	tempDir string
 	t       *testing.T
 }
 
-// Creates a new test util for the specified subsystem
-func NewCgroupTestUtil(subsystem string, t *testing.T) *cgroupTestUtil {
+// newCgroupTestUtil creates a new test util for the specified subsystem.
+func newCgroupTestUtil(subsystem string, t *testing.T) *CgroupTestUtil {
 	d := &cgroupData{
 		config: &configs.Cgroup{},
 	}
@@ -54,15 +54,15 @@ func NewCgroupTestUtil(subsystem string, t *testing.T) *cgroupTestUtil {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return &cgroupTestUtil{CgroupData: d, CgroupPath: testCgroupPath, tempDir: tempDir, t: t}
+	return &CgroupTestUtil{CgroupData: d, CgroupPath: testCgroupPath, tempDir: tempDir, t: t}
 }
 
-func (c *cgroupTestUtil) cleanup() {
+func (c *CgroupTestUtil) cleanup() {
 	os.RemoveAll(c.tempDir)
 }
 
 // Write the specified contents on the mock of the specified cgroup files.
-func (c *cgroupTestUtil) writeFileContents(fileContents map[string]string) {
+func (c *CgroupTestUtil) writeFileContents(fileContents map[string]string) {
 	for file, contents := range fileContents {
 		err := cgroups.WriteFile(c.CgroupPath, file, contents)
 		if err != nil {

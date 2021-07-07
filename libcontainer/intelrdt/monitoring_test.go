@@ -38,7 +38,7 @@ func TestParseMonFeatures(t *testing.T) {
 	})
 }
 
-func mockResctrlL3_MON(NUMANodes []string, mocks map[string]uint64) (string, error) {
+func mockResctrlL3MON(NUMANodes []string, mocks map[string]uint64) (string, error) {
 	testDir, err := ioutil.TempDir("", "rdt_mbm_test")
 	if err != nil {
 		return "", err
@@ -79,10 +79,10 @@ func TestGetMonitoringStats(t *testing.T) {
 		"llc_occupancy":   123331,
 	}
 
-	mockedL3_MON, err := mockResctrlL3_MON(mocksNUMANodesToCreate, mocksFilesToCreate)
+	mockedL3MON, err := mockResctrlL3MON(mocksNUMANodesToCreate, mocksFilesToCreate)
 
 	defer func() {
-		err := os.RemoveAll(mockedL3_MON)
+		err := os.RemoveAll(mockedL3MON)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -94,7 +94,7 @@ func TestGetMonitoringStats(t *testing.T) {
 
 	t.Run("Gather monitoring stats", func(t *testing.T) {
 		var stats Stats
-		err := getMonitoringStats(mockedL3_MON, &stats)
+		err := getMonitoringStats(mockedL3MON, &stats)
 		if err != nil {
 			t.Fatal(err)
 		}

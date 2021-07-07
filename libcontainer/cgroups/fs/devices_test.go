@@ -10,7 +10,7 @@ import (
 )
 
 func TestDevicesSetAllow(t *testing.T) {
-	helper := NewCgroupTestUtil("devices", t)
+	helper := newCgroupTestUtil("devices", t)
 	defer helper.cleanup()
 
 	helper.writeFileContents(map[string]string{

@@ -230,11 +230,7 @@ func prepareBindMount(m *configs.Mount, rootfs string) error {
 	if err := checkProcMount(rootfs, dest, m.Source); err != nil {
 		return err
 	}
-	if err := createIfNotExists(dest, stat.IsDir()); err != nil {
-		return err
-	}
-
-	return nil
+	return createIfNotExists(dest, stat.IsDir())
 }
 
 func mountCgroupV1(m *configs.Mount, c *mountConfig) error {
@@ -276,7 +272,7 @@ func mountCgroupV1(m *configs.Mount, c *mountConfig) error {
 					data   = filepath.Base(subsystemPath)
 				)
 				if data == "systemd" {
-					data = cgroups.CgroupNamePrefix + data
+					data = "name=" + data
 					source = "systemd"
 				}
 				return mount(source, b.Destination, procfd, "cgroup", uintptr(flags), data)
@@ -922,12 +918,11 @@ func msMoveRoot(rootfs string) error {
 		if err := unmount(p, unix.MNT_DETACH); err != nil {
 			if !errors.Is(err, unix.EINVAL) && !errors.Is(err, unix.EPERM) {
 				return err
-			} else {
-				// If we have not privileges for umounting (e.g. rootless), then
-				// cover the path.
-				if err := mount("tmpfs", p, "", "tmpfs", 0, ""); err != nil {
-					return err
-				}
+			}
+			// If we have not privileges for umounting (e.g. rootless), then
+			// cover the path.
+			if err := mount("tmpfs", p, "", "tmpfs", 0, ""); err != nil {
+				return err
 			}
 		}
 	}

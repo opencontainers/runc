@@ -35,7 +35,7 @@ func (s *HugetlbGroup) GetStats(path string, stats *cgroups.Stats) error {
 	if !cgroups.PathExists(path) {
 		return nil
 	}
-	for _, pageSize := range HugePageSizes {
+	for _, pageSize := range hugePageSizes {
 		usage := "hugetlb." + pageSize + ".usage_in_bytes"
 		value, err := fscommon.GetCgroupParamUint(path, usage)
 		if err != nil {
