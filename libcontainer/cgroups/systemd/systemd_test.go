@@ -1,6 +1,7 @@
 package systemd
 
 import (
+	"bufio"
 	"bytes"
 	"os"
 	"os/exec"
@@ -191,5 +192,133 @@ func TestUnitExistsIgnored(t *testing.T) {
 		if err := pm.Apply(-1); err != nil {
 			t.Fatal(err)
 		}
+	}
+}
+
+func TestFreezePodCgroup(t *testing.T) {
+	if !IsRunningSystemd() {
+		t.Skip("Test requires systemd.")
+	}
+	if os.Geteuid() != 0 {
+		t.Skip("Test requires root.")
+	}
+
+	podConfig := &configs.Cgroup{
+		Parent: "system.slice",
+		Name:   "system-runc_test_pod.slice",
+		Resources: &configs.Resources{
+			SkipDevices: true,
+			Freezer:     configs.Frozen,
+		},
+	}
+	// Create a "pod" cgroup (a systemd slice to hold containers),
+	// which is frozen initially.
+	pm := newManager(podConfig)
+	defer pm.Destroy() //nolint:errcheck
+	if err := pm.Apply(-1); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := pm.Freeze(configs.Frozen); err != nil {
+		t.Fatal(err)
+	}
+	if err := pm.Set(podConfig.Resources); err != nil {
+		t.Fatal(err)
+	}
+
+	// Check the pod is frozen.
+	pf, err := pm.GetFreezerState()
+	if pf != configs.Frozen {
+		t.Fatalf("expected pod to be frozen, got %v", pf)
+	}
+	t.Log("pod frozen")
+
+	// Create a "container" within the "pod" cgroup.
+	// This is not a real container, just a process in the cgroup.
+	containerConfig := &configs.Cgroup{
+		Parent:      "system-runc_test_pod.slice",
+		ScopePrefix: "test",
+		Name:        "inner-contianer",
+		Resources:   &configs.Resources{},
+	}
+
+	cmd := exec.Command("bash", "-c", "while read; do echo $REPLY; done")
+	cmd.Env = append(os.Environ(), "LANG=C")
+
+	// Setup stdin.
+	stdinR, stdinW, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd.Stdin = stdinR
+
+	// Setup stdout.
+	stdoutR, stdoutW, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd.Stdout = stdoutW
+	rdr := bufio.NewReader(stdoutR)
+
+	// Setup stderr.
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	err = cmd.Start()
+	stdinR.Close()
+	stdoutW.Close()
+	defer func() {
+		_ = stdinW.Close()
+		_ = stdoutR.Close()
+	}()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log("container started")
+	// Make sure to not leave a zombie.
+	defer func() {
+		// These may fail, we don't care.
+		_ = cmd.Process.Kill()
+		_ = cmd.Wait()
+	}()
+
+	// Put the process into a cgroup.
+	cm := newManager(containerConfig)
+	defer cm.Destroy() //nolint:errcheck
+
+	if err := cm.Apply(cmd.Process.Pid); err != nil {
+		t.Fatal(err)
+	}
+	if err := cm.Set(containerConfig.Resources); err != nil {
+		t.Fatal(err)
+	}
+	t.Log("container pid added")
+	// Check that we put the "container" into the "pod" cgroup.
+	if !strings.HasPrefix(cm.Path("freezer"), pm.Path("freezer")) {
+		t.Fatalf("expected container cgroup path %q to be under pod cgroup path %q",
+			cm.Path("freezer"), pm.Path("freezer"))
+	}
+
+	t.Log("pod is still frozen -- thawing")
+	// Unfreeze the pod.
+	if err := pm.Freeze(configs.Thawed); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Log("check that container is thawed and working")
+	cf, err := cm.GetFreezerState()
+	if cf != configs.Thawed {
+		t.Fatalf("expected container to be thawed, got %v", cf)
+	}
+
+	// Check the "container" works.
+	marker := "one two\n"
+	stdinW.WriteString(marker)
+	reply, err := rdr.ReadString('\n')
+	if err != nil {
+		t.Fatalf("reading from container: %v", err)
+	}
+	if reply != marker {
+		t.Fatalf("expected %q, got %q", marker, reply)
 	}
 }
