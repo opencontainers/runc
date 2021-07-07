@@ -418,34 +418,9 @@ func (m *unifiedManager) Set(r *configs.Resources) error {
 		return err
 	}
 
-	// Figure out the current freezer state, so we can revert to it after we
-	// temporarily freeze the container.
-	targetFreezerState, err := m.GetFreezerState()
-	if err != nil {
-		return err
-	}
-	if targetFreezerState == configs.Undefined {
-		targetFreezerState = configs.Thawed
-	}
-
-	// We have to freeze the container while systemd sets the cgroup settings.
-	// The reason for this is that systemd's application of DeviceAllow rules
-	// is done disruptively, resulting in spurrious errors to common devices
-	// (unlike our fs driver, they will happily write deny-all rules to running
-	// containers). So we freeze the container to avoid them hitting the cgroup
-	// error. But if the freezer cgroup isn't supported, we just warn about it.
-	if err := m.Freeze(configs.Frozen); err != nil {
-		logrus.Infof("freeze container before SetUnitProperties failed: %v", err)
-	}
-
 	if err := setUnitProperties(m.dbus, getUnitName(m.cgroups), properties...); err != nil {
-		_ = m.Freeze(targetFreezerState)
 		return errors.Wrap(err, "error while setting unit properties")
 	}
-
-	// Reset freezer state before we apply the configuration, to avoid clashing
-	// with the freezer setting in the configuration.
-	_ = m.Freeze(targetFreezerState)
 
 	fsMgr, err := m.fsManager()
 	if err != nil {
