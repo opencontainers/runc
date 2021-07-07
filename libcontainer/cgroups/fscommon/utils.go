@@ -85,7 +85,7 @@ func GetValueByKey(path, file, key string) (uint64, error) {
 		return 0, err
 	}
 
-	lines := strings.Split(string(content), "\n")
+	lines := strings.Split(content, "\n")
 	for _, line := range lines {
 		arr := strings.Split(line, " ")
 		if len(arr) == 2 && arr[0] == key {

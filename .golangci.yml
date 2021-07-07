@@ -8,3 +8,4 @@ linters:
   enable:
     - gofumpt
     - errorlint
+    - unconvert
