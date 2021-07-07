@@ -38,6 +38,10 @@ function teardown() {
 
 	update_config ' .linux.resources.devices = [{"allow": false, "access": "rwm"}]
 			| .linux.devices = [{"path": "/dev/kmsg", "type": "c", "major": 1, "minor": 11}]
+			| .process.capabilities.bounding += ["CAP_SYSLOG"]
+			| .process.capabilities.effective += ["CAP_SYSLOG"]
+			| .process.capabilities.inheritable += ["CAP_SYSLOG"]
+			| .process.capabilities.permitted += ["CAP_SYSLOG"]
 			| .process.args |= ["sh"]'
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_deny
@@ -72,6 +76,10 @@ function teardown() {
 	update_config ' .linux.resources.devices = [{"allow": false, "access": "rwm"},{"allow": true, "type": "c", "major": 1, "minor": 11, "access": "rw"}]
 			| .linux.devices = [{"path": "/dev/kmsg", "type": "c", "major": 1, "minor": 11}]
 			| .process.args |= ["sh"]
+			| .process.capabilities.bounding += ["CAP_SYSLOG"]
+			| .process.capabilities.effective += ["CAP_SYSLOG"]
+			| .process.capabilities.inheritable += ["CAP_SYSLOG"]
+			| .process.capabilities.permitted += ["CAP_SYSLOG"]
 			| .hostname = "myhostname"'
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_allow_char
