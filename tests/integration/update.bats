@@ -586,13 +586,25 @@ EOF
 
 @test "update devices [minimal transition rules]" {
 	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
-	# This test currently only makes sense on cgroupv1.
-	requires cgroups_v1
 
-	# Run a basic shell script that tries to write to /dev/null. If "runc
-	# update" makes use of minimal transition rules, updates should not cause
-	# writes to fail at any point.
-	update_config '.process.args |= ["sh", "-c", "while true; do echo >/dev/null; done"]'
+	requires root
+
+	# Run a basic shell script that tries to read from /dev/kmsg, but
+	# due to lack of permissions, it prints the error message to /dev/null.
+	# If any data is read from /dev/kmsg, it will be printed to stdout, and the
+	# test will fail. In the same way, if access to /dev/null is denied, the
+	# error will be printed to stderr, and the test will also fail.
+	#
+	# "runc update" makes use of minimal transition rules, updates should not cause
+	# writes to fail at any point. For systemd cgroup driver on cgroup v1, the cgroup
+	# is frozen to ensure this.
+	update_config ' .linux.resources.devices = [{"allow": false, "access": "rwm"}, {"allow": false, "type": "c", "major": 1, "minor": 11, "access": "rwa"}]
+			| .linux.devices = [{"path": "/dev/kmsg", "type": "c", "major": 1, "minor": 11}]
+			| .process.capabilities.bounding += ["CAP_SYSLOG"]
+			| .process.capabilities.effective += ["CAP_SYSLOG"]
+			| .process.capabilities.inheritable += ["CAP_SYSLOG"]
+			| .process.capabilities.permitted += ["CAP_SYSLOG"]
+			| .process.args |= ["sh", "-c", "while true; do head -c 100 /dev/kmsg 2> /dev/null; done"]'
 
 	# Set up a temporary console socket and recvtty so we can get the stdio.
 	TMP_RECVTTY_DIR="$(mktemp -d "$BATS_RUN_TMPDIR/runc-tmp-recvtty.XXXXXX")"
@@ -611,7 +623,7 @@ EOF
 	# Trigger an update. This update doesn't actually change the device rules,
 	# but it will trigger the devices cgroup code to reapply the current rules.
 	# We trigger the update a few times to make sure we hit the race.
-	for _ in {1..12}; do
+	for _ in {1..30}; do
 		# TODO: Update "runc update" so we can change the device rules.
 		runc update --pids-limit 30 test_update
 		[ "$status" -eq 0 ]
