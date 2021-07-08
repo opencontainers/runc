@@ -59,6 +59,11 @@ multiple times.
 : Pass _N_ additional file descriptors to the container (**stdio** +
 **$LISTEN_FDS** + _N_ in total). Default is **0**.
 
+# EXIT STATUS
+
+Exits with a status of _command_ (unless **-d** is used), or **255** if
+an error occurred.
+
 # EXAMPLES
 If the container can run **ps**(1) command, the following
 will output a list of processes running in the container:
