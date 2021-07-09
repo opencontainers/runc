@@ -224,7 +224,7 @@ func (l *linuxStandardInit) Init() error {
 		return err
 	}
 
-	if err := unix.Exec(name, l.config.Args[0:], os.Environ()); err != nil {
+	if err := system.Exec(name, l.config.Args[0:], os.Environ()); err != nil {
 		return newSystemErrorWithCause(err, "exec user process")
 	}
 	return nil
