@@ -300,12 +300,9 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 			config.Seccomp = seccomp
 		}
 		if spec.Linux.IntelRdt != nil {
-			config.IntelRdt = &configs.IntelRdt{}
-			if spec.Linux.IntelRdt.L3CacheSchema != "" {
-				config.IntelRdt.L3CacheSchema = spec.Linux.IntelRdt.L3CacheSchema
-			}
-			if spec.Linux.IntelRdt.MemBwSchema != "" {
-				config.IntelRdt.MemBwSchema = spec.Linux.IntelRdt.MemBwSchema
+			config.IntelRdt = &configs.IntelRdt{
+				L3CacheSchema: spec.Linux.IntelRdt.L3CacheSchema,
+				MemBwSchema:   spec.Linux.IntelRdt.MemBwSchema,
 			}
 		}
 	}
@@ -313,9 +310,7 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 		config.OomScoreAdj = spec.Process.OOMScoreAdj
 		config.NoNewPrivileges = spec.Process.NoNewPrivileges
 		config.Umask = spec.Process.User.Umask
-		if spec.Process.SelinuxLabel != "" {
-			config.ProcessLabel = spec.Process.SelinuxLabel
-		}
+		config.ProcessLabel = spec.Process.SelinuxLabel
 		if spec.Process.Capabilities != nil {
 			config.Capabilities = &configs.Capabilities{
 				Bounding:    spec.Process.Capabilities.Bounding,
@@ -551,12 +546,8 @@ func CreateCgroupConfig(opts *CreateOpts, defaultDevs []*devices.Device) (*confi
 				if r.CPU.RealtimePeriod != nil {
 					c.Resources.CpuRtPeriod = *r.CPU.RealtimePeriod
 				}
-				if r.CPU.Cpus != "" {
-					c.Resources.CpusetCpus = r.CPU.Cpus
-				}
-				if r.CPU.Mems != "" {
-					c.Resources.CpusetMems = r.CPU.Mems
-				}
+				c.Resources.CpusetCpus = r.CPU.Cpus
+				c.Resources.CpusetMems = r.CPU.Mems
 			}
 			if r.Pids != nil {
 				c.Resources.PidsLimit = r.Pids.Limit

@@ -3,6 +3,7 @@
 package intelrdt
 
 import (
+	"errors"
 	"io"
 	"strings"
 	"testing"
@@ -223,8 +224,8 @@ func TestFindIntelRdtMountpointDir(t *testing.T) {
 			mbaScEnabled = false
 			mp, err := findIntelRdtMountpointDir(tc.input)
 			if tc.isNotFoundError {
-				if !IsNotFound(err) {
-					t.Errorf("expected IsNotFound error, got %+v", err)
+				if !errors.Is(err, errNotFound) {
+					t.Errorf("expected errNotFound error, got %+v", err)
 				}
 				return
 			}
