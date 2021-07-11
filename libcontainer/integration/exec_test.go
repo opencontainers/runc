@@ -493,19 +493,32 @@ func TestAdditionalGroups(t *testing.T) {
 }
 
 func TestFreeze(t *testing.T) {
-	testFreeze(t, false)
-}
-
-func TestSystemdFreeze(t *testing.T) {
-	if !systemd.IsRunningSystemd() {
-		t.Skip("Test requires systemd.")
+	for _, systemd := range []bool{true, false} {
+		for _, set := range []bool{true, false} {
+			name := ""
+			if systemd {
+				name += "Systemd"
+			} else {
+				name += "FS"
+			}
+			if set {
+				name += "ViaSet"
+			} else {
+				name += "ViaPauseResume"
+			}
+			t.Run(name, func(t *testing.T) {
+				testFreeze(t, systemd, set)
+			})
+		}
 	}
-	testFreeze(t, true)
 }
 
-func testFreeze(t *testing.T, systemd bool) {
+func testFreeze(t *testing.T, withSystemd bool, useSet bool) {
 	if testing.Short() {
 		return
+	}
+	if withSystemd && !systemd.IsRunningSystemd() {
+		t.Skip("Test requires systemd.")
 	}
 
 	rootfs, err := newRootfs()
@@ -514,7 +527,7 @@ func testFreeze(t *testing.T, systemd bool) {
 
 	config := newTemplateConfig(t, &tParam{
 		rootfs:  rootfs,
-		systemd: systemd,
+		systemd: withSystemd,
 	})
 	container, err := newContainer(t, config)
 	ok(t, err)
@@ -535,15 +548,27 @@ func testFreeze(t *testing.T, systemd bool) {
 	defer stdinW.Close() //nolint: errcheck
 	ok(t, err)
 
-	err = container.Pause()
+	if !useSet {
+		err = container.Pause()
+	} else {
+		config.Cgroups.Resources.Freezer = configs.Frozen
+		err = container.Set(*config)
+	}
 	ok(t, err)
+
 	state, err := container.Status()
-	ok(t, err)
-	err = container.Resume()
 	ok(t, err)
 	if state != libcontainer.Paused {
 		t.Fatal("Unexpected state: ", state)
 	}
+
+	if !useSet {
+		err = container.Resume()
+	} else {
+		config.Cgroups.Resources.Freezer = configs.Thawed
+		err = container.Set(*config)
+	}
+	ok(t, err)
 
 	_ = stdinW.Close()
 	waitProcess(pconfig, t)
