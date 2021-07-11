@@ -151,7 +151,7 @@ func copyBusybox(dest string) error {
 }
 
 func newContainer(t *testing.T, config *configs.Config) (libcontainer.Container, error) {
-	name := t.Name() + strconv.FormatInt(int64(time.Now().Nanosecond()), 35)
+	name := strings.ReplaceAll(t.Name(), "/", "_") + strconv.FormatInt(-int64(time.Now().Nanosecond()), 35)
 	root, err := newTestRoot()
 	if err != nil {
 		return nil, err
