@@ -219,9 +219,6 @@ func TestFreezePodCgroup(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := pm.Freeze(configs.Frozen); err != nil {
-		t.Fatal(err)
-	}
 	if err := pm.Set(podConfig.Resources); err != nil {
 		t.Fatal(err)
 	}
