@@ -279,18 +279,23 @@ func getSubsystemPath(c *configs.Cgroup, subsystem string) (string, error) {
 }
 
 func (m *legacyManager) Freeze(state configs.FreezerState) error {
+	err := m.doFreeze(state)
+	if err == nil {
+		m.cgroups.Resources.Freezer = state
+	}
+	return err
+}
+
+// doFreeze is the same as Freeze but without
+// changing the m.cgroups.Resources.Frozen field.
+func (m *legacyManager) doFreeze(state configs.FreezerState) error {
 	path, ok := m.paths["freezer"]
 	if !ok {
 		return errSubsystemDoesNotExist
 	}
-	prevState := m.cgroups.Resources.Freezer
-	m.cgroups.Resources.Freezer = state
 	freezer := &fs.FreezerGroup{}
-	if err := freezer.Set(path, m.cgroups.Resources); err != nil {
-		m.cgroups.Resources.Freezer = prevState
-		return err
-	}
-	return nil
+	resources := &configs.Resources{Freezer: state}
+	return freezer.Set(path, resources)
 }
 
 func (m *legacyManager) GetPids() ([]int, error) {
@@ -356,18 +361,16 @@ func (m *legacyManager) Set(r *configs.Resources) error {
 	// (unlike our fs driver, they will happily write deny-all rules to running
 	// containers). So we freeze the container to avoid them hitting the cgroup
 	// error. But if the freezer cgroup isn't supported, we just warn about it.
-	if err := m.Freeze(configs.Frozen); err != nil {
+	if err := m.doFreeze(configs.Frozen); err != nil {
 		logrus.Infof("freeze container before SetUnitProperties failed: %v", err)
 	}
 
-	if err := setUnitProperties(m.dbus, getUnitName(m.cgroups), properties...); err != nil {
-		_ = m.Freeze(targetFreezerState)
-		return err
-	}
+	setErr := setUnitProperties(m.dbus, getUnitName(m.cgroups), properties...)
 
-	// Reset freezer state before we apply the configuration, to avoid clashing
-	// with the freezer setting in the configuration.
-	_ = m.Freeze(targetFreezerState)
+	_ = m.doFreeze(targetFreezerState)
+	if setErr != nil {
+		return setErr
+	}
 
 	for _, sys := range legacySubsystems {
 		// Get the subsystem path, but don't error out for not found cgroups.
