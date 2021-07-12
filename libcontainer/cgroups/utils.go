@@ -446,5 +446,5 @@ func ConvertBlkIOToIOWeightValue(blkIoWeight uint16) uint64 {
 	if blkIoWeight == 0 {
 		return 0
 	}
-	return uint64(1 + (uint64(blkIoWeight)-10)*9999/990)
+	return 1 + (uint64(blkIoWeight)-10)*9999/990
 }

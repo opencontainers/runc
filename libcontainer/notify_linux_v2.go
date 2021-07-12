@@ -53,7 +53,7 @@ func registerMemoryEventV2(cgDir, evName, cgEvName string) (<-chan struct{}, err
 			offset = 0
 			for offset <= uint32(n-unix.SizeofInotifyEvent) {
 				rawEvent := (*unix.InotifyEvent)(unsafe.Pointer(&buffer[offset]))
-				offset += unix.SizeofInotifyEvent + uint32(rawEvent.Len)
+				offset += unix.SizeofInotifyEvent + rawEvent.Len
 				if rawEvent.Mask&unix.IN_MODIFY != unix.IN_MODIFY {
 					continue
 				}

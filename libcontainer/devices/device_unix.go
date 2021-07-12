@@ -40,7 +40,7 @@ func DeviceFromPath(path, permissions string) (*Device, error) {
 	var (
 		devType   Type
 		mode      = stat.Mode
-		devNumber = uint64(stat.Rdev)
+		devNumber = uint64(stat.Rdev) //nolint:unconvert // Rdev is uint32 on e.g. MIPS.
 		major     = unix.Major(devNumber)
 		minor     = unix.Minor(devNumber)
 	)

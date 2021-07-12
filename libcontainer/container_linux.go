@@ -1029,7 +1029,7 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 
 	// append optional manage cgroups mode
 	if criuOpts.ManageCgroupsMode != 0 {
-		mode := criurpc.CriuCgMode(criuOpts.ManageCgroupsMode)
+		mode := criuOpts.ManageCgroupsMode
 		rpcOpts.ManageCgroupsMode = &mode
 	}
 
@@ -1406,7 +1406,7 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 
 	// append optional manage cgroups mode
 	if criuOpts.ManageCgroupsMode != 0 {
-		mode := criurpc.CriuCgMode(criuOpts.ManageCgroupsMode)
+		mode := criuOpts.ManageCgroupsMode
 		req.Opts.ManageCgroupsMode = &mode
 	}
 
