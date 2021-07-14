@@ -1,8 +1,5 @@
 # NOTE Github Actions execution environments lack a terminal, needed for
-# some integration tests. Two ways to get a terminal are used below:
-#
-# 1. script utility -- for "local" integration tests;
-# 2. ssh -tt -- for Vagrant VMs (script is buggy on CentOS 7).
+# some integration tests. So we use `script` command to fake a terminal.
 
 name: ci
 on:
@@ -72,88 +69,6 @@ jobs:
       # can't use systemd driver with cgroupv1
       if: matrix.rootless != 'rootless'
       run: sudo -E PATH="$PATH" script -e -c 'make RUNC_USE_SYSTEMD=yes local${{ matrix.rootless }}integration'
-
-
-  # cgroup v2 unified hierarchy + very recent kernel (openat2)
-  fedora:
-    # nested virtualization is only available on macOS hosts
-    runs-on: macos-10.15
-    timeout-minutes: 30
-    # only run it if others have passed
-    needs: [test]
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: "Cache ~/.vagrant.d/boxes, using hash of Vagrantfile.fedora34"
-        uses: actions/cache@v2
-        with:
-          path: ~/.vagrant.d/boxes
-          key: vagrant-${{ hashFiles('Vagrantfile.fedora34') }}
-
-      - name: prepare vagrant
-        run: |
-          ln -sf Vagrantfile.fedora34 Vagrantfile
-          # Retry if it fails (download.fedoraproject.org returns 404 sometimes)
-          vagrant up || vagrant up
-          vagrant ssh-config >> ~/.ssh/config
-
-      - name: system info
-        run: ssh default 'sh -exc "uname -a && systemctl --version && df -T"'
-
-      - name: unit tests
-        run: ssh default 'cd /vagrant && sudo make localunittest'
-
-      - name: cgroupv2 with systemd
-        run: ssh -tt default "sudo make -C /vagrant localintegration RUNC_USE_SYSTEMD=yes"
-
-      - name: cgroupv2 with fs2
-        run: ssh -tt default "sudo make -C /vagrant localintegration"
-
-      - name: cgroupv2 with systemd (rootless)
-        run: ssh -tt default "sudo make -C /vagrant localrootlessintegration RUNC_USE_SYSTEMD=yes"
-
-      - name: cgroupv2 with fs2 (rootless)
-        run: ssh -tt default "sudo make -C /vagrant localrootlessintegration"
-
-
-  # kernel 3.10 (frankenized), systemd 219
-  centos7:
-    # nested virtualization is only available on macOS hosts
-    runs-on: macos-10.15
-    timeout-minutes: 15
-    # only run it if others have passed
-    needs: [test]
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: "Cache ~/.vagrant.d/boxes, using hash of Vagrantfile.centos7"
-        uses: actions/cache@v2
-        with:
-          path: ~/.vagrant.d/boxes
-          key: vagrant-${{ hashFiles('Vagrantfile.centos7') }}
-
-      - name: prepare vagrant
-        run: |
-          ln -sf Vagrantfile.centos7 Vagrantfile
-          vagrant up
-          vagrant ssh-config >> ~/.ssh/config
-
-      - name: system info
-        run: ssh default 'rpm -q centos-release kernel systemd'
-
-      - name: unit tests
-        run: ssh default 'sudo -i make -C /vagrant localunittest'
-
-      - name: integration tests (fs cgroup driver)
-        run: ssh -tt default "sudo -i make -C /vagrant localintegration"
-
-      - name: integration tests (systemd cgroup driver)
-        run: ssh -tt default "sudo -i make -C /vagrant localintegration RUNC_USE_SYSTEMD=1"
-
-      - name: rootless integration
-      # FIXME: rootless is skipped because of EPERM on writing cgroup.procs
-        if: false
-        run: ssh default "sudo -i make -C /vagrant localrootlessintegration"
 
   # We need to continue support for 32-bit ARM.
   # However, we do not have 32-bit ARM CI, so we use i386 for testing 32bit stuff.
