@@ -47,44 +47,34 @@ function __runc() {
 	"$RUNC" ${RUNC_USE_SYSTEMD+--systemd-cgroup} --root "$ROOT/state" "$@"
 }
 
-# Wrapper for runc spec, which takes only one argument (the bundle path).
+# Wrapper for runc spec.
 function runc_spec() {
-	! [[ "$#" > 1 ]]
-
 	local args=()
-	local bundle=""
-
 	if [ "$ROOTLESS" -ne 0 ]; then
 		args+=("--rootless")
-	fi
-	if [ "$#" -ne 0 ]; then
-		bundle="$1"
-		args+=("--bundle" "$bundle")
 	fi
 
 	runc spec "${args[@]}"
 
 	# Always add additional mappings if we have idmaps.
 	if [[ "$ROOTLESS" -ne 0 ]] && [[ "$ROOTLESS_FEATURES" == *"idmap"* ]]; then
-		runc_rootless_idmap "$bundle"
+		runc_rootless_idmap
 	fi
 }
 
 # Helper function to reformat config.json file. Input uses jq syntax.
 function update_config() {
-	bundle="${2:-.}"
-	jq "$1" "$bundle/config.json" | awk 'BEGIN{RS="";getline<"-";print>ARGV[1]}' "$bundle/config.json"
+	jq "$1" "./config.json" | awk 'BEGIN{RS="";getline<"-";print>ARGV[1]}' "./config.json"
 }
 
 # Shortcut to add additional uids and gids, based on the values set as part of
 # a rootless configuration.
 function runc_rootless_idmap() {
-	bundle="${1:-.}"
 	update_config ' .mounts |= map((select(.type == "devpts") | .options += ["gid=5"]) // .)
 			| .linux.uidMappings += [{"hostID": '"$ROOTLESS_UIDMAP_START"', "containerID": 1000, "size": '"$ROOTLESS_UIDMAP_LENGTH"'}]
 			| .linux.gidMappings += [{"hostID": '"$ROOTLESS_GIDMAP_START"', "containerID": 100, "size": 1}]
 			| .linux.gidMappings += [{"hostID": '"$(($ROOTLESS_GIDMAP_START + 10))"', "containerID": 1, "size": 20}]
-			| .linux.gidMappings += [{"hostID": '"$(($ROOTLESS_GIDMAP_START + 100))"', "containerID": 1000, "size": '"$(($ROOTLESS_GIDMAP_LENGTH - 1000))"'}]' $bundle
+			| .linux.gidMappings += [{"hostID": '"$(($ROOTLESS_GIDMAP_START + 100))"', "containerID": 1000, "size": '"$(($ROOTLESS_GIDMAP_LENGTH - 1000))"'}]'
 }
 
 # Returns systemd version as a number (-1 if systemd is not enabled/supported).
@@ -141,7 +131,6 @@ function init_cgroup_paths() {
 # Randomize cgroup path(s), and update cgroupsPath in config.json.
 # This function sets a few cgroup-related variables.
 function set_cgroups_path() {
-	bundle="${1:-.}"
 	init_cgroup_paths
 
 	local rnd="$RANDOM"
@@ -165,7 +154,7 @@ function set_cgroups_path() {
 		CGROUP_PATH=${CGROUP_BASE_PATH}${REL_CGROUPS_PATH}
 	fi
 
-	update_config '.linux.cgroupsPath |= "'"${OCI_CGROUPS_PATH}"'"' "$bundle"
+	update_config '.linux.cgroupsPath |= "'"${OCI_CGROUPS_PATH}"'"'
 }
 
 # Get a value from a cgroup file.
@@ -259,15 +248,12 @@ function check_cpu_weight() {
 
 # Helper function to set a resources limit
 function set_resources_limit() {
-	bundle="${1:-.}"
-	update_config '.linux.resources.pids.limit |= 100' $bundle
+	update_config '.linux.resources.pids.limit |= 100'
 }
 
 # Helper function to make /sys/fs/cgroup writable
 function set_cgroup_mount_writable() {
-	bundle="${1:-.}"
-	update_config '.mounts |= map((select(.type == "cgroup") | .options -= ["ro"]) // .)' \
-		$bundle
+	update_config '.mounts |= map((select(.type == "cgroup") | .options -= ["ro"]) // .)'
 }
 
 # Fails the current test, providing the error given.
