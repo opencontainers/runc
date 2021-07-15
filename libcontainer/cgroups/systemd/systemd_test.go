@@ -47,6 +47,110 @@ func newManager(config *configs.Cgroup) cgroups.Manager {
 	return NewLegacyManager(config, nil)
 }
 
+// TestPodSkipDevicesUpdate checks that updating a pod having SkipDevices: true
+// does not result in spurious "permission denied" errors in a container
+// running under the pod. The test is somewhat similar in nature to the
+// @test "update devices [minimal transition rules]" in tests/integration,
+// but uses a pod.
+func TestPodSkipDevicesUpdate(t *testing.T) {
+	if !IsRunningSystemd() {
+		t.Skip("Test requires systemd.")
+	}
+	if os.Geteuid() != 0 {
+		t.Skip("Test requires root.")
+	}
+
+	podName := "system-runc_test_pod" + t.Name() + ".slice"
+	podConfig := &configs.Cgroup{
+		Parent: "system.slice",
+		Name:   podName,
+		Resources: &configs.Resources{
+			PidsLimit:   42,
+			Memory:      32 * 1024 * 1024,
+			SkipDevices: true,
+		},
+	}
+	// Create "pod" cgroup (a systemd slice to hold containers).
+	pm := newManager(podConfig)
+	defer pm.Destroy() //nolint:errcheck
+	if err := pm.Apply(-1); err != nil {
+		t.Fatal(err)
+	}
+	if err := pm.Set(podConfig.Resources); err != nil {
+		t.Fatal(err)
+	}
+
+	containerConfig := &configs.Cgroup{
+		Parent:      podName,
+		ScopePrefix: "test",
+		Name:        "PodSkipDevicesUpdate",
+		Resources: &configs.Resources{
+			Devices: []*devices.Rule{
+				// Allow access to /dev/null.
+				{
+					Type:        devices.CharDevice,
+					Major:       1,
+					Minor:       3,
+					Permissions: "rwm",
+					Allow:       true,
+				},
+			},
+		},
+	}
+
+	// Create a "container" within the "pod" cgroup.
+	// This is not a real container, just a process in the cgroup.
+	cmd := exec.Command("bash", "-c", "while true; do echo > /dev/null; done")
+	cmd.Env = append(os.Environ(), "LANG=C")
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	if err := cmd.Start(); err != nil {
+		t.Fatal(err)
+	}
+	// Make sure to not leave a zombie.
+	defer func() {
+		// These may fail, we don't care.
+		_ = cmd.Process.Kill()
+		_ = cmd.Wait()
+	}()
+
+	// Put the process into a cgroup.
+	cm := newManager(containerConfig)
+	defer cm.Destroy() //nolint:errcheck
+
+	if err := cm.Apply(cmd.Process.Pid); err != nil {
+		t.Fatal(err)
+	}
+	// Check that we put the "container" into the "pod" cgroup.
+	if !strings.HasPrefix(cm.Path("devices"), pm.Path("devices")) {
+		t.Fatalf("expected container cgroup path %q to be under pod cgroup path %q",
+			cm.Path("devices"), pm.Path("devices"))
+	}
+	if err := cm.Set(containerConfig.Resources); err != nil {
+		t.Fatal(err)
+	}
+
+	// Now update the pod a few times.
+	for i := 0; i < 42; i++ {
+		podConfig.Resources.PidsLimit++
+		podConfig.Resources.Memory += 1024 * 1024
+		if err := pm.Set(podConfig.Resources); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// Kill the "container".
+	if err := cmd.Process.Kill(); err != nil {
+		t.Fatal(err)
+	}
+
+	_ = cmd.Wait()
+
+	// "Container" stderr should be empty.
+	if stderr.Len() != 0 {
+		t.Fatalf("container stderr not empty: %s", stderr.String())
+	}
+}
+
 func testSkipDevices(t *testing.T, skipDevices bool, expected []string) {
 	if !IsRunningSystemd() {
 		t.Skip("Test requires systemd.")
@@ -219,9 +323,6 @@ func TestFreezePodCgroup(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := pm.Freeze(configs.Frozen); err != nil {
-		t.Fatal(err)
-	}
 	if err := pm.Set(podConfig.Resources); err != nil {
 		t.Fatal(err)
 	}
