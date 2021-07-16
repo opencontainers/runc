@@ -119,6 +119,59 @@ function setup() {
 	#
 }
 
+@test "runc exec (cgroup v2 without chown-cgroup annotation) does not chown cgroup" {
+	requires root cgroups_v2 systemd
+
+	set_cgroups_path
+	set_cgroup_mount_writable
+
+	# configure a user namespace
+	update_config '.linux.namespaces += [{"type": "user"}]'
+	update_config '.linux.uidMappings += [{"hostID": 100000, "containerID": 0, "size": 65536}]'
+	update_config '.linux.gidMappings += [{"hostID": 100000, "containerID": 0, "size": 65536}]'
+
+	# chown test temp dir to allow host user to read it
+	chown 100000 $ROOT
+
+	# chown rootfs to allow host user to mkdir mount points
+	chown 100000 $ROOT/bundle/rootfs
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroup_chown
+	[ "$status" -eq 0 ]
+
+	runc exec test_cgroup_chown sh -c "ls -ld /sys/fs/cgroup | awk '{print \$3}'"
+	[ "$status" -eq 0 ]
+	[ "$output" = "nobody" ]  # /sys/fs/cgroup owned by unmapped user
+}
+
+@test "runc exec (cgroup v2 with chown-cgroup annotation) does chown cgroup" {
+	requires root cgroups_v2 systemd
+
+	set_cgroups_path
+	set_cgroup_mount_writable
+
+	# configure a user namespace
+	update_config '.linux.namespaces += [{"type": "user"}]'
+	update_config '.linux.uidMappings += [{"hostID": 100000, "containerID": 0, "size": 65536}]'
+	update_config '.linux.gidMappings += [{"hostID": 100000, "containerID": 0, "size": 65536}]'
+
+	# set chown-cgroup annotation
+	update_config '.annotations += {"org.opencontainers.runc.chown-cgroup": "true"}'
+
+	# chown test temp dir to allow host user to read it
+	chown 100000 $ROOT
+
+	# chown rootfs to allow host user to mkdir mount points
+	chown 100000 $ROOT/bundle/rootfs
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroup_chown
+	[ "$status" -eq 0 ]
+
+	runc exec test_cgroup_chown sh -c "ls -ld /sys/fs/cgroup | awk '{print \$3}'"
+	[ "$status" -eq 0 ]
+	[ "$output" = "root" ]  # /sys/fs/cgroup owned by root (of user namespace)
+}
+
 @test "runc run (cgroup v1 + unified resources should fail)" {
 	requires root cgroups_v1
 
