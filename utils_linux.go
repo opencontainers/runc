@@ -27,7 +27,7 @@ import (
 
 var errEmptyID = errors.New("container id cannot be empty")
 
-// loadFactory returns the configured factory instance for execing containers.
+// loadFactory returns the configured factory instance for executing containers.
 func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
 	root := context.GlobalString("root")
 	abs, err := filepath.Abs(root)
