@@ -27,7 +27,6 @@ const (
 
 func TestHugetlbSetHugetlb(t *testing.T) {
 	helper := NewCgroupTestUtil("hugetlb", t)
-	defer helper.cleanup()
 
 	const (
 		hugetlbBefore = 256
@@ -67,7 +66,6 @@ func TestHugetlbSetHugetlb(t *testing.T) {
 
 func TestHugetlbStats(t *testing.T) {
 	helper := NewCgroupTestUtil("hugetlb", t)
-	defer helper.cleanup()
 	for _, pageSize := range HugePageSizes {
 		helper.writeFileContents(map[string]string{
 			fmt.Sprintf(usage, pageSize):    hugetlbUsageContents,
@@ -90,7 +88,6 @@ func TestHugetlbStats(t *testing.T) {
 
 func TestHugetlbStatsNoUsageFile(t *testing.T) {
 	helper := NewCgroupTestUtil("hugetlb", t)
-	defer helper.cleanup()
 	helper.writeFileContents(map[string]string{
 		maxUsage: hugetlbMaxUsageContents,
 	})
@@ -105,7 +102,6 @@ func TestHugetlbStatsNoUsageFile(t *testing.T) {
 
 func TestHugetlbStatsNoMaxUsageFile(t *testing.T) {
 	helper := NewCgroupTestUtil("hugetlb", t)
-	defer helper.cleanup()
 	for _, pageSize := range HugePageSizes {
 		helper.writeFileContents(map[string]string{
 			fmt.Sprintf(usage, pageSize): hugetlbUsageContents,
@@ -122,7 +118,6 @@ func TestHugetlbStatsNoMaxUsageFile(t *testing.T) {
 
 func TestHugetlbStatsBadUsageFile(t *testing.T) {
 	helper := NewCgroupTestUtil("hugetlb", t)
-	defer helper.cleanup()
 	for _, pageSize := range HugePageSizes {
 		helper.writeFileContents(map[string]string{
 			fmt.Sprintf(usage, pageSize): "bad",
@@ -140,7 +135,6 @@ func TestHugetlbStatsBadUsageFile(t *testing.T) {
 
 func TestHugetlbStatsBadMaxUsageFile(t *testing.T) {
 	helper := NewCgroupTestUtil("hugetlb", t)
-	defer helper.cleanup()
 	helper.writeFileContents(map[string]string{
 		usage:    hugetlbUsageContents,
 		maxUsage: "bad",
