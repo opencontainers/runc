@@ -33,7 +33,6 @@ function build_project() {
 	local libseccomp_ver='2.5.1'
 	local tarball="libseccomp-${libseccomp_ver}.tar.gz"
 	local prefix
-	local ldflags="-w -s"
 	prefix="$(mktemp -d)"
 	wget "https://github.com/seccomp/libseccomp/releases/download/v${libseccomp_ver}/${tarball}"{,.asc}
 	tar xf "$tarball"
@@ -44,6 +43,11 @@ function build_project() {
 	)
 	mv "$tarball"{,.asc} "$builddir"
 
+	# For reproducible builds, add these to EXTRA_LDFLAGS:
+	#  -w to disable DWARF generation;
+	#  -s to disable symbol table;
+	#  -buildid= to remove variable build id.
+	local ldflags="-w -s -buildid="
 	# Add -a to go build flags to make sure it links against
 	# the provided libseccomp, not the system one (otherwise
 	# it can reuse cached pkg-config results).
