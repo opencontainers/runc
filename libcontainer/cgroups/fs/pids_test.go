@@ -17,7 +17,6 @@ const (
 
 func TestPidsSetMax(t *testing.T) {
 	helper := NewCgroupTestUtil("pids", t)
-	defer helper.cleanup()
 
 	helper.writeFileContents(map[string]string{
 		"pids.max": "max",
@@ -40,7 +39,6 @@ func TestPidsSetMax(t *testing.T) {
 
 func TestPidsSetUnlimited(t *testing.T) {
 	helper := NewCgroupTestUtil("pids", t)
-	defer helper.cleanup()
 
 	helper.writeFileContents(map[string]string{
 		"pids.max": strconv.Itoa(maxLimited),
@@ -63,7 +61,6 @@ func TestPidsSetUnlimited(t *testing.T) {
 
 func TestPidsStats(t *testing.T) {
 	helper := NewCgroupTestUtil("pids", t)
-	defer helper.cleanup()
 
 	helper.writeFileContents(map[string]string{
 		"pids.current": strconv.Itoa(1337),
@@ -87,7 +84,6 @@ func TestPidsStats(t *testing.T) {
 
 func TestPidsStatsUnlimited(t *testing.T) {
 	helper := NewCgroupTestUtil("pids", t)
-	defer helper.cleanup()
 
 	helper.writeFileContents(map[string]string{
 		"pids.current": strconv.Itoa(4096),

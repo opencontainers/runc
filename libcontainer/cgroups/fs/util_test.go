@@ -8,7 +8,6 @@ Creates a mock of the cgroup filesystem for the duration of the test.
 package fs
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -28,37 +27,23 @@ type cgroupTestUtil struct {
 	// Path to the mock cgroup directory.
 	CgroupPath string
 
-	// Temporary directory to store mock cgroup filesystem.
-	tempDir string
-	t       *testing.T
+	t *testing.T
 }
 
 // Creates a new test util for the specified subsystem
 func NewCgroupTestUtil(subsystem string, t *testing.T) *cgroupTestUtil {
 	d := &cgroupData{
-		config: &configs.Cgroup{},
+		config: &configs.Cgroup{
+			Resources: &configs.Resources{},
+		},
+		root: t.TempDir(),
 	}
-	d.config.Resources = &configs.Resources{}
-	tempDir, err := ioutil.TempDir("", "cgroup_test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	d.root = tempDir
 	testCgroupPath := filepath.Join(d.root, subsystem)
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	// Ensure the full mock cgroup path exists.
-	err = os.MkdirAll(testCgroupPath, 0o755)
-	if err != nil {
+	if err := os.MkdirAll(testCgroupPath, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	return &cgroupTestUtil{CgroupData: d, CgroupPath: testCgroupPath, tempDir: tempDir, t: t}
-}
-
-func (c *cgroupTestUtil) cleanup() {
-	os.RemoveAll(c.tempDir)
+	return &cgroupTestUtil{CgroupData: d, CgroupPath: testCgroupPath, t: t}
 }
 
 // Write the specified contents on the mock of the specified cgroup files.
