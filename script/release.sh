@@ -43,11 +43,17 @@ function build_project() {
 	)
 	mv "$tarball"{,.asc} "$builddir"
 
+	# For reproducible builds, add these to EXTRA_LDFLAGS:
+	#  -w to disable DWARF generation;
+	#  -s to disable symbol table;
+	#  -buildid= to remove variable build id.
+	local ldflags="-w -s -buildid="
 	# Add -a to go build flags to make sure it links against
 	# the provided libseccomp, not the system one (otherwise
 	# it can reuse cached pkg-config results).
-	make -C "$root" PKG_CONFIG_PATH="${prefix}/lib/pkgconfig" COMMIT_NO= EXTRA_FLAGS="-a" static
+	make -C "$root" PKG_CONFIG_PATH="${prefix}/lib/pkgconfig" COMMIT_NO= EXTRA_FLAGS="-a" EXTRA_LDFLAGS="${ldflags}" static
 	rm -rf "$prefix"
+	strip "$root/$project"
 	mv "$root/$project" "$1"
 }
 
