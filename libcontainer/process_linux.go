@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -178,6 +179,42 @@ func (p *setnsProcess) start() (retErr error) {
 		case procHooks:
 			// This shouldn't happen.
 			panic("unexpected procHooks in setns")
+		case procSeccomp:
+			if p.config.Config.Seccomp.ListenerPath == "" {
+				return errors.New("listenerPath is not set")
+			}
+
+			seccompFd, err := recvSeccompFd(uintptr(p.pid()), uintptr(sync.Fd))
+			if err != nil {
+				return err
+			}
+			defer unix.Close(seccompFd)
+
+			bundle, annotations := utils.Annotations(p.config.Config.Labels)
+			containerProcessState := &specs.ContainerProcessState{
+				Version:  specs.Version,
+				Fds:      []string{specs.SeccompFdName},
+				Pid:      p.cmd.Process.Pid,
+				Metadata: p.config.Config.Seccomp.ListenerMetadata,
+				State: specs.State{
+					Version:     specs.Version,
+					ID:          p.config.ContainerId,
+					Status:      specs.StateRunning,
+					Pid:         p.initProcessPid,
+					Bundle:      bundle,
+					Annotations: annotations,
+				},
+			}
+			if err := sendContainerProcessState(p.config.Config.Seccomp.ListenerPath,
+				containerProcessState, seccompFd); err != nil {
+				return err
+			}
+
+			// Sync with child.
+			if err := writeSync(p.messageSockPair.parent, procSeccompDone); err != nil {
+				return fmt.Errorf("writing syncT 'SeccompDone': %w", err)
+			}
+			return nil
 		default:
 			return errors.New("invalid JSON payload from child")
 		}
@@ -439,6 +476,41 @@ func (p *initProcess) start() (retErr error) {
 
 	ierr := parseSync(p.messageSockPair.parent, func(sync *syncT) error {
 		switch sync.Type {
+		case procSeccomp:
+			if p.config.Config.Seccomp.ListenerPath == "" {
+				return errors.New("listenerPath is not set")
+			}
+
+			seccompFd, err := recvSeccompFd(uintptr(childPid), uintptr(sync.Fd))
+			if err != nil {
+				return err
+			}
+			defer unix.Close(seccompFd)
+
+			s, err := p.container.currentOCIState()
+			if err != nil {
+				return err
+			}
+
+			// initProcessStartTime hasn't been set yet.
+			s.Pid = p.cmd.Process.Pid
+			s.Status = specs.StateCreating
+			containerProcessState := &specs.ContainerProcessState{
+				Version:  specs.Version,
+				Fds:      []string{specs.SeccompFdName},
+				Pid:      s.Pid,
+				Metadata: p.config.Config.Seccomp.ListenerMetadata,
+				State:    *s,
+			}
+			if err := sendContainerProcessState(p.config.Config.Seccomp.ListenerPath,
+				containerProcessState, seccompFd); err != nil {
+				return err
+			}
+
+			// Sync with child.
+			if err := writeSync(p.messageSockPair.parent, procSeccompDone); err != nil {
+				return fmt.Errorf("writing syncT 'SeccompDone': %w", err)
+			}
 		case procReady:
 			// set rlimits, this has to be done here because we lose permissions
 			// to raise the limits once we enter a user-namespace
@@ -632,6 +704,46 @@ func (p *initProcess) setExternalDescriptors(newFds []string) {
 
 func (p *initProcess) forwardChildLogs() chan error {
 	return logs.ForwardLogs(p.logFilePair.parent)
+}
+
+func recvSeccompFd(childPid, childFd uintptr) (int, error) {
+	pidfd, _, errno := unix.Syscall(unix.SYS_PIDFD_OPEN, childPid, 0, 0)
+	if errno != 0 {
+		return -1, fmt.Errorf("performing SYS_PIDFD_OPEN syscall: %w", errno)
+	}
+	defer unix.Close(int(pidfd))
+
+	seccompFd, _, errno := unix.Syscall(unix.SYS_PIDFD_GETFD, pidfd, childFd, 0)
+	if errno != 0 {
+		return -1, fmt.Errorf("performing SYS_PIDFD_GETFD syscall: %w", errno)
+	}
+
+	return int(seccompFd), nil
+}
+
+func sendContainerProcessState(listenerPath string, state *specs.ContainerProcessState, fd int) error {
+	conn, err := net.Dial("unix", listenerPath)
+	if err != nil {
+		return fmt.Errorf("failed to connect with seccomp agent specified in the seccomp profile: %w", err)
+	}
+
+	socket, err := conn.(*net.UnixConn).File()
+	if err != nil {
+		return fmt.Errorf("cannot get seccomp socket: %w", err)
+	}
+	defer socket.Close()
+
+	b, err := json.Marshal(state)
+	if err != nil {
+		return fmt.Errorf("cannot marshall seccomp state: %w", err)
+	}
+
+	err = utils.SendFds(socket, b, fd)
+	if err != nil {
+		return fmt.Errorf("cannot send seccomp fd to %s: %w", listenerPath, err)
+	}
+
+	return nil
 }
 
 func getPipeFds(pid int) ([]string, error) {

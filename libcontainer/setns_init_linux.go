@@ -73,7 +73,12 @@ func (l *linuxSetnsInit) Init() error {
 	// do this before dropping capabilities; otherwise do it as late as possible
 	// just before execve so as few syscalls take place after it as possible.
 	if l.config.Config.Seccomp != nil && !l.config.NoNewPrivileges {
-		if err := seccomp.InitSeccomp(l.config.Config.Seccomp); err != nil {
+		seccompFd, err := seccomp.InitSeccomp(l.config.Config.Seccomp)
+		if err != nil {
+			return err
+		}
+
+		if err := syncParentSeccomp(l.pipe, seccompFd); err != nil {
 			return err
 		}
 	}
@@ -87,8 +92,13 @@ func (l *linuxSetnsInit) Init() error {
 	// place afterward (reducing the amount of syscalls that users need to
 	// enable in their seccomp profiles).
 	if l.config.Config.Seccomp != nil && l.config.NoNewPrivileges {
-		if err := seccomp.InitSeccomp(l.config.Config.Seccomp); err != nil {
+		seccompFd, err := seccomp.InitSeccomp(l.config.Config.Seccomp)
+		if err != nil {
 			return fmt.Errorf("unable to init seccomp: %w", err)
+		}
+
+		if err := syncParentSeccomp(l.pipe, seccompFd); err != nil {
+			return err
 		}
 	}
 	logrus.Debugf("setns_init: about to exec")

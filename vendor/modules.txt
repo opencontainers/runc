@@ -39,7 +39,7 @@ github.com/opencontainers/selinux/pkg/pwalk
 github.com/pkg/errors
 # github.com/russross/blackfriday/v2 v2.0.1
 github.com/russross/blackfriday/v2
-# github.com/seccomp/libseccomp-golang v0.9.1
+# github.com/seccomp/libseccomp-golang v0.9.2-0.20210429002308-3879420cc921
 github.com/seccomp/libseccomp-golang
 # github.com/shurcooL/sanitized_anchor_name v1.0.0
 github.com/shurcooL/sanitized_anchor_name

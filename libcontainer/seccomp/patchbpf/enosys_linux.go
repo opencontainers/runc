@@ -42,6 +42,11 @@ const uintptr_t C_SET_MODE_FILTER = SECCOMP_SET_MODE_FILTER;
 #endif
 const uintptr_t C_FILTER_FLAG_LOG = SECCOMP_FILTER_FLAG_LOG;
 
+#ifndef SECCOMP_FILTER_FLAG_NEW_LISTENER
+#	define SECCOMP_FILTER_FLAG_NEW_LISTENER (1UL << 3)
+#endif
+const uintptr_t C_FILTER_FLAG_NEW_LISTENER = SECCOMP_FILTER_FLAG_NEW_LISTENER;
+
 // We use the AUDIT_ARCH_* values because those are the ones used by the kernel
 // and SCMP_ARCH_* sometimes has fake values (such as SCMP_ARCH_X32). But we
 // use <seccomp.h> so we get libseccomp's fallback definitions of AUDIT_ARCH_*.
@@ -581,9 +586,9 @@ func enosysPatchFilter(config *configs.Seccomp, filter *libseccomp.ScmpFilter) (
 	return fprog, nil
 }
 
-func filterFlags(filter *libseccomp.ScmpFilter) (flags uint, noNewPrivs bool, err error) {
+func filterFlags(config *configs.Seccomp, filter *libseccomp.ScmpFilter) (flags uint, noNewPrivs bool, err error) {
 	// Ignore the error since pre-2.4 libseccomp is treated as API level 0.
-	apiLevel, _ := libseccomp.GetApi()
+	apiLevel, _ := libseccomp.GetAPI()
 
 	noNewPrivs, err = filter.GetNoNewPrivsBit()
 	if err != nil {
@@ -599,25 +604,40 @@ func filterFlags(filter *libseccomp.ScmpFilter) (flags uint, noNewPrivs bool, er
 	}
 
 	// TODO: Support seccomp flags not yet added to libseccomp-golang...
+
+	for _, call := range config.Syscalls {
+		if call.Action == configs.Notify {
+			if apiLevel < 6 {
+				return 0, false, fmt.Errorf("seccomp notify unsupported: API level: got %d, want at least 6. Please try with libseccomp >= 2.5.0 and Linux >= 5.7", apiLevel)
+			}
+			flags |= uint(C.C_FILTER_FLAG_NEW_LISTENER)
+			break
+		}
+	}
+
 	return
 }
 
-func sysSeccompSetFilter(flags uint, filter []unix.SockFilter) (err error) {
+func sysSeccompSetFilter(flags uint, filter []unix.SockFilter) (fd int, err error) {
 	fprog := unix.SockFprog{
 		Len:    uint16(len(filter)),
 		Filter: &filter[0],
 	}
+	fd = -1 // only return a valid fd when C_FILTER_FLAG_NEW_LISTENER is set
 	// If no seccomp flags were requested we can use the old-school prctl(2).
 	if flags == 0 {
 		err = unix.Prctl(unix.PR_SET_SECCOMP,
 			unix.SECCOMP_MODE_FILTER,
 			uintptr(unsafe.Pointer(&fprog)), 0, 0)
 	} else {
-		_, _, errno := unix.RawSyscall(unix.SYS_SECCOMP,
+		fdptr, _, errno := unix.RawSyscall(unix.SYS_SECCOMP,
 			uintptr(C.C_SET_MODE_FILTER),
 			uintptr(flags), uintptr(unsafe.Pointer(&fprog)))
 		if errno != 0 {
 			err = errno
+		}
+		if flags&uint(C.C_FILTER_FLAG_NEW_LISTENER) != 0 {
+			fd = int(fdptr)
 		}
 	}
 	runtime.KeepAlive(filter)
@@ -630,17 +650,17 @@ func sysSeccompSetFilter(flags uint, filter []unix.SockFilter) (err error) {
 // patches said filter to handle -ENOSYS in a much nicer manner than the
 // default libseccomp default action behaviour, and loads the patched filter
 // into the kernel for the current process.
-func PatchAndLoad(config *configs.Seccomp, filter *libseccomp.ScmpFilter) error {
+func PatchAndLoad(config *configs.Seccomp, filter *libseccomp.ScmpFilter) (int, error) {
 	// Generate a patched filter.
 	fprog, err := enosysPatchFilter(config, filter)
 	if err != nil {
-		return fmt.Errorf("error patching filter: %w", err)
+		return -1, fmt.Errorf("error patching filter: %w", err)
 	}
 
 	// Get the set of libseccomp flags set.
-	seccompFlags, noNewPrivs, err := filterFlags(filter)
+	seccompFlags, noNewPrivs, err := filterFlags(config, filter)
 	if err != nil {
-		return fmt.Errorf("unable to fetch seccomp filter flags: %w", err)
+		return -1, fmt.Errorf("unable to fetch seccomp filter flags: %w", err)
 	}
 
 	// Set no_new_privs if it was requested, though in runc we handle
@@ -648,13 +668,15 @@ func PatchAndLoad(config *configs.Seccomp, filter *libseccomp.ScmpFilter) error 
 	if noNewPrivs {
 		logrus.Warnf("potentially misconfigured filter -- setting no_new_privs in seccomp path")
 		if err := unix.Prctl(unix.PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0); err != nil {
-			return fmt.Errorf("error enabling no_new_privs bit: %w", err)
+			return -1, fmt.Errorf("error enabling no_new_privs bit: %w", err)
 		}
 	}
 
 	// Finally, load the filter.
-	if err := sysSeccompSetFilter(seccompFlags, fprog); err != nil {
-		return fmt.Errorf("error loading seccomp filter: %w", err)
+	fd, err := sysSeccompSetFilter(seccompFlags, fprog)
+	if err != nil {
+		return -1, fmt.Errorf("error loading seccomp filter: %w", err)
 	}
-	return nil
+
+	return fd, nil
 }

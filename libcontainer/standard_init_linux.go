@@ -158,7 +158,12 @@ func (l *linuxStandardInit) Init() error {
 	// do this before dropping capabilities; otherwise do it as late as possible
 	// just before execve so as few syscalls take place after it as possible.
 	if l.config.Config.Seccomp != nil && !l.config.NoNewPrivileges {
-		if err := seccomp.InitSeccomp(l.config.Config.Seccomp); err != nil {
+		seccompFd, err := seccomp.InitSeccomp(l.config.Config.Seccomp)
+		if err != nil {
+			return err
+		}
+
+		if err := syncParentSeccomp(l.pipe, seccompFd); err != nil {
 			return err
 		}
 	}
@@ -183,6 +188,21 @@ func (l *linuxStandardInit) Init() error {
 	if err != nil {
 		return err
 	}
+	// Set seccomp as close to execve as possible, so as few syscalls take
+	// place afterward (reducing the amount of syscalls that users need to
+	// enable in their seccomp profiles). However, this needs to be done
+	// before closing the pipe since we need it to pass the seccompFd to
+	// the parent.
+	if l.config.Config.Seccomp != nil && l.config.NoNewPrivileges {
+		seccompFd, err := seccomp.InitSeccomp(l.config.Config.Seccomp)
+		if err != nil {
+			return fmt.Errorf("unable to init seccomp: %w", err)
+		}
+
+		if err := syncParentSeccomp(l.pipe, seccompFd); err != nil {
+			return err
+		}
+	}
 	// Close the pipe to signal that we have completed our init.
 	logrus.Debugf("init: closing the pipe to signal completion")
 	_ = l.pipe.Close()
@@ -204,6 +224,7 @@ func (l *linuxStandardInit) Init() error {
 	if _, err := unix.Write(fd, []byte("0")); err != nil {
 		return &os.PathError{Op: "write exec fifo", Path: fifoPath, Err: err}
 	}
+
 	// Close the O_PATH fifofd fd before exec because the kernel resets
 	// dumpable in the wrong order. This has been fixed in newer kernels, but
 	// we keep this to ensure CVE-2016-9962 doesn't re-emerge on older kernels.
@@ -211,14 +232,6 @@ func (l *linuxStandardInit) Init() error {
 	// since been resolved.
 	// https://github.com/torvalds/linux/blob/v4.9/fs/exec.c#L1290-L1318
 	_ = unix.Close(l.fifoFd)
-	// Set seccomp as close to execve as possible, so as few syscalls take
-	// place afterward (reducing the amount of syscalls that users need to
-	// enable in their seccomp profiles).
-	if l.config.Config.Seccomp != nil && l.config.NoNewPrivileges {
-		if err := seccomp.InitSeccomp(l.config.Config.Seccomp); err != nil {
-			return fmt.Errorf("unable to init seccomp: %w", err)
-		}
-	}
 
 	s := l.config.SpecState
 	s.Pid = unix.Getpid()

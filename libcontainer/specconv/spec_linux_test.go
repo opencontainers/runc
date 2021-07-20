@@ -141,10 +141,59 @@ func TestCreateHooks(t *testing.T) {
 	}
 }
 
-func TestSetupSeccomp(t *testing.T) {
+func TestSetupSeccompNil(t *testing.T) {
+	seccomp, err := SetupSeccomp(nil)
+	if err != nil {
+		t.Error("Expected error to be nil")
+	}
+
+	if seccomp != nil {
+		t.Error("Expected seccomp to be nil")
+	}
+}
+
+func TestSetupSeccompEmpty(t *testing.T) {
+	conf := &specs.LinuxSeccomp{}
+	seccomp, err := SetupSeccomp(conf)
+	if err != nil {
+		t.Error("Expected error to be nil")
+	}
+
+	if seccomp != nil {
+		t.Error("Expected seccomp to be nil")
+	}
+}
+
+// TestSetupSeccompWrongAction tests that a wrong action triggers an error
+func TestSetupSeccompWrongAction(t *testing.T) {
 	conf := &specs.LinuxSeccomp{
-		DefaultAction: "SCMP_ACT_ERRNO",
-		Architectures: []specs.Arch{specs.ArchX86_64, specs.ArchARM},
+		DefaultAction: "SCMP_ACT_IMAGINARY_ACTION",
+	}
+	_, err := SetupSeccomp(conf)
+	if err == nil {
+		t.Error("Expected error")
+	}
+}
+
+// TestSetupSeccompWrongArchitecture tests that a wrong architecture triggers an error
+func TestSetupSeccompWrongArchitecture(t *testing.T) {
+	conf := &specs.LinuxSeccomp{
+		DefaultAction: "SCMP_ACT_ALLOW",
+		Architectures: []specs.Arch{"SCMP_ARCH_IMAGINARY_ARCH"},
+	}
+	_, err := SetupSeccomp(conf)
+	if err == nil {
+		t.Error("Expected error")
+	}
+}
+
+func TestSetupSeccomp(t *testing.T) {
+	errnoRet := uint(55)
+	conf := &specs.LinuxSeccomp{
+		DefaultAction:    "SCMP_ACT_ERRNO",
+		Architectures:    []specs.Arch{specs.ArchX86_64, specs.ArchARM},
+		ListenerPath:     "/var/run/mysocket",
+		ListenerMetadata: "mymetadatastring",
 		Syscalls: []specs.LinuxSyscall{
 			{
 				Names:  []string{"clone"},
@@ -159,16 +208,33 @@ func TestSetupSeccomp(t *testing.T) {
 				},
 			},
 			{
-				Names: []string{
-					"select",
-					"semctl",
-					"semget",
-					"semop",
-					"semtimedop",
-					"send",
-					"sendfile",
-				},
-				Action: "SCMP_ACT_ALLOW",
+				Names:  []string{"semctl"},
+				Action: "SCMP_ACT_KILL",
+			},
+			{
+				Names:  []string{"semget"},
+				Action: "SCMP_ACT_ERRNO",
+			},
+			{
+				Names:    []string{"send"},
+				Action:   "SCMP_ACT_ERRNO",
+				ErrnoRet: &errnoRet,
+			},
+			{
+				Names:  []string{"lchown"},
+				Action: "SCMP_ACT_TRAP",
+			},
+			{
+				Names:  []string{"lremovexattr"},
+				Action: "SCMP_ACT_TRACE",
+			},
+			{
+				Names:  []string{"mbind"},
+				Action: "SCMP_ACT_LOG",
+			},
+			{
+				Names:  []string{"mknod"},
+				Action: "SCMP_ACT_NOTIFY",
 			},
 		},
 	}
@@ -177,7 +243,7 @@ func TestSetupSeccomp(t *testing.T) {
 		t.Errorf("Couldn't create Seccomp config: %v", err)
 	}
 
-	if seccomp.DefaultAction != 2 { // SCMP_ACT_ERRNO
+	if seccomp.DefaultAction != configs.Errno {
 		t.Error("Wrong conversion for DefaultAction")
 	}
 
@@ -189,6 +255,14 @@ func TestSetupSeccomp(t *testing.T) {
 		t.Error("Expected architectures are not found")
 	}
 
+	if seccomp.ListenerPath != "/var/run/mysocket" {
+		t.Error("Expected ListenerPath is wrong")
+	}
+
+	if seccomp.ListenerMetadata != "mymetadatastring" {
+		t.Error("Expected ListenerMetadata is wrong")
+	}
+
 	calls := seccomp.Syscalls
 
 	callsLength := len(calls)
@@ -196,22 +270,58 @@ func TestSetupSeccomp(t *testing.T) {
 		t.Errorf("Expected 8 syscalls, got :%d", callsLength)
 	}
 
-	for i, call := range calls {
-		if i == 0 {
+	for _, call := range calls {
+		switch call.Name {
+		case "clone":
+			if call.Action != configs.Allow {
+				t.Error("Wrong conversion for the clone syscall action")
+			}
 			expectedCloneSyscallArgs := configs.Arg{
 				Index:    0,
-				Op:       7, // SCMP_CMP_MASKED_EQ
+				Op:       configs.MaskEqualTo,
 				Value:    unix.CLONE_NEWNS | unix.CLONE_NEWUTS | unix.CLONE_NEWIPC | unix.CLONE_NEWUSER | unix.CLONE_NEWPID | unix.CLONE_NEWNET | unix.CLONE_NEWCGROUP,
 				ValueTwo: 0,
 			}
 			if expectedCloneSyscallArgs != *call.Args[0] {
 				t.Errorf("Wrong arguments conversion for the clone syscall under test")
 			}
+		case "semctl":
+			if call.Action != configs.Kill {
+				t.Errorf("Wrong conversion for the %s syscall action", call.Name)
+			}
+		case "semget":
+			if call.Action != configs.Errno {
+				t.Errorf("Wrong conversion for the %s syscall action", call.Name)
+			}
+			if call.ErrnoRet != nil {
+				t.Errorf("Wrong error ret for the %s syscall", call.Name)
+			}
+		case "send":
+			if call.Action != configs.Errno {
+				t.Errorf("Wrong conversion for the %s syscall action", call.Name)
+			}
+			if *call.ErrnoRet != errnoRet {
+				t.Errorf("Wrong error ret for the %s syscall", call.Name)
+			}
+		case "lchown":
+			if call.Action != configs.Trap {
+				t.Errorf("Wrong conversion for the %s syscall action", call.Name)
+			}
+		case "lremovexattr":
+			if call.Action != configs.Trace {
+				t.Errorf("Wrong conversion for the %s syscall action", call.Name)
+			}
+		case "mbind":
+			if call.Action != configs.Log {
+				t.Errorf("Wrong conversion for the %s syscall action", call.Name)
+			}
+		case "mknod":
+			if call.Action != configs.Notify {
+				t.Errorf("Wrong conversion for the %s syscall action", call.Name)
+			}
+		default:
+			t.Errorf("Unexpected syscall %s found", call.Name)
 		}
-		if call.Action != 4 {
-			t.Error("Wrong conversion for the clone syscall action")
-		}
-
 	}
 }
 

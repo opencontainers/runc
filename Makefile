@@ -34,10 +34,13 @@ GO_BUILD_STATIC := CGO_ENABLED=1 $(GO) build -trimpath $(MOD_VENDOR) $(EXTRA_FLA
 runc:
 	$(GO_BUILD) -o runc .
 
-all: runc recvtty
+all: runc recvtty seccompagent
 
 recvtty:
 	$(GO_BUILD) -o contrib/cmd/recvtty/recvtty ./contrib/cmd/recvtty
+
+seccompagent:
+	$(GO_BUILD) -o contrib/cmd/seccompagent/seccompagent ./contrib/cmd/seccompagent
 
 static:
 	$(GO_BUILD_STATIC) -o runc .

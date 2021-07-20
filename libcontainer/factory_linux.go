@@ -387,7 +387,7 @@ func (l *LinuxFactory) StartInitialization() (err error) {
 	defer func() {
 		// We have an error during the initialization of the container's init,
 		// send it back to the parent process in the form of an initError.
-		if werr := utils.WriteJSON(pipe, syncT{procError}); werr != nil {
+		if werr := writeSync(pipe, procError); werr != nil {
 			fmt.Fprintln(os.Stderr, err)
 			return
 		}

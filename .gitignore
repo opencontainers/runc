@@ -2,6 +2,7 @@ vendor/pkg
 /runc
 /runc-*
 contrib/cmd/recvtty/recvtty
+contrib/cmd/seccompagent/seccompagent
 man/man8
 release
 Vagrantfile

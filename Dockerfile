@@ -21,21 +21,19 @@ RUN echo 'deb https://download.opensuse.org/repositories/devel:/tools:/criu/Debi
         curl \
         gawk \
         gcc \
+        gperf \
         iptables \
         jq \
         kmod \
-        libseccomp-dev \
-        libseccomp-dev:arm64 \
-        libseccomp-dev:armel \
-        libseccomp-dev:armhf \
-        libseccomp-dev:ppc64el \
-        libseccomp2 \
         pkg-config \
         python-minimal \
         sudo \
         uidmap \
     && apt-get clean \
     && rm -rf /var/cache/apt /var/lib/apt/lists/* /etc/apt/sources.list.d/*.list
+
+COPY script/install-libseccomp.sh /
+RUN /install-libseccomp.sh
 
 # Add a dummy user for the rootless integration tests. While runC does
 # not require an entry in /etc/passwd to operate, one of the tests uses

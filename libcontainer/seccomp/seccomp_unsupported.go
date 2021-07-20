@@ -11,11 +11,11 @@ import (
 var ErrSeccompNotEnabled = errors.New("seccomp: config provided but seccomp not supported")
 
 // InitSeccomp does nothing because seccomp is not supported.
-func InitSeccomp(config *configs.Seccomp) error {
+func InitSeccomp(config *configs.Seccomp) (int, error) {
 	if config != nil {
-		return ErrSeccompNotEnabled
+		return -1, ErrSeccompNotEnabled
 	}
-	return nil
+	return -1, nil
 }
 
 // Version returns major, minor, and micro.
