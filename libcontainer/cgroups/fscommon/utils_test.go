@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
+	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
 const (
@@ -18,6 +19,13 @@ const (
 	floatValue  = 2048.0
 	floatString = "2048"
 )
+
+type cgroupData struct {
+	root      string
+	innerPath string
+	config    *configs.Cgroup
+	pid       int
+}
 
 func init() {
 	cgroups.TestMode = true
@@ -99,5 +107,55 @@ func TestGetCgroupParamsInt(t *testing.T) {
 	_, err = GetCgroupParamUint(tempDir, cgroupFile)
 	if err == nil {
 		t.Fatal("Expecting error, got none")
+	}
+}
+
+type cgroupTestUtil struct {
+	// cgroup data to use in tests.
+	CgroupData *cgroupData
+
+	// Path to the mock cgroup directory.
+	CgroupPath string
+
+	// Temporary directory to store mock cgroup filesystem.
+	tempDir string
+	t       *testing.T
+}
+
+// Creates a new test util for the specified subsystem
+func NewCgroupTestUtil(subsystem string, t *testing.T) *cgroupTestUtil {
+	d := &cgroupData{
+		config: &configs.Cgroup{},
+	}
+	d.config.Resources = &configs.Resources{}
+	tempDir, err := ioutil.TempDir("", "cgroup_test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	d.root = tempDir
+	testCgroupPath := filepath.Join(d.root, subsystem)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Ensure the full mock cgroup path exists.
+	err = os.MkdirAll(testCgroupPath, 0o755)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return &cgroupTestUtil{CgroupData: d, CgroupPath: testCgroupPath, tempDir: tempDir, t: t}
+}
+
+func (c *cgroupTestUtil) cleanup() {
+	os.RemoveAll(c.tempDir)
+}
+
+// Write the specified contents on the mock of the specified cgroup files.
+func (c *cgroupTestUtil) writeFileContents(fileContents map[string]string) {
+	for file, contents := range fileContents {
+		err := cgroups.WriteFile(c.CgroupPath, file, contents)
+		if err != nil {
+			c.t.Fatal(err)
+		}
 	}
 }
