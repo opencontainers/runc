@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"runtime/debug"
 	"strconv"
+	"strings"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/moby/sys/mountinfo"
@@ -380,6 +381,24 @@ func (l *LinuxFactory) StartInitialization() (err error) {
 		return fmt.Errorf("unable to convert _LIBCONTAINER_LOGPIPE: %w", err)
 	}
 
+	// Get mount files (O_PATH)
+	envMountFileFds := os.Getenv("_LIBCONTAINER_MOUNT_FILE_FDS")
+	mountFilesArr := strings.Split(envMountFileFds, ";")
+	mountFiles := make([]*os.File, len(mountFilesArr))
+	for i, fdStr := range mountFilesArr {
+		if fdStr == "" {
+			continue
+		}
+		mountFileFd, err := strconv.Atoi(fdStr)
+		if err != nil {
+			return fmt.Errorf("unable to parse _LIBCONTAINER_MOUNT_FILE_FDS(%q): %w",
+				envMountFileFds, err)
+		}
+		mountFile := os.NewFile(uintptr(mountFileFd), "mount-file")
+		defer mountFile.Close()
+		mountFiles[i] = mountFile
+	}
+
 	// clear the current process's environment to clean any libcontainer
 	// specific env vars.
 	os.Clearenv()
@@ -402,7 +421,7 @@ func (l *LinuxFactory) StartInitialization() (err error) {
 		}
 	}()
 
-	i, err := newContainerInit(it, pipe, consoleSocket, fifofd, logPipeFd)
+	i, err := newContainerInit(it, pipe, consoleSocket, fifofd, logPipeFd, mountFiles)
 	if err != nil {
 		return err
 	}

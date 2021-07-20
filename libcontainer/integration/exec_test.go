@@ -2017,3 +2017,70 @@ next_fd:
 		t.Fatalf("found %d extra fds after container.Run", count)
 	}
 }
+
+// Test that a container using user namespaces is able to bind mount a folder
+// that has some part of its path with "---" permissions for others
+func TestBindMountAndUser(t *testing.T) {
+	if _, err := os.Stat("/proc/self/ns/user"); os.IsNotExist(err) {
+		t.Skip("userns is unsupported")
+	}
+	if testing.Short() {
+		return
+	}
+
+	rootfs, err := newRootfs()
+	ok(t, err)
+	defer remove(rootfs)
+
+	temphost, err := ioutil.TempDir("", "mnt1host")
+	ok(t, err)
+	defer os.RemoveAll(temphost)
+
+	dirhost := filepath.Join(temphost, "inaccessible", "dir")
+	err = os.MkdirAll(dirhost, 0o755)
+	ok(t, err)
+	// Make this part of the path inaccessible to "others"
+	err = os.Chmod(filepath.Join(temphost, "inaccessible"), 0o750)
+	ok(t, err)
+
+	err = ioutil.WriteFile(filepath.Join(dirhost, "foo.txt"), []byte("Hello"), 0o755)
+	ok(t, err)
+
+	config := newTemplateConfig(t, &tParam{
+		rootfs: rootfs,
+		userns: true,
+	})
+
+	// Set HostID to 1000 to avoid DAC_OVERRIDE bypassing the purpose of this test.
+	config.UidMappings[0].HostID = 1000
+	config.GidMappings[0].HostID = 1000
+	// Set the owner of rootfs to the effective IDs in the host to avoid errors
+	// while creating the folders to perform the mounts.
+	err = os.Chown(rootfs, 1000, 1000)
+	ok(t, err)
+
+	config.Mounts = append(config.Mounts, &configs.Mount{
+		Source:      dirhost,
+		Destination: "/tmp/mnt1cont",
+		Device:      "bind",
+		Flags:       unix.MS_BIND | unix.MS_REC,
+	})
+
+	container, err := newContainer(t, config)
+	ok(t, err)
+	defer container.Destroy() //nolint: errcheck
+
+	var stdout bytes.Buffer
+
+	pconfig := libcontainer.Process{
+		Cwd:    "/",
+		Args:   []string{"sh", "-c", "stat /tmp/mnt1cont/foo.txt"},
+		Env:    standardEnvironment,
+		Stdout: &stdout,
+		Init:   true,
+	}
+	err = container.Run(&pconfig)
+	ok(t, err)
+
+	waitProcess(&pconfig, t)
+}

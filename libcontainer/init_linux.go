@@ -78,7 +78,7 @@ type initer interface {
 	Init() error
 }
 
-func newContainerInit(t initType, pipe *os.File, consoleSocket *os.File, fifoFd, logFd int) (initer, error) {
+func newContainerInit(t initType, pipe *os.File, consoleSocket *os.File, fifoFd, logFd int, mountFiles []*os.File) (initer, error) {
 	var config *initConfig
 	if err := json.NewDecoder(pipe).Decode(&config); err != nil {
 		return nil, err
@@ -88,6 +88,14 @@ func newContainerInit(t initType, pipe *os.File, consoleSocket *os.File, fifoFd,
 	}
 	switch t {
 	case initSetns:
+		// mountFiles must not be sent in this case, make sure the slice
+		// are all nil pointers.
+		for _, m := range mountFiles {
+			if m != nil {
+				return nil, fmt.Errorf("mountFiles must be empty, but got: %+v", mountFiles)
+			}
+		}
+
 		return &linuxSetnsInit{
 			pipe:          pipe,
 			consoleSocket: consoleSocket,
@@ -102,6 +110,7 @@ func newContainerInit(t initType, pipe *os.File, consoleSocket *os.File, fifoFd,
 			config:        config,
 			fifoFd:        fifoFd,
 			logFd:         logFd,
+			mountFiles:    mountFiles,
 		}, nil
 	}
 	return nil, fmt.Errorf("unknown init type %q", t)

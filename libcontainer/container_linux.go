@@ -514,6 +514,27 @@ func (c *linuxContainer) commandTemplate(p *Process, childInitPipe *os.File, chi
 	return cmd
 }
 
+// shouldSendMountSources says whether the child process must setup bind mounts with
+// the source pre-opened (O_PATH) in the host user namespace.
+// See https://github.com/opencontainers/runc/issues/2484
+func (c *linuxContainer) shouldSendMountSources() bool {
+	// Passing the mount sources via SCM_RIGHTS is only necessary when
+	// both userns and mntns are active.
+	if len(c.config.Mounts) == 0 {
+		return false
+	}
+	// nsexec.c send_mountsources() requires setns(mntns) capabilities
+	// CAP_SYS_CHROOT and CAP_SYS_ADMIN
+	if c.config.RootlessEUID {
+		return false
+	}
+	if !c.config.Namespaces.Contains(configs.NEWUSER) ||
+		!c.config.Namespaces.Contains(configs.NEWNS) {
+		return false
+	}
+	return true
+}
+
 func (c *linuxContainer) newInitProcess(p *Process, cmd *exec.Cmd, messageSockPair, logFilePair filePair) (*initProcess, error) {
 	cmd.Env = append(cmd.Env, "_LIBCONTAINER_INITTYPE="+string(initStandard))
 	nsMaps := make(map[configs.NamespaceType]string)
@@ -523,10 +544,32 @@ func (c *linuxContainer) newInitProcess(p *Process, cmd *exec.Cmd, messageSockPa
 		}
 	}
 	_, sharePidns := nsMaps[configs.NEWPID]
-	data, err := c.bootstrapData(c.config.Namespaces.CloneFlags(), nsMaps)
+	data, err := c.bootstrapData(c.config.Namespaces.CloneFlags(), nsMaps, initStandard)
 	if err != nil {
 		return nil, err
 	}
+
+	if c.shouldSendMountSources() {
+		mountFileFdsList := ""
+		for _, m := range c.config.Mounts {
+			if m.Device != "bind" {
+				// StartInitialization() finds out the Mounts indices by counting ";".
+				// We take care of adding the right number of ";"
+				mountFileFdsList += ";"
+				continue
+			}
+			// The fd passed here will not be used: nsexec.c will overwrite it with dup3(). We just need
+			// to allocate a fd so that we know the number to pass in the environment variable. The fd
+			// must not be closed before cmd.Start(), so we reuse messageSockPair.child because the
+			// lifecycle of that fd is already taken care of.
+			cmd.ExtraFiles = append(cmd.ExtraFiles, messageSockPair.child)
+			mountFileFdsList += fmt.Sprintf("%d;", stdioFdCount+len(cmd.ExtraFiles)-1)
+		}
+		cmd.Env = append(cmd.Env,
+			"_LIBCONTAINER_MOUNT_FILE_FDS="+mountFileFdsList,
+		)
+	}
+
 	init := &initProcess{
 		cmd:             cmd,
 		messageSockPair: messageSockPair,
@@ -551,7 +594,7 @@ func (c *linuxContainer) newSetnsProcess(p *Process, cmd *exec.Cmd, messageSockP
 	}
 	// for setns process, we don't have to set cloneflags as the process namespaces
 	// will only be set via setns syscall
-	data, err := c.bootstrapData(0, state.NamespacePaths)
+	data, err := c.bootstrapData(0, state.NamespacePaths, initSetns)
 	if err != nil {
 		return nil, err
 	}
@@ -1178,7 +1221,9 @@ func (c *linuxContainer) makeCriuRestoreMountpoints(m *configs.Mount) error {
 	case "bind":
 		// The prepareBindMount() function checks if source
 		// exists. So it cannot be used for other filesystem types.
-		if err := prepareBindMount(m, c.config.Rootfs); err != nil {
+		// TODO: pass something else than nil? Not sure if criu is
+		// impacted by issue #2484
+		if err := prepareBindMount(m, c.config.Rootfs, nil); err != nil {
 			return err
 		}
 	default:
@@ -2008,7 +2053,7 @@ func encodeIDMapping(idMap []configs.IDMap) ([]byte, error) {
 // such as one that uses nsenter package to bootstrap the container's
 // init process correctly, i.e. with correct namespaces, uid/gid
 // mapping etc.
-func (c *linuxContainer) bootstrapData(cloneFlags uintptr, nsMaps map[configs.NamespaceType]string) (io.Reader, error) {
+func (c *linuxContainer) bootstrapData(cloneFlags uintptr, nsMaps map[configs.NamespaceType]string, it initType) (io.Reader, error) {
 	// create the netlink message
 	r := nl.NewNetlinkRequest(int(InitMsg), 0)
 
@@ -2089,6 +2134,22 @@ func (c *linuxContainer) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Na
 		Type:  RootlessEUIDAttr,
 		Value: c.config.RootlessEUID,
 	})
+
+	// bind mount source to open
+	if it == initStandard && c.shouldSendMountSources() {
+		var mounts []byte
+		for _, m := range c.config.Mounts {
+			if m.Device == "bind" {
+				mounts = append(mounts, []byte(m.Source)...)
+			}
+			mounts = append(mounts, byte(0))
+		}
+
+		r.AddData(&Bytemsg{
+			Type:  MountSourcesAttr,
+			Value: mounts,
+		})
+	}
 
 	return bytes.NewReader(r.Serialize()), nil
 }

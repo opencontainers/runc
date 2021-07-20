@@ -39,6 +39,8 @@ enum sync_t {
 	SYNC_RECVPID_ACK = 0x43,	/* PID was correctly received by parent. */
 	SYNC_GRANDCHILD = 0x44,	/* The grandchild is ready to run. */
 	SYNC_CHILD_FINISH = 0x45,	/* The child or grandchild has finished. */
+	SYNC_MOUNTSOURCES_PLS = 0x46,	/* Tell parent to send mount sources by SCM_RIGHTS. */
+	SYNC_MOUNTSOURCES_ACK = 0x47,	/* All mount sources have been sent. */
 };
 
 /*
@@ -93,6 +95,10 @@ struct nlconfig_t {
 	size_t uidmappath_len;
 	char *gidmappath;
 	size_t gidmappath_len;
+
+	/* Mount sources opened outside the container userns. */
+	char *mountsources;
+	size_t mountsources_len;
 };
 
 #define PANIC   "panic"
@@ -118,6 +124,7 @@ static int logfd = -1;
 #define ROOTLESS_EUID_ATTR	27287
 #define UIDMAPPATH_ATTR		27288
 #define GIDMAPPATH_ATTR		27289
+#define MOUNT_SOURCES_ATTR	27290
 
 /*
  * Use the raw syscall for versions of glibc which don't include a function for
@@ -508,6 +515,10 @@ static void nl_parse(int fd, struct nlconfig_t *config)
 		case SETGROUP_ATTR:
 			config->is_setgroup = readint8(current);
 			break;
+		case MOUNT_SOURCES_ATTR:
+			config->mountsources = current;
+			config->mountsources_len = payload_len;
+			break;
 		default:
 			bail("unknown netlink message type %d", nlattr->nla_type);
 		}
@@ -597,6 +608,191 @@ static inline int sane_kill(pid_t pid, int signum)
 		return kill(pid, signum);
 	else
 		return 0;
+}
+
+void receive_fd(int sockfd, int new_fd)
+{
+	int bytes_read;
+	struct msghdr msg = { };
+	struct cmsghdr *cmsg;
+	struct iovec iov = { };
+	char null_byte = '\0';
+	int ret;
+	int fd_count;
+	int *fd_payload;
+
+	iov.iov_base = &null_byte;
+	iov.iov_len = 1;
+
+	msg.msg_iov = &iov;
+	msg.msg_iovlen = 1;
+
+	msg.msg_controllen = CMSG_SPACE(sizeof(int));
+	msg.msg_control = alloca(msg.msg_controllen);
+	memset(msg.msg_control, 0, msg.msg_controllen);
+
+	bytes_read = recvmsg(sockfd, &msg, 0);
+	if (bytes_read != 1)
+		bail("failed to receive fd from unix socket %d", sockfd);
+	if (msg.msg_flags & MSG_CTRUNC)
+		bail("received truncated control message from unix socket %d", sockfd);
+
+	cmsg = CMSG_FIRSTHDR(&msg);
+	if (!cmsg)
+		bail("received message from unix socket %d without control message", sockfd);
+
+	if (cmsg->cmsg_level != SOL_SOCKET)
+		bail("received unknown control message from unix socket %d: cmsg_level=%d", sockfd, cmsg->cmsg_level);
+
+	if (cmsg->cmsg_type != SCM_RIGHTS)
+		bail("received unknown control message from unix socket %d: cmsg_type=%d", sockfd, cmsg->cmsg_type);
+
+	fd_count = (cmsg->cmsg_len - CMSG_LEN(0)) / sizeof(int);
+	if (fd_count != 1)
+		bail("received control message from unix socket %d with too many fds: %d", sockfd, fd_count);
+
+	fd_payload = (int *)CMSG_DATA(cmsg);
+	ret = dup3(*fd_payload, new_fd, O_CLOEXEC);
+	if (ret < 0)
+		bail("cannot dup3 fd %d to %d", *fd_payload, new_fd);
+
+	ret = close(*fd_payload);
+	if (ret < 0)
+		bail("cannot close fd %d", *fd_payload);
+}
+
+void send_fd(int sockfd, int fd)
+{
+	int bytes_written;
+	struct msghdr msg = { };
+	struct cmsghdr *cmsg;
+	struct iovec iov[1] = { };
+	char null_byte = '\0';
+
+	iov[0].iov_base = &null_byte;
+	iov[0].iov_len = 1;
+
+	msg.msg_iov = iov;
+	msg.msg_iovlen = 1;
+
+	/* We send only one fd as specified by cmsg->cmsg_len below, even
+	 * though msg.msg_controllen might have more space due to alignment. */
+	msg.msg_controllen = CMSG_SPACE(sizeof(int));
+	msg.msg_control = alloca(msg.msg_controllen);
+	memset(msg.msg_control, 0, msg.msg_controllen);
+
+	cmsg = CMSG_FIRSTHDR(&msg);
+	cmsg->cmsg_level = SOL_SOCKET;
+	cmsg->cmsg_type = SCM_RIGHTS;
+	cmsg->cmsg_len = CMSG_LEN(sizeof(int));
+	*(int *)CMSG_DATA(cmsg) = fd;
+
+	bytes_written = sendmsg(sockfd, &msg, 0);
+	if (bytes_written != 1)
+		bail("failed to send fd %d via unix socket %d", fd, sockfd);
+}
+
+void receive_mountsources(int sockfd, char *mountsources, size_t mountsources_len)
+{
+	char *mount_file_fds_str;
+	char *new_fd_str;
+	char *saveptr = NULL;
+
+	mount_file_fds_str = getenv("_LIBCONTAINER_MOUNT_FILE_FDS");
+
+	// container_linux.go shouldSendMountSources() decides if mount sources
+	// should be pre-opened (O_PATH) and passed via SCM_RIGHTS
+	if (mount_file_fds_str == NULL || *mount_file_fds_str == '\0')
+		return;
+	if (mountsources == NULL)
+		return;
+
+	// make a copy because strtok_r modifies the variable
+	mount_file_fds_str = strdupa(mount_file_fds_str);
+
+	new_fd_str = strtok_r(mount_file_fds_str, ";", &saveptr);
+
+	char *mountsources_end = mountsources + mountsources_len;
+	while (mountsources < mountsources_end) {
+		int new_fd;
+
+		// $_LIBCONTAINER_MOUNT_FILE_FDS might contain empty entries in
+		// the ";"-separated list
+		while (new_fd_str != NULL && new_fd_str[0] == '\0') {
+			new_fd_str = strtok_r(NULL, ";", &saveptr);
+		}
+		if (new_fd_str == NULL)
+			break;
+
+		if (mountsources[0] == '\0') {
+			mountsources++;
+			continue;
+		}
+
+		new_fd = atoi(new_fd_str);
+		receive_fd(sockfd, new_fd);
+
+		mountsources += strlen(mountsources) + 1;
+		new_fd_str = strtok_r(NULL, ";", &saveptr);
+	}
+}
+
+void send_mountsources(int sockfd, pid_t child, char *mountsources, size_t mountsources_len)
+{
+	char proc_path[PATH_MAX];
+	int host_mntns_fd;
+	int container_mntns_fd;
+	int fd;
+	int ret;
+
+	// container_linux.go shouldSendMountSources() decides if mount sources
+	// should be pre-opened (O_PATH) and passed via SCM_RIGHTS
+	if (mountsources == NULL)
+		return;
+
+	host_mntns_fd = open("/proc/self/ns/mnt", O_RDONLY | O_CLOEXEC);
+	if (host_mntns_fd == -1)
+		bail("failed to get current mount namespace");
+
+	if (snprintf(proc_path, PATH_MAX, "/proc/%d/ns/mnt", child) < 0)
+		bail("failed to get mount namespace path");
+
+	container_mntns_fd = open(proc_path, O_RDONLY | O_CLOEXEC);
+	if (container_mntns_fd == -1)
+		bail("failed to get container mount namespace");
+
+	if (setns(container_mntns_fd, CLONE_NEWNS) < 0)
+		bail("failed to setns to container mntns");
+
+	char *mountsources_end = mountsources + mountsources_len;
+	while (mountsources < mountsources_end) {
+		if (mountsources[0] == '\0') {
+			mountsources++;
+			continue;
+		}
+
+		fd = open(mountsources, O_PATH | O_CLOEXEC);
+		if (fd < 0)
+			bail("failed to open mount source %s", mountsources);
+
+		send_fd(sockfd, fd);
+
+		ret = close(fd);
+		if (ret != 0)
+			bail("failed to close mount source fd %d", fd);
+
+		mountsources += strlen(mountsources) + 1;
+	}
+
+	if (setns(host_mntns_fd, CLONE_NEWNS) < 0)
+		bail("failed to setns to host mntns");
+
+	ret = close(host_mntns_fd);
+	if (ret != 0)
+		bail("failed to close host mount namespace fd %d", host_mntns_fd);
+	ret = close(container_mntns_fd);
+	if (ret != 0)
+		bail("failed to close container mount namespace fd %d", container_mntns_fd);
 }
 
 void nsexec(void)
@@ -828,6 +1024,16 @@ void nsexec(void)
 						bail("failed to sync with runc: write(pid-JSON)");
 					}
 					break;
+				case SYNC_MOUNTSOURCES_PLS:
+					send_mountsources(syncfd, stage1_pid, config.mountsources,
+							  config.mountsources_len);
+
+					s = SYNC_MOUNTSOURCES_ACK;
+					if (write(syncfd, &s, sizeof(s)) != sizeof(s)) {
+						kill(stage1_pid, SIGKILL);
+						bail("failed to sync with child: write(SYNC_MOUNTSOURCES_ACK)");
+					}
+					break;
 				case SYNC_CHILD_FINISH:
 					write_log(DEBUG, "stage-1 complete");
 					stage1_complete = true;
@@ -981,6 +1187,28 @@ void nsexec(void)
 			write_log(DEBUG, "unshare remaining namespace (except cgroupns)");
 			if (unshare(config.cloneflags & ~CLONE_NEWCGROUP) < 0)
 				bail("failed to unshare remaining namespaces (except cgroupns)");
+
+			/* Ask our parent to send the mount sources fds. */
+			if (config.mountsources) {
+				s = SYNC_MOUNTSOURCES_PLS;
+				if (write(syncfd, &s, sizeof(s)) != sizeof(s)) {
+					kill(stage2_pid, SIGKILL);
+					bail("failed to sync with parent: write(SYNC_MOUNTSOURCES_PLS)");
+				}
+
+				/* Receive and install all mount sources fds. */
+				receive_mountsources(syncfd, config.mountsources, config.mountsources_len);
+
+				/* Parent finished to send the mount sources fds. */
+				if (read(syncfd, &s, sizeof(s)) != sizeof(s)) {
+					kill(stage2_pid, SIGKILL);
+					bail("failed to sync with parent: read(SYNC_MOUNTSOURCES_ACK)");
+				}
+				if (s != SYNC_MOUNTSOURCES_ACK) {
+					kill(stage2_pid, SIGKILL);
+					bail("failed to sync with parent: SYNC_MOUNTSOURCES_ACK: got %u", s);
+				}
+			}
 
 			/*
 			 * TODO: What about non-namespace clone flags that we're dropping here?
