@@ -7,7 +7,7 @@ if [ -z "$BATS_RUN_TMPDIR" ]; then
 fi
 
 # Root directory of integration tests.
-INTEGRATION_ROOT=$(dirname "$(readlink -f "$BASH_SOURCE")")
+INTEGRATION_ROOT=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
 
 # Download images, get *_IMAGE variables.
 IMAGES=$("${INTEGRATION_ROOT}"/get-images.sh)
@@ -18,6 +18,7 @@ RUNC="${INTEGRATION_ROOT}/../../runc"
 RECVTTY="${INTEGRATION_ROOT}/../../contrib/cmd/recvtty/recvtty"
 
 # Test data path.
+# shellcheck disable=SC2034
 TESTDATA="${INTEGRATION_ROOT}/testdata"
 
 # CRIU PATH
@@ -38,7 +39,9 @@ function runc() {
 
 	# Some debug information to make life easier. bats will only print it if the
 	# test failed, in which case the output is useful.
-	echo "runc $@ (status=$status):" >&2
+	# shellcheck disable=SC2154
+	echo "runc $* (status=$status):" >&2
+	# shellcheck disable=SC2154
 	echo "$output" >&2
 }
 
@@ -73,8 +76,8 @@ function runc_rootless_idmap() {
 	update_config ' .mounts |= map((select(.type == "devpts") | .options += ["gid=5"]) // .)
 			| .linux.uidMappings += [{"hostID": '"$ROOTLESS_UIDMAP_START"', "containerID": 1000, "size": '"$ROOTLESS_UIDMAP_LENGTH"'}]
 			| .linux.gidMappings += [{"hostID": '"$ROOTLESS_GIDMAP_START"', "containerID": 100, "size": 1}]
-			| .linux.gidMappings += [{"hostID": '"$(($ROOTLESS_GIDMAP_START + 10))"', "containerID": 1, "size": 20}]
-			| .linux.gidMappings += [{"hostID": '"$(($ROOTLESS_GIDMAP_START + 100))"', "containerID": 1000, "size": '"$(($ROOTLESS_GIDMAP_LENGTH - 1000))"'}]'
+			| .linux.gidMappings += [{"hostID": '"$((ROOTLESS_GIDMAP_START + 10))"', "containerID": 1, "size": 20}]
+			| .linux.gidMappings += [{"hostID": '"$((ROOTLESS_GIDMAP_START + 100))"', "containerID": 1000, "size": '"$((ROOTLESS_GIDMAP_LENGTH - 1000))"'}]'
 }
 
 # Returns systemd version as a number (-1 if systemd is not enabled/supported).
@@ -121,9 +124,9 @@ function init_cgroup_paths() {
 		CGROUP_SUBSYSTEMS=$(awk '!/^#/ {print $1}' /proc/cgroups)
 		local g base_path
 		for g in ${CGROUP_SUBSYSTEMS}; do
-			base_path=$(gawk '$(NF-2) == "cgroup" && $NF ~ /\<'${g}'\>/ { print $5; exit }' /proc/self/mountinfo)
+			base_path=$(gawk '$(NF-2) == "cgroup" && $NF ~ /\<'"${g}"'\>/ { print $5; exit }' /proc/self/mountinfo)
 			test -z "$base_path" && continue
-			eval CGROUP_${g^^}_BASE_PATH="${base_path}"
+			eval CGROUP_"${g^^}"_BASE_PATH="${base_path}"
 		done
 	fi
 }
@@ -162,39 +165,39 @@ function get_cgroup_value() {
 	local source=$1
 	local cgroup var current
 
-	if [ "x$CGROUP_UNIFIED" = "xyes" ]; then
+	if [ "$CGROUP_UNIFIED" = "yes" ]; then
 		cgroup=$CGROUP_PATH
 	else
 		var=${source%%.*}             # controller name (e.g. memory)
 		var=CGROUP_${var^^}_BASE_PATH # variable name (e.g. CGROUP_MEMORY_BASE_PATH)
-		eval cgroup=\$${var}${REL_CGROUPS_PATH}
+		eval cgroup=\$"${var}${REL_CGROUPS_PATH}"
 	fi
-	cat $cgroup/$source
+	cat "$cgroup/$source"
 }
 
 # Helper to check a if value in a cgroup file matches the expected one.
 function check_cgroup_value() {
 	local current
-	current="$(get_cgroup_value $1)"
+	current="$(get_cgroup_value "$1")"
 	local expected=$2
 
-	echo "current" $current "!?" "$expected"
+	echo "current $current !? $expected"
 	[ "$current" = "$expected" ]
 }
 
 # Helper to check a value in systemd.
 function check_systemd_value() {
 	[ -z "${RUNC_USE_SYSTEMD}" ] && return
-	local source=$1
+	local source="$1"
 	[ "$source" = "unsupported" ] && return
 	local expected="$2"
 	local expected2="$3"
 	local user=""
-	[ $(id -u) != "0" ] && user="--user"
+	[ "$(id -u)" != "0" ] && user="--user"
 
-	current=$(systemctl show $user --property $source $SD_UNIT_NAME | awk -F= '{print $2}')
+	current=$(systemctl show $user --property "$source" "$SD_UNIT_NAME" | awk -F= '{print $2}')
 	echo "systemd $source: current $current !? $expected $expected2"
-	[ "$current" = "$expected" ] || [ -n "$expected2" -a "$current" = "$expected2" ]
+	[ "$current" = "$expected" ] || [[ -n "$expected2" && "$current" = "$expected2" ]]
 }
 
 function check_cpu_quota() {
@@ -242,8 +245,8 @@ function check_cpu_shares() {
 function check_cpu_weight() {
 	local weight=$1
 
-	check_cgroup_value "cpu.weight" $weight
-	check_systemd_value "CPUWeight" $weight
+	check_cgroup_value "cpu.weight" "$weight"
+	check_systemd_value "CPUWeight" "$weight"
 }
 
 # Helper function to set a resources limit
@@ -316,7 +319,7 @@ function requires() {
 			;;
 		cgroups_swap)
 			init_cgroup_paths
-			if [ $CGROUP_UNIFIED = "no" -a ! -e "${CGROUP_MEMORY_BASE_PATH}/memory.memsw.limit_in_bytes" ]; then
+			if [ $CGROUP_UNIFIED = "no" ] && [ ! -e "${CGROUP_MEMORY_BASE_PATH}/memory.memsw.limit_in_bytes" ]; then
 				skip_me=1
 			fi
 			;;
@@ -345,8 +348,9 @@ function requires() {
 			fi
 			;;
 		smp)
-			local cpu_count=$(grep -c '^processor' /proc/cpuinfo)
-			if [ "$cpu_count" -lt 2 ]; then
+			local cpus
+			cpus=$(grep -c '^processor' /proc/cpuinfo)
+			if [ "$cpus" -lt 2 ]; then
 				skip_me=1
 			fi
 			;;
@@ -383,10 +387,10 @@ function retry() {
 		if [[ "$status" -eq 0 ]]; then
 			return 0
 		fi
-		sleep $delay
+		sleep "$delay"
 	done
 
-	echo "Command \"$@\" failed $attempts times. Output: $output"
+	echo "Command \"$*\" failed $attempts times. Output: $output"
 	false
 }
 
@@ -404,8 +408,8 @@ function wait_for_container() {
 
 function testcontainer() {
 	# test state of container
-	runc state $1
-	if [ $2 == "checkpointed" ]; then
+	runc state "$1"
+	if [ "$2" == "checkpointed" ]; then
 		[ "$status" -eq 1 ]
 		return
 	fi
@@ -417,7 +421,7 @@ function setup_recvtty() {
 	[ -z "$ROOT" ] && return 1 # must not be called without ROOT set
 	local dir="$ROOT/tty"
 
-	mkdir $dir
+	mkdir "$dir"
 	export CONSOLE_SOCKET="$dir/sock"
 
 	# We need to start recvtty in the background, so we double fork in the shell.
@@ -430,7 +434,7 @@ function teardown_recvtty() {
 
 	# When we kill recvtty, the container will also be killed.
 	if [ -f "$dir/pid" ]; then
-		kill -9 $(cat "$dir/pid")
+		kill -9 "$(cat "$dir/pid")"
 	fi
 
 	# Clean up the files that might be left over.
@@ -441,11 +445,11 @@ function setup_bundle() {
 	local image="$1"
 
 	# Root for various container directories (state, tty, bundle).
-	export ROOT=$(mktemp -d "$BATS_RUN_TMPDIR/runc.XXXXXX")
+	ROOT=$(mktemp -d "$BATS_RUN_TMPDIR/runc.XXXXXX")
 	mkdir -p "$ROOT/state" "$ROOT/bundle/rootfs"
 
 	setup_recvtty
-	cd "$ROOT/bundle"
+	cd "$ROOT/bundle" || return
 
 	tar --exclude './dev/*' -C rootfs -xf "$image"
 
@@ -468,7 +472,7 @@ function setup_debian() {
 function teardown_bundle() {
 	[ -z "$ROOT" ] && return 0 # nothing to teardown
 
-	cd "$INTEGRATION_ROOT"
+	cd "$INTEGRATION_ROOT" || return
 	teardown_recvtty
 	local ct
 	for ct in $(__runc list -q); do
