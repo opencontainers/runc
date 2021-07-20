@@ -15,13 +15,7 @@ func testUpdateDevices(t *testing.T, systemd bool) {
 	if testing.Short() {
 		return
 	}
-	rootfs, err := newRootfs()
-	ok(t, err)
-	defer remove(rootfs)
-	config := newTemplateConfig(t, &tParam{
-		rootfs:  rootfs,
-		systemd: systemd,
-	})
+	config := newTemplateConfig(t, &tParam{systemd: systemd})
 	container, err := newContainer(t, config)
 	ok(t, err)
 	defer destroyContainer(container)

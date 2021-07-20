@@ -22,10 +22,7 @@ func TestExecIn(t *testing.T) {
 	if testing.Short() {
 		return
 	}
-	rootfs, err := newRootfs()
-	ok(t, err)
-	defer remove(rootfs)
-	config := newTemplateConfig(t, &tParam{rootfs: rootfs})
+	config := newTemplateConfig(t, nil)
 	container, err := newContainer(t, config)
 	ok(t, err)
 	defer destroyContainer(container)
@@ -87,15 +84,7 @@ func testExecInRlimit(t *testing.T, userns bool) {
 		return
 	}
 
-	rootfs, err := newRootfs()
-	ok(t, err)
-	defer remove(rootfs)
-
-	config := newTemplateConfig(t, &tParam{
-		rootfs: rootfs,
-		userns: userns,
-	})
-
+	config := newTemplateConfig(t, &tParam{userns: userns})
 	container, err := newContainer(t, config)
 	ok(t, err)
 	defer destroyContainer(container)
@@ -146,11 +135,7 @@ func TestExecInAdditionalGroups(t *testing.T) {
 		return
 	}
 
-	rootfs, err := newRootfs()
-	ok(t, err)
-	defer remove(rootfs)
-
-	config := newTemplateConfig(t, &tParam{rootfs: rootfs})
+	config := newTemplateConfig(t, nil)
 	container, err := newContainer(t, config)
 	ok(t, err)
 	defer destroyContainer(container)
@@ -204,10 +189,7 @@ func TestExecInError(t *testing.T) {
 	if testing.Short() {
 		return
 	}
-	rootfs, err := newRootfs()
-	ok(t, err)
-	defer remove(rootfs)
-	config := newTemplateConfig(t, &tParam{rootfs: rootfs})
+	config := newTemplateConfig(t, nil)
 	container, err := newContainer(t, config)
 	ok(t, err)
 	defer destroyContainer(container)
@@ -258,10 +240,7 @@ func TestExecInTTY(t *testing.T) {
 		return
 	}
 	t.Skip("racy; see https://github.com/opencontainers/runc/issues/2425")
-	rootfs, err := newRootfs()
-	ok(t, err)
-	defer remove(rootfs)
-	config := newTemplateConfig(t, &tParam{rootfs: rootfs})
+	config := newTemplateConfig(t, nil)
 	container, err := newContainer(t, config)
 	ok(t, err)
 	defer destroyContainer(container)
@@ -352,10 +331,7 @@ func TestExecInEnvironment(t *testing.T) {
 	if testing.Short() {
 		return
 	}
-	rootfs, err := newRootfs()
-	ok(t, err)
-	defer remove(rootfs)
-	config := newTemplateConfig(t, &tParam{rootfs: rootfs})
+	config := newTemplateConfig(t, nil)
 	container, err := newContainer(t, config)
 	ok(t, err)
 	defer destroyContainer(container)
@@ -412,11 +388,7 @@ func TestExecinPassExtraFiles(t *testing.T) {
 	if testing.Short() {
 		return
 	}
-	rootfs, err := newRootfs()
-	ok(t, err)
-	defer remove(rootfs)
-
-	config := newTemplateConfig(t, &tParam{rootfs: rootfs})
+	config := newTemplateConfig(t, nil)
 	container, err := newContainer(t, config)
 	ok(t, err)
 	defer destroyContainer(container)
@@ -481,10 +453,7 @@ func TestExecInOomScoreAdj(t *testing.T) {
 	if testing.Short() {
 		return
 	}
-	rootfs, err := newRootfs()
-	ok(t, err)
-	defer remove(rootfs)
-	config := newTemplateConfig(t, &tParam{rootfs: rootfs})
+	config := newTemplateConfig(t, nil)
 	config.OomScoreAdj = ptrInt(200)
 	container, err := newContainer(t, config)
 	ok(t, err)
@@ -533,13 +502,7 @@ func TestExecInUserns(t *testing.T) {
 	if testing.Short() {
 		return
 	}
-	rootfs, err := newRootfs()
-	ok(t, err)
-	defer remove(rootfs)
-	config := newTemplateConfig(t, &tParam{
-		rootfs: rootfs,
-		userns: true,
-	})
+	config := newTemplateConfig(t, &tParam{userns: true})
 	container, err := newContainer(t, config)
 	ok(t, err)
 	defer destroyContainer(container)
