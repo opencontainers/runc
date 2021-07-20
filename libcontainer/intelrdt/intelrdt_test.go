@@ -6,7 +6,10 @@ import (
 	"errors"
 	"io"
 	"strings"
+	"sync"
 	"testing"
+
+	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
 func TestIntelRdtSetL3CacheSchema(t *testing.T) {
@@ -249,5 +252,58 @@ func TestFindIntelRdtMountpointDir(t *testing.T) {
 					tc.mountpoint, mp)
 			}
 		})
+	}
+}
+
+func TestIntelRdtManagerGetStatsNotSupportedType(t *testing.T) {
+	helper := NewIntelRdtTestUtil(t)
+	defer helper.cleanup()
+
+	intelrdt := intelRdtManager{
+		mu:        sync.Mutex{},
+		config:    helper.IntelRdtData.config,
+		id:        "",
+		path:      helper.IntelRdtPath,
+		groupType: "wrong_type",
+	}
+
+	_, err := intelrdt.GetStats()
+
+	expectedError := errors.New(`couldn't obtain IntelRdt stats: "wrong_type" is not supported group type`)
+
+	if err == nil {
+		t.Fatalf("Expected error: %v, got nil.", expectedError)
+	}
+
+	if err.Error() != expectedError.Error() {
+		t.Fatalf("Expected error: %v but got: %v.", expectedError, err)
+	}
+}
+
+func TestIntelRdtManagerSetNotSupportedType(t *testing.T) {
+	helper := NewIntelRdtTestUtil(t)
+	defer helper.cleanup()
+
+	intelrdt := intelRdtManager{
+		mu:        sync.Mutex{},
+		config:    helper.IntelRdtData.config,
+		id:        "",
+		path:      helper.IntelRdtPath,
+		groupType: "wrong_type",
+	}
+
+	err := intelrdt.Set(&configs.Config{IntelRdt: &configs.IntelRdt{
+		L3CacheSchema: "",
+		MemBwSchema:   "",
+	}})
+
+	expectedError := errors.New(`couldn't set IntelRdt configuration: "wrong_type" is not supported group type`)
+
+	if err == nil {
+		t.Fatalf("Expected error: %v, got nil.", expectedError)
+	}
+
+	if err.Error() != expectedError.Error() {
+		t.Fatalf("Expected error: %v but got: %v.", expectedError, err)
 	}
 }

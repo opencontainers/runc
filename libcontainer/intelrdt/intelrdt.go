@@ -23,35 +23,40 @@ import (
 /*
  * About Intel RDT features:
  * Intel platforms with new Xeon CPU support Resource Director Technology (RDT).
- * Cache Allocation Technology (CAT) and Memory Bandwidth Allocation (MBA) are
- * two sub-features of RDT.
+ * Cache Allocation Technology (CAT), Cache Monitoring Technology (CMT),
+ * Memory Bandwidth Allocation (MBA) and Memory Bandwidth Monitoring (MBM) are
+ * four sub-features of RDT.
  *
  * Cache Allocation Technology (CAT) provides a way for the software to restrict
  * cache allocation to a defined 'subset' of L3 cache which may be overlapping
  * with other 'subsets'. The different subsets are identified by class of
  * service (CLOS) and each CLOS has a capacity bitmask (CBM).
  *
+ * Cache Monitoring Technology (CMT) supports monitoring of the last-level cache (LLC) occupancy
+ * for each running thread simultaneously.
+ *
  * Memory Bandwidth Allocation (MBA) provides indirect and approximate throttle
  * over memory bandwidth for the software. A user controls the resource by
  * indicating the percentage of maximum memory bandwidth or memory bandwidth
  * limit in MBps unit if MBA Software Controller is enabled.
  *
- * More details about Intel RDT CAT and MBA can be found in the section 17.18
+ * Memory Bandwidth Monitoring (MBM) supports monitoring of total and local memory bandwidth
+ * for each running thread simultaneously.
+ *
+ * More details about Intel RDT CAT and MBA can be found in the section 17.18 and 17.19, Volume 3
  * of Intel Software Developer Manual:
  * https://software.intel.com/en-us/articles/intel-sdm
  *
  * About Intel RDT kernel interface:
- * In Linux 4.10 kernel or newer, the interface is defined and exposed via
+ * In Linux 4.14 kernel or newer, the interface is defined and exposed via
  * "resource control" filesystem, which is a "cgroup-like" interface.
  *
  * Comparing with cgroups, it has similar process management lifecycle and
  * interfaces in a container. But unlike cgroups' hierarchy, it has single level
  * filesystem layout.
  *
- * CAT and MBA features are introduced in Linux 4.10 and 4.12 kernel via
- * "resource control" filesystem.
- *
  * Intel RDT "resource control" filesystem hierarchy:
+ *
  * mount -t resctrl resctrl /sys/fs/resctrl
  * tree /sys/fs/resctrl
  * /sys/fs/resctrl/
@@ -69,16 +74,34 @@ import (
  * |       |-- delay_linear
  * |       |-- min_bandwidth
  * |       |-- num_closids
- * |-- ...
+ * |-- mon_groups
+ *     |-- <container_id>
+ *         |-- ...
+ *         |-- mon_data
+ *   	         |-- mon_L3_00
+ *   	             |-- llc_occupancy
+ *                    |-- mbm_local_bytes
+ *                    |-- mbm_total_bytes
+ *                |-- ...
+ *         |-- tasks
  * |-- schemata
  * |-- tasks
  * |-- <container_id>
  *     |-- ...
- *     |-- schemata
+ *     |-- mon_data
+ *         |-- mon_L3_00
+ *                |-- llc_occupancy
+ *                |-- mbm_local_bytes
+ *             |-- mbm_total_bytes
+ *         |-- ...
  *     |-- tasks
+ *     |-- schemata
+ * |-- ...
+ *
  *
  * For runc, we can make use of `tasks` and `schemata` configuration for L3
- * cache and memory bandwidth resources constraints.
+ * cache and memory bandwidth resources constraints, `mon_data` directory for
+ * CMT and MBM statistics.
  *
  * The file `tasks` has a list of tasks that belongs to this group (e.g.,
  * <container_id>" group). Tasks can be added to a group by writing the task ID
@@ -92,7 +115,9 @@ import (
  * L3 cache schema:
  * It has allocation bitmasks/values for L3 cache on each socket, which
  * contains L3 cache id and capacity bitmask (CBM).
- * 	Format: "L3:<cache_id0>=<cbm0>;<cache_id1>=<cbm1>;..."
+ *
+ *	  Format: "L3:<cache_id0>=<cbm0>;<cache_id1>=<cbm1>;..."
+ *
  * For example, on a two-socket machine, the schema line could be "L3:0=ff;1=c0"
  * which means L3 cache id 0's CBM is 0xff, and L3 cache id 1's CBM is 0xc0.
  *
@@ -106,7 +131,9 @@ import (
  * Memory bandwidth schema:
  * It has allocation values for memory bandwidth on each socket, which contains
  * L3 cache id and memory bandwidth.
- * 	Format: "MB:<cache_id0>=bandwidth0;<cache_id1>=bandwidth1;..."
+ *
+ *	  Format: "MB:<cache_id0>=bandwidth0;<cache_id1>=bandwidth1;..."
+ *
  * For example, on a two-socket machine, the schema line could be "MB:0=20;1=70"
  *
  * The minimum bandwidth percentage value for each CPU model is predefined and
@@ -131,7 +158,9 @@ import (
  * For more information about Intel RDT kernel interface:
  * https://www.kernel.org/doc/Documentation/x86/intel_rdt_ui.txt
  *
+ *
  * An example for runc:
+ *
  * Consider a two-socket machine with two L3 caches where the default CBM is
  * 0x7ff and the max CBM length is 11 bits, and minimum memory bandwidth of 10%
  * with a memory bandwidth granularity of 10%.
@@ -144,8 +173,18 @@ import (
  *     "intelRdt": {
  *         "l3CacheSchema": "L3:0=7f0;1=1f",
  *         "memBwSchema": "MB:0=20;1=70"
- * 	}
+ *	  }
  * }
+ *
+ * Another example:
+ *
+ * We only want to monitor memory bandwidth and llc occupancy.
+ * "linux": {
+ *     "intelRdt": {
+ *         "monitoring": true
+ *	  }
+ * }
+ *
  */
 
 type Manager interface {
@@ -168,22 +207,46 @@ type Manager interface {
 
 // This implements interface Manager
 type intelRdtManager struct {
-	mu     sync.Mutex
-	config *configs.Config
-	id     string
-	path   string
+	mu        sync.Mutex
+	config    *configs.Config
+	id        string
+	path      string
+	groupType string
 }
 
 func NewManager(config *configs.Config, id string, path string) Manager {
+	if config.IntelRdt == nil {
+		return nil
+	}
+
+	var groupType string
+	if config.IntelRdt.L3CacheSchema != "" || config.IntelRdt.MemBwSchema != "" {
+		groupType = controlGroupType
+	} else if config.IntelRdt.EnableCMT || config.IntelRdt.EnableMBM {
+		groupType = monitoringGroupType
+	} else {
+		return nil
+	}
+
 	return &intelRdtManager{
-		config: config,
-		id:     id,
-		path:   path,
+		config:    config,
+		id:        id,
+		path:      path,
+		groupType: groupType,
 	}
 }
 
 const (
-	intelRdtTasks = "tasks"
+	intelRdtTasks       = "tasks"
+	monitoringGroupRoot = "mon_groups"
+
+	// See "Resource alloc and monitor groups" part here:
+	// https://www.kernel.org/doc/Documentation/x86/intel_rdt_ui.txt
+	monitoringGroupType = "MON"
+	controlGroupType    = "CTRL_MON"
+
+	processTask = "task"
+	processPath = "/proc"
 )
 
 var (
@@ -532,14 +595,22 @@ func IsMBAScEnabled() bool {
 }
 
 // Get the 'container_id' path in Intel RDT "resource control" filesystem
-func GetIntelRdtPath(id string) (string, error) {
+func GetIntelRdtPath(id string, groupType string) (string, error) {
 	rootPath, err := getIntelRdtRoot()
 	if err != nil {
 		return "", err
 	}
 
-	path := filepath.Join(rootPath, id)
-	return path, nil
+	switch groupType {
+	case controlGroupType:
+		path := filepath.Join(rootPath, id)
+		return path, nil
+	case monitoringGroupType:
+		path := filepath.Join(rootPath, monitoringGroupRoot, id)
+		return path, nil
+	default:
+		return "", notSupportedGroupType(groupType)
+	}
 }
 
 // Applies Intel RDT configuration to the process with the specified pid
@@ -555,7 +626,7 @@ func (m *intelRdtManager) Apply(pid int) (err error) {
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	path, err := d.join(m.id)
+	path, err := d.join(m.id, m.groupType)
 	if err != nil {
 		return err
 	}
@@ -579,7 +650,7 @@ func (m *intelRdtManager) Destroy() error {
 // restore the object later
 func (m *intelRdtManager) GetPath() string {
 	if m.path == "" {
-		m.path, _ = GetIntelRdtPath(m.id)
+		m.path, _ = GetIntelRdtPath(m.id, m.groupType)
 	}
 	return m.path
 }
@@ -591,6 +662,10 @@ func (m *intelRdtManager) GetStats() (*Stats, error) {
 		return nil, nil
 	}
 
+	if m.groupType != controlGroupType && m.groupType != monitoringGroupType {
+		return nil, fmt.Errorf(`couldn't obtain IntelRdt stats: %v`, notSupportedGroupType(m.groupType))
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	stats := newStats()
@@ -599,69 +674,73 @@ func (m *intelRdtManager) GetStats() (*Stats, error) {
 	if err != nil {
 		return nil, err
 	}
-	// The read-only L3 cache and memory bandwidth schemata in root
-	tmpRootStrings, err := getIntelRdtParamString(rootPath, "schemata")
-	if err != nil {
-		return nil, err
-	}
-	schemaRootStrings := strings.Split(tmpRootStrings, "\n")
 
-	// The L3 cache and memory bandwidth schemata in 'container_id' group
 	containerPath := m.GetPath()
-	tmpStrings, err := getIntelRdtParamString(containerPath, "schemata")
-	if err != nil {
-		return nil, err
-	}
-	schemaStrings := strings.Split(tmpStrings, "\n")
 
-	if IsCATEnabled() {
-		// The read-only L3 cache information
-		l3CacheInfo, err := getL3CacheInfo()
+	if m.groupType == controlGroupType {
+		// The read-only L3 cache and memory bandwidth schemata in root
+		tmpRootStrings, err := getIntelRdtParamString(rootPath, "schemata")
 		if err != nil {
 			return nil, err
 		}
-		stats.L3CacheInfo = l3CacheInfo
+		schemaRootStrings := strings.Split(tmpRootStrings, "\n")
 
-		// The read-only L3 cache schema in root
-		for _, schemaRoot := range schemaRootStrings {
-			if strings.Contains(schemaRoot, "L3") {
-				stats.L3CacheSchemaRoot = strings.TrimSpace(schemaRoot)
-			}
-		}
-
-		// The L3 cache schema in 'container_id' group
-		for _, schema := range schemaStrings {
-			if strings.Contains(schema, "L3") {
-				stats.L3CacheSchema = strings.TrimSpace(schema)
-			}
-		}
-	}
-
-	if IsMBAEnabled() {
-		// The read-only memory bandwidth information
-		memBwInfo, err := getMemBwInfo()
+		// The L3 cache and memory bandwidth schemata in 'container_id' group
+		tmpStrings, err := getIntelRdtParamString(containerPath, "schemata")
 		if err != nil {
 			return nil, err
 		}
-		stats.MemBwInfo = memBwInfo
+		schemaStrings := strings.Split(tmpStrings, "\n")
 
-		// The read-only memory bandwidth information
-		for _, schemaRoot := range schemaRootStrings {
-			if strings.Contains(schemaRoot, "MB") {
-				stats.MemBwSchemaRoot = strings.TrimSpace(schemaRoot)
+		if IsCATEnabled() {
+			// The read-only L3 cache information
+			l3CacheInfo, err := getL3CacheInfo()
+			if err != nil {
+				return nil, err
+			}
+			stats.L3CacheInfo = l3CacheInfo
+
+			// The read-only L3 cache schema in root
+			for _, schemaRoot := range schemaRootStrings {
+				if strings.Contains(schemaRoot, "L3") {
+					stats.L3CacheSchemaRoot = strings.TrimSpace(schemaRoot)
+				}
+			}
+
+			// The L3 cache schema in 'container_id' group
+			for _, schema := range schemaStrings {
+				if strings.Contains(schema, "L3") {
+					stats.L3CacheSchema = strings.TrimSpace(schema)
+				}
 			}
 		}
 
-		// The memory bandwidth schema in 'container_id' group
-		for _, schema := range schemaStrings {
-			if strings.Contains(schema, "MB") {
-				stats.MemBwSchema = strings.TrimSpace(schema)
+		if IsMBAEnabled() {
+			// The read-only memory bandwidth information
+			memBwInfo, err := getMemBwInfo()
+			if err != nil {
+				return nil, err
+			}
+			stats.MemBwInfo = memBwInfo
+
+			// The read-only memory bandwidth information
+			for _, schemaRoot := range schemaRootStrings {
+				if strings.Contains(schemaRoot, "MB") {
+					stats.MemBwSchemaRoot = strings.TrimSpace(schemaRoot)
+				}
+			}
+
+			// The memory bandwidth schema in 'container_id' group
+			for _, schema := range schemaStrings {
+				if strings.Contains(schema, "MB") {
+					stats.MemBwSchema = strings.TrimSpace(schema)
+				}
 			}
 		}
 	}
 
-	if IsMBMEnabled() || IsCMTEnabled() {
-		err = getMonitoringStats(containerPath, stats)
+	if m.config.IntelRdt.EnableCMT || m.config.IntelRdt.EnableMBM {
+		err = getMonitoringStats(containerPath, stats, m.config.IntelRdt.EnableCMT, m.config.IntelRdt.EnableMBM)
 		if err != nil {
 			return nil, err
 		}
@@ -718,11 +797,23 @@ func (m *intelRdtManager) Set(container *configs.Config) error {
 	// "MB:0=5000;1=7000" which means 5000 MBps memory bandwidth limit on
 	// socket 0 and 7000 MBps memory bandwidth limit on socket 1.
 	if container.IntelRdt != nil {
-		path := m.GetPath()
+		if m.groupType != monitoringGroupType && m.groupType != controlGroupType {
+			return fmt.Errorf("couldn't set IntelRdt configuration: %v", notSupportedGroupType(m.groupType))
+		}
+
 		l3CacheSchema := container.IntelRdt.L3CacheSchema
 		memBwSchema := container.IntelRdt.MemBwSchema
 
-		// Write a single joint schema string to schemata file
+		if l3CacheSchema != "" || memBwSchema != "" {
+			// Schema can be set only in Control Group.
+			if m.groupType == monitoringGroupType {
+				return fmt.Errorf("couldn't set IntelRdt l3CacheSchema or memBwSchema for MON group")
+			}
+		}
+
+		path := m.GetPath()
+
+		// Write a single joint schemata string to schemata file
 		if l3CacheSchema != "" && memBwSchema != "" {
 			if err := writeFile(path, "schemata", l3CacheSchema+"\n"+memBwSchema); err != nil {
 				return err
@@ -747,16 +838,30 @@ func (m *intelRdtManager) Set(container *configs.Config) error {
 	return nil
 }
 
-func (raw *intelRdtData) join(id string) (string, error) {
-	path := filepath.Join(raw.root, id)
-	if err := os.MkdirAll(path, 0o755); err != nil {
-		return "", newLastCmdError(err)
-	}
+func (raw *intelRdtData) join(id string, groupType string) (string, error) {
+	switch groupType {
+	case controlGroupType:
+		path := filepath.Join(raw.root, id)
+		if err := os.MkdirAll(path, 0o755); err != nil {
+			return "", newLastCmdError(err)
+		}
+		if err := WriteIntelRdtTasks(path, raw.pid); err != nil {
+			return "", newLastCmdError(err)
+		}
+		return path, nil
+	case monitoringGroupType:
+		path := filepath.Join(raw.root, monitoringGroupRoot, id)
+		if err := os.MkdirAll(path, 0o755); err != nil {
+			return "", newLastCmdError(err)
+		}
 
-	if err := WriteIntelRdtTasks(path, raw.pid); err != nil {
-		return "", err
+		if err := WriteIntelRdtTasks(path, raw.pid); err != nil {
+			return "", newLastCmdError(err)
+		}
+		return path, nil
+	default:
+		return "", notSupportedGroupType(groupType)
 	}
-	return path, nil
 }
 
 func newLastCmdError(err error) error {
@@ -765,4 +870,25 @@ func newLastCmdError(err error) error {
 		return fmt.Errorf("%w, last_cmd_status: %s", err, status)
 	}
 	return err
+}
+
+func notSupportedGroupType(groupType string) error {
+	return fmt.Errorf("%q is not supported group type", groupType)
+}
+
+func GetAllProcessPids(pid int) ([]int, error) {
+	threadFiles, err := ioutil.ReadDir(filepath.Join(processPath, strconv.Itoa(pid), processTask))
+	if err != nil {
+		return nil, err
+	}
+	var pids []int
+	for _, file := range threadFiles {
+		pid, err := strconv.Atoi(file.Name())
+		if err != nil {
+			return nil, err
+		}
+		pids = append(pids, pid)
+	}
+
+	return pids, nil
 }

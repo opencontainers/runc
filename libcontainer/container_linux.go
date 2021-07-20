@@ -1896,16 +1896,17 @@ func (c *linuxContainer) currentState() (*State, error) {
 		startTime           uint64
 		externalDescriptors []string
 		pid                 = -1
+		intelRdtPath        string
 	)
 	if c.initProcess != nil {
 		pid = c.initProcess.pid()
 		startTime, _ = c.initProcess.startTime()
 		externalDescriptors = c.initProcess.externalDescriptors()
 	}
-	intelRdtPath, err := intelrdt.GetIntelRdtPath(c.ID())
-	if err != nil {
-		intelRdtPath = ""
+	if c.intelRdtManager != nil {
+		intelRdtPath = c.intelRdtManager.GetPath()
 	}
+
 	state := &State{
 		BaseState: BaseState{
 			ID:                   c.ID(),
