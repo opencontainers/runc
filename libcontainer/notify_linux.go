@@ -5,10 +5,10 @@ package libcontainer
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
+	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"golang.org/x/sys/unix"
 )
 
@@ -33,13 +33,14 @@ func registerMemoryEvent(cgDir string, evName string, arg string) (<-chan struct
 
 	eventfd := os.NewFile(uintptr(fd), "eventfd")
 
-	eventControlPath := filepath.Join(cgDir, "cgroup.event_control")
+	const cgEvCtlFile = "cgroup.event_control"
 	data := fmt.Sprintf("%d %d %s", eventfd.Fd(), evFile.Fd(), arg)
-	if err := ioutil.WriteFile(eventControlPath, []byte(data), 0o700); err != nil {
+	if err := cgroups.WriteFile(cgDir, cgEvCtlFile, data); err != nil {
 		eventfd.Close()
 		evFile.Close()
 		return nil, err
 	}
+	eventControlPath := filepath.Join(cgDir, cgEvCtlFile)
 	ch := make(chan struct{})
 	go func() {
 		defer func() {
