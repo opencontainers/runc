@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/opencontainers/runc/internal/configs/validate"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/opencontainers/runc/libcontainer/configs/validate"
 	"golang.org/x/sys/unix"
 )
 
@@ -36,6 +36,7 @@ func TestValidateWithInvalidRootfs(t *testing.T) {
 
 	validator := validate.New()
 	err := validator.Validate(config)
+	t.Logf("error: %v", err)
 	if err == nil {
 		t.Error("Expected error to occur but it was nil")
 	}

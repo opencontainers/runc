@@ -6,8 +6,8 @@ import (
 	"runtime"
 	"strconv"
 
+	"github.com/opencontainers/runc/internal/logs"
 	"github.com/opencontainers/runc/libcontainer"
-	"github.com/opencontainers/runc/libcontainer/logs"
 	_ "github.com/opencontainers/runc/libcontainer/nsenter"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"

@@ -16,12 +16,12 @@ import (
 	"github.com/moby/sys/mountinfo"
 	"golang.org/x/sys/unix"
 
+	"github.com/opencontainers/runc/internal/configs/validate"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fs"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fs2"
 	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/opencontainers/runc/libcontainer/configs/validate"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runc/libcontainer/utils"
 )
@@ -251,13 +251,13 @@ type LinuxFactory struct {
 
 func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, error) {
 	if l.Root == "" {
-		return nil, &ConfigError{"invalid root"}
+		return nil, fmt.Errorf("%w: invalid root", ErrInvalidConfig)
 	}
 	if err := l.validateID(id); err != nil {
 		return nil, err
 	}
 	if err := l.Validator.Validate(config); err != nil {
-		return nil, &ConfigError{err.Error()}
+		return nil, fmt.Errorf("%w: %v", ErrInvalidConfig, err)
 	}
 	containerRoot, err := securejoin.SecureJoin(l.Root, id)
 	if err != nil {
@@ -294,7 +294,7 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 
 func (l *LinuxFactory) Load(id string) (Container, error) {
 	if l.Root == "" {
-		return nil, &ConfigError{"invalid root"}
+		return nil, fmt.Errorf("%w: invalid root", ErrInvalidConfig)
 	}
 	// when load, we need to check id is valid or not.
 	if err := l.validateID(id); err != nil {
