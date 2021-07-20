@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/opencontainers/runc/internal/configs/validate"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/opencontainers/runc/libcontainer/configs/validate"
 	"golang.org/x/sys/unix"
 )
 
