@@ -1,3 +1,5 @@
+# github.com/AdaLogics/go-fuzz-headers v0.0.0-20210703113622-56d2d1c0e65d
+github.com/AdaLogics/go-fuzz-headers
 # github.com/bits-and-blooms/bitset v1.2.0
 github.com/bits-and-blooms/bitset
 # github.com/checkpoint-restore/go-criu/v5 v5.0.0

@@ -1,3 +1,5 @@
+github.com/AdaLogics/go-fuzz-headers v0.0.0-20210703113622-56d2d1c0e65d h1:raauSg++sBgBnNPDRyCbQ882x2RdJ/jTONZF9jiFNlc=
+github.com/AdaLogics/go-fuzz-headers v0.0.0-20210703113622-56d2d1c0e65d/go.mod h1:CzsSbkDixRphAF5hS6wbMKq0eI6ccJRb7/A0M6JBnwg=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/bits-and-blooms/bitset v1.2.0 h1:Kn4yilvwNtMACtf1eYDlG8H77R07mZSPbMjLyS07ChA=
 github.com/bits-and-blooms/bitset v1.2.0/go.mod h1:gIdJ4wp64HaoK2YrL1Q5/N7Y16edYb8uY+O0FJTyyDA=
