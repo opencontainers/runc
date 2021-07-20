@@ -1,6 +1,6 @@
 # github.com/bits-and-blooms/bitset v1.2.0
 github.com/bits-and-blooms/bitset
-# github.com/checkpoint-restore/go-criu/v5 v5.0.0
+# github.com/checkpoint-restore/go-criu/v5 v5.1.0
 github.com/checkpoint-restore/go-criu/v5
 github.com/checkpoint-restore/go-criu/v5/rpc
 # github.com/cilium/ebpf v0.6.2
@@ -23,8 +23,6 @@ github.com/cyphar/filepath-securejoin
 github.com/docker/go-units
 # github.com/godbus/dbus/v5 v5.0.4
 github.com/godbus/dbus/v5
-# github.com/golang/protobuf v1.5.0
-github.com/golang/protobuf/proto
 # github.com/moby/sys/mountinfo v0.4.1
 github.com/moby/sys/mountinfo
 # github.com/mrunalp/fileutils v0.5.0
@@ -83,9 +81,7 @@ google.golang.org/protobuf/internal/set
 google.golang.org/protobuf/internal/strs
 google.golang.org/protobuf/internal/version
 google.golang.org/protobuf/proto
-google.golang.org/protobuf/reflect/protodesc
 google.golang.org/protobuf/reflect/protoreflect
 google.golang.org/protobuf/reflect/protoregistry
 google.golang.org/protobuf/runtime/protoiface
 google.golang.org/protobuf/runtime/protoimpl
-google.golang.org/protobuf/types/descriptorpb
