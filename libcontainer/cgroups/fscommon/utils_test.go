@@ -25,16 +25,11 @@ func init() {
 
 func TestGetCgroupParamsInt(t *testing.T) {
 	// Setup tempdir.
-	tempDir, err := ioutil.TempDir("", "cgroup_utils_test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 	tempFile := filepath.Join(tempDir, cgroupFile)
 
 	// Success.
-	err = ioutil.WriteFile(tempFile, []byte(floatString), 0o755)
-	if err != nil {
+	if err := ioutil.WriteFile(tempFile, []byte(floatString), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	value, err := GetCgroupParamUint(tempDir, cgroupFile)

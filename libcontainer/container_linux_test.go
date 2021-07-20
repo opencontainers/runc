@@ -4,7 +4,6 @@ package libcontainer
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -339,14 +338,8 @@ func TestGetContainerStateAfterUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rootDir, err := ioutil.TempDir("", "TestGetContainerStateAfterUpdate")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(rootDir)
-
 	container := &linuxContainer{
-		root: rootDir,
+		root: t.TempDir(),
 		id:   "myid",
 		config: &configs.Config{
 			Namespaces: []configs.Namespace{
