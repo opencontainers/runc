@@ -38,6 +38,10 @@ func (m *mockCgroupManager) GetStats() (*cgroups.Stats, error) {
 	return m.stats, nil
 }
 
+func (m *mockCgroupManager) SetUID(uid *int) error {
+	return nil
+}
+
 func (m *mockCgroupManager) Apply(pid int) error {
 	return nil
 }

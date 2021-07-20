@@ -99,6 +99,10 @@ func genV1ResourcesProperties(r *configs.Resources, cm *dbusConnManager) ([]syst
 	return properties, nil
 }
 
+func (m *legacyManager) SetUID(_ *int) error {
+	return errors.New("SetUID not supported")
+}
+
 func (m *legacyManager) Apply(pid int) error {
 	var (
 		c          = m.cgroups

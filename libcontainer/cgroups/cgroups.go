@@ -12,6 +12,11 @@ type Manager interface {
 	// can be used to merely create a cgroup.
 	Apply(pid int) error
 
+	// Specify that the cgroup should be owned by a particular uid.
+	// This must be called before Apply.  Only the v2 unified manager
+	// supports this operation.
+	SetUID(uid *int) error
+
 	// GetPids returns the PIDs of all processes inside the cgroup.
 	GetPids() ([]int, error)
 

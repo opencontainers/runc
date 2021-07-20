@@ -184,6 +184,10 @@ func isIgnorableError(rootless bool, err error) bool {
 	return false
 }
 
+func (m *manager) SetUID(_ *int) error {
+	return errors.New("SetUID not supported")
+}
+
 func (m *manager) Apply(pid int) (err error) {
 	if m.cgroups == nil {
 		return nil

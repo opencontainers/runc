@@ -27,6 +27,9 @@ type unifiedManager struct {
 	path     string
 	rootless bool
 	dbus     *dbusConnManager
+	// host UID corresponding to UID 0 in container namespace;
+	// or nil if cgroup should not be chown'd
+	uid *int
 }
 
 func NewUnifiedManager(config *configs.Cgroup, path string, rootless bool) cgroups.Manager {
@@ -35,7 +38,16 @@ func NewUnifiedManager(config *configs.Cgroup, path string, rootless bool) cgrou
 		path:     path,
 		rootless: rootless,
 		dbus:     newDbusConnManager(rootless),
+		uid:      nil,
 	}
+}
+
+func (m *unifiedManager) SetUID(uid *int) error {
+	if uid != nil && *uid < 0 {
+		return fmt.Errorf("cgroup owner uid is not valid: %d", uid)
+	}
+	m.uid = uid
+	return nil
 }
 
 // unifiedResToSystemdProps tries to convert from Cgroup.Resources.Unified
@@ -292,6 +304,38 @@ func (m *unifiedManager) Apply(pid int) error {
 	if err := fs2.CreateCgroupPath(m.path, m.cgroups); err != nil {
 		return err
 	}
+
+	// When systemd creates a unit owned by a user other than the
+	// user running the service manager (usually root), it chowns
+	// the cgroup directory and the three files mentioned below.
+	// This enables the service to create new scopes/slices and set
+	// the cgroup for its child processes/threads.
+	//
+	// We follow systemd's lead and chown only those same files.
+	goodToChown := map[string]struct{}{
+		"cgroup.procs":           struct{}{},
+		"cgroup.subtree_control": struct{}{},
+		"cgroup.threads":         struct{}{},
+	}
+	if m.uid != nil {
+		// TODO: when go < 1.16 is no longer supported, switch to filepath.WalkDir
+		err := filepath.Walk(m.path, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if path == m.path {
+				return os.Chown(path, *m.uid, -1)
+			}
+			if _, ok := goodToChown[info.Name()]; ok {
+				return os.Chown(path, *m.uid, -1)
+			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

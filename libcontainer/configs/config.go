@@ -206,6 +206,11 @@ type Config struct {
 	// RootlessCgroups is set when unlikely to have the full access to cgroups.
 	// When RootlessCgroups is set, cgroups errors are ignored.
 	RootlessCgroups bool `json:"rootless_cgroups,omitempty"`
+
+	// ChownCgroup is set when the "org.opencontainers.runc.chown-cgroup" annotation
+	// is "true".  When enabled, runc will chown the cgroup to the host uid corresponding
+	// to the uid 0 in the container's user namespace.
+	ChownCgroup bool `json:"chown_cgroup,omitempty"`
 }
 
 type (

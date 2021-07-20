@@ -274,6 +274,7 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 	if err := os.Chown(containerRoot, unix.Geteuid(), unix.Getegid()); err != nil {
 		return nil, err
 	}
+
 	c := &linuxContainer{
 		id:            id,
 		root:          containerRoot,
@@ -284,6 +285,16 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 		newuidmapPath: l.NewuidmapPath,
 		newgidmapPath: l.NewgidmapPath,
 		cgroupManager: l.NewCgroupsManager(config.Cgroups, nil),
+	}
+	if config.ChownCgroup {
+		uid, err := config.HostRootUID()
+		if err != nil {
+			return nil, err
+		}
+		err = c.cgroupManager.SetUID(&uid)
+		if err != nil {
+			return nil, err
+		}
 	}
 	if l.NewIntelRdtManager != nil {
 		c.intelRdtManager = l.NewIntelRdtManager(config, id, "")
@@ -313,6 +324,7 @@ func (l *LinuxFactory) Load(id string) (Container, error) {
 		processStartTime: state.InitProcessStartTime,
 		fds:              state.ExternalDescriptors,
 	}
+
 	c := &linuxContainer{
 		initProcess:          r,
 		initProcessStartTime: state.InitProcessStartTime,
@@ -326,6 +338,16 @@ func (l *LinuxFactory) Load(id string) (Container, error) {
 		cgroupManager:        l.NewCgroupsManager(state.Config.Cgroups, state.CgroupPaths),
 		root:                 containerRoot,
 		created:              state.Created,
+	}
+	if state.Config.ChownCgroup {
+		uid, err := state.Config.HostRootUID()
+		if err != nil {
+			return nil, err
+		}
+		err = c.cgroupManager.SetUID(&uid)
+		if err != nil {
+			return nil, err
+		}
 	}
 	if l.NewIntelRdtManager != nil {
 		c.intelRdtManager = l.NewIntelRdtManager(&state.Config, id, state.IntelRdtPath)
