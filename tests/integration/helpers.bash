@@ -7,7 +7,7 @@ if [ -z "$BATS_RUN_TMPDIR" ]; then
 fi
 
 # Root directory of integration tests.
-INTEGRATION_ROOT=$(dirname "$(readlink -f "$BASH_SOURCE")")
+INTEGRATION_ROOT=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
 
 # Download images, get *_IMAGE variables.
 IMAGES=$("${INTEGRATION_ROOT}"/get-images.sh)
@@ -16,8 +16,10 @@ unset IMAGES
 
 RUNC="${INTEGRATION_ROOT}/../../runc"
 RECVTTY="${INTEGRATION_ROOT}/../../contrib/cmd/recvtty/recvtty"
+SD_HELPER="${INTEGRATION_ROOT}/../../contrib/cmd/sd-helper/sd-helper"
 
 # Test data path.
+# shellcheck disable=SC2034
 TESTDATA="${INTEGRATION_ROOT}/testdata"
 
 # CRIU PATH
@@ -38,7 +40,9 @@ function runc() {
 
 	# Some debug information to make life easier. bats will only print it if the
 	# test failed, in which case the output is useful.
-	echo "runc $@ (status=$status):" >&2
+	# shellcheck disable=SC2154
+	echo "runc $* (status=$status):" >&2
+	# shellcheck disable=SC2154
 	echo "$output" >&2
 }
 
@@ -47,44 +51,34 @@ function __runc() {
 	"$RUNC" ${RUNC_USE_SYSTEMD+--systemd-cgroup} --root "$ROOT/state" "$@"
 }
 
-# Wrapper for runc spec, which takes only one argument (the bundle path).
+# Wrapper for runc spec.
 function runc_spec() {
-	! [[ "$#" > 1 ]]
-
 	local args=()
-	local bundle=""
-
 	if [ "$ROOTLESS" -ne 0 ]; then
 		args+=("--rootless")
-	fi
-	if [ "$#" -ne 0 ]; then
-		bundle="$1"
-		args+=("--bundle" "$bundle")
 	fi
 
 	runc spec "${args[@]}"
 
 	# Always add additional mappings if we have idmaps.
 	if [[ "$ROOTLESS" -ne 0 ]] && [[ "$ROOTLESS_FEATURES" == *"idmap"* ]]; then
-		runc_rootless_idmap "$bundle"
+		runc_rootless_idmap
 	fi
 }
 
 # Helper function to reformat config.json file. Input uses jq syntax.
 function update_config() {
-	bundle="${2:-.}"
-	jq "$1" "$bundle/config.json" | awk 'BEGIN{RS="";getline<"-";print>ARGV[1]}' "$bundle/config.json"
+	jq "$1" "./config.json" | awk 'BEGIN{RS="";getline<"-";print>ARGV[1]}' "./config.json"
 }
 
 # Shortcut to add additional uids and gids, based on the values set as part of
 # a rootless configuration.
 function runc_rootless_idmap() {
-	bundle="${1:-.}"
 	update_config ' .mounts |= map((select(.type == "devpts") | .options += ["gid=5"]) // .)
 			| .linux.uidMappings += [{"hostID": '"$ROOTLESS_UIDMAP_START"', "containerID": 1000, "size": '"$ROOTLESS_UIDMAP_LENGTH"'}]
 			| .linux.gidMappings += [{"hostID": '"$ROOTLESS_GIDMAP_START"', "containerID": 100, "size": 1}]
-			| .linux.gidMappings += [{"hostID": '"$(($ROOTLESS_GIDMAP_START + 10))"', "containerID": 1, "size": 20}]
-			| .linux.gidMappings += [{"hostID": '"$(($ROOTLESS_GIDMAP_START + 100))"', "containerID": 1000, "size": '"$(($ROOTLESS_GIDMAP_LENGTH - 1000))"'}]' $bundle
+			| .linux.gidMappings += [{"hostID": '"$((ROOTLESS_GIDMAP_START + 10))"', "containerID": 1, "size": 20}]
+			| .linux.gidMappings += [{"hostID": '"$((ROOTLESS_GIDMAP_START + 100))"', "containerID": 1000, "size": '"$((ROOTLESS_GIDMAP_LENGTH - 1000))"'}]'
 }
 
 # Returns systemd version as a number (-1 if systemd is not enabled/supported).
@@ -131,32 +125,92 @@ function init_cgroup_paths() {
 		CGROUP_SUBSYSTEMS=$(awk '!/^#/ {print $1}' /proc/cgroups)
 		local g base_path
 		for g in ${CGROUP_SUBSYSTEMS}; do
-			base_path=$(gawk '$(NF-2) == "cgroup" && $NF ~ /\<'${g}'\>/ { print $5; exit }' /proc/self/mountinfo)
+			base_path=$(gawk '$(NF-2) == "cgroup" && $NF ~ /\<'"${g}"'\>/ { print $5; exit }' /proc/self/mountinfo)
 			test -z "$base_path" && continue
-			eval CGROUP_${g^^}_BASE_PATH="${base_path}"
+			eval CGROUP_"${g^^}"_BASE_PATH="${base_path}"
 		done
 	fi
 }
 
+function create_parent() {
+	if [ -n "$RUNC_USE_SYSTEMD" ]; then
+		[ -z "$SD_PARENT_NAME" ] && return
+		"$SD_HELPER" --parent machine.slice start "$SD_PARENT_NAME"
+	else
+		[ -z "$REL_PARENT_PATH" ] && return
+		if [ "$CGROUP_UNIFIED" == "yes" ]; then
+			mkdir "/sys/fs/cgroup$REL_PARENT_PATH"
+		else
+			local subsys
+			for subsys in ${CGROUP_SUBSYSTEMS}; do
+				# Have to ignore EEXIST (-p) as some subsystems
+				# are mounted together (e.g. cpu,cpuacct), so
+				# the path is created more than once.
+				mkdir -p "/sys/fs/cgroup/$subsys$REL_PARENT_PATH"
+			done
+		fi
+	fi
+}
+
+function remove_parent() {
+	if [ -n "$RUNC_USE_SYSTEMD" ]; then
+		[ -z "$SD_PARENT_NAME" ] && return
+		"$SD_HELPER" --parent machine.slice stop "$SD_PARENT_NAME"
+	else
+		[ -z "$REL_PARENT_PATH" ] && return
+		if [ "$CGROUP_UNIFIED" == "yes" ]; then
+			rmdir "/sys/fs/cgroup/$REL_PARENT_PATH"
+		else
+			local subsys
+			for subsys in ${CGROUP_SUBSYSTEMS} systemd; do
+				rmdir "/sys/fs/cgroup/$subsys/$REL_PARENT_PATH"
+			done
+		fi
+	fi
+	unset SD_PARENT_NAME
+	unset REL_PARENT_PATH
+}
+
+function set_parent_systemd_properties() {
+	[ -z "$SD_PARENT_NAME" ] && return
+	local user
+	[ "$(id -u)" != "0" ] && user="--user"
+	systemctl set-property $user "$SD_PARENT_NAME" "$@"
+}
+
 # Randomize cgroup path(s), and update cgroupsPath in config.json.
 # This function sets a few cgroup-related variables.
+#
+# Optional parameter $1 is a pod/parent name. If set, a parent/pod cgroup is
+# created, and variables $REL_PARENT_PATH and $SD_PARENT_NAME can be used to
+# refer to it.
 function set_cgroups_path() {
-	bundle="${1:-.}"
 	init_cgroup_paths
+	local pod dash_pod slash_pod pod_slice
+	if [ "$#" -ne 0 ] && [ "$1" != "" ]; then
+		# Set up a parent/pod cgroup.
+		pod="$1"
+		dash_pod="-$pod"
+		slash_pod="/$pod"
+		SD_PARENT_NAME="machine-${pod}.slice"
+		pod_slice="/$SD_PARENT_NAME"
+	fi
 
 	local rnd="$RANDOM"
 	if [ -n "${RUNC_USE_SYSTEMD}" ]; then
 		SD_UNIT_NAME="runc-cgroups-integration-test-${rnd}.scope"
 		if [ "$(id -u)" = "0" ]; then
-			REL_CGROUPS_PATH="/machine.slice/$SD_UNIT_NAME"
-			OCI_CGROUPS_PATH="machine.slice:runc-cgroups:integration-test-${rnd}"
+			REL_PARENT_PATH="/machine.slice${pod_slice}"
+			OCI_CGROUPS_PATH="machine${dash_pod}.slice:runc-cgroups:integration-test-${rnd}"
 		else
-			REL_CGROUPS_PATH="/user.slice/user-$(id -u).slice/user@$(id -u).service/machine.slice/$SD_UNIT_NAME"
+			REL_PARENT_PATH="/user.slice/user-$(id -u).slice/user@$(id -u).service/machine.slice${pod_slice}"
 			# OCI path doesn't contain "/user.slice/user-$(id -u).slice/user@$(id -u).service/" prefix
-			OCI_CGROUPS_PATH="machine.slice:runc-cgroups:integration-test-${rnd}"
+			OCI_CGROUPS_PATH="machine${dash_pod}.slice:runc-cgroups:integration-test-${rnd}"
 		fi
+		REL_CGROUPS_PATH="$REL_PARENT_PATH/$SD_UNIT_NAME"
 	else
-		REL_CGROUPS_PATH="/runc-cgroups-integration-test/test-cgroup-${rnd}"
+		REL_PARENT_PATH="/runc-cgroups-integration-test${slash_pod}"
+		REL_CGROUPS_PATH="$REL_PARENT_PATH/test-cgroup-${rnd}"
 		OCI_CGROUPS_PATH=$REL_CGROUPS_PATH
 	fi
 
@@ -165,7 +219,9 @@ function set_cgroups_path() {
 		CGROUP_PATH=${CGROUP_BASE_PATH}${REL_CGROUPS_PATH}
 	fi
 
-	update_config '.linux.cgroupsPath |= "'"${OCI_CGROUPS_PATH}"'"' "$bundle"
+	[ -n "$pod" ] && create_parent
+
+	update_config '.linux.cgroupsPath |= "'"${OCI_CGROUPS_PATH}"'"'
 }
 
 # Get a value from a cgroup file.
@@ -173,39 +229,39 @@ function get_cgroup_value() {
 	local source=$1
 	local cgroup var current
 
-	if [ "x$CGROUP_UNIFIED" = "xyes" ]; then
+	if [ "$CGROUP_UNIFIED" = "yes" ]; then
 		cgroup=$CGROUP_PATH
 	else
 		var=${source%%.*}             # controller name (e.g. memory)
 		var=CGROUP_${var^^}_BASE_PATH # variable name (e.g. CGROUP_MEMORY_BASE_PATH)
-		eval cgroup=\$${var}${REL_CGROUPS_PATH}
+		eval cgroup=\$"${var}${REL_CGROUPS_PATH}"
 	fi
-	cat $cgroup/$source
+	cat "$cgroup/$source"
 }
 
 # Helper to check a if value in a cgroup file matches the expected one.
 function check_cgroup_value() {
 	local current
-	current="$(get_cgroup_value $1)"
+	current="$(get_cgroup_value "$1")"
 	local expected=$2
 
-	echo "current" $current "!?" "$expected"
+	echo "current $current !? $expected"
 	[ "$current" = "$expected" ]
 }
 
 # Helper to check a value in systemd.
 function check_systemd_value() {
 	[ -z "${RUNC_USE_SYSTEMD}" ] && return
-	local source=$1
+	local source="$1"
 	[ "$source" = "unsupported" ] && return
 	local expected="$2"
 	local expected2="$3"
 	local user=""
-	[ $(id -u) != "0" ] && user="--user"
+	[ "$(id -u)" != "0" ] && user="--user"
 
-	current=$(systemctl show $user --property $source $SD_UNIT_NAME | awk -F= '{print $2}')
+	current=$(systemctl show $user --property "$source" "$SD_UNIT_NAME" | awk -F= '{print $2}')
 	echo "systemd $source: current $current !? $expected $expected2"
-	[ "$current" = "$expected" ] || [ -n "$expected2" -a "$current" = "$expected2" ]
+	[ "$current" = "$expected" ] || [[ -n "$expected2" && "$current" = "$expected2" ]]
 }
 
 function check_cpu_quota() {
@@ -253,21 +309,18 @@ function check_cpu_shares() {
 function check_cpu_weight() {
 	local weight=$1
 
-	check_cgroup_value "cpu.weight" $weight
-	check_systemd_value "CPUWeight" $weight
+	check_cgroup_value "cpu.weight" "$weight"
+	check_systemd_value "CPUWeight" "$weight"
 }
 
 # Helper function to set a resources limit
 function set_resources_limit() {
-	bundle="${1:-.}"
-	update_config '.linux.resources.pids.limit |= 100' $bundle
+	update_config '.linux.resources.pids.limit |= 100'
 }
 
 # Helper function to make /sys/fs/cgroup writable
 function set_cgroup_mount_writable() {
-	bundle="${1:-.}"
-	update_config '.mounts |= map((select(.type == "cgroup") | .options -= ["ro"]) // .)' \
-		$bundle
+	update_config '.mounts |= map((select(.type == "cgroup") | .options -= ["ro"]) // .)'
 }
 
 # Fails the current test, providing the error given.
@@ -330,7 +383,7 @@ function requires() {
 			;;
 		cgroups_swap)
 			init_cgroup_paths
-			if [ $CGROUP_UNIFIED = "no" -a ! -e "${CGROUP_MEMORY_BASE_PATH}/memory.memsw.limit_in_bytes" ]; then
+			if [ $CGROUP_UNIFIED = "no" ] && [ ! -e "${CGROUP_MEMORY_BASE_PATH}/memory.memsw.limit_in_bytes" ]; then
 				skip_me=1
 			fi
 			;;
@@ -359,8 +412,9 @@ function requires() {
 			fi
 			;;
 		smp)
-			local cpu_count=$(grep -c '^processor' /proc/cpuinfo)
-			if [ "$cpu_count" -lt 2 ]; then
+			local cpus
+			cpus=$(grep -c '^processor' /proc/cpuinfo)
+			if [ "$cpus" -lt 2 ]; then
 				skip_me=1
 			fi
 			;;
@@ -397,10 +451,10 @@ function retry() {
 		if [[ "$status" -eq 0 ]]; then
 			return 0
 		fi
-		sleep $delay
+		sleep "$delay"
 	done
 
-	echo "Command \"$@\" failed $attempts times. Output: $output"
+	echo "Command \"$*\" failed $attempts times. Output: $output"
 	false
 }
 
@@ -418,8 +472,8 @@ function wait_for_container() {
 
 function testcontainer() {
 	# test state of container
-	runc state $1
-	if [ $2 == "checkpointed" ]; then
+	runc state "$1"
+	if [ "$2" == "checkpointed" ]; then
 		[ "$status" -eq 1 ]
 		return
 	fi
@@ -431,7 +485,7 @@ function setup_recvtty() {
 	[ -z "$ROOT" ] && return 1 # must not be called without ROOT set
 	local dir="$ROOT/tty"
 
-	mkdir $dir
+	mkdir "$dir"
 	export CONSOLE_SOCKET="$dir/sock"
 
 	# We need to start recvtty in the background, so we double fork in the shell.
@@ -444,7 +498,7 @@ function teardown_recvtty() {
 
 	# When we kill recvtty, the container will also be killed.
 	if [ -f "$dir/pid" ]; then
-		kill -9 $(cat "$dir/pid")
+		kill -9 "$(cat "$dir/pid")"
 	fi
 
 	# Clean up the files that might be left over.
@@ -455,11 +509,11 @@ function setup_bundle() {
 	local image="$1"
 
 	# Root for various container directories (state, tty, bundle).
-	export ROOT=$(mktemp -d "$BATS_RUN_TMPDIR/runc.XXXXXX")
+	ROOT=$(mktemp -d "$BATS_RUN_TMPDIR/runc.XXXXXX")
 	mkdir -p "$ROOT/state" "$ROOT/bundle/rootfs"
 
 	setup_recvtty
-	cd "$ROOT/bundle"
+	cd "$ROOT/bundle" || return
 
 	tar --exclude './dev/*' -C rootfs -xf "$image"
 
@@ -482,11 +536,12 @@ function setup_debian() {
 function teardown_bundle() {
 	[ -z "$ROOT" ] && return 0 # nothing to teardown
 
-	cd "$INTEGRATION_ROOT"
+	cd "$INTEGRATION_ROOT" || return
 	teardown_recvtty
 	local ct
 	for ct in $(__runc list -q); do
 		__runc delete -f "$ct"
 	done
 	rm -rf "$ROOT"
+	remove_parent
 }
