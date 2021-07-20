@@ -99,7 +99,7 @@ func getDefaultImagePath(context *cli.Context) string {
 
 // newProcess returns a new libcontainer Process with the arguments from the
 // spec and stdio from the current process.
-func newProcess(p specs.Process, init bool, logLevel string) (*libcontainer.Process, error) {
+func newProcess(p specs.Process) (*libcontainer.Process, error) {
 	lp := &libcontainer.Process{
 		Args: p.Args,
 		Env:  p.Env,
@@ -109,8 +109,6 @@ func newProcess(p specs.Process, init bool, logLevel string) (*libcontainer.Proc
 		Label:           p.SelinuxLabel,
 		NoNewPrivileges: &p.NoNewPrivileges,
 		AppArmorProfile: p.ApparmorProfile,
-		Init:            init,
-		LogLevel:        logLevel,
 	}
 
 	if p.ConsoleSize != nil {
@@ -260,6 +258,7 @@ type runner struct {
 	notifySocket    *notifySocket
 	criuOpts        *libcontainer.CriuOpts
 	logLevel        string
+	cgroup          string
 }
 
 func (r *runner) run(config *specs.Process) (int, error) {
@@ -272,10 +271,14 @@ func (r *runner) run(config *specs.Process) (int, error) {
 	if err = r.checkTerminal(config); err != nil {
 		return -1, err
 	}
-	process, err := newProcess(*config, r.init, r.logLevel)
+	process, err := newProcess(*config)
 	if err != nil {
 		return -1, err
 	}
+	// Populate the fields that come from runner.
+	process.Init = r.init
+	process.LogLevel = r.logLevel
+	process.Cgroup = r.cgroup
 	if len(r.listenFDs) > 0 {
 		process.Env = append(process.Env, "LISTEN_FDS="+strconv.Itoa(len(r.listenFDs)), "LISTEN_PID=1")
 		process.ExtraFiles = append(process.ExtraFiles, r.listenFDs...)

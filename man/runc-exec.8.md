@@ -59,6 +59,13 @@ multiple times.
 : Pass _N_ additional file descriptors to the container (**stdio** +
 **$LISTEN_FDS** + _N_ in total). Default is **0**.
 
+**--cgroup** _path_
+: Execute a process in a sub-cgroup. If the specified cgroup does not exist, an
+error is returned. Default is empty path, which means to use container's top
+level cgroup. Note that for cgroup v2, by default if **runc exec** can't join
+the top level cgroup, it falls back to joining whatever cgroup container's init
+is in. This fallback can be disabled by using **--cgroup /**.
+
 # EXAMPLES
 If the container can run **ps**(1) command, the following
 will output a list of processes running in the container:
