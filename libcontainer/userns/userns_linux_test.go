@@ -2,12 +2,7 @@
 
 package userns
 
-import (
-	"strings"
-	"testing"
-
-	"github.com/opencontainers/runc/libcontainer/user"
-)
+import "testing"
 
 func TestUIDMapInUserNS(t *testing.T) {
 	cases := []struct {
@@ -33,11 +28,7 @@ func TestUIDMapInUserNS(t *testing.T) {
 		},
 	}
 	for _, c := range cases {
-		uidmap, err := user.ParseIDMap(strings.NewReader(c.s))
-		if err != nil {
-			t.Fatal(err)
-		}
-		actual := uidMapInUserNS(uidmap)
+		actual := uidMapInUserNS(c.s)
 		if c.expected != actual {
 			t.Fatalf("expected %v, got %v for %q", c.expected, actual, c.s)
 		}
