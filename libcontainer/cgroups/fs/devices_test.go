@@ -29,7 +29,7 @@ func TestDevicesSetAllow(t *testing.T) {
 		},
 	}
 
-	d := &DevicesGroup{testingSkipFinalCheck: true}
+	d := &DevicesGroup{TestingSkipFinalCheck: true}
 	if err := d.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
 		t.Fatal(err)
 	}
