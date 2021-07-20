@@ -3,7 +3,6 @@
 package intelrdt
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 )
@@ -16,18 +15,7 @@ func TestGetMBMNumaNodeStats(t *testing.T) {
 		"mbm_local_bytes": 2361361,
 	}
 
-	mockedL3_MON, err := mockResctrlL3_MON(mocksNUMANodesToCreate, mocksFilesToCreate)
-
-	defer func() {
-		err := os.RemoveAll(mockedL3_MON)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
-
-	if err != nil {
-		t.Fatal(err)
-	}
+	mockedL3_MON := mockResctrlL3_MON(t, mocksNUMANodesToCreate, mocksFilesToCreate)
 
 	t.Run("Gather mbm", func(t *testing.T) {
 		enabledMonFeatures.mbmTotalBytes = true

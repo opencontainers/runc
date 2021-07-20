@@ -4,7 +4,6 @@ package libcontainer
 
 import (
 	"errors"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -18,20 +17,8 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func newTestRoot() (string, error) {
-	dir, err := ioutil.TempDir("", "libcontainer")
-	if err != nil {
-		return "", err
-	}
-	return dir, nil
-}
-
 func TestFactoryNew(t *testing.T) {
-	root, rerr := newTestRoot()
-	if rerr != nil {
-		t.Fatal(rerr)
-	}
-	defer os.RemoveAll(root)
+	root := t.TempDir()
 	factory, err := New(root, Cgroupfs)
 	if err != nil {
 		t.Fatal(err)
@@ -53,11 +40,7 @@ func TestFactoryNew(t *testing.T) {
 }
 
 func TestFactoryNewIntelRdt(t *testing.T) {
-	root, rerr := newTestRoot()
-	if rerr != nil {
-		t.Fatal(rerr)
-	}
-	defer os.RemoveAll(root)
+	root := t.TempDir()
 	factory, err := New(root, Cgroupfs, IntelRdtFs)
 	if err != nil {
 		t.Fatal(err)
@@ -79,11 +62,7 @@ func TestFactoryNewIntelRdt(t *testing.T) {
 }
 
 func TestFactoryNewTmpfs(t *testing.T) {
-	root, rerr := newTestRoot()
-	if rerr != nil {
-		t.Fatal(rerr)
-	}
-	defer os.RemoveAll(root)
+	root := t.TempDir()
 	factory, err := New(root, Cgroupfs, TmpfsRoot)
 	if err != nil {
 		t.Fatal(err)
@@ -130,12 +109,7 @@ func TestFactoryNewTmpfs(t *testing.T) {
 }
 
 func TestFactoryLoadNotExists(t *testing.T) {
-	root, rerr := newTestRoot()
-	if rerr != nil {
-		t.Fatal(rerr)
-	}
-	defer os.RemoveAll(root) //nolint: errcheck
-	factory, err := New(root, Cgroupfs)
+	factory, err := New(t.TempDir(), Cgroupfs)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,11 +123,7 @@ func TestFactoryLoadNotExists(t *testing.T) {
 }
 
 func TestFactoryLoadContainer(t *testing.T) {
-	root, err := newTestRoot()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(root) //nolint: errcheck
+	root := t.TempDir()
 	// setup default container config and state for mocking
 	var (
 		id            = "1"
