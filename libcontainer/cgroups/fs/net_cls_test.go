@@ -16,7 +16,6 @@ const (
 
 func TestNetClsSetClassid(t *testing.T) {
 	helper := NewCgroupTestUtil("net_cls", t)
-	defer helper.cleanup()
 
 	helper.writeFileContents(map[string]string{
 		"net_cls.classid": strconv.FormatUint(classidBefore, 10),

@@ -28,18 +28,9 @@ func init() {
 	}
 }
 
-var testRoots []string
-
 func TestMain(m *testing.M) {
 	logrus.SetOutput(os.Stderr)
 	logrus.SetLevel(logrus.InfoLevel)
-
-	// Clean up roots after running everything.
-	defer func() {
-		for _, root := range testRoots {
-			os.RemoveAll(root)
-		}
-	}()
 
 	ret := m.Run()
 	os.Exit(ret)

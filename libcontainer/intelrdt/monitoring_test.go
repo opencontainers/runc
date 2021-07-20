@@ -38,30 +38,28 @@ func TestParseMonFeatures(t *testing.T) {
 	})
 }
 
-func mockResctrlL3_MON(NUMANodes []string, mocks map[string]uint64) (string, error) {
-	testDir, err := ioutil.TempDir("", "rdt_mbm_test")
-	if err != nil {
-		return "", err
-	}
+func mockResctrlL3_MON(t *testing.T, NUMANodes []string, mocks map[string]uint64) string {
+	t.Helper()
+	testDir := t.TempDir()
 	monDataPath := filepath.Join(testDir, "mon_data")
 
 	for _, numa := range NUMANodes {
 		numaPath := filepath.Join(monDataPath, numa)
-		err = os.MkdirAll(numaPath, os.ModePerm)
+		err := os.MkdirAll(numaPath, 0o700)
 		if err != nil {
-			return "", err
+			t.Fatal(err)
 		}
 
 		for fileName, value := range mocks {
 			err := ioutil.WriteFile(filepath.Join(numaPath, fileName), []byte(strconv.FormatUint(value, 10)), 0o644)
 			if err != nil {
-				return "", err
+				t.Fatal(err)
 			}
 		}
 
 	}
 
-	return testDir, nil
+	return testDir
 }
 
 func TestGetMonitoringStats(t *testing.T) {
@@ -79,18 +77,7 @@ func TestGetMonitoringStats(t *testing.T) {
 		"llc_occupancy":   123331,
 	}
 
-	mockedL3_MON, err := mockResctrlL3_MON(mocksNUMANodesToCreate, mocksFilesToCreate)
-
-	defer func() {
-		err := os.RemoveAll(mockedL3_MON)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
-
-	if err != nil {
-		t.Fatal(err)
-	}
+	mockedL3_MON := mockResctrlL3_MON(t, mocksNUMANodesToCreate, mocksFilesToCreate)
 
 	t.Run("Gather monitoring stats", func(t *testing.T) {
 		var stats Stats

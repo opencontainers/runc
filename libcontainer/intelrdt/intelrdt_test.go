@@ -15,7 +15,6 @@ func TestIntelRdtSetL3CacheSchema(t *testing.T) {
 	}
 
 	helper := NewIntelRdtTestUtil(t)
-	defer helper.cleanup()
 
 	const (
 		l3CacheSchemaBefore = "L3:0=f;1=f0"
@@ -50,7 +49,6 @@ func TestIntelRdtSetMemBwSchema(t *testing.T) {
 	}
 
 	helper := NewIntelRdtTestUtil(t)
-	defer helper.cleanup()
 
 	const (
 		memBwSchemaBefore = "MB:0=20;1=70"
@@ -85,7 +83,6 @@ func TestIntelRdtSetMemBwScSchema(t *testing.T) {
 	}
 
 	helper := NewIntelRdtTestUtil(t)
-	defer helper.cleanup()
 
 	const (
 		memBwScSchemaBefore = "MB:0=5000;1=7000"

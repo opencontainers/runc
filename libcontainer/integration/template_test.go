@@ -22,22 +22,26 @@ var standardEnvironment = []string{
 const defaultMountFlags = unix.MS_NOEXEC | unix.MS_NOSUID | unix.MS_NODEV
 
 type tParam struct {
-	rootfs  string
 	userns  bool
 	systemd bool
 }
 
-// newTemplateConfig returns a base template for running a container
+// newTemplateConfig returns a base template for running a container.
 //
-// it uses a network strategy of just setting a loopback interface
-// and the default setup for devices
+// It uses a network strategy of just setting a loopback interface
+// and the default setup for devices.
+//
+// If p is nil, a default container is created.
 func newTemplateConfig(t *testing.T, p *tParam) *configs.Config {
 	var allowedDevices []*devices.Rule
 	for _, device := range specconv.AllowedDevices {
 		allowedDevices = append(allowedDevices, &device.Rule)
 	}
+	if p == nil {
+		p = &tParam{}
+	}
 	config := &configs.Config{
-		Rootfs: p.rootfs,
+		Rootfs: newRootfs(t),
 		Capabilities: &configs.Capabilities{
 			Bounding: []string{
 				"CAP_CHOWN",

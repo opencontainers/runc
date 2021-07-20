@@ -2,7 +2,6 @@ package fs2
 
 import (
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"reflect"
 	"sort"
@@ -60,11 +59,7 @@ func TestStatIo(t *testing.T) {
 	// We're using a fake cgroupfs.
 	cgroups.TestMode = true
 
-	fakeCgroupDir, err := ioutil.TempDir("", "runc-stat-io-test.*")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(fakeCgroupDir)
+	fakeCgroupDir := t.TempDir()
 	statPath := filepath.Join(fakeCgroupDir, "io.stat")
 
 	if err := ioutil.WriteFile(statPath, []byte(exampleIoStatData), 0o644); err != nil {

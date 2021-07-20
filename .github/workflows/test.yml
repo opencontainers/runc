@@ -17,8 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Docker/Moby still builds runc with Go 1.13, so we should still support Go 1.13.
-        go-version: [1.13.x, 1.15.x, 1.16.x]
+        go-version: [1.15.x, 1.16.x]
         rootless: ["rootless", ""]
         race: ["-race", ""]
 

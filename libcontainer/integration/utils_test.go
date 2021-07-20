@@ -3,7 +3,6 @@ package integration
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -98,42 +97,15 @@ func waitProcess(p *libcontainer.Process, t *testing.T) {
 	}
 }
 
-func newTestRoot() (string, error) {
-	dir, err := ioutil.TempDir("", "libcontainer")
-	if err != nil {
-		return "", err
-	}
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return "", err
-	}
-	testRoots = append(testRoots, dir)
-	return dir, nil
-}
-
-func newTestBundle() (string, error) {
-	dir, err := ioutil.TempDir("", "bundle")
-	if err != nil {
-		return "", err
-	}
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return "", err
-	}
-	return dir, nil
-}
-
-// newRootfs creates a new tmp directory and copies the busybox root filesystem
-func newRootfs() (string, error) {
-	dir, err := ioutil.TempDir("", "")
-	if err != nil {
-		return "", err
-	}
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return "", err
-	}
+// newRootfs creates a new tmp directory and copies the busybox root
+// filesystem to it.
+func newRootfs(t *testing.T) string {
+	t.Helper()
+	dir := t.TempDir()
 	if err := copyBusybox(dir); err != nil {
-		return "", err
+		t.Fatal(err)
 	}
-	return dir, nil
+	return dir
 }
 
 func remove(dir string) {
@@ -152,10 +124,7 @@ func copyBusybox(dest string) error {
 
 func newContainer(t *testing.T, config *configs.Config) (libcontainer.Container, error) {
 	name := strings.ReplaceAll(t.Name(), "/", "_") + strconv.FormatInt(-int64(time.Now().Nanosecond()), 35)
-	root, err := newTestRoot()
-	if err != nil {
-		return nil, err
-	}
+	root := t.TempDir()
 
 	f, err := libcontainer.New(root, libcontainer.Cgroupfs)
 	if err != nil {

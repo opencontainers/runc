@@ -1,7 +1,6 @@
 package validate_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -264,13 +263,7 @@ func TestValidateSysctlWithBindHostNetNS(t *testing.T) {
 
 	const selfnet = "/proc/self/ns/net"
 
-	dir, err := ioutil.TempDir("", t.Name()+"-*")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(dir)
-
-	file := filepath.Join(dir, "default")
+	file := filepath.Join(t.TempDir(), "default")
 	fd, err := os.Create(file)
 	if err != nil {
 		t.Fatal(err)

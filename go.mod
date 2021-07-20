@@ -1,6 +1,6 @@
 module github.com/opencontainers/runc
 
-go 1.13
+go 1.15
 
 require (
 	github.com/bits-and-blooms/bitset v1.2.0
