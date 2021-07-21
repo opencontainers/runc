@@ -537,7 +537,7 @@ EOF
 	root_period=$(cat "${CGROUP_CPU_BASE_PATH}/cpu.rt_period_us")
 	root_runtime=$(cat "${CGROUP_CPU_BASE_PATH}/cpu.rt_runtime_us")
 	# the following IFS magic sets dirs=("runc-cgroups-integration-test" "test-cgroup")
-	IFS='/' read -r -a dirs <<<"$REL_CGROUPS_PATH"
+	IFS='/' read -r -a dirs <<<"${REL_CGROUPS_PATH#/}"
 	for ((i = 0; i < ${#dirs[@]}; i++)); do
 		local target="$CGROUP_CPU_BASE_PATH"
 		for ((j = 0; j <= i; j++)); do
