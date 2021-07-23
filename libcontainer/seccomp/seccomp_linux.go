@@ -6,11 +6,12 @@ import (
 	"errors"
 	"fmt"
 
+	libseccomp "github.com/seccomp/libseccomp-golang"
+	"github.com/sirupsen/logrus"
+	"golang.org/x/sys/unix"
+
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/seccomp/patchbpf"
-
-	libseccomp "github.com/seccomp/libseccomp-golang"
-	"golang.org/x/sys/unix"
 )
 
 var (
@@ -151,10 +152,11 @@ func matchCall(filter *libseccomp.ScmpFilter, call *configs.Syscall) error {
 		return errors.New("empty string is not a valid syscall")
 	}
 
-	// If we can't resolve the syscall, assume it's not supported on this kernel
-	// Ignore it, don't error out
+	// If we can't resolve the syscall, assume it is not supported
+	// by this kernel. Warn about it, don't error out.
 	callNum, err := libseccomp.GetSyscallFromName(call.Name)
 	if err != nil {
+		logrus.Debugf("unknown seccomp syscall %q ignored", call.Name)
 		return nil
 	}
 
