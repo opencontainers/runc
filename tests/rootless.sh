@@ -114,6 +114,8 @@ function enable_cgroup() {
 		# necessary, and might actually be a bug in our impl of cgroup
 		# handling.
 		[[ "$cg" == "cpuset" ]] && chown rootless:rootless "$CGROUP_MOUNT/$cg$CGROUP_PATH/cpuset."{cpus,mems}
+		# The following is required by "update rt period and runtime".
+		[[ "$cg" == "cpu" ]] && chown rootless:rootless "$CGROUP_MOUNT/$cg$CGROUP_PATH/cpu.rt_"{period,quota}_us
 	done
 	# cgroup v2
 	if [[ -e "$CGROUP_MOUNT/cgroup.controllers" ]]; then
