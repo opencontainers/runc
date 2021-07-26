@@ -276,7 +276,11 @@ func (r *runner) run(config *specs.Process) (int, error) {
 	}
 	// Populate the fields that come from runner.
 	process.Init = r.init
-	process.LogLevel = r.logLevel
+	logLevel, err := logrus.ParseLevel(r.logLevel)
+	if err != nil { // Should never happen.
+		return -1, err
+	}
+	process.LogLevel = strconv.Itoa(int(logLevel))
 	if len(r.listenFDs) > 0 {
 		process.Env = append(process.Env, "LISTEN_FDS="+strconv.Itoa(len(r.listenFDs)), "LISTEN_PID=1")
 		process.ExtraFiles = append(process.ExtraFiles, r.listenFDs...)
