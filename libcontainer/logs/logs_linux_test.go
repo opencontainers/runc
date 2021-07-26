@@ -71,7 +71,7 @@ func logToLogWriter(t *testing.T, l *log, message string) {
 
 type log struct {
 	w    io.WriteCloser
-	file string
+	file *os.File
 	done chan error
 }
 
@@ -90,19 +90,16 @@ func runLogForwarding(t *testing.T) *log {
 	if err != nil {
 		t.Fatal(err)
 	}
-	tempFile.Close()
-	logFile := tempFile.Name()
-	t.Cleanup(func() { os.Remove(logFile) })
+	t.Cleanup(func() {
+		tempFile.Close()
+		os.Remove(tempFile.Name())
+	})
 
-	logConfig := Config{LogLevel: logrus.InfoLevel, LogFormat: "json", LogFilePath: logFile}
-	loggingConfigured = false
-	if err := ConfigureLogging(logConfig); err != nil {
-		t.Fatal(err)
-	}
-
+	logrus.SetOutput(tempFile)
+	logrus.SetFormatter(&logrus.JSONFormatter{})
 	doneForwarding := ForwardLogs(logR)
 
-	return &log{w: logW, done: doneForwarding, file: logFile}
+	return &log{w: logW, done: doneForwarding, file: tempFile}
 }
 
 func finish(t *testing.T, l *log) {
@@ -113,16 +110,10 @@ func finish(t *testing.T, l *log) {
 	}
 }
 
-func truncateLogFile(t *testing.T, logFile string) {
+func truncateLogFile(t *testing.T, file *os.File) {
 	t.Helper()
-	file, err := os.OpenFile(logFile, os.O_RDWR, 0o600)
-	if err != nil {
-		t.Fatalf("failed to open log file: %v", err)
-		return
-	}
-	defer file.Close()
 
-	err = file.Truncate(0)
+	err := file.Truncate(0)
 	if err != nil {
 		t.Fatalf("failed to truncate log file: %v", err)
 	}
@@ -131,7 +122,7 @@ func truncateLogFile(t *testing.T, logFile string) {
 // check checks that file contains txt
 func check(t *testing.T, l *log, txt string) {
 	t.Helper()
-	contents, err := ioutil.ReadFile(l.file)
+	contents, err := ioutil.ReadFile(l.file.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,7 +140,7 @@ func checkWait(t *testing.T, l *log, txt string) {
 		iter  = 3
 	)
 	for i := 0; ; i++ {
-		st, err := os.Stat(l.file)
+		st, err := l.file.Stat()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -157,7 +148,7 @@ func checkWait(t *testing.T, l *log, txt string) {
 			break
 		}
 		if i == iter {
-			t.Fatalf("waited %s for file %s to be non-empty but it still is", iter*delay, l.file)
+			t.Fatalf("waited %s for file %s to be non-empty but it still is", iter*delay, l.file.Name())
 		}
 		time.Sleep(delay)
 	}
