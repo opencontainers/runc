@@ -7,7 +7,6 @@ import (
 	"strconv"
 
 	"github.com/opencontainers/runc/libcontainer"
-	"github.com/opencontainers/runc/libcontainer/logs"
 	_ "github.com/opencontainers/runc/libcontainer/nsenter"
 	"github.com/sirupsen/logrus"
 )
@@ -19,25 +18,23 @@ func init() {
 		runtime.GOMAXPROCS(1)
 		runtime.LockOSThread()
 
+		// Configure logrus to talk to the parent.
 		level := os.Getenv("_LIBCONTAINER_LOGLEVEL")
 		logLevel, err := logrus.ParseLevel(level)
 		if err != nil {
 			panic(fmt.Sprintf("libcontainer: failed to parse log level: %q: %v", level, err))
 		}
+		logrus.SetLevel(logLevel)
 
 		logPipeFdStr := os.Getenv("_LIBCONTAINER_LOGPIPE")
 		logPipeFd, err := strconv.Atoi(logPipeFdStr)
 		if err != nil {
 			panic(fmt.Sprintf("libcontainer: failed to convert environment variable _LIBCONTAINER_LOGPIPE=%s to int: %s", logPipeFdStr, err))
 		}
-		err = logs.ConfigureLogging(logs.Config{
-			LogPipeFd: logPipeFd,
-			LogFormat: "json",
-			LogLevel:  logLevel,
-		})
-		if err != nil {
-			panic(fmt.Sprintf("libcontainer: failed to configure logging: %v", err))
-		}
+
+		logrus.SetOutput(os.NewFile(uintptr(logPipeFd), "logpipe"))
+
+		logrus.SetFormatter(new(logrus.JSONFormatter))
 		logrus.Debug("child process in init()")
 
 		factory, _ := libcontainer.New("")
