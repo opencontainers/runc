@@ -132,11 +132,6 @@ func execProcess(context *cli.Context) (int, error) {
 		return -1, err
 	}
 
-	logLevel := "info"
-	if context.GlobalBool("debug") {
-		logLevel = "debug"
-	}
-
 	r := &runner{
 		enableSubreaper: false,
 		shouldDestroy:   false,
@@ -147,7 +142,6 @@ func execProcess(context *cli.Context) (int, error) {
 		action:          CT_ACT_RUN,
 		init:            false,
 		preserveFDs:     context.Int("preserve-fds"),
-		logLevel:        logLevel,
 	}
 	return r.run(p)
 }

@@ -255,7 +255,6 @@ type runner struct {
 	action          CtAct
 	notifySocket    *notifySocket
 	criuOpts        *libcontainer.CriuOpts
-	logLevel        string
 }
 
 func (r *runner) run(config *specs.Process) (int, error) {
@@ -272,9 +271,9 @@ func (r *runner) run(config *specs.Process) (int, error) {
 	if err != nil {
 		return -1, err
 	}
+	process.LogLevel = strconv.Itoa(int(logrus.GetLevel()))
 	// Populate the fields that come from runner.
 	process.Init = r.init
-	process.LogLevel = r.logLevel
 	if len(r.listenFDs) > 0 {
 		process.Env = append(process.Env, "LISTEN_FDS="+strconv.Itoa(len(r.listenFDs)), "LISTEN_PID=1")
 		process.ExtraFiles = append(process.ExtraFiles, r.listenFDs...)
@@ -431,11 +430,6 @@ func startContainer(context *cli.Context, spec *specs.Spec, action CtAct, criuOp
 		listenFDs = activation.Files(false)
 	}
 
-	logLevel := "info"
-	if context.GlobalBool("debug") {
-		logLevel = "debug"
-	}
-
 	r := &runner{
 		enableSubreaper: !context.Bool("no-subreaper"),
 		shouldDestroy:   !context.Bool("keep"),
@@ -449,7 +443,6 @@ func startContainer(context *cli.Context, spec *specs.Spec, action CtAct, criuOp
 		action:          action,
 		criuOpts:        criuOpts,
 		init:            true,
-		logLevel:        logLevel,
 	}
 	return r.run(spec.Process)
 }
