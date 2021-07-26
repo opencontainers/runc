@@ -10,9 +10,13 @@ import (
 	"github.com/opencontainers/runc/libcontainer/logs"
 	_ "github.com/opencontainers/runc/libcontainer/nsenter"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
 )
 
+// This is the entry point for runc init. It is special, as we need to perform
+// a few things even before entering main(), plus we need nothing from what the
+// main() does (option parsing etc.), so skip it entirely.
+//
+// Note that this init is executed _after_ libcontainer/nsenter.
 func init() {
 	if len(os.Args) > 1 && os.Args[1] == "init" {
 		runtime.GOMAXPROCS(1)
@@ -38,13 +42,7 @@ func init() {
 			panic(fmt.Sprintf("libcontainer: failed to configure logging: %v", err))
 		}
 		logrus.Debug("child process in init()")
-	}
-}
 
-var initCommand = cli.Command{
-	Name:  "init",
-	Usage: `initialize the namespaces and launch the process (do not call it outside of runc)`,
-	Action: func(context *cli.Context) error {
 		factory, _ := libcontainer.New("")
 		if err := factory.StartInitialization(); err != nil {
 			// as the error is sent back to the parent there is no need to log
@@ -52,5 +50,5 @@ var initCommand = cli.Command{
 			os.Exit(1)
 		}
 		panic("libcontainer: container init failed to exec")
-	},
+	}
 }
