@@ -1,13 +1,13 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"runtime"
 	"strings"
 
-	"github.com/opencontainers/runc/libcontainer/logs"
 	"github.com/opencontainers/runc/libcontainer/seccomp"
 	"github.com/opencontainers/runtime-spec/specs-go"
 
@@ -149,7 +149,7 @@ func main() {
 			return err
 		}
 
-		return logs.ConfigureLogging(createLogConfig(context))
+		return configLogrus(context)
 	}
 
 	// If the command returns an error, cli takes upon itself to print
@@ -173,22 +173,31 @@ func (f *FatalWriter) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
-func createLogConfig(context *cli.Context) logs.Config {
-	logFilePath := context.GlobalString("log")
-	logPipeFd := 0
-	if logFilePath == "" {
-		logPipeFd = 2
-	}
-	config := logs.Config{
-		LogPipeFd:   logPipeFd,
-		LogLevel:    logrus.InfoLevel,
-		LogFilePath: logFilePath,
-		LogFormat:   context.GlobalString("log-format"),
-		LogCaller:   context.GlobalBool("debug"),
-	}
+func configLogrus(context *cli.Context) error {
 	if context.GlobalBool("debug") {
-		config.LogLevel = logrus.DebugLevel
+		logrus.SetLevel(logrus.DebugLevel)
+		logrus.SetReportCaller(true)
 	}
 
-	return config
+	if file := context.GlobalString("log"); file != "" {
+		f, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY|os.O_APPEND|os.O_SYNC, 0o644)
+		if err != nil {
+			return err
+		}
+		logrus.SetOutput(f)
+	}
+
+	fmt := context.GlobalString("log-format")
+	switch fmt {
+	case "":
+		// do nothing
+	case "text":
+		// do nothing
+	case "json":
+		logrus.SetFormatter(new(logrus.JSONFormatter))
+	default:
+		return errors.New("invalid log-format: " + fmt)
+	}
+
+	return nil
 }
