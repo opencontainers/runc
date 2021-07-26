@@ -3,29 +3,10 @@ package logs
 import (
 	"bufio"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"io"
-	"os"
-	"sync"
 
 	"github.com/sirupsen/logrus"
 )
-
-var (
-	configureMutex sync.Mutex
-	// loggingConfigured will be set once logging has been configured via invoking `ConfigureLogging`.
-	// Subsequent invocations of `ConfigureLogging` would be no-op
-	loggingConfigured = false
-)
-
-type Config struct {
-	LogLevel    logrus.Level
-	LogFormat   string
-	LogFilePath string
-	LogPipeFd   int
-	LogCaller   bool
-}
 
 func ForwardLogs(logPipe io.ReadCloser) chan error {
 	done := make(chan error, 1)
@@ -67,40 +48,4 @@ func processEntry(text []byte) {
 		return
 	}
 	logrus.StandardLogger().Logf(lvl, jl.Msg)
-}
-
-func ConfigureLogging(config Config) error {
-	configureMutex.Lock()
-	defer configureMutex.Unlock()
-
-	if loggingConfigured {
-		return errors.New("logging has already been configured")
-	}
-
-	logrus.SetLevel(config.LogLevel)
-	logrus.SetReportCaller(config.LogCaller)
-
-	// XXX: while 0 is a valid fd (usually stdin), here we assume
-	// that we never deliberately set LogPipeFd to 0.
-	if config.LogPipeFd > 0 {
-		logrus.SetOutput(os.NewFile(uintptr(config.LogPipeFd), "logpipe"))
-	} else if config.LogFilePath != "" {
-		f, err := os.OpenFile(config.LogFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND|os.O_SYNC, 0o644)
-		if err != nil {
-			return err
-		}
-		logrus.SetOutput(f)
-	}
-
-	switch config.LogFormat {
-	case "text":
-		// retain logrus's default.
-	case "json":
-		logrus.SetFormatter(new(logrus.JSONFormatter))
-	default:
-		return fmt.Errorf("unknown log-format %q", config.LogFormat)
-	}
-
-	loggingConfigured = true
-	return nil
 }
