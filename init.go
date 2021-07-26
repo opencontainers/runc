@@ -19,12 +19,11 @@ func init() {
 		runtime.LockOSThread()
 
 		// Configure logrus to talk to the parent.
-		level := os.Getenv("_LIBCONTAINER_LOGLEVEL")
-		logLevel, err := logrus.ParseLevel(level)
+		level, err := strconv.Atoi(os.Getenv("_LIBCONTAINER_LOGLEVEL"))
 		if err != nil {
-			panic(fmt.Sprintf("libcontainer: failed to parse log level: %q: %v", level, err))
+			panic(fmt.Sprintf("libcontainer: failed to parse _LIBCONTAINER_LOGLEVEL: %s", err))
 		}
-		logrus.SetLevel(logLevel)
+		logrus.SetLevel(logrus.Level(level))
 
 		logPipeFdStr := os.Getenv("_LIBCONTAINER_LOGPIPE")
 		logPipeFd, err := strconv.Atoi(logPipeFdStr)
