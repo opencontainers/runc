@@ -25,10 +25,6 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// Synchronisation value for cgroup namespace setup.
-// The same constant is defined in nsexec.c as "CREATECGROUPNS".
-const createCgroupns = 0x80
-
 type parentProcess interface {
 	// pid returns the pid for the running process.
 	pid() int
@@ -410,13 +406,6 @@ func (p *initProcess) start() (retErr error) {
 		return fmt.Errorf("error getting pipe fds for pid %d: %w", childPid, err)
 	}
 	p.setExternalDescriptors(fds)
-
-	// Now it's time to setup cgroup namesapce
-	if p.config.Config.Namespaces.Contains(configs.NEWCGROUP) && p.config.Config.Namespaces.PathOf(configs.NEWCGROUP) == "" {
-		if _, err := p.messageSockPair.parent.Write([]byte{createCgroupns}); err != nil {
-			return fmt.Errorf("error sending synchronization value to init process: %w", err)
-		}
-	}
 
 	// Wait for our first child to exit
 	if err := p.waitForChildExit(childPid); err != nil {

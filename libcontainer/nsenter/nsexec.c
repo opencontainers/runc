@@ -41,12 +41,6 @@ enum sync_t {
 	SYNC_CHILD_FINISH = 0x45,	/* The child or grandchild has finished. */
 };
 
-/*
- * Synchronisation value for cgroup namespace setup.
- * The same constant is defined in process_linux.go as "createCgroupns".
- */
-#define CREATECGROUPNS 0x80
-
 #define STAGE_SETUP  -1
 /* longjmp() arguments. */
 #define STAGE_PARENT  0
@@ -1108,24 +1102,9 @@ void nsexec(void)
 					bail("setgroups failed");
 			}
 
-			/*
-			 * Wait until our topmost parent has finished cgroup setup in
-			 * p.manager.Apply().
-			 *
-			 * TODO(cyphar): Check if this code is actually needed because we
-			 *               should be in the cgroup even from stage-0, so
-			 *               waiting until now might not make sense.
-			 */
 			if (config.cloneflags & CLONE_NEWCGROUP) {
-				uint8_t value;
-				if (read(pipenum, &value, sizeof(value)) != sizeof(value))
-					bail("read synchronisation value failed");
-				if (value == CREATECGROUPNS) {
-					write_log(DEBUG, "unshare cgroup namespace");
-					if (unshare(CLONE_NEWCGROUP) < 0)
-						bail("failed to unshare cgroup namespace");
-				} else
-					bail("received unknown synchronisation value");
+				if (unshare(CLONE_NEWCGROUP) < 0)
+					bail("failed to unshare cgroup namespace");
 			}
 
 			write_log(DEBUG, "signal completion to stage-0");
