@@ -502,7 +502,7 @@ func (c *linuxContainer) commandTemplate(p *Process, childInitPipe *os.File, chi
 	cmd.ExtraFiles = append(cmd.ExtraFiles, childLogPipe)
 	cmd.Env = append(cmd.Env,
 		"_LIBCONTAINER_LOGPIPE="+strconv.Itoa(stdioFdCount+len(cmd.ExtraFiles)-1),
-		"_LIBCONTAINER_LOGLEVEL="+p.LogLevel,
+		"_LIBCONTAINER_LOGLEVEL="+strconv.Itoa(int(logrus.GetLevel())),
 	)
 
 	// NOTE: when running a container with no PID namespace and the parent process spawning the container is

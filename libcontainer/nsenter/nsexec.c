@@ -95,14 +95,19 @@ struct nlconfig_t {
 	size_t gidmappath_len;
 };
 
-#define PANIC   "panic"
-#define FATAL   "fatal"
-#define ERROR   "error"
-#define WARNING "warning"
-#define INFO    "info"
-#define DEBUG   "debug"
+/*
+ * Log levels are the same as in logrus.
+ */
+#define PANIC   0
+#define FATAL   1
+#define ERROR   2
+#define WARNING 3
+#define INFO    4
+#define DEBUG   5
+#define TRACE   6
 
 static int logfd = -1;
+static int loglevel = INFO;
 
 /*
  * List of netlink message types sent to us as part of bootstrapping the init.
@@ -140,13 +145,13 @@ int setns(int fd, int nstype)
 }
 #endif
 
-static void write_log(const char *level, const char *format, ...)
+static void write_log(int level, const char *format, ...)
 {
 	char *message = NULL, *stage = NULL;
 	va_list args;
 	int ret;
 
-	if (logfd < 0 || level == NULL)
+	if (logfd < 0 || level > loglevel)
 		goto out;
 
 	va_start(args, format);
@@ -164,7 +169,7 @@ static void write_log(const char *level, const char *format, ...)
 	if (ret < 0)
 		goto out;
 
-	dprintf(logfd, "{\"level\":\"%s\", \"msg\": \"%s[%d]: %s\"}\n", level, stage, getpid(), message);
+	dprintf(logfd, "{\"level\":\"%d\", \"msg\": \"%s[%d]: %s\"}\n", level, stage, getpid(), message);
 
 out:
 	free(message);
@@ -174,10 +179,14 @@ out:
 /* XXX: This is ugly. */
 static int syncfd = -1;
 
-#define bail(fmt, ...)                                       \
-	do {                                                       \
-		write_log(FATAL, fmt ": %m", ##__VA_ARGS__); \
-		exit(1);                                                 \
+#define bail(fmt, ...)                                               \
+	do {                                                         \
+		if (logfd < 0)                                       \
+			fprintf(stderr, "FATAL: " fmt ": %m\n",      \
+				##__VA_ARGS__);                      \
+		else                                                 \
+			write_log(FATAL, fmt ": %m", ##__VA_ARGS__); \
+		exit(1);                                             \
 	} while(0)
 
 static int write_file(char *data, size_t data_len, char *pathfmt, ...)
@@ -368,41 +377,65 @@ static int clone_parent(jmp_buf *env, int jmpval)
 }
 
 /*
+ * Returns an environment variable value as int, or an error:
+ *  -ENOENT if variable is not found;
+ *  -EINVAL if strtol failed.
+ */
+static int getenv_int(const char *name)
+{
+	char *val, *endptr;
+	int ret;
+
+	val = getenv(name);
+	if (val == NULL)
+		return -ENOENT;
+
+	ret = strtol(val, &endptr, 10);
+	if (val == endptr || *endptr != '\0')
+		return -EINVAL;
+
+	return ret;
+}
+
+/*
  * Gets the init pipe fd from the environment, which is used to read the
  * bootstrap data and tell the parent what the new pid is after we finish
  * setting up the environment.
  */
 static int initpipe(void)
 {
-	int pipenum;
-	char *initpipe, *endptr;
+	int ret;
 
-	initpipe = getenv("_LIBCONTAINER_INITPIPE");
-	if (initpipe == NULL || *initpipe == '\0')
-		return -1;
-
-	pipenum = strtol(initpipe, &endptr, 10);
-	if (*endptr != '\0')
+	ret = getenv_int("_LIBCONTAINER_INITPIPE");
+	if (ret == -EINVAL) {
 		bail("unable to parse _LIBCONTAINER_INITPIPE");
+	}
 
-	return pipenum;
+	return ret;
 }
 
+/*
+ * Sets up logging by getting log fd and log level from the environment,
+ * if available.
+ */
 static void setup_logpipe(void)
 {
-	char *logpipe, *endptr;
+	int i;
 
-	logpipe = getenv("_LIBCONTAINER_LOGPIPE");
-	if (logpipe == NULL || *logpipe == '\0') {
+	i = getenv_int("_LIBCONTAINER_LOGPIPE");
+	if (i < 0) {
+		if (i == -ENOENT)
+			/* Not runc init. */
+			return;
+		bail("unable to parse _LIBCONTAINER_LOGPIPE");
+	}
+	logfd = i;
+
+	i = getenv_int("_LIBCONTAINER_LOGLEVEL");
+	if (i < 0) {
 		return;
 	}
-
-	logfd = strtol(logpipe, &endptr, 10);
-	if (logpipe == endptr || *endptr != '\0') {
-		fprintf(stderr, "unable to parse _LIBCONTAINER_LOGPIPE, value: %s\n", logpipe);
-		/* It is too early to use bail */
-		exit(1);
-	}
+	loglevel = i;
 }
 
 /* Returns the clone(2) flag for a namespace, given the name of a namespace. */
@@ -617,7 +650,7 @@ void nsexec(void)
 	 * We'll only get an init pipe for start or exec.
 	 */
 	pipenum = initpipe();
-	if (pipenum == -1)
+	if (pipenum == -ENOENT)
 		return;
 
 	/*

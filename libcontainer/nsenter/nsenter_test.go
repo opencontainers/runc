@@ -17,15 +17,6 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-type pid struct {
-	Pid int `json:"Pid"`
-}
-
-type logentry struct {
-	Msg   string `json:"msg"`
-	Level string `json:"level"`
-}
-
 func TestNsenterValidPaths(t *testing.T) {
 	args := []string{"nsenter-exec"}
 	parent, child, err := newPipe()
@@ -67,10 +58,12 @@ func TestNsenterValidPaths(t *testing.T) {
 	initWaiter(t, parent)
 
 	decoder := json.NewDecoder(parent)
-	var pid *pid
+	var pid struct {
+		Pid int
+	}
 
 	if err := cmd.Wait(); err != nil {
-		t.Fatalf("nsenter exits with a non-zero exit status")
+		t.Fatalf("nsenter error: %v", err)
 	}
 	if err := decoder.Decode(&pid); err != nil {
 		dir, _ := ioutil.ReadDir(fmt.Sprintf("/proc/%d/ns", os.Getpid()))
@@ -79,6 +72,7 @@ func TestNsenterValidPaths(t *testing.T) {
 		}
 		t.Fatalf("%v", err)
 	}
+	t.Logf("got pid: %d", pid.Pid)
 
 	p, err := os.FindProcess(pid.Pid)
 	if err != nil {
@@ -124,7 +118,7 @@ func TestNsenterInvalidPaths(t *testing.T) {
 
 	initWaiter(t, parent)
 	if err := cmd.Wait(); err == nil {
-		t.Fatalf("nsenter exits with a zero exit status")
+		t.Fatalf("nsenter error: %v", err)
 	}
 }
 
@@ -165,7 +159,7 @@ func TestNsenterIncorrectPathType(t *testing.T) {
 
 	initWaiter(t, parent)
 	if err := cmd.Wait(); err == nil {
-		t.Fatalf("nsenter exits with a zero exit status")
+		t.Fatalf("nsenter error: %v", err)
 	}
 }
 
@@ -192,14 +186,20 @@ func TestNsenterChildLogging(t *testing.T) {
 		Path:       os.Args[0],
 		Args:       args,
 		ExtraFiles: []*os.File{child, logwrite},
-		Env:        []string{"_LIBCONTAINER_INITPIPE=3", "_LIBCONTAINER_LOGPIPE=4"},
-		Stdout:     os.Stdout,
-		Stderr:     os.Stderr,
+		Env: []string{
+			"_LIBCONTAINER_INITPIPE=3",
+			"_LIBCONTAINER_LOGPIPE=4",
+			"_LIBCONTAINER_LOGLEVEL=5", // DEBUG
+		},
+		Stdout: os.Stdout,
+		Stderr: os.Stderr,
 	}
 
 	if err := cmd.Start(); err != nil {
 		t.Fatalf("nsenter failed to start %v", err)
 	}
+	child.Close()
+	logwrite.Close()
 	// write cloneFlags
 	r := nl.NewNetlinkRequest(int(libcontainer.InitMsg), 0)
 	r.AddData(&libcontainer.Int32msg{
@@ -217,18 +217,27 @@ func TestNsenterChildLogging(t *testing.T) {
 	initWaiter(t, parent)
 
 	logsDecoder := json.NewDecoder(logread)
-	var logentry *logentry
-
-	err = logsDecoder.Decode(&logentry)
-	if err != nil {
-		t.Fatalf("child log: %v", err)
+	var logentry struct {
+		Level string `json:"level"`
+		Msg   string `json:"msg"`
 	}
-	if logentry.Level == "" || logentry.Msg == "" {
-		t.Fatalf("child log: empty log fileds: level=\"%s\" msg=\"%s\"", logentry.Level, logentry.Msg)
+
+	for {
+		err = logsDecoder.Decode(&logentry)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			t.Fatalf("child log: %v", err)
+		}
+		t.Logf("logentry: %+v", logentry)
+		if logentry.Level == "" || logentry.Msg == "" {
+			t.Fatalf("child log: empty log entry: %+v", logentry)
+		}
 	}
 
 	if err := cmd.Wait(); err != nil {
-		t.Fatalf("nsenter exits with a non-zero exit status")
+		t.Fatalf("nsenter error: %v", err)
 	}
 }
 
