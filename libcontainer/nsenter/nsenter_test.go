@@ -16,11 +16,6 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-type logentry struct {
-	Msg   string `json:"msg"`
-	Level string `json:"level"`
-}
-
 func TestNsenterValidPaths(t *testing.T) {
 	args := []string{"nsenter-exec"}
 	parent, child := newPipe(t)
@@ -186,20 +181,12 @@ func TestNsenterChildLogging(t *testing.T) {
 
 	initWaiter(t, parent)
 
-	logsDecoder := json.NewDecoder(logread)
-	var logentry *logentry
-
-	err := logsDecoder.Decode(&logentry)
-	if err != nil {
-		t.Fatalf("child log: %v", err)
-	}
-	if logentry.Level == "" || logentry.Msg == "" {
-		t.Fatalf("child log: empty log fields: level=\"%s\" msg=\"%s\"", logentry.Level, logentry.Msg)
-	}
-
+	getLogs(t, logread)
 	if err := cmd.Wait(); err != nil {
 		t.Fatalf("nsenter exits with a non-zero exit status")
 	}
+
+	reapChildren(t, parent)
 }
 
 func init() {
@@ -258,5 +245,27 @@ func reapChildren(t *testing.T, parent *os.File) {
 	// Sanity check.
 	if pid.Pid1 == 0 || pid.Pid2 == 0 {
 		t.Fatal("got pids:", pid)
+	}
+}
+
+func getLogs(t *testing.T, logread *os.File) {
+	logsDecoder := json.NewDecoder(logread)
+	logsDecoder.DisallowUnknownFields()
+	var logentry struct {
+		Level string `json:"level"`
+		Msg   string `json:"msg"`
+	}
+
+	for {
+		if err := logsDecoder.Decode(&logentry); err != nil {
+			if errors.Is(err, io.EOF) {
+				return
+			}
+			t.Fatal("init log decoding error:", err)
+		}
+		t.Logf("logentry: %+v", logentry)
+		if logentry.Level == "" || logentry.Msg == "" {
+			t.Fatalf("init log: empty log entry: %+v", logentry)
+		}
 	}
 }
