@@ -34,18 +34,13 @@ func processEntry(text []byte) {
 	}
 
 	var jl struct {
-		Level string `json:"level"`
-		Msg   string `json:"msg"`
+		Level logrus.Level `json:"level"`
+		Msg   string       `json:"msg"`
 	}
 	if err := json.Unmarshal(text, &jl); err != nil {
 		logrus.Errorf("failed to decode %q to json: %v", text, err)
 		return
 	}
 
-	lvl, err := logrus.ParseLevel(jl.Level)
-	if err != nil {
-		logrus.Errorf("failed to parse log level %q: %v", jl.Level, err)
-		return
-	}
-	logrus.StandardLogger().Logf(lvl, jl.Msg)
+	logrus.StandardLogger().Logf(jl.Level, jl.Msg)
 }
