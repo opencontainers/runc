@@ -13,7 +13,6 @@ import (
 
 func TestLoggingToFile(t *testing.T) {
 	l := runLogForwarding(t)
-	defer l.cleanup()
 
 	logToLogWriter(t, l, `{"level": "info","msg":"kitten"}`)
 	finish(t, l)
@@ -22,7 +21,6 @@ func TestLoggingToFile(t *testing.T) {
 
 func TestLogForwardingDoesNotStopOnJsonDecodeErr(t *testing.T) {
 	l := runLogForwarding(t)
-	defer l.cleanup()
 
 	logToLogWriter(t, l, "invalid-json-with-kitten")
 	checkWait(t, l, "failed to decode")
@@ -36,7 +34,6 @@ func TestLogForwardingDoesNotStopOnJsonDecodeErr(t *testing.T) {
 
 func TestLogForwardingDoesNotStopOnLogLevelParsingErr(t *testing.T) {
 	l := runLogForwarding(t)
-	defer l.cleanup()
 
 	logToLogWriter(t, l, `{"level": "alert","msg":"puppy"}`)
 	checkWait(t, l, "failed to parse log level")
@@ -50,7 +47,6 @@ func TestLogForwardingDoesNotStopOnLogLevelParsingErr(t *testing.T) {
 
 func TestLogForwardingStopsAfterClosingTheWriter(t *testing.T) {
 	l := runLogForwarding(t)
-	defer l.cleanup()
 
 	logToLogWriter(t, l, `{"level": "info","msg":"sync"}`)
 
@@ -77,9 +73,6 @@ type log struct {
 	w    io.WriteCloser
 	file string
 	done chan error
-
-	// TODO: use t.Cleanup after dropping support for Go 1.13
-	cleanup func()
 }
 
 func runLogForwarding(t *testing.T) *log {
@@ -88,6 +81,10 @@ func runLogForwarding(t *testing.T) *log {
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(func() {
+		logR.Close()
+		logW.Close()
+	})
 
 	tempFile, err := ioutil.TempFile("", "")
 	if err != nil {
@@ -95,6 +92,7 @@ func runLogForwarding(t *testing.T) *log {
 	}
 	tempFile.Close()
 	logFile := tempFile.Name()
+	t.Cleanup(func() { os.Remove(logFile) })
 
 	logConfig := Config{LogLevel: logrus.InfoLevel, LogFormat: "json", LogFilePath: logFile}
 	loggingConfigured = false
@@ -104,13 +102,7 @@ func runLogForwarding(t *testing.T) *log {
 
 	doneForwarding := ForwardLogs(logR)
 
-	cleanup := func() {
-		os.Remove(logFile)
-		logR.Close()
-		logW.Close()
-	}
-
-	return &log{w: logW, done: doneForwarding, file: logFile, cleanup: cleanup}
+	return &log{w: logW, done: doneForwarding, file: logFile}
 }
 
 func finish(t *testing.T, l *log) {

@@ -3,7 +3,6 @@ package integration
 import (
 	"bufio"
 	"bytes"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -62,19 +61,8 @@ func testCheckpoint(t *testing.T, userns bool) {
 		t.Skipf("criu binary not found: %v", err)
 	}
 
-	root, err := newTestRoot()
-	ok(t, err)
-	defer remove(root)
-
-	rootfs, err := newRootfs()
-	ok(t, err)
-	defer remove(rootfs)
-
-	config := newTemplateConfig(t, &tParam{
-		rootfs: rootfs,
-		userns: userns,
-	})
-	factory, err := libcontainer.New(root, libcontainer.Cgroupfs)
+	config := newTemplateConfig(t, &tParam{userns: userns})
+	factory, err := libcontainer.New(t.TempDir(), libcontainer.Cgroupfs)
 	ok(t, err)
 
 	container, err := factory.Create("test", config)
@@ -106,10 +94,9 @@ func testCheckpoint(t *testing.T, userns bool) {
 	process, err := os.FindProcess(pid)
 	ok(t, err)
 
-	parentDir, err := ioutil.TempDir("", "criu-parent")
-	ok(t, err)
-	defer remove(parentDir)
+	tmp := t.TempDir()
 
+	parentDir := filepath.Join(tmp, "criu-parent")
 	preDumpOpts := &libcontainer.CriuOpts{
 		ImagesDirectory: parentDir,
 		WorkDirectory:   parentDir,
@@ -129,9 +116,7 @@ func testCheckpoint(t *testing.T, userns bool) {
 		t.Fatal("Unexpected preDump state: ", state)
 	}
 
-	imagesDir, err := ioutil.TempDir("", "criu")
-	ok(t, err)
-	defer remove(imagesDir)
+	imagesDir := filepath.Join(tmp, "criu")
 
 	checkpointOpts := &libcontainer.CriuOpts{
 		ImagesDirectory: imagesDir,

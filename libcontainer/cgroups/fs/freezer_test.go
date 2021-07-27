@@ -11,7 +11,6 @@ import (
 
 func TestFreezerSetState(t *testing.T) {
 	helper := NewCgroupTestUtil("freezer", t)
-	defer helper.cleanup()
 
 	helper.writeFileContents(map[string]string{
 		"freezer.state": string(configs.Frozen),
@@ -34,7 +33,6 @@ func TestFreezerSetState(t *testing.T) {
 
 func TestFreezerSetInvalidState(t *testing.T) {
 	helper := NewCgroupTestUtil("freezer", t)
-	defer helper.cleanup()
 
 	const (
 		invalidArg configs.FreezerState = "Invalid"

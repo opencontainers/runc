@@ -13,7 +13,6 @@ import (
 
 func TestCpuSetShares(t *testing.T) {
 	helper := NewCgroupTestUtil("cpu", t)
-	defer helper.cleanup()
 
 	const (
 		sharesBefore = 1024
@@ -41,7 +40,6 @@ func TestCpuSetShares(t *testing.T) {
 
 func TestCpuSetBandWidth(t *testing.T) {
 	helper := NewCgroupTestUtil("cpu", t)
-	defer helper.cleanup()
 
 	const (
 		quotaBefore     = 8000
@@ -105,7 +103,6 @@ func TestCpuSetBandWidth(t *testing.T) {
 
 func TestCpuStats(t *testing.T) {
 	helper := NewCgroupTestUtil("cpu", t)
-	defer helper.cleanup()
 
 	const (
 		nrPeriods     = 2000
@@ -137,7 +134,6 @@ func TestCpuStats(t *testing.T) {
 
 func TestNoCpuStatFile(t *testing.T) {
 	helper := NewCgroupTestUtil("cpu", t)
-	defer helper.cleanup()
 
 	cpu := &CpuGroup{}
 	actualStats := *cgroups.NewStats()
@@ -149,7 +145,7 @@ func TestNoCpuStatFile(t *testing.T) {
 
 func TestInvalidCpuStat(t *testing.T) {
 	helper := NewCgroupTestUtil("cpu", t)
-	defer helper.cleanup()
+
 	cpuStatContent := `nr_periods 2000
 	nr_throttled 200
 	throttled_time fortytwo`
@@ -167,7 +163,6 @@ func TestInvalidCpuStat(t *testing.T) {
 
 func TestCpuSetRtSchedAtApply(t *testing.T) {
 	helper := NewCgroupTestUtil("cpu", t)
-	defer helper.cleanup()
 
 	const (
 		rtRuntimeBefore = 0

@@ -17,13 +17,9 @@ func TestSeccompDenyGetcwdWithErrno(t *testing.T) {
 		return
 	}
 
-	rootfs, err := newRootfs()
-	ok(t, err)
-	defer remove(rootfs)
-
 	errnoRet := uint(syscall.ESRCH)
 
-	config := newTemplateConfig(t, &tParam{rootfs: rootfs})
+	config := newTemplateConfig(t, nil)
 	config.Seccomp = &configs.Seccomp{
 		DefaultAction: configs.Allow,
 		Syscalls: []*configs.Syscall{
@@ -83,11 +79,7 @@ func TestSeccompDenyGetcwd(t *testing.T) {
 		return
 	}
 
-	rootfs, err := newRootfs()
-	ok(t, err)
-	defer remove(rootfs)
-
-	config := newTemplateConfig(t, &tParam{rootfs: rootfs})
+	config := newTemplateConfig(t, nil)
 	config.Seccomp = &configs.Seccomp{
 		DefaultAction: configs.Allow,
 		Syscalls: []*configs.Syscall{
@@ -146,11 +138,7 @@ func TestSeccompPermitWriteConditional(t *testing.T) {
 		return
 	}
 
-	rootfs, err := newRootfs()
-	ok(t, err)
-	defer remove(rootfs)
-
-	config := newTemplateConfig(t, &tParam{rootfs: rootfs})
+	config := newTemplateConfig(t, nil)
 	config.Seccomp = &configs.Seccomp{
 		DefaultAction: configs.Allow,
 		Syscalls: []*configs.Syscall{
@@ -202,11 +190,7 @@ func TestSeccompDenyWriteConditional(t *testing.T) {
 		return
 	}
 
-	rootfs, err := newRootfs()
-	ok(t, err)
-	defer remove(rootfs)
-
-	config := newTemplateConfig(t, &tParam{rootfs: rootfs})
+	config := newTemplateConfig(t, nil)
 	config.Seccomp = &configs.Seccomp{
 		DefaultAction: configs.Allow,
 		Syscalls: []*configs.Syscall{
@@ -274,11 +258,7 @@ func TestSeccompPermitWriteMultipleConditions(t *testing.T) {
 		return
 	}
 
-	rootfs, err := newRootfs()
-	ok(t, err)
-	defer remove(rootfs)
-
-	config := newTemplateConfig(t, &tParam{rootfs: rootfs})
+	config := newTemplateConfig(t, nil)
 	config.Seccomp = &configs.Seccomp{
 		DefaultAction: configs.Allow,
 		Syscalls: []*configs.Syscall{
@@ -327,11 +307,7 @@ func TestSeccompDenyWriteMultipleConditions(t *testing.T) {
 		return
 	}
 
-	rootfs, err := newRootfs()
-	ok(t, err)
-	defer remove(rootfs)
-
-	config := newTemplateConfig(t, &tParam{rootfs: rootfs})
+	config := newTemplateConfig(t, nil)
 	config.Seccomp = &configs.Seccomp{
 		DefaultAction: configs.Allow,
 		Syscalls: []*configs.Syscall{
@@ -374,12 +350,8 @@ func TestSeccompMultipleConditionSameArgDeniesStdout(t *testing.T) {
 		return
 	}
 
-	rootfs, err := newRootfs()
-	ok(t, err)
-	defer remove(rootfs)
-
-	// Prevent writing to both stdout and stderr
-	config := newTemplateConfig(t, &tParam{rootfs: rootfs})
+	// Prevent writing to both stdout and stderr.
+	config := newTemplateConfig(t, nil)
 	config.Seccomp = &configs.Seccomp{
 		DefaultAction: configs.Allow,
 		Syscalls: []*configs.Syscall{
@@ -420,12 +392,8 @@ func TestSeccompMultipleConditionSameArgDeniesStderr(t *testing.T) {
 		return
 	}
 
-	rootfs, err := newRootfs()
-	ok(t, err)
-	defer remove(rootfs)
-
-	// Prevent writing to both stdout and stderr
-	config := newTemplateConfig(t, &tParam{rootfs: rootfs})
+	// Prevent writing to both stdout and stderr.
+	config := newTemplateConfig(t, nil)
 	config.Seccomp = &configs.Seccomp{
 		DefaultAction: configs.Allow,
 		Syscalls: []*configs.Syscall{
