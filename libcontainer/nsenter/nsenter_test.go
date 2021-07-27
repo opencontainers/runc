@@ -47,7 +47,7 @@ func TestNsenterValidPaths(t *testing.T) {
 	}
 
 	if err := cmd.Start(); err != nil {
-		t.Fatalf("nsenter failed to start %v", err)
+		t.Fatal("nsenter failed to start:", err)
 	}
 
 	// write cloneFlags
@@ -70,7 +70,7 @@ func TestNsenterValidPaths(t *testing.T) {
 	var pid *pid
 
 	if err := cmd.Wait(); err != nil {
-		t.Fatalf("nsenter exits with a non-zero exit status")
+		t.Fatal("nsenter error:", err)
 	}
 	if err := decoder.Decode(&pid); err != nil {
 		dir, _ := ioutil.ReadDir(fmt.Sprintf("/proc/%d/ns", os.Getpid()))
@@ -106,7 +106,7 @@ func TestNsenterInvalidPaths(t *testing.T) {
 	}
 
 	if err := cmd.Start(); err != nil {
-		t.Fatal(err)
+		t.Fatal("nsenter failed to start:", err)
 	}
 	// write cloneFlags
 	r := nl.NewNetlinkRequest(int(libcontainer.InitMsg), 0)
@@ -124,7 +124,7 @@ func TestNsenterInvalidPaths(t *testing.T) {
 
 	initWaiter(t, parent)
 	if err := cmd.Wait(); err == nil {
-		t.Fatalf("nsenter exits with a zero exit status")
+		t.Fatal("nsenter error:", err)
 	}
 }
 
@@ -132,7 +132,7 @@ func TestNsenterIncorrectPathType(t *testing.T) {
 	args := []string{"nsenter-exec"}
 	parent, child, err := newPipe()
 	if err != nil {
-		t.Fatalf("failed to create pipe %v", err)
+		t.Fatal("failed to create pipe:", err)
 	}
 
 	namespaces := []string{
@@ -147,7 +147,7 @@ func TestNsenterIncorrectPathType(t *testing.T) {
 	}
 
 	if err := cmd.Start(); err != nil {
-		t.Fatal(err)
+		t.Fatal("nsenter failed to start:", err)
 	}
 	// write cloneFlags
 	r := nl.NewNetlinkRequest(int(libcontainer.InitMsg), 0)
@@ -165,7 +165,7 @@ func TestNsenterIncorrectPathType(t *testing.T) {
 
 	initWaiter(t, parent)
 	if err := cmd.Wait(); err == nil {
-		t.Fatalf("nsenter exits with a zero exit status")
+		t.Fatal("nsenter error:", err)
 	}
 }
 
@@ -198,7 +198,7 @@ func TestNsenterChildLogging(t *testing.T) {
 	}
 
 	if err := cmd.Start(); err != nil {
-		t.Fatalf("nsenter failed to start %v", err)
+		t.Fatal("nsenter failed to start:", err)
 	}
 	// write cloneFlags
 	r := nl.NewNetlinkRequest(int(libcontainer.InitMsg), 0)
@@ -228,7 +228,7 @@ func TestNsenterChildLogging(t *testing.T) {
 	}
 
 	if err := cmd.Wait(); err != nil {
-		t.Fatalf("nsenter exits with a non-zero exit status")
+		t.Fatal("nsenter error:", err)
 	}
 }
 
@@ -259,5 +259,5 @@ func initWaiter(t *testing.T, r io.Reader) {
 			return
 		}
 	}
-	t.Fatalf("waiting for init preliminary setup: %v", err)
+	t.Fatal("waiting for init preliminary setup:", err)
 }
