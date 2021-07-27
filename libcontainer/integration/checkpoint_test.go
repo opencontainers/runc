@@ -133,10 +133,12 @@ func testCheckpoint(t *testing.T, userns bool) {
 	ok(t, err)
 	defer remove(imagesDir)
 
+	relParentDir, err := filepath.Rel(imagesDir, parentDir)
+	ok(t, err)
 	checkpointOpts := &libcontainer.CriuOpts{
 		ImagesDirectory: imagesDir,
 		WorkDirectory:   imagesDir,
-		ParentImage:     "../criu-parent",
+		ParentImage:     relParentDir,
 	}
 	dumpLog := filepath.Join(checkpointOpts.WorkDirectory, "dump.log")
 	restoreLog := filepath.Join(checkpointOpts.WorkDirectory, "restore.log")
