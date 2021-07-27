@@ -28,10 +28,7 @@ type logentry struct {
 
 func TestNsenterValidPaths(t *testing.T) {
 	args := []string{"nsenter-exec"}
-	parent, child, err := newPipe()
-	if err != nil {
-		t.Fatalf("failed to create pipe %v", err)
-	}
+	parent, child := newPipe(t)
 
 	namespaces := []string{
 		// join pid ns of the current process
@@ -49,6 +46,7 @@ func TestNsenterValidPaths(t *testing.T) {
 	if err := cmd.Start(); err != nil {
 		t.Fatalf("nsenter failed to start %v", err)
 	}
+	child.Close()
 
 	// write cloneFlags
 	r := nl.NewNetlinkRequest(int(libcontainer.InitMsg), 0)
@@ -89,10 +87,7 @@ func TestNsenterValidPaths(t *testing.T) {
 
 func TestNsenterInvalidPaths(t *testing.T) {
 	args := []string{"nsenter-exec"}
-	parent, child, err := newPipe()
-	if err != nil {
-		t.Fatalf("failed to create pipe %v", err)
-	}
+	parent, child := newPipe(t)
 
 	namespaces := []string{
 		// join pid ns of the current process
@@ -108,6 +103,8 @@ func TestNsenterInvalidPaths(t *testing.T) {
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
 	}
+	child.Close()
+
 	// write cloneFlags
 	r := nl.NewNetlinkRequest(int(libcontainer.InitMsg), 0)
 	r.AddData(&libcontainer.Int32msg{
@@ -130,10 +127,7 @@ func TestNsenterInvalidPaths(t *testing.T) {
 
 func TestNsenterIncorrectPathType(t *testing.T) {
 	args := []string{"nsenter-exec"}
-	parent, child, err := newPipe()
-	if err != nil {
-		t.Fatalf("failed to create pipe %v", err)
-	}
+	parent, child := newPipe(t)
 
 	namespaces := []string{
 		// join pid ns of the current process
@@ -149,6 +143,8 @@ func TestNsenterIncorrectPathType(t *testing.T) {
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
 	}
+	child.Close()
+
 	// write cloneFlags
 	r := nl.NewNetlinkRequest(int(libcontainer.InitMsg), 0)
 	r.AddData(&libcontainer.Int32msg{
@@ -171,18 +167,8 @@ func TestNsenterIncorrectPathType(t *testing.T) {
 
 func TestNsenterChildLogging(t *testing.T) {
 	args := []string{"nsenter-exec"}
-	parent, child, err := newPipe()
-	if err != nil {
-		t.Fatalf("failed to create exec pipe %v", err)
-	}
-	logread, logwrite, err := os.Pipe()
-	if err != nil {
-		t.Fatalf("failed to create log pipe %v", err)
-	}
-	defer func() {
-		_ = logwrite.Close()
-		_ = logread.Close()
-	}()
+	parent, child := newPipe(t)
+	logread, logwrite := newPipe(t)
 
 	namespaces := []string{
 		// join pid ns of the current process
@@ -200,6 +186,9 @@ func TestNsenterChildLogging(t *testing.T) {
 	if err := cmd.Start(); err != nil {
 		t.Fatalf("nsenter failed to start %v", err)
 	}
+	child.Close()
+	logwrite.Close()
+
 	// write cloneFlags
 	r := nl.NewNetlinkRequest(int(libcontainer.InitMsg), 0)
 	r.AddData(&libcontainer.Int32msg{
@@ -219,7 +208,7 @@ func TestNsenterChildLogging(t *testing.T) {
 	logsDecoder := json.NewDecoder(logread)
 	var logentry *logentry
 
-	err = logsDecoder.Decode(&logentry)
+	err := logsDecoder.Decode(&logentry)
 	if err != nil {
 		t.Fatalf("child log: %v", err)
 	}
@@ -238,12 +227,19 @@ func init() {
 	}
 }
 
-func newPipe() (parent *os.File, child *os.File, err error) {
+func newPipe(t *testing.T) (parent *os.File, child *os.File) {
+	t.Helper()
 	fds, err := unix.Socketpair(unix.AF_LOCAL, unix.SOCK_STREAM|unix.SOCK_CLOEXEC, 0)
 	if err != nil {
-		return nil, nil, err
+		t.Fatal("socketpair failed:", err)
 	}
-	return os.NewFile(uintptr(fds[1]), "parent"), os.NewFile(uintptr(fds[0]), "child"), nil
+	parent = os.NewFile(uintptr(fds[1]), "parent")
+	child = os.NewFile(uintptr(fds[0]), "child")
+	t.Cleanup(func() {
+		parent.Close()
+		child.Close()
+	})
+	return
 }
 
 // initWaiter reads back the initial \0 from runc init
