@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
@@ -16,10 +15,6 @@ import (
 	"github.com/vishvananda/netlink/nl"
 	"golang.org/x/sys/unix"
 )
-
-type pid struct {
-	Pid int `json:"Pid"`
-}
 
 type logentry struct {
 	Msg   string `json:"msg"`
@@ -64,25 +59,11 @@ func TestNsenterValidPaths(t *testing.T) {
 
 	initWaiter(t, parent)
 
-	decoder := json.NewDecoder(parent)
-	var pid *pid
-
 	if err := cmd.Wait(); err != nil {
 		t.Fatalf("nsenter exits with a non-zero exit status")
 	}
-	if err := decoder.Decode(&pid); err != nil {
-		dir, _ := ioutil.ReadDir(fmt.Sprintf("/proc/%d/ns", os.Getpid()))
-		for _, d := range dir {
-			t.Log(d.Name())
-		}
-		t.Fatalf("%v", err)
-	}
 
-	p, err := os.FindProcess(pid.Pid)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-	_, _ = p.Wait()
+	reapChildren(t, parent)
 }
 
 func TestNsenterInvalidPaths(t *testing.T) {
@@ -256,4 +237,26 @@ func initWaiter(t *testing.T, r io.Reader) {
 		}
 	}
 	t.Fatalf("waiting for init preliminary setup: %v", err)
+}
+
+func reapChildren(t *testing.T, parent *os.File) {
+	t.Helper()
+	decoder := json.NewDecoder(parent)
+	decoder.DisallowUnknownFields()
+	var pid struct {
+		Pid2 int `json:"stage2_pid"`
+		Pid1 int `json:"stage1_pid"`
+	}
+	if err := decoder.Decode(&pid); err != nil {
+		t.Fatal(err)
+	}
+
+	// Reap children.
+	_, _ = unix.Wait4(pid.Pid1, nil, 0, nil)
+	_, _ = unix.Wait4(pid.Pid2, nil, 0, nil)
+
+	// Sanity check.
+	if pid.Pid1 == 0 || pid.Pid2 == 0 {
+		t.Fatal("got pids:", pid)
+	}
 }
