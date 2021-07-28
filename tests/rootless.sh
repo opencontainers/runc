@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 # Copyright (C) 2017 SUSE LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -114,6 +114,15 @@ function enable_cgroup() {
 		# necessary, and might actually be a bug in our impl of cgroup
 		# handling.
 		[[ "$cg" == "cpuset" ]] && chown rootless:rootless "$CGROUP_MOUNT/$cg$CGROUP_PATH/cpuset."{cpus,mems}
+		# The following is required by "update rt period and runtime".
+		if [[ "$cg" == "cpu" ]]; then
+			if [[ -e "$CGROUP_MOUNT/$cg$CGROUP_PATH/cpu.rt_period_us" ]]; then
+				chown rootless:rootless "$CGROUP_MOUNT/$cg$CGROUP_PATH/cpu.rt_period_us"
+			fi
+			if [[ -e "$CGROUP_MOUNT/$cg$CGROUP_PATH/cpu.rt_runtime_us" ]]; then
+				chown rootless:rootless "$CGROUP_MOUNT/$cg$CGROUP_PATH/cpu.rt_runtime_us"
+			fi
+		fi
 	done
 	# cgroup v2
 	if [[ -e "$CGROUP_MOUNT/cgroup.controllers" ]]; then
