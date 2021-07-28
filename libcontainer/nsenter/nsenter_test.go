@@ -66,7 +66,6 @@ func TestNsenterInvalidPaths(t *testing.T) {
 	parent, child := newPipe(t)
 
 	namespaces := []string{
-		// join pid ns of the current process
 		fmt.Sprintf("pid:/proc/%d/ns/pid", -1),
 	}
 	cmd := &exec.Cmd{
@@ -106,7 +105,6 @@ func TestNsenterIncorrectPathType(t *testing.T) {
 	parent, child := newPipe(t)
 
 	namespaces := []string{
-		// join pid ns of the current process
 		fmt.Sprintf("net:/proc/%d/ns/pid", os.Getpid()),
 	}
 	cmd := &exec.Cmd{
