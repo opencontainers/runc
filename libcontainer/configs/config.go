@@ -50,6 +50,8 @@ const (
 	Trace
 	Log
 	Notify
+	KillThread
+	KillProcess
 )
 
 // Operator is a comparison operator to be used when matching syscall arguments in Seccomp
