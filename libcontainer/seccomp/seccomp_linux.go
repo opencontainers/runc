@@ -98,6 +98,10 @@ func getAction(act configs.Action, errnoRet *uint) (libseccomp.ScmpAction, error
 		return actTrace, nil
 	case configs.Log:
 		return actLog, nil
+	case configs.KillThread:
+		return libseccomp.ActKillThread, nil
+	case configs.KillProcess:
+		return libseccomp.ActKillProcess, nil
 	default:
 		return libseccomp.ActInvalid, errors.New("invalid action, cannot use in rule")
 	}

@@ -583,7 +583,7 @@ func enosysPatchFilter(config *configs.Seccomp, filter *libseccomp.ScmpFilter) (
 
 func filterFlags(filter *libseccomp.ScmpFilter) (flags uint, noNewPrivs bool, err error) {
 	// Ignore the error since pre-2.4 libseccomp is treated as API level 0.
-	apiLevel, _ := libseccomp.GetApi()
+	apiLevel, _ := libseccomp.GetAPI()
 
 	noNewPrivs, err = filter.GetNoNewPrivsBit()
 	if err != nil {
