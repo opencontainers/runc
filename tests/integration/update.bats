@@ -392,6 +392,41 @@ EOF
 	check_cpu_quota 30000 100000 "300ms"
 }
 
+@test "update cpu period in a pod cgroup with pod limit set" {
+	requires cgroups_v1
+	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+
+	set_cgroups_path "pod_${RANDOM}"
+
+	# Set parent/pod CPU quota limit to 50%.
+	if [ -n "${RUNC_USE_SYSTEMD}" ]; then
+		set_parent_systemd_properties CPUQuota="50%"
+	else
+		echo 50000 >"/sys/fs/cgroup/cpu/$REL_PARENT_PATH/cpu.cfs_quota_us"
+	fi
+	# Sanity checks.
+	run cat "/sys/fs/cgroup/cpu$REL_PARENT_PATH/cpu.cfs_period_us"
+	[ "$output" -eq 100000 ]
+	run cat "/sys/fs/cgroup/cpu$REL_PARENT_PATH/cpu.cfs_quota_us"
+	[ "$output" -eq 50000 ]
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
+	[ "$status" -eq 0 ]
+	# Get the current period.
+	local cur
+	cur=$(get_cgroup_value cpu.cfs_period_us)
+
+	# Sanity check: as the parent cgroup sets the limit to 50%,
+	# setting a higher limit (e.g. 60%) is expected to fail.
+	runc update --cpu-quota $((cur * 6 / 10)) test_update
+	[ "$status" -eq 1 ]
+
+	# Finally, the test itself: set 30% limit but with lower period.
+	runc update --cpu-period 10000 --cpu-quota 3000 test_update
+	[ "$status" -eq 0 ]
+	check_cpu_quota 3000 10000 "300ms"
+}
+
 @test "update cgroup v2 resources via unified map" {
 	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
 	requires cgroups_v2

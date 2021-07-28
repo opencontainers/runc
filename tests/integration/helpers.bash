@@ -16,6 +16,7 @@ unset IMAGES
 
 RUNC="${INTEGRATION_ROOT}/../../runc"
 RECVTTY="${INTEGRATION_ROOT}/../../contrib/cmd/recvtty/recvtty"
+SD_HELPER="${INTEGRATION_ROOT}/../../contrib/cmd/sd-helper/sd-helper"
 
 # Test data path.
 # shellcheck disable=SC2034
@@ -131,24 +132,85 @@ function init_cgroup_paths() {
 	fi
 }
 
+function create_parent() {
+	if [ -n "$RUNC_USE_SYSTEMD" ]; then
+		[ -z "$SD_PARENT_NAME" ] && return
+		"$SD_HELPER" --parent machine.slice start "$SD_PARENT_NAME"
+	else
+		[ -z "$REL_PARENT_PATH" ] && return
+		if [ "$CGROUP_UNIFIED" == "yes" ]; then
+			mkdir "/sys/fs/cgroup$REL_PARENT_PATH"
+		else
+			local subsys
+			for subsys in ${CGROUP_SUBSYSTEMS}; do
+				# Have to ignore EEXIST (-p) as some subsystems
+				# are mounted together (e.g. cpu,cpuacct), so
+				# the path is created more than once.
+				mkdir -p "/sys/fs/cgroup/$subsys$REL_PARENT_PATH"
+			done
+		fi
+	fi
+}
+
+function remove_parent() {
+	if [ -n "$RUNC_USE_SYSTEMD" ]; then
+		[ -z "$SD_PARENT_NAME" ] && return
+		"$SD_HELPER" --parent machine.slice stop "$SD_PARENT_NAME"
+	else
+		[ -z "$REL_PARENT_PATH" ] && return
+		if [ "$CGROUP_UNIFIED" == "yes" ]; then
+			rmdir "/sys/fs/cgroup/$REL_PARENT_PATH"
+		else
+			local subsys
+			for subsys in ${CGROUP_SUBSYSTEMS} systemd; do
+				rmdir "/sys/fs/cgroup/$subsys/$REL_PARENT_PATH"
+			done
+		fi
+	fi
+	unset SD_PARENT_NAME
+	unset REL_PARENT_PATH
+}
+
+function set_parent_systemd_properties() {
+	[ -z "$SD_PARENT_NAME" ] && return
+	local user
+	[ "$(id -u)" != "0" ] && user="--user"
+	systemctl set-property $user "$SD_PARENT_NAME" "$@"
+}
+
 # Randomize cgroup path(s), and update cgroupsPath in config.json.
 # This function sets a few cgroup-related variables.
+#
+# Optional parameter $1 is a pod/parent name. If set, a parent/pod cgroup is
+# created, and variables $REL_PARENT_PATH and $SD_PARENT_NAME can be used to
+# refer to it.
 function set_cgroups_path() {
 	init_cgroup_paths
+	local pod dash_pod slash_pod pod_slice
+	if [ "$#" -ne 0 ] && [ "$1" != "" ]; then
+		# Set up a parent/pod cgroup.
+		pod="$1"
+		dash_pod="-$pod"
+		slash_pod="/$pod"
+		SD_PARENT_NAME="machine-${pod}.slice"
+		pod_slice="/$SD_PARENT_NAME"
+	fi
 
 	local rnd="$RANDOM"
 	if [ -n "${RUNC_USE_SYSTEMD}" ]; then
 		SD_UNIT_NAME="runc-cgroups-integration-test-${rnd}.scope"
 		if [ "$(id -u)" = "0" ]; then
-			REL_CGROUPS_PATH="/machine.slice/$SD_UNIT_NAME"
-			OCI_CGROUPS_PATH="machine.slice:runc-cgroups:integration-test-${rnd}"
+			REL_PARENT_PATH="/machine.slice${pod_slice}"
+			OCI_CGROUPS_PATH="machine${dash_pod}.slice:runc-cgroups:integration-test-${rnd}"
 		else
-			REL_CGROUPS_PATH="/user.slice/user-$(id -u).slice/user@$(id -u).service/machine.slice/$SD_UNIT_NAME"
+			REL_PARENT_PATH="/user.slice/user-$(id -u).slice/user@$(id -u).service/machine.slice${pod_slice}"
 			# OCI path doesn't contain "/user.slice/user-$(id -u).slice/user@$(id -u).service/" prefix
-			OCI_CGROUPS_PATH="machine.slice:runc-cgroups:integration-test-${rnd}"
+			OCI_CGROUPS_PATH="machine${dash_pod}.slice:runc-cgroups:integration-test-${rnd}"
 		fi
+		REL_CGROUPS_PATH="$REL_PARENT_PATH/$SD_UNIT_NAME"
 	else
-		REL_CGROUPS_PATH="/runc-cgroups-integration-test/test-cgroup-${rnd}"
+		REL_PARENT_PATH="/runc-cgroups-integration-test${slash_pod}"
+		REL_CGROUPS_PATH="$REL_PARENT_PATH/test-cgroup-${rnd}"
 		OCI_CGROUPS_PATH=$REL_CGROUPS_PATH
 	fi
 
@@ -156,6 +218,8 @@ function set_cgroups_path() {
 	if [ "$CGROUP_UNIFIED" == "yes" ]; then
 		CGROUP_PATH=${CGROUP_BASE_PATH}${REL_CGROUPS_PATH}
 	fi
+
+	[ -n "$pod" ] && create_parent
 
 	update_config '.linux.cgroupsPath |= "'"${OCI_CGROUPS_PATH}"'"'
 }
@@ -479,4 +543,5 @@ function teardown_bundle() {
 		__runc delete -f "$ct"
 	done
 	rm -rf "$ROOT"
+	remove_parent
 }
