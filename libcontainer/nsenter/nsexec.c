@@ -175,10 +175,14 @@ out:
 /* XXX: This is ugly. */
 static int syncfd = -1;
 
-#define bail(fmt, ...)                                       \
-	do {                                                       \
-		write_log(FATAL, fmt ": %m", ##__VA_ARGS__); \
-		exit(1);                                                 \
+#define bail(fmt, ...)                                               \
+	do {                                                         \
+		if (logfd < 0)                                       \
+			fprintf(stderr, "FATAL: " fmt ": %m\n",      \
+				##__VA_ARGS__);                      \
+		else                                                 \
+			write_log(FATAL, fmt ": %m", ##__VA_ARGS__); \
+		exit(1);                                             \
 	} while(0)
 
 static int write_file(char *data, size_t data_len, char *pathfmt, ...)
@@ -400,9 +404,7 @@ static void setup_logpipe(void)
 
 	logfd = strtol(logpipe, &endptr, 10);
 	if (logpipe == endptr || *endptr != '\0') {
-		fprintf(stderr, "unable to parse _LIBCONTAINER_LOGPIPE, value: %s\n", logpipe);
-		/* It is too early to use bail */
-		exit(1);
+		bail("unable to parse _LIBCONTAINER_LOGPIPE, value: %s", logpipe);
 	}
 }
 
