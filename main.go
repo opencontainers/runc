@@ -119,7 +119,6 @@ func main() {
 		deleteCommand,
 		eventsCommand,
 		execCommand,
-		initCommand,
 		killCommand,
 		listCommand,
 		pauseCommand,
@@ -149,10 +148,7 @@ func main() {
 		if err := reviseRootDir(context); err != nil {
 			return err
 		}
-		// let init configure logging on its own
-		if args := context.Args(); args != nil && args.First() == "init" {
-			return nil
-		}
+
 		return logs.ConfigureLogging(createLogConfig(context))
 	}
 
