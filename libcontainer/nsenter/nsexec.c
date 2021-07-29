@@ -142,7 +142,7 @@ int setns(int fd, int nstype)
 
 static void write_log(const char *level, const char *format, ...)
 {
-	char *message = NULL, *stage = NULL;
+	char *message = NULL, *stage = NULL, *json = NULL;
 	va_list args;
 	int ret;
 
@@ -164,11 +164,18 @@ static void write_log(const char *level, const char *format, ...)
 	if (ret < 0)
 		goto out;
 
-	dprintf(logfd, "{\"level\":\"%s\", \"msg\": \"%s[%d]: %s\"}\n", level, stage, getpid(), message);
+	ret = asprintf(&json, "{\"level\":\"%s\", \"msg\": \"%s[%d]: %s\"}\n", level, stage, getpid(), message);
+	if (ret < 0) {
+		json = NULL;
+		goto out;
+	}
+
+	write(logfd, json, ret);
 
 out:
 	free(message);
 	free(stage);
+	free(json);
 }
 
 /* XXX: This is ugly. */
