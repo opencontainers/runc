@@ -15,8 +15,8 @@ func (s *NetClsGroup) Name() string {
 	return "net_cls"
 }
 
-func (s *NetClsGroup) Apply(path string, d *cgroupData) error {
-	return join(path, d.pid)
+func (s *NetClsGroup) Apply(path string, d *cgroups.CgroupData) error {
+	return join(path, d.Pid)
 }
 
 func (s *NetClsGroup) Set(path string, r *configs.Resources) error {

@@ -5,20 +5,21 @@ package fs
 import (
 	"testing"
 
+	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
 func TestFreezerSetState(t *testing.T) {
-	helper := NewCgroupTestUtil("freezer", t)
+	helper := cgroups.NewCgroupTestUtil("freezer", t)
 
-	helper.writeFileContents(map[string]string{
+	helper.WriteFileContents(map[string]string{
 		"freezer.state": string(configs.Frozen),
 	})
 
-	helper.CgroupData.config.Resources.Freezer = configs.Thawed
+	helper.CgroupData.Config.Resources.Freezer = configs.Thawed
 	freezer := &FreezerGroup{}
-	if err := freezer.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
+	if err := freezer.Set(helper.CgroupPath, helper.CgroupData.Config.Resources); err != nil {
 		t.Fatal(err)
 	}
 
@@ -32,15 +33,15 @@ func TestFreezerSetState(t *testing.T) {
 }
 
 func TestFreezerSetInvalidState(t *testing.T) {
-	helper := NewCgroupTestUtil("freezer", t)
+	helper := cgroups.NewCgroupTestUtil("freezer", t)
 
 	const (
 		invalidArg configs.FreezerState = "Invalid"
 	)
 
-	helper.CgroupData.config.Resources.Freezer = invalidArg
+	helper.CgroupData.Config.Resources.Freezer = invalidArg
 	freezer := &FreezerGroup{}
-	if err := freezer.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err == nil {
+	if err := freezer.Set(helper.CgroupPath, helper.CgroupData.Config.Resources); err == nil {
 		t.Fatal("Failed to return invalid argument error")
 	}
 }

@@ -178,18 +178,18 @@ func TestBlkioSetWeight(t *testing.T) {
 
 	for _, legacyIOScheduler := range []bool{false, true} {
 		// Populate cgroup
-		helper := NewCgroupTestUtil("blkio", t)
+		helper := cgroups.NewCgroupTestUtil("blkio", t)
 		weightFilename := "blkio.bfq.weight"
 		if legacyIOScheduler {
 			weightFilename = "blkio.weight"
 		}
-		helper.writeFileContents(map[string]string{
+		helper.WriteFileContents(map[string]string{
 			weightFilename: strconv.Itoa(weightBefore),
 		})
 		// Apply new configuration
-		helper.CgroupData.config.Resources.BlkioWeight = weightAfter
+		helper.CgroupData.Config.Resources.BlkioWeight = weightAfter
 		blkio := &BlkioGroup{}
-		if err := blkio.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
+		if err := blkio.Set(helper.CgroupPath, helper.CgroupData.Config.Resources); err != nil {
 			t.Fatal(err)
 		}
 		// Verify results
@@ -213,23 +213,23 @@ func TestBlkioSetWeightDevice(t *testing.T) {
 
 	for _, legacyIOScheduler := range []bool{false, true} {
 		// Populate cgroup
-		helper := NewCgroupTestUtil("blkio", t)
+		helper := cgroups.NewCgroupTestUtil("blkio", t)
 		weightFilename := "blkio.bfq.weight"
 		weightDeviceFilename := "blkio.bfq.weight_device"
 		if legacyIOScheduler {
 			weightFilename = "blkio.weight"
 			weightDeviceFilename = "blkio.weight_device"
 		}
-		helper.writeFileContents(map[string]string{
+		helper.WriteFileContents(map[string]string{
 			weightFilename:       "",
 			weightDeviceFilename: weightDeviceBefore,
 		})
 		// Apply new configuration
 		wd := configs.NewWeightDevice(8, 0, 500, 0)
 		weightDeviceAfter := wd.WeightString()
-		helper.CgroupData.config.Resources.BlkioWeightDevice = []*configs.WeightDevice{wd}
+		helper.CgroupData.Config.Resources.BlkioWeightDevice = []*configs.WeightDevice{wd}
 		blkio := &BlkioGroup{}
-		if err := blkio.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
+		if err := blkio.Set(helper.CgroupPath, helper.CgroupData.Config.Resources); err != nil {
 			t.Fatal(err)
 		}
 		// Verify results
@@ -248,7 +248,7 @@ func TestBlkioSetWeightDevice(t *testing.T) {
 
 // regression #274
 func TestBlkioSetMultipleWeightDevice(t *testing.T) {
-	helper := NewCgroupTestUtil("blkio", t)
+	helper := cgroups.NewCgroupTestUtil("blkio", t)
 
 	const (
 		weightDeviceBefore = "8:0 400"
@@ -267,12 +267,12 @@ func TestBlkioSetMultipleWeightDevice(t *testing.T) {
 	if blkio.weightDeviceFilename != "blkio.bfq.weight_device" {
 		t.Fatalf("when blkio controller is unavailable, expected to use \"blkio.bfq.weight_device\", tried to use %q", blkio.weightDeviceFilename)
 	}
-	helper.writeFileContents(map[string]string{
+	helper.WriteFileContents(map[string]string{
 		blkio.weightDeviceFilename: weightDeviceBefore,
 	})
 
-	helper.CgroupData.config.Resources.BlkioWeightDevice = []*configs.WeightDevice{wd1, wd2}
-	if err := blkio.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
+	helper.CgroupData.Config.Resources.BlkioWeightDevice = []*configs.WeightDevice{wd1, wd2}
+	if err := blkio.Set(helper.CgroupPath, helper.CgroupData.Config.Resources); err != nil {
 		t.Fatal(err)
 	}
 
@@ -286,8 +286,8 @@ func TestBlkioSetMultipleWeightDevice(t *testing.T) {
 }
 
 func TestBlkioBFQDebugStats(t *testing.T) {
-	helper := NewCgroupTestUtil("blkio", t)
-	helper.writeFileContents(blkioBFQDebugStatsTestFiles)
+	helper := cgroups.NewCgroupTestUtil("blkio", t)
+	helper.WriteFileContents(blkioBFQDebugStatsTestFiles)
 	blkio := &BlkioGroup{}
 	actualStats := *cgroups.NewStats()
 	err := blkio.GetStats(helper.CgroupPath, &actualStats)
@@ -340,9 +340,9 @@ func TestBlkioBFQDebugStats(t *testing.T) {
 }
 
 func TestBlkioMultipleStatsFiles(t *testing.T) {
-	helper := NewCgroupTestUtil("blkio", t)
-	helper.writeFileContents(blkioBFQDebugStatsTestFiles)
-	helper.writeFileContents(blkioCFQStatsTestFiles)
+	helper := cgroups.NewCgroupTestUtil("blkio", t)
+	helper.WriteFileContents(blkioBFQDebugStatsTestFiles)
+	helper.WriteFileContents(blkioCFQStatsTestFiles)
 	blkio := &BlkioGroup{}
 	actualStats := *cgroups.NewStats()
 	err := blkio.GetStats(helper.CgroupPath, &actualStats)
@@ -395,8 +395,8 @@ func TestBlkioMultipleStatsFiles(t *testing.T) {
 }
 
 func TestBlkioBFQStats(t *testing.T) {
-	helper := NewCgroupTestUtil("blkio", t)
-	helper.writeFileContents(blkioBFQStatsTestFiles)
+	helper := cgroups.NewCgroupTestUtil("blkio", t)
+	helper.WriteFileContents(blkioBFQStatsTestFiles)
 	blkio := &BlkioGroup{}
 	actualStats := *cgroups.NewStats()
 	err := blkio.GetStats(helper.CgroupPath, &actualStats)
@@ -461,7 +461,7 @@ func TestBlkioStatsNoFilesBFQDebug(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		helper := NewCgroupTestUtil("cpuset", t)
+		helper := cgroups.NewCgroupTestUtil("cpuset", t)
 
 		tempBlkioTestFiles := map[string]string{}
 		for i, v := range blkioBFQDebugStatsTestFiles {
@@ -469,7 +469,7 @@ func TestBlkioStatsNoFilesBFQDebug(t *testing.T) {
 		}
 		delete(tempBlkioTestFiles, testCase.filename)
 
-		helper.writeFileContents(tempBlkioTestFiles)
+		helper.WriteFileContents(tempBlkioTestFiles)
 		cpuset := &CpusetGroup{}
 		actualStats := *cgroups.NewStats()
 		err := cpuset.GetStats(helper.CgroupPath, &actualStats)
@@ -480,8 +480,8 @@ func TestBlkioStatsNoFilesBFQDebug(t *testing.T) {
 }
 
 func TestBlkioCFQStats(t *testing.T) {
-	helper := NewCgroupTestUtil("blkio", t)
-	helper.writeFileContents(blkioCFQStatsTestFiles)
+	helper := cgroups.NewCgroupTestUtil("blkio", t)
+	helper.WriteFileContents(blkioCFQStatsTestFiles)
 
 	blkio := &BlkioGroup{}
 	actualStats := *cgroups.NewStats()
@@ -575,7 +575,7 @@ func TestBlkioStatsNoFilesCFQ(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		helper := NewCgroupTestUtil("cpuset", t)
+		helper := cgroups.NewCgroupTestUtil("cpuset", t)
 
 		tempBlkioTestFiles := map[string]string{}
 		for i, v := range blkioCFQStatsTestFiles {
@@ -583,7 +583,7 @@ func TestBlkioStatsNoFilesCFQ(t *testing.T) {
 		}
 		delete(tempBlkioTestFiles, testCase.filename)
 
-		helper.writeFileContents(tempBlkioTestFiles)
+		helper.WriteFileContents(tempBlkioTestFiles)
 		cpuset := &CpusetGroup{}
 		actualStats := *cgroups.NewStats()
 		err := cpuset.GetStats(helper.CgroupPath, &actualStats)
@@ -594,8 +594,8 @@ func TestBlkioStatsNoFilesCFQ(t *testing.T) {
 }
 
 func TestBlkioStatsUnexpectedNumberOfFields(t *testing.T) {
-	helper := NewCgroupTestUtil("blkio", t)
-	helper.writeFileContents(map[string]string{
+	helper := cgroups.NewCgroupTestUtil("blkio", t)
+	helper.WriteFileContents(map[string]string{
 		"blkio.io_service_bytes_recursive": "8:0 Read 100 100",
 		"blkio.io_serviced_recursive":      servicedRecursiveContents,
 		"blkio.io_queued_recursive":        queuedRecursiveContents,
@@ -615,8 +615,8 @@ func TestBlkioStatsUnexpectedNumberOfFields(t *testing.T) {
 }
 
 func TestBlkioStatsUnexpectedFieldType(t *testing.T) {
-	helper := NewCgroupTestUtil("blkio", t)
-	helper.writeFileContents(map[string]string{
+	helper := cgroups.NewCgroupTestUtil("blkio", t)
+	helper.WriteFileContents(map[string]string{
 		"blkio.io_service_bytes_recursive": "8:0 Read Write",
 		"blkio.io_serviced_recursive":      servicedRecursiveContents,
 		"blkio.io_queued_recursive":        queuedRecursiveContents,
@@ -636,8 +636,8 @@ func TestBlkioStatsUnexpectedFieldType(t *testing.T) {
 }
 
 func TestThrottleRecursiveBlkioStats(t *testing.T) {
-	helper := NewCgroupTestUtil("blkio", t)
-	helper.writeFileContents(map[string]string{
+	helper := cgroups.NewCgroupTestUtil("blkio", t)
+	helper.WriteFileContents(map[string]string{
 		"blkio.io_service_bytes_recursive":          "",
 		"blkio.io_serviced_recursive":               "",
 		"blkio.io_queued_recursive":                 "",
@@ -686,8 +686,8 @@ func TestThrottleRecursiveBlkioStats(t *testing.T) {
 }
 
 func TestThrottleBlkioStats(t *testing.T) {
-	helper := NewCgroupTestUtil("blkio", t)
-	helper.writeFileContents(map[string]string{
+	helper := cgroups.NewCgroupTestUtil("blkio", t)
+	helper.WriteFileContents(map[string]string{
 		"blkio.io_service_bytes_recursive": "",
 		"blkio.io_serviced_recursive":      "",
 		"blkio.io_queued_recursive":        "",
@@ -736,7 +736,7 @@ func TestThrottleBlkioStats(t *testing.T) {
 }
 
 func TestBlkioSetThrottleReadBpsDevice(t *testing.T) {
-	helper := NewCgroupTestUtil("blkio", t)
+	helper := cgroups.NewCgroupTestUtil("blkio", t)
 
 	const (
 		throttleBefore = `8:0 1024`
@@ -745,13 +745,13 @@ func TestBlkioSetThrottleReadBpsDevice(t *testing.T) {
 	td := configs.NewThrottleDevice(8, 0, 2048)
 	throttleAfter := td.String()
 
-	helper.writeFileContents(map[string]string{
+	helper.WriteFileContents(map[string]string{
 		"blkio.throttle.read_bps_device": throttleBefore,
 	})
 
-	helper.CgroupData.config.Resources.BlkioThrottleReadBpsDevice = []*configs.ThrottleDevice{td}
+	helper.CgroupData.Config.Resources.BlkioThrottleReadBpsDevice = []*configs.ThrottleDevice{td}
 	blkio := &BlkioGroup{}
-	if err := blkio.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
+	if err := blkio.Set(helper.CgroupPath, helper.CgroupData.Config.Resources); err != nil {
 		t.Fatal(err)
 	}
 
@@ -765,7 +765,7 @@ func TestBlkioSetThrottleReadBpsDevice(t *testing.T) {
 }
 
 func TestBlkioSetThrottleWriteBpsDevice(t *testing.T) {
-	helper := NewCgroupTestUtil("blkio", t)
+	helper := cgroups.NewCgroupTestUtil("blkio", t)
 
 	const (
 		throttleBefore = `8:0 1024`
@@ -774,13 +774,13 @@ func TestBlkioSetThrottleWriteBpsDevice(t *testing.T) {
 	td := configs.NewThrottleDevice(8, 0, 2048)
 	throttleAfter := td.String()
 
-	helper.writeFileContents(map[string]string{
+	helper.WriteFileContents(map[string]string{
 		"blkio.throttle.write_bps_device": throttleBefore,
 	})
 
-	helper.CgroupData.config.Resources.BlkioThrottleWriteBpsDevice = []*configs.ThrottleDevice{td}
+	helper.CgroupData.Config.Resources.BlkioThrottleWriteBpsDevice = []*configs.ThrottleDevice{td}
 	blkio := &BlkioGroup{}
-	if err := blkio.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
+	if err := blkio.Set(helper.CgroupPath, helper.CgroupData.Config.Resources); err != nil {
 		t.Fatal(err)
 	}
 
@@ -794,7 +794,7 @@ func TestBlkioSetThrottleWriteBpsDevice(t *testing.T) {
 }
 
 func TestBlkioSetThrottleReadIOpsDevice(t *testing.T) {
-	helper := NewCgroupTestUtil("blkio", t)
+	helper := cgroups.NewCgroupTestUtil("blkio", t)
 
 	const (
 		throttleBefore = `8:0 1024`
@@ -803,13 +803,13 @@ func TestBlkioSetThrottleReadIOpsDevice(t *testing.T) {
 	td := configs.NewThrottleDevice(8, 0, 2048)
 	throttleAfter := td.String()
 
-	helper.writeFileContents(map[string]string{
+	helper.WriteFileContents(map[string]string{
 		"blkio.throttle.read_iops_device": throttleBefore,
 	})
 
-	helper.CgroupData.config.Resources.BlkioThrottleReadIOPSDevice = []*configs.ThrottleDevice{td}
+	helper.CgroupData.Config.Resources.BlkioThrottleReadIOPSDevice = []*configs.ThrottleDevice{td}
 	blkio := &BlkioGroup{}
-	if err := blkio.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
+	if err := blkio.Set(helper.CgroupPath, helper.CgroupData.Config.Resources); err != nil {
 		t.Fatal(err)
 	}
 
@@ -823,7 +823,7 @@ func TestBlkioSetThrottleReadIOpsDevice(t *testing.T) {
 }
 
 func TestBlkioSetThrottleWriteIOpsDevice(t *testing.T) {
-	helper := NewCgroupTestUtil("blkio", t)
+	helper := cgroups.NewCgroupTestUtil("blkio", t)
 
 	const (
 		throttleBefore = `8:0 1024`
@@ -832,13 +832,13 @@ func TestBlkioSetThrottleWriteIOpsDevice(t *testing.T) {
 	td := configs.NewThrottleDevice(8, 0, 2048)
 	throttleAfter := td.String()
 
-	helper.writeFileContents(map[string]string{
+	helper.WriteFileContents(map[string]string{
 		"blkio.throttle.write_iops_device": throttleBefore,
 	})
 
-	helper.CgroupData.config.Resources.BlkioThrottleWriteIOPSDevice = []*configs.ThrottleDevice{td}
+	helper.CgroupData.Config.Resources.BlkioThrottleWriteIOPSDevice = []*configs.ThrottleDevice{td}
 	blkio := &BlkioGroup{}
-	if err := blkio.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
+	if err := blkio.Set(helper.CgroupPath, helper.CgroupData.Config.Resources); err != nil {
 		t.Fatal(err)
 	}
 

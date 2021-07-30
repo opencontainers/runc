@@ -36,8 +36,8 @@ func (s *CpuacctGroup) Name() string {
 	return "cpuacct"
 }
 
-func (s *CpuacctGroup) Apply(path string, d *cgroupData) error {
-	return join(path, d.pid)
+func (s *CpuacctGroup) Apply(path string, d *cgroups.CgroupData) error {
+	return join(path, d.Pid)
 }
 
 func (s *CpuacctGroup) Set(_ string, _ *configs.Resources) error {

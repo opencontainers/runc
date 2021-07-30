@@ -17,8 +17,8 @@ func (s *PidsGroup) Name() string {
 	return "pids"
 }
 
-func (s *PidsGroup) Apply(path string, d *cgroupData) error {
-	return join(path, d.pid)
+func (s *PidsGroup) Apply(path string, d *cgroups.CgroupData) error {
+	return join(path, d.Pid)
 }
 
 func (s *PidsGroup) Set(path string, r *configs.Resources) error {

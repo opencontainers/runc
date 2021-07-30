@@ -22,8 +22,8 @@ func (s *CpusetGroup) Name() string {
 	return "cpuset"
 }
 
-func (s *CpusetGroup) Apply(path string, d *cgroupData) error {
-	return s.ApplyDir(path, d.config.Resources, d.pid)
+func (s *CpusetGroup) Apply(path string, d *cgroups.CgroupData) error {
+	return s.ApplyDir(path, d.Config.Resources, d.Pid)
 }
 
 func (s *CpusetGroup) Set(path string, r *configs.Resources) error {
@@ -162,7 +162,7 @@ func (s *CpusetGroup) ApplyDir(dir string, r *configs.Resources, pid int) error 
 	// to ensure cpuset configs are set before moving task into the
 	// cgroup.
 	// The logic is, if user specified cpuset configs, use these
-	// specified configs, otherwise, inherit from parent. This makes
+	// specified.Configs, otherwise, inherit from parent. This makes
 	// cpuset configs work correctly with 'cpuset.cpu_exclusive', and
 	// keep backward compatibility.
 	if err := s.ensureCpusAndMems(dir, r); err != nil {

@@ -13,8 +13,8 @@ func (s *NetPrioGroup) Name() string {
 	return "net_prio"
 }
 
-func (s *NetPrioGroup) Apply(path string, d *cgroupData) error {
-	return join(path, d.pid)
+func (s *NetPrioGroup) Apply(path string, d *cgroups.CgroupData) error {
+	return join(path, d.Pid)
 }
 
 func (s *NetPrioGroup) Set(path string, r *configs.Resources) error {

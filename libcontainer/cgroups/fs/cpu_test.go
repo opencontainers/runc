@@ -12,20 +12,20 @@ import (
 )
 
 func TestCpuSetShares(t *testing.T) {
-	helper := NewCgroupTestUtil("cpu", t)
+	helper := cgroups.NewCgroupTestUtil("cpu", t)
 
 	const (
 		sharesBefore = 1024
 		sharesAfter  = 512
 	)
 
-	helper.writeFileContents(map[string]string{
+	helper.WriteFileContents(map[string]string{
 		"cpu.shares": strconv.Itoa(sharesBefore),
 	})
 
-	helper.CgroupData.config.Resources.CpuShares = sharesAfter
+	helper.CgroupData.Config.Resources.CpuShares = sharesAfter
 	cpu := &CpuGroup{}
-	if err := cpu.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
+	if err := cpu.Set(helper.CgroupPath, helper.CgroupData.Config.Resources); err != nil {
 		t.Fatal(err)
 	}
 
@@ -39,7 +39,7 @@ func TestCpuSetShares(t *testing.T) {
 }
 
 func TestCpuSetBandWidth(t *testing.T) {
-	helper := NewCgroupTestUtil("cpu", t)
+	helper := cgroups.NewCgroupTestUtil("cpu", t)
 
 	const (
 		quotaBefore     = 8000
@@ -52,19 +52,19 @@ func TestCpuSetBandWidth(t *testing.T) {
 		rtPeriodAfter   = 7000
 	)
 
-	helper.writeFileContents(map[string]string{
+	helper.WriteFileContents(map[string]string{
 		"cpu.cfs_quota_us":  strconv.Itoa(quotaBefore),
 		"cpu.cfs_period_us": strconv.Itoa(periodBefore),
 		"cpu.rt_runtime_us": strconv.Itoa(rtRuntimeBefore),
 		"cpu.rt_period_us":  strconv.Itoa(rtPeriodBefore),
 	})
 
-	helper.CgroupData.config.Resources.CpuQuota = quotaAfter
-	helper.CgroupData.config.Resources.CpuPeriod = periodAfter
-	helper.CgroupData.config.Resources.CpuRtRuntime = rtRuntimeAfter
-	helper.CgroupData.config.Resources.CpuRtPeriod = rtPeriodAfter
+	helper.CgroupData.Config.Resources.CpuQuota = quotaAfter
+	helper.CgroupData.Config.Resources.CpuPeriod = periodAfter
+	helper.CgroupData.Config.Resources.CpuRtRuntime = rtRuntimeAfter
+	helper.CgroupData.Config.Resources.CpuRtPeriod = rtPeriodAfter
 	cpu := &CpuGroup{}
-	if err := cpu.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
+	if err := cpu.Set(helper.CgroupPath, helper.CgroupData.Config.Resources); err != nil {
 		t.Fatal(err)
 	}
 
@@ -102,7 +102,7 @@ func TestCpuSetBandWidth(t *testing.T) {
 }
 
 func TestCpuStats(t *testing.T) {
-	helper := NewCgroupTestUtil("cpu", t)
+	helper := cgroups.NewCgroupTestUtil("cpu", t)
 
 	const (
 		nrPeriods     = 2000
@@ -112,7 +112,7 @@ func TestCpuStats(t *testing.T) {
 
 	cpuStatContent := fmt.Sprintf("nr_periods %d\nnr_throttled %d\nthrottled_time %d\n",
 		nrPeriods, nrThrottled, throttledTime)
-	helper.writeFileContents(map[string]string{
+	helper.WriteFileContents(map[string]string{
 		"cpu.stat": cpuStatContent,
 	})
 
@@ -133,7 +133,7 @@ func TestCpuStats(t *testing.T) {
 }
 
 func TestNoCpuStatFile(t *testing.T) {
-	helper := NewCgroupTestUtil("cpu", t)
+	helper := cgroups.NewCgroupTestUtil("cpu", t)
 
 	cpu := &CpuGroup{}
 	actualStats := *cgroups.NewStats()
@@ -144,12 +144,12 @@ func TestNoCpuStatFile(t *testing.T) {
 }
 
 func TestInvalidCpuStat(t *testing.T) {
-	helper := NewCgroupTestUtil("cpu", t)
+	helper := cgroups.NewCgroupTestUtil("cpu", t)
 
 	cpuStatContent := `nr_periods 2000
 	nr_throttled 200
 	throttled_time fortytwo`
-	helper.writeFileContents(map[string]string{
+	helper.WriteFileContents(map[string]string{
 		"cpu.stat": cpuStatContent,
 	})
 
@@ -162,7 +162,7 @@ func TestInvalidCpuStat(t *testing.T) {
 }
 
 func TestCpuSetRtSchedAtApply(t *testing.T) {
-	helper := NewCgroupTestUtil("cpu", t)
+	helper := cgroups.NewCgroupTestUtil("cpu", t)
 
 	const (
 		rtRuntimeBefore = 0
@@ -171,16 +171,16 @@ func TestCpuSetRtSchedAtApply(t *testing.T) {
 		rtPeriodAfter   = 7000
 	)
 
-	helper.writeFileContents(map[string]string{
+	helper.WriteFileContents(map[string]string{
 		"cpu.rt_runtime_us": strconv.Itoa(rtRuntimeBefore),
 		"cpu.rt_period_us":  strconv.Itoa(rtPeriodBefore),
 	})
 
-	helper.CgroupData.config.Resources.CpuRtRuntime = rtRuntimeAfter
-	helper.CgroupData.config.Resources.CpuRtPeriod = rtPeriodAfter
+	helper.CgroupData.Config.Resources.CpuRtRuntime = rtRuntimeAfter
+	helper.CgroupData.Config.Resources.CpuRtPeriod = rtPeriodAfter
 	cpu := &CpuGroup{}
 
-	helper.CgroupData.pid = 1234
+	helper.CgroupData.Pid = 1234
 	if err := cpu.Apply(helper.CgroupPath, helper.CgroupData); err != nil {
 		t.Fatal(err)
 	}

@@ -22,8 +22,8 @@ func (s *BlkioGroup) Name() string {
 	return "blkio"
 }
 
-func (s *BlkioGroup) Apply(path string, d *cgroupData) error {
-	return join(path, d.pid)
+func (s *BlkioGroup) Apply(path string, d *cgroups.CgroupData) error {
+	return join(path, d.Pid)
 }
 
 func (s *BlkioGroup) Set(path string, r *configs.Resources) error {

@@ -44,7 +44,7 @@ type subsystem interface {
 	// Returns the stats, as 'stats', corresponding to the cgroup under 'path'.
 	GetStats(path string, stats *cgroups.Stats) error
 	// Creates and joins the cgroup represented by 'cgroupData'.
-	Apply(path string, c *cgroupData) error
+	Apply(path string, c *cgroups.CgroupData) error
 	// Set sets the cgroup resources.
 	Set(path string, r *configs.Resources) error
 }
@@ -156,13 +156,6 @@ func getCgroupRoot() (string, error) {
 	return cgroupRoot, nil
 }
 
-type cgroupData struct {
-	root      string
-	innerPath string
-	config    *configs.Cgroup
-	pid       int
-}
-
 // isIgnorableError returns whether err is a permission error (in the loose
 // sense of the word). This includes EROFS (which for an unprivileged user is
 // basically a permission error) and EACCES (for similar reasons) as well as
@@ -217,7 +210,7 @@ func (m *manager) Apply(pid int) (err error) {
 	}
 
 	for _, sys := range subsystems {
-		p, err := d.path(sys.Name())
+		p, err := d.Path(sys.Name())
 		if err != nil {
 			// The non-presence of the devices subsystem is
 			// considered fatal for security reasons.
@@ -338,7 +331,7 @@ func (m *manager) GetAllPids() ([]int, error) {
 	return cgroups.GetAllPids(m.Path("devices"))
 }
 
-func getCgroupData(c *configs.Cgroup, pid int) (*cgroupData, error) {
+func getCgroupData(c *configs.Cgroup, pid int) (*cgroups.CgroupData, error) {
 	root, err := getCgroupRoot()
 	if err != nil {
 		return nil, err
@@ -353,41 +346,17 @@ func getCgroupData(c *configs.Cgroup, pid int) (*cgroupData, error) {
 	cgParent := libcontainerUtils.CleanPath(c.Parent)
 	cgName := libcontainerUtils.CleanPath(c.Name)
 
-	innerPath := cgPath
-	if innerPath == "" {
-		innerPath = filepath.Join(cgParent, cgName)
+	InnerPath := cgPath
+	if InnerPath == "" {
+		InnerPath = filepath.Join(cgParent, cgName)
 	}
 
-	return &cgroupData{
-		root:      root,
-		innerPath: innerPath,
-		config:    c,
-		pid:       pid,
+	return &cgroups.CgroupData{
+		Root:      root,
+		InnerPath: InnerPath,
+		Config:    c,
+		Pid:       pid,
 	}, nil
-}
-
-func (raw *cgroupData) path(subsystem string) (string, error) {
-	// If the cgroup name/path is absolute do not look relative to the cgroup of the init process.
-	if filepath.IsAbs(raw.innerPath) {
-		mnt, err := cgroups.FindCgroupMountpoint(raw.root, subsystem)
-		// If we didn't mount the subsystem, there is no point we make the path.
-		if err != nil {
-			return "", err
-		}
-
-		// Sometimes subsystems can be mounted together as 'cpu,cpuacct'.
-		return filepath.Join(raw.root, filepath.Base(mnt), raw.innerPath), nil
-	}
-
-	// Use GetOwnCgroupPath instead of GetInitCgroupPath, because the creating
-	// process could in container and shared pid namespace with host, and
-	// /proc/1/cgroup could point to whole other world of cgroups.
-	parentPath, err := cgroups.GetOwnCgroupPath(subsystem)
-	if err != nil {
-		return "", err
-	}
-
-	return filepath.Join(parentPath, raw.innerPath), nil
 }
 
 func join(path string, pid int) error {

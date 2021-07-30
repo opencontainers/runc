@@ -5,20 +5,21 @@ package fs
 import (
 	"testing"
 
+	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 	"github.com/opencontainers/runc/libcontainer/devices"
 )
 
 func TestDevicesSetAllow(t *testing.T) {
-	helper := NewCgroupTestUtil("devices", t)
+	helper := cgroups.NewCgroupTestUtil("devices", t)
 
-	helper.writeFileContents(map[string]string{
+	helper.WriteFileContents(map[string]string{
 		"devices.allow": "",
 		"devices.deny":  "",
 		"devices.list":  "a *:* rwm",
 	})
 
-	helper.CgroupData.config.Resources.Devices = []*devices.Rule{
+	helper.CgroupData.Config.Resources.Devices = []*devices.Rule{
 		{
 			Type:        devices.CharDevice,
 			Major:       1,
@@ -29,7 +30,7 @@ func TestDevicesSetAllow(t *testing.T) {
 	}
 
 	d := &DevicesGroup{testingSkipFinalCheck: true}
-	if err := d.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
+	if err := d.Set(helper.CgroupPath, helper.CgroupData.Config.Resources); err != nil {
 		t.Fatal(err)
 	}
 

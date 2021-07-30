@@ -74,14 +74,14 @@ func TestInvalidCgroupPath(t *testing.T) {
 				t.Fatalf("couldn't get cgroup data: %v", err)
 			}
 
-			// Make sure the final innerPath doesn't go outside the cgroup mountpoint.
-			if strings.HasPrefix(data.innerPath, "..") {
-				t.Errorf("SECURITY: cgroup innerPath is outside cgroup mountpoint!")
+			// Make sure the final InnerPath doesn't go outside the cgroup mountpoint.
+			if strings.HasPrefix(data.InnerPath, "..") {
+				t.Errorf("SECURITY: cgroup InnerPath is outside cgroup mountpoint!")
 			}
 
 			// Double-check, using an actual cgroup.
 			deviceRoot := filepath.Join(root, "devices")
-			devicePath, err := data.path("devices")
+			devicePath, err := data.Path("devices")
 			if err != nil {
 				t.Fatalf("couldn't get cgroup path: %v", err)
 			}

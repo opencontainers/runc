@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
@@ -18,11 +19,11 @@ var prioMap = []*configs.IfPrioMap{
 }
 
 func TestNetPrioSetIfPrio(t *testing.T) {
-	helper := NewCgroupTestUtil("net_prio", t)
+	helper := cgroups.NewCgroupTestUtil("net_prio", t)
 
-	helper.CgroupData.config.Resources.NetPrioIfpriomap = prioMap
+	helper.CgroupData.Config.Resources.NetPrioIfpriomap = prioMap
 	netPrio := &NetPrioGroup{}
-	if err := netPrio.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
+	if err := netPrio.Set(helper.CgroupPath, helper.CgroupData.Config.Resources); err != nil {
 		t.Fatal(err)
 	}
 

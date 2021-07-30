@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 )
 
@@ -15,15 +16,15 @@ const (
 )
 
 func TestNetClsSetClassid(t *testing.T) {
-	helper := NewCgroupTestUtil("net_cls", t)
+	helper := cgroups.NewCgroupTestUtil("net_cls", t)
 
-	helper.writeFileContents(map[string]string{
+	helper.WriteFileContents(map[string]string{
 		"net_cls.classid": strconv.FormatUint(classidBefore, 10),
 	})
 
-	helper.CgroupData.config.Resources.NetClsClassid = classidAfter
+	helper.CgroupData.Config.Resources.NetClsClassid = classidAfter
 	netcls := &NetClsGroup{}
-	if err := netcls.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
+	if err := netcls.Set(helper.CgroupPath, helper.CgroupData.Config.Resources); err != nil {
 		t.Fatal(err)
 	}
 

@@ -39,20 +39,20 @@ var cpusetTestFiles = map[string]string{
 }
 
 func TestCPUSetSetCpus(t *testing.T) {
-	helper := NewCgroupTestUtil("cpuset", t)
+	helper := cgroups.NewCgroupTestUtil("cpuset", t)
 
 	const (
 		cpusBefore = "0"
 		cpusAfter  = "1-3"
 	)
 
-	helper.writeFileContents(map[string]string{
+	helper.WriteFileContents(map[string]string{
 		"cpuset.cpus": cpusBefore,
 	})
 
-	helper.CgroupData.config.Resources.CpusetCpus = cpusAfter
+	helper.CgroupData.Config.Resources.CpusetCpus = cpusAfter
 	cpuset := &CpusetGroup{}
-	if err := cpuset.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
+	if err := cpuset.Set(helper.CgroupPath, helper.CgroupData.Config.Resources); err != nil {
 		t.Fatal(err)
 	}
 
@@ -66,20 +66,20 @@ func TestCPUSetSetCpus(t *testing.T) {
 }
 
 func TestCPUSetSetMems(t *testing.T) {
-	helper := NewCgroupTestUtil("cpuset", t)
+	helper := cgroups.NewCgroupTestUtil("cpuset", t)
 
 	const (
 		memsBefore = "0"
 		memsAfter  = "1"
 	)
 
-	helper.writeFileContents(map[string]string{
+	helper.WriteFileContents(map[string]string{
 		"cpuset.mems": memsBefore,
 	})
 
-	helper.CgroupData.config.Resources.CpusetMems = memsAfter
+	helper.CgroupData.Config.Resources.CpusetMems = memsAfter
 	cpuset := &CpusetGroup{}
-	if err := cpuset.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
+	if err := cpuset.Set(helper.CgroupPath, helper.CgroupData.Config.Resources); err != nil {
 		t.Fatal(err)
 	}
 
@@ -93,8 +93,8 @@ func TestCPUSetSetMems(t *testing.T) {
 }
 
 func TestCPUSetStatsCorrect(t *testing.T) {
-	helper := NewCgroupTestUtil("cpuset", t)
-	helper.writeFileContents(cpusetTestFiles)
+	helper := cgroups.NewCgroupTestUtil("cpuset", t)
+	helper.WriteFileContents(cpusetTestFiles)
 
 	cpuset := &CpusetGroup{}
 	actualStats := *cgroups.NewStats()
@@ -207,7 +207,7 @@ func TestCPUSetStatsMissingFiles(t *testing.T) {
 		},
 	} {
 		t.Run(testCase.desc, func(t *testing.T) {
-			helper := NewCgroupTestUtil("cpuset", t)
+			helper := cgroups.NewCgroupTestUtil("cpuset", t)
 
 			tempCpusetTestFiles := map[string]string{}
 			for i, v := range cpusetTestFiles {
@@ -216,7 +216,7 @@ func TestCPUSetStatsMissingFiles(t *testing.T) {
 
 			if testCase.removeFile {
 				delete(tempCpusetTestFiles, testCase.filename)
-				helper.writeFileContents(tempCpusetTestFiles)
+				helper.WriteFileContents(tempCpusetTestFiles)
 				cpuset := &CpusetGroup{}
 				actualStats := *cgroups.NewStats()
 				err := cpuset.GetStats(helper.CgroupPath, &actualStats)
@@ -225,7 +225,7 @@ func TestCPUSetStatsMissingFiles(t *testing.T) {
 				}
 			} else {
 				tempCpusetTestFiles[testCase.filename] = testCase.contents
-				helper.writeFileContents(tempCpusetTestFiles)
+				helper.WriteFileContents(tempCpusetTestFiles)
 				cpuset := &CpusetGroup{}
 				actualStats := *cgroups.NewStats()
 				err := cpuset.GetStats(helper.CgroupPath, &actualStats)

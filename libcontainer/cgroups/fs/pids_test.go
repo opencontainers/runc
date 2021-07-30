@@ -16,15 +16,15 @@ const (
 )
 
 func TestPidsSetMax(t *testing.T) {
-	helper := NewCgroupTestUtil("pids", t)
+	helper := cgroups.NewCgroupTestUtil("pids", t)
 
-	helper.writeFileContents(map[string]string{
+	helper.WriteFileContents(map[string]string{
 		"pids.max": "max",
 	})
 
-	helper.CgroupData.config.Resources.PidsLimit = maxLimited
+	helper.CgroupData.Config.Resources.PidsLimit = maxLimited
 	pids := &PidsGroup{}
-	if err := pids.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
+	if err := pids.Set(helper.CgroupPath, helper.CgroupData.Config.Resources); err != nil {
 		t.Fatal(err)
 	}
 
@@ -38,15 +38,15 @@ func TestPidsSetMax(t *testing.T) {
 }
 
 func TestPidsSetUnlimited(t *testing.T) {
-	helper := NewCgroupTestUtil("pids", t)
+	helper := cgroups.NewCgroupTestUtil("pids", t)
 
-	helper.writeFileContents(map[string]string{
+	helper.WriteFileContents(map[string]string{
 		"pids.max": strconv.Itoa(maxLimited),
 	})
 
-	helper.CgroupData.config.Resources.PidsLimit = maxUnlimited
+	helper.CgroupData.Config.Resources.PidsLimit = maxUnlimited
 	pids := &PidsGroup{}
-	if err := pids.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
+	if err := pids.Set(helper.CgroupPath, helper.CgroupData.Config.Resources); err != nil {
 		t.Fatal(err)
 	}
 
@@ -60,9 +60,9 @@ func TestPidsSetUnlimited(t *testing.T) {
 }
 
 func TestPidsStats(t *testing.T) {
-	helper := NewCgroupTestUtil("pids", t)
+	helper := cgroups.NewCgroupTestUtil("pids", t)
 
-	helper.writeFileContents(map[string]string{
+	helper.WriteFileContents(map[string]string{
 		"pids.current": strconv.Itoa(1337),
 		"pids.max":     strconv.Itoa(maxLimited),
 	})
@@ -83,9 +83,9 @@ func TestPidsStats(t *testing.T) {
 }
 
 func TestPidsStatsUnlimited(t *testing.T) {
-	helper := NewCgroupTestUtil("pids", t)
+	helper := cgroups.NewCgroupTestUtil("pids", t)
 
-	helper.writeFileContents(map[string]string{
+	helper.WriteFileContents(map[string]string{
 		"pids.current": strconv.Itoa(4096),
 		"pids.max":     "max",
 	})

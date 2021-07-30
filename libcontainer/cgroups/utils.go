@@ -13,8 +13,10 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"testing"
 	"time"
 
+	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/userns"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
@@ -447,4 +449,85 @@ func ConvertBlkIOToIOWeightValue(blkIoWeight uint16) uint64 {
 		return 0
 	}
 	return 1 + (uint64(blkIoWeight)-10)*9999/990
+}
+
+type CgroupData struct {
+	Root      string
+	InnerPath string
+	Config    *configs.Cgroup
+	Pid       int
+}
+
+type cgroupTestUtil struct {
+	// cgroup data to use in tests.
+	CgroupData *CgroupData
+
+	// Path to the mock cgroup directory.
+	CgroupPath string
+
+	// Temporary directory to store mock cgroup filesystem.
+	tempDir string
+	t       *testing.T
+}
+
+// NewCgroupTestUtil creates a new test util for the specified subsystem
+func NewCgroupTestUtil(subsystem string, t *testing.T) *cgroupTestUtil {
+	d := &CgroupData{
+		Config: &configs.Cgroup{},
+	}
+	d.Config.Resources = &configs.Resources{}
+	tempDir, err := ioutil.TempDir("", "cgroup_test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	d.Root = tempDir
+	testCgroupPath := filepath.Join(d.Root, subsystem)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Ensure the full mock cgroup path exists.
+	err = os.MkdirAll(testCgroupPath, 0o755)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return &cgroupTestUtil{CgroupData: d, CgroupPath: testCgroupPath, tempDir: tempDir, t: t}
+}
+
+func (c *cgroupTestUtil) Cleanup() {
+	os.RemoveAll(c.tempDir)
+}
+
+// WriteFileContents: writes the specified contents on the mock of the specified cgroup files.
+func (c *cgroupTestUtil) WriteFileContents(fileContents map[string]string) {
+	for file, contents := range fileContents {
+		err := WriteFile(c.CgroupPath, file, contents)
+		if err != nil {
+			c.t.Fatal(err)
+		}
+	}
+}
+
+func (raw *CgroupData) Path(subsystem string) (string, error) {
+	// If the cgroup name/path is absolute do not look relative to the cgroup of the init process.
+	if filepath.IsAbs(raw.InnerPath) {
+		mnt, err := FindCgroupMountpoint(raw.Root, subsystem)
+		// If we didn't mount the subsystem, there is no point we make the path.
+		if err != nil {
+			return "", err
+		}
+
+		// Sometimes subsystems can be mounted together as 'cpu,cpuacct'.
+		return filepath.Join(raw.Root, filepath.Base(mnt), raw.InnerPath), nil
+	}
+
+	// Use GetOwnCgroupPath instead of GetInitCgroupPath, because the creating
+	// process could in container and shared.Pid namespace with host, and
+	// /proc/1/cgroup could point to whole other world of cgroups.
+	parentPath, err := GetOwnCgroupPath(subsystem)
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(parentPath, raw.InnerPath), nil
 }

@@ -26,8 +26,8 @@ const (
 )
 
 func TestCpuacctStats(t *testing.T) {
-	helper := NewCgroupTestUtil("cpuacct.", t)
-	helper.writeFileContents(map[string]string{
+	helper := cgroups.NewCgroupTestUtil("cpuacct.", t)
+	helper.WriteFileContents(map[string]string{
 		"cpuacct.usage":        cpuAcctUsageContents,
 		"cpuacct.usage_percpu": cpuAcctUsagePerCPUContents,
 		"cpuacct.stat":         cpuAcctStatContents,
@@ -66,8 +66,8 @@ func TestCpuacctStats(t *testing.T) {
 }
 
 func TestCpuacctStatsWithoutUsageAll(t *testing.T) {
-	helper := NewCgroupTestUtil("cpuacct.", t)
-	helper.writeFileContents(map[string]string{
+	helper := cgroups.NewCgroupTestUtil("cpuacct.", t)
+	helper.WriteFileContents(map[string]string{
 		"cpuacct.usage":        cpuAcctUsageContents,
 		"cpuacct.usage_percpu": cpuAcctUsagePerCPUContents,
 		"cpuacct.stat":         cpuAcctStatContents,

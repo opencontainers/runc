@@ -22,8 +22,8 @@ func (s *DevicesGroup) Name() string {
 	return "devices"
 }
 
-func (s *DevicesGroup) Apply(path string, d *cgroupData) error {
-	if d.config.SkipDevices {
+func (s *DevicesGroup) Apply(path string, d *cgroups.CgroupData) error {
+	if d.Config.SkipDevices {
 		return nil
 	}
 	if path == "" {
@@ -31,7 +31,7 @@ func (s *DevicesGroup) Apply(path string, d *cgroupData) error {
 		// is a hard requirement for container's security.
 		return errSubsystemDoesNotExist
 	}
-	return join(path, d.pid)
+	return join(path, d.Pid)
 }
 
 func loadEmulator(path string) (*cgroupdevices.Emulator, error) {
