@@ -9,6 +9,19 @@ var (
 	errNoGroupMap = errors.New("User namespaces enabled, but no group mapping found.")
 )
 
+// Please check https://man7.org/linux/man-pages/man2/personality.2.html for const details.
+// https://raw.githubusercontent.com/torvalds/linux/master/include/uapi/linux/personality.h
+const (
+	PER_LINUX   = 0x0000
+	PER_LINUX32 = 0x0008
+)
+
+type LinuxPersonality struct {
+	// Domain for the personality
+	// can only contain values "LINUX" and "LINUX32"
+	Domain int `json:"domain"`
+}
+
 // HostUID gets the translated uid for the process on host which could be
 // different when user namespaces are enabled.
 func (c Config) HostUID(containerId int) (int, error) {

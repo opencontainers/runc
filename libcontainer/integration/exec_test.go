@@ -137,6 +137,26 @@ func TestIPCBadPath(t *testing.T) {
 	}
 }
 
+func TestPersonality(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+
+	config := newTemplateConfig(t, &tParam{})
+
+	// change execution domain to i686
+	config.Personality = &configs.LinuxPersonality{
+		Domain: configs.PER_LINUX32,
+	}
+
+	out, _, err := runContainer(t, config, "", "/bin/sh", "-c", "uname -a")
+	ok(t, err)
+	// output must contain kernel architecture configured as i686
+	if !strings.Contains(out.Stdout.String(), "i686") {
+		t.Fatalf("expected kernel architecture i686 configured via personality")
+	}
+}
+
 func TestRlimit(t *testing.T) {
 	testRlimit(t, false)
 }

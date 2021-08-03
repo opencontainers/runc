@@ -206,6 +206,9 @@ type Config struct {
 	// RootlessCgroups is set when unlikely to have the full access to cgroups.
 	// When RootlessCgroups is set, cgroups errors are ignored.
 	RootlessCgroups bool `json:"rootless_cgroups,omitempty"`
+
+	// Personality contains configuration for the Linux personality syscall.
+	Personality *LinuxPersonality `json:"personality,omitempty"`
 }
 
 type (

@@ -305,6 +305,11 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 				MemBwSchema:   spec.Linux.IntelRdt.MemBwSchema,
 			}
 		}
+		if spec.Linux.Personality != nil {
+			config.Personality = &configs.LinuxPersonality{
+				Domain: getLinuxPersonalityFromStr(string(spec.Linux.Personality.Domain)),
+			}
+		}
 	}
 	if spec.Process != nil {
 		config.OomScoreAdj = spec.Process.OOMScoreAdj
@@ -389,6 +394,21 @@ func convertSecToUSec(value dbus.Variant) (dbus.Variant, error) {
 		return value, errors.New("not a number")
 	}
 	return dbus.MakeVariant(sec), nil
+}
+
+// getLinuxPersonalityFromStr converts the string domain received from spec to equivalent integer.
+// check libcontainer/configs/config_linux.go
+// check https://raw.githubusercontent.com/torvalds/linux/master/include/uapi/linux/personality.h
+// valid arguments
+// 	LINUX i.e PER_LINUX (since Linux 1.2.0).
+//   	LINUX32 i.e PER_LINUX32 (since Linux 2.2) LINUX32 will set the uname system call to show a 32 bit CPU type, such as i686.
+// 	everything unknown default to PER_LINUX.
+func getLinuxPersonalityFromStr(domain string) int {
+	// defaults to PER_LINUX
+	if domain == "LINUX32" {
+		return configs.PER_LINUX32
+	}
+	return configs.PER_LINUX
 }
 
 func initSystemdProps(spec *specs.Spec) ([]systemdDbus.Property, error) {

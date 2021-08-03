@@ -3,7 +3,9 @@
 package system
 
 import (
+	"os"
 	"os/exec"
+	"syscall"
 	"unsafe"
 
 	"golang.org/x/sys/unix"
@@ -107,4 +109,14 @@ func GetSubreaper() (int, error) {
 	}
 
 	return int(i), nil
+}
+
+// SetLinuxPersonality sets the Linux execution personality. For more information see the personality syscall documentation.
+// checkout getLinuxPersonalityFromStr() from libcontainer/specconv/spec_linux.go for type conversion.
+func SetLinuxPersonality(persona int) error {
+	_, _, errno := syscall.Syscall(syscall.SYS_PERSONALITY, uintptr(persona), 0, 0)
+	if errno != 0 {
+		return &os.SyscallError{Syscall: "set_personality", Err: errno}
+	}
+	return nil
 }

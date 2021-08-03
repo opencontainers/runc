@@ -230,6 +230,13 @@ func (c *linuxContainer) Set(config configs.Config) error {
 func (c *linuxContainer) Start(process *Process) error {
 	c.m.Lock()
 	defer c.m.Unlock()
+	// configure linux personality before starting the process
+	if c.config.Personality != nil {
+		err := system.SetLinuxPersonality(c.config.Personality.Domain)
+		if err != nil {
+			return err
+		}
+	}
 	if c.config.Cgroups.Resources.SkipDevices {
 		return &ConfigError{"can't start container with SkipDevices set"}
 	}
