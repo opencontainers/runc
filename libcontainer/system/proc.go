@@ -19,6 +19,8 @@ const ( // Only values for Linux 3.14 and later are listed here
 	Stopped     State = 'T'
 	TracingStop State = 't'
 	Zombie      State = 'Z'
+	Parked      State = 'P'
+	Idle        State = 'I'
 )
 
 // String forms of the state from proc(5)'s documentation for
@@ -39,6 +41,10 @@ func (s State) String() string {
 		return "tracing stop"
 	case Zombie:
 		return "zombie"
+	case Parked:
+		return "parked"
+	case Idle:
+		return "idle" // kernel thread
 	default:
 		return fmt.Sprintf("unknown (%c)", s)
 	}
