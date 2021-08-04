@@ -76,3 +76,15 @@ function teardown() {
 	runc run test_hello
 	[ "$status" -eq 0 ]
 }
+
+@test "runc run [redundant seccomp rules]" {
+	update_config '	  .linux.seccomp = {
+				"defaultAction": "SCMP_ACT_ALLOW",
+				"syscalls": [{
+					"names": ["bdflush"],
+					"action": "SCMP_ACT_ALLOW",
+				}]
+			    }'
+	runc run test_hello
+	[ "$status" -eq 0 ]
+}
