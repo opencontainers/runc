@@ -58,17 +58,9 @@ task:
   integration_fs_script: |
     ssh -tt default "sudo -i make -C /vagrant localintegration"
   integration_systemd_rootless_script: |
-    if [ $DISTRO == centos7 ]; then
-      echo "SKIP: integration_systemd_rootless_script requires cgroup v2"
-    else
-      ssh -tt default "sudo -i make -C /vagrant localrootlessintegration RUNC_USE_SYSTEMD=yes"
-    fi
+    ssh -tt default "sudo -i make -C /vagrant localrootlessintegration RUNC_USE_SYSTEMD=yes"
   integration_fs_rootless_script: |
-    if [ $DISTRO == centos7 ]; then
-      echo "SKIP: FIXME: integration_fs_rootless_script is skipped because of EPERM on writing cgroup.procs"
-    else
-      ssh -tt default "sudo -i make -C /vagrant localrootlessintegration"
-    fi
+    ssh -tt default "sudo -i make -C /vagrant localrootlessintegration"
 
 task:
   timeout_in: 30m
