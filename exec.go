@@ -101,7 +101,8 @@ following will output a list of processes running in the container:
 		if err == nil {
 			os.Exit(status)
 		}
-		return fmt.Errorf("exec failed: %w", err)
+		fatalWithCode(fmt.Errorf("exec failed: %w", err), 255)
+		return nil // to satisfy the linter
 	},
 	SkipArgReorder: true,
 }

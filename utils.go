@@ -53,13 +53,17 @@ func logrusToStderr() bool {
 // fatal prints the error's details if it is a libcontainer specific error type
 // then exits the program with an exit status of 1.
 func fatal(err error) {
-	// make sure the error is written to the logger
+	fatalWithCode(err, 1)
+}
+
+func fatalWithCode(err error, ret int) {
+	// Make sure the error is written to the logger.
 	logrus.Error(err)
 	if !logrusToStderr() {
 		fmt.Fprintln(os.Stderr, err)
 	}
 
-	os.Exit(1)
+	os.Exit(ret)
 }
 
 // setupSpec performs initial setup based on the cli.Context for the container
