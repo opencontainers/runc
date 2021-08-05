@@ -12,9 +12,19 @@ func ForwardLogs(logPipe io.ReadCloser) chan error {
 	done := make(chan error, 1)
 	s := bufio.NewScanner(logPipe)
 
+	logger := logrus.StandardLogger()
+	if logger.ReportCaller {
+		// Need a copy of the standard logger, but with ReportCaller
+		// turned off, as the logs are merely forwarded and their
+		// true source is not this file/line/function.
+		logNoCaller := *logrus.StandardLogger()
+		logNoCaller.ReportCaller = false
+		logger = &logNoCaller
+	}
+
 	go func() {
 		for s.Scan() {
-			processEntry(s.Bytes())
+			processEntry(s.Bytes(), logger)
 		}
 		if err := logPipe.Close(); err != nil {
 			logrus.Errorf("error closing log source: %v", err)
@@ -28,7 +38,7 @@ func ForwardLogs(logPipe io.ReadCloser) chan error {
 	return done
 }
 
-func processEntry(text []byte) {
+func processEntry(text []byte, logger *logrus.Logger) {
 	if len(text) == 0 {
 		return
 	}
@@ -42,5 +52,5 @@ func processEntry(text []byte) {
 		return
 	}
 
-	logrus.StandardLogger().Logf(jl.Level, jl.Msg)
+	logger.Log(jl.Level, jl.Msg)
 }
