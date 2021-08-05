@@ -1,21 +1,22 @@
-// +build linux,go1.16
+// +build linux,!go1.16
 
 package cgroups
 
 import (
-	"io/fs"
+	"os"
 	"path/filepath"
 )
 
-// GetAllPids returns all pids from the cgroup identified by path, and all its
-// sub-cgroups.
+// GetAllPids returns all pids, that were added to cgroup at path and to all its
+// subcgroups.
 func GetAllPids(path string) ([]int, error) {
 	var pids []int
-	err := filepath.WalkDir(path, func(p string, d fs.DirEntry, iErr error) error {
+	// collect pids from all sub-cgroups
+	err := filepath.Walk(path, func(p string, info os.FileInfo, iErr error) error {
 		if iErr != nil {
 			return iErr
 		}
-		if !d.IsDir() {
+		if !info.IsDir() {
 			return nil
 		}
 		cPids, err := readProcsFile(p)
