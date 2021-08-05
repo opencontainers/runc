@@ -16,7 +16,7 @@ func GetAllPids(path string) ([]int, error) {
 		if iErr != nil {
 			return iErr
 		}
-		if info.IsDir() || info.Name() != CgroupProcesses {
+		if !info.IsDir() {
 			return nil
 		}
 		cPids, err := readProcsFile(p)

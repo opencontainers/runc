@@ -118,8 +118,8 @@ func GetAllSubsystems() ([]string, error) {
 	return subsystems, nil
 }
 
-func readProcsFile(file string) ([]int, error) {
-	f, err := os.Open(file)
+func readProcsFile(dir string) ([]int, error) {
+	f, err := OpenFile(dir, CgroupProcesses, os.O_RDONLY)
 	if err != nil {
 		return nil, err
 	}
@@ -336,7 +336,7 @@ func getHugePageSizeFromFilenames(fileNames []string) ([]string, error) {
 
 // GetPids returns all pids, that were added to cgroup at path.
 func GetPids(dir string) ([]int, error) {
-	return readProcsFile(filepath.Join(dir, CgroupProcesses))
+	return readProcsFile(dir)
 }
 
 // WriteCgroupProc writes the specified pid into the cgroup's cgroup.procs file
