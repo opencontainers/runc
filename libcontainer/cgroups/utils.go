@@ -339,28 +339,6 @@ func GetPids(dir string) ([]int, error) {
 	return readProcsFile(filepath.Join(dir, CgroupProcesses))
 }
 
-// GetAllPids returns all pids, that were added to cgroup at path and to all its
-// subcgroups.
-func GetAllPids(path string) ([]int, error) {
-	var pids []int
-	// collect pids from all sub-cgroups
-	err := filepath.Walk(path, func(p string, info os.FileInfo, iErr error) error {
-		if iErr != nil {
-			return iErr
-		}
-		if info.IsDir() || info.Name() != CgroupProcesses {
-			return nil
-		}
-		cPids, err := readProcsFile(p)
-		if err != nil {
-			return err
-		}
-		pids = append(pids, cPids...)
-		return nil
-	})
-	return pids, err
-}
-
 // WriteCgroupProc writes the specified pid into the cgroup's cgroup.procs file
 func WriteCgroupProc(dir string, pid int) error {
 	// Normally dir should not be empty, one case is that cgroup subsystem
