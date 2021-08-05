@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/urfave/cli"
@@ -74,6 +75,6 @@ command(s) that get executed on start, edit the args parameter of the spec. See
 			// notified of the exit with the correct exit status.
 			os.Exit(status)
 		}
-		return err
+		return fmt.Errorf("runc run failed: %w", err)
 	},
 }

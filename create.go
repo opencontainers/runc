@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/urfave/cli"
@@ -56,12 +57,11 @@ command(s) that get executed on start, edit the args parameter of the spec. See
 			return err
 		}
 		status, err := startContainer(context, CT_ACT_CREATE, nil)
-		if err != nil {
-			return err
+		if err == nil {
+			// exit with the container's exit status so any external supervisor
+			// is notified of the exit with the correct exit status.
+			os.Exit(status)
 		}
-		// exit with the container's exit status so any external supervisor is
-		// notified of the exit with the correct exit status.
-		os.Exit(status)
-		return nil
+		return fmt.Errorf("runc create failed: %w", err)
 	},
 }
