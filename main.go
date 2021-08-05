@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 
 	"github.com/opencontainers/runc/libcontainer/seccomp"
@@ -177,6 +179,18 @@ func configLogrus(context *cli.Context) error {
 	if context.GlobalBool("debug") {
 		logrus.SetLevel(logrus.DebugLevel)
 		logrus.SetReportCaller(true)
+		// Shorten function and file names reported by the logger, by
+		// trimming common "github.com/opencontainers/runc" prefix.
+		// This is only done for text formatter.
+		_, file, _, _ := runtime.Caller(0)
+		prefix := filepath.Dir(file) + "/"
+		logrus.SetFormatter(&logrus.TextFormatter{
+			CallerPrettyfier: func(f *runtime.Frame) (string, string) {
+				function := strings.TrimPrefix(f.Function, prefix) + "()"
+				fileLine := strings.TrimPrefix(f.File, prefix) + ":" + strconv.Itoa(f.Line)
+				return function, fileLine
+			},
+		})
 	}
 
 	switch f := context.GlobalString("log-format"); f {
