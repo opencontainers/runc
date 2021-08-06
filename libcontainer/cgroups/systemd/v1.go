@@ -148,23 +148,19 @@ func (m *legacyManager) Apply(pid int) error {
 
 	properties = append(properties, systemdDbus.PropDescription("libcontainer container "+c.Name))
 
-	// if we create a slice, the parent is defined via a Wants=
 	if strings.HasSuffix(unitName, ".slice") {
+		// If we create a slice, the parent is defined via a Wants=.
 		properties = append(properties, systemdDbus.PropWants(slice))
 	} else {
-		// otherwise, we use Slice=
+		// Otherwise it's a scope, which we put into a Slice=.
 		properties = append(properties, systemdDbus.PropSlice(slice))
+		// Assume scopes always support delegation (supported since systemd v218).
+		properties = append(properties, newProp("Delegate", true))
 	}
 
 	// only add pid if its valid, -1 is used w/ general slice creation.
 	if pid != -1 {
 		properties = append(properties, newProp("PIDs", []uint32{uint32(pid)}))
-	}
-
-	// Check if we can delegate. This is only supported on systemd versions 218 and above.
-	if !strings.HasSuffix(unitName, ".slice") {
-		// Assume scopes always support delegation.
-		properties = append(properties, newProp("Delegate", true))
 	}
 
 	// Always enable accounting, this gets us the same behaviour as the fs implementation,
