@@ -105,9 +105,23 @@ func (m *legacyManager) initPaths() error {
 		return nil
 	}
 
+	c := m.cgroups
+
+	slice := "system.slice"
+	if c.Parent != "" {
+		slice = c.Parent
+	}
+
+	var err error
+	slice, err = ExpandSlice(slice)
+	if err != nil {
+		return err
+	}
+	unit := getUnitName(c)
+
 	paths := make(map[string]string)
 	for _, s := range legacySubsystems {
-		subsystemPath, err := getSubsystemPath(m.cgroups, s.Name())
+		subsystemPath, err := getSubsystemPath(slice, unit, s.Name())
 		if err != nil {
 			// Even if it's `not found` error, we'll return err
 			// because devices cgroup is hard requirement for
@@ -242,7 +256,7 @@ func (m *legacyManager) joinCgroups(pid int) error {
 	return nil
 }
 
-func getSubsystemPath(c *configs.Cgroup, subsystem string) (string, error) {
+func getSubsystemPath(slice, unit, subsystem string) (string, error) {
 	mountpoint, err := cgroups.FindCgroupMountpoint("", subsystem)
 	if err != nil {
 		return "", err
@@ -255,17 +269,7 @@ func getSubsystemPath(c *configs.Cgroup, subsystem string) (string, error) {
 	// if pid 1 is systemd 226 or later, it will be in init.scope, not the root
 	initPath = strings.TrimSuffix(filepath.Clean(initPath), "init.scope")
 
-	slice := "system.slice"
-	if c.Parent != "" {
-		slice = c.Parent
-	}
-
-	slice, err = ExpandSlice(slice)
-	if err != nil {
-		return "", err
-	}
-
-	return filepath.Join(mountpoint, initPath, slice, getUnitName(c)), nil
+	return filepath.Join(mountpoint, initPath, slice, unit), nil
 }
 
 func (m *legacyManager) Freeze(state configs.FreezerState) error {
