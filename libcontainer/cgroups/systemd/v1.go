@@ -99,6 +99,34 @@ func genV1ResourcesProperties(r *configs.Resources, cm *dbusConnManager) ([]syst
 	return properties, nil
 }
 
+// initPaths initializes m.paths. Supposed to be called under m.mu held.
+func (m *legacyManager) initPaths() error {
+	if m.paths != nil {
+		return nil
+	}
+
+	paths := make(map[string]string)
+	for _, s := range legacySubsystems {
+		subsystemPath, err := getSubsystemPath(m.cgroups, s.Name())
+		if err != nil {
+			// Even if it's `not found` error, we'll return err
+			// because devices cgroup is hard requirement for
+			// container security.
+			if s.Name() == "devices" {
+				return err
+			}
+			// Don't fail if a cgroup hierarchy was not found, just skip this subsystem
+			if cgroups.IsNotFound(err) {
+				continue
+			}
+			return err
+		}
+		paths[s.Name()] = subsystemPath
+	}
+	m.paths = paths
+	return nil
+}
+
 func (m *legacyManager) Apply(pid int) error {
 	var (
 		c          = m.cgroups
@@ -154,26 +182,9 @@ func (m *legacyManager) Apply(pid int) error {
 		return err
 	}
 
-	paths := make(map[string]string)
-	for _, s := range legacySubsystems {
-		subsystemPath, err := getSubsystemPath(m.cgroups, s.Name())
-		if err != nil {
-			// Even if it's `not found` error, we'll return err
-			// because devices cgroup is hard requirement for
-			// container security.
-			if s.Name() == "devices" {
-				return err
-			}
-			// Don't fail if a cgroup hierarchy was not found, just skip this subsystem
-			if cgroups.IsNotFound(err) {
-				continue
-			}
-			return err
-		}
-		paths[s.Name()] = subsystemPath
+	if err := m.initPaths(); err != nil {
+		return err
 	}
-	m.paths = paths
-
 	if err := m.joinCgroups(pid); err != nil {
 		return err
 	}
