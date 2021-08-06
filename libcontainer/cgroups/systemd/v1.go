@@ -109,14 +109,13 @@ func (m *legacyManager) initPaths() error {
 
 	slice := "system.slice"
 	if c.Parent != "" {
-		slice = c.Parent
+		var err error
+		slice, err = ExpandSlice(c.Parent)
+		if err != nil {
+			return err
+		}
 	}
 
-	var err error
-	slice, err = ExpandSlice(slice)
-	if err != nil {
-		return err
-	}
 	unit := getUnitName(c)
 
 	paths := make(map[string]string)
