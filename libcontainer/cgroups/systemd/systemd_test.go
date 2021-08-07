@@ -13,6 +13,23 @@ import (
 	"github.com/opencontainers/runc/libcontainer/devices"
 )
 
+func newManager(t *testing.T, config *configs.Cgroup) (m cgroups.Manager) {
+	t.Helper()
+	var err error
+
+	if cgroups.IsCgroup2UnifiedMode() {
+		m, err = NewUnifiedManager(config, "")
+	} else {
+		m, err = NewLegacyManager(config, nil)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = m.Destroy() })
+
+	return m
+}
+
 func TestSystemdVersion(t *testing.T) {
 	systemdVersionTests := []struct {
 		verStr      string
@@ -57,13 +74,6 @@ func TestValidUnitTypes(t *testing.T) {
 	}
 }
 
-func newManager(config *configs.Cgroup) cgroups.Manager {
-	if cgroups.IsCgroup2UnifiedMode() {
-		return NewUnifiedManager(config, "", false)
-	}
-	return NewLegacyManager(config, nil)
-}
-
 // TestPodSkipDevicesUpdate checks that updating a pod having SkipDevices: true
 // does not result in spurious "permission denied" errors in a container
 // running under the pod. The test is somewhat similar in nature to the
@@ -79,8 +89,9 @@ func TestPodSkipDevicesUpdate(t *testing.T) {
 
 	podName := "system-runc_test_pod" + t.Name() + ".slice"
 	podConfig := &configs.Cgroup{
-		Parent: "system.slice",
-		Name:   podName,
+		Systemd: true,
+		Parent:  "system.slice",
+		Name:    podName,
 		Resources: &configs.Resources{
 			PidsLimit:   42,
 			Memory:      32 * 1024 * 1024,
@@ -88,8 +99,7 @@ func TestPodSkipDevicesUpdate(t *testing.T) {
 		},
 	}
 	// Create "pod" cgroup (a systemd slice to hold containers).
-	pm := newManager(podConfig)
-	defer pm.Destroy() //nolint:errcheck
+	pm := newManager(t, podConfig)
 	if err := pm.Apply(-1); err != nil {
 		t.Fatal(err)
 	}
@@ -132,9 +142,7 @@ func TestPodSkipDevicesUpdate(t *testing.T) {
 	}()
 
 	// Put the process into a cgroup.
-	cm := newManager(containerConfig)
-	defer cm.Destroy() //nolint:errcheck
-
+	cm := newManager(t, containerConfig)
 	if err := cm.Apply(cmd.Process.Pid); err != nil {
 		t.Fatal(err)
 	}
@@ -184,8 +192,7 @@ func testSkipDevices(t *testing.T, skipDevices bool, expected []string) {
 		},
 	}
 	// Create "pods" cgroup (a systemd slice to hold containers).
-	pm := newManager(podConfig)
-	defer pm.Destroy() //nolint:errcheck
+	pm := newManager(t, podConfig)
 	if err := pm.Apply(-1); err != nil {
 		t.Fatal(err)
 	}
@@ -236,9 +243,7 @@ func testSkipDevices(t *testing.T, skipDevices bool, expected []string) {
 	}()
 
 	// Put the process into a cgroup.
-	m := newManager(config)
-	defer m.Destroy() //nolint:errcheck
-
+	m := newManager(t, config)
 	if err := m.Apply(cmd.Process.Pid); err != nil {
 		t.Fatal(err)
 	}
@@ -305,8 +310,7 @@ func TestUnitExistsIgnored(t *testing.T) {
 		Resources: &configs.Resources{},
 	}
 	// Create "pods" cgroup (a systemd slice to hold containers).
-	pm := newManager(podConfig)
-	defer pm.Destroy() //nolint:errcheck
+	pm := newManager(t, podConfig)
 
 	// create twice to make sure "UnitExists" error is ignored.
 	for i := 0; i < 2; i++ {
@@ -334,8 +338,7 @@ func TestFreezePodCgroup(t *testing.T) {
 	}
 	// Create a "pod" cgroup (a systemd slice to hold containers),
 	// which is frozen initially.
-	pm := newManager(podConfig)
-	defer pm.Destroy() //nolint:errcheck
+	pm := newManager(t, podConfig)
 	if err := pm.Apply(-1); err != nil {
 		t.Fatal(err)
 	}
@@ -402,8 +405,7 @@ func TestFreezePodCgroup(t *testing.T) {
 	}()
 
 	// Put the process into a cgroup.
-	cm := newManager(containerConfig)
-	defer cm.Destroy() //nolint:errcheck
+	cm := newManager(t, containerConfig)
 
 	if err := cm.Apply(cmd.Process.Pid); err != nil {
 		t.Fatal(err)

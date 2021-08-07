@@ -49,18 +49,16 @@ type subsystem interface {
 }
 
 type manager struct {
-	mu       sync.Mutex
-	cgroups  *configs.Cgroup
-	rootless bool // ignore permission-related errors
-	paths    map[string]string
+	mu      sync.Mutex
+	cgroups *configs.Cgroup
+	paths   map[string]string
 }
 
-func NewManager(cg *configs.Cgroup, paths map[string]string, rootless bool) cgroups.Manager {
+func NewManager(cg *configs.Cgroup, paths map[string]string) (cgroups.Manager, error) {
 	return &manager{
-		cgroups:  cg,
-		paths:    paths,
-		rootless: rootless,
-	}
+		cgroups: cg,
+		paths:   paths,
+	}, nil
 }
 
 // isIgnorableError returns whether err is a permission error (in the loose
@@ -121,7 +119,7 @@ func (m *manager) Apply(pid int) (err error) {
 			// explicit cgroup path hasn't been set, we don't bail on error in
 			// case of permission problems. Cases where limits have been set
 			// (and we couldn't create our own cgroup) are handled by Set.
-			if isIgnorableError(m.rootless, err) && m.cgroups.Path == "" {
+			if isIgnorableError(c.Rootless, err) && m.cgroups.Path == "" {
 				delete(m.paths, sys.Name())
 				continue
 			}
@@ -174,10 +172,10 @@ func (m *manager) Set(r *configs.Resources) error {
 	for _, sys := range subsystems {
 		path := m.paths[sys.Name()]
 		if err := sys.Set(path, r); err != nil {
-			if m.rootless && sys.Name() == "devices" {
+			if m.cgroups.Rootless && sys.Name() == "devices" {
 				continue
 			}
-			// When m.rootless is true, errors from the device subsystem are ignored because it is really not expected to work.
+			// When rootless is true, errors from the device subsystem are ignored because it is really not expected to work.
 			// However, errors from other subsystems are not ignored.
 			// see @test "runc create (rootless + limits + no cgrouppath + no permission) fails with informative error"
 			if path == "" {
@@ -249,7 +247,7 @@ func OOMKillCount(path string) (uint64, error) {
 func (m *manager) OOMKillCount() (uint64, error) {
 	c, err := OOMKillCount(m.Path("memory"))
 	// Ignore ENOENT when rootless as it couldn't create cgroup.
-	if err != nil && m.rootless && os.IsNotExist(err) {
+	if err != nil && m.cgroups.Rootless && os.IsNotExist(err) {
 		err = nil
 	}
 

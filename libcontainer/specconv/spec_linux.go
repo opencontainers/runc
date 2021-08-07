@@ -429,6 +429,8 @@ func CreateCgroupConfig(opts *CreateOpts, defaultDevs []*devices.Device) (*confi
 	)
 
 	c := &configs.Cgroup{
+		Systemd:   useSystemdCgroup,
+		Rootless:  opts.RootlessCgroups,
 		Resources: &configs.Resources{},
 	}
 

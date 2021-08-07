@@ -22,18 +22,16 @@ type unifiedManager struct {
 	mu      sync.Mutex
 	cgroups *configs.Cgroup
 	// path is like "/sys/fs/cgroup/user.slice/user-1001.slice/session-1.scope"
-	path     string
-	rootless bool
-	dbus     *dbusConnManager
+	path string
+	dbus *dbusConnManager
 }
 
-func NewUnifiedManager(config *configs.Cgroup, path string, rootless bool) cgroups.Manager {
+func NewUnifiedManager(config *configs.Cgroup, path string) (cgroups.Manager, error) {
 	return &unifiedManager{
-		cgroups:  config,
-		path:     path,
-		rootless: rootless,
-		dbus:     newDbusConnManager(rootless),
-	}
+		cgroups: config,
+		path:    path,
+		dbus:    newDbusConnManager(config.Rootless),
+	}, nil
 }
 
 // unifiedResToSystemdProps tries to convert from Cgroup.Resources.Unified
@@ -233,7 +231,7 @@ func (m *unifiedManager) Apply(pid int) error {
 	)
 
 	slice := "system.slice"
-	if m.rootless {
+	if m.cgroups.Rootless {
 		slice = "user.slice"
 	}
 	if c.Parent != "" {
@@ -313,7 +311,7 @@ func (m *unifiedManager) Path(_ string) string {
 func (m *unifiedManager) getSliceFull() (string, error) {
 	c := m.cgroups
 	slice := "system.slice"
-	if m.rootless {
+	if c.Rootless {
 		slice = "user.slice"
 	}
 	if c.Parent != "" {
@@ -324,7 +322,7 @@ func (m *unifiedManager) getSliceFull() (string, error) {
 		}
 	}
 
-	if m.rootless {
+	if c.Rootless {
 		// managerCG is typically "/user.slice/user-${uid}.slice/user@${uid}.service".
 		managerCG, err := getManagerProperty(m.dbus, "ControlGroup")
 		if err != nil {
@@ -366,7 +364,7 @@ func (m *unifiedManager) fsManager() (cgroups.Manager, error) {
 	if err := m.initPath(); err != nil {
 		return nil, err
 	}
-	return fs2.NewManager(m.cgroups, m.path, m.rootless)
+	return fs2.NewManager(m.cgroups, m.path)
 }
 
 func (m *unifiedManager) Freeze(state configs.FreezerState) error {

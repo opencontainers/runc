@@ -126,15 +126,9 @@ func newContainer(t *testing.T, config *configs.Config) (libcontainer.Container,
 	name := strings.ReplaceAll(t.Name(), "/", "_") + strconv.FormatInt(-int64(time.Now().Nanosecond()), 35)
 	root := t.TempDir()
 
-	f, err := libcontainer.New(root, libcontainer.Cgroupfs)
+	f, err := libcontainer.New(root)
 	if err != nil {
 		return nil, err
-	}
-	if config.Cgroups != nil && config.Cgroups.Parent == "system.slice" {
-		f, err = libcontainer.New(root, libcontainer.SystemdCgroups)
-		if err != nil {
-			return nil, err
-		}
 	}
 	return f.Create(name, config)
 }
