@@ -62,7 +62,7 @@ func testCheckpoint(t *testing.T, userns bool) {
 	}
 
 	config := newTemplateConfig(t, &tParam{userns: userns})
-	factory, err := libcontainer.New(t.TempDir(), libcontainer.Cgroupfs)
+	factory, err := libcontainer.New(t.TempDir())
 	ok(t, err)
 
 	container, err := factory.Create("test", config)

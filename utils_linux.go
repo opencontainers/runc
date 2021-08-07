@@ -17,7 +17,6 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/opencontainers/runc/libcontainer"
-	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/specconv"
 	"github.com/opencontainers/runc/libcontainer/utils"
@@ -31,26 +30,6 @@ func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
 	abs, err := filepath.Abs(root)
 	if err != nil {
 		return nil, err
-	}
-
-	// We default to cgroupfs, and can only use systemd if the system is a
-	// systemd box.
-	cgroupManager := libcontainer.Cgroupfs
-	rootlessCg, err := shouldUseRootlessCgroupManager(context)
-	if err != nil {
-		return nil, err
-	}
-	if rootlessCg {
-		cgroupManager = libcontainer.RootlessCgroupfs
-	}
-	if context.GlobalBool("systemd-cgroup") {
-		if !systemd.IsRunningSystemd() {
-			return nil, errors.New("systemd cgroup flag passed, but systemd support for managing cgroups is not available")
-		}
-		cgroupManager = libcontainer.SystemdCgroups
-		if rootlessCg {
-			cgroupManager = libcontainer.RootlessSystemdCgroups
-		}
 	}
 
 	intelRdtManager := libcontainer.IntelRdtFs
@@ -67,7 +46,7 @@ func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
 		newgidmap = ""
 	}
 
-	return libcontainer.New(abs, cgroupManager, intelRdtManager,
+	return libcontainer.New(abs, intelRdtManager,
 		libcontainer.CriuPath(context.GlobalString("criu")),
 		libcontainer.NewuidmapPath(newuidmap),
 		libcontainer.NewgidmapPath(newgidmap))

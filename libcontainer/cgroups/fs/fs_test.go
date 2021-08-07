@@ -119,8 +119,11 @@ func BenchmarkGetStats(b *testing.B) {
 		Path:      "/some/kind/of/a/path/here",
 		Resources: &configs.Resources{},
 	}
-	m := NewManager(cg, nil, false)
-	err := m.Apply(-1)
+	m, err := NewManager(cg, nil)
+	if err != nil {
+		b.Fatal(err)
+	}
+	err = m.Apply(-1)
 	if err != nil {
 		b.Fatal(err)
 	}

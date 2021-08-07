@@ -2,7 +2,6 @@ package libcontainer
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,10 +13,7 @@ import (
 	"github.com/moby/sys/mountinfo"
 	"golang.org/x/sys/unix"
 
-	"github.com/opencontainers/runc/libcontainer/cgroups"
-	"github.com/opencontainers/runc/libcontainer/cgroups/fs"
-	"github.com/opencontainers/runc/libcontainer/cgroups/fs2"
-	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
+	"github.com/opencontainers/runc/libcontainer/cgroups/manager"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/configs/validate"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
@@ -30,10 +26,7 @@ const (
 	execFifoFilename = "exec.fifo"
 )
 
-var (
-	idRegex      = regexp.MustCompile(`^[\w+-\.]+$`)
-	errNoSystemd = errors.New("systemd not running on this host, can't use systemd as cgroups manager")
-)
+var idRegex = regexp.MustCompile(`^[\w+-\.]+$`)
 
 // InitArgs returns an options func to configure a LinuxFactory with the
 // provided init binary path and arguments.
@@ -52,100 +45,6 @@ func InitArgs(args ...string) func(*LinuxFactory) error {
 		l.InitArgs = args
 		return nil
 	}
-}
-
-func getUnifiedPath(paths map[string]string) string {
-	path := ""
-	for k, v := range paths {
-		if path == "" {
-			path = v
-		} else if v != path {
-			panic(fmt.Errorf("expected %q path to be unified path %q, got %q", k, path, v))
-		}
-	}
-	// can be empty
-	if path != "" {
-		if filepath.Clean(path) != path || !filepath.IsAbs(path) {
-			panic(fmt.Errorf("invalid dir path %q", path))
-		}
-	}
-
-	return path
-}
-
-func systemdCgroupV2(l *LinuxFactory, rootless bool) error {
-	l.NewCgroupsManager = func(config *configs.Cgroup, paths map[string]string) cgroups.Manager {
-		return systemd.NewUnifiedManager(config, getUnifiedPath(paths), rootless)
-	}
-	return nil
-}
-
-// SystemdCgroups is an options func to configure a LinuxFactory to return
-// containers that use systemd to create and manage cgroups.
-func SystemdCgroups(l *LinuxFactory) error {
-	if !systemd.IsRunningSystemd() {
-		return errNoSystemd
-	}
-
-	if cgroups.IsCgroup2UnifiedMode() {
-		return systemdCgroupV2(l, false)
-	}
-
-	l.NewCgroupsManager = func(config *configs.Cgroup, paths map[string]string) cgroups.Manager {
-		return systemd.NewLegacyManager(config, paths)
-	}
-
-	return nil
-}
-
-// RootlessSystemdCgroups is rootless version of SystemdCgroups.
-func RootlessSystemdCgroups(l *LinuxFactory) error {
-	if !systemd.IsRunningSystemd() {
-		return errNoSystemd
-	}
-
-	if !cgroups.IsCgroup2UnifiedMode() {
-		return errors.New("cgroup v2 not enabled on this host, can't use systemd (rootless) as cgroups manager")
-	}
-	return systemdCgroupV2(l, true)
-}
-
-func cgroupfs2(l *LinuxFactory, rootless bool) error {
-	l.NewCgroupsManager = func(config *configs.Cgroup, paths map[string]string) cgroups.Manager {
-		m, err := fs2.NewManager(config, getUnifiedPath(paths), rootless)
-		if err != nil {
-			panic(err)
-		}
-		return m
-	}
-	return nil
-}
-
-func cgroupfs(l *LinuxFactory, rootless bool) error {
-	if cgroups.IsCgroup2UnifiedMode() {
-		return cgroupfs2(l, rootless)
-	}
-	l.NewCgroupsManager = func(config *configs.Cgroup, paths map[string]string) cgroups.Manager {
-		return fs.NewManager(config, paths, rootless)
-	}
-	return nil
-}
-
-// Cgroupfs is an options func to configure a LinuxFactory to return containers
-// that use the native cgroups filesystem implementation to create and manage
-// cgroups.
-func Cgroupfs(l *LinuxFactory) error {
-	return cgroupfs(l, false)
-}
-
-// RootlessCgroupfs is an options func to configure a LinuxFactory to return
-// containers that use the native cgroups filesystem implementation to create
-// and manage cgroups. The difference between RootlessCgroupfs and Cgroupfs is
-// that RootlessCgroupfs can transparently handle permission errors that occur
-// during rootless container (including euid=0 in userns) setup (while still allowing cgroup usage if
-// they've been set up properly).
-func RootlessCgroupfs(l *LinuxFactory) error {
-	return cgroupfs(l, true)
 }
 
 // IntelRdtfs is an options func to configure a LinuxFactory to return
@@ -201,10 +100,6 @@ func New(root string, options ...func(*LinuxFactory) error) (Factory, error) {
 		CriuPath:  "criu",
 	}
 
-	if err := Cgroupfs(l); err != nil {
-		return nil, err
-	}
-
 	for _, opt := range options {
 		if opt == nil {
 			continue
@@ -241,9 +136,6 @@ type LinuxFactory struct {
 	// Validator provides validation to container configurations.
 	Validator validate.Validator
 
-	// NewCgroupsManager returns an initialized cgroups manager for a single container.
-	NewCgroupsManager func(config *configs.Cgroup, paths map[string]string) cgroups.Manager
-
 	// NewIntelRdtManager returns an initialized Intel RDT manager for a single container.
 	NewIntelRdtManager func(config *configs.Config, id string, path string) intelrdt.Manager
 }
@@ -273,6 +165,10 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 	if err := os.Chown(containerRoot, unix.Geteuid(), unix.Getegid()); err != nil {
 		return nil, err
 	}
+	cm, err := manager.New(config.Cgroups)
+	if err != nil {
+		return nil, err
+	}
 	c := &linuxContainer{
 		id:            id,
 		root:          containerRoot,
@@ -282,7 +178,7 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 		criuPath:      l.CriuPath,
 		newuidmapPath: l.NewuidmapPath,
 		newgidmapPath: l.NewgidmapPath,
-		cgroupManager: l.NewCgroupsManager(config.Cgroups, nil),
+		cgroupManager: cm,
 	}
 	if l.NewIntelRdtManager != nil {
 		c.intelRdtManager = l.NewIntelRdtManager(config, id, "")
@@ -312,6 +208,10 @@ func (l *LinuxFactory) Load(id string) (Container, error) {
 		processStartTime: state.InitProcessStartTime,
 		fds:              state.ExternalDescriptors,
 	}
+	cm, err := manager.NewWithPaths(state.Config.Cgroups, state.CgroupPaths)
+	if err != nil {
+		return nil, err
+	}
 	c := &linuxContainer{
 		initProcess:          r,
 		initProcessStartTime: state.InitProcessStartTime,
@@ -322,7 +222,7 @@ func (l *LinuxFactory) Load(id string) (Container, error) {
 		criuPath:             l.CriuPath,
 		newuidmapPath:        l.NewuidmapPath,
 		newgidmapPath:        l.NewgidmapPath,
-		cgroupManager:        l.NewCgroupsManager(state.Config.Cgroups, state.CgroupPaths),
+		cgroupManager:        cm,
 		root:                 containerRoot,
 		created:              state.Created,
 	}

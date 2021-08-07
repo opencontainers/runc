@@ -57,9 +57,9 @@ func main() {
 	}
 }
 
-func newManager(config *configs.Cgroup) cgroups.Manager {
+func newManager(config *configs.Cgroup) (cgroups.Manager, error) {
 	if cgroups.IsCgroup2UnifiedMode() {
-		return systemd.NewUnifiedManager(config, "", false)
+		return systemd.NewUnifiedManager(config, "")
 	}
 	return systemd.NewLegacyManager(config, nil)
 }
@@ -70,7 +70,10 @@ func unitCommand(cmd, name, parent string) error {
 		Parent:    parent,
 		Resources: &configs.Resources{},
 	}
-	pm := newManager(podConfig)
+	pm, err := newManager(podConfig)
+	if err != nil {
+		return err
+	}
 
 	switch cmd {
 	case "start":

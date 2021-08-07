@@ -24,12 +24,15 @@ type legacyManager struct {
 	dbus    *dbusConnManager
 }
 
-func NewLegacyManager(cg *configs.Cgroup, paths map[string]string) cgroups.Manager {
+func NewLegacyManager(cg *configs.Cgroup, paths map[string]string) (cgroups.Manager, error) {
+	if cg.Rootless {
+		return nil, errors.New("can't use rootless systemd cgroups manager on cgroup v1")
+	}
 	return &legacyManager{
 		cgroups: cg,
 		paths:   paths,
 		dbus:    newDbusConnManager(false),
-	}
+	}, nil
 }
 
 type subsystem interface {
