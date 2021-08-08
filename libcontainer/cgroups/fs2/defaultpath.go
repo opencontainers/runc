@@ -35,10 +35,6 @@ func defaultDirPath(c *configs.Cgroup) (string, error) {
 	if (c.Name != "" || c.Parent != "") && c.Path != "" {
 		return "", fmt.Errorf("cgroup: either Path or Name and Parent should be used, got %+v", c)
 	}
-	if len(c.Paths) != 0 {
-		// never set by specconv
-		return "", fmt.Errorf("cgroup: Paths is unsupported, use Path, got %+v", c)
-	}
 
 	// XXX: Do not remove this code. Path safety is important! -- cyphar
 	cgPath := libcontainerUtils.CleanPath(c.Path)

@@ -196,26 +196,12 @@ func (m *manager) Apply(pid int) (err error) {
 		return cgroups.ErrV1NoUnified
 	}
 
-	m.paths = make(map[string]string)
-	if c.Paths != nil {
-		cgMap, err := cgroups.ParseCgroupFile("/proc/self/cgroup")
-		if err != nil {
-			return err
-		}
-		for name, path := range c.Paths {
-			// XXX(kolyshkin@): why this check is needed?
-			if _, ok := cgMap[name]; ok {
-				m.paths[name] = path
-			}
-		}
-		return cgroups.EnterPid(m.paths, pid)
-	}
-
 	d, err := getCgroupData(m.cgroups, pid)
 	if err != nil {
 		return err
 	}
 
+	m.paths = make(map[string]string)
 	for _, sys := range subsystems {
 		p, err := d.path(sys.Name())
 		if err != nil {
@@ -245,9 +231,6 @@ func (m *manager) Apply(pid int) (err error) {
 }
 
 func (m *manager) Destroy() error {
-	if m.cgroups == nil || m.cgroups.Paths != nil {
-		return nil
-	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return cgroups.RemovePaths(m.paths)
@@ -280,11 +263,6 @@ func (m *manager) Set(r *configs.Resources) error {
 		return nil
 	}
 
-	// If Paths are set, then we are just joining cgroups paths
-	// and there is no need to set any values.
-	if m.cgroups != nil && m.cgroups.Paths != nil {
-		return nil
-	}
 	if r.Unified != nil {
 		return cgroups.ErrV1NoUnified
 	}
