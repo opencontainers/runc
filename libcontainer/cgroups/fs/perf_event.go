@@ -12,7 +12,7 @@ func (s *PerfEventGroup) Name() string {
 }
 
 func (s *PerfEventGroup) Apply(path string, d *cgroupData) error {
-	return join(path, d.pid)
+	return apply(path, d.pid)
 }
 
 func (s *PerfEventGroup) Set(_ string, _ *configs.Resources) error {

@@ -29,7 +29,7 @@ func (s *DevicesGroup) Apply(path string, d *cgroupData) error {
 		// is a hard requirement for container's security.
 		return errSubsystemDoesNotExist
 	}
-	return join(path, d.pid)
+	return apply(path, d.pid)
 }
 
 func loadEmulator(path string) (*cgroupdevices.Emulator, error) {

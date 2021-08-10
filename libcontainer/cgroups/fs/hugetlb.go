@@ -15,7 +15,7 @@ func (s *HugetlbGroup) Name() string {
 }
 
 func (s *HugetlbGroup) Apply(path string, d *cgroupData) error {
-	return join(path, d.pid)
+	return apply(path, d.pid)
 }
 
 func (s *HugetlbGroup) Set(path string, r *configs.Resources) error {
