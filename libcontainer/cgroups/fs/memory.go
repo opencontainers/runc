@@ -31,7 +31,7 @@ func (s *MemoryGroup) Name() string {
 }
 
 func (s *MemoryGroup) Apply(path string, d *cgroupData) (err error) {
-	return join(path, d.pid)
+	return apply(path, d.pid)
 }
 
 func setMemory(path string, val int64) error {

@@ -17,7 +17,7 @@ func (s *NameGroup) Name() string {
 func (s *NameGroup) Apply(path string, d *cgroupData) error {
 	if s.Join {
 		// ignore errors if the named cgroup does not exist
-		_ = join(path, d.pid)
+		_ = apply(path, d.pid)
 	}
 	return nil
 }

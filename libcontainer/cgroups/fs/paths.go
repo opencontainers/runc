@@ -162,7 +162,7 @@ func (raw *cgroupData) path(subsystem string) (string, error) {
 	return filepath.Join(parentPath, raw.innerPath), nil
 }
 
-func join(path string, pid int) error {
+func apply(path string, pid int) error {
 	if path == "" {
 		return nil
 	}
