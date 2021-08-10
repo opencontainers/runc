@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"sync"
 
@@ -353,15 +354,20 @@ func (m *legacyManager) freezeBeforeSet(unitName string, r *configs.Resources) (
 		// a non-existent unit returns default properties,
 		// and settings in (2) are the defaults.
 		//
-		// Do not return errors from getUnitProperty, as they alone
+		// Do not return errors from getUnitTypeProperty, as they alone
 		// should not prevent Set from working.
-		devPolicy, e := getUnitProperty(m.dbus, unitName, "DevicePolicy")
+
+		unitType := getUnitType(unitName)
+
+		devPolicy, e := getUnitTypeProperty(m.dbus, unitName, unitType, "DevicePolicy")
 		if e == nil && devPolicy.Value == dbus.MakeVariant("auto") {
-			devAllow, e := getUnitProperty(m.dbus, unitName, "DeviceAllow")
-			if e == nil && devAllow.Value == dbus.MakeVariant([]deviceAllowEntry{}) {
-				needsFreeze = false
-				needsThaw = false
-				return
+			devAllow, e := getUnitTypeProperty(m.dbus, unitName, unitType, "DeviceAllow")
+			if e == nil {
+				if rv := reflect.ValueOf(devAllow.Value.Value()); rv.Kind() == reflect.Slice && rv.Len() == 0 {
+					needsFreeze = false
+					needsThaw = false
+					return
+				}
 			}
 		}
 	}
