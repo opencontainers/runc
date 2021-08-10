@@ -30,8 +30,8 @@ func (s *MemoryGroup) Name() string {
 	return "memory"
 }
 
-func (s *MemoryGroup) Apply(path string, d *cgroupData) (err error) {
-	return apply(path, d.pid)
+func (s *MemoryGroup) Apply(path string, _ *configs.Resources, pid int) error {
+	return apply(path, pid)
 }
 
 func setMemory(path string, val int64) error {

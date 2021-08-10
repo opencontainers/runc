@@ -6,6 +6,7 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
+	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
 const (
@@ -38,7 +39,7 @@ whatever=100 N0=0
 )
 
 func TestMemorySetMemory(t *testing.T) {
-	helper := NewCgroupTestUtil("memory", t)
+	path := tempDir(t, "memory")
 
 	const (
 		memoryBefore      = 314572800 // 300M
@@ -47,19 +48,21 @@ func TestMemorySetMemory(t *testing.T) {
 		reservationAfter  = 314572800 // 300M
 	)
 
-	helper.writeFileContents(map[string]string{
+	writeFileContents(t, path, map[string]string{
 		"memory.limit_in_bytes":      strconv.Itoa(memoryBefore),
 		"memory.soft_limit_in_bytes": strconv.Itoa(reservationBefore),
 	})
 
-	helper.CgroupData.config.Resources.Memory = memoryAfter
-	helper.CgroupData.config.Resources.MemoryReservation = reservationAfter
+	r := &configs.Resources{
+		Memory:            memoryAfter,
+		MemoryReservation: reservationAfter,
+	}
 	memory := &MemoryGroup{}
-	if err := memory.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
+	if err := memory.Set(path, r); err != nil {
 		t.Fatal(err)
 	}
 
-	value, err := fscommon.GetCgroupParamUint(helper.CgroupPath, "memory.limit_in_bytes")
+	value, err := fscommon.GetCgroupParamUint(path, "memory.limit_in_bytes")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,7 +70,7 @@ func TestMemorySetMemory(t *testing.T) {
 		t.Fatal("Got the wrong value, set memory.limit_in_bytes failed.")
 	}
 
-	value, err = fscommon.GetCgroupParamUint(helper.CgroupPath, "memory.soft_limit_in_bytes")
+	value, err = fscommon.GetCgroupParamUint(path, "memory.soft_limit_in_bytes")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,24 +80,26 @@ func TestMemorySetMemory(t *testing.T) {
 }
 
 func TestMemorySetMemoryswap(t *testing.T) {
-	helper := NewCgroupTestUtil("memory", t)
+	path := tempDir(t, "memory")
 
 	const (
 		memoryswapBefore = 314572800 // 300M
 		memoryswapAfter  = 524288000 // 500M
 	)
 
-	helper.writeFileContents(map[string]string{
+	writeFileContents(t, path, map[string]string{
 		"memory.memsw.limit_in_bytes": strconv.Itoa(memoryswapBefore),
 	})
 
-	helper.CgroupData.config.Resources.MemorySwap = memoryswapAfter
+	r := &configs.Resources{
+		MemorySwap: memoryswapAfter,
+	}
 	memory := &MemoryGroup{}
-	if err := memory.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
+	if err := memory.Set(path, r); err != nil {
 		t.Fatal(err)
 	}
 
-	value, err := fscommon.GetCgroupParamUint(helper.CgroupPath, "memory.memsw.limit_in_bytes")
+	value, err := fscommon.GetCgroupParamUint(path, "memory.memsw.limit_in_bytes")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -104,7 +109,7 @@ func TestMemorySetMemoryswap(t *testing.T) {
 }
 
 func TestMemorySetMemoryLargerThanSwap(t *testing.T) {
-	helper := NewCgroupTestUtil("memory", t)
+	path := tempDir(t, "memory")
 
 	const (
 		memoryBefore     = 314572800 // 300M
@@ -113,7 +118,7 @@ func TestMemorySetMemoryLargerThanSwap(t *testing.T) {
 		memoryswapAfter  = 838860800 // 800M
 	)
 
-	helper.writeFileContents(map[string]string{
+	writeFileContents(t, path, map[string]string{
 		"memory.limit_in_bytes":       strconv.Itoa(memoryBefore),
 		"memory.memsw.limit_in_bytes": strconv.Itoa(memoryswapBefore),
 		// Set will call getMemoryData when memory and swap memory are
@@ -123,14 +128,16 @@ func TestMemorySetMemoryLargerThanSwap(t *testing.T) {
 		"memory.failcnt":            "0",
 	})
 
-	helper.CgroupData.config.Resources.Memory = memoryAfter
-	helper.CgroupData.config.Resources.MemorySwap = memoryswapAfter
+	r := &configs.Resources{
+		Memory:     memoryAfter,
+		MemorySwap: memoryswapAfter,
+	}
 	memory := &MemoryGroup{}
-	if err := memory.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
+	if err := memory.Set(path, r); err != nil {
 		t.Fatal(err)
 	}
 
-	value, err := fscommon.GetCgroupParamUint(helper.CgroupPath, "memory.limit_in_bytes")
+	value, err := fscommon.GetCgroupParamUint(path, "memory.limit_in_bytes")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -138,7 +145,7 @@ func TestMemorySetMemoryLargerThanSwap(t *testing.T) {
 		t.Fatal("Got the wrong value, set memory.limit_in_bytes failed.")
 	}
 
-	value, err = fscommon.GetCgroupParamUint(helper.CgroupPath, "memory.memsw.limit_in_bytes")
+	value, err = fscommon.GetCgroupParamUint(path, "memory.memsw.limit_in_bytes")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -148,7 +155,7 @@ func TestMemorySetMemoryLargerThanSwap(t *testing.T) {
 }
 
 func TestMemorySetSwapSmallerThanMemory(t *testing.T) {
-	helper := NewCgroupTestUtil("memory", t)
+	path := tempDir(t, "memory")
 
 	const (
 		memoryBefore     = 629145600 // 600M
@@ -157,19 +164,21 @@ func TestMemorySetSwapSmallerThanMemory(t *testing.T) {
 		memoryswapAfter  = 524288000 // 500M
 	)
 
-	helper.writeFileContents(map[string]string{
+	writeFileContents(t, path, map[string]string{
 		"memory.limit_in_bytes":       strconv.Itoa(memoryBefore),
 		"memory.memsw.limit_in_bytes": strconv.Itoa(memoryswapBefore),
 	})
 
-	helper.CgroupData.config.Resources.Memory = memoryAfter
-	helper.CgroupData.config.Resources.MemorySwap = memoryswapAfter
+	r := &configs.Resources{
+		Memory:     memoryAfter,
+		MemorySwap: memoryswapAfter,
+	}
 	memory := &MemoryGroup{}
-	if err := memory.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
+	if err := memory.Set(path, r); err != nil {
 		t.Fatal(err)
 	}
 
-	value, err := fscommon.GetCgroupParamUint(helper.CgroupPath, "memory.limit_in_bytes")
+	value, err := fscommon.GetCgroupParamUint(path, "memory.limit_in_bytes")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -177,7 +186,7 @@ func TestMemorySetSwapSmallerThanMemory(t *testing.T) {
 		t.Fatalf("Got the wrong value (%d != %d), set memory.limit_in_bytes failed", value, memoryAfter)
 	}
 
-	value, err = fscommon.GetCgroupParamUint(helper.CgroupPath, "memory.memsw.limit_in_bytes")
+	value, err = fscommon.GetCgroupParamUint(path, "memory.memsw.limit_in_bytes")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -187,22 +196,24 @@ func TestMemorySetSwapSmallerThanMemory(t *testing.T) {
 }
 
 func TestMemorySetMemorySwappinessDefault(t *testing.T) {
-	helper := NewCgroupTestUtil("memory", t)
+	path := tempDir(t, "memory")
 
 	swappinessBefore := 60 // default is 60
 	swappinessAfter := uint64(0)
 
-	helper.writeFileContents(map[string]string{
+	writeFileContents(t, path, map[string]string{
 		"memory.swappiness": strconv.Itoa(swappinessBefore),
 	})
 
-	helper.CgroupData.config.Resources.MemorySwappiness = &swappinessAfter
+	r := &configs.Resources{
+		MemorySwappiness: &swappinessAfter,
+	}
 	memory := &MemoryGroup{}
-	if err := memory.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
+	if err := memory.Set(path, r); err != nil {
 		t.Fatal(err)
 	}
 
-	value, err := fscommon.GetCgroupParamUint(helper.CgroupPath, "memory.swappiness")
+	value, err := fscommon.GetCgroupParamUint(path, "memory.swappiness")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -212,8 +223,8 @@ func TestMemorySetMemorySwappinessDefault(t *testing.T) {
 }
 
 func TestMemoryStats(t *testing.T) {
-	helper := NewCgroupTestUtil("memory", t)
-	helper.writeFileContents(map[string]string{
+	path := tempDir(t, "memory")
+	writeFileContents(t, path, map[string]string{
 		"memory.stat":                     memoryStatContents,
 		"memory.usage_in_bytes":           memoryUsageContents,
 		"memory.limit_in_bytes":           memoryLimitContents,
@@ -233,7 +244,7 @@ func TestMemoryStats(t *testing.T) {
 
 	memory := &MemoryGroup{}
 	actualStats := *cgroups.NewStats()
-	err := memory.GetStats(helper.CgroupPath, &actualStats)
+	err := memory.GetStats(path, &actualStats)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -263,8 +274,8 @@ func TestMemoryStats(t *testing.T) {
 }
 
 func TestMemoryStatsNoStatFile(t *testing.T) {
-	helper := NewCgroupTestUtil("memory", t)
-	helper.writeFileContents(map[string]string{
+	path := tempDir(t, "memory")
+	writeFileContents(t, path, map[string]string{
 		"memory.usage_in_bytes":     memoryUsageContents,
 		"memory.max_usage_in_bytes": memoryMaxUsageContents,
 		"memory.limit_in_bytes":     memoryLimitContents,
@@ -272,15 +283,15 @@ func TestMemoryStatsNoStatFile(t *testing.T) {
 
 	memory := &MemoryGroup{}
 	actualStats := *cgroups.NewStats()
-	err := memory.GetStats(helper.CgroupPath, &actualStats)
+	err := memory.GetStats(path, &actualStats)
 	if err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestMemoryStatsNoUsageFile(t *testing.T) {
-	helper := NewCgroupTestUtil("memory", t)
-	helper.writeFileContents(map[string]string{
+	path := tempDir(t, "memory")
+	writeFileContents(t, path, map[string]string{
 		"memory.stat":               memoryStatContents,
 		"memory.max_usage_in_bytes": memoryMaxUsageContents,
 		"memory.limit_in_bytes":     memoryLimitContents,
@@ -288,15 +299,15 @@ func TestMemoryStatsNoUsageFile(t *testing.T) {
 
 	memory := &MemoryGroup{}
 	actualStats := *cgroups.NewStats()
-	err := memory.GetStats(helper.CgroupPath, &actualStats)
+	err := memory.GetStats(path, &actualStats)
 	if err == nil {
 		t.Fatal("Expected failure")
 	}
 }
 
 func TestMemoryStatsNoMaxUsageFile(t *testing.T) {
-	helper := NewCgroupTestUtil("memory", t)
-	helper.writeFileContents(map[string]string{
+	path := tempDir(t, "memory")
+	writeFileContents(t, path, map[string]string{
 		"memory.stat":           memoryStatContents,
 		"memory.usage_in_bytes": memoryUsageContents,
 		"memory.limit_in_bytes": memoryLimitContents,
@@ -304,15 +315,15 @@ func TestMemoryStatsNoMaxUsageFile(t *testing.T) {
 
 	memory := &MemoryGroup{}
 	actualStats := *cgroups.NewStats()
-	err := memory.GetStats(helper.CgroupPath, &actualStats)
+	err := memory.GetStats(path, &actualStats)
 	if err == nil {
 		t.Fatal("Expected failure")
 	}
 }
 
 func TestMemoryStatsNoLimitInBytesFile(t *testing.T) {
-	helper := NewCgroupTestUtil("memory", t)
-	helper.writeFileContents(map[string]string{
+	path := tempDir(t, "memory")
+	writeFileContents(t, path, map[string]string{
 		"memory.stat":               memoryStatContents,
 		"memory.usage_in_bytes":     memoryUsageContents,
 		"memory.max_usage_in_bytes": memoryMaxUsageContents,
@@ -320,15 +331,15 @@ func TestMemoryStatsNoLimitInBytesFile(t *testing.T) {
 
 	memory := &MemoryGroup{}
 	actualStats := *cgroups.NewStats()
-	err := memory.GetStats(helper.CgroupPath, &actualStats)
+	err := memory.GetStats(path, &actualStats)
 	if err == nil {
 		t.Fatal("Expected failure")
 	}
 }
 
 func TestMemoryStatsBadStatFile(t *testing.T) {
-	helper := NewCgroupTestUtil("memory", t)
-	helper.writeFileContents(map[string]string{
+	path := tempDir(t, "memory")
+	writeFileContents(t, path, map[string]string{
 		"memory.stat":               "rss rss",
 		"memory.usage_in_bytes":     memoryUsageContents,
 		"memory.max_usage_in_bytes": memoryMaxUsageContents,
@@ -337,15 +348,15 @@ func TestMemoryStatsBadStatFile(t *testing.T) {
 
 	memory := &MemoryGroup{}
 	actualStats := *cgroups.NewStats()
-	err := memory.GetStats(helper.CgroupPath, &actualStats)
+	err := memory.GetStats(path, &actualStats)
 	if err == nil {
 		t.Fatal("Expected failure")
 	}
 }
 
 func TestMemoryStatsBadUsageFile(t *testing.T) {
-	helper := NewCgroupTestUtil("memory", t)
-	helper.writeFileContents(map[string]string{
+	path := tempDir(t, "memory")
+	writeFileContents(t, path, map[string]string{
 		"memory.stat":               memoryStatContents,
 		"memory.usage_in_bytes":     "bad",
 		"memory.max_usage_in_bytes": memoryMaxUsageContents,
@@ -354,15 +365,15 @@ func TestMemoryStatsBadUsageFile(t *testing.T) {
 
 	memory := &MemoryGroup{}
 	actualStats := *cgroups.NewStats()
-	err := memory.GetStats(helper.CgroupPath, &actualStats)
+	err := memory.GetStats(path, &actualStats)
 	if err == nil {
 		t.Fatal("Expected failure")
 	}
 }
 
 func TestMemoryStatsBadMaxUsageFile(t *testing.T) {
-	helper := NewCgroupTestUtil("memory", t)
-	helper.writeFileContents(map[string]string{
+	path := tempDir(t, "memory")
+	writeFileContents(t, path, map[string]string{
 		"memory.stat":               memoryStatContents,
 		"memory.usage_in_bytes":     memoryUsageContents,
 		"memory.max_usage_in_bytes": "bad",
@@ -371,15 +382,15 @@ func TestMemoryStatsBadMaxUsageFile(t *testing.T) {
 
 	memory := &MemoryGroup{}
 	actualStats := *cgroups.NewStats()
-	err := memory.GetStats(helper.CgroupPath, &actualStats)
+	err := memory.GetStats(path, &actualStats)
 	if err == nil {
 		t.Fatal("Expected failure")
 	}
 }
 
 func TestMemoryStatsBadLimitInBytesFile(t *testing.T) {
-	helper := NewCgroupTestUtil("memory", t)
-	helper.writeFileContents(map[string]string{
+	path := tempDir(t, "memory")
+	writeFileContents(t, path, map[string]string{
 		"memory.stat":               memoryStatContents,
 		"memory.usage_in_bytes":     memoryUsageContents,
 		"memory.max_usage_in_bytes": memoryMaxUsageContents,
@@ -388,29 +399,30 @@ func TestMemoryStatsBadLimitInBytesFile(t *testing.T) {
 
 	memory := &MemoryGroup{}
 	actualStats := *cgroups.NewStats()
-	err := memory.GetStats(helper.CgroupPath, &actualStats)
+	err := memory.GetStats(path, &actualStats)
 	if err == nil {
 		t.Fatal("Expected failure")
 	}
 }
 
 func TestMemorySetOomControl(t *testing.T) {
-	helper := NewCgroupTestUtil("memory", t)
+	path := tempDir(t, "memory")
 
 	const (
 		oomKillDisable = 1 // disable oom killer, default is 0
 	)
 
-	helper.writeFileContents(map[string]string{
+	writeFileContents(t, path, map[string]string{
 		"memory.oom_control": strconv.Itoa(oomKillDisable),
 	})
 
 	memory := &MemoryGroup{}
-	if err := memory.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
+	r := &configs.Resources{}
+	if err := memory.Set(path, r); err != nil {
 		t.Fatal(err)
 	}
 
-	value, err := fscommon.GetCgroupParamUint(helper.CgroupPath, "memory.oom_control")
+	value, err := fscommon.GetCgroupParamUint(path, "memory.oom_control")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -420,12 +432,12 @@ func TestMemorySetOomControl(t *testing.T) {
 }
 
 func TestNoHierarchicalNumaStat(t *testing.T) {
-	helper := NewCgroupTestUtil("memory", t)
-	helper.writeFileContents(map[string]string{
+	path := tempDir(t, "memory")
+	writeFileContents(t, path, map[string]string{
 		"memory.numa_stat": memoryNUMAStatNoHierarchyContents + memoryNUMAStatExtraContents,
 	})
 
-	actualStats, err := getPageUsageByNUMA(helper.CgroupPath)
+	actualStats, err := getPageUsageByNUMA(path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -470,13 +482,13 @@ anon=183 N0=12 badone
 `,
 		},
 	}
-	helper := NewCgroupTestUtil("memory", t)
+	path := tempDir(t, "memory")
 	for _, c := range memoryNUMAStatBadContents {
-		helper.writeFileContents(map[string]string{
+		writeFileContents(t, path, map[string]string{
 			"memory.numa_stat": c.contents,
 		})
 
-		_, err := getPageUsageByNUMA(helper.CgroupPath)
+		_, err := getPageUsageByNUMA(path)
 		if err == nil {
 			t.Errorf("case %q: expected error, got nil", c.desc)
 		}
@@ -484,9 +496,9 @@ anon=183 N0=12 badone
 }
 
 func TestWithoutNumaStat(t *testing.T) {
-	helper := NewCgroupTestUtil("memory", t)
+	path := tempDir(t, "memory")
 
-	actualStats, err := getPageUsageByNUMA(helper.CgroupPath)
+	actualStats, err := getPageUsageByNUMA(path)
 	if err != nil {
 		t.Fatal(err)
 	}

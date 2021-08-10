@@ -14,7 +14,7 @@ func TestInvalidCgroupPath(t *testing.T) {
 		t.Skip("cgroup v2 is not supported")
 	}
 
-	root, err := getCgroupRoot()
+	root, err := rootPath()
 	if err != nil {
 		t.Fatalf("couldn't get cgroup root: %v", err)
 	}
@@ -67,19 +67,19 @@ func TestInvalidCgroupPath(t *testing.T) {
 		t.Run(tc.test, func(t *testing.T) {
 			config := &configs.Cgroup{Path: tc.path, Name: tc.name, Parent: tc.parent}
 
-			data, err := getCgroupData(config, 0)
+			inner, err := innerPath(config)
 			if err != nil {
 				t.Fatalf("couldn't get cgroup data: %v", err)
 			}
 
-			// Make sure the final innerPath doesn't go outside the cgroup mountpoint.
-			if strings.HasPrefix(data.innerPath, "..") {
+			// Make sure the final inner path doesn't go outside the cgroup mountpoint.
+			if strings.HasPrefix(inner, "..") {
 				t.Errorf("SECURITY: cgroup innerPath is outside cgroup mountpoint!")
 			}
 
 			// Double-check, using an actual cgroup.
 			deviceRoot := filepath.Join(root, "devices")
-			devicePath, err := data.path("devices")
+			devicePath, err := subsysPath(root, inner, "devices")
 			if err != nil {
 				t.Fatalf("couldn't get cgroup path: %v", err)
 			}

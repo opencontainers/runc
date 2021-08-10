@@ -12,8 +12,8 @@ func (s *RdmaGroup) Name() string {
 	return "rdma"
 }
 
-func (s *RdmaGroup) Apply(path string, d *cgroupData) error {
-	return apply(path, d.pid)
+func (s *RdmaGroup) Apply(path string, _ *configs.Resources, pid int) error {
+	return apply(path, pid)
 }
 
 func (s *RdmaGroup) Set(path string, r *configs.Resources) error {

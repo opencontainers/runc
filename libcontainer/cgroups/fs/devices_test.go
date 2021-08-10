@@ -4,35 +4,38 @@ import (
 	"testing"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
+	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/devices"
 )
 
 func TestDevicesSetAllow(t *testing.T) {
-	helper := NewCgroupTestUtil("devices", t)
+	path := tempDir(t, "devices")
 
-	helper.writeFileContents(map[string]string{
+	writeFileContents(t, path, map[string]string{
 		"devices.allow": "",
 		"devices.deny":  "",
 		"devices.list":  "a *:* rwm",
 	})
 
-	helper.CgroupData.config.Resources.Devices = []*devices.Rule{
-		{
-			Type:        devices.CharDevice,
-			Major:       1,
-			Minor:       5,
-			Permissions: devices.Permissions("rwm"),
-			Allow:       true,
+	r := &configs.Resources{
+		Devices: []*devices.Rule{
+			{
+				Type:        devices.CharDevice,
+				Major:       1,
+				Minor:       5,
+				Permissions: devices.Permissions("rwm"),
+				Allow:       true,
+			},
 		},
 	}
 
 	d := &DevicesGroup{testingSkipFinalCheck: true}
-	if err := d.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
+	if err := d.Set(path, r); err != nil {
 		t.Fatal(err)
 	}
 
 	// The default deny rule must be written.
-	value, err := fscommon.GetCgroupParamString(helper.CgroupPath, "devices.deny")
+	value, err := fscommon.GetCgroupParamString(path, "devices.deny")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,7 +44,7 @@ func TestDevicesSetAllow(t *testing.T) {
 	}
 
 	// Permitted rule must be written.
-	if value, err := fscommon.GetCgroupParamString(helper.CgroupPath, "devices.allow"); err != nil {
+	if value, err := fscommon.GetCgroupParamString(path, "devices.allow"); err != nil {
 		t.Fatal(err)
 	} else if value != "c 1:5 rwm" {
 		t.Errorf("Got the wrong value (%q), set devices.allow failed.", value)
