@@ -6,6 +6,7 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
+	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
 const (
@@ -37,24 +38,26 @@ var cpusetTestFiles = map[string]string{
 }
 
 func TestCPUSetSetCpus(t *testing.T) {
-	helper := NewCgroupTestUtil("cpuset", t)
+	path := tempDir(t, "cpuset")
 
 	const (
 		cpusBefore = "0"
 		cpusAfter  = "1-3"
 	)
 
-	helper.writeFileContents(map[string]string{
+	writeFileContents(t, path, map[string]string{
 		"cpuset.cpus": cpusBefore,
 	})
 
-	helper.CgroupData.config.Resources.CpusetCpus = cpusAfter
+	r := &configs.Resources{
+		CpusetCpus: cpusAfter,
+	}
 	cpuset := &CpusetGroup{}
-	if err := cpuset.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
+	if err := cpuset.Set(path, r); err != nil {
 		t.Fatal(err)
 	}
 
-	value, err := fscommon.GetCgroupParamString(helper.CgroupPath, "cpuset.cpus")
+	value, err := fscommon.GetCgroupParamString(path, "cpuset.cpus")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,24 +67,26 @@ func TestCPUSetSetCpus(t *testing.T) {
 }
 
 func TestCPUSetSetMems(t *testing.T) {
-	helper := NewCgroupTestUtil("cpuset", t)
+	path := tempDir(t, "cpuset")
 
 	const (
 		memsBefore = "0"
 		memsAfter  = "1"
 	)
 
-	helper.writeFileContents(map[string]string{
+	writeFileContents(t, path, map[string]string{
 		"cpuset.mems": memsBefore,
 	})
 
-	helper.CgroupData.config.Resources.CpusetMems = memsAfter
+	r := &configs.Resources{
+		CpusetMems: memsAfter,
+	}
 	cpuset := &CpusetGroup{}
-	if err := cpuset.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
+	if err := cpuset.Set(path, r); err != nil {
 		t.Fatal(err)
 	}
 
-	value, err := fscommon.GetCgroupParamString(helper.CgroupPath, "cpuset.mems")
+	value, err := fscommon.GetCgroupParamString(path, "cpuset.mems")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,12 +96,12 @@ func TestCPUSetSetMems(t *testing.T) {
 }
 
 func TestCPUSetStatsCorrect(t *testing.T) {
-	helper := NewCgroupTestUtil("cpuset", t)
-	helper.writeFileContents(cpusetTestFiles)
+	path := tempDir(t, "cpuset")
+	writeFileContents(t, path, cpusetTestFiles)
 
 	cpuset := &CpusetGroup{}
 	actualStats := *cgroups.NewStats()
-	err := cpuset.GetStats(helper.CgroupPath, &actualStats)
+	err := cpuset.GetStats(path, &actualStats)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -205,7 +210,7 @@ func TestCPUSetStatsMissingFiles(t *testing.T) {
 		},
 	} {
 		t.Run(testCase.desc, func(t *testing.T) {
-			helper := NewCgroupTestUtil("cpuset", t)
+			path := tempDir(t, "cpuset")
 
 			tempCpusetTestFiles := map[string]string{}
 			for i, v := range cpusetTestFiles {
@@ -214,19 +219,19 @@ func TestCPUSetStatsMissingFiles(t *testing.T) {
 
 			if testCase.removeFile {
 				delete(tempCpusetTestFiles, testCase.filename)
-				helper.writeFileContents(tempCpusetTestFiles)
+				writeFileContents(t, path, tempCpusetTestFiles)
 				cpuset := &CpusetGroup{}
 				actualStats := *cgroups.NewStats()
-				err := cpuset.GetStats(helper.CgroupPath, &actualStats)
+				err := cpuset.GetStats(path, &actualStats)
 				if err != nil {
 					t.Errorf("failed unexpectedly: %q", err)
 				}
 			} else {
 				tempCpusetTestFiles[testCase.filename] = testCase.contents
-				helper.writeFileContents(tempCpusetTestFiles)
+				writeFileContents(t, path, tempCpusetTestFiles)
 				cpuset := &CpusetGroup{}
 				actualStats := *cgroups.NewStats()
-				err := cpuset.GetStats(helper.CgroupPath, &actualStats)
+				err := cpuset.GetStats(path, &actualStats)
 
 				if err == nil {
 					t.Error("failed to return expected error")

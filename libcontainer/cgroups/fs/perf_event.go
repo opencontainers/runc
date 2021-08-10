@@ -11,8 +11,8 @@ func (s *PerfEventGroup) Name() string {
 	return "perf_event"
 }
 
-func (s *PerfEventGroup) Apply(path string, d *cgroupData) error {
-	return apply(path, d.pid)
+func (s *PerfEventGroup) Apply(path string, _ *configs.Resources, pid int) error {
+	return apply(path, pid)
 }
 
 func (s *PerfEventGroup) Set(_ string, _ *configs.Resources) error {

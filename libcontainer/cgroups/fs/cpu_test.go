@@ -7,27 +7,30 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
+	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
 func TestCpuSetShares(t *testing.T) {
-	helper := NewCgroupTestUtil("cpu", t)
+	path := tempDir(t, "cpu")
 
 	const (
 		sharesBefore = 1024
 		sharesAfter  = 512
 	)
 
-	helper.writeFileContents(map[string]string{
+	writeFileContents(t, path, map[string]string{
 		"cpu.shares": strconv.Itoa(sharesBefore),
 	})
 
-	helper.CgroupData.config.Resources.CpuShares = sharesAfter
+	r := &configs.Resources{
+		CpuShares: sharesAfter,
+	}
 	cpu := &CpuGroup{}
-	if err := cpu.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
+	if err := cpu.Set(path, r); err != nil {
 		t.Fatal(err)
 	}
 
-	value, err := fscommon.GetCgroupParamUint(helper.CgroupPath, "cpu.shares")
+	value, err := fscommon.GetCgroupParamUint(path, "cpu.shares")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,7 +40,7 @@ func TestCpuSetShares(t *testing.T) {
 }
 
 func TestCpuSetBandWidth(t *testing.T) {
-	helper := NewCgroupTestUtil("cpu", t)
+	path := tempDir(t, "cpu")
 
 	const (
 		quotaBefore     = 8000
@@ -50,23 +53,25 @@ func TestCpuSetBandWidth(t *testing.T) {
 		rtPeriodAfter   = 7000
 	)
 
-	helper.writeFileContents(map[string]string{
+	writeFileContents(t, path, map[string]string{
 		"cpu.cfs_quota_us":  strconv.Itoa(quotaBefore),
 		"cpu.cfs_period_us": strconv.Itoa(periodBefore),
 		"cpu.rt_runtime_us": strconv.Itoa(rtRuntimeBefore),
 		"cpu.rt_period_us":  strconv.Itoa(rtPeriodBefore),
 	})
 
-	helper.CgroupData.config.Resources.CpuQuota = quotaAfter
-	helper.CgroupData.config.Resources.CpuPeriod = periodAfter
-	helper.CgroupData.config.Resources.CpuRtRuntime = rtRuntimeAfter
-	helper.CgroupData.config.Resources.CpuRtPeriod = rtPeriodAfter
+	r := &configs.Resources{
+		CpuQuota:     quotaAfter,
+		CpuPeriod:    periodAfter,
+		CpuRtRuntime: rtRuntimeAfter,
+		CpuRtPeriod:  rtPeriodAfter,
+	}
 	cpu := &CpuGroup{}
-	if err := cpu.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
+	if err := cpu.Set(path, r); err != nil {
 		t.Fatal(err)
 	}
 
-	quota, err := fscommon.GetCgroupParamUint(helper.CgroupPath, "cpu.cfs_quota_us")
+	quota, err := fscommon.GetCgroupParamUint(path, "cpu.cfs_quota_us")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,7 +79,7 @@ func TestCpuSetBandWidth(t *testing.T) {
 		t.Fatal("Got the wrong value, set cpu.cfs_quota_us failed.")
 	}
 
-	period, err := fscommon.GetCgroupParamUint(helper.CgroupPath, "cpu.cfs_period_us")
+	period, err := fscommon.GetCgroupParamUint(path, "cpu.cfs_period_us")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +87,7 @@ func TestCpuSetBandWidth(t *testing.T) {
 		t.Fatal("Got the wrong value, set cpu.cfs_period_us failed.")
 	}
 
-	rtRuntime, err := fscommon.GetCgroupParamUint(helper.CgroupPath, "cpu.rt_runtime_us")
+	rtRuntime, err := fscommon.GetCgroupParamUint(path, "cpu.rt_runtime_us")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,7 +95,7 @@ func TestCpuSetBandWidth(t *testing.T) {
 		t.Fatal("Got the wrong value, set cpu.rt_runtime_us failed.")
 	}
 
-	rtPeriod, err := fscommon.GetCgroupParamUint(helper.CgroupPath, "cpu.rt_period_us")
+	rtPeriod, err := fscommon.GetCgroupParamUint(path, "cpu.rt_period_us")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,7 +105,7 @@ func TestCpuSetBandWidth(t *testing.T) {
 }
 
 func TestCpuStats(t *testing.T) {
-	helper := NewCgroupTestUtil("cpu", t)
+	path := tempDir(t, "cpu")
 
 	const (
 		nrPeriods     = 2000
@@ -110,13 +115,13 @@ func TestCpuStats(t *testing.T) {
 
 	cpuStatContent := fmt.Sprintf("nr_periods %d\nnr_throttled %d\nthrottled_time %d\n",
 		nrPeriods, nrThrottled, throttledTime)
-	helper.writeFileContents(map[string]string{
+	writeFileContents(t, path, map[string]string{
 		"cpu.stat": cpuStatContent,
 	})
 
 	cpu := &CpuGroup{}
 	actualStats := *cgroups.NewStats()
-	err := cpu.GetStats(helper.CgroupPath, &actualStats)
+	err := cpu.GetStats(path, &actualStats)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -131,36 +136,36 @@ func TestCpuStats(t *testing.T) {
 }
 
 func TestNoCpuStatFile(t *testing.T) {
-	helper := NewCgroupTestUtil("cpu", t)
+	path := tempDir(t, "cpu")
 
 	cpu := &CpuGroup{}
 	actualStats := *cgroups.NewStats()
-	err := cpu.GetStats(helper.CgroupPath, &actualStats)
+	err := cpu.GetStats(path, &actualStats)
 	if err != nil {
 		t.Fatal("Expected not to fail, but did")
 	}
 }
 
 func TestInvalidCpuStat(t *testing.T) {
-	helper := NewCgroupTestUtil("cpu", t)
+	path := tempDir(t, "cpu")
 
 	cpuStatContent := `nr_periods 2000
 	nr_throttled 200
 	throttled_time fortytwo`
-	helper.writeFileContents(map[string]string{
+	writeFileContents(t, path, map[string]string{
 		"cpu.stat": cpuStatContent,
 	})
 
 	cpu := &CpuGroup{}
 	actualStats := *cgroups.NewStats()
-	err := cpu.GetStats(helper.CgroupPath, &actualStats)
+	err := cpu.GetStats(path, &actualStats)
 	if err == nil {
 		t.Fatal("Expected failed stat parsing.")
 	}
 }
 
 func TestCpuSetRtSchedAtApply(t *testing.T) {
-	helper := NewCgroupTestUtil("cpu", t)
+	path := tempDir(t, "cpu")
 
 	const (
 		rtRuntimeBefore = 0
@@ -169,21 +174,22 @@ func TestCpuSetRtSchedAtApply(t *testing.T) {
 		rtPeriodAfter   = 7000
 	)
 
-	helper.writeFileContents(map[string]string{
+	writeFileContents(t, path, map[string]string{
 		"cpu.rt_runtime_us": strconv.Itoa(rtRuntimeBefore),
 		"cpu.rt_period_us":  strconv.Itoa(rtPeriodBefore),
 	})
 
-	helper.CgroupData.config.Resources.CpuRtRuntime = rtRuntimeAfter
-	helper.CgroupData.config.Resources.CpuRtPeriod = rtPeriodAfter
+	r := &configs.Resources{
+		CpuRtRuntime: rtRuntimeAfter,
+		CpuRtPeriod:  rtPeriodAfter,
+	}
 	cpu := &CpuGroup{}
 
-	helper.CgroupData.pid = 1234
-	if err := cpu.Apply(helper.CgroupPath, helper.CgroupData); err != nil {
+	if err := cpu.Apply(path, r, 1234); err != nil {
 		t.Fatal(err)
 	}
 
-	rtRuntime, err := fscommon.GetCgroupParamUint(helper.CgroupPath, "cpu.rt_runtime_us")
+	rtRuntime, err := fscommon.GetCgroupParamUint(path, "cpu.rt_runtime_us")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -191,7 +197,7 @@ func TestCpuSetRtSchedAtApply(t *testing.T) {
 		t.Fatal("Got the wrong value, set cpu.rt_runtime_us failed.")
 	}
 
-	rtPeriod, err := fscommon.GetCgroupParamUint(helper.CgroupPath, "cpu.rt_period_us")
+	rtPeriod, err := fscommon.GetCgroupParamUint(path, "cpu.rt_period_us")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -199,7 +205,7 @@ func TestCpuSetRtSchedAtApply(t *testing.T) {
 		t.Fatal("Got the wrong value, set cpu.rt_period_us failed.")
 	}
 
-	pid, err := fscommon.GetCgroupParamUint(helper.CgroupPath, "cgroup.procs")
+	pid, err := fscommon.GetCgroupParamUint(path, "cgroup.procs")
 	if err != nil {
 		t.Fatal(err)
 	}

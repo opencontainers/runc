@@ -6,6 +6,7 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
+	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
 const (
@@ -14,19 +15,21 @@ const (
 )
 
 func TestPidsSetMax(t *testing.T) {
-	helper := NewCgroupTestUtil("pids", t)
+	path := tempDir(t, "pids")
 
-	helper.writeFileContents(map[string]string{
+	writeFileContents(t, path, map[string]string{
 		"pids.max": "max",
 	})
 
-	helper.CgroupData.config.Resources.PidsLimit = maxLimited
+	r := &configs.Resources{
+		PidsLimit: maxLimited,
+	}
 	pids := &PidsGroup{}
-	if err := pids.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
+	if err := pids.Set(path, r); err != nil {
 		t.Fatal(err)
 	}
 
-	value, err := fscommon.GetCgroupParamUint(helper.CgroupPath, "pids.max")
+	value, err := fscommon.GetCgroupParamUint(path, "pids.max")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,19 +39,21 @@ func TestPidsSetMax(t *testing.T) {
 }
 
 func TestPidsSetUnlimited(t *testing.T) {
-	helper := NewCgroupTestUtil("pids", t)
+	path := tempDir(t, "pids")
 
-	helper.writeFileContents(map[string]string{
+	writeFileContents(t, path, map[string]string{
 		"pids.max": strconv.Itoa(maxLimited),
 	})
 
-	helper.CgroupData.config.Resources.PidsLimit = maxUnlimited
+	r := &configs.Resources{
+		PidsLimit: maxUnlimited,
+	}
 	pids := &PidsGroup{}
-	if err := pids.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
+	if err := pids.Set(path, r); err != nil {
 		t.Fatal(err)
 	}
 
-	value, err := fscommon.GetCgroupParamString(helper.CgroupPath, "pids.max")
+	value, err := fscommon.GetCgroupParamString(path, "pids.max")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -58,16 +63,16 @@ func TestPidsSetUnlimited(t *testing.T) {
 }
 
 func TestPidsStats(t *testing.T) {
-	helper := NewCgroupTestUtil("pids", t)
+	path := tempDir(t, "pids")
 
-	helper.writeFileContents(map[string]string{
+	writeFileContents(t, path, map[string]string{
 		"pids.current": strconv.Itoa(1337),
 		"pids.max":     strconv.Itoa(maxLimited),
 	})
 
 	pids := &PidsGroup{}
 	stats := *cgroups.NewStats()
-	if err := pids.GetStats(helper.CgroupPath, &stats); err != nil {
+	if err := pids.GetStats(path, &stats); err != nil {
 		t.Fatal(err)
 	}
 
@@ -81,16 +86,16 @@ func TestPidsStats(t *testing.T) {
 }
 
 func TestPidsStatsUnlimited(t *testing.T) {
-	helper := NewCgroupTestUtil("pids", t)
+	path := tempDir(t, "pids")
 
-	helper.writeFileContents(map[string]string{
+	writeFileContents(t, path, map[string]string{
 		"pids.current": strconv.Itoa(4096),
 		"pids.max":     "max",
 	})
 
 	pids := &PidsGroup{}
 	stats := *cgroups.NewStats()
-	if err := pids.GetStats(helper.CgroupPath, &stats); err != nil {
+	if err := pids.GetStats(path, &stats); err != nil {
 		t.Fatal(err)
 	}
 

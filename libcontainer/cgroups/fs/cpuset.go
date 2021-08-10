@@ -20,8 +20,8 @@ func (s *CpusetGroup) Name() string {
 	return "cpuset"
 }
 
-func (s *CpusetGroup) Apply(path string, d *cgroupData) error {
-	return s.ApplyDir(path, d.config.Resources, d.pid)
+func (s *CpusetGroup) Apply(path string, r *configs.Resources, pid int) error {
+	return s.ApplyDir(path, r, pid)
 }
 
 func (s *CpusetGroup) Set(path string, r *configs.Resources) error {
@@ -166,9 +166,8 @@ func (s *CpusetGroup) ApplyDir(dir string, r *configs.Resources, pid int) error 
 	if err := s.ensureCpusAndMems(dir, r); err != nil {
 		return err
 	}
-
-	// because we are not using d.join we need to place the pid into the procs file
-	// unlike the other subsystems
+	// Since we are not using apply(), we need to place the pid
+	// into the procs file.
 	return cgroups.WriteCgroupProc(dir, pid)
 }
 

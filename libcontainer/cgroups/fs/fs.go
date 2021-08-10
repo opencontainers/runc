@@ -38,10 +38,12 @@ var errSubsystemDoesNotExist = errors.New("cgroup: subsystem does not exist")
 type subsystem interface {
 	// Name returns the name of the subsystem.
 	Name() string
-	// Returns the stats, as 'stats', corresponding to the cgroup under 'path'.
+	// GetStats fills in the stats for the subsystem.
 	GetStats(path string, stats *cgroups.Stats) error
-	// Creates and joins the cgroup represented by 'cgroupData'.
-	Apply(path string, c *cgroupData) error
+	// Apply creates and joins a cgroup, adding pid into it. Some
+	// subsystems use resources to pre-configure the cgroup parents
+	// before creating or joining it.
+	Apply(path string, r *configs.Resources, pid int) error
 	// Set sets the cgroup resources.
 	Set(path string, r *configs.Resources) error
 }
@@ -92,14 +94,16 @@ func (m *manager) Apply(pid int) (err error) {
 		return cgroups.ErrV1NoUnified
 	}
 
-	d, err := getCgroupData(m.cgroups, pid)
+	root, err := rootPath()
 	if err != nil {
 		return err
 	}
 
+	inner, err := innerPath(c)
+
 	m.paths = make(map[string]string)
 	for _, sys := range subsystems {
-		p, err := d.path(sys.Name())
+		p, err := subsysPath(root, inner, sys.Name())
 		if err != nil {
 			// The non-presence of the devices subsystem is
 			// considered fatal for security reasons.
@@ -110,7 +114,7 @@ func (m *manager) Apply(pid int) (err error) {
 		}
 		m.paths[sys.Name()] = p
 
-		if err := sys.Apply(p, d); err != nil {
+		if err := sys.Apply(p, c.Resources, pid); err != nil {
 			// In the case of rootless (including euid=0 in userns), where an
 			// explicit cgroup path hasn't been set, we don't bail on error in
 			// case of permission problems. Cases where limits have been set

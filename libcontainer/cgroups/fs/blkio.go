@@ -20,8 +20,8 @@ func (s *BlkioGroup) Name() string {
 	return "blkio"
 }
 
-func (s *BlkioGroup) Apply(path string, d *cgroupData) error {
-	return apply(path, d.pid)
+func (s *BlkioGroup) Apply(path string, _ *configs.Resources, pid int) error {
+	return apply(path, pid)
 }
 
 func (s *BlkioGroup) Set(path string, r *configs.Resources) error {

@@ -69,8 +69,8 @@ func tryDefaultCgroupRoot() string {
 	return defaultCgroupRoot
 }
 
-// Gets the cgroupRoot.
-func getCgroupRoot() (string, error) {
+// rootPath finds and returns path to the root of the cgroup hierarchies.
+func rootPath() (string, error) {
 	cgroupRootLock.Lock()
 	defer cgroupRootLock.Unlock()
 
@@ -105,21 +105,9 @@ func getCgroupRoot() (string, error) {
 	return cgroupRoot, nil
 }
 
-type cgroupData struct {
-	root      string
-	innerPath string
-	config    *configs.Cgroup
-	pid       int
-}
-
-func getCgroupData(c *configs.Cgroup, pid int) (*cgroupData, error) {
-	root, err := getCgroupRoot()
-	if err != nil {
-		return nil, err
-	}
-
+func innerPath(c *configs.Cgroup) (string, error) {
 	if (c.Name != "" || c.Parent != "") && c.Path != "" {
-		return nil, errors.New("cgroup: either Path or Name and Parent should be used")
+		return "", errors.New("cgroup: either Path or Name and Parent should be used")
 	}
 
 	// XXX: Do not remove CleanPath. Path safety is important! -- cyphar
@@ -130,25 +118,20 @@ func getCgroupData(c *configs.Cgroup, pid int) (*cgroupData, error) {
 		innerPath = filepath.Join(cgParent, cgName)
 	}
 
-	return &cgroupData{
-		root:      root,
-		innerPath: innerPath,
-		config:    c,
-		pid:       pid,
-	}, nil
+	return innerPath, nil
 }
 
-func (raw *cgroupData) path(subsystem string) (string, error) {
+func subsysPath(root, inner, subsystem string) (string, error) {
 	// If the cgroup name/path is absolute do not look relative to the cgroup of the init process.
-	if filepath.IsAbs(raw.innerPath) {
-		mnt, err := cgroups.FindCgroupMountpoint(raw.root, subsystem)
+	if filepath.IsAbs(inner) {
+		mnt, err := cgroups.FindCgroupMountpoint(root, subsystem)
 		// If we didn't mount the subsystem, there is no point we make the path.
 		if err != nil {
 			return "", err
 		}
 
 		// Sometimes subsystems can be mounted together as 'cpu,cpuacct'.
-		return filepath.Join(raw.root, filepath.Base(mnt), raw.innerPath), nil
+		return filepath.Join(root, filepath.Base(mnt), inner), nil
 	}
 
 	// Use GetOwnCgroupPath instead of GetInitCgroupPath, because the creating
@@ -159,7 +142,7 @@ func (raw *cgroupData) path(subsystem string) (string, error) {
 		return "", err
 	}
 
-	return filepath.Join(parentPath, raw.innerPath), nil
+	return filepath.Join(parentPath, inner), nil
 }
 
 func apply(path string, pid int) error {
