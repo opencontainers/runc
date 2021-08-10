@@ -122,13 +122,11 @@ func getCgroupData(c *configs.Cgroup, pid int) (*cgroupData, error) {
 		return nil, errors.New("cgroup: either Path or Name and Parent should be used")
 	}
 
-	// XXX: Do not remove this code. Path safety is important! -- cyphar
-	cgPath := utils.CleanPath(c.Path)
-	cgParent := utils.CleanPath(c.Parent)
-	cgName := utils.CleanPath(c.Name)
-
-	innerPath := cgPath
+	// XXX: Do not remove CleanPath. Path safety is important! -- cyphar
+	innerPath := utils.CleanPath(c.Path)
 	if innerPath == "" {
+		cgParent := utils.CleanPath(c.Parent)
+		cgName := utils.CleanPath(c.Name)
 		innerPath = filepath.Join(cgParent, cgName)
 	}
 
