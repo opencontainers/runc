@@ -28,6 +28,16 @@ func NewLegacyManager(cg *configs.Cgroup, paths map[string]string) (cgroups.Mana
 	if cg.Rootless {
 		return nil, errors.New("cannot use rootless systemd cgroups manager on cgroup v1")
 	}
+	if cg.Resources != nil && cg.Resources.Unified != nil {
+		return nil, cgroups.ErrV1NoUnified
+	}
+	if paths == nil {
+		var err error
+		paths, err = initPaths(cg)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return &legacyManager{
 		cgroups: cg,
 		paths:   paths,
@@ -102,20 +112,14 @@ func genV1ResourcesProperties(r *configs.Resources, cm *dbusConnManager) ([]syst
 	return properties, nil
 }
 
-// initPaths initializes m.paths. Supposed to be called under m.mu held.
-func (m *legacyManager) initPaths() error {
-	if m.paths != nil {
-		return nil
-	}
-
-	c := m.cgroups
-
+// initPaths figures out and returns paths to cgroups.
+func initPaths(c *configs.Cgroup) (map[string]string, error) {
 	slice := "system.slice"
 	if c.Parent != "" {
 		var err error
 		slice, err = ExpandSlice(c.Parent)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -129,18 +133,17 @@ func (m *legacyManager) initPaths() error {
 			// because devices cgroup is hard requirement for
 			// container security.
 			if s.Name() == "devices" {
-				return err
+				return nil, err
 			}
 			// Don't fail if a cgroup hierarchy was not found, just skip this subsystem
 			if cgroups.IsNotFound(err) {
 				continue
 			}
-			return err
+			return nil, err
 		}
 		paths[s.Name()] = subsystemPath
 	}
-	m.paths = paths
-	return nil
+	return paths, nil
 }
 
 func (m *legacyManager) Apply(pid int) error {
@@ -150,10 +153,6 @@ func (m *legacyManager) Apply(pid int) error {
 		slice      = "system.slice"
 		properties []systemdDbus.Property
 	)
-
-	if c.Resources.Unified != nil {
-		return cgroups.ErrV1NoUnified
-	}
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -198,9 +197,6 @@ func (m *legacyManager) Apply(pid int) error {
 		return err
 	}
 
-	if err := m.initPaths(); err != nil {
-		return err
-	}
 	if err := m.joinCgroups(pid); err != nil {
 		return err
 	}
