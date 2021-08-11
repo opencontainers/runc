@@ -10,7 +10,6 @@ import (
 	"sync"
 
 	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
-	"github.com/godbus/dbus/v5"
 	"github.com/sirupsen/logrus"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
@@ -332,6 +331,34 @@ func (m *legacyManager) GetStats() (*cgroups.Stats, error) {
 	return stats, nil
 }
 
+// hasDeviceRules checks cgroup device rules. Returns true if any rules
+// other than "allow all" exist. Used by freezeBeforeSet.
+func (m *legacyManager) hasDeviceRules() bool {
+	const allowAll = "a *:* rwm\n"
+
+	path := m.Path("devices")
+	// XXX: if Apply has not been called, m.paths are not initialized, so
+	// we have to figure the path. TODO: remove once fixed.
+	if path == "" {
+		var err error
+		path, err = getSubsystemPath(m.cgroups, "devices")
+		if err != nil {
+			// Should not happen. Assume we have rules.
+			return true
+		}
+	}
+	list, err := cgroups.ReadFile(path, "devices.list")
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return false
+		}
+		// Should not happen. Log the error, assume we do have rules.
+		logrus.Debug(err)
+		return true
+	}
+	return list != allowAll
+}
+
 // freezeBeforeSet answers whether there is a need to freeze the cgroup before
 // applying its systemd unit properties, and thaw after, while avoiding
 // unnecessary freezer state changes.
@@ -341,29 +368,17 @@ func (m *legacyManager) GetStats() (*cgroups.Stats, error) {
 // (unlike our fs driver, they will happily write deny-all rules to running
 // containers). So we have to freeze the container to avoid the container get
 // an occasional "permission denied" error.
-func (m *legacyManager) freezeBeforeSet(unitName string, r *configs.Resources) (needsFreeze, needsThaw bool, err error) {
-	// Special case for SkipDevices, as used by Kubernetes to create pod
-	// cgroups with allow-all device policy).
-	if r.SkipDevices {
-		// No need to freeze if SkipDevices is set, and either
-		// (1) systemd unit does not (yet) exist, or
-		// (2) it has DevicePolicy=auto and empty DeviceAllow list.
-		//
-		// Interestingly, (1) and (2) are the same here because
-		// a non-existent unit returns default properties,
-		// and settings in (2) are the defaults.
-		//
-		// Do not return errors from getUnitProperty, as they alone
-		// should not prevent Set from working.
-		devPolicy, e := getUnitProperty(m.dbus, unitName, "DevicePolicy")
-		if e == nil && devPolicy.Value == dbus.MakeVariant("auto") {
-			devAllow, e := getUnitProperty(m.dbus, unitName, "DeviceAllow")
-			if e == nil && devAllow.Value == dbus.MakeVariant([]deviceAllowEntry{}) {
-				needsFreeze = false
-				needsThaw = false
-				return
-			}
-		}
+func (m *legacyManager) freezeBeforeSet(r *configs.Resources) (needsFreeze, needsThaw bool, err error) {
+	// Special case for SkipDevices, as used by Kubernetes to create
+	// pod cgroup with allow-all device policy.
+	//
+	// SkipDevices means we won't set any Device*= properties,
+	// but systemd may still choose to re-apply existing ones,
+	// so we check that there are none.
+	if r.SkipDevices && !m.hasDeviceRules() {
+		needsFreeze = false
+		needsThaw = false
+		return
 	}
 
 	needsFreeze = true
@@ -401,8 +416,7 @@ func (m *legacyManager) Set(r *configs.Resources) error {
 		return err
 	}
 
-	unitName := getUnitName(m.cgroups)
-	needsFreeze, needsThaw, err := m.freezeBeforeSet(unitName, r)
+	needsFreeze, needsThaw, err := m.freezeBeforeSet(r)
 	if err != nil {
 		return err
 	}
@@ -413,6 +427,7 @@ func (m *legacyManager) Set(r *configs.Resources) error {
 			logrus.Infof("freeze container before SetUnitProperties failed: %v", err)
 		}
 	}
+	unitName := getUnitName(m.cgroups)
 	setErr := setUnitProperties(m.dbus, unitName, properties...)
 	if needsThaw {
 		if err := m.doFreeze(configs.Thawed); err != nil {
