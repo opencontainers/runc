@@ -345,6 +345,15 @@ EOF
 	check_cpu_quota -1 1000000 "infinity"
 }
 
+@test "set cpu period with no quota (invalid period)" {
+	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+
+	update_config '.linux.resources.cpu |= { "period": 100 }'
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
+	[ "$status" -eq 1 ]
+}
+
 @test "set cpu quota with no period" {
 	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
 
