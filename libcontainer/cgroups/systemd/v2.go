@@ -22,8 +22,9 @@ type unifiedManager struct {
 	mu      sync.Mutex
 	cgroups *configs.Cgroup
 	// path is like "/sys/fs/cgroup/user.slice/user-1001.slice/session-1.scope"
-	path string
-	dbus *dbusConnManager
+	path  string
+	dbus  *dbusConnManager
+	fsMgr cgroups.Manager
 }
 
 func NewUnifiedManager(config *configs.Cgroup, path string) (cgroups.Manager, error) {
@@ -33,6 +34,11 @@ func NewUnifiedManager(config *configs.Cgroup, path string) (cgroups.Manager, er
 		dbus:    newDbusConnManager(config.Rootless),
 	}
 	if err := m.initPath(); err != nil {
+		return nil, err
+	}
+	var err error
+	m.fsMgr, err = fs2.NewManager(config, m.path)
+	if err != nil {
 		return nil, err
 	}
 
@@ -361,16 +367,8 @@ func (m *unifiedManager) initPath() error {
 	return nil
 }
 
-func (m *unifiedManager) fsManager() (cgroups.Manager, error) {
-	return fs2.NewManager(m.cgroups, m.path)
-}
-
 func (m *unifiedManager) Freeze(state configs.FreezerState) error {
-	fsMgr, err := m.fsManager()
-	if err != nil {
-		return err
-	}
-	return fsMgr.Freeze(state)
+	return m.fsMgr.Freeze(state)
 }
 
 func (m *unifiedManager) GetPids() ([]int, error) {
@@ -382,11 +380,7 @@ func (m *unifiedManager) GetAllPids() ([]int, error) {
 }
 
 func (m *unifiedManager) GetStats() (*cgroups.Stats, error) {
-	fsMgr, err := m.fsManager()
-	if err != nil {
-		return nil, err
-	}
-	return fsMgr.GetStats()
+	return m.fsMgr.GetStats()
 }
 
 func (m *unifiedManager) Set(r *configs.Resources) error {
@@ -399,11 +393,7 @@ func (m *unifiedManager) Set(r *configs.Resources) error {
 		return fmt.Errorf("unable to set unit properties: %w", err)
 	}
 
-	fsMgr, err := m.fsManager()
-	if err != nil {
-		return err
-	}
-	return fsMgr.Set(r)
+	return m.fsMgr.Set(r)
 }
 
 func (m *unifiedManager) GetPaths() map[string]string {
@@ -417,11 +407,7 @@ func (m *unifiedManager) GetCgroups() (*configs.Cgroup, error) {
 }
 
 func (m *unifiedManager) GetFreezerState() (configs.FreezerState, error) {
-	fsMgr, err := m.fsManager()
-	if err != nil {
-		return configs.Undefined, err
-	}
-	return fsMgr.GetFreezerState()
+	return m.fsMgr.GetFreezerState()
 }
 
 func (m *unifiedManager) Exists() bool {
@@ -429,9 +415,5 @@ func (m *unifiedManager) Exists() bool {
 }
 
 func (m *unifiedManager) OOMKillCount() (uint64, error) {
-	fsMgr, err := m.fsManager()
-	if err != nil {
-		return 0, err
-	}
-	return fsMgr.OOMKillCount()
+	return m.fsMgr.OOMKillCount()
 }
