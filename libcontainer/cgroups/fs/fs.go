@@ -118,8 +118,13 @@ func (m *manager) Apply(pid int) (err error) {
 		if err := sys.Apply(p, c.Resources, pid); err != nil {
 			// In the case of rootless (including euid=0 in userns), where an
 			// explicit cgroup path hasn't been set, we don't bail on error in
-			// case of permission problems. Cases where limits have been set
-			// (and we couldn't create our own cgroup) are handled by Set.
+			// case of permission problems here, but do delete the path from
+			// the m.paths map, since it is either non-existent and could not
+			// be created, or the pid could not be added to it.
+			//
+			// Cases where limits for the subsystem have been set are handled
+			// later by Set, which fails with a friendly error (see
+			// if path == "" in Set).
 			if isIgnorableError(c.Rootless, err) && c.Path == "" {
 				delete(m.paths, name)
 				continue
@@ -173,10 +178,11 @@ func (m *manager) Set(r *configs.Resources) error {
 	for _, sys := range subsystems {
 		path := m.paths[sys.Name()]
 		if err := sys.Set(path, r); err != nil {
+			// When rootless is true, errors from the device subsystem
+			// are ignored, as it is really not expected to work.
 			if m.cgroups.Rootless && sys.Name() == "devices" {
 				continue
 			}
-			// When rootless is true, errors from the device subsystem are ignored because it is really not expected to work.
 			// However, errors from other subsystems are not ignored.
 			// see @test "runc create (rootless + limits + no cgrouppath + no permission) fails with informative error"
 			if path == "" {
