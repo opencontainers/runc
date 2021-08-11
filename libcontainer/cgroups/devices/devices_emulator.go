@@ -305,7 +305,7 @@ func EmulatorFromList(list io.Reader) (*Emulator, error) {
 // necessary.
 //
 // This function is the sole reason for all of Emulator -- to allow us
-// to figure out how to update a containers' cgroups without causing spurrious
+// to figure out how to update a containers' cgroups without causing spurious
 // device errors (if possible).
 func (source *Emulator) Transition(target *Emulator) ([]*devices.Rule, error) {
 	var transitionRules []*devices.Rule

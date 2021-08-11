@@ -134,7 +134,7 @@ func haveBpfProgReplace() bool {
 			// not supported
 			return
 		}
-		// attach_flags test succeded.
+		// attach_flags test succeeded.
 		if !errors.Is(err, unix.EBADF) {
 			logrus.Debugf("checking for BPF_F_REPLACE: got unexpected (not EBADF or EINVAL) error: %v", err)
 		}

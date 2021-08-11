@@ -71,7 +71,7 @@ func (l *linuxStandardInit) Init() error {
 				return fmt.Errorf("unable to join session keyring: %w", err)
 			}
 		} else {
-			// Make session keyring searcheable. If we've gotten this far we
+			// Make session keyring searchable. If we've gotten this far we
 			// bail on any error -- we don't want to have a keyring with bad
 			// permissions.
 			if err := keys.ModKeyringPerm(sessKeyId, keepperms, newperms); err != nil {

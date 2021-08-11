@@ -224,7 +224,7 @@ func TestNsenterChildLogging(t *testing.T) {
 		t.Fatalf("child log: %v", err)
 	}
 	if logentry.Level == "" || logentry.Msg == "" {
-		t.Fatalf("child log: empty log fileds: level=\"%s\" msg=\"%s\"", logentry.Level, logentry.Msg)
+		t.Fatalf("child log: empty log fields: level=\"%s\" msg=\"%s\"", logentry.Level, logentry.Msg)
 	}
 
 	if err := cmd.Wait(); err != nil {

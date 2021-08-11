@@ -864,7 +864,7 @@ func pivotRoot(rootfs string) error {
 	if err := mount("", ".", "", "", unix.MS_SLAVE|unix.MS_REC, ""); err != nil {
 		return err
 	}
-	// Preform the unmount. MNT_DETACH allows us to unmount /proc/self/cwd.
+	// Perform the unmount. MNT_DETACH allows us to unmount /proc/self/cwd.
 	if err := unmount(".", unix.MNT_DETACH); err != nil {
 		return err
 	}

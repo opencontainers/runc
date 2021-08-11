@@ -198,7 +198,7 @@ func generateDeviceProperties(r *configs.Resources) ([]systemdDbus.Property, err
 	}
 	// systemd doesn't support blacklists. So we log a warning, and tell
 	// systemd to act as a deny-all whitelist. This ruleset will be replaced
-	// with our normal fallback code. This may result in spurrious errors, but
+	// with our normal fallback code. This may result in spurious errors, but
 	// the only other option is to error out here.
 	if configEmu.IsBlacklist() {
 		// However, if we're dealing with an allow-all rule then we can do it.
