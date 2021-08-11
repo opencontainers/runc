@@ -138,9 +138,11 @@ func TestFactoryLoadContainer(t *testing.T) {
 			},
 		}
 		expectedConfig = &configs.Config{
-			Rootfs:  "/mycontainer/root",
-			Hooks:   expectedHooks,
-			Cgroups: &configs.Cgroup{},
+			Rootfs: "/mycontainer/root",
+			Hooks:  expectedHooks,
+			Cgroups: &configs.Cgroup{
+				Resources: &configs.Resources{},
+			},
 		}
 		expectedState = &State{
 			BaseState: BaseState{

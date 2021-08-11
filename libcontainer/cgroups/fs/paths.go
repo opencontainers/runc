@@ -21,6 +21,36 @@ var (
 
 const defaultCgroupRoot = "/sys/fs/cgroup"
 
+func initPaths(cg *configs.Cgroup) (map[string]string, error) {
+	root, err := rootPath()
+	if err != nil {
+		return nil, err
+	}
+
+	inner, err := innerPath(cg)
+	if err != nil {
+		return nil, err
+	}
+
+	paths := make(map[string]string)
+	for _, sys := range subsystems {
+		name := sys.Name()
+		path, err := subsysPath(root, inner, name)
+		if err != nil {
+			// The non-presence of the devices subsystem
+			// is considered fatal for security reasons.
+			if cgroups.IsNotFound(err) && (cg.SkipDevices || name != "devices") {
+				continue
+			}
+
+			return nil, err
+		}
+		paths[name] = path
+	}
+
+	return paths, nil
+}
+
 func tryDefaultCgroupRoot() string {
 	var st, pst unix.Stat_t
 
