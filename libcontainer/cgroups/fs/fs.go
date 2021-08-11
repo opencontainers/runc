@@ -55,6 +55,23 @@ type manager struct {
 }
 
 func NewManager(cg *configs.Cgroup, paths map[string]string) (cgroups.Manager, error) {
+	// Some v1 controllers (cpu, cpuset, and devices) expect
+	// cgroups.Resources to not be nil in Apply.
+	if cg.Resources == nil {
+		return nil, errors.New("cgroup v1 manager needs configs.Resources to be set during manager creation")
+	}
+	if cg.Resources.Unified != nil {
+		return nil, cgroups.ErrV1NoUnified
+	}
+
+	if paths == nil {
+		var err error
+		paths, err = initPaths(cg)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &manager{
 		cgroups: cg,
 		paths:   paths,
@@ -90,37 +107,21 @@ func (m *manager) Apply(pid int) (err error) {
 	defer m.mu.Unlock()
 
 	c := m.cgroups
-	if c.Resources.Unified != nil {
-		return cgroups.ErrV1NoUnified
-	}
 
-	root, err := rootPath()
-	if err != nil {
-		return err
-	}
-
-	inner, err := innerPath(c)
-
-	m.paths = make(map[string]string)
 	for _, sys := range subsystems {
-		p, err := subsysPath(root, inner, sys.Name())
-		if err != nil {
-			// The non-presence of the devices subsystem is
-			// considered fatal for security reasons.
-			if cgroups.IsNotFound(err) && (c.SkipDevices || sys.Name() != "devices") {
-				continue
-			}
-			return err
+		name := sys.Name()
+		p, ok := m.paths[name]
+		if !ok {
+			continue
 		}
-		m.paths[sys.Name()] = p
 
 		if err := sys.Apply(p, c.Resources, pid); err != nil {
 			// In the case of rootless (including euid=0 in userns), where an
 			// explicit cgroup path hasn't been set, we don't bail on error in
 			// case of permission problems. Cases where limits have been set
 			// (and we couldn't create our own cgroup) are handled by Set.
-			if isIgnorableError(c.Rootless, err) && m.cgroups.Path == "" {
-				delete(m.paths, sys.Name())
+			if isIgnorableError(c.Rootless, err) && c.Path == "" {
+				delete(m.paths, name)
 				continue
 			}
 			return err
