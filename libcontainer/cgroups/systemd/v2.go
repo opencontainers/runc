@@ -27,11 +27,16 @@ type unifiedManager struct {
 }
 
 func NewUnifiedManager(config *configs.Cgroup, path string) (cgroups.Manager, error) {
-	return &unifiedManager{
+	m := &unifiedManager{
 		cgroups: config,
 		path:    path,
 		dbus:    newDbusConnManager(config.Rootless),
-	}, nil
+	}
+	if err := m.initPath(); err != nil {
+		return nil, err
+	}
+
+	return m, nil
 }
 
 // unifiedResToSystemdProps tries to convert from Cgroup.Resources.Unified
@@ -274,9 +279,6 @@ func (m *unifiedManager) Apply(pid int) error {
 		return fmt.Errorf("unable to start unit %q (properties %+v): %w", unitName, properties, err)
 	}
 
-	if err := m.initPath(); err != nil {
-		return err
-	}
 	if err := fs2.CreateCgroupPath(m.path, m.cgroups); err != nil {
 		return err
 	}
@@ -302,7 +304,6 @@ func (m *unifiedManager) Destroy() error {
 }
 
 func (m *unifiedManager) Path(_ string) string {
-	_ = m.initPath()
 	return m.path
 }
 
@@ -361,9 +362,6 @@ func (m *unifiedManager) initPath() error {
 }
 
 func (m *unifiedManager) fsManager() (cgroups.Manager, error) {
-	if err := m.initPath(); err != nil {
-		return nil, err
-	}
 	return fs2.NewManager(m.cgroups, m.path)
 }
 
@@ -376,16 +374,10 @@ func (m *unifiedManager) Freeze(state configs.FreezerState) error {
 }
 
 func (m *unifiedManager) GetPids() ([]int, error) {
-	if err := m.initPath(); err != nil {
-		return nil, err
-	}
 	return cgroups.GetPids(m.path)
 }
 
 func (m *unifiedManager) GetAllPids() ([]int, error) {
-	if err := m.initPath(); err != nil {
-		return nil, err
-	}
 	return cgroups.GetAllPids(m.path)
 }
 
