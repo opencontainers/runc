@@ -311,6 +311,14 @@ func getUnitName(c *configs.Cgroup) string {
 	return c.Name
 }
 
+func getUnitType(name string) string {
+	// This code should be in sync with getUnitName.
+	if !strings.HasSuffix(name, ".slice") {
+		return "Scope"
+	}
+	return "Slice"
+}
+
 // isDbusError returns true if the error is a specific dbus error.
 func isDbusError(err error, name string) bool {
 	if err != nil {
@@ -389,10 +397,10 @@ func resetFailedUnit(cm *dbusConnManager, name string) {
 	}
 }
 
-func getUnitProperty(cm *dbusConnManager, unitName string, propertyName string) (*systemdDbus.Property, error) {
+func getUnitTypeProperty(cm *dbusConnManager, unitName, unitType, propertyName string) (*systemdDbus.Property, error) {
 	var prop *systemdDbus.Property
 	err := cm.retryOnDisconnect(func(c *systemdDbus.Conn) (Err error) {
-		prop, Err = c.GetUnitPropertyContext(context.TODO(), unitName, propertyName)
+		prop, Err = c.GetUnitTypePropertyContext(context.TODO(), unitName, unitType, propertyName)
 		return Err
 	})
 	return prop, err
