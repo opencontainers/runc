@@ -85,7 +85,6 @@ task:
     memory: 8G
 
   install_dependencies_script: |
-    yum install -y -q epel-release
     case $DISTRO in
     centos-7)
       (cd /etc/yum.repos.d && curl -O https://copr.fedorainfracloud.org/coprs/adrian/criu-el7/repo/epel-7/adrian-criu-el7-epel-7.repo)
@@ -94,8 +93,7 @@ task:
       sysctl --system
       ;;
     centos-stream-8)
-      yum install -y -q dnf-plugins-core
-      yum config-manager --set-enabled powertools
+      yum config-manager --set-enabled powertools # for glibc-static
       ;;
     esac
     yum install -y -q gcc git iptables jq glibc-static libseccomp-devel make criu
