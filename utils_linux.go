@@ -266,11 +266,11 @@ func (r *runner) run(config *specs.Process) (int, error) {
 		}
 		process.ExtraFiles = append(process.ExtraFiles, os.NewFile(uintptr(i), "PreserveFD:"+strconv.Itoa(i)))
 	}
-	rootuid, err := r.container.Config().HostRootUID()
+	rootuid, err := r.container.Config().HostUID(int(config.User.UID))
 	if err != nil {
 		return -1, err
 	}
-	rootgid, err := r.container.Config().HostRootGID()
+	rootgid, err := r.container.Config().HostGID(int(config.User.GID))
 	if err != nil {
 		return -1, err
 	}

@@ -938,17 +938,17 @@ func setupUserNamespace(spec *specs.Spec, config *configs.Config) error {
 			config.GidMappings = append(config.GidMappings, create(m))
 		}
 	}
-	rootUID, err := config.HostRootUID()
+	hostUID, err := config.HostUID(int(spec.Process.User.UID))
 	if err != nil {
 		return err
 	}
-	rootGID, err := config.HostRootGID()
+	hostGID, err := config.HostGID(int(spec.Process.User.GID))
 	if err != nil {
 		return err
 	}
 	for _, node := range config.Devices {
-		node.Uid = uint32(rootUID)
-		node.Gid = uint32(rootGID)
+		node.Uid = uint32(hostUID)
+		node.Gid = uint32(hostGID)
 	}
 	return nil
 }

@@ -26,12 +26,6 @@ func (c Config) HostUID(containerId int) (int, error) {
 	return containerId, nil
 }
 
-// HostRootUID gets the root uid for the process on host which could be non-zero
-// when user namespaces are enabled.
-func (c Config) HostRootUID() (int, error) {
-	return c.HostUID(0)
-}
-
 // HostGID gets the translated gid for the process on host which could be
 // different when user namespaces are enabled.
 func (c Config) HostGID(containerId int) (int, error) {
@@ -47,12 +41,6 @@ func (c Config) HostGID(containerId int) (int, error) {
 	}
 	// Return unchanged id.
 	return containerId, nil
-}
-
-// HostRootGID gets the root gid for the process on host which could be non-zero
-// when user namespaces are enabled.
-func (c Config) HostRootGID() (int, error) {
-	return c.HostGID(0)
 }
 
 // Utility function that gets a host ID for a container ID from user namespace map
