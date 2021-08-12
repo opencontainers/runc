@@ -13,7 +13,7 @@ github.com/cilium/ebpf/internal
 github.com/cilium/ebpf/internal/btf
 github.com/cilium/ebpf/internal/unix
 github.com/cilium/ebpf/link
-# github.com/containerd/console v1.0.2
+# github.com/containerd/console v1.0.3
 ## explicit
 github.com/containerd/console
 # github.com/coreos/go-systemd/v22 v22.3.2
@@ -48,8 +48,6 @@ github.com/opencontainers/selinux/go-selinux
 github.com/opencontainers/selinux/go-selinux/label
 github.com/opencontainers/selinux/pkg/pwalk
 github.com/opencontainers/selinux/pkg/pwalkdir
-# github.com/pkg/errors v0.9.1
-github.com/pkg/errors
 # github.com/russross/blackfriday/v2 v2.0.1
 github.com/russross/blackfriday/v2
 # github.com/seccomp/libseccomp-golang v0.9.1
