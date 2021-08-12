@@ -96,7 +96,12 @@ task:
       yum config-manager --set-enabled powertools # for glibc-static
       ;;
     esac
-    yum install -y -q gcc git iptables jq glibc-static libseccomp-devel make criu
+    # Work around dnf mirror failures by retrying a few times.
+    for i in $(seq 0 2); do
+      sleep $i
+      yum install -y -q gcc git iptables jq glibc-static libseccomp-devel make criu && break
+    done
+    [ $? -eq 0 ] # fail if yum failed
     # install Go
     curl -fsSL "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz" | tar Cxz /usr/local
     # install bats
