@@ -100,13 +100,13 @@ func (p Permissions) IsValid() bool {
 	return p == fromSet(p.toSet())
 }
 
-type Type rune
+type Type string
 
 const (
-	WildcardDevice Type = 'a'
-	BlockDevice    Type = 'b'
-	CharDevice     Type = 'c' // or 'u'
-	FifoDevice     Type = 'p'
+	WildcardDevice Type = "a"
+	BlockDevice    Type = "b"
+	CharDevice     Type = "c" // or 'u'
+	FifoDevice     Type = "p"
 )
 
 func (t Type) IsValid() bool {
@@ -166,7 +166,7 @@ func (d *Rule) CgroupString() string {
 	if d.Minor == Wildcard {
 		minor = "*"
 	}
-	return fmt.Sprintf("%c %s:%s %s", d.Type, major, minor, d.Permissions)
+	return fmt.Sprintf("%s %s:%s %s", d.Type, major, minor, d.Permissions)
 }
 
 func (d *Rule) Mkdev() (uint64, error) {
