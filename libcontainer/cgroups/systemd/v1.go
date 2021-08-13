@@ -10,7 +10,6 @@ import (
 	"sync"
 
 	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
-	"github.com/godbus/dbus/v5"
 	"github.com/sirupsen/logrus"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
@@ -342,28 +341,11 @@ func (m *legacyManager) GetStats() (*cgroups.Stats, error) {
 // containers). So we have to freeze the container to avoid the container get
 // an occasional "permission denied" error.
 func (m *legacyManager) freezeBeforeSet(unitName string, r *configs.Resources) (needsFreeze, needsThaw bool, err error) {
-	// Special case for SkipDevices, as used by Kubernetes to create pod
-	// cgroups with allow-all device policy).
-	if r.SkipDevices {
-		// No need to freeze if SkipDevices is set, and either
-		// (1) systemd unit does not (yet) exist, or
-		// (2) it has DevicePolicy=auto and empty DeviceAllow list.
-		//
-		// Interestingly, (1) and (2) are the same here because
-		// a non-existent unit returns default properties,
-		// and settings in (2) are the defaults.
-		//
-		// Do not return errors from getUnitProperty, as they alone
-		// should not prevent Set from working.
-		devPolicy, e := getUnitProperty(m.dbus, unitName, "DevicePolicy")
-		if e == nil && devPolicy.Value == dbus.MakeVariant("auto") {
-			devAllow, e := getUnitProperty(m.dbus, unitName, "DeviceAllow")
-			if e == nil && devAllow.Value == dbus.MakeVariant([]deviceAllowEntry{}) {
-				needsFreeze = false
-				needsThaw = false
-				return
-			}
-		}
+	// Special case for Kubernetes (which sets pod slice resources
+	// for a slice that has no device rules set).
+	if r.SkipDevices && r.SkipFreezeOnSet {
+		// Both needsFreeze and needsThaw are false.
+		return
 	}
 
 	needsFreeze = true

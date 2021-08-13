@@ -131,4 +131,11 @@ type Resources struct {
 	//
 	// NOTE it is impossible to start a container which has this flag set.
 	SkipDevices bool `json:"-"`
+
+	// SkipFreezeOnSet is a flag for cgroup manager to skip the cgroup
+	// freeze when setting resources. Only applicable to systemd legacy
+	// (i.e. cgroup v1) manager (which uses freeze by default to avoid
+	// spurious permission errors caused by systemd inability to update
+	// device rules in a non-disruptive manner).
+	SkipFreezeOnSet bool `json:"-"`
 }
