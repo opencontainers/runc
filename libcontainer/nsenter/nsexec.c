@@ -159,10 +159,8 @@ static void write_log(const char *level, const char *format, ...)
 		goto out;
 
 	ret = asprintf(&json, "{\"level\":\"%s\", \"msg\": \"%s[%d]: %s\"}\n", level, stage, getpid(), message);
-	if (ret < 0) {
-		json = NULL;
+	if (ret < 0)
 		goto out;
-	}
 
 	write(logfd, json, ret);
 
