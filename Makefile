@@ -19,7 +19,7 @@ BUILDTAGS += $(EXTRA_BUILDTAGS)
 
 COMMIT ?= $(shell git describe --dirty --long --always)
 VERSION ?= $(shell cat ./VERSION)
-LDFLAGS_COMMON := -X main.gitCommit=$(COMMIT) -X main.version=$(VERSION)
+LDFLAGS_COMMON := -X main.gitCommit=$(COMMIT)
 
 GOARCH := $(shell $(GO) env GOARCH)
 

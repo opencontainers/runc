@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "embed"
 	"errors"
 	"fmt"
 	"io"
@@ -19,9 +20,9 @@ import (
 	"github.com/urfave/cli"
 )
 
-// version must be set from the contents of VERSION file by go build's
-// -X main.version= option in the Makefile.
-var version = "unknown"
+// version is automatically set from the contents of VERSION file on go1.16+.
+//go:embed VERSION
+var version string
 
 // gitCommit will be the hash that the binary was built from
 // and will be populated by the Makefile
@@ -59,7 +60,7 @@ func main() {
 	app.Name = "runc"
 	app.Usage = usage
 
-	v := []string{version}
+	v := []string{strings.TrimSpace(version)}
 
 	if gitCommit != "" {
 		v = append(v, "commit: "+gitCommit)
