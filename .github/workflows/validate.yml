@@ -23,6 +23,13 @@ jobs:
           # must be specified without patch version
           version: v1.40
 
+  compile-buildtags:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: compile with no build tags
+        run: make BUILDTAGS=""
+
   shfmt:
     runs-on: ubuntu-20.04
     steps:
