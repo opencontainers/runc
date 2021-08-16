@@ -3,7 +3,7 @@
 package nsenter
 
 /*
-#cgo CFLAGS: -Wall
+#cgo CFLAGS: -Wall -Werror
 extern void nsexec();
 void __attribute__((constructor)) init(void) {
 	nsexec();
