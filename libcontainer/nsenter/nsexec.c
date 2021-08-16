@@ -146,8 +146,10 @@ static void write_log(const char *level, const char *format, ...)
 	va_start(args, format);
 	ret = vasprintf(&message, format, args);
 	va_end(args);
-	if (ret < 0)
+	if (ret < 0) {
+		message = NULL;
 		goto out;
+	}
 
 	message = escape_json_string(message);
 
@@ -155,8 +157,10 @@ static void write_log(const char *level, const char *format, ...)
 		stage = strdup("nsexec");
 	else
 		ret = asprintf(&stage, "nsexec-%d", current_stage);
-	if (ret < 0)
+	if (ret < 0) {
+		stage = NULL;
 		goto out;
+	}
 
 	ret = asprintf(&json, "{\"level\":\"%s\", \"msg\": \"%s[%d]: %s\"}\n", level, stage, getpid(), message);
 	if (ret < 0) {
