@@ -138,7 +138,7 @@ static void write_log(const char *level, const char *format, ...)
 {
 	char *message = NULL, *stage = NULL, *json = NULL;
 	va_list args;
-	int ret;
+	int ret, len;
 
 	if (logfd < 0 || level == NULL)
 		goto out;
@@ -164,7 +164,11 @@ static void write_log(const char *level, const char *format, ...)
 		goto out;
 	}
 
-	write(logfd, json, ret);
+	len = write(logfd, json, ret);
+	if (len != ret) {
+		ret = -1;
+		goto out;
+	}
 
 out:
 	free(message);
