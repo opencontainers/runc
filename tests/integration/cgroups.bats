@@ -282,3 +282,22 @@ function setup() {
 	[ "$status" -eq 0 ]
 	[ "$(wc -l <<<"$output")" -eq 1 ]
 }
+
+@test "runc exec should refuse a paused container" {
+	if [[ "$ROOTLESS" -ne 0 ]]; then
+		requires rootless_cgroup
+	fi
+	requires cgroups_freezer
+
+	set_cgroups_path
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" ct1
+	[ "$status" -eq 0 ]
+	runc pause ct1
+	[ "$status" -eq 0 ]
+
+	# Exec should not timeout or succeed.
+	runc exec ct1 echo ok
+	[ "$status" -eq 255 ]
+	[[ "$output" == *"cannot exec in a paused container"* ]]
+}

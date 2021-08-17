@@ -114,8 +114,8 @@ func execProcess(context *cli.Context) (int, error) {
 	if err != nil {
 		return -1, err
 	}
-	if status == libcontainer.Stopped {
-		return -1, errors.New("cannot exec a container that has stopped")
+	if status == libcontainer.Stopped || status == libcontainer.Paused {
+		return -1, fmt.Errorf("cannot exec in a %s container", status)
 	}
 	path := context.String("process")
 	if path == "" && len(context.Args()) == 1 {
