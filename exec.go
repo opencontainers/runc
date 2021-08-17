@@ -91,6 +91,10 @@ following will output a list of processes running in the container:
 			Name:  "cgroup",
 			Usage: "run the process in an (existing) sub-cgroup(s). Format is [<controller>:]<cgroup>.",
 		},
+		cli.BoolFlag{
+			Name:  "ignore-paused",
+			Usage: "allow exec in a paused container",
+		},
 	},
 	Action: func(context *cli.Context) error {
 		if err := checkArgs(context, 1, minArgs); err != nil {
@@ -145,7 +149,10 @@ func execProcess(context *cli.Context) (int, error) {
 		return -1, err
 	}
 	if status == libcontainer.Stopped {
-		return -1, errors.New("cannot exec a container that has stopped")
+		return -1, errors.New("cannot exec in a stopped container")
+	}
+	if status == libcontainer.Paused && !context.Bool("ignore-paused") {
+		return -1, errors.New("cannot exec in a paused container (use --ignore-paused to override)")
 	}
 	path := context.String("process")
 	if path == "" && len(context.Args()) == 1 {

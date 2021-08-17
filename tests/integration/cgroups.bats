@@ -303,3 +303,47 @@ function setup() {
 	# check that the cgroups v2 path is the same for both processes
 	[[ "$run_cgroup" == "$exec_cgroup" ]]
 }
+
+@test "runc exec should refuse a paused container" {
+	if [[ "$ROOTLESS" -ne 0 ]]; then
+		requires rootless_cgroup
+	fi
+	requires cgroups_freezer
+
+	set_cgroups_path
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" ct1
+	[ "$status" -eq 0 ]
+	runc pause ct1
+	[ "$status" -eq 0 ]
+
+	# Exec should not timeout or succeed.
+	runc exec ct1 echo ok
+	[ "$status" -eq 255 ]
+	[[ "$output" == *"cannot exec in a paused container"* ]]
+}
+
+@test "runc exec --ignore-paused" {
+	if [[ "$ROOTLESS" -ne 0 ]]; then
+		requires rootless_cgroup
+	fi
+	requires cgroups_freezer
+
+	set_cgroups_path
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" ct1
+	[ "$status" -eq 0 ]
+	runc pause ct1
+	[ "$status" -eq 0 ]
+
+	# Resume the container a bit later.
+	(
+		sleep 2
+		runc resume ct1
+	) &
+
+	# Exec should not timeout or succeed.
+	runc exec --ignore-paused ct1 echo ok
+	[ "$status" -eq 0 ]
+	[ "$output" = "ok" ]
+}

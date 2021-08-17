@@ -59,6 +59,11 @@ multiple times.
 : Pass _N_ additional file descriptors to the container (**stdio** +
 **$LISTEN_FDS** + _N_ in total). Default is **0**.
 
+**--ignore-paused**
+: Allow exec in a paused container. By default, if a container is paused,
+**runc exec** errors out; this option can be used to override it.
+A paused container needs to be resumed for the exec to complete.
+
 **--cgroup** _path_ | _controller_[,_controller_...]:_path_
 : Execute a process in a sub-cgroup. If the specified cgroup does not exist, an
 error is returned. Default is empty path, which means to use container's top
