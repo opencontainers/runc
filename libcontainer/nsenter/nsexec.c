@@ -170,7 +170,10 @@ static void write_log(const char *level, const char *format, ...)
 		goto out;
 	}
 
-	write(logfd, json, ret);
+	/* This logging is on a best-effort basis. In case of a short or failed
+	 * write there is nothing we can do, so just ignore write() errors.
+	 */
+	ssize_t __attribute__((unused)) __res = write(logfd, json, ret);
 
 out:
 	free(message);
