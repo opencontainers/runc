@@ -163,8 +163,10 @@ static void write_log(const char *level, const char *format, ...)
 		json = NULL;
 		goto out;
 	}
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-result"
 	write(logfd, json, ret);
+#pragma GCC diagnostic pop
 
 out:
 	free(message);
