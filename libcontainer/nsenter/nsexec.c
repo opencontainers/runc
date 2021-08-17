@@ -315,7 +315,7 @@ static int try_mapping_tool(const char *app, int pid, char *map, size_t map_len)
 
 static void update_uidmap(const char *path, int pid, char *map, size_t map_len)
 {
-	if (map == NULL || map_len <= 0)
+	if (map == NULL || map_len == 0)
 		return;
 
 	write_log(DEBUG, "update /proc/%d/uid_map to '%s'", pid, map);
@@ -330,7 +330,7 @@ static void update_uidmap(const char *path, int pid, char *map, size_t map_len)
 
 static void update_gidmap(const char *path, int pid, char *map, size_t map_len)
 {
-	if (map == NULL || map_len <= 0)
+	if (map == NULL || map_len == 0)
 		return;
 
 	write_log(DEBUG, "update /proc/%d/gid_map to '%s'", pid, map);
@@ -345,7 +345,7 @@ static void update_gidmap(const char *path, int pid, char *map, size_t map_len)
 
 static void update_oom_score_adj(char *data, size_t len)
 {
-	if (data == NULL || len <= 0)
+	if (data == NULL || len == 0)
 		return;
 
 	write_log(DEBUG, "update /proc/self/oom_score_adj to '%s'", data);
