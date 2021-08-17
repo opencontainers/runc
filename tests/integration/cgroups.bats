@@ -301,3 +301,24 @@ function setup() {
 	[ "$status" -eq 255 ]
 	[[ "$output" == *"cannot exec in a paused container"* ]]
 }
+
+@test "runc run/create should refuse a non-empty cgroup" {
+	if [[ "$ROOTLESS" -ne 0 ]]; then
+		requires rootless_cgroup
+	fi
+
+	set_cgroups_path
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" ct1
+	[ "$status" -eq 0 ]
+
+	# Run a second container sharing the cgroup with the first one.
+	runc --debug run -d --console-socket "$CONSOLE_SOCKET" ct2
+	[ "$status" -ne 0 ]
+	[[ "$output" == *"container's cgroup is not empty"* ]]
+
+	# Same but using runc create.
+	runc create --console-socket "$CONSOLE_SOCKET" ct3
+	[ "$status" -ne 0 ]
+	[[ "$output" == *"container's cgroup is not empty"* ]]
+}

@@ -159,14 +159,32 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 	} else if !os.IsNotExist(err) {
 		return nil, err
 	}
+
+	cm, err := manager.New(config.Cgroups)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check that cgroup does not exist or empty (no processes).
+	// Note for cgroup v1 this check is not thorough, as there are multiple
+	// separate hierarchies, while both Exists() and GetAllPids() only use
+	// one for "devices" controller (assuming others are the same, which is
+	// probably true in almost all scenarios). Checking all hierarchies are
+	// too expensive.
+	if cm.Exists() {
+		pids, err := cm.GetAllPids()
+		if err != nil {
+			return nil, fmt.Errorf("unable to get cgroup PIDs: %w", err)
+		}
+		if len(pids) != 0 {
+			return nil, fmt.Errorf("container's cgroup is not empty, PIDs: %v", pids)
+		}
+	}
+
 	if err := os.MkdirAll(containerRoot, 0o711); err != nil {
 		return nil, err
 	}
 	if err := os.Chown(containerRoot, unix.Geteuid(), unix.Getegid()); err != nil {
-		return nil, err
-	}
-	cm, err := manager.New(config.Cgroups)
-	if err != nil {
 		return nil, err
 	}
 	c := &linuxContainer{
