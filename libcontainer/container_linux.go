@@ -393,6 +393,14 @@ func (c *linuxContainer) Signal(s os.Signal, all bool) error {
 		if err := c.initProcess.signal(s); err != nil {
 			return fmt.Errorf("unable to signal init: %w", err)
 		}
+		if status == Paused {
+			// For cgroup v1, killing a process in a frozen cgroup
+			// does nothing until it's thawed. Only thaw the cgroup
+			// for SIGKILL.
+			if s, ok := s.(unix.Signal); ok && s == unix.SIGKILL {
+				_ = c.cgroupManager.Freeze(configs.Thawed)
+			}
+		}
 		return nil
 	}
 	return ErrNotRunning
