@@ -2100,7 +2100,7 @@ func ignoreTerminateErrors(err error) error {
 	if err == nil {
 		return nil
 	}
-	// terminate() might return an error from ether Kill or Wait.
+	// terminate() might return an error from either Kill or Wait.
 	// The (*Cmd).Wait documentation says: "If the command fails to run
 	// or doesn't complete successfully, the error is of type *ExitError".
 	// Filter out such errors (like "exit status 1" or "signal: killed").

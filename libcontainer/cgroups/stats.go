@@ -126,7 +126,7 @@ type BlkioStatEntry struct {
 }
 
 type BlkioStats struct {
-	// number of bytes tranferred to and from the block device
+	// number of bytes transferred to and from the block device
 	IoServiceBytesRecursive []BlkioStatEntry `json:"io_service_bytes_recursive,omitempty"`
 	IoServicedRecursive     []BlkioStatEntry `json:"io_serviced_recursive,omitempty"`
 	IoQueuedRecursive       []BlkioStatEntry `json:"io_queue_recursive,omitempty"`

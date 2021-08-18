@@ -341,7 +341,7 @@ func TestFreezePodCgroup(t *testing.T) {
 	containerConfig := &configs.Cgroup{
 		Parent:      "system-runc_test_pod.slice",
 		ScopePrefix: "test",
-		Name:        "inner-contianer",
+		Name:        "inner-container",
 		Resources:   &configs.Resources{},
 	}
 

@@ -51,16 +51,16 @@ func getCpusetStat(path string, file string) ([]uint16, error) {
 	}
 
 	for _, s := range strings.Split(fileContent, ",") {
-		splitted := strings.SplitN(s, "-", 3)
-		switch len(splitted) {
+		sp := strings.SplitN(s, "-", 3)
+		switch len(sp) {
 		case 3:
 			return extracted, &parseError{Path: path, File: file, Err: errors.New("extra dash")}
 		case 2:
-			min, err := strconv.ParseUint(splitted[0], 10, 16)
+			min, err := strconv.ParseUint(sp[0], 10, 16)
 			if err != nil {
 				return extracted, &parseError{Path: path, File: file, Err: err}
 			}
-			max, err := strconv.ParseUint(splitted[1], 10, 16)
+			max, err := strconv.ParseUint(sp[1], 10, 16)
 			if err != nil {
 				return extracted, &parseError{Path: path, File: file, Err: err}
 			}

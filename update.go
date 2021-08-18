@@ -260,7 +260,7 @@ other options are ignored.
 		// Update the values
 		config.Cgroups.Resources.BlkioWeight = *r.BlockIO.Weight
 
-		// Seting CPU quota and period independently does not make much sense,
+		// Setting CPU quota and period independently does not make much sense,
 		// but historically runc allowed it and this needs to be supported
 		// to not break compatibility.
 		//

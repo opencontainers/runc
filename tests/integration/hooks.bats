@@ -6,7 +6,7 @@ function setup() {
 	requires root no_systemd
 
 	setup_debian
-	# CR = CreateRuntime, CC = CreataContainer
+	# CR = CreateRuntime, CC = CreateContainer
 	HOOKLIBCR=librunc-hooks-create-runtime.so
 	HOOKLIBCC=librunc-hooks-create-container.so
 	LIBPATH="$(pwd)/rootfs/lib/"

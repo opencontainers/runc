@@ -1,0 +1,3 @@
+[codespell]
+skip = ./vendor,./.git
+ignore-words-list = clos,creat
