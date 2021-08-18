@@ -50,6 +50,16 @@ function teardown() {
 	[ "$status" -eq 0 ]
 }
 
+@test "runc delete --force [paused container]" {
+	runc run -d --console-socket "$CONSOLE_SOCKET" ct1
+	[ "$status" -eq 0 ]
+	testcontainer ct1 running
+
+	runc pause ct1
+	runc delete --force ct1
+	[ "$status" -eq 0 ]
+}
+
 @test "runc delete --force in cgroupv1 with subcgroups" {
 	requires cgroups_v1 root cgroupns
 	set_cgroups_path
