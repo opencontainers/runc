@@ -69,7 +69,7 @@ task:
     HOME: /root
     CIRRUS_WORKING_DIR: /home/runc
     GO_VERSION: "1.17"
-    BATS_VERSION: "v1.3.0"
+    BATS_VERSION: "v1.4.1"
     # yamllint disable rule:key-duplicates
     matrix:
       DISTRO: centos-7
