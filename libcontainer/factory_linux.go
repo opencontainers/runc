@@ -185,6 +185,16 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 		}
 	}
 
+	// Check that cgroup is not frozen. Do not use Exists() here
+	// since in cgroup v1 it only checks "devices" controller.
+	st, err := cm.GetFreezerState()
+	if err != nil {
+		return nil, fmt.Errorf("unable to get cgroup freezer state: %w", err)
+	}
+	if st == configs.Frozen {
+		return nil, errors.New("container's cgroup unexpectedly frozen")
+	}
+
 	if err := os.MkdirAll(containerRoot, 0o711); err != nil {
 		return nil, err
 	}

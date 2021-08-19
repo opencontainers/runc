@@ -368,3 +368,44 @@ function setup() {
 	[ "$status" -eq 0 ]
 	[[ "$output" == *"container's cgroup is not empty"* ]]
 }
+
+@test "runc run/create should refuse pre-existing frozen cgroup" {
+	requires cgroups_freezer
+	if [[ "$ROOTLESS" -ne 0 ]]; then
+		requires rootless_cgroup
+	fi
+
+	set_cgroups_path
+
+	case $CGROUP_UNIFIED in
+	no)
+		FREEZER_DIR="${CGROUP_FREEZER_BASE_PATH}/${REL_CGROUPS_PATH}"
+		FREEZER="${FREEZER_DIR}/freezer.state"
+		STATE="FROZEN"
+		;;
+	yes)
+		FREEZER_DIR="${CGROUP_PATH}"
+		FREEZER="${FREEZER_DIR}/cgroup.freeze"
+		STATE="1"
+		;;
+	esac
+
+	# Create and freeze the cgroup.
+	mkdir -p "$FREEZER_DIR"
+	echo "$STATE" >"$FREEZER"
+
+	# Start a container.
+	runc run -d --console-socket "$CONSOLE_SOCKET" ct1
+	[ "$status" -eq 1 ]
+	# A warning should be printed.
+	[[ "$output" == *"container's cgroup unexpectedly frozen"* ]]
+
+	# Same check for runc create.
+	runc create --console-socket "$CONSOLE_SOCKET" ct2
+	[ "$status" -eq 1 ]
+	# A warning should be printed.
+	[[ "$output" == *"container's cgroup unexpectedly frozen"* ]]
+
+	# Cleanup.
+	rmdir "$FREEZER_DIR"
+}
