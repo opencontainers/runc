@@ -1,7 +1,7 @@
 ARG GO_VERSION=1.17
 ARG BATS_VERSION=v1.3.0
 
-FROM golang:${GO_VERSION}-buster
+FROM golang:${GO_VERSION}-bullseye
 ARG DEBIAN_FRONTEND=noninteractive
 
 RUN echo 'deb https://download.opensuse.org/repositories/devel:/tools:/criu/Debian_10/ /' > /etc/apt/sources.list.d/criu.list \
@@ -31,7 +31,7 @@ RUN echo 'deb https://download.opensuse.org/repositories/devel:/tools:/criu/Debi
         libseccomp-dev:ppc64el \
         libseccomp2 \
         pkg-config \
-        python-minimal \
+        python3-minimal \
         sudo \
         uidmap \
     && apt-get clean \
