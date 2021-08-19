@@ -2,6 +2,7 @@ package libcontainer
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -179,6 +180,16 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 		if len(pids) != 0 {
 			return nil, fmt.Errorf("container's cgroup is not empty, PIDs: %v", pids)
 		}
+	}
+
+	// Check that cgroup is not frozen. Do it even if Exists() above returned
+	// false, since in cgroup v1 it only checks "devices" controller.
+	st, err := cm.GetFreezerState()
+	if err != nil {
+		return nil, fmt.Errorf("unable to get cgroup freezer state: %w", err)
+	}
+	if st == configs.Frozen {
+		return nil, errors.New("container's cgroup unexpectedly frozen")
 	}
 
 	if err := os.MkdirAll(containerRoot, 0o711); err != nil {
