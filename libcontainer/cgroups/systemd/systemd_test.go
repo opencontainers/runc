@@ -40,6 +40,23 @@ func TestSystemdVersion(t *testing.T) {
 	}
 }
 
+func TestValidUnitTypes(t *testing.T) {
+	testCases := []struct {
+		unitName         string
+		expectedUnitType string
+	}{
+		{"system.slice", "Slice"},
+		{"kubepods.slice", "Slice"},
+		{"testing-container:ab.scope", "Scope"},
+	}
+	for _, sdTest := range testCases {
+		unitType := getUnitType(sdTest.unitName)
+		if unitType != sdTest.expectedUnitType {
+			t.Errorf("getUnitType(%s); want %q; got %q", sdTest.unitName, sdTest.expectedUnitType, unitType)
+		}
+	}
+}
+
 func newManager(config *configs.Cgroup) cgroups.Manager {
 	if cgroups.IsCgroup2UnifiedMode() {
 		return NewUnifiedManager(config, "", false)
