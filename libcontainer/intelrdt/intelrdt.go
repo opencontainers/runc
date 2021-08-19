@@ -72,7 +72,7 @@ import (
  * |-- ...
  * |-- schemata
  * |-- tasks
- * |-- <container_id>
+ * |-- <clos>
  *     |-- ...
  *     |-- schemata
  *     |-- tasks
@@ -155,7 +155,7 @@ type Manager interface {
 	// Returns statistics for Intel RDT
 	GetStats() (*Stats, error)
 
-	// Destroys the Intel RDT 'container_id' group
+	// Destroys the Intel RDT container-specific 'container_id' group
 	Destroy() error
 
 	// Returns Intel RDT path to save in a state file and to be able to
@@ -517,7 +517,7 @@ func IsMBAScEnabled() bool {
 	return mbaScEnabled
 }
 
-// Get the 'container_id' path in Intel RDT "resource control" filesystem
+// Get the path of the clos group in "resource control" filesystem that the container belongs to
 func (m *intelRdtManager) getIntelRdtPath() (string, error) {
 	rootPath, err := getIntelRdtRoot()
 	if err != nil {
@@ -567,7 +567,7 @@ func (m *intelRdtManager) Apply(pid int) (err error) {
 	return nil
 }
 
-// Destroys the Intel RDT 'container_id' group
+// Destroys the Intel RDT container-specific 'container_id' group
 func (m *intelRdtManager) Destroy() error {
 	// Don't remove resctrl group if closid has been explicitly specified. The
 	// group is likely externally managed, i.e. by some other entity than us.
@@ -614,7 +614,7 @@ func (m *intelRdtManager) GetStats() (*Stats, error) {
 	}
 	schemaRootStrings := strings.Split(tmpRootStrings, "\n")
 
-	// The L3 cache and memory bandwidth schemata in 'container_id' group
+	// The L3 cache and memory bandwidth schemata in container's clos group
 	containerPath := m.GetPath()
 	tmpStrings, err := getIntelRdtParamString(containerPath, "schemata")
 	if err != nil {
@@ -637,7 +637,7 @@ func (m *intelRdtManager) GetStats() (*Stats, error) {
 			}
 		}
 
-		// The L3 cache schema in 'container_id' group
+		// The L3 cache schema in container's clos group
 		for _, schema := range schemaStrings {
 			if strings.Contains(schema, "L3") {
 				stats.L3CacheSchema = strings.TrimSpace(schema)
@@ -660,7 +660,7 @@ func (m *intelRdtManager) GetStats() (*Stats, error) {
 			}
 		}
 
-		// The memory bandwidth schema in 'container_id' group
+		// The memory bandwidth schema in container's clos group
 		for _, schema := range schemaStrings {
 			if strings.Contains(schema, "MB") {
 				stats.MemBwSchema = strings.TrimSpace(schema)
