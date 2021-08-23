@@ -88,7 +88,7 @@ func parseLine(line string) (*deviceRule, error) {
 	}
 	var (
 		rule  deviceRule
-		node  = matches[1]
+		node  = devices.Type(matches[1])
 		major = matches[2]
 		minor = matches[3]
 		perms = matches[4]
@@ -96,16 +96,14 @@ func parseLine(line string) (*deviceRule, error) {
 
 	// Parse the node type.
 	switch node {
-	case "a":
+	case devices.WildcardDevice:
 		// Super-special case -- "a" always means every device with every
 		// access mode. In fact, for devices.list this actually indicates that
 		// the cgroup is in black-list mode.
 		// TODO: Double-check that the entire file is "a *:* rwm".
 		return nil, nil
-	case "b":
-		rule.meta.node = devices.BlockDevice
-	case "c":
-		rule.meta.node = devices.CharDevice
+	case devices.BlockDevice, devices.CharDevice:
+		rule.meta.node = node
 	default:
 		// Should never happen!
 		return nil, fmt.Errorf("unknown device type %q", node)
@@ -139,6 +137,7 @@ func parseLine(line string) (*deviceRule, error) {
 		// Should never happen!
 		return nil, fmt.Errorf("parse access mode: contained unknown modes or is empty: %q", perms)
 	}
+
 	return &rule, nil
 }
 
@@ -320,10 +319,10 @@ func (source *Emulator) Transition(target *Emulator) ([]*devices.Rule, error) {
 	// black-list we also have to include a disruptive rule.
 	if source.IsBlacklist() || source.defaultAllow != target.defaultAllow {
 		transitionRules = append(transitionRules, &devices.Rule{
-			Type:        'a',
+			Type:        devices.WildcardDevice,
 			Major:       -1,
 			Minor:       -1,
-			Permissions: devices.Permissions("rwm"),
+			Permissions: "rwm",
 			Allow:       target.defaultAllow,
 		})
 		// The old rules are only relevant if we aren't starting out with a

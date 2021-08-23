@@ -119,7 +119,7 @@ func (p *program) appendRule(rule *devices.Rule) error {
 		bpfType = int32(unix.BPF_DEVCG_DEV_BLOCK)
 	default:
 		// We do not permit 'a', nor any other types we don't know about.
-		return fmt.Errorf("invalid type %q", string(rule.Type))
+		return fmt.Errorf("invalid type %q", rule.Type)
 	}
 	if rule.Major > math.MaxUint32 {
 		return fmt.Errorf("invalid major %d", rule.Major)
