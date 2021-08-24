@@ -22,12 +22,11 @@ package devices
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"io"
-	"regexp"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/opencontainers/runc/libcontainer/devices"
 )
@@ -79,19 +78,21 @@ func (e *Emulator) IsAllowAll() bool {
 	return e.IsBlacklist() && len(e.rules) == 0
 }
 
-var devicesListRegexp = regexp.MustCompile(`^([abc])\s+(\d+|\*):(\d+|\*)\s+([rwm]+)$`)
-
 func parseLine(line string) (*deviceRule, error) {
-	matches := devicesListRegexp.FindStringSubmatch(line)
-	if matches == nil {
-		return nil, errors.New("line doesn't match devices.list format")
+	// Input: node major:minor perms.
+	fields := strings.FieldsFunc(line, func(r rune) bool {
+		return r == ' ' || r == ':'
+	})
+	if len(fields) != 4 {
+		return nil, fmt.Errorf("malformed devices.list rule %s", line)
 	}
+
 	var (
 		rule  deviceRule
-		node  = devices.Type(matches[1])
-		major = matches[2]
-		minor = matches[3]
-		perms = matches[4]
+		node  = devices.Type(fields[0])
+		major = fields[1]
+		minor = fields[2]
+		perms = fields[3]
 	)
 
 	// Parse the node type.
@@ -105,7 +106,6 @@ func parseLine(line string) (*deviceRule, error) {
 	case devices.BlockDevice, devices.CharDevice:
 		rule.meta.node = node
 	default:
-		// Should never happen!
 		return nil, fmt.Errorf("unknown device type %q", node)
 	}
 
@@ -134,7 +134,6 @@ func parseLine(line string) (*deviceRule, error) {
 	// Parse the access permissions.
 	rule.perms = devices.Permissions(perms)
 	if !rule.perms.IsValid() || rule.perms.IsEmpty() {
-		// Should never happen!
 		return nil, fmt.Errorf("parse access mode: contained unknown modes or is empty: %q", perms)
 	}
 

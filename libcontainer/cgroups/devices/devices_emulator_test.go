@@ -19,8 +19,10 @@
 package devices
 
 import (
+	"bufio"
 	"bytes"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/opencontainers/runc/libcontainer/devices"
@@ -1111,4 +1113,32 @@ func TestDeviceEmulatorTransitionFromBlacklist(t *testing.T) {
 
 func TestDeviceEmulatorTransitionFromWhitelist(t *testing.T) {
 	testDeviceEmulatorTransition(t, false)
+}
+
+func BenchmarkParseLine(b *testing.B) {
+	list := `c *:* m
+b *:* m
+c 1:3 rwm
+c 1:5 rwm
+c 1:7 rwm
+c 1:8 rwm
+c 1:9 rwm
+c 5:0 rwm
+c 5:2 rwm
+c 136:* rwm
+c 10:200 rwm`
+
+	var r *deviceRule
+	var err error
+	for i := 0; i < b.N; i++ {
+		s := bufio.NewScanner(strings.NewReader(list))
+		for s.Scan() {
+			line := s.Text()
+			r, err = parseLine(line)
+		}
+		if err := s.Err(); err != nil {
+			b.Fatal(err)
+		}
+	}
+	b.Logf("rule: %v, err: %v", r, err)
 }
