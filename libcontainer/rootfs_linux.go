@@ -710,7 +710,7 @@ func mknodDevice(dest string, node *devices.Device) error {
 	case devices.FifoDevice:
 		fileMode |= unix.S_IFIFO
 	default:
-		return fmt.Errorf("%s is not a valid device type for device %s", node.Type, node.Path)
+		return fmt.Errorf("%c is not a valid device type for device %s", node.Type, node.Path)
 	}
 	dev, err := node.Mkdev()
 	if err != nil {
