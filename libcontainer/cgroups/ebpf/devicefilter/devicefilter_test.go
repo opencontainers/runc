@@ -146,7 +146,7 @@ block-11:
 func TestDeviceFilter_Privileged(t *testing.T) {
 	devices := []*devices.Rule{
 		{
-			Type:        devices.WildcardDevice,
+			Type:        'a',
 			Major:       -1,
 			Minor:       -1,
 			Permissions: "rwm",
@@ -173,14 +173,14 @@ block-0:
 func TestDeviceFilter_PrivilegedExceptSingleDevice(t *testing.T) {
 	devices := []*devices.Rule{
 		{
-			Type:        devices.WildcardDevice,
+			Type:        'a',
 			Major:       -1,
 			Minor:       -1,
 			Permissions: "rwm",
 			Allow:       true,
 		},
 		{
-			Type:        devices.BlockDevice,
+			Type:        'b',
 			Major:       8,
 			Minor:       0,
 			Permissions: "rwm",
@@ -213,21 +213,21 @@ block-1:
 func TestDeviceFilter_Weird(t *testing.T) {
 	devices := []*devices.Rule{
 		{
-			Type:        devices.BlockDevice,
+			Type:        'b',
 			Major:       8,
 			Minor:       1,
 			Permissions: "rwm",
 			Allow:       false,
 		},
 		{
-			Type:        devices.WildcardDevice,
+			Type:        'a',
 			Major:       -1,
 			Minor:       -1,
 			Permissions: "rwm",
 			Allow:       true,
 		},
 		{
-			Type:        devices.BlockDevice,
+			Type:        'b',
 			Major:       8,
 			Minor:       2,
 			Permissions: "rwm",

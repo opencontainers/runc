@@ -479,15 +479,12 @@ func CreateCgroupConfig(opts *CreateOpts, defaultDevs []*devices.Device) (*confi
 		if r != nil {
 			for i, d := range spec.Linux.Resources.Devices {
 				var (
-					dt    = devices.WildcardDevice
+					t     = "a"
 					major = int64(-1)
 					minor = int64(-1)
 				)
 				if d.Type != "" {
-					dt = devices.Type(d.Type)
-					if !dt.CanCgroup() {
-						return nil, fmt.Errorf("invalid cgroup device type %q", d.Type)
-					}
+					t = d.Type
 				}
 				if d.Major != nil {
 					major = *d.Major
@@ -497,6 +494,10 @@ func CreateCgroupConfig(opts *CreateOpts, defaultDevs []*devices.Device) (*confi
 				}
 				if d.Access == "" {
 					return nil, fmt.Errorf("device access at %d field cannot be empty", i)
+				}
+				dt, err := stringToCgroupDeviceRune(t)
+				if err != nil {
+					return nil, err
 				}
 				c.Resources.Devices = append(c.Resources.Devices, &devices.Rule{
 					Type:        dt,
@@ -634,7 +635,20 @@ func CreateCgroupConfig(opts *CreateOpts, defaultDevs []*devices.Device) (*confi
 	return c, nil
 }
 
-func stringToDeviceType(s string) (devices.Type, error) {
+func stringToCgroupDeviceRune(s string) (devices.Type, error) {
+	switch s {
+	case "a":
+		return devices.WildcardDevice, nil
+	case "b":
+		return devices.BlockDevice, nil
+	case "c":
+		return devices.CharDevice, nil
+	default:
+		return 0, fmt.Errorf("invalid cgroup device type %q", s)
+	}
+}
+
+func stringToDeviceRune(s string) (devices.Type, error) {
 	switch s {
 	case "p":
 		return devices.FifoDevice, nil
@@ -643,7 +657,7 @@ func stringToDeviceType(s string) (devices.Type, error) {
 	case "b":
 		return devices.BlockDevice, nil
 	default:
-		return "", fmt.Errorf("invalid device type %q", s)
+		return 0, fmt.Errorf("invalid device type %q", s)
 	}
 }
 
@@ -679,7 +693,7 @@ next:
 			if d.GID != nil {
 				gid = *d.GID
 			}
-			dt, err := stringToDeviceType(d.Type)
+			dt, err := stringToDeviceRune(d.Type)
 			if err != nil {
 				return nil, err
 			}
