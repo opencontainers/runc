@@ -234,10 +234,6 @@ func (m *unifiedManager) Apply(pid int) error {
 		properties []systemdDbus.Property
 	)
 
-	if c.Paths != nil {
-		return cgroups.WriteCgroupProc(m.path, pid)
-	}
-
 	slice := "system.slice"
 	if m.rootless {
 		slice = "user.slice"
@@ -296,9 +292,6 @@ func (m *unifiedManager) Apply(pid int) error {
 }
 
 func (m *unifiedManager) Destroy() error {
-	if m.cgroups.Paths != nil {
-		return nil
-	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 

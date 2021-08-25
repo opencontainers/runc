@@ -114,21 +114,6 @@ func (m *legacyManager) Apply(pid int) error {
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if c.Paths != nil {
-		paths := make(map[string]string)
-		cgMap, err := cgroups.ParseCgroupFile("/proc/self/cgroup")
-		if err != nil {
-			return err
-		}
-		// XXX(kolyshkin@): why this check is needed?
-		for name, path := range c.Paths {
-			if _, ok := cgMap[name]; ok {
-				paths[name] = path
-			}
-		}
-		m.paths = paths
-		return cgroups.EnterPid(m.paths, pid)
-	}
 
 	if c.Parent != "" {
 		slice = c.Parent
@@ -202,9 +187,6 @@ func (m *legacyManager) Apply(pid int) error {
 }
 
 func (m *legacyManager) Destroy() error {
-	if m.cgroups.Paths != nil {
-		return nil
-	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -399,11 +381,6 @@ func (m *legacyManager) freezeBeforeSet(unitName string, r *configs.Resources) (
 }
 
 func (m *legacyManager) Set(r *configs.Resources) error {
-	// If Paths are set, then we are just joining cgroups paths
-	// and there is no need to set any values.
-	if m.cgroups.Paths != nil {
-		return nil
-	}
 	if r.Unified != nil {
 		return cgroups.ErrV1NoUnified
 	}

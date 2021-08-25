@@ -28,10 +28,6 @@ type Cgroup struct {
 	// ScopePrefix describes prefix for the scope name
 	ScopePrefix string `json:"scope_prefix"`
 
-	// Paths represent the absolute cgroups paths to join.
-	// This takes precedence over Path.
-	Paths map[string]string
-
 	// Resources contains various cgroups settings to apply
 	*Resources
 
