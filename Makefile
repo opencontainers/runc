@@ -118,7 +118,7 @@ cfmt:
 	indent -linux -l120 -il0 -ppi2 -cp1 -T size_t -T jmp_buf $(C_SRC)
 
 shellcheck:
-	shellcheck tests/integration/*.bats tests/integration/*.sh tests/*.sh script/release.sh
+	shellcheck tests/integration/*.bats tests/integration/*.sh tests/integration/*.bash tests/*.sh script/release.sh
 	# TODO: add shellcheck for more sh files
 
 shfmt:
