@@ -30,14 +30,15 @@ GO_BUILD_STATIC := CGO_ENABLED=1 $(GO) build -trimpath $(EXTRA_FLAGS) -tags "$(B
 runc:
 	$(GO_BUILD) -o runc .
 
-all: runc recvtty
+all: runc recvtty sd-helper
 
-recvtty:
-	$(GO_BUILD) -o contrib/cmd/recvtty/recvtty ./contrib/cmd/recvtty
+recvtty sd-helper:
+	$(GO_BUILD) -o contrib/cmd/$@/$@ ./contrib/cmd/$@
 
 static:
 	$(GO_BUILD_STATIC) -o runc .
 	$(GO_BUILD_STATIC) -o contrib/cmd/recvtty/recvtty ./contrib/cmd/recvtty
+	$(GO_BUILD_STATIC) -o contrib/cmd/sd-helper/sd-helper ./contrib/cmd/sd-helper
 
 release:
 	script/release.sh -r release/$(VERSION) -v $(VERSION)
@@ -110,6 +111,7 @@ install-man: man
 clean:
 	rm -f runc runc-*
 	rm -f contrib/cmd/recvtty/recvtty
+	rm -f contrib/cmd/sd-helper/sd-helper
 	rm -rf release
 	rm -rf man/man8
 
@@ -147,7 +149,7 @@ localcross:
 	CGO_ENABLED=1 GOARCH=arm64 CC=aarch64-linux-gnu-gcc         $(GO_BUILD) -o runc-arm64 .
 	CGO_ENABLED=1 GOARCH=ppc64le CC=powerpc64le-linux-gnu-gcc   $(GO_BUILD) -o runc-ppc64le .
 
-.PHONY: runc all recvtty static release dbuild lint man runcimage \
+.PHONY: runc all recvtty sd-helper static release dbuild lint man runcimage \
 	test localtest unittest localunittest integration localintegration \
 	rootlessintegration localrootlessintegration shell install install-bash \
 	install-man clean cfmt shfmt shellcheck \
