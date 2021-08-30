@@ -139,4 +139,8 @@ type Resources struct {
 	// during Set() to figure out whether the freeze is required. Those
 	// methods may be relatively slow, thus this flag.
 	SkipFreezeOnSet bool `json:"-"`
+
+	// ChildPolicy defines how to handle child groups when updating
+	// resources. The default ("") does not handle children at all.
+	ChildPolicy string `json:"child_policy,omitempty"`
 }
