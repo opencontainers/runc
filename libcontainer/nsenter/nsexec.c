@@ -1091,7 +1091,7 @@ void nsexec(void)
 			write_log(DEBUG, "signal completion to stage-0");
 			s = SYNC_CHILD_FINISH;
 			if (write(syncfd, &s, sizeof(s)) != sizeof(s))
-				bail("failed to sync with patent: write(SYNC_CHILD_FINISH)");
+				bail("failed to sync with parent: write(SYNC_CHILD_FINISH)");
 
 			/* Close sync pipes. */
 			if (close(sync_grandchild_pipe[0]) < 0)
