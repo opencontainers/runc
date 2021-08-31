@@ -27,7 +27,9 @@ var (
 		&HugetlbGroup{},
 		&NetClsGroup{},
 		&NetPrioGroup{},
-		&PerfEventGroup{},
+		&PerfEventGroup{
+			PerfEventOpen: unix.PerfEventOpen,
+		},
 		&FreezerGroup{},
 		&RdmaGroup{},
 		&NameGroup{GroupName: "name=systemd", Join: true},

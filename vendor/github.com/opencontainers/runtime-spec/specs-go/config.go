@@ -352,6 +352,13 @@ type LinuxRdma struct {
 	HcaObjects *uint32 `json:"hcaObjects,omitempty"`
 }
 
+// TODO: Comment.
+type PerfEvent struct {
+	Config int `json:"config"`
+	Ext1   int `json:"ext1"`
+	Ext2   int `json:"ext2"`
+}
+
 // LinuxResources has container runtime resource constraints
 type LinuxResources struct {
 	// Devices configures the device allowlist.
@@ -372,6 +379,8 @@ type LinuxResources struct {
 	// Limits are a set of key value pairs that define RDMA resource limits,
 	// where the key is device name and value is resource limits.
 	Rdma map[string]LinuxRdma `json:"rdma,omitempty"`
+	// TODO: Comment.
+	PerfEvents [][]PerfEvent `json:"perf_events"`
 	// Unified resources.
 	Unified map[string]string `json:"unified,omitempty"`
 }
