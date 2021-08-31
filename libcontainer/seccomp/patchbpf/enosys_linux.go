@@ -1,3 +1,4 @@
+//go:build cgo && seccomp
 // +build cgo,seccomp
 
 package patchbpf
