@@ -30,9 +30,9 @@ func NewIntelRdtTestUtil(t *testing.T) *intelRdtTestUtil {
 		config: &configs.Config{
 			IntelRdt: &configs.IntelRdt{},
 		},
-		root: t.TempDir(),
 	}
-	testIntelRdtPath := filepath.Join(d.root, "resctrl")
+	intelRdtRoot = t.TempDir()
+	testIntelRdtPath := filepath.Join(intelRdtRoot, "resctrl")
 
 	// Ensure the full mock Intel RDT "resource control" filesystem path exists
 	if err := os.MkdirAll(testIntelRdtPath, 0o755); err != nil {

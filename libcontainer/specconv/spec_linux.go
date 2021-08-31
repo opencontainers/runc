@@ -301,6 +301,7 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 		}
 		if spec.Linux.IntelRdt != nil {
 			config.IntelRdt = &configs.IntelRdt{
+				ClosID:        spec.Linux.IntelRdt.ClosID,
 				L3CacheSchema: spec.Linux.IntelRdt.L3CacheSchema,
 				MemBwSchema:   spec.Linux.IntelRdt.MemBwSchema,
 			}

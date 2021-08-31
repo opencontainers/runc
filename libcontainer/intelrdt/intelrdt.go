@@ -72,7 +72,7 @@ import (
  * |-- ...
  * |-- schemata
  * |-- tasks
- * |-- <container_id>
+ * |-- <clos>
  *     |-- ...
  *     |-- schemata
  *     |-- tasks
@@ -155,7 +155,7 @@ type Manager interface {
 	// Returns statistics for Intel RDT
 	GetStats() (*Stats, error)
 
-	// Destroys the Intel RDT 'container_id' group
+	// Destroys the Intel RDT container-specific 'container_id' group
 	Destroy() error
 
 	// Returns Intel RDT path to save in a state file and to be able to
@@ -205,9 +205,7 @@ var (
 )
 
 type intelRdtData struct {
-	root   string
 	config *configs.Config
-	pid    int
 }
 
 // Check if Intel RDT sub-features are enabled in featuresInit()
@@ -405,18 +403,6 @@ func writeFile(dir, file, data string) error {
 	return nil
 }
 
-func getIntelRdtData(c *configs.Config, pid int) (*intelRdtData, error) {
-	rootPath, err := getIntelRdtRoot()
-	if err != nil {
-		return nil, err
-	}
-	return &intelRdtData{
-		root:   rootPath,
-		config: c,
-		pid:    pid,
-	}, nil
-}
-
 // Get the read-only L3 cache information
 func getL3CacheInfo() (*L3CacheInfo, error) {
 	l3CacheInfo := &L3CacheInfo{}
@@ -531,15 +517,19 @@ func IsMBAScEnabled() bool {
 	return mbaScEnabled
 }
 
-// Get the 'container_id' path in Intel RDT "resource control" filesystem
-func GetIntelRdtPath(id string) (string, error) {
+// Get the path of the clos group in "resource control" filesystem that the container belongs to
+func (m *intelRdtManager) getIntelRdtPath() (string, error) {
 	rootPath, err := getIntelRdtRoot()
 	if err != nil {
 		return "", err
 	}
 
-	path := filepath.Join(rootPath, id)
-	return path, nil
+	clos := m.id
+	if m.config.IntelRdt != nil && m.config.IntelRdt.ClosID != "" {
+		clos = m.config.IntelRdt.ClosID
+	}
+
+	return filepath.Join(rootPath, clos), nil
 }
 
 // Applies Intel RDT configuration to the process with the specified pid
@@ -548,30 +538,48 @@ func (m *intelRdtManager) Apply(pid int) (err error) {
 	if m.config.IntelRdt == nil {
 		return nil
 	}
-	d, err := getIntelRdtData(m.config, pid)
+
+	path, err := m.getIntelRdtPath()
 	if err != nil {
 		return err
 	}
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	path, err := d.join(m.id)
-	if err != nil {
-		return err
+
+	if m.config.IntelRdt.ClosID != "" && m.config.IntelRdt.L3CacheSchema == "" && m.config.IntelRdt.MemBwSchema == "" {
+		// Check that the CLOS exists, i.e. it has been pre-configured to
+		// conform with the runtime spec
+		if _, err := os.Stat(path); err != nil {
+			return fmt.Errorf("clos dir not accessible (must be pre-created when l3CacheSchema and memBwSchema are empty): %w", err)
+		}
+	}
+
+	if err := os.MkdirAll(path, 0o755); err != nil {
+		return newLastCmdError(err)
+	}
+
+	if err := WriteIntelRdtTasks(path, pid); err != nil {
+		return newLastCmdError(err)
 	}
 
 	m.path = path
 	return nil
 }
 
-// Destroys the Intel RDT 'container_id' group
+// Destroys the Intel RDT container-specific 'container_id' group
 func (m *intelRdtManager) Destroy() error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if err := os.RemoveAll(m.GetPath()); err != nil {
-		return err
+	// Don't remove resctrl group if closid has been explicitly specified. The
+	// group is likely externally managed, i.e. by some other entity than us.
+	// There are probably other containers/tasks sharing the same group.
+	if m.config.IntelRdt == nil || m.config.IntelRdt.ClosID == "" {
+		m.mu.Lock()
+		defer m.mu.Unlock()
+		if err := os.RemoveAll(m.GetPath()); err != nil {
+			return err
+		}
+		m.path = ""
 	}
-	m.path = ""
 	return nil
 }
 
@@ -579,7 +587,7 @@ func (m *intelRdtManager) Destroy() error {
 // restore the object later
 func (m *intelRdtManager) GetPath() string {
 	if m.path == "" {
-		m.path, _ = GetIntelRdtPath(m.id)
+		m.path, _ = m.getIntelRdtPath()
 	}
 	return m.path
 }
@@ -606,7 +614,7 @@ func (m *intelRdtManager) GetStats() (*Stats, error) {
 	}
 	schemaRootStrings := strings.Split(tmpRootStrings, "\n")
 
-	// The L3 cache and memory bandwidth schemata in 'container_id' group
+	// The L3 cache and memory bandwidth schemata in container's clos group
 	containerPath := m.GetPath()
 	tmpStrings, err := getIntelRdtParamString(containerPath, "schemata")
 	if err != nil {
@@ -629,7 +637,7 @@ func (m *intelRdtManager) GetStats() (*Stats, error) {
 			}
 		}
 
-		// The L3 cache schema in 'container_id' group
+		// The L3 cache schema in container's clos group
 		for _, schema := range schemaStrings {
 			if strings.Contains(schema, "L3") {
 				stats.L3CacheSchema = strings.TrimSpace(schema)
@@ -652,7 +660,7 @@ func (m *intelRdtManager) GetStats() (*Stats, error) {
 			}
 		}
 
-		// The memory bandwidth schema in 'container_id' group
+		// The memory bandwidth schema in container's clos group
 		for _, schema := range schemaStrings {
 			if strings.Contains(schema, "MB") {
 				stats.MemBwSchema = strings.TrimSpace(schema)
@@ -722,6 +730,12 @@ func (m *intelRdtManager) Set(container *configs.Config) error {
 		l3CacheSchema := container.IntelRdt.L3CacheSchema
 		memBwSchema := container.IntelRdt.MemBwSchema
 
+		// TODO: verify that l3CacheSchema and/or memBwSchema match the
+		// existing schemata if ClosID has been specified. This is a more
+		// involved than reading the file and doing plain string comparison as
+		// the value written in does not necessarily match what gets read out
+		// (leading zeros, cache id ordering etc).
+
 		// Write a single joint schema string to schemata file
 		if l3CacheSchema != "" && memBwSchema != "" {
 			if err := writeFile(path, "schemata", l3CacheSchema+"\n"+memBwSchema); err != nil {
@@ -745,18 +759,6 @@ func (m *intelRdtManager) Set(container *configs.Config) error {
 	}
 
 	return nil
-}
-
-func (raw *intelRdtData) join(id string) (string, error) {
-	path := filepath.Join(raw.root, id)
-	if err := os.MkdirAll(path, 0o755); err != nil {
-		return "", newLastCmdError(err)
-	}
-
-	if err := WriteIntelRdtTasks(path, raw.pid); err != nil {
-		return "", err
-	}
-	return path, nil
 }
 
 func newLastCmdError(err error) error {

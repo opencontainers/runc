@@ -1902,9 +1902,10 @@ func (c *linuxContainer) currentState() (*State, error) {
 		startTime, _ = c.initProcess.startTime()
 		externalDescriptors = c.initProcess.externalDescriptors()
 	}
-	intelRdtPath, err := intelrdt.GetIntelRdtPath(c.ID())
-	if err != nil {
-		intelRdtPath = ""
+
+	intelRdtPath := ""
+	if c.intelRdtManager != nil {
+		intelRdtPath = c.intelRdtManager.GetPath()
 	}
 	state := &State{
 		BaseState: BaseState{
