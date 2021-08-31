@@ -1,5 +1,3 @@
-// +build linux
-
 // SPDX-License-Identifier: Apache-2.0
 /*
  * Copyright (C) 2020 Aleksa Sarai <cyphar@cyphar.com>

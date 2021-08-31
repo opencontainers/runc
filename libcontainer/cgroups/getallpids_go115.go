@@ -1,4 +1,4 @@
-// +build linux,!go1.16
+// +build !go1.16
 
 package cgroups
 
