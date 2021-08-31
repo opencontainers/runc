@@ -389,6 +389,9 @@ func (m *legacyManager) freezeBeforeSet(unitName string, r *configs.Resources) (
 }
 
 func (m *legacyManager) Set(r *configs.Resources) error {
+	if r == nil {
+		return nil
+	}
 	if r.Unified != nil {
 		return cgroups.ErrV1NoUnified
 	}

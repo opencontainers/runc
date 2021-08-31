@@ -384,6 +384,9 @@ func (m *unifiedManager) GetStats() (*cgroups.Stats, error) {
 }
 
 func (m *unifiedManager) Set(r *configs.Resources) error {
+	if r == nil {
+		return nil
+	}
 	properties, err := genV2ResourcesProperties(r, m.dbus)
 	if err != nil {
 		return err

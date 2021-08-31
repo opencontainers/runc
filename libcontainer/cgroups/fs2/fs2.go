@@ -129,6 +129,9 @@ func (m *manager) GetStats() (*cgroups.Stats, error) {
 }
 
 func (m *manager) Freeze(state configs.FreezerState) error {
+	if m.config.Resources == nil {
+		return errors.New("cannot toggle freezer: cgroups not configured for container")
+	}
 	if err := setFreezer(m.dirPath, state); err != nil {
 		return err
 	}
@@ -145,6 +148,9 @@ func (m *manager) Path(_ string) string {
 }
 
 func (m *manager) Set(r *configs.Resources) error {
+	if r == nil {
+		return nil
+	}
 	if err := m.getControllers(); err != nil {
 		return err
 	}
