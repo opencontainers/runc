@@ -10,6 +10,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 
+	"github.com/landlock-lsm/go-landlock/landlock"
 	"github.com/opencontainers/runc/libcontainer/devices"
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
@@ -84,6 +85,33 @@ type Syscall struct {
 	ErrnoRet *uint  `json:"errnoRet"`
 	Args     []*Arg `json:"args"`
 }
+
+// Landlock specifies the Landlock unprivileged access control settings for the container process.
+type Landlock struct {
+	Ruleset           *Ruleset `json:"ruleset"`
+	Rules             *Rules   `json:"rules"`
+	DisableBestEffort bool     `json:"disableBestEffort"`
+}
+
+// Ruleset identifies a set of rules (i.e., actions on objects) that need to be handled in Landlock.
+type Ruleset struct {
+	HandledAccessFS landlock.AccessFSSet `json:"handledAccessFS"`
+}
+
+// Rules represents the security policies (i.e., actions allowed on objects) in Landlock.
+type Rules struct {
+	PathBeneath []*RulePathBeneath `json:"pathBeneath"`
+}
+
+// RulePathBeneath defines the file-hierarchy typed rule that grants the access rights specified by
+// AllowedAccess to the file hierarchies under the given Paths in Landlock.
+type RulePathBeneath struct {
+	AllowedAccess landlock.AccessFSSet `json:"allowedAccess"`
+	Paths         []string             `json:"paths"`
+}
+
+// TODO Windows. Many of these fields should be factored out into those parts
+// which are common across platforms, and those which are platform specific.
 
 // Config defines configuration options for executing a process inside a contained environment.
 type Config struct {
@@ -225,6 +253,9 @@ type Config struct {
 
 	// IOPriority is the container's I/O priority.
 	IOPriority *IOPriority `json:"io_priority,omitempty"`
+	// Landlock specifies the Landlock unprivileged access control settings for the container process.
+	// NoNewPrivileges must be enabled to use Landlock.
+	Landlock *Landlock `json:"landlock,omitempty"`
 }
 
 // Scheduler is based on the Linux sched_setattr(2) syscall.

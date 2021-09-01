@@ -18,6 +18,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/devices"
 	"github.com/opencontainers/runc/libcontainer/internal/userns"
+	"github.com/opencontainers/runc/libcontainer/landlock"
 	"github.com/opencontainers/runc/libcontainer/seccomp"
 	libcontainerUtils "github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/opencontainers/runtime-spec/specs-go"
@@ -556,6 +557,19 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 			ioPriority := *spec.Process.IOPriority
 			config.IOPriority = &ioPriority
 		}
+		if spec.Process.Landlock != nil {
+			landlock, err := SetupLandlock(spec.Process.Landlock)
+			if err != nil {
+				return nil, err
+			}
+			config.Landlock = landlock
+		}
+
+		landlock, err := SetupLandlock(spec.Process.Landlock)
+		if err != nil {
+			return nil, err
+		}
+		config.Landlock = landlock
 	}
 	createHooks(spec, config)
 	config.Version = specs.Version
@@ -1133,6 +1147,55 @@ func parseMountOptions(options []string) *configs.Mount {
 		}
 	}
 	return &m
+}
+
+func SetupLandlock(ll *specs.Landlock) (*configs.Landlock, error) {
+	if ll == nil {
+		return nil, nil
+	}
+
+	// No ruleset specified, assume landlock disabled.
+	if ll.Ruleset == nil || len(ll.Ruleset.HandledAccessFS) == 0 {
+		return nil, nil
+	}
+
+	newConfig := &configs.Landlock{
+		Ruleset: new(configs.Ruleset),
+		Rules: &configs.Rules{
+			PathBeneath: []*configs.RulePathBeneath{},
+		},
+		DisableBestEffort: ll.DisableBestEffort,
+	}
+
+	for _, access := range ll.Ruleset.HandledAccessFS {
+		newAccessFS, err := landlock.ConvertStringToAccessFSSet(string(access))
+		if err != nil {
+			return nil, err
+		}
+		newConfig.Ruleset.HandledAccessFS |= newAccessFS
+	}
+
+	// Loop through all Landlock path beneath rule blocks and convert them to libcontainer format.
+	for _, rulePath := range ll.Rules.PathBeneath {
+		if len(rulePath.AllowedAccess) > 0 {
+			newRule := configs.RulePathBeneath{
+				AllowedAccess: 0,
+				Paths:         rulePath.Paths,
+			}
+
+			for _, access := range rulePath.AllowedAccess {
+				newAllowedAccess, err := landlock.ConvertStringToAccessFSSet(string(access))
+				if err != nil {
+					return nil, err
+				}
+				newRule.AllowedAccess |= newAllowedAccess
+			}
+
+			newConfig.Rules.PathBeneath = append(newConfig.Rules.PathBeneath, &newRule)
+		}
+	}
+
+	return newConfig, nil
 }
 
 func SetupSeccomp(config *specs.LinuxSeccomp) (*configs.Seccomp, error) {
