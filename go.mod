@@ -11,6 +11,7 @@ require (
 	github.com/cyphar/filepath-securejoin v0.2.3
 	github.com/docker/go-units v0.4.0
 	github.com/godbus/dbus/v5 v5.0.4
+	github.com/landlock-lsm/go-landlock v0.0.0-20210828133255-ec6c6b87a946
 	github.com/moby/sys/mountinfo v0.4.1
 	github.com/mrunalp/fileutils v0.5.0
 	github.com/opencontainers/runtime-spec v1.0.3-0.20210326190908-1c3f411f0417
@@ -22,6 +23,6 @@ require (
 	github.com/urfave/cli v1.22.1
 	github.com/vishvananda/netlink v1.1.0
 	golang.org/x/net v0.0.0-20201224014010-6772e930b67b
-	golang.org/x/sys v0.0.0-20210426230700-d19ff857e887
+	golang.org/x/sys v0.0.0-20210823070655-63515b42dcdf
 	google.golang.org/protobuf v1.27.1
 )

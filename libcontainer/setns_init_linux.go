@@ -13,6 +13,7 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer/apparmor"
 	"github.com/opencontainers/runc/libcontainer/keys"
+	"github.com/opencontainers/runc/libcontainer/landlock"
 	"github.com/opencontainers/runc/libcontainer/seccomp"
 	"github.com/opencontainers/runc/libcontainer/system"
 )
@@ -85,6 +86,12 @@ func (l *linuxSetnsInit) Init() error {
 	}
 	if err := apparmor.ApplyProfile(l.config.AppArmorProfile); err != nil {
 		return err
+	}
+	// `noNewPrivileges` must be enabled to use Landlock.
+	if l.config.Config.Landlock != nil && l.config.NoNewPrivileges {
+		if err := landlock.InitLandlock(l.config.Config.Landlock); err != nil {
+			return fmt.Errorf("unable to init Landlock: %w", err)
+		}
 	}
 	// Set seccomp as close to execve as possible, so as few syscalls take
 	// place afterward (reducing the amount of syscalls that users need to
