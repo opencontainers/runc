@@ -34,7 +34,7 @@ func TestNsenterValidPaths(t *testing.T) {
 	}
 
 	if err := cmd.Start(); err != nil {
-		t.Fatalf("nsenter failed to start %v", err)
+		t.Fatalf("nsenter failed to start: %v", err)
 	}
 	child.Close()
 
@@ -55,7 +55,7 @@ func TestNsenterValidPaths(t *testing.T) {
 	initWaiter(t, parent)
 
 	if err := cmd.Wait(); err != nil {
-		t.Fatalf("nsenter exits with a non-zero exit status")
+		t.Fatalf("nsenter error: %v", err)
 	}
 
 	reapChildren(t, parent)
@@ -76,7 +76,7 @@ func TestNsenterInvalidPaths(t *testing.T) {
 	}
 
 	if err := cmd.Start(); err != nil {
-		t.Fatal(err)
+		t.Fatalf("nsenter failed to start: %v", err)
 	}
 	child.Close()
 
@@ -115,7 +115,7 @@ func TestNsenterIncorrectPathType(t *testing.T) {
 	}
 
 	if err := cmd.Start(); err != nil {
-		t.Fatal(err)
+		t.Fatalf("nsenter failed to start: %v", err)
 	}
 	child.Close()
 
@@ -135,7 +135,7 @@ func TestNsenterIncorrectPathType(t *testing.T) {
 
 	initWaiter(t, parent)
 	if err := cmd.Wait(); err == nil {
-		t.Fatalf("nsenter exits with a zero exit status")
+		t.Fatalf("nsenter error: %v", err)
 	}
 }
 
@@ -158,7 +158,7 @@ func TestNsenterChildLogging(t *testing.T) {
 	}
 
 	if err := cmd.Start(); err != nil {
-		t.Fatalf("nsenter failed to start %v", err)
+		t.Fatalf("nsenter failed to start: %v", err)
 	}
 	child.Close()
 	logwrite.Close()
@@ -181,7 +181,7 @@ func TestNsenterChildLogging(t *testing.T) {
 
 	getLogs(t, logread)
 	if err := cmd.Wait(); err != nil {
-		t.Fatalf("nsenter exits with a non-zero exit status")
+		t.Fatalf("nsenter error: %v", err)
 	}
 
 	reapChildren(t, parent)
