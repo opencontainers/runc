@@ -11,6 +11,10 @@ on:
       - release-*
   pull_request:
 
+env:
+  # Don't ignore C warnings. Note that the output of "go env CGO_CFLAGS" by default is "-g -O2", so we keep them.
+  CGO_CFLAGS: -g -O2 -Werror
+
 jobs:
   test:
     runs-on: ubuntu-20.04
