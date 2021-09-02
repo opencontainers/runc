@@ -11,11 +11,3 @@ var (
 	ErrNotRunning = errors.New("container not running")
 	ErrNotPaused  = errors.New("container not paused")
 )
-
-type ConfigError struct {
-	details string
-}
-
-func (e *ConfigError) Error() string {
-	return "invalid configuration: " + e.details
-}
