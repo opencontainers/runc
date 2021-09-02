@@ -1,5 +1,3 @@
-// +build linux
-
 /*
  * Utility for testing Intel RDT operations.
  * Creates a mock of the Intel RDT "resource control" filesystem for the duration of the test.

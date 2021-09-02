@@ -1,5 +1,3 @@
-// +build linux
-
 // Package specconv implements conversion of specifications to libcontainer
 // configurations
 package specconv

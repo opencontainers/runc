@@ -1,5 +1,3 @@
-// +build linux
-
 package intelrdt
 
 type L3CacheInfo struct {
