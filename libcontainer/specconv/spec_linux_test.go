@@ -282,6 +282,10 @@ func TestSetupLandlock(t *testing.T) {
 				i, expectedPathRulesAccess[i], rule)
 		}
 	}
+
+	if landlock.DisableBestEffort {
+		t.Error("Wrong conversion for DisableBestEffort")
+	}
 }
 
 func TestSetupSeccomp(t *testing.T) {
