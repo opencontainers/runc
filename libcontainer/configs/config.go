@@ -9,6 +9,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/landlock-lsm/go-landlock/landlock"
 	"github.com/opencontainers/runc/libcontainer/devices"
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
@@ -90,7 +91,7 @@ type Landlock struct {
 
 // Ruleset identifies a set of rules (i.e., actions on objects) that need to be handled in Landlock.
 type Ruleset struct {
-	HandledAccessFS AccessFS `json:"handledAccessFS"`
+	HandledAccessFS landlock.AccessFSSet `json:"handledAccessFS"`
 }
 
 // Rules represents the security policies (i.e., actions allowed on objects) in Landlock.
@@ -99,34 +100,11 @@ type Rules struct {
 }
 
 // RulePathBeneath defines the file-hierarchy typed rule that grants the access rights specified by
-// `AllowedAccess` to the file hierarchies under the given `Paths` in Landlock.
+// AllowedAccess to the file hierarchies under the given Paths in Landlock.
 type RulePathBeneath struct {
-	AllowedAccess AccessFS `json:"allowedAccess"`
-	Paths         []string `json:"paths"`
+	AllowedAccess landlock.AccessFSSet `json:"allowedAccess"`
+	Paths         []string             `json:"paths"`
 }
-
-// AccessFS is taken upon ruleset and rule setup in Landlock.
-type AccessFS uint64
-
-// Landlock access rights for FS.
-//
-// Please see the full documentation at
-// https://www.kernel.org/doc/html/latest/userspace-api/landlock.html#access-rights.
-const (
-	Execute    AccessFS = (1 << 0)
-	WriteFile  AccessFS = (1 << 1)
-	ReadFile   AccessFS = (1 << 2)
-	ReadDir    AccessFS = (1 << 3)
-	RemoveDir  AccessFS = (1 << 4)
-	RemoveFile AccessFS = (1 << 5)
-	MakeChar   AccessFS = (1 << 6)
-	MakeDir    AccessFS = (1 << 7)
-	MakeReg    AccessFS = (1 << 8)
-	MakeSock   AccessFS = (1 << 9)
-	MakeFifo   AccessFS = (1 << 10)
-	MakeBlock  AccessFS = (1 << 11)
-	MakeSym    AccessFS = (1 << 12)
-)
 
 // TODO Windows. Many of these fields should be factored out into those parts
 // which are common across platforms, and those which are platform specific.
@@ -258,7 +236,7 @@ type Config struct {
 	RootlessCgroups bool `json:"rootless_cgroups,omitempty"`
 
 	// Landlock specifies the Landlock unprivileged access control settings for the container process.
-	// `noNewPrivileges` must be enabled to use Landlock.
+	// NoNewPrivileges must be enabled to use Landlock.
 	Landlock *Landlock `json:"landlock,omitempty"`
 }
 

@@ -1,5 +1,3 @@
-// +build linux
-
 package landlock
 
 import (
@@ -25,7 +23,7 @@ func InitLandlock(config *configs.Landlock) error {
 
 	var llConfig landlock.Config
 
-	ruleset := getAccess(config.Ruleset.HandledAccessFS)
+	ruleset := config.Ruleset.HandledAccessFS
 	// Panic on error when constructing the Landlock configuration using invalid config values.
 	if config.DisableBestEffort {
 		llConfig = landlock.MustConfig(ruleset)
@@ -34,32 +32,25 @@ func InitLandlock(config *configs.Landlock) error {
 	}
 
 	if err := llConfig.RestrictPaths(
-		getPathAccesses(config.Rules)...,
+		pathAccesses(config.Rules)...,
 	); err != nil {
-		return fmt.Errorf("Could not restrict paths: %v", err)
+		return fmt.Errorf("could not restrict paths: %w", err)
 	}
 
 	return nil
 }
 
-// Convert Libcontainer AccessFS to go-landlock AccessFSSet.
-func getAccess(access configs.AccessFS) landlock.AccessFSSet {
-	return landlock.AccessFSSet(access)
-}
-
 // Convert Libcontainer RulePathBeneath to go-landlock PathOpt.
-func getPathAccess(rule *configs.RulePathBeneath) landlock.PathOpt {
-	return landlock.PathAccess(
-		getAccess(rule.AllowedAccess),
-		rule.Paths...)
+func pathAccess(rule *configs.RulePathBeneath) landlock.PathOpt {
+	return landlock.PathAccess(rule.AllowedAccess, rule.Paths...)
 }
 
 // Convert Libcontainer Rules to an array of go-landlock PathOpt.
-func getPathAccesses(rules *configs.Rules) []landlock.PathOpt {
+func pathAccesses(rules *configs.Rules) []landlock.PathOpt {
 	pathAccesses := []landlock.PathOpt{}
 
 	for _, rule := range rules.PathBeneath {
-		opt := getPathAccess(rule)
+		opt := pathAccess(rule)
 		pathAccesses = append(pathAccesses, opt)
 	}
 

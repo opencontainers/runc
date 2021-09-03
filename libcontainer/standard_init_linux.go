@@ -232,7 +232,7 @@ func (l *linuxStandardInit) Init() error {
 	// https://github.com/torvalds/linux/blob/v4.9/fs/exec.c#L1290-L1318
 	_ = unix.Close(l.fifoFd)
 
-	// `noNewPrivileges` must be enabled to use Landlock.
+	// NoNewPrivileges must be enabled to use Landlock.
 	if l.config.Config.Landlock != nil && l.config.NoNewPrivileges {
 		if err := landlock.InitLandlock(l.config.Config.Landlock); err != nil {
 			return fmt.Errorf("unable to init Landlock: %w", err)

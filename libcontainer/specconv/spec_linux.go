@@ -320,14 +320,12 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 				Ambient:     spec.Process.Capabilities.Ambient,
 			}
 		}
-		if spec.Process.Landlock != nil {
-			landlock, err := SetupLandlock(spec.Process.Landlock)
-			if err != nil {
-				return nil, err
-			}
-			config.Landlock = landlock
-		}
 
+		landlock, err := SetupLandlock(spec.Process.Landlock)
+		if err != nil {
+			return nil, err
+		}
+		config.Landlock = landlock
 	}
 	createHooks(spec, config)
 	config.Version = specs.Version
@@ -873,11 +871,11 @@ func SetupLandlock(ll *specs.Landlock) (*configs.Landlock, error) {
 	}
 
 	for _, access := range ll.Ruleset.HandledAccessFS {
-		newAccessFs, err := landlock.ConvertStringToAccessFS(string(access))
+		newAccessFS, err := landlock.ConvertStringToAccessFSSet(string(access))
 		if err != nil {
 			return nil, err
 		}
-		newConfig.Ruleset.HandledAccessFS |= newAccessFs
+		newConfig.Ruleset.HandledAccessFS |= newAccessFS
 	}
 
 	// Loop through all Landlock path beneath rule blocks and convert them to libcontainer format.
@@ -889,7 +887,7 @@ func SetupLandlock(ll *specs.Landlock) (*configs.Landlock, error) {
 			}
 
 			for _, access := range rulePath.AllowedAccess {
-				newAllowedAccess, err := landlock.ConvertStringToAccessFS(string(access))
+				newAllowedAccess, err := landlock.ConvertStringToAccessFSSet(string(access))
 				if err != nil {
 					return nil, err
 				}
