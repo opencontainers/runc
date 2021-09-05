@@ -38,7 +38,8 @@ function build_project() {
 	tar xf "$tarball"
 	(
 		cd "libseccomp-${libseccomp_ver}"
-		./configure --prefix="$prefix" --enable-static --disable-shared
+		./configure --prefix="$prefix" --libdir="$prefix/lib" \
+			--enable-static --disable-shared
 		make install
 	)
 	mv "$tarball"{,.asc} "$builddir"
