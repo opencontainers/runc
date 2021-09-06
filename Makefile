@@ -38,8 +38,17 @@ recvtty sd-helper seccompagent:
 static:
 	$(GO_BUILD_STATIC) -o runc .
 
-release:
-	script/release.sh -r release/$(VERSION) -v $(VERSION)
+releaseall: RELEASE_ARGS := "-a arm64 -a armel -a armhf -a ppc64le"
+releaseall: release
+
+release: runcimage
+	$(CONTAINER_ENGINE) run $(CONTAINER_ENGINE_RUN_FLAGS) \
+		--rm -v $(CURDIR):/go/src/$(PROJECT) \
+		-e RELEASE_ARGS=$(RELEASE_ARGS) \
+		$(RUNC_IMAGE) make localrelease
+
+localrelease:
+	script/release.sh -r release/$(VERSION) -v $(VERSION) $(RELEASE_ARGS)
 
 dbuild: runcimage
 	$(CONTAINER_ENGINE) run $(CONTAINER_ENGINE_RUN_FLAGS) \
@@ -119,7 +128,9 @@ cfmt:
 	indent -linux -l120 -il0 -ppi2 -cp1 -T size_t -T jmp_buf $(C_SRC)
 
 shellcheck:
-	shellcheck tests/integration/*.bats tests/integration/*.sh tests/integration/*.bash tests/*.sh script/release.sh
+	shellcheck tests/integration/*.bats tests/integration/*.sh \
+		tests/integration/*.bash tests/*.sh \
+		script/release.sh script/seccomp.sh script/lib.sh
 	# TODO: add shellcheck for more sh files
 
 shfmt:
@@ -136,20 +147,9 @@ verify-dependencies: vendor
 		|| (echo -e "git status:\n $$(git status -- go.mod go.sum vendor/)\nerror: vendor/, go.mod and/or go.sum not up to date. Run \"make vendor\" to update"; exit 1) \
 		&& echo "all vendor files are up to date."
 
-cross: runcimage
-	$(CONTAINER_ENGINE) run $(CONTAINER_ENGINE_RUN_FLAGS) \
-		-e BUILDTAGS="$(BUILDTAGS)" --rm \
-		-v $(CURDIR):/go/src/$(PROJECT) \
-		$(RUNC_IMAGE) make localcross
-
-localcross:
-	CGO_ENABLED=1 GOARCH=arm GOARM=6 CC=arm-linux-gnueabi-gcc   $(GO_BUILD) -o runc-armel .
-	CGO_ENABLED=1 GOARCH=arm GOARM=7 CC=arm-linux-gnueabihf-gcc $(GO_BUILD) -o runc-armhf .
-	CGO_ENABLED=1 GOARCH=arm64 CC=aarch64-linux-gnu-gcc         $(GO_BUILD) -o runc-arm64 .
-	CGO_ENABLED=1 GOARCH=ppc64le CC=powerpc64le-linux-gnu-gcc   $(GO_BUILD) -o runc-ppc64le .
-
-.PHONY: runc all recvtty sd-helper seccompagent static release dbuild lint man runcimage \
+.PHONY: runc all recvtty sd-helper seccompagent static releaseall release \
+	localrelease dbuild lint man runcimage \
 	test localtest unittest localunittest integration localintegration \
 	rootlessintegration localrootlessintegration shell install install-bash \
 	install-man clean cfmt shfmt shellcheck \
-	vendor verify-dependencies cross localcross
+	vendor verify-dependencies
