@@ -1,5 +1,6 @@
 ARG GO_VERSION=1.16
 ARG BATS_VERSION=v1.3.0
+ARG LIBSECCOMP_VERSION=2.5.1
 
 FROM golang:${GO_VERSION}-buster
 ARG DEBIAN_FRONTEND=noninteractive
@@ -21,15 +22,10 @@ RUN echo 'deb https://download.opensuse.org/repositories/devel:/tools:/criu/Debi
         curl \
         gawk \
         gcc \
+        gperf \
         iptables \
         jq \
         kmod \
-        libseccomp-dev \
-        libseccomp-dev:arm64 \
-        libseccomp-dev:armel \
-        libseccomp-dev:armhf \
-        libseccomp-dev:ppc64el \
-        libseccomp2 \
         pkg-config \
         python-minimal \
         sshfs \
@@ -52,5 +48,11 @@ RUN cd /tmp \
     && git reset --hard "${BATS_VERSION}" \
     && ./install.sh /usr/local \
     && rm -rf /tmp/bats-core
+
+# install libseccomp
+ARG LIBSECCOMP_VERSION
+COPY script/* /tmp/script/
+RUN mkdir -p /usr/local/src/libseccomp \
+    && /tmp/script/seccomp.sh "$LIBSECCOMP_VERSION" /usr/local/src/libseccomp /usr/local/src/libseccomp/.env-file arm64 armel armhf ppc64le
 
 WORKDIR /go/src/github.com/opencontainers/runc
