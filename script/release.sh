@@ -21,28 +21,74 @@ set -e
 project="runc"
 root="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")/..")"
 
+# Sets the value of HOST (used in configure --host=$HOST)
+# based on the architecture specified.
+function setHOST() {
+	case $1 in
+	arm64)
+		HOST=aarch64-linux-gnu
+		;;
+	*)
+		echo "setHOST: unsupported architecture: $arch" >&2
+		exit 1
+		;;
+	esac
+}
+
+# Due to libseccomp being LGPL we must include its sources,
+# so download, install and build against it.
+# Parameters:
+#  $1 -- destination directory to put the source tarball in.
+#  $* -- additional architectures to cross-compile for
+#        (currently only arm64 is supported).
+function build_libseccomp() {
+	local ver="2.5.1"
+	local tar="libseccomp-${ver}.tar.gz"
+	local dest="$1"
+	shift
+
+	# Download.
+	wget "https://github.com/seccomp/libseccomp/releases/download/v${ver}/${tar}"{,.asc}
+
+	# Build and install natively.
+	tar xf "$tar"
+	pushd "libseccomp-${ver}"
+	local prefix
+	prefix="$(mktemp -d)"
+	./configure \
+		--prefix="$prefix" --libdir="$prefix/lib" \
+		--enable-static --disable-shared
+	LIBSECCOMP_PREFIX="$prefix"
+
+	make install
+	make clean
+
+	# Build and install for additional architectures.
+	local arch
+	for arch in "$@"; do
+		prefix="$(mktemp -d)"
+		setHOST "$arch"
+		./configure --host "$HOST" \
+			--prefix="$prefix" --libdir="$prefix/lib" \
+			--enable-static --disable-shared
+		make install
+		make clean
+		eval "LIBSECCOMP_PREFIX_${arch}=$prefix"
+	done
+
+	# Place the source tarball to $dest.
+	popd
+	mv "$tar"{,.asc} "$dest"
+}
+
 # This function takes an output path as an argument, where the built
 # (preferably static) binary should be placed.
 function build_project() {
 	local builddir
 	builddir="$(dirname "$1")"
+	shift
 
-	# Due to libseccomp being LGPL we must include its sources,
-	# so download, install and build against it.
-
-	local libseccomp_ver='2.5.1'
-	local tarball="libseccomp-${libseccomp_ver}.tar.gz"
-	local prefix
-	prefix="$(mktemp -d)"
-	wget "https://github.com/seccomp/libseccomp/releases/download/v${libseccomp_ver}/${tarball}"{,.asc}
-	tar xf "$tarball"
-	(
-		cd "libseccomp-${libseccomp_ver}"
-		./configure --prefix="$prefix" --libdir="$prefix/lib" \
-			--enable-static --disable-shared
-		make install
-	)
-	mv "$tarball"{,.asc} "$builddir"
+	build_libseccomp "$builddir" "$@"
 
 	# For reproducible builds, add these to EXTRA_LDFLAGS:
 	#  -w to disable DWARF generation;
@@ -52,10 +98,25 @@ function build_project() {
 	# Add -a to go build flags to make sure it links against
 	# the provided libseccomp, not the system one (otherwise
 	# it can reuse cached pkg-config results).
-	make -C "$root" PKG_CONFIG_PATH="${prefix}/lib/pkgconfig" COMMIT_NO= EXTRA_FLAGS="-a" EXTRA_LDFLAGS="${ldflags}" static
-	rm -rf "$prefix"
+	local make_args=(COMMIT_NO= EXTRA_FLAGS="-a" EXTRA_LDFLAGS="${ldflags}" static)
+
+	# Build natively.
+	make -C "$root" PKG_CONFIG_PATH="${LIBSECCOMP_PREFIX}/lib/pkgconfig" "${make_args[@]}"
 	strip "$root/$project"
-	mv "$root/$project" "$1"
+	mv "$root/$project" "$builddir/$project.$native_arch"
+	rm -rf "${LIBSECCOMP_PREFIX}"
+
+	# Cross-build for for other architectures.
+	local prefix arch
+	for arch in "$@"; do
+		setHOST "$arch"
+		eval prefix=\$"LIBSECCOMP_PREFIX_$arch"
+		GOARCH=$arch CC=$HOST-gcc make -C "$root" \
+			PKG_CONFIG_PATH="${prefix}/lib/pkgconfig" "${make_args[@]}"
+		"$HOST-strip" "$root/$project"
+		mv "$root/$project" "$builddir/$project.$arch"
+		rm -rf "$prefix"
+	done
 }
 
 # End of the easy-to-configure portion.
@@ -63,7 +124,7 @@ function build_project() {
 
 # Print usage information.
 function usage() {
-	echo "usage: release.sh [-S <gpg-key-id>] [-c <commit-ish>] [-r <release-dir>] [-v <version>]" >&2
+	echo "usage: release.sh [-S <gpg-key-id>] [-c <commit-ish>] [-r <release-dir>] [-v <version>] [-a <cross-arch>]" >&2
 	exit 1
 }
 
@@ -91,7 +152,9 @@ commit="HEAD"
 version=""
 releasedir=""
 hashcmd=""
-while getopts "S:c:r:v:h:" opt; do
+declare -a add_arches
+
+while getopts "S:c:r:v:h:a:" opt; do
 	case "$opt" in
 	S)
 		keyid="$OPTARG"
@@ -108,6 +171,9 @@ while getopts "S:c:r:v:h:" opt; do
 	h)
 		hashcmd="$OPTARG"
 		;;
+	a)
+		add_arches+=("$OPTARG")
+		;;
 	:)
 		echo "Missing argument: -$OPTARG" >&2
 		usage
@@ -122,7 +188,9 @@ done
 version="${version:-$(<"$root/VERSION")}"
 releasedir="${releasedir:-release/$version}"
 hashcmd="${hashcmd:-sha256sum}"
-goarch="$(go env GOARCH || echo "amd64")"
+native_arch="$(go env GOARCH || echo "amd64")"
+# Suffixes of files to checksum/sign.
+suffixes=("$native_arch" "${add_arches[@]}" tar.xz)
 
 log "creating $project release in '$releasedir'"
 log "  version: $version"
@@ -137,15 +205,16 @@ set -x
 rm -rf "$releasedir" && mkdir -p "$releasedir"
 
 # Build project.
-build_project "$releasedir/$project.$goarch"
+build_project "$releasedir/$project" "${add_arches[@]}"
 
 # Generate new archive.
 git archive --format=tar --prefix="$project-$version/" "$commit" | xz >"$releasedir/$project.tar.xz"
 
-# Generate sha256 checksums for both.
+# Generate sha256 checksums for binaries and libseccomp tarball.
 (
 	cd "$releasedir"
-	"$hashcmd" "$project".{"$goarch",tar.xz} >"$project.$hashcmd"
+	# Add $project. prefix to all suffixes.
+	"$hashcmd" "${suffixes[@]/#/$project.}" >"$project.$hashcmd"
 )
 
 # Set up the gpgflags.
@@ -154,8 +223,9 @@ gpgflags=()
 gpg_cansign "${gpgflags[@]}" || bail "Could not find suitable GPG key, skipping signing step."
 
 # Sign everything.
-gpg "${gpgflags[@]}" --detach-sign --armor "$releasedir/$project.$goarch"
-gpg "${gpgflags[@]}" --detach-sign --armor "$releasedir/$project.tar.xz"
+for sfx in "${suffixes[@]}"; do
+	gpg "${gpgflags[@]}" --detach-sign --armor "$releasedir/$project.$sfx"
+done
 gpg "${gpgflags[@]}" --clear-sign --armor \
 	--output "$releasedir/$project.$hashcmd"{.tmp,} &&
 	mv "$releasedir/$project.$hashcmd"{.tmp,}

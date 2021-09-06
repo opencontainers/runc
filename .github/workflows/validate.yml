@@ -172,9 +172,9 @@ jobs:
     - name: install deps
       run: |
         sudo apt -qq update
-        sudo apt -qq install gperf
+        sudo apt -qq install gperf gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu
     - name: make release
-      run: make release
+      run: make RELEASE_ARGS="-a arm64" release
     - name: upload artifacts
       uses: actions/upload-artifact@v2
       with:

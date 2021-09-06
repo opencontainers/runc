@@ -44,7 +44,7 @@ static:
 	$(GO_BUILD_STATIC) -o contrib/cmd/sd-helper/sd-helper ./contrib/cmd/sd-helper
 
 release:
-	script/release.sh -r release/$(VERSION) -v $(VERSION)
+	script/release.sh -r release/$(VERSION) -v $(VERSION) $(RELEASE_ARGS)
 
 dbuild: runcimage
 	$(CONTAINER_ENGINE) run $(CONTAINER_ENGINE_RUN_FLAGS) \
