@@ -22,6 +22,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs/validate"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runc/libcontainer/utils"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -346,10 +347,25 @@ func (l *LinuxFactory) StartInitialization() (err error) {
 	envInitPipe := os.Getenv("_LIBCONTAINER_INITPIPE")
 	pipefd, err := strconv.Atoi(envInitPipe)
 	if err != nil {
-		return fmt.Errorf("unable to convert _LIBCONTAINER_INITPIPE: %w", err)
+		err = fmt.Errorf("unable to convert _LIBCONTAINER_INITPIPE: %w", err)
+		logrus.Error(err)
+		return err
 	}
 	pipe := os.NewFile(uintptr(pipefd), "pipe")
 	defer pipe.Close()
+
+	defer func() {
+		// We have an error during the initialization of the container's init,
+		// send it back to the parent process in the form of an initError.
+		if werr := utils.WriteJSON(pipe, syncT{procError}); werr != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return
+		}
+		if werr := utils.WriteJSON(pipe, &initError{Message: err.Error()}); werr != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return
+		}
+	}()
 
 	// Only init processes have FIFOFD.
 	fifofd := -1
@@ -382,18 +398,6 @@ func (l *LinuxFactory) StartInitialization() (err error) {
 	// specific env vars.
 	os.Clearenv()
 
-	defer func() {
-		// We have an error during the initialization of the container's init,
-		// send it back to the parent process in the form of an initError.
-		if werr := utils.WriteJSON(pipe, syncT{procError}); werr != nil {
-			fmt.Fprintln(os.Stderr, err)
-			return
-		}
-		if werr := utils.WriteJSON(pipe, &initError{Message: err.Error()}); werr != nil {
-			fmt.Fprintln(os.Stderr, err)
-			return
-		}
-	}()
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("panic from initialization: %w, %v", e, string(debug.Stack()))
