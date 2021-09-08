@@ -30,10 +30,13 @@ GO_BUILD_STATIC := CGO_ENABLED=1 $(GO) build -trimpath $(EXTRA_FLAGS) -tags "$(B
 runc:
 	$(GO_BUILD) -o runc .
 
-all: runc recvtty sd-helper
+all: runc recvtty sd-helper seccompagent
 
 recvtty sd-helper:
 	$(GO_BUILD) -o contrib/cmd/$@/$@ ./contrib/cmd/$@
+
+seccompagent:
+	$(GO_BUILD) -o contrib/cmd/seccompagent/seccompagent ./contrib/cmd/seccompagent
 
 static:
 	$(GO_BUILD_STATIC) -o runc .

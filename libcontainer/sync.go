@@ -22,16 +22,22 @@ type syncType string
 //
 // procReady   --> [final setup]
 //             <-- procRun
+//
+// procSeccomp --> [pick up seccomp fd with pidfd_getfd()]
+//             <-- procSeccompDone
 const (
-	procError  syncType = "procError"
-	procReady  syncType = "procReady"
-	procRun    syncType = "procRun"
-	procHooks  syncType = "procHooks"
-	procResume syncType = "procResume"
+	procError       syncType = "procError"
+	procReady       syncType = "procReady"
+	procRun         syncType = "procRun"
+	procHooks       syncType = "procHooks"
+	procResume      syncType = "procResume"
+	procSeccomp     syncType = "procSeccomp"
+	procSeccompDone syncType = "procSeccompDone"
 )
 
 type syncT struct {
 	Type syncType `json:"type"`
+	Fd   int      `json:"fd"`
 }
 
 // initError is used to wrap errors for passing them via JSON,
@@ -47,7 +53,16 @@ func (i initError) Error() string {
 // writeSync is used to write to a synchronisation pipe. An error is returned
 // if there was a problem writing the payload.
 func writeSync(pipe io.Writer, sync syncType) error {
-	return utils.WriteJSON(pipe, syncT{sync})
+	return writeSyncWithFd(pipe, sync, -1)
+}
+
+// writeSyncWithFd is used to write to a synchronisation pipe. An error is
+// returned if there was a problem writing the payload.
+func writeSyncWithFd(pipe io.Writer, sync syncType, fd int) error {
+	if err := utils.WriteJSON(pipe, syncT{sync, fd}); err != nil {
+		return fmt.Errorf("writing syncT %q: %w", string(sync), err)
+	}
+	return nil
 }
 
 // readSync is used to read from a synchronisation pipe. An error is returned
