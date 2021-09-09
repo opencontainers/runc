@@ -31,7 +31,7 @@ source "$root/script/lib.sh"
 #   $2 -- native architecture (a .suffix for a native binary file name).
 #   $@ -- additional architectures to cross-build for.
 function build_project() {
-	local libseccomp_version=2.5.1
+	local libseccomp_version=2.5.2
 	local builddir
 	builddir="$(dirname "$1")"
 	shift
