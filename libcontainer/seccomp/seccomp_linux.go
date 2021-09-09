@@ -16,13 +16,8 @@ import (
 )
 
 var (
-	actAllow  = libseccomp.ActAllow
-	actTrap   = libseccomp.ActTrap
-	actKill   = libseccomp.ActKill
-	actTrace  = libseccomp.ActTrace.SetReturnCode(int16(unix.EPERM))
-	actLog    = libseccomp.ActLog
-	actErrno  = libseccomp.ActErrno.SetReturnCode(int16(unix.EPERM))
-	actNotify = libseccomp.ActNotify
+	actTrace = libseccomp.ActTrace.SetReturnCode(int16(unix.EPERM))
+	actErrno = libseccomp.ActErrno.SetReturnCode(int16(unix.EPERM))
 )
 
 const (
@@ -71,7 +66,7 @@ func InitSeccomp(config *configs.Seccomp) (int, error) {
 	}
 
 	// See comment on why write is not allowed. The same reason applies, as this can mean handling write too.
-	if defaultAction == actNotify {
+	if defaultAction == libseccomp.ActNotify {
 		return -1, errors.New("SCMP_ACT_NOTIFY cannot be used as default action")
 	}
 
@@ -119,25 +114,25 @@ func InitSeccomp(config *configs.Seccomp) (int, error) {
 func getAction(act configs.Action, errnoRet *uint) (libseccomp.ScmpAction, error) {
 	switch act {
 	case configs.Kill:
-		return actKill, nil
+		return libseccomp.ActKill, nil
 	case configs.Errno:
 		if errnoRet != nil {
 			return libseccomp.ActErrno.SetReturnCode(int16(*errnoRet)), nil
 		}
 		return actErrno, nil
 	case configs.Trap:
-		return actTrap, nil
+		return libseccomp.ActTrap, nil
 	case configs.Allow:
-		return actAllow, nil
+		return libseccomp.ActAllow, nil
 	case configs.Trace:
 		if errnoRet != nil {
 			return libseccomp.ActTrace.SetReturnCode(int16(*errnoRet)), nil
 		}
 		return actTrace, nil
 	case configs.Log:
-		return actLog, nil
+		return libseccomp.ActLog, nil
 	case configs.Notify:
-		return actNotify, nil
+		return libseccomp.ActNotify, nil
 	default:
 		return libseccomp.ActInvalid, errors.New("invalid action, cannot use in rule")
 	}
