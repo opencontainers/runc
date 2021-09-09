@@ -138,7 +138,7 @@
 			"defaultAction": "SCMP_ACT_ALLOW",
 			"listenerPath": "/run/seccomp-agent.socket",
 			"listenerMetadata": "foo",
-			"architectures": [ "SCMP_ARCH_X86", "SCMP_ARCH_X32" ],
+			"architectures": [ "SCMP_ARCH_X86", "SCMP_ARCH_X32", "SCMP_ARCH_X86_64" ],
 			"syscalls": [
 				{
 					"names": [ "chmod", "fchmod", "fchmodat", "mkdir" ],
