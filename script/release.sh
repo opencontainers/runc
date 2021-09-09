@@ -42,7 +42,7 @@ function setHOST() {
 #  $* -- additional architectures to cross-compile for
 #        (currently only arm64 is supported).
 function build_libseccomp() {
-	local ver="2.5.1"
+	local ver="2.5.2"
 	local tar="libseccomp-${ver}.tar.gz"
 	local dest="$1"
 	shift
