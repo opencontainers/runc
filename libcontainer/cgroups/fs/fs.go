@@ -191,7 +191,7 @@ func (m *Manager) Set(r *configs.Resources) error {
 			if path == "" {
 				// We never created a path for this cgroup, so we cannot set
 				// limits for it (though we have already tried at this point).
-				return fmt.Errorf("cannot set %s limit: container could not join or create cgroup", sys.Name())
+				return fmt.Errorf("cannot set %s limit: container could not join or create cgroup, and the error is %w", sys.Name(), err)
 			}
 			return err
 		}

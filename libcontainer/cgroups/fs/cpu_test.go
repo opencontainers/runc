@@ -45,6 +45,7 @@ func TestCpuSetBandWidth(t *testing.T) {
 	const (
 		quotaBefore     = 8000
 		quotaAfter      = 5000
+		burstBefore     = 2000
 		periodBefore    = 10000
 		periodAfter     = 7000
 		rtRuntimeBefore = 8000
@@ -52,9 +53,11 @@ func TestCpuSetBandWidth(t *testing.T) {
 		rtPeriodBefore  = 10000
 		rtPeriodAfter   = 7000
 	)
+	burstAfter := uint64(1000)
 
 	writeFileContents(t, path, map[string]string{
 		"cpu.cfs_quota_us":  strconv.Itoa(quotaBefore),
+		"cpu.cfs_burst_us":  strconv.Itoa(burstBefore),
 		"cpu.cfs_period_us": strconv.Itoa(periodBefore),
 		"cpu.rt_runtime_us": strconv.Itoa(rtRuntimeBefore),
 		"cpu.rt_period_us":  strconv.Itoa(rtPeriodBefore),
@@ -62,6 +65,7 @@ func TestCpuSetBandWidth(t *testing.T) {
 
 	r := &configs.Resources{
 		CpuQuota:     quotaAfter,
+		CpuBurst:     &burstAfter,
 		CpuPeriod:    periodAfter,
 		CpuRtRuntime: rtRuntimeAfter,
 		CpuRtPeriod:  rtPeriodAfter,
@@ -77,6 +81,14 @@ func TestCpuSetBandWidth(t *testing.T) {
 	}
 	if quota != quotaAfter {
 		t.Fatal("Got the wrong value, set cpu.cfs_quota_us failed.")
+	}
+
+	burst, err := fscommon.GetCgroupParamUint(path, "cpu.cfs_burst_us")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if burst != burstAfter {
+		t.Fatal("Got the wrong value, set cpu.cfs_burst_us failed.")
 	}
 
 	period, err := fscommon.GetCgroupParamUint(path, "cpu.cfs_period_us")
