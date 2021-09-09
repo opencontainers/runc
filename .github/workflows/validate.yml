@@ -173,6 +173,8 @@ jobs:
       run: |
         sudo apt -qq update
         sudo apt -qq install gperf gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu
+    - name: install go
+      uses: actions/setup-go@v2
     - name: make release
       run: make RELEASE_ARGS="-a arm64" release
     - name: upload artifacts
