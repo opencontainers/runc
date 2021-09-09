@@ -21,14 +21,14 @@ func InitLandlock(config *configs.Landlock) error {
 		return errors.New("cannot initialize Landlock - nil config passed")
 	}
 
-	var llConfig landlock.Config
-
 	ruleset := config.Ruleset.HandledAccessFS
-	// Panic on error when constructing the Landlock configuration using invalid config values.
-	if config.DisableBestEffort {
-		llConfig = landlock.MustConfig(ruleset)
-	} else {
-		llConfig = landlock.MustConfig(ruleset).BestEffort()
+	llConfig, err := landlock.NewConfig(ruleset)
+	if err != nil {
+		return fmt.Errorf("could not create ruleset: %w", err)
+	}
+
+	if !config.DisableBestEffort {
+		*llConfig = llConfig.BestEffort()
 	}
 
 	if err := llConfig.RestrictPaths(

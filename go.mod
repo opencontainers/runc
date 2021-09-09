@@ -11,7 +11,7 @@ require (
 	github.com/cyphar/filepath-securejoin v0.2.3
 	github.com/docker/go-units v0.4.0
 	github.com/godbus/dbus/v5 v5.0.4
-	github.com/landlock-lsm/go-landlock v0.0.0-20210828133255-ec6c6b87a946
+	github.com/landlock-lsm/go-landlock v0.0.0-20210908180355-c56710719da4
 	github.com/moby/sys/mountinfo v0.4.1
 	github.com/mrunalp/fileutils v0.5.0
 	github.com/opencontainers/runtime-spec v1.0.3-0.20210326190908-1c3f411f0417
