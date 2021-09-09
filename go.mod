@@ -10,7 +10,7 @@ require (
 	github.com/coreos/go-systemd/v22 v22.3.2
 	github.com/cyphar/filepath-securejoin v0.2.3
 	github.com/docker/go-units v0.4.0
-	github.com/godbus/dbus/v5 v5.0.4
+	github.com/godbus/dbus/v5 v5.0.5
 	github.com/moby/sys/mountinfo v0.4.1
 	github.com/mrunalp/fileutils v0.5.0
 	github.com/opencontainers/runtime-spec v1.0.3-0.20210326190908-1c3f411f0417
