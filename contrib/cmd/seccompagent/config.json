@@ -9,7 +9,7 @@
 		"args": [
 			"sh",
 			"-c",
-			"set -x; cd /dev/shm; mkdir test-dir; touch test-file; chmod 777 test-file; ls -l /dev/shm; echo \"Note the agent added a suffix for the directory name and chmod fails\" "
+			"set -x; cd /dev/shm; mkdir test-dir; touch test-file; chmod 777 test-file; stat /dev/shm/test-dir-foo && ls -l /dev/shm && echo \"Note the agent added a suffix for the directory name and chmod fails\" "
 		],
 		"env": [
 			"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
