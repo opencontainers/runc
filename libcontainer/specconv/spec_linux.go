@@ -737,6 +737,9 @@ func CreateCgroupConfig(opts *CreateOpts, defaultDevs []*devices.Device) (*confi
 				if r.CPU.Quota != nil {
 					c.Resources.CpuQuota = *r.CPU.Quota
 				}
+				if r.CPU.Burst != nil {
+					c.Resources.CpuBurst = *r.CPU.Burst
+				}
 				if r.CPU.Period != nil {
 					c.Resources.CpuPeriod = *r.CPU.Period
 				}

@@ -84,6 +84,23 @@ func (s *CpuGroup) Set(path string, r *configs.Resources) error {
 			period = ""
 		}
 	}
+
+	var burst string
+	burst = strconv.FormatUint(r.CpuBurst, 10)
+	if err := cgroups.WriteFile(path, "cpu.cfs_burst_us", burst); err != nil {
+		// Sometimes when the burst to be set is larger
+		// than the current one, it is rejected by the kernel
+		// (EINVAL) as old_quota/new_burst exceeds the parent
+		// cgroup quota limit. If this happens and the quota is
+		// going to be set, ignore the error for now and retry
+		// after setting the quota.
+		if !errors.Is(err, unix.EINVAL) || r.CpuQuota == 0 {
+			return err
+		}
+	} else {
+		burst = ""
+	}
+
 	if r.CpuQuota != 0 {
 		if err := cgroups.WriteFile(path, "cpu.cfs_quota_us", strconv.FormatInt(r.CpuQuota, 10)); err != nil {
 			return err
@@ -93,7 +110,13 @@ func (s *CpuGroup) Set(path string, r *configs.Resources) error {
 				return err
 			}
 		}
+		if burst != "" {
+			if err := cgroups.WriteFile(path, "cpu.cfs_burst_us", burst); err != nil {
+				return err
+			}
+		}
 	}
+
 	return s.SetRtSched(path, r)
 }
 

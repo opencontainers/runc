@@ -28,6 +28,7 @@ In case **-r** is used, the JSON format is like this:
 			"cpu": {
 				"shares": 0,
 				"quota": 0,
+				"burst": 0,
 				"period": 0,
 				"realtimeRuntime": 0,
 				"realtimePeriod": 0,
@@ -52,6 +53,9 @@ stdin. If this option is used, all other options are ignored.
 
 **--cpu-quota** _num_
 : Set CPU usage limit within a given period (in microseconds).
+
+**--cpu-burst** _num_
+: Set CPU burst limit within a given period (in microseconds).
 
 **--cpu-rt-period** _num_
 : Set CPU realtime period to be used for hardcapping (in microseconds).
