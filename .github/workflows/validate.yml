@@ -21,7 +21,7 @@ jobs:
       - uses: golangci/golangci-lint-action@v2
         with:
           # must be specified without patch version
-          version: v1.40
+          version: v1.42
 
   compile-buildtags:
     runs-on: ubuntu-20.04

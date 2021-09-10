@@ -1,4 +1,5 @@
-// +build !linux !cgo !seccomp
+//go:build !linux || !seccomp
+// +build !linux !seccomp
 
 package main
 
