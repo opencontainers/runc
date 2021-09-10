@@ -36,6 +36,9 @@ github.com/golang/protobuf/proto
 # github.com/moby/sys/mountinfo v0.4.1
 ## explicit
 github.com/moby/sys/mountinfo
+# github.com/moby/sys/signal v0.5.0
+## explicit
+github.com/moby/sys/signal
 # github.com/mrunalp/fileutils v0.5.0
 ## explicit
 github.com/mrunalp/fileutils
@@ -74,7 +77,7 @@ github.com/vishvananda/netns
 # golang.org/x/net v0.0.0-20201224014010-6772e930b67b
 ## explicit
 golang.org/x/net/bpf
-# golang.org/x/sys v0.0.0-20210426230700-d19ff857e887
+# golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c
 ## explicit
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix

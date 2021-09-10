@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	"strconv"
-	"strings"
 
+	"github.com/moby/sys/signal"
 	"github.com/urfave/cli"
 	"golang.org/x/sys/unix"
 )
@@ -54,15 +54,15 @@ signal to the init process of the "ubuntu01" container:
 }
 
 func parseSignal(rawSignal string) (unix.Signal, error) {
+	// allow 0 as a valid signal
 	s, err := strconv.Atoi(rawSignal)
 	if err == nil {
 		return unix.Signal(s), nil
 	}
-	sig := strings.ToUpper(rawSignal)
-	if !strings.HasPrefix(sig, "SIG") {
-		sig = "SIG" + sig
+	signal, err := signal.ParseSignal(rawSignal)
+	if err != nil {
+		return -1, err
 	}
-	signal := unix.SignalNum(sig)
 	if signal == 0 {
 		return -1, fmt.Errorf("unknown signal %q", rawSignal)
 	}
