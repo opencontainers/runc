@@ -3,7 +3,7 @@ module github.com/opencontainers/runc
 go 1.15
 
 require (
-	github.com/bits-and-blooms/bitset v1.2.0
+	github.com/bits-and-blooms/bitset v1.2.1
 	github.com/checkpoint-restore/go-criu/v5 v5.0.0
 	github.com/cilium/ebpf v0.6.2
 	github.com/containerd/console v1.0.3

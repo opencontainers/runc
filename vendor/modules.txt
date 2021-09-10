@@ -1,4 +1,4 @@
-# github.com/bits-and-blooms/bitset v1.2.0
+# github.com/bits-and-blooms/bitset v1.2.1
 ## explicit
 github.com/bits-and-blooms/bitset
 # github.com/checkpoint-restore/go-criu/v5 v5.0.0
