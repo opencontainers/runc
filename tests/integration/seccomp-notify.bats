@@ -198,3 +198,19 @@ function scmp_act_notify_template() {
 	runc run test_busybox
 	[ "$status" -eq 0 ]
 }
+
+# Check that example config in the seccomp agent dir works.
+@test "runc run [seccomp] (SCMP_ACT_NOTIFY example config)" {
+	# Run the script used in the seccomp agent example.
+	# This takes a bare config.json and modifies it to run an example.
+	"${INTEGRATION_ROOT}/../../contrib/cmd/seccompagent/gen-seccomp-example-cfg.sh"
+
+	# The listenerPath the previous command uses is the default used by the
+	# seccomp agent. However, inside bats the socket is in a bats tmp dir.
+	update_config '.linux.seccomp.listenerPath = "'"$SECCCOMP_AGENT_SOCKET"'"'
+
+	runc run test_busybox
+
+	[ "$status" -eq 0 ]
+	[[ "$output" == *"chmod:"*"test-file"*"No medium found"* ]]
+}
