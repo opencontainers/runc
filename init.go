@@ -17,7 +17,7 @@ func init() {
 		runtime.GOMAXPROCS(1)
 		runtime.LockOSThread()
 
-		logLevel, err := logrus.ParseLevel(os.Getenv("_LIBCONTAINER_LOGLEVEL"))
+		level, err := strconv.Atoi(os.Getenv("_LIBCONTAINER_LOGLEVEL"))
 		if err != nil {
 			panic(err)
 		}
@@ -27,7 +27,7 @@ func init() {
 			panic(err)
 		}
 
-		logrus.SetLevel(logLevel)
+		logrus.SetLevel(logrus.Level(level))
 		logrus.SetOutput(os.NewFile(uintptr(logPipeFd), "logpipe"))
 		logrus.SetFormatter(new(logrus.JSONFormatter))
 		logrus.Debug("child process in init()")

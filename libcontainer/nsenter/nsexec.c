@@ -89,14 +89,21 @@ struct nlconfig_t {
 	size_t gidmappath_len;
 };
 
-#define PANIC   "panic"
-#define FATAL   "fatal"
-#define ERROR   "error"
-#define WARNING "warning"
-#define INFO    "info"
-#define DEBUG   "debug"
+/*
+ * Log levels are the same as in logrus.
+ */
+#define PANIC   0
+#define FATAL   1
+#define ERROR   2
+#define WARNING 3
+#define INFO    4
+#define DEBUG   5
+#define TRACE   6
+
+static const char *level_str[] = { "panic", "fatal", "error", "warning", "info", "debug", "trace" };
 
 static int logfd = -1;
+static int loglevel = DEBUG;
 
 /*
  * List of netlink message types sent to us as part of bootstrapping the init.
@@ -134,13 +141,13 @@ int setns(int fd, int nstype)
 }
 #endif
 
-static void write_log(const char *level, const char *format, ...)
+static void write_log(int level, const char *format, ...)
 {
 	char *message = NULL, *stage = NULL, *json = NULL;
 	va_list args;
 	int ret;
 
-	if (logfd < 0 || level == NULL)
+	if (logfd < 0 || level > loglevel)
 		goto out;
 
 	va_start(args, format);
@@ -162,7 +169,8 @@ static void write_log(const char *level, const char *format, ...)
 		goto out;
 	}
 
-	ret = asprintf(&json, "{\"level\":\"%s\", \"msg\": \"%s[%d]: %s\"}\n", level, stage, getpid(), message);
+	ret = asprintf(&json, "{\"level\":\"%s\", \"msg\": \"%s[%d]: %s\"}\n",
+		       level_str[level], stage, getpid(), message);
 	if (ret < 0) {
 		json = NULL;
 		goto out;
@@ -182,10 +190,14 @@ out:
 /* XXX: This is ugly. */
 static int syncfd = -1;
 
-#define bail(fmt, ...)                                       \
-	do {                                                       \
-		write_log(FATAL, fmt ": %m", ##__VA_ARGS__); \
-		exit(1);                                                 \
+#define bail(fmt, ...)                                               \
+	do {                                                         \
+		if (logfd < 0)                                       \
+			fprintf(stderr, "FATAL: " fmt ": %m\n",      \
+				##__VA_ARGS__);                      \
+		else                                                 \
+			write_log(FATAL, fmt ": %m", ##__VA_ARGS__); \
+		exit(1);                                             \
 	} while(0)
 
 static int write_file(char *data, size_t data_len, char *pathfmt, ...)
@@ -376,41 +388,55 @@ static int clone_parent(jmp_buf *env, int jmpval)
 }
 
 /*
- * Gets the init pipe fd from the environment, which is used to read the
- * bootstrap data and tell the parent what the new pid is after we finish
- * setting up the environment.
+ * Returns an environment variable value as a non-negative integer, or -ENOENT
+ * if the variable was not found or has an empty value.
+ *
+ * If the value can not be converted to an integer, or the result is out of
+ * range, the function bails out.
  */
-static int initpipe(void)
+static int getenv_int(const char *name)
 {
-	int pipenum;
-	char *initpipe, *endptr;
+	char *val, *endptr;
+	int ret;
 
-	initpipe = getenv("_LIBCONTAINER_INITPIPE");
-	if (initpipe == NULL || *initpipe == '\0')
-		return -1;
+	val = getenv(name);
+	/* Treat empty value as unset variable. */
+	if (val == NULL || *val == '\0')
+		return -ENOENT;
 
-	pipenum = strtol(initpipe, &endptr, 10);
-	if (*endptr != '\0')
-		bail("unable to parse _LIBCONTAINER_INITPIPE");
+	ret = strtol(val, &endptr, 10);
+	if (val == endptr || *endptr != '\0')
+		bail("unable to parse %s=%s", name, val);
+	/*
+	 * Sanity check: this must be a small non-negative number.
+	 * Practically, we pass two fds (3 and 4) and a log level,
+	 * for which the maximum is 6 (TRACE).
+	 * */
+	if (ret < 0 || ret > TRACE)
+		bail("bad value for %s=%s (%d)", name, val, ret);
 
-	return pipenum;
+	return ret;
 }
 
+/*
+ * Sets up logging by getting log fd and log level from the environment,
+ * if available.
+ */
 static void setup_logpipe(void)
 {
-	char *logpipe, *endptr;
+	int i;
 
-	logpipe = getenv("_LIBCONTAINER_LOGPIPE");
-	if (logpipe == NULL || *logpipe == '\0') {
+	i = getenv_int("_LIBCONTAINER_LOGPIPE");
+	if (i < 0) {
+		/* We are not runc init, or log pipe was not provided. */
 		return;
 	}
+	logfd = i;
 
-	logfd = strtol(logpipe, &endptr, 10);
-	if (logpipe == endptr || *endptr != '\0') {
-		fprintf(stderr, "unable to parse _LIBCONTAINER_LOGPIPE, value: %s\n", logpipe);
-		/* It is too early to use bail */
-		exit(1);
-	}
+	i = getenv_int("_LIBCONTAINER_LOGLEVEL");
+	if (i < 0)
+		return;
+	loglevel = i;
 }
 
 /* Returns the clone(2) flag for a namespace, given the name of a namespace. */
@@ -621,12 +647,15 @@ void nsexec(void)
 	setup_logpipe();
 
 	/*
-	 * If we don't have an init pipe, just return to the go routine.
-	 * We'll only get an init pipe for start or exec.
+	 * Get the init pipe fd from the environment. The init pipe is used to
+	 * read the bootstrap data and tell the parent what the new pids are
+	 * after the setup is done.
 	 */
-	pipenum = initpipe();
-	if (pipenum == -1)
+	pipenum = getenv_int("_LIBCONTAINER_INITPIPE");
+	if (pipenum < 0) {
+		/* We are not a runc init. Just return to go runtime. */
 		return;
+	}
 
 	/*
 	 * We need to re-exec if we are not in a cloned binary. This is necessary
