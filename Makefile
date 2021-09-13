@@ -32,11 +32,8 @@ runc:
 
 all: runc recvtty sd-helper seccompagent
 
-recvtty sd-helper:
+recvtty sd-helper seccompagent:
 	$(GO_BUILD) -o contrib/cmd/$@/$@ ./contrib/cmd/$@
-
-seccompagent:
-	$(GO_BUILD) -o contrib/cmd/seccompagent/seccompagent ./contrib/cmd/seccompagent
 
 static:
 	$(GO_BUILD_STATIC) -o runc .
@@ -115,6 +112,7 @@ clean:
 	rm -f runc runc-*
 	rm -f contrib/cmd/recvtty/recvtty
 	rm -f contrib/cmd/sd-helper/sd-helper
+	rm -f contrib/cmd/seccompagent/seccompagent
 	rm -rf release
 	rm -rf man/man8
 
@@ -152,7 +150,7 @@ localcross:
 	CGO_ENABLED=1 GOARCH=arm64 CC=aarch64-linux-gnu-gcc         $(GO_BUILD) -o runc-arm64 .
 	CGO_ENABLED=1 GOARCH=ppc64le CC=powerpc64le-linux-gnu-gcc   $(GO_BUILD) -o runc-ppc64le .
 
-.PHONY: runc all recvtty sd-helper static release dbuild lint man runcimage \
+.PHONY: runc all recvtty sd-helper seccompagent static release dbuild lint man runcimage \
 	test localtest unittest localunittest integration localintegration \
 	rootlessintegration localrootlessintegration shell install install-bash \
 	install-man clean cfmt shfmt shellcheck \
