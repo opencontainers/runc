@@ -37,8 +37,6 @@ recvtty sd-helper seccompagent:
 
 static:
 	$(GO_BUILD_STATIC) -o runc .
-	$(GO_BUILD_STATIC) -o contrib/cmd/recvtty/recvtty ./contrib/cmd/recvtty
-	$(GO_BUILD_STATIC) -o contrib/cmd/sd-helper/sd-helper ./contrib/cmd/sd-helper
 
 release:
 	script/release.sh -r release/$(VERSION) -v $(VERSION)
