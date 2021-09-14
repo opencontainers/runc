@@ -104,15 +104,11 @@ using the runc checkpoint command.`,
 			logrus.Warn("runc checkpoint is untested with rootless containers")
 		}
 
-		spec, err := setupSpec(context)
-		if err != nil {
-			return err
-		}
 		options := criuOptions(context)
 		if err := setEmptyNsMask(context, options); err != nil {
 			return err
 		}
-		status, err := startContainer(context, spec, CT_ACT_RESTORE, options)
+		status, err := startContainer(context, CT_ACT_RESTORE, options)
 		if err != nil {
 			return err
 		}
