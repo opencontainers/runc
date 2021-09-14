@@ -406,6 +406,7 @@ func mountToRootfs(m *configs.Mount, c *mountConfig) error {
 		if err := os.MkdirAll(dest, 0o755); err != nil {
 			return err
 		}
+		return nil // for systems without /dev/mqueue (ChromeOS)
 		if err := mountPropagate(m, rootfs, ""); err != nil {
 			return err
 		}
