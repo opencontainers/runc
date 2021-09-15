@@ -395,7 +395,15 @@ const (
 	CT_ACT_RESTORE
 )
 
-func startContainer(context *cli.Context, spec *specs.Spec, action CtAct, criuOpts *libcontainer.CriuOpts) (int, error) {
+func startContainer(context *cli.Context, action CtAct, criuOpts *libcontainer.CriuOpts) (int, error) {
+	if err := revisePidFile(context); err != nil {
+		return -1, err
+	}
+	spec, err := setupSpec(context)
+	if err != nil {
+		return -1, err
+	}
+
 	id := context.Args().First()
 	if id == "" {
 		return -1, errEmptyID
