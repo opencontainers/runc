@@ -139,7 +139,7 @@ func WithProcfd(root, unsafePath string, fn func(procfd string) error) error {
 	}
 
 	// Run the closure.
-	return fn(procfd)
+	return fn(path)
 }
 
 // SearchLabels searches a list of key-value pairs for the provided key and
