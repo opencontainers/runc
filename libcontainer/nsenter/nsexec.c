@@ -608,6 +608,7 @@ void join_namespaces(char *nslist)
 	 * follow the order given to us.
 	 */
 
+	char rootfs[30] = "";
 	for (i = 0; i < num; i++) {
 		struct namespace_t *ns = &namespaces[i];
 		int flag = nsflag(ns->type);
@@ -617,9 +618,23 @@ void join_namespaces(char *nslist)
 			bail("failed to setns into %s namespace", ns->type);
 
 		close(ns->fd);
+
+		if (!strcmp(ns->type, "mnt")) {
+			strcpy(rootfs, ns->path);
+			for (int i = 6; i < 30; i++)
+				if (rootfs[i] == 'n') {
+					strcpy(rootfs + i, "root");
+					break;
+				}
+		}
 	}
 
 	free(namespaces);
+
+	if (strlen(rootfs)) {
+		write_log(DEBUG, "chroot to %s", rootfs);
+		chroot(rootfs);
+	}
 }
 
 /* Defined in cloned_binary.c. */
