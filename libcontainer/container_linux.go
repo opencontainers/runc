@@ -1348,6 +1348,12 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 		}
 		req.Opts.LsmProfile = proto.String(criuOpts.LsmProfile)
 	}
+	if criuOpts.LsmMountContext != "" {
+		if err := c.checkCriuVersion(31600); err != nil {
+			return errors.New("--lsm-mount-context requires at least CRIU 3.16")
+		}
+		req.Opts.LsmMountContext = proto.String(criuOpts.LsmMountContext)
+	}
 
 	if criuOpts.WorkDirectory != "" {
 		// Since a container can be C/R'ed multiple times,
