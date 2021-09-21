@@ -16,15 +16,17 @@ var prioMap = []*configs.IfPrioMap{
 }
 
 func TestNetPrioSetIfPrio(t *testing.T) {
-	helper := NewCgroupTestUtil("net_prio", t)
+	path := tempDir(t, "net_prio")
 
-	helper.CgroupData.config.Resources.NetPrioIfpriomap = prioMap
+	r := &configs.Resources{
+		NetPrioIfpriomap: prioMap,
+	}
 	netPrio := &NetPrioGroup{}
-	if err := netPrio.Set(helper.CgroupPath, helper.CgroupData.config.Resources); err != nil {
+	if err := netPrio.Set(path, r); err != nil {
 		t.Fatal(err)
 	}
 
-	value, err := fscommon.GetCgroupParamString(helper.CgroupPath, "net_prio.ifpriomap")
+	value, err := fscommon.GetCgroupParamString(path, "net_prio.ifpriomap")
 	if err != nil {
 		t.Fatal(err)
 	}

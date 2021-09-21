@@ -24,8 +24,8 @@ const (
 )
 
 func TestCpuacctStats(t *testing.T) {
-	helper := NewCgroupTestUtil("cpuacct.", t)
-	helper.writeFileContents(map[string]string{
+	path := tempDir(t, "cpuacct")
+	writeFileContents(t, path, map[string]string{
 		"cpuacct.usage":        cpuAcctUsageContents,
 		"cpuacct.usage_percpu": cpuAcctUsagePerCPUContents,
 		"cpuacct.stat":         cpuAcctStatContents,
@@ -34,7 +34,7 @@ func TestCpuacctStats(t *testing.T) {
 
 	cpuacct := &CpuacctGroup{}
 	actualStats := *cgroups.NewStats()
-	err := cpuacct.GetStats(helper.CgroupPath, &actualStats)
+	err := cpuacct.GetStats(path, &actualStats)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,8 +64,8 @@ func TestCpuacctStats(t *testing.T) {
 }
 
 func TestCpuacctStatsWithoutUsageAll(t *testing.T) {
-	helper := NewCgroupTestUtil("cpuacct.", t)
-	helper.writeFileContents(map[string]string{
+	path := tempDir(t, "cpuacct")
+	writeFileContents(t, path, map[string]string{
 		"cpuacct.usage":        cpuAcctUsageContents,
 		"cpuacct.usage_percpu": cpuAcctUsagePerCPUContents,
 		"cpuacct.stat":         cpuAcctStatContents,
@@ -73,7 +73,7 @@ func TestCpuacctStatsWithoutUsageAll(t *testing.T) {
 
 	cpuacct := &CpuacctGroup{}
 	actualStats := *cgroups.NewStats()
-	err := cpuacct.GetStats(helper.CgroupPath, &actualStats)
+	err := cpuacct.GetStats(path, &actualStats)
 	if err != nil {
 		t.Fatal(err)
 	}

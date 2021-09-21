@@ -11,45 +11,29 @@ import (
 	"testing"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
-	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
 func init() {
 	cgroups.TestMode = true
 }
 
-type cgroupTestUtil struct {
-	// cgroup data to use in tests.
-	CgroupData *cgroupData
-
-	// Path to the mock cgroup directory.
-	CgroupPath string
-
-	t *testing.T
-}
-
-// Creates a new test util for the specified subsystem
-func NewCgroupTestUtil(subsystem string, t *testing.T) *cgroupTestUtil {
-	d := &cgroupData{
-		config: &configs.Cgroup{
-			Resources: &configs.Resources{},
-		},
-		root: t.TempDir(),
-	}
-	testCgroupPath := filepath.Join(d.root, subsystem)
+// tempDir creates a new test directory for the specified subsystem.
+func tempDir(t *testing.T, subsystem string) string {
+	path := filepath.Join(t.TempDir(), subsystem)
 	// Ensure the full mock cgroup path exists.
-	if err := os.MkdirAll(testCgroupPath, 0o755); err != nil {
+	if err := os.Mkdir(path, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	return &cgroupTestUtil{CgroupData: d, CgroupPath: testCgroupPath, t: t}
+	return path
 }
 
-// Write the specified contents on the mock of the specified cgroup files.
-func (c *cgroupTestUtil) writeFileContents(fileContents map[string]string) {
+// writeFileContents writes the specified contents on the mock of the specified
+// cgroup files.
+func writeFileContents(t *testing.T, path string, fileContents map[string]string) {
 	for file, contents := range fileContents {
-		err := cgroups.WriteFile(c.CgroupPath, file, contents)
+		err := cgroups.WriteFile(path, file, contents)
 		if err != nil {
-			c.t.Fatal(err)
+			t.Fatal(err)
 		}
 	}
 }
