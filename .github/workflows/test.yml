@@ -44,11 +44,14 @@ jobs:
 
     - name: install deps
       if: matrix.criu == ''
+      env:
+        REPO: https://download.opensuse.org/repositories/devel:/tools:/criu/xUbuntu_20.04
       run: |
         # criu repo
-        sudo add-apt-repository -y ppa:criu/ppa
-        # apt-add-repository runs apt update so we don't have to
-        sudo apt -q install libseccomp-dev criu
+        curl -fSsl $REPO/Release.key | sudo apt-key add -
+        echo "deb $REPO/ /" | sudo tee /etc/apt/sources.list.d/criu.list
+        sudo apt update
+        sudo apt install libseccomp-dev criu
 
     - name: install deps (criu ${{ matrix.criu }})
       if: matrix.criu != ''
