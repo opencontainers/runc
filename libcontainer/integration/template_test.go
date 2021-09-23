@@ -132,6 +132,7 @@ func newTemplateConfig(t *testing.T, p *tParam) *configs.Config {
 			{Type: configs.NEWNET},
 		}),
 		Cgroups: &configs.Cgroup{
+			Systemd: p.systemd,
 			Resources: &configs.Resources{
 				MemorySwappiness: nil,
 				Devices:          allowedDevices,
@@ -221,7 +222,6 @@ func newTemplateConfig(t *testing.T, p *tParam) *configs.Config {
 	if p.systemd {
 		id := strconv.FormatInt(-int64(time.Now().Nanosecond()), 36)
 		config.Cgroups.Name = strings.ReplaceAll(t.Name(), "/", "_") + id
-		// do not change Parent (see newContainer)
 		config.Cgroups.Parent = "system.slice"
 		config.Cgroups.ScopePrefix = "runc-test"
 	} else {

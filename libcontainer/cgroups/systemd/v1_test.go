@@ -133,7 +133,10 @@ func TestFreezeBeforeSet(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.desc, func(t *testing.T) {
-			m := NewLegacyManager(tc.cg, nil)
+			m, err := NewLegacyManager(tc.cg, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
 			defer m.Destroy() //nolint:errcheck
 			lm := m.(*legacyManager)
 

@@ -26,7 +26,7 @@ import (
 	"strings"
 
 	"github.com/opencontainers/runc/libcontainer/configs"
-	libcontainerUtils "github.com/opencontainers/runc/libcontainer/utils"
+	"github.com/opencontainers/runc/libcontainer/utils"
 )
 
 const UnifiedMountpoint = "/sys/fs/cgroup"
@@ -36,20 +36,19 @@ func defaultDirPath(c *configs.Cgroup) (string, error) {
 		return "", fmt.Errorf("cgroup: either Path or Name and Parent should be used, got %+v", c)
 	}
 
-	// XXX: Do not remove this code. Path safety is important! -- cyphar
-	cgPath := libcontainerUtils.CleanPath(c.Path)
-	cgParent := libcontainerUtils.CleanPath(c.Parent)
-	cgName := libcontainerUtils.CleanPath(c.Name)
-
-	return _defaultDirPath(UnifiedMountpoint, cgPath, cgParent, cgName)
+	return _defaultDirPath(UnifiedMountpoint, c.Path, c.Parent, c.Name)
 }
 
 func _defaultDirPath(root, cgPath, cgParent, cgName string) (string, error) {
 	if (cgName != "" || cgParent != "") && cgPath != "" {
 		return "", errors.New("cgroup: either Path or Name and Parent should be used")
 	}
-	innerPath := cgPath
+
+	// XXX: Do not remove CleanPath. Path safety is important! -- cyphar
+	innerPath := utils.CleanPath(cgPath)
 	if innerPath == "" {
+		cgParent := utils.CleanPath(cgParent)
+		cgName := utils.CleanPath(cgName)
 		innerPath = filepath.Join(cgParent, cgName)
 	}
 	if filepath.IsAbs(innerPath) {

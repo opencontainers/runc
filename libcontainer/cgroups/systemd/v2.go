@@ -22,18 +22,28 @@ type unifiedManager struct {
 	mu      sync.Mutex
 	cgroups *configs.Cgroup
 	// path is like "/sys/fs/cgroup/user.slice/user-1001.slice/session-1.scope"
-	path     string
-	rootless bool
-	dbus     *dbusConnManager
+	path  string
+	dbus  *dbusConnManager
+	fsMgr cgroups.Manager
 }
 
-func NewUnifiedManager(config *configs.Cgroup, path string, rootless bool) cgroups.Manager {
-	return &unifiedManager{
-		cgroups:  config,
-		path:     path,
-		rootless: rootless,
-		dbus:     newDbusConnManager(rootless),
+func NewUnifiedManager(config *configs.Cgroup, path string) (cgroups.Manager, error) {
+	m := &unifiedManager{
+		cgroups: config,
+		path:    path,
+		dbus:    newDbusConnManager(config.Rootless),
 	}
+	if err := m.initPath(); err != nil {
+		return nil, err
+	}
+
+	fsMgr, err := fs2.NewManager(config, m.path)
+	if err != nil {
+		return nil, err
+	}
+	m.fsMgr = fsMgr
+
+	return m, nil
 }
 
 // unifiedResToSystemdProps tries to convert from Cgroup.Resources.Unified
@@ -233,7 +243,7 @@ func (m *unifiedManager) Apply(pid int) error {
 	)
 
 	slice := "system.slice"
-	if m.rootless {
+	if m.cgroups.Rootless {
 		slice = "user.slice"
 	}
 	if c.Parent != "" {
@@ -276,9 +286,6 @@ func (m *unifiedManager) Apply(pid int) error {
 		return fmt.Errorf("unable to start unit %q (properties %+v): %w", unitName, properties, err)
 	}
 
-	if err := m.initPath(); err != nil {
-		return err
-	}
 	if err := fs2.CreateCgroupPath(m.path, m.cgroups); err != nil {
 		return err
 	}
@@ -304,7 +311,6 @@ func (m *unifiedManager) Destroy() error {
 }
 
 func (m *unifiedManager) Path(_ string) string {
-	_ = m.initPath()
 	return m.path
 }
 
@@ -313,7 +319,7 @@ func (m *unifiedManager) Path(_ string) string {
 func (m *unifiedManager) getSliceFull() (string, error) {
 	c := m.cgroups
 	slice := "system.slice"
-	if m.rootless {
+	if c.Rootless {
 		slice = "user.slice"
 	}
 	if c.Parent != "" {
@@ -324,7 +330,7 @@ func (m *unifiedManager) getSliceFull() (string, error) {
 		}
 	}
 
-	if m.rootless {
+	if c.Rootless {
 		// managerCG is typically "/user.slice/user-${uid}.slice/user@${uid}.service".
 		managerCG, err := getManagerProperty(m.dbus, "ControlGroup")
 		if err != nil {
@@ -362,44 +368,26 @@ func (m *unifiedManager) initPath() error {
 	return nil
 }
 
-func (m *unifiedManager) fsManager() (cgroups.Manager, error) {
-	if err := m.initPath(); err != nil {
-		return nil, err
-	}
-	return fs2.NewManager(m.cgroups, m.path, m.rootless)
-}
-
 func (m *unifiedManager) Freeze(state configs.FreezerState) error {
-	fsMgr, err := m.fsManager()
-	if err != nil {
-		return err
-	}
-	return fsMgr.Freeze(state)
+	return m.fsMgr.Freeze(state)
 }
 
 func (m *unifiedManager) GetPids() ([]int, error) {
-	if err := m.initPath(); err != nil {
-		return nil, err
-	}
 	return cgroups.GetPids(m.path)
 }
 
 func (m *unifiedManager) GetAllPids() ([]int, error) {
-	if err := m.initPath(); err != nil {
-		return nil, err
-	}
 	return cgroups.GetAllPids(m.path)
 }
 
 func (m *unifiedManager) GetStats() (*cgroups.Stats, error) {
-	fsMgr, err := m.fsManager()
-	if err != nil {
-		return nil, err
-	}
-	return fsMgr.GetStats()
+	return m.fsMgr.GetStats()
 }
 
 func (m *unifiedManager) Set(r *configs.Resources) error {
+	if r == nil {
+		return nil
+	}
 	properties, err := genV2ResourcesProperties(r, m.dbus)
 	if err != nil {
 		return err
@@ -409,11 +397,7 @@ func (m *unifiedManager) Set(r *configs.Resources) error {
 		return fmt.Errorf("unable to set unit properties: %w", err)
 	}
 
-	fsMgr, err := m.fsManager()
-	if err != nil {
-		return err
-	}
-	return fsMgr.Set(r)
+	return m.fsMgr.Set(r)
 }
 
 func (m *unifiedManager) GetPaths() map[string]string {
@@ -427,11 +411,7 @@ func (m *unifiedManager) GetCgroups() (*configs.Cgroup, error) {
 }
 
 func (m *unifiedManager) GetFreezerState() (configs.FreezerState, error) {
-	fsMgr, err := m.fsManager()
-	if err != nil {
-		return configs.Undefined, err
-	}
-	return fsMgr.GetFreezerState()
+	return m.fsMgr.GetFreezerState()
 }
 
 func (m *unifiedManager) Exists() bool {
@@ -439,9 +419,5 @@ func (m *unifiedManager) Exists() bool {
 }
 
 func (m *unifiedManager) OOMKillCount() (uint64, error) {
-	fsMgr, err := m.fsManager()
-	if err != nil {
-		return 0, err
-	}
-	return fsMgr.OOMKillCount()
+	return m.fsMgr.OOMKillCount()
 }

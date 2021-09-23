@@ -17,7 +17,7 @@ import (
 
 func TestFactoryNew(t *testing.T) {
 	root := t.TempDir()
-	factory, err := New(root, Cgroupfs)
+	factory, err := New(root)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,7 +39,7 @@ func TestFactoryNew(t *testing.T) {
 
 func TestFactoryNewIntelRdt(t *testing.T) {
 	root := t.TempDir()
-	factory, err := New(root, Cgroupfs, IntelRdtFs)
+	factory, err := New(root, IntelRdtFs)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,7 +61,7 @@ func TestFactoryNewIntelRdt(t *testing.T) {
 
 func TestFactoryNewTmpfs(t *testing.T) {
 	root := t.TempDir()
-	factory, err := New(root, Cgroupfs, TmpfsRoot)
+	factory, err := New(root, TmpfsRoot)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,7 +107,7 @@ func TestFactoryNewTmpfs(t *testing.T) {
 }
 
 func TestFactoryLoadNotExists(t *testing.T) {
-	factory, err := New(t.TempDir(), Cgroupfs)
+	factory, err := New(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,6 +140,9 @@ func TestFactoryLoadContainer(t *testing.T) {
 		expectedConfig = &configs.Config{
 			Rootfs: "/mycontainer/root",
 			Hooks:  expectedHooks,
+			Cgroups: &configs.Cgroup{
+				Resources: &configs.Resources{},
+			},
 		}
 		expectedState = &State{
 			BaseState: BaseState{
@@ -154,7 +157,7 @@ func TestFactoryLoadContainer(t *testing.T) {
 	if err := marshal(filepath.Join(root, id, stateFilename), expectedState); err != nil {
 		t.Fatal(err)
 	}
-	factory, err := New(root, Cgroupfs, IntelRdtFs)
+	factory, err := New(root, IntelRdtFs)
 	if err != nil {
 		t.Fatal(err)
 	}

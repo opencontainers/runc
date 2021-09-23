@@ -31,10 +31,16 @@ type Cgroup struct {
 	// Resources contains various cgroups settings to apply
 	*Resources
 
+	// Systemd tells if systemd should be used to manage cgroups.
+	Systemd bool
+
 	// SystemdProps are any additional properties for systemd,
 	// derived from org.systemd.property.xxx annotations.
 	// Ignored unless systemd is used for managing cgroups.
 	SystemdProps []systemdDbus.Property `json:"-"`
+
+	// Rootless tells if rootless cgroups should be used.
+	Rootless bool
 }
 
 type Resources struct {
