@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
@@ -24,26 +25,36 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-var namespaceMapping = map[specs.LinuxNamespaceType]configs.NamespaceType{
-	specs.PIDNamespace:     configs.NEWPID,
-	specs.NetworkNamespace: configs.NEWNET,
-	specs.MountNamespace:   configs.NEWNS,
-	specs.UserNamespace:    configs.NEWUSER,
-	specs.IPCNamespace:     configs.NEWIPC,
-	specs.UTSNamespace:     configs.NEWUTS,
-	specs.CgroupNamespace:  configs.NEWCGROUP,
-}
+var (
+	initMapsOnce            sync.Once
+	namespaceMapping        map[specs.LinuxNamespaceType]configs.NamespaceType
+	mountPropagationMapping map[string]int
+)
 
-var mountPropagationMapping = map[string]int{
-	"rprivate":    unix.MS_PRIVATE | unix.MS_REC,
-	"private":     unix.MS_PRIVATE,
-	"rslave":      unix.MS_SLAVE | unix.MS_REC,
-	"slave":       unix.MS_SLAVE,
-	"rshared":     unix.MS_SHARED | unix.MS_REC,
-	"shared":      unix.MS_SHARED,
-	"runbindable": unix.MS_UNBINDABLE | unix.MS_REC,
-	"unbindable":  unix.MS_UNBINDABLE,
-	"":            0,
+func initMaps() {
+	initMapsOnce.Do(func() {
+		namespaceMapping = map[specs.LinuxNamespaceType]configs.NamespaceType{
+			specs.PIDNamespace:     configs.NEWPID,
+			specs.NetworkNamespace: configs.NEWNET,
+			specs.MountNamespace:   configs.NEWNS,
+			specs.UserNamespace:    configs.NEWUSER,
+			specs.IPCNamespace:     configs.NEWIPC,
+			specs.UTSNamespace:     configs.NEWUTS,
+			specs.CgroupNamespace:  configs.NEWCGROUP,
+		}
+
+		mountPropagationMapping = map[string]int{
+			"rprivate":    unix.MS_PRIVATE | unix.MS_REC,
+			"private":     unix.MS_PRIVATE,
+			"rslave":      unix.MS_SLAVE | unix.MS_REC,
+			"slave":       unix.MS_SLAVE,
+			"rshared":     unix.MS_SHARED | unix.MS_REC,
+			"shared":      unix.MS_SHARED,
+			"runbindable": unix.MS_UNBINDABLE | unix.MS_REC,
+			"unbindable":  unix.MS_UNBINDABLE,
+			"":            0,
+		}
+	})
 }
 
 // AllowedDevices is the set of devices which are automatically included for
@@ -256,6 +267,8 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 	config.Cgroups = c
 	// set linux-specific config
 	if spec.Linux != nil {
+		initMaps()
+
 		var exists bool
 		if config.RootPropagation, exists = mountPropagationMapping[spec.Linux.RootfsPropagation]; !exists {
 			return nil, fmt.Errorf("rootfsPropagation=%v is not supported", spec.Linux.RootfsPropagation)
