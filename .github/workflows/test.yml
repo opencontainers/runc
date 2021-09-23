@@ -27,7 +27,7 @@ jobs:
         criu: [""]
         include:
           # Also test against latest criu-dev
-          - go-version: 1.16.x
+          - go-version: 1.17.x
             rootless: ""
             race: ""
             criu: "criu-dev"
