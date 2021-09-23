@@ -100,9 +100,6 @@ func isIgnorableError(rootless bool, err error) bool {
 }
 
 func (m *manager) Apply(pid int) (err error) {
-	if m.cgroups == nil {
-		return nil
-	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -201,7 +198,7 @@ func (m *manager) Set(r *configs.Resources) error {
 // provided
 func (m *manager) Freeze(state configs.FreezerState) error {
 	path := m.Path("freezer")
-	if m.cgroups == nil || path == "" {
+	if path == "" {
 		return errors.New("cannot toggle freezer: cgroups not configured for container")
 	}
 
