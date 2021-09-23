@@ -5,8 +5,8 @@ ARG LIBSECCOMP_VERSION=2.5.2
 FROM golang:${GO_VERSION}-bullseye
 ARG DEBIAN_FRONTEND=noninteractive
 
-RUN echo 'deb https://download.opensuse.org/repositories/devel:/tools:/criu/Debian_10/ /' > /etc/apt/sources.list.d/criu.list \
-    && wget -nv https://download.opensuse.org/repositories/devel:/tools:/criu/Debian_10/Release.key -O- | apt-key add - \
+RUN echo 'deb https://download.opensuse.org/repositories/devel:/tools:/criu/Debian_11/ /' > /etc/apt/sources.list.d/criu.list \
+    && wget -nv https://download.opensuse.org/repositories/devel:/tools:/criu/Debian_11/Release.key -O- | apt-key add - \
     && dpkg --add-architecture armel \
     && dpkg --add-architecture armhf \
     && dpkg --add-architecture arm64 \
