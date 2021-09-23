@@ -37,11 +37,6 @@ jobs:
     - name: checkout
       uses: actions/checkout@v2
 
-    - name: Dump matrix context
-      env:
-        MATRIX_CONTEXT: ${{ toJSON(matrix) }}
-      run: echo "$MATRIX_CONTEXT"
-
     - name: install deps
       if: matrix.criu == ''
       env:
