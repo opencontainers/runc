@@ -4,9 +4,11 @@ ARG LIBSECCOMP_VERSION=2.5.2
 
 FROM golang:${GO_VERSION}-bullseye
 ARG DEBIAN_FRONTEND=noninteractive
+ARG CRIU_REPO=https://download.opensuse.org/repositories/devel:/tools:/criu/Debian_11
 
-RUN echo 'deb https://download.opensuse.org/repositories/devel:/tools:/criu/Debian_11/ /' > /etc/apt/sources.list.d/criu.list \
-    && wget -nv https://download.opensuse.org/repositories/devel:/tools:/criu/Debian_11/Release.key -O- | apt-key add - \
+RUN KEYFILE=/usr/share/keyrings/criu-repo-keyring.gpg; \
+    wget -nv $CRIU_REPO/Release.key -O- | gpg --dearmor > "$KEYFILE" \
+    && echo "deb [signed-by=$KEYFILE] $CRIU_REPO/ /" > /etc/apt/sources.list.d/criu.list \
     && dpkg --add-architecture armel \
     && dpkg --add-architecture armhf \
     && dpkg --add-architecture arm64 \
