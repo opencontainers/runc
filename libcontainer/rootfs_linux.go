@@ -559,6 +559,16 @@ func checkProcMount(rootfs, dest, source string, config *configs.Config) error {
 		"/proc/slabinfo",
 		"/proc/net/dev",
 	}
+
+	// Allow /proc/sys/net if running in non-host netns
+	hostnet, hostnetErr := config.IsHostNetNS()
+	if hostnetErr != nil {
+		return hostnetErr
+	}
+	if !hostnet {
+		validProcMounts = append(validProcMounts, "/proc/sys/net")
+	}
+
 	for _, valid := range validProcMounts {
 		path, err := filepath.Rel(filepath.Join(rootfs, valid), dest)
 		if err != nil {
