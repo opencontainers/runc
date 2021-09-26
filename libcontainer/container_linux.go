@@ -1190,7 +1190,7 @@ func (c *linuxContainer) makeCriuRestoreMountpoints(m *configs.Mount) error {
 	case "bind":
 		// The prepareBindMount() function checks if source
 		// exists. So it cannot be used for other filesystem types.
-		if err := prepareBindMount(m, c.config.Rootfs); err != nil {
+		if err := prepareBindMount(m, c.config.Rootfs, c.config); err != nil {
 			return err
 		}
 	default:
@@ -1199,7 +1199,7 @@ func (c *linuxContainer) makeCriuRestoreMountpoints(m *configs.Mount) error {
 		if err != nil {
 			return err
 		}
-		if err := checkProcMount(c.config.Rootfs, dest, ""); err != nil {
+		if err := checkProcMount(c.config.Rootfs, dest, "", c.config); err != nil {
 			return err
 		}
 		if err := os.MkdirAll(dest, 0o755); err != nil {
