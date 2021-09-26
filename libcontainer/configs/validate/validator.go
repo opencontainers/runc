@@ -13,7 +13,6 @@ import (
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	selinux "github.com/opencontainers/selinux/go-selinux"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/sys/unix"
 )
 
 type Validator interface {
@@ -161,16 +160,7 @@ func (v *ConfigValidator) sysctl(config *configs.Config) error {
 			// Is container using host netns?
 			// Here "host" means "current", not "initial".
 			netOnce.Do(func() {
-				if !config.Namespaces.Contains(configs.NEWNET) {
-					hostnet = true
-					return
-				}
-				path := config.Namespaces.PathOf(configs.NEWNET)
-				if path == "" {
-					// own netns, so hostnet = false
-					return
-				}
-				hostnet, hostnetErr = isHostNetNS(path)
+				hostnet, hostnetErr = config.IsHostNetNS()
 			})
 			if hostnetErr != nil {
 				return fmt.Errorf("invalid netns path: %w", hostnetErr)
@@ -254,19 +244,4 @@ func (v *ConfigValidator) mounts(config *configs.Config) error {
 	}
 
 	return nil
-}
-
-func isHostNetNS(path string) (bool, error) {
-	const currentProcessNetns = "/proc/self/ns/net"
-
-	var st1, st2 unix.Stat_t
-
-	if err := unix.Stat(currentProcessNetns, &st1); err != nil {
-		return false, &os.PathError{Op: "stat", Path: currentProcessNetns, Err: err}
-	}
-	if err := unix.Stat(path, &st2); err != nil {
-		return false, &os.PathError{Op: "stat", Path: path, Err: err}
-	}
-
-	return (st1.Dev == st2.Dev) && (st1.Ino == st2.Ino), nil
 }
