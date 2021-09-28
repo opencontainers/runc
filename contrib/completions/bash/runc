@@ -771,7 +771,6 @@ _runc() {
 		delete
 		events
 		exec
-		init
 		kill
 		list
 		pause
