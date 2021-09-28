@@ -111,7 +111,8 @@ EOF
 }
 
 @test "runc delete --force in cgroupv2 with subcgroups" {
-	requires cgroups_v2 root
+	requires cgroups_v2
+	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
 	set_cgroups_path
 	set_cgroup_mount_writable
 
