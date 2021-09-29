@@ -52,7 +52,10 @@ RUN cd /tmp \
 # install libseccomp
 ARG LIBSECCOMP_VERSION
 COPY script/* /tmp/script/
-RUN mkdir -p /usr/local/src/libseccomp \
-    && /tmp/script/seccomp.sh "$LIBSECCOMP_VERSION" /usr/local/src/libseccomp /usr/local/src/libseccomp/.env-file arm64 armel armhf ppc64le
+RUN mkdir -p /opt/libseccomp \
+    && /tmp/script/seccomp.sh "$LIBSECCOMP_VERSION" /opt/libseccomp arm64 armel armhf ppc64le
+ENV LIBSECCOMP_VERSION=$LIBSECCOMP_VERSION
+ENV LD_LIBRARY_PATH=/opt/libseccomp/lib
+ENV PKG_CONFIG_PATH=/opt/libseccomp/lib/pkgconfig
 
 WORKDIR /go/src/github.com/opencontainers/runc
