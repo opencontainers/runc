@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e -u -o pipefail
+
 # shellcheck source=./script/lib.sh
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
@@ -7,16 +9,12 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 # so download, install and build against it.
 # Parameters:
 #  $1 -- libseccomp version to download and build.
-#  $2 -- destination directory to put the source tarball in.
-#  $3 -- file to append LIBSECCOMP_PREFIX*= environment variables to
-#        (can be sourced to get install paths).
+#  $2 -- destination directory.
 #  $@ -- additional architectures to cross-compile for.
 function build_libseccomp() {
 	local ver="$1"
 	shift
 	local dest="$1"
-	shift
-	local varfile="$1"
 	shift
 	local arches=("$@")
 	local tar="libseccomp-${ver}.tar.gz"
@@ -28,36 +26,32 @@ function build_libseccomp() {
 	tar xf "$tar" -C "$srcdir"
 	pushd "$srcdir/libseccomp-$ver" || return
 
-	# Build and install natively.
-	local prefix
-	prefix="$(mktemp -d)"
+	# Build natively and install to /usr/local.
 	./configure \
-		--prefix="$prefix" --libdir="$prefix/lib" \
-		--enable-static --disable-shared
-	echo LIBSECCOMP_PREFIX="$prefix" >>"$varfile"
+		--prefix="$dest" --libdir="$dest/lib" \
+		--enable-static --enable-shared
 	make install
 	make clean
 
 	# Build and install for additional architectures.
 	local arch
 	for arch in "${arches[@]}"; do
-		prefix="$(mktemp -d)"
 		set_cross_vars "$arch"
 		./configure --host "$HOST" \
-			--prefix="$prefix" --libdir="$prefix/lib" \
+			--prefix="$dest/$arch" --libdir="$dest/$arch/lib" \
 			--enable-static --enable-shared
 		make install
 		make clean
-		echo "LIBSECCOMP_PREFIX_${arch}=$prefix" >>"$varfile"
 	done
 
-	# Place the source tarball to $dest.
+	# Place the source tarball to $dest/src.
 	popd || return
-	mv "$tar"{,.asc} "$dest"
+	mkdir "$dest"/src
+	mv "$tar"{,.asc} "$dest"/src
 }
 
-if $# -lt 4; then
-	echo "Usage: seccomp.sh <version> <dest-dir> <var-file> [<extra-arch> ...]" >&2
+if [ $# -lt 4 ]; then
+	echo "Usage: seccomp.sh <version> <dest-dir> [<extra-arch> ...]" >&2
 	exit 1
 fi
 
