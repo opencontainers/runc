@@ -23,6 +23,9 @@ function set_cross_vars() {
 	ppc64le)
 		HOST=powerpc64le-linux-gnu
 		;;
+	s390x)
+		HOST=s390x-linux-gnu
+		;;
 	*)
 		echo "set_cross_vars: unsupported architecture: $1" >&2
 		exit 1

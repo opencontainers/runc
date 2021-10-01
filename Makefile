@@ -38,7 +38,7 @@ recvtty sd-helper seccompagent:
 static:
 	$(GO_BUILD_STATIC) -o runc .
 
-releaseall: RELEASE_ARGS := "-a arm64 -a armel -a armhf -a ppc64le"
+releaseall: RELEASE_ARGS := "-a arm64 -a armel -a armhf -a ppc64le -a s390x"
 releaseall: release
 
 release: runcimage
