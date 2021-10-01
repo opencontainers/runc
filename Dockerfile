@@ -19,6 +19,7 @@ RUN echo 'deb https://download.opensuse.org/repositories/devel:/tools:/criu/Debi
         crossbuild-essential-armel \
         crossbuild-essential-armhf \
         crossbuild-essential-ppc64el \
+        crossbuild-essential-s390x \
         curl \
         gawk \
         gcc \
@@ -53,7 +54,7 @@ RUN cd /tmp \
 ARG LIBSECCOMP_VERSION
 COPY script/* /tmp/script/
 RUN mkdir -p /opt/libseccomp \
-    && /tmp/script/seccomp.sh "$LIBSECCOMP_VERSION" /opt/libseccomp arm64 armel armhf ppc64le
+    && /tmp/script/seccomp.sh "$LIBSECCOMP_VERSION" /opt/libseccomp arm64 armel armhf ppc64le s390x
 ENV LIBSECCOMP_VERSION=$LIBSECCOMP_VERSION
 ENV LD_LIBRARY_PATH=/opt/libseccomp/lib
 ENV PKG_CONFIG_PATH=/opt/libseccomp/lib/pkgconfig
