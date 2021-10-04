@@ -546,6 +546,28 @@ func TestSpecconvExampleValidate(t *testing.T) {
 	}
 }
 
+func TestSpecconvNoLinuxSection(t *testing.T) {
+	spec := Example()
+	spec.Root.Path = "/"
+	spec.Linux = nil
+	spec.Hostname = ""
+
+	opts := &CreateOpts{
+		CgroupName: "ContainerID",
+		Spec:       spec,
+	}
+
+	config, err := CreateLibcontainerConfig(opts)
+	if err != nil {
+		t.Errorf("Couldn't create libcontainer config: %v", err)
+	}
+
+	validator := validate.New()
+	if err := validator.Validate(config); err != nil {
+		t.Errorf("Expected specconv to produce valid container config: %v", err)
+	}
+}
+
 func TestDupNamespaces(t *testing.T) {
 	spec := &specs.Spec{
 		Root: &specs.Root{
