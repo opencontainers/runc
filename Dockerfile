@@ -21,6 +21,7 @@ RUN KEYFILE=/usr/share/keyrings/criu-repo-keyring.gpg; \
         crossbuild-essential-armel \
         crossbuild-essential-armhf \
         crossbuild-essential-ppc64el \
+        crossbuild-essential-s390x \
         curl \
         gawk \
         gcc \
@@ -53,7 +54,10 @@ RUN cd /tmp \
 # install libseccomp
 ARG LIBSECCOMP_VERSION
 COPY script/* /tmp/script/
-RUN mkdir -p /usr/local/src/libseccomp \
-    && /tmp/script/seccomp.sh "$LIBSECCOMP_VERSION" /usr/local/src/libseccomp /usr/local/src/libseccomp/.env-file arm64 armel armhf ppc64le
+RUN mkdir -p /opt/libseccomp \
+    && /tmp/script/seccomp.sh "$LIBSECCOMP_VERSION" /opt/libseccomp arm64 armel armhf ppc64le s390x
+ENV LIBSECCOMP_VERSION=$LIBSECCOMP_VERSION
+ENV LD_LIBRARY_PATH=/opt/libseccomp/lib
+ENV PKG_CONFIG_PATH=/opt/libseccomp/lib/pkgconfig
 
 WORKDIR /go/src/github.com/opencontainers/runc

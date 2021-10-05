@@ -18,6 +18,7 @@ set -e
 ## --->
 # Project-specific options and functions. In *theory* you shouldn't need to
 # touch anything else in this script in order to use this elsewhere.
+: "${LIBSECCOMP_VERSION:=2.5.2}"
 project="runc"
 root="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")/..")"
 
@@ -31,7 +32,6 @@ source "$root/script/lib.sh"
 #   $2 -- native architecture (a .suffix for a native binary file name).
 #   $@ -- additional architectures to cross-build for.
 function build_project() {
-	local libseccomp_version=2.5.2
 	local builddir
 	builddir="$(dirname "$1")"
 	shift
@@ -39,17 +39,14 @@ function build_project() {
 	shift
 	local arches=("$@")
 
-	# Assume that if /usr/local/src/libseccomp/.env-file exists, then
-	# we are run via Dockerfile, and seccomp is already built.
-	if [ -r /usr/local/src/libseccomp/.env-file ]; then
-		# shellcheck disable=SC1091
-		source /usr/local/src/libseccomp/.env-file
-		# Copy the source tarball.
-		cp /usr/local/src/libseccomp/* "$builddir"
-	else
-		"$root/script/seccomp.sh" "$libseccomp_version" "$builddir" "./env-file" "${arches[@]}"
-		# shellcheck disable=SC1091
-		source ./env-file
+	# Assume that if /opt/libseccomp exists, then we are run
+	# via Dockerfile, and seccomp is already built.
+	local seccompdir=/opt/libseccomp temp_dir
+	if [ ! -d "$seccompdir" ]; then
+		temp_dir="$(mktemp -d)"
+		seccompdir="$temp_dir"
+		# Download and build libseccomp.
+		"$root/script/seccomp.sh" "$LIBSECCOMP_VERSION" "$seccompdir" "${arches[@]}"
 	fi
 
 	# For reproducible builds, add these to EXTRA_LDFLAGS:
@@ -64,28 +61,37 @@ function build_project() {
 
 	# Build natively.
 	make -C "$root" \
-		PKG_CONFIG_PATH="${LIBSECCOMP_PREFIX}/lib/pkgconfig" \
-		LD_LIBRARY_PATH="${LIBSECCOMP_PREFIX}/lib" \
+		PKG_CONFIG_PATH="$seccompdir/lib/pkgconfig" \
 		"${make_args[@]}"
 	strip "$root/$project"
+	# Sanity check: make sure libseccomp version is as expected.
+	local ver
+	ver=$("$root/$project" --version | awk '$1 == "libseccomp:" {print $2}')
+	if [ "$ver" != "$LIBSECCOMP_VERSION" ]; then
+		echo >&2 "libseccomp version mismatch: want $LIBSECCOMP_VERSION, got $ver"
+		exit 1
+	fi
+
 	mv "$root/$project" "$builddir/$project.$native_arch"
-	rm -rf "${LIBSECCOMP_PREFIX}"
 
 	# Cross-build for for other architectures.
-	local prefix arch
+	local arch
 	for arch in "${arches[@]}"; do
-		eval prefix=\$"LIBSECCOMP_PREFIX_$arch"
-		if [ -z "$prefix" ]; then
-			echo "LIBSECCOMP_PREFIX_$arch is empty (unsupported arch?)" >&2
-			exit 1
-		fi
 		set_cross_vars "$arch"
 		make -C "$root" \
-			PKG_CONFIG_PATH="${prefix}/lib/pkgconfig" "${make_args[@]}"
+			PKG_CONFIG_PATH="$seccompdir/$arch/lib/pkgconfig" \
+			"${make_args[@]}"
 		"$STRIP" "$root/$project"
 		mv "$root/$project" "$builddir/$project.$arch"
-		rm -rf "$prefix"
 	done
+
+	# Copy libseccomp source tarball.
+	cp "$seccompdir"/src/* "$builddir"
+
+	# Clean up.
+	if [ -n "$tempdir" ]; then
+		rm -rf "$tempdir"
+	fi
 }
 
 # End of the easy-to-configure portion.
