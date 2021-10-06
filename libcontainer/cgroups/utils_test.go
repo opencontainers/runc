@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/moby/sys/mountinfo"
-	"github.com/sirupsen/logrus"
 )
 
 const fedoraMountinfo = `15 35 0:3 / /proc rw,nosuid,nodev,noexec,relatime shared:5 - proc proc rw
@@ -467,7 +466,6 @@ func TestGetHugePageSizeImpl(t *testing.T) {
 		input  []string
 		output []string
 		isErr  bool
-		isWarn bool
 	}{
 		{
 			input:  []string{"hugepages-1048576kB", "hugepages-2048kB", "hugepages-32768kB", "hugepages-64kB"},
@@ -487,25 +485,29 @@ func TestGetHugePageSizeImpl(t *testing.T) {
 		{ // invalid prefix (silently skipped)
 			input: []string{"whatever-1024kB"},
 		},
-		{ // invalid suffix (skipped with a warning)
-			input:  []string{"hugepages-1024gB"},
-			isWarn: true,
+		{ // invalid suffix
+			input: []string{"hugepages-1024gB"},
+			isErr: true,
 		},
-		{ // no suffix (skipped with a warning)
-			input:  []string{"hugepages-1024"},
-			isWarn: true,
+		{ // no suffix
+			input: []string{"hugepages-1024"},
+			isErr: true,
+		},
+		{ // mixed valid and invalid entries
+			input:  []string{"hugepages-4194304kB", "hugepages-2048kB", "hugepages-akB", "hugepages-64kB"},
+			output: []string{"4GB", "2MB", "64KB"},
+			isErr:  true,
+		},
+		{ // mixed valid and invalid entries
+			input:  []string{"hugepages-2048kB", "hugepages-kB", "hugepages-64kB"},
+			output: []string{"2MB", "64KB"},
+			isErr:  true,
 		},
 	}
 
-	// Need to catch warnings.
-	savedOut := logrus.StandardLogger().Out
-	defer logrus.SetOutput(savedOut)
-	warns := new(bytes.Buffer)
-	logrus.SetOutput(warns)
-
 	for _, c := range testCases {
-		warns.Reset()
 		output, err := getHugePageSizeFromFilenames(c.input)
+		t.Log("input:", c.input, "; output:", output, "; err:", err)
 		if err != nil {
 			if !c.isErr {
 				t.Errorf("input %v, expected nil, got error: %v", c.input, err)
@@ -515,15 +517,6 @@ func TestGetHugePageSizeImpl(t *testing.T) {
 		}
 		if c.isErr {
 			t.Errorf("input %v, expected error, got error: nil, output: %v", c.input, output)
-			// no more checks
-			continue
-		}
-		// check for warnings
-		if c.isWarn && warns.Len() == 0 {
-			t.Errorf("input %v, expected a warning, got none", c.input)
-		}
-		if !c.isWarn && warns.Len() > 0 {
-			t.Errorf("input %v, unexpected warning: %s", c.input, warns.String())
 		}
 		// check output
 		if len(output) != len(c.output) || (len(output) > 0 && !reflect.DeepEqual(output, c.output)) {

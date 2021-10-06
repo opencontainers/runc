@@ -319,7 +319,10 @@ func HugePageSizes() []string {
 			return
 		}
 
-		hugePageSizes, _ = getHugePageSizeFromFilenames(files)
+		hugePageSizes, err = getHugePageSizeFromFilenames(files)
+		if err != nil {
+			logrus.Warn("HugePageSizes: ", err)
+		}
 	})
 
 	return hugePageSizes
@@ -327,24 +330,33 @@ func HugePageSizes() []string {
 
 func getHugePageSizeFromFilenames(fileNames []string) ([]string, error) {
 	pageSizes := make([]string, 0, len(fileNames))
+	var warn error
 
 	for _, file := range fileNames {
 		// example: hugepages-1048576kB
 		val := strings.TrimPrefix(file, "hugepages-")
 		if len(val) == len(file) {
-			// unexpected file name: no prefix found
+			// Unexpected file name: no prefix found, ignore it.
 			continue
 		}
-		// The suffix is always "kB" (as of Linux 5.9)
+		// The suffix is always "kB" (as of Linux 5.13). If we find
+		// something else, produce an error but keep going.
 		eLen := len(val) - 2
 		val = strings.TrimSuffix(val, "kB")
 		if len(val) != eLen {
-			logrus.Warnf("HugePageSizes: %s: invalid filename suffix (expected \"kB\")", file)
+			// Highly unlikely.
+			if warn == nil {
+				warn = errors.New(file + `: invalid suffix (expected "kB")`)
+			}
 			continue
 		}
 		size, err := strconv.Atoi(val)
 		if err != nil {
-			return nil, err
+			// Highly unlikely.
+			if warn == nil {
+				warn = fmt.Errorf("%s: %w", file, err)
+			}
+			continue
 		}
 		// Model after https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/mm/hugetlb_cgroup.c?id=eff48ddeab782e35e58ccc8853f7386bbae9dec4#n574
 		// but in our case the size is in KB already.
@@ -358,7 +370,7 @@ func getHugePageSizeFromFilenames(fileNames []string) ([]string, error) {
 		pageSizes = append(pageSizes, val)
 	}
 
-	return pageSizes, nil
+	return pageSizes, warn
 }
 
 // GetPids returns all pids, that were added to cgroup at path.
