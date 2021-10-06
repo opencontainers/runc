@@ -30,7 +30,7 @@ var (
 		&RdmaGroup{},
 		&NameGroup{GroupName: "name=systemd", Join: true},
 	}
-	HugePageSizes, _ = cgroups.GetHugePageSize()
+	HugePageSizes = cgroups.HugePageSizes()
 )
 
 var errSubsystemDoesNotExist = errors.New("cgroup: subsystem does not exist")

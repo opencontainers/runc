@@ -302,18 +302,19 @@ func RemovePaths(paths map[string]string) (err error) {
 	return fmt.Errorf("Failed to remove paths: %v", paths)
 }
 
-func GetHugePageSize() ([]string, error) {
+func HugePageSizes() []string {
 	dir, err := os.OpenFile("/sys/kernel/mm/hugepages", unix.O_DIRECTORY|unix.O_RDONLY, 0)
 	if err != nil {
-		return nil, err
+		return nil
 	}
 	files, err := dir.Readdirnames(0)
 	dir.Close()
 	if err != nil {
-		return nil, err
+		return nil
 	}
 
-	return getHugePageSizeFromFilenames(files)
+	hugePageSizes, _ := getHugePageSizeFromFilenames(files)
+	return hugePageSizes
 }
 
 func getHugePageSizeFromFilenames(fileNames []string) ([]string, error) {
@@ -330,7 +331,7 @@ func getHugePageSizeFromFilenames(fileNames []string) ([]string, error) {
 		eLen := len(val) - 2
 		val = strings.TrimSuffix(val, "kB")
 		if len(val) != eLen {
-			logrus.Warnf("GetHugePageSize: %s: invalid filename suffix (expected \"kB\")", file)
+			logrus.Warnf("HugePageSizes: %s: invalid filename suffix (expected \"kB\")", file)
 			continue
 		}
 		size, err := strconv.Atoi(val)

@@ -448,15 +448,12 @@ func TestFindCgroupMountpointAndRoot(t *testing.T) {
 	}
 }
 
-func BenchmarkGetHugePageSize(b *testing.B) {
-	var (
-		output []string
-		err    error
-	)
+func BenchmarkHugePageSizes(b *testing.B) {
+	var output []string
 	for i := 0; i < b.N; i++ {
-		output, err = GetHugePageSize()
+		output = HugePageSizes()
 	}
-	if err != nil || len(output) == 0 {
+	if len(output) == 0 {
 		b.Fatal("unexpected results")
 	}
 }
