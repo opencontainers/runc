@@ -448,16 +448,6 @@ func TestFindCgroupMountpointAndRoot(t *testing.T) {
 	}
 }
 
-func BenchmarkHugePageSizes(b *testing.B) {
-	var output []string
-	for i := 0; i < b.N; i++ {
-		output = HugePageSizes()
-	}
-	if len(output) == 0 {
-		b.Fatal("unexpected results")
-	}
-}
-
 func BenchmarkGetHugePageSizeImpl(b *testing.B) {
 	var (
 		input  = []string{"hugepages-1048576kB", "hugepages-2048kB", "hugepages-32768kB", "hugepages-64kB"}

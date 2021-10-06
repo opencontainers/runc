@@ -26,10 +26,8 @@ func setHugeTlb(dirPath string, r *configs.Resources) error {
 }
 
 func statHugeTlb(dirPath string, stats *cgroups.Stats) error {
-	hugePageSizes := cgroups.HugePageSizes()
 	hugetlbStats := cgroups.HugetlbStats{}
-
-	for _, pagesize := range hugePageSizes {
+	for _, pagesize := range cgroups.HugePageSizes() {
 		value, err := fscommon.GetCgroupParamUint(dirPath, "hugetlb."+pagesize+".current")
 		if err != nil {
 			return err

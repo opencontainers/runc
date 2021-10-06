@@ -302,18 +302,26 @@ func RemovePaths(paths map[string]string) (err error) {
 	return fmt.Errorf("Failed to remove paths: %v", paths)
 }
 
-func HugePageSizes() []string {
-	dir, err := os.OpenFile("/sys/kernel/mm/hugepages", unix.O_DIRECTORY|unix.O_RDONLY, 0)
-	if err != nil {
-		return nil
-	}
-	files, err := dir.Readdirnames(0)
-	dir.Close()
-	if err != nil {
-		return nil
-	}
+var (
+	hugePageSizes []string
+	initHPSOnce   sync.Once
+)
 
-	hugePageSizes, _ := getHugePageSizeFromFilenames(files)
+func HugePageSizes() []string {
+	initHPSOnce.Do(func() {
+		dir, err := os.OpenFile("/sys/kernel/mm/hugepages", unix.O_DIRECTORY|unix.O_RDONLY, 0)
+		if err != nil {
+			return
+		}
+		files, err := dir.Readdirnames(0)
+		dir.Close()
+		if err != nil {
+			return
+		}
+
+		hugePageSizes, _ = getHugePageSizeFromFilenames(files)
+	})
+
 	return hugePageSizes
 }
 
