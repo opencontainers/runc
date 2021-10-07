@@ -239,7 +239,7 @@ func (l *linuxStandardInit) Init() error {
 	}
 
 	if err := system.Exec(name, l.config.Args[0:], os.Environ()); err != nil {
-		return fmt.Errorf("can't exec user process: %w", err)
+		return fmt.Errorf("can't exec user process $q: %w", name, err)
 	}
 	return nil
 }

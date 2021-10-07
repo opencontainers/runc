@@ -4,6 +4,7 @@
 package system
 
 import (
+	"fmt"
 	"os/exec"
 	"unsafe"
 
@@ -43,7 +44,7 @@ func Exec(cmd string, args []string, env []string) error {
 	for {
 		err := unix.Exec(cmd, args, env)
 		if err != unix.EINTR { //nolint:errorlint // unix errors are bare
-			return err
+			return fmt.Errorf("failed to exec %q", cmd, err)
 		}
 	}
 }
