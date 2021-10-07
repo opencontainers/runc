@@ -143,6 +143,19 @@ func initPaths(c *configs.Cgroup) (map[string]string, error) {
 		}
 		paths[s.Name()] = subsystemPath
 	}
+
+	// If systemd is using cgroups-hybrid mode then add the slice path of
+	// this container to the paths so the following process executed with
+	// "runc exec" joins that cgroup as well.
+	if cgroups.IsCgroup2HybridMode() {
+		// "" means cgroup-hybrid path
+		cgroupsHybridPath, err := getSubsystemPath(slice, unit, "")
+		if err != nil && cgroups.IsNotFound(err) {
+			return nil, err
+		}
+		paths[""] = cgroupsHybridPath
+	}
+
 	return paths, nil
 }
 

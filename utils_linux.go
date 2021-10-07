@@ -234,6 +234,7 @@ type runner struct {
 	action          CtAct
 	notifySocket    *notifySocket
 	criuOpts        *libcontainer.CriuOpts
+	subCgroupPaths  map[string]string
 }
 
 func (r *runner) run(config *specs.Process) (int, error) {
@@ -253,6 +254,7 @@ func (r *runner) run(config *specs.Process) (int, error) {
 	process.LogLevel = strconv.Itoa(int(logrus.GetLevel()))
 	// Populate the fields that come from runner.
 	process.Init = r.init
+	process.SubCgroupPaths = r.subCgroupPaths
 	if len(r.listenFDs) > 0 {
 		process.Env = append(process.Env, "LISTEN_FDS="+strconv.Itoa(len(r.listenFDs)), "LISTEN_PID=1")
 		process.ExtraFiles = append(process.ExtraFiles, r.listenFDs...)

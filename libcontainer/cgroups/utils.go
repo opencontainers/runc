@@ -21,11 +21,14 @@ import (
 const (
 	CgroupProcesses   = "cgroup.procs"
 	unifiedMountpoint = "/sys/fs/cgroup"
+	hybridMountpoint  = "/sys/fs/cgroup/unified"
 )
 
 var (
 	isUnifiedOnce sync.Once
 	isUnified     bool
+	isHybridOnce  sync.Once
+	isHybrid      bool
 )
 
 // IsCgroup2UnifiedMode returns whether we are running in cgroup v2 unified mode.
@@ -45,6 +48,24 @@ func IsCgroup2UnifiedMode() bool {
 		isUnified = st.Type == unix.CGROUP2_SUPER_MAGIC
 	})
 	return isUnified
+}
+
+// IsCgroup2HybridMode returns whether we are running in cgroup v2 hybrid mode.
+func IsCgroup2HybridMode() bool {
+	isHybridOnce.Do(func() {
+		var st unix.Statfs_t
+		err := unix.Statfs(hybridMountpoint, &st)
+		if err != nil {
+			if os.IsNotExist(err) {
+				// ignore the "not found" error
+				isHybrid = false
+				return
+			}
+			panic(fmt.Sprintf("cannot statfs cgroup root: %s", err))
+		}
+		isHybrid = st.Type == unix.CGROUP2_SUPER_MAGIC
+	})
+	return isHybrid
 }
 
 type Mount struct {
@@ -352,7 +373,7 @@ func WriteCgroupProc(dir string, pid int) error {
 
 	file, err := OpenFile(dir, CgroupProcesses, os.O_WRONLY)
 	if err != nil {
-		return fmt.Errorf("failed to write %v to %v: %w", pid, CgroupProcesses, err)
+		return fmt.Errorf("failed to write %v: %w", pid, err)
 	}
 	defer file.Close()
 
@@ -369,7 +390,7 @@ func WriteCgroupProc(dir string, pid int) error {
 			continue
 		}
 
-		return fmt.Errorf("failed to write %v to %v: %w", pid, CgroupProcesses, err)
+		return fmt.Errorf("failed to write %v: %w", pid, err)
 	}
 	return err
 }
