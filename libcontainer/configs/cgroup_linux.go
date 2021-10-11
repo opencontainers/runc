@@ -32,7 +32,7 @@ type Cgroup struct {
 	*Resources
 
 	// Systemd tells if systemd should be used to manage cgroups.
-	Systemd bool
+	Systemd bool `json:"systemd"`
 
 	// SystemdProps are any additional properties for systemd,
 	// derived from org.systemd.property.xxx annotations.
