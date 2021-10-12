@@ -1,7 +1,6 @@
 package fs2
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
@@ -27,10 +26,7 @@ func setHugeTlb(dirPath string, r *configs.Resources) error {
 }
 
 func statHugeTlb(dirPath string, stats *cgroups.Stats) error {
-	hugePageSizes, err := cgroups.GetHugePageSize()
-	if err != nil {
-		return fmt.Errorf("failed to fetch hugetlb info: %w", err)
-	}
+	hugePageSizes, _ := cgroups.GetHugePageSize()
 	hugetlbStats := cgroups.HugetlbStats{}
 
 	for _, pagesize := range hugePageSizes {
