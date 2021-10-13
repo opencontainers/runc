@@ -258,7 +258,7 @@ func TestBlkioSetMultipleWeightDevice(t *testing.T) {
 
 	wd1 := configs.NewWeightDevice(8, 0, 500, 0)
 	wd2 := configs.NewWeightDevice(8, 16, 500, 0)
-	// we cannot actually set and check both because normal ioutil.WriteFile
+	// we cannot actually set and check both because normal os.WriteFile
 	// when writing to cgroup file will overwrite the whole file content instead
 	// of updating it as the kernel is doing. Just check the second device
 	// is present will suffice for the test to ensure multiple writes are done.

@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -367,7 +366,7 @@ func parseCpuInfoFile(path string) (cpuInfoFlags, error) {
 // Gets a single uint64 value from the specified file.
 func getIntelRdtParamUint(path, file string) (uint64, error) {
 	fileName := filepath.Join(path, file)
-	contents, err := ioutil.ReadFile(fileName)
+	contents, err := os.ReadFile(fileName)
 	if err != nil {
 		return 0, err
 	}
@@ -381,7 +380,7 @@ func getIntelRdtParamUint(path, file string) (uint64, error) {
 
 // Gets a string value from the specified file
 func getIntelRdtParamString(path, file string) (string, error) {
-	contents, err := ioutil.ReadFile(filepath.Join(path, file))
+	contents, err := os.ReadFile(filepath.Join(path, file))
 	if err != nil {
 		return "", err
 	}
@@ -393,7 +392,7 @@ func writeFile(dir, file, data string) error {
 	if dir == "" {
 		return fmt.Errorf("no such directory for %s", file)
 	}
-	if err := ioutil.WriteFile(filepath.Join(dir, file), []byte(data+"\n"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, file), []byte(data+"\n"), 0o600); err != nil {
 		return newLastCmdError(fmt.Errorf("intelrdt: unable to write %v: %w", data, err))
 	}
 	return nil
@@ -488,7 +487,7 @@ func WriteIntelRdtTasks(dir string, pid int) error {
 
 	// Don't attach any pid if -1 is specified as a pid
 	if pid != -1 {
-		if err := ioutil.WriteFile(filepath.Join(dir, intelRdtTasks), []byte(strconv.Itoa(pid)), 0o600); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, intelRdtTasks), []byte(strconv.Itoa(pid)), 0o600); err != nil {
 			return newLastCmdError(fmt.Errorf("intelrdt: unable to add pid %d: %w", pid, err))
 		}
 	}

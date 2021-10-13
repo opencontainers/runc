@@ -1,7 +1,7 @@
 package fs2
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"reflect"
 	"sort"
@@ -62,7 +62,7 @@ func TestStatIo(t *testing.T) {
 	fakeCgroupDir := t.TempDir()
 	statPath := filepath.Join(fakeCgroupDir, "io.stat")
 
-	if err := ioutil.WriteFile(statPath, []byte(exampleIoStatData), 0o644); err != nil {
+	if err := os.WriteFile(statPath, []byte(exampleIoStatData), 0o644); err != nil {
 		t.Fatal(err)
 	}
 

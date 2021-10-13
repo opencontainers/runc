@@ -5,7 +5,7 @@ package devices
 
 import (
 	"errors"
-	"io/ioutil"
+	"io/fs"
 	"os"
 	"testing"
 
@@ -14,7 +14,7 @@ import (
 
 func cleanupTest() {
 	unixLstat = unix.Lstat
-	ioutilReadDir = ioutil.ReadDir
+	osReadDir = os.ReadDir
 }
 
 func TestDeviceFromPathLstatFailure(t *testing.T) {
@@ -35,8 +35,8 @@ func TestDeviceFromPathLstatFailure(t *testing.T) {
 func TestHostDevicesIoutilReadDirFailure(t *testing.T) {
 	testError := errors.New("test error")
 
-	// Override ioutil.ReadDir to inject error.
-	ioutilReadDir = func(dirname string) ([]os.FileInfo, error) {
+	// Override os.ReadDir to inject error.
+	osReadDir = func(dirname string) ([]fs.DirEntry, error) {
 		return nil, testError
 	}
 	defer cleanupTest()
@@ -51,8 +51,8 @@ func TestHostDevicesIoutilReadDirDeepFailure(t *testing.T) {
 	testError := errors.New("test error")
 	called := false
 
-	// Override ioutil.ReadDir to inject error after the first call.
-	ioutilReadDir = func(dirname string) ([]os.FileInfo, error) {
+	// Override os.ReadDir to inject error after the first call.
+	osReadDir = func(dirname string) ([]fs.DirEntry, error) {
 		if called {
 			return nil, testError
 		}
@@ -64,7 +64,7 @@ func TestHostDevicesIoutilReadDirDeepFailure(t *testing.T) {
 			t.Fatalf("Unexpected error %v", err)
 		}
 
-		return []os.FileInfo{fi}, nil
+		return []fs.DirEntry{fileInfoToDirEntry(fi)}, nil
 	}
 	defer cleanupTest()
 

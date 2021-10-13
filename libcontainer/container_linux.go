@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"os"
 	"os/exec"
@@ -286,7 +285,7 @@ func (c *linuxContainer) exec() error {
 }
 
 func readFromExecFifo(execFifo io.Reader) error {
-	data, err := ioutil.ReadAll(execFifo)
+	data, err := io.ReadAll(execFifo)
 	if err != nil {
 		return err
 	}
@@ -1151,7 +1150,7 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 			return err
 		}
 
-		err = ioutil.WriteFile(filepath.Join(criuOpts.ImagesDirectory, descriptorsFilename), fdsJSON, 0o600)
+		err = os.WriteFile(filepath.Join(criuOpts.ImagesDirectory, descriptorsFilename), fdsJSON, 0o600)
 		if err != nil {
 			return err
 		}
@@ -1455,7 +1454,7 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 		fds    []string
 		fdJSON []byte
 	)
-	if fdJSON, err = ioutil.ReadFile(filepath.Join(criuOpts.ImagesDirectory, descriptorsFilename)); err != nil {
+	if fdJSON, err = os.ReadFile(filepath.Join(criuOpts.ImagesDirectory, descriptorsFilename)); err != nil {
 		return err
 	}
 
@@ -1850,7 +1849,7 @@ func (c *linuxContainer) updateState(process parentProcess) (*State, error) {
 }
 
 func (c *linuxContainer) saveState(s *State) (retErr error) {
-	tmpFile, err := ioutil.TempFile(c.root, "state-")
+	tmpFile, err := os.CreateTemp(c.root, "state-")
 	if err != nil {
 		return err
 	}
