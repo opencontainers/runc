@@ -1,6 +1,6 @@
 module github.com/opencontainers/runc
 
-go 1.15
+go 1.16
 
 require (
 	github.com/checkpoint-restore/go-criu/v5 v5.1.0

@@ -23,7 +23,7 @@ A third party security audit was performed by Cure53, you can see the full repor
 
 ## Building
 
-`runc` only supports Linux. It must be built with Go version 1.15 or higher.
+`runc` only supports Linux. It must be built with Go version 1.16 or higher.
 
 In order to enable seccomp support you will need to install `libseccomp` on your platform.
 > e.g. `libseccomp-devel` for CentOS, or `libseccomp-dev` for Ubuntu
@@ -110,7 +110,7 @@ You can run a test using your container engine's flags by setting `CONTAINER_ENG
 
 `runc` uses [Go Modules](https://github.com/golang/go/wiki/Modules) for dependencies management.
 Please refer to [Go Modules](https://github.com/golang/go/wiki/Modules) for how to add or update
-new dependencies. When updating dependencies, be sure that you are running Go `1.14` or newer.
+new dependencies.
 
 ```
 # Update vendored dependencies
