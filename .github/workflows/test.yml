@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        go-version: [1.15.x, 1.16.x, 1.17.x]
+        go-version: [1.16.x, 1.17.x]
         rootless: ["rootless", ""]
         race: ["-race", ""]
         criu: [""]
@@ -119,7 +119,9 @@ jobs:
         sudo apt -q install libseccomp-dev libseccomp-dev:i386 gcc-multilib criu
 
     - name: install go
-      uses: actions/setup-go@v2 # use default Go version
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.x # Latest stable
 
     - name: unit test
       # cgo is disabled by default when cross-compiling

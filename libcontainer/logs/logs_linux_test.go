@@ -3,7 +3,6 @@ package logs
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -93,7 +92,7 @@ func runLogForwarding(t *testing.T) *log {
 		logW.Close()
 	})
 
-	tempFile, err := ioutil.TempFile("", "")
+	tempFile, err := os.CreateTemp("", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -129,7 +128,7 @@ func truncateLogFile(t *testing.T, file *os.File) {
 // check checks that the file contains txt and does not contain notxt.
 func check(t *testing.T, l *log, txt, notxt string) {
 	t.Helper()
-	contents, err := ioutil.ReadFile(l.file.Name())
+	contents, err := os.ReadFile(l.file.Name())
 	if err != nil {
 		t.Fatal(err)
 	}

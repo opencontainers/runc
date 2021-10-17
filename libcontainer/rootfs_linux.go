@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -182,7 +181,7 @@ func finalizeRootfs(config *configs.Config) (err error) {
 
 // /tmp has to be mounted as private to allow MS_MOVE to work in all situations
 func prepareTmp(topTmpDir string) (string, error) {
-	tmpdir, err := ioutil.TempDir(topTmpDir, "runctop")
+	tmpdir, err := os.MkdirTemp(topTmpDir, "runctop")
 	if err != nil {
 		return "", err
 	}
@@ -337,7 +336,7 @@ func doTmpfsCopyUp(m *configs.Mount, rootfs, mountLabel string) (Err error) {
 		return fmt.Errorf("tmpcopyup: failed to setup tmpdir: %w", err)
 	}
 	defer cleanupTmp(tmpdir)
-	tmpDir, err := ioutil.TempDir(tmpdir, "runctmpdir")
+	tmpDir, err := os.MkdirTemp(tmpdir, "runctmpdir")
 	if err != nil {
 		return fmt.Errorf("tmpcopyup: failed to create tmpdir: %w", err)
 	}
@@ -1034,7 +1033,7 @@ func maskPath(path string, mountLabel string) error {
 // For e.g. net.ipv4.ip_forward translated to /proc/sys/net/ipv4/ip_forward.
 func writeSystemProperty(key, value string) error {
 	keyPath := strings.Replace(key, ".", "/", -1)
-	return ioutil.WriteFile(path.Join("/proc/sys", keyPath), []byte(value), 0o644)
+	return os.WriteFile(path.Join("/proc/sys", keyPath), []byte(value), 0o644)
 }
 
 func remount(m *configs.Mount, rootfs string) error {

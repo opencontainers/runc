@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -879,7 +878,7 @@ func TestMountCmds(t *testing.T) {
 	// Wait for process
 	waitProcess(&pconfig, t)
 
-	entries, err := ioutil.ReadDir(tmpDir)
+	entries, err := os.ReadDir(tmpDir)
 	ok(t, err)
 	expected := []string{"hello", "hello-backup", "world", "world-backup"}
 	for i, e := range entries {

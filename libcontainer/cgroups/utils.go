@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -243,7 +242,7 @@ func RemovePath(path string) error {
 		return nil
 	}
 
-	infos, err := ioutil.ReadDir(path)
+	infos, err := os.ReadDir(path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			err = nil

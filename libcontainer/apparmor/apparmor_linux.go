@@ -3,7 +3,6 @@ package apparmor
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"sync"
 
@@ -19,7 +18,7 @@ var (
 func isEnabled() bool {
 	checkAppArmor.Do(func() {
 		if _, err := os.Stat("/sys/kernel/security/apparmor"); err == nil {
-			buf, err := ioutil.ReadFile("/sys/module/apparmor/parameters/enabled")
+			buf, err := os.ReadFile("/sys/module/apparmor/parameters/enabled")
 			appArmorEnabled = err == nil && len(buf) > 1 && buf[0] == 'Y'
 		}
 	})

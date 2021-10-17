@@ -9,7 +9,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"path/filepath"
@@ -246,7 +245,7 @@ func main() {
 
 	if pidFile != "" {
 		pid := fmt.Sprintf("%d", os.Getpid())
-		if err := ioutil.WriteFile(pidFile, []byte(pid), 0o644); err != nil {
+		if err := os.WriteFile(pidFile, []byte(pid), 0o644); err != nil {
 			logrus.Fatalf("Cannot write pid file: %v", err)
 		}
 	}

@@ -1,7 +1,7 @@
 package capabilities
 
 import (
-	"io/ioutil"
+	"io"
 	"os"
 	"testing"
 
@@ -24,7 +24,7 @@ func TestNew(t *testing.T) {
 	hook := test.NewGlobal()
 	defer hook.Reset()
 
-	logrus.SetOutput(ioutil.Discard)
+	logrus.SetOutput(io.Discard)
 	caps, err := New(&conf)
 	logrus.SetOutput(os.Stderr)
 

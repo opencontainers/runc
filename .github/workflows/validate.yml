@@ -30,6 +30,10 @@ jobs:
       CGO_CFLAGS: -g -O2 -Werror
     steps:
       - uses: actions/checkout@v2
+      - name: install go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.x # Latest stable
       - name: compile with no build tags
         run: make BUILDTAGS=""
 
@@ -93,6 +97,10 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v2
+    - name: install go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.x # Latest stable
     - name: cache go mod and $GOCACHE
       uses: actions/cache@v2
       with:
