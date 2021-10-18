@@ -1,6 +1,11 @@
 package configs
 
-import "errors"
+import (
+	"errors"
+	"os"
+
+	"golang.org/x/sys/unix"
+)
 
 var (
 	errNoUIDMap   = errors.New("User namespaces enabled, but no uid mappings found.")
@@ -65,4 +70,35 @@ func (c Config) hostIDFromMapping(containerID int, uMap []IDMap) (int, bool) {
 		}
 	}
 	return -1, false
+}
+
+// IsHostNetNS returns true if this container is configured to run in the same
+// net namespace as the host
+func (c Config) IsHostNetNS() (bool, error) {
+	if !c.Namespaces.Contains(NEWNET) {
+		return true, nil
+	}
+
+	path := c.Namespaces.PathOf(NEWNET)
+	if path == "" {
+		// own netns, so hostnet = false
+		return false, nil
+	}
+
+	return isHostNetNS(path)
+}
+
+func isHostNetNS(path string) (bool, error) {
+	const currentProcessNetns = "/proc/self/ns/net"
+
+	var st1, st2 unix.Stat_t
+
+	if err := unix.Stat(currentProcessNetns, &st1); err != nil {
+		return false, &os.PathError{Op: "stat", Path: currentProcessNetns, Err: err}
+	}
+	if err := unix.Stat(path, &st2); err != nil {
+		return false, &os.PathError{Op: "stat", Path: path, Err: err}
+	}
+
+	return (st1.Dev == st2.Dev) && (st1.Ino == st2.Ino), nil
 }

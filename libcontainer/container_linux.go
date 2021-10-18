@@ -1212,7 +1212,7 @@ func (c *linuxContainer) makeCriuRestoreMountpoints(m *configs.Mount) error {
 	case "bind":
 		// The prepareBindMount() function checks if source
 		// exists. So it cannot be used for other filesystem types.
-		if err := prepareBindMount(m, c.config.Rootfs); err != nil {
+		if err := prepareBindMount(m, c.config.Rootfs, c.config); err != nil {
 			return err
 		}
 	default:
@@ -1221,7 +1221,7 @@ func (c *linuxContainer) makeCriuRestoreMountpoints(m *configs.Mount) error {
 		if err != nil {
 			return err
 		}
-		if err := checkProcMount(c.config.Rootfs, dest, ""); err != nil {
+		if err := checkProcMount(c.config.Rootfs, dest, "", c.config); err != nil {
 			return err
 		}
 		if err := os.MkdirAll(dest, 0o755); err != nil {
@@ -1248,7 +1248,9 @@ func isPathInPrefixList(path string, prefix []string) bool {
 // runc modifies the rootfs to add mountpoints which do not exist.
 // This function also creates missing mountpoints as long as they
 // are not on top of a tmpfs, as CRIU will restore tmpfs content anyway.
-func (c *linuxContainer) prepareCriuRestoreMounts(mounts []*configs.Mount) error {
+func (c *linuxContainer) prepareCriuRestoreMounts() error {
+	mounts := c.config.Mounts
+
 	// First get a list of a all tmpfs mounts
 	tmpfs := []string{}
 	for _, m := range mounts {
@@ -1406,7 +1408,7 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 
 	// This will modify the rootfs of the container in the same way runc
 	// modifies the container during initial creation.
-	if err := c.prepareCriuRestoreMounts(c.config.Mounts); err != nil {
+	if err := c.prepareCriuRestoreMounts(); err != nil {
 		return err
 	}
 

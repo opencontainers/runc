@@ -70,7 +70,7 @@ func prepareRootfs(pipe io.ReadWriter, iConfig *initConfig) (err error) {
 				return fmt.Errorf("error running premount command: %w", err)
 			}
 		}
-		if err := mountToRootfs(m, mountConfig); err != nil {
+		if err := mountToRootfs(m, mountConfig, config); err != nil {
 			return fmt.Errorf("error mounting %q to rootfs at %q: %w", m.Source, m.Destination, err)
 		}
 
@@ -209,7 +209,7 @@ func mountCmd(cmd configs.Command) error {
 	return nil
 }
 
-func prepareBindMount(m *configs.Mount, rootfs string) error {
+func prepareBindMount(m *configs.Mount, rootfs string, config *configs.Config) error {
 	stat, err := os.Stat(m.Source)
 	if err != nil {
 		// error out if the source of a bind mount does not exist as we will be
@@ -224,7 +224,7 @@ func prepareBindMount(m *configs.Mount, rootfs string) error {
 	if dest, err = securejoin.SecureJoin(rootfs, m.Destination); err != nil {
 		return err
 	}
-	if err := checkProcMount(rootfs, dest, m.Source); err != nil {
+	if err := checkProcMount(rootfs, dest, m.Source, config); err != nil {
 		return err
 	}
 	if err := createIfNotExists(dest, stat.IsDir()); err != nil {
@@ -234,7 +234,7 @@ func prepareBindMount(m *configs.Mount, rootfs string) error {
 	return nil
 }
 
-func mountCgroupV1(m *configs.Mount, c *mountConfig) error {
+func mountCgroupV1(m *configs.Mount, c *mountConfig, config *configs.Config) error {
 	binds, err := getCgroupMounts(m)
 	if err != nil {
 		return err
@@ -254,7 +254,7 @@ func mountCgroupV1(m *configs.Mount, c *mountConfig) error {
 		Data:             "mode=755",
 		PropagationFlags: m.PropagationFlags,
 	}
-	if err := mountToRootfs(tmpfs, c); err != nil {
+	if err := mountToRootfs(tmpfs, c, config); err != nil {
 		return err
 	}
 	for _, b := range binds {
@@ -281,7 +281,7 @@ func mountCgroupV1(m *configs.Mount, c *mountConfig) error {
 				return err
 			}
 		} else {
-			if err := mountToRootfs(b, c); err != nil {
+			if err := mountToRootfs(b, c, config); err != nil {
 				return err
 			}
 		}
@@ -374,7 +374,7 @@ func doTmpfsCopyUp(m *configs.Mount, rootfs, mountLabel string) (Err error) {
 	})
 }
 
-func mountToRootfs(m *configs.Mount, c *mountConfig) error {
+func mountToRootfs(m *configs.Mount, c *mountConfig, config *configs.Config) error {
 	rootfs := c.root
 	mountLabel := c.label
 	dest, err := securejoin.SecureJoin(rootfs, m.Destination)
@@ -438,7 +438,7 @@ func mountToRootfs(m *configs.Mount, c *mountConfig) error {
 		}
 		return nil
 	case "bind":
-		if err := prepareBindMount(m, rootfs); err != nil {
+		if err := prepareBindMount(m, rootfs, config); err != nil {
 			return err
 		}
 		if err := mountPropagate(m, rootfs, mountLabel); err != nil {
@@ -466,9 +466,9 @@ func mountToRootfs(m *configs.Mount, c *mountConfig) error {
 		if cgroups.IsCgroup2UnifiedMode() {
 			return mountCgroupV2(m, c)
 		}
-		return mountCgroupV1(m, c)
+		return mountCgroupV1(m, c, config)
 	default:
-		if err := checkProcMount(rootfs, dest, m.Source); err != nil {
+		if err := checkProcMount(rootfs, dest, m.Source, config); err != nil {
 			return err
 		}
 		if err := os.MkdirAll(dest, 0o755); err != nil {
@@ -517,7 +517,7 @@ func getCgroupMounts(m *configs.Mount) ([]*configs.Mount, error) {
 // dest is required to be an abs path and have any symlinks resolved before calling this function.
 //
 // if source is nil, don't stat the filesystem.  This is used for restore of a checkpoint.
-func checkProcMount(rootfs, dest, source string) error {
+func checkProcMount(rootfs, dest, source string, config *configs.Config) error {
 	const procPath = "/proc"
 	path, err := filepath.Rel(filepath.Join(rootfs, procPath), dest)
 	if err != nil {
@@ -558,6 +558,16 @@ func checkProcMount(rootfs, dest, source string) error {
 		"/proc/slabinfo",
 		"/proc/net/dev",
 	}
+
+	// Allow /proc/sys/net if running in non-host netns
+	hostnet, hostnetErr := config.IsHostNetNS()
+	if hostnetErr != nil {
+		return hostnetErr
+	}
+	if !hostnet {
+		validProcMounts = append(validProcMounts, "/proc/sys/net")
+	}
+
 	for _, valid := range validProcMounts {
 		path, err := filepath.Rel(filepath.Join(rootfs, valid), dest)
 		if err != nil {
