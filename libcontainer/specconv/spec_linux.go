@@ -678,7 +678,7 @@ func createDevices(spec *specs.Spec, config *configs.Config) ([]*devices.Device,
 
 next:
 	for _, ad := range AllowedDevices {
-		if ad.Path != "" {
+		if ad.Path != "" && spec.Linux != nil {
 			for _, sd := range spec.Linux.Devices {
 				if sd.Path == ad.Path {
 					continue next
