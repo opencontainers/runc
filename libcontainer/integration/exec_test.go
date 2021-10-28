@@ -3,6 +3,7 @@ package integration
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -1836,4 +1837,67 @@ next_fd:
 	if count > 0 {
 		t.Fatalf("found %d extra fds after container.Run", count)
 	}
+}
+
+// Test that a container using user namespaces is able to bind mount a folder
+// that does not have permissions for group/others.
+func TestBindMountAndUser(t *testing.T) {
+	if _, err := os.Stat("/proc/self/ns/user"); errors.Is(err, os.ErrNotExist) {
+		t.Skip("userns is unsupported")
+	}
+
+	if testing.Short() {
+		return
+	}
+
+	temphost := t.TempDir()
+	dirhost := filepath.Join(temphost, "inaccessible", "dir")
+
+	err := os.MkdirAll(dirhost, 0o755)
+	ok(t, err)
+
+	err = ioutil.WriteFile(filepath.Join(dirhost, "foo.txt"), []byte("Hello"), 0o755)
+	ok(t, err)
+
+	// Make this dir inaccessible to "group,others".
+	err = os.Chmod(filepath.Join(temphost, "inaccessible"), 0o700)
+	ok(t, err)
+
+	config := newTemplateConfig(t, &tParam{
+		userns: true,
+	})
+
+	// Set HostID to 1000 to avoid DAC_OVERRIDE bypassing the purpose of this test.
+	config.UidMappings[0].HostID = 1000
+	config.GidMappings[0].HostID = 1000
+
+	// Set the owner of rootfs to the effective IDs in the host to avoid errors
+	// while creating the folders to perform the mounts.
+	err = os.Chown(config.Rootfs, 1000, 1000)
+	ok(t, err)
+
+	config.Mounts = append(config.Mounts, &configs.Mount{
+		Source:      dirhost,
+		Destination: "/tmp/mnt1cont",
+		Device:      "bind",
+		Flags:       unix.MS_BIND | unix.MS_REC,
+	})
+
+	container, err := newContainer(t, config)
+	ok(t, err)
+	defer container.Destroy() //nolint: errcheck
+
+	var stdout bytes.Buffer
+
+	pconfig := libcontainer.Process{
+		Cwd:    "/",
+		Args:   []string{"sh", "-c", "stat /tmp/mnt1cont/foo.txt"},
+		Env:    standardEnvironment,
+		Stdout: &stdout,
+		Init:   true,
+	}
+	err = container.Run(&pconfig)
+	ok(t, err)
+
+	waitProcess(&pconfig, t)
 }

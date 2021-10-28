@@ -295,6 +295,12 @@ func (l *LinuxFactory) StartInitialization() (err error) {
 		return fmt.Errorf("unable to convert _LIBCONTAINER_LOGPIPE: %w", err)
 	}
 
+	// Get mount files (O_PATH).
+	mountFds, err := parseMountFds()
+	if err != nil {
+		return err
+	}
+
 	// clear the current process's environment to clean any libcontainer
 	// specific env vars.
 	os.Clearenv()
@@ -305,7 +311,7 @@ func (l *LinuxFactory) StartInitialization() (err error) {
 		}
 	}()
 
-	i, err := newContainerInit(it, pipe, consoleSocket, fifofd, logPipeFd)
+	i, err := newContainerInit(it, pipe, consoleSocket, fifofd, logPipeFd, mountFds)
 	if err != nil {
 		return err
 	}
@@ -358,4 +364,19 @@ func NewgidmapPath(newgidmapPath string) func(*LinuxFactory) error {
 		l.NewgidmapPath = newgidmapPath
 		return nil
 	}
+}
+
+func parseMountFds() ([]int, error) {
+	fdsJson := os.Getenv("_LIBCONTAINER_MOUNT_FDS")
+	if fdsJson == "" {
+		// Always return the nil slice if no fd is present.
+		return nil, nil
+	}
+
+	var mountFds []int
+	if err := json.Unmarshal([]byte(fdsJson), &mountFds); err != nil {
+		return nil, fmt.Errorf("Error unmarshalling _LIBCONTAINER_MOUNT_FDS: %w", err)
+	}
+
+	return mountFds, nil
 }

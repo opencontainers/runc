@@ -75,7 +75,7 @@ type initer interface {
 	Init() error
 }
 
-func newContainerInit(t initType, pipe *os.File, consoleSocket *os.File, fifoFd, logFd int) (initer, error) {
+func newContainerInit(t initType, pipe *os.File, consoleSocket *os.File, fifoFd, logFd int, mountFds []int) (initer, error) {
 	var config *initConfig
 	if err := json.NewDecoder(pipe).Decode(&config); err != nil {
 		return nil, err
@@ -85,6 +85,11 @@ func newContainerInit(t initType, pipe *os.File, consoleSocket *os.File, fifoFd,
 	}
 	switch t {
 	case initSetns:
+		// mountFds must be nil in this case. We don't mount while doing runc exec.
+		if mountFds != nil {
+			return nil, errors.New("mountFds must be nil. Can't mount while doing runc exec.")
+		}
+
 		return &linuxSetnsInit{
 			pipe:          pipe,
 			consoleSocket: consoleSocket,
@@ -99,6 +104,7 @@ func newContainerInit(t initType, pipe *os.File, consoleSocket *os.File, fifoFd,
 			config:        config,
 			fifoFd:        fifoFd,
 			logFd:         logFd,
+			mountFds:      mountFds,
 		}, nil
 	}
 	return nil, fmt.Errorf("unknown init type %q", t)
