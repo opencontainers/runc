@@ -1856,7 +1856,7 @@ func TestBindMountAndUser(t *testing.T) {
 	err := os.MkdirAll(dirhost, 0o755)
 	ok(t, err)
 
-	err = ioutil.WriteFile(filepath.Join(dirhost, "foo.txt"), []byte("Hello"), 0o755)
+	err = os.WriteFile(filepath.Join(dirhost, "foo.txt"), []byte("Hello"), 0o755)
 	ok(t, err)
 
 	// Make this dir inaccessible to "group,others".
