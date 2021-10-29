@@ -188,8 +188,11 @@ func TestValidateUsernamespaceWithoutUserNS(t *testing.T) {
 func TestValidateSysctl(t *testing.T) {
 	sysctl := map[string]string{
 		"fs.mqueue.ctl": "ctl",
+		"fs/mqueue/ctl": "ctl",
 		"net.ctl":       "ctl",
+		"net/ctl":       "ctl",
 		"kernel.ctl":    "ctl",
+		"kernel/ctl":    "ctl",
 	}
 
 	for k, v := range sysctl {
@@ -209,8 +212,11 @@ func TestValidateSysctl(t *testing.T) {
 func TestValidateValidSysctl(t *testing.T) {
 	sysctl := map[string]string{
 		"fs.mqueue.ctl": "ctl",
+		"fs/mqueue/ctl": "ctl",
 		"net.ctl":       "ctl",
+		"net/ctl":       "ctl",
 		"kernel.msgmax": "ctl",
+		"kernel/msgmax": "ctl",
 	}
 
 	for k, v := range sysctl {
