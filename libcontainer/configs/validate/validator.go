@@ -150,6 +150,7 @@ func (v *ConfigValidator) sysctl(config *configs.Config) error {
 	)
 
 	for s := range config.Sysctl {
+		s := strings.Replace(s, "/", ".", -1)
 		if validSysctlMap[s] || strings.HasPrefix(s, "fs.mqueue.") {
 			if config.Namespaces.Contains(configs.NEWIPC) {
 				continue

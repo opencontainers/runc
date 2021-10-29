@@ -897,7 +897,12 @@ func TestSysctl(t *testing.T) {
 	config := newTemplateConfig(t, nil)
 	config.Sysctl = map[string]string{
 		"kernel.shmmni": "8192",
+		"kernel/shmmax": "4194304",
 	}
+	const (
+		cmd = "cat shmmni shmmax"
+		exp = "8192\n4194304\n"
+	)
 
 	container, err := newContainer(t, config)
 	ok(t, err)
@@ -905,8 +910,8 @@ func TestSysctl(t *testing.T) {
 
 	var stdout bytes.Buffer
 	pconfig := libcontainer.Process{
-		Cwd:    "/",
-		Args:   []string{"sh", "-c", "cat /proc/sys/kernel/shmmni"},
+		Cwd:    "/proc/sys/kernel",
+		Args:   []string{"sh", "-c", cmd},
 		Env:    standardEnvironment,
 		Stdin:  nil,
 		Stdout: &stdout,
@@ -918,9 +923,9 @@ func TestSysctl(t *testing.T) {
 	// Wait for process
 	waitProcess(&pconfig, t)
 
-	shmmniOutput := strings.TrimSpace(stdout.String())
-	if shmmniOutput != "8192" {
-		t.Fatalf("kernel.shmmni property expected to be 8192, but is %s", shmmniOutput)
+	out := stdout.String()
+	if out != exp {
+		t.Fatalf("expected %s, got %s", exp, out)
 	}
 }
 
