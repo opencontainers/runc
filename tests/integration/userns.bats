@@ -7,6 +7,7 @@ function setup() {
 
 	# Prepare source folders for bind mount
 	mkdir -p source-{accessible,inaccessible-1,inaccessible-2}/dir
+	chmod 755 source-accessible source-accessible/dir
 	touch source-{accessible,inaccessible-1,inaccessible-2}/dir/foo.txt
 
 	# Permissions only to the owner, it is inaccessible to group/others
@@ -14,10 +15,6 @@ function setup() {
 
 	mkdir -p rootfs/{proc,sys,tmp}
 	mkdir -p rootfs/tmp/mount-{1,2}
-
-	# We need to give permissions for others so the uid inside the userns
-	# can mount the rootfs on itself. Otherwise the rootfs mount will fail.
-	chmod 755 "$ROOT"
 
 	if [ "$ROOTLESS" -eq 0 ]; then
 		update_config ' .linux.namespaces += [{"type": "user"}]
