@@ -544,12 +544,38 @@ function setup_bundle() {
 	ROOT=$(mktemp -d "$BATS_RUN_TMPDIR/runc.XXXXXX")
 	mkdir -p "$ROOT/state" "$ROOT/bundle/rootfs"
 
+	# Tests running inside userns need to traverse the path as different
+	# users to mount the rootfs.
+	# Give permissions for others, so they always work.
+	chmod_all 755 "$ROOT" "$BATS_RUN_TMPDIR"
+
 	setup_recvtty
 	cd "$ROOT/bundle" || return
 
 	tar --exclude './dev/*' -C rootfs -xf "$image"
 
 	runc_spec
+}
+
+function chmod_all() {
+	local perm=$1
+	local path=$2
+	local base=${3%/} # Remove the trailing slash if present.
+
+	# Validate path is descendant, otherwise the loop will not stop.
+	if [[ "$path" != "$base"/* ]]; then
+		return
+	fi
+
+	while [ "$path" != $base ]; do
+		chmod 755 $path
+
+		# Strip the last component of path
+		path=$(dirname $path)
+	done
+
+	# Always chmod base too.
+	chmod 755 $base
 }
 
 function setup_busybox() {

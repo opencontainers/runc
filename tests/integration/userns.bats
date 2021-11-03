@@ -18,10 +18,18 @@ function setup() {
 
 	# We need to give permissions for others so the uid inside the userns
 	# can mount the rootfs on itself. Otherwise the rootfs mount will fail.
-	chmod 755 "$ROOT"
+	#chmod 755 "$ROOT"
+	#chmod_all 755 $ROOT $BATS_TMPDIR
 
-	ls -ld /tmp/ /tmp/bats* /tmp/bats*/runc* /tmp/bats*/runc*/bundle /tmp/bats*/runc*/bundle/rootfs 
-	chmod 755 /tmp/ /tmp/bats* /tmp/bats*/runc* /tmp/bats*/runc*/bundle /tmp/bats*/runc*/bundle/rootfs
+	#ls -ld /tmp/ /tmp/bats* /tmp/bats*/runc* /tmp/bats*/runc*/bundle /tmp/bats*/runc*/bundle/rootfs 
+	##chmod 755 /tmp/ /tmp/bats* /tmp/bats*/runc* /tmp/bats*/runc*/bundle /tmp/bats*/runc*/bundle/rootfs
+	#
+	#chmod_all 755 $ROOT $BATS_TMPDIR
+	#echo "path is: $path"
+	#echo "root is: $ROOT"
+	#echo "BATS_RUN_TMPDIR is: $BATS_RUN_TMPDIR"
+	#echo "BATS_TMPDIR is: $BATS_TMPDIR"
+	#ls -ld /tmp/ /tmp/bats* /tmp/bats*/runc* /tmp/bats*/runc*/bundle /tmp/bats*/runc*/bundle/rootfs 
 
 	if [ "$ROOTLESS" -eq 0 ]; then
 		update_config ' .linux.namespaces += [{"type": "user"}]
@@ -40,6 +48,7 @@ function teardown() {
 
 	runc run test_busybox
 	[ "$status" -eq 0 ]
+	[ "$status" -eq 1 ]
 }
 
 # We had bugs where 1 mount worked but not 2+, test with 2 as it is a more
