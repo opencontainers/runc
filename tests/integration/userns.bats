@@ -21,6 +21,7 @@ function setup() {
 	chmod 755 "$ROOT"
 
 	ls -ld /tmp/ /tmp/bats* /tmp/bats*/runc* /tmp/bats*/runc*/bundle /tmp/bats*/runc*/bundle/rootfs 
+	chmod 755 /tmp/ /tmp/bats* /tmp/bats*/runc* /tmp/bats*/runc*/bundle /tmp/bats*/runc*/bundle/rootfs
 
 	if [ "$ROOTLESS" -eq 0 ]; then
 		update_config ' .linux.namespaces += [{"type": "user"}]
