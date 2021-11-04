@@ -128,6 +128,36 @@ func (v *ConfigValidator) cgroupnamespace(config *configs.Config) error {
 	return nil
 }
 
+// convertSysctlVariableToDotsSeparator can return sysctl variables in dots separator format.
+// The '/' separator is also accepted in place of a '.'.
+// Convert the sysctl variables to dots separator format for validation.
+// More info:
+//   https://man7.org/linux/man-pages/man8/sysctl.8.html
+//   https://man7.org/linux/man-pages/man5/sysctl.d.5.html
+// For example:
+// Input sysctl variable "net/ipv4/conf/eno2.100.rp_filter"
+// will return the converted value "net.ipv4.conf.eno2/100.rp_filter"
+func convertSysctlVariableToDotsSeparator(val string) string {
+	if val == "" {
+		return val
+	}
+	firstSepIndex := strings.IndexAny(val, "./")
+	if firstSepIndex == -1 || val[firstSepIndex] == '.' {
+		return val
+	}
+
+	f := func(r rune) rune {
+		switch r {
+		case '.':
+			return '/'
+		case '/':
+			return '.'
+		}
+		return r
+	}
+	return strings.Map(f, val)
+}
+
 // sysctl validates that the specified sysctl keys are valid or not.
 // /proc/sys isn't completely namespaced and depending on which namespaces
 // are specified, a subset of sysctls are permitted.
@@ -150,7 +180,7 @@ func (v *ConfigValidator) sysctl(config *configs.Config) error {
 	)
 
 	for s := range config.Sysctl {
-		s := strings.Replace(s, "/", ".", -1)
+		s := convertSysctlVariableToDotsSeparator(s)
 		if validSysctlMap[s] || strings.HasPrefix(s, "fs.mqueue.") {
 			if config.Namespaces.Contains(configs.NEWIPC) {
 				continue

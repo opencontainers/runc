@@ -184,14 +184,40 @@ func TestValidateUsernamespaceWithoutUserNS(t *testing.T) {
 	}
 }
 
+// TestConvertSysctlVariableToDotsSeparator tests whether the sysctl variable
+// can be correctly converted to a dot as a separator.
+func TestConvertSysctlVariableToDotsSeparator(t *testing.T) {
+	type testCase struct {
+		in  string
+		out string
+	}
+	valid := []testCase{
+		{in: "kernel.shm_rmid_forced", out: "kernel.shm_rmid_forced"},
+		{in: "kernel/shm_rmid_forced", out: "kernel.shm_rmid_forced"},
+		{in: "net.ipv4.conf.eno2/100.rp_filter", out: "net.ipv4.conf.eno2/100.rp_filter"},
+		{in: "net/ipv4/conf/eno2.100/rp_filter", out: "net.ipv4.conf.eno2/100.rp_filter"},
+		{in: "net/ipv4/ip_local_port_range", out: "net.ipv4.ip_local_port_range"},
+		{in: "kernel/msgmax", out: "kernel.msgmax"},
+		{in: "kernel/sem", out: "kernel.sem"},
+	}
+
+	for _, test := range valid {
+		convertSysctlVal := convertSysctlVariableToDotsSeparator(test.in)
+		if convertSysctlVal != test.out {
+			t.Errorf("The sysctl variable was not converted correctly. got: %s, want: %s", convertSysctlVal, test.out)
+		}
+	}
+}
+
 func TestValidateSysctl(t *testing.T) {
 	sysctl := map[string]string{
-		"fs.mqueue.ctl": "ctl",
-		"fs/mqueue/ctl": "ctl",
-		"net.ctl":       "ctl",
-		"net/ctl":       "ctl",
-		"kernel.ctl":    "ctl",
-		"kernel/ctl":    "ctl",
+		"fs.mqueue.ctl":                    "ctl",
+		"fs/mqueue/ctl":                    "ctl",
+		"net.ctl":                          "ctl",
+		"net/ctl":                          "ctl",
+		"net.ipv4.conf.eno2/100.rp_filter": "ctl",
+		"kernel.ctl":                       "ctl",
+		"kernel/ctl":                       "ctl",
 	}
 
 	for k, v := range sysctl {
@@ -210,12 +236,13 @@ func TestValidateSysctl(t *testing.T) {
 
 func TestValidateValidSysctl(t *testing.T) {
 	sysctl := map[string]string{
-		"fs.mqueue.ctl": "ctl",
-		"fs/mqueue/ctl": "ctl",
-		"net.ctl":       "ctl",
-		"net/ctl":       "ctl",
-		"kernel.msgmax": "ctl",
-		"kernel/msgmax": "ctl",
+		"fs.mqueue.ctl":                    "ctl",
+		"fs/mqueue/ctl":                    "ctl",
+		"net.ctl":                          "ctl",
+		"net/ctl":                          "ctl",
+		"net.ipv4.conf.eno2/100.rp_filter": "ctl",
+		"kernel.msgmax":                    "ctl",
+		"kernel/msgmax":                    "ctl",
 	}
 
 	for k, v := range sysctl {
