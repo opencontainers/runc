@@ -14,7 +14,7 @@ task:
     HOME: /root
     # yamllint disable rule:key-duplicates
     matrix:
-      DISTRO: fedora34
+      DISTRO: fedora
 
   name: vagrant DISTRO:$DISTRO
 

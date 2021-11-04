@@ -15,10 +15,6 @@ function setup() {
 	mkdir -p rootfs/{proc,sys,tmp}
 	mkdir -p rootfs/tmp/mount-{1,2}
 
-	# We need to give permissions for others so the uid inside the userns
-	# can mount the rootfs on itself. Otherwise the rootfs mount will fail.
-	chmod 755 "$ROOT"
-
 	if [ "$ROOTLESS" -eq 0 ]; then
 		update_config ' .linux.namespaces += [{"type": "user"}]
 			| .linux.uidMappings += [{"hostID": 100000, "containerID": 0, "size": 65534}]

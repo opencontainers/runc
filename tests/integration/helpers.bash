@@ -544,6 +544,12 @@ function setup_bundle() {
 	ROOT=$(mktemp -d "$BATS_RUN_TMPDIR/runc.XXXXXX")
 	mkdir -p "$ROOT/state" "$ROOT/bundle/rootfs"
 
+	# Directories created by mktemp -d have 0700 permission bits. Tests
+	# running inside userns (see userns.bats) need to access the directory
+	# as a different user to mount the rootfs. Since kernel v5.12, parent
+	# directories are also checked. Give a+x for these tests to work.
+	chmod a+x "$ROOT" "$BATS_RUN_TMPDIR"
+
 	setup_recvtty
 	cd "$ROOT/bundle" || return
 
