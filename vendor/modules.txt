@@ -28,7 +28,7 @@ github.com/docker/go-units
 # github.com/godbus/dbus/v5 v5.0.6
 ## explicit
 github.com/godbus/dbus/v5
-# github.com/moby/sys/mountinfo v0.4.1
+# github.com/moby/sys/mountinfo v0.5.0
 ## explicit
 github.com/moby/sys/mountinfo
 # github.com/mrunalp/fileutils v0.5.0
