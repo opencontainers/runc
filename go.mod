@@ -3,7 +3,7 @@ module github.com/opencontainers/runc
 go 1.16
 
 require (
-	github.com/checkpoint-restore/go-criu/v5 v5.1.0
+	github.com/checkpoint-restore/go-criu/v5 v5.2.0
 	github.com/cilium/ebpf v0.7.0
 	github.com/containerd/console v1.0.3
 	github.com/coreos/go-systemd/v22 v22.3.2
