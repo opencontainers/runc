@@ -303,3 +303,109 @@ function setup() {
 	# check that the cgroups v2 path is the same for both processes
 	[[ "$run_cgroup" == "$exec_cgroup" ]]
 }
+
+@test "runc exec should refuse a paused container" {
+	if [[ "$ROOTLESS" -ne 0 ]]; then
+		requires rootless_cgroup
+	fi
+	requires cgroups_freezer
+
+	set_cgroups_path
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" ct1
+	[ "$status" -eq 0 ]
+	runc pause ct1
+	[ "$status" -eq 0 ]
+
+	# Exec should not timeout or succeed.
+	runc exec ct1 echo ok
+	[ "$status" -eq 255 ]
+	[[ "$output" == *"cannot exec in a paused container"* ]]
+}
+
+@test "runc exec --ignore-paused" {
+	if [[ "$ROOTLESS" -ne 0 ]]; then
+		requires rootless_cgroup
+	fi
+	requires cgroups_freezer
+
+	set_cgroups_path
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" ct1
+	[ "$status" -eq 0 ]
+	runc pause ct1
+	[ "$status" -eq 0 ]
+
+	# Resume the container a bit later.
+	(
+		sleep 2
+		runc resume ct1
+	) &
+
+	# Exec should not timeout or succeed.
+	runc exec --ignore-paused ct1 echo ok
+	[ "$status" -eq 0 ]
+	[ "$output" = "ok" ]
+}
+
+@test "runc run/create should warn about a non-empty cgroup" {
+	if [[ "$ROOTLESS" -ne 0 ]]; then
+		requires rootless_cgroup
+	fi
+
+	set_cgroups_path
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" ct1
+	[ "$status" -eq 0 ]
+
+	# Run a second container sharing the cgroup with the first one.
+	runc --debug run -d --console-socket "$CONSOLE_SOCKET" ct2
+	[ "$status" -eq 0 ]
+	[[ "$output" == *"container's cgroup is not empty"* ]]
+
+	# Same but using runc create.
+	runc create --console-socket "$CONSOLE_SOCKET" ct3
+	[ "$status" -eq 0 ]
+	[[ "$output" == *"container's cgroup is not empty"* ]]
+}
+
+@test "runc run/create should refuse pre-existing frozen cgroup" {
+	requires cgroups_freezer
+	if [[ "$ROOTLESS" -ne 0 ]]; then
+		requires rootless_cgroup
+	fi
+
+	set_cgroups_path
+
+	case $CGROUP_UNIFIED in
+	no)
+		FREEZER_DIR="${CGROUP_FREEZER_BASE_PATH}/${REL_CGROUPS_PATH}"
+		FREEZER="${FREEZER_DIR}/freezer.state"
+		STATE="FROZEN"
+		;;
+	yes)
+		FREEZER_DIR="${CGROUP_PATH}"
+		FREEZER="${FREEZER_DIR}/cgroup.freeze"
+		STATE="1"
+		;;
+	esac
+
+	# Create and freeze the cgroup.
+	mkdir -p "$FREEZER_DIR"
+	echo "$STATE" >"$FREEZER"
+
+	# Start a container.
+	runc run -d --console-socket "$CONSOLE_SOCKET" ct1
+	[ "$status" -eq 1 ]
+	# A warning should be printed.
+	[[ "$output" == *"container's cgroup unexpectedly frozen"* ]]
+
+	# Same check for runc create.
+	runc create --console-socket "$CONSOLE_SOCKET" ct2
+	[ "$status" -eq 1 ]
+	# A warning should be printed.
+	[[ "$output" == *"container's cgroup unexpectedly frozen"* ]]
+
+	# Cleanup.
+	rmdir "$FREEZER_DIR"
+}

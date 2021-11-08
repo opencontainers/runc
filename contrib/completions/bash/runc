@@ -173,6 +173,7 @@ _runc_exec() {
 	   --apparmor
 	   --cap, -c
 	   --preserve-fds
+	   --ignore-paused
 	"
 
 	local all_options="$options_with_args $boolean_options"
