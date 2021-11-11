@@ -641,7 +641,7 @@ func reOpenDevNull() error {
 	}
 	for fd := 0; fd < 3; fd++ {
 		if err := unix.Fstat(fd, &stat); err != nil {
-			return err
+			return &os.PathError{Op: "fstat", Path: "fd " + strconv.Itoa(fd), Err: err}
 		}
 		if stat.Rdev == devNullStat.Rdev {
 			// Close and re-open the fd.
@@ -709,9 +709,9 @@ func createDeviceNode(rootfs string, node *devices.Device, bind bool) error {
 		return bindMountDeviceNode(rootfs, dest, node)
 	}
 	if err := mknodDevice(dest, node); err != nil {
-		if os.IsExist(err) {
+		if errors.Is(err, os.ErrExist) {
 			return nil
-		} else if os.IsPermission(err) {
+		} else if errors.Is(err, os.ErrPermission) {
 			return bindMountDeviceNode(rootfs, dest, node)
 		}
 		return err
@@ -736,9 +736,9 @@ func mknodDevice(dest string, node *devices.Device) error {
 		return err
 	}
 	if err := unix.Mknod(dest, uint32(fileMode), int(dev)); err != nil {
-		return err
+		return &os.PathError{Op: "mknod", Path: dest, Err: err}
 	}
-	return unix.Chown(dest, int(node.Uid), int(node.Gid))
+	return os.Chown(dest, int(node.Uid), int(node.Gid))
 }
 
 // Get the parent mount point of directory passed in as argument. Also return
