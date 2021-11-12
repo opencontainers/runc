@@ -44,7 +44,7 @@ jobs:
       run: |
         # criu repo
         curl -fSsl $REPO/Release.key | sudo apt-key add -
-        echo "deb [allow-insecure=yes trusted=yes] $REPO/ /" | sudo tee /etc/apt/sources.list.d/criu.list
+        echo "deb $REPO/ /" | sudo tee /etc/apt/sources.list.d/criu.list
         sudo apt update
         sudo apt install libseccomp-dev criu
 
