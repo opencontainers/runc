@@ -781,6 +781,7 @@ func parseMountOptions(options []string) (int, []int, string, int) {
 		data     []string
 		extFlags int
 	)
+	initMaps()
 	flags := map[string]struct {
 		clear bool
 		flag  int
@@ -819,16 +820,6 @@ func parseMountOptions(options []string) (int, []int, string, int) {
 		"suid":          {true, unix.MS_NOSUID},
 		"sync":          {false, unix.MS_SYNCHRONOUS},
 	}
-	propagationFlags := map[string]int{
-		"private":     unix.MS_PRIVATE,
-		"shared":      unix.MS_SHARED,
-		"slave":       unix.MS_SLAVE,
-		"unbindable":  unix.MS_UNBINDABLE,
-		"rprivate":    unix.MS_PRIVATE | unix.MS_REC,
-		"rshared":     unix.MS_SHARED | unix.MS_REC,
-		"rslave":      unix.MS_SLAVE | unix.MS_REC,
-		"runbindable": unix.MS_UNBINDABLE | unix.MS_REC,
-	}
 	extensionFlags := map[string]struct {
 		clear bool
 		flag  int
@@ -845,7 +836,7 @@ func parseMountOptions(options []string) (int, []int, string, int) {
 			} else {
 				flag |= f.flag
 			}
-		} else if f, exists := propagationFlags[o]; exists && f != 0 {
+		} else if f, exists := mountPropagationMapping[o]; exists && f != 0 {
 			pgflag = append(pgflag, f)
 		} else if f, exists := extensionFlags[o]; exists && f.flag != 0 {
 			if f.clear {
