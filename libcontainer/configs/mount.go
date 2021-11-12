@@ -30,6 +30,9 @@ type Mount struct {
 	// Relabel source if set, "z" indicates shared, "Z" indicates unshared.
 	Relabel string `json:"relabel"`
 
+	// RecAttr represents mount properties to be applied recursively (AT_RECURSIVE), see mount_setattr(2).
+	RecAttr *unix.MountAttr `json:"rec_attr"`
+
 	// Extensions are additional flags that are specific to runc.
 	Extensions int `json:"extensions"`
 

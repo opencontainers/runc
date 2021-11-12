@@ -493,6 +493,9 @@ func mountToRootfs(m *configs.Mount, c *mountConfig) error {
 		}
 		return mountPropagate(m, rootfs, mountLabel, mountFd)
 	}
+	if err := setRecAttr(m, rootfs); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -1122,4 +1125,13 @@ func mountPropagate(m *configs.Mount, rootfs string, mountLabel string, mountFd 
 		return fmt.Errorf("change mount propagation through procfd: %w", err)
 	}
 	return nil
+}
+
+func setRecAttr(m *configs.Mount, rootfs string) error {
+	if m.RecAttr == nil {
+		return nil
+	}
+	return utils.WithProcfd(rootfs, m.Destination, func(procfd string) error {
+		return unix.MountSetattr(-1, procfd, unix.AT_RECURSIVE, m.RecAttr)
+	})
 }
