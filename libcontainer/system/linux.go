@@ -49,14 +49,6 @@ func Exec(cmd string, args []string, env []string) error {
 	}
 }
 
-func Prlimit(pid, resource int, limit unix.Rlimit) error {
-	_, _, err := unix.RawSyscall6(unix.SYS_PRLIMIT64, uintptr(pid), uintptr(resource), uintptr(unsafe.Pointer(&limit)), uintptr(unsafe.Pointer(&limit)), 0, 0)
-	if err != 0 {
-		return err
-	}
-	return nil
-}
-
 func SetParentDeathSignal(sig uintptr) error {
 	if err := unix.Prctl(unix.PR_SET_PDEATHSIG, sig, 0, 0, 0); err != nil {
 		return err
