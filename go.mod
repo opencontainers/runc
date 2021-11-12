@@ -4,7 +4,7 @@ go 1.13
 
 require (
 	github.com/bits-and-blooms/bitset v1.2.0
-	github.com/checkpoint-restore/go-criu/v5 v5.0.0
+	github.com/checkpoint-restore/go-criu/v5 v5.2.0
 	github.com/cilium/ebpf v0.6.2
 	github.com/containerd/console v1.0.2
 	github.com/coreos/go-systemd/v22 v22.3.2
@@ -24,5 +24,5 @@ require (
 	github.com/vishvananda/netlink v1.1.0
 	golang.org/x/net v0.0.0-20201224014010-6772e930b67b
 	golang.org/x/sys v0.0.0-20210426230700-d19ff857e887
-	google.golang.org/protobuf v1.26.0
+	google.golang.org/protobuf v1.27.1
 )
