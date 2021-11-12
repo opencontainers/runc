@@ -23,6 +23,7 @@ function teardown() {
 	[[ "${lines[0]}" == *'/tmp/bind/config.json'* ]]
 }
 
+# https://github.com/opencontainers/runc/issues/2246
 @test "runc run [ro tmpfs mount]" {
 	update_config '	  .mounts += [{
 					source: "tmpfs",
