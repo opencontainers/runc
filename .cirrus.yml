@@ -46,7 +46,7 @@ task:
   vagrant_up_script: |
     ln -sf Vagrantfile.$DISTRO Vagrantfile
     # Retry if it fails (download.fedoraproject.org returns 404 sometimes)
-    vagrant up || vagrant up
+    vagrant up --no-tty || vagrant up --no-tty
     mkdir -p -m 0700 /root/.ssh
     vagrant ssh-config >> /root/.ssh/config
   guest_info_script: |
