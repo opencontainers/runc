@@ -394,27 +394,21 @@ func createLibcontainerMount(cwd string, m specs.Mount) (*configs.Mount, error) 
 		// return nil, fmt.Errorf("mount destination %s is not absolute", m.Destination)
 		logrus.Warnf("mount destination %s is not absolute. Support for non-absolute mount destinations will be removed in a future release.", m.Destination)
 	}
-	flags, pgflags, data, ext := parseMountOptions(m.Options)
-	source := m.Source
-	device := m.Type
-	if flags&unix.MS_BIND != 0 {
+	mnt := parseMountOptions(m.Options)
+
+	mnt.Destination = m.Destination
+	mnt.Source = m.Source
+	mnt.Device = m.Type
+	if mnt.Flags&unix.MS_BIND != 0 {
 		// Any "type" the user specified is meaningless (and ignored) for
 		// bind-mounts -- so we set it to "bind" because rootfs_linux.go
 		// (incorrectly) relies on this for some checks.
-		device = "bind"
-		if !filepath.IsAbs(source) {
-			source = filepath.Join(cwd, m.Source)
+		mnt.Device = "bind"
+		if !filepath.IsAbs(mnt.Source) {
+			mnt.Source = filepath.Join(cwd, m.Source)
 		}
 	}
-	return &configs.Mount{
-		Device:           device,
-		Source:           source,
-		Destination:      m.Destination,
-		Data:             data,
-		Flags:            flags,
-		PropagationFlags: pgflags,
-		Extensions:       ext,
-	}, nil
+	return mnt, nil
 }
 
 // systemd property name check: latin letters only, at least 3 of them
@@ -821,14 +815,12 @@ func setupUserNamespace(spec *specs.Spec, config *configs.Config) error {
 	return nil
 }
 
-// parseMountOptions parses the string and returns the flags, propagation
-// flags and any mount data that it contains.
-func parseMountOptions(options []string) (int, []int, string, int) {
+// parseMountOptions parses options and returns a configs.Mount
+// structure with fields that depends on options set accordingly.
+func parseMountOptions(options []string) *configs.Mount {
 	var (
-		flag     int
-		pgflag   []int
-		data     []string
-		extFlags int
+		data []string
+		m    configs.Mount
 	)
 	initMaps()
 	for _, o := range options {
@@ -837,23 +829,24 @@ func parseMountOptions(options []string) (int, []int, string, int) {
 		// then it is a data value for a specific fs type.
 		if f, exists := mountFlags[o]; exists && f.flag != 0 {
 			if f.clear {
-				flag &= ^f.flag
+				m.Flags &= ^f.flag
 			} else {
-				flag |= f.flag
+				m.Flags |= f.flag
 			}
 		} else if f, exists := mountPropagationMapping[o]; exists && f != 0 {
-			pgflag = append(pgflag, f)
+			m.PropagationFlags = append(m.PropagationFlags, f)
 		} else if f, exists := extensionFlags[o]; exists && f.flag != 0 {
 			if f.clear {
-				extFlags &= ^f.flag
+				m.Extensions &= ^f.flag
 			} else {
-				extFlags |= f.flag
+				m.Extensions |= f.flag
 			}
 		} else {
 			data = append(data, o)
 		}
 	}
-	return flag, pgflag, strings.Join(data, ","), extFlags
+	m.Data = strings.Join(data, ",")
+	return &m
 }
 
 func SetupSeccomp(config *specs.LinuxSeccomp) (*configs.Seccomp, error) {
