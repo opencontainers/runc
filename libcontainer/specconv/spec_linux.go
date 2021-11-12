@@ -87,6 +87,7 @@ func initMaps() {
 			"norelatime":    {true, unix.MS_RELATIME},
 			"nostrictatime": {true, unix.MS_STRICTATIME},
 			"nosuid":        {false, unix.MS_NOSUID},
+			"nosymfollow":   {false, unix.MS_NOSYMFOLLOW}, // since kernel 5.10
 			"rbind":         {false, unix.MS_BIND | unix.MS_REC},
 			"relatime":      {false, unix.MS_RELATIME},
 			"remount":       {false, unix.MS_REMOUNT},
@@ -96,6 +97,7 @@ func initMaps() {
 			"strictatime":   {false, unix.MS_STRICTATIME},
 			"suid":          {true, unix.MS_NOSUID},
 			"sync":          {false, unix.MS_SYNCHRONOUS},
+			"symfollow":     {true, unix.MS_NOSYMFOLLOW}, // since kernel 5.10
 		}
 		extensionFlags = map[string]struct {
 			clear bool
