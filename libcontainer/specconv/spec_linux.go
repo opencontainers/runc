@@ -414,8 +414,6 @@ func createLibcontainerMount(cwd string, m specs.Mount) (*configs.Mount, error) 
 // systemd property name check: latin letters only, at least 3 of them
 var isValidName = regexp.MustCompile(`^[a-zA-Z]{3,}$`).MatchString
 
-var isSecSuffix = regexp.MustCompile(`[a-z]Sec$`).MatchString
-
 // Some systemd properties are documented as having "Sec" suffix
 // (e.g. TimeoutStopSec) but are expected to have "USec" suffix
 // here, so let's provide conversion to improve compatibility.
@@ -462,11 +460,16 @@ func initSystemdProps(spec *specs.Spec) ([]systemdDbus.Property, error) {
 		if err != nil {
 			return nil, fmt.Errorf("Annotation %s=%s value parse error: %w", k, v, err)
 		}
-		if isSecSuffix(name) {
-			name = strings.TrimSuffix(name, "Sec") + "USec"
-			value, err = convertSecToUSec(value)
-			if err != nil {
-				return nil, fmt.Errorf("Annotation %s=%s value parse error: %w", k, v, err)
+		// Check for Sec suffix.
+		if trimName := strings.TrimSuffix(name, "Sec"); len(trimName) < len(name) {
+			// Check for a lowercase ascii a-z just before Sec.
+			if ch := trimName[len(trimName)-1]; ch >= 'a' && ch <= 'z' {
+				// Convert from Sec to USec.
+				name = trimName + "USec"
+				value, err = convertSecToUSec(value)
+				if err != nil {
+					return nil, fmt.Errorf("Annotation %s=%s value parse error: %w", k, v, err)
+				}
 			}
 		}
 		sp = append(sp, systemdDbus.Property{Name: name, Value: value})
