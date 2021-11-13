@@ -762,6 +762,39 @@ func TestInitSystemdProps(t *testing.T) {
 	}
 }
 
+func TestIsValidName(t *testing.T) {
+	testCases := []struct {
+		in    string
+		valid bool
+	}{
+		{"", false},   // too short
+		{"xx", false}, // too short
+		{"xxx", true},
+		{"someValidName", true},
+		{"A name", false},  // space
+		{"3335", false},    // numbers
+		{"Name1", false},   // numbers
+		{"Кир", false},     // non-ascii
+		{"მადლობა", false}, // non-ascii
+		{"合い言葉", false},    // non-ascii
+	}
+
+	for _, tc := range testCases {
+		valid := isValidName(tc.in)
+		if valid != tc.valid {
+			t.Errorf("case %q: expected %v, got %v", tc.in, tc.valid, valid)
+		}
+	}
+}
+
+func BenchmarkIsValidName(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		for _, s := range []string{"", "xx", "xxx", "someValidName", "A name", "Кир", "მადლობა", "合い言葉"} {
+			_ = isValidName(s)
+		}
+	}
+}
+
 func TestNullProcess(t *testing.T) {
 	spec := Example()
 	spec.Process = nil

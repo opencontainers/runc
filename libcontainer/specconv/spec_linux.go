@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -411,8 +410,21 @@ func createLibcontainerMount(cwd string, m specs.Mount) (*configs.Mount, error) 
 	return mnt, nil
 }
 
-// systemd property name check: latin letters only, at least 3 of them
-var isValidName = regexp.MustCompile(`^[a-zA-Z]{3,}$`).MatchString
+// isValidName checks if systemd property name is valid. It should consists
+// of latin letters only, and have least 3 of them.
+func isValidName(s string) bool {
+	if len(s) < 3 {
+		return false
+	}
+	// Check ASCII characters rather than Unicode runes.
+	for _, ch := range s {
+		if (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') {
+			continue
+		}
+		return false
+	}
+	return true
+}
 
 // Some systemd properties are documented as having "Sec" suffix
 // (e.g. TimeoutStopSec) but are expected to have "USec" suffix
