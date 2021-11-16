@@ -46,13 +46,13 @@ jobs:
         curl -fSsl $REPO/Release.key | sudo apt-key add -
         echo "deb $REPO/ /" | sudo tee /etc/apt/sources.list.d/criu.list
         sudo apt update
-        sudo apt install libseccomp-dev criu
+        sudo apt install libseccomp-dev criu sshfs
 
     - name: install deps (criu ${{ matrix.criu }})
       if: matrix.criu != ''
       run: |
         sudo apt -q update
-        sudo apt -q install libseccomp-dev \
+        sudo apt -q install libseccomp-dev sshfs \
           libcap-dev libnet1-dev libnl-3-dev \
           libprotobuf-c-dev libprotobuf-dev protobuf-c-compiler protobuf-compiler
         git clone https://github.com/checkpoint-restore/criu.git ~/criu
@@ -81,9 +81,10 @@ jobs:
       if: matrix.rootless == 'rootless'
       run: |
         sudo useradd -u2000 -m -d/home/rootless -s/bin/bash rootless
-        # Allow root to execute `ssh rootless@localhost` in tests/rootless.sh
+        # Allow root and rootless itself to execute `ssh rootless@localhost` in tests/rootless.sh
         ssh-keygen -t ecdsa -N "" -f $HOME/rootless.key
         sudo mkdir -m 0700 -p /home/rootless/.ssh
+        sudo cp $HOME/rootless.key /home/rootless/.ssh/id_ecdsa
         sudo cp $HOME/rootless.key.pub /home/rootless/.ssh/authorized_keys
         sudo chown -R rootless.rootless /home/rootless
 
