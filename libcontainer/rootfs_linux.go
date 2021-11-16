@@ -1035,7 +1035,22 @@ func writeSystemProperty(key, value string) error {
 
 func remount(m *configs.Mount, rootfs string) error {
 	return utils.WithProcfd(rootfs, m.Destination, func(procfd string) error {
-		return unix.Mount(m.Source, procfd, m.Device, uintptr(m.Flags|unix.MS_REMOUNT), "")
+		flags := uintptr(m.Flags | unix.MS_REMOUNT)
+		err := unix.Mount(m.Source, procfd, m.Device, flags, "")
+		if err == nil {
+			return nil
+		}
+		// Check if the source has ro flag...
+		var s unix.Statfs_t
+		if err := unix.Statfs(m.Source, &s); err != nil {
+			return &os.PathError{Op: "statfs", Path: m.Source, Err: err}
+		}
+		if s.Flags&unix.MS_RDONLY != unix.MS_RDONLY {
+			return err
+		}
+		// ... and retry the mount with ro flag set.
+		flags |= unix.MS_RDONLY
+		return unix.Mount(m.Source, procfd, m.Device, flags, "")
 	})
 }
 
