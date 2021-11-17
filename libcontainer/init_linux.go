@@ -493,7 +493,7 @@ func setupRoute(config *configs.Config) error {
 
 func setupRlimits(limits []configs.Rlimit, pid int) error {
 	for _, rlimit := range limits {
-		if err := system.Prlimit(pid, rlimit.Type, unix.Rlimit{Max: rlimit.Hard, Cur: rlimit.Soft}); err != nil {
+		if err := unix.Prlimit(pid, rlimit.Type, &unix.Rlimit{Max: rlimit.Hard, Cur: rlimit.Soft}, nil); err != nil {
 			return fmt.Errorf("error setting rlimit type %v: %w", rlimit.Type, err)
 		}
 	}
