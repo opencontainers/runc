@@ -118,7 +118,7 @@ func setPageServer(context *cli.Context, options *libcontainer.CriuOpts) {
 		if err != nil || address == "" || port == "" {
 			fatal(errors.New("Use --page-server ADDRESS:PORT to specify page server"))
 		}
-		portInt, err := strconv.Atoi(port)
+		portInt, err := strconv.ParseInt(port, 10, 32)
 		if err != nil {
 			fatal(errors.New("Invalid port number"))
 		}
