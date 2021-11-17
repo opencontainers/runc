@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
@@ -24,26 +24,85 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-var namespaceMapping = map[specs.LinuxNamespaceType]configs.NamespaceType{
-	specs.PIDNamespace:     configs.NEWPID,
-	specs.NetworkNamespace: configs.NEWNET,
-	specs.MountNamespace:   configs.NEWNS,
-	specs.UserNamespace:    configs.NEWUSER,
-	specs.IPCNamespace:     configs.NEWIPC,
-	specs.UTSNamespace:     configs.NEWUTS,
-	specs.CgroupNamespace:  configs.NEWCGROUP,
-}
+var (
+	initMapsOnce               sync.Once
+	namespaceMapping           map[specs.LinuxNamespaceType]configs.NamespaceType
+	mountPropagationMapping    map[string]int
+	mountFlags, extensionFlags map[string]struct {
+		clear bool
+		flag  int
+	}
+)
 
-var mountPropagationMapping = map[string]int{
-	"rprivate":    unix.MS_PRIVATE | unix.MS_REC,
-	"private":     unix.MS_PRIVATE,
-	"rslave":      unix.MS_SLAVE | unix.MS_REC,
-	"slave":       unix.MS_SLAVE,
-	"rshared":     unix.MS_SHARED | unix.MS_REC,
-	"shared":      unix.MS_SHARED,
-	"runbindable": unix.MS_UNBINDABLE | unix.MS_REC,
-	"unbindable":  unix.MS_UNBINDABLE,
-	"":            0,
+func initMaps() {
+	initMapsOnce.Do(func() {
+		namespaceMapping = map[specs.LinuxNamespaceType]configs.NamespaceType{
+			specs.PIDNamespace:     configs.NEWPID,
+			specs.NetworkNamespace: configs.NEWNET,
+			specs.MountNamespace:   configs.NEWNS,
+			specs.UserNamespace:    configs.NEWUSER,
+			specs.IPCNamespace:     configs.NEWIPC,
+			specs.UTSNamespace:     configs.NEWUTS,
+			specs.CgroupNamespace:  configs.NEWCGROUP,
+		}
+
+		mountPropagationMapping = map[string]int{
+			"rprivate":    unix.MS_PRIVATE | unix.MS_REC,
+			"private":     unix.MS_PRIVATE,
+			"rslave":      unix.MS_SLAVE | unix.MS_REC,
+			"slave":       unix.MS_SLAVE,
+			"rshared":     unix.MS_SHARED | unix.MS_REC,
+			"shared":      unix.MS_SHARED,
+			"runbindable": unix.MS_UNBINDABLE | unix.MS_REC,
+			"unbindable":  unix.MS_UNBINDABLE,
+			"":            0,
+		}
+
+		mountFlags = map[string]struct {
+			clear bool
+			flag  int
+		}{
+			"acl":           {false, unix.MS_POSIXACL},
+			"async":         {true, unix.MS_SYNCHRONOUS},
+			"atime":         {true, unix.MS_NOATIME},
+			"bind":          {false, unix.MS_BIND},
+			"defaults":      {false, 0},
+			"dev":           {true, unix.MS_NODEV},
+			"diratime":      {true, unix.MS_NODIRATIME},
+			"dirsync":       {false, unix.MS_DIRSYNC},
+			"exec":          {true, unix.MS_NOEXEC},
+			"iversion":      {false, unix.MS_I_VERSION},
+			"lazytime":      {false, unix.MS_LAZYTIME},
+			"loud":          {true, unix.MS_SILENT},
+			"mand":          {false, unix.MS_MANDLOCK},
+			"noacl":         {true, unix.MS_POSIXACL},
+			"noatime":       {false, unix.MS_NOATIME},
+			"nodev":         {false, unix.MS_NODEV},
+			"nodiratime":    {false, unix.MS_NODIRATIME},
+			"noexec":        {false, unix.MS_NOEXEC},
+			"noiversion":    {true, unix.MS_I_VERSION},
+			"nolazytime":    {true, unix.MS_LAZYTIME},
+			"nomand":        {true, unix.MS_MANDLOCK},
+			"norelatime":    {true, unix.MS_RELATIME},
+			"nostrictatime": {true, unix.MS_STRICTATIME},
+			"nosuid":        {false, unix.MS_NOSUID},
+			"rbind":         {false, unix.MS_BIND | unix.MS_REC},
+			"relatime":      {false, unix.MS_RELATIME},
+			"remount":       {false, unix.MS_REMOUNT},
+			"ro":            {false, unix.MS_RDONLY},
+			"rw":            {true, unix.MS_RDONLY},
+			"silent":        {false, unix.MS_SILENT},
+			"strictatime":   {false, unix.MS_STRICTATIME},
+			"suid":          {true, unix.MS_NOSUID},
+			"sync":          {false, unix.MS_SYNCHRONOUS},
+		}
+		extensionFlags = map[string]struct {
+			clear bool
+			flag  int
+		}{
+			"tmpcopyup": {false, configs.EXT_COPYUP},
+		}
+	})
 }
 
 // AllowedDevices is the set of devices which are automatically included for
@@ -256,6 +315,8 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 	config.Cgroups = c
 	// set linux-specific config
 	if spec.Linux != nil {
+		initMaps()
+
 		var exists bool
 		if config.RootPropagation, exists = mountPropagationMapping[spec.Linux.RootfsPropagation]; !exists {
 			return nil, fmt.Errorf("rootfsPropagation=%v is not supported", spec.Linux.RootfsPropagation)
@@ -332,33 +393,38 @@ func createLibcontainerMount(cwd string, m specs.Mount) (*configs.Mount, error) 
 		// return nil, fmt.Errorf("mount destination %s is not absolute", m.Destination)
 		logrus.Warnf("mount destination %s is not absolute. Support for non-absolute mount destinations will be removed in a future release.", m.Destination)
 	}
-	flags, pgflags, data, ext := parseMountOptions(m.Options)
-	source := m.Source
-	device := m.Type
-	if flags&unix.MS_BIND != 0 {
+	mnt := parseMountOptions(m.Options)
+
+	mnt.Destination = m.Destination
+	mnt.Source = m.Source
+	mnt.Device = m.Type
+	if mnt.Flags&unix.MS_BIND != 0 {
 		// Any "type" the user specified is meaningless (and ignored) for
 		// bind-mounts -- so we set it to "bind" because rootfs_linux.go
 		// (incorrectly) relies on this for some checks.
-		device = "bind"
-		if !filepath.IsAbs(source) {
-			source = filepath.Join(cwd, m.Source)
+		mnt.Device = "bind"
+		if !filepath.IsAbs(mnt.Source) {
+			mnt.Source = filepath.Join(cwd, m.Source)
 		}
 	}
-	return &configs.Mount{
-		Device:           device,
-		Source:           source,
-		Destination:      m.Destination,
-		Data:             data,
-		Flags:            flags,
-		PropagationFlags: pgflags,
-		Extensions:       ext,
-	}, nil
+	return mnt, nil
 }
 
-// systemd property name check: latin letters only, at least 3 of them
-var isValidName = regexp.MustCompile(`^[a-zA-Z]{3,}$`).MatchString
-
-var isSecSuffix = regexp.MustCompile(`[a-z]Sec$`).MatchString
+// isValidName checks if systemd property name is valid. It should consists
+// of latin letters only, and have least 3 of them.
+func isValidName(s string) bool {
+	if len(s) < 3 {
+		return false
+	}
+	// Check ASCII characters rather than Unicode runes.
+	for _, ch := range s {
+		if (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') {
+			continue
+		}
+		return false
+	}
+	return true
+}
 
 // Some systemd properties are documented as having "Sec" suffix
 // (e.g. TimeoutStopSec) but are expected to have "USec" suffix
@@ -406,11 +472,16 @@ func initSystemdProps(spec *specs.Spec) ([]systemdDbus.Property, error) {
 		if err != nil {
 			return nil, fmt.Errorf("Annotation %s=%s value parse error: %w", k, v, err)
 		}
-		if isSecSuffix(name) {
-			name = strings.TrimSuffix(name, "Sec") + "USec"
-			value, err = convertSecToUSec(value)
-			if err != nil {
-				return nil, fmt.Errorf("Annotation %s=%s value parse error: %w", k, v, err)
+		// Check for Sec suffix.
+		if trimName := strings.TrimSuffix(name, "Sec"); len(trimName) < len(name) {
+			// Check for a lowercase ascii a-z just before Sec.
+			if ch := trimName[len(trimName)-1]; ch >= 'a' && ch <= 'z' {
+				// Convert from Sec to USec.
+				name = trimName + "USec"
+				value, err = convertSecToUSec(value)
+				if err != nil {
+					return nil, fmt.Errorf("Annotation %s=%s value parse error: %w", k, v, err)
+				}
 			}
 		}
 		sp = append(sp, systemdDbus.Property{Name: name, Value: value})
@@ -759,92 +830,38 @@ func setupUserNamespace(spec *specs.Spec, config *configs.Config) error {
 	return nil
 }
 
-// parseMountOptions parses the string and returns the flags, propagation
-// flags and any mount data that it contains.
-func parseMountOptions(options []string) (int, []int, string, int) {
+// parseMountOptions parses options and returns a configs.Mount
+// structure with fields that depends on options set accordingly.
+func parseMountOptions(options []string) *configs.Mount {
 	var (
-		flag     int
-		pgflag   []int
-		data     []string
-		extFlags int
+		data []string
+		m    configs.Mount
 	)
-	flags := map[string]struct {
-		clear bool
-		flag  int
-	}{
-		"acl":           {false, unix.MS_POSIXACL},
-		"async":         {true, unix.MS_SYNCHRONOUS},
-		"atime":         {true, unix.MS_NOATIME},
-		"bind":          {false, unix.MS_BIND},
-		"defaults":      {false, 0},
-		"dev":           {true, unix.MS_NODEV},
-		"diratime":      {true, unix.MS_NODIRATIME},
-		"dirsync":       {false, unix.MS_DIRSYNC},
-		"exec":          {true, unix.MS_NOEXEC},
-		"iversion":      {false, unix.MS_I_VERSION},
-		"lazytime":      {false, unix.MS_LAZYTIME},
-		"loud":          {true, unix.MS_SILENT},
-		"mand":          {false, unix.MS_MANDLOCK},
-		"noacl":         {true, unix.MS_POSIXACL},
-		"noatime":       {false, unix.MS_NOATIME},
-		"nodev":         {false, unix.MS_NODEV},
-		"nodiratime":    {false, unix.MS_NODIRATIME},
-		"noexec":        {false, unix.MS_NOEXEC},
-		"noiversion":    {true, unix.MS_I_VERSION},
-		"nolazytime":    {true, unix.MS_LAZYTIME},
-		"nomand":        {true, unix.MS_MANDLOCK},
-		"norelatime":    {true, unix.MS_RELATIME},
-		"nostrictatime": {true, unix.MS_STRICTATIME},
-		"nosuid":        {false, unix.MS_NOSUID},
-		"rbind":         {false, unix.MS_BIND | unix.MS_REC},
-		"relatime":      {false, unix.MS_RELATIME},
-		"remount":       {false, unix.MS_REMOUNT},
-		"ro":            {false, unix.MS_RDONLY},
-		"rw":            {true, unix.MS_RDONLY},
-		"silent":        {false, unix.MS_SILENT},
-		"strictatime":   {false, unix.MS_STRICTATIME},
-		"suid":          {true, unix.MS_NOSUID},
-		"sync":          {false, unix.MS_SYNCHRONOUS},
-	}
-	propagationFlags := map[string]int{
-		"private":     unix.MS_PRIVATE,
-		"shared":      unix.MS_SHARED,
-		"slave":       unix.MS_SLAVE,
-		"unbindable":  unix.MS_UNBINDABLE,
-		"rprivate":    unix.MS_PRIVATE | unix.MS_REC,
-		"rshared":     unix.MS_SHARED | unix.MS_REC,
-		"rslave":      unix.MS_SLAVE | unix.MS_REC,
-		"runbindable": unix.MS_UNBINDABLE | unix.MS_REC,
-	}
-	extensionFlags := map[string]struct {
-		clear bool
-		flag  int
-	}{
-		"tmpcopyup": {false, configs.EXT_COPYUP},
-	}
+	initMaps()
 	for _, o := range options {
-		// If the option does not exist in the flags table or the flag
-		// is not supported on the platform,
-		// then it is a data value for a specific fs type
-		if f, exists := flags[o]; exists && f.flag != 0 {
+		// If the option does not exist in the mountFlags table,
+		// or the flag is not supported on the platform,
+		// then it is a data value for a specific fs type.
+		if f, exists := mountFlags[o]; exists && f.flag != 0 {
 			if f.clear {
-				flag &= ^f.flag
+				m.Flags &= ^f.flag
 			} else {
-				flag |= f.flag
+				m.Flags |= f.flag
 			}
-		} else if f, exists := propagationFlags[o]; exists && f != 0 {
-			pgflag = append(pgflag, f)
+		} else if f, exists := mountPropagationMapping[o]; exists && f != 0 {
+			m.PropagationFlags = append(m.PropagationFlags, f)
 		} else if f, exists := extensionFlags[o]; exists && f.flag != 0 {
 			if f.clear {
-				extFlags &= ^f.flag
+				m.Extensions &= ^f.flag
 			} else {
-				extFlags |= f.flag
+				m.Extensions |= f.flag
 			}
 		} else {
 			data = append(data, o)
 		}
 	}
-	return flag, pgflag, strings.Join(data, ","), extFlags
+	m.Data = strings.Join(data, ",")
+	return &m
 }
 
 func SetupSeccomp(config *specs.LinuxSeccomp) (*configs.Seccomp, error) {
