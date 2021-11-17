@@ -32,7 +32,7 @@ func init() {
 		panic(err)
 	}
 	// Call it to make sure images are downloaded, and to get the paths.
-	out, err := exec.Command(getImages).CombinedOutput()
+	out, err := exec.Command(getImages).CombinedOutput() //nolint:gosec // G204 (Subprocess launched with variable)
 	if err != nil {
 		panic(fmt.Errorf("getImages error %w (output: %s)", err, out))
 	}
@@ -158,7 +158,7 @@ func remove(dir string) {
 // copyBusybox copies the rootfs for a busybox container created for the test image
 // into the new directory for the specific test
 func copyBusybox(dest string) error {
-	out, err := exec.Command("sh", "-c", fmt.Sprintf("tar --exclude './dev/*' -C %q -xf %q", dest, busyboxTar)).CombinedOutput()
+	out, err := exec.Command("sh", "-c", fmt.Sprintf("tar --exclude './dev/*' -C %q -xf %q", dest, busyboxTar)).CombinedOutput() //nolint:gosec // G204 (Subprocess launched with variable)
 	if err != nil {
 		return fmt.Errorf("untar error %w: %q", err, out)
 	}

@@ -99,6 +99,7 @@ this is just some garbage data
 }
 
 func TestValidGetExecUser(t *testing.T) {
+	// #nosec G101 (Potentially hardcoded credentials)
 	const passwdContent = `
 root:x:0:0:root user:/root:/bin/bash
 adm:x:42:43:adm:/var/adm:/bin/false
@@ -253,6 +254,7 @@ this is just some garbage data
 }
 
 func TestInvalidGetExecUser(t *testing.T) {
+	// #nosec G101 (Potentially hardcoded credentials)
 	const passwdContent = `
 root:x:0:0:root user:/root:/bin/bash
 adm:x:42:43:adm:/var/adm:/bin/false
@@ -297,6 +299,7 @@ this is just some garbage data
 }
 
 func TestGetExecUserNilSources(t *testing.T) {
+	// #nosec G101 (Potentially hardcoded credentials)
 	const passwdContent = `
 root:x:0:0:root user:/root:/bin/bash
 adm:x:42:43:adm:/var/adm:/bin/false

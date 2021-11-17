@@ -62,7 +62,7 @@ func TestStatIo(t *testing.T) {
 	fakeCgroupDir := t.TempDir()
 	statPath := filepath.Join(fakeCgroupDir, "io.stat")
 
-	if err := os.WriteFile(statPath, []byte(exampleIoStatData), 0o644); err != nil {
+	if err := os.WriteFile(statPath, []byte(exampleIoStatData), 0o644); err != nil { //nolint:gosec
 		t.Fatal(err)
 	}
 

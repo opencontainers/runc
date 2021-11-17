@@ -189,7 +189,7 @@ exit 0
 	verifyCommand := fmt.Sprintf(verifyCommandTemplate, stateJson)
 	filename := "/tmp/runc-hooktest.sh"
 	os.Remove(filename)
-	if err := os.WriteFile(filename, []byte(verifyCommand), 0o700); err != nil {
+	if err := os.WriteFile(filename, []byte(verifyCommand), 0o700); err != nil { //nolint:gosec
 		t.Fatalf("Failed to create tmp file: %v", err)
 	}
 	defer os.Remove(filename)

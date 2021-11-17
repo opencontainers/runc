@@ -63,7 +63,7 @@ var psCommand = cli.Command{
 			psArgs = []string{"-ef"}
 		}
 
-		cmd := exec.Command("ps", psArgs...)
+		cmd := exec.Command("ps", psArgs...) //nolint:gosec // G204 (Subprocess launched with variable)
 		output, err := cmd.CombinedOutput()
 		if err != nil {
 			return fmt.Errorf("%w: %s", err, output)

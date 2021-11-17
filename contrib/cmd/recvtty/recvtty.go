@@ -224,7 +224,7 @@ func main() {
 		pidPath := ctx.String("pid-file")
 		if pidPath != "" {
 			pid := fmt.Sprintf("%d\n", os.Getpid())
-			if err := os.WriteFile(pidPath, []byte(pid), 0o644); err != nil {
+			if err := os.WriteFile(pidPath, []byte(pid), 0o644); err != nil { //nolint:gosec
 				return err
 			}
 		}
