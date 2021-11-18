@@ -2195,6 +2195,9 @@ func (c *linuxContainer) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Na
 		var mounts []byte
 		for _, m := range c.config.Mounts {
 			if m.IsBind() {
+				if strings.IndexByte(m.Source, 0) >= 0 {
+					return nil, fmt.Errorf("mount source string contains null byte: %q", m.Source)
+				}
 				mounts = append(mounts, []byte(m.Source)...)
 			}
 			mounts = append(mounts, byte(0))
