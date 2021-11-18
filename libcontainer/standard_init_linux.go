@@ -250,8 +250,5 @@ func (l *linuxStandardInit) Init() error {
 		return err
 	}
 
-	if err := system.Exec(name, l.config.Args[0:], os.Environ()); err != nil {
-		return err
-	}
-	return nil
+	return system.Exec(name, l.config.Args[0:], os.Environ())
 }
