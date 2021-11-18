@@ -780,9 +780,9 @@ func TestIsValidName(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		valid := isValidName(tc.in)
-		if valid != tc.valid {
-			t.Errorf("case %q: expected %v, got %v", tc.in, tc.valid, valid)
+		err := checkPropertyName(tc.in)
+		if (err == nil) != tc.valid {
+			t.Errorf("case %q: expected valid: %v, got error: %v", tc.in, tc.valid, err)
 		}
 	}
 }
@@ -790,7 +790,7 @@ func TestIsValidName(t *testing.T) {
 func BenchmarkIsValidName(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		for _, s := range []string{"", "xx", "xxx", "someValidName", "A name", "Кир", "მადლობა", "合い言葉"} {
-			_ = isValidName(s)
+			_ = checkPropertyName(s)
 		}
 	}
 }
