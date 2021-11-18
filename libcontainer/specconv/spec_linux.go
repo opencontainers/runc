@@ -273,7 +273,7 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 	}
 	spec := opts.Spec
 	if spec.Root == nil {
-		return nil, errors.New("Root must be specified")
+		return nil, errors.New("root must be specified")
 	}
 	rootfsPath := spec.Root.Path
 	if !filepath.IsAbs(rootfsPath) {
@@ -410,20 +410,20 @@ func createLibcontainerMount(cwd string, m specs.Mount) (*configs.Mount, error) 
 	return mnt, nil
 }
 
-// isValidName checks if systemd property name is valid. It should consists
-// of latin letters only, and have least 3 of them.
-func isValidName(s string) bool {
+// checkPropertyName checks if systemd property name is valid. A valid name
+// should consist of latin letters only, and have least 3 of them.
+func checkPropertyName(s string) error {
 	if len(s) < 3 {
-		return false
+		return errors.New("too short")
 	}
 	// Check ASCII characters rather than Unicode runes.
 	for _, ch := range s {
 		if (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') {
 			continue
 		}
-		return false
+		return errors.New("contains non-alphabetic character")
 	}
-	return true
+	return nil
 }
 
 // Some systemd properties are documented as having "Sec" suffix
@@ -465,12 +465,12 @@ func initSystemdProps(spec *specs.Spec) ([]systemdDbus.Property, error) {
 		if len(name) == len(k) { // prefix not there
 			continue
 		}
-		if !isValidName(name) {
-			return nil, fmt.Errorf("Annotation %s name incorrect: %s", k, name)
+		if err := checkPropertyName(name); err != nil {
+			return nil, fmt.Errorf("annotation %s name incorrect: %w", k, err)
 		}
 		value, err := dbus.ParseVariant(v, dbus.Signature{})
 		if err != nil {
-			return nil, fmt.Errorf("Annotation %s=%s value parse error: %w", k, v, err)
+			return nil, fmt.Errorf("annotation %s=%s value parse error: %w", k, v, err)
 		}
 		// Check for Sec suffix.
 		if trimName := strings.TrimSuffix(name, "Sec"); len(trimName) < len(name) {
@@ -480,7 +480,7 @@ func initSystemdProps(spec *specs.Spec) ([]systemdDbus.Property, error) {
 				name = trimName + "USec"
 				value, err = convertSecToUSec(value)
 				if err != nil {
-					return nil, fmt.Errorf("Annotation %s=%s value parse error: %w", k, v, err)
+					return nil, fmt.Errorf("annotation %s=%s value parse error: %w", k, v, err)
 				}
 			}
 		}
