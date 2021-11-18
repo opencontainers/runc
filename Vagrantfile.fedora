@@ -17,14 +17,10 @@ Vagrant.configure("2") do |config|
     # Work around dnf mirror failures by retrying a few times
     for i in $(seq 0 2); do
       sleep $i
-      # 1. "config exclude" dnf shell command is not working in Fedora 35
+      # "config exclude" dnf shell command is not working in Fedora 35
       # (see https://bugzilla.redhat.com/show_bug.cgi?id=2022571);
       # the workaround is to specify it as an option.
-      # 2. systemd 249.6-2.fc35 has a bug preventing rootless containers
-      # from starting when --systemd-cgroup is used for runc run
-      # (see https://bugzilla.redhat.com/show_bug.cgi?id=2022041),
-      # the workaround is not to upgrade systemd.
-      cat << EOF | dnf -y --exclude=kernel,kernel-core,systemd,systemd-* shell && break
+      cat << EOF | dnf -y --exclude=kernel,kernel-core shell && break
 config install_weak_deps false
 update
 install iptables gcc make golang-go glibc-static libseccomp-devel bats jq git-core criu
