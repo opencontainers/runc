@@ -463,42 +463,52 @@ func BenchmarkGetHugePageSizeImpl(b *testing.B) {
 
 func TestGetHugePageSizeImpl(t *testing.T) {
 	testCases := []struct {
+		doc    string
 		input  []string
 		output []string
 		isErr  bool
 	}{
 		{
+			doc:    "normal input",
 			input:  []string{"hugepages-1048576kB", "hugepages-2048kB", "hugepages-32768kB", "hugepages-64kB"},
 			output: []string{"1GB", "2MB", "32MB", "64KB"},
 		},
 		{
+			doc:    "empty input",
 			input:  []string{},
 			output: []string{},
 		},
-		{ // not a number
+		{
+			doc:   "not a number",
 			input: []string{"hugepages-akB"},
 			isErr: true,
 		},
-		{ // no prefix (silently skipped)
+		{
+			doc:   "no prefix (silently skipped)",
 			input: []string{"1024kB"},
 		},
-		{ // invalid prefix (silently skipped)
+		{
+			doc:   "invalid prefix (silently skipped)",
 			input: []string{"whatever-1024kB"},
 		},
-		{ // invalid suffix
+		{
+			doc:   "invalid suffix",
 			input: []string{"hugepages-1024gB"},
 			isErr: true,
 		},
-		{ // no suffix
+		{
+			doc:   "no suffix",
 			input: []string{"hugepages-1024"},
 			isErr: true,
 		},
-		{ // mixed valid and invalid entries
+		{
+			doc:    "mixed valid and invalid entries",
 			input:  []string{"hugepages-4194304kB", "hugepages-2048kB", "hugepages-akB", "hugepages-64kB"},
 			output: []string{"4GB", "2MB", "64KB"},
 			isErr:  true,
 		},
-		{ // mixed valid and invalid entries
+		{
+			doc:    "more mixed valid and invalid entries",
 			input:  []string{"hugepages-2048kB", "hugepages-kB", "hugepages-64kB"},
 			output: []string{"2MB", "64KB"},
 			isErr:  true,
@@ -506,22 +516,25 @@ func TestGetHugePageSizeImpl(t *testing.T) {
 	}
 
 	for _, c := range testCases {
-		output, err := getHugePageSizeFromFilenames(c.input)
-		t.Log("input:", c.input, "; output:", output, "; err:", err)
-		if err != nil {
-			if !c.isErr {
-				t.Errorf("input %v, expected nil, got error: %v", c.input, err)
+		c := c
+		t.Run(c.doc, func(t *testing.T) {
+			output, err := getHugePageSizeFromFilenames(c.input)
+			t.Log("input:", c.input, "; output:", output, "; err:", err)
+			if err != nil {
+				if !c.isErr {
+					t.Errorf("input %v, expected nil, got error: %v", c.input, err)
+				}
+				// no more checks
+				return
 			}
-			// no more checks
-			continue
-		}
-		if c.isErr {
-			t.Errorf("input %v, expected error, got error: nil, output: %v", c.input, output)
-		}
-		// check output
-		if len(output) != len(c.output) || (len(output) > 0 && !reflect.DeepEqual(output, c.output)) {
-			t.Errorf("input %v, expected %v, got %v", c.input, c.output, output)
-		}
+			if c.isErr {
+				t.Errorf("input %v, expected error, got error: nil, output: %v", c.input, output)
+			}
+			// check output
+			if len(output) != len(c.output) || (len(output) > 0 && !reflect.DeepEqual(output, c.output)) {
+				t.Errorf("input %v, expected %v, got %v", c.input, c.output, output)
+			}
+		})
 	}
 }
 
