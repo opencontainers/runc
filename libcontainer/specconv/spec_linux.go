@@ -407,6 +407,18 @@ func createLibcontainerMount(cwd string, m specs.Mount) (*configs.Mount, error) 
 			mnt.Source = filepath.Join(cwd, m.Source)
 		}
 	}
+
+	// None of the mount arguments can contain a null byte. Normally such
+	// strings would either cause some other failure or would just be truncated
+	// when we hit the null byte, but because we serialise these strings as
+	// netlink messages (which don't have special null-byte handling) we need
+	// to block this as early as possible.
+	if strings.IndexByte(mnt.Source, 0) >= 0 ||
+		strings.IndexByte(mnt.Destination, 0) >= 0 ||
+		strings.IndexByte(mnt.Device, 0) >= 0 {
+		return nil, errors.New("mount field contains null byte")
+	}
+
 	return mnt, nil
 }
 
