@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"errors"
+	"io"
 	"net"
 	"os"
 	"path"
@@ -11,7 +13,9 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+	"golang.org/x/sys/unix"
 )
 
 type notifySocket struct {
@@ -141,18 +145,79 @@ func (n *notifySocket) run(pid1 int) error {
 				return nil
 			}
 		case b := <-fileChan:
-			_, err = client.Write(append(b, '\n'))
-			if err != nil {
-				return err
-			}
-
-			// now we can inform systemd to use pid1 as the pid to monitor
-			newPid := "MAINPID=" + strconv.Itoa(pid1)
-			_, err := client.Write([]byte(newPid + "\n"))
-			if err != nil {
-				return err
-			}
-			return nil
+			return notifyHost(client, b, pid1)
 		}
+	}
+}
+
+// notifyHost tells the host (usually systemd) that the container reported READY.
+// Also sends MAINPID and BARRIER.
+func notifyHost(client *net.UnixConn, ready []byte, pid1 int) error {
+	_, err := client.Write(append(ready, '\n'))
+	if err != nil {
+		return err
+	}
+
+	// now we can inform systemd to use pid1 as the pid to monitor
+	newPid := "MAINPID=" + strconv.Itoa(pid1)
+	_, err = client.Write([]byte(newPid + "\n"))
+	if err != nil {
+		return err
+	}
+
+	// wait for systemd to acknowledge the communication
+	return sdNotifyBarrier(client)
+}
+
+// errUnexpectedRead is reported when actual data was read from the pipe used
+// to synchronize with systemd. Usually, that pipe is only closed.
+var errUnexpectedRead = errors.New("unexpected read from synchronization pipe")
+
+// sdNotifyBarrier performs synchronization with systemd by means of the sd_notify_barrier protocol.
+func sdNotifyBarrier(client *net.UnixConn) error {
+	// Create a pipe for communicating with systemd daemon.
+	pipeR, pipeW, err := os.Pipe()
+	if err != nil {
+		return err
+	}
+
+	// Get the FD for the unix socket file to be able to do perform syscall.Sendmsg.
+	clientFd, err := client.File()
+	if err != nil {
+		return err
+	}
+
+	// Send the write end of the pipe along with a BARRIER=1 message.
+	fdRights := unix.UnixRights(int(pipeW.Fd()))
+	err = unix.Sendmsg(int(clientFd.Fd()), []byte("BARRIER=1"), fdRights, nil, 0)
+	if err != nil {
+		return &os.SyscallError{Syscall: "sendmsg", Err: err}
+	}
+
+	// Close our copy of pipeW.
+	err = pipeW.Close()
+	if err != nil {
+		return err
+	}
+
+	// Expect the read end of the pipe to be closed after 30 seconds.
+	err = pipeR.SetReadDeadline(time.Now().Add(30 * time.Second))
+	if err != nil {
+		return nil
+	}
+
+	// Read a single byte expecting EOF.
+	var buf [1]byte
+	n, err := pipeR.Read(buf[:])
+	if n != 0 || err == nil {
+		return errUnexpectedRead
+	} else if errors.Is(err, os.ErrDeadlineExceeded) {
+		// Probably the other end doesn't support the sd_notify_barrier protocol.
+		logrus.Warn("Timeout after waiting 30s for barrier. Ignored.")
+		return nil
+	} else if err == io.EOF { //nolint:errorlint // comparison with io.EOF is legit.
+		return nil
+	} else {
+		return err
 	}
 }
