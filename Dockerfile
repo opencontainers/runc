@@ -31,6 +31,7 @@ RUN KEYFILE=/usr/share/keyrings/criu-repo-keyring.gpg; \
         kmod \
         pkg-config \
         python3-minimal \
+        sshfs \
         sudo \
         uidmap \
     && apt-get clean \

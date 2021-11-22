@@ -1065,7 +1065,22 @@ func remount(m *configs.Mount, rootfs string, mountFd *int) error {
 	}
 
 	return utils.WithProcfd(rootfs, m.Destination, func(procfd string) error {
-		return mount(source, m.Destination, procfd, m.Device, uintptr(m.Flags|unix.MS_REMOUNT), "")
+		flags := uintptr(m.Flags | unix.MS_REMOUNT)
+		err := mount(source, m.Destination, procfd, m.Device, flags, "")
+		if err == nil {
+			return nil
+		}
+		// Check if the source has ro flag...
+		var s unix.Statfs_t
+		if err := unix.Statfs(source, &s); err != nil {
+			return &os.PathError{Op: "statfs", Path: source, Err: err}
+		}
+		if s.Flags&unix.MS_RDONLY != unix.MS_RDONLY {
+			return err
+		}
+		// ... and retry the mount with ro flag set.
+		flags |= unix.MS_RDONLY
+		return mount(source, m.Destination, procfd, m.Device, flags, "")
 	})
 }
 
