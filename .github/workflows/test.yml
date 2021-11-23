@@ -32,7 +32,7 @@ jobs:
         # criu repo
         sudo add-apt-repository -y ppa:criu/ppa
         # apt-add-repository runs apt update so we don't have to
-        sudo apt -q install libseccomp-dev criu
+        sudo apt -q install libseccomp-dev criu sshfs
 
     - name: install go ${{ matrix.go-version }}
       uses: actions/setup-go@v2
@@ -56,9 +56,10 @@ jobs:
       if: matrix.rootless == 'rootless'
       run: |
         sudo useradd -u2000 -m -d/home/rootless -s/bin/bash rootless
-        # Allow root to execute `ssh rootless@localhost` in tests/rootless.sh
+        # Allow root and rootless itself to execute `ssh rootless@localhost` in tests/rootless.sh
         ssh-keygen -t ecdsa -N "" -f $HOME/rootless.key
         sudo mkdir -m 0700 -p /home/rootless/.ssh
+        sudo cp $HOME/rootless.key /home/rootless/.ssh/id_ecdsa
         sudo cp $HOME/rootless.key.pub /home/rootless/.ssh/authorized_keys
         sudo chown -R rootless.rootless /home/rootless
 
