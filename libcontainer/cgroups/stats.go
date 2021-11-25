@@ -155,6 +155,16 @@ type RdmaStats struct {
 	RdmaCurrent []RdmaEntry `json:"rdma_current,omitempty"`
 }
 
+type PerfEntry struct {
+	ScalingRatio float64 `json:"scaling_ratio"`
+	Value        uint64  `json:"value"`
+	Event        string  `json:"event"`
+}
+
+type PerfStats struct {
+	PerfStat [][]PerfEntry `json:"perf_stat"`
+}
+
 type Stats struct {
 	CpuStats    CpuStats    `json:"cpu_stats,omitempty"`
 	CPUSetStats CPUSetStats `json:"cpuset_stats,omitempty"`
@@ -164,10 +174,12 @@ type Stats struct {
 	// the map is in the format "size of hugepage: stats of the hugepage"
 	HugetlbStats map[string]HugetlbStats `json:"hugetlb_stats,omitempty"`
 	RdmaStats    RdmaStats               `json:"rdma_stats,omitempty"`
+	PerfStats    PerfStats               `json:"perf_stats,omitempty"`
 }
 
 func NewStats() *Stats {
 	memoryStats := MemoryStats{Stats: make(map[string]uint64)}
 	hugetlbStats := make(map[string]HugetlbStats)
-	return &Stats{MemoryStats: memoryStats, HugetlbStats: hugetlbStats}
+	perfStats := PerfStats{PerfStat: make([][]PerfEntry, 0)}
+	return &Stats{MemoryStats: memoryStats, HugetlbStats: hugetlbStats, PerfStats: perfStats}
 }

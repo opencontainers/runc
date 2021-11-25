@@ -700,6 +700,22 @@ func CreateCgroupConfig(opts *CreateOpts, defaultDevs []*devices.Device) (*confi
 					}
 				}
 			}
+			// TODO: Read perf events.
+			if len(r.PerfEvents) > 0 {
+				c.Resources.PerfEvents = make([][]configs.PerfEvent, len(r.PerfEvents))
+				for k, v := range r.PerfEvents {
+					if len(v) > 0 {
+						c.Resources.PerfEvents[k] = make([]configs.PerfEvent, len(v))
+						for kk, vv := range v {
+							c.Resources.PerfEvents[k][kk] = configs.PerfEvent{
+								Config: vv.Config,
+								Ext1:   vv.Ext1,
+								Ext2:   vv.Ext2,
+							}
+						}
+					}
+				}
+			}
 			if r.Network != nil {
 				if r.Network.ClassID != nil {
 					c.Resources.NetClsClassid = *r.Network.ClassID

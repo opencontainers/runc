@@ -122,6 +122,9 @@ type Resources struct {
 	// Rdma resource restriction configuration
 	Rdma map[string]LinuxRdma `json:"rdma"`
 
+	// Perf event smth.
+	PerfEvents [][]PerfEvent `json:"perf_events"`
+
 	// Used on cgroups v2:
 
 	// CpuWeight sets a proportional bandwidth limit.

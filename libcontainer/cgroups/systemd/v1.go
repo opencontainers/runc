@@ -2,6 +2,7 @@ package systemd
 
 import (
 	"errors"
+	"golang.org/x/sys/unix"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -65,7 +66,9 @@ var legacySubsystems = []subsystem{
 	&fs.PidsGroup{},
 	&fs.BlkioGroup{},
 	&fs.HugetlbGroup{},
-	&fs.PerfEventGroup{},
+	&fs.PerfEventGroup{
+		PerfEventOpen: unix.PerfEventOpen,
+	},
 	&fs.FreezerGroup{},
 	&fs.NetPrioGroup{},
 	&fs.NetClsGroup{},
