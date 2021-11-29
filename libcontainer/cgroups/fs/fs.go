@@ -13,25 +13,22 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
-var (
-	subsystems = []subsystem{
-		&CpusetGroup{},
-		&DevicesGroup{},
-		&MemoryGroup{},
-		&CpuGroup{},
-		&CpuacctGroup{},
-		&PidsGroup{},
-		&BlkioGroup{},
-		&HugetlbGroup{},
-		&NetClsGroup{},
-		&NetPrioGroup{},
-		&PerfEventGroup{},
-		&FreezerGroup{},
-		&RdmaGroup{},
-		&NameGroup{GroupName: "name=systemd", Join: true},
-	}
-	HugePageSizes, _ = cgroups.GetHugePageSize()
-)
+var subsystems = []subsystem{
+	&CpusetGroup{},
+	&DevicesGroup{},
+	&MemoryGroup{},
+	&CpuGroup{},
+	&CpuacctGroup{},
+	&PidsGroup{},
+	&BlkioGroup{},
+	&HugetlbGroup{},
+	&NetClsGroup{},
+	&NetPrioGroup{},
+	&PerfEventGroup{},
+	&FreezerGroup{},
+	&RdmaGroup{},
+	&NameGroup{GroupName: "name=systemd", Join: true},
+}
 
 var errSubsystemDoesNotExist = errors.New("cgroup: subsystem does not exist")
 

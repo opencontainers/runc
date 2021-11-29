@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/moby/sys/mountinfo"
-	"github.com/sirupsen/logrus"
 )
 
 const fedoraMountinfo = `15 35 0:3 / /proc rw,nosuid,nodev,noexec,relatime shared:5 - proc proc rw
@@ -448,19 +447,6 @@ func TestFindCgroupMountpointAndRoot(t *testing.T) {
 	}
 }
 
-func BenchmarkGetHugePageSize(b *testing.B) {
-	var (
-		output []string
-		err    error
-	)
-	for i := 0; i < b.N; i++ {
-		output, err = GetHugePageSize()
-	}
-	if err != nil || len(output) == 0 {
-		b.Fatal("unexpected results")
-	}
-}
-
 func BenchmarkGetHugePageSizeImpl(b *testing.B) {
 	var (
 		input  = []string{"hugepages-1048576kB", "hugepages-2048kB", "hugepages-32768kB", "hugepages-64kB"}
@@ -477,71 +463,78 @@ func BenchmarkGetHugePageSizeImpl(b *testing.B) {
 
 func TestGetHugePageSizeImpl(t *testing.T) {
 	testCases := []struct {
+		doc    string
 		input  []string
 		output []string
 		isErr  bool
-		isWarn bool
 	}{
 		{
+			doc:    "normal input",
 			input:  []string{"hugepages-1048576kB", "hugepages-2048kB", "hugepages-32768kB", "hugepages-64kB"},
 			output: []string{"1GB", "2MB", "32MB", "64KB"},
 		},
 		{
+			doc:    "empty input",
 			input:  []string{},
 			output: []string{},
 		},
-		{ // not a number
+		{
+			doc:   "not a number",
 			input: []string{"hugepages-akB"},
 			isErr: true,
 		},
-		{ // no prefix (silently skipped)
+		{
+			doc:   "no prefix (silently skipped)",
 			input: []string{"1024kB"},
 		},
-		{ // invalid prefix (silently skipped)
+		{
+			doc:   "invalid prefix (silently skipped)",
 			input: []string{"whatever-1024kB"},
 		},
-		{ // invalid suffix (skipped with a warning)
-			input:  []string{"hugepages-1024gB"},
-			isWarn: true,
+		{
+			doc:   "invalid suffix",
+			input: []string{"hugepages-1024gB"},
+			isErr: true,
 		},
-		{ // no suffix (skipped with a warning)
-			input:  []string{"hugepages-1024"},
-			isWarn: true,
+		{
+			doc:   "no suffix",
+			input: []string{"hugepages-1024"},
+			isErr: true,
+		},
+		{
+			doc:    "mixed valid and invalid entries",
+			input:  []string{"hugepages-4194304kB", "hugepages-2048kB", "hugepages-akB", "hugepages-64kB"},
+			output: []string{"4GB", "2MB", "64KB"},
+			isErr:  true,
+		},
+		{
+			doc:    "more mixed valid and invalid entries",
+			input:  []string{"hugepages-2048kB", "hugepages-kB", "hugepages-64kB"},
+			output: []string{"2MB", "64KB"},
+			isErr:  true,
 		},
 	}
 
-	// Need to catch warnings.
-	savedOut := logrus.StandardLogger().Out
-	defer logrus.SetOutput(savedOut)
-	warns := new(bytes.Buffer)
-	logrus.SetOutput(warns)
-
 	for _, c := range testCases {
-		warns.Reset()
-		output, err := getHugePageSizeFromFilenames(c.input)
-		if err != nil {
-			if !c.isErr {
-				t.Errorf("input %v, expected nil, got error: %v", c.input, err)
+		c := c
+		t.Run(c.doc, func(t *testing.T) {
+			output, err := getHugePageSizeFromFilenames(c.input)
+			t.Log("input:", c.input, "; output:", output, "; err:", err)
+			if err != nil {
+				if !c.isErr {
+					t.Errorf("input %v, expected nil, got error: %v", c.input, err)
+				}
+				// no more checks
+				return
 			}
-			// no more checks
-			continue
-		}
-		if c.isErr {
-			t.Errorf("input %v, expected error, got error: nil, output: %v", c.input, output)
-			// no more checks
-			continue
-		}
-		// check for warnings
-		if c.isWarn && warns.Len() == 0 {
-			t.Errorf("input %v, expected a warning, got none", c.input)
-		}
-		if !c.isWarn && warns.Len() > 0 {
-			t.Errorf("input %v, unexpected warning: %s", c.input, warns.String())
-		}
-		// check output
-		if len(output) != len(c.output) || (len(output) > 0 && !reflect.DeepEqual(output, c.output)) {
-			t.Errorf("input %v, expected %v, got %v", c.input, c.output, output)
-		}
+			if c.isErr {
+				t.Errorf("input %v, expected error, got error: nil, output: %v", c.input, output)
+			}
+			// check output
+			if len(output) != len(c.output) || (len(output) > 0 && !reflect.DeepEqual(output, c.output)) {
+				t.Errorf("input %v, expected %v, got %v", c.input, c.output, output)
+			}
+		})
 	}
 }
 
