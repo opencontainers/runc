@@ -23,6 +23,7 @@ function teardown() {
 	[[ "${lines[0]}" == *'/tmp/bind/config.json'* ]]
 }
 
+# https://github.com/opencontainers/runc/issues/2246
 @test "runc run [ro tmpfs mount]" {
 	update_config '	  .mounts += [{
 					source: "tmpfs",
@@ -31,6 +32,16 @@ function teardown() {
 					options: ["ro", "nodev", "nosuid", "mode=755"]
 				}]
 			| .process.args |= ["grep", "^tmpfs /mnt", "/proc/mounts"]'
+
+	runc run test_busybox
+	[ "$status" -eq 0 ]
+	[[ "${lines[0]}" == *'ro,'* ]]
+}
+
+# https://github.com/opencontainers/runc/issues/3248
+@test "runc run [ro /dev mount]" {
+	update_config '   .mounts |= map((select(.destination == "/dev") | .options += ["ro"]) // .)
+			| .process.args |= ["grep", "^tmpfs /dev", "/proc/mounts"]'
 
 	runc run test_busybox
 	[ "$status" -eq 0 ]
