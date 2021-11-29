@@ -2,6 +2,7 @@ package seccomp
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
@@ -16,6 +17,17 @@ var operators = map[string]configs.Operator{
 	"SCMP_CMP_MASKED_EQ": configs.MaskEqualTo,
 }
 
+// KnownOperators returns the list of the known operations.
+// Used by `runc features`.
+func KnownOperators() []string {
+	var res []string
+	for k := range operators {
+		res = append(res, k)
+	}
+	sort.Strings(res)
+	return res
+}
+
 var actions = map[string]configs.Action{
 	"SCMP_ACT_KILL":   configs.Kill,
 	"SCMP_ACT_ERRNO":  configs.Errno,
@@ -24,6 +36,17 @@ var actions = map[string]configs.Action{
 	"SCMP_ACT_TRACE":  configs.Trace,
 	"SCMP_ACT_LOG":    configs.Log,
 	"SCMP_ACT_NOTIFY": configs.Notify,
+}
+
+// KnownActions returns the list of the known actions.
+// Used by `runc features`.
+func KnownActions() []string {
+	var res []string
+	for k := range actions {
+		res = append(res, k)
+	}
+	sort.Strings(res)
+	return res
 }
 
 var archs = map[string]string{
@@ -43,6 +66,17 @@ var archs = map[string]string{
 	"SCMP_ARCH_PPC64LE":     "ppc64le",
 	"SCMP_ARCH_S390":        "s390",
 	"SCMP_ARCH_S390X":       "s390x",
+}
+
+// KnownArchs returns the list of the known archs.
+// Used by `runc features`.
+func KnownArchs() []string {
+	var res []string
+	for k := range archs {
+		res = append(res, k)
+	}
+	sort.Strings(res)
+	return res
 }
 
 // ConvertStringToOperator converts a string into a Seccomp comparison operator.

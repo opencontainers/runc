@@ -251,6 +251,19 @@ const (
 	Poststop HookName = "poststop"
 )
 
+// KnownHookNames returns the known hook names.
+// Used by `runc features`.
+func KnownHookNames() []string {
+	return []string{
+		string(Prestart), // deprecated
+		string(CreateRuntime),
+		string(CreateContainer),
+		string(StartContainer),
+		string(Poststart),
+		string(Poststop),
+	}
+}
+
 type Capabilities struct {
 	// Bounding is the set of capabilities checked by the kernel.
 	Bounding []string
