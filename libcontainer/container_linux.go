@@ -482,7 +482,7 @@ func (c *linuxContainer) newParentProcess(p *Process) (parentProcess, error) {
 }
 
 func (c *linuxContainer) commandTemplate(p *Process, childInitPipe *os.File, childLogPipe *os.File) *exec.Cmd {
-	cmd := exec.Command(c.initPath, c.initArgs[1:]...)
+	cmd := exec.Command(c.initPath, c.initArgs[1:]...) //nolint:gosec // G204 (Subprocess launched with a potential tainted input or cmd arguments)
 	cmd.Args[0] = c.initArgs[0]
 	cmd.Stdin = p.Stdin
 	cmd.Stdout = p.Stdout
@@ -1608,7 +1608,7 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *
 		// the initial CRIU run to detect the version. Skip it.
 		logrus.Debugf("Using CRIU %d at: %s", c.criuVersion, c.criuPath)
 	}
-	cmd := exec.Command(c.criuPath, args...)
+	cmd := exec.Command(c.criuPath, args...) //nolint:gosec // G204 (Subprocess launched with a potential tainted input or cmd arguments)
 	if process != nil {
 		cmd.Stdin = process.Stdin
 		cmd.Stdout = process.Stdout

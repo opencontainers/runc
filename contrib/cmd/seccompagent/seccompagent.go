@@ -245,7 +245,7 @@ func main() {
 
 	if pidFile != "" {
 		pid := fmt.Sprintf("%d", os.Getpid())
-		if err := os.WriteFile(pidFile, []byte(pid), 0o644); err != nil {
+		if err := os.WriteFile(pidFile, []byte(pid), 0o644); err != nil { //nolint:gosec
 			logrus.Fatalf("Cannot write pid file: %v", err)
 		}
 	}

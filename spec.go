@@ -108,7 +108,7 @@ created by an unprivileged user.
 		if err != nil {
 			return err
 		}
-		return os.WriteFile(specConfig, data, 0o666)
+		return os.WriteFile(specConfig, data, 0o666) //nolint:gosec
 	},
 }
 

@@ -1425,7 +1425,7 @@ func TestRootfsPropagationSharedMount(t *testing.T) {
 	defer unmountOp(dir2host)
 
 	// Check if mount is visible on host or not.
-	out, err := exec.Command("findmnt", "-n", "-f", "-oTARGET", dir2host).CombinedOutput()
+	out, err := exec.Command("findmnt", "-n", "-f", "-oTARGET", dir2host).CombinedOutput() //nolint:gosec // G204 (Subprocess launched with variable)
 	outtrim := string(bytes.TrimSpace(out))
 	if err != nil {
 		t.Logf("findmnt error %q: %q", err, outtrim)
@@ -1861,7 +1861,7 @@ func TestBindMountAndUser(t *testing.T) {
 	err := os.MkdirAll(dirhost, 0o755)
 	ok(t, err)
 
-	err = os.WriteFile(filepath.Join(dirhost, "foo.txt"), []byte("Hello"), 0o755)
+	err = os.WriteFile(filepath.Join(dirhost, "foo.txt"), []byte("Hello"), 0o755) //nolint:gosec
 	ok(t, err)
 
 	// Make this dir inaccessible to "group,others".

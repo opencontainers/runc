@@ -213,7 +213,7 @@ func cleanupTmp(tmpdir string) {
 }
 
 func mountCmd(cmd configs.Command) error {
-	command := exec.Command(cmd.Path, cmd.Args[:]...)
+	command := exec.Command(cmd.Path, cmd.Args[:]...) //nolint:gosec // G204 (Subprocess launched with a potential tainted input or cmd arguments)
 	command.Env = cmd.Env
 	command.Dir = cmd.Dir
 	if out, err := command.CombinedOutput(); err != nil {
@@ -1050,7 +1050,7 @@ func maskPath(path string, mountLabel string) error {
 // For e.g. net.ipv4.ip_forward translated to /proc/sys/net/ipv4/ip_forward.
 func writeSystemProperty(key, value string) error {
 	keyPath := strings.Replace(key, ".", "/", -1)
-	return os.WriteFile(path.Join("/proc/sys", keyPath), []byte(value), 0o644)
+	return os.WriteFile(path.Join("/proc/sys", keyPath), []byte(value), 0o644) //nolint:gosec
 }
 
 func remount(m *configs.Mount, rootfs string, mountFd *int) error {
