@@ -282,7 +282,7 @@ func TestSeccompPermitWriteMultipleConditions(t *testing.T) {
 		},
 	}
 
-	buffers, exitCode, err := runContainer(t, config, "", "ls", "/")
+	buffers, exitCode, err := runContainer(t, config, "ls", "/")
 	if err != nil {
 		t.Fatalf("%s: %s", buffers, err)
 	}
@@ -331,7 +331,7 @@ func TestSeccompDenyWriteMultipleConditions(t *testing.T) {
 		},
 	}
 
-	buffers, exitCode, err := runContainer(t, config, "", "ls", "/does_not_exist")
+	buffers, exitCode, err := runContainer(t, config, "ls", "/does_not_exist")
 	if err == nil {
 		t.Fatalf("Expecting error return, instead got 0")
 	}
@@ -375,7 +375,7 @@ func TestSeccompMultipleConditionSameArgDeniesStdout(t *testing.T) {
 		},
 	}
 
-	buffers, exitCode, err := runContainer(t, config, "", "ls", "/")
+	buffers, exitCode, err := runContainer(t, config, "ls", "/")
 	if err != nil {
 		t.Fatalf("%s: %s", buffers, err)
 	}
@@ -417,7 +417,7 @@ func TestSeccompMultipleConditionSameArgDeniesStderr(t *testing.T) {
 		},
 	}
 
-	buffers, exitCode, err := runContainer(t, config, "", "ls", "/does_not_exist")
+	buffers, exitCode, err := runContainer(t, config, "ls", "/does_not_exist")
 	if err == nil {
 		t.Fatalf("Expecting error return, instead got 0")
 	}
