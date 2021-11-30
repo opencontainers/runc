@@ -360,7 +360,7 @@ func setupUser(config *initConfig) error {
 
 	// Before we change to the container's user make sure that the processes
 	// STDIO is correctly owned by the user that we are switching to.
-	if err := fixStdioPermissions(config, execUser); err != nil {
+	if err := fixStdioPermissions(execUser); err != nil {
 		return err
 	}
 
@@ -401,7 +401,7 @@ func setupUser(config *initConfig) error {
 // fixStdioPermissions fixes the permissions of PID 1's STDIO within the container to the specified user.
 // The ownership needs to match because it is created outside of the container and needs to be
 // localized.
-func fixStdioPermissions(config *initConfig, u *user.ExecUser) error {
+func fixStdioPermissions(u *user.ExecUser) error {
 	var null unix.Stat_t
 	if err := unix.Stat("/dev/null", &null); err != nil {
 		return &os.PathError{Op: "stat", Path: "/dev/null", Err: err}
