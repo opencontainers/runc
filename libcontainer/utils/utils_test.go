@@ -8,22 +8,28 @@ import (
 )
 
 var labelTest = []struct {
-	labels        []string
-	query         string
-	expectedValue string
+	labels []string
+	query  string
+	expVal string
+	expOk  bool
 }{
-	{[]string{"bundle=/path/to/bundle"}, "bundle", "/path/to/bundle"},
-	{[]string{"test=a", "test=b"}, "bundle", ""},
-	{[]string{"bundle=a", "test=b", "bundle=c"}, "bundle", "a"},
-	{[]string{"", "test=a", "bundle=b"}, "bundle", "b"},
-	{[]string{"test", "bundle=a"}, "bundle", "a"},
-	{[]string{"test=a", "bundle="}, "bundle", ""},
+	{[]string{"bundle=/path/to/bundle"}, "bundle", "/path/to/bundle", true},
+	{[]string{"test=a", "test=b"}, "bundle", "", false},
+	{[]string{"bundle=a", "test=b", "bundle=c"}, "bundle", "a", true},
+	{[]string{"", "test=a", "bundle=b"}, "bundle", "b", true},
+	{[]string{"test", "bundle=a"}, "bundle", "a", true},
+	{[]string{"test=a", "bundle="}, "bundle", "", true},
 }
 
 func TestSearchLabels(t *testing.T) {
 	for _, tt := range labelTest {
-		if v := SearchLabels(tt.labels, tt.query); v != tt.expectedValue {
-			t.Errorf("expected value '%s' for query '%s'; got '%s'", tt.expectedValue, tt.query, v)
+		v, ok := SearchLabels(tt.labels, tt.query)
+		if ok != tt.expOk {
+			t.Errorf("expected ok: %v, got %v", tt.expOk, ok)
+			continue
+		}
+		if v != tt.expVal {
+			t.Errorf("expected value '%s' for query '%s'; got '%s'", tt.expVal, tt.query, v)
 		}
 	}
 }
