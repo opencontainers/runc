@@ -301,10 +301,7 @@ func (r *runner) run(config *specs.Process) (int, error) {
 		r.terminate(process)
 		return -1, err
 	}
-	if err = tty.ClosePostStart(); err != nil {
-		r.terminate(process)
-		return -1, err
-	}
+	tty.ClosePostStart()
 	if r.pidFile != "" {
 		if err = createPidFile(r.pidFile, process); err != nil {
 			r.terminate(process)

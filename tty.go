@@ -159,11 +159,10 @@ func (t *tty) waitConsole() error {
 
 // ClosePostStart closes any fds that are provided to the container and dup2'd
 // so that we no longer have copy in our process.
-func (t *tty) ClosePostStart() error {
+func (t *tty) ClosePostStart() {
 	for _, c := range t.postStart {
 		_ = c.Close()
 	}
-	return nil
 }
 
 // Close closes all open fds for the tty and/or restores the original
