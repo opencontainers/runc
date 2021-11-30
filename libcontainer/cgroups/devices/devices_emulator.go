@@ -139,7 +139,7 @@ func parseLine(line string) (*deviceRule, error) {
 	return &rule, nil
 }
 
-func (e *Emulator) addRule(rule deviceRule) error {
+func (e *Emulator) addRule(rule deviceRule) error { //nolint:unparam
 	if e.rules == nil {
 		e.rules = make(map[deviceMeta]devices.Permissions)
 	}
