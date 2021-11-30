@@ -167,7 +167,7 @@ func (t *tty) ClosePostStart() {
 
 // Close closes all open fds for the tty and/or restores the original
 // stdin state to what it was prior to the container execution
-func (t *tty) Close() error {
+func (t *tty) Close() {
 	// ensure that our side of the fds are always closed
 	for _, c := range t.postStart {
 		_ = c.Close()
@@ -184,7 +184,6 @@ func (t *tty) Close() error {
 	if t.hostConsole != nil {
 		_ = t.hostConsole.Reset()
 	}
-	return nil
 }
 
 func (t *tty) resize() error {
