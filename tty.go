@@ -63,11 +63,10 @@ func setupProcessPipes(p *libcontainer.Process, rootuid, rootgid int) (*tty, err
 	return t, nil
 }
 
-func inheritStdio(process *libcontainer.Process) error {
+func inheritStdio(process *libcontainer.Process) {
 	process.Stdin = os.Stdin
 	process.Stdout = os.Stdout
 	process.Stderr = os.Stderr
-	return nil
 }
 
 func (t *tty) initHostConsole() error {
@@ -100,7 +99,7 @@ func (t *tty) initHostConsole() error {
 	return nil
 }
 
-func (t *tty) recvtty(process *libcontainer.Process, socket *os.File) (Err error) {
+func (t *tty) recvtty(socket *os.File) (Err error) {
 	f, err := utils.RecvFd(socket)
 	if err != nil {
 		return err
@@ -160,16 +159,15 @@ func (t *tty) waitConsole() error {
 
 // ClosePostStart closes any fds that are provided to the container and dup2'd
 // so that we no longer have copy in our process.
-func (t *tty) ClosePostStart() error {
+func (t *tty) ClosePostStart() {
 	for _, c := range t.postStart {
 		_ = c.Close()
 	}
-	return nil
 }
 
 // Close closes all open fds for the tty and/or restores the original
 // stdin state to what it was prior to the container execution
-func (t *tty) Close() error {
+func (t *tty) Close() {
 	// ensure that our side of the fds are always closed
 	for _, c := range t.postStart {
 		_ = c.Close()
@@ -186,7 +184,6 @@ func (t *tty) Close() error {
 	if t.hostConsole != nil {
 		_ = t.hostConsole.Reset()
 	}
-	return nil
 }
 
 func (t *tty) resize() error {

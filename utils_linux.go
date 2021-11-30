@@ -66,7 +66,7 @@ func getContainer(context *cli.Context) (libcontainer.Container, error) {
 	return factory.Load(id)
 }
 
-func getDefaultImagePath(context *cli.Context) string {
+func getDefaultImagePath() string {
 	cwd, err := os.Getwd()
 	if err != nil {
 		panic(err)
@@ -139,7 +139,7 @@ func setupIO(process *libcontainer.Process, rootuid, rootgid int, createTTY, det
 			t.postStart = append(t.postStart, parent, child)
 			t.consoleC = make(chan error, 1)
 			go func() {
-				t.consoleC <- t.recvtty(process, parent)
+				t.consoleC <- t.recvtty(parent)
 			}()
 		} else {
 			// the caller of runc will handle receiving the console master
@@ -164,9 +164,7 @@ func setupIO(process *libcontainer.Process, rootuid, rootgid int, createTTY, det
 	// when runc will detach the caller provides the stdio to runc via runc's 0,1,2
 	// and the container's process inherits runc's stdio.
 	if detach {
-		if err := inheritStdio(process); err != nil {
-			return nil, err
-		}
+		inheritStdio(process)
 		return &tty{}, nil
 	}
 	return setupProcessPipes(process, rootuid, rootgid)
@@ -303,10 +301,7 @@ func (r *runner) run(config *specs.Process) (int, error) {
 		r.terminate(process)
 		return -1, err
 	}
-	if err = tty.ClosePostStart(); err != nil {
-		r.terminate(process)
-		return -1, err
-	}
+	tty.ClosePostStart()
 	if r.pidFile != "" {
 		if err = createPidFile(r.pidFile, process); err != nil {
 			r.terminate(process)
@@ -392,9 +387,7 @@ func startContainer(context *cli.Context, action CtAct, criuOpts *libcontainer.C
 
 	notifySocket := newNotifySocket(context, os.Getenv("NOTIFY_SOCKET"), id)
 	if notifySocket != nil {
-		if err := notifySocket.setupSpec(context, spec); err != nil {
-			return -1, err
-		}
+		notifySocket.setupSpec(spec)
 	}
 
 	container, err := createContainer(context, id, spec)

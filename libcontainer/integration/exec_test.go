@@ -40,7 +40,7 @@ func testExecPS(t *testing.T, userns bool) {
 	}
 	config := newTemplateConfig(t, &tParam{userns: userns})
 
-	buffers, exitCode, err := runContainer(t, config, "", "ps", "-o", "pid,user,comm")
+	buffers, exitCode, err := runContainer(t, config, "ps", "-o", "pid,user,comm")
 	if err != nil {
 		t.Fatalf("%s: %s", buffers, err)
 	}
@@ -67,7 +67,7 @@ func TestIPCPrivate(t *testing.T) {
 	ok(t, err)
 
 	config := newTemplateConfig(t, nil)
-	buffers, exitCode, err := runContainer(t, config, "", "readlink", "/proc/self/ns/ipc")
+	buffers, exitCode, err := runContainer(t, config, "readlink", "/proc/self/ns/ipc")
 	ok(t, err)
 
 	if exitCode != 0 {
@@ -89,7 +89,7 @@ func TestIPCHost(t *testing.T) {
 
 	config := newTemplateConfig(t, nil)
 	config.Namespaces.Remove(configs.NEWIPC)
-	buffers, exitCode, err := runContainer(t, config, "", "readlink", "/proc/self/ns/ipc")
+	buffers, exitCode, err := runContainer(t, config, "readlink", "/proc/self/ns/ipc")
 	ok(t, err)
 
 	if exitCode != 0 {
@@ -112,7 +112,7 @@ func TestIPCJoinPath(t *testing.T) {
 	config := newTemplateConfig(t, nil)
 	config.Namespaces.Add(configs.NEWIPC, "/proc/1/ns/ipc")
 
-	buffers, exitCode, err := runContainer(t, config, "", "readlink", "/proc/self/ns/ipc")
+	buffers, exitCode, err := runContainer(t, config, "readlink", "/proc/self/ns/ipc")
 	ok(t, err)
 
 	if exitCode != 0 {
@@ -132,7 +132,7 @@ func TestIPCBadPath(t *testing.T) {
 	config := newTemplateConfig(t, nil)
 	config.Namespaces.Add(configs.NEWIPC, "/proc/1/ns/ipcc")
 
-	if _, _, err := runContainer(t, config, "", "true"); err == nil {
+	if _, _, err := runContainer(t, config, "true"); err == nil {
 		t.Fatal("container succeeded with bad ipc path")
 	}
 }
@@ -163,7 +163,7 @@ func testRlimit(t *testing.T, userns bool) {
 		Cur: 1024,
 	}))
 
-	out, _, err := runContainer(t, config, "", "/bin/sh", "-c", "ulimit -n")
+	out, _, err := runContainer(t, config, "/bin/sh", "-c", "ulimit -n")
 	ok(t, err)
 	if limit := strings.TrimSpace(out.Stdout.String()); limit != "1025" {
 		t.Fatalf("expected rlimit to be 1025, got %s", limit)
@@ -537,7 +537,7 @@ func testCpuShares(t *testing.T, systemd bool) {
 	config := newTemplateConfig(t, &tParam{systemd: systemd})
 	config.Cgroups.Resources.CpuShares = 1
 
-	if _, _, err := runContainer(t, config, "", "ps"); err == nil {
+	if _, _, err := runContainer(t, config, "ps"); err == nil {
 		t.Fatalf("runContainer should failed with invalid CpuShares")
 	}
 }
@@ -562,7 +562,7 @@ func testPids(t *testing.T, systemd bool) {
 	config.Cgroups.Resources.PidsLimit = -1
 
 	// Running multiple processes.
-	_, ret, err := runContainer(t, config, "", "/bin/sh", "-c", "/bin/true | /bin/true | /bin/true | /bin/true")
+	_, ret, err := runContainer(t, config, "/bin/sh", "-c", "/bin/true | /bin/true | /bin/true | /bin/true")
 	ok(t, err)
 
 	if ret != 0 {
@@ -572,7 +572,7 @@ func testPids(t *testing.T, systemd bool) {
 	// Enforce a permissive limit. This needs to be fairly hand-wavey due to the
 	// issues with running Go binaries with pids restrictions (see below).
 	config.Cgroups.Resources.PidsLimit = 64
-	_, ret, err = runContainer(t, config, "", "/bin/sh", "-c", `
+	_, ret, err = runContainer(t, config, "/bin/sh", "-c", `
 	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
 	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
 	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
@@ -586,7 +586,7 @@ func testPids(t *testing.T, systemd bool) {
 	// Enforce a restrictive limit. 64 * /bin/true + 1 * shell should cause this
 	// to fail reliability.
 	config.Cgroups.Resources.PidsLimit = 64
-	out, _, err := runContainer(t, config, "", "/bin/sh", "-c", `
+	out, _, err := runContainer(t, config, "/bin/sh", "-c", `
 	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
 	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
 	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
@@ -632,7 +632,7 @@ func testCgroupResourcesUnifiedErrorOnV1(t *testing.T, systemd bool) {
 	config.Cgroups.Resources.Unified = map[string]string{
 		"memory.min": "10240",
 	}
-	_, _, err := runContainer(t, config, "", "true")
+	_, _, err := runContainer(t, config, "true")
 	if !strings.Contains(err.Error(), cgroups.ErrV1NoUnified.Error()) {
 		t.Fatalf("expected error to contain %v, got %v", cgroups.ErrV1NoUnified, err)
 	}
@@ -716,7 +716,7 @@ func testCgroupResourcesUnified(t *testing.T, systemd bool) {
 
 	for _, tc := range testCases {
 		config.Cgroups.Resources.Unified = tc.cfg
-		buffers, ret, err := runContainer(t, config, "", tc.cmd...)
+		buffers, ret, err := runContainer(t, config, tc.cmd...)
 		if tc.expError != "" {
 			if err == nil {
 				t.Errorf("case %q failed: expected error, got nil", tc.name)
@@ -934,7 +934,7 @@ func TestMountCgroupRO(t *testing.T) {
 		return
 	}
 	config := newTemplateConfig(t, nil)
-	buffers, exitCode, err := runContainer(t, config, "", "mount")
+	buffers, exitCode, err := runContainer(t, config, "mount")
 	if err != nil {
 		t.Fatalf("%s: %s", buffers, err)
 	}
@@ -981,7 +981,7 @@ func TestMountCgroupRW(t *testing.T) {
 		}
 	}
 
-	buffers, exitCode, err := runContainer(t, config, "", "mount")
+	buffers, exitCode, err := runContainer(t, config, "mount")
 	if err != nil {
 		t.Fatalf("%s: %s", buffers, err)
 	}
@@ -1198,7 +1198,7 @@ func TestSTDIOPermissions(t *testing.T) {
 	}
 
 	config := newTemplateConfig(t, nil)
-	buffers, exitCode, err := runContainer(t, config, "", "sh", "-c", "echo hi > /dev/stderr")
+	buffers, exitCode, err := runContainer(t, config, "sh", "-c", "echo hi > /dev/stderr")
 	ok(t, err)
 	if exitCode != 0 {
 		t.Fatalf("exit code not 0. code %d stderr %q", exitCode, buffers.Stderr)
@@ -1446,7 +1446,7 @@ func TestPIDHost(t *testing.T) {
 
 	config := newTemplateConfig(t, nil)
 	config.Namespaces.Remove(configs.NEWPID)
-	buffers, exitCode, err := runContainer(t, config, "", "readlink", "/proc/self/ns/pid")
+	buffers, exitCode, err := runContainer(t, config, "readlink", "/proc/self/ns/pid")
 	ok(t, err)
 
 	if exitCode != 0 {
@@ -1740,7 +1740,7 @@ func TestCGROUPPrivate(t *testing.T) {
 
 	config := newTemplateConfig(t, nil)
 	config.Namespaces.Add(configs.NEWCGROUP, "")
-	buffers, exitCode, err := runContainer(t, config, "", "readlink", "/proc/self/ns/cgroup")
+	buffers, exitCode, err := runContainer(t, config, "readlink", "/proc/self/ns/cgroup")
 	ok(t, err)
 
 	if exitCode != 0 {
@@ -1764,7 +1764,7 @@ func TestCGROUPHost(t *testing.T) {
 	ok(t, err)
 
 	config := newTemplateConfig(t, nil)
-	buffers, exitCode, err := runContainer(t, config, "", "readlink", "/proc/self/ns/cgroup")
+	buffers, exitCode, err := runContainer(t, config, "readlink", "/proc/self/ns/cgroup")
 	ok(t, err)
 
 	if exitCode != 0 {
@@ -1801,7 +1801,7 @@ func testFdLeaks(t *testing.T, systemd bool) {
 	ok(t, err)
 
 	config := newTemplateConfig(t, &tParam{systemd: systemd})
-	buffers, exitCode, err := runContainer(t, config, "", "true")
+	buffers, exitCode, err := runContainer(t, config, "true")
 	ok(t, err)
 
 	if exitCode != 0 {

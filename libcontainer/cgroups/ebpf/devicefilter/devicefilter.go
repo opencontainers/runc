@@ -65,8 +65,7 @@ func DeviceFilter(rules []*devices.Rule) (asm.Instructions, string, error) {
 			return nil, "", err
 		}
 	}
-	insts, err := p.finalize()
-	return insts, license, err
+	return p.finalize(), license, nil
 }
 
 type program struct {
@@ -181,7 +180,7 @@ func (p *program) appendRule(rule *devices.Rule) error {
 	return nil
 }
 
-func (p *program) finalize() (asm.Instructions, error) {
+func (p *program) finalize() asm.Instructions {
 	var v int32
 	if p.defaultAllow {
 		v = 1
@@ -193,7 +192,7 @@ func (p *program) finalize() (asm.Instructions, error) {
 		asm.Return(),
 	)
 	p.blockID = -1
-	return p.insts, nil
+	return p.insts
 }
 
 func acceptBlock(accept bool) asm.Instructions {

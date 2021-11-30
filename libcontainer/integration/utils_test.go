@@ -180,7 +180,7 @@ func newContainer(t *testing.T, config *configs.Config) (libcontainer.Container,
 //
 // buffers are returned containing the STDOUT and STDERR output for the run
 // along with the exit code and any go error
-func runContainer(t *testing.T, config *configs.Config, console string, args ...string) (buffers *stdBuffers, exitCode int, err error) {
+func runContainer(t *testing.T, config *configs.Config, args ...string) (buffers *stdBuffers, exitCode int, err error) {
 	container, err := newContainer(t, config)
 	if err != nil {
 		return nil, -1, err

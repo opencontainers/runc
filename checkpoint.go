@@ -80,7 +80,7 @@ checkpointed.`,
 func prepareImagePaths(context *cli.Context) (string, string, error) {
 	imagePath := context.String("image-path")
 	if imagePath == "" {
-		imagePath = getDefaultImagePath(context)
+		imagePath = getDefaultImagePath()
 	}
 
 	if err := os.MkdirAll(imagePath, 0o600); err != nil {

@@ -43,7 +43,7 @@ func (s *notifySocket) Close() error {
 
 // If systemd is supporting sd_notify protocol, this function will add support
 // for sd_notify protocol from within the container.
-func (s *notifySocket) setupSpec(context *cli.Context, spec *specs.Spec) error {
+func (s *notifySocket) setupSpec(spec *specs.Spec) {
 	pathInContainer := filepath.Join("/run/notify", path.Base(s.socketPath))
 	mount := specs.Mount{
 		Destination: path.Dir(pathInContainer),
@@ -52,7 +52,6 @@ func (s *notifySocket) setupSpec(context *cli.Context, spec *specs.Spec) error {
 	}
 	spec.Mounts = append(spec.Mounts, mount)
 	spec.Process.Env = append(spec.Process.Env, "NOTIFY_SOCKET="+pathInContainer)
-	return nil
 }
 
 func (s *notifySocket) bindSocket() error {

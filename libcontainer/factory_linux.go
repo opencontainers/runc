@@ -231,7 +231,7 @@ func (l *LinuxFactory) Load(id string) (Container, error) {
 	if err != nil {
 		return nil, err
 	}
-	state, err := l.loadState(containerRoot, id)
+	state, err := l.loadState(containerRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -351,7 +351,7 @@ func (l *LinuxFactory) StartInitialization() (err error) {
 	return i.Init()
 }
 
-func (l *LinuxFactory) loadState(root, id string) (*State, error) {
+func (l *LinuxFactory) loadState(root string) (*State, error) {
 	stateFilePath, err := securejoin.SecureJoin(root, stateFilename)
 	if err != nil {
 		return nil, err
