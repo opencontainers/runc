@@ -164,9 +164,7 @@ func setupIO(process *libcontainer.Process, rootuid, rootgid int, createTTY, det
 	// when runc will detach the caller provides the stdio to runc via runc's 0,1,2
 	// and the container's process inherits runc's stdio.
 	if detach {
-		if err := inheritStdio(process); err != nil {
-			return nil, err
-		}
+		inheritStdio(process)
 		return &tty{}, nil
 	}
 	return setupProcessPipes(process, rootuid, rootgid)

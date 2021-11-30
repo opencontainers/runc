@@ -63,11 +63,10 @@ func setupProcessPipes(p *libcontainer.Process, rootuid, rootgid int) (*tty, err
 	return t, nil
 }
 
-func inheritStdio(process *libcontainer.Process) error {
+func inheritStdio(process *libcontainer.Process) {
 	process.Stdin = os.Stdin
 	process.Stdout = os.Stdout
 	process.Stderr = os.Stderr
-	return nil
 }
 
 func (t *tty) initHostConsole() error {
