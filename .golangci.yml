@@ -9,3 +9,4 @@ linters:
     - gofumpt
     - errorlint
     - unconvert
+    - unparam
