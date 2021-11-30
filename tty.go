@@ -99,7 +99,7 @@ func (t *tty) initHostConsole() error {
 	return nil
 }
 
-func (t *tty) recvtty(process *libcontainer.Process, socket *os.File) (Err error) {
+func (t *tty) recvtty(socket *os.File) (Err error) {
 	f, err := utils.RecvFd(socket)
 	if err != nil {
 		return err
