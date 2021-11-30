@@ -387,9 +387,7 @@ func startContainer(context *cli.Context, action CtAct, criuOpts *libcontainer.C
 
 	notifySocket := newNotifySocket(context, os.Getenv("NOTIFY_SOCKET"), id)
 	if notifySocket != nil {
-		if err := notifySocket.setupSpec(context, spec); err != nil {
-			return -1, err
-		}
+		notifySocket.setupSpec(spec)
 	}
 
 	container, err := createContainer(context, id, spec)
