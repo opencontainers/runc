@@ -2,8 +2,6 @@ package utils
 
 import (
 	"bytes"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"golang.org/x/sys/unix"
@@ -27,51 +25,6 @@ func TestSearchLabels(t *testing.T) {
 		if v := SearchLabels(tt.labels, tt.query); v != tt.expectedValue {
 			t.Errorf("expected value '%s' for query '%s'; got '%s'", tt.expectedValue, tt.query, v)
 		}
-	}
-}
-
-func TestResolveRootfs(t *testing.T) {
-	dir := "rootfs"
-	if err := os.Mkdir(dir, 0o600); err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(dir)
-
-	path, err := ResolveRootfs(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	pwd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if path != pwd+"/rootfs" {
-		t.Errorf("expected rootfs to be abs and was %s", path)
-	}
-}
-
-func TestResolveRootfsWithSymlink(t *testing.T) {
-	dir := "rootfs"
-	tmpDir, _ := filepath.EvalSymlinks(os.TempDir())
-	if err := os.Symlink(tmpDir, dir); err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(dir)
-
-	path, err := ResolveRootfs(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if path != tmpDir {
-		t.Errorf("expected rootfs to be the real path %s and was %s", path, os.TempDir())
-	}
-}
-
-func TestResolveRootfsWithNonExistingDir(t *testing.T) {
-	_, err := ResolveRootfs("foo")
-	if err == nil {
-		t.Error("expected error to happen but received nil")
 	}
 }
 

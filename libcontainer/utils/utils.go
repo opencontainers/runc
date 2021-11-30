@@ -33,16 +33,6 @@ func init() {
 	}
 }
 
-// ResolveRootfs ensures that the current working directory is
-// not a symlink and returns the absolute path to the rootfs
-func ResolveRootfs(uncleanRootfs string) (string, error) {
-	rootfs, err := filepath.Abs(uncleanRootfs)
-	if err != nil {
-		return "", err
-	}
-	return filepath.EvalSymlinks(rootfs)
-}
-
 // ExitStatus returns the correct exit status for a process based on if it
 // was signaled or exited cleanly
 func ExitStatus(status unix.WaitStatus) int {
