@@ -21,9 +21,9 @@ func TestIntelRdtSetL3CacheSchema(t *testing.T) {
 		"schemata": l3CacheSchemaBefore + "\n",
 	})
 
-	helper.IntelRdtData.config.IntelRdt.L3CacheSchema = l3CacheSchemeAfter
-	intelrdt := NewManager(helper.IntelRdtData.config, "", helper.IntelRdtPath)
-	if err := intelrdt.Set(helper.IntelRdtData.config); err != nil {
+	helper.config.IntelRdt.L3CacheSchema = l3CacheSchemeAfter
+	intelrdt := NewManager(helper.config, "", helper.IntelRdtPath)
+	if err := intelrdt.Set(helper.config); err != nil {
 		t.Fatal(err)
 	}
 
@@ -51,9 +51,9 @@ func TestIntelRdtSetMemBwSchema(t *testing.T) {
 		"schemata": memBwSchemaBefore + "\n",
 	})
 
-	helper.IntelRdtData.config.IntelRdt.MemBwSchema = memBwSchemeAfter
-	intelrdt := NewManager(helper.IntelRdtData.config, "", helper.IntelRdtPath)
-	if err := intelrdt.Set(helper.IntelRdtData.config); err != nil {
+	helper.config.IntelRdt.MemBwSchema = memBwSchemeAfter
+	intelrdt := NewManager(helper.config, "", helper.IntelRdtPath)
+	if err := intelrdt.Set(helper.config); err != nil {
 		t.Fatal(err)
 	}
 
@@ -81,9 +81,9 @@ func TestIntelRdtSetMemBwScSchema(t *testing.T) {
 		"schemata": memBwScSchemaBefore + "\n",
 	})
 
-	helper.IntelRdtData.config.IntelRdt.MemBwSchema = memBwScSchemeAfter
-	intelrdt := NewManager(helper.IntelRdtData.config, "", helper.IntelRdtPath)
-	if err := intelrdt.Set(helper.IntelRdtData.config); err != nil {
+	helper.config.IntelRdt.MemBwSchema = memBwScSchemeAfter
+	intelrdt := NewManager(helper.config, "", helper.IntelRdtPath)
+	if err := intelrdt.Set(helper.config); err != nil {
 		t.Fatal(err)
 	}
 
@@ -104,8 +104,8 @@ func TestApply(t *testing.T) {
 
 	const closID = "test-clos"
 
-	helper.IntelRdtData.config.IntelRdt.ClosID = closID
-	intelrdt := NewManager(helper.IntelRdtData.config, "", helper.IntelRdtPath)
+	helper.config.IntelRdt.ClosID = closID
+	intelrdt := NewManager(helper.config, "", helper.IntelRdtPath)
 	if err := intelrdt.Apply(1234); err == nil {
 		t.Fatal("unexpected success when applying pid")
 	}
