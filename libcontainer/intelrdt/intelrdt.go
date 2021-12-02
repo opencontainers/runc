@@ -276,35 +276,30 @@ func findIntelRdtMountpointDir(f io.Reader) (string, error) {
 
 // For Root() use only.
 var (
-	intelRdtRoot string
-	rootMu       sync.Mutex
+	intelRdtRoot    string
+	intelRdtRootErr error
+	rootOnce        sync.Once
 )
 
 // Root returns the Intel RDT "resource control" filesystem mount point.
 func Root() (string, error) {
-	rootMu.Lock()
-	defer rootMu.Unlock()
+	rootOnce.Do(func() {
+		f, err := os.Open("/proc/self/mountinfo")
+		if err != nil {
+			intelRdtRootErr = err
+			return
+		}
+		root, err := findIntelRdtMountpointDir(f)
+		f.Close()
+		if err != nil {
+			intelRdtRootErr = err
+			return
+		}
 
-	if intelRdtRoot != "" {
-		return intelRdtRoot, nil
-	}
+		intelRdtRoot = root
+	})
 
-	f, err := os.Open("/proc/self/mountinfo")
-	if err != nil {
-		return "", err
-	}
-	root, err := findIntelRdtMountpointDir(f)
-	f.Close()
-	if err != nil {
-		return "", err
-	}
-
-	if _, err := os.Stat(root); err != nil {
-		return "", err
-	}
-
-	intelRdtRoot = root
-	return intelRdtRoot, nil
+	return intelRdtRoot, intelRdtRootErr
 }
 
 type cpuInfoFlags struct {
