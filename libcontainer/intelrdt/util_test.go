@@ -26,7 +26,12 @@ func NewIntelRdtTestUtil(t *testing.T) *intelRdtTestUtil {
 	config := &configs.Config{
 		IntelRdt: &configs.IntelRdt{},
 	}
+
+	// Assign fake intelRtdRoot value, returned by Root().
 	intelRdtRoot = t.TempDir()
+	// Make sure Root() won't even try to parse mountinfo.
+	rootOnce.Do(func() {})
+
 	testIntelRdtPath := filepath.Join(intelRdtRoot, "resctrl")
 
 	// Ensure the full mock Intel RDT "resource control" filesystem path exists
