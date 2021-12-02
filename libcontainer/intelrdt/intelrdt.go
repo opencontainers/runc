@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -250,9 +249,9 @@ func featuresInit() {
 	})
 }
 
-// Return the mount point path of Intel RDT "resource control" filesysem
-func findIntelRdtMountpointDir(f io.Reader) (string, error) {
-	mi, err := mountinfo.GetMountsFromReader(f, func(m *mountinfo.Info) (bool, bool) {
+// Return the mount point path of Intel RDT "resource control" filesystem.
+func findIntelRdtMountpointDir() (string, error) {
+	mi, err := mountinfo.GetMounts(func(m *mountinfo.Info) (bool, bool) {
 		// similar to mountinfo.FSTypeFilter but stops after the first match
 		if m.FSType == "resctrl" {
 			return false, true // don't skip, stop
@@ -284,13 +283,7 @@ var (
 // Root returns the Intel RDT "resource control" filesystem mount point.
 func Root() (string, error) {
 	rootOnce.Do(func() {
-		f, err := os.Open("/proc/self/mountinfo")
-		if err != nil {
-			intelRdtRootErr = err
-			return
-		}
-		root, err := findIntelRdtMountpointDir(f)
-		f.Close()
+		root, err := findIntelRdtMountpointDir()
 		if err != nil {
 			intelRdtRootErr = err
 			return
