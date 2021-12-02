@@ -13,8 +13,7 @@ import (
 )
 
 type intelRdtTestUtil struct {
-	// intelRdt data to use in tests
-	IntelRdtData *intelRdtData
+	config *configs.Config
 
 	// Path to the mock Intel RDT "resource control" filesystem directory
 	IntelRdtPath string
@@ -24,10 +23,8 @@ type intelRdtTestUtil struct {
 
 // Creates a new test util
 func NewIntelRdtTestUtil(t *testing.T) *intelRdtTestUtil {
-	d := &intelRdtData{
-		config: &configs.Config{
-			IntelRdt: &configs.IntelRdt{},
-		},
+	config := &configs.Config{
+		IntelRdt: &configs.IntelRdt{},
 	}
 	intelRdtRoot = t.TempDir()
 	testIntelRdtPath := filepath.Join(intelRdtRoot, "resctrl")
@@ -36,7 +33,7 @@ func NewIntelRdtTestUtil(t *testing.T) *intelRdtTestUtil {
 	if err := os.MkdirAll(testIntelRdtPath, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	return &intelRdtTestUtil{IntelRdtData: d, IntelRdtPath: testIntelRdtPath, t: t}
+	return &intelRdtTestUtil{config: config, IntelRdtPath: testIntelRdtPath, t: t}
 }
 
 // Write the specified contents on the mock of the specified Intel RDT "resource control" files

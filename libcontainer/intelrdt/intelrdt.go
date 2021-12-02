@@ -197,10 +197,6 @@ var (
 	errNotFound = errors.New("Intel RDT resctrl mount point not found")
 )
 
-type intelRdtData struct {
-	config *configs.Config
-}
-
 // Check if Intel RDT sub-features are enabled in featuresInit()
 func featuresInit() {
 	initOnce.Do(func() {
