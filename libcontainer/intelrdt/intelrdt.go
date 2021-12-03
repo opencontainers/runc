@@ -12,6 +12,8 @@ import (
 	"sync"
 
 	"github.com/moby/sys/mountinfo"
+	"golang.org/x/sys/unix"
+
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
@@ -193,21 +195,21 @@ var (
 	// For Intel RDT initialization
 	initOnce sync.Once
 
-	errNotFound = errors.New("Intel RDT resctrl mount point not found")
+	errNotFound = errors.New("Intel RDT not available")
 )
 
 // Check if Intel RDT sub-features are enabled in featuresInit()
 func featuresInit() {
 	initOnce.Do(func() {
-		// 1. Check if hardware and kernel support Intel RDT sub-features
-		flagsSet, err := parseCpuInfoFile("/proc/cpuinfo")
+		// 1. Check if Intel RDT "resource control" filesystem is available.
+		// The user guarantees to mount the filesystem.
+		root, err := Root()
 		if err != nil {
 			return
 		}
 
-		// 2. Check if Intel RDT "resource control" filesystem is available.
-		// The user guarantees to mount the filesystem.
-		root, err := Root()
+		// 2. Check if hardware and kernel support Intel RDT sub-features.
+		flagsSet, err := parseCpuInfoFile("/proc/cpuinfo")
 		if err != nil {
 			return
 		}
@@ -283,6 +285,12 @@ var (
 // Root returns the Intel RDT "resource control" filesystem mount point.
 func Root() (string, error) {
 	rootOnce.Do(func() {
+		// If resctrl is available, kernel creates this directory.
+		if unix.Access("/sys/fs/resctrl", unix.F_OK) != nil {
+			intelRdtRootErr = errNotFound
+			return
+		}
+
 		root, err := findIntelRdtMountpointDir()
 		if err != nil {
 			intelRdtRootErr = err
