@@ -1,5 +1,6 @@
 #!/bin/bash
 # Copyright (C) 2017 SUSE LLC.
+# Copyright (C) 2017-2021 Open Containers Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -99,7 +100,8 @@ function build_project() {
 
 # Print usage information.
 function usage() {
-	echo "usage: release.sh [-S <gpg-key-id>] [-c <commit-ish>] [-r <release-dir>] [-v <version>] [-a <cross-arch>]" >&2
+	echo "usage: release_build.sh [-a <cross-arch>]... [-c <commit-ish>] [-h <hashcmd>]" >&2
+	echo "                        [-r <release-dir>] [-v <version>]" >&2
 	exit 1
 }
 
@@ -114,40 +116,33 @@ function bail() {
 	exit 0
 }
 
-# Conduct a sanity-check to make sure that GPG provided with the given
-# arguments can sign something. Inability to sign things is not a fatal error.
-function gpg_cansign() {
-	gpg "$@" --clear-sign </dev/null >/dev/null
-}
-
 # When creating releases we need to build static binaries, an archive of the
 # current commit, and generate detached signatures for both.
-keyid=""
 commit="HEAD"
 version=""
 releasedir=""
 hashcmd=""
 declare -a add_arches
 
-while getopts "S:c:r:v:h:a:" opt; do
+while getopts "a:c:H:hr:v:" opt; do
 	case "$opt" in
-	S)
-		keyid="$OPTARG"
+	a)
+		add_arches+=("$OPTARG")
 		;;
 	c)
 		commit="$OPTARG"
+		;;
+	H)
+		hashcmd="$OPTARG"
+		;;
+	h)
+		usage
 		;;
 	r)
 		releasedir="$OPTARG"
 		;;
 	v)
 		version="$OPTARG"
-		;;
-	h)
-		hashcmd="$OPTARG"
-		;;
-	a)
-		add_arches+=("$OPTARG")
 		;;
 	:)
 		echo "Missing argument: -$OPTARG" >&2
@@ -170,7 +165,6 @@ suffixes=("$native_arch" "${add_arches[@]}" tar.xz)
 log "creating $project release in '$releasedir'"
 log "  version: $version"
 log "   commit: $commit"
-log "      key: ${keyid:-DEFAULT}"
 log "     hash: $hashcmd"
 
 # Make explicit what we're doing.
@@ -191,16 +185,3 @@ git archive --format=tar --prefix="$project-$version/" "$commit" | xz >"$release
 	# Add $project. prefix to all suffixes.
 	"$hashcmd" "${suffixes[@]/#/$project.}" >"$project.$hashcmd"
 )
-
-# Set up the gpgflags.
-gpgflags=()
-[[ "$keyid" ]] && gpgflags=(--default-key "$keyid")
-gpg_cansign "${gpgflags[@]}" || bail "Could not find suitable GPG key, skipping signing step."
-
-# Sign everything.
-for sfx in "${suffixes[@]}"; do
-	gpg "${gpgflags[@]}" --detach-sign --armor "$releasedir/$project.$sfx"
-done
-gpg "${gpgflags[@]}" --clear-sign --armor \
-	--output "$releasedir/$project.$hashcmd"{.tmp,} &&
-	mv "$releasedir/$project.$hashcmd"{.tmp,}
