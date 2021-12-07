@@ -1,4 +1,5 @@
 // Package features provides the JSON structure that is printed by `runc features` (since runc v1.1.0).
+// The types in this package are experimental and subject to change.
 package features
 
 // Features represents the supported features of the runtime.

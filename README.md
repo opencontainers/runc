@@ -301,6 +301,7 @@ WantedBy=multi-user.target
 * [Checkpoint and restore](./docs/checkpoint-restore.md)
 * [systemd cgroup driver](./docs/systemd.md)
 * [Terminals and standard IO](./docs/terminals.md)
+* [Experimental features](./docs/experimental.md)
 
 ## License
 
