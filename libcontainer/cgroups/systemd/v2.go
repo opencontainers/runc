@@ -1,8 +1,10 @@
 package systemd
 
 import (
+	"bufio"
 	"fmt"
 	"math"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -288,7 +290,44 @@ func (m *unifiedManager) Apply(pid int) error {
 	if err := fs2.CreateCgroupPath(m.path, m.cgroups); err != nil {
 		return err
 	}
+
+	if c.OwnerUID != nil {
+		filesToChown, err := cgroupFilesToChown()
+		if err != nil {
+			return err
+		}
+
+		for _, v := range filesToChown {
+			err := os.Chown(m.path+"/"+v, *c.OwnerUID, -1)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
+}
+
+// The kernel exposes a list of files that should be chowned to the delegate
+// uid in /sys/kernel/cgroup/delegate.  If the file is not present
+// (Linux < 4.15), use the initial values mentioned in cgroups(7).
+func cgroupFilesToChown() ([]string, error) {
+	filesToChown := []string{"."} // the directory itself must be chowned
+	const cgroupDelegateFile = "/sys/kernel/cgroup/delegate"
+	f, err := os.Open(cgroupDelegateFile)
+	if err == nil {
+		defer f.Close()
+		scanner := bufio.NewScanner(f)
+		for scanner.Scan() {
+			filesToChown = append(filesToChown, scanner.Text())
+		}
+		if err := scanner.Err(); err != nil {
+			return nil, fmt.Errorf("error reading %s: %w", cgroupDelegateFile, err)
+		}
+	} else {
+		filesToChown = append(filesToChown, "cgroup.procs", "cgroup.subtree_control", "cgroup.threads")
+	}
+	return filesToChown, nil
 }
 
 func (m *unifiedManager) Destroy() error {
