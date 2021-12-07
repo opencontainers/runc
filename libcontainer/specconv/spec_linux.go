@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -103,6 +104,38 @@ func initMaps() {
 			"tmpcopyup": {false, configs.EXT_COPYUP},
 		}
 	})
+}
+
+// KnownNamespaces returns the list of the known namespaces.
+// Used by `runc features`.
+func KnownNamespaces() []string {
+	initMaps()
+	var res []string
+	for k := range namespaceMapping {
+		res = append(res, string(k))
+	}
+	sort.Strings(res)
+	return res
+}
+
+// KnownMountOptions returns the list of the known mount options.
+// Used by `runc features`.
+func KnownMountOptions() []string {
+	initMaps()
+	var res []string
+	for k := range mountFlags {
+		res = append(res, k)
+	}
+	for k := range mountPropagationMapping {
+		if k != "" {
+			res = append(res, k)
+		}
+	}
+	for k := range extensionFlags {
+		res = append(res, k)
+	}
+	sort.Strings(res)
+	return res
 }
 
 // AllowedDevices is the set of devices which are automatically included for

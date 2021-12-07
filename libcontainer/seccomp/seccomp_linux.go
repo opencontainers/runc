@@ -265,3 +265,6 @@ func matchCall(filter *libseccomp.ScmpFilter, call *configs.Syscall, defAct libs
 func Version() (uint, uint, uint) {
 	return libseccomp.GetLibraryVersion()
 }
+
+// Enabled is true if seccomp support is compiled in.
+const Enabled = true

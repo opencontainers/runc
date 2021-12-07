@@ -23,3 +23,6 @@ func InitSeccomp(config *configs.Seccomp) (int, error) {
 func Version() (uint, uint, uint) {
 	return 0, 0, 0
 }
+
+// Enabled is true if seccomp support is compiled in.
+const Enabled = false
