@@ -1,0 +1,15 @@
+# This is golangci-lint config file which is used to check new code in
+# github PRs only (see lint-extra job in .github/workflows/validate.yml).
+#
+# For the default linter config, see .golangci.yml. This config should
+# only enable additional linters not enabled in the default config.
+
+run:
+  build-tags:
+    - seccomp
+
+linters:
+  disable-all: true
+  enable:
+    - godot
+    - revive

@@ -23,6 +23,26 @@ jobs:
           # must be specified without patch version
           version: v1.42
 
+  lint-extra:
+    # Extra linters, only checking new code from pull requests.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-20.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v2
+      - name: install deps
+        run: |
+          sudo apt -q update
+          sudo apt -q install libseccomp-dev
+      - uses: golangci/golangci-lint-action@v2
+        with:
+          only-new-issues: true
+          args: --config .golangci-extra.yml
+          # must be specified without patch version
+          version: v1.43
+
+
   compile-buildtags:
     runs-on: ubuntu-20.04
     env:
