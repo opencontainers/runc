@@ -28,7 +28,8 @@ type Process struct {
 
 	// User will set the uid and gid of the executing process running inside the container
 	// local to the container's user and group configuration.
-	User string
+	UID int
+	GID int
 
 	// AdditionalGroups specifies the gids that should be added to supplementary groups
 	// in addition to those that the user belongs to.

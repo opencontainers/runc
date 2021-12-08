@@ -660,7 +660,7 @@ func (c *linuxContainer) newInitConfig(process *Process) *initConfig {
 		Config:           c.config,
 		Args:             process.Args,
 		Env:              process.Env,
-		User:             process.User,
+		User:             fmt.Sprintf("%d:%d", process.UID, process.GID),
 		AdditionalGroups: process.AdditionalGroups,
 		Cwd:              process.Cwd,
 		Capabilities:     process.Capabilities,
