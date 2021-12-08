@@ -17,7 +17,6 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/opencontainers/runc/libcontainer"
-	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/specconv"
 	"github.com/opencontainers/runc/libcontainer/utils"
 )
@@ -86,6 +85,7 @@ func newProcess(p specs.Process) (*libcontainer.Process, error) {
 		Label:           p.SelinuxLabel,
 		NoNewPrivileges: &p.NoNewPrivileges,
 		AppArmorProfile: p.ApparmorProfile,
+		Capabilities:    p.Capabilities,
 	}
 
 	if p.ConsoleSize != nil {
@@ -93,14 +93,6 @@ func newProcess(p specs.Process) (*libcontainer.Process, error) {
 		lp.ConsoleHeight = uint16(p.ConsoleSize.Height)
 	}
 
-	if p.Capabilities != nil {
-		lp.Capabilities = &configs.Capabilities{}
-		lp.Capabilities.Bounding = p.Capabilities.Bounding
-		lp.Capabilities.Effective = p.Capabilities.Effective
-		lp.Capabilities.Inheritable = p.Capabilities.Inheritable
-		lp.Capabilities.Permitted = p.Capabilities.Permitted
-		lp.Capabilities.Ambient = p.Capabilities.Ambient
-	}
 	for _, gid := range p.User.AdditionalGids {
 		lp.AdditionalGroups = append(lp.AdditionalGroups, strconv.FormatUint(uint64(gid), 10))
 	}

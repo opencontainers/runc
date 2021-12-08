@@ -9,6 +9,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/devices"
 	"github.com/opencontainers/runc/libcontainer/specconv"
+	"github.com/opencontainers/runtime-spec/specs-go"
 	"golang.org/x/sys/unix"
 )
 
@@ -42,7 +43,7 @@ func newTemplateConfig(t *testing.T, p *tParam) *configs.Config {
 	}
 	config := &configs.Config{
 		Rootfs: newRootfs(t),
-		Capabilities: &configs.Capabilities{
+		Capabilities: &specs.LinuxCapabilities{
 			Bounding: []string{
 				"CAP_CHOWN",
 				"CAP_DAC_OVERRIDE",

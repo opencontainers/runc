@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/syndtr/gocapability/capability"
@@ -13,7 +13,7 @@ import (
 
 func TestNew(t *testing.T) {
 	cs := []string{"CAP_CHOWN", "CAP_UNKNOWN", "CAP_UNKNOWN2"}
-	conf := configs.Capabilities{
+	conf := specs.LinuxCapabilities{
 		Bounding:    cs,
 		Effective:   cs,
 		Inheritable: cs,

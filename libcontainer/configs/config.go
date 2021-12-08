@@ -124,7 +124,7 @@ type Config struct {
 
 	// Capabilities specify the capabilities to keep when executing the process inside the container
 	// All capabilities not specified will be dropped from the processes capability mask
-	Capabilities *Capabilities `json:"capabilities"`
+	Capabilities *specs.LinuxCapabilities `json:"capabilities"`
 
 	// Networks specifies the container's network setup to be created
 	Networks []*Network `json:"networks"`
@@ -259,19 +259,6 @@ func KnownHookNames() []string {
 		string(Poststart),
 		string(Poststop),
 	}
-}
-
-type Capabilities struct {
-	// Bounding is the set of capabilities checked by the kernel.
-	Bounding []string
-	// Effective is the set of capabilities checked by the kernel.
-	Effective []string
-	// Inheritable is the capabilities preserved across execve.
-	Inheritable []string
-	// Permitted is the limiting superset for effective capabilities.
-	Permitted []string
-	// Ambient is the ambient set of capabilities that are kept.
-	Ambient []string
 }
 
 func (hooks HookList) RunHooks(state *specs.State) error {

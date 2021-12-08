@@ -49,27 +49,27 @@ type network struct {
 
 // initConfig is used for transferring parameters from Exec() to Init()
 type initConfig struct {
-	Args             []string              `json:"args"`
-	Env              []string              `json:"env"`
-	Cwd              string                `json:"cwd"`
-	Capabilities     *configs.Capabilities `json:"capabilities"`
-	ProcessLabel     string                `json:"process_label"`
-	AppArmorProfile  string                `json:"apparmor_profile"`
-	NoNewPrivileges  bool                  `json:"no_new_privileges"`
-	User             string                `json:"user"`
-	AdditionalGroups []string              `json:"additional_groups"`
-	Config           *configs.Config       `json:"config"`
-	Networks         []*network            `json:"network"`
-	PassedFilesCount int                   `json:"passed_files_count"`
-	ContainerID      string                `json:"containerid"`
-	Rlimits          []configs.Rlimit      `json:"rlimits"`
-	CreateConsole    bool                  `json:"create_console"`
-	ConsoleWidth     uint16                `json:"console_width"`
-	ConsoleHeight    uint16                `json:"console_height"`
-	RootlessEUID     bool                  `json:"rootless_euid,omitempty"`
-	RootlessCgroups  bool                  `json:"rootless_cgroups,omitempty"`
-	SpecState        *specs.State          `json:"spec_state,omitempty"`
-	Cgroup2Path      string                `json:"cgroup2_path,omitempty"`
+	Args             []string                 `json:"args"`
+	Env              []string                 `json:"env"`
+	Cwd              string                   `json:"cwd"`
+	Capabilities     *specs.LinuxCapabilities `json:"capabilities"`
+	ProcessLabel     string                   `json:"process_label"`
+	AppArmorProfile  string                   `json:"apparmor_profile"`
+	NoNewPrivileges  bool                     `json:"no_new_privileges"`
+	User             string                   `json:"user"`
+	AdditionalGroups []string                 `json:"additional_groups"`
+	Config           *configs.Config          `json:"config"`
+	Networks         []*network               `json:"network"`
+	PassedFilesCount int                      `json:"passed_files_count"`
+	ContainerID      string                   `json:"containerid"`
+	Rlimits          []configs.Rlimit         `json:"rlimits"`
+	CreateConsole    bool                     `json:"create_console"`
+	ConsoleWidth     uint16                   `json:"console_width"`
+	ConsoleHeight    uint16                   `json:"console_height"`
+	RootlessEUID     bool                     `json:"rootless_euid,omitempty"`
+	RootlessCgroups  bool                     `json:"rootless_cgroups,omitempty"`
+	SpecState        *specs.State             `json:"spec_state,omitempty"`
+	Cgroup2Path      string                   `json:"cgroup2_path,omitempty"`
 }
 
 type initer interface {
@@ -167,7 +167,7 @@ func finalizeNamespace(config *initConfig) error {
 		}
 	}
 
-	caps := &configs.Capabilities{}
+	caps := &specs.LinuxCapabilities{}
 	if config.Capabilities != nil {
 		caps = config.Capabilities
 	} else if config.Config.Capabilities != nil {

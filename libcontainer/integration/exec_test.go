@@ -358,7 +358,7 @@ func TestProcessCaps(t *testing.T) {
 		Env:          standardEnvironment,
 		Stdin:        nil,
 		Stdout:       &stdout,
-		Capabilities: &configs.Capabilities{},
+		Capabilities: &specs.LinuxCapabilities{},
 		Init:         true,
 	}
 	pconfig.Capabilities.Bounding = append(config.Capabilities.Bounding, "CAP_NET_ADMIN")
@@ -1402,7 +1402,7 @@ func TestRootfsPropagationSharedMount(t *testing.T) {
 		Env:          standardEnvironment,
 		Stdin:        stdinR2,
 		Stdout:       &stdout2,
-		Capabilities: &configs.Capabilities{},
+		Capabilities: &specs.LinuxCapabilities{},
 	}
 
 	// Provide CAP_SYS_ADMIN

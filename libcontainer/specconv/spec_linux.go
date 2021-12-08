@@ -481,15 +481,7 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 		config.NoNewPrivileges = spec.Process.NoNewPrivileges
 		config.Umask = spec.Process.User.Umask
 		config.ProcessLabel = spec.Process.SelinuxLabel
-		if spec.Process.Capabilities != nil {
-			config.Capabilities = &configs.Capabilities{
-				Bounding:    spec.Process.Capabilities.Bounding,
-				Effective:   spec.Process.Capabilities.Effective,
-				Permitted:   spec.Process.Capabilities.Permitted,
-				Inheritable: spec.Process.Capabilities.Inheritable,
-				Ambient:     spec.Process.Capabilities.Ambient,
-			}
-		}
+		config.Capabilities = spec.Process.Capabilities
 	}
 	createHooks(spec, config)
 	config.Version = specs.Version

@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/sirupsen/logrus"
 	"github.com/syndtr/gocapability/capability"
 )
@@ -49,7 +49,7 @@ func KnownCapabilities() []string {
 // New creates a new Caps from the given Capabilities config. Unknown Capabilities
 // or Capabilities that are unavailable in the current environment are ignored,
 // printing a warning instead.
-func New(capConfig *configs.Capabilities) (*Caps, error) {
+func New(capConfig *specs.LinuxCapabilities) (*Caps, error) {
 	var (
 		err error
 		c   Caps

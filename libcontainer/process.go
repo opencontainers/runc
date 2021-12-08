@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
 var errInvalidProcess = errors.New("invalid process")
@@ -55,7 +56,7 @@ type Process struct {
 
 	// Capabilities specify the capabilities to keep when executing the process inside the container
 	// All capabilities not specified will be dropped from the processes capability mask
-	Capabilities *configs.Capabilities
+	Capabilities *specs.LinuxCapabilities
 
 	// AppArmorProfile specifies the profile to apply to the process and is
 	// changed at the time the process is execed
