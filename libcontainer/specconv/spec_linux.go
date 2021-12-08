@@ -26,9 +26,13 @@ import (
 )
 
 var (
-	initMapsOnce               sync.Once
-	namespaceMapping           map[specs.LinuxNamespaceType]configs.NamespaceType
-	mountPropagationMapping    map[string]int
+	initMapsOnce            sync.Once
+	namespaceMapping        map[specs.LinuxNamespaceType]configs.NamespaceType
+	mountPropagationMapping map[string]int
+	recAttrFlags            map[string]struct {
+		clear bool
+		flag  uint64
+	}
 	mountFlags, extensionFlags map[string]struct {
 		clear bool
 		flag  int
@@ -87,6 +91,7 @@ func initMaps() {
 			"norelatime":    {true, unix.MS_RELATIME},
 			"nostrictatime": {true, unix.MS_STRICTATIME},
 			"nosuid":        {false, unix.MS_NOSUID},
+			"nosymfollow":   {false, unix.MS_NOSYMFOLLOW}, // since kernel 5.10
 			"rbind":         {false, unix.MS_BIND | unix.MS_REC},
 			"relatime":      {false, unix.MS_RELATIME},
 			"remount":       {false, unix.MS_REMOUNT},
@@ -96,7 +101,34 @@ func initMaps() {
 			"strictatime":   {false, unix.MS_STRICTATIME},
 			"suid":          {true, unix.MS_NOSUID},
 			"sync":          {false, unix.MS_SYNCHRONOUS},
+			"symfollow":     {true, unix.MS_NOSYMFOLLOW}, // since kernel 5.10
 		}
+
+		recAttrFlags = map[string]struct {
+			clear bool
+			flag  uint64
+		}{
+			"rro":            {false, unix.MOUNT_ATTR_RDONLY},
+			"rrw":            {true, unix.MOUNT_ATTR_RDONLY},
+			"rnosuid":        {false, unix.MOUNT_ATTR_NOSUID},
+			"rsuid":          {true, unix.MOUNT_ATTR_NOSUID},
+			"rnodev":         {false, unix.MOUNT_ATTR_NODEV},
+			"rdev":           {true, unix.MOUNT_ATTR_NODEV},
+			"rnoexec":        {false, unix.MOUNT_ATTR_NOEXEC},
+			"rexec":          {true, unix.MOUNT_ATTR_NOEXEC},
+			"rnodiratime":    {false, unix.MOUNT_ATTR_NODIRATIME},
+			"rdiratime":      {true, unix.MOUNT_ATTR_NODIRATIME},
+			"rrelatime":      {false, unix.MOUNT_ATTR_RELATIME},
+			"rnorelatime":    {true, unix.MOUNT_ATTR_RELATIME},
+			"rnoatime":       {false, unix.MOUNT_ATTR_NOATIME},
+			"ratime":         {true, unix.MOUNT_ATTR_NOATIME},
+			"rstrictatime":   {false, unix.MOUNT_ATTR_STRICTATIME},
+			"rnostrictatime": {true, unix.MOUNT_ATTR_STRICTATIME},
+			"rnosymfollow":   {false, unix.MOUNT_ATTR_NOSYMFOLLOW}, // since kernel 5.14
+			"rsymfollow":     {true, unix.MOUNT_ATTR_NOSYMFOLLOW},  // since kernel 5.14
+			// No support for MOUNT_ATTR_IDMAP yet (needs UserNS FD)
+		}
+
 		extensionFlags = map[string]struct {
 			clear bool
 			flag  int
@@ -130,6 +162,9 @@ func KnownMountOptions() []string {
 		if k != "" {
 			res = append(res, k)
 		}
+	}
+	for k := range recAttrFlags {
+		res = append(res, k)
 	}
 	for k := range extensionFlags {
 		res = append(res, k)
@@ -922,8 +957,9 @@ func setupUserNamespace(spec *specs.Spec, config *configs.Config) error {
 // structure with fields that depends on options set accordingly.
 func parseMountOptions(options []string) *configs.Mount {
 	var (
-		data []string
-		m    configs.Mount
+		data                   []string
+		m                      configs.Mount
+		recAttrSet, recAttrClr uint64
 	)
 	initMaps()
 	for _, o := range options {
@@ -938,6 +974,17 @@ func parseMountOptions(options []string) *configs.Mount {
 			}
 		} else if f, exists := mountPropagationMapping[o]; exists && f != 0 {
 			m.PropagationFlags = append(m.PropagationFlags, f)
+		} else if f, exists := recAttrFlags[o]; exists {
+			if f.clear {
+				recAttrClr |= f.flag
+			} else {
+				recAttrSet |= f.flag
+				if f.flag&unix.MOUNT_ATTR__ATIME == f.flag {
+					// https://man7.org/linux/man-pages/man2/mount_setattr.2.html
+					// "cannot simply specify the access-time setting in attr_set, but must also include MOUNT_ATTR__ATIME in the attr_clr field."
+					recAttrClr |= unix.MOUNT_ATTR__ATIME
+				}
+			}
 		} else if f, exists := extensionFlags[o]; exists && f.flag != 0 {
 			if f.clear {
 				m.Extensions &= ^f.flag
@@ -949,6 +996,12 @@ func parseMountOptions(options []string) *configs.Mount {
 		}
 	}
 	m.Data = strings.Join(data, ",")
+	if recAttrSet != 0 || recAttrClr != 0 {
+		m.RecAttr = &unix.MountAttr{
+			Attr_set: recAttrSet,
+			Attr_clr: recAttrClr,
+		}
+	}
 	return &m
 }
 

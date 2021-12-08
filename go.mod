@@ -21,6 +21,6 @@ require (
 	github.com/urfave/cli v1.22.1
 	github.com/vishvananda/netlink v1.1.0
 	golang.org/x/net v0.0.0-20201224014010-6772e930b67b
-	golang.org/x/sys v0.0.0-20211025201205-69cdffdb9359
+	golang.org/x/sys v0.0.0-20211116061358-0a5406a5449c
 	google.golang.org/protobuf v1.27.1
 )
