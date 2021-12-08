@@ -5,13 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"regexp"
 	"runtime/debug"
 	"strconv"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
-	"github.com/moby/sys/mountinfo"
 	"golang.org/x/sys/unix"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups/manager"
@@ -29,29 +27,10 @@ const (
 
 var idRegex = regexp.MustCompile(`^[\w+-\.]+$`)
 
-// InitArgs returns an options func to configure a LinuxFactory with the
-// provided init binary path and arguments.
-func InitArgs(args ...string) func(*LinuxFactory) error {
-	return func(l *LinuxFactory) (err error) {
-		if len(args) > 0 {
-			// Resolve relative paths to ensure that its available
-			// after directory changes.
-			if args[0], err = filepath.Abs(args[0]); err != nil {
-				// The only error returned from filepath.Abs is
-				// the one from os.Getwd, i.e. a system error.
-				return err
-			}
-		}
-
-		l.InitArgs = args
-		return nil
-	}
-}
-
-// IntelRdtfs is an options func to configure a LinuxFactory to return
+// IntelRdtfs is an options func to configure a Factory to return
 // containers that use the Intel RDT "resource control" filesystem to
 // create and manage Intel RDT resources (e.g., L3 cache, memory bandwidth).
-func IntelRdtFs(l *LinuxFactory) error {
+func IntelRdtFs(l *Factory) error {
 	if !intelrdt.IsCATEnabled() && !intelrdt.IsMBAEnabled() {
 		l.NewIntelRdtManager = nil
 	} else {
@@ -62,24 +41,10 @@ func IntelRdtFs(l *LinuxFactory) error {
 	return nil
 }
 
-// TmpfsRoot is an option func to mount LinuxFactory.Root to tmpfs.
-func TmpfsRoot(l *LinuxFactory) error {
-	mounted, err := mountinfo.Mounted(l.Root)
-	if err != nil {
-		return err
-	}
-	if !mounted {
-		if err := mount("tmpfs", l.Root, "", "tmpfs", 0, ""); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// CriuPath returns an option func to configure a LinuxFactory with the
+// CriuPath returns an option func to configure a Factory with the
 // provided criupath
-func CriuPath(criupath string) func(*LinuxFactory) error {
-	return func(l *LinuxFactory) error {
+func CriuPath(criupath string) func(*Factory) error {
+	return func(l *Factory) error {
 		l.CriuPath = criupath
 		return nil
 	}
@@ -87,13 +52,13 @@ func CriuPath(criupath string) func(*LinuxFactory) error {
 
 // New returns a linux based container factory based in the root directory and
 // configures the factory with the provided option funcs.
-func New(root string, options ...func(*LinuxFactory) error) (Factory, error) {
+func New(root string, options ...func(*Factory) error) (*Factory, error) {
 	if root != "" {
 		if err := os.MkdirAll(root, 0o700); err != nil {
 			return nil, err
 		}
 	}
-	l := &LinuxFactory{
+	l := &Factory{
 		Root:      root,
 		InitPath:  "/proc/self/exe",
 		InitArgs:  []string{os.Args[0], "init"},
@@ -112,8 +77,8 @@ func New(root string, options ...func(*LinuxFactory) error) (Factory, error) {
 	return l, nil
 }
 
-// LinuxFactory implements the default factory interface for linux based systems.
-type LinuxFactory struct {
+// Factory implements the default factory interface for linux based systems.
+type Factory struct {
 	// Root directory for the factory to store state.
 	Root string
 
@@ -141,7 +106,17 @@ type LinuxFactory struct {
 	NewIntelRdtManager func(config *configs.Config, id string, path string) intelrdt.Manager
 }
 
-func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, error) {
+// Creates a new container with the given id and starts the initial process inside it.
+// id must be a string containing only letters, digits and underscores and must contain
+// between 1 and 1024 characters, inclusive.
+//
+// The id must not already be in use by an existing container. Containers created using
+// a factory with the same path (and filesystem) must have distinct ids.
+//
+// Returns the new container with a running process.
+//
+// On error, any partially created container parts are cleaned up (the operation is atomic).
+func (l *Factory) Create(id string, config *configs.Config) (Container, error) {
 	if l.Root == "" {
 		return nil, errors.New("root not set")
 	}
@@ -216,7 +191,9 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 	return c, nil
 }
 
-func (l *LinuxFactory) Load(id string) (Container, error) {
+// Load takes an ID for an existing container and returns the container information
+// from the state.  This presents a read only view of the container.
+func (l *Factory) Load(id string) (Container, error) {
 	if l.Root == "" {
 		return nil, errors.New("root not set")
 	}
@@ -265,13 +242,10 @@ func (l *LinuxFactory) Load(id string) (Container, error) {
 	return c, nil
 }
 
-func (l *LinuxFactory) Type() string {
-	return "libcontainer"
-}
-
-// StartInitialization loads a container by opening the pipe fd from the parent to read the configuration and state
-// This is a low level implementation detail of the reexec and should not be consumed externally
-func (l *LinuxFactory) StartInitialization() (err error) {
+// StartInitialization loads a container by opening the pipe fd from the parent
+// to read the configuration and state.  This is a low level implementation
+// detail of the reexec and should not be consumed externally.
+func (l *Factory) StartInitialization() (err error) {
 	// Get the INITPIPE.
 	envInitPipe := os.Getenv("_LIBCONTAINER_INITPIPE")
 	pipefd, err := strconv.Atoi(envInitPipe)
@@ -348,7 +322,7 @@ func (l *LinuxFactory) StartInitialization() (err error) {
 	return i.Init()
 }
 
-func (l *LinuxFactory) loadState(root string) (*State, error) {
+func (l *Factory) loadState(root string) (*State, error) {
 	stateFilePath, err := securejoin.SecureJoin(root, stateFilename)
 	if err != nil {
 		return nil, err
@@ -368,7 +342,7 @@ func (l *LinuxFactory) loadState(root string) (*State, error) {
 	return state, nil
 }
 
-func (l *LinuxFactory) validateID(id string) error {
+func (l *Factory) validateID(id string) error {
 	if !idRegex.MatchString(id) || string(os.PathSeparator)+id != utils.CleanPath(string(os.PathSeparator)+id) {
 		return ErrInvalidID
 	}
@@ -376,19 +350,19 @@ func (l *LinuxFactory) validateID(id string) error {
 	return nil
 }
 
-// NewuidmapPath returns an option func to configure a LinuxFactory with the
+// NewuidmapPath returns an option func to configure a Factory with the
 // provided ..
-func NewuidmapPath(newuidmapPath string) func(*LinuxFactory) error {
-	return func(l *LinuxFactory) error {
+func NewuidmapPath(newuidmapPath string) func(*Factory) error {
+	return func(l *Factory) error {
 		l.NewuidmapPath = newuidmapPath
 		return nil
 	}
 }
 
-// NewgidmapPath returns an option func to configure a LinuxFactory with the
+// NewgidmapPath returns an option func to configure a Factory with the
 // provided ..
-func NewgidmapPath(newgidmapPath string) func(*LinuxFactory) error {
-	return func(l *LinuxFactory) error {
+func NewgidmapPath(newgidmapPath string) func(*Factory) error {
+	return func(l *Factory) error {
 		l.NewgidmapPath = newgidmapPath
 		return nil
 	}
