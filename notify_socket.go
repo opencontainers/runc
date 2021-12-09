@@ -141,18 +141,7 @@ func (n *notifySocket) run(pid1 int) error {
 				return nil
 			}
 		case b := <-fileChan:
-			var out bytes.Buffer
-			_, err = out.Write(b)
-			if err != nil {
-				return err
-			}
-
-			_, err = out.Write([]byte{'\n'})
-			if err != nil {
-				return err
-			}
-
-			_, err = client.Write(out.Bytes())
+			_, err = client.Write(append(b, '\n'))
 			if err != nil {
 				return err
 			}
