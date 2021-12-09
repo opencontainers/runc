@@ -77,6 +77,28 @@ type initConfig struct {
 // to read the configuration and state.  This is a low level implementation
 // detail of the reexec and should not be consumed externally.
 func StartInitialization() (err error) {
+	// Set up logging.
+	level := int(logrus.DebugLevel) // default to debug
+	// Passing log level is optional; currently libcontainer/integration does not do it.
+	if levelStr := os.Getenv("_LIBCONTAINER_LOGLEVEL"); levelStr != "" {
+		level, err = strconv.Atoi(levelStr)
+		if err != nil {
+			panic(fmt.Errorf("unable to convert _LIBCONTAINER_LOGLEVEL: %w", err))
+		}
+	}
+
+	logPipeFd, err := strconv.Atoi(os.Getenv("_LIBCONTAINER_LOGPIPE"))
+	if err != nil {
+		panic(fmt.Errorf("unable to convert _LIBCONTAINER_LOGPIPE: %w", err))
+	}
+
+	logrus.SetLevel(logrus.Level(level))
+	logrus.SetOutput(os.NewFile(uintptr(logPipeFd), "logpipe"))
+	logrus.SetFormatter(new(logrus.JSONFormatter))
+	logrus.Debug("child process in init()")
+
+	// Once logging is all set, we can use logrus to log errors.
+
 	// Get the INITPIPE.
 	envInitPipe := os.Getenv("_LIBCONTAINER_INITPIPE")
 	pipefd, err := strconv.Atoi(envInitPipe)
@@ -88,6 +110,8 @@ func StartInitialization() (err error) {
 	pipe := os.NewFile(uintptr(pipefd), "pipe")
 	defer pipe.Close()
 
+	// Once init pipe is set, we can send error back to parent. If this
+	// defer is ever called, this means initialization has failed.
 	defer func() {
 		// We have an error during the initialization of the container's init,
 		// send it back to the parent process in the form of an initError.
@@ -120,12 +144,6 @@ func StartInitialization() (err error) {
 		}
 		consoleSocket = os.NewFile(uintptr(console), "console-socket")
 		defer consoleSocket.Close()
-	}
-
-	logPipeFdStr := os.Getenv("_LIBCONTAINER_LOGPIPE")
-	logPipeFd, err := strconv.Atoi(logPipeFdStr)
-	if err != nil {
-		return fmt.Errorf("unable to convert _LIBCONTAINER_LOGPIPE: %w", err)
 	}
 
 	// Get mount files (O_PATH).
