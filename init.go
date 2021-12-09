@@ -3,11 +3,9 @@ package main
 import (
 	"os"
 	"runtime"
-	"strconv"
 
 	"github.com/opencontainers/runc/libcontainer"
 	_ "github.com/opencontainers/runc/libcontainer/nsenter"
-	"github.com/sirupsen/logrus"
 )
 
 func init() {
@@ -16,21 +14,6 @@ func init() {
 		// before main() but after libcontainer/nsenter's nsexec().
 		runtime.GOMAXPROCS(1)
 		runtime.LockOSThread()
-
-		level, err := strconv.Atoi(os.Getenv("_LIBCONTAINER_LOGLEVEL"))
-		if err != nil {
-			panic(err)
-		}
-
-		logPipeFd, err := strconv.Atoi(os.Getenv("_LIBCONTAINER_LOGPIPE"))
-		if err != nil {
-			panic(err)
-		}
-
-		logrus.SetLevel(logrus.Level(level))
-		logrus.SetOutput(os.NewFile(uintptr(logPipeFd), "logpipe"))
-		logrus.SetFormatter(new(logrus.JSONFormatter))
-		logrus.Debug("child process in init()")
 
 		if err := libcontainer.StartInitialization(); err != nil {
 			// as the error is sent back to the parent there is no need to log

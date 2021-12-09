@@ -92,9 +92,7 @@ func StartInitialization() (retErr error) {
 	envInitPipe := os.Getenv("_LIBCONTAINER_INITPIPE")
 	pipefd, err := strconv.Atoi(envInitPipe)
 	if err != nil {
-		err = fmt.Errorf("unable to convert _LIBCONTAINER_INITPIPE: %w", err)
-		logrus.Error(err)
-		return err
+		return fmt.Errorf("unable to convert _LIBCONTAINER_INITPIPE: %w", err)
 	}
 	pipe := os.NewFile(uintptr(pipefd), "pipe")
 	defer pipe.Close()
@@ -111,6 +109,26 @@ func StartInitialization() (retErr error) {
 			return
 		}
 	}()
+
+	// Set up logging. This is used rarely, and mostly for init debugging.
+
+	// Passing log level is optional; currently libcontainer/integration does not do it.
+	if levelStr := os.Getenv("_LIBCONTAINER_LOGLEVEL"); levelStr != "" {
+		logLevel, err := strconv.Atoi(levelStr)
+		if err != nil {
+			return fmt.Errorf("unable to convert _LIBCONTAINER_LOGLEVEL: %w", err)
+		}
+		logrus.SetLevel(logrus.Level(logLevel))
+	}
+
+	logFD, err := strconv.Atoi(os.Getenv("_LIBCONTAINER_LOGPIPE"))
+	if err != nil {
+		return fmt.Errorf("unable to convert _LIBCONTAINER_LOGPIPE: %w", err)
+	}
+
+	logrus.SetOutput(os.NewFile(uintptr(logFD), "logpipe"))
+	logrus.SetFormatter(new(logrus.JSONFormatter))
+	logrus.Debug("child process in init()")
 
 	// Only init processes have FIFOFD.
 	fifofd := -1
@@ -131,12 +149,6 @@ func StartInitialization() (retErr error) {
 		}
 		consoleSocket = os.NewFile(uintptr(console), "console-socket")
 		defer consoleSocket.Close()
-	}
-
-	logPipeFdStr := os.Getenv("_LIBCONTAINER_LOGPIPE")
-	logPipeFd, err := strconv.Atoi(logPipeFdStr)
-	if err != nil {
-		return fmt.Errorf("unable to convert _LIBCONTAINER_LOGPIPE: %w", err)
 	}
 
 	// Get mount files (O_PATH).
@@ -166,7 +178,7 @@ func StartInitialization() (retErr error) {
 	}()
 
 	// If init succeeds, it will not return, hence none of the defers will be called.
-	return containerInit(it, pipe, consoleSocket, fifofd, logPipeFd, mountFds{sourceFds: mountSrcFds, idmapFds: idmapFds})
+	return containerInit(it, pipe, consoleSocket, fifofd, logFD, mountFds{sourceFds: mountSrcFds, idmapFds: idmapFds})
 }
 
 func containerInit(t initType, pipe *os.File, consoleSocket *os.File, fifoFd, logFd int, mountFds mountFds) error {

@@ -501,9 +501,10 @@ func (c *Container) commandTemplate(p *Process, childInitPipe *os.File, childLog
 
 	cmd.ExtraFiles = append(cmd.ExtraFiles, childLogPipe)
 	cmd.Env = append(cmd.Env,
-		"_LIBCONTAINER_LOGPIPE="+strconv.Itoa(stdioFdCount+len(cmd.ExtraFiles)-1),
-		"_LIBCONTAINER_LOGLEVEL="+p.LogLevel,
-	)
+		"_LIBCONTAINER_LOGPIPE="+strconv.Itoa(stdioFdCount+len(cmd.ExtraFiles)-1))
+	if p.LogLevel != "" {
+		cmd.Env = append(cmd.Env, "_LIBCONTAINER_LOGLEVEL="+p.LogLevel)
+	}
 
 	// NOTE: when running a container with no PID namespace and the parent process spawning the container is
 	// PID1 the pdeathsig is being delivered to the container's init process by the kernel for some reason
