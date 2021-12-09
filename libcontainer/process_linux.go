@@ -303,7 +303,7 @@ type initProcess struct {
 	logFilePair     filePair
 	config          *initConfig
 	manager         cgroups.Manager
-	intelRdtManager intelrdt.Manager
+	intelRdtManager *intelrdt.Manager
 	container       *Container
 	fds             []string
 	process         *Process

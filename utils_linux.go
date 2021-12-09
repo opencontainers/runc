@@ -31,7 +31,7 @@ func loadFactory(context *cli.Context) (*libcontainer.Factory, error) {
 		return nil, err
 	}
 
-	f, err := libcontainer.New(abs, libcontainer.IntelRdtFs)
+	f, err := libcontainer.New(abs)
 	if err != nil {
 		return nil, err
 	}

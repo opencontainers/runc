@@ -26,20 +26,6 @@ func TestFactoryNew(t *testing.T) {
 	}
 }
 
-func TestFactoryNewIntelRdt(t *testing.T) {
-	root := t.TempDir()
-	factory, err := New(root, IntelRdtFs)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if factory == nil {
-		t.Fatal("factory should not be nil")
-	}
-	if factory.Root != root {
-		t.Fatalf("expected factory root to be %q but received %q", root, factory.Root)
-	}
-}
-
 func TestFactoryLoadNotExists(t *testing.T) {
 	factory, err := New(t.TempDir())
 	if err != nil {
@@ -91,7 +77,7 @@ func TestFactoryLoadContainer(t *testing.T) {
 	if err := marshal(filepath.Join(root, id, stateFilename), expectedState); err != nil {
 		t.Fatal(err)
 	}
-	factory, err := New(root, IntelRdtFs)
+	factory, err := New(root)
 	if err != nil {
 		t.Fatal(err)
 	}

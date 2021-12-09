@@ -27,20 +27,6 @@ const (
 
 var idRegex = regexp.MustCompile(`^[\w+-\.]+$`)
 
-// IntelRdtfs is an options func to configure a Factory to return
-// containers that use the Intel RDT "resource control" filesystem to
-// create and manage Intel RDT resources (e.g., L3 cache, memory bandwidth).
-func IntelRdtFs(l *Factory) error {
-	if !intelrdt.IsCATEnabled() && !intelrdt.IsMBAEnabled() {
-		l.NewIntelRdtManager = nil
-	} else {
-		l.NewIntelRdtManager = func(config *configs.Config, id string, path string) intelrdt.Manager {
-			return intelrdt.NewManager(config, id, path)
-		}
-	}
-	return nil
-}
-
 // New returns a linux based container factory based in the root directory and
 // configures the factory with the provided option funcs.
 func New(root string, options ...func(*Factory) error) (*Factory, error) {
@@ -92,9 +78,6 @@ type Factory struct {
 
 	// Validator provides validation to container configurations.
 	Validator validate.Validator
-
-	// NewIntelRdtManager returns an initialized Intel RDT manager for a single container.
-	NewIntelRdtManager func(config *configs.Config, id string, path string) intelrdt.Manager
 }
 
 // Creates a new container with the given id and starts the initial process inside it.
@@ -165,18 +148,16 @@ func (l *Factory) Create(id string, config *configs.Config) (*Container, error) 
 		return nil, err
 	}
 	c := &Container{
-		id:            id,
-		root:          containerRoot,
-		config:        config,
-		initPath:      l.InitPath,
-		initArgs:      l.InitArgs,
-		criuPath:      l.CriuPath,
-		newuidmapPath: l.NewuidmapPath,
-		newgidmapPath: l.NewgidmapPath,
-		cgroupManager: cm,
-	}
-	if l.NewIntelRdtManager != nil {
-		c.intelRdtManager = l.NewIntelRdtManager(config, id, "")
+		id:              id,
+		root:            containerRoot,
+		config:          config,
+		initPath:        l.InitPath,
+		initArgs:        l.InitArgs,
+		criuPath:        l.CriuPath,
+		newuidmapPath:   l.NewuidmapPath,
+		newgidmapPath:   l.NewgidmapPath,
+		cgroupManager:   cm,
+		intelRdtManager: intelrdt.NewManager(config, id, ""),
 	}
 	c.state = &stoppedState{c: c}
 	return c, nil
@@ -220,11 +201,9 @@ func (l *Factory) Load(id string) (*Container, error) {
 		newuidmapPath:        l.NewuidmapPath,
 		newgidmapPath:        l.NewgidmapPath,
 		cgroupManager:        cm,
+		intelRdtManager:      intelrdt.NewManager(&state.Config, id, state.IntelRdtPath),
 		root:                 containerRoot,
 		created:              state.Created,
-	}
-	if l.NewIntelRdtManager != nil {
-		c.intelRdtManager = l.NewIntelRdtManager(&state.Config, id, state.IntelRdtPath)
 	}
 	c.state = &loadedState{c: c}
 	if err := c.refreshState(); err != nil {
