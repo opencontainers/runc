@@ -25,6 +25,8 @@ GO_BUILD := $(GO) build -trimpath $(GO_BUILDMODE) $(EXTRA_FLAGS) -tags "$(BUILDT
 GO_BUILD_STATIC := CGO_ENABLED=1 $(GO) build -trimpath $(EXTRA_FLAGS) -tags "$(BUILDTAGS) netgo osusergo" \
 	-ldflags "-extldflags -static -X main.gitCommit=$(COMMIT) -X main.version=$(VERSION) $(EXTRA_LDFLAGS)"
 
+GPG_KEYID ?= asarai@suse.de
+
 .DEFAULT: runc
 
 runc:
@@ -46,9 +48,10 @@ release: runcimage
 		--rm -v $(CURDIR):/go/src/$(PROJECT) \
 		-e RELEASE_ARGS=$(RELEASE_ARGS) \
 		$(RUNC_IMAGE) make localrelease
+	script/release_sign.sh -S $(GPG_KEYID) -r release/$(VERSION) -v $(VERSION)
 
 localrelease:
-	script/release.sh -r release/$(VERSION) -v $(VERSION) $(RELEASE_ARGS)
+	script/release_build.sh -r release/$(VERSION) -v $(VERSION) $(RELEASE_ARGS)
 
 dbuild: runcimage
 	$(CONTAINER_ENGINE) run $(CONTAINER_ENGINE_RUN_FLAGS) \
@@ -130,7 +133,7 @@ cfmt:
 shellcheck:
 	shellcheck tests/integration/*.bats tests/integration/*.sh \
 		tests/integration/*.bash tests/*.sh \
-		script/release.sh script/seccomp.sh script/lib.sh
+		script/release_*.sh script/seccomp.sh script/lib.sh
 	# TODO: add shellcheck for more sh files
 
 shfmt:
