@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"os"
 	"regexp"
-	"runtime/debug"
-	"strconv"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
 	"golang.org/x/sys/unix"
@@ -30,10 +28,8 @@ var idRegex = regexp.MustCompile(`^[\w+-\.]+$`)
 // New returns a linux based container factory based in the root directory and
 // configures the factory with the provided option funcs.
 func New(root string, options ...func(*Factory) error) (*Factory, error) {
-	if root != "" {
-		if err := os.MkdirAll(root, 0o700); err != nil {
-			return nil, err
-		}
+	if err := os.MkdirAll(root, 0o700); err != nil {
+		return nil, err
 	}
 	l := &Factory{
 		Root:      root,
@@ -210,86 +206,6 @@ func (l *Factory) Load(id string) (*Container, error) {
 		return nil, err
 	}
 	return c, nil
-}
-
-// StartInitialization loads a container by opening the pipe fd from the parent
-// to read the configuration and state.  This is a low level implementation
-// detail of the reexec and should not be consumed externally.
-func (l *Factory) StartInitialization() (err error) {
-	// Get the INITPIPE.
-	envInitPipe := os.Getenv("_LIBCONTAINER_INITPIPE")
-	pipefd, err := strconv.Atoi(envInitPipe)
-	if err != nil {
-		err = fmt.Errorf("unable to convert _LIBCONTAINER_INITPIPE: %w", err)
-		logrus.Error(err)
-		return err
-	}
-	pipe := os.NewFile(uintptr(pipefd), "pipe")
-	defer pipe.Close()
-
-	defer func() {
-		// We have an error during the initialization of the container's init,
-		// send it back to the parent process in the form of an initError.
-		if werr := writeSync(pipe, procError); werr != nil {
-			fmt.Fprintln(os.Stderr, err)
-			return
-		}
-		if werr := utils.WriteJSON(pipe, &initError{Message: err.Error()}); werr != nil {
-			fmt.Fprintln(os.Stderr, err)
-			return
-		}
-	}()
-
-	// Only init processes have FIFOFD.
-	fifofd := -1
-	envInitType := os.Getenv("_LIBCONTAINER_INITTYPE")
-	it := initType(envInitType)
-	if it == initStandard {
-		envFifoFd := os.Getenv("_LIBCONTAINER_FIFOFD")
-		if fifofd, err = strconv.Atoi(envFifoFd); err != nil {
-			return fmt.Errorf("unable to convert _LIBCONTAINER_FIFOFD: %w", err)
-		}
-	}
-
-	var consoleSocket *os.File
-	if envConsole := os.Getenv("_LIBCONTAINER_CONSOLE"); envConsole != "" {
-		console, err := strconv.Atoi(envConsole)
-		if err != nil {
-			return fmt.Errorf("unable to convert _LIBCONTAINER_CONSOLE: %w", err)
-		}
-		consoleSocket = os.NewFile(uintptr(console), "console-socket")
-		defer consoleSocket.Close()
-	}
-
-	logPipeFdStr := os.Getenv("_LIBCONTAINER_LOGPIPE")
-	logPipeFd, err := strconv.Atoi(logPipeFdStr)
-	if err != nil {
-		return fmt.Errorf("unable to convert _LIBCONTAINER_LOGPIPE: %w", err)
-	}
-
-	// Get mount files (O_PATH).
-	mountFds, err := parseMountFds()
-	if err != nil {
-		return err
-	}
-
-	// clear the current process's environment to clean any libcontainer
-	// specific env vars.
-	os.Clearenv()
-
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("panic from initialization: %w, %v", e, string(debug.Stack()))
-		}
-	}()
-
-	i, err := newContainerInit(it, pipe, consoleSocket, fifofd, logPipeFd, mountFds)
-	if err != nil {
-		return err
-	}
-
-	// If Init succeeds, syscall.Exec will not return, hence none of the defers will be called.
-	return i.Init()
 }
 
 func (l *Factory) loadState(root string) (*State, error) {

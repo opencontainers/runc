@@ -32,8 +32,7 @@ func init() {
 		logrus.SetFormatter(new(logrus.JSONFormatter))
 		logrus.Debug("child process in init()")
 
-		factory, _ := libcontainer.New("")
-		if err := factory.StartInitialization(); err != nil {
+		if err := libcontainer.StartInitialization(); err != nil {
 			// as the error is sent back to the parent there is no need to log
 			// or write it to stderr because the parent process will handle this
 			os.Exit(1)

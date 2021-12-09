@@ -19,11 +19,7 @@ func init() {
 	}
 	runtime.GOMAXPROCS(1)
 	runtime.LockOSThread()
-	factory, err := libcontainer.New("")
-	if err != nil {
-		logrus.Fatalf("unable to initialize for container: %s", err)
-	}
-	if err := factory.StartInitialization(); err != nil {
+	if err := libcontainer.StartInitialization(); err != nil {
 		logrus.Fatal(err)
 	}
 }
