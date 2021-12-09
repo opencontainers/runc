@@ -100,7 +100,7 @@ function build_project() {
 
 # Print usage information.
 function usage() {
-	echo "usage: release_build.sh [-a <cross-arch>]... [-c <commit-ish>] [-h <hashcmd>]" >&2
+	echo "usage: release_build.sh [-a <cross-arch>]... [-c <commit-ish>] [-H <hashcmd>]" >&2
 	echo "                        [-r <release-dir>] [-v <version>]" >&2
 	exit 1
 }
