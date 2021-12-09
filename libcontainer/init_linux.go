@@ -162,42 +162,34 @@ func StartInitialization() (err error) {
 		}
 	}()
 
-	i, err := newContainerInit(it, pipe, consoleSocket, fifofd, logPipeFd, mountFds)
-	if err != nil {
-		return err
-	}
-
-	// If Init succeeds, syscall.Exec will not return, hence none of the defers will be called.
-	return i.Init()
+	// If init succeeds, it will not return, hence none of the defers will be called.
+	return containerInit(it, pipe, consoleSocket, fifofd, logPipeFd, mountFds)
 }
 
-type initer interface {
-	Init() error
-}
-
-func newContainerInit(t initType, pipe *os.File, consoleSocket *os.File, fifoFd, logFd int, mountFds []int) (initer, error) {
+func containerInit(t initType, pipe *os.File, consoleSocket *os.File, fifoFd, logFd int, mountFds []int) error {
 	var config *initConfig
 	if err := json.NewDecoder(pipe).Decode(&config); err != nil {
-		return nil, err
+		return err
 	}
 	if err := populateProcessEnvironment(config.Env); err != nil {
-		return nil, err
+		return err
 	}
 	switch t {
 	case initSetns:
 		// mountFds must be nil in this case. We don't mount while doing runc exec.
 		if mountFds != nil {
-			return nil, errors.New("mountFds must be nil; can't mount from exec")
+			return errors.New("mountFds must be nil; can't mount from exec")
 		}
 
-		return &linuxSetnsInit{
+		i := &linuxSetnsInit{
 			pipe:          pipe,
 			consoleSocket: consoleSocket,
 			config:        config,
 			logFd:         logFd,
-		}, nil
+		}
+		return i.Init()
 	case initStandard:
-		return &linuxStandardInit{
+		i := &linuxStandardInit{
 			pipe:          pipe,
 			consoleSocket: consoleSocket,
 			parentPid:     unix.Getppid(),
@@ -205,9 +197,10 @@ func newContainerInit(t initType, pipe *os.File, consoleSocket *os.File, fifoFd,
 			fifoFd:        fifoFd,
 			logFd:         logFd,
 			mountFds:      mountFds,
-		}, nil
+		}
+		return i.Init()
 	}
-	return nil, fmt.Errorf("unknown init type %q", t)
+	return fmt.Errorf("unknown init type %q", t)
 }
 
 // populateProcessEnvironment loads the provided environment variables into the
