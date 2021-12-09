@@ -91,7 +91,7 @@ func notifySocketStart(context *cli.Context, notifySocketHost, id string) (*noti
 	return notifySocket, nil
 }
 
-func (n *notifySocket) waitForContainer(container libcontainer.Container) error {
+func (n *notifySocket) waitForContainer(container *libcontainer.Container) error {
 	s, err := container.State()
 	if err != nil {
 		return err

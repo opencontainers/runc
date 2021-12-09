@@ -304,7 +304,7 @@ type initProcess struct {
 	config          *initConfig
 	manager         cgroups.Manager
 	intelRdtManager intelrdt.Manager
-	container       *linuxContainer
+	container       *Container
 	fds             []string
 	process         *Process
 	bootstrapData   io.Reader

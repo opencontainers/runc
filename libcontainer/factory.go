@@ -116,7 +116,7 @@ type Factory struct {
 // Returns the new container with a running process.
 //
 // On error, any partially created container parts are cleaned up (the operation is atomic).
-func (l *Factory) Create(id string, config *configs.Config) (Container, error) {
+func (l *Factory) Create(id string, config *configs.Config) (*Container, error) {
 	if l.Root == "" {
 		return nil, errors.New("root not set")
 	}
@@ -173,7 +173,7 @@ func (l *Factory) Create(id string, config *configs.Config) (Container, error) {
 	if err := os.MkdirAll(containerRoot, 0o711); err != nil {
 		return nil, err
 	}
-	c := &linuxContainer{
+	c := &Container{
 		id:            id,
 		root:          containerRoot,
 		config:        config,
@@ -193,7 +193,7 @@ func (l *Factory) Create(id string, config *configs.Config) (Container, error) {
 
 // Load takes an ID for an existing container and returns the container information
 // from the state.  This presents a read only view of the container.
-func (l *Factory) Load(id string) (Container, error) {
+func (l *Factory) Load(id string) (*Container, error) {
 	if l.Root == "" {
 		return nil, errors.New("root not set")
 	}
@@ -218,7 +218,7 @@ func (l *Factory) Load(id string) (Container, error) {
 	if err != nil {
 		return nil, err
 	}
-	c := &linuxContainer{
+	c := &Container{
 		initProcess:          r,
 		initProcessStartTime: state.InitProcessStartTime,
 		id:                   id,
