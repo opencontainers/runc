@@ -21,7 +21,8 @@ root="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")/..")"
 
 # Print usage information.
 function usage() {
-	echo "usage: release_sign.sh [-S <gpg-key-id>] [-r <release-dir>]" >&2
+	echo "usage: release_sign.sh [-S <gpg-key-id>] [-H <hashcmd>]" >&2
+	echo "                       [-r <release-dir>] [-v <version>]" >&2
 	exit 1
 }
 

@@ -19,7 +19,7 @@ set -e
 ## --->
 # Project-specific options and functions. In *theory* you shouldn't need to
 # touch anything else in this script in order to use this elsewhere.
-: "${LIBSECCOMP_VERSION:=2.5.2}"
+: "${LIBSECCOMP_VERSION:=2.5.3}"
 project="runc"
 root="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")/..")"
 
@@ -100,7 +100,7 @@ function build_project() {
 
 # Print usage information.
 function usage() {
-	echo "usage: release_build.sh [-a <cross-arch>]... [-c <commit-ish>] [-h <hashcmd>]" >&2
+	echo "usage: release_build.sh [-a <cross-arch>]... [-c <commit-ish>] [-H <hashcmd>]" >&2
 	echo "                        [-r <release-dir>] [-v <version>]" >&2
 	exit 1
 }
