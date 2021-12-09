@@ -41,15 +41,6 @@ func IntelRdtFs(l *Factory) error {
 	return nil
 }
 
-// CriuPath returns an option func to configure a Factory with the
-// provided criupath
-func CriuPath(criupath string) func(*Factory) error {
-	return func(l *Factory) error {
-		l.CriuPath = criupath
-		return nil
-	}
-}
-
 // New returns a linux based container factory based in the root directory and
 // configures the factory with the provided option funcs.
 func New(root string, options ...func(*Factory) error) (*Factory, error) {
@@ -348,24 +339,6 @@ func (l *Factory) validateID(id string) error {
 	}
 
 	return nil
-}
-
-// NewuidmapPath returns an option func to configure a Factory with the
-// provided ..
-func NewuidmapPath(newuidmapPath string) func(*Factory) error {
-	return func(l *Factory) error {
-		l.NewuidmapPath = newuidmapPath
-		return nil
-	}
-}
-
-// NewgidmapPath returns an option func to configure a Factory with the
-// provided ..
-func NewgidmapPath(newgidmapPath string) func(*Factory) error {
-	return func(l *Factory) error {
-		l.NewgidmapPath = newgidmapPath
-		return nil
-	}
 }
 
 func parseMountFds() ([]int, error) {

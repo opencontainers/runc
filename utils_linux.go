@@ -31,24 +31,26 @@ func loadFactory(context *cli.Context) (*libcontainer.Factory, error) {
 		return nil, err
 	}
 
-	intelRdtManager := libcontainer.IntelRdtFs
+	f, err := libcontainer.New(abs, libcontainer.IntelRdtFs)
+	if err != nil {
+		return nil, err
+	}
 
 	// We resolve the paths for {newuidmap,newgidmap} from the context of runc,
 	// to avoid doing a path lookup in the nsexec context. TODO: The binary
 	// names are not currently configurable.
-	newuidmap, err := exec.LookPath("newuidmap")
-	if err != nil {
-		newuidmap = ""
+	if newuidmap, err := exec.LookPath("newuidmap"); err == nil {
+		f.NewuidmapPath = newuidmap
 	}
-	newgidmap, err := exec.LookPath("newgidmap")
-	if err != nil {
-		newgidmap = ""
+	if newgidmap, err := exec.LookPath("newgidmap"); err == nil {
+		f.NewgidmapPath = newgidmap
 	}
 
-	return libcontainer.New(abs, intelRdtManager,
-		libcontainer.CriuPath(context.GlobalString("criu")),
-		libcontainer.NewuidmapPath(newuidmap),
-		libcontainer.NewgidmapPath(newgidmap))
+	if criu := context.GlobalString("criu"); criu != "" {
+		f.CriuPath = criu
+	}
+
+	return f, nil
 }
 
 // getContainer returns the specified container instance by loading it from state
