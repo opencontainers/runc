@@ -14,7 +14,7 @@ IMAGES=$("${INTEGRATION_ROOT}"/get-images.sh)
 eval "$IMAGES"
 unset IMAGES
 
-RUNC="${INTEGRATION_ROOT}/../../runc"
+: "${RUNC:="${INTEGRATION_ROOT}/../../runc"}"
 RECVTTY="${INTEGRATION_ROOT}/../../contrib/cmd/recvtty/recvtty"
 SD_HELPER="${INTEGRATION_ROOT}/../../contrib/cmd/sd-helper/sd-helper"
 SECCOMP_AGENT="${INTEGRATION_ROOT}/../../contrib/cmd/seccompagent/seccompagent"
@@ -47,7 +47,7 @@ function runc() {
 	# Some debug information to make life easier. bats will only print it if the
 	# test failed, in which case the output is useful.
 	# shellcheck disable=SC2154
-	echo "runc $* (status=$status):" >&2
+	echo "$(basename "$RUNC") $* (status=$status):" >&2
 	# shellcheck disable=SC2154
 	echo "$output" >&2
 }
@@ -74,7 +74,7 @@ function runc_spec() {
 
 # Helper function to reformat config.json file. Input uses jq syntax.
 function update_config() {
-	jq "$1" "./config.json" | awk 'BEGIN{RS="";getline<"-";print>ARGV[1]}' "./config.json"
+	jq "$@" "./config.json" | awk 'BEGIN{RS="";getline<"-";print>ARGV[1]}' "./config.json"
 }
 
 # Shortcut to add additional uids and gids, based on the values set as part of

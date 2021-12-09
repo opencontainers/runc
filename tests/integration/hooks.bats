@@ -39,13 +39,13 @@ function teardown() {
 
 	create_container_hook="touch ./lib/$HOOKLIBCC.1.0.0 && mount --bind $bundle/$HOOKLIBCC.1.0.0 ./lib/$HOOKLIBCC.1.0.0"
 
-	CONFIG=$(jq --arg create_runtime_hook "$create_runtime_hook" --arg create_container_hook "$create_container_hook" '
+	# shellcheck disable=SC2016
+	update_config --arg create_runtime_hook "$create_runtime_hook" --arg create_container_hook "$create_container_hook" '
 		.hooks |= . + {"createRuntime": [{"path": "/bin/sh", "args": ["/bin/sh", "-c", $create_runtime_hook]}]} |
 		.hooks |= . + {"createContainer": [{"path": "/bin/sh", "args": ["/bin/sh", "-c", $create_container_hook]}]} |
 		.hooks |= . + {"startContainer": [{"path": "/bin/sh", "args": ["/bin/sh", "-c", "ldconfig"]}]} |
 		.root.readonly |= false |
-		.process.args = ["/bin/sh", "-c", "ldconfig -p | grep librunc"]' "$bundle"/config.json)
-	echo "${CONFIG}" >config.json
+		.process.args = ["/bin/sh", "-c", "ldconfig -p | grep librunc"]'
 
 	runc run test_debian
 	[ "$status" -eq 0 ]
