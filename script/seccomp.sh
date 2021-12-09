@@ -50,7 +50,7 @@ function build_libseccomp() {
 	mv "$tar"{,.asc} "$dest"/src
 }
 
-if [ $# -lt 4 ]; then
+if [ $# -lt 2 ]; then
 	echo "Usage: seccomp.sh <version> <dest-dir> [<extra-arch> ...]" >&2
 	exit 1
 fi
