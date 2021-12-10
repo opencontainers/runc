@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"fmt"
 	"os"
 	"runtime"
 	"testing"
@@ -9,27 +10,27 @@ import (
 	//nolint:revive // Enable cgroup manager to manage devices
 	_ "github.com/opencontainers/runc/libcontainer/cgroups/devices"
 	_ "github.com/opencontainers/runc/libcontainer/nsenter"
-
-	"github.com/sirupsen/logrus"
 )
 
-// init runs the libcontainer initialization code because of the busybox style needs
-// to work around the go runtime and the issues with forking
+// Same as ../../init.go but for libcontainer/integration.
 func init() {
 	if len(os.Args) < 2 || os.Args[1] != "init" {
 		return
 	}
+	// This is the golang entry point for runc init, executed
+	// before TestMain() but after libcontainer/nsenter's nsexec().
 	runtime.GOMAXPROCS(1)
 	runtime.LockOSThread()
 	if err := libcontainer.StartInitialization(); err != nil {
-		logrus.Fatal(err)
+		// logrus is not initialized
+		fmt.Fprintln(os.Stderr, err)
 	}
+	// Normally, StartInitialization() never returns, meaning
+	// if we are here, it had failed.
+	os.Exit(1)
 }
 
 func TestMain(m *testing.M) {
-	logrus.SetOutput(os.Stderr)
-	logrus.SetLevel(logrus.InfoLevel)
-
 	ret := m.Run()
 	os.Exit(ret)
 }

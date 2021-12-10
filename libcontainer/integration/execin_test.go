@@ -215,12 +215,10 @@ func TestExecInError(t *testing.T) {
 	ok(t, err)
 
 	for i := 0; i < 42; i++ {
-		var out bytes.Buffer
 		unexistent := &libcontainer.Process{
-			Cwd:    "/",
-			Args:   []string{"unexistent"},
-			Env:    standardEnvironment,
-			Stderr: &out,
+			Cwd:  "/",
+			Args: []string{"unexistent"},
+			Env:  standardEnvironment,
 		}
 		err = container.Run(unexistent)
 		if err == nil {
@@ -228,9 +226,6 @@ func TestExecInError(t *testing.T) {
 		}
 		if !strings.Contains(err.Error(), "executable file not found") {
 			t.Fatalf("Should be error about not found executable, got %s", err)
-		}
-		if !bytes.Contains(out.Bytes(), []byte("executable file not found")) {
-			t.Fatalf("executable file not found error not delivered to stdio:\n%s", out.String())
 		}
 	}
 }
