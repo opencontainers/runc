@@ -7,27 +7,25 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer"
 	_ "github.com/opencontainers/runc/libcontainer/nsenter"
-
-	"github.com/sirupsen/logrus"
 )
 
-// init runs the libcontainer initialization code because of the busybox style needs
-// to work around the go runtime and the issues with forking
+// Same as ../../init.go but for libcontainer/integration.
 func init() {
 	if len(os.Args) < 2 || os.Args[1] != "init" {
 		return
 	}
+	// This is the golang entry point for runc init, executed
+	// before TestMain() but after libcontainer/nsenter's nsexec().
 	runtime.GOMAXPROCS(1)
 	runtime.LockOSThread()
 	if err := libcontainer.StartInitialization(); err != nil {
-		logrus.Fatal(err)
+		// as the error is sent back to the parent there is no need to log
+		// or write it to stderr because the parent process will handle this
+		os.Exit(1)
 	}
 }
 
 func TestMain(m *testing.M) {
-	logrus.SetOutput(os.Stderr)
-	logrus.SetLevel(logrus.InfoLevel)
-
 	ret := m.Run()
 	os.Exit(ret)
 }
