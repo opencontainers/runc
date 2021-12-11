@@ -187,7 +187,7 @@ func newContainerInit(t initType, pipe *os.File, consoleSocket *os.File, fifoFd,
 	case initSetns:
 		// mountFds must be nil in this case. We don't mount while doing runc exec.
 		if mountFds != nil {
-			return nil, errors.New("mountFds must be nil. Can't mount while doing runc exec.")
+			return nil, errors.New("mountFds must be nil; can't mount from exec")
 		}
 
 		return &linuxSetnsInit{

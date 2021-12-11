@@ -91,12 +91,12 @@ func notifySocketStart(context *cli.Context, notifySocketHost, id string) (*noti
 	return notifySocket, nil
 }
 
-func (n *notifySocket) waitForContainer(container *libcontainer.Container) error {
-	s, err := container.State()
+func (s *notifySocket) waitForContainer(container *libcontainer.Container) error {
+	state, err := container.State()
 	if err != nil {
 		return err
 	}
-	return n.run(s.InitProcessPid)
+	return s.run(state.InitProcessPid)
 }
 
 func (n *notifySocket) run(pid1 int) error {
