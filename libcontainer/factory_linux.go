@@ -198,9 +198,6 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 	if err := os.MkdirAll(containerRoot, 0o711); err != nil {
 		return nil, err
 	}
-	if err := os.Chown(containerRoot, unix.Geteuid(), unix.Getegid()); err != nil {
-		return nil, err
-	}
 	c := &linuxContainer{
 		id:            id,
 		root:          containerRoot,
