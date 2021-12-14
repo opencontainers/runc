@@ -5,6 +5,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+
+## [1.1.0-rc.1] - 2021-12-14
+
+> He who controls the spice controls the universe.
+
 ### Deprecated
  * runc run/start now warns if a new container cgroup is non-empty or frozen;
    this warning will become an error in runc 1.2. (#3132, #3223)
@@ -218,7 +224,8 @@ implementation (libcontainer) is *not* covered by this policy.
    cgroups at all during `runc update`). (#2994)
 
 <!-- minor releases -->
-[Unreleased]: https://github.com/opencontainers/runc/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/opencontainers/runc/compare/v1.1.0-rc.1...HEAD
+[1.1.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.0.0...v1.1.0-rc.1
 [1.0.0]: https://github.com/opencontainers/runc/releases/tag/v1.0.0
 
 <!-- 1.0.x patch releases -->
