@@ -1,4 +1,4 @@
-# github.com/checkpoint-restore/go-criu/v5 v5.2.0
+# github.com/checkpoint-restore/go-criu/v5 v5.3.0
 ## explicit
 github.com/checkpoint-restore/go-criu/v5
 github.com/checkpoint-restore/go-criu/v5/rpc
