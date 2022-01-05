@@ -74,6 +74,7 @@ task:
     matrix:
       DISTRO: centos-7
       DISTRO: centos-stream-8
+      DISTRO: centos-stream-9
 
   name: ci / $DISTRO
 
