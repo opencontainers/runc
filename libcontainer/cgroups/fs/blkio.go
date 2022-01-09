@@ -50,23 +50,31 @@ func (s *BlkioGroup) Set(path string, r *configs.Resources) error {
 		}
 	}
 	for _, td := range r.BlkioThrottleReadBpsDevice {
-		if err := cgroups.WriteFile(path, "blkio.throttle.read_bps_device", td.String()); err != nil {
-			return err
+		if td.Rate != 0 {
+			if err := cgroups.WriteFile(path, "blkio.throttle.read_bps_device", td.String()); err != nil {
+				return err
+			}
 		}
 	}
 	for _, td := range r.BlkioThrottleWriteBpsDevice {
-		if err := cgroups.WriteFile(path, "blkio.throttle.write_bps_device", td.String()); err != nil {
-			return err
+		if td.Rate != 0 {
+			if err := cgroups.WriteFile(path, "blkio.throttle.write_bps_device", td.String()); err != nil {
+				return err
+			}
 		}
 	}
 	for _, td := range r.BlkioThrottleReadIOPSDevice {
-		if err := cgroups.WriteFile(path, "blkio.throttle.read_iops_device", td.String()); err != nil {
-			return err
+		if td.Rate != 0 {
+			if err := cgroups.WriteFile(path, "blkio.throttle.read_iops_device", td.String()); err != nil {
+				return err
+			}
 		}
 	}
 	for _, td := range r.BlkioThrottleWriteIOPSDevice {
-		if err := cgroups.WriteFile(path, "blkio.throttle.write_iops_device", td.String()); err != nil {
-			return err
+		if td.Rate != 0 {
+			if err := cgroups.WriteFile(path, "blkio.throttle.write_iops_device", td.String()); err != nil {
+				return err
+			}
 		}
 	}
 

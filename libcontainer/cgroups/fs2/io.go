@@ -75,23 +75,31 @@ func setIo(dirPath string, r *configs.Resources) error {
 		}
 	}
 	for _, td := range r.BlkioThrottleReadBpsDevice {
-		if err := cgroups.WriteFile(dirPath, "io.max", td.StringName("rbps")); err != nil {
-			return err
+		if td.Rate != 0 {
+			if err := cgroups.WriteFile(dirPath, "io.max", td.StringName("rbps")); err != nil {
+				return err
+			}
 		}
 	}
 	for _, td := range r.BlkioThrottleWriteBpsDevice {
-		if err := cgroups.WriteFile(dirPath, "io.max", td.StringName("wbps")); err != nil {
-			return err
+		if td.Rate != 0 {
+			if err := cgroups.WriteFile(dirPath, "io.max", td.StringName("wbps")); err != nil {
+				return err
+			}
 		}
 	}
 	for _, td := range r.BlkioThrottleReadIOPSDevice {
-		if err := cgroups.WriteFile(dirPath, "io.max", td.StringName("riops")); err != nil {
-			return err
+		if td.Rate != 0 {
+			if err := cgroups.WriteFile(dirPath, "io.max", td.StringName("riops")); err != nil {
+				return err
+			}
 		}
 	}
 	for _, td := range r.BlkioThrottleWriteIOPSDevice {
-		if err := cgroups.WriteFile(dirPath, "io.max", td.StringName("wiops")); err != nil {
-			return err
+		if td.Rate != 0 {
+			if err := cgroups.WriteFile(dirPath, "io.max", td.StringName("wiops")); err != nil {
+				return err
+			}
 		}
 	}
 
