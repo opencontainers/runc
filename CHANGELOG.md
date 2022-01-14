@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2022-01-14
+
+> A plan depends as much upon execution as it does upon concept.
+
+## Changed
+ * libcontainer will now refuse to build without the nsenter package being
+   correctly compiled (specifically this requires CGO to be enabled). This
+   should avoid folks accidentally creating broken runc binaries (and
+   incorrectly importing our internal libraries into their projects). (#3331)
 
 ## [1.1.0-rc.1] - 2021-12-14
 
@@ -15,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  * runc run/start now warns if a new container cgroup is non-empty or frozen;
    this warning will become an error in runc 1.2. (#3132, #3223)
  * runc can only be built with Go 1.16 or later from this release onwards.
-   (#3100, #3245)
+   (#3100, #3245, #3325)
 
 ### Removed
  * `cgroup.GetHugePageSizes` has been removed entirely, and been replaced with
@@ -224,12 +233,16 @@ implementation (libcontainer) is *not* covered by this policy.
    cgroups at all during `runc update`). (#2994)
 
 <!-- minor releases -->
-[Unreleased]: https://github.com/opencontainers/runc/compare/v1.1.0-rc.1...HEAD
-[1.1.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.0.0...v1.1.0-rc.1
+[Unreleased]: https://github.com/opencontainers/runc/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/opencontainers/runc/compare/v1.1.0-rc.1...v1.1.0
 [1.0.0]: https://github.com/opencontainers/runc/releases/tag/v1.0.0
 
-<!-- 1.0.x patch releases -->
+<!-- 1.0.z patch releases -->
 [Unreleased 1.0.z]: https://github.com/opencontainers/runc/compare/v1.0.3...release-1.0
 [1.0.3]: https://github.com/opencontainers/runc/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/opencontainers/runc/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/opencontainers/runc/compare/v1.0.0...v1.0.1
+
+<!-- 1.1.z patch releases -->
+[Unreleased 1.1.z]: https://github.com/opencontainers/runc/compare/v1.1.0...release-1.1
+[1.1.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.0.0...v1.1.0-rc.1
