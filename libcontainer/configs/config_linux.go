@@ -3,27 +3,27 @@ package configs
 import "errors"
 
 var (
-	errNoUIDMap   = errors.New("User namespaces enabled, but no uid mappings found.")
-	errNoUserMap  = errors.New("User namespaces enabled, but no user mapping found.")
-	errNoGIDMap   = errors.New("User namespaces enabled, but no gid mappings found.")
-	errNoGroupMap = errors.New("User namespaces enabled, but no group mapping found.")
+	errNoUIDMap   = errors.New("user namespaces enabled, but no uid mappings found")
+	errNoUserMap  = errors.New("user namespaces enabled, but no user mapping found")
+	errNoGIDMap   = errors.New("user namespaces enabled, but no gid mappings found")
+	errNoGroupMap = errors.New("user namespaces enabled, but no group mapping found")
 )
 
 // HostUID gets the translated uid for the process on host which could be
 // different when user namespaces are enabled.
-func (c Config) HostUID(containerId int) (int, error) {
+func (c Config) HostUID(containerID int) (int, error) {
 	if c.Namespaces.Contains(NEWUSER) {
-		if c.UidMappings == nil {
+		if c.UIDMappings == nil {
 			return -1, errNoUIDMap
 		}
-		id, found := c.hostIDFromMapping(containerId, c.UidMappings)
+		id, found := c.hostIDFromMapping(containerID, c.UIDMappings)
 		if !found {
 			return -1, errNoUserMap
 		}
 		return id, nil
 	}
 	// Return unchanged id.
-	return containerId, nil
+	return containerID, nil
 }
 
 // HostRootUID gets the root uid for the process on host which could be non-zero
@@ -34,19 +34,19 @@ func (c Config) HostRootUID() (int, error) {
 
 // HostGID gets the translated gid for the process on host which could be
 // different when user namespaces are enabled.
-func (c Config) HostGID(containerId int) (int, error) {
+func (c Config) HostGID(containerID int) (int, error) {
 	if c.Namespaces.Contains(NEWUSER) {
-		if c.GidMappings == nil {
+		if c.GIDMappings == nil {
 			return -1, errNoGIDMap
 		}
-		id, found := c.hostIDFromMapping(containerId, c.GidMappings)
+		id, found := c.hostIDFromMapping(containerID, c.GIDMappings)
 		if !found {
 			return -1, errNoGroupMap
 		}
 		return id, nil
 	}
 	// Return unchanged id.
-	return containerId, nil
+	return containerID, nil
 }
 
 // HostRootGID gets the root gid for the process on host which could be non-zero

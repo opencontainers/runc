@@ -245,11 +245,7 @@ func prepareBindMount(m *configs.Mount, rootfs string, mountFd *int) error {
 	if err := checkProcMount(rootfs, dest, source); err != nil {
 		return err
 	}
-	if err := createIfNotExists(dest, stat.IsDir()); err != nil {
-		return err
-	}
-
-	return nil
+	return createIfNotExists(dest, stat.IsDir())
 }
 
 func mountCgroupV1(m *configs.Mount, c *mountConfig) error {
@@ -293,7 +289,7 @@ func mountCgroupV1(m *configs.Mount, c *mountConfig) error {
 					data   = filepath.Base(subsystemPath)
 				)
 				if data == "systemd" {
-					data = cgroups.CgroupNamePrefix + data
+					data = "name=" + data
 					source = "systemd"
 				}
 				return mount(source, b.Destination, procfd, "cgroup", uintptr(flags), data)
@@ -736,7 +732,7 @@ func mknodDevice(dest string, node *devices.Device) error {
 	if err := unix.Mknod(dest, uint32(fileMode), int(dev)); err != nil {
 		return &os.PathError{Op: "mknod", Path: dest, Err: err}
 	}
-	return os.Chown(dest, int(node.Uid), int(node.Gid))
+	return os.Chown(dest, int(node.UID), int(node.GID))
 }
 
 // Get the parent mount point of directory passed in as argument. Also return
@@ -939,12 +935,11 @@ func msMoveRoot(rootfs string) error {
 		if err := unmount(p, unix.MNT_DETACH); err != nil {
 			if !errors.Is(err, unix.EINVAL) && !errors.Is(err, unix.EPERM) {
 				return err
-			} else {
-				// If we have not privileges for umounting (e.g. rootless), then
-				// cover the path.
-				if err := mount("tmpfs", p, "", "tmpfs", 0, ""); err != nil {
-					return err
-				}
+			}
+			// If we have not privileges for umounting (e.g. rootless), then
+			// cover the path.
+			if err := mount("tmpfs", p, "", "tmpfs", 0, ""); err != nil {
+				return err
 			}
 		}
 	}

@@ -91,21 +91,15 @@ func setMemoryAndSwap(path string, r *configs.Resources) error {
 			if err := setSwap(path, r.MemorySwap); err != nil {
 				return err
 			}
-			if err := setMemory(path, r.Memory); err != nil {
-				return err
-			}
-			return nil
+			return setMemory(path, r.Memory)
 		}
 	}
 
 	if err := setMemory(path, r.Memory); err != nil {
 		return err
 	}
-	if err := setSwap(path, r.MemorySwap); err != nil {
-		return err
-	}
 
-	return nil
+	return setSwap(path, r.MemorySwap)
 }
 
 func (s *MemoryGroup) Set(path string, r *configs.Resources) error {
@@ -121,7 +115,7 @@ func (s *MemoryGroup) Set(path string, r *configs.Resources) error {
 		}
 	}
 
-	if r.OomKillDisable {
+	if r.OOMKillDisable {
 		if err := cgroups.WriteFile(path, "memory.oom_control", "1"); err != nil {
 			return err
 		}

@@ -9,21 +9,21 @@ type ThrottlingData struct {
 	ThrottledTime uint64 `json:"throttled_time,omitempty"`
 }
 
-// CpuUsage denotes the usage of a CPU.
+// CPUUsage denotes the usage of a CPU.
 // All CPU stats are aggregate since container inception.
-type CpuUsage struct {
+type CPUUsage struct {
 	// Total CPU time consumed.
 	// Units: nanoseconds.
 	TotalUsage uint64 `json:"total_usage,omitempty"`
 	// Total CPU time consumed per core.
 	// Units: nanoseconds.
-	PercpuUsage []uint64 `json:"percpu_usage,omitempty"`
+	PerCPUUsage []uint64 `json:"percpu_usage,omitempty"`
 	// CPU time consumed per core in kernel mode
 	// Units: nanoseconds.
-	PercpuUsageInKernelmode []uint64 `json:"percpu_usage_in_kernelmode"`
+	PerCPUUsageInKernelmode []uint64 `json:"percpu_usage_in_kernelmode"`
 	// CPU time consumed per core in user mode
 	// Units: nanoseconds.
-	PercpuUsageInUsermode []uint64 `json:"percpu_usage_in_usermode"`
+	PerCPUUsageInUsermode []uint64 `json:"percpu_usage_in_usermode"`
 	// Time spent by tasks of the cgroup in kernel mode.
 	// Units: nanoseconds.
 	UsageInKernelmode uint64 `json:"usage_in_kernelmode"`
@@ -32,8 +32,8 @@ type CpuUsage struct {
 	UsageInUsermode uint64 `json:"usage_in_usermode"`
 }
 
-type CpuStats struct {
-	CpuUsage       CpuUsage       `json:"cpu_usage,omitempty"`
+type CPUStats struct {
+	CPUUsage       CPUUsage       `json:"cpu_usage,omitempty"`
 	ThrottlingData ThrottlingData `json:"throttling_data,omitempty"`
 }
 
@@ -109,7 +109,7 @@ type PageStats struct {
 	Nodes map[uint8]uint64 `json:"nodes,omitempty"`
 }
 
-type PidsStats struct {
+type PIDsStats struct {
 	// number of pids in the cgroup
 	Current uint64 `json:"current,omitempty"`
 	// active pids hard limit
@@ -156,10 +156,10 @@ type RdmaStats struct {
 }
 
 type Stats struct {
-	CpuStats    CpuStats    `json:"cpu_stats,omitempty"`
+	CPUStats    CPUStats    `json:"cpu_stats,omitempty"`
 	CPUSetStats CPUSetStats `json:"cpuset_stats,omitempty"`
 	MemoryStats MemoryStats `json:"memory_stats,omitempty"`
-	PidsStats   PidsStats   `json:"pids_stats,omitempty"`
+	PIDsStats   PIDsStats   `json:"pids_stats,omitempty"`
 	BlkioStats  BlkioStats  `json:"blkio_stats,omitempty"`
 	// the map is in the format "size of hugepage: stats of the hugepage"
 	HugetlbStats map[string]HugetlbStats `json:"hugetlb_stats,omitempty"`

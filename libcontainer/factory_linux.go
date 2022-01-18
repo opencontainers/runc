@@ -48,7 +48,7 @@ func InitArgs(args ...string) func(*LinuxFactory) error {
 	}
 }
 
-// IntelRdtfs is an options func to configure a LinuxFactory to return
+// IntelRdtFs is an options func to configure a LinuxFactory to return
 // containers that use the Intel RDT "resource control" filesystem to
 // create and manage Intel RDT resources (e.g., L3 cache, memory bandwidth).
 func IntelRdtFs(l *LinuxFactory) error {
@@ -76,11 +76,11 @@ func TmpfsRoot(l *LinuxFactory) error {
 	return nil
 }
 
-// CriuPath returns an option func to configure a LinuxFactory with the
+// CRIUPath returns an option func to configure a LinuxFactory with the
 // provided criupath
-func CriuPath(criupath string) func(*LinuxFactory) error {
+func CRIUPath(criupath string) func(*LinuxFactory) error {
 	return func(l *LinuxFactory) error {
-		l.CriuPath = criupath
+		l.CRIUPath = criupath
 		return nil
 	}
 }
@@ -98,7 +98,7 @@ func New(root string, options ...func(*LinuxFactory) error) (Factory, error) {
 		InitPath:  "/proc/self/exe",
 		InitArgs:  []string{os.Args[0], "init"},
 		Validator: validate.New(),
-		CriuPath:  "criu",
+		CRIUPath:  "criu",
 	}
 
 	for _, opt := range options {
@@ -125,14 +125,14 @@ type LinuxFactory struct {
 	// a container.
 	InitArgs []string
 
-	// CriuPath is the path to the criu binary used for checkpoint and restore of
+	// CRIUPath is the path to the criu binary used for checkpoint and restore of
 	// containers.
-	CriuPath string
+	CRIUPath string
 
 	// New{u,g}idmapPath is the path to the binaries used for mapping with
 	// rootless containers.
-	NewuidmapPath string
-	NewgidmapPath string
+	NewUIDMapPath string
+	NewGIDMapPath string
 
 	// Validator provides validation to container configurations.
 	Validator validate.Validator
@@ -207,9 +207,9 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 		config:        config,
 		initPath:      l.InitPath,
 		initArgs:      l.InitArgs,
-		criuPath:      l.CriuPath,
-		newuidmapPath: l.NewuidmapPath,
-		newgidmapPath: l.NewgidmapPath,
+		criuPath:      l.CRIUPath,
+		newuidmapPath: l.NewUIDMapPath,
+		newgidmapPath: l.NewGIDMapPath,
 		cgroupManager: cm,
 	}
 	if l.NewIntelRdtManager != nil {
@@ -251,9 +251,9 @@ func (l *LinuxFactory) Load(id string) (Container, error) {
 		config:               &state.Config,
 		initPath:             l.InitPath,
 		initArgs:             l.InitArgs,
-		criuPath:             l.CriuPath,
-		newuidmapPath:        l.NewuidmapPath,
-		newgidmapPath:        l.NewgidmapPath,
+		criuPath:             l.CRIUPath,
+		newuidmapPath:        l.NewUIDMapPath,
+		newgidmapPath:        l.NewGIDMapPath,
 		cgroupManager:        cm,
 		root:                 containerRoot,
 		created:              state.Created,
@@ -379,34 +379,34 @@ func (l *LinuxFactory) validateID(id string) error {
 	return nil
 }
 
-// NewuidmapPath returns an option func to configure a LinuxFactory with the
+// NewUIDMapPath returns an option func to configure a LinuxFactory with the
 // provided ..
-func NewuidmapPath(newuidmapPath string) func(*LinuxFactory) error {
+func NewUIDMapPath(newuidmapPath string) func(*LinuxFactory) error {
 	return func(l *LinuxFactory) error {
-		l.NewuidmapPath = newuidmapPath
+		l.NewUIDMapPath = newuidmapPath
 		return nil
 	}
 }
 
-// NewgidmapPath returns an option func to configure a LinuxFactory with the
+// NewGIDMapPath returns an option func to configure a LinuxFactory with the
 // provided ..
-func NewgidmapPath(newgidmapPath string) func(*LinuxFactory) error {
+func NewGIDMapPath(newgidmapPath string) func(*LinuxFactory) error {
 	return func(l *LinuxFactory) error {
-		l.NewgidmapPath = newgidmapPath
+		l.NewGIDMapPath = newgidmapPath
 		return nil
 	}
 }
 
 func parseMountFds() ([]int, error) {
-	fdsJson := os.Getenv("_LIBCONTAINER_MOUNT_FDS")
-	if fdsJson == "" {
+	fdsJSON := os.Getenv("_LIBCONTAINER_MOUNT_FDS")
+	if fdsJSON == "" {
 		// Always return the nil slice if no fd is present.
 		return nil, nil
 	}
 
 	var mountFds []int
-	if err := json.Unmarshal([]byte(fdsJson), &mountFds); err != nil {
-		return nil, fmt.Errorf("Error unmarshalling _LIBCONTAINER_MOUNT_FDS: %w", err)
+	if err := json.Unmarshal([]byte(fdsJSON), &mountFds); err != nil {
+		return nil, fmt.Errorf("error unmarshalling _LIBCONTAINER_MOUNT_FDS: %w", err)
 	}
 
 	return mountFds, nil

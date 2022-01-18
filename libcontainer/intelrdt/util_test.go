@@ -15,14 +15,14 @@ import (
 type intelRdtTestUtil struct {
 	config *configs.Config
 
-	// Path to the mock Intel RDT "resource control" filesystem directory
+	// IntelRdtPath is the path to the mock Intel RDT "resource control" filesystem directory.
 	IntelRdtPath string
 
 	t *testing.T
 }
 
-// Creates a new test util
-func NewIntelRdtTestUtil(t *testing.T) *intelRdtTestUtil {
+// newIntelRdtTestUtil creates a new test util.
+func newIntelRdtTestUtil(t *testing.T) *intelRdtTestUtil {
 	config := &configs.Config{
 		IntelRdt: &configs.IntelRdt{},
 	}

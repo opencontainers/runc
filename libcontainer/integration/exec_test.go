@@ -515,18 +515,18 @@ func testFreeze(t *testing.T, withSystemd bool, useSet bool) {
 	waitProcess(pconfig, t)
 }
 
-func TestCpuShares(t *testing.T) {
-	testCpuShares(t, false)
+func TestCPUShares(t *testing.T) {
+	testCPUShares(t, false)
 }
 
-func TestCpuSharesSystemd(t *testing.T) {
+func TestCPUSharesSystemd(t *testing.T) {
 	if !systemd.IsRunningSystemd() {
 		t.Skip("Test requires systemd.")
 	}
-	testCpuShares(t, true)
+	testCPUShares(t, true)
 }
 
-func testCpuShares(t *testing.T, systemd bool) {
+func testCPUShares(t *testing.T, systemd bool) {
 	if testing.Short() {
 		return
 	}
@@ -535,7 +535,7 @@ func testCpuShares(t *testing.T, systemd bool) {
 	}
 
 	config := newTemplateConfig(t, &tParam{systemd: systemd})
-	config.Cgroups.Resources.CpuShares = 1
+	config.Cgroups.Resources.CPUShares = 1
 
 	if _, _, err := runContainer(t, config, "ps"); err == nil {
 		t.Fatalf("runContainer should failed with invalid CpuShares")
@@ -559,7 +559,7 @@ func testPids(t *testing.T, systemd bool) {
 	}
 
 	config := newTemplateConfig(t, &tParam{systemd: systemd})
-	config.Cgroups.Resources.PidsLimit = -1
+	config.Cgroups.Resources.PIDsLimit = -1
 
 	// Running multiple processes.
 	_, ret, err := runContainer(t, config, "/bin/sh", "-c", "/bin/true | /bin/true | /bin/true | /bin/true")
@@ -571,7 +571,7 @@ func testPids(t *testing.T, systemd bool) {
 
 	// Enforce a permissive limit. This needs to be fairly hand-wavey due to the
 	// issues with running Go binaries with pids restrictions (see below).
-	config.Cgroups.Resources.PidsLimit = 64
+	config.Cgroups.Resources.PIDsLimit = 64
 	_, ret, err = runContainer(t, config, "/bin/sh", "-c", `
 	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
 	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
@@ -585,7 +585,7 @@ func testPids(t *testing.T, systemd bool) {
 
 	// Enforce a restrictive limit. 64 * /bin/true + 1 * shell should cause this
 	// to fail reliability.
-	config.Cgroups.Resources.PidsLimit = 64
+	config.Cgroups.Resources.PIDsLimit = 64
 	out, _, err := runContainer(t, config, "/bin/sh", "-c", `
 	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
 	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
@@ -633,7 +633,7 @@ func testCgroupResourcesUnifiedErrorOnV1(t *testing.T, systemd bool) {
 		"memory.min": "10240",
 	}
 	_, _, err := runContainer(t, config, "true")
-	if !strings.Contains(err.Error(), cgroups.ErrV1NoUnified.Error()) {
+	if err == nil || !strings.Contains(err.Error(), cgroups.ErrV1NoUnified.Error()) {
 		t.Fatalf("expected error to contain %v, got %v", cgroups.ErrV1NoUnified, err)
 	}
 }
@@ -728,8 +728,12 @@ func testCgroupResourcesUnified(t *testing.T, systemd bool) {
 			continue
 		}
 		if err != nil {
+			var stdErr string
+			if buffers != nil {
+				stdErr = buffers.Stderr.String()
+			}
 			t.Errorf("case %q failed: expected no error, got %v (command: %v, status: %d, stderr: %q)",
-				tc.name, err, tc.cmd, ret, buffers.Stderr.String())
+				tc.name, err, tc.cmd, ret, stdErr)
 			continue
 		}
 		if tc.exp != "" {
@@ -1021,7 +1025,7 @@ func TestOomScoreAdj(t *testing.T) {
 	}
 
 	config := newTemplateConfig(t, nil)
-	config.OomScoreAdj = ptrInt(200)
+	config.OOMScoreAdj = ptrInt(200)
 
 	container, err := newContainer(t, config)
 	ok(t, err)
@@ -1044,8 +1048,8 @@ func TestOomScoreAdj(t *testing.T) {
 	outputOomScoreAdj := strings.TrimSpace(stdout.String())
 
 	// Check that the oom_score_adj matches the value that was set as part of config.
-	if outputOomScoreAdj != strconv.Itoa(*config.OomScoreAdj) {
-		t.Fatalf("Expected oom_score_adj %d; got %q", *config.OomScoreAdj, outputOomScoreAdj)
+	if outputOomScoreAdj != strconv.Itoa(*config.OOMScoreAdj) {
+		t.Fatalf("Expected oom_score_adj %d; got %q", *config.OOMScoreAdj, outputOomScoreAdj)
 	}
 }
 
@@ -1873,8 +1877,8 @@ func TestBindMountAndUser(t *testing.T) {
 	})
 
 	// Set HostID to 1000 to avoid DAC_OVERRIDE bypassing the purpose of this test.
-	config.UidMappings[0].HostID = 1000
-	config.GidMappings[0].HostID = 1000
+	config.UIDMappings[0].HostID = 1000
+	config.GIDMappings[0].HostID = 1000
 
 	// Set the owner of rootfs to the effective IDs in the host to avoid errors
 	// while creating the folders to perform the mounts.

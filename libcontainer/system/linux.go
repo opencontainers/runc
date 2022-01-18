@@ -50,10 +50,7 @@ func Exec(cmd string, args []string, env []string) error {
 }
 
 func SetParentDeathSignal(sig uintptr) error {
-	if err := unix.Prctl(unix.PR_SET_PDEATHSIG, sig, 0, 0, 0); err != nil {
-		return err
-	}
-	return nil
+	return unix.Prctl(unix.PR_SET_PDEATHSIG, sig, 0, 0, 0)
 }
 
 func GetParentDeathSignal() (ParentDeathSignal, error) {
@@ -65,26 +62,15 @@ func GetParentDeathSignal() (ParentDeathSignal, error) {
 }
 
 func SetKeepCaps() error {
-	if err := unix.Prctl(unix.PR_SET_KEEPCAPS, 1, 0, 0, 0); err != nil {
-		return err
-	}
-
-	return nil
+	return unix.Prctl(unix.PR_SET_KEEPCAPS, 1, 0, 0, 0)
 }
 
 func ClearKeepCaps() error {
-	if err := unix.Prctl(unix.PR_SET_KEEPCAPS, 0, 0, 0, 0); err != nil {
-		return err
-	}
-
-	return nil
+	return unix.Prctl(unix.PR_SET_KEEPCAPS, 0, 0, 0, 0)
 }
 
 func Setctty() error {
-	if err := unix.IoctlSetInt(0, unix.TIOCSCTTY, 0); err != nil {
-		return err
-	}
-	return nil
+	return unix.IoctlSetInt(0, unix.TIOCSCTTY, 0)
 }
 
 // SetSubreaper sets the value i as the subreaper setting for the calling process

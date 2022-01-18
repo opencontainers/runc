@@ -117,18 +117,18 @@ func convertLibcontainerStats(ls *libcontainer.Stats) *types.Stats {
 		return nil
 	}
 	var s types.Stats
-	s.Pids.Current = cg.PidsStats.Current
-	s.Pids.Limit = cg.PidsStats.Limit
+	s.Pids.Current = cg.PIDsStats.Current
+	s.Pids.Limit = cg.PIDsStats.Limit
 
-	s.CPU.Usage.Kernel = cg.CpuStats.CpuUsage.UsageInKernelmode
-	s.CPU.Usage.User = cg.CpuStats.CpuUsage.UsageInUsermode
-	s.CPU.Usage.Total = cg.CpuStats.CpuUsage.TotalUsage
-	s.CPU.Usage.Percpu = cg.CpuStats.CpuUsage.PercpuUsage
-	s.CPU.Usage.PercpuKernel = cg.CpuStats.CpuUsage.PercpuUsageInKernelmode
-	s.CPU.Usage.PercpuUser = cg.CpuStats.CpuUsage.PercpuUsageInUsermode
-	s.CPU.Throttling.Periods = cg.CpuStats.ThrottlingData.Periods
-	s.CPU.Throttling.ThrottledPeriods = cg.CpuStats.ThrottlingData.ThrottledPeriods
-	s.CPU.Throttling.ThrottledTime = cg.CpuStats.ThrottlingData.ThrottledTime
+	s.CPU.Usage.Kernel = cg.CPUStats.CPUUsage.UsageInKernelmode
+	s.CPU.Usage.User = cg.CPUStats.CPUUsage.UsageInUsermode
+	s.CPU.Usage.Total = cg.CPUStats.CPUUsage.TotalUsage
+	s.CPU.Usage.PerCPU = cg.CPUStats.CPUUsage.PerCPUUsage
+	s.CPU.Usage.PerCPUKernel = cg.CPUStats.CPUUsage.PerCPUUsageInKernelmode
+	s.CPU.Usage.PerCPUUser = cg.CPUStats.CPUUsage.PerCPUUsageInUsermode
+	s.CPU.Throttling.Periods = cg.CPUStats.ThrottlingData.Periods
+	s.CPU.Throttling.ThrottledPeriods = cg.CPUStats.ThrottlingData.ThrottledPeriods
+	s.CPU.Throttling.ThrottledTime = cg.CPUStats.ThrottlingData.ThrottledTime
 
 	s.CPUSet = types.CPUSet(cg.CPUSetStats)
 

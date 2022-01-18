@@ -7,6 +7,7 @@ import (
 )
 
 const (
+	// Wildcard is used as value for device major/minor wildcard (*).
 	Wildcard = -1
 )
 
@@ -19,11 +20,11 @@ type Device struct {
 	// FileMode permission bits for the device.
 	FileMode os.FileMode `json:"file_mode"`
 
-	// Uid of the device.
-	Uid uint32 `json:"uid"`
+	// UID of the device.
+	UID uint32 `json:"uid"`
 
-	// Gid of the device.
-	Gid uint32 `json:"gid"`
+	// GID of the device.
+	GID uint32 `json:"gid"`
 }
 
 // Permissions is a cgroupv1-style string to represent device access. It
@@ -100,8 +101,10 @@ func (p Permissions) IsValid() bool {
 	return p == fromSet(p.toSet())
 }
 
+// Type describes a device type.
 type Type rune
 
+// Device type values.
 const (
 	WildcardDevice Type = 'a'
 	BlockDevice    Type = 'b'

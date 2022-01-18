@@ -192,7 +192,7 @@ func (p *setnsProcess) start() (retErr error) {
 				Metadata: p.config.Config.Seccomp.ListenerMetadata,
 				State: specs.State{
 					Version:     specs.Version,
-					ID:          p.config.ContainerId,
+					ID:          p.config.ContainerID,
 					Status:      specs.StateRunning,
 					Pid:         p.initProcessPid,
 					Bundle:      bundle,

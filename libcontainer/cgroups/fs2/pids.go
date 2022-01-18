@@ -14,14 +14,14 @@ import (
 )
 
 func isPidsSet(r *configs.Resources) bool {
-	return r.PidsLimit != 0
+	return r.PIDsLimit != 0
 }
 
 func setPids(dirPath string, r *configs.Resources) error {
 	if !isPidsSet(r) {
 		return nil
 	}
-	if val := numToStr(r.PidsLimit); val != "" {
+	if val := numToStr(r.PIDsLimit); val != "" {
 		if err := cgroups.WriteFile(dirPath, "pids.max", val); err != nil {
 			return err
 		}
@@ -41,8 +41,8 @@ func statPidsFromCgroupProcs(dirPath string, stats *cgroups.Stats) error {
 		return err
 	}
 	pids := strings.Count(contents, "\n")
-	stats.PidsStats.Current = uint64(pids)
-	stats.PidsStats.Limit = 0
+	stats.PIDsStats.Current = uint64(pids)
+	stats.PIDsStats.Limit = 0
 	return nil
 }
 
@@ -66,7 +66,7 @@ func statPids(dirPath string, stats *cgroups.Stats) error {
 		max = 0
 	}
 
-	stats.PidsStats.Current = current
-	stats.PidsStats.Limit = max
+	stats.PIDsStats.Current = current
+	stats.PIDsStats.Limit = max
 	return nil
 }

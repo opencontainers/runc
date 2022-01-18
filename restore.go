@@ -113,7 +113,7 @@ using the runc checkpoint command.`,
 		if err := setEmptyNsMask(context, options); err != nil {
 			return err
 		}
-		status, err := startContainer(context, CT_ACT_RESTORE, options)
+		status, err := startContainer(context, actRestore, options)
 		if err != nil {
 			return err
 		}
@@ -124,18 +124,18 @@ using the runc checkpoint command.`,
 	},
 }
 
-func criuOptions(context *cli.Context) *libcontainer.CriuOpts {
+func criuOptions(context *cli.Context) *libcontainer.CRIUOpts {
 	imagePath, parentPath, err := prepareImagePaths(context)
 	if err != nil {
 		fatal(err)
 	}
 
-	return &libcontainer.CriuOpts{
+	return &libcontainer.CRIUOpts{
 		ImagesDirectory:         imagePath,
 		WorkDirectory:           context.String("work-path"),
 		ParentImage:             parentPath,
 		LeaveRunning:            context.Bool("leave-running"),
-		TcpEstablished:          context.Bool("tcp-established"),
+		TCPEstablished:          context.Bool("tcp-established"),
 		ExternalUnixConnections: context.Bool("ext-unix-sk"),
 		ShellJob:                context.Bool("shell-job"),
 		FileLocks:               context.Bool("file-locks"),

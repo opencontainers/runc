@@ -50,7 +50,7 @@ func TestCPUSetSetCpus(t *testing.T) {
 	})
 
 	r := &configs.Resources{
-		CpusetCpus: cpusAfter,
+		CPUSetCPUs: cpusAfter,
 	}
 	cpuset := &CpusetGroup{}
 	if err := cpuset.Set(path, r); err != nil {
@@ -79,7 +79,7 @@ func TestCPUSetSetMems(t *testing.T) {
 	})
 
 	r := &configs.Resources{
-		CpusetMems: memsAfter,
+		CPUSetMems: memsAfter,
 	}
 	cpuset := &CpusetGroup{}
 	if err := cpuset.Set(path, r); err != nil {

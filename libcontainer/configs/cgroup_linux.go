@@ -5,8 +5,10 @@ import (
 	"github.com/opencontainers/runc/libcontainer/devices"
 )
 
+// FreezerState is a state of the freezer cgroup.
 type FreezerState string
 
+// Possible values for FreezerState.
 const (
 	Undefined FreezerState = ""
 	Frozen    FreezerState = "FROZEN"
@@ -64,28 +66,28 @@ type Resources struct {
 	MemorySwap int64 `json:"memory_swap"`
 
 	// CPU shares (relative weight vs. other containers)
-	CpuShares uint64 `json:"cpu_shares"`
+	CPUShares uint64 `json:"cpu_shares"`
 
 	// CPU hardcap limit (in usecs). Allowed cpu time in a given period.
-	CpuQuota int64 `json:"cpu_quota"`
+	CPUQuota int64 `json:"cpu_quota"`
 
 	// CPU period to be used for hardcapping (in usecs). 0 to use system default.
-	CpuPeriod uint64 `json:"cpu_period"`
+	CPUPeriod uint64 `json:"cpu_period"`
 
 	// How many time CPU will use in realtime scheduling (in usecs).
-	CpuRtRuntime int64 `json:"cpu_rt_quota"`
+	CPURtRuntime int64 `json:"cpu_rt_quota"`
 
 	// CPU period to be used for realtime scheduling (in usecs).
-	CpuRtPeriod uint64 `json:"cpu_rt_period"`
+	CPURtPeriod uint64 `json:"cpu_rt_period"`
 
 	// CPU to use
-	CpusetCpus string `json:"cpuset_cpus"`
+	CPUSetCPUs string `json:"cpuset_cpus"`
 
 	// MEM to use
-	CpusetMems string `json:"cpuset_mems"`
+	CPUSetMems string `json:"cpuset_mems"`
 
 	// Process limit; set <= `0' to disable limit.
-	PidsLimit int64 `json:"pids_limit"`
+	PIDsLimit int64 `json:"pids_limit"`
 
 	// Specifies per cgroup weight, range is from 10 to 1000.
 	BlkioWeight uint16 `json:"blkio_weight"`
@@ -115,7 +117,7 @@ type Resources struct {
 	HugetlbLimit []*HugepageLimit `json:"hugetlb_limit"`
 
 	// Whether to disable OOM Killer
-	OomKillDisable bool `json:"oom_kill_disable"`
+	OOMKillDisable bool `json:"oom_kill_disable"`
 
 	// Tuning swappiness behaviour per cgroup
 	MemorySwappiness *uint64 `json:"memory_swappiness"`
@@ -131,8 +133,8 @@ type Resources struct {
 
 	// Used on cgroups v2:
 
-	// CpuWeight sets a proportional bandwidth limit.
-	CpuWeight uint64 `json:"cpu_weight"`
+	// CPUWeight sets a proportional bandwidth limit.
+	CPUWeight uint64 `json:"cpu_weight"`
 
 	// Unified is cgroupv2-only key-value map.
 	Unified map[string]string `json:"unified"`

@@ -48,10 +48,10 @@ func needAnyControllers(r *configs.Resources) (bool, error) {
 	if isIoSet(r) && have("io") {
 		return true, nil
 	}
-	if isCpuSet(r) && have("cpu") {
+	if isCPUSet(r) && have("cpu") {
 		return true, nil
 	}
-	if isCpusetSet(r) && have("cpuset") {
+	if isCPUSetSet(r) && have("cpuset") {
 		return true, nil
 	}
 	if isHugeTlbSet(r) && have("hugetlb") {
@@ -65,7 +65,7 @@ func needAnyControllers(r *configs.Resources) (bool, error) {
 // Refer to: http://man7.org/linux/man-pages/man7/cgroups.7.html
 // As at Linux 4.19, the following controllers are threaded: cpu, perf_event, and pids.
 func containsDomainController(r *configs.Resources) bool {
-	return isMemorySet(r) || isIoSet(r) || isCpuSet(r) || isHugeTlbSet(r)
+	return isMemorySet(r) || isIoSet(r) || isCPUSet(r) || isHugeTlbSet(r)
 }
 
 // CreateCgroupPath creates cgroupv2 path, enabling all the supported controllers.
@@ -117,13 +117,12 @@ func CreateCgroupPath(path string, c *configs.Cgroup) (Err error) {
 			case "domain invalid":
 				if containsDomainController(c.Resources) {
 					return fmt.Errorf("cannot enter cgroupv2 %q with domain controllers -- it is in an invalid state", current)
-				} else {
-					// Not entirely correct (in theory we'd always want to be a domain --
-					// since that means we're a properly delegated cgroup subtree) but in
-					// this case there's not much we can do and it's better than giving an
-					// error.
-					_ = cgroups.WriteFile(current, cgTypeFile, "threaded")
 				}
+				// Not entirely correct (in theory we'd always want to be a domain --
+				// since that means we're a properly delegated cgroup subtree) but in
+				// this case there's not much we can do and it's better than giving an
+				// error.
+				_ = cgroups.WriteFile(current, cgTypeFile, "threaded")
 			// If the cgroup is in (threaded) or (domain threaded) mode, we can only use thread-aware controllers
 			// (and you cannot usually take a cgroup out of threaded mode).
 			case "domain threaded":

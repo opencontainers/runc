@@ -226,7 +226,7 @@ func matchCall(filter *libseccomp.ScmpFilter, call *configs.Syscall, defAct libs
 				return fmt.Errorf("error creating seccomp syscall condition for syscall %s: %w", call.Name, err)
 			}
 
-			argCounts[cond.Index] += 1
+			argCounts[cond.Index]++
 
 			conditions = append(conditions, newCond)
 		}

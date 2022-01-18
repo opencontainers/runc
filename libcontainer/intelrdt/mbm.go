@@ -1,9 +1,9 @@
 package intelrdt
 
-// The flag to indicate if Intel RDT/MBM is enabled
+// mbmEnabled indicates if Intel RDT/MBM is enabled.
 var mbmEnabled bool
 
-// Check if Intel RDT/MBM is enabled.
+// IsMBMEnabled checks if Intel RDT/MBM is enabled.
 func IsMBMEnabled() bool {
 	featuresInit()
 	return mbmEnabled

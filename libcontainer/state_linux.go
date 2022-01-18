@@ -71,11 +71,7 @@ func runPoststopHooks(c *linuxContainer) error {
 	}
 	s.Status = specs.StateStopped
 
-	if err := hooks[configs.Poststop].RunHooks(s); err != nil {
-		return err
-	}
-
-	return nil
+	return hooks[configs.Poststop].RunHooks(s)
 }
 
 // stoppedState represents a container is a stopped/destroyed state.

@@ -18,9 +18,13 @@ import (
 )
 
 const (
-	CgroupProcesses   = "cgroup.procs"
+	cgroupProcesses   = "cgroup.procs"
 	unifiedMountpoint = "/sys/fs/cgroup"
 	hybridMountpoint  = "/sys/fs/cgroup/unified"
+
+	// maxShares corresponds to MAX_SHARES in the Linux kernel.
+	// https://github.com/torvalds/linux/blob/16b3d0cf5bad844daaf436ad2e9061de0fe36e5c/kernel/sched/sched.h#L449
+	maxShares = 262142
 )
 
 var (
@@ -137,7 +141,7 @@ func GetAllSubsystems() ([]string, error) {
 }
 
 func readProcsFile(dir string) ([]int, error) {
-	f, err := OpenFile(dir, CgroupProcesses, os.O_RDONLY)
+	f, err := OpenFile(dir, cgroupProcesses, os.O_RDONLY)
 	if err != nil {
 		return nil, err
 	}
@@ -383,7 +387,7 @@ func WriteCgroupProc(dir string, pid int) error {
 	// Normally dir should not be empty, one case is that cgroup subsystem
 	// is not mounted, we will get empty dir, and we want it fail here.
 	if dir == "" {
-		return fmt.Errorf("no such directory for %s", CgroupProcesses)
+		return fmt.Errorf("no such directory for %s", cgroupProcesses)
 	}
 
 	// Dont attach any pid to the cgroup if -1 is specified as a pid
@@ -391,7 +395,7 @@ func WriteCgroupProc(dir string, pid int) error {
 		return nil
 	}
 
-	file, err := OpenFile(dir, CgroupProcesses, os.O_WRONLY)
+	file, err := OpenFile(dir, cgroupProcesses, os.O_WRONLY)
 	if err != nil {
 		return fmt.Errorf("failed to write %v: %w", pid, err)
 	}
@@ -415,16 +419,20 @@ func WriteCgroupProc(dir string, pid int) error {
 	return err
 }
 
-// Since the OCI spec is designed for cgroup v1, in some cases
-// there is need to convert from the cgroup v1 configuration to cgroup v2
-// the formula for cpuShares is y = (1 + ((x - 2) * 9999) / 262142)
-// convert from [2-262144] to [1-10000]
-// 262144 comes from Linux kernel definition "#define MAX_SHARES (1UL << 18)"
+// The OCI spec is designed for cgroup v1, in some cases there is need to
+// convert from the cgroup v1 configuration to cgroup v2. A few functions
+// below are doing such conversion.
+
+// ConvertCPUSharesToCgroupV2Value converts a CPU shares cgroup v1 configuration
+// to cgroup v2.
+//
+// The formula for CPU shares is y = (1 + ((x - 2) * 9999) / 262142) to convert
+// from [2-262144] to [1-10000].
 func ConvertCPUSharesToCgroupV2Value(cpuShares uint64) uint64 {
 	if cpuShares == 0 {
 		return 0
 	}
-	return (1 + ((cpuShares-2)*9999)/262142)
+	return 1 + ((cpuShares-2)*9999)/maxShares
 }
 
 // ConvertMemorySwapToCgroupV2Value converts MemorySwap value from OCI spec
@@ -455,10 +463,11 @@ func ConvertMemorySwapToCgroupV2Value(memorySwap, memory int64) (int64, error) {
 	return memorySwap - memory, nil
 }
 
-// Since the OCI spec is designed for cgroup v1, in some cases
-// there is need to convert from the cgroup v1 configuration to cgroup v2
-// the formula for BlkIOWeight to IOWeight is y = (1 + (x - 10) * 9999 / 990)
-// convert linearly from [10-1000] to [1-10000]
+// ConvertBlkIOToIOWeightValue converts a BlkIOWeight cgroup v1 configuration
+// to cgroup v2.
+//
+// The formula for BlkIOWeight to IOWeight is y = (1 + (x - 10) * 9999 / 990)
+// to convert linearly from [10-1000] to [1-10000].
 func ConvertBlkIOToIOWeightValue(blkIoWeight uint16) uint64 {
 	if blkIoWeight == 0 {
 		return 0

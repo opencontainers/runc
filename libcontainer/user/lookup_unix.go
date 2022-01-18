@@ -26,12 +26,12 @@ func LookupUser(username string) (User, error) {
 	})
 }
 
-// LookupUid looks up a user by their user id in /etc/passwd. If the user cannot
+// LookupUID looks up a user by their user id in /etc/passwd. If the user cannot
 // be found (or there is no /etc/passwd file on the filesystem), then LookupId
 // returns an error.
-func LookupUid(uid int) (User, error) {
+func LookupUID(uid int) (User, error) {
 	return lookupUserFunc(func(u User) bool {
-		return u.Uid == uid
+		return u.UID == uid
 	})
 }
 
@@ -72,7 +72,7 @@ func LookupGroup(groupname string) (Group, error) {
 // returns an error.
 func LookupGid(gid int) (Group, error) {
 	return lookupGroupFunc(func(g Group) bool {
-		return g.Gid == gid
+		return g.GID == gid
 	})
 }
 
@@ -119,7 +119,7 @@ func GetGroup() (io.ReadCloser, error) {
 // user cannot be found (or there is no /etc/passwd file on the filesystem),
 // then CurrentUser returns an error.
 func CurrentUser() (User, error) {
-	return LookupUid(unix.Getuid())
+	return LookupUID(unix.Getuid())
 }
 
 // CurrentGroup looks up the current user's group by their primary group id's
@@ -135,7 +135,7 @@ func currentUserSubIDs(fileName string) ([]SubID, error) {
 		return nil, err
 	}
 	filter := func(entry SubID) bool {
-		return entry.Name == u.Name || entry.Name == strconv.Itoa(u.Uid)
+		return entry.Name == u.Name || entry.Name == strconv.Itoa(u.UID)
 	}
 	return ParseSubIDFileFilter(fileName, filter)
 }

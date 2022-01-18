@@ -17,7 +17,7 @@ var subsystems = []subsystem{
 	&CpusetGroup{},
 	&DevicesGroup{},
 	&MemoryGroup{},
-	&CpuGroup{},
+	&CPUGroup{},
 	&CpuacctGroup{},
 	&PidsGroup{},
 	&BlkioGroup{},

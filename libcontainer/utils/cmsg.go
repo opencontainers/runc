@@ -23,7 +23,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// MaxSendfdLen is the maximum length of the name of a file descriptor being
+// MaxNameLen is the maximum length of the name of a file descriptor being
 // sent using SendFd. The name of the file handle returned by RecvFd will never
 // be larger than this value.
 const MaxNameLen = 4096

@@ -37,13 +37,13 @@ var (
 	isRunningSystemd     bool
 )
 
-// NOTE: This function comes from package github.com/coreos/go-systemd/util
-// It was borrowed here to avoid a dependency on cgo.
-//
 // IsRunningSystemd checks whether the host was booted with systemd as its init
 // system. This functions similarly to systemd's `sd_booted(3)`: internally, it
 // checks whether /run/systemd/system/ exists and is a directory.
 // http://www.freedesktop.org/software/systemd/man/sd_booted.html
+//
+// NOTE: This function comes from package github.com/coreos/go-systemd/util
+// It was borrowed here to avoid a dependency on cgo.
 func IsRunningSystemd() bool {
 	isRunningSystemdOnce.Do(func() {
 		fi, err := os.Lstat("/run/systemd/system")
@@ -52,7 +52,9 @@ func IsRunningSystemd() bool {
 	return isRunningSystemd
 }
 
-// systemd represents slice hierarchy using `-`, so we need to follow suit when
+// ExpandSlice expands the path of a systemd representation of a slice hierarchy.
+//
+// Systemd represents slice hierarchy using `-`, so we need to follow suit when
 // generating the path of slice. Essentially, test-a-b.slice becomes
 // /test.slice/test-a.slice/test-a-b.slice.
 func ExpandSlice(slice string) (string, error) {
@@ -159,8 +161,8 @@ func findDeviceGroup(ruleType devices.Type, ruleMajor int64) (string, error) {
 	return "", nil
 }
 
-// DeviceAllow is the dbus type "a(ss)" which means we need a struct
-// to represent it in Go.
+// deviceAllowEntry is a type representing an entry for DeviceAllow
+// dbus property value, which has dbus type of "a(ss)".
 type deviceAllowEntry struct {
 	Path  string
 	Perms string
@@ -459,7 +461,7 @@ func systemdVersionAtoi(verStr string) (int, error) {
 	return ver, nil
 }
 
-func addCpuQuota(cm *dbusConnManager, properties *[]systemdDbus.Property, quota int64, period uint64) {
+func addCPUQuota(cm *dbusConnManager, properties *[]systemdDbus.Property, quota int64, period uint64) {
 	if period != 0 {
 		// systemd only supports CPUQuotaPeriodUSec since v242
 		sdVer := systemdVersion(cm)
@@ -493,7 +495,7 @@ func addCpuQuota(cm *dbusConnManager, properties *[]systemdDbus.Property, quota 
 	}
 }
 
-func addCpuset(cm *dbusConnManager, props *[]systemdDbus.Property, cpus, mems string) error {
+func addCPUSet(cm *dbusConnManager, props *[]systemdDbus.Property, cpus, mems string) error {
 	if cpus == "" && mems == "" {
 		return nil
 	}

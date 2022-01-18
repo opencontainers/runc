@@ -11,7 +11,9 @@ import (
 // State is the status of a process.
 type State rune
 
-const ( // Only values for Linux 3.14 and later are listed here
+// Process state values.
+// Only values for Linux 3.14 and later are listed here.
+const (
 	Dead        State = 'X'
 	DiskSleep   State = 'D'
 	Running     State = 'R'
@@ -53,7 +55,7 @@ func (s State) String() string {
 // Stat_t represents the information from /proc/[pid]/stat, as
 // described in proc(5) with names based on the /proc/[pid]/status
 // fields.
-type Stat_t struct {
+type Stat_t struct { //nolint:revive // ignore "type Stat_t should be StatT"
 	// Name is the command run by the process.
 	Name string
 

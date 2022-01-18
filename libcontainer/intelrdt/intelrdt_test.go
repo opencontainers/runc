@@ -10,7 +10,7 @@ import (
 )
 
 func TestIntelRdtSetL3CacheSchema(t *testing.T) {
-	helper := NewIntelRdtTestUtil(t)
+	helper := newIntelRdtTestUtil(t)
 
 	const (
 		l3CacheSchemaBefore = "L3:0=f;1=f0"
@@ -40,7 +40,7 @@ func TestIntelRdtSetL3CacheSchema(t *testing.T) {
 }
 
 func TestIntelRdtSetMemBwSchema(t *testing.T) {
-	helper := NewIntelRdtTestUtil(t)
+	helper := newIntelRdtTestUtil(t)
 
 	const (
 		memBwSchemaBefore = "MB:0=20;1=70"
@@ -70,7 +70,7 @@ func TestIntelRdtSetMemBwSchema(t *testing.T) {
 }
 
 func TestIntelRdtSetMemBwScSchema(t *testing.T) {
-	helper := NewIntelRdtTestUtil(t)
+	helper := newIntelRdtTestUtil(t)
 
 	const (
 		memBwScSchemaBefore = "MB:0=5000;1=7000"
@@ -100,7 +100,7 @@ func TestIntelRdtSetMemBwScSchema(t *testing.T) {
 }
 
 func TestApply(t *testing.T) {
-	helper := NewIntelRdtTestUtil(t)
+	helper := newIntelRdtTestUtil(t)
 
 	const closID = "test-clos"
 

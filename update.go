@@ -272,30 +272,30 @@ other options are ignored.
 		p, q := *r.CPU.Period, *r.CPU.Quota
 		if (p == 0 && q == 0) || (p != 0 && q != 0) {
 			// both values are either set or unset (0)
-			config.Cgroups.Resources.CpuPeriod = p
-			config.Cgroups.Resources.CpuQuota = q
+			config.Cgroups.Resources.CPUPeriod = p
+			config.Cgroups.Resources.CPUQuota = q
 		} else {
 			// one is set and the other is not
 			if p != 0 {
 				// set new period, leave quota at old value
-				config.Cgroups.Resources.CpuPeriod = p
+				config.Cgroups.Resources.CPUPeriod = p
 			} else if q != 0 {
 				// set new quota, leave period at old value
-				config.Cgroups.Resources.CpuQuota = q
+				config.Cgroups.Resources.CPUQuota = q
 			}
 		}
 
-		config.Cgroups.Resources.CpuShares = *r.CPU.Shares
+		config.Cgroups.Resources.CPUShares = *r.CPU.Shares
 		// CpuWeight is used for cgroupv2 and should be converted
-		config.Cgroups.Resources.CpuWeight = cgroups.ConvertCPUSharesToCgroupV2Value(*r.CPU.Shares)
-		config.Cgroups.Resources.CpuRtPeriod = *r.CPU.RealtimePeriod
-		config.Cgroups.Resources.CpuRtRuntime = *r.CPU.RealtimeRuntime
-		config.Cgroups.Resources.CpusetCpus = r.CPU.Cpus
-		config.Cgroups.Resources.CpusetMems = r.CPU.Mems
+		config.Cgroups.Resources.CPUWeight = cgroups.ConvertCPUSharesToCgroupV2Value(*r.CPU.Shares)
+		config.Cgroups.Resources.CPURtPeriod = *r.CPU.RealtimePeriod
+		config.Cgroups.Resources.CPURtRuntime = *r.CPU.RealtimeRuntime
+		config.Cgroups.Resources.CPUSetCPUs = r.CPU.Cpus
+		config.Cgroups.Resources.CPUSetMems = r.CPU.Mems
 		config.Cgroups.Resources.Memory = *r.Memory.Limit
 		config.Cgroups.Resources.MemoryReservation = *r.Memory.Reservation
 		config.Cgroups.Resources.MemorySwap = *r.Memory.Swap
-		config.Cgroups.Resources.PidsLimit = r.Pids.Limit
+		config.Cgroups.Resources.PIDsLimit = r.Pids.Limit
 		config.Cgroups.Resources.Unified = r.Unified
 
 		// Update Intel RDT

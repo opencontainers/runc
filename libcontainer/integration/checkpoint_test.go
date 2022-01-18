@@ -97,7 +97,7 @@ func testCheckpoint(t *testing.T, userns bool) {
 	tmp := t.TempDir()
 
 	parentDir := filepath.Join(tmp, "criu-parent")
-	preDumpOpts := &libcontainer.CriuOpts{
+	preDumpOpts := &libcontainer.CRIUOpts{
 		ImagesDirectory: parentDir,
 		WorkDirectory:   parentDir,
 		PreDump:         true,
@@ -118,7 +118,7 @@ func testCheckpoint(t *testing.T, userns bool) {
 
 	imagesDir := filepath.Join(tmp, "criu")
 
-	checkpointOpts := &libcontainer.CriuOpts{
+	checkpointOpts := &libcontainer.CRIUOpts{
 		ImagesDirectory: imagesDir,
 		WorkDirectory:   imagesDir,
 		ParentImage:     "../criu-parent",

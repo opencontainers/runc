@@ -42,7 +42,7 @@ func (l *linuxStandardInit) getSessionRingParams() (string, uint32, uint32) {
 
 	// Create a unique per session container name that we can join in setns;
 	// However, other containers can also join it.
-	return "_ses." + l.config.ContainerId, 0xffffffff, newperms
+	return "_ses." + l.config.ContainerID, 0xffffffff, newperms
 }
 
 func (l *linuxStandardInit) Init() error {
@@ -54,7 +54,7 @@ func (l *linuxStandardInit) Init() error {
 		ringname, keepperms, newperms := l.getSessionRingParams()
 
 		// Do not inherit the parent's session keyring.
-		if sessKeyId, err := keys.JoinSessionKeyring(ringname); err != nil {
+		if sessKeyID, err := keys.JoinSessionKeyring(ringname); err != nil {
 			// If keyrings aren't supported then it is likely we are on an
 			// older kernel (or inside an LXC container). While we could bail,
 			// the security feature we are using here is best-effort (it only
@@ -70,7 +70,7 @@ func (l *linuxStandardInit) Init() error {
 			// Make session keyring searchable. If we've gotten this far we
 			// bail on any error -- we don't want to have a keyring with bad
 			// permissions.
-			if err := keys.ModKeyringPerm(sessKeyId, keepperms, newperms); err != nil {
+			if err := keys.ModKeyringPerm(sessKeyID, keepperms, newperms); err != nil {
 				return fmt.Errorf("unable to mod keyring permissions: %w", err)
 			}
 		}
