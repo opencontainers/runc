@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -13,6 +12,8 @@ import (
 	"sync"
 
 	"github.com/moby/sys/mountinfo"
+	"golang.org/x/sys/unix"
+
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
@@ -194,21 +195,21 @@ var (
 	// For Intel RDT initialization
 	initOnce sync.Once
 
-	errNotFound = errors.New("Intel RDT resctrl mount point not found")
+	errNotFound = errors.New("Intel RDT not available")
 )
 
 // Check if Intel RDT sub-features are enabled in featuresInit()
 func featuresInit() {
 	initOnce.Do(func() {
-		// 1. Check if hardware and kernel support Intel RDT sub-features
-		flagsSet, err := parseCpuInfoFile("/proc/cpuinfo")
+		// 1. Check if Intel RDT "resource control" filesystem is available.
+		// The user guarantees to mount the filesystem.
+		root, err := Root()
 		if err != nil {
 			return
 		}
 
-		// 2. Check if Intel RDT "resource control" filesystem is available.
-		// The user guarantees to mount the filesystem.
-		root, err := Root()
+		// 2. Check if hardware and kernel support Intel RDT sub-features.
+		flagsSet, err := parseCpuInfoFile("/proc/cpuinfo")
 		if err != nil {
 			return
 		}
@@ -250,9 +251,9 @@ func featuresInit() {
 	})
 }
 
-// Return the mount point path of Intel RDT "resource control" filesysem
-func findIntelRdtMountpointDir(f io.Reader) (string, error) {
-	mi, err := mountinfo.GetMountsFromReader(f, func(m *mountinfo.Info) (bool, bool) {
+// Return the mount point path of Intel RDT "resource control" filesystem.
+func findIntelRdtMountpointDir() (string, error) {
+	mi, err := mountinfo.GetMounts(func(m *mountinfo.Info) (bool, bool) {
 		// similar to mountinfo.FSTypeFilter but stops after the first match
 		if m.FSType == "resctrl" {
 			return false, true // don't skip, stop
@@ -276,35 +277,30 @@ func findIntelRdtMountpointDir(f io.Reader) (string, error) {
 
 // For Root() use only.
 var (
-	intelRdtRoot string
-	rootMu       sync.Mutex
+	intelRdtRoot    string
+	intelRdtRootErr error
+	rootOnce        sync.Once
 )
 
 // Root returns the Intel RDT "resource control" filesystem mount point.
 func Root() (string, error) {
-	rootMu.Lock()
-	defer rootMu.Unlock()
+	rootOnce.Do(func() {
+		// If resctrl is available, kernel creates this directory.
+		if unix.Access("/sys/fs/resctrl", unix.F_OK) != nil {
+			intelRdtRootErr = errNotFound
+			return
+		}
 
-	if intelRdtRoot != "" {
-		return intelRdtRoot, nil
-	}
+		root, err := findIntelRdtMountpointDir()
+		if err != nil {
+			intelRdtRootErr = err
+			return
+		}
 
-	f, err := os.Open("/proc/self/mountinfo")
-	if err != nil {
-		return "", err
-	}
-	root, err := findIntelRdtMountpointDir(f)
-	f.Close()
-	if err != nil {
-		return "", err
-	}
+		intelRdtRoot = root
+	})
 
-	if _, err := os.Stat(root); err != nil {
-		return "", err
-	}
-
-	intelRdtRoot = root
-	return intelRdtRoot, nil
+	return intelRdtRoot, intelRdtRootErr
 }
 
 type cpuInfoFlags struct {
