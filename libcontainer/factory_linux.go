@@ -48,16 +48,14 @@ func InitArgs(args ...string) func(*LinuxFactory) error {
 	}
 }
 
-// IntelRdtfs is an options func to configure a LinuxFactory to return
+// IntelRdtFs is an options func to configure a LinuxFactory to return
 // containers that use the Intel RDT "resource control" filesystem to
 // create and manage Intel RDT resources (e.g., L3 cache, memory bandwidth).
 func IntelRdtFs(l *LinuxFactory) error {
-	if !intelrdt.IsCATEnabled() && !intelrdt.IsMBAEnabled() {
-		l.NewIntelRdtManager = nil
+	if intelrdt.IsCATEnabled() || intelrdt.IsMBAEnabled() {
+		l.NewIntelRdtManager = intelrdt.NewManager
 	} else {
-		l.NewIntelRdtManager = func(config *configs.Config, id string, path string) intelrdt.Manager {
-			return intelrdt.NewManager(config, id, path)
-		}
+		l.NewIntelRdtManager = nil
 	}
 	return nil
 }
