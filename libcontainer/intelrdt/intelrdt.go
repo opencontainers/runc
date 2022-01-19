@@ -291,6 +291,8 @@ func Root() (string, error) {
 			return
 		}
 
+		// NB: ideally, we could just do statfs and RDTGROUP_SUPER_MAGIC check, but
+		// we have to parse mountinfo since we're also interested in mount options.
 		root, err := findIntelRdtMountpointDir()
 		if err != nil {
 			intelRdtRootErr = err
