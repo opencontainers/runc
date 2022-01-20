@@ -137,7 +137,7 @@ static void *must_realloc(void *ptr, size_t size)
  */
 static int is_self_cloned(void)
 {
-	int fd, ret, is_cloned = 0;
+	int fd, is_cloned = 0;
 	struct stat statbuf = { };
 	struct statfs fsbuf = { };
 
@@ -153,11 +153,9 @@ static int is_self_cloned(void)
 	 * sharing it isn't a bad thing -- and an admin could bind-mount a sealed
 	 * memfd to /usr/bin/runc to allow re-use).
 	 */
-	ret = fcntl(fd, F_GET_SEALS);
-	if (ret >= 0) {
-		is_cloned = (ret == RUNC_MEMFD_SEALS);
+	is_cloned = (fcntl(fd, F_GET_SEALS) == RUNC_MEMFD_SEALS);
+	if (is_cloned)
 		goto out;
-	}
 
 	/*
 	 * All other forms require CLONED_BINARY_ENV, since they are potentially
