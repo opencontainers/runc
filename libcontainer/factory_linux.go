@@ -65,8 +65,7 @@ func New(root string, options ...func(*LinuxFactory) error) (Factory, error) {
 		}
 	}
 	l := &LinuxFactory{
-		Root:      root,
-		Validator: validate.New(),
+		Root: root,
 	}
 
 	for _, opt := range options {
@@ -90,9 +89,6 @@ type LinuxFactory struct {
 	NewuidmapPath string
 	NewgidmapPath string
 
-	// Validator provides validation to container configurations.
-	Validator validate.Validator
-
 	// NewIntelRdtManager returns an initialized Intel RDT manager for a single container.
 	NewIntelRdtManager func(config *configs.Config, id string, path string) intelrdt.Manager
 }
@@ -104,7 +100,7 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 	if err := l.validateID(id); err != nil {
 		return nil, err
 	}
-	if err := l.Validator.Validate(config); err != nil {
+	if err := validate.Validate(config); err != nil {
 		return nil, err
 	}
 	containerRoot, err := securejoin.SecureJoin(l.Root, id)

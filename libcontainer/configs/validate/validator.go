@@ -16,30 +16,19 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-type Validator interface {
-	Validate(*configs.Config) error
-}
-
-func New() Validator {
-	return &ConfigValidator{}
-}
-
-type ConfigValidator struct{}
-
 type check func(config *configs.Config) error
 
-func (v *ConfigValidator) Validate(config *configs.Config) error {
+func Validate(config *configs.Config) error {
 	checks := []check{
-		v.cgroups,
-		v.rootfs,
-		v.network,
-		v.hostname,
-		v.security,
-		v.usernamespace,
-		v.cgroupnamespace,
-		v.sysctl,
-		v.intelrdt,
-		v.rootlessEUID,
+		cgroupsCheck,
+		rootfs,
+		network,
+		hostname,
+		security,
+		namespaces,
+		sysctl,
+		intelrdtCheck,
+		rootlessEUIDCheck,
 	}
 	for _, c := range checks {
 		if err := c(config); err != nil {
@@ -48,7 +37,7 @@ func (v *ConfigValidator) Validate(config *configs.Config) error {
 	}
 	// Relaxed validation rules for backward compatibility
 	warns := []check{
-		v.mounts, // TODO (runc v1.x.x): make this an error instead of a warning
+		mounts, // TODO (runc v1.x.x): make this an error instead of a warning
 	}
 	for _, c := range warns {
 		if err := c(config); err != nil {
@@ -60,7 +49,7 @@ func (v *ConfigValidator) Validate(config *configs.Config) error {
 
 // rootfs validates if the rootfs is an absolute path and is not a symlink
 // to the container's root filesystem.
-func (v *ConfigValidator) rootfs(config *configs.Config) error {
+func rootfs(config *configs.Config) error {
 	if _, err := os.Stat(config.Rootfs); err != nil {
 		return fmt.Errorf("invalid rootfs: %w", err)
 	}
@@ -77,7 +66,7 @@ func (v *ConfigValidator) rootfs(config *configs.Config) error {
 	return nil
 }
 
-func (v *ConfigValidator) network(config *configs.Config) error {
+func network(config *configs.Config) error {
 	if !config.Namespaces.Contains(configs.NEWNET) {
 		if len(config.Networks) > 0 || len(config.Routes) > 0 {
 			return errors.New("unable to apply network settings without a private NET namespace")
@@ -86,14 +75,14 @@ func (v *ConfigValidator) network(config *configs.Config) error {
 	return nil
 }
 
-func (v *ConfigValidator) hostname(config *configs.Config) error {
+func hostname(config *configs.Config) error {
 	if config.Hostname != "" && !config.Namespaces.Contains(configs.NEWUTS) {
 		return errors.New("unable to set hostname without a private UTS namespace")
 	}
 	return nil
 }
 
-func (v *ConfigValidator) security(config *configs.Config) error {
+func security(config *configs.Config) error {
 	// restrict sys without mount namespace
 	if (len(config.MaskPaths) > 0 || len(config.ReadonlyPaths) > 0) &&
 		!config.Namespaces.Contains(configs.NEWNS) {
@@ -106,7 +95,7 @@ func (v *ConfigValidator) security(config *configs.Config) error {
 	return nil
 }
 
-func (v *ConfigValidator) usernamespace(config *configs.Config) error {
+func namespaces(config *configs.Config) error {
 	if config.Namespaces.Contains(configs.NEWUSER) {
 		if _, err := os.Stat("/proc/self/ns/user"); os.IsNotExist(err) {
 			return errors.New("USER namespaces aren't enabled in the kernel")
@@ -116,15 +105,13 @@ func (v *ConfigValidator) usernamespace(config *configs.Config) error {
 			return errors.New("User namespace mappings specified, but USER namespace isn't enabled in the config")
 		}
 	}
-	return nil
-}
 
-func (v *ConfigValidator) cgroupnamespace(config *configs.Config) error {
 	if config.Namespaces.Contains(configs.NEWCGROUP) {
 		if _, err := os.Stat("/proc/self/ns/cgroup"); os.IsNotExist(err) {
 			return errors.New("cgroup namespaces aren't enabled in the kernel")
 		}
 	}
+
 	return nil
 }
 
@@ -161,7 +148,7 @@ func convertSysctlVariableToDotsSeparator(val string) string {
 // sysctl validates that the specified sysctl keys are valid or not.
 // /proc/sys isn't completely namespaced and depending on which namespaces
 // are specified, a subset of sysctls are permitted.
-func (v *ConfigValidator) sysctl(config *configs.Config) error {
+func sysctl(config *configs.Config) error {
 	validSysctlMap := map[string]bool{
 		"kernel.msgmax":          true,
 		"kernel.msgmnb":          true,
@@ -227,7 +214,7 @@ func (v *ConfigValidator) sysctl(config *configs.Config) error {
 	return nil
 }
 
-func (v *ConfigValidator) intelrdt(config *configs.Config) error {
+func intelrdtCheck(config *configs.Config) error {
 	if config.IntelRdt != nil {
 		if !intelrdt.IsCATEnabled() && !intelrdt.IsMBAEnabled() {
 			return errors.New("intelRdt is specified in config, but Intel RDT is not supported or enabled")
@@ -248,7 +235,7 @@ func (v *ConfigValidator) intelrdt(config *configs.Config) error {
 	return nil
 }
 
-func (v *ConfigValidator) cgroups(config *configs.Config) error {
+func cgroupsCheck(config *configs.Config) error {
 	c := config.Cgroups
 	if c == nil {
 		return nil
@@ -277,7 +264,7 @@ func (v *ConfigValidator) cgroups(config *configs.Config) error {
 	return nil
 }
 
-func (v *ConfigValidator) mounts(config *configs.Config) error {
+func mounts(config *configs.Config) error {
 	for _, m := range config.Mounts {
 		if !filepath.IsAbs(m.Destination) {
 			return fmt.Errorf("invalid mount %+v: mount destination not absolute", m)
