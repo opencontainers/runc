@@ -32,9 +32,8 @@ func New(root string, options ...func(*Factory) error) (*Factory, error) {
 		return nil, err
 	}
 	l := &Factory{
-		Root:      root,
-		Validator: validate.New(),
-		CriuPath:  "criu",
+		Root:     root,
+		CriuPath: "criu",
 	}
 
 	for _, opt := range options {
@@ -61,9 +60,6 @@ type Factory struct {
 	// rootless containers.
 	NewuidmapPath string
 	NewgidmapPath string
-
-	// Validator provides validation to container configurations.
-	Validator validate.Validator
 }
 
 // Creates a new container with the given id and starts the initial process inside it.
@@ -83,7 +79,7 @@ func (l *Factory) Create(id string, config *configs.Config) (*Container, error) 
 	if err := l.validateID(id); err != nil {
 		return nil, err
 	}
-	if err := l.Validator.Validate(config); err != nil {
+	if err := validate.Validate(config); err != nil {
 		return nil, err
 	}
 	containerRoot, err := securejoin.SecureJoin(l.Root, id)
