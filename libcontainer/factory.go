@@ -33,8 +33,6 @@ func New(root string, options ...func(*Factory) error) (*Factory, error) {
 	}
 	l := &Factory{
 		Root:      root,
-		InitPath:  "/proc/self/exe",
-		InitArgs:  []string{os.Args[0], "init"},
 		Validator: validate.New(),
 		CriuPath:  "criu",
 	}
@@ -54,14 +52,6 @@ func New(root string, options ...func(*Factory) error) (*Factory, error) {
 type Factory struct {
 	// Root directory for the factory to store state.
 	Root string
-
-	// InitPath is the path for calling the init responsibilities for spawning
-	// a container.
-	InitPath string
-
-	// InitArgs are arguments for calling the init responsibilities for spawning
-	// a container.
-	InitArgs []string
 
 	// CriuPath is the path to the criu binary used for checkpoint and restore of
 	// containers.
@@ -147,8 +137,6 @@ func (l *Factory) Create(id string, config *configs.Config) (*Container, error) 
 		id:              id,
 		root:            containerRoot,
 		config:          config,
-		initPath:        l.InitPath,
-		initArgs:        l.InitArgs,
 		criuPath:        l.CriuPath,
 		newuidmapPath:   l.NewuidmapPath,
 		newgidmapPath:   l.NewgidmapPath,
@@ -191,8 +179,6 @@ func (l *Factory) Load(id string) (*Container, error) {
 		initProcessStartTime: state.InitProcessStartTime,
 		id:                   id,
 		config:               &state.Config,
-		initPath:             l.InitPath,
-		initArgs:             l.InitArgs,
 		criuPath:             l.CriuPath,
 		newuidmapPath:        l.NewuidmapPath,
 		newgidmapPath:        l.NewgidmapPath,
