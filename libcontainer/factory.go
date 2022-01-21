@@ -25,26 +25,15 @@ const (
 
 var idRegex = regexp.MustCompile(`^[\w+-\.]+$`)
 
-// New returns a linux based container factory based in the root directory and
-// configures the factory with the provided option funcs.
-func New(root string, options ...func(*Factory) error) (*Factory, error) {
+// New returns a linux based container factory based in the root directory.
+func New(root string) (*Factory, error) {
 	if err := os.MkdirAll(root, 0o700); err != nil {
 		return nil, err
 	}
-	l := &Factory{
+	return &Factory{
 		Root:     root,
 		CriuPath: "criu",
-	}
-
-	for _, opt := range options {
-		if opt == nil {
-			continue
-		}
-		if err := opt(l); err != nil {
-			return nil, err
-		}
-	}
-	return l, nil
+	}, nil
 }
 
 // Factory implements the default factory interface for linux based systems.
