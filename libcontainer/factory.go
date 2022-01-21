@@ -31,8 +31,7 @@ func New(root string) (*Factory, error) {
 		return nil, err
 	}
 	return &Factory{
-		Root:     root,
-		CriuPath: "criu",
+		Root: root,
 	}, nil
 }
 
@@ -40,10 +39,6 @@ func New(root string) (*Factory, error) {
 type Factory struct {
 	// Root directory for the factory to store state.
 	Root string
-
-	// CriuPath is the path to the criu binary used for checkpoint and restore of
-	// containers.
-	CriuPath string
 }
 
 // Creates a new container with the given id and starts the initial process inside it.
@@ -117,7 +112,6 @@ func (l *Factory) Create(id string, config *configs.Config) (*Container, error) 
 		id:              id,
 		root:            containerRoot,
 		config:          config,
-		criuPath:        l.CriuPath,
 		cgroupManager:   cm,
 		intelRdtManager: intelrdt.NewManager(config, id, ""),
 	}
@@ -157,7 +151,6 @@ func (l *Factory) Load(id string) (*Container, error) {
 		initProcessStartTime: state.InitProcessStartTime,
 		id:                   id,
 		config:               &state.Config,
-		criuPath:             l.CriuPath,
 		cgroupManager:        cm,
 		intelRdtManager:      intelrdt.NewManager(&state.Config, id, state.IntelRdtPath),
 		root:                 containerRoot,

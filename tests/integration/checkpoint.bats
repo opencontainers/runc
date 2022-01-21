@@ -84,7 +84,7 @@ function runc_restore_with_pipes() {
 	shift
 
 	ret=0
-	__runc --criu "$CRIU" restore -d --work-path "$workdir" --image-path ./image-dir "$@" "$name" <&${in_r} >&${out_w} 2>&${err_w} || ret=$?
+	__runc restore -d --work-path "$workdir" --image-path ./image-dir "$@" "$name" <&${in_r} >&${out_w} 2>&${err_w} || ret=$?
 	if [ "$ret" -ne 0 ]; then
 		echo "__runc restore $name failed (status: $ret)"
 		exec {err_w}>&-
@@ -109,7 +109,7 @@ function simple_cr() {
 
 	for _ in $(seq 2); do
 		# checkpoint the running container
-		runc --criu "$CRIU" "$@" checkpoint --work-path ./work-dir test_busybox
+		runc "$@" checkpoint --work-path ./work-dir test_busybox
 		grep -B 5 Error ./work-dir/dump.log || true
 		[ "$status" -eq 0 ]
 
@@ -117,7 +117,7 @@ function simple_cr() {
 		testcontainer test_busybox checkpointed
 
 		# restore from checkpoint
-		runc --criu "$CRIU" "$@" restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
+		runc "$@" restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
 		grep -B 5 Error ./work-dir/restore.log || true
 		[ "$status" -eq 0 ]
 
@@ -162,12 +162,12 @@ function simple_cr() {
 	testcontainer test_busybox running
 
 	# runc should fail with absolute parent image path.
-	runc --criu "$CRIU" checkpoint --parent-path "$(pwd)"/parent-dir --work-path ./work-dir --image-path ./image-dir test_busybox
+	runc checkpoint --parent-path "$(pwd)"/parent-dir --work-path ./work-dir --image-path ./image-dir test_busybox
 	[[ "${output}" == *"--parent-path"* ]]
 	[ "$status" -ne 0 ]
 
 	# runc should fail with invalid parent image path.
-	runc --criu "$CRIU" checkpoint --parent-path ./parent-dir --work-path ./work-dir --image-path ./image-dir test_busybox
+	runc checkpoint --parent-path ./parent-dir --work-path ./work-dir --image-path ./image-dir test_busybox
 	[[ "${output}" == *"--parent-path"* ]]
 	[ "$status" -ne 0 ]
 }
@@ -178,7 +178,7 @@ function simple_cr() {
 
 	#test checkpoint pre-dump
 	mkdir parent-dir
-	runc --criu "$CRIU" checkpoint --pre-dump --image-path ./parent-dir test_busybox
+	runc checkpoint --pre-dump --image-path ./parent-dir test_busybox
 	[ "$status" -eq 0 ]
 
 	# busybox should still be running
@@ -187,7 +187,7 @@ function simple_cr() {
 	# checkpoint the running container
 	mkdir image-dir
 	mkdir work-dir
-	runc --criu "$CRIU" checkpoint --parent-path ../parent-dir --work-path ./work-dir --image-path ./image-dir test_busybox
+	runc checkpoint --parent-path ../parent-dir --work-path ./work-dir --image-path ./image-dir test_busybox
 	grep -B 5 Error ./work-dir/dump.log || true
 	[ "$status" -eq 0 ]
 
@@ -203,7 +203,7 @@ function simple_cr() {
 
 @test "checkpoint --lazy-pages and restore" {
 	# check if lazy-pages is supported
-	if ! "${CRIU}" check --feature uffd-noncoop; then
+	if ! criu check --feature uffd-noncoop; then
 		skip "this criu does not support lazy migration"
 	fi
 
@@ -224,7 +224,7 @@ function simple_cr() {
 	# TCP port for lazy migration
 	port=27277
 
-	__runc --criu "$CRIU" checkpoint --lazy-pages --page-server 0.0.0.0:${port} --status-fd ${lazy_w} --work-path ./work-dir --image-path ./image-dir test_busybox &
+	__runc checkpoint --lazy-pages --page-server 0.0.0.0:${port} --status-fd ${lazy_w} --work-path ./work-dir --image-path ./image-dir test_busybox &
 	cpt_pid=$!
 
 	# wait for lazy page server to be ready
@@ -242,7 +242,7 @@ function simple_cr() {
 	[ -e image-dir/inventory.img ]
 
 	# Start CRIU in lazy-daemon mode
-	${CRIU} lazy-pages --page-server --address 127.0.0.1 --port ${port} -D image-dir &
+	criu lazy-pages --page-server --address 127.0.0.1 --port ${port} -D image-dir &
 	lp_pid=$!
 
 	# Restore lazily from checkpoint.
@@ -264,7 +264,7 @@ function simple_cr() {
 
 @test "checkpoint and restore in external network namespace" {
 	# check if external_net_ns is supported; only with criu 3.10++
-	if ! "${CRIU}" check --feature external_net_ns; then
+	if ! criu check --feature external_net_ns; then
 		# this criu does not support external_net_ns; skip the test
 		skip "this criu does not support external network namespaces"
 	fi
@@ -290,7 +290,7 @@ function simple_cr() {
 	for _ in $(seq 2); do
 		# checkpoint the running container; this automatically tells CRIU to
 		# handle the network namespace defined in config.json as an external
-		runc --criu "$CRIU" checkpoint --work-path ./work-dir test_busybox
+		runc checkpoint --work-path ./work-dir test_busybox
 		grep -B 5 Error ./work-dir/dump.log || true
 		[ "$status" -eq 0 ]
 
@@ -298,7 +298,7 @@ function simple_cr() {
 		testcontainer test_busybox checkpointed
 
 		# restore from checkpoint; this should restore the container into the existing network namespace
-		runc --criu "$CRIU" restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
+		runc restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
 		grep -B 5 Error ./work-dir/restore.log || true
 		[ "$status" -eq 0 ]
 
@@ -341,7 +341,7 @@ function simple_cr() {
 	testcontainer test_busybox running
 
 	# checkpoint the running container
-	runc --criu "$CRIU" checkpoint --work-path ./work-dir test_busybox
+	runc checkpoint --work-path ./work-dir test_busybox
 	grep -B 5 Error ./work-dir/dump.log || true
 	[ "$status" -eq 0 ]
 	! test -f ./work-dir/"$tmplog1"
@@ -352,7 +352,7 @@ function simple_cr() {
 
 	test -f ./work-dir/"$tmplog2" && unlink ./work-dir/"$tmplog2"
 	# restore from checkpoint
-	runc --criu "$CRIU" restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
+	runc restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
 	grep -B 5 Error ./work-dir/restore.log || true
 	[ "$status" -eq 0 ]
 	! test -f ./work-dir/"$tmplog1"
@@ -386,7 +386,7 @@ function simple_cr() {
 	testcontainer test_busybox running
 
 	# checkpoint the running container
-	runc --criu "$CRIU" checkpoint --work-path ./work-dir test_busybox
+	runc checkpoint --work-path ./work-dir test_busybox
 	grep -B 5 Error ./work-dir/dump.log || true
 	[ "$status" -eq 0 ]
 
@@ -398,7 +398,7 @@ function simple_cr() {
 	rm -rf "${bind1:?}"/*
 
 	# restore from checkpoint
-	runc --criu "$CRIU" restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
+	runc restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
 	grep -B 5 Error ./work-dir/restore.log || true
 	[ "$status" -eq 0 ]
 

@@ -30,16 +30,7 @@ func loadFactory(context *cli.Context) (*libcontainer.Factory, error) {
 		return nil, err
 	}
 
-	f, err := libcontainer.New(abs)
-	if err != nil {
-		return nil, err
-	}
-
-	if criu := context.GlobalString("criu"); criu != "" {
-		f.CriuPath = criu
-	}
-
-	return f, nil
+	return libcontainer.New(abs)
 }
 
 // getContainer returns the specified container instance by loading it from state

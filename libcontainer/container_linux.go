@@ -43,7 +43,6 @@ type Container struct {
 	intelRdtManager      *intelrdt.Manager
 	initProcess          parentProcess
 	initProcessStartTime uint64
-	criuPath             string
 	m                    sync.Mutex
 	criuVersion          int
 	state                containerState
@@ -834,7 +833,6 @@ func (c *Container) checkCriuVersion(minVersion int) error {
 	}
 
 	criu := criu.MakeCriu()
-	criu.SetCriuPath(c.criuPath)
 	var err error
 	c.criuVersion, err = criu.GetCriuVersion()
 	if err != nil {
@@ -1615,9 +1613,9 @@ func (c *Container) criuSwrk(process *Process, req *criurpc.CriuReq, opts *CriuO
 	if c.criuVersion != 0 {
 		// If the CRIU Version is still '0' then this is probably
 		// the initial CRIU run to detect the version. Skip it.
-		logrus.Debugf("Using CRIU %d at: %s", c.criuVersion, c.criuPath)
+		logrus.Debugf("Using CRIU %d", c.criuVersion)
 	}
-	cmd := exec.Command(c.criuPath, args...)
+	cmd := exec.Command("criu", args...)
 	if process != nil {
 		cmd.Stdin = process.Stdin
 		cmd.Stdout = process.Stdout

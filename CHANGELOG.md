@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Deprecated
+
+ * `runc` option `--criu` is now ignored (with a warning), and the option will
+   be removed entirely in a future release. Users who need a non-standard
+   `criu` binary should rely on the standard way of looking up binaries in
+   `$PATH`. (#3316)
+
 ### Changed
 
  * When Intel RDT feature is not available, its initialization is skipped,
