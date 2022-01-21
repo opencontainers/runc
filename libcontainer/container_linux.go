@@ -44,8 +44,6 @@ type Container struct {
 	initProcess          parentProcess
 	initProcessStartTime uint64
 	criuPath             string
-	newuidmapPath        string
-	newgidmapPath        string
 	m                    sync.Mutex
 	criuVersion          int
 	state                containerState
@@ -2164,11 +2162,16 @@ func (c *Container) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Namespa
 	if !joinExistingUser {
 		// write uid mappings
 		if len(c.config.UidMappings) > 0 {
-			if c.config.RootlessEUID && c.newuidmapPath != "" {
-				r.AddData(&Bytemsg{
-					Type:  UidmapPathAttr,
-					Value: []byte(c.newuidmapPath),
-				})
+			if c.config.RootlessEUID {
+				// We resolve the paths for new{u,g}idmap from
+				// the context of runc to avoid doing a path
+				// lookup in the nsexec context.
+				if path, err := exec.LookPath("newuidmap"); err == nil {
+					r.AddData(&Bytemsg{
+						Type:  UidmapPathAttr,
+						Value: []byte(path),
+					})
+				}
 			}
 			b, err := encodeIDMapping(c.config.UidMappings)
 			if err != nil {
@@ -2190,11 +2193,13 @@ func (c *Container) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Namespa
 				Type:  GidmapAttr,
 				Value: b,
 			})
-			if c.config.RootlessEUID && c.newgidmapPath != "" {
-				r.AddData(&Bytemsg{
-					Type:  GidmapPathAttr,
-					Value: []byte(c.newgidmapPath),
-				})
+			if c.config.RootlessEUID {
+				if path, err := exec.LookPath("newgidmap"); err == nil {
+					r.AddData(&Bytemsg{
+						Type:  GidmapPathAttr,
+						Value: []byte(path),
+					})
+				}
 			}
 			if requiresRootOrMappingTool(c.config) {
 				r.AddData(&Boolmsg{

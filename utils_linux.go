@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 
@@ -34,16 +33,6 @@ func loadFactory(context *cli.Context) (*libcontainer.Factory, error) {
 	f, err := libcontainer.New(abs)
 	if err != nil {
 		return nil, err
-	}
-
-	// We resolve the paths for {newuidmap,newgidmap} from the context of runc,
-	// to avoid doing a path lookup in the nsexec context. TODO: The binary
-	// names are not currently configurable.
-	if newuidmap, err := exec.LookPath("newuidmap"); err == nil {
-		f.NewuidmapPath = newuidmap
-	}
-	if newgidmap, err := exec.LookPath("newgidmap"); err == nil {
-		f.NewgidmapPath = newgidmap
 	}
 
 	if criu := context.GlobalString("criu"); criu != "" {

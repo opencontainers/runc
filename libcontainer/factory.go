@@ -55,11 +55,6 @@ type Factory struct {
 	// CriuPath is the path to the criu binary used for checkpoint and restore of
 	// containers.
 	CriuPath string
-
-	// New{u,g}idmapPath is the path to the binaries used for mapping with
-	// rootless containers.
-	NewuidmapPath string
-	NewgidmapPath string
 }
 
 // Creates a new container with the given id and starts the initial process inside it.
@@ -134,8 +129,6 @@ func (l *Factory) Create(id string, config *configs.Config) (*Container, error) 
 		root:            containerRoot,
 		config:          config,
 		criuPath:        l.CriuPath,
-		newuidmapPath:   l.NewuidmapPath,
-		newgidmapPath:   l.NewgidmapPath,
 		cgroupManager:   cm,
 		intelRdtManager: intelrdt.NewManager(config, id, ""),
 	}
@@ -176,8 +169,6 @@ func (l *Factory) Load(id string) (*Container, error) {
 		id:                   id,
 		config:               &state.Config,
 		criuPath:             l.CriuPath,
-		newuidmapPath:        l.NewuidmapPath,
-		newgidmapPath:        l.NewgidmapPath,
 		cgroupManager:        cm,
 		intelRdtManager:      intelrdt.NewManager(&state.Config, id, state.IntelRdtPath),
 		root:                 containerRoot,
