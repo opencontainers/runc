@@ -111,7 +111,7 @@ To list containers created using a non-default value for "--root":
 }
 
 func getContainers(context *cli.Context) ([]containerState, error) {
-	factory, err := loadFactory(context)
+	factory, err := libcontainer.New(context.GlobalString("root"))
 	if err != nil {
 		return nil, err
 	}

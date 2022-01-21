@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
@@ -27,11 +28,15 @@ var idRegex = regexp.MustCompile(`^[\w+-\.]+$`)
 
 // New returns a linux based container factory based in the root directory.
 func New(root string) (*Factory, error) {
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		return nil, err
+	}
 	if err := os.MkdirAll(root, 0o700); err != nil {
 		return nil, err
 	}
 	return &Factory{
-		Root: root,
+		Root: absRoot,
 	}, nil
 }
 
