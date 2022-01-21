@@ -6,11 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+ * When Intel RDT feature is not available, its initialization is skipped,
+   resulting in slightly faster `runc exec` and `runc run`. (#3306)
+
 ## [1.1.0] - 2022-01-14
 
 > A plan depends as much upon execution as it does upon concept.
 
-## Changed
+### Changed
  * libcontainer will now refuse to build without the nsenter package being
    correctly compiled (specifically this requires CGO to be enabled). This
    should avoid folks accidentally creating broken runc binaries (and
