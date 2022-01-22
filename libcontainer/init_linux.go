@@ -426,11 +426,12 @@ func fixStdioPermissions(u *user.ExecUser) error {
 			// If we've hit an EINVAL then s.Gid isn't mapped in the user
 			// namespace. If we've hit an EPERM then the inode's current owner
 			// is not mapped in our user namespace (in particular,
-			// privileged_wrt_inode_uidgid() has failed). In either case, we
-			// are in a configuration where it's better for us to just not
-			// touch the stdio rather than bail at this point.
+			// privileged_wrt_inode_uidgid() has failed). Read-only
+			// /dev can result in EROFS error. In any case, it's
+			// better for us to just not touch the stdio rather
+			// than bail at this point.
 
-			if errors.Is(err, unix.EINVAL) || errors.Is(err, unix.EPERM) {
+			if errors.Is(err, unix.EINVAL) || errors.Is(err, unix.EPERM) || errors.Is(err, unix.EROFS) {
 				continue
 			}
 			return err
