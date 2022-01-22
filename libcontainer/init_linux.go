@@ -411,12 +411,12 @@ func fixStdioPermissions(u *user.ExecUser) error {
 			return &os.PathError{Op: "fstat", Path: file.Name(), Err: err}
 		}
 
-		// Skip chown of /dev/null if it was used as one of the STDIO fds.
-		if s.Rdev == null.Rdev {
+		// Skip chown if uid is already the one we want.
+		if int(s.Uid) == u.Uid {
 			continue
 		}
 
-		// We only change the uid owner (as it is possible for the mount to
+		// We only change the uid (as it is possible for the mount to
 		// prefer a different gid, and there's no reason for us to change it).
 		// The reason why we don't just leave the default uid=X mount setup is
 		// that users expect to be able to actually use their console. Without
