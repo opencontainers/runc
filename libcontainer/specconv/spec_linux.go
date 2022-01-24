@@ -60,7 +60,6 @@ func initMaps() {
 			"shared":      unix.MS_SHARED,
 			"runbindable": unix.MS_UNBINDABLE | unix.MS_REC,
 			"unbindable":  unix.MS_UNBINDABLE,
-			"":            0,
 		}
 
 		mountFlags = map[string]struct {
@@ -159,9 +158,7 @@ func KnownMountOptions() []string {
 		res = append(res, k)
 	}
 	for k := range mountPropagationMapping {
-		if k != "" {
-			res = append(res, k)
-		}
+		res = append(res, k)
 	}
 	for k := range recAttrFlags {
 		res = append(res, k)
@@ -385,12 +382,14 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 	if spec.Linux != nil {
 		initMaps()
 
-		var exists bool
-		if config.RootPropagation, exists = mountPropagationMapping[spec.Linux.RootfsPropagation]; !exists {
-			return nil, fmt.Errorf("rootfsPropagation=%v is not supported", spec.Linux.RootfsPropagation)
-		}
-		if config.NoPivotRoot && (config.RootPropagation&unix.MS_PRIVATE != 0) {
-			return nil, errors.New("rootfsPropagation of [r]private is not safe without pivot_root")
+		if spec.Linux.RootfsPropagation != "" {
+			var exists bool
+			if config.RootPropagation, exists = mountPropagationMapping[spec.Linux.RootfsPropagation]; !exists {
+				return nil, fmt.Errorf("rootfsPropagation=%v is not supported", spec.Linux.RootfsPropagation)
+			}
+			if config.NoPivotRoot && (config.RootPropagation&unix.MS_PRIVATE != 0) {
+				return nil, errors.New("rootfsPropagation of [r]private is not safe without pivot_root")
+			}
 		}
 
 		for _, ns := range spec.Linux.Namespaces {
