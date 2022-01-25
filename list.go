@@ -130,8 +130,12 @@ func getContainers(context *cli.Context) ([]containerState, error) {
 		if !item.IsDir() {
 			continue
 		}
-		st, err := os.Stat(filepath.Join(absRoot, item.Name()))
+		st, err := item.Info()
 		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				// Possible race with runc delete.
+				continue
+			}
 			fatal(err)
 		}
 		// This cast is safe on Linux.
