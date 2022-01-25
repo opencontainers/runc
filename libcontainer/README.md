@@ -45,7 +45,7 @@ Then to create a container you first have to initialize an instance of a factory
 that will handle the creation and initialization for a container.
 
 ```go
-factory, err := libcontainer.New("/var/lib/container", libcontainer.Cgroupfs, libcontainer.InitArgs(os.Args[0], "init"))
+factory, err := libcontainer.New("/var/lib/container", libcontainer.InitArgs(os.Args[0], "init"))
 if err != nil {
 	logrus.Fatal(err)
 	return
