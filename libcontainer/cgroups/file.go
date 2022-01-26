@@ -76,7 +76,7 @@ var (
 	// TestMode is set to true by unit tests that need "fake" cgroupfs.
 	TestMode bool
 
-	cgroupFd     int = -1
+	cgroupFd     = -1
 	prepOnce     sync.Once
 	prepErr      error
 	resolveFlags uint64

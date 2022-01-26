@@ -9,7 +9,8 @@ type Event struct {
 	Data interface{} `json:"data,omitempty"`
 }
 
-// stats is the runc specific stats structure for stability when encoding and decoding stats.
+// Stats is the runc specific stats structure for stability when encoding and
+// decoding stats.
 type Stats struct {
 	CPU               Cpu                 `json:"cpu"`
 	CPUSet            CPUSet              `json:"cpuset"`
@@ -115,28 +116,30 @@ type MemBwInfo struct {
 }
 
 type IntelRdt struct {
-	// The read-only L3 cache information
+	// L3CacheInfo holds read-only L3 cache information.
 	L3CacheInfo *L3CacheInfo `json:"l3_cache_info,omitempty"`
 
-	// The read-only L3 cache schema in root
+	// L3CacheSchemaRoot holds the read-only L3 cache schema in root.
 	L3CacheSchemaRoot string `json:"l3_cache_schema_root,omitempty"`
 
-	// The L3 cache schema in 'container_id' group
+	// L3CacheSchema holds the L3 cache schema in 'container_id' group.
 	L3CacheSchema string `json:"l3_cache_schema,omitempty"`
 
-	// The read-only memory bandwidth information
+	// MemBwInfo holds read-only memory bandwidth information.
 	MemBwInfo *MemBwInfo `json:"mem_bw_info,omitempty"`
 
-	// The read-only memory bandwidth schema in root
+	// MemBwSchemaRoot holds the read-only memory bandwidth schema in root.
 	MemBwSchemaRoot string `json:"mem_bw_schema_root,omitempty"`
 
-	// The memory bandwidth schema in 'container_id' group
+	// MemBwSchema hold the memory bandwidth schema in 'container_id' group.
 	MemBwSchema string `json:"mem_bw_schema,omitempty"`
 
-	// The memory bandwidth monitoring statistics from NUMA nodes in 'container_id' group
+	// MBMStats holds the memory bandwidth monitoring statistics from NUMA nodes
+	// in 'container_id' group.
 	MBMStats *[]intelrdt.MBMNumaNodeStats `json:"mbm_stats,omitempty"`
 
-	// The cache monitoring technology statistics from NUMA nodes in 'container_id' group
+	// CMTStats holds the cache monitoring technology statistics from NUMA nodes
+	// in 'container_id' group.
 	CMTStats *[]intelrdt.CMTNumaNodeStats `json:"cmt_stats,omitempty"`
 }
 

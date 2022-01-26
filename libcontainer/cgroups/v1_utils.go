@@ -18,12 +18,13 @@ import (
 // and must not be used from any cgroup v2 code.
 
 const (
-	CgroupNamePrefix = "name="
+	cgroupNamePrefix = "name="
 	defaultPrefix    = "/sys/fs/cgroup"
 )
 
 var (
-	errUnified     = errors.New("not implemented for cgroup v2 unified hierarchy")
+	errUnified = errors.New("not implemented for cgroup v2 unified hierarchy")
+	// ErrV1NoUnified is returned when a "unified" config value is used in cgroup v1.
 	ErrV1NoUnified = errors.New("invalid configuration: cannot use unified on cgroup v1")
 
 	readMountinfoOnce sync.Once
@@ -56,7 +57,7 @@ func tryDefaultPath(cgroupPath, subsystem string) string {
 	}
 
 	// remove possible prefix
-	subsystem = strings.TrimPrefix(subsystem, CgroupNamePrefix)
+	subsystem = strings.TrimPrefix(subsystem, cgroupNamePrefix)
 
 	// Make sure we're still under defaultPrefix, and resolve
 	// a possible symlink (like cpu -> cpu,cpuacct).
@@ -107,7 +108,9 @@ func readCgroupMountinfo() ([]*mountinfo.Info, error) {
 	return cgroupMountinfo, readMountinfoErr
 }
 
-// https://www.kernel.org/doc/Documentation/cgroup-v1/cgroups.txt
+// FindCgroupMountpoint returns the mountpoint for the given subsystem.
+//
+// See https://www.kernel.org/doc/Documentation/cgroup-v1/cgroups.txt.
 func FindCgroupMountpoint(cgroupPath, subsystem string) (string, error) {
 	if IsCgroup2UnifiedMode() {
 		return "", errUnified
@@ -176,7 +179,7 @@ func getCgroupMountsHelper(ss map[string]bool, mounts []*mountinfo.Info, all boo
 				continue
 			}
 			ss[opt] = true
-			opt = strings.TrimPrefix(opt, CgroupNamePrefix)
+			opt = strings.TrimPrefix(opt, cgroupNamePrefix)
 			m.Subsystems = append(m.Subsystems, opt)
 			numFound++
 		}
@@ -282,7 +285,7 @@ func getControllerPath(subsystem string, cgroups map[string]string) (string, err
 		return p, nil
 	}
 
-	if p, ok := cgroups[CgroupNamePrefix+subsystem]; ok {
+	if p, ok := cgroups[cgroupNamePrefix+subsystem]; ok {
 		return p, nil
 	}
 

@@ -78,10 +78,7 @@ func (m *manager) Apply(pid int) error {
 		}
 		return err
 	}
-	if err := cgroups.WriteCgroupProc(m.dirPath, pid); err != nil {
-		return err
-	}
-	return nil
+	return cgroups.WriteCgroupProc(m.dirPath, pid)
 }
 
 func (m *manager) GetPids() ([]int, error) {
@@ -111,7 +108,7 @@ func (m *manager) GetStats() (*cgroups.Stats, error) {
 	}
 	// cpu (since kernel 4.15)
 	// Note cpu.stat is available even if the controller is not enabled.
-	if err := statCpu(m.dirPath, st); err != nil && !os.IsNotExist(err) {
+	if err := statCPU(m.dirPath, st); err != nil && !os.IsNotExist(err) {
 		errs = append(errs, err)
 	}
 	// hugetlb (since kernel 5.6)
@@ -167,7 +164,7 @@ func (m *manager) Set(r *configs.Resources) error {
 		return err
 	}
 	// cpu (since kernel 4.15)
-	if err := setCpu(m.dirPath, r); err != nil {
+	if err := setCPU(m.dirPath, r); err != nil {
 		return err
 	}
 	// devices (since kernel 4.15, pseudo-controller)

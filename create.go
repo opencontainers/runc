@@ -56,7 +56,7 @@ command(s) that get executed on start, edit the args parameter of the spec. See
 		if err := checkArgs(context, 1, exactArgs); err != nil {
 			return err
 		}
-		status, err := startContainer(context, CT_ACT_CREATE, nil)
+		status, err := startContainer(context, actCreate, nil)
 		if err == nil {
 			// exit with the container's exit status so any external supervisor
 			// is notified of the exit with the correct exit status.

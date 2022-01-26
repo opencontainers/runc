@@ -6,6 +6,7 @@ import (
 	"sync"
 )
 
+// NamespaceType constants.
 const (
 	NEWNET    NamespaceType = "NEWNET"
 	NEWPID    NamespaceType = "NEWPID"
@@ -21,7 +22,7 @@ var (
 	supportedNamespaces = make(map[NamespaceType]bool)
 )
 
-// NsName converts the namespace type to its filename
+// NsName converts the namespace type to its filename.
 func NsName(ns NamespaceType) string {
 	switch ns {
 	case NEWNET:
@@ -42,8 +43,7 @@ func NsName(ns NamespaceType) string {
 	return ""
 }
 
-// IsNamespaceSupported returns whether a namespace is available or
-// not
+// IsNamespaceSupported returns whether a namespace is available or not.
 func IsNamespaceSupported(ns NamespaceType) bool {
 	nsLock.Lock()
 	defer nsLock.Unlock()
@@ -63,6 +63,7 @@ func IsNamespaceSupported(ns NamespaceType) bool {
 	return supported
 }
 
+// NamespaceTypes returns a slice of supported namespace types.
 func NamespaceTypes() []NamespaceType {
 	return []NamespaceType{
 		NEWUSER, // Keep user NS always first, don't move it.
@@ -82,6 +83,7 @@ type Namespace struct {
 	Path string        `json:"path"`
 }
 
+// GetPath returns the path of the namespace.
 func (n *Namespace) GetPath(pid int) string {
 	return fmt.Sprintf("/proc/%d/ns/%s", pid, NsName(n.Type))
 }

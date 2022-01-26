@@ -113,7 +113,7 @@ func (c *Caps) ApplyBoundingSet() error {
 	return c.pid.Apply(capability.BOUNDING)
 }
 
-// Apply sets all the capabilities for the current process in the config.
+// ApplyCaps sets all the capabilities for the current process in the config.
 func (c *Caps) ApplyCaps() error {
 	c.pid.Clear(allCapabilityTypes)
 	for _, g := range capTypes {

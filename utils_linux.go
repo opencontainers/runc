@@ -229,7 +229,7 @@ type runner struct {
 	pidFile         string
 	consoleSocket   string
 	container       libcontainer.Container
-	action          CtAct
+	action          ctAct
 	notifySocket    *notifySocket
 	criuOpts        *libcontainer.CriuOpts
 	subCgroupPaths  map[string]string
@@ -273,7 +273,7 @@ func (r *runner) run(config *specs.Process) (int, error) {
 	if err != nil {
 		return -1, err
 	}
-	detach := r.detach || (r.action == CT_ACT_CREATE)
+	detach := r.detach || (r.action == actCreate)
 	// Setting up IO is a two stage process. We need to modify process to deal
 	// with detaching containers, and then we get a tty after the container has
 	// started.
@@ -285,11 +285,11 @@ func (r *runner) run(config *specs.Process) (int, error) {
 	defer tty.Close()
 
 	switch r.action {
-	case CT_ACT_CREATE:
+	case actCreate:
 		err = r.container.Start(process)
-	case CT_ACT_RESTORE:
+	case actRestore:
 		err = r.container.Restore(process, r.criuOpts)
-	case CT_ACT_RUN:
+	case actRun:
 		err = r.container.Run(process)
 	default:
 		panic("Unknown action")
@@ -333,7 +333,7 @@ func (r *runner) terminate(p *libcontainer.Process) {
 }
 
 func (r *runner) checkTerminal(config *specs.Process) error {
-	detach := r.detach || (r.action == CT_ACT_CREATE)
+	detach := r.detach || (r.action == actCreate)
 	// Check command-line for sanity.
 	if detach && config.Terminal && r.consoleSocket == "" {
 		return errors.New("cannot allocate tty if runc will detach without setting console socket")
@@ -363,15 +363,15 @@ func validateProcessSpec(spec *specs.Process) error {
 	return nil
 }
 
-type CtAct uint8
+type ctAct uint8
 
 const (
-	CT_ACT_CREATE CtAct = iota + 1
-	CT_ACT_RUN
-	CT_ACT_RESTORE
+	actCreate  ctAct = iota + 1 // Create container
+	actRun                      // Run container
+	actRestore                  // Restore container
 )
 
-func startContainer(context *cli.Context, action CtAct, criuOpts *libcontainer.CriuOpts) (int, error) {
+func startContainer(context *cli.Context, action ctAct, criuOpts *libcontainer.CriuOpts) (int, error) {
 	if err := revisePidFile(context); err != nil {
 		return -1, err
 	}
@@ -399,7 +399,7 @@ func startContainer(context *cli.Context, action CtAct, criuOpts *libcontainer.C
 		if err := notifySocket.setupSocketDirectory(); err != nil {
 			return -1, err
 		}
-		if action == CT_ACT_RUN {
+		if action == actRun {
 			if err := notifySocket.bindSocket(); err != nil {
 				return -1, err
 			}

@@ -46,7 +46,7 @@ func (s *CpuacctGroup) GetStats(path string, stats *cgroups.Stats) error {
 	if !cgroups.PathExists(path) {
 		return nil
 	}
-	userModeUsage, kernelModeUsage, err := getCpuUsageBreakdown(path)
+	userModeUsage, kernelModeUsage, err := getCPUUsageBreakdown(path)
 	if err != nil {
 		return err
 	}
@@ -76,7 +76,7 @@ func (s *CpuacctGroup) GetStats(path string, stats *cgroups.Stats) error {
 }
 
 // Returns user and kernel usage breakdown in nanoseconds.
-func getCpuUsageBreakdown(path string) (uint64, uint64, error) {
+func getCPUUsageBreakdown(path string) (uint64, uint64, error) {
 	var userModeUsage, kernelModeUsage uint64
 	const (
 		userField   = "user"

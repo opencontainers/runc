@@ -164,16 +164,16 @@ func statsFromMeminfo(stats *cgroups.Stats) error {
 
 	// Fields we are interested in.
 	var (
-		swap_free  uint64
-		swap_total uint64
-		main_total uint64
-		main_free  uint64
+		swapFree  uint64
+		swapTotal uint64
+		mainTotal uint64
+		mainFree  uint64
 	)
 	mem := map[string]*uint64{
-		"SwapFree":  &swap_free,
-		"SwapTotal": &swap_total,
-		"MemTotal":  &main_total,
-		"MemFree":   &main_free,
+		"SwapFree":  &swapFree,
+		"SwapTotal": &swapTotal,
+		"MemTotal":  &mainTotal,
+		"MemFree":   &mainFree,
 	}
 
 	found := 0
@@ -206,10 +206,10 @@ func statsFromMeminfo(stats *cgroups.Stats) error {
 		return &parseError{Path: "", File: file, Err: err}
 	}
 
-	stats.MemoryStats.SwapUsage.Usage = (swap_total - swap_free) * 1024
+	stats.MemoryStats.SwapUsage.Usage = (swapTotal - swapFree) * 1024
 	stats.MemoryStats.SwapUsage.Limit = math.MaxUint64
 
-	stats.MemoryStats.Usage.Usage = (main_total - main_free) * 1024
+	stats.MemoryStats.Usage.Usage = (mainTotal - mainFree) * 1024
 	stats.MemoryStats.Usage.Limit = math.MaxUint64
 
 	return nil
