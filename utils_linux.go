@@ -31,9 +31,7 @@ func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
 		return nil, err
 	}
 
-	intelRdtManager := libcontainer.IntelRdtFs
-
-	return libcontainer.New(abs, intelRdtManager)
+	return libcontainer.New(abs)
 }
 
 // getContainer returns the specified container instance by loading it from state

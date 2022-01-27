@@ -20,7 +20,7 @@ func TestIntelRdtSetL3CacheSchema(t *testing.T) {
 	})
 
 	helper.config.IntelRdt.L3CacheSchema = l3CacheSchemeAfter
-	intelrdt := NewManager(helper.config, "", helper.IntelRdtPath)
+	intelrdt := newManager(helper.config, "", helper.IntelRdtPath)
 	if err := intelrdt.Set(helper.config); err != nil {
 		t.Fatal(err)
 	}
@@ -50,7 +50,7 @@ func TestIntelRdtSetMemBwSchema(t *testing.T) {
 	})
 
 	helper.config.IntelRdt.MemBwSchema = memBwSchemeAfter
-	intelrdt := NewManager(helper.config, "", helper.IntelRdtPath)
+	intelrdt := newManager(helper.config, "", helper.IntelRdtPath)
 	if err := intelrdt.Set(helper.config); err != nil {
 		t.Fatal(err)
 	}
@@ -80,7 +80,7 @@ func TestIntelRdtSetMemBwScSchema(t *testing.T) {
 	})
 
 	helper.config.IntelRdt.MemBwSchema = memBwScSchemeAfter
-	intelrdt := NewManager(helper.config, "", helper.IntelRdtPath)
+	intelrdt := newManager(helper.config, "", helper.IntelRdtPath)
 	if err := intelrdt.Set(helper.config); err != nil {
 		t.Fatal(err)
 	}
@@ -103,7 +103,7 @@ func TestApply(t *testing.T) {
 	const closID = "test-clos"
 
 	helper.config.IntelRdt.ClosID = closID
-	intelrdt := NewManager(helper.config, "", helper.IntelRdtPath)
+	intelrdt := newManager(helper.config, "", helper.IntelRdtPath)
 	if err := intelrdt.Apply(1234); err == nil {
 		t.Fatal("unexpected success when applying pid")
 	}
@@ -112,7 +112,7 @@ func TestApply(t *testing.T) {
 	}
 
 	// Dir should be created if some schema has been specified
-	intelrdt.(*intelRdtManager).config.IntelRdt.L3CacheSchema = "L3:0=f"
+	intelrdt.config.IntelRdt.L3CacheSchema = "L3:0=f"
 	if err := intelrdt.Apply(1235); err != nil {
 		t.Fatalf("Apply() failed: %v", err)
 	}

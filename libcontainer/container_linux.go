@@ -41,7 +41,7 @@ type linuxContainer struct {
 	root                 string
 	config               *configs.Config
 	cgroupManager        cgroups.Manager
-	intelRdtManager      intelrdt.Manager
+	intelRdtManager      *intelrdt.Manager
 	initProcess          parentProcess
 	initProcessStartTime uint64
 	m                    sync.Mutex
