@@ -76,15 +76,6 @@ func TmpfsRoot(l *LinuxFactory) error {
 	return nil
 }
 
-// CriuPath returns an option func to configure a LinuxFactory with the
-// provided criupath
-func CriuPath(criupath string) func(*LinuxFactory) error {
-	return func(l *LinuxFactory) error {
-		l.CriuPath = criupath
-		return nil
-	}
-}
-
 // New returns a linux based container factory based in the root directory and
 // configures the factory with the provided option funcs.
 func New(root string, options ...func(*LinuxFactory) error) (Factory, error) {
@@ -98,7 +89,6 @@ func New(root string, options ...func(*LinuxFactory) error) (Factory, error) {
 		InitPath:  "/proc/self/exe",
 		InitArgs:  []string{os.Args[0], "init"},
 		Validator: validate.New(),
-		CriuPath:  "criu",
 	}
 
 	for _, opt := range options {
@@ -124,10 +114,6 @@ type LinuxFactory struct {
 	// InitArgs are arguments for calling the init responsibilities for spawning
 	// a container.
 	InitArgs []string
-
-	// CriuPath is the path to the criu binary used for checkpoint and restore of
-	// containers.
-	CriuPath string
 
 	// New{u,g}idmapPath is the path to the binaries used for mapping with
 	// rootless containers.
@@ -204,7 +190,6 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 		config:        config,
 		initPath:      l.InitPath,
 		initArgs:      l.InitArgs,
-		criuPath:      l.CriuPath,
 		newuidmapPath: l.NewuidmapPath,
 		newgidmapPath: l.NewgidmapPath,
 		cgroupManager: cm,
@@ -248,7 +233,6 @@ func (l *LinuxFactory) Load(id string) (Container, error) {
 		config:               &state.Config,
 		initPath:             l.InitPath,
 		initArgs:             l.InitArgs,
-		criuPath:             l.CriuPath,
 		newuidmapPath:        l.NewuidmapPath,
 		newgidmapPath:        l.NewgidmapPath,
 		cgroupManager:        cm,

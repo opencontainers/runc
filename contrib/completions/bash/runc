@@ -231,12 +231,11 @@ _runc_runc() {
 		--log
 		--log-format
 		--root
-		--criu
 		--rootless
 	"
 
 	case "$prev" in
-	--log | --root | --criu)
+	--log | --root)
 		case "$cur" in
 		*:*) ;; # TODO somehow do _filedir for stuff inside the image, if it's already specified (which is also somewhat difficult to determine)
 		'')

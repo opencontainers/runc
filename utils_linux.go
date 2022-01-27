@@ -47,7 +47,6 @@ func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
 	}
 
 	return libcontainer.New(abs, intelRdtManager,
-		libcontainer.CriuPath(context.GlobalString("criu")),
 		libcontainer.NewuidmapPath(newuidmap),
 		libcontainer.NewgidmapPath(newgidmap))
 }

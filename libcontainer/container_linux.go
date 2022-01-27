@@ -45,7 +45,6 @@ type linuxContainer struct {
 	initArgs             []string
 	initProcess          parentProcess
 	initProcessStartTime uint64
-	criuPath             string
 	newuidmapPath        string
 	newgidmapPath        string
 	m                    sync.Mutex
@@ -829,7 +828,6 @@ func (c *linuxContainer) checkCriuVersion(minVersion int) error {
 	}
 
 	criu := criu.MakeCriu()
-	criu.SetCriuPath(c.criuPath)
 	var err error
 	c.criuVersion, err = criu.GetCriuVersion()
 	if err != nil {
@@ -1602,13 +1600,12 @@ func (c *linuxContainer) criuSwrk(process *Process, req *criurpc.CriuReq, opts *
 	criuServer := os.NewFile(uintptr(fds[1]), "criu-transport-server")
 	defer criuServer.Close()
 
-	args := []string{"swrk", "3"}
 	if c.criuVersion != 0 {
 		// If the CRIU Version is still '0' then this is probably
 		// the initial CRIU run to detect the version. Skip it.
-		logrus.Debugf("Using CRIU %d at: %s", c.criuVersion, c.criuPath)
+		logrus.Debugf("Using CRIU %d", c.criuVersion)
 	}
-	cmd := exec.Command(c.criuPath, args...)
+	cmd := exec.Command("criu", "swrk", "3")
 	if process != nil {
 		cmd.Stdin = process.Stdin
 		cmd.Stdout = process.Stdout
