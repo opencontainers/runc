@@ -84,11 +84,6 @@ type LinuxFactory struct {
 	// Root directory for the factory to store state.
 	Root string
 
-	// New{u,g}idmapPath is the path to the binaries used for mapping with
-	// rootless containers.
-	NewuidmapPath string
-	NewgidmapPath string
-
 	// NewIntelRdtManager returns an initialized Intel RDT manager for a single container.
 	NewIntelRdtManager func(config *configs.Config, id string, path string) intelrdt.Manager
 }
@@ -154,8 +149,6 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 		id:            id,
 		root:          containerRoot,
 		config:        config,
-		newuidmapPath: l.NewuidmapPath,
-		newgidmapPath: l.NewgidmapPath,
 		cgroupManager: cm,
 	}
 	if l.NewIntelRdtManager != nil {
@@ -195,8 +188,6 @@ func (l *LinuxFactory) Load(id string) (Container, error) {
 		initProcessStartTime: state.InitProcessStartTime,
 		id:                   id,
 		config:               &state.Config,
-		newuidmapPath:        l.NewuidmapPath,
-		newgidmapPath:        l.NewgidmapPath,
 		cgroupManager:        cm,
 		root:                 containerRoot,
 		created:              state.Created,
@@ -325,24 +316,6 @@ func (l *LinuxFactory) validateID(id string) error {
 	}
 
 	return nil
-}
-
-// NewuidmapPath returns an option func to configure a LinuxFactory with the
-// provided ..
-func NewuidmapPath(newuidmapPath string) func(*LinuxFactory) error {
-	return func(l *LinuxFactory) error {
-		l.NewuidmapPath = newuidmapPath
-		return nil
-	}
-}
-
-// NewgidmapPath returns an option func to configure a LinuxFactory with the
-// provided ..
-func NewgidmapPath(newgidmapPath string) func(*LinuxFactory) error {
-	return func(l *LinuxFactory) error {
-		l.NewgidmapPath = newgidmapPath
-		return nil
-	}
 }
 
 func parseMountFds() ([]int, error) {
