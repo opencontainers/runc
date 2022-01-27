@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"regexp"
 	"runtime/debug"
 	"strconv"
@@ -28,25 +27,6 @@ const (
 )
 
 var idRegex = regexp.MustCompile(`^[\w+-\.]+$`)
-
-// InitArgs returns an options func to configure a LinuxFactory with the
-// provided init binary path and arguments.
-func InitArgs(args ...string) func(*LinuxFactory) error {
-	return func(l *LinuxFactory) (err error) {
-		if len(args) > 0 {
-			// Resolve relative paths to ensure that its available
-			// after directory changes.
-			if args[0], err = filepath.Abs(args[0]); err != nil {
-				// The only error returned from filepath.Abs is
-				// the one from os.Getwd, i.e. a system error.
-				return err
-			}
-		}
-
-		l.InitArgs = args
-		return nil
-	}
-}
 
 // IntelRdtfs is an options func to configure a LinuxFactory to return
 // containers that use the Intel RDT "resource control" filesystem to
@@ -86,8 +66,6 @@ func New(root string, options ...func(*LinuxFactory) error) (Factory, error) {
 	}
 	l := &LinuxFactory{
 		Root:      root,
-		InitPath:  "/proc/self/exe",
-		InitArgs:  []string{os.Args[0], "init"},
 		Validator: validate.New(),
 	}
 
@@ -106,14 +84,6 @@ func New(root string, options ...func(*LinuxFactory) error) (Factory, error) {
 type LinuxFactory struct {
 	// Root directory for the factory to store state.
 	Root string
-
-	// InitPath is the path for calling the init responsibilities for spawning
-	// a container.
-	InitPath string
-
-	// InitArgs are arguments for calling the init responsibilities for spawning
-	// a container.
-	InitArgs []string
 
 	// New{u,g}idmapPath is the path to the binaries used for mapping with
 	// rootless containers.
@@ -188,8 +158,6 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 		id:            id,
 		root:          containerRoot,
 		config:        config,
-		initPath:      l.InitPath,
-		initArgs:      l.InitArgs,
 		newuidmapPath: l.NewuidmapPath,
 		newgidmapPath: l.NewgidmapPath,
 		cgroupManager: cm,
@@ -231,8 +199,6 @@ func (l *LinuxFactory) Load(id string) (Container, error) {
 		initProcessStartTime: state.InitProcessStartTime,
 		id:                   id,
 		config:               &state.Config,
-		initPath:             l.InitPath,
-		initArgs:             l.InitArgs,
 		newuidmapPath:        l.NewuidmapPath,
 		newgidmapPath:        l.NewgidmapPath,
 		cgroupManager:        cm,
