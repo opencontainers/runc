@@ -400,14 +400,14 @@ func NewgidmapPath(newgidmapPath string) func(*LinuxFactory) error {
 }
 
 func parseMountFds() ([]int, error) {
-	fdsJson := os.Getenv("_LIBCONTAINER_MOUNT_FDS")
-	if fdsJson == "" {
+	fdsJSON := os.Getenv("_LIBCONTAINER_MOUNT_FDS")
+	if fdsJSON == "" {
 		// Always return the nil slice if no fd is present.
 		return nil, nil
 	}
 
 	var mountFds []int
-	if err := json.Unmarshal([]byte(fdsJson), &mountFds); err != nil {
+	if err := json.Unmarshal([]byte(fdsJSON), &mountFds); err != nil {
 		return nil, fmt.Errorf("Error unmarshalling _LIBCONTAINER_MOUNT_FDS: %w", err)
 	}
 

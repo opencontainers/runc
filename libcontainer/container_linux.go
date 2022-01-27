@@ -665,7 +665,7 @@ func (c *linuxContainer) newInitConfig(process *Process) *initConfig {
 		Cwd:              process.Cwd,
 		Capabilities:     process.Capabilities,
 		PassedFilesCount: len(process.ExtraFiles),
-		ContainerId:      c.ID(),
+		ContainerID:      c.ID(),
 		NoNewPrivileges:  c.config.NoNewPrivileges,
 		RootlessEUID:     c.config.RootlessEUID,
 		RootlessCgroups:  c.config.RootlessCgroups,
