@@ -27,6 +27,35 @@ function teardown() {
 	[[ "${lines[0]}" == *"data"* ]]
 }
 
+# shellcheck disable=SC2030
+@test "events --stats with psi data" {
+	requires root cgroups_v2 psi
+	init_cgroup_paths
+
+	update_config '.linux.resources.cpu |= { "quota": 1000 }'
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	[ "$status" -eq 0 ]
+
+	# Stress the CPU a bit. Need something that runs for more than 10s.
+	runc exec test_busybox dd if=/dev/zero bs=1 count=128K of=/dev/null
+	[ "$status" -eq 0 ]
+
+	runc exec test_busybox sh -c 'tail /sys/fs/cgroup/*.pressure'
+
+	runc events --stats test_busybox
+	[ "$status" -eq 0 ]
+
+	# Check PSI metrics.
+	jq '.data.cpu.psi' <<<"${lines[0]}"
+	for psi_type in some full; do
+		for psi_metric in avg10 avg60 avg300 total; do
+			echo -n "checking .data.cpu.psi.$psi_type.$psi_metric != 0: "
+			jq -e '.data.cpu.psi.'$psi_type.$psi_metric' != 0' <<<"${lines[0]}"
+		done
+	done
+}
+
 function test_events() {
 	# XXX: currently cgroups require root containers.
 	requires root
