@@ -2,9 +2,9 @@ package devices
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
@@ -181,6 +181,7 @@ func findDeviceGroup(ruleType devices.Type, ruleMajor int64) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	ruleMajorStr := strconv.FormatInt(ruleMajor, 10) + " "
 
 	scanner := bufio.NewScanner(fh)
 	var currentType devices.Type
@@ -205,20 +206,9 @@ func findDeviceGroup(ruleType devices.Type, ruleMajor int64) (string, error) {
 			continue
 		}
 
-		// Parse out the (major, name).
-		var (
-			currMajor int64
-			currName  string
-		)
-		if n, err := fmt.Sscanf(line, "%d %s", &currMajor, &currName); err != nil || n != 2 {
-			if err == nil {
-				err = errors.New("wrong number of fields")
-			}
-			return "", fmt.Errorf("scan /proc/devices line %q: %w", line, err)
-		}
-
-		if currMajor == ruleMajor {
-			return prefix + currName, nil
+		group := strings.TrimPrefix(line, ruleMajorStr)
+		if len(group) < len(line) { // got it
+			return prefix + group, nil
 		}
 	}
 	if err := scanner.Err(); err != nil {
