@@ -377,9 +377,12 @@ func TestGetContainerStateAfterUpdate(t *testing.T) {
 	// Set initProcessStartTime so we fake to be running
 	container.initProcessStartTime = state.InitProcessStartTime
 	container.state = &runningState{c: container}
-	newConfig := container.Config()
+	newConfig, err := container.Config().Copy()
+	if err != nil {
+		t.Fatal(err)
+	}
 	newConfig.Cgroups.Resources.Memory = 2048
-	if err := container.Set(newConfig); err != nil {
+	if err := container.Set(*newConfig); err != nil {
 		t.Fatal(err)
 	}
 	state, err = container.State()

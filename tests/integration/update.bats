@@ -683,7 +683,6 @@ EOF
 
 @test "update paused container" {
 	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
-	requires cgroups_freezer
 
 	# Run the container in the background.
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
@@ -703,4 +702,50 @@ EOF
 	# Resume the container.
 	runc resume test_update
 	[ "$status" -eq 0 ]
+}
+
+@test "update container fail back for cgroup v1" {
+	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+	requires cgroups_v1
+
+	# Run the container in the background.
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
+	[ "$status" -eq 0 ]
+
+	# Update the cpuset-cpus to 1
+	runc update --cpuset-cpus 1 test_update
+	[ "$status" -eq 0 ]
+
+	cpus=$(get_state "test_update" ".config.cgroups.cpuset_cpus")
+	[ "$cpus" = '"1"' ]
+
+	# Update the cpuset-cpus to 0(will success), memory to 2(will fail)
+	runc update --cpuset-cpus 0 --memory 2 test_update
+	[ "$status" -eq 1 ]
+
+	cpus=$(get_state "test_update" ".config.cgroups.cpuset_cpus")
+	[ "$cpus" = '"1"' ]
+}
+
+@test "update container fail back for cgroup v2" {
+	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+	requires cgroups_v2
+
+	# Run the container in the background.
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
+	[ "$status" -eq 0 ]
+
+	# Update pids to 100
+	runc update --pids-limit 100 test_update
+	[ "$status" -eq 0 ]
+
+	pids=$(get_state "test_update" ".config.cgroups.pids_limit")
+	[ "$pids" = '100' ]
+
+	# Update pids to 101(will success), cpuset-cpus to 100(will fail)
+	runc update --pids-limit 100 --cpuset-cpus 100 test_update
+	[ "$status" -eq 1 ]
+
+	pids=$(get_state "test_update" ".config.cgroups.pids_limit")
+	[ "$pids" = '100' ]
 }

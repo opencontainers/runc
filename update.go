@@ -159,7 +159,10 @@ other options are ignored.
 			},
 		}
 
-		config := container.Config()
+		var config *configs.Config
+		if config, err = container.Config().Copy(); err != nil {
+			return err
+		}
 
 		if in := context.String("resources"); in != "" {
 			var (
@@ -320,7 +323,7 @@ other options are ignored.
 					return err
 				}
 				config.IntelRdt = &configs.IntelRdt{}
-				intelRdtManager := intelrdt.NewManager(&config, container.ID(), state.IntelRdtPath)
+				intelRdtManager := intelrdt.NewManager(config, container.ID(), state.IntelRdtPath)
 				if err := intelRdtManager.Apply(state.InitProcessPid); err != nil {
 					return err
 				}
@@ -336,6 +339,6 @@ other options are ignored.
 		// Note this field is not saved into container's state.json.
 		config.Cgroups.SkipDevices = true
 
-		return container.Set(config)
+		return container.Set(*config)
 	},
 }

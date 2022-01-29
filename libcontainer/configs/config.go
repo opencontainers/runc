@@ -210,6 +210,17 @@ type Config struct {
 	RootlessCgroups bool `json:"rootless_cgroups,omitempty"`
 }
 
+// Copy is to deep copy a config.
+func (c Config) Copy() (*Config, error) {
+	var config Config
+	bytes, err := json.Marshal(c)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(bytes, &config)
+	return &config, err
+}
+
 type (
 	HookName string
 	HookList []Hook
