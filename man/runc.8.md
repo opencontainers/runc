@@ -110,10 +110,6 @@ These options can be used with any command, and must precede the **command**.
 located on tmpfs. Default is */run/runc*, or *$XDG_RUNTIME_DIR/runc* for
 rootless containers.
 
-**--criu** _path_
-: Set the path to the **criu**(8) binary used for checkpoint and restore.
-Default is **criu**.
-
 **--systemd-cgroup**
 : Enable systemd cgroup support. If this is set, the container spec
 (_config.json_) is expected to have **cgroupsPath** value in the

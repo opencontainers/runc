@@ -23,8 +23,8 @@ SECCOMP_AGENT="${INTEGRATION_ROOT}/../../contrib/cmd/seccompagent/seccompagent"
 # shellcheck disable=SC2034
 TESTDATA="${INTEGRATION_ROOT}/testdata"
 
-# CRIU PATH
-CRIU="$(which criu 2>/dev/null || true)"
+# Whether we have criu binary.
+command -v criu &>/dev/null && HAVE_CRIU=yes
 
 # Kernel version
 KERNEL_VERSION="$(uname -r)"
@@ -350,7 +350,7 @@ function requires() {
 		local skip_me
 		case $var in
 		criu)
-			if [ ! -e "$CRIU" ]; then
+			if [ -n "$HAVE_CRIU" ]; then
 				skip_me=1
 			fi
 			;;
