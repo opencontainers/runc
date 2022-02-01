@@ -87,7 +87,7 @@ func DetectUserDbusSessionBusAddress() (string, error) {
 	if xdr := os.Getenv("XDG_RUNTIME_DIR"); xdr != "" {
 		busPath := filepath.Join(xdr, "bus")
 		if _, err := os.Stat(busPath); err == nil {
-			busAddress := "unix:path=" + busPath
+			busAddress := "unix:path=" + dbus.EscapeBusAddressValue(busPath)
 			return busAddress, nil
 		}
 	}
