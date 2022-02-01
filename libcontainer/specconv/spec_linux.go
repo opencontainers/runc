@@ -538,8 +538,10 @@ func checkPropertyName(s string) error {
 	if len(s) < 3 {
 		return errors.New("too short")
 	}
-	// Check ASCII characters rather than Unicode runes.
-	for _, ch := range s {
+	// Check ASCII characters rather than Unicode runes,
+	// so we have to use indexes rather than range.
+	for i := 0; i < len(s); i++ {
+		ch := s[i]
 		if (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') {
 			continue
 		}
