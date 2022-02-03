@@ -840,55 +840,6 @@ func TestPassExtraFiles(t *testing.T) {
 	}
 }
 
-func TestMountCmds(t *testing.T) {
-	if testing.Short() {
-		return
-	}
-
-	tmpDir := t.TempDir()
-	config := newTemplateConfig(t, nil)
-	rootfs := config.Rootfs
-	config.Mounts = append(config.Mounts, &configs.Mount{
-		Source:      tmpDir,
-		Destination: "/tmp",
-		Device:      "bind",
-		Flags:       unix.MS_BIND | unix.MS_REC,
-		PremountCmds: []configs.Command{
-			{Path: "touch", Args: []string{filepath.Join(tmpDir, "hello")}},
-			{Path: "touch", Args: []string{filepath.Join(tmpDir, "world")}},
-		},
-		PostmountCmds: []configs.Command{
-			{Path: "cp", Args: []string{filepath.Join(rootfs, "tmp", "hello"), filepath.Join(rootfs, "tmp", "hello-backup")}},
-			{Path: "cp", Args: []string{filepath.Join(rootfs, "tmp", "world"), filepath.Join(rootfs, "tmp", "world-backup")}},
-		},
-	})
-
-	container, err := newContainer(t, config)
-	ok(t, err)
-	defer destroyContainer(container)
-
-	pconfig := libcontainer.Process{
-		Cwd:  "/",
-		Args: []string{"sh", "-c", "env"},
-		Env:  standardEnvironment,
-		Init: true,
-	}
-	err = container.Run(&pconfig)
-	ok(t, err)
-
-	// Wait for process
-	waitProcess(&pconfig, t)
-
-	entries, err := os.ReadDir(tmpDir)
-	ok(t, err)
-	expected := []string{"hello", "hello-backup", "world", "world-backup"}
-	for i, e := range entries {
-		if e.Name() != expected[i] {
-			t.Errorf("Got(%s), expect %s", e.Name(), expected[i])
-		}
-	}
-}
-
 func TestSysctl(t *testing.T) {
 	if testing.Short() {
 		return
