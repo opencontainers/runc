@@ -23,6 +23,7 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink/nl"
+	"golang.org/x/sys/execabs"
 	"golang.org/x/sys/unix"
 	"google.golang.org/protobuf/proto"
 
@@ -2150,7 +2151,7 @@ func (c *linuxContainer) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Na
 				// We resolve the paths for new{u,g}idmap from
 				// the context of runc to avoid doing a path
 				// lookup in the nsexec context.
-				if path, err := exec.LookPath("newuidmap"); err == nil {
+				if path, err := execabs.LookPath("newuidmap"); err == nil {
 					r.AddData(&Bytemsg{
 						Type:  UidmapPathAttr,
 						Value: []byte(path),
@@ -2178,7 +2179,7 @@ func (c *linuxContainer) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Na
 				Value: b,
 			})
 			if c.config.RootlessEUID {
-				if path, err := exec.LookPath("newgidmap"); err == nil {
+				if path, err := execabs.LookPath("newgidmap"); err == nil {
 					r.AddData(&Bytemsg{
 						Type:  GidmapPathAttr,
 						Value: []byte(path),
