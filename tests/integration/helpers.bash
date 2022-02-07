@@ -59,12 +59,10 @@ function __runc() {
 
 # Wrapper for runc spec.
 function runc_spec() {
-	local args=()
-	if [ "$ROOTLESS" -ne 0 ]; then
-		args+=("--rootless")
-	fi
+	local rootless=""
+	[ "$ROOTLESS" -ne 0 ] && rootless="--rootless"
 
-	runc spec "${args[@]}"
+	runc spec $rootless
 
 	# Always add additional mappings if we have idmaps.
 	if [[ "$ROOTLESS" -ne 0 ]] && [[ "$ROOTLESS_FEATURES" == *"idmap"* ]]; then
