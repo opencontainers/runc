@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -u
+
 # bats-core v1.2.1 defines BATS_RUN_TMPDIR.
 if [ ! -v BATS_RUN_TMPDIR ]; then
 	echo "bats >= v1.2.1 is required. Aborting." >&2
