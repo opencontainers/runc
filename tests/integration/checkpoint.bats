@@ -252,7 +252,7 @@ function simple_cr() {
 	# in time when the last page is lazily transferred to the destination.
 	# Killing the CRIU on the checkpoint side will let the container
 	# continue to run if the migration failed at some point.
-	[ -n "$RUNC_USE_SYSTEMD" ] && set_cgroups_path
+	[ -v RUNC_USE_SYSTEMD ] && set_cgroups_path
 	runc_restore_with_pipes ./image-dir test_busybox_restore --lazy-pages
 
 	wait $cpt_pid

@@ -399,7 +399,7 @@ EOF
 	set_cgroups_path "pod_${RANDOM}"
 
 	# Set parent/pod CPU quota limit to 50%.
-	if [ -n "${RUNC_USE_SYSTEMD}" ]; then
+	if [ -v RUNC_USE_SYSTEMD ]; then
 		set_parent_systemd_properties CPUQuota="50%"
 	else
 		echo 50000 >"/sys/fs/cgroup/cpu/$REL_PARENT_PATH/cpu.cfs_quota_us"
