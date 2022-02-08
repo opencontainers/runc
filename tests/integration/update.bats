@@ -627,8 +627,6 @@ EOF
 }
 
 @test "update devices [minimal transition rules]" {
-	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
-
 	requires root
 
 	# Run a basic shell script that tries to read from /dev/kmsg, but
