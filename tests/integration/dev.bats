@@ -17,7 +17,7 @@ function teardown() {
 	runc run test_dev
 	[ "$status" -eq 0 ]
 
-	if [[ "$ROOTLESS" -ne 0 ]]; then
+	if [ $EUID -ne 0 ]; then
 		[[ "${lines[0]}" =~ "crw-rw-rw".+"1".+"65534".+"65534".+"5,".+"0".+"/dev/tty" ]]
 	else
 		[[ "${lines[0]}" =~ "crw-rw-rw".+"1".+"0".+"0".+"5,".+"0".+"/dev/tty" ]]

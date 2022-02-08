@@ -43,9 +43,6 @@ ARCH=$(uname -m)
 # Seccomp agent socket.
 SECCCOMP_AGENT_SOCKET="$BATS_TMPDIR/seccomp-agent.sock"
 
-# Check if we're in rootless mode.
-ROOTLESS=$(id -u)
-
 # Wrapper for runc.
 function runc() {
 	run __runc "$@"
@@ -67,12 +64,12 @@ function __runc() {
 # Wrapper for runc spec.
 function runc_spec() {
 	local rootless=""
-	[ "$ROOTLESS" -ne 0 ] && rootless="--rootless"
+	[ $EUID -ne 0 ] && rootless="--rootless"
 
 	runc spec $rootless
 
 	# Always add additional mappings if we have idmaps.
-	if [[ "$ROOTLESS" -ne 0 && "$ROOTLESS_FEATURES" == *"idmap"* ]]; then
+	if [[ $EUID -ne 0 && "$ROOTLESS_FEATURES" == *"idmap"* ]]; then
 		runc_rootless_idmap
 	fi
 }
@@ -112,8 +109,8 @@ function init_cgroup_paths() {
 		# For rootless + systemd case, controllers delegation is required,
 		# so check the controllers that the current user has, not the top one.
 		# NOTE: delegation of cpuset requires systemd >= 244 (Fedora >= 32, Ubuntu >= 20.04).
-		if [[ "$ROOTLESS" -ne 0 && -v RUNC_USE_SYSTEMD ]]; then
-			controllers="/sys/fs/cgroup/user.slice/user-$(id -u).slice/user@$(id -u).service/cgroup.controllers"
+		if [[ $EUID -ne 0 && -v RUNC_USE_SYSTEMD ]]; then
+			controllers="/sys/fs/cgroup/user.slice/user-${UID}.slice/user@${UID}.service/cgroup.controllers"
 		fi
 
 		# "pseudo" controllers do not appear in /sys/fs/cgroup/cgroup.controllers.
@@ -188,7 +185,7 @@ function remove_parent() {
 function set_parent_systemd_properties() {
 	[ ! -v SD_PARENT_NAME ] && return
 	local user=""
-	[ "$(id -u)" != "0" ] && user="--user"
+	[ $EUID -ne 0 ] && user="--user"
 	systemctl set-property $user "$SD_PARENT_NAME" "$@"
 }
 
@@ -213,12 +210,12 @@ function set_cgroups_path() {
 	local rnd="$RANDOM"
 	if [ -v RUNC_USE_SYSTEMD ]; then
 		SD_UNIT_NAME="runc-cgroups-integration-test-${rnd}.scope"
-		if [ "$(id -u)" = "0" ]; then
+		if [ $EUID -eq 0 ]; then
 			REL_PARENT_PATH="/machine.slice${pod_slice}"
 			OCI_CGROUPS_PATH="machine${dash_pod}.slice:runc-cgroups:integration-test-${rnd}"
 		else
-			REL_PARENT_PATH="/user.slice/user-$(id -u).slice/user@$(id -u).service/machine.slice${pod_slice}"
-			# OCI path doesn't contain "/user.slice/user-$(id -u).slice/user@$(id -u).service/" prefix
+			REL_PARENT_PATH="/user.slice/user-${UID}.slice/user@${UID}.service/machine.slice${pod_slice}"
+			# OCI path doesn't contain "/user.slice/user-${UID}.slice/user@${UID}.service/" prefix
 			OCI_CGROUPS_PATH="machine${dash_pod}.slice:runc-cgroups:integration-test-${rnd}"
 		fi
 		REL_CGROUPS_PATH="$REL_PARENT_PATH/$SD_UNIT_NAME"
@@ -271,7 +268,7 @@ function check_systemd_value() {
 	local expected="$2"
 	local expected2="${3:-}"
 	local user=""
-	[ "$(id -u)" != "0" ] && user="--user"
+	[ $EUID -ne 0 ] && user="--user"
 
 	current=$(systemctl show $user --property "$source" "$SD_UNIT_NAME" | awk -F= '{print $2}')
 	echo "systemd $source: current $current !? $expected $expected2"
@@ -360,12 +357,12 @@ function requires() {
 			fi
 			;;
 		root)
-			if [ "$ROOTLESS" -ne 0 ]; then
+			if [ $EUID -ne 0 ]; then
 				skip_me=1
 			fi
 			;;
 		rootless)
-			if [ "$ROOTLESS" -eq 0 ]; then
+			if [ $EUID -eq 0 ]; then
 				skip_me=1
 			fi
 			;;

@@ -21,7 +21,7 @@ function setup() {
 # Tests whatever limits are (more or less) common between cgroup
 # v1 and v2: memory/swap, pids, and cpuset.
 @test "update cgroup v1/v2 common limits" {
-	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+	[ $EUID -ne 0 ] && requires rootless_cgroup
 	requires cgroups_memory cgroups_pids cgroups_cpuset
 	init_cgroup_paths
 
@@ -259,7 +259,7 @@ EOF
 }
 
 @test "update cgroup cpu limits" {
-	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+	[ $EUID -ne 0 ] && requires rootless_cgroup
 
 	# run a few busyboxes detached
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
@@ -333,7 +333,7 @@ EOF
 }
 
 @test "set cpu period with no quota" {
-	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+	[ $EUID -ne 0 ] && requires rootless_cgroup
 
 	update_config '.linux.resources.cpu |= { "period": 1000000 }'
 
@@ -344,7 +344,7 @@ EOF
 }
 
 @test "set cpu period with no quota (invalid period)" {
-	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+	[ $EUID -ne 0 ] && requires rootless_cgroup
 
 	update_config '.linux.resources.cpu |= { "period": 100 }'
 
@@ -353,7 +353,7 @@ EOF
 }
 
 @test "set cpu quota with no period" {
-	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+	[ $EUID -ne 0 ] && requires rootless_cgroup
 
 	update_config '.linux.resources.cpu |= { "quota": 5000 }'
 
@@ -363,7 +363,7 @@ EOF
 }
 
 @test "update cpu period with no previous period/quota set" {
-	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+	[ $EUID -ne 0 ] && requires rootless_cgroup
 
 	update_config '.linux.resources.cpu |= {}'
 
@@ -377,7 +377,7 @@ EOF
 }
 
 @test "update cpu quota with no previous period/quota set" {
-	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+	[ $EUID -ne 0 ] && requires rootless_cgroup
 
 	update_config '.linux.resources.cpu |= {}'
 
@@ -392,7 +392,7 @@ EOF
 
 @test "update cpu period in a pod cgroup with pod limit set" {
 	requires cgroups_v1
-	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+	[ $EUID -ne 0 ] && requires rootless_cgroup
 
 	set_cgroups_path "pod_${RANDOM}"
 
@@ -426,7 +426,7 @@ EOF
 }
 
 @test "update cgroup v2 resources via unified map" {
-	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+	[ $EUID -ne 0 ] && requires rootless_cgroup
 	requires cgroups_v2
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
@@ -455,7 +455,7 @@ EOF
 }
 
 @test "update cpuset parameters via resources.CPU" {
-	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+	[ $EUID -ne 0 ] && requires rootless_cgroup
 	requires smp cgroups_cpuset
 
 	local AllowedCPUs='AllowedCPUs' AllowedMemoryNodes='AllowedMemoryNodes'
@@ -511,7 +511,7 @@ EOF
 
 @test "update cpuset parameters via v2 unified map" {
 	# This test assumes systemd >= v244
-	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+	[ $EUID -ne 0 ] && requires rootless_cgroup
 	requires cgroups_v2 smp cgroups_cpuset
 
 	update_config ' .linux.resources.unified |= {
@@ -558,7 +558,7 @@ EOF
 }
 
 @test "update rt period and runtime" {
-	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+	[ $EUID -ne 0 ] && requires rootless_cgroup
 	requires cgroups_v1 cgroups_rt no_systemd
 
 	local cgroup_cpu="${CGROUP_CPU_BASE_PATH}/${REL_CGROUPS_PATH}"
@@ -678,8 +678,8 @@ EOF
 }
 
 @test "update paused container" {
-	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
 	requires cgroups_freezer
+	[ $EUID -ne 0 ] && requires rootless_cgroup
 
 	# Run the container in the background.
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_update

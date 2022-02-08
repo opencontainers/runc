@@ -62,7 +62,7 @@ function teardown() {
 
 @test "ps after the container stopped" {
 	# ps requires cgroups
-	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+	[ $EUID -ne 0 ] && requires rootless_cgroup
 	set_cgroups_path
 
 	# start busybox detached

@@ -117,7 +117,7 @@ function teardown() {
 
 @test "runc exec --user" {
 	# --user can't work in rootless containers that don't have idmap.
-	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_idmap
+	[ $EUID -ne 0 ] && requires rootless_idmap
 
 	# run busybox detached
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox

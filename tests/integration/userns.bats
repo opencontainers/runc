@@ -15,7 +15,7 @@ function setup() {
 	mkdir -p rootfs/{proc,sys,tmp}
 	mkdir -p rootfs/tmp/mount-{1,2}
 
-	if [ "$ROOTLESS" -eq 0 ]; then
+	if [ $EUID -eq 0 ]; then
 		update_config ' .linux.namespaces += [{"type": "user"}]
 			| .linux.uidMappings += [{"hostID": 100000, "containerID": 0, "size": 65534}]
 			| .linux.gidMappings += [{"hostID": 100000, "containerID": 0, "size": 65534}] '

@@ -11,11 +11,11 @@ function teardown() {
 }
 
 @test "runc pause and resume" {
-	if [[ "$ROOTLESS" -ne 0 ]]; then
+	requires cgroups_freezer
+	if [ $EUID -ne 0 ]; then
 		requires rootless_cgroup
 		set_cgroups_path
 	fi
-	requires cgroups_freezer
 
 	# run busybox detached
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
@@ -39,11 +39,11 @@ function teardown() {
 }
 
 @test "runc pause and resume with nonexist container" {
-	if [[ "$ROOTLESS" -ne 0 ]]; then
+	requires cgroups_freezer
+	if [ $EUID -ne 0 ]; then
 		requires rootless_cgroup
 		set_cgroups_path
 	fi
-	requires cgroups_freezer
 
 	# run test_busybox detached
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox

@@ -15,7 +15,7 @@ function teardown() {
 	# XXX(@kolyshkin): currently this test does not handle rootless when
 	# fs cgroup driver is used, because in this case cgroup (with a
 	# predefined name) is created by tests/rootless.sh, not by runc.
-	[[ "$ROOTLESS" -ne 0 ]] && requires systemd
+	[ $EUID -ne 0 ] && requires systemd
 	set_resources_limit
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" testbusyboxdelete
