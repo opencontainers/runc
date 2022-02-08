@@ -24,7 +24,7 @@ function teardown() {
 
 	runc exec test_busybox cat /testfile
 	[ "$status" -eq 0 ]
-	[[ "${output}" == "" ]]
+	[ -z "$output" ]
 
 	runc exec test_busybox rm -f /testfile
 	[ "$status" -eq 1 ]
@@ -42,7 +42,7 @@ function teardown() {
 
 	runc exec test_busybox ls /testdir
 	[ "$status" -eq 0 ]
-	[[ "${output}" == "" ]]
+	[ -z "$output" ]
 
 	runc exec test_busybox touch /testdir/foo
 	[ "$status" -eq 1 ]

@@ -50,7 +50,7 @@ function teardown() {
 	# check pid.txt was generated
 	[ -e pid.txt ]
 
-	[[ $(cat pid.txt) == $(__runc state test_busybox | jq '.pid') ]]
+	[[ $(cat pid.txt) = $(__runc state test_busybox | jq '.pid') ]]
 
 	# start the command
 	runc start test_busybox
@@ -73,7 +73,7 @@ function teardown() {
 	# check pid.txt was generated
 	[ -e pid.txt ]
 
-	[[ $(cat pid.txt) == $(__runc state test_busybox | jq '.pid') ]]
+	[[ $(cat pid.txt) = $(__runc state test_busybox | jq '.pid') ]]
 
 	# start the command
 	runc start test_busybox

@@ -87,7 +87,7 @@ function setup() {
 
 	runc exec test_cgroups_group cat /proc/self/cgroup
 	[ "$status" -eq 0 ]
-	[[ ${lines[0]} == "0::/" ]]
+	[[ ${lines[0]} = "0::/" ]]
 
 	runc exec test_cgroups_group mkdir /sys/fs/cgroup/foo
 	[ "$status" -eq 0 ]
@@ -99,7 +99,7 @@ function setup() {
 	# because we haven't enabled any domain controller.
 	runc exec test_cgroups_group cat /proc/self/cgroup
 	[ "$status" -eq 0 ]
-	[[ ${lines[0]} == "0::/" ]]
+	[[ ${lines[0]} = "0::/" ]]
 
 	# turn on a domain controller (memory)
 	runc exec test_cgroups_group sh -euxc 'echo $$ > /sys/fs/cgroup/foo/cgroup.procs; echo +memory > /sys/fs/cgroup/cgroup.subtree_control'
@@ -109,7 +109,7 @@ function setup() {
 	# falls back to "/foo".
 	runc exec test_cgroups_group cat /proc/self/cgroup
 	[ "$status" -eq 0 ]
-	[[ ${lines[0]} == "0::/foo" ]]
+	[[ ${lines[0]} = "0::/foo" ]]
 
 	# teardown: remove "/foo"
 	# shellcheck disable=SC2016
@@ -301,7 +301,7 @@ function setup() {
 	[[ $exec_cgroup == *"runc-cgroups-integration-test"* ]]
 
 	# check that the cgroups v2 path is the same for both processes
-	[[ "$run_cgroup" == "$exec_cgroup" ]]
+	[ "$run_cgroup" = "$exec_cgroup" ]
 }
 
 @test "runc exec should refuse a paused container" {

@@ -152,7 +152,7 @@ function create_parent() {
 		"$SD_HELPER" --parent machine.slice start "$SD_PARENT_NAME"
 	else
 		[ ! -v REL_PARENT_PATH ] && return
-		if [ "$CGROUP_UNIFIED" == "yes" ]; then
+		if [ "$CGROUP_UNIFIED" = "yes" ]; then
 			mkdir "/sys/fs/cgroup$REL_PARENT_PATH"
 		else
 			local subsys
@@ -172,7 +172,7 @@ function remove_parent() {
 		"$SD_HELPER" --parent machine.slice stop "$SD_PARENT_NAME"
 	else
 		[ ! -v REL_PARENT_PATH ] && return
-		if [ "$CGROUP_UNIFIED" == "yes" ]; then
+		if [ "$CGROUP_UNIFIED" = "yes" ]; then
 			rmdir "/sys/fs/cgroup/$REL_PARENT_PATH"
 		else
 			local subsys
@@ -229,7 +229,7 @@ function set_cgroups_path() {
 	fi
 
 	# Absolute path to container's cgroup v2.
-	if [ "$CGROUP_UNIFIED" == "yes" ]; then
+	if [ "$CGROUP_UNIFIED" = "yes" ]; then
 		CGROUP_PATH=${CGROUP_BASE_PATH}${REL_CGROUPS_PATH}
 	fi
 
@@ -498,7 +498,7 @@ function wait_for_container() {
 function testcontainer() {
 	# test state of container
 	runc state "$1"
-	if [ "$2" == "checkpointed" ]; then
+	if [ "$2" = "checkpointed" ]; then
 		[ "$status" -eq 1 ]
 		return
 	fi
