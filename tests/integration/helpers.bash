@@ -104,10 +104,10 @@ function systemd_version() {
 
 function init_cgroup_paths() {
 	# init once
-	[ -v CGROUP_UNIFIED ] && return
+	[[ -v CGROUP_V1 || -v CGROUP_V2 ]] && return
 
 	if stat -f -c %t /sys/fs/cgroup | grep -qFw 63677270; then
-		CGROUP_UNIFIED=yes
+		CGROUP_V2=yes
 		local controllers="/sys/fs/cgroup/cgroup.controllers"
 		# For rootless + systemd case, controllers delegation is required,
 		# so check the controllers that the current user has, not the top one.
@@ -135,7 +135,7 @@ function init_cgroup_paths() {
 		if stat -f -c %t /sys/fs/cgroup/unified | grep -qFw 63677270; then
 			CGROUP_HYBRID=yes
 		fi
-		CGROUP_UNIFIED=no
+		CGROUP_V1=yes
 		CGROUP_SUBSYSTEMS=$(awk '!/^#/ {print $1}' /proc/cgroups)
 		local g base_path
 		for g in ${CGROUP_SUBSYSTEMS}; do
@@ -152,7 +152,7 @@ function create_parent() {
 		"$SD_HELPER" --parent machine.slice start "$SD_PARENT_NAME"
 	else
 		[ ! -v REL_PARENT_PATH ] && return
-		if [ "$CGROUP_UNIFIED" = "yes" ]; then
+		if [ -v CGROUP_V2 ]; then
 			mkdir "/sys/fs/cgroup$REL_PARENT_PATH"
 		else
 			local subsys
@@ -172,7 +172,7 @@ function remove_parent() {
 		"$SD_HELPER" --parent machine.slice stop "$SD_PARENT_NAME"
 	else
 		[ ! -v REL_PARENT_PATH ] && return
-		if [ "$CGROUP_UNIFIED" = "yes" ]; then
+		if [ -v CGROUP_V2 ]; then
 			rmdir "/sys/fs/cgroup/$REL_PARENT_PATH"
 		else
 			local subsys
@@ -229,7 +229,7 @@ function set_cgroups_path() {
 	fi
 
 	# Absolute path to container's cgroup v2.
-	if [ "$CGROUP_UNIFIED" = "yes" ]; then
+	if [ -v CGROUP_V2 ]; then
 		CGROUP_PATH=${CGROUP_BASE_PATH}${REL_CGROUPS_PATH}
 	fi
 
@@ -243,7 +243,7 @@ function get_cgroup_value() {
 	local source=$1
 	local cgroup var current
 
-	if [ "$CGROUP_UNIFIED" = "yes" ]; then
+	if [ -v CGROUP_V2 ]; then
 		cgroup=$CGROUP_PATH
 	else
 		var=${source%%.*}             # controller name (e.g. memory)
@@ -283,7 +283,7 @@ function check_cpu_quota() {
 	local period=$2
 	local sd_quota=$3
 
-	if [ "$CGROUP_UNIFIED" = "yes" ]; then
+	if [ -v CGROUP_V2 ]; then
 		if [ "$quota" = "-1" ]; then
 			quota="max"
 		fi
@@ -310,7 +310,7 @@ function check_cpu_quota() {
 function check_cpu_shares() {
 	local shares=$1
 
-	if [ "$CGROUP_UNIFIED" = "yes" ]; then
+	if [ -v CGROUP_V2 ]; then
 		local weight=$((1 + ((shares - 2) * 9999) / 262142))
 		check_cpu_weight "$weight"
 	else
@@ -397,7 +397,7 @@ function requires() {
 			;;
 		cgroups_swap)
 			init_cgroup_paths
-			if [ $CGROUP_UNIFIED = "no" ] && [ ! -e "${CGROUP_MEMORY_BASE_PATH}/memory.memsw.limit_in_bytes" ]; then
+			if [ -v CGROUP_V1 ] && [ ! -e "${CGROUP_MEMORY_BASE_PATH}/memory.memsw.limit_in_bytes" ]; then
 				skip_me=1
 			fi
 			;;
@@ -408,13 +408,13 @@ function requires() {
 			;;
 		cgroups_v1)
 			init_cgroup_paths
-			if [ "$CGROUP_UNIFIED" != "no" ]; then
+			if [ ! -v GROUP_V1 ]; then
 				skip_me=1
 			fi
 			;;
 		cgroups_v2)
 			init_cgroup_paths
-			if [ "$CGROUP_UNIFIED" != "yes" ]; then
+			if [ ! -v CGROUP_V2 ]; then
 				skip_me=1
 			fi
 			;;

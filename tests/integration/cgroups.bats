@@ -44,7 +44,7 @@ function setup() {
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_permissions
 	[ "$status" -eq 0 ]
-	if [ "$CGROUP_UNIFIED" != "no" ]; then
+	if [ -v CGROUP_V2 ]; then
 		if [ -v RUNC_USE_SYSTEMD ]; then
 			if [ "$(id -u)" = "0" ]; then
 				check_cgroup_value "cgroup.controllers" "$(cat /sys/fs/cgroup/machine.slice/cgroup.controllers)"
@@ -177,7 +177,7 @@ function setup() {
 	# The loop device itself is no longer needed.
 	losetup -d "$dev"
 
-	if [ "$CGROUP_UNIFIED" = "yes" ]; then
+	if [ -v CGROUP_V2 ]; then
 		file="io.bfq.weight"
 	else
 		file="blkio.bfq.weight_device"
@@ -377,18 +377,15 @@ function setup() {
 
 	set_cgroups_path
 
-	case $CGROUP_UNIFIED in
-	no)
+	if [ -v CGROUP_V1 ]; then
 		FREEZER_DIR="${CGROUP_FREEZER_BASE_PATH}/${REL_CGROUPS_PATH}"
 		FREEZER="${FREEZER_DIR}/freezer.state"
 		STATE="FROZEN"
-		;;
-	yes)
+	else
 		FREEZER_DIR="${CGROUP_PATH}"
 		FREEZER="${FREEZER_DIR}/cgroup.freeze"
 		STATE="1"
-		;;
-	esac
+	fi
 
 	# Create and freeze the cgroup.
 	mkdir -p "$FREEZER_DIR"
