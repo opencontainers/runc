@@ -2,6 +2,13 @@
 
 load helpers
 
+function setup() {
+	# It does not make sense to repeat these trivial tests for non-root.
+	# Also, they fail due to $ROOT not being set and XDG_RUNTIME_DIR
+	# pointing to another user's directory after sudo rootless.
+	requires root
+}
+
 @test "runc -h" {
 	runc -h
 	[ "$status" -eq 0 ]

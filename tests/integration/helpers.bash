@@ -54,7 +54,8 @@ function runc() {
 
 # Raw wrapper for runc.
 function __runc() {
-	"$RUNC" ${RUNC_USE_SYSTEMD+--systemd-cgroup} --root "$ROOT/state" "$@"
+	"$RUNC" ${RUNC_USE_SYSTEMD+--systemd-cgroup} \
+		${ROOT:+--root "$ROOT/state"} "$@"
 }
 
 # Wrapper for runc spec.
