@@ -102,9 +102,9 @@ jobs:
       - uses: actions/checkout@v3
       - name: vars
         run: |
-          echo 'VERSION=v0.7.2' >> $GITHUB_ENV
+          echo 'VERSION=v0.8.0' >> $GITHUB_ENV
           echo 'BASEURL=https://github.com/koalaman/shellcheck/releases/download' >> $GITHUB_ENV
-          echo 'SHA256SUM=12ee2e0b90a3d1e9cae24ac9b2838be66b48573cb2c8e8f3c566b959df6f050c' >> $GITHUB_ENV
+          echo 'SHA256SUM=f4bce23c11c3919c1b20bcb0f206f6b44c44e26f2bc95f8aa708716095fa0651' >> $GITHUB_ENV
           echo ~/bin >> $GITHUB_PATH
       - name: install shellcheck
         run: |
