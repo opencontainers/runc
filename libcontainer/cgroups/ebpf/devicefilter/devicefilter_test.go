@@ -153,8 +153,7 @@ func TestDeviceFilter_Privileged(t *testing.T) {
 			Allow:       true,
 		},
 	}
-	expected :=
-		`
+	expected := `
 // load parameters into registers
         0: LdXMemW dst: r2 src: r1 off: 0 imm: 0
         1: And32Imm dst: r2 imm: 65535
