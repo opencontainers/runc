@@ -194,7 +194,6 @@ other options are ignored.
 				opt  string
 				dest *uint64
 			}{
-
 				{"cpu-period", r.CPU.Period},
 				{"cpu-rt-period", r.CPU.RealtimePeriod},
 				{"cpu-share", r.CPU.Shares},
@@ -211,7 +210,6 @@ other options are ignored.
 				opt  string
 				dest *int64
 			}{
-
 				{"cpu-quota", r.CPU.Quota},
 				{"cpu-rt-runtime", r.CPU.RealtimeRuntime},
 			} {
