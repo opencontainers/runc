@@ -58,7 +58,7 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 	if l.Root == "" {
 		return nil, errors.New("root not set")
 	}
-	if err := l.validateID(id); err != nil {
+	if err := validateID(id); err != nil {
 		return nil, err
 	}
 	if err := validate.Validate(config); err != nil {
@@ -130,14 +130,14 @@ func (l *LinuxFactory) Load(id string) (Container, error) {
 		return nil, errors.New("root not set")
 	}
 	// when load, we need to check id is valid or not.
-	if err := l.validateID(id); err != nil {
+	if err := validateID(id); err != nil {
 		return nil, err
 	}
 	containerRoot, err := securejoin.SecureJoin(l.Root, id)
 	if err != nil {
 		return nil, err
 	}
-	state, err := l.loadState(containerRoot)
+	state, err := loadState(containerRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -252,7 +252,7 @@ func StartInitialization() (err error) {
 	return i.Init()
 }
 
-func (l *LinuxFactory) loadState(root string) (*State, error) {
+func loadState(root string) (*State, error) {
 	stateFilePath, err := securejoin.SecureJoin(root, stateFilename)
 	if err != nil {
 		return nil, err
@@ -272,7 +272,7 @@ func (l *LinuxFactory) loadState(root string) (*State, error) {
 	return state, nil
 }
 
-func (l *LinuxFactory) validateID(id string) error {
+func validateID(id string) error {
 	if !idRegex.MatchString(id) || string(os.PathSeparator)+id != utils.CleanPath(string(os.PathSeparator)+id) {
 		return ErrInvalidID
 	}
