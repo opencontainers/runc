@@ -165,7 +165,7 @@ func copyBusybox(dest string) error {
 	return nil
 }
 
-func newContainer(t *testing.T, config *configs.Config) (libcontainer.Container, error) {
+func newContainer(t *testing.T, config *configs.Config) (*libcontainer.Container, error) {
 	name := strings.ReplaceAll(t.Name(), "/", "_") + strconv.FormatInt(-int64(time.Now().Nanosecond()), 35)
 	root := t.TempDir()
 
@@ -212,6 +212,6 @@ func runContainer(t *testing.T, config *configs.Config, args ...string) (buffers
 	return
 }
 
-func destroyContainer(container libcontainer.Container) {
+func destroyContainer(container *libcontainer.Container) {
 	_ = container.Destroy()
 }

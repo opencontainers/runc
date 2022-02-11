@@ -25,7 +25,7 @@ var errEmptyID = errors.New("container id cannot be empty")
 
 // getContainer returns the specified container instance by loading it from
 // a state directory (root).
-func getContainer(context *cli.Context) (libcontainer.Container, error) {
+func getContainer(context *cli.Context) (*libcontainer.Container, error) {
 	id := context.Args().First()
 	if id == "" {
 		return nil, errEmptyID
@@ -82,7 +82,7 @@ func newProcess(p specs.Process) (*libcontainer.Process, error) {
 	return lp, nil
 }
 
-func destroy(container libcontainer.Container) {
+func destroy(container *libcontainer.Container) {
 	if err := container.Destroy(); err != nil {
 		logrus.Error(err)
 	}
@@ -162,7 +162,7 @@ func createPidFile(path string, process *libcontainer.Process) error {
 	return os.Rename(tmpName, path)
 }
 
-func createContainer(context *cli.Context, id string, spec *specs.Spec) (libcontainer.Container, error) {
+func createContainer(context *cli.Context, id string, spec *specs.Spec) (*libcontainer.Container, error) {
 	rootlessCg, err := shouldUseRootlessCgroupManager(context)
 	if err != nil {
 		return nil, err
@@ -193,7 +193,7 @@ type runner struct {
 	preserveFDs     int
 	pidFile         string
 	consoleSocket   string
-	container       libcontainer.Container
+	container       *libcontainer.Container
 	action          CtAct
 	notifySocket    *notifySocket
 	criuOpts        *libcontainer.CriuOpts
