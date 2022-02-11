@@ -10,7 +10,6 @@ import (
 	"strconv"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
-	"github.com/moby/sys/mountinfo"
 	"golang.org/x/sys/unix"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups/manager"
@@ -27,20 +26,6 @@ const (
 )
 
 var idRegex = regexp.MustCompile(`^[\w+-\.]+$`)
-
-// TmpfsRoot is an option func to mount LinuxFactory.Root to tmpfs.
-func TmpfsRoot(l *LinuxFactory) error {
-	mounted, err := mountinfo.Mounted(l.Root)
-	if err != nil {
-		return err
-	}
-	if !mounted {
-		if err := mount("tmpfs", l.Root, "", "tmpfs", 0, ""); err != nil {
-			return err
-		}
-	}
-	return nil
-}
 
 // New returns a linux based container factory based in the root directory and
 // configures the factory with the provided option funcs.
