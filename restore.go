@@ -109,7 +109,10 @@ using the runc checkpoint command.`,
 			logrus.Warn("runc checkpoint is untested with rootless containers")
 		}
 
-		options := criuOptions(context)
+		options, err := criuOptions(context)
+		if err != nil {
+			return err
+		}
 		if err := setEmptyNsMask(context, options); err != nil {
 			return err
 		}
@@ -124,10 +127,10 @@ using the runc checkpoint command.`,
 	},
 }
 
-func criuOptions(context *cli.Context) *libcontainer.CriuOpts {
+func criuOptions(context *cli.Context) (*libcontainer.CriuOpts, error) {
 	imagePath, parentPath, err := prepareImagePaths(context)
 	if err != nil {
-		fatal(err)
+		return nil, err
 	}
 
 	return &libcontainer.CriuOpts{
@@ -145,5 +148,5 @@ func criuOptions(context *cli.Context) *libcontainer.CriuOpts {
 		StatusFd:                context.Int("status-fd"),
 		LsmProfile:              context.String("lsm-profile"),
 		LsmMountContext:         context.String("lsm-mount-context"),
-	}
+	}, nil
 }

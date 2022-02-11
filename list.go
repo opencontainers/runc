@@ -117,7 +117,7 @@ func getContainers(context *cli.Context) ([]containerState, error) {
 	root := context.GlobalString("root")
 	list, err := os.ReadDir(root)
 	if err != nil {
-		fatal(err)
+		return nil, err
 	}
 
 	var s []containerState
@@ -131,7 +131,7 @@ func getContainers(context *cli.Context) ([]containerState, error) {
 				// Possible race with runc delete.
 				continue
 			}
-			fatal(err)
+			return nil, err
 		}
 		// This cast is safe on Linux.
 		uid := st.Sys().(*syscall.Stat_t).Uid
