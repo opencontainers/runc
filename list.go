@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"syscall"
 	"text/tabwriter"
 	"time"
@@ -116,11 +115,7 @@ func getContainers(context *cli.Context) ([]containerState, error) {
 		return nil, err
 	}
 	root := context.GlobalString("root")
-	absRoot, err := filepath.Abs(root)
-	if err != nil {
-		return nil, err
-	}
-	list, err := os.ReadDir(absRoot)
+	list, err := os.ReadDir(root)
 	if err != nil {
 		fatal(err)
 	}
