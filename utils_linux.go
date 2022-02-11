@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 
@@ -32,23 +31,7 @@ func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
 		return nil, err
 	}
 
-	intelRdtManager := libcontainer.IntelRdtFs
-
-	// We resolve the paths for {newuidmap,newgidmap} from the context of runc,
-	// to avoid doing a path lookup in the nsexec context. TODO: The binary
-	// names are not currently configurable.
-	newuidmap, err := exec.LookPath("newuidmap")
-	if err != nil {
-		newuidmap = ""
-	}
-	newgidmap, err := exec.LookPath("newgidmap")
-	if err != nil {
-		newgidmap = ""
-	}
-
-	return libcontainer.New(abs, intelRdtManager,
-		libcontainer.NewuidmapPath(newuidmap),
-		libcontainer.NewgidmapPath(newgidmap))
+	return libcontainer.New(abs)
 }
 
 // getContainer returns the specified container instance by loading it from state

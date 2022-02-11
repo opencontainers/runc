@@ -23,6 +23,7 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink/nl"
+	"golang.org/x/sys/execabs"
 	"golang.org/x/sys/unix"
 	"google.golang.org/protobuf/proto"
 
@@ -40,13 +41,9 @@ type linuxContainer struct {
 	root                 string
 	config               *configs.Config
 	cgroupManager        cgroups.Manager
-	intelRdtManager      intelrdt.Manager
-	initPath             string
-	initArgs             []string
+	intelRdtManager      *intelrdt.Manager
 	initProcess          parentProcess
 	initProcessStartTime uint64
-	newuidmapPath        string
-	newgidmapPath        string
 	m                    sync.Mutex
 	criuVersion          int
 	state                containerState
@@ -481,8 +478,8 @@ func (c *linuxContainer) newParentProcess(p *Process) (parentProcess, error) {
 }
 
 func (c *linuxContainer) commandTemplate(p *Process, childInitPipe *os.File, childLogPipe *os.File) *exec.Cmd {
-	cmd := exec.Command(c.initPath, c.initArgs[1:]...)
-	cmd.Args[0] = c.initArgs[0]
+	cmd := exec.Command("/proc/self/exe", "init")
+	cmd.Args[0] = os.Args[0]
 	cmd.Stdin = p.Stdin
 	cmd.Stdout = p.Stdout
 	cmd.Stderr = p.Stderr
@@ -2150,11 +2147,16 @@ func (c *linuxContainer) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Na
 	if !joinExistingUser {
 		// write uid mappings
 		if len(c.config.UidMappings) > 0 {
-			if c.config.RootlessEUID && c.newuidmapPath != "" {
-				r.AddData(&Bytemsg{
-					Type:  UidmapPathAttr,
-					Value: []byte(c.newuidmapPath),
-				})
+			if c.config.RootlessEUID {
+				// We resolve the paths for new{u,g}idmap from
+				// the context of runc to avoid doing a path
+				// lookup in the nsexec context.
+				if path, err := execabs.LookPath("newuidmap"); err == nil {
+					r.AddData(&Bytemsg{
+						Type:  UidmapPathAttr,
+						Value: []byte(path),
+					})
+				}
 			}
 			b, err := encodeIDMapping(c.config.UidMappings)
 			if err != nil {
@@ -2176,11 +2178,13 @@ func (c *linuxContainer) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Na
 				Type:  GidmapAttr,
 				Value: b,
 			})
-			if c.config.RootlessEUID && c.newgidmapPath != "" {
-				r.AddData(&Bytemsg{
-					Type:  GidmapPathAttr,
-					Value: []byte(c.newgidmapPath),
-				})
+			if c.config.RootlessEUID {
+				if path, err := execabs.LookPath("newgidmap"); err == nil {
+					r.AddData(&Bytemsg{
+						Type:  GidmapPathAttr,
+						Value: []byte(path),
+					})
+				}
 			}
 			if requiresRootOrMappingTool(c.config) {
 				r.AddData(&Boolmsg{
