@@ -29,10 +29,8 @@ var idRegex = regexp.MustCompile(`^[\w+-\.]+$`)
 
 // New returns a linux based container factory based in the root directory.
 func New(root string) (*LinuxFactory, error) {
-	if root != "" {
-		if err := os.MkdirAll(root, 0o700); err != nil {
-			return nil, err
-		}
+	if err := os.MkdirAll(root, 0o700); err != nil {
+		return nil, err
 	}
 	return &LinuxFactory{
 		Root: root,
@@ -169,9 +167,10 @@ func (l *LinuxFactory) Load(id string) (Container, error) {
 	return c, nil
 }
 
-// StartInitialization loads a container by opening the pipe fd from the parent to read the configuration and state
-// This is a low level implementation detail of the reexec and should not be consumed externally
-func (l *LinuxFactory) StartInitialization() (err error) {
+// StartInitialization loads a container by opening the pipe fd from the parent
+// to read the configuration and state. This is a low level implementation
+// detail of the reexec and should not be consumed externally.
+func StartInitialization() (err error) {
 	// Get the INITPIPE.
 	envInitPipe := os.Getenv("_LIBCONTAINER_INITPIPE")
 	pipefd, err := strconv.Atoi(envInitPipe)
