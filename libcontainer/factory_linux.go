@@ -28,7 +28,7 @@ const (
 var idRegex = regexp.MustCompile(`^[\w+-\.]+$`)
 
 // New returns a linux based container factory based in the root directory.
-func New(root string) (Factory, error) {
+func New(root string) (*LinuxFactory, error) {
 	if root != "" {
 		if err := os.MkdirAll(root, 0o700); err != nil {
 			return nil, err
@@ -45,6 +45,17 @@ type LinuxFactory struct {
 	Root string
 }
 
+// Create creates a new container with the given id and starts the initial
+// process inside it.
+//
+// The id must not be empty and consists of only the following characters:
+// ASCII letters, digits, underscore, plus, minus, period. The id must be
+// unique and non-existent for the factory with  same root path.
+//
+// Returns the new container with a running process.
+//
+// On error, any partially created container parts are cleaned up (the
+// operation is atomic).
 func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, error) {
 	if l.Root == "" {
 		return nil, errors.New("root not set")
@@ -113,6 +124,9 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 	return c, nil
 }
 
+// Load takes an ID for an existing container and returns the container
+// information from the state. This presents a read only view of the
+// container.
 func (l *LinuxFactory) Load(id string) (Container, error) {
 	if l.Root == "" {
 		return nil, errors.New("root not set")
@@ -153,10 +167,6 @@ func (l *LinuxFactory) Load(id string) (Container, error) {
 		return nil, err
 	}
 	return c, nil
-}
-
-func (l *LinuxFactory) Type() string {
-	return "libcontainer"
 }
 
 // StartInitialization loads a container by opening the pipe fd from the parent to read the configuration and state

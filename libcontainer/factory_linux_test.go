@@ -21,16 +21,8 @@ func TestFactoryNew(t *testing.T) {
 	if factory == nil {
 		t.Fatal("factory should not be nil")
 	}
-	lfactory, ok := factory.(*LinuxFactory)
-	if !ok {
-		t.Fatal("expected linux factory returned on linux based systems")
-	}
-	if lfactory.Root != root {
-		t.Fatalf("expected factory root to be %q but received %q", root, lfactory.Root)
-	}
-
-	if factory.Type() != "libcontainer" {
-		t.Fatalf("unexpected factory type: %q, expected %q", factory.Type(), "libcontainer")
+	if factory.Root != root {
+		t.Fatalf("expected factory root to be %q but received %q", root, factory.Root)
 	}
 }
 
