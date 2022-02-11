@@ -27,35 +27,18 @@ const (
 
 var idRegex = regexp.MustCompile(`^[\w+-\.]+$`)
 
-// New returns a linux based container factory based in the root directory.
-func New(root string) (*LinuxFactory, error) {
-	if err := os.MkdirAll(root, 0o700); err != nil {
-		return nil, err
-	}
-	return &LinuxFactory{
-		Root: root,
-	}, nil
-}
-
-// LinuxFactory implements the default factory interface for linux based systems.
-type LinuxFactory struct {
-	// Root directory for the factory to store state.
-	Root string
-}
-
-// Create creates a new container with the given id and starts the initial
-// process inside it.
+// Create creates a new container with the given id inside a given state
+// directory (root), and returns a Container object.
 //
-// The id must not be empty and consists of only the following characters:
+// The root is a state directory which many containers can share. It can be
+// used later to get the list of containers, or to get information about a
+// particular container (see Load).
+//
+// The id must not be empty and consist of only the following characters:
 // ASCII letters, digits, underscore, plus, minus, period. The id must be
-// unique and non-existent for the factory with  same root path.
-//
-// Returns the new container with a running process.
-//
-// On error, any partially created container parts are cleaned up (the
-// operation is atomic).
-func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, error) {
-	if l.Root == "" {
+// unique and non-existent for the given root path.
+func Create(root, id string, config *configs.Config) (Container, error) {
+	if root == "" {
 		return nil, errors.New("root not set")
 	}
 	if err := validateID(id); err != nil {
@@ -64,7 +47,10 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 	if err := validate.Validate(config); err != nil {
 		return nil, err
 	}
-	containerRoot, err := securejoin.SecureJoin(l.Root, id)
+	if err := os.MkdirAll(root, 0o700); err != nil {
+		return nil, err
+	}
+	containerRoot, err := securejoin.SecureJoin(root, id)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +94,8 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 		return nil, errors.New("container's cgroup unexpectedly frozen")
 	}
 
-	if err := os.MkdirAll(containerRoot, 0o711); err != nil {
+	// Parent directory is already created above, so Mkdir is enough.
+	if err := os.Mkdir(containerRoot, 0o711); err != nil {
 		return nil, err
 	}
 	c := &linuxContainer{
@@ -122,18 +109,18 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 	return c, nil
 }
 
-// Load takes an ID for an existing container and returns the container
-// information from the state. This presents a read only view of the
-// container.
-func (l *LinuxFactory) Load(id string) (Container, error) {
-	if l.Root == "" {
+// Load takes a path to the state directory (root) and an id of an existing
+// container, and returns a Container object reconstructed from the saved
+// state. This presents a read only view of the container.
+func Load(root, id string) (Container, error) {
+	if root == "" {
 		return nil, errors.New("root not set")
 	}
 	// when load, we need to check id is valid or not.
 	if err := validateID(id); err != nil {
 		return nil, err
 	}
-	containerRoot, err := securejoin.SecureJoin(l.Root, id)
+	containerRoot, err := securejoin.SecureJoin(root, id)
 	if err != nil {
 		return nil, err
 	}

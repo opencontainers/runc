@@ -23,19 +23,15 @@ import (
 
 var errEmptyID = errors.New("container id cannot be empty")
 
-// getContainer returns the specified container instance by loading it from state
-// with the default factory.
+// getContainer returns the specified container instance by loading it from
+// a state directory (root).
 func getContainer(context *cli.Context) (libcontainer.Container, error) {
 	id := context.Args().First()
 	if id == "" {
 		return nil, errEmptyID
 	}
 	root := context.GlobalString("root")
-	factory, err := libcontainer.New(root)
-	if err != nil {
-		return nil, err
-	}
-	return factory.Load(id)
+	return libcontainer.Load(root, id)
 }
 
 func getDefaultImagePath() string {
@@ -185,11 +181,7 @@ func createContainer(context *cli.Context, id string, spec *specs.Spec) (libcont
 	}
 
 	root := context.GlobalString("root")
-	factory, err := libcontainer.New(root)
-	if err != nil {
-		return nil, err
-	}
-	return factory.Create(id, config)
+	return libcontainer.Create(root, id, config)
 }
 
 type runner struct {

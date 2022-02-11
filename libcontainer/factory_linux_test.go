@@ -12,26 +12,9 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
-func TestFactoryNew(t *testing.T) {
-	root := t.TempDir()
-	factory, err := New(root)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if factory == nil {
-		t.Fatal("factory should not be nil")
-	}
-	if factory.Root != root {
-		t.Fatalf("expected factory root to be %q but received %q", root, factory.Root)
-	}
-}
-
 func TestFactoryLoadNotExists(t *testing.T) {
-	factory, err := New(t.TempDir())
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, err = factory.Load("nocontainer")
+	stateDir := t.TempDir()
+	_, err := Load(stateDir, "nocontainer")
 	if err == nil {
 		t.Fatal("expected nil error loading non-existing container")
 	}
@@ -77,11 +60,7 @@ func TestFactoryLoadContainer(t *testing.T) {
 	if err := marshal(filepath.Join(root, id, stateFilename), expectedState); err != nil {
 		t.Fatal(err)
 	}
-	factory, err := New(root)
-	if err != nil {
-		t.Fatal(err)
-	}
-	container, err := factory.Load(id)
+	container, err := Load(root, id)
 	if err != nil {
 		t.Fatal(err)
 	}
