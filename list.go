@@ -121,8 +121,7 @@ func getContainers(context *cli.Context) ([]containerState, error) {
 		// Report other errors, including non-existent custom --root.
 		return nil, err
 	}
-
-	factory, err := loadFactory(context)
+	factory, err := libcontainer.New(root)
 	if err != nil {
 		return nil, err
 	}

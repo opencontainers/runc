@@ -23,12 +23,6 @@ import (
 
 var errEmptyID = errors.New("container id cannot be empty")
 
-// loadFactory returns the configured factory instance for execing containers.
-func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
-	root := context.GlobalString("root")
-	return libcontainer.New(root)
-}
-
 // getContainer returns the specified container instance by loading it from state
 // with the default factory.
 func getContainer(context *cli.Context) (libcontainer.Container, error) {
@@ -36,7 +30,8 @@ func getContainer(context *cli.Context) (libcontainer.Container, error) {
 	if id == "" {
 		return nil, errEmptyID
 	}
-	factory, err := loadFactory(context)
+	root := context.GlobalString("root")
+	factory, err := libcontainer.New(root)
 	if err != nil {
 		return nil, err
 	}
@@ -189,7 +184,8 @@ func createContainer(context *cli.Context, id string, spec *specs.Spec) (libcont
 		return nil, err
 	}
 
-	factory, err := loadFactory(context)
+	root := context.GlobalString("root")
+	factory, err := libcontainer.New(root)
 	if err != nil {
 		return nil, err
 	}
