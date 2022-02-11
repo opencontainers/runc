@@ -71,13 +71,12 @@ func main() {
 	}
 	app.Version = strings.Join(v, "\n")
 
-	xdgRuntimeDir := ""
 	root := "/run/runc"
-	if shouldHonorXDGRuntimeDir() {
-		if runtimeDir := os.Getenv("XDG_RUNTIME_DIR"); runtimeDir != "" {
-			root = runtimeDir + "/runc"
-			xdgRuntimeDir = root
-		}
+	xdgDirUsed := false
+	xdgRuntimeDir := os.Getenv("XDG_RUNTIME_DIR")
+	if xdgRuntimeDir != "" && shouldHonorXDGRuntimeDir() {
+		root = xdgRuntimeDir + "/runc"
+		xdgDirUsed = true
 	}
 
 	app.Flags = []cli.Flag{
@@ -135,7 +134,7 @@ func main() {
 		featuresCommand,
 	}
 	app.Before = func(context *cli.Context) error {
-		if !context.IsSet("root") && xdgRuntimeDir != "" {
+		if !context.IsSet("root") && xdgDirUsed {
 			// According to the XDG specification, we need to set anything in
 			// XDG_RUNTIME_DIR to have a sticky bit if we don't want it to get
 			// auto-pruned.
