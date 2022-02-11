@@ -110,12 +110,19 @@ To list containers created using a non-default value for "--root":
 }
 
 func getContainers(context *cli.Context) ([]containerState, error) {
-	factory, err := loadFactory(context)
-	if err != nil {
-		return nil, err
-	}
 	root := context.GlobalString("root")
 	list, err := os.ReadDir(root)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) && context.IsSet("root") {
+			// Ignore non-existing default root directory
+			// (no containers created yet).
+			return nil, nil
+		}
+		// Report other errors, including non-existent custom --root.
+		return nil, err
+	}
+
+	factory, err := loadFactory(context)
 	if err != nil {
 		return nil, err
 	}
