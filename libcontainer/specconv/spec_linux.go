@@ -673,7 +673,7 @@ func CreateCgroupConfig(opts *CreateOpts, defaultDevs []*devices.Device) (*confi
 	if spec.Linux != nil {
 		r := spec.Linux.Resources
 		if r != nil {
-			for i, d := range spec.Linux.Resources.Devices {
+			for i, d := range r.Devices {
 				var (
 					t     = "a"
 					major = int64(-1)
