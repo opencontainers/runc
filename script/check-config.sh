@@ -27,6 +27,11 @@ kernelMajor="${kernelVersion%%.*}"
 kernelMinor="${kernelVersion#$kernelMajor.}"
 kernelMinor="${kernelMinor%%.*}"
 
+kernel_lt() {
+	[ "$kernelMajor" -lt "$1" ] && return
+	[ "$kernelMajor" -eq "$1" ] && [ "$kernelMinor" -le "$2" ]
+}
+
 is_set() {
 	zgrep "CONFIG_$1=[y|m]" "$CONFIG" >/dev/null
 }
@@ -178,7 +183,7 @@ if [ "$(stat -f -c %t /sys/fs/cgroup 2>/dev/null)" = "63677270" ]; then
 else
 	cgroupSubsystemDir="$(awk '/[, ](cpu|cpuacct|cpuset|devices|freezer|memory)[, ]/ && $3 == "cgroup" { print $2 }' /proc/mounts | head -n1)"
 	cgroupDir="$(dirname "$cgroupSubsystemDir")"
-	if [ -d "$cgroupDir/cpu" -o -d "$cgroupDir/cpuacct" -o -d "$cgroupDir/cpuset" -o -d "$cgroupDir/devices" -o -d "$cgroupDir/freezer" -o -d "$cgroupDir/memory" ]; then
+	if [ -d "$cgroupDir/cpu" ] || [ -d "$cgroupDir/cpuacct" ] || [ -d "$cgroupDir/cpuset" ] || [ -d "$cgroupDir/devices" ] || [ -d "$cgroupDir/freezer" ] || [ -d "$cgroupDir/memory" ]; then
 		wrap_good 'cgroup hierarchy' 'properly mounted' "[$cgroupDir]"
 	else
 		if [ "$cgroupSubsystemDir" ]; then
@@ -221,11 +226,11 @@ flags=(
 )
 check_flags "${flags[@]}"
 
-if [ "$kernelMajor" -lt 5 ] || [ "$kernelMajor" -eq 5 -a "$kernelMinor" -le 1 ]; then
+if kernel_lt 5 1; then
 	check_flags NF_NAT_IPV4
 fi
 
-if [ "$kernelMajor" -lt 5 ] || [ "$kernelMajor" -eq 5 -a "$kernelMinor" -le 2 ]; then
+if kernel_lt 5 2; then
 	check_flags NF_NAT_NEEDED
 fi
 
@@ -242,7 +247,7 @@ echo 'Optional Features:'
 
 	check_flags MEMCG_SWAP
 
-	if [ "$kernelMajor" -lt 5 ] || [ "$kernelMajor" -eq 5 -a "$kernelMinor" -le 8 ]; then
+	if kernel_lt 5 8; then
 		check_flags MEMCG_SWAP_ENABLED
 		if is_set MEMCG_SWAP && ! is_set MEMCG_SWAP_ENABLED; then
 			wrap_color '    (note that cgroup swap accounting is not enabled in your kernel config, you can enable it by setting boot option "swapaccount=1")' bold black
@@ -250,21 +255,21 @@ echo 'Optional Features:'
 	fi
 }
 
-if [ "$kernelMajor" -lt 4 ] || [ "$kernelMajor" -eq 4 -a "$kernelMinor" -le 5 ]; then
+if kernel_lt 4 5; then
 	check_flags MEMCG_KMEM
 fi
 
-if [ "$kernelMajor" -lt 3 ] || [ "$kernelMajor" -eq 3 -a "$kernelMinor" -le 18 ]; then
+if kernel_lt 3 18; then
 	check_flags RESOURCE_COUNTERS
 fi
 
-if [ "$kernelMajor" -lt 3 ] || [ "$kernelMajor" -eq 3 -a "$kernelMinor" -le 13 ]; then
+if kernel_lt 3 13; then
 	netprio=NETPRIO_CGROUP
 else
 	netprio=CGROUP_NET_PRIO
 fi
 
-if [ "$kernelMajor" -lt 5 ]; then
+if kernel_lt 5 0; then
 	check_flags IOSCHED_CFQ CFQ_GROUP_IOSCHED
 fi
 
