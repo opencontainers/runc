@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+set -e -u
 
 # bits of this were adapted from check_config.sh in docker
 # see also https://github.com/docker/docker/blob/master/contrib/check-config.sh
@@ -45,11 +45,11 @@ is_set_as_module() {
 color() {
 	local codes=()
 	if [ "$1" = 'bold' ]; then
-		codes=("${codes[@]}" '1')
+		codes=("${codes[@]-}" '1')
 		shift
 	fi
 	if [ "$#" -gt 0 ]; then
-		local code
+		local code=''
 		case "$1" in
 		# see https://en.wikipedia.org/wiki/ANSI_escape_code#Colors
 		black) code=30 ;;
@@ -62,11 +62,11 @@ color() {
 		white) code=37 ;;
 		esac
 		if [ "$code" ]; then
-			codes=("${codes[@]}" "$code")
+			codes=("${codes[@]-}" "$code")
 		fi
 	fi
 	local IFS=';'
-	echo -en '\033['"${codes[*]}"'m'
+	echo -en '\033['"${codes[*]-}"'m'
 }
 wrap_color() {
 	text="$1"
@@ -134,8 +134,7 @@ is_config() {
 }
 
 search_config() {
-	local target_dir="$1"
-	[[ "$target_dir" ]] || target_dir=("${possibleConfigs[@]}")
+	local target_dir=("${1:-${possibleConfigs[@]}}")
 
 	local tryConfig
 	for tryConfig in "${target_dir[@]}"; do
@@ -159,7 +158,7 @@ search_config() {
 	exit 1
 }
 
-CONFIG="$1"
+CONFIG="${1:-}"
 
 is_config "$CONFIG" || {
 	if [[ ! "$CONFIG" ]]; then
