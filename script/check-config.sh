@@ -24,7 +24,7 @@ fi
 
 kernelVersion="$(uname -r)"
 kernelMajor="${kernelVersion%%.*}"
-kernelMinor="${kernelVersion#$kernelMajor.}"
+kernelMinor="${kernelVersion#"$kernelMajor".}"
 kernelMinor="${kernelMinor%%.*}"
 
 kernel_lt() {
@@ -113,7 +113,9 @@ check_flags() {
 }
 
 check_distro_userns() {
-	source /etc/os-release 2>/dev/null || /bin/true
+	[ -r /etc/os-release ] || return 0
+	# shellcheck source=/dev/null
+	. /etc/os-release 2>/dev/null || return 0
 	if [[ "${ID}" =~ ^(centos|rhel)$ && "${VERSION_ID}" =~ ^7 ]]; then
 		# this is a CentOS7 or RHEL7 system
 		grep -q "user_namespace.enable=1" /proc/cmdline || {
@@ -277,7 +279,7 @@ flags=(
 	BLK_CGROUP BLK_DEV_THROTTLING
 	CGROUP_PERF
 	CGROUP_HUGETLB
-	NET_CLS_CGROUP $netprio
+	NET_CLS_CGROUP "$netprio"
 	CFS_BANDWIDTH FAIR_GROUP_SCHED RT_GROUP_SCHED
 	IP_NF_TARGET_REDIRECT
 	IP_VS
