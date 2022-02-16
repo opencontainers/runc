@@ -138,7 +138,9 @@ shellcheck:
 
 shfmt:
 	shfmt -ln bats -d -w tests/integration/*.bats
-	shfmt -ln bash -d -w man/*.sh script/* tests/*.sh tests/integration/*.bash
+	shfmt -ln bash -d -w man/*.sh script/* \
+		tests/*.sh tests/integration/*.bash tests/fuzzing/*.sh \
+		contrib/completions/bash/runc contrib/cmd/seccompagent/*.sh
 
 vendor:
 	$(GO) mod tidy

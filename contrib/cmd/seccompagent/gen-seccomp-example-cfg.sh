@@ -12,7 +12,7 @@ fi
 # exits when not running inside bats. We can do hacks, but just to redefine
 # update_config() seems clearer. We don't even really need to keep them in sync.
 function update_config() {
-        jq "$1" "./config.json" | awk 'BEGIN{RS="";getline<"-";print>ARGV[1]}' "./config.json"
+	jq "$1" "./config.json" | awk 'BEGIN{RS="";getline<"-";print>ARGV[1]}' "./config.json"
 }
 
 update_config '.linux.seccomp = {
