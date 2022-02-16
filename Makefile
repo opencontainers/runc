@@ -133,8 +133,8 @@ cfmt:
 shellcheck:
 	shellcheck tests/integration/*.bats tests/integration/*.sh \
 		tests/integration/*.bash tests/*.sh \
-		script/*
-	# TODO: add shellcheck for more sh files
+		man/*.sh script/*
+	# TODO: add shellcheck for more sh files (contrib/completions/bash/runc).
 
 shfmt:
 	shfmt -ln bats -d -w tests/integration/*.bats
