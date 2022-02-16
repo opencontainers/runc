@@ -118,6 +118,8 @@ jobs:
       - name: shellcheck
         run: |
           make shellcheck
+      - name: check-config.sh
+        run : ./script/check-config.sh
 
   deps:
     runs-on: ubuntu-20.04
