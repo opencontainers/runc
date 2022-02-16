@@ -51,6 +51,8 @@ task:
     vagrant ssh-config >> /root/.ssh/config
   guest_info_script: |
     ssh default 'sh -exc "uname -a && systemctl --version && df -T && cat /etc/os-release && go version"'
+  check_config_script: |
+    ssh default /vagrant/script/check-config.sh
   unit_tests_script: |
     ssh default 'sudo -i make -C /vagrant localunittest'
   integration_systemd_script: |
@@ -152,6 +154,8 @@ task:
     df -T
     echo "-----"
     systemctl --version
+  check_config_script: |
+    /home/runc/script/check-config.sh
   unit_tests_script: |
     ssh -tt localhost "make -C /home/runc localunittest"
   integration_systemd_script: |
