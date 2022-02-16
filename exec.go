@@ -162,7 +162,10 @@ func execProcess(context *cli.Context) (int, error) {
 	if err != nil {
 		return -1, err
 	}
-	bundle := utils.SearchLabels(state.Config.Labels, "bundle")
+	bundle, ok := utils.SearchLabels(state.Config.Labels, "bundle")
+	if !ok {
+		return -1, errors.New("bundle not found in labels")
+	}
 	p, err := getProcess(context, bundle)
 	if err != nil {
 		return -1, err

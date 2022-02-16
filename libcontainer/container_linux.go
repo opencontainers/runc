@@ -876,8 +876,7 @@ func (c *linuxContainer) handleCriuConfigurationFile(rpcOpts *criurpc.CriuOpts) 
 	// Look for annotations. The annotation 'org.criu.config'
 	// specifies if CRIU should use a different, container specific
 	// configuration file.
-	_, annotations := utils.Annotations(c.config.Labels)
-	configFile, exists := annotations["org.criu.config"]
+	configFile, exists := utils.SearchLabels(c.config.Labels, "org.criu.config")
 	if exists {
 		// If the annotation 'org.criu.config' exists and is set
 		// to a non-empty string, tell CRIU to use that as a
