@@ -73,10 +73,19 @@ wrap_color() {
 }
 
 wrap_good() {
-	echo "$(wrap_color "$1" white): $(wrap_color "$2" green)"
+	local name="$1"
+	shift
+	local val="$1"
+	shift
+	echo "$(wrap_color "$name" white): $(wrap_color "$val" green)" "$@"
 }
+
 wrap_bad() {
-	echo "$(wrap_color "$1" bold): $(wrap_color "$2" bold red)"
+	local name="$1"
+	shift
+	local val="$1"
+	shift
+	echo "$(wrap_color "$name" bold): $(wrap_color "$val" bold red)" "$@"
 }
 wrap_warning() {
 	wrap_color >&2 "$*" red
@@ -165,35 +174,35 @@ echo 'Generally Necessary:'
 
 echo -n '- '
 if [ "$(stat -f -c %t /sys/fs/cgroup 2>/dev/null)" = "63677270" ]; then
-	echo "$(wrap_good 'cgroup hierarchy' 'cgroupv2')"
+	wrap_good 'cgroup hierarchy' 'cgroupv2'
 else
 	cgroupSubsystemDir="$(awk '/[, ](cpu|cpuacct|cpuset|devices|freezer|memory)[, ]/ && $3 == "cgroup" { print $2 }' /proc/mounts | head -n1)"
 	cgroupDir="$(dirname "$cgroupSubsystemDir")"
 	if [ -d "$cgroupDir/cpu" -o -d "$cgroupDir/cpuacct" -o -d "$cgroupDir/cpuset" -o -d "$cgroupDir/devices" -o -d "$cgroupDir/freezer" -o -d "$cgroupDir/memory" ]; then
-		echo "$(wrap_good 'cgroup hierarchy' 'properly mounted') [$cgroupDir]"
+		wrap_good 'cgroup hierarchy' 'properly mounted' "[$cgroupDir]"
 	else
 		if [ "$cgroupSubsystemDir" ]; then
-			echo "$(wrap_bad 'cgroup hierarchy' 'single mountpoint!') [$cgroupSubsystemDir]"
+			wrap_bad 'cgroup hierarchy' 'single mountpoint!' "[$cgroupSubsystemDir]"
 		else
-			echo "$(wrap_bad 'cgroup hierarchy' 'nonexistent??')"
+			wrap_bad 'cgroup hierarchy' 'nonexistent??'
 		fi
-		echo "    $(wrap_color '(see https://github.com/tianon/cgroupfs-mount)' yellow)"
+		wrap_color '    (see https://github.com/tianon/cgroupfs-mount)' yellow
 	fi
 fi
 
 if [ "$(cat /sys/module/apparmor/parameters/enabled 2>/dev/null)" = 'Y' ]; then
 	echo -n '- '
 	if command -v apparmor_parser &>/dev/null; then
-		echo "$(wrap_good 'apparmor' 'enabled and tools installed')"
+		wrap_good 'apparmor' 'enabled and tools installed'
 	else
-		echo "$(wrap_bad 'apparmor' 'enabled, but apparmor_parser missing')"
+		wrap_bad 'apparmor' 'enabled, but apparmor_parser missing'
 		echo -n '    '
 		if command -v apt-get &>/dev/null; then
-			echo "$(wrap_color '(use "apt-get install apparmor" to fix this)')"
+			wrap_color '(use "apt-get install apparmor" to fix this)' yellow
 		elif command -v yum &>/dev/null; then
-			echo "$(wrap_color '(your best bet is "yum install apparmor-parser")')"
+			wrap_color '(your best bet is "yum install apparmor-parser")' yellow
 		else
-			echo "$(wrap_color '(look for an "apparmor" package for your distribution)')"
+			wrap_color '(look for an "apparmor" package for your distribution)' yellow
 		fi
 	fi
 fi
@@ -236,7 +245,7 @@ echo 'Optional Features:'
 	if [ "$kernelMajor" -lt 5 ] || [ "$kernelMajor" -eq 5 -a "$kernelMinor" -le 8 ]; then
 		check_flags MEMCG_SWAP_ENABLED
 		if is_set MEMCG_SWAP && ! is_set MEMCG_SWAP_ENABLED; then
-			echo "    $(wrap_color '(note that cgroup swap accounting is not enabled in your kernel config, you can enable it by setting boot option "swapaccount=1")' bold black)"
+			wrap_color '    (note that cgroup swap accounting is not enabled in your kernel config, you can enable it by setting boot option "swapaccount=1")' bold black
 		fi
 	fi
 }
