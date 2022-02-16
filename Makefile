@@ -133,7 +133,7 @@ cfmt:
 shellcheck:
 	shellcheck tests/integration/*.bats tests/integration/*.sh \
 		tests/integration/*.bash tests/*.sh \
-		script/release_*.sh script/seccomp.sh script/lib.sh
+		script/*
 	# TODO: add shellcheck for more sh files
 
 shfmt:
