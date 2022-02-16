@@ -29,7 +29,7 @@ command -v criu &>/dev/null && HAVE_CRIU=yes
 # Kernel version
 KERNEL_VERSION="$(uname -r)"
 KERNEL_MAJOR="${KERNEL_VERSION%%.*}"
-KERNEL_MINOR="${KERNEL_VERSION#$KERNEL_MAJOR.}"
+KERNEL_MINOR="${KERNEL_VERSION#"$KERNEL_MAJOR".}"
 KERNEL_MINOR="${KERNEL_MINOR%%.*}"
 
 ARCH=$(uname -m)
