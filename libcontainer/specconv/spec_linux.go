@@ -18,6 +18,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/devices"
 	"github.com/opencontainers/runc/libcontainer/seccomp"
+	"github.com/opencontainers/runc/libcontainer/user"
 	libcontainerUtils "github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/sirupsen/logrus"
@@ -496,6 +497,20 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 	return config, nil
 }
 
+func toConfigIDMap(mappings []specs.LinuxIDMapping) (configMappings []user.IDMap) {
+	convertIDMapToUserIDMap := func(m specs.LinuxIDMapping) user.IDMap {
+		return user.IDMap{
+			ID:       int64(m.ContainerID),
+			ParentID: int64(m.HostID),
+			Count:    int64(m.Size),
+		}
+	}
+	for _, m := range mappings {
+		configMappings = append(configMappings, convertIDMapToUserIDMap(m))
+	}
+	return
+}
+
 func createLibcontainerMount(cwd string, m specs.Mount) (*configs.Mount, error) {
 	if !filepath.IsAbs(m.Destination) {
 		// Relax validation for backward compatibility
@@ -508,6 +523,9 @@ func createLibcontainerMount(cwd string, m specs.Mount) (*configs.Mount, error) 
 	mnt.Destination = m.Destination
 	mnt.Source = m.Source
 	mnt.Device = m.Type
+	mnt.UIDMaps = toConfigIDMap(m.UIDMappings)
+	mnt.GIDMaps = toConfigIDMap(m.GIDMappings)
+
 	if mnt.Flags&unix.MS_BIND != 0 {
 		// Any "type" the user specified is meaningless (and ignored) for
 		// bind-mounts -- so we set it to "bind" because rootfs_linux.go
@@ -923,20 +941,21 @@ next:
 	return dedupedAllowDevs, nil
 }
 
-func setupUserNamespace(spec *specs.Spec, config *configs.Config) error {
-	create := func(m specs.LinuxIDMapping) configs.IDMap {
-		return configs.IDMap{
-			HostID:      int(m.HostID),
-			ContainerID: int(m.ContainerID),
-			Size:        int(m.Size),
-		}
+func createIDMap(m specs.LinuxIDMapping) configs.IDMap {
+	return configs.IDMap{
+		HostID:      int(m.HostID),
+		ContainerID: int(m.ContainerID),
+		Size:        int(m.Size),
 	}
+}
+
+func setupUserNamespace(spec *specs.Spec, config *configs.Config) error {
 	if spec.Linux != nil {
 		for _, m := range spec.Linux.UIDMappings {
-			config.UidMappings = append(config.UidMappings, create(m))
+			config.UidMappings = append(config.UidMappings, createIDMap(m))
 		}
 		for _, m := range spec.Linux.GIDMappings {
-			config.GidMappings = append(config.GidMappings, create(m))
+			config.GidMappings = append(config.GidMappings, createIDMap(m))
 		}
 	}
 	rootUID, err := config.HostRootUID()

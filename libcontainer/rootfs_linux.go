@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
@@ -18,6 +20,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/cgroups/fs2"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/devices"
+	"github.com/opencontainers/runc/libcontainer/user"
 	"github.com/opencontainers/runc/libcontainer/userns"
 	"github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/opencontainers/runtime-spec/specs-go"
@@ -437,9 +440,21 @@ func mountToRootfs(m *configs.Mount, c *mountConfig) error {
 		if err := prepareBindMount(m, rootfs, mountFd); err != nil {
 			return err
 		}
-		if err := mountPropagate(m, rootfs, mountLabel, mountFd); err != nil {
+
+		treeFd, err := unix.OpenTree(-int(unix.EBADF), m.Source, uint(unix.OPEN_TREE_CLONE|unix.OPEN_TREE_CLOEXEC|unix.AT_EMPTY_PATH|unix.AT_RECURSIVE))
+		if err != nil || treeFd < 0 {
 			return err
 		}
+
+		err = unix.MoveMount(treeFd, "", unix.AT_FDCWD, dest, unix.MOVE_MOUNT_F_EMPTY_PATH)
+		if err != nil {
+			return err
+		}
+
+		if err := mountIDMapMapped(m, treeFd); err != nil {
+			return err
+		}
+
 		// bind mount won't change mount options, we need remount to make mount options effective.
 		// first check that we have non-default options required before attempting a remount
 		if m.Flags&^(unix.MS_REC|unix.MS_REMOUNT|unix.MS_BIND) != 0 {
@@ -472,7 +487,7 @@ func mountToRootfs(m *configs.Mount, c *mountConfig) error {
 		}
 		return mountPropagate(m, rootfs, mountLabel, mountFd)
 	}
-	if err := setRecAttr(m, rootfs); err != nil {
+	if err := setMountAttr(m, rootfs); err != nil {
 		return err
 	}
 	return nil
@@ -1044,7 +1059,7 @@ func remount(m *configs.Mount, rootfs string, mountFd *int) error {
 
 	return utils.WithProcfd(rootfs, m.Destination, func(procfd string) error {
 		flags := uintptr(m.Flags | unix.MS_REMOUNT)
-		err := mount(source, m.Destination, procfd, m.Device, flags, "")
+		err := mount(source, m.Destination, procfd, m.Device, flags, m.Data)
 		if err == nil {
 			return nil
 		}
@@ -1058,7 +1073,8 @@ func remount(m *configs.Mount, rootfs string, mountFd *int) error {
 		}
 		// ... and retry the mount with ro flag set.
 		flags |= unix.MS_RDONLY
-		return mount(source, m.Destination, procfd, m.Device, flags, "")
+
+		return mount(source, m.Destination, procfd, m.Device, flags, m.Data)
 	})
 }
 
@@ -1107,11 +1123,87 @@ func mountPropagate(m *configs.Mount, rootfs string, mountLabel string, mountFd 
 	return nil
 }
 
-func setRecAttr(m *configs.Mount, rootfs string) error {
-	if m.RecAttr == nil {
+func toLinuxIDMap(mappings []user.IDMap) (configMappings []syscall.SysProcIDMap) {
+	createIDMap := func(m user.IDMap) syscall.SysProcIDMap {
+		return syscall.SysProcIDMap{
+			ContainerID: int(m.ID),
+			HostID:      int(m.ParentID),
+			Size:        int(m.Count),
+		}
+	}
+	for _, m := range mappings {
+		configMappings = append(configMappings, createIDMap(m))
+	}
+	return
+}
+
+func mountIDMapMapped(m *configs.Mount, fsmFd int) (err error) {
+	if m.Device != "bind" || utils.CleanPath(m.Destination) == "/sys" || len(m.UIDMaps) == 0 || len(m.GIDMaps) == 0 {
 		return nil
 	}
-	return utils.WithProcfd(rootfs, m.Destination, func(procfd string) error {
-		return unix.MountSetattr(-1, procfd, unix.AT_RECURSIVE, m.RecAttr)
-	})
+	const userNsHelperBinary = "/bin/true"
+	var attr unix.MountAttr
+
+	attr.Attr_set = unix.MOUNT_ATTR_IDMAP
+	attr.Attr_clr = 0
+	attr.Propagation = 0
+
+	// TODO: this was given from containerd/containerd
+	// https://github.com/containerd/containerd/pull/5890
+	// this code requese generalization
+	// TODO: Avoid dependency on /bin/true or do in a completely different way
+	// Currently there is no way to pass idmapping directly to mount_setattr,
+	// this is not very convenient from the container runtime point of view.
+	// The id remapping procedure should be done in containerd, due to we have
+	// old approach that use recursive chown.
+	// Maybe it is necessary to think about moving of container rootfs ownership
+	// adjustment to runc due to runc has information about container user namespace.
+	// But personally I think that it would be better to add possibility to call
+	// mount_setattr with explicit id mappings and leave container runtime components
+	// responsibilities unchanged.
+	cmd := exec.Command(userNsHelperBinary)
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Cloneflags: syscall.CLONE_NEWUSER,
+	}
+
+	cmd.SysProcAttr.UidMappings = toLinuxIDMap(m.UIDMaps)
+	cmd.SysProcAttr.GidMappings = toLinuxIDMap(m.GIDMaps)
+
+	if err = cmd.Start(); err != nil {
+		return fmt.Errorf("Failed to run the %s helper binary, %w", userNsHelperBinary, err)
+	}
+
+	defer func() {
+		if waitErr := cmd.Wait(); waitErr != nil {
+			err = fmt.Errorf("Failed to run the %s helper binary, %w", userNsHelperBinary, waitErr)
+		}
+	}()
+
+	path := fmt.Sprintf("/proc/%d/ns/user", cmd.Process.Pid)
+	var userNsFile *os.File
+	if userNsFile, err = os.Open(path); err != nil {
+		return fmt.Errorf("Unable to get user ns file descriptor for - %s, %w", path, err)
+	}
+	defer userNsFile.Close()
+
+	attr.Userns_fd = uint64(userNsFile.Fd())
+
+	err = unix.MountSetattr(fsmFd, "", unix.AT_EMPTY_PATH|unix.AT_RECURSIVE, &attr)
+	if err != nil {
+		return fmt.Errorf("MountSetAttr has failed idmapping - %s, %w", m.Destination, err)
+	}
+	return nil
+}
+
+func setMountAttr(m *configs.Mount, rootfs string) error {
+	if m.RecAttr != nil {
+		err := utils.WithProcfd(rootfs, m.Destination, func(procfd string) error {
+			return unix.MountSetattr(-1, procfd, unix.AT_RECURSIVE, m.RecAttr)
+		})
+		if err != nil {
+			return fmt.Errorf("MountSetattr failed, AT_RECURSIVE, %w", err)
+		}
+	}
+
+	return nil
 }
