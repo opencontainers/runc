@@ -1,6 +1,9 @@
 package configs
 
-import "golang.org/x/sys/unix"
+import (
+	"github.com/opencontainers/runc/libcontainer/user"
+	"golang.org/x/sys/unix"
+)
 
 const (
 	// EXT_COPYUP is a directive to copy up the contents of a directory when
@@ -35,6 +38,10 @@ type Mount struct {
 
 	// Extensions are additional flags that are specific to runc.
 	Extensions int `json:"extensions"`
+
+	// UID/GID mapping per mount point
+	UIDMaps []user.IDMap `json:"uid_maps"`
+	GIDMaps []user.IDMap `json:"gid_maps"`
 }
 
 func (m *Mount) IsBind() bool {
