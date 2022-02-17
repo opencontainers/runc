@@ -759,7 +759,7 @@ func TestInitSystemdProps(t *testing.T) {
 	}
 }
 
-func TestIsValidName(t *testing.T) {
+func TestCheckPropertyName(t *testing.T) {
 	testCases := []struct {
 		in    string
 		valid bool
@@ -784,7 +784,7 @@ func TestIsValidName(t *testing.T) {
 	}
 }
 
-func BenchmarkIsValidName(b *testing.B) {
+func BenchmarkCheckPropertyName(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		for _, s := range []string{"", "xx", "xxx", "someValidName", "A name", "Кир", "მადლობა", "合い言葉"} {
 			_ = checkPropertyName(s)
