@@ -350,7 +350,7 @@ function requires() {
 		local skip_me
 		case $var in
 		criu)
-			if [ -n "$HAVE_CRIU" ]; then
+			if [ -z "$HAVE_CRIU" ]; then
 				skip_me=1
 			fi
 			;;
