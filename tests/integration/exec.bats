@@ -197,6 +197,11 @@ function check_exec_debug() {
 	__runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 	testcontainer test_busybox running
 
+	# Check we can't join parent cgroup.
+	runc exec --cgroup ".." test_busybox cat /proc/self/cgroup
+	[ "$status" -ne 0 ]
+	[[ "$output" == *" .. is not a sub cgroup path"* ]]
+
 	# Check we can't join non-existing subcgroup.
 	runc exec --cgroup nonexistent test_busybox cat /proc/self/cgroup
 	[ "$status" -ne 0 ]
@@ -242,6 +247,11 @@ function check_exec_debug() {
 
 	__runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
 	testcontainer test_busybox running
+
+	# Check we can't join parent cgroup.
+	runc exec --cgroup ".." test_busybox cat /proc/self/cgroup
+	[ "$status" -ne 0 ]
+	[[ "$output" == *" .. is not a sub cgroup path"* ]]
 
 	# Check we can't join non-existing subcgroup.
 	runc exec --cgroup nonexistent test_busybox cat /proc/self/cgroup
