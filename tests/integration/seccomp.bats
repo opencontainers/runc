@@ -66,6 +66,38 @@ function teardown() {
 	[[ "$output" == *"Network is down"* ]]
 }
 
+@test "runc run [seccomp] (SECCOMP_FILTER_FLAG_*)" {
+	# Linux 4.14: SECCOMP_FILTER_FLAG_LOG
+	# Linux 4.17: SECCOMP_FILTER_FLAG_SPEC_ALLOW
+	requires_kernel 4.17
+	SECCOMP_FILTER_FLAGS=(
+		'' # no flag
+		'"SECCOMP_FILTER_FLAG_LOG"'
+		'"SECCOMP_FILTER_FLAG_SPEC_ALLOW"'
+		'"SECCOMP_FILTER_FLAG_TSYNC"'
+		'"SECCOMP_FILTER_FLAG_LOG","SECCOMP_FILTER_FLAG_SPEC_ALLOW"'
+		'"SECCOMP_FILTER_FLAG_LOG","SECCOMP_FILTER_FLAG_TSYNC"'
+		'"SECCOMP_FILTER_FLAG_SPEC_ALLOW","SECCOMP_FILTER_FLAG_TSYNC"'
+		'"SECCOMP_FILTER_FLAG_LOG","SECCOMP_FILTER_FLAG_SPEC_ALLOW","SECCOMP_FILTER_FLAG_TSYNC"'
+	)
+	for flags in "${SECCOMP_FILTER_FLAGS[@]}"; do
+		update_config '   .process.args = ["/bin/sh", "-c", "mkdir /dev/shm/foo"]
+				| .process.noNewPrivileges = false
+				| .linux.seccomp = {
+					"defaultAction":"SCMP_ACT_ALLOW",
+					"architectures":["SCMP_ARCH_X86","SCMP_ARCH_X32","SCMP_ARCH_X86_64","SCMP_ARCH_AARCH64","SCMP_ARCH_ARM"],
+					"flags":['"${flags}"'],
+					"syscalls":[{"names":["mkdir"], "action":"SCMP_ACT_ERRNO"}]
+				}'
+
+		# This test checks that the flags are accepted without errors but does
+		# not check they are effectively applied
+		runc run test_busybox
+		[ "$status" -ne 0 ]
+		[[ "$output" == *"mkdir:"*"/dev/shm/foo"*"Operation not permitted"* ]]
+	done
+}
+
 @test "runc run [seccomp] (SCMP_ACT_KILL)" {
 	update_config '  .process.args = ["/bin/sh", "-c", "mkdir /dev/shm/foo"]
 			| .process.noNewPrivileges = false
