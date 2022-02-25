@@ -18,7 +18,7 @@ jobs:
         run: |
           sudo apt -q update
           sudo apt -q install libseccomp-dev
-      - uses: golangci/golangci-lint-action@v2
+      - uses: golangci/golangci-lint-action@v3
         with:
           # must be specified without patch version
           version: v1.42
@@ -35,7 +35,7 @@ jobs:
         run: |
           sudo apt -q update
           sudo apt -q install libseccomp-dev
-      - uses: golangci/golangci-lint-action@v2
+      - uses: golangci/golangci-lint-action@v3
         with:
           only-new-issues: true
           args: --config .golangci-extra.yml
