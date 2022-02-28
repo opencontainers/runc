@@ -26,7 +26,7 @@ github.com/cyphar/filepath-securejoin
 # github.com/docker/go-units v0.4.0
 ## explicit
 github.com/docker/go-units
-# github.com/godbus/dbus/v5 v5.0.6
+# github.com/godbus/dbus/v5 v5.1.0
 ## explicit
 github.com/godbus/dbus/v5
 # github.com/moby/sys/mountinfo v0.6.0
