@@ -7,6 +7,8 @@ on:
       - master
       - release-*
   pull_request:
+env:
+  GO_VERSION: 1.17.x
 
 jobs:
 
@@ -14,11 +16,14 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
+      - uses: actions/setup-go@v2
+        with:
+          go-version: "${{ env.GO_VERSION }}"
       - name: install deps
         run: |
           sudo apt -q update
           sudo apt -q install libseccomp-dev
-      - uses: golangci/golangci-lint-action@v2
+      - uses: golangci/golangci-lint-action@v3
         with:
           version: v1.44
 
@@ -30,11 +35,14 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v3
+      - uses: actions/setup-go@v2
+        with:
+          go-version: "${{ env.GO_VERSION }}"
       - name: install deps
         run: |
           sudo apt -q update
           sudo apt -q install libseccomp-dev
-      - uses: golangci/golangci-lint-action@v2
+      - uses: golangci/golangci-lint-action@v3
         with:
           only-new-issues: true
           args: --config .golangci-extra.yml
@@ -51,7 +59,7 @@ jobs:
       - name: install go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.x # Latest stable
+          go-version: "${{ env.GO_VERSION }}"
       - name: compile with no build tags
         run: make BUILDTAGS=""
 
@@ -118,7 +126,7 @@ jobs:
     - name: install go
       uses: actions/setup-go@v2
       with:
-        go-version: 1.x # Latest stable
+        go-version: "${{ env.GO_VERSION }}"
     - name: cache go mod and $GOCACHE
       uses: actions/cache@v2
       with:
