@@ -9,10 +9,8 @@ function setup() {
 }
 
 function teardown() {
-	if [ -n "$ALT_ROOT" ]; then
-		ROOT=$ALT_ROOT __runc delete -f test_dotbox
-		rm -rf "$ALT_ROOT"
-	fi
+	ROOT=$ALT_ROOT __runc delete -f test_dotbox
+	unset ALT_ROOT
 	teardown_bundle
 }
 
