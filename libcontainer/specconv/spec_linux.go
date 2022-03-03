@@ -201,6 +201,7 @@ func KnownMountOptions() []string {
 var AllowedDevices = []*devices.Device{
 	// allow mknod for any device
 	{
+		IsDefault: true,
 		Rule: devices.Rule{
 			Type:        devices.CharDevice,
 			Major:       devices.Wildcard,
@@ -210,6 +211,7 @@ var AllowedDevices = []*devices.Device{
 		},
 	},
 	{
+		IsDefault: true,
 		Rule: devices.Rule{
 			Type:        devices.BlockDevice,
 			Major:       devices.Wildcard,
@@ -219,10 +221,11 @@ var AllowedDevices = []*devices.Device{
 		},
 	},
 	{
-		Path:     "/dev/null",
-		FileMode: 0o666,
-		Uid:      0,
-		Gid:      0,
+		Path:      "/dev/null",
+		FileMode:  0o666,
+		Uid:       0,
+		Gid:       0,
+		IsDefault: true,
 		Rule: devices.Rule{
 			Type:        devices.CharDevice,
 			Major:       1,
@@ -232,10 +235,11 @@ var AllowedDevices = []*devices.Device{
 		},
 	},
 	{
-		Path:     "/dev/random",
-		FileMode: 0o666,
-		Uid:      0,
-		Gid:      0,
+		Path:      "/dev/random",
+		FileMode:  0o666,
+		Uid:       0,
+		Gid:       0,
+		IsDefault: true,
 		Rule: devices.Rule{
 			Type:        devices.CharDevice,
 			Major:       1,
@@ -245,10 +249,11 @@ var AllowedDevices = []*devices.Device{
 		},
 	},
 	{
-		Path:     "/dev/full",
-		FileMode: 0o666,
-		Uid:      0,
-		Gid:      0,
+		Path:      "/dev/full",
+		FileMode:  0o666,
+		Uid:       0,
+		Gid:       0,
+		IsDefault: true,
 		Rule: devices.Rule{
 			Type:        devices.CharDevice,
 			Major:       1,
@@ -258,10 +263,11 @@ var AllowedDevices = []*devices.Device{
 		},
 	},
 	{
-		Path:     "/dev/tty",
-		FileMode: 0o666,
-		Uid:      0,
-		Gid:      0,
+		Path:      "/dev/tty",
+		FileMode:  0o666,
+		Uid:       0,
+		Gid:       0,
+		IsDefault: true,
 		Rule: devices.Rule{
 			Type:        devices.CharDevice,
 			Major:       5,
@@ -271,10 +277,11 @@ var AllowedDevices = []*devices.Device{
 		},
 	},
 	{
-		Path:     "/dev/zero",
-		FileMode: 0o666,
-		Uid:      0,
-		Gid:      0,
+		Path:      "/dev/zero",
+		FileMode:  0o666,
+		Uid:       0,
+		Gid:       0,
+		IsDefault: true,
 		Rule: devices.Rule{
 			Type:        devices.CharDevice,
 			Major:       1,
@@ -284,10 +291,11 @@ var AllowedDevices = []*devices.Device{
 		},
 	},
 	{
-		Path:     "/dev/urandom",
-		FileMode: 0o666,
-		Uid:      0,
-		Gid:      0,
+		Path:      "/dev/urandom",
+		FileMode:  0o666,
+		Uid:       0,
+		Gid:       0,
+		IsDefault: true,
 		Rule: devices.Rule{
 			Type:        devices.CharDevice,
 			Major:       1,
@@ -298,6 +306,7 @@ var AllowedDevices = []*devices.Device{
 	},
 	// /dev/pts/ - pts namespaces are "coming soon"
 	{
+		IsDefault: true,
 		Rule: devices.Rule{
 			Type:        devices.CharDevice,
 			Major:       136,
@@ -307,6 +316,7 @@ var AllowedDevices = []*devices.Device{
 		},
 	},
 	{
+		IsDefault: true,
 		Rule: devices.Rule{
 			Type:        devices.CharDevice,
 			Major:       5,
@@ -380,12 +390,14 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 		config.Mounts = append(config.Mounts, cm)
 	}
 
-	defaultDevs, err := createDevices(spec, config)
+	err = createDevices(spec, config)
 	if err != nil {
 		return nil, err
 	}
 
-	c, err := CreateCgroupConfig(opts, defaultDevs)
+	defaultAllowedDevices := createDefaultDevicesCgroups(config)
+
+	c, err := CreateCgroupConfig(opts, defaultAllowedDevices)
 	if err != nil {
 		return nil, err
 	}
@@ -941,21 +953,22 @@ func stringToDeviceRune(s string) (devices.Type, error) {
 	}
 }
 
-func createDevices(spec *specs.Spec, config *configs.Config) ([]*devices.Device, error) {
+func createDevices(spec *specs.Spec, config *configs.Config) error {
 	// If a spec device is redundant with a default device, remove that default
 	// device (the spec one takes priority).
-	dedupedAllowDevs := []*devices.Device{}
-
 next:
 	for _, ad := range AllowedDevices {
-		if ad.Path != "" && spec.Linux != nil {
+		if ad.Path == "" {
+			continue next
+		}
+
+		if spec.Linux != nil {
 			for _, sd := range spec.Linux.Devices {
 				if sd.Path == ad.Path {
 					continue next
 				}
 			}
 		}
-		dedupedAllowDevs = append(dedupedAllowDevs, ad)
 		if ad.Path != "" {
 			config.Devices = append(config.Devices, ad)
 		}
@@ -975,7 +988,7 @@ next:
 			}
 			dt, err := stringToDeviceRune(d.Type)
 			if err != nil {
-				return nil, err
+				return err
 			}
 			if d.FileMode != nil {
 				filemode = *d.FileMode &^ unix.S_IFMT
@@ -995,7 +1008,24 @@ next:
 		}
 	}
 
-	return dedupedAllowDevs, nil
+	return nil
+}
+
+func createDefaultDevicesCgroups(config *configs.Config) []*devices.Device {
+	defaultAllowedDevices := []*devices.Device{}
+next:
+	for _, ad := range AllowedDevices {
+		if ad.Path != "" {
+			for _, device := range config.Devices {
+				if ad.Path == device.Path && !device.IsDefault {
+					continue next
+				}
+			}
+		}
+		defaultAllowedDevices = append(defaultAllowedDevices, ad)
+	}
+
+	return defaultAllowedDevices
 }
 
 func setupUserNamespace(spec *specs.Spec, config *configs.Config) error {
