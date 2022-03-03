@@ -395,7 +395,7 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 		return nil, err
 	}
 
-	defaultAllowedDevices := createDefaultDevicesCgroups(config)
+	defaultAllowedDevices := CreateDefaultDevicesCgroups(config)
 
 	c, err := CreateCgroupConfig(opts, defaultAllowedDevices)
 	if err != nil {
@@ -1025,7 +1025,7 @@ next:
 	return nil
 }
 
-func createDefaultDevicesCgroups(config *configs.Config) []*devices.Device {
+func CreateDefaultDevicesCgroups(config *configs.Config) []*devices.Device {
 	defaultAllowedDevices := []*devices.Device{}
 next:
 	for _, ad := range AllowedDevices {
