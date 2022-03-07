@@ -13,7 +13,7 @@ jobs:
   lint:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: install deps
         run: |
           sudo apt -q update
@@ -30,7 +30,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: install deps
         run: |
           sudo apt -q update
@@ -49,7 +49,7 @@ jobs:
       # Don't ignore C warnings. Note that the output of "go env CGO_CFLAGS" by default is "-g -O2", so we keep them.
       CGO_CFLAGS: -g -O2 -Werror
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: install go
         uses: actions/setup-go@v2
         with:
@@ -60,7 +60,7 @@ jobs:
   codespell:
     runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: install deps
       # Version of codespell bundled with Ubuntu is way old, so use pip.
       run: pip install codespell
@@ -70,7 +70,7 @@ jobs:
   shfmt:
     runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: vars
       run: |
         echo "VERSION=3.3.1" >> $GITHUB_ENV
@@ -93,7 +93,7 @@ jobs:
   shellcheck:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: vars
         run: |
           echo 'VERSION=v0.8.0' >> $GITHUB_ENV
@@ -116,7 +116,7 @@ jobs:
   deps:
     runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: install go
       uses: actions/setup-go@v2
       with:
@@ -156,7 +156,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
     - name: checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         fetch-depth: 0
     - name: install deps
@@ -173,7 +173,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
     - name: checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         fetch-depth: 0
       # We have to run this under Docker as Ubuntu (host) does not support all
