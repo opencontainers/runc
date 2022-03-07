@@ -216,10 +216,6 @@ func sysctl(config *configs.Config) error {
 
 func intelrdtCheck(config *configs.Config) error {
 	if config.IntelRdt != nil {
-		if !intelrdt.IsCATEnabled() && !intelrdt.IsMBAEnabled() {
-			return errors.New("intelRdt is specified in config, but Intel RDT is not supported or enabled")
-		}
-
 		if config.IntelRdt.ClosID == "." || config.IntelRdt.ClosID == ".." || strings.Contains(config.IntelRdt.ClosID, "/") {
 			return fmt.Errorf("invalid intelRdt.ClosID %q", config.IntelRdt.ClosID)
 		}
