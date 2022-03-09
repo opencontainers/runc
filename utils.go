@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -96,16 +97,24 @@ func revisePidFile(context *cli.Context) error {
 	return context.Set("pid-file", pidFile)
 }
 
-// reviseRootDir convert the root to absolute path
+// reviseRootDir ensures that the --root option argument,
+// if specified, is converted to an absolute and cleaned path,
+// and that this path is sane.
 func reviseRootDir(context *cli.Context) error {
-	root := context.GlobalString("root")
-	if root == "" {
+	if !context.IsSet("root") {
 		return nil
 	}
-
-	root, err := filepath.Abs(root)
+	root, err := filepath.Abs(context.GlobalString("root"))
 	if err != nil {
 		return err
+	}
+	if root == "/" {
+		// This can happen if --root argument is
+		//  - "" (i.e. empty);
+		//  - "." (and the CWD is /);
+		//  - "../../.." (enough to get to /);
+		//  - "/" (the actual /).
+		return errors.New("Option --root argument should not be set to /")
 	}
 
 	return context.GlobalSet("root", root)

@@ -52,9 +52,6 @@ func shouldUseRootlessCgroupManager(context *cli.Context) (bool, error) {
 }
 
 func shouldHonorXDGRuntimeDir() bool {
-	if os.Getenv("XDG_RUNTIME_DIR") == "" {
-		return false
-	}
 	if os.Geteuid() != 0 {
 		return true
 	}

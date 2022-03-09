@@ -60,16 +60,24 @@ checkpointed.`,
 			return err
 		}
 		if status == libcontainer.Created || status == libcontainer.Stopped {
-			fatal(fmt.Errorf("Container cannot be checkpointed in %s state", status.String()))
+			return fmt.Errorf("Container cannot be checkpointed in %s state", status.String())
 		}
-		options := criuOptions(context)
+		options, err := criuOptions(context)
+		if err != nil {
+			return err
+		}
+
 		if !(options.LeaveRunning || options.PreDump) {
 			// destroy container unless we tell CRIU to keep it
 			defer destroy(container)
 		}
 		// these are the mandatory criu options for a container
-		setPageServer(context, options)
-		setManageCgroupsMode(context, options)
+		if err := setPageServer(context, options); err != nil {
+			return err
+		}
+		if err := setManageCgroupsMode(context, options); err != nil {
+			return err
+		}
 		if err := setEmptyNsMask(context, options); err != nil {
 			return err
 		}
@@ -109,27 +117,28 @@ func prepareImagePaths(context *cli.Context) (string, string, error) {
 	return imagePath, parentPath, nil
 }
 
-func setPageServer(context *cli.Context, options *libcontainer.CriuOpts) {
+func setPageServer(context *cli.Context, options *libcontainer.CriuOpts) error {
 	// xxx following criu opts are optional
 	// The dump image can be sent to a criu page server
 	if psOpt := context.String("page-server"); psOpt != "" {
 		address, port, err := net.SplitHostPort(psOpt)
 
 		if err != nil || address == "" || port == "" {
-			fatal(errors.New("Use --page-server ADDRESS:PORT to specify page server"))
+			return errors.New("Use --page-server ADDRESS:PORT to specify page server")
 		}
 		portInt, err := strconv.Atoi(port)
 		if err != nil {
-			fatal(errors.New("Invalid port number"))
+			return errors.New("Invalid port number")
 		}
 		options.PageServer = libcontainer.CriuPageServerInfo{
 			Address: address,
 			Port:    int32(portInt),
 		}
 	}
+	return nil
 }
 
-func setManageCgroupsMode(context *cli.Context, options *libcontainer.CriuOpts) {
+func setManageCgroupsMode(context *cli.Context, options *libcontainer.CriuOpts) error {
 	if cgOpt := context.String("manage-cgroups-mode"); cgOpt != "" {
 		switch cgOpt {
 		case "soft":
@@ -139,9 +148,10 @@ func setManageCgroupsMode(context *cli.Context, options *libcontainer.CriuOpts) 
 		case "strict":
 			options.ManageCgroupsMode = criu.CriuCgMode_STRICT
 		default:
-			fatal(errors.New("Invalid manage cgroups mode"))
+			return errors.New("Invalid manage cgroups mode")
 		}
 	}
+	return nil
 }
 
 var namespaceMapping = map[specs.LinuxNamespaceType]int{
