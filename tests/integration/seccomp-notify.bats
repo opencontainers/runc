@@ -92,7 +92,8 @@ function scmp_act_notify_template() {
 	[ "$status" -eq 0 ]
 }
 
-@test "runc run [seccomp] (empty listener path)" {
+# Ignore listenerPath if the profile doesn't use seccomp notify actions.
+@test "runc run [seccomp] (ignore listener path if no notify act)" {
 	update_config '   .process.args = ["/bin/sh", "-c", "mkdir /dev/shm/foo && stat /dev/shm/foo"]
 			| .linux.seccomp = {
 				"defaultAction":"SCMP_ACT_ALLOW",
