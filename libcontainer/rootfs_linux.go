@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -331,6 +332,53 @@ func mountCgroupV2(m *configs.Mount, c *mountConfig) error {
 	})
 }
 
+var (
+	syscallOnce sync.Once
+	syscallErr  error
+)
+
+func mountByMove(m *configs.Mount, dest string) error {
+	// Check once for all mount point that syscall exists
+	syscallOnce.Do(func() {
+		_, err := unix.OpenTree(-int(unix.EBADF), "", uint(unix.OPEN_TREE_CLONE|unix.OPEN_TREE_CLOEXEC|unix.AT_EMPTY_PATH|unix.AT_RECURSIVE))
+		if errors.Is(err, unix.ENOSYS) {
+			logrus.Debugf("no open_tree syscall on the system")
+			syscallErr = err
+		}
+
+		err = unix.MoveMount(-int(unix.EBADF), "", unix.AT_FDCWD, "", unix.MOVE_MOUNT_F_EMPTY_PATH)
+		if errors.Is(err, unix.ENOSYS) {
+			logrus.Debugf("no move_mount syscall on the system")
+			syscallErr = err
+		}
+
+		err = unix.MountSetattr(-int(unix.EBADF), "", unix.AT_EMPTY_PATH|unix.AT_RECURSIVE, nil)
+		if errors.Is(err, unix.ENOSYS) {
+			logrus.Debugf("no mount_setattr syscall on the system")
+			syscallErr = err
+		}
+	})
+	if syscallErr != nil {
+		return syscallErr
+	}
+	// If syscalls exist we may fail somewhere else
+	treeFd, err := unix.OpenTree(-int(unix.EBADF), m.Source, uint(unix.OPEN_TREE_CLONE|unix.OPEN_TREE_CLOEXEC|unix.AT_EMPTY_PATH|unix.AT_RECURSIVE))
+	if err != nil || treeFd < 0 {
+		return err
+	}
+
+	err = unix.MoveMount(treeFd, "", unix.AT_FDCWD, dest, unix.MOVE_MOUNT_F_EMPTY_PATH)
+	if err != nil {
+		return err
+	}
+
+	if err := mountIDMapMapped(m, treeFd); err != nil {
+		return err
+	}
+	logrus.Debugf("move_mount succeed")
+	return nil
+}
+
 func doTmpfsCopyUp(m *configs.Mount, rootfs, mountLabel string) (Err error) {
 	// Set up a scratch dir for the tmpfs on the host.
 	tmpdir, err := prepareTmp("/tmp")
@@ -441,18 +489,10 @@ func mountToRootfs(m *configs.Mount, c *mountConfig) error {
 			return err
 		}
 
-		treeFd, err := unix.OpenTree(-int(unix.EBADF), m.Source, uint(unix.OPEN_TREE_CLONE|unix.OPEN_TREE_CLOEXEC|unix.AT_EMPTY_PATH|unix.AT_RECURSIVE))
-		if err != nil || treeFd < 0 {
-			return err
-		}
-
-		err = unix.MoveMount(treeFd, "", unix.AT_FDCWD, dest, unix.MOVE_MOUNT_F_EMPTY_PATH)
-		if err != nil {
-			return err
-		}
-
-		if err := mountIDMapMapped(m, treeFd); err != nil {
-			return err
+		if mountByMove(m, dest) != nil {
+			if err := mountPropagate(m, rootfs, mountLabel, mountFd); err != nil {
+				return err
+			}
 		}
 
 		// bind mount won't change mount options, we need remount to make mount options effective.
