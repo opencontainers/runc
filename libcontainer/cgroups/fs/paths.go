@@ -39,7 +39,7 @@ func initPaths(cg *configs.Cgroup) (map[string]string, error) {
 		if err != nil {
 			// The non-presence of the devices subsystem
 			// is considered fatal for security reasons.
-			if cgroups.IsNotFound(err) && (cg.SkipDevices || name != "devices") {
+			if cgroups.IsNotFound(err) && (skipDevices(cg.Resources) || name != "devices") {
 				continue
 			}
 

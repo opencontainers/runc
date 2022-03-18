@@ -67,6 +67,20 @@ make BUILDTAGS=""
 |-----------|------------------------------------|--------------------|------------|
 | seccomp   | Syscall filtering                  | yes                | libseccomp |
 
+##### libcontainer build tags
+
+Some libcontainer packages support additional build tags, which can be used
+to build software exporting runc/libcontainer packages.
+
+NOTE these build tags are not set by default, and they can not be used to build
+`runc`.
+
+| Build tag              | Applicable to            | Feature                                      |
+|------------------------|--------------------------|----------------------------------------------|
+| disable_cgroup_devices | libcontainer/cgroups/... | Disables devices support in cgroups packages |
+
+##### Obsoleted build tags
+
 The following build tags were used earlier, but are now obsoleted:
  - **nokmem** (since runc v1.0.0-rc94 kernel memory settings are ignored)
  - **apparmor** (since runc v1.0.0-rc93 the feature is always enabled)

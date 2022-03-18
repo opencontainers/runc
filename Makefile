@@ -81,6 +81,8 @@ unittest: runcimage
 
 localunittest: all
 	$(GO) test -timeout 3m -tags "$(BUILDTAGS)" $(TESTFLAGS) -v ./...
+	# Test disable_cgroup_devices build tag for libcontainer/cgroups.
+	$(GO) test -timeout 3m -tags "$(BUILDTAGS) disable_cgroup_devices" $(TESTFLAGS) -v ./libcontainer/cgroups/...
 
 integration: runcimage
 	$(CONTAINER_ENGINE) run $(CONTAINER_ENGINE_RUN_FLAGS) \

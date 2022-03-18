@@ -1,3 +1,6 @@
+//go:build !disable_cgroup_devices
+// +build !disable_cgroup_devices
+
 package fs
 
 import (
@@ -11,6 +14,10 @@ import (
 	"github.com/opencontainers/runc/libcontainer/devices"
 	"github.com/opencontainers/runc/libcontainer/userns"
 )
+
+func skipDevices(r *configs.Resources) bool {
+	return r.SkipDevices
+}
 
 type DevicesGroup struct {
 	TestingSkipFinalCheck bool

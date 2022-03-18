@@ -1,3 +1,6 @@
+//go:build !disable_cgroup_devices
+// +build !disable_cgroup_devices
+
 package main
 
 import (
