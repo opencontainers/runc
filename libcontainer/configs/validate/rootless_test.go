@@ -141,3 +141,24 @@ func TestValidateRootlessEUIDMountGid(t *testing.T) {
 		t.Errorf("Expected error to occur when setting gid=11 in mount options and GidMapping[0].size is 10")
 	}
 }
+
+func BenchmarkRootlessEUIDMount(b *testing.B) {
+	config := rootlessEUIDConfig()
+	config.GidMappings[0].Size = 10
+	config.Mounts = []*configs.Mount{
+		{
+			Source:      "devpts",
+			Destination: "/dev/pts",
+			Device:      "devpts",
+			Data:        "newinstance,ptmxmode=0666,mode=0620,uid=0,gid=5",
+		},
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		err := rootlessEUIDMount(config)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
