@@ -35,7 +35,7 @@ function teardown() {
 
 	# Some setup for this test (AUX_DIR and AUX_UID) is done
 	# by rootless.sh. Check that setup is done...
-	if [[ ! -d "$AUX_DIR" || -z "$AUX_UID" ]]; then
+	if [[ ! -v AUX_UID || ! -v AUX_DIR || ! -d "$AUX_DIR" ]]; then
 		skip "bad/unset AUX_DIR/AUX_UID"
 	fi
 	# ... and is correct, i.e. the current user

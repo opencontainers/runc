@@ -13,10 +13,11 @@ function setup() {
 }
 
 function teardown() {
-	if [ -n "$LIBPATH" ]; then
+	if [ -v LIBPATH ]; then
 		umount "$LIBPATH"/$HOOKLIBCR.1.0.0 &>/dev/null || true
 		umount "$LIBPATH"/$HOOKLIBCC.1.0.0 &>/dev/null || true
 		rm -f $HOOKLIBCR.1.0.0 $HOOKLIBCC.1.0.0
+		unset LIBPATH HOOKLIBCR HOOKLIBCC
 	fi
 	teardown_bundle
 }

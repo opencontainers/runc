@@ -9,9 +9,8 @@ function setup() {
 }
 
 function teardown() {
-	if [ -n "$ALT_ROOT" ]; then
-		ROOT="$ALT_ROOT" teardown_bundle
-	fi
+	ROOT="$ALT_ROOT" teardown_bundle
+	unset ALT_ROOT
 	teardown_bundle
 }
 

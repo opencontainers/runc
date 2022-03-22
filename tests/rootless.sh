@@ -20,12 +20,11 @@
 # and add an enable_* and disable_* hook.
 
 set -e -u -o pipefail
-: "${RUNC_USE_SYSTEMD:=}"
 : "${ROOTLESS_TESTPATH:=}"
 
 ALL_FEATURES=("idmap" "cgroup")
-# cgroup is managed by systemd when RUNC_USE_SYSTEMD is set
-if [[ -n "${RUNC_USE_SYSTEMD}" ]]; then
+# cgroup is managed by systemd when RUNC_USE_SYSTEMD is set.
+if [ -v RUNC_USE_SYSTEMD ]; then
 	ALL_FEATURES=("idmap")
 fi
 ROOT="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")/..")"
@@ -182,7 +181,7 @@ for enabled_features in $features_powerset; do
 	# Run the test suite!
 	echo "path: $PATH"
 	export ROOTLESS_FEATURES="$enabled_features"
-	if [[ -n "${RUNC_USE_SYSTEMD}" ]]; then
+	if [ -v RUNC_USE_SYSTEMD ]; then
 		# We use `ssh rootless@localhost` instead of `sudo -u rootless` for creating systemd user session.
 		# Alternatively we could use `machinectl shell`, but it is known not to work well on SELinux-enabled hosts as of April 2020:
 		# https://bugzilla.redhat.com/show_bug.cgi?id=1788616

@@ -1,7 +1,9 @@
 #!/bin/bash
 
-# bats-core v1.2.1 defines BATS_RUN_TMPDIR
-if [ -z "$BATS_RUN_TMPDIR" ]; then
+set -u
+
+# bats-core v1.2.1 defines BATS_RUN_TMPDIR.
+if [ ! -v BATS_RUN_TMPDIR ]; then
 	echo "bats >= v1.2.1 is required. Aborting." >&2
 	exit 1
 fi
@@ -18,6 +20,10 @@ unset IMAGES
 RECVTTY="${INTEGRATION_ROOT}/../../contrib/cmd/recvtty/recvtty"
 SD_HELPER="${INTEGRATION_ROOT}/../../contrib/cmd/sd-helper/sd-helper"
 SECCOMP_AGENT="${INTEGRATION_ROOT}/../../contrib/cmd/seccompagent/seccompagent"
+
+# Some variables may not always be set. Set those to empty value,
+# if unset, to avoid "unbound variable" error.
+: "${ROOTLESS_FEATURES:=}"
 
 # Test data path.
 # shellcheck disable=SC2034
@@ -54,20 +60,19 @@ function runc() {
 
 # Raw wrapper for runc.
 function __runc() {
-	"$RUNC" ${RUNC_USE_SYSTEMD+--systemd-cgroup} --root "$ROOT/state" "$@"
+	"$RUNC" ${RUNC_USE_SYSTEMD+--systemd-cgroup} \
+		${ROOT:+--root "$ROOT/state"} "$@"
 }
 
 # Wrapper for runc spec.
 function runc_spec() {
-	local args=()
-	if [ "$ROOTLESS" -ne 0 ]; then
-		args+=("--rootless")
-	fi
+	local rootless=""
+	[ "$ROOTLESS" -ne 0 ] && rootless="--rootless"
 
-	runc spec "${args[@]}"
+	runc spec $rootless
 
 	# Always add additional mappings if we have idmaps.
-	if [[ "$ROOTLESS" -ne 0 ]] && [[ "$ROOTLESS_FEATURES" == *"idmap"* ]]; then
+	if [[ "$ROOTLESS" -ne 0 && "$ROOTLESS_FEATURES" == *"idmap"* ]]; then
 		runc_rootless_idmap
 	fi
 }
@@ -89,7 +94,7 @@ function runc_rootless_idmap() {
 
 # Returns systemd version as a number (-1 if systemd is not enabled/supported).
 function systemd_version() {
-	if [ -n "${RUNC_USE_SYSTEMD}" ]; then
+	if [ -v RUNC_USE_SYSTEMD ]; then
 		systemctl --version | awk '/^systemd / {print $2; exit}'
 		return
 	fi
@@ -99,7 +104,7 @@ function systemd_version() {
 
 function init_cgroup_paths() {
 	# init once
-	test -n "$CGROUP_UNIFIED" && return
+	[ -v CGROUP_UNIFIED ] && return
 
 	if stat -f -c %t /sys/fs/cgroup | grep -qFw 63677270; then
 		CGROUP_UNIFIED=yes
@@ -107,7 +112,7 @@ function init_cgroup_paths() {
 		# For rootless + systemd case, controllers delegation is required,
 		# so check the controllers that the current user has, not the top one.
 		# NOTE: delegation of cpuset requires systemd >= 244 (Fedora >= 32, Ubuntu >= 20.04).
-		if [[ "$ROOTLESS" -ne 0 && -n "$RUNC_USE_SYSTEMD" ]]; then
+		if [[ "$ROOTLESS" -ne 0 && -v RUNC_USE_SYSTEMD ]]; then
 			controllers="/sys/fs/cgroup/user.slice/user-$(id -u).slice/user@$(id -u).service/cgroup.controllers"
 		fi
 
@@ -142,11 +147,11 @@ function init_cgroup_paths() {
 }
 
 function create_parent() {
-	if [ -n "$RUNC_USE_SYSTEMD" ]; then
-		[ -z "$SD_PARENT_NAME" ] && return
+	if [ -v RUNC_USE_SYSTEMD ]; then
+		[ ! -v SD_PARENT_NAME ] && return
 		"$SD_HELPER" --parent machine.slice start "$SD_PARENT_NAME"
 	else
-		[ -z "$REL_PARENT_PATH" ] && return
+		[ ! -v REL_PARENT_PATH ] && return
 		if [ "$CGROUP_UNIFIED" == "yes" ]; then
 			mkdir "/sys/fs/cgroup$REL_PARENT_PATH"
 		else
@@ -162,11 +167,11 @@ function create_parent() {
 }
 
 function remove_parent() {
-	if [ -n "$RUNC_USE_SYSTEMD" ]; then
-		[ -z "$SD_PARENT_NAME" ] && return
+	if [ -v RUNC_USE_SYSTEMD ]; then
+		[ ! -v SD_PARENT_NAME ] && return
 		"$SD_HELPER" --parent machine.slice stop "$SD_PARENT_NAME"
 	else
-		[ -z "$REL_PARENT_PATH" ] && return
+		[ ! -v REL_PARENT_PATH ] && return
 		if [ "$CGROUP_UNIFIED" == "yes" ]; then
 			rmdir "/sys/fs/cgroup/$REL_PARENT_PATH"
 		else
@@ -181,8 +186,8 @@ function remove_parent() {
 }
 
 function set_parent_systemd_properties() {
-	[ -z "$SD_PARENT_NAME" ] && return
-	local user
+	[ ! -v SD_PARENT_NAME ] && return
+	local user=""
 	[ "$(id -u)" != "0" ] && user="--user"
 	systemctl set-property $user "$SD_PARENT_NAME" "$@"
 }
@@ -195,7 +200,7 @@ function set_parent_systemd_properties() {
 # refer to it.
 function set_cgroups_path() {
 	init_cgroup_paths
-	local pod dash_pod slash_pod pod_slice
+	local pod dash_pod="" slash_pod="" pod_slice=""
 	if [ "$#" -ne 0 ] && [ "$1" != "" ]; then
 		# Set up a parent/pod cgroup.
 		pod="$1"
@@ -206,7 +211,7 @@ function set_cgroups_path() {
 	fi
 
 	local rnd="$RANDOM"
-	if [ -n "${RUNC_USE_SYSTEMD}" ]; then
+	if [ -v RUNC_USE_SYSTEMD ]; then
 		SD_UNIT_NAME="runc-cgroups-integration-test-${rnd}.scope"
 		if [ "$(id -u)" = "0" ]; then
 			REL_PARENT_PATH="/machine.slice${pod_slice}"
@@ -228,7 +233,7 @@ function set_cgroups_path() {
 		CGROUP_PATH=${CGROUP_BASE_PATH}${REL_CGROUPS_PATH}
 	fi
 
-	[ -n "$pod" ] && create_parent
+	[ -v pod ] && create_parent
 
 	update_config '.linux.cgroupsPath |= "'"${OCI_CGROUPS_PATH}"'"'
 }
@@ -260,11 +265,11 @@ function check_cgroup_value() {
 
 # Helper to check a value in systemd.
 function check_systemd_value() {
-	[ -z "${RUNC_USE_SYSTEMD}" ] && return
+	[ ! -v RUNC_USE_SYSTEMD ] && return
 	local source="$1"
 	[ "$source" = "unsupported" ] && return
 	local expected="$2"
-	local expected2="$3"
+	local expected2="${3:-}"
 	local user=""
 	[ "$(id -u)" != "0" ] && user="--user"
 
@@ -340,7 +345,7 @@ function fail() {
 
 # Check whether rootless runc can use cgroups.
 function rootless_cgroup() {
-	[[ "$ROOTLESS_FEATURES" == *"cgroup"* || -n "$RUNC_USE_SYSTEMD" ]]
+	[[ "$ROOTLESS_FEATURES" == *"cgroup"* || -v RUNC_USE_SYSTEMD ]]
 }
 
 # Allows a test to specify what things it requires. If the environment can't
@@ -350,7 +355,7 @@ function requires() {
 		local skip_me
 		case $var in
 		criu)
-			if [ -n "$HAVE_CRIU" ]; then
+			if [ ! -v HAVE_CRIU ]; then
 				skip_me=1
 			fi
 			;;
@@ -380,7 +385,7 @@ function requires() {
 			fi
 			;;
 		rootless_no_features)
-			if [ "$ROOTLESS_FEATURES" != "" ]; then
+			if [ -n "$ROOTLESS_FEATURES" ]; then
 				skip_me=1
 			fi
 			;;
@@ -415,7 +420,7 @@ function requires() {
 			;;
 		cgroups_hybrid)
 			init_cgroup_paths
-			if [ "$CGROUP_HYBRID" != "yes" ]; then
+			if [ ! -v CGROUP_HYBRID ]; then
 				skip_me=1
 			fi
 			;;
@@ -434,12 +439,12 @@ function requires() {
 			fi
 			;;
 		systemd)
-			if [ -z "${RUNC_USE_SYSTEMD}" ]; then
+			if [ ! -v RUNC_USE_SYSTEMD ]; then
 				skip_me=1
 			fi
 			;;
 		no_systemd)
-			if [ -n "${RUNC_USE_SYSTEMD}" ]; then
+			if [ -v RUNC_USE_SYSTEMD ]; then
 				skip_me=1
 			fi
 			;;
@@ -452,7 +457,7 @@ function requires() {
 			fail "BUG: Invalid requires $var."
 			;;
 		esac
-		if [ -n "$skip_me" ]; then
+		if [ -v skip_me ]; then
 			skip "test requires $var"
 		fi
 	done
@@ -502,7 +507,7 @@ function testcontainer() {
 }
 
 function setup_recvtty() {
-	[ -z "$ROOT" ] && return 1 # must not be called without ROOT set
+	[ ! -v ROOT ] && return 1 # must not be called without ROOT set
 	local dir="$ROOT/tty"
 
 	mkdir "$dir"
@@ -513,7 +518,7 @@ function setup_recvtty() {
 }
 
 function teardown_recvtty() {
-	[ -z "$ROOT" ] && return 0 # nothing to teardown
+	[ ! -v ROOT ] && return 0 # nothing to teardown
 	local dir="$ROOT/tty"
 
 	# When we kill recvtty, the container will also be killed.
@@ -572,7 +577,7 @@ function setup_debian() {
 }
 
 function teardown_bundle() {
-	[ -z "$ROOT" ] && return 0 # nothing to teardown
+	[ ! -v ROOT ] && return 0 # nothing to teardown
 
 	cd "$INTEGRATION_ROOT" || return
 	teardown_recvtty
