@@ -137,10 +137,12 @@ shellcheck:
 	# TODO: add shellcheck for more sh files (contrib/completions/bash/runc).
 
 shfmt:
-	shfmt -ln bats -d -w tests/integration/*.bats
-	shfmt -ln bash -d -w man/*.sh script/* \
-		tests/*.sh tests/integration/*.bash tests/fuzzing/*.sh \
-		contrib/completions/bash/runc contrib/cmd/seccompagent/*.sh
+	$(CONTAINER_ENGINE) run $(CONTAINER_ENGINE_RUN_FLAGS) \
+		--rm -v $(CURDIR):/src -w /src \
+		mvdan/shfmt:v3.5.1 -d -w .
+
+localshfmt:
+	shfmt -d -w .
 
 vendor:
 	$(GO) mod tidy
@@ -162,5 +164,5 @@ verify-dependencies: vendor
 	localrelease dbuild lint man runcimage \
 	test localtest unittest localunittest integration localintegration \
 	rootlessintegration localrootlessintegration shell install install-bash \
-	install-man clean cfmt shfmt shellcheck \
+	install-man clean cfmt shfmt localshfmt shellcheck \
 	vendor verify-changelog verify-dependencies
