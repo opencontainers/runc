@@ -90,10 +90,13 @@ struct nlconfig_t {
 	size_t uidmappath_len;
 	char *gidmappath;
 	size_t gidmappath_len;
+	uint32_t uid;
+	uint32_t gid;
 
 	/* Mount sources opened outside the container userns. */
 	char *mountsources;
 	size_t mountsources_len;
+
 };
 
 /*
@@ -127,6 +130,8 @@ static int loglevel = DEBUG;
 #define UIDMAPPATH_ATTR		27288
 #define GIDMAPPATH_ATTR		27289
 #define MOUNT_SOURCES_ATTR	27290
+#define UID_ATTR                27291
+#define GID_ATTR                27292
 
 /*
  * Use the raw syscall for versions of glibc which don't include a function for
@@ -553,6 +558,18 @@ static void nl_parse(int fd, struct nlconfig_t *config)
 		case MOUNT_SOURCES_ATTR:
 			config->mountsources = current;
 			config->mountsources_len = payload_len;
+			break;
+		case UID_ATTR:
+			/*
+			 * golang in its os.Chown specifies uid & gid as int type
+			 * posix doesn't specify sign of uid & gid, but linux
+			 * specifies it as uint32_t as well as OCI spec
+			 * */
+			config->uid = readint32(current);
+			break;
+
+		case GID_ATTR:
+			config->gid = readint32(current);
 			break;
 		default:
 			bail("unknown netlink message type %d", nlattr->nla_type);
@@ -1210,7 +1227,10 @@ void nsexec(void)
 				}
 
 				/* Become root in the namespace proper. */
-				if (setresuid(0, 0, 0) < 0)
+				write_log(DEBUG, "Become root in the namespace proper.");
+				write_log(DEBUG, "uid: %d\n", config.uid);
+				// TODO get it from config
+				if (setresuid(config.uid, config.uid, config.uid) < 0)
 					bail("failed to become root in user namespace");
 			}
 
@@ -1332,10 +1352,11 @@ void nsexec(void)
 			if (setsid() < 0)
 				bail("setsid failed");
 
-			if (setuid(0) < 0)
+			write_log(DEBUG, "gid: %d, uid: %d\n", config.gid, config.uid);
+			if (setuid(config.uid) < 0)
 				bail("setuid failed");
 
-			if (setgid(0) < 0)
+			if (setgid(config.gid) < 0)
 				bail("setgid failed");
 
 			if (!config.is_rootless_euid && config.is_setgroup) {

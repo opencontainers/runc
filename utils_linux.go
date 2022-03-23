@@ -49,7 +49,8 @@ func newProcess(p specs.Process) (*libcontainer.Process, error) {
 		Args: p.Args,
 		Env:  p.Env,
 		// TODO: fix libcontainer's API to better support uid/gid in a typesafe way.
-		User:            fmt.Sprintf("%d:%d", p.User.UID, p.User.GID),
+		UID:             int(p.User.UID),
+		GID:             int(p.User.GID),
 		Cwd:             p.Cwd,
 		Label:           p.SelinuxLabel,
 		NoNewPrivileges: &p.NoNewPrivileges,
@@ -230,11 +231,11 @@ func (r *runner) run(config *specs.Process) (int, error) {
 		}
 		process.ExtraFiles = append(process.ExtraFiles, os.NewFile(uintptr(i), "PreserveFD:"+strconv.Itoa(i)))
 	}
-	rootuid, err := r.container.Config().HostRootUID()
+	rootuid, err := r.container.Config().HostUID(int(config.User.UID))
 	if err != nil {
 		return -1, err
 	}
-	rootgid, err := r.container.Config().HostRootGID()
+	rootgid, err := r.container.Config().HostGID(int(config.User.GID))
 	if err != nil {
 		return -1, err
 	}

@@ -228,7 +228,7 @@ func (c *linuxContainer) Start(process *Process) error {
 		return errors.New("can't start container with SkipDevices set")
 	}
 	if process.Init {
-		if err := c.createExecFifo(); err != nil {
+		if err := c.createExecFifo(process.UID, process.GID); err != nil {
 			return err
 		}
 	}
@@ -402,12 +402,12 @@ func (c *linuxContainer) Signal(s os.Signal, all bool) error {
 	return ErrNotRunning
 }
 
-func (c *linuxContainer) createExecFifo() error {
-	rootuid, err := c.Config().HostRootUID()
+func (c *linuxContainer) createExecFifo(uid int, gid int) error {
+	hostuid, err := c.Config().HostUID(uid)
 	if err != nil {
 		return err
 	}
-	rootgid, err := c.Config().HostRootGID()
+	hostgid, err := c.Config().HostGID(gid)
 	if err != nil {
 		return err
 	}
@@ -422,7 +422,7 @@ func (c *linuxContainer) createExecFifo() error {
 		return err
 	}
 	unix.Umask(oldMask)
-	return os.Chown(fifoName, rootuid, rootgid)
+	return os.Chown(fifoName, hostuid, hostgid)
 }
 
 func (c *linuxContainer) deleteExecFifo() {
@@ -552,7 +552,7 @@ func (c *linuxContainer) newInitProcess(p *Process, cmd *exec.Cmd, messageSockPa
 		}
 	}
 	_, sharePidns := nsMaps[configs.NEWPID]
-	data, err := c.bootstrapData(c.config.Namespaces.CloneFlags(), nsMaps, initStandard)
+	data, err := c.bootstrapData(c.config.Namespaces.CloneFlags(), nsMaps, initStandard, p.UID, p.GID)
 	if err != nil {
 		return nil, err
 	}
@@ -610,7 +610,7 @@ func (c *linuxContainer) newSetnsProcess(p *Process, cmd *exec.Cmd, messageSockP
 	}
 	// for setns process, we don't have to set cloneflags as the process namespaces
 	// will only be set via setns syscall
-	data, err := c.bootstrapData(0, state.NamespacePaths, initSetns)
+	data, err := c.bootstrapData(0, state.NamespacePaths, initSetns, -1, -1)
 	if err != nil {
 		return nil, err
 	}
@@ -664,7 +664,7 @@ func (c *linuxContainer) newInitConfig(process *Process) *initConfig {
 		Config:           c.config,
 		Args:             process.Args,
 		Env:              process.Env,
-		User:             process.User,
+		User:             fmt.Sprintf("%d:%d", process.UID, process.GID),
 		AdditionalGroups: process.AdditionalGroups,
 		Cwd:              process.Cwd,
 		Capabilities:     process.Capabilities,
@@ -2114,7 +2114,7 @@ type netlinkError struct{ error }
 // such as one that uses nsenter package to bootstrap the container's
 // init process correctly, i.e. with correct namespaces, uid/gid
 // mapping etc.
-func (c *linuxContainer) bootstrapData(cloneFlags uintptr, nsMaps map[configs.NamespaceType]string, it initType) (_ io.Reader, Err error) {
+func (c *linuxContainer) bootstrapData(cloneFlags uintptr, nsMaps map[configs.NamespaceType]string, it initType, uid int, gid int) (_ io.Reader, Err error) {
 	// create the netlink message
 	r := nl.NewNetlinkRequest(int(InitMsg), 0)
 
@@ -2199,6 +2199,18 @@ func (c *linuxContainer) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Na
 					Value: true,
 				})
 			}
+		}
+		if uid >= 0 {
+			r.AddData(&Int32msg{
+				Type:  UserUIDAttr,
+				Value: uint32(uid),
+			})
+		}
+		if gid >= 0 {
+			r.AddData(&Int32msg{
+				Type:  UserGIDAttr,
+				Value: uint32(gid),
+			})
 		}
 	}
 
