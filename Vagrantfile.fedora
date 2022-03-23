@@ -23,11 +23,16 @@ Vagrant.configure("2") do |config|
       cat << EOF | dnf -y --exclude=kernel,kernel-core shell && break
 config install_weak_deps false
 update
-install iptables gcc make golang-go glibc-static libseccomp-devel bats jq git-core criu fuse-sshfs
+install iptables gcc make glibc-static libseccomp-devel bats jq git-core criu fuse-sshfs
 ts run
 EOF
     done
     dnf clean all
+
+    # Install golang.
+    # FIXME go back to golang-go rpm once switched to Fedora 36.
+    curl -fsSL https://go.dev/dl/go1.18.linux-amd64.tar.gz | tar Cxz /usr/local
+    echo 'export PATH=/usr/local/go/bin:$PATH' >> /etc/profile.d/golang.sh
 
     # Add a user for rootless tests
     useradd -u2000 -m -d/home/rootless -s/bin/bash rootless

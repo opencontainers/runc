@@ -50,7 +50,7 @@ task:
     mkdir -p -m 0700 /root/.ssh
     vagrant ssh-config >> /root/.ssh/config
   guest_info_script: |
-    ssh default 'sh -exc "uname -a && systemctl --version && df -T && cat /etc/os-release"'
+    ssh default 'sh -exc "uname -a && systemctl --version && df -T && cat /etc/os-release && go version"'
   unit_tests_script: |
     ssh default 'sudo -i make -C /vagrant localunittest'
   integration_systemd_script: |
@@ -68,7 +68,7 @@ task:
   env:
     HOME: /root
     CIRRUS_WORKING_DIR: /home/runc
-    GO_VERSION: "1.17.3"
+    GO_VERSION: "1.18"
     BATS_VERSION: "v1.3.0"
     # yamllint disable rule:key-duplicates
     matrix:
