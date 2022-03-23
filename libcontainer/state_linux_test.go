@@ -53,7 +53,7 @@ func testTransitions(t *testing.T, initialState containerState, valid []containe
 func TestStoppedStateTransition(t *testing.T) {
 	testTransitions(
 		t,
-		&stoppedState{c: &linuxContainer{}},
+		&stoppedState{c: &Container{}},
 		[]containerState{
 			&stoppedState{},
 			&runningState{},
@@ -65,7 +65,7 @@ func TestStoppedStateTransition(t *testing.T) {
 func TestPausedStateTransition(t *testing.T) {
 	testTransitions(
 		t,
-		&pausedState{c: &linuxContainer{}},
+		&pausedState{c: &Container{}},
 		[]containerState{
 			&pausedState{},
 			&runningState{},
@@ -77,7 +77,7 @@ func TestPausedStateTransition(t *testing.T) {
 func TestRestoredStateTransition(t *testing.T) {
 	testTransitions(
 		t,
-		&restoredState{c: &linuxContainer{}},
+		&restoredState{c: &Container{}},
 		[]containerState{
 			&stoppedState{},
 			&runningState{},
@@ -88,7 +88,7 @@ func TestRestoredStateTransition(t *testing.T) {
 func TestRunningStateTransition(t *testing.T) {
 	testTransitions(
 		t,
-		&runningState{c: &linuxContainer{}},
+		&runningState{c: &Container{}},
 		[]containerState{
 			&stoppedState{},
 			&pausedState{},
@@ -100,7 +100,7 @@ func TestRunningStateTransition(t *testing.T) {
 func TestCreatedStateTransition(t *testing.T) {
 	testTransitions(
 		t,
-		&createdState{c: &linuxContainer{}},
+		&createdState{c: &Container{}},
 		[]containerState{
 			&stoppedState{},
 			&pausedState{},

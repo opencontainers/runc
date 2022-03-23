@@ -115,7 +115,7 @@ func TestGetContainerPids(t *testing.T) {
 	if err != nil {
 		t.Fatalf("can't stat pid %d, got %v", pid, err)
 	}
-	container := &linuxContainer{
+	container := &Container{
 		id:     "myid",
 		config: &configs.Config{},
 		cgroupManager: &mockCgroupManager{
@@ -148,7 +148,7 @@ func TestGetContainerState(t *testing.T) {
 		expectedMemoryPath  = "/sys/fs/cgroup/memory/myid"
 		expectedNetworkPath = fmt.Sprintf("/proc/%d/ns/net", pid)
 	)
-	container := &linuxContainer{
+	container := &Container{
 		id: "myid",
 		config: &configs.Config{
 			Namespaces: []configs.Namespace{
@@ -232,7 +232,7 @@ func TestGetContainerStateAfterUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	container := &linuxContainer{
+	container := &Container{
 		root: t.TempDir(),
 		id:   "myid",
 		config: &configs.Config{

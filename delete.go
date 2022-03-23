@@ -13,7 +13,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func killContainer(container libcontainer.Container) error {
+func killContainer(container *libcontainer.Container) error {
 	_ = container.Signal(unix.SIGKILL, false)
 	for i := 0; i < 100; i++ {
 		time.Sleep(100 * time.Millisecond)

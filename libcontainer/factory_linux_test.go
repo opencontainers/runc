@@ -75,12 +75,8 @@ func TestFactoryLoadContainer(t *testing.T) {
 	if !reflect.DeepEqual(config.Hooks, expectedHooks) {
 		t.Fatalf("expects hooks %q but received %q", expectedHooks, config.Hooks)
 	}
-	lcontainer, ok := container.(*linuxContainer)
-	if !ok {
-		t.Fatal("expected linux container on linux based systems")
-	}
-	if lcontainer.initProcess.pid() != expectedState.InitProcessPid {
-		t.Fatalf("expected init pid %d but received %d", expectedState.InitProcessPid, lcontainer.initProcess.pid())
+	if container.initProcess.pid() != expectedState.InitProcessPid {
+		t.Fatalf("expected init pid %d but received %d", expectedState.InitProcessPid, container.initProcess.pid())
 	}
 }
 

@@ -37,7 +37,7 @@ var idRegex = regexp.MustCompile(`^[\w+-\.]+$`)
 // The id must not be empty and consist of only the following characters:
 // ASCII letters, digits, underscore, plus, minus, period. The id must be
 // unique and non-existent for the given root path.
-func Create(root, id string, config *configs.Config) (Container, error) {
+func Create(root, id string, config *configs.Config) (*Container, error) {
 	if root == "" {
 		return nil, errors.New("root not set")
 	}
@@ -98,7 +98,7 @@ func Create(root, id string, config *configs.Config) (Container, error) {
 	if err := os.Mkdir(containerRoot, 0o711); err != nil {
 		return nil, err
 	}
-	c := &linuxContainer{
+	c := &Container{
 		id:              id,
 		root:            containerRoot,
 		config:          config,
@@ -112,7 +112,7 @@ func Create(root, id string, config *configs.Config) (Container, error) {
 // Load takes a path to the state directory (root) and an id of an existing
 // container, and returns a Container object reconstructed from the saved
 // state. This presents a read only view of the container.
-func Load(root, id string) (Container, error) {
+func Load(root, id string) (*Container, error) {
 	if root == "" {
 		return nil, errors.New("root not set")
 	}
@@ -137,7 +137,7 @@ func Load(root, id string) (Container, error) {
 	if err != nil {
 		return nil, err
 	}
-	c := &linuxContainer{
+	c := &Container{
 		initProcess:          r,
 		initProcessStartTime: state.InitProcessStartTime,
 		id:                   id,
