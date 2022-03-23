@@ -121,11 +121,6 @@ func getContainers(context *cli.Context) ([]containerState, error) {
 		// Report other errors, including non-existent custom --root.
 		return nil, err
 	}
-	factory, err := libcontainer.New(root)
-	if err != nil {
-		return nil, err
-	}
-
 	var s []containerState
 	for _, item := range list {
 		if !item.IsDir() {
@@ -146,7 +141,7 @@ func getContainers(context *cli.Context) ([]containerState, error) {
 			owner.Name = fmt.Sprintf("#%d", uid)
 		}
 
-		container, err := factory.Load(item.Name())
+		container, err := libcontainer.Load(root, item.Name())
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "load container %s: %v\n", item.Name(), err)
 			continue

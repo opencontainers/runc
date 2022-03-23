@@ -169,11 +169,7 @@ func newContainer(t *testing.T, config *configs.Config) (libcontainer.Container,
 	name := strings.ReplaceAll(t.Name(), "/", "_") + strconv.FormatInt(-int64(time.Now().Nanosecond()), 35)
 	root := t.TempDir()
 
-	f, err := libcontainer.New(root)
-	if err != nil {
-		return nil, err
-	}
-	return f.Create(name, config)
+	return libcontainer.Create(root, name, config)
 }
 
 // runContainer runs the container with the specific config and arguments

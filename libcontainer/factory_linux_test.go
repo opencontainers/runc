@@ -7,89 +7,14 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/moby/sys/mountinfo"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/opencontainers/runtime-spec/specs-go"
-
-	"golang.org/x/sys/unix"
 )
 
-func TestFactoryNew(t *testing.T) {
-	root := t.TempDir()
-	factory, err := New(root)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if factory == nil {
-		t.Fatal("factory should not be nil")
-	}
-	lfactory, ok := factory.(*LinuxFactory)
-	if !ok {
-		t.Fatal("expected linux factory returned on linux based systems")
-	}
-	if lfactory.Root != root {
-		t.Fatalf("expected factory root to be %q but received %q", root, lfactory.Root)
-	}
-
-	if factory.Type() != "libcontainer" {
-		t.Fatalf("unexpected factory type: %q, expected %q", factory.Type(), "libcontainer")
-	}
-}
-
-func TestFactoryNewTmpfs(t *testing.T) {
-	root := t.TempDir()
-	factory, err := New(root, TmpfsRoot)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if factory == nil {
-		t.Fatal("factory should not be nil")
-	}
-	lfactory, ok := factory.(*LinuxFactory)
-	if !ok {
-		t.Fatal("expected linux factory returned on linux based systems")
-	}
-	if lfactory.Root != root {
-		t.Fatalf("expected factory root to be %q but received %q", root, lfactory.Root)
-	}
-
-	if factory.Type() != "libcontainer" {
-		t.Fatalf("unexpected factory type: %q, expected %q", factory.Type(), "libcontainer")
-	}
-	mounted, err := mountinfo.Mounted(lfactory.Root)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !mounted {
-		t.Fatalf("Factory Root is not mounted")
-	}
-	mounts, err := mountinfo.GetMounts(mountinfo.SingleEntryFilter(lfactory.Root))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(mounts) != 1 {
-		t.Fatalf("Factory Root is not listed in mounts list")
-	}
-	m := mounts[0]
-	if m.FSType != "tmpfs" {
-		t.Fatalf("FSType of root: %s, expected %s", m.FSType, "tmpfs")
-	}
-	if m.Source != "tmpfs" {
-		t.Fatalf("Source of root: %s, expected %s", m.Source, "tmpfs")
-	}
-	err = unix.Unmount(root, unix.MNT_DETACH)
-	if err != nil {
-		t.Error("failed to unmount root:", err)
-	}
-}
-
 func TestFactoryLoadNotExists(t *testing.T) {
-	factory, err := New(t.TempDir())
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, err = factory.Load("nocontainer")
+	stateDir := t.TempDir()
+	_, err := Load(stateDir, "nocontainer")
 	if err == nil {
 		t.Fatal("expected nil error loading non-existing container")
 	}
@@ -135,11 +60,7 @@ func TestFactoryLoadContainer(t *testing.T) {
 	if err := marshal(filepath.Join(root, id, stateFilename), expectedState); err != nil {
 		t.Fatal(err)
 	}
-	factory, err := New(root)
-	if err != nil {
-		t.Fatal(err)
-	}
-	container, err := factory.Load(id)
+	container, err := Load(root, id)
 	if err != nil {
 		t.Fatal(err)
 	}

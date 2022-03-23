@@ -62,10 +62,9 @@ func testCheckpoint(t *testing.T, userns bool) {
 	}
 
 	config := newTemplateConfig(t, &tParam{userns: userns})
-	factory, err := libcontainer.New(t.TempDir())
-	ok(t, err)
+	stateDir := t.TempDir()
 
-	container, err := factory.Create("test", config)
+	container, err := libcontainer.Create(stateDir, "test", config)
 	ok(t, err)
 	defer destroyContainer(container)
 
@@ -143,7 +142,7 @@ func testCheckpoint(t *testing.T, userns bool) {
 	ok(t, err)
 
 	// reload the container
-	container, err = factory.Load("test")
+	container, err = libcontainer.Load(stateDir, "test")
 	ok(t, err)
 
 	restoreStdinR, restoreStdinW, err := os.Pipe()

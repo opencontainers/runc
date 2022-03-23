@@ -10,7 +10,6 @@ import (
 	"strconv"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
-	"github.com/moby/sys/mountinfo"
 	"golang.org/x/sys/unix"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups/manager"
@@ -28,60 +27,30 @@ const (
 
 var idRegex = regexp.MustCompile(`^[\w+-\.]+$`)
 
-// TmpfsRoot is an option func to mount LinuxFactory.Root to tmpfs.
-func TmpfsRoot(l *LinuxFactory) error {
-	mounted, err := mountinfo.Mounted(l.Root)
-	if err != nil {
-		return err
-	}
-	if !mounted {
-		if err := mount("tmpfs", l.Root, "", "tmpfs", 0, ""); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// New returns a linux based container factory based in the root directory and
-// configures the factory with the provided option funcs.
-func New(root string, options ...func(*LinuxFactory) error) (Factory, error) {
-	if root != "" {
-		if err := os.MkdirAll(root, 0o700); err != nil {
-			return nil, err
-		}
-	}
-	l := &LinuxFactory{
-		Root: root,
-	}
-
-	for _, opt := range options {
-		if opt == nil {
-			continue
-		}
-		if err := opt(l); err != nil {
-			return nil, err
-		}
-	}
-	return l, nil
-}
-
-// LinuxFactory implements the default factory interface for linux based systems.
-type LinuxFactory struct {
-	// Root directory for the factory to store state.
-	Root string
-}
-
-func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, error) {
-	if l.Root == "" {
+// Create creates a new container with the given id inside a given state
+// directory (root), and returns a Container object.
+//
+// The root is a state directory which many containers can share. It can be
+// used later to get the list of containers, or to get information about a
+// particular container (see Load).
+//
+// The id must not be empty and consist of only the following characters:
+// ASCII letters, digits, underscore, plus, minus, period. The id must be
+// unique and non-existent for the given root path.
+func Create(root, id string, config *configs.Config) (Container, error) {
+	if root == "" {
 		return nil, errors.New("root not set")
 	}
-	if err := l.validateID(id); err != nil {
+	if err := validateID(id); err != nil {
 		return nil, err
 	}
 	if err := validate.Validate(config); err != nil {
 		return nil, err
 	}
-	containerRoot, err := securejoin.SecureJoin(l.Root, id)
+	if err := os.MkdirAll(root, 0o700); err != nil {
+		return nil, err
+	}
+	containerRoot, err := securejoin.SecureJoin(root, id)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +94,8 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 		return nil, errors.New("container's cgroup unexpectedly frozen")
 	}
 
-	if err := os.MkdirAll(containerRoot, 0o711); err != nil {
+	// Parent directory is already created above, so Mkdir is enough.
+	if err := os.Mkdir(containerRoot, 0o711); err != nil {
 		return nil, err
 	}
 	c := &linuxContainer{
@@ -139,19 +109,22 @@ func (l *LinuxFactory) Create(id string, config *configs.Config) (Container, err
 	return c, nil
 }
 
-func (l *LinuxFactory) Load(id string) (Container, error) {
-	if l.Root == "" {
+// Load takes a path to the state directory (root) and an id of an existing
+// container, and returns a Container object reconstructed from the saved
+// state. This presents a read only view of the container.
+func Load(root, id string) (Container, error) {
+	if root == "" {
 		return nil, errors.New("root not set")
 	}
 	// when load, we need to check id is valid or not.
-	if err := l.validateID(id); err != nil {
+	if err := validateID(id); err != nil {
 		return nil, err
 	}
-	containerRoot, err := securejoin.SecureJoin(l.Root, id)
+	containerRoot, err := securejoin.SecureJoin(root, id)
 	if err != nil {
 		return nil, err
 	}
-	state, err := l.loadState(containerRoot)
+	state, err := loadState(containerRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -181,13 +154,10 @@ func (l *LinuxFactory) Load(id string) (Container, error) {
 	return c, nil
 }
 
-func (l *LinuxFactory) Type() string {
-	return "libcontainer"
-}
-
-// StartInitialization loads a container by opening the pipe fd from the parent to read the configuration and state
-// This is a low level implementation detail of the reexec and should not be consumed externally
-func (l *LinuxFactory) StartInitialization() (err error) {
+// StartInitialization loads a container by opening the pipe fd from the parent
+// to read the configuration and state. This is a low level implementation
+// detail of the reexec and should not be consumed externally.
+func StartInitialization() (err error) {
 	// Get the INITPIPE.
 	envInitPipe := os.Getenv("_LIBCONTAINER_INITPIPE")
 	pipefd, err := strconv.Atoi(envInitPipe)
@@ -269,7 +239,7 @@ func (l *LinuxFactory) StartInitialization() (err error) {
 	return i.Init()
 }
 
-func (l *LinuxFactory) loadState(root string) (*State, error) {
+func loadState(root string) (*State, error) {
 	stateFilePath, err := securejoin.SecureJoin(root, stateFilename)
 	if err != nil {
 		return nil, err
@@ -289,7 +259,7 @@ func (l *LinuxFactory) loadState(root string) (*State, error) {
 	return state, nil
 }
 
-func (l *LinuxFactory) validateID(id string) error {
+func validateID(id string) error {
 	if !idRegex.MatchString(id) || string(os.PathSeparator)+id != utils.CleanPath(string(os.PathSeparator)+id) {
 		return ErrInvalidID
 	}
