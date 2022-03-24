@@ -13,6 +13,9 @@ env:
 jobs:
 
   lint:
+    permissions:
+      contents: read  # for actions/checkout to fetch code
+      pull-requests: read  # for golangci/golangci-lint-action to fetch pull requests
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
