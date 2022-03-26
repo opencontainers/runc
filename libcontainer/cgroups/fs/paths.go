@@ -21,7 +21,7 @@ var (
 
 const defaultCgroupRoot = "/sys/fs/cgroup"
 
-func initPaths(cg *configs.Cgroup) (map[string]string, error) {
+func initPaths(cg *configs.Cgroup, subsystems []subsystem) (map[string]string, error) {
 	root, err := rootPath()
 	if err != nil {
 		return nil, err

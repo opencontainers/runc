@@ -13,23 +13,6 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
-var subsystems = []subsystem{
-	&CpusetGroup{},
-	&DevicesGroup{},
-	&MemoryGroup{},
-	&CpuGroup{},
-	&CpuacctGroup{},
-	&PidsGroup{},
-	&BlkioGroup{},
-	&HugetlbGroup{},
-	&NetClsGroup{},
-	&NetPrioGroup{},
-	&PerfEventGroup{},
-	&FreezerGroup{},
-	&RdmaGroup{},
-	&NameGroup{GroupName: "name=systemd", Join: true},
-}
-
 var errSubsystemDoesNotExist = errors.New("cgroup: subsystem does not exist")
 
 type subsystem interface {
@@ -46,9 +29,10 @@ type subsystem interface {
 }
 
 type manager struct {
-	mu      sync.Mutex
-	cgroups *configs.Cgroup
-	paths   map[string]string
+	mu         sync.Mutex
+	cgroups    *configs.Cgroup
+	paths      map[string]string
+	subsystems []subsystem
 }
 
 func NewManager(cg *configs.Cgroup, paths map[string]string) (cgroups.Manager, error) {
@@ -61,6 +45,23 @@ func NewManager(cg *configs.Cgroup, paths map[string]string) (cgroups.Manager, e
 		return nil, cgroups.ErrV1NoUnified
 	}
 
+	subsystems := []subsystem{
+		&CpusetGroup{},
+		&DevicesGroup{},
+		&MemoryGroup{},
+		&CpuGroup{},
+		&CpuacctGroup{},
+		&PidsGroup{},
+		&BlkioGroup{},
+		&HugetlbGroup{},
+		&NetClsGroup{},
+		&NetPrioGroup{},
+		&PerfEventGroup{},
+		&FreezerGroup{},
+		&RdmaGroup{},
+		&NameGroup{GroupName: "name=systemd", Join: true},
+	}
+
 	// If using cgroups-hybrid mode then add a "" controller indicating
 	// it should join the cgroups v2.
 	if cgroups.IsCgroup2HybridMode() {
@@ -69,15 +70,16 @@ func NewManager(cg *configs.Cgroup, paths map[string]string) (cgroups.Manager, e
 
 	if paths == nil {
 		var err error
-		paths, err = initPaths(cg)
+		paths, err = initPaths(cg, subsystems)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	return &manager{
-		cgroups: cg,
-		paths:   paths,
+		cgroups:    cg,
+		paths:      paths,
+		subsystems: subsystems,
 	}, nil
 }
 
@@ -108,7 +110,7 @@ func (m *manager) Apply(pid int) (err error) {
 
 	c := m.cgroups
 
-	for _, sys := range subsystems {
+	for _, sys := range m.subsystems {
 		name := sys.Name()
 		p, ok := m.paths[name]
 		if !ok {
@@ -152,7 +154,7 @@ func (m *manager) GetStats() (*cgroups.Stats, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	stats := cgroups.NewStats()
-	for _, sys := range subsystems {
+	for _, sys := range m.subsystems {
 		path := m.paths[sys.Name()]
 		if path == "" {
 			continue
@@ -175,7 +177,7 @@ func (m *manager) Set(r *configs.Resources) error {
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	for _, sys := range subsystems {
+	for _, sys := range m.subsystems {
 		path := m.paths[sys.Name()]
 		if err := sys.Set(path, r); err != nil {
 			// When rootless is true, errors from the device subsystem
