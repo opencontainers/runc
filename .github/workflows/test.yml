@@ -69,7 +69,7 @@ jobs:
       run: sudo -E PATH="$PATH" make EXTRA_FLAGS="${{ matrix.race }}" all
 
     - name: install bats
-      uses: mig4/setup-bats@v1
+      uses: mig4/setup-bats@e939fcdb4a143e6ba2afa10d444765659db9e1b5 # v1 https://api.github.com/repos/mig4/setup-bats/git/tags/e939fcdb4a143e6ba2afa10d444765659db9e1b5
       with:
         bats-version: 1.3.0
 

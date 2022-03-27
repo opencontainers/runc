@@ -23,7 +23,7 @@ jobs:
         run: |
           sudo apt -q update
           sudo apt -q install libseccomp-dev
-      - uses: golangci/golangci-lint-action@v3
+      - uses: golangci/golangci-lint-action@b517f99ae23d86ecc4c0dec08dcf48d2336abc29 # v3 https://api.github.com/repos/golangci/golangci-lint-action/git/commits/b517f99ae23d86ecc4c0dec08dcf48d2336abc29
         with:
           version: v1.45
 
@@ -42,7 +42,7 @@ jobs:
         run: |
           sudo apt -q update
           sudo apt -q install libseccomp-dev
-      - uses: golangci/golangci-lint-action@v3
+      - uses: golangci/golangci-lint-action@b517f99ae23d86ecc4c0dec08dcf48d2336abc29 # v3 https://api.github.com/repos/golangci/golangci-lint-action/git/commits/b517f99ae23d86ecc4c0dec08dcf48d2336abc29
         with:
           only-new-issues: true
           args: --config .golangci-extra.yml
@@ -114,7 +114,7 @@ jobs:
           sha256sum ~/bin/shellcheck | grep -q $SHA256SUM
           # make sure to remove the old version
           sudo rm -f /usr/bin/shellcheck
-      - uses: lumaxis/shellcheck-problem-matchers@v1
+      - uses: lumaxis/shellcheck-problem-matchers@2766fdd076ee4d2c9b92f0768eb2cb3420b5ad2b # v1 https://api.github.com/repos/lumaxis/shellcheck-problem-matchers/git/tags/2766fdd076ee4d2c9b92f0768eb2cb3420b5ad2b
       - name: shellcheck
         run: |
           make shellcheck
@@ -146,12 +146,12 @@ jobs:
     steps:
       - name: get pr commits
         id: 'get-pr-commits'
-        uses: tim-actions/get-pr-commits@v1.2.0
+        uses: tim-actions/get-pr-commits@c64db31d359214d244884dd68f971a110b29ab83 # v1.2.0 https://api.github.com/repos/tim-actions/get-pr-commits/git/commits/c64db31d359214d244884dd68f971a110b29ab83
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: check subject line length
-        uses: tim-actions/commit-message-checker-with-regex@v0.3.1
+        uses: tim-actions/commit-message-checker-with-regex@d6d9770051dd6460679d1cab1dcaa8cffc5c2bbd # v0.3.1 https://api.github.com/repos/tim-actions/commit-message-checker-with-regex/git/commits/d6d9770051dd6460679d1cab1dcaa8cffc5c2bbd
         with:
           commits: ${{ steps.get-pr-commits.outputs.commits }}
           pattern: '^.{0,72}(\n.*)*$'
@@ -191,7 +191,7 @@ jobs:
       # under Docker will emerge, it will be good to have a separate make
       # runcimage job and share its result (the docker image) with whoever
       # needs it.
-    - uses: satackey/action-docker-layer-caching@v0.0.11
+    - uses: satackey/action-docker-layer-caching@46d2c640b1d8ef50d185452ad6fb324e6bd1d052 # v0.0.11 https://api.github.com/repos/satackey/action-docker-layer-caching/git/commits/46d2c640b1d8ef50d185452ad6fb324e6bd1d052
       continue-on-error: true
     - name: build docker image
       run: make runcimage
