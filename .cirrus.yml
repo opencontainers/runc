@@ -74,6 +74,7 @@ task:
     matrix:
       DISTRO: centos-7
       DISTRO: centos-stream-8
+      DISTRO: centos-stream-9
 
   name: ci / $DISTRO
 
@@ -94,6 +95,10 @@ task:
       ;;
     centos-stream-8)
       yum config-manager --set-enabled powertools # for glibc-static
+      ;;
+    centos-stream-9)
+      dnf config-manager --set-enabled crb # for glibc-static
+      dnf -y install epel-release epel-next-release # for fuse-sshfs
       ;;
     esac
     # Work around dnf mirror failures by retrying a few times.
