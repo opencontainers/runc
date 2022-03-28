@@ -6,11 +6,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2022-03-28
+
+> Violence is the last refuge of the incompetent.
+
+### Added
+ * CI is now also run on centos-stream-9. (#3436)
+
+### Fixed
+ * `runc run/start` can now run a container with read-only `/dev` in OCI spec,
+   rather than error out. (#3355)
+ * `runc exec` now ensures that `--cgroup` argument is a sub-cgroup. (#3403)
+ * libcontainer systemd v2 manager no longer errors out if one of the files
+   listed in `/sys/kernel/cgroup/delegate` do not exist in container's cgroup.
+   (#3387, #3404)
+ * Loose OCI spec validation to avoid bogus "Intel RDT is not supported" error.
+   (#3406)
+ * libcontainer/cgroups no longer panics in cgroup v1 managers if `stat`
+   of `/sys/fs/cgroup/unified` returns an error other than ENOENT. (#3435)
+
 ## [1.1.0] - 2022-01-14
 
 > A plan depends as much upon execution as it does upon concept.
 
-## Changed
+### Changed
  * libcontainer will now refuse to build without the nsenter package being
    correctly compiled (specifically this requires CGO to be enabled). This
    should avoid folks accidentally creating broken runc binaries (and
@@ -233,7 +252,8 @@ implementation (libcontainer) is *not* covered by this policy.
    cgroups at all during `runc update`). (#2994)
 
 <!-- minor releases -->
-[Unreleased]: https://github.com/opencontainers/runc/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/opencontainers/runc/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/opencontainers/runc/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/opencontainers/runc/compare/v1.1.0-rc.1...v1.1.0
 [1.0.0]: https://github.com/opencontainers/runc/releases/tag/v1.0.0
 
