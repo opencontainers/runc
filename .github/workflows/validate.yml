@@ -4,7 +4,7 @@ on:
     tags:
       - v*
     branches:
-      - master
+      - main
       - release-*
   pull_request:
 env:
