@@ -54,7 +54,7 @@ RUN cd /tmp \
 
 # install libseccomp
 ARG LIBSECCOMP_VERSION
-COPY script/* /tmp/script/
+COPY script/seccomp.sh script/lib.sh /tmp/script/
 RUN mkdir -p /opt/libseccomp \
     && /tmp/script/seccomp.sh "$LIBSECCOMP_VERSION" /opt/libseccomp arm64 armel armhf ppc64le s390x
 ENV LIBSECCOMP_VERSION=$LIBSECCOMP_VERSION
