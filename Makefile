@@ -40,11 +40,20 @@ ifneq (,$(filter $(GOARCH),arm64 amd64))
 	endif
 endif
 # Enable static PIE binaries on supported platforms.
-GO_BUILD_STATIC := CGO_ENABLED=1 $(GO) build -trimpath $(GO_BUILDMODE_STATIC) \
+GO_BUILD_STATIC := $(GO) build -trimpath $(GO_BUILDMODE_STATIC) \
 	$(EXTRA_FLAGS) -tags "$(BUILDTAGS) netgo osusergo" \
 	-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS_STATIC) $(EXTRA_LDFLAGS)"
 
 GPG_KEYID ?= asarai@suse.de
+
+# Some targets need cgo, which is disabled by default when cross compiling.
+# Enable cgo explicitly for those.
+# Both runc and libcontainer/integration need libcontainer/nsenter.
+runc static localunittest: export CGO_ENABLED=1
+# seccompagent needs libseccomp (when seccomp build tag is set).
+ifneq (,$(filter $(BUILDTAGS),seccomp))
+seccompagent: export CGO_ENABLED=1
+endif
 
 .DEFAULT: runc
 
