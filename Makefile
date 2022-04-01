@@ -15,18 +15,33 @@ COMMIT ?= $(shell git describe --dirty --long --always)
 VERSION := $(shell cat ./VERSION)
 LDFLAGS_COMMON := -X main.gitCommit=$(COMMIT) -X main.version=$(VERSION)
 
+GOARCH := $(shell $(GO) env GOARCH)
+
 GO_BUILDMODE :=
 # Enable dynamic PIE executables on supported platforms.
-ifneq (,$(filter $(shell $(GO) env GOARCH),386 amd64 arm arm64 ppc64le riscv64 s390x))
+ifneq (,$(filter $(GOARCH),386 amd64 arm arm64 ppc64le riscv64 s390x))
 	ifeq (,$(findstring -race,$(EXTRA_FLAGS)))
 		GO_BUILDMODE := "-buildmode=pie"
 	endif
 endif
-GO_BUILD := $(GO) build -trimpath $(GO_BUILDMODE) $(EXTRA_FLAGS) -tags "$(BUILDTAGS)" \
+GO_BUILD := $(GO) build -trimpath $(GO_BUILDMODE) \
+	$(EXTRA_FLAGS) -tags "$(BUILDTAGS)" \
 	-ldflags "$(LDFLAGS_COMMON) $(EXTRA_LDFLAGS)"
 
+GO_BUILDMODE_STATIC :=
 LDFLAGS_STATIC := -extldflags -static
-GO_BUILD_STATIC := CGO_ENABLED=1 $(GO) build -trimpath $(EXTRA_FLAGS) -tags "$(BUILDTAGS) netgo osusergo" \
+# Enable static PIE executables on supported platforms.
+# This (among the other things) requires libc support (rcrt1.o), which seems
+# to be available only for arm64 and amd64 (Debian Bullseye).
+ifneq (,$(filter $(GOARCH),arm64 amd64))
+	ifeq (,$(findstring -race,$(EXTRA_FLAGS)))
+		GO_BUILDMODE_STATIC := -buildmode=pie
+		LDFLAGS_STATIC := -linkmode external -extldflags --static-pie
+	endif
+endif
+# Enable static PIE binaries on supported platforms.
+GO_BUILD_STATIC := CGO_ENABLED=1 $(GO) build -trimpath $(GO_BUILDMODE_STATIC) \
+	$(EXTRA_FLAGS) -tags "$(BUILDTAGS) netgo osusergo" \
 	-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS_STATIC) $(EXTRA_LDFLAGS)"
 
 GPG_KEYID ?= asarai@suse.de
