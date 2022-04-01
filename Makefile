@@ -15,11 +15,11 @@ COMMIT ?= $(shell git describe --dirty --long --always)
 VERSION := $(shell cat ./VERSION)
 LDFLAGS_COMMON := -X main.gitCommit=$(COMMIT) -X main.version=$(VERSION)
 
-ifeq ($(shell $(GO) env GOOS),linux)
-	ifeq (,$(filter $(shell $(GO) env GOARCH),mips mipsle mips64 mips64le ppc64))
-		ifeq (,$(findstring -race,$(EXTRA_FLAGS)))
-			GO_BUILDMODE := "-buildmode=pie"
-		endif
+GO_BUILDMODE :=
+# Enable dynamic PIE executables on supported platforms.
+ifneq (,$(filter $(shell $(GO) env GOARCH),386 amd64 arm arm64 ppc64le riscv64 s390x))
+	ifeq (,$(findstring -race,$(EXTRA_FLAGS)))
+		GO_BUILDMODE := "-buildmode=pie"
 	endif
 endif
 GO_BUILD := $(GO) build -trimpath $(GO_BUILDMODE) $(EXTRA_FLAGS) -tags "$(BUILDTAGS)" \
