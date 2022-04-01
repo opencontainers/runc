@@ -738,14 +738,17 @@ func getParentMount(rootfs string) (string, string, error) {
 	return mi[idx].Mountpoint, mi[idx].Optional, nil
 }
 
-// Make parent mount private if it was shared
-func rootfsParentMountPrivate(rootfs string) error {
+// Make parent mount private if it was shared. This also returns
+// a flag whether rootfs itself is a mount point.
+func rootfsParentMountPrivate(rootfs string) (bool, error) {
 	sharedMount := false
 
 	parentMount, optionalOpts, err := getParentMount(rootfs)
 	if err != nil {
-		return err
+		return false, err
 	}
+
+	isMount := parentMount == rootfs
 
 	optsSplit := strings.Split(optionalOpts, " ")
 	for _, opt := range optsSplit {
@@ -760,10 +763,10 @@ func rootfsParentMountPrivate(rootfs string) error {
 	// shared. Secondly when we bind mount rootfs it will propagate to
 	// parent namespace and we don't want that to happen.
 	if sharedMount {
-		return mount("", parentMount, "", "", unix.MS_PRIVATE, "")
+		return isMount, mount("", parentMount, "", "", unix.MS_PRIVATE, "")
 	}
 
-	return nil
+	return isMount, nil
 }
 
 func prepareRoot(config *configs.Config) error {
@@ -778,8 +781,14 @@ func prepareRoot(config *configs.Config) error {
 	// Make parent mount private to make sure following bind mount does
 	// not propagate in other namespaces. Also it will help with kernel
 	// check pass in pivot_root. (IS_SHARED(new_mnt->mnt_parent))
-	if err := rootfsParentMountPrivate(config.Rootfs); err != nil {
+	isMount, err := rootfsParentMountPrivate(config.Rootfs)
+	if err != nil {
 		return err
+	}
+
+	if isMount {
+		// config.Rootfs is already a mount point.
+		return nil
 	}
 
 	return mount(config.Rootfs, config.Rootfs, "", "bind", unix.MS_BIND|unix.MS_REC, "")
