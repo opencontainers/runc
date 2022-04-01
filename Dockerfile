@@ -13,11 +13,11 @@ RUN KEYFILE=/usr/share/keyrings/criu-repo-keyring.gpg; \
     && apt-get install -y --no-install-recommends \
         build-essential \
         criu \
-        crossbuild-essential-arm64 \
-        crossbuild-essential-armel \
-        crossbuild-essential-armhf \
-        crossbuild-essential-ppc64el \
-        crossbuild-essential-s390x \
+        gcc-aarch64-linux-gnu libc-dev-arm64-cross \
+        gcc-arm-linux-gnueabi libc-dev-armel-cross \
+        gcc-arm-linux-gnueabihf libc-dev-armhf-cross \
+        gcc-powerpc64le-linux-gnu libc-dev-ppc64el-cross \
+        gcc-s390x-linux-gnu libc-dev-s390x-cross \
         curl \
         gawk \
         gcc \
