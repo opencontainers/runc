@@ -18,6 +18,7 @@ RUN KEYFILE=/usr/share/keyrings/criu-repo-keyring.gpg; \
         gcc-arm-linux-gnueabihf libc-dev-armhf-cross \
         gcc-powerpc64le-linux-gnu libc-dev-ppc64el-cross \
         gcc-s390x-linux-gnu libc-dev-s390x-cross \
+        gcc-riscv64-linux-gnu libc-dev-riscv64-cross \
         curl \
         gawk \
         gcc \
@@ -52,7 +53,7 @@ RUN cd /tmp \
 ARG LIBSECCOMP_VERSION
 COPY script/seccomp.sh script/lib.sh /tmp/script/
 RUN mkdir -p /opt/libseccomp \
-    && /tmp/script/seccomp.sh "$LIBSECCOMP_VERSION" /opt/libseccomp arm64 armel armhf ppc64le s390x
+    && /tmp/script/seccomp.sh "$LIBSECCOMP_VERSION" /opt/libseccomp arm64 armel armhf ppc64le riscv64 s390x
 ENV LIBSECCOMP_VERSION=$LIBSECCOMP_VERSION
 ENV LD_LIBRARY_PATH=/opt/libseccomp/lib
 ENV PKG_CONFIG_PATH=/opt/libseccomp/lib/pkgconfig
