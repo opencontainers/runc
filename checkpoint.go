@@ -38,7 +38,7 @@ checkpointed.`,
 		cli.StringFlag{Name: "page-server", Value: "", Usage: "ADDRESS:PORT of the page server"},
 		cli.BoolFlag{Name: "file-locks", Usage: "handle file locks, for safety"},
 		cli.BoolFlag{Name: "pre-dump", Usage: "dump container's memory information only, leave the container running after this"},
-		cli.StringFlag{Name: "manage-cgroups-mode", Value: "", Usage: "cgroups mode: 'soft' (default), 'full' and 'strict'"},
+		cli.StringFlag{Name: "manage-cgroups-mode", Value: "", Usage: "cgroups mode: 'soft' (default), 'ignore', 'full' and 'strict'"},
 		cli.StringSliceFlag{Name: "empty-ns", Usage: "create a namespace, but don't restore its properties"},
 		cli.BoolFlag{Name: "auto-dedup", Usage: "enable auto deduplication of memory images"},
 	},
@@ -147,6 +147,8 @@ func setManageCgroupsMode(context *cli.Context, options *libcontainer.CriuOpts) 
 			options.ManageCgroupsMode = criu.CriuCgMode_FULL
 		case "strict":
 			options.ManageCgroupsMode = criu.CriuCgMode_STRICT
+		case "ignore":
+			options.ManageCgroupsMode = criu.CriuCgMode_IGNORE
 		default:
 			return errors.New("Invalid manage cgroups mode")
 		}

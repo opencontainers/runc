@@ -37,7 +37,7 @@ image files directory.
 : Allow checkpoint/restore of file locks. See
 [criu --file-locks option](https://criu.org/CLI/opt/--file-locks).
 
-**--manage-cgroups-mode** **soft**|**full**|**strict**.
+**--manage-cgroups-mode** **soft**|**ignore**|**full**|**strict**.
 : Cgroups mode. Default is **soft**. See
 [criu --manage-cgroups option](https://criu.org/CLI/opt/--manage-cgroups).
 
