@@ -405,3 +405,40 @@ function simple_cr() {
 	# busybox should be back up and running
 	testcontainer test_busybox running
 }
+
+@test "checkpoint and restore into a different cgroup" {
+	local pid name=test-diff-cgroup
+
+	set_cgroups_path
+	runc run -d --console-socket "$CONSOLE_SOCKET" --pid-file pid "$name"
+	[ "$status" -eq 0 ]
+
+	testcontainer "$name" running
+	# Check the cgroup.
+	pid="$(cat pid)"
+	original_cgroup="$OCI_CGROUPS_PATH"
+	echo "OCI_CGROUPS_PATH=$OCI_CGROUPS_PATH"
+	cat "/proc/$pid/cgroup"
+
+	runc checkpoint --manage-cgroups-mode ignore --work-path ./work-dir "$name"
+	grep -B 5 Error ./work-dir/dump.log || true
+	[ "$status" -eq 0 ]
+
+	testcontainer "$name" checkpointed
+
+	# Modify the cgroup path.
+	set_cgroups_path
+	runc restore --manage-cgroups-mode ignore --pid-file pid -d \
+		--work-path ./work-dir --console-socket "$CONSOLE_SOCKET" "$name"
+	grep -B 5 Error ./work-dir/restore.log || true
+	[ "$status" -eq 0 ]
+
+	testcontainer "$name" running
+
+	# Check the cgroup name has changed.
+	pid="$(cat pid)"
+	echo "OCI_CGROUPS_PATH=$OCI_CGROUPS_PATH"
+	cat "/proc/$pid/cgroup"
+	new_cgroup="$OCI_CGROUPS_PATH"
+	[ "$original_cgroup" != "$new_cgroup" ]
+}
