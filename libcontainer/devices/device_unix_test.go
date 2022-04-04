@@ -95,3 +95,16 @@ func TestHostDevicesAllValid(t *testing.T) {
 		}
 	}
 }
+
+func BenchmarkCgroupString(b *testing.B) {
+	devs, err := HostDevices()
+	if err != nil {
+		b.Fatal(err)
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		for _, d := range devs {
+			_ = d.CgroupString()
+		}
+	}
+}

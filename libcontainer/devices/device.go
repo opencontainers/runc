@@ -1,7 +1,6 @@
 package devices
 
 import (
-	"fmt"
 	"os"
 	"strconv"
 )
@@ -156,17 +155,21 @@ type Rule struct {
 }
 
 func (d *Rule) CgroupString() string {
-	var (
-		major = strconv.FormatInt(d.Major, 10)
-		minor = strconv.FormatInt(d.Minor, 10)
-	)
+	var major, minor string
+
 	if d.Major == Wildcard {
 		major = "*"
+	} else {
+		major = strconv.FormatInt(d.Major, 10)
 	}
+
 	if d.Minor == Wildcard {
 		minor = "*"
+	} else {
+		minor = strconv.FormatInt(d.Minor, 10)
 	}
-	return fmt.Sprintf("%c %s:%s %s", d.Type, major, minor, d.Permissions)
+
+	return string(d.Type) + " " + major + ":" + minor + " " + string(d.Permissions)
 }
 
 func (d *Rule) Mkdev() (uint64, error) {
