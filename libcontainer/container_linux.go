@@ -2100,7 +2100,10 @@ func (c *Container) orderNamespacePaths(namespaces map[configs.NamespaceType]str
 func encodeIDMapping(idMap []configs.IDMap) ([]byte, error) {
 	data := bytes.NewBuffer(nil)
 	for _, im := range idMap {
-		line := fmt.Sprintf("%d %d %d\n", im.ContainerID, im.HostID, im.Size)
+		line := strconv.Itoa(im.ContainerID) + " " +
+			strconv.Itoa(im.HostID) + " " +
+			strconv.Itoa(im.Size) + "\n"
+
 		if _, err := data.WriteString(line); err != nil {
 			return nil, err
 		}

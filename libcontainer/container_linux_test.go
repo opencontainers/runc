@@ -286,3 +286,33 @@ func TestGetContainerStateAfterUpdate(t *testing.T) {
 		t.Fatalf("expected Memory to be 2048 but received %q", state.Config.Cgroups.Memory)
 	}
 }
+
+func benchmarkEncodeIDMapping(b *testing.B, m []configs.IDMap) {
+	var (
+		res []byte
+		err error
+	)
+	for i := 0; i < b.N; i++ {
+		res, err = encodeIDMapping(m)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+	if len(res) == 0 {
+		b.Fatal("no data")
+	}
+}
+
+func BenchmarkEncodeIDMapping1(b *testing.B) {
+	benchmarkEncodeIDMapping(b, []configs.IDMap{
+		{HostID: 10000, ContainerID: 0, Size: 1000},
+	})
+}
+
+func BenchmarkEncodeIDMapping3(b *testing.B) {
+	benchmarkEncodeIDMapping(b, []configs.IDMap{
+		{HostID: 10000, ContainerID: 0, Size: 1000},
+		{HostID: 20000, ContainerID: 5000, Size: 1000},
+		{HostID: 34567, ContainerID: 9999, Size: 1000},
+	})
+}
