@@ -16,6 +16,7 @@ import (
 	dbus "github.com/godbus/dbus/v5"
 	"github.com/sirupsen/logrus"
 
+	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
@@ -32,6 +33,8 @@ var (
 
 	isRunningSystemdOnce sync.Once
 	isRunningSystemd     bool
+
+	GenerateDeviceProps func(*configs.Resources) ([]systemdDbus.Property, error)
 )
 
 // NOTE: This function comes from package github.com/coreos/go-systemd/util
@@ -312,4 +315,17 @@ func addCpuset(cm *dbusConnManager, props *[]systemdDbus.Property, cpus, mems st
 			newProp("AllowedMemoryNodes", bits))
 	}
 	return nil
+}
+
+// generateDeviceProperties takes the configured device rules and generates a
+// corresponding set of systemd properties to configure the devices correctly.
+func generateDeviceProperties(r *configs.Resources) ([]systemdDbus.Property, error) {
+	if GenerateDeviceProps == nil {
+		if len(r.Devices) > 0 {
+			return nil, cgroups.ErrDevicesUnsupported
+		}
+		return nil, nil
+	}
+
+	return GenerateDeviceProps(r)
 }

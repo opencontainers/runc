@@ -1,4 +1,4 @@
-package devicefilter
+package devices
 
 import (
 	"strings"

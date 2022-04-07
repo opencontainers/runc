@@ -1,4 +1,4 @@
-package ebpf
+package devices
 
 import (
 	"errors"

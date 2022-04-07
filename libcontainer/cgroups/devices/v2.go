@@ -1,12 +1,10 @@
-package fs2
+package devices
 
 import (
 	"fmt"
 
 	"golang.org/x/sys/unix"
 
-	"github.com/opencontainers/runc/libcontainer/cgroups/ebpf"
-	"github.com/opencontainers/runc/libcontainer/cgroups/ebpf/devicefilter"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/devices"
 	"github.com/opencontainers/runc/libcontainer/userns"
@@ -53,11 +51,11 @@ func canSkipEBPFError(r *configs.Resources) bool {
 	return true
 }
 
-func setDevices(dirPath string, r *configs.Resources) error {
+func setV2(dirPath string, r *configs.Resources) error {
 	if r.SkipDevices {
 		return nil
 	}
-	insts, license, err := devicefilter.DeviceFilter(r.Devices)
+	insts, license, err := DeviceFilter(r.Devices)
 	if err != nil {
 		return err
 	}
@@ -66,7 +64,7 @@ func setDevices(dirPath string, r *configs.Resources) error {
 		return fmt.Errorf("cannot get dir FD for %s", dirPath)
 	}
 	defer unix.Close(dirFD)
-	if _, err := ebpf.LoadAttachCgroupDeviceFilter(insts, license, dirFD); err != nil {
+	if _, err := LoadAttachCgroupDeviceFilter(insts, license, dirFD); err != nil {
 		if !canSkipEBPFError(r) {
 			return err
 		}

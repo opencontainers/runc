@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	"github.com/opencontainers/runc/libcontainer"
+	//nolint:revive // Enable cgroup manager to manage devices
+	_ "github.com/opencontainers/runc/libcontainer/cgroups/devices"
 	_ "github.com/opencontainers/runc/libcontainer/nsenter"
 
 	"github.com/sirupsen/logrus"
