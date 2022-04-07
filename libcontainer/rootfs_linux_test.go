@@ -38,6 +38,14 @@ func TestCheckMountDestFalsePositive(t *testing.T) {
 	}
 }
 
+func TestCheckMountDestNsLastPid(t *testing.T) {
+	dest := "/rootfs/proc/sys/kernel/ns_last_pid"
+	err := checkProcMount("/rootfs", dest, "/proc")
+	if err != nil {
+		t.Fatal("/proc/sys/kernel/ns_last_pid should not return an error")
+	}
+}
+
 func TestNeedsSetupDev(t *testing.T) {
 	config := &configs.Config{
 		Mounts: []*configs.Mount{
