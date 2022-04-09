@@ -55,7 +55,7 @@ func setV2(dirPath string, r *configs.Resources) error {
 	if r.SkipDevices {
 		return nil
 	}
-	insts, license, err := DeviceFilter(r.Devices)
+	insts, license, err := deviceFilter(r.Devices)
 	if err != nil {
 		return err
 	}
@@ -64,7 +64,7 @@ func setV2(dirPath string, r *configs.Resources) error {
 		return fmt.Errorf("cannot get dir FD for %s", dirPath)
 	}
 	defer unix.Close(dirFD)
-	if _, err := LoadAttachCgroupDeviceFilter(insts, license, dirFD); err != nil {
+	if _, err := loadAttachCgroupDeviceFilter(insts, license, dirFD); err != nil {
 		if !canSkipEBPFError(r) {
 			return err
 		}

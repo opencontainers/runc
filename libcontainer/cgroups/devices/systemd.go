@@ -30,7 +30,7 @@ func systemdProperties(r *configs.Resources) ([]systemdDbus.Property, error) {
 	}
 
 	// Figure out the set of rules.
-	configEmu := Emulator{}
+	configEmu := emulator{}
 	for _, rule := range r.Devices {
 		if err := configEmu.Apply(*rule); err != nil {
 			return nil, fmt.Errorf("unable to apply rule for systemd: %w", err)

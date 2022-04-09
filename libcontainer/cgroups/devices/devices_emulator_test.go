@@ -31,19 +31,19 @@ import (
 func TestDeviceEmulatorLoad(t *testing.T) {
 	tests := []struct {
 		name, list string
-		expected   *Emulator
+		expected   *emulator
 	}{
 		{
 			name: "BlacklistMode",
 			list: `a *:* rwm`,
-			expected: &Emulator{
+			expected: &emulator{
 				defaultAllow: true,
 			},
 		},
 		{
 			name: "WhitelistBasic",
 			list: `c 4:2 rw`,
-			expected: &Emulator{
+			expected: &emulator{
 				defaultAllow: false,
 				rules: deviceRules{
 					{
@@ -57,7 +57,7 @@ func TestDeviceEmulatorLoad(t *testing.T) {
 		{
 			name: "WhitelistWildcard",
 			list: `b 0:* m`,
-			expected: &Emulator{
+			expected: &emulator{
 				defaultAllow: false,
 				rules: deviceRules{
 					{
@@ -72,7 +72,7 @@ func TestDeviceEmulatorLoad(t *testing.T) {
 			name: "WhitelistDuplicate",
 			list: `c *:* rwm
 c 1:1 r`,
-			expected: &Emulator{
+			expected: &emulator{
 				defaultAllow: false,
 				rules: deviceRules{
 					{
@@ -102,7 +102,7 @@ c 5:0 rwm
 c 5:2 rwm
 c 136:* rwm
 c 10:200 rwm`,
-			expected: &Emulator{
+			expected: &emulator{
 				defaultAllow: false,
 				rules: deviceRules{
 					{
@@ -205,7 +205,7 @@ c 10:200 rwm`,
 		test := test // capture range variable
 		t.Run(test.name, func(t *testing.T) {
 			list := bytes.NewBufferString(test.list)
-			emu, err := EmulatorFromList(list)
+			emu, err := emulatorFromList(list)
 			if err != nil && test.expected != nil {
 				t.Fatalf("unexpected failure when creating emulator: %v", err)
 			} else if err == nil && test.expected == nil {
@@ -223,7 +223,7 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 	tests := []struct {
 		name           string
 		rule           devices.Rule
-		base, expected *Emulator
+		base, expected *emulator
 	}{
 		// Switch between default modes.
 		{
@@ -235,7 +235,7 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 				Permissions: devices.Permissions("rwm"),
 				Allow:       !baseDefaultAllow,
 			},
-			base: &Emulator{
+			base: &emulator{
 				defaultAllow: baseDefaultAllow,
 				rules: deviceRules{
 					{
@@ -250,7 +250,7 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 					}: devices.Permissions("r"),
 				},
 			},
-			expected: &Emulator{
+			expected: &emulator{
 				defaultAllow: !baseDefaultAllow,
 				rules:        nil,
 			},
@@ -264,11 +264,11 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 				Permissions: devices.Permissions("rwm"),
 				Allow:       baseDefaultAllow,
 			},
-			base: &Emulator{
+			base: &emulator{
 				defaultAllow: baseDefaultAllow,
 				rules:        nil,
 			},
-			expected: &Emulator{
+			expected: &emulator{
 				defaultAllow: baseDefaultAllow,
 				rules:        nil,
 			},
@@ -282,7 +282,7 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 				Permissions: devices.Permissions("rwm"),
 				Allow:       baseDefaultAllow,
 			},
-			base: &Emulator{
+			base: &emulator{
 				defaultAllow: baseDefaultAllow,
 				rules: deviceRules{
 					{
@@ -297,7 +297,7 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 					}: devices.Permissions("r"),
 				},
 			},
-			expected: &Emulator{
+			expected: &emulator{
 				defaultAllow: baseDefaultAllow,
 				rules:        nil,
 			},
@@ -312,7 +312,7 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 				Permissions: devices.Permissions("rm"),
 				Allow:       !baseDefaultAllow,
 			},
-			base: &Emulator{
+			base: &emulator{
 				defaultAllow: baseDefaultAllow,
 				rules: deviceRules{
 					{
@@ -327,7 +327,7 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 					}: devices.Permissions("r"),
 				},
 			},
-			expected: &Emulator{
+			expected: &emulator{
 				defaultAllow: baseDefaultAllow,
 				rules: deviceRules{
 					{
@@ -357,7 +357,7 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 				Permissions: devices.Permissions("rm"),
 				Allow:       !baseDefaultAllow,
 			},
-			base: &Emulator{
+			base: &emulator{
 				defaultAllow: baseDefaultAllow,
 				rules: deviceRules{
 					{
@@ -367,7 +367,7 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 					}: devices.Permissions("rwm"),
 				},
 			},
-			expected: &Emulator{
+			expected: &emulator{
 				defaultAllow: baseDefaultAllow,
 				rules: deviceRules{
 					{
@@ -393,7 +393,7 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 				Permissions: devices.Permissions("rm"),
 				Allow:       !baseDefaultAllow,
 			},
-			base: &Emulator{
+			base: &emulator{
 				defaultAllow: baseDefaultAllow,
 				rules: deviceRules{
 					{
@@ -403,7 +403,7 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 					}: devices.Permissions("rm"),
 				},
 			},
-			expected: &Emulator{
+			expected: &emulator{
 				defaultAllow: baseDefaultAllow,
 				rules: deviceRules{
 					{
@@ -423,7 +423,7 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 				Permissions: devices.Permissions("rm"),
 				Allow:       !baseDefaultAllow,
 			},
-			base: &Emulator{
+			base: &emulator{
 				defaultAllow: baseDefaultAllow,
 				rules: deviceRules{
 					{
@@ -438,7 +438,7 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 					}: devices.Permissions("rw"),
 				},
 			},
-			expected: &Emulator{
+			expected: &emulator{
 				defaultAllow: baseDefaultAllow,
 				rules: deviceRules{
 					{
@@ -463,7 +463,7 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 				Permissions: devices.Permissions("rm"),
 				Allow:       !baseDefaultAllow,
 			},
-			base: &Emulator{
+			base: &emulator{
 				defaultAllow: baseDefaultAllow,
 				rules: deviceRules{
 					{
@@ -478,7 +478,7 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 					}: devices.Permissions("rw"),
 				},
 			},
-			expected: &Emulator{
+			expected: &emulator{
 				defaultAllow: baseDefaultAllow,
 				rules: deviceRules{
 					{
@@ -503,7 +503,7 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 				Permissions: devices.Permissions("r"),
 				Allow:       !baseDefaultAllow,
 			},
-			base: &Emulator{
+			base: &emulator{
 				defaultAllow: baseDefaultAllow,
 				rules: deviceRules{
 					{
@@ -518,7 +518,7 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 					}: devices.Permissions("rw"),
 				},
 			},
-			expected: &Emulator{
+			expected: &emulator{
 				defaultAllow: baseDefaultAllow,
 				rules: deviceRules{
 					{
@@ -544,7 +544,7 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 				Permissions: devices.Permissions("rm"),
 				Allow:       baseDefaultAllow,
 			},
-			base: &Emulator{
+			base: &emulator{
 				defaultAllow: baseDefaultAllow,
 				rules: deviceRules{
 					{
@@ -559,7 +559,7 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 					}: devices.Permissions("r"),
 				},
 			},
-			expected: &Emulator{
+			expected: &emulator{
 				defaultAllow: baseDefaultAllow,
 				rules: deviceRules{
 					{
@@ -579,7 +579,7 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 				Permissions: devices.Permissions("rw"),
 				Allow:       baseDefaultAllow,
 			},
-			base: &Emulator{
+			base: &emulator{
 				defaultAllow: baseDefaultAllow,
 				rules: deviceRules{
 					{
@@ -589,7 +589,7 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 					}: devices.Permissions("r"),
 				},
 			},
-			expected: &Emulator{
+			expected: &emulator{
 				defaultAllow: baseDefaultAllow,
 				rules: deviceRules{
 					{
@@ -609,7 +609,7 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 				Permissions: devices.Permissions("rw"),
 				Allow:       baseDefaultAllow,
 			},
-			base: &Emulator{
+			base: &emulator{
 				defaultAllow: baseDefaultAllow,
 				rules: deviceRules{
 					{
@@ -624,7 +624,7 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 					}: devices.Permissions("r"),
 				},
 			},
-			expected: &Emulator{
+			expected: &emulator{
 				defaultAllow: baseDefaultAllow,
 				rules: deviceRules{
 					{
@@ -644,7 +644,7 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 				Permissions: devices.Permissions("r"),
 				Allow:       baseDefaultAllow,
 			},
-			base: &Emulator{
+			base: &emulator{
 				defaultAllow: baseDefaultAllow,
 				rules: deviceRules{
 					{
@@ -659,7 +659,7 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 					}: devices.Permissions("r"),
 				},
 			},
-			expected: &Emulator{
+			expected: &emulator{
 				defaultAllow: baseDefaultAllow,
 				rules: deviceRules{
 					{
@@ -686,7 +686,7 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 				Permissions: devices.Permissions("r"),
 				Allow:       baseDefaultAllow,
 			},
-			base: &Emulator{
+			base: &emulator{
 				defaultAllow: baseDefaultAllow,
 				rules: deviceRules{
 					{
@@ -712,7 +712,7 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 				Permissions: devices.Permissions("r"),
 				Allow:       baseDefaultAllow,
 			},
-			base: &Emulator{
+			base: &emulator{
 				defaultAllow: baseDefaultAllow,
 				rules: deviceRules{
 					{
@@ -727,7 +727,7 @@ func testDeviceEmulatorApply(t *testing.T, baseDefaultAllow bool) {
 					}: devices.Permissions("r"),
 				},
 			},
-			expected: &Emulator{
+			expected: &emulator{
 				defaultAllow: baseDefaultAllow,
 				rules: deviceRules{
 					{
@@ -768,13 +768,13 @@ func TestDeviceEmulatorBlacklistApply(t *testing.T) {
 func testDeviceEmulatorTransition(t *testing.T, sourceDefaultAllow bool) {
 	tests := []struct {
 		name           string
-		source, target *Emulator
+		source, target *emulator
 		expected       []*devices.Rule
 	}{
 		// No-op changes.
 		{
 			name: "Noop",
-			source: &Emulator{
+			source: &emulator{
 				defaultAllow: sourceDefaultAllow,
 				rules: deviceRules{
 					{
@@ -784,7 +784,7 @@ func testDeviceEmulatorTransition(t *testing.T, sourceDefaultAllow bool) {
 					}: devices.Permissions("wm"),
 				},
 			},
-			target: &Emulator{
+			target: &emulator{
 				defaultAllow: sourceDefaultAllow,
 				rules: deviceRules{
 					{
@@ -800,7 +800,7 @@ func testDeviceEmulatorTransition(t *testing.T, sourceDefaultAllow bool) {
 		// Switching modes.
 		{
 			name: "SwitchToOtherMode",
-			source: &Emulator{
+			source: &emulator{
 				defaultAllow: sourceDefaultAllow,
 				rules: deviceRules{
 					{
@@ -810,7 +810,7 @@ func testDeviceEmulatorTransition(t *testing.T, sourceDefaultAllow bool) {
 					}: devices.Permissions("rwm"),
 				},
 			},
-			target: &Emulator{
+			target: &emulator{
 				defaultAllow: !sourceDefaultAllow,
 				rules: deviceRules{
 					{
@@ -842,7 +842,7 @@ func testDeviceEmulatorTransition(t *testing.T, sourceDefaultAllow bool) {
 		// Rule changes.
 		{
 			name: "RuleAddition",
-			source: &Emulator{
+			source: &emulator{
 				defaultAllow: sourceDefaultAllow,
 				rules: deviceRules{
 					{
@@ -852,7 +852,7 @@ func testDeviceEmulatorTransition(t *testing.T, sourceDefaultAllow bool) {
 					}: devices.Permissions("rwm"),
 				},
 			},
-			target: &Emulator{
+			target: &emulator{
 				defaultAllow: sourceDefaultAllow,
 				rules: deviceRules{
 					{
@@ -879,7 +879,7 @@ func testDeviceEmulatorTransition(t *testing.T, sourceDefaultAllow bool) {
 		},
 		{
 			name: "RuleRemoval",
-			source: &Emulator{
+			source: &emulator{
 				defaultAllow: sourceDefaultAllow,
 				rules: deviceRules{
 					{
@@ -894,7 +894,7 @@ func testDeviceEmulatorTransition(t *testing.T, sourceDefaultAllow bool) {
 					}: devices.Permissions("rwm"),
 				},
 			},
-			target: &Emulator{
+			target: &emulator{
 				defaultAllow: sourceDefaultAllow,
 				rules: deviceRules{
 					{
@@ -916,7 +916,7 @@ func testDeviceEmulatorTransition(t *testing.T, sourceDefaultAllow bool) {
 		},
 		{
 			name: "RuleMultipleAdditionRemoval",
-			source: &Emulator{
+			source: &emulator{
 				defaultAllow: sourceDefaultAllow,
 				rules: deviceRules{
 					{
@@ -931,7 +931,7 @@ func testDeviceEmulatorTransition(t *testing.T, sourceDefaultAllow bool) {
 					}: devices.Permissions("rw"),
 				},
 			},
-			target: &Emulator{
+			target: &emulator{
 				defaultAllow: sourceDefaultAllow,
 				rules: deviceRules{
 					{
@@ -954,7 +954,7 @@ func testDeviceEmulatorTransition(t *testing.T, sourceDefaultAllow bool) {
 		// Modifying the access permissions.
 		{
 			name: "RulePartialAddition",
-			source: &Emulator{
+			source: &emulator{
 				defaultAllow: sourceDefaultAllow,
 				rules: deviceRules{
 					{
@@ -964,7 +964,7 @@ func testDeviceEmulatorTransition(t *testing.T, sourceDefaultAllow bool) {
 					}: devices.Permissions("r"),
 				},
 			},
-			target: &Emulator{
+			target: &emulator{
 				defaultAllow: sourceDefaultAllow,
 				rules: deviceRules{
 					{
@@ -986,7 +986,7 @@ func testDeviceEmulatorTransition(t *testing.T, sourceDefaultAllow bool) {
 		},
 		{
 			name: "RulePartialRemoval",
-			source: &Emulator{
+			source: &emulator{
 				defaultAllow: sourceDefaultAllow,
 				rules: deviceRules{
 					{
@@ -996,7 +996,7 @@ func testDeviceEmulatorTransition(t *testing.T, sourceDefaultAllow bool) {
 					}: devices.Permissions("rw"),
 				},
 			},
-			target: &Emulator{
+			target: &emulator{
 				defaultAllow: sourceDefaultAllow,
 				rules: deviceRules{
 					{
@@ -1018,7 +1018,7 @@ func testDeviceEmulatorTransition(t *testing.T, sourceDefaultAllow bool) {
 		},
 		{
 			name: "RulePartialBoth",
-			source: &Emulator{
+			source: &emulator{
 				defaultAllow: sourceDefaultAllow,
 				rules: deviceRules{
 					{
@@ -1028,7 +1028,7 @@ func testDeviceEmulatorTransition(t *testing.T, sourceDefaultAllow bool) {
 					}: devices.Permissions("rw"),
 				},
 			},
-			target: &Emulator{
+			target: &emulator{
 				defaultAllow: sourceDefaultAllow,
 				rules: deviceRules{
 					{

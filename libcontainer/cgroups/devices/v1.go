@@ -64,17 +64,17 @@ func setV1(path string, r *configs.Resources) error {
 	return nil
 }
 
-func loadEmulator(path string) (*Emulator, error) {
+func loadEmulator(path string) (*emulator, error) {
 	list, err := cgroups.ReadFile(path, "devices.list")
 	if err != nil {
 		return nil, err
 	}
-	return EmulatorFromList(bytes.NewBufferString(list))
+	return emulatorFromList(bytes.NewBufferString(list))
 }
 
-func buildEmulator(rules []*devices.Rule) (*Emulator, error) {
+func buildEmulator(rules []*devices.Rule) (*emulator, error) {
 	// This defaults to a white-list -- which is what we want!
-	emu := &Emulator{}
+	emu := &emulator{}
 	for _, rule := range rules {
 		if err := emu.Apply(*rule); err != nil {
 			return nil, err

@@ -22,14 +22,14 @@ const (
 	license = "Apache"
 )
 
-// DeviceFilter returns eBPF device filter program and its license string
-func DeviceFilter(rules []*devices.Rule) (asm.Instructions, string, error) {
+// deviceFilter returns eBPF device filter program and its license string.
+func deviceFilter(rules []*devices.Rule) (asm.Instructions, string, error) {
 	// Generate the minimum ruleset for the device rules we are given. While we
 	// don't care about minimum transitions in cgroupv2, using the emulator
 	// gives us a guarantee that the behaviour of devices filtering is the same
 	// as cgroupv1, including security hardenings to avoid misconfiguration
 	// (such as punching holes in wildcard rules).
-	emu := new(Emulator)
+	emu := new(emulator)
 	for _, rule := range rules {
 		if err := emu.Apply(*rule); err != nil {
 			return nil, "", err

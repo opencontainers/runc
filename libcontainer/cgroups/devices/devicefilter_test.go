@@ -21,7 +21,7 @@ func hash(s, comm string) string {
 }
 
 func testDeviceFilter(t testing.TB, devices []*devices.Rule, expectedStr string) {
-	insts, _, err := DeviceFilter(devices)
+	insts, _, err := deviceFilter(devices)
 	if err != nil {
 		t.Fatalf("%s: %v (devices: %+v)", t.Name(), err, devices)
 	}
