@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@v3
         with:
           go-version: "${{ env.GO_VERSION }}"
       - name: install deps
@@ -35,7 +35,7 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@v3
         with:
           go-version: "${{ env.GO_VERSION }}"
       - name: install deps
@@ -57,7 +57,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: install go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
           go-version: "${{ env.GO_VERSION }}"
       - name: compile with no build tags
@@ -124,7 +124,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: install go
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v3
       with:
         go-version: "${{ env.GO_VERSION }}"
     - name: cache go mod and $GOCACHE

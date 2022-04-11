@@ -60,7 +60,7 @@ jobs:
         rm -rf ~/criu
 
     - name: install go ${{ matrix.go-version }}
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v3
       with:
         stable: '!contains(${{ matrix.go-version }}, "beta") && !contains(${{ matrix.go-version }}, "rc")'
         go-version: ${{ matrix.go-version }}
@@ -120,7 +120,7 @@ jobs:
         sudo apt -q install libseccomp-dev libseccomp-dev:i386 gcc-multilib criu
 
     - name: install go
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v3
       with:
         go-version: 1.x # Latest stable
 
