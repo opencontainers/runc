@@ -62,7 +62,6 @@ jobs:
     - name: install go ${{ matrix.go-version }}
       uses: actions/setup-go@v3
       with:
-        stable: '!contains(${{ matrix.go-version }}, "beta") && !contains(${{ matrix.go-version }}, "rc")'
         go-version: ${{ matrix.go-version }}
 
     - name: build
