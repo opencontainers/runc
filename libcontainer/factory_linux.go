@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"regexp"
 	"runtime/debug"
 	"strconv"
 
@@ -26,8 +25,6 @@ const (
 	stateFilename    = "state.json"
 	execFifoFilename = "exec.fifo"
 )
-
-var idRegex = regexp.MustCompile(`^[\w+-\.]+$`)
 
 // Create creates a new container with the given id inside a given state
 // directory (root), and returns a Container object.
@@ -260,8 +257,47 @@ func loadState(root string) (*State, error) {
 	return state, nil
 }
 
+// validateID checks if the supplied container ID is valid, returning
+// the ErrInvalidID in case it is not.
+//
+// The format of valid ID was never formally defined, instead the code
+// was modified to allow or disallow specific characters.
+//
+// Currently, a valid ID is a non-empty string consisting only of
+// the following characters:
+// - uppercase (A-Z) and lowercase (a-z) Latin letters;
+// - digits (0-9);
+// - underscore (_);
+// - plus sign (+);
+// - minus sign (-);
+// - period (.).
+//
+// In addition, IDs that can't be used to represent a file name
+// (such as . or ..) are rejected.
+
 func validateID(id string) error {
-	if !idRegex.MatchString(id) || string(os.PathSeparator)+id != utils.CleanPath(string(os.PathSeparator)+id) {
+	if len(id) < 1 {
+		return ErrInvalidID
+	}
+
+	// Allowed characters: 0-9 A-Z a-z _ + - .
+	for i := 0; i < len(id); i++ {
+		c := id[i]
+		switch {
+		case c >= 'a' && c <= 'z':
+		case c >= 'A' && c <= 'Z':
+		case c >= '0' && c <= '9':
+		case c == '_':
+		case c == '+':
+		case c == '-':
+		case c == '.':
+		default:
+			return ErrInvalidID
+		}
+
+	}
+
+	if string(os.PathSeparator)+id != utils.CleanPath(string(os.PathSeparator)+id) {
 		return ErrInvalidID
 	}
 
