@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+set -e -u
 
 # bits of this were adapted from check_config.sh in docker
 # see also https://github.com/docker/docker/blob/master/contrib/check-config.sh
@@ -24,8 +24,13 @@ fi
 
 kernelVersion="$(uname -r)"
 kernelMajor="${kernelVersion%%.*}"
-kernelMinor="${kernelVersion#$kernelMajor.}"
+kernelMinor="${kernelVersion#"$kernelMajor".}"
 kernelMinor="${kernelMinor%%.*}"
+
+kernel_lt() {
+	[ "$kernelMajor" -lt "$1" ] && return
+	[ "$kernelMajor" -eq "$1" ] && [ "$kernelMinor" -le "$2" ]
+}
 
 is_set() {
 	zgrep "CONFIG_$1=[y|m]" "$CONFIG" >/dev/null
@@ -40,11 +45,11 @@ is_set_as_module() {
 color() {
 	local codes=()
 	if [ "$1" = 'bold' ]; then
-		codes=("${codes[@]}" '1')
+		codes=("${codes[@]-}" '1')
 		shift
 	fi
 	if [ "$#" -gt 0 ]; then
-		local code
+		local code=''
 		case "$1" in
 		# see https://en.wikipedia.org/wiki/ANSI_escape_code#Colors
 		black) code=30 ;;
@@ -57,11 +62,11 @@ color() {
 		white) code=37 ;;
 		esac
 		if [ "$code" ]; then
-			codes=("${codes[@]}" "$code")
+			codes=("${codes[@]-}" "$code")
 		fi
 	fi
 	local IFS=';'
-	echo -en '\033['"${codes[*]}"'m'
+	echo -en '\033['"${codes[*]-}"'m'
 }
 wrap_color() {
 	text="$1"
@@ -73,10 +78,19 @@ wrap_color() {
 }
 
 wrap_good() {
-	echo "$(wrap_color "$1" white): $(wrap_color "$2" green)"
+	local name="$1"
+	shift
+	local val="$1"
+	shift
+	echo "$(wrap_color "$name" white): $(wrap_color "$val" green)" "$@"
 }
+
 wrap_bad() {
-	echo "$(wrap_color "$1" bold): $(wrap_color "$2" bold red)"
+	local name="$1"
+	shift
+	local val="$1"
+	shift
+	echo "$(wrap_color "$name" bold): $(wrap_color "$val" bold red)" "$@"
 }
 wrap_warning() {
 	wrap_color >&2 "$*" red
@@ -99,7 +113,9 @@ check_flags() {
 }
 
 check_distro_userns() {
-	source /etc/os-release 2>/dev/null || /bin/true
+	[ -r /etc/os-release ] || return 0
+	# shellcheck source=/dev/null
+	. /etc/os-release 2>/dev/null || return 0
 	if [[ "${ID}" =~ ^(centos|rhel)$ && "${VERSION_ID}" =~ ^7 ]]; then
 		# this is a CentOS7 or RHEL7 system
 		grep -q "user_namespace.enable=1" /proc/cmdline || {
@@ -118,8 +134,7 @@ is_config() {
 }
 
 search_config() {
-	local target_dir="$1"
-	[[ "$target_dir" ]] || target_dir=("${possibleConfigs[@]}")
+	local target_dir=("${1:-${possibleConfigs[@]}}")
 
 	local tryConfig
 	for tryConfig in "${target_dir[@]}"; do
@@ -143,7 +158,7 @@ search_config() {
 	exit 1
 }
 
-CONFIG="$1"
+CONFIG="${1:-}"
 
 is_config "$CONFIG" || {
 	if [[ ! "$CONFIG" ]]; then
@@ -165,35 +180,35 @@ echo 'Generally Necessary:'
 
 echo -n '- '
 if [ "$(stat -f -c %t /sys/fs/cgroup 2>/dev/null)" = "63677270" ]; then
-	echo "$(wrap_good 'cgroup hierarchy' 'cgroupv2')"
+	wrap_good 'cgroup hierarchy' 'cgroupv2'
 else
 	cgroupSubsystemDir="$(awk '/[, ](cpu|cpuacct|cpuset|devices|freezer|memory)[, ]/ && $3 == "cgroup" { print $2 }' /proc/mounts | head -n1)"
 	cgroupDir="$(dirname "$cgroupSubsystemDir")"
-	if [ -d "$cgroupDir/cpu" -o -d "$cgroupDir/cpuacct" -o -d "$cgroupDir/cpuset" -o -d "$cgroupDir/devices" -o -d "$cgroupDir/freezer" -o -d "$cgroupDir/memory" ]; then
-		echo "$(wrap_good 'cgroup hierarchy' 'properly mounted') [$cgroupDir]"
+	if [ -d "$cgroupDir/cpu" ] || [ -d "$cgroupDir/cpuacct" ] || [ -d "$cgroupDir/cpuset" ] || [ -d "$cgroupDir/devices" ] || [ -d "$cgroupDir/freezer" ] || [ -d "$cgroupDir/memory" ]; then
+		wrap_good 'cgroup hierarchy' 'properly mounted' "[$cgroupDir]"
 	else
 		if [ "$cgroupSubsystemDir" ]; then
-			echo "$(wrap_bad 'cgroup hierarchy' 'single mountpoint!') [$cgroupSubsystemDir]"
+			wrap_bad 'cgroup hierarchy' 'single mountpoint!' "[$cgroupSubsystemDir]"
 		else
-			echo "$(wrap_bad 'cgroup hierarchy' 'nonexistent??')"
+			wrap_bad 'cgroup hierarchy' 'nonexistent??'
 		fi
-		echo "    $(wrap_color '(see https://github.com/tianon/cgroupfs-mount)' yellow)"
+		wrap_color '    (see https://github.com/tianon/cgroupfs-mount)' yellow
 	fi
 fi
 
 if [ "$(cat /sys/module/apparmor/parameters/enabled 2>/dev/null)" = 'Y' ]; then
 	echo -n '- '
 	if command -v apparmor_parser &>/dev/null; then
-		echo "$(wrap_good 'apparmor' 'enabled and tools installed')"
+		wrap_good 'apparmor' 'enabled and tools installed'
 	else
-		echo "$(wrap_bad 'apparmor' 'enabled, but apparmor_parser missing')"
+		wrap_bad 'apparmor' 'enabled, but apparmor_parser missing'
 		echo -n '    '
 		if command -v apt-get &>/dev/null; then
-			echo "$(wrap_color '(use "apt-get install apparmor" to fix this)')"
+			wrap_color '(use "apt-get install apparmor" to fix this)' yellow
 		elif command -v yum &>/dev/null; then
-			echo "$(wrap_color '(your best bet is "yum install apparmor-parser")')"
+			wrap_color '(your best bet is "yum install apparmor-parser")' yellow
 		else
-			echo "$(wrap_color '(look for an "apparmor" package for your distribution)')"
+			wrap_color '(look for an "apparmor" package for your distribution)' yellow
 		fi
 	fi
 fi
@@ -212,11 +227,11 @@ flags=(
 )
 check_flags "${flags[@]}"
 
-if [ "$kernelMajor" -lt 5 ] || [ "$kernelMajor" -eq 5 -a "$kernelMinor" -le 1 ]; then
+if kernel_lt 5 1; then
 	check_flags NF_NAT_IPV4
 fi
 
-if [ "$kernelMajor" -lt 5 ] || [ "$kernelMajor" -eq 5 -a "$kernelMinor" -le 2 ]; then
+if kernel_lt 5 2; then
 	check_flags NF_NAT_NEEDED
 fi
 
@@ -233,29 +248,29 @@ echo 'Optional Features:'
 
 	check_flags MEMCG_SWAP
 
-	if [ "$kernelMajor" -lt 5 ] || [ "$kernelMajor" -eq 5 -a "$kernelMinor" -le 8 ]; then
+	if kernel_lt 5 8; then
 		check_flags MEMCG_SWAP_ENABLED
 		if is_set MEMCG_SWAP && ! is_set MEMCG_SWAP_ENABLED; then
-			echo "    $(wrap_color '(note that cgroup swap accounting is not enabled in your kernel config, you can enable it by setting boot option "swapaccount=1")' bold black)"
+			wrap_color '    (note that cgroup swap accounting is not enabled in your kernel config, you can enable it by setting boot option "swapaccount=1")' bold black
 		fi
 	fi
 }
 
-if [ "$kernelMajor" -lt 4 ] || [ "$kernelMajor" -eq 4 -a "$kernelMinor" -le 5 ]; then
+if kernel_lt 4 5; then
 	check_flags MEMCG_KMEM
 fi
 
-if [ "$kernelMajor" -lt 3 ] || [ "$kernelMajor" -eq 3 -a "$kernelMinor" -le 18 ]; then
+if kernel_lt 3 18; then
 	check_flags RESOURCE_COUNTERS
 fi
 
-if [ "$kernelMajor" -lt 3 ] || [ "$kernelMajor" -eq 3 -a "$kernelMinor" -le 13 ]; then
+if kernel_lt 3 13; then
 	netprio=NETPRIO_CGROUP
 else
 	netprio=CGROUP_NET_PRIO
 fi
 
-if [ "$kernelMajor" -lt 5 ]; then
+if kernel_lt 5 0; then
 	check_flags IOSCHED_CFQ CFQ_GROUP_IOSCHED
 fi
 
@@ -263,7 +278,7 @@ flags=(
 	BLK_CGROUP BLK_DEV_THROTTLING
 	CGROUP_PERF
 	CGROUP_HUGETLB
-	NET_CLS_CGROUP $netprio
+	NET_CLS_CGROUP "$netprio"
 	CFS_BANDWIDTH FAIR_GROUP_SCHED RT_GROUP_SCHED
 	IP_NF_TARGET_REDIRECT
 	IP_VS

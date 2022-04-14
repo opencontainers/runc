@@ -133,12 +133,14 @@ cfmt:
 shellcheck:
 	shellcheck tests/integration/*.bats tests/integration/*.sh \
 		tests/integration/*.bash tests/*.sh \
-		script/release_*.sh script/seccomp.sh script/lib.sh
-	# TODO: add shellcheck for more sh files
+		man/*.sh script/*
+	# TODO: add shellcheck for more sh files (contrib/completions/bash/runc).
 
 shfmt:
 	shfmt -ln bats -d -w tests/integration/*.bats
-	shfmt -ln bash -d -w man/*.sh script/* tests/*.sh tests/integration/*.bash
+	shfmt -ln bash -d -w man/*.sh script/* \
+		tests/*.sh tests/integration/*.bash tests/fuzzing/*.sh \
+		contrib/completions/bash/runc contrib/cmd/seccompagent/*.sh
 
 vendor:
 	$(GO) mod tidy
