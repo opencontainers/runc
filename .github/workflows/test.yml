@@ -10,6 +10,8 @@ on:
       - main
       - release-*
   pull_request:
+permissions:
+  contents: read
 
 env:
   # Don't ignore C warnings. Note that the output of "go env CGO_CFLAGS" by default is "-g -O2", so we keep them.
