@@ -82,6 +82,10 @@ function update_config() {
 	jq "$@" "./config.json" | awk 'BEGIN{RS="";getline<"-";print>ARGV[1]}' "./config.json"
 }
 
+function get_state() {
+	jq "$2" "$ROOT/state/$1/state.json"
+}
+
 # Shortcut to add additional uids and gids, based on the values set as part of
 # a rootless configuration.
 function runc_rootless_idmap() {
