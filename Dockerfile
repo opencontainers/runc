@@ -22,6 +22,15 @@ RUN KEYFILE=/usr/share/keyrings/criu-repo-keyring.gpg; \
         crossbuild-essential-armhf \
         crossbuild-essential-ppc64el \
         crossbuild-essential-s390x \
+        \
+# no "crossbuild-essential-riscv64" package yet: https://wiki.debian.org/RISC-V
+        binutils-riscv64-linux-gnu \
+        cpp-riscv64-linux-gnu \
+        gcc-riscv64-linux-gnu \
+        libc6-dev-riscv64-cross \
+        libc6-riscv64-cross \
+        linux-libc-dev-riscv64-cross \
+        \
         curl \
         gawk \
         gcc \
@@ -56,7 +65,7 @@ RUN cd /tmp \
 ARG LIBSECCOMP_VERSION
 COPY script/* /tmp/script/
 RUN mkdir -p /opt/libseccomp \
-    && /tmp/script/seccomp.sh "$LIBSECCOMP_VERSION" /opt/libseccomp arm64 armel armhf ppc64le s390x
+    && /tmp/script/seccomp.sh "$LIBSECCOMP_VERSION" /opt/libseccomp arm64 armel armhf ppc64le riscv64 s390x
 ENV LIBSECCOMP_VERSION=$LIBSECCOMP_VERSION
 ENV LD_LIBRARY_PATH=/opt/libseccomp/lib
 ENV PKG_CONFIG_PATH=/opt/libseccomp/lib/pkgconfig
