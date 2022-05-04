@@ -307,16 +307,6 @@ var AllowedDevices = []*devices.Device{
 			Allow:       true,
 		},
 	},
-	// tuntap
-	{
-		Rule: devices.Rule{
-			Type:        devices.CharDevice,
-			Major:       10,
-			Minor:       200,
-			Permissions: "rwm",
-			Allow:       true,
-		},
-	},
 }
 
 type CreateOpts struct {
