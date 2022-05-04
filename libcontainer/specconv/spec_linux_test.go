@@ -234,6 +234,14 @@ func TestSetupSeccomp(t *testing.T) {
 				Names:  []string{"mknod"},
 				Action: "SCMP_ACT_NOTIFY",
 			},
+			{
+				Names:  []string{"rmdir"},
+				Action: "SCMP_ACT_KILL_THREAD",
+			},
+			{
+				Names:  []string{"mkdir"},
+				Action: "SCMP_ACT_KILL_PROCESS",
+			},
 		},
 	}
 	seccomp, err := SetupSeccomp(conf)
@@ -263,9 +271,8 @@ func TestSetupSeccomp(t *testing.T) {
 
 	calls := seccomp.Syscalls
 
-	callsLength := len(calls)
-	if callsLength != 8 {
-		t.Errorf("Expected 8 syscalls, got :%d", callsLength)
+	if len(calls) != len(conf.Syscalls) {
+		t.Error("Mismatched number of syscalls")
 	}
 
 	for _, call := range calls {
@@ -315,6 +322,14 @@ func TestSetupSeccomp(t *testing.T) {
 			}
 		case "mknod":
 			if call.Action != configs.Notify {
+				t.Errorf("Wrong conversion for the %s syscall action", call.Name)
+			}
+		case "rmdir":
+			if call.Action != configs.KillThread {
+				t.Errorf("Wrong conversion for the %s syscall action", call.Name)
+			}
+		case "mkdir":
+			if call.Action != configs.KillProcess {
 				t.Errorf("Wrong conversion for the %s syscall action", call.Name)
 			}
 		default:
