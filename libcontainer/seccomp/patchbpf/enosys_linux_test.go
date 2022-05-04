@@ -282,7 +282,7 @@ func TestDisassembleHugeFilterDoesNotHang(t *testing.T) {
 	}
 
 	for i := 1; i < 10000; i++ {
-		if err := hugeFilter.AddRule(libseccomp.ScmpSyscall(i), libseccomp.ActKill); err != nil {
+		if err := hugeFilter.AddRule(libseccomp.ScmpSyscall(i), libseccomp.ActKillThread); err != nil {
 			t.Fatalf("failed to add rule to filter %d: %v", i, err)
 		}
 	}
