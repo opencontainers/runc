@@ -120,21 +120,14 @@ block-8:
         51: Mov32Imm dst: r0 imm: 1
         52: Exit
 block-9:
-// tuntap (c, 10, 200, rwm, allow)
-        53: JNEImm dst: r2 off: -1 imm: 2 <block-10>
-        54: JNEImm dst: r4 off: -1 imm: 10 <block-10>
-        55: JNEImm dst: r5 off: -1 imm: 200 <block-10>
-        56: Mov32Imm dst: r0 imm: 1
-        57: Exit
-block-10:
 // /dev/pts (c, 136, wildcard, rwm, true)
-        58: JNEImm dst: r2 off: -1 imm: 2 <block-11>
-        59: JNEImm dst: r4 off: -1 imm: 136 <block-11>
-        60: Mov32Imm dst: r0 imm: 1
-        61: Exit
-block-11:
-        62: Mov32Imm dst: r0 imm: 0
-        63: Exit
+        53: JNEImm dst: r2 off: -1 imm: 2 <block-10>
+        54: JNEImm dst: r4 off: -1 imm: 136 <block-10>
+        55: Mov32Imm dst: r0 imm: 1
+        56: Exit
+block-10:
+        57: Mov32Imm dst: r0 imm: 0
+        58: Exit
 `
 	var devices []*devices.Rule
 	for _, device := range specconv.AllowedDevices {
