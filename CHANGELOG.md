@@ -1,10 +1,28 @@
-# Changelog/
+# Changelog
 This file documents all notable changes made to this project since runc 1.0.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+
+## [1.1.2] - 2022-05-06
+
+> I should think I’m going to be a perpetual student.
+
+### Security
+ * A bug was found in runc where runc exec --cap executed processes with
+   non-empty inheritable Linux process capabilities, creating an atypical Linux
+   environment. For more information, see [GHSA-f3fp-gc8g-vw66][] and
+   CVE-2022-29162.
+
+### Changed
+ * `runc spec` no longer sets any inheritable capabilities in the created
+   example OCI spec (`config.json`) file.
+
+[GHSA-f3fp-gc8g-vw66]: https://github.com/opencontainers/runc/security/advisories/GHSA-f3fp-gc8g-vw66
+
 
 ## [1.1.1] - 2022-03-28
 
@@ -25,6 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  * libcontainer/cgroups no longer panics in cgroup v1 managers if `stat`
    of `/sys/fs/cgroup/unified` returns an error other than ENOENT. (#3435)
 
+
 ## [1.1.0] - 2022-01-14
 
 > A plan depends as much upon execution as it does upon concept.
@@ -34,6 +53,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    correctly compiled (specifically this requires CGO to be enabled). This
    should avoid folks accidentally creating broken runc binaries (and
    incorrectly importing our internal libraries into their projects). (#3331)
+
 
 ## [1.1.0-rc.1] - 2021-12-14
 
@@ -252,7 +272,8 @@ implementation (libcontainer) is *not* covered by this policy.
    cgroups at all during `runc update`). (#2994)
 
 <!-- minor releases -->
-[Unreleased]: https://github.com/opencontainers/runc/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/opencontainers/runc/compare/v1.1.2...HEAD
+[1.1.2]: https://github.com/opencontainers/runc/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/opencontainers/runc/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/opencontainers/runc/compare/v1.1.0-rc.1...v1.1.0
 [1.0.0]: https://github.com/opencontainers/runc/releases/tag/v1.0.0
