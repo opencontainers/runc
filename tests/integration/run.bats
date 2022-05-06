@@ -36,8 +36,7 @@ function teardown() {
 @test "runc run --keep (check cgroup exists)" {
 	# for systemd driver, the unit's cgroup path will be auto removed if container's all processes exited
 	requires no_systemd
-
-	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+	[ $EUID -ne 0 ] && requires rootless_cgroup
 
 	set_cgroups_path
 

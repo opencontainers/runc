@@ -117,7 +117,7 @@ function teardown() {
 
 @test "runc exec --user" {
 	# --user can't work in rootless containers that don't have idmap.
-	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_idmap
+	[ $EUID -ne 0 ] && requires rootless_idmap
 
 	# run busybox detached
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
@@ -140,8 +140,7 @@ function teardown() {
 
 	runc exec --user 1000:1000 --additional-gids 100 --additional-gids 65534 test_busybox id -G
 	[ "$status" -eq 0 ]
-
-	[[ ${output} == "1000 100 65534" ]]
+	[ "$output" = "1000 100 65534" ]
 }
 
 @test "runc exec --preserve-fds" {
@@ -154,7 +153,7 @@ function teardown() {
 	exec 4<preserve-fds.test
 	runc exec --preserve-fds=2 test_busybox cat /proc/self/fd/4
 	[ "$status" -eq 0 ]
-	[[ "${output}" == "hello" ]]
+	[ "${output}" = "hello" ]
 }
 
 function check_exec_debug() {

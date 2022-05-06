@@ -21,7 +21,7 @@ function setup() {
 # Tests whatever limits are (more or less) common between cgroup
 # v1 and v2: memory/swap, pids, and cpuset.
 @test "update cgroup v1/v2 common limits" {
-	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+	[ $EUID -ne 0 ] && requires rootless_cgroup
 	requires cgroups_memory cgroups_pids cgroups_cpuset
 	init_cgroup_paths
 
@@ -30,8 +30,7 @@ function setup() {
 	[ "$status" -eq 0 ]
 
 	# Set a few variables to make the code below work for both v1 and v2
-	case $CGROUP_UNIFIED in
-	no)
+	if [ -v CGROUP_V1 ]; then
 		MEM_LIMIT="memory.limit_in_bytes"
 		SD_MEM_LIMIT="MemoryLimit"
 		MEM_RESERVE="memory.soft_limit_in_bytes"
@@ -43,8 +42,7 @@ function setup() {
 		if [ -f "${CGROUP_MEMORY_BASE_PATH}/${MEM_SWAP}" ]; then
 			HAVE_SWAP="yes"
 		fi
-		;;
-	yes)
+	else
 		MEM_LIMIT="memory.max"
 		SD_MEM_LIMIT="MemoryMax"
 		MEM_RESERVE="memory.low"
@@ -53,8 +51,8 @@ function setup() {
 		SD_MEM_SWAP="MemorySwapMax"
 		SYSTEM_MEM="max"
 		HAVE_SWAP="yes"
-		;;
-	esac
+	fi
+
 	SD_UNLIMITED="infinity"
 	SD_VERSION=$(systemctl --version | awk '{print $2; exit}')
 	if [ "$SD_VERSION" -lt 227 ]; then
@@ -105,7 +103,7 @@ function setup() {
 		check_systemd_value "$SD_MEM_SWAP" $SD_UNLIMITED
 
 		# update memory swap
-		if [ "$CGROUP_UNIFIED" = "yes" ]; then
+		if [ -v CGROUP_V2 ]; then
 			# for cgroupv2, memory and swap can only be set together
 			runc update test_update --memory 52428800 --memory-swap 96468992
 			[ "$status" -eq 0 ]
@@ -233,7 +231,7 @@ EOF
 		check_cgroup_value $MEM_LIMIT $((30 * 1024 * 1024))
 		check_systemd_value $SD_MEM_LIMIT $((30 * 1024 * 1024))
 
-		if [ "$CGROUP_UNIFIED" = "yes" ]; then
+		if [ -v CGROUP_V2 ]; then
 			# for cgroupv2, swap does not include mem
 			check_cgroup_value "$MEM_SWAP" $((20 * 1024 * 1024))
 			check_systemd_value "$SD_MEM_SWAP" $((20 * 1024 * 1024))
@@ -249,7 +247,7 @@ EOF
 		check_cgroup_value $MEM_LIMIT $((60 * 1024 * 1024))
 		check_systemd_value $SD_MEM_LIMIT $((60 * 1024 * 1024))
 
-		if [ "$CGROUP_UNIFIED" = "yes" ]; then
+		if [ -v CGROUP_V2 ]; then
 			# for cgroupv2, swap does not include mem
 			check_cgroup_value "$MEM_SWAP" $((20 * 1024 * 1024))
 			check_systemd_value "$SD_MEM_SWAP" $((20 * 1024 * 1024))
@@ -261,7 +259,7 @@ EOF
 }
 
 @test "update cgroup cpu limits" {
-	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+	[ $EUID -ne 0 ] && requires rootless_cgroup
 
 	# run a few busyboxes detached
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
@@ -335,7 +333,7 @@ EOF
 }
 
 @test "set cpu period with no quota" {
-	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+	[ $EUID -ne 0 ] && requires rootless_cgroup
 
 	update_config '.linux.resources.cpu |= { "period": 1000000 }'
 
@@ -346,7 +344,7 @@ EOF
 }
 
 @test "set cpu period with no quota (invalid period)" {
-	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+	[ $EUID -ne 0 ] && requires rootless_cgroup
 
 	update_config '.linux.resources.cpu |= { "period": 100 }'
 
@@ -355,7 +353,7 @@ EOF
 }
 
 @test "set cpu quota with no period" {
-	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+	[ $EUID -ne 0 ] && requires rootless_cgroup
 
 	update_config '.linux.resources.cpu |= { "quota": 5000 }'
 
@@ -365,7 +363,7 @@ EOF
 }
 
 @test "update cpu period with no previous period/quota set" {
-	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+	[ $EUID -ne 0 ] && requires rootless_cgroup
 
 	update_config '.linux.resources.cpu |= {}'
 
@@ -379,7 +377,7 @@ EOF
 }
 
 @test "update cpu quota with no previous period/quota set" {
-	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+	[ $EUID -ne 0 ] && requires rootless_cgroup
 
 	update_config '.linux.resources.cpu |= {}'
 
@@ -394,7 +392,7 @@ EOF
 
 @test "update cpu period in a pod cgroup with pod limit set" {
 	requires cgroups_v1
-	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+	[ $EUID -ne 0 ] && requires rootless_cgroup
 
 	set_cgroups_path "pod_${RANDOM}"
 
@@ -428,7 +426,7 @@ EOF
 }
 
 @test "update cgroup v2 resources via unified map" {
-	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+	[ $EUID -ne 0 ] && requires rootless_cgroup
 	requires cgroups_v2
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
@@ -457,7 +455,7 @@ EOF
 }
 
 @test "update cpuset parameters via resources.CPU" {
-	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+	[ $EUID -ne 0 ] && requires rootless_cgroup
 	requires smp cgroups_cpuset
 
 	local AllowedCPUs='AllowedCPUs' AllowedMemoryNodes='AllowedMemoryNodes'
@@ -513,7 +511,7 @@ EOF
 
 @test "update cpuset parameters via v2 unified map" {
 	# This test assumes systemd >= v244
-	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+	[ $EUID -ne 0 ] && requires rootless_cgroup
 	requires cgroups_v2 smp cgroups_cpuset
 
 	update_config ' .linux.resources.unified |= {
@@ -560,7 +558,7 @@ EOF
 }
 
 @test "update rt period and runtime" {
-	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+	[ $EUID -ne 0 ] && requires rootless_cgroup
 	requires cgroups_v1 cgroups_rt no_systemd
 
 	local cgroup_cpu="${CGROUP_CPU_BASE_PATH}/${REL_CGROUPS_PATH}"
@@ -629,8 +627,6 @@ EOF
 }
 
 @test "update devices [minimal transition rules]" {
-	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
-
 	requires root
 
 	# Run a basic shell script that tries to read from /dev/kmsg, but
@@ -682,8 +678,8 @@ EOF
 }
 
 @test "update paused container" {
-	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
 	requires cgroups_freezer
+	[ $EUID -ne 0 ] && requires rootless_cgroup
 
 	# Run the container in the background.
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_update

@@ -98,7 +98,7 @@ function runc_restore_with_pipes() {
 
 	runc exec --cwd /bin "$name" echo ok
 	[ "$status" -eq 0 ]
-	[[ ${output} == "ok" ]]
+	[ "$output" = "ok" ]
 }
 
 function simple_cr() {

@@ -37,20 +37,20 @@ function setup() {
 }
 
 @test "runc create (limits + cgrouppath + permission on the cgroup dir) succeeds" {
-	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+	[ $EUID -ne 0 ] && requires rootless_cgroup
 
 	set_cgroups_path
 	set_resources_limit
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_permissions
 	[ "$status" -eq 0 ]
-	if [ "$CGROUP_UNIFIED" != "no" ]; then
+	if [ -v CGROUP_V2 ]; then
 		if [ -v RUNC_USE_SYSTEMD ]; then
-			if [ "$(id -u)" = "0" ]; then
+			if [ $EUID -eq 0 ]; then
 				check_cgroup_value "cgroup.controllers" "$(cat /sys/fs/cgroup/machine.slice/cgroup.controllers)"
 			else
 				# Filter out hugetlb and misc as systemd is unable to delegate them.
-				check_cgroup_value "cgroup.controllers" "$(sed -e 's/ hugetlb//' -e 's/ misc//' </sys/fs/cgroup/user.slice/user-"$(id -u)".slice/cgroup.controllers)"
+				check_cgroup_value "cgroup.controllers" "$(sed -e 's/ hugetlb//' -e 's/ misc//' </sys/fs/cgroup/user.slice/user-${EUID}.slice/cgroup.controllers)"
 			fi
 		else
 			check_cgroup_value "cgroup.controllers" "$(cat /sys/fs/cgroup/cgroup.controllers)"
@@ -59,7 +59,7 @@ function setup() {
 }
 
 @test "runc exec (limits + cgrouppath + permission on the cgroup dir) succeeds" {
-	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+	[ $EUID -ne 0 ] && requires rootless_cgroup
 
 	set_cgroups_path
 	set_resources_limit
@@ -87,7 +87,7 @@ function setup() {
 
 	runc exec test_cgroups_group cat /proc/self/cgroup
 	[ "$status" -eq 0 ]
-	[[ ${lines[0]} == "0::/" ]]
+	[[ ${lines[0]} = "0::/" ]]
 
 	runc exec test_cgroups_group mkdir /sys/fs/cgroup/foo
 	[ "$status" -eq 0 ]
@@ -99,7 +99,7 @@ function setup() {
 	# because we haven't enabled any domain controller.
 	runc exec test_cgroups_group cat /proc/self/cgroup
 	[ "$status" -eq 0 ]
-	[[ ${lines[0]} == "0::/" ]]
+	[[ ${lines[0]} = "0::/" ]]
 
 	# turn on a domain controller (memory)
 	runc exec test_cgroups_group sh -euxc 'echo $$ > /sys/fs/cgroup/foo/cgroup.procs; echo +memory > /sys/fs/cgroup/cgroup.subtree_control'
@@ -109,7 +109,7 @@ function setup() {
 	# falls back to "/foo".
 	runc exec test_cgroups_group cat /proc/self/cgroup
 	[ "$status" -eq 0 ]
-	[[ ${lines[0]} == "0::/foo" ]]
+	[[ ${lines[0]} = "0::/foo" ]]
 
 	# teardown: remove "/foo"
 	# shellcheck disable=SC2016
@@ -133,7 +133,7 @@ function setup() {
 
 @test "runc run (blkio weight)" {
 	requires cgroups_v2
-	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+	[ $EUID -ne 0 ] && requires rootless_cgroup
 
 	set_cgroups_path
 	update_config '.linux.resources.blockIO |= {"weight": 750}'
@@ -177,7 +177,7 @@ function setup() {
 	# The loop device itself is no longer needed.
 	losetup -d "$dev"
 
-	if [ "$CGROUP_UNIFIED" = "yes" ]; then
+	if [ -v CGROUP_V2 ]; then
 		file="io.bfq.weight"
 	else
 		file="blkio.bfq.weight_device"
@@ -270,7 +270,7 @@ function setup() {
 
 @test "runc run (cgroupv2 mount inside container)" {
 	requires cgroups_v2
-	[[ "$ROOTLESS" -ne 0 ]] && requires rootless_cgroup
+	[ $EUID -ne 0 ] && requires rootless_cgroup
 
 	set_cgroups_path
 
@@ -301,14 +301,12 @@ function setup() {
 	[[ $exec_cgroup == *"runc-cgroups-integration-test"* ]]
 
 	# check that the cgroups v2 path is the same for both processes
-	[[ "$run_cgroup" == "$exec_cgroup" ]]
+	[ "$run_cgroup" = "$exec_cgroup" ]
 }
 
 @test "runc exec should refuse a paused container" {
-	if [[ "$ROOTLESS" -ne 0 ]]; then
-		requires rootless_cgroup
-	fi
 	requires cgroups_freezer
+	[ $EUID -ne 0 ] && requires rootless_cgroup
 
 	set_cgroups_path
 
@@ -324,10 +322,8 @@ function setup() {
 }
 
 @test "runc exec --ignore-paused" {
-	if [[ "$ROOTLESS" -ne 0 ]]; then
-		requires rootless_cgroup
-	fi
 	requires cgroups_freezer
+	[ $EUID -ne 0 ] && requires rootless_cgroup
 
 	set_cgroups_path
 
@@ -349,9 +345,7 @@ function setup() {
 }
 
 @test "runc run/create should warn about a non-empty cgroup" {
-	if [[ "$ROOTLESS" -ne 0 ]]; then
-		requires rootless_cgroup
-	fi
+	[ $EUID -ne 0 ] && requires rootless_cgroup
 
 	set_cgroups_path
 
@@ -371,24 +365,19 @@ function setup() {
 
 @test "runc run/create should refuse pre-existing frozen cgroup" {
 	requires cgroups_freezer
-	if [[ "$ROOTLESS" -ne 0 ]]; then
-		requires rootless_cgroup
-	fi
+	[ $EUID -ne 0 ] && requires rootless_cgroup
 
 	set_cgroups_path
 
-	case $CGROUP_UNIFIED in
-	no)
+	if [ -v CGROUP_V1 ]; then
 		FREEZER_DIR="${CGROUP_FREEZER_BASE_PATH}/${REL_CGROUPS_PATH}"
 		FREEZER="${FREEZER_DIR}/freezer.state"
 		STATE="FROZEN"
-		;;
-	yes)
+	else
 		FREEZER_DIR="${CGROUP_PATH}"
 		FREEZER="${FREEZER_DIR}/cgroup.freeze"
 		STATE="1"
-		;;
-	esac
+	fi
 
 	# Create and freeze the cgroup.
 	mkdir -p "$FREEZER_DIR"
