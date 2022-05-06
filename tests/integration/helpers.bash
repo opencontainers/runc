@@ -405,7 +405,7 @@ function requires() {
 			;;
 		cgroups_v1)
 			init_cgroup_paths
-			if [ ! -v GROUP_V1 ]; then
+			if [ ! -v CGROUP_V1 ]; then
 				skip_me=1
 			fi
 			;;
