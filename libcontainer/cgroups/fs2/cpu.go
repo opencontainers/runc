@@ -2,19 +2,33 @@ package fs2
 
 import (
 	"bufio"
+	"errors"
 	"os"
 	"strconv"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 	"github.com/opencontainers/runc/libcontainer/configs"
+	"golang.org/x/sys/unix"
 )
 
 func isCpuSet(r *configs.Resources) bool {
-	return r.CpuWeight != 0 || r.CpuQuota != 0 || r.CpuPeriod != 0
+	return r.CpuWeight != 0 || r.CpuQuota != 0 || r.CpuPeriod != 0 || r.CPUIdle != 0
 }
 
 func setCpu(dirPath string, r *configs.Resources) error {
+	// Since cpu.idle is introduced in Linux 5.15, the default value is 0,
+	// and we don't have a way to see if CpuIdle is set from the OCI spec
+	// or not, do always write 0 (to reset it to the default).
+	if err := cgroups.WriteFile(dirPath, "cpu.idle", strconv.FormatUint(uint64(r.CPUIdle), 10)); err != nil {
+		// Ignore ENOENT for the default value, assuming if the file
+		// is not present (old kernel), the behavior is the same
+		// as when cpu.idle == 0.
+		if !(r.CPUIdle == 0 && errors.Is(err, unix.ENOENT)) {
+			return err
+		}
+	}
+
 	if !isCpuSet(r) {
 		return nil
 	}

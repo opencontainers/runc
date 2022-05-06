@@ -425,6 +425,29 @@ EOF
 	check_cpu_quota 3000 10000 "300ms"
 }
 
+@test "update cgroup cpu.idle" {
+	requires cgroups_cpu_idle
+	[ $EUID -ne 0 ] && requires rootless_cgroup
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
+	[ "$status" -eq 0 ]
+
+	check_cgroup_value "cpu.idle" "0"
+
+	local val
+	for val in 1 0 1; do
+		runc update -r - test_update <<EOF
+{
+  "cpu": {
+    "idle": $val
+  }
+}
+EOF
+		[ "$status" -eq 0 ]
+		check_cgroup_value "cpu.idle" "$val"
+	done
+}
+
 @test "update cgroup v2 resources via unified map" {
 	[ $EUID -ne 0 ] && requires rootless_cgroup
 	requires cgroups_v2

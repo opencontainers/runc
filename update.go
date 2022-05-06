@@ -47,6 +47,7 @@ The accepted format is as follow (unchanged values can be omitted):
     "realtimePeriod": 0,
     "cpus": "",
     "mems": ""
+    "idle": 0,
   },
   "blockIO": {
     "weight": 0
@@ -150,6 +151,7 @@ other options are ignored.
 				RealtimePeriod:  u64Ptr(0),
 				Cpus:            "",
 				Mems:            "",
+				Idle:            i64Ptr(0),
 			},
 			BlockIO: &specs.LinuxBlockIO{
 				Weight: u16Ptr(0),
@@ -290,6 +292,7 @@ other options are ignored.
 		config.Cgroups.Resources.CpuRtRuntime = *r.CPU.RealtimeRuntime
 		config.Cgroups.Resources.CpusetCpus = r.CPU.Cpus
 		config.Cgroups.Resources.CpusetMems = r.CPU.Mems
+		config.Cgroups.Resources.CPUIdle = *r.CPU.Idle
 		config.Cgroups.Resources.Memory = *r.Memory.Limit
 		config.Cgroups.Resources.MemoryReservation = *r.Memory.Reservation
 		config.Cgroups.Resources.MemorySwap = *r.Memory.Swap

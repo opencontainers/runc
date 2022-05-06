@@ -49,6 +49,18 @@ func (s *CpuGroup) SetRtSched(path string, r *configs.Resources) error {
 }
 
 func (s *CpuGroup) Set(path string, r *configs.Resources) error {
+	// Since cpu.idle is introduced in Linux 5.15, the default value is 0,
+	// and we don't have a way to see if CpuIdle is set from the OCI spec
+	// or not, do always write 0 (to reset it to the default).
+	if err := cgroups.WriteFile(path, "cpu.idle", strconv.FormatUint(uint64(r.CPUIdle), 10)); err != nil {
+		// Ignore ENOENT for the default value, assuming if the file
+		// is not present (old kernel), the behavior is the same
+		// as when cpu.idle == 0.
+		if !(r.CPUIdle == 0 && errors.Is(err, unix.ENOENT)) {
+			return err
+		}
+	}
+
 	if r.CpuShares != 0 {
 		shares := r.CpuShares
 		if err := cgroups.WriteFile(path, "cpu.shares", strconv.FormatUint(shares, 10)); err != nil {

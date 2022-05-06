@@ -398,6 +398,15 @@ function requires() {
 				skip_me=1
 			fi
 			;;
+		cgroups_cpu_idle)
+			local p
+			init_cgroup_paths
+			[ -v CGROUP_V1 ] && p="$CGROUP_CPU_BASE_PATH"
+			[ -v CGROUP_V2 ] && p="$CGROUP_BASE_PATH"
+			if [ -z "$(find "$p" -name cpu.idle -print -quit)" ]; then
+				skip_me=1
+			fi
+			;;
 		cgroupns)
 			if [ ! -e "/proc/self/ns/cgroup" ]; then
 				skip_me=1

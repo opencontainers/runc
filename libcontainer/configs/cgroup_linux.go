@@ -84,6 +84,9 @@ type Resources struct {
 	// MEM to use
 	CpusetMems string `json:"cpuset_mems"`
 
+	// CPU idle flag (0: default behavior, 1: SCHED_IDLE)
+	CPUIdle int64 `json:"cpu_idle"`
+
 	// Process limit; set <= `0' to disable limit.
 	PidsLimit int64 `json:"pids_limit"`
 
