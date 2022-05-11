@@ -29,6 +29,9 @@ EOF
     done
     dnf clean all
 
+    # Prevent the "fatal: unsafe repository" git complain during build.
+    git config --global --add safe.directory /vagrant
+
     # Install golang.
     # FIXME go back to golang-go rpm once switched to Fedora 36.
     curl -fsSL https://go.dev/dl/go1.18.linux-amd64.tar.gz | tar Cxz /usr/local
