@@ -537,10 +537,7 @@ func (c *Container) newInitProcess(p *Process, cmd *exec.Cmd, messageSockPair, l
 		}
 	}
 	_, sharePidns := nsMaps[configs.NEWPID]
-	data, err := c.bootstrapData(c.config.Namespaces.CloneFlags(), nsMaps, initStandard)
-	if err != nil {
-		return nil, err
-	}
+	userNsMountFds := [3]int{-1, -1, -1}
 
 	if c.shouldSendMountSources() {
 		// Elements on this slice will be paired with mounts (see StartInitialization() and
@@ -571,6 +568,11 @@ func (c *Container) newInitProcess(p *Process, cmd *exec.Cmd, messageSockPair, l
 		)
 	}
 
+	data, err := c.bootstrapData(c.config.Namespaces.CloneFlags(), nsMaps, initStandard, &userNsMountFds)
+	if err != nil {
+		return nil, err
+	}
+
 	init := &initProcess{
 		cmd:             cmd,
 		messageSockPair: messageSockPair,
@@ -595,7 +597,7 @@ func (c *Container) newSetnsProcess(p *Process, cmd *exec.Cmd, messageSockPair, 
 	}
 	// for setns process, we don't have to set cloneflags as the process namespaces
 	// will only be set via setns syscall
-	data, err := c.bootstrapData(0, state.NamespacePaths, initSetns)
+	data, err := c.bootstrapData(0, state.NamespacePaths, initSetns, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -2119,7 +2121,8 @@ type netlinkError struct{ error }
 // such as one that uses nsenter package to bootstrap the container's
 // init process correctly, i.e. with correct namespaces, uid/gid
 // mapping etc.
-func (c *Container) bootstrapData(cloneFlags uintptr, nsMaps map[configs.NamespaceType]string, it initType) (_ io.Reader, Err error) {
+func (c *Container) bootstrapData(cloneFlags uintptr, nsMaps map[configs.NamespaceType]string,
+	it initType, userNsMountFd *[3]int) (_ io.Reader, Err error) {
 	// create the netlink message
 	r := nl.NewNetlinkRequest(int(InitMsg), 0)
 
@@ -2237,6 +2240,23 @@ func (c *Container) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Namespa
 		r.AddData(&Bytemsg{
 			Type:  MountSourcesAttr,
 			Value: mounts,
+		})
+
+		// File descriptors to support cross user namespace mounting
+		if userNsMountFd == nil {
+			return nil, fmt.Errorf("user mount fd array should not be null")
+		}
+		r.AddData(&Int32msg{
+			Type:  MountFdProc,
+			Value: uint32(userNsMountFd[0]),
+		})
+		r.AddData(&Int32msg{
+			Type:  MountFdSys,
+			Value: uint32(userNsMountFd[1]),
+		})
+		r.AddData(&Int32msg{
+			Type:  MountFdMqueue,
+			Value: uint32(userNsMountFd[2]),
 		})
 	}
 

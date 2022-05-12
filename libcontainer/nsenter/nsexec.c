@@ -94,6 +94,11 @@ struct nlconfig_t {
 	/* Mount sources opened outside the container userns. */
 	char *mountsources;
 	size_t mountsources_len;
+
+	/* File descriptors to support cross user namespace mounting */
+	int mount_fd_proc;
+	int mount_fd_sys;
+	int mount_fd_mqueue;
 };
 
 /*
@@ -127,6 +132,9 @@ static int loglevel = DEBUG;
 #define UIDMAPPATH_ATTR		27288
 #define GIDMAPPATH_ATTR		27289
 #define MOUNT_SOURCES_ATTR	27290
+#define MOUNT_FD_PROC		27291
+#define MOUNT_FD_SYS		27292
+#define MOUNT_FD_MQUEUE		27293
 
 /*
  * Use the raw syscall for versions of glibc which don't include a function for
@@ -551,6 +559,15 @@ static void nl_parse(int fd, struct nlconfig_t *config)
 		case MOUNT_SOURCES_ATTR:
 			config->mountsources = current;
 			config->mountsources_len = payload_len;
+			break;
+		case MOUNT_FD_PROC:
+			config->mount_fd_proc = readint32(current);
+			break;
+		case MOUNT_FD_SYS:
+			config->mount_fd_sys = readint32(current);
+			break;
+		case MOUNT_FD_MQUEUE:
+			config->mount_fd_mqueue = readint32(current);
 			break;
 		default:
 			bail("unknown netlink message type %d", nlattr->nla_type);
