@@ -743,6 +743,7 @@ _runc_update() {
 	   --pids-limit
 	   --l3-cache-schema
 	   --mem-bw-schema
+	   --cpu-idle
 	"
 
 	case "$prev" in

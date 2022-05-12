@@ -187,6 +187,18 @@ function setup() {
 	[[ "$weights" == *"$major:$minor 444"* ]]
 }
 
+@test "runc run (cpu.idle)" {
+	requires cgroups_cpu_idle
+	[ $EUID -ne 0 ] && requires rootless_cgroup
+
+	set_cgroups_path
+	update_config '.linux.resources.cpu.idle = 1'
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_cgroups_unified
+	[ "$status" -eq 0 ]
+	check_cgroup_value "cpu.idle" "1"
+}
+
 @test "runc run (cgroup v2 resources.unified only)" {
 	requires root cgroups_v2
 

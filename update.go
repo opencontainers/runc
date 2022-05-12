@@ -48,7 +48,8 @@ The accepted format is as follow (unchanged values can be omitted):
     "realtimeRuntime": 0,
     "realtimePeriod": 0,
     "cpus": "",
-    "mems": ""
+    "mems": "",
+    "idle": 0
   },
   "blockIO": {
     "weight": 0
@@ -105,6 +106,10 @@ other options are ignored.
 		cli.StringFlag{
 			Name:  "memory",
 			Usage: "Memory limit (in bytes)",
+		},
+		cli.StringFlag{
+			Name:  "cpu-idle",
+			Usage: "set cgroup SCHED_IDLE or not, 0: default behavior, 1: SCHED_IDLE",
 		},
 		cli.StringFlag{
 			Name:  "memory-reservation",
@@ -191,6 +196,13 @@ other options are ignored.
 			}
 			if val := context.String("cpuset-mems"); val != "" {
 				r.CPU.Mems = val
+			}
+			if val := context.String("cpu-idle"); val != "" {
+				idle, err := strconv.ParseInt(val, 10, 64)
+				if err != nil {
+					return fmt.Errorf("invalid value for cpu-idle: %w", err)
+				}
+				r.CPU.Idle = i64Ptr(idle)
 			}
 
 			for _, pair := range []struct {
@@ -294,6 +306,7 @@ other options are ignored.
 		config.Cgroups.Resources.CpusetCpus = r.CPU.Cpus
 		config.Cgroups.Resources.CpusetMems = r.CPU.Mems
 		config.Cgroups.Resources.Memory = *r.Memory.Limit
+		config.Cgroups.Resources.CPUIdle = r.CPU.Idle
 		config.Cgroups.Resources.MemoryReservation = *r.Memory.Reservation
 		config.Cgroups.Resources.MemorySwap = *r.Memory.Swap
 		config.Cgroups.Resources.MemoryCheckBeforeUpdate = *r.Memory.CheckBeforeUpdate
