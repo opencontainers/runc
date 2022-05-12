@@ -314,15 +314,25 @@ type CreateOpts struct {
 	RootlessCgroups  bool
 }
 
+// getwd is a wrapper similar to os.Getwd, except it always gets
+// the value from the kernel, which guarantees the returned value
+// to be absolute and clean.
+func getwd() (wd string, err error) {
+	for {
+		wd, err = unix.Getwd()
+		//nolint:errorlint // unix errors are bare
+		if err != unix.EINTR {
+			break
+		}
+	}
+	return wd, os.NewSyscallError("getwd", err)
+}
+
 // CreateLibcontainerConfig creates a new libcontainer configuration from a
 // given specification and a cgroup name
 func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 	// runc's cwd will always be the bundle path
-	rcwd, err := os.Getwd()
-	if err != nil {
-		return nil, err
-	}
-	cwd, err := filepath.Abs(rcwd)
+	cwd, err := getwd()
 	if err != nil {
 		return nil, err
 	}
