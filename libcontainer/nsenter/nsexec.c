@@ -582,71 +582,118 @@ void nl_free(struct nlconfig_t *config)
 	free(config->data);
 }
 
-void join_namespaces(char *nslist)
+#define MAX_NAMSPACE_TYPE_LEN		64
+#define MAX_NAMESPACES				10
+
+struct namespace_t {
+	int target_ns_fd;
+	int flag;
+	char type[MAX_NAMSPACE_TYPE_LEN];
+	char path[PATH_MAX];
+};
+
+struct namespace_info_t {
+	int namespace_cnt;
+	struct namespace_t *namespaces[MAX_NAMESPACES];
+};
+
+static struct namespace_info_t* parse_namespace_info(char *nslist)
 {
-	int num = 0, i;
-	char *saveptr = NULL;
-	char *namespace = strtok_r(nslist, ",", &saveptr);
-	struct namespace_t {
-		int fd;
-		char type[PATH_MAX];
-		char path[PATH_MAX];
-	} *namespaces = NULL;
+	int i;
+	struct namespace_info_t *ns_info;
 
-	if (!namespace || !strlen(namespace) || !strlen(nslist))
-		bail("ns paths are empty");
-
-	/*
-	 * We have to open the file descriptors first, since after
-	 * we join the mnt namespace we might no longer be able to
-	 * access the paths.
-	 */
-	do {
-		int fd;
-		char *path;
-		struct namespace_t *ns;
-
-		/* Resize the namespace array. */
-		namespaces = realloc(namespaces, ++num * sizeof(struct namespace_t));
-		if (!namespaces)
-			bail("failed to reallocate namespace array");
-		ns = &namespaces[num - 1];
-
-		/* Split 'ns:path'. */
-		path = strstr(namespace, ":");
-		if (!path)
-			bail("failed to parse %s", namespace);
-		*path++ = '\0';
-
-		fd = open(path, O_RDONLY);
-		if (fd < 0)
-			bail("failed to open %s", path);
-
-		ns->fd = fd;
-		strncpy(ns->type, namespace, PATH_MAX - 1);
-		strncpy(ns->path, path, PATH_MAX - 1);
-		ns->path[PATH_MAX - 1] = '\0';
-	} while ((namespace = strtok_r(NULL, ",", &saveptr)) != NULL);
-
-	/*
-	 * The ordering in which we join namespaces is important. We should
-	 * always join the user namespace *first*. This is all guaranteed
-	 * from the container_linux.go side of this, so we're just going to
-	 * follow the order given to us.
-	 */
-
-	for (i = 0; i < num; i++) {
-		struct namespace_t *ns = &namespaces[i];
-		int flag = nsflag(ns->type);
-
-		write_log(DEBUG, "setns(%#x) into %s namespace (with path %s)", flag, ns->type, ns->path);
-		if (setns(ns->fd, flag) < 0)
-			bail("failed to setns into %s namespace", ns->type);
-
-		close(ns->fd);
+	ns_info = malloc(sizeof(*ns_info));
+	if (ns_info == NULL) {
+		bail("Can't allocate memory for namespace_info.");
+	}
+	for (i = 0; i < MAX_NAMESPACES; i++) {
+		ns_info->namespaces[i]->target_ns_fd = -1;
 	}
 
-	free(namespaces);
+	if (nslist != NULL) {
+		char *saveptr = NULL;
+		char *namespace = strtok_r(nslist, ",", &saveptr);
+
+		if (!namespace || !strlen(namespace) || !strlen(nslist))
+			bail("ns paths are empty");
+
+		/*
+		 * We have to open the file descriptors first, since after
+		 * we join the mnt namespace we might no longer be able to
+		 * access the paths.
+		 */
+		do {
+			int fd;
+			char *path;
+			struct namespace_t *ns;
+
+			/* Resize the namespace array. */
+			ns = malloc(sizeof(struct namespace_t));
+			if (!ns)
+				bail("failed to reallocate namespace array");
+
+			/* Split 'ns:path'. */
+			path = strstr(namespace, ":");
+			if (!path)
+				bail("failed to parse %s", namespace);
+			*path++ = '\0';
+
+			fd = open(path, O_RDONLY);
+			if (fd < 0)
+				bail("failed to open %s", path);
+
+			ns->target_ns_fd = fd;
+			strncpy(ns->type, namespace, MAX_NAMSPACE_TYPE_LEN - 1);
+			ns->type[MAX_NAMSPACE_TYPE_LEN - 1] = '\0';
+			strncpy(ns->path, path, PATH_MAX - 1);
+			ns->path[PATH_MAX - 1] = '\0';
+			ns->flag = nsflag(ns->type);
+
+			if (ns_info->namespace_cnt >= MAX_NAMESPACES)
+				bail("too many namespace configured");
+			ns_info->namespaces[ns_info->namespace_cnt] = ns;
+			ns_info->namespace_cnt++;
+		} while ((namespace = strtok_r(NULL, ",", &saveptr)) != NULL);
+	}
+
+	return ns_info;
+}
+
+/*
+ * The ordering in which we join namespaces is important. We should
+ * always join the user namespace *first*. This is all guaranteed
+ * from the container_linux.go side of this, so we're just going to
+ * follow the order given to us.
+ */
+static void join_namespaces(struct namespace_info_t *ns_info)
+{
+	int i;
+
+	for (i = 0; i < ns_info->namespace_cnt; i++) {
+		struct namespace_t *ns = ns_info->namespaces[i];
+
+		if (ns->target_ns_fd >= 0) {
+			write_log(DEBUG, "setns(%#x) into %s namespace (with path %s)", ns->flag, ns->type, ns->path);
+			if (setns(ns->target_ns_fd, ns->flag) < 0)
+				bail("failed to setns into %s namespace", ns->type);
+		}
+	}
+}
+
+static void free_namespace_info(struct namespace_info_t *ns_info)
+{
+	int i;
+
+	for (i = 0; i < ns_info->namespace_cnt; i++) {
+		struct namespace_t *ns = ns_info->namespaces[i];
+
+		if (ns->target_ns_fd >= 0) {
+			close(ns->target_ns_fd);
+		}
+		free(ns);
+	}
+
+	free(ns_info);
 }
 
 /* Defined in cloned_binary.c. */
@@ -1146,6 +1193,7 @@ void nsexec(void)
 	case STAGE_CHILD:{
 			pid_t stage2_pid = -1;
 			enum sync_t s;
+			struct namespace_info_t *ns_info;
 
 			/* We're in a child and thus need to tell the parent if we die. */
 			syncfd = sync_child_pipe[0];
@@ -1162,8 +1210,11 @@ void nsexec(void)
 			 * [stage 2: STAGE_INIT]) would be meaningless). We could send it
 			 * using cmsg(3) but that's just annoying.
 			 */
-			if (config.namespaces)
-				join_namespaces(config.namespaces);
+			ns_info = parse_namespace_info(config.namespaces);
+			if (ns_info->namespace_cnt > 0)
+				join_namespaces(ns_info);
+			free_namespace_info(ns_info);
+			ns_info = NULL;
 
 			/*
 			 * Deal with user namespaces first. They are quite special, as they
