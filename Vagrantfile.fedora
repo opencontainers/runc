@@ -29,6 +29,9 @@ EOF
     done
     dnf clean all
 
+    # Prevent the "fatal: unsafe repository" git complain during build.
+    git config --global --add safe.directory /vagrant
+
     # Add a user for rootless tests
     useradd -u2000 -m -d/home/rootless -s/bin/bash rootless
 
