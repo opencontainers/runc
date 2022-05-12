@@ -40,3 +40,7 @@ type Mount struct {
 func (m *Mount) IsBind() bool {
 	return m.Flags&unix.MS_BIND != 0
 }
+
+func (m *Mount) IsMove() bool {
+	return m.Flags&unix.MS_MOVE != 0
+}
