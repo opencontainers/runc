@@ -9,19 +9,16 @@ ARG CRIU_REPO=https://download.opensuse.org/repositories/devel:/tools:/criu/Debi
 RUN KEYFILE=/usr/share/keyrings/criu-repo-keyring.gpg; \
     wget -nv $CRIU_REPO/Release.key -O- | gpg --dearmor > "$KEYFILE" \
     && echo "deb [signed-by=$KEYFILE] $CRIU_REPO/ /" > /etc/apt/sources.list.d/criu.list \
-    && dpkg --add-architecture armel \
-    && dpkg --add-architecture armhf \
-    && dpkg --add-architecture arm64 \
-    && dpkg --add-architecture ppc64el \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
         build-essential \
         criu \
-        crossbuild-essential-arm64 \
-        crossbuild-essential-armel \
-        crossbuild-essential-armhf \
-        crossbuild-essential-ppc64el \
-        crossbuild-essential-s390x \
+        gcc-aarch64-linux-gnu libc-dev-arm64-cross \
+        gcc-arm-linux-gnueabi libc-dev-armel-cross \
+        gcc-arm-linux-gnueabihf libc-dev-armhf-cross \
+        gcc-powerpc64le-linux-gnu libc-dev-ppc64el-cross \
+        gcc-s390x-linux-gnu libc-dev-s390x-cross \
+        gcc-riscv64-linux-gnu libc-dev-riscv64-cross \
         curl \
         gawk \
         gcc \
@@ -54,9 +51,9 @@ RUN cd /tmp \
 
 # install libseccomp
 ARG LIBSECCOMP_VERSION
-COPY script/* /tmp/script/
+COPY script/seccomp.sh script/lib.sh /tmp/script/
 RUN mkdir -p /opt/libseccomp \
-    && /tmp/script/seccomp.sh "$LIBSECCOMP_VERSION" /opt/libseccomp arm64 armel armhf ppc64le s390x
+    && /tmp/script/seccomp.sh "$LIBSECCOMP_VERSION" /opt/libseccomp arm64 armel armhf ppc64le riscv64 s390x
 ENV LIBSECCOMP_VERSION=$LIBSECCOMP_VERSION
 ENV LD_LIBRARY_PATH=/opt/libseccomp/lib
 ENV PKG_CONFIG_PATH=/opt/libseccomp/lib/pkgconfig
