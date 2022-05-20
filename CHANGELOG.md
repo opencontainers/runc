@@ -22,6 +22,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  * In case the runc binary resides on tmpfs, `runc init` no longer re-execs
    itself twice. (#3342)
+ * Our seccomp `-ENOSYS` stub now correctly handles multiplexed syscalls on
+   s390 and s390x. This solves the issue where syscalls the host kernel did not
+   support would return `-EPERM` despite the existence of the `-ENOSYS` stub
+   code (this was due to how s390x does syscall multiplexing). (#3474)
 
 ## [1.1.0] - 2022-01-14
 

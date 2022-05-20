@@ -213,6 +213,19 @@ func testEnosysStub(t *testing.T, defaultAction configs.Action, arches []string)
 				})
 			}
 
+			// If we're on s390(x) make sure you get -ENOSYS for the "setup"
+			// syscall (this is done to work around an issue with s390x's
+			// syscall multiplexing which results in unknown syscalls being a
+			// setup(2) invocation).
+			switch scmpArch {
+			case libseccomp.ArchS390, libseccomp.ArchS390X:
+				syscallTests = append(syscallTests, syscallTest{
+					sysno:    s390xMultiplexSyscall,
+					syscall:  "setup",
+					expected: retErrnoEnosys,
+				})
+			}
+
 			// Test syscalls in the explicit list.
 			for _, test := range syscallTests {
 				// Override the expected value in the two special cases.
