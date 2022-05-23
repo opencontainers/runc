@@ -191,8 +191,6 @@ jobs:
       # under Docker will emerge, it will be good to have a separate make
       # runcimage job and share its result (the docker image) with whoever
       # needs it.
-    - uses: satackey/action-docker-layer-caching@v0.0.11
-      continue-on-error: true
     - name: build docker image
       run: make runcimage
     - name: make releaseall
