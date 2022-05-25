@@ -1,10 +1,10 @@
-// Package devicefilter contains eBPF device filter program
+// Implements creation of eBPF device filter program.
 //
-// The implementation is based on https://github.com/containers/crun/blob/0.10.2/src/libcrun/ebpf.c
+// Based on https://github.com/containers/crun/blob/0.10.2/src/libcrun/ebpf.c
 //
 // Although ebpf.c is originally licensed under LGPL-3.0-or-later, the author (Giuseppe Scrivano)
 // agreed to relicense the file in Apache License 2.0: https://github.com/opencontainers/runc/issues/2144#issuecomment-543116397
-package devicefilter
+package devices
 
 import (
 	"errors"
@@ -13,7 +13,6 @@ import (
 	"strconv"
 
 	"github.com/cilium/ebpf/asm"
-	devicesemulator "github.com/opencontainers/runc/libcontainer/cgroups/devices"
 	"github.com/opencontainers/runc/libcontainer/devices"
 	"golang.org/x/sys/unix"
 )
@@ -23,14 +22,14 @@ const (
 	license = "Apache"
 )
 
-// DeviceFilter returns eBPF device filter program and its license string
-func DeviceFilter(rules []*devices.Rule) (asm.Instructions, string, error) {
+// deviceFilter returns eBPF device filter program and its license string.
+func deviceFilter(rules []*devices.Rule) (asm.Instructions, string, error) {
 	// Generate the minimum ruleset for the device rules we are given. While we
 	// don't care about minimum transitions in cgroupv2, using the emulator
 	// gives us a guarantee that the behaviour of devices filtering is the same
 	// as cgroupv1, including security hardenings to avoid misconfiguration
 	// (such as punching holes in wildcard rules).
-	emu := new(devicesemulator.Emulator)
+	emu := new(emulator)
 	for _, rule := range rules {
 		if err := emu.Apply(*rule); err != nil {
 			return nil, "", err

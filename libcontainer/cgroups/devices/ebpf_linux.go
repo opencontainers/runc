@@ -1,4 +1,4 @@
-package ebpf
+package devices
 
 import (
 	"errors"
@@ -143,12 +143,12 @@ func haveBpfProgReplace() bool {
 	return haveBpfProgReplaceBool
 }
 
-// LoadAttachCgroupDeviceFilter installs eBPF device filter program to /sys/fs/cgroup/<foo> directory.
+// loadAttachCgroupDeviceFilter installs eBPF device filter program to /sys/fs/cgroup/<foo> directory.
 //
 // Requires the system to be running in cgroup2 unified-mode with kernel >= 4.15 .
 //
 // https://github.com/torvalds/linux/commit/ebc614f687369f9df99828572b1d85a7c2de3d92
-func LoadAttachCgroupDeviceFilter(insts asm.Instructions, license string, dirFd int) (func() error, error) {
+func loadAttachCgroupDeviceFilter(insts asm.Instructions, license string, dirFd int) (func() error, error) {
 	// Increase `ulimit -l` limit to avoid BPF_PROG_LOAD error (#2167).
 	// This limit is not inherited into the container.
 	memlockLimit := &unix.Rlimit{
