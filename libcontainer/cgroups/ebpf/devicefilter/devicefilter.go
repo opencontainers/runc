@@ -175,7 +175,7 @@ func (p *program) appendRule(rule *devices.Rule) error {
 	}
 	p.insts = append(p.insts, acceptBlock(rule.Allow)...)
 	// set blockSym to the first instruction we added in this iteration
-	p.insts[prevBlockLastIdx+1] = p.insts[prevBlockLastIdx+1].Sym(blockSym)
+	p.insts[prevBlockLastIdx+1] = p.insts[prevBlockLastIdx+1].WithSymbol(blockSym)
 	p.blockID++
 	return nil
 }
@@ -188,7 +188,7 @@ func (p *program) finalize() asm.Instructions {
 	blockSym := "block-" + strconv.Itoa(p.blockID)
 	p.insts = append(p.insts,
 		// R0 <- v
-		asm.Mov.Imm32(asm.R0, v).Sym(blockSym),
+		asm.Mov.Imm32(asm.R0, v).WithSymbol(blockSym),
 		asm.Return(),
 	)
 	p.blockID = -1
