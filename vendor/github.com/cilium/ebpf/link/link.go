@@ -6,8 +6,8 @@ import (
 	"fmt"
 
 	"github.com/cilium/ebpf"
+	"github.com/cilium/ebpf/btf"
 	"github.com/cilium/ebpf/internal"
-	"github.com/cilium/ebpf/internal/btf"
 	"github.com/cilium/ebpf/internal/sys"
 )
 
@@ -325,11 +325,13 @@ func (l *RawLink) Info() (*Info, error) {
 		extra = &TracingInfo{}
 	case XDPType:
 		extra = &XDPInfo{}
+	case PerfEventType:
+		// no extra
 	default:
 		return nil, fmt.Errorf("unknown link info type: %d", info.Type)
 	}
 
-	if info.Type != RawTracepointType && info.Type != IterType {
+	if info.Type != RawTracepointType && info.Type != IterType && info.Type != PerfEventType {
 		buf := bytes.NewReader(info.Extra[:])
 		err := binary.Read(buf, internal.NativeEndian, extra)
 		if err != nil {
