@@ -7,7 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 
-## [1.1.2] - 2022-05-06
+## [1.1.3] - 2022-06-09
+
+> In the beginning there was nothing, which exploded.
+
+### Fixed
+ * Our seccomp `-ENOSYS` stub now correctly handles multiplexed syscalls on
+   s390 and s390x. This solves the issue where syscalls the host kernel did not
+   support would return `-EPERM` despite the existence of the `-ENOSYS` stub
+   code (this was due to how s390x does syscall multiplexing). (#3478)
+ * Retry on dbus disconnect logic in libcontainer/cgroups/systemd now works as
+   intended; this fix does not affect runc binary itself but is important for
+   libcontainer users such as Kubernetes. (#3476)
+ * Inability to compile with recent clang due to an issue with duplicate
+   constants in libseccomp-golang. (#3477)
+ * When using systemd cgroup driver, skip adding device paths that don't exist,
+   to stop systemd from emitting warnings about those paths. (#3504)
+ * Socket activation was failing when more than 3 sockets were used. (#3494)
+ * Various CI fixes. (#3472, #3479)
+
+### Added
+ * Allow to bind mount /proc/sys/kernel/ns_last_pid to inside container. (#3493)
+
+### Changed
+ * runc static binaries are now linked against libseccomp v2.5.4. (#3481)
+
+
+## [1.1.2] - 2022-05-11
 
 > I should think I'm going to be a perpetual student.
 
@@ -272,9 +298,7 @@ implementation (libcontainer) is *not* covered by this policy.
    cgroups at all during `runc update`). (#2994)
 
 <!-- minor releases -->
-[Unreleased]: https://github.com/opencontainers/runc/compare/v1.1.2...HEAD
-[1.1.2]: https://github.com/opencontainers/runc/compare/v1.1.1...v1.1.2
-[1.1.1]: https://github.com/opencontainers/runc/compare/v1.1.0...v1.1.1
+[Unreleased]: https://github.com/opencontainers/runc/compare/v1.1.3...HEAD
 [1.1.0]: https://github.com/opencontainers/runc/compare/v1.1.0-rc.1...v1.1.0
 [1.0.0]: https://github.com/opencontainers/runc/releases/tag/v1.0.0
 
@@ -285,5 +309,8 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.0.1]: https://github.com/opencontainers/runc/compare/v1.0.0...v1.0.1
 
 <!-- 1.1.z patch releases -->
-[Unreleased 1.1.z]: https://github.com/opencontainers/runc/compare/v1.1.0...release-1.1
+[Unreleased 1.1.z]: https://github.com/opencontainers/runc/compare/v1.1.3...release-1.1
+[1.1.3]: https://github.com/opencontainers/runc/compare/v1.1.2...v1.1.3
+[1.1.2]: https://github.com/opencontainers/runc/compare/v1.1.1...v1.1.2
+[1.1.1]: https://github.com/opencontainers/runc/compare/v1.1.0...v1.1.1
 [1.1.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.0.0...v1.1.0-rc.1
