@@ -416,11 +416,9 @@ static int getenv_int(const char *name)
 	if (val == endptr || *endptr != '\0')
 		bail("unable to parse %s=%s", name, val);
 	/*
-	 * Sanity check: this must be a small non-negative number.
-	 * Practically, we pass two fds (3 and 4) and a log level,
-	 * for which the maximum is 6 (TRACE).
-	 * */
-	if (ret < 0 || ret > TRACE)
+	 * Sanity check: this must be a non-negative number.
+	 */
+	if (ret < 0)
 		bail("bad value for %s=%s (%d)", name, val, ret);
 
 	return ret;
