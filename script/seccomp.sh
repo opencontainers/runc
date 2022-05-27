@@ -5,6 +5,11 @@ set -e -u -o pipefail
 # shellcheck source=./script/lib.sh
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
+# sha256 checksums for seccomp release tarballs.
+declare -A SECCOMP_SHA256=(
+	["2.5.4"]=d82902400405cf0068574ef3dc1fe5f5926207543ba1ae6f8e7a1576351dcbdb
+)
+
 # Due to libseccomp being LGPL we must include its sources,
 # so download, install and build against it.
 # Parameters:
@@ -19,8 +24,10 @@ function build_libseccomp() {
 	local arches=("$@")
 	local tar="libseccomp-${ver}.tar.gz"
 
-	# Download and extract.
+	# Download, check, and extract.
 	wget "https://github.com/seccomp/libseccomp/releases/download/v${ver}/${tar}"{,.asc}
+	sha256sum --strict --check - <<<"${SECCOMP_SHA256[${ver}]} *${tar}"
+
 	local srcdir
 	srcdir="$(mktemp -d)"
 	tar xf "$tar" -C "$srcdir"
