@@ -3,7 +3,15 @@
 runc fully supports cgroup v2 (unified mode) since v1.0.0-rc93.
 
 To use cgroup v2, you might need to change the configuration of the host init system.
-Fedora (>= 31) uses cgroup v2 by default and no extra configuration is required.
+The following distributions are known to use cgroup v2 by default:
+<!-- the list should be kept in sync with https://github.com/rootless-containers/rootlesscontaine.rs/blob/master/content/getting-started/common/cgroup2.md -->
+- Fedora (since 31)
+- Arch Linux (since April 2021)
+- openSUSE Tumbleweed (since c. 2021)
+- Debian GNU/Linux (since 11)
+- Ubuntu (since 21.10)
+- RHEL and RHEL-like distributions (since 9)
+
 On other systemd-based distros, cgroup v2 can be enabled by adding `systemd.unified_cgroup_hierarchy=1` to the kernel cmdline.
 
 ## Am I using cgroup v2?
