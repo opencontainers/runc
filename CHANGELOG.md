@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.1.2] - 2022-05-06
 
-> I should think I’m going to be a perpetual student.
+> I should think I'm going to be a perpetual student.
 
 ### Security
  * A bug was found in runc where runc exec --cap executed processes with
@@ -80,7 +80,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    binary etc.) and failures of the command being executed. (#3073)
  * runc run: new `--keep` option to skip removal exited containers artefacts.
    This might be useful to check the state (e.g. of cgroup controllers) after
-   the container has￼exited. (#2817, #2825)
+   the container has exited. (#2817, #2825)
  * seccomp: add support for `SCMP_ACT_KILL_PROCESS` and `SCMP_ACT_KILL_THREAD`
    (the latter is just an alias for `SCMP_ACT_KILL`). (#3204)
  * seccomp: add support for `SCMP_ACT_NOTIFY` (seccomp actions). This allows
@@ -169,13 +169,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
  * Fixed inability to start a container with read-write bind mount of a
    read-only fuse host mount. (#3283, #3292)
- * Fixed inability to start when read-only /dev in set in spec (#3276, #3277)
+ * Fixed inability to start when read-only /dev in set in spec. (#3276, #3277)
  * Fixed not removing sub-cgroups upon container delete, when rootless cgroup v2
    is used with older systemd. (#3226, #3297)
  * Fixed returning error from GetStats when hugetlb is unsupported (which causes
    excessive logging for Kubernetes). (#3233, #3295)
  * Improved an error message when dbus-user-session is not installed and
-   rootless + cgroup2 + systemd are used (#3212)
+   rootless + cgroup2 + systemd are used. (#3212)
 
 [GHSA-v95c-p5hm-xq8f]: https://github.com/opencontainers/runc/security/advisories/GHSA-v95c-p5hm-xq8f
 
@@ -255,7 +255,7 @@ implementation (libcontainer) is *not* covered by this policy.
    code, optimize the method for checking whether a cgroup is frozen. (#2955)
  * cgroups/systemd: fixed "retry on dbus disconnect" logic introduced in rc94
  * cgroups/systemd: fixed returning "unit already exists" error from a systemd
-   cgroup manager (regression in rc94) (#2997, #2996)
+   cgroup manager (regression in rc94). (#2997, #2996)
 
 ### Added
  * cgroupv2: support SkipDevices with systemd driver. (#2958, #3019)
@@ -264,7 +264,7 @@ implementation (libcontainer) is *not* covered by this policy.
    (#3022)
 
 ### Changed
- * cgroup/systemd: return, not ignore, stop unit error from Destroy (#2946)
+ * cgroup/systemd: return, not ignore, stop unit error from Destroy. (#2946)
  * Fix all golangci-lint failures. (#2781, #2962)
  * Make `runc --version` output sane even when built with `go get` or
    otherwise outside of our build scripts. (#2962)
