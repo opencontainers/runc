@@ -7,9 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 
-## [1.1.2] - 2022-05-06
+## [1.1.3] - 2022-06-09
 
-> I should think I’m going to be a perpetual student.
+> In the beginning there was nothing, which exploded.
+
+### Fixed
+ * Our seccomp `-ENOSYS` stub now correctly handles multiplexed syscalls on
+   s390 and s390x. This solves the issue where syscalls the host kernel did not
+   support would return `-EPERM` despite the existence of the `-ENOSYS` stub
+   code (this was due to how s390x does syscall multiplexing). (#3478)
+ * Retry on dbus disconnect logic in libcontainer/cgroups/systemd now works as
+   intended; this fix does not affect runc binary itself but is important for
+   libcontainer users such as Kubernetes. (#3476)
+ * Inability to compile with recent clang due to an issue with duplicate
+   constants in libseccomp-golang. (#3477)
+ * When using systemd cgroup driver, skip adding device paths that don't exist,
+   to stop systemd from emitting warnings about those paths. (#3504)
+ * Socket activation was failing when more than 3 sockets were used. (#3494)
+ * Various CI fixes. (#3472, #3479)
+
+### Added
+ * Allow to bind mount /proc/sys/kernel/ns_last_pid to inside container. (#3493)
+
+### Changed
+ * runc static binaries are now linked against libseccomp v2.5.4. (#3481)
+
+
+## [1.1.2] - 2022-05-11
+
+> I should think I'm going to be a perpetual student.
 
 ### Security
  * A bug was found in runc where runc exec --cap executed processes with
@@ -80,7 +106,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    binary etc.) and failures of the command being executed. (#3073)
  * runc run: new `--keep` option to skip removal exited containers artefacts.
    This might be useful to check the state (e.g. of cgroup controllers) after
-   the container has￼exited. (#2817, #2825)
+   the container has exited. (#2817, #2825)
  * seccomp: add support for `SCMP_ACT_KILL_PROCESS` and `SCMP_ACT_KILL_THREAD`
    (the latter is just an alias for `SCMP_ACT_KILL`). (#3204)
  * seccomp: add support for `SCMP_ACT_NOTIFY` (seccomp actions). This allows
@@ -169,13 +195,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
  * Fixed inability to start a container with read-write bind mount of a
    read-only fuse host mount. (#3283, #3292)
- * Fixed inability to start when read-only /dev in set in spec (#3276, #3277)
+ * Fixed inability to start when read-only /dev in set in spec. (#3276, #3277)
  * Fixed not removing sub-cgroups upon container delete, when rootless cgroup v2
    is used with older systemd. (#3226, #3297)
  * Fixed returning error from GetStats when hugetlb is unsupported (which causes
    excessive logging for Kubernetes). (#3233, #3295)
  * Improved an error message when dbus-user-session is not installed and
-   rootless + cgroup2 + systemd are used (#3212)
+   rootless + cgroup2 + systemd are used. (#3212)
 
 [GHSA-v95c-p5hm-xq8f]: https://github.com/opencontainers/runc/security/advisories/GHSA-v95c-p5hm-xq8f
 
@@ -255,7 +281,7 @@ implementation (libcontainer) is *not* covered by this policy.
    code, optimize the method for checking whether a cgroup is frozen. (#2955)
  * cgroups/systemd: fixed "retry on dbus disconnect" logic introduced in rc94
  * cgroups/systemd: fixed returning "unit already exists" error from a systemd
-   cgroup manager (regression in rc94) (#2997, #2996)
+   cgroup manager (regression in rc94). (#2997, #2996)
 
 ### Added
  * cgroupv2: support SkipDevices with systemd driver. (#2958, #3019)
@@ -264,7 +290,7 @@ implementation (libcontainer) is *not* covered by this policy.
    (#3022)
 
 ### Changed
- * cgroup/systemd: return, not ignore, stop unit error from Destroy (#2946)
+ * cgroup/systemd: return, not ignore, stop unit error from Destroy. (#2946)
  * Fix all golangci-lint failures. (#2781, #2962)
  * Make `runc --version` output sane even when built with `go get` or
    otherwise outside of our build scripts. (#2962)
@@ -272,9 +298,7 @@ implementation (libcontainer) is *not* covered by this policy.
    cgroups at all during `runc update`). (#2994)
 
 <!-- minor releases -->
-[Unreleased]: https://github.com/opencontainers/runc/compare/v1.1.2...HEAD
-[1.1.2]: https://github.com/opencontainers/runc/compare/v1.1.1...v1.1.2
-[1.1.1]: https://github.com/opencontainers/runc/compare/v1.1.0...v1.1.1
+[Unreleased]: https://github.com/opencontainers/runc/compare/v1.1.3...HEAD
 [1.1.0]: https://github.com/opencontainers/runc/compare/v1.1.0-rc.1...v1.1.0
 [1.0.0]: https://github.com/opencontainers/runc/releases/tag/v1.0.0
 
@@ -285,5 +309,8 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.0.1]: https://github.com/opencontainers/runc/compare/v1.0.0...v1.0.1
 
 <!-- 1.1.z patch releases -->
-[Unreleased 1.1.z]: https://github.com/opencontainers/runc/compare/v1.1.0...release-1.1
+[Unreleased 1.1.z]: https://github.com/opencontainers/runc/compare/v1.1.3...release-1.1
+[1.1.3]: https://github.com/opencontainers/runc/compare/v1.1.2...v1.1.3
+[1.1.2]: https://github.com/opencontainers/runc/compare/v1.1.1...v1.1.2
+[1.1.1]: https://github.com/opencontainers/runc/compare/v1.1.0...v1.1.1
 [1.1.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.0.0...v1.1.0-rc.1
