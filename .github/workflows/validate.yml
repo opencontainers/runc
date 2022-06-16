@@ -8,7 +8,7 @@ on:
       - release-*
   pull_request:
 env:
-  GO_VERSION: 1.18.x
+  GO_VERSION: 1.19.x
 permissions:
   contents: read
 
