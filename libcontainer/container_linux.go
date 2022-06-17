@@ -1277,9 +1277,8 @@ func (c *Container) makeCriuRestoreMountpoints(m *configs.Mount) error {
 	case "bind":
 		// The prepareBindMount() function checks if source
 		// exists. So it cannot be used for other filesystem types.
-		// TODO: pass something else than nil? Not sure if criu is
-		// impacted by issue #2484
-		if err := prepareBindMount(m, c.config.Rootfs, nil); err != nil {
+		// TODO: pass srcFD? Not sure if criu is impacted by issue #2484.
+		if err := prepareBindMount(mountEntry{Mount: m}, c.config.Rootfs); err != nil {
 			return err
 		}
 	default:
