@@ -64,3 +64,22 @@ function teardown() {
 	runc exec test_busybox stat /tmp/mount-1/foo.txt /tmp/mount-2/foo.txt
 	[ "$status" -eq 0 ]
 }
+
+# To repro issue mentioned in: https://github.com/opencontainers/runc/pull/3510.
+@test "userns with bind mount before a cgroupfs mount" {
+	# This can only be reproduced on cgroup v1 (and no cgroupns) due to the
+	# way it is mounted in such case (a bunch of of bind mounts).
+	requires cgroups_v1
+
+	# Add a bind mount right before the /sys/fs/cgroup mount,
+	# and make sure cgroupns is not enabled.
+	update_config '	  .mounts |= map(if .destination == "/sys/fs/cgroup" then ({"source": "source-accessible/dir", "destination": "/tmp/mount-1", "options": ["bind"]}, .) else . end)
+			| .linux.namespaces -= [{"type": "cgroup"}]'
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	[ "$status" -eq 0 ]
+
+	# Make sure this is real cgroupfs.
+	runc exec test_busybox cat /sys/fs/cgroup/{pids,memory}/tasks
+	[ "$status" -eq 0 ]
+}
