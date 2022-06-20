@@ -60,15 +60,16 @@ func prepareRootfs(pipe io.ReadWriter, iConfig *initConfig, mountFds []int) (err
 		return fmt.Errorf("malformed mountFds slice. Expected size: %v, got: %v. Slice: %v", len(config.Mounts), len(mountFds), mountFds)
 	}
 
-	mountConfig := &mountConfig{
-		root:            config.Rootfs,
-		label:           config.MountLabel,
-		cgroup2Path:     iConfig.Cgroup2Path,
-		rootlessCgroups: iConfig.RootlessCgroups,
-		cgroupns:        config.Namespaces.Contains(configs.NEWCGROUP),
-	}
 	setupDev := needsSetupDev(config)
 	for i, m := range config.Mounts {
+		mountConfig := &mountConfig{
+			root:            config.Rootfs,
+			label:           config.MountLabel,
+			cgroup2Path:     iConfig.Cgroup2Path,
+			rootlessCgroups: iConfig.RootlessCgroups,
+			cgroupns:        config.Namespaces.Contains(configs.NEWCGROUP),
+		}
+
 		// Just before the loop we checked that if not empty, len(mountFds) == len(config.Mounts).
 		// Therefore, we can access mountFds[i] without any concerns.
 		if mountFds != nil && mountFds[i] != -1 {
