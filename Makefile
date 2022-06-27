@@ -58,7 +58,7 @@ endif
 .DEFAULT: runc
 
 runc:
-	$(GO_BUILD) -o runc .
+	$(GO_BUILD) -o runc ./cmd/runc
 
 all: runc recvtty sd-helper seccompagent
 
@@ -66,7 +66,7 @@ recvtty sd-helper seccompagent:
 	$(GO_BUILD) -o contrib/cmd/$@/$@ ./contrib/cmd/$@
 
 static:
-	$(GO_BUILD_STATIC) -o runc .
+	$(GO_BUILD_STATIC) -o runc ./cmd/runc
 
 releaseall: RELEASE_ARGS := "-a arm64 -a armel -a armhf -a ppc64le -a riscv64 -a s390x"
 releaseall: release
