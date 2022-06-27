@@ -1068,7 +1068,7 @@ void nsexec(void)
 
 					s = SYNC_MOUNTSOURCES_ACK;
 					if (write(syncfd, &s, sizeof(s)) != sizeof(s)) {
-						kill(stage1_pid, SIGKILL);
+						sane_kill(stage1_pid, SIGKILL);
 						bail("failed to sync with child: write(SYNC_MOUNTSOURCES_ACK)");
 					}
 					break;
@@ -1230,7 +1230,7 @@ void nsexec(void)
 			if (config.mountsources) {
 				s = SYNC_MOUNTSOURCES_PLS;
 				if (write(syncfd, &s, sizeof(s)) != sizeof(s)) {
-					kill(stage2_pid, SIGKILL);
+					sane_kill(stage2_pid, SIGKILL);
 					bail("failed to sync with parent: write(SYNC_MOUNTSOURCES_PLS)");
 				}
 
@@ -1239,11 +1239,11 @@ void nsexec(void)
 
 				/* Parent finished to send the mount sources fds. */
 				if (read(syncfd, &s, sizeof(s)) != sizeof(s)) {
-					kill(stage2_pid, SIGKILL);
+					sane_kill(stage2_pid, SIGKILL);
 					bail("failed to sync with parent: read(SYNC_MOUNTSOURCES_ACK)");
 				}
 				if (s != SYNC_MOUNTSOURCES_ACK) {
-					kill(stage2_pid, SIGKILL);
+					sane_kill(stage2_pid, SIGKILL);
 					bail("failed to sync with parent: SYNC_MOUNTSOURCES_ACK: got %u", s);
 				}
 			}
