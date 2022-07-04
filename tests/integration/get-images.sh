@@ -64,7 +64,3 @@ DEBIAN_IMAGE="$TESTDATA/debian-${arch}.tar.xz"
 get "$DEBIAN_IMAGE" \
 	"https://github.com/debuerreotype/docker-debian-artifacts/raw/dist-${arch}/buster/slim/rootfs.tar.xz"
 echo "DEBIAN_IMAGE=$DEBIAN_IMAGE"
-
-# hello-world is local, no need to download.
-HELLO_IMAGE="$TESTDATA/hello-world-${arch}.tar"
-echo "HELLO_IMAGE=$HELLO_IMAGE"

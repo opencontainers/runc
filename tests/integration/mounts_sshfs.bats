@@ -16,7 +16,8 @@ function setup() {
 		skip "test requires working sshfs mounts"
 	fi
 
-	setup_hello
+	setup_busybox
+	update_config '.process.args = ["/bin/echo", "Hello World"]'
 }
 
 function teardown() {
