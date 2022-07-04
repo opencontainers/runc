@@ -60,7 +60,7 @@ load helpers
 
 # setup is called at the beginning of every test.
 function setup() {
-  setup_hello
+  setup_busybox
 }
 
 # teardown is called at the end of every test.
@@ -77,5 +77,4 @@ function teardown() {
   # check expected output
   [[ "${output}" == *"Hello"* ]]
 }
-
 ```
