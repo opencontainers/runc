@@ -564,11 +564,6 @@ function setup_busybox() {
 	setup_bundle "$BUSYBOX_IMAGE"
 }
 
-function setup_hello() {
-	setup_bundle "$HELLO_IMAGE"
-	update_config '(.. | select(.? == "sh")) |= "/hello"'
-}
-
 function setup_debian() {
 	setup_bundle "$DEBIAN_IMAGE"
 }
