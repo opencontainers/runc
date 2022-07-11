@@ -43,8 +43,8 @@ function teardown() {
 			| .process.noNewPrivileges = false
 			| .linux.seccomp = {
 				"defaultAction":"SCMP_ACT_ALLOW",
-				"architectures":["SCMP_ARCH_X86","SCMP_ARCH_X32"],
-				"syscalls":[{"names":["mkdir"], "action":"SCMP_ACT_ERRNO"}]
+				"architectures":["SCMP_ARCH_X86","SCMP_ARCH_X32","SCMP_ARCH_X86_64","SCMP_ARCH_AARCH64","SCMP_ARCH_ARM"],
+				"syscalls":[{"names":["mkdir","mkdirat"], "action":"SCMP_ACT_ERRNO"}]
 			}'
 
 	runc run test_busybox
@@ -57,8 +57,8 @@ function teardown() {
 			| .process.noNewPrivileges = false
 			| .linux.seccomp = {
 				"defaultAction":"SCMP_ACT_ALLOW",
-				"architectures":["SCMP_ARCH_X86","SCMP_ARCH_X32"],
-				"syscalls":[{"names":["mkdir"], "action":"SCMP_ACT_ERRNO", "errnoRet": 100}]
+				"architectures":["SCMP_ARCH_X86","SCMP_ARCH_X32","SCMP_ARCH_X86_64","SCMP_ARCH_AARCH64","SCMP_ARCH_ARM"],
+				"syscalls":[{"names":["mkdir","mkdirat"], "action":"SCMP_ACT_ERRNO", "errnoRet": 100}]
 			}'
 
 	runc run test_busybox
@@ -71,8 +71,8 @@ function teardown() {
 			| .process.noNewPrivileges = false
 			| .linux.seccomp = {
 				"defaultAction":"SCMP_ACT_ALLOW",
-				"architectures":["SCMP_ARCH_X86","SCMP_ARCH_X32"],
-				"syscalls":[{"names":["mkdir"], "action":"SCMP_ACT_KILL"}]
+				"architectures":["SCMP_ARCH_X86","SCMP_ARCH_X32","SCMP_ARCH_X86_64","SCMP_ARCH_AARCH64","SCMP_ARCH_ARM"],
+				"syscalls":[{"names":["mkdir","mkdirat"], "action":"SCMP_ACT_KILL"}]
 			}'
 
 	runc run test_busybox
@@ -84,8 +84,8 @@ function teardown() {
 	update_config '   .process.args = ["/bin/true"]
 			| .linux.seccomp = {
 				"defaultAction":"SCMP_ACT_ALLOW",
-				"architectures":["SCMP_ARCH_X86","SCMP_ARCH_X32"],
-				"syscalls":[{"names":["mkdir"], "action":"SCMP_ACT_KILL"}]
+				"architectures":["SCMP_ARCH_X86","SCMP_ARCH_X32","SCMP_ARCH_X86_64","SCMP_ARCH_AARCH64","SCMP_ARCH_ARM"],
+				"syscalls":[{"names":["mkdir","mkdirat"], "action":"SCMP_ACT_KILL"}]
 			}
 			| .hooks = {
 				"startContainer": [ {
