@@ -175,6 +175,14 @@ vendor:
 	$(GO) mod vendor
 	$(GO) mod verify
 
+verify-changelog:
+	# No non-ASCII characters.
+	! LC_ALL=C grep -n -P '[\x80-\xFF]' CHANGELOG.md
+	# No space at EOL.
+	! grep -n '\s$$' CHANGELOG.md
+	# Period before issue/PR references.
+	! grep -n '[0-9a-zA-Z][^.] (#[1-9][0-9, #]*)$$' CHANGELOG.md
+
 verify-dependencies: vendor
 	@test -z "$$(git status --porcelain -- go.mod go.sum vendor/)" \
 		|| (echo -e "git status:\n $$(git status -- go.mod go.sum vendor/)\nerror: vendor/, go.mod and/or go.sum not up to date. Run \"make vendor\" to update"; exit 1) \
@@ -185,4 +193,4 @@ verify-dependencies: vendor
 	test localtest unittest localunittest integration localintegration \
 	rootlessintegration localrootlessintegration shell install install-bash \
 	install-man clean cfmt shfmt shellcheck \
-	vendor verify-dependencies
+	vendor verify-changelog verify-dependencies
