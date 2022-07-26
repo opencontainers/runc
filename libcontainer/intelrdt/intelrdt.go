@@ -182,8 +182,6 @@ var (
 	catEnabled bool
 	// The flag to indicate if Intel RDT/MBA is enabled
 	mbaEnabled bool
-	// The flag to indicate if Intel RDT/MBA Software Controller is enabled
-	mbaScEnabled bool
 
 	// For Intel RDT initialization
 	initOnce sync.Once
@@ -216,12 +214,7 @@ func featuresInit() {
 				catEnabled = true
 			}
 		}
-		if mbaScEnabled {
-			// We confirm MBA Software Controller is enabled in step 2,
-			// MBA should be enabled because MBA Software Controller
-			// depends on MBA
-			mbaEnabled = true
-		} else if flagsSet.MBA {
+		if flagsSet.MBA {
 			if _, err := os.Stat(filepath.Join(root, "info", "MB")); err == nil {
 				mbaEnabled = true
 			}
@@ -258,11 +251,6 @@ func findIntelRdtMountpointDir() (string, error) {
 	}
 	if len(mi) < 1 {
 		return "", errNotFound
-	}
-
-	// Check if MBA Software Controller is enabled through mount option "-o mba_MBps"
-	if strings.Contains(","+mi[0].VFSOptions+",", ",mba_MBps,") {
-		mbaScEnabled = true
 	}
 
 	return mi[0].Mountpoint, nil
@@ -491,12 +479,6 @@ func IsCATEnabled() bool {
 func IsMBAEnabled() bool {
 	featuresInit()
 	return mbaEnabled
-}
-
-// Check if Intel RDT/MBA Software Controller is enabled
-func IsMBAScEnabled() bool {
-	featuresInit()
-	return mbaScEnabled
 }
 
 // Get the path of the clos group in "resource control" filesystem that the container belongs to
