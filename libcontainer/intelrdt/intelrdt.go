@@ -224,7 +224,7 @@ func featuresInit() {
 	})
 }
 
-// Return the mount point path of Intel RDT "resource control" filesystem.
+// findIntelRdtMountpointDir returns the mount point of the Intel RDT "resource control" filesystem.
 func findIntelRdtMountpointDir() (string, error) {
 	mi, err := mountinfo.GetMounts(func(m *mountinfo.Info) (bool, bool) {
 		// similar to mountinfo.FSTypeFilter but stops after the first match
@@ -250,24 +250,32 @@ var (
 	rootOnce        sync.Once
 )
 
+// The kernel creates this (empty) directory if resctrl is supported by the
+// hardware and kernel. The user is responsible for mounting the resctrl
+// filesystem, and they could mount it somewhere else if they wanted to.
+const defaultResctrlMountpoint = "/sys/fs/resctrl"
+
 // Root returns the Intel RDT "resource control" filesystem mount point.
 func Root() (string, error) {
 	rootOnce.Do(func() {
-		// If resctrl is available, kernel creates this directory.
-		if unix.Access("/sys/fs/resctrl", unix.F_OK) != nil {
-			intelRdtRootErr = errNotFound
-			return
-		}
-
-		// NB: ideally, we could just do statfs and RDTGROUP_SUPER_MAGIC check, but
-		// we have to parse mountinfo since we're also interested in mount options.
-		root, err := findIntelRdtMountpointDir()
-		if err != nil {
+		// Does this system support resctrl?
+		var statfs unix.Statfs_t
+		if err := unix.Statfs(defaultResctrlMountpoint, &statfs); err != nil {
+			if errors.Is(err, unix.ENOENT) {
+				err = errNotFound
+			}
 			intelRdtRootErr = err
 			return
 		}
 
-		intelRdtRoot = root
+		// Has the resctrl fs been mounted to the default mount point?
+		if statfs.Type == unix.RDTGROUP_SUPER_MAGIC {
+			intelRdtRoot = defaultResctrlMountpoint
+			return
+		}
+
+		// The resctrl fs could have been mounted somewhere nonstandard.
+		intelRdtRoot, intelRdtRootErr = findIntelRdtMountpointDir()
 	})
 
 	return intelRdtRoot, intelRdtRootErr
