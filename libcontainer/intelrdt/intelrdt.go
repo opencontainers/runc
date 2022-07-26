@@ -1,7 +1,6 @@
 package intelrdt
 
 import (
-	"bufio"
 	"bytes"
 	"errors"
 	"fmt"
@@ -199,40 +198,28 @@ func featuresInit() {
 			return
 		}
 
-		// 2. Check if hardware and kernel support Intel RDT sub-features.
-		flagsSet, err := parseCpuInfoFile("/proc/cpuinfo")
+		// 2. Check if Intel RDT sub-features are available in "resource
+		// control" filesystem. Intel RDT sub-features can be
+		// selectively disabled or enabled by kernel command line
+		// (e.g., rdt=!l3cat,mba) in 4.14 and newer kernel
+		if _, err := os.Stat(filepath.Join(root, "info", "L3")); err == nil {
+			catEnabled = true
+		}
+		if _, err := os.Stat(filepath.Join(root, "info", "MB")); err == nil {
+			mbaEnabled = true
+		}
+		if _, err := os.Stat(filepath.Join(root, "info", "L3_MON")); err != nil {
+			return
+		}
+		enabledMonFeatures, err = getMonFeatures(root)
 		if err != nil {
 			return
 		}
-
-		// 3. Double check if Intel RDT sub-features are available in
-		// "resource control" filesystem. Intel RDT sub-features can be
-		// selectively disabled or enabled by kernel command line
-		// (e.g., rdt=!l3cat,mba) in 4.14 and newer kernel
-		if flagsSet.CAT {
-			if _, err := os.Stat(filepath.Join(root, "info", "L3")); err == nil {
-				catEnabled = true
-			}
+		if enabledMonFeatures.mbmTotalBytes || enabledMonFeatures.mbmLocalBytes {
+			mbmEnabled = true
 		}
-		if flagsSet.MBA {
-			if _, err := os.Stat(filepath.Join(root, "info", "MB")); err == nil {
-				mbaEnabled = true
-			}
-		}
-		if flagsSet.MBMTotal || flagsSet.MBMLocal || flagsSet.CMT {
-			if _, err := os.Stat(filepath.Join(root, "info", "L3_MON")); err != nil {
-				return
-			}
-			enabledMonFeatures, err = getMonFeatures(root)
-			if err != nil {
-				return
-			}
-			if enabledMonFeatures.mbmTotalBytes || enabledMonFeatures.mbmLocalBytes {
-				mbmEnabled = true
-			}
-			if enabledMonFeatures.llcOccupancy {
-				cmtEnabled = true
-			}
+		if enabledMonFeatures.llcOccupancy {
+			cmtEnabled = true
 		}
 	})
 }
@@ -284,58 +271,6 @@ func Root() (string, error) {
 	})
 
 	return intelRdtRoot, intelRdtRootErr
-}
-
-type cpuInfoFlags struct {
-	CAT bool // Cache Allocation Technology
-	MBA bool // Memory Bandwidth Allocation
-
-	// Memory Bandwidth Monitoring related.
-	MBMTotal bool
-	MBMLocal bool
-
-	CMT bool // Cache Monitoring Technology
-}
-
-func parseCpuInfoFile(path string) (cpuInfoFlags, error) {
-	infoFlags := cpuInfoFlags{}
-
-	f, err := os.Open(path)
-	if err != nil {
-		return infoFlags, err
-	}
-	defer f.Close()
-
-	s := bufio.NewScanner(f)
-	for s.Scan() {
-		line := s.Text()
-
-		// Search "cat_l3" and "mba" flags in first "flags" line
-		if strings.HasPrefix(line, "flags") {
-			flags := strings.Split(line, " ")
-			// "cat_l3" flag for CAT and "mba" flag for MBA
-			for _, flag := range flags {
-				switch flag {
-				case "cat_l3":
-					infoFlags.CAT = true
-				case "mba":
-					infoFlags.MBA = true
-				case "cqm_mbm_total":
-					infoFlags.MBMTotal = true
-				case "cqm_mbm_local":
-					infoFlags.MBMLocal = true
-				case "cqm_occup_llc":
-					infoFlags.CMT = true
-				}
-			}
-			return infoFlags, nil
-		}
-	}
-	if err := s.Err(); err != nil {
-		return infoFlags, err
-	}
-
-	return infoFlags, nil
 }
 
 // Gets a single uint64 value from the specified file.
