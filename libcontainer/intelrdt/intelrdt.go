@@ -152,9 +152,13 @@ type Manager struct {
 	path   string
 }
 
-// NewManager returns a new instance of Manager, or nil, if the Intel RDT
-// functionality is not available from hardware or not enabled in the kernel.
+// NewManager returns a new instance of Manager, or nil if the Intel RDT
+// functionality is not specified in the config, available from hardware or
+// enabled in the kernel.
 func NewManager(config *configs.Config, id string, path string) *Manager {
+	if config.IntelRdt == nil {
+		return nil
+	}
 	if _, err := Root(); err != nil {
 		// Intel RDT is not available.
 		return nil
