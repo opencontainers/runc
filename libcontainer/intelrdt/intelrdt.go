@@ -479,7 +479,7 @@ func (m *Manager) Destroy() error {
 	// Don't remove resctrl group if closid has been explicitly specified. The
 	// group is likely externally managed, i.e. by some other entity than us.
 	// There are probably other containers/tasks sharing the same group.
-	if m.config.IntelRdt == nil || m.config.IntelRdt.ClosID == "" {
+	if m.config.IntelRdt != nil && m.config.IntelRdt.ClosID == "" {
 		m.mu.Lock()
 		defer m.mu.Unlock()
 		if err := os.RemoveAll(m.GetPath()); err != nil {
