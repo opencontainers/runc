@@ -23,7 +23,7 @@ function teardown() {
 
 	testcontainer testbusyboxdelete running
 	# Ensure the find statement used later is correct.
-	output=$(find /sys/fs/cgroup -name testbusyboxdelete -o -name \*-testbusyboxdelete.scope)
+	output=$(find /sys/fs/cgroup -name testbusyboxdelete -o -name \*-testbusyboxdelete.scope 2>/dev/null || true)
 	if [ -z "$output" ]; then
 		fail "expected cgroup not found"
 	fi
@@ -38,7 +38,7 @@ function teardown() {
 	runc state testbusyboxdelete
 	[ "$status" -ne 0 ]
 
-	output=$(find /sys/fs/cgroup -name testbusyboxdelete -o -name \*-testbusyboxdelete.scope)
+	output=$(find /sys/fs/cgroup -name testbusyboxdelete -o -name \*-testbusyboxdelete.scope 2>/dev/null || true)
 	[ "$output" = "" ] || fail "cgroup not cleaned up correctly: $output"
 }
 
@@ -118,7 +118,7 @@ EOF
 	runc state test_busybox
 	[ "$status" -ne 0 ]
 
-	output=$(find /sys/fs/cgroup -wholename '*testbusyboxdelete*' -type d)
+	output=$(find /sys/fs/cgroup -wholename '*testbusyboxdelete*' -type d 2>/dev/null || true)
 	[ "$output" = "" ] || fail "cgroup not cleaned up correctly: $output"
 }
 
