@@ -29,9 +29,6 @@ SECCOMP_AGENT="${INTEGRATION_ROOT}/../../contrib/cmd/seccompagent/seccompagent"
 # shellcheck disable=SC2034
 TESTDATA="${INTEGRATION_ROOT}/testdata"
 
-# Whether we have criu binary.
-command -v criu &>/dev/null && HAVE_CRIU=yes
-
 # Kernel version
 KERNEL_VERSION="$(uname -r)"
 KERNEL_MAJOR="${KERNEL_VERSION%%.*}"
@@ -345,6 +342,16 @@ function rootless_cgroup() {
 	[[ "$ROOTLESS_FEATURES" == *"cgroup"* || -v RUNC_USE_SYSTEMD ]]
 }
 
+# Check if criu is available and working.
+function have_criu() {
+	command -v criu &>/dev/null || return 1
+
+	# Workaround for https://github.com/opencontainers/runc/issues/3532.
+	local ver
+	ver=$(rpm -q criu 2>/dev/null || true)
+	! grep -q '^criu-3\.17-[123]\.el9' <<<"$ver"
+}
+
 # Allows a test to specify what things it requires. If the environment can't
 # support it, the test is skipped with a message.
 function requires() {
@@ -352,7 +359,7 @@ function requires() {
 		local skip_me
 		case $var in
 		criu)
-			if [ ! -v HAVE_CRIU ]; then
+			if ! have_criu; then
 				skip_me=1
 			fi
 			;;
