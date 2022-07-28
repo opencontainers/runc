@@ -41,27 +41,24 @@ func AttachFreplace(targetProg *ebpf.Program, name string, prog *ebpf.Program) (
 		typeID btf.TypeID
 	)
 	if targetProg != nil {
-		info, err := targetProg.Info()
-		if err != nil {
-			return nil, err
-		}
-		btfID, ok := info.BTFID()
-		if !ok {
-			return nil, fmt.Errorf("could not get BTF ID for program %s: %w", info.Name, errInvalidInput)
-		}
-		btfHandle, err := btf.NewHandleFromID(btfID)
+		btfHandle, err := targetProg.Handle()
 		if err != nil {
 			return nil, err
 		}
 		defer btfHandle.Close()
 
+		spec, err := btfHandle.Spec(nil)
+		if err != nil {
+			return nil, err
+		}
+
 		var function *btf.Func
-		if err := btfHandle.Spec().TypeByName(name, &function); err != nil {
+		if err := spec.TypeByName(name, &function); err != nil {
 			return nil, err
 		}
 
 		target = targetProg.FD()
-		typeID, err = btfHandle.Spec().TypeID(function)
+		typeID, err = spec.TypeID(function)
 		if err != nil {
 			return nil, err
 		}
@@ -78,18 +75,6 @@ func AttachFreplace(targetProg *ebpf.Program, name string, prog *ebpf.Program) (
 	}
 
 	return &tracing{*link}, nil
-}
-
-// LoadPinnedFreplace loads a pinned iterator from a bpffs.
-//
-// Deprecated: use LoadPinnedLink instead.
-func LoadPinnedFreplace(fileName string, opts *ebpf.LoadPinOptions) (Link, error) {
-	link, err := LoadPinnedRawLink(fileName, TracingType, opts)
-	if err != nil {
-		return nil, err
-	}
-
-	return &tracing{*link}, err
 }
 
 type TracingOptions struct {

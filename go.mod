@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/checkpoint-restore/go-criu/v5 v5.3.0
-	github.com/cilium/ebpf v0.9.0
+	github.com/cilium/ebpf v0.9.1
 	github.com/containerd/console v1.0.3
 	github.com/coreos/go-systemd/v22 v22.3.2
 	github.com/cyphar/filepath-securejoin v0.2.3
