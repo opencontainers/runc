@@ -11,10 +11,22 @@ function teardown() {
 }
 
 @test "runc delete" {
+	# Need a permission to create a cgroup.
+	# XXX(@kolyshkin): currently this test does not handle rootless when
+	# fs cgroup driver is used, because in this case cgroup (with a
+	# predefined name) is created by tests/rootless.sh, not by runc.
+	[[ "$ROOTLESS" -ne 0 ]] && requires systemd
+	set_resources_limit
+
 	runc run -d --console-socket "$CONSOLE_SOCKET" testbusyboxdelete
 	[ "$status" -eq 0 ]
 
 	testcontainer testbusyboxdelete running
+	# Ensure the find statement used later is correct.
+	output=$(find /sys/fs/cgroup -name testbusyboxdelete -o -name \*-testbusyboxdelete.scope 2>/dev/null || true)
+	if [ -z "$output" ]; then
+		fail "expected cgroup not found"
+	fi
 
 	runc kill testbusyboxdelete KILL
 	[ "$status" -eq 0 ]
@@ -26,7 +38,7 @@ function teardown() {
 	runc state testbusyboxdelete
 	[ "$status" -ne 0 ]
 
-	output=$(find /sys/fs/cgroup -wholename '*testbusyboxdelete*' -type d)
+	output=$(find /sys/fs/cgroup -name testbusyboxdelete -o -name \*-testbusyboxdelete.scope 2>/dev/null || true)
 	[ "$output" = "" ] || fail "cgroup not cleaned up correctly: $output"
 }
 
@@ -106,7 +118,7 @@ EOF
 	runc state test_busybox
 	[ "$status" -ne 0 ]
 
-	output=$(find /sys/fs/cgroup -wholename '*testbusyboxdelete*' -type d)
+	output=$(find /sys/fs/cgroup -wholename '*testbusyboxdelete*' -type d 2>/dev/null || true)
 	[ "$output" = "" ] || fail "cgroup not cleaned up correctly: $output"
 }
 
