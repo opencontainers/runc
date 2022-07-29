@@ -146,7 +146,16 @@ function disable_cgroup() {
 		[ -d "$CGROUP_MOUNT/$cg$CGROUP_PATH" ] && rmdir "$CGROUP_MOUNT/$cg$CGROUP_PATH"
 	done
 	# cgroup v2
-	[ -d "$CGROUP_MOUNT/$CGROUP_PATH" ] && rmdir "$CGROUP_MOUNT/$CGROUP_PATH"
+	if [ -d "$CGROUP_MOUNT$CGROUP_PATH" ]; then
+		if ! rmdir "$CGROUP_MOUNT$CGROUP_PATH"; then
+			echo "ERROR: could not remove $CGROUP_MOUNT$CGROUP_PATH"
+			ls -lR "$CGROUP_MOUNT$CGROUP_PATH"
+			for pid in $(find "$CGROUP_MOUNT$CGROUP_PATH" -name cgroup.procs -exec cat '{}' +); do
+				ps -c $pid
+			done
+			return 1
+		fi
+	fi
 
 	return 0
 }
