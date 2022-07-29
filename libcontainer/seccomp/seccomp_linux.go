@@ -13,6 +13,7 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/seccomp/patchbpf"
+	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
 var (
@@ -83,6 +84,29 @@ func InitSeccomp(config *configs.Seccomp) (int, error) {
 		}
 		if err := filter.AddArch(scmpArch); err != nil {
 			return -1, fmt.Errorf("error adding architecture to seccomp filter: %w", err)
+		}
+	}
+
+	// Add extra flags
+	for _, flag := range config.Flags {
+		switch flag {
+		case "SECCOMP_FILTER_FLAG_TSYNC":
+			// libseccomp-golang always use filterAttrTsync when
+			// possible so all goroutines will receive the same
+			// rules, so there is nothing to do. It does not make
+			// sense to apply the seccomp filter on only one
+			// thread; other threads will be terminated after exec
+			// anyway.
+		case specs.LinuxSeccompFlagLog:
+			if err := filter.SetLogBit(true); err != nil {
+				return -1, fmt.Errorf("error adding log flag to seccomp filter: %w", err)
+			}
+		case specs.LinuxSeccompFlagSpecAllow:
+			if err := filter.SetSSB(true); err != nil {
+				return -1, fmt.Errorf("error adding SSB flag to seccomp filter: %w", err)
+			}
+		default:
+			return -1, fmt.Errorf("seccomp flags %q not yet supported by runc", flag)
 		}
 	}
 
