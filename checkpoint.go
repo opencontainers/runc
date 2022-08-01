@@ -38,7 +38,7 @@ checkpointed.`,
 		cli.StringFlag{Name: "page-server", Value: "", Usage: "ADDRESS:PORT of the page server"},
 		cli.BoolFlag{Name: "file-locks", Usage: "handle file locks, for safety"},
 		cli.BoolFlag{Name: "pre-dump", Usage: "dump container's memory information only, leave the container running after this"},
-		cli.StringFlag{Name: "manage-cgroups-mode", Value: "", Usage: "cgroups mode: 'soft' (default), 'full' and 'strict'"},
+		cli.StringFlag{Name: "manage-cgroups-mode", Value: "", Usage: "cgroups mode: soft|full|strict|ignore (default: soft)"},
 		cli.StringSliceFlag{Name: "empty-ns", Usage: "create a namespace, but don't restore its properties"},
 		cli.BoolFlag{Name: "auto-dedup", Usage: "enable auto deduplication of memory images"},
 	},
@@ -149,17 +149,19 @@ func criuOptions(context *cli.Context) (*libcontainer.CriuOpts, error) {
 		}
 	}
 
-	if cgOpt := context.String("manage-cgroups-mode"); cgOpt != "" {
-		switch cgOpt {
-		case "soft":
-			opts.ManageCgroupsMode = criu.CriuCgMode_SOFT
-		case "full":
-			opts.ManageCgroupsMode = criu.CriuCgMode_FULL
-		case "strict":
-			opts.ManageCgroupsMode = criu.CriuCgMode_STRICT
-		default:
-			return nil, errors.New("Invalid manage cgroups mode")
-		}
+	switch context.String("manage-cgroups-mode") {
+	case "":
+		// do nothing
+	case "soft":
+		opts.ManageCgroupsMode = criu.CriuCgMode_SOFT
+	case "full":
+		opts.ManageCgroupsMode = criu.CriuCgMode_FULL
+	case "strict":
+		opts.ManageCgroupsMode = criu.CriuCgMode_STRICT
+	case "ignore":
+		opts.ManageCgroupsMode = criu.CriuCgMode_IGNORE
+	default:
+		return nil, errors.New("Invalid manage-cgroups-mode value")
 	}
 
 	// runc doesn't manage network devices and their configuration.
