@@ -1560,6 +1560,8 @@ func (c *Container) criuApplyCgroups(pid int, req *criurpc.CriuReq) error {
 		return err
 	}
 
+	// TODO(@kolyshkin): should we use c.cgroupManager.GetPaths()
+	// instead of reading /proc/pid/cgroup?
 	path := fmt.Sprintf("/proc/%d/cgroup", pid)
 	cgroupsPaths, err := cgroups.ParseCgroupFile(path)
 	if err != nil {
