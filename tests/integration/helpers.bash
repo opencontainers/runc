@@ -232,19 +232,27 @@ function set_cgroups_path() {
 	update_config '.linux.cgroupsPath |= "'"${OCI_CGROUPS_PATH}"'"'
 }
 
+# Get a path to cgroup directory, based on controller name.
+# Parameters:
+#  $1: controller name (like "pids") or a file name (like "pids.max").
+function get_cgroup_path() {
+	if [ -v CGROUP_V2 ]; then
+		echo "$CGROUP_PATH"
+		return
+	fi
+
+	local var cgroup
+	var=${1%%.*}                  # controller name (e.g. memory)
+	var=CGROUP_${var^^}_BASE_PATH # variable name (e.g. CGROUP_MEMORY_BASE_PATH)
+	eval cgroup=\$"${var}${REL_CGROUPS_PATH}"
+	echo "$cgroup"
+}
+
 # Get a value from a cgroup file.
 function get_cgroup_value() {
-	local source=$1
-	local cgroup var current
-
-	if [ -v CGROUP_V2 ]; then
-		cgroup=$CGROUP_PATH
-	else
-		var=${source%%.*}             # controller name (e.g. memory)
-		var=CGROUP_${var^^}_BASE_PATH # variable name (e.g. CGROUP_MEMORY_BASE_PATH)
-		eval cgroup=\$"${var}${REL_CGROUPS_PATH}"
-	fi
-	cat "$cgroup/$source"
+	local cgroup
+	cgroup="$(get_cgroup_path "$1")"
+	cat "$cgroup/$1"
 }
 
 # Helper to check a if value in a cgroup file matches the expected one.

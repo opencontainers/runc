@@ -405,3 +405,44 @@ function simple_cr() {
 	# busybox should be back up and running
 	testcontainer test_busybox running
 }
+
+@test "checkpoint then restore into a different cgroup (via --manage-cgroups-mode ignore)" {
+	set_resources_limit
+	set_cgroups_path
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	[ "$status" -eq 0 ]
+	testcontainer test_busybox running
+
+	local orig_path
+	orig_path=$(get_cgroup_path "pids")
+	# Check that the cgroup exists.
+	test -d "$orig_path"
+
+	runc checkpoint --work-path ./work-dir --manage-cgroups-mode ignore test_busybox
+	grep -B 5 Error ./work-dir/dump.log || true
+	[ "$status" -eq 0 ]
+	testcontainer test_busybox checkpointed
+	# Check that the cgroup is gone.
+	! test -d "$orig_path"
+
+	# Restore into a different cgroup.
+	set_cgroups_path # Changes the path.
+	runc restore -d --manage-cgroups-mode ignore --pid-file pid \
+		--work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
+	grep -B 5 Error ./work-dir/restore.log || true
+	[ "$status" -eq 0 ]
+	testcontainer test_busybox running
+
+	# Check that the old cgroup path doesn't exist.
+	! test -d "$orig_path"
+
+	# Check that the new path exists.
+	local new_path
+	new_path=$(get_cgroup_path "pids")
+	test -d "$new_path"
+
+	# Check that container's init is in the new cgroup.
+	local pid
+	pid=$(cat "pid")
+	grep -q "${REL_CGROUPS_PATH}$" "/proc/$pid/cgroup"
+}
