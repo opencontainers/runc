@@ -76,7 +76,7 @@ type initConfig struct {
 // StartInitialization loads a container by opening the pipe fd from the parent
 // to read the configuration and state. This is a low level implementation
 // detail of the reexec and should not be consumed externally.
-func StartInitialization() (err error) {
+func StartInitialization() (retErr error) {
 	// Get the INITPIPE.
 	envInitPipe := os.Getenv("_LIBCONTAINER_INITPIPE")
 	pipefd, err := strconv.Atoi(envInitPipe)
@@ -91,12 +91,12 @@ func StartInitialization() (err error) {
 	defer func() {
 		// We have an error during the initialization of the container's init,
 		// send it back to the parent process in the form of an initError.
-		if werr := writeSync(pipe, procError); werr != nil {
-			fmt.Fprintln(os.Stderr, err)
+		if err := writeSync(pipe, procError); err != nil {
+			fmt.Fprintln(os.Stderr, retErr)
 			return
 		}
-		if werr := utils.WriteJSON(pipe, &initError{Message: err.Error()}); werr != nil {
-			fmt.Fprintln(os.Stderr, err)
+		if err := utils.WriteJSON(pipe, &initError{Message: retErr.Error()}); err != nil {
+			fmt.Fprintln(os.Stderr, retErr)
 			return
 		}
 	}()
@@ -139,11 +139,11 @@ func StartInitialization() (err error) {
 	os.Clearenv()
 
 	defer func() {
-		if e := recover(); e != nil {
-			if ee, ok := e.(error); ok {
-				err = fmt.Errorf("panic from initialization: %w, %s", ee, debug.Stack())
+		if err := recover(); err != nil {
+			if err2, ok := err.(error); ok {
+				retErr = fmt.Errorf("panic from initialization: %w, %s", err2, debug.Stack())
 			} else {
-				err = fmt.Errorf("panic from initialization: %v, %s", e, debug.Stack())
+				retErr = fmt.Errorf("panic from initialization: %v, %s", err, debug.Stack())
 			}
 		}
 	}()
