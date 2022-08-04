@@ -41,6 +41,11 @@ image files directory.
 : Cgroups mode. Default is **soft**. See
 [criu --manage-cgroups option](https://criu.org/CLI/opt/--manage-cgroups).
 
+: In particular, to restore the container into a different cgroup,
+**--manage-cgroups-mode ignore** must be used during both
+**checkpoint** and **restore**, and the _container_id_ (or
+**cgroupsPath** property in OCI config, if set) must be changed.
+
 **--bundle**|**-b** _path_
 : Path to the root of the bundle directory. Default is current directory.
 
