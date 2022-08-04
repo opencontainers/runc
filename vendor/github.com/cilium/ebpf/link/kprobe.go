@@ -350,7 +350,7 @@ func tracefsKprobe(args probeArgs) (*perfEvent, error) {
 // Path and offset are only set in the case of uprobe(s) and are used to set
 // the executable/library path on the filesystem and the offset where the probe is inserted.
 // A perf event is then opened on the newly-created trace event and returned to the caller.
-func tracefsProbe(typ probeType, args probeArgs) (*perfEvent, error) {
+func tracefsProbe(typ probeType, args probeArgs) (_ *perfEvent, err error) {
 	// Generate a random string for each trace event we attempt to create.
 	// This value is used as the 'group' token in tracefs to allow creating
 	// multiple kprobe trace events with the same name.
@@ -376,6 +376,15 @@ func tracefsProbe(typ probeType, args probeArgs) (*perfEvent, error) {
 	if err := createTraceFSProbeEvent(typ, args); err != nil {
 		return nil, fmt.Errorf("creating probe entry on tracefs: %w", err)
 	}
+	defer func() {
+		if err != nil {
+			// Make sure we clean up the created tracefs event when we return error.
+			// If a livepatch handler is already active on the symbol, the write to
+			// tracefs will succeed, a trace event will show up, but creating the
+			// perf event will fail with EBUSY.
+			_ = closeTraceFSProbeEvent(typ, args.group, args.symbol)
+		}
+	}()
 
 	// Get the newly-created trace event's id.
 	tid, err := getTraceEventID(group, args.symbol)
