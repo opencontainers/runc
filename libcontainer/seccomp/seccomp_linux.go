@@ -42,7 +42,14 @@ func InitSeccomp(config *configs.Seccomp) (int, error) {
 
 	// Ignore the error since pre-2.4 libseccomp is treated as API level 0.
 	apiLevel, _ := libseccomp.GetAPI()
+	const writeSyscall = "write"
+	writeAllowed := false
 	for _, call := range config.Syscalls {
+		// If write is in the allowed list of syscalls, then we can also notify on the defaultAction.
+		if call.Name == writeSyscall {
+			writeAllowed = syscallIsAlwaysAllowed(call, config.Architectures)
+		}
+
 		if call.Action == configs.Notify {
 			if apiLevel < 6 {
 				return -1, fmt.Errorf("seccomp notify unsupported: API level: got %d, want at least 6. Please try with libseccomp >= 2.5.0 and Linux >= 5.7", apiLevel)
@@ -60,14 +67,14 @@ func InitSeccomp(config *configs.Seccomp) (int, error) {
 			// filter). We will be blocked on read()/close() inside syncParentSeccomp() but if the seccomp
 			// agent allows those syscalls to proceed, initialization works just fine and the agent can
 			// handle future read()/close() syscalls as it wanted.
-			if call.Name == "write" {
+			if call.Name == writeSyscall {
 				return -1, errors.New("SCMP_ACT_NOTIFY cannot be used for the write syscall")
 			}
 		}
 	}
 
-	// See comment on why write is not allowed. The same reason applies, as this can mean handling write too.
-	if defaultAction == libseccomp.ActNotify {
+	// See comment on why write is not allowed. The same reason may apply if writeAllowed is false, as this can mean handling write too.
+	if !writeAllowed && defaultAction == libseccomp.ActNotify {
 		return -1, errors.New("SCMP_ACT_NOTIFY cannot be used as default action")
 	}
 
@@ -132,6 +139,38 @@ func InitSeccomp(config *configs.Seccomp) (int, error) {
 	}
 
 	return seccompFd, nil
+}
+
+func syscallIsAlwaysAllowed(syscall *configs.Syscall, architectures []string) bool {
+	// We cannot guarantee if the syscall is fully allowed when additional args
+	// are provided, therefore we exclude that case.
+	if syscall == nil || len(syscall.Args) > 0 {
+		return false
+	}
+
+	switch syscall.Action {
+	case configs.Allow, configs.Trace, configs.Log:
+		// Verify if the architecture matches
+		nativeArch, err := libseccomp.GetNativeArch()
+		if err != nil {
+			return false
+		}
+
+		for _, arch := range architectures {
+			scmpArch, err := libseccomp.GetArchFromString(arch)
+			if err != nil {
+				return false
+			}
+
+			if nativeArch == scmpArch {
+				return true
+			}
+		}
+
+		fallthrough
+	default:
+		return false
+	}
 }
 
 // Convert Libcontainer Action to Libseccomp ScmpAction
