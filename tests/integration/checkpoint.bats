@@ -224,7 +224,14 @@ function simple_cr() {
 	# TCP port for lazy migration
 	port=27277
 
-	__runc checkpoint --lazy-pages --page-server 0.0.0.0:${port} --status-fd ${lazy_w} --work-path ./work-dir --image-path ./image-dir test_busybox &
+	__runc checkpoint \
+		--lazy-pages \
+		--page-server 0.0.0.0:${port} \
+		--status-fd ${lazy_w} \
+		--manage-cgroups-mode=ignore \
+		--work-path ./work-dir \
+		--image-path ./image-dir \
+		test_busybox &
 	cpt_pid=$!
 
 	# wait for lazy page server to be ready
@@ -246,14 +253,18 @@ function simple_cr() {
 	lp_pid=$!
 
 	# Restore lazily from checkpoint.
-	# The restored container needs a different name (as well as systemd
-	# unit name, in case systemd cgroup driver is used) as the checkpointed
-	# container is not yet destroyed. It is only destroyed at that point
-	# in time when the last page is lazily transferred to the destination.
+	#
+	# The restored container needs a different name and a different cgroup
+	# (and a different systemd unit name, in case systemd cgroup driver is
+	# used) as the checkpointed container is not yet destroyed. It is only
+	# destroyed at that point in time when the last page is lazily
+	# transferred to the destination.
+	#
 	# Killing the CRIU on the checkpoint side will let the container
 	# continue to run if the migration failed at some point.
-	[ -v RUNC_USE_SYSTEMD ] && set_cgroups_path
-	runc_restore_with_pipes ./image-dir test_busybox_restore --lazy-pages
+	runc_restore_with_pipes ./image-dir test_busybox_restore \
+		--lazy-pages \
+		--manage-cgroups-mode=ignore
 
 	wait $cpt_pid
 
