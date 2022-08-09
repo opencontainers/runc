@@ -386,7 +386,7 @@ function setup() {
 		FREEZER="${FREEZER_DIR}/freezer.state"
 		STATE="FROZEN"
 	else
-		FREEZER_DIR="${CGROUP_PATH}"
+		FREEZER_DIR="${CGROUP_V2_PATH}"
 		FREEZER="${FREEZER_DIR}/cgroup.freeze"
 		STATE="1"
 	fi

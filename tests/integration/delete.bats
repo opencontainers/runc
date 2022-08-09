@@ -157,7 +157,7 @@ EOF
 	[[ "$output" =~ [0-9]+ ]]
 
 	# check create subcgroups success
-	[ -d "$CGROUP_PATH"/foo ]
+	[ -d "$CGROUP_V2_PATH"/foo ]
 
 	# force delete test_busybox
 	runc delete --force test_busybox
@@ -166,5 +166,5 @@ EOF
 	[ "$status" -ne 0 ]
 
 	# check delete subcgroups success
-	[ ! -d "$CGROUP_PATH"/foo ]
+	[ ! -d "$CGROUP_V2_PATH"/foo ]
 }
