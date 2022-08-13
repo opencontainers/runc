@@ -126,4 +126,5 @@ jobs:
         go-version: 1.x # Latest stable
 
     - name: unit test
-      run: sudo -E PATH="$PATH" -- make GOARCH=386 localunittest
+      # See https://go-review.googlesource.com/c/go/+/421935
+      run: sudo -E PATH="$PATH" -- make GOARCH=386 CGO_CFLAGS=-fno-stack-protector localunittest
