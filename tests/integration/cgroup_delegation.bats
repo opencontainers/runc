@@ -35,7 +35,7 @@ function setup() {
 	[ "$output" = "nobody" ] # /sys/fs/cgroup owned by unmapped user
 }
 
-@test "runc exec (cgroup v2, rw cgroupfs, inh cgroupns) does not chown cgroup" {
+@test "runc exec (cgroup v2, rw cgroupfs, inherit cgroupns) does not chown cgroup" {
 	set_cgroup_mount_writable
 
 	# inherit cgroup namespace (remove cgroup from namespaces list)
