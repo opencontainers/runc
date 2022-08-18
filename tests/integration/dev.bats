@@ -128,3 +128,19 @@ function teardown() {
 	runc exec test_allow_block sh -c 'fdisk -l '"$device"''
 	[ "$status" -eq 0 ]
 }
+
+# https://github.com/opencontainers/runc/issues/3551
+@test "runc exec vs systemctl daemon-reload" {
+	requires systemd root
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_exec
+	[ "$status" -eq 0 ]
+
+	runc exec -t test_exec sh -c "ls -l /proc/self/fd/0; echo 123"
+	[ "$status" -eq 0 ]
+
+	systemctl daemon-reload
+
+	runc exec -t test_exec sh -c "ls -l /proc/self/fd/0; echo 123"
+	[ "$status" -eq 0 ]
+}
