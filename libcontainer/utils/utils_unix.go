@@ -6,6 +6,7 @@ package utils
 import (
 	"fmt"
 	"os"
+	"runtime"
 	"strconv"
 
 	"golang.org/x/sys/unix"
@@ -66,4 +67,29 @@ func NewSockPair(name string) (parent *os.File, child *os.File, err error) {
 		return nil, nil, err
 	}
 	return os.NewFile(uintptr(fds[1]), name+"-p"), os.NewFile(uintptr(fds[0]), name+"-c"), nil
+}
+
+// RunWithUmask runs a function f with umask mask.
+// It does so while locking the OS thread, as umask
+// operates on threads, and this avoid potentially leaking umask(0000)
+// to other threads.
+func RunWithUmask(mask int, f func() error) error {
+	errC := make(chan error)
+	go func() {
+		runtime.LockOSThread()
+		// The umask is part of the "filesystem information" whose sharing is governed by the `CLONE_FS` flag.
+		// The Go runtime clones new threads with the `CLONE_FS` flag set, so any call to umask immediately affects
+		// all goroutines in the process.
+		if err := unix.Unshare(unix.CLONE_FS); err != nil {
+			errC <- err
+			runtime.UnlockOSThread()
+			return
+		}
+		// However, unshare(CLONE_FS) is irreversible. Thus, ensure the thread is terminated by
+		// not calling UnlockOSThread (which signals to the Go runtime to terminate or wedge the thread),
+		// so this OSThread is not reused in other parts of the program.
+		unix.Umask(mask)
+		errC <- f()
+	}()
+	return <-errC
 }

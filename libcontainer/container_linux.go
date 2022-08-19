@@ -401,12 +401,11 @@ func (c *Container) createExecFifo() error {
 	if _, err := os.Stat(fifoName); err == nil {
 		return fmt.Errorf("exec fifo %s already exists", fifoName)
 	}
-	oldMask := unix.Umask(0o000)
-	if err := unix.Mkfifo(fifoName, 0o622); err != nil {
-		unix.Umask(oldMask)
+	if err := utils.RunWithUmask(0o000, func() error {
+		return unix.Mkfifo(fifoName, 0o622)
+	}); err != nil {
 		return err
 	}
-	unix.Umask(oldMask)
 	return os.Chown(fifoName, rootuid, rootgid)
 }
 
