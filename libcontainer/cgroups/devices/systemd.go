@@ -126,7 +126,7 @@ func systemdProperties(r *configs.Resources) ([]systemdDbus.Property, error) {
 			case devices.BlockDevice:
 				entry.Path = fmt.Sprintf("/dev/block/%d:%d", rule.Major, rule.Minor)
 			case devices.CharDevice:
-				entry.Path = fmt.Sprintf("/dev/char/%d:%d", rule.Major, rule.Minor)
+				entry.Path = getCharEntryPath(rule)
 			}
 			// systemd will issue a warning if the path we give here doesn't exist.
 			// Since all of this logic is best-effort anyway (we manually set these
@@ -238,4 +238,31 @@ func allowAllDevices() []systemdDbus.Property {
 		newProp("DevicePolicy", "auto"),
 		newProp("DeviceAllow", []deviceAllowEntry{}),
 	}
+}
+
+func getCharEntryPath(rule *devices.Rule) string {
+	switch rule.Major {
+	case 195:
+		// Special case for NVIDIA devices
+		switch rule.Minor {
+		case 254:
+			return "/dev/nvidia-modeset"
+		case 255:
+			return "/dev/nvidiactl"
+		default:
+			// nvidia0 /dev/nvidia0
+			// nvidia1 /dev/nvidia1
+			return fmt.Sprintf("/dev/nvidia%d", rule.Minor)
+		}
+	case 507:
+		// Special case for NVIDIA devices
+		switch rule.Minor {
+		case 0:
+			return "/dev/nvidia-uvm"
+		case 1:
+			return "/dev/nvidia-uvm-tools"
+		}
+	}
+
+	return fmt.Sprintf("/dev/char/%d:%d", rule.Major, rule.Minor)
 }

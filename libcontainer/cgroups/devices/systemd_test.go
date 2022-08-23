@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"os/exec"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -250,4 +251,94 @@ func newManager(t *testing.T, config *configs.Cgroup) (m cgroups.Manager) {
 	t.Cleanup(func() { _ = m.Destroy() })
 
 	return m
+}
+
+func TestGetCharEntryPath(t *testing.T) {
+	tests := []struct {
+		name   string
+		rule   devices.Rule
+		expect string
+	}{
+		{
+			name: "normal char /dev/char/0:0",
+			rule: devices.Rule{
+				Type:  devices.CharDevice,
+				Major: 0,
+				Minor: 0,
+			},
+			expect: "/dev/char/0:0",
+		},
+		{
+			name: "normal char /dev/char/188:188",
+			rule: devices.Rule{
+				Type:  devices.CharDevice,
+				Major: 188,
+				Minor: 188,
+			},
+			expect: "/dev/char/188:188",
+		},
+		{
+			name: "nvidia /dev/nvidia0",
+			rule: devices.Rule{
+				Type:  devices.CharDevice,
+				Major: 195,
+				Minor: 0,
+			},
+			expect: "/dev/nvidia0",
+		},
+		{
+			name: "nvidia /dev/nvidia30",
+			rule: devices.Rule{
+				Type:  devices.CharDevice,
+				Major: 195,
+				Minor: 30,
+			},
+			expect: "/dev/nvidia30",
+		},
+		{
+			name: "nvidia /dev/nvidiactl",
+			rule: devices.Rule{
+				Type:  devices.CharDevice,
+				Major: 195,
+				Minor: 255,
+			},
+			expect: "/dev/nvidiactl",
+		},
+		{
+			name: "nvidia /dev/nvidia-modeset",
+			rule: devices.Rule{
+				Type:  devices.CharDevice,
+				Major: 195,
+				Minor: 254,
+			},
+			expect: "/dev/nvidia-modeset",
+		},
+		{
+			name: "nvidia /dev/nvidia-uvm",
+			rule: devices.Rule{
+				Type:  devices.CharDevice,
+				Major: 507,
+				Minor: 0,
+			},
+			expect: "/dev/nvidia-uvm",
+		},
+		{
+			name: "nvidia /dev/nvidia-uvm-tools",
+			rule: devices.Rule{
+				Type:  devices.CharDevice,
+				Major: 507,
+				Minor: 1,
+			},
+			expect: "/dev/nvidia-uvm-tools",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			path := getCharEntryPath(&test.rule)
+			if !reflect.DeepEqual(path, test.expect) {
+				t.Errorf("test %s error, expect %s but got %s", test.name, test.expect, path)
+			}
+		})
+	}
 }
