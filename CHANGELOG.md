@@ -6,6 +6,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.4] - 2022-08-24
+
+> If you look for perfection, you'll never be content.
+
+### Fixed
+
+* Fix mounting via wrong proc fd.
+  When the user and mount namespaces are used, and the bind mount is followed by
+  the cgroup mount in the spec, the cgroup was mounted using the bind mount's
+  mount fd. (#3511)
+* Switch `kill()` in `libcontainer/nsenter` to `sane_kill()`. (#3536)
+* Fix "permission denied" error from `runc run` on `noexec` fs. (#3541)
+* Fix failed exec after `systemctl daemon-reload`.
+  Due to a regression in v1.1.3, the `DeviceAllow=char-pts rwm` rule was no
+  longer added and was causing an error `open /dev/pts/0: operation not permitted: unknown`
+  when systemd was reloaded. (#3554)
+* Various CI fixes. (#3538, #3558, #3562)
 
 ## [1.1.3] - 2022-06-09
 
@@ -298,7 +315,7 @@ implementation (libcontainer) is *not* covered by this policy.
    cgroups at all during `runc update`). (#2994)
 
 <!-- minor releases -->
-[Unreleased]: https://github.com/opencontainers/runc/compare/v1.1.3...HEAD
+[Unreleased]: https://github.com/opencontainers/runc/compare/v1.1.4...HEAD
 [1.1.0]: https://github.com/opencontainers/runc/compare/v1.1.0-rc.1...v1.1.0
 [1.0.0]: https://github.com/opencontainers/runc/releases/tag/v1.0.0
 
@@ -309,7 +326,8 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.0.1]: https://github.com/opencontainers/runc/compare/v1.0.0...v1.0.1
 
 <!-- 1.1.z patch releases -->
-[Unreleased 1.1.z]: https://github.com/opencontainers/runc/compare/v1.1.3...release-1.1
+[Unreleased 1.1.z]: https://github.com/opencontainers/runc/compare/v1.1.4...release-1.1
+[1.1.4]: https://github.com/opencontainers/runc/compare/v1.1.3...v1.1.4
 [1.1.3]: https://github.com/opencontainers/runc/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/opencontainers/runc/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/opencontainers/runc/compare/v1.1.0...v1.1.1
