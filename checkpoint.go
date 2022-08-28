@@ -69,7 +69,11 @@ checkpointed.`,
 
 		if !(options.LeaveRunning || options.PreDump) {
 			// destroy container unless we tell CRIU to keep it
-			defer destroy(container)
+			defer func() {
+				if err := killContainer(container); err != nil {
+					logrus.Error(err)
+				}
+			}()
 		}
 		// these are the mandatory criu options for a container
 		if err := setPageServer(context, options); err != nil {
