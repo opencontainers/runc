@@ -105,6 +105,7 @@ func InitSeccomp(config *configs.Seccomp) (int, error) {
 			if err := filter.SetSSB(true); err != nil {
 				return -1, fmt.Errorf("error adding SSB flag to seccomp filter: %w", err)
 			}
+		// NOTE when adding more flags, make sure to also modify filterFlags in patchbpf.
 		default:
 			return -1, fmt.Errorf("seccomp flags %q not yet supported by runc", flag)
 		}
