@@ -726,3 +726,43 @@ EOF
 	runc resume test_update
 	[ "$status" -eq 0 ]
 }
+
+@test "update memory vs CheckBeforeUpdate" {
+	requires cgroups_v2
+	[ $EUID -ne 0 ] && requires rootless_cgroup
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
+	[ "$status" -eq 0 ]
+
+	# Setting memory to low value with checkBeforeUpdate=true should fail.
+	runc update -r - test_update <<EOF
+{
+  "memory": {
+    "limit": 1024,
+    "checkBeforeUpdate": true
+  }
+}
+EOF
+	[ "$status" -ne 0 ]
+	[[ "$output" == *"rejecting memory limit"* ]]
+	testcontainer test_update running
+
+	# Setting memory+swap to low value with checkBeforeUpdate=true should fail.
+	runc update -r - test_update <<EOF
+{
+  "memory": {
+    "limit": 1024,
+    "swap": 2048,
+    "checkBeforeUpdate": true
+  }
+}
+EOF
+	[ "$status" -ne 0 ]
+	[[ "$output" == *"rejecting memory+swap limit"* ]]
+	testcontainer test_update running
+
+	# The container will be OOM killed, and runc might either succeed
+	# or fail depending on the timing, so we don't check its exit code.
+	runc update test_update --memory 1024
+	testcontainer test_update stopped
+}

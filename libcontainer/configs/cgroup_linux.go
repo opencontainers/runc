@@ -155,4 +155,9 @@ type Resources struct {
 	// during Set() to figure out whether the freeze is required. Those
 	// methods may be relatively slow, thus this flag.
 	SkipFreezeOnSet bool `json:"-"`
+
+	// MemoryCheckBeforeUpdate is a flag for cgroup v2 managers to check
+	// if the new memory limits (Memory and MemorySwap) being set are lower
+	// than the current memory usage, and reject if so.
+	MemoryCheckBeforeUpdate bool `json:"memory_check_before_update"`
 }

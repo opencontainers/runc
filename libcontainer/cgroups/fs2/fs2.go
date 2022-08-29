@@ -269,3 +269,35 @@ func (m *Manager) OOMKillCount() (uint64, error) {
 
 	return c, err
 }
+
+func CheckMemoryUsage(dirPath string, r *configs.Resources) error {
+	if !r.MemoryCheckBeforeUpdate {
+		return nil
+	}
+
+	if r.Memory <= 0 && r.MemorySwap <= 0 {
+		return nil
+	}
+
+	usage, err := fscommon.GetCgroupParamUint(dirPath, "memory.current")
+	if err != nil {
+		// This check is on best-effort basis, so if we can't read the
+		// current usage (cgroup not yet created, or any other error),
+		// we should not fail.
+		return nil
+	}
+
+	if r.MemorySwap > 0 {
+		if uint64(r.MemorySwap) <= usage {
+			return fmt.Errorf("rejecting memory+swap limit %d <= usage %d", r.MemorySwap, usage)
+		}
+	}
+
+	if r.Memory > 0 {
+		if uint64(r.Memory) <= usage {
+			return fmt.Errorf("rejecting memory limit %d <= usage %d", r.Memory, usage)
+		}
+	}
+
+	return nil
+}
