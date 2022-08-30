@@ -665,6 +665,9 @@ func filterFlags(config *configs.Seccomp, filter *libseccomp.ScmpFilter) (flags 
 }
 
 func sysSeccompSetFilter(flags uint, filter []unix.SockFilter) (fd int, err error) {
+	// This debug output is validated in tests/integration/seccomp.bats
+	// by the SECCOMP_FILTER_FLAG_* test.
+	logrus.Debugf("seccomp filter flags: %d", flags)
 	fprog := unix.SockFprog{
 		Len:    uint16(len(filter)),
 		Filter: &filter[0],
