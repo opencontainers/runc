@@ -80,7 +80,7 @@ function teardown() {
 			}'
 
 	declare -A FLAGS=(
-		['REMOVE']=0 # No setting, use built-in default.
+		['REMOVE']=4 # No setting, use built-in default.
 		['EMPTY']=0  # Empty set of flags.
 		['"SECCOMP_FILTER_FLAG_LOG"']=2
 		['"SECCOMP_FILTER_FLAG_SPEC_ALLOW"']=4
