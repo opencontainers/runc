@@ -1,0 +1,44 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+package criu;
+
+message cgroup_perms {
+	required uint32			mode		= 1;
+	required uint32			uid		= 2;
+	required uint32			gid		= 3;
+}
+
+message cgroup_prop_entry {
+	required string			name		= 1;
+	required string			value		= 2;
+	optional cgroup_perms		perms		= 3;
+}
+
+message cgroup_dir_entry {
+	required string 		dir_name	= 1;
+	repeated cgroup_dir_entry	children 	= 2;
+	repeated cgroup_prop_entry	properties	= 3;
+	optional cgroup_perms		dir_perms	= 4;
+}
+
+message cg_controller_entry {
+	repeated string			cnames		= 1;
+	repeated cgroup_dir_entry	dirs		= 2;
+}
+
+message cg_member_entry {
+	required string name		= 1;
+	required string path		= 2;
+	optional uint32 cgns_prefix	= 3;
+}
+
+message cg_set_entry {
+	required uint32			id	= 1;
+	repeated cg_member_entry	ctls	= 2;
+}
+
+message cgroup_entry {
+	repeated cg_set_entry		sets		= 1;
+	repeated cg_controller_entry	controllers	= 2;
+}
