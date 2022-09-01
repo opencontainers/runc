@@ -53,11 +53,11 @@ type Seccomp struct {
 	// Nil value means "unknown", not "no support for any action".
 	Actions []string `json:"actions,omitempty"`
 
-	// Operators is the list of the recognized actions, e.g., "SCMP_CMP_NE".
+	// Operators is the list of the recognized operators, e.g., "SCMP_CMP_NE".
 	// Nil value means "unknown", not "no support for any operator".
 	Operators []string `json:"operators,omitempty"`
 
-	// Operators is the list of the recognized archs, e.g., "SCMP_ARCH_X86_64".
+	// Archs is the list of the recognized archs, e.g., "SCMP_ARCH_X86_64".
 	// Nil value means "unknown", not "no support for any arch".
 	Archs []string `json:"archs,omitempty"`
 }
