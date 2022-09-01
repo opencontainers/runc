@@ -8,7 +8,7 @@ require (
 	github.com/containerd/console v1.0.3
 	github.com/coreos/go-systemd/v22 v22.3.2
 	github.com/cyphar/filepath-securejoin v0.2.3
-	github.com/docker/go-units v0.4.0
+	github.com/docker/go-units v0.5.0
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/moby/sys/mountinfo v0.6.2
 	github.com/mrunalp/fileutils v0.5.0
