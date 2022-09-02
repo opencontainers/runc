@@ -643,6 +643,7 @@ func filterFlags(config *configs.Seccomp, filter *libseccomp.ScmpFilter) (flags 
 			flags |= uint(C.C_FILTER_FLAG_SPEC_ALLOW)
 		}
 	}
+	// XXX: add newly supported filter flags above this line.
 
 	for _, call := range config.Syscalls {
 		if call.Action == configs.Notify {

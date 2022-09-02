@@ -1026,14 +1026,10 @@ func SetupSeccomp(config *specs.LinuxSeccomp) (*configs.Seccomp, error) {
 	// The list of flags defined in runtime-spec is a subset of the flags
 	// in the seccomp() syscall
 	for _, flag := range config.Flags {
-		switch flag {
-		case "SECCOMP_FILTER_FLAG_TSYNC":
-			// Tsync can be silently ignored
-		case specs.LinuxSeccompFlagLog, specs.LinuxSeccompFlagSpecAllow:
-			newConfig.Flags = append(newConfig.Flags, flag)
-		default:
-			return nil, fmt.Errorf("seccomp flag %q not yet supported by runc", flag)
+		if err := seccomp.FlagSupported(flag); err != nil {
+			return nil, err
 		}
+		newConfig.Flags = append(newConfig.Flags, flag)
 	}
 
 	if len(config.Architectures) > 0 {
