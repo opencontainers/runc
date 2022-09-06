@@ -416,6 +416,12 @@ func (p *initProcess) start() (retErr error) {
 			return fmt.Errorf("unable to apply Intel RDT configuration: %w", err)
 		}
 	}
+	// update state here, so we can retrieve process resource
+	// even it get killed by accident
+	if _, err := p.container.updateState(p); err != nil {
+		return err
+	}
+
 	if _, err := io.Copy(p.messageSockPair.parent, p.bootstrapData); err != nil {
 		return fmt.Errorf("can't copy bootstrap data to pipe: %w", err)
 	}
