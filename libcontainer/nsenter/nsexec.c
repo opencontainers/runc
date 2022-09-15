@@ -27,10 +27,11 @@
 #include <linux/netlink.h>
 #include <linux/types.h>
 
+#include "getenv.h"
+#include "ipc.h"
+#include "log.h"
 /* Get all of the CLONE_NEW* flags. */
 #include "namespace.h"
-
-extern char *escape_json_string(char *str);
 
 /* Synchronisation values. */
 enum sync_t {
@@ -97,22 +98,6 @@ struct nlconfig_t {
 };
 
 /*
- * Log levels are the same as in logrus.
- */
-#define PANIC   0
-#define FATAL   1
-#define ERROR   2
-#define WARNING 3
-#define INFO    4
-#define DEBUG   5
-#define TRACE   6
-
-static const char *level_str[] = { "panic", "fatal", "error", "warning", "info", "debug", "trace" };
-
-static int logfd = -1;
-static int loglevel = DEBUG;
-
-/*
  * List of netlink message types sent to us as part of bootstrapping the init.
  * These constants are defined in libcontainer/message_linux.go.
  */
@@ -149,66 +134,8 @@ int setns(int fd, int nstype)
 }
 #endif
 
-static void write_log(int level, const char *format, ...)
-{
-	char *message = NULL, *stage = NULL, *json = NULL;
-	va_list args;
-	int ret;
-
-	if (logfd < 0 || level > loglevel)
-		goto out;
-
-	va_start(args, format);
-	ret = vasprintf(&message, format, args);
-	va_end(args);
-	if (ret < 0) {
-		message = NULL;
-		goto out;
-	}
-
-	message = escape_json_string(message);
-
-	if (current_stage == STAGE_SETUP) {
-		stage = strdup("nsexec");
-		if (stage == NULL)
-			goto out;
-	} else {
-		ret = asprintf(&stage, "nsexec-%d", current_stage);
-		if (ret < 0) {
-			stage = NULL;
-			goto out;
-		}
-	}
-	ret = asprintf(&json, "{\"level\":\"%s\", \"msg\": \"%s[%d]: %s\"}\n",
-		       level_str[level], stage, getpid(), message);
-	if (ret < 0) {
-		json = NULL;
-		goto out;
-	}
-
-	/* This logging is on a best-effort basis. In case of a short or failed
-	 * write there is nothing we can do, so just ignore write() errors.
-	 */
-	ssize_t __attribute__((unused)) __res = write(logfd, json, ret);
-
-out:
-	free(message);
-	free(stage);
-	free(json);
-}
-
 /* XXX: This is ugly. */
 static int syncfd = -1;
-
-#define bail(fmt, ...)                                               \
-	do {                                                         \
-		if (logfd < 0)                                       \
-			fprintf(stderr, "FATAL: " fmt ": %m\n",      \
-				##__VA_ARGS__);                      \
-		else                                                 \
-			write_log(FATAL, fmt ": %m", ##__VA_ARGS__); \
-		exit(1);                                             \
-	} while(0)
 
 static int write_file(char *data, size_t data_len, char *pathfmt, ...)
 {
@@ -395,56 +322,6 @@ static int clone_parent(jmp_buf *env, int jmpval)
 	};
 
 	return clone(child_func, ca.stack_ptr, CLONE_PARENT | SIGCHLD, &ca);
-}
-
-/*
- * Returns an environment variable value as a non-negative integer, or -ENOENT
- * if the variable was not found or has an empty value.
- *
- * If the value can not be converted to an integer, or the result is out of
- * range, the function bails out.
- */
-static int getenv_int(const char *name)
-{
-	char *val, *endptr;
-	int ret;
-
-	val = getenv(name);
-	/* Treat empty value as unset variable. */
-	if (val == NULL || *val == '\0')
-		return -ENOENT;
-
-	ret = strtol(val, &endptr, 10);
-	if (val == endptr || *endptr != '\0')
-		bail("unable to parse %s=%s", name, val);
-	/*
-	 * Sanity check: this must be a non-negative number.
-	 */
-	if (ret < 0)
-		bail("bad value for %s=%s (%d)", name, val, ret);
-
-	return ret;
-}
-
-/*
- * Sets up logging by getting log fd and log level from the environment,
- * if available.
- */
-static void setup_logpipe(void)
-{
-	int i;
-
-	i = getenv_int("_LIBCONTAINER_LOGPIPE");
-	if (i < 0) {
-		/* We are not runc init, or log pipe was not provided. */
-		return;
-	}
-	logfd = i;
-
-	i = getenv_int("_LIBCONTAINER_LOGLEVEL");
-	if (i < 0)
-		return;
-	loglevel = i;
 }
 
 /* Returns the clone(2) flag for a namespace, given the name of a namespace. */
@@ -643,101 +520,6 @@ static inline int sane_kill(pid_t pid, int signum)
 		return kill(pid, signum);
 	else
 		return 0;
-}
-
-void receive_fd(int sockfd, int new_fd)
-{
-	int bytes_read;
-	struct msghdr msg = { };
-	struct cmsghdr *cmsg;
-	struct iovec iov = { };
-	char null_byte = '\0';
-	int ret;
-	int fd_count;
-	int *fd_payload;
-
-	iov.iov_base = &null_byte;
-	iov.iov_len = 1;
-
-	msg.msg_iov = &iov;
-	msg.msg_iovlen = 1;
-
-	msg.msg_controllen = CMSG_SPACE(sizeof(int));
-	msg.msg_control = malloc(msg.msg_controllen);
-	if (msg.msg_control == NULL) {
-		bail("Can't allocate memory to receive fd.");
-	}
-
-	memset(msg.msg_control, 0, msg.msg_controllen);
-
-	bytes_read = recvmsg(sockfd, &msg, 0);
-	if (bytes_read != 1)
-		bail("failed to receive fd from unix socket %d", sockfd);
-	if (msg.msg_flags & MSG_CTRUNC)
-		bail("received truncated control message from unix socket %d", sockfd);
-
-	cmsg = CMSG_FIRSTHDR(&msg);
-	if (!cmsg)
-		bail("received message from unix socket %d without control message", sockfd);
-
-	if (cmsg->cmsg_level != SOL_SOCKET)
-		bail("received unknown control message from unix socket %d: cmsg_level=%d", sockfd, cmsg->cmsg_level);
-
-	if (cmsg->cmsg_type != SCM_RIGHTS)
-		bail("received unknown control message from unix socket %d: cmsg_type=%d", sockfd, cmsg->cmsg_type);
-
-	fd_count = (cmsg->cmsg_len - CMSG_LEN(0)) / sizeof(int);
-	if (fd_count != 1)
-		bail("received control message from unix socket %d with too many fds: %d", sockfd, fd_count);
-
-	fd_payload = (int *)CMSG_DATA(cmsg);
-	ret = dup3(*fd_payload, new_fd, O_CLOEXEC);
-	if (ret < 0)
-		bail("cannot dup3 fd %d to %d", *fd_payload, new_fd);
-
-	free(msg.msg_control);
-
-	ret = close(*fd_payload);
-	if (ret < 0)
-		bail("cannot close fd %d", *fd_payload);
-}
-
-void send_fd(int sockfd, int fd)
-{
-	int bytes_written;
-	struct msghdr msg = { };
-	struct cmsghdr *cmsg;
-	struct iovec iov[1] = { };
-	char null_byte = '\0';
-
-	iov[0].iov_base = &null_byte;
-	iov[0].iov_len = 1;
-
-	msg.msg_iov = iov;
-	msg.msg_iovlen = 1;
-
-	/* We send only one fd as specified by cmsg->cmsg_len below, even
-	 * though msg.msg_controllen might have more space due to alignment. */
-	msg.msg_controllen = CMSG_SPACE(sizeof(int));
-	msg.msg_control = malloc(msg.msg_controllen);
-	if (msg.msg_control == NULL) {
-		bail("Can't allocate memory to send fd.");
-	}
-
-	memset(msg.msg_control, 0, msg.msg_controllen);
-
-	cmsg = CMSG_FIRSTHDR(&msg);
-	cmsg->cmsg_level = SOL_SOCKET;
-	cmsg->cmsg_type = SCM_RIGHTS;
-	cmsg->cmsg_len = CMSG_LEN(sizeof(int));
-	memcpy(CMSG_DATA(cmsg), &fd, sizeof(int));
-
-	bytes_written = sendmsg(sockfd, &msg, 0);
-
-	free(msg.msg_control);
-
-	if (bytes_written != 1)
-		bail("failed to send fd %d via unix socket %d", fd, sockfd);
 }
 
 void receive_mountsources(int sockfd)
