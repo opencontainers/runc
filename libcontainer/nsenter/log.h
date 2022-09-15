@@ -20,7 +20,7 @@
  */
 void setup_logpipe(void);
 
-void write_log(int level, const char *format, ...);
+void write_log(int level, const char *format, ...) __attribute__((format(printf, 2, 3)));
 
 extern int logfd;
 #define bail(fmt, ...)                                               \
