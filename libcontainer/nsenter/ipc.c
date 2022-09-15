@@ -1,13 +1,12 @@
 #define _GNU_SOURCE
-#include <fcntl.h>
+#include <alloca.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
-#include <unistd.h>
 #include "ipc.h"
 #include "log.h"
 
-void receive_fd(int sockfd, int new_fd)
+int receive_fd(int sockfd)
 {
 	int bytes_read;
 	struct msghdr msg = { };
@@ -16,7 +15,6 @@ void receive_fd(int sockfd, int new_fd)
 	char null_byte = '\0';
 	int ret;
 	int fd_count;
-	int *fd_payload;
 
 	iov.iov_base = &null_byte;
 	iov.iov_len = 1;
@@ -52,21 +50,13 @@ void receive_fd(int sockfd, int new_fd)
 	if (fd_count != 1)
 		bail("received control message from unix socket %d with too many fds: %d", sockfd, fd_count);
 
-	fd_payload = (int *)CMSG_DATA(cmsg);
-	ret = dup3(*fd_payload, new_fd, O_CLOEXEC);
-	if (ret < 0)
-		bail("cannot dup3 fd %d to %d", *fd_payload, new_fd);
-
+	ret = *(int *)CMSG_DATA(cmsg);
 	free(msg.msg_control);
-
-	ret = close(*fd_payload);
-	if (ret < 0)
-		bail("cannot close fd %d", *fd_payload);
+	return ret;
 }
 
-void send_fd(int sockfd, int fd)
+int send_fd(int sockfd, int fd)
 {
-	int bytes_written;
 	struct msghdr msg = { };
 	struct cmsghdr *cmsg;
 	struct iovec iov[1] = { };
@@ -81,11 +71,7 @@ void send_fd(int sockfd, int fd)
 	/* We send only one fd as specified by cmsg->cmsg_len below, even
 	 * though msg.msg_controllen might have more space due to alignment. */
 	msg.msg_controllen = CMSG_SPACE(sizeof(int));
-	msg.msg_control = malloc(msg.msg_controllen);
-	if (msg.msg_control == NULL) {
-		bail("Can't allocate memory to send fd.");
-	}
-
+	msg.msg_control = alloca(msg.msg_controllen);
 	memset(msg.msg_control, 0, msg.msg_controllen);
 
 	cmsg = CMSG_FIRSTHDR(&msg);
@@ -94,10 +80,5 @@ void send_fd(int sockfd, int fd)
 	cmsg->cmsg_len = CMSG_LEN(sizeof(int));
 	memcpy(CMSG_DATA(cmsg), &fd, sizeof(int));
 
-	bytes_written = sendmsg(sockfd, &msg, 0);
-
-	free(msg.msg_control);
-
-	if (bytes_written != 1)
-		bail("failed to send fd %d via unix socket %d", fd, sockfd);
+	return sendmsg(sockfd, &msg, 0);
 }

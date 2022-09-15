@@ -552,7 +552,13 @@ void receive_mountsources(int sockfd)
 			bail("malformed _LIBCONTAINER_MOUNT_FDS env var: fds out of range");
 		}
 
-		receive_fd(sockfd, new_fd);
+		int recv_fd = receive_fd(sockfd);
+		if (dup3(recv_fd, new_fd, O_CLOEXEC) < 0) {
+			bail("cannot dup3 fd %d to %ld", recv_fd, new_fd);
+		}
+		if (close(recv_fd) < 0) {
+			bail("cannot close fd %d", recv_fd);
+		}
 	}
 }
 
@@ -595,7 +601,8 @@ void send_mountsources(int sockfd, pid_t child, char *mountsources, size_t mount
 			bail("failed to open mount source %s", mountsources);
 
 		write_log(DEBUG, "~> sending fd for: %s", mountsources);
-		send_fd(sockfd, fd);
+		if (send_fd(sockfd, fd) < 0)
+			bail("failed to send fd %d via unix socket %d", fd, sockfd);
 
 		ret = close(fd);
 		if (ret != 0)
