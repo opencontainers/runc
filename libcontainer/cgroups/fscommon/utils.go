@@ -72,6 +72,29 @@ func ParseKeyValue(t string) (string, uint64, error) {
 	return parts[0], value, nil
 }
 
+// ReadKeyValueFile reads all key-value pairs from the specified cgroup file,
+// returns a map from key to value.
+func ParseKeyValueFile(dir, file string) (map[string]uint64, error) {
+	content, err := cgroups.ReadFile(dir, file)
+	if err != nil {
+		return nil, err
+	}
+
+	lines := strings.Split(content, "\n")
+	vals := make(map[string]uint64, len(lines))
+	for _, line := range lines {
+		arr := strings.Split(line, " ")
+		if len(arr) == 2 {
+			val, err := ParseUint(arr[1], 10, 64)
+			if err == nil {
+				vals[arr[0]] = val
+			}
+		}
+	}
+
+	return vals, nil
+}
+
 // GetValueByKey reads a key-value pairs from the specified cgroup file,
 // and returns a value of the specified key. ParseUint is used for value
 // conversion.
