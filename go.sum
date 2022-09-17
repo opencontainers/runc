@@ -1,6 +1,6 @@
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
-github.com/checkpoint-restore/go-criu/v6 v6.1.0 h1:unOFSW/95ND2WjV9QWzdpWRmRuK8DsggmPfeqbfrhUM=
-github.com/checkpoint-restore/go-criu/v6 v6.1.0/go.mod h1:rrRTN/uSwY2X+BPRl/gkulo9gsKOSAeVp9/K2tv7xZI=
+github.com/checkpoint-restore/go-criu/v6 v6.2.0 h1:3hXH7Vbq18m6oGeSj1PZkx9z0b1c2gD/jJxAGnNdLkI=
+github.com/checkpoint-restore/go-criu/v6 v6.2.0/go.mod h1:rrRTN/uSwY2X+BPRl/gkulo9gsKOSAeVp9/K2tv7xZI=
 github.com/cilium/ebpf v0.9.1 h1:64sn2K3UKw8NbP/blsixRpF3nXuyhz/VjRlRzvlBRu4=
 github.com/cilium/ebpf v0.9.1/go.mod h1:+OhNOIXx/Fnu1IE8bJz2dzOA+VSfyTfdNUVdlQnxUFY=
 github.com/containerd/console v1.0.3 h1:lIr7SlA5PxZyMV30bDW0MGbiOPXwc63yRuCP0ARubLw=

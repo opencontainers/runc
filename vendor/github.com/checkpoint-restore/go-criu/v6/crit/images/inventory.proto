@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 
 syntax = "proto2";
-package criu;
 
-import "core.proto";
+import "criu-core.proto";
 
 enum lsmtype {
 	NO_LSM		= 0;
