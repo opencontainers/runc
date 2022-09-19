@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 
 syntax = "proto2";
-package criu;
 
 message rlimit_entry {
 	required uint64		cur = 1;
