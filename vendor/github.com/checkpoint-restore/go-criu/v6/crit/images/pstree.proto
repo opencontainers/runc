@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 
 syntax = "proto2";
-package criu;
 
 message pstree_entry {
 	required uint32			pid		= 1;

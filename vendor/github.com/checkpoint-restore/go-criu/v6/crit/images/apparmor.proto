@@ -1,5 +1,4 @@
 syntax = "proto2";
-package criu;
 
 message aa_policy {
 	required string		name	= 1;

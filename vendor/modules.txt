@@ -1,4 +1,4 @@
-# github.com/checkpoint-restore/go-criu/v6 v6.1.0
+# github.com/checkpoint-restore/go-criu/v6 v6.2.0
 ## explicit; go 1.16
 github.com/checkpoint-restore/go-criu/v6
 github.com/checkpoint-restore/go-criu/v6/crit/images
