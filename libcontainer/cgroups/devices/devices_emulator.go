@@ -375,6 +375,9 @@ func emulatorFromRules(rules []*devices.Rule) (*emulator, error) {
 	// This defaults to a white-list -- which is what we want!
 	emu := &emulator{}
 	for _, rule := range rules {
+		if err := checkPath(rule); err != nil {
+			return nil, err
+		}
 		if err := emu.Apply(*rule); err != nil {
 			return nil, err
 		}
