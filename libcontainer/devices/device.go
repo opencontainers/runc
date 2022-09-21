@@ -13,9 +13,6 @@ const (
 type Device struct {
 	Rule
 
-	// Path to the device.
-	Path string `json:"path"`
-
 	// FileMode permission bits for the device.
 	FileMode os.FileMode `json:"file_mode"`
 
@@ -146,6 +143,9 @@ type Rule struct {
 
 	// Minor is the device's minor number.
 	Minor int64 `json:"minor"`
+
+	// Path is an optional absolute path to device file.
+	Path string
 
 	// Permissions is the set of permissions that this rule applies to (in the
 	// cgroupv1 format -- any combination of "rwm").

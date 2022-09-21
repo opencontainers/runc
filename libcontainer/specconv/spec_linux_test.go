@@ -893,11 +893,11 @@ func TestCreateDevices(t *testing.T) {
 	for _, configDev := range conf.Devices {
 		if configDev.Path == "/dev/tty" {
 			wantDev := &devices.Device{
-				Path:     "/dev/tty",
 				FileMode: 0o666,
 				Uid:      1000,
 				Gid:      1000,
 				Rule: devices.Rule{
+					Path:  "/dev/tty",
 					Type:  devices.CharDevice,
 					Major: 5,
 					Minor: 0,

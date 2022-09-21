@@ -414,6 +414,11 @@ type LinuxDeviceCgroup struct {
 	Major *int64 `json:"major,omitempty"`
 	// Minor is the device's minor number.
 	Minor *int64 `json:"minor,omitempty"`
+	// Path is the absolute path to the device file. This is not
+	// a replacement for specifying device type and major:minor numbers,
+	// and is used as a fallback in case /dev/{block,char}/<major>:<minor>
+	// file is not available.
+	Path string `json:"path,omitempty"`
 	// Cgroup access permissions format, rwm.
 	Access string `json:"access,omitempty"`
 }

@@ -207,11 +207,11 @@ var AllowedDevices = []*devices.Device{
 		},
 	},
 	{
-		Path:     "/dev/null",
 		FileMode: 0o666,
 		Uid:      0,
 		Gid:      0,
 		Rule: devices.Rule{
+			Path:        "/dev/null",
 			Type:        devices.CharDevice,
 			Major:       1,
 			Minor:       3,
@@ -220,11 +220,11 @@ var AllowedDevices = []*devices.Device{
 		},
 	},
 	{
-		Path:     "/dev/random",
 		FileMode: 0o666,
 		Uid:      0,
 		Gid:      0,
 		Rule: devices.Rule{
+			Path:        "/dev/random",
 			Type:        devices.CharDevice,
 			Major:       1,
 			Minor:       8,
@@ -233,11 +233,11 @@ var AllowedDevices = []*devices.Device{
 		},
 	},
 	{
-		Path:     "/dev/full",
 		FileMode: 0o666,
 		Uid:      0,
 		Gid:      0,
 		Rule: devices.Rule{
+			Path:        "/dev/full",
 			Type:        devices.CharDevice,
 			Major:       1,
 			Minor:       7,
@@ -246,11 +246,11 @@ var AllowedDevices = []*devices.Device{
 		},
 	},
 	{
-		Path:     "/dev/tty",
 		FileMode: 0o666,
 		Uid:      0,
 		Gid:      0,
 		Rule: devices.Rule{
+			Path:        "/dev/tty",
 			Type:        devices.CharDevice,
 			Major:       5,
 			Minor:       0,
@@ -259,11 +259,11 @@ var AllowedDevices = []*devices.Device{
 		},
 	},
 	{
-		Path:     "/dev/zero",
 		FileMode: 0o666,
 		Uid:      0,
 		Gid:      0,
 		Rule: devices.Rule{
+			Path:        "/dev/zero",
 			Type:        devices.CharDevice,
 			Major:       1,
 			Minor:       5,
@@ -272,11 +272,11 @@ var AllowedDevices = []*devices.Device{
 		},
 	},
 	{
-		Path:     "/dev/urandom",
 		FileMode: 0o666,
 		Uid:      0,
 		Gid:      0,
 		Rule: devices.Rule{
+			Path:        "/dev/urandom",
 			Type:        devices.CharDevice,
 			Major:       1,
 			Minor:       9,
@@ -296,6 +296,7 @@ var AllowedDevices = []*devices.Device{
 	},
 	{
 		Rule: devices.Rule{
+			Path:        "/dev/ptmx",
 			Type:        devices.CharDevice,
 			Major:       5,
 			Minor:       2,
@@ -700,6 +701,7 @@ func CreateCgroupConfig(opts *CreateOpts, defaultDevs []*devices.Device) (*confi
 					Type:        dt,
 					Major:       major,
 					Minor:       minor,
+					Path:        d.Path,
 					Permissions: devices.Permissions(d.Access),
 					Allow:       d.Allow,
 				})
@@ -911,8 +913,8 @@ next:
 					Type:  dt,
 					Major: d.Major,
 					Minor: d.Minor,
+					Path:  d.Path,
 				},
-				Path:     d.Path,
 				FileMode: filemode,
 				Uid:      uid,
 				Gid:      gid,
