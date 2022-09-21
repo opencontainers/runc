@@ -369,6 +369,19 @@ func (source *emulator) Transition(target *emulator) ([]*devices.Rule, error) { 
 	return transitionRules, nil
 }
 
+// emulatorFromRules creates a new emulator and adds the supplied device rules
+// to it.
+func emulatorFromRules(rules []*devices.Rule) (*emulator, error) {
+	// This defaults to a white-list -- which is what we want!
+	emu := &emulator{}
+	for _, rule := range rules {
+		if err := emu.Apply(*rule); err != nil {
+			return nil, err
+		}
+	}
+	return emu, nil
+}
+
 // Rules returns the minimum set of rules necessary to convert a *deny-all*
 // cgroup to the emulated filter state (note that this is not the same as a
 // default cgroupv1 cgroup -- which is allow-all). This is effectively just a

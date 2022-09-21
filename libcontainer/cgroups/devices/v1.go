@@ -7,7 +7,6 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/opencontainers/runc/libcontainer/devices"
 	"github.com/opencontainers/runc/libcontainer/userns"
 )
 
@@ -23,7 +22,7 @@ func setV1(path string, r *configs.Resources) error {
 	if err != nil {
 		return err
 	}
-	target, err := buildEmulator(r.Devices)
+	target, err := emulatorFromRules(r.Devices)
 	if err != nil {
 		return err
 	}
@@ -70,15 +69,4 @@ func loadEmulator(path string) (*emulator, error) {
 		return nil, err
 	}
 	return emulatorFromList(bytes.NewBufferString(list))
-}
-
-func buildEmulator(rules []*devices.Rule) (*emulator, error) {
-	// This defaults to a white-list -- which is what we want!
-	emu := &emulator{}
-	for _, rule := range rules {
-		if err := emu.Apply(*rule); err != nil {
-			return nil, err
-		}
-	}
-	return emu, nil
 }

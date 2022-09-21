@@ -30,11 +30,9 @@ func systemdProperties(r *configs.Resources) ([]systemdDbus.Property, error) {
 	}
 
 	// Figure out the set of rules.
-	configEmu := emulator{}
-	for _, rule := range r.Devices {
-		if err := configEmu.Apply(*rule); err != nil {
-			return nil, fmt.Errorf("unable to apply rule for systemd: %w", err)
-		}
+	configEmu, err := emulatorFromRules(r.Devices)
+	if err != nil {
+		return nil, fmt.Errorf("unable to apply cgroup device rules to systemd: %w", err)
 	}
 	// systemd doesn't support blacklists. So we log a warning, and tell
 	// systemd to act as a deny-all whitelist. This ruleset will be replaced

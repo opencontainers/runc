@@ -29,11 +29,9 @@ func deviceFilter(rules []*devices.Rule) (asm.Instructions, string, error) {
 	// gives us a guarantee that the behaviour of devices filtering is the same
 	// as cgroupv1, including security hardenings to avoid misconfiguration
 	// (such as punching holes in wildcard rules).
-	emu := new(emulator)
-	for _, rule := range rules {
-		if err := emu.Apply(*rule); err != nil {
-			return nil, "", err
-		}
+	emu, err := emulatorFromRules(rules)
+	if err != nil {
+		return nil, "", err
 	}
 	cleanRules, err := emu.Rules()
 	if err != nil {
