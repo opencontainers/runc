@@ -126,7 +126,7 @@ function init_cgroup_paths() {
 			CGROUP_SUBSYSTEMS+=" freezer"
 		fi
 	else
-		if stat -f -c %t /sys/fs/cgroup/unified | grep -qFw 63677270; then
+		if stat -f -c %t /sys/fs/cgroup/unified 2>/dev/null | grep -qFw 63677270; then
 			CGROUP_HYBRID=yes
 		fi
 		CGROUP_V1=yes
