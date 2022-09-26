@@ -22,13 +22,13 @@ func TestRangeToBits(t *testing.T) {
 		{in: "4-7", out: []byte{0xf0}},
 		{in: "0-7", out: []byte{0xff}},
 		{in: "0-15", out: []byte{0xff, 0xff}},
-		{in: "16", out: []byte{1, 0, 0}},
-		{in: "0-3,32-33", out: []byte{3, 0, 0, 0, 0x0f}},
+		{in: "16", out: []byte{0, 0, 1}},
+		{in: "0-3,32-33", out: []byte{0x0f, 0, 0, 0, 3}},
 		// extra spaces and tabs are ok
 		{in: "1, 2, 1-2", out: []byte{6}},
 		{in: "    , 1   , 3  ,  5-7,	", out: []byte{0xea}},
 		// somewhat large values
-		{in: "128-130,1", out: []byte{7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}},
+		{in: "128-130,1", out: []byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7}},
 
 		{in: "-", isErr: true},
 		{in: "1-", isErr: true},
