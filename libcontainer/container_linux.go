@@ -520,7 +520,7 @@ func (c *Container) shouldSendMountSources() bool {
 
 	// We need to send sources if there are bind-mounts.
 	for _, m := range c.config.Mounts {
-		if m.IsBind() {
+		if m.IsBind() || m.IsMove() {
 			return true
 		}
 	}
@@ -536,15 +536,46 @@ func (c *Container) newInitProcess(p *Process, cmd *exec.Cmd, messageSockPair, l
 			nsMaps[ns.Type] = ns.Path
 		}
 	}
+
+	nsList := make(map[configs.NamespaceType]string)
+	for _, ns := range c.config.Namespaces {
+		nsList[ns.Type] = ns.Path
+	}
+
 	_, sharePidns := nsMaps[configs.NEWPID]
 	userNsMountFds := [3]int{-1, -1, -1}
+
+	// Enable open_tree()/move_mount() for special filesystems to support cross user namespace mounting.
+	if _, ok := nsList[configs.NEWUSER]; ok {
+		for idx, m := range c.config.Mounts {
+			if m.Device == "proc" && m.Source == "proc" && m.Destination == "/proc" &&
+				m.Flags == unix.MS_NODEV|unix.MS_NOEXEC|unix.MS_NOSUID {
+				// procfs depends on Pid namespace
+				if _, exist := nsList[configs.NEWPID]; exist {
+				}
+			} else if m.Device == "sysfs" && m.Source == "sysfs" && m.Destination == "/sys" &&
+				m.Flags == unix.MS_NODEV|unix.MS_NOSUID|unix.MS_NOEXEC|unix.MS_RDONLY {
+				// sysfs depends on Net namespace
+				// meaning exclude runc unshare new netns
+				if path, exist := nsList[configs.NEWNET]; !exist || path != "" {
+					c.config.Mounts[idx].Flags |= unix.MS_MOVE
+				}
+			} else if m.Device == "mqueue" && m.Source == "mqueue" && m.Destination == "/dev/mqueue" &&
+				m.Flags == unix.MS_NODEV|unix.MS_NOEXEC|unix.MS_NOSUID {
+				// /mqueue depends on IPC namespace
+				if _, exist := nsList[configs.NEWIPC]; exist {
+					c.config.Mounts[idx].Flags |= unix.MS_MOVE
+				}
+			}
+		}
+	}
 
 	if c.shouldSendMountSources() {
 		// Elements on this slice will be paired with mounts (see StartInitialization() and
 		// prepareRootfs()). This slice MUST have the same size as c.config.Mounts.
 		mountFds := make([]int, len(c.config.Mounts))
 		for i, m := range c.config.Mounts {
-			if !m.IsBind() {
+			if !m.IsBind() && !m.IsMove() {
 				// Non bind-mounts do not use an fd.
 				mountFds[i] = -1
 				continue
@@ -556,6 +587,17 @@ func (c *Container) newInitProcess(p *Process, cmd *exec.Cmd, messageSockPair, l
 			// lifecycle of that fd is already taken care of.
 			cmd.ExtraFiles = append(cmd.ExtraFiles, messageSockPair.child)
 			mountFds[i] = stdioFdCount + len(cmd.ExtraFiles) - 1
+
+			// MS_MOVE flag is set for cross user namespace mounting
+			if m.IsMove() {
+				if m.Device == "proc" {
+					userNsMountFds[0] = mountFds[i]
+				} else if m.Device == "sysfs" {
+					userNsMountFds[1] = mountFds[i]
+				} else if m.Device == "mqueue" {
+					userNsMountFds[2] = mountFds[i]
+				}
+			}
 		}
 
 		mountFdsJson, err := json.Marshal(mountFds)
