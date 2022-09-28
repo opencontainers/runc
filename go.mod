@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/checkpoint-restore/go-criu/v6 v6.2.0
-	github.com/cilium/ebpf v0.9.1
+	github.com/cilium/ebpf v0.9.2
 	github.com/containerd/console v1.0.3
 	github.com/coreos/go-systemd/v22 v22.4.0
 	github.com/cyphar/filepath-securejoin v0.2.3
@@ -20,7 +20,7 @@ require (
 	github.com/urfave/cli v1.22.9
 	github.com/vishvananda/netlink v1.1.0
 	golang.org/x/net v0.0.0-20201224014010-6772e930b67b
-	golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8
+	golang.org/x/sys v0.0.0-20220829200755-d48e67d00261
 	google.golang.org/protobuf v1.28.1
 )
 
