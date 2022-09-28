@@ -66,11 +66,32 @@ function teardown() {
 	[[ "$output" == *"Network is down"* ]]
 }
 
-@test "runc run [seccomp] (SECCOMP_FILTER_FLAG_*)" {
-	# Linux 4.14: SECCOMP_FILTER_FLAG_LOG
-	# Linux 4.17: SECCOMP_FILTER_FLAG_SPEC_ALLOW
-	requires_kernel 4.17
+# Prints the numeric value of provided seccomp flags combination.
+# The parameter is flags string, as supplied in OCI spec, for example
+# '"SECCOMP_FILTER_FLAG_TSYNC","SECCOMP_FILTER_FLAG_LOG"'.
+function flags_value() {
+	# Numeric values of seccomp flags.
+	declare -A values=(
+		['"SECCOMP_FILTER_FLAG_TSYNC"']=0 # Supported but ignored by runc, thus 0.
+		['"SECCOMP_FILTER_FLAG_LOG"']=2
+		['"SECCOMP_FILTER_FLAG_SPEC_ALLOW"']=4
+		# XXX: add new values above this line.
+	)
+	# Split the flags.
+	IFS=',' read -ra flags <<<"$1"
 
+	local flag v sum=0
+	for flag in "${flags[@]}"; do
+		# This will produce "values[$flag]: unbound variable"
+		# error for a new flag yet unknown to the test.
+		v=${values[$flag]}
+		((sum += v)) || true
+	done
+
+	echo $sum
+}
+
+@test "runc run [seccomp] (SECCOMP_FILTER_FLAG_*)" {
 	update_config '   .process.args = ["/bin/sh", "-c", "mkdir /dev/shm/foo"]
 			| .process.noNewPrivileges = false
 			| .linux.seccomp = {
@@ -79,18 +100,35 @@ function teardown() {
 				"syscalls":[{"names":["mkdir", "mkdirat"], "action":"SCMP_ACT_ERRNO"}]
 			}'
 
-	declare -A FLAGS=(
-		['REMOVE']=4 # No setting, use built-in default.
-		['EMPTY']=0  # Empty set of flags.
-		['"SECCOMP_FILTER_FLAG_LOG"']=2
-		['"SECCOMP_FILTER_FLAG_SPEC_ALLOW"']=4
-		['"SECCOMP_FILTER_FLAG_TSYNC"']=0 # tsync flag is ignored.
-		['"SECCOMP_FILTER_FLAG_LOG","SECCOMP_FILTER_FLAG_SPEC_ALLOW"']=6
-		['"SECCOMP_FILTER_FLAG_LOG","SECCOMP_FILTER_FLAG_TSYNC"']=2
-		['"SECCOMP_FILTER_FLAG_SPEC_ALLOW","SECCOMP_FILTER_FLAG_TSYNC"']=4
-		['"SECCOMP_FILTER_FLAG_LOG","SECCOMP_FILTER_FLAG_SPEC_ALLOW","SECCOMP_FILTER_FLAG_TSYNC"']=6
+	# Get the list of flags supported by runc/seccomp/kernel,
+	# or "null" if no flags are supported or runc is too old.
+	mapfile -t flags < <(__runc features | jq -c '.linux.seccomp.supportedFlags' |
+		tr -d '[]\n' | tr ',' '\n')
+
+	# This is a set of all possible flag combinations to test.
+	declare -A TEST_CASES=(
+		['EMPTY']=0  # Special value: empty set of flags.
+		['REMOVE']=0 # Special value: no flags set.
 	)
-	for key in "${!FLAGS[@]}"; do
+
+	# If supported, runc should set SPEC_ALLOW if no flags are set.
+	if [[ " ${flags[*]} " == *' "SECCOMP_FILTER_FLAG_SPEC_ALLOW" '* ]]; then
+		TEST_CASES['REMOVE']=$(flags_value '"SECCOMP_FILTER_FLAG_SPEC_ALLOW"')
+	fi
+
+	# Add all possible combinations of seccomp flags
+	# and their expected numeric values to TEST_CASES.
+	if [ "${flags[0]}" != "null" ]; then
+		# Use shell {a,}{b,}{c,} to generate the powerset.
+		for fc in $(eval echo "$(printf "{'%s,',}" "${flags[@]}")"); do
+			# Remove the last comma.
+			fc="${fc/%,/}"
+			TEST_CASES[$fc]=$(flags_value "$fc")
+		done
+	fi
+
+	# Finally, run the tests.
+	for key in "${!TEST_CASES[@]}"; do
 		case "$key" in
 		'REMOVE')
 			update_config ' del(.linux.seccomp.flags)'
@@ -108,7 +146,7 @@ function teardown() {
 		[[ "$output" == *"mkdir:"*"/dev/shm/foo"*"Operation not permitted"* ]]
 
 		# Check the numeric flags value, as printed in the debug log, is as expected.
-		exp="\"seccomp filter flags: ${FLAGS[$key]}\""
+		exp="\"seccomp filter flags: ${TEST_CASES[$key]}\""
 		echo "flags $key, expecting $exp"
 		[[ "$output" == *"$exp"* ]]
 	done

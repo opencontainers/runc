@@ -163,7 +163,7 @@ func setFlag(filter *libseccomp.ScmpFilter, flag specs.LinuxSeccompFlag) error {
 	}
 	// NOTE when adding more flags above, do not forget to also:
 	// - add new flags to `flags` slice in config.go;
-	// - add new flags to tests/integration/seccomp.bats flags test;
+	// - add new flag values to flags_value() in tests/integration/seccomp.bats;
 	// - modify func filterFlags in patchbpf/ accordingly.
 
 	return &unknownFlagError{flag: flag}
