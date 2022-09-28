@@ -70,6 +70,7 @@ task:
     CIRRUS_WORKING_DIR: /home/runc
     GO_VERSION: "1.17.3"
     BATS_VERSION: "v1.3.0"
+    RPMS: gcc git iptables jq glibc-static libseccomp-devel make criu fuse-sshfs
     # yamllint disable rule:key-duplicates
     matrix:
       DISTRO: centos-7
@@ -89,6 +90,8 @@ task:
     case $DISTRO in
     centos-7)
       (cd /etc/yum.repos.d && curl -O https://copr.fedorainfracloud.org/coprs/adrian/criu-el7/repo/epel-7/adrian-criu-el7-epel-7.repo)
+      # EPEL is needed for jq and fuse-sshfs.
+      rpm -Uvh https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
       # sysctl
       echo "user.max_user_namespaces=15076" > /etc/sysctl.d/userns.conf
       sysctl --system
@@ -104,9 +107,14 @@ task:
     # Work around dnf mirror failures by retrying a few times.
     for i in $(seq 0 2); do
       sleep $i
-      yum install -y -q gcc git iptables jq glibc-static libseccomp-devel make criu fuse-sshfs && break
+      yum install -y $RPMS && break
     done
     [ $? -eq 0 ] # fail if yum failed
+
+    # Double check that all rpms were installed (yum from CentOS 7
+    # does not exit with an error if some packages were not found).
+    # Use --whatprovides since some packages are renamed.
+    rpm -q --whatprovides $RPMS
     # install Go
     curl -fsSL "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz" | tar Cxz /usr/local
     # install bats
