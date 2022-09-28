@@ -126,14 +126,14 @@ function init_cgroup_paths() {
 			CGROUP_SUBSYSTEMS+=" freezer"
 		fi
 	else
-		if stat -f -c %t /sys/fs/cgroup/unified | grep -qFw 63677270; then
+		if stat -f -c %t /sys/fs/cgroup/unified 2>/dev/null | grep -qFw 63677270; then
 			CGROUP_HYBRID=yes
 		fi
 		CGROUP_V1=yes
 		CGROUP_SUBSYSTEMS=$(awk '!/^#/ {print $1}' /proc/cgroups)
 		local g base_path
 		for g in ${CGROUP_SUBSYSTEMS}; do
-			base_path=$(gawk '$(NF-2) == "cgroup" && $NF ~ /\<'"${g}"'\>/ { print $5; exit }' /proc/self/mountinfo)
+			base_path=$(awk '$(NF-2) == "cgroup" && $NF ~ /\<'"${g}"'\>/ { print $5; exit }' /proc/self/mountinfo)
 			test -z "$base_path" && continue
 			eval CGROUP_"${g^^}"_BASE_PATH="${base_path}"
 		done
