@@ -58,7 +58,7 @@ func Create(root, id string, config *configs.Config) (*Container, error) {
 	}
 	if _, err := os.Stat(containerRoot); err == nil {
 		return nil, ErrExist
-	} else if !os.IsNotExist(err) {
+	} else if os.IsExist(err) {
 		return nil, err
 	}
 
