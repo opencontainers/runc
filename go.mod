@@ -13,7 +13,7 @@ require (
 	github.com/moby/sys/mountinfo v0.6.2
 	github.com/mrunalp/fileutils v0.5.0
 	github.com/opencontainers/runtime-spec v1.0.3-0.20220718201635-a8106e99982b
-	github.com/opencontainers/selinux v1.10.1
+	github.com/opencontainers/selinux v1.10.2
 	github.com/seccomp/libseccomp-golang v0.10.0
 	github.com/sirupsen/logrus v1.9.0
 	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635
