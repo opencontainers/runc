@@ -557,6 +557,33 @@ EOF
 	check_systemd_value "AllowedMemoryNodes" 1
 }
 
+@test "update cpuset cpus range via v2 unified map" {
+	# This test assumes systemd >= v244
+	[ $EUID -ne 0 ] && requires rootless_cgroup
+	requires systemd cgroups_v2 more_than_8_core cgroups_cpuset
+
+	update_config ' .linux.resources.unified |= {
+				"cpuset.cpus": "0-5",
+			}'
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
+	[ "$status" -eq 0 ]
+
+	# check that the initial value was properly set
+	check_systemd_value "AllowedCPUs" "0-5"
+
+	runc update -r - test_update <<EOF
+{
+  "unified": {
+    "cpuset.cpus": "5-8"
+  }
+}
+EOF
+	[ "$status" -eq 0 ]
+
+	# check the updated systemd unit property, the value should not be affected by byte order
+	check_systemd_value "AllowedCPUs" "5-8"
+}
+
 @test "update rt period and runtime" {
 	[ $EUID -ne 0 ] && requires rootless_cgroup
 	requires cgroups_v1 cgroups_rt no_systemd

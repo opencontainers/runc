@@ -457,6 +457,13 @@ function requires() {
 				skip_me=1
 			fi
 			;;
+		more_than_8_core)
+			local cpus
+			cpus=$(grep -c '^processor' /proc/cpuinfo)
+			if [ "$cpus" -le 8 ]; then
+				skip_me=1
+			fi
+			;;
 		*)
 			fail "BUG: Invalid requires $var."
 			;;
