@@ -126,6 +126,11 @@ func (l *linuxStandardInit) Init() error {
 			return &os.SyscallError{Syscall: "sethostname", Err: err}
 		}
 	}
+	if domainname := l.config.Config.Domainname; domainname != "" {
+		if err := unix.Setdomainname([]byte(domainname)); err != nil {
+			return &os.SyscallError{Syscall: "setdomainname", Err: err}
+		}
+	}
 	if err := apparmor.ApplyProfile(l.config.AppArmorProfile); err != nil {
 		return fmt.Errorf("unable to apply apparmor profile: %w", err)
 	}

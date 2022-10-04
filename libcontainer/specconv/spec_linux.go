@@ -353,6 +353,7 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 		NoPivotRoot:     opts.NoPivotRoot,
 		Readonlyfs:      spec.Root.Readonly,
 		Hostname:        spec.Hostname,
+		Domainname:      spec.Domainname,
 		Labels:          append(labels, "bundle="+cwd),
 		NoNewKeyring:    opts.NoNewKeyring,
 		RootlessEUID:    opts.RootlessEUID,

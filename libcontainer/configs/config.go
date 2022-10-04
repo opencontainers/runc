@@ -119,6 +119,9 @@ type Config struct {
 	// Hostname optionally sets the container's hostname if provided
 	Hostname string `json:"hostname"`
 
+	// Domainname optionally sets the container's domainname if provided
+	Domainname string `json:"domainname"`
+
 	// Namespaces specifies the container's namespaces that it should setup when cloning the init process
 	// If a namespace is not provided that namespace is shared from the container's parent process
 	Namespaces Namespaces `json:"namespaces"`

@@ -129,8 +129,9 @@ func newTemplateConfig(t *testing.T, p *tParam) *configs.Config {
 		ReadonlyPaths: []string{
 			"/proc/sys", "/proc/sysrq-trigger", "/proc/irq", "/proc/bus",
 		},
-		Devices:  specconv.AllowedDevices,
-		Hostname: "integration",
+		Devices:    specconv.AllowedDevices,
+		Hostname:   "integration",
+		Domainname: "integration",
 		Mounts: []*configs.Mount{
 			{
 				Source:      "proc",
