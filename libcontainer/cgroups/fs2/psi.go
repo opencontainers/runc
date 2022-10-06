@@ -2,10 +2,12 @@ package fs2
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 )
@@ -13,6 +15,12 @@ import (
 func statPSI(dirPath string, file string, stats *cgroups.PSIStats) error {
 	f, err := cgroups.OpenFile(dirPath, file, os.O_RDONLY)
 	if err != nil {
+		if errors.Is(err, os.ErrNotExist) || errors.Is(err, syscall.ENOTSUP) {
+			// open *.pressure file returns
+			// - ErrNotExist when kernel < 4.20 or CONFIG_PSI is disabled
+			// - ENOTSUP when we requires psi=1 in kernel command line to enable PSI support
+			return nil
+		}
 		return err
 	}
 	defer f.Close()
@@ -35,6 +43,9 @@ func statPSI(dirPath string, file string, stats *cgroups.PSIStats) error {
 	}
 	err = sc.Err()
 	if err != nil {
+		if errors.Is(err, os.ErrNotExist) || errors.Is(err, syscall.ENOTSUP) {
+			return nil
+		}
 		return &parseError{Path: dirPath, File: file, Err: err}
 	}
 	return nil
