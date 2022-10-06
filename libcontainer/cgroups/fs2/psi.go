@@ -45,31 +45,31 @@ func parsePSIData(psi []string) (data cgroups.PSIData, err error) {
 	for _, f := range psi {
 		kv := strings.SplitN(f, "=", 2)
 		if len(kv) != 2 {
-			return data, fmt.Errorf("invalid psi data: %q", f)
+			return data, fmt.Errorf("invalid PSI data: %q", f)
 		}
 		switch kv[0] {
 		case "avg10":
 			v, err := strconv.ParseFloat(kv[1], 64)
 			if err != nil {
-				return data, fmt.Errorf("invalid psi value: %q", f)
+				return data, fmt.Errorf("invalid PSI value: %q", f)
 			}
 			data.Avg10 = v
 		case "avg60":
 			v, err := strconv.ParseFloat(kv[1], 64)
 			if err != nil {
-				return data, fmt.Errorf("invalid psi value: %q", f)
+				return data, fmt.Errorf("invalid PSI value: %q", f)
 			}
 			data.Avg60 = v
 		case "avg300":
 			v, err := strconv.ParseFloat(kv[1], 64)
 			if err != nil {
-				return data, fmt.Errorf("invalid psi value: %q", f)
+				return data, fmt.Errorf("invalid PSI value: %q", f)
 			}
 			data.Avg300 = v
 		case "total":
 			v, err := strconv.ParseUint(kv[1], 10, 64)
 			if err != nil {
-				return data, fmt.Errorf("invalid psi value: %q", f)
+				return data, fmt.Errorf("invalid PSI value: %q", f)
 			}
 			data.Total = v
 		}
