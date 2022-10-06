@@ -109,6 +109,10 @@ func (m *manager) GetStats() (*cgroups.Stats, error) {
 	if err := statIo(m.dirPath, st); err != nil && !os.IsNotExist(err) {
 		errs = append(errs, err)
 	}
+	// rdma (since kernel 4.11)
+	if err := fscommon.RdmaGetStats(m.dirPath, st); err != nil && !os.IsNotExist(err) {
+		errs = append(errs, err)
+	}
 	// cpu (since kernel 4.15)
 	// Note cpu.stat is available even if the controller is not enabled.
 	if err := statCpu(m.dirPath, st); err != nil && !os.IsNotExist(err) {
@@ -126,10 +130,6 @@ func (m *manager) GetStats() (*cgroups.Stats, error) {
 	}
 	// hugetlb (since kernel 5.6)
 	if err := statHugeTlb(m.dirPath, st); err != nil && !os.IsNotExist(err) {
-		errs = append(errs, err)
-	}
-	// rdma (since kernel 4.11)
-	if err := fscommon.RdmaGetStats(m.dirPath, st); err != nil && !os.IsNotExist(err) {
 		errs = append(errs, err)
 	}
 	if len(errs) > 0 && !m.config.Rootless {
