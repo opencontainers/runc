@@ -47,7 +47,7 @@ type PSIStats struct {
 type CpuStats struct {
 	CpuUsage       CpuUsage       `json:"cpu_usage,omitempty"`
 	ThrottlingData ThrottlingData `json:"throttling_data,omitempty"`
-	PSI            PSIStats       `json:"psi,omitempty"`
+	PSI            *PSIStats      `json:"psi,omitempty"`
 }
 
 type CPUSetStats struct {
@@ -102,7 +102,7 @@ type MemoryStats struct {
 	UseHierarchy bool `json:"use_hierarchy"`
 
 	Stats map[string]uint64 `json:"stats,omitempty"`
-	PSI   PSIStats          `json:"psi,omitempty"`
+	PSI   *PSIStats         `json:"psi,omitempty"`
 }
 
 type PageUsageByNUMA struct {
@@ -147,7 +147,7 @@ type BlkioStats struct {
 	IoMergedRecursive       []BlkioStatEntry `json:"io_merged_recursive,omitempty"`
 	IoTimeRecursive         []BlkioStatEntry `json:"io_time_recursive,omitempty"`
 	SectorsRecursive        []BlkioStatEntry `json:"sectors_recursive,omitempty"`
-	PSI                     PSIStats         `json:"psi,omitempty"`
+	PSI                     *PSIStats        `json:"psi,omitempty"`
 }
 
 type HugetlbStats struct {

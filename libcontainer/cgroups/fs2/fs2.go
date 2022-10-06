@@ -119,13 +119,13 @@ func (m *manager) GetStats() (*cgroups.Stats, error) {
 	// open *.pressure file returns
 	// - ErrNotExist when kernel < 4.20 or CONFIG_PSI is disabled
 	// - ENOTSUP when we requires psi=1 in kernel command line to enable PSI support
-	if err := statPSI(m.dirPath, "cpu.pressure", &st.CpuStats.PSI); err != nil && !errors.Is(err, os.ErrNotExist) && !errors.Is(err, syscall.ENOTSUP) {
+	if err := statPSI(m.dirPath, "cpu.pressure", st.CpuStats.PSI); err != nil && !errors.Is(err, os.ErrNotExist) && !errors.Is(err, syscall.ENOTSUP) {
 		errs = append(errs, err)
 	}
-	if err := statPSI(m.dirPath, "memory.pressure", &st.MemoryStats.PSI); err != nil && !errors.Is(err, os.ErrNotExist) && !errors.Is(err, syscall.ENOTSUP) {
+	if err := statPSI(m.dirPath, "memory.pressure", st.MemoryStats.PSI); err != nil && !errors.Is(err, os.ErrNotExist) && !errors.Is(err, syscall.ENOTSUP) {
 		errs = append(errs, err)
 	}
-	if err := statPSI(m.dirPath, "io.pressure", &st.BlkioStats.PSI); err != nil && !errors.Is(err, os.ErrNotExist) && !errors.Is(err, syscall.ENOTSUP) {
+	if err := statPSI(m.dirPath, "io.pressure", st.BlkioStats.PSI); err != nil && !errors.Is(err, os.ErrNotExist) && !errors.Is(err, syscall.ENOTSUP) {
 		errs = append(errs, err)
 	}
 	// hugetlb (since kernel 5.6)

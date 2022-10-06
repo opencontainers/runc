@@ -78,7 +78,7 @@ type CpuUsage struct {
 type Cpu struct {
 	Usage      CpuUsage   `json:"usage,omitempty"`
 	Throttling Throttling `json:"throttling,omitempty"`
-	PSI        PSIStats   `json:"psi,omitempty"`
+	PSI        *PSIStats  `json:"psi,omitempty"`
 }
 
 type CPUSet struct {
@@ -109,7 +109,7 @@ type Memory struct {
 	Kernel    MemoryEntry       `json:"kernel,omitempty"`
 	KernelTCP MemoryEntry       `json:"kernelTCP,omitempty"`
 	Raw       map[string]uint64 `json:"raw,omitempty"`
-	PSI       PSIStats          `json:"psi,omitempty"`
+	PSI       *PSIStats         `json:"psi,omitempty"`
 }
 
 type L3CacheInfo struct {
