@@ -40,8 +40,8 @@ type PSIData struct {
 }
 
 type PSIStats struct {
-	Some PSIData `json:"some,omitempty"`
-	Full PSIData `json:"full,omitempty"`
+	Some *PSIData `json:"some,omitempty"`
+	Full *PSIData `json:"full,omitempty"`
 }
 
 type CpuStats struct {

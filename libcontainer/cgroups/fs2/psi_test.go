@@ -29,13 +29,13 @@ func TestStatCPUPSI(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(psi, cgroups.PSIStats{
-		Some: cgroups.PSIData{
+		Some: &cgroups.PSIData{
 			Avg10:  1.71,
 			Avg60:  2.36,
 			Avg300: 2.57,
 			Total:  230548833,
 		},
-		Full: cgroups.PSIData{
+		Full: &cgroups.PSIData{
 			Avg10:  1.00,
 			Avg60:  1.01,
 			Avg300: 1.00,

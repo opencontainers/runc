@@ -22,56 +22,58 @@ func statPSI(dirPath string, file string, stats *cgroups.PSIStats) error {
 		parts := strings.Fields(sc.Text())
 		switch parts[0] {
 		case "some":
-			data, err := parsePSIData(parts[1:])
+			stats.Some, err = parsePSIData(parts[1:])
 			if err != nil {
 				return err
 			}
-			stats.Some = data
 		case "full":
-			data, err := parsePSIData(parts[1:])
+			stats.Full, err = parsePSIData(parts[1:])
 			if err != nil {
 				return err
 			}
-			stats.Full = data
 		}
 	}
-	if err := sc.Err(); err != nil {
+	err = sc.Err()
+	if err != nil {
 		return &parseError{Path: dirPath, File: file, Err: err}
 	}
 	return nil
 }
 
-func parsePSIData(psi []string) (data cgroups.PSIData, err error) {
+func parsePSIData(psi []string) (*cgroups.PSIData, error) {
+	var (
+		data = &cgroups.PSIData{}
+		err  error
+	)
 	for _, f := range psi {
 		kv := strings.SplitN(f, "=", 2)
 		if len(kv) != 2 {
-			return data, fmt.Errorf("invalid PSI data: %q", f)
+			return nil, fmt.Errorf("invalid PSI data: %q", f)
 		}
 		switch kv[0] {
 		case "avg10":
 			v, err := strconv.ParseFloat(kv[1], 64)
 			if err != nil {
-				return data, fmt.Errorf("invalid PSI value: %q", f)
+				return nil, fmt.Errorf("invalid PSI value: %q", f)
 			}
 			data.Avg10 = v
 		case "avg60":
 			v, err := strconv.ParseFloat(kv[1], 64)
 			if err != nil {
-				return data, fmt.Errorf("invalid PSI value: %q", f)
+				return nil, fmt.Errorf("invalid PSI value: %q", f)
 			}
 			data.Avg60 = v
 		case "avg300":
 			v, err := strconv.ParseFloat(kv[1], 64)
 			if err != nil {
-				return data, fmt.Errorf("invalid PSI value: %q", f)
+				return nil, fmt.Errorf("invalid PSI value: %q", f)
 			}
 			data.Avg300 = v
 		case "total":
-			v, err := strconv.ParseUint(kv[1], 10, 64)
+			data.Total, err = strconv.ParseUint(kv[1], 10, 64)
 			if err != nil {
-				return data, fmt.Errorf("invalid PSI value: %q", f)
+				return nil, fmt.Errorf("invalid PSI value: %q", f)
 			}
-			data.Total = v
 		}
 	}
 	return data, nil
