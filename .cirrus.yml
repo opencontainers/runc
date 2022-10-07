@@ -91,7 +91,7 @@ task:
     centos-7)
       (cd /etc/yum.repos.d && curl -O https://copr.fedorainfracloud.org/coprs/adrian/criu-el7/repo/epel-7/adrian-criu-el7-epel-7.repo)
       # EPEL is needed for jq and fuse-sshfs.
-      rpm -Uvh https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+      rpm -q epel-release || rpm -Uvh https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
       # sysctl
       echo "user.max_user_namespaces=15076" > /etc/sysctl.d/userns.conf
       sysctl --system
