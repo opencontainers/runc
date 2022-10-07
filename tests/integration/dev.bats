@@ -40,7 +40,6 @@ function teardown() {
 			| .linux.devices = [{"path": "/dev/kmsg", "type": "c", "major": 1, "minor": 11}]
 			| .process.capabilities.bounding += ["CAP_SYSLOG"]
 			| .process.capabilities.effective += ["CAP_SYSLOG"]
-			| .process.capabilities.inheritable += ["CAP_SYSLOG"]
 			| .process.capabilities.permitted += ["CAP_SYSLOG"]
 			| .process.args |= ["sh"]'
 
@@ -78,7 +77,6 @@ function teardown() {
 			| .process.args |= ["sh"]
 			| .process.capabilities.bounding += ["CAP_SYSLOG"]
 			| .process.capabilities.effective += ["CAP_SYSLOG"]
-			| .process.capabilities.inheritable += ["CAP_SYSLOG"]
 			| .process.capabilities.permitted += ["CAP_SYSLOG"]
 			| .hostname = "myhostname"'
 
@@ -114,7 +112,6 @@ function teardown() {
 			| .process.args |= ["sh"]
 			| .process.capabilities.bounding += ["CAP_MKNOD"]
 			| .process.capabilities.effective += ["CAP_MKNOD"]
-			| .process.capabilities.inheritable += ["CAP_MKNOD"]
 			| .process.capabilities.permitted += ["CAP_MKNOD"]'
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_allow_block

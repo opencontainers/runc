@@ -642,7 +642,6 @@ EOF
 			| .linux.devices = [{"path": "/dev/kmsg", "type": "c", "major": 1, "minor": 11}]
 			| .process.capabilities.bounding += ["CAP_SYSLOG"]
 			| .process.capabilities.effective += ["CAP_SYSLOG"]
-			| .process.capabilities.inheritable += ["CAP_SYSLOG"]
 			| .process.capabilities.permitted += ["CAP_SYSLOG"]
 			| .process.args |= ["sh", "-c", "while true; do head -c 100 /dev/kmsg 2> /dev/null; done"]'
 
