@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"time"
 
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/opencontainers/selinux/go-selinux"
@@ -233,13 +234,26 @@ func (l *linuxStandardInit) Init() error {
 	// user process. We open it through /proc/self/fd/$fd, because the fd that
 	// was given to us was an O_PATH fd to the fifo itself. Linux allows us to
 	// re-open an O_PATH fd through /proc.
-	fifoPath := "/proc/self/fd/" + strconv.Itoa(l.fifoFd)
-	fd, err := unix.Open(fifoPath, unix.O_WRONLY|unix.O_CLOEXEC, 0)
-	if err != nil {
-		return &os.PathError{Op: "open exec fifo", Path: fifoPath, Err: err}
-	}
-	if _, err := unix.Write(fd, []byte("0")); err != nil {
-		return &os.PathError{Op: "write exec fifo", Path: fifoPath, Err: err}
+	ch := make(chan error, 1)
+	go func() {
+		fifoPath := "/proc/self/fd/" + strconv.Itoa(l.fifoFd)
+		fd, err := unix.Open(fifoPath, unix.O_WRONLY|unix.O_CLOEXEC, 0)
+		if err != nil {
+			ch <- &os.PathError{Op: "open exec fifo", Path: fifoPath, Err: err}
+		}
+		if _, err := unix.Write(fd, []byte("0")); err != nil {
+			ch <- &os.PathError{Op: "write exec fifo", Path: fifoPath, Err: err}
+		}
+		ch <- nil
+	}()
+
+	select {
+	case chErr := <-ch:
+		if chErr != nil {
+			return chErr
+		}
+	case <-time.After(120 * time.Second):
+		return fmt.Errorf("wait for the fifo to be opened on the other side timeout")
 	}
 
 	// Close the O_PATH fifofd fd before exec because the kernel resets
