@@ -32,7 +32,8 @@ func init() {
 	if len(os.Args) > 1 && os.Args[1] == "init" {
 		runtime.GOMAXPROCS(1)
 		runtime.LockOSThread()
-		if err := libcontainer.StartInitialization(); err != nil {
+		factory, _ := libcontainer.New("")
+		if err := factory.StartInitialization(); err != nil {
 			logrus.Fatal(err)
 		}
 		panic("--this line should have never been executed, congratulations--")
@@ -215,11 +216,22 @@ config := &configs.Config{
 }
 ```
 
+Then to create a container you first have to initialize an instance of a factory 
+that will handle the creation and initialization for a container.
+
+```go
+factory, err := libcontainer.New("/var/lib/container", libcontainer.Cgroupfs, libcontainer.InitArgs(os.Args[0], "init"))
+if err != nil {
+	logrus.Fatal(err)
+	return
+}
+```
+
 Once you have the configuration populated you can create a container
 with a specified ID under a specified state directory:
 
 ```go
-container, err := libcontainer.Create("/run/containers", "container-id", config)
+container, err := factory.Create("container-id", config)
 if err != nil {
 	logrus.Fatal(err)
 	return
