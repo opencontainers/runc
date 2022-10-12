@@ -41,6 +41,17 @@ func init() {
 }
 ```
 
+To create a container you first have to initialize an instance of a factory 
+that will handle the creation and initialization for a container.
+
+```go
+factory, err := libcontainer.New("/var/lib/container", libcontainer.Cgroupfs, libcontainer.InitArgs(os.Args[0], "init"))
+if err != nil {
+	logrus.Fatal(err)
+	return
+}
+```
+
 Then to create a container you first have to create a configuration
 struct describing how the container is to be created. A sample would look similar to this:
 
@@ -216,19 +227,7 @@ config := &configs.Config{
 }
 ```
 
-Then to create a container you first have to initialize an instance of a factory 
-that will handle the creation and initialization for a container.
-
-```go
-factory, err := libcontainer.New("/var/lib/container", libcontainer.Cgroupfs, libcontainer.InitArgs(os.Args[0], "init"))
-if err != nil {
-	logrus.Fatal(err)
-	return
-}
-```
-
-Once you have the configuration populated you can create a container
-with a specified ID under a specified state directory:
+Once you have the configuration populated you can create a container:
 
 ```go
 container, err := factory.Create("container-id", config)
