@@ -139,10 +139,9 @@ func TestFreezeBeforeSet(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer m.Destroy() //nolint:errcheck
-			lm := m.(*legacyManager)
 
 			// Checks for a non-existent unit.
-			freeze, thaw, err := lm.freezeBeforeSet(getUnitName(tc.cg), tc.cg.Resources)
+			freeze, thaw, err := m.freezeBeforeSet(getUnitName(tc.cg), tc.cg.Resources)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -176,7 +175,7 @@ func TestFreezeBeforeSet(t *testing.T) {
 					return // no more checks
 				}
 			}
-			freeze, thaw, err = lm.freezeBeforeSet(getUnitName(tc.cg), tc.cg.Resources)
+			freeze, thaw, err = m.freezeBeforeSet(getUnitName(tc.cg), tc.cg.Resources)
 			if err != nil {
 				t.Error(err)
 				return // no more checks
