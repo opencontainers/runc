@@ -233,16 +233,6 @@ func findLastSyscalls(config *configs.Seccomp) (lastSyscallMap, error) {
 			return nil, fmt.Errorf("unable to validate seccomp architecture: %w", err)
 		}
 
-		// Map native architecture to a real architecture value to avoid
-		// doubling-up the lastSyscall mapping.
-		if arch == libseccomp.ArchNative {
-			nativeArch, err := libseccomp.GetNativeArch()
-			if err != nil {
-				return nil, fmt.Errorf("unable to get native architecture: %w", err)
-			}
-			arch = nativeArch
-		}
-
 		// Figure out native architecture representation of the architecture.
 		nativeArch, err := archToNative(arch)
 		if err != nil {
