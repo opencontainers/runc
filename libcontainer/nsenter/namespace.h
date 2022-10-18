@@ -28,5 +28,13 @@
 #ifndef CLONE_NEWNET
 #	define CLONE_NEWNET 0x40000000 /* New network namespace */
 #endif
+/*
+ * IMA Namespace has no CLONE_* flag, it is activated
+ * via securityfs, so clone()/unshare() system calls are not aware
+ * of IMA Namespace.
+ */
+#ifndef NCLONE_NEWIMA
+# define NCLONE_NEWIMA 0x400000000ULL /* New ima namespace */
+#endif
 
 #endif /* NSENTER_NAMESPACE_H */

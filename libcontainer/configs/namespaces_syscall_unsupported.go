@@ -12,3 +12,10 @@ func (n *Namespace) Syscall() int {
 func (n *Namespaces) CloneFlags() uintptr {
 	panic("No namespace syscall support")
 }
+
+// NonCloneFlags parses the container's Namespaces options that are not
+// related to clone() or unshare() system calls. This function returns
+// flags only for new namespaces.
+func (n *Namespaces) NonCloneFlags() uintptr {
+	panic("No namespace syscall support")
+}

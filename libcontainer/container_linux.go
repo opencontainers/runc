@@ -537,7 +537,8 @@ func (c *Container) newInitProcess(p *Process, cmd *exec.Cmd, messageSockPair, l
 		}
 	}
 	_, sharePidns := nsMaps[configs.NEWPID]
-	data, err := c.bootstrapData(c.config.Namespaces.CloneFlags(), nsMaps, initStandard)
+	data, err := c.bootstrapData(c.config.Namespaces.CloneFlags(),
+		c.config.Namespaces.NonCloneFlags(), nsMaps, initStandard)
 	if err != nil {
 		return nil, err
 	}
@@ -595,7 +596,7 @@ func (c *Container) newSetnsProcess(p *Process, cmd *exec.Cmd, messageSockPair, 
 	}
 	// for setns process, we don't have to set cloneflags as the process namespaces
 	// will only be set via setns syscall
-	data, err := c.bootstrapData(0, state.NamespacePaths, initSetns)
+	data, err := c.bootstrapData(0, 0, state.NamespacePaths, initSetns)
 	if err != nil {
 		return nil, err
 	}
@@ -2028,7 +2029,9 @@ func (c *Container) currentState() (*State, error) {
 	}
 	if pid > 0 {
 		for _, ns := range c.config.Namespaces {
-			state.NamespacePaths[ns.Type] = ns.GetPath(pid)
+			if ns.HasProcfs() {
+				state.NamespacePaths[ns.Type] = ns.GetPath(pid)
+			}
 		}
 		for _, nsType := range configs.NamespaceTypes() {
 			if !configs.IsNamespaceSupported(nsType) {
@@ -2036,7 +2039,9 @@ func (c *Container) currentState() (*State, error) {
 			}
 			if _, ok := state.NamespacePaths[nsType]; !ok {
 				ns := configs.Namespace{Type: nsType}
-				state.NamespacePaths[ns.Type] = ns.GetPath(pid)
+				if ns.HasProcfs() {
+					state.NamespacePaths[ns.Type] = ns.GetPath(pid)
+				}
 			}
 		}
 	}
@@ -2119,7 +2124,7 @@ type netlinkError struct{ error }
 // such as one that uses nsenter package to bootstrap the container's
 // init process correctly, i.e. with correct namespaces, uid/gid
 // mapping etc.
-func (c *Container) bootstrapData(cloneFlags uintptr, nsMaps map[configs.NamespaceType]string, it initType) (_ io.Reader, Err error) {
+func (c *Container) bootstrapData(cloneFlags uintptr, nonCloneFlags uintptr, nsMaps map[configs.NamespaceType]string, it initType) (_ io.Reader, Err error) {
 	// create the netlink message
 	r := nl.NewNetlinkRequest(int(InitMsg), 0)
 
@@ -2140,6 +2145,12 @@ func (c *Container) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Namespa
 	r.AddData(&Int32msg{
 		Type:  CloneFlagsAttr,
 		Value: uint32(cloneFlags),
+	})
+
+	// write nonCloneFlags
+	r.AddData(&Int64msg{
+		Type:  NonCloneFlagsAttr,
+		Value: uint64(nonCloneFlags),
 	})
 
 	// write custom namespace paths

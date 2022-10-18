@@ -14,6 +14,7 @@ const (
 	NEWIPC    NamespaceType = "NEWIPC"
 	NEWUSER   NamespaceType = "NEWUSER"
 	NEWCGROUP NamespaceType = "NEWCGROUP"
+	NEWIMA    NamespaceType = "NEWIMA"
 )
 
 var (
@@ -38,6 +39,8 @@ func NsName(ns NamespaceType) string {
 		return "uts"
 	case NEWCGROUP:
 		return "cgroup"
+	case NEWIMA:
+		return "ima"
 	}
 	return ""
 }
@@ -56,6 +59,11 @@ func IsNamespaceSupported(ns NamespaceType) bool {
 	if nsFile == "" {
 		return false
 	}
+	// ima namespace is a part of userns and
+	// has no procfs entry, so redirect the check to userns
+	if ns == NEWIMA {
+		nsFile = NsName(NEWUSER)
+	}
 	_, err := os.Stat("/proc/self/ns/" + nsFile)
 	// a namespace is supported if it exists and we have permissions to read it
 	supported = err == nil
@@ -72,6 +80,7 @@ func NamespaceTypes() []NamespaceType {
 		NEWPID,
 		NEWNS,
 		NEWCGROUP,
+		NEWIMA,
 	}
 }
 
@@ -82,8 +91,21 @@ type Namespace struct {
 	Path string        `json:"path"`
 }
 
+// GetPath returns a procfs path for the given POD and namespace type.
+// into procfs path. A few namespaces may not have procfs entry,
+// call HasProcfs first to make sure this namespace has one.
 func (n *Namespace) GetPath(pid int) string {
 	return fmt.Sprintf("/proc/%d/ns/%s", pid, NsName(n.Type))
+}
+
+// HasProcfs tells whether the given namespace has procfs entry.
+func (n *Namespace) HasProcfs() bool {
+	switch n.Type {
+	case NEWIMA:
+		return false
+	default:
+		return true
+	}
 }
 
 func (n *Namespaces) Remove(t NamespaceType) bool {
