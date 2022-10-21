@@ -2,6 +2,7 @@ package cgroups
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -378,6 +379,27 @@ func getHugePageSizeFromFilenames(fileNames []string) ([]string, error) {
 // GetPids returns all pids, that were added to cgroup at path.
 func GetPids(dir string) ([]int, error) {
 	return readProcsFile(dir)
+}
+
+func WaitForCgroupsMount(ctx context.Context, dir string) error {
+	// Normally dir should not be empty, one case is that cgroup subsystem
+	// is not mounted, we will get empty dir, and we want it fail here.
+	if dir == "" {
+		return fmt.Errorf("wait for cgroup: no such directory for %s", CgroupProcesses)
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("wait for cgroups timed out: %v, %w", dir, ctx.Err())
+		default:
+			_, err := os.Stat(filepath.Join(dir, CgroupProcesses))
+			if err == nil {
+				return nil
+			}
+			time.Sleep(30 * time.Millisecond)
+		}
+	}
 }
 
 // WriteCgroupProc writes the specified pid into the cgroup's cgroup.procs file

@@ -1,11 +1,13 @@
 package systemd
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
 	"github.com/sirupsen/logrus"
@@ -253,6 +255,11 @@ func (m *LegacyManager) joinCgroups(pid int) error {
 		default:
 			if path, ok := m.paths[name]; ok {
 				if err := os.MkdirAll(path, 0o755); err != nil {
+					return err
+				}
+				ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+				defer cancel()
+				if err := cgroups.WaitForCgroupsMount(ctx, path); err != nil {
 					return err
 				}
 				if err := cgroups.WriteCgroupProc(path, pid); err != nil {
