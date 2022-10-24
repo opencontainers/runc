@@ -61,11 +61,11 @@ func ParseUint(s string, base, bitSize int) (uint64, error) {
 func ParseKeyValue(t string) (string, uint64, error) {
 	
 	
-	tmp_f := strings.Replace(t, ":", "", -1)
-        tmp_s := strings.Replace(tmp_f, "\t", "", -1)
-        tmp_t := strings.Replace(tmp_s, " kB", "", -1)
-        count := strings.Count(tmp_t, " ")
-        tmplast := strings.Replace(tmp_t, " ", "", count-1)
+	tmpf := strings.Replace(t, ":", "", -1)
+        tmps := strings.Replace(tmpf, "\t", "", -1)
+        tmpt := strings.Replace(tmps, " kB", "", -1)
+        count := strings.Count(tmpt, " ")
+        tmplast := strings.Replace(tmpt, " ", "", count-1)
 	
 	parts := strings.SplitN(tmplast, " ", 3)
 	if len(parts) != 2 {
