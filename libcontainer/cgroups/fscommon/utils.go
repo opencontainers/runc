@@ -61,13 +61,14 @@ func ParseUint(s string, base, bitSize int) (uint64, error) {
 func ParseKeyValue(t string) (string, uint64, error) {
 	
 	
-	tmpa := astrings.Replace(t, ":", "", -1)
-        tmpb := strings.Replace(tmpa, "\t", "", -1)
-        tmpc := strings.Replace(tmpb, " kB", "", -1)
-        count := strings.Count(tmpc, " ")
-        tmpd := strings.Replace(tmpc, " ", "", count-1)
+	tmpnm := astrings.Replace(t, ":", "", -1)
+        tmpnt := strings.Replace(tmpnm, "\t", "", -1)
+        tmpnk := strings.Replace(tmpnt, " kB", "", -1)
+        count := strings.Count(tmpnk, " ")
+        tmplast := strings.Replace(tmpnk, " ", "", count-1)
 	
-	parts := strings.SplitN(tmpd, " ", 3)
+	
+	parts := strings.SplitN(tmplast, " ", 3)
 	if len(parts) != 2 {
 		return "", 0, fmt.Errorf("line %q is not in key value format", t)
 	}
