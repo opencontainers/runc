@@ -59,7 +59,15 @@ func ParseUint(s string, base, bitSize int) (uint64, error) {
 // (ParseUint is used to convert the value). For example,
 // "io_service_bytes 1234" will be returned as "io_service_bytes", 1234.
 func ParseKeyValue(t string) (string, uint64, error) {
-	parts := strings.SplitN(t, " ", 3)
+	
+	
+	tmp_f := strings.Replace(t, ":", "", -1)
+        tmp_s := strings.Replace(tmp_f, "\t", "", -1)
+        tmp_t := strings.Replace(tmp_s, " kB", "", -1)
+        count := strings.Count(tmp_t, " ")
+        tmplast := strings.Replace(tmp_t, " ", "", count-1)
+	
+	parts := strings.SplitN(tmplast, " ", 3)
 	if len(parts) != 2 {
 		return "", 0, fmt.Errorf("line %q is not in key value format", t)
 	}
