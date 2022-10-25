@@ -30,7 +30,7 @@ int receive_fd(int sockfd)
 
 	memset(msg.msg_control, 0, msg.msg_controllen);
 
-	bytes_read = recvmsg(sockfd, &msg, 0);
+	bytes_read = recvmsg(sockfd, &msg, MSG_CMSG_CLOEXEC);
 	if (bytes_read != 1)
 		bail("failed to receive fd from unix socket %d", sockfd);
 	if (msg.msg_flags & MSG_CTRUNC)
