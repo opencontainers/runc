@@ -76,7 +76,7 @@ function teardown() {
 			| .linux.seccomp = {
 				"defaultAction":"SCMP_ACT_ALLOW",
 				"architectures":["SCMP_ARCH_X86","SCMP_ARCH_X32","SCMP_ARCH_X86_64","SCMP_ARCH_AARCH64","SCMP_ARCH_ARM"],
-				"syscalls":[{"names":["mkdir"], "action":"SCMP_ACT_ERRNO"}]
+				"syscalls":[{"names":["mkdir", "mkdirat"], "action":"SCMP_ACT_ERRNO"}]
 			}'
 
 	declare -A FLAGS=(
