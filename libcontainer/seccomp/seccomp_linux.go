@@ -111,6 +111,20 @@ func InitSeccomp(config *configs.Seccomp) (int, error) {
 		}
 	}
 
+	// Enable libseccomp binary tree optimization for longer rulesets.
+	//
+	// The number below chosen semi-arbitrarily, considering the following:
+	// 1. libseccomp <= 2.5.4 misbehaves when binary tree optimization
+	// is enabled and there are 0 rules.
+	// 2. All known libseccomp versions (2.5.0 to 2.5.4) generate a binary
+	// tree with 4 syscalls per node.
+	if len(config.Syscalls) > 32 {
+		if err := filter.SetOptimize(2); err != nil {
+			// The error is not fatal and is probably means we have older libseccomp.
+			logrus.Debugf("seccomp binary tree optimization not available: %v", err)
+		}
+	}
+
 	// Unset no new privs bit
 	if err := filter.SetNoNewPrivsBit(false); err != nil {
 		return -1, fmt.Errorf("error setting no new privileges: %w", err)
