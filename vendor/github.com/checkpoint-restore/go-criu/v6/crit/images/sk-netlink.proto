@@ -1,0 +1,24 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+import "opts.proto";
+import "fown.proto";
+import "sk-opts.proto";
+
+message netlink_sk_entry {
+	required uint32			id		=  1;
+	required uint32			ino		=  2;
+	required uint32			protocol	=  3;
+	required uint32			state		=  4;
+	required uint32			flags		=  6 [(criu).hex = true];
+	required uint32			portid		=  7;
+	repeated uint32			groups		=  8;
+	required uint32			dst_portid	=  9;
+	required uint32			dst_group	=  10;
+	required fown_entry		fown		=  11;
+	required sk_opts_entry		opts		=  12;
+	optional uint32			ns_id		=  13;
+	// For netlink queued messages
+	// optional nl_sk_opts_entry	nl_opts		=  14;
+}

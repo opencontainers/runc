@@ -1,0 +1,12 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+message file_lock_entry {
+    required uint32	flag  = 1;
+    required uint32	type  = 2;
+    required int32	pid   = 3;
+    required int32	fd    = 4;
+    required int64	start = 5;
+    required int64	len   = 6;
+}

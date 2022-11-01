@@ -1,0 +1,9 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+message fs_entry {
+	required uint32		cwd_id		= 1;
+	required uint32		root_id		= 2;
+	optional uint32		umask		= 3;
+}

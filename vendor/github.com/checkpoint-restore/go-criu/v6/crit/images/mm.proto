@@ -1,0 +1,35 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+import "opts.proto";
+import "vma.proto";
+
+message aio_ring_entry {
+	required uint64	id		= 1;
+	required uint32	nr_req		= 2;
+	required uint32	ring_len	= 3;
+}
+
+message mm_entry {
+	required uint64	mm_start_code	=  1 [(criu).hex = true];
+	required uint64	mm_end_code	=  2 [(criu).hex = true];
+	required uint64	mm_start_data	=  3 [(criu).hex = true];
+	required uint64	mm_end_data	=  4 [(criu).hex = true];
+	required uint64	mm_start_stack	=  5 [(criu).hex = true];
+	required uint64	mm_start_brk	=  6 [(criu).hex = true];
+	required uint64	mm_brk		=  7 [(criu).hex = true];
+	required uint64	mm_arg_start	=  8 [(criu).hex = true];
+	required uint64	mm_arg_end	=  9 [(criu).hex = true];
+	required uint64	mm_env_start	= 10 [(criu).hex = true];
+	required uint64	mm_env_end	= 11 [(criu).hex = true];
+	required uint32	exe_file_id	= 12;
+
+	repeated uint64	mm_saved_auxv	= 13;
+
+	repeated vma_entry vmas		= 14;
+
+	optional int32	dumpable	= 15;
+	repeated aio_ring_entry	aios	= 16;
+	optional bool thp_disabled	= 17;
+}

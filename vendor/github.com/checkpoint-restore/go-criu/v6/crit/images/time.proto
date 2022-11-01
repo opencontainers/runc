@@ -1,0 +1,8 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+message timeval {
+	required uint64		tv_sec	= 1;
+	required uint64		tv_usec	= 2;
+}

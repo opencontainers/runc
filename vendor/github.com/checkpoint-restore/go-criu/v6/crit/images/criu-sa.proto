@@ -1,0 +1,14 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+import "opts.proto";
+
+message sa_entry {
+	required uint64	sigaction	= 1 [(criu).hex = true];
+	required uint64	flags		= 2 [(criu).hex = true];
+	required uint64	restorer	= 3 [(criu).hex = true];
+	required uint64	mask		= 4 [(criu).hex = true];
+	optional bool compat_sigaction	= 5;
+	optional uint64	mask_extended	= 6 [(criu).hex = true];
+}

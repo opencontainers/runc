@@ -1,0 +1,11 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+message siginfo_entry {
+	required bytes siginfo = 1;
+}
+
+message signal_queue_entry {
+	repeated siginfo_entry signals = 1;
+}

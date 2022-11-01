@@ -1,0 +1,10 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+message rseq_entry {
+	required uint64 rseq_abi_pointer	= 1;
+	required uint32 rseq_abi_size		= 2;
+	required uint32 signature		= 3;
+	optional uint64 rseq_cs_pointer		= 4;
+}

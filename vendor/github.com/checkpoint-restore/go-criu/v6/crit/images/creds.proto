@@ -1,0 +1,27 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+message creds_entry {
+	required uint32 uid	= 1;
+	required uint32	gid	= 2;
+	required uint32	euid	= 3;
+	required uint32	egid	= 4;
+	required uint32	suid	= 5;
+	required uint32	sgid	= 6;
+	required uint32	fsuid	= 7;
+	required uint32	fsgid	= 8;
+
+	repeated uint32	cap_inh	= 9;
+	repeated uint32	cap_prm	= 10;
+	repeated uint32	cap_eff	= 11;
+	repeated uint32	cap_bnd	= 12;
+
+	required uint32	secbits	= 13;
+
+	repeated uint32	groups	= 14;
+
+	optional string lsm_profile = 15;
+	optional string lsm_sockcreate = 16;
+	optional bytes	apparmor_data	= 17;
+}

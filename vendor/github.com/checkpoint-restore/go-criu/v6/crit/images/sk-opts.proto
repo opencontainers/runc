@@ -1,0 +1,43 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+message sk_opts_entry {
+	required uint32		so_sndbuf	= 1;
+	required uint32		so_rcvbuf	= 2;
+
+	required uint64		so_snd_tmo_sec	= 3;
+	required uint64		so_snd_tmo_usec	= 4;
+	required uint64		so_rcv_tmo_sec	= 5;
+	required uint64		so_rcv_tmo_usec	= 6;
+	optional bool		reuseaddr	= 7;
+
+	optional uint32		so_priority	= 8;
+	optional uint32		so_rcvlowat	= 9;
+	optional uint32		so_mark		= 10;
+	optional bool		so_passcred	= 11;
+	optional bool		so_passsec	= 12;
+	optional bool		so_dontroute	= 13;
+	optional bool		so_no_check	= 14;
+
+	optional string		so_bound_dev	= 15;
+
+	repeated fixed64	so_filter	= 16;
+	optional bool		so_reuseport	= 17;
+	optional bool		so_broadcast	= 18;
+	optional bool		so_keepalive	= 19;
+	optional uint32		tcp_keepcnt	= 20;
+	optional uint32		tcp_keepidle	= 21;
+	optional uint32		tcp_keepintvl	= 22;
+	optional uint32		so_oobinline	= 23;
+	optional uint32		so_linger	= 24;
+
+	optional uint32		so_buf_lock	= 25;
+}
+
+enum sk_shutdown {
+	NONE = 0;
+	READ = 1;
+	WRITE = 2;
+	BOTH = 3;
+}

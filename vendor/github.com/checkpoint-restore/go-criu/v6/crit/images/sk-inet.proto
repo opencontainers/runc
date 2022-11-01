@@ -1,0 +1,55 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+import "opts.proto";
+import "fown.proto";
+import "sk-opts.proto";
+
+message ip_opts_raw_entry {
+	optional bool			hdrincl		= 1;
+	optional bool			nodefrag	= 2;
+	optional bool			checksum	= 3;
+	repeated uint32			icmpv_filter	= 4;
+}
+
+message ip_opts_entry {
+	optional bool			freebind	= 1;
+	// Fields 2 and 3 are reserved for vz7 use
+	optional ip_opts_raw_entry	raw		= 4;
+}
+
+message inet_sk_entry {
+	/*
+	 * We have two IDs here -- id and ino. The first one
+	 * is used when restoring socket behind a file descriprot.
+	 * The fdinfo image's id is it. The second one is used
+	 * in sk-inet.c internally, in particular we identify
+	 * a TCP stream to restore into this socket using the
+	 * ino value.
+	 */
+	required uint32			id		=  1;
+	required uint32			ino		=  2;
+	required uint32			family		=  3 [(criu).dict = "sk"];
+	required uint32			type		=  4 [(criu).dict = "sk"];
+	required uint32			proto		=  5 [(criu).dict = "sk"];
+	required uint32			state		=  6 [(criu).dict = "sk"];
+	required uint32			src_port	=  7;
+	required uint32			dst_port	=  8;
+	required uint32			flags		=  9 [(criu).hex = true];
+	required uint32			backlog		= 10;
+
+	repeated uint32			src_addr	= 11 [(criu).ipadd = true];
+	repeated uint32			dst_addr	= 12 [(criu).ipadd = true];
+
+	required fown_entry		fown		= 13;
+	required sk_opts_entry		opts		= 14;
+	optional bool			v6only		= 15;
+	optional ip_opts_entry		ip_opts		= 16;
+
+	/* for ipv6, we need to send the ifindex to bind(); we keep the ifname
+	 * here and convert it on restore */
+	optional string			ifname		= 17;
+	optional uint32			ns_id		= 18;
+	optional sk_shutdown		shutdown	= 19;
+}

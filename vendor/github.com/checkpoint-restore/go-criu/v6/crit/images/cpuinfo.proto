@@ -1,0 +1,49 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+message cpuinfo_x86_entry {
+	enum vendor {
+		UNKNOWN		= 0;
+		INTEL		= 1;
+		AMD		= 2;
+	}
+
+	required vendor			vendor_id	= 1;
+	required uint32			cpu_family	= 2;
+	required uint32			model		= 3;
+	required uint32			stepping	= 4;
+	required uint32			capability_ver	= 5;
+	repeated uint32			capability	= 6;
+
+	optional string			model_id	= 7;
+
+	optional uint64			xfeatures_mask	= 8;
+	optional uint32			xsave_size	= 9;
+	optional uint32			xsave_size_max	= 10;
+}
+
+message cpuinfo_ppc64_entry {
+	enum endianness {
+		BIGENDIAN	= 0;
+		LITTLEENDIAN	= 1;
+	}
+
+	required endianness	endian		= 1;
+	repeated uint64		hwcap		= 2;
+}
+
+message cpuinfo_s390_entry {
+	repeated uint64		hwcap		= 2;
+}
+
+message cpuinfo_entry {
+	/*
+	 * Usually on SMP system there should be same CPUs
+	 * installed, but it might happen that system carries
+	 * various CPUs so @repeated used.
+	 */
+	repeated cpuinfo_x86_entry	x86_entry	= 1;
+	repeated cpuinfo_ppc64_entry	ppc64_entry	= 2;
+	repeated cpuinfo_s390_entry	s390_entry	= 3;
+}

@@ -1,0 +1,36 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+import "opts.proto";
+import "fown.proto";
+
+message reg_file_entry {
+	required uint32		id			= 1;
+	required uint32		flags			= 2 [(criu).flags = "rfile.flags"];
+	required uint64		pos			= 3;
+	required fown_entry	fown			= 5;
+	required string		name			= 6;
+	optional sint32		mnt_id			= 7 [default = -1];
+	optional uint64		size			= 8;
+	optional bool		ext			= 9;
+	optional uint32         mode    		= 10;
+
+	/* This field stores the build-ID of the file if it could be obtained. */
+	repeated uint32 	build_id 		= 11;
+
+	/* This field stores the CRC32C checksum of the file if it could be obtained. */
+	optional uint32 	checksum 		= 12;
+
+	/*
+	 * This field stores the configuration of bytes which were used in the
+	 * calculation of the checksum, if it could be obtained.
+	 */
+	optional uint32 	checksum_config 	= 13;
+
+	/*
+	 * This field stores the checksum parameter if it was used in the calculation
+	 * of the checksum, if it could be obtained.
+	 */
+	optional uint32 	checksum_parameter 	= 14;
+}

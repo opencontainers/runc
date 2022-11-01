@@ -1,0 +1,17 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+message autofs_entry {
+	required int32		fd			= 1;
+	required int32		pgrp			= 2;
+	required int32		timeout			= 3;
+	required int32		minproto		= 4;
+	required int32		maxproto		= 5;
+	required int32		mode			= 6;
+
+	optional int32		uid			= 7;
+	optional int32		gid			= 8;
+
+	optional int32		read_fd			= 9;
+}

@@ -1,0 +1,16 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+import "ipc-desc.proto";
+
+message ipc_msg {
+	required uint64		mtype	= 1;
+	required uint32		msize	= 2;
+}
+
+message ipc_msg_entry {
+	required ipc_desc_entry	desc	= 1;
+	required uint32		qbytes	= 2;
+	required uint32		qnum	= 3;
+}

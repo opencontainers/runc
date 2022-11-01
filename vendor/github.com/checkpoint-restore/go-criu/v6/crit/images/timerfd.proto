@@ -1,0 +1,21 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+import "opts.proto";
+import "fown.proto";
+
+message timerfd_entry {
+	required uint32		id		= 1;
+	required uint32		flags		= 2 [(criu).hex = true];
+	required fown_entry	fown		= 3;
+
+	required uint32		clockid		= 4;
+	required uint64		ticks		= 5;
+	required uint32		settime_flags	= 6 [(criu).hex = true];
+
+	required uint64		vsec		= 7;
+	required uint64		vnsec		= 8;
+	required uint64		isec		= 9;
+	required uint64		insec		= 10;
+}

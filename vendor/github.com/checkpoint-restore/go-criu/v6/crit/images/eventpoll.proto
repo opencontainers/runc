@@ -1,0 +1,24 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+import "fown.proto";
+
+message eventpoll_tfd_entry {
+	required uint32		id	= 1;
+	required uint32		tfd	= 2;
+	required uint32		events	= 3;
+	required uint64		data	= 4;
+
+	/* to find dup'ed target files */
+	optional uint32		dev	= 5;
+	optional uint64		inode	= 6;
+	optional uint64		pos	= 7;
+}
+
+message eventpoll_file_entry {
+	required uint32		id	= 1;
+	required uint32		flags	= 2;
+	required fown_entry	fown	= 3;
+	repeated eventpoll_tfd_entry tfd = 4;
+}

@@ -1,0 +1,12 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+import "fown.proto";
+
+message eventfd_file_entry {
+	required uint32		id		= 1;
+	required uint32		flags		= 2;
+	required fown_entry	fown		= 3;
+	required uint64		counter		= 4;
+}

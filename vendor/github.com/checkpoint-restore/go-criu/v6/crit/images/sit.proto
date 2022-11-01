@@ -1,0 +1,24 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+import "opts.proto";
+
+message sit_entry {
+	optional uint32 link		= 1;
+	repeated uint32 local		= 2 [(criu).ipadd = true];
+	repeated uint32 remote		= 3 [(criu).ipadd = true];
+	optional uint32 ttl		= 4;
+	optional uint32 tos		= 5;
+	optional bool   pmtudisc	= 6;
+	optional uint32 proto		= 7;
+	optional uint32 flags		= 8;
+	optional uint32 encap_type	= 9;
+	optional uint32 encap_flags	= 10;
+	optional uint32 encap_sport	= 11;
+	optional uint32 encap_dport	= 12;
+	optional uint32 rd_prefixlen	= 13;
+	repeated uint32 rd_prefix	= 14 [(criu).ipadd = true];
+	optional uint32 relay_prefixlen	= 15;
+	repeated uint32 relay_prefix	= 16 [(criu).ipadd = true];
+};

@@ -1,0 +1,11 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+message fown_entry {
+	required uint32		uid		= 1;
+	required uint32		euid		= 2;
+	required uint32		signum		= 3;
+	required uint32		pid_type	= 4;
+	required uint32		pid		= 5;
+}

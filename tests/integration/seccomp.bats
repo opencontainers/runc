@@ -70,31 +70,47 @@ function teardown() {
 	# Linux 4.14: SECCOMP_FILTER_FLAG_LOG
 	# Linux 4.17: SECCOMP_FILTER_FLAG_SPEC_ALLOW
 	requires_kernel 4.17
-	SECCOMP_FILTER_FLAGS=(
-		'' # no flag
-		'"SECCOMP_FILTER_FLAG_LOG"'
-		'"SECCOMP_FILTER_FLAG_SPEC_ALLOW"'
-		'"SECCOMP_FILTER_FLAG_TSYNC"'
-		'"SECCOMP_FILTER_FLAG_LOG","SECCOMP_FILTER_FLAG_SPEC_ALLOW"'
-		'"SECCOMP_FILTER_FLAG_LOG","SECCOMP_FILTER_FLAG_TSYNC"'
-		'"SECCOMP_FILTER_FLAG_SPEC_ALLOW","SECCOMP_FILTER_FLAG_TSYNC"'
-		'"SECCOMP_FILTER_FLAG_LOG","SECCOMP_FILTER_FLAG_SPEC_ALLOW","SECCOMP_FILTER_FLAG_TSYNC"'
-	)
-	for flags in "${SECCOMP_FILTER_FLAGS[@]}"; do
-		update_config '   .process.args = ["/bin/sh", "-c", "mkdir /dev/shm/foo"]
-				| .process.noNewPrivileges = false
-				| .linux.seccomp = {
-					"defaultAction":"SCMP_ACT_ALLOW",
-					"architectures":["SCMP_ARCH_X86","SCMP_ARCH_X32","SCMP_ARCH_X86_64","SCMP_ARCH_AARCH64","SCMP_ARCH_ARM"],
-					"flags":['"${flags}"'],
-					"syscalls":[{"names":["mkdir"], "action":"SCMP_ACT_ERRNO"}]
-				}'
 
-		# This test checks that the flags are accepted without errors but does
-		# not check they are effectively applied
-		runc run test_busybox
+	update_config '   .process.args = ["/bin/sh", "-c", "mkdir /dev/shm/foo"]
+			| .process.noNewPrivileges = false
+			| .linux.seccomp = {
+				"defaultAction":"SCMP_ACT_ALLOW",
+				"architectures":["SCMP_ARCH_X86","SCMP_ARCH_X32","SCMP_ARCH_X86_64","SCMP_ARCH_AARCH64","SCMP_ARCH_ARM"],
+				"syscalls":[{"names":["mkdir", "mkdirat"], "action":"SCMP_ACT_ERRNO"}]
+			}'
+
+	declare -A FLAGS=(
+		['REMOVE']=0 # No setting, use built-in default.
+		['EMPTY']=0  # Empty set of flags.
+		['"SECCOMP_FILTER_FLAG_LOG"']=2
+		['"SECCOMP_FILTER_FLAG_SPEC_ALLOW"']=4
+		['"SECCOMP_FILTER_FLAG_TSYNC"']=0 # tsync flag is ignored.
+		['"SECCOMP_FILTER_FLAG_LOG","SECCOMP_FILTER_FLAG_SPEC_ALLOW"']=6
+		['"SECCOMP_FILTER_FLAG_LOG","SECCOMP_FILTER_FLAG_TSYNC"']=2
+		['"SECCOMP_FILTER_FLAG_SPEC_ALLOW","SECCOMP_FILTER_FLAG_TSYNC"']=4
+		['"SECCOMP_FILTER_FLAG_LOG","SECCOMP_FILTER_FLAG_SPEC_ALLOW","SECCOMP_FILTER_FLAG_TSYNC"']=6
+	)
+	for key in "${!FLAGS[@]}"; do
+		case "$key" in
+		'REMOVE')
+			update_config ' del(.linux.seccomp.flags)'
+			;;
+		'EMPTY')
+			update_config ' .linux.seccomp.flags = []'
+			;;
+		*)
+			update_config ' .linux.seccomp.flags = [ '"${key}"' ]'
+			;;
+		esac
+
+		runc --debug run test_busybox
 		[ "$status" -ne 0 ]
 		[[ "$output" == *"mkdir:"*"/dev/shm/foo"*"Operation not permitted"* ]]
+
+		# Check the numeric flags value, as printed in the debug log, is as expected.
+		exp="\"seccomp filter flags: ${FLAGS[$key]}\""
+		echo "flags $key, expecting $exp"
+		[[ "$output" == *"$exp"* ]]
 	done
 }
 

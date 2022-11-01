@@ -1,0 +1,62 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+import "opts.proto";
+
+enum fstype {
+	UNSUPPORTED		= 0;
+	PROC			= 1;
+	SYSFS			= 2;
+	DEVTMPFS		= 3;
+	BINFMT_MISC		= 4;
+	TMPFS			= 5;
+	DEVPTS			= 6;
+	SIMFS			= 7;
+	PSTORE			= 8;
+	SECURITYFS		= 9;
+	FUSECTL			= 10;
+	DEBUGFS			= 11;
+	CGROUP			= 12;
+	AUFS			= 13;
+	MQUEUE			= 14;
+	FUSE			= 15;
+	AUTO			= 16;
+	OVERLAYFS		= 17;
+	AUTOFS			= 18;
+	TRACEFS			= 19;
+
+	/* These three are reserved for NFS support */
+	// RPC_PIPEFS		= 20;
+	// NFS			= 21;
+	// NFS4			= 22;
+
+	CGROUP2			= 23;
+};
+
+message mnt_entry {
+	required uint32		fstype			= 1;
+	required uint32		mnt_id			= 2;
+	required uint32		root_dev		= 3 [(criu).dev = true];
+	required uint32		parent_mnt_id		= 4;
+	required uint32		flags			= 5 [(criu).hex = true];
+
+	required string		root			= 6;
+	required string		mountpoint		= 7;
+	required string		source			= 8;
+	required string		options			= 9;
+
+	optional uint32		shared_id		= 10;
+	optional uint32		master_id		= 11;
+
+	optional bool		with_plugin		= 12;
+	optional bool		ext_mount		= 13;
+
+	optional string		fsname			= 14;
+	optional bool		internal_sharing	= 15;
+
+	optional bool		deleted			= 16;
+	optional uint32		sb_flags		= 17 [(criu).hex = true];
+	/* user defined mapping for external mount */
+	optional string		ext_key			= 18;
+}

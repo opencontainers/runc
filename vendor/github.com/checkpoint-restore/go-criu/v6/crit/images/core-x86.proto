@@ -1,0 +1,110 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+import "opts.proto";
+
+enum user_x86_regs_mode {
+	NATIVE = 1;
+	COMPAT = 2;
+}
+
+/* Reusing entry for both 64 and 32 bits register sets */
+message user_x86_regs_entry {
+	required uint64			r15		=  1;
+	required uint64			r14		=  2;
+	required uint64			r13		=  3;
+	required uint64			r12		=  4;
+	required uint64			bp		=  5;
+	required uint64			bx		=  6;
+	required uint64			r11		=  7;
+	required uint64			r10		=  8;
+	required uint64			r9		=  9;
+	required uint64			r8		= 10;
+	required uint64			ax		= 11;
+	required uint64			cx		= 12;
+	required uint64			dx		= 13;
+	required uint64			si		= 14;
+	required uint64			di		= 15;
+	required uint64			orig_ax		= 16;
+	required uint64			ip		= 17;
+	required uint64			cs		= 18;
+	required uint64			flags		= 19;
+	required uint64			sp		= 20;
+	required uint64			ss		= 21;
+	required uint64			fs_base		= 22;
+	required uint64			gs_base		= 23;
+	required uint64			ds		= 24;
+	required uint64			es		= 25;
+	required uint64			fs		= 26;
+	required uint64			gs		= 27;
+	optional user_x86_regs_mode	mode		= 28 [default = NATIVE];
+}
+
+message user_x86_xsave_entry {
+	/* standard xsave features */
+	required uint64			xstate_bv	=  1;
+
+	/* AVX components: 16x 256-bit ymm registers, hi 128 bits */
+	repeated uint32			ymmh_space	=  2;
+
+	/* MPX components */
+	repeated uint64			bndreg_state	=  3;
+	repeated uint64			bndcsr_state	=  4;
+
+	/* AVX512 components: k0-k7, ZMM_Hi256, Hi16_ZMM  */
+	repeated uint64			opmask_reg	=  5;
+	repeated uint64			zmm_upper	=  6;
+	repeated uint64			hi16_zmm	=  7;
+
+	/* Protected keys */
+	repeated uint32			pkru		=  8;
+
+	/*
+	 * Processor trace (PT) and hardware duty cycling (HDC)
+	 * are supervisor state components and only managed by
+	 * xsaves/xrstors on cpl=0, so ignore them.
+	 */
+}
+
+message user_x86_fpregs_entry {
+
+	/* fxsave data */
+	required uint32			cwd		=  1;
+	required uint32			swd		=  2;
+	required uint32			twd		=  3;
+	required uint32			fop		=  4;
+	required uint64			rip		=  5;
+	required uint64			rdp		=  6;
+	required uint32			mxcsr		=  7;
+	required uint32			mxcsr_mask	=  8;
+	repeated uint32			st_space	=  9;
+	repeated uint32			xmm_space	= 10;
+
+	/* Unused, but present for backward compatibility */
+	repeated uint32			padding		= 11;
+
+	/* xsave extension */
+	optional user_x86_xsave_entry	xsave		= 13;
+}
+
+message user_desc_t {
+	required uint32			entry_number	=  1;
+	/* this is for GDT, not for MSRs - 32-bit base */
+	required uint32			base_addr	=  2;
+	required uint32			limit		=  3;
+	required bool			seg_32bit	=  4;
+	required bool			contents_h	=  5;
+	required bool			contents_l	=  6;
+	required bool			read_exec_only	=  7 [default = true];
+	required bool			limit_in_pages	=  8;
+	required bool			seg_not_present	=  9 [default = true];
+	required bool			usable		= 10;
+}
+
+message thread_info_x86 {
+	required uint64			clear_tid_addr	= 1[(criu).hex = true];
+	required user_x86_regs_entry	gpregs		= 2[(criu).hex = true];
+	required user_x86_fpregs_entry	fpregs		= 3;
+	repeated user_desc_t		tls		= 4;
+}

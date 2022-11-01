@@ -15,14 +15,14 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
-type legacyManager struct {
+type LegacyManager struct {
 	mu      sync.Mutex
 	cgroups *configs.Cgroup
 	paths   map[string]string
 	dbus    *dbusConnManager
 }
 
-func NewLegacyManager(cg *configs.Cgroup, paths map[string]string) (cgroups.Manager, error) {
+func NewLegacyManager(cg *configs.Cgroup, paths map[string]string) (*LegacyManager, error) {
 	if cg.Rootless {
 		return nil, errors.New("cannot use rootless systemd cgroups manager on cgroup v1")
 	}
@@ -36,7 +36,7 @@ func NewLegacyManager(cg *configs.Cgroup, paths map[string]string) (cgroups.Mana
 			return nil, err
 		}
 	}
-	return &legacyManager{
+	return &LegacyManager{
 		cgroups: cg,
 		paths:   paths,
 		dbus:    newDbusConnManager(false),
@@ -46,7 +46,7 @@ func NewLegacyManager(cg *configs.Cgroup, paths map[string]string) (cgroups.Mana
 type subsystem interface {
 	// Name returns the name of the subsystem.
 	Name() string
-	// Returns the stats, as 'stats', corresponding to the cgroup under 'path'.
+	// GetStats returns the stats, as 'stats', corresponding to the cgroup under 'path'.
 	GetStats(path string, stats *cgroups.Stats) error
 	// Set sets cgroup resource limits.
 	Set(path string, r *configs.Resources) error
@@ -157,7 +157,7 @@ func initPaths(c *configs.Cgroup) (map[string]string, error) {
 	return paths, nil
 }
 
-func (m *legacyManager) Apply(pid int) error {
+func (m *LegacyManager) Apply(pid int) error {
 	var (
 		c          = m.cgroups
 		unitName   = getUnitName(c)
@@ -215,7 +215,7 @@ func (m *legacyManager) Apply(pid int) error {
 	return nil
 }
 
-func (m *legacyManager) Destroy() error {
+func (m *LegacyManager) Destroy() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -231,13 +231,13 @@ func (m *legacyManager) Destroy() error {
 	return stopErr
 }
 
-func (m *legacyManager) Path(subsys string) string {
+func (m *LegacyManager) Path(subsys string) string {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return m.paths[subsys]
 }
 
-func (m *legacyManager) joinCgroups(pid int) error {
+func (m *LegacyManager) joinCgroups(pid int) error {
 	for _, sys := range legacySubsystems {
 		name := sys.Name()
 		switch name {
@@ -281,7 +281,7 @@ func getSubsystemPath(slice, unit, subsystem string) (string, error) {
 	return filepath.Join(mountpoint, initPath, slice, unit), nil
 }
 
-func (m *legacyManager) Freeze(state configs.FreezerState) error {
+func (m *LegacyManager) Freeze(state configs.FreezerState) error {
 	err := m.doFreeze(state)
 	if err == nil {
 		m.cgroups.Resources.Freezer = state
@@ -291,7 +291,7 @@ func (m *legacyManager) Freeze(state configs.FreezerState) error {
 
 // doFreeze is the same as Freeze but without
 // changing the m.cgroups.Resources.Frozen field.
-func (m *legacyManager) doFreeze(state configs.FreezerState) error {
+func (m *LegacyManager) doFreeze(state configs.FreezerState) error {
 	path, ok := m.paths["freezer"]
 	if !ok {
 		return errSubsystemDoesNotExist
@@ -301,7 +301,7 @@ func (m *legacyManager) doFreeze(state configs.FreezerState) error {
 	return freezer.Set(path, resources)
 }
 
-func (m *legacyManager) GetPids() ([]int, error) {
+func (m *LegacyManager) GetPids() ([]int, error) {
 	path, ok := m.paths["devices"]
 	if !ok {
 		return nil, errSubsystemDoesNotExist
@@ -309,7 +309,7 @@ func (m *legacyManager) GetPids() ([]int, error) {
 	return cgroups.GetPids(path)
 }
 
-func (m *legacyManager) GetAllPids() ([]int, error) {
+func (m *LegacyManager) GetAllPids() ([]int, error) {
 	path, ok := m.paths["devices"]
 	if !ok {
 		return nil, errSubsystemDoesNotExist
@@ -317,7 +317,7 @@ func (m *legacyManager) GetAllPids() ([]int, error) {
 	return cgroups.GetAllPids(path)
 }
 
-func (m *legacyManager) GetStats() (*cgroups.Stats, error) {
+func (m *LegacyManager) GetStats() (*cgroups.Stats, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	stats := cgroups.NewStats()
@@ -334,7 +334,7 @@ func (m *legacyManager) GetStats() (*cgroups.Stats, error) {
 	return stats, nil
 }
 
-func (m *legacyManager) Set(r *configs.Resources) error {
+func (m *LegacyManager) Set(r *configs.Resources) error {
 	if r == nil {
 		return nil
 	}
@@ -382,17 +382,17 @@ func (m *legacyManager) Set(r *configs.Resources) error {
 	return nil
 }
 
-func (m *legacyManager) GetPaths() map[string]string {
+func (m *LegacyManager) GetPaths() map[string]string {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return m.paths
 }
 
-func (m *legacyManager) GetCgroups() (*configs.Cgroup, error) {
+func (m *LegacyManager) GetCgroups() (*configs.Cgroup, error) {
 	return m.cgroups, nil
 }
 
-func (m *legacyManager) GetFreezerState() (configs.FreezerState, error) {
+func (m *LegacyManager) GetFreezerState() (configs.FreezerState, error) {
 	path, ok := m.paths["freezer"]
 	if !ok {
 		return configs.Undefined, nil
@@ -401,10 +401,10 @@ func (m *legacyManager) GetFreezerState() (configs.FreezerState, error) {
 	return freezer.GetState(path)
 }
 
-func (m *legacyManager) Exists() bool {
+func (m *LegacyManager) Exists() bool {
 	return cgroups.PathExists(m.Path("devices"))
 }
 
-func (m *legacyManager) OOMKillCount() (uint64, error) {
+func (m *LegacyManager) OOMKillCount() (uint64, error) {
 	return fs.OOMKillCount(m.Path("memory"))
 }

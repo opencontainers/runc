@@ -1,0 +1,16 @@
+syntax = "proto2";
+
+message aa_policy {
+	required string		name	= 1;
+	required bytes		blob	= 2;
+}
+
+message aa_namespace {
+	required string		name			= 1;
+	repeated aa_policy	policies		= 2;
+	repeated aa_namespace	namespaces		= 3;
+}
+
+message apparmor_entry {
+	repeated aa_namespace	namespaces		= 1;
+}

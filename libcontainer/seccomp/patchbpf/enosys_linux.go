@@ -43,6 +43,11 @@ const uintptr_t C_SET_MODE_FILTER = SECCOMP_SET_MODE_FILTER;
 #endif
 const uintptr_t C_FILTER_FLAG_LOG = SECCOMP_FILTER_FLAG_LOG;
 
+#ifndef SECCOMP_FILTER_FLAG_SPEC_ALLOW
+#	define SECCOMP_FILTER_FLAG_SPEC_ALLOW (1UL << 2)
+#endif
+const uintptr_t C_FILTER_FLAG_SPEC_ALLOW = SECCOMP_FILTER_FLAG_SPEC_ALLOW;
+
 #ifndef SECCOMP_FILTER_FLAG_NEW_LISTENER
 #	define SECCOMP_FILTER_FLAG_NEW_LISTENER (1UL << 3)
 #endif
@@ -641,8 +646,13 @@ func filterFlags(config *configs.Seccomp, filter *libseccomp.ScmpFilter) (flags 
 			flags |= uint(C.C_FILTER_FLAG_LOG)
 		}
 	}
-
-	// TODO: Support seccomp flags not yet added to libseccomp-golang...
+	if apiLevel >= 4 {
+		if ssb, err := filter.GetSSB(); err != nil {
+			return 0, false, fmt.Errorf("unable to fetch SECCOMP_FILTER_FLAG_SPEC_ALLOW bit: %w", err)
+		} else if ssb {
+			flags |= uint(C.C_FILTER_FLAG_SPEC_ALLOW)
+		}
+	}
 
 	for _, call := range config.Syscalls {
 		if call.Action == configs.Notify {
@@ -655,6 +665,9 @@ func filterFlags(config *configs.Seccomp, filter *libseccomp.ScmpFilter) (flags 
 }
 
 func sysSeccompSetFilter(flags uint, filter []unix.SockFilter) (fd int, err error) {
+	// This debug output is validated in tests/integration/seccomp.bats
+	// by the SECCOMP_FILTER_FLAG_* test.
+	logrus.Debugf("seccomp filter flags: %d", flags)
 	fprog := unix.SockFprog{
 		Len:    uint16(len(filter)),
 		Filter: &filter[0],

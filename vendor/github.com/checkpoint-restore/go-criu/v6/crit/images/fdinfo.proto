@@ -1,0 +1,81 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+import "regfile.proto";
+import "sk-inet.proto";
+import "ns.proto";
+import "packet-sock.proto";
+import "sk-netlink.proto";
+import "eventfd.proto";
+import "eventpoll.proto";
+import "signalfd.proto";
+import "tun.proto";
+import "timerfd.proto";
+import "fsnotify.proto";
+import "ext-file.proto";
+import "sk-unix.proto";
+import "fifo.proto";
+import "pipe.proto";
+import "tty.proto";
+import "memfd.proto";
+import "bpfmap-file.proto";
+
+enum fd_types {
+	UND		= 0;
+	REG		= 1;
+	PIPE		= 2;
+	FIFO		= 3;
+	INETSK		= 4;
+	UNIXSK		= 5;
+	EVENTFD		= 6;
+	EVENTPOLL	= 7;
+	INOTIFY		= 8;
+	SIGNALFD	= 9;
+	PACKETSK	= 10;
+	TTY		= 11;
+	FANOTIFY	= 12;
+	NETLINKSK	= 13;
+	NS		= 14;
+	TUNF		= 15;
+	EXT		= 16;
+	TIMERFD		= 17;
+	MEMFD		= 18;
+	BPFMAP		= 19;
+
+	/* Any number above the real used. Not stored to image */
+	CTL_TTY		= 65534;
+	AUTOFS_PIPE	= 65535;
+}
+
+message fdinfo_entry {
+	required uint32		id	= 1;
+	required uint32		flags	= 2;
+	required fd_types	type	= 3;
+	required uint32		fd	= 4;
+	optional string		xattr_security_selinux = 5;
+}
+
+message file_entry {
+	required fd_types		type	= 1;
+	required uint32			id	= 2;
+	optional reg_file_entry		reg	= 3;
+	optional inet_sk_entry		isk	= 4;
+	optional ns_file_entry		nsf	= 5;
+	optional packet_sock_entry	psk	= 6;
+	optional netlink_sk_entry	nlsk	= 7;
+	optional eventfd_file_entry	efd	= 8;
+	optional eventpoll_file_entry	epfd	= 9;
+	optional signalfd_entry		sgfd	= 10;
+	optional tunfile_entry		tunf	= 11;
+	optional timerfd_entry		tfd	= 12;
+	optional inotify_file_entry	ify	= 13;
+	optional fanotify_file_entry	ffy	= 14;
+	optional ext_file_entry		ext	= 15;
+	optional unix_sk_entry		usk	= 16;
+	optional fifo_entry		fifo	= 17;
+	optional pipe_entry		pipe	= 18;
+	optional tty_file_entry		tty	= 19;
+	optional memfd_file_entry	memfd	= 20;
+	optional bpfmap_file_entry	bpf	= 21;
+}

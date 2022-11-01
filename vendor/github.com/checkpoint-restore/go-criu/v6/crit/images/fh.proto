@@ -1,0 +1,25 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+import "opts.proto";
+
+enum fh_entry_sizes {
+	min_entries			= 16;
+}
+
+message fh_entry {
+	required uint32		bytes	= 1;
+	required uint32		type	= 2;
+
+	/* The minimum is fh_n_handle repetitions */
+	repeated uint64		handle	= 3;
+	optional string		path	= 4;
+	optional uint32		mnt_id	= 5;
+}
+
+message irmap_cache_entry {
+	required uint32		dev	= 1 [(criu).dev = true, (criu).odev = true];
+	required uint64		inode	= 2;
+	required string		path	= 3;
+}

@@ -1,0 +1,92 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+import "opts.proto";
+
+message user_mips_regs_entry {
+	required uint64 r0      = 1;
+	required uint64 r1      = 2;
+	required uint64 r2      = 3;
+	required uint64 r3      = 4;
+	required uint64 r4      = 5;
+	required uint64 r5      = 6;
+	required uint64 r6      = 7;
+	required uint64 r7      = 8;
+	required uint64 r8      = 9;
+	required uint64 r9      = 10;
+	required uint64 r10     = 11;
+	required uint64 r11     = 12;
+	required uint64 r12     = 13;
+	required uint64 r13     = 14;
+	required uint64 r14     = 15;
+	required uint64 r15     = 16;
+	required uint64 r16     = 17;
+	required uint64 r17     = 18;
+	required uint64 r18     = 19;
+	required uint64 r19     = 20;
+	required uint64 r20     = 21;
+	required uint64 r21     = 22;
+	required uint64 r22     = 23;
+	required uint64 r23     = 24;
+	required uint64 r24     = 25;
+	required uint64 r25     = 26;
+	required uint64 r26     = 27;
+	required uint64 r27     = 28;
+	required uint64 r28     = 29;
+	required uint64 r29     = 30;
+	required uint64 r30     = 31;
+	required uint64 r31     = 32;
+	required uint64 lo      = 33;
+	required uint64 hi      = 34;
+	required uint64 cp0_epc      = 35;
+	required uint64 cp0_badvaddr      = 36;
+	required uint64 cp0_status      = 37;
+	required uint64 cp0_cause      = 38;
+}
+
+message user_mips_fpregs_entry {
+	required uint64 r0      = 1;
+	required uint64 r1      = 2;
+	required uint64 r2      = 3;
+	required uint64 r3      = 4;
+	required uint64 r4      = 5;
+	required uint64 r5      = 6;
+	required uint64 r6      = 7;
+	required uint64 r7      = 8;
+	required uint64 r8      = 9;
+	required uint64 r9      = 10;
+	required uint64 r10     = 11;
+	required uint64 r11     = 12;
+	required uint64 r12     = 13;
+	required uint64 r13     = 14;
+	required uint64 r14     = 15;
+	required uint64 r15     = 16;
+	required uint64 r16     = 17;
+	required uint64 r17     = 18;
+	required uint64 r18     = 19;
+	required uint64 r19     = 20;
+	required uint64 r20     = 21;
+	required uint64 r21     = 22;
+	required uint64 r22     = 23;
+	required uint64 r23     = 24;
+	required uint64 r24     = 25;
+	required uint64 r25     = 26;
+	required uint64 r26     = 27;
+	required uint64 r27     = 28;
+	required uint64 r28     = 29;
+	required uint64 r29     = 30;
+	required uint64 r30     = 31;
+	required uint64 r31     = 32;
+	required uint64 lo      = 33;
+	required uint64 hi      = 34;
+	required uint32 fpu_fcr31      = 35;
+	required uint32 fpu_id      = 36;
+}
+
+message thread_info_mips {
+	required uint64			 clear_tid_addr	= 1[(criu).hex = true];
+	required uint64                  tls            = 2;
+	required user_mips_regs_entry	 gpregs		= 3[(criu).hex = true];
+	required user_mips_fpregs_entry	 fpregs		= 4[(criu).hex = true];
+}

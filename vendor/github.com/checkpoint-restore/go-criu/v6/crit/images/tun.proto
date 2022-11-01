@@ -1,0 +1,20 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+import "opts.proto";
+
+message tunfile_entry {
+	required uint32		id		= 1;
+	optional string		netdev		= 2;
+	optional bool		detached	= 3;
+	optional uint32		ns_id		= 4;
+};
+
+message tun_link_entry {
+	required uint32		flags		= 1 [(criu).hex = true];
+	required int32		owner		= 2;
+	required int32		group		= 3;
+	required uint32		vnethdr		= 4;
+	required uint32		sndbuf		= 5;
+};

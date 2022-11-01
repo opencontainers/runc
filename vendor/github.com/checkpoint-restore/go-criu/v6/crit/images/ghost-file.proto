@@ -1,0 +1,27 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+import "opts.proto";
+import "time.proto";
+
+message ghost_file_entry {
+	required uint32		uid		= 1;
+	required uint32		gid		= 2;
+	required uint32		mode		= 3;
+
+	optional uint32		dev		= 4 [(criu).dev = true];
+	optional uint64		ino		= 5;
+	optional uint32		rdev		= 6 [(criu).dev = true, (criu).odev = true];
+	optional timeval	atim		= 7;
+	optional timeval	mtim		= 8;
+	optional bool		chunks		= 9;
+	optional uint64		size		= 10;
+	/* this field makes sense only when S_ISLNK(mode) */
+	optional string		symlnk_target	= 11;
+}
+
+message ghost_chunk_entry {
+	required uint64		len		= 1;
+	required uint64		off		= 2;
+}

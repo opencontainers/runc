@@ -13,7 +13,7 @@ import (
 
 type parseError = fscommon.ParseError
 
-type manager struct {
+type Manager struct {
 	config *configs.Cgroup
 	// dirPath is like "/sys/fs/cgroup/user.slice/user-1001.slice/session-1.scope"
 	dirPath string
@@ -25,7 +25,7 @@ type manager struct {
 // NewManager creates a manager for cgroup v2 unified hierarchy.
 // dirPath is like "/sys/fs/cgroup/user.slice/user-1001.slice/session-1.scope".
 // If dirPath is empty, it is automatically set using config.
-func NewManager(config *configs.Cgroup, dirPath string) (cgroups.Manager, error) {
+func NewManager(config *configs.Cgroup, dirPath string) (*Manager, error) {
 	if dirPath == "" {
 		var err error
 		dirPath, err = defaultDirPath(config)
@@ -34,14 +34,14 @@ func NewManager(config *configs.Cgroup, dirPath string) (cgroups.Manager, error)
 		}
 	}
 
-	m := &manager{
+	m := &Manager{
 		config:  config,
 		dirPath: dirPath,
 	}
 	return m, nil
 }
 
-func (m *manager) getControllers() error {
+func (m *Manager) getControllers() error {
 	if m.controllers != nil {
 		return nil
 	}
@@ -62,7 +62,7 @@ func (m *manager) getControllers() error {
 	return nil
 }
 
-func (m *manager) Apply(pid int) error {
+func (m *Manager) Apply(pid int) error {
 	if err := CreateCgroupPath(m.dirPath, m.config); err != nil {
 		// Related tests:
 		// - "runc create (no limits + no cgrouppath + no permission) succeeds"
@@ -84,15 +84,15 @@ func (m *manager) Apply(pid int) error {
 	return nil
 }
 
-func (m *manager) GetPids() ([]int, error) {
+func (m *Manager) GetPids() ([]int, error) {
 	return cgroups.GetPids(m.dirPath)
 }
 
-func (m *manager) GetAllPids() ([]int, error) {
+func (m *Manager) GetAllPids() ([]int, error) {
 	return cgroups.GetAllPids(m.dirPath)
 }
 
-func (m *manager) GetStats() (*cgroups.Stats, error) {
+func (m *Manager) GetStats() (*cgroups.Stats, error) {
 	var errs []error
 
 	st := cgroups.NewStats()
@@ -128,7 +128,7 @@ func (m *manager) GetStats() (*cgroups.Stats, error) {
 	return st, nil
 }
 
-func (m *manager) Freeze(state configs.FreezerState) error {
+func (m *Manager) Freeze(state configs.FreezerState) error {
 	if m.config.Resources == nil {
 		return errors.New("cannot toggle freezer: cgroups not configured for container")
 	}
@@ -139,15 +139,15 @@ func (m *manager) Freeze(state configs.FreezerState) error {
 	return nil
 }
 
-func (m *manager) Destroy() error {
+func (m *Manager) Destroy() error {
 	return cgroups.RemovePath(m.dirPath)
 }
 
-func (m *manager) Path(_ string) string {
+func (m *Manager) Path(_ string) string {
 	return m.dirPath
 }
 
-func (m *manager) Set(r *configs.Resources) error {
+func (m *Manager) Set(r *configs.Resources) error {
 	if r == nil {
 		return nil
 	}
@@ -213,7 +213,7 @@ func setDevices(dirPath string, r *configs.Resources) error {
 	return cgroups.DevicesSetV2(dirPath, r)
 }
 
-func (m *manager) setUnified(res map[string]string) error {
+func (m *Manager) setUnified(res map[string]string) error {
 	for k, v := range res {
 		if strings.Contains(k, "/") {
 			return fmt.Errorf("unified resource %q must be a file name (no slashes)", k)
@@ -239,21 +239,21 @@ func (m *manager) setUnified(res map[string]string) error {
 	return nil
 }
 
-func (m *manager) GetPaths() map[string]string {
+func (m *Manager) GetPaths() map[string]string {
 	paths := make(map[string]string, 1)
 	paths[""] = m.dirPath
 	return paths
 }
 
-func (m *manager) GetCgroups() (*configs.Cgroup, error) {
+func (m *Manager) GetCgroups() (*configs.Cgroup, error) {
 	return m.config, nil
 }
 
-func (m *manager) GetFreezerState() (configs.FreezerState, error) {
+func (m *Manager) GetFreezerState() (configs.FreezerState, error) {
 	return getFreezer(m.dirPath)
 }
 
-func (m *manager) Exists() bool {
+func (m *Manager) Exists() bool {
 	return cgroups.PathExists(m.dirPath)
 }
 
@@ -261,7 +261,7 @@ func OOMKillCount(path string) (uint64, error) {
 	return fscommon.GetValueByKey(path, "memory.events", "oom_kill")
 }
 
-func (m *manager) OOMKillCount() (uint64, error) {
+func (m *Manager) OOMKillCount() (uint64, error) {
 	c, err := OOMKillCount(m.dirPath)
 	if err != nil && m.config.Rootless && os.IsNotExist(err) {
 		err = nil

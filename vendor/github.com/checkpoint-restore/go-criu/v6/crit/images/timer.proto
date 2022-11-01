@@ -1,0 +1,32 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+message itimer_entry {
+	required uint64		isec		= 1;
+	required uint64		iusec		= 2;
+	required uint64		vsec		= 3;
+	required uint64		vusec		= 4;
+}
+
+message posix_timer_entry {
+	required uint32		it_id		= 1;
+	required uint32		clock_id	= 2;
+	required uint32		si_signo	= 3;
+	required uint32		it_sigev_notify = 4;
+	required uint64		sival_ptr	= 5;
+	required uint32		overrun		= 6;
+
+	required uint64		isec		= 7;
+	required uint64		insec		= 8;
+	required uint64		vsec		= 9;
+	required uint64		vnsec		= 10;
+	optional int32		notify_thread_id= 11;
+}
+
+message task_timers_entry {
+	required itimer_entry		real	= 1;
+	required itimer_entry		virt	= 2;
+	required itimer_entry		prof	= 3;
+	repeated posix_timer_entry	posix	= 4;
+}

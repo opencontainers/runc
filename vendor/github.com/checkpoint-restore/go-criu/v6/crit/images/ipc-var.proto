@@ -1,0 +1,23 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+message ipc_var_entry {
+	repeated uint32			sem_ctls		=  1;
+	required uint32			msg_ctlmax		=  2;
+	required uint32			msg_ctlmnb		=  3;
+	required uint32			msg_ctlmni		=  4;
+	required uint32			auto_msgmni		=  5;
+	required uint64			shm_ctlmax		=  6;
+	required uint64			shm_ctlall		=  7;
+	required uint32			shm_ctlmni		=  8;
+	required uint32			shm_rmid_forced		=  9;
+	required uint32			mq_queues_max		= 10;
+	required uint32			mq_msg_max		= 11;
+	required uint32			mq_msgsize_max		= 12;
+	optional uint32			mq_msg_default		= 13;
+	optional uint32			mq_msgsize_default	= 14;
+	optional uint32			msg_next_id		= 15;
+	optional uint32			sem_next_id		= 16;
+	optional uint32			shm_next_id		= 17;
+}

@@ -1,0 +1,14 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+message uid_gid_extent {
+	required uint32 first		= 1;
+	required uint32 lower_first	= 2;
+	required uint32 count		= 3;
+}
+
+message userns_entry {
+	repeated uid_gid_extent uid_map	= 1;
+	repeated uid_gid_extent gid_map = 2;
+}

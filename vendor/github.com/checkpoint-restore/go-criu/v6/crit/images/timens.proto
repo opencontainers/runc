@@ -1,0 +1,12 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+message timespec {
+	required uint64		tv_sec	= 1;
+	required uint64		tv_nsec	= 2;
+}
+message timens_entry {
+	required timespec monotonic	= 1;
+	required timespec boottime	= 2;
+}

@@ -1,0 +1,57 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+import "opts.proto";
+import "fown.proto";
+import "sk-opts.proto";
+
+message file_perms_entry {
+	required uint32			mode		= 1;
+	required uint32			uid		= 2;
+	required uint32			gid		= 3;
+}
+
+message unix_sk_entry {
+	/*
+	 * Few words about why we need both -- id and ino.
+	 *
+	 * The former one is used to link file descriptor from
+	 * fdinfo image with the unix_sk_entry that should be
+	 * opened under it.
+	 *
+	 * The latter one ties together unix peers -- the peer
+	 * member on this structure is the ino one of its peer
+	 * and simetimes vise-versa.
+	 */
+	required uint32			id		=  1;
+	required uint32			ino		=  2;
+	required uint32			type		=  3 [(criu).dict = "sk"];
+	required uint32			state		=  4 [(criu).dict = "sk"];
+	required uint32			flags		=  5 [(criu).hex = true];
+	required uint32			uflags		=  6 [(criu).hex = true];
+	required uint32			backlog		=  7;
+	required uint32			peer		=  8;
+	required fown_entry		fown		=  9;
+	required sk_opts_entry		opts		= 10;
+
+	/*
+	 * Abstract name may contain \0 at any point,
+	 * so we need to carry it as byte sequence...
+	 */
+	required bytes			name		= 11 [(criu).conv = "unix_name"];
+
+	optional sk_shutdown		shutdown	= 12;
+
+	optional file_perms_entry	file_perms	= 13;
+
+	/*
+	 * Relative socket name may have prefix.
+	 */
+	optional string			name_dir	= 14;
+	optional bool			deleted		= 15;
+
+	optional uint32			ns_id		= 16;
+	optional sint32			mnt_id		= 17 [default = -1];
+	/* Please, don't use field with number 18. */
+}

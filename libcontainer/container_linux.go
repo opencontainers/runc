@@ -17,8 +17,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/checkpoint-restore/go-criu/v5"
-	criurpc "github.com/checkpoint-restore/go-criu/v5/rpc"
+	"github.com/checkpoint-restore/go-criu/v6"
+	criurpc "github.com/checkpoint-restore/go-criu/v6/crit/images"
 	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/sirupsen/logrus"

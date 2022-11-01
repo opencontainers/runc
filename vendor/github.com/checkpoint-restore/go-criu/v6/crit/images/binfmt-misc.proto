@@ -1,0 +1,14 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+message binfmt_misc_entry {
+	required string		name			= 1;
+	required bool		enabled			= 2;
+	required string		interpreter		= 3;
+	optional string		flags			= 4;
+	optional string		extension		= 5;
+	optional string		magic			= 6;
+	optional string		mask			= 7;
+	optional int32		offset			= 8;
+}

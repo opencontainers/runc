@@ -1,0 +1,18 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+// This message is sent from CRIU to the streamer.
+// * During dump, it communicates the name of the file that is about to be sent
+//   to the streamer.
+// * During restore, CRIU requests image files from the streamer. The message is
+//   used to communicate the name of the desired file.
+message img_streamer_request_entry {
+	required string filename = 1;
+}
+
+// This message is sent from the streamer to CRIU. It is only used during
+// restore to report whether the requested file exists.
+message img_streamer_reply_entry {
+	required bool exists = 1;
+}

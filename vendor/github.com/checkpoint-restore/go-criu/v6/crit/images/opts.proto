@@ -1,0 +1,20 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+import "google/protobuf/descriptor.proto";
+
+message CRIU_Opts {
+	optional bool hex = 1; // Indicate that CRIT should treat this field as hex.
+	optional bool ipadd = 2; // The field is IPv4/v6 address
+	optional string flags = 3;
+	optional bool dev = 4; // Device major:minor packed
+	optional bool odev = 5; // ... in old format
+	optional string dict = 6;
+	optional string conv = 7;
+}
+
+extend google.protobuf.FieldOptions {
+	// Registered unique number to use for all kinds of custom options.
+	optional CRIU_Opts criu = 1018;
+}

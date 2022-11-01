@@ -17,7 +17,7 @@ import (
 // (unlike our fs driver, they will happily write deny-all rules to running
 // containers). So we have to freeze the container to avoid the container get
 // an occasional "permission denied" error.
-func (m *legacyManager) freezeBeforeSet(unitName string, r *configs.Resources) (needsFreeze, needsThaw bool, err error) {
+func (m *LegacyManager) freezeBeforeSet(unitName string, r *configs.Resources) (needsFreeze, needsThaw bool, err error) {
 	// Special case for SkipDevices, as used by Kubernetes to create pod
 	// cgroups with allow-all device policy).
 	if r.SkipDevices {

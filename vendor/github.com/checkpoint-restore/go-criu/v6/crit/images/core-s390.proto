@@ -1,0 +1,53 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+import "opts.proto";
+
+message user_s390_regs_entry {
+	required uint64			psw_mask	= 1;
+	required uint64			psw_addr	= 2;
+	repeated uint64			gprs		= 3;
+	repeated uint32			acrs		= 4;
+	required uint64			orig_gpr2	= 5;
+	required uint32			system_call	= 6;
+}
+
+message user_s390_vxrs_low_entry {
+	repeated uint64			regs		= 1;
+}
+
+/*
+ * The vxrs_high registers have 128 bit:
+ *
+ *   vxrs_high_0 = regs[0] << 64 | regs[1];
+ *   vxrs_high_1 = regs[2] << 64 | regs[3];
+ */
+message user_s390_vxrs_high_entry {
+	repeated uint64			regs		= 1;
+}
+
+message user_s390_fpregs_entry {
+	required uint32			fpc		= 1;
+	repeated uint64			fprs		= 2;
+}
+
+message user_s390_gs_cb_entry {
+	repeated uint64			regs		= 1;
+}
+
+message user_s390_ri_entry {
+	required uint32			ri_on		= 1;
+	repeated uint64			regs		= 2;
+}
+
+message thread_info_s390 {
+	required uint64				clear_tid_addr	= 1[(criu).hex = true];
+	required user_s390_regs_entry		gpregs		= 2[(criu).hex = true];
+	required user_s390_fpregs_entry		fpregs		= 3[(criu).hex = true];
+	optional user_s390_vxrs_low_entry	vxrs_low	= 4[(criu).hex = true];
+	optional user_s390_vxrs_high_entry	vxrs_high	= 5[(criu).hex = true];
+	optional user_s390_gs_cb_entry		gs_cb		= 6[(criu).hex = true];
+	optional user_s390_gs_cb_entry		gs_bc		= 7[(criu).hex = true];
+	optional user_s390_ri_entry		ri_cb		= 8[(criu).hex = true];
+}

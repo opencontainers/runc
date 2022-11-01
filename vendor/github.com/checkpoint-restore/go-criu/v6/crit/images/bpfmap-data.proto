@@ -1,0 +1,10 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+message bpfmap_data_entry {
+	required uint32	map_id			= 1;
+	required uint32	keys_bytes		= 2;	/* Bytes required to store keys */
+	required uint32	values_bytes		= 3;	/* Bytes required to store values */
+	required uint32 count			= 4;	/* Number of key-value pairs stored */
+}

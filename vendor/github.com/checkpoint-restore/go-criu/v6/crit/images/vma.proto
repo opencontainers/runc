@@ -1,0 +1,27 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+import "opts.proto";
+
+message vma_entry {
+	required uint64		start	= 1 [(criu).hex = true];
+	required uint64		end	= 2 [(criu).hex = true];
+	required uint64		pgoff	= 3;
+	required uint64		shmid	= 4;
+	required uint32		prot	= 5 [(criu).flags = "mmap.prot" ];
+	required uint32		flags	= 6 [(criu).flags = "mmap.flags" ];
+	required uint32		status	= 7 [(criu).flags = "mmap.status" ];
+	/*
+	 * This fd thing is unused in the image, it was lost
+	 * while switching from execve restore model. It is
+	 * -1 by default.
+	 */
+	required sint64		fd	= 8;
+
+	/* madvise flags bitmap */
+	optional uint64		madv	= 9 [(criu).hex = true];
+
+	/* file status flags */
+	optional uint32		fdflags	= 10 [(criu).hex = true];
+}

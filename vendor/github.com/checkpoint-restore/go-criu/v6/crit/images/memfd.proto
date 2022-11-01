@@ -1,0 +1,25 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+import "opts.proto";
+import "fown.proto";
+
+message memfd_file_entry {
+	required uint32		id		= 1;
+	required uint32		flags		= 2 [(criu).flags = "rfile.flags"];
+	required uint64		pos		= 3;
+	required fown_entry	fown		= 4;
+	required uint32		inode_id	= 5;
+};
+
+message memfd_inode_entry {
+	required string		name		= 1;
+	required uint32		uid		= 2;
+	required uint32		gid		= 3;
+	required uint64		size		= 4;
+	required uint32		shmid		= 5;
+	required uint32		seals		= 6 [(criu).flags = "seals.flags"];
+	required uint64		inode_id	= 7;
+	optional uint32		hugetlb_flag	= 8;
+};

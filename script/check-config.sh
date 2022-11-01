@@ -178,14 +178,17 @@ echo
 
 echo 'Generally Necessary:'
 
+cgroup=""
 echo -n '- '
 if [ "$(stat -f -c %t /sys/fs/cgroup 2>/dev/null)" = "63677270" ]; then
 	wrap_good 'cgroup hierarchy' 'cgroupv2'
+	cgroup="v2"
 else
 	cgroupSubsystemDir="$(awk '/[, ](cpu|cpuacct|cpuset|devices|freezer|memory)[, ]/ && $3 == "cgroup" { print $2 }' /proc/mounts | head -n1)"
 	cgroupDir="$(dirname "$cgroupSubsystemDir")"
 	if [ -d "$cgroupDir/cpu" ] || [ -d "$cgroupDir/cpuacct" ] || [ -d "$cgroupDir/cpuset" ] || [ -d "$cgroupDir/devices" ] || [ -d "$cgroupDir/freezer" ] || [ -d "$cgroupDir/memory" ]; then
 		wrap_good 'cgroup hierarchy' 'properly mounted' "[$cgroupDir]"
+		cgroup="v1"
 	else
 		if [ "$cgroupSubsystemDir" ]; then
 			wrap_bad 'cgroup hierarchy' 'single mountpoint!' "[$cgroupSubsystemDir]"
@@ -226,6 +229,12 @@ flags=(
 	POSIX_MQUEUE
 )
 check_flags "${flags[@]}"
+
+if ! kernel_lt 4 14; then
+	if [ $cgroup = "v2" ]; then
+		check_flags CGROUP_BPF
+	fi
+fi
 
 if kernel_lt 5 1; then
 	check_flags NF_NAT_IPV4

@@ -1,0 +1,10 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+message ns_file_entry {
+	required uint32		id		= 1;
+	required uint32		ns_id		= 2;
+	required uint32		ns_cflag	= 3;
+	required uint32		flags		= 4;
+}

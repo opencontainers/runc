@@ -1,0 +1,73 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+import "opts.proto";
+
+message user_ppc64_regs_entry {
+	/* Following is the list of registers starting at r0. */
+	repeated uint64 gpr		= 1;
+	required uint64 nip		= 2;
+	required uint64 msr		= 3;
+	required uint64 orig_gpr3	= 4;
+	required uint64 ctr		= 5;
+	required uint64 link		= 6;
+	required uint64 xer		= 7;
+	required uint64 ccr		= 8;
+	required uint64 trap		= 9;
+	/* For Transactional memory support since P8 */
+	optional uint64 texasr		= 10;
+	optional uint64 tfhar		= 11;
+	optional uint64 tfiar		= 12;
+}
+
+message user_ppc64_fpstate_entry {
+	/* Following is the list of registers starting at fpr0 */
+	repeated uint64 fpregs 		= 1;
+}
+
+message user_ppc64_vrstate_entry {
+	/*
+	 * Altivec registers
+	 * The vector registers are 128bit registers (VSR[32..63]).
+	 * The following vregs entry will store first the high part then the
+	 * low one:
+	 * 	VR0 = vrregs[0] << 64 | vrregs[1];
+	 * 	VR1 = vrregs[2] << 64 | vrregs[3];
+	 * 	..
+	 * The last entry stores in a 128bit field the VSCR which is a 32bit
+	 * value returned by the kernel in a 128 field.
+	 */
+	repeated uint64 vrregs		= 1;
+	required uint32	vrsave		= 2;
+}
+
+message user_ppc64_vsxstate_entry {
+	/*
+	 * VSX registers
+	 * The vector-scale registers are 128bit registers (VSR[0..64]).
+	 * Since there is an overlapping over the VSX registers by the FPR and
+	 * the Altivec registers, only the lower part of the first 32 VSX
+	 * registers have to be saved.
+	 */
+	repeated uint64 vsxregs		= 1;
+}
+
+/*
+ * Transactional memory operation's state
+ */
+message user_ppc64_tm_regs_entry {
+	required user_ppc64_regs_entry		gpregs 		= 1;
+	optional user_ppc64_fpstate_entry	fpstate		= 2;
+	optional user_ppc64_vrstate_entry	vrstate		= 3;
+	optional user_ppc64_vsxstate_entry	vsxstate	= 4;
+}
+
+message thread_info_ppc64 {
+	required uint64			 	clear_tid_addr	= 1[(criu).hex = true];
+	required user_ppc64_regs_entry	 	gpregs		= 2[(criu).hex = true];
+	optional user_ppc64_fpstate_entry 	fpstate		= 3;
+	optional user_ppc64_vrstate_entry	vrstate		= 4;
+	optional user_ppc64_vsxstate_entry	vsxstate	= 5;
+	optional user_ppc64_tm_regs_entry	tmstate		= 6;
+}

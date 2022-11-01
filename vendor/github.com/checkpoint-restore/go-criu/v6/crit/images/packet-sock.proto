@@ -1,0 +1,49 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+import "opts.proto";
+import "fown.proto";
+import "sk-opts.proto";
+
+message packet_mclist {
+	required uint32	index	= 1;
+	required uint32	type	= 2;
+	required bytes	addr	= 3;
+}
+
+message packet_ring {
+	required uint32	block_size	= 1;
+	required uint32	block_nr	= 2;
+	required uint32	frame_size	= 3;
+	required uint32	frame_nr	= 4;
+
+	required uint32	retire_tmo	= 5;
+	required uint32	sizeof_priv	= 6;
+	required uint32	features	= 7;
+}
+
+message packet_sock_entry {
+	required uint32		id		= 1;
+	required uint32		type		= 2;
+	required uint32		protocol	= 3;
+	required uint32		flags		= 4 [(criu).hex = true];
+	required uint32		ifindex		= 5;
+
+	required fown_entry	fown		= 6;
+	required sk_opts_entry	opts		= 7;
+
+	required uint32		version		= 8;
+	required uint32		reserve		= 9;
+	required bool		aux_data	= 10;
+	required bool		orig_dev	= 11;
+	required bool		vnet_hdr	= 12;
+	required bool		loss		= 13;
+	required uint32		timestamp	= 14;
+	required uint32		copy_thresh	= 15;
+	repeated packet_mclist	mclist		= 16;
+	optional uint32		fanout		= 17 [ default = 0xffffffff ];
+	optional packet_ring	rx_ring		= 18;
+	optional packet_ring	tx_ring		= 19;
+	optional uint32		ns_id		= 20;
+}

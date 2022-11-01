@@ -1,0 +1,18 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+message scm_entry {
+	required uint32			type		= 1;
+	repeated uint32			rights		= 2;
+}
+
+message sk_packet_entry {
+	required uint32		id_for		= 1;
+	required uint32		length		= 2;
+	// Reserved for message address
+	// optional bytes		addr	= 3;
+	repeated scm_entry	scm		= 4;
+	// Reserved for ucred restore
+	// optional sk_ucred_entry	ucred	= 128;
+}

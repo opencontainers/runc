@@ -1,0 +1,41 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+import "opts.proto";
+
+message user_arm_regs_entry {
+	required uint32 r0      = 1;
+	required uint32 r1      = 2;
+	required uint32 r2      = 3;
+	required uint32 r3      = 4;
+	required uint32 r4      = 5;
+	required uint32 r5      = 6;
+	required uint32 r6      = 7;
+	required uint32 r7      = 8;
+	required uint32 r8      = 9;
+	required uint32 r9      = 10;
+	required uint32 r10     = 11;
+	required uint32 fp      = 12;
+	required uint32 ip      = 13;
+	required uint32 sp      = 14;
+	required uint32 lr      = 15;
+	required uint32 pc      = 16;
+	required uint32 cpsr    = 17;
+	required uint32 orig_r0 = 18;
+}
+
+message user_arm_vfpstate_entry {
+	repeated uint64 vfp_regs = 1;
+	required uint32 fpscr    = 2;
+	required uint32 fpexc    = 3;
+	required uint32 fpinst   = 4;
+	required uint32 fpinst2  = 5;
+}
+
+message thread_info_arm {
+	required uint64			 clear_tid_addr	= 1[(criu).hex = true];
+	required uint32                  tls            = 2;
+	required user_arm_regs_entry	 gpregs		= 3[(criu).hex = true];
+	required user_arm_vfpstate_entry fpstate	= 4;
+}

@@ -1,0 +1,92 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+import "opts.proto";
+import "fown.proto";
+
+message winsize_entry {
+	required uint32			ws_row		= 1;
+	required uint32			ws_col		= 2;
+	required uint32			ws_xpixel	= 3;
+	required uint32			ws_ypixel	= 4;
+};
+
+message termios_entry {
+	required uint32			c_iflag		= 1;
+	required uint32			c_oflag		= 2;
+	required uint32			c_cflag		= 3;
+	required uint32			c_lflag		= 4;
+	required uint32			c_line		= 5;
+	required uint32			c_ispeed	= 6;
+	required uint32			c_ospeed	= 7;
+
+	repeated uint32			c_cc		= 8;
+}
+
+message tty_pty_entry {
+	required uint32			index		= 1;
+}
+
+enum TtyType {
+	UNKNOWN		= 0;
+	PTY		= 1;
+	CONSOLE		= 2;
+	VT		= 3;
+	CTTY		= 4;
+	EXT_TTY		= 5;
+	SERIAL		= 6;
+}
+
+message tty_data_entry {
+	required uint32			tty_id		= 1;
+	required bytes			data		= 2;
+
+	// optional sint32		mnt_id		= 3 [default = 0];
+}
+
+message tty_info_entry {
+	required uint32			id		=  1;
+
+	required TtyType		type		=  2;
+
+	required bool			locked		=  3;	/* Unix98 PTY only */
+	required bool			exclusive	=  4;
+	required bool			packet_mode	=  5;	/* Unix98 PTY only */
+
+	required uint32			sid		=  6;
+	required uint32			pgrp		=  7;
+
+	/*
+	 * Convenient for printing errors and such, with this
+	 * device encoded we can figure out major and minor
+	 * numbers.
+	 */
+	required uint32			rdev		=  8;
+
+	optional termios_entry		termios		=  9;
+	optional termios_entry		termios_locked	= 10;
+	optional winsize_entry		winsize		= 11;
+
+	/*
+	 * These are optional fields which presence depends on
+	 * TTY type.
+	 */
+	optional tty_pty_entry		pty		= 12;
+	optional uint32			dev		= 13;
+
+	optional uint32			uid		= 14;
+	optional uint32			gid		= 15;
+
+	// optional sint32		mnt_id		= 16 [default = 0];
+};
+
+message tty_file_entry {
+	required uint32			id		= 1;
+	required uint32			tty_info_id	= 2;
+
+	required uint32			flags		= 3 [(criu).hex = true];
+	required fown_entry		fown		= 4;
+	// optional sint32		mnt_id		= 5 [default = 0];
+	optional uint32			regf_id		= 6;
+}

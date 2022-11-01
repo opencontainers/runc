@@ -1,0 +1,25 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+import "opts.proto";
+import "fown.proto";
+
+message bpfmap_file_entry {
+	required uint32		id		= 1;
+	required uint32		flags		= 2 [(criu).flags = "rfile.flags"];
+	required uint64		pos		= 3;
+	required fown_entry	fown		= 4;
+	required uint32		map_type	= 5;
+	required uint32		key_size	= 6;
+	required uint32		value_size	= 7;
+	required uint32		map_id		= 8;
+	required uint32		max_entries	= 9;
+	required uint32		map_flags	= 10;
+	required uint64		memlock		= 11;
+	required bool		frozen		= 12 [default = false];
+	required string		map_name	= 13;
+	required uint32		ifindex		= 14 [default = 0];
+	optional sint32		mnt_id		= 15 [default = -1];
+	optional uint64		map_extra	= 16;
+}

@@ -1,0 +1,11 @@
+// SPDX-License-Identifier: MIT
+
+syntax = "proto2";
+
+message pstree_entry {
+	required uint32			pid		= 1;
+	required uint32			ppid		= 2;
+	required uint32			pgid		= 3;
+	required uint32			sid		= 4;
+	repeated uint32			threads		= 5;
+}
