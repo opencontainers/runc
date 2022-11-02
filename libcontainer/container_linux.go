@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"github.com/checkpoint-restore/go-criu/v6"
-	criurpc "github.com/checkpoint-restore/go-criu/v6/crit/images"
+	criurpc "github.com/checkpoint-restore/go-criu/v6/rpc"
 	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/sirupsen/logrus"
