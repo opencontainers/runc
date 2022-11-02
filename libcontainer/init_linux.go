@@ -522,7 +522,8 @@ func isWaitable(pid int) (bool, error) {
 
 // signalAllProcesses freezes then iterates over all the processes inside the
 // manager's cgroups sending the signal s to them.
-// If s is SIGKILL then it will wait for each process to exit.
+// If s is SIGKILL and subreaper is not enabled then it will wait for each
+// process to exit.
 // For all other signals it will check if the process is ready to report its
 // exit status and only if it is will a wait be performed.
 func signalAllProcesses(m cgroups.Manager, s os.Signal) error {
