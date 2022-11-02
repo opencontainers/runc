@@ -10,6 +10,7 @@ function teardown() {
 	teardown_bundle
 }
 
+# shellcheck disable=SC2030
 @test "events --stats" {
 	# XXX: currently cgroups require root containers.
 	requires root
@@ -38,6 +39,7 @@ function test_events() {
 	fi
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	# shellcheck disable=SC2031
 	[ "$status" -eq 0 ]
 
 	# Spawn two subshels:
