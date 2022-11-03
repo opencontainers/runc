@@ -20,6 +20,7 @@ import (
 func i64Ptr(i int64) *int64   { return &i }
 func u64Ptr(i uint64) *uint64 { return &i }
 func u16Ptr(i uint16) *uint16 { return &i }
+func boolPtr(b bool) *bool    { return &b }
 
 var updateCommand = cli.Command{
 	Name:      "update",
@@ -37,7 +38,8 @@ The accepted format is as follow (unchanged values can be omitted):
   "memory": {
     "limit": 0,
     "reservation": 0,
-    "swap": 0
+    "swap": 0,
+    "checkBeforeUpdate": true
   },
   "cpu": {
     "shares": 0,
@@ -136,11 +138,12 @@ other options are ignored.
 
 		r := specs.LinuxResources{
 			Memory: &specs.LinuxMemory{
-				Limit:       i64Ptr(0),
-				Reservation: i64Ptr(0),
-				Swap:        i64Ptr(0),
-				Kernel:      i64Ptr(0),
-				KernelTCP:   i64Ptr(0),
+				Limit:             i64Ptr(0),
+				Reservation:       i64Ptr(0),
+				Swap:              i64Ptr(0),
+				Kernel:            i64Ptr(0),
+				KernelTCP:         i64Ptr(0),
+				CheckBeforeUpdate: boolPtr(false),
 			},
 			CPU: &specs.LinuxCPU{
 				Shares:          u64Ptr(0),
@@ -293,6 +296,7 @@ other options are ignored.
 		config.Cgroups.Resources.Memory = *r.Memory.Limit
 		config.Cgroups.Resources.MemoryReservation = *r.Memory.Reservation
 		config.Cgroups.Resources.MemorySwap = *r.Memory.Swap
+		config.Cgroups.Resources.MemoryCheckBeforeUpdate = *r.Memory.CheckBeforeUpdate
 		config.Cgroups.Resources.PidsLimit = r.Pids.Limit
 		config.Cgroups.Resources.Unified = r.Unified
 

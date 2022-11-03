@@ -174,7 +174,14 @@ func unifiedResToSystemdProps(cm *dbusConnManager, res map[string]string) (props
 	return props, nil
 }
 
-func genV2ResourcesProperties(r *configs.Resources, cm *dbusConnManager) ([]systemdDbus.Property, error) {
+func genV2ResourcesProperties(dirPath string, r *configs.Resources, cm *dbusConnManager) ([]systemdDbus.Property, error) {
+	// We need this check before setting systemd properties, otherwise
+	// the container is OOM-killed and the systemd unit is removed
+	// before we get to fsMgr.Set().
+	if err := fs2.CheckMemoryUsage(dirPath, r); err != nil {
+		return nil, err
+	}
+
 	var properties []systemdDbus.Property
 
 	// NOTE: This is of questionable correctness because we insert our own
@@ -437,7 +444,7 @@ func (m *UnifiedManager) Set(r *configs.Resources) error {
 	if r == nil {
 		return nil
 	}
-	properties, err := genV2ResourcesProperties(r, m.dbus)
+	properties, err := genV2ResourcesProperties(m.fsMgr.Path(""), r, m.dbus)
 	if err != nil {
 		return err
 	}

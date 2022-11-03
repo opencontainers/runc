@@ -723,6 +723,9 @@ func CreateCgroupConfig(opts *CreateOpts, defaultDevs []*devices.Device) (*confi
 				if r.Memory.DisableOOMKiller != nil {
 					c.Resources.OomKillDisable = *r.Memory.DisableOOMKiller
 				}
+				if r.Memory.CheckBeforeUpdate != nil {
+					c.Resources.MemoryCheckBeforeUpdate = *r.Memory.CheckBeforeUpdate
+				}
 			}
 			if r.CPU != nil {
 				if r.CPU.Shares != nil {
