@@ -1,6 +1,9 @@
 package types
 
-import "github.com/opencontainers/runc/libcontainer/intelrdt"
+import (
+	"github.com/opencontainers/runc/libcontainer/cgroups"
+	"github.com/opencontainers/runc/libcontainer/intelrdt"
+)
 
 // Event struct for encoding the event data to json.
 type Event struct {
@@ -21,17 +24,9 @@ type Stats struct {
 	NetworkInterfaces []*NetworkInterface `json:"network_interfaces"`
 }
 
-type PSIData struct {
-	Avg10  float64 `json:"avg10"`
-	Avg60  float64 `json:"avg60"`
-	Avg300 float64 `json:"avg300"`
-	Total  uint64  `json:"total"`
-}
+type PSIData cgroups.PSIData
 
-type PSIStats struct {
-	Some PSIData `json:"some,omitempty"`
-	Full PSIData `json:"full,omitempty"`
-}
+type PSIStats cgroups.PSIStats
 
 type Hugetlb struct {
 	Usage   uint64 `json:"usage,omitempty"`

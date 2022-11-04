@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"syscall"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 	"github.com/opencontainers/runc/libcontainer/configs"
+	"golang.org/x/sys/unix"
 )
 
 type parseError = fscommon.ParseError
@@ -119,13 +119,13 @@ func (m *Manager) GetStats() (*cgroups.Stats, error) {
 	// open *.pressure file returns
 	// - ErrNotExist when kernel < 4.20 or CONFIG_PSI is disabled
 	// - ENOTSUP when we requires psi=1 in kernel command line to enable PSI support
-	if err := statPSI(m.dirPath, "cpu.pressure", &st.CpuStats.PSI); err != nil && !errors.Is(err, os.ErrNotExist) && !errors.Is(err, syscall.ENOTSUP) {
+	if err := statPSI(m.dirPath, "cpu.pressure", st.CpuStats.PSI); err != nil && !errors.Is(err, os.ErrNotExist) && !errors.Is(err, unix.ENOTSUP) {
 		errs = append(errs, err)
 	}
-	if err := statPSI(m.dirPath, "memory.pressure", &st.MemoryStats.PSI); err != nil && !errors.Is(err, os.ErrNotExist) && !errors.Is(err, syscall.ENOTSUP) {
+	if err := statPSI(m.dirPath, "memory.pressure", st.MemoryStats.PSI); err != nil && !errors.Is(err, os.ErrNotExist) && !errors.Is(err, unix.ENOTSUP) {
 		errs = append(errs, err)
 	}
-	if err := statPSI(m.dirPath, "io.pressure", &st.BlkioStats.PSI); err != nil && !errors.Is(err, os.ErrNotExist) && !errors.Is(err, syscall.ENOTSUP) {
+	if err := statPSI(m.dirPath, "io.pressure", st.BlkioStats.PSI); err != nil && !errors.Is(err, os.ErrNotExist) && !errors.Is(err, unix.ENOTSUP) {
 		errs = append(errs, err)
 	}
 	// hugetlb (since kernel 5.6)

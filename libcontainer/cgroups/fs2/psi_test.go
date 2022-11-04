@@ -12,7 +12,7 @@ import (
 const examplePSIData = `some avg10=1.71 avg60=2.36 avg300=2.57 total=230548833
 full avg10=1.00 avg60=1.01 avg300=1.00 total=157622356`
 
-func TestStatCPUPsi(t *testing.T) {
+func TestStatCPUPSI(t *testing.T) {
 	// We're using a fake cgroupfs.
 	cgroups.TestMode = true
 
@@ -42,6 +42,6 @@ func TestStatCPUPsi(t *testing.T) {
 			Total:  157622356,
 		},
 	}) {
-		t.Errorf("unexpected psi result: %+v", psi)
+		t.Errorf("unexpected PSI result: %+v", psi)
 	}
 }
