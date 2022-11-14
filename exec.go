@@ -208,7 +208,8 @@ func getProcess(context *cli.Context, bundle string) (*specs.Process, error) {
 	if err := os.Chdir(bundle); err != nil {
 		return nil, err
 	}
-	spec, err := loadSpec(specConfig)
+
+	spec, err := loadSpec(specConfig, context)
 	if err != nil {
 		return nil, err
 	}

@@ -30,6 +30,11 @@ command(s) that get executed on start, edit the args parameter of the spec. See
 			Usage: `path to the root of the bundle directory, defaults to the current directory`,
 		},
 		cli.StringFlag{
+			Name:  "config, c",
+			Value: "",
+			Usage: `path to a config file, which overrides the default config.json in the specified bundle directory`,
+		},
+		cli.StringFlag{
 			Name:  "console-socket",
 			Value: "",
 			Usage: "path to an AF_UNIX socket which will receive a file descriptor referencing the master end of the console's pseudoterminal",
