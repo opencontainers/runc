@@ -115,7 +115,11 @@ created by an unprivileged user.
 // loadSpec loads the specification from the provided path.
 func loadSpec(cPath string, context *cli.Context) (spec *specs.Spec, err error) {
 	configPath := context.String("config")
-	fmt.Printf("passed a config path: %s", configPath)
+
+	if configPath != "" {
+		cPath = configPath
+		fmt.Printf("Using config path: %s", cPath)
+	}
 
 	cf, err := os.Open(cPath)
 	if err != nil {
