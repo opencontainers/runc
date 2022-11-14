@@ -25,7 +25,7 @@ var version = "unknown"
 // and will be populated by the Makefile
 var gitCommit = ""
 
-const (
+var (
 	specConfig = "config.json"
 	usage      = `Open Container Initiative runtime
 
