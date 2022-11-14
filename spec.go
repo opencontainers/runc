@@ -118,7 +118,6 @@ func loadSpec(cPath string, context *cli.Context) (spec *specs.Spec, err error) 
 
 	if configPath != "" {
 		cPath = configPath
-		fmt.Printf("Using config path: %s", cPath)
 	}
 
 	cf, err := os.Open(cPath)
