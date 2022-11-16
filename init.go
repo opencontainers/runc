@@ -1,16 +1,23 @@
 package main
 
 import (
+	"fmt"
 	"os"
+	"os/signal"
 	"runtime"
 	"strconv"
 
 	"github.com/opencontainers/runc/libcontainer"
 	_ "github.com/opencontainers/runc/libcontainer/nsenter"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sys/unix"
 )
 
 func init() {
+	// Support to print stack when receive signal SIGUSR1
+	sc := make(chan os.Signal, 1)
+	handleSignals(sc)
+	signal.Notify(sc, unix.SIGUSR1)
 	if len(os.Args) > 1 && os.Args[1] == "init" {
 		// This is the golang entry point for runc init, executed
 		// before main() but after libcontainer/nsenter's nsexec().
@@ -39,4 +46,35 @@ func init() {
 		}
 		panic("libcontainer: container init failed to exec")
 	}
+}
+
+func handleSignals(signals chan os.Signal) {
+	go func() {
+		for {
+			select {
+			case s := <-signals:
+				logrus.Debugf("received signal %v ", s)
+				switch s {
+				case unix.SIGUSR1:
+					dumpStacks()
+				default:
+				}
+			}
+		}
+	}()
+}
+
+func dumpStacks() {
+	var (
+		buf       []byte
+		stackSize int
+	)
+	bufferLen := 16384
+	for stackSize == len(buf) {
+		buf = make([]byte, bufferLen)
+		stackSize = runtime.Stack(buf, true)
+		bufferLen *= 2
+	}
+	buf = buf[:stackSize]
+	fmt.Fprintln(os.Stderr, string(buf))
 }
