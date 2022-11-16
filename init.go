@@ -17,6 +17,7 @@ func init() {
 		runtime.GOMAXPROCS(1)
 		runtime.LockOSThread()
 
+		// Must be set
 		level, err := strconv.Atoi(os.Getenv("_LIBCONTAINER_LOGLEVEL"))
 		if err != nil {
 			panic(err)
