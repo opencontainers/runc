@@ -67,10 +67,6 @@ checkpointed.`,
 			return err
 		}
 
-		if !(options.LeaveRunning || options.PreDump) {
-			// destroy container unless we tell CRIU to keep it
-			defer destroy(container)
-		}
 		// these are the mandatory criu options for a container
 		if err := setPageServer(context, options); err != nil {
 			return err
@@ -81,7 +77,13 @@ checkpointed.`,
 		if err := setEmptyNsMask(context, options); err != nil {
 			return err
 		}
-		return container.Checkpoint(options)
+
+		err = container.Checkpoint(options)
+		if err == nil && !(options.LeaveRunning || options.PreDump) {
+			// Destroy the container unless we tell CRIU to keep it.
+			destroy(container)
+		}
+		return err
 	},
 }
 
