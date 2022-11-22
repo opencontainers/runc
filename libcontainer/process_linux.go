@@ -548,7 +548,7 @@ func (p *initProcess) start() (retErr error) {
 			// procRun sync.
 			state, uerr := p.container.updateState(p)
 			if uerr != nil {
-				return fmt.Errorf("unable to store init state: %w", err)
+				return fmt.Errorf("unable to store init state: %w", uerr)
 			}
 			p.container.initProcessStartTime = state.InitProcessStartTime
 
