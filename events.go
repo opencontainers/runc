@@ -163,8 +163,10 @@ func convertLibcontainerStats(ls *libcontainer.Stats) *types.Stats {
 	if s.Memory.PSI == nil {
 		s.Memory.PSI = &types.PSIStats{}
 	}
-	convertPSI(cg.MemoryStats.PSI.Some, s.Memory.PSI.Some)
-	convertPSI(cg.MemoryStats.PSI.Full, s.Memory.PSI.Full)
+	if cg.MemoryStats.PSI != nil {
+		convertPSI(cg.MemoryStats.PSI.Some, s.Memory.PSI.Some)
+		convertPSI(cg.MemoryStats.PSI.Full, s.Memory.PSI.Full)
+	}
 
 	s.Blkio.IoServiceBytesRecursive = convertBlkioEntry(cg.BlkioStats.IoServiceBytesRecursive)
 	s.Blkio.IoServicedRecursive = convertBlkioEntry(cg.BlkioStats.IoServicedRecursive)
@@ -177,8 +179,10 @@ func convertLibcontainerStats(ls *libcontainer.Stats) *types.Stats {
 	if s.Blkio.PSI == nil {
 		s.Blkio.PSI = &types.PSIStats{}
 	}
-	convertPSI(cg.BlkioStats.PSI.Some, s.Blkio.PSI.Some)
-	convertPSI(cg.BlkioStats.PSI.Full, s.Blkio.PSI.Full)
+	if cg.BlkioStats.PSI != nil {
+		convertPSI(cg.BlkioStats.PSI.Some, s.Blkio.PSI.Some)
+		convertPSI(cg.BlkioStats.PSI.Full, s.Blkio.PSI.Full)
+	}
 
 	s.Hugetlb = make(map[string]types.Hugetlb)
 	for k, v := range cg.HugetlbStats {
