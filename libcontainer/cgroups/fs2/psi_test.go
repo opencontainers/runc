@@ -15,6 +15,7 @@ full avg10=1.00 avg60=1.01 avg300=1.00 total=157622356`
 func createFloatPtr(f float64) *float64 {
 	return &f
 }
+
 func createUInt64Ptr(i uint64) *uint64 {
 	return &i
 }

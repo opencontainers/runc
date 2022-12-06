@@ -50,6 +50,7 @@ func setFloat(s string, f *float64) error {
 
 	return nil
 }
+
 func parsePSIData(psi []string) (*cgroups.PSIData, error) {
 	var data cgroups.PSIData
 	for _, f := range psi {
