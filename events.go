@@ -144,8 +144,13 @@ func convertLibcontainerStats(ls *libcontainer.Stats) *types.Stats {
 	s.CPU.Throttling.Periods = cg.CpuStats.ThrottlingData.Periods
 	s.CPU.Throttling.ThrottledPeriods = cg.CpuStats.ThrottlingData.ThrottledPeriods
 	s.CPU.Throttling.ThrottledTime = cg.CpuStats.ThrottlingData.ThrottledTime
-	convertPSI(cg.CpuStats.PSI.Some, s.CPU.PSI.Some)
-	convertPSI(cg.CpuStats.PSI.Full, s.CPU.PSI.Full)
+	if s.CPU.PSI == nil {
+		s.CPU.PSI = &types.PSIStats{}
+	}
+	if cg.CpuStats.PSI != nil {
+		convertPSI(cg.CpuStats.PSI.Some, s.CPU.PSI.Some)
+		convertPSI(cg.CpuStats.PSI.Full, s.CPU.PSI.Full)
+	}
 
 	s.CPUSet = types.CPUSet(cg.CPUSetStats)
 

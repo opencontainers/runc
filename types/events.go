@@ -77,7 +77,7 @@ type CpuUsage struct {
 type Cpu struct {
 	Usage      CpuUsage   `json:"usage,omitempty"`
 	Throttling Throttling `json:"throttling,omitempty"`
-	PSI        PSIStats   `json:"psi,omitempty"`
+	PSI        *PSIStats  `json:"psi,omitempty"`
 }
 
 type CPUSet struct {
