@@ -160,6 +160,9 @@ func convertLibcontainerStats(ls *libcontainer.Stats) *types.Stats {
 	s.Memory.Swap = convertMemoryEntry(cg.MemoryStats.SwapUsage)
 	s.Memory.Usage = convertMemoryEntry(cg.MemoryStats.Usage)
 	s.Memory.Raw = cg.MemoryStats.Stats
+	if s.Memory.PSI == nil {
+		s.Memory.PSI = &types.PSIStats{}
+	}
 	convertPSI(cg.MemoryStats.PSI.Some, s.Memory.PSI.Some)
 	convertPSI(cg.MemoryStats.PSI.Full, s.Memory.PSI.Full)
 
@@ -171,6 +174,9 @@ func convertLibcontainerStats(ls *libcontainer.Stats) *types.Stats {
 	s.Blkio.IoMergedRecursive = convertBlkioEntry(cg.BlkioStats.IoMergedRecursive)
 	s.Blkio.IoTimeRecursive = convertBlkioEntry(cg.BlkioStats.IoTimeRecursive)
 	s.Blkio.SectorsRecursive = convertBlkioEntry(cg.BlkioStats.SectorsRecursive)
+	if s.Blkio.PSI == nil {
+		s.Blkio.PSI = &types.PSIStats{}
+	}
 	convertPSI(cg.BlkioStats.PSI.Some, s.Blkio.PSI.Some)
 	convertPSI(cg.BlkioStats.PSI.Full, s.Blkio.PSI.Full)
 
