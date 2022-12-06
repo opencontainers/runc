@@ -11,6 +11,9 @@ import (
 )
 
 func statPSI(dirPath string, file string, stats *cgroups.PSIStats) error {
+	if stats == nil {
+		return fmt.Errorf("invalid PSIStats pointer is nil")
+	}
 	f, err := cgroups.OpenFile(dirPath, file, os.O_RDONLY)
 	if err != nil {
 		return err
@@ -42,6 +45,9 @@ func statPSI(dirPath string, file string, stats *cgroups.PSIStats) error {
 }
 
 func setFloat(s string, f *float64) error {
+	if f == nil {
+		return fmt.Errorf("invalid pointer *float64 is nil")
+	}
 	v, err := strconv.ParseFloat(s, 64)
 	if err != nil {
 		return fmt.Errorf("invalid PSI value: %q", s)
@@ -52,7 +58,12 @@ func setFloat(s string, f *float64) error {
 }
 
 func parsePSIData(psi []string) (*cgroups.PSIData, error) {
-	var data cgroups.PSIData
+	data := cgroups.PSIData{
+		Avg10:  new(float64),
+		Avg60:  new(float64),
+		Avg300: new(float64),
+		Total:  new(uint64),
+	}
 	for _, f := range psi {
 		kv := strings.SplitN(f, "=", 2)
 		if len(kv) != 2 {
