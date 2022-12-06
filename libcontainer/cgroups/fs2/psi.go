@@ -50,32 +50,33 @@ func setFloat(s string, f *float64) error {
 
 	return nil
 }
-func parsePSIData(psi []string) (data *cgroups.PSIData, err error) {
+func parsePSIData(psi []string) (*cgroups.PSIData, error) {
+	var data cgroups.PSIData
 	for _, f := range psi {
 		kv := strings.SplitN(f, "=", 2)
 		if len(kv) != 2 {
-			return data, fmt.Errorf("invalid psi data: %q", f)
+			return nil, fmt.Errorf("invalid psi data: %q", f)
 		}
 		switch kv[0] {
 		case "avg10":
-			if err = setFloat(kv[1], data.Avg10); err != nil {
-				return
+			if err := setFloat(kv[1], data.Avg10); err != nil {
+				return nil, err
 			}
 		case "avg60":
-			if err = setFloat(kv[1], data.Avg60); err != nil {
-				return
+			if err := setFloat(kv[1], data.Avg60); err != nil {
+				return nil, err
 			}
 		case "avg300":
-			if err = setFloat(kv[1], data.Avg300); err != nil {
-				return
+			if err := setFloat(kv[1], data.Avg300); err != nil {
+				return nil, err
 			}
 		case "total":
 			v, err := strconv.ParseUint(kv[1], 10, 64)
 			if err != nil {
-				return data, fmt.Errorf("invalid PSI value: %q", f)
+				return nil, fmt.Errorf("invalid PSI value: %q", f)
 			}
 			data.Total = &v
 		}
 	}
-	return data, nil
+	return &data, nil
 }
