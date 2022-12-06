@@ -112,6 +112,14 @@ information is displayed once every 5 seconds.`,
 }
 
 func convertPSI(from *cgroups.PSIData, to *cgroups.PSIData) {
+	if from == nil {
+		println("from is nil")
+		return
+	}
+	if to == nil {
+		println("to is nil")
+		return
+	}
 	to.Avg10 = from.Avg10
 	to.Avg60 = from.Avg60
 	to.Avg300 = from.Avg300
