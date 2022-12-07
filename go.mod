@@ -19,8 +19,8 @@ require (
 	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635
 	github.com/urfave/cli v1.22.9
 	github.com/vishvananda/netlink v1.1.0
-	golang.org/x/net v0.2.0
-	golang.org/x/sys v0.2.0
+	golang.org/x/net v0.3.0
+	golang.org/x/sys v0.3.0
 	google.golang.org/protobuf v1.28.1
 )
 
