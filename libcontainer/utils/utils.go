@@ -19,6 +19,9 @@ const (
 	exitSignalOffset = 128
 )
 
+// RunInUserns is the user namespace state of the process.
+var RunInUserns = -1
+
 // NativeEndian is the native byte order of the host system.
 var NativeEndian binary.ByteOrder
 
@@ -161,4 +164,28 @@ func Annotations(labels []string) (bundle string, userAnnotations map[string]str
 		}
 	}
 	return
+}
+
+// CheckRunningInUserNamespace return the user namespace state of the process,
+// or -1 if read /proc/self/uid_map error.
+func CheckRunningInUserNamespace() int {
+	var ret int
+
+	ret = RunInUserns
+	if ret >= 0 {
+		return ret
+	}
+	uidmap, err := os.ReadFile("/proc/self/uid_map")
+	if err != nil {
+		return ret
+	}
+
+	if strings.Index(string(uidmap), "4294967295") == -1 {
+		ret = 1
+	} else {
+		ret = 0
+	}
+	RunInUserns = ret
+
+	return ret
 }

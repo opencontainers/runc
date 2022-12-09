@@ -1089,7 +1089,21 @@ func mountPropagate(m *configs.Mount, rootfs string, mountLabel string, mountFd 
 	if err := utils.WithProcfd(rootfs, m.Destination, func(procfd string) error {
 		return mount(source, m.Destination, procfd, m.Device, uintptr(flags), data)
 	}); err != nil {
-		return err
+		if m.Device == "sysfs" {
+			/* If we are running in a user namespace, just bind mount /sys if creating
+			   sysfs failed.  */
+			ret := utils.CheckRunningInUserNamespace()
+			if ret < 0 {
+				return err
+			}
+			if err = utils.WithProcfd(rootfs, m.Destination, func(procfd string) error {
+				return mount("/sys", m.Destination, procfd, "/sys", unix.MS_BIND|unix.MS_REC|unix.MS_SLAVE, data)
+			}); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
 	}
 	// We have to apply mount propagation flags in a separate WithProcfd() call
 	// because the previous call invalidates the passed procfd -- the mount
