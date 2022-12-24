@@ -45,7 +45,7 @@ struct describing how the container is to be created. A sample would look simila
 
 ```go
 defaultMountFlags := unix.MS_NOEXEC | unix.MS_NOSUID | unix.MS_NODEV
-var devices []*configs.DeviceRule
+var devices []*devices.Rule
 for _, device := range specconv.AllowedDevices {
 	devices = append(devices, &device.Rule)
 }
