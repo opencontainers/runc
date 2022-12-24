@@ -17,6 +17,7 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fs2"
+	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
@@ -368,6 +369,12 @@ func (m *UnifiedManager) Destroy() error {
 
 func (m *UnifiedManager) Path(_ string) string {
 	return m.path
+}
+
+func (m *UnifiedManager) Kill() error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return fscommon.Kill(m.path)
 }
 
 // getSliceFull value is used in initPath.

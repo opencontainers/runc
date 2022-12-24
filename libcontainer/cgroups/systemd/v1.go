@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
+	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 	"github.com/sirupsen/logrus"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
@@ -235,6 +236,16 @@ func (m *LegacyManager) Path(subsys string) string {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return m.paths[subsys]
+}
+
+func (m *LegacyManager) Kill() error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	// Since "cgroup.kill" is not available for v1 check for cgroup mode hybrid+v1
+	if cgroups.IsCgroup2HybridMode() {
+		return fscommon.Kill(m.paths[""])
+	}
+	return errors.New("cgroup.kill not supported")
 }
 
 func (m *LegacyManager) joinCgroups(pid int) error {

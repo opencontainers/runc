@@ -528,9 +528,18 @@ func isWaitable(pid int) (bool, error) {
 // exit status and only if it is will a wait be performed.
 func signalAllProcesses(m cgroups.Manager, s os.Signal) error {
 	var procs []*os.Process
+	// If signal is SIGKILL try manager.Kill()
+	// in order to leverage "cgroup.kill" instead
+	// of iterating over each process. "cgroup.kill"
+	// was added in Linux kernel 5.14 onwards.
+	if s == unix.SIGKILL && m.Kill() == nil {
+		return nil
+	}
+	// Fallback to slow method
 	if err := m.Freeze(configs.Frozen); err != nil {
 		logrus.Warn(err)
 	}
+
 	pids, err := m.GetAllPids()
 	if err != nil {
 		if err := m.Freeze(configs.Thawed); err != nil {

@@ -150,6 +150,16 @@ func (m *Manager) Path(subsys string) string {
 	return m.paths[subsys]
 }
 
+func (m *Manager) Kill() error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	// Since "cgroup.kill" is not available for v1 check for cgroup mode hybrid+v1
+	if cgroups.IsCgroup2HybridMode() {
+		return fscommon.Kill(m.paths[""])
+	}
+	return errors.New("cgroup.kill not supported")
+}
+
 func (m *Manager) GetStats() (*cgroups.Stats, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()

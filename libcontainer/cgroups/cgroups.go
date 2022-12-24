@@ -41,6 +41,10 @@ type Manager interface {
 	// Destroy removes cgroup.
 	Destroy() error
 
+	// Leverages "cgroup.kill" added in kernel 5.14.
+	// Kills all the process listed in cgroup.
+	Kill() error
+
 	// Path returns a cgroup path to the specified controller/subsystem.
 	// For cgroupv2, the argument is unused and can be empty.
 	Path(string) string

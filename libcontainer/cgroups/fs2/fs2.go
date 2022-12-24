@@ -143,6 +143,10 @@ func (m *Manager) Destroy() error {
 	return cgroups.RemovePath(m.dirPath)
 }
 
+func (m *Manager) Kill() error {
+	return fscommon.Kill(m.dirPath)
+}
+
 func (m *Manager) Path(_ string) string {
 	return m.dirPath
 }

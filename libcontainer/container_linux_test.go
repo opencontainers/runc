@@ -1,6 +1,7 @@
 package libcontainer
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"testing"
@@ -38,6 +39,10 @@ func (m *mockCgroupManager) Set(_ *configs.Resources) error {
 
 func (m *mockCgroupManager) Destroy() error {
 	return nil
+}
+
+func (m *mockCgroupManager) Kill() error {
+	return errors.New("Not supported for mock devices")
 }
 
 func (m *mockCgroupManager) Exists() bool {
