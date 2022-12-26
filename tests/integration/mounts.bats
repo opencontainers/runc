@@ -63,3 +63,20 @@ function teardown() {
 	runc run test_busybox
 	[ "$status" -eq 0 ]
 }
+
+# https://github.com/opencontainers/runc/security/advisories/GHSA-m8cg-xc2p-r3fc
+@test "runc run [ro /sys/fs/cgroup mount]" {
+	# With cgroup namespace
+	update_config '.process.args |= ["sh", "-euc", "for f in `grep /sys/fs/cgroup /proc/mounts | awk \"{print \\\\$2}\"| uniq`; do grep -w $f /proc/mounts | tail -n1; done"]'
+	runc run test_busybox
+	[ "$status" -eq 0 ]
+	[ "${#lines[@]}" -ne 0 ]
+	for line in "${lines[@]}"; do [[ "${line}" == *'ro,'* ]]; done
+
+	# Without cgroup namespace
+	update_config '.linux.namespaces -= [{"type": "cgroup"}]'
+	runc run test_busybox
+	[ "$status" -eq 0 ]
+	[ "${#lines[@]}" -ne 0 ]
+	for line in "${lines[@]}"; do [[ "${line}" == *'ro,'* ]]; done
+}
