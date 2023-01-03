@@ -40,5 +40,6 @@ func TestNilResources(t *testing.T) {
 		_, _ = mgr.GetStats()
 		_, _ = mgr.OOMKillCount()
 		_ = mgr.Destroy()
+		_ = mgr.MakeThreaded()
 	}
 }
