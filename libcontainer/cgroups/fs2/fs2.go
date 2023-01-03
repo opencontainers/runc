@@ -301,3 +301,37 @@ func CheckMemoryUsage(dirPath string, r *configs.Resources) error {
 
 	return nil
 }
+
+func (m *Manager) MakeThreaded() error {
+	const (
+		cgTypeFile   = "cgroup.type"
+		typeThreaded = "threaded"
+	)
+
+	cgroupType, err := cgroups.ReadFile(m.dirPath, cgTypeFile)
+	if err != nil {
+		return err
+	}
+	cgroupType = strings.TrimSpace(cgroupType)
+
+	if cgroupType == typeThreaded {
+		return nil
+	}
+
+	err = cgroups.WriteFile(m.dirPath, cgTypeFile, typeThreaded)
+	if err != nil {
+		return err
+	}
+
+	cgroupType, err = cgroups.ReadFile(m.dirPath, cgTypeFile)
+	if err != nil {
+		return err
+	}
+	cgroupType = strings.TrimSpace(cgroupType)
+
+	if cgroupType != typeThreaded {
+		return fmt.Errorf("could not change cgroup type (%s) to %s", cgroupType, typeThreaded)
+	}
+
+	return nil
+}

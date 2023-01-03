@@ -477,3 +477,7 @@ func (m *UnifiedManager) Exists() bool {
 func (m *UnifiedManager) OOMKillCount() (uint64, error) {
 	return m.fsMgr.OOMKillCount()
 }
+
+func (m *UnifiedManager) MakeThreaded() error {
+	return m.fsMgr.MakeThreaded()
+}

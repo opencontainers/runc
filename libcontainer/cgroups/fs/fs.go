@@ -262,3 +262,7 @@ func (m *Manager) OOMKillCount() (uint64, error) {
 
 	return c, err
 }
+
+func (m *Manager) MakeThreaded() error {
+	return nil
+}

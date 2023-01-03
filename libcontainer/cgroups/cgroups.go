@@ -71,4 +71,7 @@ type Manager interface {
 
 	// OOMKillCount reports OOM kill count for the cgroup.
 	OOMKillCount() (uint64, error)
+
+	// MakeThreaded turns the underlying cgroup to a threaded cgroup. A no-op for v1.
+	MakeThreaded() error
 }
