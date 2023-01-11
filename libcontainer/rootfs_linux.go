@@ -400,12 +400,25 @@ func mountToRootfs(m *configs.Mount, c *mountConfig) error {
 			return err
 		}
 		// Selinux kernels do not support labeling of /proc or /sys
+		if m.IsMove() && *c.fd >= 0 {
+			// fallback to normal mount if MoveMount() fails
+			if err := unix.MoveMount(*c.fd, "", -1, dest, unix.MOVE_MOUNT_F_EMPTY_PATH); err == nil {
+				return nil
+			}
+		}
 		return mountPropagate(m, rootfs, "", nil)
 	case "mqueue":
 		if err := os.MkdirAll(dest, 0o755); err != nil {
 			return err
 		}
-		if err := mountPropagate(m, rootfs, "", nil); err != nil {
+		if m.IsMove() && *c.fd >= 0 {
+			// fallback to normal mount if MoveMount() fails
+			if err := unix.MoveMount(*c.fd, "", -1, dest, unix.MOVE_MOUNT_F_EMPTY_PATH); err != nil {
+				if err := mountPropagate(m, rootfs, "", nil); err != nil {
+					return err
+				}
+			}
+		} else if err := mountPropagate(m, rootfs, "", nil); err != nil {
 			return err
 		}
 		return label.SetFileLabel(dest, mountLabel)

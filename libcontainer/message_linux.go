@@ -22,6 +22,9 @@ const (
 	UidmapPathAttr   uint16 = 27288
 	GidmapPathAttr   uint16 = 27289
 	MountSourcesAttr uint16 = 27290
+	MountFdProc      uint16 = 27291
+	MountFdSys       uint16 = 27292
+	MountFdMqueue    uint16 = 27293
 )
 
 type Int32msg struct {

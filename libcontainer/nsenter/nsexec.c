@@ -18,6 +18,7 @@
 #include <unistd.h>
 
 #include <sys/ioctl.h>
+#include <sys/mount.h>
 #include <sys/prctl.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -26,11 +27,14 @@
 #include <linux/limits.h>
 #include <linux/netlink.h>
 #include <linux/types.h>
+#include <sys/stat.h>
 
 /* Get all of the CLONE_NEW* flags. */
 #include "namespace.h"
 
 extern char *escape_json_string(char *str);
+
+#define AT_RECURSIVE 0x8000
 
 /* Synchronisation values. */
 enum sync_t {
@@ -94,6 +98,11 @@ struct nlconfig_t {
 	/* Mount sources opened outside the container userns. */
 	char *mountsources;
 	size_t mountsources_len;
+
+	/* File descriptors to support cross user namespace mounting */
+	int mount_fd_proc;
+	int mount_fd_sys;
+	int mount_fd_mqueue;
 };
 
 /*
@@ -127,6 +136,9 @@ static int loglevel = DEBUG;
 #define UIDMAPPATH_ATTR		27288
 #define GIDMAPPATH_ATTR		27289
 #define MOUNT_SOURCES_ATTR	27290
+#define MOUNT_FD_PROC		27291
+#define MOUNT_FD_SYS		27292
+#define MOUNT_FD_MQUEUE		27293
 
 /*
  * Use the raw syscall for versions of glibc which don't include a function for
@@ -477,6 +489,12 @@ static uint8_t readint8(char *buf)
 	return *(uint8_t *) buf;
 }
 
+static void set_default_config(struct nlconfig_t *config) {
+	config->mount_fd_proc = -1;
+	config->mount_fd_sys = -1;
+	config->mount_fd_mqueue = -1;
+}
+
 static void nl_parse(int fd, struct nlconfig_t *config)
 {
 	size_t len, size;
@@ -552,6 +570,15 @@ static void nl_parse(int fd, struct nlconfig_t *config)
 			config->mountsources = current;
 			config->mountsources_len = payload_len;
 			break;
+		case MOUNT_FD_PROC:
+			config->mount_fd_proc = readint32(current);
+			break;
+		case MOUNT_FD_SYS:
+			config->mount_fd_sys = readint32(current);
+			break;
+		case MOUNT_FD_MQUEUE:
+			config->mount_fd_mqueue = readint32(current);
+			break;
 		default:
 			bail("unknown netlink message type %d", nlattr->nla_type);
 		}
@@ -565,71 +592,285 @@ void nl_free(struct nlconfig_t *config)
 	free(config->data);
 }
 
-void join_namespaces(char *nslist)
+#define MAX_NAMSPACE_TYPE_LEN		64
+#define MAX_NAMESPACES				10
+
+struct namespace_t {
+	int target_ns_fd;
+	int original_ns_fd;
+	int flag;
+	int done;
+	char type[MAX_NAMSPACE_TYPE_LEN];
+	char path[PATH_MAX];
+};
+
+struct namespace_info_t {
+	int namespace_cnt;
+	struct namespace_t *namespaces[MAX_NAMESPACES];
+};
+
+static struct namespace_info_t* parse_namespace_info(char *nslist)
 {
-	int num = 0, i;
-	char *saveptr = NULL;
-	char *namespace = strtok_r(nslist, ",", &saveptr);
-	struct namespace_t {
-		int fd;
-		char type[PATH_MAX];
-		char path[PATH_MAX];
-	} *namespaces = NULL;
+	struct namespace_info_t *ns_info;
 
-	if (!namespace || !strlen(namespace) || !strlen(nslist))
-		bail("ns paths are empty");
+	ns_info = malloc(sizeof(*ns_info));
+	if (ns_info == NULL) {
+		bail("Can't allocate memory for namespace_info.");
+	}
+	memset(ns_info, 0, sizeof(*ns_info));
 
-	/*
-	 * We have to open the file descriptors first, since after
-	 * we join the mnt namespace we might no longer be able to
-	 * access the paths.
-	 */
-	do {
-		int fd;
-		char *path;
-		struct namespace_t *ns;
+	if (nslist != NULL) {
+		char *saveptr = NULL;
+		char *namespace = strtok_r(nslist, ",", &saveptr);
 
-		/* Resize the namespace array. */
-		namespaces = realloc(namespaces, ++num * sizeof(struct namespace_t));
-		if (!namespaces)
-			bail("failed to reallocate namespace array");
-		ns = &namespaces[num - 1];
+		if (!namespace || !strlen(namespace) || !strlen(nslist))
+			bail("ns paths are empty");
 
-		/* Split 'ns:path'. */
-		path = strstr(namespace, ":");
-		if (!path)
-			bail("failed to parse %s", namespace);
-		*path++ = '\0';
+		/*
+		 * We have to open the file descriptors first, since after
+		 * we join the mnt namespace we might no longer be able to
+		 * access the paths.
+		 */
+		do {
+			int fd;
+			char *path;
+			struct namespace_t *ns;
 
-		fd = open(path, O_RDONLY);
-		if (fd < 0)
-			bail("failed to open %s", path);
+			/* Resize the namespace array. */
+			ns = malloc(sizeof(struct namespace_t));
+			if (!ns)
+				bail("failed to reallocate namespace array");
+			memset(ns, 0, sizeof(struct namespace_t));
+			ns->target_ns_fd = -1;
+			ns->original_ns_fd = -1;
 
-		ns->fd = fd;
-		strncpy(ns->type, namespace, PATH_MAX - 1);
-		strncpy(ns->path, path, PATH_MAX - 1);
-		ns->path[PATH_MAX - 1] = '\0';
-	} while ((namespace = strtok_r(NULL, ",", &saveptr)) != NULL);
+			/* Split 'ns:path'. */
+			path = strstr(namespace, ":");
+			if (!path)
+				bail("failed to parse %s", namespace);
+			*path++ = '\0';
 
-	/*
-	 * The ordering in which we join namespaces is important. We should
-	 * always join the user namespace *first*. This is all guaranteed
-	 * from the container_linux.go side of this, so we're just going to
-	 * follow the order given to us.
-	 */
+			fd = open(path, O_RDONLY);
+			if (fd < 0)
+				bail("failed to open %s", path);
 
-	for (i = 0; i < num; i++) {
-		struct namespace_t *ns = &namespaces[i];
-		int flag = nsflag(ns->type);
+			ns->target_ns_fd = fd;
+			strncpy(ns->type, namespace, MAX_NAMSPACE_TYPE_LEN - 1);
+			ns->type[MAX_NAMSPACE_TYPE_LEN - 1] = '\0';
+			strncpy(ns->path, path, PATH_MAX - 1);
+			ns->path[PATH_MAX - 1] = '\0';
+			ns->flag = nsflag(ns->type);
 
-		write_log(DEBUG, "setns(%#x) into %s namespace (with path %s)", flag, ns->type, ns->path);
-		if (setns(ns->fd, flag) < 0)
-			bail("failed to setns into %s namespace", ns->type);
-
-		close(ns->fd);
+			if (ns_info->namespace_cnt >= MAX_NAMESPACES)
+				bail("too many namespace configured");
+			ns_info->namespaces[ns_info->namespace_cnt] = ns;
+			ns_info->namespace_cnt++;
+		} while ((namespace = strtok_r(NULL, ",", &saveptr)) != NULL);
 	}
 
-	free(namespaces);
+	return ns_info;
+}
+
+/*
+ * The ordering in which we join namespaces is important. We should
+ * always join the user namespace *first*. This is all guaranteed
+ * from the container_linux.go side of this, so we're just going to
+ * follow the order given to us.
+ */
+static void join_namespaces(struct namespace_info_t *ns_info)
+{
+	int i;
+	int userns_idx = -1;
+
+	for (i = 0; i < ns_info->namespace_cnt; i++) {
+		struct namespace_t *ns = ns_info->namespaces[i];
+		if (!strcmp(ns->type, "user")) {
+			userns_idx = i;
+			break;
+		}
+	}
+
+	if (userns_idx >= 0) {
+		for (i = 0; i < ns_info->namespace_cnt; i++) {
+			struct namespace_t *ns = ns_info->namespaces[i];
+
+			if (i != userns_idx && ns->target_ns_fd >= 0) {
+				write_log(DEBUG, "setns(%#x) into %s namespace (with path %s)", ns->flag, ns->type, ns->path);
+				if (setns(ns->target_ns_fd, ns->flag) >= 0)
+					ns->done = 1;
+			}
+		}
+	}
+
+	for (i = 0; i < ns_info->namespace_cnt; i++) {
+		struct namespace_t *ns = ns_info->namespaces[i];
+
+		if (ns->target_ns_fd >= 0 && !ns->done) {
+			write_log(DEBUG, "setns(%#x) into %s namespace (with path %s)", ns->flag, ns->type, ns->path);
+			if (setns(ns->target_ns_fd, ns->flag) < 0)
+				bail("failed to setns into %s namespace, error %d", ns->type, errno);
+		}
+	}
+}
+
+static void free_namespace_info(struct namespace_info_t *ns_info)
+{
+	int i;
+
+	for (i = 0; i < ns_info->namespace_cnt; i++) {
+		struct namespace_t *ns = ns_info->namespaces[i];
+
+		if (ns->target_ns_fd >= 0) {
+			close(ns->target_ns_fd);
+		}
+		if (ns->original_ns_fd >= 0) {
+			close(ns->original_ns_fd);
+		}
+		free(ns);
+	}
+
+	free(ns_info);
+}
+
+#ifndef OPEN_TREE_CLONE
+#define OPEN_TREE_CLONE					1
+#endif
+
+#ifndef OPEN_TREE_CLOEXEC
+#define OPEN_TREE_CLOEXEC				O_CLOEXEC
+#endif
+
+#ifndef __NR_open_tree
+#define __NR_open_tree					428
+#endif
+
+// container_linux.go ensures that syscall open_tree is available.
+static inline int sys_open_tree(int dfd, const char *filename, unsigned int flags)
+{
+	return syscall(__NR_open_tree, dfd, filename, flags);
+}
+
+static void cleanup_mount_fds_tempdir(char *dirname)
+{
+	umount2(dirname, MNT_FORCE | MNT_DETACH);
+	rmdir(dirname);
+}
+
+static void prepare_mount_fd(char *dirname, char *type, int target_fd, int flags)
+{
+	int fd, ret;
+	char path[PATH_MAX];
+
+	if (snprintf(path, PATH_MAX, "%s/%s", dirname, type) < 0) {
+		cleanup_mount_fds_tempdir(dirname);
+		bail("failed to prepare temp directory path for %s", type);
+	}
+    ret = mkdir(path, 0644);
+    if (ret < 0) {
+		rmdir(path);
+		cleanup_mount_fds_tempdir(dirname);
+		bail("failed to mount %s onto temp directory, ret %d", type, ret);
+	}
+
+    ret = mount(type, path, type, flags, NULL);
+	if ( ret < 0) {
+		rmdir(path);
+		cleanup_mount_fds_tempdir(dirname);
+		bail("failed to mount %s onto temp directory, ret %d", type, ret);
+	}
+
+	fd = sys_open_tree(-1, path, OPEN_TREE_CLOEXEC | OPEN_TREE_CLONE | AT_RECURSIVE);
+	umount2(path,  MNT_FORCE | MNT_DETACH);
+	rmdir(path);
+	if (fd < 0) {
+		cleanup_mount_fds_tempdir(dirname);
+		bail("failed to open temporary mountpoint of %s", type);
+	}
+
+	ret = dup3(fd, target_fd, O_CLOEXEC);
+	close(fd);
+	if (ret < 0) {
+		cleanup_mount_fds_tempdir(dirname);
+		bail("failed to duplicate the mount fd for %s", type);
+	}
+}
+
+/* Prepare temparory mounts for move_mount() */
+static void prepare_mount_fds(struct namespace_info_t *ns_info, struct nlconfig_t *config)
+{
+	int i, fd, ret, flags;
+	char name[PATH_MAX];
+	char dirname_buf[PATH_MAX];
+	char *dirname;
+
+	// Get handles of current namespaces except user namespace
+	for (i = 0; i < ns_info->namespace_cnt; i++) {
+		struct namespace_t *ns = ns_info->namespaces[i];
+
+		if (ns->target_ns_fd >= 0 && ns->flag != 0 && ns->flag != CLONE_NEWUSER) {
+			if (snprintf(name, PATH_MAX, "/proc/self/ns/%s", ns->type) < 0)
+				bail("failed to prepare file path for current %s namespace", ns->type);
+			fd = open(name, O_RDONLY | O_CLOEXEC);
+			if (fd == -1)
+				bail("failed to open current %s namespace", ns->type);
+			ns->original_ns_fd = fd;
+		}
+	}
+
+	// Join target namespaces except user namespace
+	for (i = 0; i < ns_info->namespace_cnt; i++) {
+		struct namespace_t *ns = ns_info->namespaces[i];
+        if (!strcmp(ns->type, "user"))
+            continue;
+		if (ns->target_ns_fd >= 0 && ns->flag != 0 && ns->flag != CLONE_NEWUSER) {
+			if (setns(ns->target_ns_fd, ns->flag) < 0)
+				bail("failed to setns into %s namespace", ns->type);
+		}
+	}
+
+	// Create a temp working directory, similar to prepareTmp()
+	strcpy(dirname_buf, "/tmp/runc-mountfds-XXXXXX");
+	dirname = mkdtemp(dirname_buf);
+	if (dirname == NULL)
+		bail("failed to create temporary directory for mount fds");
+	ret = mount(dirname, dirname, "bind", MS_BIND, NULL);
+	if (ret < 0) {
+		cleanup_mount_fds_tempdir(dirname);
+		bail("failed to bind mount temporary directory for mount fds");
+	}
+	ret = mount(dirname, dirname, NULL, MS_PRIVATE, NULL);
+	if (ret < 0) {
+		cleanup_mount_fds_tempdir(dirname);
+		bail("failed to bind mount temporary directory as private for mount fds");
+	}
+
+	if (config->mount_fd_proc >= 0) {
+		flags = MS_NOSUID | MS_NOEXEC | MS_NODEV;
+		prepare_mount_fd(dirname, "proc", config->mount_fd_proc, flags);
+	}
+	if (config->mount_fd_sys >= 0) {
+		flags = MS_NOSUID | MS_NOEXEC | MS_NODEV | MS_RDONLY;
+		prepare_mount_fd(dirname, "sysfs", config->mount_fd_sys, flags);
+	}
+	if (config->mount_fd_mqueue >= 0) {
+		flags = MS_NOSUID | MS_NOEXEC | MS_NODEV;
+		prepare_mount_fd(dirname, "mqueue", config->mount_fd_mqueue, flags);
+	}
+
+	cleanup_mount_fds_tempdir(dirname);
+
+	// Rejoin original namespaces except user namespace
+	for (i = 0; i < ns_info->namespace_cnt; i++) {
+		struct namespace_t *ns = ns_info->namespaces[i];
+        if (!strcmp(ns->type, "user"))
+            continue;
+		if (ns->original_ns_fd >= 0) {
+			if (setns(ns->original_ns_fd, ns->flag) < 0)
+				bail("failed to setns into %s namespace", ns->type);
+			close(ns->original_ns_fd);
+			ns->original_ns_fd = -1;
+		}
+	}
 }
 
 /* Defined in cloned_binary.c. */
@@ -738,7 +979,7 @@ void send_fd(int sockfd, int fd)
 		bail("failed to send fd %d via unix socket %d", fd, sockfd);
 }
 
-void receive_mountsources(int sockfd)
+void receive_mountsources(int sockfd, struct nlconfig_t *config)
 {
 	char *mount_fds, *endp;
 	long new_fd;
@@ -766,6 +1007,11 @@ void receive_mountsources(int sockfd)
 
 		if (new_fd == LONG_MAX || new_fd < 0 || new_fd > INT_MAX) {
 			bail("malformed _LIBCONTAINER_MOUNT_FDS env var: fds out of range");
+		}
+
+		// Skip file descriptors for cross user namespace mounting
+		if (new_fd == config->mount_fd_proc || new_fd == config->mount_fd_sys || new_fd == config->mount_fd_mqueue) {
+			continue;
 		}
 
 		receive_fd(sockfd, new_fd);
@@ -872,6 +1118,7 @@ void nsexec(void)
 	write_log(DEBUG, "=> nsexec container setup");
 
 	/* Parse all of the netlink configuration. */
+	set_default_config(&config);
 	nl_parse(pipenum, &config);
 
 	/* Set oom_score_adj. This has to be done before !dumpable because
@@ -1129,6 +1376,7 @@ void nsexec(void)
 	case STAGE_CHILD:{
 			pid_t stage2_pid = -1;
 			enum sync_t s;
+			struct namespace_info_t *ns_info;
 
 			/* We're in a child and thus need to tell the parent if we die. */
 			syncfd = sync_child_pipe[0];
@@ -1145,8 +1393,13 @@ void nsexec(void)
 			 * [stage 2: STAGE_INIT]) would be meaningless). We could send it
 			 * using cmsg(3) but that's just annoying.
 			 */
-			if (config.namespaces)
-				join_namespaces(config.namespaces);
+			ns_info = parse_namespace_info(config.namespaces);
+			if (config.mount_fd_proc >= 0 || config.mount_fd_proc >= 0 || config.mount_fd_mqueue >= 0)
+				prepare_mount_fds(ns_info, &config);
+			if (ns_info->namespace_cnt > 0)
+				join_namespaces(ns_info);
+			free_namespace_info(ns_info);
+			ns_info = NULL;
 
 			/*
 			 * Deal with user namespaces first. They are quite special, as they
@@ -1235,7 +1488,7 @@ void nsexec(void)
 				}
 
 				/* Receive and install all mount sources fds. */
-				receive_mountsources(syncfd);
+				receive_mountsources(syncfd, &config);
 
 				/* Parent finished to send the mount sources fds. */
 				if (read(syncfd, &s, sizeof(s)) != sizeof(s)) {

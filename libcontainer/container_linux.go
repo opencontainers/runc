@@ -520,7 +520,7 @@ func (c *Container) shouldSendMountSources() bool {
 
 	// We need to send sources if there are bind-mounts.
 	for _, m := range c.config.Mounts {
-		if m.IsBind() {
+		if m.IsBind() || m.IsMove() {
 			return true
 		}
 	}
@@ -536,10 +536,38 @@ func (c *Container) newInitProcess(p *Process, cmd *exec.Cmd, messageSockPair, l
 			nsMaps[ns.Type] = ns.Path
 		}
 	}
+
+	nsList := make(map[configs.NamespaceType]string)
+	for _, ns := range c.config.Namespaces {
+		nsList[ns.Type] = ns.Path
+	}
+
 	_, sharePidns := nsMaps[configs.NEWPID]
-	data, err := c.bootstrapData(c.config.Namespaces.CloneFlags(), nsMaps, initStandard)
-	if err != nil {
-		return nil, err
+	userNsMountFds := [3]int{-1, -1, -1}
+
+	// Enable open_tree()/move_mount() for special filesystems to support cross user namespace mounting.
+	if _, ok := nsList[configs.NEWUSER]; ok {
+		for idx, m := range c.config.Mounts {
+			if m.Device == "proc" && m.Source == "proc" && m.Destination == "/proc" &&
+				m.Flags == unix.MS_NODEV|unix.MS_NOEXEC|unix.MS_NOSUID {
+				// procfs depends on Pid namespace
+				if _, exist := nsList[configs.NEWPID]; exist {
+				}
+			} else if m.Device == "sysfs" && m.Source == "sysfs" && m.Destination == "/sys" &&
+				m.Flags == unix.MS_NODEV|unix.MS_NOSUID|unix.MS_NOEXEC|unix.MS_RDONLY {
+				// sysfs depends on Net namespace
+				// meaning exclude runc unshare new netns
+				if path, exist := nsList[configs.NEWNET]; !exist || path != "" {
+					c.config.Mounts[idx].Flags |= unix.MS_MOVE
+				}
+			} else if m.Device == "mqueue" && m.Source == "mqueue" && m.Destination == "/dev/mqueue" &&
+				m.Flags == unix.MS_NODEV|unix.MS_NOEXEC|unix.MS_NOSUID {
+				// /mqueue depends on IPC namespace
+				if _, exist := nsList[configs.NEWIPC]; exist {
+					c.config.Mounts[idx].Flags |= unix.MS_MOVE
+				}
+			}
+		}
 	}
 
 	if c.shouldSendMountSources() {
@@ -547,7 +575,7 @@ func (c *Container) newInitProcess(p *Process, cmd *exec.Cmd, messageSockPair, l
 		// prepareRootfs()). This slice MUST have the same size as c.config.Mounts.
 		mountFds := make([]int, len(c.config.Mounts))
 		for i, m := range c.config.Mounts {
-			if !m.IsBind() {
+			if !m.IsBind() && !m.IsMove() {
 				// Non bind-mounts do not use an fd.
 				mountFds[i] = -1
 				continue
@@ -559,6 +587,17 @@ func (c *Container) newInitProcess(p *Process, cmd *exec.Cmd, messageSockPair, l
 			// lifecycle of that fd is already taken care of.
 			cmd.ExtraFiles = append(cmd.ExtraFiles, messageSockPair.child)
 			mountFds[i] = stdioFdCount + len(cmd.ExtraFiles) - 1
+
+			// MS_MOVE flag is set for cross user namespace mounting
+			if m.IsMove() {
+				if m.Device == "proc" {
+					userNsMountFds[0] = mountFds[i]
+				} else if m.Device == "sysfs" {
+					userNsMountFds[1] = mountFds[i]
+				} else if m.Device == "mqueue" {
+					userNsMountFds[2] = mountFds[i]
+				}
+			}
 		}
 
 		mountFdsJson, err := json.Marshal(mountFds)
@@ -569,6 +608,11 @@ func (c *Container) newInitProcess(p *Process, cmd *exec.Cmd, messageSockPair, l
 		cmd.Env = append(cmd.Env,
 			"_LIBCONTAINER_MOUNT_FDS="+string(mountFdsJson),
 		)
+	}
+
+	data, err := c.bootstrapData(c.config.Namespaces.CloneFlags(), nsMaps, initStandard, &userNsMountFds)
+	if err != nil {
+		return nil, err
 	}
 
 	init := &initProcess{
@@ -595,7 +639,7 @@ func (c *Container) newSetnsProcess(p *Process, cmd *exec.Cmd, messageSockPair, 
 	}
 	// for setns process, we don't have to set cloneflags as the process namespaces
 	// will only be set via setns syscall
-	data, err := c.bootstrapData(0, state.NamespacePaths, initSetns)
+	data, err := c.bootstrapData(0, state.NamespacePaths, initSetns, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -2119,7 +2163,8 @@ type netlinkError struct{ error }
 // such as one that uses nsenter package to bootstrap the container's
 // init process correctly, i.e. with correct namespaces, uid/gid
 // mapping etc.
-func (c *Container) bootstrapData(cloneFlags uintptr, nsMaps map[configs.NamespaceType]string, it initType) (_ io.Reader, Err error) {
+func (c *Container) bootstrapData(cloneFlags uintptr, nsMaps map[configs.NamespaceType]string,
+	it initType, userNsMountFd *[3]int) (_ io.Reader, Err error) {
 	// create the netlink message
 	r := nl.NewNetlinkRequest(int(InitMsg), 0)
 
@@ -2237,6 +2282,23 @@ func (c *Container) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Namespa
 		r.AddData(&Bytemsg{
 			Type:  MountSourcesAttr,
 			Value: mounts,
+		})
+
+		// File descriptors to support cross user namespace mounting
+		if userNsMountFd == nil {
+			return nil, fmt.Errorf("user mount fd array should not be null")
+		}
+		r.AddData(&Int32msg{
+			Type:  MountFdProc,
+			Value: uint32(userNsMountFd[0]),
+		})
+		r.AddData(&Int32msg{
+			Type:  MountFdSys,
+			Value: uint32(userNsMountFd[1]),
+		})
+		r.AddData(&Int32msg{
+			Type:  MountFdMqueue,
+			Value: uint32(userNsMountFd[2]),
 		})
 	}
 
