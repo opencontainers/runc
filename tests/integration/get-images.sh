@@ -56,7 +56,7 @@ esac
 # busybox
 BUSYBOX_IMAGE="$TESTDATA/busybox-${arch}.tar.xz"
 get "$BUSYBOX_IMAGE" \
-	"https://github.com/docker-library/busybox/raw/dist-${arch}/stable/glibc/busybox.tar.xz"
+	"https://github.com/docker-library/busybox/raw/dist-${arch}/latest/glibc/busybox.tar.xz"
 echo "BUSYBOX_IMAGE=$BUSYBOX_IMAGE"
 
 # debian
