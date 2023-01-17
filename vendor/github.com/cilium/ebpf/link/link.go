@@ -230,6 +230,11 @@ func (l *RawLink) Unpin() error {
 	return nil
 }
 
+// IsPinned returns true if the Link has a non-empty pinned path.
+func (l *RawLink) IsPinned() bool {
+	return l.pinnedPath != ""
+}
+
 // Update implements the Link interface.
 func (l *RawLink) Update(new *ebpf.Program) error {
 	return l.UpdateArgs(RawLinkUpdateOptions{
