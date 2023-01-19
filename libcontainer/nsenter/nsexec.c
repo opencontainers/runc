@@ -1129,6 +1129,8 @@ void nsexec(void)
 	case STAGE_CHILD:{
 			pid_t stage2_pid = -1;
 			enum sync_t s;
+			int i;
+			const int retry_times = 5;
 
 			/* We're in a child and thus need to tell the parent if we die. */
 			syncfd = sync_child_pipe[0];
@@ -1223,8 +1225,15 @@ void nsexec(void)
 			 * was broken, so we'll just do it the long way anyway.
 			 */
 			write_log(DEBUG, "unshare remaining namespace (except cgroupns)");
-			if (unshare(config.cloneflags & ~CLONE_NEWCGROUP) < 0)
-				bail("failed to unshare remaining namespaces (except cgroupns)");
+			for (i = 0; i < retry_times; i++) {
+				int unshare_result = unshare(config.cloneflags & ~CLONE_NEWCGROUP);
+				if (unshare_result >= 0)
+					break;
+				if (errno != EINVAL)
+					bail("failed to unshare remaining namespaces (except cgroupns)");
+				if (i == retry_times - 1)
+					bail("failed to unshare remaining namespaces (except cgroupns), please retry");
+			}
 
 			/* Ask our parent to send the mount sources fds. */
 			if (config.mountsources) {
