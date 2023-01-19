@@ -832,6 +832,18 @@ void send_mountsources(int sockfd, pid_t child, char *mountsources, size_t mount
 		bail("failed to close container mount namespace fd %d", container_mntns_fd);
 }
 
+int try_unshare(uint32_t flags)
+{
+	int retries = 5;
+	for (; retries > 0; retries--) {
+		if (unshare(flags) == 0)
+			return 0;
+		if (errno != EINVAL)
+			break;
+	}
+	return -1;
+}
+
 void nsexec(void)
 {
 	int pipenum;
@@ -1171,8 +1183,12 @@ void nsexec(void)
 			 */
 			if (config.cloneflags & CLONE_NEWUSER) {
 				write_log(DEBUG, "unshare user namespace");
-				if (unshare(CLONE_NEWUSER) < 0)
-					bail("failed to unshare user namespace");
+				if (try_unshare(CLONE_NEWUSER) != 0) {
+					if (errno != EINVAL)
+						bail("failed to unshare user namespace");
+					else
+						bail("failed to unshare user namespace, please retry");
+				}
 				config.cloneflags &= ~CLONE_NEWUSER;
 
 				/*
@@ -1225,8 +1241,22 @@ void nsexec(void)
 			 * was broken, so we'll just do it the long way anyway.
 			 */
 			write_log(DEBUG, "unshare remaining namespace (except cgroupns)");
-			if (unshare(config.cloneflags & ~CLONE_NEWCGROUP) < 0)
-				bail("failed to unshare remaining namespaces (except cgroupns)");
+			/*
+			 * In centos 7.4/7.5/7.6, when other processes read the /proc/pid/status
+			 * file of the runc: [1: CHILD] process, and if the runc: [1: CHILD]
+			 * process happens to be in the unshare stage, the unshare syscall will
+			 * report an error EINVAL. This is because when other processes read
+			 * the status file, they will call the kernel function get_ task_ mm(),
+			 * which sets the decision condition task->mm->mm_users +1. In the
+			 * unshare syscall, mm does not meet the condition of mm<=1, and the
+			 * kernel throws an EINVAL error. For this, I think we can try again.
+			 */
+			if (try_unshare(config.cloneflags & ~CLONE_NEWCGROUP) != 0) {
+				if (errno != EINVAL)
+					bail("failed to unshare remaining namespaces (except cgroupns)");
+				else
+					bail("failed to unshare remaining namespaces (except cgroupns), please retry");
+			}
 
 			/* Ask our parent to send the mount sources fds. */
 			if (config.mountsources) {
@@ -1344,8 +1374,12 @@ void nsexec(void)
 			}
 
 			if (config.cloneflags & CLONE_NEWCGROUP) {
-				if (unshare(CLONE_NEWCGROUP) < 0)
-					bail("failed to unshare cgroup namespace");
+				if (try_unshare(CLONE_NEWCGROUP) != 0) {
+					if (errno != EINVAL)
+						bail("failed to unshare cgroup namespace");
+					else
+						bail("failed to unshare cgroup namespace, please retry");
+				}
 			}
 
 			write_log(DEBUG, "signal completion to stage-0");
