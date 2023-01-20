@@ -53,13 +53,23 @@ type Seccomp struct {
 	// Nil value means "unknown", not "no support for any action".
 	Actions []string `json:"actions,omitempty"`
 
-	// Operators is the list of the recognized actions, e.g., "SCMP_CMP_NE".
+	// Operators is the list of the recognized operators, e.g., "SCMP_CMP_NE".
 	// Nil value means "unknown", not "no support for any operator".
 	Operators []string `json:"operators,omitempty"`
 
-	// Operators is the list of the recognized archs, e.g., "SCMP_ARCH_X86_64".
+	// Archs is the list of the recognized archs, e.g., "SCMP_ARCH_X86_64".
 	// Nil value means "unknown", not "no support for any arch".
 	Archs []string `json:"archs,omitempty"`
+
+	// KnownFlags is the list of the recognized filter flags, e.g., "SECCOMP_FILTER_FLAG_LOG".
+	// Nil value means "unknown", not "no flags are recognized".
+	KnownFlags []string `json:"knownFlags,omitempty"`
+
+	// SupportedFlags is the list of the supported filter flags, e.g., "SECCOMP_FILTER_FLAG_LOG".
+	// This list may be a subset of KnownFlags due to some flags
+	// not supported by the current kernel and/or libseccomp.
+	// Nil value means "unknown", not "no flags are supported".
+	SupportedFlags []string `json:"supportedFlags,omitempty"`
 }
 
 // Apparmor represents the "apparmor" field.

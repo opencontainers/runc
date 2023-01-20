@@ -59,10 +59,12 @@ var featuresCommand = cli.Command{
 
 		if seccomp.Enabled {
 			feat.Linux.Seccomp = &features.Seccomp{
-				Enabled:   &tru,
-				Actions:   seccomp.KnownActions(),
-				Operators: seccomp.KnownOperators(),
-				Archs:     seccomp.KnownArchs(),
+				Enabled:        &tru,
+				Actions:        seccomp.KnownActions(),
+				Operators:      seccomp.KnownOperators(),
+				Archs:          seccomp.KnownArchs(),
+				KnownFlags:     seccomp.KnownFlags(),
+				SupportedFlags: seccomp.SupportedFlags(),
 			}
 			major, minor, patch := seccomp.Version()
 			feat.Annotations[features.AnnotationLibseccompVersion] = fmt.Sprintf("%d.%d.%d", major, minor, patch)
