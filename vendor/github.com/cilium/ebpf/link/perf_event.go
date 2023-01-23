@@ -276,7 +276,7 @@ func getTraceEventID(group, name string) (uint64, error) {
 	}
 	tid, err := readUint64FromFile("%d\n", path)
 	if errors.Is(err, os.ErrNotExist) {
-		return 0, fmt.Errorf("trace event %s/%s: %w", group, name, os.ErrNotExist)
+		return 0, err
 	}
 	if err != nil {
 		return 0, fmt.Errorf("reading trace event ID of %s/%s: %w", group, name, err)
@@ -380,7 +380,7 @@ func readUint64FromFileOnce(format string, path ...string) (uint64, error) {
 //
 // https://elixir.bootlin.com/linux/v5.16.8/source/kernel/bpf/syscall.c#L4307
 // https://github.com/torvalds/linux/commit/b89fbfbb854c9afc3047e8273cc3a694650b802e
-var haveBPFLinkPerfEvent = internal.FeatureTest("bpf_link_perf_event", "5.15", func() error {
+var haveBPFLinkPerfEvent = internal.NewFeatureTest("bpf_link_perf_event", "5.15", func() error {
 	prog, err := ebpf.NewProgram(&ebpf.ProgramSpec{
 		Name: "probe_bpf_perf_link",
 		Type: ebpf.Kprobe,

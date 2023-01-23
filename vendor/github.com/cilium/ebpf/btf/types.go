@@ -276,6 +276,21 @@ func (e *Enum) copy() Type {
 	return &cpy
 }
 
+// has64BitValues returns true if the Enum contains a value larger than 32 bits.
+// Kernels before 6.0 have enum values that overrun u32 replaced with zeroes.
+//
+// 64-bit enums have their Enum.Size attributes correctly set to 8, but if we
+// use the size attribute as a heuristic during BTF marshaling, we'll emit
+// ENUM64s to kernels that don't support them.
+func (e *Enum) has64BitValues() bool {
+	for _, v := range e.Values {
+		if v.Value > math.MaxUint32 {
+			return true
+		}
+	}
+	return false
+}
+
 // FwdKind is the type of forward declaration.
 type FwdKind int
 
@@ -393,6 +408,12 @@ func FuncMetadata(ins *asm.Instruction) *Func {
 	return fn
 }
 
+// WithFuncMetadata adds a btf.Func to the Metadata of asm.Instruction.
+func WithFuncMetadata(ins asm.Instruction, fn *Func) asm.Instruction {
+	ins.Metadata.Set(funcInfoMeta{}, fn)
+	return ins
+}
+
 func (f *Func) Format(fs fmt.State, verb rune) {
 	formatType(fs, verb, f, f.Linkage, "proto=", f.Type)
 }
@@ -472,6 +493,7 @@ func (ds *Datasec) copy() Type {
 //
 // It is not a valid Type.
 type VarSecinfo struct {
+	// Var or Func.
 	Type   Type
 	Offset uint32
 	Size   uint32
@@ -723,10 +745,10 @@ func inflateRawTypes(rawTypes []rawType, baseTypes types, rawStrings *stringTabl
 	}
 
 	var fixups []fixupDef
-	fixup := func(id TypeID, typ *Type) {
+	fixup := func(id TypeID, typ *Type) bool {
 		if id < TypeID(len(baseTypes)) {
 			*typ = baseTypes[id]
-			return
+			return true
 		}
 
 		idx := id
@@ -736,26 +758,29 @@ func inflateRawTypes(rawTypes []rawType, baseTypes types, rawStrings *stringTabl
 		if idx < TypeID(len(types)) {
 			// We've already inflated this type, fix it up immediately.
 			*typ = types[idx]
-			return
+			return true
 		}
 		fixups = append(fixups, fixupDef{id, typ})
+		return false
 	}
 
 	type assertion struct {
+		id   TypeID
 		typ  *Type
 		want reflect.Type
 	}
 
 	var assertions []assertion
-	assert := func(typ *Type, want reflect.Type) error {
-		if *typ != nil {
-			// The type has already been fixed up, check the type immediately.
-			if reflect.TypeOf(*typ) != want {
-				return fmt.Errorf("expected %s, got %T", want, *typ)
-			}
+	fixupAndAssert := func(id TypeID, typ *Type, want reflect.Type) error {
+		if !fixup(id, typ) {
+			assertions = append(assertions, assertion{id, typ, want})
 			return nil
 		}
-		assertions = append(assertions, assertion{typ, want})
+
+		// The type has already been fixed up, check the type immediately.
+		if reflect.TypeOf(*typ) != want {
+			return fmt.Errorf("type ID %d: expected %s, got %T", id, want, *typ)
+		}
 		return nil
 	}
 
@@ -857,14 +882,14 @@ func inflateRawTypes(rawTypes []rawType, baseTypes types, rawStrings *stringTabl
 			typ = arr
 
 		case kindStruct:
-			members, err := convertMembers(raw.data.([]btfMember), raw.KindFlag())
+			members, err := convertMembers(raw.data.([]btfMember), raw.Bitfield())
 			if err != nil {
 				return nil, fmt.Errorf("struct %s (id %d): %w", name, id, err)
 			}
 			typ = &Struct{name, raw.Size(), members}
 
 		case kindUnion:
-			members, err := convertMembers(raw.data.([]btfMember), raw.KindFlag())
+			members, err := convertMembers(raw.data.([]btfMember), raw.Bitfield())
 			if err != nil {
 				return nil, fmt.Errorf("union %s (id %d): %w", name, id, err)
 			}
@@ -873,7 +898,7 @@ func inflateRawTypes(rawTypes []rawType, baseTypes types, rawStrings *stringTabl
 		case kindEnum:
 			rawvals := raw.data.([]btfEnum)
 			vals := make([]EnumValue, 0, len(rawvals))
-			signed := raw.KindFlag()
+			signed := raw.Signed()
 			for i, btfVal := range rawvals {
 				name, err := rawStrings.Lookup(btfVal.NameOff)
 				if err != nil {
@@ -889,11 +914,7 @@ func inflateRawTypes(rawTypes []rawType, baseTypes types, rawStrings *stringTabl
 			typ = &Enum{name, raw.Size(), signed, vals}
 
 		case kindForward:
-			if raw.KindFlag() {
-				typ = &Fwd{name, FwdUnion}
-			} else {
-				typ = &Fwd{name, FwdStruct}
-			}
+			typ = &Fwd{name, raw.FwdKind()}
 
 		case kindTypedef:
 			typedef := &Typedef{name, nil}
@@ -917,8 +938,7 @@ func inflateRawTypes(rawTypes []rawType, baseTypes types, rawStrings *stringTabl
 
 		case kindFunc:
 			fn := &Func{name, nil, raw.Linkage()}
-			fixup(raw.Type(), &fn.Type)
-			if err := assert(&fn.Type, reflect.TypeOf((*FuncProto)(nil))); err != nil {
+			if err := fixupAndAssert(raw.Type(), &fn.Type, reflect.TypeOf((*FuncProto)(nil))); err != nil {
 				return nil, err
 			}
 			typ = fn
@@ -960,11 +980,8 @@ func inflateRawTypes(rawTypes []rawType, baseTypes types, rawStrings *stringTabl
 			}
 			for i := range vars {
 				fixup(btfVars[i].Type, &vars[i].Type)
-				if err := assert(&vars[i].Type, reflect.TypeOf((*Var)(nil))); err != nil {
-					return nil, err
-				}
 			}
-			typ = &Datasec{name, raw.SizeType, vars}
+			typ = &Datasec{name, raw.Size(), vars}
 
 		case kindFloat:
 			typ = &Float{name, raw.Size()}
@@ -975,12 +992,7 @@ func inflateRawTypes(rawTypes []rawType, baseTypes types, rawStrings *stringTabl
 				return nil, fmt.Errorf("type id %d: index exceeds int", id)
 			}
 
-			index := int(btfIndex)
-			if btfIndex == math.MaxUint32 {
-				index = -1
-			}
-
-			dt := &declTag{nil, name, index}
+			dt := &declTag{nil, name, int(int32(btfIndex))}
 			fixup(raw.Type(), &dt.Type)
 			typ = dt
 
@@ -990,6 +1002,19 @@ func inflateRawTypes(rawTypes []rawType, baseTypes types, rawStrings *stringTabl
 			tt := &typeTag{nil, name}
 			fixup(raw.Type(), &tt.Type)
 			typ = tt
+
+		case kindEnum64:
+			rawvals := raw.data.([]btfEnum64)
+			vals := make([]EnumValue, 0, len(rawvals))
+			for i, btfVal := range rawvals {
+				name, err := rawStrings.Lookup(btfVal.NameOff)
+				if err != nil {
+					return nil, fmt.Errorf("get name for enum64 value %d: %s", i, err)
+				}
+				value := (uint64(btfVal.ValHi32) << 32) | uint64(btfVal.ValLo32)
+				vals = append(vals, EnumValue{name, value})
+			}
+			typ = &Enum{name, raw.Size(), raw.Signed(), vals}
 
 		default:
 			return nil, fmt.Errorf("type id %d: unknown kind: %v", id, raw.Kind())
@@ -1025,7 +1050,7 @@ func inflateRawTypes(rawTypes []rawType, baseTypes types, rawStrings *stringTabl
 
 	for _, assertion := range assertions {
 		if reflect.TypeOf(*assertion.typ) != assertion.want {
-			return nil, fmt.Errorf("expected %s, got %T", assertion.want, *assertion.typ)
+			return nil, fmt.Errorf("type ID %d: expected %s, got %T", assertion.id, assertion.want, *assertion.typ)
 		}
 	}
 

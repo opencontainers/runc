@@ -51,6 +51,12 @@ func LoadCollectionSpecFromReader(rd io.ReaderAt) (*CollectionSpec, error) {
 		return nil, err
 	}
 
+	// Checks if the ELF file is for BPF data.
+	// Old LLVM versions set e_machine to EM_NONE.
+	if f.File.Machine != unix.EM_NONE && f.File.Machine != elf.EM_BPF {
+		return nil, fmt.Errorf("unexpected machine type for BPF ELF: %s", f.File.Machine)
+	}
+
 	var (
 		licenseSection *elf.Section
 		versionSection *elf.Section
@@ -308,7 +314,6 @@ func (ec *elfCode) loadProgramSections() (map[string]*ProgramSpec, error) {
 				KernelVersion: ec.version,
 				Instructions:  insns,
 				ByteOrder:     ec.ByteOrder,
-				BTF:           ec.btf,
 			}
 
 			// Function names must be unique within a single ELF blob.
@@ -897,13 +902,6 @@ func mapSpecFromBTF(es *elfSection, vs *btf.VarSecinfo, def *btf.Struct, spec *b
 		}
 	}
 
-	if key == nil {
-		key = &btf.Void{}
-	}
-	if value == nil {
-		value = &btf.Void{}
-	}
-
 	return &MapSpec{
 		Name:       SanitizeName(name, -1),
 		Type:       MapType(mapType),
@@ -913,7 +911,6 @@ func mapSpecFromBTF(es *elfSection, vs *btf.VarSecinfo, def *btf.Struct, spec *b
 		Flags:      flags,
 		Key:        key,
 		Value:      value,
-		BTF:        spec,
 		Pinning:    pinType,
 		InnerMap:   innerMapSpec,
 		Contents:   contents,
@@ -1058,7 +1055,6 @@ func (ec *elfCode) loadDataSections(maps map[string]*MapSpec) error {
 			var ds *btf.Datasec
 			if ec.btf.TypeByName(sec.Name, &ds) == nil {
 				// Assign the spec's key and BTF only if the Datasec lookup was successful.
-				mapSpec.BTF = ec.btf
 				mapSpec.Key = &btf.Void{}
 				mapSpec.Value = ds
 			}
