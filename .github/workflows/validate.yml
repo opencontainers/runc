@@ -181,3 +181,29 @@ jobs:
       with:
         name: release-${{ github.run_id }}
         path: release/*
+
+
+  get-images:
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    - name: install bashbrew
+      env:
+        BASEURL: https://github.com/docker-library/bashbrew/releases/download
+        VERSION: v0.1.7
+        SHA256: 6b71a6fccfb2025d48a2b23324836b5513c29abfd2d16a57b7a2f89bd02fe53a
+      run: |
+        mkdir ~/bin
+        curl -sSfL --retry 5 -o ~/bin/bashbrew \
+          $BASEURL/$VERSION/bashbrew-amd64
+        sha256sum --strict --check - <<<"$SHA256 *$HOME/bin/bashbrew"
+        chmod a+x ~/bin/bashbrew
+        # Add ~/bin to $PATH.
+        echo ~/bin >> $GITHUB_PATH
+    - name: check that get-images.sh is up to date
+      run: |
+        cd tests/integration
+        ./bootstrap-get-images.sh > get-images.sh
+        git diff --exit-code
