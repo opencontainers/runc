@@ -37,9 +37,14 @@ image files directory.
 : Allow checkpoint/restore of file locks. See
 [criu --file-locks option](https://criu.org/CLI/opt/--file-locks).
 
-**--manage-cgroups-mode** **soft**|**full**|**strict**.
+**--manage-cgroups-mode** **soft**|**full**|**strict**|**ignore**.
 : Cgroups mode. Default is **soft**. See
 [criu --manage-cgroups option](https://criu.org/CLI/opt/--manage-cgroups).
+
+: In particular, to restore the container into a different cgroup,
+**--manage-cgroups-mode ignore** must be used during both
+**checkpoint** and **restore**, and the _container_id_ (or
+**cgroupsPath** property in OCI config, if set) must be changed.
 
 **--bundle**|**-b** _path_
 : Path to the root of the bundle directory. Default is current directory.

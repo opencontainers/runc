@@ -224,7 +224,14 @@ function simple_cr() {
 	# TCP port for lazy migration
 	port=27277
 
-	__runc checkpoint --lazy-pages --page-server 0.0.0.0:${port} --status-fd ${lazy_w} --work-path ./work-dir --image-path ./image-dir test_busybox &
+	__runc checkpoint \
+		--lazy-pages \
+		--page-server 0.0.0.0:${port} \
+		--status-fd ${lazy_w} \
+		--manage-cgroups-mode=ignore \
+		--work-path ./work-dir \
+		--image-path ./image-dir \
+		test_busybox &
 	cpt_pid=$!
 
 	# wait for lazy page server to be ready
@@ -246,14 +253,18 @@ function simple_cr() {
 	lp_pid=$!
 
 	# Restore lazily from checkpoint.
-	# The restored container needs a different name (as well as systemd
-	# unit name, in case systemd cgroup driver is used) as the checkpointed
-	# container is not yet destroyed. It is only destroyed at that point
-	# in time when the last page is lazily transferred to the destination.
+	#
+	# The restored container needs a different name and a different cgroup
+	# (and a different systemd unit name, in case systemd cgroup driver is
+	# used) as the checkpointed container is not yet destroyed. It is only
+	# destroyed at that point in time when the last page is lazily
+	# transferred to the destination.
+	#
 	# Killing the CRIU on the checkpoint side will let the container
 	# continue to run if the migration failed at some point.
-	[ -v RUNC_USE_SYSTEMD ] && set_cgroups_path
-	runc_restore_with_pipes ./image-dir test_busybox_restore --lazy-pages
+	runc_restore_with_pipes ./image-dir test_busybox_restore \
+		--lazy-pages \
+		--manage-cgroups-mode=ignore
 
 	wait $cpt_pid
 
@@ -404,4 +415,45 @@ function simple_cr() {
 
 	# busybox should be back up and running
 	testcontainer test_busybox running
+}
+
+@test "checkpoint then restore into a different cgroup (via --manage-cgroups-mode ignore)" {
+	set_resources_limit
+	set_cgroups_path
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	[ "$status" -eq 0 ]
+	testcontainer test_busybox running
+
+	local orig_path
+	orig_path=$(get_cgroup_path "pids")
+	# Check that the cgroup exists.
+	test -d "$orig_path"
+
+	runc checkpoint --work-path ./work-dir --manage-cgroups-mode ignore test_busybox
+	grep -B 5 Error ./work-dir/dump.log || true
+	[ "$status" -eq 0 ]
+	testcontainer test_busybox checkpointed
+	# Check that the cgroup is gone.
+	! test -d "$orig_path"
+
+	# Restore into a different cgroup.
+	set_cgroups_path # Changes the path.
+	runc restore -d --manage-cgroups-mode ignore --pid-file pid \
+		--work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
+	grep -B 5 Error ./work-dir/restore.log || true
+	[ "$status" -eq 0 ]
+	testcontainer test_busybox running
+
+	# Check that the old cgroup path doesn't exist.
+	! test -d "$orig_path"
+
+	# Check that the new path exists.
+	local new_path
+	new_path=$(get_cgroup_path "pids")
+	test -d "$new_path"
+
+	# Check that container's init is in the new cgroup.
+	local pid
+	pid=$(cat "pid")
+	grep -q "${REL_CGROUPS_PATH}$" "/proc/$pid/cgroup"
 }

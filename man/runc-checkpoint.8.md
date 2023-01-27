@@ -57,7 +57,7 @@ together with **criu lazy-pages**. See
 : Do a pre-dump, i.e. dump container's memory information only, leaving the
 container running. See [criu iterative migration](https://criu.org/Iterative_migration).
 
-**--manage-cgroups-mode** **soft**|**full**|**strict**.
+**--manage-cgroups-mode** **soft**|**full**|**strict**|**ignore**.
 : Cgroups mode. Default is **soft**. See
 [criu --manage-cgroups option](https://criu.org/CLI/opt/--manage-cgroups).
 

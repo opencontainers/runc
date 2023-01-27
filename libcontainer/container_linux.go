@@ -1560,11 +1560,8 @@ func (c *Container) criuApplyCgroups(pid int, req *criurpc.CriuReq) error {
 		return err
 	}
 
-	if cgroups.IsCgroup2UnifiedMode() {
-		return nil
-	}
-	// the stuff below is cgroupv1-specific
-
+	// TODO(@kolyshkin): should we use c.cgroupManager.GetPaths()
+	// instead of reading /proc/pid/cgroup?
 	path := fmt.Sprintf("/proc/%d/cgroup", pid)
 	cgroupsPaths, err := cgroups.ParseCgroupFile(path)
 	if err != nil {
