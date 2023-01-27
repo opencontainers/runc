@@ -168,15 +168,17 @@ static void write_log(int level, const char *format, ...)
 
 	message = escape_json_string(message);
 
-	if (current_stage == STAGE_SETUP)
+	if (current_stage == STAGE_SETUP) {
 		stage = strdup("nsexec");
-	else
+		if (stage == NULL)
+			goto out;
+	} else {
 		ret = asprintf(&stage, "nsexec-%d", current_stage);
-	if (ret < 0) {
-		stage = NULL;
-		goto out;
+		if (ret < 0) {
+			stage = NULL;
+			goto out;
+		}
 	}
-
 	ret = asprintf(&json, "{\"level\":\"%s\", \"msg\": \"%s[%d]: %s\"}\n",
 		       level_str[level], stage, getpid(), message);
 	if (ret < 0) {
