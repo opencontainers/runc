@@ -1,0 +1,8 @@
+---
+# We use GNU indent from the Makefile to format C code in this project. Alas,
+# there is no way to map indent options to clang-format style options in a way
+# to achieve identical results for both formatters.
+#
+# Therefore, let's disable clang-format entirely.
+DisableFormat: true
+...
