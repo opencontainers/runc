@@ -125,8 +125,23 @@ function teardown() {
 
 	runc exec --user 1000:1000 test_busybox id
 	[ "$status" -eq 0 ]
-
 	[[ "${output}" == "uid=1000 gid=1000"* ]]
+}
+
+# https://github.com/opencontainers/runc/issues/3674.
+@test "runc exec --user vs /dev/null ownership" {
+	requires root
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	[ "$status" -eq 0 ]
+
+	ls -l /dev/null
+	__runc exec -d --user 1000:1000 test_busybox id </dev/null
+	ls -l /dev/null
+	UG=$(stat -c %u:%g /dev/null)
+
+	# Host's /dev/null must be owned by root.
+	[ "$UG" = "0:0" ]
 }
 
 @test "runc exec --additional-gids" {
