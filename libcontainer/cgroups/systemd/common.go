@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math"
 	"os"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -231,18 +230,22 @@ func systemdVersion(cm *dbusConnManager) int {
 	return version
 }
 
-func systemdVersionAtoi(verStr string) (int, error) {
-	// verStr should be of the form:
-	// "v245.4-1.fc32", "245", "v245-1.fc32", "245-1.fc32" (without quotes).
-	// The result for all of the above should be 245.
-	// Thus, we unconditionally remove the "v" prefix
-	// and then match on the first integer we can grab.
-	re := regexp.MustCompile(`v?([0-9]+)`)
-	matches := re.FindStringSubmatch(verStr)
-	if len(matches) < 2 {
-		return 0, fmt.Errorf("can't parse version %s: incorrect number of matches %v", verStr, matches)
+// systemdVersionAtoi extracts a numeric systemd version from the argument.
+// The argument should be of the form: "v245.4-1.fc32", "245", "v245-1.fc32",
+// "245-1.fc32" (with or without quotes). The result for all of the above
+// should be 245.
+func systemdVersionAtoi(str string) (int, error) {
+	// Unconditionally remove the leading prefix ("v).
+	str = strings.TrimLeft(str, `"v`)
+	// Match on the first integer we can grab.
+	for i := 0; i < len(str); i++ {
+		if str[i] < '0' || str[i] > '9' {
+			// First non-digit: cut the tail.
+			str = str[:i]
+			break
+		}
 	}
-	ver, err := strconv.Atoi(matches[1])
+	ver, err := strconv.Atoi(str)
 	if err != nil {
 		return -1, fmt.Errorf("can't parse version: %w", err)
 	}

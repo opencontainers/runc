@@ -35,8 +35,11 @@ func TestSystemdVersion(t *testing.T) {
 		{`"v245.4-1.fc32"`, 245, false},
 		{`"241-1"`, 241, false},
 		{`"v241-1"`, 241, false},
-		{"NaN", 0, true},
-		{"", 0, true},
+		{`333.45"`, 333, false},
+		{`v321-0`, 321, false},
+		{"NaN", -1, true},
+		{"", -1, true},
+		{"v", -1, true},
 	}
 	for _, sdTest := range systemdVersionTests {
 		ver, err := systemdVersionAtoi(sdTest.verStr)
