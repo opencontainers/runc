@@ -812,6 +812,7 @@ void send_mountsources(int sockfd, pid_t child, char *mountsources, size_t mount
 		if (fd < 0)
 			bail("failed to open mount source %s", mountsources);
 
+		write_log(DEBUG, "~> sending fd for: %s", mountsources);
 		send_fd(sockfd, fd);
 
 		ret = close(fd);
@@ -1065,6 +1066,7 @@ void nsexec(void)
 					}
 					break;
 				case SYNC_MOUNTSOURCES_PLS:
+					write_log(DEBUG, "stage-1 requested to open mount sources");
 					send_mountsources(syncfd, stage1_pid, config.mountsources,
 							  config.mountsources_len);
 
@@ -1230,6 +1232,7 @@ void nsexec(void)
 
 			/* Ask our parent to send the mount sources fds. */
 			if (config.mountsources) {
+				write_log(DEBUG, "request stage-0 to send mount sources");
 				s = SYNC_MOUNTSOURCES_PLS;
 				if (write(syncfd, &s, sizeof(s)) != sizeof(s)) {
 					sane_kill(stage2_pid, SIGKILL);
