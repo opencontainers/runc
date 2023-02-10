@@ -282,13 +282,7 @@ func TestSeccompPermitWriteMultipleConditions(t *testing.T) {
 		},
 	}
 
-	buffers, exitCode, err := runContainer(t, config, "ls", "/")
-	if err != nil {
-		t.Fatalf("%s: %s", buffers, err)
-	}
-	if exitCode != 0 {
-		t.Fatalf("exit code not 0. code %d buffers %s", exitCode, buffers)
-	}
+	buffers := runContainerOk(t, config, "ls", "/")
 	// We don't need to verify the actual thing printed
 	// Just that something was written to stdout
 	if len(buffers.Stdout.String()) == 0 {
@@ -375,13 +369,7 @@ func TestSeccompMultipleConditionSameArgDeniesStdout(t *testing.T) {
 		},
 	}
 
-	buffers, exitCode, err := runContainer(t, config, "ls", "/")
-	if err != nil {
-		t.Fatalf("%s: %s", buffers, err)
-	}
-	if exitCode != 0 {
-		t.Fatalf("exit code not 0. code %d buffers %s", exitCode, buffers)
-	}
+	buffers := runContainerOk(t, config, "ls", "/")
 	// Verify that nothing was printed
 	if len(buffers.Stdout.String()) != 0 {
 		t.Fatalf("Something was written to stdout, write call succeeded!\n")

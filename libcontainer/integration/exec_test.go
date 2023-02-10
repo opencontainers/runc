@@ -40,13 +40,7 @@ func testExecPS(t *testing.T, userns bool) {
 	}
 	config := newTemplateConfig(t, &tParam{userns: userns})
 
-	buffers, exitCode, err := runContainer(t, config, "ps", "-o", "pid,user,comm")
-	if err != nil {
-		t.Fatalf("%s: %s", buffers, err)
-	}
-	if exitCode != 0 {
-		t.Fatalf("exit code not 0. code %d stderr %q", exitCode, buffers.Stderr)
-	}
+	buffers := runContainerOk(t, config, "ps", "-o", "pid,user,comm")
 	lines := strings.Split(buffers.Stdout.String(), "\n")
 	if len(lines) < 2 {
 		t.Fatalf("more than one process running for output %q", buffers.Stdout.String())
@@ -67,12 +61,7 @@ func TestIPCPrivate(t *testing.T) {
 	ok(t, err)
 
 	config := newTemplateConfig(t, nil)
-	buffers, exitCode, err := runContainer(t, config, "readlink", "/proc/self/ns/ipc")
-	ok(t, err)
-
-	if exitCode != 0 {
-		t.Fatalf("exit code not 0. code %d stderr %q", exitCode, buffers.Stderr)
-	}
+	buffers := runContainerOk(t, config, "readlink", "/proc/self/ns/ipc")
 
 	if actual := strings.Trim(buffers.Stdout.String(), "\n"); actual == l {
 		t.Fatalf("ipc link should be private to the container but equals host %q %q", actual, l)
@@ -89,12 +78,7 @@ func TestIPCHost(t *testing.T) {
 
 	config := newTemplateConfig(t, nil)
 	config.Namespaces.Remove(configs.NEWIPC)
-	buffers, exitCode, err := runContainer(t, config, "readlink", "/proc/self/ns/ipc")
-	ok(t, err)
-
-	if exitCode != 0 {
-		t.Fatalf("exit code not 0. code %d stderr %q", exitCode, buffers.Stderr)
-	}
+	buffers := runContainerOk(t, config, "readlink", "/proc/self/ns/ipc")
 
 	if actual := strings.Trim(buffers.Stdout.String(), "\n"); actual != l {
 		t.Fatalf("ipc link not equal to host link %q %q", actual, l)
@@ -111,13 +95,7 @@ func TestIPCJoinPath(t *testing.T) {
 
 	config := newTemplateConfig(t, nil)
 	config.Namespaces.Add(configs.NEWIPC, "/proc/1/ns/ipc")
-
-	buffers, exitCode, err := runContainer(t, config, "readlink", "/proc/self/ns/ipc")
-	ok(t, err)
-
-	if exitCode != 0 {
-		t.Fatalf("exit code not 0. code %d stderr %q", exitCode, buffers.Stderr)
-	}
+	buffers := runContainerOk(t, config, "readlink", "/proc/self/ns/ipc")
 
 	if actual := strings.Trim(buffers.Stdout.String(), "\n"); actual != l {
 		t.Fatalf("ipc link not equal to host link %q %q", actual, l)
@@ -163,8 +141,7 @@ func testRlimit(t *testing.T, userns bool) {
 		Cur: 1024,
 	}))
 
-	out, _, err := runContainer(t, config, "/bin/sh", "-c", "ulimit -n")
-	ok(t, err)
+	out := runContainerOk(t, config, "/bin/sh", "-c", "ulimit -n")
 	if limit := strings.TrimSpace(out.Stdout.String()); limit != "1025" {
 		t.Fatalf("expected rlimit to be 1025, got %s", limit)
 	}
@@ -560,27 +537,17 @@ func testPids(t *testing.T, systemd bool) {
 	config := newTemplateConfig(t, &tParam{systemd: systemd})
 	config.Cgroups.Resources.PidsLimit = -1
 
-	// Running multiple processes.
-	_, ret, err := runContainer(t, config, "/bin/sh", "-c", "/bin/true | /bin/true | /bin/true | /bin/true")
-	ok(t, err)
-
-	if ret != 0 {
-		t.Fatalf("expected fork() to succeed with no pids limit")
-	}
+	// Running multiple processes, expecting it to succeed with no pids limit.
+	_ = runContainerOk(t, config, "/bin/sh", "-c", "/bin/true | /bin/true | /bin/true | /bin/true")
 
 	// Enforce a permissive limit. This needs to be fairly hand-wavey due to the
 	// issues with running Go binaries with pids restrictions (see below).
 	config.Cgroups.Resources.PidsLimit = 64
-	_, ret, err = runContainer(t, config, "/bin/sh", "-c", `
+	_ = runContainerOk(t, config, "/bin/sh", "-c", `
 	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
 	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
 	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
 	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true`)
-	ok(t, err)
-
-	if ret != 0 {
-		t.Fatalf("expected fork() to succeed with permissive pids limit")
-	}
 
 	// Enforce a restrictive limit. 64 * /bin/true + 1 * shell should cause this
 	// to fail reliability.
@@ -884,13 +851,8 @@ func TestMountCgroupRO(t *testing.T) {
 		return
 	}
 	config := newTemplateConfig(t, nil)
-	buffers, exitCode, err := runContainer(t, config, "mount")
-	if err != nil {
-		t.Fatalf("%s: %s", buffers, err)
-	}
-	if exitCode != 0 {
-		t.Fatalf("exit code not 0. code %d stderr %q", exitCode, buffers.Stderr)
-	}
+	buffers := runContainerOk(t, config, "mount")
+
 	mountInfo := buffers.Stdout.String()
 	lines := strings.Split(mountInfo, "\n")
 	for _, l := range lines {
@@ -931,13 +893,8 @@ func TestMountCgroupRW(t *testing.T) {
 		}
 	}
 
-	buffers, exitCode, err := runContainer(t, config, "mount")
-	if err != nil {
-		t.Fatalf("%s: %s", buffers, err)
-	}
-	if exitCode != 0 {
-		t.Fatalf("exit code not 0. code %d stderr %q", exitCode, buffers.Stderr)
-	}
+	buffers := runContainerOk(t, config, "mount")
+
 	mountInfo := buffers.Stdout.String()
 	lines := strings.Split(mountInfo, "\n")
 	for _, l := range lines {
@@ -1148,11 +1105,7 @@ func TestSTDIOPermissions(t *testing.T) {
 	}
 
 	config := newTemplateConfig(t, nil)
-	buffers, exitCode, err := runContainer(t, config, "sh", "-c", "echo hi > /dev/stderr")
-	ok(t, err)
-	if exitCode != 0 {
-		t.Fatalf("exit code not 0. code %d stderr %q", exitCode, buffers.Stderr)
-	}
+	buffers := runContainerOk(t, config, "sh", "-c", "echo hi > /dev/stderr")
 
 	if actual := strings.Trim(buffers.Stderr.String(), "\n"); actual != "hi" {
 		t.Fatalf("stderr should equal be equal %q %q", actual, "hi")
@@ -1395,12 +1348,7 @@ func TestPIDHost(t *testing.T) {
 
 	config := newTemplateConfig(t, nil)
 	config.Namespaces.Remove(configs.NEWPID)
-	buffers, exitCode, err := runContainer(t, config, "readlink", "/proc/self/ns/pid")
-	ok(t, err)
-
-	if exitCode != 0 {
-		t.Fatalf("exit code not 0. code %d stderr %q", exitCode, buffers.Stderr)
-	}
+	buffers := runContainerOk(t, config, "readlink", "/proc/self/ns/pid")
 
 	if actual := strings.Trim(buffers.Stdout.String(), "\n"); actual != l {
 		t.Fatalf("ipc link not equal to host link %q %q", actual, l)
@@ -1689,12 +1637,7 @@ func TestCGROUPPrivate(t *testing.T) {
 
 	config := newTemplateConfig(t, nil)
 	config.Namespaces.Add(configs.NEWCGROUP, "")
-	buffers, exitCode, err := runContainer(t, config, "readlink", "/proc/self/ns/cgroup")
-	ok(t, err)
-
-	if exitCode != 0 {
-		t.Fatalf("exit code not 0. code %d stderr %q", exitCode, buffers.Stderr)
-	}
+	buffers := runContainerOk(t, config, "readlink", "/proc/self/ns/cgroup")
 
 	if actual := strings.Trim(buffers.Stdout.String(), "\n"); actual == l {
 		t.Fatalf("cgroup link should be private to the container but equals host %q %q", actual, l)
@@ -1713,12 +1656,7 @@ func TestCGROUPHost(t *testing.T) {
 	ok(t, err)
 
 	config := newTemplateConfig(t, nil)
-	buffers, exitCode, err := runContainer(t, config, "readlink", "/proc/self/ns/cgroup")
-	ok(t, err)
-
-	if exitCode != 0 {
-		t.Fatalf("exit code not 0. code %d stderr %q", exitCode, buffers.Stderr)
-	}
+	buffers := runContainerOk(t, config, "readlink", "/proc/self/ns/cgroup")
 
 	if actual := strings.Trim(buffers.Stdout.String(), "\n"); actual != l {
 		t.Fatalf("cgroup link not equal to host link %q %q", actual, l)
@@ -1750,12 +1688,7 @@ func testFdLeaks(t *testing.T, systemd bool) {
 	ok(t, err)
 
 	config := newTemplateConfig(t, &tParam{systemd: systemd})
-	buffers, exitCode, err := runContainer(t, config, "true")
-	ok(t, err)
-
-	if exitCode != 0 {
-		t.Fatalf("exit code not 0. code %d stderr %q", exitCode, buffers.Stderr)
-	}
+	_ = runContainerOk(t, config, "true")
 
 	fds1, err := pfd.Readdirnames(0)
 	ok(t, err)
