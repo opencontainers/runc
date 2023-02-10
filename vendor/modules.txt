@@ -39,11 +39,10 @@ github.com/mrunalp/fileutils
 # github.com/opencontainers/runtime-spec v1.0.3-0.20220909204839-494a5a6aca78
 ## explicit
 github.com/opencontainers/runtime-spec/specs-go
-# github.com/opencontainers/selinux v1.10.2
-## explicit; go 1.13
+# github.com/opencontainers/selinux v1.11.0
+## explicit; go 1.19
 github.com/opencontainers/selinux/go-selinux
 github.com/opencontainers/selinux/go-selinux/label
-github.com/opencontainers/selinux/pkg/pwalk
 github.com/opencontainers/selinux/pkg/pwalkdir
 # github.com/russross/blackfriday/v2 v2.1.0
 ## explicit
