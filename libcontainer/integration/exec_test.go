@@ -1728,6 +1728,16 @@ func testFdLeaks(t *testing.T, systemd bool) {
 		return
 	}
 
+	config := newTemplateConfig(t, &tParam{systemd: systemd})
+	// Run a container once to exclude file descriptors that are only
+	// opened once during the process lifetime by the library and are
+	// never closed. Those are not considered leaks.
+	//
+	// Examples of this open-once file descriptors are:
+	//  - /sys/fs/cgroup dirfd opened by prepareOpenat2 in libct/cgroups;
+	//  - dbus connection opened by getConnection in libct/cgroups/systemd.
+	_ = runContainerOk(t, config, "true")
+
 	pfd, err := os.Open("/proc/self/fd")
 	ok(t, err)
 	defer pfd.Close()
@@ -1736,7 +1746,6 @@ func testFdLeaks(t *testing.T, systemd bool) {
 	_, err = pfd.Seek(0, 0)
 	ok(t, err)
 
-	config := newTemplateConfig(t, &tParam{systemd: systemd})
 	_ = runContainerOk(t, config, "true")
 
 	fds1, err := pfd.Readdirnames(0)
@@ -1748,7 +1757,6 @@ func testFdLeaks(t *testing.T, systemd bool) {
 	// Show the extra opened files.
 
 	excludedPaths := []string{
-		"/sys/fs/cgroup",      // opened once, see prepareOpenat2
 		"anon_inode:bpf-prog", // FIXME: see https://github.com/opencontainers/runc/issues/2366#issuecomment-776411392
 	}
 
