@@ -66,7 +66,7 @@ func TestPodSkipDevicesUpdate(t *testing.T) {
 
 	// Create a "container" within the "pod" cgroup.
 	// This is not a real container, just a process in the cgroup.
-	cmd := exec.Command("bash", "-c", "while true; do echo > /dev/null; done")
+	cmd := exec.Command("sleep", "infinity")
 	cmd.Env = append(os.Environ(), "LANG=C")
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
