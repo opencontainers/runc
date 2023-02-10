@@ -514,7 +514,7 @@ func testCpuShares(t *testing.T, systemd bool) {
 	config.Cgroups.Resources.CpuShares = 1
 
 	if _, _, err := runContainer(t, config, "ps"); err == nil {
-		t.Fatalf("runContainer should failed with invalid CpuShares")
+		t.Fatal("runContainer should fail with invalid CpuShares")
 	}
 }
 
@@ -549,8 +549,8 @@ func testPids(t *testing.T, systemd bool) {
 	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
 	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true`)
 
-	// Enforce a restrictive limit. 64 * /bin/true + 1 * shell should cause this
-	// to fail reliability.
+	// Enforce a restrictive limit. 64 * /bin/true + 1 * shell should cause
+	// this to fail reliably.
 	config.Cgroups.Resources.PidsLimit = 64
 	out, _, err := runContainer(t, config, "/bin/sh", "-c", `
 	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
