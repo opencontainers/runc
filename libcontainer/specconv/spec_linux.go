@@ -66,7 +66,7 @@ func initMaps() {
 			clear bool
 			flag  int
 		}{
-			"acl":           {false, unix.MS_POSIXACL},
+			// "acl" cannot be mapped to MS_POSIXACL: https://github.com/opencontainers/runc/issues/3738
 			"async":         {true, unix.MS_SYNCHRONOUS},
 			"atime":         {true, unix.MS_NOATIME},
 			"bind":          {false, unix.MS_BIND},
@@ -79,7 +79,6 @@ func initMaps() {
 			"lazytime":      {false, unix.MS_LAZYTIME},
 			"loud":          {true, unix.MS_SILENT},
 			"mand":          {false, unix.MS_MANDLOCK},
-			"noacl":         {true, unix.MS_POSIXACL},
 			"noatime":       {false, unix.MS_NOATIME},
 			"nodev":         {false, unix.MS_NODEV},
 			"nodiratime":    {false, unix.MS_NODIRATIME},
