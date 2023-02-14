@@ -42,7 +42,12 @@ func IsCgroup2UnifiedMode() bool {
 				isUnified = false
 				return
 			}
-			panic(fmt.Sprintf("cannot statfs cgroup root: %s", err))
+			isUnified = false
+			if !os.IsNotExist(err) {
+				// Report unexpected errors.
+				logrus.WithError(err).Debugf("statfs(%q) failed", unifiedMountpoint)
+			}
+			return
 		}
 		isUnified = st.Type == unix.CGROUP2_SUPER_MAGIC
 	})
