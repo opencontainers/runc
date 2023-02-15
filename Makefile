@@ -36,7 +36,7 @@ LDFLAGS_STATIC := -extldflags -static
 ifneq (,$(filter $(GOARCH),arm64 amd64))
 	ifeq (,$(findstring -race,$(EXTRA_FLAGS)))
 		GO_BUILDMODE_STATIC := -buildmode=pie
-		LDFLAGS_STATIC := -linkmode external -extldflags --static-pie
+		LDFLAGS_STATIC := -linkmode external -extldflags -static-pie
 	endif
 endif
 # Enable static PIE binaries on supported platforms.
