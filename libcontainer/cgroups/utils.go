@@ -36,14 +36,15 @@ func IsCgroup2UnifiedMode() bool {
 		var st unix.Statfs_t
 		err := unix.Statfs(unifiedMountpoint, &st)
 		if err != nil {
-			if os.IsNotExist(err) && userns.RunningInUserNS() {
+			isErrNotExist := errors.Is(err, os.ErrNotExist)
+			if isErrNotExist && userns.RunningInUserNS() {
 				// ignore the "not found" error if running in userns
 				logrus.WithError(err).Debugf("%s missing, assuming cgroup v1", unifiedMountpoint)
 				isUnified = false
 				return
 			}
 			isUnified = false
-			if !os.IsNotExist(err) {
+			if isErrNotExist {
 				// Report unexpected errors.
 				logrus.WithError(err).Debugf("statfs(%q) failed", unifiedMountpoint)
 			}
