@@ -298,6 +298,7 @@ WantedBy=multi-user.target
 
 ## More documentation
 
+* [Spec conformance](./docs/spec-conformance.md)
 * [cgroup v2](./docs/cgroup-v2.md)
 * [Checkpoint and restore](./docs/checkpoint-restore.md)
 * [systemd cgroup driver](./docs/systemd.md)
