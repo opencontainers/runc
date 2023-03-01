@@ -1035,7 +1035,6 @@ void nsexec(void)
 					/* Get the stage-2 pid. */
 					if (read(syncfd, &stage2_pid, sizeof(stage2_pid)) != sizeof(stage2_pid)) {
 						sane_kill(stage1_pid, SIGKILL);
-						sane_kill(stage2_pid, SIGKILL);
 						bail("failed to sync with stage-1: read(stage2_pid)");
 					}
 
@@ -1234,23 +1233,17 @@ void nsexec(void)
 			if (config.mountsources) {
 				write_log(DEBUG, "request stage-0 to send mount sources");
 				s = SYNC_MOUNTSOURCES_PLS;
-				if (write(syncfd, &s, sizeof(s)) != sizeof(s)) {
-					sane_kill(stage2_pid, SIGKILL);
+				if (write(syncfd, &s, sizeof(s)) != sizeof(s))
 					bail("failed to sync with parent: write(SYNC_MOUNTSOURCES_PLS)");
-				}
 
 				/* Receive and install all mount sources fds. */
 				receive_mountsources(syncfd);
 
 				/* Parent finished to send the mount sources fds. */
-				if (read(syncfd, &s, sizeof(s)) != sizeof(s)) {
-					sane_kill(stage2_pid, SIGKILL);
+				if (read(syncfd, &s, sizeof(s)) != sizeof(s))
 					bail("failed to sync with parent: read(SYNC_MOUNTSOURCES_ACK)");
-				}
-				if (s != SYNC_MOUNTSOURCES_ACK) {
-					sane_kill(stage2_pid, SIGKILL);
+				if (s != SYNC_MOUNTSOURCES_ACK)
 					bail("failed to sync with parent: SYNC_MOUNTSOURCES_ACK: got %u", s);
-				}
 			}
 
 			/*
