@@ -49,10 +49,11 @@ GPG_KEYID ?= asarai@suse.de
 # Some targets need cgo, which is disabled by default when cross compiling.
 # Enable cgo explicitly for those.
 # Both runc and libcontainer/integration need libcontainer/nsenter.
-runc static localunittest: export CGO_ENABLED=1
+#enable stack protection with CGO compile.
+runc static localunittest: export CGO_ENABLED=1 && CGO_CFLAGS='-fstack-protector-strong'
 # seccompagent needs libseccomp (when seccomp build tag is set).
 ifneq (,$(filter $(BUILDTAGS),seccomp))
-seccompagent: export CGO_ENABLED=1
+seccompagent: export CGO_ENABLED=1 && export CGO_CFLAGS='-fstack-protector-strong'
 endif
 
 .DEFAULT: runc
