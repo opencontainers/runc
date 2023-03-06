@@ -52,6 +52,10 @@ func needsSetupDev(config *configs.Config) bool {
 // finalizeRootfs after this function to finish setting up the rootfs.
 func prepareRootfs(pipe io.ReadWriter, iConfig *initConfig, mountFds []int) (err error) {
 	config := iConfig.Config
+	if err := validateRoot(config); err != nil {
+		return fmt.Errorf("error validating rootfs: %w", err)
+	}
+
 	if err := prepareRoot(config); err != nil {
 		return fmt.Errorf("error preparing rootfs: %w", err)
 	}
@@ -1114,4 +1118,38 @@ func setRecAttr(m *configs.Mount, rootfs string) error {
 	return utils.WithProcfd(rootfs, m.Destination, func(procfd string) error {
 		return unix.MountSetattr(-1, procfd, unix.AT_RECURSIVE, m.RecAttr)
 	})
+}
+
+// validateRoot detects symlinks in config.Rootfs that may break config.ReadonlyPaths
+// and config.MaskPaths.
+//
+// For preventing CVE-2023-27561 (CVE-2019-19921 re-introduction/regression).
+// https://github.com/opencontainers/runc/issues/3751
+func validateRoot(config *configs.Config) error {
+	mustNotBeSymlink := make(map[string]struct{})
+	for _, f := range append(config.ReadonlyPaths, config.MaskPaths...) {
+		if !filepath.IsAbs(f) || f != filepath.Clean(f) {
+			return fmt.Errorf("bad path: %q", f)
+		}
+		for f != "/" {
+			mustNotBeSymlink[f] = struct{}{}
+			f = filepath.Dir(f)
+		}
+	}
+	// mustNotBeSymlink typically contains {"/sys", "/proc"} in addition to readonlyPaths and maskedPaths.
+	rootFD, err := unix.Open(config.Rootfs, unix.O_DIRECTORY|unix.O_RDONLY, 0o600)
+	if err != nil {
+		return &os.PathError{Op: "open", Path: config.Rootfs, Err: err}
+	}
+	defer unix.Close(rootFD)
+	for f := range mustNotBeSymlink {
+		// fstatat(2): "If pathname is absolute, then dirfd is ignored."
+		fRel := "./" + f
+		var st unix.Stat_t
+		err := unix.Fstatat(rootFD, fRel, &st, unix.AT_SYMLINK_NOFOLLOW)
+		if err == nil && st.Mode&unix.S_IFMT == unix.S_IFLNK {
+			return fmt.Errorf("must not be a symlink (conflicts with readonlyPaths and/or maskedPaths): %q", f)
+		}
+	}
+	return nil
 }
