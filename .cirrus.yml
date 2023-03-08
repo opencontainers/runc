@@ -104,6 +104,7 @@ task:
     centos-stream-9)
       dnf config-manager --set-enabled crb # for glibc-static
       dnf -y install epel-release epel-next-release # for fuse-sshfs
+      dnf -y update
       ;;
     esac
     # Work around dnf mirror failures by retrying a few times.
@@ -158,8 +159,6 @@ task:
     /home/runc/script/check-config.sh
   unit_tests_script: |
     ssh -tt localhost "make -C /home/runc localunittest"
-  integration_systemd_script: |
-    ssh -tt localhost "make -C /home/runc localintegration RUNC_USE_SYSTEMD=yes"
   integration_fs_script: |
     ssh -tt localhost "make -C /home/runc localintegration"
   integration_systemd_rootless_script: |
@@ -173,3 +172,5 @@ task:
       ssh -tt localhost "make -C /home/runc localrootlessintegration"
       ;;
     esac
+  integration_systemd_script: |
+    ssh -tt localhost "make -C /home/runc localintegration RUNC_USE_SYSTEMD=yes"
