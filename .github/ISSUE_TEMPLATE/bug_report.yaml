@@ -1,0 +1,54 @@
+# Forked from https://github.com/containerd/nerdctl/blob/v1.2.1/.github/ISSUE_TEMPLATE/bug_report.yaml
+name: Bug report
+description: Create a bug report to help improve runc
+labels: kind/unconfirmed-bug-claim
+body:
+  - type: markdown
+    attributes:
+      value: |
+        If you are reporting a new issue, make sure that we do not have any duplicates
+        already open. You can ensure this by searching the issue list for this
+        repository. If there is a duplicate, please close your issue and add a comment
+        to the existing issue instead.
+
+        When reporting a security issue, do not create an issue or file a pull request on GitHub.
+        See [`opencontainers/.github/SECURITY.md`](https://github.com/opencontainers/.github/blob/master/SECURITY.md).
+
+  - type: textarea
+    attributes:
+      label: Description
+      description: |
+        Briefly describe the problem you are having in a few paragraphs.
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Steps to reproduce the issue
+      value: |
+        1.
+        2.
+        3.
+
+  - type: textarea
+    attributes:
+      label: Describe the results you received and expected
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: What version of runc are you using?
+      placeholder: runc --version
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Host OS information
+      placeholder: cat /etc/os-release
+
+  - type: textarea
+    attributes:
+      label: Host kernel information
+      placeholder: uname -a
