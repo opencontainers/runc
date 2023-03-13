@@ -7,6 +7,8 @@
 [![gha/ci](https://github.com/opencontainers/runc/workflows/ci/badge.svg)](https://github.com/opencontainers/runc/actions?query=workflow%3Aci)
 [![CirrusCI](https://api.cirrus-ci.com/github/opencontainers/runc.svg)](https://cirrus-ci.com/github/opencontainers/runc)
 
+**⚠️⚠️⚠️We don't maintain the balena-related docs here!⚠️⚠️⚠️** Please refer to the [balena documentation website](https://docs.balena.io) instead.
+
 ## Introduction
 
 `runc` is a CLI tool for spawning and running containers on Linux according to the OCI specification.
