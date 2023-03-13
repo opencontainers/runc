@@ -4,6 +4,8 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/opencontainers/runc)](https://goreportcard.com/report/github.com/opencontainers/runc)
 [![GoDoc](https://godoc.org/github.com/opencontainers/runc?status.svg)](https://godoc.org/github.com/opencontainers/runc)
 
+**⚠️⚠️⚠️We don't maintain the balena-related docs here!⚠️⚠️⚠️** Please refer to the [balena documentation website](https://docs.balena.io) instead.
+
 ## Introduction
 
 `runc` is a CLI tool for spawning and running containers according to the OCI specification.
