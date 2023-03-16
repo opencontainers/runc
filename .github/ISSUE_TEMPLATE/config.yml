@@ -10,5 +10,8 @@ contact_links:
       please consider asking in GitHub Discussions first.
   - name: Slack (opencontainers.slack.com)
     url: https://communityinviter.com/apps/opencontainers/join-the-oci-community
+    # GitHub requires the `about` property to be set
+    about: Slack
   - name: Mailing list
     url: https://groups.google.com/a/opencontainers.org/forum/#!forum/dev
+    about: Mailing list
