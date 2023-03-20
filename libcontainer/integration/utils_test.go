@@ -212,6 +212,22 @@ func runContainer(t *testing.T, config *configs.Config, args ...string) (buffers
 	return
 }
 
+// runContainerOk is a wrapper for runContainer, simplifying its use for cases
+// when the run is expected to succeed and return exit code of 0.
+func runContainerOk(t *testing.T, config *configs.Config, args ...string) *stdBuffers {
+	buffers, exitCode, err := runContainer(t, config, args...)
+
+	t.Helper()
+	if err != nil {
+		t.Fatalf("%s: %s", buffers, err)
+	}
+	if exitCode != 0 {
+		t.Fatalf("exit code not 0. code %d stderr %q", exitCode, buffers.Stderr)
+	}
+
+	return buffers
+}
+
 func destroyContainer(container *libcontainer.Container) {
 	_ = container.Destroy()
 }
