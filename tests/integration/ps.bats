@@ -4,6 +4,10 @@ load helpers
 
 function setup() {
 	setup_busybox
+	id=ct-${RANDOM}
+	#	if [ -v RUNC_USE_SYSTEMD ]; then
+	#		update_config '.linux.cgroupsPath |= ":runc:test_busybox-'${RANDOM}'"'
+	#	fi
 }
 
 function teardown() {
@@ -14,14 +18,12 @@ function teardown() {
 	# ps is not supported, it requires cgroups
 	requires root
 
-	# start busybox detached
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	runc run -d --console-socket "$CONSOLE_SOCKET" $id
 	[ "$status" -eq 0 ]
 
-	# check state
-	testcontainer test_busybox running
+	testcontainer $id running
 
-	runc ps test_busybox
+	runc ps $id
 	[ "$status" -eq 0 ]
 	[[ ${lines[0]} =~ UID\ +PID\ +PPID\ +C\ +STIME\ +TTY\ +TIME\ +CMD+ ]]
 	[[ "${lines[1]}" == *"$(id -un 2>/dev/null)"*[0-9]* ]]
@@ -31,14 +33,12 @@ function teardown() {
 	# ps is not supported, it requires cgroups
 	requires root
 
-	# start busybox detached
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	runc run -d --console-socket "$CONSOLE_SOCKET" $id
 	[ "$status" -eq 0 ]
 
-	# check state
-	testcontainer test_busybox running
+	testcontainer $id running
 
-	runc ps -f json test_busybox
+	runc ps -f json $id
 	[ "$status" -eq 0 ]
 	[[ ${lines[0]} =~ [0-9]+ ]]
 }
@@ -47,14 +47,12 @@ function teardown() {
 	# ps is not supported, it requires cgroups
 	requires root
 
-	# start busybox detached
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	runc run -d --console-socket "$CONSOLE_SOCKET" $id
 	[ "$status" -eq 0 ]
 
-	# check state
-	testcontainer test_busybox running
+	testcontainer $id running
 
-	runc ps test_busybox -e -x
+	runc ps $id -e -x
 	[ "$status" -eq 0 ]
 	[[ ${lines[0]} =~ \ +PID\ +TTY\ +STAT\ +TIME\ +COMMAND+ ]]
 	[[ "${lines[1]}" =~ [0-9]+ ]]
@@ -65,20 +63,18 @@ function teardown() {
 	[ $EUID -ne 0 ] && requires rootless_cgroup
 	set_cgroups_path
 
-	# start busybox detached
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	runc run -d --console-socket "$CONSOLE_SOCKET" $id
 	[ "$status" -eq 0 ]
 
-	# check state
-	testcontainer test_busybox running
+	testcontainer $id running
 
-	runc ps test_busybox
+	runc ps $id
 	[ "$status" -eq 0 ]
 
-	runc kill test_busybox KILL
+	runc kill $id KILL
 	[ "$status" -eq 0 ]
-	wait_for_container 10 1 test_busybox stopped
+	wait_for_container 10 1 $id stopped
 
-	runc ps test_busybox
+	runc ps $id
 	[ "$status" -eq 0 ]
 }
