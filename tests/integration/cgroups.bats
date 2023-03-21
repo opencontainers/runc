@@ -199,6 +199,70 @@ function setup() {
 	check_cgroup_value "cpu.idle" "1"
 }
 
+# Convert size in KB to hugetlb size suffix.
+convert_hugetlb_size() {
+	local size=$1
+	local units=("KB" "MB" "GB")
+	local idx=0
+
+	while ((size >= 1024)); do
+		((size /= 1024))
+		((idx++))
+	done
+
+	echo "$size${units[$idx]}"
+}
+
+@test "runc run (hugetlb limits)" {
+	requires cgroups_hugetlb
+	[ $EUID -ne 0 ] && requires rootless_cgroup
+	# shellcheck disable=SC2012 # ls is fine here.
+	mapfile -t sizes_kb < <(ls /sys/kernel/mm/hugepages/ | sed -e 's/.*hugepages-//' -e 's/kB$//') #
+	if [ "${#sizes_kb[@]}" -lt 1 ]; then
+		skip "requires hugetlb"
+	fi
+
+	# Create two arrays:
+	#  - sizes: hugetlb cgroup file suffixes;
+	#  - limits: limits for each size.
+	for size in "${sizes_kb[@]}"; do
+		sizes+=("$(convert_hugetlb_size "$size")")
+		# Limit to 1 page.
+		limits+=("$((size * 1024))")
+	done
+
+	# Set per-size limits.
+	for ((i = 0; i < ${#sizes[@]}; i++)); do
+		size="${sizes[$i]}"
+		limit="${limits[$i]}"
+		update_config '.linux.resources.hugepageLimits += [{ pagesize: "'"$size"'", limit: '"$limit"' }]'
+	done
+
+	set_cgroups_path
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_hugetlb
+	[ "$status" -eq 0 ]
+
+	lim="max"
+	[ -v CGROUP_V1 ] && lim=".limit_in_bytes"
+
+	optional=("")
+	# Add rsvd, if available.
+	if test -f "$(get_cgroup_path hugetlb)/hugetlb.${sizes[0]}.rsvd.$lim"; then
+		optional+=(".rsvd")
+	fi
+
+	# Check if the limits are as expected.
+	for ((i = 0; i < ${#sizes[@]}; i++)); do
+		size="${sizes[$i]}"
+		limit="${limits[$i]}"
+		for rsvd in "${optional[@]}"; do
+			param="hugetlb.${size}${rsvd}.$lim"
+			echo "checking $param"
+			check_cgroup_value "$param" "$limit"
+		done
+	done
+}
+
 @test "runc run (cgroup v2 resources.unified only)" {
 	requires root cgroups_v2
 
