@@ -122,6 +122,11 @@ func testSkipDevices(t *testing.T, skipDevices bool, expected []string) {
 	if os.Geteuid() != 0 {
 		t.Skip("Test requires root.")
 	}
+	// https://github.com/opencontainers/runc/issues/3743
+	centosVer, _ := exec.Command("rpm", "-q", "--qf", "%{version}", "centos-release").CombinedOutput()
+	if string(centosVer) == "7" {
+		t.Skip("Flaky on CentOS 7")
+	}
 
 	podConfig := &configs.Cgroup{
 		Parent: "system.slice",
