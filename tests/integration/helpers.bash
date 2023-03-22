@@ -609,6 +609,15 @@ function teardown_bundle() {
 		__runc delete -f "$ct"
 	done
 	rm -rf "$ROOT"
+	# Check that systemd unit is removed.
+	if [ -v RUNC_USE_SYSTEMD ]; then
+		run systemctl status runc-test_busybox.scope
+		echo "$output"
+		[ "$status" -eq 4 ] # "no such unit"
+		if ls /run/systemd/transient/runc-test_busybox.scope.d; then
+			fail "should not have test_busybox left"
+		fi
+	fi
 	remove_parent
 }
 
