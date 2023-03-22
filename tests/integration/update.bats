@@ -455,6 +455,7 @@ EOF
 	done
 
 	# test update other option won't impact on cpu.idle
+	check_cgroup_value "cpu.idle" "1"
 	runc update --cpu-period 10000 test_update
 	[ "$status" -eq 0 ]
 	check_cgroup_value "cpu.idle" "1"

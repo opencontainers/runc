@@ -4,7 +4,8 @@ load helpers
 
 function setup() {
 	setup_busybox
-	id=ct-${RANDOM}
+	id=test_busybox
+	#id=ct-${RANDOM}
 	#	if [ -v RUNC_USE_SYSTEMD ]; then
 	#		update_config '.linux.cgroupsPath |= ":runc:test_busybox-'${RANDOM}'"'
 	#	fi
@@ -18,6 +19,7 @@ function teardown() {
 	# ps is not supported, it requires cgroups
 	requires root
 
+	systemctl status runc-test_busybox.scope || true
 	runc run -d --console-socket "$CONSOLE_SOCKET" $id
 	[ "$status" -eq 0 ]
 
@@ -33,6 +35,7 @@ function teardown() {
 	# ps is not supported, it requires cgroups
 	requires root
 
+	systemctl status runc-test_busybox.scope || true
 	runc run -d --console-socket "$CONSOLE_SOCKET" $id
 	[ "$status" -eq 0 ]
 
@@ -47,6 +50,7 @@ function teardown() {
 	# ps is not supported, it requires cgroups
 	requires root
 
+	systemctl status runc-test_busybox.scope || true
 	runc run -d --console-socket "$CONSOLE_SOCKET" $id
 	[ "$status" -eq 0 ]
 
