@@ -126,6 +126,9 @@ func isUnitExists(err error) bool {
 
 func startUnit(cm *dbusConnManager, unitName string, properties []systemdDbus.Property, ignoreExist bool) error {
 	statusChan := make(chan string, 1)
+	retry := true
+
+retry:
 	err := cm.retryOnDisconnect(func(c *systemdDbus.Conn) error {
 		_, err := c.StartTransientUnitContext(context.TODO(), unitName, "replace", properties, statusChan)
 		return err
@@ -139,6 +142,14 @@ func startUnit(cm *dbusConnManager, unitName string, properties []systemdDbus.Pr
 			// This is kubelet making sure a slice exists (see
 			// https://github.com/opencontainers/runc/pull/1124).
 			return nil
+		}
+		if retry {
+			// In case a unit with the same name exists, this may
+			// be a leftover failed unit. Reset it, so systemd can
+			// remove it, and retry once.
+			resetFailedUnit(cm, unitName)
+			retry = false
+			goto retry
 		}
 		return err
 	}
