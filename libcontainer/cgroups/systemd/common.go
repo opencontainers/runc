@@ -124,7 +124,7 @@ func isUnitExists(err error) bool {
 	return isDbusError(err, "org.freedesktop.systemd1.UnitExists")
 }
 
-func startUnit(cm *dbusConnManager, unitName string, properties []systemdDbus.Property) error {
+func startUnit(cm *dbusConnManager, unitName string, properties []systemdDbus.Property, ignoreExist bool) error {
 	statusChan := make(chan string, 1)
 	err := cm.retryOnDisconnect(func(c *systemdDbus.Conn) error {
 		_, err := c.StartTransientUnitContext(context.TODO(), unitName, "replace", properties, statusChan)
@@ -134,7 +134,13 @@ func startUnit(cm *dbusConnManager, unitName string, properties []systemdDbus.Pr
 		if !isUnitExists(err) {
 			return err
 		}
-		return nil
+		if ignoreExist {
+			// TODO: remove this hack.
+			// This is kubelet making sure a slice exists (see
+			// https://github.com/opencontainers/runc/pull/1124).
+			return nil
+		}
+		return err
 	}
 
 	timeout := time.NewTimer(30 * time.Second)
