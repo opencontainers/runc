@@ -32,6 +32,7 @@ func Validate(config *configs.Config) error {
 		rootlessEUIDCheck,
 		mountsStrict,
 		scheduler,
+		ioPriority,
 	}
 	for _, c := range checks {
 		if err := c(config); err != nil {
@@ -393,6 +394,17 @@ func scheduler(config *configs.Config) error {
 	}
 	if s.Policy != specs.SchedDeadline && (s.Runtime != 0 || s.Deadline != 0 || s.Period != 0) {
 		return errors.New("scheduler runtime/deadline/period can only be specified for SchedDeadline policy")
+	}
+	return nil
+}
+
+func ioPriority(config *configs.Config) error {
+	if config.IOPriority == nil {
+		return nil
+	}
+	priority := config.IOPriority.Priority
+	if priority < 0 || priority > 7 {
+		return fmt.Errorf("invalid ioPriority.Priority: %d", priority)
 	}
 	return nil
 }

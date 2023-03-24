@@ -842,3 +842,32 @@ func TestValidateScheduler(t *testing.T) {
 		}
 	}
 }
+
+func TestValidateIOPriority(t *testing.T) {
+	testCases := []struct {
+		isErr    bool
+		priority int
+	}{
+		{isErr: false, priority: 0},
+		{isErr: false, priority: 7},
+		{isErr: true, priority: -1},
+	}
+
+	for _, tc := range testCases {
+		ioPriroty := configs.IOPriority{
+			Priority: tc.priority,
+		}
+		config := &configs.Config{
+			Rootfs:     "/var",
+			IOPriority: &ioPriroty,
+		}
+
+		err := Validate(config)
+		if tc.isErr && err == nil {
+			t.Errorf("iopriority: %d, expected error, got nil", tc.priority)
+		}
+		if !tc.isErr && err != nil {
+			t.Errorf("iopriority: %d, expected nil, got error %v", tc.priority, err)
+		}
+	}
+}
