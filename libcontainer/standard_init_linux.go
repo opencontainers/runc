@@ -161,6 +161,11 @@ func (l *linuxStandardInit) Init() error {
 			return err
 		}
 	}
+	if l.config.Config.IOPriority != nil {
+		if err := setIOPriority(l.config.Config.IOPriority); err != nil {
+			return err
+		}
+	}
 
 	// Tell our parent that we're ready to Execv. This must be done before the
 	// Seccomp rules have been applied, because we need to be able to read and
