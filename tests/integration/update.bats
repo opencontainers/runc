@@ -454,6 +454,8 @@ EOF
 		check_cgroup_value "cpu.idle" "$val"
 	done
 
+	# https://github.com/opencontainers/runc/issues/3786
+	[ "$(systemd_version)" -ge 252 ] && return
 	# test update other option won't impact on cpu.idle
 	runc update --cpu-period 10000 test_update
 	[ "$status" -eq 0 ]
