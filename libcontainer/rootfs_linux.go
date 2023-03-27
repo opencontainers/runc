@@ -469,6 +469,7 @@ func mountToRootfs(m *configs.Mount, c *mountConfig) error {
 				return err
 			}
 		}
+		return setRecAttr(m, rootfs)
 	case "cgroup":
 		if cgroups.IsCgroup2UnifiedMode() {
 			return mountCgroupV2(m, c)
@@ -483,10 +484,6 @@ func mountToRootfs(m *configs.Mount, c *mountConfig) error {
 		}
 		return mountPropagate(m, rootfs, mountLabel, mountFd)
 	}
-	if err := setRecAttr(m, rootfs); err != nil {
-		return err
-	}
-	return nil
 }
 
 func getCgroupMounts(m *configs.Mount) ([]*configs.Mount, error) {
