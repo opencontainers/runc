@@ -2,8 +2,10 @@ package systemd
 
 import (
 	"os"
+	"reflect"
 	"testing"
 
+	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
@@ -93,5 +95,87 @@ func TestUnitExistsIgnored(t *testing.T) {
 		if err := pm.Apply(-1); err != nil {
 			t.Fatal(err)
 		}
+	}
+}
+
+func TestUnifiedResToSystemdProps(t *testing.T) {
+	if !IsRunningSystemd() {
+		t.Skip("Test requires systemd.")
+	}
+	if !cgroups.IsCgroup2UnifiedMode() {
+		t.Skip("cgroup v2 is required")
+	}
+
+	cm := newDbusConnManager(os.Geteuid() != 0)
+
+	testCases := []struct {
+		name     string
+		minVer   int
+		res      map[string]string
+		expError bool
+		expProps []systemdDbus.Property
+	}{
+		{
+			name: "empty map",
+			res:  map[string]string{},
+		},
+		{
+			name:   "only cpu.idle=1",
+			minVer: cpuIdleSupportedVersion,
+			res: map[string]string{
+				"cpu.idle": "1",
+			},
+			expProps: []systemdDbus.Property{
+				newProp("CPUWeight", uint64(0)),
+			},
+		},
+		{
+			name:   "only cpu.idle=0",
+			minVer: cpuIdleSupportedVersion,
+			res: map[string]string{
+				"cpu.idle": "0",
+			},
+		},
+		{
+			name:   "cpu.idle=1 and cpu.weight=1000",
+			minVer: cpuIdleSupportedVersion,
+			res: map[string]string{
+				"cpu.idle":   "1",
+				"cpu.weight": "1000",
+			},
+			expProps: []systemdDbus.Property{
+				newProp("CPUWeight", uint64(0)),
+			},
+		},
+		{
+			name:   "cpu.idle=0 and cpu.weight=1000",
+			minVer: cpuIdleSupportedVersion,
+			res: map[string]string{
+				"cpu.idle":   "0",
+				"cpu.weight": "1000",
+			},
+			expProps: []systemdDbus.Property{
+				newProp("CPUWeight", uint64(1000)),
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.minVer != 0 && systemdVersion(cm) < tc.minVer {
+				t.Skipf("requires systemd >= %d", tc.minVer)
+			}
+			props, err := unifiedResToSystemdProps(cm, tc.res)
+			if err != nil && !tc.expError {
+				t.Fatalf("expected no error, got: %v", err)
+			}
+			if err == nil && tc.expError {
+				t.Fatal("expected error, got nil")
+			}
+			if !reflect.DeepEqual(tc.expProps, props) {
+				t.Errorf("wrong properties (exp %+v, got %+v)", tc.expProps, props)
+			}
+		})
 	}
 }

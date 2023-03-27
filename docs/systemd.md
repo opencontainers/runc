@@ -91,6 +91,7 @@ The following tables summarize which properties are translated.
 | cpu.mems                | AllowedMemoryNodes    | v244                |
 | unified.cpu.max         | CPUQuota, CPUQuotaPeriodSec | v242          |
 | unified.cpu.weight      | CPUWeight             |                     |
+| unified.cpu.idle        | CPUWeight             | v252                |
 | unified.cpuset.cpus     | AllowedCPUs           | v244                |
 | unified.cpuset.mems     | AllowedMemoryNodes    | v244                |
 | unified.memory.high     | MemoryHigh            |                     |

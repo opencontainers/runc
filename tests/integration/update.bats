@@ -473,6 +473,51 @@ EOF
 	check_cgroup_value "cpu.idle" "1"
 }
 
+@test "update cgroup cpu.idle via systemd v252+" {
+	requires cgroups_v2 systemd cgroups_cpu_idle
+	[ $EUID -ne 0 ] && requires rootless_cgroup
+	if [ "$(systemd_version)" -lt 252 ]; then
+		skip "requires systemd >= v252"
+	fi
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
+	[ "$status" -eq 0 ]
+	check_cgroup_value "cpu.idle" "0"
+
+	# If cpu-idle is set, cpu-share (converted to CPUWeight) can't be set via systemd.
+	runc update --cpu-share 200 --cpu-idle 1 test_update
+	[[ "$output" == *"unable to apply both"* ]]
+	check_cgroup_value "cpu.idle" "1"
+
+	# Changing cpu-shares (converted to CPU weight) resets cpu.idle to 0.
+	runc update --cpu-share 200 test_update
+	check_cgroup_value "cpu.idle" "0"
+
+	# Setting values via unified map.
+
+	# If cpu.idle is set, cpu.weight is ignored.
+	runc update -r - test_update <<EOF
+{
+  "unified": {
+    "cpu.idle": "1",
+    "cpu.weight": "8"
+  }
+}
+EOF
+	[[ "$output" == *"unable to apply both"* ]]
+	check_cgroup_value "cpu.idle" "1"
+
+	# Setting any cpu.weight should reset cpu.idle to 0.
+	runc update -r - test_update <<EOF
+{
+  "unified": {
+    "cpu.weight": "8"
+  }
+}
+EOF
+	check_cgroup_value "cpu.idle" "0"
+}
+
 @test "update cgroup v2 resources via unified map" {
 	[ $EUID -ne 0 ] && requires rootless_cgroup
 	requires cgroups_v2
