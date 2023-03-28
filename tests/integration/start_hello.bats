@@ -37,6 +37,33 @@ function teardown() {
 	[[ "${output}" == *"Hello"* ]]
 }
 
+# https://github.com/opencontainers/runc/issues/3715.
+#
+# Fails when using Go 1.20 < 1.20.2, the reasons is https://go.dev/issue/58552.
+@test "runc run as user with no exec bit but CAP_DAC_OVERRIDE set" {
+	requires root # Can't chown/chmod otherwise.
+
+	# Remove exec perm for everyone but owner (root).
+	chown 0 rootfs/bin/echo
+	chmod go-x rootfs/bin/echo
+
+	# Replace "uid": 0 with "uid": 1000 and do a similar thing for gid.
+	update_config '	  (.. | select(.uid? == 0)) .uid |= 1000
+			| (.. | select(.gid? == 0)) .gid |= 100'
+
+	# Sanity check: make sure we can't run the container w/o CAP_DAC_OVERRIDE.
+	runc run test_busybox
+	[ "$status" -ne 0 ]
+
+	# Enable CAP_DAC_OVERRIDE.
+	update_config '	  .process.capabilities.bounding += ["CAP_DAC_OVERRIDE"]
+			| .process.capabilities.effective += ["CAP_DAC_OVERRIDE"]
+			| .process.capabilities.permitted += ["CAP_DAC_OVERRIDE"]'
+
+	runc run test_busybox
+	[ "$status" -eq 0 ]
+}
+
 @test "runc run with rootfs set to ." {
 	cp config.json rootfs/.
 	rm config.json
