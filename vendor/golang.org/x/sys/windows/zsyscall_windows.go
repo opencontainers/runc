@@ -36,9 +36,11 @@ func errnoErr(e syscall.Errno) error {
 }
 
 var (
+	modCfgMgr32 = NewLazySystemDLL("CfgMgr32.dll")
 	modadvapi32 = NewLazySystemDLL("advapi32.dll")
 	modcrypt32  = NewLazySystemDLL("crypt32.dll")
 	moddnsapi   = NewLazySystemDLL("dnsapi.dll")
+	moddwmapi   = NewLazySystemDLL("dwmapi.dll")
 	modiphlpapi = NewLazySystemDLL("iphlpapi.dll")
 	modkernel32 = NewLazySystemDLL("kernel32.dll")
 	modmswsock  = NewLazySystemDLL("mswsock.dll")
@@ -48,6 +50,7 @@ var (
 	modpsapi    = NewLazySystemDLL("psapi.dll")
 	modsechost  = NewLazySystemDLL("sechost.dll")
 	modsecur32  = NewLazySystemDLL("secur32.dll")
+	modsetupapi = NewLazySystemDLL("setupapi.dll")
 	modshell32  = NewLazySystemDLL("shell32.dll")
 	moduser32   = NewLazySystemDLL("user32.dll")
 	moduserenv  = NewLazySystemDLL("userenv.dll")
@@ -56,6 +59,10 @@ var (
 	modws2_32   = NewLazySystemDLL("ws2_32.dll")
 	modwtsapi32 = NewLazySystemDLL("wtsapi32.dll")
 
+	procCM_Get_DevNode_Status                                = modCfgMgr32.NewProc("CM_Get_DevNode_Status")
+	procCM_Get_Device_Interface_ListW                        = modCfgMgr32.NewProc("CM_Get_Device_Interface_ListW")
+	procCM_Get_Device_Interface_List_SizeW                   = modCfgMgr32.NewProc("CM_Get_Device_Interface_List_SizeW")
+	procCM_MapCrToWin32Err                                   = modCfgMgr32.NewProc("CM_MapCrToWin32Err")
 	procAdjustTokenGroups                                    = modadvapi32.NewProc("AdjustTokenGroups")
 	procAdjustTokenPrivileges                                = modadvapi32.NewProc("AdjustTokenPrivileges")
 	procAllocateAndInitializeSid                             = modadvapi32.NewProc("AllocateAndInitializeSid")
@@ -169,8 +176,11 @@ var (
 	procDnsNameCompare_W                                     = moddnsapi.NewProc("DnsNameCompare_W")
 	procDnsQuery_W                                           = moddnsapi.NewProc("DnsQuery_W")
 	procDnsRecordListFree                                    = moddnsapi.NewProc("DnsRecordListFree")
+	procDwmGetWindowAttribute                                = moddwmapi.NewProc("DwmGetWindowAttribute")
+	procDwmSetWindowAttribute                                = moddwmapi.NewProc("DwmSetWindowAttribute")
 	procGetAdaptersAddresses                                 = modiphlpapi.NewProc("GetAdaptersAddresses")
 	procGetAdaptersInfo                                      = modiphlpapi.NewProc("GetAdaptersInfo")
+	procGetBestInterfaceEx                                   = modiphlpapi.NewProc("GetBestInterfaceEx")
 	procGetIfEntry                                           = modiphlpapi.NewProc("GetIfEntry")
 	procAssignProcessToJobObject                             = modkernel32.NewProc("AssignProcessToJobObject")
 	procCancelIo                                             = modkernel32.NewProc("CancelIo")
@@ -199,6 +209,7 @@ var (
 	procDeviceIoControl                                      = modkernel32.NewProc("DeviceIoControl")
 	procDuplicateHandle                                      = modkernel32.NewProc("DuplicateHandle")
 	procExitProcess                                          = modkernel32.NewProc("ExitProcess")
+	procExpandEnvironmentStringsW                            = modkernel32.NewProc("ExpandEnvironmentStringsW")
 	procFindClose                                            = modkernel32.NewProc("FindClose")
 	procFindCloseChangeNotification                          = modkernel32.NewProc("FindCloseChangeNotification")
 	procFindFirstChangeNotificationW                         = modkernel32.NewProc("FindFirstChangeNotificationW")
@@ -219,6 +230,7 @@ var (
 	procFreeLibrary                                          = modkernel32.NewProc("FreeLibrary")
 	procGenerateConsoleCtrlEvent                             = modkernel32.NewProc("GenerateConsoleCtrlEvent")
 	procGetACP                                               = modkernel32.NewProc("GetACP")
+	procGetActiveProcessorCount                              = modkernel32.NewProc("GetActiveProcessorCount")
 	procGetCommTimeouts                                      = modkernel32.NewProc("GetCommTimeouts")
 	procGetCommandLineW                                      = modkernel32.NewProc("GetCommandLineW")
 	procGetComputerNameExW                                   = modkernel32.NewProc("GetComputerNameExW")
@@ -240,10 +252,12 @@ var (
 	procGetFileType                                          = modkernel32.NewProc("GetFileType")
 	procGetFinalPathNameByHandleW                            = modkernel32.NewProc("GetFinalPathNameByHandleW")
 	procGetFullPathNameW                                     = modkernel32.NewProc("GetFullPathNameW")
+	procGetLargePageMinimum                                  = modkernel32.NewProc("GetLargePageMinimum")
 	procGetLastError                                         = modkernel32.NewProc("GetLastError")
 	procGetLogicalDriveStringsW                              = modkernel32.NewProc("GetLogicalDriveStringsW")
 	procGetLogicalDrives                                     = modkernel32.NewProc("GetLogicalDrives")
 	procGetLongPathNameW                                     = modkernel32.NewProc("GetLongPathNameW")
+	procGetMaximumProcessorCount                             = modkernel32.NewProc("GetMaximumProcessorCount")
 	procGetModuleFileNameW                                   = modkernel32.NewProc("GetModuleFileNameW")
 	procGetModuleHandleExW                                   = modkernel32.NewProc("GetModuleHandleExW")
 	procGetNamedPipeHandleStateW                             = modkernel32.NewProc("GetNamedPipeHandleStateW")
@@ -288,6 +302,8 @@ var (
 	procLockFileEx                                           = modkernel32.NewProc("LockFileEx")
 	procLockResource                                         = modkernel32.NewProc("LockResource")
 	procMapViewOfFile                                        = modkernel32.NewProc("MapViewOfFile")
+	procModule32FirstW                                       = modkernel32.NewProc("Module32FirstW")
+	procModule32NextW                                        = modkernel32.NewProc("Module32NextW")
 	procMoveFileExW                                          = modkernel32.NewProc("MoveFileExW")
 	procMoveFileW                                            = modkernel32.NewProc("MoveFileW")
 	procMultiByteToWideChar                                  = modkernel32.NewProc("MultiByteToWideChar")
@@ -396,16 +412,54 @@ var (
 	procGetModuleBaseNameW                                   = modpsapi.NewProc("GetModuleBaseNameW")
 	procGetModuleFileNameExW                                 = modpsapi.NewProc("GetModuleFileNameExW")
 	procGetModuleInformation                                 = modpsapi.NewProc("GetModuleInformation")
+	procQueryWorkingSetEx                                    = modpsapi.NewProc("QueryWorkingSetEx")
 	procSubscribeServiceChangeNotifications                  = modsechost.NewProc("SubscribeServiceChangeNotifications")
 	procUnsubscribeServiceChangeNotifications                = modsechost.NewProc("UnsubscribeServiceChangeNotifications")
 	procGetUserNameExW                                       = modsecur32.NewProc("GetUserNameExW")
 	procTranslateNameW                                       = modsecur32.NewProc("TranslateNameW")
+	procSetupDiBuildDriverInfoList                           = modsetupapi.NewProc("SetupDiBuildDriverInfoList")
+	procSetupDiCallClassInstaller                            = modsetupapi.NewProc("SetupDiCallClassInstaller")
+	procSetupDiCancelDriverInfoSearch                        = modsetupapi.NewProc("SetupDiCancelDriverInfoSearch")
+	procSetupDiClassGuidsFromNameExW                         = modsetupapi.NewProc("SetupDiClassGuidsFromNameExW")
+	procSetupDiClassNameFromGuidExW                          = modsetupapi.NewProc("SetupDiClassNameFromGuidExW")
+	procSetupDiCreateDeviceInfoListExW                       = modsetupapi.NewProc("SetupDiCreateDeviceInfoListExW")
+	procSetupDiCreateDeviceInfoW                             = modsetupapi.NewProc("SetupDiCreateDeviceInfoW")
+	procSetupDiDestroyDeviceInfoList                         = modsetupapi.NewProc("SetupDiDestroyDeviceInfoList")
+	procSetupDiDestroyDriverInfoList                         = modsetupapi.NewProc("SetupDiDestroyDriverInfoList")
+	procSetupDiEnumDeviceInfo                                = modsetupapi.NewProc("SetupDiEnumDeviceInfo")
+	procSetupDiEnumDriverInfoW                               = modsetupapi.NewProc("SetupDiEnumDriverInfoW")
+	procSetupDiGetClassDevsExW                               = modsetupapi.NewProc("SetupDiGetClassDevsExW")
+	procSetupDiGetClassInstallParamsW                        = modsetupapi.NewProc("SetupDiGetClassInstallParamsW")
+	procSetupDiGetDeviceInfoListDetailW                      = modsetupapi.NewProc("SetupDiGetDeviceInfoListDetailW")
+	procSetupDiGetDeviceInstallParamsW                       = modsetupapi.NewProc("SetupDiGetDeviceInstallParamsW")
+	procSetupDiGetDeviceInstanceIdW                          = modsetupapi.NewProc("SetupDiGetDeviceInstanceIdW")
+	procSetupDiGetDevicePropertyW                            = modsetupapi.NewProc("SetupDiGetDevicePropertyW")
+	procSetupDiGetDeviceRegistryPropertyW                    = modsetupapi.NewProc("SetupDiGetDeviceRegistryPropertyW")
+	procSetupDiGetDriverInfoDetailW                          = modsetupapi.NewProc("SetupDiGetDriverInfoDetailW")
+	procSetupDiGetSelectedDevice                             = modsetupapi.NewProc("SetupDiGetSelectedDevice")
+	procSetupDiGetSelectedDriverW                            = modsetupapi.NewProc("SetupDiGetSelectedDriverW")
+	procSetupDiOpenDevRegKey                                 = modsetupapi.NewProc("SetupDiOpenDevRegKey")
+	procSetupDiSetClassInstallParamsW                        = modsetupapi.NewProc("SetupDiSetClassInstallParamsW")
+	procSetupDiSetDeviceInstallParamsW                       = modsetupapi.NewProc("SetupDiSetDeviceInstallParamsW")
+	procSetupDiSetDeviceRegistryPropertyW                    = modsetupapi.NewProc("SetupDiSetDeviceRegistryPropertyW")
+	procSetupDiSetSelectedDevice                             = modsetupapi.NewProc("SetupDiSetSelectedDevice")
+	procSetupDiSetSelectedDriverW                            = modsetupapi.NewProc("SetupDiSetSelectedDriverW")
+	procSetupUninstallOEMInfW                                = modsetupapi.NewProc("SetupUninstallOEMInfW")
 	procCommandLineToArgvW                                   = modshell32.NewProc("CommandLineToArgvW")
 	procSHGetKnownFolderPath                                 = modshell32.NewProc("SHGetKnownFolderPath")
 	procShellExecuteW                                        = modshell32.NewProc("ShellExecuteW")
+	procEnumChildWindows                                     = moduser32.NewProc("EnumChildWindows")
+	procEnumWindows                                          = moduser32.NewProc("EnumWindows")
 	procExitWindowsEx                                        = moduser32.NewProc("ExitWindowsEx")
+	procGetClassNameW                                        = moduser32.NewProc("GetClassNameW")
+	procGetDesktopWindow                                     = moduser32.NewProc("GetDesktopWindow")
+	procGetForegroundWindow                                  = moduser32.NewProc("GetForegroundWindow")
+	procGetGUIThreadInfo                                     = moduser32.NewProc("GetGUIThreadInfo")
 	procGetShellWindow                                       = moduser32.NewProc("GetShellWindow")
 	procGetWindowThreadProcessId                             = moduser32.NewProc("GetWindowThreadProcessId")
+	procIsWindow                                             = moduser32.NewProc("IsWindow")
+	procIsWindowUnicode                                      = moduser32.NewProc("IsWindowUnicode")
+	procIsWindowVisible                                      = moduser32.NewProc("IsWindowVisible")
 	procMessageBoxW                                          = moduser32.NewProc("MessageBoxW")
 	procCreateEnvironmentBlock                               = moduserenv.NewProc("CreateEnvironmentBlock")
 	procDestroyEnvironmentBlock                              = moduserenv.NewProc("DestroyEnvironmentBlock")
@@ -420,6 +474,9 @@ var (
 	procWSAEnumProtocolsW                                    = modws2_32.NewProc("WSAEnumProtocolsW")
 	procWSAGetOverlappedResult                               = modws2_32.NewProc("WSAGetOverlappedResult")
 	procWSAIoctl                                             = modws2_32.NewProc("WSAIoctl")
+	procWSALookupServiceBeginW                               = modws2_32.NewProc("WSALookupServiceBeginW")
+	procWSALookupServiceEnd                                  = modws2_32.NewProc("WSALookupServiceEnd")
+	procWSALookupServiceNextW                                = modws2_32.NewProc("WSALookupServiceNextW")
 	procWSARecv                                              = modws2_32.NewProc("WSARecv")
 	procWSARecvFrom                                          = modws2_32.NewProc("WSARecvFrom")
 	procWSASend                                              = modws2_32.NewProc("WSASend")
@@ -446,6 +503,30 @@ var (
 	procWTSFreeMemory                                        = modwtsapi32.NewProc("WTSFreeMemory")
 	procWTSQueryUserToken                                    = modwtsapi32.NewProc("WTSQueryUserToken")
 )
+
+func cm_Get_DevNode_Status(status *uint32, problemNumber *uint32, devInst DEVINST, flags uint32) (ret CONFIGRET) {
+	r0, _, _ := syscall.Syscall6(procCM_Get_DevNode_Status.Addr(), 4, uintptr(unsafe.Pointer(status)), uintptr(unsafe.Pointer(problemNumber)), uintptr(devInst), uintptr(flags), 0, 0)
+	ret = CONFIGRET(r0)
+	return
+}
+
+func cm_Get_Device_Interface_List(interfaceClass *GUID, deviceID *uint16, buffer *uint16, bufferLen uint32, flags uint32) (ret CONFIGRET) {
+	r0, _, _ := syscall.Syscall6(procCM_Get_Device_Interface_ListW.Addr(), 5, uintptr(unsafe.Pointer(interfaceClass)), uintptr(unsafe.Pointer(deviceID)), uintptr(unsafe.Pointer(buffer)), uintptr(bufferLen), uintptr(flags), 0)
+	ret = CONFIGRET(r0)
+	return
+}
+
+func cm_Get_Device_Interface_List_Size(len *uint32, interfaceClass *GUID, deviceID *uint16, flags uint32) (ret CONFIGRET) {
+	r0, _, _ := syscall.Syscall6(procCM_Get_Device_Interface_List_SizeW.Addr(), 4, uintptr(unsafe.Pointer(len)), uintptr(unsafe.Pointer(interfaceClass)), uintptr(unsafe.Pointer(deviceID)), uintptr(flags), 0, 0)
+	ret = CONFIGRET(r0)
+	return
+}
+
+func cm_MapCrToWin32Err(configRet CONFIGRET, defaultWin32Error Errno) (ret Errno) {
+	r0, _, _ := syscall.Syscall(procCM_MapCrToWin32Err.Addr(), 2, uintptr(configRet), uintptr(defaultWin32Error), 0)
+	ret = Errno(r0)
+	return
+}
 
 func AdjustTokenGroups(token Token, resetToDefault bool, newstate *Tokengroups, buflen uint32, prevstate *Tokengroups, returnlen *uint32) (err error) {
 	var _p0 uint32
@@ -1460,6 +1541,22 @@ func DnsRecordListFree(rl *DNSRecord, freetype uint32) {
 	return
 }
 
+func DwmGetWindowAttribute(hwnd HWND, attribute uint32, value unsafe.Pointer, size uint32) (ret error) {
+	r0, _, _ := syscall.Syscall6(procDwmGetWindowAttribute.Addr(), 4, uintptr(hwnd), uintptr(attribute), uintptr(value), uintptr(size), 0, 0)
+	if r0 != 0 {
+		ret = syscall.Errno(r0)
+	}
+	return
+}
+
+func DwmSetWindowAttribute(hwnd HWND, attribute uint32, value unsafe.Pointer, size uint32) (ret error) {
+	r0, _, _ := syscall.Syscall6(procDwmSetWindowAttribute.Addr(), 4, uintptr(hwnd), uintptr(attribute), uintptr(value), uintptr(size), 0, 0)
+	if r0 != 0 {
+		ret = syscall.Errno(r0)
+	}
+	return
+}
+
 func GetAdaptersAddresses(family uint32, flags uint32, reserved uintptr, adapterAddresses *IpAdapterAddresses, sizePointer *uint32) (errcode error) {
 	r0, _, _ := syscall.Syscall6(procGetAdaptersAddresses.Addr(), 5, uintptr(family), uintptr(flags), uintptr(reserved), uintptr(unsafe.Pointer(adapterAddresses)), uintptr(unsafe.Pointer(sizePointer)), 0)
 	if r0 != 0 {
@@ -1470,6 +1567,14 @@ func GetAdaptersAddresses(family uint32, flags uint32, reserved uintptr, adapter
 
 func GetAdaptersInfo(ai *IpAdapterInfo, ol *uint32) (errcode error) {
 	r0, _, _ := syscall.Syscall(procGetAdaptersInfo.Addr(), 2, uintptr(unsafe.Pointer(ai)), uintptr(unsafe.Pointer(ol)), 0)
+	if r0 != 0 {
+		errcode = syscall.Errno(r0)
+	}
+	return
+}
+
+func getBestInterfaceEx(sockaddr unsafe.Pointer, pdwBestIfIndex *uint32) (errcode error) {
+	r0, _, _ := syscall.Syscall(procGetBestInterfaceEx.Addr(), 2, uintptr(sockaddr), uintptr(unsafe.Pointer(pdwBestIfIndex)), 0)
 	if r0 != 0 {
 		errcode = syscall.Errno(r0)
 	}
@@ -1716,6 +1821,15 @@ func ExitProcess(exitcode uint32) {
 	return
 }
 
+func ExpandEnvironmentStrings(src *uint16, dst *uint16, size uint32) (n uint32, err error) {
+	r0, _, e1 := syscall.Syscall(procExpandEnvironmentStringsW.Addr(), 3, uintptr(unsafe.Pointer(src)), uintptr(unsafe.Pointer(dst)), uintptr(size))
+	n = uint32(r0)
+	if n == 0 {
+		err = errnoErr(e1)
+	}
+	return
+}
+
 func FindClose(handle Handle) (err error) {
 	r1, _, e1 := syscall.Syscall(procFindClose.Addr(), 1, uintptr(handle), 0, 0)
 	if r1 == 0 {
@@ -1897,6 +2011,12 @@ func GetACP() (acp uint32) {
 	return
 }
 
+func GetActiveProcessorCount(groupNumber uint16) (ret uint32) {
+	r0, _, _ := syscall.Syscall(procGetActiveProcessorCount.Addr(), 1, uintptr(groupNumber), 0, 0)
+	ret = uint32(r0)
+	return
+}
+
 func GetCommTimeouts(handle Handle, timeouts *CommTimeouts) (err error) {
 	r1, _, e1 := syscall.Syscall(procGetCommTimeouts.Addr(), 2, uintptr(handle), uintptr(unsafe.Pointer(timeouts)), 0)
 	if r1 == 0 {
@@ -2064,6 +2184,12 @@ func GetFullPathName(path *uint16, buflen uint32, buf *uint16, fname **uint16) (
 	return
 }
 
+func GetLargePageMinimum() (size uintptr) {
+	r0, _, _ := syscall.Syscall(procGetLargePageMinimum.Addr(), 0, 0, 0, 0)
+	size = uintptr(r0)
+	return
+}
+
 func GetLastError() (lasterr error) {
 	r0, _, _ := syscall.Syscall(procGetLastError.Addr(), 0, 0, 0, 0)
 	if r0 != 0 {
@@ -2096,6 +2222,12 @@ func GetLongPathName(path *uint16, buf *uint16, buflen uint32) (n uint32, err er
 	if n == 0 {
 		err = errnoErr(e1)
 	}
+	return
+}
+
+func GetMaximumProcessorCount(groupNumber uint16) (ret uint32) {
+	r0, _, _ := syscall.Syscall(procGetMaximumProcessorCount.Addr(), 1, uintptr(groupNumber), 0, 0)
+	ret = uint32(r0)
 	return
 }
 
@@ -2499,6 +2631,22 @@ func MapViewOfFile(handle Handle, access uint32, offsetHigh uint32, offsetLow ui
 	return
 }
 
+func Module32First(snapshot Handle, moduleEntry *ModuleEntry32) (err error) {
+	r1, _, e1 := syscall.Syscall(procModule32FirstW.Addr(), 2, uintptr(snapshot), uintptr(unsafe.Pointer(moduleEntry)), 0)
+	if r1 == 0 {
+		err = errnoErr(e1)
+	}
+	return
+}
+
+func Module32Next(snapshot Handle, moduleEntry *ModuleEntry32) (err error) {
+	r1, _, e1 := syscall.Syscall(procModule32NextW.Addr(), 2, uintptr(snapshot), uintptr(unsafe.Pointer(moduleEntry)), 0)
+	if r1 == 0 {
+		err = errnoErr(e1)
+	}
+	return
+}
+
 func MoveFileEx(from *uint16, to *uint16, flags uint32) (err error) {
 	r1, _, e1 := syscall.Syscall(procMoveFileExW.Addr(), 3, uintptr(unsafe.Pointer(from)), uintptr(unsafe.Pointer(to)), uintptr(flags))
 	if r1 == 0 {
@@ -2661,7 +2809,7 @@ func ReadDirectoryChanges(handle Handle, buf *byte, buflen uint32, watchSubTree 
 	return
 }
 
-func ReadFile(handle Handle, buf []byte, done *uint32, overlapped *Overlapped) (err error) {
+func readFile(handle Handle, buf []byte, done *uint32, overlapped *Overlapped) (err error) {
 	var _p0 *byte
 	if len(buf) > 0 {
 		_p0 = &buf[0]
@@ -3103,7 +3251,7 @@ func WriteConsole(console Handle, buf *uint16, towrite uint32, written *uint32, 
 	return
 }
 
-func WriteFile(handle Handle, buf []byte, done *uint32, overlapped *Overlapped) (err error) {
+func writeFile(handle Handle, buf []byte, done *uint32, overlapped *Overlapped) (err error) {
 	var _p0 *byte
 	if len(buf) > 0 {
 		_p0 = &buf[0]
@@ -3395,6 +3543,14 @@ func GetModuleInformation(process Handle, module Handle, modinfo *ModuleInfo, cb
 	return
 }
 
+func QueryWorkingSetEx(process Handle, pv uintptr, cb uint32) (err error) {
+	r1, _, e1 := syscall.Syscall(procQueryWorkingSetEx.Addr(), 3, uintptr(process), uintptr(pv), uintptr(cb))
+	if r1 == 0 {
+		err = errnoErr(e1)
+	}
+	return
+}
+
 func SubscribeServiceChangeNotifications(service Handle, eventType uint32, callback uintptr, callbackCtx uintptr, subscription *uintptr) (ret error) {
 	ret = procSubscribeServiceChangeNotifications.Find()
 	if ret != nil {
@@ -3432,6 +3588,233 @@ func TranslateName(accName *uint16, accNameFormat uint32, desiredNameFormat uint
 	return
 }
 
+func SetupDiBuildDriverInfoList(deviceInfoSet DevInfo, deviceInfoData *DevInfoData, driverType SPDIT) (err error) {
+	r1, _, e1 := syscall.Syscall(procSetupDiBuildDriverInfoList.Addr(), 3, uintptr(deviceInfoSet), uintptr(unsafe.Pointer(deviceInfoData)), uintptr(driverType))
+	if r1 == 0 {
+		err = errnoErr(e1)
+	}
+	return
+}
+
+func SetupDiCallClassInstaller(installFunction DI_FUNCTION, deviceInfoSet DevInfo, deviceInfoData *DevInfoData) (err error) {
+	r1, _, e1 := syscall.Syscall(procSetupDiCallClassInstaller.Addr(), 3, uintptr(installFunction), uintptr(deviceInfoSet), uintptr(unsafe.Pointer(deviceInfoData)))
+	if r1 == 0 {
+		err = errnoErr(e1)
+	}
+	return
+}
+
+func SetupDiCancelDriverInfoSearch(deviceInfoSet DevInfo) (err error) {
+	r1, _, e1 := syscall.Syscall(procSetupDiCancelDriverInfoSearch.Addr(), 1, uintptr(deviceInfoSet), 0, 0)
+	if r1 == 0 {
+		err = errnoErr(e1)
+	}
+	return
+}
+
+func setupDiClassGuidsFromNameEx(className *uint16, classGuidList *GUID, classGuidListSize uint32, requiredSize *uint32, machineName *uint16, reserved uintptr) (err error) {
+	r1, _, e1 := syscall.Syscall6(procSetupDiClassGuidsFromNameExW.Addr(), 6, uintptr(unsafe.Pointer(className)), uintptr(unsafe.Pointer(classGuidList)), uintptr(classGuidListSize), uintptr(unsafe.Pointer(requiredSize)), uintptr(unsafe.Pointer(machineName)), uintptr(reserved))
+	if r1 == 0 {
+		err = errnoErr(e1)
+	}
+	return
+}
+
+func setupDiClassNameFromGuidEx(classGUID *GUID, className *uint16, classNameSize uint32, requiredSize *uint32, machineName *uint16, reserved uintptr) (err error) {
+	r1, _, e1 := syscall.Syscall6(procSetupDiClassNameFromGuidExW.Addr(), 6, uintptr(unsafe.Pointer(classGUID)), uintptr(unsafe.Pointer(className)), uintptr(classNameSize), uintptr(unsafe.Pointer(requiredSize)), uintptr(unsafe.Pointer(machineName)), uintptr(reserved))
+	if r1 == 0 {
+		err = errnoErr(e1)
+	}
+	return
+}
+
+func setupDiCreateDeviceInfoListEx(classGUID *GUID, hwndParent uintptr, machineName *uint16, reserved uintptr) (handle DevInfo, err error) {
+	r0, _, e1 := syscall.Syscall6(procSetupDiCreateDeviceInfoListExW.Addr(), 4, uintptr(unsafe.Pointer(classGUID)), uintptr(hwndParent), uintptr(unsafe.Pointer(machineName)), uintptr(reserved), 0, 0)
+	handle = DevInfo(r0)
+	if handle == DevInfo(InvalidHandle) {
+		err = errnoErr(e1)
+	}
+	return
+}
+
+func setupDiCreateDeviceInfo(deviceInfoSet DevInfo, DeviceName *uint16, classGUID *GUID, DeviceDescription *uint16, hwndParent uintptr, CreationFlags DICD, deviceInfoData *DevInfoData) (err error) {
+	r1, _, e1 := syscall.Syscall9(procSetupDiCreateDeviceInfoW.Addr(), 7, uintptr(deviceInfoSet), uintptr(unsafe.Pointer(DeviceName)), uintptr(unsafe.Pointer(classGUID)), uintptr(unsafe.Pointer(DeviceDescription)), uintptr(hwndParent), uintptr(CreationFlags), uintptr(unsafe.Pointer(deviceInfoData)), 0, 0)
+	if r1 == 0 {
+		err = errnoErr(e1)
+	}
+	return
+}
+
+func SetupDiDestroyDeviceInfoList(deviceInfoSet DevInfo) (err error) {
+	r1, _, e1 := syscall.Syscall(procSetupDiDestroyDeviceInfoList.Addr(), 1, uintptr(deviceInfoSet), 0, 0)
+	if r1 == 0 {
+		err = errnoErr(e1)
+	}
+	return
+}
+
+func SetupDiDestroyDriverInfoList(deviceInfoSet DevInfo, deviceInfoData *DevInfoData, driverType SPDIT) (err error) {
+	r1, _, e1 := syscall.Syscall(procSetupDiDestroyDriverInfoList.Addr(), 3, uintptr(deviceInfoSet), uintptr(unsafe.Pointer(deviceInfoData)), uintptr(driverType))
+	if r1 == 0 {
+		err = errnoErr(e1)
+	}
+	return
+}
+
+func setupDiEnumDeviceInfo(deviceInfoSet DevInfo, memberIndex uint32, deviceInfoData *DevInfoData) (err error) {
+	r1, _, e1 := syscall.Syscall(procSetupDiEnumDeviceInfo.Addr(), 3, uintptr(deviceInfoSet), uintptr(memberIndex), uintptr(unsafe.Pointer(deviceInfoData)))
+	if r1 == 0 {
+		err = errnoErr(e1)
+	}
+	return
+}
+
+func setupDiEnumDriverInfo(deviceInfoSet DevInfo, deviceInfoData *DevInfoData, driverType SPDIT, memberIndex uint32, driverInfoData *DrvInfoData) (err error) {
+	r1, _, e1 := syscall.Syscall6(procSetupDiEnumDriverInfoW.Addr(), 5, uintptr(deviceInfoSet), uintptr(unsafe.Pointer(deviceInfoData)), uintptr(driverType), uintptr(memberIndex), uintptr(unsafe.Pointer(driverInfoData)), 0)
+	if r1 == 0 {
+		err = errnoErr(e1)
+	}
+	return
+}
+
+func setupDiGetClassDevsEx(classGUID *GUID, Enumerator *uint16, hwndParent uintptr, Flags DIGCF, deviceInfoSet DevInfo, machineName *uint16, reserved uintptr) (handle DevInfo, err error) {
+	r0, _, e1 := syscall.Syscall9(procSetupDiGetClassDevsExW.Addr(), 7, uintptr(unsafe.Pointer(classGUID)), uintptr(unsafe.Pointer(Enumerator)), uintptr(hwndParent), uintptr(Flags), uintptr(deviceInfoSet), uintptr(unsafe.Pointer(machineName)), uintptr(reserved), 0, 0)
+	handle = DevInfo(r0)
+	if handle == DevInfo(InvalidHandle) {
+		err = errnoErr(e1)
+	}
+	return
+}
+
+func SetupDiGetClassInstallParams(deviceInfoSet DevInfo, deviceInfoData *DevInfoData, classInstallParams *ClassInstallHeader, classInstallParamsSize uint32, requiredSize *uint32) (err error) {
+	r1, _, e1 := syscall.Syscall6(procSetupDiGetClassInstallParamsW.Addr(), 5, uintptr(deviceInfoSet), uintptr(unsafe.Pointer(deviceInfoData)), uintptr(unsafe.Pointer(classInstallParams)), uintptr(classInstallParamsSize), uintptr(unsafe.Pointer(requiredSize)), 0)
+	if r1 == 0 {
+		err = errnoErr(e1)
+	}
+	return
+}
+
+func setupDiGetDeviceInfoListDetail(deviceInfoSet DevInfo, deviceInfoSetDetailData *DevInfoListDetailData) (err error) {
+	r1, _, e1 := syscall.Syscall(procSetupDiGetDeviceInfoListDetailW.Addr(), 2, uintptr(deviceInfoSet), uintptr(unsafe.Pointer(deviceInfoSetDetailData)), 0)
+	if r1 == 0 {
+		err = errnoErr(e1)
+	}
+	return
+}
+
+func setupDiGetDeviceInstallParams(deviceInfoSet DevInfo, deviceInfoData *DevInfoData, deviceInstallParams *DevInstallParams) (err error) {
+	r1, _, e1 := syscall.Syscall(procSetupDiGetDeviceInstallParamsW.Addr(), 3, uintptr(deviceInfoSet), uintptr(unsafe.Pointer(deviceInfoData)), uintptr(unsafe.Pointer(deviceInstallParams)))
+	if r1 == 0 {
+		err = errnoErr(e1)
+	}
+	return
+}
+
+func setupDiGetDeviceInstanceId(deviceInfoSet DevInfo, deviceInfoData *DevInfoData, instanceId *uint16, instanceIdSize uint32, instanceIdRequiredSize *uint32) (err error) {
+	r1, _, e1 := syscall.Syscall6(procSetupDiGetDeviceInstanceIdW.Addr(), 5, uintptr(deviceInfoSet), uintptr(unsafe.Pointer(deviceInfoData)), uintptr(unsafe.Pointer(instanceId)), uintptr(instanceIdSize), uintptr(unsafe.Pointer(instanceIdRequiredSize)), 0)
+	if r1 == 0 {
+		err = errnoErr(e1)
+	}
+	return
+}
+
+func setupDiGetDeviceProperty(deviceInfoSet DevInfo, deviceInfoData *DevInfoData, propertyKey *DEVPROPKEY, propertyType *DEVPROPTYPE, propertyBuffer *byte, propertyBufferSize uint32, requiredSize *uint32, flags uint32) (err error) {
+	r1, _, e1 := syscall.Syscall9(procSetupDiGetDevicePropertyW.Addr(), 8, uintptr(deviceInfoSet), uintptr(unsafe.Pointer(deviceInfoData)), uintptr(unsafe.Pointer(propertyKey)), uintptr(unsafe.Pointer(propertyType)), uintptr(unsafe.Pointer(propertyBuffer)), uintptr(propertyBufferSize), uintptr(unsafe.Pointer(requiredSize)), uintptr(flags), 0)
+	if r1 == 0 {
+		err = errnoErr(e1)
+	}
+	return
+}
+
+func setupDiGetDeviceRegistryProperty(deviceInfoSet DevInfo, deviceInfoData *DevInfoData, property SPDRP, propertyRegDataType *uint32, propertyBuffer *byte, propertyBufferSize uint32, requiredSize *uint32) (err error) {
+	r1, _, e1 := syscall.Syscall9(procSetupDiGetDeviceRegistryPropertyW.Addr(), 7, uintptr(deviceInfoSet), uintptr(unsafe.Pointer(deviceInfoData)), uintptr(property), uintptr(unsafe.Pointer(propertyRegDataType)), uintptr(unsafe.Pointer(propertyBuffer)), uintptr(propertyBufferSize), uintptr(unsafe.Pointer(requiredSize)), 0, 0)
+	if r1 == 0 {
+		err = errnoErr(e1)
+	}
+	return
+}
+
+func setupDiGetDriverInfoDetail(deviceInfoSet DevInfo, deviceInfoData *DevInfoData, driverInfoData *DrvInfoData, driverInfoDetailData *DrvInfoDetailData, driverInfoDetailDataSize uint32, requiredSize *uint32) (err error) {
+	r1, _, e1 := syscall.Syscall6(procSetupDiGetDriverInfoDetailW.Addr(), 6, uintptr(deviceInfoSet), uintptr(unsafe.Pointer(deviceInfoData)), uintptr(unsafe.Pointer(driverInfoData)), uintptr(unsafe.Pointer(driverInfoDetailData)), uintptr(driverInfoDetailDataSize), uintptr(unsafe.Pointer(requiredSize)))
+	if r1 == 0 {
+		err = errnoErr(e1)
+	}
+	return
+}
+
+func setupDiGetSelectedDevice(deviceInfoSet DevInfo, deviceInfoData *DevInfoData) (err error) {
+	r1, _, e1 := syscall.Syscall(procSetupDiGetSelectedDevice.Addr(), 2, uintptr(deviceInfoSet), uintptr(unsafe.Pointer(deviceInfoData)), 0)
+	if r1 == 0 {
+		err = errnoErr(e1)
+	}
+	return
+}
+
+func setupDiGetSelectedDriver(deviceInfoSet DevInfo, deviceInfoData *DevInfoData, driverInfoData *DrvInfoData) (err error) {
+	r1, _, e1 := syscall.Syscall(procSetupDiGetSelectedDriverW.Addr(), 3, uintptr(deviceInfoSet), uintptr(unsafe.Pointer(deviceInfoData)), uintptr(unsafe.Pointer(driverInfoData)))
+	if r1 == 0 {
+		err = errnoErr(e1)
+	}
+	return
+}
+
+func SetupDiOpenDevRegKey(deviceInfoSet DevInfo, deviceInfoData *DevInfoData, Scope DICS_FLAG, HwProfile uint32, KeyType DIREG, samDesired uint32) (key Handle, err error) {
+	r0, _, e1 := syscall.Syscall6(procSetupDiOpenDevRegKey.Addr(), 6, uintptr(deviceInfoSet), uintptr(unsafe.Pointer(deviceInfoData)), uintptr(Scope), uintptr(HwProfile), uintptr(KeyType), uintptr(samDesired))
+	key = Handle(r0)
+	if key == InvalidHandle {
+		err = errnoErr(e1)
+	}
+	return
+}
+
+func SetupDiSetClassInstallParams(deviceInfoSet DevInfo, deviceInfoData *DevInfoData, classInstallParams *ClassInstallHeader, classInstallParamsSize uint32) (err error) {
+	r1, _, e1 := syscall.Syscall6(procSetupDiSetClassInstallParamsW.Addr(), 4, uintptr(deviceInfoSet), uintptr(unsafe.Pointer(deviceInfoData)), uintptr(unsafe.Pointer(classInstallParams)), uintptr(classInstallParamsSize), 0, 0)
+	if r1 == 0 {
+		err = errnoErr(e1)
+	}
+	return
+}
+
+func SetupDiSetDeviceInstallParams(deviceInfoSet DevInfo, deviceInfoData *DevInfoData, deviceInstallParams *DevInstallParams) (err error) {
+	r1, _, e1 := syscall.Syscall(procSetupDiSetDeviceInstallParamsW.Addr(), 3, uintptr(deviceInfoSet), uintptr(unsafe.Pointer(deviceInfoData)), uintptr(unsafe.Pointer(deviceInstallParams)))
+	if r1 == 0 {
+		err = errnoErr(e1)
+	}
+	return
+}
+
+func setupDiSetDeviceRegistryProperty(deviceInfoSet DevInfo, deviceInfoData *DevInfoData, property SPDRP, propertyBuffer *byte, propertyBufferSize uint32) (err error) {
+	r1, _, e1 := syscall.Syscall6(procSetupDiSetDeviceRegistryPropertyW.Addr(), 5, uintptr(deviceInfoSet), uintptr(unsafe.Pointer(deviceInfoData)), uintptr(property), uintptr(unsafe.Pointer(propertyBuffer)), uintptr(propertyBufferSize), 0)
+	if r1 == 0 {
+		err = errnoErr(e1)
+	}
+	return
+}
+
+func SetupDiSetSelectedDevice(deviceInfoSet DevInfo, deviceInfoData *DevInfoData) (err error) {
+	r1, _, e1 := syscall.Syscall(procSetupDiSetSelectedDevice.Addr(), 2, uintptr(deviceInfoSet), uintptr(unsafe.Pointer(deviceInfoData)), 0)
+	if r1 == 0 {
+		err = errnoErr(e1)
+	}
+	return
+}
+
+func SetupDiSetSelectedDriver(deviceInfoSet DevInfo, deviceInfoData *DevInfoData, driverInfoData *DrvInfoData) (err error) {
+	r1, _, e1 := syscall.Syscall(procSetupDiSetSelectedDriverW.Addr(), 3, uintptr(deviceInfoSet), uintptr(unsafe.Pointer(deviceInfoData)), uintptr(unsafe.Pointer(driverInfoData)))
+	if r1 == 0 {
+		err = errnoErr(e1)
+	}
+	return
+}
+
+func setupUninstallOEMInf(infFileName *uint16, flags SUOI, reserved uintptr) (err error) {
+	r1, _, e1 := syscall.Syscall(procSetupUninstallOEMInfW.Addr(), 3, uintptr(unsafe.Pointer(infFileName)), uintptr(flags), uintptr(reserved))
+	if r1 == 0 {
+		err = errnoErr(e1)
+	}
+	return
+}
+
 func CommandLineToArgv(cmd *uint16, argc *int32) (argv *[8192]*[8192]uint16, err error) {
 	r0, _, e1 := syscall.Syscall(procCommandLineToArgvW.Addr(), 2, uintptr(unsafe.Pointer(cmd)), uintptr(unsafe.Pointer(argc)), 0)
 	argv = (*[8192]*[8192]uint16)(unsafe.Pointer(r0))
@@ -3457,8 +3840,50 @@ func ShellExecute(hwnd Handle, verb *uint16, file *uint16, args *uint16, cwd *ui
 	return
 }
 
+func EnumChildWindows(hwnd HWND, enumFunc uintptr, param unsafe.Pointer) {
+	syscall.Syscall(procEnumChildWindows.Addr(), 3, uintptr(hwnd), uintptr(enumFunc), uintptr(param))
+	return
+}
+
+func EnumWindows(enumFunc uintptr, param unsafe.Pointer) (err error) {
+	r1, _, e1 := syscall.Syscall(procEnumWindows.Addr(), 2, uintptr(enumFunc), uintptr(param), 0)
+	if r1 == 0 {
+		err = errnoErr(e1)
+	}
+	return
+}
+
 func ExitWindowsEx(flags uint32, reason uint32) (err error) {
 	r1, _, e1 := syscall.Syscall(procExitWindowsEx.Addr(), 2, uintptr(flags), uintptr(reason), 0)
+	if r1 == 0 {
+		err = errnoErr(e1)
+	}
+	return
+}
+
+func GetClassName(hwnd HWND, className *uint16, maxCount int32) (copied int32, err error) {
+	r0, _, e1 := syscall.Syscall(procGetClassNameW.Addr(), 3, uintptr(hwnd), uintptr(unsafe.Pointer(className)), uintptr(maxCount))
+	copied = int32(r0)
+	if copied == 0 {
+		err = errnoErr(e1)
+	}
+	return
+}
+
+func GetDesktopWindow() (hwnd HWND) {
+	r0, _, _ := syscall.Syscall(procGetDesktopWindow.Addr(), 0, 0, 0, 0)
+	hwnd = HWND(r0)
+	return
+}
+
+func GetForegroundWindow() (hwnd HWND) {
+	r0, _, _ := syscall.Syscall(procGetForegroundWindow.Addr(), 0, 0, 0, 0)
+	hwnd = HWND(r0)
+	return
+}
+
+func GetGUIThreadInfo(thread uint32, info *GUIThreadInfo) (err error) {
+	r1, _, e1 := syscall.Syscall(procGetGUIThreadInfo.Addr(), 2, uintptr(thread), uintptr(unsafe.Pointer(info)), 0)
 	if r1 == 0 {
 		err = errnoErr(e1)
 	}
@@ -3477,6 +3902,24 @@ func GetWindowThreadProcessId(hwnd HWND, pid *uint32) (tid uint32, err error) {
 	if tid == 0 {
 		err = errnoErr(e1)
 	}
+	return
+}
+
+func IsWindow(hwnd HWND) (isWindow bool) {
+	r0, _, _ := syscall.Syscall(procIsWindow.Addr(), 1, uintptr(hwnd), 0, 0)
+	isWindow = r0 != 0
+	return
+}
+
+func IsWindowUnicode(hwnd HWND) (isUnicode bool) {
+	r0, _, _ := syscall.Syscall(procIsWindowUnicode.Addr(), 1, uintptr(hwnd), 0, 0)
+	isUnicode = r0 != 0
+	return
+}
+
+func IsWindowVisible(hwnd HWND) (isVisible bool) {
+	r0, _, _ := syscall.Syscall(procIsWindowVisible.Addr(), 1, uintptr(hwnd), 0, 0)
+	isVisible = r0 != 0
 	return
 }
 
@@ -3621,6 +4064,30 @@ func WSAGetOverlappedResult(h Handle, o *Overlapped, bytes *uint32, wait bool, f
 
 func WSAIoctl(s Handle, iocc uint32, inbuf *byte, cbif uint32, outbuf *byte, cbob uint32, cbbr *uint32, overlapped *Overlapped, completionRoutine uintptr) (err error) {
 	r1, _, e1 := syscall.Syscall9(procWSAIoctl.Addr(), 9, uintptr(s), uintptr(iocc), uintptr(unsafe.Pointer(inbuf)), uintptr(cbif), uintptr(unsafe.Pointer(outbuf)), uintptr(cbob), uintptr(unsafe.Pointer(cbbr)), uintptr(unsafe.Pointer(overlapped)), uintptr(completionRoutine))
+	if r1 == socket_error {
+		err = errnoErr(e1)
+	}
+	return
+}
+
+func WSALookupServiceBegin(querySet *WSAQUERYSET, flags uint32, handle *Handle) (err error) {
+	r1, _, e1 := syscall.Syscall(procWSALookupServiceBeginW.Addr(), 3, uintptr(unsafe.Pointer(querySet)), uintptr(flags), uintptr(unsafe.Pointer(handle)))
+	if r1 == socket_error {
+		err = errnoErr(e1)
+	}
+	return
+}
+
+func WSALookupServiceEnd(handle Handle) (err error) {
+	r1, _, e1 := syscall.Syscall(procWSALookupServiceEnd.Addr(), 1, uintptr(handle), 0, 0)
+	if r1 == socket_error {
+		err = errnoErr(e1)
+	}
+	return
+}
+
+func WSALookupServiceNext(handle Handle, flags uint32, size *int32, querySet *WSAQUERYSET) (err error) {
+	r1, _, e1 := syscall.Syscall6(procWSALookupServiceNextW.Addr(), 4, uintptr(handle), uintptr(flags), uintptr(unsafe.Pointer(size)), uintptr(unsafe.Pointer(querySet)), 0, 0)
 	if r1 == socket_error {
 		err = errnoErr(e1)
 	}
