@@ -980,8 +980,7 @@ void nsexec(void)
 	 * -- Aleksa "what has my life come to?" Sarai
 	 */
 
-	current_stage = setjmp(env);
-	switch (current_stage) {
+	switch (setjmp(env)) {
 		/*
 		 * Stage 0: We're in the parent. Our job is just to create a new child
 		 *          (stage 1: STAGE_CHILD) process and write its uid_map and
@@ -995,6 +994,7 @@ void nsexec(void)
 			bool stage1_complete, stage2_complete;
 
 			/* For debugging. */
+			current_stage = STAGE_PARENT;
 			prctl(PR_SET_NAME, (unsigned long)"runc:[0:PARENT]", 0, 0, 0);
 			write_log(DEBUG, "~> nsexec stage-0");
 
@@ -1151,6 +1151,9 @@ void nsexec(void)
 	case STAGE_CHILD:{
 			pid_t stage2_pid = -1;
 			enum sync_t s;
+
+			/* For debugging. */
+			current_stage = STAGE_CHILD;
 
 			/* We're in a child and thus need to tell the parent if we die. */
 			syncfd = sync_child_pipe[0];
@@ -1323,6 +1326,9 @@ void nsexec(void)
 			 */
 			enum sync_t s;
 
+			/* For debugging. */
+			current_stage = STAGE_INIT;
+
 			/* We're in a child and thus need to tell the parent if we die. */
 			syncfd = sync_grandchild_pipe[0];
 			if (close(sync_grandchild_pipe[1]) < 0)
@@ -1377,7 +1383,7 @@ void nsexec(void)
 		}
 		break;
 	default:
-		bail("unknown stage '%d' for jump value", current_stage);
+		bail("unexpected jump value");
 	}
 
 	/* Should never be reached. */
