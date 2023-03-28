@@ -64,8 +64,7 @@ func unifiedResToSystemdProps(cm *dbusConnManager, res map[string]string) (props
 		if strings.Contains(k, "/") {
 			return nil, fmt.Errorf("unified resource %q must be a file name (no slashes)", k)
 		}
-		sk := strings.SplitN(k, ".", 2)
-		if len(sk) != 2 {
+		if strings.IndexByte(k, '.') <= 0 {
 			return nil, fmt.Errorf("unified resource %q must be in the form CONTROLLER.PARAMETER", k)
 		}
 		// Kernel is quite forgiving to extra whitespace
