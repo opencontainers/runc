@@ -454,6 +454,17 @@ EOF
 		check_cgroup_value "cpu.idle" "$val"
 	done
 
+	# Values other than 1 or 0 are ignored by the kernel, see
+	# sched_group_set_idle() in kernel/sched/fair.c.
+	#
+	# If this ever fails, it means that the kernel now accepts values
+	# other than 0 or 1, and runc needs to adopt.
+	for val in -1 2 3; do
+		runc update --cpu-idle "$val" test_update
+		[ "$status" -ne 0 ]
+		check_cgroup_value "cpu.idle" "1"
+	done
+
 	# https://github.com/opencontainers/runc/issues/3786
 	[ "$(systemd_version)" -ge 252 ] && return
 	# test update other option won't impact on cpu.idle
