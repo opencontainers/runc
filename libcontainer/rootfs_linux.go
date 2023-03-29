@@ -329,26 +329,41 @@ func mountCgroupV2(m *configs.Mount, c *mountConfig) error {
 	if err := os.MkdirAll(dest, 0o755); err != nil {
 		return err
 	}
-	return utils.WithProcfd(c.root, m.Destination, func(procfd string) error {
-		if err := mount(m.Source, m.Destination, procfd, "cgroup2", uintptr(m.Flags), m.Data); err != nil {
-			// when we are in UserNS but CgroupNS is not unshared, we cannot mount cgroup2 (#2158)
-			if errors.Is(err, unix.EPERM) || errors.Is(err, unix.EBUSY) {
-				src := fs2.UnifiedMountpoint
-				if c.cgroupns && c.cgroup2Path != "" {
-					// Emulate cgroupns by bind-mounting
-					// the container cgroup path rather than
-					// the whole /sys/fs/cgroup.
-					src = c.cgroup2Path
-				}
-				err = mount(src, m.Destination, procfd, "", uintptr(m.Flags)|unix.MS_BIND, "")
-				if c.rootlessCgroups && errors.Is(err, unix.ENOENT) {
-					err = nil
-				}
-			}
-			return err
-		}
-		return nil
+	err = utils.WithProcfd(c.root, m.Destination, func(procfd string) error {
+		return mount(m.Source, m.Destination, procfd, "cgroup2", uintptr(m.Flags), m.Data)
 	})
+	if err == nil || !(errors.Is(err, unix.EPERM) || errors.Is(err, unix.EBUSY)) {
+		return err
+	}
+
+	// When we are in UserNS but CgroupNS is not unshared, we cannot mount
+	// cgroup2 (#2158), so fall back to bind mount.
+	bindM := &configs.Mount{
+		Device:           "bind",
+		Source:           fs2.UnifiedMountpoint,
+		Destination:      m.Destination,
+		Flags:            unix.MS_BIND | m.Flags,
+		PropagationFlags: m.PropagationFlags,
+	}
+	if c.cgroupns && c.cgroup2Path != "" {
+		// Emulate cgroupns by bind-mounting the container cgroup path
+		// rather than the whole /sys/fs/cgroup.
+		bindM.Source = c.cgroup2Path
+	}
+	// mountToRootfs() handles remounting for MS_RDONLY.
+	// No need to set c.fd here, because mountToRootfs() calls utils.WithProcfd() by itself in mountPropagate().
+	err = mountToRootfs(bindM, c)
+	if c.rootlessCgroups && errors.Is(err, unix.ENOENT) {
+		// ENOENT (for `src = c.cgroup2Path`) happens when rootless runc is being executed
+		// outside the userns+mountns.
+		//
+		// Mask `/sys/fs/cgroup` to ensure it is read-only, even when `/sys` is mounted
+		// with `rbind,ro` (`runc spec --rootless` produces `rbind,ro` for `/sys`).
+		err = utils.WithProcfd(c.root, m.Destination, func(procfd string) error {
+			return maskPath(procfd, c.label)
+		})
+	}
+	return err
 }
 
 func doTmpfsCopyUp(m *configs.Mount, rootfs, mountLabel string) (Err error) {
