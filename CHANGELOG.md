@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Fix the inability to use `/dev/null` when inside a container. (#3620)
 * Fix changing the ownership of host's `/dev/null` caused by fd redirection
   (a regression in 1.1.1). (#3674, #3731)
-* Fix rare runc exec/enter unshare error on older kernels, inlcuding
+* Fix rare runc exec/enter unshare error on older kernels, including
   CentOS < 7.7. (#3776)
 * nsexec: Check for errors in `write_log()`. (#3721)
 * Various CI fixes and updates. (#3618, #3630, #3640, #3729)
