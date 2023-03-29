@@ -4,7 +4,26 @@ This file documents all notable changes made to this project since runc 1.0.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [Unreleased 1.1.z]
+
+## [1.1.5] - 2023-03-29
+
+> 囚われた屈辱は
+> 反撃の嚆矢だ
+
+### Fixed
+
+* Prohibit container's `/proc` and `/sys` to be symlinks (CVE-2019-19921,
+  CVE-2023-27561, CVE-2023-28642, #3785)
+* rootless: rework /sys/fs/cgroup mounts to avoid exposing the host's cgroup
+  hierarchy into the container. (CVE-2023-25809)
+* Fix the inability to use `/dev/null` when inside a container. (#3620)
+* Fix changing the ownership of host's `/dev/null` caused by fd redirection
+  (a regression in 1.1.1). (#3674, #3731)
+* Fix rare runc exec/enter unshare error on older kernels, inlcuding
+  CentOS < 7.7. (#3776)
+* nsexec: Check for errors in `write_log()`. (#3721)
+* Various CI fixes and updates. (#3618, #3630, #3640, #3729)
 
 ## [1.1.4] - 2022-08-24
 
@@ -315,7 +334,7 @@ implementation (libcontainer) is *not* covered by this policy.
    cgroups at all during `runc update`). (#2994)
 
 <!-- minor releases -->
-[Unreleased]: https://github.com/opencontainers/runc/compare/v1.1.4...HEAD
+[Unreleased]: https://github.com/opencontainers/runc/compare/v1.1.0...HEAD
 [1.1.0]: https://github.com/opencontainers/runc/compare/v1.1.0-rc.1...v1.1.0
 [1.0.0]: https://github.com/opencontainers/runc/releases/tag/v1.0.0
 
@@ -326,7 +345,8 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.0.1]: https://github.com/opencontainers/runc/compare/v1.0.0...v1.0.1
 
 <!-- 1.1.z patch releases -->
-[Unreleased 1.1.z]: https://github.com/opencontainers/runc/compare/v1.1.4...release-1.1
+[Unreleased 1.1.z]: https://github.com/opencontainers/runc/compare/v1.1.5...release-1.1
+[1.1.5]: https://github.com/opencontainers/runc/compare/v1.1.3...v1.1.5
 [1.1.4]: https://github.com/opencontainers/runc/compare/v1.1.3...v1.1.4
 [1.1.3]: https://github.com/opencontainers/runc/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/opencontainers/runc/compare/v1.1.1...v1.1.2
