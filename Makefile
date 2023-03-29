@@ -50,7 +50,7 @@ release: runcimage
 		$(RUNC_IMAGE) make localrelease
 	script/release_sign.sh -S $(GPG_KEYID) -r release/$(VERSION) -v $(VERSION)
 
-localrelease:
+localrelease: verify-changelog
 	script/release_build.sh -r release/$(VERSION) -v $(VERSION) $(RELEASE_ARGS)
 
 dbuild: runcimage
