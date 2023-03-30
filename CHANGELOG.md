@@ -11,12 +11,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > 囚われた屈辱は
 > 反撃の嚆矢だ
 
+### Security
+
+The following CVEs were fixed in this release:
+
+* [CVE-2023-25809][] is a vulnerability involving rootless containers where
+  (under specific configurations), the container would have write access to the
+  `/sys/fs/cgroup/user.slice/...` cgroup hierarchy. No other hierarchies on the
+  host were affected. This vulnerability was discovered by Akihiro Suda.
+
+* [CVE-2023-27561][] was a regression in our protections against tricky `/proc`
+  and `/sys` configurations (where the container mountpoint is a symlink)
+  causing us to be tricked into incorrectly configuring the container, which
+  effectively re-introduced [CVE-2019-19921][]. This regression was present
+  from v1.0.0-rc95 to v1.1.4 and was discovered by @Beuc. (#3785)
+
+* [CVE-2023-28642][] is a different attack vector using the same regression
+  as in [CVE-2023-27561][]. This was reported by Lei Wang.
+
+[CVE-2019-19921]: https://github.com/advisories/GHSA-fh74-hm69-rqjw
+[CVE-2023-25809]: https://github.com/opencontainers/runc/security/advisories/GHSA-m8cg-xc2p-r3fc
+[CVE-2023-27561]: https://github.com/advisories/GHSA-vpvm-3wq2-2wvm
+[CVE-2023-28642]: https://github.com/opencontainers/runc/security/advisories/GHSA-g2j6-57v7-gm8c
+
 ### Fixed
 
-* Prohibit container's `/proc` and `/sys` to be symlinks (CVE-2019-19921,
-  CVE-2023-27561, CVE-2023-28642, #3785)
-* rootless: rework /sys/fs/cgroup mounts to avoid exposing the host's cgroup
-  hierarchy into the container. (CVE-2023-25809)
 * Fix the inability to use `/dev/null` when inside a container. (#3620)
 * Fix changing the ownership of host's `/dev/null` caused by fd redirection
   (a regression in 1.1.1). (#3674, #3731)
