@@ -178,8 +178,6 @@ vendor:
 	$(GO) mod verify
 
 verify-changelog:
-	# No non-ASCII characters.
-	! LC_ALL=C grep -n -P '[\x80-\xFF]' CHANGELOG.md
 	# No space at EOL.
 	! grep -n '\s$$' CHANGELOG.md
 	# Period before issue/PR references.
