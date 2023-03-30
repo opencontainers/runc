@@ -83,7 +83,7 @@ function teardown() {
 function test_ro_cgroup_mount() {
 	local lines status
 	# shellcheck disable=SC2016
-	update_config '.process.args |= ["sh", "-euc", "for f in `grep /sys/fs/cgroup /proc/mounts | awk \"{print \\\\$2}\"| uniq`; do grep -w $f /proc/mounts | tail -n1; done"]'
+	update_config '.process.args |= ["sh", "-euc", "for f in `grep /sys/fs/cgroup /proc/mounts | awk \"{print \\\\$2}\"| uniq`; do test -e $f && grep -w $f /proc/mounts | tail -n1; done"]'
 	runc run test_busybox
 	[ "$status" -eq 0 ]
 	[ "${#lines[@]}" -ne 0 ]
