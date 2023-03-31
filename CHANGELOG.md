@@ -27,6 +27,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    support would return `-EPERM` despite the existence of the `-ENOSYS` stub
    code (this was due to how s390x does syscall multiplexing). (#3474)
 
+## [1.1.5] - 2023-03-29
+
+> 囚われた屈辱は
+> 反撃の嚆矢だ
+
+### Security
+
+The following CVEs were fixed in this release:
+
+* [CVE-2023-25809][] is a vulnerability involving rootless containers where
+  (under specific configurations), the container would have write access to the
+  `/sys/fs/cgroup/user.slice/...` cgroup hierarchy. No other hierarchies on the
+  host were affected. This vulnerability was discovered by Akihiro Suda.
+
+* [CVE-2023-27561][] was a regression in our protections against tricky `/proc`
+  and `/sys` configurations (where the container mountpoint is a symlink)
+  causing us to be tricked into incorrectly configuring the container, which
+  effectively re-introduced [CVE-2019-19921][]. This regression was present
+  from v1.0.0-rc95 to v1.1.4 and was discovered by @Beuc. (#3785)
+
+* [CVE-2023-28642][] is a different attack vector using the same regression
+  as in [CVE-2023-27561][]. This was reported by Lei Wang.
+
+[CVE-2019-19921]: https://github.com/advisories/GHSA-fh74-hm69-rqjw
+[CVE-2023-25809]: https://github.com/opencontainers/runc/security/advisories/GHSA-m8cg-xc2p-r3fc
+[CVE-2023-27561]: https://github.com/advisories/GHSA-vpvm-3wq2-2wvm
+[CVE-2023-28642]: https://github.com/opencontainers/runc/security/advisories/GHSA-g2j6-57v7-gm8c
+
+### Fixed
+
+* Fix the inability to use `/dev/null` when inside a container. (#3620)
+* Fix changing the ownership of host's `/dev/null` caused by fd redirection
+  (a regression in 1.1.1). (#3674, #3731)
+* Fix rare runc exec/enter unshare error on older kernels, including
+  CentOS < 7.7. (#3776)
+* nsexec: Check for errors in `write_log()`. (#3721)
+* Various CI fixes and updates. (#3618, #3630, #3640, #3729)
+
+## [1.1.4] - 2022-08-24
+
+> If you look for perfection, you'll never be content.
+
+### Fixed
+
+* Fix mounting via wrong proc fd.
+  When the user and mount namespaces are used, and the bind mount is followed by
+  the cgroup mount in the spec, the cgroup was mounted using the bind mount's
+  mount fd. (#3511)
+* Switch `kill()` in `libcontainer/nsenter` to `sane_kill()`. (#3536)
+* Fix "permission denied" error from `runc run` on `noexec` fs. (#3541)
+* Fix failed exec after `systemctl daemon-reload`.
+  Due to a regression in v1.1.3, the `DeviceAllow=char-pts rwm` rule was no
+  longer added and was causing an error `open /dev/pts/0: operation not permitted: unknown`
+  when systemd was reloaded. (#3554)
+* Various CI fixes. (#3538, #3558, #3562)
 
 ## [1.1.3] - 2022-06-09
 
@@ -319,7 +374,7 @@ implementation (libcontainer) is *not* covered by this policy.
    cgroups at all during `runc update`). (#2994)
 
 <!-- minor releases -->
-[Unreleased]: https://github.com/opencontainers/runc/compare/v1.1.3...HEAD
+[Unreleased]: https://github.com/opencontainers/runc/compare/v1.1.0...HEAD
 [1.1.0]: https://github.com/opencontainers/runc/compare/v1.1.0-rc.1...v1.1.0
 [1.0.0]: https://github.com/opencontainers/runc/releases/tag/v1.0.0
 
@@ -330,7 +385,9 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.0.1]: https://github.com/opencontainers/runc/compare/v1.0.0...v1.0.1
 
 <!-- 1.1.z patch releases -->
-[Unreleased 1.1.z]: https://github.com/opencontainers/runc/compare/v1.1.3...release-1.1
+[Unreleased 1.1.z]: https://github.com/opencontainers/runc/compare/v1.1.5...release-1.1
+[1.1.5]: https://github.com/opencontainers/runc/compare/v1.1.4...v1.1.5
+[1.1.4]: https://github.com/opencontainers/runc/compare/v1.1.3...v1.1.4
 [1.1.3]: https://github.com/opencontainers/runc/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/opencontainers/runc/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/opencontainers/runc/compare/v1.1.0...v1.1.1
