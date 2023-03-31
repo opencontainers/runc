@@ -217,17 +217,6 @@ func PathExists(path string) bool {
 	return true
 }
 
-func EnterPid(cgroupPaths map[string]string, pid int) error {
-	for _, path := range cgroupPaths {
-		if PathExists(path) {
-			if err := WriteCgroupProc(path, pid); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
 func rmdir(path string) error {
 	err := unix.Rmdir(path)
 	if err == nil || err == unix.ENOENT { //nolint:errorlint // unix errors are bare
