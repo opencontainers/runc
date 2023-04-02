@@ -620,3 +620,8 @@ function requires_kernel() {
 		skip "requires kernel $1"
 	fi
 }
+
+function systemd_reset_failed() {
+	[ ! -v RUNC_USE_SYSTEMD ] && return
+	systemctl reset-failed
+}

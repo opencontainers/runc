@@ -99,4 +99,6 @@ function test_events() {
 	wait # wait for the above sub shells to finish
 
 	grep -q '{"type":"oom","id":"test_busybox"}' events.log
+
+	systemd_reset_failed
 }
