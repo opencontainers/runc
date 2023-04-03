@@ -63,14 +63,14 @@ func needsSetupDev(config *configs.Config) bool {
 // prepareRootfs sets up the devices, mount points, and filesystems for use
 // inside a new mount namespace. It doesn't set anything as ro. You must call
 // finalizeRootfs after this function to finish setting up the rootfs.
-func prepareRootfs(pipe io.ReadWriter, iConfig *initConfig, mountFds []int) (err error) {
+func prepareRootfs(pipe io.ReadWriter, iConfig *initConfig, mountFds mountFds) (err error) {
 	config := iConfig.Config
 	if err := prepareRoot(config); err != nil {
 		return fmt.Errorf("error preparing rootfs: %w", err)
 	}
 
-	if mountFds != nil && len(mountFds) != len(config.Mounts) {
-		return fmt.Errorf("malformed mountFds slice. Expected size: %v, got: %v. Slice: %v", len(config.Mounts), len(mountFds), mountFds)
+	if mountFds.sourceFds != nil && len(mountFds.sourceFds) != len(config.Mounts) {
+		return fmt.Errorf("malformed mountFds slice. Expected size: %v, got: %v. Slice: %v", len(config.Mounts), len(mountFds.sourceFds), mountFds.sourceFds)
 	}
 
 	mountConfig := &mountConfig{
@@ -84,8 +84,8 @@ func prepareRootfs(pipe io.ReadWriter, iConfig *initConfig, mountFds []int) (err
 		entry := mountEntry{Mount: m}
 		// Just before the loop we checked that if not empty, len(mountFds) == len(config.Mounts).
 		// Therefore, we can access mountFds[i] without any concerns.
-		if mountFds != nil && mountFds[i] != -1 {
-			entry.srcFD = "/proc/self/fd/" + strconv.Itoa(mountFds[i])
+		if mountFds.sourceFds != nil && mountFds.sourceFds[i] != -1 {
+			entry.srcFD = "/proc/self/fd/" + strconv.Itoa(mountFds.sourceFds[i])
 		}
 
 		if err := mountToRootfs(mountConfig, entry); err != nil {

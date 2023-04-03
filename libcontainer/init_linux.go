@@ -47,6 +47,15 @@ type network struct {
 	TempVethPeerName string `json:"temp_veth_peer_name"`
 }
 
+type mountFds struct {
+	// Fds to use as source when mounting
+	// Size should be the same as container mounts, as it will be paired.
+	// The value -1 is used when no fd is needed for the mount.
+	// Can't have a valid fd in the same position that other slices in this struct.
+	// We need to use only one of these fds on any single mount.
+	sourceFds []int
+}
+
 // initConfig is used for transferring parameters from Exec() to Init()
 type initConfig struct {
 	Args             []string              `json:"args"`
@@ -128,7 +137,7 @@ func StartInitialization() (retErr error) {
 	}
 
 	// Get mount files (O_PATH).
-	mountFds, err := parseMountFds()
+	mountSrcFds, err := parseFdsFromEnv("_LIBCONTAINER_MOUNT_FDS")
 	if err != nil {
 		return err
 	}
@@ -148,10 +157,10 @@ func StartInitialization() (retErr error) {
 	}()
 
 	// If init succeeds, it will not return, hence none of the defers will be called.
-	return containerInit(it, pipe, consoleSocket, fifofd, logPipeFd, mountFds)
+	return containerInit(it, pipe, consoleSocket, fifofd, logPipeFd, mountFds{sourceFds: mountSrcFds})
 }
 
-func containerInit(t initType, pipe *os.File, consoleSocket *os.File, fifoFd, logFd int, mountFds []int) error {
+func containerInit(t initType, pipe *os.File, consoleSocket *os.File, fifoFd, logFd int, mountFds mountFds) error {
 	var config *initConfig
 	if err := json.NewDecoder(pipe).Decode(&config); err != nil {
 		return err
@@ -162,8 +171,8 @@ func containerInit(t initType, pipe *os.File, consoleSocket *os.File, fifoFd, lo
 	switch t {
 	case initSetns:
 		// mountFds must be nil in this case. We don't mount while doing runc exec.
-		if mountFds != nil {
-			return errors.New("mountFds must be nil; can't mount from exec")
+		if mountFds.sourceFds != nil {
+			return errors.New("mount source fds must be nil; can't mount from exec")
 		}
 
 		i := &linuxSetnsInit{
