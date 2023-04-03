@@ -541,6 +541,42 @@ func (c *Container) shouldSendMountSources() bool {
 	return false
 }
 
+func (c *Container) sendMountSources(cmd *exec.Cmd, messageSockPair filePair) error {
+	if !c.shouldSendMountSources() {
+		return nil
+	}
+
+	return c.sendFdsSources(cmd, messageSockPair, "_LIBCONTAINER_MOUNT_FDS", func(m *configs.Mount) bool {
+		return m.IsBind() && !m.IsIDMapped()
+	})
+}
+
+func (c *Container) sendFdsSources(cmd *exec.Cmd, messageSockPair filePair, envVar string, condition func(*configs.Mount) bool) error {
+	// Elements on these slices will be paired with mounts (see StartInitialization() and
+	// prepareRootfs()). These slices MUST have the same size as c.config.Mounts.
+	fds := make([]int, len(c.config.Mounts))
+	for i, m := range c.config.Mounts {
+		if !condition(m) {
+			// The -1 fd is ignored later.
+			fds[i] = -1
+			continue
+		}
+
+		// The fd passed here will not be used: nsexec.c will overwrite it with dup3(). We just need
+		// to allocate a fd so that we know the number to pass in the environment variable. The fd
+		// must not be closed before cmd.Start(), so we reuse messageSockPair.child because the
+		// lifecycle of that fd is already taken care of.
+		cmd.ExtraFiles = append(cmd.ExtraFiles, messageSockPair.child)
+		fds[i] = stdioFdCount + len(cmd.ExtraFiles) - 1
+	}
+	fdsJSON, err := json.Marshal(fds)
+	if err != nil {
+		return fmt.Errorf("Error creating %v: %w", envVar, err)
+	}
+	cmd.Env = append(cmd.Env, envVar+"="+string(fdsJSON))
+	return nil
+}
+
 func (c *Container) newInitProcess(p *Process, cmd *exec.Cmd, messageSockPair, logFilePair filePair) (*initProcess, error) {
 	cmd.Env = append(cmd.Env, "_LIBCONTAINER_INITTYPE="+string(initStandard))
 	nsMaps := make(map[configs.NamespaceType]string)
@@ -553,34 +589,8 @@ func (c *Container) newInitProcess(p *Process, cmd *exec.Cmd, messageSockPair, l
 	if err != nil {
 		return nil, err
 	}
-
-	if c.shouldSendMountSources() {
-		// Elements on this slice will be paired with mounts (see StartInitialization() and
-		// prepareRootfs()). This slice MUST have the same size as c.config.Mounts.
-		mountFds := make([]int, len(c.config.Mounts))
-		for i, m := range c.config.Mounts {
-			if !m.IsBind() {
-				// Non bind-mounts do not use an fd.
-				mountFds[i] = -1
-				continue
-			}
-
-			// The fd passed here will not be used: nsexec.c will overwrite it with dup3(). We just need
-			// to allocate a fd so that we know the number to pass in the environment variable. The fd
-			// must not be closed before cmd.Start(), so we reuse messageSockPair.child because the
-			// lifecycle of that fd is already taken care of.
-			cmd.ExtraFiles = append(cmd.ExtraFiles, messageSockPair.child)
-			mountFds[i] = stdioFdCount + len(cmd.ExtraFiles) - 1
-		}
-
-		mountFdsJson, err := json.Marshal(mountFds)
-		if err != nil {
-			return nil, fmt.Errorf("Error creating _LIBCONTAINER_MOUNT_FDS: %w", err)
-		}
-
-		cmd.Env = append(cmd.Env,
-			"_LIBCONTAINER_MOUNT_FDS="+string(mountFdsJson),
-		)
+	if err := c.sendMountSources(cmd, messageSockPair); err != nil {
+		return nil, err
 	}
 
 	init := &initProcess{
