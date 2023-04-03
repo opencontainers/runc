@@ -541,6 +541,38 @@ func (c *Container) shouldSendMountSources() bool {
 	return false
 }
 
+// shouldSendIdmapSources says whether the child process must setup idmap mounts with
+// the mount_setattr already done in the host user namespace.
+func (c *Container) shouldSendIdmapSources() bool {
+	// nsexec.c mount_setattr() requires CAP_SYS_ADMIN in:
+	// * the user namespace the filesystem was mounted in;
+	// * the user namespace we're trying to idmap the mount to;
+	// * the owning user namespace of the mount namespace you're currently located in.
+	//
+	// See the comment from Christian Brauner:
+	//	https://github.com/opencontainers/runc/pull/3717#discussion_r1103607972
+	//
+	// Let's just rule out rootless, we don't have those permission in the
+	// rootless case.
+	if c.config.RootlessEUID {
+		return false
+	}
+
+	// For the time being we require userns to be in use.
+	if !c.config.Namespaces.Contains(configs.NEWUSER) {
+		return false
+	}
+
+	// We need to send sources if there are idmap bind-mounts.
+	for _, m := range c.config.Mounts {
+		if m.IsBind() && m.IsIDMapped() {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (c *Container) sendMountSources(cmd *exec.Cmd, messageSockPair filePair) error {
 	if !c.shouldSendMountSources() {
 		return nil
@@ -548,6 +580,16 @@ func (c *Container) sendMountSources(cmd *exec.Cmd, messageSockPair filePair) er
 
 	return c.sendFdsSources(cmd, messageSockPair, "_LIBCONTAINER_MOUNT_FDS", func(m *configs.Mount) bool {
 		return m.IsBind() && !m.IsIDMapped()
+	})
+}
+
+func (c *Container) sendIdmapSources(cmd *exec.Cmd, messageSockPair filePair) error {
+	if !c.shouldSendIdmapSources() {
+		return nil
+	}
+
+	return c.sendFdsSources(cmd, messageSockPair, "_LIBCONTAINER_IDMAP_FDS", func(m *configs.Mount) bool {
+		return m.IsBind() && m.IsIDMapped()
 	})
 }
 
@@ -590,6 +632,9 @@ func (c *Container) newInitProcess(p *Process, cmd *exec.Cmd, messageSockPair, l
 		return nil, err
 	}
 	if err := c.sendMountSources(cmd, messageSockPair); err != nil {
+		return nil, err
+	}
+	if err := c.sendIdmapSources(cmd, messageSockPair); err != nil {
 		return nil, err
 	}
 
@@ -2252,6 +2297,29 @@ func (c *Container) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Namespa
 
 		r.AddData(&Bytemsg{
 			Type:  MountSourcesAttr,
+			Value: mounts,
+		})
+	}
+
+	// Idmap mount sources to open.
+	if it == initStandard && c.shouldSendIdmapSources() {
+		var mounts []byte
+		for _, m := range c.config.Mounts {
+			if m.IsBind() && m.IsIDMapped() {
+				// While other parts of the code check this too (like
+				// libcontainer/specconv/spec_linux.go) we do it here also because some libcontainer
+				// users don't use those functions.
+				if strings.IndexByte(m.Source, 0) >= 0 {
+					return nil, fmt.Errorf("mount source string contains null byte: %q", m.Source)
+				}
+
+				mounts = append(mounts, []byte(m.Source)...)
+			}
+			mounts = append(mounts, byte(0))
+		}
+
+		r.AddData(&Bytemsg{
+			Type:  IdmapSourcesAttr,
 			Value: mounts,
 		})
 	}

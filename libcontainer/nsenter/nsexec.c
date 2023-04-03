@@ -33,6 +33,9 @@
 /* Get all of the CLONE_NEW* flags. */
 #include "namespace.h"
 
+/* Get definitions for idmap sources */
+#include "idmap.h"
+
 /* Synchronisation values. */
 enum sync_t {
 	SYNC_USERMAP_PLS = 0x40,	/* Request parent to map our users. */
@@ -43,6 +46,8 @@ enum sync_t {
 	SYNC_CHILD_FINISH = 0x45,	/* The child or grandchild has finished. */
 	SYNC_MOUNTSOURCES_PLS = 0x46,	/* Tell parent to send mount sources by SCM_RIGHTS. */
 	SYNC_MOUNTSOURCES_ACK = 0x47,	/* All mount sources have been sent. */
+	SYNC_MOUNT_IDMAP_PLS = 0x48,	/* Tell parent to mount idmap sources. */
+	SYNC_MOUNT_IDMAP_ACK = 0x49,	/* All idmap mounts have been done. */
 };
 
 #define STAGE_SETUP  -1
@@ -95,6 +100,10 @@ struct nlconfig_t {
 	/* Mount sources opened outside the container userns. */
 	char *mountsources;
 	size_t mountsources_len;
+
+	/* Idmap sources opened outside the container userns which will be id mapped. */
+	char *idmapsources;
+	size_t idmapsources_len;
 };
 
 /*
@@ -112,6 +121,7 @@ struct nlconfig_t {
 #define UIDMAPPATH_ATTR		27288
 #define GIDMAPPATH_ATTR		27289
 #define MOUNT_SOURCES_ATTR	27290
+#define IDMAP_SOURCES_ATTR	27291
 
 /*
  * Use the raw syscall for versions of glibc which don't include a function for
@@ -431,6 +441,10 @@ static void nl_parse(int fd, struct nlconfig_t *config)
 			config->mountsources = current;
 			config->mountsources_len = payload_len;
 			break;
+		case IDMAP_SOURCES_ATTR:
+			config->idmapsources = current;
+			config->idmapsources_len = payload_len;
+			break;
 		default:
 			bail("unknown netlink message type %d", nlattr->nla_type);
 		}
@@ -648,6 +662,83 @@ void try_unshare(int flags, const char *msg)
 			break;
 	}
 	bail("failed to unshare %s", msg);
+}
+
+void send_idmapsources(int sockfd, pid_t pid, char *idmap_src, int idmap_src_len)
+{
+	char proc_user_path[PATH_MAX];
+
+	/* Open the userns fd only once.
+	 * Currently we only support idmap mounts that use the same mapping than
+	 * the userns. This is validated in libcontainer/configs/validate/validator.go,
+	 * so if we reached here, we know the mapping for the idmap is the same
+	 * as the userns. This is why we just open the userns_fd once from the
+	 * PID of the child process that has the userns already applied.
+	 */
+	int ret = snprintf(proc_user_path, sizeof(proc_user_path), "/proc/%d/ns/user", pid);
+	if (ret < 0 || (size_t)ret >= sizeof(proc_user_path)) {
+		sane_kill(pid, SIGKILL);
+		bail("failed to create userns path string");
+	}
+
+	int userns_fd = open(proc_user_path, O_RDONLY | O_CLOEXEC | O_NOCTTY);
+	if (userns_fd < 0) {
+		sane_kill(pid, SIGKILL);
+		bail("failed to get user namespace fd");
+	}
+
+	char *idmap_end = idmap_src + idmap_src_len;
+	while (idmap_src < idmap_end) {
+		if (idmap_src[0] == '\0') {
+			idmap_src++;
+			continue;
+		}
+
+		int fd_tree = sys_open_tree(-EBADF, idmap_src,
+					    OPEN_TREE_CLONE | OPEN_TREE_CLOEXEC |
+					    AT_SYMLINK_NOFOLLOW | AT_NO_AUTOMOUNT);
+		if (fd_tree < 0) {
+			sane_kill(pid, SIGKILL);
+			if (errno == EINVAL)
+				bail("failed to use open_tree(2) with path: %s, the kernel doesn't supports ID-mapped mounts", idmap_src);
+			else
+				bail("failed to use open_tree(2) with path: %s", idmap_src);
+		}
+
+		struct mount_attr attr = {
+			.attr_set = MOUNT_ATTR_IDMAP,
+			.userns_fd = userns_fd,
+		};
+
+		ret = sys_mount_setattr(fd_tree, "", AT_EMPTY_PATH, &attr, sizeof(attr));
+		if (ret < 0) {
+			sane_kill(pid, SIGKILL);
+			if (errno == EINVAL)
+				bail("failed to change mount attributes, maybe the filesystem doesn't supports ID-mapped mounts");
+			else
+				bail("failed to change mount attributes");
+		}
+
+		write_log(DEBUG, "~> sending idmap source: %s with mapping from: %s", idmap_src, proc_user_path);
+		send_fd(sockfd, fd_tree);
+
+		if (close(fd_tree) < 0) {
+			sane_kill(pid, SIGKILL);
+			bail("error closing fd_tree");
+		}
+
+		idmap_src += strlen(idmap_src) + 1;
+	}
+
+	if (close(userns_fd) < 0) {
+		sane_kill(pid, SIGKILL);
+		bail("error closing userns fd");
+	}
+}
+
+void receive_idmapsources(int sockfd)
+{
+	receive_fd_sources(sockfd, "_LIBCONTAINER_IDMAP_FDS");
 }
 
 void nsexec(void)
@@ -892,6 +983,17 @@ void nsexec(void)
 						bail("failed to sync with child: write(SYNC_MOUNTSOURCES_ACK)");
 					}
 					break;
+				case SYNC_MOUNT_IDMAP_PLS:
+					write_log(DEBUG, "stage-1 requested to open idmap sources");
+					send_idmapsources(syncfd, stage1_pid, config.idmapsources,
+							  config.idmapsources_len);
+					s = SYNC_MOUNT_IDMAP_ACK;
+					if (write(syncfd, &s, sizeof(s)) != sizeof(s)) {
+						sane_kill(stage1_pid, SIGKILL);
+						bail("failed to sync with child: write(SYNC_MOUNT_IDMAP_ACK)");
+					}
+
+					break;
 				case SYNC_CHILD_FINISH:
 					write_log(DEBUG, "stage-1 complete");
 					stage1_complete = true;
@@ -1060,6 +1162,21 @@ void nsexec(void)
 					bail("failed to sync with parent: read(SYNC_MOUNTSOURCES_ACK)");
 				if (s != SYNC_MOUNTSOURCES_ACK)
 					bail("failed to sync with parent: SYNC_MOUNTSOURCES_ACK: got %u", s);
+			}
+
+			if (config.idmapsources) {
+				write_log(DEBUG, "request stage-0 to send idmap sources");
+				s = SYNC_MOUNT_IDMAP_PLS;
+				if (write(syncfd, &s, sizeof(s)) != sizeof(s))
+					bail("failed to sync with parent: write(SYNC_MOUNT_IDMAP_PLS)");
+
+				/* Receive and install all idmap fds. */
+				receive_idmapsources(syncfd);
+
+				if (read(syncfd, &s, sizeof(s)) != sizeof(s))
+					bail("failed to sync with parent: read(SYNC_MOUNT_IDMAP_ACK)");
+				if (s != SYNC_MOUNT_IDMAP_ACK)
+					bail("failed to sync with parent: SYNC_MOUNT_IDMAP_ACK: got %u", s);
 			}
 
 			/*

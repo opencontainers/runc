@@ -48,12 +48,15 @@ type network struct {
 }
 
 type mountFds struct {
-	// Fds to use as source when mounting
-	// Size should be the same as container mounts, as it will be paired.
+	// sourceFds are the fds to use as source when mounting.
+	// The slice size should be the same as container mounts, as it will be
+	// paired with them.
 	// The value -1 is used when no fd is needed for the mount.
 	// Can't have a valid fd in the same position that other slices in this struct.
 	// We need to use only one of these fds on any single mount.
 	sourceFds []int
+	// Idem sourceFds, but fds of already created idmap mounts, to use with unix.MoveMount().
+	idmapFds []int
 }
 
 // initConfig is used for transferring parameters from Exec() to Init()
@@ -142,6 +145,12 @@ func StartInitialization() (retErr error) {
 		return err
 	}
 
+	// Get idmap fds.
+	idmapFds, err := parseFdsFromEnv("_LIBCONTAINER_IDMAP_FDS")
+	if err != nil {
+		return err
+	}
+
 	// clear the current process's environment to clean any libcontainer
 	// specific env vars.
 	os.Clearenv()
@@ -157,7 +166,7 @@ func StartInitialization() (retErr error) {
 	}()
 
 	// If init succeeds, it will not return, hence none of the defers will be called.
-	return containerInit(it, pipe, consoleSocket, fifofd, logPipeFd, mountFds{sourceFds: mountSrcFds})
+	return containerInit(it, pipe, consoleSocket, fifofd, logPipeFd, mountFds{sourceFds: mountSrcFds, idmapFds: idmapFds})
 }
 
 func containerInit(t initType, pipe *os.File, consoleSocket *os.File, fifoFd, logFd int, mountFds mountFds) error {
@@ -170,9 +179,9 @@ func containerInit(t initType, pipe *os.File, consoleSocket *os.File, fifoFd, lo
 	}
 	switch t {
 	case initSetns:
-		// mountFds must be nil in this case. We don't mount while doing runc exec.
-		if mountFds.sourceFds != nil {
-			return errors.New("mount source fds must be nil; can't mount from exec")
+		// mount and idmap fds must be nil in this case. We don't mount while doing runc exec.
+		if mountFds.sourceFds != nil || mountFds.idmapFds != nil {
+			return errors.New("mount and idmap fds must be nil; can't mount from exec")
 		}
 
 		i := &linuxSetnsInit{
