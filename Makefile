@@ -78,7 +78,7 @@ release: runcimage
 		$(RUNC_IMAGE) make localrelease
 	script/release_sign.sh -S $(GPG_KEYID) -r release/$(VERSION) -v $(VERSION)
 
-localrelease:
+localrelease: verify-changelog
 	script/release_build.sh -r release/$(VERSION) -v $(VERSION) $(RELEASE_ARGS)
 
 dbuild: runcimage
@@ -178,8 +178,6 @@ vendor:
 	$(GO) mod verify
 
 verify-changelog:
-	# No non-ASCII characters.
-	! LC_ALL=C grep -n -P '[\x80-\xFF]' CHANGELOG.md
 	# No space at EOL.
 	! grep -n '\s$$' CHANGELOG.md
 	# Period before issue/PR references.
