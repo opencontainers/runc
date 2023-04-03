@@ -356,7 +356,7 @@ function setup() {
 	[ "$output" = "ok" ]
 }
 
-@test "runc run/create should warn about a non-empty cgroup" {
+@test "runc run/create should error for a non-empty cgroup" {
 	[ $EUID -ne 0 ] && requires rootless_cgroup
 
 	set_cgroups_path
@@ -366,12 +366,12 @@ function setup() {
 
 	# Run a second container sharing the cgroup with the first one.
 	runc --debug run -d --console-socket "$CONSOLE_SOCKET" ct2
-	[ "$status" -eq 0 ]
+	[ "$status" -ne 0 ]
 	[[ "$output" == *"container's cgroup is not empty"* ]]
 
 	# Same but using runc create.
 	runc create --console-socket "$CONSOLE_SOCKET" ct3
-	[ "$status" -eq 0 ]
+	[ "$status" -ne 0 ]
 	[[ "$output" == *"container's cgroup is not empty"* ]]
 }
 

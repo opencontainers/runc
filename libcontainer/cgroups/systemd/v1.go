@@ -204,7 +204,7 @@ func (m *LegacyManager) Apply(pid int) error {
 
 	properties = append(properties, c.SystemdProps...)
 
-	if err := startUnit(m.dbus, unitName, properties); err != nil {
+	if err := startUnit(m.dbus, unitName, properties, pid == -1); err != nil {
 		return err
 	}
 

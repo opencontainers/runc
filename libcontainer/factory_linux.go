@@ -77,9 +77,7 @@ func Create(root, id string, config *configs.Config) (*Container, error) {
 			return nil, fmt.Errorf("unable to get cgroup PIDs: %w", err)
 		}
 		if len(pids) != 0 {
-			// TODO: return an error.
-			logrus.Warnf("container's cgroup is not empty: %d process(es) found", len(pids))
-			logrus.Warn("DEPRECATED: running container in a non-empty cgroup won't be supported in runc 1.2; https://github.com/opencontainers/runc/issues/3132")
+			return nil, fmt.Errorf("container's cgroup is not empty: %d process(es) found", len(pids))
 		}
 	}
 
