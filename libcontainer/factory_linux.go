@@ -215,17 +215,17 @@ func validateID(id string) error {
 	return nil
 }
 
-func parseMountFds() ([]int, error) {
-	fdsJSON := os.Getenv("_LIBCONTAINER_MOUNT_FDS")
+func parseFdsFromEnv(envVar string) ([]int, error) {
+	fdsJSON := os.Getenv(envVar)
 	if fdsJSON == "" {
 		// Always return the nil slice if no fd is present.
 		return nil, nil
 	}
 
-	var mountFds []int
-	if err := json.Unmarshal([]byte(fdsJSON), &mountFds); err != nil {
-		return nil, fmt.Errorf("Error unmarshalling _LIBCONTAINER_MOUNT_FDS: %w", err)
+	var fds []int
+	if err := json.Unmarshal([]byte(fdsJSON), &fds); err != nil {
+		return nil, fmt.Errorf("Error unmarshalling %v: %w", envVar, err)
 	}
 
-	return mountFds, nil
+	return fds, nil
 }
