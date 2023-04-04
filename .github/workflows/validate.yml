@@ -97,7 +97,7 @@ jobs:
       with:
         go-version: "${{ env.GO_VERSION }}"
     - name: cache go mod and $GOCACHE
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: |
           ~/go/pkg/mod
