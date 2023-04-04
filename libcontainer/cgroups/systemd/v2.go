@@ -20,6 +20,10 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
+const (
+	cpuIdleSupportedVersion = 252
+)
+
 type UnifiedManager struct {
 	mu      sync.Mutex
 	cgroups *configs.Cgroup
@@ -48,6 +52,14 @@ func NewUnifiedManager(config *configs.Cgroup, path string) (*UnifiedManager, er
 	return m, nil
 }
 
+func shouldSetCPUIdle(cm *dbusConnManager, v string) bool {
+	// The only valid values for cpu.idle are 0 and 1. As it is
+	// not possible to directly set cpu.idle to 0 via systemd,
+	// ignore 0. Ignore other values as we'll error out later
+	// in Set() while calling fsMgr.Set().
+	return v == "1" && systemdVersion(cm) >= cpuIdleSupportedVersion
+}
+
 // unifiedResToSystemdProps tries to convert from Cgroup.Resources.Unified
 // key/value map (where key is cgroupfs file name) to systemd unit properties.
 // This is on a best-effort basis, so the properties that are not known
@@ -64,8 +76,7 @@ func unifiedResToSystemdProps(cm *dbusConnManager, res map[string]string) (props
 		if strings.Contains(k, "/") {
 			return nil, fmt.Errorf("unified resource %q must be a file name (no slashes)", k)
 		}
-		sk := strings.SplitN(k, ".", 2)
-		if len(sk) != 2 {
+		if strings.IndexByte(k, '.') <= 0 {
 			return nil, fmt.Errorf("unified resource %q must be in the form CONTROLLER.PARAMETER", k)
 		}
 		// Kernel is quite forgiving to extra whitespace
@@ -73,6 +84,14 @@ func unifiedResToSystemdProps(cm *dbusConnManager, res map[string]string) (props
 		v = strings.TrimSpace(v)
 		// Please keep cases in alphabetical order.
 		switch k {
+		case "cpu.idle":
+			if shouldSetCPUIdle(cm, v) {
+				// Setting CPUWeight to 0 tells systemd
+				// to set cpu.idle to 1.
+				props = append(props,
+					newProp("CPUWeight", uint64(0)))
+			}
+
 		case "cpu.max":
 			// value: quota [period]
 			quota := int64(0) // 0 means "unlimited" for addCpuQuota, if period is set
@@ -98,6 +117,12 @@ func unifiedResToSystemdProps(cm *dbusConnManager, res map[string]string) (props
 			addCpuQuota(cm, &props, quota, period)
 
 		case "cpu.weight":
+			if shouldSetCPUIdle(cm, strings.TrimSpace(res["cpu.idle"])) {
+				// Do not add duplicate CPUWeight property
+				// (see case "cpu.idle" above).
+				logrus.Warn("unable to apply both cpu.weight and cpu.idle to systemd, ignoring cpu.weight")
+				continue
+			}
 			num, err := strconv.ParseUint(v, 10, 64)
 			if err != nil {
 				return nil, fmt.Errorf("unified resource %q value conversion error: %w", k, err)
@@ -213,9 +238,21 @@ func genV2ResourcesProperties(dirPath string, r *configs.Resources, cm *dbusConn
 			newProp("MemorySwapMax", uint64(swap)))
 	}
 
-	if r.CpuWeight != 0 {
+	idleSet := false
+	// The logic here is the same as in shouldSetCPUIdle.
+	if r.CPUIdle != nil && *r.CPUIdle == 1 && systemdVersion(cm) >= cpuIdleSupportedVersion {
 		properties = append(properties,
-			newProp("CPUWeight", r.CpuWeight))
+			newProp("CPUWeight", uint64(0)))
+		idleSet = true
+	}
+	if r.CpuWeight != 0 {
+		if idleSet {
+			// Ignore CpuWeight if CPUIdle is already set.
+			logrus.Warn("unable to apply both CPUWeight and CpuIdle to systemd, ignoring CPUWeight")
+		} else {
+			properties = append(properties,
+				newProp("CPUWeight", r.CpuWeight))
+		}
 	}
 
 	addCpuQuota(cm, &properties, r.CpuQuota, r.CpuPeriod)
