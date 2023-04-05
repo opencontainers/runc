@@ -30,12 +30,12 @@ task:
 
   host_info_script: |
     uname -a
-    echo "-----"
+    # -----
     cat /etc/os-release
-    echo "-----"
-    cat /proc/cpuinfo
-    echo "-----"
+    # -----
     df -T
+    # -----
+    cat /proc/cpuinfo
   install_libvirt_vagrant_script: |
     apt-get update
     apt-get install -y libvirt-daemon libvirt-daemon-system vagrant vagrant-libvirt
@@ -149,14 +149,16 @@ task:
     systemctl restart sshd
   host_info_script: |
     uname -a
-    echo "-----"
-    cat /etc/os-release
-    echo "-----"
-    cat /proc/cpuinfo
-    echo "-----"
-    df -T
-    echo "-----"
+    # -----
+    /usr/local/go/bin/go version
+    # -----
     systemctl --version
+    # -----
+    cat /etc/os-release
+    # -----
+    df -T
+    # -----
+    cat /proc/cpuinfo
   check_config_script: |
     /home/runc/script/check-config.sh
   unit_tests_script: |
