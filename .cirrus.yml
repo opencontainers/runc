@@ -31,12 +31,12 @@ task:
 
   host_info_script: |
     uname -a
-    echo "-----"
+    # -----
     cat /etc/os-release
-    echo "-----"
-    cat /proc/cpuinfo
-    echo "-----"
+    # -----
     df -T
+    # -----
+    cat /proc/cpuinfo
   install_libvirt_vagrant_script: |
     curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
     echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
@@ -161,14 +161,16 @@ task:
     systemctl restart sshd
   host_info_script: |
     uname -a
-    echo "-----"
-    cat /etc/os-release
-    echo "-----"
-    cat /proc/cpuinfo
-    echo "-----"
-    df -T
-    echo "-----"
+    # -----
+    /usr/local/go/bin/go version
+    # -----
     systemctl --version
+    # -----
+    cat /etc/os-release
+    # -----
+    df -T
+    # -----
+    cat /proc/cpuinfo
   check_config_script: |
     /home/runc/script/check-config.sh
   unit_tests_script: |
