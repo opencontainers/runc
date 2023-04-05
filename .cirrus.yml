@@ -130,7 +130,10 @@ task:
     # Use --whatprovides since some packages are renamed.
     rpm -q --whatprovides $RPMS
     # install Go
-    curl -fsSL "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz" | tar Cxz /usr/local
+    PREFIX="https://go.dev/dl/"
+    # Find out the latest minor release URL.
+    eval $(curl -fsSL "${PREFIX}?mode=json" | jq -r  --arg Ver "$GO_VERSION" '.[] | select(.version | startswith("go\($Ver)")) | .files[] | select(.os == "linux" and .arch == "amd64" and .kind == "archive") | "filename=\"" + .filename + "\""')
+    curl -fsSL "$PREFIX$filename" | tar Cxz /usr/local
     # install bats
     cd /tmp
     git clone https://github.com/bats-core/bats-core
