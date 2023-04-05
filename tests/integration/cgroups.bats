@@ -348,7 +348,7 @@ function setup() {
 	[ "$output" = "ok" ]
 }
 
-@test "runc run/create should warn about a non-empty cgroup" {
+@test "runc run/create should error/warn about a non-empty cgroup" {
 	if [[ "$ROOTLESS" -ne 0 ]]; then
 		requires rootless_cgroup
 	fi
@@ -358,14 +358,21 @@ function setup() {
 	runc run -d --console-socket "$CONSOLE_SOCKET" ct1
 	[ "$status" -eq 0 ]
 
+	# When systemd driver is used, runc can't add PID to an existing unit,
+	# so runc returns an error. For backward compatibility, we still allow
+	# such configuration in 1.1, but only when systemd driver is NOT used.
+	# See https://github.com/opencontainers/runc/issues/3780.
+	local exp=0
+	[[ -n "${RUNC_USE_SYSTEMD}" ]] && exp=1
+
 	# Run a second container sharing the cgroup with the first one.
 	runc --debug run -d --console-socket "$CONSOLE_SOCKET" ct2
-	[ "$status" -eq 0 ]
+	[ "$status" -eq "$exp" ]
 	[[ "$output" == *"container's cgroup is not empty"* ]]
 
 	# Same but using runc create.
 	runc create --console-socket "$CONSOLE_SOCKET" ct3
-	[ "$status" -eq 0 ]
+	[ "$status" -eq "$exp" ]
 	[[ "$output" == *"container's cgroup is not empty"* ]]
 }
 
