@@ -2,11 +2,7 @@
 
 set -u
 
-# bats-core v1.2.1 defines BATS_RUN_TMPDIR.
-if [ ! -v BATS_RUN_TMPDIR ]; then
-	echo "bats >= v1.2.1 is required. Aborting." >&2
-	exit 1
-fi
+bats_require_minimum_version 1.5.0
 
 # Root directory of integration tests.
 INTEGRATION_ROOT=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
@@ -357,7 +353,7 @@ function have_criu() {
 	# Workaround for https://github.com/opencontainers/runc/issues/3532.
 	local ver
 	ver=$(rpm -q criu 2>/dev/null || true)
-	! grep -q '^criu-3\.17-[123]\.el9' <<<"$ver"
+	run ! grep -q '^criu-3\.17-[123]\.el9' <<<"$ver"
 }
 
 # Allows a test to specify what things it requires. If the environment can't

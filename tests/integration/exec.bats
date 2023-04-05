@@ -234,12 +234,12 @@ function check_exec_debug() {
 	# Check we can join top-level cgroup (implicit).
 	runc exec test_busybox cat /proc/self/cgroup
 	[ "$status" -eq 0 ]
-	! grep -v ":$REL_CGROUPS_PATH\$" <<<"$output"
+	run ! grep -v ":$REL_CGROUPS_PATH\$" <<<"$output"
 
 	# Check we can join top-level cgroup (explicit).
 	runc exec --cgroup / test_busybox cat /proc/self/cgroup
 	[ "$status" -eq 0 ]
-	! grep -v ":$REL_CGROUPS_PATH\$" <<<"$output"
+	run ! grep -v ":$REL_CGROUPS_PATH\$" <<<"$output"
 
 	# Create a few subcgroups.
 	# Note that cpu,cpuacct may be mounted together or separate.

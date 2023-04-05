@@ -355,7 +355,7 @@ function simple_cr() {
 	runc checkpoint --work-path ./work-dir test_busybox
 	grep -B 5 Error ./work-dir/dump.log || true
 	[ "$status" -eq 0 ]
-	! test -f ./work-dir/"$tmplog1"
+	run ! test -f ./work-dir/"$tmplog1"
 	test -f ./work-dir/"$tmplog2"
 
 	# after checkpoint busybox is no longer running
@@ -366,7 +366,7 @@ function simple_cr() {
 	runc restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
 	grep -B 5 Error ./work-dir/restore.log || true
 	[ "$status" -eq 0 ]
-	! test -f ./work-dir/"$tmplog1"
+	run ! test -f ./work-dir/"$tmplog1"
 	test -f ./work-dir/"$tmplog2"
 
 	# busybox should be back up and running
@@ -434,7 +434,7 @@ function simple_cr() {
 	[ "$status" -eq 0 ]
 	testcontainer test_busybox checkpointed
 	# Check that the cgroup is gone.
-	! test -d "$orig_path"
+	run ! test -d "$orig_path"
 
 	# Restore into a different cgroup.
 	set_cgroups_path # Changes the path.
@@ -445,7 +445,7 @@ function simple_cr() {
 	testcontainer test_busybox running
 
 	# Check that the old cgroup path doesn't exist.
-	! test -d "$orig_path"
+	run ! test -d "$orig_path"
 
 	# Check that the new path exists.
 	local new_path
