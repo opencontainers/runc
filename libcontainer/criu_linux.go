@@ -1,6 +1,8 @@
 package libcontainer
 
 import (
+	"bufio"
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -277,6 +279,7 @@ func (c *Container) handleRestoringExternalNamespaces(rpcOpts *criurpc.CriuOpts,
 }
 
 func (c *Container) Checkpoint(criuOpts *CriuOpts) error {
+	const logFile = "dump.log"
 	c.m.Lock()
 	defer c.m.Unlock()
 
@@ -301,6 +304,7 @@ func (c *Container) Checkpoint(criuOpts *CriuOpts) error {
 		return err
 	}
 
+	logDir := criuOpts.ImagesDirectory
 	imageDir, err := os.Open(criuOpts.ImagesDirectory)
 	if err != nil {
 		return err
@@ -310,7 +314,7 @@ func (c *Container) Checkpoint(criuOpts *CriuOpts) error {
 	rpcOpts := criurpc.CriuOpts{
 		ImagesDirFd:     proto.Int32(int32(imageDir.Fd())),
 		LogLevel:        proto.Int32(4),
-		LogFile:         proto.String("dump.log"),
+		LogFile:         proto.String(logFile),
 		Root:            proto.String(c.config.Rootfs),
 		ManageCgroups:   proto.Bool(true),
 		NotifyScripts:   proto.Bool(true),
@@ -337,6 +341,7 @@ func (c *Container) Checkpoint(criuOpts *CriuOpts) error {
 		}
 		defer workDir.Close()
 		rpcOpts.WorkDirFd = proto.Int32(int32(workDir.Fd()))
+		logDir = criuOpts.WorkDirectory
 	}
 
 	c.handleCriuConfigurationFile(&rpcOpts)
@@ -479,6 +484,7 @@ func (c *Container) Checkpoint(criuOpts *CriuOpts) error {
 
 	err = c.criuSwrk(nil, req, criuOpts, nil)
 	if err != nil {
+		logCriuErrors(logDir, logFile)
 		return err
 	}
 	return nil
@@ -627,6 +633,7 @@ func (c *Container) prepareCriuRestoreMounts(mounts []*configs.Mount) error {
 // Restore restores the checkpointed container to a running state using the
 // criu(8) utility.
 func (c *Container) Restore(process *Process, criuOpts *CriuOpts) error {
+	const logFile = "restore.log"
 	c.m.Lock()
 	defer c.m.Unlock()
 
@@ -644,6 +651,7 @@ func (c *Container) Restore(process *Process, criuOpts *CriuOpts) error {
 	if criuOpts.ImagesDirectory == "" {
 		return errors.New("invalid directory to restore checkpoint")
 	}
+	logDir := criuOpts.ImagesDirectory
 	imageDir, err := os.Open(criuOpts.ImagesDirectory)
 	if err != nil {
 		return err
@@ -675,7 +683,7 @@ func (c *Container) Restore(process *Process, criuOpts *CriuOpts) error {
 			ImagesDirFd:     proto.Int32(int32(imageDir.Fd())),
 			EvasiveDevices:  proto.Bool(true),
 			LogLevel:        proto.Int32(4),
-			LogFile:         proto.String("restore.log"),
+			LogFile:         proto.String(logFile),
 			RstSibling:      proto.Bool(true),
 			Root:            proto.String(root),
 			ManageCgroups:   proto.Bool(true),
@@ -718,6 +726,7 @@ func (c *Container) Restore(process *Process, criuOpts *CriuOpts) error {
 		}
 		defer workDir.Close()
 		req.Opts.WorkDirFd = proto.Int32(int32(workDir.Fd()))
+		logDir = criuOpts.WorkDirectory
 	}
 	c.handleCriuConfigurationFile(req.Opts)
 
@@ -791,6 +800,9 @@ func (c *Container) Restore(process *Process, criuOpts *CriuOpts) error {
 		}
 	}
 	err = c.criuSwrk(process, req, criuOpts, extraFiles)
+	if err != nil {
+		logCriuErrors(logDir, logFile)
+	}
 
 	// Now that CRIU is done let's close all opened FDs CRIU needed.
 	for _, fd := range extraFiles {
@@ -798,6 +810,56 @@ func (c *Container) Restore(process *Process, criuOpts *CriuOpts) error {
 	}
 
 	return err
+}
+
+// logCriuErrors tries to find and log errors from a criu log file.
+// The output is similar to what "grep -n -B5 Error" does.
+func logCriuErrors(dir, file string) {
+	lookFor := []byte("Error") // Print the line that contains this...
+	const max = 5 + 1          // ... and a few preceding lines.
+
+	logFile := filepath.Join(dir, file)
+	f, err := os.Open(logFile)
+	if err != nil {
+		logrus.Warn(err)
+		return
+	}
+	defer f.Close()
+
+	var lines [max][]byte
+	var idx, lineNo, printedLineNo int
+	s := bufio.NewScanner(f)
+	for s.Scan() {
+		lineNo++
+		lines[idx] = s.Bytes()
+		idx = (idx + 1) % max
+		if !bytes.Contains(s.Bytes(), lookFor) {
+			continue
+		}
+		// Found an error.
+		if printedLineNo == 0 {
+			logrus.Warnf("--- Quoting %q", logFile)
+		} else if lineNo-max > printedLineNo {
+			// Mark the gap.
+			logrus.Warn("...")
+		}
+		// Print the last lines.
+		for add := 0; add < max; add++ {
+			i := (idx + add) % max
+			s := lines[i]
+			actLineNo := lineNo + add - max + 1
+			if len(s) > 0 && actLineNo > printedLineNo {
+				logrus.Warnf("%d:%s", actLineNo, s)
+				printedLineNo = actLineNo
+			}
+		}
+	}
+	if printedLineNo != 0 {
+		logrus.Warn("---") // End of "Quoting ...".
+	}
+	if err := s.Err(); err != nil {
+		logrus.Warnf("read %q: %v", logFile, err)
+	}
 }
 
 func (c *Container) criuApplyCgroups(pid int, req *criurpc.CriuReq) error {
