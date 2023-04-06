@@ -8,7 +8,7 @@ on:
       - release-*
   pull_request:
 env:
-  GO_VERSION: 1.17.x
+  GO_VERSION: 1.19.x
 
 jobs:
 
@@ -16,7 +16,9 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-go@v2
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-go@v3
         with:
           go-version: "${{ env.GO_VERSION }}"
       - name: install deps
@@ -25,29 +27,12 @@ jobs:
           sudo apt -q install libseccomp-dev
       - uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.44
-
-  lint-extra:
-    # Extra linters, only checking new code from pull requests.
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-20.04
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v2
-        with:
-          go-version: "${{ env.GO_VERSION }}"
-      - name: install deps
+          version: v1.48
+      # Extra linters, only checking new code from a pull request.
+      - name: lint-extra
+        if: github.event_name == 'pull_request'
         run: |
-          sudo apt -q update
-          sudo apt -q install libseccomp-dev
-      - uses: golangci/golangci-lint-action@v3
-        with:
-          only-new-issues: true
-          args: --config .golangci-extra.yml
-          version: v1.44
-
+          golangci-lint run --config .golangci-extra.yml --new-from-rev=HEAD~1 --out-format=github-actions
 
   compile-buildtags:
     runs-on: ubuntu-20.04
@@ -57,7 +42,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: install go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
           go-version: "${{ env.GO_VERSION }}"
       - name: compile with no build tags
@@ -77,22 +62,6 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v3
-    - name: vars
-      run: |
-        echo "VERSION=3.3.1" >> $GITHUB_ENV
-        echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-    - name: cache go mod and $GOCACHE
-      uses: actions/cache@v2
-      with:
-        path: |
-          ~/go/pkg/mod
-          ~/.cache/go-build
-        key: ${{ runner.os }}-shfmt-${{ env.VERSION }}
-        restore-keys: ${{ runner.os }}-shfmt-
-    - name: install shfmt
-      run: |
-        command -v shfmt || \
-          (cd ~ && GO111MODULE=on time go get mvdan.cc/sh/v3/cmd/shfmt@v$VERSION)
     - name: shfmt
       run: make shfmt
 
@@ -118,17 +87,19 @@ jobs:
       - name: shellcheck
         run: |
           make shellcheck
+      - name: check-config.sh
+        run : ./script/check-config.sh
 
   deps:
     runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v3
     - name: install go
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v3
       with:
         go-version: "${{ env.GO_VERSION }}"
     - name: cache go mod and $GOCACHE
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: |
           ~/go/pkg/mod

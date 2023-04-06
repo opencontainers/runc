@@ -64,7 +64,7 @@ func TestHostDevicesIoutilReadDirDeepFailure(t *testing.T) {
 			t.Fatalf("Unexpected error %v", err)
 		}
 
-		return []fs.DirEntry{fileInfoToDirEntry(fi)}, nil
+		return []fs.DirEntry{fs.FileInfoToDirEntry(fi)}, nil
 	}
 	defer cleanupTest()
 

@@ -1,4 +1,4 @@
-ARG GO_VERSION=1.17
+ARG GO_VERSION=1.20
 ARG BATS_VERSION=v1.3.0
 ARG LIBSECCOMP_VERSION=2.5.4
 
@@ -60,5 +60,8 @@ RUN mkdir -p /opt/libseccomp \
 ENV LIBSECCOMP_VERSION=$LIBSECCOMP_VERSION
 ENV LD_LIBRARY_PATH=/opt/libseccomp/lib
 ENV PKG_CONFIG_PATH=/opt/libseccomp/lib/pkgconfig
+
+# Prevent the "fatal: detected dubious ownership in repository" git complain during build.
+RUN git config --global --add safe.directory /go/src/github.com/opencontainers/runc
 
 WORKDIR /go/src/github.com/opencontainers/runc

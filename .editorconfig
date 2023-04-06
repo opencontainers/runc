@@ -1,0 +1,8 @@
+# This file is used by shfmt. See https://EditorConfig.org
+
+# This is a top-most EditorConfig file.
+root = true
+
+# Ignore the entire "vendor" directory.
+[vendor/**]
+ignore = true
