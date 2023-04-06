@@ -6,6 +6,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased 1.1.z]
 
+## [1.1.6] - 2023-04-11
+
+> In this world nothing is certain but death and taxes.
+
+### Compatibility
+
+* This release can no longer be built from sources using Go 1.16. Using a
+  latest maintained Go 1.20.x or Go 1.19.x release is recommended.
+  Go 1.17 can still be used.
+
+### Fixed
+
+* systemd cgroup v1 and v2 drivers were deliberately ignoring `UnitExist` error
+  from systemd while trying to create a systemd unit, which in some scenarios
+  may result in a container not being added to the proper systemd unit and
+  cgroup. (#3780, #3806)
+* systemd cgroup v2 driver was incorrectly translating cpuset range from spec's
+  `resources.cpu.cpus` to systemd unit property (`AllowedCPUs`) in case of more
+  than 8 CPUs, resulting in the wrong AllowedCPUs setting. (#3808)
+* systemd cgroup v1 driver was prefixing container's cgroup path with the path
+  of PID 1 cgroup, resulting in inability to place PID 1 in a non-root cgroup.
+  (#3811)
+* runc run/start may return "permission denied" error when starting a rootless
+  container when the file to be executed does not have executable bit set for
+  the user, not taking the `CAP_DAC_OVERRIDE` capability into account. This is
+  a regression in runc 1.1.4, as well as in Go 1.20 and 1.20.1 (#3715, #3817)
+* cgroup v1 drivers are now aware of `misc` controller. (#3823)
+* Various CI fixes and improvements, mostly to ensure Go 1.19.x and Go 1.20.x
+  compatibility.
+
 ## [1.1.5] - 2023-03-29
 
 > 囚われた屈辱は
@@ -364,7 +394,8 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.0.1]: https://github.com/opencontainers/runc/compare/v1.0.0...v1.0.1
 
 <!-- 1.1.z patch releases -->
-[Unreleased 1.1.z]: https://github.com/opencontainers/runc/compare/v1.1.5...release-1.1
+[Unreleased 1.1.z]: https://github.com/opencontainers/runc/compare/v1.1.6...release-1.1
+[1.1.6]: https://github.com/opencontainers/runc/compare/v1.1.5...v1.1.6
 [1.1.5]: https://github.com/opencontainers/runc/compare/v1.1.4...v1.1.5
 [1.1.4]: https://github.com/opencontainers/runc/compare/v1.1.3...v1.1.4
 [1.1.3]: https://github.com/opencontainers/runc/compare/v1.1.2...v1.1.3
