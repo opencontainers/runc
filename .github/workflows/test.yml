@@ -19,20 +19,22 @@ env:
 
 jobs:
   test:
-    runs-on: ubuntu-20.04
     strategy:
       fail-fast: false
       matrix:
+        os: [ubuntu-20.04, ubuntu-22.04]
         go-version: [1.19.x, 1.20.x]
         rootless: ["rootless", ""]
         race: ["-race", ""]
-        criu: [""]
-        include:
-          # Also test against latest criu-dev
-          - go-version: 1.19.x
-            rootless: ""
-            race: ""
-            criu: "criu-dev"
+        criu: ["", "criu-dev"]
+        exclude:
+          - criu: criu-dev
+            rootless: rootless
+          - criu: criu-dev
+            go-version: 1.19.x
+          - criu: criu-dev
+            race: -race
+    runs-on: ${{ matrix.os }}
 
     steps:
 
@@ -42,9 +44,10 @@ jobs:
     - name: install deps
       if: matrix.criu == ''
       env:
-        REPO: https://download.opensuse.org/repositories/devel:/tools:/criu/xUbuntu_20.04
+        PREFIX: https://download.opensuse.org/repositories/devel:/tools:/criu/xUbuntu
       run: |
         # criu repo
+        REPO=${PREFIX}_$(echo ${{ matrix.os }} | sed 's/.*-//')
         curl -fSsl $REPO/Release.key | sudo apt-key add -
         echo "deb $REPO/ /" | sudo tee /etc/apt/sources.list.d/criu.list
         sudo apt update
@@ -64,6 +67,7 @@ jobs:
     - name: install go ${{ matrix.go-version }}
       uses: actions/setup-go@v4
       with:
+        cache: false # https://github.com/actions/setup-go/issues/368
         go-version: ${{ matrix.go-version }}
 
     - name: build
@@ -88,6 +92,7 @@ jobs:
         sudo cp $HOME/rootless.key /home/rootless/.ssh/id_ecdsa
         sudo cp $HOME/rootless.key.pub /home/rootless/.ssh/authorized_keys
         sudo chown -R rootless.rootless /home/rootless
+        sudo chmod a+X $HOME # for Ubuntu 22.04
 
     - name: integration test (fs driver)
       run: sudo -E PATH="$PATH" script -e -c 'make local${{ matrix.rootless }}integration'
@@ -101,7 +106,7 @@ jobs:
   # However, we do not have 32-bit ARM CI, so we use i386 for testing 32bit stuff.
   # We are not interested in providing official support for i386.
   cross-i386:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
 
     steps:
 
