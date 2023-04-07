@@ -273,14 +273,7 @@ func getSubsystemPath(slice, unit, subsystem string) (string, error) {
 		return "", err
 	}
 
-	initPath, err := cgroups.GetInitCgroup(subsystem)
-	if err != nil {
-		return "", err
-	}
-	// if pid 1 is systemd 226 or later, it will be in init.scope, not the root
-	initPath = strings.TrimSuffix(filepath.Clean(initPath), "init.scope")
-
-	return filepath.Join(mountpoint, initPath, slice, unit), nil
+	return filepath.Join(mountpoint, slice, unit), nil
 }
 
 func (m *legacyManager) Freeze(state configs.FreezerState) error {
