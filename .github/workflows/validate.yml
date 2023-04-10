@@ -108,14 +108,6 @@ jobs:
       uses: actions/setup-go@v4
       with:
         go-version: "${{ env.GO_VERSION }}"
-    - name: cache go mod and $GOCACHE
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/go/pkg/mod
-          ~/.cache/go-build
-        key: ${{ runner.os }}-go.sum-${{ hashFiles('**/go.sum') }}
-        restore-keys: ${{ runner.os }}-go.sum-
     - name: verify deps
       run: make verify-dependencies
 
