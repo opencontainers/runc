@@ -497,6 +497,18 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 	return config, nil
 }
 
+func toConfigIDMap(specMaps []specs.LinuxIDMapping) []configs.IDMap {
+	idmaps := make([]configs.IDMap, len(specMaps))
+	for i, id := range specMaps {
+		idmaps[i] = configs.IDMap{
+			ContainerID: int(id.ContainerID),
+			HostID:      int(id.HostID),
+			Size:        int(id.Size),
+		}
+	}
+	return idmaps
+}
+
 func createLibcontainerMount(cwd string, m specs.Mount) (*configs.Mount, error) {
 	if !filepath.IsAbs(m.Destination) {
 		// Relax validation for backward compatibility
@@ -518,6 +530,9 @@ func createLibcontainerMount(cwd string, m specs.Mount) (*configs.Mount, error) 
 			mnt.Source = filepath.Join(cwd, m.Source)
 		}
 	}
+
+	mnt.UIDMappings = toConfigIDMap(m.UIDMappings)
+	mnt.GIDMappings = toConfigIDMap(m.GIDMappings)
 
 	// None of the mount arguments can contain a null byte. Normally such
 	// strings would either cause some other failure or would just be truncated

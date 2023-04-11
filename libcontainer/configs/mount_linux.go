@@ -29,8 +29,24 @@ type Mount struct {
 
 	// Extensions are additional flags that are specific to runc.
 	Extensions int `json:"extensions"`
+
+	// UIDMappings is used to changing file user owners w/o calling chown.
+	// Note that, the underlying filesystem should support this feature to be
+	// used.
+	// Every mount point could have its own mapping.
+	UIDMappings []IDMap `json:"uidMappings,omitempty"`
+
+	// GIDMappings is used to changing file group owners w/o calling chown.
+	// Note that, the underlying filesystem should support this feature to be
+	// used.
+	// Every mount point could have its own mapping.
+	GIDMappings []IDMap `json:"gidMappings,omitempty"`
 }
 
 func (m *Mount) IsBind() bool {
 	return m.Flags&unix.MS_BIND != 0
+}
+
+func (m *Mount) IsIDMapped() bool {
+	return len(m.UIDMappings) > 0 || len(m.GIDMappings) > 0
 }

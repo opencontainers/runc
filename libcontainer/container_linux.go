@@ -531,9 +531,9 @@ func (c *Container) shouldSendMountSources() bool {
 		return false
 	}
 
-	// We need to send sources if there are bind-mounts.
+	// We need to send sources if there are non-idmap bind-mounts.
 	for _, m := range c.config.Mounts {
-		if m.IsBind() {
+		if m.IsBind() && !m.IsIDMapped() {
 			return true
 		}
 	}
@@ -2231,7 +2231,7 @@ func (c *Container) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Namespa
 	if it == initStandard && c.shouldSendMountSources() {
 		var mounts []byte
 		for _, m := range c.config.Mounts {
-			if m.IsBind() {
+			if m.IsBind() && !m.IsIDMapped() {
 				if strings.IndexByte(m.Source, 0) >= 0 {
 					return nil, fmt.Errorf("mount source string contains null byte: %q", m.Source)
 				}
