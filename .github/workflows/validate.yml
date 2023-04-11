@@ -18,7 +18,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
         with:
@@ -40,7 +40,7 @@ jobs:
           golangci-lint run --config .golangci-extra.yml --new-from-rev=HEAD~1 --out-format=github-actions
 
   compile-buildtags:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     env:
       # Don't ignore C warnings. Note that the output of "go env CGO_CFLAGS" by default is "-g -O2", so we keep them.
       CGO_CFLAGS: -g -O2 -Werror
@@ -54,7 +54,7 @@ jobs:
         run: make BUILDTAGS=""
 
   codespell:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v3
     - name: install deps
@@ -64,14 +64,14 @@ jobs:
       run: codespell
 
   shfmt:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v3
     - name: shfmt
       run: make shfmt
 
   shellcheck:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
       - name: install shellcheck
@@ -95,7 +95,7 @@ jobs:
         run : ./script/check-config.sh
 
   deps:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v3
     - name: install go
@@ -118,7 +118,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     # Only check commits on pull requests.
     if: github.event_name == 'pull_request'
     steps:
@@ -136,7 +136,7 @@ jobs:
           error: 'Subject too long (max 72)'
 
   cfmt:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
     - name: checkout
       uses: actions/checkout@v3
@@ -153,7 +153,7 @@ jobs:
 
 
   release:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
     - name: checkout
       uses: actions/checkout@v3
@@ -184,7 +184,7 @@ jobs:
 
 
   get-images:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v3
       with:
