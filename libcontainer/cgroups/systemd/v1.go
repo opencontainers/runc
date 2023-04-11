@@ -71,6 +71,7 @@ var legacySubsystems = []subsystem{
 	&fs.NetClsGroup{},
 	&fs.NameGroup{GroupName: "name=systemd"},
 	&fs.RdmaGroup{},
+	&fs.NameGroup{GroupName: "misc"},
 }
 
 func genV1ResourcesProperties(r *configs.Resources, cm *dbusConnManager) ([]systemdDbus.Property, error) {
