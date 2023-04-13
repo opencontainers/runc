@@ -18,8 +18,8 @@ to list available signals.
 # OPTIONS
 **--all**|**-a**
 : Send the signal to all processes inside the container, rather than
-the container's init only. This option is useful when the container does not
-have its own PID namespace.
+the container's init only. This option is implied when the _signal_ is **KILL**
+and the container does not have its own PID namespace.
 
 : When this option is set, no error is returned if the container is stopped
 or does not exist.

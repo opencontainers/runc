@@ -1399,8 +1399,8 @@ func testPidnsInitKill(t *testing.T, config *configs.Config) {
 	err = container.Run(process2)
 	ok(t, err)
 
-	// Kill the init process and Wait for it.
-	err = process1.Signal(syscall.SIGKILL)
+	// Kill the container.
+	err = container.Signal(syscall.SIGKILL, false)
 	ok(t, err)
 	_, err = process1.Wait()
 	if err == nil {

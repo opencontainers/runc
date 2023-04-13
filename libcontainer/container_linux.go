@@ -358,9 +358,9 @@ func (c *Container) start(process *Process) (retErr error) {
 }
 
 // Signal sends a specified signal to container's init, or, if all is true,
-// true, to all container's processes (as determined by container's cgroup).
+// to all container's processes (as determined by container's cgroup).
 //
-// Setting all=true is useful when s is SIGKILL and the container does not have
+// Note all=true is implied when s is SIGKILL and the container does not have
 // its own PID namespace. In this scenario, the libcontainer user may be required
 // to implement a proper child reaper.
 func (c *Container) Signal(s os.Signal, all bool) error {
@@ -382,22 +382,36 @@ func (c *Container) Signal(s os.Signal, all bool) error {
 		}
 		return c.ignoreCgroupError(signalAllProcesses(c.cgroupManager, sig))
 	}
-	// to avoid a PID reuse attack
-	if status == Running || status == Created || status == Paused {
-		if err := c.initProcess.signal(s); err != nil {
-			return fmt.Errorf("unable to signal init: %w", err)
-		}
-		if status == Paused {
-			// For cgroup v1, killing a process in a frozen cgroup
-			// does nothing until it's thawed. Only thaw the cgroup
-			// for SIGKILL.
-			if s, ok := s.(unix.Signal); ok && s == unix.SIGKILL {
-				_ = c.cgroupManager.Freeze(configs.Thawed)
-			}
-		}
-		return nil
+
+	// To avoid a PID reuse attack, don't kill non-running container.
+	switch status {
+	case Running, Created, Paused:
+	default:
+		return ErrNotRunning
 	}
-	return ErrNotRunning
+
+	// When a container has its own PID namespace, inside it the init PID
+	// is 1, and thus it is handled specially by the kernel. In particular,
+	// killing init with SIGKILL from an ancestor namespace will also kill
+	// all other processes in that PID namespace (see pid_namespaces(7)).
+	//
+	// OTOH, if PID namespace is shared, we should kill all pids to avoid
+	// leftover processes.
+	if s == unix.SIGKILL && !c.config.Namespaces.IsPrivate(configs.NEWPID) {
+		err = signalAllProcesses(c.cgroupManager, unix.SIGKILL)
+	} else {
+		err = c.initProcess.signal(s)
+	}
+	if err != nil {
+		return fmt.Errorf("unable to signal init: %w", err)
+	}
+	if status == Paused && s == unix.SIGKILL {
+		// For cgroup v1, killing a process in a frozen cgroup
+		// does nothing until it's thawed. Only thaw the cgroup
+		// for SIGKILL.
+		_ = c.cgroupManager.Freeze(configs.Thawed)
+	}
+	return nil
 }
 
 func (c *Container) createExecFifo() error {
@@ -593,7 +607,6 @@ func (c *Container) newInitProcess(p *Process, cmd *exec.Cmd, messageSockPair, l
 		container:       c,
 		process:         p,
 		bootstrapData:   data,
-		sharePidns:      !c.config.Namespaces.IsPrivate(configs.NEWPID),
 	}
 	c.initProcess = init
 	return init, nil
@@ -696,8 +709,7 @@ func (c *Container) newInitConfig(process *Process) *initConfig {
 	return cfg
 }
 
-// Destroy destroys the container, if its in a valid state, after killing any
-// remaining running processes.
+// Destroy destroys the container, if its in a valid state.
 //
 // Any event registrations are removed before the container is destroyed.
 // No error is returned if the container is already destroyed.
