@@ -184,7 +184,12 @@ function set_parent_systemd_properties() {
 }
 
 # Randomize cgroup path(s), and update cgroupsPath in config.json.
-# This function sets a few cgroup-related variables.
+# This function also sets a few cgroup-related variables that are used
+# by other cgroup-related functions.
+#
+# If this function is not called (and cgroupsPath is not set in config),
+# runc uses default container's cgroup path derived from the container's name
+# (except for rootless containers, that have no default cgroup path).
 #
 # Optional parameter $1 is a pod/parent name. If set, a parent/pod cgroup is
 # created, and variables $REL_PARENT_PATH and $SD_PARENT_NAME can be used to
