@@ -8,8 +8,9 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/seccomp"
 	"github.com/opencontainers/runc/libcontainer/specconv"
-	"github.com/opencontainers/runc/types/features"
+	runcfeatures "github.com/opencontainers/runc/types/features"
 	"github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/opencontainers/runtime-spec/specs-go/features"
 	"github.com/urfave/cli"
 )
 
@@ -33,9 +34,9 @@ var featuresCommand = cli.Command{
 			OCIVersionMin: "1.0.0",
 			OCIVersionMax: specs.Version,
 			Annotations: map[string]string{
-				features.AnnotationRuncVersion:           version,
-				features.AnnotationRuncCommit:            gitCommit,
-				features.AnnotationRuncCheckpointEnabled: "true",
+				runcfeatures.AnnotationRuncVersion:           version,
+				runcfeatures.AnnotationRuncCommit:            gitCommit,
+				runcfeatures.AnnotationRuncCheckpointEnabled: "true",
 			},
 			Hooks:        configs.KnownHookNames(),
 			MountOptions: specconv.KnownMountOptions(),
@@ -47,11 +48,15 @@ var featuresCommand = cli.Command{
 					V2:          &tru,
 					Systemd:     &tru,
 					SystemdUser: &tru,
+					Rdma:        &tru,
 				},
 				Apparmor: &features.Apparmor{
 					Enabled: &tru,
 				},
 				Selinux: &features.Selinux{
+					Enabled: &tru,
+				},
+				IntelRdt: &features.IntelRdt{
 					Enabled: &tru,
 				},
 			},
@@ -67,7 +72,7 @@ var featuresCommand = cli.Command{
 				SupportedFlags: seccomp.SupportedFlags(),
 			}
 			major, minor, patch := seccomp.Version()
-			feat.Annotations[features.AnnotationLibseccompVersion] = fmt.Sprintf("%d.%d.%d", major, minor, patch)
+			feat.Annotations[runcfeatures.AnnotationLibseccompVersion] = fmt.Sprintf("%d.%d.%d", major, minor, patch)
 		}
 
 		enc := json.NewEncoder(context.App.Writer)
