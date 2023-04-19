@@ -188,9 +188,12 @@ verify-dependencies: vendor
 		|| (echo -e "git status:\n $$(git status -- go.mod go.sum vendor/)\nerror: vendor/, go.mod and/or go.sum not up to date. Run \"make vendor\" to update"; exit 1) \
 		&& echo "all vendor files are up to date."
 
+validate-keyring:
+	script/keyring_validate.sh
+
 .PHONY: runc all recvtty sd-helper seccompagent static releaseall release \
 	localrelease dbuild lint man runcimage \
 	test localtest unittest localunittest integration localintegration \
 	rootlessintegration localrootlessintegration shell install install-bash \
 	install-man clean cfmt shfmt localshfmt shellcheck \
-	vendor verify-changelog verify-dependencies
+	vendor verify-changelog verify-dependencies validate-keyring
