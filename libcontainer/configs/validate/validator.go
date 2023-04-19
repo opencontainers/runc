@@ -23,7 +23,7 @@ func Validate(config *configs.Config) error {
 		cgroupsCheck,
 		rootfs,
 		network,
-		hostname,
+		uts,
 		security,
 		namespaces,
 		sysctl,
@@ -75,9 +75,12 @@ func network(config *configs.Config) error {
 	return nil
 }
 
-func hostname(config *configs.Config) error {
+func uts(config *configs.Config) error {
 	if config.Hostname != "" && !config.Namespaces.Contains(configs.NEWUTS) {
 		return errors.New("unable to set hostname without a private UTS namespace")
+	}
+	if config.Domainname != "" && !config.Namespaces.Contains(configs.NEWUTS) {
+		return errors.New("unable to set domainname without a private UTS namespace")
 	}
 	return nil
 }

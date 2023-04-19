@@ -82,13 +82,41 @@ func TestValidateHostname(t *testing.T) {
 	}
 }
 
-func TestValidateHostnameWithoutUTSNamespace(t *testing.T) {
+func TestValidateUTS(t *testing.T) {
+	config := &configs.Config{
+		Rootfs:     "/var",
+		Domainname: "runc",
+		Hostname:   "runc",
+		Namespaces: configs.Namespaces(
+			[]configs.Namespace{
+				{Type: configs.NEWUTS},
+			},
+		),
+	}
+
+	err := Validate(config)
+	if err != nil {
+		t.Errorf("Expected error to not occur: %+v", err)
+	}
+}
+
+func TestValidateUTSWithoutUTSNamespace(t *testing.T) {
 	config := &configs.Config{
 		Rootfs:   "/var",
 		Hostname: "runc",
 	}
 
 	err := Validate(config)
+	if err == nil {
+		t.Error("Expected error to occur but it was nil")
+	}
+
+	config = &configs.Config{
+		Rootfs:     "/var",
+		Domainname: "runc",
+	}
+
+	err = Validate(config)
 	if err == nil {
 		t.Error("Expected error to occur but it was nil")
 	}

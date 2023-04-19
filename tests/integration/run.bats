@@ -57,3 +57,22 @@ function teardown() {
 	runc state test_run_keep
 	[ "$status" -ne 0 ]
 }
+
+@test "runc run [hostname domainname]" {
+	update_config ' .process.args |= ["sh"]
+			| .hostname = "myhostname"
+			| .domainname= "mydomainname"'
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_utc
+	[ "$status" -eq 0 ]
+
+	# test hostname
+	runc exec test_utc hostname
+	[ "$status" -eq 0 ]
+	[[ "${lines[0]}" == *'myhostname'* ]]
+
+	# test domainname
+	runc exec test_utc cat /proc/sys/kernel/domainname
+	[ "$status" -eq 0 ]
+	[[ "${lines[0]}" == *'mydomainname'* ]]
+}
