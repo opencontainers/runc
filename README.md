@@ -15,6 +15,8 @@
 
 You can find official releases of `runc` on the [release](https://github.com/opencontainers/runc/releases) page.
 
+All releases are signed by one of the keys listed in the [`runc.keyring` file in the root of this repository](runc.keyring).
+
 ## Security
 
 The reporting process and disclosure communications are outlined [here](https://github.com/opencontainers/org/blob/master/SECURITY.md).
