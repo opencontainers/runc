@@ -8,6 +8,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"runtime"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -84,10 +85,30 @@ type initConfig struct {
 	Cgroup2Path      string                `json:"cgroup2_path,omitempty"`
 }
 
-// StartInitialization loads a container by opening the pipe fd from the parent
-// to read the configuration and state. This is a low level implementation
-// detail of the reexec and should not be consumed externally.
-func StartInitialization() (retErr error) {
+// Init is part of "runc init" implementation.
+func Init() {
+	runtime.GOMAXPROCS(1)
+	runtime.LockOSThread()
+
+	if err := startInitialization(); err != nil {
+		// If the error is returned, it was not communicated
+		// back to the parent (which is not a common case),
+		// so print it to stderr here as a last resort.
+		//
+		// Do not use logrus as we are not sure if it has been
+		// set up yet, but most important, if the parent is
+		// alive (and its log forwarding is working).
+		fmt.Fprintln(os.Stderr, err)
+	}
+	// Normally, StartInitialization() never returns, meaning
+	// if we are here, it had failed.
+	os.Exit(1)
+}
+
+// Normally, this function does not return. If it returns, with or without an
+// error, it means the initialization has failed. If the error is returned,
+// it means the error can not be communicated back to the parent.
+func startInitialization() (retErr error) {
 	// Get the INITPIPE.
 	envInitPipe := os.Getenv("_LIBCONTAINER_INITPIPE")
 	pipefd, err := strconv.Atoi(envInitPipe)
@@ -98,16 +119,18 @@ func StartInitialization() (retErr error) {
 	defer pipe.Close()
 
 	defer func() {
-		// We have an error during the initialization of the container's init,
-		// send it back to the parent process in the form of an initError.
+		// If this defer is ever called, this means initialization has failed.
+		// Send the error back to the parent process in the form of an initError.
 		if err := writeSync(pipe, procError); err != nil {
-			fmt.Fprintln(os.Stderr, retErr)
+			fmt.Fprintln(os.Stderr, err)
 			return
 		}
 		if err := utils.WriteJSON(pipe, &initError{Message: retErr.Error()}); err != nil {
-			fmt.Fprintln(os.Stderr, retErr)
+			fmt.Fprintln(os.Stderr, err)
 			return
 		}
+		// The error is sent, no need to also return it (or it will be reported twice).
+		retErr = nil
 	}()
 
 	// Set up logging. This is used rarely, and mostly for init debugging.
