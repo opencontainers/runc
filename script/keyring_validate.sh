@@ -34,8 +34,10 @@ trap 'rm -r "$tmp_gpgdir"' EXIT
 
 # Get the set of MAINTAINERS.
 readarray -t maintainers < <(sed -E 's|.* <.*> \(@?(.*)\)$|\1|' <"$root/MAINTAINERS")
+echo "------------------------------------------------------------"
 echo "$project maintainers:"
-printf "  %s\n" "${maintainers[@]}"
+printf " * %s\n" "${maintainers[@]}"
+echo "------------------------------------------------------------"
 
 # Create a dummy gpg keyring from the set of MAINTAINERS.
 while IFS="" read -r username || [ -n "$username" ]; do
@@ -58,6 +60,14 @@ awk <"$root/$project.keyring" '
 		}
 	}
 '
+
+echo "------------------------------------------------------------"
+echo "$project release managers:"
+sed -En "s|^Comment:.* github=(\w+).*| * \1|p" <"$root/$project.keyring" | sort -u
+echo "------------------------------------------------------------"
+gpg --no-default-keyring --keyring="$tmp_gpgdir/keyring" \
+	--import --import-options=show-only <"$root/$project.keyring"
+echo "------------------------------------------------------------"
 
 # Check that each entry in the kering is actually a maintainer's key.
 while IFS="" read -d $'\0' -r block || [ -n "$block" ]; do
@@ -91,7 +101,7 @@ while IFS="" read -d $'\0' -r block || [ -n "$block" ]; do
 	done < <(gpg --no-default-keyring \
 		--import --import-options=show-only --with-colons <<<"$block" |
 		grep "^$fprfield:" | cut -d: -f10)
-done < <(awk <"$project.keyring" '
+done < <(awk <"$root/$project.keyring" '
 	/^-----BEGIN PGP PUBLIC KEY BLOCK-----$/ { in_block=1 }
 	in_block { print }
 	/^-----END PGP PUBLIC KEY BLOCK-----$/   { in_block=0; printf("\0"); }
