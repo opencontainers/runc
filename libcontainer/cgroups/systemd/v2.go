@@ -214,7 +214,7 @@ func genV2ResourcesProperties(dirPath string, r *configs.Resources, cm *dbusConn
 	//       aren't the end of the world, but it is a bit concerning. However
 	//       it's unclear if systemd removes all eBPF programs attached when
 	//       doing SetUnitProperties...
-	deviceProperties, err := generateDeviceProperties(r)
+	deviceProperties, err := generateDeviceProperties(r, cm)
 	if err != nil {
 		return nil, err
 	}
