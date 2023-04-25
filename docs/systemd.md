@@ -104,6 +104,27 @@ The following tables summarize which properties are translated.
 For documentation on systemd unit resource properties, see
 `systemd.resource-control(5)` man page.
 
+### Device access rules
+
+Device access rules from the runtime spec are translated to systemd properties
+(`DevicePolicy` and `DeviceAllow`). Not all configurations are supported; in
+particular, the following can not be translated:
+ - blacklist-style rulesets;
+ - wildcard-major rules (meaning "all devices with any major number and the
+   given minor number").
+
+NOTE that systemd v240 or later is highly recommended, since older versions
+have limited ways to interpret `DeviceAllow` rules. When using systemd older
+than v240, the following limitations exist:
+
+ - it is not possible to add a rule for a device that does not have an
+   equivalent `/dev/{char,block}/<MAJOR>:<minor>` file on the host
+   (for example, this is the case for NVidia devices);
+ - adding a wildcard-minor rule (meaning "devices with the given major number
+   any any minor number") results in having a set of individual rules for
+   existing devices only, meaning that any devices that will appear after the
+   container start won't be accessible.
+
 ### Auxiliary properties
 
 Auxiliary properties of a systemd unit (as shown by `systemctl show
