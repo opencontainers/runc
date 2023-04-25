@@ -75,7 +75,7 @@ var legacySubsystems = []subsystem{
 func genV1ResourcesProperties(r *configs.Resources, cm *dbusConnManager) ([]systemdDbus.Property, error) {
 	var properties []systemdDbus.Property
 
-	deviceProperties, err := generateDeviceProperties(r)
+	deviceProperties, err := generateDeviceProperties(r, cm)
 	if err != nil {
 		return nil, err
 	}
