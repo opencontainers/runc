@@ -83,11 +83,12 @@ func systemdProperties(r *configs.Resources, sdVer int) ([]systemdDbus.Property,
 		//    cannot add whitelist rules for devices that don't exist. Since v240,
 		//    device properties are parsed from the path string.
 		//
-		//    However, path globbing is not support for path-based rules so we
+		//    However, path globbing is not supported for path-based rules so we
 		//    need to handle wildcards in some other manner.
 		//
-		//  * Wildcard-minor rules have to specify a "device group name" (the
-		//    second column in /proc/devices).
+		//  * If systemd older than v240 is used, wildcard-minor rules
+		//    have to specify a "device group name" (the second column
+		//    in /proc/devices).
 		//
 		//  * Wildcard (major and minor) rules can just specify a glob with the
 		//    type ("char-*" or "block-*").
@@ -110,17 +111,26 @@ func systemdProperties(r *configs.Resources, sdVer int) ([]systemdDbus.Property,
 			}
 			entry.Path = prefix + "*"
 		} else if rule.Minor == devices.Wildcard {
-			// "_ n:* _" rules require a device group from /proc/devices.
-			group, err := findDeviceGroup(rule.Type, rule.Major)
-			if err != nil {
-				return nil, fmt.Errorf("unable to find device '%v/%d': %w", rule.Type, rule.Major, err)
+			if sdVer >= 240 {
+				// systemd v240+ allows for {block,char}-MAJOR syntax.
+				prefix, err := groupPrefix(rule.Type)
+				if err != nil {
+					return nil, err
+				}
+				entry.Path = prefix + strconv.FormatInt(rule.Major, 10)
+			} else {
+				// For older systemd, "_ n:* _" rules require a device group from /proc/devices.
+				group, err := findDeviceGroup(rule.Type, rule.Major)
+				if err != nil {
+					return nil, fmt.Errorf("unable to find device '%v/%d': %w", rule.Type, rule.Major, err)
+				}
+				if group == "" {
+					// Couldn't find a group.
+					logrus.Warnf("could not find device group for '%v/%d' in /proc/devices -- temporarily ignoring rule: %v", rule.Type, rule.Major, *rule)
+					continue
+				}
+				entry.Path = group
 			}
-			if group == "" {
-				// Couldn't find a group.
-				logrus.Warnf("could not find device group for '%v/%d' in /proc/devices -- temporarily ignoring rule: %v", rule.Type, rule.Major, *rule)
-				continue
-			}
-			entry.Path = group
 		} else {
 			// "_ n:m _" rules are just a path in /dev/{block,char}/.
 			switch rule.Type {
