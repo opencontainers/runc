@@ -38,7 +38,7 @@ var (
 	// [github.com/opencontainers/runc/libcontainer/cgroups/devices]
 	// package is imported, it is set to nil, so cgroup managers can't
 	// configure devices.
-	GenerateDeviceProps func(r *configs.Resources, sdVer int) ([]systemdDbus.Property, error)
+	GenerateDeviceProps func(r *configs.Resources, sdVer, cgroupVer int) ([]systemdDbus.Property, error)
 )
 
 // NOTE: This function comes from package github.com/coreos/go-systemd/util
@@ -351,7 +351,7 @@ func addCpuset(cm *dbusConnManager, props *[]systemdDbus.Property, cpus, mems st
 
 // generateDeviceProperties takes the configured device rules and generates a
 // corresponding set of systemd properties to configure the devices correctly.
-func generateDeviceProperties(r *configs.Resources, cm *dbusConnManager) ([]systemdDbus.Property, error) {
+func generateDeviceProperties(r *configs.Resources, cm *dbusConnManager, cgroupVersion int) ([]systemdDbus.Property, error) {
 	if GenerateDeviceProps == nil {
 		if len(r.Devices) > 0 {
 			return nil, cgroups.ErrDevicesUnsupported
@@ -359,5 +359,5 @@ func generateDeviceProperties(r *configs.Resources, cm *dbusConnManager) ([]syst
 		return nil, nil
 	}
 
-	return GenerateDeviceProps(r, systemdVersion(cm))
+	return GenerateDeviceProps(r, systemdVersion(cm), cgroupVersion)
 }
