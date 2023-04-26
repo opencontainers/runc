@@ -184,14 +184,18 @@ func (m *Manager) Set(r *cgroups.Resources) error {
 	if err := setCPU(m.dirPath, r); err != nil {
 		return err
 	}
-	// devices (since kernel 4.15, pseudo-controller)
-	//
-	// When rootless is true, errors from the device subsystem are ignored because it is really not expected to work.
-	// However, errors from other subsystems are not ignored.
-	// see @test "runc create (rootless + limits + no cgrouppath + no permission) fails with informative error"
-	if err := setDevices(m.dirPath, r); err != nil {
-		if !m.config.Rootless || errors.Is(err, cgroups.ErrDevicesUnsupported) {
-			return err
+	// When systemd is used, we do not add a second BPF_CGROUP_DEVICE program,
+	// relying on systemd to set all the device rules (see systemdProperties
+	// in libcontainer/cgroups/devices/systemd.go).
+	if !m.config.Systemd {
+		// Devices (since kernel 4.15, pseudo-controller).
+		if err := setDevices(m.dirPath, r); err != nil {
+			// When rootless is true, errors from the device subsystem are ignored because it is
+			// really not expected to work. However, errors from other subsystems are not ignored.
+			// See @test "runc create (rootless + limits + no cgrouppath + no permission) fails with informative error".
+			if !m.config.Rootless || errors.Is(err, cgroups.ErrDevicesUnsupported) {
+				return err
+			}
 		}
 	}
 	// cpuset (since kernel 5.0)
