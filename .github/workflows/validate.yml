@@ -11,6 +11,12 @@ env:
   GO_VERSION: 1.19.x
 
 jobs:
+  keyring:
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v3
+    - name: check runc.keyring
+      run: make validate-keyring
 
   lint:
     runs-on: ubuntu-20.04
