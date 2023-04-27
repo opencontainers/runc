@@ -6,6 +6,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased 1.1.z]
 
+## [1.1.7] - 2023-04-26
+
+> Ночевала тучка золотая на груди утеса-великана.
+
+### Fixed
+
+* When used with systemd v240+, systemd cgroup drivers no longer skip
+  `DeviceAllow` rules if the device does not exist (a regression introduced
+  in runc 1.1.3). This fix also reverts the workaround added in runc 1.1.5,
+  removing an extra warning emitted by runc run/start. (#3845, #3708, #3671)
+
+### Added
+
+* The source code now has a new file, `runc.keyring`, which contains the keys
+  used to sign runc releases. (#3838)
+
 ## [1.1.6] - 2023-04-11
 
 > In this world nothing is certain but death and taxes.
@@ -394,7 +410,8 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.0.1]: https://github.com/opencontainers/runc/compare/v1.0.0...v1.0.1
 
 <!-- 1.1.z patch releases -->
-[Unreleased 1.1.z]: https://github.com/opencontainers/runc/compare/v1.1.6...release-1.1
+[Unreleased 1.1.z]: https://github.com/opencontainers/runc/compare/v1.1.7...release-1.1
+[1.1.7]: https://github.com/opencontainers/runc/compare/v1.1.6...v1.1.7
 [1.1.6]: https://github.com/opencontainers/runc/compare/v1.1.5...v1.1.6
 [1.1.5]: https://github.com/opencontainers/runc/compare/v1.1.4...v1.1.5
 [1.1.4]: https://github.com/opencontainers/runc/compare/v1.1.3...v1.1.4
