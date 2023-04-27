@@ -76,7 +76,7 @@ jobs:
     - name: install bats
       uses: mig4/setup-bats@v1
       with:
-        bats-version: 1.8.2
+        bats-version: 1.9.0
 
     - name: unit test
       if: matrix.rootless != 'rootless'
