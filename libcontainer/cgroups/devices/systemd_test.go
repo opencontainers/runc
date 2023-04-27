@@ -2,6 +2,7 @@ package devices
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"os/exec"
 	"strings"
@@ -238,6 +239,32 @@ func TestSkipDevicesFalse(t *testing.T) {
 		"/dev/full: Operation not permitted",
 		"cat: /dev/null: Operation not permitted",
 	})
+}
+
+func testFindDeviceGroup() error {
+	const (
+		major = 136
+		group = "char-pts"
+	)
+	res, err := findDeviceGroup(devices.CharDevice, major)
+	if res != group || err != nil {
+		return fmt.Errorf("expected %v, nil, got %v, %w", group, res, err)
+	}
+	return nil
+}
+
+func TestFindDeviceGroup(t *testing.T) {
+	if err := testFindDeviceGroup(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func BenchmarkFindDeviceGroup(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		if err := testFindDeviceGroup(); err != nil {
+			b.Fatal(err)
+		}
+	}
 }
 
 func newManager(t *testing.T, config *configs.Cgroup) (m cgroups.Manager) {
