@@ -3,3 +3,8 @@ coverage.txt
 node_modules/
 vendor
 .idea
+/.local/
+/internal/
+/site/
+package.json
+package-lock.json
