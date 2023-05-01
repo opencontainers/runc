@@ -17,7 +17,7 @@ require (
 	github.com/seccomp/libseccomp-golang v0.10.0
 	github.com/sirupsen/logrus v1.9.0
 	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635
-	github.com/urfave/cli v1.22.9
+	github.com/urfave/cli v1.22.12
 	github.com/vishvananda/netlink v1.1.0
 	golang.org/x/net v0.9.0
 	golang.org/x/sys v0.7.0

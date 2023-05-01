@@ -57,7 +57,7 @@ github.com/sirupsen/logrus/hooks/test
 # github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635
 ## explicit
 github.com/syndtr/gocapability/capability
-# github.com/urfave/cli v1.22.9
+# github.com/urfave/cli v1.22.12
 ## explicit; go 1.11
 github.com/urfave/cli
 # github.com/vishvananda/netlink v1.1.0
