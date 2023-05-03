@@ -11,9 +11,9 @@ When creating a container, runc requests systemd (over dbus) to create
 a transient unit for the container, and place it into a specified slice.
 
 The name of the unit and the containing slice is derived from the container
-runtime spec in the following way:
+[runtime spec] in the following way:
 
-1. If `Linux.CgroupsPath` is set, it is expected to be in the form
+1. If [Linux.CgroupsPath] is set, it is expected to be in the form
    `[slice]:[prefix]:[name]`.
 
    Here `slice` is a systemd slice under which the container is placed.
@@ -32,7 +32,7 @@ runtime spec in the following way:
    is `<prefix>-<name>.scope`, unless `name` has `.slice` suffix, in
    which case `prefix` is ignored and the `name` is used as is.
 
-2. If `Linux.CgroupsPath` is not set or empty, it works the same way as if it
+2. If [Linux.CgroupsPath] is not set or empty, it works the same way as if it
    would be set to `:runc:<container-id>`. See the description above to see
    what it transforms to.
 
@@ -102,7 +102,7 @@ The following tables summarize which properties are translated.
 | unified.pids.max        | TasksMax              |                     |
 
 For documentation on systemd unit resource properties, see
-`systemd.resource-control(5)` man page.
+[systemd.resource-control(5)] man page.
 
 ### Auxiliary properties
 
@@ -129,3 +129,7 @@ The values must be in the gvariant text format, as described in
 
 To find out which type systemd expects for a particular parameter, please
 consult systemd sources.
+
+[runtime spec]: https://github.com/opencontainers/runtime-spec/blob/main/spec.md
+[Linux.CgroupsPath]: https://github.com/opencontainers/runtime-spec/blob/main/config-linux.md#cgroups-path
+[systemd.resource-control(5)]: https://www.freedesktop.org/software/systemd/man/systemd.resource-control.html
