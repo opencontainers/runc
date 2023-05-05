@@ -3,10 +3,10 @@ package configs
 import "errors"
 
 var (
-	errNoUIDMap   = errors.New("User namespaces enabled, but no uid mappings found.")
-	errNoUserMap  = errors.New("User namespaces enabled, but no user mapping found.")
-	errNoGIDMap   = errors.New("User namespaces enabled, but no gid mappings found.")
-	errNoGroupMap = errors.New("User namespaces enabled, but no group mapping found.")
+	errNoUIDMap   = errors.New("user namespaces enabled, but no uid mappings found")
+	errNoUserMap  = errors.New("user namespaces enabled, but no user mapping found")
+	errNoGIDMap   = errors.New("user namespaces enabled, but no gid mappings found")
+	errNoGroupMap = errors.New("user namespaces enabled, but no group mapping found")
 )
 
 // HostUID gets the translated uid for the process on host which could be

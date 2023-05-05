@@ -189,7 +189,7 @@ var (
 	// For Intel RDT initialization
 	initOnce sync.Once
 
-	errNotFound = errors.New("Intel RDT not available")
+	errNotFound = errors.New("Intel RDT not available") //nolint:stylecheck // Intel is a proper noun.
 )
 
 // Check if Intel RDT sub-features are enabled in featuresInit()

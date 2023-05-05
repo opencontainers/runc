@@ -104,7 +104,7 @@ func (s *FreezerGroup) Set(path string, r *configs.Resources) (Err error) {
 	case configs.Undefined:
 		return nil
 	default:
-		return fmt.Errorf("Invalid argument '%s' to freezer.state", string(r.Freezer))
+		return fmt.Errorf("invalid argument %q to freezer.state", string(r.Freezer))
 	}
 }
 

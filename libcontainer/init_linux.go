@@ -559,11 +559,11 @@ func setupRoute(config *configs.Config) error {
 		}
 		src := net.ParseIP(config.Source)
 		if src == nil {
-			return fmt.Errorf("Invalid source for route: %s", config.Source)
+			return fmt.Errorf("invalid source for route: %s", config.Source)
 		}
 		gw := net.ParseIP(config.Gateway)
 		if gw == nil {
-			return fmt.Errorf("Invalid gateway for route: %s", config.Gateway)
+			return fmt.Errorf("invalid gateway for route: %s", config.Gateway)
 		}
 		l, err := netlink.LinkByName(config.InterfaceName)
 		if err != nil {

@@ -315,10 +315,10 @@ func validateProcessSpec(spec *specs.Process) error {
 		return errors.New("process property must not be empty")
 	}
 	if spec.Cwd == "" {
-		return errors.New("Cwd property must not be empty")
+		return errors.New("cwd property must not be empty")
 	}
 	if !filepath.IsAbs(spec.Cwd) {
-		return errors.New("Cwd must be an absolute path")
+		return errors.New("cwd must be an absolute path")
 	}
 	if len(spec.Args) == 0 {
 		return errors.New("args must not be empty")

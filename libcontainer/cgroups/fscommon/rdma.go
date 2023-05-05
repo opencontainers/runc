@@ -20,7 +20,7 @@ func parseRdmaKV(raw string, entry *cgroups.RdmaEntry) error {
 	parts := strings.SplitN(raw, "=", 3)
 
 	if len(parts) != 2 {
-		return errors.New("Unable to parse RDMA entry")
+		return errors.New("unable to parse RDMA entry")
 	}
 
 	k, v := parts[0], parts[1]

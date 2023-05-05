@@ -13,3 +13,9 @@ linters:
   enable:
     - godot
     - revive
+    - stylecheck
+
+linters-settings:
+  stylecheck:
+    # Enable warnings disabled in .golangci.yml.
+    checks: ["ST1003", "ST1016"]

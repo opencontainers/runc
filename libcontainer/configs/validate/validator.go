@@ -96,7 +96,7 @@ func namespaces(config *configs.Config) error {
 		}
 	} else {
 		if config.UIDMappings != nil || config.GIDMappings != nil {
-			return errors.New("User namespace mappings specified, but USER namespace isn't enabled in the config")
+			return errors.New("user namespace mappings specified, but USER namespace isn't enabled in the config")
 		}
 	}
 

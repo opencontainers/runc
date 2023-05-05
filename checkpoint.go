@@ -60,7 +60,7 @@ checkpointed.`,
 			return err
 		}
 		if status == libcontainer.Created || status == libcontainer.Stopped {
-			return fmt.Errorf("Container cannot be checkpointed in %s state", status.String())
+			return fmt.Errorf("container cannot be checkpointed in %s state", status.String())
 		}
 		options, err := criuOptions(context)
 		if err != nil {
@@ -137,11 +137,11 @@ func criuOptions(context *cli.Context) (*libcontainer.CriuOpts, error) {
 		address, port, err := net.SplitHostPort(psOpt)
 
 		if err != nil || address == "" || port == "" {
-			return nil, errors.New("Use --page-server ADDRESS:PORT to specify page server")
+			return nil, errors.New("use --page-server ADDRESS:PORT to specify page server")
 		}
 		portInt, err := strconv.Atoi(port)
 		if err != nil {
-			return nil, errors.New("Invalid port number")
+			return nil, errors.New("invalid port number")
 		}
 		opts.PageServer = libcontainer.CriuPageServerInfo{
 			Address: address,
@@ -161,7 +161,7 @@ func criuOptions(context *cli.Context) (*libcontainer.CriuOpts, error) {
 	case "ignore":
 		opts.ManageCgroupsMode = criu.CriuCgMode_IGNORE
 	default:
-		return nil, errors.New("Invalid manage-cgroups-mode value")
+		return nil, errors.New("invalid manage-cgroups-mode value")
 	}
 
 	// runc doesn't manage network devices and their configuration.

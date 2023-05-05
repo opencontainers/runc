@@ -89,7 +89,7 @@ created by an unprivileged user.
 		checkNoFile := func(name string) error {
 			_, err := os.Stat(name)
 			if err == nil {
-				return fmt.Errorf("File %s exists. Remove it first", name)
+				return fmt.Errorf("file %s exists; remove it first", name)
 			}
 			if !os.IsNotExist(err) {
 				return err

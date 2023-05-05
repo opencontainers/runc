@@ -1035,7 +1035,7 @@ func (c *Container) handleRestoringNamespaces(rpcOpts *criurpc.CriuOpts, extraFi
 			}
 			if ns.Type == configs.NEWCGROUP {
 				// CRIU has no code to handle NEWCGROUP
-				return fmt.Errorf("Do not know how to handle namespace %v", ns.Type)
+				return fmt.Errorf("do not know how to handle namespace %v", ns.Type)
 			}
 			// CRIU has code to handle NEWTIME, but it does not seem to be defined in runc
 
@@ -1067,7 +1067,7 @@ func (c *Container) handleRestoringExternalNamespaces(rpcOpts *criurpc.CriuOpts,
 	nsFd, err := os.Open(nsPath)
 	if err != nil {
 		logrus.Errorf("If a specific network namespace is defined it must exist: %s", err)
-		return fmt.Errorf("Requested network namespace %v does not exist", nsPath)
+		return fmt.Errorf("requested network namespace %v does not exist", nsPath)
 	}
 	inheritFd := &criurpc.InheritFd{
 		Key: proto.String(criuNsToKey(t)),

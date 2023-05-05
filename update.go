@@ -317,10 +317,12 @@ other options are ignored.
 		l3CacheSchema := context.String("l3-cache-schema")
 		memBwSchema := context.String("mem-bw-schema")
 		if l3CacheSchema != "" && !intelrdt.IsCATEnabled() {
+			//nolint:stylecheck // Intel is a proper noun.
 			return errors.New("Intel RDT/CAT: l3 cache schema is not enabled")
 		}
 
 		if memBwSchema != "" && !intelrdt.IsMBAEnabled() {
+			//nolint:stylecheck // Intel is a proper noun.
 			return errors.New("Intel RDT/MBA: memory bandwidth schema is not enabled")
 		}
 

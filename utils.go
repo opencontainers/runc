@@ -114,7 +114,7 @@ func reviseRootDir(context *cli.Context) error {
 		//  - "." (and the CWD is /);
 		//  - "../../.." (enough to get to /);
 		//  - "/" (the actual /).
-		return errors.New("Option --root argument should not be set to /")
+		return errors.New("option --root argument should not be set to /")
 	}
 
 	return context.GlobalSet("root", root)

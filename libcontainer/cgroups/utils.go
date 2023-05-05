@@ -290,7 +290,7 @@ func RemovePaths(paths map[string]string) (err error) {
 			return nil
 		}
 	}
-	return fmt.Errorf("Failed to remove paths: %v", paths)
+	return fmt.Errorf("failed to remove paths: %v", paths)
 }
 
 var (

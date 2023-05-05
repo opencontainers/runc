@@ -30,7 +30,7 @@ func ModKeyringPerm(ringID KeySerial, mask, setbits uint32) error {
 
 	res := strings.Split(dest, ";")
 	if len(res) < 5 {
-		return errors.New("Destination buffer for key description is too small")
+		return errors.New("destination buffer for key description is too small")
 	}
 
 	// parse permissions
