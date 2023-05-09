@@ -1277,9 +1277,8 @@ func (c *Container) makeCriuRestoreMountpoints(m *configs.Mount) error {
 	case "bind":
 		// The prepareBindMount() function checks if source
 		// exists. So it cannot be used for other filesystem types.
-		// TODO: pass something else than nil? Not sure if criu is
-		// impacted by issue #2484
-		if err := prepareBindMount(m, c.config.Rootfs, nil); err != nil {
+		// TODO: pass srcFD? Not sure if criu is impacted by issue #2484.
+		if err := prepareBindMount(mountEntry{Mount: m}, c.config.Rootfs); err != nil {
 			return err
 		}
 	default:
@@ -1357,8 +1356,8 @@ func (c *Container) prepareCriuRestoreMounts(mounts []*configs.Mount) error {
 			// because during initial container creation mounts are
 			// set up in the order they are configured.
 			if m.Device == "bind" {
-				if err := utils.WithProcfd(c.config.Rootfs, m.Destination, func(procfd string) error {
-					if err := mount(m.Source, m.Destination, procfd, "", unix.MS_BIND|unix.MS_REC, ""); err != nil {
+				if err := utils.WithProcfd(c.config.Rootfs, m.Destination, func(dstFD string) error {
+					if err := mountViaFDs(m.Source, "", m.Destination, dstFD, "", unix.MS_BIND|unix.MS_REC, ""); err != nil {
 						return err
 					}
 					return nil
@@ -1411,7 +1410,7 @@ func (c *Container) Restore(process *Process, criuOpts *CriuOpts) error {
 	if err != nil {
 		return err
 	}
-	err = mount(c.config.Rootfs, root, "", "", unix.MS_BIND|unix.MS_REC, "")
+	err = mount(c.config.Rootfs, root, "", unix.MS_BIND|unix.MS_REC, "")
 	if err != nil {
 		return err
 	}
