@@ -175,6 +175,7 @@ func createContainer(context *cli.Context, id string, spec *specs.Spec) (*libcon
 		Spec:             spec,
 		RootlessEUID:     os.Geteuid() != 0,
 		RootlessCgroups:  rootlessCg,
+		NoMountFallback:  context.Bool("no-mount-fallback"),
 	})
 	if err != nil {
 		return nil, err
