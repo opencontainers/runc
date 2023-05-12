@@ -577,6 +577,17 @@ func setupRlimits(limits []configs.Rlimit, pid int) error {
 // signalAllProcesses freezes then iterates over all the processes inside the
 // manager's cgroups sending the signal s to them.
 func signalAllProcesses(m cgroups.Manager, s unix.Signal) error {
+	// Use cgroup.kill, if available.
+	if s == unix.SIGKILL {
+		if p := m.Path(""); p != "" { // Either cgroup v2 or hybrid.
+			err := cgroups.WriteFile(p, "cgroup.kill", "1")
+			if err == nil || !errors.Is(err, os.ErrNotExist) {
+				return err
+			}
+			// Fallback to old implementation.
+		}
+	}
+
 	if err := m.Freeze(configs.Frozen); err != nil {
 		logrus.Warn(err)
 	}
