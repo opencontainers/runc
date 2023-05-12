@@ -31,3 +31,15 @@ func (n *Namespaces) CloneFlags() uintptr {
 	}
 	return uintptr(flag)
 }
+
+// IsPrivate tells whether the namespace of type t is configured as private
+// (i.e. it exists and is not shared).
+func (n Namespaces) IsPrivate(t NamespaceType) bool {
+	for _, v := range n {
+		if v.Type == t {
+			return v.Path == ""
+		}
+	}
+	// Not found, so implicitly sharing a parent namespace.
+	return false
+}

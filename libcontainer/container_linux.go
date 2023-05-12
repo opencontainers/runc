@@ -549,7 +549,6 @@ func (c *Container) newInitProcess(p *Process, cmd *exec.Cmd, messageSockPair, l
 			nsMaps[ns.Type] = ns.Path
 		}
 	}
-	_, sharePidns := nsMaps[configs.NEWPID]
 	data, err := c.bootstrapData(c.config.Namespaces.CloneFlags(), nsMaps, initStandard)
 	if err != nil {
 		return nil, err
@@ -594,7 +593,7 @@ func (c *Container) newInitProcess(p *Process, cmd *exec.Cmd, messageSockPair, l
 		container:       c,
 		process:         p,
 		bootstrapData:   data,
-		sharePidns:      sharePidns,
+		sharePidns:      !c.config.Namespaces.IsPrivate(configs.NEWPID),
 	}
 	c.initProcess = init
 	return init, nil

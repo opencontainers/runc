@@ -1355,16 +1355,26 @@ func TestPIDHost(t *testing.T) {
 	}
 }
 
-func TestPIDHostInitProcessWait(t *testing.T) {
+func TestHostPidnsInitKill(t *testing.T) {
+	config := newTemplateConfig(t, nil)
+	// Implicitly use host pid ns.
+	config.Namespaces.Remove(configs.NEWPID)
+	testPidnsInitKill(t, config)
+}
+
+func TestSharedPidnsInitKill(t *testing.T) {
+	config := newTemplateConfig(t, nil)
+	// Explicitly use host pid ns.
+	config.Namespaces.Add(configs.NEWPID, "/proc/1/ns/pid")
+	testPidnsInitKill(t, config)
+}
+
+func testPidnsInitKill(t *testing.T, config *configs.Config) {
 	if testing.Short() {
 		return
 	}
 
-	pidns := "/proc/1/ns/pid"
-
 	// Run a container with two long-running processes.
-	config := newTemplateConfig(t, nil)
-	config.Namespaces.Add(configs.NEWPID, pidns)
 	container, err := newContainer(t, config)
 	ok(t, err)
 	defer func() {
