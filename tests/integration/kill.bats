@@ -22,7 +22,12 @@ function teardown() {
 	[ "$status" -eq 0 ]
 	wait_for_container 10 1 test_busybox stopped
 
-	# we should ensure kill work after the container stopped
+	# Check that kill errors on a stopped container.
+	runc kill test_busybox 0
+	[ "$status" -ne 0 ]
+	[[ "$output" == *"container not running"* ]]
+
+	# Check that -a (now obsoleted) makes kill return no error for a stopped container.
 	runc kill -a test_busybox 0
 	[ "$status" -eq 0 ]
 
@@ -31,7 +36,7 @@ function teardown() {
 }
 
 # This is roughly the same as TestPIDHostInitProcessWait in libcontainer/integration.
-@test "kill --all KILL [host pidns]" {
+@test "kill KILL [host pidns]" {
 	# kill -a currently requires cgroup freezer.
 	requires cgroups_freezer
 
@@ -65,7 +70,7 @@ function teardown() {
 		kill -0 "$p"
 	done
 
-	runc kill -a test_busybox KILL
+	runc kill test_busybox KILL
 	[ "$status" -eq 0 ]
 	wait_for_container 10 1 test_busybox stopped
 

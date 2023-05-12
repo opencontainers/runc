@@ -1400,7 +1400,7 @@ func testPidnsInitKill(t *testing.T, config *configs.Config) {
 	ok(t, err)
 
 	// Kill the container.
-	err = container.Signal(syscall.SIGKILL, false)
+	err = container.Signal(syscall.SIGKILL)
 	ok(t, err)
 	_, err = process1.Wait()
 	if err == nil {

@@ -357,32 +357,18 @@ func (c *Container) start(process *Process) (retErr error) {
 	return nil
 }
 
-// Signal sends a specified signal to container's init, or, if all is true,
-// to all container's processes (as determined by container's cgroup).
+// Signal sends a specified signal to container's init.
 //
-// Note all=true is implied when s is SIGKILL and the container does not have
-// its own PID namespace. In this scenario, the libcontainer user may be required
-// to implement a proper child reaper.
-func (c *Container) Signal(s os.Signal, all bool) error {
+// When s is SIGKILL and the container does not have its own PID namespace, all
+// the container's processes are killed. In this scenario, the libcontainer
+// user may be required to implement a proper child reaper.
+func (c *Container) Signal(s os.Signal) error {
 	c.m.Lock()
 	defer c.m.Unlock()
 	status, err := c.currentStatus()
 	if err != nil {
 		return err
 	}
-	if all {
-		sig, ok := s.(unix.Signal)
-		if !ok {
-			return errors.New("unsupported signal type")
-		}
-		if status == Stopped && !c.cgroupManager.Exists() {
-			// Avoid calling signalAllProcesses which may print
-			// a warning trying to freeze a non-existing cgroup.
-			return nil
-		}
-		return c.ignoreCgroupError(signalAllProcesses(c.cgroupManager, sig))
-	}
-
 	// To avoid a PID reuse attack, don't kill non-running container.
 	switch status {
 	case Running, Created, Paused:

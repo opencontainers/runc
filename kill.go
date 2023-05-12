@@ -1,10 +1,12 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 
+	"github.com/opencontainers/runc/libcontainer"
 	"github.com/urfave/cli"
 	"golang.org/x/sys/unix"
 )
@@ -24,8 +26,9 @@ signal to the init process of the "ubuntu01" container:
        # runc kill ubuntu01 KILL`,
 	Flags: []cli.Flag{
 		cli.BoolFlag{
-			Name:  "all, a",
-			Usage: "send the specified signal to all processes inside the container",
+			Name:   "all, a",
+			Usage:  "(obsoleted, do not use)",
+			Hidden: true,
 		},
 	},
 	Action: func(context *cli.Context) error {
@@ -49,7 +52,11 @@ signal to the init process of the "ubuntu01" container:
 		if err != nil {
 			return err
 		}
-		return container.Signal(signal, context.Bool("all"))
+		err = container.Signal(signal)
+		if errors.Is(err, libcontainer.ErrNotRunning) && context.Bool("all") {
+			err = nil
+		}
+		return err
 	},
 }
 
