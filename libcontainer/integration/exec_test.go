@@ -1373,7 +1373,7 @@ func TestPIDHostInitProcessWait(t *testing.T) {
 
 	process1 := &libcontainer.Process{
 		Cwd:  "/",
-		Args: []string{"sleep", "100"},
+		Args: []string{"sleep", "1h"},
 		Env:  standardEnvironment,
 		Init: true,
 	}
@@ -1382,7 +1382,7 @@ func TestPIDHostInitProcessWait(t *testing.T) {
 
 	process2 := &libcontainer.Process{
 		Cwd:  "/",
-		Args: []string{"sleep", "100"},
+		Args: []string{"sleep", "1h"},
 		Env:  standardEnvironment,
 		Init: false,
 	}
@@ -1397,10 +1397,11 @@ func TestPIDHostInitProcessWait(t *testing.T) {
 		t.Fatal("expected Wait to indicate failure")
 	}
 
-	// The non-init process must've been killed.
-	err = process2.Signal(syscall.Signal(0))
-	if err == nil || err.Error() != "no such process" {
-		t.Fatalf("expected process to have been killed: %v", err)
+	// The non-init process must've also been killed. If not,
+	// the test will time out.
+	_, err = process2.Wait()
+	if err == nil {
+		t.Fatal("expected Wait to indicate failure")
 	}
 }
 
