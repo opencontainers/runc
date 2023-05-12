@@ -539,8 +539,9 @@ func (c *Container) newInitProcess(p *Process, cmd *exec.Cmd, messageSockPair, l
 			nsMaps[ns.Type] = ns.Path
 		}
 	}
-	_, sharePidns := nsMaps[configs.NEWPID]
-	data, err := c.bootstrapData(c.config.Namespaces.CloneFlags(), nsMaps, initStandard)
+	cloneFlags := c.config.Namespaces.CloneFlags()
+	sharePidns := cloneFlags&unix.CLONE_NEWPID == 0
+	data, err := c.bootstrapData(cloneFlags, nsMaps, initStandard)
 	if err != nil {
 		return nil, err
 	}
