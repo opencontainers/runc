@@ -1134,10 +1134,10 @@ func (c *Container) criuNotifications(resp *criurpc.CriuResp, process *Process, 
 			}
 			s.Pid = int(notify.GetPid())
 
-			if err := c.config.Hooks[configs.Prestart].RunHooks(s); err != nil {
+			if err := c.config.Hooks.Run(configs.Prestart, s); err != nil {
 				return err
 			}
-			if err := c.config.Hooks[configs.CreateRuntime].RunHooks(s); err != nil {
+			if err := c.config.Hooks.Run(configs.CreateRuntime, s); err != nil {
 				return err
 			}
 		}
