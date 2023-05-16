@@ -10,15 +10,25 @@ import (
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 )
 
-func statPSI(dirPath string, file string, stats *cgroups.PSIStats) error {
+func statPSI(dirPath string, file string, stats *cgroups.Stats) error {
 	if stats == nil {
-		return fmt.Errorf("invalid PSIStats pointer is nil")
+		return fmt.Errorf("invalid Stats pointer is nil")
 	}
 	f, err := cgroups.OpenFile(dirPath, file, os.O_RDONLY)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
+
+	var psistats *cgroups.PSIStats
+	switch file {
+	case "cpu.pressure":
+		psistats = &stats.CpuStats.PSI
+	case "memory.pressure":
+		psistats = &stats.MemoryStats.PSI
+	case "io.pressure":
+		psistats = &stats.BlkioStats.PSI
+	}
 
 	sc := bufio.NewScanner(f)
 	for sc.Scan() {
@@ -29,13 +39,13 @@ func statPSI(dirPath string, file string, stats *cgroups.PSIStats) error {
 			if err != nil {
 				return err
 			}
-			stats.Some = data
+			psistats.Some = *data
 		case "full":
 			data, err := parsePSIData(parts[1:])
 			if err != nil {
 				return err
 			}
-			stats.Full = data
+			psistats.Full = *data
 		}
 	}
 	if err := sc.Err(); err != nil {
@@ -58,12 +68,7 @@ func setFloat(s string, f *float64) error {
 }
 
 func parsePSIData(psi []string) (*cgroups.PSIData, error) {
-	data := cgroups.PSIData{
-		Avg10:  new(float64),
-		Avg60:  new(float64),
-		Avg300: new(float64),
-		Total:  new(uint64),
-	}
+	data := cgroups.PSIData{}
 	for _, f := range psi {
 		kv := strings.SplitN(f, "=", 2)
 		if len(kv) != 2 {
@@ -71,15 +76,15 @@ func parsePSIData(psi []string) (*cgroups.PSIData, error) {
 		}
 		switch kv[0] {
 		case "avg10":
-			if err := setFloat(kv[1], data.Avg10); err != nil {
+			if err := setFloat(kv[1], &data.Avg10); err != nil {
 				return nil, err
 			}
 		case "avg60":
-			if err := setFloat(kv[1], data.Avg60); err != nil {
+			if err := setFloat(kv[1], &data.Avg60); err != nil {
 				return nil, err
 			}
 		case "avg300":
-			if err := setFloat(kv[1], data.Avg300); err != nil {
+			if err := setFloat(kv[1], &data.Avg300); err != nil {
 				return nil, err
 			}
 		case "total":
@@ -87,7 +92,7 @@ func parsePSIData(psi []string) (*cgroups.PSIData, error) {
 			if err != nil {
 				return nil, fmt.Errorf("invalid PSI value: %q", f)
 			}
-			data.Total = &v
+			data.Total = v
 		}
 	}
 	return &data, nil

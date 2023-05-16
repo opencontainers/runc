@@ -112,14 +112,6 @@ information is displayed once every 5 seconds.`,
 }
 
 func convertPSI(from *cgroups.PSIData, to *cgroups.PSIData) {
-	if from == nil {
-		println("from is nil")
-		return
-	}
-	if to == nil {
-		println("to is nil")
-		return
-	}
 	to.Avg10 = from.Avg10
 	to.Avg60 = from.Avg60
 	to.Avg300 = from.Avg300
@@ -144,13 +136,8 @@ func convertLibcontainerStats(ls *libcontainer.Stats) *types.Stats {
 	s.CPU.Throttling.Periods = cg.CpuStats.ThrottlingData.Periods
 	s.CPU.Throttling.ThrottledPeriods = cg.CpuStats.ThrottlingData.ThrottledPeriods
 	s.CPU.Throttling.ThrottledTime = cg.CpuStats.ThrottlingData.ThrottledTime
-	if s.CPU.PSI == nil {
-		s.CPU.PSI = &types.PSIStats{}
-	}
-	if cg.CpuStats.PSI != nil {
-		convertPSI(cg.CpuStats.PSI.Some, s.CPU.PSI.Some)
-		convertPSI(cg.CpuStats.PSI.Full, s.CPU.PSI.Full)
-	}
+	convertPSI(&cg.CpuStats.PSI.Some, &s.CPU.PSI.Some)
+	convertPSI(&cg.CpuStats.PSI.Full, &s.CPU.PSI.Full)
 
 	s.CPUSet = types.CPUSet(cg.CPUSetStats)
 
@@ -160,13 +147,8 @@ func convertLibcontainerStats(ls *libcontainer.Stats) *types.Stats {
 	s.Memory.Swap = convertMemoryEntry(cg.MemoryStats.SwapUsage)
 	s.Memory.Usage = convertMemoryEntry(cg.MemoryStats.Usage)
 	s.Memory.Raw = cg.MemoryStats.Stats
-	if s.Memory.PSI == nil {
-		s.Memory.PSI = &types.PSIStats{}
-	}
-	if cg.MemoryStats.PSI != nil {
-		convertPSI(cg.MemoryStats.PSI.Some, s.Memory.PSI.Some)
-		convertPSI(cg.MemoryStats.PSI.Full, s.Memory.PSI.Full)
-	}
+	convertPSI(&cg.MemoryStats.PSI.Some, &s.Memory.PSI.Some)
+	convertPSI(&cg.MemoryStats.PSI.Full, &s.Memory.PSI.Full)
 
 	s.Blkio.IoServiceBytesRecursive = convertBlkioEntry(cg.BlkioStats.IoServiceBytesRecursive)
 	s.Blkio.IoServicedRecursive = convertBlkioEntry(cg.BlkioStats.IoServicedRecursive)
@@ -176,13 +158,8 @@ func convertLibcontainerStats(ls *libcontainer.Stats) *types.Stats {
 	s.Blkio.IoMergedRecursive = convertBlkioEntry(cg.BlkioStats.IoMergedRecursive)
 	s.Blkio.IoTimeRecursive = convertBlkioEntry(cg.BlkioStats.IoTimeRecursive)
 	s.Blkio.SectorsRecursive = convertBlkioEntry(cg.BlkioStats.SectorsRecursive)
-	if s.Blkio.PSI == nil {
-		s.Blkio.PSI = &types.PSIStats{}
-	}
-	if cg.BlkioStats.PSI != nil {
-		convertPSI(cg.BlkioStats.PSI.Some, s.Blkio.PSI.Some)
-		convertPSI(cg.BlkioStats.PSI.Full, s.Blkio.PSI.Full)
-	}
+	convertPSI(&cg.BlkioStats.PSI.Some, &s.Blkio.PSI.Some)
+	convertPSI(&cg.BlkioStats.PSI.Full, &s.Blkio.PSI.Full)
 
 	s.Hugetlb = make(map[string]types.Hugetlb)
 	for k, v := range cg.HugetlbStats {

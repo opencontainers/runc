@@ -31,25 +31,25 @@ func TestStatCPUPSI(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var psi cgroups.PSIStats
-	if err := statPSI(fakeCgroupDir, "cpu.pressure", &psi); err != nil {
+	var stats cgroups.Stats
+	if err := statPSI(fakeCgroupDir, "cpu.pressure", &stats); err != nil {
 		t.Error(err)
 	}
 
-	if !reflect.DeepEqual(psi, cgroups.PSIStats{
-		Some: &cgroups.PSIData{
-			Avg10:  createFloatPtr(1.71),
-			Avg60:  createFloatPtr(2.36),
-			Avg300: createFloatPtr(2.57),
-			Total:  createUInt64Ptr(230548833),
+	if !reflect.DeepEqual(stats.CpuStats.PSI, cgroups.PSIStats{
+		Some: cgroups.PSIData{
+			Avg10:  1.71,
+			Avg60:  2.36,
+			Avg300: 2.57,
+			Total:  230548833,
 		},
-		Full: &cgroups.PSIData{
-			Avg10:  createFloatPtr(1.00),
-			Avg60:  createFloatPtr(1.01),
-			Avg300: createFloatPtr(1.00),
-			Total:  createUInt64Ptr(157622356),
+		Full: cgroups.PSIData{
+			Avg10:  1.00,
+			Avg60:  1.01,
+			Avg300: 1.00,
+			Total:  157622356,
 		},
 	}) {
-		t.Errorf("unexpected PSI result: %+v", psi)
+		t.Errorf("unexpected PSI result: %+v", stats.CpuStats.PSI)
 	}
 }
