@@ -8,6 +8,8 @@ import (
 	"io"
 	"net"
 	"os"
+	"runtime/debug"
+	"strconv"
 	"strings"
 	"unsafe"
 
@@ -71,33 +73,109 @@ type initConfig struct {
 	Cgroup2Path      string                `json:"cgroup2_path,omitempty"`
 }
 
-type initer interface {
-	Init() error
+// StartInitialization loads a container by opening the pipe fd from the parent
+// to read the configuration and state. This is a low level implementation
+// detail of the reexec and should not be consumed externally.
+func StartInitialization() (retErr error) {
+	// Get the INITPIPE.
+	envInitPipe := os.Getenv("_LIBCONTAINER_INITPIPE")
+	pipefd, err := strconv.Atoi(envInitPipe)
+	if err != nil {
+		err = fmt.Errorf("unable to convert _LIBCONTAINER_INITPIPE: %w", err)
+		logrus.Error(err)
+		return err
+	}
+	pipe := os.NewFile(uintptr(pipefd), "pipe")
+	defer pipe.Close()
+
+	defer func() {
+		// We have an error during the initialization of the container's init,
+		// send it back to the parent process in the form of an initError.
+		if err := writeSync(pipe, procError); err != nil {
+			fmt.Fprintln(os.Stderr, retErr)
+			return
+		}
+		if err := utils.WriteJSON(pipe, &initError{Message: retErr.Error()}); err != nil {
+			fmt.Fprintln(os.Stderr, retErr)
+			return
+		}
+	}()
+
+	// Only init processes have FIFOFD.
+	fifofd := -1
+	envInitType := os.Getenv("_LIBCONTAINER_INITTYPE")
+	it := initType(envInitType)
+	if it == initStandard {
+		envFifoFd := os.Getenv("_LIBCONTAINER_FIFOFD")
+		if fifofd, err = strconv.Atoi(envFifoFd); err != nil {
+			return fmt.Errorf("unable to convert _LIBCONTAINER_FIFOFD: %w", err)
+		}
+	}
+
+	var consoleSocket *os.File
+	if envConsole := os.Getenv("_LIBCONTAINER_CONSOLE"); envConsole != "" {
+		console, err := strconv.Atoi(envConsole)
+		if err != nil {
+			return fmt.Errorf("unable to convert _LIBCONTAINER_CONSOLE: %w", err)
+		}
+		consoleSocket = os.NewFile(uintptr(console), "console-socket")
+		defer consoleSocket.Close()
+	}
+
+	logPipeFdStr := os.Getenv("_LIBCONTAINER_LOGPIPE")
+	logPipeFd, err := strconv.Atoi(logPipeFdStr)
+	if err != nil {
+		return fmt.Errorf("unable to convert _LIBCONTAINER_LOGPIPE: %w", err)
+	}
+
+	// Get mount files (O_PATH).
+	mountFds, err := parseMountFds()
+	if err != nil {
+		return err
+	}
+
+	// clear the current process's environment to clean any libcontainer
+	// specific env vars.
+	os.Clearenv()
+
+	defer func() {
+		if err := recover(); err != nil {
+			if err2, ok := err.(error); ok {
+				retErr = fmt.Errorf("panic from initialization: %w, %s", err2, debug.Stack())
+			} else {
+				retErr = fmt.Errorf("panic from initialization: %v, %s", err, debug.Stack())
+			}
+		}
+	}()
+
+	// If init succeeds, it will not return, hence none of the defers will be called.
+	return containerInit(it, pipe, consoleSocket, fifofd, logPipeFd, mountFds)
 }
 
-func newContainerInit(t initType, pipe *os.File, consoleSocket *os.File, fifoFd, logFd int, mountFds []int) (initer, error) {
+func containerInit(t initType, pipe *os.File, consoleSocket *os.File, fifoFd, logFd int, mountFds []int) error {
 	var config *initConfig
 	if err := json.NewDecoder(pipe).Decode(&config); err != nil {
-		return nil, err
+		return err
 	}
 	if err := populateProcessEnvironment(config.Env); err != nil {
-		return nil, err
+		return err
 	}
 	switch t {
 	case initSetns:
 		// mountFds must be nil in this case. We don't mount while doing runc exec.
 		if mountFds != nil {
-			return nil, errors.New("mountFds must be nil; can't mount from exec")
+			return errors.New("mountFds must be nil; can't mount from exec")
 		}
 
-		return &linuxSetnsInit{
+		i := &linuxSetnsInit{
 			pipe:          pipe,
 			consoleSocket: consoleSocket,
 			config:        config,
 			logFd:         logFd,
-		}, nil
+		}
+		return i.Init()
 	case initStandard:
-		return &linuxStandardInit{
+		i := &linuxStandardInit{
 			pipe:          pipe,
 			consoleSocket: consoleSocket,
 			parentPid:     unix.Getppid(),
@@ -105,9 +183,10 @@ func newContainerInit(t initType, pipe *os.File, consoleSocket *os.File, fifoFd,
 			fifoFd:        fifoFd,
 			logFd:         logFd,
 			mountFds:      mountFds,
-		}, nil
+		}
+		return i.Init()
 	}
-	return nil, fmt.Errorf("unknown init type %q", t)
+	return fmt.Errorf("unknown init type %q", t)
 }
 
 // populateProcessEnvironment loads the provided environment variables into the
