@@ -47,8 +47,8 @@ task:
     apt-get install -y --no-install-recommends libxslt-dev libxml2-dev libvirt-dev ruby-bundler ruby-dev zlib1g-dev
     vagrant plugin install vagrant-libvirt
   vagrant_cache:
-    fingerprint_script: uname -s ; cat Vagrantfile.$DISTRO
-    folder: /root/.vagrant.d
+    fingerprint_script: cat Vagrantfile.$DISTRO
+    folder: /root/.vagrant.d/boxes
   vagrant_up_script: |
     ln -sf Vagrantfile.$DISTRO Vagrantfile
     # Retry if it fails (download.fedoraproject.org returns 404 sometimes)
