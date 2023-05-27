@@ -86,9 +86,22 @@ type MemoryStats struct {
 	// see chapter 5.6 of memory controller documentation
 	PageUsageByNUMA PageUsageByNUMA `json:"page_usage_by_numa,omitempty"`
 	// if true, memory usage is accounted for throughout a hierarchy of cgroups.
-	UseHierarchy bool `json:"use_hierarchy"`
+	UseHierarchy bool              `json:"use_hierarchy"`
+	EventsCnt    MemoryEventsCnt   `json:"events_cnt,omitempty"`
+	Stats        map[string]uint64 `json:"stats,omitempty"`
+}
 
-	Stats map[string]uint64 `json:"stats,omitempty"`
+type MemoryEventsCnt struct {
+	// count of memory reclaim (when usage is under the low boundary)
+	ReclaimLowCnt uint64 `json:"reclaim_low_cnt,omitempty"`
+	// count of memory reclaim (when high memory boundary was exceeded)
+	ReclaimHighCnt uint64 `json:"reclaim_high_cnt,omitempty"`
+	// the number of times the cgroup’s memory usage was about to go over the max boundary
+	MaxCnt uint64 `json:"max_cnt,omitempty"`
+	// the number of time the cgroup’s memory usage was reached the limit and allocation was about to fail
+	OomCnt uint64 `json:"oom_cnt,omitempty"`
+	// The number of processes belonging to this cgroup was oom killed
+	OomKillCnt uint64 `json:"oom_kill_cnt,omitempty"`
 }
 
 type PageUsageByNUMA struct {

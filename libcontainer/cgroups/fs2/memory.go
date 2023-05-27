@@ -128,6 +128,21 @@ func statMemory(dirPath string, stats *cgroups.Stats) error {
 	return nil
 }
 
+func eventMemory(dirPath string, stats *cgroups.Stats) error {
+	kv, err := fscommon.ParseKeyValueFile(dirPath, "memory.events")
+	if err != nil {
+		return err
+	}
+
+	stats.MemoryStats.EventsCnt.MaxCnt = kv["max"]
+	stats.MemoryStats.EventsCnt.ReclaimLowCnt = kv["low"]
+	stats.MemoryStats.EventsCnt.ReclaimHighCnt = kv["high"]
+	stats.MemoryStats.EventsCnt.OomCnt = kv["oom"]
+	stats.MemoryStats.EventsCnt.OomKillCnt = kv["oom_kill"]
+
+	return nil
+}
+
 func getMemoryDataV2(path, name string) (cgroups.MemoryData, error) {
 	memoryData := cgroups.MemoryData{}
 

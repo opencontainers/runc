@@ -105,6 +105,10 @@ func (m *Manager) GetStats() (*cgroups.Stats, error) {
 	if err := statMemory(m.dirPath, st); err != nil && !os.IsNotExist(err) {
 		errs = append(errs, err)
 	}
+	// memory event
+	if err := eventMemory(m.dirPath, st); err != nil && !os.IsNotExist(err) {
+		errs = append(errs, err)
+	}
 	// io (since kernel 4.5)
 	if err := statIo(m.dirPath, st); err != nil && !os.IsNotExist(err) {
 		errs = append(errs, err)
