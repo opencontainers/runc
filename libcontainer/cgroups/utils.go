@@ -130,10 +130,7 @@ func GetAllSubsystems() ([]string, error) {
 			}
 		}
 	}
-	if err := s.Err(); err != nil {
-		return nil, err
-	}
-	return subsystems, nil
+	return subsystems, s.Err()
 }
 
 func readProcsFile(dir string) ([]int, error) {
@@ -203,11 +200,7 @@ func parseCgroupFromReader(r io.Reader) (map[string]string, error) {
 			cgroups[subs] = parts[2]
 		}
 	}
-	if err := s.Err(); err != nil {
-		return nil, err
-	}
-
-	return cgroups, nil
+	return cgroups, s.Err()
 }
 
 func PathExists(path string) bool {
