@@ -101,6 +101,13 @@ jobs:
       - name: check-config.sh
         run : ./script/check-config.sh
 
+  space-at-eol:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: rm -fr vendor
+      - run: if git -P grep -I -n '\s$'; then echo "^^^ extra whitespace at EOL, please fix"; exit 1; fi
+
   deps:
     runs-on: ubuntu-22.04
     steps:
