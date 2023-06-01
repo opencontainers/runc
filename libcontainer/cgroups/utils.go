@@ -19,6 +19,7 @@ import (
 
 const (
 	CgroupProcesses   = "cgroup.procs"
+	CgroupThreads     = "cgroup.threads"
 	unifiedMountpoint = "/sys/fs/cgroup"
 	hybridMountpoint  = "/sys/fs/cgroup/unified"
 )
@@ -137,14 +138,16 @@ func GetAllSubsystems() ([]string, error) {
 }
 
 func readProcsFile(dir string) ([]int, error) {
-	f, err := OpenFile(dir, CgroupProcesses, os.O_RDONLY)
+	contents, err := ReadFile(dir, CgroupProcesses)
+	if errors.Is(err, unix.ENOTSUP) {
+		contents, err = ReadFile(dir, CgroupThreads)
+	}
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
 
 	var (
-		s   = bufio.NewScanner(f)
+		s   = bufio.NewScanner(strings.NewReader(contents))
 		out = []int{}
 	)
 
