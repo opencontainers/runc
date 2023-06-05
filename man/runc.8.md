@@ -40,19 +40,15 @@ value for _bundle_ is the current directory.
 : Create a container. See **runc-create**(8).
 
 **delete**
-: Delete any resources held by the container often used with detached
+: Delete any resources held by the container; often used with detached
 containers. See **runc-delete**(8).
 
 **events**
-: Display container events such as OOM notifications, cpu, memory, IO and
-network stats. See **runc-events**(8).
+: Display container events, such as OOM notifications, CPU, memory, I/O and
+network statistics. See **runc-events**(8).
 
 **exec**
 : Execute a new process inside the container. See **runc-exec**(8).
-
-**init**
-: Initialize the namespaces and launch the container init process. This command
-is not supposed to be used directly.
 
 **kill**
 : Send a specified signal to the container's init process. See
