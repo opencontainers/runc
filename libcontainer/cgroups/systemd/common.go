@@ -420,6 +420,10 @@ func stopUnit(cm *dbusConnManager, unitName string) error {
 			return errors.New("Timed out while waiting for systemd to remove " + unitName)
 		}
 	}
+
+	// In case of a failed unit, let systemd remove it.
+	_ = resetFailedUnit(cm, unitName)
+
 	return nil
 }
 
