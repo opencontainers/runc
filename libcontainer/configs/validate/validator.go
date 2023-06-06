@@ -104,6 +104,11 @@ func namespaces(config *configs.Config) error {
 			return errors.New("USER namespaces aren't enabled in the kernel")
 		}
 	} else {
+		// ima namespace is a part of user namespace but still is a separate namespace
+		if config.Namespaces.Contains(configs.NEWIMA) {
+			return errors.New("IMA namespace cannot be created without USER namespace")
+		}
+
 		if config.UidMappings != nil || config.GidMappings != nil {
 			return errors.New("User namespace mappings specified, but USER namespace isn't enabled in the config")
 		}

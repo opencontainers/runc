@@ -6,10 +6,10 @@ package configs
 import "golang.org/x/sys/unix"
 
 func (n *Namespace) Syscall() int {
-	return namespaceInfo[n.Type]
+	return namespaceCloneInfo[n.Type]
 }
 
-var namespaceInfo = map[NamespaceType]int{
+var namespaceCloneInfo = map[NamespaceType]int{
 	NEWNET:    unix.CLONE_NEWNET,
 	NEWNS:     unix.CLONE_NEWNS,
 	NEWUSER:   unix.CLONE_NEWUSER,
@@ -27,7 +27,30 @@ func (n *Namespaces) CloneFlags() uintptr {
 		if v.Path != "" {
 			continue
 		}
-		flag |= namespaceInfo[v.Type]
+		flag |= namespaceCloneInfo[v.Type]
 	}
 	return uintptr(flag)
+}
+
+// NonCloneFlags parses the container's Namespaces options that are not
+// related to clone() or unshare() system calls. This function returns
+// flags only for new namespaces.
+func (n *Namespaces) NonCloneFlags() uintptr {
+	var flag uint64
+	for _, v := range *n {
+		if v.Path != "" {
+			continue
+		}
+		flag |= v.parseNonCloneFlags()
+	}
+	return uintptr(flag)
+}
+
+func (n *Namespace) parseNonCloneFlags() uint64 {
+	var flag uint64
+	switch n.Type {
+	case NEWIMA:
+		flag |= 0x400000000
+	}
+	return flag
 }

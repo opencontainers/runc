@@ -49,6 +49,7 @@ func initMaps() {
 			specs.IPCNamespace:     configs.NEWIPC,
 			specs.UTSNamespace:     configs.NEWUTS,
 			specs.CgroupNamespace:  configs.NEWCGROUP,
+			specs.ImaNamespace:     configs.NEWIMA,
 		}
 
 		mountPropagationMapping = map[string]int{

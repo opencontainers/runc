@@ -20,8 +20,10 @@
 #include <sys/ioctl.h>
 #include <sys/prctl.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/mount.h>
 
 #include <linux/limits.h>
 #include <linux/netlink.h>
@@ -72,6 +74,7 @@ struct nlconfig_t {
 
 	/* Process settings. */
 	uint32_t cloneflags;
+	uint64_t noncloneflags;
 	char *oom_score_adj;
 	size_t oom_score_adj_len;
 
@@ -127,6 +130,7 @@ static int loglevel = DEBUG;
 #define UIDMAPPATH_ATTR		27288
 #define GIDMAPPATH_ATTR		27289
 #define MOUNT_SOURCES_ATTR	27290
+#define NON_CLONE_FLAGS_ATTR	27291
 
 /*
  * Use the raw syscall for versions of glibc which don't include a function for
@@ -469,6 +473,11 @@ static int nsflag(char *name)
 	return 0;
 }
 
+static uint64_t readint64(char *buf)
+{
+	return *(uint64_t *) buf;
+}
+
 static uint32_t readint32(char *buf)
 {
 	return *(uint32_t *) buf;
@@ -519,6 +528,9 @@ static void nl_parse(int fd, struct nlconfig_t *config)
 		switch (nlattr->nla_type) {
 		case CLONE_FLAGS_ATTR:
 			config->cloneflags = readint32(current);
+			break;
+		case NON_CLONE_FLAGS_ATTR:
+			config->noncloneflags = readint64(current);
 			break;
 		case ROOTLESS_EUID_ATTR:
 			config->is_rootless_euid = readint8(current);	/* boolean */
@@ -632,6 +644,92 @@ void join_namespaces(char *nslist)
 	}
 
 	free(namespaces);
+}
+
+#define IMA_ACTIVE_PATH	"integrity/ima/active"
+/* IMA  securityfs relative mount point */
+#define IMA_SECURITYFS_REL_MNT	"/.ima_secfs/"
+
+#define bail_imasecfs(ima_secfs, fmt, ...)                                           \
+	do {                                                                         \
+		if (logfd < 0)                                                       \
+			fprintf(stderr, "FATAL: " fmt ": %m\n",                      \
+				##__VA_ARGS__);                                      \
+		else                                                                 \
+			write_log(FATAL, fmt ": %m", ##__VA_ARGS__);                 \
+		if (rmdir(ima_secfs) != 0)                                           \
+			bail("failed to remove temporary securityfs directory [%s]", \
+				ima_secfs);                                          \
+		exit(1);                                                             \
+	} while(0)
+
+/*
+ * enable_ima_ns - sets up IMA Namespace for the process
+ *
+ * In order to set it up correctly calling process
+ * should have new userns first, because if it is in the first userns then
+ * new imans won't be created (imans has no CLONE_* flags). The function does next things:
+ *
+ * 1. It mounts temporary securityfs, in order to not bother hosts's
+ * filesystem, we've chosen container's rootfs as a location for this,
+ * (to be more accurate we've chosen ${IMA_SECURITYFS_REL_MNT} inside the rootfs). Make
+ * sure the calling process already created new userns.
+ *
+ * 2. It writes '1' to rootfs/${IMA_SECURITYFS_REL_MNT}/integrity/ima/active. This is
+ * the key stage of enabling imans. After that imans will be actually created.
+ *
+ * 3. Unmount temporary securityfs.
+ *
+ */
+static void enable_ima_ns(void)
+{
+	int err, mntflags, ima_active_path_len;
+	char data, ima_active[PATH_MAX + 1];
+
+	ima_active_path_len = strlen(IMA_ACTIVE_PATH);
+	/*
+	 * Now current working directory is our rootfs,
+	 * so in order to avoid some conflicts with Host filesystem,
+	 * we should mount securityfs inside the rootfs of the currently
+	 * starting container. The mount point for this securityfs is
+	 * CWD + IMA_SECURITYFS_REL_MNT
+	 */
+	if (!getcwd(ima_active, PATH_MAX))
+		bail("failed to get path of the current rootfs");
+
+	if ((strnlen(ima_active, PATH_MAX) + strlen(IMA_SECURITYFS_REL_MNT) + ima_active_path_len) > PATH_MAX)
+		bail("securityfs temporary path is too long");
+
+	strncat(ima_active, IMA_SECURITYFS_REL_MNT, PATH_MAX);
+	if (mkdir(ima_active, S_IRWXU) != 0)
+		bail("failed to create temporary securityfs directory");
+
+	mntflags = MS_NOATIME | MS_NODEV | MS_NOEXEC | MS_NOSUID | MS_RELATIME;
+	err = mount("securityfs", ima_active, "securityfs", mntflags, NULL);
+	if (err != 0)
+		bail_imasecfs(ima_active, "failed to mount temporary securityfs");
+
+	/*
+	 * According to security/integrity/ima/ima_fs.c:ima_write_active()
+	 * the length of the buffer <= 2 and it is only allowed to write '1', '1\0' or '1\n'
+	 */
+	data = '1';
+	strncat(ima_active, IMA_ACTIVE_PATH, PATH_MAX);
+	err = write_file(&data, 1, ima_active);
+	/*
+	 * cut ima_active path to be able to umount/rmdir securityfs
+	 * 1 is to remove the last unnecessary slash '/.../path/' -> '/.../path'
+	 */
+	ima_active[strnlen(ima_active, PATH_MAX) - ima_active_path_len - 1] = '\0';
+	if (err < 0)
+		bail_imasecfs(ima_active, "cannot set up IMA namespace");
+
+	err = umount(ima_active);
+	if (err != 0)
+		bail_imasecfs(ima_active, "failed to unmount temporary securityfs");
+
+	if (rmdir(ima_active) != 0)
+		bail("failed to remove temporary securityfs directory [%s]", ima_active);
 }
 
 /* Defined in cloned_binary.c. */
@@ -1246,6 +1344,11 @@ void nsexec(void)
 			 * was broken, so we'll just do it the long way anyway.
 			 */
 			try_unshare(config.cloneflags & ~CLONE_NEWCGROUP, "remaining namespaces (except cgroupns)");
+
+			if (config.noncloneflags & NCLONE_NEWIMA) {
+				write_log(DEBUG, "enable ima namespace");
+				enable_ima_ns();
+			}
 
 			/* Ask our parent to send the mount sources fds. */
 			if (config.mountsources) {
