@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"syscall"
@@ -165,7 +166,22 @@ func (m Mount) GetOwnCgroup(cgroups map[string]string) (string, error) {
 func getCgroupMountsHelper(ss map[string]bool, mounts []*mountinfo.Info, all bool) ([]Mount, error) {
 	res := make([]Mount, 0, len(ss))
 	numFound := 0
+	parentIDs := make([]int, 0, len(mounts))
 	for _, mi := range mounts {
+		parentIDs = append(parentIDs, mi.Parent)
+	}
+
+	sort.Slice(parentIDs, func(i, j int) bool {
+		return parentIDs[i] < parentIDs[j]
+	})
+
+	for _, mi := range mounts {
+		// This mount is hidden by other mount
+		// at the same mountpoint, so skip it.
+		if sort.SearchInts(parentIDs, mi.ID) < len(parentIDs) {
+			continue
+		}
+
 		m := Mount{
 			Mountpoint: mi.Mountpoint,
 			Root:       mi.Root,
