@@ -344,7 +344,7 @@ function simple_cr() {
 	runc checkpoint --work-path ./work-dir test_busybox
 	grep -B 5 Error ./work-dir/dump.log || true
 	[ "$status" -eq 0 ]
-	! test -f ./work-dir/"$tmplog1"
+	run ! test -f ./work-dir/"$tmplog1"
 	test -f ./work-dir/"$tmplog2"
 
 	# after checkpoint busybox is no longer running
@@ -355,7 +355,7 @@ function simple_cr() {
 	runc restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
 	grep -B 5 Error ./work-dir/restore.log || true
 	[ "$status" -eq 0 ]
-	! test -f ./work-dir/"$tmplog1"
+	run ! test -f ./work-dir/"$tmplog1"
 	test -f ./work-dir/"$tmplog2"
 
 	# busybox should be back up and running

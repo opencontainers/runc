@@ -1,7 +1,8 @@
 ---
-# We use Cirrus for Vagrant tests and native CentOS 7 and 8, because macOS
-# instances of GHA are too slow and flaky, and Linux instances of GHA do not
-# support KVM.
+# We use Cirrus for CentOS (native) and Fedora (in Vagrant), because neither
+# CentOS nor Fedora is available on GHA natively, so the only option is VM.
+# In GHA, nested virtualization is only supported on macOS instances, which
+# are slow and flaky.
 
 # NOTE Cirrus execution environments lack a terminal, needed for
 # some integration tests. So we use `ssh -tt` command to fake a terminal.
@@ -24,9 +25,9 @@ task:
     platform: linux
     nested_virtualization: true
     # CPU limit: `16 / NTASK`: see https://cirrus-ci.org/faq/#are-there-any-limits
-    cpu: 8
+    cpu: 4
     # Memory limit: `4GB * NCPU`
-    memory: 32G
+    memory: 16G
 
   host_info_script: |
     uname -a
@@ -37,12 +38,18 @@ task:
     echo "-----"
     df -T
   install_libvirt_vagrant_script: |
+    curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+    echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+    sudo sed -i 's/^# deb-src/deb-src/' /etc/apt/sources.list
     apt-get update
-    apt-get install -y libvirt-daemon libvirt-daemon-system vagrant vagrant-libvirt
+    apt-get install -y libvirt-daemon libvirt-daemon-system vagrant
     systemctl enable --now libvirtd
+    apt-get build-dep -y vagrant ruby-libvirt
+    apt-get install -y --no-install-recommends libxslt-dev libxml2-dev libvirt-dev ruby-bundler ruby-dev zlib1g-dev
+    vagrant plugin install vagrant-libvirt
   vagrant_cache:
-    fingerprint_script: uname -s ; cat Vagrantfile.$DISTRO
-    folder: /root/.vagrant.d
+    fingerprint_script: cat Vagrantfile.$DISTRO
+    folder: /root/.vagrant.d/boxes
   vagrant_up_script: |
     ln -sf Vagrantfile.$DISTRO Vagrantfile
     # Retry if it fails (download.fedoraproject.org returns 404 sometimes)
@@ -71,7 +78,7 @@ task:
     HOME: /root
     CIRRUS_WORKING_DIR: /home/runc
     GO_VERSION: "1.19.8"
-    BATS_VERSION: "v1.3.0"
+    BATS_VERSION: "v1.9.0"
     RPMS: gcc git iptables jq glibc-static libseccomp-devel make criu fuse-sshfs
     # yamllint disable rule:key-duplicates
     matrix:
