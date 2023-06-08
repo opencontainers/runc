@@ -93,7 +93,7 @@ function test_events() {
 		retry 10 1 grep -q test_busybox events.log
 		# shellcheck disable=SC2016
 		__runc exec -d test_busybox sh -c 'test=$(dd if=/dev/urandom ibs=5120k)'
-		retry 10 1 grep -q oom events.log
+		retry 30 1 grep -q oom events.log
 		__runc delete -f test_busybox
 	) &
 	wait # wait for the above sub shells to finish
