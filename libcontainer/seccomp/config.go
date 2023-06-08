@@ -25,7 +25,7 @@ var operators = map[string]configs.Operator{
 // KnownOperators returns the list of the known operations.
 // Used by `runc features`.
 func KnownOperators() []string {
-	var res []string
+	res := make([]string, 0, len(operators))
 	for k := range operators {
 		res = append(res, k)
 	}
@@ -48,7 +48,7 @@ var actions = map[string]configs.Action{
 // KnownActions returns the list of the known actions.
 // Used by `runc features`.
 func KnownActions() []string {
-	var res []string
+	res := make([]string, 0, len(actions))
 	for k := range actions {
 		res = append(res, k)
 	}
@@ -79,7 +79,7 @@ var archs = map[string]string{
 // KnownArchs returns the list of the known archs.
 // Used by `runc features`.
 func KnownArchs() []string {
-	var res []string
+	res := make([]string, 0, len(archs))
 	for k := range archs {
 		res = append(res, k)
 	}
