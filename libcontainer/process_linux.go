@@ -304,7 +304,6 @@ type initProcess struct {
 	fds             []string
 	process         *Process
 	bootstrapData   io.Reader
-	sharePidns      bool
 }
 
 func (p *initProcess) pid() int {
@@ -616,10 +615,6 @@ func (p *initProcess) start() (retErr error) {
 
 func (p *initProcess) wait() (*os.ProcessState, error) {
 	err := p.cmd.Wait()
-	// we should kill all processes in cgroup when init is died if we use host PID namespace
-	if p.sharePidns {
-		_ = signalAllProcesses(p.manager, unix.SIGKILL)
-	}
 	return p.cmd.ProcessState, err
 }
 

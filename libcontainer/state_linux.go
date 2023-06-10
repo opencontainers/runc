@@ -7,7 +7,6 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runtime-spec/specs-go"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
 
@@ -36,12 +35,6 @@ type containerState interface {
 }
 
 func destroy(c *Container) error {
-	if !c.config.Namespaces.Contains(configs.NEWPID) ||
-		c.config.Namespaces.PathOf(configs.NEWPID) != "" {
-		if err := signalAllProcesses(c.cgroupManager, unix.SIGKILL); err != nil {
-			logrus.Warn(err)
-		}
-	}
 	err := c.cgroupManager.Destroy()
 	if c.intelRdtManager != nil {
 		if ierr := c.intelRdtManager.Destroy(); err == nil {
