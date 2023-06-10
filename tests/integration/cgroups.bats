@@ -49,8 +49,8 @@ function setup() {
 			if [ $EUID -eq 0 ]; then
 				check_cgroup_value "cgroup.controllers" "$(cat /sys/fs/cgroup/machine.slice/cgroup.controllers)"
 			else
-				# Filter out hugetlb and misc as systemd is unable to delegate them.
-				check_cgroup_value "cgroup.controllers" "$(sed -e 's/ hugetlb//' -e 's/ misc//' </sys/fs/cgroup/user.slice/user-${EUID}.slice/cgroup.controllers)"
+				# Filter out controllers that systemd is unable to delegate.
+				check_cgroup_value "cgroup.controllers" "$(sed 's/ \(hugetlb\|misc\|rdma\)//g' </sys/fs/cgroup/user.slice/user-${EUID}.slice/cgroup.controllers)"
 			fi
 		else
 			check_cgroup_value "cgroup.controllers" "$(cat /sys/fs/cgroup/cgroup.controllers)"
@@ -386,7 +386,7 @@ function setup() {
 		FREEZER="${FREEZER_DIR}/freezer.state"
 		STATE="FROZEN"
 	else
-		FREEZER_DIR="${CGROUP_PATH}"
+		FREEZER_DIR="${CGROUP_V2_PATH}"
 		FREEZER="${FREEZER_DIR}/cgroup.freeze"
 		STATE="1"
 	fi

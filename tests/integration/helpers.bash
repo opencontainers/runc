@@ -220,7 +220,7 @@ function set_cgroups_path() {
 
 	# Absolute path to container's cgroup v2.
 	if [ -v CGROUP_V2 ]; then
-		CGROUP_PATH=${CGROUP_BASE_PATH}${REL_CGROUPS_PATH}
+		CGROUP_V2_PATH=${CGROUP_BASE_PATH}${REL_CGROUPS_PATH}
 	fi
 
 	[ -v pod ] && create_parent
@@ -233,7 +233,7 @@ function set_cgroups_path() {
 #  $1: controller name (like "pids") or a file name (like "pids.max").
 function get_cgroup_path() {
 	if [ -v CGROUP_V2 ]; then
-		echo "$CGROUP_PATH"
+		echo "$CGROUP_V2_PATH"
 		return
 	fi
 
