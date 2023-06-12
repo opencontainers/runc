@@ -124,8 +124,8 @@ The above will set the following properties:
 * `TimeoutStopSec` to 2 minutes and 3 seconds;
 * `CollectMode` to "inactive-or-failed".
 
-The values must be in the gvariant format (for details, see
-[gvariant documentation](https://developer.gnome.org/glib/stable/gvariant-text.html)).
+The values must be in the gvariant text format, as described in
+[gvariant documentation](https://docs.gtk.org/glib/gvariant-text.html).
 
 To find out which type systemd expects for a particular parameter, please
 consult systemd sources.
