@@ -460,6 +460,12 @@ function requires() {
 				skip_me=1
 			fi
 			;;
+		systemd_v*)
+			var=${var#systemd_v}
+			if [ "$(systemd_version)" -lt "$var" ]; then
+				skip "requires systemd >= v${var}"
+			fi
+			;;
 		no_systemd)
 			if [ -v RUNC_USE_SYSTEMD ]; then
 				skip_me=1
