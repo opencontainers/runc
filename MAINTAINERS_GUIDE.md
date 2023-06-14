@@ -50,7 +50,7 @@ All decisions affecting runc, big and small, follow the same 3 steps:
 
 * Step 2: Discuss the pull request. Anyone can do this.
 
-* Step 3: Accept (`LGTM`) or refuse a pull request. The relevant maintainers do 
+* Step 3: Accept (`LGTM`) or refuse a pull request. The relevant maintainers do
 this (see below "Who decides what?")
 
 *I'm a maintainer, should I make pull requests too?*
