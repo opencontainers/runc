@@ -1,3 +1,3 @@
 [codespell]
 skip = ./vendor,./.git,./go.sum
-ignore-words-list = clos,creat,ro,complies
+ignore-words-list = clos,mis
