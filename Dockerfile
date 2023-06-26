@@ -31,6 +31,7 @@ RUN KEYFILE=/usr/share/keyrings/criu-repo-keyring.gpg; \
         sshfs \
         sudo \
         uidmap \
+        iproute2 \
     && apt-get clean \
     && rm -rf /var/cache/apt /var/lib/apt/lists/* /etc/apt/sources.list.d/*.list
 
