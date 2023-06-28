@@ -14,9 +14,9 @@ function setup() {
 
 function teardown() {
 	if [ -v LIBPATH ]; then
-		umount "$LIBPATH"/$HOOKLIBCR.1.0.0 &>/dev/null || true
-		umount "$LIBPATH"/$HOOKLIBCC.1.0.0 &>/dev/null || true
-		rm -f $HOOKLIBCR.1.0.0 $HOOKLIBCC.1.0.0
+		umount "$LIBPATH/$HOOKLIBCR".1.0.0 &>/dev/null || true
+		umount "$LIBPATH/$HOOKLIBCC".1.0.0 &>/dev/null || true
+		rm -f "$HOOKLIBCR".1.0.0 "$HOOKLIBCC".1.0.0
 		unset LIBPATH HOOKLIBCR HOOKLIBCC
 	fi
 	teardown_bundle
@@ -52,8 +52,8 @@ function teardown() {
 	[ "$status" -eq 0 ]
 
 	echo "Checking create-runtime library"
-	echo "$output" | grep $HOOKLIBCR
+	echo "$output" | grep "$HOOKLIBCR"
 
 	echo "Checking create-container library"
-	echo "$output" | grep $HOOKLIBCC
+	echo "$output" | grep "$HOOKLIBCC"
 }

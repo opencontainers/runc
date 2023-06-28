@@ -99,8 +99,8 @@ function setup() {
 		# try to remove memory swap limit
 		runc update test_update --memory-swap -1
 		[ "$status" -eq 0 ]
-		check_cgroup_value "$MEM_SWAP" $SYSTEM_MEM
-		check_systemd_value "$SD_MEM_SWAP" $SD_UNLIMITED
+		check_cgroup_value "$MEM_SWAP" "$SYSTEM_MEM"
+		check_systemd_value "$SD_MEM_SWAP" "$SD_UNLIMITED"
 
 		# update memory swap
 		if [ -v CGROUP_V2 ]; then
@@ -123,13 +123,13 @@ function setup() {
 	[ "$status" -eq 0 ]
 
 	# check memory limit is gone
-	check_cgroup_value $MEM_LIMIT $SYSTEM_MEM
-	check_systemd_value $SD_MEM_LIMIT $SD_UNLIMITED
+	check_cgroup_value "$MEM_LIMIT" "$SYSTEM_MEM"
+	check_systemd_value "$SD_MEM_LIMIT" "$SD_UNLIMITED"
 
 	# check swap memory limited is gone
 	if [ "$HAVE_SWAP" = "yes" ]; then
-		check_cgroup_value $MEM_SWAP $SYSTEM_MEM
-		check_systemd_value "$SD_MEM_SWAP" $SD_UNLIMITED
+		check_cgroup_value "$MEM_SWAP" "$SYSTEM_MEM"
+		check_systemd_value "$SD_MEM_SWAP" "$SD_UNLIMITED"
 	fi
 
 	# update pids limit

@@ -287,7 +287,7 @@ function check_cpu_quota() {
 		fi
 		check_cgroup_value "cpu.max" "$quota $period"
 	else
-		check_cgroup_value "cpu.cfs_quota_us" $quota
+		check_cgroup_value "cpu.cfs_quota_us" "$quota"
 		check_cgroup_value "cpu.cfs_period_us" "$period"
 	fi
 	# systemd values are the same for v1 and v2
