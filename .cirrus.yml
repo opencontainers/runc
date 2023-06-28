@@ -111,6 +111,11 @@ task:
     centos-stream-9)
       dnf config-manager --set-enabled crb # for glibc-static
       dnf -y install epel-release epel-next-release # for fuse-sshfs
+      # Delegate all cgroup v2 controllers to rootless user via --systemd-cgroup.
+      # The default (since systemd v252) is "pids memory cpu".
+      mkdir -p /etc/systemd/system/user@.service.d
+      printf "[Service]\nDelegate=yes\n" > /etc/systemd/system/user@.service.d/delegate.conf
+      systemctl daemon-reload
       ;;
     esac
     # Work around dnf mirror failures by retrying a few times.
@@ -170,13 +175,19 @@ task:
   integration_fs_script: |
     ssh -tt localhost "make -C /home/runc localintegration"
   integration_systemd_rootless_script: |
-    echo "SKIP: integration_systemd_rootless_script requires cgroup v2"
+    case $DISTRO in
+    centos-7|centos-stream-8)
+      echo "SKIP: integration_systemd_rootless_script requires cgroup v2"
+      ;;
+    *)
+      ssh -tt localhost "make -C /home/runc localrootlessintegration RUNC_USE_SYSTEMD=yes"
+    esac
   integration_fs_rootless_script: |
     case $DISTRO in
     centos-7)
       echo "SKIP: FIXME: integration_fs_rootless_script is skipped because of EPERM on writing cgroup.procs"
         ;;
-    centos-stream-8)
+    *)
       ssh -tt localhost "make -C /home/runc localrootlessintegration"
       ;;
     esac
