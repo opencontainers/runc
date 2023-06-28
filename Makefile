@@ -10,22 +10,50 @@ GIT_BRANCH_CLEAN := $(shell echo $(GIT_BRANCH) | sed -e "s/[^[:alnum:]]/-/g")
 RUNC_IMAGE := runc_dev$(if $(GIT_BRANCH_CLEAN),:$(GIT_BRANCH_CLEAN))
 PROJECT := github.com/opencontainers/runc
 BUILDTAGS ?= seccomp
+
 COMMIT ?= $(shell git describe --dirty --long --always)
 VERSION := $(shell cat ./VERSION)
+LDFLAGS_COMMON := -X main.gitCommit=$(COMMIT) -X main.version=$(VERSION)
 
-ifeq ($(shell $(GO) env GOOS),linux)
-	ifeq (,$(filter $(shell $(GO) env GOARCH),mips mipsle mips64 mips64le ppc64))
-		ifeq (,$(findstring -race,$(EXTRA_FLAGS)))
-			GO_BUILDMODE := "-buildmode=pie"
-		endif
+GOARCH := $(shell $(GO) env GOARCH)
+
+GO_BUILDMODE :=
+# Enable dynamic PIE executables on supported platforms.
+ifneq (,$(filter $(GOARCH),386 amd64 arm arm64 ppc64le riscv64 s390x))
+	ifeq (,$(findstring -race,$(EXTRA_FLAGS)))
+		GO_BUILDMODE := "-buildmode=pie"
 	endif
 endif
-GO_BUILD := $(GO) build -trimpath $(GO_BUILDMODE) $(EXTRA_FLAGS) -tags "$(BUILDTAGS)" \
-	-ldflags "-X main.gitCommit=$(COMMIT) -X main.version=$(VERSION) $(EXTRA_LDFLAGS)"
-GO_BUILD_STATIC := CGO_ENABLED=1 $(GO) build -trimpath $(EXTRA_FLAGS) -tags "$(BUILDTAGS) netgo osusergo" \
-	-ldflags "-extldflags -static -X main.gitCommit=$(COMMIT) -X main.version=$(VERSION) $(EXTRA_LDFLAGS)"
+GO_BUILD := $(GO) build -trimpath $(GO_BUILDMODE) \
+	$(EXTRA_FLAGS) -tags "$(BUILDTAGS)" \
+	-ldflags "$(LDFLAGS_COMMON) $(EXTRA_LDFLAGS)"
+
+GO_BUILDMODE_STATIC :=
+LDFLAGS_STATIC := -extldflags -static
+# Enable static PIE executables on supported platforms.
+# This (among the other things) requires libc support (rcrt1.o), which seems
+# to be available only for arm64 and amd64 (Debian Bullseye).
+ifneq (,$(filter $(GOARCH),arm64 amd64))
+	ifeq (,$(findstring -race,$(EXTRA_FLAGS)))
+		GO_BUILDMODE_STATIC := -buildmode=pie
+		LDFLAGS_STATIC := -linkmode external -extldflags --static-pie
+	endif
+endif
+# Enable static PIE binaries on supported platforms.
+GO_BUILD_STATIC := $(GO) build -trimpath $(GO_BUILDMODE_STATIC) \
+	$(EXTRA_FLAGS) -tags "$(BUILDTAGS) netgo osusergo" \
+	-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS_STATIC) $(EXTRA_LDFLAGS)"
 
 GPG_KEYID ?= asarai@suse.de
+
+# Some targets need cgo, which is disabled by default when cross compiling.
+# Enable cgo explicitly for those.
+# Both runc and libcontainer/integration need libcontainer/nsenter.
+runc static localunittest: export CGO_ENABLED=1
+# seccompagent needs libseccomp (when seccomp build tag is set).
+ifneq (,$(filter $(BUILDTAGS),seccomp))
+seccompagent: export CGO_ENABLED=1
+endif
 
 .DEFAULT: runc
 
@@ -40,7 +68,7 @@ recvtty sd-helper seccompagent:
 static:
 	$(GO_BUILD_STATIC) -o runc .
 
-releaseall: RELEASE_ARGS := "-a arm64 -a armel -a armhf -a ppc64le -a s390x"
+releaseall: RELEASE_ARGS := "-a arm64 -a armel -a armhf -a ppc64le -a riscv64 -a s390x"
 releaseall: release
 
 release: runcimage

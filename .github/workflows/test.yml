@@ -124,5 +124,4 @@ jobs:
         go-version: 1.x # Latest stable
 
     - name: unit test
-      # cgo is disabled by default when cross-compiling
-      run: sudo -E PATH="$PATH" -- make GOARCH=386 CGO_ENABLED=1 CGO_CFLAGS=-fno-stack-protector localunittest
+      run: sudo -E PATH="$PATH" -- make GOARCH=386 localunittest

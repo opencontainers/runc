@@ -23,6 +23,9 @@ function set_cross_vars() {
 	ppc64le)
 		HOST=powerpc64le-linux-gnu
 		;;
+	riscv64)
+		HOST=riscv64-linux-gnu
+		;;
 	s390x)
 		HOST=s390x-linux-gnu
 		;;
