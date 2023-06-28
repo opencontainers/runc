@@ -79,6 +79,9 @@ type Process struct {
 
 	ops processOperations
 
+	// LogLevel is a string containing a numeric representation of the current
+	// log level (i.e. "4", but never "info"). It is passed on to runc init as
+	// _LIBCONTAINER_LOGLEVEL environment variable.
 	LogLevel string
 
 	// SubCgroupPaths specifies sub-cgroups to run the process in.
