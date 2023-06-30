@@ -340,3 +340,139 @@ EOF
 	[ ${#lines[@]} -eq 1 ]
 	[[ ${lines[0]} = *"exec /run.sh: no such file or directory"* ]]
 }
+
+@test "runc exec with isolated cpus affinity temporary transition [cgroup cpuset]" {
+	requires root cgroups_cpuset
+
+	tmp=$(mktemp -d "$BATS_RUN_TMPDIR/runc.XXXXXX")
+
+	set_cgroup_cpuset_all_cpus
+	local all_cpus
+	all_cpus="$(get_all_online_cpus)"
+
+	# set temporary isolated CPU affinity transition
+	update_config '.annotations += {"org.opencontainers.runc.exec.isolated-cpu-affinity-transition": "temporary"}'
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_isolated_temporary_transition
+	[ "$status" -eq 0 ]
+
+	# set all online cpus as isolated
+	echo "nohz_full=$all_cpus" >"$tmp/cmdline"
+
+	mount --bind "$tmp/cmdline" /proc/cmdline
+
+	runc exec test_isolated_temporary_transition grep "Cpus_allowed_list:" /proc/self/status
+
+	umount /proc/cmdline
+
+	[ "$status" -eq 0 ]
+	[[ "${lines[0]}" == "Cpus_allowed_list:	$all_cpus" ]]
+}
+
+@test "runc exec with isolated cpus affinity definitive transition [cgroup cpuset]" {
+	requires root cgroups_cpuset
+
+	tmp=$(mktemp -d "$BATS_RUN_TMPDIR/runc.XXXXXX")
+
+	set_cgroup_cpuset_all_cpus
+	local all_cpus
+	all_cpus="$(get_all_online_cpus)"
+
+	# set definitive isolated CPU affinity transition
+	update_config '.annotations += {"org.opencontainers.runc.exec.isolated-cpu-affinity-transition": "definitive"}'
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_isolated_definitive_transition
+	[ "$status" -eq 0 ]
+
+	# set all online cpus as isolated
+	echo "nohz_full=$all_cpus" >"$tmp/cmdline"
+
+	mount --bind "$tmp/cmdline" /proc/cmdline
+
+	runc exec test_isolated_definitive_transition grep "Cpus_allowed_list:" /proc/self/status
+
+	umount /proc/cmdline
+
+	[ "$status" -eq 0 ]
+
+	load /etc/os-release
+
+	# fix unbound variable in condition below
+	VERSION_ID=${VERSION_ID:-}
+
+	allowed_cpus=$all_cpus
+	# use first cpu on systems with RHEL >= 9 or systems with kernel >= 6.2
+	if [[ "${ID_LIKE:-}" =~ "rhel" && "${VERSION_ID%%.*}" -ge "9" ]] || is_kernel_gte 6.2; then
+		allowed_cpus="$(get_first_online_cpu)"
+	fi
+
+	[[ "${lines[0]}" == "Cpus_allowed_list:	$allowed_cpus" ]]
+}
+
+@test "runc exec with isolated cpus affinity bad transition [cgroup cpuset]" {
+	requires root cgroups_cpuset
+
+	tmp=$(mktemp -d "$BATS_RUN_TMPDIR/runc.XXXXXX")
+
+	set_cgroup_cpuset_all_cpus
+	local all_cpus
+	all_cpus="$(get_all_online_cpus)"
+
+	# set a bad isolated CPU affinity transition
+	update_config '.annotations += {"org.opencontainers.runc.exec.isolated-cpu-affinity-transition": "bad"}'
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_isolated_bad_transition
+	[ "$status" -eq 0 ]
+
+	# set all online cpus as isolated
+	echo "nohz_full=$all_cpus" >"$tmp/cmdline"
+
+	mount --bind "$tmp/cmdline" /proc/cmdline
+
+	runc exec test_isolated_bad_transition true
+
+	umount /proc/cmdline
+
+	[ "$status" -eq 255 ]
+}
+
+@test "runc exec with taskset affinity [cgroup cpuset]" {
+	requires root cgroups_cpuset
+
+	set_cgroup_cpuset_all_cpus
+	local all_cpus
+	all_cpus="$(get_all_online_cpus)"
+
+	taskset -p -c "$(get_first_online_cpu)" $$
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_with_taskset
+	[ "$status" -eq 0 ]
+
+	runc exec test_with_taskset grep "Cpus_allowed_list:" /proc/1/status
+	[ "$status" -eq 0 ]
+	[[ "${lines[0]}" == "Cpus_allowed_list:	$all_cpus" ]]
+
+	runc exec test_with_taskset grep "Cpus_allowed_list:" /proc/self/status
+	[ "$status" -eq 0 ]
+	[[ "${lines[0]}" == "Cpus_allowed_list:	$all_cpus" ]]
+}
+
+@test "runc exec with taskset affinity [rootless cgroups_v2]" {
+	requires rootless cgroups_v2
+
+	local all_cpus
+	all_cpus="$(get_all_online_cpus)"
+
+	taskset -p -c "$(get_first_online_cpu)" $$
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_with_taskset
+	[ "$status" -eq 0 ]
+
+	runc exec test_with_taskset grep "Cpus_allowed_list:" /proc/1/status
+	[ "$status" -eq 0 ]
+	[[ "${lines[0]}" == "Cpus_allowed_list:	$all_cpus" ]]
+
+	runc exec test_with_taskset grep "Cpus_allowed_list:" /proc/self/status
+	[ "$status" -eq 0 ]
+	[[ "${lines[0]}" == "Cpus_allowed_list:	$all_cpus" ]]
+}
