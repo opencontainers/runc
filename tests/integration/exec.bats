@@ -340,3 +340,143 @@ EOF
 	[ ${#lines[@]} -eq 1 ]
 	[[ ${lines[0]} = *"exec /run.sh: no such file or directory"* ]]
 }
+
+@test "runc exec with isolated cpus affinity temporary transition [cgroup cpuset]" {
+	requires root
+
+	tmp=$(mktemp -d "$BATS_RUN_TMPDIR/runc.XXXXXX")
+
+	cpus="$(cat /sys/devices/system/cpu/online)"
+
+	update_config " .linux.resources.cpu.cpus = \"$cpus\""
+
+	mems="$(cat /sys/devices/system/node/online 2>/dev/null || true)"
+	[[ -n $mems ]] && update_config " .linux.resources.cpu.mems = \"$mems\""
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_isolated_temporary_transition
+	[ "$status" -eq 0 ]
+
+	# set all online cpus as isolated
+	echo "runc.exec.isolated-cpu-affinity-transition=temporary nohz_full=$cpus" >"$tmp/cmdline"
+
+	mount --bind "$tmp/cmdline" /proc/cmdline
+
+	runc exec test_isolated_temporary_transition grep "Cpus_allowed_list:" /proc/self/status
+	runc_status=$status
+
+	umount /proc/cmdline
+
+	[ "$runc_status" -eq 0 ]
+	[[ "${lines[0]}" == "Cpus_allowed_list:	$cpus" ]]
+}
+
+@test "runc exec with isolated cpus affinity definitive transition [cgroup cpuset]" {
+	requires root
+	requires_kernel 6.2
+
+	tmp=$(mktemp -d "$BATS_RUN_TMPDIR/runc.XXXXXX")
+
+	cpus="$(cat /sys/devices/system/cpu/online)"
+
+	first_cpu="0"
+	[[ $cpus =~ [^0-9]*([0-9]+)([-,][0-9]+)? ]] && first_cpu=${BASH_REMATCH[1]}
+
+	update_config " .linux.resources.cpu.cpus = \"$cpus\""
+
+	mems="$(cat /sys/devices/system/node/online 2>/dev/null || true)"
+	[[ -n $mems ]] && update_config " .linux.resources.cpu.mems = \"$mems\""
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_isolated_definitive_transition
+	[ "$status" -eq 0 ]
+
+	# set all online cpus as isolated
+	echo "runc.exec.isolated-cpu-affinity-transition=definitive nohz_full=$cpus" >"$tmp/cmdline"
+
+	mount --bind "$tmp/cmdline" /proc/cmdline
+
+	runc exec test_isolated_definitive_transition grep "Cpus_allowed_list:" /proc/self/status
+	runc_status=$status
+
+	umount /proc/cmdline
+
+	[ "$runc_status" -eq 0 ]
+
+	[[ "${lines[0]}" == "Cpus_allowed_list:	$first_cpu" ]]
+}
+
+@test "runc exec with isolated cpus affinity bad transition [cgroup cpuset]" {
+	requires root
+
+	tmp=$(mktemp -d "$BATS_RUN_TMPDIR/runc.XXXXXX")
+
+	cpus="$(cat /sys/devices/system/cpu/online)"
+
+	update_config " .linux.resources.cpu.cpus = \"$cpus\""
+
+	mems="$(cat /sys/devices/system/node/online 2>/dev/null || true)"
+	[[ -n $mems ]] && update_config " .linux.resources.cpu.mems = \"$mems\""
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_isolated_bad_transition
+	[ "$status" -eq 0 ]
+
+	# test with bad transition value
+	echo "runc.exec.isolated-cpu-affinity-transition=bad nohz_full=$cpus" >"$tmp/cmdline"
+
+	mount --bind "$tmp/cmdline" /proc/cmdline
+
+	runc exec test_isolated_bad_transition true
+	runc_status=$status
+
+	umount /proc/cmdline
+
+	[ "$runc_status" -eq 255 ]
+}
+
+@test "runc exec with taskset affinity [cgroup cpuset]" {
+	requires root
+
+	cpus="$(cat /sys/devices/system/cpu/online)"
+
+	first_cpu="0"
+	[[ $cpus =~ [^0-9]*([0-9]+)([-,][0-9]+)? ]] && first_cpu=${BASH_REMATCH[1]}
+
+	update_config " .linux.resources.cpu.cpus = \"$cpus\""
+
+	mems="$(cat /sys/devices/system/node/online 2>/dev/null || true)"
+	[[ -n $mems ]] && update_config " .linux.resources.cpu.mems = \"$mems\""
+
+	taskset -p -c "$first_cpu" $$
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_with_taskset
+	[ "$status" -eq 0 ]
+
+	runc exec test_with_taskset grep "Cpus_allowed_list:" /proc/1/status
+	[ "$status" -eq 0 ]
+	[[ "${lines[0]}" == "Cpus_allowed_list:	$cpus" ]]
+
+	runc exec test_with_taskset grep "Cpus_allowed_list:" /proc/self/status
+	[ "$status" -eq 0 ]
+	[[ "${lines[0]}" == "Cpus_allowed_list:	$cpus" ]]
+}
+
+@test "runc exec with taskset affinity [rootless cgroups_v2]" {
+	requires rootless cgroups_v2
+
+	cpus="$(cat /sys/devices/system/cpu/online)"
+
+	first_cpu="0"
+	[[ $cpus =~ [^0-9]*([0-9]+)([-,][0-9]+)? ]] && first_cpu=${BASH_REMATCH[1]}
+
+	taskset -p -c "$first_cpu" $$
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_with_taskset
+	[ "$status" -eq 0 ]
+
+	runc exec test_with_taskset grep "Cpus_allowed_list:" /proc/1/status
+	[ "$status" -eq 0 ]
+	[[ "${lines[0]}" == "Cpus_allowed_list:	$cpus" ]]
+
+	runc exec test_with_taskset grep "Cpus_allowed_list:" /proc/self/status
+	[ "$status" -eq 0 ]
+	[[ "${lines[0]}" == "Cpus_allowed_list:	$cpus" ]]
+}

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
@@ -315,4 +316,25 @@ func CheckMemoryUsage(dirPath string, r *configs.Resources) error {
 	}
 
 	return nil
+}
+
+func (m *Manager) GetEffectiveCPUs() string {
+	// fast path
+	if m.config.CpusetCpus != "" {
+		return m.config.CpusetCpus
+	} else if !strings.HasPrefix(m.dirPath, UnifiedMountpoint) {
+		return ""
+	}
+
+	// iterates until it goes outside of the cgroup root path
+	outsidePath := filepath.Dir(UnifiedMountpoint)
+
+	for path := m.dirPath; path != outsidePath; path = filepath.Dir(path) {
+		cpus, err := fscommon.GetCgroupParamString(path, "cpuset.cpus.effective")
+		if err == nil {
+			return cpus
+		}
+	}
+
+	return ""
 }
