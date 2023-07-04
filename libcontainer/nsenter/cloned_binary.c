@@ -49,6 +49,7 @@
 #include <fcntl.h>
 #include <errno.h>
 
+#include <sched.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/statfs.h>
@@ -56,7 +57,12 @@
 #include <sys/mman.h>
 #include <sys/mount.h>
 #include <sys/sendfile.h>
+#include <sys/socket.h>
 #include <sys/syscall.h>
+#include <sys/wait.h>
+
+#include "ipc.h"
+#include "log.h"
 
 /* Use our own wrapper for memfd_create. */
 #ifndef SYS_memfd_create
@@ -394,6 +400,123 @@ static int seal_execfd(int *fd, int fdtype)
 	return -1;
 }
 
+struct bindfd_child_args {
+	int sockfd;
+	const char *mount_target;
+};
+
+static int bindfd_in_subprocess(void *arg)
+{
+	/*
+	 * In the interests of efficiency (read: minimizing the syscall count)
+	 * and conciseness, no attempt is made to release resources which would
+	 * be cleaned up automatically on process exit, i.e. when this function
+	 * returns. This includes filesystem mounts, as this function is
+	 * executed in a dedicated mount namespace.
+	 */
+
+	/*
+	 * For obvious reasons this won't work in rootless mode because we
+	 * haven't created a userns -- but getting that to work will be a bit
+	 * complicated and it's only worth doing if someone actually needs it.
+	 */
+	if (mount("none", "/", NULL, MS_SLAVE | MS_REC, NULL) < 0)
+		return errno;
+	/*
+	 * The kernel resolves the magic symlink /proc/self/exe to the real file
+	 * _in the original mount namespace_. Cross-namespace bind mounts are
+	 * not allowed, so we must locate the file inside the current mount
+	 * namespace to be able to bind-mount it. (The mount(8) command resolves
+	 * symlinks, which is why it appears to work at first glance.)
+	 */
+	char linkbuf[PATH_MAX + 1] = { 0 };
+	ssize_t linkpathlen = readlink("/proc/self/exe", linkbuf, sizeof(linkbuf));
+	if (linkpathlen < 0)
+		return errno;
+	if (linkpathlen == sizeof(linkbuf)) {
+		/*
+		 * The link path is longer than PATH_MAX, and the contents of
+		 * linkbuf might have been truncated. A truncated path could
+		 * happen to be a valid path to a different file, which could
+		 * allow for local privilege escalation if we were to exec it.
+		 * The mount syscall doesn't accept paths longer than PATH_MAX,
+		 * anyway.
+		 */
+		return ENAMETOOLONG;
+	}
+
+	int srcfd = open(linkbuf, O_PATH | O_CLOEXEC);
+	if (srcfd < 0)
+		return errno;
+	/*
+	 * linkbuf holds the path to the binary which the parent process was
+	 * launched from. Someone could have moved a different file to that path
+	 * in the interim, in which case srcfd is not the file we want to
+	 * bind-mount. Guard against this situation by verifying srcfd is the
+	 * same file as /proc/self/exe.
+	 */
+	struct stat realexe = { 0 };
+	if (stat("/proc/self/exe", &realexe) < 0)
+		return errno;
+	struct stat resolved = { 0 };
+	if (fstat(srcfd, &resolved) < 0)
+		return errno;
+	if (resolved.st_dev != realexe.st_dev || resolved.st_ino != realexe.st_ino)
+		return ENOENT;
+	if (snprintf(linkbuf, sizeof(linkbuf), "/proc/self/fd/%d", srcfd) == sizeof(linkbuf))
+		return ENAMETOOLONG;
+
+	const struct bindfd_child_args *args = arg;
+	if (mount(linkbuf, args->mount_target, "", MS_BIND, "") < 0)
+		return errno;
+	if (mount("", args->mount_target, "", MS_REMOUNT | MS_BIND | MS_RDONLY, "") < 0)
+		return errno;
+
+	int fd = open(args->mount_target, O_PATH | O_CLOEXEC);
+	if (fd < 0)
+		return errno;
+
+	/*
+	 * Make sure the MNT_DETACH works, otherwise we could get remounted
+	 * read-write and that would be quite bad.
+	 */
+	if (umount2(args->mount_target, MNT_DETACH) < 0)
+		return errno;
+
+	if (send_fd(args->sockfd, fd) < 0)
+		return errno;
+	return 0;
+}
+
+static int spawn_bindfd_child(const struct bindfd_child_args *args) __attribute__((noinline));
+static int spawn_bindfd_child(const struct bindfd_child_args *args)
+{
+	/*
+	 * Carve out a chunk of our call stack for the child process to use as
+	 * we can be sure it is correctly mapped for use as stack. (Technically
+	 * only the libc clone() wrapper writes to this buffer. The child
+	 * process operates on a copy of the parent's virtual memory space and
+	 * so can safely overflow into the rest of the stack memory region
+	 * without consequence.)
+	 */
+	char stack[4 * 1024] __attribute__((aligned(16)));
+	int tid = clone(bindfd_in_subprocess,
+			/*
+			 * Assume stack grows down, as HP-PA, the only Linux
+			 * platform where stack grows up, is obsolete.
+			 */
+			stack + sizeof(stack),
+			/*
+			 * Suspend the parent process until the child has exited to
+			 * save an unnecessary context switch as we'd just be
+			 * waiting for the child process to exit anyway.
+			 */
+			CLONE_NEWNS | CLONE_VFORK, (void *)args);
+	if (tid < 0)
+		return -errno;
+	return tid;
+}
+
 static int try_bindfd(void)
 {
 	int fd, ret = -1;
@@ -415,32 +538,53 @@ static int try_bindfd(void)
 	close(fd);
 
 	/*
-	 * For obvious reasons this won't work in rootless mode because we haven't
-	 * created a userns+mntns -- but getting that to work will be a bit
-	 * complicated and it's only worth doing if someone actually needs it.
+	 * Daemons such as systemd and udisks2 watch /proc/self/mountinfo and
+	 * re-parse it on every change, which gets expensive when the mount table
+	 * is large and/or changes frequently. Perform the mount operations in a
+	 * new, private mount namespace so as not to wake up those processes
+	 * every time we nsexec into a container. We clone a child process into
+	 * a new mount namespace to do the dirty work so the side effects of
+	 * unsharing the mount namespace do not leak into the current process.
 	 */
-	ret = -EPERM;
-	if (mount("/proc/self/exe", template, "", MS_BIND, "") < 0)
-		goto out;
-	if (mount("", template, "", MS_REMOUNT | MS_BIND | MS_RDONLY, "") < 0)
-		goto out_umount;
-
-	/* Get read-only handle that we're sure can't be made read-write. */
-	ret = open(template, O_PATH | O_CLOEXEC);
-
-out_umount:
-	/*
-	 * Make sure the MNT_DETACH works, otherwise we could get remounted
-	 * read-write and that would be quite bad (the fd would be made read-write
-	 * too, invalidating the protection).
-	 */
-	if (umount2(template, MNT_DETACH) < 0) {
-		if (ret >= 0)
-			close(ret);
-		ret = -ENOTRECOVERABLE;
+	int sock[2];
+	if (socketpair(AF_LOCAL, SOCK_STREAM, 0, sock) < 0) {
+		ret = -errno;
+		goto cleanup_unlink;
 	}
 
-out:
+	struct bindfd_child_args args = {
+		.sockfd = sock[0],
+		.mount_target = template,
+	};
+	int cpid = spawn_bindfd_child(&args);
+	close(sock[0]);
+	if (cpid < 0) {
+		ret = cpid;
+		goto cleanup_socketpair;
+	}
+
+	int wstatus = 0;
+	if (waitpid(cpid, &wstatus, __WCLONE) < 0)
+		bail("error waiting for bindfd child process to exit");
+	if (WIFEXITED(wstatus)) {
+		if (WEXITSTATUS(wstatus)) {
+			ret = -WEXITSTATUS(wstatus);
+			goto cleanup_socketpair;
+		}
+	} else if (WIFSIGNALED(wstatus)) {
+		int sig = WTERMSIG(wstatus);
+		bail("bindfd child process terminated by signal %d (%s)", sig, strsignal(sig));
+	} else {
+		/* Should never happen... */
+		bail("unexpected waitpid() status for bindfd child process: 0x%x", wstatus);
+	}
+
+	ret = receive_fd(sock[1]);
+
+cleanup_socketpair:
+	close(sock[1]);
+
+cleanup_unlink:
 	/*
 	 * We don't care about unlink errors, the worst that happens is that
 	 * there's an empty file left around in STATEDIR.
