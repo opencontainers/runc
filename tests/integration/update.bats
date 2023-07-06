@@ -474,11 +474,8 @@ EOF
 }
 
 @test "update cgroup cpu.idle via systemd v252+" {
-	requires cgroups_v2 systemd cgroups_cpu_idle
+	requires cgroups_v2 systemd_v252 cgroups_cpu_idle
 	[ $EUID -ne 0 ] && requires rootless_cgroup
-	if [ "$(systemd_version)" -lt 252 ]; then
-		skip "requires systemd >= v252"
-	fi
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
 	[ "$status" -eq 0 ]
