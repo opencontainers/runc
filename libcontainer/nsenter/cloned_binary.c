@@ -96,6 +96,9 @@
 #  define MFD_CLOEXEC       0x0001U
 #  define MFD_ALLOW_SEALING 0x0002U
 #endif
+#ifndef MFD_EXEC
+#  define MFD_EXEC          0x0010U
+#endif
 
 int memfd_create(const char *name, unsigned int flags)
 {
@@ -116,15 +119,27 @@ int memfd_create(const char *name, unsigned int flags)
 #  define F_GET_SEALS (F_LINUX_SPECIFIC_BASE + 10)
 #endif
 #ifndef F_SEAL_SEAL
-#  define F_SEAL_SEAL   0x0001	/* prevent further seals from being set */
-#  define F_SEAL_SHRINK 0x0002	/* prevent file from shrinking */
-#  define F_SEAL_GROW   0x0004	/* prevent file from growing */
-#  define F_SEAL_WRITE  0x0008	/* prevent writes */
+#  define F_SEAL_SEAL          0x0001	/* prevent further seals from being set */
+#  define F_SEAL_SHRINK        0x0002	/* prevent file from shrinking */
+#  define F_SEAL_GROW          0x0004	/* prevent file from growing */
+#  define F_SEAL_WRITE         0x0008	/* prevent writes */
+#endif
+#ifndef F_SEAL_FUTURE_WRITE
+#  define F_SEAL_FUTURE_WRITE  0x0010	/* prevent future writes while mapped */
+#endif
+#ifndef F_SEAL_EXEC
+#  define F_SEAL_EXEC          0x0020	/* prevent chmod modifying exec bits */
 #endif
 
 #define CLONED_BINARY_ENV "_LIBCONTAINER_CLONED_BINARY"
 #define RUNC_MEMFD_COMMENT "runc_cloned:/proc/self/exe"
-#define RUNC_MEMFD_SEALS \
+/*
+ * There are newer memfd seals (such as F_SEAL_FUTURE_WRITE and F_SEAL_EXEC),
+ * which we use opportunistically. However, this set is the original set of
+ * memfd seals, and we require them all to be set to trust our /proc/self/exe
+ * if it is a memfd.
+ */
+#define RUNC_MEMFD_MIN_SEALS \
 	(F_SEAL_SEAL | F_SEAL_SHRINK | F_SEAL_GROW | F_SEAL_WRITE)
 
 static void *must_realloc(void *ptr, size_t size)
@@ -143,25 +158,27 @@ static void *must_realloc(void *ptr, size_t size)
  */
 static int is_self_cloned(void)
 {
-	int fd, is_cloned = 0;
+	int fd, seals = 0, is_cloned = false;
 	struct stat statbuf = { };
 	struct statfs fsbuf = { };
 
 	fd = open("/proc/self/exe", O_RDONLY | O_CLOEXEC);
 	if (fd < 0) {
-		fprintf(stderr, "you have no read access to runc binary file\n");
+		write_log(ERROR, "cannot open runc binary for reading: open /proc/self/exe: %m");
 		return -ENOTRECOVERABLE;
 	}
 
 	/*
 	 * Is the binary a fully-sealed memfd? We don't need CLONED_BINARY_ENV for
-	 * this, because you cannot write to a sealed memfd no matter what (so
-	 * sharing it isn't a bad thing -- and an admin could bind-mount a sealed
-	 * memfd to /usr/bin/runc to allow re-use).
+	 * this, because you cannot write to a sealed memfd no matter what.
 	 */
-	is_cloned = (fcntl(fd, F_GET_SEALS) == RUNC_MEMFD_SEALS);
-	if (is_cloned)
-		goto out;
+	seals = fcntl(fd, F_GET_SEALS);
+	if (seals >= 0) {
+		write_log(DEBUG, "checking /proc/self/exe memfd seals: 0x%x", seals);
+		is_cloned = (seals & RUNC_MEMFD_MIN_SEALS) == RUNC_MEMFD_MIN_SEALS;
+		if (is_cloned)
+			goto out;
+	}
 
 	/*
 	 * All other forms require CLONED_BINARY_ENV, since they are potentially
@@ -298,6 +315,35 @@ enum {
 #  endif
 #endif
 
+static inline bool is_memfd_unsupported_error(int err)
+{
+	/*
+	 * - ENOSYS is obviously an "unsupported" error.
+	 *
+	 * - EINVAL could be hit if MFD_EXEC is not supported (pre-6.3 kernel),
+	 *   but it can also be hit if vm.memfd_noexec=2 (in kernels without
+	 *   [1] applied) and the flags does not contain MFD_EXEC. However,
+	 *   there was a bug in the original 6.3 implementation of
+	 *   vm.memfd_noexec=2, which meant that MFD_EXEC would work even in
+	 *   the "strict" mode. Because we try MFD_EXEC first, we won't get
+	 *   EINVAL in the vm.memfd_noexec=2 case (which means we don't need to
+	 *   figure out whether to log the message about memfd_create).
+	 *
+	 * - EACCES is returned in kernels that contain [1] in the
+	 *   vm.memfd_noexec=2 case.
+	 *
+	 * At time of writing, [1] is not in Linus's tree and it't not clear if
+	 * it will be backported to stable, so what exact versions apply here
+	 * is unclear. But the bug is present in 6.3-6.5 at the very least.
+	 *
+	 * [1]: https://lore.kernel.org/all/20230705063315.3680666-2-jeffxu@google.com/
+	 */
+	if (err == EACCES)
+		write_log(INFO,
+			  "memfd_create(MFD_EXEC) failed, possibly due to vm.memfd_noexec=2 -- falling back to less secure O_TMPFILE");
+	return err == ENOSYS || err == EINVAL || err == EACCES;
+}
+
 static int make_execfd(int *fdtype)
 {
 	int fd = -1;
@@ -315,10 +361,20 @@ static int make_execfd(int *fdtype)
 	 * assumptions about STATEDIR.
 	 */
 	*fdtype = EFD_MEMFD;
-	fd = memfd_create(RUNC_MEMFD_COMMENT, MFD_CLOEXEC | MFD_ALLOW_SEALING);
+	/*
+	 * On newer kernels we should set MFD_EXEC to indicate we need +x
+	 * permissions. Otherwise an admin with vm.memfd_noexec=1 would subtly
+	 * break runc. vm.memfd_noexec=2 is a little bit more complicated, see the
+	 * comment in is_memfd_unsupported_error() -- the upshot is that doing it
+	 * this way works, but only because of two overlapping bugs in the sysctl
+	 * implementation.
+	 */
+	fd = memfd_create(RUNC_MEMFD_COMMENT, MFD_EXEC | MFD_CLOEXEC | MFD_ALLOW_SEALING);
+	if (fd < 0 && is_memfd_unsupported_error(errno))
+		fd = memfd_create(RUNC_MEMFD_COMMENT, MFD_CLOEXEC | MFD_ALLOW_SEALING);
 	if (fd >= 0)
 		return fd;
-	if (errno != ENOSYS && errno != EINVAL)
+	if (!is_memfd_unsupported_error(errno))
 		goto error;
 
 #ifdef O_TMPFILE
@@ -373,8 +429,18 @@ error:
 static int seal_execfd(int *fd, int fdtype)
 {
 	switch (fdtype) {
-	case EFD_MEMFD:
-		return fcntl(*fd, F_ADD_SEALS, RUNC_MEMFD_SEALS);
+	case EFD_MEMFD:{
+			/*
+			 * Try to seal with newer seals, but we ignore errors because older
+			 * kernels don't support some of them. For container security only
+			 * RUNC_MEMFD_MIN_SEALS are strictly required, but the rest are
+			 * nice-to-haves. We apply RUNC_MEMFD_MIN_SEALS at the end because it
+			 * contains F_SEAL_SEAL.
+			 */
+			int __attribute__((unused)) _err1 = fcntl(*fd, F_ADD_SEALS, F_SEAL_FUTURE_WRITE);	// Linux 5.1
+			int __attribute__((unused)) _err2 = fcntl(*fd, F_ADD_SEALS, F_SEAL_EXEC);	// Linux 6.3
+			return fcntl(*fd, F_ADD_SEALS, RUNC_MEMFD_MIN_SEALS);
+		}
 	case EFD_FILE:{
 			/* Need to re-open our pseudo-memfd as an O_PATH to avoid execve(2) giving -ETXTBSY. */
 			int newfd;
