@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased 1.1.z]
 
+### Changed
+
+ * Sum `anon` and `file` from `memory.stat` for cgroupv2 root usage,
+   as the root does not have `memory.current` for cgroupv2.
+   This aligns cgroupv2 root usage more closely with cgroupv1 reporting.
+   Additionally, report root swap usage as sum of swap and memory usage,
+   aligned with v1 and existing non-root v2 reporting. (#3933)
+
 ## [1.1.8] - 2023-07-20
 
 > 海纳百川 有容乃大
