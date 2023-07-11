@@ -70,7 +70,7 @@ func prepareRootfs(pipe io.ReadWriter, iConfig *initConfig, mountFds mountFds) (
 	}
 
 	if mountFds.sourceFds != nil && len(mountFds.sourceFds) != len(config.Mounts) {
-		return fmt.Errorf("malformed mountFds slice. Expected size: %v, got: %v. Slice: %v", len(config.Mounts), len(mountFds.sourceFds), mountFds.sourceFds)
+		return fmt.Errorf("malformed mountFds slice. Expected size: %v, got: %v", len(config.Mounts), len(mountFds.sourceFds))
 	}
 
 	mountConfig := &mountConfig{
