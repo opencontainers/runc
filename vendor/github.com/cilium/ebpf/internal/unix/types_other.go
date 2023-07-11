@@ -41,6 +41,7 @@ const (
 	BPF_F_MMAPABLE
 	BPF_F_INNER_MAP
 	BPF_F_KPROBE_MULTI_RETURN
+	BPF_F_XDP_HAS_FRAGS
 	BPF_OBJ_NAME_LEN
 	BPF_TAG_SIZE
 	BPF_RINGBUF_BUSY_BIT
@@ -53,9 +54,12 @@ const (
 	EPOLL_CLOEXEC
 	O_CLOEXEC
 	O_NONBLOCK
+	PROT_NONE
 	PROT_READ
 	PROT_WRITE
+	MAP_ANON
 	MAP_SHARED
+	MAP_PRIVATE
 	PERF_ATTR_SIZE_VER1
 	PERF_TYPE_SOFTWARE
 	PERF_TYPE_TRACEPOINT
@@ -64,6 +68,7 @@ const (
 	PERF_EVENT_IOC_ENABLE
 	PERF_EVENT_IOC_SET_BPF
 	PerfBitWatermark
+	PerfBitWriteBackward
 	PERF_SAMPLE_RAW
 	PERF_FLAG_FD_CLOEXEC
 	RLIM_INFINITY
@@ -81,6 +86,9 @@ const (
 	SIG_UNBLOCK
 	EM_NONE
 	EM_BPF
+	BPF_FS_MAGIC
+	TRACEFS_MAGIC
+	DEBUGFS_MAGIC
 )
 
 type Statfs_t struct {
@@ -98,7 +106,19 @@ type Statfs_t struct {
 	Spare   [4]int64
 }
 
-type Stat_t struct{}
+type Stat_t struct {
+	Dev     uint64
+	Ino     uint64
+	Nlink   uint64
+	Mode    uint32
+	Uid     uint32
+	Gid     uint32
+	_       int32
+	Rdev    uint64
+	Size    int64
+	Blksize int64
+	Blocks  int64
+}
 
 type Rlimit struct {
 	Cur uint64
@@ -266,5 +286,9 @@ func Open(path string, mode int, perm uint32) (int, error) {
 }
 
 func Fstat(fd int, stat *Stat_t) error {
+	return errNonLinux
+}
+
+func SetsockoptInt(fd, level, opt, value int) error {
 	return errNonLinux
 }
