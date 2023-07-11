@@ -67,9 +67,9 @@ runc: runc-dmz
 	$(GO_BUILD) -o runc .
 	make verify-dmz-arch
 
-all: runc recvtty sd-helper seccompagent fs-idmap
+all: runc recvtty sd-helper seccompagent fs-idmap memfd-bind
 
-recvtty sd-helper seccompagent fs-idmap:
+recvtty sd-helper seccompagent fs-idmap memfd-bind:
 	$(GO_BUILD) -o contrib/cmd/$@/$@ ./contrib/cmd/$@
 
 static: runc-dmz
@@ -161,10 +161,11 @@ install-man: man
 
 clean:
 	rm -f runc runc-* libcontainer/dmz/runc-dmz
+	rm -f contrib/cmd/fs-idmap/fs-idmap
 	rm -f contrib/cmd/recvtty/recvtty
 	rm -f contrib/cmd/sd-helper/sd-helper
 	rm -f contrib/cmd/seccompagent/seccompagent
-	rm -f contrib/cmd/fs-idmap/fs-idmap
+	rm -f contrib/cmd/memfd-bind/memfd-bind
 	sudo rm -rf release
 	rm -rf man/man8
 
