@@ -219,3 +219,11 @@ func statsFromMeminfo(stats *cgroups.Stats) error {
 
 	return nil
 }
+
+func statMemoryPressure(dirPath string, stats *cgroups.Stats) error {
+	const file = "memory.pressure"
+	var err error
+
+	stats.MemoryStats.PSI, err = statPSI(dirPath, file)
+	return err
+}

@@ -191,3 +191,11 @@ func statIo(dirPath string, stats *cgroups.Stats) error {
 	stats.BlkioStats = parsedStats
 	return nil
 }
+
+func statIoPressure(dirPath string, stats *cgroups.Stats) error {
+	const file = "io.pressure"
+	var err error
+
+	stats.BlkioStats.PSI, err = statPSI(dirPath, file)
+	return err
+}

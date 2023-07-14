@@ -91,3 +91,11 @@ func statCpu(dirPath string, stats *cgroups.Stats) error {
 	}
 	return nil
 }
+
+func statCpuPressure(dirPath string, stats *cgroups.Stats) error {
+	const file = "cpu.pressure"
+	var err error
+
+	stats.CpuStats.PSI, err = statPSI(dirPath, file)
+	return err
+}
