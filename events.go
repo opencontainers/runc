@@ -129,6 +129,7 @@ func convertLibcontainerStats(ls *libcontainer.Stats) *types.Stats {
 	s.CPU.Throttling.Periods = cg.CpuStats.ThrottlingData.Periods
 	s.CPU.Throttling.ThrottledPeriods = cg.CpuStats.ThrottlingData.ThrottledPeriods
 	s.CPU.Throttling.ThrottledTime = cg.CpuStats.ThrottlingData.ThrottledTime
+	s.CPU.PSI = cg.CpuStats.PSI
 
 	s.CPUSet = types.CPUSet(cg.CPUSetStats)
 
@@ -138,6 +139,7 @@ func convertLibcontainerStats(ls *libcontainer.Stats) *types.Stats {
 	s.Memory.Swap = convertMemoryEntry(cg.MemoryStats.SwapUsage)
 	s.Memory.Usage = convertMemoryEntry(cg.MemoryStats.Usage)
 	s.Memory.Raw = cg.MemoryStats.Stats
+	s.Memory.PSI = cg.MemoryStats.PSI
 
 	s.Blkio.IoServiceBytesRecursive = convertBlkioEntry(cg.BlkioStats.IoServiceBytesRecursive)
 	s.Blkio.IoServicedRecursive = convertBlkioEntry(cg.BlkioStats.IoServicedRecursive)
@@ -147,6 +149,7 @@ func convertLibcontainerStats(ls *libcontainer.Stats) *types.Stats {
 	s.Blkio.IoMergedRecursive = convertBlkioEntry(cg.BlkioStats.IoMergedRecursive)
 	s.Blkio.IoTimeRecursive = convertBlkioEntry(cg.BlkioStats.IoTimeRecursive)
 	s.Blkio.SectorsRecursive = convertBlkioEntry(cg.BlkioStats.SectorsRecursive)
+	s.Blkio.PSI = cg.BlkioStats.PSI
 
 	s.Hugetlb = make(map[string]types.Hugetlb)
 	for k, v := range cg.HugetlbStats {
