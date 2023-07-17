@@ -12,7 +12,6 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	selinux "github.com/opencontainers/selinux/go-selinux"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
 
@@ -29,19 +28,11 @@ func Validate(config *configs.Config) error {
 		sysctl,
 		intelrdtCheck,
 		rootlessEUIDCheck,
+		mounts,
 	}
 	for _, c := range checks {
 		if err := c(config); err != nil {
 			return err
-		}
-	}
-	// Relaxed validation rules for backward compatibility
-	warns := []check{
-		mounts, // TODO (runc v1.x.x): make this an error instead of a warning
-	}
-	for _, c := range warns {
-		if err := c(config); err != nil {
-			logrus.WithError(err).Warn("invalid configuration")
 		}
 	}
 	return nil
@@ -262,14 +253,70 @@ func cgroupsCheck(config *configs.Config) error {
 	return nil
 }
 
+func checkIDMapMounts(config *configs.Config, m *configs.Mount) error {
+	if !m.IsIDMapped() {
+		return nil
+	}
+
+	if !m.IsBind() {
+		return fmt.Errorf("gidMappings/uidMappings is supported only for mounts with the option 'bind'")
+	}
+	if config.RootlessEUID {
+		return fmt.Errorf("gidMappings/uidMappings is not supported when runc is being launched with EUID != 0, needs CAP_SYS_ADMIN on the runc parent's user namespace")
+	}
+	if len(config.UidMappings) == 0 || len(config.GidMappings) == 0 {
+		return fmt.Errorf("not yet supported to use gidMappings/uidMappings in a mount without also using a user namespace")
+	}
+	if !sameMapping(config.UidMappings, m.UIDMappings) {
+		return fmt.Errorf("not yet supported for the mount uidMappings to be different than user namespace uidMapping")
+	}
+	if !sameMapping(config.GidMappings, m.GIDMappings) {
+		return fmt.Errorf("not yet supported for the mount gidMappings to be different than user namespace gidMapping")
+	}
+	if !filepath.IsAbs(m.Source) {
+		return fmt.Errorf("mount source not absolute")
+	}
+
+	return nil
+}
+
 func mounts(config *configs.Config) error {
 	for _, m := range config.Mounts {
+		// We upgraded this to an error in runc 1.2. We might need to
+		// revert this change if some users haven't still moved to use
+		// abs paths, in that please move this check inside
+		// checkIDMapMounts() as we do want to ensure that for idmap
+		// mounts anyways.
 		if !filepath.IsAbs(m.Destination) {
 			return fmt.Errorf("invalid mount %+v: mount destination not absolute", m)
+		}
+		if err := checkIDMapMounts(config, m); err != nil {
+			return fmt.Errorf("invalid mount %+v: %w", m, err)
 		}
 	}
 
 	return nil
+}
+
+// sameMapping checks if the mappings are the same. If the mappings are the same
+// but in different order, it returns false.
+func sameMapping(a, b []configs.IDMap) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	for i := range a {
+		if a[i].ContainerID != b[i].ContainerID {
+			return false
+		}
+		if a[i].HostID != b[i].HostID {
+			return false
+		}
+		if a[i].Size != b[i].Size {
+			return false
+		}
+	}
+	return true
 }
 
 func isHostNetNS(path string) (bool, error) {

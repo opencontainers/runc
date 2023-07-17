@@ -360,11 +360,10 @@ func TestValidateMounts(t *testing.T) {
 		isErr bool
 		dest  string
 	}{
-		// TODO (runc v1.x.x): make these relative paths an error. See https://github.com/opencontainers/runc/pull/3004
-		{isErr: false, dest: "not/an/abs/path"},
-		{isErr: false, dest: "./rel/path"},
-		{isErr: false, dest: "./rel/path"},
-		{isErr: false, dest: "../../path"},
+		{isErr: true, dest: "not/an/abs/path"},
+		{isErr: true, dest: "./rel/path"},
+		{isErr: true, dest: "./rel/path"},
+		{isErr: true, dest: "../../path"},
 
 		{isErr: false, dest: "/abs/path"},
 		{isErr: false, dest: "/abs/but/../unclean"},
@@ -385,5 +384,201 @@ func TestValidateMounts(t *testing.T) {
 		if !tc.isErr && err != nil {
 			t.Errorf("mount dest: %s, expected nil, got error %v", tc.dest, err)
 		}
+	}
+}
+
+func TestValidateIDMapMounts(t *testing.T) {
+	mapping := []configs.IDMap{
+		{
+			ContainerID: 0,
+			HostID:      10000,
+			Size:        1,
+		},
+	}
+
+	testCases := []struct {
+		name   string
+		isErr  bool
+		config *configs.Config
+	}{
+		{
+			name:  "idmap mount without bind opt specified",
+			isErr: true,
+			config: &configs.Config{
+				UidMappings: mapping,
+				GidMappings: mapping,
+				Mounts: []*configs.Mount{
+					{
+						Source:      "/abs/path/",
+						Destination: "/abs/path/",
+						UIDMappings: mapping,
+						GIDMappings: mapping,
+					},
+				},
+			},
+		},
+		{
+			name:  "rootless idmap mount",
+			isErr: true,
+			config: &configs.Config{
+				RootlessEUID: true,
+				UidMappings:  mapping,
+				GidMappings:  mapping,
+				Mounts: []*configs.Mount{
+					{
+						Source:      "/abs/path/",
+						Destination: "/abs/path/",
+						Flags:       unix.MS_BIND,
+						UIDMappings: mapping,
+						GIDMappings: mapping,
+					},
+				},
+			},
+		},
+		{
+			name:  "idmap mount without userns mappings",
+			isErr: true,
+			config: &configs.Config{
+				Mounts: []*configs.Mount{
+					{
+						Source:      "/abs/path/",
+						Destination: "/abs/path/",
+						Flags:       unix.MS_BIND,
+						UIDMappings: mapping,
+						GIDMappings: mapping,
+					},
+				},
+			},
+		},
+		{
+			name:  "idmap mounts with different userns and mount mappings",
+			isErr: true,
+			config: &configs.Config{
+				UidMappings: mapping,
+				GidMappings: mapping,
+				Mounts: []*configs.Mount{
+					{
+						Source:      "/abs/path/",
+						Destination: "/abs/path/",
+						Flags:       unix.MS_BIND,
+						UIDMappings: []configs.IDMap{
+							{
+								ContainerID: 10,
+								HostID:      10,
+								Size:        1,
+							},
+						},
+						GIDMappings: mapping,
+					},
+				},
+			},
+		},
+		{
+			name:  "idmap mounts with different userns and mount mappings",
+			isErr: true,
+			config: &configs.Config{
+				UidMappings: mapping,
+				GidMappings: mapping,
+				Mounts: []*configs.Mount{
+					{
+						Source:      "/abs/path/",
+						Destination: "/abs/path/",
+						Flags:       unix.MS_BIND,
+						UIDMappings: mapping,
+						GIDMappings: []configs.IDMap{
+							{
+								ContainerID: 10,
+								HostID:      10,
+								Size:        1,
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:  "idmap mounts without abs source path",
+			isErr: true,
+			config: &configs.Config{
+				UidMappings: mapping,
+				GidMappings: mapping,
+				Mounts: []*configs.Mount{
+					{
+						Source:      "./rel/path/",
+						Destination: "/abs/path/",
+						Flags:       unix.MS_BIND,
+						UIDMappings: mapping,
+						GIDMappings: mapping,
+					},
+				},
+			},
+		},
+		{
+			name:  "idmap mounts without abs dest path",
+			isErr: true,
+			config: &configs.Config{
+				UidMappings: mapping,
+				GidMappings: mapping,
+				Mounts: []*configs.Mount{
+					{
+						Source:      "/abs/path/",
+						Destination: "./rel/path/",
+						Flags:       unix.MS_BIND,
+						UIDMappings: mapping,
+						GIDMappings: mapping,
+					},
+				},
+			},
+		},
+
+		{
+			name: "simple idmap mount",
+			config: &configs.Config{
+				UidMappings: mapping,
+				GidMappings: mapping,
+				Mounts: []*configs.Mount{
+					{
+						Source:      "/another-abs/path/",
+						Destination: "/abs/path/",
+						Flags:       unix.MS_BIND,
+						UIDMappings: mapping,
+						GIDMappings: mapping,
+					},
+				},
+			},
+		},
+		{
+			name: "idmap mount with more flags",
+			config: &configs.Config{
+				UidMappings: mapping,
+				GidMappings: mapping,
+				Mounts: []*configs.Mount{
+					{
+						Source:      "/another-abs/path/",
+						Destination: "/abs/path/",
+						Flags:       unix.MS_BIND | unix.MS_RDONLY,
+						UIDMappings: mapping,
+						GIDMappings: mapping,
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			config := tc.config
+			config.Rootfs = "/var"
+
+			err := mounts(config)
+			if tc.isErr && err == nil {
+				t.Error("expected error, got nil")
+			}
+
+			if !tc.isErr && err != nil {
+				t.Error(err)
+			}
+		})
 	}
 }

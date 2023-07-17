@@ -40,7 +40,8 @@ type mountConfig struct {
 // mountEntry contains mount data specific to a mount point.
 type mountEntry struct {
 	*configs.Mount
-	srcFD string
+	srcFD   string
+	idmapFD int
 }
 
 func (m *mountEntry) src() string {
@@ -63,14 +64,18 @@ func needsSetupDev(config *configs.Config) bool {
 // prepareRootfs sets up the devices, mount points, and filesystems for use
 // inside a new mount namespace. It doesn't set anything as ro. You must call
 // finalizeRootfs after this function to finish setting up the rootfs.
-func prepareRootfs(pipe io.ReadWriter, iConfig *initConfig, mountFds []int) (err error) {
+func prepareRootfs(pipe io.ReadWriter, iConfig *initConfig, mountFds mountFds) (err error) {
 	config := iConfig.Config
 	if err := prepareRoot(config); err != nil {
 		return fmt.Errorf("error preparing rootfs: %w", err)
 	}
 
-	if mountFds != nil && len(mountFds) != len(config.Mounts) {
-		return fmt.Errorf("malformed mountFds slice. Expected size: %v, got: %v. Slice: %v", len(config.Mounts), len(mountFds), mountFds)
+	if mountFds.sourceFds != nil && len(mountFds.sourceFds) != len(config.Mounts) {
+		return fmt.Errorf("malformed mountFds slice. Expected size: %v, got: %v", len(config.Mounts), len(mountFds.sourceFds))
+	}
+
+	if mountFds.idmapFds != nil && len(mountFds.idmapFds) != len(config.Mounts) {
+		return fmt.Errorf("malformed idmapFds slice: expected size: %v, got: %v", len(config.Mounts), len(mountFds.idmapFds))
 	}
 
 	mountConfig := &mountConfig{
@@ -81,11 +86,20 @@ func prepareRootfs(pipe io.ReadWriter, iConfig *initConfig, mountFds []int) (err
 		cgroupns:        config.Namespaces.Contains(configs.NEWCGROUP),
 	}
 	for i, m := range config.Mounts {
-		entry := mountEntry{Mount: m}
+		entry := mountEntry{Mount: m, idmapFD: -1}
 		// Just before the loop we checked that if not empty, len(mountFds) == len(config.Mounts).
 		// Therefore, we can access mountFds[i] without any concerns.
-		if mountFds != nil && mountFds[i] != -1 {
-			entry.srcFD = "/proc/self/fd/" + strconv.Itoa(mountFds[i])
+		if mountFds.sourceFds != nil && mountFds.sourceFds[i] != -1 {
+			entry.srcFD = "/proc/self/fd/" + strconv.Itoa(mountFds.sourceFds[i])
+		}
+
+		// We validated before we can access idmapFds[i].
+		if mountFds.idmapFds != nil && mountFds.idmapFds[i] != -1 {
+			entry.idmapFD = mountFds.idmapFds[i]
+		}
+
+		if entry.idmapFD != -1 && entry.srcFD != "" {
+			return fmt.Errorf("malformed mountFds and idmapFds slice, entry: %v has fds in both slices", i)
 		}
 
 		if err := mountToRootfs(mountConfig, entry); err != nil {
@@ -466,8 +480,35 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 		if err := prepareBindMount(m, rootfs); err != nil {
 			return err
 		}
-		if err := mountPropagate(m, rootfs, mountLabel); err != nil {
-			return err
+
+		if m.IsBind() && m.IsIDMapped() {
+			if m.idmapFD == -1 {
+				return fmt.Errorf("error creating mount %+v: idmapFD is invalid, should point to a valid fd", m)
+			}
+			if err := unix.MoveMount(m.idmapFD, "", -1, dest, unix.MOVE_MOUNT_F_EMPTY_PATH); err != nil {
+				return fmt.Errorf("error on unix.MoveMount %+v: %w", m, err)
+			}
+
+			// In nsexec.c, we did not set the propagation field of mount_attr struct.
+			// So, let's deal with these flags right now!
+			if err := utils.WithProcfd(rootfs, dest, func(dstFD string) error {
+				for _, pflag := range m.PropagationFlags {
+					// When using mount for setting propagations flags, the source, file
+					// system type and data arguments are ignored:
+					// https://man7.org/linux/man-pages/man2/mount.2.html
+					// We also ignore procfd because we want to act on dest.
+					if err := mountViaFDs("", "", dest, dstFD, "", uintptr(pflag), ""); err != nil {
+						return err
+					}
+				}
+				return nil
+			}); err != nil {
+				return fmt.Errorf("change mount propagation through procfd: %w", err)
+			}
+		} else {
+			if err := mountPropagate(m, rootfs, mountLabel); err != nil {
+				return err
+			}
 		}
 		// bind mount won't change mount options, we need remount to make mount options effective.
 		// first check that we have non-default options required before attempting a remount

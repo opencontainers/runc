@@ -60,9 +60,9 @@ endif
 runc:
 	$(GO_BUILD) -o runc .
 
-all: runc recvtty sd-helper seccompagent
+all: runc recvtty sd-helper seccompagent fs-idmap
 
-recvtty sd-helper seccompagent:
+recvtty sd-helper seccompagent fs-idmap:
 	$(GO_BUILD) -o contrib/cmd/$@/$@ ./contrib/cmd/$@
 
 static:
@@ -151,6 +151,7 @@ clean:
 	rm -f contrib/cmd/recvtty/recvtty
 	rm -f contrib/cmd/sd-helper/sd-helper
 	rm -f contrib/cmd/seccompagent/seccompagent
+	rm -f contrib/cmd/fs-idmap/fs-idmap
 	rm -rf release
 	rm -rf man/man8
 
@@ -191,7 +192,7 @@ verify-dependencies: vendor
 validate-keyring:
 	script/keyring_validate.sh
 
-.PHONY: runc all recvtty sd-helper seccompagent static releaseall release \
+.PHONY: runc all recvtty sd-helper seccompagent fs-idmap static releaseall release \
 	localrelease dbuild lint man runcimage \
 	test localtest unittest localunittest integration localintegration \
 	rootlessintegration localrootlessintegration shell install install-bash \

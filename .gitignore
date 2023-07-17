@@ -4,6 +4,7 @@ vendor/pkg
 contrib/cmd/recvtty/recvtty
 contrib/cmd/sd-helper/sd-helper
 contrib/cmd/seccompagent/seccompagent
+contrib/cmd/fs-idmap/fs-idmap
 man/man8
 release
 Vagrantfile

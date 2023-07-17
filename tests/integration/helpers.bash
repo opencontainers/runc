@@ -16,6 +16,7 @@ unset IMAGES
 RECVTTY="${INTEGRATION_ROOT}/../../contrib/cmd/recvtty/recvtty"
 SD_HELPER="${INTEGRATION_ROOT}/../../contrib/cmd/sd-helper/sd-helper"
 SECCOMP_AGENT="${INTEGRATION_ROOT}/../../contrib/cmd/seccompagent/seccompagent"
+FS_IDMAP="${INTEGRATION_ROOT}/../../contrib/cmd/fs-idmap/fs-idmap"
 
 # Some variables may not always be set. Set those to empty value,
 # if unset, to avoid "unbound variable" error.
@@ -628,4 +629,43 @@ function requires_kernel() {
 	if [[ "$KERNEL_MAJOR" -lt $major_required || ("$KERNEL_MAJOR" -eq $major_required && "$KERNEL_MINOR" -lt $minor_required) ]]; then
 		skip "requires kernel $1"
 	fi
+}
+
+function requires_idmap_fs() {
+	local fs
+	fs=$1
+
+	# We need to "|| true" it to avoid CI failure as this binary may return with
+	# something different than 0.
+	stderr=$($FS_IDMAP "$fs" 2>&1 >/dev/null || true)
+
+	case $stderr in
+	*invalid\ argument)
+		skip "$fs underlying file system does not support ID map mounts"
+		;;
+	*operation\ not\ permitted)
+		if uname -r | grep -q el9; then
+			# centos kernel 5.14.0-200 does not permit using ID map mounts due to a
+			# specific patch added to their sources:
+			# 	https://gitlab.com/redhat/centos-stream/src/kernel/centos-stream-9/-/merge_requests/131
+			#
+			# There doesn't seem to be any technical reason behind
+			# it, none was provided in numerous examples, like:
+			# 	https://lore.kernel.org/lkml/20210213130042.828076-1-christian.brauner@ubuntu.com/T/#m3a9df31aa183e8797c70bc193040adfd601399ad
+			#	https://lore.kernel.org/lkml/20210213130042.828076-1-christian.brauner@ubuntu.com/T/#m59cdad9630d5a279aeecd0c1f117115144bc15eb
+			#	https://lore.kernel.org/lkml/m1r1ifzf8x.fsf@fess.ebiederm.org
+			#	https://lore.kernel.org/lkml/20210510125147.tkgeurcindldiwxg@wittgenstein
+			#
+			# So, sadly we just need to skip this on centos.
+			#
+			# TODO Nonetheless, there are ongoing works to revert the patch
+			# deactivating ID map mounts:
+			# https://gitlab.com/redhat/centos-stream/src/kernel/centos-stream-9/-/merge_requests/2179/diffs?commit_id=06f4fe946394cb94d2cf274aa7f3091d8f8469dc
+			# Once this patch is merge, we should be able to remove the below skip
+			# if the revert is backported or if CI centos kernel is upgraded.
+			skip "sadly, centos kernel 5.14 does not permit using ID map mounts"
+		fi
+		;;
+	esac
+	# If we have another error, the integration test will fail and report it.
 }
