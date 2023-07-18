@@ -1419,10 +1419,7 @@ func (c *Container) prepareCriuRestoreMounts(mounts []*configs.Mount) error {
 			// set up in the order they are configured.
 			if m.Device == "bind" {
 				if err := utils.WithProcfd(c.config.Rootfs, m.Destination, func(dstFD string) error {
-					if err := mountViaFDs(m.Source, "", m.Destination, dstFD, "", unix.MS_BIND|unix.MS_REC, ""); err != nil {
-						return err
-					}
-					return nil
+					return mountViaFDs(m.Source, nil, m.Destination, dstFD, "", unix.MS_BIND|unix.MS_REC, "")
 				}); err != nil {
 					return err
 				}
