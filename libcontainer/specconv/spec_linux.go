@@ -945,8 +945,8 @@ next:
 
 func setupUserNamespace(spec *specs.Spec, config *configs.Config) error {
 	if spec.Linux != nil {
-		config.UidMappings = toConfigIDMap(spec.Linux.UIDMappings)
-		config.GidMappings = toConfigIDMap(spec.Linux.GIDMappings)
+		config.UIDMappings = toConfigIDMap(spec.Linux.UIDMappings)
+		config.GIDMappings = toConfigIDMap(spec.Linux.GIDMappings)
 	}
 	rootUID, err := config.HostRootUID()
 	if err != nil {

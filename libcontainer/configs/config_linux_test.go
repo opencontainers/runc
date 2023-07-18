@@ -34,7 +34,7 @@ func TestHostRootUIDNoUSERNS(t *testing.T) {
 func TestHostRootUIDWithUSERNS(t *testing.T) {
 	config := &Config{
 		Namespaces: Namespaces{{Type: NEWUSER}},
-		UidMappings: []IDMap{
+		UIDMappings: []IDMap{
 			{
 				ContainerID: 0,
 				HostID:      1000,
@@ -67,7 +67,7 @@ func TestHostRootGIDNoUSERNS(t *testing.T) {
 func TestHostRootGIDWithUSERNS(t *testing.T) {
 	config := &Config{
 		Namespaces: Namespaces{{Type: NEWUSER}},
-		GidMappings: []IDMap{
+		GIDMappings: []IDMap{
 			{
 				ContainerID: 0,
 				HostID:      1000,

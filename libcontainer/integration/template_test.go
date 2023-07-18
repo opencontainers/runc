@@ -193,8 +193,8 @@ func newTemplateConfig(t *testing.T, p *tParam) *configs.Config {
 	}
 
 	if p.userns {
-		config.UidMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
-		config.GidMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
+		config.UIDMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
+		config.GIDMappings = []configs.IDMap{{HostID: 0, ContainerID: 0, Size: 1000}}
 		config.Namespaces = append(config.Namespaces, configs.Namespace{Type: configs.NEWUSER})
 	} else {
 		config.Mounts = append(config.Mounts, &configs.Mount{

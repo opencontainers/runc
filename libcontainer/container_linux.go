@@ -2219,7 +2219,7 @@ func (c *Container) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Namespa
 	_, joinExistingUser := nsMaps[configs.NEWUSER]
 	if !joinExistingUser {
 		// write uid mappings
-		if len(c.config.UidMappings) > 0 {
+		if len(c.config.UIDMappings) > 0 {
 			if c.config.RootlessEUID {
 				// We resolve the paths for new{u,g}idmap from
 				// the context of runc to avoid doing a path
@@ -2231,7 +2231,7 @@ func (c *Container) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Namespa
 					})
 				}
 			}
-			b, err := encodeIDMapping(c.config.UidMappings)
+			b, err := encodeIDMapping(c.config.UIDMappings)
 			if err != nil {
 				return nil, err
 			}
@@ -2242,8 +2242,8 @@ func (c *Container) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Namespa
 		}
 
 		// write gid mappings
-		if len(c.config.GidMappings) > 0 {
-			b, err := encodeIDMapping(c.config.GidMappings)
+		if len(c.config.GIDMappings) > 0 {
+			b, err := encodeIDMapping(c.config.GIDMappings)
 			if err != nil {
 				return nil, err
 			}
@@ -2356,5 +2356,5 @@ func requiresRootOrMappingTool(c *configs.Config) bool {
 	gidMap := []configs.IDMap{
 		{ContainerID: 0, HostID: os.Getegid(), Size: 1},
 	}
-	return !reflect.DeepEqual(c.GidMappings, gidMap)
+	return !reflect.DeepEqual(c.GIDMappings, gidMap)
 }
