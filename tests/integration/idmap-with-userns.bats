@@ -149,12 +149,12 @@ function teardown() {
 	[[ "${output}" == *"invalid mount"* ]]
 }
 
-@test "idmap mount with different mapping than userns fails" {
-	# Let's modify the containerID to be 1, instead of 0 as it is in the
-	# userns config.
-	update_config ' .mounts |= map((select(.source == "source-1/") | .uidMappings[0]["containerID"] = 1 ) // .)'
+@test "idmap mount with different mapping than userns" {
+	update_config ' .linux.uidMappings[0].hostID = 99999'
 
 	runc run test_debian
-	[ "$status" -eq 1 ]
-	[[ "${output}" == *"invalid mount"* ]]
+	[ "$status" -eq 0 ]
+	# We have 1 as UID as user ns first UID is 99999 and id map mount is 10000.
+	# We still have 0 as GID was did not modify it.
+	[[ "${output}" == *"=1=0="* ]]
 }

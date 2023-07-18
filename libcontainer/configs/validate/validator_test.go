@@ -436,8 +436,7 @@ func TestValidateIDMapMounts(t *testing.T) {
 			},
 		},
 		{
-			name:  "idmap mount without userns mappings",
-			isErr: true,
+			name: "idmap mount without userns mappings",
 			config: &configs.Config{
 				Mounts: []*configs.Mount{
 					{
@@ -451,8 +450,7 @@ func TestValidateIDMapMounts(t *testing.T) {
 			},
 		},
 		{
-			name:  "idmap mounts with different userns and mount mappings",
-			isErr: true,
+			name: "idmap mounts with different userns and mount mappings",
 			config: &configs.Config{
 				UIDMappings: mapping,
 				GIDMappings: mapping,
@@ -474,8 +472,7 @@ func TestValidateIDMapMounts(t *testing.T) {
 			},
 		},
 		{
-			name:  "idmap mounts with different userns and mount mappings",
-			isErr: true,
+			name: "idmap mounts with different userns and mount mappings",
 			config: &configs.Config{
 				UIDMappings: mapping,
 				GIDMappings: mapping,

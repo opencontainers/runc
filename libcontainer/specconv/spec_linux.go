@@ -415,6 +415,10 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 				return nil, err
 			}
 		}
+
+		config.UIDMappings = toConfigIDMap(spec.Linux.UIDMappings)
+		config.GIDMappings = toConfigIDMap(spec.Linux.GIDMappings)
+
 		config.MaskPaths = spec.Linux.MaskedPaths
 		config.ReadonlyPaths = spec.Linux.ReadonlyPaths
 		config.MountLabel = spec.Linux.MountLabel

@@ -558,11 +558,6 @@ func (c *Container) shouldSendIdmapSources() bool {
 		return false
 	}
 
-	// For the time being we require userns to be in use.
-	if !c.config.Namespaces.Contains(configs.NEWUSER) {
-		return false
-	}
-
 	// We need to send sources if there are idmap bind-mounts.
 	for _, m := range c.config.Mounts {
 		if m.IsBind() && m.IsIDMapped() {
@@ -2301,6 +2296,9 @@ func (c *Container) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Namespa
 	// Idmap mount sources to open.
 	if it == initStandard && c.shouldSendIdmapSources() {
 		var mounts []byte
+		var uidmaps []byte
+		var gidmaps []byte
+
 		for _, m := range c.config.Mounts {
 			if m.IsBind() && m.IsIDMapped() {
 				// While other parts of the code check this too (like
@@ -2310,10 +2308,34 @@ func (c *Container) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Namespa
 					return nil, fmt.Errorf("mount source string contains null byte: %q", m.Source)
 				}
 
+				uidBytes, err := encodeIDMapping(m.UIDMappings)
+				if err != nil {
+					return nil, err
+				}
+				gidBytes, err := encodeIDMapping(m.GIDMappings)
+				if err != nil {
+					return nil, err
+				}
+
+				uidmaps = append(uidmaps, uidBytes...)
+				gidmaps = append(gidmaps, gidBytes...)
 				mounts = append(mounts, []byte(m.Source)...)
 			}
+
+			uidmaps = append(uidmaps, byte(0))
+			gidmaps = append(gidmaps, byte(0))
 			mounts = append(mounts, byte(0))
 		}
+
+		r.AddData(&Bytemsg{
+			Type:  IdmapUidmapAttr,
+			Value: uidmaps,
+		})
+
+		r.AddData(&Bytemsg{
+			Type:  IdmapGidmapAttr,
+			Value: gidmaps,
+		})
 
 		r.AddData(&Bytemsg{
 			Type:  IdmapSourcesAttr,

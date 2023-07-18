@@ -104,6 +104,14 @@ struct nlconfig_t {
 	/* Idmap sources opened outside the container userns which will be id mapped. */
 	char *idmapsources;
 	size_t idmapsources_len;
+
+	/* UID map to id map the above idmapsources. */
+	char *idmap_uidmap;
+	size_t idmap_uidmap_len;
+
+	/* GID map to id map the above idmapsources. */
+	char *idmap_gidmap;
+	size_t idmap_gidmap_len;
 };
 
 /*
@@ -122,6 +130,8 @@ struct nlconfig_t {
 #define GIDMAPPATH_ATTR		27289
 #define MOUNT_SOURCES_ATTR	27290
 #define IDMAP_SOURCES_ATTR	27291
+#define IDMAP_UIDMAP_ATTR	27292
+#define IDMAP_GIDMAP_ATTR	27293
 
 /*
  * Use the raw syscall for versions of glibc which don't include a function for
@@ -445,6 +455,14 @@ static void nl_parse(int fd, struct nlconfig_t *config)
 			config->idmapsources = current;
 			config->idmapsources_len = payload_len;
 			break;
+		case IDMAP_UIDMAP_ATTR:
+			config->idmap_uidmap = current;
+			config->idmap_uidmap_len = payload_len;
+			break;
+		case IDMAP_GIDMAP_ATTR:
+			config->idmap_gidmap = current;
+			config->idmap_gidmap_len = payload_len;
+			break;
 		default:
 			bail("unknown netlink message type %d", nlattr->nla_type);
 		}
@@ -664,40 +682,146 @@ void try_unshare(int flags, const char *msg)
 	bail("failed to unshare %s", msg);
 }
 
-void send_idmapsources(int sockfd, pid_t pid, char *idmap_src, int idmap_src_len)
+int child_mount_user_ns(void *unused)
 {
-	char proc_user_path[PATH_MAX];
+	sigset_t set;
+	pid_t pid;
+	int sig;
 
-	/* Open the userns fd only once.
-	 * Currently we only support idmap mounts that use the same mapping than
-	 * the userns. This is validated in libcontainer/configs/validate/validator.go,
-	 * so if we reached here, we know the mapping for the idmap is the same
-	 * as the userns. This is why we just open the userns_fd once from the
-	 * PID of the child process that has the userns already applied.
+	pid = getpid();
+
+	if (sigemptyset(&set)) {
+		sane_kill(pid, SIGKILL);
+		bail("failed to empty sigset");
+	}
+	if (sigaddset(&set, SIGKILL)) {
+		sane_kill(pid, SIGKILL);
+		bail("failed to add SIGKILL to sigset");
+	}
+
+	if (sigwait(&set, &sig)) {
+		sane_kill(pid, SIGKILL);
+		bail("failed to sigwait");
+	}
+
+	return 0;
+}
+
+void send_idmapsources(int sockfd, pid_t pid, struct nlconfig_t *config)
+{
+	char *uidmap_src = config->idmap_uidmap;
+	char *gidmap_src = config->idmap_gidmap;
+
+	char *idmap_src = config->idmapsources;
+	char *idmap_end = idmap_src + config->idmapsources_len;
+
+	int nr_uidmap = 0;
+	int nr_gidmap = 0;
+	int nr_idmap = 0;
+
+	int i;
+
+	/*
+	 * There should be as many UID/GID map as mount sources as done in
+	 * bootstrapData().
+	 * But let's check this nonethelss.
 	 */
-	int ret = snprintf(proc_user_path, sizeof(proc_user_path), "/proc/%d/ns/user", pid);
-	if (ret < 0 || (size_t)ret >= sizeof(proc_user_path)) {
+	for (i = 0; i < config->idmapsources_len; i++)
+		if (idmap_src[i] == '\0')
+			nr_idmap++;
+
+	for (i = 0; i < config->idmap_uidmap_len; i++)
+		if (uidmap_src[i] == '\0')
+			nr_uidmap++;
+
+	for (i = 0; i < config->idmap_gidmap_len; i++)
+		if (gidmap_src[i] == '\0')
+			nr_gidmap++;
+
+	if (nr_gidmap != nr_uidmap && nr_uidmap != nr_idmap) {
 		sane_kill(pid, SIGKILL);
-		bail("failed to create userns path string");
+		bail("there should be as many id map mount sources as UID and GID mappings: %d vs %d and %d", nr_idmap,
+		     nr_uidmap, nr_gidmap);
 	}
 
-	int userns_fd = open(proc_user_path, O_RDONLY | O_CLOEXEC | O_NOCTTY);
-	if (userns_fd < 0) {
-		sane_kill(pid, SIGKILL);
-		bail("failed to get user namespace fd");
-	}
-
-	char *idmap_end = idmap_src + idmap_src_len;
 	while (idmap_src < idmap_end) {
+		char proc_user_path[PATH_MAX];
+		int child_stack_size = 4096;
+		void *child_stack;
+		int child_pid;
+		int ret;
+
 		if (idmap_src[0] == '\0') {
 			idmap_src++;
+			uidmap_src++;
+			gidmap_src++;
+
 			continue;
+		}
+
+		/*
+		 * For each mount source, we have corresponding UID and GID
+		 * mappings.
+		 * Then, we need to apply the man user_namespace for each of
+		 * them.
+		 * That is to say, create a new child with CLONE_NEWUSER, write
+		 * the corresponding UID and GID maps, then doing the ID map
+		 * mount with the child PID.
+		 * This could be parallelized by spawning a thread for each
+		 * triple (mount source, UID map, GID map).
+		 * But for the moment, let's keep it sequential.
+		 */
+		child_stack = malloc(child_stack_size);
+		if (child_stack == NULL) {
+			sane_kill(pid, SIGKILL);
+			bail("failed to allocate child stack");
+		}
+
+		child_pid = clone(child_mount_user_ns, child_stack + child_stack_size, CLONE_NEWUSER, NULL);
+		if (child_pid == -1) {
+			free(child_stack);
+			sane_kill(pid, SIGKILL);
+			bail("failed to clone with CLONE_NEWUSER");
+		}
+
+		update_setgroups(child_pid, SETGROUPS_DENY);
+
+		int uidmap_len = strlen(uidmap_src);
+		int gidmap_len = strlen(gidmap_src);
+
+		/* Update child mappings from the parent. */
+		update_uidmap(config->uidmappath, child_pid, uidmap_src, uidmap_len);
+		update_gidmap(config->gidmappath, child_pid, gidmap_src, gidmap_len);
+
+		/* Open the userns fd only once.
+		 * Currently we only support idmap mounts that use the same mapping than
+		 * the userns. This is validated in libcontainer/configs/validate/validator.go,
+		 * so if we reached here, we know the mapping for the idmap is the same
+		 * as the userns. This is why we just open the userns_fd once from the
+		 * PID of the child process that has the userns already applied.
+		 */
+		ret = snprintf(proc_user_path, sizeof(proc_user_path), "/proc/%d/ns/user", child_pid);
+		if (ret < 0 || (size_t)ret >= sizeof(proc_user_path)) {
+			sane_kill(child_pid, SIGKILL);
+			free(child_stack);
+			sane_kill(pid, SIGKILL);
+			bail("failed to create userns path string");
+		}
+
+		int userns_fd = open(proc_user_path, O_RDONLY | O_CLOEXEC | O_NOCTTY);
+		if (userns_fd < 0) {
+			sane_kill(child_pid, SIGKILL);
+			free(child_stack);
+			sane_kill(pid, SIGKILL);
+			bail("failed to get user namespace fd");
 		}
 
 		int fd_tree = sys_open_tree(-EBADF, idmap_src,
 					    OPEN_TREE_CLONE | OPEN_TREE_CLOEXEC |
 					    AT_SYMLINK_NOFOLLOW | AT_NO_AUTOMOUNT);
 		if (fd_tree < 0) {
+			sane_kill(child_pid, SIGKILL);
+			free(child_stack);
 			sane_kill(pid, SIGKILL);
 			if (errno == EINVAL)
 				bail("failed to use open_tree(2) with path: %s, the kernel doesn't supports ID-mapped mounts", idmap_src);
@@ -712,6 +836,8 @@ void send_idmapsources(int sockfd, pid_t pid, char *idmap_src, int idmap_src_len
 
 		ret = sys_mount_setattr(fd_tree, "", AT_EMPTY_PATH, &attr, sizeof(attr));
 		if (ret < 0) {
+			sane_kill(child_pid, SIGKILL);
+			free(child_stack);
 			sane_kill(pid, SIGKILL);
 			if (errno == EINVAL)
 				bail("failed to change mount attributes, maybe the filesystem doesn't supports ID-mapped mounts");
@@ -723,16 +849,25 @@ void send_idmapsources(int sockfd, pid_t pid, char *idmap_src, int idmap_src_len
 		send_fd(sockfd, fd_tree);
 
 		if (close(fd_tree) < 0) {
+			sane_kill(child_pid, SIGKILL);
+			free(child_stack);
 			sane_kill(pid, SIGKILL);
 			bail("error closing fd_tree");
 		}
 
-		idmap_src += strlen(idmap_src) + 1;
-	}
+		if (close(userns_fd) < 0) {
+			sane_kill(child_pid, SIGKILL);
+			free(child_stack);
+			sane_kill(pid, SIGKILL);
+			bail("error closing userns fd");
+		}
 
-	if (close(userns_fd) < 0) {
-		sane_kill(pid, SIGKILL);
-		bail("error closing userns fd");
+		sane_kill(child_pid, SIGKILL);
+		free(child_stack);
+
+		idmap_src += strlen(idmap_src) + 1;
+		uidmap_src += uidmap_len + 1;
+		gidmap_src += gidmap_len + 1;
 	}
 }
 
@@ -985,8 +1120,7 @@ void nsexec(void)
 					break;
 				case SYNC_MOUNT_IDMAP_PLS:
 					write_log(DEBUG, "stage-1 requested to open idmap sources");
-					send_idmapsources(syncfd, stage1_pid, config.idmapsources,
-							  config.idmapsources_len);
+					send_idmapsources(syncfd, stage1_pid, &config);
 					s = SYNC_MOUNT_IDMAP_ACK;
 					if (write(syncfd, &s, sizeof(s)) != sizeof(s)) {
 						sane_kill(stage1_pid, SIGKILL);
