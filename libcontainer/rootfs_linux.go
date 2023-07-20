@@ -40,8 +40,7 @@ type mountConfig struct {
 // mountEntry contains mount data specific to a mount point.
 type mountEntry struct {
 	*configs.Mount
-	srcFD   *int
-	idmapFD int
+	srcFD *int
 }
 
 func (m *mountEntry) src() string {
@@ -86,20 +85,19 @@ func prepareRootfs(pipe io.ReadWriter, iConfig *initConfig, mountFds mountFds) (
 		cgroupns:        config.Namespaces.Contains(configs.NEWCGROUP),
 	}
 	for i, m := range config.Mounts {
-		entry := mountEntry{Mount: m, idmapFD: -1}
-		// Just before the loop we checked that if not empty, len(mountFds) == len(config.Mounts).
-		// Therefore, we can access mountFds[i] without any concerns.
+		entry := mountEntry{Mount: m}
+		// Just before the loop we checked that if not empty, len(mountFds.sourceFds) == len(config.Mounts).
+		// Therefore, we can access mountFds.sourceFds[i] without any concerns.
 		if mountFds.sourceFds != nil && mountFds.sourceFds[i] != -1 {
 			entry.srcFD = &mountFds.sourceFds[i]
 		}
 
-		// We validated before we can access idmapFds[i].
+		// We validated before we can access mountFds.idmapFds[i].
 		if mountFds.idmapFds != nil && mountFds.idmapFds[i] != -1 {
-			entry.idmapFD = mountFds.idmapFds[i]
-		}
-
-		if entry.idmapFD != -1 && entry.srcFD != nil {
-			return fmt.Errorf("malformed mountFds and idmapFds slice, entry: %v has fds in both slices", i)
+			if entry.srcFD != nil {
+				return fmt.Errorf("malformed mountFds and idmapFds slice, entry: %v has fds in both slices", i)
+			}
+			entry.srcFD = &mountFds.idmapFds[i]
 		}
 
 		if err := mountToRootfs(mountConfig, entry); err != nil {
@@ -482,10 +480,10 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 		}
 
 		if m.IsBind() && m.IsIDMapped() {
-			if m.idmapFD == -1 {
+			if m.srcFD == nil {
 				return fmt.Errorf("error creating mount %+v: idmapFD is invalid, should point to a valid fd", m)
 			}
-			if err := unix.MoveMount(m.idmapFD, "", -1, dest, unix.MOVE_MOUNT_F_EMPTY_PATH); err != nil {
+			if err := unix.MoveMount(*m.srcFD, "", -1, dest, unix.MOVE_MOUNT_F_EMPTY_PATH); err != nil {
 				return fmt.Errorf("error on unix.MoveMount %+v: %w", m, err)
 			}
 
