@@ -192,7 +192,7 @@ func TestValidateUsernamespaceWithoutUserNS(t *testing.T) {
 	uidMap := configs.IDMap{ContainerID: 123}
 	config := &configs.Config{
 		Rootfs:      "/var",
-		UidMappings: []configs.IDMap{uidMap},
+		UIDMappings: []configs.IDMap{uidMap},
 	}
 
 	err := Validate(config)
@@ -405,8 +405,8 @@ func TestValidateIDMapMounts(t *testing.T) {
 			name:  "idmap mount without bind opt specified",
 			isErr: true,
 			config: &configs.Config{
-				UidMappings: mapping,
-				GidMappings: mapping,
+				UIDMappings: mapping,
+				GIDMappings: mapping,
 				Mounts: []*configs.Mount{
 					{
 						Source:      "/abs/path/",
@@ -422,8 +422,8 @@ func TestValidateIDMapMounts(t *testing.T) {
 			isErr: true,
 			config: &configs.Config{
 				RootlessEUID: true,
-				UidMappings:  mapping,
-				GidMappings:  mapping,
+				UIDMappings:  mapping,
+				GIDMappings:  mapping,
 				Mounts: []*configs.Mount{
 					{
 						Source:      "/abs/path/",
@@ -454,8 +454,8 @@ func TestValidateIDMapMounts(t *testing.T) {
 			name:  "idmap mounts with different userns and mount mappings",
 			isErr: true,
 			config: &configs.Config{
-				UidMappings: mapping,
-				GidMappings: mapping,
+				UIDMappings: mapping,
+				GIDMappings: mapping,
 				Mounts: []*configs.Mount{
 					{
 						Source:      "/abs/path/",
@@ -477,8 +477,8 @@ func TestValidateIDMapMounts(t *testing.T) {
 			name:  "idmap mounts with different userns and mount mappings",
 			isErr: true,
 			config: &configs.Config{
-				UidMappings: mapping,
-				GidMappings: mapping,
+				UIDMappings: mapping,
+				GIDMappings: mapping,
 				Mounts: []*configs.Mount{
 					{
 						Source:      "/abs/path/",
@@ -500,8 +500,8 @@ func TestValidateIDMapMounts(t *testing.T) {
 			name:  "idmap mounts without abs source path",
 			isErr: true,
 			config: &configs.Config{
-				UidMappings: mapping,
-				GidMappings: mapping,
+				UIDMappings: mapping,
+				GIDMappings: mapping,
 				Mounts: []*configs.Mount{
 					{
 						Source:      "./rel/path/",
@@ -517,8 +517,8 @@ func TestValidateIDMapMounts(t *testing.T) {
 			name:  "idmap mounts without abs dest path",
 			isErr: true,
 			config: &configs.Config{
-				UidMappings: mapping,
-				GidMappings: mapping,
+				UIDMappings: mapping,
+				GIDMappings: mapping,
 				Mounts: []*configs.Mount{
 					{
 						Source:      "/abs/path/",
@@ -534,8 +534,8 @@ func TestValidateIDMapMounts(t *testing.T) {
 		{
 			name: "simple idmap mount",
 			config: &configs.Config{
-				UidMappings: mapping,
-				GidMappings: mapping,
+				UIDMappings: mapping,
+				GIDMappings: mapping,
 				Mounts: []*configs.Mount{
 					{
 						Source:      "/another-abs/path/",
@@ -550,8 +550,8 @@ func TestValidateIDMapMounts(t *testing.T) {
 		{
 			name: "idmap mount with more flags",
 			config: &configs.Config{
-				UidMappings: mapping,
-				GidMappings: mapping,
+				UIDMappings: mapping,
+				GIDMappings: mapping,
 				Mounts: []*configs.Mount{
 					{
 						Source:      "/another-abs/path/",

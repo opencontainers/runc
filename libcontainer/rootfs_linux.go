@@ -40,13 +40,12 @@ type mountConfig struct {
 // mountEntry contains mount data specific to a mount point.
 type mountEntry struct {
 	*configs.Mount
-	srcFD   string
-	idmapFD int
+	srcFD *int
 }
 
 func (m *mountEntry) src() string {
-	if m.srcFD != "" {
-		return m.srcFD
+	if m.srcFD != nil {
+		return "/proc/self/fd/" + strconv.Itoa(*m.srcFD)
 	}
 	return m.Source
 }
@@ -86,20 +85,19 @@ func prepareRootfs(pipe io.ReadWriter, iConfig *initConfig, mountFds mountFds) (
 		cgroupns:        config.Namespaces.Contains(configs.NEWCGROUP),
 	}
 	for i, m := range config.Mounts {
-		entry := mountEntry{Mount: m, idmapFD: -1}
-		// Just before the loop we checked that if not empty, len(mountFds) == len(config.Mounts).
-		// Therefore, we can access mountFds[i] without any concerns.
+		entry := mountEntry{Mount: m}
+		// Just before the loop we checked that if not empty, len(mountFds.sourceFds) == len(config.Mounts).
+		// Therefore, we can access mountFds.sourceFds[i] without any concerns.
 		if mountFds.sourceFds != nil && mountFds.sourceFds[i] != -1 {
-			entry.srcFD = "/proc/self/fd/" + strconv.Itoa(mountFds.sourceFds[i])
+			entry.srcFD = &mountFds.sourceFds[i]
 		}
 
-		// We validated before we can access idmapFds[i].
+		// We validated before we can access mountFds.idmapFds[i].
 		if mountFds.idmapFds != nil && mountFds.idmapFds[i] != -1 {
-			entry.idmapFD = mountFds.idmapFds[i]
-		}
-
-		if entry.idmapFD != -1 && entry.srcFD != "" {
-			return fmt.Errorf("malformed mountFds and idmapFds slice, entry: %v has fds in both slices", i)
+			if entry.srcFD != nil {
+				return fmt.Errorf("malformed mountFds and idmapFds slice, entry: %v has fds in both slices", i)
+			}
+			entry.srcFD = &mountFds.idmapFds[i]
 		}
 
 		if err := mountToRootfs(mountConfig, entry); err != nil {
@@ -297,7 +295,7 @@ func mountCgroupV1(m *configs.Mount, c *mountConfig) error {
 					data = cgroups.CgroupNamePrefix + data
 					source = "systemd"
 				}
-				return mountViaFDs(source, "", b.Destination, dstFD, "cgroup", uintptr(flags), data)
+				return mountViaFDs(source, nil, b.Destination, dstFD, "cgroup", uintptr(flags), data)
 			}); err != nil {
 				return err
 			}
@@ -329,7 +327,7 @@ func mountCgroupV2(m *configs.Mount, c *mountConfig) error {
 		return err
 	}
 	err = utils.WithProcfd(c.root, m.Destination, func(dstFD string) error {
-		return mountViaFDs(m.Source, "", m.Destination, dstFD, "cgroup2", uintptr(m.Flags), m.Data)
+		return mountViaFDs(m.Source, nil, m.Destination, dstFD, "cgroup2", uintptr(m.Flags), m.Data)
 	})
 	if err == nil || !(errors.Is(err, unix.EPERM) || errors.Is(err, unix.EBUSY)) {
 		return err
@@ -403,7 +401,7 @@ func doTmpfsCopyUp(m mountEntry, rootfs, mountLabel string) (Err error) {
 			return fmt.Errorf("tmpcopyup: failed to copy %s to %s (%s): %w", m.Destination, dstFD, tmpDir, err)
 		}
 		// Now move the mount into the container.
-		if err := mountViaFDs(tmpDir, "", m.Destination, dstFD, "", unix.MS_MOVE, ""); err != nil {
+		if err := mountViaFDs(tmpDir, nil, m.Destination, dstFD, "", unix.MS_MOVE, ""); err != nil {
 			return fmt.Errorf("tmpcopyup: failed to move mount: %w", err)
 		}
 		return nil
@@ -482,10 +480,10 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 		}
 
 		if m.IsBind() && m.IsIDMapped() {
-			if m.idmapFD == -1 {
+			if m.srcFD == nil {
 				return fmt.Errorf("error creating mount %+v: idmapFD is invalid, should point to a valid fd", m)
 			}
-			if err := unix.MoveMount(m.idmapFD, "", -1, dest, unix.MOVE_MOUNT_F_EMPTY_PATH); err != nil {
+			if err := unix.MoveMount(*m.srcFD, "", -1, dest, unix.MOVE_MOUNT_F_EMPTY_PATH); err != nil {
 				return fmt.Errorf("error on unix.MoveMount %+v: %w", m, err)
 			}
 
@@ -497,7 +495,7 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 					// system type and data arguments are ignored:
 					// https://man7.org/linux/man-pages/man2/mount.2.html
 					// We also ignore procfd because we want to act on dest.
-					if err := mountViaFDs("", "", dest, dstFD, "", uintptr(pflag), ""); err != nil {
+					if err := mountViaFDs("", nil, dest, dstFD, "", uintptr(pflag), ""); err != nil {
 						return err
 					}
 				}
@@ -733,7 +731,7 @@ func bindMountDeviceNode(rootfs, dest string, node *devices.Device) error {
 		_ = f.Close()
 	}
 	return utils.WithProcfd(rootfs, dest, func(dstFD string) error {
-		return mountViaFDs(node.Path, "", dest, dstFD, "bind", unix.MS_BIND, "")
+		return mountViaFDs(node.Path, nil, dest, dstFD, "bind", unix.MS_BIND, "")
 	})
 }
 
@@ -1154,7 +1152,7 @@ func mountPropagate(m mountEntry, rootfs string, mountLabel string) error {
 	// target needs to be re-opened.
 	if err := utils.WithProcfd(rootfs, m.Destination, func(dstFD string) error {
 		for _, pflag := range m.PropagationFlags {
-			if err := mountViaFDs("", "", m.Destination, dstFD, "", uintptr(pflag), ""); err != nil {
+			if err := mountViaFDs("", nil, m.Destination, dstFD, "", uintptr(pflag), ""); err != nil {
 				return err
 			}
 		}

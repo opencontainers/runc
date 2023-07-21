@@ -1774,8 +1774,8 @@ func TestBindMountAndUser(t *testing.T) {
 	})
 
 	// Set HostID to 1000 to avoid DAC_OVERRIDE bypassing the purpose of this test.
-	config.UidMappings[0].HostID = 1000
-	config.GidMappings[0].HostID = 1000
+	config.UIDMappings[0].HostID = 1000
+	config.GIDMappings[0].HostID = 1000
 
 	// Set the owner of rootfs to the effective IDs in the host to avoid errors
 	// while creating the folders to perform the mounts.

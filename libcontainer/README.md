@@ -184,14 +184,14 @@ config := &configs.Config{
 			Flags:       defaultMountFlags | unix.MS_RDONLY,
 		},
 	},
-	UidMappings: []configs.IDMap{
+	UIDMappings: []configs.IDMap{
 		{
 			ContainerID: 0,
 			HostID: 1000,
 			Size: 65536,
 		},
 	},
-	GidMappings: []configs.IDMap{
+	GIDMappings: []configs.IDMap{
 		{
 			ContainerID: 0,
 			HostID: 1000,

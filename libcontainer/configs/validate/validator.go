@@ -95,7 +95,7 @@ func namespaces(config *configs.Config) error {
 			return errors.New("USER namespaces aren't enabled in the kernel")
 		}
 	} else {
-		if config.UidMappings != nil || config.GidMappings != nil {
+		if config.UIDMappings != nil || config.GIDMappings != nil {
 			return errors.New("User namespace mappings specified, but USER namespace isn't enabled in the config")
 		}
 	}
@@ -264,13 +264,13 @@ func checkIDMapMounts(config *configs.Config, m *configs.Mount) error {
 	if config.RootlessEUID {
 		return fmt.Errorf("gidMappings/uidMappings is not supported when runc is being launched with EUID != 0, needs CAP_SYS_ADMIN on the runc parent's user namespace")
 	}
-	if len(config.UidMappings) == 0 || len(config.GidMappings) == 0 {
+	if len(config.UIDMappings) == 0 || len(config.GIDMappings) == 0 {
 		return fmt.Errorf("not yet supported to use gidMappings/uidMappings in a mount without also using a user namespace")
 	}
-	if !sameMapping(config.UidMappings, m.UIDMappings) {
+	if !sameMapping(config.UIDMappings, m.UIDMappings) {
 		return fmt.Errorf("not yet supported for the mount uidMappings to be different than user namespace uidMapping")
 	}
-	if !sameMapping(config.GidMappings, m.GIDMappings) {
+	if !sameMapping(config.GIDMappings, m.GIDMappings) {
 		return fmt.Errorf("not yet supported for the mount gidMappings to be different than user namespace gidMapping")
 	}
 	if !filepath.IsAbs(m.Source) {

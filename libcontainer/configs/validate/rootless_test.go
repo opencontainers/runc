@@ -16,14 +16,14 @@ func rootlessEUIDConfig() *configs.Config {
 				{Type: configs.NEWUSER},
 			},
 		),
-		UidMappings: []configs.IDMap{
+		UIDMappings: []configs.IDMap{
 			{
 				HostID:      1337,
 				ContainerID: 0,
 				Size:        1,
 			},
 		},
-		GidMappings: []configs.IDMap{
+		GIDMappings: []configs.IDMap{
 			{
 				HostID:      7331,
 				ContainerID: 0,
@@ -52,7 +52,7 @@ func TestValidateRootlessEUIDUserns(t *testing.T) {
 
 func TestValidateRootlessEUIDMappingUid(t *testing.T) {
 	config := rootlessEUIDConfig()
-	config.UidMappings = nil
+	config.UIDMappings = nil
 	if err := Validate(config); err == nil {
 		t.Errorf("Expected error to occur if no uid mappings provided")
 	}
@@ -60,7 +60,7 @@ func TestValidateRootlessEUIDMappingUid(t *testing.T) {
 
 func TestValidateNonZeroEUIDMappingGid(t *testing.T) {
 	config := rootlessEUIDConfig()
-	config.GidMappings = nil
+	config.GIDMappings = nil
 	if err := Validate(config); err == nil {
 		t.Errorf("Expected error to occur if no gid mappings provided")
 	}
@@ -93,15 +93,15 @@ func TestValidateRootlessEUIDMountUid(t *testing.T) {
 	}
 
 	config.Mounts[0].Data = "uid=2"
-	config.UidMappings[0].Size = 10
+	config.UIDMappings[0].Size = 10
 	if err := Validate(config); err != nil {
-		t.Errorf("Expected error to not occur when setting uid=2 in mount options and UidMapping[0].size is 10")
+		t.Errorf("Expected error to not occur when setting uid=2 in mount options and UIDMappings[0].size is 10")
 	}
 
 	config.Mounts[0].Data = "uid=20"
-	config.UidMappings[0].Size = 10
+	config.UIDMappings[0].Size = 10
 	if err := Validate(config); err == nil {
-		t.Errorf("Expected error to occur when setting uid=20 in mount options and UidMapping[0].size is 10")
+		t.Errorf("Expected error to occur when setting uid=20 in mount options and UIDMappings[0].size is 10")
 	}
 }
 
@@ -130,21 +130,21 @@ func TestValidateRootlessEUIDMountGid(t *testing.T) {
 	}
 
 	config.Mounts[0].Data = "gid=5"
-	config.GidMappings[0].Size = 10
+	config.GIDMappings[0].Size = 10
 	if err := Validate(config); err != nil {
-		t.Errorf("Expected error to not occur when setting gid=5 in mount options and GidMapping[0].size is 10")
+		t.Errorf("Expected error to not occur when setting gid=5 in mount options and GIDMappings[0].size is 10")
 	}
 
 	config.Mounts[0].Data = "gid=11"
-	config.GidMappings[0].Size = 10
+	config.GIDMappings[0].Size = 10
 	if err := Validate(config); err == nil {
-		t.Errorf("Expected error to occur when setting gid=11 in mount options and GidMapping[0].size is 10")
+		t.Errorf("Expected error to occur when setting gid=11 in mount options and GIDMappings[0].size is 10")
 	}
 }
 
 func BenchmarkRootlessEUIDMount(b *testing.B) {
 	config := rootlessEUIDConfig()
-	config.GidMappings[0].Size = 10
+	config.GIDMappings[0].Size = 10
 	config.Mounts = []*configs.Mount{
 		{
 			Source:      "devpts",
