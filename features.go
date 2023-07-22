@@ -20,8 +20,7 @@ var featuresCommand = cli.Command{
 	ArgsUsage: "",
 	Description: `Show the enabled features.
    The result is parsable as a JSON.
-   See https://pkg.go.dev/github.com/opencontainers/runc/types/features for the type definition.
-   The types are experimental and subject to change.
+   See https://github.com/opencontainers/runtime-spec/blob/main/features.md for the type definition.
 `,
 	Action: func(context *cli.Context) error {
 		if err := checkArgs(context, 0, exactArgs); err != nil {
