@@ -12,11 +12,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    be removed entirely in a future release. Users who need a non-standard
    `criu` binary should rely on the standard way of looking up binaries in
    `$PATH`. (#3316)
+ * `runc kill` option `-a` is now deprecated. Previously, it had to be specified
+   to kill a container (with SIGKILL) which does not have its own private PID
+   namespace (so that runc would send SIGKILL to all processes). Now, this is
+   done automatically. (#3864, #3825)
 
 ### Changed
 
  * When Intel RDT feature is not available, its initialization is skipped,
    resulting in slightly faster `runc exec` and `runc run`. (#3306)
+ * Enforce absolute paths for mounts. (#3020, #3717)
+ * libcontainer users that create and kill containers from a daemon process
+   (so that the container init is a child of that process) must now implement
+   a proper child reaper in case a container does not have its own private PID
+   namespace, as documented in `container.Signal`. (#3825)
 
 ### Fixed
 
@@ -26,6 +35,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    s390 and s390x. This solves the issue where syscalls the host kernel did not
    support would return `-EPERM` despite the existence of the `-ENOSYS` stub
    code (this was due to how s390x does syscall multiplexing). (#3474)
+ * Remove tun/tap from the default device rules. (#3468)
+ * specconv: avoid mapping "acl" to MS_POSIXACL. (#3739)
 
 ## [1.1.8] - 2023-07-20
 
