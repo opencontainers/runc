@@ -12,11 +12,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    be removed entirely in a future release. Users who need a non-standard
    `criu` binary should rely on the standard way of looking up binaries in
    `$PATH`. (#3316)
+ * `runc kill` option `-a` is now deprecated. Previously, it had to be specified
+   to kill a container (with SIGKILL) which does not have its own private PID
+   namespace (so that runc would send SIGKILL to all processes). Now, this is
+   done automatically. (#3864, #3825)
 
 ### Changed
 
  * When Intel RDT feature is not available, its initialization is skipped,
    resulting in slightly faster `runc exec` and `runc run`. (#3306)
+ * Enforce absolute paths for mounts. (#3020, #3717)
+ * libcontainer users that create and kill containers from a daemon process
+   (so that the container init is a child of that process) must now implement
+   a proper child reaper in case a container does not have its own private PID
+   namespace, as documented in `container.Signal`. (#3825)
 
 ### Fixed
 
@@ -26,6 +35,79 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    s390 and s390x. This solves the issue where syscalls the host kernel did not
    support would return `-EPERM` despite the existence of the `-ENOSYS` stub
    code (this was due to how s390x does syscall multiplexing). (#3474)
+ * Remove tun/tap from the default device rules. (#3468)
+ * specconv: avoid mapping "acl" to MS_POSIXACL. (#3739)
+
+## [1.1.8] - 2023-07-20
+
+> 海纳百川 有容乃大
+
+### Added
+
+* Support riscv64. (#3905)
+
+### Fixed
+
+* init: do not print environment variable value. (#3879)
+* libct: fix a race with systemd removal. (#3877)
+* tests/int: increase num retries for oom tests. (#3891)
+* man/runc: fixes. (#3892)
+* Fix tmpfs mode opts when dir already exists. (#3916)
+* docs/systemd: fix a broken link. (#3917)
+* ci/cirrus: enable some rootless tests on cs9. (#3918)
+* runc delete: call systemd's reset-failed. (#3932)
+* libct/cg/sd/v1: do not update non-frozen cgroup after frozen failed. (#3921)
+
+### Changed
+
+* CI: bump Fedora, Vagrant, bats. (#3878)
+* `.codespellrc`: update for 2.2.5. (#3909)
+
+## [1.1.7] - 2023-04-26
+
+> Ночевала тучка золотая на груди утеса-великана.
+
+### Fixed
+
+* When used with systemd v240+, systemd cgroup drivers no longer skip
+  `DeviceAllow` rules if the device does not exist (a regression introduced
+  in runc 1.1.3). This fix also reverts the workaround added in runc 1.1.5,
+  removing an extra warning emitted by runc run/start. (#3845, #3708, #3671)
+
+### Added
+
+* The source code now has a new file, `runc.keyring`, which contains the keys
+  used to sign runc releases. (#3838)
+
+## [1.1.6] - 2023-04-11
+
+> In this world nothing is certain but death and taxes.
+
+### Compatibility
+
+* This release can no longer be built from sources using Go 1.16. Using a
+  latest maintained Go 1.20.x or Go 1.19.x release is recommended.
+  Go 1.17 can still be used.
+
+### Fixed
+
+* systemd cgroup v1 and v2 drivers were deliberately ignoring `UnitExist` error
+  from systemd while trying to create a systemd unit, which in some scenarios
+  may result in a container not being added to the proper systemd unit and
+  cgroup. (#3780, #3806)
+* systemd cgroup v2 driver was incorrectly translating cpuset range from spec's
+  `resources.cpu.cpus` to systemd unit property (`AllowedCPUs`) in case of more
+  than 8 CPUs, resulting in the wrong AllowedCPUs setting. (#3808)
+* systemd cgroup v1 driver was prefixing container's cgroup path with the path
+  of PID 1 cgroup, resulting in inability to place PID 1 in a non-root cgroup.
+  (#3811)
+* runc run/start may return "permission denied" error when starting a rootless
+  container when the file to be executed does not have executable bit set for
+  the user, not taking the `CAP_DAC_OVERRIDE` capability into account. This is
+  a regression in runc 1.1.4, as well as in Go 1.20 and 1.20.1 (#3715, #3817)
+* cgroup v1 drivers are now aware of `misc` controller. (#3823)
+* Various CI fixes and improvements, mostly to ensure Go 1.19.x and Go 1.20.x
+  compatibility.
 
 ## [1.1.5] - 2023-03-29
 
@@ -385,7 +467,10 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.0.1]: https://github.com/opencontainers/runc/compare/v1.0.0...v1.0.1
 
 <!-- 1.1.z patch releases -->
-[Unreleased 1.1.z]: https://github.com/opencontainers/runc/compare/v1.1.5...release-1.1
+[Unreleased 1.1.z]: https://github.com/opencontainers/runc/compare/v1.1.8...release-1.1
+[1.1.8]: https://github.com/opencontainers/runc/compare/v1.1.7...v1.1.8
+[1.1.7]: https://github.com/opencontainers/runc/compare/v1.1.6...v1.1.7
+[1.1.6]: https://github.com/opencontainers/runc/compare/v1.1.5...v1.1.6
 [1.1.5]: https://github.com/opencontainers/runc/compare/v1.1.4...v1.1.5
 [1.1.4]: https://github.com/opencontainers/runc/compare/v1.1.3...v1.1.4
 [1.1.3]: https://github.com/opencontainers/runc/compare/v1.1.2...v1.1.3
