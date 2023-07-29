@@ -312,6 +312,7 @@ type CreateOpts struct {
 	Spec             *specs.Spec
 	RootlessEUID     bool
 	RootlessCgroups  bool
+	NoMountFallback  bool
 }
 
 // getwd is a wrapper similar to os.Getwd, except it always gets
@@ -358,6 +359,7 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 		NoNewKeyring:    opts.NoNewKeyring,
 		RootlessEUID:    opts.RootlessEUID,
 		RootlessCgroups: opts.RootlessCgroups,
+		NoMountFallback: opts.NoMountFallback,
 	}
 
 	for _, m := range spec.Mounts {

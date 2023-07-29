@@ -98,6 +98,10 @@ using the runc checkpoint command.`,
 			Value: "",
 			Usage: "Specify an LSM mount context to be used during restore.",
 		},
+		cli.BoolFlag{
+			Name:  "no-mount-fallback",
+			Usage: "Do not fallback when the specific configuration is not applicable (e.g., do not try to remount a bind mount again after the first attempt failed on source filesystems that have nodev, noexec, nosuid, noatime, relatime, strictatime, nodiratime set)",
+		},
 	},
 	Action: func(context *cli.Context) error {
 		if err := checkArgs(context, 1, exactArgs); err != nil {

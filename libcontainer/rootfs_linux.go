@@ -35,6 +35,7 @@ type mountConfig struct {
 	cgroup2Path     string
 	rootlessCgroups bool
 	cgroupns        bool
+	noMountFallback bool
 }
 
 // mountEntry contains mount data specific to a mount point.
@@ -83,6 +84,7 @@ func prepareRootfs(pipe io.ReadWriter, iConfig *initConfig, mountFds mountFds) (
 		cgroup2Path:     iConfig.Cgroup2Path,
 		rootlessCgroups: iConfig.RootlessCgroups,
 		cgroupns:        config.Namespaces.Contains(configs.NEWCGROUP),
+		noMountFallback: config.NoMountFallback,
 	}
 	for i, m := range config.Mounts {
 		entry := mountEntry{Mount: m}
@@ -512,7 +514,7 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 		// first check that we have non-default options required before attempting a remount
 		if m.Flags&^(unix.MS_REC|unix.MS_REMOUNT|unix.MS_BIND) != 0 {
 			// only remount if unique mount options are set
-			if err := remount(m, rootfs); err != nil {
+			if err := remount(m, rootfs, c.noMountFallback); err != nil {
 				return err
 			}
 		}
@@ -1101,24 +1103,33 @@ func writeSystemProperty(key, value string) error {
 	return os.WriteFile(path.Join("/proc/sys", keyPath), []byte(value), 0o644)
 }
 
-func remount(m mountEntry, rootfs string) error {
+func remount(m mountEntry, rootfs string, noMountFallback bool) error {
 	return utils.WithProcfd(rootfs, m.Destination, func(dstFD string) error {
 		flags := uintptr(m.Flags | unix.MS_REMOUNT)
 		err := mountViaFDs(m.Source, m.srcFD, m.Destination, dstFD, m.Device, flags, "")
 		if err == nil {
 			return nil
 		}
-		// Check if the source has ro flag...
+		// Check if the source has flags set according to noMountFallback
 		src := m.src()
 		var s unix.Statfs_t
 		if err := unix.Statfs(src, &s); err != nil {
 			return &os.PathError{Op: "statfs", Path: src, Err: err}
 		}
-		if s.Flags&unix.MS_RDONLY != unix.MS_RDONLY {
+		var checkflags int
+		if noMountFallback {
+			// Check for ro only
+			checkflags = unix.MS_RDONLY
+		} else {
+			// Check for ro, nodev, noexec, nosuid, noatime, relatime, strictatime,
+			// nodiratime
+			checkflags = unix.MS_RDONLY | unix.MS_NODEV | unix.MS_NOEXEC | unix.MS_NOSUID | unix.MS_NOATIME | unix.MS_RELATIME | unix.MS_STRICTATIME | unix.MS_NODIRATIME
+		}
+		if int(s.Flags)&checkflags == 0 {
 			return err
 		}
-		// ... and retry the mount with ro flag set.
-		flags |= unix.MS_RDONLY
+		// ... and retry the mount with flags found above.
+		flags |= uintptr(int(s.Flags) & checkflags)
 		return mountViaFDs(m.Source, m.srcFD, m.Destination, dstFD, m.Device, flags, "")
 	})
 }
