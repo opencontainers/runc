@@ -31,6 +31,10 @@ func main() {
 	if err := cmd.Start(); err != nil {
 		log.Fatalf("failed to run the helper binary: %v", err)
 	}
+	defer func() {
+		_ = cmd.Process.Kill()
+		_ = cmd.Wait()
+	}()
 
 	path := fmt.Sprintf("/proc/%d/ns/user", cmd.Process.Pid)
 	var userNsFile *os.File
