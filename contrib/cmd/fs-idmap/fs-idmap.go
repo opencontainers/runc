@@ -16,7 +16,7 @@ func main() {
 	}
 
 	src := os.Args[1]
-	treeFD, err := unix.OpenTree(-1, src, uint(unix.OPEN_TREE_CLONE|unix.OPEN_TREE_CLOEXEC|unix.AT_EMPTY_PATH|unix.AT_RECURSIVE))
+	treeFD, err := unix.OpenTree(unix.AT_FDCWD, src, uint(unix.OPEN_TREE_CLONE|unix.OPEN_TREE_CLOEXEC|unix.AT_EMPTY_PATH))
 	if err != nil {
 		log.Fatalf("error calling open_tree %q: %v", src, err)
 	}
@@ -48,7 +48,7 @@ func main() {
 		Attr_set:  unix.MOUNT_ATTR_IDMAP,
 		Userns_fd: uint64(userNsFile.Fd()),
 	}
-	if err := unix.MountSetattr(treeFD, "", unix.AT_EMPTY_PATH|unix.AT_RECURSIVE, &attr); err != nil {
+	if err := unix.MountSetattr(treeFD, "", unix.AT_EMPTY_PATH, &attr); err != nil {
 		log.Fatalf("error calling mount_setattr: %v", err)
 	}
 }
