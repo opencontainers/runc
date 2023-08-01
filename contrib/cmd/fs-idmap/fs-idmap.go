@@ -22,7 +22,7 @@ func main() {
 	}
 	defer unix.Close(treeFD)
 
-	cmd := exec.Command("/usr/bin/sleep", "5")
+	cmd := exec.Command("sleep", "5")
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Cloneflags:  syscall.CLONE_NEWUSER,
 		UidMappings: []syscall.SysProcIDMap{{ContainerID: 0, HostID: 65536, Size: 65536}},
