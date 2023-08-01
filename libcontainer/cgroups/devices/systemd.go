@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"strings"
 
-	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
 	"github.com/godbus/dbus/v5"
 	"github.com/sirupsen/logrus"
 
@@ -17,12 +16,12 @@ import (
 
 // systemdProperties takes the configured device rules and generates a
 // corresponding set of systemd properties to configure the devices correctly.
-func systemdProperties(r *configs.Resources, sdVer int) ([]systemdDbus.Property, error) {
+func systemdProperties(r *configs.Resources, sdVer int) (configs.SdProperties, error) {
 	if r.SkipDevices {
 		return nil, nil
 	}
 
-	properties := []systemdDbus.Property{
+	properties := configs.SdProperties{
 		// Always run in the strictest white-list mode.
 		newProp("DevicePolicy", "strict"),
 		// Empty the DeviceAllow array before filling it.
@@ -158,8 +157,8 @@ func systemdProperties(r *configs.Resources, sdVer int) ([]systemdDbus.Property,
 	return properties, nil
 }
 
-func newProp(name string, units interface{}) systemdDbus.Property {
-	return systemdDbus.Property{
+func newProp(name string, units interface{}) configs.SdProperty {
+	return configs.SdProperty{
 		Name:  name,
 		Value: dbus.MakeVariant(units),
 	}
@@ -235,10 +234,10 @@ type deviceAllowEntry struct {
 	Perms string
 }
 
-func allowAllDevices() []systemdDbus.Property {
+func allowAllDevices() configs.SdProperties {
 	// Setting mode to auto and removing all DeviceAllow rules
 	// results in allowing access to all devices.
-	return []systemdDbus.Property{
+	return configs.SdProperties{
 		newProp("DevicePolicy", "auto"),
 		newProp("DeviceAllow", []deviceAllowEntry{}),
 	}

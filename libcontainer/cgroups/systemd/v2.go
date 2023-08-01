@@ -69,7 +69,7 @@ func shouldSetCPUIdle(cm *dbusConnManager, v string) bool {
 // For the list of keys, see https://www.kernel.org/doc/Documentation/cgroup-v2.txt
 //
 // For the list of systemd unit properties, see systemd.resource-control(5).
-func unifiedResToSystemdProps(cm *dbusConnManager, res map[string]string) (props []systemdDbus.Property, _ error) {
+func unifiedResToSystemdProps(cm *dbusConnManager, res map[string]string) (props configs.SdProperties, _ error) {
 	var err error
 
 	for k, v := range res {
@@ -199,7 +199,7 @@ func unifiedResToSystemdProps(cm *dbusConnManager, res map[string]string) (props
 	return props, nil
 }
 
-func genV2ResourcesProperties(dirPath string, r *configs.Resources, cm *dbusConnManager) ([]systemdDbus.Property, error) {
+func genV2ResourcesProperties(dirPath string, r *configs.Resources, cm *dbusConnManager) (configs.SdProperties, error) {
 	// We need this check before setting systemd properties, otherwise
 	// the container is OOM-killed and the systemd unit is removed
 	// before we get to fsMgr.Set().
@@ -207,7 +207,7 @@ func genV2ResourcesProperties(dirPath string, r *configs.Resources, cm *dbusConn
 		return nil, err
 	}
 
-	var properties []systemdDbus.Property
+	var properties configs.SdProperties
 
 	// NOTE: This is of questionable correctness because we insert our own
 	//       devices eBPF program later. Two programs with identical rules
@@ -285,7 +285,7 @@ func (m *UnifiedManager) Apply(pid int) error {
 	var (
 		c          = m.cgroups
 		unitName   = getUnitName(c)
-		properties []systemdDbus.Property
+		properties configs.SdProperties
 	)
 
 	slice := "system.slice"

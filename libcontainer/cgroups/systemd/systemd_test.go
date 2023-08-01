@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"testing"
 
-	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
@@ -113,7 +112,7 @@ func TestUnifiedResToSystemdProps(t *testing.T) {
 		minVer   int
 		res      map[string]string
 		expError bool
-		expProps []systemdDbus.Property
+		expProps configs.SdProperties
 	}{
 		{
 			name: "empty map",
@@ -125,7 +124,7 @@ func TestUnifiedResToSystemdProps(t *testing.T) {
 			res: map[string]string{
 				"cpu.idle": "1",
 			},
-			expProps: []systemdDbus.Property{
+			expProps: configs.SdProperties{
 				newProp("CPUWeight", uint64(0)),
 			},
 		},
@@ -143,7 +142,7 @@ func TestUnifiedResToSystemdProps(t *testing.T) {
 				"cpu.idle":   "1",
 				"cpu.weight": "1000",
 			},
-			expProps: []systemdDbus.Property{
+			expProps: configs.SdProperties{
 				newProp("CPUWeight", uint64(0)),
 			},
 		},
@@ -154,7 +153,7 @@ func TestUnifiedResToSystemdProps(t *testing.T) {
 				"cpu.idle":   "0",
 				"cpu.weight": "1000",
 			},
-			expProps: []systemdDbus.Property{
+			expProps: configs.SdProperties{
 				newProp("CPUWeight", uint64(1000)),
 			},
 		},
