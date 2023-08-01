@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 2 {
+	if len(os.Args) != 2 {
 		log.Fatalf("usage: %s path_to_mount_set_attr", os.Args[0])
 	}
 
