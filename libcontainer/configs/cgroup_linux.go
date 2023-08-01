@@ -1,7 +1,6 @@
 package configs
 
 import (
-	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
 	"github.com/opencontainers/runc/libcontainer/devices"
 )
 
@@ -37,7 +36,7 @@ type Cgroup struct {
 	// SystemdProps are any additional properties for systemd,
 	// derived from org.systemd.property.xxx annotations.
 	// Ignored unless systemd is used for managing cgroups.
-	SystemdProps []systemdDbus.Property `json:"-"`
+	SystemdProps SdProperties `json:"-"`
 
 	// Rootless tells if rootless cgroups should be used.
 	Rootless bool
