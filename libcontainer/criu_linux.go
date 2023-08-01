@@ -618,8 +618,8 @@ func (c *Container) prepareCriuRestoreMounts(mounts []*configs.Mount) error {
 			// because during initial container creation mounts are
 			// set up in the order they are configured.
 			if m.Device == "bind" {
-				if err := utils.WithProcfd(c.config.Rootfs, m.Destination, func(dstFD string) error {
-					return mountViaFDs(m.Source, nil, m.Destination, dstFD, "", unix.MS_BIND|unix.MS_REC, "")
+				if err := utils.WithProcfd(c.config.Rootfs, m.Destination, func(dstFd string) error {
+					return mountViaFds(m.Source, nil, m.Destination, dstFd, "", unix.MS_BIND|unix.MS_REC, "")
 				}); err != nil {
 					return err
 				}

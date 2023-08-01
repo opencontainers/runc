@@ -33,9 +33,6 @@
 /* Get all of the CLONE_NEW* flags. */
 #include "namespace.h"
 
-/* Get definitions for idmap sources */
-#include "idmap.h"
-
 /* Synchronisation values. */
 enum sync_t {
 	SYNC_USERMAP_PLS = 0x40,	/* Request parent to map our users. */
@@ -44,12 +41,8 @@ enum sync_t {
 	SYNC_RECVPID_ACK = 0x43,	/* PID was correctly received by parent. */
 	SYNC_GRANDCHILD = 0x44,	/* The grandchild is ready to run. */
 	SYNC_CHILD_FINISH = 0x45,	/* The child or grandchild has finished. */
-	SYNC_MOUNTSOURCES_PLS = 0x46,	/* Tell parent to send mount sources by SCM_RIGHTS. */
-	SYNC_MOUNTSOURCES_ACK = 0x47,	/* All mount sources have been sent. */
-	SYNC_MOUNT_IDMAP_PLS = 0x48,	/* Tell parent to mount idmap sources. */
-	SYNC_MOUNT_IDMAP_ACK = 0x49,	/* All idmap mounts have been done. */
-	SYNC_TIMEOFFSETS_PLS = 0x50,	/* Request parent to write timens offsets. */
-	SYNC_TIMEOFFSETS_ACK = 0x51,	/* Timens offsets were written. */
+	SYNC_TIMEOFFSETS_PLS = 0x46,	/* Request parent to write timens offsets. */
+	SYNC_TIMEOFFSETS_ACK = 0x47,	/* Timens offsets were written. */
 };
 
 #define STAGE_SETUP  -1
@@ -99,14 +92,6 @@ struct nlconfig_t {
 	char *gidmappath;
 	size_t gidmappath_len;
 
-	/* Mount sources opened outside the container userns. */
-	char *mountsources;
-	size_t mountsources_len;
-
-	/* Idmap sources opened outside the container userns which will be id mapped. */
-	char *idmapsources;
-	size_t idmapsources_len;
-
 	/* Time NS offsets. */
 	char *timensoffset;
 	size_t timensoffset_len;
@@ -126,9 +111,7 @@ struct nlconfig_t {
 #define ROOTLESS_EUID_ATTR	27287
 #define UIDMAPPATH_ATTR		27288
 #define GIDMAPPATH_ATTR		27289
-#define MOUNT_SOURCES_ATTR	27290
-#define IDMAP_SOURCES_ATTR	27291
-#define TIMENSOFFSET_ATTR	27292
+#define TIMENSOFFSET_ATTR	27290
 
 /*
  * Use the raw syscall for versions of glibc which don't include a function for
@@ -446,14 +429,6 @@ static void nl_parse(int fd, struct nlconfig_t *config)
 		case SETGROUP_ATTR:
 			config->is_setgroup = readint8(current);
 			break;
-		case MOUNT_SOURCES_ATTR:
-			config->mountsources = current;
-			config->mountsources_len = payload_len;
-			break;
-		case IDMAP_SOURCES_ATTR:
-			config->idmapsources = current;
-			config->idmapsources_len = payload_len;
-			break;
 		case TIMENSOFFSET_ATTR:
 			config->timensoffset = current;
 			config->timensoffset_len = payload_len;
@@ -546,115 +521,6 @@ static inline int sane_kill(pid_t pid, int signum)
 		return 0;
 }
 
-/* receive_fd_sources parses env_var as an array of fd numbers and, for each element that is
- * not -1, it receives an fd via SCM_RIGHTS and dup3 it to the fd requested in
- * the element of the env var.
- */
-void receive_fd_sources(int sockfd, const char *env_var)
-{
-	char *fds, *endp;
-	long new_fd;
-
-	// This env var must be a json array of ints.
-	fds = getenv(env_var);
-
-	if (fds[0] != '[') {
-		bail("malformed %s env var: missing '['", env_var);
-	}
-	fds++;
-
-	for (endp = fds; *endp != ']'; fds = endp + 1) {
-		new_fd = strtol(fds, &endp, 10);
-		if (endp == fds) {
-			bail("malformed %s env var: not a number", env_var);
-		}
-		if (*endp == '\0') {
-			bail("malformed %s env var: missing ]", env_var);
-		}
-		// The list contains -1 when no fd is needed. Ignore them.
-		if (new_fd == -1) {
-			continue;
-		}
-
-		if (new_fd == LONG_MAX || new_fd < 0 || new_fd > INT_MAX) {
-			bail("malformed %s env var: fds out of range", env_var);
-		}
-
-		int recv_fd = receive_fd(sockfd);
-		if (dup3(recv_fd, new_fd, O_CLOEXEC) < 0) {
-			bail("cannot dup3 fd %d to %ld", recv_fd, new_fd);
-		}
-		if (close(recv_fd) < 0) {
-			bail("cannot close fd %d", recv_fd);
-		}
-	}
-}
-
-void receive_mountsources(int sockfd)
-{
-	receive_fd_sources(sockfd, "_LIBCONTAINER_MOUNT_FDS");
-}
-
-void send_mountsources(int sockfd, pid_t child, char *mountsources, size_t mountsources_len)
-{
-	char proc_path[PATH_MAX];
-	int host_mntns_fd;
-	int container_mntns_fd;
-	int fd;
-	int ret;
-
-	// container_linux.go shouldSendMountSources() decides if mount sources
-	// should be pre-opened (O_PATH) and passed via SCM_RIGHTS
-	if (mountsources == NULL)
-		return;
-
-	host_mntns_fd = open("/proc/self/ns/mnt", O_RDONLY | O_CLOEXEC);
-	if (host_mntns_fd == -1)
-		bail("failed to get current mount namespace");
-
-	if (snprintf(proc_path, PATH_MAX, "/proc/%d/ns/mnt", child) < 0)
-		bail("failed to get mount namespace path");
-
-	container_mntns_fd = open(proc_path, O_RDONLY | O_CLOEXEC);
-	if (container_mntns_fd == -1)
-		bail("failed to get container mount namespace");
-
-	if (setns(container_mntns_fd, CLONE_NEWNS) < 0)
-		bail("failed to setns to container mntns");
-
-	char *mountsources_end = mountsources + mountsources_len;
-	while (mountsources < mountsources_end) {
-		if (mountsources[0] == '\0') {
-			mountsources++;
-			continue;
-		}
-
-		fd = open(mountsources, O_PATH | O_CLOEXEC);
-		if (fd < 0)
-			bail("failed to open mount source %s", mountsources);
-
-		write_log(DEBUG, "~> sending fd for: %s", mountsources);
-		if (send_fd(sockfd, fd) < 0)
-			bail("failed to send fd %d via unix socket %d", fd, sockfd);
-
-		ret = close(fd);
-		if (ret != 0)
-			bail("failed to close mount source fd %d", fd);
-
-		mountsources += strlen(mountsources) + 1;
-	}
-
-	if (setns(host_mntns_fd, CLONE_NEWNS) < 0)
-		bail("failed to setns to host mntns");
-
-	ret = close(host_mntns_fd);
-	if (ret != 0)
-		bail("failed to close host mount namespace fd %d", host_mntns_fd);
-	ret = close(container_mntns_fd);
-	if (ret != 0)
-		bail("failed to close container mount namespace fd %d", container_mntns_fd);
-}
-
 void try_unshare(int flags, const char *msg)
 {
 	write_log(DEBUG, "unshare %s", msg);
@@ -672,89 +538,6 @@ void try_unshare(int flags, const char *msg)
 			break;
 	}
 	bail("failed to unshare %s", msg);
-}
-
-void send_idmapsources(int sockfd, pid_t pid, char *idmap_src, int idmap_src_len)
-{
-	char proc_user_path[PATH_MAX];
-
-	/* Open the userns fd only once.
-	 * Currently we only support idmap mounts that use the same mapping than
-	 * the userns. This is validated in libcontainer/configs/validate/validator.go,
-	 * so if we reached here, we know the mapping for the idmap is the same
-	 * as the userns. This is why we just open the userns_fd once from the
-	 * PID of the child process that has the userns already applied.
-	 */
-	int ret = snprintf(proc_user_path, sizeof(proc_user_path), "/proc/%d/ns/user", pid);
-	if (ret < 0 || (size_t)ret >= sizeof(proc_user_path)) {
-		sane_kill(pid, SIGKILL);
-		bail("failed to create userns path string");
-	}
-
-	int userns_fd = open(proc_user_path, O_RDONLY | O_CLOEXEC | O_NOCTTY);
-	if (userns_fd < 0) {
-		sane_kill(pid, SIGKILL);
-		bail("failed to get user namespace fd");
-	}
-
-	char *idmap_end = idmap_src + idmap_src_len;
-	while (idmap_src < idmap_end) {
-		if (idmap_src[0] == '\0') {
-			idmap_src++;
-			continue;
-		}
-
-		int fd_tree = sys_open_tree(-EBADF, idmap_src,
-					    OPEN_TREE_CLONE | OPEN_TREE_CLOEXEC |
-					    AT_SYMLINK_NOFOLLOW | AT_NO_AUTOMOUNT);
-		if (fd_tree < 0) {
-			sane_kill(pid, SIGKILL);
-			if (errno == ENOSYS) {
-				bail("open_tree(2) failed, the kernel doesn't support ID-mapped mounts");
-			} else if (errno == EINVAL) {
-				bail("open_tree(2) failed with path: %s, the kernel doesn't support ID-mapped mounts",
-				     idmap_src);
-			} else {
-				bail("open_tree(2) failed with path: %s", idmap_src);
-			}
-		}
-
-		struct mount_attr attr = {
-			.attr_set = MOUNT_ATTR_IDMAP,
-			.userns_fd = userns_fd,
-		};
-
-		ret = sys_mount_setattr(fd_tree, "", AT_EMPTY_PATH, &attr, sizeof(attr));
-		if (ret < 0) {
-			sane_kill(pid, SIGKILL);
-			if (errno == ENOSYS)
-				bail("mount_setattr(2) failed, the kernel doesn't support ID-mapped mounts");
-			else if (errno == EINVAL)
-				bail("mount_setattr(2) failed with path: %s, maybe the filesystem doesn't support ID-mapped mounts", idmap_src);
-			else
-				bail("mount_setattr(2) failed with path: %s", idmap_src);
-		}
-
-		write_log(DEBUG, "~> sending idmap source: %s with mapping from: %s", idmap_src, proc_user_path);
-		send_fd(sockfd, fd_tree);
-
-		if (close(fd_tree) < 0) {
-			sane_kill(pid, SIGKILL);
-			bail("error closing fd_tree");
-		}
-
-		idmap_src += strlen(idmap_src) + 1;
-	}
-
-	if (close(userns_fd) < 0) {
-		sane_kill(pid, SIGKILL);
-		bail("error closing userns fd");
-	}
-}
-
-void receive_idmapsources(int sockfd)
-{
-	receive_fd_sources(sockfd, "_LIBCONTAINER_IDMAP_FDS");
 }
 
 static void update_timens_offsets(pid_t pid, char *map, size_t map_len)
@@ -989,28 +772,6 @@ void nsexec(void)
 						bail("failed to sync with runc: write(pid-JSON)");
 					}
 					break;
-				case SYNC_MOUNTSOURCES_PLS:
-					write_log(DEBUG, "stage-1 requested to open mount sources");
-					send_mountsources(syncfd, stage1_pid, config.mountsources,
-							  config.mountsources_len);
-
-					s = SYNC_MOUNTSOURCES_ACK;
-					if (write(syncfd, &s, sizeof(s)) != sizeof(s)) {
-						sane_kill(stage1_pid, SIGKILL);
-						bail("failed to sync with child: write(SYNC_MOUNTSOURCES_ACK)");
-					}
-					break;
-				case SYNC_MOUNT_IDMAP_PLS:
-					write_log(DEBUG, "stage-1 requested to open idmap sources");
-					send_idmapsources(syncfd, stage1_pid, config.idmapsources,
-							  config.idmapsources_len);
-					s = SYNC_MOUNT_IDMAP_ACK;
-					if (write(syncfd, &s, sizeof(s)) != sizeof(s)) {
-						sane_kill(stage1_pid, SIGKILL);
-						bail("failed to sync with child: write(SYNC_MOUNT_IDMAP_ACK)");
-					}
-
-					break;
 				case SYNC_TIMEOFFSETS_PLS:
 					write_log(DEBUG, "stage-1 requested timens offsets to be configured");
 					update_timens_offsets(stage1_pid, config.timensoffset, config.timensoffset_len);
@@ -1184,38 +945,6 @@ void nsexec(void)
 					bail("failed to sync with parent: read(SYNC_TIMEOFFSETS_ACK)");
 				if (s != SYNC_TIMEOFFSETS_ACK)
 					bail("failed to sync with parent: SYNC_TIMEOFFSETS_ACK: got %u", s);
-			}
-
-			/* Ask our parent to send the mount sources fds. */
-			if (config.mountsources) {
-				write_log(DEBUG, "request stage-0 to send mount sources");
-				s = SYNC_MOUNTSOURCES_PLS;
-				if (write(syncfd, &s, sizeof(s)) != sizeof(s))
-					bail("failed to sync with parent: write(SYNC_MOUNTSOURCES_PLS)");
-
-				/* Receive and install all mount sources fds. */
-				receive_mountsources(syncfd);
-
-				/* Parent finished to send the mount sources fds. */
-				if (read(syncfd, &s, sizeof(s)) != sizeof(s))
-					bail("failed to sync with parent: read(SYNC_MOUNTSOURCES_ACK)");
-				if (s != SYNC_MOUNTSOURCES_ACK)
-					bail("failed to sync with parent: SYNC_MOUNTSOURCES_ACK: got %u", s);
-			}
-
-			if (config.idmapsources) {
-				write_log(DEBUG, "request stage-0 to send idmap sources");
-				s = SYNC_MOUNT_IDMAP_PLS;
-				if (write(syncfd, &s, sizeof(s)) != sizeof(s))
-					bail("failed to sync with parent: write(SYNC_MOUNT_IDMAP_PLS)");
-
-				/* Receive and install all idmap fds. */
-				receive_idmapsources(syncfd);
-
-				if (read(syncfd, &s, sizeof(s)) != sizeof(s))
-					bail("failed to sync with parent: read(SYNC_MOUNT_IDMAP_ACK)");
-				if (s != SYNC_MOUNT_IDMAP_ACK)
-					bail("failed to sync with parent: SYNC_MOUNT_IDMAP_ACK: got %u", s);
 			}
 
 			/*

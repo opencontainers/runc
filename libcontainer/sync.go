@@ -21,6 +21,11 @@ type syncType string
 //
 //	     [  child  ] <-> [   parent   ]
 //
+//	procMountPlease      --> [open(2) or open_tree(2) and configure mount]
+//	  Arg: configs.Mount
+//	                     <-- procMountFd
+//	                           file: mountfd
+//
 //	procSeccomp         --> [forward fd to listenerPath]
 //	  file: seccomp fd
 //	                    --- no return synchronisation
@@ -39,6 +44,8 @@ const (
 	procRun         syncType = "procRun"
 	procHooks       syncType = "procHooks"
 	procHooksDone   syncType = "procHooksDone"
+	procMountPlease syncType = "procMountPlease"
+	procMountFd     syncType = "procMountFd"
 	procSeccomp     syncType = "procSeccomp"
 	procSeccompDone syncType = "procSeccompDone"
 )

@@ -2,7 +2,6 @@ package libcontainer
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -629,112 +628,6 @@ func (c *Container) newParentProcess(p *Process) (parentProcess, error) {
 	return c.newSetnsProcess(p, cmd, comm)
 }
 
-// shouldSendMountSources says whether the child process must setup bind mounts with
-// the source pre-opened (O_PATH) in the host user namespace.
-// See https://github.com/opencontainers/runc/issues/2484
-func (c *Container) shouldSendMountSources() bool {
-	// Passing the mount sources via SCM_RIGHTS is only necessary when
-	// both userns and mntns are active.
-	if !c.config.Namespaces.Contains(configs.NEWUSER) ||
-		!c.config.Namespaces.Contains(configs.NEWNS) {
-		return false
-	}
-
-	// nsexec.c send_mountsources() requires setns(mntns) capabilities
-	// CAP_SYS_CHROOT and CAP_SYS_ADMIN.
-	if c.config.RootlessEUID {
-		return false
-	}
-
-	// We need to send sources if there are non-idmap bind-mounts.
-	for _, m := range c.config.Mounts {
-		if m.IsBind() && !m.IsIDMapped() {
-			return true
-		}
-	}
-
-	return false
-}
-
-// shouldSendIdmapSources says whether the child process must setup idmap mounts with
-// the mount_setattr already done in the host user namespace.
-func (c *Container) shouldSendIdmapSources() bool {
-	// nsexec.c mount_setattr() requires CAP_SYS_ADMIN in:
-	// * the user namespace the filesystem was mounted in;
-	// * the user namespace we're trying to idmap the mount to;
-	// * the owning user namespace of the mount namespace you're currently located in.
-	//
-	// See the comment from Christian Brauner:
-	//	https://github.com/opencontainers/runc/pull/3717#discussion_r1103607972
-	//
-	// Let's just rule out rootless, we don't have those permission in the
-	// rootless case.
-	if c.config.RootlessEUID {
-		return false
-	}
-
-	// For the time being we require userns to be in use.
-	if !c.config.Namespaces.Contains(configs.NEWUSER) {
-		return false
-	}
-
-	// We need to send sources if there are idmap bind-mounts.
-	for _, m := range c.config.Mounts {
-		if m.IsBind() && m.IsIDMapped() {
-			return true
-		}
-	}
-
-	return false
-}
-
-func (c *Container) sendMountSources(cmd *exec.Cmd, comm *processComm) error {
-	if !c.shouldSendMountSources() {
-		return nil
-	}
-
-	return c.sendFdsSources(cmd, comm, "_LIBCONTAINER_MOUNT_FDS", func(m *configs.Mount) bool {
-		return m.IsBind() && !m.IsIDMapped()
-	})
-}
-
-func (c *Container) sendIdmapSources(cmd *exec.Cmd, comm *processComm) error {
-	if !c.shouldSendIdmapSources() {
-		return nil
-	}
-
-	return c.sendFdsSources(cmd, comm, "_LIBCONTAINER_IDMAP_FDS", func(m *configs.Mount) bool {
-		return m.IsBind() && m.IsIDMapped()
-	})
-}
-
-func (c *Container) sendFdsSources(cmd *exec.Cmd, comm *processComm, envVar string, condition func(*configs.Mount) bool) error {
-	// Elements on these slices will be paired with mounts (see StartInitialization() and
-	// prepareRootfs()). These slices MUST have the same size as c.config.Mounts.
-	fds := make([]int, len(c.config.Mounts))
-	for i, m := range c.config.Mounts {
-		if !condition(m) {
-			// The -1 fd is ignored later.
-			fds[i] = -1
-			continue
-		}
-
-		// The fd passed here will not be used: nsexec.c will overwrite it with
-		// dup3(). We just need to allocate a fd so that we know the number to
-		// pass in the environment variable. The fd must not be closed before
-		// cmd.Start(), so we reuse initSockChild because the lifecycle of that
-		// fd is already taken care of.
-		cmd.ExtraFiles = append(cmd.ExtraFiles, comm.initSockChild)
-		fds[i] = stdioFdCount + len(cmd.ExtraFiles) - 1
-	}
-	fdsJSON, err := json.Marshal(fds)
-	if err != nil {
-		return fmt.Errorf("Error creating %v: %w", envVar, err)
-	}
-	cmd.Env = append(cmd.Env, envVar+"="+string(fdsJSON))
-	return nil
-}
-
 func (c *Container) newInitProcess(p *Process, cmd *exec.Cmd, comm *processComm) (*initProcess, error) {
 	cmd.Env = append(cmd.Env, "_LIBCONTAINER_INITTYPE="+string(initStandard))
 	nsMaps := make(map[configs.NamespaceType]string)
@@ -743,14 +636,8 @@ func (c *Container) newInitProcess(p *Process, cmd *exec.Cmd, comm *processComm)
 			nsMaps[ns.Type] = ns.Path
 		}
 	}
-	data, err := c.bootstrapData(c.config.Namespaces.CloneFlags(), nsMaps, initStandard)
+	data, err := c.bootstrapData(c.config.Namespaces.CloneFlags(), nsMaps)
 	if err != nil {
-		return nil, err
-	}
-	if err := c.sendMountSources(cmd, comm); err != nil {
-		return nil, err
-	}
-	if err := c.sendIdmapSources(cmd, comm); err != nil {
 		return nil, err
 	}
 
@@ -776,7 +663,7 @@ func (c *Container) newSetnsProcess(p *Process, cmd *exec.Cmd, comm *processComm
 	}
 	// for setns process, we don't have to set cloneflags as the process namespaces
 	// will only be set via setns syscall
-	data, err := c.bootstrapData(0, state.NamespacePaths, initSetns)
+	data, err := c.bootstrapData(0, state.NamespacePaths)
 	if err != nil {
 		return nil, err
 	}
@@ -1165,7 +1052,7 @@ type netlinkError struct{ error }
 // such as one that uses nsenter package to bootstrap the container's
 // init process correctly, i.e. with correct namespaces, uid/gid
 // mapping etc.
-func (c *Container) bootstrapData(cloneFlags uintptr, nsMaps map[configs.NamespaceType]string, it initType) (_ io.Reader, Err error) {
+func (c *Container) bootstrapData(cloneFlags uintptr, nsMaps map[configs.NamespaceType]string) (_ io.Reader, Err error) {
 	// create the netlink message
 	r := nl.NewNetlinkRequest(int(InitMsg), 0)
 
@@ -1266,48 +1153,6 @@ func (c *Container) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Namespa
 		Type:  RootlessEUIDAttr,
 		Value: c.config.RootlessEUID,
 	})
-
-	// Bind mount source to open.
-	if it == initStandard && c.shouldSendMountSources() {
-		var mounts []byte
-		for _, m := range c.config.Mounts {
-			if m.IsBind() && !m.IsIDMapped() {
-				if strings.IndexByte(m.Source, 0) >= 0 {
-					return nil, fmt.Errorf("mount source string contains null byte: %q", m.Source)
-				}
-				mounts = append(mounts, []byte(m.Source)...)
-			}
-			mounts = append(mounts, byte(0))
-		}
-
-		r.AddData(&Bytemsg{
-			Type:  MountSourcesAttr,
-			Value: mounts,
-		})
-	}
-
-	// Idmap mount sources to open.
-	if it == initStandard && c.shouldSendIdmapSources() {
-		var mounts []byte
-		for _, m := range c.config.Mounts {
-			if m.IsBind() && m.IsIDMapped() {
-				// While other parts of the code check this too (like
-				// libcontainer/specconv/spec_linux.go) we do it here also because some libcontainer
-				// users don't use those functions.
-				if strings.IndexByte(m.Source, 0) >= 0 {
-					return nil, fmt.Errorf("mount source string contains null byte: %q", m.Source)
-				}
-
-				mounts = append(mounts, []byte(m.Source)...)
-			}
-			mounts = append(mounts, byte(0))
-		}
-
-		r.AddData(&Bytemsg{
-			Type:  IdmapSourcesAttr,
-			Value: mounts,
-		})
-	}
 
 	// write boottime and monotonic time ns offsets.
 	if c.config.TimeOffsets != nil {

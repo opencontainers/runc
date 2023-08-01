@@ -27,7 +27,6 @@ type linuxStandardInit struct {
 	fifoFd        int
 	logFd         int
 	dmzExe        *os.File
-	mountFds      mountFds
 	config        *initConfig
 }
 
@@ -88,17 +87,7 @@ func (l *linuxStandardInit) Init() error {
 	// initialises the labeling system
 	selinux.GetEnabled()
 
-	// We don't need the mount nor idmap fds after prepareRootfs() nor if it fails.
-	err := prepareRootfs(l.pipe, l.config, l.mountFds)
-	for _, m := range append(l.mountFds.sourceFds, l.mountFds.idmapFds...) {
-		if m == -1 {
-			continue
-		}
-		if err := unix.Close(m); err != nil {
-			return fmt.Errorf("unable to close mountFds fds: %w", err)
-		}
-	}
-
+	err := prepareRootfs(l.pipe, l.config)
 	if err != nil {
 		return err
 	}
