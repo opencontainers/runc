@@ -12,7 +12,6 @@ import (
 	"sync"
 	"time"
 
-	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
 	dbus "github.com/godbus/dbus/v5"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -663,9 +662,9 @@ func convertSecToUSec(value dbus.Variant) (dbus.Variant, error) {
 	return dbus.MakeVariant(sec), nil
 }
 
-func initSystemdProps(spec *specs.Spec) ([]systemdDbus.Property, error) {
+func initSystemdProps(spec *specs.Spec) (configs.SdProperties, error) {
 	const keyPrefix = "org.systemd.property."
-	var sp []systemdDbus.Property
+	var sp configs.SdProperties
 
 	for k, v := range spec.Annotations {
 		name := strings.TrimPrefix(k, keyPrefix)
@@ -691,7 +690,7 @@ func initSystemdProps(spec *specs.Spec) ([]systemdDbus.Property, error) {
 				}
 			}
 		}
-		sp = append(sp, systemdDbus.Property{Name: name, Value: value})
+		sp = append(sp, configs.SdProperty{Name: name, Value: value})
 	}
 
 	return sp, nil
