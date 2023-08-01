@@ -63,18 +63,10 @@ func needsSetupDev(config *configs.Config) bool {
 // prepareRootfs sets up the devices, mount points, and filesystems for use
 // inside a new mount namespace. It doesn't set anything as ro. You must call
 // finalizeRootfs after this function to finish setting up the rootfs.
-func prepareRootfs(pipe *os.File, iConfig *initConfig, mountFds mountFds) (err error) {
+func prepareRootfs(pipe *os.File, iConfig *initConfig) (err error) {
 	config := iConfig.Config
 	if err := prepareRoot(config); err != nil {
 		return fmt.Errorf("error preparing rootfs: %w", err)
-	}
-
-	if mountFds.sourceFds != nil && len(mountFds.sourceFds) != len(config.Mounts) {
-		return fmt.Errorf("malformed mountFds slice. Expected size: %v, got: %v", len(config.Mounts), len(mountFds.sourceFds))
-	}
-
-	if mountFds.idmapFds != nil && len(mountFds.idmapFds) != len(config.Mounts) {
-		return fmt.Errorf("malformed idmapFds slice: expected size: %v, got: %v", len(config.Mounts), len(mountFds.idmapFds))
 	}
 
 	mountConfig := &mountConfig{
@@ -85,24 +77,31 @@ func prepareRootfs(pipe *os.File, iConfig *initConfig, mountFds mountFds) (err e
 		cgroupns:        config.Namespaces.Contains(configs.NEWCGROUP),
 		noMountFallback: config.NoMountFallback,
 	}
-	for i, m := range config.Mounts {
+	for _, m := range config.Mounts {
 		entry := mountEntry{Mount: m}
-		// Just before the loop we checked that if not empty, len(mountFds.sourceFds) == len(config.Mounts).
-		// Therefore, we can access mountFds.sourceFds[i] without any concerns.
-		if mountFds.sourceFds != nil && mountFds.sourceFds[i] != -1 {
-			entry.srcFD = &mountFds.sourceFds[i]
+		if m.SourceFd != nil {
+			// m.SourceFd indicates that we have an open_tree()-like mountfd
+			// which was passed to us from the parent runc process, which we
+			// have to operate on using the new mount API.
+			// TODO: Remove mountEntry and srcFD.
+			entry.srcFD = m.SourceFd
+			// As an extra precaution, mark the descriptor as O_CLOEXEC. In
+			// theory this could be raced against and leaked in other ways, but
+			// we have other protections. We ignore errors.
+			_, _ = unix.FcntlInt(uintptr(*m.SourceFd), unix.F_SETFD, unix.O_CLOEXEC)
 		}
-
-		// We validated before we can access mountFds.idmapFds[i].
-		if mountFds.idmapFds != nil && mountFds.idmapFds[i] != -1 {
-			if entry.srcFD != nil {
-				return fmt.Errorf("malformed mountFds and idmapFds slice, entry: %v has fds in both slices", i)
-			}
-			entry.srcFD = &mountFds.idmapFds[i]
-		}
-
 		if err := mountToRootfs(mountConfig, entry); err != nil {
-			return fmt.Errorf("error mounting %q to rootfs at %q: %w", m.Source, m.Destination, err)
+			// Clean up error formatting for \x00 prefix entries to tell the
+			// user what the original mount source was.
+			srcName := fmt.Sprintf("%q", m.Source)
+			if entry.srcFD != nil {
+				if link, err := os.Readlink(fmt.Sprintf("/proc/self/fd/%d", *entry.srcFD)); err != nil {
+					srcName = fmt.Sprintf("<unknown source path>[fd=%d]", *entry.srcFD)
+				} else {
+					srcName = fmt.Sprintf("%q[fd=%d]", link, *entry.srcFD)
+				}
+			}
+			return fmt.Errorf("error mounting %s to rootfs at %q: %w", srcName, m.Destination, err)
 		}
 	}
 
@@ -479,35 +478,9 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 		if err := prepareBindMount(m, rootfs); err != nil {
 			return err
 		}
-
-		if m.IsBind() && m.IsIDMapped() {
-			if m.srcFD == nil {
-				return fmt.Errorf("error creating mount %+v: idmapFD is invalid, should point to a valid fd", m)
-			}
-			if err := unix.MoveMount(*m.srcFD, "", -1, dest, unix.MOVE_MOUNT_F_EMPTY_PATH); err != nil {
-				return fmt.Errorf("error on unix.MoveMount %+v: %w", m, err)
-			}
-
-			// In nsexec.c, we did not set the propagation field of mount_attr struct.
-			// So, let's deal with these flags right now!
-			if err := utils.WithProcfd(rootfs, dest, func(dstFD string) error {
-				for _, pflag := range m.PropagationFlags {
-					// When using mount for setting propagations flags, the source, file
-					// system type and data arguments are ignored:
-					// https://man7.org/linux/man-pages/man2/mount.2.html
-					// We also ignore procfd because we want to act on dest.
-					if err := mountViaFDs("", nil, dest, dstFD, "", uintptr(pflag), ""); err != nil {
-						return err
-					}
-				}
-				return nil
-			}); err != nil {
-				return fmt.Errorf("change mount propagation through procfd: %w", err)
-			}
-		} else {
-			if err := mountPropagate(m, rootfs, mountLabel); err != nil {
-				return err
-			}
+		// open_tree()-related shenanigans are all handled in mountViaFDs.
+		if err := mountPropagate(m, rootfs, mountLabel); err != nil {
+			return err
 		}
 		// bind mount won't change mount options, we need remount to make mount options effective.
 		// first check that we have non-default options required before attempting a remount

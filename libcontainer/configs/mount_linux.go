@@ -6,6 +6,14 @@ type Mount struct {
 	// Source path for the mount.
 	Source string `json:"source"`
 
+	// SourceFd is a open_tree(2)-style file descriptor created with the new
+	// mount API. If non-nil, this indicates that SourceFd is a configured
+	// mountfd that should be used for the mount into the container.
+	//
+	// Note that you cannot use /proc/self/fd/$n-style paths with
+	// open_tree(2)-style file descriptors.
+	SourceFd *int
+
 	// Destination path for the mount inside the container.
 	Destination string `json:"destination"`
 

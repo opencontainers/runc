@@ -2,7 +2,6 @@ package libcontainer
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -16,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/moby/sys/mountinfo"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink/nl"
@@ -26,6 +26,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runc/libcontainer/system"
+	"github.com/opencontainers/runc/libcontainer/userns"
 	"github.com/opencontainers/runc/libcontainer/utils"
 )
 
@@ -646,108 +647,149 @@ func (c *Container) newParentProcess(p *Process) (parentProcess, error) {
 	return c.newSetnsProcess(p, cmd, messageSockPair, logFilePair)
 }
 
-// shouldSendMountSources says whether the child process must setup bind mounts with
-// the source pre-opened (O_PATH) in the host user namespace.
-// See https://github.com/opencontainers/runc/issues/2484
-func (c *Container) shouldSendMountSources() bool {
-	// Passing the mount sources via SCM_RIGHTS is only necessary when
-	// both userns and mntns are active.
-	if !c.config.Namespaces.Contains(configs.NEWUSER) ||
-		!c.config.Namespaces.Contains(configs.NEWNS) {
-		return false
-	}
-
-	// nsexec.c send_mountsources() requires setns(mntns) capabilities
-	// CAP_SYS_CHROOT and CAP_SYS_ADMIN.
-	if c.config.RootlessEUID {
-		return false
-	}
-
-	// We need to send sources if there are non-idmap bind-mounts.
-	for _, m := range c.config.Mounts {
-		if m.IsBind() && !m.IsIDMapped() {
-			return true
-		}
-	}
-
-	return false
-}
-
-// shouldSendIdmapSources says whether the child process must setup idmap mounts with
-// the mount_setattr already done in the host user namespace.
-func (c *Container) shouldSendIdmapSources() bool {
-	// nsexec.c mount_setattr() requires CAP_SYS_ADMIN in:
-	// * the user namespace the filesystem was mounted in;
-	// * the user namespace we're trying to idmap the mount to;
-	// * the owning user namespace of the mount namespace you're currently located in.
-	//
-	// See the comment from Christian Brauner:
-	//	https://github.com/opencontainers/runc/pull/3717#discussion_r1103607972
-	//
-	// Let's just rule out rootless, we don't have those permission in the
-	// rootless case.
-	if c.config.RootlessEUID {
-		return false
-	}
-
-	// For the time being we require userns to be in use.
-	if !c.config.Namespaces.Contains(configs.NEWUSER) {
-		return false
-	}
-
-	// We need to send sources if there are idmap bind-mounts.
-	for _, m := range c.config.Mounts {
-		if m.IsBind() && m.IsIDMapped() {
-			return true
-		}
-	}
-
-	return false
-}
-
-func (c *Container) sendMountSources(cmd *exec.Cmd, messageSockPair filePair) error {
-	if !c.shouldSendMountSources() {
-		return nil
-	}
-
-	return c.sendFdsSources(cmd, messageSockPair, "_LIBCONTAINER_MOUNT_FDS", func(m *configs.Mount) bool {
-		return m.IsBind() && !m.IsIDMapped()
-	})
-}
-
-func (c *Container) sendIdmapSources(cmd *exec.Cmd, messageSockPair filePair) error {
-	if !c.shouldSendIdmapSources() {
-		return nil
-	}
-
-	return c.sendFdsSources(cmd, messageSockPair, "_LIBCONTAINER_IDMAP_FDS", func(m *configs.Mount) bool {
-		return m.IsBind() && m.IsIDMapped()
-	})
-}
-
-func (c *Container) sendFdsSources(cmd *exec.Cmd, messageSockPair filePair, envVar string, condition func(*configs.Mount) bool) error {
-	// Elements on these slices will be paired with mounts (see StartInitialization() and
-	// prepareRootfs()). These slices MUST have the same size as c.config.Mounts.
-	fds := make([]int, len(c.config.Mounts))
+// remapMountSources tries to remap any applicable mount sources in the
+// container configuration to use open_tree(2)-style mountfds. This allows
+// containers to have bind-mounts from source directories the container process
+// cannot resolve (#2576) as well as apply MOUNT_ATTR_IDMAP to mounts (which
+// requires privileges the container process might not have).
+//
+// The core idea is that we create a mountfd with the right configuration, and
+// then replace the source with a reference to the file descriptor. Ideally
+// this would be /proc/self/fd/<the-fd-runc-init-will-see>, but we cannot use
+// new mount API file descriptors as bind-mount sources (they run afoul of the
+// check_mnt() checks that stop us from doing bind-mounts from an fd in a
+// different namespace). So instead, we set the source to \x00<file-descriptor>
+// which is an invalid path under Linux.
+func (c *Container) remapMountSources(cmd *exec.Cmd) (Err error) {
+	nsHandles := new(userns.Handles)
+	defer nsHandles.Release()
 	for i, m := range c.config.Mounts {
-		if !condition(m) {
-			// The -1 fd is ignored later.
-			fds[i] = -1
-			continue
+		var mountFile *os.File
+		if m.IsBind() {
+			flags := uint(unix.OPEN_TREE_CLONE | unix.O_CLOEXEC)
+			if m.Flags&unix.MS_REC == unix.MS_REC {
+				flags |= unix.AT_RECURSIVE
+			}
+			mountFd, err := unix.OpenTree(unix.AT_FDCWD, m.Source, flags)
+			if err != nil {
+				// For non-id-mapped mounts, this functionality is optional. We
+				// can just fallback to letting the rootfs code use the
+				// original source as a mountpoint.
+				if !m.IsIDMapped() {
+					logrus.Debugf("remap mount sources: skipping remap of %s due to failure: open_tree(OPEN_TREE_CLONE): %v", m.Source, err)
+					continue
+				}
+				return &os.PathError{Op: "open_tree(OPEN_TREE_CLONE)", Path: m.Source, Err: err}
+			}
+			mountFile = os.NewFile(uintptr(mountFd), m.Source+" (open_tree)")
+			// Only close the file if the remapping failed -- otherwise we keep
+			// the file open to be passed to "runc init".
+			defer func() {
+				if Err != nil {
+					_ = mountFile.Close()
+				}
+			}()
 		}
 
-		// The fd passed here will not be used: nsexec.c will overwrite it with dup3(). We just need
-		// to allocate a fd so that we know the number to pass in the environment variable. The fd
-		// must not be closed before cmd.Start(), so we reuse messageSockPair.child because the
-		// lifecycle of that fd is already taken care of.
-		cmd.ExtraFiles = append(cmd.ExtraFiles, messageSockPair.child)
-		fds[i] = stdioFdCount + len(cmd.ExtraFiles) - 1
+		if m.IsIDMapped() {
+			if mountFile == nil {
+				return fmt.Errorf("remap mount sources: invalid mount source %s: id-mapping of non-bind-mounts is not supported", m.Source)
+			}
+			usernsFile, err := nsHandles.Get(userns.Mapping{
+				UIDMappings: m.UIDMappings,
+				GIDMappings: m.GIDMappings,
+			})
+			if err != nil {
+				return fmt.Errorf("remap mount sources: failed to create userns for %s id-mapping: %w", m.Source, err)
+			}
+			defer usernsFile.Close()
+			if err := unix.MountSetattr(int(mountFile.Fd()), "", unix.AT_EMPTY_PATH, &unix.MountAttr{
+				Attr_set:  unix.MOUNT_ATTR_IDMAP,
+				Userns_fd: uint64(usernsFile.Fd()),
+			}); err != nil {
+				return fmt.Errorf("remap mount sources: failed to set IDMAP_SOURCE_ATTR on %s: %w", m.Source, err)
+			}
+		}
+
+		if mountFile != nil {
+			// We need to emulate the propagation behaviour when bind-mounting
+			// from a root filesystem with config.RootPropagation applied. This
+			// is needed because existing runc users expect bind-mounts to act
+			// this way (the "classic" method), regardless of the mount API
+			// used to create the bind-mount.
+			//
+			// NOTE: This explicitly does not handle configurations where there
+			// is a bind-mount source of a path from inside the container
+			// rootfs. We could do this in rootfs_linux.go but this would
+			// require doing criu-style shennanigans to try to figure out how
+			// to recreate the state in /proc/self/mountinfo. For now, it's
+			// much simpler to implement this based purely on RootPropagation.
+
+			// Same logic as prepareRoot().
+			propFlags := unix.MS_SLAVE | unix.MS_REC
+			if c.config.RootPropagation != 0 {
+				propFlags = c.config.RootPropagation
+			}
+
+			// The one thing to consider is whether the RootPropagation is
+			// MS_REC and whether the mount source is the same as /. If it is
+			// MS_REC then we apply the propagation flags (nix MS_REC)
+			// recursively. Otherwise we apply the propagation flags
+			// non-recursively if m.Source is part of the / mount. We do
+			// nothing if neither is the case.
+			var setattrFlags uint
+			if propFlags&unix.MS_REC == unix.MS_REC {
+				// If the RootPropagation is recursive, then any bind-mount
+				// from the host should inherit the propagation setting of /.
+				logrus.Debugf("remap mount sources: applying recursive RootPropagation of 0x%x to %q bind-mount propagation", propFlags, m.Source)
+				setattrFlags = unix.AT_RECURSIVE
+			} else {
+				// If the RootPropagation is not recursive, only bind-mounts
+				// from paths within the / mount should inherit the propagation
+				// setting /.
+				info, err := mountinfo.GetMounts(mountinfo.ParentsFilter(m.Source))
+				if err != nil {
+					return fmt.Errorf("remap mount sources: failed to parse /proc/self/mountinfo: %w", err)
+				}
+				// If there is only a single entry with a mountpoint path of /,
+				// the source was a child of /. Otherwise, do not set the
+				// propagation setting of bind-mounts.
+				if len(info) == 1 && info[0].Mountpoint == "/" {
+					logrus.Debugf("remap mount sources: applying non-recursive RootPropagation of 0x%x to child of / %q bind-mount propagation", propFlags, m.Source)
+				} else {
+					logrus.Debugf("remap mount sources: using default mount propagation for %q bind-mount", m.Source)
+					propFlags = 0
+				}
+			}
+			if propFlags != 0 {
+				if err := unix.MountSetattr(int(mountFile.Fd()), "", unix.AT_EMPTY_PATH|setattrFlags, &unix.MountAttr{
+					Propagation: uint64(propFlags &^ unix.MS_REC),
+				}); err != nil {
+					return fmt.Errorf("remap mount sources: failed to set mount propagation of %q bind-mount to 0x%x: %w", m.Source, propFlags, err)
+				}
+			}
+
+			// We have to leak these file descriptors to "runc init", which
+			// will mean that Go will set them as ~O_CLOEXEC during ForkExec,
+			// meaning that by default these would be leaked to the container
+			// process.
+			//
+			// While this is a bit scary, we have several processes to make
+			// sure this never leaks to the actual container (the SET_DUMPABLE
+			// bit, setting everything to O_CLOEXEC at the end of init, etc) --
+			// and in addition, OPEN_TREE_CLONE file descriptors are completely
+			// safe to leak to the container because they are in an anonymous
+			// mount namespace so they cannot be used to escape the container
+			// a-la CVE-2016-9962.
+			cmd.ExtraFiles = append(cmd.ExtraFiles, mountFile)
+			fd := stdioFdCount + len(cmd.ExtraFiles) - 1
+			logrus.Debugf("remapping mount source %s to fd %d", m.Source, fd)
+			c.config.Mounts[i].SourceFd = &fd
+			// Prepend \x00 to m.Source to make sure that attempts to operate
+			// on it in rootfs_linux.go fail.
+			c.config.Mounts[i].Source = "\x00" + m.Source
+		}
 	}
-	fdsJSON, err := json.Marshal(fds)
-	if err != nil {
-		return fmt.Errorf("Error creating %v: %w", envVar, err)
-	}
-	cmd.Env = append(cmd.Env, envVar+"="+string(fdsJSON))
 	return nil
 }
 
@@ -759,14 +801,11 @@ func (c *Container) newInitProcess(p *Process, cmd *exec.Cmd, messageSockPair, l
 			nsMaps[ns.Type] = ns.Path
 		}
 	}
-	data, err := c.bootstrapData(c.config.Namespaces.CloneFlags(), nsMaps, initStandard)
+	if err := c.remapMountSources(cmd); err != nil {
+		return nil, err
+	}
+	data, err := c.bootstrapData(c.config.Namespaces.CloneFlags(), nsMaps)
 	if err != nil {
-		return nil, err
-	}
-	if err := c.sendMountSources(cmd, messageSockPair); err != nil {
-		return nil, err
-	}
-	if err := c.sendIdmapSources(cmd, messageSockPair); err != nil {
 		return nil, err
 	}
 
@@ -793,7 +832,7 @@ func (c *Container) newSetnsProcess(p *Process, cmd *exec.Cmd, messageSockPair, 
 	}
 	// for setns process, we don't have to set cloneflags as the process namespaces
 	// will only be set via setns syscall
-	data, err := c.bootstrapData(0, state.NamespacePaths, initSetns)
+	data, err := c.bootstrapData(0, state.NamespacePaths)
 	if err != nil {
 		return nil, err
 	}
@@ -1183,7 +1222,7 @@ type netlinkError struct{ error }
 // such as one that uses nsenter package to bootstrap the container's
 // init process correctly, i.e. with correct namespaces, uid/gid
 // mapping etc.
-func (c *Container) bootstrapData(cloneFlags uintptr, nsMaps map[configs.NamespaceType]string, it initType) (_ io.Reader, Err error) {
+func (c *Container) bootstrapData(cloneFlags uintptr, nsMaps map[configs.NamespaceType]string) (_ io.Reader, Err error) {
 	// create the netlink message
 	r := nl.NewNetlinkRequest(int(InitMsg), 0)
 
@@ -1284,48 +1323,6 @@ func (c *Container) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Namespa
 		Type:  RootlessEUIDAttr,
 		Value: c.config.RootlessEUID,
 	})
-
-	// Bind mount source to open.
-	if it == initStandard && c.shouldSendMountSources() {
-		var mounts []byte
-		for _, m := range c.config.Mounts {
-			if m.IsBind() && !m.IsIDMapped() {
-				if strings.IndexByte(m.Source, 0) >= 0 {
-					return nil, fmt.Errorf("mount source string contains null byte: %q", m.Source)
-				}
-				mounts = append(mounts, []byte(m.Source)...)
-			}
-			mounts = append(mounts, byte(0))
-		}
-
-		r.AddData(&Bytemsg{
-			Type:  MountSourcesAttr,
-			Value: mounts,
-		})
-	}
-
-	// Idmap mount sources to open.
-	if it == initStandard && c.shouldSendIdmapSources() {
-		var mounts []byte
-		for _, m := range c.config.Mounts {
-			if m.IsBind() && m.IsIDMapped() {
-				// While other parts of the code check this too (like
-				// libcontainer/specconv/spec_linux.go) we do it here also because some libcontainer
-				// users don't use those functions.
-				if strings.IndexByte(m.Source, 0) >= 0 {
-					return nil, fmt.Errorf("mount source string contains null byte: %q", m.Source)
-				}
-
-				mounts = append(mounts, []byte(m.Source)...)
-			}
-			mounts = append(mounts, byte(0))
-		}
-
-		r.AddData(&Bytemsg{
-			Type:  IdmapSourcesAttr,
-			Value: mounts,
-		})
-	}
 
 	return bytes.NewReader(r.Serialize()), nil
 }

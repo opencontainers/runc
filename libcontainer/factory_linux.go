@@ -214,18 +214,3 @@ func validateID(id string) error {
 
 	return nil
 }
-
-func parseFdsFromEnv(envVar string) ([]int, error) {
-	fdsJSON := os.Getenv(envVar)
-	if fdsJSON == "" {
-		// Always return the nil slice if no fd is present.
-		return nil, nil
-	}
-
-	var fds []int
-	if err := json.Unmarshal([]byte(fdsJSON), &fds); err != nil {
-		return nil, fmt.Errorf("Error unmarshalling %v: %w", envVar, err)
-	}
-
-	return fds, nil
-}

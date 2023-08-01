@@ -47,18 +47,6 @@ type network struct {
 	TempVethPeerName string `json:"temp_veth_peer_name"`
 }
 
-type mountFds struct {
-	// sourceFds are the fds to use as source when mounting.
-	// The slice size should be the same as container mounts, as it will be
-	// paired with them.
-	// The value -1 is used when no fd is needed for the mount.
-	// Can't have a valid fd in the same position that other slices in this struct.
-	// We need to use only one of these fds on any single mount.
-	sourceFds []int
-	// Idem sourceFds, but fds of already created idmap mounts, to use with unix.MoveMount().
-	idmapFds []int
-}
-
 // initConfig is used for transferring parameters from Exec() to Init()
 type initConfig struct {
 	Args             []string              `json:"args"`
@@ -136,18 +124,6 @@ func StartInitialization() (retErr error) {
 		return fmt.Errorf("unable to convert _LIBCONTAINER_LOGPIPE: %w", err)
 	}
 
-	// Get mount files (O_PATH).
-	mountSrcFds, err := parseFdsFromEnv("_LIBCONTAINER_MOUNT_FDS")
-	if err != nil {
-		return err
-	}
-
-	// Get idmap fds.
-	idmapFds, err := parseFdsFromEnv("_LIBCONTAINER_IDMAP_FDS")
-	if err != nil {
-		return err
-	}
-
 	// clear the current process's environment to clean any libcontainer
 	// specific env vars.
 	os.Clearenv()
@@ -163,10 +139,10 @@ func StartInitialization() (retErr error) {
 	}()
 
 	// If init succeeds, it will not return, hence none of the defers will be called.
-	return containerInit(it, pipe, consoleSocket, fifofd, logPipeFd, mountFds{sourceFds: mountSrcFds, idmapFds: idmapFds})
+	return containerInit(it, pipe, consoleSocket, fifofd, logPipeFd)
 }
 
-func containerInit(t initType, pipe *os.File, consoleSocket *os.File, fifoFd, logFd int, mountFds mountFds) error {
+func containerInit(t initType, pipe *os.File, consoleSocket *os.File, fifoFd, logFd int) error {
 	var config *initConfig
 	if err := json.NewDecoder(pipe).Decode(&config); err != nil {
 		return err
@@ -176,11 +152,6 @@ func containerInit(t initType, pipe *os.File, consoleSocket *os.File, fifoFd, lo
 	}
 	switch t {
 	case initSetns:
-		// mount and idmap fds must be nil in this case. We don't mount while doing runc exec.
-		if mountFds.sourceFds != nil || mountFds.idmapFds != nil {
-			return errors.New("mount and idmap fds must be nil; can't mount from exec")
-		}
-
 		i := &linuxSetnsInit{
 			pipe:          pipe,
 			consoleSocket: consoleSocket,
@@ -196,7 +167,6 @@ func containerInit(t initType, pipe *os.File, consoleSocket *os.File, fifoFd, lo
 			config:        config,
 			fifoFd:        fifoFd,
 			logFd:         logFd,
-			mountFds:      mountFds,
 		}
 		return i.Init()
 	}
