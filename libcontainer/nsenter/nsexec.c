@@ -699,10 +699,14 @@ void send_idmapsources(int sockfd, pid_t pid, char *idmap_src, int idmap_src_len
 					    AT_SYMLINK_NOFOLLOW | AT_NO_AUTOMOUNT);
 		if (fd_tree < 0) {
 			sane_kill(pid, SIGKILL);
-			if (errno == EINVAL)
-				bail("failed to use open_tree(2) with path: %s, the kernel doesn't supports ID-mapped mounts", idmap_src);
-			else
-				bail("failed to use open_tree(2) with path: %s", idmap_src);
+			if (errno == ENOSYS) {
+				bail("open_tree(2) failed, the kernel doesn't support ID-mapped mounts");
+			} else if (errno == EINVAL) {
+				bail("open_tree(2) failed with path: %s, the kernel doesn't support ID-mapped mounts",
+				     idmap_src);
+			} else {
+				bail("open_tree(2) failed with path: %s", idmap_src);
+			}
 		}
 
 		struct mount_attr attr = {
@@ -713,10 +717,12 @@ void send_idmapsources(int sockfd, pid_t pid, char *idmap_src, int idmap_src_len
 		ret = sys_mount_setattr(fd_tree, "", AT_EMPTY_PATH, &attr, sizeof(attr));
 		if (ret < 0) {
 			sane_kill(pid, SIGKILL);
-			if (errno == EINVAL)
-				bail("failed to change mount attributes, maybe the filesystem doesn't supports ID-mapped mounts");
+			if (errno == ENOSYS)
+				bail("mount_setattr(2) failed, the kernel doesn't support ID-mapped mounts");
+			else if (errno == EINVAL)
+				bail("mount_setattr(2) failed with path: %s, maybe the filesystem doesn't support ID-mapped mounts", idmap_src);
 			else
-				bail("failed to change mount attributes");
+				bail("mount_setattr(2) failed with path: %s", idmap_src);
 		}
 
 		write_log(DEBUG, "~> sending idmap source: %s with mapping from: %s", idmap_src, proc_user_path);
