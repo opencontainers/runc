@@ -6,8 +6,6 @@ import (
 	"github.com/moby/sys/userns"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
-
-	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
 )
 
 func shouldUseRootlessCgroupManager(context *cli.Context) (bool, error) {
@@ -38,7 +36,7 @@ func shouldUseRootlessCgroupManager(context *cli.Context) (bool, error) {
 	// On error, we assume we are root. An error may happen during shelling out to `busctl` CLI,
 	// mostly when $DBUS_SESSION_BUS_ADDRESS is unset.
 	if context.GlobalBool("systemd-cgroup") {
-		ownerUID, err := systemd.DetectUID()
+		ownerUID, err := sdDetectUID()
 		if err != nil {
 			logrus.WithError(err).Debug("failed to get the OwnerUID value, assuming the value to be 0")
 			ownerUID = 0

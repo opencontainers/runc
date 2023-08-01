@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/coreos/go-systemd/v22/activation"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	selinux "github.com/opencontainers/selinux/go-selinux"
 	"github.com/sirupsen/logrus"
@@ -388,17 +387,11 @@ func startContainer(context *cli.Context, action CtAct, criuOpts *libcontainer.C
 		}
 	}
 
-	// Support on-demand socket activation by passing file descriptors into the container init process.
-	listenFDs := []*os.File{}
-	if os.Getenv("LISTEN_FDS") != "" {
-		listenFDs = activation.Files(false)
-	}
-
 	r := &runner{
 		enableSubreaper: !context.Bool("no-subreaper"),
 		shouldDestroy:   !context.Bool("keep"),
 		container:       container,
-		listenFDs:       listenFDs,
+		listenFDs:       sdGetListenFDs(),
 		notifySocket:    notifySocket,
 		consoleSocket:   context.String("console-socket"),
 		pidfdSocket:     context.String("pidfd-socket"),
