@@ -89,7 +89,7 @@ jobs:
           sha256sum ~/bin/shellcheck | grep -q $SHA256SUM
           # make sure to remove the old version
           sudo rm -f /usr/bin/shellcheck
-      - uses: lumaxis/shellcheck-problem-matchers@v1
+      - uses: lumaxis/shellcheck-problem-matchers@v2
       - name: shellcheck
         run: |
           make shellcheck
@@ -176,7 +176,7 @@ jobs:
     - name: make releaseall
       run: make releaseall
     - name: upload artifacts
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: release-${{ github.run_id }}
         path: release/*
