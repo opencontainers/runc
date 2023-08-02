@@ -697,6 +697,34 @@ func initSystemdProps(spec *specs.Spec) ([]systemdDbus.Property, error) {
 	return sp, nil
 }
 
+func createCgroupConfigSystemd(opts *CreateOpts, c *configs.Cgroup) error {
+	spec := opts.Spec
+
+	sp, err := initSystemdProps(spec)
+	if err != nil {
+		return err
+	}
+	c.SystemdProps = sp
+
+	if spec.Linux == nil || spec.Linux.CgroupsPath == "" {
+		// Default for c.Parent is set by systemd cgroup drivers.
+		c.ScopePrefix = "runc"
+		c.Name = opts.CgroupName
+	} else {
+		// Parse the path from expected "slice:prefix:name"
+		// for e.g. "system.slice:docker:1234"
+		parts := strings.Split(spec.Linux.CgroupsPath, ":")
+		if len(parts) != 3 {
+			return fmt.Errorf("expected cgroupsPath to be of format \"slice:prefix:name\" for systemd cgroups, got %q instead", spec.Linux.CgroupsPath)
+		}
+		c.Parent = parts[0]
+		c.ScopePrefix = parts[1]
+		c.Name = parts[2]
+	}
+
+	return nil
+}
+
 func CreateCgroupConfig(opts *CreateOpts, defaultDevs []*devices.Device) (*configs.Cgroup, error) {
 	var (
 		spec             = opts.Spec
@@ -711,26 +739,8 @@ func CreateCgroupConfig(opts *CreateOpts, defaultDevs []*devices.Device) (*confi
 	}
 
 	if useSystemdCgroup {
-		sp, err := initSystemdProps(spec)
-		if err != nil {
+		if err := createCgroupConfigSystemd(opts, c); err != nil {
 			return nil, err
-		}
-		c.SystemdProps = sp
-
-		if spec.Linux == nil || spec.Linux.CgroupsPath == "" {
-			// Default for c.Parent is set by systemd cgroup drivers.
-			c.ScopePrefix = "runc"
-			c.Name = name
-		} else {
-			// Parse the path from expected "slice:prefix:name"
-			// for e.g. "system.slice:docker:1234"
-			parts := strings.Split(spec.Linux.CgroupsPath, ":")
-			if len(parts) != 3 {
-				return nil, fmt.Errorf("expected cgroupsPath to be of format \"slice:prefix:name\" for systemd cgroups, got %q instead", spec.Linux.CgroupsPath)
-			}
-			c.Parent = parts[0]
-			c.ScopePrefix = parts[1]
-			c.Name = parts[2]
 		}
 	} else {
 		if spec.Linux != nil {
