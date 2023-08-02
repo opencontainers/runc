@@ -1105,7 +1105,7 @@ func writeSystemProperty(key, value string) error {
 func remount(m mountEntry, rootfs string, noMountFallback bool) error {
 	return utils.WithProcfd(rootfs, m.Destination, func(dstFD string) error {
 		flags := uintptr(m.Flags | unix.MS_REMOUNT)
-		err := mountViaFDs(m.Source, m.srcFD, m.Destination, dstFD, m.Device, flags, "")
+		err := mountViaFDs("", nil, m.Destination, dstFD, m.Device, flags, "")
 		if err == nil {
 			return nil
 		}
@@ -1129,7 +1129,7 @@ func remount(m mountEntry, rootfs string, noMountFallback bool) error {
 		}
 		// ... and retry the mount with flags found above.
 		flags |= uintptr(int(s.Flags) & checkflags)
-		return mountViaFDs(m.Source, m.srcFD, m.Destination, dstFD, m.Device, flags, "")
+		return mountViaFDs("", nil, m.Destination, dstFD, m.Device, flags, "")
 	})
 }
 
