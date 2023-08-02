@@ -699,8 +699,6 @@ func initSystemdProps(spec *specs.Spec) ([]systemdDbus.Property, error) {
 
 func CreateCgroupConfig(opts *CreateOpts, defaultDevs []*devices.Device) (*configs.Cgroup, error) {
 	var (
-		myCgroupPath string
-
 		spec             = opts.Spec
 		useSystemdCgroup = opts.UseSystemdCgroup
 		name             = opts.CgroupName
@@ -718,37 +716,29 @@ func CreateCgroupConfig(opts *CreateOpts, defaultDevs []*devices.Device) (*confi
 			return nil, err
 		}
 		c.SystemdProps = sp
-	}
 
-	if spec.Linux != nil && spec.Linux.CgroupsPath != "" {
-		if useSystemdCgroup {
-			myCgroupPath = spec.Linux.CgroupsPath
-		} else {
-			myCgroupPath = libcontainerUtils.CleanPath(spec.Linux.CgroupsPath)
-		}
-	}
-
-	if useSystemdCgroup {
-		if myCgroupPath == "" {
+		if spec.Linux == nil || spec.Linux.CgroupsPath == "" {
 			// Default for c.Parent is set by systemd cgroup drivers.
 			c.ScopePrefix = "runc"
 			c.Name = name
 		} else {
 			// Parse the path from expected "slice:prefix:name"
 			// for e.g. "system.slice:docker:1234"
-			parts := strings.Split(myCgroupPath, ":")
+			parts := strings.Split(spec.Linux.CgroupsPath, ":")
 			if len(parts) != 3 {
-				return nil, fmt.Errorf("expected cgroupsPath to be of format \"slice:prefix:name\" for systemd cgroups, got %q instead", myCgroupPath)
+				return nil, fmt.Errorf("expected cgroupsPath to be of format \"slice:prefix:name\" for systemd cgroups, got %q instead", spec.Linux.CgroupsPath)
 			}
 			c.Parent = parts[0]
 			c.ScopePrefix = parts[1]
 			c.Name = parts[2]
 		}
 	} else {
-		if myCgroupPath == "" {
+		if spec.Linux != nil {
+			c.Path = libcontainerUtils.CleanPath(spec.Linux.CgroupsPath)
+		}
+		if c.Path == "" {
 			c.Name = name
 		}
-		c.Path = myCgroupPath
 	}
 
 	// In rootless containers, any attempt to make cgroup changes is likely to fail.
