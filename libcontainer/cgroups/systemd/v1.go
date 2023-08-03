@@ -93,7 +93,7 @@ func genV1ResourcesProperties(r *configs.Resources, cm *dbusConnManager) (config
 			newProp("CPUShares", r.CpuShares))
 	}
 
-	addCpuQuota(cm, &properties, r.CpuQuota, r.CpuPeriod)
+	addCPUQuota(cm, &properties, r.CpuQuota, r.CpuPeriod)
 
 	if r.BlkioWeight != 0 {
 		properties = append(properties,
