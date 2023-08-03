@@ -26,6 +26,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    (so that the container init is a child of that process) must now implement
    a proper child reaper in case a container does not have its own private PID
    namespace, as documented in `container.Signal`. (#3825)
+ * Sum `anon` and `file` from `memory.stat` for cgroupv2 root usage,
+   as the root does not have `memory.current` for cgroupv2.
+   This aligns cgroupv2 root usage more closely with cgroupv1 reporting.
+   Additionally, report root swap usage as sum of swap and memory usage,
+   aligned with v1 and existing non-root v2 reporting. (#3933)
 
 ### Fixed
 
