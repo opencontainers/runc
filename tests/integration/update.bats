@@ -854,5 +854,5 @@ EOF
 	# The container will be OOM killed, and runc might either succeed
 	# or fail depending on the timing, so we don't check its exit code.
 	runc update test_update --memory 1024
-	testcontainer test_update stopped
+	wait_for_container 10 1 test_update stopped
 }

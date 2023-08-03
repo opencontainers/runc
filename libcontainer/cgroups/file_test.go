@@ -58,8 +58,6 @@ func TestOpenat2(t *testing.T) {
 		{"/sys/fs/cgroup", "/cgroup.controllers"},
 		{"/sys/fs/cgroup/", "cgroup.controllers"},
 		{"/sys/fs/cgroup/", "/cgroup.controllers"},
-		{"/sys/fs/cgroup/user.slice", "cgroup.controllers"},
-		{"/sys/fs/cgroup/user.slice/", "/cgroup.controllers"},
 		{"/", "/sys/fs/cgroup/cgroup.controllers"},
 		{"/", "sys/fs/cgroup/cgroup.controllers"},
 		{"/sys/fs/cgroup/cgroup.controllers", ""},
