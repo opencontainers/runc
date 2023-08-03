@@ -59,6 +59,22 @@ function teardown() {
 	[ "$status" -ne 0 ]
 }
 
+# https://github.com/opencontainers/runc/issues/3952
+@test "runc run with tmpfs" {
+	requires root
+
+	chmod 'a=rwx,ug+s,+t' rootfs/tmp # set all bits
+	mode=$(stat -c %A rootfs/tmp)
+
+	# shellcheck disable=SC2016
+	update_config '.process.args = ["sh", "-c", "stat -c %A /tmp"]'
+	update_config '.mounts += [{"destination": "/tmp", "type": "tmpfs", "source": "tmpfs", "options":["noexec","nosuid","nodev","rprivate"]}]'
+
+	runc run test_tmpfs
+	[ "$status" -eq 0 ]
+	[ "$output" = "$mode" ]
+}
+
 @test "runc run with tmpfs perms" {
 	# shellcheck disable=SC2016
 	update_config '.process.args = ["sh", "-c", "stat -c %a /tmp/test"]'
