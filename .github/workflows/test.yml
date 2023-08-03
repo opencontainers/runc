@@ -78,6 +78,15 @@ jobs:
       with:
         bats-version: 1.9.0
 
+    - name: procfs mount
+      run: |
+        # Get the list of mounts to help with debugging.
+        cat /proc/self/mounts
+        # Create a procfs mount that is not masked, to ensure that container
+        # procfs mounts will succeed.
+        sudo mkdir -p /tmp/.procfs-stashed-mount
+        sudo unshare -pf mount -t proc -o subset=pid proc /tmp/.procfs-stashed-mount
+
     - name: unit test
       if: matrix.rootless != 'rootless'
       run: sudo -E PATH="$PATH" -- make TESTFLAGS="${{ matrix.race }}" localunittest
