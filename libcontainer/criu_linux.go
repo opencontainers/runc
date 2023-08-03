@@ -971,15 +971,14 @@ func (c *Container) criuSwrk(process *Process, req *criurpc.CriuReq, opts *CriuO
 		}
 
 		t := resp.GetType()
-		switch {
-		case t == criurpc.CriuReqType_FEATURE_CHECK:
+		switch t {
+		case criurpc.CriuReqType_FEATURE_CHECK:
 			logrus.Debugf("Feature check says: %s", resp)
 			criuFeatures = resp.GetFeatures()
-		case t == criurpc.CriuReqType_NOTIFY:
+		case criurpc.CriuReqType_NOTIFY:
 			if err := c.criuNotifications(resp, process, cmd, opts, extFds, oob[:oobn]); err != nil {
 				return err
 			}
-			t = criurpc.CriuReqType_NOTIFY
 			req = &criurpc.CriuReq{
 				Type:          &t,
 				NotifySuccess: proto.Bool(true),
@@ -993,9 +992,9 @@ func (c *Container) criuSwrk(process *Process, req *criurpc.CriuReq, opts *CriuO
 				return err
 			}
 			continue
-		case t == criurpc.CriuReqType_RESTORE:
-		case t == criurpc.CriuReqType_DUMP:
-		case t == criurpc.CriuReqType_PRE_DUMP:
+		case criurpc.CriuReqType_RESTORE:
+		case criurpc.CriuReqType_DUMP:
+		case criurpc.CriuReqType_PRE_DUMP:
 		default:
 			return fmt.Errorf("unable to parse the response %s", resp.String())
 		}
