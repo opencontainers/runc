@@ -106,6 +106,12 @@ func namespaces(config *configs.Config) error {
 		}
 	}
 
+	if config.Namespaces.Contains(configs.NEWTIME) {
+		if _, err := os.Stat("/proc/self/timens_offsets"); os.IsNotExist(err) {
+			return errors.New("time namespaces aren't enabled in the kernel")
+		}
+	}
+
 	return nil
 }
 
