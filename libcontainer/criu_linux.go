@@ -902,14 +902,6 @@ func (c *Container) criuSwrk(process *Process, req *criurpc.CriuReq, opts *CriuO
 		return err
 	}
 
-	var logPath string
-	if opts != nil {
-		logPath = filepath.Join(opts.WorkDirectory, req.GetOpts().GetLogFile())
-	} else {
-		// For the VERSION RPC 'opts' is set to 'nil' and therefore
-		// opts.WorkDirectory does not exist. Set logPath to "".
-		logPath = ""
-	}
 	criuClient := os.NewFile(uintptr(fds[0]), "criu-transport-client")
 	criuClientFileCon, err := net.FileConn(criuClient)
 	criuClient.Close()
@@ -1027,12 +1019,11 @@ func (c *Container) criuSwrk(process *Process, req *criurpc.CriuReq, opts *CriuO
 		if err != nil {
 			return err
 		}
+		t := resp.GetType()
 		if !resp.GetSuccess() {
-			typeString := req.GetType().String()
-			return fmt.Errorf("criu failed: type %s errno %d\nlog file: %s", typeString, resp.GetCrErrno(), logPath)
+			return fmt.Errorf("criu failed: type %s errno %d", t, resp.GetCrErrno())
 		}
 
-		t := resp.GetType()
 		switch t {
 		case criurpc.CriuReqType_FEATURE_CHECK:
 			logrus.Debugf("Feature check says: %s", resp)
@@ -1080,7 +1071,7 @@ func (c *Container) criuSwrk(process *Process, req *criurpc.CriuReq, opts *CriuO
 	// If we got the message CriuReqType_PRE_DUMP it means
 	// CRIU was successful and we need to forcefully stop CRIU
 	if !criuProcessState.Success() && *req.Type != criurpc.CriuReqType_PRE_DUMP {
-		return fmt.Errorf("criu failed: %s\nlog file: %s", criuProcessState.String(), logPath)
+		return fmt.Errorf("criu failed: %s", criuProcessState)
 	}
 	return nil
 }
