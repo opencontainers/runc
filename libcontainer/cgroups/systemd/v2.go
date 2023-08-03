@@ -96,7 +96,7 @@ func unifiedResToSystemdProps(cm *dbusConnManager, res map[string]string) (props
 
 		case "cpu.max":
 			// value: quota [period]
-			quota := int64(0) // 0 means "unlimited" for addCpuQuota, if period is set
+			quota := int64(0) // 0 means "unlimited" for addCPUQuota, if period is set
 			period := defCPUQuotaPeriod
 			sv := strings.Fields(v)
 			if len(sv) < 1 || len(sv) > 2 {
@@ -116,7 +116,7 @@ func unifiedResToSystemdProps(cm *dbusConnManager, res map[string]string) (props
 					return nil, fmt.Errorf("unified resource %q quota value conversion error: %w", k, err)
 				}
 			}
-			addCpuQuota(cm, &props, quota, period)
+			addCPUQuota(cm, &props, quota, period)
 
 		case "cpu.weight":
 			if shouldSetCPUIdle(cm, strings.TrimSpace(res["cpu.idle"])) {
@@ -257,7 +257,7 @@ func genV2ResourcesProperties(dirPath string, r *configs.Resources, cm *dbusConn
 		}
 	}
 
-	addCpuQuota(cm, &properties, r.CpuQuota, r.CpuPeriod)
+	addCPUQuota(cm, &properties, r.CpuQuota, r.CpuPeriod)
 
 	if r.PidsLimit > 0 || r.PidsLimit == -1 {
 		properties = append(properties,

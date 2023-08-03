@@ -283,7 +283,7 @@ func systemdVersionAtoi(str string) (int, error) {
 	return ver, nil
 }
 
-func addCpuQuota(cm *dbusConnManager, properties *configs.SdProperties, quota int64, period uint64) {
+func addCPUQuota(cm *dbusConnManager, properties *configs.SdProperties, quota int64, period uint64) {
 	if period != 0 {
 		// systemd only supports CPUQuotaPeriodUSec since v242
 		sdVer := systemdVersion(cm)
