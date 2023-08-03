@@ -464,7 +464,7 @@ func mountToRootfs(m *configs.Mount, c *mountConfig) error {
 				return err
 			}
 		} else {
-			dt := fmt.Sprintf("mode=%04o", stat.Mode())
+			dt := fmt.Sprintf("mode=%04o", syscallMode(stat.Mode()))
 			if m.Data != "" {
 				dt = dt + "," + m.Data
 			}
