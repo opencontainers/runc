@@ -63,3 +63,7 @@ ENV PKG_CONFIG_PATH=/opt/libseccomp/lib/pkgconfig
 RUN git config --global --add safe.directory /go/src/github.com/opencontainers/runc
 
 WORKDIR /go/src/github.com/opencontainers/runc
+
+# Fixup for cgroup v2.
+COPY script/prepare-cgroup-v2.sh /
+ENTRYPOINT [ "/prepare-cgroup-v2.sh" ]
