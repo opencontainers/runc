@@ -49,6 +49,9 @@ type Process struct {
 	// ExtraFiles specifies additional open files to be inherited by the container
 	ExtraFiles []*os.File
 
+	// open handles to cloned binaries -- see dmz.ClonedBinary for more details
+	clonedExes []*os.File
+
 	// Initial sizings for the console
 	ConsoleWidth  uint16
 	ConsoleHeight uint16
@@ -119,6 +122,15 @@ func (p Process) Signal(sig os.Signal) error {
 		return errInvalidProcess
 	}
 	return p.ops.signal(sig)
+}
+
+// closeClonedExes cleans up any existing cloned binaries associated with the
+// Process.
+func (p *Process) closeClonedExes() {
+	for _, exe := range p.clonedExes {
+		_ = exe.Close()
+	}
+	p.clonedExes = nil
 }
 
 // IO holds the process's STDIO

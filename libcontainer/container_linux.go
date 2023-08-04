@@ -24,6 +24,7 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/dmz"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runc/libcontainer/utils"
@@ -316,6 +317,8 @@ func (c *Container) start(process *Process) (retErr error) {
 	if err != nil {
 		return fmt.Errorf("unable to create new parent process: %w", err)
 	}
+	// We do not need the cloned binaries once the process is spawned.
+	defer process.closeClonedExes()
 
 	logsDone := parent.forwardChildLogs()
 	if logsDone != nil {
@@ -454,24 +457,30 @@ func (c *Container) newParentProcess(p *Process) (parentProcess, error) {
 	}
 	logFilePair := filePair{parentLogPipe, childLogPipe}
 
-	cmd := c.commandTemplate(p, childInitPipe, childLogPipe)
-	if !p.Init {
-		return c.newSetnsProcess(p, cmd, messageSockPair, logFilePair)
+	// Make sure we use a new safe copy of /proc/self/exe each time this is
+	// called, to make sure that if a container manages to overwrite the file
+	// it cannot affect other containers on the system. For runc, this code
+	// will only ever be called once, but libcontainer users might call this
+	// more than once.
+	p.closeClonedExes()
+	var (
+		exePath string
+		safeExe *os.File
+	)
+	if dmz.IsSelfExeCloned() {
+		// /proc/self/exe is already a cloned binary -- no need to do anything
+		logrus.Debug("skipping binary cloning -- /proc/self/exe is already cloned!")
+		exePath = "/proc/self/exe"
+	} else {
+		safeExe, err = dmz.CloneSelfExe(c.root)
+		if err != nil {
+			return nil, fmt.Errorf("unable to create safe /proc/self/exe clone for runc init: %w", err)
+		}
+		exePath = "/proc/self/fd/" + strconv.Itoa(int(safeExe.Fd()))
+		p.clonedExes = append(p.clonedExes, safeExe)
 	}
 
-	// We only set up fifoFd if we're not doing a `runc exec`. The historic
-	// reason for this is that previously we would pass a dirfd that allowed
-	// for container rootfs escape (and not doing it in `runc exec` avoided
-	// that problem), but we no longer do that. However, there's no need to do
-	// this for `runc exec` so we just keep it this way to be safe.
-	if err := c.includeExecFifo(cmd); err != nil {
-		return nil, fmt.Errorf("unable to setup exec fifo: %w", err)
-	}
-	return c.newInitProcess(p, cmd, messageSockPair, logFilePair)
-}
-
-func (c *Container) commandTemplate(p *Process, childInitPipe *os.File, childLogPipe *os.File) *exec.Cmd {
-	cmd := exec.Command("/proc/self/exe", "init")
+	cmd := exec.Command(exePath, "init")
 	cmd.Args[0] = os.Args[0]
 	cmd.Stdin = p.Stdin
 	cmd.Stdout = p.Stdout
@@ -501,13 +510,38 @@ func (c *Container) commandTemplate(p *Process, childInitPipe *os.File, childLog
 		cmd.Env = append(cmd.Env, "_LIBCONTAINER_LOGLEVEL="+p.LogLevel)
 	}
 
-	// NOTE: when running a container with no PID namespace and the parent process spawning the container is
-	// PID1 the pdeathsig is being delivered to the container's init process by the kernel for some reason
-	// even with the parent still running.
+	if safeExe != nil {
+		// Due to a Go stdlib bug, we need to add safeExe to the set of
+		// ExtraFiles otherwise it is possible for the stdlib to clobber the fd
+		// during forkAndExecInChild1 and replace it with some other file that
+		// might be malicious. This is less than ideal (because the descriptor
+		// will be non-O_CLOEXEC) however we have protections in "runc init" to
+		// stop us from leaking extra file descriptors.
+		//
+		// See <https://github.com/golang/go/issues/61751>.
+		cmd.ExtraFiles = append(cmd.ExtraFiles, safeExe)
+	}
+
+	// NOTE: when running a container with no PID namespace and the parent
+	//       process spawning the container is PID1 the pdeathsig is being
+	//       delivered to the container's init process by the kernel for some
+	//       reason even with the parent still running.
 	if c.config.ParentDeathSignal > 0 {
 		cmd.SysProcAttr.Pdeathsig = unix.Signal(c.config.ParentDeathSignal)
 	}
-	return cmd
+
+	if p.Init {
+		// We only set up fifoFd if we're not doing a `runc exec`. The historic
+		// reason for this is that previously we would pass a dirfd that allowed
+		// for container rootfs escape (and not doing it in `runc exec` avoided
+		// that problem), but we no longer do that. However, there's no need to do
+		// this for `runc exec` so we just keep it this way to be safe.
+		if err := c.includeExecFifo(cmd); err != nil {
+			return nil, fmt.Errorf("unable to setup exec fifo: %w", err)
+		}
+		return c.newInitProcess(p, cmd, messageSockPair, logFilePair)
+	}
+	return c.newSetnsProcess(p, cmd, messageSockPair, logFilePair)
 }
 
 // shouldSendMountSources says whether the child process must setup bind mounts with

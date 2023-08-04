@@ -4,10 +4,12 @@
 package system
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"unsafe"
 
+	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
 
@@ -101,4 +103,30 @@ func GetSubreaper() (int, error) {
 	}
 
 	return int(i), nil
+}
+
+func ExecutableMemfd(comment string, flags int) (*os.File, error) {
+	// Try to use MFD_EXEC first. On pre-6.3 kernels we get -EINVAL for this
+	// flag. On post-6.3 kernels, with vm.memfd_noexec=1 this ensures we get an
+	// executable memfd. For vm.memfd_noexec=2 this is a bit more complicated.
+	// The original vm.memfd_noexec=2 implementation incorrectly silently
+	// allowed MFD_EXEC[1] -- this should be fixed in 6.6. On 6.6 and newer
+	// kernels, we will get -EACCES if we try to use MFD_EXEC with
+	// vm.memfd_noexec=2 (for 6.3-6.5, -EINVAL was the intended return value).
+	//
+	// The upshot is we only need to retry without MFD_EXEC on -EINVAL because
+	// it just so happens that passing MFD_EXEC bypasses vm.memfd_noexec=2 on
+	// kernels where -EINVAL is actually a security denial.
+	memfd, err := unix.MemfdCreate(comment, flags|unix.MFD_EXEC)
+	if err == unix.EINVAL {
+		memfd, err = unix.MemfdCreate(comment, flags)
+	}
+	if err != nil {
+		if err == unix.EACCES {
+			logrus.Info("memfd_create(MFD_EXEC) failed, possibly due to vm.memfd_noexec=2 -- falling back to less secure O_TMPFILE")
+		}
+		err := os.NewSyscallError("memfd_create", err)
+		return nil, fmt.Errorf("failed to create executable memfd: %w", err)
+	}
+	return os.NewFile(uintptr(memfd), "/memfd:"+comment), nil
 }
