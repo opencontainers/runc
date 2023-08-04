@@ -45,6 +45,7 @@ type Container struct {
 	state                containerState
 	created              time.Time
 	fifo                 *os.File
+	safeExeFile          *os.File
 }
 
 // State represents a running container's state
@@ -316,6 +317,12 @@ func (c *Container) start(process *Process) (retErr error) {
 	if err != nil {
 		return fmt.Errorf("unable to create new parent process: %w", err)
 	}
+	// This is no longer needed after the process has been spawned. We also
+	// want to make sure that (especially in the case of O_TMPFILE descriptors)
+	// that we use a new copy for each execution, because an attacker
+	// overwriting our copy would be just as bad as overwiting the host runc
+	// binary if we re-use the copy.
+	defer c.clearSafeExe()
 
 	logsDone := parent.forwardChildLogs()
 	if logsDone != nil {
@@ -441,6 +448,125 @@ func (c *Container) includeExecFifo(cmd *exec.Cmd) error {
 	return nil
 }
 
+func (c *Container) clearSafeExe() {
+	if c.safeExeFile != nil {
+		_ = c.safeExeFile.Close()
+		c.safeExeFile = nil
+	}
+}
+
+// makeSafeExe makes a copy of /proc/self/exe that is safe to use when
+// executing inside a container. On modern kernels, this is a locked executable
+// memfd that contains a copy of /proc/self/exe. The returned string is a
+// /proc/self/fd/... path that can be used directly with "os/exec".Command().
+// For more details on why this is necessary, see CVE-2019-5736.
+func (c *Container) makeSafeExe() (path string, Err error) {
+	if c.safeExeFile == nil {
+		var err error
+		var sealFn func(**os.File) error
+
+		// Close safeExeFile if we fail to make it properly.
+		defer func() {
+			if c.safeExeFile != nil && Err != nil {
+				c.clearSafeExe()
+			}
+		}()
+
+		// First, try an executable memfd (supported since Linux 3.17).
+		c.safeExeFile, err = system.ExecutableMemfd("runc_cloned:/proc/self/exe", unix.MFD_ALLOW_SEALING|unix.MFD_CLOEXEC)
+		if err != nil {
+			logrus.Debugf("memfd cloned binary failed, falling back to O_TMPFILE: %v", err)
+		} else {
+			sealFn = func(f **os.File) error {
+				if err := (*f).Chmod(0o511); err != nil {
+					return fmt.Errorf("chmod memfd: %w", err)
+				}
+				// Try to set the newer memfd sealing flags, but we ignore
+				// errors because they are not needed and we want to continue
+				// to work on older kernels.
+				fd := (*f).Fd()
+				// F_SEAL_FUTURE_WRITE -- Linux 5.1
+				_, _ = unix.FcntlInt(fd, unix.F_ADD_SEALS, unix.F_SEAL_FUTURE_WRITE)
+				// F_SEAL_EXEC -- Linux 6.3
+				const F_SEAL_EXEC = 0x2000 //nolint:revive // this matches the unix.* name
+				_, _ = unix.FcntlInt(fd, unix.F_ADD_SEALS, F_SEAL_EXEC)
+				// Apply all original memfd seals.
+				_, err := unix.FcntlInt(fd, unix.F_ADD_SEALS, unix.F_SEAL_SEAL|unix.F_SEAL_SHRINK|unix.F_SEAL_GROW|unix.F_SEAL_WRITE)
+				return os.NewSyscallError("fcntl(F_ADD_SEALS)", err)
+			}
+		}
+
+		// Try to fallback to O_TMPFILE (supported since Linux 3.11).
+		if c.safeExeFile == nil {
+			var stat unix.Stat_t
+			c.safeExeFile, err = os.OpenFile(c.root, unix.O_TMPFILE|unix.O_RDWR|unix.O_EXCL|unix.O_CLOEXEC, 0o700)
+			if err != nil {
+				logrus.Debugf("O_TMPFILE cloned binary failed, falling back to mktemp(): %v", err)
+			} else if err := unix.Fstat(int(c.safeExeFile.Fd()), &stat); err != nil || stat.Nlink != 0 {
+				logrus.Debugf("O_TMPFILE cloned binary has non-zero nlink, falling back to mktemp(): %v", err)
+				c.clearSafeExe()
+			}
+
+			// Finally, fallback to a classic temporary file we unlink.
+			if c.safeExeFile == nil {
+				c.safeExeFile, err = os.CreateTemp(c.root, "runc.")
+				if err != nil {
+					return "", fmt.Errorf("could not clone binary: %w", err)
+				}
+				// Unlink the file and verify it was unlinked.
+				if err := os.Remove(c.safeExeFile.Name()); err != nil {
+					return "", fmt.Errorf("unlinking classic tmpfile: %w", err)
+				}
+				if err := unix.Fstat(int(c.safeExeFile.Fd()), &stat); err != nil {
+					return "", fmt.Errorf("classic tmpfile fstat: %w", err)
+				} else if stat.Nlink != 0 {
+					return "", fmt.Errorf("classic tmpfile %s has non-zero nlink after unlink", c.safeExeFile.Name())
+				}
+			}
+			sealFn = func(f **os.File) error {
+				if err := (*f).Chmod(0o511); err != nil {
+					return fmt.Errorf("chmod tmpfile: %w", err)
+				}
+				// When sealing an O_TMPFILE-style descriptor we need to
+				// re-open the path as O_PATH to clear the existing write
+				// handle we have.
+				opath, err := os.OpenFile(fmt.Sprintf("/proc/self/fd/%d", (*f).Fd()), unix.O_PATH|unix.O_CLOEXEC, 0)
+				if err != nil {
+					return fmt.Errorf("reopen tmpfile: %w", err)
+				}
+				_ = (*f).Close()
+				*f = opath
+				return nil
+			}
+		}
+
+		// Copy the contents of /proc/self/exe to the cloned fd.
+		srcExeFile, err := os.Open("/proc/self/exe")
+		if err != nil {
+			return "", fmt.Errorf("cannot open current process exe: %w", err)
+		}
+		defer srcExeFile.Close()
+		stat, err := srcExeFile.Stat()
+		if err != nil {
+			return "", fmt.Errorf("checking /proc/self/exe size: %w", err)
+		}
+		exeSize := stat.Size()
+
+		copied, err := system.Copy(c.safeExeFile, srcExeFile)
+		if err != nil {
+			return "", fmt.Errorf("copy binary: %w", err)
+		} else if copied != exeSize {
+			return "", fmt.Errorf("copied binary size mismatch: %d != %d", copied, exeSize)
+		}
+
+		// Seal the descriptor.
+		if err := sealFn(&c.safeExeFile); err != nil {
+			return "", fmt.Errorf("could not seal fd: %w", err)
+		}
+	}
+	return fmt.Sprintf("/proc/self/fd/%d", c.safeExeFile.Fd()), nil
+}
+
 func (c *Container) newParentProcess(p *Process) (parentProcess, error) {
 	parentInitPipe, childInitPipe, err := utils.NewSockPair("init")
 	if err != nil {
@@ -454,24 +580,12 @@ func (c *Container) newParentProcess(p *Process) (parentProcess, error) {
 	}
 	logFilePair := filePair{parentLogPipe, childLogPipe}
 
-	cmd := c.commandTemplate(p, childInitPipe, childLogPipe)
-	if !p.Init {
-		return c.newSetnsProcess(p, cmd, messageSockPair, logFilePair)
+	exePath, err := c.makeSafeExe()
+	if err != nil {
+		return nil, fmt.Errorf("unable to create safe /proc/self/exe clone: %w", err)
 	}
 
-	// We only set up fifoFd if we're not doing a `runc exec`. The historic
-	// reason for this is that previously we would pass a dirfd that allowed
-	// for container rootfs escape (and not doing it in `runc exec` avoided
-	// that problem), but we no longer do that. However, there's no need to do
-	// this for `runc exec` so we just keep it this way to be safe.
-	if err := c.includeExecFifo(cmd); err != nil {
-		return nil, fmt.Errorf("unable to setup exec fifo: %w", err)
-	}
-	return c.newInitProcess(p, cmd, messageSockPair, logFilePair)
-}
-
-func (c *Container) commandTemplate(p *Process, childInitPipe *os.File, childLogPipe *os.File) *exec.Cmd {
-	cmd := exec.Command("/proc/self/exe", "init")
+	cmd := exec.Command(exePath, "init")
 	cmd.Args[0] = os.Args[0]
 	cmd.Stdin = p.Stdin
 	cmd.Stdout = p.Stdout
@@ -500,13 +614,36 @@ func (c *Container) commandTemplate(p *Process, childInitPipe *os.File, childLog
 		"_LIBCONTAINER_LOGLEVEL="+p.LogLevel,
 	)
 
-	// NOTE: when running a container with no PID namespace and the parent process spawning the container is
-	// PID1 the pdeathsig is being delivered to the container's init process by the kernel for some reason
-	// even with the parent still running.
+	// Due to a Go stdlib bug, we need to add c.safeExeFile to the set of
+	// ExtraFiles otherwise it is possible for the stdlib to clobber the fd
+	// during forkAndExecInChild1 and replace it with some other file that
+	// might be malicious. This is less than ideal (because the descriptor will
+	// be non-O_CLOEXEC) however we have protections in "runc init" to stop us
+	// from leaking extra file descriptors.
+	//
+	// See <https://github.com/golang/go/issues/61751>.
+	cmd.ExtraFiles = append(cmd.ExtraFiles, c.safeExeFile)
+
+	// NOTE: when running a container with no PID namespace and the parent
+	//       process spawning the container is PID1 the pdeathsig is being
+	//       delivered to the container's init process by the kernel for some
+	//       reason even with the parent still running.
 	if c.config.ParentDeathSignal > 0 {
 		cmd.SysProcAttr.Pdeathsig = unix.Signal(c.config.ParentDeathSignal)
 	}
-	return cmd
+
+	if p.Init {
+		// We only set up fifoFd if we're not doing a `runc exec`. The historic
+		// reason for this is that previously we would pass a dirfd that allowed
+		// for container rootfs escape (and not doing it in `runc exec` avoided
+		// that problem), but we no longer do that. However, there's no need to do
+		// this for `runc exec` so we just keep it this way to be safe.
+		if err := c.includeExecFifo(cmd); err != nil {
+			return nil, fmt.Errorf("unable to setup exec fifo: %w", err)
+		}
+		return c.newInitProcess(p, cmd, messageSockPair, logFilePair)
+	}
+	return c.newSetnsProcess(p, cmd, messageSockPair, logFilePair)
 }
 
 // shouldSendMountSources says whether the child process must setup bind mounts with
