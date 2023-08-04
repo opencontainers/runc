@@ -6,6 +6,77 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0-rc.1] - 2024-03-20
+
+> How, dear sir, did you cross the flood? By not stopping, friend, and by not
+> straining I crossed the flood
+
+This new runc release includes all the changes from the v1.1 patch releases up
+to v1.1.12.
+
+### Compatibility
+
+* This release requires Go 1.20.x or Go 1.19.x (#3718)
+
+### Breaking
+
+ * Several aspects of how mount options work has been adjusted in a way that
+   could theoretically break users that have very strange mount option strings.
+   This was necessary to fix glaring issues in how mount options were being
+   treated. The key changes are:
+
+   - Mount options on bind-mounts that clear a mount flag are now always
+     applied. Previously, if a user requested a bind-mount with only clearing
+     options (such as `rw,exec,dev`) the options would be ignored and the
+     original bind-mount options would be set. Unfortunately this also means
+     that container configurations which specified only clearing mount options
+     will now actually get what they asked for, which could break existing
+     containers (though it seems unlikely that a user who requested a specific
+     mount option would consider it "broken" to get the mount options they
+     asked foruser who requested a specific mount option would consider it
+     "broken" to get the mount options they asked for). (#3967)
+
+   - Container configurations using bind-mounts with superblock mount flags
+     (i.e. filesystem-specific mount flags, referred to as "data" in
+     `mount(2)`, as opposed to VFS generic mount flags like `MS_NODEV`) will
+     now return an error. This is because superblock mount flags will also
+     affect the host mount (as the superblock is shared when bind-mounting),
+     which is obviously not acceptable. Previously, these flags were silently
+     ignored so this change simply tells users that runc cannot fulfil their
+     request rather than just ignoring it. (#3990)
+
+   If any of these changes cause problems in real-world workloads, please [open
+   an issue](https://github.com/opencontainers/runc/issues/new/choose) so we
+   can adjust the behaviour to avoid compatibility issues.
+
+### Added
+
+ * Support id-mapped mounts for bind-mounts. Other mount types are not
+   currently supported. This feature requires `MOUNT_ATTR_IDMAP` kernel support
+   (Linux 5.12 or newer) as well as kernel support for the underlying filesystem
+   used for the bind-mount. See [`mount_setattr(2)`][mount_setattr.2] for a list of
+   supported filesystems and other restrictions. (#3717, #3985)
+ * Support for `cgroup.kill` to kill all processes inside a container. (#3135,
+   #3825)
+ * Support to set a domainname as specified in the OCI runtime-spec v1.1.0.
+   (#3600)
+ * Add support for umask when exec-ing into a container. (#3661)
+ * libct/cg: support SCHED_IDLE for runc cgroupfs. (#3377)
+ * checkpoint/restore: implement `--manage-cgroups-mode` ignore. (#3546)
+ * seccomp: refactor flags support; add flags to features, set SPEC_ALLOW by
+   default. (#3588)
+ * libct/cg/sd: use systemd v240+ new `MAJOR:*` syntax. (#3843)
+ * Use github.com/checkpoint-restore/go-criu v6.3.0, which reduces the compiled
+   binary file. (#3652)
+ * Expose MountExtensions (including idmap support) in the features subcommand. (#3993)
+ * Support CFS bandwidth burst for CPU. (#3749, #3145)
+ * Support time namespace. (#3876)
+ * Build tag `runc_nodmz`, see also the `memfd-bind` binary in `contrib/` in case you can't use
+   `runc-dmz` and still want to reduce memory usage. (#3987)
+ * New "pidfd-socket" CLI flag. (#4045)
+
+[mount_setattr.2]: https://man7.org/linux/man-pages/man2/mount_setattr.2.html
+
 ### Deprecated
 
  * `runc` option `--criu` is now ignored (with a warning), and the option will
@@ -16,12 +87,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    to kill a container (with SIGKILL) which does not have its own private PID
    namespace (so that runc would send SIGKILL to all processes). Now, this is
    done automatically. (#3864, #3825)
+ * `libcontainer/user` is deprecated, use `github.com/moby/sys/user` instead. It
+   will be removed in a future release. (#4017)
 
 ### Changed
 
  * When Intel RDT feature is not available, its initialization is skipped,
    resulting in slightly faster `runc exec` and `runc run`. (#3306)
- * Enforce absolute paths for mounts. (#3020, #3717)
+ * The `runc features` command is no longer experimental. (#3861)
  * libcontainer users that create and kill containers from a daemon process
    (so that the container init is a child of that process) must now implement
    a proper child reaper in case a container does not have its own private PID
@@ -35,6 +108,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    For cgroupv1, `Usage` and `Failcnt` are set by subtracting memory usage
    from memory+swap usage. For cgroupv2, `Usage`, `Limit`, and `MaxUsage`
    are set. (#4010)
+ * When running rootless or using a user namespace, a source filesystem mounted
+   with `nodev`, `nosuid` or `noexec` can now be used as source of a bind mount
+   without the same options being set for the mount. (#3805, #3967)
+ * libcontainer users that create and kill containers from a daemon process
+   (so that the container init is a child of that process) must now implement
+   a proper child reaper in case a container does not have its own private PID
+   namespace, as documented in `container.Signal`. (#3825)
+ * libcontainer: `container.Signal` no longer have the second `all bool`
+   argument; a need to kill all processes is now determined automatically.
+   (#3825, #3885)
+ * libct/cg: Remove function EnterPid with no users. (#3797)
+ * libct/seccomp: enable seccomp binary tree optimization. (#3405)
+ * runc run/exec: ignore SIGURG. (#3368)
+ * Remove tun/tap from the default device rules. (#3468)
+ * `runc --root non-existent-dir list` now reports an error for non-existent
+   root directory. (#3374)
+ * libct: Mount: Remove {Pre,Post}mountCmds, were never used and are obsoleted
+   by more generic container hooks. (#3350)
+ * When joining an existing time or user namespace, don't require configuration
+   entries for them. If they are specified, they need to be consistent with the
+   user namespace joining. In future minor releases an error will be thrown if
+   they are specified, though. (#4133)
 
 ### Fixed
 
@@ -46,6 +141,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    code (this was due to how s390x does syscall multiplexing). (#3474)
  * Remove tun/tap from the default device rules. (#3468)
  * specconv: avoid mapping "acl" to MS_POSIXACL. (#3739)
+ * libcontainer: fix private PID namespace detection when killing the container.
+   (#3866, #3825)
+ * Fix `READY` notification sometimes not accepted by systemd. (#3291, #3293)
+ * Reduce the number of mount/umount syscalls in the host mount namespace, remove the bindfd logic
+   and move the memfd logic to go. (#3987, #3599, #2532, #3931)
 
 ## [1.1.12] - 2024-01-31
 
