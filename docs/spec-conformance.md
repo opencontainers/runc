@@ -12,7 +12,6 @@ v1.0.0       | `SCMP_ARCH_PARISC64`                     | Unplanned, due to lack
 v1.0.2       | `.linux.personality`                     | [#3126](https://github.com/opencontainers/runc/pull/3126)
 v1.1.0       | `SECCOMP_FILTER_FLAG_WAIT_KILLABLE_RECV` | [#3862](https://github.com/opencontainers/runc/pull/3862)
 v1.1.0       | rsvd hugetlb cgroup                      | TODO ([#3859](https://github.com/opencontainers/runc/issues/3859))
-v1.1.0       | `.process.scheduler`                     | TODO ([#3895](https://github.com/opencontainers/runc/issues/3895))
 v1.1.0       | `.process.ioPriority`                    | [#3783](https://github.com/opencontainers/runc/pull/3783)
 
 

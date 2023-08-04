@@ -159,6 +159,13 @@ func (l *linuxStandardInit) Init() error {
 			return &os.SyscallError{Syscall: "prctl(SET_NO_NEW_PRIVS)", Err: err}
 		}
 	}
+
+	if l.config.Config.Scheduler != nil {
+		if err := setupScheduler(l.config.Config); err != nil {
+			return err
+		}
+	}
+
 	// Tell our parent that we're ready to Execv. This must be done before the
 	// Seccomp rules have been applied, because we need to be able to read and
 	// write to a socket.

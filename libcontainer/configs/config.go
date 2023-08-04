@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sys/unix"
 
 	"github.com/opencontainers/runc/libcontainer/devices"
 	"github.com/opencontainers/runtime-spec/specs-go"
@@ -219,6 +220,68 @@ type Config struct {
 
 	// TimeOffsets specifies the offset for supporting time namespaces.
 	TimeOffsets map[string]specs.LinuxTimeOffset `json:"time_offsets,omitempty"`
+
+	// Scheduler represents the scheduling attributes for a process.
+	Scheduler *Scheduler `json:"scheduler,omitempty"`
+}
+
+// Scheduler is based on the Linux sched_setattr(2) syscall.
+type Scheduler = specs.Scheduler
+
+// ToSchedAttr is to convert *configs.Scheduler to *unix.SchedAttr.
+func ToSchedAttr(scheduler *Scheduler) (*unix.SchedAttr, error) {
+	var policy uint32
+	switch scheduler.Policy {
+	case specs.SchedOther:
+		policy = 0
+	case specs.SchedFIFO:
+		policy = 1
+	case specs.SchedRR:
+		policy = 2
+	case specs.SchedBatch:
+		policy = 3
+	case specs.SchedISO:
+		policy = 4
+	case specs.SchedIdle:
+		policy = 5
+	case specs.SchedDeadline:
+		policy = 6
+	default:
+		return nil, fmt.Errorf("invalid scheduler policy: %s", scheduler.Policy)
+	}
+
+	var flags uint64
+	for _, flag := range scheduler.Flags {
+		switch flag {
+		case specs.SchedFlagResetOnFork:
+			flags |= 0x01
+		case specs.SchedFlagReclaim:
+			flags |= 0x02
+		case specs.SchedFlagDLOverrun:
+			flags |= 0x04
+		case specs.SchedFlagKeepPolicy:
+			flags |= 0x08
+		case specs.SchedFlagKeepParams:
+			flags |= 0x10
+		case specs.SchedFlagUtilClampMin:
+			flags |= 0x20
+		case specs.SchedFlagUtilClampMax:
+			flags |= 0x40
+		default:
+			return nil, fmt.Errorf("invalid scheduler flag: %s", flag)
+		}
+	}
+
+	return &unix.SchedAttr{
+		Size:     unix.SizeofSchedAttr,
+		Policy:   policy,
+		Flags:    flags,
+		Nice:     scheduler.Nice,
+		Priority: uint32(scheduler.Priority),
+		Runtime:  scheduler.Runtime,
+		Deadline: scheduler.Deadline,
+		Period:   scheduler.Period,
+	}, nil
 }
 
 type (

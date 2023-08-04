@@ -640,6 +640,20 @@ func setupRlimits(limits []configs.Rlimit, pid int) error {
 	return nil
 }
 
+func setupScheduler(config *configs.Config) error {
+	attr, err := configs.ToSchedAttr(config.Scheduler)
+	if err != nil {
+		return err
+	}
+	if err := unix.SchedSetAttr(0, attr, 0); err != nil {
+		if errors.Is(err, unix.EPERM) && config.Cgroups.CpusetCpus != "" {
+			return errors.New("process scheduler can't be used together with AllowedCPUs")
+		}
+		return fmt.Errorf("error setting scheduler: %w", err)
+	}
+	return nil
+}
+
 // signalAllProcesses freezes then iterates over all the processes inside the
 // manager's cgroups sending the signal s to them.
 func signalAllProcesses(m cgroups.Manager, s unix.Signal) error {
