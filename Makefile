@@ -105,7 +105,7 @@ unittest: runcimage
 		-t --privileged --rm \
 		-v /lib/modules:/lib/modules:ro \
 		-v $(CURDIR):/go/src/$(PROJECT) \
-		$(RUNC_IMAGE) make localunittest TESTFLAGS=$(TESTFLAGS)
+		$(RUNC_IMAGE) make localunittest TESTFLAGS="$(TESTFLAGS)"
 
 localunittest: all
 	$(GO) test -timeout 3m -tags "$(BUILDTAGS)" $(TESTFLAGS) -v ./...
@@ -115,7 +115,7 @@ integration: runcimage
 		-t --privileged --rm \
 		-v /lib/modules:/lib/modules:ro \
 		-v $(CURDIR):/go/src/$(PROJECT) \
-		$(RUNC_IMAGE) make localintegration TESTPATH=$(TESTPATH)
+		$(RUNC_IMAGE) make localintegration TESTPATH="$(TESTPATH)"
 
 localintegration: all
 	bats -t tests/integration$(TESTPATH)
