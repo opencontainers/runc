@@ -216,6 +216,20 @@ type Config struct {
 	// Do not try to remount a bind mount again after the first attempt failed on source
 	// filesystems that have nodev, noexec, nosuid, noatime, relatime, strictatime, nodiratime set
 	NoMountFallback bool `json:"no_mount_fallback,omitempty"`
+
+	// Scheduler represents the scheduling attributes for a process.
+	Scheduler *Scheduler `json:"shceduler,omitempty"`
+}
+
+// Scheduler is based on the Linux sched_setattr(2) syscall.
+type Scheduler struct {
+	Policy   specs.LinuxSchedulerPolicy `json:"policy"`
+	Nice     int32                      `json:"nice,omitempty"`
+	Priority int32                      `json:"priority,omitempty"`
+	Flags    []specs.LinuxSchedulerFlag `json:"flags,omitempty"`
+	Runtime  uint64                     `json:"runtime,omitempty"`
+	Deadline uint64                     `json:"deadline,omitempty"`
+	Period   uint64                     `json:"period,omitempty"`
 }
 
 type (

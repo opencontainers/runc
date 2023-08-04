@@ -80,6 +80,13 @@ func (p *setnsProcess) signal(sig os.Signal) error {
 
 func (p *setnsProcess) start() (retErr error) {
 	defer p.messageSockPair.parent.Close()
+
+	if p.process.Scheduler != nil {
+		if err := utils.SetSchedAttr(p.pid(), p.process.Scheduler); err != nil {
+			return fmt.Errorf("error setting scheduler: %w", err)
+		}
+	}
+
 	// get the "before" value of oom kill count
 	oom, _ := p.manager.OOMKillCount()
 	err := p.cmd.Start()

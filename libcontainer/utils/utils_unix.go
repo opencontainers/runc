@@ -9,9 +9,18 @@ import (
 	"os"
 	"strconv"
 	"sync"
+	"syscall"
+	"unsafe"
 
+	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runtime-spec/specs-go"
 	"golang.org/x/sys/unix"
 )
+
+/*
+#include <sys/syscall.h>
+*/
+import "C"
 
 // EnsureProcHandle returns whether or not the given file handle is on procfs.
 func EnsureProcHandle(fh *os.File) error {
@@ -97,4 +106,75 @@ func NewSockPair(name string) (parent *os.File, child *os.File, err error) {
 		return nil, nil, err
 	}
 	return os.NewFile(uintptr(fds[1]), name+"-p"), os.NewFile(uintptr(fds[0]), name+"-c"), nil
+}
+
+type schedAttr struct {
+	Size          uint32
+	SchedPolicy   uint32
+	SchedFlags    uint64
+	SchedNice     int32
+	SchedPriority uint32
+	SchedRuntime  uint64
+	SchedDeadline uint64
+	SchedPeriod   uint64
+}
+
+// SetSchedAttr sets the scheduler attributes for the process with the given pid.
+// Please refer to the following link for kernel-specific values:
+// https://github.com/torvalds/linux/blob/c1a515d3c0270628df8ae5f5118ba859b85464a2/include/uapi/linux/sched.h#L111-L134
+func SetSchedAttr(pid int, scheduler *configs.Scheduler) error {
+	var policy uint32
+	switch scheduler.Policy {
+	case specs.SchedOther:
+		policy = 0
+	case specs.SchedFIFO:
+		policy = 1
+	case specs.SchedRR:
+		policy = 2
+	case specs.SchedBatch:
+		policy = 3
+	case specs.SchedISO:
+		policy = 4
+	case specs.SchedIdle:
+		policy = 5
+	case specs.SchedDeadline:
+		policy = 6
+	}
+
+	var flags uint64
+	for _, flag := range scheduler.Flags {
+		switch flag {
+		case specs.SchedFlagResetOnFork:
+			flags |= 0x01
+		case specs.SchedFlagReclaim:
+			flags |= 0x02
+		case specs.SchedFlagDLOverrun:
+			flags |= 0x04
+		case specs.SchedFlagKeepPolicy:
+			flags |= 0x08
+		case specs.SchedFlagKeepParams:
+			flags |= 0x10
+		case specs.SchedFlagUtilClampMin:
+			flags |= 0x20
+		case specs.SchedFlagUtilClampMax:
+			flags |= 0x40
+		}
+	}
+
+	attr := &schedAttr{
+		Size:          uint32(unsafe.Sizeof(schedAttr{})),
+		SchedPolicy:   policy,
+		SchedFlags:    flags,
+		SchedNice:     scheduler.Nice,
+		SchedPriority: uint32(scheduler.Priority),
+		SchedRuntime:  scheduler.Runtime,
+		SchedDeadline: scheduler.Deadline,
+		SchedPeriod:   scheduler.Period,
+	}
+	_, _, errno := syscall.Syscall(C.SYS_sched_setattr, uintptr(pid), uintptr(unsafe.Pointer(attr)), uintptr(0))
+	if errno != 0 {
+		return errno
+	}
+
+	return nil
 }

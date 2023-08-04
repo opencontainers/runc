@@ -582,3 +582,33 @@ func TestValidateIDMapMounts(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateScheduler(t *testing.T) {
+	testCases := []struct {
+		isErr     bool
+		niceValue int32
+	}{
+		{isErr: false, niceValue: 20},
+		{isErr: false, niceValue: -20},
+		{isErr: true, niceValue: 21},
+		{isErr: true, niceValue: -21},
+	}
+
+	for _, tc := range testCases {
+		scheduler := configs.Scheduler{
+			Nice: tc.niceValue,
+		}
+		config := &configs.Config{
+			Rootfs:    "/var",
+			Scheduler: &scheduler,
+		}
+
+		err := Validate(config)
+		if tc.isErr && err == nil {
+			t.Errorf("scheduler: %d, expected error, got nil", tc.niceValue)
+		}
+		if !tc.isErr && err != nil {
+			t.Errorf("scheduler: %d, expected nil, got error %v", tc.niceValue, err)
+		}
+	}
+}

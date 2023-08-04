@@ -61,6 +61,18 @@ func newProcess(p specs.Process) (*libcontainer.Process, error) {
 		lp.ConsoleHeight = uint16(p.ConsoleSize.Height)
 	}
 
+	if p.Scheduler != nil {
+		lp.Scheduler = &configs.Scheduler{
+			Policy:   p.Scheduler.Policy,
+			Nice:     p.Scheduler.Nice,
+			Priority: p.Scheduler.Priority,
+			Flags:    p.Scheduler.Flags,
+			Runtime:  p.Scheduler.Runtime,
+			Deadline: p.Scheduler.Deadline,
+			Period:   p.Scheduler.Period,
+		}
+	}
+
 	if p.Capabilities != nil {
 		lp.Capabilities = &configs.Capabilities{}
 		lp.Capabilities.Bounding = p.Capabilities.Bounding

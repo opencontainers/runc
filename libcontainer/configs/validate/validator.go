@@ -29,6 +29,7 @@ func Validate(config *configs.Config) error {
 		intelrdtCheck,
 		rootlessEUIDCheck,
 		mounts,
+		scheduler,
 	}
 	for _, c := range checks {
 		if err := c(config); err != nil {
@@ -332,4 +333,15 @@ func isHostNetNS(path string) (bool, error) {
 	}
 
 	return (st1.Dev == st2.Dev) && (st1.Ino == st2.Ino), nil
+}
+
+func scheduler(config *configs.Config) error {
+	if config.Scheduler == nil {
+		return nil
+	}
+	niceValue := config.Scheduler.Nice
+	if niceValue < -20 || niceValue > 20 {
+		return fmt.Errorf("invalid scheduler.nice: %d", niceValue)
+	}
+	return nil
 }
