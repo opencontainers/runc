@@ -96,6 +96,9 @@
 #  define MFD_CLOEXEC       0x0001U
 #  define MFD_ALLOW_SEALING 0x0002U
 #endif
+#ifndef MFD_EXEC
+#  define MFD_EXEC          0x0010U
+#endif
 
 int memfd_create(const char *name, unsigned int flags)
 {
@@ -116,15 +119,27 @@ int memfd_create(const char *name, unsigned int flags)
 #  define F_GET_SEALS (F_LINUX_SPECIFIC_BASE + 10)
 #endif
 #ifndef F_SEAL_SEAL
-#  define F_SEAL_SEAL   0x0001	/* prevent further seals from being set */
-#  define F_SEAL_SHRINK 0x0002	/* prevent file from shrinking */
-#  define F_SEAL_GROW   0x0004	/* prevent file from growing */
-#  define F_SEAL_WRITE  0x0008	/* prevent writes */
+#  define F_SEAL_SEAL          0x0001	/* prevent further seals from being set */
+#  define F_SEAL_SHRINK        0x0002	/* prevent file from shrinking */
+#  define F_SEAL_GROW          0x0004	/* prevent file from growing */
+#  define F_SEAL_WRITE         0x0008	/* prevent writes */
+#endif
+#ifndef F_SEAL_FUTURE_WRITE
+#  define F_SEAL_FUTURE_WRITE  0x0010	/* prevent future writes while mapped */
+#endif
+#ifndef F_SEAL_EXEC
+#  define F_SEAL_EXEC          0x0020	/* prevent chmod modifying exec bits */
 #endif
 
 #define CLONED_BINARY_ENV "_LIBCONTAINER_CLONED_BINARY"
 #define RUNC_MEMFD_COMMENT "runc_cloned:/proc/self/exe"
-#define RUNC_MEMFD_SEALS \
+/*
+ * There are newer memfd seals (such as F_SEAL_FUTURE_WRITE and F_SEAL_EXEC),
+ * which we use opportunistically. However, this set is the original set of
+ * memfd seals, and we require them all to be set to trust our /proc/self/exe
+ * if it is a memfd.
+ */
+#define RUNC_MEMFD_MIN_SEALS \
 	(F_SEAL_SEAL | F_SEAL_SHRINK | F_SEAL_GROW | F_SEAL_WRITE)
 
 static void *must_realloc(void *ptr, size_t size)
@@ -143,25 +158,27 @@ static void *must_realloc(void *ptr, size_t size)
  */
 static int is_self_cloned(void)
 {
-	int fd, is_cloned = 0;
+	int fd, seals = 0, is_cloned = false;
 	struct stat statbuf = { };
 	struct statfs fsbuf = { };
 
 	fd = open("/proc/self/exe", O_RDONLY | O_CLOEXEC);
 	if (fd < 0) {
-		fprintf(stderr, "you have no read access to runc binary file\n");
+		write_log(ERROR, "cannot open runc binary for reading: open /proc/self/exe: %m");
 		return -ENOTRECOVERABLE;
 	}
 
 	/*
 	 * Is the binary a fully-sealed memfd? We don't need CLONED_BINARY_ENV for
-	 * this, because you cannot write to a sealed memfd no matter what (so
-	 * sharing it isn't a bad thing -- and an admin could bind-mount a sealed
-	 * memfd to /usr/bin/runc to allow re-use).
+	 * this, because you cannot write to a sealed memfd no matter what.
 	 */
-	is_cloned = (fcntl(fd, F_GET_SEALS) == RUNC_MEMFD_SEALS);
-	if (is_cloned)
-		goto out;
+	seals = fcntl(fd, F_GET_SEALS);
+	if (seals >= 0) {
+		write_log(DEBUG, "checking /proc/self/exe memfd seals: 0x%x", seals);
+		is_cloned = (seals & RUNC_MEMFD_MIN_SEALS) == RUNC_MEMFD_MIN_SEALS;
+		if (is_cloned)
+			goto out;
+	}
 
 	/*
 	 * All other forms require CLONED_BINARY_ENV, since they are potentially
@@ -298,6 +315,35 @@ enum {
 #  endif
 #endif
 
+static inline bool is_memfd_unsupported_error(int err)
+{
+	/*
+	 * - ENOSYS is obviously an "unsupported" error.
+	 *
+	 * - EINVAL could be hit if MFD_EXEC is not supported (pre-6.3 kernel),
+	 *   but it can also be hit if vm.memfd_noexec=2 (in kernels without
+	 *   [1] applied) and the flags does not contain MFD_EXEC. However,
+	 *   there was a bug in the original 6.3 implementation of
+	 *   vm.memfd_noexec=2, which meant that MFD_EXEC would work even in
+	 *   the "strict" mode. Because we try MFD_EXEC first, we won't get
+	 *   EINVAL in the vm.memfd_noexec=2 case (which means we don't need to
+	 *   figure out whether to log the message about memfd_create).
+	 *
+	 * - EACCES is returned in kernels that contain [1] in the
+	 *   vm.memfd_noexec=2 case.
+	 *
+	 * At time of writing, [1] is not in Linus's tree and it't not clear if
+	 * it will be backported to stable, so what exact versions apply here
+	 * is unclear. But the bug is present in 6.3-6.5 at the very least.
+	 *
+	 * [1]: https://lore.kernel.org/all/20230705063315.3680666-2-jeffxu@google.com/
+	 */
+	if (err == EACCES)
+		write_log(INFO,
+			  "memfd_create(MFD_EXEC) failed, possibly due to vm.memfd_noexec=2 -- falling back to less secure O_TMPFILE");
+	return err == ENOSYS || err == EINVAL || err == EACCES;
+}
+
 static int make_execfd(int *fdtype)
 {
 	int fd = -1;
@@ -315,10 +361,20 @@ static int make_execfd(int *fdtype)
 	 * assumptions about STATEDIR.
 	 */
 	*fdtype = EFD_MEMFD;
-	fd = memfd_create(RUNC_MEMFD_COMMENT, MFD_CLOEXEC | MFD_ALLOW_SEALING);
+	/*
+	 * On newer kernels we should set MFD_EXEC to indicate we need +x
+	 * permissions. Otherwise an admin with vm.memfd_noexec=1 would subtly
+	 * break runc. vm.memfd_noexec=2 is a little bit more complicated, see the
+	 * comment in is_memfd_unsupported_error() -- the upshot is that doing it
+	 * this way works, but only because of two overlapping bugs in the sysctl
+	 * implementation.
+	 */
+	fd = memfd_create(RUNC_MEMFD_COMMENT, MFD_EXEC | MFD_CLOEXEC | MFD_ALLOW_SEALING);
+	if (fd < 0 && is_memfd_unsupported_error(errno))
+		fd = memfd_create(RUNC_MEMFD_COMMENT, MFD_CLOEXEC | MFD_ALLOW_SEALING);
 	if (fd >= 0)
 		return fd;
-	if (errno != ENOSYS && errno != EINVAL)
+	if (!is_memfd_unsupported_error(errno))
 		goto error;
 
 #ifdef O_TMPFILE
@@ -373,8 +429,18 @@ error:
 static int seal_execfd(int *fd, int fdtype)
 {
 	switch (fdtype) {
-	case EFD_MEMFD:
-		return fcntl(*fd, F_ADD_SEALS, RUNC_MEMFD_SEALS);
+	case EFD_MEMFD:{
+			/*
+			 * Try to seal with newer seals, but we ignore errors because older
+			 * kernels don't support some of them. For container security only
+			 * RUNC_MEMFD_MIN_SEALS are strictly required, but the rest are
+			 * nice-to-haves. We apply RUNC_MEMFD_MIN_SEALS at the end because it
+			 * contains F_SEAL_SEAL.
+			 */
+			int __attribute__((unused)) _err1 = fcntl(*fd, F_ADD_SEALS, F_SEAL_FUTURE_WRITE);	// Linux 5.1
+			int __attribute__((unused)) _err2 = fcntl(*fd, F_ADD_SEALS, F_SEAL_EXEC);	// Linux 6.3
+			return fcntl(*fd, F_ADD_SEALS, RUNC_MEMFD_MIN_SEALS);
+		}
 	case EFD_FILE:{
 			/* Need to re-open our pseudo-memfd as an O_PATH to avoid execve(2) giving -ETXTBSY. */
 			int newfd;
@@ -398,199 +464,6 @@ static int seal_execfd(int *fd, int fdtype)
 		break;
 	}
 	return -1;
-}
-
-struct bindfd_child_args {
-	int sockfd;
-	const char *mount_target;
-};
-
-static int bindfd_in_subprocess(void *arg)
-{
-	/*
-	 * In the interests of efficiency (read: minimizing the syscall count)
-	 * and conciseness, no attempt is made to release resources which would
-	 * be cleaned up automatically on process exit, i.e. when this function
-	 * returns. This includes filesystem mounts, as this function is
-	 * executed in a dedicated mount namespace.
-	 */
-
-	/*
-	 * For obvious reasons this won't work in rootless mode because we
-	 * haven't created a userns -- but getting that to work will be a bit
-	 * complicated and it's only worth doing if someone actually needs it.
-	 */
-	if (mount("none", "/", NULL, MS_SLAVE | MS_REC, NULL) < 0)
-		return errno;
-	/*
-	 * The kernel resolves the magic symlink /proc/self/exe to the real file
-	 * _in the original mount namespace_. Cross-namespace bind mounts are
-	 * not allowed, so we must locate the file inside the current mount
-	 * namespace to be able to bind-mount it. (The mount(8) command resolves
-	 * symlinks, which is why it appears to work at first glance.)
-	 */
-	char linkbuf[PATH_MAX + 1] = { 0 };
-	ssize_t linkpathlen = readlink("/proc/self/exe", linkbuf, sizeof(linkbuf));
-	if (linkpathlen < 0)
-		return errno;
-	if (linkpathlen == sizeof(linkbuf)) {
-		/*
-		 * The link path is longer than PATH_MAX, and the contents of
-		 * linkbuf might have been truncated. A truncated path could
-		 * happen to be a valid path to a different file, which could
-		 * allow for local privilege escalation if we were to exec it.
-		 * The mount syscall doesn't accept paths longer than PATH_MAX,
-		 * anyway.
-		 */
-		return ENAMETOOLONG;
-	}
-
-	int srcfd = open(linkbuf, O_PATH | O_CLOEXEC);
-	if (srcfd < 0)
-		return errno;
-	/*
-	 * linkbuf holds the path to the binary which the parent process was
-	 * launched from. Someone could have moved a different file to that path
-	 * in the interim, in which case srcfd is not the file we want to
-	 * bind-mount. Guard against this situation by verifying srcfd is the
-	 * same file as /proc/self/exe.
-	 */
-	struct stat realexe = { 0 };
-	if (stat("/proc/self/exe", &realexe) < 0)
-		return errno;
-	struct stat resolved = { 0 };
-	if (fstat(srcfd, &resolved) < 0)
-		return errno;
-	if (resolved.st_dev != realexe.st_dev || resolved.st_ino != realexe.st_ino)
-		return ENOENT;
-	if (snprintf(linkbuf, sizeof(linkbuf), "/proc/self/fd/%d", srcfd) == sizeof(linkbuf))
-		return ENAMETOOLONG;
-
-	const struct bindfd_child_args *args = arg;
-	if (mount(linkbuf, args->mount_target, "", MS_BIND, "") < 0)
-		return errno;
-	if (mount("", args->mount_target, "", MS_REMOUNT | MS_BIND | MS_RDONLY, "") < 0)
-		return errno;
-
-	int fd = open(args->mount_target, O_PATH | O_CLOEXEC);
-	if (fd < 0)
-		return errno;
-
-	/*
-	 * Make sure the MNT_DETACH works, otherwise we could get remounted
-	 * read-write and that would be quite bad.
-	 */
-	if (umount2(args->mount_target, MNT_DETACH) < 0)
-		return errno;
-
-	if (send_fd(args->sockfd, fd) < 0)
-		return errno;
-	return 0;
-}
-
-static int spawn_bindfd_child(const struct bindfd_child_args *args) __attribute__((noinline));
-static int spawn_bindfd_child(const struct bindfd_child_args *args)
-{
-	/*
-	 * Carve out a chunk of our call stack for the child process to use as
-	 * we can be sure it is correctly mapped for use as stack. (Technically
-	 * only the libc clone() wrapper writes to this buffer. The child
-	 * process operates on a copy of the parent's virtual memory space and
-	 * so can safely overflow into the rest of the stack memory region
-	 * without consequence.)
-	 */
-	char stack[4 * 1024] __attribute__((aligned(16)));
-	int tid = clone(bindfd_in_subprocess,
-			/*
-			 * Assume stack grows down, as HP-PA, the only Linux
-			 * platform where stack grows up, is obsolete.
-			 */
-			stack + sizeof(stack),
-			/*
-			 * Suspend the parent process until the child has exited to
-			 * save an unnecessary context switch as we'd just be
-			 * waiting for the child process to exit anyway.
-			 */
-			CLONE_NEWNS | CLONE_VFORK, (void *)args);
-	if (tid < 0)
-		return -errno;
-	return tid;
-}
-
-static int try_bindfd(void)
-{
-	int fd, ret = -1;
-	char template[PATH_MAX] = { 0 };
-	char *prefix = getenv("_LIBCONTAINER_STATEDIR");
-
-	if (!prefix || *prefix != '/')
-		prefix = "/tmp";
-	if (snprintf(template, sizeof(template), "%s/runc.XXXXXX", prefix) < 0)
-		return ret;
-
-	/*
-	 * We need somewhere to mount it, mounting anything over /proc/self is a
-	 * BAD idea on the host -- even if we do it temporarily.
-	 */
-	fd = mkstemp(template);
-	if (fd < 0)
-		return ret;
-	close(fd);
-
-	/*
-	 * Daemons such as systemd and udisks2 watch /proc/self/mountinfo and
-	 * re-parse it on every change, which gets expensive when the mount table
-	 * is large and/or changes frequently. Perform the mount operations in a
-	 * new, private mount namespace so as not to wake up those processes
-	 * every time we nsexec into a container. We clone a child process into
-	 * a new mount namespace to do the dirty work so the side effects of
-	 * unsharing the mount namespace do not leak into the current process.
-	 */
-	int sock[2];
-	if (socketpair(AF_LOCAL, SOCK_STREAM, 0, sock) < 0) {
-		ret = -errno;
-		goto cleanup_unlink;
-	}
-
-	struct bindfd_child_args args = {
-		.sockfd = sock[0],
-		.mount_target = template,
-	};
-	int cpid = spawn_bindfd_child(&args);
-	close(sock[0]);
-	if (cpid < 0) {
-		ret = cpid;
-		goto cleanup_socketpair;
-	}
-
-	int wstatus = 0;
-	if (waitpid(cpid, &wstatus, __WCLONE) < 0)
-		bail("error waiting for bindfd child process to exit");
-	if (WIFEXITED(wstatus)) {
-		if (WEXITSTATUS(wstatus)) {
-			ret = -WEXITSTATUS(wstatus);
-			goto cleanup_socketpair;
-		}
-	} else if (WIFSIGNALED(wstatus)) {
-		int sig = WTERMSIG(wstatus);
-		bail("bindfd child process terminated by signal %d (%s)", sig, strsignal(sig));
-	} else {
-		/* Should never happen... */
-		bail("unexpected waitpid() status for bindfd child process: 0x%x", wstatus);
-	}
-
-	ret = receive_fd(sock[1]);
-
-cleanup_socketpair:
-	close(sock[1]);
-
-cleanup_unlink:
-	/*
-	 * We don't care about unlink errors, the worst that happens is that
-	 * there's an empty file left around in STATEDIR.
-	 */
-	unlink(template);
-	return ret;
 }
 
 static ssize_t fd_to_fd(int outfd, int infd)
@@ -627,18 +500,6 @@ static int clone_binary(void)
 	size_t sent = 0;
 	int fdtype = EFD_NONE;
 
-	/*
-	 * Before we resort to copying, let's try creating an ro-binfd in one shot
-	 * by getting a handle for a read-only bind-mount of the execfd.
-	 */
-	execfd = try_bindfd();
-	if (execfd >= 0)
-		return execfd;
-
-	/*
-	 * Dammit, that didn't work -- time to copy the binary to a safe place we
-	 * can seal the contents.
-	 */
 	execfd = make_execfd(&fdtype);
 	if (execfd < 0 || fdtype == EFD_NONE)
 		return -ENOTRECOVERABLE;
