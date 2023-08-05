@@ -312,26 +312,12 @@ func checkIDMapMounts(config *configs.Config, m *configs.Mount) error {
 	if !m.IsIDMapped() {
 		return nil
 	}
-
 	if !m.IsBind() {
-		return fmt.Errorf("gidMappings/uidMappings is supported only for mounts with the option 'bind'")
+		return errors.New("id-mapped mounts are only supported for bind-mounts")
 	}
 	if config.RootlessEUID {
-		return fmt.Errorf("gidMappings/uidMappings is not supported when runc is being launched with EUID != 0, needs CAP_SYS_ADMIN on the runc parent's user namespace")
+		return errors.New("id-mapped mounts are not supported for rootless containers")
 	}
-	if len(config.UIDMappings) == 0 || len(config.GIDMappings) == 0 {
-		return fmt.Errorf("not yet supported to use gidMappings/uidMappings in a mount without also using a user namespace")
-	}
-	if !sameMapping(config.UIDMappings, m.UIDMappings) {
-		return fmt.Errorf("not yet supported for the mount uidMappings to be different than user namespace uidMapping")
-	}
-	if !sameMapping(config.GIDMappings, m.GIDMappings) {
-		return fmt.Errorf("not yet supported for the mount gidMappings to be different than user namespace gidMapping")
-	}
-	if !filepath.IsAbs(m.Source) {
-		return fmt.Errorf("mount source not absolute")
-	}
-
 	return nil
 }
 
@@ -354,27 +340,6 @@ func mountsStrict(config *configs.Config) error {
 		}
 	}
 	return nil
-}
-
-// sameMapping checks if the mappings are the same. If the mappings are the same
-// but in different order, it returns false.
-func sameMapping(a, b []configs.IDMap) bool {
-	if len(a) != len(b) {
-		return false
-	}
-
-	for i := range a {
-		if a[i].ContainerID != b[i].ContainerID {
-			return false
-		}
-		if a[i].HostID != b[i].HostID {
-			return false
-		}
-		if a[i].Size != b[i].Size {
-			return false
-		}
-	}
-	return true
 }
 
 func isHostNetNS(path string) (bool, error) {
