@@ -33,7 +33,21 @@ function setup_sshfs() {
 	fi
 }
 
-@test "runc run [rw bind mount of a ro fuse sshfs mount]" {
+@test "runc run [implied-rw bind mount of a ro fuse sshfs mount]" {
+	setup_sshfs "ro"
+	# All of the extra mount flags are needed to force a remount with new flags.
+	update_config '	  .mounts += [{
+					type: "bind",
+					source: "'"$DIR"'",
+					destination: "/mnt",
+					options: ["rprivate", "nosuid", "nodev", "rbind", "sync"]
+				}]'
+
+	runc run test_busybox
+	[ "$status" -eq 0 ]
+}
+
+@test "runc run [explicit-rw bind mount of a ro fuse sshfs mount]" {
 	setup_sshfs "ro"
 	update_config '	  .mounts += [{
 					type: "bind",
@@ -42,24 +56,12 @@ function setup_sshfs() {
 					options: ["rw", "rprivate", "nosuid", "nodev", "rbind"]
 				}]'
 
-	runc run --no-mount-fallback test_busybox
-	[ "$status" -eq 0 ]
-}
-
-@test "runc run [dev,exec,suid,atime bind mount of a nodev,nosuid,noexec,noatime fuse sshfs mount]" {
-	setup_sshfs "nodev,nosuid,noexec,noatime"
-	# The "sync" option is used to trigger a remount with the below options.
-	# It serves no further purpose. Otherwise only a bind mount without
-	# applying the below options will be done.
-	update_config '	  .mounts += [{
-					type: "bind",
-					source: "'"$DIR"'",
-					destination: "/mnt",
-					options: ["dev", "suid", "exec", "atime", "rprivate", "rbind", "sync"]
-				}]'
-
 	runc run test_busybox
-	[ "$status" -eq 0 ]
+	# The above will fail because we explicitly requested a mount with a
+	# MNT_LOCKED mount option cleared (when the source mount has those mounts
+	# enabled), namely MS_RDONLY.
+	[ "$status" -ne 0 ]
+	[[ "$output" == *"runc run failed: unable to start container process: error during container init: error mounting"*"operation not permitted"* ]]
 }
 
 @test "runc run [ro bind mount of a nodev,nosuid,noexec,noatime fuse sshfs mount]" {
@@ -75,7 +77,9 @@ function setup_sshfs() {
 	[ "$status" -eq 0 ]
 }
 
-@test "runc run [dev,exec,suid,atime bind mount of a nodev,nosuid,noexec,noatime fuse sshfs mount without fallback]" {
+@test "runc run [dev,exec,suid,atime bind mount of a nodev,nosuid,noexec,noatime fuse sshfs mount]" {
+	requires rootless
+
 	setup_sshfs "nodev,nosuid,noexec,noatime"
 	# The "sync" option is used to trigger a remount with the below options.
 	# It serves no further purpose. Otherwise only a bind mount without
@@ -87,27 +91,25 @@ function setup_sshfs() {
 					options: ["dev", "suid", "exec", "atime", "rprivate", "rbind", "sync"]
 				}]'
 
-	runc run --no-mount-fallback test_busybox
-	# The above will fail as we added --no-mount-fallback which causes us not to
-	# try to remount a bind mount again after the first attempt failed on source
-	# filesystems that have nodev, noexec, nosuid, noatime set.
+	runc run test_busybox
+	# The above will fail because we explicitly requested a mount with several
+	# MNT_LOCKED mount options cleared (when the source mount has those mounts
+	# enabled).
 	[ "$status" -ne 0 ]
 	[[ "$output" == *"runc run failed: unable to start container process: error during container init: error mounting"*"operation not permitted"* ]]
 }
 
-@test "runc run [ro bind mount of a nodev,nosuid,noexec,noatime fuse sshfs mount without fallback]" {
-	setup_sshfs "nodev,nosuid,noexec,noatime"
+@test "runc run [ro,noexec bind mount of a nosuid,noatime fuse sshfs mount]" {
+	requires rootless
+
+	setup_sshfs "nosuid,noatime"
 	update_config '	  .mounts += [{
 					type: "bind",
 					source: "'"$DIR"'",
 					destination: "/mnt",
-					options: ["rbind", "ro"]
+					options: ["rbind", "ro", "exec"]
 				}]'
 
-	runc run --no-mount-fallback test_busybox
-	# The above will fail as we added --no-mount-fallback which causes us not to
-	# try to remount a bind mount again after the first attempt failed on source
-	# filesystems that have nodev, noexec, nosuid, noatime set.
-	[ "$status" -ne 0 ]
-	[[ "$output" == *"runc run failed: unable to start container process: error during container init: error mounting"*"operation not permitted"* ]]
+	runc run test_busybox
+	[ "$status" -eq 0 ]
 }

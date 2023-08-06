@@ -15,6 +15,10 @@ type Mount struct {
 	// Mount flags.
 	Flags int `json:"flags"`
 
+	// Mount flags that were explicitly cleared in the configuration (meaning
+	// the user explicitly requested that these flags *not* be set).
+	ClearedFlags int `json:"cleared_flags"`
+
 	// Propagation Flags
 	PropagationFlags []int `json:"propagation_flags"`
 

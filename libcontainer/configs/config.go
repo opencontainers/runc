@@ -212,10 +212,6 @@ type Config struct {
 	// RootlessCgroups is set when unlikely to have the full access to cgroups.
 	// When RootlessCgroups is set, cgroups errors are ignored.
 	RootlessCgroups bool `json:"rootless_cgroups,omitempty"`
-
-	// Do not try to remount a bind mount again after the first attempt failed on source
-	// filesystems that have nodev, noexec, nosuid, noatime, relatime, strictatime, nodiratime set
-	NoMountFallback bool `json:"no_mount_fallback,omitempty"`
 }
 
 type (

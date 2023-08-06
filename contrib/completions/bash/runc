@@ -461,7 +461,6 @@ _runc_run() {
 	   --no-subreaper
 	   --no-pivot
 	   --no-new-keyring
-	   --no-mount-fallback
 	"
 
 	local options_with_args="
@@ -568,7 +567,6 @@ _runc_create() {
 	   --help
 	   --no-pivot
 	   --no-new-keyring
-	   --no-mount-fallback
 	"
 
 	local options_with_args="
@@ -629,7 +627,6 @@ _runc_restore() {
 	   --no-pivot
 	   --auto-dedup
 	   --lazy-pages
-	   --no-mount-fallback
 	"
 
 	local options_with_args="

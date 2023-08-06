@@ -35,7 +35,6 @@ type mountConfig struct {
 	cgroup2Path     string
 	rootlessCgroups bool
 	cgroupns        bool
-	noMountFallback bool
 }
 
 // mountEntry contains mount data specific to a mount point.
@@ -84,7 +83,6 @@ func prepareRootfs(pipe io.ReadWriter, iConfig *initConfig, mountFds mountFds) (
 		cgroup2Path:     iConfig.Cgroup2Path,
 		rootlessCgroups: iConfig.RootlessCgroups,
 		cgroupns:        config.Namespaces.Contains(configs.NEWCGROUP),
-		noMountFallback: config.NoMountFallback,
 	}
 	for i, m := range config.Mounts {
 		entry := mountEntry{Mount: m}
@@ -514,7 +512,7 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 		// first check that we have non-default options required before attempting a remount
 		if m.Flags&^(unix.MS_REC|unix.MS_REMOUNT|unix.MS_BIND) != 0 {
 			// only remount if unique mount options are set
-			if err := remount(m, rootfs, c.noMountFallback); err != nil {
+			if err := remount(m, rootfs); err != nil {
 				return err
 			}
 		}
@@ -1103,33 +1101,36 @@ func writeSystemProperty(key, value string) error {
 	return os.WriteFile(path.Join("/proc/sys", keyPath), []byte(value), 0o644)
 }
 
-func remount(m mountEntry, rootfs string, noMountFallback bool) error {
+func remount(m mountEntry, rootfs string) error {
+	const mntLockedFlags = unix.MS_RDONLY | unix.MS_NODEV | unix.MS_NOEXEC |
+		unix.MS_NOSUID | unix.MS_NOATIME | unix.MS_RELATIME |
+		unix.MS_STRICTATIME | unix.MS_NODIRATIME
+
 	return utils.WithProcfd(rootfs, m.Destination, func(dstFD string) error {
 		flags := uintptr(m.Flags | unix.MS_REMOUNT)
 		err := mountViaFDs(m.Source, m.srcFD, m.Destination, dstFD, m.Device, flags, "")
 		if err == nil {
 			return nil
 		}
-		// Check if the source has flags set according to noMountFallback
 		src := m.src()
 		var s unix.Statfs_t
 		if err := unix.Statfs(src, &s); err != nil {
 			return &os.PathError{Op: "statfs", Path: src, Err: err}
 		}
-		var checkflags int
-		if noMountFallback {
-			// Check for ro only
-			checkflags = unix.MS_RDONLY
-		} else {
-			// Check for ro, nodev, noexec, nosuid, noatime, relatime, strictatime,
-			// nodiratime
-			checkflags = unix.MS_RDONLY | unix.MS_NODEV | unix.MS_NOEXEC | unix.MS_NOSUID | unix.MS_NOATIME | unix.MS_RELATIME | unix.MS_STRICTATIME | unix.MS_NODIRATIME
+		// Check if the source has any MNT_LOCKED flags set. If so, we need to
+		// pass the same set of flags when running in a user namespace in order
+		// for the remount to succeed.
+		if int(s.Flags)&mntLockedFlags == 0 {
+			return err
 		}
-		if int(s.Flags)&checkflags == 0 {
+		// However, if the user explicitly request the flags *not* be set, we
+		// need to return an error to avoid producing mounts that don't match
+		// their requirements.
+		if int(s.Flags)&m.ClearedFlags&mntLockedFlags != 0 {
 			return err
 		}
 		// ... and retry the mount with flags found above.
-		flags |= uintptr(int(s.Flags) & checkflags)
+		flags |= uintptr(int(s.Flags) & mntLockedFlags)
 		return mountViaFDs(m.Source, m.srcFD, m.Destination, dstFD, m.Device, flags, "")
 	})
 }
