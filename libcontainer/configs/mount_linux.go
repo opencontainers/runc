@@ -34,13 +34,13 @@ type Mount struct {
 	// Note that, the underlying filesystem should support this feature to be
 	// used.
 	// Every mount point could have its own mapping.
-	UIDMappings []IDMap `json:"uidMappings,omitempty"`
+	UIDMappings []IDMap `json:"uid_mappings,omitempty"`
 
 	// GIDMappings is used to changing file group owners w/o calling chown.
 	// Note that, the underlying filesystem should support this feature to be
 	// used.
 	// Every mount point could have its own mapping.
-	GIDMappings []IDMap `json:"gidMappings,omitempty"`
+	GIDMappings []IDMap `json:"gid_mappings,omitempty"`
 }
 
 func (m *Mount) IsBind() bool {
