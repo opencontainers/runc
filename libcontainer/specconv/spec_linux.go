@@ -313,7 +313,6 @@ type CreateOpts struct {
 	Spec             *specs.Spec
 	RootlessEUID     bool
 	RootlessCgroups  bool
-	NoMountFallback  bool
 }
 
 // getwd is a wrapper similar to os.Getwd, except it always gets
@@ -359,7 +358,6 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 		NoNewKeyring:    opts.NoNewKeyring,
 		RootlessEUID:    opts.RootlessEUID,
 		RootlessCgroups: opts.RootlessCgroups,
-		NoMountFallback: opts.NoMountFallback,
 	}
 
 	for _, m := range spec.Mounts {
@@ -973,10 +971,15 @@ func parseMountOptions(options []string) *configs.Mount {
 		// or the flag is not supported on the platform,
 		// then it is a data value for a specific fs type.
 		if f, exists := mountFlags[o]; exists && f.flag != 0 {
+			// FIXME: The *atime flags are special (they are more of an enum
+			// with quite hairy semantics) and thus arguably setting some of
+			// them should clear unrelated flags.
 			if f.clear {
 				m.Flags &= ^f.flag
+				m.ClearedFlags |= f.flag
 			} else {
 				m.Flags |= f.flag
+				m.ClearedFlags &= ^f.flag
 			}
 		} else if f, exists := mountPropagationMapping[o]; exists && f != 0 {
 			m.PropagationFlags = append(m.PropagationFlags, f)
