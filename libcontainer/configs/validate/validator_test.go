@@ -360,10 +360,11 @@ func TestValidateMounts(t *testing.T) {
 		isErr bool
 		dest  string
 	}{
-		{isErr: true, dest: "not/an/abs/path"},
-		{isErr: true, dest: "./rel/path"},
-		{isErr: true, dest: "./rel/path"},
-		{isErr: true, dest: "../../path"},
+		// TODO (runc v1.x.x): make these relative paths an error. See https://github.com/opencontainers/runc/pull/3004
+		{isErr: false, dest: "not/an/abs/path"},
+		{isErr: false, dest: "./rel/path"},
+		{isErr: false, dest: "./rel/path"},
+		{isErr: false, dest: "../../path"},
 
 		{isErr: false, dest: "/abs/path"},
 		{isErr: false, dest: "/abs/but/../unclean"},
@@ -514,8 +515,7 @@ func TestValidateIDMapMounts(t *testing.T) {
 			},
 		},
 		{
-			name:  "idmap mounts without abs dest path",
-			isErr: true,
+			name: "idmap mounts without abs dest path",
 			config: &configs.Config{
 				UIDMappings: mapping,
 				GIDMappings: mapping,
@@ -530,7 +530,6 @@ func TestValidateIDMapMounts(t *testing.T) {
 				},
 			},
 		},
-
 		{
 			name: "simple idmap mount",
 			config: &configs.Config{
@@ -571,7 +570,7 @@ func TestValidateIDMapMounts(t *testing.T) {
 			config := tc.config
 			config.Rootfs = "/var"
 
-			err := mounts(config)
+			err := mountsStrict(config)
 			if tc.isErr && err == nil {
 				t.Error("expected error, got nil")
 			}
