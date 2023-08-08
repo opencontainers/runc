@@ -1,6 +1,7 @@
 package libcontainer
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,16 +14,18 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/sirupsen/logrus"
+	"golang.org/x/sys/unix"
+
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fs2"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runc/libcontainer/logs"
 	"github.com/opencontainers/runc/libcontainer/system"
+	"github.com/opencontainers/runc/libcontainer/userns"
 	"github.com/opencontainers/runc/libcontainer/utils"
-	"github.com/opencontainers/runtime-spec/specs-go"
-	"github.com/sirupsen/logrus"
-	"golang.org/x/sys/unix"
 )
 
 type parentProcess interface {
@@ -168,8 +171,11 @@ func (p *setnsProcess) start() (retErr error) {
 			// This shouldn't happen.
 			panic("unexpected procReady in setns")
 		case procHooks:
-			// This shouldn't happen.
+			// this shouldn't happen.
 			panic("unexpected procHooks in setns")
+		case procMountPlease:
+			// this shouldn't happen.
+			panic("unexpected procMountPlease in setns")
 		case procSeccomp:
 			if p.config.Config.Seccomp.ListenerPath == "" {
 				return errors.New("seccomp listenerPath is not set")
@@ -361,6 +367,95 @@ func (p *initProcess) waitForChildExit(childPid int) error {
 	return nil
 }
 
+type mountSourceRequestFn func(*configs.Mount) (mountSource, error)
+
+// goCreateMountSources spawns a goroutine which creates open_tree(2)-style
+// mountfds based on the requested configs.Mount configuration. The returned
+// requestFn and cancelFn are used to interact with the goroutine.
+func (p *initProcess) goCreateMountSources(ctx context.Context) (mountSourceRequestFn, context.CancelFunc, error) {
+	type response struct {
+		src mountSource
+		err error
+	}
+
+	errCh := make(chan error, 1)
+	requestCh := make(chan *configs.Mount)
+	responseCh := make(chan response)
+
+	ctx, cancelFn := context.WithCancel(ctx)
+	go func() {
+		// We lock this thread because we need to setns(2) here. There is no
+		// UnlockOSThread() here, to ensure that the Go runtime will kill this
+		// thread once this goroutine returns (ensuring no other goroutines run
+		// in this context).
+		runtime.LockOSThread()
+
+		// Detach from the shared fs of the rest of the Go process.
+		if err := unix.Unshare(unix.CLONE_FS); err != nil {
+			err = os.NewSyscallError("unshare(CLONE_FS)", err)
+			errCh <- fmt.Errorf("mount source thread: %w", err)
+		}
+
+		// Attach to the container's mount namespace.
+		nsFd, err := os.Open(fmt.Sprintf("/proc/%d/ns/mnt", p.pid()))
+		if err != nil {
+			errCh <- fmt.Errorf("mount source thread: open container mntns: %w", err)
+			return
+		}
+		defer nsFd.Close()
+		if err := unix.Setns(int(nsFd.Fd()), unix.CLONE_NEWNS); err != nil {
+			err = os.NewSyscallError("setns", err)
+			errCh <- fmt.Errorf("mount source thread: join container mntns: %w", err)
+			return
+		}
+
+		// No errors during setup!
+		errCh <- nil
+		logrus.Debugf("mount source thread: successfully running in container mntns")
+
+		nsHandles := new(userns.Handles)
+		defer nsHandles.Release()
+		for {
+			select {
+			case m := <-requestCh:
+				src, err := mountFd(nsHandles, m)
+				logrus.Debugf("mount source thread: handling request for %q: %v %v", m.Source, src, err)
+				responseCh <- response{
+					src: src,
+					err: err,
+				}
+			case <-ctx.Done():
+				close(requestCh)
+				close(responseCh)
+				return
+			}
+		}
+	}()
+
+	// Check for setup errors.
+	err := <-errCh
+	close(errCh)
+	if err != nil {
+		cancelFn()
+		return nil, nil, err
+	}
+
+	requestFn := func(m *configs.Mount) (mountSource, error) {
+		select {
+		case requestCh <- m:
+			select {
+			case resp := <-responseCh:
+				return resp.src, resp.err
+			case <-ctx.Done():
+				return mountSource{}, errors.New("receive mount source failed: channel closed")
+			}
+		case <-ctx.Done():
+			return mountSource{}, errors.New("send mount source request failed: channel closed")
+		}
+	}
+	return requestFn, cancelFn, nil
+}
+
 func (p *initProcess) start() (retErr error) {
 	defer p.messageSockPair.parent.Close() //nolint: errcheck
 	err := p.cmd.Start()
@@ -451,6 +546,17 @@ func (p *initProcess) start() (retErr error) {
 		return fmt.Errorf("error waiting for our first child to exit: %w", err)
 	}
 
+	// Spin up a goroutine to handle remapping mount requests by runc init. There is no point doing this for rootless containers becuase
+	var mountRequest mountSourceRequestFn
+	if !p.container.config.RootlessEUID {
+		request, cancel, err := p.goCreateMountSources(context.Background())
+		if err != nil {
+			return fmt.Errorf("error spawning mount remapping thread: %w", err)
+		}
+		defer cancel()
+		mountRequest = request
+	}
+
 	if err := p.createNetworkInterfaces(); err != nil {
 		return fmt.Errorf("error creating network interfaces: %w", err)
 	}
@@ -467,6 +573,35 @@ func (p *initProcess) start() (retErr error) {
 
 	ierr := parseSync(p.messageSockPair.parent, func(sync *syncT) error {
 		switch sync.Type {
+		case procMountPlease:
+			if mountRequest == nil {
+				return fmt.Errorf("cannot fulfil mount requests as a rootless user")
+			}
+			var m *configs.Mount
+			if sync.Arg == nil {
+				return fmt.Errorf("sync %q is missing an argument", sync.Type)
+			}
+			if err := json.Unmarshal(*sync.Arg, &m); err != nil {
+				return fmt.Errorf("sync %q passed invalid mount arg: %w", sync.Type, err)
+			}
+			mnt, err := mountRequest(m)
+			if err != nil {
+				return fmt.Errorf("failed to fulfil mount request: %w", err)
+			}
+			defer mnt.file.Close()
+
+			arg, err := json.Marshal(mnt)
+			if err != nil {
+				return fmt.Errorf("sync %q failed to marshal mountSource: %w", sync.Type, err)
+			}
+			argMsg := json.RawMessage(arg)
+			if err := doWriteSync(p.messageSockPair.parent, syncT{
+				Type: procMountFd,
+				Arg:  &argMsg,
+				File: mnt.file,
+			}); err != nil {
+				return err
+			}
 		case procSeccomp:
 			if p.config.Config.Seccomp.ListenerPath == "" {
 				return errors.New("seccomp listenerPath is not set")

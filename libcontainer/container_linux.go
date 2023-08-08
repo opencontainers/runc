@@ -15,7 +15,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/moby/sys/mountinfo"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink/nl"
@@ -26,7 +25,6 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runc/libcontainer/system"
-	"github.com/opencontainers/runc/libcontainer/userns"
 	"github.com/opencontainers/runc/libcontainer/utils"
 )
 
@@ -647,152 +645,6 @@ func (c *Container) newParentProcess(p *Process) (parentProcess, error) {
 	return c.newSetnsProcess(p, cmd, messageSockPair, logFilePair)
 }
 
-// remapMountSources tries to remap any applicable mount sources in the
-// container configuration to use open_tree(2)-style mountfds. This allows
-// containers to have bind-mounts from source directories the container process
-// cannot resolve (#2576) as well as apply MOUNT_ATTR_IDMAP to mounts (which
-// requires privileges the container process might not have).
-//
-// The core idea is that we create a mountfd with the right configuration, and
-// then replace the source with a reference to the file descriptor. Ideally
-// this would be /proc/self/fd/<the-fd-runc-init-will-see>, but we cannot use
-// new mount API file descriptors as bind-mount sources (they run afoul of the
-// check_mnt() checks that stop us from doing bind-mounts from an fd in a
-// different namespace). So instead, we set the source to \x00<file-descriptor>
-// which is an invalid path under Linux.
-func (c *Container) remapMountSources(cmd *exec.Cmd) (Err error) {
-	nsHandles := new(userns.Handles)
-	defer nsHandles.Release()
-	for i, m := range c.config.Mounts {
-		var mountFile *os.File
-		if m.IsBind() {
-			flags := uint(unix.OPEN_TREE_CLONE | unix.O_CLOEXEC)
-			if m.Flags&unix.MS_REC == unix.MS_REC {
-				flags |= unix.AT_RECURSIVE
-			}
-			mountFd, err := unix.OpenTree(unix.AT_FDCWD, m.Source, flags)
-			if err != nil {
-				// For non-id-mapped mounts, this functionality is optional. We
-				// can just fallback to letting the rootfs code use the
-				// original source as a mountpoint.
-				if !m.IsIDMapped() {
-					logrus.Debugf("remap mount sources: skipping remap of %s due to failure: open_tree(OPEN_TREE_CLONE): %v", m.Source, err)
-					continue
-				}
-				return &os.PathError{Op: "open_tree(OPEN_TREE_CLONE)", Path: m.Source, Err: err}
-			}
-			mountFile = os.NewFile(uintptr(mountFd), m.Source+" (open_tree)")
-			// Only close the file if the remapping failed -- otherwise we keep
-			// the file open to be passed to "runc init".
-			defer func() {
-				if Err != nil {
-					_ = mountFile.Close()
-				}
-			}()
-		}
-
-		if m.IsIDMapped() {
-			if mountFile == nil {
-				return fmt.Errorf("remap mount sources: invalid mount source %s: id-mapping of non-bind-mounts is not supported", m.Source)
-			}
-			usernsFile, err := nsHandles.Get(userns.Mapping{
-				UIDMappings: m.UIDMappings,
-				GIDMappings: m.GIDMappings,
-			})
-			if err != nil {
-				return fmt.Errorf("remap mount sources: failed to create userns for %s id-mapping: %w", m.Source, err)
-			}
-			defer usernsFile.Close()
-			if err := unix.MountSetattr(int(mountFile.Fd()), "", unix.AT_EMPTY_PATH, &unix.MountAttr{
-				Attr_set:  unix.MOUNT_ATTR_IDMAP,
-				Userns_fd: uint64(usernsFile.Fd()),
-			}); err != nil {
-				return fmt.Errorf("remap mount sources: failed to set IDMAP_SOURCE_ATTR on %s: %w", m.Source, err)
-			}
-		}
-
-		if mountFile != nil {
-			// We need to emulate the propagation behaviour when bind-mounting
-			// from a root filesystem with config.RootPropagation applied. This
-			// is needed because existing runc users expect bind-mounts to act
-			// this way (the "classic" method), regardless of the mount API
-			// used to create the bind-mount.
-			//
-			// NOTE: This explicitly does not handle configurations where there
-			// is a bind-mount source of a path from inside the container
-			// rootfs. We could do this in rootfs_linux.go but this would
-			// require doing criu-style shennanigans to try to figure out how
-			// to recreate the state in /proc/self/mountinfo. For now, it's
-			// much simpler to implement this based purely on RootPropagation.
-
-			// Same logic as prepareRoot().
-			propFlags := unix.MS_SLAVE | unix.MS_REC
-			if c.config.RootPropagation != 0 {
-				propFlags = c.config.RootPropagation
-			}
-
-			// The one thing to consider is whether the RootPropagation is
-			// MS_REC and whether the mount source is the same as /. If it is
-			// MS_REC then we apply the propagation flags (nix MS_REC)
-			// recursively. Otherwise we apply the propagation flags
-			// non-recursively if m.Source is part of the / mount. We do
-			// nothing if neither is the case.
-			var setattrFlags uint
-			if propFlags&unix.MS_REC == unix.MS_REC {
-				// If the RootPropagation is recursive, then any bind-mount
-				// from the host should inherit the propagation setting of /.
-				logrus.Debugf("remap mount sources: applying recursive RootPropagation of 0x%x to %q bind-mount propagation", propFlags, m.Source)
-				setattrFlags = unix.AT_RECURSIVE
-			} else {
-				// If the RootPropagation is not recursive, only bind-mounts
-				// from paths within the / mount should inherit the propagation
-				// setting /.
-				info, err := mountinfo.GetMounts(mountinfo.ParentsFilter(m.Source))
-				if err != nil {
-					return fmt.Errorf("remap mount sources: failed to parse /proc/self/mountinfo: %w", err)
-				}
-				// If there is only a single entry with a mountpoint path of /,
-				// the source was a child of /. Otherwise, do not set the
-				// propagation setting of bind-mounts.
-				if len(info) == 1 && info[0].Mountpoint == "/" {
-					logrus.Debugf("remap mount sources: applying non-recursive RootPropagation of 0x%x to child of / %q bind-mount propagation", propFlags, m.Source)
-				} else {
-					logrus.Debugf("remap mount sources: using default mount propagation for %q bind-mount", m.Source)
-					propFlags = 0
-				}
-			}
-			if propFlags != 0 {
-				if err := unix.MountSetattr(int(mountFile.Fd()), "", unix.AT_EMPTY_PATH|setattrFlags, &unix.MountAttr{
-					Propagation: uint64(propFlags &^ unix.MS_REC),
-				}); err != nil {
-					return fmt.Errorf("remap mount sources: failed to set mount propagation of %q bind-mount to 0x%x: %w", m.Source, propFlags, err)
-				}
-			}
-
-			// We have to leak these file descriptors to "runc init", which
-			// will mean that Go will set them as ~O_CLOEXEC during ForkExec,
-			// meaning that by default these would be leaked to the container
-			// process.
-			//
-			// While this is a bit scary, we have several processes to make
-			// sure this never leaks to the actual container (the SET_DUMPABLE
-			// bit, setting everything to O_CLOEXEC at the end of init, etc) --
-			// and in addition, OPEN_TREE_CLONE file descriptors are completely
-			// safe to leak to the container because they are in an anonymous
-			// mount namespace so they cannot be used to escape the container
-			// a-la CVE-2016-9962.
-			cmd.ExtraFiles = append(cmd.ExtraFiles, mountFile)
-			fd := stdioFdCount + len(cmd.ExtraFiles) - 1
-			logrus.Debugf("remapping mount source %s to fd %d", m.Source, fd)
-			c.config.Mounts[i].SourceFd = &fd
-			// Prepend \x00 to m.Source to make sure that attempts to operate
-			// on it in rootfs_linux.go fail.
-			c.config.Mounts[i].Source = "\x00" + m.Source
-		}
-	}
-	return nil
-}
-
 func (c *Container) newInitProcess(p *Process, cmd *exec.Cmd, messageSockPair, logFilePair filePair) (*initProcess, error) {
 	cmd.Env = append(cmd.Env, "_LIBCONTAINER_INITTYPE="+string(initStandard))
 	nsMaps := make(map[configs.NamespaceType]string)
@@ -800,9 +652,6 @@ func (c *Container) newInitProcess(p *Process, cmd *exec.Cmd, messageSockPair, l
 		if ns.Path != "" {
 			nsMaps[ns.Type] = ns.Path
 		}
-	}
-	if err := c.remapMountSources(cmd); err != nil {
-		return nil, err
 	}
 	data, err := c.bootstrapData(c.config.Namespaces.CloneFlags(), nsMaps)
 	if err != nil {
