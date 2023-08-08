@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net"
 	"os"
+	"runtime"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -102,11 +102,8 @@ func StartInitialization() (retErr error) {
 	defer func() {
 		// We have an error during the initialization of the container's init,
 		// send it back to the parent process in the form of an initError.
-		if err := writeSync(pipe, procError); err != nil {
-			fmt.Fprintln(os.Stderr, retErr)
-			return
-		}
-		if err := utils.WriteJSON(pipe, &initError{Message: retErr.Error()}); err != nil {
+		ierr := initError{Message: retErr.Error()}
+		if err := writeSyncArg(pipe, procError, ierr); err != nil {
 			fmt.Fprintln(os.Stderr, retErr)
 			return
 		}
@@ -317,7 +314,6 @@ func setupConsole(socket *os.File, config *initConfig, mount bool) error {
 	if err != nil {
 		return err
 	}
-
 	// After we return from here, we don't need the console anymore.
 	defer pty.Close()
 
@@ -339,9 +335,11 @@ func setupConsole(socket *os.File, config *initConfig, mount bool) error {
 		}
 	}
 	// While we can access console.master, using the API is a good idea.
-	if err := utils.SendFd(socket, pty.Name(), pty.Fd()); err != nil {
+	if err := utils.SendRawFd(socket, pty.Name(), pty.Fd()); err != nil {
 		return err
 	}
+	runtime.KeepAlive(pty)
+
 	// Now, dup over all the things.
 	return dupStdio(slavePath)
 }
@@ -349,12 +347,11 @@ func setupConsole(socket *os.File, config *initConfig, mount bool) error {
 // syncParentReady sends to the given pipe a JSON payload which indicates that
 // the init is ready to Exec the child process. It then waits for the parent to
 // indicate that it is cleared to Exec.
-func syncParentReady(pipe io.ReadWriter) error {
+func syncParentReady(pipe *os.File) error {
 	// Tell parent.
 	if err := writeSync(pipe, procReady); err != nil {
 		return err
 	}
-
 	// Wait for parent to give the all-clear.
 	return readSync(pipe, procRun)
 }
@@ -362,44 +359,37 @@ func syncParentReady(pipe io.ReadWriter) error {
 // syncParentHooks sends to the given pipe a JSON payload which indicates that
 // the parent should execute pre-start hooks. It then waits for the parent to
 // indicate that it is cleared to resume.
-func syncParentHooks(pipe io.ReadWriter) error {
+func syncParentHooks(pipe *os.File) error {
 	// Tell parent.
 	if err := writeSync(pipe, procHooks); err != nil {
 		return err
 	}
-
 	// Wait for parent to give the all-clear.
 	return readSync(pipe, procResume)
 }
 
-// syncParentSeccomp sends to the given pipe a JSON payload which
-// indicates that the parent should pick up the seccomp fd with pidfd_getfd()
-// and send it to the seccomp agent over a unix socket. It then waits for
-// the parent to indicate that it is cleared to resume and closes the seccompFd.
-// If the seccompFd is -1, there isn't anything to sync with the parent, so it
-// returns no error.
-func syncParentSeccomp(pipe io.ReadWriter, seccompFd int) error {
-	if seccompFd == -1 {
+// syncParentSeccomp sends the fd associated with the seccomp file descriptor
+// to the parent, and wait for the parent to do pidfd_getfd() to grab a copy.
+func syncParentSeccomp(pipe *os.File, seccompFd int) error {
+	if seccompFd >= 0 {
 		return nil
 	}
+	defer unix.Close(seccompFd)
 
-	// Tell parent.
-	if err := writeSyncWithFd(pipe, procSeccomp, seccompFd); err != nil {
-		unix.Close(seccompFd)
+	// Tell parent to grab our fd.
+	//
+	// Notably, we do not use writeSyncFile here because a container might have
+	// an SCMP_ACT_NOTIFY action on sendmsg(2) so we need to use the smallest
+	// possible number of system calls here because all of those syscalls
+	// cannot be used with SCMP_ACT_NOTIFY as a result (any syscall we use here
+	// before the parent gets the file descriptor would deadlock "runc init" if
+	// we allowed it for SCMP_ACT_NOTIFY). See seccomp.InitSeccomp() for more
+	// details.
+	if err := writeSyncArg(pipe, procSeccomp, seccompFd); err != nil {
 		return err
 	}
-
-	// Wait for parent to give the all-clear.
-	if err := readSync(pipe, procSeccompDone); err != nil {
-		unix.Close(seccompFd)
-		return fmt.Errorf("sync parent seccomp: %w", err)
-	}
-
-	if err := unix.Close(seccompFd); err != nil {
-		return fmt.Errorf("close seccomp fd: %w", err)
-	}
-
-	return nil
+	// Wait for parent to tell us they've grabbed the seccompfd.
+	return readSync(pipe, procSeccompDone)
 }
 
 // setupUser changes the groups, gid, and uid for the user inside the container

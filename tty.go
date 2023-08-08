@@ -100,7 +100,7 @@ func (t *tty) initHostConsole() error {
 }
 
 func (t *tty) recvtty(socket *os.File) (Err error) {
-	f, err := utils.RecvFd(socket)
+	f, err := utils.RecvFile(socket)
 	if err != nil {
 		return err
 	}
