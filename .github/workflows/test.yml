@@ -67,7 +67,6 @@ jobs:
     - name: install go ${{ matrix.go-version }}
       uses: actions/setup-go@v4
       with:
-        cache: false # https://github.com/actions/setup-go/issues/368
         go-version: ${{ matrix.go-version }}
 
     - name: build
