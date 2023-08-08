@@ -23,7 +23,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-20.04, ubuntu-22.04]
-        go-version: [1.19.x, 1.20.x]
+        go-version: [1.20.x, 1.21.x]
         rootless: ["rootless", ""]
         race: ["-race", ""]
         criu: ["", "criu-dev"]
@@ -31,7 +31,7 @@ jobs:
           - criu: criu-dev
             rootless: rootless
           - criu: criu-dev
-            go-version: 1.19.x
+            go-version: 1.20.x
           - criu: criu-dev
             race: -race
     runs-on: ${{ matrix.os }}
