@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 
 	"github.com/opencontainers/runc/libcontainer/utils"
 )
@@ -15,15 +16,19 @@ type syncType string
 // during container setup. They come in pairs (with procError being a generic
 // response which is followed by an &initError).
 //
-//	[  child  ] <-> [   parent   ]
+//	     [  child  ] <-> [   parent   ]
 //
-//	procHooks   --> [run hooks]
-//	            <-- procResume
+//	procSeccomp         --> [forward fd to listenerPath]
+//	  file: seccomp fd
+//	                    --- no return synchronisation
 //
-//	procReady   --> [final setup]
-//	            <-- procRun
+//	procHooks --> [run hooks]
+//	          <-- procResume
 //
-//	procSeccomp --> [pick up seccomp fd with pidfd_getfd()]
+//	procReady --> [final setup]
+//	          <-- procRun
+//
+//	procSeccomp --> [grab seccomp fd with pidfd_getfd()]
 //	            <-- procSeccompDone
 const (
 	procError       syncType = "procError"
@@ -35,9 +40,17 @@ const (
 	procSeccompDone syncType = "procSeccompDone"
 )
 
+type syncFlags int
+
+const (
+	syncFlagHasFd syncFlags = (1 << iota)
+)
+
 type syncT struct {
-	Type syncType `json:"type"`
-	Fd   int      `json:"fd"`
+	Type  syncType         `json:"type"`
+	Flags syncFlags        `json:"flags"`
+	Arg   *json.RawMessage `json:"arg,omitempty"`
+	File  *os.File         `json:"-"` // passed oob through SCM_RIGHTS
 }
 
 // initError is used to wrap errors for passing them via JSON,
@@ -50,74 +63,100 @@ func (i initError) Error() string {
 	return i.Message
 }
 
-// writeSync is used to write to a synchronisation pipe. An error is returned
-// if there was a problem writing the payload.
-func writeSync(pipe io.Writer, sync syncType) error {
-	return writeSyncWithFd(pipe, sync, -1)
-}
-
-// writeSyncWithFd is used to write to a synchronisation pipe. An error is
-// returned if there was a problem writing the payload.
-func writeSyncWithFd(pipe io.Writer, sync syncType, fd int) error {
-	if err := utils.WriteJSON(pipe, syncT{sync, fd}); err != nil {
-		return fmt.Errorf("writing syncT %q: %w", string(sync), err)
+func doWriteSync(pipe *os.File, sync syncT) error {
+	sync.Flags &= ^syncFlagHasFd
+	if sync.File != nil {
+		sync.Flags |= syncFlagHasFd
+	}
+	if err := utils.WriteJSON(pipe, sync); err != nil {
+		return fmt.Errorf("writing sync %q: %w", sync.Type, err)
+	}
+	if sync.Flags&syncFlagHasFd != 0 {
+		if err := utils.SendFile(pipe, sync.File); err != nil {
+			return fmt.Errorf("sending file after sync %q: %w", sync.Type, err)
+		}
 	}
 	return nil
 }
 
-// readSync is used to read from a synchronisation pipe. An error is returned
-// if we got an initError, the pipe was closed, or we got an unexpected flag.
-func readSync(pipe io.Reader, expected syncType) error {
-	var procSync syncT
-	if err := json.NewDecoder(pipe).Decode(&procSync); err != nil {
+func writeSync(pipe *os.File, sync syncType) error {
+	return doWriteSync(pipe, syncT{Type: sync})
+}
+
+func writeSyncArg(pipe *os.File, sync syncType, arg interface{}) error {
+	argJSON, err := json.Marshal(arg)
+	if err != nil {
+		return fmt.Errorf("writing sync %q: marshal argument failed: %w", sync, err)
+	}
+	argJSONMsg := json.RawMessage(argJSON)
+	return doWriteSync(pipe, syncT{Type: sync, Arg: &argJSONMsg})
+}
+
+func doReadSync(pipe *os.File) (syncT, error) {
+	var sync syncT
+	if err := json.NewDecoder(pipe).Decode(&sync); err != nil {
 		if errors.Is(err, io.EOF) {
-			return errors.New("parent closed synchronisation channel")
+			return sync, err
 		}
-		return fmt.Errorf("failed reading error from parent: %w", err)
+		return sync, fmt.Errorf("reading from parent failed: %w", err)
 	}
-
-	if procSync.Type == procError {
+	if sync.Type == procError {
 		var ierr initError
-
-		if err := json.NewDecoder(pipe).Decode(&ierr); err != nil {
-			return fmt.Errorf("failed reading error from parent: %w", err)
+		if sync.Arg == nil {
+			return sync, errors.New("procError missing error payload")
 		}
-
-		return &ierr
+		if err := json.Unmarshal(*sync.Arg, &ierr); err != nil {
+			return sync, fmt.Errorf("unmarshal procError failed: %w", err)
+		}
+		return sync, &ierr
 	}
+	if sync.Flags&syncFlagHasFd != 0 {
+		file, err := utils.RecvFile(pipe)
+		if err != nil {
+			return sync, fmt.Errorf("receiving fd from sync %q failed: %w", sync.Type, err)
+		}
+		sync.File = file
+	}
+	return sync, nil
+}
 
-	if procSync.Type != expected {
-		return errors.New("invalid synchronisation flag from parent")
+func readSyncFull(pipe *os.File, expected syncType) (syncT, error) {
+	sync, err := doReadSync(pipe)
+	if err != nil {
+		return sync, err
+	}
+	if sync.Type != expected {
+		return sync, fmt.Errorf("unexpected synchronisation flag: got %q, expected %q", sync.Type, expected)
+	}
+	return sync, nil
+}
+
+func readSync(pipe *os.File, expected syncType) error {
+	sync, err := readSyncFull(pipe, expected)
+	if err != nil {
+		return err
+	}
+	if sync.Arg != nil {
+		return fmt.Errorf("sync %q had unexpected argument passed: %q", expected, string(*sync.Arg))
+	}
+	if sync.File != nil {
+		_ = sync.File.Close()
+		return fmt.Errorf("sync %q had unexpected file passed", sync.Type)
 	}
 	return nil
 }
 
 // parseSync runs the given callback function on each syncT received from the
 // child. It will return once io.EOF is returned from the given pipe.
-func parseSync(pipe io.Reader, fn func(*syncT) error) error {
-	dec := json.NewDecoder(pipe)
+func parseSync(pipe *os.File, fn func(*syncT) error) error {
 	for {
-		var sync syncT
-		if err := dec.Decode(&sync); err != nil {
+		sync, err := doReadSync(pipe)
+		if err != nil {
 			if errors.Is(err, io.EOF) {
 				break
 			}
 			return err
 		}
-
-		// We handle this case outside fn for cleanliness reasons.
-		var ierr *initError
-		if sync.Type == procError {
-			if err := dec.Decode(&ierr); err != nil && !errors.Is(err, io.EOF) {
-				return fmt.Errorf("error decoding proc error from init: %w", err)
-			}
-			if ierr != nil {
-				return ierr
-			}
-			// Programmer error.
-			panic("No error following JSON procError payload.")
-		}
-
 		if err := fn(&sync); err != nil {
 			return err
 		}

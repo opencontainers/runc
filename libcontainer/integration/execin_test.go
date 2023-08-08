@@ -277,9 +277,9 @@ func TestExecInTTY(t *testing.T) {
 
 		done := make(chan (error))
 		go func() {
-			f, err := utils.RecvFd(parent)
+			f, err := utils.RecvFile(parent)
 			if err != nil {
-				done <- fmt.Errorf("RecvFd: %w", err)
+				done <- fmt.Errorf("RecvFile: %w", err)
 				return
 			}
 			c, err := console.ConsoleFromFile(f)
