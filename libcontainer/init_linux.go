@@ -404,11 +404,11 @@ func syncParentHooks(pipe *os.File) error {
 
 // syncParentSeccomp sends the fd associated with the seccomp file descriptor
 // to the parent, and wait for the parent to do pidfd_getfd() to grab a copy.
-func syncParentSeccomp(pipe *os.File, seccompFd int) error {
-	if seccompFd == -1 {
+func syncParentSeccomp(pipe *os.File, seccompFd *os.File) error {
+	if seccompFd == nil {
 		return nil
 	}
-	defer unix.Close(seccompFd)
+	defer seccompFd.Close()
 
 	// Tell parent to grab our fd.
 	//
@@ -419,7 +419,7 @@ func syncParentSeccomp(pipe *os.File, seccompFd int) error {
 	// before the parent gets the file descriptor would deadlock "runc init" if
 	// we allowed it for SCMP_ACT_NOTIFY). See seccomp.InitSeccomp() for more
 	// details.
-	if err := writeSyncArg(pipe, procSeccomp, seccompFd); err != nil {
+	if err := writeSyncArg(pipe, procSeccomp, seccompFd.Fd()); err != nil {
 		return err
 	}
 	// Wait for parent to tell us they've grabbed the seccompfd.
