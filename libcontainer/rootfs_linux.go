@@ -485,7 +485,7 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 			if m.srcFD == nil {
 				return fmt.Errorf("error creating mount %+v: idmapFD is invalid, should point to a valid fd", m)
 			}
-			if err := unix.MoveMount(*m.srcFD, "", -1, dest, unix.MOVE_MOUNT_F_EMPTY_PATH); err != nil {
+			if err := unix.MoveMount(*m.srcFD, "", unix.AT_FDCWD, dest, unix.MOVE_MOUNT_F_EMPTY_PATH); err != nil {
 				return fmt.Errorf("error on unix.MoveMount %+v: %w", m, err)
 			}
 

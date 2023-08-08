@@ -72,6 +72,14 @@ function teardown() {
 	[[ "$output" == *"shared"* ]]
 }
 
+@test "idmap mount with relative path" {
+	update_config ' .mounts |= map((select(.source == "source-1/") | .destination = "tmp/mount-1") // .)'
+
+	runc run test_debian
+	[ "$status" -eq 0 ]
+	[[ "$output" == *"=0=0="* ]]
+}
+
 @test "idmap mount with bind mount" {
 	update_config '   .mounts += [
 					{
