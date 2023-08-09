@@ -8,6 +8,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"runtime"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -84,33 +85,73 @@ type initConfig struct {
 	Cgroup2Path      string                `json:"cgroup2_path,omitempty"`
 }
 
-// StartInitialization loads a container by opening the pipe fd from the parent
-// to read the configuration and state. This is a low level implementation
-// detail of the reexec and should not be consumed externally.
-func StartInitialization() (retErr error) {
+// Init is part of "runc init" implementation.
+func Init() {
+	runtime.GOMAXPROCS(1)
+	runtime.LockOSThread()
+
+	if err := startInitialization(); err != nil {
+		// If the error is returned, it was not communicated
+		// back to the parent (which is not a common case),
+		// so print it to stderr here as a last resort.
+		//
+		// Do not use logrus as we are not sure if it has been
+		// set up yet, but most important, if the parent is
+		// alive (and its log forwarding is working).
+		fmt.Fprintln(os.Stderr, err)
+	}
+	// Normally, StartInitialization() never returns, meaning
+	// if we are here, it had failed.
+	os.Exit(1)
+}
+
+// Normally, this function does not return. If it returns, with or without an
+// error, it means the initialization has failed. If the error is returned,
+// it means the error can not be communicated back to the parent.
+func startInitialization() (retErr error) {
 	// Get the INITPIPE.
 	envInitPipe := os.Getenv("_LIBCONTAINER_INITPIPE")
 	pipefd, err := strconv.Atoi(envInitPipe)
 	if err != nil {
-		err = fmt.Errorf("unable to convert _LIBCONTAINER_INITPIPE: %w", err)
-		logrus.Error(err)
-		return err
+		return fmt.Errorf("unable to convert _LIBCONTAINER_INITPIPE: %w", err)
 	}
 	pipe := os.NewFile(uintptr(pipefd), "pipe")
 	defer pipe.Close()
 
 	defer func() {
-		// We have an error during the initialization of the container's init,
-		// send it back to the parent process in the form of an initError.
+		// If this defer is ever called, this means initialization has failed.
+		// Send the error back to the parent process in the form of an initError.
 		if err := writeSync(pipe, procError); err != nil {
-			fmt.Fprintln(os.Stderr, retErr)
+			fmt.Fprintln(os.Stderr, err)
 			return
 		}
 		if err := utils.WriteJSON(pipe, &initError{Message: retErr.Error()}); err != nil {
-			fmt.Fprintln(os.Stderr, retErr)
+			fmt.Fprintln(os.Stderr, err)
 			return
 		}
+		// The error is sent, no need to also return it (or it will be reported twice).
+		retErr = nil
 	}()
+
+	// Set up logging. This is used rarely, and mostly for init debugging.
+
+	// Passing log level is optional; currently libcontainer/integration does not do it.
+	if levelStr := os.Getenv("_LIBCONTAINER_LOGLEVEL"); levelStr != "" {
+		logLevel, err := strconv.Atoi(levelStr)
+		if err != nil {
+			return fmt.Errorf("unable to convert _LIBCONTAINER_LOGLEVEL: %w", err)
+		}
+		logrus.SetLevel(logrus.Level(logLevel))
+	}
+
+	logFD, err := strconv.Atoi(os.Getenv("_LIBCONTAINER_LOGPIPE"))
+	if err != nil {
+		return fmt.Errorf("unable to convert _LIBCONTAINER_LOGPIPE: %w", err)
+	}
+
+	logrus.SetOutput(os.NewFile(uintptr(logFD), "logpipe"))
+	logrus.SetFormatter(new(logrus.JSONFormatter))
+	logrus.Debug("child process in init()")
 
 	// Only init processes have FIFOFD.
 	fifofd := -1
@@ -131,12 +172,6 @@ func StartInitialization() (retErr error) {
 		}
 		consoleSocket = os.NewFile(uintptr(console), "console-socket")
 		defer consoleSocket.Close()
-	}
-
-	logPipeFdStr := os.Getenv("_LIBCONTAINER_LOGPIPE")
-	logPipeFd, err := strconv.Atoi(logPipeFdStr)
-	if err != nil {
-		return fmt.Errorf("unable to convert _LIBCONTAINER_LOGPIPE: %w", err)
 	}
 
 	// Get mount files (O_PATH).
@@ -166,7 +201,7 @@ func StartInitialization() (retErr error) {
 	}()
 
 	// If init succeeds, it will not return, hence none of the defers will be called.
-	return containerInit(it, pipe, consoleSocket, fifofd, logPipeFd, mountFds{sourceFds: mountSrcFds, idmapFds: idmapFds})
+	return containerInit(it, pipe, consoleSocket, fifofd, logFD, mountFds{sourceFds: mountSrcFds, idmapFds: idmapFds})
 }
 
 func containerInit(t initType, pipe *os.File, consoleSocket *os.File, fifoFd, logFd int, mountFds mountFds) error {
