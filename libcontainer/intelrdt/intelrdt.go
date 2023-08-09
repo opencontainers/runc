@@ -146,34 +146,27 @@ import (
  * }
  */
 
-type Manager interface {
-	// Applies Intel RDT configuration to the process with the specified pid
-	Apply(pid int) error
-
-	// Returns statistics for Intel RDT
-	GetStats() (*Stats, error)
-
-	// Destroys the Intel RDT container-specific 'container_id' group
-	Destroy() error
-
-	// Returns Intel RDT path to save in a state file and to be able to
-	// restore the object later
-	GetPath() string
-
-	// Set Intel RDT "resource control" filesystem as configured.
-	Set(container *configs.Config) error
-}
-
-// This implements interface Manager
-type intelRdtManager struct {
+type Manager struct {
 	mu     sync.Mutex
 	config *configs.Config
 	id     string
 	path   string
 }
 
-func NewManager(config *configs.Config, id string, path string) Manager {
-	return &intelRdtManager{
+// NewManager returns a new instance of Manager, or nil, if the Intel RDT
+// functionality is not available from hardware or not enabled in the kernel.
+func NewManager(config *configs.Config, id string, path string) *Manager {
+	if _, err := Root(); err != nil {
+		// Intel RDT is not available.
+		return nil
+	}
+	return newManager(config, id, path)
+}
+
+// newManager is the same as NewManager, except it does not check if the feature
+// is actually available. Used by unit tests that mock intelrdt paths.
+func newManager(config *configs.Config, id string, path string) *Manager {
+	return &Manager{
 		config: config,
 		id:     id,
 		path:   path,
@@ -507,7 +500,7 @@ func IsMBAScEnabled() bool {
 }
 
 // Get the path of the clos group in "resource control" filesystem that the container belongs to
-func (m *intelRdtManager) getIntelRdtPath() (string, error) {
+func (m *Manager) getIntelRdtPath() (string, error) {
 	rootPath, err := Root()
 	if err != nil {
 		return "", err
@@ -522,7 +515,7 @@ func (m *intelRdtManager) getIntelRdtPath() (string, error) {
 }
 
 // Applies Intel RDT configuration to the process with the specified pid
-func (m *intelRdtManager) Apply(pid int) (err error) {
+func (m *Manager) Apply(pid int) (err error) {
 	// If intelRdt is not specified in config, we do nothing
 	if m.config.IntelRdt == nil {
 		return nil
@@ -557,7 +550,7 @@ func (m *intelRdtManager) Apply(pid int) (err error) {
 }
 
 // Destroys the Intel RDT container-specific 'container_id' group
-func (m *intelRdtManager) Destroy() error {
+func (m *Manager) Destroy() error {
 	// Don't remove resctrl group if closid has been explicitly specified. The
 	// group is likely externally managed, i.e. by some other entity than us.
 	// There are probably other containers/tasks sharing the same group.
@@ -574,7 +567,7 @@ func (m *intelRdtManager) Destroy() error {
 
 // Returns Intel RDT path to save in a state file and to be able to
 // restore the object later
-func (m *intelRdtManager) GetPath() string {
+func (m *Manager) GetPath() string {
 	if m.path == "" {
 		m.path, _ = m.getIntelRdtPath()
 	}
@@ -582,7 +575,7 @@ func (m *intelRdtManager) GetPath() string {
 }
 
 // Returns statistics for Intel RDT
-func (m *intelRdtManager) GetStats() (*Stats, error) {
+func (m *Manager) GetStats() (*Stats, error) {
 	// If intelRdt is not specified in config
 	if m.config.IntelRdt == nil {
 		return nil, nil
@@ -668,7 +661,7 @@ func (m *intelRdtManager) GetStats() (*Stats, error) {
 }
 
 // Set Intel RDT "resource control" filesystem as configured.
-func (m *intelRdtManager) Set(container *configs.Config) error {
+func (m *Manager) Set(container *configs.Config) error {
 	// About L3 cache schema:
 	// It has allocation bitmasks/values for L3 cache on each socket,
 	// which contains L3 cache id and capacity bitmask (CBM).

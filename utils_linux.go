@@ -32,8 +32,6 @@ func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
 		return nil, err
 	}
 
-	intelRdtManager := libcontainer.IntelRdtFs
-
 	// We resolve the paths for {newuidmap,newgidmap} from the context of runc,
 	// to avoid doing a path lookup in the nsexec context. TODO: The binary
 	// names are not currently configurable.
@@ -46,7 +44,7 @@ func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
 		newgidmap = ""
 	}
 
-	return libcontainer.New(abs, intelRdtManager,
+	return libcontainer.New(abs,
 		libcontainer.CriuPath(context.GlobalString("criu")),
 		libcontainer.NewuidmapPath(newuidmap),
 		libcontainer.NewgidmapPath(newgidmap))

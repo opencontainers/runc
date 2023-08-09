@@ -40,7 +40,7 @@ type linuxContainer struct {
 	root                 string
 	config               *configs.Config
 	cgroupManager        cgroups.Manager
-	intelRdtManager      intelrdt.Manager
+	intelRdtManager      *intelrdt.Manager
 	initPath             string
 	initArgs             []string
 	initProcess          parentProcess
