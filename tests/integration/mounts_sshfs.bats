@@ -8,9 +8,12 @@ function setup() {
 }
 
 function teardown() {
-	# Some distros do not have fusermount installed
-	# as a dependency of fuse-sshfs, and good ol' umount works.
-	fusermount -u "$DIR" || umount "$DIR"
+	if [ -v DIR ]; then
+		# Some distros do not have fusermount installed
+		# as a dependency of fuse-sshfs, and good ol' umount works.
+		fusermount -u "$DIR" || umount "$DIR"
+		unset DIR
+	fi
 
 	teardown_bundle
 }
