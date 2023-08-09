@@ -12,6 +12,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	selinux "github.com/opencontainers/selinux/go-selinux"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
 
@@ -28,11 +29,20 @@ func Validate(config *configs.Config) error {
 		sysctl,
 		intelrdtCheck,
 		rootlessEUIDCheck,
-		mounts,
+		mountsStrict,
 	}
 	for _, c := range checks {
 		if err := c(config); err != nil {
 			return err
+		}
+	}
+	// Relaxed validation rules for backward compatibility
+	warns := []check{
+		mounts, // TODO (runc v1.x.x): make this an error instead of a warning
+	}
+	for _, c := range warns {
+		if err := c(config); err != nil {
+			logrus.WithError(err).Warn("invalid configuration")
 		}
 	}
 	return nil
@@ -282,19 +292,19 @@ func checkIDMapMounts(config *configs.Config, m *configs.Mount) error {
 
 func mounts(config *configs.Config) error {
 	for _, m := range config.Mounts {
-		// We upgraded this to an error in runc 1.2. We might need to
-		// revert this change if some users haven't still moved to use
-		// abs paths, in that please move this check inside
-		// checkIDMapMounts() as we do want to ensure that for idmap
-		// mounts anyways.
 		if !filepath.IsAbs(m.Destination) {
 			return fmt.Errorf("invalid mount %+v: mount destination not absolute", m)
 		}
+	}
+	return nil
+}
+
+func mountsStrict(config *configs.Config) error {
+	for _, m := range config.Mounts {
 		if err := checkIDMapMounts(config, m); err != nil {
 			return fmt.Errorf("invalid mount %+v: %w", m, err)
 		}
 	}
-
 	return nil
 }
 
