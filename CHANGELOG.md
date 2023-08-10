@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased 1.1.z]
 
+## [1.1.9] - 2023-08-10
+
+> There is a crack in everything. That's how the light gets in.
+
+### Added
+
+* Added go 1.21 to the CI matrix; other CI updates. (#3976, #3958)
+
+### Fixed
+
+* Fixed losing sticky bit on tmpfs (a regression in 1.1.8). (#3952, #3961)
+* intelrdt: fixed ignoring ClosID on some systems. (#3550, #3978)
+
 ### Changed
 
  * Sum `anon` and `file` from `memory.stat` for cgroupv2 root usage,
@@ -443,7 +456,8 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.0.1]: https://github.com/opencontainers/runc/compare/v1.0.0...v1.0.1
 
 <!-- 1.1.z patch releases -->
-[Unreleased 1.1.z]: https://github.com/opencontainers/runc/compare/v1.1.8...release-1.1
+[Unreleased 1.1.z]: https://github.com/opencontainers/runc/compare/v1.1.9...release-1.1
+[1.1.8]: https://github.com/opencontainers/runc/compare/v1.1.8...v1.1.9
 [1.1.8]: https://github.com/opencontainers/runc/compare/v1.1.7...v1.1.8
 [1.1.7]: https://github.com/opencontainers/runc/compare/v1.1.6...v1.1.7
 [1.1.6]: https://github.com/opencontainers/runc/compare/v1.1.5...v1.1.6
