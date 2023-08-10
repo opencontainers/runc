@@ -104,6 +104,10 @@ struct nlconfig_t {
 	/* Idmap sources opened outside the container userns which will be id mapped. */
 	char *idmapsources;
 	size_t idmapsources_len;
+
+	/* Time NS offsets. */
+	char *timensoffset;
+	size_t timensoffset_len;
 };
 
 /*
@@ -122,6 +126,7 @@ struct nlconfig_t {
 #define GIDMAPPATH_ATTR		27289
 #define MOUNT_SOURCES_ATTR	27290
 #define IDMAP_SOURCES_ATTR	27291
+#define TIMENSOFFSET_ATTR	27292
 
 /*
  * Use the raw syscall for versions of glibc which don't include a function for
@@ -351,6 +356,8 @@ static int nsflag(char *name)
 		return CLONE_NEWUSER;
 	else if (!strcmp(name, "uts"))
 		return CLONE_NEWUTS;
+	else if (!strcmp(name, "time"))
+		return CLONE_NEWTIME;
 
 	/* If we don't recognise a name, fallback to 0. */
 	return 0;
@@ -444,6 +451,10 @@ static void nl_parse(int fd, struct nlconfig_t *config)
 		case IDMAP_SOURCES_ATTR:
 			config->idmapsources = current;
 			config->idmapsources_len = payload_len;
+			break;
+		case TIMENSOFFSET_ATTR:
+			config->timensoffset = current;
+			config->timensoffset_len = payload_len;
 			break;
 		default:
 			bail("unknown netlink message type %d", nlattr->nla_type);
@@ -745,6 +756,17 @@ void send_idmapsources(int sockfd, pid_t pid, char *idmap_src, int idmap_src_len
 void receive_idmapsources(int sockfd)
 {
 	receive_fd_sources(sockfd, "_LIBCONTAINER_IDMAP_FDS");
+}
+
+static void update_timens(char *map, size_t map_len)
+{
+	if (map == NULL || map_len == 0)
+		return;
+	write_log(DEBUG, "update /proc/self/timens_offsets to '%s'", map);
+	if (write_file(map, map_len, "/proc/self/timens_offsets") < 0) {
+		if (errno != EPERM)
+			bail("failed to update /proc/self/timens_offsets");
+	}
 }
 
 void nsexec(void)
@@ -1184,6 +1206,11 @@ void nsexec(void)
 				if (s != SYNC_MOUNT_IDMAP_ACK)
 					bail("failed to sync with parent: SYNC_MOUNT_IDMAP_ACK: got %u", s);
 			}
+
+			/*
+			 * set boottime and monotonic timens offsets.
+			 */
+			update_timens(config.timensoffset, config.timensoffset_len);
 
 			/*
 			 * TODO: What about non-namespace clone flags that we're dropping here?

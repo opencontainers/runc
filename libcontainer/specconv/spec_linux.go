@@ -49,6 +49,7 @@ func initMaps() {
 			specs.IPCNamespace:     configs.NEWIPC,
 			specs.UTSNamespace:     configs.NEWUTS,
 			specs.CgroupNamespace:  configs.NEWCGROUP,
+			specs.TimeNamespace:    configs.NEWTIME,
 		}
 
 		mountPropagationMapping = map[string]int{
@@ -435,6 +436,9 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 				MemBwSchema:   spec.Linux.IntelRdt.MemBwSchema,
 			}
 		}
+
+		// update timens offsets
+		config.TimeOffsets = spec.Linux.TimeOffsets
 	}
 
 	// Set the host UID that should own the container's cgroup.

@@ -216,6 +216,9 @@ type Config struct {
 	// Do not try to remount a bind mount again after the first attempt failed on source
 	// filesystems that have nodev, noexec, nosuid, noatime, relatime, strictatime, nodiratime set
 	NoMountFallback bool `json:"no_mount_fallback,omitempty"`
+
+	// TimeOffsets specifies the offset for supporting time namespaces.
+	TimeOffsets map[string]specs.LinuxTimeOffset `json:"time_offsets,omitempty"`
 }
 
 type (
