@@ -120,6 +120,10 @@ func namespaces(config *configs.Config) error {
 		if _, err := os.Stat("/proc/self/timens_offsets"); os.IsNotExist(err) {
 			return errors.New("time namespaces aren't enabled in the kernel")
 		}
+	} else {
+		if config.TimeOffsets != nil {
+			return errors.New("time namespace offsets specified, but time namespace isn't enabled in the config")
+		}
 	}
 
 	return nil

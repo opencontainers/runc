@@ -1192,7 +1192,7 @@ func (c *Container) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Namespa
 	}
 
 	// write boottime and monotonic time ns offsets.
-	if c.config.Namespaces.Contains(configs.NEWTIME) && c.config.TimeOffsets != nil {
+	if c.config.TimeOffsets != nil {
 		var offsetSpec bytes.Buffer
 		for clock, offset := range c.config.TimeOffsets {
 			fmt.Fprintf(&offsetSpec, "%s %d %d\n", clock, offset.Secs, offset.Nanosecs)

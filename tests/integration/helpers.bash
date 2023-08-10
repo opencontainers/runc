@@ -429,6 +429,11 @@ function requires() {
 				skip_me=1
 			fi
 			;;
+		timens)
+			if [ ! -e "/proc/self/ns/time" ]; then
+				skip_me=1
+			fi
+			;;
 		cgroups_v1)
 			init_cgroup_paths
 			if [ ! -v CGROUP_V1 ]; then

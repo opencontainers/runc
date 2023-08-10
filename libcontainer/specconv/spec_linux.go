@@ -422,6 +422,7 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 		config.ReadonlyPaths = spec.Linux.ReadonlyPaths
 		config.MountLabel = spec.Linux.MountLabel
 		config.Sysctl = spec.Linux.Sysctl
+		config.TimeOffsets = spec.Linux.TimeOffsets
 		if spec.Linux.Seccomp != nil {
 			seccomp, err := SetupSeccomp(spec.Linux.Seccomp)
 			if err != nil {
@@ -436,9 +437,6 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 				MemBwSchema:   spec.Linux.IntelRdt.MemBwSchema,
 			}
 		}
-
-		// update timens offsets
-		config.TimeOffsets = spec.Linux.TimeOffsets
 	}
 
 	// Set the host UID that should own the container's cgroup.

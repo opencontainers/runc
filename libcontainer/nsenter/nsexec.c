@@ -758,15 +758,13 @@ void receive_idmapsources(int sockfd)
 	receive_fd_sources(sockfd, "_LIBCONTAINER_IDMAP_FDS");
 }
 
-static void update_timens(char *map, size_t map_len)
+static void update_timens_offsets(char *map, size_t map_len)
 {
 	if (map == NULL || map_len == 0)
 		return;
 	write_log(DEBUG, "update /proc/self/timens_offsets to '%s'", map);
-	if (write_file(map, map_len, "/proc/self/timens_offsets") < 0) {
-		if (errno != EPERM)
-			bail("failed to update /proc/self/timens_offsets");
-	}
+	if (write_file(map, map_len, "/proc/self/timens_offsets") < 0)
+		bail("failed to update /proc/self/timens_offsets");
 }
 
 void nsexec(void)
@@ -1174,6 +1172,7 @@ void nsexec(void)
 			 * was broken, so we'll just do it the long way anyway.
 			 */
 			try_unshare(config.cloneflags & ~CLONE_NEWCGROUP, "remaining namespaces (except cgroupns)");
+			update_timens_offsets(config.timensoffset, config.timensoffset_len);
 
 			/* Ask our parent to send the mount sources fds. */
 			if (config.mountsources) {
@@ -1206,11 +1205,6 @@ void nsexec(void)
 				if (s != SYNC_MOUNT_IDMAP_ACK)
 					bail("failed to sync with parent: SYNC_MOUNT_IDMAP_ACK: got %u", s);
 			}
-
-			/*
-			 * set boottime and monotonic timens offsets.
-			 */
-			update_timens(config.timensoffset, config.timensoffset_len);
 
 			/*
 			 * TODO: What about non-namespace clone flags that we're dropping here?
