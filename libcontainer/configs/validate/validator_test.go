@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runtime-spec/specs-go"
 	"golang.org/x/sys/unix"
 )
 
@@ -193,6 +194,40 @@ func TestValidateUsernamespaceWithoutUserNS(t *testing.T) {
 	config := &configs.Config{
 		Rootfs:      "/var",
 		UIDMappings: []configs.IDMap{uidMap},
+	}
+
+	err := Validate(config)
+	if err == nil {
+		t.Error("Expected error to occur but it was nil")
+	}
+}
+
+func TestValidateTimeNamespace(t *testing.T) {
+	if _, err := os.Stat("/proc/self/ns/time"); os.IsNotExist(err) {
+		t.Skip("Test requires timens.")
+	}
+	config := &configs.Config{
+		Rootfs: "/var",
+		Namespaces: configs.Namespaces(
+			[]configs.Namespace{
+				{Type: configs.NEWTIME},
+			},
+		),
+	}
+
+	err := Validate(config)
+	if err != nil {
+		t.Errorf("expected error to not occur %+v", err)
+	}
+}
+
+func TestValidateTimeOffsetsWithoutTimeNamespace(t *testing.T) {
+	config := &configs.Config{
+		Rootfs: "/var",
+		TimeOffsets: map[string]specs.LinuxTimeOffset{
+			"boottime":  {Secs: 150, Nanosecs: 314159},
+			"monotonic": {Secs: 512, Nanosecs: 271818},
+		},
 	}
 
 	err := Validate(config)
