@@ -24,10 +24,10 @@ task:
     image: family/docker-kvm
     platform: linux
     nested_virtualization: true
-    # CPU limit: `16 / NTASK`: see https://cirrus-ci.org/faq/#are-there-any-limits
-    cpu: 4
-    # Memory limit: `4GB * NCPU`
-    memory: 16G
+    # We need to limit this as much as possible to avoid going over the new monthly limits.
+    # <https://cirrus-ci.org/blog/2023/07/17/limiting-free-usage-of-cirrus-ci/>
+    cpu: 1
+    memory: 2G
 
   host_info_script: |
     uname -a
