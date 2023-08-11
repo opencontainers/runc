@@ -4,9 +4,16 @@
 package user
 
 import (
+	"bytes"
+	"fmt"
 	"io"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"strconv"
+	"sync"
+
+	"github.com/opencontainers/runc/libcontainer/system"
 
 	"golang.org/x/sys/unix"
 )
@@ -17,12 +24,17 @@ const (
 	unixGroupPath  = "/etc/group"
 )
 
+var (
+	entOnce   sync.Once
+	getentCmd string
+)
+
 // LookupUser looks up a user by their username in /etc/passwd. If the user
 // cannot be found (or there is no /etc/passwd file on the filesystem), then
 // LookupUser returns an error.
-func LookupUser(username string) (User, error) {
-	return lookupUserFunc(func(u User) bool {
-		return u.Name == username
+func LookupUser(name string) (User, error) {
+	return getentUser(name, func(u User) bool {
+		return u.Name == name
 	})
 }
 
@@ -30,40 +42,17 @@ func LookupUser(username string) (User, error) {
 // be found (or there is no /etc/passwd file on the filesystem), then LookupId
 // returns an error.
 func LookupUid(uid int) (User, error) {
-	return lookupUserFunc(func(u User) bool {
+	return getentUser(fmt.Sprint(uid), func(u User) bool {
 		return u.Uid == uid
 	})
-}
-
-func lookupUserFunc(filter func(u User) bool) (User, error) {
-	// Get operating system-specific passwd reader-closer.
-	passwd, err := GetPasswd()
-	if err != nil {
-		return User{}, err
-	}
-	defer passwd.Close()
-
-	// Get the users.
-	users, err := ParsePasswdFilter(passwd, filter)
-	if err != nil {
-		return User{}, err
-	}
-
-	// No user entries found.
-	if len(users) == 0 {
-		return User{}, ErrNoPasswdEntries
-	}
-
-	// Assume the first entry is the "correct" one.
-	return users[0], nil
 }
 
 // LookupGroup looks up a group by its name in /etc/group. If the group cannot
 // be found (or there is no /etc/group file on the filesystem), then LookupGroup
 // returns an error.
-func LookupGroup(groupname string) (Group, error) {
-	return lookupGroupFunc(func(g Group) bool {
-		return g.Name == groupname
+func LookupGroup(name string) (Group, error) {
+	return getentGroup(fmt.Sprintf("%s %s", "group", name), func(g Group) bool {
+		return g.Name == name
 	})
 }
 
@@ -71,32 +60,94 @@ func LookupGroup(groupname string) (Group, error) {
 // be found (or there is no /etc/group file on the filesystem), then LookupGid
 // returns an error.
 func LookupGid(gid int) (Group, error) {
-	return lookupGroupFunc(func(g Group) bool {
+	return getentGroup(fmt.Sprintf("%s %d", "group", gid), func(g Group) bool {
 		return g.Gid == gid
 	})
 }
 
-func lookupGroupFunc(filter func(g Group) bool) (Group, error) {
-	// Get operating system-specific group reader-closer.
-	group, err := GetGroup()
+func getentUser(value string, filter func(u User) bool) (User, error) {
+	passwd, err := callGetent("passwd", value)
+	if err != nil {
+		return User{}, err
+	}
+
+	users, err := ParsePasswdFilter(passwd, filter)
+	if err != nil {
+		return User{}, err
+	}
+
+	if len(users) == 0 {
+		return User{}, fmt.Errorf("getent failed to find passwd entry for %q", value)
+	}
+
+	return users[0], nil
+}
+
+func getentGroup(value string, filter func(g Group) bool) (Group, error) {
+	group, err := callGetent("group", value)
 	if err != nil {
 		return Group{}, err
 	}
-	defer group.Close()
 
-	// Get the users.
 	groups, err := ParseGroupFilter(group, filter)
 	if err != nil {
 		return Group{}, err
 	}
 
-	// No user entries found.
 	if len(groups) == 0 {
-		return Group{}, ErrNoGroupEntries
+		return Group{}, fmt.Errorf("getent failed to find groups entry for %q", value)
 	}
 
-	// Assume the first entry is the "correct" one.
 	return groups[0], nil
+}
+
+func callGetent(database string, key string) (io.Reader, error) {
+	entOnce.Do(func() { getentCmd, _ = resolveBinary("getent") })
+	// if no `getent` command on host, can't do anything else
+	if getentCmd == "" {
+		return nil, fmt.Errorf("unable to find getent command")
+	}
+	out, err := execCmd(getentCmd, database, key)
+	if err != nil {
+		exitCode, errC := system.GetExitCode(err)
+		if errC != nil {
+			return nil, err
+		}
+		switch exitCode {
+		case 1:
+			return nil, fmt.Errorf("getent reported invalid parameters/database unknown")
+		case 2:
+			return nil, fmt.Errorf("getent unable to find entry %q in %s database", key, database)
+		case 3:
+			return nil, fmt.Errorf("getent database doesn't support enumeration")
+		default:
+			return nil, err
+		}
+
+	}
+	return bytes.NewReader(out), nil
+}
+
+func resolveBinary(binname string) (string, error) {
+	binaryPath, err := exec.LookPath(binname)
+	if err != nil {
+		return "", err
+	}
+	resolvedPath, err := filepath.EvalSymlinks(binaryPath)
+	if err != nil {
+		return "", err
+	}
+	// only return no error if the final resolved binary basename
+	// matches what was searched for
+	if filepath.Base(resolvedPath) == binname {
+		return resolvedPath, nil
+	}
+	return "", fmt.Errorf("Binary %q does not resolve to a binary of that name in $PATH (%q)", binname, resolvedPath)
+}
+
+func execCmd(cmd string, arg ...string) ([]byte, error) {
+	execCmd := exec.Command(cmd, arg...)
+	return execCmd.CombinedOutput()
 }
 
 func GetPasswdPath() (string, error) {
