@@ -57,7 +57,12 @@ endif
 
 .DEFAULT: runc
 
-runc:
+runc: runc-dmz runc-bin
+
+runc-dmz:
+	$(CC) -o runc-dmz -static contrib/cmd/runc-dmz/runc-dmz.c
+
+runc-bin:
 	$(GO_BUILD) -o runc .
 
 all: runc recvtty sd-helper seccompagent fs-idmap
