@@ -8,6 +8,8 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -15,6 +17,29 @@ import (
 	"github.com/vishvananda/netlink/nl"
 	"golang.org/x/sys/unix"
 )
+
+func init() {
+	_, ex, _, _ := runtime.Caller(0)
+	// make and copy runc-dmg
+	rootDir, err := filepath.Abs(filepath.Join(filepath.Dir(ex), "..", ".."))
+	if err != nil {
+		panic(err)
+	}
+	nowPath := getExeDir()
+	dmzMake, err := exec.Command("gcc", "-o", filepath.Join(nowPath, "nsenter.test-dmz"), "-static", filepath.Join(rootDir, "contrib/cmd/runc-dmz/runc-dmz.c")).CombinedOutput()
+	if err != nil {
+		panic(fmt.Errorf("make runc-dmz error %w (output: %s)", err, dmzMake))
+	}
+}
+
+func getExeDir() string {
+	exePath, err := os.Executable()
+	if err != nil {
+		panic(err)
+	}
+	res, _ := filepath.EvalSymlinks(filepath.Dir(exePath))
+	return res
+}
 
 func TestNsenterValidPaths(t *testing.T) {
 	args := []string{"nsenter-exec"}
@@ -24,6 +49,7 @@ func TestNsenterValidPaths(t *testing.T) {
 		// join pid ns of the current process
 		fmt.Sprintf("pid:/proc/%d/ns/pid", os.Getpid()),
 	}
+	fmt.Printf("=========os.Args[0] %s\n", os.Args[0])
 	cmd := &exec.Cmd{
 		Path:       os.Args[0],
 		Args:       args,

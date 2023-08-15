@@ -27,6 +27,16 @@ func init() {
 	// Figure out path to get-images.sh. Note it won't work
 	// in case the compiled test binary is moved elsewhere.
 	_, ex, _, _ := runtime.Caller(0)
+	// make and copy runc-dmg
+	rootDir, err := filepath.Abs(filepath.Join(filepath.Dir(ex), "..", ".."))
+	if err != nil {
+		panic(err)
+	}
+	nowPath := getExeDir()
+	dmzMake, err := exec.Command("gcc", "-o", filepath.Join(nowPath, "integration.test-dmz"), "-static", filepath.Join(rootDir, "contrib/cmd/runc-dmz/runc-dmz.c")).CombinedOutput()
+	if err != nil {
+		panic(fmt.Errorf("make runc-dmz error %w (output: %s)", err, dmzMake))
+	}
 	getImages, err := filepath.Abs(filepath.Join(filepath.Dir(ex), "..", "..", "tests", "integration", "get-images.sh"))
 	if err != nil {
 		panic(err)
@@ -46,6 +56,15 @@ func init() {
 	if _, err := os.Stat(busyboxTar); err != nil {
 		panic(err)
 	}
+}
+
+func getExeDir() string {
+	exePath, err := os.Executable()
+	if err != nil {
+		panic(err)
+	}
+	res, _ := filepath.EvalSymlinks(filepath.Dir(exePath))
+	return res
 }
 
 func ptrInt(v int) *int {
