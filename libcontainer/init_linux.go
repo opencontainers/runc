@@ -186,6 +186,12 @@ func startInitialization() (retErr error) {
 		return err
 	}
 
+	// Get runc-dmz fds.
+	dmzFd, err := strconv.Atoi(os.Getenv("_LIBCONTAINER_DMZFD"))
+	if err != nil {
+		return fmt.Errorf("dmzFd error: %w", err)
+	}
+
 	// clear the current process's environment to clean any libcontainer
 	// specific env vars.
 	os.Clearenv()
@@ -201,10 +207,10 @@ func startInitialization() (retErr error) {
 	}()
 
 	// If init succeeds, it will not return, hence none of the defers will be called.
-	return containerInit(it, pipe, consoleSocket, fifofd, logFD, mountFds{sourceFds: mountSrcFds, idmapFds: idmapFds})
+	return containerInit(it, pipe, consoleSocket, fifofd, logFD, dmzFd, mountFds{sourceFds: mountSrcFds, idmapFds: idmapFds})
 }
 
-func containerInit(t initType, pipe *os.File, consoleSocket *os.File, fifoFd, logFd int, mountFds mountFds) error {
+func containerInit(t initType, pipe *os.File, consoleSocket *os.File, fifoFd, logFd, dmzFd int, mountFds mountFds) error {
 	var config *initConfig
 	if err := json.NewDecoder(pipe).Decode(&config); err != nil {
 		return err
@@ -212,6 +218,7 @@ func containerInit(t initType, pipe *os.File, consoleSocket *os.File, fifoFd, lo
 	if err := populateProcessEnvironment(config.Env); err != nil {
 		return err
 	}
+
 	switch t {
 	case initSetns:
 		// mount and idmap fds must be nil in this case. We don't mount while doing runc exec.
@@ -224,6 +231,7 @@ func containerInit(t initType, pipe *os.File, consoleSocket *os.File, fifoFd, lo
 			consoleSocket: consoleSocket,
 			config:        config,
 			logFd:         logFd,
+			dmzFd:         dmzFd,
 		}
 		return i.Init()
 	case initStandard:
@@ -233,6 +241,7 @@ func containerInit(t initType, pipe *os.File, consoleSocket *os.File, fifoFd, lo
 			parentPid:     unix.Getppid(),
 			config:        config,
 			fifoFd:        fifoFd,
+			dmzFd:         dmzFd,
 			logFd:         logFd,
 			mountFds:      mountFds,
 		}

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"strconv"
 
 	"github.com/opencontainers/selinux/go-selinux"
@@ -23,6 +24,7 @@ type linuxSetnsInit struct {
 	consoleSocket *os.File
 	config        *initConfig
 	logFd         int
+	dmzFd         int
 }
 
 func (l *linuxSetnsInit) getSessionRingName() string {
@@ -100,10 +102,16 @@ func (l *linuxSetnsInit) Init() error {
 		}
 	}
 	logrus.Debugf("setns_init: about to exec")
+
 	// Close the log pipe fd so the parent's ForwardLogs can exit.
 	if err := unix.Close(l.logFd); err != nil {
 		return &os.PathError{Op: "close log pipe", Path: "fd " + strconv.Itoa(l.logFd), Err: err}
 	}
 
-	return system.Execv(l.config.Args[0], l.config.Args[0:], os.Environ())
+	entryPoint, err := exec.LookPath(l.config.Args[0])
+	if err != nil {
+		return err
+	}
+	dmzArgs := []string{entryPoint}
+	return system.Fexecve(uintptr(l.dmzFd), append(dmzArgs, l.config.Args[1:]...), os.Environ())
 }

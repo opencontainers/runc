@@ -6,6 +6,7 @@ package system
 import (
 	"os"
 	"os/exec"
+	"syscall"
 	"unsafe"
 
 	"golang.org/x/sys/unix"
@@ -47,6 +48,39 @@ func Exec(cmd string, args []string, env []string) error {
 			return &os.PathError{Op: "exec", Path: cmd, Err: err}
 		}
 	}
+}
+
+func Execveat(fd uintptr, pathname string, args []string, env []string, flags int) error {
+	pathnamep, err := syscall.BytePtrFromString(pathname)
+	if err != nil {
+		return err
+	}
+
+	argv, err := syscall.SlicePtrFromStrings(args)
+	if err != nil {
+		return err
+	}
+
+	envs, err := syscall.SlicePtrFromStrings(env)
+	if err != nil {
+		return err
+	}
+
+	_, _, errno := syscall.Syscall6(
+		unix.SYS_EXECVEAT,
+		fd,
+		uintptr(unsafe.Pointer(pathnamep)),
+		uintptr(unsafe.Pointer(&argv[0])),
+		uintptr(unsafe.Pointer(&envs[0])),
+		uintptr(flags),
+		0,
+	)
+
+	return errno
+}
+
+func Fexecve(fd uintptr, args []string, env []string) error {
+	return Execveat(fd, "", args, env, unix.AT_EMPTY_PATH)
 }
 
 func SetParentDeathSignal(sig uintptr) error {

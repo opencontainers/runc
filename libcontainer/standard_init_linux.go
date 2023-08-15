@@ -24,6 +24,7 @@ type linuxStandardInit struct {
 	consoleSocket *os.File
 	parentPid     int
 	fifoFd        int
+	dmzFd         int
 	logFd         int
 	mountFds      mountFds
 	config        *initConfig
@@ -262,5 +263,10 @@ func (l *linuxStandardInit) Init() error {
 		return err
 	}
 
-	return system.Exec(name, l.config.Args[0:], os.Environ())
+	entryPoint, err := exec.LookPath(l.config.Args[0])
+	if err != nil {
+		return err
+	}
+	dmzArgs := []string{entryPoint}
+	return system.Fexecve(uintptr(l.dmzFd), append(dmzArgs, l.config.Args[1:]...), os.Environ())
 }

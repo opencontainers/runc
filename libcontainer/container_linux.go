@@ -492,6 +492,7 @@ func (c *Container) commandTemplate(p *Process, childInitPipe *os.File, childLog
 	cmd.Env = append(cmd.Env,
 		"_LIBCONTAINER_INITPIPE="+strconv.Itoa(stdioFdCount+len(cmd.ExtraFiles)-1),
 		"_LIBCONTAINER_STATEDIR="+c.root,
+		"_LIBCONTAINER_DMZFD=-1",
 	)
 
 	cmd.ExtraFiles = append(cmd.ExtraFiles, childLogPipe)
