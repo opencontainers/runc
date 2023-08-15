@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"strconv"
 
 	"github.com/opencontainers/selinux/go-selinux"
@@ -23,6 +24,7 @@ type linuxSetnsInit struct {
 	consoleSocket *os.File
 	config        *initConfig
 	logFd         int
+	dmzExe        *os.File
 }
 
 func (l *linuxSetnsInit) getSessionRingName() string {
@@ -85,6 +87,18 @@ func (l *linuxSetnsInit) Init() error {
 	if err := apparmor.ApplyProfile(l.config.AppArmorProfile); err != nil {
 		return err
 	}
+	// Check for the arg early to make sure it exists.
+	name, err := exec.LookPath(l.config.Args[0])
+	if err != nil {
+		return err
+	}
+	// exec.LookPath in Go < 1.20 might return no error for an executable
+	// residing on a file system mounted with noexec flag, so perform this
+	// extra check now while we can still return a proper error.
+	// TODO: remove this once go < 1.20 is not supported.
+	if err := eaccess(name); err != nil {
+		return &os.PathError{Op: "eaccess", Path: name, Err: err}
+	}
 	// Set seccomp as close to execve as possible, so as few syscalls take
 	// place afterward (reducing the amount of syscalls that users need to
 	// enable in their seccomp profiles).
@@ -98,10 +112,15 @@ func (l *linuxSetnsInit) Init() error {
 		}
 	}
 	logrus.Debugf("setns_init: about to exec")
+
 	// Close the log pipe fd so the parent's ForwardLogs can exit.
 	if err := unix.Close(l.logFd); err != nil {
 		return &os.PathError{Op: "close log pipe", Path: "fd " + strconv.Itoa(l.logFd), Err: err}
 	}
 
-	return system.Execv(l.config.Args[0], l.config.Args[0:], os.Environ())
+	if l.dmzExe != nil {
+		l.config.Args[0] = name
+		return system.Fexecve(l.dmzExe.Fd(), l.config.Args, os.Environ())
+	}
+	return system.Exec(name, l.config.Args, os.Environ())
 }

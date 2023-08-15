@@ -25,6 +25,7 @@ type linuxStandardInit struct {
 	parentPid     int
 	fifoFd        int
 	logFd         int
+	dmzExe        *os.File
 	mountFds      mountFds
 	config        *initConfig
 }
@@ -262,5 +263,9 @@ func (l *linuxStandardInit) Init() error {
 		return err
 	}
 
-	return system.Exec(name, l.config.Args[0:], os.Environ())
+	if l.dmzExe != nil {
+		l.config.Args[0] = name
+		return system.Fexecve(l.dmzExe.Fd(), l.config.Args, os.Environ())
+	}
+	return system.Exec(name, l.config.Args, os.Environ())
 }
