@@ -3,7 +3,6 @@ package libcontainer
 import (
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -64,7 +63,7 @@ func needsSetupDev(config *configs.Config) bool {
 // prepareRootfs sets up the devices, mount points, and filesystems for use
 // inside a new mount namespace. It doesn't set anything as ro. You must call
 // finalizeRootfs after this function to finish setting up the rootfs.
-func prepareRootfs(pipe io.ReadWriter, iConfig *initConfig, mountFds mountFds) (err error) {
+func prepareRootfs(pipe *os.File, iConfig *initConfig, mountFds mountFds) (err error) {
 	config := iConfig.Config
 	if err := prepareRoot(config); err != nil {
 		return fmt.Errorf("error preparing rootfs: %w", err)
@@ -1106,7 +1105,7 @@ func writeSystemProperty(key, value string) error {
 func remount(m mountEntry, rootfs string, noMountFallback bool) error {
 	return utils.WithProcfd(rootfs, m.Destination, func(dstFD string) error {
 		flags := uintptr(m.Flags | unix.MS_REMOUNT)
-		err := mountViaFDs(m.Source, m.srcFD, m.Destination, dstFD, m.Device, flags, "")
+		err := mountViaFDs("", nil, m.Destination, dstFD, m.Device, flags, "")
 		if err == nil {
 			return nil
 		}
@@ -1130,7 +1129,7 @@ func remount(m mountEntry, rootfs string, noMountFallback bool) error {
 		}
 		// ... and retry the mount with flags found above.
 		flags |= uintptr(int(s.Flags) & checkflags)
-		return mountViaFDs(m.Source, m.srcFD, m.Destination, dstFD, m.Device, flags, "")
+		return mountViaFDs("", nil, m.Destination, dstFD, m.Device, flags, "")
 	})
 }
 

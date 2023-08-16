@@ -1171,7 +1171,7 @@ void nsexec(void)
 			 * some old kernel versions where clone(CLONE_PARENT | CLONE_NEWPID)
 			 * was broken, so we'll just do it the long way anyway.
 			 */
-			try_unshare(config.cloneflags & ~CLONE_NEWCGROUP, "remaining namespaces (except cgroupns)");
+			try_unshare(config.cloneflags, "remaining namespaces");
 			update_timens_offsets(config.timensoffset, config.timensoffset_len);
 
 			/* Ask our parent to send the mount sources fds. */
@@ -1300,10 +1300,6 @@ void nsexec(void)
 			if (!config.is_rootless_euid && config.is_setgroup) {
 				if (setgroups(0, NULL) < 0)
 					bail("setgroups failed");
-			}
-
-			if (config.cloneflags & CLONE_NEWCGROUP) {
-				try_unshare(CLONE_NEWCGROUP, "cgroup namespace");
 			}
 
 			write_log(DEBUG, "signal completion to stage-0");

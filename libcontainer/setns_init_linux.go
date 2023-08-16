@@ -75,7 +75,6 @@ func (l *linuxSetnsInit) Init() error {
 		if err != nil {
 			return err
 		}
-
 		if err := syncParentSeccomp(l.pipe, seccompFd); err != nil {
 			return err
 		}
@@ -94,7 +93,6 @@ func (l *linuxSetnsInit) Init() error {
 		if err != nil {
 			return fmt.Errorf("unable to init seccomp: %w", err)
 		}
-
 		if err := syncParentSeccomp(l.pipe, seccompFd); err != nil {
 			return err
 		}
