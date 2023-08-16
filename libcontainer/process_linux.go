@@ -451,11 +451,8 @@ func (p *initProcess) start() (retErr error) {
 	if err := p.sendConfig(); err != nil {
 		return fmt.Errorf("error sending config to init process: %w", err)
 	}
-	var (
-		sentRun    bool
-		sentResume bool
-	)
 
+	var seenProcReady bool
 	ierr := parseSync(p.messageSockPair.parent, func(sync *syncT) error {
 		switch sync.Type {
 		case procSeccomp:
@@ -494,6 +491,7 @@ func (p *initProcess) start() (retErr error) {
 				return err
 			}
 		case procReady:
+			seenProcReady = true
 			// set rlimits, this has to be done here because we lose permissions
 			// to raise the limits once we enter a user-namespace
 			if err := setupRlimits(p.config.Rlimits, p.pid()); err != nil {
@@ -555,7 +553,6 @@ func (p *initProcess) start() (retErr error) {
 			if err := writeSync(p.messageSockPair.parent, procRun); err != nil {
 				return err
 			}
-			sentRun = true
 		case procHooks:
 			// Setup cgroup before prestart hook, so that the prestart hook could apply cgroup permissions.
 			if err := p.manager.Set(p.config.Config.Cgroups.Resources); err != nil {
@@ -587,7 +584,6 @@ func (p *initProcess) start() (retErr error) {
 			if err := writeSync(p.messageSockPair.parent, procResume); err != nil {
 				return err
 			}
-			sentResume = true
 		default:
 			return errors.New("invalid JSON payload from child")
 		}
@@ -595,20 +591,14 @@ func (p *initProcess) start() (retErr error) {
 		return nil
 	})
 
-	if !sentRun {
-		return fmt.Errorf("error during container init: %w", ierr)
-	}
-	if p.config.Config.Namespaces.Contains(configs.NEWNS) && !sentResume {
-		return errors.New("could not synchronise after executing prestart and CreateRuntime hooks with container process")
-	}
-	if err := unix.Shutdown(int(p.messageSockPair.parent.Fd()), unix.SHUT_WR); err != nil {
+	if err := unix.Shutdown(int(p.messageSockPair.parent.Fd()), unix.SHUT_WR); err != nil && ierr == nil {
 		return &os.PathError{Op: "shutdown", Path: "(init pipe)", Err: err}
 	}
-
-	// Must be done after Shutdown so the child will exit and we can wait for it.
+	if !seenProcReady && ierr == nil {
+		ierr = errors.New("procReady not received")
+	}
 	if ierr != nil {
-		_, _ = p.wait()
-		return ierr
+		return fmt.Errorf("error during container init: %w", ierr)
 	}
 	return nil
 }
