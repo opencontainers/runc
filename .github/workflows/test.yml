@@ -19,6 +19,7 @@ env:
 
 jobs:
   test:
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -113,6 +114,7 @@ jobs:
   # We are not interested in providing official support for i386.
   cross-i386:
     runs-on: ubuntu-22.04
+    timeout-minutes: 15
 
     steps:
 
