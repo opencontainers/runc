@@ -20,7 +20,7 @@ import (
 )
 
 type linuxStandardInit struct {
-	pipe          *os.File
+	pipe          *syncSocket
 	consoleSocket *os.File
 	parentPid     int
 	fifoFd        int
@@ -231,6 +231,7 @@ func (l *linuxStandardInit) Init() error {
 	_ = l.pipe.Close()
 
 	// Close the log pipe fd so the parent's ForwardLogs can exit.
+	logrus.Debugf("init: about to wait on exec fifo")
 	if err := unix.Close(l.logFd); err != nil {
 		return &os.PathError{Op: "close log pipe", Path: "fd " + strconv.Itoa(l.logFd), Err: err}
 	}

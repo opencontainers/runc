@@ -488,17 +488,10 @@ func isDmzBinarySafe(c *configs.Config) bool {
 }
 
 func (c *Container) newParentProcess(p *Process) (parentProcess, error) {
-	parentInitPipe, childInitPipe, err := utils.NewSockPair("init")
+	comm, err := newProcessComm()
 	if err != nil {
-		return nil, fmt.Errorf("unable to create init pipe: %w", err)
+		return nil, err
 	}
-	messageSockPair := filePair{parentInitPipe, childInitPipe}
-
-	parentLogPipe, childLogPipe, err := os.Pipe()
-	if err != nil {
-		return nil, fmt.Errorf("unable to create log pipe: %w", err)
-	}
-	logFilePair := filePair{parentLogPipe, childLogPipe}
 
 	// Make sure we use a new safe copy of /proc/self/exe or the runc-dmz
 	// binary each time this is called, to make sure that if a container
@@ -569,10 +562,15 @@ func (c *Container) newParentProcess(p *Process) (parentProcess, error) {
 			"_LIBCONTAINER_CONSOLE="+strconv.Itoa(stdioFdCount+len(cmd.ExtraFiles)-1),
 		)
 	}
-	cmd.ExtraFiles = append(cmd.ExtraFiles, childInitPipe)
+	cmd.Env = append(cmd.Env, "_LIBCONTAINER_STATEDIR="+c.root)
+
+	cmd.ExtraFiles = append(cmd.ExtraFiles, comm.initSockChild)
 	cmd.Env = append(cmd.Env,
 		"_LIBCONTAINER_INITPIPE="+strconv.Itoa(stdioFdCount+len(cmd.ExtraFiles)-1),
-		"_LIBCONTAINER_STATEDIR="+c.root,
+	)
+	cmd.ExtraFiles = append(cmd.ExtraFiles, comm.syncSockChild.File())
+	cmd.Env = append(cmd.Env,
+		"_LIBCONTAINER_SYNCPIPE="+strconv.Itoa(stdioFdCount+len(cmd.ExtraFiles)-1),
 	)
 
 	if dmzExe != nil {
@@ -581,7 +579,7 @@ func (c *Container) newParentProcess(p *Process) (parentProcess, error) {
 			"_LIBCONTAINER_DMZEXEFD="+strconv.Itoa(stdioFdCount+len(cmd.ExtraFiles)-1))
 	}
 
-	cmd.ExtraFiles = append(cmd.ExtraFiles, childLogPipe)
+	cmd.ExtraFiles = append(cmd.ExtraFiles, comm.logPipeChild)
 	cmd.Env = append(cmd.Env,
 		"_LIBCONTAINER_LOGPIPE="+strconv.Itoa(stdioFdCount+len(cmd.ExtraFiles)-1))
 	if p.LogLevel != "" {
@@ -617,9 +615,9 @@ func (c *Container) newParentProcess(p *Process) (parentProcess, error) {
 		if err := c.includeExecFifo(cmd); err != nil {
 			return nil, fmt.Errorf("unable to setup exec fifo: %w", err)
 		}
-		return c.newInitProcess(p, cmd, messageSockPair, logFilePair)
+		return c.newInitProcess(p, cmd, comm)
 	}
-	return c.newSetnsProcess(p, cmd, messageSockPair, logFilePair)
+	return c.newSetnsProcess(p, cmd, comm)
 }
 
 // shouldSendMountSources says whether the child process must setup bind mounts with
@@ -681,27 +679,27 @@ func (c *Container) shouldSendIdmapSources() bool {
 	return false
 }
 
-func (c *Container) sendMountSources(cmd *exec.Cmd, messageSockPair filePair) error {
+func (c *Container) sendMountSources(cmd *exec.Cmd, comm *processComm) error {
 	if !c.shouldSendMountSources() {
 		return nil
 	}
 
-	return c.sendFdsSources(cmd, messageSockPair, "_LIBCONTAINER_MOUNT_FDS", func(m *configs.Mount) bool {
+	return c.sendFdsSources(cmd, comm, "_LIBCONTAINER_MOUNT_FDS", func(m *configs.Mount) bool {
 		return m.IsBind() && !m.IsIDMapped()
 	})
 }
 
-func (c *Container) sendIdmapSources(cmd *exec.Cmd, messageSockPair filePair) error {
+func (c *Container) sendIdmapSources(cmd *exec.Cmd, comm *processComm) error {
 	if !c.shouldSendIdmapSources() {
 		return nil
 	}
 
-	return c.sendFdsSources(cmd, messageSockPair, "_LIBCONTAINER_IDMAP_FDS", func(m *configs.Mount) bool {
+	return c.sendFdsSources(cmd, comm, "_LIBCONTAINER_IDMAP_FDS", func(m *configs.Mount) bool {
 		return m.IsBind() && m.IsIDMapped()
 	})
 }
 
-func (c *Container) sendFdsSources(cmd *exec.Cmd, messageSockPair filePair, envVar string, condition func(*configs.Mount) bool) error {
+func (c *Container) sendFdsSources(cmd *exec.Cmd, comm *processComm, envVar string, condition func(*configs.Mount) bool) error {
 	// Elements on these slices will be paired with mounts (see StartInitialization() and
 	// prepareRootfs()). These slices MUST have the same size as c.config.Mounts.
 	fds := make([]int, len(c.config.Mounts))
@@ -712,11 +710,12 @@ func (c *Container) sendFdsSources(cmd *exec.Cmd, messageSockPair filePair, envV
 			continue
 		}
 
-		// The fd passed here will not be used: nsexec.c will overwrite it with dup3(). We just need
-		// to allocate a fd so that we know the number to pass in the environment variable. The fd
-		// must not be closed before cmd.Start(), so we reuse messageSockPair.child because the
-		// lifecycle of that fd is already taken care of.
-		cmd.ExtraFiles = append(cmd.ExtraFiles, messageSockPair.child)
+		// The fd passed here will not be used: nsexec.c will overwrite it with
+		// dup3(). We just need to allocate a fd so that we know the number to
+		// pass in the environment variable. The fd must not be closed before
+		// cmd.Start(), so we reuse initSockChild because the lifecycle of that
+		// fd is already taken care of.
+		cmd.ExtraFiles = append(cmd.ExtraFiles, comm.initSockChild)
 		fds[i] = stdioFdCount + len(cmd.ExtraFiles) - 1
 	}
 	fdsJSON, err := json.Marshal(fds)
@@ -727,7 +726,7 @@ func (c *Container) sendFdsSources(cmd *exec.Cmd, messageSockPair filePair, envV
 	return nil
 }
 
-func (c *Container) newInitProcess(p *Process, cmd *exec.Cmd, messageSockPair, logFilePair filePair) (*initProcess, error) {
+func (c *Container) newInitProcess(p *Process, cmd *exec.Cmd, comm *processComm) (*initProcess, error) {
 	cmd.Env = append(cmd.Env, "_LIBCONTAINER_INITTYPE="+string(initStandard))
 	nsMaps := make(map[configs.NamespaceType]string)
 	for _, ns := range c.config.Namespaces {
@@ -739,17 +738,16 @@ func (c *Container) newInitProcess(p *Process, cmd *exec.Cmd, messageSockPair, l
 	if err != nil {
 		return nil, err
 	}
-	if err := c.sendMountSources(cmd, messageSockPair); err != nil {
+	if err := c.sendMountSources(cmd, comm); err != nil {
 		return nil, err
 	}
-	if err := c.sendIdmapSources(cmd, messageSockPair); err != nil {
+	if err := c.sendIdmapSources(cmd, comm); err != nil {
 		return nil, err
 	}
 
 	init := &initProcess{
 		cmd:             cmd,
-		messageSockPair: messageSockPair,
-		logFilePair:     logFilePair,
+		comm:            comm,
 		manager:         c.cgroupManager,
 		intelRdtManager: c.intelRdtManager,
 		config:          c.newInitConfig(p),
@@ -761,7 +759,7 @@ func (c *Container) newInitProcess(p *Process, cmd *exec.Cmd, messageSockPair, l
 	return init, nil
 }
 
-func (c *Container) newSetnsProcess(p *Process, cmd *exec.Cmd, messageSockPair, logFilePair filePair) (*setnsProcess, error) {
+func (c *Container) newSetnsProcess(p *Process, cmd *exec.Cmd, comm *processComm) (*setnsProcess, error) {
 	cmd.Env = append(cmd.Env, "_LIBCONTAINER_INITTYPE="+string(initSetns))
 	state, err := c.currentState()
 	if err != nil {
@@ -778,8 +776,7 @@ func (c *Container) newSetnsProcess(p *Process, cmd *exec.Cmd, messageSockPair, 
 		cgroupPaths:     state.CgroupPaths,
 		rootlessCgroups: c.config.RootlessCgroups,
 		intelRdtPath:    state.IntelRdtPath,
-		messageSockPair: messageSockPair,
-		logFilePair:     logFilePair,
+		comm:            comm,
 		manager:         c.cgroupManager,
 		config:          c.newInitConfig(p),
 		process:         p,

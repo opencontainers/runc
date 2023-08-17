@@ -20,7 +20,7 @@ import (
 // linuxSetnsInit performs the container's initialization for running a new process
 // inside an existing container.
 type linuxSetnsInit struct {
-	pipe          *os.File
+	pipe          *syncSocket
 	consoleSocket *os.File
 	config        *initConfig
 	logFd         int
@@ -111,9 +111,9 @@ func (l *linuxSetnsInit) Init() error {
 			return err
 		}
 	}
-	logrus.Debugf("setns_init: about to exec")
 
 	// Close the log pipe fd so the parent's ForwardLogs can exit.
+	logrus.Debugf("setns_init: about to exec")
 	if err := unix.Close(l.logFd); err != nil {
 		return &os.PathError{Op: "close log pipe", Path: "fd " + strconv.Itoa(l.logFd), Err: err}
 	}
