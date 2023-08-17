@@ -23,7 +23,7 @@ type syncType string
 //	                    --- no return synchronisation
 //
 //	procHooks --> [run hooks]
-//	          <-- procResume
+//	          <-- procHooksDone
 //
 //	procReady --> [final setup]
 //	          <-- procRun
@@ -35,7 +35,7 @@ const (
 	procReady       syncType = "procReady"
 	procRun         syncType = "procRun"
 	procHooks       syncType = "procHooks"
-	procResume      syncType = "procResume"
+	procHooksDone   syncType = "procHooksDone"
 	procSeccomp     syncType = "procSeccomp"
 	procSeccompDone syncType = "procSeccompDone"
 )

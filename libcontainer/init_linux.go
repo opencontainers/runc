@@ -413,7 +413,7 @@ func syncParentHooks(pipe *os.File) error {
 		return err
 	}
 	// Wait for parent to give the all-clear.
-	return readSync(pipe, procResume)
+	return readSync(pipe, procHooksDone)
 }
 
 // syncParentSeccomp sends the fd associated with the seccomp file descriptor

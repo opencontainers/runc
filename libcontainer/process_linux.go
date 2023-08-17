@@ -568,7 +568,7 @@ func (p *initProcess) start() (retErr error) {
 				}
 			}
 			// Sync with child.
-			if err := writeSync(p.messageSockPair.parent, procResume); err != nil {
+			if err := writeSync(p.messageSockPair.parent, procHooksDone); err != nil {
 				return err
 			}
 		default:
