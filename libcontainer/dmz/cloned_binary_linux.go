@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
@@ -18,6 +19,23 @@ var (
 	_ SealFunc = sealMemfd
 	_ SealFunc = sealFile
 )
+
+func isExecutable(f *os.File) bool {
+	if err := unix.Faccessat(int(f.Fd()), "", unix.X_OK, unix.AT_EACCESS|unix.AT_EMPTY_PATH); err == nil {
+		return true
+	} else if err == unix.EACCES {
+		return false
+	}
+	path := "/proc/self/fd/" + strconv.Itoa(int(f.Fd()))
+	if err := unix.Access(path, unix.X_OK); err == nil {
+		return true
+	} else if err == unix.EACCES {
+		return false
+	}
+	// Cannot check -- assume it's executable (if not, exec will fail).
+	logrus.Debugf("cannot do X_OK check on binary %s -- assuming it's executable", f.Name())
+	return true
+}
 
 const baseMemfdSeals = unix.F_SEAL_SEAL | unix.F_SEAL_SHRINK | unix.F_SEAL_GROW | unix.F_SEAL_WRITE
 
@@ -106,15 +124,46 @@ func getSealableFile(comment, tmpDir string) (file *os.File, sealFn SealFunc, er
 		return
 	}
 	logrus.Debugf("memfd cloned binary failed, falling back to O_TMPFILE: %v", err)
+
+	// The tmpDir here (c.root) might be mounted noexec, so we need a couple of
+	// fallbacks to try. It's possible that none of these are writable and
+	// executable, in which case there's nothing we can practically do (other
+	// than mounting our own executable tmpfs, which would have its own
+	// issues).
+	tmpDirs := []string{
+		tmpDir,
+		os.TempDir(),
+		"/tmp",
+		".",
+		"/bin",
+		"/",
+	}
+
 	// Try to fallback to O_TMPFILE (supported since Linux 3.11).
-	file, sealFn, err = otmpfile(tmpDir)
-	if err == nil {
+	for _, dir := range tmpDirs {
+		file, sealFn, err = otmpfile(dir)
+		if err != nil {
+			continue
+		}
+		if !isExecutable(file) {
+			logrus.Debugf("tmpdir %s is noexec -- trying a different tmpdir", dir)
+			file.Close()
+			continue
+		}
 		return
 	}
 	logrus.Debugf("O_TMPFILE cloned binary failed, falling back to mktemp(): %v", err)
 	// Finally, try a classic unlinked temporary file.
-	file, sealFn, err = mktemp(tmpDir)
-	if err == nil {
+	for _, dir := range tmpDirs {
+		file, sealFn, err = mktemp(dir)
+		if err != nil {
+			continue
+		}
+		if !isExecutable(file) {
+			logrus.Debugf("tmpdir %s is noexec -- trying a different tmpdir", dir)
+			file.Close()
+			continue
+		}
 		return
 	}
 	return nil, nil, fmt.Errorf("could not create sealable file for cloned binary: %w", err)
