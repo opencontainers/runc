@@ -58,6 +58,8 @@ function teardown() {
 	# Enable CAP_DAC_OVERRIDE.
 	update_config '	  .process.capabilities.bounding += ["CAP_DAC_OVERRIDE"]
 			| .process.capabilities.effective += ["CAP_DAC_OVERRIDE"]
+			| .process.capabilities.inheritable += ["CAP_DAC_OVERRIDE"]
+			| .process.capabilities.ambient += ["CAP_DAC_OVERRIDE"]
 			| .process.capabilities.permitted += ["CAP_DAC_OVERRIDE"]'
 
 	runc run test_busybox
