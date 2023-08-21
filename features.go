@@ -9,7 +9,6 @@ import (
 	"github.com/opencontainers/runc/libcontainer/seccomp"
 	"github.com/opencontainers/runc/libcontainer/specconv"
 	"github.com/opencontainers/runc/types/features"
-	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/urfave/cli"
 )
 
@@ -31,7 +30,11 @@ var featuresCommand = cli.Command{
 
 		feat := features.Features{
 			OCIVersionMin: "1.0.0",
-			OCIVersionMax: specs.Version,
+			// We usually use specs.Version here, but the runtime-spec version we are vendoring
+			// has a bug regarding the use of semver. To workaround it, we just hardcode
+			// this in for the 1.1 branch, as we don't expect this to change.
+			// See: https://github.com/opencontainers/runtime-spec/issues/1220
+			OCIVersionMax: "1.0.3-dev",
 			Annotations: map[string]string{
 				features.AnnotationRuncVersion:           version,
 				features.AnnotationRuncCommit:            gitCommit,
