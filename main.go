@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/opencontainers/runc/libcontainer/seccomp"
 	"github.com/opencontainers/runtime-spec/specs-go"
@@ -53,6 +54,7 @@ value for "bundle" is the current directory.`
 )
 
 func main() {
+	syscall.Umask(0)
 	app := cli.NewApp()
 	app.Name = "runc"
 	app.Usage = usage
