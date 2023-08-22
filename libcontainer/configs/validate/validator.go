@@ -275,6 +275,26 @@ func cgroupsCheck(config *configs.Config) error {
 	return nil
 }
 
+func checkBindOptions(m *configs.Mount) error {
+	if !m.IsBind() {
+		return nil
+	}
+	// We must reject bind-mounts that also have filesystem-specific mount
+	// options, because the kernel will completely ignore these flags and we
+	// cannot set them per-mountpoint.
+	//
+	// It should be noted that (due to how the kernel caches superblocks), data
+	// options could also silently ignored for other filesystems even when
+	// doing a fresh mount, but there is no real way to avoid this (and it
+	// matches how everything else works). There have been proposals to make it
+	// possible for userspace to detect this caching, but this wouldn't help
+	// runc because the behaviour wouldn't even be desirable for most users.
+	if m.Data != "" {
+		return errors.New("bind mounts cannot have any filesystem-specific options applied")
+	}
+	return nil
+}
+
 func checkIDMapMounts(config *configs.Config, m *configs.Mount) error {
 	if !m.IsIDMapped() {
 		return nil
@@ -313,6 +333,9 @@ func mountsWarn(config *configs.Config) error {
 
 func mountsStrict(config *configs.Config) error {
 	for _, m := range config.Mounts {
+		if err := checkBindOptions(m); err != nil {
+			return fmt.Errorf("invalid mount %+v: %w", m, err)
+		}
 		if err := checkIDMapMounts(config, m); err != nil {
 			return fmt.Errorf("invalid mount %+v: %w", m, err)
 		}
