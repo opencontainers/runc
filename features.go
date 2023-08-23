@@ -58,6 +58,11 @@ var featuresCommand = cli.Command{
 				IntelRdt: &features.IntelRdt{
 					Enabled: &tru,
 				},
+				MountExtensions: &features.MountExtensions{
+					IDMap: &features.IDMap{
+						Enabled: &tru,
+					},
+				},
 			},
 		}
 
