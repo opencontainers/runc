@@ -13,7 +13,7 @@ set -o pipefail
 set -o errexit
 set -x
 
-# specifiy go version
+# specify go version
 apt-get update && apt-get install -y wget
 cd $SRC
 
@@ -27,6 +27,5 @@ mv tmp-go/go/* /root/.go/
 cd $SRC/runc
 go mod tidy
 
-compile_go_fuzzer github.com/opencontainers/runc/libcontainer/userns FuzzUIDMap id_map_fuzzer linux,gofuzz
 compile_go_fuzzer github.com/opencontainers/runc/libcontainer/user FuzzUser user_fuzzer
 compile_go_fuzzer github.com/opencontainers/runc/libcontainer/configs FuzzUnmarshalJSON configs_fuzzer
