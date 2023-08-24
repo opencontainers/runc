@@ -224,8 +224,10 @@ func (r *runner) run(config *specs.Process) (int, error) {
 		process.ExtraFiles = append(process.ExtraFiles, r.listenFDs...)
 	}
 	baseFd := 3 + len(process.ExtraFiles)
+	procSelfFd, closer := utils.ProcThreadSelf("fd/")
+	defer closer()
 	for i := baseFd; i < baseFd+r.preserveFDs; i++ {
-		_, err = os.Stat("/proc/self/fd/" + strconv.Itoa(i))
+		_, err = os.Stat(filepath.Join(procSelfFd, strconv.Itoa(i)))
 		if err != nil {
 			return -1, fmt.Errorf("unable to stat preserved-fd %d (of %d): %w", i-baseFd, r.preserveFDs, err)
 		}

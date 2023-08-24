@@ -17,6 +17,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/keys"
 	"github.com/opencontainers/runc/libcontainer/seccomp"
 	"github.com/opencontainers/runc/libcontainer/system"
+	"github.com/opencontainers/runc/libcontainer/utils"
 )
 
 type linuxStandardInit struct {
@@ -247,11 +248,13 @@ func (l *linuxStandardInit) Init() error {
 		return &os.PathError{Op: "close log pipe", Path: "fd " + strconv.Itoa(l.logFd), Err: err}
 	}
 
+	fifoPath, closer := utils.ProcThreadSelf("fd/" + strconv.Itoa(l.fifoFd))
+	defer closer()
+
 	// Wait for the FIFO to be opened on the other side before exec-ing the
 	// user process. We open it through /proc/self/fd/$fd, because the fd that
 	// was given to us was an O_PATH fd to the fifo itself. Linux allows us to
 	// re-open an O_PATH fd through /proc.
-	fifoPath := "/proc/self/fd/" + strconv.Itoa(l.fifoFd)
 	fd, err := unix.Open(fifoPath, unix.O_WRONLY|unix.O_CLOEXEC, 0)
 	if err != nil {
 		return &os.PathError{Op: "open exec fifo", Path: fifoPath, Err: err}

@@ -12,6 +12,7 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/userns"
+	"github.com/opencontainers/runc/libcontainer/utils"
 )
 
 // mountSourceType indicates what type of file descriptor is being returned. It
@@ -23,7 +24,7 @@ const (
 	// An open_tree(2)-style file descriptor that needs to be installed using
 	// move_mount(2) to install.
 	mountSourceOpenTree mountSourceType = "open_tree"
-	// A plain file descriptor that can be mounted through /proc/self/fd.
+	// A plain file descriptor that can be mounted through /proc/thread-self/fd.
 	mountSourcePlain mountSourceType = "plain-open"
 )
 
@@ -90,7 +91,7 @@ func mount(source, target, fstype string, flags uintptr, data string) error {
 // will mount it according to the mountSourceType of the file descriptor.
 //
 // The dstFd argument, if non-empty, is expected to be in the form of a path to
-// an opened file descriptor on procfs (i.e. "/proc/self/fd/NN").
+// an opened file descriptor on procfs (i.e. "/proc/thread-self/fd/NN").
 //
 // If a file descriptor is used instead of a source or a target path, the
 // corresponding path is only used to add context to an error in case the mount
@@ -101,19 +102,30 @@ func mountViaFds(source string, srcFile *mountSource, target, dstFd, fstype stri
 		logrus.Debugf("mount source passed along with MS_REMOUNT -- ignoring srcFile")
 		srcFile = nil
 	}
-
 	dst := target
 	if dstFd != "" {
 		dst = dstFd
 	}
 	src := source
+	isMoveMount := srcFile != nil && srcFile.Type == mountSourceOpenTree
 	if srcFile != nil {
-		src = "/proc/self/fd/" + strconv.Itoa(int(srcFile.file.Fd()))
+		// If we're going to use the /proc/thread-self/... path for classic
+		// mount(2), we need to get a safe handle to /proc/thread-self. This
+		// isn't needed for move_mount(2) because in that case the path is just
+		// a dummy string used for error info.
+		fdStr := strconv.Itoa(int(srcFile.file.Fd()))
+		if isMoveMount {
+			src = "/proc/self/fd/" + fdStr
+		} else {
+			var closer utils.ProcThreadSelfCloser
+			src, closer = utils.ProcThreadSelf("fd/" + fdStr)
+			defer closer()
+		}
 	}
 
 	var op string
 	var err error
-	if srcFile != nil && srcFile.Type == mountSourceOpenTree {
+	if isMoveMount {
 		op = "move_mount"
 		err = unix.MoveMount(int(srcFile.file.Fd()), "",
 			unix.AT_FDCWD, dstFd,

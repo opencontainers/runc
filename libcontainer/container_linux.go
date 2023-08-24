@@ -509,14 +509,20 @@ func (c *Container) newParentProcess(p *Process) (parentProcess, error) {
 	if dmz.IsSelfExeCloned() {
 		// /proc/self/exe is already a cloned binary -- no need to do anything
 		logrus.Debug("skipping binary cloning -- /proc/self/exe is already cloned!")
+		// We don't need to use /proc/thread-self here because the exe mm of a
+		// thread-group is guaranteed to be the same for all threads by
+		// definition. This lets us avoid having to do runtime.LockOSThread.
 		exePath = "/proc/self/exe"
 	} else {
 		var err error
 		if isDmzBinarySafe(c.config) {
 			dmzExe, err = dmz.Binary(c.stateDir)
 			if err == nil {
-				// We can use our own executable without cloning if we are using
-				// runc-dmz.
+				// We can use our own executable without cloning if we are
+				// using runc-dmz. We don't need to use /proc/thread-self here
+				// because the exe mm of a thread-group is guaranteed to be the
+				// same for all threads by definition. This lets us avoid
+				// having to do runtime.LockOSThread.
 				exePath = "/proc/self/exe"
 				p.clonedExes = append(p.clonedExes, dmzExe)
 				logrus.Debug("runc-dmz: using runc-dmz") // used for tests

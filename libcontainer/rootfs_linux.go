@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
@@ -44,11 +45,42 @@ type mountEntry struct {
 	srcFile *mountSource
 }
 
-func (m *mountEntry) src() string {
+// srcName is only meant for error messages, it returns a "friendly" name.
+func (m mountEntry) srcName() string {
 	if m.srcFile != nil {
-		return "/proc/self/fd/" + strconv.Itoa(int(m.srcFile.file.Fd()))
+		return m.srcFile.file.Name()
 	}
 	return m.Source
+}
+
+func (m mountEntry) srcStat() (os.FileInfo, *syscall.Stat_t, error) {
+	var (
+		st  os.FileInfo
+		err error
+	)
+	if m.srcFile != nil {
+		st, err = m.srcFile.file.Stat()
+	} else {
+		st, err = os.Stat(m.Source)
+	}
+	if err != nil {
+		return nil, nil, err
+	}
+	return st, st.Sys().(*syscall.Stat_t), nil
+}
+
+func (m mountEntry) srcStatfs() (*unix.Statfs_t, error) {
+	var st unix.Statfs_t
+	if m.srcFile != nil {
+		if err := unix.Fstatfs(int(m.srcFile.file.Fd()), &st); err != nil {
+			return nil, os.NewSyscallError("fstatfs", err)
+		}
+	} else {
+		if err := unix.Statfs(m.Source, &st); err != nil {
+			return nil, &os.PathError{Op: "statfs", Path: m.Source, Err: err}
+		}
+	}
+	return &st, nil
 }
 
 // needsSetupDev returns true if /dev needs to be set up.
@@ -250,8 +282,7 @@ func cleanupTmp(tmpdir string) {
 }
 
 func prepareBindMount(m mountEntry, rootfs string) error {
-	source := m.src()
-	stat, err := os.Stat(source)
+	fi, _, err := m.srcStat()
 	if err != nil {
 		// error out if the source of a bind mount does not exist as we will be
 		// unable to bind anything to it.
@@ -265,14 +296,10 @@ func prepareBindMount(m mountEntry, rootfs string) error {
 	if dest, err = securejoin.SecureJoin(rootfs, m.Destination); err != nil {
 		return err
 	}
-	if err := checkProcMount(rootfs, dest, source); err != nil {
+	if err := checkProcMount(rootfs, dest, m); err != nil {
 		return err
 	}
-	if err := createIfNotExists(dest, stat.IsDir()); err != nil {
-		return err
-	}
-
-	return nil
+	return createIfNotExists(dest, fi.IsDir())
 }
 
 func mountCgroupV1(m *configs.Mount, c *mountConfig) error {
@@ -601,11 +628,11 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 				// that we handle atimes correctly to make sure we error out if
 				// we cannot fulfil the requested mount flags.
 
-				var st unix.Statfs_t
-				if err := unix.Statfs(m.src(), &st); err != nil {
-					return &os.PathError{Op: "statfs", Path: m.src(), Err: err}
+				st, err := m.srcStatfs()
+				if err != nil {
+					return err
 				}
-				srcFlags := statfsToMountFlags(st)
+				srcFlags := statfsToMountFlags(*st)
 				// If the user explicitly request one of the locked flags *not*
 				// be set, we need to return an error to avoid producing mounts
 				// that don't match the user's request.
@@ -661,7 +688,7 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 		}
 		return mountCgroupV1(m.Mount, c)
 	default:
-		if err := checkProcMount(rootfs, dest, m.Source); err != nil {
+		if err := checkProcMount(rootfs, dest, m); err != nil {
 			return err
 		}
 		if err := os.MkdirAll(dest, 0o755); err != nil {
@@ -677,6 +704,9 @@ func getCgroupMounts(m *configs.Mount) ([]*configs.Mount, error) {
 		return nil, err
 	}
 
+	// We don't need to use /proc/thread-self here because runc always runs
+	// with every thread in the same cgroup. This lets us avoid having to do
+	// runtime.LockOSThread.
 	cgroupPaths, err := cgroups.ParseCgroupFile("/proc/self/cgroup")
 	if err != nil {
 		return nil, err
@@ -708,8 +738,8 @@ func getCgroupMounts(m *configs.Mount) ([]*configs.Mount, error) {
 // checkProcMount checks to ensure that the mount destination is not over the top of /proc.
 // dest is required to be an abs path and have any symlinks resolved before calling this function.
 //
-// if source is nil, don't stat the filesystem.  This is used for restore of a checkpoint.
-func checkProcMount(rootfs, dest, source string) error {
+// If m is nil, don't stat the filesystem.  This is used for restore of a checkpoint.
+func checkProcMount(rootfs, dest string, m mountEntry) error {
 	const procPath = "/proc"
 	path, err := filepath.Rel(filepath.Join(rootfs, procPath), dest)
 	if err != nil {
@@ -720,18 +750,12 @@ func checkProcMount(rootfs, dest, source string) error {
 		return nil
 	}
 	if path == "." {
-		// an empty source is pasted on restore
-		if source == "" {
-			return nil
-		}
 		// only allow a mount on-top of proc if it's source is "proc"
-		isproc, err := isProc(source)
+		st, err := m.srcStatfs()
 		if err != nil {
 			return err
 		}
-		// pass if the mount is happening on top of /proc and the source of
-		// the mount is a proc filesystem
-		if isproc {
+		if st.Type == unix.PROC_SUPER_MAGIC {
 			return nil
 		}
 		return fmt.Errorf("%q cannot be mounted because it is not of type proc", dest)
@@ -764,15 +788,10 @@ func checkProcMount(rootfs, dest, source string) error {
 	return fmt.Errorf("%q cannot be mounted because it is inside /proc", dest)
 }
 
-func isProc(path string) (bool, error) {
-	var s unix.Statfs_t
-	if err := unix.Statfs(path, &s); err != nil {
-		return false, &os.PathError{Op: "statfs", Path: path, Err: err}
-	}
-	return s.Type == unix.PROC_SUPER_MAGIC, nil
-}
-
 func setupDevSymlinks(rootfs string) error {
+	// In theory, these should be links to /proc/thread-self, but systems
+	// expect these to be /proc/self and this matches how most distributions
+	// work.
 	links := [][2]string{
 		{"/proc/self/fd", "/dev/fd"},
 		{"/proc/self/fd/0", "/dev/stdin"},

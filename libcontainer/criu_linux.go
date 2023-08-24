@@ -526,6 +526,7 @@ func (c *Container) restoreNetwork(req *criurpc.CriuReq, criuOpts *CriuOpts) {
 // restore using CRIU. This function is inspired from the code in
 // rootfs_linux.go.
 func (c *Container) makeCriuRestoreMountpoints(m *configs.Mount) error {
+	me := mountEntry{Mount: m}
 	switch m.Device {
 	case "cgroup":
 		// No mount point(s) need to be created:
@@ -540,7 +541,7 @@ func (c *Container) makeCriuRestoreMountpoints(m *configs.Mount) error {
 		// The prepareBindMount() function checks if source
 		// exists. So it cannot be used for other filesystem types.
 		// TODO: pass srcFD? Not sure if criu is impacted by issue #2484.
-		if err := prepareBindMount(mountEntry{Mount: m}, c.config.Rootfs); err != nil {
+		if err := prepareBindMount(me, c.config.Rootfs); err != nil {
 			return err
 		}
 	default:
@@ -549,7 +550,7 @@ func (c *Container) makeCriuRestoreMountpoints(m *configs.Mount) error {
 		if err != nil {
 			return err
 		}
-		if err := checkProcMount(c.config.Rootfs, dest, ""); err != nil {
+		if err := checkProcMount(c.config.Rootfs, dest, me); err != nil {
 			return err
 		}
 		if err := os.MkdirAll(dest, 0o755); err != nil {

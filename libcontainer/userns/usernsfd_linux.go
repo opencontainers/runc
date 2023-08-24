@@ -90,6 +90,9 @@ func spawnProc(req Mapping) (*os.Process, error) {
 	// they have privileges over.
 	logrus.Debugf("spawning dummy process for id-mapping %s", req.id())
 	uidMappings, gidMappings := req.toSys()
+	// We don't need to use /proc/thread-self here because the exe mm of a
+	// thread-group is guaranteed to be the same for all threads by definition.
+	// This lets us avoid having to do runtime.LockOSThread.
 	return os.StartProcess("/proc/self/exe", []string{"runc", "--help"}, &os.ProcAttr{
 		Sys: &syscall.SysProcAttr{
 			Cloneflags:                 unix.CLONE_NEWUSER,

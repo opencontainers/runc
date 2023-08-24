@@ -480,6 +480,9 @@ func setupUser(config *initConfig) error {
 		return err
 	}
 
+	// We don't need to use /proc/thread-self here because setgroups is a
+	// per-userns file and thus is global to all threads in a thread-group.
+	// This lets us avoid having to do runtime.LockOSThread.
 	setgroups, err := os.ReadFile("/proc/self/setgroups")
 	if err != nil && !os.IsNotExist(err) {
 		return err
