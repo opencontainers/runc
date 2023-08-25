@@ -43,7 +43,7 @@ func Execv(cmd string, args []string, env []string) error {
 func Exec(cmd string, args []string, env []string) error {
 	for {
 		err := unix.Exec(cmd, args, env)
-		if err != unix.EINTR { //nolint:errorlint // unix errors are bare
+		if err != unix.EINTR {
 			return &os.PathError{Op: "exec", Path: cmd, Err: err}
 		}
 	}

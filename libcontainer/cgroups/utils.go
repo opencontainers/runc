@@ -219,7 +219,7 @@ func PathExists(path string) bool {
 
 func rmdir(path string) error {
 	err := unix.Rmdir(path)
-	if err == nil || err == unix.ENOENT { //nolint:errorlint // unix errors are bare
+	if err == nil || err == unix.ENOENT {
 		return nil
 	}
 	return &os.PathError{Op: "rmdir", Path: path, Err: err}

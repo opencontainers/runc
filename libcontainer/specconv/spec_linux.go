@@ -322,7 +322,6 @@ type CreateOpts struct {
 func getwd() (wd string, err error) {
 	for {
 		wd, err = unix.Getwd()
-		//nolint:errorlint // unix errors are bare
 		if err != unix.EINTR {
 			break
 		}
