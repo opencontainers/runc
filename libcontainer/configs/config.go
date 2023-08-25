@@ -285,6 +285,7 @@ type Capabilities struct {
 	Ambient []string
 }
 
+// Deprecated: use (Hooks).Run instead.
 func (hooks HookList) RunHooks(state *specs.State) error {
 	for i, h := range hooks {
 		if err := h.Run(state); err != nil {
@@ -339,6 +340,18 @@ func (hooks *Hooks) MarshalJSON() ([]byte, error) {
 		"poststart":       serialize((*hooks)[Poststart]),
 		"poststop":        serialize((*hooks)[Poststop]),
 	})
+}
+
+// Run executes all hooks for the given hook name.
+func (hooks Hooks) Run(name HookName, state *specs.State) error {
+	list := hooks[name]
+	for i, h := range list {
+		if err := h.Run(state); err != nil {
+			return fmt.Errorf("error running %s hook #%d: %w", name, i, err)
+		}
+	}
+
+	return nil
 }
 
 type Hook interface {
@@ -401,7 +414,7 @@ func (c Command) Run(s *specs.State) error {
 	go func() {
 		err := cmd.Wait()
 		if err != nil {
-			err = fmt.Errorf("error running hook: %w, stdout: %s, stderr: %s", err, stdout.String(), stderr.String())
+			err = fmt.Errorf("%w, stdout: %s, stderr: %s", err, stdout.String(), stderr.String())
 		}
 		errC <- err
 	}()

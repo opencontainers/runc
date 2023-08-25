@@ -536,10 +536,10 @@ func (p *initProcess) start() (retErr error) {
 					s.Status = specs.StateCreating
 					hooks := p.config.Config.Hooks
 
-					if err := hooks[configs.Prestart].RunHooks(s); err != nil {
+					if err := hooks.Run(configs.Prestart, s); err != nil {
 						return err
 					}
-					if err := hooks[configs.CreateRuntime].RunHooks(s); err != nil {
+					if err := hooks.Run(configs.CreateRuntime, s); err != nil {
 						return err
 					}
 				}
@@ -590,10 +590,10 @@ func (p *initProcess) start() (retErr error) {
 				s.Status = specs.StateCreating
 				hooks := p.config.Config.Hooks
 
-				if err := hooks[configs.Prestart].RunHooks(s); err != nil {
+				if err := hooks.Run(configs.Prestart, s); err != nil {
 					return err
 				}
-				if err := hooks[configs.CreateRuntime].RunHooks(s); err != nil {
+				if err := hooks.Run(configs.CreateRuntime, s); err != nil {
 					return err
 				}
 			}

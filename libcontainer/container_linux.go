@@ -341,7 +341,7 @@ func (c *Container) start(process *Process) (retErr error) {
 				return err
 			}
 
-			if err := c.config.Hooks[configs.Poststart].RunHooks(s); err != nil {
+			if err := c.config.Hooks.Run(configs.Poststart, s); err != nil {
 				if err := ignoreTerminateErrors(parent.terminate()); err != nil {
 					logrus.Warn(fmt.Errorf("error running poststart hook: %w", err))
 				}

@@ -143,7 +143,7 @@ func prepareRootfs(pipe *os.File, iConfig *initConfig, mountFds mountFds) (err e
 	s := iConfig.SpecState
 	s.Pid = unix.Getpid()
 	s.Status = specs.StateCreating
-	if err := iConfig.Config.Hooks[configs.CreateContainer].RunHooks(s); err != nil {
+	if err := iConfig.Config.Hooks.Run(configs.CreateContainer, s); err != nil {
 		return err
 	}
 
