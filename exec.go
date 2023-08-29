@@ -251,13 +251,13 @@ func getProcess(context *cli.Context, bundle string) (*specs.Process, error) {
 		if len(u) > 1 {
 			gid, err := strconv.Atoi(u[1])
 			if err != nil {
-				return nil, fmt.Errorf("parsing %s as int for gid failed: %w", u[1], err)
+				return nil, fmt.Errorf("bad gid: %w", err)
 			}
 			p.User.GID = uint32(gid)
 		}
 		uid, err := strconv.Atoi(u[0])
 		if err != nil {
-			return nil, fmt.Errorf("parsing %s as int for uid failed: %w", u[0], err)
+			return nil, fmt.Errorf("bad uid: %w", err)
 		}
 		p.User.UID = uint32(uid)
 	}
