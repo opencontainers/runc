@@ -131,7 +131,7 @@ jobs:
     steps:
       - name: get pr commits
         id: 'get-pr-commits'
-        uses: tim-actions/get-pr-commits@v1.3.0
+        uses: kolyshkin/get-pr-commits@v1.3.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
