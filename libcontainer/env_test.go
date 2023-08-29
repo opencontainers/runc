@@ -1,25 +1,37 @@
 package libcontainer
 
 import (
+	"os/user"
 	"slices"
+	"strconv"
 	"testing"
 )
 
-func TestPrepareEnvDedup(t *testing.T) {
+func TestPrepareEnv(t *testing.T) {
+	u, err := user.Current()
+	if err != nil {
+		t.Fatal(err)
+	}
+	home := "HOME=" + u.HomeDir
+	uid, err := strconv.Atoi(u.Uid)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	tests := []struct {
 		env, wantEnv []string
 	}{
 		{
 			env:     []string{},
-			wantEnv: []string{},
+			wantEnv: []string{home},
 		},
 		{
-			env:     []string{"HOME=/root", "FOO=bar"},
-			wantEnv: []string{"HOME=/root", "FOO=bar"},
+			env:     []string{"HOME=/whoo", "FOO=bar"},
+			wantEnv: []string{"HOME=/whoo", "FOO=bar"},
 		},
 		{
 			env:     []string{"A=a", "A=b", "A=c"},
-			wantEnv: []string{"A=c"},
+			wantEnv: []string{"A=c", home},
 		},
 		{
 			env:     []string{"TERM=vt100", "HOME=/home/one", "HOME=/home/two", "TERM=xterm", "HOME=/home/three", "FOO=bar"},
@@ -28,7 +40,7 @@ func TestPrepareEnvDedup(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		env, _, err := prepareEnv(tc.env)
+		env, err := prepareEnv(tc.env, uid)
 		if err != nil {
 			t.Error(err)
 			continue

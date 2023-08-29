@@ -25,7 +25,6 @@ type linuxSetnsInit struct {
 	pidfdSocket   *os.File
 	config        *initConfig
 	logPipe       *os.File
-	addHome       bool
 }
 
 func (l *linuxSetnsInit) getSessionRingName() string {
@@ -102,7 +101,7 @@ func (l *linuxSetnsInit) Init() error {
 			return err
 		}
 	}
-	if err := finalizeNamespace(l.config, l.addHome); err != nil {
+	if err := finalizeNamespace(l.config); err != nil {
 		return err
 	}
 	if err := apparmor.ApplyProfile(l.config.AppArmorProfile); err != nil {
