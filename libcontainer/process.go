@@ -26,13 +26,13 @@ type Process struct {
 	// Env specifies the environment variables for the process.
 	Env []string
 
-	// User will set the uid and gid of the executing process running inside the container
+	// UID and GID of the executing process running inside the container
 	// local to the container's user and group configuration.
-	User string
+	UID, GID int
 
 	// AdditionalGroups specifies the gids that should be added to supplementary groups
 	// in addition to those that the user belongs to.
-	AdditionalGroups []string
+	AdditionalGroups []int
 
 	// Cwd will change the processes current working directory inside the container's rootfs.
 	Cwd string

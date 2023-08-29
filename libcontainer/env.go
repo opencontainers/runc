@@ -6,6 +6,9 @@ import (
 	"os"
 	"slices"
 	"strings"
+
+	"github.com/moby/sys/user"
+	"github.com/sirupsen/logrus"
 )
 
 // prepareEnv processes a list of environment variables, preparing it
@@ -13,13 +16,13 @@ import (
 //   - validates each variable is in the NAME=VALUE format and
 //     contains no \0 (nil) bytes;
 //   - removes any duplicates (keeping only the last value for each key)
-//   - sets PATH for the current process, if found in the list.
+//   - sets PATH for the current process, if found in the list;
+//   - adds HOME to returned environment, if not found in the list.
 //
-// It returns the deduplicated environment, a flag telling whether HOME
-// is present in the input, and an error.
-func prepareEnv(env []string) ([]string, bool, error) {
+// Returns the prepared environment.
+func prepareEnv(env []string, uid int) ([]string, error) {
 	if env == nil {
-		return nil, false, nil
+		return nil, nil
 	}
 	// Deduplication code based on dedupEnv from Go 1.22 os/exec.
 
@@ -31,10 +34,10 @@ func prepareEnv(env []string) ([]string, bool, error) {
 		kv := env[n-1]
 		i := strings.IndexByte(kv, '=')
 		if i == -1 {
-			return nil, false, errors.New("invalid environment variable: missing '='")
+			return nil, errors.New("invalid environment variable: missing '='")
 		}
 		if i == 0 {
-			return nil, false, errors.New("invalid environment variable: name cannot be empty")
+			return nil, errors.New("invalid environment variable: name cannot be empty")
 		}
 		key := kv[:i]
 		if saw[key] { // Duplicate.
@@ -42,12 +45,12 @@ func prepareEnv(env []string) ([]string, bool, error) {
 		}
 		saw[key] = true
 		if strings.IndexByte(kv, 0) >= 0 {
-			return nil, false, fmt.Errorf("invalid environment variable %q: contains nul byte (\\x00)", key)
+			return nil, fmt.Errorf("invalid environment variable %q: contains nul byte (\\x00)", key)
 		}
 		if key == "PATH" {
 			// Needs to be set as it is used for binary lookup.
 			if err := os.Setenv("PATH", kv[i+1:]); err != nil {
-				return nil, false, err
+				return nil, err
 			}
 		}
 		out = append(out, kv)
@@ -55,5 +58,31 @@ func prepareEnv(env []string) ([]string, bool, error) {
 	// Restore the original order.
 	slices.Reverse(out)
 
-	return out, saw["HOME"], nil
+	// If HOME is not found in env, get it from container's /etc/passwd and add.
+	if !saw["HOME"] {
+		home, err := getUserHome(uid)
+		if err != nil {
+			// For backward compatibility, don't return an error, but merely log it.
+			logrus.WithError(err).Debugf("HOME not set in process.env, and getting UID %d homedir failed", uid)
+		}
+
+		out = append(out, "HOME="+home)
+	}
+
+	return out, nil
+}
+
+func getUserHome(uid int) (string, error) {
+	const defaultHome = "/" // Default value, return this with any error.
+
+	u, err := user.LookupUid(uid)
+	if err != nil {
+		// ErrNoPasswdEntries is kinda expected as any UID can be specified.
+		if errors.Is(err, user.ErrNoPasswdEntries) {
+			err = nil
+		}
+		return defaultHome, err
+	}
+
+	return u.Home, nil
 }
