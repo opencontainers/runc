@@ -1,3 +1,5 @@
+//go:build !runc_no_ebpf
+
 // Implements creation of eBPF device filter program.
 //
 // Based on https://github.com/containers/crun/blob/0.10.2/src/libcrun/ebpf.c
