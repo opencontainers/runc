@@ -129,8 +129,10 @@ func startUnit(cm *dbusConnManager, unitName string, properties []systemdDbus.Pr
 	retry := true
 
 retry:
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 	err := cm.retryOnDisconnect(func(c *systemdDbus.Conn) error {
-		_, err := c.StartTransientUnitContext(context.TODO(), unitName, "replace", properties, statusChan)
+		_, err := c.StartTransientUnitContext(ctx, unitName, "replace", properties, statusChan)
 		return err
 	})
 	if err != nil {
@@ -178,8 +180,10 @@ retry:
 
 func stopUnit(cm *dbusConnManager, unitName string) error {
 	statusChan := make(chan string, 1)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 	err := cm.retryOnDisconnect(func(c *systemdDbus.Conn) error {
-		_, err := c.StopUnitContext(context.TODO(), unitName, "replace", statusChan)
+		_, err := c.StopUnitContext(ctx, unitName, "replace", statusChan)
 		return err
 	})
 	if err == nil {
