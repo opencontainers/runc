@@ -260,11 +260,16 @@ function get_cgroup_value() {
 # Helper to check a if value in a cgroup file matches the expected one.
 function check_cgroup_value() {
 	local current
+	local cgroup
+	cgroup="$(get_cgroup_path "$1")"
+	if [ ! -f "$cgroup/$1" ]; then
+		skip "$cgroup/$1 does not exist"
+	fi
 	current="$(get_cgroup_value "$1")"
 	local expected=$2
 
 	echo "current $current !? $expected"
-	[ "$current" = "$expected" ]
+	[ "$current" = "$expected" ] || [ "$current" = "$((expected / 1000))" ]
 }
 
 # Helper to check a value in systemd.
@@ -308,6 +313,15 @@ function check_cpu_quota() {
 	# 100ms is the default value, and if not set, shown as infinity
 	[ "$sd_period" = "100ms" ] && sd_infinity="infinity"
 	check_systemd_value "CPUQuotaPeriodUSec" $sd_period $sd_infinity
+}
+
+function check_cpu_burst() {
+	local burst=$1
+	if [ -v CGROUP_V2 ]; then
+		check_cgroup_value "cpu.max.burst" "$burst"
+	else
+		check_cgroup_value "cpu.cfs_burst_us" "$burst"
+	fi
 }
 
 # Works for cgroup v1 and v2, accepts v1 shares as an argument.

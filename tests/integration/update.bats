@@ -288,6 +288,12 @@ EOF
 	runc update test_update --cpu-share 200
 	[ "$status" -eq 0 ]
 	check_cpu_shares 200
+	runc update test_update --cpu-period 900000 --cpu-burst 500000
+	[ "$status" -eq 0 ]
+	check_cpu_burst 500000
+	runc update test_update --cpu-period 900000 --cpu-burst 0
+	[ "$status" -eq 0 ]
+	check_cpu_burst 0
 
 	# Revert to the test initial value via json on stding
 	runc update -r - test_update <<EOF
