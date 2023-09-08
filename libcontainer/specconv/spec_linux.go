@@ -781,46 +781,36 @@ func CreateCgroupConfig(opts *CreateOpts, defaultDevs []*devices.Device) (*confi
 				if r.BlockIO.LeafWeight != nil {
 					c.Resources.BlkioLeafWeight = *r.BlockIO.LeafWeight
 				}
-				if r.BlockIO.WeightDevice != nil {
-					for _, wd := range r.BlockIO.WeightDevice {
-						var weight, leafWeight uint16
-						if wd.Weight != nil {
-							weight = *wd.Weight
-						}
-						if wd.LeafWeight != nil {
-							leafWeight = *wd.LeafWeight
-						}
-						weightDevice := configs.NewWeightDevice(wd.Major, wd.Minor, weight, leafWeight)
-						c.Resources.BlkioWeightDevice = append(c.Resources.BlkioWeightDevice, weightDevice)
+				for _, wd := range r.BlockIO.WeightDevice {
+					var weight, leafWeight uint16
+					if wd.Weight != nil {
+						weight = *wd.Weight
 					}
+					if wd.LeafWeight != nil {
+						leafWeight = *wd.LeafWeight
+					}
+					weightDevice := configs.NewWeightDevice(wd.Major, wd.Minor, weight, leafWeight)
+					c.Resources.BlkioWeightDevice = append(c.Resources.BlkioWeightDevice, weightDevice)
 				}
-				if r.BlockIO.ThrottleReadBpsDevice != nil {
-					for _, td := range r.BlockIO.ThrottleReadBpsDevice {
-						rate := td.Rate
-						throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, rate)
-						c.Resources.BlkioThrottleReadBpsDevice = append(c.Resources.BlkioThrottleReadBpsDevice, throttleDevice)
-					}
+				for _, td := range r.BlockIO.ThrottleReadBpsDevice {
+					rate := td.Rate
+					throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, rate)
+					c.Resources.BlkioThrottleReadBpsDevice = append(c.Resources.BlkioThrottleReadBpsDevice, throttleDevice)
 				}
-				if r.BlockIO.ThrottleWriteBpsDevice != nil {
-					for _, td := range r.BlockIO.ThrottleWriteBpsDevice {
-						rate := td.Rate
-						throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, rate)
-						c.Resources.BlkioThrottleWriteBpsDevice = append(c.Resources.BlkioThrottleWriteBpsDevice, throttleDevice)
-					}
+				for _, td := range r.BlockIO.ThrottleWriteBpsDevice {
+					rate := td.Rate
+					throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, rate)
+					c.Resources.BlkioThrottleWriteBpsDevice = append(c.Resources.BlkioThrottleWriteBpsDevice, throttleDevice)
 				}
-				if r.BlockIO.ThrottleReadIOPSDevice != nil {
-					for _, td := range r.BlockIO.ThrottleReadIOPSDevice {
-						rate := td.Rate
-						throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, rate)
-						c.Resources.BlkioThrottleReadIOPSDevice = append(c.Resources.BlkioThrottleReadIOPSDevice, throttleDevice)
-					}
+				for _, td := range r.BlockIO.ThrottleReadIOPSDevice {
+					rate := td.Rate
+					throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, rate)
+					c.Resources.BlkioThrottleReadIOPSDevice = append(c.Resources.BlkioThrottleReadIOPSDevice, throttleDevice)
 				}
-				if r.BlockIO.ThrottleWriteIOPSDevice != nil {
-					for _, td := range r.BlockIO.ThrottleWriteIOPSDevice {
-						rate := td.Rate
-						throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, rate)
-						c.Resources.BlkioThrottleWriteIOPSDevice = append(c.Resources.BlkioThrottleWriteIOPSDevice, throttleDevice)
-					}
+				for _, td := range r.BlockIO.ThrottleWriteIOPSDevice {
+					rate := td.Rate
+					throttleDevice := configs.NewThrottleDevice(td.Major, td.Minor, rate)
+					c.Resources.BlkioThrottleWriteIOPSDevice = append(c.Resources.BlkioThrottleWriteIOPSDevice, throttleDevice)
 				}
 			}
 			for _, l := range r.HugepageLimits {
