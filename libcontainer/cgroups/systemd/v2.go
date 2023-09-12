@@ -257,9 +257,9 @@ func genV2ResourcesProperties(dirPath string, r *configs.Resources, cm *dbusConn
 
 	addCpuQuota(cm, &properties, r.CpuQuota, r.CpuPeriod)
 
-	if r.PidsLimit > 0 || r.PidsLimit == -1 {
+	if r.PidsLimit != nil && (*r.PidsLimit > 0 || *r.PidsLimit == -1) {
 		properties = append(properties,
-			newProp("TasksMax", uint64(r.PidsLimit)))
+			newProp("TasksMax", uint64(*r.PidsLimit)))
 	}
 
 	err = addCpuset(cm, &properties, r.CpusetCpus, r.CpusetMems)

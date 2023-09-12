@@ -9,9 +9,10 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
-const (
-	maxUnlimited = -1
-	maxLimited   = 1024
+var (
+	maxUnlimited int64 = -1
+	maxZero      int64
+	maxLimited   int64 = 1024
 )
 
 func TestPidsSetMax(t *testing.T) {
@@ -22,7 +23,7 @@ func TestPidsSetMax(t *testing.T) {
 	})
 
 	r := &configs.Resources{
-		PidsLimit: maxLimited,
+		PidsLimit: &maxLimited,
 	}
 	pids := &PidsGroup{}
 	if err := pids.Set(path, r); err != nil {
@@ -33,8 +34,33 @@ func TestPidsSetMax(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if value != maxLimited {
+	// Only done for comparison
+	if value != uint64(maxLimited) {
 		t.Fatalf("Expected %d, got %d for setting pids.max - limited", maxLimited, value)
+	}
+}
+
+func TestPidsSetUnlimitedWhenZero(t *testing.T) {
+	path := tempDir(t, "pids")
+
+	writeFileContents(t, path, map[string]string{
+		"pids.max": "max",
+	})
+
+	r := &configs.Resources{
+		PidsLimit: &maxZero,
+	}
+	pids := &PidsGroup{}
+	if err := pids.Set(path, r); err != nil {
+		t.Fatal(err)
+	}
+
+	value, err := fscommon.GetCgroupParamString(path, "pids.max")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if value != "max" {
+		t.Fatalf("Expected %s, got %s for setting pids.max - unlimited", "max", value)
 	}
 }
 
@@ -42,11 +68,11 @@ func TestPidsSetUnlimited(t *testing.T) {
 	path := tempDir(t, "pids")
 
 	writeFileContents(t, path, map[string]string{
-		"pids.max": strconv.Itoa(maxLimited),
+		"pids.max": strconv.FormatInt(maxLimited, 10),
 	})
 
 	r := &configs.Resources{
-		PidsLimit: maxUnlimited,
+		PidsLimit: &maxUnlimited,
 	}
 	pids := &PidsGroup{}
 	if err := pids.Set(path, r); err != nil {
@@ -67,7 +93,7 @@ func TestPidsStats(t *testing.T) {
 
 	writeFileContents(t, path, map[string]string{
 		"pids.current": strconv.Itoa(1337),
-		"pids.max":     strconv.Itoa(maxLimited),
+		"pids.max":     strconv.FormatInt(maxLimited, 10),
 	})
 
 	pids := &PidsGroup{}
@@ -80,7 +106,7 @@ func TestPidsStats(t *testing.T) {
 		t.Fatalf("Expected %d, got %d for pids.current", 1337, stats.PidsStats.Current)
 	}
 
-	if stats.PidsStats.Limit != maxLimited {
+	if stats.PidsStats.Limit != uint64(maxLimited) {
 		t.Fatalf("Expected %d, got %d for pids.max", maxLimited, stats.PidsStats.Limit)
 	}
 }

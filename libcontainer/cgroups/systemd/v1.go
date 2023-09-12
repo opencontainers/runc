@@ -98,9 +98,9 @@ func genV1ResourcesProperties(r *configs.Resources, cm *dbusConnManager) ([]syst
 			newProp("BlockIOWeight", uint64(r.BlkioWeight)))
 	}
 
-	if r.PidsLimit > 0 || r.PidsLimit == -1 {
+	if r.PidsLimit != nil && (*r.PidsLimit > 0 || *r.PidsLimit == -1) {
 		properties = append(properties,
-			newProp("TasksMax", uint64(r.PidsLimit)))
+			newProp("TasksMax", uint64(*r.PidsLimit)))
 	}
 
 	err = addCpuset(cm, &properties, r.CpusetCpus, r.CpusetMems)

@@ -535,14 +535,15 @@ func testPids(t *testing.T, systemd bool) {
 	}
 
 	config := newTemplateConfig(t, &tParam{systemd: systemd})
-	config.Cgroups.Resources.PidsLimit = -1
+	l := int64(-1)
+	config.Cgroups.Resources.PidsLimit = &l
 
 	// Running multiple processes, expecting it to succeed with no pids limit.
 	_ = runContainerOk(t, config, "/bin/sh", "-c", "/bin/true | /bin/true | /bin/true | /bin/true")
 
 	// Enforce a permissive limit. This needs to be fairly hand-wavey due to the
 	// issues with running Go binaries with pids restrictions (see below).
-	config.Cgroups.Resources.PidsLimit = 64
+	*config.Cgroups.Resources.PidsLimit = 64
 	_ = runContainerOk(t, config, "/bin/sh", "-c", `
 	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
 	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
@@ -551,7 +552,7 @@ func testPids(t *testing.T, systemd bool) {
 
 	// Enforce a restrictive limit. 64 * /bin/true + 1 * shell should cause
 	// this to fail reliably.
-	config.Cgroups.Resources.PidsLimit = 64
+	*config.Cgroups.Resources.PidsLimit = 64
 	out, _, err := runContainer(t, config, "/bin/sh", "-c", `
 	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |
 	/bin/true | /bin/true | /bin/true | /bin/true | /bin/true | /bin/true | bin/true | /bin/true |

@@ -13,15 +13,11 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
-func isPidsSet(r *configs.Resources) bool {
-	return r.PidsLimit != 0
-}
-
 func setPids(dirPath string, r *configs.Resources) error {
-	if !isPidsSet(r) {
+	if r.PidsLimit == nil {
 		return nil
 	}
-	if val := numToStr(r.PidsLimit); val != "" {
+	if val := numToStr(*r.PidsLimit); val != "" {
 		if err := cgroups.WriteFile(dirPath, "pids.max", val); err != nil {
 			return err
 		}

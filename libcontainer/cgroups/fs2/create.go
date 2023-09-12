@@ -39,7 +39,7 @@ func needAnyControllers(r *configs.Resources) (bool, error) {
 		return ok
 	}
 
-	if isPidsSet(r) && have("pids") {
+	if r.PidsLimit != nil && have("pids") {
 		return true, nil
 	}
 	if isMemorySet(r) && have("memory") {
