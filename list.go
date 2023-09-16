@@ -9,8 +9,8 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"github.com/moby/sys/user"
 	"github.com/opencontainers/runc/libcontainer"
-	"github.com/opencontainers/runc/libcontainer/user"
 	"github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/urfave/cli"
 )
