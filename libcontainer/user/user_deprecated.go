@@ -1,3 +1,6 @@
+// Package user is an alias for [github.com/moby/sys/user].
+//
+// Deprecated: use [github.com/moby/sys/user].
 package user
 
 import (
