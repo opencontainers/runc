@@ -3,8 +3,8 @@
 load helpers
 
 function setup() {
-	if [[ "$KERNEL_MAJOR" -gt 5 || ("$KERNEL_MAJOR" -eq 5 && "$KERNEL_MINOR" -ge 6) ]]; then
-		skip "requires kernel less than 5.6"
+	if is_kernel_gte 5.6; then
+		skip "requires kernel < 5.6"
 	fi
 
 	requires arch_x86_64

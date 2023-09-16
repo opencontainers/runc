@@ -524,6 +524,7 @@ func (c *Container) newParentProcess(p *Process) (parentProcess, error) {
 				// runc-dmz.
 				exePath = "/proc/self/exe"
 				p.clonedExes = append(p.clonedExes, dmzExe)
+				logrus.Debug("runc-dmz: using runc-dmz") // used for tests
 			} else if errors.Is(err, dmz.ErrNoDmzBinary) {
 				logrus.Debug("runc-dmz binary not embedded in runc binary, falling back to /proc/self/exe clone")
 			} else if err != nil {
@@ -542,6 +543,7 @@ func (c *Container) newParentProcess(p *Process) (parentProcess, error) {
 			}
 			exePath = "/proc/self/fd/" + strconv.Itoa(int(safeExe.Fd()))
 			p.clonedExes = append(p.clonedExes, safeExe)
+			logrus.Debug("runc-dmz: using /proc/self/exe clone") // used for tests
 		}
 		// Just to make sure we don't run without protection.
 		if dmzExe == nil && safeExe == nil {
