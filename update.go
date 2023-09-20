@@ -44,6 +44,7 @@ The accepted format is as follow (unchanged values can be omitted):
   "cpu": {
     "shares": 0,
     "quota": 0,
+    "burst": 0,
     "period": 0,
     "realtimeRuntime": 0,
     "realtimePeriod": 0,
@@ -72,6 +73,10 @@ other options are ignored.
 		cli.StringFlag{
 			Name:  "cpu-quota",
 			Usage: "CPU CFS hardcap limit (in usecs). Allowed cpu time in a given period",
+		},
+		cli.StringFlag{
+			Name:  "cpu-burst",
+			Usage: "CPU CFS hardcap burst limit (in usecs). Allowed accumulated cpu time additionally for burst a given period",
 		},
 		cli.StringFlag{
 			Name:  "cpu-share",
@@ -153,6 +158,7 @@ other options are ignored.
 			CPU: &specs.LinuxCPU{
 				Shares:          u64Ptr(0),
 				Quota:           i64Ptr(0),
+				Burst:           u64Ptr(0),
 				Period:          u64Ptr(0),
 				RealtimeRuntime: i64Ptr(0),
 				RealtimePeriod:  u64Ptr(0),
@@ -182,6 +188,7 @@ other options are ignored.
 				if err != nil {
 					return err
 				}
+				defer f.Close()
 			}
 			err = json.NewDecoder(f).Decode(&r)
 			if err != nil {
@@ -209,6 +216,7 @@ other options are ignored.
 				opt  string
 				dest *uint64
 			}{
+				{"cpu-burst", r.CPU.Burst},
 				{"cpu-period", r.CPU.Period},
 				{"cpu-rt-period", r.CPU.RealtimePeriod},
 				{"cpu-share", r.CPU.Shares},
@@ -298,6 +306,7 @@ other options are ignored.
 			}
 		}
 
+		config.Cgroups.Resources.CpuBurst = r.CPU.Burst
 		config.Cgroups.Resources.CpuShares = *r.CPU.Shares
 		// CpuWeight is used for cgroupv2 and should be converted
 		config.Cgroups.Resources.CpuWeight = cgroups.ConvertCPUSharesToCgroupV2Value(*r.CPU.Shares)

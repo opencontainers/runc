@@ -593,7 +593,7 @@ func (c *Container) prepareCriuRestoreMounts(mounts []*configs.Mount) error {
 		for _, u := range umounts {
 			_ = utils.WithProcfd(c.config.Rootfs, u, func(procfd string) error {
 				if e := unix.Unmount(procfd, unix.MNT_DETACH); e != nil {
-					if e != unix.EINVAL { //nolint:errorlint // unix errors are bare
+					if e != unix.EINVAL {
 						// Ignore EINVAL as it means 'target is not a mount point.'
 						// It probably has already been unmounted.
 						logrus.Warnf("Error during cleanup unmounting of %s (%s): %v", procfd, u, e)
@@ -1134,10 +1134,10 @@ func (c *Container) criuNotifications(resp *criurpc.CriuResp, process *Process, 
 			}
 			s.Pid = int(notify.GetPid())
 
-			if err := c.config.Hooks[configs.Prestart].RunHooks(s); err != nil {
+			if err := c.config.Hooks.Run(configs.Prestart, s); err != nil {
 				return err
 			}
-			if err := c.config.Hooks[configs.CreateRuntime].RunHooks(s); err != nil {
+			if err := c.config.Hooks.Run(configs.CreateRuntime, s); err != nil {
 				return err
 			}
 		}

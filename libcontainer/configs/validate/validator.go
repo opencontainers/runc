@@ -38,11 +38,11 @@ func Validate(config *configs.Config) error {
 	}
 	// Relaxed validation rules for backward compatibility
 	warns := []check{
-		mounts, // TODO (runc v1.x.x): make this an error instead of a warning
+		mountsWarn,
 	}
 	for _, c := range warns {
 		if err := c(config); err != nil {
-			logrus.WithError(err).Warn("invalid configuration")
+			logrus.WithError(err).Warn("configuration")
 		}
 	}
 	return nil
@@ -300,10 +300,10 @@ func checkIDMapMounts(config *configs.Config, m *configs.Mount) error {
 	return nil
 }
 
-func mounts(config *configs.Config) error {
+func mountsWarn(config *configs.Config) error {
 	for _, m := range config.Mounts {
 		if !filepath.IsAbs(m.Destination) {
-			return fmt.Errorf("invalid mount %+v: mount destination not absolute", m)
+			return fmt.Errorf("mount %+v: relative destination path is **deprecated**, using it as relative to /", m)
 		}
 	}
 	return nil

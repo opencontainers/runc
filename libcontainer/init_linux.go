@@ -642,7 +642,7 @@ func signalAllProcesses(m cgroups.Manager, s unix.Signal) error {
 	}
 	for _, pid := range pids {
 		err := unix.Kill(pid, s)
-		if err != nil && err != unix.ESRCH { //nolint:errorlint // unix errors are bare
+		if err != nil && err != unix.ESRCH {
 			logrus.Warnf("kill %d: %v", pid, err)
 		}
 	}

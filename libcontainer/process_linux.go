@@ -514,36 +514,6 @@ func (p *initProcess) start() (retErr error) {
 			if err := setupRlimits(p.config.Rlimits, p.pid()); err != nil {
 				return fmt.Errorf("error setting rlimits for ready process: %w", err)
 			}
-			// call prestart and CreateRuntime hooks
-			if !p.config.Config.Namespaces.Contains(configs.NEWNS) {
-				// Setup cgroup before the hook, so that the prestart and CreateRuntime hook could apply cgroup permissions.
-				if err := p.manager.Set(p.config.Config.Cgroups.Resources); err != nil {
-					return fmt.Errorf("error setting cgroup config for ready process: %w", err)
-				}
-				if p.intelRdtManager != nil {
-					if err := p.intelRdtManager.Set(p.config.Config); err != nil {
-						return fmt.Errorf("error setting Intel RDT config for ready process: %w", err)
-					}
-				}
-
-				if len(p.config.Config.Hooks) != 0 {
-					s, err := p.container.currentOCIState()
-					if err != nil {
-						return err
-					}
-					// initProcessStartTime hasn't been set yet.
-					s.Pid = p.cmd.Process.Pid
-					s.Status = specs.StateCreating
-					hooks := p.config.Config.Hooks
-
-					if err := hooks[configs.Prestart].RunHooks(s); err != nil {
-						return err
-					}
-					if err := hooks[configs.CreateRuntime].RunHooks(s); err != nil {
-						return err
-					}
-				}
-			}
 
 			// generate a timestamp indicating when the container was started
 			p.container.created = time.Now().UTC()
@@ -590,10 +560,10 @@ func (p *initProcess) start() (retErr error) {
 				s.Status = specs.StateCreating
 				hooks := p.config.Config.Hooks
 
-				if err := hooks[configs.Prestart].RunHooks(s); err != nil {
+				if err := hooks.Run(configs.Prestart, s); err != nil {
 					return err
 				}
-				if err := hooks[configs.CreateRuntime].RunHooks(s); err != nil {
+				if err := hooks.Run(configs.CreateRuntime, s); err != nil {
 					return err
 				}
 			}

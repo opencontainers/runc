@@ -215,7 +215,7 @@ func sdNotifyBarrier(client *net.UnixConn) error {
 		// Probably the other end doesn't support the sd_notify_barrier protocol.
 		logrus.Warn("Timeout after waiting 30s for barrier. Ignored.")
 		return nil
-	} else if err == io.EOF { //nolint:errorlint // comparison with io.EOF is legit.
+	} else if err == io.EOF { //nolint:errorlint // https://github.com/polyfloyd/go-errorlint/issues/49
 		return nil
 	} else {
 		return err

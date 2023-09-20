@@ -182,6 +182,6 @@ function flags_value() {
 
 	runc run test_busybox
 	[ "$status" -ne 0 ]
-	[[ "$output" == *"error running hook"* ]]
+	[[ "$output" == *"error running startContainer hook"* ]]
 	[[ "$output" == *"bad system call"* ]]
 }
