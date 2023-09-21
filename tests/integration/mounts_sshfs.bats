@@ -141,6 +141,51 @@ function fail_sshfs_bind_flags() {
 	run ! grep -wq nosymfollow <<<"$mnt_flags"
 }
 
+@test "runc run [mount(8)-like behaviour: --bind -o remount with clearing flag]" {
+	requires root
+
+	pass_sshfs_bind_flags "ro,noexec,nosymfollow,nodiratime" "bind,remount,exec"
+	# With -o remount, we apply clearing flags on top of the existing ones a-la
+	# "mount --bind -o remount". All other unspecified flags are kept.
+	run -0 grep -wq ro <<<"$mnt_flags"
+	run ! grep -wq rw <<<"$mnt_flags"
+	run -0 grep -wq nosymfollow <<<"$mnt_flags"
+	run -0 grep -wq nodiratime <<<"$mnt_flags"
+	# noexec was cleared.
+	run ! grep -wq noexec <<<"$mnt_flags"
+
+	# Now try with a user namespace. The results should be the same as above,
+	# except when trying to clear a locked flag (which will fail).
+	update_config ' .linux.namespaces += [{"type": "user"}]
+		| .linux.uidMappings += [{"hostID": 100000, "containerID": 0, "size": 65534}]
+		| .linux.gidMappings += [{"hostID": 100000, "containerID": 0, "size": 65534}] '
+
+	# Trying to clear a lockable flag will fail.
+	fail_sshfs_bind_flags "ro,noexec,nosymfollow,nodiratime" "bind,remount,exec"
+
+	# Try to clear a non-lockable flag instead.
+	pass_sshfs_bind_flags "ro,noexec,nosymfollow,nodiratime" "bind,remount,symfollow"
+	# With -o remount, we apply clearing flags on top of the existing ones a-la
+	# "mount --bind -o remount". All other unspecified flags are kept.
+	run -0 grep -wq ro <<<"$mnt_flags"
+	run ! grep -wq rw <<<"$mnt_flags"
+	run -0 grep -wq noexec <<<"$mnt_flags"
+	run -0 grep -wq nodiratime <<<"$mnt_flags"
+	# nosymfollow was cleared.
+	run ! grep -wq nosymfollow <<<"$mnt_flags"
+
+	# Try to clear a lockable flag that isn't set.
+	pass_sshfs_bind_flags "ro,noexec,nosymfollow,nodiratime" "bind,remount,dev"
+	# With -o remount, we apply clearing flags on top of the existing ones a-la
+	# "mount --bind -o remount". All other unspecified flags are kept.
+	run -0 grep -wq ro <<<"$mnt_flags"
+	run ! grep -wq rw <<<"$mnt_flags"
+	run -0 grep -wq noexec <<<"$mnt_flags"
+	run -0 grep -wq nosymfollow <<<"$mnt_flags"
+	run -0 grep -wq nodiratime <<<"$mnt_flags"
+	run ! grep -wq nodev <<<"$mnt_flags"
+}
+
 @test "runc run [implied-rw bind mount of a ro fuse sshfs mount]" {
 	requires root
 

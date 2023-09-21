@@ -564,7 +564,6 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 		// expect. See <https://github.com/util-linux/util-linux/issues/2433>.
 		if m.Flags & ^(unix.MS_BIND|unix.MS_REC|unix.MS_REMOUNT) != 0 || m.ClearedFlags != 0 {
 			if err := utils.WithProcfd(rootfs, m.Destination, func(dstFD string) error {
-				flags := m.Flags | unix.MS_BIND | unix.MS_REMOUNT
 				// The runtime-spec says we SHOULD map to the relevant mount(8)
 				// behaviour. However, it's not clear whether we want the
 				// "mount --bind -o ..." or "mount --bind -o remount,..."
@@ -577,6 +576,19 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 				// mount(8) will eventually implement this behaviour too..
 				//
 				// [1]: https://github.com/util-linux/util-linux/issues/2433
+				var st unix.Statfs_t
+				if err := unix.Statfs(m.src(), &st); err != nil {
+					return &os.PathError{Op: "statfs", Path: m.src(), Err: err}
+				}
+				srcFlags := statfsToMountFlags(st)
+
+				flags := m.Flags | unix.MS_BIND | unix.MS_REMOUNT
+				if m.Flags&unix.MS_REMOUNT == unix.MS_REMOUNT {
+					// Act like "mount --bind -o remount", where we use the old
+					// mount flags as a base and apply the requested flags on
+					// top.
+					flags |= srcFlags &^ m.ClearedFlags
+				}
 
 				// Initially, we emulate "mount --bind -o ..." where we set
 				// only the requested flags (clearing any existing flags). The
@@ -603,11 +615,6 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 				// that we handle atimes correctly to make sure we error out if
 				// we cannot fulfil the requested mount flags.
 
-				var st unix.Statfs_t
-				if err := unix.Statfs(m.src(), &st); err != nil {
-					return &os.PathError{Op: "statfs", Path: m.src(), Err: err}
-				}
-				srcFlags := statfsToMountFlags(st)
 				// If the user explicitly request one of the locked flags *not*
 				// be set, we need to return an error to avoid producing mounts
 				// that don't match the user's request.
