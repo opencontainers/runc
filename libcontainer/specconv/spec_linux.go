@@ -775,8 +775,14 @@ func CreateCgroupConfig(opts *CreateOpts, defaultDevs []*devices.Device) (*confi
 				c.Resources.CpusetMems = r.CPU.Mems
 				c.Resources.CPUIdle = r.CPU.Idle
 			}
+			// Convert pids limit from the runtime-spec value (where any value <= 0 means "unlimited")
+			// to internal runc value (where -1 is "unlimited", and 0 is "unset").
 			if r.Pids != nil {
-				c.Resources.PidsLimit = r.Pids.Limit
+				if r.Pids.Limit > 0 {
+					c.Resources.PidsLimit = r.Pids.Limit
+				} else {
+					c.Resources.PidsLimit = -1
+				}
 			}
 			if r.BlockIO != nil {
 				if r.BlockIO.Weight != nil {

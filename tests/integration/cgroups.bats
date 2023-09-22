@@ -263,6 +263,20 @@ convert_hugetlb_size() {
 	done
 }
 
+# https://github.com/opencontainers/runc/issues/4014.
+@test "runc run (pids.limit=0 means unlimited)" {
+	[ $EUID -ne 0 ] && requires rootless_cgroup
+
+	set_cgroups_path
+	update_config '.linux.resources.pids.limit |= 0'
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_pids
+	[ "$status" -eq 0 ]
+	check_cgroup_value "pids.max" "max"
+	# systemd < v227 shows UINT64_MAX instead of "infinity".
+	check_systemd_value "TasksMax" "infinity" "18446744073709551615"
+}
+
 @test "runc run (cgroup v2 resources.unified only)" {
 	requires root cgroups_v2
 
