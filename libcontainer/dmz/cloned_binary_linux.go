@@ -179,7 +179,7 @@ func CloneBinary(src io.Reader, size int64, name, tmpDir string) (*os.File, erro
 	if err != nil {
 		return nil, err
 	}
-	copied, err := io.Copy(file, src)
+	copied, err := system.Copy(file, src)
 	if err != nil {
 		file.Close()
 		return nil, fmt.Errorf("copy binary: %w", err)
