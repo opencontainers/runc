@@ -54,8 +54,7 @@ function setup() {
 	fi
 
 	SD_UNLIMITED="infinity"
-	SD_VERSION=$(systemctl --version | awk '{print $2; exit}')
-	if [ "$SD_VERSION" -lt 227 ]; then
+	if [ "$(systemd_version)" -lt 227 ]; then
 		SD_UNLIMITED="18446744073709551615"
 	fi
 
