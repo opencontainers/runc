@@ -309,6 +309,7 @@ convert_hugetlb_size() {
 	set_cgroups_path
 	# CPU shares of 3333 corresponds to CPU weight of 128.
 	update_config '   .linux.resources.memory |= {"limit": 33554432}
+			| .linux.resources.pids.limit |= 100
 			| .linux.resources.cpu |= {
 				"shares": 3333,
 				"quota": 40000,
