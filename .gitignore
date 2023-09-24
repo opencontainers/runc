@@ -1,10 +1,11 @@
 vendor/pkg
 /runc
 /runc-*
-contrib/cmd/recvtty/recvtty
-contrib/cmd/sd-helper/sd-helper
-contrib/cmd/seccompagent/seccompagent
-contrib/cmd/fs-idmap/fs-idmap
+/contrib/cmd/recvtty/recvtty
+/contrib/cmd/sd-helper/sd-helper
+/contrib/cmd/seccompagent/seccompagent
+/contrib/cmd/fs-idmap/fs-idmap
+/contrib/cmd/memfd-bind/memfd-bind
 man/man8
 release
 Vagrantfile

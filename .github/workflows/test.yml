@@ -28,6 +28,7 @@ jobs:
         rootless: ["rootless", ""]
         race: ["-race", ""]
         criu: ["", "criu-dev"]
+        dmz: ["", "runc_nodmz"]
         exclude:
           - criu: criu-dev
             rootless: rootless
@@ -35,6 +36,10 @@ jobs:
             go-version: 1.20.x
           - criu: criu-dev
             race: -race
+          - dmz: runc_nodmz
+            criu: criu-dev
+          - dmz: runc_nodmz
+            os: ubuntu-20.04
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -71,6 +76,8 @@ jobs:
         go-version: ${{ matrix.go-version }}
 
     - name: build
+      env:
+        EXTRA_BUILDTAGS: ${{ matrix.dmz }}
       run: sudo -E PATH="$PATH" make EXTRA_FLAGS="${{ matrix.race }}" all
 
     - name: install bats
@@ -80,6 +87,8 @@ jobs:
 
     - name: unit test
       if: matrix.rootless != 'rootless'
+      env:
+        EXTRA_BUILDTAGS: ${{ matrix.dmz }}
       run: sudo -E PATH="$PATH" -- make TESTFLAGS="${{ matrix.race }}" localunittest
 
     - name: add rootless user
@@ -113,8 +122,12 @@ jobs:
   # However, we do not have 32-bit ARM CI, so we use i386 for testing 32bit stuff.
   # We are not interested in providing official support for i386.
   cross-i386:
-    runs-on: ubuntu-22.04
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        dmz: ["", "runc_nodmz"]
+    runs-on: ubuntu-22.04
 
     steps:
 
@@ -136,4 +149,6 @@ jobs:
         go-version: 1.x # Latest stable
 
     - name: unit test
+      env:
+        EXTRA_BUILDTAGS: ${{ matrix.dmz }}
       run: sudo -E PATH="$PATH" -- make GOARCH=386 localunittest

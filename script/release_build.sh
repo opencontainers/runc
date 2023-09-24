@@ -60,24 +60,14 @@ function build_project() {
 	# it can reuse cached pkg-config results).
 	local make_args=(COMMIT_NO= EXTRA_FLAGS="-a" EXTRA_LDFLAGS="${ldflags}" static)
 
-	# Build natively.
-	make -C "$root" \
-		PKG_CONFIG_PATH="$seccompdir/lib/pkgconfig" \
-		"${make_args[@]}"
-	strip "$root/$project"
-	# Sanity check: make sure libseccomp version is as expected.
-	local ver
-	ver=$("$root/$project" --version | awk '$1 == "libseccomp:" {print $2}')
-	if [ "$ver" != "$LIBSECCOMP_VERSION" ]; then
-		echo >&2 "libseccomp version mismatch: want $LIBSECCOMP_VERSION, got $ver"
-		exit 1
-	fi
+	# Save the original cflags.
+	local original_cflags="${CFLAGS:-}"
 
-	mv "$root/$project" "$builddir/$project.$native_arch"
-
-	# Cross-build for for other architectures.
+	# Build for all requested architectures.
 	local arch
 	for arch in "${arches[@]}"; do
+		# Reset CFLAGS.
+		CFLAGS="$original_cflags"
 		set_cross_vars "$arch"
 		make -C "$root" \
 			PKG_CONFIG_PATH="$seccompdir/$arch/lib/pkgconfig" \
@@ -85,6 +75,14 @@ function build_project() {
 		"$STRIP" "$root/$project"
 		mv "$root/$project" "$builddir/$project.$arch"
 	done
+
+	# Sanity check: make sure libseccomp version is as expected.
+	local ver
+	ver=$("$builddir/$project.$native_arch" --version | awk '$1 == "libseccomp:" {print $2}')
+	if [ "$ver" != "$LIBSECCOMP_VERSION" ]; then
+		echo >&2 "libseccomp version mismatch: want $LIBSECCOMP_VERSION, got $ver"
+		exit 1
+	fi
 
 	# Copy libseccomp source tarball.
 	cp "$seccompdir"/src/* "$builddir"
@@ -122,12 +120,17 @@ commit="HEAD"
 version=""
 releasedir=""
 hashcmd=""
-declare -a add_arches
+# Always build a native binary.
+native_arch="$(go env GOARCH || echo "amd64")"
+arches=("$native_arch")
 
 while getopts "a:c:H:hr:v:" opt; do
 	case "$opt" in
 	a)
-		add_arches+=("$OPTARG")
+		# Add architecture if not already present in arches.
+		if ! (printf "%s\0" "${arches[@]}" | grep -zqxF "$OPTARG"); then
+			arches+=("$OPTARG")
+		fi
 		;;
 	c)
 		commit="$OPTARG"
@@ -158,9 +161,8 @@ done
 version="${version:-$(<"$root/VERSION")}"
 releasedir="${releasedir:-release/$version}"
 hashcmd="${hashcmd:-sha256sum}"
-native_arch="$(go env GOARCH || echo "amd64")"
 # Suffixes of files to checksum/sign.
-suffixes=("$native_arch" "${add_arches[@]}" tar.xz)
+suffixes=("${arches[@]}" tar.xz)
 
 log "creating $project release in '$releasedir'"
 log "  version: $version"
@@ -174,7 +176,7 @@ set -x
 rm -rf "$releasedir" && mkdir -p "$releasedir"
 
 # Build project.
-build_project "$releasedir/$project" "$native_arch" "${add_arches[@]}"
+build_project "$releasedir/$project" "$native_arch" "${arches[@]}"
 
 # Generate new archive.
 git archive --format=tar --prefix="$project-$version/" "$commit" | xz >"$releasedir/$project.tar.xz"

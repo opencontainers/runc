@@ -646,12 +646,16 @@ function teardown_bundle() {
 	remove_parent
 }
 
-function requires_kernel() {
+function is_kernel_gte() {
 	local major_required minor_required
 	major_required=$(echo "$1" | cut -d. -f1)
 	minor_required=$(echo "$1" | cut -d. -f2)
-	if [[ "$KERNEL_MAJOR" -lt $major_required || ("$KERNEL_MAJOR" -eq $major_required && "$KERNEL_MINOR" -lt $minor_required) ]]; then
-		skip "requires kernel $1"
+	[[ "$KERNEL_MAJOR" -gt $major_required || ("$KERNEL_MAJOR" -eq $major_required && "$KERNEL_MINOR" -ge $minor_required) ]]
+}
+
+function requires_kernel() {
+	if ! is_kernel_gte "$@"; then
+		skip "requires kernel >= $1"
 	fi
 }
 

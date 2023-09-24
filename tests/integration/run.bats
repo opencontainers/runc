@@ -126,3 +126,37 @@ function teardown() {
 	[ "$status" -eq 0 ]
 	[ "$output" = "410" ]
 }
+
+@test "runc run [runc-dmz]" {
+	runc --debug run test_hello
+	[ "$status" -eq 0 ]
+	[[ "$output" = *"Hello World"* ]]
+	# We use runc-dmz if we can.
+	[[ "$output" = *"runc-dmz: using runc-dmz"* ]]
+}
+
+@test "runc run [cap_sys_ptrace -> /proc/self/exe clone]" {
+	# Add CAP_SYS_PTRACE to the bounding set, the minimum needed to indicate a
+	# container process _could_ get CAP_SYS_PTRACE.
+	update_config '.process.capabilities.bounding += ["CAP_SYS_PTRACE"]'
+
+	runc --debug run test_hello
+	[ "$status" -eq 0 ]
+	[[ "$output" = *"Hello World"* ]]
+	if [ "$EUID" -ne 0 ] && is_kernel_gte 4.10; then
+		# For Linux 4.10 and later, rootless containers will use runc-dmz
+		# because they are running in a user namespace. See isDmzBinarySafe().
+		[[ "$output" = *"runc-dmz: using runc-dmz"* ]]
+	else
+		# If the container has CAP_SYS_PTRACE and is not rootless, we use
+		# /proc/self/exe cloning.
+		[[ "$output" = *"runc-dmz: using /proc/self/exe clone"* ]]
+	fi
+}
+
+@test "RUNC_DMZ=legacy runc run [/proc/self/exe clone]" {
+	RUNC_DMZ=legacy runc --debug run test_hello
+	[ "$status" -eq 0 ]
+	[[ "$output" = *"Hello World"* ]]
+	[[ "$output" = *"runc-dmz: using /proc/self/exe clone"* ]]
+}

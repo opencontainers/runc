@@ -3,6 +3,7 @@
 run:
   build-tags:
     - seccomp
+    - runc_nodmz
 
 linters:
   enable:

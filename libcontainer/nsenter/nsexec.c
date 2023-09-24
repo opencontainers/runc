@@ -536,9 +536,6 @@ void join_namespaces(char *nslist)
 	free(namespaces);
 }
 
-/* Defined in cloned_binary.c. */
-extern int ensure_cloned_binary(void);
-
 static inline int sane_kill(pid_t pid, int signum)
 {
 	if (pid > 0)
@@ -790,14 +787,6 @@ void nsexec(void)
 		/* We are not a runc init. Just return to go runtime. */
 		return;
 	}
-
-	/*
-	 * We need to re-exec if we are not in a cloned binary. This is necessary
-	 * to ensure that containers won't be able to access the host binary
-	 * through /proc/self/exe. See CVE-2019-5736.
-	 */
-	if (ensure_cloned_binary() < 0)
-		bail("could not ensure we are a cloned binary");
 
 	/*
 	 * Inform the parent we're past initial setup.

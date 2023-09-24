@@ -7,6 +7,7 @@
 run:
   build-tags:
     - seccomp
+    - runc_nodmz
 
 linters:
   disable-all: true
