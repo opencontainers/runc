@@ -1,4 +1,5 @@
-#include <unistd.h>
+#include "xstat.h"
+#include "nolibc/nolibc.h"
 
 extern char **environ;
 
