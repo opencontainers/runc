@@ -1,4 +1,5 @@
-//go:build !runc_nodmz
+//go:build (386 || amd64 || arm || arm64 || loong64 || ppc64le || riscv64 || s390x) && !runc_nodmz
+// +build 386 amd64 arm arm64 loong64 ppc64le riscv64 s390x
 // +build !runc_nodmz
 
 package dmz

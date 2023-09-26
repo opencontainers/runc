@@ -48,6 +48,10 @@ else ifeq ($(GOARCH),riscv64)
 	HOST := riscv64-$(PLATFORM)-
 else ifeq ($(GOARCH),s390x)
 	HOST := s390x-$(PLATFORM)-
+else ifeq ($(GOARCH),mipsle)
+	HOST := mipsel-$(PLATFORM)-
+else ifeq ($(GOARCH),mips64le)
+	HOST := mips64el-$(PLATFORM)abi64-
 else
 $(error Unsupported GOARCH $(GOARCH))
 endif
