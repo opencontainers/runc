@@ -704,7 +704,6 @@ func reOpenDevNull() error {
 // Create the device nodes in the container.
 func createDevices(config *configs.Config) error {
 	useBindMount := userns.RunningInUserNS() || config.Namespaces.Contains(configs.NEWUSER)
-	oldMask := unix.Umask(0o000)
 	for _, node := range config.Devices {
 
 		// The /dev/ptmx device is setup by setupPtmx()
@@ -715,11 +714,9 @@ func createDevices(config *configs.Config) error {
 		// containers running in a user namespace are not allowed to mknod
 		// devices so we can just bind mount it from the host.
 		if err := createDeviceNode(config.Rootfs, node, useBindMount); err != nil {
-			unix.Umask(oldMask)
 			return err
 		}
 	}
-	unix.Umask(oldMask)
 	return nil
 }
 
@@ -781,6 +778,10 @@ func mknodDevice(dest string, node *devices.Device) error {
 	}
 	if err := unix.Mknod(dest, uint32(fileMode), int(dev)); err != nil {
 		return &os.PathError{Op: "mknod", Path: dest, Err: err}
+	}
+	// Ensure permission bits (can be different because of umask).
+	if err := os.Chmod(dest, fileMode); err != nil {
+		return err
 	}
 	return os.Chown(dest, int(node.Uid), int(node.Gid))
 }
