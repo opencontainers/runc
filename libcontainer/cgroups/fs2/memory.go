@@ -136,26 +136,43 @@ func getMemoryDataV2(path, name string) (cgroups.MemoryData, error) {
 	if name != "" {
 		moduleName = "memory." + name
 	}
-	usage := moduleName + ".current"
-	limit := moduleName + ".max"
+	files := []struct {
+		name  string
+		value *uint64
+	}{
+		{
+			name:  moduleName + ".current",
+			value: &memoryData.Usage,
+		},
+		{
+			name:  moduleName + ".max",
+			value: &memoryData.Limit,
+		},
+		{
+			name:  moduleName + ".peak",
+			value: &memoryData.MaxUsage,
+		},
+	}
 
-	value, err := fscommon.GetCgroupParamUint(path, usage)
-	if err != nil {
-		if name != "" && os.IsNotExist(err) {
-			// Ignore EEXIST as there's no swap accounting
-			// if kernel CONFIG_MEMCG_SWAP is not set or
-			// swapaccount=0 kernel boot parameter is given.
-			return cgroups.MemoryData{}, nil
+	for _, f := range files {
+		value, err := fscommon.GetCgroupParamUint(path, f.name)
+		if err != nil {
+			if os.IsNotExist(err) {
+				// Peak usage is only available since kernel v5.14, so collect best-effort.
+				if strings.HasSuffix(f.name, "peak") {
+					continue
+				}
+				// Ignore EEXIST as there's no swap accounting
+				// if kernel CONFIG_MEMCG_SWAP is not set or
+				// swapaccount=0 kernel boot parameter is given.
+				if name == "swap" {
+					return cgroups.MemoryData{}, nil
+				}
+			}
+			return memoryData, err
 		}
-		return cgroups.MemoryData{}, err
+		*f.value = value
 	}
-	memoryData.Usage = value
-
-	value, err = fscommon.GetCgroupParamUint(path, limit)
-	if err != nil {
-		return cgroups.MemoryData{}, err
-	}
-	memoryData.Limit = value
 
 	return memoryData, nil
 }
