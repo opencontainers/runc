@@ -395,7 +395,7 @@ func TestAdditionalGroups(t *testing.T) {
 		Env:              standardEnvironment,
 		Stdin:            nil,
 		Stdout:           &stdout,
-		AdditionalGroups: []string{"plugdev", "audio"},
+		AdditionalGroups: []string{"1", "2"},
 		Init:             true,
 	}
 	err = container.Run(&pconfig)
@@ -407,12 +407,12 @@ func TestAdditionalGroups(t *testing.T) {
 	outputGroups := stdout.String()
 
 	// Check that the groups output has the groups that we specified
-	if !strings.Contains(outputGroups, "audio") {
-		t.Fatalf("Listed groups do not contain the audio group as expected: %v", outputGroups)
+	if !strings.Contains(outputGroups, "1") {
+		t.Fatalf("Listed groups do not contain the group as expected: %v", outputGroups)
 	}
 
-	if !strings.Contains(outputGroups, "plugdev") {
-		t.Fatalf("Listed groups do not contain the plugdev group as expected: %v", outputGroups)
+	if !strings.Contains(outputGroups, "2") {
+		t.Fatalf("Listed groups do not contain the group as expected: %v", outputGroups)
 	}
 }
 

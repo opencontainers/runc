@@ -440,8 +440,7 @@ func syncParentSeccomp(pipe *os.File, seccompFd *os.File) error {
 	return readSync(pipe, procSeccompDone)
 }
 
-// setupUser changes the groups, gid, and uid for the user inside the container
-func setupUser(config *initConfig) error {
+func getExecUser(userAndGroup string) (*user.ExecUser, error) {
 	// Set up defaults.
 	defaultExecUser := user.ExecUser{
 		Uid:  0,
@@ -449,26 +448,51 @@ func setupUser(config *initConfig) error {
 		Home: "/",
 	}
 
-	passwdPath, err := user.GetPasswdPath()
-	if err != nil {
-		return err
-	}
+	u, g, ok := strings.Cut(userAndGroup, ":")
 
-	groupPath, err := user.GetGroupPath()
-	if err != nil {
-		return err
-	}
+	if !ok || os.Getenv("HOME") == "" {
+		passwdPath, err := user.GetPasswdPath()
+		if err != nil {
+			return nil, err
+		}
 
-	execUser, err := user.GetExecUserPath(config.User, &defaultExecUser, passwdPath, groupPath)
+		groupPath, err := user.GetGroupPath()
+		if err != nil {
+			return nil, err
+		}
+
+		return user.GetExecUserPath(userAndGroup, &defaultExecUser, passwdPath, groupPath)
+	}
+	uid, err := strconv.Atoi(u)
+	if err != nil {
+		return nil, err
+	}
+	gid, err := strconv.Atoi(g)
+	if err != nil {
+		return nil, err
+	}
+	return &user.ExecUser{
+		Uid:  uid,
+		Gid:  gid,
+		Home: os.Getenv("HOME"),
+	}, nil
+}
+
+// setupUser changes the groups, gid, and uid for the user inside the container.
+func setupUser(config *initConfig) error {
+	execUser, err := getExecUser(config.User)
 	if err != nil {
 		return err
 	}
 
 	var addGroups []int
 	if len(config.AdditionalGroups) > 0 {
-		addGroups, err = user.GetAdditionalGroupsPath(config.AdditionalGroups, groupPath)
-		if err != nil {
-			return err
+		for _, group := range config.AdditionalGroups {
+			gid, err := strconv.Atoi(group)
+			if err != nil {
+				return err
+			}
+			addGroups = append(addGroups, gid)
 		}
 	}
 
