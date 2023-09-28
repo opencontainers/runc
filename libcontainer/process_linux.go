@@ -144,6 +144,14 @@ func (p *setnsProcess) start() (retErr error) {
 			}
 		}
 	}
+	// Reset the inherited cpu affinity. Old kernels do that automatically, but
+	// new kernels remember the affinity that was set before the cgroup move.
+	// This is undesirable, because it inherits the systemd affinity when the container
+	// should really move to the container space cpus.
+	if err := unix.SchedSetaffinity(p.pid(), &unix.CPUSet{}); err != nil && err != unix.EINVAL && err != unix.ENODEV {
+		return fmt.Errorf("error resetting pid %d affinity: %w", p.pid(), err)
+	}
+
 	if p.intelRdtPath != "" {
 		// if Intel RDT "resource control" filesystem path exists
 		_, err := os.Stat(p.intelRdtPath)
@@ -418,6 +426,14 @@ func (p *initProcess) start() (retErr error) {
 	// because we'd be using the rootless cgroup manager in that case.
 	if err := p.manager.Apply(p.pid()); err != nil {
 		return fmt.Errorf("unable to apply cgroup configuration: %w", err)
+	}
+
+	// Reset the inherited cpu affinity. Old kernels do that automatically, but
+	// new kernels remember the affinity that was set before the cgroup move.
+	// This is undesirable, because it inherits the systemd affinity when the container
+	// should really move to the container space cpus.
+	if err := unix.SchedSetaffinity(p.pid(), &unix.CPUSet{}); err != nil && err != unix.EINVAL && err != unix.ENODEV {
+		return fmt.Errorf("error resetting pid %d affinity: %w", p.pid(), err)
 	}
 	if p.intelRdtManager != nil {
 		if err := p.intelRdtManager.Apply(p.pid()); err != nil {
