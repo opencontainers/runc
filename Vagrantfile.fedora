@@ -28,6 +28,9 @@ ts run
 EOF
     done
     dnf clean all
+    echo -----
+    sestatus
+    echo -----
 
     # Prevent the "fatal: unsafe repository" git complain during build.
     git config --global --add safe.directory /vagrant
