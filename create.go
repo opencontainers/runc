@@ -35,6 +35,10 @@ command(s) that get executed on start, edit the args parameter of the spec. See
 			Usage: "path to an AF_UNIX socket which will receive a file descriptor referencing the master end of the console's pseudoterminal",
 		},
 		cli.StringFlag{
+			Name:  "pidfd-socket",
+			Usage: "path to an AF_UNIX socket which will receive a file descriptor referencing the init process",
+		},
+		cli.StringFlag{
 			Name:  "pid-file",
 			Value: "",
 			Usage: "specify the file to write the process id to",

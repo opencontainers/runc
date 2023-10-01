@@ -17,6 +17,7 @@ RECVTTY="${INTEGRATION_ROOT}/../../contrib/cmd/recvtty/recvtty"
 SD_HELPER="${INTEGRATION_ROOT}/../../contrib/cmd/sd-helper/sd-helper"
 SECCOMP_AGENT="${INTEGRATION_ROOT}/../../contrib/cmd/seccompagent/seccompagent"
 FS_IDMAP="${INTEGRATION_ROOT}/../../contrib/cmd/fs-idmap/fs-idmap"
+PIDFD_KILL="${INTEGRATION_ROOT}/../../contrib/cmd/pidfd-kill/pidfd-kill"
 
 # Some variables may not always be set. Set those to empty value,
 # if unset, to avoid "unbound variable" error.
@@ -696,4 +697,45 @@ function requires_idmap_fs() {
 		;;
 	esac
 	# If we have another error, the integration test will fail and report it.
+}
+
+# setup_pidfd_kill runs pidfd-kill process in background and receives the
+# SIGTERM as signal to send the given signal to init process.
+function setup_pidfd_kill() {
+	local signal=$1
+
+	[ ! -v ROOT ] && return 1
+	local dir="${ROOT}/pidfd"
+
+	mkdir "${dir}"
+	export PIDFD_SOCKET="${dir}/sock"
+
+	("${PIDFD_KILL}" --pid-file "${dir}/pid" --signal "${signal}" "${PIDFD_SOCKET}" &) &
+
+	# ensure socket is ready
+	retry 10 1 stat "${PIDFD_SOCKET}"
+}
+
+# teardown_pidfd_kill cleanups all the resources related to pidfd-kill.
+function teardown_pidfd_kill() {
+	[ ! -v ROOT ] && return 0
+
+	local dir="${ROOT}/pidfd"
+
+	if [ -f "${dir}/pid" ]; then
+		kill -9 "$(cat "${dir}/pid")"
+	fi
+
+	rm -rf "${dir}"
+}
+
+# pidfd_kill sends the signal to init process.
+function pidfd_kill() {
+	[ ! -v ROOT ] && return 0
+
+	local dir="${ROOT}/pidfd"
+
+	if [ -f "${dir}/pid" ]; then
+		kill "$(cat "${dir}/pid")"
+	fi
 }

@@ -71,10 +71,10 @@ runc-bin: runc-dmz
 	$(GO_BUILD) -o runc .
 
 .PHONY: all
-all: runc recvtty sd-helper seccompagent fs-idmap memfd-bind
+all: runc recvtty sd-helper seccompagent fs-idmap memfd-bind pidfd-kill
 
-.PHONY: recvtty sd-helper seccompagent fs-idmap memfd-bind
-recvtty sd-helper seccompagent fs-idmap memfd-bind:
+.PHONY: recvtty sd-helper seccompagent fs-idmap memfd-bind pidfd-kill
+recvtty sd-helper seccompagent fs-idmap memfd-bind pidfd-kill:
 	$(GO_BUILD) -o contrib/cmd/$@/$@ ./contrib/cmd/$@
 
 .PHONY: static
@@ -194,6 +194,7 @@ clean:
 	rm -f contrib/cmd/sd-helper/sd-helper
 	rm -f contrib/cmd/seccompagent/seccompagent
 	rm -f contrib/cmd/memfd-bind/memfd-bind
+	rm -f contrib/cmd/pidfd-kill/pidfd-kill
 	sudo rm -rf release
 	rm -rf man/man8
 
