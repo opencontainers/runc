@@ -103,7 +103,7 @@ func (r *runningState) status() Status {
 func (r *runningState) transition(s containerState) error {
 	switch s.(type) {
 	case *stoppedState:
-		if r.c.runType() == Running {
+		if r.c.hasInit() {
 			return ErrRunning
 		}
 		r.c.state = s
@@ -118,7 +118,7 @@ func (r *runningState) transition(s containerState) error {
 }
 
 func (r *runningState) destroy() error {
-	if r.c.runType() == Running {
+	if r.c.hasInit() {
 		return ErrRunning
 	}
 	return destroy(r.c)
@@ -170,14 +170,13 @@ func (p *pausedState) transition(s containerState) error {
 }
 
 func (p *pausedState) destroy() error {
-	t := p.c.runType()
-	if t != Running && t != Created {
-		if err := p.c.cgroupManager.Freeze(configs.Thawed); err != nil {
-			return err
-		}
-		return destroy(p.c)
+	if p.c.hasInit() {
+		return ErrPaused
 	}
-	return ErrPaused
+	if err := p.c.cgroupManager.Freeze(configs.Thawed); err != nil {
+		return err
+	}
+	return destroy(p.c)
 }
 
 // restoredState is the same as the running state but also has associated checkpoint

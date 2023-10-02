@@ -115,7 +115,7 @@ func (c *Container) ignoreCgroupError(err error) error {
 	if err == nil {
 		return nil
 	}
-	if errors.Is(err, os.ErrNotExist) && c.runType() == Stopped && !c.cgroupManager.Exists() {
+	if errors.Is(err, os.ErrNotExist) && !c.hasInit() && !c.cgroupManager.Exists() {
 		return nil
 	}
 	return err
@@ -1006,34 +1006,31 @@ func (c *Container) refreshState() error {
 	if paused {
 		return c.state.transition(&pausedState{c: c})
 	}
-	t := c.runType()
-	switch t {
-	case Created:
-		return c.state.transition(&createdState{c: c})
-	case Running:
-		return c.state.transition(&runningState{c: c})
+	if !c.hasInit() {
+		return c.state.transition(&stoppedState{c: c})
 	}
-	return c.state.transition(&stoppedState{c: c})
+	// The presence of exec fifo helps to distinguish between
+	// the created and the running states.
+	if _, err := os.Stat(filepath.Join(c.stateDir, execFifoFilename)); err == nil {
+		return c.state.transition(&createdState{c: c})
+	}
+	return c.state.transition(&runningState{c: c})
 }
 
-func (c *Container) runType() Status {
+// hasInit tells whether the container init process exists.
+func (c *Container) hasInit() bool {
 	if c.initProcess == nil {
-		return Stopped
+		return false
 	}
 	pid := c.initProcess.pid()
 	stat, err := system.Stat(pid)
 	if err != nil {
-		return Stopped
+		return false
 	}
 	if stat.StartTime != c.initProcessStartTime || stat.State == system.Zombie || stat.State == system.Dead {
-		return Stopped
+		return false
 	}
-	// We'll create exec fifo and blocking on it after container is created,
-	// and delete it after start container.
-	if _, err := os.Stat(filepath.Join(c.stateDir, execFifoFilename)); err == nil {
-		return Created
-	}
-	return Running
+	return true
 }
 
 func (c *Container) isPaused() (bool, error) {
