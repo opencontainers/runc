@@ -368,12 +368,6 @@ func (c *Container) Signal(s os.Signal) error {
 	if err != nil {
 		return err
 	}
-	// To avoid a PID reuse attack, don't kill non-running container.
-	switch status {
-	case Running, Created, Paused:
-	default:
-		return ErrNotRunning
-	}
 
 	// When a container has its own PID namespace, inside it the init PID
 	// is 1, and thus it is handled specially by the kernel. In particular,
@@ -383,8 +377,19 @@ func (c *Container) Signal(s os.Signal) error {
 	// OTOH, if PID namespace is shared, we should kill all pids to avoid
 	// leftover processes.
 	if s == unix.SIGKILL && !c.config.Namespaces.IsPrivate(configs.NEWPID) {
+		if pids, err := c.cgroupManager.GetAllPids(); c.ignoreCgroupError(err) != nil {
+			return err
+		} else if len(pids) == 0 {
+			return ErrNotRunning
+		}
 		err = signalAllProcesses(c.cgroupManager, unix.SIGKILL)
 	} else {
+		// To avoid a PID reuse attack, don't kill non-running container.
+		switch status {
+		case Running, Created, Paused:
+		default:
+			return ErrNotRunning
+		}
 		err = c.initProcess.signal(s)
 	}
 	if err != nil {
