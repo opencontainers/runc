@@ -873,6 +873,26 @@ func (c *Container) newInitConfig(process *Process) *initConfig {
 func (c *Container) Destroy() error {
 	c.m.Lock()
 	defer c.m.Unlock()
+	if !c.config.Namespaces.IsPrivate(configs.NEWPID) {
+		const retries = 10
+		for i := 0; i < retries; i++ {
+			pids, err := c.cgroupManager.GetAllPids()
+			if c.ignoreCgroupError(err) != nil {
+				return err
+			}
+			if len(pids) > 0 {
+				if err := signalAllProcesses(c.cgroupManager, unix.SIGKILL); c.ignoreCgroupError(err) != nil {
+					return err
+				}
+				if i == retries-1 {
+					return errors.New("some processes are still running in the container")
+				}
+				time.Sleep(100 * time.Millisecond)
+			} else {
+				break
+			}
+		}
+	}
 	return c.state.destroy()
 }
 
