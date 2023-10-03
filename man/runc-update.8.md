@@ -42,7 +42,7 @@ In case **-r** is used, the JSON format is like this:
 
 # OPTIONS
 **--resources**|**-r** _resources.json_
-: Read the new resource limtis from _resources.json_. Use **-** to read from
+: Read the new resource limits from _resources.json_. Use **-** to read from
 stdin. If this option is used, all other options are ignored.
 
 **--blkio-weight** _weight_
