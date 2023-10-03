@@ -41,7 +41,7 @@ func destroy(c *Container) error {
 			err = ierr
 		}
 	}
-	if rerr := os.RemoveAll(c.root); err == nil {
+	if rerr := os.RemoveAll(c.stateDir); err == nil {
 		err = rerr
 	}
 	c.initProcess = nil
@@ -200,7 +200,7 @@ func (r *restoredState) transition(s containerState) error {
 }
 
 func (r *restoredState) destroy() error {
-	if _, err := os.Stat(filepath.Join(r.c.root, "checkpoint")); err != nil {
+	if _, err := os.Stat(filepath.Join(r.c.stateDir, "checkpoint")); err != nil {
 		if !os.IsNotExist(err) {
 			return err
 		}

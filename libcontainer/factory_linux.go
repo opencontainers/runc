@@ -46,11 +46,11 @@ func Create(root, id string, config *configs.Config) (*Container, error) {
 	if err := os.MkdirAll(root, 0o700); err != nil {
 		return nil, err
 	}
-	containerRoot, err := securejoin.SecureJoin(root, id)
+	stateDir, err := securejoin.SecureJoin(root, id)
 	if err != nil {
 		return nil, err
 	}
-	if _, err := os.Stat(containerRoot); err == nil {
+	if _, err := os.Stat(stateDir); err == nil {
 		return nil, ErrExist
 	} else if !os.IsNotExist(err) {
 		return nil, err
@@ -89,12 +89,12 @@ func Create(root, id string, config *configs.Config) (*Container, error) {
 	}
 
 	// Parent directory is already created above, so Mkdir is enough.
-	if err := os.Mkdir(containerRoot, 0o711); err != nil {
+	if err := os.Mkdir(stateDir, 0o711); err != nil {
 		return nil, err
 	}
 	c := &Container{
 		id:              id,
-		root:            containerRoot,
+		stateDir:        stateDir,
 		config:          config,
 		cgroupManager:   cm,
 		intelRdtManager: intelrdt.NewManager(config, id, ""),
@@ -114,11 +114,11 @@ func Load(root, id string) (*Container, error) {
 	if err := validateID(id); err != nil {
 		return nil, err
 	}
-	containerRoot, err := securejoin.SecureJoin(root, id)
+	stateDir, err := securejoin.SecureJoin(root, id)
 	if err != nil {
 		return nil, err
 	}
-	state, err := loadState(containerRoot)
+	state, err := loadState(stateDir)
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +138,7 @@ func Load(root, id string) (*Container, error) {
 		config:               &state.Config,
 		cgroupManager:        cm,
 		intelRdtManager:      intelrdt.NewManager(&state.Config, id, state.IntelRdtPath),
-		root:                 containerRoot,
+		stateDir:             stateDir,
 		created:              state.Created,
 	}
 	c.state = &loadedState{c: c}
