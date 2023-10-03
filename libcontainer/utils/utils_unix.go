@@ -90,7 +90,7 @@ func CloseExecFrom(minFd int) error {
 	return nil
 }
 
-// NewSockPair returns a new unix socket pair
+// NewSockPair returns a new SOCK_STREAM unix socket pair.
 func NewSockPair(name string) (parent, child *os.File, err error) {
 	fds, err := unix.Socketpair(unix.AF_LOCAL, unix.SOCK_STREAM|unix.SOCK_CLOEXEC, 0)
 	if err != nil {

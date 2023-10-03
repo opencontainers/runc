@@ -63,7 +63,7 @@ func needsSetupDev(config *configs.Config) bool {
 // prepareRootfs sets up the devices, mount points, and filesystems for use
 // inside a new mount namespace. It doesn't set anything as ro. You must call
 // finalizeRootfs after this function to finish setting up the rootfs.
-func prepareRootfs(pipe *os.File, iConfig *initConfig, mountFds mountFds) (err error) {
+func prepareRootfs(pipe *syncSocket, iConfig *initConfig, mountFds mountFds) (err error) {
 	config := iConfig.Config
 	if err := prepareRoot(config); err != nil {
 		return fmt.Errorf("error preparing rootfs: %w", err)

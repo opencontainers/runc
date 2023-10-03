@@ -46,15 +46,54 @@ type parentProcess interface {
 	forwardChildLogs() chan error
 }
 
-type filePair struct {
-	parent *os.File
-	child  *os.File
+type processComm struct {
+	// Used to send initial configuration to "runc init" and for "runc init" to
+	// indicate that it is ready.
+	initSockParent *os.File
+	initSockChild  *os.File
+	// Used for control messages between parent and "runc init".
+	syncSockParent *syncSocket
+	syncSockChild  *syncSocket
+	// Used for log forwarding from "runc init" to the parent.
+	logPipeParent *os.File
+	logPipeChild  *os.File
+}
+
+func newProcessComm() (*processComm, error) {
+	var (
+		comm processComm
+		err  error
+	)
+	comm.initSockParent, comm.initSockChild, err = utils.NewSockPair("init")
+	if err != nil {
+		return nil, fmt.Errorf("unable to create init pipe: %w", err)
+	}
+	comm.syncSockParent, comm.syncSockChild, err = newSyncSockpair("sync")
+	if err != nil {
+		return nil, fmt.Errorf("unable to create sync pipe: %w", err)
+	}
+	comm.logPipeParent, comm.logPipeChild, err = os.Pipe()
+	if err != nil {
+		return nil, fmt.Errorf("unable to create log pipe: %w", err)
+	}
+	return &comm, nil
+}
+
+func (c *processComm) closeChild() {
+	_ = c.initSockChild.Close()
+	_ = c.syncSockChild.Close()
+	_ = c.logPipeChild.Close()
+}
+
+func (c *processComm) closeParent() {
+	_ = c.initSockParent.Close()
+	_ = c.syncSockParent.Close()
+	// c.logPipeParent is kept alive for ForwardLogs
 }
 
 type setnsProcess struct {
 	cmd             *exec.Cmd
-	messageSockPair filePair
-	logFilePair     filePair
+	comm            *processComm
 	cgroupPaths     map[string]string
 	rootlessCgroups bool
 	manager         cgroups.Manager
@@ -80,18 +119,17 @@ func (p *setnsProcess) signal(sig os.Signal) error {
 }
 
 func (p *setnsProcess) start() (retErr error) {
-	defer p.messageSockPair.parent.Close()
+	defer p.comm.closeParent()
 	// get the "before" value of oom kill count
 	oom, _ := p.manager.OOMKillCount()
 	err := p.cmd.Start()
-	// close the write-side of the pipes (controlled by child)
-	p.messageSockPair.child.Close()
-	p.logFilePair.child.Close()
+	// close the child-side of the pipes (controlled by child)
+	p.comm.closeChild()
 	if err != nil {
 		return fmt.Errorf("error starting setns process: %w", err)
 	}
 
-	waitInit := initWaiter(p.messageSockPair.parent)
+	waitInit := initWaiter(p.comm.initSockParent)
 	defer func() {
 		if retErr != nil {
 			if newOom, err := p.manager.OOMKillCount(); err == nil && newOom != oom {
@@ -110,7 +148,7 @@ func (p *setnsProcess) start() (retErr error) {
 	}()
 
 	if p.bootstrapData != nil {
-		if _, err := io.Copy(p.messageSockPair.parent, p.bootstrapData); err != nil {
+		if _, err := io.Copy(p.comm.initSockParent, p.bootstrapData); err != nil {
 			return fmt.Errorf("error copying bootstrap data to pipe: %w", err)
 		}
 	}
@@ -158,11 +196,11 @@ func (p *setnsProcess) start() (retErr error) {
 	if err := setupRlimits(p.config.Rlimits, p.pid()); err != nil {
 		return fmt.Errorf("error setting rlimits for process: %w", err)
 	}
-	if err := utils.WriteJSON(p.messageSockPair.parent, p.config); err != nil {
+	if err := utils.WriteJSON(p.comm.initSockParent, p.config); err != nil {
 		return fmt.Errorf("error writing config to pipe: %w", err)
 	}
 
-	ierr := parseSync(p.messageSockPair.parent, func(sync *syncT) error {
+	ierr := parseSync(p.comm.syncSockParent, func(sync *syncT) error {
 		switch sync.Type {
 		case procReady:
 			// This shouldn't happen.
@@ -190,7 +228,7 @@ func (p *setnsProcess) start() (retErr error) {
 			// wait for the seccomp notify listener to get the fd before we
 			// permit the child to continue because the child will happily wait
 			// for the listener if it hits SCMP_ACT_NOTIFY.
-			if err := writeSync(p.messageSockPair.parent, procSeccompDone); err != nil {
+			if err := writeSync(p.comm.syncSockParent, procSeccompDone); err != nil {
 				return err
 			}
 
@@ -219,8 +257,8 @@ func (p *setnsProcess) start() (retErr error) {
 		return nil
 	})
 
-	if err := unix.Shutdown(int(p.messageSockPair.parent.Fd()), unix.SHUT_WR); err != nil {
-		return &os.PathError{Op: "shutdown", Path: "(init pipe)", Err: err}
+	if err := p.comm.syncSockParent.Shutdown(unix.SHUT_WR); err != nil && ierr == nil {
+		return err
 	}
 	// Must be done after Shutdown so the child will exit and we can wait for it.
 	if ierr != nil {
@@ -245,7 +283,7 @@ func (p *setnsProcess) execSetns() error {
 		return &exec.ExitError{ProcessState: status}
 	}
 	var pid *pid
-	if err := json.NewDecoder(p.messageSockPair.parent).Decode(&pid); err != nil {
+	if err := json.NewDecoder(p.comm.initSockParent).Decode(&pid); err != nil {
 		_ = p.cmd.Wait()
 		return fmt.Errorf("error reading pid from init pipe: %w", err)
 	}
@@ -299,13 +337,12 @@ func (p *setnsProcess) setExternalDescriptors(newFds []string) {
 }
 
 func (p *setnsProcess) forwardChildLogs() chan error {
-	return logs.ForwardLogs(p.logFilePair.parent)
+	return logs.ForwardLogs(p.comm.logPipeParent)
 }
 
 type initProcess struct {
 	cmd             *exec.Cmd
-	messageSockPair filePair
-	logFilePair     filePair
+	comm            *processComm
 	config          *initConfig
 	manager         cgroups.Manager
 	intelRdtManager *intelrdt.Manager
@@ -326,7 +363,7 @@ func (p *initProcess) externalDescriptors() []string {
 // getChildPid receives the final child's pid over the provided pipe.
 func (p *initProcess) getChildPid() (int, error) {
 	var pid pid
-	if err := json.NewDecoder(p.messageSockPair.parent).Decode(&pid); err != nil {
+	if err := json.NewDecoder(p.comm.initSockParent).Decode(&pid); err != nil {
 		_ = p.cmd.Wait()
 		return -1, err
 	}
@@ -362,18 +399,17 @@ func (p *initProcess) waitForChildExit(childPid int) error {
 }
 
 func (p *initProcess) start() (retErr error) {
-	defer p.messageSockPair.parent.Close() //nolint: errcheck
+	defer p.comm.closeParent()
 	err := p.cmd.Start()
 	p.process.ops = p
-	// close the write-side of the pipes (controlled by child)
-	_ = p.messageSockPair.child.Close()
-	_ = p.logFilePair.child.Close()
+	// close the child-side of the pipes (controlled by child)
+	p.comm.closeChild()
 	if err != nil {
 		p.process.ops = nil
 		return fmt.Errorf("unable to start init: %w", err)
 	}
 
-	waitInit := initWaiter(p.messageSockPair.parent)
+	waitInit := initWaiter(p.comm.initSockParent)
 	defer func() {
 		if retErr != nil {
 			// Find out if init is killed by the kernel's OOM killer.
@@ -424,7 +460,7 @@ func (p *initProcess) start() (retErr error) {
 			return fmt.Errorf("unable to apply Intel RDT configuration: %w", err)
 		}
 	}
-	if _, err := io.Copy(p.messageSockPair.parent, p.bootstrapData); err != nil {
+	if _, err := io.Copy(p.comm.initSockParent, p.bootstrapData); err != nil {
 		return fmt.Errorf("can't copy bootstrap data to pipe: %w", err)
 	}
 	err = <-waitInit
@@ -457,12 +493,12 @@ func (p *initProcess) start() (retErr error) {
 	if err := p.updateSpecState(); err != nil {
 		return fmt.Errorf("error updating spec state: %w", err)
 	}
-	if err := p.sendConfig(); err != nil {
+	if err := utils.WriteJSON(p.comm.initSockParent, p.config); err != nil {
 		return fmt.Errorf("error sending config to init process: %w", err)
 	}
 
 	var seenProcReady bool
-	ierr := parseSync(p.messageSockPair.parent, func(sync *syncT) error {
+	ierr := parseSync(p.comm.syncSockParent, func(sync *syncT) error {
 		switch sync.Type {
 		case procSeccomp:
 			if p.config.Config.Seccomp.ListenerPath == "" {
@@ -484,7 +520,7 @@ func (p *initProcess) start() (retErr error) {
 			// wait for the seccomp notify listener to get the fd before we
 			// permit the child to continue because the child will happily wait
 			// for the listener if it hits SCMP_ACT_NOTIFY.
-			if err := writeSync(p.messageSockPair.parent, procSeccompDone); err != nil {
+			if err := writeSync(p.comm.syncSockParent, procSeccompDone); err != nil {
 				return err
 			}
 
@@ -537,7 +573,7 @@ func (p *initProcess) start() (retErr error) {
 			p.container.initProcessStartTime = state.InitProcessStartTime
 
 			// Sync with child.
-			if err := writeSync(p.messageSockPair.parent, procRun); err != nil {
+			if err := writeSync(p.comm.syncSockParent, procRun); err != nil {
 				return err
 			}
 		case procHooks:
@@ -568,7 +604,7 @@ func (p *initProcess) start() (retErr error) {
 				}
 			}
 			// Sync with child.
-			if err := writeSync(p.messageSockPair.parent, procResume); err != nil {
+			if err := writeSync(p.comm.syncSockParent, procHooksDone); err != nil {
 				return err
 			}
 		default:
@@ -577,8 +613,8 @@ func (p *initProcess) start() (retErr error) {
 		return nil
 	})
 
-	if err := unix.Shutdown(int(p.messageSockPair.parent.Fd()), unix.SHUT_WR); err != nil && ierr == nil {
-		return &os.PathError{Op: "shutdown", Path: "(init pipe)", Err: err}
+	if err := p.comm.syncSockParent.Shutdown(unix.SHUT_WR); err != nil && ierr == nil {
+		return err
 	}
 	if !seenProcReady && ierr == nil {
 		ierr = errors.New("procReady not received")
@@ -620,13 +656,6 @@ func (p *initProcess) updateSpecState() error {
 	return nil
 }
 
-func (p *initProcess) sendConfig() error {
-	// send the config to the container's init process, we don't use JSON Encode
-	// here because there might be a problem in JSON decoder in some cases, see:
-	// https://github.com/docker/docker/issues/14203#issuecomment-174177790
-	return utils.WriteJSON(p.messageSockPair.parent, p.config)
-}
-
 func (p *initProcess) createNetworkInterfaces() error {
 	for _, config := range p.config.Config.Networks {
 		strategy, err := getStrategy(config.Type)
@@ -657,7 +686,7 @@ func (p *initProcess) setExternalDescriptors(newFds []string) {
 }
 
 func (p *initProcess) forwardChildLogs() chan error {
-	return logs.ForwardLogs(p.logFilePair.parent)
+	return logs.ForwardLogs(p.comm.logPipeParent)
 }
 
 func pidGetFd(pid, srcFd int) (*os.File, error) {

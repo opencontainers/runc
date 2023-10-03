@@ -108,26 +108,35 @@ func Init() {
 // error, it means the initialization has failed. If the error is returned,
 // it means the error can not be communicated back to the parent.
 func startInitialization() (retErr error) {
-	// Get the INITPIPE.
-	envInitPipe := os.Getenv("_LIBCONTAINER_INITPIPE")
-	pipefd, err := strconv.Atoi(envInitPipe)
+	// Get the syncrhonisation pipe.
+	envSyncPipe := os.Getenv("_LIBCONTAINER_SYNCPIPE")
+	syncPipeFd, err := strconv.Atoi(envSyncPipe)
 	if err != nil {
-		return fmt.Errorf("unable to convert _LIBCONTAINER_INITPIPE: %w", err)
+		return fmt.Errorf("unable to convert _LIBCONTAINER_SYNCPIPE: %w", err)
 	}
-	pipe := os.NewFile(uintptr(pipefd), "pipe")
-	defer pipe.Close()
+	syncPipe := newSyncSocket(os.NewFile(uintptr(syncPipeFd), "sync"))
+	defer syncPipe.Close()
 
 	defer func() {
 		// If this defer is ever called, this means initialization has failed.
 		// Send the error back to the parent process in the form of an initError.
 		ierr := initError{Message: retErr.Error()}
-		if err := writeSyncArg(pipe, procError, ierr); err != nil {
+		if err := writeSyncArg(syncPipe, procError, ierr); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			return
 		}
 		// The error is sent, no need to also return it (or it will be reported twice).
 		retErr = nil
 	}()
+
+	// Get the INITPIPE.
+	envInitPipe := os.Getenv("_LIBCONTAINER_INITPIPE")
+	initPipeFd, err := strconv.Atoi(envInitPipe)
+	if err != nil {
+		return fmt.Errorf("unable to convert _LIBCONTAINER_INITPIPE: %w", err)
+	}
+	initPipe := os.NewFile(uintptr(initPipeFd), "init")
+	defer initPipe.Close()
 
 	// Set up logging. This is used rarely, and mostly for init debugging.
 
@@ -207,15 +216,16 @@ func startInitialization() (retErr error) {
 		}
 	}()
 
-	// If init succeeds, it will not return, hence none of the defers will be called.
-	return containerInit(it, pipe, consoleSocket, fifofd, logFD, dmzExe, mountFds{sourceFds: mountSrcFds, idmapFds: idmapFds})
-}
-
-func containerInit(t initType, pipe *os.File, consoleSocket *os.File, fifoFd, logFd int, dmzExe *os.File, mountFds mountFds) error {
-	var config *initConfig
-	if err := json.NewDecoder(pipe).Decode(&config); err != nil {
+	var config initConfig
+	if err := json.NewDecoder(initPipe).Decode(&config); err != nil {
 		return err
 	}
+
+	// If init succeeds, it will not return, hence none of the defers will be called.
+	return containerInit(it, &config, syncPipe, consoleSocket, fifofd, logFD, dmzExe, mountFds{sourceFds: mountSrcFds, idmapFds: idmapFds})
+}
+
+func containerInit(t initType, config *initConfig, pipe *syncSocket, consoleSocket *os.File, fifoFd, logFd int, dmzExe *os.File, mountFds mountFds) error {
 	if err := populateProcessEnvironment(config.Env); err != nil {
 		return err
 	}
@@ -395,7 +405,7 @@ func setupConsole(socket *os.File, config *initConfig, mount bool) error {
 // syncParentReady sends to the given pipe a JSON payload which indicates that
 // the init is ready to Exec the child process. It then waits for the parent to
 // indicate that it is cleared to Exec.
-func syncParentReady(pipe *os.File) error {
+func syncParentReady(pipe *syncSocket) error {
 	// Tell parent.
 	if err := writeSync(pipe, procReady); err != nil {
 		return err
@@ -407,18 +417,18 @@ func syncParentReady(pipe *os.File) error {
 // syncParentHooks sends to the given pipe a JSON payload which indicates that
 // the parent should execute pre-start hooks. It then waits for the parent to
 // indicate that it is cleared to resume.
-func syncParentHooks(pipe *os.File) error {
+func syncParentHooks(pipe *syncSocket) error {
 	// Tell parent.
 	if err := writeSync(pipe, procHooks); err != nil {
 		return err
 	}
 	// Wait for parent to give the all-clear.
-	return readSync(pipe, procResume)
+	return readSync(pipe, procHooksDone)
 }
 
 // syncParentSeccomp sends the fd associated with the seccomp file descriptor
 // to the parent, and wait for the parent to do pidfd_getfd() to grab a copy.
-func syncParentSeccomp(pipe *os.File, seccompFd *os.File) error {
+func syncParentSeccomp(pipe *syncSocket, seccompFd *os.File) error {
 	if seccompFd == nil {
 		return nil
 	}
