@@ -563,7 +563,6 @@ func (c *Container) newParentProcess(p *Process) (parentProcess, error) {
 			"_LIBCONTAINER_CONSOLE="+strconv.Itoa(stdioFdCount+len(cmd.ExtraFiles)-1),
 		)
 	}
-	cmd.Env = append(cmd.Env, "_LIBCONTAINER_STATEDIR="+c.root)
 
 	cmd.ExtraFiles = append(cmd.ExtraFiles, comm.initSockChild)
 	cmd.Env = append(cmd.Env,
