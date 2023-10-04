@@ -10,6 +10,24 @@ function teardown() {
 	teardown_bundle
 }
 
+# https://github.com/opencontainers/runc/issues/3991
+@test "runc run [tmpcopyup]" {
+	mkdir -p rootfs/dir1/dir2
+	chmod 777 rootfs/dir1/dir2
+	update_config '	  .mounts += [{
+					source: "tmpfs",
+					destination: "/dir1",
+					type: "tmpfs",
+					options: ["tmpcopyup"]
+				}]
+			| .process.args |= ["ls", "-ld", "/dir1/dir2"]'
+
+	umask 022
+	runc run test_busybox
+	[ "$status" -eq 0 ]
+	[[ "${lines[0]}" == *'drwxrwxrwx'* ]]
+}
+
 @test "runc run [bind mount]" {
 	update_config '	  .mounts += [{
 					source: ".",
