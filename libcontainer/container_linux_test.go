@@ -233,8 +233,8 @@ func TestGetContainerStateAfterUpdate(t *testing.T) {
 	}
 
 	container := &Container{
-		root: t.TempDir(),
-		id:   "myid",
+		stateDir: t.TempDir(),
+		id:       "myid",
 		config: &configs.Config{
 			Namespaces: []configs.Namespace{
 				{Type: configs.NEWPID},

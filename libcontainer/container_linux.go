@@ -36,7 +36,7 @@ const stdioFdCount = 3
 // Container is a libcontainer container object.
 type Container struct {
 	id                   string
-	root                 string
+	stateDir             string
 	config               *configs.Config
 	cgroupManager        cgroups.Manager
 	intelRdtManager      *intelrdt.Manager
@@ -242,7 +242,7 @@ func (c *Container) Exec() error {
 }
 
 func (c *Container) exec() error {
-	path := filepath.Join(c.root, execFifoFilename)
+	path := filepath.Join(c.stateDir, execFifoFilename)
 	pid := c.initProcess.pid()
 	blockingFifoOpenCh := awaitFifoOpen(path)
 	for {
@@ -409,7 +409,7 @@ func (c *Container) createExecFifo() error {
 		return err
 	}
 
-	fifoName := filepath.Join(c.root, execFifoFilename)
+	fifoName := filepath.Join(c.stateDir, execFifoFilename)
 	if _, err := os.Stat(fifoName); err == nil {
 		return fmt.Errorf("exec fifo %s already exists", fifoName)
 	}
@@ -424,7 +424,7 @@ func (c *Container) createExecFifo() error {
 }
 
 func (c *Container) deleteExecFifo() {
-	fifoName := filepath.Join(c.root, execFifoFilename)
+	fifoName := filepath.Join(c.stateDir, execFifoFilename)
 	os.Remove(fifoName)
 }
 
@@ -433,7 +433,7 @@ func (c *Container) deleteExecFifo() {
 // un-opened). It then adds the FifoFd to the given exec.Cmd as an inherited
 // fd, with _LIBCONTAINER_FIFOFD set to its fd number.
 func (c *Container) includeExecFifo(cmd *exec.Cmd) error {
-	fifoName := filepath.Join(c.root, execFifoFilename)
+	fifoName := filepath.Join(c.stateDir, execFifoFilename)
 	fifo, err := os.OpenFile(fifoName, unix.O_PATH|unix.O_CLOEXEC, 0)
 	if err != nil {
 		return err
@@ -512,7 +512,7 @@ func (c *Container) newParentProcess(p *Process) (parentProcess, error) {
 	} else {
 		var err error
 		if isDmzBinarySafe(c.config) {
-			dmzExe, err = dmz.Binary(c.root)
+			dmzExe, err = dmz.Binary(c.stateDir)
 			if err == nil {
 				// We can use our own executable without cloning if we are using
 				// runc-dmz.
@@ -531,7 +531,7 @@ func (c *Container) newParentProcess(p *Process) (parentProcess, error) {
 			err = dmz.ErrNoDmzBinary
 		}
 		if errors.Is(err, dmz.ErrNoDmzBinary) {
-			safeExe, err = dmz.CloneSelfExe(c.root)
+			safeExe, err = dmz.CloneSelfExe(c.stateDir)
 			if err != nil {
 				return nil, fmt.Errorf("unable to create safe /proc/self/exe clone for runc init: %w", err)
 			}
@@ -563,7 +563,6 @@ func (c *Container) newParentProcess(p *Process) (parentProcess, error) {
 			"_LIBCONTAINER_CONSOLE="+strconv.Itoa(stdioFdCount+len(cmd.ExtraFiles)-1),
 		)
 	}
-	cmd.Env = append(cmd.Env, "_LIBCONTAINER_STATEDIR="+c.root)
 
 	cmd.ExtraFiles = append(cmd.ExtraFiles, comm.initSockChild)
 	cmd.Env = append(cmd.Env,
@@ -952,7 +951,7 @@ func (c *Container) updateState(process parentProcess) (*State, error) {
 }
 
 func (c *Container) saveState(s *State) (retErr error) {
-	tmpFile, err := os.CreateTemp(c.root, "state-")
+	tmpFile, err := os.CreateTemp(c.stateDir, "state-")
 	if err != nil {
 		return err
 	}
@@ -973,7 +972,7 @@ func (c *Container) saveState(s *State) (retErr error) {
 		return err
 	}
 
-	stateFilePath := filepath.Join(c.root, stateFilename)
+	stateFilePath := filepath.Join(c.stateDir, stateFilename)
 	return os.Rename(tmpFile.Name(), stateFilePath)
 }
 
@@ -1020,7 +1019,7 @@ func (c *Container) runType() Status {
 	}
 	// We'll create exec fifo and blocking on it after container is created,
 	// and delete it after start container.
-	if _, err := os.Stat(filepath.Join(c.root, execFifoFilename)); err == nil {
+	if _, err := os.Stat(filepath.Join(c.stateDir, execFifoFilename)); err == nil {
 		return Created
 	}
 	return Running

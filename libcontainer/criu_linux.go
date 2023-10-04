@@ -662,7 +662,7 @@ func (c *Container) Restore(process *Process, criuOpts *CriuOpts) error {
 	// * its parent must not be overmounted
 	// c.config.Rootfs is bind-mounted to a temporary directory
 	// to satisfy these requirements.
-	root := filepath.Join(c.root, "criu-root")
+	root := filepath.Join(c.stateDir, "criu-root")
 	if err := os.Mkdir(root, 0o755); err != nil {
 		return err
 	}
@@ -1113,7 +1113,7 @@ func (c *Container) criuNotifications(resp *criurpc.CriuResp, process *Process, 
 	logrus.Debugf("notify: %s\n", script)
 	switch script {
 	case "post-dump":
-		f, err := os.Create(filepath.Join(c.root, "checkpoint"))
+		f, err := os.Create(filepath.Join(c.stateDir, "checkpoint"))
 		if err != nil {
 			return err
 		}
@@ -1166,7 +1166,7 @@ func (c *Container) criuNotifications(resp *criurpc.CriuResp, process *Process, 
 		if _, err := c.updateState(r); err != nil {
 			return err
 		}
-		if err := os.Remove(filepath.Join(c.root, "checkpoint")); err != nil {
+		if err := os.Remove(filepath.Join(c.stateDir, "checkpoint")); err != nil {
 			if !os.IsNotExist(err) {
 				logrus.Error(err)
 			}
