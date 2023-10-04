@@ -151,7 +151,7 @@ static int is_self_cloned(void)
 	 * Is the binary a fully-sealed memfd? We don't need CLONED_BINARY_ENV for
 	 * this, because you cannot write to a sealed memfd no matter what (so
 	 * sharing it isn't a bad thing -- and an admin could bind-mount a sealed
-	 * memfd to /usr/bin/runc to allow re-use).
+	 * memfd to /usr/bin/runc to allow reuse).
 	 */
 	ret = fcntl(fd, F_GET_SEALS);
 	if (ret >= 0) {
