@@ -108,7 +108,7 @@ func Init() {
 // error, it means the initialization has failed. If the error is returned,
 // it means the error can not be communicated back to the parent.
 func startInitialization() (retErr error) {
-	// Get the syncrhonisation pipe.
+	// Get the synchronisation pipe.
 	envSyncPipe := os.Getenv("_LIBCONTAINER_SYNCPIPE")
 	syncPipeFd, err := strconv.Atoi(envSyncPipe)
 	if err != nil {
