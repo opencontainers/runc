@@ -202,18 +202,15 @@ verify-dependencies: vendor
 	@test -z "$$(git status --porcelain -- go.mod go.sum vendor/)" \
 		|| (echo -e "git status:\n $$(git status -- go.mod go.sum vendor/)\nerror: vendor/, go.mod and/or go.sum not up to date. Run \"make vendor\" to update"; exit 1) \
 		&& echo "all vendor files are up to date."
+
 verify-dmz-arch:
-	@test -s libcontainer/dmz/runc-dmz || exit 0; \
+	@if test -s libcontainer/dmz/runc-dmz; then \
 		set -Eeuo pipefail; \
 		export LC_ALL=C; \
-		echo "readelf -h runc"; \
-		readelf -h runc | grep -E "(Machine|Flags):"; \
-		echo "readelf -h libcontainer/dmz/runc-dmz"; \
-		readelf -h libcontainer/dmz/runc-dmz | grep -E "(Machine|Flags):"; \
 		diff -u \
 			<(readelf -h runc | grep -E "(Machine|Flags):") \
-			<(readelf -h libcontainer/dmz/runc-dmz | grep -E "(Machine|Flags):") \
-		&& echo "runc-dmz architecture matches runc binary."
+			<(readelf -h libcontainer/dmz/runc-dmz | grep -E "(Machine|Flags):"); \
+	fi
 
 validate-keyring:
 	script/keyring_validate.sh
