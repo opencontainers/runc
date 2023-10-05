@@ -63,18 +63,20 @@ endif
 
 .DEFAULT: runc
 
-runc: runc-dmz
+runc: runc-bin verify-dmz-arch
+
+runc-bin: runc-dmz
 	$(GO_BUILD) -o runc .
-	make verify-dmz-arch
 
 all: runc recvtty sd-helper seccompagent fs-idmap memfd-bind
 
 recvtty sd-helper seccompagent fs-idmap memfd-bind:
 	$(GO_BUILD) -o contrib/cmd/$@/$@ ./contrib/cmd/$@
 
-static: runc-dmz
+static: static-bin verify-dmz-arch
+
+static-bin: runc-dmz
 	$(GO_BUILD_STATIC) -o runc .
-	make verify-dmz-arch
 
 .PHONY: runc-dmz
 runc-dmz:
@@ -215,8 +217,8 @@ verify-dmz-arch:
 validate-keyring:
 	script/keyring_validate.sh
 
-.PHONY: runc all recvtty sd-helper seccompagent fs-idmap static releaseall release \
-	localrelease dbuild lint man runcimage \
+.PHONY: runc runc-bin all recvtty sd-helper seccompagent fs-idmap static static-bin \
+	releaseall release localrelease dbuild lint man runcimage \
 	test localtest unittest localunittest integration localintegration \
 	rootlessintegration localrootlessintegration shell install install-bash \
 	install-man clean cfmt shfmt localshfmt shellcheck \
