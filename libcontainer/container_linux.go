@@ -839,15 +839,6 @@ func (c *Container) newInitConfig(process *Process) *initConfig {
 	if process.NoNewPrivileges != nil {
 		cfg.NoNewPrivileges = *process.NoNewPrivileges
 	}
-	if process.AppArmorProfile != "" {
-		cfg.AppArmorProfile = process.AppArmorProfile
-	}
-	if process.Label != "" {
-		cfg.ProcessLabel = process.Label
-	}
-	if len(process.Rlimits) > 0 {
-		cfg.Rlimits = process.Rlimits
-	}
 	if cgroups.IsCgroup2UnifiedMode() {
 		cfg.Cgroup2Path = c.cgroupManager.Path("")
 	}
