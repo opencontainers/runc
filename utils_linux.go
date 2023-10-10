@@ -82,10 +82,8 @@ func newProcess(p specs.Process) (*libcontainer.Process, error) {
 	return lp, nil
 }
 
-func destroy(container *libcontainer.Container) {
-	if err := container.Destroy(); err != nil {
-		logrus.Error(err)
-	}
+func destroy(container *libcontainer.Container) error {
+	return container.Destroy()
 }
 
 // setupIO modifies the given process config according to the options.
@@ -289,7 +287,9 @@ func (r *runner) run(config *specs.Process) (int, error) {
 
 func (r *runner) destroy() {
 	if r.shouldDestroy {
-		destroy(r.container)
+		if err := destroy(r.container); err != nil {
+			logrus.Warn(err)
+		}
 	}
 }
 

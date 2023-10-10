@@ -36,6 +36,9 @@ type containerState interface {
 
 func destroy(c *Container) error {
 	err := c.cgroupManager.Destroy()
+	if err != nil {
+		return err
+	}
 	if c.intelRdtManager != nil {
 		if ierr := c.intelRdtManager.Destroy(); err == nil {
 			err = ierr
