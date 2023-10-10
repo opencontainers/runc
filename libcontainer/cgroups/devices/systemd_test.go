@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
@@ -117,11 +118,23 @@ func TestPodSkipDevicesUpdate(t *testing.T) {
 	}
 }
 
+var (
+	centosVer     string
+	centosVerOnce sync.Once
+)
+
+func centosVersion() string {
+	centosVerOnce.Do(func() {
+		ver, _ := exec.Command("rpm", "-q", "--qf", "%{version}", "centos-release").CombinedOutput()
+		centosVer = string(ver)
+	})
+	return centosVer
+}
+
 func skipOnCentOS7(t *testing.T) {
 	t.Helper()
 	// https://github.com/opencontainers/runc/issues/3743
-	centosVer, _ := exec.Command("rpm", "-q", "--qf", "%{version}", "centos-release").CombinedOutput()
-	if string(centosVer) == "7" {
+	if centosVersion() == "7" {
 		t.Skip("Flaky on CentOS 7")
 	}
 }
