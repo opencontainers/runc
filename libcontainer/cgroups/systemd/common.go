@@ -159,9 +159,6 @@ retry:
 		return err
 	}
 
-	timeout := time.NewTimer(30 * time.Second)
-	defer timeout.Stop()
-
 	select {
 	case s := <-statusChan:
 		close(statusChan)
@@ -170,7 +167,7 @@ retry:
 			_ = resetFailedUnit(cm, unitName)
 			return fmt.Errorf("error creating systemd unit `%s`: got `%s`", unitName, s)
 		}
-	case <-timeout.C:
+	case <-ctx.Done():
 		_ = resetFailedUnit(cm, unitName)
 		return errors.New("Timeout waiting for systemd to create " + unitName)
 	}
@@ -187,8 +184,6 @@ func stopUnit(cm *dbusConnManager, unitName string) error {
 		return err
 	})
 	if err == nil {
-		timeout := time.NewTimer(30 * time.Second)
-		defer timeout.Stop()
 
 		select {
 		case s := <-statusChan:
@@ -197,7 +192,7 @@ func stopUnit(cm *dbusConnManager, unitName string) error {
 			if s != "done" {
 				logrus.Warnf("error removing unit `%s`: got `%s`. Continuing...", unitName, s)
 			}
-		case <-timeout.C:
+		case <-ctx.Done():
 			return errors.New("Timed out while waiting for systemd to remove " + unitName)
 		}
 	}
