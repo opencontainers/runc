@@ -259,7 +259,7 @@ func RemovePath(path string) error {
 // If after all there are not removed cgroups - appropriate error will be
 // returned.
 func RemovePaths(paths map[string]string) (err error) {
-	const retries = 5
+	const retries = 10
 	delay := 10 * time.Millisecond
 	for i := 0; i < retries; i++ {
 		if i != 0 {
