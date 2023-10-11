@@ -525,10 +525,10 @@ func setupUser(config *initConfig) error {
 		}
 	}
 
-	if err := system.Setgid(execUser.Gid); err != nil {
+	if err := unix.Setgid(execUser.Gid); err != nil {
 		return err
 	}
-	if err := system.Setuid(execUser.Uid); err != nil {
+	if err := unix.Setuid(execUser.Uid); err != nil {
 		return err
 	}
 
