@@ -190,11 +190,4 @@ task:
       ssh -tt localhost "make -C /home/runc localrootlessintegration RUNC_USE_SYSTEMD=yes"
     esac
   integration_fs_rootless_script: |
-    case $DISTRO in
-    centos-7)
-      echo "SKIP: FIXME: integration_fs_rootless_script is skipped because of EPERM on writing cgroup.procs"
-        ;;
-    *)
       ssh -tt localhost "make -C /home/runc localrootlessintegration"
-      ;;
-    esac
