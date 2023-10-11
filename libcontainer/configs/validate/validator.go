@@ -11,6 +11,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
+	"github.com/opencontainers/runtime-spec/specs-go"
 	selinux "github.com/opencontainers/selinux/go-selinux"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
@@ -30,6 +31,7 @@ func Validate(config *configs.Config) error {
 		intelrdtCheck,
 		rootlessEUIDCheck,
 		mountsStrict,
+		scheduler,
 	}
 	for _, c := range checks {
 		if err := c(config); err != nil {
@@ -352,4 +354,25 @@ func isHostNetNS(path string) (bool, error) {
 	}
 
 	return (st1.Dev == st2.Dev) && (st1.Ino == st2.Ino), nil
+}
+
+// scheduler is to validate scheduler configs according to https://man7.org/linux/man-pages/man2/sched_setattr.2.html
+func scheduler(config *configs.Config) error {
+	s := config.Scheduler
+	if s == nil {
+		return nil
+	}
+	if s.Policy == "" {
+		return errors.New("scheduler policy is required")
+	}
+	if s.Nice < -20 || s.Nice > 19 {
+		return fmt.Errorf("invalid scheduler.nice: %d", s.Nice)
+	}
+	if s.Priority != 0 && (s.Policy != specs.SchedFIFO && s.Policy != specs.SchedRR) {
+		return errors.New("scheduler.priority can only be specified for SchedFIFO or SchedRR policy")
+	}
+	if s.Policy != specs.SchedDeadline && (s.Runtime != 0 || s.Deadline != 0 || s.Period != 0) {
+		return errors.New("scheduler runtime/deadline/period can only be specified for SchedDeadline policy")
+	}
+	return nil
 }

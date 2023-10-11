@@ -95,6 +95,8 @@ type Process struct {
 	//
 	// For cgroup v2, the only key allowed is "".
 	SubCgroupPaths map[string]string
+
+	Scheduler *configs.Scheduler
 }
 
 // Wait waits for the process to exit.

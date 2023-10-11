@@ -616,3 +616,53 @@ func TestValidateIDMapMounts(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateScheduler(t *testing.T) {
+	testCases := []struct {
+		isErr     bool
+		policy    string
+		niceValue int32
+		priority  int32
+		runtime   uint64
+		deadline  uint64
+		period    uint64
+	}{
+		{isErr: true, niceValue: 0},
+		{isErr: false, policy: "SCHED_OTHER", niceValue: 19},
+		{isErr: false, policy: "SCHED_OTHER", niceValue: -20},
+		{isErr: true, policy: "SCHED_OTHER", niceValue: 20},
+		{isErr: true, policy: "SCHED_OTHER", niceValue: -21},
+		{isErr: true, policy: "SCHED_OTHER", priority: 100},
+		{isErr: false, policy: "SCHED_FIFO", priority: 100},
+		{isErr: true, policy: "SCHED_FIFO", runtime: 20},
+		{isErr: true, policy: "SCHED_BATCH", deadline: 30},
+		{isErr: true, policy: "SCHED_IDLE", period: 40},
+		{isErr: true, policy: "SCHED_DEADLINE", priority: 100},
+		{isErr: false, policy: "SCHED_DEADLINE", runtime: 200},
+		{isErr: false, policy: "SCHED_DEADLINE", deadline: 300},
+		{isErr: false, policy: "SCHED_DEADLINE", period: 400},
+	}
+
+	for _, tc := range testCases {
+		scheduler := configs.Scheduler{
+			Policy:   specs.LinuxSchedulerPolicy(tc.policy),
+			Nice:     tc.niceValue,
+			Priority: tc.priority,
+			Runtime:  tc.runtime,
+			Deadline: tc.deadline,
+			Period:   tc.period,
+		}
+		config := &configs.Config{
+			Rootfs:    "/var",
+			Scheduler: &scheduler,
+		}
+
+		err := Validate(config)
+		if tc.isErr && err == nil {
+			t.Errorf("scheduler: %d, expected error, got nil", tc.niceValue)
+		}
+		if !tc.isErr && err != nil {
+			t.Errorf("scheduler: %d, expected nil, got error %v", tc.niceValue, err)
+		}
+	}
+}

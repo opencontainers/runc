@@ -494,6 +494,10 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 				Ambient:     spec.Process.Capabilities.Ambient,
 			}
 		}
+		if spec.Process.Scheduler != nil {
+			s := *spec.Process.Scheduler
+			config.Scheduler = &s
+		}
 	}
 	createHooks(spec, config)
 	config.Version = specs.Version
