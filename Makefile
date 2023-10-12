@@ -64,11 +64,18 @@ endif
 .DEFAULT: runc
 
 .PHONY: runc
-runc: runc-bin verify-dmz-arch
+runc: runc-bin selinux-context verify-dmz-arch
 
 .PHONY: runc-bin
 runc-bin: runc-dmz
 	$(GO_BUILD) -o runc .
+
+.PHONY: selinux-context
+selinux-context:
+	@if selinuxenabled 2>/dev/null && [ $$EUID -eq 0 ]; then \
+		chcon -u system_u -r object_r -t container_runtime_exec_t runc; \
+		ls -lZ runc; \
+	fi
 
 .PHONY: all
 all: runc recvtty sd-helper seccompagent fs-idmap memfd-bind
