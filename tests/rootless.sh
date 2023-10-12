@@ -164,6 +164,12 @@ features_powerset="$(powerset "${ALL_FEATURES[@]}")"
 # rootless user won't be able to write to $TESTDATA.
 "$ROOT"/tests/integration/get-images.sh >/dev/null
 
+# If SELinux is enabled, fix runc's context.
+if selinuxenabled 2>/dev/null; then
+	chcon -u system_u -r object_r -t container_runtime_exec_t runc
+	ls -lZ runc
+fi
+
 # Iterate over the powerset of all features.
 IFS=:
 idx=0
@@ -178,9 +184,17 @@ for enabled_features in $features_powerset; do
 		"$hook_func"
 	done
 
+	# Save the start date and time for ausearch.
+	if command -v ausearch &>/dev/null; then
+		AU_DD="$(date +%x)"
+		AU_TT="$(date +%H:%M:%S)"
+	fi
+
 	# Run the test suite!
 	echo "path: $PATH"
 	export ROOTLESS_FEATURES="$enabled_features"
+	# Allow the test to fail and use RET.
+	set +e
 	if [ -v RUNC_USE_SYSTEMD ]; then
 		# We use `ssh rootless@localhost` instead of `sudo -u rootless` for creating systemd user session.
 		# Alternatively we could use `machinectl shell`, but it is known not to work well on SELinux-enabled hosts as of April 2020:
@@ -189,5 +203,20 @@ for enabled_features in $features_powerset; do
 	else
 		sudo -HE -u rootless PATH="$PATH" "$(which bats)" -t "$ROOT/tests/integration$ROOTLESS_TESTPATH"
 	fi
+	RET=$?
+	set -e
+
+	# Show any avc denials.
+	if [[ -v AU_DD && -v AU_TT ]]; then
+		echo ===========================================
+		ausearch -ts "$AU_DD" "$AU_TT" -i -m avc || true
+		ls -lR /sys/fs/cgroup/*/runc-cgroups-integration-test
+		echo ===========================================
+	fi
+
 	cleanup
+	if [ $RET -ne 0 ]; then
+		echo "FAILED" >&2
+		exit $RET
+	fi
 done
