@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
@@ -26,6 +27,7 @@ func TestPodSkipDevicesUpdate(t *testing.T) {
 	if os.Geteuid() != 0 {
 		t.Skip("Test requires root.")
 	}
+	skipOnCentOS7(t)
 
 	podName := "system-runc_test_pod" + t.Name() + ".slice"
 	podConfig := &configs.Cgroup{
@@ -116,6 +118,27 @@ func TestPodSkipDevicesUpdate(t *testing.T) {
 	}
 }
 
+var (
+	centosVer     string
+	centosVerOnce sync.Once
+)
+
+func centosVersion() string {
+	centosVerOnce.Do(func() {
+		ver, _ := exec.Command("rpm", "-q", "--qf", "%{version}", "centos-release").CombinedOutput()
+		centosVer = string(ver)
+	})
+	return centosVer
+}
+
+func skipOnCentOS7(t *testing.T) {
+	t.Helper()
+	// https://github.com/opencontainers/runc/issues/3743
+	if centosVersion() == "7" {
+		t.Skip("Flaky on CentOS 7")
+	}
+}
+
 func testSkipDevices(t *testing.T, skipDevices bool, expected []string) {
 	if !systemd.IsRunningSystemd() {
 		t.Skip("Test requires systemd.")
@@ -123,11 +146,7 @@ func testSkipDevices(t *testing.T, skipDevices bool, expected []string) {
 	if os.Geteuid() != 0 {
 		t.Skip("Test requires root.")
 	}
-	// https://github.com/opencontainers/runc/issues/3743
-	centosVer, _ := exec.Command("rpm", "-q", "--qf", "%{version}", "centos-release").CombinedOutput()
-	if string(centosVer) == "7" {
-		t.Skip("Flaky on CentOS 7")
-	}
+	skipOnCentOS7(t)
 
 	podConfig := &configs.Cgroup{
 		Parent: "system.slice",
