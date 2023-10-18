@@ -13,4 +13,6 @@ The current version in that folder is from Linux 6.6-rc3 tag (556fb7131e03b02836
 
 It also support all the architectures we support in runc.
 
+If the GOARCH we use for compiling doesn't support nolibc, it fallbacks to using the C stdlib.
+
 [nolibc-upstream]: https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/tools/include/nolibc?h=v6.6-rc3
