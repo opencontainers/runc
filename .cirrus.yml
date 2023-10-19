@@ -57,7 +57,7 @@ task:
     mkdir -p -m 0700 /root/.ssh
     vagrant ssh-config >> /root/.ssh/config
   guest_info_script: |
-    ssh default 'sh -exc "uname -a && systemctl --version && df -T && cat /etc/os-release && go version && sestatus"'
+    ssh default 'sh -exc "uname -a && systemctl --version && df -T && cat /etc/os-release && go version && sestatus && rpm -q container-selinux"'
   check_config_script: |
     ssh default /vagrant/script/check-config.sh
   unit_tests_script: |
@@ -159,6 +159,17 @@ task:
     echo -e "Host localhost\n\tStrictHostKeyChecking no\t\nIdentityFile /root/.ssh/id_ed25519\n" >> /root/.ssh/config
     sed -e "s,PermitRootLogin.*,PermitRootLogin prohibit-password,g" -i /etc/ssh/sshd_config
     systemctl restart sshd
+
+    # Disable the dmz-vs-selinux workaround for distros that have container-selinux >= 2.224.0.
+    case $DISTRO in
+    # TODO: remove centos-stream-8.
+    centos-7|centos-stream-8)
+      # Do nothing.
+      ;;
+    *)
+      echo 'export EXTRA_BUILDTAGS=runc_dmz_selinux_nocompat' >> /root/.bashrc
+      ;;
+    esac
   host_info_script: |
     uname -a
     # -----
