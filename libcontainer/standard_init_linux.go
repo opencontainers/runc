@@ -233,6 +233,14 @@ func (l *linuxStandardInit) Init() error {
 			return err
 		}
 	}
+
+	// Set personality if specified.
+	if l.config.Config.Personality != nil {
+		if err := setupPersonality(l.config.Config); err != nil {
+			return err
+		}
+	}
+
 	// Close the pipe to signal that we have completed our init.
 	logrus.Debugf("init: closing the pipe to signal completion")
 	_ = l.pipe.Close()

@@ -93,6 +93,11 @@ func (l *linuxSetnsInit) Init() error {
 	if err := apparmor.ApplyProfile(l.config.AppArmorProfile); err != nil {
 		return err
 	}
+	if l.config.Config.Personality != nil {
+		if err := setupPersonality(l.config.Config); err != nil {
+			return err
+		}
+	}
 	// Check for the arg early to make sure it exists.
 	name, err := exec.LookPath(l.config.Args[0])
 	if err != nil {

@@ -214,3 +214,13 @@ func Copy(dst io.Writer, src io.Reader) (copied int64, err error) {
 fallback:
 	return io.Copy(dst, src)
 }
+
+// SetLinuxPersonality sets the Linux execution personality. For more information see the personality syscall documentation.
+// checkout getLinuxPersonalityFromStr() from libcontainer/specconv/spec_linux.go for type conversion.
+func SetLinuxPersonality(personality int) error {
+	_, _, errno := unix.Syscall(unix.SYS_PERSONALITY, uintptr(personality), 0, 0)
+	if errno != 0 {
+		return &os.SyscallError{Syscall: "set_personality", Err: errno}
+	}
+	return nil
+}
