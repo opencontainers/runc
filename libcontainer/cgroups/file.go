@@ -49,22 +49,11 @@ func WriteFile(dir, file, data string) error {
 		return err
 	}
 	defer fd.Close()
-	if err := retryingWriteFile(fd, data); err != nil {
+	if _, err := fd.WriteString(data); err != nil {
 		// Having data in the error message helps in debugging.
 		return fmt.Errorf("failed to write %q: %w", data, err)
 	}
 	return nil
-}
-
-func retryingWriteFile(fd *os.File, data string) error {
-	for {
-		_, err := fd.Write([]byte(data))
-		if errors.Is(err, unix.EINTR) {
-			logrus.Infof("interrupted while writing %s to %s", data, fd.Name())
-			continue
-		}
-		return err
-	}
 }
 
 const (
