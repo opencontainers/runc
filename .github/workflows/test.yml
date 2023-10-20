@@ -43,7 +43,7 @@ jobs:
         REPO: https://download.opensuse.org/repositories/devel:/tools:/criu/xUbuntu_20.04
       run: |
         # criu repo
-        curl -fSsl $REPO/Release.key | sudo apt-key add -
+        curl -fSsLl $REPO/Release.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/devel_tools_criu.gpg > /dev/null
         echo "deb $REPO/ /" | sudo tee /etc/apt/sources.list.d/criu.list
         sudo apt update
         sudo apt install libseccomp-dev criu sshfs
