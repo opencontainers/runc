@@ -288,12 +288,6 @@ EOF
 	runc update test_update --cpu-share 200
 	[ "$status" -eq 0 ]
 	check_cpu_shares 200
-	runc update test_update --cpu-period 900000 --cpu-burst 500000
-	[ "$status" -eq 0 ]
-	check_cpu_burst 500000
-	runc update test_update --cpu-period 900000 --cpu-burst 0
-	[ "$status" -eq 0 ]
-	check_cpu_burst 0
 
 	# Revert to the test initial value via json on stding
 	runc update -r - test_update <<EOF
@@ -336,6 +330,23 @@ EOF
 	[ "$status" -eq 0 ]
 	check_cpu_quota 500000 1000000 "500ms"
 	check_cpu_shares 100
+}
+
+@test "cpu burst" {
+	[ $EUID -ne 0 ] && requires rootless_cgroup
+	requires cgroups_cpu_burst
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
+	[ "$status" -eq 0 ]
+	check_cpu_burst 0
+
+	runc update test_update --cpu-period 900000 --cpu-burst 500000
+	[ "$status" -eq 0 ]
+	check_cpu_burst 500000
+
+	runc update test_update --cpu-period 900000 --cpu-burst 0
+	[ "$status" -eq 0 ]
+	check_cpu_burst 0
 }
 
 @test "set cpu period with no quota" {
