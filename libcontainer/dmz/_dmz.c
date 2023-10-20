@@ -1,5 +1,9 @@
-#include "xstat.h"
-#include "nolibc/nolibc.h"
+#ifdef RUNC_USE_STDLIB
+#  include <unistd.h>
+#else
+#  include "xstat.h"
+#  include "nolibc/nolibc.h"
+#endif
 
 extern char **environ;
 
