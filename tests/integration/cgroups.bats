@@ -243,7 +243,7 @@ convert_hugetlb_size() {
 	[ "$status" -eq 0 ]
 
 	lim="max"
-	[ -v CGROUP_V1 ] && lim=".limit_in_bytes"
+	[ -v CGROUP_V1 ] && lim="limit_in_bytes"
 
 	optional=("")
 	# Add rsvd, if available.
