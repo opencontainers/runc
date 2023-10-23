@@ -6,6 +6,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased 1.1.z]
 
+## [1.1.10] - 2023-10-26
+
+> Śruba, przykręcona we śnie, nie zmieni sytuacji, jaka panuje na jawie.
+
+### Added
+
+* Support for `hugetlb.<pagesize>.rsvd` limiting and accounting. Fixes the
+  issue of postres failing when hugepage limits are set. (#3859, #4077)
+
+### Fixed
+
+* Fixed permissions of a newly created directories to not depend on the value
+  of umask in tmpcopyup feature implementation. (#3991, #4060)
+* libcontainer: cgroup v1 GetStats now ignores missing `kmem.limit_in_bytes`
+  (fixes the compatibility with Linux kernel 6.1+). (#4028)
+* Various CI fixes. (#4081, #4055)
+
 ## [1.1.9] - 2023-08-10
 
 > There is a crack in everything. That's how the light gets in.
@@ -456,8 +473,9 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.0.1]: https://github.com/opencontainers/runc/compare/v1.0.0...v1.0.1
 
 <!-- 1.1.z patch releases -->
-[Unreleased 1.1.z]: https://github.com/opencontainers/runc/compare/v1.1.9...release-1.1
-[1.1.8]: https://github.com/opencontainers/runc/compare/v1.1.8...v1.1.9
+[Unreleased 1.1.z]: https://github.com/opencontainers/runc/compare/v1.1.10...release-1.1
+[1.1.10]: https://github.com/opencontainers/runc/compare/v1.1.9...v1.1.10
+[1.1.9]: https://github.com/opencontainers/runc/compare/v1.1.8...v1.1.9
 [1.1.8]: https://github.com/opencontainers/runc/compare/v1.1.7...v1.1.8
 [1.1.7]: https://github.com/opencontainers/runc/compare/v1.1.6...v1.1.7
 [1.1.6]: https://github.com/opencontainers/runc/compare/v1.1.5...v1.1.6
