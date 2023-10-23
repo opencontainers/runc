@@ -1,8 +1,8 @@
 github.com/BurntSushi/toml v1.2.1/go.mod h1:CxXYINrC8qIiEnFrOxCa7Jy5BFHlXnUU2pbicEuybxQ=
 github.com/checkpoint-restore/go-criu/v6 v6.3.0 h1:mIdrSO2cPNWQY1truPg6uHLXyKHk3Z5Odx4wjKOASzA=
 github.com/checkpoint-restore/go-criu/v6 v6.3.0/go.mod h1:rrRTN/uSwY2X+BPRl/gkulo9gsKOSAeVp9/K2tv7xZI=
-github.com/cilium/ebpf v0.12.1 h1:0zxmBZrItv5dgJrSVYHo36yVfJAacE7Sd1xPC3fMl4M=
-github.com/cilium/ebpf v0.12.1/go.mod h1:u9H29/Iq+8cy70YqI6p5pfADkFl3vdnV2qXDg5JL0Zo=
+github.com/cilium/ebpf v0.12.2 h1:cP3qL4kkl19kr/F+hKqUo9F9pPMVz1oms8C7Qj0AwWk=
+github.com/cilium/ebpf v0.12.2/go.mod h1:u9H29/Iq+8cy70YqI6p5pfADkFl3vdnV2qXDg5JL0Zo=
 github.com/containerd/console v1.0.3 h1:lIr7SlA5PxZyMV30bDW0MGbiOPXwc63yRuCP0ARubLw=
 github.com/containerd/console v1.0.3/go.mod h1:7LqA/THxQ86k76b8c/EMSiaJ3h1eZkMkXar0TQ1gf3U=
 github.com/coreos/go-systemd/v22 v22.5.0 h1:RrqgGjYQKalulkV8NGVIfkXQf6YYmOyiJKk8iXXhfZs=
