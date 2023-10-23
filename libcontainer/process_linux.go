@@ -1,6 +1,7 @@
 package libcontainer
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -400,6 +401,8 @@ func (p *initProcess) waitForChildExit(childPid int) error {
 
 func (p *initProcess) start() (retErr error) {
 	defer p.comm.closeParent()
+	var stderr bytes.Buffer
+	p.cmd.Stderr = &stderr
 	err := p.cmd.Start()
 	p.process.ops = p
 	// close the child-side of the pipes (controlled by child)
@@ -620,6 +623,9 @@ func (p *initProcess) start() (retErr error) {
 		ierr = errors.New("procReady not received")
 	}
 	if ierr != nil {
+		if _, err = p.wait(); err != nil {
+			return fmt.Errorf("runc init exited abnormally error is %w err detail:%s", ierr, stderr.String())
+		}
 		return fmt.Errorf("error during container init: %w", ierr)
 	}
 	return nil
