@@ -70,7 +70,7 @@ checkpointed.`,
 		err = container.Checkpoint(options)
 		if err == nil && !(options.LeaveRunning || options.PreDump) {
 			// Destroy the container unless we tell CRIU to keep it.
-			destroy(container)
+			_ = destroy(container)
 		}
 		return err
 	},

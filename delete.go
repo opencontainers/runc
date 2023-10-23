@@ -18,7 +18,7 @@ func killContainer(container *libcontainer.Container) error {
 	for i := 0; i < 100; i++ {
 		time.Sleep(100 * time.Millisecond)
 		if err := container.Signal(unix.Signal(0)); err != nil {
-			destroy(container)
+			_ = destroy(container)
 			return nil
 		}
 	}
@@ -72,7 +72,9 @@ status of "ubuntu01" as "stopped" the following will delete resources held for
 		}
 		switch s {
 		case libcontainer.Stopped:
-			destroy(container)
+			if err := destroy(container); err != nil {
+				return err
+			}
 		case libcontainer.Created:
 			return killContainer(container)
 		default:
