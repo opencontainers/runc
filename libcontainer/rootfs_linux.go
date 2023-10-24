@@ -34,7 +34,6 @@ type mountConfig struct {
 	cgroup2Path     string
 	rootlessCgroups bool
 	cgroupns        bool
-	noMountFallback bool
 }
 
 // mountEntry contains mount data specific to a mount point.
@@ -83,7 +82,6 @@ func prepareRootfs(pipe *syncSocket, iConfig *initConfig, mountFds mountFds) (er
 		cgroup2Path:     iConfig.Cgroup2Path,
 		rootlessCgroups: iConfig.RootlessCgroups,
 		cgroupns:        config.Namespaces.Contains(configs.NEWCGROUP),
-		noMountFallback: config.NoMountFallback,
 	}
 	for i, m := range config.Mounts {
 		entry := mountEntry{Mount: m}
@@ -409,6 +407,51 @@ func doTmpfsCopyUp(m mountEntry, rootfs, mountLabel string) (Err error) {
 	})
 }
 
+const (
+	// The atime "enum" flags (which are mutually exclusive).
+	mntAtimeEnumFlags = unix.MS_NOATIME | unix.MS_RELATIME | unix.MS_STRICTATIME
+	// All atime-related flags.
+	mntAtimeFlags = mntAtimeEnumFlags | unix.MS_NODIRATIME
+	// Flags which can be locked when inheriting mounts in a different userns.
+	// In the kernel, these are the mounts that are locked using MNT_LOCK_*.
+	mntLockFlags = unix.MS_RDONLY | unix.MS_NODEV | unix.MS_NOEXEC |
+		unix.MS_NOSUID | mntAtimeFlags
+)
+
+func statfsToMountFlags(st unix.Statfs_t) int {
+	// From <linux/statfs.h>.
+	const ST_NOSYMFOLLOW = 0x2000 //nolint:revive
+
+	var flags int
+	for _, f := range []struct {
+		st, ms int
+	}{
+		// See calculate_f_flags() in fs/statfs.c.
+		{unix.ST_RDONLY, unix.MS_RDONLY},
+		{unix.ST_NOSUID, unix.MS_NOSUID},
+		{unix.ST_NODEV, unix.MS_NODEV},
+		{unix.ST_NOEXEC, unix.MS_NOEXEC},
+		{unix.ST_MANDLOCK, unix.MS_MANDLOCK},
+		{unix.ST_SYNCHRONOUS, unix.MS_SYNCHRONOUS},
+		{unix.ST_NOATIME, unix.MS_NOATIME},
+		{unix.ST_NODIRATIME, unix.MS_NODIRATIME},
+		{unix.ST_RELATIME, unix.MS_RELATIME},
+		{ST_NOSYMFOLLOW, unix.MS_NOSYMFOLLOW},
+		// There is no ST_STRICTATIME -- see below.
+	} {
+		if int(st.Flags)&f.st == f.st {
+			flags |= f.ms
+		}
+	}
+	// MS_STRICTATIME is a "fake" MS_* flag. It isn't stored in mnt->mnt_flags,
+	// and so it doesn't show up in statfs(2). If none of the other flags in
+	// atime enum are present, the mount is MS_STRICTATIME.
+	if flags&mntAtimeEnumFlags == 0 {
+		flags |= unix.MS_STRICTATIME
+	}
+	return flags
+}
+
 func mountToRootfs(c *mountConfig, m mountEntry) error {
 	rootfs := c.root
 
@@ -509,11 +552,104 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 				return err
 			}
 		}
-		// bind mount won't change mount options, we need remount to make mount options effective.
-		// first check that we have non-default options required before attempting a remount
-		if m.Flags&^(unix.MS_REC|unix.MS_REMOUNT|unix.MS_BIND) != 0 {
-			// only remount if unique mount options are set
-			if err := remount(m, rootfs, c.noMountFallback); err != nil {
+
+		// The initial MS_BIND won't change the mount options, we need to do a
+		// separate MS_BIND|MS_REMOUNT to apply the mount options. We skip
+		// doing this if the user has not specified any mount flags at all
+		// (including cleared flags) -- in which case we just keep the original
+		// mount flags.
+		//
+		// Note that the fact we check whether any clearing flags are set is in
+		// contrast to mount(8)'s current behaviour, but is what users probably
+		// expect. See <https://github.com/util-linux/util-linux/issues/2433>.
+		if m.Flags & ^(unix.MS_BIND|unix.MS_REC|unix.MS_REMOUNT) != 0 || m.ClearedFlags != 0 {
+			if err := utils.WithProcfd(rootfs, m.Destination, func(dstFD string) error {
+				// The runtime-spec says we SHOULD map to the relevant mount(8)
+				// behaviour. However, it's not clear whether we want the
+				// "mount --bind -o ..." or "mount --bind -o remount,..."
+				// behaviour here -- both of which are somewhat broken[1].
+				//
+				// So, if the user has passed "remount" as a mount option, we
+				// implement the "mount --bind -o remount" behaviour, otherwise
+				// we implement the spiritual intent of the "mount --bind -o"
+				// behaviour, which should match what users expect. Maybe
+				// mount(8) will eventually implement this behaviour too..
+				//
+				// [1]: https://github.com/util-linux/util-linux/issues/2433
+				var st unix.Statfs_t
+				if err := unix.Statfs(m.src(), &st); err != nil {
+					return &os.PathError{Op: "statfs", Path: m.src(), Err: err}
+				}
+				srcFlags := statfsToMountFlags(st)
+
+				flags := m.Flags | unix.MS_BIND | unix.MS_REMOUNT
+				if m.Flags&unix.MS_REMOUNT == unix.MS_REMOUNT {
+					// Act like "mount --bind -o remount", where we use the old
+					// mount flags as a base and apply the requested flags on
+					// top.
+					flags |= srcFlags &^ m.ClearedFlags
+				}
+
+				// Initially, we emulate "mount --bind -o ..." where we set
+				// only the requested flags (clearing any existing flags). The
+				// only difference from mount(8) is that we do this
+				// unconditionally, regardless of whether any set-me mount
+				// options have been requested.
+				//
+				// TODO: We are not doing any special handling of the atime
+				// flags here, which means that the mount will inherit the old
+				// atime flags if the user didn't explicitly request a
+				// different set of flags. This also has the mount(8) bug where
+				// "nodiratime,norelatime" will result in a
+				// "nodiratime,relatime" mount.
+				mountErr := mountViaFDs("", nil, m.Destination, dstFD, "", uintptr(flags), "")
+				if mountErr == nil {
+					return nil
+				}
+
+				// If the mount failed, the mount may contain locked mount
+				// flags. In that case, we emulate "mount --bind -o
+				// remount,...", where we take the existing mount flags of the
+				// mount and apply the request flags (including clearing flags)
+				// on top. The main divergence we have from mount(8) here is
+				// that we handle atimes correctly to make sure we error out if
+				// we cannot fulfil the requested mount flags.
+
+				// If the user explicitly request one of the locked flags *not*
+				// be set, we need to return an error to avoid producing mounts
+				// that don't match the user's request.
+				if srcFlags&m.ClearedFlags&mntLockFlags != 0 {
+					return mountErr
+				}
+
+				// If an MS_*ATIME flag was requested, it must match the
+				// existing one. This handles two separate kernel bugs, and
+				// matches the logic of can_change_locked_flags() but without
+				// these bugs:
+				//
+				// * (2.6.30+) Since commit 613cbe3d4870 ("Don't set relatime
+				// when noatime is specified"), MS_RELATIME is ignored when
+				// MS_NOATIME is set. This means that us inheriting MS_NOATIME
+				// from a mount while requesting MS_RELATIME would *silently*
+				// produce an MS_NOATIME mount.
+				//
+				// * (2.6.30+) Since its introduction in commit d0adde574b84
+				// ("Add a strictatime mount option"), MS_STRICTATIME has
+				// caused any passed MS_RELATIME and MS_NOATIME flags to be
+				// ignored which results in us *silently* producing
+				// MS_STRICTATIME mounts even if the user requested MS_RELATIME
+				// or MS_NOATIME.
+				if m.Flags&mntAtimeFlags != 0 && m.Flags&mntAtimeFlags != srcFlags&mntAtimeFlags {
+					return mountErr
+				}
+
+				// Retry the mount with the existing lockable mount flags
+				// applied.
+				flags |= srcFlags & mntLockFlags
+				mountErr = mountViaFDs("", nil, m.Destination, dstFD, "", uintptr(flags), "")
+				logrus.Debugf("remount retry: srcFlags=0x%x flagsSet=0x%x flagsClr=0x%x: %v", srcFlags, m.Flags, m.ClearedFlags, mountErr)
+				return mountErr
+			}); err != nil {
 				return err
 			}
 		}
@@ -1101,37 +1237,6 @@ func maskPath(path string, mountLabel string) error {
 func writeSystemProperty(key, value string) error {
 	keyPath := strings.Replace(key, ".", "/", -1)
 	return os.WriteFile(path.Join("/proc/sys", keyPath), []byte(value), 0o644)
-}
-
-func remount(m mountEntry, rootfs string, noMountFallback bool) error {
-	return utils.WithProcfd(rootfs, m.Destination, func(dstFD string) error {
-		flags := uintptr(m.Flags | unix.MS_REMOUNT)
-		err := mountViaFDs("", nil, m.Destination, dstFD, m.Device, flags, "")
-		if err == nil {
-			return nil
-		}
-		// Check if the source has flags set according to noMountFallback
-		src := m.src()
-		var s unix.Statfs_t
-		if err := unix.Statfs(src, &s); err != nil {
-			return &os.PathError{Op: "statfs", Path: src, Err: err}
-		}
-		var checkflags int
-		if noMountFallback {
-			// Check for ro only
-			checkflags = unix.MS_RDONLY
-		} else {
-			// Check for ro, nodev, noexec, nosuid, noatime, relatime, strictatime,
-			// nodiratime
-			checkflags = unix.MS_RDONLY | unix.MS_NODEV | unix.MS_NOEXEC | unix.MS_NOSUID | unix.MS_NOATIME | unix.MS_RELATIME | unix.MS_STRICTATIME | unix.MS_NODIRATIME
-		}
-		if int(s.Flags)&checkflags == 0 {
-			return err
-		}
-		// ... and retry the mount with flags found above.
-		flags |= uintptr(int(s.Flags) & checkflags)
-		return mountViaFDs("", nil, m.Destination, dstFD, m.Device, flags, "")
-	})
 }
 
 // Do the mount operation followed by additional mounts required to take care
