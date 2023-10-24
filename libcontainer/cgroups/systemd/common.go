@@ -200,7 +200,7 @@ func stopUnit(cm *dbusConnManager, unitName string) error {
 	// In case of a failed unit, let systemd remove it.
 	_ = resetFailedUnit(cm, unitName)
 
-	return nil
+	return err
 }
 
 func resetFailedUnit(cm *dbusConnManager, name string) error {
