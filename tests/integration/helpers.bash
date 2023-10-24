@@ -260,16 +260,11 @@ function get_cgroup_value() {
 # Helper to check a if value in a cgroup file matches the expected one.
 function check_cgroup_value() {
 	local current
-	local cgroup
-	cgroup="$(get_cgroup_path "$1")"
-	if [ ! -f "$cgroup/$1" ]; then
-		skip "$cgroup/$1 does not exist"
-	fi
 	current="$(get_cgroup_value "$1")"
 	local expected=$2
 
 	echo "current $current !? $expected"
-	[ "$current" = "$expected" ] || [ "$current" = "$((expected / 1000))" ]
+	[ "$current" = "$expected" ]
 }
 
 # Helper to check a value in systemd.
@@ -318,6 +313,7 @@ function check_cpu_quota() {
 function check_cpu_burst() {
 	local burst=$1
 	if [ -v CGROUP_V2 ]; then
+		burst=$((burst / 1000))
 		check_cgroup_value "cpu.max.burst" "$burst"
 	else
 		check_cgroup_value "cpu.cfs_burst_us" "$burst"
@@ -435,6 +431,20 @@ function requires() {
 			[ -v CGROUP_V1 ] && p="$CGROUP_CPU_BASE_PATH"
 			[ -v CGROUP_V2 ] && p="$CGROUP_BASE_PATH"
 			if [ -z "$(find "$p" -name cpu.idle -print -quit)" ]; then
+				skip_me=1
+			fi
+			;;
+		cgroups_cpu_burst)
+			local p f
+			init_cgroup_paths
+			if [ -v CGROUP_V1 ]; then
+				p="$CGROUP_CPU_BASE_PATH"
+				f="cpu.cfs_burst_us"
+			elif [ -v CGROUP_V2 ]; then
+				p="$CGROUP_BASE_PATH"
+				f="cpu.max.burst"
+			fi
+			if [ -z "$(find "$p" -name "$f" -print -quit)" ]; then
 				skip_me=1
 			fi
 			;;
