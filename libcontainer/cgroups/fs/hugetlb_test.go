@@ -21,6 +21,11 @@ const (
 	limit    = "hugetlb.%s.limit_in_bytes"
 	maxUsage = "hugetlb.%s.max_usage_in_bytes"
 	failcnt  = "hugetlb.%s.failcnt"
+
+	rsvdUsage    = "hugetlb.%s.rsvd.usage_in_bytes"
+	rsvdLimit    = "hugetlb.%s.rsvd.limit_in_bytes"
+	rsvdMaxUsage = "hugetlb.%s.rsvd.max_usage_in_bytes"
+	rsvdFailcnt  = "hugetlb.%s.rsvd.failcnt"
 )
 
 func TestHugetlbSetHugetlb(t *testing.T) {
@@ -52,13 +57,15 @@ func TestHugetlbSetHugetlb(t *testing.T) {
 	}
 
 	for _, pageSize := range cgroups.HugePageSizes() {
-		limit := fmt.Sprintf(limit, pageSize)
-		value, err := fscommon.GetCgroupParamUint(path, limit)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if value != hugetlbAfter {
-			t.Fatalf("Set hugetlb.limit_in_bytes failed. Expected: %v, Got: %v", hugetlbAfter, value)
+		for _, f := range []string{limit, rsvdLimit} {
+			limit := fmt.Sprintf(f, pageSize)
+			value, err := fscommon.GetCgroupParamUint(path, limit)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if value != hugetlbAfter {
+				t.Fatalf("Set %s failed. Expected: %v, Got: %v", limit, hugetlbAfter, value)
+			}
 		}
 	}
 }
@@ -70,6 +77,28 @@ func TestHugetlbStats(t *testing.T) {
 			fmt.Sprintf(usage, pageSize):    hugetlbUsageContents,
 			fmt.Sprintf(maxUsage, pageSize): hugetlbMaxUsageContents,
 			fmt.Sprintf(failcnt, pageSize):  hugetlbFailcnt,
+		})
+	}
+
+	hugetlb := &HugetlbGroup{}
+	actualStats := *cgroups.NewStats()
+	err := hugetlb.GetStats(path, &actualStats)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expectedStats := cgroups.HugetlbStats{Usage: 128, MaxUsage: 256, Failcnt: 100}
+	for _, pageSize := range cgroups.HugePageSizes() {
+		expectHugetlbStatEquals(t, expectedStats, actualStats.HugetlbStats[pageSize])
+	}
+}
+
+func TestHugetlbRStatsRsvd(t *testing.T) {
+	path := tempDir(t, "hugetlb")
+	for _, pageSize := range cgroups.HugePageSizes() {
+		writeFileContents(t, path, map[string]string{
+			fmt.Sprintf(rsvdUsage, pageSize):    hugetlbUsageContents,
+			fmt.Sprintf(rsvdMaxUsage, pageSize): hugetlbMaxUsageContents,
+			fmt.Sprintf(rsvdFailcnt, pageSize):  hugetlbFailcnt,
 		})
 	}
 
