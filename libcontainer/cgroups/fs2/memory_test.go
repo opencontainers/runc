@@ -94,6 +94,10 @@ func TestStatMemoryPodCgroup(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	if err := os.WriteFile(filepath.Join(fakeCgroupDir, "memory.peak"), []byte("987654321"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
 	gotStats := cgroups.NewStats()
 
 	// use a fake root path to trigger the pod cgroup lookup.
@@ -106,6 +110,18 @@ func TestStatMemoryPodCgroup(t *testing.T) {
 	var expectedUsageBytes uint64 = 123456789
 	if gotStats.MemoryStats.Usage.Usage != expectedUsageBytes {
 		t.Errorf("parsed cgroupv2 memory.stat doesn't match expected result: \ngot %#v\nexpected %#v\n", gotStats.MemoryStats.Usage.Usage, expectedUsageBytes)
+	}
+
+	// result should be "memory.max"
+	var expectedLimitBytes uint64 = 999999999
+	if gotStats.MemoryStats.Usage.Limit != expectedLimitBytes {
+		t.Errorf("parsed cgroupv2 memory.stat doesn't match expected result: \ngot %#v\nexpected %#v\n", gotStats.MemoryStats.Usage.Limit, expectedLimitBytes)
+	}
+
+	// result should be "memory.peak"
+	var expectedMaxUsageBytes uint64 = 987654321
+	if gotStats.MemoryStats.Usage.MaxUsage != expectedMaxUsageBytes {
+		t.Errorf("parsed cgroupv2 memory.stat doesn't match expected result: \ngot %#v\nexpected %#v\n", gotStats.MemoryStats.Usage.MaxUsage, expectedMaxUsageBytes)
 	}
 }
 
