@@ -90,7 +90,7 @@ function teardown() {
 
 	runc run test_tmpfs
 	[ "$status" -eq 0 ]
-	[ "$output" = "$mode" ]
+	[ "${lines[0]}" = "$mode" ]
 }
 
 @test "runc run with tmpfs perms" {
@@ -101,13 +101,13 @@ function teardown() {
 	# Directory is to be created by runc.
 	runc run test_tmpfs
 	[ "$status" -eq 0 ]
-	[ "$output" = "444" ]
+	[ "${lines[0]}" = "444" ]
 
 	# Run a 2nd time with the pre-existing directory.
 	# Ref: https://github.com/opencontainers/runc/issues/3911
 	runc run test_tmpfs
 	[ "$status" -eq 0 ]
-	[ "$output" = "444" ]
+	[ "${lines[0]}" = "444" ]
 
 	# Existing directory, custom perms, no mode on the mount,
 	# so it should use the directory's perms.
@@ -116,7 +116,7 @@ function teardown() {
 	# shellcheck disable=SC2016
 	runc run test_tmpfs
 	[ "$status" -eq 0 ]
-	[ "$output" = "710" ]
+	[ "${lines[0]}" = "710" ]
 
 	# Add back the mode on the mount, and it should use that instead.
 	# Just for fun, use different perms than was used earlier.
@@ -124,7 +124,7 @@ function teardown() {
 	update_config '.mounts[-1].options = ["mode=0410"]'
 	runc run test_tmpfs
 	[ "$status" -eq 0 ]
-	[ "$output" = "410" ]
+	[ "${lines[0]}" = "410" ]
 }
 
 @test "runc run [runc-dmz]" {
