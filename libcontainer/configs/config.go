@@ -219,6 +219,9 @@ type Config struct {
 
 	// Scheduler represents the scheduling attributes for a process.
 	Scheduler *Scheduler `json:"scheduler,omitempty"`
+
+	// Personality contains configuration for the Linux personality syscall.
+	Personality *LinuxPersonality `json:"personality,omitempty"`
 }
 
 // Scheduler is based on the Linux sched_setattr(2) syscall.

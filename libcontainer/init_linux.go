@@ -654,6 +654,10 @@ func setupScheduler(config *configs.Config) error {
 	return nil
 }
 
+func setupPersonality(config *configs.Config) error {
+	return system.SetLinuxPersonality(config.Personality.Domain)
+}
+
 // signalAllProcesses freezes then iterates over all the processes inside the
 // manager's cgroups sending the signal s to them.
 func signalAllProcesses(m cgroups.Manager, s unix.Signal) error {

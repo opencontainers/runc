@@ -434,6 +434,18 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 				MemBwSchema:   spec.Linux.IntelRdt.MemBwSchema,
 			}
 		}
+		if spec.Linux.Personality != nil {
+			if len(spec.Linux.Personality.Flags) > 0 {
+				logrus.Warnf("ignoring unsupported personality flags: %+v because personality flag has not supported at this time", spec.Linux.Personality.Flags)
+			}
+			domain, err := getLinuxPersonalityFromStr(string(spec.Linux.Personality.Domain))
+			if err != nil {
+				return nil, err
+			}
+			config.Personality = &configs.LinuxPersonality{
+				Domain: domain,
+			}
+		}
 	}
 
 	// Set the host UID that should own the container's cgroup.
@@ -569,6 +581,16 @@ func checkPropertyName(s string) error {
 		return errors.New("contains non-alphabetic character")
 	}
 	return nil
+}
+
+// getLinuxPersonalityFromStr converts the string domain received from spec to equivalent integer.
+func getLinuxPersonalityFromStr(domain string) (int, error) {
+	if domain == string(specs.PerLinux32) {
+		return configs.PerLinux32, nil
+	} else if domain == string(specs.PerLinux) {
+		return configs.PerLinux, nil
+	}
+	return -1, fmt.Errorf("invalid personality domain %s", domain)
 }
 
 // Some systemd properties are documented as having "Sec" suffix
