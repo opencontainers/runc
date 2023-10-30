@@ -14,6 +14,6 @@ else
 	CFLAGS += -DRUNC_USE_STDLIB
 endif
 
-runc-dmz: _dmz.c
+binary/runc-dmz: _dmz.c
 	$(CC) $(CFLAGS) -static -o $@ $^
 	$(STRIP) -gs $@

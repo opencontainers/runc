@@ -6,20 +6,32 @@ package dmz
 import (
 	"bytes"
 	"debug/elf"
-	_ "embed"
+	"embed"
 	"os"
+	"sync"
 
 	"github.com/sirupsen/logrus"
 )
 
-// Try to build the runc-dmz binary. If it fails, replace it with an empty file
-// (this will trigger us to fall back to a clone of /proc/self/exe). Yeah, this
-// is a bit ugly but it makes sure that weird cross-compilation setups don't
-// break because of runc-dmz.
+// Try to build the runc-dmz binary on "go generate". If it fails (or
+// libcontainer is being imported as a library), the embed.FS will not contain
+// the file, which will then cause us to fall back to a clone of
+// /proc/self/exe.
 //
-//go:generate sh -c "make -B runc-dmz || echo -n >runc-dmz"
-//go:embed runc-dmz
-var runcDmzBinary []byte
+// There is an empty file called dummy-file.txt in libcontainer/dmz/binary in
+// order to work around the restriction that go:embed requires at least one
+// file to match the pattern.
+//
+//go:generate make -B binary/runc-dmz
+//go:embed binary
+var runcDmzFs embed.FS
+
+// A cached copy of the contents of runc-dmz.
+var (
+	runcDmzBinaryOnce    sync.Once
+	runcDmzBinaryIsValid bool
+	runcDmzBinary        []byte
+)
 
 // Binary returns a cloned copy (see CloneBinary) of a very minimal C program
 // that just does an execve() of its arguments. This is used in the final
@@ -31,18 +43,25 @@ var runcDmzBinary []byte
 // If the runc-dmz binary is not embedded into the runc binary, Binary will
 // return ErrNoDmzBinary as the error.
 func Binary(tmpDir string) (*os.File, error) {
-	rdr := bytes.NewBuffer(runcDmzBinary)
-	// Verify that our embedded binary has a standard ELF header.
-	if !bytes.HasPrefix(rdr.Bytes(), []byte(elf.ELFMAG)) {
-		if rdr.Len() != 0 {
-			logrus.Infof("misconfigured build: embedded runc-dmz binary is non-empty but is missing a proper ELF header")
-		}
-		return nil, ErrNoDmzBinary
-	}
 	// Setting RUNC_DMZ=legacy disables this dmz method.
 	if os.Getenv("RUNC_DMZ") == "legacy" {
 		logrus.Debugf("RUNC_DMZ=legacy set -- switching back to classic /proc/self/exe cloning")
 		return nil, ErrNoDmzBinary
 	}
+	runcDmzBinaryOnce.Do(func() {
+		runcDmzBinary, _ = runcDmzFs.ReadFile("binary/runc-dmz")
+		// Verify that our embedded binary has a standard ELF header.
+		if !bytes.HasPrefix(runcDmzBinary, []byte(elf.ELFMAG)) {
+			if len(runcDmzBinary) != 0 {
+				logrus.Infof("misconfigured build: embedded runc-dmz binary is non-empty but is missing a proper ELF header")
+			}
+		} else {
+			runcDmzBinaryIsValid = true
+		}
+	})
+	if !runcDmzBinaryIsValid {
+		return nil, ErrNoDmzBinary
+	}
+	rdr := bytes.NewBuffer(runcDmzBinary)
 	return CloneBinary(rdr, int64(rdr.Len()), "runc-dmz", tmpDir)
 }
