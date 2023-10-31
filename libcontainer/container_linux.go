@@ -364,10 +364,6 @@ func (c *Container) start(process *Process) (retErr error) {
 func (c *Container) Signal(s os.Signal) error {
 	c.m.Lock()
 	defer c.m.Unlock()
-	// To avoid a PID reuse attack, don't kill non-running container.
-	if !c.hasInit() {
-		return ErrNotRunning
-	}
 
 	// When a container has its own PID namespace, inside it the init PID
 	// is 1, and thus it is handled specially by the kernel. In particular,
@@ -375,14 +371,19 @@ func (c *Container) Signal(s os.Signal) error {
 	// all other processes in that PID namespace (see pid_namespaces(7)).
 	//
 	// OTOH, if PID namespace is shared, we should kill all pids to avoid
-	// leftover processes.
-	var err error
+	// leftover processes. Handle this special case here.
 	if s == unix.SIGKILL && !c.config.Namespaces.IsPrivate(configs.NEWPID) {
-		err = signalAllProcesses(c.cgroupManager, unix.SIGKILL)
-	} else {
-		err = c.initProcess.signal(s)
+		if err := signalAllProcesses(c.cgroupManager, unix.SIGKILL); err != nil {
+			return fmt.Errorf("unable to kill all processes: %w", err)
+		}
+		return nil
 	}
-	if err != nil {
+
+	// To avoid a PID reuse attack, don't kill non-running container.
+	if !c.hasInit() {
+		return ErrNotRunning
+	}
+	if err := c.initProcess.signal(s); err != nil {
 		return fmt.Errorf("unable to signal init: %w", err)
 	}
 	if s == unix.SIGKILL {
