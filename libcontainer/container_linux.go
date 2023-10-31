@@ -364,14 +364,8 @@ func (c *Container) start(process *Process) (retErr error) {
 func (c *Container) Signal(s os.Signal) error {
 	c.m.Lock()
 	defer c.m.Unlock()
-	status, err := c.currentStatus()
-	if err != nil {
-		return err
-	}
 	// To avoid a PID reuse attack, don't kill non-running container.
-	switch status {
-	case Running, Created, Paused:
-	default:
+	if !c.hasInit() {
 		return ErrNotRunning
 	}
 
@@ -382,6 +376,7 @@ func (c *Container) Signal(s os.Signal) error {
 	//
 	// OTOH, if PID namespace is shared, we should kill all pids to avoid
 	// leftover processes.
+	var err error
 	if s == unix.SIGKILL && !c.config.Namespaces.IsPrivate(configs.NEWPID) {
 		err = signalAllProcesses(c.cgroupManager, unix.SIGKILL)
 	} else {
@@ -390,11 +385,13 @@ func (c *Container) Signal(s os.Signal) error {
 	if err != nil {
 		return fmt.Errorf("unable to signal init: %w", err)
 	}
-	if status == Paused && s == unix.SIGKILL {
+	if s == unix.SIGKILL {
 		// For cgroup v1, killing a process in a frozen cgroup
 		// does nothing until it's thawed. Only thaw the cgroup
 		// for SIGKILL.
-		_ = c.cgroupManager.Freeze(configs.Thawed)
+		if paused, _ := c.isPaused(); paused {
+			_ = c.cgroupManager.Freeze(configs.Thawed)
+		}
 	}
 	return nil
 }
