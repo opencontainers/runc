@@ -23,11 +23,17 @@ Vagrant.configure("2") do |config|
       cat << EOF | dnf -y --exclude=kernel,kernel-core shell && break
 config install_weak_deps false
 update
-install iptables gcc golang-go make glibc-static libseccomp-devel bats jq git-core criu fuse-sshfs
+install iptables gcc golang-go make glibc-static libseccomp-devel bats jq git-core criu fuse-sshfs container-selinux
 ts run
 EOF
     done
     dnf clean all
+
+    # To avoid "avc: denied { nosuid_transition }" from SELinux as we run tests on /tmp.
+    mount -o remount,suid /tmp
+
+    # Disable selinux-vs-dmz workaround as Fedora doesn't need it.
+    echo 'export EXTRA_BUILDTAGS=runc_dmz_selinux_nocompat' >> /root/.bashrc
 
     # Prevent the "fatal: unsafe repository" git complain during build.
     git config --global --add safe.directory /vagrant
