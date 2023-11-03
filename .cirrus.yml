@@ -160,10 +160,10 @@ task:
     sed -e "s,PermitRootLogin.*,PermitRootLogin prohibit-password,g" -i /etc/ssh/sshd_config
     systemctl restart sshd
 
-    # Disable the dmz-vs-selinux workaround for distros that have container-selinux >= 2.224.0.
+    # Disable the dmz-vs-selinux workaround for distros that have
+    # container-selinux >= 2.224.0 (CentOS 7 does not have it).
     case $DISTRO in
-    # TODO: remove centos-stream-8.
-    centos-7|centos-stream-8)
+    centos-7)
       # Do nothing.
       ;;
     *)
