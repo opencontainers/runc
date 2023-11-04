@@ -66,6 +66,14 @@ status of "ubuntu01" as "stopped" the following will delete resources held for
 			}
 			return err
 		}
+		// When --force is given, we kill all container processes and
+		// then destroy the container. This is done even for a stopped
+		// container, because (in case it does not have its own PID
+		// namespace) there may be some leftover processes in the
+		// container's cgroup.
+		if force {
+			return killContainer(container)
+		}
 		s, err := container.Status()
 		if err != nil {
 			return err
@@ -76,9 +84,6 @@ status of "ubuntu01" as "stopped" the following will delete resources held for
 		case libcontainer.Created:
 			return killContainer(container)
 		default:
-			if force {
-				return killContainer(container)
-			}
 			return fmt.Errorf("cannot delete container %s that is not stopped: %s", id, s)
 		}
 

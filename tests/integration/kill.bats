@@ -109,6 +109,7 @@ test_host_pidns_kill() {
 # 3. Test runc kill on a container whose init process is gone.
 #
 # Issue 4047, case "runc kill".
+# See also: "runc delete --force [host pidns + init gone]" test in delete.bats.
 @test "kill KILL [host pidns + init gone]" {
 	# Apparently, for rootless test, when using systemd cgroup manager,
 	# newer versions of systemd clean up the container as soon as its init
