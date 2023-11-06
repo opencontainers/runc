@@ -35,6 +35,17 @@ type containerState interface {
 }
 
 func destroy(c *Container) error {
+	// Usually, when a container init is gone, all other processes in its
+	// cgroup are killed by the kernel. This is not the case for a shared
+	// PID namespace container, which may have some processes left after
+	// its init is killed or exited.
+	//
+	// As the container without init process running is considered stopped,
+	// and destroy is supposed to remove all the container resources, we need
+	// to kill those processes here.
+	if !c.config.Namespaces.IsPrivate(configs.NEWPID) {
+		_ = signalAllProcesses(c.cgroupManager, unix.SIGKILL)
+	}
 	err := c.cgroupManager.Destroy()
 	if c.intelRdtManager != nil {
 		if ierr := c.intelRdtManager.Destroy(); err == nil {

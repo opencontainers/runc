@@ -62,9 +62,19 @@ function teardown() {
 	[ "$status" -eq 0 ]
 }
 
-# Issue 4047, case "runc delete -f".
-# See also: "kill KILL [host pidns + init gone]" test in kill.bats.
+# Issue 4047, case "runc delete".
+@test "runc delete [host pidns + init gone]" {
+	test_runc_delete_host_pidns
+}
+
+# Issue 4047, case "runc delete --force" (different code path).
+# shellcheck disable=SC2030
 @test "runc delete --force [host pidns + init gone]" {
+	test_runc_delete_host_pidns --force
+}
+
+# See also: "kill KILL [host pidns + init gone]" test in kill.bats.
+function test_runc_delete_host_pidns() {
 	requires cgroups_freezer
 
 	update_config '	  .linux.namespaces -= [{"type": "pid"}]'
@@ -91,6 +101,7 @@ function teardown() {
 	fi
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	# shellcheck disable=SC2031
 	[ "$status" -eq 0 ]
 	cgpath=$(get_cgroup_path "pids")
 	init_pid=$(cat "$cgpath"/cgroup.procs)
@@ -113,10 +124,14 @@ function teardown() {
 		kill -0 "$p"
 	done
 
-	runc delete -f test_busybox
+	# Must kill those processes and remove container.
+	# shellcheck disable=SC2031
+	runc delete "$@" test_busybox
+	# shellcheck disable=SC2031
 	[ "$status" -eq 0 ]
 
 	runc state test_busybox
+	# shellcheck disable=SC2031
 	[ "$status" -ne 0 ] # "Container does not exist"
 
 	# Make sure all processes are gone.
