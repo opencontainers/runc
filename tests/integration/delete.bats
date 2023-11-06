@@ -195,3 +195,29 @@ EOF
 	# Expect "no such unit" exit code.
 	run -4 systemctl status $user "$SD_UNIT_NAME"
 }
+
+@test "runc delete [with host pid namespace]" {
+	requires root
+	
+	update_config '	  .linux.namespaces -= [{"type": "pid"}]
+			| .process.terminal = false
+			| .process.args |= ["/bin/sleep", "1d"]'
+
+	__runc run -d test_host_pidns
+	[ "$status" -eq 0 ]
+	testcontainer test_host_pidns running
+
+	runc state test_host_pidns
+	pid=$(echo $output | jq .pid)
+
+	__runc exec -d test_host_pidns sleep 2d
+	[ "$status" -eq 0 ]
+	testcontainer test_host_pidns running
+
+	kill -9 $pid
+	[ "$status" -eq 0 ]
+	testcontainer test_host_pidns stopped
+
+	runc delete test_host_pidns
+	[ "$status" -eq 0 ]
+}
