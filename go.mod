@@ -10,7 +10,7 @@ require (
 	github.com/cyphar/filepath-securejoin v0.2.4
 	github.com/docker/go-units v0.5.0
 	github.com/godbus/dbus/v5 v5.1.0
-	github.com/moby/sys/mountinfo v0.6.2
+	github.com/moby/sys/mountinfo v0.7.0
 	github.com/moby/sys/user v0.1.0
 	github.com/mrunalp/fileutils v0.5.1
 	github.com/opencontainers/runtime-spec v1.1.1-0.20230823135140-4fec88fd00a4
