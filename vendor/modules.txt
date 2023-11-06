@@ -33,7 +33,7 @@ github.com/docker/go-units
 # github.com/godbus/dbus/v5 v5.1.0
 ## explicit; go 1.12
 github.com/godbus/dbus/v5
-# github.com/moby/sys/mountinfo v0.6.2
+# github.com/moby/sys/mountinfo v0.6.2 => github.com/cyphar/moby-sys/mountinfo v0.0.0-20231106050622-f0e0b5e292d9
 ## explicit; go 1.16
 github.com/moby/sys/mountinfo
 # github.com/moby/sys/user v0.1.0
@@ -114,3 +114,4 @@ google.golang.org/protobuf/reflect/protoreflect
 google.golang.org/protobuf/reflect/protoregistry
 google.golang.org/protobuf/runtime/protoiface
 google.golang.org/protobuf/runtime/protoimpl
+# github.com/moby/sys/mountinfo => github.com/cyphar/moby-sys/mountinfo v0.0.0-20231106050622-f0e0b5e292d9
