@@ -88,12 +88,6 @@ func newProcess(p specs.Process) (*libcontainer.Process, error) {
 	return lp, nil
 }
 
-func destroy(container *libcontainer.Container) {
-	if err := container.Destroy(); err != nil {
-		logrus.Error(err)
-	}
-}
-
 // setupIO modifies the given process config according to the options.
 func setupIO(process *libcontainer.Process, rootuid, rootgid int, createTTY, detach bool, sockpath string) (*tty, error) {
 	if createTTY {
@@ -303,7 +297,9 @@ func (r *runner) run(config *specs.Process) (int, error) {
 
 func (r *runner) destroy() {
 	if r.shouldDestroy {
-		destroy(r.container)
+		if err := r.container.Destroy(); err != nil {
+			logrus.Warn(err)
+		}
 	}
 }
 

@@ -18,8 +18,7 @@ func killContainer(container *libcontainer.Container) error {
 	for i := 0; i < 100; i++ {
 		time.Sleep(100 * time.Millisecond)
 		if err := container.Signal(unix.Signal(0)); err != nil {
-			destroy(container)
-			return nil
+			return container.Destroy()
 		}
 	}
 	return errors.New("container init still running")
@@ -80,13 +79,11 @@ status of "ubuntu01" as "stopped" the following will delete resources held for
 		}
 		switch s {
 		case libcontainer.Stopped:
-			destroy(container)
+			return container.Destroy()
 		case libcontainer.Created:
 			return killContainer(container)
 		default:
 			return fmt.Errorf("cannot delete container %s that is not stopped: %s", id, s)
 		}
-
-		return nil
 	},
 }

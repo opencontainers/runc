@@ -874,7 +874,10 @@ func (c *Container) newInitConfig(process *Process) *initConfig {
 func (c *Container) Destroy() error {
 	c.m.Lock()
 	defer c.m.Unlock()
-	return c.state.destroy()
+	if err := c.state.destroy(); err != nil {
+		return fmt.Errorf("unable to destroy container: %w", err)
+	}
+	return nil
 }
 
 // Pause pauses the container, if its state is RUNNING or CREATED, changing
