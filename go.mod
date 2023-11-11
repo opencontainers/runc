@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/checkpoint-restore/go-criu/v6 v6.3.0
-	github.com/cilium/ebpf v0.12.2
+	github.com/cilium/ebpf v0.12.3
 	github.com/containerd/console v1.0.3
 	github.com/coreos/go-systemd/v22 v22.5.0
 	github.com/cyphar/filepath-securejoin v0.2.4
@@ -21,7 +21,7 @@ require (
 	github.com/urfave/cli v1.22.12
 	github.com/vishvananda/netlink v1.1.0
 	golang.org/x/net v0.17.0
-	golang.org/x/sys v0.13.0
+	golang.org/x/sys v0.14.1-0.20231108175955-e4099bfacb8c
 	google.golang.org/protobuf v1.31.0
 )
 
