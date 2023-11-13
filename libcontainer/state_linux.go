@@ -46,19 +46,19 @@ func destroy(c *Container) error {
 	if !c.config.Namespaces.IsPrivate(configs.NEWPID) {
 		_ = signalAllProcesses(c.cgroupManager, unix.SIGKILL)
 	}
-	err := c.cgroupManager.Destroy()
+	if err := c.cgroupManager.Destroy(); err != nil {
+		return fmt.Errorf("unable to remove container's cgroup: %w", err)
+	}
 	if c.intelRdtManager != nil {
-		if ierr := c.intelRdtManager.Destroy(); err == nil {
-			err = ierr
+		if err := c.intelRdtManager.Destroy(); err != nil {
+			return fmt.Errorf("unable to remove container's IntelRDT group: %w", err)
 		}
 	}
-	if rerr := os.RemoveAll(c.stateDir); err == nil {
-		err = rerr
+	if err := os.RemoveAll(c.stateDir); err != nil {
+		return fmt.Errorf("unable to remove container state dir: %w", err)
 	}
 	c.initProcess = nil
-	if herr := runPoststopHooks(c); err == nil {
-		err = herr
-	}
+	err := runPoststopHooks(c)
 	c.state = &stoppedState{c: c}
 	return err
 }
