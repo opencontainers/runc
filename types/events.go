@@ -28,6 +28,8 @@ type PSIData = cgroups.PSIData
 
 type PSIStats = cgroups.PSIStats
 
+type MemoryEventCount = cgroups.MemoryEventCount
+
 type Hugetlb struct {
 	Usage   uint64 `json:"usage,omitempty"`
 	Max     uint64 `json:"max,omitempty"`
@@ -102,13 +104,14 @@ type MemoryEntry struct {
 }
 
 type Memory struct {
-	Cache     uint64            `json:"cache,omitempty"`
-	Usage     MemoryEntry       `json:"usage,omitempty"`
-	Swap      MemoryEntry       `json:"swap,omitempty"`
-	Kernel    MemoryEntry       `json:"kernel,omitempty"`
-	KernelTCP MemoryEntry       `json:"kernelTCP,omitempty"`
-	Raw       map[string]uint64 `json:"raw,omitempty"`
-	PSI       *PSIStats         `json:"psi,omitempty"`
+	Cache      uint64            `json:"cache,omitempty"`
+	Usage      MemoryEntry       `json:"usage,omitempty"`
+	Swap       MemoryEntry       `json:"swap,omitempty"`
+	Kernel     MemoryEntry       `json:"kernel,omitempty"`
+	KernelTCP  MemoryEntry       `json:"kernelTCP,omitempty"`
+	Raw        map[string]uint64 `json:"raw,omitempty"`
+	PSI        *PSIStats         `json:"psi,omitempty"`
+	EventCount MemoryEventCount  `json:"event_count"`
 }
 
 type L3CacheInfo struct {
