@@ -5,7 +5,6 @@ load helpers
 function setup() {
 	OVERFLOW_UID="$(cat /proc/sys/kernel/overflowuid)"
 	OVERFLOW_GID="$(cat /proc/sys/kernel/overflowgid)"
-
 	requires root
 	requires_kernel 5.12
 
@@ -37,10 +36,32 @@ function setup() {
 
 	# Add a symlink-containing source.
 	ln -s source-multi1 source-multi1-symlink
+
+	# Add some top-level files in the mount tree.
+	mkdir -p mnt-subtree/multi{1,2}
+	touch mnt-subtree/{foo,bar,baz}.txt
+	chown 100:211 mnt-subtree/foo.txt
+	chown 200:222 mnt-subtree/bar.txt
+	chown 300:233 mnt-subtree/baz.txt
+
+	mounts_file="$PWD/.all-mounts"
+	echo -n >"$mounts_file"
 }
 
 function teardown() {
+	if [ -v mounts_file ]; then
+		xargs -n 1 -a "$mounts_file" -- umount -l
+		rm -f "$mounts_file"
+	fi
 	teardown_bundle
+}
+
+function setup_host_bind_mount() {
+	src="$1"
+	dst="$2"
+
+	mount --bind "$src" "$dst"
+	echo "$dst" >>"$mounts_file"
 }
 
 function setup_idmap_userns() {
@@ -340,4 +361,332 @@ function setup_idmap_basic_mount() {
 	[[ "$output" == *"=/tmp/mount-multi1/foo.txt:1000=1101="* ]]
 	[[ "$output" == *"=/tmp/mount-multi1/bar.txt:2000=2202="* ]]
 	[[ "$output" == *"=/tmp/mount-multi1/baz.txt:3000=3303="* ]]
+}
+
+@test "idmap mount (non-recursive idmap) [userns]" {
+	setup_idmap_userns
+
+	setup_host_bind_mount "source-multi1/" "mnt-subtree/multi1"
+	setup_host_bind_mount "source-multi2/" "mnt-subtree/multi2"
+
+	update_config '.mounts += [
+			{
+				"source": "mnt-subtree/",
+				"destination": "/tmp/mount-tree",
+				"options": ["rbind"],
+				"uidMappings": [
+					{"containerID": 100, "hostID": 101000, "size": 3},
+					{"containerID": 200, "hostID": 102000, "size": 3},
+					{"containerID": 300, "hostID": 103000, "size": 3}
+				],
+				"gidMappings": [
+					{"containerID": 210, "hostID": 101100, "size": 10},
+					{"containerID": 220, "hostID": 102200, "size": 10},
+					{"containerID": 230, "hostID": 103300, "size": 10}
+				]
+			}
+		]'
+
+	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/mount-tree{,/multi1,/multi2}/{foo,bar,baz}.txt"]'
+	runc run test_debian
+	[ "$status" -eq 0 ]
+	[[ "$output" == *"=/tmp/mount-tree/foo.txt:1000=1101="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/bar.txt:2000=2202="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/baz.txt:3000=3303="* ]]
+	# Because we used "idmap", the child mounts were not remapped recursively.
+	[[ "$output" == *"=/tmp/mount-tree/multi1/foo.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi1/bar.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi1/baz.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi2/foo.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi2/bar.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi2/baz.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
+}
+
+@test "idmap mount (non-recursive idmap) [no userns]" {
+	setup_host_bind_mount "source-multi1/" "mnt-subtree/multi1"
+	setup_host_bind_mount "source-multi2/" "mnt-subtree/multi2"
+
+	update_config '.mounts += [
+			{
+				"source": "mnt-subtree/",
+				"destination": "/tmp/mount-tree",
+				"options": ["rbind"],
+				"uidMappings": [
+					{"containerID": 100, "hostID": 101000, "size": 3},
+					{"containerID": 200, "hostID": 102000, "size": 3},
+					{"containerID": 300, "hostID": 103000, "size": 3}
+				],
+				"gidMappings": [
+					{"containerID": 210, "hostID": 101100, "size": 10},
+					{"containerID": 220, "hostID": 102200, "size": 10},
+					{"containerID": 230, "hostID": 103300, "size": 10}
+				]
+			}
+		]'
+
+	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/mount-tree{,/multi1,/multi2}/{foo,bar,baz}.txt"]'
+	runc run test_debian
+	[ "$status" -eq 0 ]
+	[[ "$output" == *"=/tmp/mount-tree/foo.txt:101000=101101="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/bar.txt:102000=102202="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/baz.txt:103000=103303="* ]]
+	# Because we used "idmap", the child mounts were not remapped recursively.
+	[[ "$output" == *"=/tmp/mount-tree/multi1/foo.txt:100=211="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi1/bar.txt:101=222="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi1/baz.txt:102=233="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi2/foo.txt:200=211="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi2/bar.txt:201=222="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi2/baz.txt:202=233="* ]]
+}
+
+@test "idmap mount (idmap flag) [userns]" {
+	setup_idmap_userns
+
+	setup_host_bind_mount "source-multi1/" "mnt-subtree/multi1"
+	setup_host_bind_mount "source-multi2/" "mnt-subtree/multi2"
+
+	update_config '.mounts += [
+			{
+				"source": "mnt-subtree/",
+				"destination": "/tmp/mount-tree",
+				"options": ["rbind", "idmap"],
+				"uidMappings": [
+					{"containerID": 100, "hostID": 101000, "size": 3},
+					{"containerID": 200, "hostID": 102000, "size": 3},
+					{"containerID": 300, "hostID": 103000, "size": 3}
+				],
+				"gidMappings": [
+					{"containerID": 210, "hostID": 101100, "size": 10},
+					{"containerID": 220, "hostID": 102200, "size": 10},
+					{"containerID": 230, "hostID": 103300, "size": 10}
+				]
+			}
+		]'
+
+	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/mount-tree{,/multi1,/multi2}/{foo,bar,baz}.txt"]'
+	runc run test_debian
+	[ "$status" -eq 0 ]
+	[[ "$output" == *"=/tmp/mount-tree/foo.txt:1000=1101="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/bar.txt:2000=2202="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/baz.txt:3000=3303="* ]]
+	# Because we used "idmap", the child mounts were not remapped recursively.
+	[[ "$output" == *"=/tmp/mount-tree/multi1/foo.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi1/bar.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi1/baz.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi2/foo.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi2/bar.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi2/baz.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
+}
+
+@test "idmap mount (idmap flag) [no userns]" {
+	setup_host_bind_mount "source-multi1/" "mnt-subtree/multi1"
+	setup_host_bind_mount "source-multi2/" "mnt-subtree/multi2"
+
+	update_config '.mounts += [
+			{
+				"source": "mnt-subtree/",
+				"destination": "/tmp/mount-tree",
+				"options": ["rbind", "idmap"],
+				"uidMappings": [
+					{"containerID": 100, "hostID": 101000, "size": 3},
+					{"containerID": 200, "hostID": 102000, "size": 3},
+					{"containerID": 300, "hostID": 103000, "size": 3}
+				],
+				"gidMappings": [
+					{"containerID": 210, "hostID": 101100, "size": 10},
+					{"containerID": 220, "hostID": 102200, "size": 10},
+					{"containerID": 230, "hostID": 103300, "size": 10}
+				]
+			}
+		]'
+
+	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/mount-tree{,/multi1,/multi2}/{foo,bar,baz}.txt"]'
+	runc run test_debian
+	[ "$status" -eq 0 ]
+	[[ "$output" == *"=/tmp/mount-tree/foo.txt:101000=101101="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/bar.txt:102000=102202="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/baz.txt:103000=103303="* ]]
+	# Because we used "idmap", the child mounts were not remapped recursively.
+	[[ "$output" == *"=/tmp/mount-tree/multi1/foo.txt:100=211="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi1/bar.txt:101=222="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi1/baz.txt:102=233="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi2/foo.txt:200=211="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi2/bar.txt:201=222="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi2/baz.txt:202=233="* ]]
+}
+
+@test "idmap mount (ridmap flag) [userns]" {
+	setup_idmap_userns
+
+	setup_host_bind_mount "source-multi1/" "mnt-subtree/multi1"
+	setup_host_bind_mount "source-multi2/" "mnt-subtree/multi2"
+
+	update_config '.mounts += [
+			{
+				"source": "mnt-subtree/",
+				"destination": "/tmp/mount-tree",
+				"options": ["rbind", "ridmap"],
+				"uidMappings": [
+					{"containerID": 100, "hostID": 101000, "size": 3},
+					{"containerID": 200, "hostID": 102000, "size": 3},
+					{"containerID": 300, "hostID": 103000, "size": 3}
+				],
+				"gidMappings": [
+					{"containerID": 210, "hostID": 101100, "size": 10},
+					{"containerID": 220, "hostID": 102200, "size": 10},
+					{"containerID": 230, "hostID": 103300, "size": 10}
+				]
+			}
+		]'
+
+	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/mount-tree{,/multi1,/multi2}/{foo,bar,baz}.txt"]'
+	runc run test_debian
+	[ "$status" -eq 0 ]
+	[[ "$output" == *"=/tmp/mount-tree/foo.txt:1000=1101="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/bar.txt:2000=2202="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/baz.txt:3000=3303="* ]]
+	# The child mounts have the same mapping applied.
+	[[ "$output" == *"=/tmp/mount-tree/multi1/foo.txt:1000=1101="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi1/bar.txt:1001=2202="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi1/baz.txt:1002=3303="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi2/foo.txt:2000=1101="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi2/bar.txt:2001=2202="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi2/baz.txt:2002=3303="* ]]
+}
+
+@test "idmap mount (ridmap flag) [no userns]" {
+	setup_host_bind_mount "source-multi1/" "mnt-subtree/multi1"
+	setup_host_bind_mount "source-multi2/" "mnt-subtree/multi2"
+
+	update_config '.mounts += [
+			{
+				"source": "mnt-subtree/",
+				"destination": "/tmp/mount-tree",
+				"options": ["rbind", "ridmap"],
+				"uidMappings": [
+					{"containerID": 100, "hostID": 101000, "size": 3},
+					{"containerID": 200, "hostID": 102000, "size": 3},
+					{"containerID": 300, "hostID": 103000, "size": 3}
+				],
+				"gidMappings": [
+					{"containerID": 210, "hostID": 101100, "size": 10},
+					{"containerID": 220, "hostID": 102200, "size": 10},
+					{"containerID": 230, "hostID": 103300, "size": 10}
+				]
+			}
+		]'
+
+	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/mount-tree{,/multi1,/multi2}/{foo,bar,baz}.txt"]'
+	runc run test_debian
+	[ "$status" -eq 0 ]
+	[[ "$output" == *"=/tmp/mount-tree/foo.txt:101000=101101="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/bar.txt:102000=102202="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/baz.txt:103000=103303="* ]]
+	# The child mounts have the same mapping applied.
+	[[ "$output" == *"=/tmp/mount-tree/multi1/foo.txt:101000=101101="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi1/bar.txt:101001=102202="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi1/baz.txt:101002=103303="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi2/foo.txt:102000=101101="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi2/bar.txt:102001=102202="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi2/baz.txt:102002=103303="* ]]
+}
+
+@test "idmap mount (idmap flag, implied mapping) [userns]" {
+	setup_idmap_userns
+
+	setup_host_bind_mount "source-multi1/" "mnt-subtree/multi1"
+	setup_host_bind_mount "source-multi2/" "mnt-subtree/multi2"
+
+	update_config '.mounts += [
+			{
+				"source": "mnt-subtree/",
+				"destination": "/tmp/mount-tree",
+				"options": ["rbind", "idmap"],
+			}
+		]'
+
+	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/mount-tree{,/multi1,/multi2}/{foo,bar,baz}.txt"]'
+	runc run test_debian
+	[ "$status" -eq 0 ]
+	[[ "$output" == *"=/tmp/mount-tree/foo.txt:100=211="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/bar.txt:200=222="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/baz.txt:300=233="* ]]
+	# Because we used "idmap", the child mounts were not remapped recursively.
+	[[ "$output" == *"=/tmp/mount-tree/multi1/foo.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi1/bar.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi1/baz.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi2/foo.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi2/bar.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi2/baz.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
+}
+
+@test "idmap mount (ridmap flag, implied mapping) [userns]" {
+	setup_idmap_userns
+
+	setup_host_bind_mount "source-multi1/" "mnt-subtree/multi1"
+	setup_host_bind_mount "source-multi2/" "mnt-subtree/multi2"
+
+	update_config '.mounts += [
+			{
+				"source": "mnt-subtree/",
+				"destination": "/tmp/mount-tree",
+				"options": ["rbind", "ridmap"],
+			}
+		]'
+
+	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/mount-tree{,/multi1,/multi2}/{foo,bar,baz}.txt"]'
+	runc run test_debian
+	[ "$status" -eq 0 ]
+	[[ "$output" == *"=/tmp/mount-tree/foo.txt:100=211="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/bar.txt:200=222="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/baz.txt:300=233="* ]]
+	# The child mounts have the same mapping applied.
+	[[ "$output" == *"=/tmp/mount-tree/multi1/foo.txt:100=211="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi1/bar.txt:101=222="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi1/baz.txt:102=233="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi2/foo.txt:200=211="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi2/bar.txt:201=222="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi2/baz.txt:202=233="* ]]
+}
+
+@test "idmap mount (idmap flag, implied mapping, userns join) [userns]" {
+	# Create a detached container with the id-mapping we want.
+	cp config.json config.json.bak
+	update_config '.linux.namespaces += [{"type": "user"}]
+		| .linux.uidMappings += [{"containerID": 0, "hostID": 100000, "size": 65536}]
+		| .linux.gidMappings += [{"containerID": 0, "hostID": 100000, "size": 65536}]'
+	update_config '.process.args = ["sleep", "infinity"]'
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" target_userns
+	[ "$status" -eq 0 ]
+
+	# Configure our container to attach to the first container's userns.
+	target_pid="$(__runc state target_userns | jq .pid)"
+	update_config '.linux.namespaces |= map(if .type == "user" then (.path = "/proc/'"$target_pid"'/ns/" + .type) else . end)'
+	update_config 'del(.linux.uidMappings) | del(.linux.gidMappings)'
+
+	setup_host_bind_mount "source-multi1/" "mnt-subtree/multi1"
+	setup_host_bind_mount "source-multi2/" "mnt-subtree/multi2"
+
+	update_config '.mounts += [
+			{
+				"source": "mnt-subtree/",
+				"destination": "/tmp/mount-tree",
+				"options": ["rbind", "idmap"],
+			}
+		]'
+
+	update_config '.process.args = ["bash", "-c", "stat -c =%n:%u=%g= /tmp/mount-tree{,/multi1,/multi2}/{foo,bar,baz}.txt"]'
+	runc run test_debian
+	[ "$status" -eq 0 ]
+	[[ "$output" == *"=/tmp/mount-tree/foo.txt:100=211="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/bar.txt:200=222="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/baz.txt:300=233="* ]]
+	# Because we used "idmap", the child mounts were not remapped recursively.
+	[[ "$output" == *"=/tmp/mount-tree/multi1/foo.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi1/bar.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi1/baz.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi2/foo.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi2/bar.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
+	[[ "$output" == *"=/tmp/mount-tree/multi2/baz.txt:$OVERFLOW_UID=$OVERFLOW_GID="* ]]
 }

@@ -309,6 +309,13 @@ func checkBindOptions(m *configs.Mount) error {
 }
 
 func checkIDMapMounts(config *configs.Config, m *configs.Mount) error {
+	// Make sure MOUNT_ATTR_IDMAP is not set on any of our mounts. This
+	// attribute is handled differently to all other attributes (through
+	// m.IDMapping), so make sure we never store it in the actual config. This
+	// really shouldn't ever happen.
+	if m.RecAttr != nil && (m.RecAttr.Attr_set|m.RecAttr.Attr_clr)&unix.MOUNT_ATTR_IDMAP != 0 {
+		return errors.New("mount configuration cannot contain recAttr for MOUNT_ATTR_IDMAP")
+	}
 	if !m.IsIDMapped() {
 		return nil
 	}
@@ -317,6 +324,16 @@ func checkIDMapMounts(config *configs.Config, m *configs.Mount) error {
 	}
 	if config.RootlessEUID {
 		return errors.New("id-mapped mounts are not supported for rootless containers")
+	}
+	if m.IDMapping.UserNSPath == "" {
+		if len(m.IDMapping.UIDMappings) == 0 || len(m.IDMapping.GIDMappings) == 0 {
+			return errors.New("id-mapped mounts must have both uid and gid mappings specified")
+		}
+	} else {
+		if m.IDMapping.UIDMappings != nil || m.IDMapping.GIDMappings != nil {
+			// should never happen
+			return errors.New("[internal error] id-mapped mounts cannot have both userns_path and uid and gid mappings specified")
+		}
 	}
 	return nil
 }

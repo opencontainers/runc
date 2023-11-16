@@ -229,16 +229,32 @@ func mountFd(nsHandles *userns.Handles, m *configs.Mount) (*mountSource, error) 
 		sourceType = mountSourceOpenTree
 
 		// Configure the id mapping.
-		usernsFile, err := nsHandles.Get(userns.Mapping{
-			UIDMappings: m.UIDMappings,
-			GIDMappings: m.GIDMappings,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to create userns for %s id-mapping: %w", m.Source, err)
+		var usernsFile *os.File
+		if m.IDMapping.UserNSPath == "" {
+			usernsFile, err = nsHandles.Get(userns.Mapping{
+				UIDMappings: m.IDMapping.UIDMappings,
+				GIDMappings: m.IDMapping.GIDMappings,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("failed to create userns for %s id-mapping: %w", m.Source, err)
+			}
+		} else {
+			usernsFile, err = os.Open(m.IDMapping.UserNSPath)
+			if err != nil {
+				return nil, fmt.Errorf("failed to open existing userns for %s id-mapping: %w", m.Source, err)
+			}
 		}
 		defer usernsFile.Close()
 
-		if err := unix.MountSetattr(int(mountFile.Fd()), "", unix.AT_EMPTY_PATH, &unix.MountAttr{
+		setAttrFlags := uint(unix.AT_EMPTY_PATH)
+		// If the mount has "ridmap" set, we apply the configuration
+		// recursively. This allows you to create "rbind" mounts where only
+		// the top-level mount has an idmapping. I'm not sure why you'd
+		// want that, but still...
+		if m.IDMapping.Recursive {
+			setAttrFlags |= unix.AT_RECURSIVE
+		}
+		if err := unix.MountSetattr(int(mountFile.Fd()), "", setAttrFlags, &unix.MountAttr{
 			Attr_set:  unix.MOUNT_ATTR_IDMAP,
 			Userns_fd: uint64(usernsFile.Fd()),
 		}); err != nil {
