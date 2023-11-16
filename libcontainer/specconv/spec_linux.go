@@ -1036,8 +1036,10 @@ func parseMountOptions(options []string) *configs.Mount {
 		} else if f, exists := recAttrFlags[o]; exists {
 			if f.clear {
 				recAttrClr |= f.flag
+				recAttrSet &= ^f.flag
 			} else {
 				recAttrSet |= f.flag
+				recAttrClr &= ^f.flag
 				if f.flag&unix.MOUNT_ATTR__ATIME == f.flag {
 					// https://man7.org/linux/man-pages/man2/mount_setattr.2.html
 					// "cannot simply specify the access-time setting in attr_set, but must also include MOUNT_ATTR__ATIME in the attr_clr field."
