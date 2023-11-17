@@ -10,7 +10,7 @@ function teardown() {
 	if [ -v DIR ]; then
 		# Some distros do not have fusermount installed
 		# as a dependency of fuse-sshfs, and good ol' umount works.
-		fusermount -u "$DIR" || umount "$DIR"
+		fusermount3 -u "$DIR" || fusermount -u "$DIR" || umount "$DIR"
 		unset DIR
 	fi
 
