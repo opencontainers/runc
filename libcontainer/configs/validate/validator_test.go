@@ -421,6 +421,49 @@ func TestValidateMounts(t *testing.T) {
 	}
 }
 
+func TestValidateBindMounts(t *testing.T) {
+	testCases := []struct {
+		isErr bool
+		flags int
+		data  string
+	}{
+		{isErr: false, flags: 0, data: ""},
+		{isErr: false, flags: unix.MS_RDONLY | unix.MS_NOSYMFOLLOW, data: ""},
+
+		{isErr: true, flags: 0, data: "idmap"},
+		{isErr: true, flags: unix.MS_RDONLY, data: "custom_ext4_flag"},
+		{isErr: true, flags: unix.MS_NOATIME, data: "rw=foobar"},
+	}
+
+	for _, tc := range testCases {
+		for _, bind := range []string{"bind", "rbind"} {
+			bindFlag := map[string]int{
+				"bind":  unix.MS_BIND,
+				"rbind": unix.MS_BIND | unix.MS_REC,
+			}[bind]
+
+			config := &configs.Config{
+				Rootfs: "/var",
+				Mounts: []*configs.Mount{
+					{
+						Destination: "/",
+						Flags:       tc.flags | bindFlag,
+						Data:        tc.data,
+					},
+				},
+			}
+
+			err := Validate(config)
+			if tc.isErr && err == nil {
+				t.Errorf("%s mount flags:0x%x data:%v, expected error, got nil", bind, tc.flags, tc.data)
+			}
+			if !tc.isErr && err != nil {
+				t.Errorf("%s mount flags:0x%x data:%v, expected nil, got error %v", bind, tc.flags, tc.data, err)
+			}
+		}
+	}
+}
+
 func TestValidateIDMapMounts(t *testing.T) {
 	mapping := []configs.IDMap{
 		{
