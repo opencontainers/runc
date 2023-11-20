@@ -15,15 +15,25 @@ function setup() {
 	mkdir -p rootfs/{proc,sys,tmp}
 	mkdir -p rootfs/tmp/mount-{1,2}
 
+	to_umount_list="$(mktemp "$BATS_RUN_TMPDIR/userns-mounts.XXXXXX")"
 	if [ "$ROOTLESS" -eq 0 ]; then
 		update_config ' .linux.namespaces += [{"type": "user"}]
 			| .linux.uidMappings += [{"hostID": 100000, "containerID": 0, "size": 65534}]
-			| .linux.gidMappings += [{"hostID": 100000, "containerID": 0, "size": 65534}] '
+			| .linux.gidMappings += [{"hostID": 200000, "containerID": 0, "size": 65534}] '
 	fi
 }
 
 function teardown() {
 	teardown_bundle
+
+	if [ -v to_umount_list ]; then
+		while read -r mount_path; do
+			umount -l "$mount_path" || :
+			rm -f "$mount_path"
+		done <"$to_umount_list"
+		rm -f "$to_umount_list"
+		unset to_umount_list
+	fi
 }
 
 @test "userns with simple mount" {
@@ -82,4 +92,75 @@ function teardown() {
 	# Make sure this is real cgroupfs.
 	runc exec test_busybox cat /sys/fs/cgroup/{pids,memory}/tasks
 	[ "$status" -eq 0 ]
+}
+
+@test "userns join other container userns" {
+	# Create a detached container with the id-mapping we want.
+	update_config '.process.args = ["sleep", "infinity"]'
+	runc run -d --console-socket "$CONSOLE_SOCKET" target_userns
+	[ "$status" -eq 0 ]
+
+	# Configure our container to attach to the first container's userns.
+	target_pid="$(__runc state target_userns | jq .pid)"
+	update_config '.linux.namespaces |= map(if .type == "user" then (.path = "/proc/'"$target_pid"'/ns/" + .type) else . end)
+		| del(.linux.uidMappings)
+		| del(.linux.gidMappings)'
+	runc run -d --console-socket "$CONSOLE_SOCKET" in_userns
+	[ "$status" -eq 0 ]
+
+	runc exec in_userns cat /proc/self/uid_map
+	[ "$status" -eq 0 ]
+	if [ $EUID -eq 0 ]; then
+		grep -E '^\s+0\s+100000\s+65534$' <<<"$output"
+	else
+		grep -E '^\s+0\s+'$EUID'\s+1$' <<<"$output"
+	fi
+
+	runc exec in_userns cat /proc/self/gid_map
+	[ "$status" -eq 0 ]
+	if [ $EUID -eq 0 ]; then
+		grep -E '^\s+0\s+200000\s+65534$' <<<"$output"
+	else
+		grep -E '^\s+0\s+'$EUID'\s+1$' <<<"$output"
+	fi
+}
+
+@test "userns join other container userns [bind-mounted nsfd]" {
+	requires root
+
+	# Create a detached container with the id-mapping we want.
+	update_config '.process.args = ["sleep", "infinity"]'
+	runc run -d --console-socket "$CONSOLE_SOCKET" target_userns
+	[ "$status" -eq 0 ]
+
+	# Bind-mount the first containers userns nsfd to a different path, to
+	# exercise the non-fast-path (where runc has to join the userns to get the
+	# mappings).
+	target_pid="$(__runc state target_userns | jq .pid)"
+	userns_path=$(mktemp "$BATS_RUN_TMPDIR/userns.XXXXXX")
+	mount --bind "/proc/$target_pid/ns/user" "$userns_path"
+	echo "$userns_path" >>"$to_umount_list"
+
+	# Configure our container to attach to the first container's userns.
+	update_config '.linux.namespaces |= map(if .type == "user" then (.path = "'"$userns_path"'") else . end)
+		| del(.linux.uidMappings)
+		| del(.linux.gidMappings)'
+	runc run -d --console-socket "$CONSOLE_SOCKET" in_userns
+	[ "$status" -eq 0 ]
+
+	runc exec in_userns cat /proc/self/uid_map
+	[ "$status" -eq 0 ]
+	if [ $EUID -eq 0 ]; then
+		grep -E '^\s+0\s+100000\s+65534$' <<<"$output"
+	else
+		grep -E '^\s+0\s+'$EUID'\s+1$' <<<"$output"
+	fi
+
+	runc exec in_userns cat /proc/self/gid_map
+	[ "$status" -eq 0 ]
+	if [ $EUID -eq 0 ]; then
+		grep -E '^\s+0\s+200000\s+65534$' <<<"$output"
+	else
+		grep -E '^\s+0\s+'$EUID'\s+1$' <<<"$output"
+	fi
 }
