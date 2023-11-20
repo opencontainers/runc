@@ -18,6 +18,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/devices"
 	"github.com/opencontainers/runc/libcontainer/seccomp"
+	"github.com/opencontainers/runc/libcontainer/userns"
 	libcontainerUtils "github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/sirupsen/logrus"
@@ -967,6 +968,21 @@ func setupUserNamespace(spec *specs.Spec, config *configs.Config) error {
 	if spec.Linux != nil {
 		config.UIDMappings = toConfigIDMap(spec.Linux.UIDMappings)
 		config.GIDMappings = toConfigIDMap(spec.Linux.GIDMappings)
+	}
+	if path := config.Namespaces.PathOf(configs.NEWUSER); path != "" {
+		// Cache the current userns mappings in our configuration, so that we
+		// can calculate uid and gid mappings within runc. These mappings are
+		// never used for configuring the container if the path is set.
+		uidMap, gidMap, err := userns.GetUserNamespaceMappings(path)
+		if err != nil {
+			return fmt.Errorf("failed to cache mappings for userns: %w", err)
+		}
+		config.UIDMappings = uidMap
+		config.GIDMappings = gidMap
+		logrus.WithFields(logrus.Fields{
+			"uid_map": uidMap,
+			"gid_map": gidMap,
+		}).Debugf("config uses path-based userns configuration -- current uid and gid mappings cached")
 	}
 	rootUID, err := config.HostRootUID()
 	if err != nil {
