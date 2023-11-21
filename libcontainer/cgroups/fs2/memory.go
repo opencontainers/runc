@@ -231,6 +231,9 @@ func rootStatsFromMeminfo(stats *cgroups.Stats) error {
 	// sum swap usage as combined mem+swap usage for consistency as well.
 	stats.MemoryStats.Usage.Usage = stats.MemoryStats.Stats["anon"] + stats.MemoryStats.Stats["file"]
 	stats.MemoryStats.Usage.Limit = math.MaxUint64
+	stats.MemoryStats.KernelUsage = cgroups.MemoryData{
+		Usage: stats.MemoryStats.Stats["kernel_stack"] + stats.MemoryStats.Stats["slab"],
+	}
 	stats.MemoryStats.SwapUsage.Usage = (swap_total - swap_free) * 1024
 	stats.MemoryStats.SwapUsage.Limit = math.MaxUint64
 	stats.MemoryStats.SwapUsage.Usage += stats.MemoryStats.Usage.Usage
