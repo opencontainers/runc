@@ -18,6 +18,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
 	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/userns"
 	"github.com/opencontainers/runtime-spec/specs-go"
 
 	"golang.org/x/sys/unix"
@@ -1550,6 +1551,11 @@ func TestInitJoinNetworkAndUser(t *testing.T) {
 	config2 := newTemplateConfig(t, &tParam{userns: true})
 	config2.Namespaces.Add(configs.NEWNET, netns1)
 	config2.Namespaces.Add(configs.NEWUSER, userns1)
+	// Emulate specconv.setupUserNamespace().
+	uidMap, gidMap, err := userns.GetUserNamespaceMappings(userns1)
+	ok(t, err)
+	config2.UIDMappings = uidMap
+	config2.GIDMappings = gidMap
 	config2.Cgroups.Path = "integration/test2"
 	container2, err := newContainer(t, config2)
 	ok(t, err)

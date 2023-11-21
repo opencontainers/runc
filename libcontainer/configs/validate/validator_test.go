@@ -170,7 +170,7 @@ func TestValidateSecurityWithoutNEWNS(t *testing.T) {
 	}
 }
 
-func TestValidateUsernamespace(t *testing.T) {
+func TestValidateUserNamespace(t *testing.T) {
 	if _, err := os.Stat("/proc/self/ns/user"); os.IsNotExist(err) {
 		t.Skip("Test requires userns.")
 	}
@@ -181,6 +181,8 @@ func TestValidateUsernamespace(t *testing.T) {
 				{Type: configs.NEWUSER},
 			},
 		),
+		UIDMappings: []configs.IDMap{{HostID: 0, ContainerID: 123, Size: 100}},
+		GIDMappings: []configs.IDMap{{HostID: 0, ContainerID: 123, Size: 100}},
 	}
 
 	err := Validate(config)
@@ -189,11 +191,11 @@ func TestValidateUsernamespace(t *testing.T) {
 	}
 }
 
-func TestValidateUsernamespaceWithoutUserNS(t *testing.T) {
-	uidMap := configs.IDMap{ContainerID: 123}
+func TestValidateUsernsMappingWithoutNamespace(t *testing.T) {
 	config := &configs.Config{
 		Rootfs:      "/var",
-		UIDMappings: []configs.IDMap{uidMap},
+		UIDMappings: []configs.IDMap{{HostID: 0, ContainerID: 123, Size: 100}},
+		GIDMappings: []configs.IDMap{{HostID: 0, ContainerID: 123, Size: 100}},
 	}
 
 	err := Validate(config)
@@ -218,6 +220,29 @@ func TestValidateTimeNamespace(t *testing.T) {
 	err := Validate(config)
 	if err != nil {
 		t.Errorf("expected error to not occur %+v", err)
+	}
+}
+
+func TestValidateTimeNamespaceWithBothPathAndTimeOffset(t *testing.T) {
+	if _, err := os.Stat("/proc/self/ns/time"); os.IsNotExist(err) {
+		t.Skip("Test requires timens.")
+	}
+	config := &configs.Config{
+		Rootfs: "/var",
+		Namespaces: configs.Namespaces(
+			[]configs.Namespace{
+				{Type: configs.NEWTIME, Path: "/proc/1/ns/time"},
+			},
+		),
+		TimeOffsets: map[string]specs.LinuxTimeOffset{
+			"boottime":  {Secs: 150, Nanosecs: 314159},
+			"monotonic": {Secs: 512, Nanosecs: 271818},
+		},
+	}
+
+	err := Validate(config)
+	if err == nil {
+		t.Error("Expected error to occur but it was nil")
 	}
 }
 

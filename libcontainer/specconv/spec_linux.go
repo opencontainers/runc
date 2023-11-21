@@ -516,6 +516,9 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 }
 
 func toConfigIDMap(specMaps []specs.LinuxIDMapping) []configs.IDMap {
+	if specMaps == nil {
+		return nil
+	}
 	idmaps := make([]configs.IDMap, len(specMaps))
 	for i, id := range specMaps {
 		idmaps[i] = configs.IDMap{
@@ -970,6 +973,11 @@ func setupUserNamespace(spec *specs.Spec, config *configs.Config) error {
 		config.GIDMappings = toConfigIDMap(spec.Linux.GIDMappings)
 	}
 	if path := config.Namespaces.PathOf(configs.NEWUSER); path != "" {
+		// We cannot allow uid or gid mappings to be set if we are also asked
+		// to join a userns.
+		if config.UIDMappings != nil || config.GIDMappings != nil {
+			return errors.New("user namespaces enabled, but both namespace path and mapping specified -- you may only provide one")
+		}
 		// Cache the current userns mappings in our configuration, so that we
 		// can calculate uid and gid mappings within runc. These mappings are
 		// never used for configuring the container if the path is set.
