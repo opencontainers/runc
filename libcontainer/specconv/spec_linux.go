@@ -941,6 +941,11 @@ func setupUserNamespace(spec *specs.Spec, config *configs.Config) error {
 		}
 	}
 	if path := config.Namespaces.PathOf(configs.NEWUSER); path != "" {
+		// We cannot allow uid or gid mappings to be set if we are also asked
+		// to join a userns.
+		if config.UidMappings != nil || config.GidMappings != nil {
+			return errors.New("user namespaces enabled, but both namespace path and mapping specified -- you may only provide one")
+		}
 		// Cache the current userns mappings in our configuration, so that we
 		// can calculate uid and gid mappings within runc. These mappings are
 		// never used for configuring the container if the path is set.
