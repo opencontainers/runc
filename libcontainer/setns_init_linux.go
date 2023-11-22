@@ -22,6 +22,7 @@ import (
 type linuxSetnsInit struct {
 	pipe          *syncSocket
 	consoleSocket *os.File
+	pidfdSocket   *os.File
 	config        *initConfig
 	logFd         int
 	dmzExe        *os.File
@@ -54,6 +55,11 @@ func (l *linuxSetnsInit) Init() error {
 		}
 		if err := system.Setctty(); err != nil {
 			return err
+		}
+	}
+	if l.pidfdSocket != nil {
+		if err := setupPidfd(l.pidfdSocket, "setns"); err != nil {
+			return fmt.Errorf("failed to setup pidfd: %w", err)
 		}
 	}
 	if l.config.NoNewPrivileges {

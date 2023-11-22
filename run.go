@@ -35,6 +35,10 @@ command(s) that get executed on start, edit the args parameter of the spec. See
 			Value: "",
 			Usage: "path to an AF_UNIX socket which will receive a file descriptor referencing the master end of the console's pseudoterminal",
 		},
+		cli.StringFlag{
+			Name:  "pidfd-socket",
+			Usage: "path to an AF_UNIX socket which will receive a file descriptor referencing the init process",
+		},
 		cli.BoolFlag{
 			Name:  "detach, d",
 			Usage: "detach from the container's process",

@@ -22,6 +22,7 @@ import (
 type linuxStandardInit struct {
 	pipe          *syncSocket
 	consoleSocket *os.File
+	pidfdSocket   *os.File
 	parentPid     int
 	fifoFd        int
 	logFd         int
@@ -111,6 +112,12 @@ func (l *linuxStandardInit) Init() error {
 		}
 		if err := system.Setctty(); err != nil {
 			return &os.SyscallError{Syscall: "ioctl(setctty)", Err: err}
+		}
+	}
+
+	if l.pidfdSocket != nil {
+		if err := setupPidfd(l.pidfdSocket, "standard"); err != nil {
+			return fmt.Errorf("failed to setup pidfd: %w", err)
 		}
 	}
 

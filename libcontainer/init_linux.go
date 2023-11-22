@@ -179,6 +179,16 @@ func startInitialization() (retErr error) {
 		defer consoleSocket.Close()
 	}
 
+	var pidfdSocket *os.File
+	if envSockFd := os.Getenv("_LIBCONTAINER_PIDFD_SOCK"); envSockFd != "" {
+		sockFd, err := strconv.Atoi(envSockFd)
+		if err != nil {
+			return fmt.Errorf("unable to convert _LIBCONTAINER_PIDFD_SOCK: %w", err)
+		}
+		pidfdSocket = os.NewFile(uintptr(sockFd), "pidfd-socket")
+		defer pidfdSocket.Close()
+	}
+
 	// Get mount files (O_PATH).
 	mountSrcFds, err := parseFdsFromEnv("_LIBCONTAINER_MOUNT_FDS")
 	if err != nil {
@@ -222,10 +232,10 @@ func startInitialization() (retErr error) {
 	}
 
 	// If init succeeds, it will not return, hence none of the defers will be called.
-	return containerInit(it, &config, syncPipe, consoleSocket, fifofd, logFD, dmzExe, mountFds{sourceFds: mountSrcFds, idmapFds: idmapFds})
+	return containerInit(it, &config, syncPipe, consoleSocket, pidfdSocket, fifofd, logFD, dmzExe, mountFds{sourceFds: mountSrcFds, idmapFds: idmapFds})
 }
 
-func containerInit(t initType, config *initConfig, pipe *syncSocket, consoleSocket *os.File, fifoFd, logFd int, dmzExe *os.File, mountFds mountFds) error {
+func containerInit(t initType, config *initConfig, pipe *syncSocket, consoleSocket, pidfdSocket *os.File, fifoFd, logFd int, dmzExe *os.File, mountFds mountFds) error {
 	if err := populateProcessEnvironment(config.Env); err != nil {
 		return err
 	}
@@ -240,6 +250,7 @@ func containerInit(t initType, config *initConfig, pipe *syncSocket, consoleSock
 		i := &linuxSetnsInit{
 			pipe:          pipe,
 			consoleSocket: consoleSocket,
+			pidfdSocket:   pidfdSocket,
 			config:        config,
 			logFd:         logFd,
 			dmzExe:        dmzExe,
@@ -249,6 +260,7 @@ func containerInit(t initType, config *initConfig, pipe *syncSocket, consoleSock
 		i := &linuxStandardInit{
 			pipe:          pipe,
 			consoleSocket: consoleSocket,
+			pidfdSocket:   pidfdSocket,
 			parentPid:     unix.Getppid(),
 			config:        config,
 			fifoFd:        fifoFd,
@@ -693,4 +705,21 @@ func signalAllProcesses(m cgroups.Manager, s unix.Signal) error {
 	}
 
 	return nil
+}
+
+// setupPidfd opens a process file descriptor of init process, and sends the
+// file descriptor back to the socket.
+func setupPidfd(socket *os.File, initType string) error {
+	defer socket.Close()
+
+	pidFd, err := unix.PidfdOpen(os.Getpid(), 0)
+	if err != nil {
+		return fmt.Errorf("failed to pidfd_open: %w", err)
+	}
+
+	if err := utils.SendRawFd(socket, initType, uintptr(pidFd)); err != nil {
+		unix.Close(pidFd)
+		return fmt.Errorf("failed to send pidfd on socket: %w", err)
+	}
+	return unix.Close(pidFd)
 }

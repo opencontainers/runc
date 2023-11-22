@@ -6,6 +6,7 @@ vendor/pkg
 /contrib/cmd/seccompagent/seccompagent
 /contrib/cmd/fs-idmap/fs-idmap
 /contrib/cmd/memfd-bind/memfd-bind
+/contrib/cmd/pidfd-kill/pidfd-kill
 man/man8
 release
 Vagrantfile

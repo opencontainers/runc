@@ -77,6 +77,9 @@ type Process struct {
 	// ConsoleSocket provides the masterfd console.
 	ConsoleSocket *os.File
 
+	// PidfdSocket provides process file descriptor of it own.
+	PidfdSocket *os.File
+
 	// Init specifies whether the process is the first process in the container.
 	Init bool
 

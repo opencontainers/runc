@@ -34,6 +34,10 @@ following will output a list of processes running in the container:
 			Usage: "path to an AF_UNIX socket which will receive a file descriptor referencing the master end of the console's pseudoterminal",
 		},
 		cli.StringFlag{
+			Name:  "pidfd-socket",
+			Usage: "path to an AF_UNIX socket which will receive a file descriptor referencing the exec process",
+		},
+		cli.StringFlag{
 			Name:  "cwd",
 			Usage: "current working directory in the container",
 		},
@@ -181,6 +185,7 @@ func execProcess(context *cli.Context) (int, error) {
 		shouldDestroy:   false,
 		container:       container,
 		consoleSocket:   context.String("console-socket"),
+		pidfdSocket:     context.String("pidfd-socket"),
 		detach:          context.Bool("detach"),
 		pidFile:         context.String("pid-file"),
 		action:          CT_ACT_RUN,
