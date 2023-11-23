@@ -4,6 +4,8 @@ load helpers
 
 function setup() {
 	setup_busybox
+
+	mkdir -p rootfs/{proc,sys,tmp}
 }
 
 function teardown() {
@@ -40,6 +42,27 @@ function teardown() {
 
 @test "runc run [simple timens]" {
 	requires timens
+
+	update_config '.process.args = ["cat", "/proc/self/timens_offsets"]'
+	update_config '.linux.namespaces += [{"type": "time"}]
+		| .linux.timeOffsets = {
+			"monotonic": { "secs": 7881, "nanosecs": 2718281 },
+			"boottime": { "secs": 1337, "nanosecs": 3141519 }
+		}'
+
+	runc run test_busybox
+	[ "$status" -eq 0 ]
+	grep -E '^monotonic\s+7881\s+2718281$' <<<"$output"
+	grep -E '^boottime\s+1337\s+3141519$' <<<"$output"
+}
+
+@test "runc run [simple timens + userns]" {
+	requires root
+	requires timens
+
+	update_config ' .linux.namespaces += [{"type": "user"}]
+		| .linux.uidMappings += [{"hostID": 100000, "containerID": 0, "size": 65534}]
+		| .linux.gidMappings += [{"hostID": 200000, "containerID": 0, "size": 65534}] '
 
 	update_config '.process.args = ["cat", "/proc/self/timens_offsets"]'
 	update_config '.linux.namespaces += [{"type": "time"}]
