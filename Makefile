@@ -71,10 +71,10 @@ runc-bin: runc-dmz
 	$(GO_BUILD) -o runc .
 
 .PHONY: all
-all: runc recvtty sd-helper seccompagent fs-idmap memfd-bind pidfd-kill
+all: runc recvtty sd-helper seccompagent fs-idmap memfd-bind pidfd-kill remap-rootfs
 
-.PHONY: recvtty sd-helper seccompagent fs-idmap memfd-bind pidfd-kill
-recvtty sd-helper seccompagent fs-idmap memfd-bind pidfd-kill:
+.PHONY: recvtty sd-helper seccompagent fs-idmap memfd-bind pidfd-kill remap-rootfs
+recvtty sd-helper seccompagent fs-idmap memfd-bind pidfd-kill remap-rootfs:
 	$(GO_BUILD) -o contrib/cmd/$@/$@ ./contrib/cmd/$@
 
 .PHONY: static

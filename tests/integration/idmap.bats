@@ -16,7 +16,6 @@ function setup() {
 	# Use other owner for source-2
 	chown 1:1 source-2/foo.txt
 
-	mkdir -p rootfs/{proc,sys,tmp}
 	mkdir -p rootfs/tmp/mount-{1,2}
 	mkdir -p rootfs/mnt/bind-mount-{1,2}
 
@@ -43,6 +42,8 @@ function setup() {
 						]
 					}
 				] '
+
+	remap_rootfs
 }
 
 function teardown() {

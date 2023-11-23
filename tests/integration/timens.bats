@@ -4,8 +4,6 @@ load helpers
 
 function setup() {
 	setup_busybox
-
-	mkdir -p rootfs/{proc,sys,tmp}
 }
 
 function teardown() {
@@ -63,6 +61,7 @@ function teardown() {
 	update_config ' .linux.namespaces += [{"type": "user"}]
 		| .linux.uidMappings += [{"hostID": 100000, "containerID": 0, "size": 65534}]
 		| .linux.gidMappings += [{"hostID": 200000, "containerID": 0, "size": 65534}] '
+	remap_rootfs
 
 	update_config '.process.args = ["cat", "/proc/self/timens_offsets"]'
 	update_config '.linux.namespaces += [{"type": "time"}]

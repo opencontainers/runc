@@ -171,7 +171,7 @@ function teardown() {
 		update_config '.linux.namespaces += [{"type": "user"}]
 			| .linux.uidMappings += [{"containerID": 0, "hostID": 100000, "size": 100}]
 			| .linux.gidMappings += [{"containerID": 0, "hostID": 200000, "size": 200}]'
-		mkdir -p rootfs/{proc,sys,tmp}
+		remap_rootfs
 	fi
 	update_config '.linux.namespaces += [{"type": "time"}]
 		| .linux.timeOffsets = {

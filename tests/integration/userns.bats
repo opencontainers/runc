@@ -12,7 +12,6 @@ function setup() {
 	# Permissions only to the owner, it is inaccessible to group/others
 	chmod 700 source-inaccessible-{1,2}
 
-	mkdir -p rootfs/{proc,sys,tmp}
 	mkdir -p rootfs/tmp/mount-{1,2}
 
 	to_umount_list="$(mktemp "$BATS_RUN_TMPDIR/userns-mounts.XXXXXX")"
@@ -20,6 +19,7 @@ function setup() {
 		update_config ' .linux.namespaces += [{"type": "user"}]
 			| .linux.uidMappings += [{"hostID": 100000, "containerID": 0, "size": 65534}]
 			| .linux.gidMappings += [{"hostID": 200000, "containerID": 0, "size": 65534}] '
+		remap_rootfs
 	fi
 }
 
