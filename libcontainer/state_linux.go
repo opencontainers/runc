@@ -35,19 +35,30 @@ type containerState interface {
 }
 
 func destroy(c *Container) error {
-	err := c.cgroupManager.Destroy()
+	// Usually, when a container init is gone, all other processes in its
+	// cgroup are killed by the kernel. This is not the case for a shared
+	// PID namespace container, which may have some processes left after
+	// its init is killed or exited.
+	//
+	// As the container without init process running is considered stopped,
+	// and destroy is supposed to remove all the container resources, we need
+	// to kill those processes here.
+	if !c.config.Namespaces.IsPrivate(configs.NEWPID) {
+		_ = signalAllProcesses(c.cgroupManager, unix.SIGKILL)
+	}
+	if err := c.cgroupManager.Destroy(); err != nil {
+		return fmt.Errorf("unable to remove container's cgroup: %w", err)
+	}
 	if c.intelRdtManager != nil {
-		if ierr := c.intelRdtManager.Destroy(); err == nil {
-			err = ierr
+		if err := c.intelRdtManager.Destroy(); err != nil {
+			return fmt.Errorf("unable to remove container's IntelRDT group: %w", err)
 		}
 	}
-	if rerr := os.RemoveAll(c.stateDir); err == nil {
-		err = rerr
+	if err := os.RemoveAll(c.stateDir); err != nil {
+		return fmt.Errorf("unable to remove container state dir: %w", err)
 	}
 	c.initProcess = nil
-	if herr := runPoststopHooks(c); err == nil {
-		err = herr
-	}
+	err := runPoststopHooks(c)
 	c.state = &stoppedState{c: c}
 	return err
 }
@@ -103,7 +114,7 @@ func (r *runningState) status() Status {
 func (r *runningState) transition(s containerState) error {
 	switch s.(type) {
 	case *stoppedState:
-		if r.c.runType() == Running {
+		if r.c.hasInit() {
 			return ErrRunning
 		}
 		r.c.state = s
@@ -118,7 +129,7 @@ func (r *runningState) transition(s containerState) error {
 }
 
 func (r *runningState) destroy() error {
-	if r.c.runType() == Running {
+	if r.c.hasInit() {
 		return ErrRunning
 	}
 	return destroy(r.c)
@@ -170,14 +181,13 @@ func (p *pausedState) transition(s containerState) error {
 }
 
 func (p *pausedState) destroy() error {
-	t := p.c.runType()
-	if t != Running && t != Created {
-		if err := p.c.cgroupManager.Freeze(configs.Thawed); err != nil {
-			return err
-		}
-		return destroy(p.c)
+	if p.c.hasInit() {
+		return ErrPaused
 	}
-	return ErrPaused
+	if err := p.c.cgroupManager.Freeze(configs.Thawed); err != nil {
+		return err
+	}
+	return destroy(p.c)
 }
 
 // restoredState is the same as the running state but also has associated checkpoint

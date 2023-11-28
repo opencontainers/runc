@@ -673,6 +673,9 @@ func setupPersonality(config *configs.Config) error {
 // signalAllProcesses freezes then iterates over all the processes inside the
 // manager's cgroups sending the signal s to them.
 func signalAllProcesses(m cgroups.Manager, s unix.Signal) error {
+	if !m.Exists() {
+		return ErrNotRunning
+	}
 	// Use cgroup.kill, if available.
 	if s == unix.SIGKILL {
 		if p := m.Path(""); p != "" { // Either cgroup v2 or hybrid.

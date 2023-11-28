@@ -115,7 +115,7 @@ func (c *Container) ignoreCgroupError(err error) error {
 	if err == nil {
 		return nil
 	}
-	if errors.Is(err, os.ErrNotExist) && c.runType() == Stopped && !c.cgroupManager.Exists() {
+	if errors.Is(err, os.ErrNotExist) && !c.hasInit() && !c.cgroupManager.Exists() {
 		return nil
 	}
 	return err
@@ -364,16 +364,6 @@ func (c *Container) start(process *Process) (retErr error) {
 func (c *Container) Signal(s os.Signal) error {
 	c.m.Lock()
 	defer c.m.Unlock()
-	status, err := c.currentStatus()
-	if err != nil {
-		return err
-	}
-	// To avoid a PID reuse attack, don't kill non-running container.
-	switch status {
-	case Running, Created, Paused:
-	default:
-		return ErrNotRunning
-	}
 
 	// When a container has its own PID namespace, inside it the init PID
 	// is 1, and thus it is handled specially by the kernel. In particular,
@@ -381,20 +371,28 @@ func (c *Container) Signal(s os.Signal) error {
 	// all other processes in that PID namespace (see pid_namespaces(7)).
 	//
 	// OTOH, if PID namespace is shared, we should kill all pids to avoid
-	// leftover processes.
+	// leftover processes. Handle this special case here.
 	if s == unix.SIGKILL && !c.config.Namespaces.IsPrivate(configs.NEWPID) {
-		err = signalAllProcesses(c.cgroupManager, unix.SIGKILL)
-	} else {
-		err = c.initProcess.signal(s)
+		if err := signalAllProcesses(c.cgroupManager, unix.SIGKILL); err != nil {
+			return fmt.Errorf("unable to kill all processes: %w", err)
+		}
+		return nil
 	}
-	if err != nil {
+
+	// To avoid a PID reuse attack, don't kill non-running container.
+	if !c.hasInit() {
+		return ErrNotRunning
+	}
+	if err := c.initProcess.signal(s); err != nil {
 		return fmt.Errorf("unable to signal init: %w", err)
 	}
-	if status == Paused && s == unix.SIGKILL {
+	if s == unix.SIGKILL {
 		// For cgroup v1, killing a process in a frozen cgroup
 		// does nothing until it's thawed. Only thaw the cgroup
 		// for SIGKILL.
-		_ = c.cgroupManager.Freeze(configs.Thawed)
+		if paused, _ := c.isPaused(); paused {
+			_ = c.cgroupManager.Freeze(configs.Thawed)
+		}
 	}
 	return nil
 }
@@ -876,7 +874,10 @@ func (c *Container) newInitConfig(process *Process) *initConfig {
 func (c *Container) Destroy() error {
 	c.m.Lock()
 	defer c.m.Unlock()
-	return c.state.destroy()
+	if err := c.state.destroy(); err != nil {
+		return fmt.Errorf("unable to destroy container: %w", err)
+	}
+	return nil
 }
 
 // Pause pauses the container, if its state is RUNNING or CREATED, changing
@@ -1006,34 +1007,31 @@ func (c *Container) refreshState() error {
 	if paused {
 		return c.state.transition(&pausedState{c: c})
 	}
-	t := c.runType()
-	switch t {
-	case Created:
-		return c.state.transition(&createdState{c: c})
-	case Running:
-		return c.state.transition(&runningState{c: c})
+	if !c.hasInit() {
+		return c.state.transition(&stoppedState{c: c})
 	}
-	return c.state.transition(&stoppedState{c: c})
+	// The presence of exec fifo helps to distinguish between
+	// the created and the running states.
+	if _, err := os.Stat(filepath.Join(c.stateDir, execFifoFilename)); err == nil {
+		return c.state.transition(&createdState{c: c})
+	}
+	return c.state.transition(&runningState{c: c})
 }
 
-func (c *Container) runType() Status {
+// hasInit tells whether the container init process exists.
+func (c *Container) hasInit() bool {
 	if c.initProcess == nil {
-		return Stopped
+		return false
 	}
 	pid := c.initProcess.pid()
 	stat, err := system.Stat(pid)
 	if err != nil {
-		return Stopped
+		return false
 	}
 	if stat.StartTime != c.initProcessStartTime || stat.State == system.Zombie || stat.State == system.Dead {
-		return Stopped
+		return false
 	}
-	// We'll create exec fifo and blocking on it after container is created,
-	// and delete it after start container.
-	if _, err := os.Stat(filepath.Join(c.stateDir, execFifoFilename)); err == nil {
-		return Created
-	}
-	return Running
+	return true
 }
 
 func (c *Container) isPaused() (bool, error) {

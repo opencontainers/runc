@@ -18,8 +18,7 @@ func killContainer(container *libcontainer.Container) error {
 	for i := 0; i < 100; i++ {
 		time.Sleep(100 * time.Millisecond)
 		if err := container.Signal(unix.Signal(0)); err != nil {
-			destroy(container)
-			return nil
+			return container.Destroy()
 		}
 	}
 	return errors.New("container init still running")
@@ -66,22 +65,25 @@ status of "ubuntu01" as "stopped" the following will delete resources held for
 			}
 			return err
 		}
+		// When --force is given, we kill all container processes and
+		// then destroy the container. This is done even for a stopped
+		// container, because (in case it does not have its own PID
+		// namespace) there may be some leftover processes in the
+		// container's cgroup.
+		if force {
+			return killContainer(container)
+		}
 		s, err := container.Status()
 		if err != nil {
 			return err
 		}
 		switch s {
 		case libcontainer.Stopped:
-			destroy(container)
+			return container.Destroy()
 		case libcontainer.Created:
 			return killContainer(container)
 		default:
-			if force {
-				return killContainer(container)
-			}
 			return fmt.Errorf("cannot delete container %s that is not stopped: %s", id, s)
 		}
-
-		return nil
 	},
 }
