@@ -82,6 +82,7 @@ type initConfig struct {
 	RootlessCgroups  bool                  `json:"rootless_cgroups,omitempty"`
 	SpecState        *specs.State          `json:"spec_state,omitempty"`
 	Cgroup2Path      string                `json:"cgroup2_path,omitempty"`
+	UseDmz           bool                  `json:"use_dmz,omitempty"`
 }
 
 // Init is part of "runc init" implementation.
@@ -347,9 +348,29 @@ func finalizeNamespace(config *initConfig) error {
 	if err := system.SetKeepCaps(); err != nil {
 		return fmt.Errorf("unable to set keep caps: %w", err)
 	}
-	if err := setupUser(config); err != nil {
+	uid, err := setupUser(config)
+	if err != nil {
 		return fmt.Errorf("unable to setup user: %w", err)
 	}
+
+	if uid != 0 && len(caps.Bounding) > 0 {
+		// We cannot use the Dmz binary if capabilities are requested as non-root,
+		// as the Dmz binary itself has no file capabilities. Unless all the
+		// requested capabilities are in the ambient set.
+		for _, capab := range caps.Bounding {
+			found := false
+			for _, ambCapab := range caps.Ambient {
+				if ambCapab == capab {
+					found = true
+				}
+			}
+			if !found {
+				config.UseDmz = false
+				break
+			}
+		}
+	}
+
 	// Change working directory AFTER the user has been set up, if we haven't done it yet.
 	if doChdir {
 		if err := unix.Chdir(config.Cwd); err != nil {
@@ -463,7 +484,7 @@ func syncParentSeccomp(pipe *syncSocket, seccompFd *os.File) error {
 }
 
 // setupUser changes the groups, gid, and uid for the user inside the container
-func setupUser(config *initConfig) error {
+func setupUser(config *initConfig) (int, error) {
 	// Set up defaults.
 	defaultExecUser := user.ExecUser{
 		Uid:  0,
@@ -473,34 +494,34 @@ func setupUser(config *initConfig) error {
 
 	passwdPath, err := user.GetPasswdPath()
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	groupPath, err := user.GetGroupPath()
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	execUser, err := user.GetExecUserPath(config.User, &defaultExecUser, passwdPath, groupPath)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	var addGroups []int
 	if len(config.AdditionalGroups) > 0 {
 		addGroups, err = user.GetAdditionalGroupsPath(config.AdditionalGroups, groupPath)
 		if err != nil {
-			return err
+			return 0, err
 		}
 	}
 
 	// Rather than just erroring out later in setuid(2) and setgid(2), check
 	// that the user is mapped here.
 	if _, err := config.Config.HostUID(execUser.Uid); err != nil {
-		return errors.New("cannot set uid to unmapped user in user namespace")
+		return 0, errors.New("cannot set uid to unmapped user in user namespace")
 	}
 	if _, err := config.Config.HostGID(execUser.Gid); err != nil {
-		return errors.New("cannot set gid to unmapped user in user namespace")
+		return 0, errors.New("cannot set gid to unmapped user in user namespace")
 	}
 
 	if config.RootlessEUID {
@@ -509,19 +530,19 @@ func setupUser(config *initConfig) error {
 		// this check earlier, but if libcontainer.Process.User was typesafe
 		// this might work.
 		if len(addGroups) > 0 {
-			return errors.New("cannot set any additional groups in a rootless container")
+			return 0, errors.New("cannot set any additional groups in a rootless container")
 		}
 	}
 
 	// Before we change to the container's user make sure that the processes
 	// STDIO is correctly owned by the user that we are switching to.
 	if err := fixStdioPermissions(execUser); err != nil {
-		return err
+		return 0, err
 	}
 
 	setgroups, err := os.ReadFile("/proc/self/setgroups")
 	if err != nil && !os.IsNotExist(err) {
-		return err
+		return 0, err
 	}
 
 	// This isn't allowed in an unprivileged user namespace since Linux 3.19.
@@ -533,24 +554,24 @@ func setupUser(config *initConfig) error {
 	if allowSupGroups {
 		suppGroups := append(execUser.Sgids, addGroups...)
 		if err := unix.Setgroups(suppGroups); err != nil {
-			return &os.SyscallError{Syscall: "setgroups", Err: err}
+			return 0, &os.SyscallError{Syscall: "setgroups", Err: err}
 		}
 	}
 
 	if err := unix.Setgid(execUser.Gid); err != nil {
-		return err
+		return 0, err
 	}
 	if err := unix.Setuid(execUser.Uid); err != nil {
-		return err
+		return 0, err
 	}
 
 	// if we didn't get HOME already, set it based on the user's HOME
 	if envHome := os.Getenv("HOME"); envHome == "" {
 		if err := os.Setenv("HOME", execUser.Home); err != nil {
-			return err
+			return 0, err
 		}
 	}
-	return nil
+	return execUser.Uid, nil
 }
 
 // fixStdioPermissions fixes the permissions of PID 1's STDIO within the container to the specified user.

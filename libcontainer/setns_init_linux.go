@@ -135,7 +135,7 @@ func (l *linuxSetnsInit) Init() error {
 		return &os.PathError{Op: "close log pipe", Path: "fd " + strconv.Itoa(l.logFd), Err: err}
 	}
 
-	if l.dmzExe != nil {
+	if l.dmzExe != nil && l.config.UseDmz {
 		l.config.Args[0] = name
 		return system.Fexecve(l.dmzExe.Fd(), l.config.Args, os.Environ())
 	}

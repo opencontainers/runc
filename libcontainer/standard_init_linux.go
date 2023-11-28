@@ -286,7 +286,7 @@ func (l *linuxStandardInit) Init() error {
 		return err
 	}
 
-	if l.dmzExe != nil {
+	if l.dmzExe != nil && l.config.UseDmz {
 		l.config.Args[0] = name
 		return system.Fexecve(l.dmzExe.Fd(), l.config.Args, os.Environ())
 	}
