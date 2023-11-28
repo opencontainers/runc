@@ -82,7 +82,7 @@ golang.org/x/exp/slices
 # golang.org/x/net v0.17.0
 ## explicit; go 1.17
 golang.org/x/net/bpf
-# golang.org/x/sys v0.14.1-0.20231108175955-e4099bfacb8c
+# golang.org/x/sys v0.15.0
 ## explicit; go 1.18
 golang.org/x/sys/execabs
 golang.org/x/sys/unix
