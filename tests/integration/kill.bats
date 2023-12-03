@@ -10,32 +10,8 @@ function teardown() {
 	teardown_bundle
 }
 
-# shellcheck disable=SC2030
-@test "kill detached busybox" {
-	# run busybox detached
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	[ "$status" -eq 0 ]
-
-	# check state
-	testcontainer test_busybox running
-
-	runc kill test_busybox KILL
-	[ "$status" -eq 0 ]
-	wait_for_container 10 1 test_busybox stopped
-
-	# Check that kill errors on a stopped container.
-	runc kill test_busybox 0
-	[ "$status" -ne 0 ]
-	[[ "$output" == *"container not running"* ]]
-
-	# Check that -a (now obsoleted) makes kill return no error for a stopped container.
-	runc kill -a test_busybox 0
-	[ "$status" -eq 0 ]
-
-	runc delete test_busybox
-	[ "$status" -eq 0 ]
-}
-
+# This needs to be placed at the top of the bats file to work around
+# a shellcheck bug. See <https://github.com/koalaman/shellcheck/issues/2873>.
 test_host_pidns_kill() {
 	requires cgroups_freezer
 
@@ -53,7 +29,6 @@ test_host_pidns_kill() {
 	fi
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	# shellcheck disable=SC2031
 	[ "$status" -eq 0 ]
 	cgpath=$(get_cgroup_path "pids")
 	init_pid=$(cat "$cgpath"/cgroup.procs)
@@ -82,7 +57,6 @@ test_host_pidns_kill() {
 	done
 
 	runc kill test_busybox KILL
-	# shellcheck disable=SC2031
 	[ "$status" -eq 0 ]
 	wait_for_container 10 1 test_busybox stopped
 
@@ -90,6 +64,31 @@ test_host_pidns_kill() {
 	pids=$(cat "$cgpath"/cgroup.procs) || true # OK if cgroup is gone
 	echo "pids: $pids"
 	[ -z "$pids" ]
+}
+
+@test "kill detached busybox" {
+	# run busybox detached
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	[ "$status" -eq 0 ]
+
+	# check state
+	testcontainer test_busybox running
+
+	runc kill test_busybox KILL
+	[ "$status" -eq 0 ]
+	wait_for_container 10 1 test_busybox stopped
+
+	# Check that kill errors on a stopped container.
+	runc kill test_busybox 0
+	[ "$status" -ne 0 ]
+	[[ "$output" == *"container not running"* ]]
+
+	# Check that -a (now obsoleted) makes kill return no error for a stopped container.
+	runc kill -a test_busybox 0
+	[ "$status" -eq 0 ]
+
+	runc delete test_busybox
+	[ "$status" -eq 0 ]
 }
 
 # This is roughly the same as TestPIDHostInitProcessWait in libcontainer/integration.
