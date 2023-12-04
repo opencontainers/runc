@@ -473,6 +473,14 @@ func (m *UnifiedManager) GetAllPids() ([]int, error) {
 	return cgroups.GetAllPids(m.path)
 }
 
+func (m *UnifiedManager) GetTids() ([]int, error) {
+	return cgroups.GetTids(m.path)
+}
+
+func (m *UnifiedManager) GetAllTids() ([]int, error) {
+	return cgroups.GetAllTids(m.path)
+}
+
 func (m *UnifiedManager) GetStats() (*cgroups.Stats, error) {
 	return m.fsMgr.GetStats()
 }

@@ -135,6 +135,20 @@ func (c *Container) Processes() ([]int, error) {
 	return pids, nil
 }
 
+// Threads returns the TIDs inside this container. The TIDs are in the
+// namespace of the calling process.
+//
+// Some of the returned TIDs may no longer refer to processes in the container,
+// unless the container state is PAUSED in which case every TID in the slice is
+// valid.
+func (c *Container) Threads() ([]int, error) {
+	tids, err := c.cgroupManager.GetAllTids()
+	if err = c.ignoreCgroupError(err); err != nil {
+		return nil, fmt.Errorf("unable to get all container tids: %w", err)
+	}
+	return tids, nil
+}
+
 // Stats returns statistics for the container.
 func (c *Container) Stats() (*Stats, error) {
 	var (

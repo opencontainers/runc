@@ -19,6 +19,7 @@ import (
 
 const (
 	CgroupProcesses   = "cgroup.procs"
+	CgroupThreads     = "cgroup.threads"
 	unifiedMountpoint = "/sys/fs/cgroup"
 	hybridMountpoint  = "/sys/fs/cgroup/unified"
 )
@@ -136,8 +137,8 @@ func GetAllSubsystems() ([]string, error) {
 	return subsystems, nil
 }
 
-func readProcsFile(dir string) ([]int, error) {
-	f, err := OpenFile(dir, CgroupProcesses, os.O_RDONLY)
+func readTaskFile(dir string, tType string) ([]int, error) {
+	f, err := OpenFile(dir, tType, os.O_RDONLY)
 	if err != nil {
 		return nil, err
 	}
@@ -356,7 +357,12 @@ func getHugePageSizeFromFilenames(fileNames []string) ([]string, error) {
 
 // GetPids returns all pids, that were added to cgroup at path.
 func GetPids(dir string) ([]int, error) {
-	return readProcsFile(dir)
+	return readTaskFile(dir, CgroupProcesses)
+}
+
+// GetTids returns all tids, that were added to cgroup at path.
+func GetTids(dir string) ([]int, error) {
+	return readTaskFile(dir, CgroupThreads)
 }
 
 // WriteCgroupProc writes the specified pid into the cgroup's cgroup.procs file

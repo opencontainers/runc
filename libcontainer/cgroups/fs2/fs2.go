@@ -92,6 +92,14 @@ func (m *Manager) GetAllPids() ([]int, error) {
 	return cgroups.GetAllPids(m.dirPath)
 }
 
+func (m *Manager) GetTids() ([]int, error) {
+	return cgroups.GetTids(m.dirPath)
+}
+
+func (m *Manager) GetAllTids() ([]int, error) {
+	return cgroups.GetAllTids(m.dirPath)
+}
+
 func (m *Manager) GetStats() (*cgroups.Stats, error) {
 	var errs []error
 

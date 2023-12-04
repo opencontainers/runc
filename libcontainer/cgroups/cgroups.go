@@ -32,6 +32,13 @@ type Manager interface {
 	// any all its sub-cgroups.
 	GetAllPids() ([]int, error)
 
+	// GetTids returns the TIDs of all processes inside the cgroup
+	GetTids() ([]int, error)
+
+	// GetAllTids returns the TIDs of all processes inside the cgroup
+	// any all its sub-cgroups.
+	GetAllTids() ([]int, error)
+
 	// GetStats returns cgroups statistics.
 	GetStats() (*Stats, error)
 

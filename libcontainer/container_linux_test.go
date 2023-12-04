@@ -24,6 +24,14 @@ func (m *mockCgroupManager) GetAllPids() ([]int, error) {
 	return m.allPids, nil
 }
 
+func (m *mockCgroupManager) GetTids() ([]int, error) {
+	return m.pids, nil
+}
+
+func (m *mockCgroupManager) GetAllTids() ([]int, error) {
+	return m.allPids, nil
+}
+
 func (m *mockCgroupManager) GetStats() (*cgroups.Stats, error) {
 	return nil, nil
 }
@@ -138,6 +146,15 @@ func TestGetContainerPids(t *testing.T) {
 	for i, expected := range []int{1, 2, 3} {
 		if pids[i] != expected {
 			t.Fatalf("expected pid %d but received %d", expected, pids[i])
+		}
+	}
+	tids, err := container.Threads()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, expected := range []int{1, 2, 3} {
+		if tids[i] != expected {
+			t.Fatalf("expected tid %d but received %d", expected, tids[i])
 		}
 	}
 }

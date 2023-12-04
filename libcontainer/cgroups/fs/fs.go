@@ -226,6 +226,14 @@ func (m *Manager) GetAllPids() ([]int, error) {
 	return cgroups.GetAllPids(m.Path("devices"))
 }
 
+func (m *Manager) GetTids() ([]int, error) {
+	return cgroups.GetTids(m.Path("devices"))
+}
+
+func (m *Manager) GetAllTids() ([]int, error) {
+	return cgroups.GetAllTids(m.Path("devices"))
+}
+
 func (m *Manager) GetPaths() map[string]string {
 	m.mu.Lock()
 	defer m.mu.Unlock()

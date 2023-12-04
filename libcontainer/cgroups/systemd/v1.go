@@ -311,6 +311,22 @@ func (m *LegacyManager) GetAllPids() ([]int, error) {
 	return cgroups.GetAllPids(path)
 }
 
+func (m *LegacyManager) GetTids() ([]int, error) {
+	path, ok := m.paths["devices"]
+	if !ok {
+		return nil, errSubsystemDoesNotExist
+	}
+	return cgroups.GetTids(path)
+}
+
+func (m *LegacyManager) GetAllTids() ([]int, error) {
+	path, ok := m.paths["devices"]
+	if !ok {
+		return nil, errSubsystemDoesNotExist
+	}
+	return cgroups.GetAllTids(path)
+}
+
 func (m *LegacyManager) GetStats() (*cgroups.Stats, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
