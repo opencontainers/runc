@@ -1,12 +1,13 @@
 package configs
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 var (
-	errNoUIDMap   = errors.New("User namespaces enabled, but no uid mappings found.")
-	errNoUserMap  = errors.New("User namespaces enabled, but no user mapping found.")
-	errNoGIDMap   = errors.New("User namespaces enabled, but no gid mappings found.")
-	errNoGroupMap = errors.New("User namespaces enabled, but no group mapping found.")
+	errNoUIDMap = errors.New("user namespaces enabled, but no uid mappings found")
+	errNoGIDMap = errors.New("user namespaces enabled, but no gid mappings found")
 )
 
 // Please check https://man7.org/linux/man-pages/man2/personality.2.html for const details.
@@ -31,7 +32,7 @@ func (c Config) HostUID(containerId int) (int, error) {
 		}
 		id, found := c.hostIDFromMapping(containerId, c.UIDMappings)
 		if !found {
-			return -1, errNoUserMap
+			return -1, fmt.Errorf("user namespaces enabled, but no mapping found for uid %d", containerId)
 		}
 		return id, nil
 	}
@@ -54,7 +55,7 @@ func (c Config) HostGID(containerId int) (int, error) {
 		}
 		id, found := c.hostIDFromMapping(containerId, c.GIDMappings)
 		if !found {
-			return -1, errNoGroupMap
+			return -1, fmt.Errorf("user namespaces enabled, but no mapping found for gid %d", containerId)
 		}
 		return id, nil
 	}

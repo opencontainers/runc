@@ -10,7 +10,40 @@ function teardown() {
 	teardown_bundle
 }
 
-# shellcheck disable=SC2030
+# This needs to be placed at the top of the bats file to work around
+# a shellcheck bug. See <https://github.com/koalaman/shellcheck/issues/2873>.
+function test_events() {
+	# XXX: currently cgroups require root containers.
+	requires root
+	init_cgroup_paths
+
+	local status interval retry_every=1
+	if [ $# -eq 2 ]; then
+		interval="$1"
+		retry_every="$2"
+	fi
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	[ "$status" -eq 0 ]
+
+	# Spawn two subshels:
+	# 1. Event logger that sends stats events to events.log.
+	(__runc events ${interval:+ --interval "$interval"} test_busybox >events.log) &
+	# 2. Waits for an event that includes test_busybox then kills the
+	#    test_busybox container which causes the event logger to exit.
+	(
+		retry 10 "$retry_every" grep -q test_busybox events.log
+		__runc delete -f test_busybox
+	) &
+	wait # for both subshells to finish
+
+	[ -e events.log ]
+
+	output=$(head -1 events.log)
+	[[ "$output" == [\{]"\"type\""[:]"\"stats\""[,]"\"id\""[:]"\"test_busybox\""[,]* ]]
+	[[ "$output" == *"data"* ]]
+}
+
 @test "events --stats" {
 	# XXX: currently cgroups require root containers.
 	requires root
@@ -27,7 +60,6 @@ function teardown() {
 	[[ "${lines[0]}" == *"data"* ]]
 }
 
-# shellcheck disable=SC2030
 @test "events --stats with psi data" {
 	requires root cgroups_v2 psi
 	init_cgroup_paths
@@ -54,39 +86,6 @@ function teardown() {
 			jq -e '.data.cpu.psi.'$psi_type.$psi_metric' != 0' <<<"${lines[0]}"
 		done
 	done
-}
-
-function test_events() {
-	# XXX: currently cgroups require root containers.
-	requires root
-	init_cgroup_paths
-
-	local status interval retry_every=1
-	if [ $# -eq 2 ]; then
-		interval="$1"
-		retry_every="$2"
-	fi
-
-	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	# shellcheck disable=SC2031
-	[ "$status" -eq 0 ]
-
-	# Spawn two subshels:
-	# 1. Event logger that sends stats events to events.log.
-	(__runc events ${interval:+ --interval "$interval"} test_busybox >events.log) &
-	# 2. Waits for an event that includes test_busybox then kills the
-	#    test_busybox container which causes the event logger to exit.
-	(
-		retry 10 "$retry_every" grep -q test_busybox events.log
-		__runc delete -f test_busybox
-	) &
-	wait # for both subshells to finish
-
-	[ -e events.log ]
-
-	output=$(head -1 events.log)
-	[[ "$output" == [\{]"\"type\""[:]"\"stats\""[,]"\"id\""[:]"\"test_busybox\""[,]* ]]
-	[[ "$output" == *"data"* ]]
 }
 
 @test "events --interval default" {

@@ -18,6 +18,7 @@ SD_HELPER="${INTEGRATION_ROOT}/../../contrib/cmd/sd-helper/sd-helper"
 SECCOMP_AGENT="${INTEGRATION_ROOT}/../../contrib/cmd/seccompagent/seccompagent"
 FS_IDMAP="${INTEGRATION_ROOT}/../../contrib/cmd/fs-idmap/fs-idmap"
 PIDFD_KILL="${INTEGRATION_ROOT}/../../contrib/cmd/pidfd-kill/pidfd-kill"
+REMAP_ROOTFS="${INTEGRATION_ROOT}/../../contrib/cmd/remap-rootfs/remap-rootfs"
 
 # Some variables may not always be set. Set those to empty value,
 # if unset, to avoid "unbound variable" error.
@@ -655,6 +656,12 @@ function teardown_bundle() {
 	done
 	rm -rf "$ROOT"
 	remove_parent
+}
+
+function remap_rootfs() {
+	[ ! -v ROOT ] && return 0 # nothing to remap
+
+	"$REMAP_ROOTFS" "$ROOT/bundle"
 }
 
 function is_kernel_gte() {

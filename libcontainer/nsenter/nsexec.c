@@ -48,6 +48,8 @@ enum sync_t {
 	SYNC_MOUNTSOURCES_ACK = 0x47,	/* All mount sources have been sent. */
 	SYNC_MOUNT_IDMAP_PLS = 0x48,	/* Tell parent to mount idmap sources. */
 	SYNC_MOUNT_IDMAP_ACK = 0x49,	/* All idmap mounts have been done. */
+	SYNC_TIMEOFFSETS_PLS = 0x50,	/* Request parent to write timens offsets. */
+	SYNC_TIMEOFFSETS_ACK = 0x51,	/* Timens offsets were written. */
 };
 
 #define STAGE_SETUP  -1
@@ -755,13 +757,13 @@ void receive_idmapsources(int sockfd)
 	receive_fd_sources(sockfd, "_LIBCONTAINER_IDMAP_FDS");
 }
 
-static void update_timens_offsets(char *map, size_t map_len)
+static void update_timens_offsets(pid_t pid, char *map, size_t map_len)
 {
 	if (map == NULL || map_len == 0)
 		return;
-	write_log(DEBUG, "update /proc/self/timens_offsets to '%s'", map);
-	if (write_file(map, map_len, "/proc/self/timens_offsets") < 0)
-		bail("failed to update /proc/self/timens_offsets");
+	write_log(DEBUG, "update /proc/%d/timens_offsets to '%s'", pid, map);
+	if (write_file(map, map_len, "/proc/%d/timens_offsets", pid) < 0)
+		bail("failed to update /proc/%d/timens_offsets", pid);
 }
 
 void nsexec(void)
@@ -1009,6 +1011,15 @@ void nsexec(void)
 					}
 
 					break;
+				case SYNC_TIMEOFFSETS_PLS:
+					write_log(DEBUG, "stage-1 requested timens offsets to be configured");
+					update_timens_offsets(stage1_pid, config.timensoffset, config.timensoffset_len);
+					s = SYNC_TIMEOFFSETS_ACK;
+					if (write(syncfd, &s, sizeof(s)) != sizeof(s)) {
+						sane_kill(stage1_pid, SIGKILL);
+						bail("failed to sync with child: write(SYNC_TIMEOFFSETS_ACK)");
+					}
+					break;
 				case SYNC_CHILD_FINISH:
 					write_log(DEBUG, "stage-1 complete");
 					stage1_complete = true;
@@ -1161,7 +1172,19 @@ void nsexec(void)
 			 * was broken, so we'll just do it the long way anyway.
 			 */
 			try_unshare(config.cloneflags, "remaining namespaces");
-			update_timens_offsets(config.timensoffset, config.timensoffset_len);
+
+			if (config.timensoffset) {
+				write_log(DEBUG, "request stage-0 to write timens offsets");
+
+				s = SYNC_TIMEOFFSETS_PLS;
+				if (write(syncfd, &s, sizeof(s)) != sizeof(s))
+					bail("failed to sync with parent: write(SYNC_TIMEOFFSETS_PLS)");
+
+				if (read(syncfd, &s, sizeof(s)) != sizeof(s))
+					bail("failed to sync with parent: read(SYNC_TIMEOFFSETS_ACK)");
+				if (s != SYNC_TIMEOFFSETS_ACK)
+					bail("failed to sync with parent: SYNC_TIMEOFFSETS_ACK: got %u", s);
+			}
 
 			/* Ask our parent to send the mount sources fds. */
 			if (config.mountsources) {

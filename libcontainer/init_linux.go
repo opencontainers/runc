@@ -494,15 +494,6 @@ func setupUser(config *initConfig) error {
 		}
 	}
 
-	// Rather than just erroring out later in setuid(2) and setgid(2), check
-	// that the user is mapped here.
-	if _, err := config.Config.HostUID(execUser.Uid); err != nil {
-		return errors.New("cannot set uid to unmapped user in user namespace")
-	}
-	if _, err := config.Config.HostGID(execUser.Gid); err != nil {
-		return errors.New("cannot set gid to unmapped user in user namespace")
-	}
-
 	if config.RootlessEUID {
 		// We cannot set any additional groups in a rootless container and thus
 		// we bail if the user asked us to do so. TODO: We currently can't do
@@ -538,9 +529,15 @@ func setupUser(config *initConfig) error {
 	}
 
 	if err := unix.Setgid(execUser.Gid); err != nil {
+		if err == unix.EINVAL {
+			return fmt.Errorf("cannot setgid to unmapped gid %d in user namespace", execUser.Gid)
+		}
 		return err
 	}
 	if err := unix.Setuid(execUser.Uid); err != nil {
+		if err == unix.EINVAL {
+			return fmt.Errorf("cannot setuid to unmapped uid %d in user namespace", execUser.Uid)
+		}
 		return err
 	}
 

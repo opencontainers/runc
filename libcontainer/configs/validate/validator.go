@@ -104,11 +104,19 @@ func security(config *configs.Config) error {
 func namespaces(config *configs.Config) error {
 	if config.Namespaces.Contains(configs.NEWUSER) {
 		if _, err := os.Stat("/proc/self/ns/user"); os.IsNotExist(err) {
-			return errors.New("USER namespaces aren't enabled in the kernel")
+			return errors.New("user namespaces aren't enabled in the kernel")
 		}
+		hasPath := config.Namespaces.PathOf(configs.NEWUSER) != ""
+		hasMappings := config.UIDMappings != nil || config.GIDMappings != nil
+		if !hasPath && !hasMappings {
+			return errors.New("user namespaces enabled, but no namespace path to join nor mappings to apply specified")
+		}
+		// The hasPath && hasMappings validation case is handled in specconv --
+		// we cache the mappings in Config during specconv in the hasPath case,
+		// so we cannot do that validation here.
 	} else {
 		if config.UIDMappings != nil || config.GIDMappings != nil {
-			return errors.New("User namespace mappings specified, but USER namespace isn't enabled in the config")
+			return errors.New("user namespace mappings specified, but user namespace isn't enabled in the config")
 		}
 	}
 
@@ -121,6 +129,11 @@ func namespaces(config *configs.Config) error {
 	if config.Namespaces.Contains(configs.NEWTIME) {
 		if _, err := os.Stat("/proc/self/timens_offsets"); os.IsNotExist(err) {
 			return errors.New("time namespaces aren't enabled in the kernel")
+		}
+		hasPath := config.Namespaces.PathOf(configs.NEWTIME) != ""
+		hasOffsets := config.TimeOffsets != nil
+		if hasPath && hasOffsets {
+			return errors.New("time namespace enabled, but both namespace path and time offsets specified -- you may only provide one")
 		}
 	} else {
 		if config.TimeOffsets != nil {

@@ -2,6 +2,7 @@ package validate
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -28,25 +29,18 @@ func rootlessEUIDCheck(config *configs.Config) error {
 	return nil
 }
 
-func hasIDMapping(id int, mappings []configs.IDMap) bool {
-	for _, m := range mappings {
-		if id >= m.ContainerID && id < m.ContainerID+m.Size {
-			return true
-		}
-	}
-	return false
-}
-
 func rootlessEUIDMappings(config *configs.Config) error {
 	if !config.Namespaces.Contains(configs.NEWUSER) {
 		return errors.New("rootless container requires user namespaces")
 	}
-
-	if len(config.UIDMappings) == 0 {
-		return errors.New("rootless containers requires at least one UID mapping")
-	}
-	if len(config.GIDMappings) == 0 {
-		return errors.New("rootless containers requires at least one GID mapping")
+	// We only require mappings if we are not joining another userns.
+	if path := config.Namespaces.PathOf(configs.NEWUSER); path == "" {
+		if len(config.UIDMappings) == 0 {
+			return errors.New("rootless containers requires at least one UID mapping")
+		}
+		if len(config.GIDMappings) == 0 {
+			return errors.New("rootless containers requires at least one GID mapping")
+		}
 	}
 	return nil
 }
@@ -68,8 +62,8 @@ func rootlessEUIDMount(config *configs.Config) error {
 					// Ignore unknown mount options.
 					continue
 				}
-				if !hasIDMapping(uid, config.UIDMappings) {
-					return errors.New("cannot specify uid= mount options for unmapped uid in rootless containers")
+				if _, err := config.HostUID(uid); err != nil {
+					return fmt.Errorf("cannot specify uid=%d mount option for rootless container: %w", uid, err)
 				}
 			}
 
@@ -79,8 +73,8 @@ func rootlessEUIDMount(config *configs.Config) error {
 					// Ignore unknown mount options.
 					continue
 				}
-				if !hasIDMapping(gid, config.GIDMappings) {
-					return errors.New("cannot specify gid= mount options for unmapped gid in rootless containers")
+				if _, err := config.HostGID(gid); err != nil {
+					return fmt.Errorf("cannot specify gid=%d mount option for rootless container: %w", gid, err)
 				}
 			}
 		}

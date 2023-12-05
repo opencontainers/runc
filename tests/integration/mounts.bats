@@ -10,6 +10,20 @@ function teardown() {
 	teardown_bundle
 }
 
+# https://github.com/opencontainers/runc/security/advisories/GHSA-m8cg-xc2p-r3fc
+#
+# This needs to be placed at the top of the bats file to work around
+# a shellcheck bug. See <https://github.com/koalaman/shellcheck/issues/2873>.
+function test_ro_cgroup_mount() {
+	local lines status
+	# shellcheck disable=SC2016
+	update_config '.process.args |= ["sh", "-euc", "for f in `grep /sys/fs/cgroup /proc/mounts | awk \"{print \\\\$2}\"| uniq`; do test -e $f && grep -w $f /proc/mounts | tail -n1; done"]'
+	runc run test_busybox
+	[ "$status" -eq 0 ]
+	[ "${#lines[@]}" -ne 0 ]
+	for line in "${lines[@]}"; do [[ "${line}" == *'ro,'* ]]; done
+}
+
 # https://github.com/opencontainers/runc/issues/3991
 @test "runc run [tmpcopyup]" {
 	mkdir -p rootfs/dir1/dir2
@@ -88,22 +102,9 @@ function teardown() {
 	test_ro_cgroup_mount
 }
 
-# shellcheck disable=SC2030
 @test "runc run [ro /sys/fs/cgroup mounts + cgroupns]" {
 	requires cgroupns
 	# With cgroup namespace.
 	update_config '.linux.namespaces |= if index({"type": "cgroup"}) then . else . + [{"type": "cgroup"}] end'
 	test_ro_cgroup_mount
-}
-
-# https://github.com/opencontainers/runc/security/advisories/GHSA-m8cg-xc2p-r3fc
-# shellcheck disable=SC2031
-function test_ro_cgroup_mount() {
-	local lines status
-	# shellcheck disable=SC2016
-	update_config '.process.args |= ["sh", "-euc", "for f in `grep /sys/fs/cgroup /proc/mounts | awk \"{print \\\\$2}\"| uniq`; do test -e $f && grep -w $f /proc/mounts | tail -n1; done"]'
-	runc run test_busybox
-	[ "$status" -eq 0 ]
-	[ "${#lines[@]}" -ne 0 ]
-	for line in "${lines[@]}"; do [[ "${line}" == *'ro,'* ]]; done
 }
