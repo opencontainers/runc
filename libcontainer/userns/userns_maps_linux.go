@@ -169,3 +169,18 @@ func GetUserNamespaceMappings(nsPath string) (uidMap, gidMap []configs.IDMap, er
 
 	return uidMap, gidMap, nil
 }
+
+// IsSameMapping returns whether or not the two id mappings are the same. Note
+// that if the order of the mappings is different, or a mapping has been split,
+// the mappings will be considered different.
+func IsSameMapping(a, b []configs.IDMap) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for idx := range a {
+		if a[idx] != b[idx] {
+			return false
+		}
+	}
+	return true
+}
