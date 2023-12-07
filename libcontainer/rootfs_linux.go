@@ -281,27 +281,6 @@ func cleanupTmp(tmpdir string) {
 	_ = os.RemoveAll(tmpdir)
 }
 
-func prepareBindMount(m mountEntry, rootfs string) error {
-	fi, _, err := m.srcStat()
-	if err != nil {
-		// error out if the source of a bind mount does not exist as we will be
-		// unable to bind anything to it.
-		return err
-	}
-	// ensure that the destination of the bind mount is resolved of symlinks at mount time because
-	// any previous mounts can invalidate the next mount's destination.
-	// this can happen when a user specifies mounts within other mounts to cause breakouts or other
-	// evil stuff to try to escape the container's rootfs.
-	var dest string
-	if dest, err = securejoin.SecureJoin(rootfs, m.Destination); err != nil {
-		return err
-	}
-	if err := checkProcMount(rootfs, dest, m); err != nil {
-		return err
-	}
-	return createIfNotExists(dest, fi.IsDir())
-}
-
 func mountCgroupV1(m *configs.Mount, c *mountConfig) error {
 	binds, err := getCgroupMounts(m)
 	if err != nil {
@@ -520,6 +499,9 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 			// Do not use securejoin as it resolves symlinks.
 			dest = filepath.Join(rootfs, dest)
 		}
+		if err := checkProcMount(rootfs, dest, m); err != nil {
+			return err
+		}
 		if fi, err := os.Lstat(dest); err != nil {
 			if !os.IsNotExist(err) {
 				return err
@@ -537,6 +519,9 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 	mountLabel := c.label
 	dest, err := securejoin.SecureJoin(rootfs, m.Destination)
 	if err != nil {
+		return err
+	}
+	if err := checkProcMount(rootfs, dest, m); err != nil {
 		return err
 	}
 
@@ -570,7 +555,13 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 
 		return err
 	case "bind":
-		if err := prepareBindMount(m, rootfs); err != nil {
+		fi, _, err := m.srcStat()
+		if err != nil {
+			// error out if the source of a bind mount does not exist as we will be
+			// unable to bind anything to it.
+			return err
+		}
+		if err := createIfNotExists(dest, fi.IsDir()); err != nil {
 			return err
 		}
 		// open_tree()-related shenanigans are all handled in mountViaFds.
@@ -688,9 +679,6 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 		}
 		return mountCgroupV1(m.Mount, c)
 	default:
-		if err := checkProcMount(rootfs, dest, m); err != nil {
-			return err
-		}
 		if err := os.MkdirAll(dest, 0o755); err != nil {
 			return err
 		}
@@ -735,6 +723,11 @@ func getCgroupMounts(m *configs.Mount) ([]*configs.Mount, error) {
 	return binds, nil
 }
 
+// Taken from <include/linux/proc_ns.h>. If a file is on a filesystem of type
+// PROC_SUPER_MAGIC, we're guaranteed that only the root of the superblock will
+// have this inode number.
+const procRootIno = 1
+
 // checkProcMount checks to ensure that the mount destination is not over the top of /proc.
 // dest is required to be an abs path and have any symlinks resolved before calling this function.
 //
@@ -750,12 +743,28 @@ func checkProcMount(rootfs, dest string, m mountEntry) error {
 		return nil
 	}
 	if path == "." {
-		// only allow a mount on-top of proc if it's source is "proc"
-		st, err := m.srcStatfs()
-		if err != nil {
-			return err
-		}
-		if st.Type == unix.PROC_SUPER_MAGIC {
+		// Only allow bind-mounts on top of /proc, and only if the source is a
+		// procfs mount.
+		if m.IsBind() {
+			fsSt, err := m.srcStatfs()
+			if err != nil {
+				return err
+			}
+			if fsSt.Type == unix.PROC_SUPER_MAGIC {
+				if _, uSt, err := m.srcStat(); err != nil {
+					return err
+				} else if uSt.Ino != procRootIno {
+					// We cannot error out in this case, because we've
+					// supported these kinds of mounts for a long time.
+					// However, we would expect users to bind-mount the root of
+					// a real procfs on top of /proc in the container. We might
+					// want to block this in the future.
+					logrus.Warnf("bind-mount %v (source %v) is of type procfs but is not the root of a procfs (inode %d). Future versions of runc might block this configuration -- please report an issue to <https://github.com/opencontainers/runc> if you see this warning.", dest, m.srcName(), uSt.Ino)
+				}
+				return nil
+			}
+		} else if m.Device == "proc" {
+			// Fresh procfs-type mounts are always safe to mount on top of /proc.
 			return nil
 		}
 		return fmt.Errorf("%q cannot be mounted because it is not of type proc", dest)

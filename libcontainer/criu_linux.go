@@ -527,6 +527,14 @@ func (c *Container) restoreNetwork(req *criurpc.CriuReq, criuOpts *CriuOpts) {
 // rootfs_linux.go.
 func (c *Container) makeCriuRestoreMountpoints(m *configs.Mount) error {
 	me := mountEntry{Mount: m}
+	dest, err := securejoin.SecureJoin(c.config.Rootfs, m.Destination)
+	if err != nil {
+		return err
+	}
+	// TODO: pass srcFD? Not sure if criu is impacted by issue #2484.
+	if err := checkProcMount(c.config.Rootfs, dest, me); err != nil {
+		return err
+	}
 	switch m.Device {
 	case "cgroup":
 		// No mount point(s) need to be created:
@@ -538,21 +546,19 @@ func (c *Container) makeCriuRestoreMountpoints(m *configs.Mount) error {
 		//   the mountpoint appears as soon as /sys is mounted
 		return nil
 	case "bind":
-		// The prepareBindMount() function checks if source
-		// exists. So it cannot be used for other filesystem types.
-		// TODO: pass srcFD? Not sure if criu is impacted by issue #2484.
-		if err := prepareBindMount(me, c.config.Rootfs); err != nil {
+		// For bind-mounts (unlike other filesystem types), we need to check if
+		// the source exists.
+		fi, _, err := me.srcStat()
+		if err != nil {
+			// error out if the source of a bind mount does not exist as we
+			// will be unable to bind anything to it.
+			return err
+		}
+		if err := createIfNotExists(dest, fi.IsDir()); err != nil {
 			return err
 		}
 	default:
 		// for all other filesystems just create the mountpoints
-		dest, err := securejoin.SecureJoin(c.config.Rootfs, m.Destination)
-		if err != nil {
-			return err
-		}
-		if err := checkProcMount(c.config.Rootfs, dest, me); err != nil {
-			return err
-		}
 		if err := os.MkdirAll(dest, 0o755); err != nil {
 			return err
 		}
