@@ -522,9 +522,9 @@ func toConfigIDMap(specMaps []specs.LinuxIDMapping) []configs.IDMap {
 	idmaps := make([]configs.IDMap, len(specMaps))
 	for i, id := range specMaps {
 		idmaps[i] = configs.IDMap{
-			ContainerID: int(id.ContainerID),
-			HostID:      int(id.HostID),
-			Size:        int(id.Size),
+			ContainerID: int64(id.ContainerID),
+			HostID:      int64(id.HostID),
+			Size:        int64(id.Size),
 		}
 	}
 	return idmaps
