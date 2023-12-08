@@ -927,9 +927,9 @@ next:
 func setupUserNamespace(spec *specs.Spec, config *configs.Config) error {
 	create := func(m specs.LinuxIDMapping) configs.IDMap {
 		return configs.IDMap{
-			HostID:      int(m.HostID),
-			ContainerID: int(m.ContainerID),
-			Size:        int(m.Size),
+			HostID:      int64(m.HostID),
+			ContainerID: int64(m.ContainerID),
+			Size:        int64(m.Size),
 		}
 	}
 	if spec.Linux != nil {
