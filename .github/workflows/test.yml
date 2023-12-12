@@ -23,7 +23,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-20.04, ubuntu-22.04]
+        os: [ubuntu-20.04, ubuntu-22.04, actuated-arm64-6cpu-8gb]
         go-version: [1.20.x, 1.21.x]
         rootless: ["rootless", ""]
         race: ["-race", ""]
@@ -50,15 +50,81 @@ jobs:
             rootless: rootless
           - dmz: runc_nodmz
             race: -race
+          - go-version: 1.20.x
+            os: actuated-arm64-6cpu-8gb
+          - race: "-race"
+            os: actuated-arm64-6cpu-8gb
+          - criu: criu-dev
+            os: actuated-arm64-6cpu-8gb
+          - dmz: runc_nodmz
+            os: actuated-arm64-6cpu-8gb
+
     runs-on: ${{ matrix.os }}
 
     steps:
+# https://gist.github.com/alexellis/1f33e581c75e11e161fe613c46180771#file-metering-gha-md
+# vmmeter start
+    - name: Prepare arkade
+      uses: alexellis/arkade-get@master
+      if: matrix.os == 'actuated-arm64-6cpu-8gb'
+      with:
+        crane: latest
+        print-summary: false
+
+    - name: Install vmmeter
+      if: matrix.os == 'actuated-arm64-6cpu-8gb'
+      run: |
+        crane export --platform linux/arm64 ghcr.io/openfaasltd/vmmeter:latest | sudo tar -xvf - -C /usr/local/bin
+
+    - name: Run vmmeter
+      uses: self-actuated/vmmeter-action@master
+      if: matrix.os == 'actuated-arm64-6cpu-8gb'
+# vmmeter end
 
     - name: checkout
       uses: actions/checkout@v4
 
+    - name: Show host info
+      run: |
+        set -x
+        # Sync `set -x` outputs with command ouputs
+        exec 2>&1
+        # Version
+        uname -a
+        cat /etc/os-release
+        # Hardware
+        cat /proc/cpuinfo
+        free -mt
+        # cgroup
+        ls -F /sys/fs/cgroup
+        cat /proc/self/cgroup
+        if [ -e /sys/fs/cgroup/cgroup.controllers ]; then
+          cat /sys/fs/cgroup/cgroup.controllers
+          cat /sys/fs/cgroup/cgroup.subtree_control
+          ls -F /sys/fs/cgroup$(grep -oP '0::\K.*' /proc/self/cgroup)
+        fi
+        # kernel config
+        script/check-config.sh
+
+    - name: start sshd (used for testing rootless with systemd user session)
+      if: ${{ matrix.os == 'actuated-arm64-6cpu-8gb' && matrix.rootless == 'rootless' }}
+      run: |
+        # Generate new keys to fix "sshd: no hostkeys available -- exiting."
+        sudo ssh-keygen -A
+        if ! sudo systemctl start ssh.service; then
+          sudo journalctl -xeu ssh.service
+          exit 1
+        fi
+        ps auxw | grep sshd
+
     - name: install deps
-      if: matrix.criu == ''
+      run: |
+        sudo apt update
+        sudo apt -y install libseccomp-dev sshfs uidmap
+
+    - name: install CRIU
+      # TODO: enable CRIU for actuated: https://github.com/opencontainers/runc/pull/4142#issuecomment-1945408382
+      if: ${{ matrix.os != 'actuated-arm64-6cpu-8gb' && matrix.criu == '' }}
       env:
         PREFIX: https://download.opensuse.org/repositories/devel:/tools:/criu/xUbuntu
       run: |
@@ -67,13 +133,12 @@ jobs:
         curl -fSsLl $REPO/Release.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/devel_tools_criu.gpg > /dev/null
         echo "deb $REPO/ /" | sudo tee /etc/apt/sources.list.d/criu.list
         sudo apt update
-        sudo apt -y install libseccomp-dev criu sshfs
+        sudo apt -y install criu
 
-    - name: install deps (criu ${{ matrix.criu }})
-      if: matrix.criu != ''
+    - name: install CRIU (criu ${{ matrix.criu }})
+      if: ${{ matrix.os != 'actuated-arm64-6cpu-8gb' && matrix.criu != '' }}
       run: |
-        sudo apt -q update
-        sudo apt -qy install libseccomp-dev sshfs \
+        sudo apt -qy install \
           libcap-dev libnet1-dev libnl-3-dev \
           libprotobuf-c-dev libprotobuf-dev protobuf-c-compiler protobuf-compiler
         git clone https://github.com/checkpoint-restore/criu.git ~/criu
