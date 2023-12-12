@@ -46,6 +46,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    This aligns cgroupv2 root usage more closely with cgroupv1 reporting.
    Additionally, report root swap usage as sum of swap and memory usage,
    aligned with v1 and existing non-root v2 reporting. (#3933)
+ * Add `swapOnlyUsage` in `MemoryStats`. This field reports swap-only usage.
+   For cgroupv1, `Usage` and `Failcnt` are set by subtracting memory usage
+   from memory+swap usage. For cgroupv2, `Usage`, `Limit`, and `MaxUsage`
+   are set. (#4010)
 
 ## [1.1.8] - 2023-07-20
 
