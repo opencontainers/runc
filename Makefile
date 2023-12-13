@@ -77,6 +77,18 @@ all: runc recvtty sd-helper seccompagent fs-idmap memfd-bind pidfd-kill remap-ro
 recvtty sd-helper seccompagent fs-idmap memfd-bind pidfd-kill remap-rootfs:
 	$(GO_BUILD) -o contrib/cmd/$@/$@ ./contrib/cmd/$@
 
+.PHONY: clean
+clean:
+	rm -f runc runc-* libcontainer/dmz/runc-dmz
+	rm -f contrib/cmd/recvtty/recvtty
+	rm -f contrib/cmd/sd-helper/sd-helper
+	rm -f contrib/cmd/seccompagent/seccompagent
+	rm -f contrib/cmd/fs-idmap/fs-idmap
+	rm -f contrib/cmd/memfd-bind/memfd-bind
+	rm -f contrib/cmd/pidfd-kill/pidfd-kill
+	sudo rm -rf release
+	rm -rf man/man8
+
 .PHONY: static
 static: static-bin verify-dmz-arch
 
@@ -185,18 +197,6 @@ install-bash:
 install-man: man
 	install -d -m 755 $(DESTDIR)$(MANDIR)/man8
 	install -D -m 644 man/man8/*.8 $(DESTDIR)$(MANDIR)/man8
-
-.PHONY: clean
-clean:
-	rm -f runc runc-* libcontainer/dmz/runc-dmz
-	rm -f contrib/cmd/fs-idmap/fs-idmap
-	rm -f contrib/cmd/recvtty/recvtty
-	rm -f contrib/cmd/sd-helper/sd-helper
-	rm -f contrib/cmd/seccompagent/seccompagent
-	rm -f contrib/cmd/memfd-bind/memfd-bind
-	rm -f contrib/cmd/pidfd-kill/pidfd-kill
-	sudo rm -rf release
-	rm -rf man/man8
 
 .PHONY: cfmt
 cfmt: C_SRC=$(shell git ls-files '*.c' | grep -v '^vendor/')
