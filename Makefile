@@ -86,6 +86,7 @@ clean:
 	rm -f contrib/cmd/fs-idmap/fs-idmap
 	rm -f contrib/cmd/memfd-bind/memfd-bind
 	rm -f contrib/cmd/pidfd-kill/pidfd-kill
+	rm -f contrib/cmd/remap-rootfs/remap-rootfs
 	sudo rm -rf release
 	rm -rf man/man8
 
