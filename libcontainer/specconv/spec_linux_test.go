@@ -637,8 +637,8 @@ func TestUserNamespaceMappingAndPath(t *testing.T) {
 		Spec: spec,
 	})
 
-	if !strings.Contains(err.Error(), "user namespaces enabled, but both namespace path and mapping specified") {
-		t.Errorf("user namespace with mapping and namespace path should be forbidden")
+	if !strings.Contains(err.Error(), "both namespace path and non-matching mapping specified") {
+		t.Errorf("user namespace with path and non-matching mapping should be forbidden, got error %v", err)
 	}
 }
 
