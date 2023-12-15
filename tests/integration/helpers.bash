@@ -465,6 +465,8 @@ function requires() {
 				p="$CGROUP_CPU_BASE_PATH"
 				f="cpu.cfs_burst_us"
 			elif [ -v CGROUP_V2 ]; then
+				# https://github.com/torvalds/linux/commit/f4183717b370ad28dd0c0d74760142b20e6e7931
+				requires_kernel 5.14
 				p="$CGROUP_BASE_PATH"
 				f="cpu.max.burst"
 			fi
