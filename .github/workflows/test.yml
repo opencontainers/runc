@@ -46,13 +46,13 @@ jobs:
         curl -fSsLl $REPO/Release.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/devel_tools_criu.gpg > /dev/null
         echo "deb $REPO/ /" | sudo tee /etc/apt/sources.list.d/criu.list
         sudo apt update
-        sudo apt install libseccomp-dev criu sshfs
+        sudo apt -y install libseccomp-dev criu sshfs
 
     - name: install deps (criu ${{ matrix.criu }})
       if: matrix.criu != ''
       run: |
         sudo apt -q update
-        sudo apt -q install libseccomp-dev sshfs \
+        sudo apt -qy install libseccomp-dev sshfs \
           libcap-dev libnet1-dev libnl-3-dev \
           libprotobuf-c-dev libprotobuf-dev protobuf-c-compiler protobuf-compiler
         git clone https://github.com/checkpoint-restore/criu.git ~/criu
@@ -113,7 +113,7 @@ jobs:
         sudo add-apt-repository -y ppa:criu/ppa
         # apt-add-repository runs apt update so we don't have to.
 
-        sudo apt -q install libseccomp-dev libseccomp-dev:i386 gcc-multilib criu
+        sudo apt -qy install libseccomp-dev libseccomp-dev:i386 gcc-multilib criu
 
     - name: install go
       uses: actions/setup-go@v5
