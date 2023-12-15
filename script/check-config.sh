@@ -305,6 +305,11 @@ if kernel_lt 5 0; then
 	check_flags IOSCHED_CFQ CFQ_GROUP_IOSCHED
 fi
 
+# Linux kernel commit 7caa47151ab2.
+if kernel_ge 5 4; then
+	check_flags BLK_CGROUP_IOCOST
+fi
+
 flags=(
 	BLK_CGROUP BLK_DEV_THROTTLING
 	CGROUP_PERF
