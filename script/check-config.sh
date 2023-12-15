@@ -4,6 +4,11 @@ set -e -u
 # bits of this were adapted from check_config.sh in docker
 # see also https://github.com/docker/docker/blob/master/contrib/check-config.sh
 
+: "${NO_COLOR:=}"
+if [ -z "$NO_COLOR" ] && ! [ -t 1 ]; then
+	NO_COLOR=1
+fi
+
 possibleConfigs=(
 	'/proc/config.gz'
 	"/boot/config-$(uname -r)"
@@ -43,6 +48,9 @@ is_set_as_module() {
 }
 
 color() {
+	if [ "$NO_COLOR" = "1" ]; then
+		return
+	fi
 	local codes=()
 	if [ "$1" = 'bold' ]; then
 		codes=("${codes[@]-}" '1')
