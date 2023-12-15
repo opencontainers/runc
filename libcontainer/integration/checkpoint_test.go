@@ -3,6 +3,7 @@ package integration
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -112,6 +113,9 @@ func testCheckpoint(t *testing.T, userns bool) {
 
 	if err := container.Checkpoint(preDumpOpts); err != nil {
 		showFile(t, preDumpLog)
+		if errors.Is(err, libcontainer.ErrCriuMissingFeatures) {
+			t.Skip(err)
+		}
 		t.Fatal(err)
 	}
 
