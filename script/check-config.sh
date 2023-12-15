@@ -302,5 +302,6 @@ flags=(
 	IP_VS_RR
 	SECURITY_SELINUX
 	SECURITY_APPARMOR
+	CHECKPOINT_RESTORE
 )
 check_flags "${flags[@]}"
