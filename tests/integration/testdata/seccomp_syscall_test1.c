@@ -57,10 +57,10 @@ int main(void)
 	syscall_assert(raw(process_vm_writev, 0, NULL, 0, NULL, 0, ~0), -EPERM);
 
 	// Multiple arguments with AND rules.
-	syscall_assert(raw(kcmp, 0, 1337, 0, 0, 0), -ESRCH);
-	syscall_assert(raw(kcmp, 0, 0, 0, 0, 0), -EPERM);
-	syscall_assert(raw(kcmp, 500, 1337, 0, 0, 0), -EPERM);
-	syscall_assert(raw(kcmp, 500, 500, 0, 0, 0), -EPERM);
+	syscall_assert(raw(ftruncate, 123456789, 1337), -EBADF);
+	syscall_assert(raw(ftruncate, 123456789, 0), -EPERM);
+	syscall_assert(raw(ftruncate, 500, 1337), -EPERM);
+	syscall_assert(raw(ftruncate, 500, 500), -EPERM);
 
 	// Multiple rules for the same syscall.
 	syscall_assert(raw(dup3, 0, -100, 0xFFFF), -EPERM);
