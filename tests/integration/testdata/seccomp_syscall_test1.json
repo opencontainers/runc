@@ -79,8 +79,6 @@
 				"fstatfs",
 				"fstatfs64",
 				"fsync",
-				"ftruncate",
-				"ftruncate64",
 				"futex",
 				"futex_time64",
 				"futimesat",
@@ -380,12 +378,13 @@
 		{
 			"action": "SCMP_ACT_ALLOW",
 			"names": [
-				"kcmp"
+				"ftruncate",
+				"ftruncate64"
 			],
 			"args": [
 				{
 					"index": 0,
-					"value": 0,
+					"value": 123456789,
 					"op": "SCMP_CMP_EQ"
 				},
 				{
