@@ -472,6 +472,22 @@ function requires() {
 				skip_me=1
 			fi
 			;;
+		cgroups_io_weight)
+			local p f1 f2
+			init_cgroup_paths
+			if [ -v CGROUP_V1 ]; then
+				p="$CGROUP_CPU_BASE_PATH"
+				f1="blkio.weight"
+				f2="blkio.bfq.weight"
+			elif [ -v CGROUP_V2 ]; then
+				p="$CGROUP_BASE_PATH"
+				f1="io.weight"
+				f2="io.bfq.weight"
+			fi
+			if [ -z "$(find "$p" -type f \( -name "$f1" -o -name "$f2" \) -print -quit)" ]; then
+				skip_me=1
+			fi
+			;;
 		cgroupns)
 			if [ ! -e "/proc/self/ns/cgroup" ]; then
 				skip_me=1

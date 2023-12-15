@@ -132,7 +132,7 @@ function setup() {
 }
 
 @test "runc run (blkio weight)" {
-	requires cgroups_v2
+	requires cgroups_v2 cgroups_io_weight
 	[ $EUID -ne 0 ] && requires rootless_cgroup
 
 	set_cgroups_path
