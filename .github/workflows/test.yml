@@ -52,12 +52,18 @@ jobs:
       env:
         PREFIX: https://download.opensuse.org/repositories/devel:/tools:/criu/xUbuntu
       run: |
-        # criu repo
-        REPO=${PREFIX}_$(echo ${{ matrix.os }} | sed 's/.*-//')
-        curl -fSsLl $REPO/Release.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/devel_tools_criu.gpg > /dev/null
-        echo "deb $REPO/ /" | sudo tee /etc/apt/sources.list.d/criu.list
+        packages="libseccomp-dev sshfs"
+        if script/check-config.sh | grep -q "CONFIG_CHECKPOINT_RESTORE:\s*enabled"; then
+          # criu repo
+          REPO=${PREFIX}_$(echo ${{ matrix.os }} | sed 's/.*-//')
+          curl -fSsLl $REPO/Release.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/devel_tools_criu.gpg > /dev/null
+          echo "deb $REPO/ /" | sudo tee /etc/apt/sources.list.d/criu.list
+          packages="$packages criu"
+        else
+          echo >&2 "Skipping installation of CRIU, as CONFIG_CHECKPOINT_RESTORE seems missing"
+        fi
         sudo apt update
-        sudo apt install -y libseccomp-dev criu sshfs
+        sudo apt install -y $packages
 
     - name: install deps (criu ${{ matrix.criu }})
       if: matrix.criu != ''
