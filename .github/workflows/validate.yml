@@ -37,7 +37,7 @@ jobs:
       - name: install deps
         run: |
           sudo apt -q update
-          sudo apt -q install libseccomp-dev
+          sudo apt -q install -y libseccomp-dev
       - uses: golangci/golangci-lint-action@v3
         with:
           version: v1.54
@@ -152,7 +152,7 @@ jobs:
     - name: install deps
       run: |
         sudo apt -qq update
-        sudo apt -qq install indent
+        sudo apt -qq install -y indent
     - name: cfmt
       run: |
         make cfmt
