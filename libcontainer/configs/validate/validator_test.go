@@ -150,7 +150,7 @@ func TestValidateSecurityWithoutNEWNS(t *testing.T) {
 	}
 }
 
-func TestValidateUsernamespace(t *testing.T) {
+func TestValidateUserNamespace(t *testing.T) {
 	if _, err := os.Stat("/proc/self/ns/user"); os.IsNotExist(err) {
 		t.Skip("Test requires userns.")
 	}
@@ -161,6 +161,8 @@ func TestValidateUsernamespace(t *testing.T) {
 				{Type: configs.NEWUSER},
 			},
 		),
+		UidMappings: []configs.IDMap{{HostID: 0, ContainerID: 123, Size: 100}},
+		GidMappings: []configs.IDMap{{HostID: 0, ContainerID: 123, Size: 100}},
 	}
 
 	validator := New()
@@ -170,11 +172,11 @@ func TestValidateUsernamespace(t *testing.T) {
 	}
 }
 
-func TestValidateUsernamespaceWithoutUserNS(t *testing.T) {
-	uidMap := configs.IDMap{ContainerID: 123}
+func TestValidateUsernsMappingWithoutNamespace(t *testing.T) {
 	config := &configs.Config{
 		Rootfs:      "/var",
-		UidMappings: []configs.IDMap{uidMap},
+		UidMappings: []configs.IDMap{{HostID: 0, ContainerID: 123, Size: 100}},
+		GidMappings: []configs.IDMap{{HostID: 0, ContainerID: 123, Size: 100}},
 	}
 
 	validator := New()

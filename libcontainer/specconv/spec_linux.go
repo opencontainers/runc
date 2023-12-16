@@ -18,6 +18,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/devices"
 	"github.com/opencontainers/runc/libcontainer/seccomp"
+	"github.com/opencontainers/runc/libcontainer/userns"
 	libcontainerUtils "github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/sirupsen/logrus"
@@ -926,9 +927,9 @@ next:
 func setupUserNamespace(spec *specs.Spec, config *configs.Config) error {
 	create := func(m specs.LinuxIDMapping) configs.IDMap {
 		return configs.IDMap{
-			HostID:      int(m.HostID),
-			ContainerID: int(m.ContainerID),
-			Size:        int(m.Size),
+			HostID:      int64(m.HostID),
+			ContainerID: int64(m.ContainerID),
+			Size:        int64(m.Size),
 		}
 	}
 	if spec.Linux != nil {
@@ -938,6 +939,40 @@ func setupUserNamespace(spec *specs.Spec, config *configs.Config) error {
 		for _, m := range spec.Linux.GIDMappings {
 			config.GidMappings = append(config.GidMappings, create(m))
 		}
+	}
+	if path := config.Namespaces.PathOf(configs.NEWUSER); path != "" {
+		// Cache the current userns mappings in our configuration, so that we
+		// can calculate uid and gid mappings within runc. These mappings are
+		// never used for configuring the container if the path is set.
+		uidMap, gidMap, err := userns.GetUserNamespaceMappings(path)
+		if err != nil {
+			return fmt.Errorf("failed to cache mappings for userns: %w", err)
+		}
+		// We cannot allow uid or gid mappings to be set if we are also asked
+		// to join a userns.
+		if config.UidMappings != nil || config.GidMappings != nil {
+			// FIXME: It turns out that containerd and CRIO pass both a userns
+			// path and the mappings of the namespace in the same config.json.
+			// Such a configuration is technically not valid, but we used to
+			// require mappings be specified, and thus users worked around our
+			// bug -- so we can't regress it at the moment. But we also don't
+			// want to produce broken behaviour if the mapping doesn't match
+			// the userns. So (for now) we output a warning if the actual
+			// userns mappings match the configuration, otherwise we return an
+			// error.
+			if !userns.IsSameMapping(uidMap, config.UidMappings) ||
+				!userns.IsSameMapping(gidMap, config.GidMappings) {
+				return errors.New("user namespaces enabled, but both namespace path and non-matching mapping specified -- you may only provide one")
+			}
+			logrus.Warnf("config.json has both a userns path to join and a matching userns mapping specified -- you may only provide one. Future versions of runc may return an error with this configuration, please report a bug on <https://github.com/opencontainers/runc> if you see this warning and cannot update your configuration.")
+		}
+
+		config.UidMappings = uidMap
+		config.GidMappings = gidMap
+		logrus.WithFields(logrus.Fields{
+			"uid_map": uidMap,
+			"gid_map": gidMap,
+		}).Debugf("config uses path-based userns configuration -- current uid and gid mappings cached")
 	}
 	rootUID, err := config.HostRootUID()
 	if err != nil {
