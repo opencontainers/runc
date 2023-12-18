@@ -136,13 +136,14 @@ func openFile(dir, file string, flags int) (*os.File, error) {
 		//
 		// TODO: if such usage will ever be common, amend this
 		// to reopen cgroupFd and retry openat2.
-		fdStr := strconv.Itoa(cgroupFd)
-		fdDest, _ := os.Readlink("/proc/self/fd/" + fdStr)
+		fdPath, closer := utils.ProcThreadSelf("fd/" + strconv.Itoa(cgroupFd))
+		defer closer()
+		fdDest, _ := os.Readlink(fdPath)
 		if fdDest != cgroupfsDir {
 			// Wrap the error so it is clear that cgroupFd
 			// is opened to an unexpected/wrong directory.
-			err = fmt.Errorf("cgroupFd %s unexpectedly opened to %s != %s: %w",
-				fdStr, fdDest, cgroupfsDir, err)
+			err = fmt.Errorf("cgroupFd %d unexpectedly opened to %s != %s: %w",
+				cgroupFd, fdDest, cgroupfsDir, err)
 		}
 		return nil, err
 	}

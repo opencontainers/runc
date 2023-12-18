@@ -526,6 +526,15 @@ func (c *Container) restoreNetwork(req *criurpc.CriuReq, criuOpts *CriuOpts) {
 // restore using CRIU. This function is inspired from the code in
 // rootfs_linux.go.
 func (c *Container) makeCriuRestoreMountpoints(m *configs.Mount) error {
+	me := mountEntry{Mount: m}
+	dest, err := securejoin.SecureJoin(c.config.Rootfs, m.Destination)
+	if err != nil {
+		return err
+	}
+	// TODO: pass srcFD? Not sure if criu is impacted by issue #2484.
+	if err := checkProcMount(c.config.Rootfs, dest, me); err != nil {
+		return err
+	}
 	switch m.Device {
 	case "cgroup":
 		// No mount point(s) need to be created:
@@ -537,21 +546,19 @@ func (c *Container) makeCriuRestoreMountpoints(m *configs.Mount) error {
 		//   the mountpoint appears as soon as /sys is mounted
 		return nil
 	case "bind":
-		// The prepareBindMount() function checks if source
-		// exists. So it cannot be used for other filesystem types.
-		// TODO: pass srcFD? Not sure if criu is impacted by issue #2484.
-		if err := prepareBindMount(mountEntry{Mount: m}, c.config.Rootfs); err != nil {
+		// For bind-mounts (unlike other filesystem types), we need to check if
+		// the source exists.
+		fi, _, err := me.srcStat()
+		if err != nil {
+			// error out if the source of a bind mount does not exist as we
+			// will be unable to bind anything to it.
+			return err
+		}
+		if err := createIfNotExists(dest, fi.IsDir()); err != nil {
 			return err
 		}
 	default:
 		// for all other filesystems just create the mountpoints
-		dest, err := securejoin.SecureJoin(c.config.Rootfs, m.Destination)
-		if err != nil {
-			return err
-		}
-		if err := checkProcMount(c.config.Rootfs, dest, ""); err != nil {
-			return err
-		}
 		if err := os.MkdirAll(dest, 0o755); err != nil {
 			return err
 		}
@@ -618,8 +625,8 @@ func (c *Container) prepareCriuRestoreMounts(mounts []*configs.Mount) error {
 			// because during initial container creation mounts are
 			// set up in the order they are configured.
 			if m.Device == "bind" {
-				if err := utils.WithProcfd(c.config.Rootfs, m.Destination, func(dstFD string) error {
-					return mountViaFDs(m.Source, nil, m.Destination, dstFD, "", unix.MS_BIND|unix.MS_REC, "")
+				if err := utils.WithProcfd(c.config.Rootfs, m.Destination, func(dstFd string) error {
+					return mountViaFds(m.Source, nil, m.Destination, dstFd, "", unix.MS_BIND|unix.MS_REC, "")
 				}); err != nil {
 					return err
 				}

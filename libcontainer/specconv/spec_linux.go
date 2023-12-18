@@ -38,6 +38,7 @@ var (
 		clear bool
 		flag  int
 	}
+	complexFlags map[string]func(*configs.Mount)
 )
 
 func initMaps() {
@@ -126,7 +127,6 @@ func initMaps() {
 			"rnostrictatime": {true, unix.MOUNT_ATTR_STRICTATIME},
 			"rnosymfollow":   {false, unix.MOUNT_ATTR_NOSYMFOLLOW}, // since kernel 5.14
 			"rsymfollow":     {true, unix.MOUNT_ATTR_NOSYMFOLLOW},  // since kernel 5.14
-			// No support for MOUNT_ATTR_IDMAP yet (needs UserNS FD)
 		}
 
 		extensionFlags = map[string]struct {
@@ -134,6 +134,17 @@ func initMaps() {
 			flag  int
 		}{
 			"tmpcopyup": {false, configs.EXT_COPYUP},
+		}
+
+		complexFlags = map[string]func(*configs.Mount){
+			"idmap": func(m *configs.Mount) {
+				m.IDMapping = new(configs.MountIDMapping)
+				m.IDMapping.Recursive = false // noop
+			},
+			"ridmap": func(m *configs.Mount) {
+				m.IDMapping = new(configs.MountIDMapping)
+				m.IDMapping.Recursive = true
+			},
 		}
 	})
 }
@@ -415,6 +426,19 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 			if err := setupUserNamespace(spec, config); err != nil {
 				return nil, err
 			}
+			// For idmap and ridmap mounts without explicit mappings, use the
+			// ones from the container's userns. If we are joining another
+			// userns, stash the path.
+			for _, m := range config.Mounts {
+				if m.IDMapping != nil && m.IDMapping.UIDMappings == nil && m.IDMapping.GIDMappings == nil {
+					if path := config.Namespaces.PathOf(configs.NEWUSER); path != "" {
+						m.IDMapping.UserNSPath = path
+					} else {
+						m.IDMapping.UIDMappings = config.UIDMappings
+						m.IDMapping.GIDMappings = config.GIDMappings
+					}
+				}
+			}
 		}
 		config.MaskPaths = spec.Linux.MaskedPaths
 		config.ReadonlyPaths = spec.Linux.ReadonlyPaths
@@ -447,6 +471,7 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 				Domain: domain,
 			}
 		}
+
 	}
 
 	// Set the host UID that should own the container's cgroup.
@@ -552,8 +577,14 @@ func createLibcontainerMount(cwd string, m specs.Mount) (*configs.Mount, error) 
 		}
 	}
 
-	mnt.UIDMappings = toConfigIDMap(m.UIDMappings)
-	mnt.GIDMappings = toConfigIDMap(m.GIDMappings)
+	if m.UIDMappings != nil || m.GIDMappings != nil {
+		if mnt.IDMapping == nil {
+			// Neither "idmap" nor "ridmap" were specified.
+			mnt.IDMapping = new(configs.MountIDMapping)
+		}
+		mnt.IDMapping.UIDMappings = toConfigIDMap(m.UIDMappings)
+		mnt.IDMapping.GIDMappings = toConfigIDMap(m.GIDMappings)
+	}
 
 	// None of the mount arguments can contain a null byte. Normally such
 	// strings would either cause some other failure or would just be truncated
@@ -1050,20 +1081,24 @@ func parseMountOptions(options []string) *configs.Mount {
 		} else if f, exists := recAttrFlags[o]; exists {
 			if f.clear {
 				recAttrClr |= f.flag
+				recAttrSet &= ^f.flag
 			} else {
 				recAttrSet |= f.flag
+				recAttrClr &= ^f.flag
 				if f.flag&unix.MOUNT_ATTR__ATIME == f.flag {
 					// https://man7.org/linux/man-pages/man2/mount_setattr.2.html
 					// "cannot simply specify the access-time setting in attr_set, but must also include MOUNT_ATTR__ATIME in the attr_clr field."
 					recAttrClr |= unix.MOUNT_ATTR__ATIME
 				}
 			}
-		} else if f, exists := extensionFlags[o]; exists && f.flag != 0 {
+		} else if f, exists := extensionFlags[o]; exists {
 			if f.clear {
 				m.Extensions &= ^f.flag
 			} else {
 				m.Extensions |= f.flag
 			}
+		} else if fn, exists := complexFlags[o]; exists {
+			fn(&m)
 		} else {
 			data = append(data, o)
 		}

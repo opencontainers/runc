@@ -3,15 +3,12 @@ package utils
 import (
 	"encoding/binary"
 	"encoding/json"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"unsafe"
 
-	securejoin "github.com/cyphar/filepath-securejoin"
 	"golang.org/x/sys/unix"
 )
 
@@ -100,39 +97,6 @@ func stripRoot(root, path string) string {
 		path = strings.TrimPrefix(path, root+"/")
 	}
 	return CleanPath("/" + path)
-}
-
-// WithProcfd runs the passed closure with a procfd path (/proc/self/fd/...)
-// corresponding to the unsafePath resolved within the root. Before passing the
-// fd, this path is verified to have been inside the root -- so operating on it
-// through the passed fdpath should be safe. Do not access this path through
-// the original path strings, and do not attempt to use the pathname outside of
-// the passed closure (the file handle will be freed once the closure returns).
-func WithProcfd(root, unsafePath string, fn func(procfd string) error) error {
-	// Remove the root then forcefully resolve inside the root.
-	unsafePath = stripRoot(root, unsafePath)
-	path, err := securejoin.SecureJoin(root, unsafePath)
-	if err != nil {
-		return fmt.Errorf("resolving path inside rootfs failed: %w", err)
-	}
-
-	// Open the target path.
-	fh, err := os.OpenFile(path, unix.O_PATH|unix.O_CLOEXEC, 0)
-	if err != nil {
-		return fmt.Errorf("open o_path procfd: %w", err)
-	}
-	defer fh.Close()
-
-	// Double-check the path is the one we expected.
-	procfd := "/proc/self/fd/" + strconv.Itoa(int(fh.Fd()))
-	if realpath, err := os.Readlink(procfd); err != nil {
-		return fmt.Errorf("procfd verification failed: %w", err)
-	} else if realpath != path {
-		return fmt.Errorf("possibly malicious path detected -- refusing to operate on %s", realpath)
-	}
-
-	// Run the closure.
-	return fn(procfd)
 }
 
 // SearchLabels searches through a list of key=value pairs for a given key,

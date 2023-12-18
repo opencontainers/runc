@@ -504,17 +504,82 @@ func TestValidateIDMapMounts(t *testing.T) {
 		config *configs.Config
 	}{
 		{
-			name:  "idmap mount without bind opt specified",
+			name:  "idmap non-bind mount",
 			isErr: true,
 			config: &configs.Config{
 				UIDMappings: mapping,
 				GIDMappings: mapping,
 				Mounts: []*configs.Mount{
 					{
+						Source:      "/dev/sda1",
+						Destination: "/abs/path/",
+						Device:      "ext4",
+						IDMapping: &configs.MountIDMapping{
+							UIDMappings: mapping,
+							GIDMappings: mapping,
+						},
+					},
+				},
+			},
+		},
+		{
+			name:  "idmap option non-bind mount",
+			isErr: true,
+			config: &configs.Config{
+				Mounts: []*configs.Mount{
+					{
+						Source:      "/dev/sda1",
+						Destination: "/abs/path/",
+						Device:      "ext4",
+						IDMapping:   &configs.MountIDMapping{},
+					},
+				},
+			},
+		},
+		{
+			name:  "ridmap option non-bind mount",
+			isErr: true,
+			config: &configs.Config{
+				Mounts: []*configs.Mount{
+					{
+						Source:      "/dev/sda1",
+						Destination: "/abs/path/",
+						Device:      "ext4",
+						IDMapping: &configs.MountIDMapping{
+							Recursive: true,
+						},
+					},
+				},
+			},
+		},
+		{
+			name:  "idmap mount no uid mapping",
+			isErr: true,
+			config: &configs.Config{
+				Mounts: []*configs.Mount{
+					{
 						Source:      "/abs/path/",
 						Destination: "/abs/path/",
-						UIDMappings: mapping,
-						GIDMappings: mapping,
+						Flags:       unix.MS_BIND,
+						IDMapping: &configs.MountIDMapping{
+							GIDMappings: mapping,
+						},
+					},
+				},
+			},
+		},
+		{
+			name:  "idmap mount no gid mapping",
+			isErr: true,
+			config: &configs.Config{
+				Mounts: []*configs.Mount{
+					{
+						Source:      "/abs/path/",
+						Destination: "/abs/path/",
+						Flags:       unix.MS_BIND,
+						IDMapping: &configs.MountIDMapping{
+							UIDMappings: mapping,
+						},
 					},
 				},
 			},
@@ -531,76 +596,16 @@ func TestValidateIDMapMounts(t *testing.T) {
 						Source:      "/abs/path/",
 						Destination: "/abs/path/",
 						Flags:       unix.MS_BIND,
-						UIDMappings: mapping,
-						GIDMappings: mapping,
-					},
-				},
-			},
-		},
-		{
-			name:  "idmap mount without userns mappings",
-			isErr: true,
-			config: &configs.Config{
-				Mounts: []*configs.Mount{
-					{
-						Source:      "/abs/path/",
-						Destination: "/abs/path/",
-						Flags:       unix.MS_BIND,
-						UIDMappings: mapping,
-						GIDMappings: mapping,
-					},
-				},
-			},
-		},
-		{
-			name:  "idmap mounts with different userns and mount mappings",
-			isErr: true,
-			config: &configs.Config{
-				UIDMappings: mapping,
-				GIDMappings: mapping,
-				Mounts: []*configs.Mount{
-					{
-						Source:      "/abs/path/",
-						Destination: "/abs/path/",
-						Flags:       unix.MS_BIND,
-						UIDMappings: []configs.IDMap{
-							{
-								ContainerID: 10,
-								HostID:      10,
-								Size:        1,
-							},
-						},
-						GIDMappings: mapping,
-					},
-				},
-			},
-		},
-		{
-			name:  "idmap mounts with different userns and mount mappings",
-			isErr: true,
-			config: &configs.Config{
-				UIDMappings: mapping,
-				GIDMappings: mapping,
-				Mounts: []*configs.Mount{
-					{
-						Source:      "/abs/path/",
-						Destination: "/abs/path/",
-						Flags:       unix.MS_BIND,
-						UIDMappings: mapping,
-						GIDMappings: []configs.IDMap{
-							{
-								ContainerID: 10,
-								HostID:      10,
-								Size:        1,
-							},
+						IDMapping: &configs.MountIDMapping{
+							UIDMappings: mapping,
+							GIDMappings: mapping,
 						},
 					},
 				},
 			},
 		},
 		{
-			name:  "idmap mounts without abs source path",
-			isErr: true,
+			name: "idmap mounts without abs source path",
 			config: &configs.Config{
 				UIDMappings: mapping,
 				GIDMappings: mapping,
@@ -609,8 +614,10 @@ func TestValidateIDMapMounts(t *testing.T) {
 						Source:      "./rel/path/",
 						Destination: "/abs/path/",
 						Flags:       unix.MS_BIND,
-						UIDMappings: mapping,
-						GIDMappings: mapping,
+						IDMapping: &configs.MountIDMapping{
+							UIDMappings: mapping,
+							GIDMappings: mapping,
+						},
 					},
 				},
 			},
@@ -625,8 +632,10 @@ func TestValidateIDMapMounts(t *testing.T) {
 						Source:      "/abs/path/",
 						Destination: "./rel/path/",
 						Flags:       unix.MS_BIND,
-						UIDMappings: mapping,
-						GIDMappings: mapping,
+						IDMapping: &configs.MountIDMapping{
+							UIDMappings: mapping,
+							GIDMappings: mapping,
+						},
 					},
 				},
 			},
@@ -641,8 +650,10 @@ func TestValidateIDMapMounts(t *testing.T) {
 						Source:      "/another-abs/path/",
 						Destination: "/abs/path/",
 						Flags:       unix.MS_BIND,
-						UIDMappings: mapping,
-						GIDMappings: mapping,
+						IDMapping: &configs.MountIDMapping{
+							UIDMappings: mapping,
+							GIDMappings: mapping,
+						},
 					},
 				},
 			},
@@ -657,8 +668,104 @@ func TestValidateIDMapMounts(t *testing.T) {
 						Source:      "/another-abs/path/",
 						Destination: "/abs/path/",
 						Flags:       unix.MS_BIND | unix.MS_RDONLY,
-						UIDMappings: mapping,
-						GIDMappings: mapping,
+						IDMapping: &configs.MountIDMapping{
+							UIDMappings: mapping,
+							GIDMappings: mapping,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "idmap mount without userns mappings",
+			config: &configs.Config{
+				Mounts: []*configs.Mount{
+					{
+						Source:      "/abs/path/",
+						Destination: "/abs/path/",
+						Flags:       unix.MS_BIND,
+						IDMapping: &configs.MountIDMapping{
+							UIDMappings: mapping,
+							GIDMappings: mapping,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "idmap mounts with different userns and mount mappings",
+			config: &configs.Config{
+				UIDMappings: mapping,
+				GIDMappings: mapping,
+				Mounts: []*configs.Mount{
+					{
+						Source:      "/abs/path/",
+						Destination: "/abs/path/",
+						Flags:       unix.MS_BIND,
+						IDMapping: &configs.MountIDMapping{
+							UIDMappings: []configs.IDMap{
+								{
+									ContainerID: 10,
+									HostID:      10,
+									Size:        1,
+								},
+							},
+							GIDMappings: mapping,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "idmap mounts with different userns and mount mappings",
+			config: &configs.Config{
+				UIDMappings: mapping,
+				GIDMappings: mapping,
+				Mounts: []*configs.Mount{
+					{
+						Source:      "/abs/path/",
+						Destination: "/abs/path/",
+						Flags:       unix.MS_BIND,
+						IDMapping: &configs.MountIDMapping{
+							UIDMappings: mapping,
+							GIDMappings: []configs.IDMap{
+								{
+									ContainerID: 10,
+									HostID:      10,
+									Size:        1,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:  "mount with 'idmap' option but no mappings",
+			isErr: true,
+			config: &configs.Config{
+				Mounts: []*configs.Mount{
+					{
+						Source:      "/abs/path/",
+						Destination: "/abs/path/",
+						Flags:       unix.MS_BIND,
+						IDMapping:   &configs.MountIDMapping{},
+					},
+				},
+			},
+		},
+		{
+			name:  "mount with 'ridmap' option but no mappings",
+			isErr: true,
+			config: &configs.Config{
+				Mounts: []*configs.Mount{
+					{
+						Source:      "/abs/path/",
+						Destination: "/abs/path/",
+						Flags:       unix.MS_BIND,
+						IDMapping: &configs.MountIDMapping{
+							Recursive: true,
+						},
 					},
 				},
 			},

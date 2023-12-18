@@ -19,6 +19,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/userns"
+	"github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/opencontainers/runtime-spec/specs-go"
 
 	"golang.org/x/sys/unix"
@@ -1691,6 +1692,20 @@ func TestFdLeaksSystemd(t *testing.T) {
 	testFdLeaks(t, true)
 }
 
+func fdList(t *testing.T) []string {
+	procSelfFd, closer := utils.ProcThreadSelf("fd")
+	defer closer()
+
+	fdDir, err := os.Open(procSelfFd)
+	ok(t, err)
+	defer fdDir.Close()
+
+	fds, err := fdDir.Readdirnames(-1)
+	ok(t, err)
+
+	return fds
+}
+
 func testFdLeaks(t *testing.T, systemd bool) {
 	if testing.Short() {
 		return
@@ -1705,21 +1720,12 @@ func testFdLeaks(t *testing.T, systemd bool) {
 	//  - /sys/fs/cgroup dirfd opened by prepareOpenat2 in libct/cgroups;
 	//  - dbus connection opened by getConnection in libct/cgroups/systemd.
 	_ = runContainerOk(t, config, "true")
-
-	pfd, err := os.Open("/proc/self/fd")
-	ok(t, err)
-	defer pfd.Close()
-	fds0, err := pfd.Readdirnames(0)
-	ok(t, err)
-	_, err = pfd.Seek(0, 0)
-	ok(t, err)
+	fds0 := fdList(t)
 
 	_ = runContainerOk(t, config, "true")
+	fds1 := fdList(t)
 
-	fds1, err := pfd.Readdirnames(0)
-	ok(t, err)
-
-	if len(fds1) == len(fds0) {
+	if reflect.DeepEqual(fds0, fds1) {
 		return
 	}
 	// Show the extra opened files.
@@ -1729,6 +1735,10 @@ func testFdLeaks(t *testing.T, systemd bool) {
 	}
 
 	count := 0
+
+	procSelfFd, closer := utils.ProcThreadSelf("fd/")
+	defer closer()
+
 next_fd:
 	for _, fd1 := range fds1 {
 		for _, fd0 := range fds0 {
@@ -1736,7 +1746,7 @@ next_fd:
 				continue next_fd
 			}
 		}
-		dst, _ := os.Readlink("/proc/self/fd/" + fd1)
+		dst, _ := os.Readlink(filepath.Join(procSelfFd, fd1))
 		for _, ex := range excludedPaths {
 			if ex == dst {
 				continue next_fd

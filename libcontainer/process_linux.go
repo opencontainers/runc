@@ -1,6 +1,7 @@
 package libcontainer
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -11,7 +12,12 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"sync"
 	"time"
+
+	"github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/sirupsen/logrus"
+	"golang.org/x/sys/unix"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fs2"
@@ -19,10 +25,8 @@ import (
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runc/libcontainer/logs"
 	"github.com/opencontainers/runc/libcontainer/system"
+	"github.com/opencontainers/runc/libcontainer/userns"
 	"github.com/opencontainers/runc/libcontainer/utils"
-	"github.com/opencontainers/runtime-spec/specs-go"
-	"github.com/sirupsen/logrus"
-	"golang.org/x/sys/unix"
 )
 
 type parentProcess interface {
@@ -208,6 +212,9 @@ func (p *setnsProcess) start() (retErr error) {
 		case procHooks:
 			// This shouldn't happen.
 			panic("unexpected procHooks in setns")
+		case procMountPlease:
+			// This shouldn't happen.
+			panic("unexpected procMountPlease in setns")
 		case procSeccomp:
 			if p.config.Config.Seccomp.ListenerPath == "" {
 				return errors.New("seccomp listenerPath is not set")
@@ -398,6 +405,110 @@ func (p *initProcess) waitForChildExit(childPid int) error {
 	return nil
 }
 
+type mountSourceRequestFn func(*configs.Mount) (*mountSource, error)
+
+// goCreateMountSources spawns a goroutine which creates open_tree(2)-style
+// mountfds based on the requested configs.Mount configuration. The returned
+// requestFn and cancelFn are used to interact with the goroutine.
+//
+// The caller of the returned mountSourceRequestFn is responsible for closing
+// the returned file.
+func (p *initProcess) goCreateMountSources(ctx context.Context) (mountSourceRequestFn, context.CancelFunc, error) {
+	type response struct {
+		src *mountSource
+		err error
+	}
+
+	errCh := make(chan error, 1)
+	requestCh := make(chan *configs.Mount)
+	responseCh := make(chan response)
+
+	ctx, cancelFn := context.WithTimeout(ctx, 1*time.Minute)
+	go func() {
+		// We lock this thread because we need to setns(2) here. There is no
+		// UnlockOSThread() here, to ensure that the Go runtime will kill this
+		// thread once this goroutine returns (ensuring no other goroutines run
+		// in this context).
+		runtime.LockOSThread()
+
+		// Detach from the shared fs of the rest of the Go process in order to
+		// be able to CLONE_NEWNS.
+		if err := unix.Unshare(unix.CLONE_FS); err != nil {
+			err = os.NewSyscallError("unshare(CLONE_FS)", err)
+			errCh <- fmt.Errorf("mount source thread: %w", err)
+			return
+		}
+
+		// Attach to the container's mount namespace.
+		nsFd, err := os.Open(fmt.Sprintf("/proc/%d/ns/mnt", p.pid()))
+		if err != nil {
+			errCh <- fmt.Errorf("mount source thread: open container mntns: %w", err)
+			return
+		}
+		defer nsFd.Close()
+		if err := unix.Setns(int(nsFd.Fd()), unix.CLONE_NEWNS); err != nil {
+			err = os.NewSyscallError("setns", err)
+			errCh <- fmt.Errorf("mount source thread: join container mntns: %w", err)
+			return
+		}
+
+		// No errors during setup!
+		close(errCh)
+		logrus.Debugf("mount source thread: successfully running in container mntns")
+
+		nsHandles := new(userns.Handles)
+		defer nsHandles.Release()
+	loop:
+		for {
+			select {
+			case m, ok := <-requestCh:
+				if !ok {
+					break loop
+				}
+				src, err := mountFd(nsHandles, m)
+				logrus.Debugf("mount source thread: handling request for %q: %v %v", m.Source, src, err)
+				responseCh <- response{
+					src: src,
+					err: err,
+				}
+			case <-ctx.Done():
+				break loop
+			}
+		}
+		logrus.Debugf("mount source thread: closing thread: %v", ctx.Err())
+		close(responseCh)
+	}()
+
+	// Check for setup errors.
+	err := <-errCh
+	if err != nil {
+		cancelFn()
+		return nil, nil, err
+	}
+
+	// TODO: Switch to context.AfterFunc when we switch to Go 1.21.
+	var requestChCloseOnce sync.Once
+	requestFn := func(m *configs.Mount) (*mountSource, error) {
+		var err error
+		select {
+		case requestCh <- m:
+			select {
+			case resp, ok := <-responseCh:
+				if ok {
+					return resp.src, resp.err
+				}
+			case <-ctx.Done():
+				err = fmt.Errorf("receive mount source context cancelled: %w", ctx.Err())
+			}
+		case <-ctx.Done():
+			err = fmt.Errorf("send mount request cancelled: %w", ctx.Err())
+		}
+		requestChCloseOnce.Do(func() { close(requestCh) })
+		return nil, err
+	}
+	return requestFn, cancelFn, nil
+}
+
 func (p *initProcess) start() (retErr error) {
 	defer p.comm.closeParent()
 	err := p.cmd.Start()
@@ -487,6 +598,22 @@ func (p *initProcess) start() (retErr error) {
 		return fmt.Errorf("error waiting for our first child to exit: %w", err)
 	}
 
+	// Spin up a goroutine to handle remapping mount requests by runc init.
+	// There is no point doing this for rootless containers because they cannot
+	// configure MOUNT_ATTR_IDMAP, nor do OPEN_TREE_CLONE. We could just
+	// service plain-open requests for plain bind-mounts but there's no need
+	// (rootless containers will never have permission issues on a source mount
+	// that the parent process can help with -- they are the same user).
+	var mountRequest mountSourceRequestFn
+	if !p.container.config.RootlessEUID {
+		request, cancel, err := p.goCreateMountSources(context.Background())
+		if err != nil {
+			return fmt.Errorf("error spawning mount remapping thread: %w", err)
+		}
+		defer cancel()
+		mountRequest = request
+	}
+
 	if err := p.createNetworkInterfaces(); err != nil {
 		return fmt.Errorf("error creating network interfaces: %w", err)
 	}
@@ -500,6 +627,35 @@ func (p *initProcess) start() (retErr error) {
 	var seenProcReady bool
 	ierr := parseSync(p.comm.syncSockParent, func(sync *syncT) error {
 		switch sync.Type {
+		case procMountPlease:
+			if mountRequest == nil {
+				return fmt.Errorf("cannot fulfil mount requests as a rootless user")
+			}
+			var m *configs.Mount
+			if sync.Arg == nil {
+				return fmt.Errorf("sync %q is missing an argument", sync.Type)
+			}
+			if err := json.Unmarshal(*sync.Arg, &m); err != nil {
+				return fmt.Errorf("sync %q passed invalid mount arg: %w", sync.Type, err)
+			}
+			mnt, err := mountRequest(m)
+			if err != nil {
+				return fmt.Errorf("failed to fulfil mount request: %w", err)
+			}
+			defer mnt.file.Close()
+
+			arg, err := json.Marshal(mnt)
+			if err != nil {
+				return fmt.Errorf("sync %q failed to marshal mountSource: %w", sync.Type, err)
+			}
+			argMsg := json.RawMessage(arg)
+			if err := doWriteSync(p.comm.syncSockParent, syncT{
+				Type: procMountFd,
+				Arg:  &argMsg,
+				File: mnt.file,
+			}); err != nil {
+				return err
+			}
 		case procSeccomp:
 			if p.config.Config.Seccomp.ListenerPath == "" {
 				return errors.New("seccomp listenerPath is not set")

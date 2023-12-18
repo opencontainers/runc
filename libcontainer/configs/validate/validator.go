@@ -309,29 +309,32 @@ func checkBindOptions(m *configs.Mount) error {
 }
 
 func checkIDMapMounts(config *configs.Config, m *configs.Mount) error {
+	// Make sure MOUNT_ATTR_IDMAP is not set on any of our mounts. This
+	// attribute is handled differently to all other attributes (through
+	// m.IDMapping), so make sure we never store it in the actual config. This
+	// really shouldn't ever happen.
+	if m.RecAttr != nil && (m.RecAttr.Attr_set|m.RecAttr.Attr_clr)&unix.MOUNT_ATTR_IDMAP != 0 {
+		return errors.New("mount configuration cannot contain recAttr for MOUNT_ATTR_IDMAP")
+	}
 	if !m.IsIDMapped() {
 		return nil
 	}
-
 	if !m.IsBind() {
-		return fmt.Errorf("gidMappings/uidMappings is supported only for mounts with the option 'bind'")
+		return errors.New("id-mapped mounts are only supported for bind-mounts")
 	}
 	if config.RootlessEUID {
-		return fmt.Errorf("gidMappings/uidMappings is not supported when runc is being launched with EUID != 0, needs CAP_SYS_ADMIN on the runc parent's user namespace")
+		return errors.New("id-mapped mounts are not supported for rootless containers")
 	}
-	if len(config.UIDMappings) == 0 || len(config.GIDMappings) == 0 {
-		return fmt.Errorf("not yet supported to use gidMappings/uidMappings in a mount without also using a user namespace")
+	if m.IDMapping.UserNSPath == "" {
+		if len(m.IDMapping.UIDMappings) == 0 || len(m.IDMapping.GIDMappings) == 0 {
+			return errors.New("id-mapped mounts must have both uid and gid mappings specified")
+		}
+	} else {
+		if m.IDMapping.UIDMappings != nil || m.IDMapping.GIDMappings != nil {
+			// should never happen
+			return errors.New("[internal error] id-mapped mounts cannot have both userns_path and uid and gid mappings specified")
+		}
 	}
-	if !sameMapping(config.UIDMappings, m.UIDMappings) {
-		return fmt.Errorf("not yet supported for the mount uidMappings to be different than user namespace uidMapping")
-	}
-	if !sameMapping(config.GIDMappings, m.GIDMappings) {
-		return fmt.Errorf("not yet supported for the mount gidMappings to be different than user namespace gidMapping")
-	}
-	if !filepath.IsAbs(m.Source) {
-		return fmt.Errorf("mount source not absolute")
-	}
-
 	return nil
 }
 
@@ -354,27 +357,6 @@ func mountsStrict(config *configs.Config) error {
 		}
 	}
 	return nil
-}
-
-// sameMapping checks if the mappings are the same. If the mappings are the same
-// but in different order, it returns false.
-func sameMapping(a, b []configs.IDMap) bool {
-	if len(a) != len(b) {
-		return false
-	}
-
-	for i := range a {
-		if a[i].ContainerID != b[i].ContainerID {
-			return false
-		}
-		if a[i].HostID != b[i].HostID {
-			return false
-		}
-		if a[i].Size != b[i].Size {
-			return false
-		}
-	}
-	return true
 }
 
 func isHostNetNS(path string) (bool, error) {
