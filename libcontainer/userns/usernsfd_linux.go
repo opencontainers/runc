@@ -22,16 +22,16 @@ type Mapping struct {
 func (m Mapping) toSys() (uids, gids []syscall.SysProcIDMap) {
 	for _, uid := range m.UIDMappings {
 		uids = append(uids, syscall.SysProcIDMap{
-			ContainerID: uid.ContainerID,
-			HostID:      uid.HostID,
-			Size:        uid.Size,
+			ContainerID: int(uid.ContainerID),
+			HostID:      int(uid.HostID),
+			Size:        int(uid.Size),
 		})
 	}
 	for _, gid := range m.GIDMappings {
 		gids = append(gids, syscall.SysProcIDMap{
-			ContainerID: gid.ContainerID,
-			HostID:      gid.HostID,
-			Size:        gid.Size,
+			ContainerID: int(gid.ContainerID),
+			HostID:      int(gid.HostID),
+			Size:        int(gid.Size),
 		})
 	}
 	return
