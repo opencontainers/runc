@@ -255,8 +255,9 @@ echo 'Optional Features:'
 	check_flags SECCOMP_FILTER
 	check_flags CGROUP_PIDS
 
-	check_flags MEMCG_SWAP
-
+	if kernel_lt 6 1; then
+		check_flags MEMCG_SWAP
+	fi
 	if kernel_lt 5 8; then
 		check_flags MEMCG_SWAP_ENABLED
 		if is_set MEMCG_SWAP && ! is_set MEMCG_SWAP_ENABLED; then
