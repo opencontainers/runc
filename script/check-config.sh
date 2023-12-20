@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -e -u
 
+[ -t 1 ] || NO_COLOR=1
+
 # bits of this were adapted from check_config.sh in docker
 # see also https://github.com/docker/docker/blob/master/contrib/check-config.sh
 
@@ -43,6 +45,8 @@ is_set_as_module() {
 }
 
 color() {
+	[ -n "${NO_COLOR:-}" ] && return
+
 	local codes=()
 	if [ "$1" = 'bold' ]; then
 		codes=("${codes[@]-}" '1')
