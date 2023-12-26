@@ -13,7 +13,7 @@ import (
 	libseccomp "github.com/seccomp/libseccomp-golang"
 )
 
-func TestSeccompDenyGetcwdWithErrno(t *testing.T) {
+func TestSeccompDenySyslogWithErrno(t *testing.T) {
 	if testing.Short() {
 		return
 	}
@@ -25,7 +25,7 @@ func TestSeccompDenyGetcwdWithErrno(t *testing.T) {
 		DefaultAction: configs.Allow,
 		Syscalls: []*configs.Syscall{
 			{
-				Name:     "getcwd",
+				Name:     "syslog",
 				Action:   configs.Errno,
 				ErrnoRet: &errnoRet,
 			},
@@ -39,7 +39,7 @@ func TestSeccompDenyGetcwdWithErrno(t *testing.T) {
 	buffers := newStdBuffers()
 	pwd := &libcontainer.Process{
 		Cwd:    "/",
-		Args:   []string{"pwd"},
+		Args:   []string{"dmesg"},
 		Env:    standardEnvironment,
 		Stdin:  buffers.Stdin,
 		Stdout: buffers.Stdout,
@@ -65,17 +65,17 @@ func TestSeccompDenyGetcwdWithErrno(t *testing.T) {
 	}
 
 	if exitCode == 0 {
-		t.Fatalf("Getcwd should fail with negative exit code, instead got %d!", exitCode)
+		t.Fatalf("dmesg should fail with negative exit code, instead got %d!", exitCode)
 	}
 
-	expected := "pwd: getcwd: No such process"
+	expected := "dmesg: klogctl: No such process"
 	actual := strings.Trim(buffers.Stderr.String(), "\n")
 	if actual != expected {
 		t.Fatalf("Expected output %s but got %s\n", expected, actual)
 	}
 }
 
-func TestSeccompDenyGetcwd(t *testing.T) {
+func TestSeccompDenySyslog(t *testing.T) {
 	if testing.Short() {
 		return
 	}
@@ -85,7 +85,7 @@ func TestSeccompDenyGetcwd(t *testing.T) {
 		DefaultAction: configs.Allow,
 		Syscalls: []*configs.Syscall{
 			{
-				Name:   "getcwd",
+				Name:   "syslog",
 				Action: configs.Errno,
 			},
 		},
@@ -98,7 +98,7 @@ func TestSeccompDenyGetcwd(t *testing.T) {
 	buffers := newStdBuffers()
 	pwd := &libcontainer.Process{
 		Cwd:    "/",
-		Args:   []string{"pwd"},
+		Args:   []string{"dmesg"},
 		Env:    standardEnvironment,
 		Stdin:  buffers.Stdin,
 		Stdout: buffers.Stdout,
@@ -124,10 +124,10 @@ func TestSeccompDenyGetcwd(t *testing.T) {
 	}
 
 	if exitCode == 0 {
-		t.Fatalf("Getcwd should fail with negative exit code, instead got %d!", exitCode)
+		t.Fatalf("dmesg should fail with negative exit code, instead got %d!", exitCode)
 	}
 
-	expected := "pwd: getcwd: Operation not permitted"
+	expected := "dmesg: klogctl: Operation not permitted"
 	actual := strings.Trim(buffers.Stderr.String(), "\n")
 	if actual != expected {
 		t.Fatalf("Expected output %s but got %s\n", expected, actual)
