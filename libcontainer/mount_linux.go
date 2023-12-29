@@ -258,7 +258,12 @@ func mountFd(nsHandles *userns.Handles, m *configs.Mount) (*mountSource, error) 
 			Attr_set:  unix.MOUNT_ATTR_IDMAP,
 			Userns_fd: uint64(usernsFile.Fd()),
 		}); err != nil {
-			return nil, fmt.Errorf("failed to set MOUNT_ATTR_IDMAP on %s: %w", m.Source, err)
+			extraMsg := ""
+			if err == unix.EINVAL {
+				extraMsg = " (maybe the filesystem used doesn't support idmap mounts on this kernel?)"
+			}
+
+			return nil, fmt.Errorf("failed to set MOUNT_ATTR_IDMAP on %s: %w%s", m.Source, err, extraMsg)
 		}
 	} else {
 		var err error
