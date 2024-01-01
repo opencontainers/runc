@@ -6,6 +6,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased 1.1.z]
 
+## [1.1.11] - 2024-01-01
+
+> Happy New Year!
+
+### Fixed
+
+* Fix several issues with userns path handling. (#4122, #4124, #4134, #4144)
+
+### Changed
+
+ * Support memory.peak and memory.swap.peak in cgroups v2.
+   Add `swapOnlyUsage` in `MemoryStats`. This field reports swap-only usage.
+   For cgroupv1, `Usage` and `Failcnt` are set by subtracting memory usage
+   from memory+swap usage. For cgroupv2, `Usage`, `Limit`, and `MaxUsage`
+   are set. (#4000, #4010, #4131)
+ * build(deps): bump github.com/cyphar/filepath-securejoin. (#4140)
+
 ## [1.1.10] - 2023-10-31
 
 > Śruba, przykręcona we śnie, nie zmieni sytuacji, jaka panuje na jawie.
@@ -46,10 +63,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    This aligns cgroupv2 root usage more closely with cgroupv1 reporting.
    Additionally, report root swap usage as sum of swap and memory usage,
    aligned with v1 and existing non-root v2 reporting. (#3933)
- * Add `swapOnlyUsage` in `MemoryStats`. This field reports swap-only usage.
-   For cgroupv1, `Usage` and `Failcnt` are set by subtracting memory usage
-   from memory+swap usage. For cgroupv2, `Usage`, `Limit`, and `MaxUsage`
-   are set. (#4010)
 
 ## [1.1.8] - 2023-07-20
 
@@ -480,7 +493,8 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.0.1]: https://github.com/opencontainers/runc/compare/v1.0.0...v1.0.1
 
 <!-- 1.1.z patch releases -->
-[Unreleased 1.1.z]: https://github.com/opencontainers/runc/compare/v1.1.10...release-1.1
+[Unreleased 1.1.z]: https://github.com/opencontainers/runc/compare/v1.1.11...release-1.1
+[1.1.11]: https://github.com/opencontainers/runc/compare/v1.1.10...v1.1.11
 [1.1.10]: https://github.com/opencontainers/runc/compare/v1.1.9...v1.1.10
 [1.1.9]: https://github.com/opencontainers/runc/compare/v1.1.8...v1.1.9
 [1.1.8]: https://github.com/opencontainers/runc/compare/v1.1.7...v1.1.8
