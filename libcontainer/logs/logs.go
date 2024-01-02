@@ -4,9 +4,18 @@ import (
 	"bufio"
 	"encoding/json"
 	"io"
+	"os"
 
 	"github.com/sirupsen/logrus"
 )
+
+// IsLogrusFd returns whether the provided fd matches the one that logrus is
+// currently outputting to. This should only ever be called by UnsafeCloseFrom
+// from `runc init`.
+func IsLogrusFd(fd uintptr) bool {
+	file, ok := logrus.StandardLogger().Out.(*os.File)
+	return ok && file.Fd() == fd
+}
 
 func ForwardLogs(logPipe io.ReadCloser) chan error {
 	done := make(chan error, 1)

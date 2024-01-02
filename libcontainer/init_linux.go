@@ -90,7 +90,7 @@ func Init() {
 	}
 	// Normally, StartInitialization() never returns, meaning
 	// if we are here, it had failed.
-	os.Exit(1)
+	os.Exit(255)
 }
 
 // Normally, this function does not return. If it returns, with or without an

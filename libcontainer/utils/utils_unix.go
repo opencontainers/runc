@@ -11,10 +11,13 @@ import (
 	"runtime"
 	"strconv"
 	"sync"
+	_ "unsafe" // for go:linkname
 
 	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
+
+	"github.com/opencontainers/runc/libcontainer/logs"
 )
 
 // EnsureProcHandle returns whether or not the given file handle is on procfs.
@@ -53,14 +56,11 @@ func haveCloseRangeCloexec() bool {
 	return haveCloseRangeCloexecBool
 }
 
-// CloseExecFrom applies O_CLOEXEC to all file descriptors currently open for
-// the process (except for those below the given fd value).
-func CloseExecFrom(minFd int) error {
-	if haveCloseRangeCloexec() {
-		err := unix.CloseRange(uint(minFd), math.MaxUint, unix.CLOSE_RANGE_CLOEXEC)
-		return os.NewSyscallError("close_range", err)
-	}
+type fdFunc func(fd int)
 
+// fdRangeFrom calls the passed fdFunc for each file descriptor that is open in
+// the current process.
+func fdRangeFrom(minFd int, fn fdFunc) error {
 	procSelfFd, closer := ProcThreadSelf("fd")
 	defer closer()
 
@@ -88,13 +88,71 @@ func CloseExecFrom(minFd int) error {
 		if fd < minFd {
 			continue
 		}
-		// Intentionally ignore errors from unix.CloseOnExec -- the cases where
-		// this might fail are basically file descriptors that have already
-		// been closed (including and especially the one that was created when
-		// os.ReadDir did the "opendir" syscall).
-		unix.CloseOnExec(fd)
+		// Ignore the file descriptor we used for readdir, as it will be closed
+		// when we return.
+		if uintptr(fd) == fdDir.Fd() {
+			continue
+		}
+		// Run the closure.
+		fn(fd)
 	}
 	return nil
+}
+
+// CloseExecFrom sets the O_CLOEXEC flag on all file descriptors greater or
+// equal to minFd in the current process.
+func CloseExecFrom(minFd int) error {
+	// Use close_range(CLOSE_RANGE_CLOEXEC) if possible.
+	if haveCloseRangeCloexec() {
+		err := unix.CloseRange(uint(minFd), math.MaxUint, unix.CLOSE_RANGE_CLOEXEC)
+		return os.NewSyscallError("close_range", err)
+	}
+	// Otherwise, fall back to the standard loop.
+	return fdRangeFrom(minFd, unix.CloseOnExec)
+}
+
+//go:linkname runtime_IsPollDescriptor internal/poll.IsPollDescriptor
+
+// In order to make sure we do not close the internal epoll descriptors the Go
+// runtime uses, we need to ensure that we skip descriptors that match
+// "internal/poll".IsPollDescriptor. Yes, this is a Go runtime internal thing,
+// unfortunately there's no other way to be sure we're only keeping the file
+// descriptors the Go runtime needs. Hopefully nothing blows up doing this...
+func runtime_IsPollDescriptor(fd uintptr) bool //nolint:revive
+
+// UnsafeCloseFrom closes all file descriptors greater or equal to minFd in the
+// current process, except for those critical to Go's runtime (such as the
+// netpoll management descriptors).
+//
+// NOTE: That this function is incredibly dangerous to use in most Go code, as
+// closing file descriptors from underneath *os.File handles can lead to very
+// bad behaviour (the closed file descriptor can be re-used and then any
+// *os.File operations would apply to the wrong file). This function is only
+// intended to be called from the last stage of runc init.
+func UnsafeCloseFrom(minFd int) error {
+	// We cannot use close_range(2) even if it is available, because we must
+	// not close some file descriptors.
+	return fdRangeFrom(minFd, func(fd int) {
+		if runtime_IsPollDescriptor(uintptr(fd)) {
+			// These are the Go runtimes internal netpoll file descriptors.
+			// These file descriptors are operated on deep in the Go scheduler,
+			// and closing those files from underneath Go can result in panics.
+			// There is no issue with keeping them because they are not
+			// executable and are not useful to an attacker anyway. Also we
+			// don't have any choice.
+			return
+		}
+		if logs.IsLogrusFd(uintptr(fd)) {
+			// Do not close the logrus output fd. We cannot exec a pipe, and
+			// the contents are quite limited (very little attacker control,
+			// JSON-encoded) making shellcode attacks unlikely.
+			return
+		}
+		// There's nothing we can do about errors from close(2), and the
+		// only likely error to be seen is EBADF which indicates the fd was
+		// already closed (in which case, we got what we wanted).
+		_ = unix.Close(fd)
+	})
 }
 
 // NewSockPair returns a new SOCK_STREAM unix socket pair.
