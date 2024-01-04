@@ -10,13 +10,6 @@ Spec version | Feature                                  | PR
 v1.1.0       | `SECCOMP_FILTER_FLAG_WAIT_KILLABLE_RECV` | [#3862](https://github.com/opencontainers/runc/pull/3862)
 v1.1.0       | `.process.ioPriority`                    | [#3783](https://github.com/opencontainers/runc/pull/3783)
 
-
-The following features are implemented with some limitations:
-Spec version | Feature                                  | Limitation
--------------|------------------------------------------|----------------------------------------------------------
-v1.1.0       | `.[]mounts.uidMappings`                  | Requires using UserNS with identical uidMappings
-v1.1.0       | `.[]mounts.gidMappings`                  | Requires using UserNS with identical gidMappings
-
 ## Architectures
 
 The following architectures are supported:
