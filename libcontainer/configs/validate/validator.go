@@ -383,8 +383,10 @@ func scheduler(config *configs.Config) error {
 	if s.Policy == "" {
 		return errors.New("scheduler policy is required")
 	}
-	if s.Nice < -20 || s.Nice > 19 {
-		return fmt.Errorf("invalid scheduler.nice: %d", s.Nice)
+	if s.Policy == specs.SchedOther || s.Policy == specs.SchedBatch {
+		if s.Nice < -20 || s.Nice > 19 {
+			return fmt.Errorf("invalid scheduler.nice: %d when scheduler.policy is %s", s.Nice, string(s.Policy))
+		}
 	}
 	if s.Priority != 0 && (s.Policy != specs.SchedFIFO && s.Policy != specs.SchedRR) {
 		return errors.New("scheduler.priority can only be specified for SchedFIFO or SchedRR policy")

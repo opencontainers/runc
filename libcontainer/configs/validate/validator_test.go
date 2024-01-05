@@ -814,6 +814,9 @@ func TestValidateScheduler(t *testing.T) {
 		{isErr: false, policy: "SCHED_DEADLINE", runtime: 200},
 		{isErr: false, policy: "SCHED_DEADLINE", deadline: 300},
 		{isErr: false, policy: "SCHED_DEADLINE", period: 400},
+		{isErr: true, policy: "SCHED_OTHER", niceValue: 20},
+		{isErr: true, policy: "SCHED_OTHER", niceValue: -21},
+		{isErr: false, policy: "SCHED_FIFO", priority: 100, niceValue: 100},
 	}
 
 	for _, tc := range testCases {
