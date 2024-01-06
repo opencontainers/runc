@@ -28,6 +28,8 @@ import (
 
 var criuFeatures *criurpc.CriuFeatures
 
+var ErrCriuMissingFeatures = errors.New("criu is missing features")
+
 func (c *Container) checkCriuFeatures(criuOpts *CriuOpts, rpcOpts *criurpc.CriuOpts, criuFeat *criurpc.CriuFeatures) error {
 	t := criurpc.CriuReqType_FEATURE_CHECK
 
@@ -50,14 +52,14 @@ func (c *Container) checkCriuFeatures(criuOpts *CriuOpts, rpcOpts *criurpc.CriuO
 		return errors.New("CRIU feature check failed")
 	}
 
-	missingFeatures := false
+	var missingFeatures []string
 
 	// The outer if checks if the fields actually exist
 	if (criuFeat.MemTrack != nil) &&
 		(criuFeatures.MemTrack != nil) {
 		// The inner if checks if they are set to true
 		if *criuFeat.MemTrack && !*criuFeatures.MemTrack {
-			missingFeatures = true
+			missingFeatures = append(missingFeatures, "MemTrack")
 			logrus.Debugf("CRIU does not support MemTrack")
 		}
 	}
@@ -67,13 +69,13 @@ func (c *Container) checkCriuFeatures(criuOpts *CriuOpts, rpcOpts *criurpc.CriuO
 	if (criuFeat.LazyPages != nil) &&
 		(criuFeatures.LazyPages != nil) {
 		if *criuFeat.LazyPages && !*criuFeatures.LazyPages {
-			missingFeatures = true
+			missingFeatures = append(missingFeatures, "LazyPages")
 			logrus.Debugf("CRIU does not support LazyPages")
 		}
 	}
 
-	if missingFeatures {
-		return errors.New("CRIU is missing features")
+	if len(missingFeatures) != 0 {
+		return fmt.Errorf("%w: %v", ErrCriuMissingFeatures, missingFeatures)
 	}
 
 	return nil
