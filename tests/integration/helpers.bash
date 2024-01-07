@@ -132,7 +132,7 @@ function init_cgroup_paths() {
 		CGROUP_SUBSYSTEMS=$(awk '!/^#/ {print $1}' /proc/cgroups)
 		local g base_path
 		for g in ${CGROUP_SUBSYSTEMS}; do
-			base_path=$(awk '$(NF-2) == "cgroup" && $NF ~ /\<'"${g}"'\>/ { print $5; exit }' /proc/self/mountinfo)
+			base_path=$(awk '$(NF-2) == "cgroup" && ($NF ~ /'"${g}"',/ || $NF ~ /'"${g}"'$/) { print $5; exit }' /proc/self/mountinfo)
 			test -z "$base_path" && continue
 			eval CGROUP_"${g^^}"_BASE_PATH="${base_path}"
 		done
