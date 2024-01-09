@@ -453,8 +453,40 @@ func slicesContains[S ~[]E, E comparable](slice S, needle E) bool {
 	return false
 }
 
-func isDmzBinarySafe(c *configs.Config) bool {
+// No longer needed in Go 1.21.
+func slicesEqual[S ~[]E, E comparable](s1, s2 S) bool {
+	if len(s1) != len(s2) {
+		return false
+	}
+	for idx := range s1 {
+		if s1[idx] != s2[idx] {
+			return false
+		}
+	}
+	return true
+}
+
+func shouldUseDmzBinary(p *Process, c *configs.Config) bool {
+	// Older versions container-selinux (< 2.224.0) had permission issues when
+	// using runc-dmz, so don't use runc-dmz for those systems.
 	if !dmz.WorksWithSELinux(c) {
+		return false
+	}
+
+	// runc-dmz changes how capabilities are inherited by the process "runc
+	// init" execs if the container process is not root and the capabilities
+	// are not in the ambient set. There is no nice solution for this problem,
+	// so we can't use runc-dmz unless the four non-effective capability sets
+	// are the same.
+	//
+	// TODO: Unfortunately, our configuration format is such that we don't know
+	// the uid/gid of the container process at the moment. See newProcess() in
+	// utils_linux.go. So we have to assume that any User other than "0:0" is
+	// not root.
+	if p.User != "0:0" && c.Capabilities != nil &&
+		(!slicesEqual(c.Capabilities.Inheritable, c.Capabilities.Ambient) ||
+			!slicesEqual(c.Capabilities.Bounding, c.Capabilities.Ambient) ||
+			!slicesEqual(c.Capabilities.Permitted, c.Capabilities.Ambient)) {
 		return false
 	}
 
@@ -515,7 +547,7 @@ func (c *Container) newParentProcess(p *Process) (parentProcess, error) {
 		exePath = "/proc/self/exe"
 	} else {
 		var err error
-		if isDmzBinarySafe(c.config) {
+		if shouldUseDmzBinary(p, c.config) {
 			dmzExe, err = dmz.Binary(c.stateDir)
 			if err == nil {
 				// We can use our own executable without cloning if we are
