@@ -18,7 +18,9 @@ import (
 )
 
 const (
+	CgroupType        = "cgroup.type"
 	CgroupProcesses   = "cgroup.procs"
+	CgroupThreads     = "cgroup.threads"
 	unifiedMountpoint = "/sys/fs/cgroup"
 	hybridMountpoint  = "/sys/fs/cgroup/unified"
 )
@@ -137,7 +139,14 @@ func GetAllSubsystems() ([]string, error) {
 }
 
 func readProcsFile(dir string) ([]int, error) {
-	f, err := OpenFile(dir, CgroupProcesses, os.O_RDONLY)
+	var procsFile = CgroupProcesses
+
+	cgrouptype, err := ReadFile(dir, CgroupType)
+	if err == nil && string(cgrouptype) == "threaded\n" {
+		procsFile = CgroupThreads
+	}
+
+	f, err := OpenFile(dir, procsFile, os.O_RDONLY)
 	if err != nil {
 		return nil, err
 	}
