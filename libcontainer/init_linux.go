@@ -107,7 +107,11 @@ func startInitialization() (retErr error) {
 
 	defer func() {
 		// If this defer is ever called, this means initialization has failed.
-		// Send the error back to the parent process in the form of an initError.
+		// Send the error back to the parent process in the form of an initError
+		// if the sync socket has not been closed.
+		if syncPipe.isClosed() {
+			return
+		}
 		ierr := initError{Message: retErr.Error()}
 		if err := writeSyncArg(syncPipe, procError, ierr); err != nil {
 			fmt.Fprintln(os.Stderr, err)
