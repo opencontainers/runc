@@ -230,3 +230,20 @@ function teardown() {
 	grep -E '^monotonic\s+7881\s+2718281$' <<<"$output"
 	grep -E '^boottime\s+1337\s+3141519$' <<<"$output"
 }
+
+@test "runc run [exec error]" {
+	cat <<EOF >rootfs/run.sh
+#!/mmnnttbb foo bar
+sh
+EOF
+	chmod +x rootfs/run.sh
+	update_config '.process.args = [ "/run.sh" ]'
+	runc run test_hello
+
+	# Ensure that the output contains the right error message. For runc-dmz, both
+	# nolibc and libc have the same formatting string (but libc will print the
+	# errno description rather than just the number), and for runc_nodmz the error
+	# message from Go starts with the same string.
+	[ "$status" -ne 0 ]
+	[[ "$output" = *"exec /run.sh: "* ]]
+}
