@@ -202,3 +202,12 @@ func ProcThreadSelf(subpath string) (string, ProcThreadSelfCloser) {
 	}
 	return threadSelf + subpath, runtime.UnlockOSThread
 }
+
+// ProcThreadSelfFd is small wrapper around ProcThreadSelf to make it easier to
+// create a /proc/thread-self handle for given file descriptor.
+//
+// It is basically equivalent to ProcThreadSelf(fmt.Sprintf("fd/%d", fd)), but
+// without using fmt.Sprintf to avoid unneeded overhead.
+func ProcThreadSelfFd(fd uintptr) (string, ProcThreadSelfCloser) {
+	return ProcThreadSelf("fd/" + strconv.FormatUint(uint64(fd), 10))
+}

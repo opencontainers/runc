@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"strconv"
 
 	"github.com/opencontainers/selinux/go-selinux"
 	"github.com/sirupsen/logrus"
@@ -24,7 +23,7 @@ type linuxSetnsInit struct {
 	consoleSocket *os.File
 	pidfdSocket   *os.File
 	config        *initConfig
-	logFd         int
+	logPipe       *os.File
 	dmzExe        *os.File
 }
 
@@ -131,8 +130,8 @@ func (l *linuxSetnsInit) Init() error {
 
 	// Close the log pipe fd so the parent's ForwardLogs can exit.
 	logrus.Debugf("setns_init: about to exec")
-	if err := unix.Close(l.logFd); err != nil {
-		return &os.PathError{Op: "close log pipe", Path: "fd " + strconv.Itoa(l.logFd), Err: err}
+	if err := l.logPipe.Close(); err != nil {
+		return fmt.Errorf("close log pipe: %w", err)
 	}
 
 	if l.dmzExe != nil {
