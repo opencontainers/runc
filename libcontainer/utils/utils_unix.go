@@ -16,8 +16,6 @@ import (
 	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
-
-	"github.com/opencontainers/runc/libcontainer/logs"
 )
 
 // EnsureProcHandle returns whether or not the given file handle is on procfs.
@@ -140,12 +138,6 @@ func UnsafeCloseFrom(minFd int) error {
 			// There is no issue with keeping them because they are not
 			// executable and are not useful to an attacker anyway. Also we
 			// don't have any choice.
-			return
-		}
-		if logs.IsLogrusFd(uintptr(fd)) {
-			// Do not close the logrus output fd. We cannot exec a pipe, and
-			// the contents are quite limited (very little attacker control,
-			// JSON-encoded) making shellcode attacks unlikely.
 			return
 		}
 		// There's nothing we can do about errors from close(2), and the
