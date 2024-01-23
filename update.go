@@ -174,6 +174,7 @@ other options are ignored.
 				if err != nil {
 					return err
 				}
+				defer f.Close()
 			}
 			err = json.NewDecoder(f).Decode(&r)
 			if err != nil {
