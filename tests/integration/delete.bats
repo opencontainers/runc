@@ -54,12 +54,13 @@ function test_runc_delete_host_pidns() {
 	# not have own PID ns, its init is no special and the container
 	# will still be up and running.
 	kill -9 "$init_pid"
+	wait_pids_gone 10 0.2 "$init_pid"
 
 	# Get the list of all container processes.
-	pids=$(cat "$cgpath"/cgroup.procs)
-	echo "pids: $pids"
+	mapfile -t pids < <(cat "$cgpath"/cgroup.procs)
+	echo "pids:" "${pids[@]}"
 	# Sanity check -- make sure all processes exist.
-	for p in $pids; do
+	for p in "${pids[@]}"; do
 		kill -0 "$p"
 	done
 
@@ -70,10 +71,15 @@ function test_runc_delete_host_pidns() {
 	runc state test_busybox
 	[ "$status" -ne 0 ] # "Container does not exist"
 
-	# Make sure all processes are gone.
-	pids=$(cat "$cgpath"/cgroup.procs) || true # OK if cgroup is gone
-	echo "pids: $pids"
-	[ -z "$pids" ]
+	# Wait and check that all the processes are gone.
+	wait_pids_gone 10 0.2 "${pids[@]}"
+
+	# Make sure cgroup.procs is empty.
+	mapfile -t pids < <(cat "$cgpath"/cgroup.procs || true)
+	if [ ${#pids[@]} -gt 0 ]; then
+		echo "expected empty cgroup.procs, got:" "${pids[@]}" 1>&2
+		return 1
+	fi
 }
 
 @test "runc delete" {
