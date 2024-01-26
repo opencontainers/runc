@@ -323,14 +323,14 @@ function check_exec_debug() {
 	[ "$status" -eq 0 ]
 }
 
-@test "RUNC_DMZ=legacy runc exec [execve error]" {
+@test "runc exec [execve error]" {
 	cat <<EOF >rootfs/run.sh
 #!/mmnnttbb foo bar
 sh
 EOF
 	chmod +x rootfs/run.sh
-	RUNC_DMZ=legacy runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
-	RUNC_DMZ=legacy runc exec -t test_busybox /run.sh
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	runc exec -t test_busybox /run.sh
 	[ "$status" -ne 0 ]
 
 	# After the sync socket closed, we should not send error to parent

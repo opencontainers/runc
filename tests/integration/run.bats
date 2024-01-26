@@ -127,20 +127,20 @@ function teardown() {
 	[ "${lines[0]}" = "410" ]
 }
 
-@test "runc run [runc-dmz]" {
-	runc --debug run test_hello
+@test "RUNC_DMZ=true runc run [runc-dmz]" {
+	RUNC_DMZ=true runc --debug run test_hello
 	[ "$status" -eq 0 ]
 	[[ "$output" = *"Hello World"* ]]
 	# We use runc-dmz if we can.
 	[[ "$output" = *"runc-dmz: using runc-dmz"* ]]
 }
 
-@test "runc run [cap_sys_ptrace -> /proc/self/exe clone]" {
+@test "RUNC_DMZ=true runc run [cap_sys_ptrace -> /proc/self/exe clone]" {
 	# Add CAP_SYS_PTRACE to the bounding set, the minimum needed to indicate a
 	# container process _could_ get CAP_SYS_PTRACE.
 	update_config '.process.capabilities.bounding += ["CAP_SYS_PTRACE"]'
 
-	runc --debug run test_hello
+	RUNC_DMZ=true runc --debug run test_hello
 	[ "$status" -eq 0 ]
 	[[ "$output" = *"Hello World"* ]]
 	if [ "$EUID" -ne 0 ] && is_kernel_gte 4.10; then
@@ -154,8 +154,8 @@ function teardown() {
 	fi
 }
 
-@test "RUNC_DMZ=legacy runc run [/proc/self/exe clone]" {
-	RUNC_DMZ=legacy runc --debug run test_hello
+@test "runc run [/proc/self/exe clone]" {
+	runc --debug run test_hello
 	[ "$status" -eq 0 ]
 	[[ "$output" = *"Hello World"* ]]
 	[[ "$output" = *"runc-dmz: using /proc/self/exe clone"* ]]
@@ -231,14 +231,14 @@ function teardown() {
 	grep -E '^boottime\s+1337\s+3141519$' <<<"$output"
 }
 
-@test "runc run [exec error]" {
+@test "RUNC_DMZ=true runc run [exec error]" {
 	cat <<EOF >rootfs/run.sh
 #!/mmnnttbb foo bar
 sh
 EOF
 	chmod +x rootfs/run.sh
 	update_config '.process.args = [ "/run.sh" ]'
-	runc run test_hello
+	RUNC_DMZ=true runc run test_hello
 
 	# Ensure that the output contains the right error message. For runc-dmz, both
 	# nolibc and libc have the same formatting string (but libc will print the
@@ -248,14 +248,14 @@ EOF
 	[[ "$output" = *"exec /run.sh: "* ]]
 }
 
-@test "RUNC_DMZ=legacy runc run [execve error]" {
+@test "runc run [execve error]" {
 	cat <<EOF >rootfs/run.sh
 #!/mmnnttbb foo bar
 sh
 EOF
 	chmod +x rootfs/run.sh
 	update_config '.process.args = [ "/run.sh" ]'
-	RUNC_DMZ=legacy runc run test_hello
+	runc run test_hello
 	[ "$status" -ne 0 ]
 
 	# After the sync socket closed, we should not send error to parent
