@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sync/atomic"
 
 	"golang.org/x/sys/unix"
 )
@@ -14,7 +15,8 @@ import (
 // which ends up making things like json.Decoder hang forever if the packet is
 // bigger than the internal read buffer.
 type syncSocket struct {
-	f *os.File
+	f      *os.File
+	closed atomic.Bool
 }
 
 func newSyncSocket(f *os.File) *syncSocket {
@@ -26,7 +28,13 @@ func (s *syncSocket) File() *os.File {
 }
 
 func (s *syncSocket) Close() error {
+	// Even with errors from Close(), we have to assume the pipe was closed.
+	s.closed.Store(true)
 	return s.f.Close()
+}
+
+func (s *syncSocket) isClosed() bool {
+	return s.closed.Load()
 }
 
 func (s *syncSocket) WritePacket(b []byte) (int, error) {

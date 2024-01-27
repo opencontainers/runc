@@ -247,3 +247,19 @@ EOF
 	[ "$status" -ne 0 ]
 	[[ "$output" = *"exec /run.sh: "* ]]
 }
+
+@test "RUNC_DMZ=legacy runc run [execve error]" {
+	cat <<EOF >rootfs/run.sh
+#!/mmnnttbb foo bar
+sh
+EOF
+	chmod +x rootfs/run.sh
+	update_config '.process.args = [ "/run.sh" ]'
+	RUNC_DMZ=legacy runc run test_hello
+	[ "$status" -ne 0 ]
+
+	# After the sync socket closed, we should not send error to parent
+	# process, or else we will get a unnecessary error log(#4171).
+	[ ${#lines[@]} -eq 1 ]
+	[[ ${lines[0]} = "exec /run.sh: no such file or directory" ]]
+}

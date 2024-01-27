@@ -322,3 +322,21 @@ function check_exec_debug() {
 	runc exec --cgroup second test_busybox grep -w second /proc/self/cgroup
 	[ "$status" -eq 0 ]
 }
+
+@test "RUNC_DMZ=legacy runc exec [execve error]" {
+	cat <<EOF >rootfs/run.sh
+#!/mmnnttbb foo bar
+sh
+EOF
+	chmod +x rootfs/run.sh
+	RUNC_DMZ=legacy runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	RUNC_DMZ=legacy runc exec -t test_busybox /run.sh
+	[ "$status" -ne 0 ]
+
+	# After the sync socket closed, we should not send error to parent
+	# process, or else we will get a unnecessary error log(#4171).
+	# Although we never close the sync socket when doing exec,
+	# but we need to keep this test to ensure this behavior is always right.
+	[ ${#lines[@]} -eq 1 ]
+	[[ ${lines[0]} = *"exec failed: unable to start container process: exec /run.sh: no such file or directory"* ]]
+}
