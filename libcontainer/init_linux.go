@@ -141,24 +141,26 @@ func startInitialization() (retErr error) {
 		logrus.SetLevel(logrus.Level(logLevel))
 	}
 
-	logFD, err := strconv.Atoi(os.Getenv("_LIBCONTAINER_LOGPIPE"))
+	logFd, err := strconv.Atoi(os.Getenv("_LIBCONTAINER_LOGPIPE"))
 	if err != nil {
 		return fmt.Errorf("unable to convert _LIBCONTAINER_LOGPIPE: %w", err)
 	}
+	logPipe := os.NewFile(uintptr(logFd), "logpipe")
 
-	logrus.SetOutput(os.NewFile(uintptr(logFD), "logpipe"))
+	logrus.SetOutput(logPipe)
 	logrus.SetFormatter(new(logrus.JSONFormatter))
 	logrus.Debug("child process in init()")
 
 	// Only init processes have FIFOFD.
-	fifofd := -1
+	var fifoFile *os.File
 	envInitType := os.Getenv("_LIBCONTAINER_INITTYPE")
 	it := initType(envInitType)
 	if it == initStandard {
-		envFifoFd := os.Getenv("_LIBCONTAINER_FIFOFD")
-		if fifofd, err = strconv.Atoi(envFifoFd); err != nil {
+		fifoFd, err := strconv.Atoi(os.Getenv("_LIBCONTAINER_FIFOFD"))
+		if err != nil {
 			return fmt.Errorf("unable to convert _LIBCONTAINER_FIFOFD: %w", err)
 		}
+		fifoFile = os.NewFile(uintptr(fifoFd), "initfifo")
 	}
 
 	var consoleSocket *os.File
@@ -212,10 +214,10 @@ func startInitialization() (retErr error) {
 	}
 
 	// If init succeeds, it will not return, hence none of the defers will be called.
-	return containerInit(it, &config, syncPipe, consoleSocket, pidfdSocket, fifofd, logFD, dmzExe)
+	return containerInit(it, &config, syncPipe, consoleSocket, pidfdSocket, fifoFile, logPipe, dmzExe)
 }
 
-func containerInit(t initType, config *initConfig, pipe *syncSocket, consoleSocket, pidfdSocket *os.File, fifoFd, logFd int, dmzExe *os.File) error {
+func containerInit(t initType, config *initConfig, pipe *syncSocket, consoleSocket, pidfdSocket, fifoFile, logPipe, dmzExe *os.File) error {
 	if err := populateProcessEnvironment(config.Env); err != nil {
 		return err
 	}
@@ -227,7 +229,7 @@ func containerInit(t initType, config *initConfig, pipe *syncSocket, consoleSock
 			consoleSocket: consoleSocket,
 			pidfdSocket:   pidfdSocket,
 			config:        config,
-			logFd:         logFd,
+			logPipe:       logPipe,
 			dmzExe:        dmzExe,
 		}
 		return i.Init()
@@ -238,8 +240,8 @@ func containerInit(t initType, config *initConfig, pipe *syncSocket, consoleSock
 			pidfdSocket:   pidfdSocket,
 			parentPid:     unix.Getppid(),
 			config:        config,
-			fifoFd:        fifoFd,
-			logFd:         logFd,
+			fifoFile:      fifoFile,
+			logPipe:       logPipe,
 			dmzExe:        dmzExe,
 		}
 		return i.Init()

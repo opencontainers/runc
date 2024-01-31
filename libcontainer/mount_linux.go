@@ -113,12 +113,12 @@ func mountViaFds(source string, srcFile *mountSource, target, dstFd, fstype stri
 		// mount(2), we need to get a safe handle to /proc/thread-self. This
 		// isn't needed for move_mount(2) because in that case the path is just
 		// a dummy string used for error info.
-		fdStr := strconv.Itoa(int(srcFile.file.Fd()))
+		srcFileFd := srcFile.file.Fd()
 		if isMoveMount {
-			src = "/proc/self/fd/" + fdStr
+			src = "/proc/self/fd/" + strconv.Itoa(int(srcFileFd))
 		} else {
 			var closer utils.ProcThreadSelfCloser
-			src, closer = utils.ProcThreadSelf("fd/" + fdStr)
+			src, closer = utils.ProcThreadSelfFd(srcFileFd)
 			defer closer()
 		}
 	}

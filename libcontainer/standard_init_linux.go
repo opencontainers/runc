@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"strconv"
 
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/opencontainers/selinux/go-selinux"
@@ -25,8 +24,8 @@ type linuxStandardInit struct {
 	consoleSocket *os.File
 	pidfdSocket   *os.File
 	parentPid     int
-	fifoFd        int
-	logFd         int
+	fifoFile      *os.File
+	logPipe       *os.File
 	dmzExe        *os.File
 	config        *initConfig
 }
@@ -244,11 +243,11 @@ func (l *linuxStandardInit) Init() error {
 
 	// Close the log pipe fd so the parent's ForwardLogs can exit.
 	logrus.Debugf("init: about to wait on exec fifo")
-	if err := unix.Close(l.logFd); err != nil {
-		return &os.PathError{Op: "close log pipe", Path: "fd " + strconv.Itoa(l.logFd), Err: err}
+	if err := l.logPipe.Close(); err != nil {
+		return fmt.Errorf("close log pipe: %w", err)
 	}
 
-	fifoPath, closer := utils.ProcThreadSelf("fd/" + strconv.Itoa(l.fifoFd))
+	fifoPath, closer := utils.ProcThreadSelfFd(l.fifoFile.Fd())
 	defer closer()
 
 	// Wait for the FIFO to be opened on the other side before exec-ing the
@@ -269,7 +268,7 @@ func (l *linuxStandardInit) Init() error {
 	// N.B. the core issue itself (passing dirfds to the host filesystem) has
 	// since been resolved.
 	// https://github.com/torvalds/linux/blob/v4.9/fs/exec.c#L1290-L1318
-	_ = unix.Close(l.fifoFd)
+	_ = l.fifoFile.Close()
 
 	s := l.config.SpecState
 	s.Pid = unix.Getpid()
