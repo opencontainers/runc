@@ -57,6 +57,27 @@ func WriteFile(dir, file, data string) error {
 	return nil
 }
 
+// To support write multiple item into one cgroup file like:
+// {"io.max": "252:1 riops=1000 wiops=1000 \n 252:2 riops=2000 wiops=2000"}
+func WriteFileMultipleLines(dir, file, data string) error {
+	fd, err := OpenFile(dir, file, unix.O_WRONLY)
+	if err != nil {
+		return err
+	}
+	defer fd.Close()
+	lines := strings.Split(data, "\n")
+	for _, line := range lines {
+		if strings.TrimSuffix(line, " ") == "" {
+			continue
+		}
+		if _, err := fd.WriteString(line); err != nil {
+			// Having data in the error message helps in debugging.
+			return fmt.Errorf("failed to write %q: %w", line, err)
+		}
+	}
+	return nil
+}
+
 const (
 	cgroupfsDir    = "/sys/fs/cgroup"
 	cgroupfsPrefix = cgroupfsDir + "/"

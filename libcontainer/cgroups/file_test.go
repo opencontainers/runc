@@ -73,3 +73,22 @@ func TestOpenat2(t *testing.T) {
 		fd.Close()
 	}
 }
+
+func TestWriteFileMultipleLines(t *testing.T) {
+	TestMode = true
+	defer func() { TestMode = false }()
+
+	tmpDir := t.TempDir()
+	testcases := []string{
+		"252:1 foo=bar  ",
+		"252:2 foo=bar \n wrong_data \n wrong value",
+		"252:1 foo=bar boo=far\n252:2 nospace=0 \n        default 11111\n",
+		"\n\n\n\n\n\n\n\n",
+	}
+
+	for _, val := range testcases {
+		if err := WriteFileMultipleLines(tmpDir, "file", val); err != nil {
+			t.Errorf("%v", err)
+		}
+	}
+}
