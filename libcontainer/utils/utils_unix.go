@@ -120,17 +120,22 @@ func runtime_IsPollDescriptor(fd uintptr) bool //nolint:revive
 
 // UnsafeCloseFrom closes all file descriptors greater or equal to minFd in the
 // current process, except for those critical to Go's runtime (such as the
-// netpoll management descriptors).
+// netpoll management descriptors), and the explicitly specified ones.
 //
 // NOTE: That this function is incredibly dangerous to use in most Go code, as
 // closing file descriptors from underneath *os.File handles can lead to very
 // bad behaviour (the closed file descriptor can be re-used and then any
 // *os.File operations would apply to the wrong file). This function is only
 // intended to be called from the last stage of runc init.
-func UnsafeCloseFrom(minFd int) error {
+func UnsafeCloseFrom(minFd int, except ...int) error {
 	// We cannot use close_range(2) even if it is available, because we must
 	// not close some file descriptors.
 	return fdRangeFrom(minFd, func(fd int) {
+		for _, ex := range except {
+			if fd == ex {
+				return
+			}
+		}
 		if runtime_IsPollDescriptor(uintptr(fd)) {
 			// These are the Go runtimes internal netpoll file descriptors.
 			// These file descriptors are operated on deep in the Go scheduler,
