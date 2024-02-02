@@ -451,8 +451,14 @@ function requires() {
 			;;
 		cgroups_swap)
 			init_cgroup_paths
-			if [ -v CGROUP_V1 ] && [ ! -e "${CGROUP_MEMORY_BASE_PATH}/memory.memsw.limit_in_bytes" ]; then
-				skip_me=1
+			if [ -v CGROUP_V1 ]; then
+				if [ ! -e "${CGROUP_MEMORY_BASE_PATH}/memory.memsw.limit_in_bytes" ]; then
+					skip_me=1
+				fi
+			elif [ -v CGROUP_V2 ]; then
+				if [ -z "$(find "$CGROUP_BASE_PATH" -maxdepth 2 -type f -name memory.swap.max -print -quit)" ]; then
+					skip_me=1
+				fi
 			fi
 			;;
 		cgroups_cpu_idle)
