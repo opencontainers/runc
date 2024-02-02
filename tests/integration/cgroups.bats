@@ -187,6 +187,38 @@ function setup() {
 	[[ "$weights" == *"$major:$minor 444"* ]]
 }
 
+@test "runc run (per-device multiple iops via unified)" {
+	requires root cgroups_v2
+
+	dd if=/dev/zero of=backing1.img bs=4096 count=1
+	dev1=$(losetup --find --show backing1.img) || skip "unable to create a loop device"
+
+	# Second device.
+	dd if=/dev/zero of=backing2.img bs=4096 count=1
+	dev2=$(losetup --find --show backing2.img) || skip "unable to create a loop device"
+
+	set_cgroups_path
+
+	IFS=$' \t:' read -r major1 minor1 <<<"$(lsblk -nd -o MAJ:MIN "$dev1")"
+	IFS=$' \t:' read -r major2 minor2 <<<"$(lsblk -nd -o MAJ:MIN "$dev2")"
+	update_config '	  .linux.devices += [
+				{path: "'"$dev1"'", type: "b", major: '"$major1"', minor: '"$minor1"'},
+				{path: "'"$dev2"'", type: "b", major: '"$major2"', minor: '"$minor2"'}
+			   ]
+			| .linux.resources.unified |=
+				{"io.max": "'"$major1"':'"$minor1"' riops=333 wiops=444\n'"$major2"':'"$minor2"' riops=555 wiops=666\n"}'
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_dev_weight
+	[ "$status" -eq 0 ]
+
+	# The loop devices are no longer needed.
+	losetup -d "$dev1"
+	losetup -d "$dev2"
+
+	weights=$(get_cgroup_value "io.max")
+	grep "^$major1:$minor1 .* riops=333 wiops=444$" <<<"$weights"
+	grep "^$major2:$minor2 .* riops=555 wiops=666$" <<<"$weights"
+}
+
 @test "runc run (cpu.idle)" {
 	requires cgroups_cpu_idle
 	[ $EUID -ne 0 ] && requires rootless_cgroup
