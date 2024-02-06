@@ -1,0 +1,154 @@
+{
+  "image": "mcr.microsoft.com/devcontainers/universal:2",
+  "features": {
+  }
+}Client:
+ Context:    default
+ Debug Mode: false
+
+Server:
+ Containers: 78
+  Running: 1
+  Paused: 0
+  Stopped: 77
+ Images: 3
+ Server Version: 20.10.7
+ Storage Driver: overlay2
+  Backing Filesystem: xfs
+  Supports d_type: true
+  Native Overlay Diff: true
+  userxattr: false
+ Logging Driver: journald
+ Cgroup Driver: systemd
+ Cgroup Version: 2
+ Plugins:
+  Volume: local
+  Network: bridge host ipvlan macvlan null overlay
+  Log: awslogs fluentd gcplogs gelf journald json-file local logentries splunk syslog
+ Swarm: inactive
+ Runtimes: io.containerd.runc.v2 io.containerd.runtime.v1.linux runc
+ Default Runtime: runc
+ Init Binary: /usr/libexec/docker/docker-init
+ containerd version: 
+ runc version: 4fc6f22
+ init version: 
+ Security Options:
+  seccomp
+   Profile: default
+  selinux
+  cgroupns
+ Kernel Version: 5.14.0-0.rc2.20210721git8cae8cd89f05.24.fc35.x86_64
+ Operating System: Fedora Linux 35 (Server Edition Prerelease)
+ OSType: linux
+ Architecture: x86_64
+ CPUs: 12
+ Total Memory: 7.438GiB
+ Name: fedora
+ ID: GQBM:HCKW:MKVM:Y5RK:HXPA:ZCCY:EXPA:FQBS:S4ZN:HRL5:5PSZ:KK7B
+ Docker Root Dir: /var/lib/docker
+ Debug Mode: false
+ Registry: https://index.docker.io/v1/
+ Labels:
+ Experimental: false
+ Insecure Registries:
+  127.0.0.0/8
+ Live Restore Enabled: true
+Client:
+ Version:           20.10.7
+ API version:       1.41
+ Go version:        go1.16.6
+ Git commit:        f0df350
+ Built:             Mon Jul 26 16:34:29 2021
+ OS/Arch:           linux/amd64
+ Context:           default
+ Experimental:      true
+
+Server:
+ Engine:
+  Version:          20.10.7
+  API version:      1.41 (minimum version 1.12)
+  Go version:       go1.16.6
+  Git commit:       b0f5bc3
+  Built:            Thu Jul 22 00:00:00 2021
+  OS/Arch:          linux/amd64
+  Experimental:     false
+ containerd:
+  Version:          1.5.3
+  GitCommit:        
+ runc:
+  Version:          1.0.1
+  GitCommit:        4fc6f22
+ docker-init:
+  Version:          0.19.0
+  GitCommit:        
+$ docker build --security-opt seccomp=~/profile2.json -f test.dkr  .
+Sending build context to Docker daemon  2.048kB
+Error response from daemon: The daemon on this platform does not support setting security options on build$ cat test.dkr 
+FROM registry.fedoraproject.org/fedora:rawhide
+
+RUN curl google.com
+
+$ docker build -f test.dkr  .
+Sending build context to Docker daemon  2.048kB
+Step 1/2 : FROM registry.fedoraproject.org/fedora:rawhide
+ ---> 887689ee223e
+Step 2/2 : RUN curl google.com
+ ---> Running in a370ae01f27e
+curl: (6) getaddrinfo() thread failed to start
+The command '/bin/sh -c curl google.com' returned a non-zero code: 6clone3({flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID, child_tid=0x7f098bf8a910, parent_tid=0x7f098bf8a910, exit_signal=0, stack=0x7f098b78a000, stack_size=0x7ffe00, tls=0x7f098bf8a640}, 88) = -1 ENOSYS (Function not implemented)$ wget https://raw.githubusercontent.com/docker/labs/master/security/seccomp/seccomp-profiles/default.json -O profile.json
+$ docker run --security-opt seccomp=profile2.json -it registry.fedoraproject.org/fedora:rawhide  curl google.com
+<HTML><HEAD><meta http-equiv="content-type" content="text/html;charset=utf-8">
+..snip...clone3({flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID, child_tid=0x7f000ec6d910, parent_tid=0x7f000ec6d910, exit_signal=0, stack=0x7f000e46d000, stack_size=0x7ffe00, tls=0x7f000ec6d640}, 88) = -1 EPERM (Operation not permitted)$ docker run -it registry.fedoraproject.org/fedora:rawhide  curl google.com
+curl: (6) getaddrinfo() thread failed to startClient:
+ Context:    default
+ Debug Mode: false
+
+Server:
+ Containers: 78
+  Running: 1
+  Paused: 0
+  Stopped: 77
+ Images: 3
+ Server Version: 20.10.7
+ Storage Driver: overlay2
+  Backing Filesystem: xfs
+  Supports d_type: true
+  Native Overlay Diff: true
+  userxattr: false
+ Logging Driver: journald
+ Cgroup Driver: systemd
+ Cgroup Version: 2
+ Plugins:
+  Volume: local
+  Network: bridge host ipvlan macvlan null overlay
+  Log: awslogs fluentd gcplogs gelf journald json-file local logentries splunk syslog
+ Swarm: inactive
+ Runtimes: io.containerd.runc.v2 io.containerd.runtime.v1.linux runc
+ Default Runtime: runc
+ Init Binary: /usr/libexec/docker/docker-init
+ containerd version: 
+ runc version: 4fc6f22
+ init version: 
+ Security Options:
+  seccomp
+   Profile: default
+  selinux
+  cgroupns
+ Kernel Version: 5.14.0-0.rc2.20210721git8cae8cd89f05.24.fc35.x86_64
+ Operating System: Fedora Linux 35 (Server Edition Prerelease)
+ OSType: linux
+ Architecture: x86_64
+ CPUs: 12
+ Total Memory: 7.438GiB
+ Name: fedora
+ ID: GQBM:HCKW:MKVM:Y5RK:HXPA:ZCCY:EXPA:FQBS:S4ZN:HRL5:5PSZ:KK7B
+ Docker Root Dir: /var/lib/docker
+ Debug Mode: false
+ Registry: https://index.docker.io/v1/
+ Labels:
+ Experimental: false
+ Insecure Registries:
+  127.0.0.0/8
+ Live Restore Enabled: true
+$ docker run -it registry.fedoraproject.org/fedora:rawhide  curl google.com
+curl: (6) getaddrinfo() thread failed to start
