@@ -32,6 +32,12 @@ function bail() {
 tmp_gpgdir="$(mktemp -d --tmpdir "$project-validate-tmpkeyring.XXXXXX")"
 trap 'rm -r "$tmp_gpgdir"' EXIT
 
+function gpg_user() {
+	local user=$1
+	shift
+	gpg --homedir="$tmp_gpgdir" --no-default-keyring --keyring="$user.keyring" "$@"
+}
+
 # Get the set of MAINTAINERS.
 readarray -t maintainers < <(sed -E 's|.* <.*> \(@?(.*)\)$|\1|' <"$root/MAINTAINERS")
 echo "------------------------------------------------------------"
@@ -41,8 +47,7 @@ echo "------------------------------------------------------------"
 
 # Create a dummy gpg keyring from the set of MAINTAINERS.
 while IFS="" read -r username || [ -n "$username" ]; do
-	curl -sSL "https://github.com/$username.gpg" |
-		gpg --no-default-keyring --keyring="$tmp_gpgdir/$username.keyring" --import
+	curl -sSL "https://github.com/$username.gpg" | gpg_user "$username" --import
 done < <(printf '%s\n' "${maintainers[@]}")
 
 # Make sure all of the keys in the keyring have a github=... comment.
@@ -65,8 +70,7 @@ echo "------------------------------------------------------------"
 echo "$project release managers:"
 sed -En "s|^Comment:.* github=(\w+).*| * \1|p" <"$root/$project.keyring" | sort -u
 echo "------------------------------------------------------------"
-gpg --no-default-keyring --keyring="$tmp_gpgdir/keyring" \
-	--import --import-options=show-only <"$root/$project.keyring"
+gpg --show-keys <"$root/$project.keyring"
 echo "------------------------------------------------------------"
 
 # Check that each entry in the kering is actually a maintainer's key.
@@ -94,12 +98,10 @@ while IFS="" read -d $'\0' -r block || [ -n "$block" ]; do
 	# fingerprint. See <https://github.com/gpg/gnupg/blob/master/doc/DETAILS>
 	# for more details.
 	while IFS="" read -r key || [ -n "$key" ]; do
-		gpg --no-default-keyring --keyring="$tmp_gpgdir/$username.keyring" \
-			--list-keys --with-colons | grep "$fprfield:::::::::$key:" >/dev/null ||
+		gpg_user "$username" --list-keys --with-colons | grep "$fprfield:::::::::$key:" >/dev/null ||
 			bail "(Sub?)Key $key in $project.keyring is NOT actually one of $username's keys!"
 		log "Successfully verified $username's (sub?)key $key is legitimate."
-	done < <(gpg --no-default-keyring \
-		--import --import-options=show-only --with-colons <<<"$block" |
+	done < <(gpg --show-keys --with-colons <<<"$block" |
 		grep "^$fprfield:" | cut -d: -f10)
 done < <(awk <"$root/$project.keyring" '
 	/^-----BEGIN PGP PUBLIC KEY BLOCK-----$/ { in_block=1 }
