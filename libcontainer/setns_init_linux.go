@@ -129,6 +129,11 @@ func (l *linuxSetnsInit) Init() error {
 		}
 	}
 
+	// Close the pipe to signal that we have completed our init.
+	// Please keep this because we don't want to get a pipe write error if
+	// there is an error from `execve` after all fds closed.
+	_ = l.pipe.Close()
+
 	// Close the log pipe fd so the parent's ForwardLogs can exit.
 	logrus.Debugf("setns_init: about to exec")
 	if err := l.logPipe.Close(); err != nil {
