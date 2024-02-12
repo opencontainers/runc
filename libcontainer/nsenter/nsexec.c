@@ -4,7 +4,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <grp.h>
-#include <limits.h>
 #include <sched.h>
 #include <setjmp.h>
 #include <signal.h>
