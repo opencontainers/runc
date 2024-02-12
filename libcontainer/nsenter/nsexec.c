@@ -28,7 +28,6 @@
 #include <linux/types.h>
 
 #include "getenv.h"
-#include "ipc.h"
 #include "log.h"
 /* Get all of the CLONE_NEW* flags. */
 #include "namespace.h"
