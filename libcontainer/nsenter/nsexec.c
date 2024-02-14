@@ -4,7 +4,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <grp.h>
-#include <limits.h>
 #include <sched.h>
 #include <setjmp.h>
 #include <signal.h>
@@ -28,7 +27,6 @@
 #include <linux/types.h>
 
 #include "getenv.h"
-#include "ipc.h"
 #include "log.h"
 /* Get all of the CLONE_NEW* flags. */
 #include "namespace.h"
