@@ -25,6 +25,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
+      checks: write # to allow the action to annotate code in the PR.
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
