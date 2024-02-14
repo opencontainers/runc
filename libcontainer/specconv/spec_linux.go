@@ -791,7 +791,7 @@ func CreateCgroupConfig(opts *CreateOpts, defaultDevs []*devices.Device) (*confi
 				if r.Memory.Swap != nil {
 					c.Resources.MemorySwap = *r.Memory.Swap
 				}
-				if r.Memory.Kernel != nil || r.Memory.KernelTCP != nil {
+				if r.Memory.Kernel != nil || r.Memory.KernelTCP != nil { //nolint:staticcheck // Ignore SA1019. Need to keep deprecated package for compatibility.
 					logrus.Warn("Kernel memory settings are ignored and will be removed")
 				}
 				if r.Memory.Swappiness != nil {
@@ -1207,7 +1207,7 @@ func SetupSeccomp(config *specs.LinuxSeccomp) (*configs.Seccomp, error) {
 func createHooks(rspec *specs.Spec, config *configs.Config) {
 	config.Hooks = configs.Hooks{}
 	if rspec.Hooks != nil {
-		for _, h := range rspec.Hooks.Prestart {
+		for _, h := range rspec.Hooks.Prestart { //nolint:staticcheck // Ignore SA1019. Need to keep deprecated package for compatibility.
 			cmd := createCommandHook(h)
 			config.Hooks[configs.Prestart] = append(config.Hooks[configs.Prestart], configs.NewCommandHook(cmd))
 		}
