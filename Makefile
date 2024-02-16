@@ -221,7 +221,7 @@ shfmt:
 localshfmt:
 	shfmt -d -w .
 
-.PHONY: venodr
+.PHONY: vendor
 vendor:
 	$(GO) mod tidy
 	$(GO) mod vendor
