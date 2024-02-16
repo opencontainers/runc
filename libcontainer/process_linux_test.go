@@ -4,14 +4,14 @@ import (
 	"io/fs"
 	"testing"
 	"testing/fstest"
-
-	"github.com/opencontainers/runc/libcontainer/system/kernelparam"
 )
 
 func TestIsolatedCPUAffinityTransition(t *testing.T) {
+	const isolatedCPUAffinityTransitionParam = "runc.exec.isolated-cpu-affinity-transition"
+
 	noAffinity := -1
-	temporaryTransition := kernelparam.IsolatedCPUAffinityTransition + "=" + kernelparam.TemporaryIsolatedCPUAffinityTransition
-	definitiveTransition := kernelparam.IsolatedCPUAffinityTransition + "=" + kernelparam.DefinitiveIsolatedCPUAffinityTransition
+	temporaryTransition := isolatedCPUAffinityTransitionParam + "=temporary"
+	definitiveTransition := isolatedCPUAffinityTransitionParam + "=definitive"
 
 	tests := []struct {
 		name                         string

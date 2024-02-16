@@ -8,38 +8,38 @@ import (
 func TestLookupKernelBootParameters(t *testing.T) {
 	for _, test := range []struct {
 		cmdline                  string
-		lookupParameters         []KernelBootParam
-		expectedKernelParameters map[KernelBootParam]string
+		lookupParameters         []string
+		expectedKernelParameters map[string]string
 	}{
 		{
 			cmdline:          "root=/dev/sda1 ro console=ttyS0 console=tty0",
-			lookupParameters: []KernelBootParam{"root"},
-			expectedKernelParameters: map[KernelBootParam]string{
+			lookupParameters: []string{"root"},
+			expectedKernelParameters: map[string]string{
 				"root": "/dev/sda1",
 			},
 		},
 		{
 			cmdline:          "ro runc.kernel_parameter=a_value console=ttyS0 console=tty0",
-			lookupParameters: []KernelBootParam{"runc.kernel_parameter"},
-			expectedKernelParameters: map[KernelBootParam]string{
+			lookupParameters: []string{"runc.kernel_parameter"},
+			expectedKernelParameters: map[string]string{
 				"runc.kernel_parameter": "a_value",
 			},
 		},
 		{
 			cmdline: "ro runc.kernel_parameter_a=value_a  runc.kernel_parameter_b=value_a:value_b",
-			lookupParameters: []KernelBootParam{
+			lookupParameters: []string{
 				"runc.kernel_parameter_a",
 				"runc.kernel_parameter_b",
 			},
-			expectedKernelParameters: map[KernelBootParam]string{
+			expectedKernelParameters: map[string]string{
 				"runc.kernel_parameter_a": "value_a",
 				"runc.kernel_parameter_b": "value_a:value_b",
 			},
 		},
 		{
 			cmdline:                  "root=/dev/sda1 ro console=ttyS0 console=tty0",
-			lookupParameters:         []KernelBootParam{"runc.kernel_parameter_a"},
-			expectedKernelParameters: map[KernelBootParam]string{},
+			lookupParameters:         []string{"runc.kernel_parameter_a"},
+			expectedKernelParameters: map[string]string{},
 		},
 	} {
 		params, err := LookupKernelBootParameters(fstest.MapFS{

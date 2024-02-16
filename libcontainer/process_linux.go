@@ -149,9 +149,9 @@ func (p *setnsProcess) start() (retErr error) {
 	resetCPUAffinity := true
 
 	if len(p.manager.GetPaths()) > 0 {
-		// get the target container cgroup
+		// Get the target container cgroup.
 		if cg, err := p.manager.GetCgroups(); err != nil {
-			// close the pipe to not be blocked in the parent
+			// Close the pipe to not be blocked in the parent.
 			p.comm.closeChild()
 			return fmt.Errorf("getting container cgroups: %w", err)
 		} else if cg.CpusetCpus != "" {
@@ -162,7 +162,7 @@ func (p *setnsProcess) start() (retErr error) {
 				cg.CpusetCpus,
 			)
 			if err != nil {
-				// close the pipe to not be blocked in the parent
+				// Close the pipe to not be blocked in the parent.
 				p.comm.closeChild()
 				return fmt.Errorf("getting CPU affinity: %w", err)
 			} else if definitive {
@@ -179,7 +179,7 @@ func (p *setnsProcess) start() (retErr error) {
 		err = startCommandWithCPUAffinity(p.cmd, cpuAffinity)
 	}
 
-	// close the write-side of the pipes (controlled by child)
+	// Close the write-side of the pipes (controlled by child).
 	p.comm.closeChild()
 	if err != nil {
 		return fmt.Errorf("error starting setns process: %w", err)
@@ -1047,10 +1047,15 @@ func initWaiter(r io.Reader) chan error {
 
 // isolatedCPUAffinityTransition returns a CPU affinity if necessary based on heuristics.
 func isolatedCPUAffinityTransition(rootFS fs.FS, cpusetList string) (int, bool, error) {
+	const (
+		isolatedCPUAffinityTransitionParam = "runc.exec.isolated-cpu-affinity-transition"
+		nohzFullParam                      = "nohz_full"
+	)
+
 	kernelParams, err := kernelparam.LookupKernelBootParameters(
 		rootFS,
-		kernelparam.IsolatedCPUAffinityTransition,
-		kernelparam.NohzFull,
+		isolatedCPUAffinityTransitionParam,
+		nohzFullParam,
 	)
 	if err != nil {
 		// /proc/cmdline does not exist or isn't readable, this is not fatal.
@@ -1062,16 +1067,16 @@ func isolatedCPUAffinityTransition(rootFS fs.FS, cpusetList string) (int, bool, 
 
 	definitive := false
 
-	switch kernelParams[kernelparam.IsolatedCPUAffinityTransition] {
-	case kernelparam.TemporaryIsolatedCPUAffinityTransition:
-	case kernelparam.DefinitiveIsolatedCPUAffinityTransition:
+	switch kernelParams[isolatedCPUAffinityTransitionParam] {
+	case "temporary":
+	case "definitive":
 		definitive = true
 	default:
-		transition := kernelParams[kernelparam.IsolatedCPUAffinityTransition]
+		transition := kernelParams[isolatedCPUAffinityTransitionParam]
 		if transition != "" {
 			return -1, false, fmt.Errorf(
 				"unknown transition value for kernel boot parameter %s: %s",
-				kernelparam.IsolatedCPUAffinityTransition, transition,
+				isolatedCPUAffinityTransitionParam, transition,
 			)
 		}
 		return -1, false, nil
@@ -1081,7 +1086,7 @@ func isolatedCPUAffinityTransition(rootFS fs.FS, cpusetList string) (int, bool, 
 	// present, get the value from sysfs, to cover the case where
 	// CONFIG_NO_HZ_FULL_ALL is set, it also makes the integration
 	// tests not dependent on /sys/devices/system/cpu/nohz_full.
-	isolatedList := kernelParams[kernelparam.NohzFull]
+	isolatedList := kernelParams[nohzFullParam]
 	if isolatedList == "" {
 		// Get the isolated CPU list, the error is not checked here because
 		// no matter what the error is, it returns without error the same way
@@ -1130,30 +1135,30 @@ func getEligibleCPU(cpusetList, isolatedList string) (int, error) {
 	eligibleCore := -1
 	isolatedCores := 0
 
-	// start from cpu core #0
+	// Start from cpu core #0.
 	currentCore := 0
-	// handle mixed sets
+	// Handle mixed sets.
 	mixed := false
 
 	// CPU core start from the first slice element and bits are read
 	// from the least to the most significant bit.
 	for byteRange := 0; byteRange < len(cpusetBits); byteRange++ {
 		if byteRange >= len(isolatedBits) {
-			// no more isolated cores
+			// No more isolated cores.
 			break
 		}
 		for bit := 0; bit < 8; bit++ {
 			if cpusetBits[byteRange]&(1<<bit) != 0 {
-				// mark the first core of the cgroup cpuset as eligible
+				// Mark the first core of the cgroup cpuset as eligible.
 				if eligibleCore < 0 {
 					eligibleCore = currentCore
 				}
 
-				// isolated cores count
+				// Isolated cores count.
 				if isolatedBits[byteRange]&(1<<bit) != 0 {
 					isolatedCores++
 				} else if !mixed {
-					// not an isolated core, mark the current core as eligible once
+					// Not an isolated core, mark the current core as eligible once.
 					mixed = true
 					eligibleCore = currentCore
 				}
@@ -1165,7 +1170,7 @@ func getEligibleCPU(cpusetList, isolatedList string) (int, error) {
 		}
 	}
 
-	// we have an eligible CPU if there is at least one isolated CPU in the cpuset
+	// We have an eligible CPU if there is at least one isolated CPU in the cpuset.
 	if isolatedCores == 0 {
 		return -1, nil
 	}
@@ -1178,17 +1183,17 @@ func startCommandWithCPUAffinity(cmd *exec.Cmd, cpuAffinity int) error {
 	errCh := make(chan error)
 	defer close(errCh)
 
-	// use a goroutine to dedicate an OS thread
+	// Use a goroutine to dedicate an OS thread.
 	go func() {
 		cpuSet := new(unix.CPUSet)
 		cpuSet.Zero()
 		cpuSet.Set(cpuAffinity)
 
-		// don't call runtime.UnlockOSThread to terminate the OS thread
-		// when goroutine exits
+		// Don't call runtime.UnlockOSThread to terminate the OS thread
+		// when goroutine exits.
 		runtime.LockOSThread()
 
-		// command inherits the CPU affinity
+		// Command inherits the CPU affinity.
 		if err := unix.SchedSetaffinity(unix.Gettid(), cpuSet); err != nil {
 			errCh <- fmt.Errorf("setting os thread CPU affinity: %w", err)
 			return

@@ -271,15 +271,15 @@ func (m *Manager) GetEffectiveCPUs() string {
 }
 
 func GetEffectiveCPUs(cpusetPath string, cgroups *configs.Cgroup) string {
-	// fast path
+	// Fast path.
 	if cgroups.CpusetCpus != "" {
 		return cgroups.CpusetCpus
 	} else if !strings.HasPrefix(cpusetPath, defaultCgroupRoot) {
 		return ""
 	}
 
-	// iterates until it goes to the cgroup root path
-	for path := cpusetPath; path != defaultCgroupRoot; path = filepath.Dir(path) {
+	// Iterates until it goes to the cgroup root path.
+	for path := filepath.Clean(cpusetPath); path != defaultCgroupRoot; path = filepath.Dir(path) {
 		cpus, err := fscommon.GetCgroupParamString(path, "cpuset.effective_cpus")
 		if err == nil {
 			return cpus
