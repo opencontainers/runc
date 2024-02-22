@@ -24,7 +24,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-20.04, ubuntu-22.04]
-        go-version: [1.20.x, 1.21.x]
+        go-version: [1.20.x, 1.21.x, tip]
         rootless: ["rootless", ""]
         race: ["-race", ""]
         criu: ["", "criu-dev"]
@@ -71,9 +71,20 @@ jobs:
         rm -rf ~/criu
 
     - name: install go ${{ matrix.go-version }}
+      if: matrix.go-version != 'tip'
       uses: actions/setup-go@v5
       with:
         go-version: ${{ matrix.go-version }}
+
+    - name: install go tip from sources
+      if: matrix.go-version == 'tip'
+      working-directory: ${{ github.workspace }}
+      run: |
+        git clone https://go.googlesource.com/go $HOME/gotip
+        cd $HOME/gotip/src
+        ./make.bash
+        echo "GOROOT=$HOME/gotip" >> $GITHUB_ENV
+        echo "$HOME/gotip/bin:$PATH" >> $GITHUB_PATH
 
     - name: build
       env:
