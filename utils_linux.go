@@ -67,6 +67,11 @@ func newProcess(p specs.Process) (*libcontainer.Process, error) {
 		lp.Scheduler = &s
 	}
 
+	if p.IOPriority != nil {
+		ioPriority := *p.IOPriority
+		lp.IOPriority = &ioPriority
+	}
+
 	if p.Capabilities != nil {
 		lp.Capabilities = &configs.Capabilities{}
 		lp.Capabilities.Bounding = p.Capabilities.Bounding

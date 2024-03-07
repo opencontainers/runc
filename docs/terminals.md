@@ -58,7 +58,7 @@ you use `runc` directly in something like a `systemd` unit file. To disable
 this `LISTEN_FDS`-style passing just unset `LISTEN_FDS`.
 
 **Be very careful when passing file descriptors to a container process.** Due
-to some Linux kernel (mis)features, a container with access to certain types of
+to some Linux kernel misfeatures, a container with access to certain types of
 file descriptors (such as `O_PATH` descriptors) outside of the container's root
 file system can use these to break out of the container's pivoted mount
 namespace. [This has resulted in CVEs in the past.][CVE-2016-9962]
