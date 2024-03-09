@@ -46,6 +46,7 @@ test_host_pidns_kill() {
 		# kills the container; see "kill KILL [host pidns + init gone]"
 		# below).
 		kill -9 "$init_pid"
+		wait_for_container 10 1 test_busybox stopped
 	fi
 
 	# Get the list of all container processes.
@@ -58,11 +59,16 @@ test_host_pidns_kill() {
 
 	runc kill test_busybox KILL
 	[ "$status" -eq 0 ]
-	wait_for_container 10 1 test_busybox stopped
 
-	# Make sure all processes are gone.
-	pids=$(cat "$cgpath"/cgroup.procs) || true # OK if cgroup is gone
-	echo "pids: $pids"
+	retry=0
+	while [ $retry -lt 10 ] && [ -n "$pids" ]; do
+		# Make sure all processes are gone.
+		pids=$(cat "$cgpath"/cgroup.procs) || true # OK if cgroup is gone
+		echo "pids: $pids"
+		if [ -n "$pids" ]; then
+			retry=$((retry + 1))
+		fi
+	done
 	[ -z "$pids" ]
 }
 
