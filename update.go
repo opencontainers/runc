@@ -250,7 +250,7 @@ other options are ignored.
 			}{
 				{"memory", r.Memory.Limit},
 				{"memory-swap", r.Memory.Swap},
-				{"kernel-memory", r.Memory.Kernel},
+				{"kernel-memory", r.Memory.Kernel}, //nolint:staticcheck // Ignore SA1019. Need to keep deprecated package for compatibility.
 				{"kernel-memory-tcp", r.Memory.KernelTCP},
 				{"memory-reservation", r.Memory.Reservation},
 			} {
@@ -272,7 +272,7 @@ other options are ignored.
 			r.Pids.Limit = int64(context.Int("pids-limit"))
 		}
 
-		if *r.Memory.Kernel != 0 || *r.Memory.KernelTCP != 0 {
+		if *r.Memory.Kernel != 0 || *r.Memory.KernelTCP != 0 { //nolint:staticcheck // Ignore SA1019. Need to keep deprecated package for compatibility.
 			logrus.Warn("Kernel memory settings are ignored and will be removed")
 		}
 
