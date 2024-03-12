@@ -9,7 +9,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > **NOTE**: runc currently will not work properly when compiled with Go 1.22 or
 > newer. This is due to some unfortunate glibc behaviour that Go 1.22
 > exacerbates in a way that results in containers not being able to start on
-> some systems. [See this issue for more information.][runc-4233].
+> some systems. [See this issue for more information.][runc-4233]
+
+[runc-4233]: https://github.com/opencontainers/runc/issues/4233
+
+### Breaking
+
+ * Several aspects of how mount options work has been adjusted in a way that
+   could theoretically break users that have very strange mount option strings.
+   This was necessary to fix glaring issues in how mount options were being
+   treated. The key changes are:
+
+   - Mount options on bind-mounts that clear a mount flag are now always
+     applied. Previously, if a user requested a bind-mount with only clearing
+     options (such as `rw,exec,dev`) the options would be ignored and the
+     original bind-mount options would be set. Unfortunately this also means
+     that container configurations which specified only clearing mount options
+     will now actually get what they asked for, which could break existing
+     containers (though it seems unlikely that a user who requested a specific
+     mount option would consider it "broken" to get the mount options they
+     asked foruser who requested a specific mount option would consider it
+     "broken" to get the mount options they asked for). This also allows us to
+     silently add locked mount flags the user *did not explicitly request to be
+     cleared* in rootless mode, allowing for easier use of bind-mounts for
+     rootless containers. (#3967)
+
+   - Container configurations using bind-mounts with superblock mount flags
+     (i.e. filesystem-specific mount flags, referred to as "data" in
+     `mount(2)`, as opposed to VFS generic mount flags like `MS_NODEV`) will
+     now return an error. This is because superblock mount flags will also
+     affect the host mount (as the superblock is shared when bind-mounting),
+     which is obviously not acceptable. Previously, these flags were silently
+     ignored so this change simply tells users that runc cannot fulfil their
+     request rather than just ignoring it. (#3990)
+
+   If any of these changes cause problems in real-world workloads, please [open
+   an issue](https://github.com/opencontainers/runc/issues/new/choose) so we
+   can adjust the behaviour to avoid compatibility issues.
+
+### Added
+
+ * runc now supports id-mapped mounts for bind-mounts (with no restrictions on
+   the mapping used for each mount). Other mount types are not currently
+   supported. This feature requires `MOUNT_ATTR_IDMAP` kernel support (Linux
+   5.12 or newer) as well as kernel support for the underlying filesystem used
+   for the bind-mount. See [`mount_setattr(2)`][mount_setattr.2] for a list of
+   supported filesystems and other restrictions.
+
+[mount_setattr.2]: https://man7.org/linux/man-pages/man2/mount_setattr.2.html
 
 ### Deprecated
 
@@ -51,8 +98,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    code (this was due to how s390x does syscall multiplexing). (#3474)
  * Remove tun/tap from the default device rules. (#3468)
  * specconv: avoid mapping "acl" to MS_POSIXACL. (#3739)
-
-[runc-4233]: https://github.com/opencontainers/runc/issues/4233
 
 ## [1.1.8] - 2023-07-20
 
