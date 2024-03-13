@@ -23,7 +23,7 @@ type seccompData struct {
 }
 
 // mockSyscallPayload creates a fake seccomp_data struct with the given data.
-func mockSyscallPayload(t *testing.T, sysno libseccomp.ScmpSyscall, arch nativeArch, args ...uint64) []byte {
+func mockSyscallPayload(t *testing.T, sysno libseccomp.ScmpSyscall, arch linuxAuditArch, args ...uint64) []byte {
 	var buf bytes.Buffer
 
 	data := seccompData{
@@ -150,8 +150,8 @@ func testEnosysStub(t *testing.T, defaultAction configs.Action, arches []string)
 
 		for _, arch := range testArches {
 			type syscallTest struct {
-				syscall  string
 				sysno    libseccomp.ScmpSyscall
+				syscall  string
 				expected uint32
 			}
 
@@ -160,7 +160,7 @@ func testEnosysStub(t *testing.T, defaultAction configs.Action, arches []string)
 				t.Fatalf("unknown libseccomp architecture %q: %v", arch, err)
 			}
 
-			nativeArch, err := archToNative(scmpArch)
+			auditArch, err := scmpArchToAuditArch(scmpArch)
 			if err != nil {
 				t.Fatalf("unknown audit architecture %q: %v", arch, err)
 			}
@@ -179,9 +179,9 @@ func testEnosysStub(t *testing.T, defaultAction configs.Action, arches []string)
 					t.Fatalf("unknown syscall %q on arch %q: %v", syscall, arch, err)
 				}
 				syscallTests = append(syscallTests, syscallTest{
-					syscall,
-					sysno,
-					expected,
+					sysno:    sysno,
+					syscall:  syscall,
+					expected: expected,
 				})
 			}
 
@@ -233,7 +233,7 @@ func testEnosysStub(t *testing.T, defaultAction configs.Action, arches []string)
 					test.expected = retFallthrough
 				}
 
-				payload := mockSyscallPayload(t, test.sysno, nativeArch, 0x1337, 0xF00BA5)
+				payload := mockSyscallPayload(t, test.sysno, auditArch, 0x1337, 0xF00BA5)
 				// NOTE: golang.org/x/net/bpf returns int here rather
 				// than uint32.
 				rawRet, err := filter.Run(payload)
@@ -247,7 +247,7 @@ func testEnosysStub(t *testing.T, defaultAction configs.Action, arches []string)
 						t.Logf("  [%4.1d] %s", idx, insn)
 					}
 					t.Logf("payload: %#v", payload)
-					t.Errorf("filter %s(%d) %q(%d): got %#x, want %#x", arch, nativeArch, test.syscall, test.sysno, ret, test.expected)
+					t.Errorf("filter %s(%d) %q(%d): got %#x, want %#x", arch, auditArch, test.syscall, test.sysno, ret, test.expected)
 				}
 			}
 		}
