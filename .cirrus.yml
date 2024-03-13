@@ -159,17 +159,6 @@ task:
     echo -e "Host localhost\n\tStrictHostKeyChecking no\t\nIdentityFile /root/.ssh/id_ed25519\n" >> /root/.ssh/config
     sed -e "s,PermitRootLogin.*,PermitRootLogin prohibit-password,g" -i /etc/ssh/sshd_config
     systemctl restart sshd
-
-    # Disable the dmz-vs-selinux workaround for distros that have
-    # container-selinux >= 2.224.0 (CentOS 7 does not have it).
-    case $DISTRO in
-    centos-7)
-      # Do nothing.
-      ;;
-    *)
-      echo 'export EXTRA_BUILDTAGS=runc_dmz_selinux_nocompat' >> /root/.bashrc
-      ;;
-    esac
   host_info_script: |
     uname -a
     # -----
