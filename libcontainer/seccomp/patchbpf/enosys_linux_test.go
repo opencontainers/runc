@@ -105,7 +105,15 @@ var testArches = []string{
 	"ppc64le",
 	"s390",
 	"s390x",
+	// Dummy value to indicate a configuration with no architecture specified.
+	"native",
 }
+
+// Used for the "native" architecture.
+var (
+	scmpNativeArch, _ = libseccomp.GetNativeArch()
+	nativeArch        = scmpNativeArch.String()
+)
 
 func testEnosysStub(t *testing.T, defaultAction configs.Action, arches []string) {
 	explicitSyscalls := []string{
@@ -155,6 +163,9 @@ func testEnosysStub(t *testing.T, defaultAction configs.Action, arches []string)
 				expected uint32
 			}
 
+			if arch == "native" {
+				arch = nativeArch
+			}
 			scmpArch, err := libseccomp.GetArchFromString(arch)
 			if err != nil {
 				t.Fatalf("unknown libseccomp architecture %q: %v", arch, err)
@@ -228,8 +239,15 @@ func testEnosysStub(t *testing.T, defaultAction configs.Action, arches []string)
 
 			// Test syscalls in the explicit list.
 			for _, test := range syscallTests {
-				// Override the expected value in the two special cases.
-				if !archSet[arch] || isAllowAction(defaultAction) {
+				// Override the expected value in the two special cases:
+				//  1. If the default action is allow, the filter won't have
+				//     the stub prepended so we expect a fallthrough.
+				//  2. If the executing architecture is not in the architecture
+				//     set, then the architecture is not handled by the stub --
+				//     *except* in the case of the native architecture (which
+				//     is always included in the stub).
+				if isAllowAction(defaultAction) ||
+					(!archSet[arch] && arch != nativeArch) {
 					test.expected = retFallthrough
 				}
 
@@ -263,7 +281,14 @@ var testActions = map[string]configs.Action{
 
 func TestEnosysStub_SingleArch(t *testing.T) {
 	for _, arch := range testArches {
-		arches := []string{arch}
+		var arches []string
+		// "native" indicates a blank architecture field for seccomp, to test
+		// the case where the running architecture was not included in the
+		// architecture. Docker doesn't always set the architecture for some
+		// reason (namely for ppc64le).
+		if arch != "native" {
+			arches = append(arches, arch)
+		}
 		t.Run("arch="+arch, func(t *testing.T) {
 			for name, action := range testActions {
 				t.Run("action="+name, func(t *testing.T) {
@@ -277,7 +302,16 @@ func TestEnosysStub_SingleArch(t *testing.T) {
 func TestEnosysStub_MultiArch(t *testing.T) {
 	for end := 0; end < len(testArches); end++ {
 		for start := 0; start < end; start++ {
-			arches := testArches[start:end]
+			var arches []string
+			for _, arch := range testArches[start:end] {
+				// "native" indicates a blank architecture field for seccomp, to test
+				// the case where the running architecture was not included in the
+				// architecture. Docker doesn't always set the architecture for some
+				// reason (namely for ppc64le).
+				if arch != "native" {
+					arches = append(arches, arch)
+				}
+			}
 			if len(arches) <= 1 {
 				continue
 			}

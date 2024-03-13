@@ -231,16 +231,30 @@ type lastSyscallMap map[linuxAuditArch]map[libseccomp.ScmpArch]libseccomp.ScmpSy
 // representation, but SCMP_ARCH_X32 means we have to track cases where the
 // same architecture has different largest syscalls based on the mode.
 func findLastSyscalls(config *configs.Seccomp) (lastSyscallMap, error) {
-	lastSyscalls := make(lastSyscallMap)
-	// Only loop over architectures which are present in the filter. Any other
-	// architectures will get the libseccomp bad architecture action anyway.
+	scmpArchs := make(map[libseccomp.ScmpArch]struct{})
 	for _, ociArch := range config.Architectures {
 		arch, err := libseccomp.GetArchFromString(ociArch)
 		if err != nil {
 			return nil, fmt.Errorf("unable to validate seccomp architecture: %w", err)
 		}
+		scmpArchs[arch] = struct{}{}
+	}
+	// On architectures like ppc64le, Docker inexplicably doesn't include the
+	// native architecture in the architecture list which results in no
+	// architectures being present in the list at all (rendering the ENOSYS
+	// stub a no-op). So, always include the native architecture.
+	if nativeScmpArch, err := libseccomp.GetNativeArch(); err != nil {
+		return nil, fmt.Errorf("unable to get native arch: %w", err)
+	} else if _, ok := scmpArchs[nativeScmpArch]; !ok {
+		logrus.Debugf("seccomp: adding implied native architecture %v to config set", nativeScmpArch)
+		scmpArchs[nativeScmpArch] = struct{}{}
+	}
+	logrus.Debugf("seccomp: configured architecture set: %s", scmpArchs)
 
-		// Figure out native architecture representation of the architecture.
+	// Only loop over architectures which are present in the filter. Any other
+	// architectures will get the libseccomp bad architecture action anyway.
+	lastSyscalls := make(lastSyscallMap)
+	for arch := range scmpArchs {
 		auditArch, err := scmpArchToAuditArch(arch)
 		if err != nil {
 			return nil, fmt.Errorf("cannot map architecture %v to AUDIT_ARCH_ constant: %w", arch, err)
