@@ -79,7 +79,7 @@ recvtty sd-helper seccompagent fs-idmap memfd-bind pidfd-kill remap-rootfs:
 
 .PHONY: clean
 clean:
-	rm -f runc runc-* libcontainer/dmz/runc-dmz
+	rm -f runc runc-* libcontainer/dmz/binary/runc-dmz
 	rm -f contrib/cmd/recvtty/recvtty
 	rm -f contrib/cmd/sd-helper/sd-helper
 	rm -f contrib/cmd/seccompagent/seccompagent

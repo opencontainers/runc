@@ -68,7 +68,7 @@ make BUILDTAGS=""
 | Build Tag     | Feature                               | Enabled by Default | Dependencies        |
 |---------------|---------------------------------------|--------------------|---------------------|
 | `seccomp`     | Syscall filtering using `libseccomp`. | yes                | `libseccomp`        |
-| `!runc_nodmz` | Reduce memory usage for CVE-2019-5736 protection by using a small C binary, [see `memfd-bind` for more details][contrib-memfd-bind]. `runc_nodmz` disables this feature and causes runc to use a different protection mechanism which will further increases memory usage temporarily during container startup. This feature can also be disabled at runtime by setting the `RUNC_DMZ=legacy` environment variable. | yes ||
+| `!runc_nodmz` | Reduce memory usage for CVE-2019-5736 protection by using a small C binary, [see `memfd-bind` for more details][contrib-memfd-bind]. `runc_nodmz` disables this **experimental feature** and causes runc to use a different protection mechanism which will further increases memory usage temporarily during container startup. To enable this feature you also need to set the `RUNC_DMZ=true` environment variable. | yes ||
 | `runc_dmz_selinux_nocompat` | Disables a SELinux DMZ workaround (new distros should set this). See [dmz README] for details. | no ||
 
 The following build tags were used earlier, but are now obsoleted:

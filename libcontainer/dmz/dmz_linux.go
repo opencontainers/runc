@@ -7,7 +7,9 @@ import (
 	"bytes"
 	"debug/elf"
 	"embed"
+	"fmt"
 	"os"
+	"strconv"
 	"sync"
 
 	"github.com/sirupsen/logrus"
@@ -43,11 +45,19 @@ var (
 // If the runc-dmz binary is not embedded into the runc binary, Binary will
 // return ErrNoDmzBinary as the error.
 func Binary(tmpDir string) (*os.File, error) {
-	// Setting RUNC_DMZ=legacy disables this dmz method.
-	if os.Getenv("RUNC_DMZ") == "legacy" {
-		logrus.Debugf("RUNC_DMZ=legacy set -- switching back to classic /proc/self/exe cloning")
+	// Only RUNC_DMZ=true enables runc_dmz.
+	runcDmz := os.Getenv("RUNC_DMZ")
+	if runcDmz == "" {
+		logrus.Debugf("RUNC_DMZ is not set -- switching back to classic /proc/self/exe cloning")
 		return nil, ErrNoDmzBinary
 	}
+	if dmzEnabled, err := strconv.ParseBool(runcDmz); err == nil && !dmzEnabled {
+		logrus.Debugf("RUNC_DMZ is false -- switching back to classic /proc/self/exe cloning")
+		return nil, ErrNoDmzBinary
+	} else if err != nil {
+		return nil, fmt.Errorf("parsing RUNC_DMZ: %w", err)
+	}
+
 	runcDmzBinaryOnce.Do(func() {
 		runcDmzBinary, _ = runcDmzFs.ReadFile("binary/runc-dmz")
 		// Verify that our embedded binary has a standard ELF header.
