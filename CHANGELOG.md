@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0-rc.1] - 2024-03-14
+
+> There's a frood who really knows where his towel is.
+
 `runc` now requires a minimum of Go 1.20 to compile.
 
 ### Breaking
@@ -682,3 +686,6 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.1.2]: https://github.com/opencontainers/runc/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/opencontainers/runc/compare/v1.1.0...v1.1.1
 [1.1.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.0.0...v1.1.0-rc.1
+
+<!-- 1.2.z patch releases -->
+[1.2.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.1.0...v1.2.0-rc.1
