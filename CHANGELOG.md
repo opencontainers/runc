@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+`runc` now requires a minimum of Go 1.20 to compile.
+
 > **NOTE**: runc currently will not work properly when compiled with Go 1.22 or
 > newer. This is due to some unfortunate glibc behaviour that Go 1.22
 > exacerbates in a way that results in containers not being able to start on
@@ -49,14 +51,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+ * runc has been updated to OCI runtime-spec 1.2.0, and supports all Linux
+   features with a few minor exceptions. See
+   [`docs/spec-conformance.md`](https://github.com/opencontainers/runc/blob/v1.2.0-rc.1/docs/spec-conformance.md)
+   for more details.
  * runc now supports id-mapped mounts for bind-mounts (with no restrictions on
    the mapping used for each mount). Other mount types are not currently
    supported. This feature requires `MOUNT_ATTR_IDMAP` kernel support (Linux
    5.12 or newer) as well as kernel support for the underlying filesystem used
    for the bind-mount. See [`mount_setattr(2)`][mount_setattr.2] for a list of
-   supported filesystems and other restrictions.
+   supported filesystems and other restrictions. (#3717, #3985, #3993)
+ * Two new mechanisms for reducing the memory usage of our protections against
+   [CVE-2019-5736][cve-2019-5736] have been introduced:
+   - `runc-dmz` is a minimal binary (~8K) which acts as an additional execve
+     stage, allowing us to only need to protect the smaller binary. It should
+     be noted that there have been several compatibility issues reported with
+     the usage of `runc-dmz` (namely related to capabilities and SELinux). As
+     such, this mechanism is **opt-in** and can be enabled by running `runc`
+     with the environment variable `RUNC_DMZ=true` (setting this environment
+     variable in `config.json` will have no effect). This feature can be
+     disabled at build time using the `runc_nodmz` build tag. (#3983, #3987)
+   - `contrib/memfd-bind` is a helper daemon which will bind-mount a memfd copy
+     of `/usr/bin/runc` on top of `/usr/bin/runc`. This entirely eliminates
+     per-container copies of the binary, but requires care to ensure that
+     upgrades to runc are handled properly, and requires a long-running daemon
+     (unfortunately memfds cannot be bind-mounted directly and thus require a
+     daemon to keep them alive). (#3987)
+ * runc will now use `cgroup.kill` if available to kill all processes in a
+   container (such as when doing `runc kill`). (#3135, #3825)
+ * Add support for setting the umask for `runc exec`. (#3661)
+ * libct/cg: support `SCHED_IDLE` for runc cgroupfs. (#3377)
+ * checkpoint/restore: implement `--manage-cgroups-mode=ignore`. (#3546)
+ * seccomp: refactor flags support; add flags to features, set `SPEC_ALLOW` by
+   default. (#3588)
+ * libct/cg/sd: use systemd v240+ new `MAJOR:*` syntax. (#3843)
+ * Support CFS bandwidth burst for CPU. (#3749, #3145)
+ * Support time namespaces. (#3876)
+ * Reduce the `runc` binary size by ~11% by updating
+   `github.com/checkpoint-restore/go-criu`. (#3652)
+ * Add `--pidfd-socket` to `runc run` and `runc exec` to allow for management
+   processes to receive a pidfd for the new process, allowing them to avoid pid
+   reuse attacks. (#4045)
 
 [mount_setattr.2]: https://man7.org/linux/man-pages/man2/mount_setattr.2.html
+[cve-2019-5736]: https://github.com/advisories/GHSA-gxmr-w5mj-v8hh
 
 ### Deprecated
 
@@ -68,12 +106,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    to kill a container (with SIGKILL) which does not have its own private PID
    namespace (so that runc would send SIGKILL to all processes). Now, this is
    done automatically. (#3864, #3825)
+ * `github.com/opencontainers/runc/libcontainer/user` is now deprecated, please
+   use `github.com/moby/sys/user` instead. It will be removed in a future
+   release. (#4017)
 
 ### Changed
 
  * When Intel RDT feature is not available, its initialization is skipped,
    resulting in slightly faster `runc exec` and `runc run`. (#3306)
- * Enforce absolute paths for mounts. (#3020, #3717)
+ * `runc features` is no longer experimental. (#3861)
  * libcontainer users that create and kill containers from a daemon process
    (so that the container init is a child of that process) must now implement
    a proper child reaper in case a container does not have its own private PID
@@ -87,6 +128,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    For cgroupv1, `Usage` and `Failcnt` are set by subtracting memory usage
    from memory+swap usage. For cgroupv2, `Usage`, `Limit`, and `MaxUsage`
    are set. (#4010)
+ * libcontainer users that create and kill containers from a daemon process
+   (so that the container init is a child of that process) must now implement
+   a proper child reaper in case a container does not have its own private PID
+   namespace, as documented in `container.Signal`. (#3825)
+ * libcontainer: `container.Signal` no longer takes an `all` argument. Whether
+   or not it is necessary to kill all processes in the container individually
+   is now determined automatically. (#3825, #3885)
+ * seccomp: enable seccomp binary tree optimization. (#3405)
+ * `runc run`/`runc exec`: ignore SIGURG. (#3368)
+ * Remove tun/tap from the default device allowlist. (#3468)
+ * `runc --root non-existent-dir list` now reports an error for non-existent
+   root directory. (#3374)
 
 ### Fixed
 
@@ -97,7 +150,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    support would return `-EPERM` despite the existence of the `-ENOSYS` stub
    code (this was due to how s390x does syscall multiplexing). (#3474)
  * Remove tun/tap from the default device rules. (#3468)
- * specconv: avoid mapping "acl" to MS_POSIXACL. (#3739)
+ * specconv: avoid mapping "acl" to `MS_POSIXACL`. (#3739)
+ * libcontainer: fix private PID namespace detection when killing the
+   container. (#3866, #3825)
+ * systemd socket notification: fix race where runc exited before systemd
+   properly handled the `READY` notification. (#3291, #3293)
+ * The `-ENOSYS` seccomp stub is now always generated for the native
+   architecture that `runc` is running on. This is needed to work around some
+   arguably specification-incompliant behaviour from Docker on architectures
+   such as ppc64le, where the allowed architecture list is set to `null`. This
+   ensures that we always generate at least one `-ENOSYS` stub for the native
+   architecture even with these weird configs. (#4219)
+
+### Removed
+
+ * In order to fix performance issues in the "lightweight" bindfd protection
+   against [CVE-2019-5736][cve-2019-5736], the temporary `ro` bind-mount of
+   `/proc/self/exe` has been removed. runc now creates a binary copy in all
+   cases. See the above notes about `memfd-bind` and `runc-dmz` as well as
+   `contrib/cmd/memfd-bind/README.md` for more information about how this
+   (minor) change in memory usage can be further reduced. (#3987, #3599, #2532,
+   #3931)
+ * libct/cg: Remove `EnterPid` (a function with no users). (#3797)
+ * libcontainer: Remove `{Pre,Post}MountCmds` which were never used and are
+   obsoleted by more generic container hooks. (#3350)
+
+[cve-2019-5736]: https://github.com/advisories/GHSA-gxmr-w5mj-v8hh
 
 ## [1.1.12] - 2024-01-31
 
