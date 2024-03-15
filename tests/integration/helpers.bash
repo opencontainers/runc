@@ -581,6 +581,36 @@ function testcontainer() {
 	[[ "${output}" == *"$2"* ]]
 }
 
+# Check that all the listed processes are gone. Use after kill/stop etc.
+function wait_pids_gone() {
+	if [ $# -lt 3 ]; then
+		echo "Usage: wait_pids_gone ITERATIONS SLEEP PID [PID ...]"
+		return 1
+	fi
+	local iter=$1
+	shift
+	local sleep=$1
+	shift
+	local pids=("$@")
+
+	while true; do
+		for i in "${!pids[@]}"; do
+			# Check if the pid is there; if not, remove it from the list.
+			kill -0 "${pids[i]}" 2>/dev/null || unset "pids[i]"
+		done
+		[ ${#pids[@]} -eq 0 ] && return 0
+		# Rebuild pids array to avoid sparse array issues.
+		pids=("${pids[@]}")
+
+		((--iter > 0)) || break
+
+		sleep "$sleep"
+	done
+
+	echo "Expected all PIDs to be gone, but some are still there:" "${pids[@]}" 1>&2
+	return 1
+}
+
 function setup_recvtty() {
 	[ ! -v ROOT ] && return 1 # must not be called without ROOT set
 	local dir="$ROOT/tty"

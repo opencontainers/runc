@@ -46,24 +46,33 @@ test_host_pidns_kill() {
 		# kills the container; see "kill KILL [host pidns + init gone]"
 		# below).
 		kill -9 "$init_pid"
+		wait_pids_gone 10 0.2 "$init_pid"
 	fi
 
 	# Get the list of all container processes.
-	pids=$(cat "$cgpath"/cgroup.procs)
-	echo "pids: $pids"
+	mapfile -t pids < <(cat "$cgpath"/cgroup.procs)
+	echo "pids:" "${pids[@]}"
 	# Sanity check -- make sure all processes exist.
-	for p in $pids; do
+	for p in "${pids[@]}"; do
 		kill -0 "$p"
 	done
 
 	runc kill test_busybox KILL
 	[ "$status" -eq 0 ]
-	wait_for_container 10 1 test_busybox stopped
+	# Wait and check that all processes are gone.
+	wait_pids_gone 10 0.2 "${pids[@]}"
 
-	# Make sure all processes are gone.
-	pids=$(cat "$cgpath"/cgroup.procs) || true # OK if cgroup is gone
-	echo "pids: $pids"
-	[ -z "$pids" ]
+	# Make sure the container is in stopped state. Note if KILL_INIT
+	# is set, container was already stopped by killing its $init_pid
+	# and so this check is NOP/redundant.
+	testcontainer test_busybox stopped
+
+	# Make sure cgroup.procs is empty.
+	mapfile -t pids < <(cat "$cgpath"/cgroup.procs || true)
+	if [ ${#pids[@]} -gt 0 ]; then
+		echo "expected empty cgroup.procs, got:" "${pids[@]}" 1>&2
+		return 1
+	fi
 }
 
 @test "kill detached busybox" {
