@@ -344,6 +344,17 @@ EOF
 	[ "$status" -eq 0 ]
 	check_cpu_burst 500000
 
+	# issue: https://github.com/opencontainers/runc/issues/4210
+	if [ -v CGROUP_V2 ]; then
+		runc update test_update --memory 100M
+		[ "$status" -eq 0 ]
+		check_cpu_burst 500000
+	else
+		runc update test_update --cpu-period 300000
+		[ "$status" -eq 0 ]
+		check_cpu_burst 500000
+	fi
+
 	runc update test_update --cpu-period 900000 --cpu-burst 0
 	[ "$status" -eq 0 ]
 	check_cpu_burst 0
