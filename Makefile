@@ -99,7 +99,7 @@ static-bin: runc-dmz
 
 .PHONY: runc-dmz
 runc-dmz:
-	rm -f libcontainer/dmz/runc-dmz
+	rm -f libcontainer/dmz/binary/runc-dmz
 	$(GO) generate -tags "$(BUILDTAGS)" ./libcontainer/dmz
 
 .PHONY: releaseall
@@ -242,12 +242,12 @@ verify-dependencies: vendor
 
 .PHONY: verify-dmz-arch
 verify-dmz-arch:
-	@if test -s libcontainer/dmz/runc-dmz; then \
+	@if test -s libcontainer/dmz/binary/runc-dmz; then \
 		set -Eeuo pipefail; \
 		export LC_ALL=C; \
 		diff -u \
 			<(readelf -h runc | grep -E "(Machine|Flags):") \
-			<(readelf -h libcontainer/dmz/runc-dmz | grep -E "(Machine|Flags):"); \
+			<(readelf -h libcontainer/dmz/binary/runc-dmz | grep -E "(Machine|Flags):"); \
 	fi
 
 .PHONY: validate-keyring
