@@ -8,9 +8,6 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "daily"
-    ignore:
-      # a regression in v1.22.2, see https://github.com/urfave/cli/issues/1092
-      - dependency-name: "github.com/urfave/cli"
 
   # Dependencies listed in .github/workflows/*.yml
   - package-ecosystem: "github-actions"
