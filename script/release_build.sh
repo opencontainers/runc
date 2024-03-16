@@ -19,7 +19,7 @@ set -e
 ## --->
 # Project-specific options and functions. In *theory* you shouldn't need to
 # touch anything else in this script in order to use this elsewhere.
-: "${LIBSECCOMP_VERSION:=2.5.4}"
+: "${LIBSECCOMP_VERSION:=2.5.5}"
 project="runc"
 root="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")/..")"
 
