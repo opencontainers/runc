@@ -118,7 +118,7 @@ function setup() {
 		fi
 	fi
 
-	# try to remove memory limit
+	# Remove memory (and swap) limit.
 	runc update test_update --memory -1
 	[ "$status" -eq 0 ]
 
@@ -332,7 +332,7 @@ EOF
 	check_cpu_shares 100
 }
 
-@test "cpu burst" {
+@test "set and update cpu burst" {
 	[ $EUID -ne 0 ] && requires rootless_cgroup
 	requires cgroups_cpu_burst
 
@@ -344,9 +344,60 @@ EOF
 	[ "$status" -eq 0 ]
 	check_cpu_burst 500000
 
+	# Check that updating cpu period does not resets CPU burst.
+	runc update test_update --cpu-period 800000
+	[ "$status" -eq 0 ]
+	check_cpu_burst 500000
+
 	runc update test_update --cpu-period 900000 --cpu-burst 0
 	[ "$status" -eq 0 ]
 	check_cpu_burst 0
+}
+
+# https://github.com/opencontainers/runc/issues/4225
+@test "updating memory does not reset cpu period with no quota" {
+	[ $EUID -ne 0 ] && requires rootless_cgroup
+
+	update_config '.linux.resources.cpu |= {}'
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
+	[ "$status" -eq 0 ]
+	check_cpu_quota -1 100000 "infinity"
+
+	runc update test_update --cpu-period 900000
+	[ "$status" -eq 0 ]
+	check_cpu_quota -1  900000 "infinity"
+
+	runc update test_update --memory 500M
+	[ "$status" -eq 0 ]
+	check_cpu_quota -1  900000 "infinity"
+}
+
+# https://github.com/opencontainers/runc/issues/4225
+@test "updating memory and period resets cpu quota" {
+	[ $EUID -ne 0 ] && requires rootless_cgroup
+
+	update_config '.linux.resources.cpu |= {}'
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
+	[ "$status" -eq 0 ]
+	check_cpu_quota -1 100000 "infinity"
+
+	runc update test_update --cpu-period 900000 --cpu-quota 504000
+	[ "$status" -eq 0 ]
+	check_cpu_quota 504000 900000 "560ms"
+
+	runc update test_update --cpu-period 900000
+	[ "$status" -eq 0 ]
+	check_cpu_quota 504000 900000 "560ms"
+
+	runc update test_update --memory 500M
+	[ "$status" -eq 0 ]
+	check_cpu_quota 504000 900000 "560ms"
+
+	runc update test_update --cpu-period 900000
+	[ "$status" -eq 0 ]
+	check_cpu_quota 504000 900000 "560ms"
 }
 
 @test "set cpu period with no quota" {
