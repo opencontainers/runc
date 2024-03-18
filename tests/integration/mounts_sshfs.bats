@@ -10,7 +10,7 @@ function teardown() {
 	if [ -v DIR ]; then
 		# Some distros do not have fusermount installed
 		# as a dependency of fuse-sshfs, and good ol' umount works.
-		fusermount -u "$DIR" || umount "$DIR"
+		fusermount3 -u "$DIR" || fusermount -u "$DIR" || umount "$DIR"
 		unset DIR
 	fi
 
@@ -36,7 +36,7 @@ function setup_sshfs() {
 		mkdir -p "$DIR"
 		# Make sure we clear all superblock flags to make sure bind-mounts can
 		# unset these flags.
-		if ! $sshfs -o rw,suid,dev,exec,atime rootless@localhost: "$DIR"; then
+		if ! $sshfs -o rw,suid,dev,exec rootless@localhost: "$DIR"; then
 			# fallback to tmpfs if running in without sshfs
 			mount -t tmpfs -o rw,suid,dev,exec,diratime,strictatime tmpfs "$DIR"
 		fi
