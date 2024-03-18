@@ -140,6 +140,7 @@ func convertLibcontainerStats(ls *libcontainer.Stats) *types.Stats {
 	s.Memory.Usage = convertMemoryEntry(cg.MemoryStats.Usage)
 	s.Memory.Raw = cg.MemoryStats.Stats
 	s.Memory.PSI = cg.MemoryStats.PSI
+	s.Memory.EventCount = cg.MemoryStats.EventCount
 
 	s.Blkio.IoServiceBytesRecursive = convertBlkioEntry(cg.BlkioStats.IoServiceBytesRecursive)
 	s.Blkio.IoServicedRecursive = convertBlkioEntry(cg.BlkioStats.IoServicedRecursive)

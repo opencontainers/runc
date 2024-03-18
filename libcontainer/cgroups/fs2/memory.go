@@ -237,3 +237,36 @@ func rootStatsFromMeminfo(stats *cgroups.Stats) error {
 
 	return nil
 }
+
+func eventMemory(dirPath string, stats *cgroups.Stats) error {
+	const fileName = "memory.events"
+	file, err := cgroups.OpenFile(dirPath, fileName, os.O_RDONLY)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	stats.MemoryStats.EventCount = cgroups.MemoryEventCount{}
+	for scanner.Scan() {
+		t, v, err := fscommon.ParseKeyValue(scanner.Text())
+		if err != nil {
+			return &parseError{Path: dirPath, File: fileName, Err: err}
+		}
+		switch t {
+		case "max":
+			stats.MemoryStats.EventCount.Max = v
+		case "low":
+			stats.MemoryStats.EventCount.ReclaimLow = v
+		case "high":
+			stats.MemoryStats.EventCount.ReclaimHigh = v
+		case "oom":
+			stats.MemoryStats.EventCount.OOM = v
+		case "oom_kill":
+			stats.MemoryStats.EventCount.OOMKill = v
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return &parseError{Path: dirPath, File: fileName, Err: err}
+	}
+	return nil
+}

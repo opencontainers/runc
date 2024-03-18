@@ -121,10 +121,40 @@ function test_events() {
 		retry 10 1 grep -q test_busybox events.log
 		# shellcheck disable=SC2016
 		__runc exec -d test_busybox sh -c 'test=$(dd if=/dev/urandom ibs=5120k)'
-		retry 30 1 grep -q oom events.log
+		retry 30 1 grep -q '{"type":"oom","id":"test_busybox"}' events.log
 		__runc delete -f test_busybox
 	) &
 	wait # wait for the above sub shells to finish
 
 	grep -q '{"type":"oom","id":"test_busybox"}' events.log
+}
+
+@test "events --stats with OOM memory event" {
+	requires root cgroups_v2
+	init_cgroup_paths
+
+	# we need the container to hit OOM, so disable swap
+	update_config '(.. | select(.resources? != null)) .resources.memory |= {"limit": 33554432, "swap": 33554432}'
+
+	# run busybox detached
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	[ "$status" -eq 0 ]
+
+	# spawn two sub processes (shells)
+	# the first sub process is an event logger that sends stats events to events.log
+	# the second sub process exec a memory hog process to cause a oom condition
+	# and waits for an oom event
+	(__runc events test_busybox >events.log) &
+	(
+		retry 10 1 grep -q test_busybox events.log
+		# shellcheck disable=SC2016
+		__runc exec -d test_busybox sh -c 'test=$(dd if=/dev/urandom ibs=5120k)'
+		retry 30 1 grep -q '{"type":"oom","id":"test_busybox"}' events.log
+		__runc events --stats test_busybox >stats.log
+		__runc delete -f test_busybox
+	) &
+	wait # wait for the above sub shells to finish
+
+	grep -q '{"type":"oom","id":"test_busybox"}' events.log
+	jq -e '.data.memory.event_count.oom_kill >= 1' <<<"$(cat stats.log)"
 }
