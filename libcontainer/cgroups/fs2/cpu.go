@@ -11,6 +11,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/sirupsen/logrus"
 )
 
 func isCpuSet(r *configs.Resources) bool {
@@ -30,7 +31,9 @@ func setCpu(dirPath string, r *configs.Resources) error {
 
 	// NOTE: .CpuShares is not used here. Conversion is the caller's responsibility.
 	if r.CpuWeight != 0 {
-		if err := cgroups.WriteFile(dirPath, "cpu.weight", strconv.FormatUint(r.CpuWeight, 10)); err != nil {
+		if r.CPUIdle != nil && *r.CPUIdle != 0 {
+			logrus.Warn("CPU weight can't be set when CPU idle is enabled -- ignoring")
+		} else if err := cgroups.WriteFile(dirPath, "cpu.weight", strconv.FormatUint(r.CpuWeight, 10)); err != nil {
 			return err
 		}
 	}
