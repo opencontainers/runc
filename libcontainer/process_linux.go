@@ -137,14 +137,14 @@ func (p *setnsProcess) start() (retErr error) {
 	// exclusively on isolated CPU cores to force the kernel to schedule
 	// runc process on the first CPU core within the cgroups cpuset.
 	// The introduction of the kernel commit 46a87b3851f0d6eb05e6d83d5c5a30df0eca8f76
-	// has affected this deterministic scheduling behavior by distributing
-	// tasks across CPU cores within the cgroups cpuset. Some intensive
-	// real-time application are relying on this deterministic behavior
-	// and use the first CPU core to run a slow thread while other CPU
-	// cores are fully used by real-time threads with SCHED_FIFO policy.
-	// Such applications prevent runc process from joining a container
-	// when the runc process is randomly scheduled on a CPU core owned
-	// by a real-time thread.
+	// in 5.7 has affected this deterministic scheduling behavior by
+	// distributing tasks across CPU cores within the cgroups cpuset.
+	// Some intensive real-time application are relying on this
+	// deterministic behavior and use the first CPU core to run a slow
+	// thread while other CPU cores are fully used by real-time threads
+	// with SCHED_FIFO policy. Such applications prevent runc process
+	// from joining a container when the runc process is randomly
+	// scheduled on a CPU core owned by a real-time thread.
 	cpuAffinity := -1
 	resetCPUAffinity := true
 

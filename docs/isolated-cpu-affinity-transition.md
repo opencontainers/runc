@@ -1,7 +1,7 @@
 ## Isolated CPU affinity transition
 
 The introduction of the kernel commit 46a87b3851f0d6eb05e6d83d5c5a30df0eca8f76
-has affected a deterministic scheduling behavior by distributing tasks
+in 5.7 has affected a deterministic scheduling behavior by distributing tasks
 across CPU cores within a cgroups cpuset. It means that some runc operations
 like `runc exec` might be impacted under some circumstances, by example when
 a container has been created within a cgroup cpuset entirely composed of
