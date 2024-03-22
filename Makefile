@@ -23,6 +23,13 @@ LDFLAGS_COMMON := -X main.gitCommit=$(COMMIT) -X main.version=$(VERSION)
 
 GOARCH := $(shell $(GO) env GOARCH)
 
+# -trimpath may be required on some platforms to create reproducible builds
+# on the other hand, it does strip out build information, like -ldflags, which
+# some tools use to infer the version, in the absence of go information,
+# which happens when you use `go build`.
+# This enables someone to override by doing `make runc TRIMPATH= ` etc.
+TRIMPATH := -trimpath
+
 GO_BUILDMODE :=
 # Enable dynamic PIE executables on supported platforms.
 ifneq (,$(filter $(GOARCH),386 amd64 arm arm64 ppc64le riscv64 s390x))
@@ -30,7 +37,7 @@ ifneq (,$(filter $(GOARCH),386 amd64 arm arm64 ppc64le riscv64 s390x))
 		GO_BUILDMODE := "-buildmode=pie"
 	endif
 endif
-GO_BUILD := $(GO) build -trimpath $(GO_BUILDMODE) \
+GO_BUILD := $(GO) build $(TRIMPATH) $(GO_BUILDMODE) \
 	$(EXTRA_FLAGS) -tags "$(BUILDTAGS)" \
 	-ldflags "$(LDFLAGS_COMMON) $(EXTRA_LDFLAGS)"
 
@@ -46,7 +53,7 @@ ifneq (,$(filter $(GOARCH),arm64 amd64))
 	endif
 endif
 # Enable static PIE binaries on supported platforms.
-GO_BUILD_STATIC := $(GO) build -trimpath $(GO_BUILDMODE_STATIC) \
+GO_BUILD_STATIC := $(GO) build $(TRIMPATH) $(GO_BUILDMODE_STATIC) \
 	$(EXTRA_FLAGS) -tags "$(BUILDTAGS) netgo osusergo" \
 	-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS_STATIC) $(EXTRA_LDFLAGS)"
 
