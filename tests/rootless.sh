@@ -178,9 +178,16 @@ for enabled_features in $features_powerset; do
 		"$hook_func"
 	done
 
+	# Save the start date and time for ausearch.
+	if command -v ausearch &>/dev/null; then
+		AU_DD="$(date +%x)"
+		AU_TT="$(date +%H:%M:%S)"
+	fi
+
 	# Run the test suite!
 	echo "path: $PATH"
 	export ROOTLESS_FEATURES="$enabled_features"
+	set +e
 	if [ -v RUNC_USE_SYSTEMD ]; then
 		# We use `ssh rootless@localhost` instead of `sudo -u rootless` for creating systemd user session.
 		# Alternatively we could use `machinectl shell`, but it is known not to work well on SELinux-enabled hosts as of April 2020:
@@ -189,5 +196,16 @@ for enabled_features in $features_powerset; do
 	else
 		sudo -HE -u rootless PATH="$PATH" "$(which bats)" -t "$ROOT/tests/integration$ROOTLESS_TESTPATH"
 	fi
+	RET=$?
+
+	# Show any avc denials.
+	if [[ -v AU_DD && -v AU_TT ]]; then
+		ausearch -ts "$AU_DD" "$AU_TT" -i -m avc || true
+	fi
+
 	cleanup
+	if [ $RET -ne 0 ]; then
+		echo "FAILED" >&2
+		exit $RET
+	fi
 done
