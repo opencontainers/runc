@@ -115,14 +115,13 @@ func (m *Manager) GetStats() (*cgroups.Stats, error) {
 		errs = append(errs, err)
 	}
 	// PSI (since kernel 4.20).
-	var err error
-	if st.CpuStats.PSI, err = statPSI(m.dirPath, "cpu.pressure"); err != nil {
+	if err := statCpuPressure(m.dirPath, st); err != nil {
 		errs = append(errs, err)
 	}
-	if st.MemoryStats.PSI, err = statPSI(m.dirPath, "memory.pressure"); err != nil {
+	if err := statMemoryPressure(m.dirPath, st); err != nil {
 		errs = append(errs, err)
 	}
-	if st.BlkioStats.PSI, err = statPSI(m.dirPath, "io.pressure"); err != nil {
+	if err := statIoPressure(m.dirPath, st); err != nil {
 		errs = append(errs, err)
 	}
 	// hugetlb (since kernel 5.6)
