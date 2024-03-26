@@ -7,11 +7,11 @@ import (
 )
 
 func TestIsolatedCPUAffinityTransition(t *testing.T) {
-	const isolatedCPUAffinityTransitionParam = "runc.exec.isolated-cpu-affinity-transition"
+	const isolatedCPUAffinityTransitionAnnotation = "org.opencontainers.runc.exec.isolated-cpu-affinity-transition"
 
 	noAffinity := -1
-	temporaryTransition := isolatedCPUAffinityTransitionParam + "=temporary"
-	definitiveTransition := isolatedCPUAffinityTransitionParam + "=definitive"
+	temporaryTransition := "temporary"
+	definitiveTransition := "definitive"
 
 	tests := []struct {
 		name                         string
@@ -20,12 +20,12 @@ func TestIsolatedCPUAffinityTransition(t *testing.T) {
 		expectedErr                  bool
 		expectedAffinityCore         int
 		expectedDefinitiveTransition bool
+		annotations                  map[string]string
 	}{
 		{
 			name:   "no affinity",
 			cpuset: "0-15",
 			testFS: fstest.MapFS{
-				"proc/cmdline":                     &fstest.MapFile{Data: []byte("\n")},
 				"sys/devices/system/cpu/nohz_full": &fstest.MapFile{Data: []byte("0-4\n")},
 			},
 			expectedAffinityCore:         noAffinity,
@@ -35,56 +35,91 @@ func TestIsolatedCPUAffinityTransition(t *testing.T) {
 			name:   "affinity match with temporary transition",
 			cpuset: "3-4",
 			testFS: fstest.MapFS{
-				"proc/cmdline":                     &fstest.MapFile{Data: []byte(temporaryTransition + "\n")},
 				"sys/devices/system/cpu/nohz_full": &fstest.MapFile{Data: []byte("0-4\n")},
 			},
 			expectedAffinityCore:         3,
 			expectedDefinitiveTransition: false,
+			annotations: map[string]string{
+				isolatedCPUAffinityTransitionAnnotation: temporaryTransition,
+			},
 		},
 		{
 			name:   "affinity match with temporary transition and nohz_full boot param",
 			cpuset: "3-4",
 			testFS: fstest.MapFS{
-				"proc/cmdline": &fstest.MapFile{Data: []byte(temporaryTransition + " nohz_full=0-4\n")},
+				"proc/cmdline": &fstest.MapFile{Data: []byte("nohz_full=0-4\n")},
 			},
 			expectedAffinityCore:         3,
 			expectedDefinitiveTransition: false,
+			annotations: map[string]string{
+				isolatedCPUAffinityTransitionAnnotation: temporaryTransition,
+			},
 		},
 		{
 			name:   "affinity match with definitive transition",
 			cpuset: "3-4",
 			testFS: fstest.MapFS{
-				"proc/cmdline":                     &fstest.MapFile{Data: []byte(definitiveTransition + "\n")},
 				"sys/devices/system/cpu/nohz_full": &fstest.MapFile{Data: []byte("0-4\n")},
 			},
 			expectedAffinityCore:         3,
 			expectedDefinitiveTransition: true,
+			annotations: map[string]string{
+				isolatedCPUAffinityTransitionAnnotation: definitiveTransition,
+			},
+		},
+		{
+			name:   "affinity match with definitive transition and nohz_full boot param",
+			cpuset: "3-4",
+			testFS: fstest.MapFS{
+				"proc/cmdline": &fstest.MapFile{Data: []byte("nohz_full=0-4\n")},
+			},
+			expectedAffinityCore:         3,
+			expectedDefinitiveTransition: true,
+			annotations: map[string]string{
+				isolatedCPUAffinityTransitionAnnotation: definitiveTransition,
+			},
 		},
 		{
 			name:   "affinity error with bad isolated set",
 			cpuset: "0-15",
 			testFS: fstest.MapFS{
-				"proc/cmdline":                     &fstest.MapFile{Data: []byte(temporaryTransition + "\n")},
 				"sys/devices/system/cpu/nohz_full": &fstest.MapFile{Data: []byte("bad_isolated_set\n")},
 			},
 			expectedErr:          true,
 			expectedAffinityCore: noAffinity,
+			annotations: map[string]string{
+				isolatedCPUAffinityTransitionAnnotation: temporaryTransition,
+			},
+		},
+		{
+			name:   "affinity error with bad isolated set for nohz_full boot param",
+			cpuset: "0-15",
+			testFS: fstest.MapFS{
+				"proc/cmdline": &fstest.MapFile{Data: []byte("nohz_full=bad_isolated_set\n")},
+			},
+			expectedErr:          true,
+			expectedAffinityCore: noAffinity,
+			annotations: map[string]string{
+				isolatedCPUAffinityTransitionAnnotation: temporaryTransition,
+			},
 		},
 		{
 			name:   "no affinity with null isolated set value",
 			cpuset: "0-15",
 			testFS: fstest.MapFS{
-				"proc/cmdline":                     &fstest.MapFile{Data: []byte(temporaryTransition + "\n")},
 				"sys/devices/system/cpu/nohz_full": &fstest.MapFile{Data: []byte("(null)\n")},
 			},
 			expectedAffinityCore:         noAffinity,
 			expectedDefinitiveTransition: false,
+			annotations: map[string]string{
+				isolatedCPUAffinityTransitionAnnotation: temporaryTransition,
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			affinityCore, definitive, err := isolatedCPUAffinityTransition(tt.testFS, tt.cpuset)
+			affinityCore, definitive, err := isolatedCPUAffinityTransition(tt.testFS, tt.cpuset, tt.annotations)
 			if err != nil && !tt.expectedErr {
 				t.Fatalf("unexpected error: %s", err)
 			} else if err == nil && tt.expectedErr {

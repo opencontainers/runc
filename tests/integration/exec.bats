@@ -349,17 +349,20 @@ EOF
 	local all_cpus
 	all_cpus="$(cat /sys/devices/system/cpu/online)"
 
-	update_config " .linux.resources.cpu.cpus = \"$all_cpus\""
+	update_config ".linux.resources.cpu.cpus = \"$all_cpus\""
+
+	# set temporary isolated CPU affinity transition
+	update_config '.annotations += {"org.opencontainers.runc.exec.isolated-cpu-affinity-transition": "temporary"}'
 
 	local mems
 	mems="$(cat /sys/devices/system/node/online 2>/dev/null || true)"
-	[[ -n $mems ]] && update_config " .linux.resources.cpu.mems = \"$mems\""
+	[[ -n $mems ]] && update_config ".linux.resources.cpu.mems = \"$mems\""
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_isolated_temporary_transition
 	[ "$status" -eq 0 ]
 
 	# set all online cpus as isolated
-	echo "runc.exec.isolated-cpu-affinity-transition=temporary nohz_full=$all_cpus" >"$tmp/cmdline"
+	echo "nohz_full=$all_cpus" >"$tmp/cmdline"
 
 	mount --bind "$tmp/cmdline" /proc/cmdline
 
@@ -382,17 +385,20 @@ EOF
 	local first_cpu="0"
 	[[ $all_cpus =~ [^0-9]*([0-9]+)([-,][0-9]+)? ]] && first_cpu=${BASH_REMATCH[1]}
 
-	update_config " .linux.resources.cpu.cpus = \"$all_cpus\""
+	update_config ".linux.resources.cpu.cpus = \"$all_cpus\""
+
+	# set definitive isolated CPU affinity transition
+	update_config '.annotations += {"org.opencontainers.runc.exec.isolated-cpu-affinity-transition": "definitive"}'
 
 	local mems
 	mems="$(cat /sys/devices/system/node/online 2>/dev/null || true)"
-	[[ -n $mems ]] && update_config " .linux.resources.cpu.mems = \"$mems\""
+	[[ -n $mems ]] && update_config ".linux.resources.cpu.mems = \"$mems\""
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_isolated_definitive_transition
 	[ "$status" -eq 0 ]
 
 	# set all online cpus as isolated
-	echo "runc.exec.isolated-cpu-affinity-transition=definitive nohz_full=$all_cpus" >"$tmp/cmdline"
+	echo "nohz_full=$all_cpus" >"$tmp/cmdline"
 
 	mount --bind "$tmp/cmdline" /proc/cmdline
 
@@ -424,17 +430,20 @@ EOF
 	local all_cpus
 	all_cpus="$(cat /sys/devices/system/cpu/online)"
 
-	update_config " .linux.resources.cpu.cpus = \"$all_cpus\""
+	update_config ".linux.resources.cpu.cpus = \"$all_cpus\""
+
+	# set a bad isolated CPU affinity transition
+	update_config '.annotations += {"org.opencontainers.runc.exec.isolated-cpu-affinity-transition": "bad"}'
 
 	local mems
 	mems="$(cat /sys/devices/system/node/online 2>/dev/null || true)"
-	[[ -n $mems ]] && update_config " .linux.resources.cpu.mems = \"$mems\""
+	[[ -n $mems ]] && update_config ".linux.resources.cpu.mems = \"$mems\""
 
 	runc run -d --console-socket "$CONSOLE_SOCKET" test_isolated_bad_transition
 	[ "$status" -eq 0 ]
 
-	# test with bad transition value
-	echo "runc.exec.isolated-cpu-affinity-transition=bad nohz_full=$all_cpus" >"$tmp/cmdline"
+	# set all online cpus as isolated
+	echo "nohz_full=$all_cpus" >"$tmp/cmdline"
 
 	mount --bind "$tmp/cmdline" /proc/cmdline
 
@@ -454,11 +463,11 @@ EOF
 	local first_cpu="0"
 	[[ $all_cpus =~ [^0-9]*([0-9]+)([-,][0-9]+)? ]] && first_cpu=${BASH_REMATCH[1]}
 
-	update_config " .linux.resources.cpu.cpus = \"$all_cpus\""
+	update_config ".linux.resources.cpu.cpus = \"$all_cpus\""
 
 	local mems
 	mems="$(cat /sys/devices/system/node/online 2>/dev/null || true)"
-	[[ -n $mems ]] && update_config " .linux.resources.cpu.mems = \"$mems\""
+	[[ -n $mems ]] && update_config ".linux.resources.cpu.mems = \"$mems\""
 
 	taskset -p -c "$first_cpu" $$
 

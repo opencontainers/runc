@@ -14,22 +14,30 @@ cores are fully used by the real-time threads with SCHED_FIFO policy.
 Such applications can prevent runc process from joining a container when the
 runc process is randomly scheduled on a CPU core owned by a real-time thread.
 
-Runc introduces a way to restore this behavior via a dedicated kernel boot
-parameter:
+Runc introduces a way to restore this behavior by adding the following
+annotation to the container runtime spec (`config.json`):
 
-`runc.exec.isolated-cpu-affinity-transition`
+`org.opencontainers.runc.exec.isolated-cpu-affinity-transition`
 
-This parameter can take two values:
+This annotation can take one of those values:
 
 * `temporary` to temporarily set the runc process CPU affinity to the first
 isolated CPU core of the container cgroup cpuset.
 * `definitive`: to definitively set the runc process CPU affinity to the first
 isolated CPU core of the container cgroup cpuset.
 
+For example:
+
+```json
+  "annotations": {
+    "org.opencontainers.runc.exec.isolated-cpu-affinity-transition": "temporary"
+  }
+```
+
 __WARNING:__ `definitive` requires a kernel >= 6.2, also works with RHEL 9 and
 above.
 
-### How it works ?
+### How it works?
 
 When enabled and during `runc exec`, runc is looking for the `nohz_full` kernel
 boot parameter value and considers the CPUs in the list as isolated, it doesn't
@@ -72,3 +80,69 @@ CPU affinity to match the container cgroup cpuset.
 `definitive` transition might be helpful when `nohz_full` is used without
 `isolcpus` to avoid runc and container process to be a noisy neighbour for
 real-time applications.
+
+### How to use it with Kubernetes?
+
+Kubernetes doesn't manage container directly, instead it uses the Container Runtime
+Interface (CRI) to communicate with a software implementing this interface and responsible
+to manage the lifecycle of containers. There are popular CRI implementations like Containerd
+and CRI-O. Those implementations allows to pass pod annotations to the container runtime
+via the container runtime spec. Currently runc is the runtime used by default for both.
+
+#### Containerd configuration
+
+Containerd CRI uses runc by default but requires an extra step to pass the annotation to runc.
+You have to whitelist `org.opencontainers.runc.exec.isolated-cpu-affinity-transition` as a pod
+annotation allowed to be passed to the container runtime in `/etc/containerd/config.toml`:
+
+```toml
+[plugins."io.containerd.grpc.v1.cri".containerd]
+  default_runtime_name = "runc"
+  [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]
+    [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
+      runtime_type = "io.containerd.runc.v2"
+      base_runtime_spec = "/etc/containerd/cri-base.json"
+      pod_annotations = ["org.opencontainers.runc.exec.isolated-cpu-affinity-transition"]
+```
+
+#### CRI-O configuration
+
+CRI-O doesn't require any extra step, however some annotations could be excluded by
+configuration.
+
+#### Pod deployment example
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: demo-pod
+  annotations:
+    org.opencontainers.runc.exec.isolated-cpu-affinity-transition: "temporary"
+spec:
+  containers:
+  - name: demo
+    image: registry.com/demo:latest
+```
+
+#### Deployment template example
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-deployment
+  labels:
+    app: demo
+spec:
+  template:
+    metadata:
+      labels:
+        app: demo
+      annotations:
+        org.opencontainers.runc.exec.isolated-cpu-affinity-transition: "temporary"
+    spec:
+      containers:
+      - name: demo
+        image: registry.com/demo:latest
+```

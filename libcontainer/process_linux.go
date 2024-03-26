@@ -157,9 +157,11 @@ func (p *setnsProcess) start() (retErr error) {
 		} else if cg.CpusetCpus != "" {
 			definitive := false
 
+			_, annotations := utils.Annotations(p.config.Config.Labels)
 			cpuAffinity, definitive, err = isolatedCPUAffinityTransition(
 				os.DirFS("/"),
 				cg.CpusetCpus,
+				annotations,
 			)
 			if err != nil {
 				// Close the pipe to not be blocked in the parent.
@@ -1045,41 +1047,41 @@ func initWaiter(r io.Reader) chan error {
 	return ch
 }
 
-// isolatedCPUAffinityTransition returns a CPU affinity if necessary based on heuristics.
-func isolatedCPUAffinityTransition(rootFS fs.FS, cpusetList string) (int, bool, error) {
+// isolatedCPUAffinityTransition returns a CPU affinity if necessary based on heuristics
+// and org.opencontainers.runc.exec.isolated-cpu-affinity-transition annotation value.
+func isolatedCPUAffinityTransition(rootFS fs.FS, cpusetList string, annotations map[string]string) (int, bool, error) {
 	const (
-		isolatedCPUAffinityTransitionParam = "runc.exec.isolated-cpu-affinity-transition"
-		nohzFullParam                      = "nohz_full"
+		isolatedCPUAffinityTransitionAnnotation = "org.opencontainers.runc.exec.isolated-cpu-affinity-transition"
+		nohzFullParam                           = "nohz_full"
 	)
-
-	kernelParams, err := kernelparam.LookupKernelBootParameters(
-		rootFS,
-		isolatedCPUAffinityTransitionParam,
-		nohzFullParam,
-	)
-	if err != nil {
-		// /proc/cmdline does not exist or isn't readable, this is not fatal.
-		if errors.Is(err, os.ErrNotExist) || errors.Is(err, os.ErrPermission) {
-			err = nil
-		}
-		return -1, false, err
-	}
 
 	definitive := false
 
-	switch kernelParams[isolatedCPUAffinityTransitionParam] {
+	transition := annotations[isolatedCPUAffinityTransitionAnnotation]
+	switch transition {
 	case "temporary":
 	case "definitive":
 		definitive = true
 	default:
-		transition := kernelParams[isolatedCPUAffinityTransitionParam]
 		if transition != "" {
 			return -1, false, fmt.Errorf(
-				"unknown transition value for kernel boot parameter %s: %s",
-				isolatedCPUAffinityTransitionParam, transition,
+				"unknown transition value %q for annotation %s",
+				transition, isolatedCPUAffinityTransitionAnnotation,
 			)
 		}
 		return -1, false, nil
+	}
+
+	kernelParams, err := kernelparam.LookupKernelBootParameters(
+		rootFS,
+		nohzFullParam,
+	)
+	if err != nil {
+		// If /proc/cmdline does not exist or isn't readable, continue to read
+		// nohz_full from sysfs below.
+		if !errors.Is(err, os.ErrNotExist) && !errors.Is(err, os.ErrPermission) {
+			return -1, false, err
+		}
 	}
 
 	// First get nohz_full value from kernel boot params, if not
