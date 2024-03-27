@@ -295,12 +295,11 @@ func (p *setnsProcess) execSetns() error {
 		return fmt.Errorf("error reading pid from init pipe: %w", err)
 	}
 
-	// Clean up the zombie parent process
-	// On Unix systems FindProcess always succeeds.
-	firstChildProcess, _ := os.FindProcess(pid.PidFirstChild)
-
-	// Ignore the error in case the child has already been reaped for any reason
-	_, _ = firstChildProcess.Wait()
+	// Clean up the zombie parent process.
+	if firstChild, err := os.FindProcess(pid.PidFirstChild); err == nil {
+		// Ignore the error in case the child has already been reaped for any reason.
+		_, _ = firstChild.Wait()
+	}
 
 	process, err := os.FindProcess(pid.Pid)
 	if err != nil {
@@ -375,12 +374,11 @@ func (p *initProcess) getChildPid() (int, error) {
 		return -1, err
 	}
 
-	// Clean up the zombie parent process
-	// On Unix systems FindProcess always succeeds.
-	firstChildProcess, _ := os.FindProcess(pid.PidFirstChild)
-
-	// Ignore the error in case the child has already been reaped for any reason
-	_, _ = firstChildProcess.Wait()
+	// Clean up the zombie parent process.
+	if firstChild, err := os.FindProcess(pid.PidFirstChild); err == nil {
+		// Ignore the error in case the child has already been reaped for any reason.
+		_, _ = firstChild.Wait()
+	}
 
 	return pid.Pid, nil
 }
