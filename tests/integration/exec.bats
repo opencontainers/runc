@@ -340,3 +340,168 @@ EOF
 	[ ${#lines[@]} -eq 1 ]
 	[[ ${lines[0]} = *"exec /run.sh: no such file or directory"* ]]
 }
+
+@test "runc exec with isolated cpus affinity temporary transition [cgroup cpuset]" {
+	requires root
+
+	tmp=$(mktemp -d "$BATS_RUN_TMPDIR/runc.XXXXXX")
+
+	local all_cpus
+	all_cpus="$(cat /sys/devices/system/cpu/online)"
+
+	update_config ".linux.resources.cpu.cpus = \"$all_cpus\""
+
+	# set temporary isolated CPU affinity transition
+	update_config '.annotations += {"org.opencontainers.runc.exec.isolated-cpu-affinity-transition": "temporary"}'
+
+	local mems
+	mems="$(cat /sys/devices/system/node/online 2>/dev/null || true)"
+	[[ -n $mems ]] && update_config ".linux.resources.cpu.mems = \"$mems\""
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_isolated_temporary_transition
+	[ "$status" -eq 0 ]
+
+	# set all online cpus as isolated
+	echo "nohz_full=$all_cpus" >"$tmp/cmdline"
+
+	mount --bind "$tmp/cmdline" /proc/cmdline
+
+	runc exec test_isolated_temporary_transition grep "Cpus_allowed_list:" /proc/self/status
+
+	umount /proc/cmdline
+
+	[ "$status" -eq 0 ]
+	[[ "${lines[0]}" == "Cpus_allowed_list:	$all_cpus" ]]
+}
+
+@test "runc exec with isolated cpus affinity definitive transition [cgroup cpuset]" {
+	requires root
+
+	tmp=$(mktemp -d "$BATS_RUN_TMPDIR/runc.XXXXXX")
+
+	local all_cpus
+	all_cpus="$(cat /sys/devices/system/cpu/online)"
+
+	local first_cpu="0"
+	[[ $all_cpus =~ [^0-9]*([0-9]+)([-,][0-9]+)? ]] && first_cpu=${BASH_REMATCH[1]}
+
+	update_config ".linux.resources.cpu.cpus = \"$all_cpus\""
+
+	# set definitive isolated CPU affinity transition
+	update_config '.annotations += {"org.opencontainers.runc.exec.isolated-cpu-affinity-transition": "definitive"}'
+
+	local mems
+	mems="$(cat /sys/devices/system/node/online 2>/dev/null || true)"
+	[[ -n $mems ]] && update_config ".linux.resources.cpu.mems = \"$mems\""
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_isolated_definitive_transition
+	[ "$status" -eq 0 ]
+
+	# set all online cpus as isolated
+	echo "nohz_full=$all_cpus" >"$tmp/cmdline"
+
+	mount --bind "$tmp/cmdline" /proc/cmdline
+
+	runc exec test_isolated_definitive_transition grep "Cpus_allowed_list:" /proc/self/status
+
+	umount /proc/cmdline
+
+	[ "$status" -eq 0 ]
+
+	load /etc/os-release
+
+	# fix unbound variable in condition below
+	PLATFORM_ID=${PLATFORM_ID:-}
+
+	allowed_cpus=$all_cpus
+	# use first cpu on systems with RHEL >= 9 or systems with kernel >= 6.2
+	if [[ "${ID_LIKE:-}" =~ "rhel" && "${PLATFORM_ID#platform:el*}" -ge "9" ]] || is_kernel_gte 6.2; then
+		allowed_cpus=$first_cpu
+	fi
+
+	[[ "${lines[0]}" == "Cpus_allowed_list:	$allowed_cpus" ]]
+}
+
+@test "runc exec with isolated cpus affinity bad transition [cgroup cpuset]" {
+	requires root
+
+	tmp=$(mktemp -d "$BATS_RUN_TMPDIR/runc.XXXXXX")
+
+	local all_cpus
+	all_cpus="$(cat /sys/devices/system/cpu/online)"
+
+	update_config ".linux.resources.cpu.cpus = \"$all_cpus\""
+
+	# set a bad isolated CPU affinity transition
+	update_config '.annotations += {"org.opencontainers.runc.exec.isolated-cpu-affinity-transition": "bad"}'
+
+	local mems
+	mems="$(cat /sys/devices/system/node/online 2>/dev/null || true)"
+	[[ -n $mems ]] && update_config ".linux.resources.cpu.mems = \"$mems\""
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_isolated_bad_transition
+	[ "$status" -eq 0 ]
+
+	# set all online cpus as isolated
+	echo "nohz_full=$all_cpus" >"$tmp/cmdline"
+
+	mount --bind "$tmp/cmdline" /proc/cmdline
+
+	runc exec test_isolated_bad_transition true
+
+	umount /proc/cmdline
+
+	[ "$status" -eq 255 ]
+}
+
+@test "runc exec with taskset affinity [cgroup cpuset]" {
+	requires root
+
+	local all_cpus
+	all_cpus="$(cat /sys/devices/system/cpu/online)"
+
+	local first_cpu="0"
+	[[ $all_cpus =~ [^0-9]*([0-9]+)([-,][0-9]+)? ]] && first_cpu=${BASH_REMATCH[1]}
+
+	update_config ".linux.resources.cpu.cpus = \"$all_cpus\""
+
+	local mems
+	mems="$(cat /sys/devices/system/node/online 2>/dev/null || true)"
+	[[ -n $mems ]] && update_config ".linux.resources.cpu.mems = \"$mems\""
+
+	taskset -p -c "$first_cpu" $$
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_with_taskset
+	[ "$status" -eq 0 ]
+
+	runc exec test_with_taskset grep "Cpus_allowed_list:" /proc/1/status
+	[ "$status" -eq 0 ]
+	[[ "${lines[0]}" == "Cpus_allowed_list:	$all_cpus" ]]
+
+	runc exec test_with_taskset grep "Cpus_allowed_list:" /proc/self/status
+	[ "$status" -eq 0 ]
+	[[ "${lines[0]}" == "Cpus_allowed_list:	$all_cpus" ]]
+}
+
+@test "runc exec with taskset affinity [rootless cgroups_v2]" {
+	requires rootless cgroups_v2
+
+	local all_cpus
+	all_cpus="$(cat /sys/devices/system/cpu/online)"
+
+	local first_cpu="0"
+	[[ $all_cpus =~ [^0-9]*([0-9]+)([-,][0-9]+)? ]] && first_cpu=${BASH_REMATCH[1]}
+
+	taskset -p -c "$first_cpu" $$
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_with_taskset
+	[ "$status" -eq 0 ]
+
+	runc exec test_with_taskset grep "Cpus_allowed_list:" /proc/1/status
+	[ "$status" -eq 0 ]
+	[[ "${lines[0]}" == "Cpus_allowed_list:	$all_cpus" ]]
+
+	runc exec test_with_taskset grep "Cpus_allowed_list:" /proc/self/status
+	[ "$status" -eq 0 ]
+	[[ "${lines[0]}" == "Cpus_allowed_list:	$all_cpus" ]]
+}

@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 
 	"golang.org/x/sys/unix"
@@ -262,4 +264,27 @@ func (m *Manager) OOMKillCount() (uint64, error) {
 	}
 
 	return c, err
+}
+
+func (m *Manager) GetEffectiveCPUs() string {
+	return GetEffectiveCPUs(m.Path("cpuset"), m.cgroups)
+}
+
+func GetEffectiveCPUs(cpusetPath string, cgroups *configs.Cgroup) string {
+	// Fast path.
+	if cgroups.CpusetCpus != "" {
+		return cgroups.CpusetCpus
+	} else if !strings.HasPrefix(cpusetPath, defaultCgroupRoot) {
+		return ""
+	}
+
+	// Iterates until it goes to the cgroup root path.
+	for path := filepath.Clean(cpusetPath); path != defaultCgroupRoot; path = filepath.Dir(path) {
+		cpus, err := fscommon.GetCgroupParamString(path, "cpuset.effective_cpus")
+		if err == nil {
+			return cpus
+		}
+	}
+
+	return ""
 }

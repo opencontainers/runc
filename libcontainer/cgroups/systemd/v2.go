@@ -514,3 +514,7 @@ func (m *UnifiedManager) Exists() bool {
 func (m *UnifiedManager) OOMKillCount() (uint64, error) {
 	return m.fsMgr.OOMKillCount()
 }
+
+func (m *UnifiedManager) GetEffectiveCPUs() string {
+	return m.fsMgr.GetEffectiveCPUs()
+}
