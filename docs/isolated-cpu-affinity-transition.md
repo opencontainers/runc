@@ -124,25 +124,3 @@ spec:
   - name: demo
     image: registry.com/demo:latest
 ```
-
-#### Deployment template example
-
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: demo-deployment
-  labels:
-    app: demo
-spec:
-  template:
-    metadata:
-      labels:
-        app: demo
-      annotations:
-        org.opencontainers.runc.exec.isolated-cpu-affinity-transition: "temporary"
-    spec:
-      containers:
-      - name: demo
-        image: registry.com/demo:latest
-```
