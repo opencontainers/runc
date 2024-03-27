@@ -121,7 +121,7 @@ function init_cgroup_paths() {
 		CGROUP_BASE_PATH=/sys/fs/cgroup
 
 		# Find any cgroup.freeze files...
-		if [ -n "$(find "$CGROUP_BASE_PATH" -type f -name "cgroup.freeze" -print -quit)" ]; then
+		if [ -n "$(find "$CGROUP_BASE_PATH" -maxdepth 2 -type f -name "cgroup.freeze" -print -quit)" ]; then
 			CGROUP_SUBSYSTEMS+=" freezer"
 		fi
 	else
@@ -424,8 +424,14 @@ function requires() {
 			;;
 		cgroups_swap)
 			init_cgroup_paths
-			if [ -v CGROUP_V1 ] && [ ! -e "${CGROUP_MEMORY_BASE_PATH}/memory.memsw.limit_in_bytes" ]; then
-				skip_me=1
+			if [ -v CGROUP_V1 ]; then
+				if [ ! -e "${CGROUP_MEMORY_BASE_PATH}/memory.memsw.limit_in_bytes" ]; then
+					skip_me=1
+				fi
+			elif [ -v CGROUP_V2 ]; then
+				if [ -z "$(find "$CGROUP_BASE_PATH" -maxdepth 2 -type f -name memory.swap.max -print -quit)" ]; then
+					skip_me=1
+				fi
 			fi
 			;;
 		cgroups_cpu_idle)
@@ -433,7 +439,7 @@ function requires() {
 			init_cgroup_paths
 			[ -v CGROUP_V1 ] && p="$CGROUP_CPU_BASE_PATH"
 			[ -v CGROUP_V2 ] && p="$CGROUP_BASE_PATH"
-			if [ -z "$(find "$p" -name cpu.idle -print -quit)" ]; then
+			if [ -z "$(find "$p" -maxdepth 2 -type f -name cpu.idle -print -quit)" ]; then
 				skip_me=1
 			fi
 			;;
@@ -447,7 +453,7 @@ function requires() {
 				p="$CGROUP_BASE_PATH"
 				f="cpu.max.burst"
 			fi
-			if [ -z "$(find "$p" -name "$f" -print -quit)" ]; then
+			if [ -z "$(find "$p" -maxdepth 2 -type f -name "$f" -print -quit)" ]; then
 				skip_me=1
 			fi
 			;;
