@@ -463,10 +463,6 @@ func slicesContains[S ~[]E, E comparable](slice S, needle E) bool {
 }
 
 func isDmzBinarySafe(c *configs.Config) bool {
-	if !dmz.WorksWithSELinux(c) {
-		return false
-	}
-
 	// Because we set the dumpable flag in nsexec, the only time when it is
 	// unsafe to use runc-dmz is when the container process would be able to
 	// race against "runc init" and bypass the ptrace_may_access() checks.

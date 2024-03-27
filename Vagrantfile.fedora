@@ -32,9 +32,6 @@ EOF
     # To avoid "avc: denied { nosuid_transition }" from SELinux as we run tests on /tmp.
     mount -o remount,suid /tmp
 
-    # Disable selinux-vs-dmz workaround as Fedora doesn't need it.
-    echo 'export EXTRA_BUILDTAGS=runc_dmz_selinux_nocompat' >> /root/.bashrc
-
     # Prevent the "fatal: unsafe repository" git complain during build.
     git config --global --add safe.directory /vagrant
 
