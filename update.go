@@ -122,11 +122,11 @@ other options are ignored.
 		},
 		cli.StringFlag{
 			Name:  "memory-swap",
-			Usage: "Total memory usage (memory + swap); set '-1' to enable unlimited swap",
+			Usage: "Total memory usage (memory + swap); use '-1' to enable unlimited swap",
 		},
 		cli.IntFlag{
 			Name:  "pids-limit",
-			Usage: "Maximum number of pids allowed in the container",
+			Usage: "Maximum number of tasks; use '-1' for unlimited",
 		},
 		cli.StringFlag{
 			Name:  "l3-cache-schema",
