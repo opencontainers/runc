@@ -20,20 +20,17 @@ func (s *PidsGroup) Apply(path string, _ *configs.Resources, pid int) error {
 }
 
 func (s *PidsGroup) Set(path string, r *configs.Resources) error {
-	if r.PidsLimit != 0 {
-		// "max" is the fallback value.
-		limit := "max"
+	if r.PidsLimit == nil {
+		return nil
+	}
+	// "max" is the fallback value.
+	limit := "max"
 
-		if r.PidsLimit > 0 {
-			limit = strconv.FormatInt(r.PidsLimit, 10)
-		}
-
-		if err := cgroups.WriteFile(path, "pids.max", limit); err != nil {
-			return err
-		}
+	if *r.PidsLimit > 0 {
+		limit = strconv.FormatInt(*r.PidsLimit, 10)
 	}
 
-	return nil
+	return cgroups.WriteFile(path, "pids.max", limit)
 }
 
 func (s *PidsGroup) GetStats(path string, stats *cgroups.Stats) error {
