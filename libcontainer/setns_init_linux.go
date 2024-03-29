@@ -49,6 +49,7 @@ func (l *linuxSetnsInit) Init() error {
 			}
 		}
 	}
+
 	if l.config.CreateConsole {
 		if err := setupConsole(l.consoleSocket, l.config, false); err != nil {
 			return err
