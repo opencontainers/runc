@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
@@ -35,17 +36,65 @@ func (s *CpuGroup) Apply(path string, r *configs.Resources, pid int) error {
 }
 
 func (s *CpuGroup) SetRtSched(path string, r *configs.Resources) error {
-	if r.CpuRtPeriod != 0 {
-		if err := cgroups.WriteFile(path, "cpu.rt_period_us", strconv.FormatUint(r.CpuRtPeriod, 10)); err != nil {
+	const (
+		filePeriod  = "cpu.rt_period_us"
+		fileRuntime = "cpu.rt_runtime_us"
+	)
+
+	if r.CpuRtPeriod == 0 && r.CpuRtRuntime == 0 {
+		return nil
+	}
+
+	if r.CpuRtPeriod != 0 && r.CpuRtRuntime == 0 {
+		return cgroups.WriteFile(path, filePeriod, strconv.FormatUint(r.CpuRtPeriod, 10))
+	} else if r.CpuRtRuntime != 0 && r.CpuRtPeriod == 0 {
+		return cgroups.WriteFile(path, fileRuntime, strconv.FormatInt(r.CpuRtRuntime, 10))
+	}
+
+	// When neither CpuRtPeriod nor CpuRtRuntime is equal to 0, let's set them in the correct order.
+
+	sOldPeriod, err := cgroups.ReadFile(path, filePeriod)
+	if err != nil {
+		return err
+	}
+	oldPeriod, err := strconv.ParseInt(strings.TrimSpace(sOldPeriod), 10, 64)
+	if err != nil {
+		return err
+	}
+
+	sOldRuntime, err := cgroups.ReadFile(path, fileRuntime)
+	if err != nil {
+		return err
+	}
+	oldRuntime, err := strconv.ParseInt(strings.TrimSpace(sOldRuntime), 10, 64)
+	if err != nil {
+		return err
+	}
+
+	/*
+		When we set a new rt_period_us, the kernel will determine whether
+		the current configuration of new_limit1 = old_quota/new_period
+		exceeds the limit. If it exceeds the limit, an error will be reported.
+		Maybe it is reasonable to set rt_runtime_us first so that the
+		new_limit2 = new_quota/old_period.In the opposite case, if rt_runtime_us
+		is set first, new_limit2 may still exceed the limit, but new_limit1
+		will be valid.Therefore, new_limit1 and new_limit2 should be calculated
+		in advance,and the smaller corresponding setting order should be selected
+		to set rt_period_us and rt_runtime_us.
+	*/
+
+	// First set cpu.rt_period_us because of (oldRuntime / r.CpuRtPeriod) < (r.CpuRtRuntime / oldPeriod)
+	if uint64(oldRuntime*oldPeriod) < (uint64(r.CpuRtRuntime) * r.CpuRtPeriod) {
+		if err := cgroups.WriteFile(path, filePeriod, strconv.FormatUint(r.CpuRtPeriod, 10)); err != nil {
 			return err
 		}
+		return cgroups.WriteFile(path, fileRuntime, strconv.FormatInt(r.CpuRtRuntime, 10))
 	}
-	if r.CpuRtRuntime != 0 {
-		if err := cgroups.WriteFile(path, "cpu.rt_runtime_us", strconv.FormatInt(r.CpuRtRuntime, 10)); err != nil {
-			return err
-		}
+	// First set cpu.rt_runtime_us because of (r.CpuRtRuntime / oldPeriod) < (oldRuntime / r.CpuRtPeriod)
+	if err := cgroups.WriteFile(path, fileRuntime, strconv.FormatInt(r.CpuRtRuntime, 10)); err != nil {
+		return err
 	}
-	return nil
+	return cgroups.WriteFile(path, filePeriod, strconv.FormatUint(r.CpuRtPeriod, 10))
 }
 
 func (s *CpuGroup) Set(path string, r *configs.Resources) error {
