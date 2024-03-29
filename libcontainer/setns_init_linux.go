@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"syscall"
 
 	"github.com/opencontainers/selinux/go-selinux"
 	"github.com/sirupsen/logrus"
@@ -49,6 +50,17 @@ func (l *linuxSetnsInit) Init() error {
 			}
 		}
 	}
+
+	// Set RLIMIT_NOFILE again to clean the cache in go runtime
+	// The problem originates from https://github.com/golang/go/commit/f5eef58e4381259cbd84b3f2074c79607fb5c821
+	rlimit := syscall.Rlimit{}
+	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rlimit); err != nil {
+		return err
+	}
+	if err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rlimit); err != nil {
+		return err
+	}
+
 	if l.config.CreateConsole {
 		if err := setupConsole(l.consoleSocket, l.config, false); err != nil {
 			return err

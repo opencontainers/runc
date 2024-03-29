@@ -5,11 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-
-	"github.com/opencontainers/runtime-spec/specs-go"
-	"github.com/opencontainers/selinux/go-selinux"
-	"github.com/sirupsen/logrus"
-	"golang.org/x/sys/unix"
+	"syscall"
 
 	"github.com/opencontainers/runc/libcontainer/apparmor"
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -17,6 +13,10 @@ import (
 	"github.com/opencontainers/runc/libcontainer/seccomp"
 	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runc/libcontainer/utils"
+	"github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/opencontainers/selinux/go-selinux"
+	"github.com/sirupsen/logrus"
+	"golang.org/x/sys/unix"
 )
 
 type linuxStandardInit struct {
@@ -75,6 +75,16 @@ func (l *linuxStandardInit) Init() error {
 				return fmt.Errorf("unable to mod keyring permissions: %w", err)
 			}
 		}
+	}
+
+	// Set RLIMIT_NOFILE again to clean the cache in go runtime
+	// The problem originates from https://github.com/golang/go/commit/f5eef58e4381259cbd84b3f2074c79607fb5c821
+	rlimit := syscall.Rlimit{}
+	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rlimit); err != nil {
+		return err
+	}
+	if err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rlimit); err != nil {
+		return err
 	}
 
 	if err := setupNetwork(l.config); err != nil {
