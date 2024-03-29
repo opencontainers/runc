@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased 1.1.z]
 
+> **NOTE**: runc currently will not work properly when compiled with Go 1.22 or
+> newer. This is due to some unfortunate glibc behaviour that Go 1.22
+> exacerbates in a way that results in containers not being able to start on
+> some systems. [See this issue for more information.][runc-4233].
+
+[runc-4233]: https://github.com/opencontainers/runc/issues/4233
+
 ## [1.1.12] - 2024-01-31
 
 > Now you're thinking with Portals™!
