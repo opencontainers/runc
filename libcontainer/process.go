@@ -100,6 +100,8 @@ type Process struct {
 	SubCgroupPaths map[string]string
 
 	Scheduler *configs.Scheduler
+
+	IOPriority *configs.IOPriority
 }
 
 // Wait waits for the process to exit.
