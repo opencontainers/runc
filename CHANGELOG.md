@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+> **NOTE**: runc currently will not work properly when compiled with Go 1.22 or
+> newer. This is due to some unfortunate glibc behaviour that Go 1.22
+> exacerbates in a way that results in containers not being able to start on
+> some systems. [See this issue for more information.][runc-4233].
+
 ### Deprecated
 
  * `runc` option `--criu` is now ignored (with a warning), and the option will
@@ -46,6 +51,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    code (this was due to how s390x does syscall multiplexing). (#3474)
  * Remove tun/tap from the default device rules. (#3468)
  * specconv: avoid mapping "acl" to MS_POSIXACL. (#3739)
+
+[runc-4233]: https://github.com/opencontainers/runc/issues/4233
 
 ## [1.1.8] - 2023-07-20
 
