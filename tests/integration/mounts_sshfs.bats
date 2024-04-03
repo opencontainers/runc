@@ -31,19 +31,16 @@ function setup_sshfs() {
 		-o StrictHostKeyChecking=no
 		-o PasswordAuthentication=no"
 
-	if ! [ -v DIR ]; then
-		DIR="$BATS_RUN_TMPDIR/fuse-sshfs"
-		mkdir -p "$DIR"
-		# Make sure we clear all superblock flags to make sure bind-mounts can
-		# unset these flags.
-		if ! $sshfs -o rw,suid,dev,exec,atime rootless@localhost: "$DIR"; then
-			# fallback to tmpfs if running in without sshfs
-			mount -t tmpfs -o rw,suid,dev,exec,diratime,strictatime tmpfs "$DIR"
-		fi
+	DIR="$BATS_RUN_TMPDIR/fuse-sshfs"
+	umount "$DIR" 2>/dev/null || true
+	mkdir -p "$DIR"
+	# Make sure we clear all superblock flags to make sure bind-mounts can
+	# unset these flags.
+	if ! $sshfs -o rw,suid,dev,exec,atime rootless@localhost: "$DIR"; then
+		# fallback to tmpfs if running in without sshfs
+		mount -t tmpfs -o rw,suid,dev,exec,diratime,strictatime tmpfs "$DIR"
 	fi
-	# Reset atime flags. "diratime" is quite a strange flag, so we need to make
-	# sure it's cleared before we apply the requested flags.
-	mount --bind -o remount,diratime,strictatime "$DIR"
+
 	# We need to set the mount flags separately on the mount because some mount
 	# flags (such as "ro") are set on the superblock if you do them in the
 	# initial mount, which means that they cannot be cleared by bind-mounts.
