@@ -121,7 +121,7 @@ jobs:
     - name: install go
       uses: actions/setup-go@v4
       with:
-        go-version: 1.x # Latest stable
+        go-version: 1.21
 
     - name: unit test
       run: sudo -E PATH="$PATH" -- make GOARCH=386 localunittest

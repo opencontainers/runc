@@ -1,6 +1,6 @@
 ARG GO_VERSION=1.20
 ARG BATS_VERSION=v1.9.0
-ARG LIBSECCOMP_VERSION=2.5.4
+ARG LIBSECCOMP_VERSION=2.5.5
 
 FROM golang:${GO_VERSION}-bullseye
 ARG DEBIAN_FRONTEND=noninteractive
@@ -31,6 +31,7 @@ RUN KEYFILE=/usr/share/keyrings/criu-repo-keyring.gpg; \
         sshfs \
         sudo \
         uidmap \
+        iproute2 \
     && apt-get clean \
     && rm -rf /var/cache/apt /var/lib/apt/lists/* /etc/apt/sources.list.d/*.list
 

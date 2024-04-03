@@ -7,7 +7,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 # sha256 checksums for seccomp release tarballs.
 declare -A SECCOMP_SHA256=(
-	["2.5.4"]=d82902400405cf0068574ef3dc1fe5f5926207543ba1ae6f8e7a1576351dcbdb
+	["2.5.5"]=248a2c8a4d9b9858aa6baf52712c34afefcf9c9e94b76dce02c1c9aa25fb3375
 )
 
 # Due to libseccomp being LGPL we must include its sources,
