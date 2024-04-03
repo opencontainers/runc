@@ -6,10 +6,99 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0-rc.1] - 2024-04-03
+
+> There's a frood who really knows where his towel is.
+
+`runc` now requires a minimum of Go 1.20 to compile.
+
 > **NOTE**: runc currently will not work properly when compiled with Go 1.22 or
 > newer. This is due to some unfortunate glibc behaviour that Go 1.22
 > exacerbates in a way that results in containers not being able to start on
-> some systems. [See this issue for more information.][runc-4233].
+> some systems. [See this issue for more information.][runc-4233]
+
+[runc-4233]: https://github.com/opencontainers/runc/issues/4233
+
+### Breaking
+
+ * Several aspects of how mount options work has been adjusted in a way that
+   could theoretically break users that have very strange mount option strings.
+   This was necessary to fix glaring issues in how mount options were being
+   treated. The key changes are:
+
+   - Mount options on bind-mounts that clear a mount flag are now always
+     applied. Previously, if a user requested a bind-mount with only clearing
+     options (such as `rw,exec,dev`) the options would be ignored and the
+     original bind-mount options would be set. Unfortunately this also means
+     that container configurations which specified only clearing mount options
+     will now actually get what they asked for, which could break existing
+     containers (though it seems unlikely that a user who requested a specific
+     mount option would consider it "broken" to get the mount options they
+     asked foruser who requested a specific mount option would consider it
+     "broken" to get the mount options they asked for). This also allows us to
+     silently add locked mount flags the user *did not explicitly request to be
+     cleared* in rootless mode, allowing for easier use of bind-mounts for
+     rootless containers. (#3967)
+
+   - Container configurations using bind-mounts with superblock mount flags
+     (i.e. filesystem-specific mount flags, referred to as "data" in
+     `mount(2)`, as opposed to VFS generic mount flags like `MS_NODEV`) will
+     now return an error. This is because superblock mount flags will also
+     affect the host mount (as the superblock is shared when bind-mounting),
+     which is obviously not acceptable. Previously, these flags were silently
+     ignored so this change simply tells users that runc cannot fulfil their
+     request rather than just ignoring it. (#3990)
+
+   If any of these changes cause problems in real-world workloads, please [open
+   an issue](https://github.com/opencontainers/runc/issues/new/choose) so we
+   can adjust the behaviour to avoid compatibility issues.
+
+### Added
+
+ * runc has been updated to OCI runtime-spec 1.2.0, and supports all Linux
+   features with a few minor exceptions. See
+   [`docs/spec-conformance.md`](https://github.com/opencontainers/runc/blob/v1.2.0-rc.1/docs/spec-conformance.md)
+   for more details.
+ * runc now supports id-mapped mounts for bind-mounts (with no restrictions on
+   the mapping used for each mount). Other mount types are not currently
+   supported. This feature requires `MOUNT_ATTR_IDMAP` kernel support (Linux
+   5.12 or newer) as well as kernel support for the underlying filesystem used
+   for the bind-mount. See [`mount_setattr(2)`][mount_setattr.2] for a list of
+   supported filesystems and other restrictions. (#3717, #3985, #3993)
+ * Two new mechanisms for reducing the memory usage of our protections against
+   [CVE-2019-5736][cve-2019-5736] have been introduced:
+   - `runc-dmz` is a minimal binary (~8K) which acts as an additional execve
+     stage, allowing us to only need to protect the smaller binary. It should
+     be noted that there have been several compatibility issues reported with
+     the usage of `runc-dmz` (namely related to capabilities and SELinux). As
+     such, this mechanism is **opt-in** and can be enabled by running `runc`
+     with the environment variable `RUNC_DMZ=true` (setting this environment
+     variable in `config.json` will have no effect). This feature can be
+     disabled at build time using the `runc_nodmz` build tag. (#3983, #3987)
+   - `contrib/memfd-bind` is a helper daemon which will bind-mount a memfd copy
+     of `/usr/bin/runc` on top of `/usr/bin/runc`. This entirely eliminates
+     per-container copies of the binary, but requires care to ensure that
+     upgrades to runc are handled properly, and requires a long-running daemon
+     (unfortunately memfds cannot be bind-mounted directly and thus require a
+     daemon to keep them alive). (#3987)
+ * runc will now use `cgroup.kill` if available to kill all processes in a
+   container (such as when doing `runc kill`). (#3135, #3825)
+ * Add support for setting the umask for `runc exec`. (#3661)
+ * libct/cg: support `SCHED_IDLE` for runc cgroupfs. (#3377)
+ * checkpoint/restore: implement `--manage-cgroups-mode=ignore`. (#3546)
+ * seccomp: refactor flags support; add flags to features, set `SPEC_ALLOW` by
+   default. (#3588)
+ * libct/cg/sd: use systemd v240+ new `MAJOR:*` syntax. (#3843)
+ * Support CFS bandwidth burst for CPU. (#3749, #3145)
+ * Support time namespaces. (#3876)
+ * Reduce the `runc` binary size by ~11% by updating
+   `github.com/checkpoint-restore/go-criu`. (#3652)
+ * Add `--pidfd-socket` to `runc run` and `runc exec` to allow for management
+   processes to receive a pidfd for the new process, allowing them to avoid pid
+   reuse attacks. (#4045)
+
+[mount_setattr.2]: https://man7.org/linux/man-pages/man2/mount_setattr.2.html
+[cve-2019-5736]: https://github.com/advisories/GHSA-gxmr-w5mj-v8hh
 
 ### Deprecated
 
@@ -21,12 +110,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    to kill a container (with SIGKILL) which does not have its own private PID
    namespace (so that runc would send SIGKILL to all processes). Now, this is
    done automatically. (#3864, #3825)
+ * `github.com/opencontainers/runc/libcontainer/user` is now deprecated, please
+   use `github.com/moby/sys/user` instead. It will be removed in a future
+   release. (#4017)
 
 ### Changed
 
  * When Intel RDT feature is not available, its initialization is skipped,
    resulting in slightly faster `runc exec` and `runc run`. (#3306)
- * Enforce absolute paths for mounts. (#3020, #3717)
+ * `runc features` is no longer experimental. (#3861)
  * libcontainer users that create and kill containers from a daemon process
    (so that the container init is a child of that process) must now implement
    a proper child reaper in case a container does not have its own private PID
@@ -40,6 +132,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    For cgroupv1, `Usage` and `Failcnt` are set by subtracting memory usage
    from memory+swap usage. For cgroupv2, `Usage`, `Limit`, and `MaxUsage`
    are set. (#4010)
+ * libcontainer users that create and kill containers from a daemon process
+   (so that the container init is a child of that process) must now implement
+   a proper child reaper in case a container does not have its own private PID
+   namespace, as documented in `container.Signal`. (#3825)
+ * libcontainer: `container.Signal` no longer takes an `all` argument. Whether
+   or not it is necessary to kill all processes in the container individually
+   is now determined automatically. (#3825, #3885)
+ * seccomp: enable seccomp binary tree optimization. (#3405)
+ * `runc run`/`runc exec`: ignore SIGURG. (#3368)
+ * Remove tun/tap from the default device allowlist. (#3468)
+ * `runc --root non-existent-dir list` now reports an error for non-existent
+   root directory. (#3374)
 
 ### Fixed
 
@@ -50,9 +154,108 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    support would return `-EPERM` despite the existence of the `-ENOSYS` stub
    code (this was due to how s390x does syscall multiplexing). (#3474)
  * Remove tun/tap from the default device rules. (#3468)
- * specconv: avoid mapping "acl" to MS_POSIXACL. (#3739)
+ * specconv: avoid mapping "acl" to `MS_POSIXACL`. (#3739)
+ * libcontainer: fix private PID namespace detection when killing the
+   container. (#3866, #3825)
+ * systemd socket notification: fix race where runc exited before systemd
+   properly handled the `READY` notification. (#3291, #3293)
+ * The `-ENOSYS` seccomp stub is now always generated for the native
+   architecture that `runc` is running on. This is needed to work around some
+   arguably specification-incompliant behaviour from Docker on architectures
+   such as ppc64le, where the allowed architecture list is set to `null`. This
+   ensures that we always generate at least one `-ENOSYS` stub for the native
+   architecture even with these weird configs. (#4219)
 
-[runc-4233]: https://github.com/opencontainers/runc/issues/4233
+### Removed
+
+ * In order to fix performance issues in the "lightweight" bindfd protection
+   against [CVE-2019-5736][cve-2019-5736], the temporary `ro` bind-mount of
+   `/proc/self/exe` has been removed. runc now creates a binary copy in all
+   cases. See the above notes about `memfd-bind` and `runc-dmz` as well as
+   `contrib/cmd/memfd-bind/README.md` for more information about how this
+   (minor) change in memory usage can be further reduced. (#3987, #3599, #2532,
+   #3931)
+ * libct/cg: Remove `EnterPid` (a function with no users). (#3797)
+ * libcontainer: Remove `{Pre,Post}MountCmds` which were never used and are
+   obsoleted by more generic container hooks. (#3350)
+
+[cve-2019-5736]: https://github.com/advisories/GHSA-gxmr-w5mj-v8hh
+
+## [1.1.12] - 2024-01-31
+
+> Now you're thinking with Portals™!
+
+### Security
+
+* Fix [CVE-2024-21626][cve-2024-21626], a container breakout attack that took
+  advantage of a file descriptor that was leaked internally within runc (but
+  never leaked to the container process). In addition to fixing the leak,
+  several strict hardening measures were added to ensure that future internal
+  leaks could not be used to break out in this manner again. Based on our
+  research, while no other container runtime had a similar leak, none had any
+  of the hardening steps we've introduced (and some runtimes would not check
+  for any file descriptors that a calling process may have leaked to them,
+  allowing for container breakouts due to basic user error).
+
+[cve-2024-21626]: https://github.com/opencontainers/runc/security/advisories/GHSA-xr7r-f8xq-vfvv
+
+## [1.1.11] - 2024-01-01
+
+> Happy New Year!
+
+### Fixed
+
+* Fix several issues with userns path handling. (#4122, #4124, #4134, #4144)
+
+### Changed
+
+ * Support memory.peak and memory.swap.peak in cgroups v2.
+   Add `swapOnlyUsage` in `MemoryStats`. This field reports swap-only usage.
+   For cgroupv1, `Usage` and `Failcnt` are set by subtracting memory usage
+   from memory+swap usage. For cgroupv2, `Usage`, `Limit`, and `MaxUsage`
+   are set. (#4000, #4010, #4131)
+ * build(deps): bump github.com/cyphar/filepath-securejoin. (#4140)
+
+## [1.1.10] - 2023-10-31
+
+> Śruba, przykręcona we śnie, nie zmieni sytuacji, jaka panuje na jawie.
+
+### Added
+
+* Support for `hugetlb.<pagesize>.rsvd` limiting and accounting. Fixes the
+  issue of postres failing when hugepage limits are set. (#3859, #4077)
+
+### Fixed
+
+* Fixed permissions of a newly created directories to not depend on the value
+  of umask in tmpcopyup feature implementation. (#3991, #4060)
+* libcontainer: cgroup v1 GetStats now ignores missing `kmem.limit_in_bytes`
+  (fixes the compatibility with Linux kernel 6.1+). (#4028)
+* Fix a semi-arbitrary cgroup write bug when given a malicious hugetlb
+  configuration. This issue is not a security issue because it requires a
+  malicious `config.json`, which is outside of our threat model. (#4103)
+* Various CI fixes. (#4081, #4055)
+
+## [1.1.9] - 2023-08-10
+
+> There is a crack in everything. That's how the light gets in.
+
+### Added
+
+* Added go 1.21 to the CI matrix; other CI updates. (#3976, #3958)
+
+### Fixed
+
+* Fixed losing sticky bit on tmpfs (a regression in 1.1.8). (#3952, #3961)
+* intelrdt: fixed ignoring ClosID on some systems. (#3550, #3978)
+
+### Changed
+
+ * Sum `anon` and `file` from `memory.stat` for cgroupv2 root usage,
+   as the root does not have `memory.current` for cgroupv2.
+   This aligns cgroupv2 root usage more closely with cgroupv1 reporting.
+   Additionally, report root swap usage as sum of swap and memory usage,
+   aligned with v1 and existing non-root v2 reporting. (#3933)
 
 ## [1.1.8] - 2023-07-20
 
@@ -472,7 +675,7 @@ implementation (libcontainer) is *not* covered by this policy.
    cgroups at all during `runc update`). (#2994)
 
 <!-- minor releases -->
-[Unreleased]: https://github.com/opencontainers/runc/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/opencontainers/runc/compare/v1.2.0-rc.1...HEAD
 [1.1.0]: https://github.com/opencontainers/runc/compare/v1.1.0-rc.1...v1.1.0
 [1.0.0]: https://github.com/opencontainers/runc/releases/tag/v1.0.0
 
@@ -483,7 +686,11 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.0.1]: https://github.com/opencontainers/runc/compare/v1.0.0...v1.0.1
 
 <!-- 1.1.z patch releases -->
-[Unreleased 1.1.z]: https://github.com/opencontainers/runc/compare/v1.1.8...release-1.1
+[Unreleased 1.1.z]: https://github.com/opencontainers/runc/compare/v1.1.12...release-1.1
+[1.1.12]: https://github.com/opencontainers/runc/compare/v1.1.11...v1.1.12
+[1.1.11]: https://github.com/opencontainers/runc/compare/v1.1.10...v1.1.11
+[1.1.10]: https://github.com/opencontainers/runc/compare/v1.1.9...v1.1.10
+[1.1.9]: https://github.com/opencontainers/runc/compare/v1.1.8...v1.1.9
 [1.1.8]: https://github.com/opencontainers/runc/compare/v1.1.7...v1.1.8
 [1.1.7]: https://github.com/opencontainers/runc/compare/v1.1.6...v1.1.7
 [1.1.6]: https://github.com/opencontainers/runc/compare/v1.1.5...v1.1.6
@@ -493,3 +700,6 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.1.2]: https://github.com/opencontainers/runc/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/opencontainers/runc/compare/v1.1.0...v1.1.1
 [1.1.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.0.0...v1.1.0-rc.1
+
+<!-- 1.2.z patch releases -->
+[1.2.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.1.0...v1.2.0-rc.1
