@@ -219,7 +219,7 @@ jobs:
     - name: install go
       uses: actions/setup-go@v5
       with:
-        go-version: 1.21.x # TODO: switch to 1.x (latest stable) once Go 1.22 vs glibc issue is fixed.
+        go-version: 1.x # Latest stable
 
     - name: unit test
       env:
