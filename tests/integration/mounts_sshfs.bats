@@ -390,7 +390,11 @@ function fail_sshfs_bind_flags() {
 	pass_sshfs_bind_flags "nodiratime" "bind"
 	run -0 grep -wq nodiratime <<<"$mnt_flags"
 	# MS_DIRATIME implies MS_RELATIME by default.
-	run -0 grep -wq relatime <<<"$mnt_flags"
+	# Let's check either relatime is set or no other option that removes
+	# relatime semantics is set.
+	# The latter case is needed in debian. For more info, see issue: #4093
+	run -0 grep -wq relatime <<<"$mnt_flags" ||
+		(run ! grep -wqE 'strictatime|norelatime|noatime' <<<"$mnt_flags")
 
 	pass_sshfs_bind_flags "noatime,nodiratime" "bind"
 	run -0 grep -wq noatime <<<"$mnt_flags"
