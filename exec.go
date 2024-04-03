@@ -181,17 +181,16 @@ func execProcess(context *cli.Context) (int, error) {
 	}
 
 	r := &runner{
-		enableSubreaper: false,
-		shouldDestroy:   false,
-		container:       container,
-		consoleSocket:   context.String("console-socket"),
-		pidfdSocket:     context.String("pidfd-socket"),
-		detach:          context.Bool("detach"),
-		pidFile:         context.String("pid-file"),
-		action:          CT_ACT_RUN,
-		init:            false,
-		preserveFDs:     context.Int("preserve-fds"),
-		subCgroupPaths:  cgPaths,
+		shouldDestroy:  false,
+		container:      container,
+		consoleSocket:  context.String("console-socket"),
+		pidfdSocket:    context.String("pidfd-socket"),
+		detach:         context.Bool("detach"),
+		pidFile:        context.String("pid-file"),
+		action:         CT_ACT_RUN,
+		init:           false,
+		preserveFDs:    context.Int("preserve-fds"),
+		subCgroupPaths: cgPaths,
 	}
 	return r.run(p)
 }

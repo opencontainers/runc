@@ -54,7 +54,7 @@ command(s) that get executed on start, edit the args parameter of the spec. See
 		},
 		cli.BoolFlag{
 			Name:  "no-subreaper",
-			Usage: "disable the use of the subreaper used to reap reparented processes",
+			Usage: "(ignored) disable the use of the subreaper used to reap reparented processes.  This flag has been ignored by runc, and will be removed in 1.3.0",
 		},
 		cli.BoolFlag{
 			Name:  "no-pivot",

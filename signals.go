@@ -5,7 +5,6 @@ import (
 	"os/signal"
 
 	"github.com/opencontainers/runc/libcontainer"
-	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runc/libcontainer/utils"
 
 	"github.com/sirupsen/logrus"
@@ -18,13 +17,7 @@ const signalBufferSize = 2048
 // while still forwarding all other signals to the process.
 // If notifySocket is present, use it to read systemd notifications from the container and
 // forward them to notifySocketHost.
-func newSignalHandler(enableSubreaper bool, notifySocket *notifySocket) *signalHandler {
-	if enableSubreaper {
-		// set us as the subreaper before registering the signal handler for the container
-		if err := system.SetSubreaper(1); err != nil {
-			logrus.Warn(err)
-		}
-	}
+func newSignalHandler(notifySocket *notifySocket) *signalHandler {
 	// ensure that we have a large buffer size so that we do not miss any signals
 	// in case we are not processing them fast enough.
 	s := make(chan os.Signal, signalBufferSize)

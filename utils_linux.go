@@ -190,20 +190,19 @@ func createContainer(context *cli.Context, id string, spec *specs.Spec) (*libcon
 }
 
 type runner struct {
-	init            bool
-	enableSubreaper bool
-	shouldDestroy   bool
-	detach          bool
-	listenFDs       []*os.File
-	preserveFDs     int
-	pidFile         string
-	consoleSocket   string
-	pidfdSocket     string
-	container       *libcontainer.Container
-	action          CtAct
-	notifySocket    *notifySocket
-	criuOpts        *libcontainer.CriuOpts
-	subCgroupPaths  map[string]string
+	init           bool
+	shouldDestroy  bool
+	detach         bool
+	listenFDs      []*os.File
+	preserveFDs    int
+	pidFile        string
+	consoleSocket  string
+	pidfdSocket    string
+	container      *libcontainer.Container
+	action         CtAct
+	notifySocket   *notifySocket
+	criuOpts       *libcontainer.CriuOpts
+	subCgroupPaths map[string]string
 }
 
 func (r *runner) run(config *specs.Process) (int, error) {
@@ -247,10 +246,11 @@ func (r *runner) run(config *specs.Process) (int, error) {
 		return -1, err
 	}
 	detach := r.detach || (r.action == CT_ACT_CREATE)
+
 	// Setting up IO is a two stage process. We need to modify process to deal
 	// with detaching containers, and then we get a tty after the container has
 	// started.
-	handler := newSignalHandler(r.enableSubreaper, r.notifySocket)
+	handler := newSignalHandler(r.notifySocket)
 	tty, err := setupIO(process, rootuid, rootgid, config.Terminal, detach, r.consoleSocket)
 	if err != nil {
 		return -1, err
@@ -396,19 +396,18 @@ func startContainer(context *cli.Context, action CtAct, criuOpts *libcontainer.C
 	}
 
 	r := &runner{
-		enableSubreaper: !context.Bool("no-subreaper"),
-		shouldDestroy:   !context.Bool("keep"),
-		container:       container,
-		listenFDs:       listenFDs,
-		notifySocket:    notifySocket,
-		consoleSocket:   context.String("console-socket"),
-		pidfdSocket:     context.String("pidfd-socket"),
-		detach:          context.Bool("detach"),
-		pidFile:         context.String("pid-file"),
-		preserveFDs:     context.Int("preserve-fds"),
-		action:          action,
-		criuOpts:        criuOpts,
-		init:            true,
+		shouldDestroy: !context.Bool("keep"),
+		container:     container,
+		listenFDs:     listenFDs,
+		notifySocket:  notifySocket,
+		consoleSocket: context.String("console-socket"),
+		pidfdSocket:   context.String("pidfd-socket"),
+		detach:        context.Bool("detach"),
+		pidFile:       context.String("pid-file"),
+		preserveFDs:   context.Int("preserve-fds"),
+		action:        action,
+		criuOpts:      criuOpts,
+		init:          true,
 	}
 	return r.run(spec.Process)
 }

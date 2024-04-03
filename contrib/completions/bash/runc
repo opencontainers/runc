@@ -458,7 +458,6 @@ _runc_run() {
 	   --help
 	   --detatch
 	   -d
-	   --no-subreaper
 	   --no-pivot
 	   --no-new-keyring
 	"
@@ -623,7 +622,6 @@ _runc_restore() {
 	   --file-locks
 	   --detach
 	   -d
-	   --no-subreaper
 	   --no-pivot
 	   --auto-dedup
 	   --lazy-pages

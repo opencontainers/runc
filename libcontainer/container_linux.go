@@ -341,6 +341,12 @@ func (c *Container) start(process *Process) (retErr error) {
 	if err := utils.CloseExecFrom(3); err != nil {
 		return fmt.Errorf("unable to mark non-stdio fds as cloexec: %w", err)
 	}
+
+	// Set us as the subreaper to let the grandchild process reparent to us.
+	if err := system.SetSubreaper(1); err != nil {
+		return fmt.Errorf("unable to set subreaper: %w", err)
+	}
+
 	if err := parent.start(); err != nil {
 		return fmt.Errorf("unable to start container process: %w", err)
 	}

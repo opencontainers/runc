@@ -52,20 +52,6 @@ enum sync_t {
 /* Stores the current stage of nsexec. */
 int current_stage = STAGE_SETUP;
 
-/* Assume the stack grows down, so arguments should be above it. */
-struct clone_t {
-	/*
-	 * Reserve some space for clone() to locate arguments
-	 * and retcode in this place
-	 */
-	char stack[4096] __attribute__((aligned(16)));
-	char stack_ptr[0];
-
-	/* There's two children. This is used to execute the different code. */
-	jmp_buf *env;
-	int jmpval;
-};
-
 struct nlconfig_t {
 	char *data;
 
@@ -303,23 +289,15 @@ static void update_oom_score_adj(char *data, size_t len)
 		bail("failed to update /proc/self/oom_score_adj");
 }
 
-/* A dummy function that just jumps to the given jumpval. */
-static int child_func(void *arg) __attribute__((noinline));
-static int child_func(void *arg)
+static int fork_and_run(jmp_buf *env, int jmpval)
 {
-	struct clone_t *ca = (struct clone_t *)arg;
-	longjmp(*ca->env, ca->jmpval);
-}
-
-static int clone_parent(jmp_buf *env, int jmpval) __attribute__((noinline));
-static int clone_parent(jmp_buf *env, int jmpval)
-{
-	struct clone_t ca = {
-		.env = env,
-		.jmpval = jmpval,
-	};
-
-	return clone(child_func, ca.stack_ptr, CLONE_PARENT | SIGCHLD, &ca);
+	pid_t pid = fork();
+	if (pid < 0)
+		bail("failed to fork");
+	if (pid > 0)
+		return pid;
+	/* Jump back to the big switch in nsexec... */
+	longjmp(*env, jmpval);
 }
 
 /* Returns the clone(2) flag for a namespace, given the name of a namespace. */
@@ -644,7 +622,7 @@ void nsexec(void)
 	 *
 	 * Unfortunately, it's not as simple as that. We have to fork to enter the
 	 * PID namespace (the PID namespace only applies to children). Since we'll
-	 * have to double-fork, this clone_parent() call won't be able to get the
+	 * have to double-fork, this fork() call won't be able to get the
 	 * PID of the _actual_ init process (without doing more synchronisation than
 	 * I can deal with at the moment). So we'll just get the parent to send it
 	 * for us, the only job of this process is to update
@@ -654,15 +632,6 @@ void nsexec(void)
 	 * because if we join a PID namespace in the topmost parent then our child
 	 * will be in that namespace (and it will not be able to give us a PID value
 	 * that makes sense without resorting to sending things with cmsg).
-	 *
-	 * This also deals with an older issue caused by dumping cloneflags into
-	 * clone(2): On old kernels, CLONE_PARENT didn't work with CLONE_NEWPID, so
-	 * we have to unshare(2) before clone(2) in order to do this. This was fixed
-	 * in upstream commit 1f7f4dde5c945f41a7abc2285be43d918029ecc5, and was
-	 * introduced by 40a0d32d1eaffe6aac7324ca92604b6b3977eb0e. As far as we're
-	 * aware, the last mainline kernel which had this bug was Linux 3.12.
-	 * However, we cannot comment on which kernels the broken patch was
-	 * backported to.
 	 *
 	 * -- Aleksa "what has my life come to?" Sarai
 	 */
@@ -687,7 +656,7 @@ void nsexec(void)
 
 			/* Start the process of getting a container. */
 			write_log(DEBUG, "spawn stage-1");
-			stage1_pid = clone_parent(&env, STAGE_CHILD);
+			stage1_pid = fork_and_run(&env, STAGE_CHILD);
 			if (stage1_pid < 0)
 				bail("unable to spawn stage-1");
 
@@ -755,9 +724,7 @@ void nsexec(void)
 					/*
 					 * Send both the stage-1 and stage-2 pids back to runc.
 					 * runc needs the stage-2 to continue process management,
-					 * but because stage-1 was spawned with CLONE_PARENT we
-					 * cannot reap it within stage-0 and thus we need to ask
-					 * runc to reap the zombie for us.
+					 * and ask runc to reap the zombie for us.
 					 */
 					write_log(DEBUG, "forward stage-1 (%d) and stage-2 (%d) pids to runc",
 						  stage1_pid, stage2_pid);
@@ -892,9 +859,8 @@ void nsexec(void)
 				}
 
 				/*
-				 * We don't have the privileges to do any mapping here (see the
-				 * clone_parent rant). So signal stage-0 to do the mapping for
-				 * us.
+				 * We don't have the privileges to do any mapping here.
+				 * So signal stage-0 to do the mapping for us.
 				 */
 				write_log(DEBUG, "request stage-0 to map user namespace");
 				s = SYNC_USERMAP_PLS;
@@ -925,10 +891,6 @@ void nsexec(void)
 			 * ordering might break in the future (especially with rootless
 			 * containers). But for now, it's not possible to split this into
 			 * CLONE_NEWUSER + [the rest] because of some RHEL SELinux issues.
-			 *
-			 * Note that we don't merge this with clone() because there were
-			 * some old kernel versions where clone(CLONE_PARENT | CLONE_NEWPID)
-			 * was broken, so we'll just do it the long way anyway.
 			 */
 			try_unshare(config.cloneflags, "remaining namespaces");
 
@@ -955,7 +917,7 @@ void nsexec(void)
 			 * to actually enter the new PID namespace.
 			 */
 			write_log(DEBUG, "spawn stage-2");
-			stage2_pid = clone_parent(&env, STAGE_INIT);
+			stage2_pid = fork_and_run(&env, STAGE_INIT);
 			if (stage2_pid < 0)
 				bail("unable to spawn stage-2");
 

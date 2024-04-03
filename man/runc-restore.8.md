@@ -55,9 +55,6 @@ image files directory.
 **--pid-file** _path_
 : Specify the file to write the initial container process' PID to.
 
-**--no-subreaper**
-: Disable the use of the subreaper used to reap reparented processes.
-
 **--no-pivot**
 : Do not use pivot root to jail process inside rootfs. This should not be used
 except in exceptional circumstances, and may be unsafe from the security
