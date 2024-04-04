@@ -30,16 +30,26 @@ jobs:
         criu: ["", "criu-dev"]
         dmz: ["", "runc_nodmz"]
         exclude:
-          - criu: criu-dev
-            rootless: rootless
+          # Disable most of criu-dev jobs, as they are expensive
+          # (need to compile criu) and don't add much value/coverage.
           - criu: criu-dev
             go-version: 1.20.x
           - criu: criu-dev
+            rootless: rootless
+          - criu: criu-dev
             race: -race
-          - dmz: runc_nodmz
-            criu: criu-dev
+          - criu: criu-dev
+            dmz: runc_nodmz
+          # Disable most of runc_nodmz jobs, as they don't add much value
+          # (as dmz is disabled by default anyway).
           - dmz: runc_nodmz
             os: ubuntu-20.04
+          - dmz: runc_nodmz
+            go-version: 1.20.x
+          - dmz: runc_nodmz
+            rootless: rootless
+          - dmz: runc_nodmz
+            race: -race
     runs-on: ${{ matrix.os }}
 
     steps:
