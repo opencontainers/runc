@@ -43,7 +43,7 @@ function setup_sshfs() {
 	fi
 	# Reset atime flags. "diratime" is quite a strange flag, so we need to make
 	# sure it's cleared before we apply the requested flags.
-	mount --bind -o remount,diratime,strictatime "$DIR"
+	mount --bind -o remount,diratime,atime,strictatime "$DIR"
 	# We need to set the mount flags separately on the mount because some mount
 	# flags (such as "ro") are set on the superblock if you do them in the
 	# initial mount, which means that they cannot be cleared by bind-mounts.
