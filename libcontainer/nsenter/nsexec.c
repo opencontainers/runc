@@ -112,6 +112,11 @@ struct nlconfig_t {
 #define TIMENSOFFSET_ATTR	27290
 
 /*
+ * The env name to indicate if we are running `runc init-boot`.
+*/
+#define LIBCONTAINER_INIT_BOOT "_LIBCONTAINER_INIT_BOOT"
+
+/*
  * Use the raw syscall for versions of glibc which don't include a function for
  * it, namely (glibc 2.12).
  */
@@ -549,6 +554,7 @@ static void update_timens_offsets(pid_t pid, char *map, size_t map_len)
 
 void nsexec(void)
 {
+	char *ifInitboot;
 	int pipenum;
 	jmp_buf env;
 	int sync_child_pipe[2], sync_grandchild_pipe[2];
@@ -559,6 +565,12 @@ void nsexec(void)
 	 * first, because bail will use that pipe.
 	 */
 	setup_logpipe();
+
+	ifInitboot = getenv(LIBCONTAINER_INIT_BOOT);
+	if (ifInitboot != NULL && *ifInitboot == '1') {
+		/* We are running runc `init-boot` now, just return to go runtime. */
+		return;
+	}
 
 	/*
 	 * Get the init pipe fd from the environment. The init pipe is used to
@@ -1056,7 +1068,22 @@ void nsexec(void)
 			/* Finish executing, let the Go runtime take over. */
 			write_log(DEBUG, "<= nsexec container setup");
 			write_log(DEBUG, "booting up go runtime ...");
-			return;
+
+			/*
+			 * As there is a bug in some old version glibc, which
+			 * will cause runc can't return to go routine in go 1.22.x,
+			 * so we need to execve a new runc process to give golang
+			 * a clean memory environment.
+			*/
+			setenv(LIBCONTAINER_INIT_BOOT, "1", 1);
+
+			char *argv[] = {
+				"/proc/self/exe",
+				"init-boot",
+				NULL
+			};
+			if (execve(argv[0], argv, environ) != 0)
+				bail("failed to execve runc int-boot");
 		}
 		break;
 	default:

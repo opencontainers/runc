@@ -120,6 +120,7 @@ func main() {
 		deleteCommand,
 		eventsCommand,
 		execCommand,
+		initBootCommand,
 		killCommand,
 		listCommand,
 		pauseCommand,
