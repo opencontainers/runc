@@ -344,6 +344,14 @@ EOF
 	[ "$status" -eq 0 ]
 	check_cpu_burst 500000
 
+	# issue: https://github.com/opencontainers/runc/issues/4210
+	# for systemd, cpu-burst value will be cleared, it's a known issue.
+	if [ ! -v RUNC_USE_SYSTEMD ]; then
+		runc update test_update --memory 100M
+		[ "$status" -eq 0 ]
+		check_cpu_burst 500000
+	fi
+
 	runc update test_update --cpu-period 900000 --cpu-burst 0
 	[ "$status" -eq 0 ]
 	check_cpu_burst 0
