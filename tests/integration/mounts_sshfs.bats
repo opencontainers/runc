@@ -43,7 +43,7 @@ function setup_sshfs() {
 	fi
 	# Reset atime flags. "diratime" is quite a strange flag, so we need to make
 	# sure it's cleared before we apply the requested flags.
-	mount --bind -o remount,diratime,strictatime "$DIR"
+	mount --bind -o remount,diratime,atime,strictatime "$DIR"
 	# We need to set the mount flags separately on the mount because some mount
 	# flags (such as "ro") are set on the superblock if you do them in the
 	# initial mount, which means that they cannot be cleared by bind-mounts.
@@ -393,7 +393,11 @@ function fail_sshfs_bind_flags() {
 	pass_sshfs_bind_flags "nodiratime" "bind"
 	run -0 grep -wq nodiratime <<<"$mnt_flags"
 	# MS_DIRATIME implies MS_RELATIME by default.
-	run -0 grep -wq relatime <<<"$mnt_flags"
+	# Let's check either relatime is set or no other option that removes
+	# relatime semantics is set.
+	# The latter case is needed in debian. For more info, see issue: #4093
+	run -0 grep -wq relatime <<<"$mnt_flags" ||
+		(run ! grep -wqE 'strictatime|norelatime|noatime' <<<"$mnt_flags")
 
 	pass_sshfs_bind_flags "noatime,nodiratime" "bind"
 	run -0 grep -wq noatime <<<"$mnt_flags"
