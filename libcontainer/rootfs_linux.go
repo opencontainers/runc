@@ -783,6 +783,7 @@ func checkProcMount(rootfs, dest string, m mountEntry) error {
 		"/proc/slabinfo",
 		"/proc/net/dev",
 		"/proc/sys/kernel/ns_last_pid",
+		"/proc/sys/crypto/fips_enabled",
 	}
 	for _, valid := range validProcMounts {
 		path, err := filepath.Rel(filepath.Join(rootfs, valid), dest)
