@@ -1,4 +1,3 @@
-
 #define _GNU_SOURCE
 #include <endian.h>
 #include <errno.h>
@@ -13,8 +12,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <string.h>
+#include <syscall.h>
 #include <unistd.h>
+#include <pthread.h>		/* only used for pthread_self() -- see clone_parent() */
 
 #include <sys/ioctl.h>
 #include <sys/prctl.h>
@@ -111,17 +113,11 @@ struct nlconfig_t {
 #define GIDMAPPATH_ATTR		27289
 #define TIMENSOFFSET_ATTR	27290
 
-/*
- * Use the raw syscall for versions of glibc which don't include a function for
- * it, namely (glibc 2.12).
- */
-#if __GLIBC__ == 2 && __GLIBC_MINOR__ < 14
-#  define _GNU_SOURCE
-#  include "syscall.h"
+/* The setns() libc wrapper was added in glibc 2.14. */
+#if !__GLIBC_PREREQ(2, 14)
 #  if !defined(SYS_setns) && defined(__NR_setns)
 #    define SYS_setns __NR_setns
 #  endif
-
 #  ifndef SYS_setns
 #    error "setns(2) syscall not supported by glibc version"
 #  endif
@@ -311,6 +307,220 @@ static int child_func(void *arg)
 	longjmp(*ca->env, ca->jmpval);
 }
 
+/* The gettid() libc wrapper was added in glibc 2.30 */
+#if !__GLIBC_PREREQ(2, 30)
+#  if !defined(SYS_gettid) && defined(__NR_gettid)
+#    define SYS_gettid __NR_gettid
+#  endif
+pid_t gettid(void)
+{
+#  ifdef SYS_gettid
+	return syscall(SYS_gettid);
+#  else
+	/* We are single-threaded here, so just using the pid is okay. */
+	return getpid();
+#  endif
+}
+#endif
+
+#if !defined(RUNC_GLIBC_TID_KLUDGE) || !defined(__GLIBC__)
+#  define RUNC_GLIBC_TID_KLUDGE 0
+#endif
+#if RUNC_GLIBC_TID_KLUDGE
+static pid_t *find_glibc_tls_tid_address(void)
+{
+	/*
+	 * glibc sets CLONE_CHILD_CLEARTID to &THREAD_SELF->tid (the thread-local
+	 * cache of the thread's tid), which we can retrieve using
+	 * PR_GET_TID_ADDRESS on kernels that support it (Linux >= 3.5 and
+	 * CONFIG_CHECKPOINT_RESTORE=y). Otherwise we have to do a somewhat-hairy
+	 * linear scan for the address based on pthread_self().
+	 *
+	 * Other libcs (like musl) set up processes differently, meaning this logic
+	 * will only work for runc builds using glibc (more precisely, the process
+	 * which spawned "runc init" needs to be a glibc-based process using
+	 * glibc's fork() primitives -- this is the case for runc when built with
+	 * glibc). The linear scan should still technically work for the musl
+	 * versions I've checked, but at the moment we only do this for glibc.
+	 */
+
+	pid_t *tid_addr = NULL;
+	pid_t actual_tid = gettid();
+
+	if (!prctl(PR_GET_TID_ADDRESS, &tid_addr))
+		/*
+		 * Make sure the address actually contains the current TID. musl uses a
+		 * different pointer with CLONE_CHILD_CLEARTID, so PR_GET_TID_ADDRESS
+		 * succeeding doesn't mean the address is the one we want.
+		 */
+		if (tid_addr && *tid_addr == actual_tid)
+			goto got_tid_addr;
+
+	/*
+	 * If we cannot use PR_GET_TID_ADDRESS to get &PTHREAD_SELF->tid, we
+	 * are probably running on a CONFIG_CHECKPOINT_RESTORE=n kernel.
+	 * Unfortunately the layout of "struct pthread" is not public, so we
+	 * need to get the address by force.
+	 *
+	 * So, we treat the structure as though it were pid_t[] to find an
+	 * offset whose value matches the tid of the current process. In order
+	 * to avoid accidentally choosing an offset in some internal data
+	 * structure in tcbhead_t, we first try some known-correct offsets on
+	 * the current architecture. If none of those work, we do a linear
+	 * scan. Yes, this is *much* worse than PR_GET_TID_ADDRESS and is
+	 * pretty terrifying, but we should never get here on the vast majority
+	 * of machines.
+	 *
+	 * (To be honest, maybe it's better to just hope Go doesn't notice any
+	 * issues with glibc rather than trying to hack internal glibc
+	 * structures to make them "work" with Go. But it seems we need to do
+	 * this...)
+	 */
+
+	if (tid_addr)
+		write_log(DEBUG,
+			  "clone: find_glibc_tls_tid_address: PR_GET_TID_ADDRESS is not the cached tid field (*%p [%d] != %d, pthread_self=%p)",
+			  tid_addr, *tid_addr, actual_tid, (void *)pthread_self());
+	else
+		write_log(DEBUG, "clone: find_glibc_tls_tid_address: PR_GET_TID_ADDRESS failed: %m");
+	write_log(WARNING,
+		  "clone: find_glibc_tls_tid_address: falling back to scanning pthread_self(). Please use a kernel with CONFIG_CHECKPOINT_RESTORE=y.");
+
+	/*
+	 * These offsets are based on glibc 2.39, but the layout of struct
+	 * pthread (at least up to the tid field) has been stable for several
+	 * decades. The cached pid (from pre-2.25 glibc) was stored after the
+	 * tid field, so even on ancient glibc versions it's "safe" for us to
+	 * do this.
+	 *
+	 * The structure layouts can be found in <sysdeps/.../ntpl/tls.h>. Only a
+	 * few architectures have tcbhead_t in the pthread header (TLS_TCB_AT_TP),
+	 * so we only need to define the structure for those architectures.
+	 */
+
+#  if defined(__x86_64__) || defined(__i386__) || defined(__s390__) || defined(__s390x__) || defined(__sparc__)
+#    define TLS_TCB_AT_TP 1
+#  else
+#    define TLS_TCB_AT_TP 0
+#  endif
+
+#  if TLS_TCB_AT_TP
+	struct tcbhead_t {
+#    if defined(__x86_64__)
+		void *tcb, *dtv, *self;
+		int multiple_threads, gscope_flag;
+		uintptr_t sysinfo, stack_guard, pointer_guard;
+		unsigned long int unused_vgetcpu_cache[2];
+		unsigned int feature_1;
+		int __glibc_unused1;
+		void *__private_tm[4];
+		void *__private_ss;
+		unsigned long long int ssp_base;
+		struct {
+			int i[4];
+		} __glibc_unused[8][4] __attribute__((aligned(32)));
+		void *__padding[8];
+#    elif defined(__i386__)
+		void *tcb, *dtv, *self;
+		int multiple_threads;
+		uintptr_t sysinfo, stack_guard, pointer_guard;
+		int gscope_flag;
+		unsigned int feature_1;
+		void *__private_tm[3];
+		void *__private_ss;
+		unsigned long ssp_base;
+#    elif defined(__s390__) || defined(__s390x__)
+		void *tcb, *dtv, *self;
+		int multiple_threads;
+		uintptr_t sysinfo;
+		uintptr_t stack_guard;
+		int gscope_flag;
+		int __glibc_reserved1;
+		void *__private_ss;
+#    elif defined(__sparc__)
+		void *tcb, *dtv, *self;
+		int multiple_threads;
+#      if __WORDSIZE == 64
+		int gscope_flag;
+#      endif
+		uintptr_t sysinfo;
+		uintptr_t stack_guard;
+		uintptr_t pointer_guard;
+#      if __WORDSIZE != 64
+		int gscope_flag;
+#      endif
+#    endif
+	};
+#  endif
+	/* TLS_TCB_AT_TP */
+
+	/* Based on <ntpl/descr.h>. */
+	struct __glibc_pthread {
+		union {
+#  if TLS_TCB_AT_TP		/* !TLS_DIV_AT_TP */
+			struct tcbhead_t header;
+#  else
+			struct {
+				int multiple_threads, gscope_flag;
+			} header;
+#  endif
+			void *__padding[24];
+		};
+		struct {
+			void *prev, *next;
+		} list;
+		pid_t tid;	/* The field we are looking for! */
+
+		/* Ignore the rest of the fields. */
+	};
+
+#  define TRY_TID_OFFSET(offset)					\
+	do {								\
+		size_t __idx = (offset);				\
+		pid_t *__addr = (pid_t *) (pthread_self() + __idx);	\
+		if (*__addr == actual_tid) {				\
+			tid_addr = __addr;				\
+			write_log(DEBUG, "clone: find_glibc_tls_tid_address: using %p as tid address (pthread_self+0x%zx, index %zu)", \
+				  tid_addr, __idx, __idx / sizeof(pid_t)); \
+			goto got_tid_addr;				\
+		}							\
+	} while (0)
+
+	/* First, try the known-good address offset. */
+	TRY_TID_OFFSET(offsetof(struct __glibc_pthread, tid));
+	write_log(DEBUG,
+		  "clone: find_glibc_tls_tid_address: known offset %p+0x%zx failed -- falling back to brute-force linear scan",
+		  (void *)pthread_self(), offsetof(struct __glibc_pthread, tid));
+
+	/*
+	 * If the known offsets are wrong, we have to fall back to a linear
+	 * scan. The pid_t will always be aligned, so we check in blocks of
+	 * sizeof(pid_t). This could result in the wrong address, but there
+	 * isn't a better option unfortunately.
+	 *
+	 * On my x86_64 machine, sizeof(struct pthread) is 724. x86_64 has the
+	 * largest struct pthread, so scanning up to an offset of 1024 should
+	 * cover every architecture without a huge risk of SIGSEGV.
+	 */
+	int i;
+	for (i = 0; i < 1024; i += sizeof(pid_t))
+		TRY_TID_OFFSET(i);
+
+got_tid_addr:
+	if (!tid_addr)
+		write_log(WARNING, "clone: find_glibc_tls_tid_address: could not find tid address");
+	else if (*tid_addr != actual_tid)
+		write_log(WARNING,
+			  "clone: find_glibc_tls_tid_address: glibc private tid address is wrong: *%p [%d] != gettid() %d",
+			  tid_addr, *tid_addr, actual_tid);
+	else
+		write_log(DEBUG,
+			  "clone: find_glibc_tls_tid_address: found seemingly viable tid address %p (pthread_self=%p)",
+			  tid_addr, (void *)pthread_self());
+	return tid_addr;
+}
+#endif /* RUNC_GLIBC_TID_KLUDGE */
+
 static int clone_parent(jmp_buf *env, int jmpval) __attribute__((noinline));
 static int clone_parent(jmp_buf *env, int jmpval)
 {
@@ -319,7 +529,45 @@ static int clone_parent(jmp_buf *env, int jmpval)
 		.jmpval = jmpval,
 	};
 
-	return clone(child_func, ca.stack_ptr, CLONE_PARENT | SIGCHLD, &ca);
+	/*
+	 * Since glibc 2.25 (see c579f48edba88380635ab98cb612030e3ed8691e),
+	 * glibc no longer updates the TLS state containing the current process
+	 * tid after clone(2). This results in stale TIDs being used when Go
+	 * 1.22 and later call pthread_gettattr_np(pthread_self()), resulting
+	 * in crashes on ancient glibcs and errors on newer glibcs.
+	 *
+	 * Luckily, because the address containing pthread's cached TID is also
+	 * used for CLONE_CHILD_CLEARTID, we can poke around in glibc's internal
+	 * cache by getting the address using PR_GET_TID_ADDRESS. For kernels
+	 * without PR_GET_TID_ADDRESS support (Linux < 3.5 or
+	 * CONFIG_CHECKPOINT_RESTORE=n), we have to do some far uglier tricks to
+	 * find the address. We then overwrite the address with the correct TID
+	 * using CLONE_CHILD_SETTID, and set CLONE_CHILD_CLEARTID to match glibc's
+	 * arch_fork() (which also allows descendants to find the address with
+	 * PR_GET_TID_ADDRESS).
+	 *
+	 * Yes, this is pretty horrific, but the core issue here is that we
+	 * need to run Go code ("runc init") in the child after fork(), which
+	 * is not allowed by glibc (see signal-safety(7)). We cannot exec to
+	 * solve the problem because we are in a security critical situation
+	 * here, and doing an exec would allow for container escapes (obvious
+	 * issues include that the shared libraries loaded from a re-exec would
+	 * come from the container, and doing an exec here would reset mm->user_ns
+	 * which would allow for breakouts by userns containers with
+	 * SYS_CAP_PTRACE).
+	 *
+	 * Note that all of this is only guaranteed to work if "runc init" was
+	 * spawned from a *glibc* fork. A fork from another libc might not work, so
+	 * we only do this for glibc.
+	 */
+	pid_t *tid_addr = NULL;
+#if RUNC_GLIBC_TID_KLUDGE
+	tid_addr = find_glibc_tls_tid_address();
+#endif
+
+	return clone(child_func, ca.stack_ptr,
+		     CLONE_PARENT | CLONE_CHILD_SETTID | CLONE_CHILD_CLEARTID | SIGCHLD, &ca,
+		     NULL /* parent_tid */ , NULL /* tls */ , tid_addr /* child_tid */ );
 }
 
 /* Returns the clone(2) flag for a namespace, given the name of a namespace. */
