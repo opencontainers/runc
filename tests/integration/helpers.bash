@@ -354,6 +354,27 @@ function set_cgroup_mount_writable() {
 	update_config '.mounts |= map((select(.type == "cgroup") | .options -= ["ro"]) // .)'
 }
 
+# Helper function to get all online cpus.
+function get_all_online_cpus() {
+	cat /sys/devices/system/cpu/online
+}
+
+# Helper function to get the first online cpu.
+function get_first_online_cpu() {
+	[[ $(get_all_online_cpus) =~ [^0-9]*([0-9]+)([-,][0-9]+)? ]] && echo "${BASH_REMATCH[1]}"
+}
+
+# Helper function to set all cpus/mems in container cgroup cpuset.
+function set_cgroup_cpuset_all_cpus() {
+	update_config ".linux.resources.cpu.cpus = \"$(get_all_online_cpus)\""
+
+	local mems
+	mems="$(cat /sys/devices/system/node/online 2>/dev/null || true)"
+	if [[ -n $mems ]]; then
+		update_config ".linux.resources.cpu.mems = \"$mems\""
+	fi
+}
+
 # Fails the current test, providing the error given.
 function fail() {
 	echo "$@" >&2

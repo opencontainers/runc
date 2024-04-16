@@ -1,11 +1,13 @@
 package libcontainer
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net"
 	"os"
 	"os/exec"
@@ -21,10 +23,12 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fs2"
+	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runc/libcontainer/logs"
 	"github.com/opencontainers/runc/libcontainer/system"
+	"github.com/opencontainers/runc/libcontainer/system/kernelparam"
 	"github.com/opencontainers/runc/libcontainer/userns"
 	"github.com/opencontainers/runc/libcontainer/utils"
 )
@@ -133,8 +137,58 @@ func (p *setnsProcess) start() (retErr error) {
 
 	// get the "before" value of oom kill count
 	oom, _ := p.manager.OOMKillCount()
-	err := p.cmd.Start()
-	// close the child-side of the pipes (controlled by child)
+
+	// When greater or equal to zero, it will set a temporary single CPU
+	// affinity before cgroup cpuset transition, this handles a corner
+	// case when joining a container having all the processes running
+	// exclusively on isolated CPU cores to force the kernel to schedule
+	// runc process on the first CPU core within the cgroups cpuset.
+	// The introduction of the kernel commit 46a87b3851f0d6eb05e6d83d5c5a30df0eca8f76
+	// in 5.7 has affected this deterministic scheduling behavior by
+	// distributing tasks across CPU cores within the cgroups cpuset.
+	// Some intensive real-time application are relying on this
+	// deterministic behavior and use the first CPU core to run a slow
+	// thread while other CPU cores are fully used by real-time threads
+	// with SCHED_FIFO policy. Such applications prevent runc process
+	// from joining a container when the runc process is randomly
+	// scheduled on a CPU core owned by a real-time thread.
+	cpuAffinity := -1
+	resetCPUAffinity := true
+
+	if len(p.manager.GetPaths()) > 0 {
+		// Get the target container cgroup.
+		if cg, err := p.manager.GetCgroups(); err != nil {
+			// Close the pipe to not be blocked in the parent.
+			p.comm.closeChild()
+			return fmt.Errorf("getting container cgroups: %w", err)
+		} else if cg.CpusetCpus != "" {
+			definitive := false
+
+			_, annotations := utils.Annotations(p.config.Config.Labels)
+			cpuAffinity, definitive, err = isolatedCPUAffinityTransition(
+				os.DirFS("/"),
+				cg.CpusetCpus,
+				annotations,
+			)
+			if err != nil {
+				// Close the pipe to not be blocked in the parent.
+				p.comm.closeChild()
+				return fmt.Errorf("getting CPU affinity: %w", err)
+			} else if definitive {
+				resetCPUAffinity = false
+			}
+		}
+	}
+
+	var err error
+
+	if cpuAffinity < 0 {
+		err = p.cmd.Start()
+	} else {
+		err = startCommandWithCPUAffinity(p.cmd, cpuAffinity)
+	}
+
+	// Close the write-side of the pipes (controlled by child).
 	p.comm.closeChild()
 	if err != nil {
 		return fmt.Errorf("error starting setns process: %w", err)
@@ -193,6 +247,18 @@ func (p *setnsProcess) start() (retErr error) {
 			}
 		}
 	}
+
+	if resetCPUAffinity {
+		// Fix the container process CPU affinity to match container cgroup cpuset,
+		// since kernel 6.2, the runc CPU affinity might affect the container process
+		// CPU affinity after cgroup cpuset transition, by example if runc is running
+		// with CPU affinity 0-1 and container process has cpuset.cpus set to 1-2, the
+		// resulting container process CPU affinity will be 1 instead of 1-2.
+		if err := fixProcessCPUAffinity(p.pid(), p.manager); err != nil {
+			return fmt.Errorf("error resetting container process CPU affinity: %w", err)
+		}
+	}
+
 	if p.intelRdtPath != "" {
 		// if Intel RDT "resource control" filesystem path exists
 		_, err := os.Stat(p.intelRdtPath)
@@ -744,6 +810,14 @@ func (p *initProcess) start() (retErr error) {
 			if err := p.manager.Set(p.config.Config.Cgroups.Resources); err != nil {
 				return fmt.Errorf("error setting cgroup config for procHooks process: %w", err)
 			}
+			// Reset container process CPU affinity to match container cgroup cpuset,
+			// since kernel 6.2, the runc CPU affinity might affect the container process
+			// CPU affinity after cgroup cpuset transition, by example if runc is running
+			// with CPU affinity 0-1 and container process has cpuset.cpus set to 1-2, the
+			// resulting container process CPU affinity will be 1 instead of 1-2.
+			if err := fixProcessCPUAffinity(p.pid(), p.manager); err != nil {
+				return fmt.Errorf("error resetting container process CPU affinity: %w", err)
+			}
 			if p.intelRdtManager != nil {
 				if err := p.intelRdtManager.Set(p.config.Config); err != nil {
 					return fmt.Errorf("error setting Intel RDT config for procHooks process: %w", err)
@@ -995,5 +1069,196 @@ func setIOPriority(ioprio *configs.IOPriority) error {
 	if errno != 0 {
 		return fmt.Errorf("failed to set io priority: %w", errno)
 	}
+
+	return nil
+}
+
+// isolatedCPUAffinityTransition returns a CPU affinity if necessary based on heuristics
+// and org.opencontainers.runc.exec.isolated-cpu-affinity-transition annotation value.
+func isolatedCPUAffinityTransition(rootFS fs.FS, cpusetList string, annotations map[string]string) (int, bool, error) {
+	const (
+		isolatedCPUAffinityTransitionAnnotation = "org.opencontainers.runc.exec.isolated-cpu-affinity-transition"
+		nohzFullParam                           = "nohz_full"
+	)
+
+	definitive := false
+
+	transition := annotations[isolatedCPUAffinityTransitionAnnotation]
+	switch transition {
+	case "temporary":
+	case "definitive":
+		definitive = true
+	default:
+		if transition != "" {
+			return -1, false, fmt.Errorf(
+				"unknown transition value %q for annotation %s",
+				transition, isolatedCPUAffinityTransitionAnnotation,
+			)
+		}
+		return -1, false, nil
+	}
+
+	kernelParams, err := kernelparam.LookupKernelBootParameters(
+		rootFS,
+		nohzFullParam,
+	)
+	if err != nil {
+		// If /proc/cmdline does not exist or isn't readable, continue to read
+		// nohz_full from sysfs below.
+		if !errors.Is(err, os.ErrNotExist) && !errors.Is(err, os.ErrPermission) {
+			return -1, false, err
+		}
+	}
+
+	// First get nohz_full value from kernel boot params, if not
+	// present, get the value from sysfs, to cover the case where
+	// CONFIG_NO_HZ_FULL_ALL is set, it also makes the integration
+	// tests not dependent on /sys/devices/system/cpu/nohz_full.
+	isolatedList := kernelParams[nohzFullParam]
+	if isolatedList == "" {
+		// Get the isolated CPU list, the error is not checked here because
+		// no matter what the error is, it returns without error the same way
+		// as with empty data.
+		isolatedData, _ := fs.ReadFile(rootFS, "sys/devices/system/cpu/nohz_full")
+		isolatedList = string(bytes.TrimSpace(isolatedData))
+		if isolatedList == "" || isolatedList == "(null)" {
+			return -1, false, nil
+		}
+	}
+
+	cpu, err := getEligibleCPU(cpusetList, isolatedList)
+	if err != nil {
+		return -1, false, fmt.Errorf("getting eligible cpu: %w", err)
+	} else if cpu == -1 {
+		definitive = false
+	}
+
+	return cpu, definitive, nil
+}
+
+// getEligibleCPU returns the first eligible CPU for CPU affinity before
+// entering in a cgroup cpuset:
+//   - when there is not cpuset cores: no eligible CPU (-1)
+//   - when there is not isolated cores: no eligible CPU (-1)
+//   - when cpuset cores are not in isolated cores: no eligible CPU (-1)
+//   - when cpuset cores are all isolated cores: return the first CPU of the cpuset
+//   - when cpuset cores are mixed between housekeeping/isolated cores: return the
+//     first housekeeping CPU not in isolated CPUs.
+func getEligibleCPU(cpusetList, isolatedList string) (int, error) {
+	if isolatedList == "" || cpusetList == "" {
+		return -1, nil
+	}
+
+	// The target container has a cgroup cpuset, get the bit range.
+	cpusetBits, err := systemd.RangeToBits(cpusetList)
+	if err != nil {
+		return -1, fmt.Errorf("parsing cpuset cpus list %s: %w", cpusetList, err)
+	}
+
+	isolatedBits, err := systemd.RangeToBits(isolatedList)
+	if err != nil {
+		return -1, fmt.Errorf("parsing isolated cpus list %s: %w", isolatedList, err)
+	}
+
+	eligibleCore := -1
+	isolatedCores := 0
+
+	// Start from cpu core #0.
+	currentCore := 0
+	// Handle mixed sets.
+	mixed := false
+
+	// CPU core start from the first slice element and bits are read
+	// from the least to the most significant bit.
+	for byteRange := 0; byteRange < len(cpusetBits); byteRange++ {
+		if byteRange >= len(isolatedBits) {
+			// No more isolated cores.
+			break
+		}
+		for bit := 0; bit < 8; bit++ {
+			if cpusetBits[byteRange]&(1<<bit) != 0 {
+				// Mark the first core of the cgroup cpuset as eligible.
+				if eligibleCore < 0 {
+					eligibleCore = currentCore
+				}
+
+				// Isolated cores count.
+				if isolatedBits[byteRange]&(1<<bit) != 0 {
+					isolatedCores++
+				} else if !mixed {
+					// Not an isolated core, mark the current core as eligible once.
+					mixed = true
+					eligibleCore = currentCore
+				}
+				if mixed && isolatedCores > 0 {
+					return eligibleCore, nil
+				}
+			}
+			currentCore++
+		}
+	}
+
+	// We have an eligible CPU if there is at least one isolated CPU in the cpuset.
+	if isolatedCores == 0 {
+		return -1, nil
+	}
+
+	return eligibleCore, nil
+}
+
+// startCommandWithCPUAffinity starts a command on a specific CPU if set.
+func startCommandWithCPUAffinity(cmd *exec.Cmd, cpuAffinity int) error {
+	errCh := make(chan error)
+	defer close(errCh)
+
+	// Use a goroutine to dedicate an OS thread.
+	go func() {
+		cpuSet := new(unix.CPUSet)
+		cpuSet.Zero()
+		cpuSet.Set(cpuAffinity)
+
+		// Don't call runtime.UnlockOSThread to terminate the OS thread
+		// when goroutine exits.
+		runtime.LockOSThread()
+
+		// Command inherits the CPU affinity.
+		if err := unix.SchedSetaffinity(unix.Gettid(), cpuSet); err != nil {
+			errCh <- fmt.Errorf("setting os thread CPU affinity: %w", err)
+			return
+		}
+
+		errCh <- cmd.Start()
+	}()
+
+	return <-errCh
+}
+
+// fixProcessCPUAffinity sets the CPU affinity of a container process
+// to all CPUs allowed by container cgroup cpuset.
+func fixProcessCPUAffinity(pid int, manager cgroups.Manager) error {
+	cpusetList := manager.GetEffectiveCPUs()
+	if cpusetList == "" {
+		// If the cgroup cpuset is not present, the container will inherit
+		// this process CPU affinity, so it can return without further actions.
+		return nil
+	}
+
+	cpusetBits, err := systemd.RangeToBits(cpusetList)
+	if err != nil {
+		return fmt.Errorf("parsing cpuset cpus list %s: %w", cpusetList, err)
+	}
+
+	processCPUSet := new(unix.CPUSet)
+
+	for byteRange := 0; byteRange < len(cpusetBits); byteRange++ {
+		for bit := 0; bit < 8; bit++ {
+			processCPUSet.Set(byteRange*8 + bit)
+		}
+	}
+
+	if err := unix.SchedSetaffinity(pid, processCPUSet); err != nil {
+		return fmt.Errorf("setting process PID %d CPU affinity: %w", pid, err)
+	}
+
 	return nil
 }
