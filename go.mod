@@ -1,10 +1,12 @@
 module github.com/opencontainers/runc
 
-go 1.20
+go 1.21.0
+
+toolchain go1.22.2
 
 require (
 	github.com/checkpoint-restore/go-criu/v6 v6.3.0
-	github.com/cilium/ebpf v0.12.3
+	github.com/cilium/ebpf v0.13.2
 	github.com/containerd/console v1.0.4
 	github.com/coreos/go-systemd/v22 v22.5.0
 	github.com/cyphar/filepath-securejoin v0.2.4
