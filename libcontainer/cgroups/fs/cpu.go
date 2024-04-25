@@ -89,9 +89,11 @@ func (s *CpuGroup) Set(path string, r *configs.Resources) error {
 	if r.CpuBurst != nil {
 		burst = strconv.FormatUint(*r.CpuBurst, 10)
 		if err := cgroups.WriteFile(path, "cpu.cfs_burst_us", burst); err != nil {
-			// this is a special trick for burst feature, the current systemd and low version of kernel will not support it.
-			// So, an `no such file or directory` error would be raised, and we can ignore it .
-			if !errors.Is(err, unix.ENOENT) {
+			if errors.Is(err, unix.ENOENT) {
+				// If CPU burst knob is not available (e.g.
+				// older kernel), ignore it.
+				burst = ""
+			} else {
 				// Sometimes when the burst to be set is larger
 				// than the current one, it is rejected by the kernel
 				// (EINVAL) as old_quota/new_burst exceeds the parent
@@ -117,9 +119,7 @@ func (s *CpuGroup) Set(path string, r *configs.Resources) error {
 		}
 		if burst != "" {
 			if err := cgroups.WriteFile(path, "cpu.cfs_burst_us", burst); err != nil {
-				if !errors.Is(err, unix.ENOENT) {
-					return err
-				}
+				return err
 			}
 		}
 	}
