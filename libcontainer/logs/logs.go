@@ -23,6 +23,8 @@ func ForwardLogs(logPipe io.ReadCloser) chan error {
 	}
 
 	go func() {
+		defer close(done) // defer close(done) to ensure done is always closed
+
 		for s.Scan() {
 			processEntry(s.Bytes(), logger)
 		}
@@ -32,7 +34,6 @@ func ForwardLogs(logPipe io.ReadCloser) chan error {
 		// The only error we want to return is when reading from
 		// logPipe has failed.
 		done <- s.Err()
-		close(done)
 	}()
 
 	return done
