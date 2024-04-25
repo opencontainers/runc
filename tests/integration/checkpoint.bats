@@ -173,6 +173,10 @@ function simple_cr() {
 }
 
 @test "checkpoint --pre-dump and restore" {
+	# Requires kernel dirty memory tracking (missing on ARM, see
+	# https://github.com/checkpoint-restore/criu/issues/1729).
+	requires criu_feature_mem_dirty_track
+
 	setup_pipes
 	runc_run_with_pipes test_busybox
 
@@ -202,10 +206,8 @@ function simple_cr() {
 }
 
 @test "checkpoint --lazy-pages and restore" {
-	# check if lazy-pages is supported
-	if ! criu check --feature uffd-noncoop; then
-		skip "this criu does not support lazy migration"
-	fi
+	# Requires lazy-pages support.
+	requires criu_feature_uffd-noncoop
 
 	setup_pipes
 	runc_run_with_pipes test_busybox
@@ -274,11 +276,8 @@ function simple_cr() {
 }
 
 @test "checkpoint and restore in external network namespace" {
-	# check if external_net_ns is supported; only with criu 3.10++
-	if ! criu check --feature external_net_ns; then
-		# this criu does not support external_net_ns; skip the test
-		skip "this criu does not support external network namespaces"
-	fi
+	# Requires external network namespaces (criu >= 3.10).
+	requires criu_feature_external_net_ns
 
 	# create a temporary name for the test network namespace
 	tmp=$(mktemp)
