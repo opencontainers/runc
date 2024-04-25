@@ -34,12 +34,11 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "${{ env.GO_VERSION }}"
-          cache: false # golangci-lint-action does its own caching
       - name: install deps
         run: |
           sudo apt -q update
           sudo apt -qy install libseccomp-dev
-      - uses: golangci/golangci-lint-action@v4
+      - uses: golangci/golangci-lint-action@v5
         with:
           version: v1.54
       # Extra linters, only checking new code from a pull request.
