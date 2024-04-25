@@ -399,7 +399,6 @@ func setupConsole(socket *os.File, config *initConfig, mount bool) error {
 			Height: config.ConsoleHeight,
 			Width:  config.ConsoleWidth,
 		})
-
 		if err != nil {
 			return err
 		}
