@@ -407,6 +407,12 @@ function requires() {
 				skip_me=1
 			fi
 			;;
+		criu_feature_*)
+			var=${var#criu_feature_}
+			if ! criu check --feature "$var"; then
+				skip "requires CRIU feature ${var}"
+			fi
+			;;
 		root)
 			if [ $EUID -ne 0 ]; then
 				skip_me=1

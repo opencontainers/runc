@@ -123,20 +123,18 @@ jobs:
         sudo apt -y install libseccomp-dev sshfs uidmap
 
     - name: install CRIU
-      # TODO: enable CRIU for actuated: https://github.com/opencontainers/runc/pull/4142#issuecomment-1945408382
-      if: ${{ matrix.os != 'actuated-arm64-6cpu-8gb' && matrix.criu == '' }}
+      if: ${{ matrix.criu == '' }}
       env:
         PREFIX: https://download.opensuse.org/repositories/devel:/tools:/criu/xUbuntu
       run: |
-        # criu repo
-        REPO=${PREFIX}_$(echo ${{ matrix.os }} | sed 's/.*-//')
+        REPO=${PREFIX}_$(. /etc/os-release && echo $VERSION_ID)
         curl -fSsLl $REPO/Release.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/devel_tools_criu.gpg > /dev/null
         echo "deb $REPO/ /" | sudo tee /etc/apt/sources.list.d/criu.list
         sudo apt update
         sudo apt -y install criu
 
     - name: install CRIU (criu ${{ matrix.criu }})
-      if: ${{ matrix.os != 'actuated-arm64-6cpu-8gb' && matrix.criu != '' }}
+      if: ${{ matrix.criu != '' }}
       run: |
         sudo apt -qy install \
           libcap-dev libnet1-dev libnl-3-dev \
