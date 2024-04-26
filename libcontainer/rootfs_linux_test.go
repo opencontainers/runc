@@ -46,6 +46,14 @@ func TestCheckMountDestNsLastPid(t *testing.T) {
 	}
 }
 
+func TestCheckCryptoFipsEnabled(t *testing.T) {
+	dest := "/rootfs/proc/sys/crypto/fips_enabled"
+	err := checkProcMount("/rootfs", dest, "/proc")
+	if err != nil {
+		t.Fatalf("/proc/sys/crypto/fips_enabled should not return an error: %v", err)
+	}
+}
+
 func TestNeedsSetupDev(t *testing.T) {
 	config := &configs.Config{
 		Mounts: []*configs.Mount{
