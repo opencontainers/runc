@@ -171,15 +171,13 @@ function teardown() {
 EOF
 	)
 
-	# run the exec
+	# Run the detached exec.
 	runc exec -t --pid-file pid.txt -d --console-socket "$CONSOLE_SOCKET" -p <(echo "$tty_info_with_consize_size") test_busybox
 	[ "$status" -eq 0 ]
-
-	# check the pid was generated
 	[ -e pid.txt ]
 
-	# wait for the process to finish
-	timeout 5 tail --pid="$(head -n 1 pid.txt)" -f /dev/null
+	# Wait for the exec to finish.
+	wait_pids_gone 100 0.5 "$(cat pid.txt)"
 
 	tty_info=$(
 		cat <<EOF
