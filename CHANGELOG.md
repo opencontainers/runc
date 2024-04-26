@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+ * libcontainer/cgroups users who want to manage cgroup devices need to explicitly
+   import libcontainer/cgroups/devices. (#3452, #4248)
+
 ## [1.2.0-rc.1] - 2024-04-03
 
 > There's a frood who really knows where his towel is.

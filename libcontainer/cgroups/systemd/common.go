@@ -33,6 +33,11 @@ var (
 	isRunningSystemdOnce sync.Once
 	isRunningSystemd     bool
 
+	// GenerateDeviceProps is a function to generate systemd device
+	// properties, used by Set methods. Unless
+	// [github.com/opencontainers/runc/libcontainer/cgroups/devices]
+	// package is imported, it is set to nil, so cgroup managers can't
+	// configure devices.
 	GenerateDeviceProps func(r *configs.Resources, sdVer int) ([]systemdDbus.Property, error)
 )
 

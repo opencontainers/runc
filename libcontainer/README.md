@@ -8,11 +8,13 @@ It allows you to manage the lifecycle of the container performing additional ope
 after the container is created.
 
 
-#### Container
+## Container
 A container is a self contained execution environment that shares the kernel of the
 host system and which is (optionally) isolated from other containers in the system.
 
-#### Using libcontainer
+## Using libcontainer
+
+### Container init
 
 Because containers are spawned in a two step process you will need a binary that
 will be executed as the init process for the container. In libcontainer, we use
@@ -27,7 +29,24 @@ For details on how runc implements such "init", see
 [init.go](https://github.com/opencontainers/runc/blob/master/init.go)
 and [libcontainer/init_linux.go](https://github.com/opencontainers/runc/blob/master/libcontainer/init_linux.go).
 
-Then to create a container you first have to create a configuration
+### Device management
+
+If you want containers that have access to some devices, you need to import
+this package into your code:
+
+```go
+    import (
+        _ "github.com/opencontainers/runc/libcontainer/cgroups/devices"
+    )
+```
+
+Without doing this, libcontainer cgroup manager won't be able to set up device
+access rules, and will fail if devices are specified in the container
+configuration.
+
+### Container creation
+
+To create a container you first have to create a configuration
 struct describing how the container is to be created. A sample would look similar to this:
 
 ```go
@@ -274,7 +293,7 @@ state, err := container.State()
 ```
 
 
-#### Checkpoint & Restore
+## Checkpoint & Restore
 
 libcontainer now integrates [CRIU](http://criu.org/) for checkpointing and restoring containers.
 This lets you save the state of a process running inside a container to disk, and then restore

@@ -9,8 +9,6 @@ import (
 	securejoin "github.com/cyphar/filepath-securejoin"
 	"golang.org/x/sys/unix"
 
-	//nolint:revive // Enable cgroup manager to manage devices
-	_ "github.com/opencontainers/runc/libcontainer/cgroups/devices"
 	"github.com/opencontainers/runc/libcontainer/cgroups/manager"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/configs/validate"
