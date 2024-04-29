@@ -29,6 +29,7 @@ jobs:
         race: ["-race", ""]
         criu: ["", "criu-dev"]
         dmz: ["", "runc_nodmz"]
+        tidscan: ["", "-DDONT_USE_PR_GET_TID_ADDRESS=1"]
         exclude:
           # Disable most of criu-dev jobs, as they are expensive
           # (need to compile criu) and don't add much value/coverage.
@@ -151,6 +152,7 @@ jobs:
     - name: build
       env:
         EXTRA_BUILDTAGS: ${{ matrix.dmz }}
+        CGO_CFLAGS: ${{ matrix.tidscan }}
       run: sudo -E PATH="$PATH" make EXTRA_FLAGS="${{ matrix.race }}" all
 
     - name: install bats
@@ -162,6 +164,7 @@ jobs:
       if: matrix.rootless != 'rootless'
       env:
         EXTRA_BUILDTAGS: ${{ matrix.dmz }}
+        CGO_CFLAGS: ${{ matrix.tidscan }}
       run: sudo -E PATH="$PATH" -- make TESTFLAGS="${{ matrix.race }}" localunittest
 
     - name: add rootless user

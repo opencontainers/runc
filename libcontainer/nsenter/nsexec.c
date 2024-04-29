@@ -327,6 +327,9 @@ pid_t gettid(void)
 #  define RUNC_TID_KLUDGE 0
 #endif
 #if RUNC_TID_KLUDGE
+#  if !defined(DONT_USE_PR_GET_TID_ADDRESS)
+#    define DONT_USE_PR_GET_TID_ADDRESS 0
+#  endif
 #  define TID_OFFSET_SCAN_MAX 1024
 static int tid_offset = 0;
 
@@ -392,6 +395,7 @@ static pid_t *find_tls_tid_address(void)
 		.tid = gettid(),
 	};
 
+#  if !DONT_USE_PR_GET_TID_ADDRESS
 	if (!prctl(PR_GET_TID_ADDRESS, &tid_addr))
 		/*
 		 * Make sure the address actually contains the current TID. musl uses a
@@ -399,8 +403,10 @@ static pid_t *find_tls_tid_address(void)
 		 * succeeding doesn't mean the address is the one we want.
 		 */
 		if (tid_addr && *tid_addr == main_tid.tid) {
-			goto got_tid_addr;
+			return tid_addr;
 		}
+#  endif
+	write_log(DEBUG, "let's try using tid scan to find out the tid address in struct thread");
 
 	/*
 	 * If we cannot use PR_GET_TID_ADDRESS to get &PTHREAD_SELF->tid, we
@@ -448,7 +454,6 @@ static pid_t *find_tls_tid_address(void)
 		tid_addr = (pid_t *) (main_tid.handle + tid_offset);
 	}
 
-got_tid_addr:
 	return tid_addr;
 }
 #endif /* RUNC_TID_KLUDGE */
