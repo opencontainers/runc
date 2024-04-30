@@ -161,6 +161,8 @@ task:
     systemctl restart sshd
   host_info_script: |
     uname -a
+    ulimit -a
+    ulimit -aH
     # -----
     /usr/local/go/bin/go version
     # -----
