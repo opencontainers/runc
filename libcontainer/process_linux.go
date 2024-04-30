@@ -268,11 +268,6 @@ func (p *setnsProcess) start() (retErr error) {
 			}
 		}
 	}
-	// set rlimits, this has to be done here because we lose permissions
-	// to raise the limits once we enter a user-namespace
-	if err := setupRlimits(p.config.Rlimits, p.pid()); err != nil {
-		return fmt.Errorf("error setting rlimits for process: %w", err)
-	}
 	if err := utils.WriteJSON(p.comm.initSockParent, p.config); err != nil {
 		return fmt.Errorf("error writing config to pipe: %w", err)
 	}
@@ -280,8 +275,17 @@ func (p *setnsProcess) start() (retErr error) {
 	ierr := parseSync(p.comm.syncSockParent, func(sync *syncT) error {
 		switch sync.Type {
 		case procReady:
-			// This shouldn't happen.
-			panic("unexpected procReady in setns")
+			// Set rlimits here because we lose permissions
+			// to raise the limits once we enter a user-namespace.
+			// Also, Go runtime sets its own RLIMIT_NOFILE on start
+			// so we need to reset it here.
+			if err := setupRlimits(p.config.Rlimits, p.pid()); err != nil {
+				return fmt.Errorf("error setting rlimits for process: %w", err)
+			}
+			// Sync with child.
+			if err := writeSync(p.comm.syncSockParent, procRun); err != nil {
+				return err
+			}
 		case procHooks:
 			// This shouldn't happen.
 			panic("unexpected procHooks in setns")

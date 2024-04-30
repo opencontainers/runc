@@ -81,6 +81,14 @@ func (l *linuxSetnsInit) Init() error {
 		return err
 	}
 	defer selinux.SetExecLabel("") //nolint: errcheck
+
+	// Tell our parent that we're ready to Execv. This must be done before the
+	// Seccomp rules have been applied, because we need to be able to read and
+	// write to a socket.
+	if err := syncParentReady(l.pipe); err != nil {
+		return fmt.Errorf("sync ready: %w", err)
+	}
+
 	// Without NoNewPrivileges seccomp is a privileged operation, so we need to
 	// do this before dropping capabilities; otherwise do it as late as possible
 	// just before execve so as few syscalls take place after it as possible.
