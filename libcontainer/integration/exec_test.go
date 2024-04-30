@@ -135,11 +135,13 @@ func testRlimit(t *testing.T, userns bool) {
 
 	config := newTemplateConfig(t, &tParam{userns: userns})
 
-	// ensure limit is lower than what the config requests to test that in a user namespace
+	// Ensure limit is lower than what the config requests to test that in a user namespace
 	// the Setrlimit call happens early enough that we still have permissions to raise the limit.
+	// Do not change the Cur value to be equal to the Max value, please see:
+	// https://github.com/opencontainers/runc/pull/4265#discussion_r1589666444
 	ok(t, unix.Setrlimit(unix.RLIMIT_NOFILE, &unix.Rlimit{
 		Max: 1024,
-		Cur: 1024,
+		Cur: 512,
 	}))
 
 	out := runContainerOk(t, config, "/bin/sh", "-c", "ulimit -n")
