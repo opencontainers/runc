@@ -476,3 +476,19 @@ EOF
 	[ "$status" -eq 0 ]
 	[[ "${lines[0]}" == "Cpus_allowed_list:	$all_cpus" ]]
 }
+
+@test "runc exec with RLIMIT_NOFILE" {
+	update_config '.process.capabilities.bounding = ["CAP_SYS_RESOURCE"]'
+	update_config '.process.rlimits = [{"type": "RLIMIT_NOFILE", "hard": 65536, "soft": 65536}]'
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_busybox
+	[ "$status" -eq 0 ]
+
+	update_config '.process.args = ["/bin/sh", "-c", "ulimit -n"]'
+	runc run test_ulimit
+	[[ "${output}" == "65536" ]]
+
+	# issue: https://github.com/opencontainers/runc/issues/4195
+	runc exec test_busybox /bin/sh -c "ulimit -n"
+	[[ "${output}" == "65536" ]]
+}
