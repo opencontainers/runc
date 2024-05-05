@@ -18,7 +18,7 @@ BUILDTAGS ?= seccomp urfave_cli_no_docs
 BUILDTAGS += $(EXTRA_BUILDTAGS)
 
 COMMIT ?= $(shell git describe --dirty --long --always)
-VERSION := $(shell cat ./VERSION)
+VERSION ?= $(shell cat ./VERSION)
 LDFLAGS_COMMON := -X main.gitCommit=$(COMMIT) -X main.version=$(VERSION)
 
 GOARCH := $(shell $(GO) env GOARCH)
