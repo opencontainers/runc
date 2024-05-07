@@ -204,28 +204,16 @@ func (c *Container) Set(config configs.Config) error {
 func (c *Container) Start(process *Process) error {
 	c.m.Lock()
 	defer c.m.Unlock()
-	if c.config.Cgroups.Resources.SkipDevices {
-		return errors.New("can't start container with SkipDevices set")
-	}
-	if process.Init {
-		if err := c.createExecFifo(); err != nil {
-			return err
-		}
-	}
-	if err := c.start(process); err != nil {
-		if process.Init {
-			c.deleteExecFifo()
-		}
-		return err
-	}
-	return nil
+	return c.start(process)
 }
 
 // Run immediately starts the process inside the container. Returns an error if
 // the process fails to start. It does not block waiting for the exec fifo
 // after start returns but opens the fifo after start returns.
 func (c *Container) Run(process *Process) error {
-	if err := c.Start(process); err != nil {
+	c.m.Lock()
+	defer c.m.Unlock()
+	if err := c.start(process); err != nil {
 		return err
 	}
 	if process.Init {
@@ -314,6 +302,20 @@ type openResult struct {
 }
 
 func (c *Container) start(process *Process) (retErr error) {
+	if c.config.Cgroups.Resources.SkipDevices {
+		return errors.New("can't start container with SkipDevices set")
+	}
+	if process.Init {
+		if err := c.createExecFifo(); err != nil {
+			return err
+		}
+		defer func() {
+			if retErr != nil {
+				c.deleteExecFifo()
+			}
+		}()
+	}
+
 	parent, err := c.newParentProcess(process)
 	if err != nil {
 		return fmt.Errorf("unable to create new parent process: %w", err)
