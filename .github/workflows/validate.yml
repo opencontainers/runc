@@ -38,14 +38,14 @@ jobs:
         run: |
           sudo apt -q update
           sudo apt -qy install libseccomp-dev
-      - uses: golangci/golangci-lint-action@v5
+      - uses: golangci/golangci-lint-action@v6
         with:
           version: v1.57
       # Extra linters, only checking new code from a pull request.
       - name: lint-extra
         if: github.event_name == 'pull_request'
         run: |
-          golangci-lint run --config .golangci-extra.yml --new-from-rev=HEAD~1 --out-format=github-actions
+          golangci-lint run --config .golangci-extra.yml --new-from-rev=HEAD~1
 
   compile-buildtags:
     runs-on: ubuntu-22.04
