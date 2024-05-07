@@ -89,8 +89,6 @@ function runc_restore_with_pipes() {
 		echo "__runc restore $name failed (status: $ret)"
 		exec {err_w}>&-
 		cat <&${err_r}
-		echo "CRIU log errors (if any):"
-		grep -B 5 Error "$workdir"/*.log ./image-dir/*.log || true
 		fail "runc restore failed"
 	fi
 
@@ -110,7 +108,6 @@ function simple_cr() {
 	for _ in $(seq 2); do
 		# checkpoint the running container
 		runc "$@" checkpoint --work-path ./work-dir test_busybox
-		grep -B 5 Error ./work-dir/dump.log || true
 		[ "$status" -eq 0 ]
 
 		# after checkpoint busybox is no longer running
@@ -118,7 +115,6 @@ function simple_cr() {
 
 		# restore from checkpoint
 		runc "$@" restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
-		grep -B 5 Error ./work-dir/restore.log || true
 		[ "$status" -eq 0 ]
 
 		# busybox should be back up and running
@@ -192,7 +188,6 @@ function simple_cr() {
 	mkdir image-dir
 	mkdir work-dir
 	runc checkpoint --parent-path ../parent-dir --work-path ./work-dir --image-path ./image-dir test_busybox
-	grep -B 5 Error ./work-dir/dump.log || true
 	[ "$status" -eq 0 ]
 
 	# check parent path is valid
@@ -242,8 +237,6 @@ function simple_cr() {
 	exec {lazy_w}>&-
 	# shellcheck disable=SC2116,SC2086
 	out=$(echo $out) # rm newlines
-	# show errors if there are any before we fail
-	grep -B5 Error ./work-dir/dump.log || true
 	# expecting \0 which od prints as
 	[ "$out" = "0000000 000000 0000001" ]
 
@@ -301,7 +294,6 @@ function simple_cr() {
 		# checkpoint the running container; this automatically tells CRIU to
 		# handle the network namespace defined in config.json as an external
 		runc checkpoint --work-path ./work-dir test_busybox
-		grep -B 5 Error ./work-dir/dump.log || true
 		[ "$status" -eq 0 ]
 
 		# after checkpoint busybox is no longer running
@@ -309,7 +301,6 @@ function simple_cr() {
 
 		# restore from checkpoint; this should restore the container into the existing network namespace
 		runc restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
-		grep -B 5 Error ./work-dir/restore.log || true
 		[ "$status" -eq 0 ]
 
 		# busybox should be back up and running
@@ -352,7 +343,6 @@ function simple_cr() {
 
 	# checkpoint the running container
 	runc checkpoint --work-path ./work-dir test_busybox
-	grep -B 5 Error ./work-dir/dump.log || true
 	[ "$status" -eq 0 ]
 	run ! test -f ./work-dir/"$tmplog1"
 	test -f ./work-dir/"$tmplog2"
@@ -363,7 +353,6 @@ function simple_cr() {
 	test -f ./work-dir/"$tmplog2" && unlink ./work-dir/"$tmplog2"
 	# restore from checkpoint
 	runc restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
-	grep -B 5 Error ./work-dir/restore.log || true
 	[ "$status" -eq 0 ]
 	run ! test -f ./work-dir/"$tmplog1"
 	test -f ./work-dir/"$tmplog2"
@@ -397,7 +386,6 @@ function simple_cr() {
 
 	# checkpoint the running container
 	runc checkpoint --work-path ./work-dir test_busybox
-	grep -B 5 Error ./work-dir/dump.log || true
 	[ "$status" -eq 0 ]
 
 	# after checkpoint busybox is no longer running
@@ -409,7 +397,6 @@ function simple_cr() {
 
 	# restore from checkpoint
 	runc restore -d --work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
-	grep -B 5 Error ./work-dir/restore.log || true
 	[ "$status" -eq 0 ]
 
 	# busybox should be back up and running
@@ -429,7 +416,6 @@ function simple_cr() {
 	test -d "$orig_path"
 
 	runc checkpoint --work-path ./work-dir --manage-cgroups-mode ignore test_busybox
-	grep -B 5 Error ./work-dir/dump.log || true
 	[ "$status" -eq 0 ]
 	testcontainer test_busybox checkpointed
 	# Check that the cgroup is gone.
@@ -439,7 +425,6 @@ function simple_cr() {
 	set_cgroups_path # Changes the path.
 	runc restore -d --manage-cgroups-mode ignore --pid-file pid \
 		--work-path ./work-dir --console-socket "$CONSOLE_SOCKET" test_busybox
-	grep -B 5 Error ./work-dir/restore.log || true
 	[ "$status" -eq 0 ]
 	testcontainer test_busybox running
 
