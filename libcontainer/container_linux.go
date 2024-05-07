@@ -306,6 +306,9 @@ func (c *Container) start(process *Process) (retErr error) {
 		return errors.New("can't start container with SkipDevices set")
 	}
 	if process.Init {
+		if c.initProcessStartTime != 0 {
+			return errors.New("container already has init process")
+		}
 		if err := c.createExecFifo(); err != nil {
 			return err
 		}
