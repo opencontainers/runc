@@ -417,9 +417,6 @@ func (c *Container) createExecFifo() error {
 	}
 
 	fifoName := filepath.Join(c.stateDir, execFifoFilename)
-	if _, err := os.Stat(fifoName); err == nil {
-		return fmt.Errorf("exec fifo %s already exists", fifoName)
-	}
 	if err := unix.Mkfifo(fifoName, 0o622); err != nil {
 		return &os.PathError{Op: "mkfifo", Path: fifoName, Err: err}
 	}
