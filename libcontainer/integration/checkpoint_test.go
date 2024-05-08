@@ -1,7 +1,6 @@
 package integration
 
 import (
-	"bufio"
 	"bytes"
 	"errors"
 	"os"
@@ -14,30 +13,6 @@ import (
 	"github.com/opencontainers/runc/libcontainer"
 	"golang.org/x/sys/unix"
 )
-
-func showFile(t *testing.T, fname string) {
-	t.Helper()
-	t.Logf("=== %s ===\n", fname)
-
-	f, err := os.Open(fname)
-	if err != nil {
-		t.Log(err)
-		return
-	}
-	defer f.Close() //nolint: errcheck
-
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		t.Log(scanner.Text())
-	}
-
-	if err := scanner.Err(); err != nil {
-		t.Log(err)
-		return
-	}
-
-	t.Logf("=== END ===\n")
-}
 
 func TestUsernsCheckpoint(t *testing.T) {
 	cmd := exec.Command("criu", "check", "--feature", "userns")
@@ -106,10 +81,8 @@ func testCheckpoint(t *testing.T, userns bool) {
 		WorkDirectory:   parentDir,
 		PreDump:         true,
 	}
-	preDumpLog := filepath.Join(preDumpOpts.WorkDirectory, "dump.log")
 
 	if err := container.Checkpoint(preDumpOpts); err != nil {
-		showFile(t, preDumpLog)
 		if errors.Is(err, libcontainer.ErrCriuMissingFeatures) {
 			t.Skip(err)
 		}
@@ -130,11 +103,8 @@ func testCheckpoint(t *testing.T, userns bool) {
 		WorkDirectory:   imagesDir,
 		ParentImage:     "../criu-parent",
 	}
-	dumpLog := filepath.Join(checkpointOpts.WorkDirectory, "dump.log")
-	restoreLog := filepath.Join(checkpointOpts.WorkDirectory, "restore.log")
 
 	if err := container.Checkpoint(checkpointOpts); err != nil {
-		showFile(t, dumpLog)
 		t.Fatal(err)
 	}
 
@@ -168,7 +138,6 @@ func testCheckpoint(t *testing.T, userns bool) {
 	_ = restoreStdinR.Close()
 	defer restoreStdinW.Close() //nolint: errcheck
 	if err != nil {
-		showFile(t, restoreLog)
 		t.Fatal(err)
 	}
 
