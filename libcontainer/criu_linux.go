@@ -48,8 +48,7 @@ func (c *Container) checkCriuFeatures(criuOpts *CriuOpts, rpcOpts *criurpc.CriuO
 
 	err := c.criuSwrk(nil, req, criuOpts, nil)
 	if err != nil {
-		logrus.Debugf("%s", err)
-		return errors.New("CRIU feature check failed")
+		return fmt.Errorf("CRIU feature check failed: %w", err)
 	}
 
 	var missingFeatures []string
