@@ -192,7 +192,11 @@ task:
   integration_fs_rootless_script: |
     case $DISTRO in
     centos-7)
-      echo "SKIP: FIXME: integration_fs_rootless_script is skipped because of EPERM on writing cgroup.procs"
+      # Most probably EPERM on cgroup.procs is caused by some missing kernel
+      # patch. The other issue is SELinux, but even with SELinux fixes in
+      # https://github.com/opencontainers/runc/pull/4068 it still doesn't work.
+      # Does not make sense in trying to fix this since it's an older distro.
+      echo "SKIP: integration_fs_rootless_script is skipped because of EPERM on writing cgroup.procs"
         ;;
     *)
       ssh -tt localhost "make -C /home/runc localrootlessintegration"
