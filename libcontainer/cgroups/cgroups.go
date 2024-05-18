@@ -72,8 +72,4 @@ type Manager interface {
 
 	// OOMKillCount reports OOM kill count for the cgroup.
 	OOMKillCount() (uint64, error)
-
-	// GetEffectiveCPUs returns the effective CPUs of the cgroup, an empty
-	// value means that the cgroups cpuset subsystem/controller is not enabled.
-	GetEffectiveCPUs() string
 }

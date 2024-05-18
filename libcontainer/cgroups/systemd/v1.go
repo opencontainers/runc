@@ -411,7 +411,3 @@ func (m *LegacyManager) Exists() bool {
 func (m *LegacyManager) OOMKillCount() (uint64, error) {
 	return fs.OOMKillCount(m.Path("memory"))
 }
-
-func (m *LegacyManager) GetEffectiveCPUs() string {
-	return fs.GetEffectiveCPUs(m.Path("cpuset"), m.cgroups)
-}

@@ -69,10 +69,6 @@ func (m *mockCgroupManager) GetFreezerState() (configs.FreezerState, error) {
 	return configs.Thawed, nil
 }
 
-func (m *mockCgroupManager) GetEffectiveCPUs() string {
-	return ""
-}
-
 type mockProcess struct {
 	_pid    int
 	started uint64
