@@ -84,6 +84,13 @@ func newContainerInit(t initType, pipe *os.File, consoleSocket *os.File, fifoFd,
 	if err := populateProcessEnvironment(config.Env); err != nil {
 		return nil, err
 	}
+
+	// Clean the RLIMIT_NOFILE cache in go runtime.
+	// Issue: https://github.com/opencontainers/runc/issues/4195
+	if containsRlimit(config.Rlimits, unix.RLIMIT_NOFILE) {
+		system.ClearRlimitNofileCache()
+	}
+
 	switch t {
 	case initSetns:
 		// mountFds must be nil in this case. We don't mount while doing runc exec.
@@ -516,6 +523,15 @@ func setupRoute(config *configs.Config) error {
 		}
 	}
 	return nil
+}
+
+func containsRlimit(limits []configs.Rlimit, resource int) bool {
+	for _, rlimit := range limits {
+		if rlimit.Type == resource {
+			return true
+		}
+	}
+	return false
 }
 
 func setupRlimits(limits []configs.Rlimit, pid int) error {
