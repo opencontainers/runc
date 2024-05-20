@@ -30,7 +30,7 @@ var criuFeatures *criurpc.CriuFeatures
 
 var ErrCriuMissingFeatures = errors.New("criu is missing features")
 
-func (c *Container) checkCriuFeatures(criuOpts *CriuOpts, rpcOpts *criurpc.CriuOpts, criuFeat *criurpc.CriuFeatures) error {
+func (c *Container) checkCriuFeatures(criuOpts *CriuOpts, criuFeat *criurpc.CriuFeatures) error {
 	t := criurpc.CriuReqType_FEATURE_CHECK
 
 	// make sure the features we are looking for are really not from
@@ -38,18 +38,13 @@ func (c *Container) checkCriuFeatures(criuOpts *CriuOpts, rpcOpts *criurpc.CriuO
 	criuFeatures = nil
 
 	req := &criurpc.CriuReq{
-		Type: &t,
-		// Theoretically this should not be necessary but CRIU
-		// segfaults if Opts is empty.
-		// Fixed in CRIU  2.12
-		Opts:     rpcOpts,
+		Type:     &t,
 		Features: criuFeat,
 	}
 
 	err := c.criuSwrk(nil, req, criuOpts, nil)
 	if err != nil {
-		logrus.Debugf("%s", err)
-		return errors.New("CRIU feature check failed")
+		return fmt.Errorf("CRIU feature check failed: %w", err)
 	}
 
 	var missingFeatures []string
@@ -398,7 +393,7 @@ func (c *Container) Checkpoint(criuOpts *CriuOpts) error {
 			MemTrack: proto.Bool(true),
 		}
 
-		if err := c.checkCriuFeatures(criuOpts, &rpcOpts, &feat); err != nil {
+		if err := c.checkCriuFeatures(criuOpts, &feat); err != nil {
 			return err
 		}
 
@@ -412,7 +407,7 @@ func (c *Container) Checkpoint(criuOpts *CriuOpts) error {
 		feat := criurpc.CriuFeatures{
 			LazyPages: proto.Bool(true),
 		}
-		if err := c.checkCriuFeatures(criuOpts, &rpcOpts, &feat); err != nil {
+		if err := c.checkCriuFeatures(criuOpts, &feat); err != nil {
 			return err
 		}
 

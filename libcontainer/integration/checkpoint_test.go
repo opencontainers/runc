@@ -1,9 +1,7 @@
 package integration
 
 import (
-	"bufio"
 	"bytes"
-	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -15,38 +13,11 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func showFile(t *testing.T, fname string) {
-	t.Helper()
-	t.Logf("=== %s ===\n", fname)
-
-	f, err := os.Open(fname)
-	if err != nil {
-		t.Log(err)
-		return
-	}
-	defer f.Close() //nolint: errcheck
-
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		t.Log(scanner.Text())
-	}
-
-	if err := scanner.Err(); err != nil {
-		t.Log(err)
-		return
-	}
-
-	t.Logf("=== END ===\n")
+func criuFeature(feature string) bool {
+	return exec.Command("criu", "check", "--feature", feature).Run() == nil
 }
 
 func TestUsernsCheckpoint(t *testing.T) {
-	if _, err := os.Stat("/proc/self/ns/user"); os.IsNotExist(err) {
-		t.Skip("Test requires userns.")
-	}
-	cmd := exec.Command("criu", "check", "--feature", "userns")
-	if err := cmd.Run(); err != nil {
-		t.Skip("Unable to c/r a container with userns")
-	}
 	testCheckpoint(t, true)
 }
 
@@ -67,6 +38,10 @@ func testCheckpoint(t *testing.T, userns bool) {
 	out, err := exec.Command("rpm", "-q", "criu").CombinedOutput()
 	if err == nil && regexp.MustCompile(`^criu-3\.17-[123]\.el9`).Match(out) {
 		t.Skip("Test requires criu >= 3.17-4 on CentOS Stream 9.")
+	}
+
+	if userns && !criuFeature("userns") {
+		t.Skip("Test requires userns")
 	}
 
 	config := newTemplateConfig(t, &tParam{userns: userns})
@@ -102,28 +77,28 @@ func testCheckpoint(t *testing.T, userns bool) {
 	ok(t, err)
 
 	tmp := t.TempDir()
+	var parentImage string
 
-	parentDir := filepath.Join(tmp, "criu-parent")
-	preDumpOpts := &libcontainer.CriuOpts{
-		ImagesDirectory: parentDir,
-		WorkDirectory:   parentDir,
-		PreDump:         true,
-	}
-	preDumpLog := filepath.Join(preDumpOpts.WorkDirectory, "dump.log")
-
-	if err := container.Checkpoint(preDumpOpts); err != nil {
-		showFile(t, preDumpLog)
-		if errors.Is(err, libcontainer.ErrCriuMissingFeatures) {
-			t.Skip(err)
+	// Test pre-dump if mem_dirty_track is available.
+	if criuFeature("mem_dirty_track") {
+		parentImage = "../criu-parent"
+		parentDir := filepath.Join(tmp, "criu-parent")
+		preDumpOpts := &libcontainer.CriuOpts{
+			ImagesDirectory: parentDir,
+			WorkDirectory:   parentDir,
+			PreDump:         true,
 		}
-		t.Fatal(err)
-	}
 
-	state, err := container.Status()
-	ok(t, err)
+		if err := container.Checkpoint(preDumpOpts); err != nil {
+			t.Fatal(err)
+		}
 
-	if state != libcontainer.Running {
-		t.Fatal("Unexpected preDump state: ", state)
+		state, err := container.Status()
+		ok(t, err)
+
+		if state != libcontainer.Running {
+			t.Fatal("Unexpected preDump state: ", state)
+		}
 	}
 
 	imagesDir := filepath.Join(tmp, "criu")
@@ -131,17 +106,14 @@ func testCheckpoint(t *testing.T, userns bool) {
 	checkpointOpts := &libcontainer.CriuOpts{
 		ImagesDirectory: imagesDir,
 		WorkDirectory:   imagesDir,
-		ParentImage:     "../criu-parent",
+		ParentImage:     parentImage,
 	}
-	dumpLog := filepath.Join(checkpointOpts.WorkDirectory, "dump.log")
-	restoreLog := filepath.Join(checkpointOpts.WorkDirectory, "restore.log")
 
 	if err := container.Checkpoint(checkpointOpts); err != nil {
-		showFile(t, dumpLog)
 		t.Fatal(err)
 	}
 
-	state, err = container.Status()
+	state, err := container.Status()
 	ok(t, err)
 
 	if state != libcontainer.Stopped {
@@ -171,7 +143,6 @@ func testCheckpoint(t *testing.T, userns bool) {
 	_ = restoreStdinR.Close()
 	defer restoreStdinW.Close() //nolint: errcheck
 	if err != nil {
-		showFile(t, restoreLog)
 		t.Fatal(err)
 	}
 
