@@ -23,7 +23,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-20.04, ubuntu-22.04, actuated-arm64-6cpu-8gb]
+        os: [ubuntu-20.04, ubuntu-24.04, actuated-arm64-6cpu-8gb]
         go-version: [1.20.x, 1.21.x]
         rootless: ["rootless", ""]
         race: ["-race", ""]
@@ -158,6 +158,12 @@ jobs:
       with:
         bats-version: 1.9.0
 
+    - name: Allow userns for runc
+      # https://discourse.ubuntu.com/t/ubuntu-24-04-lts-noble-numbat-release-notes/39890#unprivileged-user-namespace-restrictions-15
+      if: matrix.os == 'ubuntu-24.04'
+      run: |
+        sed "s;^profile runc /usr/sbin/;profile runc-test $PWD/;" < /etc/apparmor.d/runc | sudo apparmor_parser
+
     - name: unit test
       if: matrix.rootless != 'rootless'
       env:
@@ -174,7 +180,7 @@ jobs:
         sudo cp $HOME/rootless.key /home/rootless/.ssh/id_ecdsa
         sudo cp $HOME/rootless.key.pub /home/rootless/.ssh/authorized_keys
         sudo chown -R rootless.rootless /home/rootless
-        sudo chmod a+X $HOME # for Ubuntu 22.04
+        sudo chmod a+X $HOME # for Ubuntu 22.04 and later
 
     - name: integration test (fs driver)
       run: sudo -E PATH="$PATH" script -e -c 'make local${{ matrix.rootless }}integration'
