@@ -21,6 +21,12 @@ COMMIT ?= $(shell git describe --dirty --long --always)
 VERSION ?= $(shell cat ./VERSION)
 LDFLAGS_COMMON := -X main.gitCommit=$(COMMIT) -X main.version=$(VERSION)
 
+# Since Go 1.23, we have to add -checklinkname=0 linker flag for rlimit workaround.
+GO_MINOR := $(shell $(GO) version | sed 's/.* go1\.\([0-9]*\)[. -].*/\1/')
+ifeq ($(shell test $(GO_MINOR) -gt 22; echo $$?),0)
+  LDFLAGS_COMMON += -checklinkname=0
+endif
+
 GOARCH := $(shell $(GO) env GOARCH)
 
 GO_BUILDMODE :=
