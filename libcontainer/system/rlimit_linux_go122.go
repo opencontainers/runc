@@ -1,19 +1,21 @@
-//go:build go1.19
+//go:build go1.19 && !go1.23
+
+// TODO: remove this file once go 1.22 is no longer supported.
 
 package system
 
 import (
 	"sync/atomic"
 	"syscall"
-
-	_ "unsafe" // for go:linkname
+	_ "unsafe" // Needed for go:linkname to work.
 )
 
 //go:linkname syscallOrigRlimitNofile syscall.origRlimitNofile
 var syscallOrigRlimitNofile atomic.Pointer[syscall.Rlimit]
 
-// ClearRlimitNofileCache is to clear go runtime's nofile rlimit cache.
-func ClearRlimitNofileCache() {
+// ClearRlimitNofileCache clears go runtime's nofile rlimit cache.
+// The argument is process RLIMIT_NOFILE values.
+func ClearRlimitNofileCache(_ *syscall.Rlimit) {
 	// As reported in issue #4195, the new version of go runtime(since 1.19)
 	// will cache rlimit-nofile. Before executing execve, the rlimit-nofile
 	// of the process will be restored with the cache. In runc, this will
