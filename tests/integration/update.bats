@@ -653,6 +653,17 @@ EOF
 
 	check_cgroup_value "cpu.rt_period_us" 900001
 	check_cgroup_value "cpu.rt_runtime_us" 600001
+
+	# https://github.com/opencontainers/runc/issues/4094
+	runc update test_update_rt --cpu-rt-period 10000 --cpu-rt-runtime 3000
+	[ "$status" -eq 0 ]
+	check_cgroup_value "cpu.rt_period_us" 10000
+	check_cgroup_value "cpu.rt_runtime_us" 3000
+
+	runc update test_update_rt --cpu-rt-period 100000 --cpu-rt-runtime 20000
+	[ "$status" -eq 0 ]
+	check_cgroup_value "cpu.rt_period_us" 100000
+	check_cgroup_value "cpu.rt_runtime_us" 20000
 }
 
 @test "update devices [minimal transition rules]" {
