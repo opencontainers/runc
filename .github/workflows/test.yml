@@ -24,7 +24,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-20.04, ubuntu-24.04, actuated-arm64-6cpu-8gb]
-        go-version: [1.20.x, 1.21.x]
+        go-version: [1.21.x, 1.22.x]
         rootless: ["rootless", ""]
         race: ["-race", ""]
         criu: ["", "criu-dev"]
@@ -33,7 +33,7 @@ jobs:
           # Disable most of criu-dev jobs, as they are expensive
           # (need to compile criu) and don't add much value/coverage.
           - criu: criu-dev
-            go-version: 1.20.x
+            go-version: 1.21.x
           - criu: criu-dev
             rootless: rootless
           - criu: criu-dev
@@ -45,12 +45,12 @@ jobs:
           - dmz: runc_nodmz
             os: ubuntu-20.04
           - dmz: runc_nodmz
-            go-version: 1.20.x
+            go-version: 1.21.x
           - dmz: runc_nodmz
             rootless: rootless
           - dmz: runc_nodmz
             race: -race
-          - go-version: 1.20.x
+          - go-version: 1.21.x
             os: actuated-arm64-6cpu-8gb
           - race: "-race"
             os: actuated-arm64-6cpu-8gb
@@ -147,6 +147,7 @@ jobs:
       uses: actions/setup-go@v5
       with:
         go-version: ${{ matrix.go-version }}
+        check-latest: true
 
     - name: build
       env:
@@ -225,7 +226,8 @@ jobs:
     - name: install go
       uses: actions/setup-go@v5
       with:
-        go-version: 1.21.x # TODO: switch to 1.x (latest stable) once Go 1.22 vs glibc issue is fixed.
+        go-version: 1.x # Latest stable
+        check-latest: true
 
     - name: unit test
       env:
