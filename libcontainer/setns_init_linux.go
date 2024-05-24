@@ -117,13 +117,6 @@ func (l *linuxSetnsInit) Init() error {
 	if err != nil {
 		return err
 	}
-	// exec.LookPath in Go < 1.20 might return no error for an executable
-	// residing on a file system mounted with noexec flag, so perform this
-	// extra check now while we can still return a proper error.
-	// TODO: remove this once go < 1.20 is not supported.
-	if err := eaccess(name); err != nil {
-		return &os.PathError{Op: "eaccess", Path: name, Err: err}
-	}
 	// Set seccomp as close to execve as possible, so as few syscalls take
 	// place afterward (reducing the amount of syscalls that users need to
 	// enable in their seccomp profiles).
