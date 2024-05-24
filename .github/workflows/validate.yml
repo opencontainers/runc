@@ -8,7 +8,7 @@ on:
       - release-*
   pull_request:
 env:
-  GO_VERSION: 1.20.x
+  GO_VERSION: 1.22.x
 
 jobs:
   keyring:
@@ -104,6 +104,7 @@ jobs:
       uses: actions/setup-go@v5
       with:
         go-version: "${{ env.GO_VERSION }}"
+        check-latest: true
     - name: verify deps
       run: make verify-dependencies
 
