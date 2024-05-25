@@ -10,6 +10,7 @@ import (
 	"path"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -452,16 +453,6 @@ func (c *Container) includeExecFifo(cmd *exec.Cmd) error {
 	return nil
 }
 
-// No longer needed in Go 1.21.
-func slicesContains[S ~[]E, E comparable](slice S, needle E) bool {
-	for _, val := range slice {
-		if val == needle {
-			return true
-		}
-	}
-	return false
-}
-
 func isDmzBinarySafe(c *configs.Config) bool {
 	// Because we set the dumpable flag in nsexec, the only time when it is
 	// unsafe to use runc-dmz is when the container process would be able to
@@ -472,9 +463,9 @@ func isDmzBinarySafe(c *configs.Config) bool {
 	// inheritable, or ambient sets). Luckily, most containers do not have this
 	// capability.
 	if c.Capabilities == nil ||
-		(!slicesContains(c.Capabilities.Bounding, "CAP_SYS_PTRACE") &&
-			!slicesContains(c.Capabilities.Inheritable, "CAP_SYS_PTRACE") &&
-			!slicesContains(c.Capabilities.Ambient, "CAP_SYS_PTRACE")) {
+		(!slices.Contains(c.Capabilities.Bounding, "CAP_SYS_PTRACE") &&
+			!slices.Contains(c.Capabilities.Inheritable, "CAP_SYS_PTRACE") &&
+			!slices.Contains(c.Capabilities.Ambient, "CAP_SYS_PTRACE")) {
 		return true
 	}
 
