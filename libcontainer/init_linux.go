@@ -12,6 +12,7 @@ import (
 	"runtime/debug"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/containerd/console"
 	"github.com/moby/sys/user"
@@ -225,9 +226,7 @@ func containerInit(t initType, config *initConfig, pipe *syncSocket, consoleSock
 
 	// Clean the RLIMIT_NOFILE cache in go runtime.
 	// Issue: https://github.com/opencontainers/runc/issues/4195
-	if containsRlimit(config.Rlimits, unix.RLIMIT_NOFILE) {
-		system.ClearRlimitNofileCache()
-	}
+	maybeClearRlimitNofileCache(config.Rlimits)
 
 	switch t {
 	case initSetns:
@@ -655,13 +654,16 @@ func setupRoute(config *configs.Config) error {
 	return nil
 }
 
-func containsRlimit(limits []configs.Rlimit, resource int) bool {
+func maybeClearRlimitNofileCache(limits []configs.Rlimit) {
 	for _, rlimit := range limits {
-		if rlimit.Type == resource {
-			return true
+		if rlimit.Type == syscall.RLIMIT_NOFILE {
+			system.ClearRlimitNofileCache(&syscall.Rlimit{
+				Cur: rlimit.Soft,
+				Max: rlimit.Hard,
+			})
+			return
 		}
 	}
-	return false
 }
 
 func setupRlimits(limits []configs.Rlimit, pid int) error {
