@@ -61,7 +61,7 @@ jobs:
     - uses: actions/checkout@v3
     - name: install deps
       # Version of codespell bundled with Ubuntu is way old, so use pip.
-      run: pip install codespell
+      run: pip install codespell==v2.3.0
     - name: run codespell
       run: codespell
 
