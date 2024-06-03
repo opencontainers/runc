@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/opencontainers/runc/internal/testutil"
 	"github.com/opencontainers/runc/libcontainer"
 	"golang.org/x/sys/unix"
 )
@@ -18,6 +19,7 @@ func criuFeature(feature string) bool {
 }
 
 func TestUsernsCheckpoint(t *testing.T) {
+	testutil.SkipOnCentOS(t, "Flaky (see #4273)", 7)
 	testCheckpoint(t, true)
 }
 
