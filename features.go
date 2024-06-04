@@ -27,7 +27,7 @@ var featuresCommand = cli.Command{
 			return err
 		}
 
-		tru := true
+		t := true
 
 		feat := features.Features{
 			OCIVersionMin: "1.0.0",
@@ -43,23 +43,23 @@ var featuresCommand = cli.Command{
 				Namespaces:   specconv.KnownNamespaces(),
 				Capabilities: capabilities.KnownCapabilities(),
 				Cgroup: &features.Cgroup{
-					V1:          &tru,
-					V2:          &tru,
-					Systemd:     &tru,
-					SystemdUser: &tru,
+					V1:          &t,
+					V2:          &t,
+					Systemd:     &t,
+					SystemdUser: &t,
 				},
 				Apparmor: &features.Apparmor{
-					Enabled: &tru,
+					Enabled: &t,
 				},
 				Selinux: &features.Selinux{
-					Enabled: &tru,
+					Enabled: &t,
 				},
 			},
 		}
 
 		if seccomp.Enabled {
 			feat.Linux.Seccomp = &features.Seccomp{
-				Enabled:   &tru,
+				Enabled:   &t,
 				Actions:   seccomp.KnownActions(),
 				Operators: seccomp.KnownOperators(),
 				Archs:     seccomp.KnownArchs(),

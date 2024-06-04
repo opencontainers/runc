@@ -168,9 +168,8 @@ func setupIO(process *libcontainer.Process, rootuid, rootgid int, createTTY, det
 	return setupProcessPipes(process, rootuid, rootgid)
 }
 
-// createPidFile creates a file with the processes pid inside it atomically
-// it creates a temp file with the paths filename + '.' infront of it
-// then renames the file
+// createPidFile creates a file containing the PID,
+// doing so atomically (via create and rename).
 func createPidFile(path string, process *libcontainer.Process) error {
 	pid, err := process.Pid()
 	if err != nil {
