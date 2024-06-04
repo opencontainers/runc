@@ -106,6 +106,10 @@ task:
       sysctl --system
       ;;
     centos-stream-8)
+      # CS8 is EOF. As a temp workaround, fix repo URLs to point to vault.
+      for f in /etc/yum.repos.d/*.repo; do \
+        sed -i -e 's,^mirrorlist=,#\0,' -e 's,^#baseurl=http://mirror\.,baseurl=http://vault.,' $f; \
+      done
       yum config-manager --set-enabled powertools # for glibc-static
       ;;
     centos-stream-9)
