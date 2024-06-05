@@ -58,7 +58,7 @@ void write_log(int level, const char *format, ...)
 		if (stage == NULL)
 			goto out;
 	} else {
-		ret = asprintf(&stage, "nsexec-%d", current_stage);
+		ret = asprintf(&stage, "nsexec-%d", current_stage + 1);
 		if (ret < 0) {
 			stage = NULL;
 			goto out;
