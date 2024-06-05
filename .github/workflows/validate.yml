@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   keyring:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
     - name: check runc.keyring
@@ -26,7 +26,7 @@ jobs:
       contents: read
       pull-requests: read
       checks: write # to allow the action to annotate code in the PR.
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
@@ -48,7 +48,7 @@ jobs:
           golangci-lint run --config .golangci-extra.yml --new-from-rev=HEAD~1
 
   compile-buildtags:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     env:
       # Don't ignore C warnings. Note that the output of "go env CGO_CFLAGS" by default is "-g -O2", so we keep them.
       CGO_CFLAGS: -g -O2 -Werror
@@ -62,24 +62,24 @@ jobs:
         run: make BUILDTAGS=""
 
   codespell:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
     - name: install deps
       # Version of codespell bundled with Ubuntu is way old, so use pip.
-      run: pip install codespell==v2.3.0
+      run: pip install --break-system-packages codespell==v2.3.0
     - name: run codespell
       run: codespell
 
   shfmt:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
     - name: shfmt
       run: make shfmt
 
   shellcheck:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - name: install shellcheck
@@ -110,7 +110,7 @@ jobs:
       - run: if git -P grep -I -n '\s$'; then echo "^^^ extra whitespace at EOL, please fix"; exit 1; fi
 
   deps:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
     - name: install go
@@ -125,7 +125,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     # Only check commits on pull requests.
     if: github.event_name == 'pull_request'
     steps:
@@ -143,7 +143,7 @@ jobs:
           error: 'Subject too long (max 72)'
 
   cfmt:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
     - name: checkout
       uses: actions/checkout@v4
@@ -161,7 +161,7 @@ jobs:
 
   release:
     timeout-minutes: 30
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
     - name: checkout
       uses: actions/checkout@v4
@@ -192,7 +192,7 @@ jobs:
 
 
   get-images:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
       with:
