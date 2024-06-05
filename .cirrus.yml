@@ -83,7 +83,6 @@ task:
     # yamllint disable rule:key-duplicates
     matrix:
       DISTRO: centos-7
-      DISTRO: centos-stream-8
       DISTRO: centos-stream-9
 
   name: ci / $DISTRO
@@ -104,13 +103,6 @@ task:
       # sysctl
       echo "user.max_user_namespaces=15076" > /etc/sysctl.d/userns.conf
       sysctl --system
-      ;;
-    centos-stream-8)
-      # CS8 is EOF. As a temp workaround, fix repo URLs to point to vault.
-      for f in /etc/yum.repos.d/*.repo; do \
-        sed -i -e 's,^mirrorlist=,#\0,' -e 's,^#baseurl=http://mirror\.,baseurl=http://vault.,' $f; \
-      done
-      yum config-manager --set-enabled powertools # for glibc-static
       ;;
     centos-stream-9)
       dnf config-manager --set-enabled crb # for glibc-static
@@ -185,7 +177,7 @@ task:
     ssh -tt localhost "make -C /home/runc localintegration"
   integration_systemd_rootless_script: |
     case $DISTRO in
-    centos-7|centos-stream-8)
+    centos-7)
       echo "SKIP: integration_systemd_rootless_script requires cgroup v2"
       ;;
     *)
