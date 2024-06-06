@@ -99,17 +99,22 @@ func (c *processComm) closeParent() {
 	// c.logPipeParent is kept alive for ForwardLogs
 }
 
+type containerProcess struct {
+	cmd           *exec.Cmd
+	comm          *processComm
+	config        *initConfig
+	manager       cgroups.Manager
+	fds           []string
+	process       *Process
+	bootstrapData io.Reader
+	container     *Container
+}
+
 type setnsProcess struct {
-	cmd             *exec.Cmd
-	comm            *processComm
+	containerProcess
 	cgroupPaths     map[string]string
 	rootlessCgroups bool
-	manager         cgroups.Manager
 	intelRdtPath    string
-	config          *initConfig
-	fds             []string
-	process         *Process
-	bootstrapData   io.Reader
 	initProcessPid  int
 }
 
@@ -430,15 +435,8 @@ func (p *setnsProcess) forwardChildLogs() chan error {
 }
 
 type initProcess struct {
-	cmd             *exec.Cmd
-	comm            *processComm
-	config          *initConfig
-	manager         cgroups.Manager
+	containerProcess
 	intelRdtManager *intelrdt.Manager
-	container       *Container
-	fds             []string
-	process         *Process
-	bootstrapData   io.Reader
 }
 
 func (p *initProcess) pid() int {
