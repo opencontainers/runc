@@ -2,5 +2,6 @@
 
 package system
 
-func ClearRlimitNofileCache() {
-}
+import "syscall"
+
+func ClearRlimitNofileCache(_ *syscall.Rlimit) {}
