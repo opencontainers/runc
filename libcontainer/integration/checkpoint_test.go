@@ -48,6 +48,13 @@ func testCheckpoint(t *testing.T, userns bool) {
 
 	config := newTemplateConfig(t, &tParam{userns: userns})
 	stateDir := t.TempDir()
+	defer func() {
+		out, err := exec.Command("fuser", "-vm", stateDir+"/dev").CombinedOutput()
+		t.Logf("%s", out)
+		if err != nil {
+			t.Logf("exec: %v", err)
+		}
+	}()
 
 	container, err := libcontainer.Create(stateDir, "test", config)
 	ok(t, err)
