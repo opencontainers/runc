@@ -19,7 +19,7 @@ jobs:
       run: make validate-keyring
 
   lint:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
         with:
@@ -42,7 +42,7 @@ jobs:
           golangci-lint run --config .golangci-extra.yml --new-from-rev=HEAD~1 --out-format=github-actions
 
   compile-buildtags:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     env:
       # Don't ignore C warnings. Note that the output of "go env CGO_CFLAGS" by default is "-g -O2", so we keep them.
       CGO_CFLAGS: -g -O2 -Werror
@@ -56,7 +56,7 @@ jobs:
         run: make BUILDTAGS=""
 
   codespell:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v4
     - name: install deps
@@ -66,14 +66,14 @@ jobs:
       run: codespell
 
   shfmt:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v4
     - name: shfmt
       run: make shfmt
 
   shellcheck:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - name: vars
@@ -98,7 +98,7 @@ jobs:
         run : ./script/check-config.sh
 
   deps:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v4
     - name: install go
@@ -110,7 +110,7 @@ jobs:
 
 
   commit:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     # Only check commits on pull requests.
     if: github.event_name == 'pull_request'
     steps:
@@ -128,7 +128,7 @@ jobs:
           error: 'Subject too long (max 72)'
 
   cfmt:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
     - name: checkout
       uses: actions/checkout@v4
@@ -145,7 +145,7 @@ jobs:
 
 
   release:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
     - name: checkout
       uses: actions/checkout@v4

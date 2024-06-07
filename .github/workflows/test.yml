@@ -99,7 +99,7 @@ jobs:
   # However, we do not have 32-bit ARM CI, so we use i386 for testing 32bit stuff.
   # We are not interested in providing official support for i386.
   cross-i386:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
 
     steps:
 
@@ -113,9 +113,6 @@ jobs:
         sudo add-apt-repository -y ppa:criu/ppa
         # apt-add-repository runs apt update so we don't have to.
 
-        # Due to a bug in apt, we have to update it first
-        # (see https://bugs.launchpad.net/ubuntu-cdimage/+bug/1871268)
-        sudo apt -q install apt
         sudo apt -q install libseccomp-dev libseccomp-dev:i386 gcc-multilib criu
 
     - name: install go
