@@ -38,10 +38,6 @@ function setup() {
 		MEM_SWAP="memory.memsw.limit_in_bytes"
 		SD_MEM_SWAP="unsupported"
 		SYSTEM_MEM=$(cat "${CGROUP_MEMORY_BASE_PATH}/${MEM_LIMIT}")
-		HAVE_SWAP="no"
-		if [ -f "${CGROUP_MEMORY_BASE_PATH}/${MEM_SWAP}" ]; then
-			HAVE_SWAP="yes"
-		fi
 	else
 		MEM_LIMIT="memory.max"
 		SD_MEM_LIMIT="MemoryMax"
@@ -50,8 +46,10 @@ function setup() {
 		MEM_SWAP="memory.swap.max"
 		SD_MEM_SWAP="MemorySwapMax"
 		SYSTEM_MEM="max"
-		HAVE_SWAP="yes"
 	fi
+
+	unset HAVE_SWAP
+	get_cgroup_value $MEM_SWAP >/dev/null && HAVE_SWAP=yes
 
 	SD_UNLIMITED="infinity"
 	SD_VERSION=$(systemctl --version | awk '{print $2; exit}')
@@ -94,8 +92,8 @@ function setup() {
 	check_cgroup_value "$MEM_RESERVE" 33554432
 	check_systemd_value "$SD_MEM_RESERVE" 33554432
 
-	# Run swap memory tests if swap is available
-	if [ "$HAVE_SWAP" = "yes" ]; then
+	# Run swap memory tests if swap is available.
+	if [ -v HAVE_SWAP ]; then
 		# try to remove memory swap limit
 		runc update test_update --memory-swap -1
 		[ "$status" -eq 0 ]
@@ -127,7 +125,7 @@ function setup() {
 	check_systemd_value "$SD_MEM_LIMIT" "$SD_UNLIMITED"
 
 	# check swap memory limited is gone
-	if [ "$HAVE_SWAP" = "yes" ]; then
+	if [ -v HAVE_SWAP ]; then
 		check_cgroup_value "$MEM_SWAP" "$SYSTEM_MEM"
 		check_systemd_value "$SD_MEM_SWAP" "$SD_UNLIMITED"
 	fi
@@ -221,7 +219,7 @@ EOF
 	check_cgroup_value "pids.max" 20
 	check_systemd_value "TasksMax" 20
 
-	if [ "$HAVE_SWAP" = "yes" ]; then
+	if [ -v HAVE_SWAP ]; then
 		# Test case for https://github.com/opencontainers/runc/pull/592,
 		# checking libcontainer/cgroups/fs/memory.go:setMemoryAndSwap.
 
