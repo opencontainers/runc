@@ -275,9 +275,7 @@ func RemovePaths(paths map[string]string) (err error) {
 		}
 	}
 	if len(paths) == 0 {
-		//nolint:ineffassign,staticcheck // done to help garbage collecting: opencontainers/runc#2506
-		// TODO: switch to clear once Go < 1.21 is not supported.
-		paths = make(map[string]string)
+		clear(paths)
 		return nil
 	}
 	return fmt.Errorf("Failed to remove paths: %v", paths)
