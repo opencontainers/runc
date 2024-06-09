@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        go-version: [1.17.x, 1.20.x, 1.21.x]
+        go-version: [1.17.x, 1.21.x, 1.22.x]
         rootless: ["rootless", ""]
         race: ["-race", ""]
         criu: [""]
@@ -35,7 +35,7 @@ jobs:
     steps:
 
     - name: checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: install deps
       if: matrix.criu == ''
@@ -46,13 +46,13 @@ jobs:
         curl -fSsLl $REPO/Release.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/devel_tools_criu.gpg > /dev/null
         echo "deb $REPO/ /" | sudo tee /etc/apt/sources.list.d/criu.list
         sudo apt update
-        sudo apt install libseccomp-dev criu sshfs
+        sudo apt -y install libseccomp-dev criu sshfs
 
     - name: install deps (criu ${{ matrix.criu }})
       if: matrix.criu != ''
       run: |
         sudo apt -q update
-        sudo apt -q install libseccomp-dev sshfs \
+        sudo apt -qy install libseccomp-dev sshfs \
           libcap-dev libnet1-dev libnl-3-dev \
           libprotobuf-c-dev libprotobuf-dev protobuf-c-compiler protobuf-compiler
         git clone https://github.com/checkpoint-restore/criu.git ~/criu
@@ -60,9 +60,10 @@ jobs:
         rm -rf ~/criu
 
     - name: install go ${{ matrix.go-version }}
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v5
       with:
         go-version: ${{ matrix.go-version }}
+        check-latest: true
 
     - name: build
       run: sudo -E PATH="$PATH" make EXTRA_FLAGS="${{ matrix.race }}" all
@@ -99,12 +100,12 @@ jobs:
   # However, we do not have 32-bit ARM CI, so we use i386 for testing 32bit stuff.
   # We are not interested in providing official support for i386.
   cross-i386:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
 
     steps:
 
     - name: checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: install deps
       run: |
@@ -113,15 +114,13 @@ jobs:
         sudo add-apt-repository -y ppa:criu/ppa
         # apt-add-repository runs apt update so we don't have to.
 
-        # Due to a bug in apt, we have to update it first
-        # (see https://bugs.launchpad.net/ubuntu-cdimage/+bug/1871268)
-        sudo apt -q install apt
-        sudo apt -q install libseccomp-dev libseccomp-dev:i386 gcc-multilib criu
+        sudo apt -qy install libseccomp-dev libseccomp-dev:i386 gcc-multilib criu
 
     - name: install go
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v5
       with:
-        go-version: 1.21
+        go-version: 1.x # Latest stable
+        check-latest: true
 
     - name: unit test
       run: sudo -E PATH="$PATH" -- make GOARCH=386 localunittest

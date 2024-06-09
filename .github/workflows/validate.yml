@@ -8,57 +8,56 @@ on:
       - release-*
   pull_request:
 env:
-  GO_VERSION: 1.20.x
+  GO_VERSION: 1.22.x
 
 jobs:
   keyring:
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: check runc.keyring
       run: make validate-keyring
 
   lint:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 2
-      - uses: actions/setup-go@v4
+      - uses: actions/setup-go@v5
         with:
           go-version: "${{ env.GO_VERSION }}"
-          cache: false # golangci-lint-action does its own caching
       - name: install deps
         run: |
           sudo apt -q update
-          sudo apt -q install libseccomp-dev
-      - uses: golangci/golangci-lint-action@v3
+          sudo apt -qy install libseccomp-dev
+      - uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.53
+          version: v1.57
       # Extra linters, only checking new code from a pull request.
       - name: lint-extra
         if: github.event_name == 'pull_request'
         run: |
-          golangci-lint run --config .golangci-extra.yml --new-from-rev=HEAD~1 --out-format=github-actions
+          golangci-lint run --config .golangci-extra.yml --new-from-rev=HEAD~1
 
   compile-buildtags:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     env:
       # Don't ignore C warnings. Note that the output of "go env CGO_CFLAGS" by default is "-g -O2", so we keep them.
       CGO_CFLAGS: -g -O2 -Werror
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: install go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: "${{ env.GO_VERSION }}"
       - name: compile with no build tags
         run: make BUILDTAGS=""
 
   codespell:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: install deps
       # Version of codespell bundled with Ubuntu is way old, so use pip.
       run: pip install codespell==v2.3.0
@@ -66,16 +65,16 @@ jobs:
       run: codespell
 
   shfmt:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: shfmt
       run: make shfmt
 
   shellcheck:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: vars
         run: |
           echo 'VERSION=v0.8.0' >> $GITHUB_ENV
@@ -98,19 +97,20 @@ jobs:
         run : ./script/check-config.sh
 
   deps:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: install go
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v5
       with:
         go-version: "${{ env.GO_VERSION }}"
+        check-latest: true
     - name: verify deps
       run: make verify-dependencies
 
 
   commit:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     # Only check commits on pull requests.
     if: github.event_name == 'pull_request'
     steps:
@@ -121,23 +121,23 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: check subject line length
-        uses: tim-actions/commit-message-checker-with-regex@v0.3.1
+        uses: tim-actions/commit-message-checker-with-regex@v0.3.2
         with:
           commits: ${{ steps.get-pr-commits.outputs.commits }}
           pattern: '^.{0,72}(\n.*)*$'
           error: 'Subject too long (max 72)'
 
   cfmt:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
     - name: checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
     - name: install deps
       run: |
         sudo apt -qq update
-        sudo apt -qq install indent
+        sudo apt -qqy install indent
     - name: cfmt
       run: |
         make cfmt
@@ -145,10 +145,10 @@ jobs:
 
 
   release:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
     - name: checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
@@ -169,7 +169,7 @@ jobs:
     - name: make releaseall
       run: make releaseall
     - name: upload artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: release-${{ github.run_id }}
         path: release/*
