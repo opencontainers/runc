@@ -136,18 +136,18 @@ func GetAllSubsystems() ([]string, error) {
 	return subsystems, nil
 }
 
-func readProcsFile(dir string) ([]int, error) {
-	f, err := OpenFile(dir, CgroupProcesses, os.O_RDONLY)
+func readProcsFile(dir string) (out []int, _ error) {
+	file := CgroupProcesses
+	retry := true
+
+again:
+	f, err := OpenFile(dir, file, os.O_RDONLY)
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
 
-	var (
-		s   = bufio.NewScanner(f)
-		out = []int{}
-	)
-
+	s := bufio.NewScanner(f)
 	for s.Scan() {
 		if t := s.Text(); t != "" {
 			pid, err := strconv.Atoi(t)
@@ -156,6 +156,13 @@ func readProcsFile(dir string) ([]int, error) {
 			}
 			out = append(out, pid)
 		}
+	}
+	if errors.Is(s.Err(), unix.ENOTSUP) && retry {
+		// For a threaded cgroup, read returns ENOTSUP, and we should
+		// read from cgroup.threads instead.
+		file = "cgroup.threads"
+		retry = false
+		goto again
 	}
 	return out, s.Err()
 }

@@ -4,13 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/opencontainers/runc/libcontainer/utils"
 )
 
 type parseError = fscommon.ParseError
@@ -34,9 +32,6 @@ func NewManager(config *configs.Cgroup, dirPath string) (*Manager, error) {
 		if err != nil {
 			return nil, err
 		}
-	} else {
-		// Clean path for safety.
-		dirPath = utils.CleanPath(dirPath)
 	}
 
 	m := &Manager{
@@ -320,27 +315,4 @@ func CheckMemoryUsage(dirPath string, r *configs.Resources) error {
 	}
 
 	return nil
-}
-
-func (m *Manager) GetEffectiveCPUs() string {
-	// Fast path.
-	if m.config.CpusetCpus != "" {
-		return m.config.CpusetCpus
-	} else if !strings.HasPrefix(m.dirPath, UnifiedMountpoint) {
-		return ""
-	}
-
-	// Iterates until it goes outside of the cgroup root path.
-	// It's required for containers in which cpuset controller
-	// is not enabled, in this case a parent cgroup is used.
-	outsidePath := filepath.Dir(UnifiedMountpoint)
-
-	for path := m.dirPath; path != outsidePath; path = filepath.Dir(path) {
-		cpus, err := fscommon.GetCgroupParamString(path, "cpuset.cpus.effective")
-		if err == nil {
-			return cpus
-		}
-	}
-
-	return ""
 }
