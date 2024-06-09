@@ -2,8 +2,9 @@
 # vi: set ft=ruby :
 
 Vagrant.configure("2") do |config|
-# Fedora box is used for testing cgroup v2 support
-  config.vm.box = "fedora/39-cloud-base"
+  config.vm.box = "fedora-40"
+  # For URL, check https://www.fedoraproject.org/cloud/download
+  config.vm.box_url = "https://download.fedoraproject.org/pub/fedora/linux/releases/40/Cloud/x86_64/images/Fedora-Cloud-Base-Vagrant-libvirt.x86_64-40-1.14.vagrant.libvirt.box"
   config.vm.provider :virtualbox do |v|
     v.memory = 2048
     v.cpus = 2
