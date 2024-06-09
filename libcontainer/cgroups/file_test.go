@@ -73,3 +73,25 @@ func TestOpenat2(t *testing.T) {
 		fd.Close()
 	}
 }
+
+func BenchmarkWriteFile(b *testing.B) {
+	TestMode = true
+	defer func() { TestMode = false }()
+
+	dir := b.TempDir()
+	tc := []string{
+		"one",
+		"one\ntwo\nthree",
+		"10:200 foo=bar boo=far\n300:1200 something=other\ndefault 45000\n",
+		"\n\n\n\n\n\n\n\n",
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		for _, val := range tc {
+			if err := WriteFileByLine(dir, "file", val); err != nil {
+				b.Fatal(err)
+			}
+		}
+	}
+}
