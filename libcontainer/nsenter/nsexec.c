@@ -1213,7 +1213,7 @@ void nsexec(void)
 					bail("failed to sync with parent: write(SYNC_USERMAP_PLS)");
 
 				/* ... wait for mapping ... */
-				write_log(DEBUG, "request stage-0 to map user namespace");
+				write_log(DEBUG, "waiting stage-0 to complete the mapping of user namespace");
 				if (read(syncfd, &s, sizeof(s)) != sizeof(s))
 					bail("failed to sync with parent: read(SYNC_USERMAP_ACK)");
 				if (s != SYNC_USERMAP_ACK)
