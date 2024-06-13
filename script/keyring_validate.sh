@@ -73,7 +73,7 @@ echo "------------------------------------------------------------"
 gpg --show-keys <"$root/$project.keyring"
 echo "------------------------------------------------------------"
 
-# Check that each entry in the kering is actually a maintainer's key.
+# Check that each entry in the keyring is actually a maintainer's key.
 while IFS="" read -d $'\0' -r block || [ -n "$block" ]; do
 	username="$(sed -En "s|^Comment:.* github=(\w+).*|\1|p" <<<"$block")"
 

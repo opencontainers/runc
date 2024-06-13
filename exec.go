@@ -219,9 +219,9 @@ func getProcess(context *cli.Context, bundle string) (*specs.Process, error) {
 	}
 	p := spec.Process
 	p.Args = context.Args()[1:]
-	// override the cwd, if passed
-	if context.String("cwd") != "" {
-		p.Cwd = context.String("cwd")
+	// Override the cwd, if passed.
+	if cwd := context.String("cwd"); cwd != "" {
+		p.Cwd = cwd
 	}
 	if ap := context.String("apparmor"); ap != "" {
 		p.ApparmorProfile = ap
@@ -240,27 +240,24 @@ func getProcess(context *cli.Context, bundle string) (*specs.Process, error) {
 	// append the passed env variables
 	p.Env = append(p.Env, context.StringSlice("env")...)
 
-	// set the tty
-	p.Terminal = false
-	if context.IsSet("tty") {
-		p.Terminal = context.Bool("tty")
-	}
+	// Always set tty to false, unless explicitly enabled from CLI.
+	p.Terminal = context.Bool("tty")
 	if context.IsSet("no-new-privs") {
 		p.NoNewPrivileges = context.Bool("no-new-privs")
 	}
-	// override the user, if passed
-	if context.String("user") != "" {
-		u := strings.SplitN(context.String("user"), ":", 2)
+	// Override the user, if passed.
+	if user := context.String("user"); user != "" {
+		u := strings.SplitN(user, ":", 2)
 		if len(u) > 1 {
 			gid, err := strconv.Atoi(u[1])
 			if err != nil {
-				return nil, fmt.Errorf("parsing %s as int for gid failed: %w", u[1], err)
+				return nil, fmt.Errorf("bad gid: %w", err)
 			}
 			p.User.GID = uint32(gid)
 		}
 		uid, err := strconv.Atoi(u[0])
 		if err != nil {
-			return nil, fmt.Errorf("parsing %s as int for uid failed: %w", u[0], err)
+			return nil, fmt.Errorf("bad uid: %w", err)
 		}
 		p.User.UID = uint32(uid)
 	}
