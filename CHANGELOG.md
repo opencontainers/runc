@@ -11,32 +11,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  * libcontainer/cgroups users who want to manage cgroup devices need to explicitly
    import libcontainer/cgroups/devices. (#3452, #4248)
 
-## [1.1.13] - 2024-06-13
-
-> There is no certainty in the world. This is the only certainty I have.
-### Important Notes
- * If building with Go 1.22.x, make sure to use 1.22.4 or a later version.
-   (see #4233 for more details)
-
-### Fixed
-
- * Support go 1.22.4+. (#4313)
- * runc list: fix race with runc delete. (#4231)
- * Fix set nofile rlimit error. (#4277, #4299)
- * libct/cg/fs: fix setting rt_period vs rt_runtime. (#4284)
- * Fix a debug msg for user ns in nsexec. (#4315)
- * script/*: fix gpg usage wrt keyboxd. (#4316)
- * CI fixes and misc backports. (#4241)
- * Fix codespell warnings. (#4300)
-
-### Changed
-
- * Silence security false positives from golang/net. (#4244)
- * libcontainer: allow containers to make apps think fips is enabled/disabled for testing. (#4257)
- * allow overriding VERSION value in Makefile. (#4270)
- * Vagrantfile.fedora: bump Fedora to 39. (#4261)
- * ci/cirrus: rm centos stream 8. (#4305, #4308)
-
 ## [1.2.0-rc.1] - 2024-04-03
 
 > There's a frood who really knows where his towel is.
@@ -211,6 +185,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    obsoleted by more generic container hooks. (#3350)
 
 [cve-2019-5736]: https://github.com/advisories/GHSA-gxmr-w5mj-v8hh
+
+## [1.1.13] - 2024-06-13
+
+> There is no certainty in the world. This is the only certainty I have.
+
+### Important Notes
+
+ * If building with Go 1.22.x, make sure to use 1.22.4 or a later version.
+   (see #4233 for more details)
+
+### Fixed
+
+ * Support go 1.22.4+. (#4313)
+ * runc list: fix race with runc delete. (#4231)
+ * Fix set nofile rlimit error. (#4277, #4299)
+ * libct/cg/fs: fix setting rt_period vs rt_runtime. (#4284)
+ * Fix a debug msg for user ns in nsexec. (#4315)
+ * script/*: fix gpg usage wrt keyboxd. (#4316)
+ * CI fixes and misc backports. (#4241)
+ * Fix codespell warnings. (#4300)
+
+### Changed
+
+ * Silence security false positives from golang/net. (#4244)
+ * libcontainer: allow containers to make apps think fips is enabled/disabled for testing. (#4257)
+ * allow overriding VERSION value in Makefile. (#4270)
+ * Vagrantfile.fedora: bump Fedora to 39. (#4261)
+ * ci/cirrus: rm centos stream 8. (#4305, #4308)
 
 ## [1.1.12] - 2024-01-31
 
