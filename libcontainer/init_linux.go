@@ -11,7 +11,6 @@ import (
 	"runtime"
 	"runtime/debug"
 	"strconv"
-	"strings"
 	"syscall"
 
 	"github.com/containerd/console"
@@ -185,8 +184,8 @@ func startInitialization() (retErr error) {
 		defer pidfdSocket.Close()
 	}
 
-	// clear the current process's environment to clean any libcontainer
-	// specific env vars.
+	// From here on, we don't need current process environment. It is not
+	// used directly anywhere below this point, but let's clear it anyway.
 	os.Clearenv()
 
 	defer func() {
@@ -209,9 +208,11 @@ func startInitialization() (retErr error) {
 }
 
 func containerInit(t initType, config *initConfig, pipe *syncSocket, consoleSocket, pidfdSocket, fifoFile, logPipe *os.File) error {
-	if err := populateProcessEnvironment(config.Env); err != nil {
+	env, homeSet, err := prepareEnv(config.Env)
+	if err != nil {
 		return err
 	}
+	config.Env = env
 
 	// Clean the RLIMIT_NOFILE cache in go runtime.
 	// Issue: https://github.com/opencontainers/runc/issues/4195
@@ -225,6 +226,7 @@ func containerInit(t initType, config *initConfig, pipe *syncSocket, consoleSock
 			pidfdSocket:   pidfdSocket,
 			config:        config,
 			logPipe:       logPipe,
+			addHome:       !homeSet,
 		}
 		return i.Init()
 	case initStandard:
@@ -236,34 +238,11 @@ func containerInit(t initType, config *initConfig, pipe *syncSocket, consoleSock
 			config:        config,
 			fifoFile:      fifoFile,
 			logPipe:       logPipe,
+			addHome:       !homeSet,
 		}
 		return i.Init()
 	}
 	return fmt.Errorf("unknown init type %q", t)
-}
-
-// populateProcessEnvironment loads the provided environment variables into the
-// current processes's environment.
-func populateProcessEnvironment(env []string) error {
-	for _, pair := range env {
-		name, val, ok := strings.Cut(pair, "=")
-		if !ok {
-			return errors.New("invalid environment variable: missing '='")
-		}
-		if name == "" {
-			return errors.New("invalid environment variable: name cannot be empty")
-		}
-		if strings.IndexByte(name, 0) >= 0 {
-			return fmt.Errorf("invalid environment variable %q: name contains nul byte (\\x00)", name)
-		}
-		if strings.IndexByte(val, 0) >= 0 {
-			return fmt.Errorf("invalid environment variable %q: value contains nul byte (\\x00)", name)
-		}
-		if err := os.Setenv(name, val); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // verifyCwd ensures that the current directory is actually inside the mount
@@ -294,8 +273,8 @@ func verifyCwd() error {
 
 // finalizeNamespace drops the caps, sets the correct user
 // and working dir, and closes any leaked file descriptors
-// before executing the command inside the namespace
-func finalizeNamespace(config *initConfig) error {
+// before executing the command inside the namespace.
+func finalizeNamespace(config *initConfig, addHome bool) error {
 	// Ensure that all unwanted fds we may have accidentally
 	// inherited are marked close-on-exec so they stay out of the
 	// container
@@ -341,7 +320,7 @@ func finalizeNamespace(config *initConfig) error {
 	if err := system.SetKeepCaps(); err != nil {
 		return fmt.Errorf("unable to set keep caps: %w", err)
 	}
-	if err := setupUser(config); err != nil {
+	if err := setupUser(config, addHome); err != nil {
 		return fmt.Errorf("unable to setup user: %w", err)
 	}
 	// Change working directory AFTER the user has been set up, if we haven't done it yet.
@@ -459,8 +438,9 @@ func syncParentSeccomp(pipe *syncSocket, seccompFd int) error {
 	return readSync(pipe, procSeccompDone)
 }
 
-// setupUser changes the groups, gid, and uid for the user inside the container
-func setupUser(config *initConfig) error {
+// setupUser changes the groups, gid, and uid for the user inside the container,
+// and appends user's HOME to config.Env if addHome is true.
+func setupUser(config *initConfig, addHome bool) error {
 	// Set up defaults.
 	defaultExecUser := user.ExecUser{
 		Uid:  0,
@@ -541,11 +521,9 @@ func setupUser(config *initConfig) error {
 		return err
 	}
 
-	// if we didn't get HOME already, set it based on the user's HOME
-	if envHome := os.Getenv("HOME"); envHome == "" {
-		if err := os.Setenv("HOME", execUser.Home); err != nil {
-			return err
-		}
+	// If we didn't get HOME already, set it based on the user's HOME.
+	if addHome {
+		config.Env = append(config.Env, "HOME="+execUser.Home)
 	}
 	return nil
 }
