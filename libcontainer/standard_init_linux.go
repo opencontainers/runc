@@ -27,6 +27,7 @@ type linuxStandardInit struct {
 	fifoFile      *os.File
 	logPipe       *os.File
 	config        *initConfig
+	addHome       bool
 }
 
 func (l *linuxStandardInit) getSessionRingParams() (string, uint32, uint32) {
@@ -186,7 +187,7 @@ func (l *linuxStandardInit) Init() error {
 			return err
 		}
 	}
-	if err := finalizeNamespace(l.config); err != nil {
+	if err := finalizeNamespace(l.config, l.addHome); err != nil {
 		return err
 	}
 	// finalizeNamespace can change user/group which clears the parent death
@@ -194,6 +195,17 @@ func (l *linuxStandardInit) Init() error {
 	if err := pdeath.Restore(); err != nil {
 		return fmt.Errorf("can't restore pdeath signal: %w", err)
 	}
+
+	// In case we have any StartContainer hooks to run, and they don't
+	// have environment configured explicitly, make sure they will be run
+	// with the same environment as container's init.
+	//
+	// NOTE the above described behavior is not part of runtime-spec, but
+	// rather a de facto historical thing we afraid to change.
+	if h := l.config.Config.Hooks[configs.StartContainer]; len(h) > 0 {
+		h.SetDefaultEnv(l.config.Env)
+	}
+
 	// Compare the parent from the initial start of the init process and make
 	// sure that it did not change.  if the parent changes that means it died
 	// and we were reparented to something else so we should just kill ourself
@@ -285,5 +297,5 @@ func (l *linuxStandardInit) Init() error {
 	if err := utils.UnsafeCloseFrom(l.config.PassedFilesCount + 3); err != nil {
 		return err
 	}
-	return system.Exec(name, l.config.Args, os.Environ())
+	return system.Exec(name, l.config.Args, l.config.Env)
 }
