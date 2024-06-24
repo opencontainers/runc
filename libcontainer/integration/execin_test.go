@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"math/rand"
 	"os"
 	"strconv"
 	"strings"
@@ -375,6 +376,80 @@ func TestExecInEnvironment(t *testing.T) {
 		strings.Contains(out, "DEBUG=true") {
 		t.Fatalf("unexpected running process, output %q", out)
 	}
+}
+
+func genBigEnv(count int) []string {
+	randStr := func(length int) string {
+		const charset = "abcdefghijklmnopqrstuvwxyz0123456789_"
+		b := make([]byte, length)
+		for i := range b {
+			b[i] = charset[rand.Intn(len(charset))]
+		}
+		return string(b)
+	}
+
+	envs := make([]string, count)
+	for i := 0; i < count; i++ {
+		key := strings.ToUpper(randStr(10))
+		value := randStr(20)
+		envs[i] = key + "=" + value
+	}
+
+	return envs
+}
+
+func BenchmarkExecInBigEnv(b *testing.B) {
+	if testing.Short() {
+		return
+	}
+	config := newTemplateConfig(b, nil)
+	container, err := newContainer(b, config)
+	ok(b, err)
+	defer destroyContainer(container)
+
+	// Execute a first process in the container
+	stdinR, stdinW, err := os.Pipe()
+	ok(b, err)
+	process := &libcontainer.Process{
+		Cwd:   "/",
+		Args:  []string{"cat"},
+		Env:   standardEnvironment,
+		Stdin: stdinR,
+		Init:  true,
+	}
+	err = container.Run(process)
+	_ = stdinR.Close()
+	defer stdinW.Close() //nolint: errcheck
+	ok(b, err)
+
+	const numEnv = 5000
+	env := append(standardEnvironment, genBigEnv(numEnv)...)
+	// Construct the expected output.
+	var wantOut bytes.Buffer
+	for _, e := range env {
+		wantOut.WriteString(e + "\n")
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		buffers := newStdBuffers()
+		process2 := &libcontainer.Process{
+			Cwd:    "/",
+			Args:   []string{"env"},
+			Env:    env,
+			Stdin:  buffers.Stdin,
+			Stdout: buffers.Stdout,
+			Stderr: buffers.Stderr,
+		}
+		err = container.Run(process2)
+		ok(b, err)
+		waitProcess(process2, b)
+		if !bytes.Equal(buffers.Stdout.Bytes(), wantOut.Bytes()) {
+			b.Fatalf("unexpected output: %s (stderr: %s)", buffers.Stdout, buffers.Stderr)
+		}
+	}
+	_ = stdinW.Close()
+	waitProcess(process, b)
 }
 
 func TestExecinPassExtraFiles(t *testing.T) {
