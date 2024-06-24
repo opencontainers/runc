@@ -32,7 +32,7 @@ type tParam struct {
 // and the default setup for devices.
 //
 // If p is nil, a default container is created.
-func newTemplateConfig(t *testing.T, p *tParam) *configs.Config {
+func newTemplateConfig(t testing.TB, p *tParam) *configs.Config {
 	var allowedDevices []*devices.Rule
 	for _, device := range specconv.AllowedDevices {
 		allowedDevices = append(allowedDevices, &device.Rule)
