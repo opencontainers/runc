@@ -7,5 +7,6 @@ contributions to our collective success:
  * Andrei Vagin (@avagin)
  * Rohit Jnagal (@rjnagal)
  * Victor Marmol (@vmarmol)
+ * Michael Crosby (@crosbymichael)
 
 We thank these members for their service to the OCI community.
