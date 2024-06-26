@@ -71,10 +71,8 @@ func (l *linuxSetnsInit) Init() error {
 		unix.Umask(int(*l.config.Config.Umask))
 	}
 
-	if l.config.Config.Scheduler != nil {
-		if err := setupScheduler(l.config.Config); err != nil {
-			return err
-		}
+	if err := setupScheduler(l.config.Config); err != nil {
+		return err
 	}
 
 	// Tell our parent that we're ready to exec. This must be done before the
