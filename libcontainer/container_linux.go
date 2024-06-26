@@ -411,7 +411,7 @@ func (c *Container) Signal(s os.Signal) error {
 	return nil
 }
 
-func (c *Container) createExecFifo() error {
+func (c *Container) createExecFifo() (retErr error) {
 	rootuid, err := c.Config().HostRootUID()
 	if err != nil {
 		return err
@@ -425,6 +425,11 @@ func (c *Container) createExecFifo() error {
 	if err := unix.Mkfifo(fifoName, 0o622); err != nil {
 		return &os.PathError{Op: "mkfifo", Path: fifoName, Err: err}
 	}
+	defer func() {
+		if retErr != nil {
+			os.Remove(fifoName)
+		}
+	}()
 	// Ensure permission bits (can be different because of umask).
 	if err := os.Chmod(fifoName, 0o622); err != nil {
 		return err
