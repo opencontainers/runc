@@ -662,6 +662,9 @@ func setupRlimits(limits []configs.Rlimit, pid int) error {
 }
 
 func setupScheduler(config *configs.Config) error {
+	if config.Scheduler == nil {
+		return nil
+	}
 	attr, err := configs.ToSchedAttr(config.Scheduler)
 	if err != nil {
 		return err

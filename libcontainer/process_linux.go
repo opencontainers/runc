@@ -166,10 +166,8 @@ type setnsProcess struct {
 func (p *setnsProcess) start() (retErr error) {
 	defer p.comm.closeParent()
 
-	if p.process.IOPriority != nil {
-		if err := setIOPriority(p.process.IOPriority); err != nil {
-			return err
-		}
+	if err := setIOPriority(p.process.IOPriority); err != nil {
+		return err
 	}
 
 	// get the "before" value of oom kill count
@@ -912,6 +910,9 @@ func (p *Process) InitializeIO(rootuid, rootgid int) (i *IO, err error) {
 func setIOPriority(ioprio *configs.IOPriority) error {
 	const ioprioWhoPgrp = 1
 
+	if ioprio == nil {
+		return nil
+	}
 	class, ok := configs.IOPrioClassMapping[ioprio.Class]
 	if !ok {
 		return fmt.Errorf("invalid io priority class: %s", ioprio.Class)
