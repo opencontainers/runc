@@ -127,7 +127,7 @@ func (p *setnsProcess) start() (retErr error) {
 
 	// get the "before" value of oom kill count
 	oom, _ := p.manager.OOMKillCount()
-	err := p.cmd.Start()
+	err := p.cmd.Start() // https://github.com/opencontainers/runc/pull/3923/commits/afc23e33971b657c4a09c54b16c6139651171aad
 	// close the child-side of the pipes (controlled by child)
 	p.comm.closeChild()
 	if err != nil {

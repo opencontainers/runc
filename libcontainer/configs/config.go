@@ -300,6 +300,8 @@ type (
 	Hooks    map[HookName]HookList
 )
 
+type CPUAffinity = specs.CPUAffinity
+
 const (
 	// Prestart commands are executed after the container namespaces are created,
 	// but before the user supplied command is executed from init.
