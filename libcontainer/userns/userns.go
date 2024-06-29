@@ -4,5 +4,5 @@ package userns
 // user namespace and memoizes the result. It returns false on non-Linux
 // platforms.
 func RunningInUserNS() bool {
-	return runningInUserNS()
+	return inUserNS()
 }
