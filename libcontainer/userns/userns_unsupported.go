@@ -7,9 +7,3 @@ package userns
 func runningInUserNS() bool {
 	return false
 }
-
-// uidMapInUserNS is a stub for non-Linux systems
-// Always returns false
-func uidMapInUserNS(uidMap string) bool {
-	return false
-}
