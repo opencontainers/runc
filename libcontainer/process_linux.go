@@ -23,9 +23,9 @@ import (
 	"github.com/opencontainers/runc/libcontainer/cgroups/fs2"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
+	"github.com/opencontainers/runc/libcontainer/internal/userns"
 	"github.com/opencontainers/runc/libcontainer/logs"
 	"github.com/opencontainers/runc/libcontainer/system"
-	"github.com/opencontainers/runc/libcontainer/userns"
 	"github.com/opencontainers/runc/libcontainer/utils"
 )
 
