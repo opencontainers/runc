@@ -19,46 +19,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
- * CI: add actuated-arm64. (#4142)
+ * CI: add actuated-arm64. (#4142, #4252, #4276)
 
 ### Fixed
 
  * cgroup v2: do not set swap to 0 or unlimited when it's not available. (#4188)
  * Set the default value of CpuBurst to nil instead of 0. (#4210, #4211)
- * runc exec: fix setting rlimit_nofile. (#4195, #4265, #4282, #4290)
- * libct/cg/fs: fix setting rt_period vs rt_runtime. (#4094, #4258)
- * script/*: fix gpg usage wrt keyboxd. (#4189)
- * Fix a debug log message for user namespaces in nsexec. (#4311)
  * libct/cg: write unified resources line by line. (#4186)
  * libct.Start: fix locking, do not allow a second container init. (#4271)
  * Fix tests in debian testing (mount_sshfs.bats). (#4245)
- * Fix checkpoint/restore tests on actuated-arm64. (#4276)
  * Fix codespell warnings. (#4291)
  * libct/cg/dev: fix TestSetV1Allow panic. (#4295)
  * tests/int/scheduler: require smp. (#4298)
 
 ### Changed
 
- * libcontainer: allow containers to make apps think fips is enabled/disabled for testing. (#4246)
  * libct/cg/fs: don't write cpu_burst twice on ENOENT. (#4259)
- * Allow overriding VERSION value in Makefile. (#4269)
  * Make trimpath optional. (#3908)
  * Remove unused system.Execv. (#4268)
  * Stop blacklisting Go 1.22+, drop Go < 1.21 support, use Go 1.22 in CI. (#4292)
  * Improve some error messages for runc exec. (#4320)
- * ci/actuated: re-enable CRIU tests. (#4252)
- * Vagrantfile.fedora: bump Fedora to 39. (#4256)
  * ci/gha: bump golangci-lint[-action]. (#4255)
  * tests/int/tty: increase the timeout. (#4260)
  * [ci] use go mod instead of go get in spec.bats. (#4264)
  * tests/int/checkpoint: rm double logging. (#4251)
- * ci/gha: bump golangci-lint-action from 5 to 6. (#4275)
  * .cirrus.yml: rm FIXME from rootless fs on CentOS 7. (#4279)
- * vendor: golang.org/x/net@v0.24.0. (#4280)
  * Dockerfile: bump Debian to 12, Go to 1.21. (#4296)
- * ci: pin codespell. (#4301)
- * ci: workaround for centos stream 8 being EOLed. (#4304)
- * ci/cirrus: rm centos stream 8. (#4307)
  * ci/gha: switch to ubuntu 24.04. (#4286)
  * Vagrantfile.fedora: bump to F40. (#4285)
 
