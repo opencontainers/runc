@@ -1,5 +1,4 @@
 //go:build !linux || runc_nodmz
-// +build !linux runc_nodmz
 
 package dmz
 
