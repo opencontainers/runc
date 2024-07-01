@@ -55,21 +55,13 @@ func newProcess(p specs.Process) (*libcontainer.Process, error) {
 		Label:           p.SelinuxLabel,
 		NoNewPrivileges: &p.NoNewPrivileges,
 		AppArmorProfile: p.ApparmorProfile,
+		Scheduler:       p.Scheduler,
+		IOPriority:      p.IOPriority,
 	}
 
 	if p.ConsoleSize != nil {
 		lp.ConsoleWidth = uint16(p.ConsoleSize.Width)
 		lp.ConsoleHeight = uint16(p.ConsoleSize.Height)
-	}
-
-	if p.Scheduler != nil {
-		s := *p.Scheduler
-		lp.Scheduler = &s
-	}
-
-	if p.IOPriority != nil {
-		ioPriority := *p.IOPriority
-		lp.IOPriority = &ioPriority
 	}
 
 	if p.Capabilities != nil {
