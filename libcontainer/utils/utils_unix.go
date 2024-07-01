@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	_ "unsafe" // for go:linkname
 
 	"golang.org/x/sys/unix"
@@ -114,4 +115,18 @@ func NewSockPair(name string) (parent *os.File, child *os.File, err error) {
 		return nil, nil, err
 	}
 	return os.NewFile(uintptr(fds[1]), name+"-p"), os.NewFile(uintptr(fds[0]), name+"-c"), nil
+}
+
+// IsLexicallyInRoot is shorthand for strings.HasPrefix(path+"/", root+"/"),
+// but properly handling the case where path or root are "/".
+//
+// NOTE: The return value only make sense if the path doesn't contain "..".
+func IsLexicallyInRoot(root, path string) bool {
+	if root != "/" {
+		root += "/"
+	}
+	if path != "/" {
+		path += "/"
+	}
+	return strings.HasPrefix(path, root)
 }
