@@ -1,4 +1,4 @@
-//go:build gofuzz
+//go:build linux && gofuzz
 
 package userns
 
