@@ -26,6 +26,7 @@ type linuxSetnsInit struct {
 	config        *initConfig
 	logPipe       *os.File
 	dmzExe        *os.File
+	addHome       bool
 }
 
 func (l *linuxSetnsInit) getSessionRingName() string {
@@ -101,7 +102,7 @@ func (l *linuxSetnsInit) Init() error {
 			return err
 		}
 	}
-	if err := finalizeNamespace(l.config); err != nil {
+	if err := finalizeNamespace(l.config, l.addHome); err != nil {
 		return err
 	}
 	if err := apparmor.ApplyProfile(l.config.AppArmorProfile); err != nil {
@@ -143,7 +144,7 @@ func (l *linuxSetnsInit) Init() error {
 
 	if l.dmzExe != nil {
 		l.config.Args[0] = name
-		return system.Fexecve(l.dmzExe.Fd(), l.config.Args, os.Environ())
+		return system.Fexecve(l.dmzExe.Fd(), l.config.Args, l.config.Env)
 	}
 	// Close all file descriptors we are not passing to the container. This is
 	// necessary because the execve target could use internal runc fds as the
@@ -163,5 +164,5 @@ func (l *linuxSetnsInit) Init() error {
 	if err := utils.UnsafeCloseFrom(l.config.PassedFilesCount + 3); err != nil {
 		return err
 	}
-	return system.Exec(name, l.config.Args, os.Environ())
+	return system.Exec(name, l.config.Args, l.config.Env)
 }
