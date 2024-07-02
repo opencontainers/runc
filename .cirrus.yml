@@ -1,6 +1,6 @@
 ---
-# We use Cirrus for CentOS (native) and Fedora (in Vagrant), because neither
-# CentOS nor Fedora is available on GHA natively, so the only option is VM.
+# We use Cirrus for RHEL clones (native) and Fedora (in Vagrant), because
+# neither is available on GHA natively, so the only option is VM.
 # In GHA, nested virtualization is only supported on macOS instances, which
 # are slow and flaky.
 
@@ -82,13 +82,13 @@ task:
     RPMS: gcc git iptables jq glibc-static libseccomp-devel make criu fuse-sshfs container-selinux
     # yamllint disable rule:key-duplicates
     matrix:
-      DISTRO: centos-7
-      DISTRO: centos-stream-9
+      DISTRO: almalinux-8
+      DISTRO: almalinux-9
 
   name: ci / $DISTRO
 
   compute_engine_instance:
-    image_project: centos-cloud
+    image_project: almalinux-cloud
     image: family/$DISTRO
     platform: linux
     cpu: 4
@@ -96,17 +96,12 @@ task:
 
   install_dependencies_script: |
     case $DISTRO in
-    centos-7)
-      (cd /etc/yum.repos.d && curl -O https://copr.fedorainfracloud.org/coprs/adrian/criu-el7/repo/epel-7/adrian-criu-el7-epel-7.repo)
-      # EPEL is needed for jq and fuse-sshfs.
-      rpm -q epel-release || rpm -Uvh https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
-      # sysctl
-      echo "user.max_user_namespaces=15076" > /etc/sysctl.d/userns.conf
-      sysctl --system
+    *-8)
+      yum config-manager --set-enabled powertools # for glibc-static
       ;;
-    centos-stream-9)
+    *-9)
       dnf config-manager --set-enabled crb # for glibc-static
-      dnf -y install epel-release epel-next-release # for fuse-sshfs
+      dnf -y install epel-release # for fuse-sshfs
       # Delegate all cgroup v2 controllers to rootless user via --systemd-cgroup.
       # The default (since systemd v252) is "pids memory cpu".
       mkdir -p /etc/systemd/system/user@.service.d
@@ -121,11 +116,7 @@ task:
     done
     [ $? -eq 0 ] # fail if yum failed
 
-    # Double check that all rpms were installed (yum from CentOS 7
-    # does not exit with an error if some packages were not found).
-    # Use --whatprovides since some packages are renamed.
-    rpm -q --whatprovides $RPMS
-    # install Go
+    # Install Go.
     PREFIX="https://go.dev/dl/"
     # Find out the latest minor release URL.
     eval $(curl -fsSL "${PREFIX}?mode=json" | jq -r  --arg Ver "$GO_VERSION" '.[] | select(.version | startswith("go\($Ver)")) | .files[] | select(.os == "linux" and .arch == "amd64" and .kind == "archive") | "filename=\"" + .filename + "\""')
@@ -179,22 +170,11 @@ task:
     ssh -tt localhost "make -C /home/runc localintegration"
   integration_systemd_rootless_script: |
     case $DISTRO in
-    centos-7)
-      echo "SKIP: integration_systemd_rootless_script requires cgroup v2"
-      ;;
-    *)
-      ssh -tt localhost "make -C /home/runc localrootlessintegration RUNC_USE_SYSTEMD=yes"
+      *-8)
+        echo "SKIP: integration_systemd_rootless_script requires cgroup v2"
+        ;;
+      *)
+        ssh -tt localhost "make -C /home/runc localrootlessintegration RUNC_USE_SYSTEMD=yes"
     esac
   integration_fs_rootless_script: |
-    case $DISTRO in
-    centos-7)
-      # Most probably EPERM on cgroup.procs is caused by some missing kernel
-      # patch. The other issue is SELinux, but even with SELinux fixes in
-      # https://github.com/opencontainers/runc/pull/4068 it still doesn't work.
-      # Does not make sense in trying to fix this since it's an older distro.
-      echo "SKIP: integration_fs_rootless_script is skipped because of EPERM on writing cgroup.procs"
-        ;;
-    *)
-      ssh -tt localhost "make -C /home/runc localrootlessintegration"
-      ;;
-    esac
+    ssh -tt localhost "make -C /home/runc localrootlessintegration"
