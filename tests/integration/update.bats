@@ -330,6 +330,50 @@ EOF
 	check_cpu_shares 100
 }
 
+@test "update cpu period and memory with no quota" {
+	[ $EUID -ne 0 ] && requires rootless_cgroup
+
+	update_config '.linux.resources.cpu |= {}'
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
+	[ "$status" -eq 0 ]
+	check_cpu_quota -1 100000 "infinity"
+
+	runc update test_update --cpu-period 900000
+	[ "$status" -eq 0 ]
+	check_cpu_quota -1  900000 "infinity"
+
+	runc update test_update --memory 500M
+	[ "$status" -eq 0 ]
+	check_cpu_quota -1  900000 "infinity"
+}
+
+@test "update cpu period and memory" {
+	[ $EUID -ne 0 ] && requires rootless_cgroup
+
+	update_config '.linux.resources.cpu |= {}'
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_update
+	[ "$status" -eq 0 ]
+	check_cpu_quota -1 100000 "infinity"
+
+	runc update test_update --cpu-period 900000 --cpu-quota 504000
+	[ "$status" -eq 0 ]
+	check_cpu_quota 504000 900000 "560ms"
+
+	runc update test_update --cpu-period 900000
+	[ "$status" -eq 0 ]
+	check_cpu_quota 504000 900000 "560ms"
+
+	runc update test_update --memory 500M
+	[ "$status" -eq 0 ]
+	check_cpu_quota 504000 900000 "560ms"
+
+	runc update test_update --cpu-period 900000
+	[ "$status" -eq 0 ]
+	check_cpu_quota 504000 900000 "560ms"
+}
+
 @test "cpu burst" {
 	[ $EUID -ne 0 ] && requires rootless_cgroup
 	requires cgroups_cpu_burst
