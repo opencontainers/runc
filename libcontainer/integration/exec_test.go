@@ -18,7 +18,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/opencontainers/runc/libcontainer/userns"
+	"github.com/opencontainers/runc/libcontainer/internal/userns"
 	"github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/opencontainers/runtime-spec/specs-go"
 
@@ -724,7 +724,7 @@ func TestContainerState(t *testing.T) {
 		{Type: configs.NEWNS},
 		{Type: configs.NEWUTS},
 		// host for IPC
-		//{Type: configs.NEWIPC},
+		// {Type: configs.NEWIPC},
 		{Type: configs.NEWPID},
 		{Type: configs.NEWNET},
 	})
