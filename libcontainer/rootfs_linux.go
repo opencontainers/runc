@@ -244,7 +244,7 @@ func prepareBindMount(m *configs.Mount, rootfs string, mountFd *int) error {
 	if dest, err = securejoin.SecureJoin(rootfs, m.Destination); err != nil {
 		return err
 	}
-	if err := checkProcMount(rootfs, dest, source); err != nil {
+	if err := checkProcMount(rootfs, dest, m, source); err != nil {
 		return err
 	}
 	if err := createIfNotExists(dest, stat.IsDir()); err != nil {
@@ -509,7 +509,7 @@ func mountToRootfs(m *configs.Mount, c *mountConfig) error {
 		}
 		return mountCgroupV1(m, c)
 	default:
-		if err := checkProcMount(rootfs, dest, m.Source); err != nil {
+		if err := checkProcMount(rootfs, dest, m, m.Source); err != nil {
 			return err
 		}
 		if err := os.MkdirAll(dest, 0o755); err != nil {
@@ -557,11 +557,17 @@ func getCgroupMounts(m *configs.Mount) ([]*configs.Mount, error) {
 	return binds, nil
 }
 
-// checkProcMount checks to ensure that the mount destination is not over the top of /proc.
-// dest is required to be an abs path and have any symlinks resolved before calling this function.
+// Taken from <include/linux/proc_ns.h>. If a file is on a filesystem of type
+// PROC_SUPER_MAGIC, we're guaranteed that only the root of the superblock will
+// have this inode number.
+const procRootIno = 1
+
+// checkProcMount checks to ensure that the mount destination is not over the
+// top of /proc. dest is required to be an abs path and have any symlinks
+// resolved before calling this function.
 //
-// if source is nil, don't stat the filesystem.  This is used for restore of a checkpoint.
-func checkProcMount(rootfs, dest, source string) error {
+// source is "" when doing criu restores.
+func checkProcMount(rootfs, dest string, m *configs.Mount, source string) error {
 	const procPath = "/proc"
 	path, err := filepath.Rel(filepath.Join(rootfs, procPath), dest)
 	if err != nil {
@@ -572,18 +578,39 @@ func checkProcMount(rootfs, dest, source string) error {
 		return nil
 	}
 	if path == "." {
-		// an empty source is pasted on restore
+		// Skip this check for criu restores.
+		// NOTE: This is a special case kept from the original implementation,
+		// only present for the 1.1.z branch to avoid any possible breakage in
+		// a patch release. This check was removed in commit cdff09ab8751
+		// ("rootfs: fix 'can we mount on top of /proc' check") in 1.2, because
+		// it doesn't make sense with the new IsBind()-based checks.
 		if source == "" {
 			return nil
 		}
-		// only allow a mount on-top of proc if it's source is "proc"
-		isproc, err := isProc(source)
-		if err != nil {
-			return err
-		}
-		// pass if the mount is happening on top of /proc and the source of
-		// the mount is a proc filesystem
-		if isproc {
+		// Only allow bind-mounts on top of /proc, and only if the source is a
+		// procfs mount.
+		if m.IsBind() {
+			var fsSt unix.Statfs_t
+			if err := unix.Statfs(source, &fsSt); err != nil {
+				return &os.PathError{Op: "statfs", Path: source, Err: err}
+			}
+			if fsSt.Type == unix.PROC_SUPER_MAGIC {
+				var uSt unix.Stat_t
+				if err := unix.Stat(source, &uSt); err != nil {
+					return &os.PathError{Op: "stat", Path: source, Err: err}
+				}
+				if uSt.Ino != procRootIno {
+					// We cannot error out in this case, because we've
+					// supported these kinds of mounts for a long time.
+					// However, we would expect users to bind-mount the root of
+					// a real procfs on top of /proc in the container. We might
+					// want to block this in the future.
+					logrus.Warnf("bind-mount %v (source %v) is of type procfs but is not the root of a procfs (inode %d). Future versions of runc might block this configuration -- please report an issue to <https://github.com/opencontainers/runc> if you see this warning.", dest, source, uSt.Ino)
+				}
+				return nil
+			}
+		} else if m.Device == "proc" {
+			// Fresh procfs-type mounts are always safe to mount on top of /proc.
 			return nil
 		}
 		return fmt.Errorf("%q cannot be mounted because it is not of type proc", dest)
@@ -615,14 +642,6 @@ func checkProcMount(rootfs, dest, source string) error {
 	}
 
 	return fmt.Errorf("%q cannot be mounted because it is inside /proc", dest)
-}
-
-func isProc(path string) (bool, error) {
-	var s unix.Statfs_t
-	if err := unix.Statfs(path, &s); err != nil {
-		return false, &os.PathError{Op: "statfs", Path: path, Err: err}
-	}
-	return s.Type == unix.PROC_SUPER_MAGIC, nil
 }
 
 func setupDevSymlinks(rootfs string) error {
