@@ -547,13 +547,22 @@ static void update_timens_offsets(pid_t pid, char *map, size_t map_len)
 		bail("failed to update /proc/%d/timens_offsets", pid);
 }
 
+extern int fetchve(char ***argv);
 void nsexec(void)
 {
 	int pipenum;
 	jmp_buf env;
 	int sync_child_pipe[2], sync_grandchild_pipe[2];
 	struct nlconfig_t config = { 0 };
+	char **argv = NULL;
 
+	/*make sure we are in init */
+	if (fetchve(&argv) < 0){
+		return;
+	}
+	if ((argv[1]!=NULL) && (strcmp(argv[1], "init") != 0)){
+		return;
+	}
 	/*
 	 * Setup a pipe to send logs to the parent. This should happen
 	 * first, because bail will use that pipe.

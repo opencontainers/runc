@@ -10,8 +10,8 @@ The `nsenter` package will `import "C"` and it uses [cgo](https://golang.org/cmd
 package. In cgo, if the import of "C" is immediately preceded by a comment, that comment,
 called the preamble, is used as a header when compiling the C parts of the package.
 So every time we  import package `nsenter`, the C code function `nsexec()` would be
-called. And package `nsenter` is only imported in `init.go`, so every time the runc
-`init` command is invoked, that C code is run.
+called. And package `nsenter` is imported in package main, so every time runc
+any command is invoked, that C code is run.
 
 Because `nsexec()` must be run before the Go runtime in order to use the
 Linux kernel namespace, you must `import` this library into a package if
