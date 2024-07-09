@@ -17,7 +17,7 @@ import (
 
 // systemdProperties takes the configured device rules and generates a
 // corresponding set of systemd properties to configure the devices correctly.
-func systemdProperties(r *configs.Resources, sdVer int) ([]systemdDbus.Property, error) {
+func systemdProperties(r *configs.Resources, sdVer int, cgroupVer int) ([]systemdDbus.Property, error) {
 	if r.SkipDevices {
 		return nil, nil
 	}
@@ -96,12 +96,26 @@ func systemdProperties(r *configs.Resources, sdVer int) ([]systemdDbus.Property,
 		// The only type of rule we can't handle is wildcard-major rules, and
 		// so we'll give a warning in that case (note that the fallback code
 		// will insert any rules systemd couldn't handle). What amazing fun.
+		//
+		// The properties generated here are applied by systemd. In case of
+		// cgroup v1 ("device.{allow,deny}" files), runc when overwrites the
+		// systemd rules, so the correct rules are in effect (except for the
+		// case when systemd is restarted and our rules gets overwritten, but
+		// there is nothing we can do here).
+		//
+		// For cgroup v2, we only use systemd rules, so we error out if
+		// we can't translate some rules.
 
 		if rule.Major == devices.Wildcard {
 			// "_ *:n _" rules aren't supported by systemd.
 			if rule.Minor != devices.Wildcard {
-				logrus.Warnf("systemd doesn't support '*:n' device rules -- temporarily ignoring rule: %v", *rule)
+				err = fmt.Errorf("systemd does not support wildcard-major device rule: %+v", *rule)
+				if cgroupVer == 2 {
+					return nil, err
+				}
+				logrus.WithError(err).Debugf("temporarily ignoring rule: %v (will be applied by systemd)", rule)
 				continue
+
 			}
 
 			// "_ *:* _" rules just wildcard everything.
@@ -126,7 +140,11 @@ func systemdProperties(r *configs.Resources, sdVer int) ([]systemdDbus.Property,
 				}
 				if group == "" {
 					// Couldn't find a group.
-					logrus.Warnf("could not find device group for '%v/%d' in /proc/devices -- temporarily ignoring rule: %v", rule.Type, rule.Major, *rule)
+					err = fmt.Errorf("systemd older than v240 does not support wildcard-minor rules for devices not listed in /proc/devices: +%v", *rule)
+					if cgroupVer == 2 {
+						return nil, err
+					}
+					logrus.Warnf("temporarily ignoring rule: %v", err)
 					continue
 				}
 				entry.Path = group
@@ -141,12 +159,13 @@ func systemdProperties(r *configs.Resources, sdVer int) ([]systemdDbus.Property,
 			}
 			if sdVer < 240 {
 				// Old systemd versions use stat(2) on path to find out device major:minor
-				// numbers and type. If the path doesn't exist, it will not add the rule,
-				// emitting a warning instead.
-				// Since all of this logic is best-effort anyway (we manually set these
-				// rules separately to systemd) we can safely skip entries that don't
-				// have a corresponding path.
+				// numbers and type. If the path doesn't exist, it will not add the rule.
 				if _, err := os.Stat(entry.Path); err != nil {
+					err = fmt.Errorf("systemd older than v240 does not support device rules for non-existing device: %w", err)
+					if cgroupVer == 2 {
+						return nil, err
+					}
+					logrus.Warnf("temporarily ignoring rule: %v", err)
 					continue
 				}
 			}
