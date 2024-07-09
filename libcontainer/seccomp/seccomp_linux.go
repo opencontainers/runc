@@ -5,7 +5,6 @@ package seccomp
 import (
 	"errors"
 	"fmt"
-	"os"
 
 	libseccomp "github.com/seccomp/libseccomp-golang"
 	"github.com/sirupsen/logrus"
@@ -27,16 +26,17 @@ const (
 )
 
 // InitSeccomp installs the seccomp filters to be used in the container as
-// specified in config. Returns the seccomp file descriptor if any of the
-// filters include a SCMP_ACT_NOTIFY action.
-func InitSeccomp(config *configs.Seccomp) (*os.File, error) {
+// specified in config.
+// Returns the seccomp file descriptor if any of the filters include a
+// SCMP_ACT_NOTIFY action, otherwise returns -1.
+func InitSeccomp(config *configs.Seccomp) (int, error) {
 	if config == nil {
-		return nil, errors.New("cannot initialize Seccomp - nil config passed")
+		return -1, errors.New("cannot initialize Seccomp - nil config passed")
 	}
 
 	defaultAction, err := getAction(config.DefaultAction, config.DefaultErrnoRet)
 	if err != nil {
-		return nil, errors.New("error initializing seccomp - invalid default action")
+		return -1, errors.New("error initializing seccomp - invalid default action")
 	}
 
 	// Ignore the error since pre-2.4 libseccomp is treated as API level 0.
@@ -44,7 +44,7 @@ func InitSeccomp(config *configs.Seccomp) (*os.File, error) {
 	for _, call := range config.Syscalls {
 		if call.Action == configs.Notify {
 			if apiLevel < 6 {
-				return nil, fmt.Errorf("seccomp notify unsupported: API level: got %d, want at least 6. Please try with libseccomp >= 2.5.0 and Linux >= 5.7", apiLevel)
+				return -1, fmt.Errorf("seccomp notify unsupported: API level: got %d, want at least 6. Please try with libseccomp >= 2.5.0 and Linux >= 5.7", apiLevel)
 			}
 
 			// We can't allow the write syscall to notify to the seccomp agent.
@@ -60,36 +60,36 @@ func InitSeccomp(config *configs.Seccomp) (*os.File, error) {
 			// agent allows those syscalls to proceed, initialization works just fine and the agent can
 			// handle future read()/close() syscalls as it wanted.
 			if call.Name == "write" {
-				return nil, errors.New("SCMP_ACT_NOTIFY cannot be used for the write syscall")
+				return -1, errors.New("SCMP_ACT_NOTIFY cannot be used for the write syscall")
 			}
 		}
 	}
 
 	// See comment on why write is not allowed. The same reason applies, as this can mean handling write too.
 	if defaultAction == libseccomp.ActNotify {
-		return nil, errors.New("SCMP_ACT_NOTIFY cannot be used as default action")
+		return -1, errors.New("SCMP_ACT_NOTIFY cannot be used as default action")
 	}
 
 	filter, err := libseccomp.NewFilter(defaultAction)
 	if err != nil {
-		return nil, fmt.Errorf("error creating filter: %w", err)
+		return -1, fmt.Errorf("error creating filter: %w", err)
 	}
 
 	// Add extra architectures
 	for _, arch := range config.Architectures {
 		scmpArch, err := libseccomp.GetArchFromString(arch)
 		if err != nil {
-			return nil, fmt.Errorf("error validating Seccomp architecture: %w", err)
+			return -1, fmt.Errorf("error validating Seccomp architecture: %w", err)
 		}
 		if err := filter.AddArch(scmpArch); err != nil {
-			return nil, fmt.Errorf("error adding architecture to seccomp filter: %w", err)
+			return -1, fmt.Errorf("error adding architecture to seccomp filter: %w", err)
 		}
 	}
 
 	// Add extra flags.
 	for _, flag := range config.Flags {
 		if err := setFlag(filter, flag); err != nil {
-			return nil, err
+			return -1, err
 		}
 	}
 
@@ -109,24 +109,25 @@ func InitSeccomp(config *configs.Seccomp) (*os.File, error) {
 
 	// Unset no new privs bit
 	if err := filter.SetNoNewPrivsBit(false); err != nil {
-		return nil, fmt.Errorf("error setting no new privileges: %w", err)
+		return -1, fmt.Errorf("error setting no new privileges: %w", err)
 	}
 
 	// Add a rule for each syscall
 	for _, call := range config.Syscalls {
 		if call == nil {
-			return nil, errors.New("encountered nil syscall while initializing Seccomp")
+			return -1, errors.New("encountered nil syscall while initializing Seccomp")
 		}
 
 		if err := matchCall(filter, call, defaultAction); err != nil {
-			return nil, err
+			return -1, err
 		}
 	}
 
 	seccompFd, err := patchbpf.PatchAndLoad(config, filter)
 	if err != nil {
-		return nil, fmt.Errorf("error loading seccomp filter into kernel: %w", err)
+		return -1, fmt.Errorf("error loading seccomp filter into kernel: %w", err)
 	}
+
 	return seccompFd, nil
 }
 

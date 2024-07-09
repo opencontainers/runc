@@ -83,8 +83,9 @@ function scmp_act_notify_template() {
 }
 
 # Test important syscalls (some might be executed by runc) work fine when handled by the agent. noNewPrivileges FALSE.
+# fcntl: https://github.com/opencontainers/runc/issues/4328
 @test "runc run [seccomp] (SCMP_ACT_NOTIFY important syscalls noNewPrivileges false)" {
-	scmp_act_notify_template "/bin/true" false '"execve","openat","open","read","close"'
+	scmp_act_notify_template "/bin/true" false '"execve","openat","open","read","close","fcntl"'
 
 	runc run test_busybox
 	[ "$status" -eq 0 ]
@@ -92,7 +93,7 @@ function scmp_act_notify_template() {
 
 # Test important syscalls (some might be executed by runc) work fine when handled by the agent. noNewPrivileges TRUE.
 @test "runc run [seccomp] (SCMP_ACT_NOTIFY important syscalls noNewPrivileges true)" {
-	scmp_act_notify_template "/bin/true" true '"execve","openat","open","read","close"'
+	scmp_act_notify_template "/bin/true" true '"execve","openat","open","read","close","fcntl"'
 
 	runc run test_busybox
 	[ "$status" -eq 0 ]
