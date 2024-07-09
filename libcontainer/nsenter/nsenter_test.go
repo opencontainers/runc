@@ -17,7 +17,6 @@ import (
 )
 
 func TestNsenterValidPaths(t *testing.T) {
-	args := []string{"nsenter-exec"}
 	parent, child := newPipe(t)
 
 	namespaces := []string{
@@ -26,7 +25,7 @@ func TestNsenterValidPaths(t *testing.T) {
 	}
 	cmd := &exec.Cmd{
 		Path:       os.Args[0],
-		Args:       args,
+		Args:       initArgs,
 		ExtraFiles: []*os.File{child},
 		Env:        []string{"_LIBCONTAINER_INITPIPE=3"},
 		Stdout:     os.Stdout,
@@ -62,7 +61,6 @@ func TestNsenterValidPaths(t *testing.T) {
 }
 
 func TestNsenterInvalidPaths(t *testing.T) {
-	args := []string{"nsenter-exec"}
 	parent, child := newPipe(t)
 
 	namespaces := []string{
@@ -70,7 +68,7 @@ func TestNsenterInvalidPaths(t *testing.T) {
 	}
 	cmd := &exec.Cmd{
 		Path:       os.Args[0],
-		Args:       args,
+		Args:       initArgs,
 		ExtraFiles: []*os.File{child},
 		Env:        []string{"_LIBCONTAINER_INITPIPE=3"},
 	}
@@ -101,7 +99,6 @@ func TestNsenterInvalidPaths(t *testing.T) {
 }
 
 func TestNsenterIncorrectPathType(t *testing.T) {
-	args := []string{"nsenter-exec"}
 	parent, child := newPipe(t)
 
 	namespaces := []string{
@@ -109,7 +106,7 @@ func TestNsenterIncorrectPathType(t *testing.T) {
 	}
 	cmd := &exec.Cmd{
 		Path:       os.Args[0],
-		Args:       args,
+		Args:       initArgs,
 		ExtraFiles: []*os.File{child},
 		Env:        []string{"_LIBCONTAINER_INITPIPE=3"},
 	}
@@ -140,7 +137,6 @@ func TestNsenterIncorrectPathType(t *testing.T) {
 }
 
 func TestNsenterChildLogging(t *testing.T) {
-	args := []string{"nsenter-exec"}
 	parent, child := newPipe(t)
 	logread, logwrite := newPipe(t)
 
@@ -150,7 +146,7 @@ func TestNsenterChildLogging(t *testing.T) {
 	}
 	cmd := &exec.Cmd{
 		Path:       os.Args[0],
-		Args:       args,
+		Args:       initArgs,
 		ExtraFiles: []*os.File{child, logwrite},
 		Env:        []string{"_LIBCONTAINER_INITPIPE=3", "_LIBCONTAINER_LOGPIPE=4"},
 		Stdout:     os.Stdout,
@@ -187,8 +183,10 @@ func TestNsenterChildLogging(t *testing.T) {
 	reapChildren(t, parent)
 }
 
+var initArgs = []string{"nsexec-test", "init"}
+
 func init() {
-	if strings.HasPrefix(os.Args[0], "nsenter-") {
+	if len(os.Args) == len(initArgs) && os.Args[1] == initArgs[1] {
 		os.Exit(0)
 	}
 }
