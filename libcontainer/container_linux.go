@@ -531,7 +531,7 @@ func (c *Container) newParentProcess(p *Process) (parentProcess, error) {
 				logrus.Debug("runc-dmz: using runc-dmz") // used for tests
 			} else if errors.Is(err, dmz.ErrNoDmzBinary) {
 				logrus.Debug("runc-dmz binary not embedded in runc binary, falling back to /proc/self/exe clone")
-			} else if err != nil {
+			} else {
 				return nil, fmt.Errorf("failed to create runc-dmz binary clone: %w", err)
 			}
 		} else {

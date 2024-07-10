@@ -11,3 +11,8 @@ linters:
     - errorlint
     - unconvert
     - unparam
+
+linters-settings:
+  govet:
+    enable:
+      - nilness
