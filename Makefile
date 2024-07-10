@@ -59,6 +59,7 @@ endif
 
 runc:
 	$(GO_BUILD) -o runc .
+	$(GO_BUILD) -o runc-init cmd/runc-init/main.go
 
 all: runc recvtty sd-helper seccompagent
 
@@ -66,7 +67,8 @@ recvtty sd-helper seccompagent:
 	$(GO_BUILD) -o contrib/cmd/$@/$@ ./contrib/cmd/$@
 
 static:
-	$(GO_BUILD_STATIC) -o runc .
+	$(GO_BUILD_STATIC) 
+	$(GO_BUILD_STATIC) -o runc-init cmd/runc-init/main.go
 
 releaseall: RELEASE_ARGS := "-a arm64 -a armel -a armhf -a ppc64le -a riscv64 -a s390x"
 releaseall: release
@@ -138,6 +140,7 @@ shell: runcimage
 
 install:
 	install -D -m0755 runc $(DESTDIR)$(BINDIR)/runc
+	install -D -m0755 runc-init $(DESTDIR)$(BINDIR)/runc-init
 
 install-bash:
 	install -D -m0644 contrib/completions/bash/runc $(DESTDIR)$(PREFIX)/share/bash-completion/completions/runc

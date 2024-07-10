@@ -41,3 +41,7 @@ func init() {
 		panic("libcontainer: container init failed to exec")
 	}
 }
+
+func main() {
+
+}
