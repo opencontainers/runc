@@ -99,7 +99,7 @@ func (c *Container) Status() (Status, error) {
 func (c *Container) State() (*State, error) {
 	c.m.Lock()
 	defer c.m.Unlock()
-	return c.currentState()
+	return c.currentState(), nil
 }
 
 // OCIState returns the current container's state information.
@@ -666,10 +666,7 @@ func (c *Container) newInitProcess(p *Process, cmd *exec.Cmd, comm *processComm)
 
 func (c *Container) newSetnsProcess(p *Process, cmd *exec.Cmd, comm *processComm) (*setnsProcess, error) {
 	cmd.Env = append(cmd.Env, "_LIBCONTAINER_INITTYPE="+string(initSetns))
-	state, err := c.currentState()
-	if err != nil {
-		return nil, fmt.Errorf("unable to get container state: %w", err)
-	}
+	state := c.currentState()
 	// for setns process, we don't have to set cloneflags as the process namespaces
 	// will only be set via setns syscall
 	data, err := c.bootstrapData(0, state.NamespacePaths)
@@ -847,12 +844,8 @@ func (c *Container) updateState(process parentProcess) (*State, error) {
 	if process != nil {
 		c.initProcess = process
 	}
-	state, err := c.currentState()
-	if err != nil {
-		return nil, err
-	}
-	err = c.saveState(state)
-	if err != nil {
+	state := c.currentState()
+	if err := c.saveState(state); err != nil {
 		return nil, err
 	}
 	return state, nil
@@ -938,7 +931,7 @@ func (c *Container) isPaused() (bool, error) {
 	return state == configs.Frozen, nil
 }
 
-func (c *Container) currentState() (*State, error) {
+func (c *Container) currentState() *State {
 	var (
 		startTime           uint64
 		externalDescriptors []string
@@ -982,7 +975,7 @@ func (c *Container) currentState() (*State, error) {
 			}
 		}
 	}
-	return state, nil
+	return state
 }
 
 func (c *Container) currentOCIState() (*specs.State, error) {
