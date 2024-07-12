@@ -232,4 +232,4 @@ jobs:
     - name: unit test
       env:
         EXTRA_BUILDTAGS: ${{ matrix.dmz }}
-      run: sudo -E PATH="$PATH" -- make GOARCH=386 localunittest
+      run: sudo -E PATH="$PATH" sh -c "$(./script/cross.sh 386); make localunittest"

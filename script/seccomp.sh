@@ -1,9 +1,7 @@
 #!/bin/bash
 
 set -e -u -o pipefail
-
-# shellcheck source=./script/lib.sh
-source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
+cross="$(dirname "${BASH_SOURCE[0]}")/cross.sh"
 
 # sha256 checksums for seccomp release tarballs.
 declare -A SECCOMP_SHA256=(
@@ -48,7 +46,8 @@ function build_libseccomp() {
 	for arch in "${arches[@]}"; do
 		# Reset CFLAGS.
 		CFLAGS="$original_cflags"
-		set_cross_vars "$arch"
+		# Obtain cross-compilation environment variables.
+		eval "$($cross "$arch")"
 		./configure --host "$HOST" \
 			--prefix="$dest/$arch" --libdir="$dest/$arch/lib" \
 			--enable-static --enable-shared

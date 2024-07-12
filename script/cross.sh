@@ -1,10 +1,8 @@
 #!/bin/bash
 
-# NOTE: Make sure you keep this file in sync with cc_platform.mk.
-
-# set_cross_vars sets a few environment variables used for cross-compiling,
+# Prints a few environment variables used for cross-compiling,
 # based on the architecture specified in $1.
-function set_cross_vars() {
+function print_cross_vars() {
 	GOARCH="$1" # default, may be overridden below
 	unset GOARM
 
@@ -79,5 +77,8 @@ function set_cross_vars() {
 	CC="${HOST:+$HOST-}gcc"
 	STRIP="${HOST:+$HOST-}strip"
 
-	export HOST CFLAGS GOARM GOARCH CC STRIP
+	[ -v GOARM ] && echo "export GOARM=$GOARM"
+	echo "export HOST=$HOST CFLAGS=\"$CFLAGS\" GOARCH=$GOARCH CC=$CC STRIP=$STRIP"
 }
+
+print_cross_vars "$1"

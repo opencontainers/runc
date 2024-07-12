@@ -3,9 +3,6 @@ SHELL = /bin/bash
 CONTAINER_ENGINE := docker
 GO ?= go
 
-# Get CC values for cross-compilation.
-include cc_platform.mk
-
 PREFIX ?= /usr/local
 BINDIR := $(PREFIX)/sbin
 MANDIR := $(PREFIX)/share/man

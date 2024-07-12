@@ -22,9 +22,7 @@ set -e
 : "${LIBSECCOMP_VERSION:=2.5.5}"
 project="runc"
 root="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")/..")"
-
-# shellcheck source=./script/lib.sh
-source "$root/script/lib.sh"
+cross="$root"/script/cross.sh
 
 # This function takes an output path as an argument, where the built
 # (preferably static) binary should be placed.
@@ -68,7 +66,8 @@ function build_project() {
 	for arch in "${arches[@]}"; do
 		# Reset CFLAGS.
 		CFLAGS="$original_cflags"
-		set_cross_vars "$arch"
+		# Obtain cross-compilation environment variables.
+		eval "$($cross "$arch")"
 		make -C "$root" \
 			PKG_CONFIG_PATH="$seccompdir/$arch/lib/pkgconfig" \
 			"${make_args[@]}"
