@@ -3,9 +3,6 @@ SHELL = /bin/bash
 CONTAINER_ENGINE := docker
 GO ?= go
 
-# Get CC values for cross-compilation.
-include cc_platform.mk
-
 PREFIX ?= /usr/local
 BINDIR := $(PREFIX)/sbin
 MANDIR := $(PREFIX)/share/man
@@ -16,6 +13,12 @@ RUNC_IMAGE := runc_dev$(if $(GIT_BRANCH_CLEAN),:$(GIT_BRANCH_CLEAN))
 PROJECT := github.com/opencontainers/runc
 BUILDTAGS ?= seccomp urfave_cli_no_docs
 BUILDTAGS += $(EXTRA_BUILDTAGS)
+
+# Only include the CC values for cross-compilation when the runc_nodmz build tag is not set.
+# We want to leave everything as untouched as possible when it is set.
+ifneq (runc_nodmz,$(filter runc_nodmz, $(BUILDTAGS)))
+include cc_platform.mk
+endif
 
 COMMIT ?= $(shell git describe --dirty --long --always)
 VERSION ?= $(shell cat ./VERSION)
