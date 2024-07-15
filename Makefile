@@ -3,8 +3,10 @@ SHELL = /bin/bash
 CONTAINER_ENGINE := docker
 GO ?= go
 
-# Get CC values for cross-compilation.
+# Get CC value for cross-compilation if GOARCH is explicitly specified.
+ifneq ($(filter environment command line,$(origin GOARCH)),)
 include cc_platform.mk
+endif
 
 PREFIX ?= /usr/local
 BINDIR := $(PREFIX)/sbin

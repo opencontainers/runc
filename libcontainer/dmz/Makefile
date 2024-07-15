@@ -1,5 +1,11 @@
-# Get GO, GOARCH and CC values for cross-compilation.
-include ../../cc_platform.mk
+# Get CC value for cross-compilation if GOARCH is explicitly specified.
+ifneq ($(filter environment command line,$(origin GOARCH)),)
+	include ../../cc_platform.mk
+else
+	# Assume native compilation.
+	GO ?= go
+	GOARCH ?= $(shell $(GO) env GOARCH)
+endif
 
 # List of GOARCH that nolibc supports, from:
 # 	https://go.dev/doc/install/source#environment (with GOOS=linux)
