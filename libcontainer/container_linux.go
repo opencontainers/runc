@@ -270,7 +270,11 @@ func (c *linuxContainer) exec() error {
 	for {
 		select {
 		case result := <-blockingFifoOpenCh:
-			return handleFifoResult(result)
+			err := handleFifoResult(result)
+			if err != nil {
+				return err
+			}
+			return c.postStart()
 
 		case <-time.After(time.Millisecond * 100):
 			stat, err := system.Stat(pid)
@@ -284,6 +288,19 @@ func (c *linuxContainer) exec() error {
 			}
 		}
 	}
+}
+
+func (c *linuxContainer) postStart() error {
+	s, err := c.currentOCIState()
+	if err != nil {
+		return err
+	}
+	if c.config.Hooks != nil {
+		if err := c.config.Hooks[configs.Poststart].RunHooks(s); err != nil {
+			return fmt.Errorf("run postStart hook: %w", err)
+		}
+	}
+	return nil
 }
 
 func readFromExecFifo(execFifo io.Reader) error {
@@ -368,19 +385,6 @@ func (c *linuxContainer) start(process *Process) (retErr error) {
 
 	if process.Init {
 		c.fifo.Close()
-		if c.config.Hooks != nil {
-			s, err := c.currentOCIState()
-			if err != nil {
-				return err
-			}
-
-			if err := c.config.Hooks[configs.Poststart].RunHooks(s); err != nil {
-				if err := ignoreTerminateErrors(parent.terminate()); err != nil {
-					logrus.Warn(fmt.Errorf("error running poststart hook: %w", err))
-				}
-				return err
-			}
-		}
 	}
 	return nil
 }
