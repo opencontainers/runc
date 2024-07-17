@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -122,13 +123,96 @@ func (p *setnsProcess) signal(sig os.Signal) error {
 	return unix.Kill(p.pid(), s)
 }
 
+func affToUnix(str string) (*unix.CPUSet, error) {
+	s := new(unix.CPUSet)
+	for _, r := range strings.Split(str, ",") {
+		// Allow extra spaces around.
+		r = strings.TrimSpace(r)
+		// Allow empty elements (extra commas).
+		if r == "" {
+			continue
+		}
+		if r0, r1, found := strings.Cut(r, "-"); found {
+			start, err := strconv.ParseUint(r0, 10, 32)
+			if err != nil {
+				return nil, err
+			}
+			end, err := strconv.ParseUint(r1, 10, 32)
+			if err != nil {
+				return nil, err
+			}
+			if start > end {
+				return nil, errors.New("invalid range: " + r)
+			}
+			for i := int(start); i <= int(end); i++ {
+				s.Set(i)
+			}
+		} else {
+			val, err := strconv.ParseUint(r, 10, 32)
+			if err != nil {
+				return nil, err
+			}
+			s.Set(int(val))
+		}
+	}
+
+	return s, nil
+}
+
+// Starts setns process with specified initial CPU affinity.
+func (p *setnsProcess) startWithCPUAffinity() error {
+	aff := p.config.Config.ExecCPUAffinity
+	if aff == nil || aff.Initial == "" {
+		return p.cmd.Start()
+	}
+	cpus, err := affToUnix(aff.Initial)
+	if err != nil {
+		return fmt.Errorf("invalid execCPUAffinity.initial: %w", err)
+	}
+
+	errCh := make(chan error)
+	defer close(errCh)
+
+	// Use a goroutine to dedicate an OS thread.
+	go func() {
+		// Don't call runtime.UnlockOSThread to terminate the OS thread
+		// when goroutine exits.
+		runtime.LockOSThread()
+
+		// Command inherits the CPU affinity.
+		if err := unix.SchedSetaffinity(unix.Gettid(), cpus); err != nil {
+			errCh <- fmt.Errorf("setting initial CPU affinity: %w", err)
+			return
+		}
+
+		errCh <- p.cmd.Start()
+	}()
+
+	return <-errCh
+}
+
+func (p *setnsProcess) setFinalCPUAffinity() error {
+	aff := p.config.Config.ExecCPUAffinity
+	if aff == nil || aff.Final == "" {
+		return nil
+	}
+	cpus, err := affToUnix(aff.Final)
+	if err != nil {
+		return fmt.Errorf("invalid execCPUAffinity.final: %w", err)
+	}
+	if err := unix.SchedSetaffinity(p.pid(), cpus); err != nil {
+		return fmt.Errorf("setting final CPU affinity: %w", err)
+	}
+	return nil
+}
+
 func (p *setnsProcess) start() (retErr error) {
 	defer p.comm.closeParent()
 
-	// get the "before" value of oom kill count
+	// Get the "before" value of oom kill count.
 	oom, _ := p.manager.OOMKillCount()
-	err := p.cmd.Start() // https://github.com/opencontainers/runc/pull/3923/commits/afc23e33971b657c4a09c54b16c6139651171aad
-	// close the child-side of the pipes (controlled by child)
+	err := p.startWithCPUAffinity()
+	// Close the child-side of the pipes (controlled by child).
 	p.comm.closeChild()
 	if err != nil {
 		return fmt.Errorf("error starting setns process: %w", err)
@@ -195,6 +279,9 @@ func (p *setnsProcess) start() (retErr error) {
 				return fmt.Errorf("error adding pid %d to Intel RDT: %w", p.pid(), err)
 			}
 		}
+	}
+	if err := p.setFinalCPUAffinity(); err != nil {
+		return err
 	}
 
 	if err := utils.WriteJSON(p.comm.initSockParent, p.config); err != nil {
