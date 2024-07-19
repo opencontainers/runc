@@ -47,10 +47,12 @@ func (l *linuxStandardInit) getSessionRingParams() (string, uint32, uint32) {
 
 func (l *linuxStandardInit) Init() error {
 	if !l.config.Config.NoNewKeyring {
-		if err := selinux.SetKeyLabel(l.config.ProcessLabel); err != nil {
-			return err
+		if l.config.ProcessLabel != "" {
+			if err := selinux.SetKeyLabel(l.config.ProcessLabel); err != nil {
+				return err
+			}
+			defer selinux.SetKeyLabel("") //nolint: errcheck
 		}
-		defer selinux.SetKeyLabel("") //nolint: errcheck
 		ringname, keepperms, newperms := l.getSessionRingParams()
 
 		// Do not inherit the parent's session keyring.
@@ -169,10 +171,12 @@ func (l *linuxStandardInit) Init() error {
 	if err := syncParentReady(l.pipe); err != nil {
 		return fmt.Errorf("sync ready: %w", err)
 	}
-	if err := selinux.SetExecLabel(l.config.ProcessLabel); err != nil {
-		return fmt.Errorf("can't set process label: %w", err)
+	if l.config.ProcessLabel != "" {
+		if err := selinux.SetExecLabel(l.config.ProcessLabel); err != nil {
+			return fmt.Errorf("can't set process label: %w", err)
+		}
+		defer selinux.SetExecLabel("") //nolint: errcheck
 	}
-	defer selinux.SetExecLabel("") //nolint: errcheck
 	// Without NoNewPrivileges seccomp is a privileged operation, so we need to
 	// do this before dropping capabilities; otherwise do it as late as possible
 	// just before execve so as few syscalls take place after it as possible.
