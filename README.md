@@ -29,12 +29,41 @@ A third party security audit was performed by Cure53, you can see the full repor
 
 `runc` only supports Linux. It must be built with Go version 1.21 or higher.
 
+### Pre-Requisites
+
+#### Go
+
 NOTE: if building with Go 1.22.x, make sure to use 1.22.4 or a later version
 (see [issue #4233](https://github.com/opencontainers/runc/issues/4233) for
 more details).
 
-In order to enable seccomp support you will need to install `libseccomp` on your platform.
-> e.g. `libseccomp-devel` for CentOS, or `libseccomp-dev` for Ubuntu
+#### Utilities and Libraries
+
+In addition to Go, building `runc` requires multiple utilities and libraries to be installed on your system.
+
+On Ubuntu/Debian, you can install the required dependencies with:
+
+```bash
+apt update && apt install -y make gcc linux-libc-dev libseccomp-dev pkg-config git
+```
+
+On CentOS/Fedora, you can install the required dependencies with:
+
+```bash
+yum install -y make gcc kernel-headers libseccomp-devel pkg-config git
+```
+
+On Alpine Linux, you can install the required dependencies with:
+
+```bash
+apk --update add bash make gcc libseccomp-dev musl-dev linux-headers git
+```
+
+The following dependencies are optional:
+
+* `libseccomp` - only required if you enable seccomp support; to disable, see [Build Tags](#build-tags)
+
+### Build
 
 ```bash
 # create a 'github.com/opencontainers' in your GOPATH/src
@@ -56,7 +85,6 @@ sudo make install
 ```
 
 `runc` will be installed to `/usr/local/sbin/runc` on your system.
-
 
 #### Build Tags
 
@@ -118,7 +146,7 @@ You can run a test using your container engine's flags by setting `CONTAINER_ENG
 # make test CONTAINER_ENGINE_BUILD_FLAGS="--build-arg http_proxy=http://yourproxy/" CONTAINER_ENGINE_RUN_FLAGS="-e http_proxy=http://yourproxy/"
 ```
 
-### Dependencies Management
+### Go Dependencies Management
 
 `runc` uses [Go Modules](https://github.com/golang/go/wiki/Modules) for dependencies management.
 Please refer to [Go Modules](https://github.com/golang/go/wiki/Modules) for how to add or update
