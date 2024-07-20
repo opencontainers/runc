@@ -151,10 +151,6 @@ func (p *setnsProcess) start() (retErr error) {
 			if werr != nil {
 				logrus.WithError(werr).Warn()
 			}
-			err := ignoreTerminateErrors(p.terminate())
-			if err != nil {
-				logrus.WithError(err).Warn("unable to terminate setnsProcess")
-			}
 		}
 	}()
 
@@ -562,16 +558,6 @@ func (p *initProcess) start() (retErr error) {
 			werr := <-waitInit
 			if werr != nil {
 				logrus.WithError(werr).Warn()
-			}
-
-			// Terminate the process to ensure we can remove cgroups.
-			if err := ignoreTerminateErrors(p.terminate()); err != nil {
-				logrus.WithError(err).Warn("unable to terminate initProcess")
-			}
-
-			_ = p.manager.Destroy()
-			if p.intelRdtManager != nil {
-				_ = p.intelRdtManager.Destroy()
 			}
 		}
 	}()
