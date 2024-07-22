@@ -554,82 +554,97 @@ func TestConvertCPUSharesToCgroupV2Value(t *testing.T) {
 
 func TestConvertMemorySwapToCgroupV2Value(t *testing.T) {
 	cases := []struct {
+		descr           string
 		memswap, memory int64
 		expected        int64
 		expErr          bool
 	}{
 		{
+			descr:    "all unset",
 			memswap:  0,
 			memory:   0,
 			expected: 0,
 		},
 		{
+			descr:    "unlimited memory+swap, unset memory",
 			memswap:  -1,
 			memory:   0,
 			expected: -1,
 		},
 		{
+			descr:    "unlimited memory",
+			memswap:  300,
+			memory:   -1,
+			expected: 300,
+		},
+		{
+			descr:    "all unlimited",
 			memswap:  -1,
 			memory:   -1,
 			expected: -1,
 		},
 		{
+			descr:   "negative memory+swap",
 			memswap: -2,
 			memory:  0,
 			expErr:  true,
 		},
 		{
+			descr:    "unlimited memory+swap, set memory",
 			memswap:  -1,
 			memory:   1000,
 			expected: -1,
 		},
 		{
+			descr:    "memory+swap == memory",
 			memswap:  1000,
 			memory:   1000,
 			expected: 0,
 		},
 		{
+			descr:    "memory+swap > memory",
 			memswap:  500,
 			memory:   200,
 			expected: 300,
 		},
 		{
+			descr:   "memory+swap < memory",
 			memswap: 300,
 			memory:  400,
 			expErr:  true,
 		},
 		{
+			descr:   "unset memory",
 			memswap: 300,
 			memory:  0,
 			expErr:  true,
 		},
 		{
+			descr:   "negative memory",
 			memswap: 300,
 			memory:  -300,
-			expErr:  true,
-		},
-		{
-			memswap: 300,
-			memory:  -1,
 			expErr:  true,
 		},
 	}
 
 	for _, c := range cases {
-		swap, err := ConvertMemorySwapToCgroupV2Value(c.memswap, c.memory)
-		if c.expErr {
-			if err == nil {
-				t.Errorf("memswap: %d, memory %d, expected error, got %d, nil", c.memswap, c.memory, swap)
+		c := c
+		t.Run(c.descr, func(t *testing.T) {
+			swap, err := ConvertMemorySwapToCgroupV2Value(c.memswap, c.memory)
+			if c.expErr {
+				if err == nil {
+					t.Errorf("memswap: %d, memory %d, expected error, got %d, nil", c.memswap, c.memory, swap)
+				}
+				// No more checks.
+				return
 			}
-			// no more checks
-			continue
-		}
-		if err != nil {
-			t.Errorf("memswap: %d, memory %d, expected success, got error %s", c.memswap, c.memory, err)
-		}
-		if swap != c.expected {
-			t.Errorf("memswap: %d, memory %d, expected %d, got %d", c.memswap, c.memory, c.expected, swap)
-		}
+			if err != nil {
+				t.Errorf("memswap: %d, memory %d, expected success, got error %s", c.memswap, c.memory, err)
+			}
+			if swap != c.expected {
+				t.Errorf("memswap: %d, memory %d, expected %d, got %d", c.memswap, c.memory, c.expected, swap)
+			}
+		})
 	}
 }
 
