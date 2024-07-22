@@ -427,8 +427,11 @@ func ConvertMemorySwapToCgroupV2Value(memorySwap, memory int64) (int64, error) {
 	case memorySwap == -1, memorySwap == 0:
 		// Treat -1 ("max") and 0 ("unset") swap as is.
 		return memorySwap, nil
-	case memory == 0, memory == -1:
-		// Unset or unlimited memory, can't calculate swap.
+	case memory == -1:
+		// Unlimited memory, so treat swap as is.
+		return memorySwap, nil
+	case memory == 0:
+		// Unset or unknown memory, can't calculate swap.
 		return 0, errors.New("unable to set swap limit without memory limit")
 	case memory < 0:
 		// Does not make sense to subtract a negative value.
