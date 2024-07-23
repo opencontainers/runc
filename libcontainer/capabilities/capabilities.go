@@ -5,6 +5,7 @@ package capabilities
 import (
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/sirupsen/logrus"
@@ -14,25 +15,25 @@ import (
 const allCapabilityTypes = capability.CAPS | capability.BOUNDING | capability.AMBIENT
 
 var (
-	capabilityMap map[string]capability.Cap
-	capTypes      = []capability.CapType{
+	capTypes = []capability.CapType{
 		capability.BOUNDING,
 		capability.PERMITTED,
 		capability.INHERITABLE,
 		capability.EFFECTIVE,
 		capability.AMBIENT,
 	}
-)
 
-func init() {
-	capabilityMap = make(map[string]capability.Cap, capability.CAP_LAST_CAP+1)
-	for _, c := range capability.List() {
-		if c > capability.CAP_LAST_CAP {
-			continue
+	capMap = sync.OnceValue(func() map[string]capability.Cap {
+		cm := make(map[string]capability.Cap, capability.CAP_LAST_CAP+1)
+		for _, c := range capability.List() {
+			if c > capability.CAP_LAST_CAP {
+				continue
+			}
+			cm["CAP_"+strings.ToUpper(c.String())] = c
 		}
-		capabilityMap["CAP_"+strings.ToUpper(c.String())] = c
-	}
-}
+		return cm
+	})
+)
 
 // KnownCapabilities returns the list of the known capabilities.
 // Used by `runc features`.
@@ -75,9 +76,10 @@ func New(capConfig *configs.Capabilities) (*Caps, error) {
 // equivalent, and returns them as a slice. Unknown or unavailable capabilities
 // are not returned, but appended to unknownCaps.
 func capSlice(caps []string, unknownCaps map[string]struct{}) []capability.Cap {
+	cm := capMap()
 	out := make([]capability.Cap, 0, len(caps))
 	for _, c := range caps {
-		if v, ok := capabilityMap[c]; !ok {
+		if v, ok := cm[c]; !ok {
 			unknownCaps[c] = struct{}{}
 		} else {
 			out = append(out, v)
