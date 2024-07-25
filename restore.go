@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/opencontainers/runc/libcontainer/userns"
+	"github.com/moby/sys/userns"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )

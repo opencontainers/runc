@@ -3,10 +3,11 @@ package main
 import (
 	"os"
 
-	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
-	"github.com/opencontainers/runc/libcontainer/userns"
+	"github.com/moby/sys/userns"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+
+	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
 )
 
 func shouldUseRootlessCgroupManager(context *cli.Context) (bool, error) {
