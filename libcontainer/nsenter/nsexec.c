@@ -547,12 +547,49 @@ static void update_timens_offsets(pid_t pid, char *map, size_t map_len)
 		bail("failed to update /proc/%d/timens_offsets", pid);
 }
 
+/* Check if the binary is called with the sole "init" argument by reading
+ * the /proc/self/cmdline file (as argc/argv is not available).
+ */
+static int in_init(void)
+{
+	const char expect[] = "init";
+	/* Assuming the binary path can't be longer than PATH_MAX,
+	 * read enough to check for the argument expected.
+	 */
+	char buf[PATH_MAX + sizeof(expect) + 1];
+
+	int f = open("/proc/self/cmdline", O_RDONLY | O_CLOEXEC);
+	if (f < 0)
+		bail("open /proc/self/cmdline");
+
+	int c = read(f, buf, sizeof(buf));
+	if (c < 0)
+		bail("read /proc/self/cmdline");
+
+	close(f);
+
+	char *arg = memchr(buf, '\0', c);
+	if (arg == NULL) {	/* Should never happen. */
+		return 0;
+	}
+	/* Check the size of remaining cmdline matches the expected argument. */
+	if (c - (arg - buf) != sizeof(expect) + 1) {
+		return 0;
+	}
+
+	return (memcmp(arg + 1, expect, sizeof(expect)) == 0);
+}
+
 void nsexec(void)
 {
 	int pipenum;
 	jmp_buf env;
 	int sync_child_pipe[2], sync_grandchild_pipe[2];
 	struct nlconfig_t config = { 0 };
+
+	if (!in_init()) {
+		return;
+	}
 
 	/*
 	 * Setup a pipe to send logs to the parent. This should happen
@@ -566,10 +603,8 @@ void nsexec(void)
 	 * after the setup is done.
 	 */
 	pipenum = getenv_int("_LIBCONTAINER_INITPIPE");
-	if (pipenum < 0) {
-		/* We are not a runc init. Just return to go runtime. */
-		return;
-	}
+	if (pipenum < 0)
+		bail("missing init pipe");
 
 	/*
 	 * Inform the parent we're past initial setup.

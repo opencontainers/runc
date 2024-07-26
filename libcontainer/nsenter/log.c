@@ -20,7 +20,7 @@ void setup_logpipe(void)
 
 	i = getenv_int("_LIBCONTAINER_LOGPIPE");
 	if (i < 0) {
-		/* We are not runc init, or log pipe was not provided. */
+		/* Log pipe was not provided. */
 		return;
 	}
 	logfd = i;
