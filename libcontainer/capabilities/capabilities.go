@@ -75,7 +75,7 @@ func New(capConfig *configs.Capabilities) (*Caps, error) {
 // equivalent, and returns them as a slice. Unknown or unavailable capabilities
 // are not returned, but appended to unknownCaps.
 func capSlice(caps []string, unknownCaps map[string]struct{}) []capability.Cap {
-	var out []capability.Cap
+	out := make([]capability.Cap, 0, len(caps))
 	for _, c := range caps {
 		if v, ok := capabilityMap[c]; !ok {
 			unknownCaps[c] = struct{}{}
@@ -88,7 +88,7 @@ func capSlice(caps []string, unknownCaps map[string]struct{}) []capability.Cap {
 
 // mapKeys returns the keys of input in sorted order
 func mapKeys(input map[string]struct{}) []string {
-	var keys []string
+	keys := make([]string, 0, len(input))
 	for c := range input {
 		keys = append(keys, c)
 	}
