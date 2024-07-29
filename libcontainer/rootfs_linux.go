@@ -308,7 +308,11 @@ func mountCgroupV1(m *configs.Mount, c *mountConfig) error {
 
 	for _, b := range binds {
 		if c.cgroupns {
+			// We just created the tmpfs, and so we can just use filepath.Join
+			// here (not to mention we want to make sure we create the path
+			// inside the tmpfs, so we don't want to resolve symlinks).
 			subsystemPath := filepath.Join(c.root, b.Destination)
+			subsystemName := filepath.Base(b.Destination)
 			if err := os.MkdirAll(subsystemPath, 0o755); err != nil {
 				return err
 			}
@@ -319,7 +323,7 @@ func mountCgroupV1(m *configs.Mount, c *mountConfig) error {
 				}
 				var (
 					source = "cgroup"
-					data   = filepath.Base(subsystemPath)
+					data   = subsystemName
 				)
 				if data == "systemd" {
 					data = cgroups.CgroupNamePrefix + data
@@ -349,14 +353,7 @@ func mountCgroupV1(m *configs.Mount, c *mountConfig) error {
 }
 
 func mountCgroupV2(m *configs.Mount, c *mountConfig) error {
-	dest, err := securejoin.SecureJoin(c.root, m.Destination)
-	if err != nil {
-		return err
-	}
-	if err := os.MkdirAll(dest, 0o755); err != nil {
-		return err
-	}
-	err = utils.WithProcfd(c.root, m.Destination, func(dstFd string) error {
+	err := utils.WithProcfd(c.root, m.Destination, func(dstFd string) error {
 		return mountViaFds(m.Source, nil, m.Destination, dstFd, "cgroup2", uintptr(m.Flags), m.Data)
 	})
 	if err == nil || !(errors.Is(err, unix.EPERM) || errors.Is(err, unix.EBUSY)) {
@@ -482,6 +479,65 @@ func statfsToMountFlags(st unix.Statfs_t) int {
 	return flags
 }
 
+var errRootfsToFile = errors.New("config tries to change rootfs to file")
+
+func createMountpoint(rootfs string, m mountEntry) (string, error) {
+	dest, err := securejoin.SecureJoin(rootfs, m.Destination)
+	if err != nil {
+		return "", err
+	}
+	if err := checkProcMount(rootfs, dest, m); err != nil {
+		return "", fmt.Errorf("check proc-safety of %s mount: %w", m.Destination, err)
+	}
+
+	switch m.Device {
+	case "bind":
+		fi, _, err := m.srcStat()
+		if err != nil {
+			// Error out if the source of a bind mount does not exist as we
+			// will be unable to bind anything to it.
+			return "", err
+		}
+		// If the original source is not a directory, make the target a file.
+		if !fi.IsDir() {
+			// Make sure we aren't tricked into trying to make the root a file.
+			if rootfs == dest {
+				return "", fmt.Errorf("%w: file bind mount over rootfs", errRootfsToFile)
+			}
+			// Make the parent directory.
+			if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
+				return "", fmt.Errorf("make parent dir of file bind-mount: %w", err)
+			}
+			// Make the target file.
+			f, err := os.OpenFile(dest, os.O_CREATE, 0o755)
+			if err != nil {
+				return "", fmt.Errorf("create target of file bind-mount: %w", err)
+			}
+			_ = f.Close()
+			// Nothing left to do.
+			return dest, nil
+		}
+
+	case "tmpfs":
+		// If the original target exists, copy the mode for the tmpfs mount.
+		if stat, err := os.Stat(dest); err == nil {
+			dt := fmt.Sprintf("mode=%04o", syscallMode(stat.Mode()))
+			if m.Data != "" {
+				dt = dt + "," + m.Data
+			}
+			m.Data = dt
+
+			// Nothing left to do.
+			return dest, nil
+		}
+	}
+
+	if err := os.MkdirAll(dest, 0o755); err != nil {
+		return "", err
+	}
+	return dest, nil
+}
+
 func mountToRootfs(c *mountConfig, m mountEntry) error {
 	rootfs := c.root
 
@@ -495,7 +551,7 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 		// TODO: This won't be necessary once we switch to libpathrs and we can
 		//       stop all of these symlink-exchange attacks.
 		dest := filepath.Clean(m.Destination)
-		if !strings.HasPrefix(dest, rootfs) {
+		if !utils.IsLexicallyInRoot(rootfs, dest) {
 			// Do not use securejoin as it resolves symlinks.
 			dest = filepath.Join(rootfs, dest)
 		}
@@ -516,37 +572,19 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 		return mountPropagate(m, rootfs, "")
 	}
 
-	mountLabel := c.label
-	dest, err := securejoin.SecureJoin(rootfs, m.Destination)
+	dest, err := createMountpoint(rootfs, m)
 	if err != nil {
-		return err
+		return fmt.Errorf("create mountpoint for %s mount: %w", m.Destination, err)
 	}
-	if err := checkProcMount(rootfs, dest, m); err != nil {
-		return err
-	}
+	mountLabel := c.label
 
 	switch m.Device {
 	case "mqueue":
-		if err := os.MkdirAll(dest, 0o755); err != nil {
-			return err
-		}
 		if err := mountPropagate(m, rootfs, ""); err != nil {
 			return err
 		}
 		return label.SetFileLabel(dest, mountLabel)
 	case "tmpfs":
-		if stat, err := os.Stat(dest); err != nil {
-			if err := os.MkdirAll(dest, 0o755); err != nil {
-				return err
-			}
-		} else {
-			dt := fmt.Sprintf("mode=%04o", syscallMode(stat.Mode()))
-			if m.Data != "" {
-				dt = dt + "," + m.Data
-			}
-			m.Data = dt
-		}
-
 		if m.Extensions&configs.EXT_COPYUP == configs.EXT_COPYUP {
 			err = doTmpfsCopyUp(m, rootfs, mountLabel)
 		} else {
@@ -555,15 +593,6 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 
 		return err
 	case "bind":
-		fi, _, err := m.srcStat()
-		if err != nil {
-			// error out if the source of a bind mount does not exist as we will be
-			// unable to bind anything to it.
-			return err
-		}
-		if err := createIfNotExists(dest, fi.IsDir()); err != nil {
-			return err
-		}
 		// open_tree()-related shenanigans are all handled in mountViaFds.
 		if err := mountPropagate(m, rootfs, mountLabel); err != nil {
 			return err
@@ -679,9 +708,6 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 		}
 		return mountCgroupV1(m.Mount, c)
 	default:
-		if err := os.MkdirAll(dest, 0o755); err != nil {
-			return err
-		}
 		return mountPropagate(m, rootfs, mountLabel)
 	}
 }
@@ -898,6 +924,9 @@ func createDeviceNode(rootfs string, node *devices.Device, bind bool) error {
 	dest, err := securejoin.SecureJoin(rootfs, node.Path)
 	if err != nil {
 		return err
+	}
+	if dest == rootfs {
+		return fmt.Errorf("%w: mknod over rootfs", errRootfsToFile)
 	}
 	if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
 		return err
@@ -1165,26 +1194,6 @@ func chroot() error {
 	}
 	if err := unix.Chdir("/"); err != nil {
 		return &os.PathError{Op: "chdir", Path: "/", Err: err}
-	}
-	return nil
-}
-
-// createIfNotExists creates a file or a directory only if it does not already exist.
-func createIfNotExists(path string, isDir bool) error {
-	if _, err := os.Stat(path); err != nil {
-		if os.IsNotExist(err) {
-			if isDir {
-				return os.MkdirAll(path, 0o755)
-			}
-			if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-				return err
-			}
-			f, err := os.OpenFile(path, os.O_CREATE, 0o755)
-			if err != nil {
-				return err
-			}
-			_ = f.Close()
-		}
 	}
 	return nil
 }
