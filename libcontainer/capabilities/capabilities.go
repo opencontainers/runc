@@ -7,9 +7,9 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/moby/sys/capability"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/sirupsen/logrus"
-	"github.com/syndtr/gocapability/capability"
 )
 
 const allCapabilityTypes = capability.CAPS | capability.BOUNDING | capability.AMBIENT
@@ -23,22 +23,23 @@ var (
 		capability.AMBIENT,
 	}
 
-	capMap = sync.OnceValue(func() map[string]capability.Cap {
-		cm := make(map[string]capability.Cap, capability.CAP_LAST_CAP+1)
-		for _, c := range capability.List() {
-			if c > capability.CAP_LAST_CAP {
-				continue
-			}
+	capMap = sync.OnceValues(func() (map[string]capability.Cap, error) {
+		list, err := capability.ListSupported()
+		if err != nil {
+			return nil, err
+		}
+		cm := make(map[string]capability.Cap, len(list))
+		for _, c := range list {
 			cm["CAP_"+strings.ToUpper(c.String())] = c
 		}
-		return cm
+		return cm, nil
 	})
 )
 
 // KnownCapabilities returns the list of the known capabilities.
 // Used by `runc features`.
 func KnownCapabilities() []string {
-	list := capability.List()
+	list := capability.ListKnown()
 	res := make([]string, len(list))
 	for i, c := range list {
 		res[i] = "CAP_" + strings.ToUpper(c.String())
@@ -79,7 +80,10 @@ func New(capConfig *configs.Capabilities) (*Caps, error) {
 // equivalent, and returns them as a slice. Unknown or unavailable capabilities
 // are not returned, but appended to unknownCaps.
 func capSlice(caps []string, unknownCaps map[string]struct{}) []capability.Cap {
-	cm := capMap()
+	cm, err := capMap()
+	if err != nil {
+		return nil
+	}
 	out := make([]capability.Cap, 0, len(caps))
 	for _, c := range caps {
 		if v, ok := cm[c]; !ok {
