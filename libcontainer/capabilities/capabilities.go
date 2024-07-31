@@ -55,13 +55,28 @@ func New(capConfig *configs.Capabilities) (*Caps, error) {
 		c   Caps
 	)
 
+	cm := capMap()
 	unknownCaps := make(map[string]struct{})
+	// capSlice converts the slice of capability names in caps, to their numeric
+	// equivalent, and returns them as a slice. Unknown or unavailable capabilities
+	// are not returned, but appended to unknownCaps.
+	capSlice := func(caps []string) []capability.Cap {
+		out := make([]capability.Cap, 0, len(caps))
+		for _, c := range caps {
+			if v, ok := cm[c]; !ok {
+				unknownCaps[c] = struct{}{}
+			} else {
+				out = append(out, v)
+			}
+		}
+		return out
+	}
 	c.caps = map[capability.CapType][]capability.Cap{
-		capability.BOUNDING:    capSlice(capConfig.Bounding, unknownCaps),
-		capability.EFFECTIVE:   capSlice(capConfig.Effective, unknownCaps),
-		capability.INHERITABLE: capSlice(capConfig.Inheritable, unknownCaps),
-		capability.PERMITTED:   capSlice(capConfig.Permitted, unknownCaps),
-		capability.AMBIENT:     capSlice(capConfig.Ambient, unknownCaps),
+		capability.BOUNDING:    capSlice(capConfig.Bounding),
+		capability.EFFECTIVE:   capSlice(capConfig.Effective),
+		capability.INHERITABLE: capSlice(capConfig.Inheritable),
+		capability.PERMITTED:   capSlice(capConfig.Permitted),
+		capability.AMBIENT:     capSlice(capConfig.Ambient),
 	}
 	if c.pid, err = capability.NewPid2(0); err != nil {
 		return nil, err
@@ -73,22 +88,6 @@ func New(capConfig *configs.Capabilities) (*Caps, error) {
 		logrus.Warn("ignoring unknown or unavailable capabilities: ", mapKeys(unknownCaps))
 	}
 	return &c, nil
-}
-
-// capSlice converts the slice of capability names in caps, to their numeric
-// equivalent, and returns them as a slice. Unknown or unavailable capabilities
-// are not returned, but appended to unknownCaps.
-func capSlice(caps []string, unknownCaps map[string]struct{}) []capability.Cap {
-	cm := capMap()
-	out := make([]capability.Cap, 0, len(caps))
-	for _, c := range caps {
-		if v, ok := cm[c]; !ok {
-			unknownCaps[c] = struct{}{}
-		} else {
-			out = append(out, v)
-		}
-	}
-	return out
 }
 
 // mapKeys returns the keys of input in sorted order
