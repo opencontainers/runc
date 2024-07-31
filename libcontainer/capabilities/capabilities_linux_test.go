@@ -5,11 +5,19 @@ import (
 	"os"
 	"testing"
 
+	"github.com/moby/sys/capability"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
-	"github.com/syndtr/gocapability/capability"
 )
+
+var capTypes = []capability.CapType{
+	capability.BOUNDING,
+	capability.PERMITTED,
+	capability.INHERITABLE,
+	capability.EFFECTIVE,
+	capability.AMBIENT,
+}
 
 func TestNew(t *testing.T) {
 	cs := []string{"CAP_CHOWN", "CAP_UNKNOWN", "CAP_UNKNOWN2"}

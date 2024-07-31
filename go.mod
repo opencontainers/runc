@@ -15,6 +15,7 @@ require (
 	github.com/cyphar/filepath-securejoin v0.3.4
 	github.com/docker/go-units v0.5.0
 	github.com/godbus/dbus/v5 v5.1.0
+	github.com/moby/sys/capability v0.4.0
 	github.com/moby/sys/mountinfo v0.7.2
 	github.com/moby/sys/user v0.3.0
 	github.com/moby/sys/userns v0.1.0
@@ -23,7 +24,6 @@ require (
 	github.com/opencontainers/selinux v1.11.1
 	github.com/seccomp/libseccomp-golang v0.10.0
 	github.com/sirupsen/logrus v1.9.3
-	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635
 	github.com/urfave/cli v1.22.16
 	github.com/vishvananda/netlink v1.3.0
 	golang.org/x/net v0.31.0
