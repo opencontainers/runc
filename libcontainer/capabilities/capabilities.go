@@ -8,9 +8,9 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/kolyshkin/capability"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/sirupsen/logrus"
-	"github.com/syndtr/gocapability/capability"
 )
 
 const allCapabilityTypes = capability.CAPS | capability.BOUNDING | capability.AMBIENT
@@ -24,15 +24,19 @@ var (
 		capability.AMBIENT,
 	}
 
-	capMap = sync.OnceValue(func() map[string]capability.Cap {
-		cm := make(map[string]capability.Cap, capability.CAP_LAST_CAP+1)
+	capMap = sync.OnceValues(func() (map[string]capability.Cap, error) {
+		last, err := capability.LastCap()
+		if err != nil {
+			return nil, err
+		}
+		cm := make(map[string]capability.Cap, last+1)
 		for _, c := range capability.List() {
-			if c > capability.CAP_LAST_CAP {
+			if c > last {
 				continue
 			}
 			cm["CAP_"+strings.ToUpper(c.String())] = c
 		}
-		return cm
+		return cm, nil
 	})
 )
 
@@ -51,12 +55,12 @@ func KnownCapabilities() []string {
 // or Capabilities that are unavailable in the current environment are ignored,
 // printing a warning instead.
 func New(capConfig *configs.Capabilities) (*Caps, error) {
-	var (
-		err error
-		c   Caps
-	)
+	var c Caps
 
-	cm := capMap()
+	cm, err := capMap()
+	if err != nil {
+		return nil, err
+	}
 	unknownCaps := make(map[string]struct{})
 	ignoredCaps := make(map[string]struct{})
 	// capSlice converts the slice of capability names in caps, to their numeric
