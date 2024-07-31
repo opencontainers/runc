@@ -8,7 +8,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
-	"github.com/syndtr/gocapability/capability"
+	"github.com/kolyshkin/capability"
 )
 
 func TestNew(t *testing.T) {

@@ -300,10 +300,3 @@ const (
 	// Introduced in kernel 5.9
 	CAP_CHECKPOINT_RESTORE = Cap(40)
 )
-
-var (
-	// Highest valid capability of the running kernel.
-	CAP_LAST_CAP = Cap(63)
-
-	capUpperMask = ^uint32(0)
-)
