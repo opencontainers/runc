@@ -3,6 +3,7 @@
 package capabilities
 
 import (
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -57,27 +58,48 @@ func New(capConfig *configs.Capabilities) (*Caps, error) {
 
 	cm := capMap()
 	unknownCaps := make(map[string]struct{})
+	ignoredCaps := make(map[string]struct{})
 	// capSlice converts the slice of capability names in caps, to their numeric
 	// equivalent, and returns them as a slice. Unknown or unavailable capabilities
 	// are not returned, but appended to unknownCaps.
-	capSlice := func(caps []string) []capability.Cap {
+	//
+	// If mustHave argument is not nil, caps that are not present in mustHave
+	// are appended to ignoredCaps instead of the resulting slice.
+	capSlice := func(caps []string, mustHave []capability.Cap) []capability.Cap {
 		out := make([]capability.Cap, 0, len(caps))
 		for _, c := range caps {
 			if v, ok := cm[c]; !ok {
 				unknownCaps[c] = struct{}{}
 			} else {
+				if mustHave != nil && !slices.Contains(mustHave, v) {
+					ignoredCaps[c] = struct{}{}
+					continue
+				}
 				out = append(out, v)
 			}
 		}
 		return out
 	}
-	c.caps = map[capability.CapType][]capability.Cap{
-		capability.BOUNDING:    capSlice(capConfig.Bounding),
-		capability.EFFECTIVE:   capSlice(capConfig.Effective),
-		capability.INHERITABLE: capSlice(capConfig.Inheritable),
-		capability.PERMITTED:   capSlice(capConfig.Permitted),
-		capability.AMBIENT:     capSlice(capConfig.Ambient),
+	inheritable := capSlice(capConfig.Inheritable, nil)
+	// Ambient vector can not contain values not raised in the Inheritable vector,
+	// and errors setting ambient capabilities were previously ignored due to a bug
+	// (see https://github.com/kolyshkin/capability/pull/3), so to maintain backward
+	// compatibility we have to ignore those Ambient caps that are not also raised
+	// in Inheritable (and issue a warning).
+	ambient := capSlice(capConfig.Ambient, inheritable)
+	if len(ignoredCaps) > 0 {
+		logrus.Warn("unable to set Ambient capabilities which are not set in Inheritable; ignoring following Ambient capabilities: ", mapKeys(ignoredCaps))
+		clear(ignoredCaps)
 	}
+
+	c.caps = map[capability.CapType][]capability.Cap{
+		capability.BOUNDING:    capSlice(capConfig.Bounding, nil),
+		capability.EFFECTIVE:   capSlice(capConfig.Effective, nil),
+		capability.INHERITABLE: inheritable,
+		capability.PERMITTED:   capSlice(capConfig.Permitted, nil),
+		capability.AMBIENT:     ambient,
+	}
+
 	if c.pid, err = capability.NewPid2(0); err != nil {
 		return nil, err
 	}

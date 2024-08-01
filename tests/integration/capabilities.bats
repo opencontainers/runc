@@ -54,6 +54,14 @@ function teardown() {
 	[[ "${output}" == *"NoNewPrivs:	1"* ]]
 }
 
+@test "runc run [ambient caps not set in inheritable result in a warning]" {
+	update_config '	  .process.capabilities.inheritable = ["CAP_KILL"]
+			| .process.capabilities.ambient = ["CAP_KILL", "CAP_AUDIT_WRITE"]'
+	runc run test_amb
+	[ "$status" -eq 0 ]
+	[[ "$output" == **"ignoring following Ambient capabilities: [CAP_AUDIT_WRITE]"* ]]
+}
+
 @test "runc exec --cap" {
 	update_config '	  .process.args = ["/bin/sh"]
 			| .process.capabilities = {}'
