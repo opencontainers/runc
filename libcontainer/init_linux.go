@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"unsafe"
 
 	"github.com/containerd/console"
 	"github.com/moby/sys/user"
@@ -34,11 +35,6 @@ const (
 	initSetns    initType = "setns"
 	initStandard initType = "standard"
 )
-
-type pid struct {
-	Pid           int `json:"stage2_pid"`
-	PidFirstChild int `json:"stage1_pid"`
-}
 
 // network is an internal struct used to setup container networks.
 type network struct {
@@ -151,6 +147,11 @@ func startInitialization() (retErr error) {
 
 	logrus.SetOutput(logPipe)
 	logrus.SetFormatter(new(logrus.JSONFormatter))
+
+	/* For debugging. */
+	procName := append([]byte("runc:[2:INIT]"), 0)
+	_ = unix.Prctl(unix.PR_SET_NAME, uintptr(unsafe.Pointer(&procName[0])), 0, 0, 0)
+
 	logrus.Debug("child process in init()")
 
 	// Only init processes have FIFOFD.
@@ -213,6 +214,24 @@ func startInitialization() (retErr error) {
 	var config initConfig
 	if err := json.NewDecoder(initPipe).Decode(&config); err != nil {
 		return err
+	}
+
+	if _, err := unix.Setsid(); err != nil {
+		return fmt.Errorf("setsid failed: %w", err)
+	}
+
+	if err := unix.Setuid(0); err != nil {
+		return fmt.Errorf("setuid failed %w", err)
+	}
+
+	if err := unix.Setgid(0); err != nil {
+		return fmt.Errorf("setgid failed %w", err)
+	}
+
+	if !config.RootlessEUID && requiresRootOrMappingTool(config.Config.GIDMappings) {
+		if err := unix.Setgroups([]int{0}); err != nil {
+			return fmt.Errorf("setgroups failed %w", err)
+		}
 	}
 
 	// If init succeeds, it will not return, hence none of the defers will be called.
