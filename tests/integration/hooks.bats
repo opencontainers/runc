@@ -37,8 +37,12 @@ function teardown() {
 		# shellcheck disable=SC2016
 		update_config '.hooks |= {"'$hook'": [{"path": "/bin/true"}, {"path": "/bin/false"}]}'
 		runc run "test_hook-$hook"
-		[[ "$output" != "Hello World" ]]
 		[ "$status" -ne 0 ]
+		[[ "$output" != *"Hello World"* ]]
 		[[ "$output" == *"error running $hook hook #1:"* ]]
+		# Check the container was never started.
+		runc delete "test_hook-$hook"
+		[ "$status" -eq 1 ]
+		[[ "$output" == *"container does not exist"* ]]
 	done
 }
