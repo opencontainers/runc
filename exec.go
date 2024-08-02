@@ -234,7 +234,12 @@ func getProcess(context *cli.Context, bundle string) (*specs.Process, error) {
 			p.Capabilities.Bounding = append(p.Capabilities.Bounding, c)
 			p.Capabilities.Effective = append(p.Capabilities.Effective, c)
 			p.Capabilities.Permitted = append(p.Capabilities.Permitted, c)
-			p.Capabilities.Ambient = append(p.Capabilities.Ambient, c)
+			// Since ambient capabilities can't be set without inherritable,
+			// and runc exec --cap don't set inheritable, let's only set
+			// ambient if we already have some inheritable bits set from spec.
+			if p.Capabilities.Inheritable != nil {
+				p.Capabilities.Ambient = append(p.Capabilities.Ambient, c)
+			}
 		}
 	}
 	// append the passed env variables
