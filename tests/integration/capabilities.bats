@@ -53,3 +53,26 @@ function teardown() {
 	[[ "${output}" == *"CapPrm:	0000000000200000"* ]]
 	[[ "${output}" == *"NoNewPrivs:	1"* ]]
 }
+
+@test "runc exec --cap" {
+	update_config '	  .process.args = ["/bin/sh"]
+			| .process.capabilities = {}'
+	runc run -d --console-socket "$CONSOLE_SOCKET" test_exec_cap
+	[ "$status" -eq 0 ]
+
+	runc exec test_exec_cap cat /proc/self/status
+	[ "$status" -eq 0 ]
+	[[ "${output}" == *"CapInh:	0000000000000000"* ]]
+	[[ "${output}" == *"CapAmb:	0000000000000000"* ]]
+	[[ "${output}" == *"CapBnd:	0000000000000000"* ]]
+	[[ "${output}" == *"CapEff:	0000000000000000"* ]]
+	[[ "${output}" == *"CapPrm:	0000000000000000"* ]]
+
+	runc exec --cap CAP_KILL --cap CAP_AUDIT_WRITE test_exec_cap cat /proc/self/status
+	[ "$status" -eq 0 ]
+	[[ "${output}" == *"CapInh:	0000000000000000"* ]]
+	[[ "${output}" == *"CapAmb:	0000000000000000"* ]]
+	[[ "${output}" == *"CapBnd:	0000000020000020"* ]]
+	[[ "${output}" == *"CapEff:	0000000020000020"* ]]
+	[[ "${output}" == *"CapPrm:	0000000020000020"* ]]
+}

@@ -234,7 +234,6 @@ func getProcess(context *cli.Context, bundle string) (*specs.Process, error) {
 			p.Capabilities.Bounding = append(p.Capabilities.Bounding, c)
 			p.Capabilities.Effective = append(p.Capabilities.Effective, c)
 			p.Capabilities.Permitted = append(p.Capabilities.Permitted, c)
-			p.Capabilities.Ambient = append(p.Capabilities.Ambient, c)
 		}
 	}
 	// append the passed env variables
