@@ -24,6 +24,9 @@ type Device struct {
 
 	// Gid of the device.
 	Gid uint32 `json:"gid"`
+
+	// Is Default Device
+	IsDefault bool `json:"is_default"`
 }
 
 // Permissions is a cgroupv1-style string to represent device access. It
