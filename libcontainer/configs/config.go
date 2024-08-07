@@ -225,6 +225,9 @@ type Config struct {
 
 	// IOPriority is the container's I/O priority.
 	IOPriority *IOPriority `json:"io_priority,omitempty"`
+
+	// ExecCPUAffinity is CPU affinity for a non-init process to be run in the container.
+	ExecCPUAffinity *CPUAffinity `json:"exec_cpu_affinity,omitempty"`
 }
 
 // Scheduler is based on the Linux sched_setattr(2) syscall.
@@ -299,6 +302,8 @@ type (
 	HookList []Hook
 	Hooks    map[HookName]HookList
 )
+
+type CPUAffinity = specs.CPUAffinity
 
 const (
 	// Prestart commands are executed after the container namespaces are created,
