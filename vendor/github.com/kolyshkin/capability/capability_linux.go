@@ -12,62 +12,58 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 )
 
-var errUnknownVers = errors.New("unknown capability version")
-
 const (
-	linuxCapVer1 = 0x19980330
-	linuxCapVer2 = 0x20071026
+	linuxCapVer1 = 0x19980330 // No longer supported.
+	linuxCapVer2 = 0x20071026 // No longer supported.
 	linuxCapVer3 = 0x20080522
 )
 
-var (
-	capVers    uint32
-	capLastCap Cap
-)
-
-func init() {
-	var hdr capHeader
-	capget(&hdr, nil)
-	capVers = hdr.version
-
-	if initLastCap() == nil {
-		CAP_LAST_CAP = capLastCap
-		if capLastCap > 31 {
-			capUpperMask = (uint32(1) << (uint(capLastCap) - 31)) - 1
-		} else {
-			capUpperMask = 0
-		}
-	}
+// LastCap returns highest valid capability of the running kernel.
+func LastCap() (Cap, error) {
+	return lastCap()
 }
 
-func initLastCap() error {
-	if capLastCap != 0 {
-		return nil
-	}
-
+var lastCap = sync.OnceValues(func() (Cap, error) {
 	f, err := os.Open("/proc/sys/kernel/cap_last_cap")
 	if err != nil {
-		return err
+		return 0, err
 	}
-	defer f.Close()
 
-	var b []byte = make([]byte, 11)
-	_, err = f.Read(b)
+	buf := make([]byte, 11)
+	l, err := f.Read(buf)
+	f.Close()
 	if err != nil {
-		return err
+		return 0, err
 	}
+	buf = buf[:l]
 
-	fmt.Sscanf(string(b), "%d", &capLastCap)
+	last, err := strconv.Atoi(strings.TrimSpace(string(buf)))
+	if err != nil {
+		return 0, err
+	}
+	return Cap(last), nil
+})
 
-	return nil
+func capUpperMask() uint32 {
+	last, err := lastCap()
+	if err != nil || last < 32 {
+		return 0
+	}
+	return (uint32(1) << (uint(last) - 31)) - 1
 }
 
 func mkStringCap(c Capabilities, which CapType) (ret string) {
-	for i, first := Cap(0), true; i <= CAP_LAST_CAP; i++ {
+	last, err := lastCap()
+	if err != nil {
+		return ""
+	}
+	for i, first := Cap(0), true; i <= last; i++ {
 		if !c.Get(which, i) {
 			continue
 		}
@@ -98,136 +94,31 @@ func mkString(c Capabilities, max CapType) (ret string) {
 	return
 }
 
-func newPid(pid int) (c Capabilities, err error) {
-	switch capVers {
-	case linuxCapVer1:
-		p := new(capsV1)
-		p.hdr.version = capVers
-		p.hdr.pid = int32(pid)
-		c = p
-	case linuxCapVer2, linuxCapVer3:
-		p := new(capsV3)
-		p.hdr.version = capVers
-		p.hdr.pid = int32(pid)
-		c = p
-	default:
-		err = errUnknownVers
+var capVersion = sync.OnceValues(func() (uint32, error) {
+	var hdr capHeader
+	err := capget(&hdr, nil)
+	return hdr.version, err
+})
+
+func newPid(pid int) (c Capabilities, retErr error) {
+	ver, err := capVersion()
+	if err != nil {
+		retErr = fmt.Errorf("unable to get capability version from the kernel: %w", err)
 		return
 	}
-	return
-}
-
-type capsV1 struct {
-	hdr  capHeader
-	data capData
-}
-
-func (c *capsV1) Get(which CapType, what Cap) bool {
-	if what > 32 {
-		return false
-	}
-
-	switch which {
-	case EFFECTIVE:
-		return (1<<uint(what))&c.data.effective != 0
-	case PERMITTED:
-		return (1<<uint(what))&c.data.permitted != 0
-	case INHERITABLE:
-		return (1<<uint(what))&c.data.inheritable != 0
-	}
-
-	return false
-}
-
-func (c *capsV1) getData(which CapType) (ret uint32) {
-	switch which {
-	case EFFECTIVE:
-		ret = c.data.effective
-	case PERMITTED:
-		ret = c.data.permitted
-	case INHERITABLE:
-		ret = c.data.inheritable
+	switch ver {
+	case linuxCapVer1, linuxCapVer2:
+		retErr = errors.New("old/unsupported capability version (kernel older than 2.6.26?)")
+	default:
+		// Either linuxCapVer3, or an unknown/future version (such as v4).
+		// In the latter case, we fall back to v3 as the latest version known
+		// to this package, as kernel should be backward-compatible to v3.
+		p := new(capsV3)
+		p.hdr.version = linuxCapVer3
+		p.hdr.pid = int32(pid)
+		c = p
 	}
 	return
-}
-
-func (c *capsV1) Empty(which CapType) bool {
-	return c.getData(which) == 0
-}
-
-func (c *capsV1) Full(which CapType) bool {
-	return (c.getData(which) & 0x7fffffff) == 0x7fffffff
-}
-
-func (c *capsV1) Set(which CapType, caps ...Cap) {
-	for _, what := range caps {
-		if what > 32 {
-			continue
-		}
-
-		if which&EFFECTIVE != 0 {
-			c.data.effective |= 1 << uint(what)
-		}
-		if which&PERMITTED != 0 {
-			c.data.permitted |= 1 << uint(what)
-		}
-		if which&INHERITABLE != 0 {
-			c.data.inheritable |= 1 << uint(what)
-		}
-	}
-}
-
-func (c *capsV1) Unset(which CapType, caps ...Cap) {
-	for _, what := range caps {
-		if what > 32 {
-			continue
-		}
-
-		if which&EFFECTIVE != 0 {
-			c.data.effective &= ^(1 << uint(what))
-		}
-		if which&PERMITTED != 0 {
-			c.data.permitted &= ^(1 << uint(what))
-		}
-		if which&INHERITABLE != 0 {
-			c.data.inheritable &= ^(1 << uint(what))
-		}
-	}
-}
-
-func (c *capsV1) Fill(kind CapType) {
-	if kind&CAPS == CAPS {
-		c.data.effective = 0x7fffffff
-		c.data.permitted = 0x7fffffff
-		c.data.inheritable = 0
-	}
-}
-
-func (c *capsV1) Clear(kind CapType) {
-	if kind&CAPS == CAPS {
-		c.data.effective = 0
-		c.data.permitted = 0
-		c.data.inheritable = 0
-	}
-}
-
-func (c *capsV1) StringCap(which CapType) (ret string) {
-	return mkStringCap(c, which)
-}
-
-func (c *capsV1) String() (ret string) {
-	return mkString(c, BOUNDING)
-}
-
-func (c *capsV1) Load() (err error) {
-	return capget(&c.hdr, &c.data)
-}
-
-func (c *capsV1) Apply(kind CapType) error {
-	if kind&CAPS == CAPS {
-		return capset(&c.hdr, &c.data)
-	}
-	return nil
 }
 
 type capsV3 struct {
@@ -292,7 +183,8 @@ func (c *capsV3) Full(which CapType) bool {
 	if (data[0] & 0xffffffff) != 0xffffffff {
 		return false
 	}
-	return (data[1] & capUpperMask) == capUpperMask
+	mask := capUpperMask()
+	return (data[1] & mask) == mask
 }
 
 func (c *capsV3) Set(which CapType, caps ...Cap) {
@@ -401,15 +293,12 @@ func (c *capsV3) Load() (err error) {
 		return
 	}
 
-	var status_path string
-
-	if c.hdr.pid == 0 {
-		status_path = fmt.Sprintf("/proc/self/status")
-	} else {
-		status_path = fmt.Sprintf("/proc/%d/status", c.hdr.pid)
+	path := "/proc/self/status"
+	if c.hdr.pid != 0 {
+		path = fmt.Sprintf("/proc/%d/status", c.hdr.pid)
 	}
 
-	f, err := os.Open(status_path)
+	f, err := os.Open(path)
 	if err != nil {
 		return
 	}
@@ -423,11 +312,17 @@ func (c *capsV3) Load() (err error) {
 			break
 		}
 		if strings.HasPrefix(line, "CapB") {
-			fmt.Sscanf(line[4:], "nd:  %08x%08x", &c.bounds[1], &c.bounds[0])
+			_, err = fmt.Sscanf(line[4:], "nd:  %08x%08x", &c.bounds[1], &c.bounds[0])
+			if err != nil {
+				break
+			}
 			continue
 		}
 		if strings.HasPrefix(line, "CapA") {
-			fmt.Sscanf(line[4:], "mb:  %08x%08x", &c.ambient[1], &c.ambient[0])
+			_, err = fmt.Sscanf(line[4:], "mb:  %08x%08x", &c.ambient[1], &c.ambient[0])
+			if err != nil {
+				break
+			}
 			continue
 		}
 	}
@@ -437,6 +332,10 @@ func (c *capsV3) Load() (err error) {
 }
 
 func (c *capsV3) Apply(kind CapType) (err error) {
+	last, err := LastCap()
+	if err != nil {
+		return err
+	}
 	if kind&BOUNDS == BOUNDS {
 		var data [2]capData
 		err = capget(&c.hdr, &data[0])
@@ -444,14 +343,14 @@ func (c *capsV3) Apply(kind CapType) (err error) {
 			return
 		}
 		if (1<<uint(CAP_SETPCAP))&data[0].effective != 0 {
-			for i := Cap(0); i <= CAP_LAST_CAP; i++ {
+			for i := Cap(0); i <= last; i++ {
 				if c.Get(BOUNDING, i) {
 					continue
 				}
 				err = prctl(syscall.PR_CAPBSET_DROP, uintptr(i), 0, 0, 0)
 				if err != nil {
 					// Ignore EINVAL since the capability may not be supported in this system.
-					if errno, ok := err.(syscall.Errno); ok && errno == syscall.EINVAL {
+					if err == syscall.EINVAL { //nolint:errorlint // Errors from syscall are bare.
 						err = nil
 						continue
 					}
@@ -469,16 +368,19 @@ func (c *capsV3) Apply(kind CapType) (err error) {
 	}
 
 	if kind&AMBS == AMBS {
-		for i := Cap(0); i <= CAP_LAST_CAP; i++ {
+		for i := Cap(0); i <= last; i++ {
 			action := pr_CAP_AMBIENT_LOWER
 			if c.Get(AMBIENT, i) {
 				action = pr_CAP_AMBIENT_RAISE
 			}
-			err := prctl(pr_CAP_AMBIENT, action, uintptr(i), 0, 0)
-			// Ignore EINVAL as not supported on kernels before 4.3
-			if errno, ok := err.(syscall.Errno); ok && errno == syscall.EINVAL {
-				err = nil
-				continue
+			err = prctl(pr_CAP_AMBIENT, action, uintptr(i), 0, 0)
+			if err != nil {
+				// Ignore EINVAL as not supported on kernels before 4.3
+				if err == syscall.EINVAL { //nolint:errorlint // Errors from syscall are bare.
+					err = nil
+					continue
+				}
+				return
 			}
 		}
 	}
@@ -547,7 +449,8 @@ func (c *capsFile) Full(which CapType) bool {
 	if (data[0] & 0xffffffff) != 0xffffffff {
 		return false
 	}
-	return (data[1] & capUpperMask) == capUpperMask
+	mask := capUpperMask()
+	return (data[1] & mask) == mask
 }
 
 func (c *capsFile) Set(which CapType, caps ...Cap) {
