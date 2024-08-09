@@ -41,11 +41,6 @@ func Example() *specs.Spec {
 					"CAP_KILL",
 					"CAP_NET_BIND_SERVICE",
 				},
-				Ambient: []string{
-					"CAP_AUDIT_WRITE",
-					"CAP_KILL",
-					"CAP_NET_BIND_SERVICE",
-				},
 				Effective: []string{
 					"CAP_AUDIT_WRITE",
 					"CAP_KILL",
