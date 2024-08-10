@@ -52,19 +52,8 @@ func TestSeccompDenySyslogWithErrno(t *testing.T) {
 	if err == nil {
 		t.Fatal("Expecting error (negative return code); instead exited cleanly!")
 	}
-
-	var exitCode int
-	status := ps.Sys().(syscall.WaitStatus)
-	if status.Exited() {
-		exitCode = status.ExitStatus()
-	} else if status.Signaled() {
-		exitCode = -int(status.Signal())
-	} else {
-		t.Fatalf("Unrecognized exit reason!")
-	}
-
-	if exitCode == 0 {
-		t.Fatalf("dmesg should fail with negative exit code, instead got %d!", exitCode)
+	if ps.Success() {
+		t.Fatal("dmesg should fail with negative exit code, instead got 0!")
 	}
 
 	expected := "dmesg: klogctl: No such process"
@@ -111,19 +100,8 @@ func TestSeccompDenySyslog(t *testing.T) {
 	if err == nil {
 		t.Fatal("Expecting error (negative return code); instead exited cleanly!")
 	}
-
-	var exitCode int
-	status := ps.Sys().(syscall.WaitStatus)
-	if status.Exited() {
-		exitCode = status.ExitStatus()
-	} else if status.Signaled() {
-		exitCode = -int(status.Signal())
-	} else {
-		t.Fatalf("Unrecognized exit reason!")
-	}
-
-	if exitCode == 0 {
-		t.Fatalf("dmesg should fail with negative exit code, instead got %d!", exitCode)
+	if ps.Success() {
+		t.Fatal("dmesg should fail with negative exit code, instead got 0!")
 	}
 
 	expected := "dmesg: klogctl: Operation not permitted"
@@ -230,19 +208,8 @@ func TestSeccompDenyWriteConditional(t *testing.T) {
 	if err == nil {
 		t.Fatal("Expecting negative return, instead got 0!")
 	}
-
-	var exitCode int
-	status := ps.Sys().(syscall.WaitStatus)
-	if status.Exited() {
-		exitCode = status.ExitStatus()
-	} else if status.Signaled() {
-		exitCode = -int(status.Signal())
-	} else {
-		t.Fatalf("Unrecognized exit reason!")
-	}
-
-	if exitCode == 0 {
-		t.Fatalf("Busybox should fail with negative exit code, instead got %d!", exitCode)
+	if ps.Success() {
+		t.Fatal("Busybox should fail with negative exit code, instead got 0!")
 	}
 
 	// We're denying write to stderr, so we expect an empty buffer
