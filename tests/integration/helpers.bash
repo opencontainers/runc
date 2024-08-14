@@ -260,14 +260,15 @@ function get_cgroup_value() {
 	cat "$cgroup/$1"
 }
 
-# Check if a value in a cgroup file $1 matches $2.
+# Check if a value in a cgroup file $1 matches $2 or $3 (if specified).
 function check_cgroup_value() {
 	local got
 	got="$(get_cgroup_value "$1")"
 	local want=$2
+	local want2="${3:-}"
 
-	echo "$1: got $got, want $want"
-	[ "$got" = "$want" ]
+	echo "$1: got $got, want $want $want2"
+	[ "$got" = "$want" ] || [[ -n "$want2" && "$got" = "$want2" ]]
 }
 
 # Check if a value of systemd unit property $1 matches $2 or $3 (if specified).
@@ -316,8 +317,10 @@ function check_cpu_quota() {
 function check_cpu_burst() {
 	local burst=$1
 	if [ -v CGROUP_V2 ]; then
-		burst=$((burst / 1000))
-		check_cgroup_value "cpu.max.burst" "$burst"
+		# Due to a kernel bug (fixed by commit 49217ea147df, see
+		# https://lore.kernel.org/all/20240424132438.514720-1-serein.chengyu@huawei.com/),
+		# older kernels printed value divided by 1000. Check for both.
+		check_cgroup_value "cpu.max.burst" "$burst" "$((burst / 1000))"
 	else
 		check_cgroup_value "cpu.cfs_burst_us" "$burst"
 	fi
