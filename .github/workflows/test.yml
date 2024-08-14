@@ -233,3 +233,11 @@ jobs:
       env:
         EXTRA_BUILDTAGS: ${{ matrix.dmz }}
       run: sudo -E PATH="$PATH" -- make GOARCH=386 localunittest
+
+  all-done:
+    needs:
+    - test
+    - cross-i386
+    runs-on: ubuntu-24.04
+    steps:
+    - run: echo "All jobs completed"

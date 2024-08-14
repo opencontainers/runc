@@ -234,3 +234,22 @@ jobs:
         cd tests/integration
         ./bootstrap-get-images.sh > get-images.sh
         git diff --exit-code
+
+  all-done:
+    needs:
+      - cfmt
+      - codespell
+      - commit
+      - compile-buildtags
+      - deps
+      - get-images
+      - go-fix
+      - keyring
+      - lint
+      - release
+      - shellcheck
+      - shfmt
+      - space-at-eol
+    runs-on: ubuntu-24.04
+    steps:
+    - run: echo "All jobs completed"
