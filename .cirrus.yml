@@ -119,7 +119,7 @@ task:
     # Install Go.
     PREFIX="https://go.dev/dl/"
     # Find out the latest minor release URL.
-    eval $(curl -fsSL "${PREFIX}?mode=json" | jq -r  --arg Ver "$GO_VERSION" '.[] | select(.version | startswith("go\($Ver)")) | .files[] | select(.os == "linux" and .arch == "amd64" and .kind == "archive") | "filename=\"" + .filename + "\""')
+    filename=$(curl -fsSL "${PREFIX}?mode=json&include=all" | jq -r --arg Ver "go$GO_VERSION." '. | map(select(.version | contains($Ver))) | first | .files[] | select(.os == "linux" and .arch == "amd64" and .kind == "archive") | .filename')
     curl -fsSL "$PREFIX$filename" | tar Cxz /usr/local
     # install bats
     cd /tmp
