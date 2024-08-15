@@ -1,7 +1,6 @@
 package fs
 
 import (
-	"fmt"
 	"strconv"
 	"testing"
 
@@ -478,7 +477,7 @@ func TestBlkioStatsNoFilesBFQDebug(t *testing.T) {
 		actualStats := *cgroups.NewStats()
 		err := cpuset.GetStats(path, &actualStats)
 		if err != nil {
-			t.Errorf(fmt.Sprintf("test case '%s' failed unexpectedly: %s", testCase.desc, err))
+			t.Errorf("%s: want no error, got: %+v", testCase.desc, err)
 		}
 	}
 }
@@ -592,7 +591,7 @@ func TestBlkioStatsNoFilesCFQ(t *testing.T) {
 		actualStats := *cgroups.NewStats()
 		err := cpuset.GetStats(path, &actualStats)
 		if err != nil {
-			t.Errorf(fmt.Sprintf("test case '%s' failed unexpectedly: %s", testCase.desc, err))
+			t.Errorf("%s: want no error, got %+v", testCase.desc, err)
 		}
 	}
 }

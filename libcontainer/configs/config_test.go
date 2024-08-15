@@ -202,7 +202,7 @@ exit 0
 	})
 
 	if err := cmdHook.Run(state); err != nil {
-		t.Errorf(fmt.Sprintf("Expected error to not occur but it was %+v", err))
+		t.Errorf("Want no error, got: %+v", err)
 	}
 }
 
