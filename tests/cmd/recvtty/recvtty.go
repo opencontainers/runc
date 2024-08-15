@@ -39,7 +39,7 @@ var version = ""
 var gitCommit = ""
 
 const (
-	usage = `Open Container Initiative contrib/cmd/recvtty
+	usage = `Open Container Initiative tests/cmd/recvtty
 
 recvtty is a reference implementation of a consumer of runC's --console-socket
 API. It has two main modes of operation:

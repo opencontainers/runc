@@ -13,12 +13,12 @@ eval "$IMAGES"
 unset IMAGES
 
 : "${RUNC:="${INTEGRATION_ROOT}/../../runc"}"
-RECVTTY="${INTEGRATION_ROOT}/../../contrib/cmd/recvtty/recvtty"
-SD_HELPER="${INTEGRATION_ROOT}/../../contrib/cmd/sd-helper/sd-helper"
-SECCOMP_AGENT="${INTEGRATION_ROOT}/../../contrib/cmd/seccompagent/seccompagent"
-FS_IDMAP="${INTEGRATION_ROOT}/../../contrib/cmd/fs-idmap/fs-idmap"
-PIDFD_KILL="${INTEGRATION_ROOT}/../../contrib/cmd/pidfd-kill/pidfd-kill"
-REMAP_ROOTFS="${INTEGRATION_ROOT}/../../contrib/cmd/remap-rootfs/remap-rootfs"
+RECVTTY="${INTEGRATION_ROOT}/../../tests/cmd/recvtty/recvtty"
+SD_HELPER="${INTEGRATION_ROOT}/../../tests/cmd/sd-helper/sd-helper"
+SECCOMP_AGENT="${INTEGRATION_ROOT}/../../tests/cmd/seccompagent/seccompagent"
+FS_IDMAP="${INTEGRATION_ROOT}/../../tests/cmd/fs-idmap/fs-idmap"
+PIDFD_KILL="${INTEGRATION_ROOT}/../../tests/cmd/pidfd-kill/pidfd-kill"
+REMAP_ROOTFS="${INTEGRATION_ROOT}/../../tests/cmd/remap-rootfs/remap-rootfs"
 
 # Some variables may not always be set. Set those to empty value,
 # if unset, to avoid "unbound variable" error.

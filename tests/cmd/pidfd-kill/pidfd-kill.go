@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	usage = `Open Container Initiative contrib/cmd/pidfd-kill
+	usage = `Open Container Initiative tests/cmd/pidfd-kill
 
 pidfd-kill is an implementation of a consumer of runC's --pidfd-socket API.
 After received SIGTERM, pidfd-kill sends the given signal to init process by
