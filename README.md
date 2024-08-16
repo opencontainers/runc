@@ -86,6 +86,17 @@ sudo make install
 
 `runc` will be installed to `/usr/local/sbin/runc` on your system.
 
+#### Version string customization
+
+You can see the runc version by running `runc --version`. You can append a custom string to the
+version using the `EXTRA_VERSION` make variable when building, e.g.:
+
+```bash
+make EXTRA_VERSION="+build-1"
+```
+
+Bear in mind to include some separator for readability.
+
 #### Build Tags
 
 `runc` supports optional build tags for compiling support of various features,
