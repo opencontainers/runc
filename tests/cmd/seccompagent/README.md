@@ -17,7 +17,7 @@ make all
 
 Run the seccomp agent in the background:
 ```bash
-sudo ./contrib/cmd/seccompagent/seccompagent &
+sudo ./tests/cmd/seccompagent/seccompagent &
 ```
 
 Prepare a container:

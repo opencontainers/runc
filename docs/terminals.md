@@ -351,4 +351,4 @@ a [Go implementation in the `go-runc` bindings][containerd/go-runc.Socket], as
 well as [a simple client][recvtty].
 
 [containerd/go-runc.Socket]: https://godoc.org/github.com/containerd/go-runc#Socket
-[recvtty]: /contrib/cmd/recvtty
+[recvtty]: /tests/cmd/recvtty

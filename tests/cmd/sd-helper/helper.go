@@ -13,7 +13,7 @@ import (
 )
 
 func usage() {
-	fmt.Print(`Open Container Initiative contrib/cmd/sd-helper
+	fmt.Print(`Open Container Initiative tests/cmd/sd-helper
 
 sd-helper is a tool that uses runc/libcontainer/cgroups/systemd package
 functionality to communicate to systemd in order to perform various operations.

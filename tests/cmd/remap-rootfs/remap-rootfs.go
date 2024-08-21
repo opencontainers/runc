@@ -13,7 +13,7 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
-const usage = `contrib/cmd/remap-rootfs
+const usage = `tests/cmd/remap-rootfs
 
 remap-rootfs is a helper tool to remap the root filesystem of a Open Container
 Initiative bundle using user namespaces such that the file owners are remapped

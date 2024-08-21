@@ -214,7 +214,7 @@ function scmp_act_notify_template() {
 @test "runc run [seccomp] (SCMP_ACT_NOTIFY example config)" {
 	# Run the script used in the seccomp agent example.
 	# This takes a bare config.json and modifies it to run an example.
-	"${INTEGRATION_ROOT}/../../contrib/cmd/seccompagent/gen-seccomp-example-cfg.sh"
+	"${INTEGRATION_ROOT}/../../tests/cmd/seccompagent/gen-seccomp-example-cfg.sh"
 
 	# The listenerPath the previous command uses is the default used by the
 	# seccomp agent. However, inside bats the socket is in a bats tmp dir.
