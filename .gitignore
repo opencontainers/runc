@@ -2,12 +2,7 @@ vendor/pkg
 /runc
 /runc-*
 /contrib/cmd/memfd-bind/memfd-bind
-/tests/cmd/recvtty/recvtty
-/tests/cmd/sd-helper/sd-helper
-/tests/cmd/seccompagent/seccompagent
-/tests/cmd/fs-idmap/fs-idmap
-/tests/cmd/pidfd-kill/pidfd-kill
-/tests/cmd/remap-rootfs/remap-rootfs
+/tests/cmd/_bin
 man/man8
 release
 Vagrantfile
