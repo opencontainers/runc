@@ -118,6 +118,21 @@ func CloseExecFrom(minFd int) error {
 // descriptors the Go runtime needs. Hopefully nothing blows up doing this...
 func runtime_IsPollDescriptor(fd uintptr) bool //nolint:revive
 
+var (
+	unsafeFileDescriptorsLock sync.Mutex
+	unsafeFileDescriptors     = map[uintptr]struct{}{}
+)
+
+// RegisterUnsafeFileDescriptor registers a file descriptor that should not be
+// closed by UnsafeCloseFrom. This is purely reserved for file descriptors that
+// would cause serious issues if closed before doing an execve.
+func RegisterUnsafeFileDescriptor(fd uintptr) {
+	unsafeFileDescriptorsLock.Lock()
+	defer unsafeFileDescriptorsLock.Unlock()
+
+	unsafeFileDescriptors[fd] = struct{}{}
+}
+
 // UnsafeCloseFrom closes all file descriptors greater or equal to minFd in the
 // current process, except for those critical to Go's runtime (such as the
 // netpoll management descriptors).
@@ -128,6 +143,9 @@ func runtime_IsPollDescriptor(fd uintptr) bool //nolint:revive
 // *os.File operations would apply to the wrong file). This function is only
 // intended to be called from the last stage of runc init.
 func UnsafeCloseFrom(minFd int) error {
+	unsafeFileDescriptorsLock.Lock()
+	defer unsafeFileDescriptorsLock.Unlock()
+
 	// We cannot use close_range(2) even if it is available, because we must
 	// not close some file descriptors.
 	return fdRangeFrom(minFd, func(fd int) {
@@ -138,6 +156,9 @@ func UnsafeCloseFrom(minFd int) error {
 			// There is no issue with keeping them because they are not
 			// executable and are not useful to an attacker anyway. Also we
 			// don't have any choice.
+			return
+		}
+		if _, skip := unsafeFileDescriptors[uintptr(fd)]; skip {
 			return
 		}
 		// There's nothing we can do about errors from close(2), and the

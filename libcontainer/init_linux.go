@@ -107,6 +107,13 @@ func startInitialization() (retErr error) {
 	syncPipe := newSyncSocket(os.NewFile(uintptr(syncPipeFd), "sync"))
 	defer syncPipe.Close()
 
+	// We must not close the syncpipe before exec because an exec error will be
+	// sent through it. There is no security risk in allowing an attacker to
+	// forcefully leak this file descriptor (you cannot exec it, so it might
+	// not even be possible to leak with execve -- but it is also an in-memory
+	// pipe so there's no breakout risk even if you could leak it).
+	utils.RegisterUnsafeFileDescriptor(syncPipe.File().Fd())
+
 	defer func() {
 		// If this defer is ever called, this means initialization has failed.
 		// Send the error back to the parent process in the form of an initError
