@@ -396,61 +396,6 @@ static int seal_execfd(int *fd, int fdtype)
 	return -1;
 }
 
-static int try_bindfd(void)
-{
-	int fd, ret = -1;
-	char template[PATH_MAX] = { 0 };
-	char *prefix = getenv("_LIBCONTAINER_STATEDIR");
-
-	if (!prefix || *prefix != '/')
-		prefix = "/tmp";
-	if (snprintf(template, sizeof(template), "%s/runc.XXXXXX", prefix) < 0)
-		return ret;
-
-	/*
-	 * We need somewhere to mount it, mounting anything over /proc/self is a
-	 * BAD idea on the host -- even if we do it temporarily.
-	 */
-	fd = mkstemp(template);
-	if (fd < 0)
-		return ret;
-	close(fd);
-
-	/*
-	 * For obvious reasons this won't work in rootless mode because we haven't
-	 * created a userns+mntns -- but getting that to work will be a bit
-	 * complicated and it's only worth doing if someone actually needs it.
-	 */
-	ret = -EPERM;
-	if (mount("/proc/self/exe", template, "", MS_BIND, "") < 0)
-		goto out;
-	if (mount("", template, "", MS_REMOUNT | MS_BIND | MS_RDONLY, "") < 0)
-		goto out_umount;
-
-	/* Get read-only handle that we're sure can't be made read-write. */
-	ret = open(template, O_PATH | O_CLOEXEC);
-
-out_umount:
-	/*
-	 * Make sure the MNT_DETACH works, otherwise we could get remounted
-	 * read-write and that would be quite bad (the fd would be made read-write
-	 * too, invalidating the protection).
-	 */
-	if (umount2(template, MNT_DETACH) < 0) {
-		if (ret >= 0)
-			close(ret);
-		ret = -ENOTRECOVERABLE;
-	}
-
-out:
-	/*
-	 * We don't care about unlink errors, the worst that happens is that
-	 * there's an empty file left around in STATEDIR.
-	 */
-	unlink(template);
-	return ret;
-}
-
 static ssize_t fd_to_fd(int outfd, int infd)
 {
 	ssize_t total = 0;
@@ -485,18 +430,6 @@ static int clone_binary(void)
 	size_t sent = 0;
 	int fdtype = EFD_NONE;
 
-	/*
-	 * Before we resort to copying, let's try creating an ro-binfd in one shot
-	 * by getting a handle for a read-only bind-mount of the execfd.
-	 */
-	execfd = try_bindfd();
-	if (execfd >= 0)
-		return execfd;
-
-	/*
-	 * Dammit, that didn't work -- time to copy the binary to a safe place we
-	 * can seal the contents.
-	 */
 	execfd = make_execfd(&fdtype);
 	if (execfd < 0 || fdtype == EFD_NONE)
 		return -ENOTRECOVERABLE;
