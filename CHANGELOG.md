@@ -6,6 +6,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased 1.1.z]
 
+## [1.1.14] - 2024-09-03
+
+> 年を取っていいことは、驚かなくなることね。
+
+### Security
+
+ * Fix [CVE-2024-45310][cve-2024-45310], a low-severity attack that allowed
+   maliciously configured containers to create empty files and directories on
+   the host.
+
+[cve-2024-45310]: https://github.com/opencontainers/runc/security/advisories/GHSA-jfvp-7x6p-h2pv
+
+### Added
+
+ * Add support for Go 1.23. (#4360, #4372)
+
+### Fixed
+
+ * Revert "allow overriding VERSION value in Makefile" and add `EXTRA_VERSION`.
+   (#4370, #4382)
+ * rootfs: consolidate mountpoint creation logic. (#4359)
+
+### Changed
+
 ## [1.1.13] - 2024-06-13
 
 > There is no certainty in the world. This is the only certainty I have.
@@ -19,7 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  * Support go 1.22.4+. (#4313)
  * runc list: fix race with runc delete. (#4231)
  * Fix set nofile rlimit error. (#4277, #4299)
- * libct/cg/fs: fix setting rt_period vs rt_runtime. (#4284)
+ * libct/cg/fs: fix setting `rt_period` vs `rt_runtime`. (#4284)
  * Fix a debug msg for user ns in nsexec. (#4315)
  * script/*: fix gpg usage wrt keyboxd. (#4316)
  * CI fixes and misc backports. (#4241)
@@ -538,7 +562,8 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.0.1]: https://github.com/opencontainers/runc/compare/v1.0.0...v1.0.1
 
 <!-- 1.1.z patch releases -->
-[Unreleased 1.1.z]: https://github.com/opencontainers/runc/compare/v1.1.13...release-1.1
+[Unreleased 1.1.z]: https://github.com/opencontainers/runc/compare/v1.1.14...release-1.1
+[1.1.14]: https://github.com/opencontainers/runc/compare/v1.1.13...v1.1.14
 [1.1.13]: https://github.com/opencontainers/runc/compare/v1.1.12...v1.1.13
 [1.1.12]: https://github.com/opencontainers/runc/compare/v1.1.11...v1.1.12
 [1.1.11]: https://github.com/opencontainers/runc/compare/v1.1.10...v1.1.11
