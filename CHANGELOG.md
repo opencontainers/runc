@@ -35,9 +35,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  * libct/userns: split userns detection from internal userns code. (#4331)
  * rootfs: consolidate mountpoint creation logic. (#4359)
  * Add Go 1.23, drop 1.21. (#4360)
- * Revert "allow overriding VERSION value in Makefile" and add EXTRA_VERSION. (#4370)
+ * Revert "allow overriding VERSION value in Makefile" and add `EXTRA_VERSION`.
+   (#4370)
  * Mv contrib/cmd tests/cmd (except memfd-bind). (#4377)
- * Makefile: Don't read COMMIT, BUILDTAGS, EXTRA_BUILDTAGS from env vars. (#4380)
+ * Makefile: Don't read COMMIT, BUILDTAGS, `EXTRA_BUILDTAGS` from env vars.
+   (#4380)
 
 ## [1.2.0-rc.2] - 2024-06-26
 
