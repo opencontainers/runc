@@ -313,7 +313,7 @@ func mountCgroupV1(m *configs.Mount, c *mountConfig) error {
 			// inside the tmpfs, so we don't want to resolve symlinks).
 			subsystemPath := filepath.Join(c.root, b.Destination)
 			subsystemName := filepath.Base(b.Destination)
-			if err := os.MkdirAll(subsystemPath, 0o755); err != nil {
+			if err := utils.MkdirAllInRoot(c.root, subsystemPath, 0o755); err != nil {
 				return err
 			}
 			if err := utils.WithProcfd(c.root, b.Destination, func(dstFd string) error {
@@ -505,15 +505,26 @@ func createMountpoint(rootfs string, m mountEntry) (string, error) {
 				return "", fmt.Errorf("%w: file bind mount over rootfs", errRootfsToFile)
 			}
 			// Make the parent directory.
-			if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
+			destDir, destBase := filepath.Split(dest)
+			destDirFd, err := utils.MkdirAllInRootOpen(rootfs, destDir, 0o755)
+			if err != nil {
 				return "", fmt.Errorf("make parent dir of file bind-mount: %w", err)
 			}
-			// Make the target file.
-			f, err := os.OpenFile(dest, os.O_CREATE, 0o755)
-			if err != nil {
-				return "", fmt.Errorf("create target of file bind-mount: %w", err)
+			defer destDirFd.Close()
+			// Make the target file. We want to avoid opening any file that is
+			// already there because it could be a "bad" file like an invalid
+			// device or hung tty that might cause a DoS, so we use mknodat.
+			// destBase does not contain any "/" components, and mknodat does
+			// not follow trailing symlinks, so we can safely just call mknodat
+			// here.
+			if err := unix.Mknodat(int(destDirFd.Fd()), destBase, unix.S_IFREG|0o644, 0); err != nil {
+				// If we get EEXIST, there was already an inode there and
+				// we can consider that a success.
+				if !errors.Is(err, unix.EEXIST) {
+					err = &os.PathError{Op: "mknod regular file", Path: dest, Err: err}
+					return "", fmt.Errorf("create target of file bind-mount: %w", err)
+				}
 			}
-			_ = f.Close()
 			// Nothing left to do.
 			return dest, nil
 		}
@@ -532,7 +543,7 @@ func createMountpoint(rootfs string, m mountEntry) (string, error) {
 		}
 	}
 
-	if err := os.MkdirAll(dest, 0o755); err != nil {
+	if err := utils.MkdirAllInRoot(rootfs, dest, 0o755); err != nil {
 		return "", err
 	}
 	return dest, nil
@@ -565,7 +576,7 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 		} else if !fi.IsDir() {
 			return fmt.Errorf("filesystem %q must be mounted on ordinary directory", m.Device)
 		}
-		if err := os.MkdirAll(dest, 0o755); err != nil {
+		if err := utils.MkdirAllInRoot(rootfs, dest, 0o755); err != nil {
 			return err
 		}
 		// Selinux kernels do not support labeling of /proc or /sys.
@@ -928,7 +939,7 @@ func createDeviceNode(rootfs string, node *devices.Device, bind bool) error {
 	if dest == rootfs {
 		return fmt.Errorf("%w: mknod over rootfs", errRootfsToFile)
 	}
-	if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
+	if err := utils.MkdirAllInRoot(rootfs, filepath.Dir(dest), 0o755); err != nil {
 		return err
 	}
 	if bind {
