@@ -133,3 +133,27 @@ test_host_pidns_kill() {
 	test_host_pidns_kill
 	unset KILL_INIT
 }
+
+# https://github.com/opencontainers/runc/issues/4394 (cgroup v1, rootless)
+@test "kill KILL [shared pidns]" {
+	update_config '.process.args = ["sleep", "infinity"]'
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" target_ctr
+	[ "$status" -eq 0 ]
+	testcontainer target_ctr running
+	target_pid="$(__runc state target_ctr | jq .pid)"
+	update_config '.linux.namespaces |= map(if .type == "user" or .type == "pid" then (.path = "/proc/'"$target_pid"'/ns/" + .type) else . end) | del(.linux.uidMappings) | del(.linux.gidMappings)'
+
+	runc run -d --console-socket "$CONSOLE_SOCKET" attached_ctr
+	[ "$status" -eq 0 ]
+	testcontainer attached_ctr running
+
+	runc kill attached_ctr 9
+	[ "$status" -eq 0 ]
+
+	runc delete --force attached_ctr
+	[ "$status" -eq 0 ]
+
+	runc delete --force target_ctr
+	[ "$status" -eq 0 ]
+}

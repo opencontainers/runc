@@ -44,6 +44,7 @@ func destroy(c *Container) error {
 	// and destroy is supposed to remove all the container resources, we need
 	// to kill those processes here.
 	if !c.config.Namespaces.IsPrivate(configs.NEWPID) {
+		// Likely to fail when c.config.RootlessCgroups is true
 		_ = signalAllProcesses(c.cgroupManager, unix.SIGKILL)
 	}
 	if err := c.cgroupManager.Destroy(); err != nil {
