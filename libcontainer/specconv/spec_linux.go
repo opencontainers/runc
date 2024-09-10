@@ -415,7 +415,7 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 			}
 			config.Namespaces.Add(t, ns.Path)
 		}
-		if config.Namespaces.Contains(configs.NEWNET) && config.Namespaces.PathOf(configs.NEWNET) == "" {
+		if config.Namespaces.IsPrivate(configs.NEWNET) {
 			config.Networks = []*configs.Network{
 				{
 					Type: "loopback",
@@ -481,7 +481,7 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 	// Only set it if the container will have its own cgroup
 	// namespace and the cgroupfs will be mounted read/write.
 	//
-	hasCgroupNS := config.Namespaces.Contains(configs.NEWCGROUP) && config.Namespaces.PathOf(configs.NEWCGROUP) == ""
+	hasCgroupNS := config.Namespaces.IsPrivate(configs.NEWCGROUP)
 	hasRwCgroupfs := false
 	if hasCgroupNS {
 		for _, m := range config.Mounts {
