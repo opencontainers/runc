@@ -388,11 +388,21 @@ func (c *Container) Signal(s os.Signal) error {
 	// leftover processes. Handle this special case here.
 	if s == unix.SIGKILL && !c.config.Namespaces.IsPrivate(configs.NEWPID) {
 		if err := signalAllProcesses(c.cgroupManager, unix.SIGKILL); err != nil {
+			if c.config.RootlessCgroups { // may not have an access to cgroup
+				logrus.WithError(err).Warn("failed to kill all processes, possibly due to lack of cgroup (Hint: enable cgroup v2 delegation)")
+				// Some processes may leak when cgroup is not delegated
+				// https://github.com/opencontainers/runc/pull/4395#pullrequestreview-2291179652
+				return c.signal(s)
+			}
 			return fmt.Errorf("unable to kill all processes: %w", err)
 		}
 		return nil
 	}
 
+	return c.signal(s)
+}
+
+func (c *Container) signal(s os.Signal) error {
 	// To avoid a PID reuse attack, don't kill non-running container.
 	if !c.hasInit() {
 		return ErrNotRunning
