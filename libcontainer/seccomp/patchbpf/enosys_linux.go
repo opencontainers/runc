@@ -18,7 +18,6 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/opencontainers/runc/libcontainer/utils"
 )
 
 // #cgo pkg-config: libseccomp
@@ -110,7 +109,7 @@ func parseProgram(rdr io.Reader) ([]bpf.RawInstruction, error) {
 		// Read the next instruction. We have to use NativeEndian because
 		// seccomp_export_bpf outputs the program in *host* endian-ness.
 		var insn unix.SockFilter
-		if err := binary.Read(rdr, utils.NativeEndian, &insn); err != nil {
+		if err := binary.Read(rdr, binary.NativeEndian, &insn); err != nil {
 			if errors.Is(err, io.EOF) {
 				// Parsing complete.
 				break
