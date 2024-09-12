@@ -176,21 +176,18 @@ func LoadAttachCgroupDeviceFilter(insts asm.Instructions, license string, dirFd 
 	}
 
 	// If there is only one old program, we can just replace it directly.
-	var (
-		replaceProg *ebpf.Program
-		attachFlags uint32 = unix.BPF_F_ALLOW_MULTI
-	)
-	if useReplaceProg {
-		replaceProg = oldProgs[0]
-		attachFlags |= unix.BPF_F_REPLACE
-	}
-	err = link.RawAttachProgram(link.RawAttachProgramOptions{
+
+	attachProgramOptions := link.RawAttachProgramOptions{
 		Target:  dirFd,
 		Program: prog,
-		Replace: replaceProg,
 		Attach:  ebpf.AttachCGroupDevice,
-		Flags:   attachFlags,
-	})
+		Flags:   unix.BPF_F_ALLOW_MULTI,
+	}
+
+	if useReplaceProg {
+		attachProgramOptions.Anchor = link.ReplaceProgram(oldProgs[0])
+	}
+	err = link.RawAttachProgram(attachProgramOptions)
 	if err != nil {
 		return nilCloser, fmt.Errorf("failed to call BPF_PROG_ATTACH (BPF_CGROUP_DEVICE, BPF_F_ALLOW_MULTI): %w", err)
 	}
