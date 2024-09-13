@@ -199,6 +199,18 @@ function test_mount_order() {
 	[ "$status" -eq 0 ]
 }
 
+# CVE-2023-27561 CVE-2019-19921
+@test "runc run [/proc is a symlink]" {
+	# Make /proc in the container a symlink.
+	rm -rf rootfs/proc
+	mkdir -p rootfs/bad-proc
+	ln -sf /bad-proc rootfs/proc
+	# This should fail.
+	runc run test_busybox
+	[ "$status" -ne 0 ]
+	[[ "$output" == *"must be mounted on ordinary directory"* ]]
+}
+
 @test "runc run [ro /sys/fs/cgroup mounts]" {
 	# Without cgroup namespace.
 	update_config '.linux.namespaces -= [{"type": "cgroup"}]'
