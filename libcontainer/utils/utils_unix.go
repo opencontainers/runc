@@ -319,6 +319,14 @@ func MkdirAllInRootOpen(root, unsafePath string, mode uint32) (_ *os.File, Err e
 	if mode&^0o7777 != 0 {
 		return nil, fmt.Errorf("tried to include non-mode bits in MkdirAll mode: 0o%.3o", mode)
 	}
+	// Linux (and thus os.MkdirAll) silently ignores the suid and sgid bits if
+	// passed. While it would make sense to return an error in that case (since
+	// the user has asked for a mode that won't be applied), for compatibility
+	// reasons we have to ignore these bits.
+	if ignoredBits := mode &^ 0o1777; ignoredBits != 0 {
+		logrus.Warnf("MkdirAll called with no-op mode bits that are ignored by Linux: 0o%.3o", ignoredBits)
+		mode &= 0o1777
+	}
 
 	rootDir, err := os.OpenFile(root, unix.O_DIRECTORY|unix.O_CLOEXEC, 0)
 	if err != nil {

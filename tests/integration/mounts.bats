@@ -199,6 +199,41 @@ function test_mount_order() {
 	[ "$status" -eq 0 ]
 }
 
+# CVE-2023-27561 CVE-2019-19921
+@test "runc run [/proc is a symlink]" {
+	# Make /proc in the container a symlink.
+	rm -rf rootfs/proc
+	mkdir -p rootfs/bad-proc
+	ln -sf /bad-proc rootfs/proc
+	# This should fail.
+	runc run test_busybox
+	[ "$status" -ne 0 ]
+	[[ "$output" == *"must be mounted on ordinary directory"* ]]
+}
+
+# https://github.com/opencontainers/runc/issues/4401
+@test "runc run [setgid / + mkdirall]" {
+	mkdir rootfs/setgid
+	chmod '=7755' rootfs/setgid
+
+	update_config '.mounts += [{
+		type: "tmpfs",
+		source: "tmpfs",
+		destination: "/setgid/a/b/c",
+		options: ["ro", "nodev", "nosuid"]
+	}]'
+	update_config '.process.args |= ["true"]'
+
+	runc run test_busybox
+	[ "$status" -eq 0 ]
+
+	# Verify that the setgid bit is inherited.
+	[[ "$(stat -c %a rootfs/setgid)" == 7755 ]]
+	[[ "$(stat -c %a rootfs/setgid/a)" == 2755 ]]
+	[[ "$(stat -c %a rootfs/setgid/a/b)" == 2755 ]]
+	[[ "$(stat -c %a rootfs/setgid/a/b/c)" == 2755 ]]
+}
+
 @test "runc run [ro /sys/fs/cgroup mounts]" {
 	# Without cgroup namespace.
 	update_config '.linux.namespaces -= [{"type": "cgroup"}]'
