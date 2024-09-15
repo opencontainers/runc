@@ -18,7 +18,7 @@ func init() {
 }
 
 // tempDir creates a new test directory for the specified subsystem.
-func tempDir(t *testing.T, subsystem string) string {
+func tempDir(t testing.TB, subsystem string) string {
 	path := filepath.Join(t.TempDir(), subsystem)
 	// Ensure the full mock cgroup path exists.
 	if err := os.Mkdir(path, 0o755); err != nil {
@@ -29,7 +29,7 @@ func tempDir(t *testing.T, subsystem string) string {
 
 // writeFileContents writes the specified contents on the mock of the specified
 // cgroup files.
-func writeFileContents(t *testing.T, path string, fileContents map[string]string) {
+func writeFileContents(t testing.TB, path string, fileContents map[string]string) {
 	for file, contents := range fileContents {
 		err := cgroups.WriteFile(path, file, contents)
 		if err != nil {
