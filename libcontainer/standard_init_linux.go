@@ -260,6 +260,7 @@ func (l *linuxStandardInit) Init() error {
 		return &os.PathError{Op: "write exec fifo", Path: fifoPath, Err: err}
 	}
 
+	_ = unix.Close(fd)
 	// Close the O_PATH fifofd fd before exec because the kernel resets
 	// dumpable in the wrong order. This has been fixed in newer kernels, but
 	// we keep this to ensure CVE-2016-9962 doesn't re-emerge on older kernels.
