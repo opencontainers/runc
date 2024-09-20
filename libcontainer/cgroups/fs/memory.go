@@ -282,21 +282,20 @@ func getPageUsageByNUMA(path string) (cgroups.PageUsageByNUMA, error) {
 		line := scanner.Text()
 		columns := strings.SplitN(line, " ", maxColumns)
 		for i, column := range columns {
-			byNode := strings.SplitN(column, "=", 2)
+			key, val, ok := strings.Cut(column, "=")
 			// Some custom kernels have non-standard fields, like
 			//   numa_locality 0 0 0 0 0 0 0 0 0 0
 			//   numa_exectime 0
-			if len(byNode) < 2 {
-				if i == 0 {
-					// Ignore/skip those.
-					break
-				} else {
+			if !ok {
+				if i != 0 {
 					// The first column was already validated,
 					// so be strict to the rest.
 					return stats, malformedLine(path, file, line)
 				}
+
+				// Ignore/skip those.
+				break
 			}
-			key, val := byNode[0], byNode[1]
 			if i == 0 { // First column: key is name, val is total.
 				field = getNUMAField(&stats, key)
 				if field == nil { // unknown field (new kernel?)
