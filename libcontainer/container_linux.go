@@ -394,6 +394,11 @@ func (c *Container) Signal(s os.Signal) error {
 				// https://github.com/opencontainers/runc/pull/4395#pullrequestreview-2291179652
 				return c.signal(s)
 			}
+			// For not rootless container, if there is no init process and no cgroup,
+			// it means that the container is not running.
+			if errors.Is(err, ErrCgroupNotExist) && !c.hasInit() {
+				err = ErrNotRunning
+			}
 			return fmt.Errorf("unable to kill all processes: %w", err)
 		}
 		return nil
