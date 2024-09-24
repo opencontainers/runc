@@ -34,7 +34,7 @@ func rootlessEUIDMappings(config *configs.Config) error {
 		return errors.New("rootless container requires user namespaces")
 	}
 	// We only require mappings if we are not joining another userns.
-	if path := config.Namespaces.PathOf(configs.NEWUSER); path == "" {
+	if config.Namespaces.IsPrivate(configs.NEWUSER) {
 		if len(config.UIDMappings) == 0 {
 			return errors.New("rootless containers requires at least one UID mapping")
 		}

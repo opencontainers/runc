@@ -81,3 +81,31 @@ function teardown() {
 
 	testcontainer test_busybox running
 }
+
+# https://github.com/opencontainers/runc/issues/4394#issuecomment-2334926257
+@test "runc create [shared pidns + rootless]" {
+	# Remove pidns so it's shared with the host.
+	update_config '	  .linux.namespaces -= [{"type": "pid"}]'
+	if [ $EUID -ne 0 ]; then
+		if rootless_cgroup; then
+			# Rootless containers have empty cgroup path by default.
+			set_cgroups_path
+		fi
+		# Can't mount real /proc when rootless + no pidns,
+		# so change it to a bind-mounted one from the host.
+		update_config '	  .mounts |= map((select(.type == "proc")
+                                | .type = "none"
+                                | .source = "/proc"
+                                | .options = ["rbind", "nosuid", "nodev", "noexec"]
+                          ) // .)'
+	fi
+
+	exp="Such configuration is strongly discouraged"
+	runc create --console-socket "$CONSOLE_SOCKET" test
+	[ "$status" -eq 0 ]
+	if [ $EUID -ne 0 ] && ! rootless_cgroup; then
+		[[ "$output" = *"$exp"* ]]
+	else
+		[[ "$output" != *"$exp"* ]]
+	fi
+}

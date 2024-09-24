@@ -580,7 +580,18 @@ func (p *initProcess) start() (retErr error) {
 	// cgroup. We don't need to worry about not doing this and not being root
 	// because we'd be using the rootless cgroup manager in that case.
 	if err := p.manager.Apply(p.pid()); err != nil {
-		return fmt.Errorf("unable to apply cgroup configuration: %w", err)
+		if errors.Is(err, cgroups.ErrRootless) {
+			// ErrRootless is to be ignored except when
+			// the container doesn't have private pidns.
+			if !p.config.Config.Namespaces.IsPrivate(configs.NEWPID) {
+				// TODO: make this an error in runc 1.3.
+				logrus.Warn("Creating a rootless container with no cgroup and no private pid namespace. " +
+					"Such configuration is strongly discouraged (as it is impossible to properly kill all container's processes) " +
+					"and will result in an error in a future runc version.")
+			}
+		} else {
+			return fmt.Errorf("unable to apply cgroup configuration: %w", err)
+		}
 	}
 	if p.intelRdtManager != nil {
 		if err := p.intelRdtManager.Apply(p.pid()); err != nil {

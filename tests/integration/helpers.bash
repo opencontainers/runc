@@ -727,6 +727,8 @@ function teardown_bundle() {
 	[ ! -v ROOT ] && return 0 # nothing to teardown
 
 	cd "$INTEGRATION_ROOT" || return
+	echo "--- teardown ---" >&2
+
 	teardown_recvtty
 	local ct
 	for ct in $(__runc list -q); do
