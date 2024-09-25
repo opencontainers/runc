@@ -158,6 +158,10 @@ jobs:
       uses: bats-core/bats-action@2.0.0
       with:
         bats-version: 1.9.0
+        support-install: false
+        assert-install: false
+        detik-install: false
+        file-install: false
 
     - name: Allow userns for runc
       # https://discourse.ubuntu.com/t/ubuntu-24-04-lts-noble-numbat-release-notes/39890#unprivileged-user-namespace-restrictions-15
