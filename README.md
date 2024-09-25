@@ -23,19 +23,14 @@ All releases are signed by one of the keys listed in the [`runc.keyring` file in
 The reporting process and disclosure communications are outlined [here](https://github.com/opencontainers/org/blob/master/SECURITY.md).
 
 ### Security Audit
+
 A third party security audit was performed by Cure53, you can see the full report [here](https://github.com/opencontainers/runc/blob/master/docs/Security-Audit.pdf).
 
 ## Building
 
-`runc` only supports Linux. It must be built with Go version 1.21 or higher.
+`runc` only supports Linux. It must be built with Go version 1.22.4 or higher.
 
 ### Pre-Requisites
-
-#### Go
-
-NOTE: if building with Go 1.22.x, make sure to use 1.22.4 or a later version
-(see [issue #4233](https://github.com/opencontainers/runc/issues/4233) for
-more details).
 
 #### Utilities and Libraries
 
@@ -61,7 +56,7 @@ apk --update add bash make gcc libseccomp-dev musl-dev linux-headers git
 
 The following dependencies are optional:
 
-* `libseccomp` - only required if you enable seccomp support; to disable, see [Build Tags](#build-tags)
+- `libseccomp` - only required if you enable seccomp support; to disable, see [Build Tags](#build-tags)
 
 ### Build
 
@@ -109,18 +104,19 @@ e.g. to disable seccomp:
 make BUILDTAGS=""
 ```
 
-| Build Tag     | Feature                               | Enabled by Default | Dependencies        |
-|---------------|---------------------------------------|--------------------|---------------------|
-| `seccomp`     | Syscall filtering using `libseccomp`. | yes                | `libseccomp`        |
-| `!runc_nodmz` | Reduce memory usage for CVE-2019-5736 protection by using a small C binary, [see `memfd-bind` for more details][contrib-memfd-bind]. `runc_nodmz` disables this **experimental feature** and causes runc to use a different protection mechanism which will further increases memory usage temporarily during container startup. To enable this feature you also need to set the `RUNC_DMZ=true` environment variable. | yes ||
+| Build Tag     | Feature                                                                                                                                                                                                                                                                                                                                                                                                                | Enabled by Default | Dependencies |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ------------ |
+| `seccomp`     | Syscall filtering using `libseccomp`.                                                                                                                                                                                                                                                                                                                                                                                  | yes                | `libseccomp` |
+| `!runc_nodmz` | Reduce memory usage for CVE-2019-5736 protection by using a small C binary, [see `memfd-bind` for more details][contrib-memfd-bind]. `runc_nodmz` disables this **experimental feature** and causes runc to use a different protection mechanism which will further increases memory usage temporarily during container startup. To enable this feature you also need to set the `RUNC_DMZ=true` environment variable. | yes                |              |
 
 The following build tags were used earlier, but are now obsoleted:
- - **nokmem** (since runc v1.0.0-rc94 kernel memory settings are ignored)
- - **apparmor** (since runc v1.0.0-rc93 the feature is always enabled)
- - **selinux**  (since runc v1.0.0-rc93 the feature is always enabled)
 
- [contrib-memfd-bind]: /contrib/cmd/memfd-bind/README.md
- [dmz README]: /libcontainer/dmz/README.md
+- **nokmem** (since runc v1.0.0-rc94 kernel memory settings are ignored)
+- **apparmor** (since runc v1.0.0-rc93 the feature is always enabled)
+- **selinux** (since runc v1.0.0-rc93 the feature is always enabled)
+
+[contrib-memfd-bind]: /contrib/cmd/memfd-bind/README.md
+[dmz README]: /libcontainer/dmz/README.md
 
 ### Running the test suite
 
@@ -226,7 +222,6 @@ the `config.json` to remove the `terminal` setting for the simple examples
 below (see more details about [runc terminal handling](docs/terminals.md)).
 Your process field in the `config.json` should look like this below with `"terminal": false` and `"args": ["sleep", "5"]`.
 
-
 ```json
         "process": {
                 "terminal": false,
@@ -282,7 +277,6 @@ Your process field in the `config.json` should look like this below with `"termi
 
 Now we can go through the lifecycle operations in your shell.
 
-
 ```bash
 # run as root
 cd /mycontainer
@@ -304,14 +298,17 @@ runc delete mycontainerid
 This allows higher level systems to augment the containers creation logic with setup of various settings after the container is created and/or before it is deleted. For example, the container's network stack is commonly set up after `create` but before `start`.
 
 #### Rootless containers
+
 `runc` has the ability to run containers without root privileges. This is called `rootless`. You need to pass some parameters to `runc` in order to run rootless containers. See below and compare with the previous version.
 
 **Note:** In order to use this feature, "User Namespaces" must be compiled and enabled in your kernel. There are various ways to do this depending on your distribution:
+
 - Confirm `CONFIG_USER_NS=y` is set in your kernel configuration (normally found in `/proc/config.gz`)
 - Arch/Debian: `echo 1 > /proc/sys/kernel/unprivileged_userns_clone`
 - RHEL/CentOS 7: `echo 28633 > /proc/sys/user/max_user_namespaces`
 
 Run the following commands as an ordinary user:
+
 ```bash
 # Same as the first example
 mkdir ~/mycontainer
@@ -348,12 +345,12 @@ WantedBy=multi-user.target
 
 ## More documentation
 
-* [Spec conformance](./docs/spec-conformance.md)
-* [cgroup v2](./docs/cgroup-v2.md)
-* [Checkpoint and restore](./docs/checkpoint-restore.md)
-* [systemd cgroup driver](./docs/systemd.md)
-* [Terminals and standard IO](./docs/terminals.md)
-* [Experimental features](./docs/experimental.md)
+- [Spec conformance](./docs/spec-conformance.md)
+- [cgroup v2](./docs/cgroup-v2.md)
+- [Checkpoint and restore](./docs/checkpoint-restore.md)
+- [systemd cgroup driver](./docs/systemd.md)
+- [Terminals and standard IO](./docs/terminals.md)
+- [Experimental features](./docs/experimental.md)
 
 ## License
 
