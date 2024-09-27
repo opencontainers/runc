@@ -95,3 +95,18 @@ func TestCpuacctStatsWithoutUsageAll(t *testing.T) {
 			expectedStats, actualStats.CpuStats.CpuUsage)
 	}
 }
+
+func BenchmarkGetCpuUsageBreakdown(b *testing.B) {
+	path := tempDir(b, "cpuacct")
+	writeFileContents(b, path, map[string]string{
+		"cpuacct.stat": cpuAcctStatContents,
+	})
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _, err := getCpuUsageBreakdown(path)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
