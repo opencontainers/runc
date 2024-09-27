@@ -120,5 +120,17 @@ func (c *Caps) ApplyCaps() error {
 	for _, g := range capTypes {
 		c.pid.Set(g, c.caps[g]...)
 	}
-	return c.pid.Apply(allCapabilityTypes)
+	err := c.pid.Apply(capability.BOUNDING | capability.CAPS)
+	if err == nil {
+		// There is a long standing bug in github.com/syndtr/gocapability package:
+		// It will always ignore errors when setting ambient caps.
+		// (Please see https://github.com/kolyshkin/capability/pull/3)
+		// We need to have a compatibility with before even though this bug has been fixed.
+		err = c.pid.Apply(capability.AMBIENT)
+		if err != nil {
+			logrus.Warn("unable to set Ambient capabilities: ", err)
+			err = nil
+		}
+	}
+	return err
 }
