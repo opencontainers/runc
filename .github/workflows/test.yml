@@ -155,7 +155,7 @@ jobs:
       run: sudo -E PATH="$PATH" make EXTRA_FLAGS="${{ matrix.race }}" all
 
     - name: Setup Bats and bats libs
-      uses: bats-core/bats-action@2.1.1
+      uses: bats-core/bats-action@3.0.0
       with:
         bats-version: 1.9.0
         support-install: false
