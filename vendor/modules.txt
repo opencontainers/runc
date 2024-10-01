@@ -25,8 +25,8 @@ github.com/coreos/go-systemd/v22/dbus
 # github.com/cpuguy83/go-md2man/v2 v2.0.2
 ## explicit; go 1.11
 github.com/cpuguy83/go-md2man/v2/md2man
-# github.com/cyphar/filepath-securejoin v0.3.2
-## explicit; go 1.20
+# github.com/cyphar/filepath-securejoin v0.3.3
+## explicit; go 1.21
 github.com/cyphar/filepath-securejoin
 # github.com/docker/go-units v0.5.0
 ## explicit
