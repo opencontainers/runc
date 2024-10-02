@@ -34,8 +34,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    (#4370, #4382)
  * rootfs: consolidate mountpoint creation logic. (#4359)
 
-### Changed
-
 ## [1.1.13] - 2024-06-13
 
 > There is no certainty in the world. This is the only certainty I have.
