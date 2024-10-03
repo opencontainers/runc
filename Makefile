@@ -80,26 +80,27 @@ runc-bin: runc-dmz
 	$(GO_BUILD) -o runc .
 
 .PHONY: all
-all: runc memfd-bind recvtty sd-helper seccompagent fs-idmap pidfd-kill remap-rootfs
+all: runc memfd-bind test-helpers
 
 .PHONY: memfd-bind
 memfd-bind:
 	$(GO_BUILD) -o contrib/cmd/$@/$@ ./contrib/cmd/$@
 
-.PHONY: recvtty sd-helper seccompagent fs-idmap pidfd-kill remap-rootfs
-recvtty sd-helper seccompagent fs-idmap pidfd-kill remap-rootfs:
-	$(GO_BUILD) -o tests/cmd/$@/$@ ./tests/cmd/$@
+HELPERS_DIR := tests/cmd/_bin
+$(HELPERS_DIR):
+	mkdir $(HELPERS_DIR)
+
+TEST_HELPERS := recvtty sd-helper seccompagent fs-idmap pidfd-kill remap-rootfs
+.PHONY: test-helpers $(TEST_HELPERS)
+test-helpers: $(TEST_HELPERS)
+$(TEST_HELPERS): $(HELPERS_DIR)
+	$(GO_BUILD) -o tests/cmd/_bin ./tests/cmd/$@
 
 .PHONY: clean
 clean:
 	rm -f runc runc-* libcontainer/dmz/binary/runc-dmz
 	rm -f contrib/cmd/memfd-bind/memfd-bind
-	rm -f tests/cmd/recvtty/recvtty
-	rm -f tests/cmd/sd-helper/sd-helper
-	rm -f tests/cmd/seccompagent/seccompagent
-	rm -f tests/cmd/fs-idmap/fs-idmap
-	rm -f tests/cmd/pidfd-kill/pidfd-kill
-	rm -f tests/cmd/remap-rootfs/remap-rootfs
+	rm -fr $(HELPERS_DIR)
 	sudo rm -rf release
 	rm -rf man/man8
 
