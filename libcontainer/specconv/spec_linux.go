@@ -539,6 +539,11 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 			ioPriority := *spec.Process.IOPriority
 			config.IOPriority = &ioPriority
 		}
+		if spec.Process.ExecCPUAffinity != nil {
+			a := *spec.Process.ExecCPUAffinity
+			config.ExecCPUAffinity = &a
+		}
+
 	}
 	createHooks(spec, config)
 	config.Version = specs.Version
