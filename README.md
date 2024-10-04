@@ -27,15 +27,9 @@ A third party security audit was performed by Cure53, you can see the full repor
 
 ## Building
 
-`runc` only supports Linux. It must be built with Go version 1.21 or higher.
+`runc` only supports Linux. See the header of [`go.mod`](./go mod) for the required Go version.
 
 ### Pre-Requisites
-
-#### Go
-
-NOTE: if building with Go 1.22.x, make sure to use 1.22.4 or a later version
-(see [issue #4233](https://github.com/opencontainers/runc/issues/4233) for
-more details).
 
 #### Utilities and Libraries
 
