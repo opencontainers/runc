@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased 1.1.z]
 
+### Fixed
+
+ * On a system with older kernel, reading `/proc/self/mountinfo` may skip some
+   entries, as a consequence runc may not properly set mount propagation,
+   causing container mounts leak onto the host mount namespace. (#2404, #4425)
+
 ## [1.1.14] - 2024-09-03
 
 > 年を取っていいことは、驚かなくなることね。
