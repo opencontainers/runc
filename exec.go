@@ -252,15 +252,15 @@ func getProcess(context *cli.Context, bundle string) (*specs.Process, error) {
 	}
 	// Override the user, if passed.
 	if user := context.String("user"); user != "" {
-		u := strings.SplitN(user, ":", 2)
-		if len(u) > 1 {
-			gid, err := strconv.Atoi(u[1])
+		uids, gids, ok := strings.Cut(user, ":")
+		if ok {
+			gid, err := strconv.Atoi(gids)
 			if err != nil {
 				return nil, fmt.Errorf("bad gid: %w", err)
 			}
 			p.User.GID = uint32(gid)
 		}
-		uid, err := strconv.Atoi(u[0])
+		uid, err := strconv.Atoi(uids)
 		if err != nil {
 			return nil, fmt.Errorf("bad uid: %w", err)
 		}

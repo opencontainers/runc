@@ -259,11 +259,10 @@ func containerInit(t initType, config *initConfig, pipe *syncSocket, consoleSock
 // current processes's environment.
 func populateProcessEnvironment(env []string) error {
 	for _, pair := range env {
-		p := strings.SplitN(pair, "=", 2)
-		if len(p) < 2 {
+		name, val, ok := strings.Cut(pair, "=")
+		if !ok {
 			return errors.New("invalid environment variable: missing '='")
 		}
-		name, val := p[0], p[1]
 		if name == "" {
 			return errors.New("invalid environment variable: name cannot be empty")
 		}

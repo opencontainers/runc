@@ -101,14 +101,14 @@ func SearchLabels(labels []string, key string) (string, bool) {
 func Annotations(labels []string) (bundle string, userAnnotations map[string]string) {
 	userAnnotations = make(map[string]string)
 	for _, l := range labels {
-		parts := strings.SplitN(l, "=", 2)
-		if len(parts) < 2 {
+		name, value, ok := strings.Cut(l, "=")
+		if !ok {
 			continue
 		}
-		if parts[0] == "bundle" {
-			bundle = parts[1]
+		if name == "bundle" {
+			bundle = value
 		} else {
-			userAnnotations[parts[0]] = parts[1]
+			userAnnotations[name] = value
 		}
 	}
 	return
