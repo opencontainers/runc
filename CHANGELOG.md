@@ -6,11 +6,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased 1.1.z]
 
+## [1.1.15] - 2024-10-07
+
+> How, dear sir, did you cross the flood? By not stopping, friend, and by not
+> straining I crossed the flood.
+
 ### Fixed
 
+ * The `-ENOSYS` seccomp stub is now always generated for the native
+   architecture that `runc` is running on. This is needed to work around some
+   arguably specification-incompliant behaviour from Docker on architectures
+   such as ppc64le, where the allowed architecture list is set to `null`. This
+   ensures that we always generate at least one `-ENOSYS` stub for the native
+   architecture even with these weird configs. (#4391)
  * On a system with older kernel, reading `/proc/self/mountinfo` may skip some
    entries, as a consequence runc may not properly set mount propagation,
    causing container mounts leak onto the host mount namespace. (#2404, #4425)
+
+### Removed
+
+ * In order to fix performance issues in the "lightweight" bindfd protection
+   against [CVE-2019-5736], the temporary `ro` bind-mount of `/proc/self/exe`
+   has been removed. runc now creates a binary copy in all cases. (#4392, #2532)
+
+[CVE-2019-5736]: https://www.openwall.com/lists/oss-security/2019/02/11/2
 
 ## [1.1.14] - 2024-09-03
 
@@ -33,8 +52,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  * Revert "allow overriding VERSION value in Makefile" and add `EXTRA_VERSION`.
    (#4370, #4382)
  * rootfs: consolidate mountpoint creation logic. (#4359)
-
-### Changed
 
 ## [1.1.13] - 2024-06-13
 
@@ -568,7 +585,8 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.0.1]: https://github.com/opencontainers/runc/compare/v1.0.0...v1.0.1
 
 <!-- 1.1.z patch releases -->
-[Unreleased 1.1.z]: https://github.com/opencontainers/runc/compare/v1.1.14...release-1.1
+[Unreleased 1.1.z]: https://github.com/opencontainers/runc/compare/v1.1.15...release-1.1
+[1.1.15]: https://github.com/opencontainers/runc/compare/v1.1.14...v1.1.15
 [1.1.14]: https://github.com/opencontainers/runc/compare/v1.1.13...v1.1.14
 [1.1.13]: https://github.com/opencontainers/runc/compare/v1.1.12...v1.1.13
 [1.1.12]: https://github.com/opencontainers/runc/compare/v1.1.11...v1.1.12
