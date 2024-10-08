@@ -1,6 +1,6 @@
 [Unit]
 Description=Manage memfd-bind of %f
-Documentation=https://github.com/opencontainers/runc
+Documentation=https://github.com/opencontainers/runc/blob/main/contrib/cmd/memfd-bind/README.md
 
 [Service]
 Type=simple
