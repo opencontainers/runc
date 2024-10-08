@@ -1,11 +1,11 @@
 [Unit]
-Description=Manage memfd-bind of %I
+Description=Manage memfd-bind of %f
 Documentation=https://github.com/opencontainers/runc
 
 [Service]
 Type=simple
-ExecStart=memfd-bind "%I"
-ExecStop=memfd-bind --cleanup "%I"
+ExecStart=memfd-bind "%f"
+ExecStop=memfd-bind --cleanup "%f"
 
 [Install]
 WantedBy=multi-user.target
