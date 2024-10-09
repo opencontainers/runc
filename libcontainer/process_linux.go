@@ -740,7 +740,7 @@ func (p *initProcess) start() (retErr error) {
 					return fmt.Errorf("error setting Intel RDT config for procHooks process: %w", err)
 				}
 			}
-			if len(p.config.Config.Hooks) != 0 {
+			if p.config.Config.HasHook(configs.Prestart, configs.CreateRuntime) {
 				s, err := p.container.currentOCIState()
 				if err != nil {
 					return err
