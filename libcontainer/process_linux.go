@@ -615,9 +615,16 @@ func (p *initProcess) start() (retErr error) {
 	if err := p.createNetworkInterfaces(); err != nil {
 		return fmt.Errorf("error creating network interfaces: %w", err)
 	}
-	if err := p.updateSpecState(); err != nil {
-		return fmt.Errorf("error updating spec state: %w", err)
+
+	// initConfig.SpecState is only needed to run hooks that are executed
+	// inside a container, i.e. CreateContainer and StartContainer.
+	if p.config.Config.HasHook(configs.CreateContainer, configs.StartContainer) {
+		p.config.SpecState, err = p.container.currentOCIState()
+		if err != nil {
+			return fmt.Errorf("error getting current state: %w", err)
+		}
 	}
+
 	if err := utils.WriteJSON(p.comm.initSockParent, p.config); err != nil {
 		return fmt.Errorf("error sending config to init process: %w", err)
 	}
@@ -776,16 +783,6 @@ func (p *initProcess) start() (retErr error) {
 	if ierr != nil {
 		return fmt.Errorf("error during container init: %w", ierr)
 	}
-	return nil
-}
-
-func (p *initProcess) updateSpecState() error {
-	s, err := p.container.currentOCIState()
-	if err != nil {
-		return err
-	}
-
-	p.config.SpecState = s
 	return nil
 }
 
