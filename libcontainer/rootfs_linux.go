@@ -213,6 +213,15 @@ func prepareRootfs(pipe *syncSocket, iConfig *initConfig) (err error) {
 		return fmt.Errorf("error jailing process inside rootfs: %w", err)
 	}
 
+	// mount with MS_SHARED flag does not work well with pivotRoot, because
+	// of the checks in the Linux kernel. So we need to first pivotRoot with
+	// a private rootfs, and after that make it shared.
+	if config.RootPropagation&unix.MS_SHARED != 0 {
+		if err := rootfsParentMountShared(config.Rootfs); err != nil {
+			return err
+		}
+	}
+
 	if setupDev {
 		if err := reOpenDevNull(); err != nil {
 			return fmt.Errorf("error reopening /dev/null inside container: %w", err)
@@ -1009,6 +1018,31 @@ func rootfsParentMountPrivate(path string) error {
 		flags:  unix.MS_PRIVATE,
 		err:    err,
 	}
+}
+
+// Make parent mount shared if it was not shared.
+func rootfsParentMountShared(rootfs string) error {
+	sharedMount := false
+
+	parentMount, optionalOpts, err := getParentMount(rootfs)
+	if err != nil {
+		return err
+	}
+
+	optsSplit := strings.Split(optionalOpts, " ")
+	for _, opt := range optsSplit {
+		if strings.HasPrefix(opt, "shared:") {
+			sharedMount = true
+			break
+		}
+	}
+
+	// Make parent mount SHARED if it was not shared.
+	if !sharedMount {
+		return mount("", parentMount, "", uintptr(unix.MS_SHARED), "")
+	}
+
+	return nil
 }
 
 func prepareRoot(config *configs.Config) error {
