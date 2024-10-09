@@ -116,3 +116,31 @@ function teardown() {
 	[[ "${output}" == *"CapBnd:	0000000400000021"* ]]
 	[[ "${output}" == *"CapAmb:	0000000400000001"* ]]
 }
+
+@test "runc run with ambient not in permitted" {
+	update_config '.process.capabilities.inheritable = ["CAP_CHOWN", "CAP_SYSLOG"]
+			| .process.capabilities.permitted = ["CAP_KILL"]
+			| .process.capabilities.effective = ["CAP_KILL"]
+			| .process.capabilities.bounding = ["CAP_KILL", "CAP_CHOWN", "CAP_SYSLOG"]
+			| .process.capabilities.ambient = ["CAP_CHOWN"]'
+	runc run test_some_caps
+	[ "$status" -eq 0 ]
+	# Check that ambient cap set is null.
+	#
+	# CAP_CHOWN is 0, the bit mask is 0x1 (1 << 0)
+	# CAP_KILL is 5, the bit mask is 0x20 (1 << 5).
+	# CAP_SYSLOG is 34, the bit mask is 0x400000000 (1 << 34).
+	[[ "${output}" == *"CapInh:	0000000400000001"* ]]
+	[[ "${output}" == *"CapPrm:	0000000000000020"* ]]
+	[[ "${output}" == *"CapEff:	0000000000000020"* ]]
+	[[ "${output}" == *"CapBnd:	0000000400000021"* ]]
+	[[ "${output}" == *"CapAmb:	0000000000000000"* ]]
+}
+
+@test "runc run [ambient caps not set in inheritable result in a warning]" {
+	update_config '	  .process.capabilities.inheritable = ["CAP_KILL"]
+			| .process.capabilities.ambient = ["CAP_KILL", "CAP_AUDIT_WRITE"]'
+	runc run test_amb
+	[ "$status" -eq 0 ]
+	[[ "$output" == **"unable to set Ambient capabilities:"* ]]
+}

@@ -5,39 +5,41 @@ package capabilities
 import (
 	"sort"
 	"strings"
+	"sync"
 
+	"github.com/moby/sys/capability"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/sirupsen/logrus"
-	"github.com/syndtr/gocapability/capability"
 )
 
 const allCapabilityTypes = capability.CAPS | capability.BOUNDING | capability.AMBIENT
 
 var (
-	capabilityMap map[string]capability.Cap
-	capTypes      = []capability.CapType{
+	capTypes = []capability.CapType{
 		capability.BOUNDING,
 		capability.PERMITTED,
 		capability.INHERITABLE,
 		capability.EFFECTIVE,
 		capability.AMBIENT,
 	}
-)
 
-func init() {
-	capabilityMap = make(map[string]capability.Cap, capability.CAP_LAST_CAP+1)
-	for _, c := range capability.List() {
-		if c > capability.CAP_LAST_CAP {
-			continue
+	capMap = sync.OnceValues(func() (map[string]capability.Cap, error) {
+		list, err := capability.ListSupported()
+		if err != nil {
+			return nil, err
 		}
-		capabilityMap["CAP_"+strings.ToUpper(c.String())] = c
-	}
-}
+		cm := make(map[string]capability.Cap, len(list))
+		for _, c := range list {
+			cm["CAP_"+strings.ToUpper(c.String())] = c
+		}
+		return cm, nil
+	})
+)
 
 // KnownCapabilities returns the list of the known capabilities.
 // Used by `runc features`.
 func KnownCapabilities() []string {
-	list := capability.List()
+	list := capability.ListKnown()
 	res := make([]string, len(list))
 	for i, c := range list {
 		res[i] = "CAP_" + strings.ToUpper(c.String())
@@ -78,9 +80,13 @@ func New(capConfig *configs.Capabilities) (*Caps, error) {
 // equivalent, and returns them as a slice. Unknown or unavailable capabilities
 // are not returned, but appended to unknownCaps.
 func capSlice(caps []string, unknownCaps map[string]struct{}) []capability.Cap {
-	var out []capability.Cap
+	cm, err := capMap()
+	if err != nil {
+		return nil
+	}
+	out := make([]capability.Cap, 0, len(caps))
 	for _, c := range caps {
-		if v, ok := capabilityMap[c]; !ok {
+		if v, ok := cm[c]; !ok {
 			unknownCaps[c] = struct{}{}
 		} else {
 			out = append(out, v)
@@ -91,7 +97,7 @@ func capSlice(caps []string, unknownCaps map[string]struct{}) []capability.Cap {
 
 // mapKeys returns the keys of input in sorted order
 func mapKeys(input map[string]struct{}) []string {
-	var keys []string
+	keys := make([]string, 0, len(input))
 	for c := range input {
 		keys = append(keys, c)
 	}
@@ -118,5 +124,17 @@ func (c *Caps) ApplyCaps() error {
 	for _, g := range capTypes {
 		c.pid.Set(g, c.caps[g]...)
 	}
-	return c.pid.Apply(allCapabilityTypes)
+	err := c.pid.Apply(capability.BOUNDING | capability.CAPS)
+	if err == nil {
+		// There is a long standing bug in github.com/syndtr/gocapability package:
+		// It will always ignore errors when setting ambient caps.
+		// (Please see https://github.com/kolyshkin/capability/pull/3)
+		// We need to have a compatibility with before even though this bug has been fixed.
+		err = c.pid.Apply(capability.AMBIENT)
+		if err != nil {
+			logrus.Warn("unable to set Ambient capabilities: ", err)
+			err = nil
+		}
+	}
+	return err
 }
