@@ -5,10 +5,10 @@ import (
 	"errors"
 	"reflect"
 
+	"github.com/moby/sys/userns"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/devices"
-	"github.com/opencontainers/runc/libcontainer/userns"
 )
 
 var testingSkipFinalCheck bool
