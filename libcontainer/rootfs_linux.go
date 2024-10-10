@@ -202,10 +202,19 @@ func prepareRootfs(pipe *syncSocket, iConfig *initConfig) (err error) {
 		return err
 	}
 
-	if config.NoPivotRoot {
-		err = msMoveRoot(config.Rootfs)
-	} else if config.Namespaces.Contains(configs.NEWNS) {
+	if config.Namespaces.Contains(configs.NEWNS) {
 		err = pivotRoot(config.Rootfs)
+		if config.NoPivotRoot {
+			logrus.Warnf("--no-pivot is deprecated and may be removed or silently ignored in a future version of runc -- see <https://github.com/opencontainers/runc/issues/4435> for more details")
+			if err != nil {
+				// Always try to do pivot_root(2) because it's safe, and only fallback
+				// to the unsafe MS_MOVE+chroot(2) dance if pivot_root(2) fails.
+				logrus.Warnf("your container failed to start with pivot_root(2) (%v) -- please open a bug report to let us know about your usecase", err)
+				err = msMoveRoot(config.Rootfs)
+			} else {
+				logrus.Warnf("despite setting --no-pivot, this container successfully started using pivot_root(2) -- consider removing the --no-pivot flag")
+			}
+		}
 	} else {
 		err = chroot()
 	}

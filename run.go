@@ -58,7 +58,7 @@ command(s) that get executed on start, edit the args parameter of the spec. See
 		},
 		cli.BoolFlag{
 			Name:  "no-pivot",
-			Usage: "do not use pivot root to jail process inside rootfs.  This should be used whenever the rootfs is on top of a ramdisk",
+			Usage: "do not use pivot root to jail process inside rootfs to work around limitations when running in an initramfs (this option is deprecated, insecure, and unnecessary now that pivot_root works with initramfs -- see <https://github.com/opencontainers/runc/issues/4435>)",
 		},
 		cli.BoolFlag{
 			Name:  "no-new-keyring",
