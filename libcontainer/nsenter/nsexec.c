@@ -571,13 +571,6 @@ void nsexec(void)
 		return;
 	}
 
-	/*
-	 * Inform the parent we're past initial setup.
-	 * For the other side of this, see initWaiter.
-	 */
-	if (write(pipenum, "", 1) != 1)
-		bail("could not inform the parent we are past initial setup");
-
 	write_log(DEBUG, "=> nsexec container setup");
 
 	/* Parse all of the netlink configuration. */
