@@ -407,6 +407,13 @@ func (p *initProcess) start() (retErr error) {
 		}
 	}()
 
+	// We should join the cgroup after the initial setup finished,
+	// but before runc init clone new children processes. (#4427)
+	err = <-waitInit
+	if err != nil {
+		return err
+	}
+
 	// Do this before syncing with child so that no children can escape the
 	// cgroup. We don't need to worry about not doing this and not being root
 	// because we'd be using the rootless cgroup manager in that case.
@@ -420,10 +427,6 @@ func (p *initProcess) start() (retErr error) {
 	}
 	if _, err := io.Copy(p.messageSockPair.parent, p.bootstrapData); err != nil {
 		return fmt.Errorf("can't copy bootstrap data to pipe: %w", err)
-	}
-	err = <-waitInit
-	if err != nil {
-		return err
 	}
 
 	childPid, err := p.getChildPid()
