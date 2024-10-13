@@ -64,9 +64,6 @@ func Memfd(comment string) (*os.File, SealFunc, error) {
 }
 
 func sealFile(f **os.File) error {
-	if err := (*f).Chmod(0o511); err != nil {
-		return err
-	}
 	// When sealing an O_TMPFILE-style descriptor we need to
 	// re-open the path as O_PATH to clear the existing write
 	// handle we have.
@@ -107,6 +104,9 @@ func mktemp(dir string) (*os.File, SealFunc, error) {
 	// Unlink the file and verify it was unlinked.
 	if err := os.Remove(file.Name()); err != nil {
 		return nil, nil, fmt.Errorf("unlinking classic tmpfile: %w", err)
+	}
+	if err := file.Chmod(0o511); err != nil {
+		return nil, nil, fmt.Errorf("chmod classic tmpfile: %w", err)
 	}
 	var stat unix.Stat_t
 	if err := unix.Fstat(int(file.Fd()), &stat); err != nil {
