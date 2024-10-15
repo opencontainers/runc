@@ -6,9 +6,9 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/moby/sys/capability"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/sirupsen/logrus"
-	"github.com/syndtr/gocapability/capability"
 )
 
 const allCapabilityTypes = capability.CAPS | capability.BOUNDING | capability.AMBIENT
@@ -25,11 +25,12 @@ var (
 )
 
 func init() {
-	capabilityMap = make(map[string]capability.Cap, capability.CAP_LAST_CAP+1)
-	for _, c := range capability.List() {
-		if c > capability.CAP_LAST_CAP {
-			continue
-		}
+	list, err := capability.ListSupported()
+	if err != nil {
+		return
+	}
+	capabilityMap = make(map[string]capability.Cap, len(list))
+	for _, c := range list {
 		capabilityMap["CAP_"+strings.ToUpper(c.String())] = c
 	}
 }
@@ -37,7 +38,10 @@ func init() {
 // KnownCapabilities returns the list of the known capabilities.
 // Used by `runc features`.
 func KnownCapabilities() []string {
-	list := capability.List()
+	list, err := capability.ListSupported()
+	if err != nil {
+		return nil
+	}
 	res := make([]string, len(list))
 	for i, c := range list {
 		res[i] = "CAP_" + strings.ToUpper(c.String())
@@ -118,5 +122,25 @@ func (c *Caps) ApplyCaps() error {
 	for _, g := range capTypes {
 		c.pid.Set(g, c.caps[g]...)
 	}
-	return c.pid.Apply(allCapabilityTypes)
+	if err := c.pid.Apply(capability.BOUNDING | capability.CAPS); err != nil {
+		return err
+	}
+	// As there was a bug for ambient implementation in package capability,
+	// the error of raise/lower ambient caps has been masked. Please see:
+	// https://github.com/kolyshkin/capability/pull/3
+	// Though the bug has been fixed in v0.4.0, but we should have a
+	// compatibility for ambient cap set.
+	ambientCaps := c.caps[capability.AMBIENT]
+	err := capability.AmbientClearAll()
+	if err != nil {
+		logrus.Warnf("can't lower all ambient caps: %v", err)
+		return nil
+	}
+	for _, ambient := range ambientCaps {
+		err = capability.AmbientRaise(ambient)
+		if err != nil {
+			logrus.Warnf("can't raise ambient cap(%s): %v", ambient.String(), err)
+		}
+	}
+	return nil
 }

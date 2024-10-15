@@ -5,10 +5,10 @@ import (
 	"os"
 	"testing"
 
+	"github.com/moby/sys/capability"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
-	"github.com/syndtr/gocapability/capability"
 )
 
 func TestNew(t *testing.T) {

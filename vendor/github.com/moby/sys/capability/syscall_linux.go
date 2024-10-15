@@ -1,8 +1,9 @@
-// Copyright (c) 2013, Suryandaru Triandana <syndtr@gmail.com>
+// Copyright 2024 The Capability Authors.
+// Copyright 2013 Suryandaru Triandana <syndtr@gmail.com>
 // All rights reserved.
 //
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
 
 package capability
 
@@ -79,9 +80,7 @@ type vfscapData struct {
 	version   int8
 }
 
-var (
-	_vfsXattrName *byte
-)
+var _vfsXattrName *byte
 
 func init() {
 	_vfsXattrName, _ = syscall.BytePtrFromString(vfsXattrName)
