@@ -186,13 +186,14 @@ func (m *Manager) Set(r *configs.Resources) error {
 		return err
 	}
 	// devices (since kernel 4.15, pseudo-controller)
-	//
-	// When rootless is true, errors from the device subsystem are ignored because it is really not expected to work.
-	// However, errors from other subsystems are not ignored.
-	// see @test "runc create (rootless + limits + no cgrouppath + no permission) fails with informative error"
-	if err := setDevices(m.dirPath, r); err != nil {
-		if !m.config.Rootless || errors.Is(err, cgroups.ErrDevicesUnsupported) {
-			return err
+	if !m.config.Systemd {
+		// When rootless is true, errors from the device subsystem are ignored because it is really not expected to work.
+		// However, errors from other subsystems are not ignored.
+		// see @test "runc create (rootless + limits + no cgrouppath + no permission) fails with informative error"
+		if err := setDevices(m.dirPath, r); err != nil {
+			if !m.config.Rootless || errors.Is(err, cgroups.ErrDevicesUnsupported) {
+				return err
+			}
 		}
 	}
 	// cpuset (since kernel 5.0)

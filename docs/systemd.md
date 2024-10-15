@@ -11,9 +11,9 @@ When creating a container, runc requests systemd (over dbus) to create
 a transient unit for the container, and place it into a specified slice.
 
 The name of the unit and the containing slice is derived from the container
-runtime spec in the following way:
+[runtime spec] in the following way:
 
-1. If `Linux.CgroupsPath` is set, it is expected to be in the form
+1. If [Linux.CgroupsPath] is set, it is expected to be in the form
    `[slice]:[prefix]:[name]`.
 
    Here `slice` is a systemd slice under which the container is placed.
@@ -32,7 +32,7 @@ runtime spec in the following way:
    is `<prefix>-<name>.scope`, unless `name` has `.slice` suffix, in
    which case `prefix` is ignored and the `name` is used as is.
 
-2. If `Linux.CgroupsPath` is not set or empty, it works the same way as if it
+2. If [Linux.CgroupsPath] is not set or empty, it works the same way as if it
    would be set to `:runc:<container-id>`. See the description above to see
    what it transforms to.
 
@@ -102,7 +102,43 @@ The following tables summarize which properties are translated.
 | unified.pids.max        | TasksMax              |                     |
 
 For documentation on systemd unit resource properties, see
-`systemd.resource-control(5)` man page.
+[systemd.resource-control(5)] man page.
+
+### Device access rules
+
+[Device access rules] from the [runtime spec] are translated to systemd properties
+(`DevicePolicy` and `DeviceAllow`). Not all configurations are supported; in
+particular, the following can not be translated:
+ - blacklist-style rulesets;
+ - wildcard-major rules (meaning "all devices with any major number and the
+   given minor number").
+
+NOTE that systemd v240 or later is highly recommended, since older versions
+have limited ways to interpret `DeviceAllow` rules. When using systemd older
+than v240, the following limitations exist:
+
+ - it is not possible to add a rule for a device that does not have an
+   equivalent `/dev/{char,block}/<MAJOR>:<minor>` file on the host
+   (for example, this is the case for NVidia devices);
+ - adding a wildcard-minor rule (meaning "devices with the given major number
+   any any minor number") results in having a set of individual rules for
+   existing devices only, meaning that any devices that will appear after the
+   container start won't be accessible.
+
+How the device access rules are applied depends on cgroup version:
+
+#### cgroup v1
+
+The rules are applied by systemd to the cgroup device controller
+(`device.{allow,deny}` files), then runc overwrites those rules with its own
+set, which might be more complete due to older systemd limitations described
+above. If some spec rules can not be translated to systemd properties, a
+warning is emitted.
+
+#### cgroup v2
+
+The rules are only applied by systemd. If some spec rules can not be translated
+to systemd properties (see above), an error is returned.
 
 ### Auxiliary properties
 
@@ -129,3 +165,8 @@ The values must be in the gvariant text format, as described in
 
 To find out which type systemd expects for a particular parameter, please
 consult systemd sources.
+
+[runtime spec]: https://github.com/opencontainers/runtime-spec/blob/main/spec.md
+[Linux.CgroupsPath]: https://github.com/opencontainers/runtime-spec/blob/main/config-linux.md#cgroups-path
+[systemd.resource-control(5)]: https://www.freedesktop.org/software/systemd/man/systemd.resource-control.html
+[Device access rules]: https://github.com/opencontainers/runtime-spec/blob/main/config-linux.md#allowed-device-list
