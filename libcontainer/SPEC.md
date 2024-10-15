@@ -158,31 +158,37 @@ init process will block waiting for the parent to finish setup.
 ### IntelRdt
 
 Intel platforms with new Xeon CPU support Resource Director Technology (RDT).
-Cache Allocation Technology (CAT) and Memory Bandwidth Allocation (MBA) are
-two sub-features of RDT.
+Cache Allocation Technology (CAT), Cache Monitoring Technology (CMT),
+Memory Bandwidth Allocation (MBA) and Memory Bandwidth Monitoring (MBM) are
+four sub-features of RDT.
 
 Cache Allocation Technology (CAT) provides a way for the software to restrict
 cache allocation to a defined 'subset' of L3 cache which may be overlapping
 with other 'subsets'. The different subsets are identified by class of
 service (CLOS) and each CLOS has a capacity bitmask (CBM).
 
+Cache Monitoring Technology (CMT) supports monitoring of the last-level cache (LLC) occupancy
+for each running thread simultaneously.
+
 Memory Bandwidth Allocation (MBA) provides indirect and approximate throttle
 over memory bandwidth for the software. A user controls the resource by
-indicating the percentage of maximum memory bandwidth or memory bandwidth limit
-in MBps unit if MBA Software Controller is enabled.
+indicating the percentage of maximum memory bandwidth or memory bandwidth
+limit in MBps unit if MBA Software Controller is enabled.
 
-It can be used to handle L3 cache and memory bandwidth resources allocation
-for containers if hardware and kernel support Intel RDT CAT and MBA features.
+Memory Bandwidth Monitoring (MBM) supports monitoring of total and local memory bandwidth
+for each running thread simultaneously.
 
-In Linux 4.10 kernel or newer, the interface is defined and exposed via
+More details about Intel RDT CAT and MBA can be found in the section 17.18 and 17.19, Volume 3
+of Intel Software Developer Manual:
+https://software.intel.com/en-us/articles/intel-sdm
+
+About Intel RDT kernel interface:
+In Linux 4.14 kernel or newer, the interface is defined and exposed via
 "resource control" filesystem, which is a "cgroup-like" interface.
 
 Comparing with cgroups, it has similar process management lifecycle and
 interfaces in a container. But unlike cgroups' hierarchy, it has single level
 filesystem layout.
-
-CAT and MBA features are introduced in Linux 4.10 and 4.12 kernel via
-"resource control" filesystem.
 
 Intel RDT "resource control" filesystem hierarchy:
 ```
@@ -194,25 +200,46 @@ tree /sys/fs/resctrl
 |   |   |-- cbm_mask
 |   |   |-- min_cbm_bits
 |   |   |-- num_closids
+|   |-- L3_MON
+|   |   |-- max_threshold_occupancy
+|   |   |-- mon_features
+|   |   |-- num_rmids
 |   |-- MB
 |       |-- bandwidth_gran
 |       |-- delay_linear
 |       |-- min_bandwidth
 |       |-- num_closids
-|-- ...
+|-- mon_groups
+    |-- <rmid>
+        |-- ...
+        |-- mon_data
+    	    |-- mon_L3_00
+                |-- llc_occupancy
+                |-- mbm_local_bytes
+                |-- mbm_total_bytes
+            |-- ...
+        |-- tasks
 |-- schemata
 |-- tasks
-|-- <container_id>
+|-- <clos>
     |-- ...
-    |-- schemata
+    |-- mon_data
+        |-- mon_L3_00
+            |-- llc_occupancy
+            |-- mbm_local_bytes
+            |-- mbm_total_bytes
+        |-- ...
     |-- tasks
+    |-- schemata
+|-- ...
 ```
 
 For runc, we can make use of `tasks` and `schemata` configuration for L3
-cache and memory bandwidth resources constraints.
+cache and memory bandwidth resources constraints, `mon_data` directory for
+CMT and MBM statistics.
 
 The file `tasks` has a list of tasks that belongs to this group (e.g.,
-<container_id>" group). Tasks can be added to a group by writing the task ID
+"<clos>" group). Tasks can be added to a group by writing the task ID
 to the "tasks" file (which will automatically remove them from the previous
 group to which they belonged). New tasks created by fork(2) and clone(2) are
 added to the same group as their parent.
@@ -224,7 +251,7 @@ L3 cache schema:
 It has allocation bitmasks/values for L3 cache on each socket, which
 contains L3 cache id and capacity bitmask (CBM).
 ```
-	Format: "L3:<cache_id0>=<cbm0>;<cache_id1>=<cbm1>;..."
+Format: "L3:<cache_id0>=<cbm0>;<cache_id1>=<cbm1>;..."
 ```
 For example, on a two-socket machine, the schema line could be "L3:0=ff;1=c0"
 which means L3 cache id 0's CBM is 0xff, and L3 cache id 1's CBM is 0xc0.
@@ -240,7 +267,7 @@ Memory bandwidth schema:
 It has allocation values for memory bandwidth on each socket, which contains
 L3 cache id and memory bandwidth.
 ```
-	Format: "MB:<cache_id0>=bandwidth0;<cache_id1>=bandwidth1;..."
+Format: "MB:<cache_id0>=bandwidth0;<cache_id1>=bandwidth1;..."
 ```
 For example, on a two-socket machine, the schema line could be "MB:0=20;1=70"
 
@@ -251,8 +278,10 @@ that is allocated is also dependent on the CPU model and can be looked up at
 min_bw + N * bw_gran. Intermediate values are rounded to the next control
 step available on the hardware.
 
-If MBA Software Controller is enabled through mount option "-o mba_MBps"
+If MBA Software Controller is enabled through mount option "-o mba_MBps":
+```
 mount -t resctrl resctrl -o mba_MBps /sys/fs/resctrl
+```
 We could specify memory bandwidth in "MBps" (Mega Bytes per second) unit
 instead of "percentages". The kernel underneath would use a software feedback
 mechanism or a "Software Controller" which reads the actual bandwidth using
@@ -266,8 +295,9 @@ and 7000 MBps memory bandwidth limit on socket 1.
 For more information about Intel RDT kernel interface:
 https://www.kernel.org/doc/Documentation/x86/intel_rdt_ui.txt
 
-```
+
 An example for runc:
+```
 Consider a two-socket machine with two L3 caches where the default CBM is
 0x7ff and the max CBM length is 11 bits, and minimum memory bandwidth of 10%
 with a memory bandwidth granularity of 10%.
@@ -281,7 +311,17 @@ maximum memory bandwidth of 20% on socket 0 and 70% on socket 1.
         "closID": "guaranteed_group",
         "l3CacheSchema": "L3:0=7f0;1=1f",
         "memBwSchema": "MB:0=20;1=70"
-    }
+	}
+}
+```
+Another example:
+```
+We only want to monitor memory bandwidth and llc occupancy.
+"linux": {
+    "intelRdt": {
+        "enableMBM": true,
+        "enableCMT": true
+	}
 }
 ```
 
