@@ -374,6 +374,49 @@ function in_userns() {
 	[[ "$(readlink /proc/self/ns/user)" != "user:[$((0xEFFFFFFD))]" ]]
 }
 
+function can_fsopen() {
+	fstype="$1"
+
+	# At the very least you need 5.1 for fsopen() and the filesystem needs to
+	# be supported by the running kernel.
+	if ! is_kernel_gte 5.1 || ! grep -qFw "$fstype" /proc/filesystems; then
+		return 1
+	fi
+
+	# You need to be root to use fsopen.
+	if [ "$EUID" -ne 0 ]; then
+		return 1
+	fi
+
+	# If we're root in the initial userns, we're done.
+	if ! in_userns; then
+		return 0
+	fi
+
+	# If we are running in a userns, then the filesystem needs to support
+	# FS_USERNS_MOUNT, which is a per-filesystem flag that depends on the
+	# kernel version.
+	case "$fstype" in
+	overlay)
+		# 459c7c565ac3 ("ovl: unprivieged mounts")
+		is_kernel_gte 5.11 || return 2
+		;;
+	fuse)
+		# 4ad769f3c346 ("fuse: Allow fully unprivileged mounts")
+		is_kernel_gte 4.18 || return 2
+		;;
+	ramfs | tmpfs)
+		# b3c6761d9b5c ("userns: Allow the userns root to mount ramfs.")
+		# 2b8576cb09a7 ("userns: Allow the userns root to mount tmpfs.")
+		is_kernel_gte 3.9 || return 2
+		;;
+	*)
+		# If we don't know about the filesystem, return an error.
+		fail "can_fsopen: unknown filesystem $fstype"
+		;;
+	esac
+}
+
 # Check if criu is available and working.
 function have_criu() {
 	command -v criu &>/dev/null || return 1
