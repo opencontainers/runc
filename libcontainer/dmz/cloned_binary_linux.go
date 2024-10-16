@@ -212,6 +212,23 @@ func IsCloned(exe *os.File) bool {
 // make sure the container process can never resolve the original runc binary.
 // For more details on why this is necessary, see CVE-2019-5736.
 func CloneSelfExe(tmpDir string) (*os.File, error) {
+	// Try to create a temporary overlayfs to produce a readonly version of
+	// /proc/self/exe that cannot be "unwrapped" by the container. In contrast
+	// to CloneBinary, this technique does not require any extra memory usage
+	// and does not have the (fairly noticeable) performance impact of copying
+	// a large binary file into a memfd.
+	//
+	// Based on some basic performance testing, the overlayfs approach has
+	// effectively no performance overhead (it is on par with both
+	// MS_BIND+MS_RDONLY and no binary cloning at all) while memfd copying adds
+	// around ~60% overhead during container startup.
+	overlayFile, err := sealedOverlayfs("/proc/self/exe", tmpDir)
+	if err == nil {
+		logrus.Debug("runc-dmz: using overlayfs for sealed /proc/self/exe") // used for tests
+		return overlayFile, nil
+	}
+	logrus.WithError(err).Debugf("could not use overlayfs for /proc/self/exe sealing -- falling back to making a temporary copy")
+
 	selfExe, err := os.Open("/proc/self/exe")
 	if err != nil {
 		return nil, fmt.Errorf("opening current binary: %w", err)

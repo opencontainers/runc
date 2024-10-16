@@ -167,6 +167,12 @@ function teardown() {
 	[ "$status" -eq 0 ]
 	[[ "$output" = *"Hello World"* ]]
 	[[ "$output" = *"runc-dmz: using /proc/self/exe clone"* ]]
+	if [ "$EUID" -eq 0 ] && is_kernel_gte 5.1 && grep -qFw overlay /proc/filesystems; then
+		# If the kernel has fsopen() and we have privileges to use it, we will
+		# use a temporary overlayfs instead of making a memfd clone of
+		# /proc/self/exe.
+		[[ "$output" = *"runc-dmz: using overlayfs for sealed /proc/self/exe"* ]]
+	fi
 }
 
 @test "runc run [joining existing container namespaces]" {
