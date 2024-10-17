@@ -771,25 +771,15 @@ function requires_idmap_fs() {
 		;;
 	*operation\ not\ permitted)
 		if uname -r | grep -q el9; then
-			# centos kernel 5.14.0-200 does not permit using ID map mounts due to a
-			# specific patch added to their sources:
+			# Older EL9 kernels did not permit using ID map mounts
+			# due to a specific patch added to their sources:
 			# 	https://gitlab.com/redhat/centos-stream/src/kernel/centos-stream-9/-/merge_requests/131
 			#
-			# There doesn't seem to be any technical reason behind
-			# it, none was provided in numerous examples, like:
-			# 	https://lore.kernel.org/lkml/20210213130042.828076-1-christian.brauner@ubuntu.com/T/#m3a9df31aa183e8797c70bc193040adfd601399ad
-			#	https://lore.kernel.org/lkml/20210213130042.828076-1-christian.brauner@ubuntu.com/T/#m59cdad9630d5a279aeecd0c1f117115144bc15eb
-			#	https://lore.kernel.org/lkml/m1r1ifzf8x.fsf@fess.ebiederm.org
-			#	https://lore.kernel.org/lkml/20210510125147.tkgeurcindldiwxg@wittgenstein
+			# That patch was reverted in:
+			# 	https://gitlab.com/redhat/centos-stream/src/kernel/centos-stream-9/-/merge_requests/2179
 			#
-			# So, sadly we just need to skip this on centos.
-			#
-			# TODO Nonetheless, there are ongoing works to revert the patch
-			# deactivating ID map mounts:
-			# https://gitlab.com/redhat/centos-stream/src/kernel/centos-stream-9/-/merge_requests/2179/diffs?commit_id=06f4fe946394cb94d2cf274aa7f3091d8f8469dc
-			# Once this patch is merge, we should be able to remove the below skip
-			# if the revert is backported or if CI centos kernel is upgraded.
-			skip "sadly, centos kernel 5.14 does not permit using ID map mounts"
+			# The above revert is included into the kernel 5.14.0-334.el9.
+			skip "Needs kernel >= 5.14.0-334.el9"
 		fi
 		;;
 	esac
