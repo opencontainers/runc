@@ -40,10 +40,6 @@ function teardown() {
 
 # https://github.com/opencontainers/runc/issues/4057
 @test "runc run (custom selinux label, RUNC_DMZ=true)" {
-	# centos-7 has an outdated container-selinux (<2.224.0) which means
-	# runc-dmz won't work.
-	exclude_os centos-7
-
 	update_config '	  .process.selinuxLabel |= "system_u:system_r:container_t:s0:c4,c5"
 			| .process.args = ["/bin/true"]'
 	RUNC_DMZ=true runc run tst
