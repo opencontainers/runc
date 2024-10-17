@@ -628,6 +628,21 @@ func (c *Container) newParentProcess(p *Process) (parentProcess, error) {
 		//
 		// See <https://github.com/golang/go/issues/61751>.
 		cmd.ExtraFiles = append(cmd.ExtraFiles, safeExe)
+
+		// But because of we have added safeExe to the set of ExtraFiles, if the
+		// fd of safeExe is too small, go stdlib will dup3 it to another fd, then
+		// it will cause the original fd closed. (#4294)
+		if int(safeExe.Fd()) <= stdioFdCount+len(cmd.ExtraFiles) {
+			maxFd, err := utils.GetMaxFds()
+			if err != nil {
+				return nil, fmt.Errorf("unable to get the max opened fd of current process: %w", err)
+			}
+			maxFd = maxFd + 1
+			if err := unix.Dup3(int(safeExe.Fd()), maxFd, unix.O_CLOEXEC); err != nil {
+				return nil, fmt.Errorf("unable to dup3 the fd from %d to %d: %w", safeExe.Fd(), maxFd, err)
+			}
+			cmd.Path = "/proc/self/fd/" + strconv.Itoa(maxFd)
+		}
 	}
 
 	// NOTE: when running a container with no PID namespace and the parent

@@ -97,6 +97,17 @@ func fdRangeFrom(minFd int, fn fdFunc) error {
 	return nil
 }
 
+// GetMaxFds returns the max opened fd of current process.
+func GetMaxFds() (int, error) {
+	maxFd := -1
+	err := fdRangeFrom(-1, func(fd int) {
+		if fd > maxFd {
+			maxFd = fd
+		}
+	})
+	return maxFd, err
+}
+
 // CloseExecFrom sets the O_CLOEXEC flag on all file descriptors greater or
 // equal to minFd in the current process.
 func CloseExecFrom(minFd int) error {
