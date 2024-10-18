@@ -852,6 +852,8 @@ EOF
 }
 
 @test "update memory vs CheckBeforeUpdate" {
+	exclude_os almalinux-9.4 # See https://github.com/opencontainers/runc/issues/4454
+
 	requires cgroups_v2
 	[ $EUID -ne 0 ] && requires rootless_cgroup
 
