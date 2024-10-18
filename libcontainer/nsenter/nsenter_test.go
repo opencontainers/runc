@@ -52,8 +52,6 @@ func TestNsenterValidPaths(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	initWaiter(t, parent)
-
 	if err := cmd.Wait(); err != nil {
 		t.Fatalf("nsenter error: %v", err)
 	}
@@ -94,7 +92,6 @@ func TestNsenterInvalidPaths(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	initWaiter(t, parent)
 	if err := cmd.Wait(); err == nil {
 		t.Fatalf("nsenter exits with a zero exit status")
 	}
@@ -133,7 +130,6 @@ func TestNsenterIncorrectPathType(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	initWaiter(t, parent)
 	if err := cmd.Wait(); err == nil {
 		t.Fatalf("nsenter error: %v", err)
 	}
@@ -177,8 +173,6 @@ func TestNsenterChildLogging(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	initWaiter(t, parent)
-
 	getLogs(t, logread)
 	if err := cmd.Wait(); err != nil {
 		t.Fatalf("nsenter error: %v", err)
@@ -206,22 +200,6 @@ func newPipe(t *testing.T) (parent *os.File, child *os.File) {
 		child.Close()
 	})
 	return
-}
-
-// initWaiter reads back the initial \0 from runc init
-func initWaiter(t *testing.T, r io.Reader) {
-	inited := make([]byte, 1)
-	n, err := r.Read(inited)
-	if err == nil {
-		if n < 1 {
-			err = errors.New("short read")
-		} else if inited[0] != 0 {
-			err = fmt.Errorf("unexpected %d != 0", inited[0])
-		} else {
-			return
-		}
-	}
-	t.Fatalf("waiting for init preliminary setup: %v", err)
 }
 
 func reapChildren(t *testing.T, parent *os.File) {
