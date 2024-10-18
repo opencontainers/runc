@@ -128,10 +128,6 @@ function teardown() {
 }
 
 @test "RUNC_DMZ=true runc run [runc-dmz]" {
-	# centos-7 has an outdated container-selinux (<2.224.0) which means
-	# runc-dmz won't work.
-	exclude_os centos-7
-
 	RUNC_DMZ=true runc --debug run test_hello
 	[ "$status" -eq 0 ]
 	[[ "$output" = *"Hello World"* ]]
@@ -140,10 +136,6 @@ function teardown() {
 }
 
 @test "RUNC_DMZ=true runc run [cap_sys_ptrace -> /proc/self/exe clone]" {
-	# centos-7 has an outdated container-selinux (<2.224.0) which means
-	# runc-dmz won't work.
-	exclude_os centos-7
-
 	# Add CAP_SYS_PTRACE to the bounding set, the minimum needed to indicate a
 	# container process _could_ get CAP_SYS_PTRACE.
 	update_config '.process.capabilities.bounding += ["CAP_SYS_PTRACE"]'
@@ -240,10 +232,6 @@ function teardown() {
 }
 
 @test "RUNC_DMZ=true runc run [exec error]" {
-	# centos-7 has an outdated container-selinux (<2.224.0) which means
-	# runc-dmz won't work.
-	exclude_os centos-7
-
 	cat <<EOF >rootfs/run.sh
 #!/mmnnttbb foo bar
 sh
