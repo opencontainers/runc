@@ -42,3 +42,41 @@ function teardown() {
 		[[ "$output" == *"error running $hook hook #1:"* ]]
 	done
 }
+
+@test "runc run [hook with env]" {
+	update_config '.process.args = ["/bin/true"]'
+	update_config '.process.env = ["mm=nn"]'
+	# All hooks except Poststop.
+	for hook in prestart createRuntime createContainer startContainer poststart; do
+		echo "testing hook $hook"
+		# shellcheck disable=SC2016
+		update_config '.hooks = {
+			"'$hook'": [{
+				"path": "/bin/sh",
+				"args": ["/bin/sh", "-c", "[ \"$mm\"==\"tt\" ] && echo yes, we got tt from the env mm && exit 1 || exit 0"],
+				"env": ["mm=tt"]
+			}]
+		}'
+		mm=nn runc run "test_hook-$hook"
+		[ "$status" -ne 0 ]
+		[[ "$output" == *"yes, we got tt from the env mm"* ]]
+	done
+}
+
+@test "runc run [hook without env does not inherit host env]" {
+	update_config '.process.args = ["/bin/true"]'
+	update_config '.process.env = ["mm=nn"]'
+	# All hooks except Poststop.
+	for hook in prestart createRuntime createContainer startContainer poststart; do
+		echo "testing hook $hook"
+		# shellcheck disable=SC2016
+		update_config '.hooks = {
+			"'$hook'": [{
+				"path": "/bin/sh",
+				"args": ["/bin/sh", "-c", "[[ \"$mm\" == \"nn\" ]] && echo \"$mm\" && exit 1 || exit 0"]
+			}]
+		}'
+		mm=nn runc run "test_hook-$hook"
+		[ "$status" -eq 0 ]
+	done
+}
