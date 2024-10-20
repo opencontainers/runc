@@ -346,3 +346,18 @@ func MkdirAllInRoot(root, unsafePath string, mode uint32) error {
 	}
 	return err
 }
+
+// Openat is a Go-friendly openat(2) wrapper.
+func Openat(dir *os.File, path string, flags int, mode uint32) (*os.File, error) {
+	dirFd := unix.AT_FDCWD
+	if dir != nil {
+		dirFd = int(dir.Fd())
+	}
+	flags |= unix.O_CLOEXEC
+
+	fd, err := unix.Openat(dirFd, path, flags, mode)
+	if err != nil {
+		return nil, &os.PathError{Op: "openat", Path: path, Err: err}
+	}
+	return os.NewFile(uintptr(fd), dir.Name()+"/"+path), nil
+}
