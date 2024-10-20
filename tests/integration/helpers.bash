@@ -368,6 +368,12 @@ function rootless_cgroup() {
 	[[ "$ROOTLESS_FEATURES" == *"cgroup"* || -v RUNC_USE_SYSTEMD ]]
 }
 
+function in_userns() {
+	# The kernel guarantees the root userns inode number (and thus the value of
+	# the magic-link) is always the same value (PROC_USER_INIT_INO).
+	[[ "$(readlink /proc/self/ns/user)" != "user:[$((0xEFFFFFFD))]" ]]
+}
+
 # Check if criu is available and working.
 function have_criu() {
 	command -v criu &>/dev/null || return 1
@@ -396,7 +402,7 @@ function requires() {
 			fi
 			;;
 		root)
-			if [ $EUID -ne 0 ]; then
+			if [ $EUID -ne 0 ] || in_userns; then
 				skip_me=1
 			fi
 			;;
