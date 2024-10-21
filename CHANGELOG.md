@@ -6,6 +6,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2024-10-22
+
+> できるときにできることをやるんだ。それが今だ。
+
+### Added
+ * In order to alleviate the remaining concerns around the memory usage and
+   (arguably somewhat unimportant, but measurable) performance overhead of
+   memfds for cloning `/proc/self/exe`, we have added a new protection using
+   `overlayfs` that is used if you have enough privileges and the running
+   kernel supports it. It has effectively no performance nor memory overhead
+   (compared to no cloning at all). (#4448)
+
+### Fixed
+ * The original fix for [CVE-2024-45310][cve-2024-45310] was intentionally very
+   limited in scope to make it easier to review, however it also did not handle
+   all possible `os.MkdirAll` cases and thus could lead to regressions. We have
+   switched to the more complete implementation in the newer versions of
+   `github.com/cyphar/filepath-securejoin`. (#4393, #4400, #4421, #4430)
+ * In certain situations (a system with lots of mounts or racing mounts) we
+   could accidentally end up leaking mounts from the container into the host.
+   This has been fixed. (#4417)
+ * The fallback logic for `O_TMPFILE` clones of `/proc/self/exe` had a minor
+   bug that would cause us to miss non-`noexec` directories and thus fail to
+   start containers on some systems. (#4444)
+ * Sometimes the cloned `/proc/self/exe` file descriptor could be placed in a
+   way that it would get clobbered by the Go runtime. We had a fix for this
+   already but it turns out it could still break in rare circumstances, but it
+   has now been fixed. (#4294, #4452)
+
+### Changed
+ * It is not possible for `runc kill` to work properly in some specific
+   configurations (such as rootless containers with no cgroups and a shared pid
+   namespace). We now output a warning for such configurations. (#4398)
+ * memfd-bind: update the documentation and make path handling with the systemd
+   unit more idiomatic. (#4428)
+ * We now use v0.16 of Cilium's eBPF library, including fixes that quite a few
+   downstreams asked for. (#4397, #4396)
+ * Some internal `runc init` synchronisation that was no longer necessary (due
+   to the `/proc/self/exe` cloning move to Go) was removed. (#4441)
+
+[cve-2024-45310]: https://github.com/opencontainers/runc/security/advisories/GHSA-jfvp-7x6p-h2pv
+
 ## [1.2.0-rc.3] - 2024-09-02
 
 > The supreme happiness of life is the conviction that we are loved.
@@ -15,8 +57,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  * Fix [CVE-2024-45310][cve-2024-45310], a low-severity attack that allowed
    maliciously configured containers to create empty files and directories on
    the host.
-
-[cve-2024-45310]: https://github.com/opencontainers/runc/security/advisories/GHSA-jfvp-7x6p-h2pv
 
 ### Added
 
@@ -40,6 +80,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  * Mv contrib/cmd tests/cmd (except memfd-bind). (#4377)
  * Makefile: Don't read COMMIT, BUILDTAGS, `EXTRA_BUILDTAGS` from env vars.
    (#4380)
+
+[cve-2024-45310]: https://github.com/opencontainers/runc/security/advisories/GHSA-jfvp-7x6p-h2pv
 
 ## [1.2.0-rc.2] - 2024-06-26
 
@@ -802,7 +844,8 @@ implementation (libcontainer) is *not* covered by this policy.
    cgroups at all during `runc update`). (#2994)
 
 <!-- minor releases -->
-[Unreleased]: https://github.com/opencontainers/runc/compare/v1.2.0-rc.3...HEAD
+[Unreleased]: https://github.com/opencontainers/runc/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/opencontainers/runc/compare/v1.2.0-rc.1...v1.2.0
 [1.1.0]: https://github.com/opencontainers/runc/compare/v1.1.0-rc.1...v1.1.0
 [1.0.0]: https://github.com/opencontainers/runc/releases/tag/v1.0.0
 
@@ -831,6 +874,7 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.1.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.0.0...v1.1.0-rc.1
 
 <!-- 1.2.z patch releases -->
+[Unreleased 1.2.z]: https://github.com/opencontainers/runc/compare/v1.2.0...release-1.2
 [1.2.0-rc.3]: https://github.com/opencontainers/runc/compare/v1.2.0-rc.2...v1.2.0-rc.3
 [1.2.0-rc.2]: https://github.com/opencontainers/runc/compare/v1.2.0-rc.1...v1.2.0-rc.2
 [1.2.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.1.0...v1.2.0-rc.1
