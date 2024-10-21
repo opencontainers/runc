@@ -202,10 +202,19 @@ func prepareRootfs(pipe *syncSocket, iConfig *initConfig) (err error) {
 		return err
 	}
 
-	if config.NoPivotRoot {
-		err = msMoveRoot(config.Rootfs)
-	} else if config.Namespaces.Contains(configs.NEWNS) {
+	if config.Namespaces.Contains(configs.NEWNS) {
 		err = pivotRoot(config.Rootfs)
+		if config.NoPivotRoot {
+			logrus.Warnf("--no-pivot is deprecated and may be removed or silently ignored in a future version of runc -- see <https://github.com/opencontainers/runc/issues/4435> for more details")
+			if err != nil {
+				// Always try to do pivot_root(2) because it's safe, and only fallback
+				// to the unsafe MS_MOVE+chroot(2) dance if pivot_root(2) fails.
+				logrus.Warnf("your container failed to start with pivot_root(2) (%v) -- please open a bug report to let us know about your usecase", err)
+				err = msMoveRoot(config.Rootfs)
+			} else {
+				logrus.Warnf("despite setting --no-pivot, this container successfully started using pivot_root(2) -- consider removing the --no-pivot flag")
+			}
+		}
 	} else {
 		err = chroot()
 	}
@@ -1079,8 +1088,37 @@ func pivotRoot(rootfs string) error {
 		return &os.PathError{Op: "fchdir", Path: "fd " + strconv.Itoa(newroot), Err: err}
 	}
 
-	if err := unix.PivotRoot(".", "."); err != nil {
-		return &os.PathError{Op: "pivot_root", Path: ".", Err: err}
+	pivotErr := unix.PivotRoot(".", ".")
+	if errors.Is(pivotErr, unix.EINVAL) {
+		// If pivot_root(2) failed with -EINVAL, one of the possible reasons is
+		// that we are in early boot and trying pivot_root on top of the
+		// initramfs (which isn't allowed because initramfs/rootfs doesn't have
+		// a parent mount).
+		//
+		// Traditionally, users were told to pass --no-pivot-root (which used a
+		// chroot instead) but this is very insecure (even with the hardenings
+		// we've put into our chroot() wrapper).
+		//
+		// A much better solution is to create a bind-mount of the target and
+		// chroot into it, resulting in a parented mount that pivot_root(2)
+		// will accept. One minor issue is that the mount will still exist (and
+		// in the case of an init system like systemd, this will result in
+		// wasted memory, so they have to do some hacks to clear the initramfs)
+		// but the mount is masked in a much more safe way than chroot() so
+		// this is still much better.
+		if err := unix.Mount(".", ".", "", unix.MS_BIND|unix.MS_REC, ""); err != nil {
+			err := &os.PathError{Op: "bind mount over self", Path: rootfs, Err: err}
+			return fmt.Errorf("error during fallback for failed pivot_root (%w): %w", pivotErr, err)
+		}
+		if err := unix.Chroot("."); err != nil {
+			err := &os.PathError{Op: "chroot into bind-mount", Path: rootfs, Err: err}
+			return fmt.Errorf("error during fallback for failed pivot_root (%w): %w", pivotErr, err)
+		}
+		// Re-try the pivot_root().
+		pivotErr = unix.PivotRoot(".", ".")
+	}
+	if pivotErr != nil {
+		return &os.PathError{Op: "pivot_root", Path: rootfs, Err: err}
 	}
 
 	// Currently our "." is oldroot (according to the current kernel code).
