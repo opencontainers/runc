@@ -618,6 +618,8 @@ func (c *Container) newParentProcess(p *Process) (parentProcess, error) {
 		)
 	}
 
+	// TODO: After https://go-review.googlesource.com/c/go/+/515799 included
+	// in go versions supported by us, we can remove this logic.
 	if safeExe != nil {
 		// Due to a Go stdlib bug, we need to add safeExe to the set of
 		// ExtraFiles otherwise it is possible for the stdlib to clobber the fd
@@ -628,6 +630,18 @@ func (c *Container) newParentProcess(p *Process) (parentProcess, error) {
 		//
 		// See <https://github.com/golang/go/issues/61751>.
 		cmd.ExtraFiles = append(cmd.ExtraFiles, safeExe)
+
+		// There is a race situation when we are opening a file, if there is a
+		// small fd was closed at that time, maybe it will be reused by safeExe.
+		// Because of Go stdlib fds shuffling bug, if the fd of safeExe is too
+		// small, go stdlib will dup3 it to another fd, or dup3 a other fd to this
+		// fd, then it will cause the fd type cmd.Path refers to a random path,
+		// and it can lead to an error "permission denied" when starting the process.
+		// Please see #4294.
+		// So we should not use the original fd of safeExe, but use the fd after
+		// shuffled by Go stdlib. Because Go stdlib will guarantee this fd refers to
+		// the correct file.
+		cmd.Path = "/proc/self/fd/" + strconv.Itoa(stdioFdCount+len(cmd.ExtraFiles)-1)
 	}
 
 	// NOTE: when running a container with no PID namespace and the parent
