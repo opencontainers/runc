@@ -11,70 +11,6 @@ task:
   timeout_in: 30m
 
   env:
-    DEBIAN_FRONTEND: noninteractive
-    HOME: /root
-    # yamllint disable rule:key-duplicates
-    matrix:
-      DISTRO: fedora
-
-  name: vagrant DISTRO:$DISTRO
-
-  compute_engine_instance:
-    image_project: cirrus-images
-    image: family/docker-kvm
-    platform: linux
-    nested_virtualization: true
-    # CPU limit: `16 / NTASK`: see https://cirrus-ci.org/faq/#are-there-any-limits
-    cpu: 4
-    # Memory limit: `4GB * NCPU`
-    memory: 16G
-
-  host_info_script: |
-    uname -a
-    # -----
-    cat /etc/os-release
-    # -----
-    df -T
-    # -----
-    cat /proc/cpuinfo
-  install_libvirt_vagrant_script: |
-    curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
-    echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
-    sudo sed -i 's/^# deb-src/deb-src/' /etc/apt/sources.list
-    apt-get update
-    apt-get install -y libvirt-daemon libvirt-daemon-system vagrant
-    systemctl enable --now libvirtd
-    apt-get build-dep -y vagrant ruby-libvirt
-    apt-get install -y --no-install-recommends libxslt-dev libxml2-dev libvirt-dev ruby-bundler ruby-dev zlib1g-dev
-    vagrant plugin install vagrant-libvirt
-  vagrant_cache:
-    fingerprint_script: cat Vagrantfile.$DISTRO
-    folder: /root/.vagrant.d/boxes
-  vagrant_up_script: |
-    ln -sf Vagrantfile.$DISTRO Vagrantfile
-    # Retry if it fails (download.fedoraproject.org returns 404 sometimes)
-    vagrant up --no-tty || vagrant up --no-tty
-    mkdir -p -m 0700 /root/.ssh
-    vagrant ssh-config >> /root/.ssh/config
-  guest_info_script: |
-    ssh default 'sh -exc "uname -a && systemctl --version && df -T && cat /etc/os-release && go version && sestatus && rpm -q container-selinux"'
-  check_config_script: |
-    ssh default /vagrant/script/check-config.sh
-  unit_tests_script: |
-    ssh default 'sudo -i make -C /vagrant localunittest'
-  integration_systemd_script: |
-    ssh -tt default "sudo -i make -C /vagrant localintegration RUNC_USE_SYSTEMD=yes"
-  integration_fs_script: |
-    ssh -tt default "sudo -i make -C /vagrant localintegration"
-  integration_systemd_rootless_script: |
-    ssh -tt default "sudo -i make -C /vagrant localrootlessintegration RUNC_USE_SYSTEMD=yes"
-  integration_fs_rootless_script: |
-    ssh -tt default "sudo -i make -C /vagrant localrootlessintegration"
-
-task:
-  timeout_in: 30m
-
-  env:
     HOME: /root
     CIRRUS_WORKING_DIR: /home/runc
     GO_VERSION: "1.22"
@@ -82,7 +18,6 @@ task:
     RPMS: gcc git iptables jq glibc-static libseccomp-devel make criu fuse-sshfs container-selinux
     # yamllint disable rule:key-duplicates
     matrix:
-      DISTRO: almalinux-8
       DISTRO: almalinux-9
 
   name: ci / $DISTRO
