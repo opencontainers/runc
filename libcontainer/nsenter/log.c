@@ -31,6 +31,11 @@ void setup_logpipe(void)
 	loglevel = i;
 }
 
+bool log_enabled_for(int level)
+{
+	return (logfd >= 0 && level <= loglevel);
+}
+
 /* Defined in nsexec.c */
 extern int current_stage;
 
@@ -40,8 +45,8 @@ void write_log(int level, const char *format, ...)
 	va_list args;
 	int ret;
 
-	if (logfd < 0 || level > loglevel)
-		goto out;
+	if (!log_enabled_for(level))
+		return;
 
 	va_start(args, format);
 	ret = vasprintf(&message, format, args);
