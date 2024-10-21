@@ -685,8 +685,15 @@ func setupIOPriority(config *configs.Config) error {
 	if ioprio == nil {
 		return nil
 	}
-	class, ok := configs.IOPrioClassMapping[ioprio.Class]
-	if !ok {
+	class := 0
+	switch ioprio.Class {
+	case specs.IOPRIO_CLASS_RT:
+		class = 1
+	case specs.IOPRIO_CLASS_BE:
+		class = 2
+	case specs.IOPRIO_CLASS_IDLE:
+		class = 3
+	default:
 		return fmt.Errorf("invalid io priority class: %s", ioprio.Class)
 	}
 
