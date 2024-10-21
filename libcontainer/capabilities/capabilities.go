@@ -4,7 +4,6 @@ package capabilities
 
 import (
 	"sort"
-	"strings"
 
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/sirupsen/logrus"
@@ -13,25 +12,12 @@ import (
 
 const allCapabilityTypes = capability.CAPS | capability.BOUNDING | capability.AMBIENT
 
-var (
-	capabilityMap map[string]capability.Cap
-	capTypes      = []capability.CapType{
-		capability.BOUNDING,
-		capability.PERMITTED,
-		capability.INHERITABLE,
-		capability.EFFECTIVE,
-		capability.AMBIENT,
-	}
-)
-
-func init() {
-	capabilityMap = make(map[string]capability.Cap, capability.CAP_LAST_CAP+1)
-	for _, c := range capability.List() {
-		if c > capability.CAP_LAST_CAP {
-			continue
-		}
-		capabilityMap["CAP_"+strings.ToUpper(c.String())] = c
-	}
+var capTypes = []capability.CapType{
+	capability.BOUNDING,
+	capability.PERMITTED,
+	capability.INHERITABLE,
+	capability.EFFECTIVE,
+	capability.AMBIENT,
 }
 
 // KnownCapabilities returns the list of the known capabilities.
@@ -76,6 +62,7 @@ func New(capConfig *configs.Capabilities) (*Caps, error) {
 // are not returned, but appended to unknownCaps.
 func capSlice(caps []string, unknownCaps map[string]struct{}) []capability.Cap {
 	var out []capability.Cap
+	capabilityMap, _ := current()
 	for _, c := range caps {
 		if v, ok := capabilityMap[c]; !ok {
 			unknownCaps[c] = struct{}{}
@@ -109,7 +96,7 @@ func (c *Caps) ApplyBoundingSet() error {
 	return c.pid.Apply(capability.BOUNDING)
 }
 
-// Apply sets all the capabilities for the current process in the config.
+// ApplyCaps sets all the capabilities for the current process in the config.
 func (c *Caps) ApplyCaps() error {
 	c.pid.Clear(allCapabilityTypes)
 	for _, g := range capTypes {
