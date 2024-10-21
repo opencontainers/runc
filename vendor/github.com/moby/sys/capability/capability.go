@@ -1,8 +1,9 @@
-// Copyright (c) 2013, Suryandaru Triandana <syndtr@gmail.com>
+// Copyright 2023 The Capability Authors.
+// Copyright 2013 Suryandaru Triandana <syndtr@gmail.com>
 // All rights reserved.
 //
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
 
 // Package capability provides utilities for manipulating POSIX capabilities.
 package capability
@@ -60,26 +61,27 @@ type Capabilities interface {
 	Apply(kind CapType) error
 }
 
-// NewPid initializes a new Capabilities object for given pid when
+// NewPid initializes a new [Capabilities] object for given pid when
 // it is nonzero, or for the current process if pid is 0.
 //
-// Deprecated: Replace with NewPid2.  For example, replace:
+// Deprecated: Replace with [NewPid2] followed by [Capabilities.Load].
+// For example, replace:
 //
-//    c, err := NewPid(0)
-//    if err != nil {
-//      return err
-//    }
+//	c, err := NewPid(0)
+//	if err != nil {
+//		return err
+//	}
 //
 // with:
 //
-//    c, err := NewPid2(0)
-//    if err != nil {
-//      return err
-//    }
-//    err = c.Load()
-//    if err != nil {
-//      return err
-//    }
+//	c, err := NewPid2(0)
+//	if err != nil {
+//		return err
+//	}
+//	err = c.Load()
+//	if err != nil {
+//		return err
+//	}
 func NewPid(pid int) (Capabilities, error) {
 	c, err := newPid(pid)
 	if err != nil {
@@ -89,33 +91,34 @@ func NewPid(pid int) (Capabilities, error) {
 	return c, err
 }
 
-// NewPid2 initializes a new Capabilities object for given pid when
-// it is nonzero, or for the current process if pid is 0.  This
+// NewPid2 initializes a new [Capabilities] object for given pid when
+// it is nonzero, or for the current process if pid is 0. This
 // does not load the process's current capabilities; to do that you
-// must call Load explicitly.
+// must call [Capabilities.Load] explicitly.
 func NewPid2(pid int) (Capabilities, error) {
 	return newPid(pid)
 }
 
 // NewFile initializes a new Capabilities object for given file path.
 //
-// Deprecated: Replace with NewFile2.  For example, replace:
+// Deprecated: Replace with [NewFile2] followed by [Capabilities.Load].
+// For example, replace:
 //
-//    c, err := NewFile(path)
-//    if err != nil {
-//      return err
-//    }
+//	c, err := NewFile(path)
+//	if err != nil {
+//		return err
+//	}
 //
 // with:
 //
-//    c, err := NewFile2(path)
-//    if err != nil {
-//      return err
-//    }
-//    err = c.Load()
-//    if err != nil {
-//      return err
-//    }
+//	c, err := NewFile2(path)
+//	if err != nil {
+//		return err
+//	}
+//	err = c.Load()
+//	if err != nil {
+//		return err
+//	}
 func NewFile(path string) (Capabilities, error) {
 	c, err := newFile(path)
 	if err != nil {
@@ -125,9 +128,17 @@ func NewFile(path string) (Capabilities, error) {
 	return c, err
 }
 
-// NewFile2 creates a new initialized Capabilities object for given
-// file path.  This does not load the process's current capabilities;
-// to do that you must call Load explicitly.
+// NewFile2 creates a new initialized [Capabilities] object for given
+// file path. This does not load the process's current capabilities;
+// to do that you must call [Capabilities.Load] explicitly.
 func NewFile2(path string) (Capabilities, error) {
 	return newFile(path)
+}
+
+// LastCap returns highest valid capability of the running kernel,
+// or an error if it can not be obtained.
+//
+// See also: [ListSupported].
+func LastCap() (Cap, error) {
+	return lastCap()
 }
