@@ -121,6 +121,8 @@ type Process struct {
 	//
 	// If not empty, takes precedence over container's [configs.Config.IOPriority].
 	IOPriority *configs.IOPriority
+
+	CPUAffinity *configs.CPUAffinity
 }
 
 // Wait waits for the process to exit.

@@ -1,6 +1,7 @@
 #ifndef NSENTER_LOG_H
 #define NSENTER_LOG_H
 
+#include <stdbool.h>
 #include <stdio.h>
 
 /*
@@ -19,6 +20,8 @@
  * if available.
  */
 void setup_logpipe(void);
+
+bool log_enabled_for(int level);
 
 void write_log(int level, const char *format, ...) __attribute__((format(printf, 2, 3)));
 
