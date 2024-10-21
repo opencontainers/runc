@@ -58,6 +58,7 @@ func (s *FreezerGroup) Set(path string, r *configs.Resources) (Err error) {
 		// Alas, this is still a game of chances, since the real fix
 		// belong to the kernel (cgroup v2 do not have this bug).
 
+		var d time.Duration = 1
 		for i := 0; i < 1000; i++ {
 			if i%50 == 49 {
 				// Occasional thaw and sleep improves
@@ -79,6 +80,14 @@ func (s *FreezerGroup) Set(path string, r *configs.Resources) (Err error) {
 				// system.
 				time.Sleep(10 * time.Microsecond)
 			}
+
+			if i%200 == 199 {
+				// should sleep a longer time for
+				// some really very slow machine.
+				time.Sleep(d * time.Second)
+				d <<= 1
+			}
+
 			state, err := cgroups.ReadFile(path, "freezer.state")
 			if err != nil {
 				return err
