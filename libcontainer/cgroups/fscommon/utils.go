@@ -54,22 +54,22 @@ func ParseUint(s string, base, bitSize int) (uint64, error) {
 	return value, nil
 }
 
-// ParseKeyValue parses a space-separated "name value" kind of cgroup
+// ParseKeyValue parses a space-separated "key value" kind of cgroup
 // parameter and returns its key as a string, and its value as uint64
-// (ParseUint is used to convert the value). For example,
+// (using [ParseUint] to convert the value). For example,
 // "io_service_bytes 1234" will be returned as "io_service_bytes", 1234.
 func ParseKeyValue(t string) (string, uint64, error) {
-	parts := strings.SplitN(t, " ", 3)
-	if len(parts) != 2 {
+	key, val, ok := strings.Cut(t, " ")
+	if !ok {
 		return "", 0, fmt.Errorf("line %q is not in key value format", t)
 	}
 
-	value, err := ParseUint(parts[1], 10, 64)
+	value, err := ParseUint(val, 10, 64)
 	if err != nil {
 		return "", 0, err
 	}
 
-	return parts[0], value, nil
+	return key, value, nil
 }
 
 // GetValueByKey reads a key-value pairs from the specified cgroup file,
