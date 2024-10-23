@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"testing"
 
+	cgConfig "github.com/opencontainers/runc/libcontainer/cgroups/configs"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/opencontainers/runtime-spec/specs-go"
@@ -43,8 +44,8 @@ func TestFactoryLoadContainer(t *testing.T) {
 		expectedConfig = &configs.Config{
 			Rootfs: "/mycontainer/root",
 			Hooks:  expectedHooks,
-			Cgroups: &configs.Cgroup{
-				Resources: &configs.Resources{},
+			Cgroups: &cgConfig.Cgroup{
+				Resources: &cgConfig.Resources{},
 			},
 		}
 		expectedState = &State{

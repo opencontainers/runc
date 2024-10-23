@@ -16,6 +16,7 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
+	cgConfig "github.com/opencontainers/runc/libcontainer/cgroups/configs"
 	"github.com/opencontainers/runc/libcontainer/cgroups/systemd"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/internal/userns"
@@ -472,7 +473,7 @@ func testFreeze(t *testing.T, withSystemd bool, useSet bool) {
 	if !useSet {
 		err = container.Pause()
 	} else {
-		config.Cgroups.Resources.Freezer = configs.Frozen
+		config.Cgroups.Resources.Freezer = cgConfig.Frozen
 		err = container.Set(*config)
 	}
 	ok(t, err)
@@ -486,7 +487,7 @@ func testFreeze(t *testing.T, withSystemd bool, useSet bool) {
 	if !useSet {
 		err = container.Resume()
 	} else {
-		config.Cgroups.Resources.Freezer = configs.Thawed
+		config.Cgroups.Resources.Freezer = cgConfig.Thawed
 		err = container.Set(*config)
 	}
 	ok(t, err)
