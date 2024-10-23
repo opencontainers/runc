@@ -28,7 +28,7 @@ require (
 	github.com/vishvananda/netlink v1.1.0
 	golang.org/x/net v0.24.0
 	golang.org/x/sys v0.22.0
-	google.golang.org/protobuf v1.33.0
+	google.golang.org/protobuf v1.35.1
 )
 
 require (
