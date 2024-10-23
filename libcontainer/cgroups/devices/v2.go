@@ -6,7 +6,7 @@ import (
 	"github.com/moby/sys/userns"
 	"golang.org/x/sys/unix"
 
-	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/cgroups/configs"
 	"github.com/opencontainers/runc/libcontainer/devices"
 )
 

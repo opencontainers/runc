@@ -11,7 +11,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
-	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/cgroups/configs"
 )
 
 func setFreezer(dirPath string, state configs.FreezerState) error {

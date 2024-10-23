@@ -5,7 +5,7 @@ import (
 
 	dbus "github.com/godbus/dbus/v5"
 
-	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/cgroups/configs"
 )
 
 // freezeBeforeSet answers whether there is a need to freeze the cgroup before
